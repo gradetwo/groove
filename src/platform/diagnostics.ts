@@ -111,102 +111,214 @@ export async function collectDiagReport(engine: AudioEngine, notes: string[] = [
 }
 
 /**
- * The panel itself. Plain DOM on purpose: it is a diagnostic, it has to survive whatever the app's own views are
- * doing, and it must not need a route or a React tree.
+ * The panel: draggable, collapsible to a pill, and small on purpose.
+ *
+ * The first version was a fixed block in the bottom-right corner with no way to put it away, and on a phone that is
+ * the same as no panel at all — the report is off-screen and the app underneath is unusable. This one has a header
+ * you can **drag**, a **收起/展开** control that leaves a small pill behind, and a **关闭** button; expanded it takes
+ * a modest slice of the screen rather than all of it, and the live strip beside the environment is the part that
+ * matters for a defect that *starts*: peak, rms, clipped samples and the worklet's own voice count and load, updated
+ * once a second.
  */
 export function installDiagnostics(engine: AudioEngine): () => void {
   if (typeof document === "undefined") return () => undefined;
+
+  const pill = document.createElement("button");
+  pill.type = "button";
+  pill.setAttribute("data-testid", "diag-pill");
+  pill.textContent = "diag";
+  pill.style.cssText = [
+    "position:fixed",
+    "right:10px",
+    "bottom:calc(10px + env(safe-area-inset-bottom, 0px))",
+    "z-index:2147483647",
+    "font:600 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace",
+    "letter-spacing:.06em",
+    "padding:8px 10px",
+    "border-radius:999px",
+    "border:1px solid #3a3a44",
+    "background:#0b0b0f",
+    "color:#e8e8ee",
+    "min-height:32px",
+    "cursor:pointer",
+  ].join(";");
+
   const panel = document.createElement("div");
   panel.setAttribute("data-testid", "diag-panel");
   panel.style.cssText = [
     "position:fixed",
-    "right:12px",
-    "bottom:12px",
+    "right:10px",
+    "bottom:calc(10px + env(safe-area-inset-bottom, 0px))",
     "z-index:2147483647",
-    "max-width:min(92vw, 460px)",
-    "max-height:70vh",
-    "overflow:auto",
+    "width:min(92vw, 380px)",
+    "max-height:52vh",
+    "display:flex",
+    "flex-direction:column",
     "background:#0b0b0f",
     "color:#e8e8ee",
-    "font:12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace",
+    "font:11px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace",
     "border:1px solid #3a3a44",
     "border-radius:10px",
-    "padding:10px 12px",
-    "white-space:pre-wrap",
-    "box-shadow:0 8px 30px rgba(0,0,0,.45)",
+    "box-shadow:0 8px 30px rgba(0,0,0,.5)",
+    "overflow:hidden",
   ].join(";");
 
-  const out = document.createElement("div");
-  out.textContent = "diag: collecting…";
-  const buttons = document.createElement("div");
-  buttons.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;margin:8px 0";
+  const header = document.createElement("div");
+  header.style.cssText =
+    "display:flex;align-items:center;gap:6px;padding:6px 8px;background:#14141b;cursor:move;touch-action:none;user-select:none";
+  const title = document.createElement("span");
+  title.textContent = "diag";
+  title.style.cssText = "flex:1;letter-spacing:.08em;text-transform:uppercase;opacity:.75";
+  header.appendChild(title);
 
-  const button = (label: string, onClick: () => void) => {
+  const small = (label: string, onClick: () => void, testid?: string) => {
     const b = document.createElement("button");
+    b.type = "button";
     b.textContent = label;
+    if (testid) b.setAttribute("data-testid", testid);
     b.style.cssText =
-      "font:inherit;padding:4px 8px;border-radius:6px;border:1px solid #4a4a58;background:#191922;color:#e8e8ee;cursor:pointer";
-    b.addEventListener("click", onClick);
-    buttons.appendChild(b);
+      "font:inherit;padding:4px 7px;border-radius:6px;border:1px solid #4a4a58;background:#191922;color:#e8e8ee;cursor:pointer;min-height:28px";
+    b.addEventListener("click", (event) => {
+      event.stopPropagation();
+      onClick();
+    });
     return b;
   };
 
+  const body = document.createElement("div");
+  body.style.cssText = "overflow:auto;padding:8px 10px;display:flex;flex-direction:column;gap:6px";
+
+  const live = document.createElement("div");
+  live.style.cssText = "display:grid;grid-template-columns:auto 1fr;gap:2px 8px";
+  const out = document.createElement("div");
+  out.style.cssText = "white-space:pre-wrap;opacity:.85";
+
+  const buttons = document.createElement("div");
+  buttons.style.cssText = "display:flex;gap:6px;flex-wrap:wrap";
+
+  // ---- collapse / expand -------------------------------------------------------
+  let collapsed = false;
+  let timer: ReturnType<typeof setInterval> | undefined;
+
+  const applyCollapsed = () => {
+    panel.style.display = collapsed ? "none" : "flex";
+    pill.style.display = collapsed ? "block" : "none";
+  };
+  pill.addEventListener("click", () => {
+    collapsed = false;
+    applyCollapsed();
+  });
+  header.appendChild(small("收起", () => {
+    collapsed = true;
+    applyCollapsed();
+  }, "diag-collapse"));
+  header.appendChild(small("关闭", () => {
+    if (timer) clearInterval(timer);
+    panel.remove();
+    pill.remove();
+  }, "diag-close"));
+  panel.appendChild(header);
+  panel.appendChild(body);
+  body.appendChild(live);
+  body.appendChild(buttons);
+  body.appendChild(out);
+
+  // ---- drag by the header ------------------------------------------------------
+  let drag: { x: number; y: number; left: number; top: number } | null = null;
+  const place = (left: number, top: number) => {
+    for (const node of [panel, pill]) {
+      node.style.left = `${Math.max(0, Math.min(window.innerWidth - 60, left))}px`;
+      node.style.top = `${Math.max(0, Math.min(window.innerHeight - 40, top))}px`;
+      node.style.right = "auto";
+      node.style.bottom = "auto";
+    }
+  };
+  header.addEventListener("pointerdown", (event) => {
+    const rect = panel.getBoundingClientRect();
+    drag = { x: event.clientX, y: event.clientY, left: rect.left, top: rect.top };
+    header.setPointerCapture(event.pointerId);
+  });
+  header.addEventListener("pointermove", (event) => {
+    if (!drag) return;
+    place(drag.left + (event.clientX - drag.x), drag.top + (event.clientY - drag.y));
+  });
+  header.addEventListener("pointerup", () => {
+    drag = null;
+  });
+
+  // ---- the numbers -------------------------------------------------------------
   const notes: string[] = [];
-  const refresh = async () => {
-    out.textContent = "diag: measuring… (start playback for a live reading)";
+  const render = async () => {
     const report = await collectDiagReport(engine, [...notes]);
+    const host = report.gs1Hosts.find((h) => h.analysis) ?? report.gs1Hosts[0] ?? null;
+    const analysis = (host?.analysis ?? null) as Record<string, number> | null;
+    const rows: Array<[string, string]> = [
+      ["master", report.master ? `peak ${report.master.peak} · rms ${report.master.rms}` : "no analyser"],
+      ["clipped", report.master ? String(report.master.samples) : "-"],
+      ["voices", analysis ? String(analysis.voices) : "-"],
+      ["load", analysis ? String(analysis.load) : "-"],
+      ["violations", analysis ? String(analysis.violations) : "-"],
+      ["hosts", String(report.gs1Hosts.length)],
+      ["step", `${report.playing ? "playing" : "stopped"} · ${report.currentStep}`],
+    ];
+    live.textContent = "";
+    for (const [key, value] of rows) {
+      const k = document.createElement("span");
+      k.textContent = key;
+      k.style.opacity = "0.6";
+      const v = document.createElement("span");
+      v.textContent = value;
+      live.appendChild(k);
+      live.appendChild(v);
+    }
     out.textContent = [
-      `UA      ${report.userAgent}`,
-      `rate    ${report.sampleRate} · ctx ${report.contextState} · cores ${report.hardwareConcurrency}`,
-      `GS-1    enabled=${report.gs1Enabled} · offline probe=${report.gs1OfflineVerdict ?? "not run"}`,
-      `hosts   ${JSON.stringify(report.gs1Hosts)}`,
-      `playing ${report.playing} · step ${report.currentStep}`,
-      `master  ${report.master ? `peak ${report.master.peak} rms ${report.master.rms}` : "no analyser"}`,
-      notes.length ? `notes   ${notes.join(" | ")}` : "",
-      "",
-      "按 Copy report 会把上面这份 JSON 复制到剪贴板（同时打印到控制台）。",
+      `rate   ${report.sampleRate} · ctx ${report.contextState}`,
+      `GS-1   ${report.gs1Enabled ? "on" : "off"} · offline probe ${report.gs1OfflineVerdict ?? "not run"}`,
+      `hosts  ${report.gs1Hosts.map((h) => `${h.role}:${h.patch ?? "-"}${h.ready ? "" : "!"}`).join(" ")}`,
+      notes.length ? `notes  ${notes.join(" | ")}` : "",
     ]
       .filter(Boolean)
       .join("\n");
     (panel as unknown as { __report?: DiagReport }).__report = report;
-    // eslint-disable-next-line no-console
-    console.log("[diag]", JSON.stringify(report));
   };
 
-  button("Refresh", () => void refresh());
-  button("Copy report", () => {
-    const report = (panel as unknown as { __report?: DiagReport }).__report;
-    const text = JSON.stringify(report ?? { error: "nothing measured yet" }, null, 2);
-    void navigator.clipboard?.writeText(text).then(
+  buttons.appendChild(small("刷新", () => void render(), "diag-refresh"));
+  buttons.appendChild(
+    small(
+      "GS-1 开关",
       () => {
-        notes.push("copied");
-        out.textContent += "\n(copied to clipboard)";
+        engine.setGs1Enabled(!engine.isGs1Enabled());
+        notes.push(`gs1=${engine.isGs1Enabled()}`);
       },
+      "diag-gs1"
+    )
+  );
+  buttons.appendChild(
+    small(
+      "复制报告",
       () => {
-        notes.push("clipboard refused");
-        out.textContent += "\n(clipboard refused — the report is in the console)";
-      }
-    );
-  });
-  button("GS-1 on/off (listen)", () => {
-    const next = !engine.isGs1Enabled();
-    engine.setGs1Enabled(next);
-    notes.push(`gs1=${next}`);
-    // eslint-disable-next-line no-console
-    console.log("[diag] GS-1", next ? "on" : "off");
-    void refresh();
-  });
-  button("Run offline probe", () => {
-    void ensureOfflineGs1Capability().then((verdict) => {
-      notes.push(`offline probe=${verdict}`);
-      void refresh();
-    });
-  });
+        const report = (panel as unknown as { __report?: DiagReport }).__report;
+        const text = JSON.stringify(report ?? { error: "nothing measured yet" }, null, 2);
+        // eslint-disable-next-line no-console
+        console.log("[diag]", text);
+        void navigator.clipboard?.writeText(text).then(
+          () => notes.push("copied"),
+          () => notes.push("clipboard refused")
+        );
+      },
+      "diag-copy"
+    )
+  );
 
-  panel.appendChild(buttons);
-  panel.appendChild(out);
   document.body.appendChild(panel);
-  void refresh();
+  document.body.appendChild(pill);
+  applyCollapsed();
+  void render();
+  timer = setInterval(() => void render(), 2000);
 
-  return () => panel.remove();
+  return () => {
+    if (timer) clearInterval(timer);
+    panel.remove();
+    pill.remove();
+  };
 }

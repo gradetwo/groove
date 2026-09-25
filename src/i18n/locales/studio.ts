@@ -331,6 +331,12 @@ export const studioMessages = {
   audio_settings_on: { en: "ON", zh: "开" },
   audio_settings_off: { en: "OFF", zh: "关" },
   audio_settings_section_voices: { en: "Voices", zh: "音色引擎" },
+  audio_settings_section_debug: { en: "Debug", zh: "调试" },
+  audio_settings_debug_label: { en: "Debug panel", zh: "调试信息面板" },
+  audio_settings_debug_hint: {
+    en: "Shows live status over the current view — draggable, and it collapses to a small pill.",
+    zh: "在当前页面上方显示运行状态；可拖动，可收成一个小圆点。",
+  },
   audio_settings_gs1_label: { en: "GS-1 synth for chords & lead", zh: "和弦/旋律轨使用 GS-1 合成器" },
   audio_settings_gs1_hint: {
     en: "On by default. Turn it off to voice those two tracks with the original native patches.",

@@ -32,6 +32,14 @@ const value = (flag, fallback) => {
 const BROWSER = value("--browser", "chromium");
 const GENRE = value("--genre", "uk-garage");
 const SAMPLE_MS = Number(value("--sample-ms", "8000")) || 8000;
+/** `--gs1=off` switches the synth engine off before the transport starts, which is how the A/B is taken. */
+const GS1 = value("--gs1", "on");
+/**
+ * `--timeline` samples every ~120 ms and prints one line per second: peak, rms and how many samples are at or above
+ * the ceiling. A defect that *starts* — "fine for a moment, then crackling" — is a timeline question, not an average
+ * one, and a pinned peak with a rising rms is what clipping looks like from here.
+ */
+const TIMELINE = process.argv.includes("--timeline");
 
 if (!fs.existsSync(path.join(ROOT, "dist", "index.html"))) {
   console.error("❌ dist/index.html is missing — build first (`npm run build`)");
@@ -88,8 +96,9 @@ await page.goto(url, { waitUntil: "domcontentloaded" });
 let exitCode = 0;
 try {
   await page.waitForFunction(() => Boolean(window.__grooveProbe), null, { timeout: 30000 });
-  const measured = await page.evaluate(async ({ sampleMs }) => {
+  const measured = await page.evaluate(async ({ sampleMs, gs1, timeline }) => {
     const probe = window.__grooveProbe;
+    if (gs1 === "off") probe.engine.setGs1Enabled(false);
     await probe.engine.play();
     const analyser = probe.engine.getMasterAnalyser();
     if (!analyser) throw new Error("no master analyser");
@@ -97,14 +106,36 @@ try {
     while (Date.now() - started < 1500) await new Promise((r) => setTimeout(r, 100));
     const bins = new Float32Array(analyser.frequencyBinCount);
     const sums = new Float32Array(analyser.frequencyBinCount);
+    const wave = new Float32Array(analyser.fftSize);
+    const buckets = [];
     let frames = 0;
+    let bucket = { peak: 0, sum: 0, count: 0, clipped: 0, at: 0 };
     while (Date.now() - started < sampleMs) {
       analyser.getFloatFrequencyData(bins);
       for (let i = 0; i < bins.length; i += 1) {
         const v = Number.isFinite(bins[i]) ? bins[i] : -140;
         sums[i] += v;
       }
+      analyser.getFloatTimeDomainData(wave);
+      for (let i = 0; i < wave.length; i += 1) {
+        const v = wave[i];
+        const a = Math.abs(v);
+        if (a > bucket.peak) bucket.peak = a;
+        if (a >= 0.999) bucket.clipped += 1;
+        bucket.sum += v * v;
+        bucket.count += 1;
+      }
       frames += 1;
+      const elapsed = Date.now() - started;
+      if (elapsed - bucket.at >= 1000) {
+        buckets.push({
+          at: Math.round(elapsed / 1000),
+          peak: Number(bucket.peak.toFixed(4)),
+          rms: Number(Math.sqrt(bucket.sum / Math.max(1, bucket.count)).toFixed(5)),
+          clipped: bucket.clipped,
+        });
+        bucket = { peak: 0, sum: 0, count: 0, clipped: 0, at: elapsed };
+      }
       await new Promise((r) => setTimeout(r, 60));
     }
     probe.engine.stop();
@@ -114,8 +145,10 @@ try {
       fftSize: analyser.fftSize,
       frames,
       average,
+      buckets,
+      gs1: probe.engine.isGs1Enabled(),
     };
-  }, { sampleMs: SAMPLE_MS });
+  }, { sampleMs: SAMPLE_MS, gs1: GS1, timeline: TIMELINE });
 
   const nyquist = measured.sampleRate / 2;
   const bandCount = 12;
@@ -137,7 +170,12 @@ try {
     bandsHz: Array.from({ length: bandCount }, (_, i) => Math.round((i / bandCount) * nyquist)),
   };
   if (asJson) {
-    console.log(JSON.stringify(summary, null, 1));
+    console.log(JSON.stringify({ ...summary, buckets: measured.buckets, gs1: measured.gs1 }, null, 1));
+  } else if (TIMELINE) {
+    console.log(`${BROWSER} · ${GENRE} · GS-1 ${measured.gs1 ? "on" : "off"} · ${measured.sampleRate} Hz`);
+    for (const b of measured.buckets) {
+      console.log(`  ${String(b.at).padStart(3)}s  peak ${b.peak.toFixed(4)}  rms ${b.rms.toFixed(5)}  clipped ${b.clipped}`);
+    }
   } else {
     console.log(`${BROWSER} · ${GENRE} · ${measured.sampleRate} Hz · ${measured.frames} frames`);
     console.log(
