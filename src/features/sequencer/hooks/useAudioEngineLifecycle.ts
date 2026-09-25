@@ -9,6 +9,7 @@ import { parseScaleString, quantizePitchToScale } from "../../../utils/scaleTheo
 import { publishPlayhead } from "../playheadBus";
 import { installProbeHooks, uninstallProbeHooks } from "../../../platform/probeHooks";
 import { debugModeForcedByUrl, isDebugModeEnabled, subscribeDebugMode } from "../../../platform/debugMode";
+import { setActiveAudioEngine } from "../../../audio/activeEngine";
 import { patternForExport } from "../../../data/songFlatten";
 import { editorPositionFor } from "../../../data/songFlatten";
 import { loadLayoutPrefs, type LayoutPrefs } from "../layoutPrefs";
@@ -419,9 +420,15 @@ export function useAudioEngineLifecycle({
     };
     syncDiag(isDebugModeEnabled() || debugModeForcedByUrl());
     const unsubscribeDiag = subscribeDebugMode(() => syncDiag(isDebugModeEnabled()));
+    /**
+     * Registered for the entry screen, which is above the app and has to be able to start audio inside its own tap
+     * (`src/audio/activeEngine.ts`, and `primeAudioContext` for why that matters on Safari).
+     */
+    setActiveAudioEngine(engine);
     const cleanup = onAudioEngineReady ? onAudioEngineReady(engine) : undefined;
 
     return () => {
+      setActiveAudioEngine(null);
       unsubscribeDiag();
       cleanup?.();
       cleanupDiag?.();
