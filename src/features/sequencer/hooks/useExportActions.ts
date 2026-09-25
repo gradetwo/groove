@@ -5,7 +5,13 @@ import { DrumKitType, EffectsRackState } from "../../../audio/AudioEngine";
 import { downloadMidiFile } from "../../../audio/MidiExporter";
 import { downloadAbletonProject } from "../../../audio/AbletonExporter";
 import { getShareUrlResult, toSharedTrack } from "../../../audio/SequencerUrlShare";
-import { exportMasterWav, exportStemsZip, triggerWavDownload } from "../../../audio/WavExporter";
+import {
+  EXPORT_MEMORY_WARN_BYTES,
+  estimateExportMemoryBytes,
+  exportMasterWav,
+  exportStemsZip,
+  triggerWavDownload,
+} from "../../../audio/WavExporter";
 import { exportMasterMp3 } from "../../../audio/Mp3Exporter";
 import { exportProjectToGrooveFile } from "../projectDb";
 import type { SequencerState } from "../useSequencerStore";
@@ -311,6 +317,21 @@ export function useExportActions({
   const handleExportStems = useCallback(async () => {
     try {
       setIsExportingAudio(true);
+      /**
+       * Say the size **before** rendering, because WebKit does not raise an error when it runs out of memory — it
+       * restarts the page, which is the crash the owner reported after exporting stems in Safari. The estimate is
+       * arithmetic over what the render holds (one live buffer plus every encoded stem), not a guess.
+       */
+      const seconds = (stepCount / 4) * (60 / Math.max(1, bpm));
+      const estimate = estimateExportMemoryBytes({
+        seconds,
+        sampleRate: 44100,
+        tracks: patternRef.current.tracks.length,
+        stems: true,
+      });
+      if (estimate.peak > EXPORT_MEMORY_WARN_BYTES) {
+        showToast(t("export_stems_memory_warning", { megabytes: String(estimate.megabytes) }));
+      }
       showToast(
         t("export_stems_rendering")
       );

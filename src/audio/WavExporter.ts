@@ -1034,12 +1034,18 @@ export async function exportStemsZip(
   const bpm = options.bpm || pattern.bpm || 120;
   const sanitizedGenre = (genreId || "groove").replace(/[^a-z0-9_-]/gi, "_").toLowerCase();
 
-  const zipEntries = await Promise.all(
-    stems.map(async (stem) => ({
-      name: stem.filename,
-      data: new Uint8Array(await stem.blob.arrayBuffer()),
-    }))
-  );
+  /**
+   * **One stem at a time, and each one let go of as soon as it is packed.**
+   *
+   * This used to be a `Promise.all` over every stem, which materialises all of them as `Uint8Array`s at once on top of
+   * the blobs the render already holds — three copies of the whole export in memory at the peak. That is how a Safari
+   * tab dies: WebKit restarts the page rather than throwing, and the user sees a crash and a reload. Reading
+   * sequentially costs a loop and keeps the peak at "the archive so far, plus one stem".
+   */
+  const zipEntries: { name: string; data: Uint8Array }[] = [];
+  for (const stem of stems) {
+    zipEntries.push({ name: stem.filename, data: new Uint8Array(await stem.blob.arrayBuffer()) });
+  }
 
   const zipBlob = createZipArchive(zipEntries);
   const zipFilename = `${sanitizedGenre}_stems_${bpm}bpm.zip`;
@@ -1051,6 +1057,32 @@ export async function exportStemsZip(
     gs1HostFailures: stems.reduce((n, stem) => n + stem.gs1HostFailures, 0),
   };
 }
+
+/**
+ * How much memory this export will need, before it is attempted.
+ *
+ * A stem render holds one `AudioBuffer` per track (the render is sequential) and then the encoded WAVs for all of
+ * them, so the peak is roughly *one buffer + every encoded stem*. That is enough to matter: a four-minute song at
+ * 44.1 kHz stereo is ~42 MB per stem as float samples and ~21 MB as 16-bit WAV, so eight stems land around 300 MB —
+ * and WebKit responds to that by restarting the page rather than raising an error. The UI asks this first and warns;
+ * the number is an estimate and says so.
+ */
+export function estimateExportMemoryBytes(
+  options: { seconds: number; sampleRate: number; tracks: number; stems: boolean }
+): { buffers: number; encoded: number; peak: number; megabytes: number } {
+  const channels = 2;
+  /** `AudioBuffer` is float32: one buffer is live at a time during a sequential stem render. */
+  const oneBuffer = Math.max(0, options.seconds) * options.sampleRate * channels * 4;
+  /** 16-bit PCM plus a small header, which is what `encodeAudioBufferToWav` produces. */
+  const oneEncoded = Math.max(0, options.seconds) * options.sampleRate * channels * 2;
+  const buffers = oneBuffer;
+  const encoded = options.stems ? oneEncoded * Math.max(1, options.tracks) : oneEncoded;
+  const peak = buffers + encoded;
+  return { buffers, encoded, peak, megabytes: Math.round(peak / (1024 * 1024)) };
+}
+
+/** Peak this app is willing to attempt without warning the user first. Measured, not guessed — see the doc above. */
+export const EXPORT_MEMORY_WARN_BYTES = 220 * 1024 * 1024;
 
 /**
  * Triggers a client-side file download

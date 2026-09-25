@@ -332,6 +332,10 @@ export const studioMessages = {
   audio_settings_off: { en: "OFF", zh: "关" },
   audio_settings_section_voices: { en: "Voices", zh: "音色引擎" },
   audio_settings_section_debug: { en: "Debug", zh: "调试" },
+  export_stems_memory_warning: {
+    en: "This stems export needs about {megabytes} MB; Safari can restart the page when it runs out of memory. Export fewer tracks or a shorter song if it does.",
+    zh: "这次分轨导出约需 {megabytes} MB 内存；Safari 内存不足时会直接重启页面。若发生，请减少轨道数或缩短长度。",
+  },
   audio_settings_debug_label: { en: "Debug panel", zh: "调试信息面板" },
   audio_settings_debug_hint: {
     en: "Shows live status over the current view — draggable, and it collapses to a small pill.",
