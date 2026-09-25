@@ -626,6 +626,30 @@ which is the owner's rule arriving as numbers rather than as taste, so they got 
 `brassLead`). The residual ×1.5–1.8 readings are recorded rather than tuned away: a zero-crossing ratio is a coarse
 instrument, and the complaints that started this were ×4–6.6.
 
+### The instruments calibrate: all 26 within ±0.5 dB and ×0.99–1.16 (2026-09-26)
+
+The clean measurement answered the question the sweep could not. `scripts/probe_gs1_calibration.mjs` plays **one held
+note** on **one lane** with no genre, no pattern of other lanes and no effects beyond the shared strip, with GS-1 on and
+off — the native preset the part was written for — and the CI matrix ran it over every routed instrument:
+
+```
+worst reading   chords distorted_guitar  +0.5 dB  ×1.07
+                chords supersaw          +0.4 dB  ×1.16
+everything else within ±0.3 dB and ×1.00 ± 0.05   (26 of 26 measured)
+```
+
+**The patches are correct as voices.** So the objective's "derive each patch from the native preset" is not needed —
+they already agree with their references — and the genre-level deltas the sweep reports are **context**, not timbre:
+
+* the **register and duration** each genre's pattern actually plays (a one-beat stab and a four-beat held note measure
+  very differently for the same patch, which is enough on its own to explain a −13 dB reading);
+* the **articulation** the engine applies, which the native and GS-1 paths could apply differently — that is the next
+  thing to measure, because a squared or dropped gate scale would look exactly like this;
+* the mix the stem still carries (ducking, sends).
+
+That re-scopes the rest of this work honestly: **the per-instrument voice is done and verified**, and the remaining
+per-genre differences are about how a lane is *played*, which the measurement can now be pointed at directly.
+
 ### The instrument sweep, and why the next step is one measurement per instrument (2026-09-26)
 
 All 159 genres reach GS-1 through only **26** lane/instrument pairs, so the sweep the owner asked for ("every genre's
