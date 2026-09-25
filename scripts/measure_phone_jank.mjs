@@ -93,6 +93,14 @@ function startServer() {
 const INSTRUMENT = () => {
   const state = { longTasks: [], frames: [], images: 0, imageBytes: 0 };
   window.__jank = state;
+  // The entry gate is a full-screen overlay until it is tapped; a measurement run starts from "audio already
+  // unlocked", which is the state the app itself writes after a real first visit.
+  try {
+    localStorage.setItem("groove_audio_started", "1");
+    localStorage.setItem("groove_onboarding_completed", "true");
+  } catch (_) {
+    /* disabled */
+  }
   try {
     new PerformanceObserver((list) => {
       for (const entry of list.getEntries()) state.longTasks.push(Math.round(entry.duration));

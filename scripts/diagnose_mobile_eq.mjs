@@ -33,7 +33,8 @@ const browser = await playwright.chromium.launch({ args: ["--no-sandbox"] });
 const probe = async (label, width, height) => {
   const context = await browser.newContext({ ...playwright.devices["iPhone 14"] });
   await context.addInitScript(() => {
-    try { localStorage.setItem("groove_onboarding_completed", "true"); } catch { /* disabled */ }
+    try { localStorage.setItem("groove_onboarding_completed", "true");
+localStorage.setItem("groove_audio_started", "1"); } catch { /* disabled */ }
   });
   const page = await context.newPage();
   await page.setViewportSize({ width, height });

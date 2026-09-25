@@ -82,6 +82,7 @@ for (const [label, width, height, device] of targets) {
       ({ d }) => {
         try {
           localStorage.setItem("groove_onboarding_completed", "true");
+localStorage.setItem("groove_audio_started", "1");
           localStorage.setItem(
             "groove_layout_prefs_v1",
             JSON.stringify({ version: 1, density: d })

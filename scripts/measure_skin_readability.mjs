@@ -371,6 +371,8 @@ async function main() {
           try {
             localStorage.setItem("groove_skin_v1", id);
             localStorage.setItem("groove_onboarding_completed", "1");
+            // The entry gate overlays the app until tapped; a measurement run starts from the state after it.
+            localStorage.setItem("groove_audio_started", "1");
             localStorage.setItem("groove_language", "en");
           } catch {
             /* storage may be unavailable; the audit then measures the default skin */

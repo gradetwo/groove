@@ -1,23 +1,23 @@
 {
-  "version": "2.19.2",
+  "version": "2.20.0",
   "releaseDate": "2026-09-25",
   "changelogCount": 10,
   "latest": {
-    "version": "2.19.2",
+    "version": "2.20.0",
     "date": "2026-09-25",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "修好 Safari 上的导出与主奏",
-      "en": "Safari: exports and the lead, fixed"
+      "zh": "新增开场点击页与排障面板",
+      "en": "A start screen, and a diagnostic panel"
     },
     "highlights": [
       {
-        "zh": "Safari 离线渲染时听不到合成引擎，导出的文件只剩鼓和贝斯，分轨里的和弦与主奏是空的。现在会自动改用原生音色，导出内容完整。",
-        "en": "Safari could not hear the synth engine when rendering offline, so exports kept only the drums and bass, and the chords/lead stems were empty. Those lanes now use the native engine."
+        "zh": "首次进入多了一个开始页：点一下才允许播放声音（手机浏览器的要求），同时让两个音频能力检测在真实点击时跑完，导出与播放的兜底因此更可靠。",
+        "en": "A start screen on the first visit: one tap is what lets browsers play audio, and it is where the two audio capability checks run with a real gesture behind them."
       },
       {
-        "zh": "播放时主奏的音准以前是单独发的，会在错误的时刻改到正在响的音；现在跟着音符一起、在音符自己的时刻生效。",
-        "en": "The lead's tuning used to arrive as a separate message that retuned whatever was already sounding; it now travels with the note and takes effect at the note's own moment."
+        "zh": "新增排障面板（网址后加 `?diag=1`）：显示浏览器、采样率、合成引擎状态、各轨道加载情况与实时输出电平；可一键开关合成引擎试听对比，并把整份报告复制出来。",
+        "en": "A diagnostic panel at `?diag=1`: the browser, sample rate, synth-engine state, per-track host status and a live output reading — with a one-click synth-engine toggle for A/B listening and a Copy report button."
       }
     ],
     "truncated": false
