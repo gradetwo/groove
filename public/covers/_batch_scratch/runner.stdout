@@ -61,3 +61,4 @@
 2026-09-25T13:26:08Z OK default deathstep seconds=53.8 seed=1783
 2026-09-25T13:26:12Z CHECKPOINT 2026-09-25T13:26:08Z done=4 skipped=36 failed=0 elapsed_min=4.2 avg_s=59.7 balance=251.46
 2026-09-25T13:26:12Z GPU-YIELD generation loop pausing for review regeneration
+2026-09-25T13:35:41Z BATCH-INTERRUPTED signal=15 — safe to restart, completed images are skipped

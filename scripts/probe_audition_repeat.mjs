@@ -43,6 +43,16 @@ const asJson = process.argv.includes("--json");
  * reported on Safari (44.1 kHz) does not appear in headless Chromium (48 kHz), and that is the one variable left.
  */
 const RATE = Number(value("--rate", "0")) || 0;
+/**
+ * `--latency` measures **how long after the click the sound arrives**, which is the other half of the owner's Safari
+ * report ("tapping the preview takes a second or two before you hear it, and the step grid lags the sound too").
+ *
+ * The page records the tap's own timestamp, then polls the analyser until the level crosses a threshold; the delay it
+ * reports is the sum of our scheduling and the browser's output path, and the context's `baseLatency`/`outputLatency`
+ * are printed beside it so the two halves can be told apart. A result near the context's own latency means the code is
+ * not adding anything; a result far above it means something of ours is.
+ */
+const LATENCY = process.argv.includes("--latency");
 
 if (!fs.existsSync(path.join(ROOT, "dist", "index.html"))) {
   console.error("❌ dist/index.html is missing — build first (`npm run build`)");
@@ -143,7 +153,7 @@ try {
     await page.click(selector, { timeout: 5000 });
   });
   const measured = await page.evaluate(
-    async ({ buttonSelector, taps, gapMs, gs1 }) => {
+    async ({ buttonSelector, taps, gapMs, gs1, latency }) => {
       const probe = window.__grooveProbe;
       if (gs1 === "off") probe.engine.setGs1Enabled(false);
       const analyser = probe.engine.getMasterAnalyser();
@@ -174,16 +184,30 @@ try {
        * `element.click()` is not a user gesture, and WebKit will not let audio start on one — which is how a run of
        * all-zero readings was produced and briefly mistaken for the defect.
        */
+      const waitForSound = async (budgetMs) => {
+        const started = performance.now();
+        let quietFor = 0;
+        while (performance.now() - started < budgetMs) {
+          analyser.getFloatTimeDomainData(wave);
+          let peak = 0;
+          for (let i = 0; i < wave.length; i += 1) peak = Math.max(peak, Math.abs(wave[i]));
+          if (peak > 0.02) return Math.round(performance.now() - started);
+          quietFor += 1;
+          await new Promise((r) => requestAnimationFrame(r));
+        }
+        void quietFor;
+        return -1;
+      };
       for (let tap = 1; tap <= taps; tap += 1) {
-        const reading = peakWindow(gapMs);
+        const reading = latency ? waitForSound(3000) : peakWindow(gapMs);
+        const tapAt = performance.now();
         await window.__grooveTap?.(buttonSelector);
-        const level = await reading;
+        const level = latency ? { latencyMs: await reading, tapAt: Math.round(tapAt) } : await reading;
         const diag = probe.engine.getGs1Diagnostics();
         const host = diag.hosts.find((h) => h.role === "lead") ?? diag.hosts[0] ?? null;
         out.push({
           tap,
-          peak: level.peak,
-          rms: level.rms,
+          ...(latency ? { latencyMs: level.latencyMs } : { peak: level.peak, rms: level.rms }),
           host: host ? `${host.role}/${host.patch}${host.ready ? "" : "(not ready)"}` : "none",
           voices: host?.analysis?.voices ?? null,
           load: host?.analysis?.load ?? null,
@@ -193,23 +217,42 @@ try {
       }
       return { rate: analyser.context.sampleRate, rows: out };
     },
-    { buttonSelector: button, taps: TAPS, gapMs: GAP_MS, gs1: GS1 }
+    { buttonSelector: button, taps: TAPS, gapMs: GAP_MS, gs1: GS1, latency: LATENCY }
   );
 
   const { rate, rows } = measured;
   if (asJson) {
     console.log(JSON.stringify(measured, null, 1));
   } else {
+    const ctxLatency = await page.evaluate(() => {
+      const ctx = window.__grooveProbe.engine.getScrubTarget()?.ctx;
+      return ctx
+        ? { base: Math.round((ctx.baseLatency ?? 0) * 1000), out: Math.round((ctx.outputLatency ?? 0) * 1000) }
+        : null;
+    });
     console.log(
-      `${BROWSER} · ${GENRE} · track ${TRACK} · GS-1 ${GS1} · ${rate} Hz · ${TAPS} taps every ${GAP_MS} ms`
+      `${BROWSER} · ${GENRE} · track ${TRACK} · GS-1 ${GS1} · ${rate} Hz · ${TAPS} taps every ${GAP_MS} ms` +
+        (LATENCY ? ` · context latency ${ctxLatency?.base ?? "?"} ms base / ${ctxLatency?.out ?? "?"} ms out` : "")
     );
     for (const row of rows) {
-      console.log(
-        `  tap ${row.tap}  peak ${String(row.peak).padEnd(7)} rms ${String(row.rms).padEnd(8)} ` +
-          `voices ${String(row.voices).padEnd(4)} load ${String(row.load).padEnd(6)} viol ${row.violations}  ${row.host}`
-      );
+      if (LATENCY) {
+        console.log(
+          `  tap ${row.tap}  heard after ${String(row.latencyMs).padStart(5)} ms  voices ${String(row.voices).padEnd(4)} ${row.host}`
+        );
+      } else {
+        console.log(
+          `  tap ${row.tap}  peak ${String(row.peak).padEnd(7)} rms ${String(row.rms).padEnd(8)} ` +
+            `voices ${String(row.voices).padEnd(4)} load ${String(row.load).padEnd(6)} viol ${row.violations}  ${row.host}`
+        );
+      }
     }
     // The reading this probe exists for: does the level collapse, or climb, as the taps repeat?
+    if (LATENCY) {
+      const heard = rows.map((r) => r.latencyMs).filter((v) => v >= 0);
+      const p50 = heard.length ? heard.sort((a, b) => a - b)[Math.floor(heard.length / 2)] : -1;
+      console.log(`  → median ${p50} ms from click to audible (negative = never within 3 s)`);
+      process.exit(0);
+    }
     const peaks = rows.map((r) => r.peak);
     const silent = peaks.filter((p) => p < 0.005).length;
     if (silent > 1) {
