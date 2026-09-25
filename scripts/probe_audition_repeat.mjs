@@ -213,6 +213,10 @@ try {
           load: host?.analysis?.load ?? null,
           violations: host?.analysis?.violations ?? null,
           hosts: diag.hosts.length,
+          // The core's own true-peak and limiter reading, which is what the headroom rule in `gs1Patches.test.ts`
+          // is about: raising a patch's gain is only safe while the master stays under the core's limiter.
+          truePeak: host?.analysis?.truePeak ?? null,
+          limit: host?.analysis?.limit ?? null,
         });
       }
       return { rate: analyser.context.sampleRate, rows: out };
@@ -242,7 +246,8 @@ try {
       } else {
         console.log(
           `  tap ${row.tap}  peak ${String(row.peak).padEnd(7)} rms ${String(row.rms).padEnd(8)} ` +
-            `voices ${String(row.voices).padEnd(4)} load ${String(row.load).padEnd(6)} viol ${row.violations}  ${row.host}`
+            `voices ${String(row.voices).padEnd(4)} load ${String(row.load).padEnd(6)} viol ${row.violations} ` +
+            `peak ${String(row.truePeak).padEnd(7)} limit ${String(row.limit).padEnd(5)}  ${row.host}`
         );
       }
     }
