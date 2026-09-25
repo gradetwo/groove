@@ -50,6 +50,7 @@ import { ChannelStrip } from "./ChannelStripDsp";
 import { resolveTrackInsertForGenre } from "../data/genreInsert";
 import { resolveGroupBus } from "./trackBuses";
 import { createGs1Host, type Gs1Host } from "./gs1/Gs1Host";
+import { gs1VelocityRoute } from "../data/gs1Patches";
 import { capPlanPolyphony, gs1PatchFor, isGs1RoutingEnabled, planGs1Notes, patchNeedsSample } from "./gs1/gs1Tracks";
 import { generateTextureSample } from "./gs1/textureSample";
 import { applyGenreFxToGraph, resolveGenreFx } from "../data/genreFx";
@@ -503,6 +504,10 @@ export async function renderPatternOffline(
         continue;
       }
       host.setPatch(routed.params);
+      // The same velocity response the live pool wires, so a rendered stem and the room agree (the exporter's own
+      // parity rule).
+      const velocityRoute = gs1VelocityRoute(routed.velToCutoff);
+      host.setModRoute(0, velocityRoute?.src ?? 3, velocityRoute?.dst ?? 0, velocityRoute?.amount ?? 0, Boolean(velocityRoute));
       /**
        * A sample patch needs its recording (P2.5). Imported **before** the host joins the graph, so the first note
        * cannot be silent while the bytes are on their way — and only when the patch actually plays a sample, so a

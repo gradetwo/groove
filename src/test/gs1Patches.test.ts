@@ -21,6 +21,7 @@ import {
   GS1_CHORDS_ROUTING,
   GS1_LEAD_ROUTING,
   GS1_PATCH_GAIN_MAX,
+  GS1_PATCH_VELOCITY_TO_CUTOFF,
   GS1_PATCHES,
   GS1_ROLES,
   patchParamIds,
@@ -193,6 +194,9 @@ describe("GS-1 resolution", () => {
     expect(resolveGs1Patch("chords", "warm_pad")).toEqual({
       patch: "warmPad",
       params: GS1_PATCHES.warmPad,
+      // The velocity response travels with the patch: the pool and the exporter both wire it, and leaving it out here
+      // would let a patch change silently keep the previous instrument's feel.
+      velToCutoff: GS1_PATCH_VELOCITY_TO_CUTOFF.warmPad,
     });
     expect(resolveGs1Patch("lead", "acid_303")?.patch).toBe("acidLead");
   });

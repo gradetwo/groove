@@ -177,6 +177,14 @@ export interface Gs1Host {
   getParam(id: number): number | undefined;
   /** Replace many parameters atomically-ish; this is the `setPatch` seam. */
   setPatch(values: Record<number, number>): void;
+  /**
+   * Wire (or clear) one modulation route, e.g. velocity → cutoff.
+   *
+   * The core reads velocity as amplitude alone; the native presets all carry a `velocityToCutoff` response, so a quiet
+   * note is a *darker* note there and not here. The route is the core's own mechanism for that (`modRoute`), and the
+   * only caller is a patch change — which is why it lives next to `setPatch` rather than in its own lifetime.
+   */
+  setModRoute(index: number, src: number, dst: number, amount: number, enabled: boolean): void;
   onAnalysis(listener: (analysis: Gs1Analysis) => void): () => void;
   onPolyphony(listener: (event: Gs1PolyphonyEvent) => void): () => void;
   /** Most recent analysis frame, for pollers (the measurement scripts use this). */
@@ -495,6 +503,9 @@ export async function createGs1Host(options: Gs1HostOptions): Promise<Gs1Host> {
     },
     setPatch(values) {
       for (const [id, value] of Object.entries(values)) setParam(Number(id), value);
+    },
+    setModRoute(index, src, dst, amount, enabled) {
+      post({ type: "modRoute", index, src, dst, amount, enabled });
     },
     onAnalysis(listener) {
       analysisListeners.add(listener);

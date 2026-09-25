@@ -40,6 +40,30 @@ import { Param, PARAM_SPECS, type ParamId } from "../../vendor/gs1/src/audio/par
 /** One patch: a sparse map of parameter id → value, exactly GS-1's preset format. */
 export type Gs1Patch = Record<number, number>;
 
+/**
+ * A patch's velocity response, in **octaves of cutoff per unit of velocity** — the native engine's own unit.
+ *
+ * Every native preset carries `velocityToCutoff` (1.0–2.2 octaves across the routed instruments) and neither of the two
+ * GS-1 patches' oscillators had anything equivalent: the core reads velocity as amplitude alone. Measured, the gap shows
+ * up in exactly one cell of the grid — a **quiet and short** note, where the native voice is a slow soft swell that the
+ * genre's gate cuts and a GS-1 voice is immediate and full. A held note catches up within the window either way, which is
+ * why four rounds of calibration missed it.
+ *
+ * The core's cutoff modulation is `cutoff *= exp2(mod * 4)`, so the route amount is this value divided by four — the
+ * conversion lives in `gs1VelocityRoute` below, in one place.
+ */
+export interface Gs1PatchVoice {
+  params: Gs1Patch;
+  velToCutoff?: number;
+}
+
+/** The route amount the core wants for a given velocity response, and `null` when there is nothing to send. */
+export function gs1VelocityRoute(velToCutoff: number | undefined): { src: number; dst: number; amount: number } | null {
+  if (!velToCutoff || !Number.isFinite(velToCutoff)) return null;
+  // ModSrc::Velocity = 3, ModDst::Cutoff = 0 (see the core's `params.rs`), and `exp2(mod * 4)` is the sweep.
+  return { src: 3, dst: 0, amount: Number((velToCutoff / 4).toFixed(4)) };
+}
+
 export type Gs1PatchName =
   | "warmPad"
   | "electricPiano"
@@ -624,6 +648,37 @@ export const GS1_PATCHES: Record<Gs1PatchName, Gs1Patch> = {
 };
 
 /**
+ * Each patch's velocity-to-cutoff response, read from the **native preset** the routed instruments resolve to.
+ *
+ * Where a patch serves several instruments the value is the median of theirs (they rarely differ: `cleanPluck` reads
+ * 1.5–1.8, `analogLead` 1.2–1.8). This is the one place where "derive the patch from the native preset" turned out to be
+ * the right answer after all — not for the tone, which the calibration showed already matched, but for the **velocity
+ * response**, which it cannot show because a held note hides it.
+ */
+export const GS1_PATCH_VELOCITY_TO_CUTOFF: Partial<Record<Gs1PatchName, number>> = {
+  warmPad: 1,
+  electricPiano: 1.8,
+  cleanPluck: 1.6,
+  supersawStack: 0.9,
+  drivenGuitar: 1.65,
+  organStack: 0.7,
+  analogLead: 1.8,
+  sustainedStrings: 1.2,
+  squareLead: 1,
+  acidLead: 2.2,
+  bellMallet: 1.3,
+  sineLead: 0.8,
+  sampleSurface: 0.65,
+  sampleTexture: 0.5,
+  // The genre-specific voices take their neighbour's response, since they are variants of it.
+  organStab: 0.7,
+  discoStrings: 1.2,
+  brassLead: 1.8,
+  dubStab: 1.8,
+  ambientStrings: 1.2,
+};
+
+/**
  * The highest `PATCH_GAIN` any patch may carry.
  *
  * It exists to keep the core's own limiter out of the picture, and it is a **measurement**, re-taken when the
@@ -735,6 +790,8 @@ export function routingForRole(role: string | null | undefined): Record<string, 
 export interface ResolvedGs1Patch {
   patch: Gs1PatchName;
   params: Gs1Patch;
+  /** The native preset's velocity-to-cutoff response, when the patch has one to model. */
+  velToCutoff?: number;
 }
 
 /**
@@ -761,7 +818,7 @@ export function resolveGs1Patch(
    */
   const override = genreId ? GENRE_GS1_PATCH_OVERRIDES[genreId]?.[instrument] : undefined;
   const patch = override ?? entry.patch;
-  return { patch, params: GS1_PATCHES[patch] };
+  return { patch, params: GS1_PATCHES[patch], velToCutoff: GS1_PATCH_VELOCITY_TO_CUTOFF[patch] };
 }
 
 /**

@@ -93,6 +93,8 @@ export interface Gs1PlannedNote {
 export interface Gs1Plan {
   patch: Gs1PatchName;
   params: Gs1Patch;
+  /** The native preset's velocity-to-cutoff response, carried so the pool can wire it with the patch. */
+  velToCutoff?: number;
   notes: Gs1PlannedNote[];
 }
 
@@ -170,7 +172,7 @@ export function planGs1Notes(options: Gs1PlanOptions): Gs1Plan | null {
   if (planned.length === 0) return null;
   // Stable order, so live and offline schedule identically for the same input.
   planned.sort((a, b) => a.atFrame - b.atFrame || a.note - b.note);
-  return { patch: resolved.patch, params: resolved.params, notes: planned };
+  return { patch: resolved.patch, params: resolved.params, velToCutoff: resolved.velToCutoff, notes: planned };
 }
 
 /**

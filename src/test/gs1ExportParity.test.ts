@@ -45,6 +45,7 @@ vi.mock("../audio/gs1/Gs1Host", async (importOriginal) => {
       setPatch: () => {
         recorded.patches += 1;
       },
+      setModRoute: () => undefined,
       allNotesOff: () => undefined,
       dispose: () => undefined,
     };
@@ -187,6 +188,7 @@ describe("GS-1 export parity", () => {
        */
       setTuningNote: (note: number, cents: number) => recorded.tuning.push([note, cents]),
         setPatch: () => undefined,
+        setModRoute: () => undefined,
         allNotesOff: () => undefined,
         dispose: () => undefined,
       })) as never,

@@ -146,6 +146,7 @@ describe("P2.5 · a texture lane renders through GS-1", () => {
 
     const hosts: Array<{
       setPatch: ReturnType<typeof vi.fn>;
+      setModRoute: () => undefined,
       importSample: ReturnType<typeof vi.fn>;
       noteOnAt: ReturnType<typeof vi.fn>;
       setTuningNote: ReturnType<typeof vi.fn>;
@@ -161,6 +162,7 @@ describe("P2.5 · a texture lane renders through GS-1", () => {
         scheduledNoteLatencyFrames: 128,
         output: { connect: () => undefined },
         setPatch: vi.fn(),
+        setModRoute: () => undefined,
         importSample: vi.fn().mockResolvedValue({ has: true, code: 0 }),
         clearSample: vi.fn().mockResolvedValue({ has: false, code: 0 }),
         noteOnAt: vi.fn(),
@@ -233,6 +235,7 @@ describe("P2.5 · the texture lane does not double", () => {
       scheduledNoteLatencyFrames: 128,
       output: { connect: () => undefined },
       setPatch: vi.fn(),
+      setModRoute: () => undefined,
       importSample: vi.fn().mockResolvedValue({ has: true, code: 0 }),
       clearSample: vi.fn().mockResolvedValue({ has: false, code: 0 }),
       noteOnAt: vi.fn(),

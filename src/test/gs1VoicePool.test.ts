@@ -36,6 +36,8 @@ function makeHost(options: { latency?: number; readyDelayMs?: number; fail?: boo
     setPatch: () => {
       calls.patches += 1;
     },
+    /** The pool wires the patch's velocity response with the patch; a host must answer for it. */
+    setModRoute: () => undefined,
     allNotesOff: vi.fn(),
     dispose: vi.fn(),
   } as unknown as Gs1Host;

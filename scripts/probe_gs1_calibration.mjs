@@ -50,6 +50,8 @@ const value = (flag, fallback) => {
 };
 const TAKES = Math.max(1, Number(value("takes", "3")) || 3);
 /** The velocities a lane is actually played at: `velocityScale` sections and soft parts live in the lower half. */
+/** The velocity of the "quiet stab" cell — a soft part, which is where `velocityToAttack` bites. */
+const QUIET_VELOCITY = Number(value("quiet-velocity", "0.35")) || 0.35;
 const VELOCITIES = (value("velocities", "0.35,0.9") || "0.35,0.9")
   .split(",")
   .map((v) => Number(v))
@@ -127,7 +129,7 @@ const rows = [];
 for (const target of targets) {
   try {
     const measured = await page.evaluate(
-      async ({ role, instrument, notes, takes, velocities }) => {
+      async ({ role, instrument, notes, takes, velocities, quietVelocity }) => {
         const engine = window.__grooveProbe.engine;
         const trackIdx = { chords: 5, lead: 6, fx: 7 }[role];
         /**
@@ -224,6 +226,7 @@ for (const target of targets) {
           }
           const held = [];
           const stab = [];
+          const quietStab = [];
           for (let i = 0; i < takes; i += 1) {
             held.push({ gs1: await take(true, note, 4, 700), native: await take(false, note, 4, 700) });
             /**
@@ -233,8 +236,18 @@ for (const target of targets) {
              * initial transient instead and reported 0.0 dB for every instrument, which is a measurement of nothing.
              */
             stab.push({ gs1: await take(true, note, 1.2, 500), native: await take(false, note, 1.2, 500) });
+            /**
+             * …and the cell the grid was missing: a **quiet stab**. The native presets carry `velocityToAttack` and
+             * friends, so a soft, short note is a slow swell that the gate cuts; a core that reads velocity as
+             * amplitude alone starts immediately and full. This is the interaction that made a genre render read 30 dB
+             * apart while every separate axis measured clean.
+             */
+            quietStab.push({
+              gs1: await take(true, note, 1.2, 500, quietVelocity),
+              native: await take(false, note, 1.2, 500, quietVelocity),
+            });
           }
-          out.push({ note, held, stab, velocityRows });
+          out.push({ note, held, stab, quietStab, velocityRows });
         }
         return out;
       },
@@ -244,6 +257,7 @@ for (const target of targets) {
         notes: NOTES_FOR[target.role] ?? [60],
         takes: TAKES,
         velocities: VELOCITIES,
+        quietVelocity: QUIET_VELOCITY,
       }
     );
 
@@ -262,6 +276,8 @@ for (const target of targets) {
        */
       const gs1Stab = median(entry.stab.map((t) => t.gs1.rms));
       const nativeStab = median(entry.stab.map((t) => t.native.rms));
+      const gs1QuietStab = median(entry.quietStab.map((t) => t.gs1.rms));
+      const nativeQuietStab = median(entry.quietStab.map((t) => t.native.rms));
       const gs1Zcr = median(entry.held.map((t) => t.gs1.zcr));
       const nativeZcr = median(entry.held.map((t) => t.native.zcr));
       const byVelocity = entry.velocityRows.map((row) => {
@@ -274,6 +290,8 @@ for (const target of targets) {
         byVelocity,
         heldLevelDb: Number((db(gs1Held) - db(nativeHeld)).toFixed(1)),
         stabLevelDb: Number((db(gs1Stab) - db(nativeStab)).toFixed(1)),
+        /** The interaction cell: quiet velocity, short note. */
+        quietStabLevelDb: Number((db(gs1QuietStab) - db(nativeQuietStab)).toFixed(1)),
         brightnessRatio: Number((gs1Zcr / Math.max(1, nativeZcr)).toFixed(2)),
         // Raw values, because a delta of exactly 0.0 is either a coincidence or a measurement of nothing.
         gs1HeldRms: Number(gs1Held.toFixed(5)),
@@ -283,7 +301,10 @@ for (const target of targets) {
       };
     });
     const heldSpread = Math.max(...perNote.map((n) => n.heldLevelDb)) - Math.min(...perNote.map((n) => n.heldLevelDb));
-    const worstStab = perNote.reduce((worst, n) => (Math.abs(n.stabLevelDb) > Math.abs(worst) ? n.stabLevelDb : worst), 0);
+    const worstStab = perNote.reduce(
+      (worst, n) => (Math.abs(n.quietStabLevelDb) > Math.abs(worst) ? n.quietStabLevelDb : worst),
+      perNote.reduce((worst, n) => (Math.abs(n.stabLevelDb) > Math.abs(worst) ? n.stabLevelDb : worst), 0)
+    );
     const worstHeld = perNote.reduce((worst, n) => (Math.abs(n.heldLevelDb) > Math.abs(worst) ? n.heldLevelDb : worst), 0);
     const worstBrightness = perNote.reduce(
       (worst, n) => (Math.abs(Math.log(n.brightnessRatio)) > Math.abs(Math.log(worst)) ? n.brightnessRatio : worst),
@@ -337,7 +358,7 @@ if (asJson) {
   console.log(JSON.stringify(rows, null, 1));
 } else {
   console.log(
-  `GS-1 instrument calibration · shard ${SHARD} · ${TAKES} takes · per note "held/stab" level vs native, one lane, no other lanes`
+  `GS-1 instrument calibration · shard ${SHARD} · ${TAKES} takes · per note "held/stab/quiet-stab" level vs native, one lane`
 );
   for (const row of rows) {
     if (row.error) {
@@ -345,11 +366,16 @@ if (asJson) {
       continue;
     }
     const notes = row.perNote
-      .map((n) => `${n.note}:${n.heldLevelDb >= 0 ? "+" : ""}${n.heldLevelDb}/${n.stabLevelDb >= 0 ? "+" : ""}${n.stabLevelDb}`)
+      .map(
+        (n) =>
+          `${n.note}:${n.heldLevelDb >= 0 ? "+" : ""}${n.heldLevelDb}/` +
+          `${n.stabLevelDb >= 0 ? "+" : ""}${n.stabLevelDb}/` +
+          `${n.quietStabLevelDb >= 0 ? "+" : ""}${n.quietStabLevelDb}`
+      )
       .join(" ");
     console.log(
       `  ${row.verdict === "ok" ? "✅" : "⚠️ "} ${row.role.padEnd(7)} ${row.instrument.padEnd(16)} ` +
-        `held/stab ${notes.padEnd(28)} reg ${String(row.registerSpreadDb).padStart(4)} dB  vel ${String(row.velocitySpreadDb).padStart(5)} dB  ×${row.worstBrightness}  ${row.verdict}`
+        `held/stab/quiet ${notes.padEnd(34)} reg ${String(row.registerSpreadDb).padStart(4)} dB  vel ${String(row.velocitySpreadDb).padStart(5)} dB  ×${row.worstBrightness}  ${row.verdict}`
     );
   }
 }

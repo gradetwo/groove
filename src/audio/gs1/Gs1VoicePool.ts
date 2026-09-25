@@ -38,6 +38,7 @@
  */
 import type { MixTrackId } from "../../data/genreMix";
 import { createGs1Host, type Gs1Host } from "./Gs1Host";
+import { gs1VelocityRoute } from "../../data/gs1Patches";
 import {
   GS1_POLYPHONY_CEILING,
   capPlanPolyphony,
@@ -255,6 +256,12 @@ export class Gs1VoicePool {
       }
       if (slot.patch !== plan.patch) {
         slot.host.setPatch(plan.params);
+        /**
+         * …and the velocity response with it, **including when there is none**: a patch swap must clear the previous
+         * route or the next instrument inherits the last one's feel. Slot 0 is the only one used.
+         */
+        const route = gs1VelocityRoute(plan.velToCutoff);
+        slot.host.setModRoute(0, route?.src ?? 3, route?.dst ?? 0, route?.amount ?? 0, Boolean(route));
         slot.patch = plan.patch;
         /**
          * A sample patch needs its recording (P2.5). Not awaited: this runs inside the scheduler, and the native

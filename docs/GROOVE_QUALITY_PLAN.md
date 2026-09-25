@@ -626,6 +626,28 @@ which is the owner's rule arriving as numbers rather than as taste, so they got 
 `brassLead`). The residual ×1.5–1.8 readings are recorded rather than tuned away: a zero-crossing ratio is a coarse
 instrument, and the complaints that started this were ×4–6.6.
 
+### The interaction hypothesis is refuted by the cell that was supposed to confirm it (2026-09-26)
+
+The prediction was that a **quiet, short** note would separate the engines by tens of dB, because the native presets
+carry `velocityToAttack` while the core reads velocity as amplitude. So the calibration grew that cell — and measured
+`strings_lead` at **±0.5 dB both with and without** the velocity→cutoff routes that were added to model the native
+presets' documented `velocityToCutoff` (1.0–2.2 octaves across the routed instruments).
+
+Two honest conclusions, neither of them the one the round set out to prove:
+
+* the **interaction is not the cause** of the genre-stem gap. Five axes now measure clean — register, articulation,
+  velocity, the quiet-stab interaction and brightness — so whatever separates a genre's two renders is something the
+  controlled probe **does not model**;
+* the **velocity response stays anyway**, because it is correct on its own terms: every native preset documents a
+  `velocityToCutoff`, the core has the mod matrix for it (`exp2(mod * 4)`), and the mapping now lives in one place
+  (`gs1VelocityRoute`, with the per-patch values read from the presets themselves). It is committed as a feature that
+  matches the native engine's behaviour, **not** as a fix for a measured defect — there is no A/B improvement to show.
+
+The remaining suspects, in the order the evidence points: a lane's **state in the arrangement** (the earlier genre sweep
+had two pairs where the *native* stem rendered silent while GS-1 did not — if a lane is muted or turned down for a
+section, only one path may be honouring it), and the **stem renderer's isolation** itself. Both are engine-level and
+testable with the fake-context harness rather than with more audio diffs.
+
 ### The disagreement is an interaction: quiet *and* short (2026-09-26)
 
 The controlled measurement now covers four axes per instrument — register (three notes), articulation (held and stab),
