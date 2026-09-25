@@ -99,6 +99,15 @@ export interface SongSection {
   bars: number;
   /** Track ids silenced for this section (a breakdown, a drop). */
   mute?: string[];
+  /**
+   * Per-lane clip choice: this section's `slot` for every lane that is not named here.
+   *
+   * The first step of the per-track arrangement (`docs/TRACK_ARRANGEMENT_PLAN.md`): a section is still one unit of
+   * time, and a lane that says nothing behaves exactly as it did before the field existed — which is the property the
+   * byte-identical test holds. Addressing a lane by its `track_id` rather than by its position means a lane that the
+   * other clip does not have falls back instead of silently taking a different lane's steps.
+   */
+  slots?: Partial<Record<string, ClipSlot>>;
   /** Arrangement-level dynamics: 1 = as written, 0.8 = a quieter build-up. */
   velocityScale?: number;
   /** A human label for the section ("intro", "drop", "fill"), shown on the region. */
@@ -129,6 +138,8 @@ export const MAX_SONG_BARS = 512;
 export interface SongBar {
   sectionId: string;
   slot: ClipSlot;
+  /** The section's per-lane clip choices, when it has any (see `SongSection.slots`). */
+  slots?: Partial<Record<string, ClipSlot>>;
   barInSection: number;
   /** Index in the whole song, from 0. */
   barIndex: number;
@@ -261,6 +272,7 @@ export function resolveTimeline(song: Song, options: TimelineOptions = {}): Song
       bars.push({
         sectionId: section.id,
         slot: section.slot,
+        ...(section.slots ? { slots: section.slots } : {}),
         barInSection: bar,
         barIndex: bars.length,
         mute: section.mute ?? [],
