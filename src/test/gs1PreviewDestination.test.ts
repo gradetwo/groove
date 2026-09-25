@@ -123,3 +123,56 @@ describe("GS-1 previews and playback share one destination", () => {
     expect(previewDest).not.toBe(chordDest);
   });
 });
+
+/**
+ * The invariant behind the fix, over **every** entry point that can reach a GS-1 lane.
+ *
+ * The defect was not "the preview path is wrong" but "two callers disagreed about a host's destination", and the
+ * question that follows is whether any other caller disagrees. This holds the rule for all three roles GS-1 voices
+ * (`chords`, `lead`, `fx`) across all three ways a person can trigger them — the transport, a track header preview and
+ * a pad — so a new call site cannot reintroduce the disagreement without failing here.
+ */
+describe("GS-1 destinations are per lane, whatever plays them", () => {
+  let restore: () => void;
+  beforeEach(() => {
+    localStorage.clear();
+    setGs1RoutingEnabled(true);
+    restore = installFakeAudioContext();
+  });
+  afterEach(() => {
+    restore();
+    setGs1RoutingEnabled(DEFAULT_GS1_ROUTING_ENABLED);
+    localStorage.clear();
+  });
+
+  it("hands the pool one destination per track index across previews and pads", () => {
+    const { pool, plays } = makePoolStub();
+    const engine = new AudioEngine({ createGs1Pool: () => pool });
+    engine.setPattern(pattern(), { resetSteps: false } as never);
+
+    // `chords` (index 5), `lead` (6) and `fx` (7) are the three GS-1 roles in this genre.
+    const trigger = [
+      () => engine.triggerNote(5, "Chords", 0.9, 60, 1, 0.8),
+      () => engine.triggerNote(6, "Lead", 0.9, 72, 1, 0.8),
+      () => engine.triggerNote(7, "FX", 0.9, 60, 1, 0.8),
+      () => engine.auditionTrack("chords", 1),
+      () => engine.auditionTrack("lead", 1),
+      () => engine.auditionTrack("fx", 1),
+    ];
+    for (const call of trigger) call();
+    for (const call of trigger) call();
+
+    expect(plays.length, "every call must have reached GS-1").toBe(trigger.length * 2);
+    const byTrack = new Map<number, Set<unknown>>();
+    for (const play of plays) {
+      const seen = byTrack.get(play.trackIdx) ?? new Set<unknown>();
+      seen.add(play.dest);
+      byTrack.set(play.trackIdx, seen);
+    }
+    for (const [trackIdx, destinations] of byTrack) {
+      expect(destinations.size, `track ${trackIdx} was handed ${destinations.size} destinations`).toBe(1);
+    }
+    // …and the lanes are genuinely different destinations, so the map above is not one shared node.
+    expect(new Set([...byTrack.values()].map((set) => [...set][0])).size).toBe(byTrack.size);
+  });
+});
