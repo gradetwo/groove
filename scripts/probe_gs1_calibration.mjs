@@ -55,6 +55,8 @@ const VELOCITIES = (value("velocities", "0.35,0.9") || "0.35,0.9")
   .map((v) => Number(v))
   .filter((v) => Number.isFinite(v) && v > 0 && v <= 1);
 const SHARD = value("shard", "1/1");
+/** A single lane/instrument to measure, for iterating on one row instead of all 26. */
+const ONLY = value("instrument", "");
 const OUT = value("out", "");
 const asJson = process.argv.includes("--json");
 
@@ -71,6 +73,7 @@ const targets = lanes
     const [role, instrument] = key.split("::");
     return { role, instrument };
   })
+  .filter((target) => !ONLY || target.instrument === ONLY)
   .filter((_, i) => i % (shardCount || 1) === (shardIndex || 1) - 1);
 
 const MIME = {
