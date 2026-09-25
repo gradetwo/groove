@@ -15,6 +15,7 @@ import { buildAbletonLiveSetXml } from "../audio/AbletonExporter";
 import { installFakeOfflineAudioContext, FakeOfflineAudioContext } from "./helpers/fakeAudio";
 import { renderPatternOffline } from "../audio/WavExporter";
 import type { SequencerPattern } from "../types/genre";
+import { setGs1OfflineCapability } from "../audio/gs1/gs1OfflineCapability";
 
 /**
  * N-04: the three exporters used to disagree about per-step probability —
@@ -242,3 +243,11 @@ describe("N-04 · probability is applied identically by every exporter", () => {
     // keep the global fake installation scoped per test
   });
 });
+
+
+/**
+ * The offline GS-1 capability probe renders a throwaway context of its own; these cases inspect the *app's* render
+ * (hosts, strips, buffers) and would otherwise find the probe's instead. Declared satisfied at module scope here; the
+ * probe has its own file, and `probe_engine_parity.mjs` is its acceptance test.
+ */
+setGs1OfflineCapability("usable");

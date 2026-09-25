@@ -1,3 +1,4 @@
+import { setGs1OfflineCapability } from "../audio/gs1/gs1OfflineCapability";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { AudioEngine } from "../audio/AudioEngine";
@@ -323,3 +324,11 @@ describe("kick design · transport self-initialises audio", () => {
     expect(engine.getAudioContext()).toBe(first);
   });
 });
+
+
+/**
+ * The offline GS-1 capability probe renders a throwaway context of its own; these cases inspect the *app's* render
+ * (hosts, strips, buffers) and would otherwise find the probe's instead. Declared satisfied at module scope here; the
+ * probe has its own file, and `probe_engine_parity.mjs` is its acceptance test.
+ */
+setGs1OfflineCapability("usable");

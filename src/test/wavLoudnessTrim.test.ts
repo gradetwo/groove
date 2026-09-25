@@ -9,6 +9,7 @@ import {
 } from "./helpers/fakeAudio";
 import { MASTER_FADER_DEFAULT } from "../audio/masterGraph";
 import type { SequencerPattern } from "../types/genre";
+import { setGs1OfflineCapability } from "../audio/gs1/gs1OfflineCapability";
 
 /**
  * Exporter parity for the genre loudness trim: a bounced master must sit at the same
@@ -138,3 +139,11 @@ describe("offline renderer · genre loudness trim", () => {
     expect(trim).not.toBe(masterGain);
   });
 });
+
+
+/**
+ * The offline GS-1 capability probe renders a throwaway context of its own; these cases inspect the *app's* render
+ * (hosts, strips, buffers) and would otherwise find the probe's instead. Declared satisfied at module scope here; the
+ * probe has its own file, and `probe_engine_parity.mjs` is its acceptance test.
+ */
+setGs1OfflineCapability("usable");

@@ -39,6 +39,7 @@ import { resolveInstrumentPreset } from "../audio/instrumentPresets";
 import { renderPatternOffline } from "../audio/WavExporter";
 import { FakeOfflineAudioContext, installFakeOfflineAudioContext } from "./helpers/fakeAudio";
 import type { SequencerPattern } from "../types/genre";
+import { setGs1OfflineCapability } from "../audio/gs1/gs1OfflineCapability";
 
 /** Semitone offsets from the root: what "which chord is this" actually reduces to. */
 const offsets = (notes: number[]) => notes.map((n) => n - notes[0]);
@@ -659,3 +660,11 @@ describe("chord instrument per genre", () => {
     );
   });
 });
+
+
+/**
+ * The offline GS-1 capability probe renders a throwaway context of its own; these cases inspect the *app's* render
+ * (hosts, strips, buffers) and would otherwise find the probe's instead. Declared satisfied at module scope here; the
+ * probe has its own file, and `probe_engine_parity.mjs` is its acceptance test.
+ */
+setGs1OfflineCapability("usable");

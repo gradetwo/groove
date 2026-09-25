@@ -3,6 +3,7 @@ import { AudioEngine } from "../audio/AudioEngine";
 import { renderPatternOffline } from "../audio/WavExporter";
 import { installFakeAudioContext, installFakeOfflineAudioContext, FakeAudioContext, FakeOfflineAudioContext } from "./helpers/fakeAudio";
 import type { SequencerPattern, SequencerTrack } from "../types/genre";
+import { setGs1OfflineCapability } from "../audio/gs1/gs1OfflineCapability";
 
 describe("Phase 2.3 Acoustic Enhancements: Hi-Hat Choke Group & Kick/Bass Ducking", () => {
   let restoreFakeAudio: () => void;
@@ -208,3 +209,11 @@ describe("Phase 2.3 Acoustic Enhancements: Hi-Hat Choke Group & Kick/Bass Duckin
     expect(chokedGains.length).toBeGreaterThanOrEqual(1);
   });
 });
+
+
+/**
+ * The offline GS-1 capability probe renders a throwaway context of its own; these cases inspect the *app's* render
+ * (hosts, strips, buffers) and would otherwise find the probe's instead. Declared satisfied at module scope here; the
+ * probe has its own file, and `probe_engine_parity.mjs` is its acceptance test.
+ */
+setGs1OfflineCapability("usable");

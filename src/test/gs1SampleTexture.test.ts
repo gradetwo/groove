@@ -1,7 +1,7 @@
+import { setGs1OfflineCapability } from "../audio/gs1/gs1OfflineCapability";
 import { afterEach, describe, it, expect, vi } from "vitest";
 import { GS1_PATCHES, GS1_TEXTURE_ROUTING, resolveGs1Patch, routingForRole } from "../data/gs1Patches";
 import { gs1PatchFor, patchNeedsSample } from "../audio/gs1/gs1Tracks";
-import { setGs1OfflineCapability } from "../audio/gs1/gs1OfflineCapability";
 
 /**
  * The offline capability probe builds a host of its own, and these cases count hosts and assert what the renderer did

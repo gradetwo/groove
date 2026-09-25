@@ -11,6 +11,7 @@
  * cannot observe. `exportMasterWav` therefore has to carry the kind out, and the sequencer's export
  * action has to say something when it is `"fallback"`.
  */
+import { setGs1OfflineCapability } from "../audio/gs1/gs1OfflineCapability";
 import { describe, it, expect, afterEach } from "vitest";
 import { exportMasterWav, renderPatternOffline } from "../audio/WavExporter";
 import type { DrumPattern } from "../types/genre";
@@ -125,3 +126,11 @@ describe("a GS-1 voice that could not load is reported", () => {
     expect(result.gs1HostFailures).toBe(0);
   });
 });
+
+
+/**
+ * The offline GS-1 capability probe renders a throwaway context of its own; these cases inspect the *app's* render
+ * (hosts, strips, buffers) and would otherwise find the probe's instead. Declared satisfied at module scope here; the
+ * probe has its own file, and `probe_engine_parity.mjs` is its acceptance test.
+ */
+setGs1OfflineCapability("usable");
