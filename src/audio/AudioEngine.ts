@@ -1539,7 +1539,11 @@ export class AudioEngine {
      * transport start asks once. Deliberately **not awaited**: a silent browser hears its first moments natively and
      * the routing flips as soon as the answer arrives, rather than delaying playback on a 300 ms measurement.
      */
-    if (this.ctx && this.gs1Enabled && gs1Capability() === undefined) void this.probeLiveGs1();
+    if (this.ctx && this.gs1Enabled && gs1Capability() === undefined) {
+      // Fire and forget, and **swallowed**: a probe must never become an unhandled rejection (the unit suite caught
+      // exactly that — twelve of them from the scheduler's own tests, where `play()` runs against a fake context).
+      void this.probeLiveGs1().catch(() => undefined);
+    }
     /**
      * A full play clears any preview scope, because that is what the user just asked for.
      *

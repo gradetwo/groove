@@ -166,7 +166,15 @@ export async function ensureLiveGs1Capability(
      * The control first, and it decides everything: a context that cannot reproduce a plain oscillator cannot tell us
      * anything about the synth engine, so the verdict is `unmeasured` and the current routing is left alone.
      */
-    const referencePeak = await measureReferenceTone(context, analyser);
+    let referencePeak = 0;
+    try {
+      referencePeak = await measureReferenceTone(context, analyser);
+    } catch {
+      // A context that cannot build the reference graph is not evidence about the engine (a test double, a partial
+      // implementation) — the same rule as a host that will not build.
+      cached = "unmeasured";
+      return cached;
+    }
     if (referencePeak < GS1_PROBE_PEAK_THRESHOLD) {
       cached = "unmeasured";
       return cached;
