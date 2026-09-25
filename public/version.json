@@ -1,23 +1,23 @@
 {
   "version": "2.19.1",
   "releaseDate": "2026-09-24",
-  "changelogCount": 214,
+  "changelogCount": 10,
   "latest": {
     "version": "2.19.1",
     "date": "2026-09-24",
     "category": "fix",
     "title": {
-      "zh": "v2.19.1 维护版本：声音没有变化，收尾 P2.5 的内容问题并补齐一处回退音色",
-      "en": "v2.19.1 maintenance: no audible change — P2.5's content question closed, and one fallback gap filled"
+      "zh": "维护版：补上织体音色的后备音色，更新记录只保留最近十条",
+      "en": "Maintenance: a fallback voice for the texture instruments, and the changelog keeps the latest ten"
     },
     "highlights": [
       {
-        "zh": "这一版**不含任何可听变化**，是上一版之后的收尾。① 采样织体的「内容」问题有了结论：159 个曲风的 `fx` 轨都是**每循环一次转场音**，没有空轨可用——试过的两个换法（chillwave 用 vocal chop、glitch-hop 用 found sound）都被试听否掉，已回退；P2.5 真正落地的内容就是 v2.18.0 里那 26 个曲风的唱针噪声。② 顺带补上一个真实缺口：织体乐器在 GS-1 关闭时没有原生回退音色（会掉到没人选过的默认音色），现在三个名字都有了对应，并被新的用例盯住。",
-        "en": "This release has **no audible change**; it closes out the previous one. (1) P2.5's content question has an answer: the `fx` lane is a single transition hit per loop in all 159 genres, so there is no free lane — the two swaps tried (a vocal chop for chillwave, a found sound for glitch-hop) were rejected by ear and reverted, and P2.5's real content is what shipped in v2.18.0 (26 genres' needle noise playing a recording). (2) It filled a genuine gap on the way: a texture instru…"
+        "zh": "修掉一处隐患：采样织体音色在关闭新合成引擎时没有后备音色，会掉到一个没人选过的默认音色。",
+        "en": "Fixed a gap: a sample-texture instrument had no fallback voice with the new synth engine switched off, and fell through to a default nobody chose."
       },
       {
-        "zh": "另外新增 `scripts/render_genre_wav.mjs`（把某个曲风渲染成 WAV，供试听；`--no-gs1` 可渲染同一条轨的原生回退版本），它是这一轮判断「听到的到底是采样还是回退音色」的依据——两次渲染一比即知，比从单个文件推断可靠。",
-        "en": "Also new: `scripts/render_genre_wav.mjs` renders a genre to a WAV for auditions (`--no-gs1` renders the same lane's native fallback), which is what settled \"was that the recording or the fallback?\" — two renders answer it, while a single file only invites a guess."
+        "zh": "这一版没有可听的变化。",
+        "en": "Nothing in this release changes what you hear."
       }
     ],
     "truncated": false
