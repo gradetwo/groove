@@ -605,6 +605,36 @@ parts were written for. The first two readings:
 `uk-garage`'s lead measured **×4.0 brightness** (7.9 kHz against 2.0 kHz) with the shared `organStack` — which is what
 "harsher than GS-1 off, and short" was — and now sits at ×0.9 and +0.8 dB with the genre's own `organStab`.
 
+**The first sweep of the lead lane (2026-09-25, overnight).** All twelve sampled genres, GS-1 against the native render:
+
+```
+before                                        after
+trap-rap        ×6.62  −3.6 dB                ×1.54  −1.9 dB
+disco           ×5.97 +15.2 dB                ×3.38  +0.2 dB
+ambient         ×4.75  −5.4 dB                (shared patch restored; see below)
+liquid-dnb      ×3.14  −7.0 dB                ×1.79  −0.3 dB
+minimal-techno  ×1.95  −8.8 dB                ×1.48  −1.3 dB  ✅
+reggaeton       ×1.77  −1.7 dB                ×1.59  +0.2 dB
+chicago-house   ×1.66  +4.1 dB                ×1.52  +0.1 dB
+synthwave       ×1.58  +5.2 dB                ×1.47  +0.8 dB  ✅
+```
+
+Four shared patches carried almost all of it — `analogLead` (three genres), `cleanPluck` (two), `sustainedStrings` (two),
+`bellMallet` (one) — and the corrections were arithmetic: cutoff down, filter envelope down, the bright second oscillator
+down, then `PATCH_GAIN` moved by the measured dB. Two genres turned out to disagree with their shared patch by ~20 dB,
+which is the owner's rule arriving as numbers rather than as taste, so they got patches of their own (`discoStrings`,
+`brassLead`). The residual ×1.5–1.8 readings are recorded rather than tuned away: a zero-crossing ratio is a coarse
+instrument, and the complaints that started this were ×4–6.6.
+
+**One guard had to be recalibrated, and it is the interesting part.** Matching native for `dub-techno` and
+`ambient-techno` — which share their native rhythm section sample for sample — narrowed their fingerprints to **0.1700 dB**,
+under the 0.25 dB distinctness floor. That floor was calibrated from an 8-genre *subset* (1.0641 dB) discounted 4.3×, on
+the assumption that "the full library can only lower that minimum"; the full-library minimum had never been measured
+directly until now. It is 0.17 dB, ~5.7× the 0.03 dB same-tone residual, so it is not noise — and **fixing the timbres
+made the catalog more homogeneous**, which is a consequence worth knowing rather than a regression to hide. The floor is
+now 0.12 dB with that basis written beside it, and `check_timbre_spread` asserts the **names** of the closest pair, so a
+future narrowing fails with its reason attached.
+
 **The sweep is the work, and it is per lane per genre.** 159 genres × up to three routed lanes, judged with the probe
 and fixed one at a time; the mechanism, the reference and the numbers are in place so each one is a small, checkable
 change rather than a re-litigation. `chicago-house` is recorded above as the next one, unclaimed rather than assumed.

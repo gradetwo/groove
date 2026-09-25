@@ -344,6 +344,22 @@ check(
     ? `${closestPair.a} ↔ ${closestPair.b} = ${closestPair.distance.toFixed(4)} dB`
     : "no pairs to compare"
 );
+/**
+ * The pair the floor is calibrated against, named.
+ *
+ * The floor moved from 0.25 to 0.12 when the full library's minimum was finally measured (see `timbreSource.mjs`), and
+ * the pair that sets it is these two: they share their native rhythm section sample for sample, so the only lane left
+ * to differ in is the lead. Asserting the **names** means a future change that narrows some *other* pair — or narrows
+ * this one further — fails with the reason attached instead of sliding under a number whose basis nobody remembers.
+ */
+const CALIBRATED_CLOSEST_PAIR = ["ambient-techno", "dub-techno"];
+check(
+  "the closest pair is still the one the floor was calibrated against",
+  Boolean(closestPair) &&
+    CALIBRATED_CLOSEST_PAIR.includes(closestPair.a) &&
+    CALIBRATED_CLOSEST_PAIR.includes(closestPair.b),
+  closestPair ? `${closestPair.a} ↔ ${closestPair.b}` : "no pairs to compare"
+);
 const meanPairDistance = pairCount > 0 ? pairDistanceSum / pairCount : 0;
 const reported = report.distinctness;
 const reportedClosest = reported?.closestPair;

@@ -63,3 +63,9 @@ scripts/*.progress.json
 wrangler.toml
 # MCP server bundle (built by `npm run mcp:build`)
 dist-mcp/
+
+# Cover-pipeline scratch (the batch runner's own working files, never shipped)
+public/covers/_batch_scratch/
+public/covers/_BATCH_STATE.md
+public/covers/_batch_progress.log
+public/covers/_batch_keepalive.sh

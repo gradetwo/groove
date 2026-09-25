@@ -54,6 +54,14 @@ export type Gs1PatchName =
   | "organStack"
   /** The organ as a UK-garage lead plays it — see the patch body and `GENRE_GS1_PATCH_OVERRIDES`. */
   | "organStab"
+  /** Quieter strings for a genre whose own part sits under the mix (`disco`). */
+  | "discoStrings"
+  /** A brass lead that carries (`reggaeton`). */
+  | "brassLead"
+  /** Dub techno's own hollow lead stab. */
+  | "dubStab"
+  /** Ambient techno's wide strings wash — see the patch body for the trade it records. */
+  | "ambientStrings"
   | "sampleTexture"
   | "sampleSurface";
 
@@ -157,20 +165,27 @@ export const GS1_PATCHES: Record<Gs1PatchName, Gs1Patch> = {
     [Param.PATCH_GAIN]: 0.6,
   },
   /** Bowed ensemble: the slow swell that chords tracks use instead of a pad. */
+  /**
+   * Measured in `ambient` (×4.75 brightness, −5.4 dB) and `disco` (×5.97, **+15.2 dB**): nearly six times the
+   * high-frequency activity of the native strings, and the two genres disagree about level, so the correction targets
+   * the middle rather than either reading.
+   */
   sustainedStrings: {
     [Param.OSC1_ON]: 1,
     [Param.OSC1_WAVE]: 2,
     [Param.OSC1_LEVEL]: 0.62,
-    [Param.OSC1_UNISON]: 5,
-    [Param.OSC1_SPREAD]: 0.62,
+    // Five detuned saws is a bright chorus: closing the filter to 700 Hz barely moved the measured brightness
+    // (×5.97 → ×4.93), and the stack itself is what carries it. Two voices is still a string section.
+    [Param.OSC1_UNISON]: 2,
+    [Param.OSC1_SPREAD]: 0.3,
     [Param.OSC2_ON]: 1,
     [Param.OSC2_WAVE]: 2,
-    [Param.OSC2_LEVEL]: 0.42,
+    [Param.OSC2_LEVEL]: 0.2,
     [Param.OSC2_DETUNE]: -11,
     [Param.FILTER_TYPE]: 1, // SVF
-    [Param.FILTER_CUTOFF]: 2600,
+    [Param.FILTER_CUTOFF]: 700,
     [Param.FILTER_RES]: 0.12,
-    [Param.FILTER_ENV_AMT]: 0.25,
+    [Param.FILTER_ENV_AMT]: 0.12,
     [Param.FILTER_KBD]: 0.35,
     [Param.ENV_ATTACK]: 0.32,
     [Param.ENV_DECAY]: 0.9,
@@ -181,21 +196,32 @@ export const GS1_PATCHES: Record<Gs1PatchName, Gs1Patch> = {
     [Param.LFO_RATE]: 5.2,
     [Param.LFO_DEPTH]: 0.12,
     [Param.LFO_TARGET]: Param.OSC1_PITCH,
-    [Param.PATCH_GAIN]: 0.5,
+    /**
+     * Back up to 0.45: with 0.22 this shared registration served `ambient` at −7.5 dB, and a shared patch should serve
+     * the typical part — the genre that genuinely sits under the mix has `discoStrings` of its own.
+     */
+    [Param.PATCH_GAIN]: 0.45,
   },
   /** Picked/plucked: a real attack transient, then out of the way. */
+  /**
+   * Measured in `liquid-dnb` (×3.14 brightness, −7 dB) and `minimal-techno` (×1.95, −8.8 dB): three times the
+   * high-frequency activity and markedly quieter than the native pluck. Cutoff, filter envelope and the saw's level come
+   * down together; the gain comes up.
+   */
   cleanPluck: {
     [Param.OSC1_ON]: 1,
     [Param.OSC1_WAVE]: 1,
-    [Param.OSC1_LEVEL]: 0.75,
+    // The level the measurement asked for comes from the oscillator levels rather than `PATCH_GAIN`, because the core's
+    // own headroom rule caps that at 0.6 (the eight-voice E3 measurement) and the range guard enforces it.
+    [Param.OSC1_LEVEL]: 1,
     [Param.OSC2_ON]: 1,
     [Param.OSC2_WAVE]: 2,
     [Param.OSC2_LEVEL]: 0.3,
     [Param.OSC2_DETUNE]: 4,
     [Param.FILTER_TYPE]: 1,
-    [Param.FILTER_CUTOFF]: 2400,
+    [Param.FILTER_CUTOFF]: 1000,
     [Param.FILTER_RES]: 0.22,
-    [Param.FILTER_ENV_AMT]: 0.6,
+    [Param.FILTER_ENV_AMT]: 0.3,
     [Param.FILTER_KBD]: 0.45,
     [Param.ENV_ATTACK]: 0.002,
     [Param.ENV_DECAY]: 0.35,
@@ -250,6 +276,12 @@ export const GS1_PATCHES: Record<Gs1PatchName, Gs1Patch> = {
     [Param.PATCH_GAIN]: 0.5,
   },
   /** Lead that glides: one saw, resonant filter, a little portamento. */
+  /**
+   * Measured against the native lead in three genres that route here (`chicago-house` ×1.66/+4.1 dB, `detroit-techno`
+   * ×1.5/+3.5, `synthwave` ×1.58/+5.2): the shared patch was brighter and louder than the part it replaces, in every
+   * one of them. The cutoff, the filter envelope and the detuned second saw carry the brightness; the gain carries the
+   * level. The correction is arithmetic — halving the cutoff and pulling ~4 dB out — not taste.
+   */
   analogLead: {
     [Param.OSC1_ON]: 1,
     [Param.OSC1_WAVE]: 2,
@@ -259,18 +291,18 @@ export const GS1_PATCHES: Record<Gs1PatchName, Gs1Patch> = {
     [Param.OSC2_ON]: 1,
     [Param.OSC2_WAVE]: 2,
     [Param.OSC2_DETUNE]: 9,
-    [Param.OSC2_LEVEL]: 0.35,
+    [Param.OSC2_LEVEL]: 0.22,
     [Param.FILTER_TYPE]: 0,
-    [Param.FILTER_CUTOFF]: 3400,
+    [Param.FILTER_CUTOFF]: 1900,
     [Param.FILTER_RES]: 0.35,
-    [Param.FILTER_ENV_AMT]: 0.45,
+    [Param.FILTER_ENV_AMT]: 0.25,
     [Param.FILTER_KBD]: 0.4,
     [Param.ENV_ATTACK]: 0.006,
     [Param.ENV_DECAY]: 0.4,
     [Param.ENV_SUSTAIN]: 0.8,
     [Param.ENV_RELEASE]: 0.3,
     [Param.GLIDE]: 0.18,
-    [Param.PATCH_GAIN]: 0.55,
+    [Param.PATCH_GAIN]: 0.35,
   },
   /** Hollow and steady: squares, no glide, that 80s topline. */
   squareLead: {
@@ -313,23 +345,28 @@ export const GS1_PATCHES: Record<Gs1PatchName, Gs1Patch> = {
     [Param.PATCH_GAIN]: 0.5,
   },
   /** Struck metal: sine carrier through FM, long ring, no sustain. */
+  /**
+   * Measured in `trap-rap` at **×6.62 brightness** (−3.6 dB) against the native lead. A bell is bright by nature, and
+   * this patch's FM index plus its octave-and-a-fifth partial put it six times above the part it replaces: both come
+   * down, the filter closes, and the gain comes up to meet the level.
+   */
   bellMallet: {
     [Param.OSC1_ON]: 1,
     [Param.OSC1_WAVE]: 0, // sine
-    [Param.OSC1_LEVEL]: 0.8,
+    [Param.OSC1_LEVEL]: 0.95,
     [Param.OSC2_ON]: 1,
     [Param.OSC2_WAVE]: 0,
-    [Param.OSC2_PITCH]: 19,
-    [Param.OSC2_LEVEL]: 0.2,
-    [Param.OSC_FM]: 0.42,
+    [Param.OSC2_PITCH]: 12,
+    [Param.OSC2_LEVEL]: 0.16,
+    [Param.OSC_FM]: 0.12,
     [Param.FILTER_TYPE]: 1,
-    [Param.FILTER_CUTOFF]: 8000,
+    [Param.FILTER_CUTOFF]: 2500,
     [Param.FILTER_RES]: 0.05,
     [Param.ENV_ATTACK]: 0.002,
     [Param.ENV_DECAY]: 1.6,
     [Param.ENV_SUSTAIN]: 0.02,
     [Param.ENV_RELEASE]: 1.8,
-    [Param.PATCH_GAIN]: 0.45,
+    [Param.PATCH_GAIN]: 0.6,
   },
   /** Drawbar-ish organ: steady, hollow, a touch of sub. */
   /**
@@ -390,6 +427,127 @@ export const GS1_PATCHES: Record<Gs1PatchName, Gs1Patch> = {
      */
     [Param.ENV_RELEASE]: 1.3,
     [Param.PATCH_GAIN]: 0.46,
+  },
+  /**
+   * `sustainedStrings`, quieter — for a genre whose own string part sits well under the mix (`disco`, measured at
+   * **+15.2 dB** over the native reference with the shared patch).
+   *
+   * The shared patch cannot be tuned to satisfy both ends: `ambient` reads −5.4 dB with the same registration, so a
+   * 20 dB spread between two genres is not a patch problem, it is two different parts. That is the owner's rule
+   * arriving as arithmetic.
+   */
+  discoStrings: {
+    [Param.OSC1_ON]: 1,
+    [Param.OSC1_WAVE]: 2,
+    [Param.OSC1_LEVEL]: 0.6,
+    [Param.OSC1_UNISON]: 2,
+    [Param.OSC1_SPREAD]: 0.28,
+    [Param.OSC2_ON]: 1,
+    [Param.OSC2_WAVE]: 2,
+    [Param.OSC2_LEVEL]: 0.18,
+    [Param.OSC2_DETUNE]: -9,
+    [Param.FILTER_TYPE]: 1,
+    [Param.FILTER_CUTOFF]: 900,
+    [Param.FILTER_RES]: 0.12,
+    [Param.FILTER_ENV_AMT]: 0.1,
+    [Param.FILTER_KBD]: 0.3,
+    [Param.ENV_ATTACK]: 0.28,
+    [Param.ENV_DECAY]: 0.9,
+    [Param.ENV_SUSTAIN]: 0.9,
+    [Param.ENV_RELEASE]: 1.1,
+    [Param.LFO_ON]: 1,
+    [Param.LFO_WAVE]: 0,
+    [Param.LFO_RATE]: 5.2,
+    [Param.LFO_DEPTH]: 0.1,
+    [Param.LFO_TARGET]: Param.OSC1_PITCH,
+    [Param.PATCH_GAIN]: 0.06,
+  },
+  /**
+   * A brass lead that carries — for `reggaeton`, where the shared `analogLead` (corrected for the three saw-lead
+   * genres) measured **−6.1 dB** under the native part. Same voice, more gain and a slower attack, which is what a
+   * brass line does differently from a synth lead.
+   */
+  brassLead: {
+    [Param.OSC1_ON]: 1,
+    [Param.OSC1_WAVE]: 2,
+    [Param.OSC1_LEVEL]: 0.85,
+    [Param.OSC1_UNISON]: 2,
+    [Param.OSC1_SPREAD]: 0.2,
+    [Param.OSC2_ON]: 1,
+    [Param.OSC2_WAVE]: 2,
+    [Param.OSC2_DETUNE]: 7,
+    [Param.OSC2_LEVEL]: 0.24,
+    [Param.FILTER_TYPE]: 0,
+    [Param.FILTER_CUTOFF]: 2000,
+    [Param.FILTER_RES]: 0.28,
+    [Param.FILTER_ENV_AMT]: 0.3,
+    [Param.FILTER_KBD]: 0.4,
+    [Param.ENV_ATTACK]: 0.05,
+    [Param.ENV_DECAY]: 0.3,
+    [Param.ENV_SUSTAIN]: 0.85,
+    [Param.ENV_RELEASE]: 0.35,
+    [Param.PATCH_GAIN]: 0.6,
+  },
+  /**
+   * Dub techno's lead: a short, hollow stab through a resonant low filter — the chord-and-stab language of the genre,
+   * and deliberately nothing like either neighbour in the catalog (`analogLead`'s sustained saw, `sustainedStrings`'
+   * airy pad).
+   */
+  dubStab: {
+    [Param.OSC1_ON]: 1,
+    [Param.OSC1_WAVE]: 3, // pulse — hollow, and the resonant filter does the rest
+    [Param.OSC1_LEVEL]: 0.5,
+    [Param.OSC2_ON]: 1,
+    [Param.OSC2_WAVE]: 1,
+    [Param.OSC2_PITCH]: -12,
+    [Param.OSC2_LEVEL]: 0.25,
+    [Param.FILTER_TYPE]: 0,
+    [Param.FILTER_CUTOFF]: 900,
+    [Param.FILTER_RES]: 0.62,
+    [Param.FILTER_ENV_AMT]: 0.5,
+    [Param.FILTER_KBD]: 0.25,
+    [Param.ENV_ATTACK]: 0.004,
+    [Param.ENV_DECAY]: 0.16,
+    [Param.ENV_SUSTAIN]: 0.25,
+    [Param.ENV_RELEASE]: 0.3,
+    [Param.PATCH_GAIN]: 0.55,
+  },
+  /**
+   * Ambient techno's strings: a wide, slow, noticeably brighter wash than the corrected shared patch — deliberately
+   * **not** the closest match to this lane's native reference.
+   *
+   * This is a documented trade between two guards, and it is worth stating plainly. The voicing rule wants each lane
+   * near its native render; the distinctness floor wants two genres to differ. For `ambient-techno` and `dub-techno`,
+   * both cannot hold: they share their native rhythm section sample for sample, so the pair distance is dominated by
+   * the low end and the *only* lever left is this lane. Two attempts to separate them through the chords moved the
+   * number the wrong way (0.150 → 0.145), which is what a low-end-dominated metric does; the lead is the lever, so the
+   * lead is where they differ, and this patch says so out loud rather than leaving a mystery for the next reader.
+   */
+  ambientStrings: {
+    [Param.OSC1_ON]: 1,
+    [Param.OSC1_WAVE]: 2,
+    [Param.OSC1_LEVEL]: 0.62,
+    [Param.OSC1_UNISON]: 5,
+    [Param.OSC1_SPREAD]: 0.62,
+    [Param.OSC2_ON]: 1,
+    [Param.OSC2_WAVE]: 2,
+    [Param.OSC2_LEVEL]: 0.42,
+    [Param.OSC2_DETUNE]: -11,
+    [Param.FILTER_TYPE]: 1,
+    [Param.FILTER_CUTOFF]: 2600,
+    [Param.FILTER_RES]: 0.12,
+    [Param.FILTER_ENV_AMT]: 0.25,
+    [Param.FILTER_KBD]: 0.35,
+    [Param.ENV_ATTACK]: 0.32,
+    [Param.ENV_DECAY]: 0.9,
+    [Param.ENV_SUSTAIN]: 0.9,
+    [Param.ENV_RELEASE]: 1.1,
+    [Param.LFO_ON]: 1,
+    [Param.LFO_WAVE]: 0,
+    [Param.LFO_RATE]: 5.2,
+    [Param.LFO_DEPTH]: 0.12,
+    [Param.LFO_TARGET]: Param.OSC1_PITCH,
+    [Param.PATCH_GAIN]: 0.5,
   },
   organStack: {
     [Param.OSC1_ON]: 1,
@@ -563,6 +721,13 @@ export const GENRE_GS1_PATCH_OVERRIDES: Record<string, Partial<Record<string, Gs
    * with a level matched to the native part.
    */
   "uk-garage": { m1_organ: "organStab" },
+  /** +15.2 dB over the native strings with the shared patch; see `discoStrings`. */
+  disco: { strings_lead: "discoStrings" },
+  /** −6.1 dB under the native brass with the corrected shared lead; see `brassLead`. */
+  reggaeton: { brass_synth: "brassLead" },
+  /** Its own chord stab, and the pair distance the baseline floor requires; see `dubChord`. */
+  "dub-techno": { saw_lead: "dubStab" },
+  "ambient-techno": { strings_lead: "ambientStrings" },
 };
 
 /** The instruments a genre overrides, for the plan's per-genre voicing sweep and for tests. */

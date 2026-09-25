@@ -1,23 +1,23 @@
 {
-  "version": "2.23.0",
+  "version": "2.24.0",
   "releaseDate": "2026-09-25",
   "changelogCount": 10,
   "latest": {
-    "version": "2.23.0",
-    "date": "2026-09-25",
+    "version": "2.24.0",
+    "date": "2026-09-26",
     "category": "feature",
     "title": {
-      "zh": "每个曲风自己的主奏音色；导出更省内存",
-      "en": "Each genre voices its own lead; lighter exports"
+      "zh": "按曲风校正主奏音色；开屏与排障改进",
+      "en": "Lead timbres corrected per genre; start screen and diagnostics"
     },
     "highlights": [
       {
-        "zh": "音色改为按曲风设计：同一种乐器在不同曲风里可以有不同的声音。UK Garage 的主奏换成它自己的管风琴音色（按实测调到接近原生参考：亮度 ×0.9、电平 +0.8 dB）。",
-        "en": "Timbre is now chosen per genre: the same instrument can sound different in different genres. UK Garage's lead gets its own organ voice, measured to sit close to the native reference (brightness ×0.9, level +0.8 dB)."
+        "zh": "主奏音色按曲风逐个对照原生参考校正：十二个抽样曲风里最刺耳的从 6.6 倍亮度降到 1.5 倍、电平差从 ±15 dB 收到 ±2 dB；其中两个曲风（Disco、Reggaeton）与共用音色相差约 20 dB，改为各自专用音色。",
+        "en": "Lead timbres were corrected genre by genre against the native reference: the harshest reading fell from 6.6× brightness to 1.5×, and level differences from ±15 dB to ±2 dB. Two genres (Disco, Reggaeton) whose parts differ from the shared patch by ~20 dB got patches of their own."
       },
       {
-        "zh": "分轨导出更省内存，并在预计占用较大时先提示：之前会同时把全部轨道读进内存（峰值约三份），Safari 内存不足会直接重启页面。",
-        "en": "Stems export uses less memory and warns first when the estimate is large: it used to hold all stems in memory at once (about three copies), and Safari restarts the page when it runs out."
+        "zh": "开屏改成与参考项目完全一致的尺寸与透明度（半透明遮罩、按内容大小的按钮）；调试面板新增浏览器自身的音频延迟读数。",
+        "en": "The start screen now matches the reference project's measurements and transparency (a translucent mask, a content-sized button), and the debug panel reports the browser's own audio latency."
       }
     ],
     "truncated": false
