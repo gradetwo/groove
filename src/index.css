@@ -761,15 +761,6 @@ html.reduced-motion .animate-orbit {
   opacity: 0.6;
   cursor: progress;
 }
-.gate-diag {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 10px;
-  font-weight: 500;
-  line-height: 1.5;
-  letter-spacing: 0.02em;
-  opacity: 0.45;
-  text-align: center;
-}
 .gate-error {
   background: rgba(120, 30, 30, 0.35);
   border: 1px solid rgba(220, 120, 120, 0.35);

@@ -139,6 +139,7 @@ export function AudioStartGate({ children, onStart }: AudioStartGateProps) {
             <div className="gate-name">
               GROOVE <b>LAB</b>
             </div>
+            <div className="gate-sub">{environment}</div>
           </div>
           <button
             type="button"
@@ -149,9 +150,6 @@ export function AudioStartGate({ children, onStart }: AudioStartGateProps) {
           >
             {busy ? "正在启动… / Starting…" : "启动音频引擎 / Start Audio Engine"}
           </button>
-          <div className="gate-diag" data-testid="audio-start-diag">
-            {environment}
-          </div>
           {error ? (
             <div className="gate-error" data-testid="audio-start-error" role="alert">
               <b>启动失败 / Startup failed</b>
