@@ -53,6 +53,24 @@ const seamlessLoop = process.argv.includes("--seamless-loop");
  * other); rendering both can.
  */
 const noGs1 = process.argv.includes("--no-gs1");
+/**
+ * Render **one lane**, by `track_id` (`--stem=hihat`).
+ *
+ * The exporter's own stem option, which is how "check every track of this genre" gets done: eight files that can be
+ * listened to one at a time instead of one file that has to be argued about as a whole.
+ */
+const stemRole = arg("--stem", "");
+/** Render the authored skeleton instead of the shipping pattern (see the note at the call site). */
+const raw = process.argv.includes("--raw");
+/**
+ * Which engine to render in: `chromium` (default), `webkit` or `firefox`.
+ *
+ * Safari is the reason this exists. A report that a genre's lead track sounds wrong on Safari (desktop *and* phone)
+ * while Chrome is fine cannot be investigated from a Chromium-only tool — the difference between the engines is the
+ * subject, not the noise. All three are installed for the e2e matrix, so the same render can be taken twice and
+ * compared byte for byte, which is the only way to tell "the browser sounds different" from "the mix is different".
+ */
+const browserName = (arg("--browser", "chromium") || "chromium").toLowerCase();
 
 const waitForServer = (url, timeoutMs = 30000) =>
   new Promise((resolve, reject) => {
@@ -88,13 +106,15 @@ let exitCode = 0;
 try {
   const url = `http://127.0.0.1:${port}/`;
   await waitForServer(url);
-  const browser = await playwright.chromium.launch({ args: ["--no-sandbox"] });
+  const engine = playwright[browserName];
+  if (!engine) throw new Error(`unknown browser ${browserName} (chromium | webkit | firefox)`);
+  const browser = await engine.launch({ args: browserName === "chromium" ? ["--no-sandbox"] : [] });
   const page = await browser.newPage();
   page.on("pageerror", (error) => console.error("[page]", error.message));
   await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
 
   const result = await page.evaluate(
-    async ({ genreId, bars, seamlessLoop, noGs1 }) => {
+    async ({ genreId, bars, seamlessLoop, noGs1, stemRole, raw }) => {
       const [genres, wav, mix, trackStates, gs1Tracks] = await Promise.all([
         import("/src/data/genres/index.ts"),
         import("/src/audio/WavExporter.ts"),
@@ -107,11 +127,27 @@ try {
       if (noGs1) gs1Tracks.setGs1RoutingEnabled(false);
       const entry = genres.ALL_GENRES.find((g) => g.id === genreId);
       if (!entry) return { error: `unknown genre ${genreId}` };
-      const pattern = entry.sequencer_pattern;
+      /**
+       * The **shipping** pattern, not the authored skeleton.
+       *
+       * `patternFromGenre` is what the app plays: it applies the mix defaults, writes the genre's chords as real
+       * note stacks, grows the pattern to the progression's length and runs the humanisation/texture passes. The
+       * first version of this tool rendered `entry.sequencer_pattern` — the raw data — so a review of "the genre"
+       * was a review of a pattern nobody hears: it reported "mechanical, no accents or ghosts" for a lane whose
+       * ghosts the humanisation pass adds. `--raw` renders the skeleton, for when that is what is being asked.
+       */
+      const pattern = raw ? entry.sequencer_pattern : mix.patternFromGenre(entry);
+      const stemIndex = stemRole
+        ? pattern.tracks.findIndex((track) => track.track_id === stemRole)
+        : undefined;
+      if (stemRole && (stemIndex === undefined || stemIndex < 0)) {
+        return { error: `no track with track_id ${stemRole}` };
+      }
       const buffer = await wav.renderPatternOffline(pattern, {
         bars,
         seamlessLoop,
         trackStates: trackStates.deriveTrackStates(pattern),
+        ...(stemIndex === undefined ? {} : { stemTrackIdx: stemIndex }),
       });
       const bytes = new Uint8Array(wav.encodeAudioBufferToWav(buffer));
       /**
@@ -141,7 +177,7 @@ try {
           : null,
       };
     },
-    { genreId: genre, bars, seamlessLoop, noGs1 }
+    { genreId: genre, bars, seamlessLoop, noGs1, stemRole, raw }
   );
 
   await browser.close();
