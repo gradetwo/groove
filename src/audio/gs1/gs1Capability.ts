@@ -121,6 +121,55 @@ export async function probeGs1Output(deps: ProbeDeps): Promise<Gs1Capability> {
  */
 let cached: Gs1Capability | undefined;
 
+/**
+ * Run the probe against a **live** context and cache the verdict.
+ *
+ * This is the wiring the module header said belonged in "a probe that renders in the context under test": the host is
+ * built on the real `AudioContext`, fed one note, and read through an analyser on that same context. The note is
+ * routed through a zero-gain node into the master so the graph is pulled — an analyser with no path to the
+ * destination is not rendered at all — while staying inaudible.
+ *
+ * Cached per page: one page has one audio stack, and the probe costs a WASM core plus a third of a second.
+ */
+export async function ensureLiveGs1Capability(
+  context: BaseAudioContext,
+  options: { createHost?: () => Promise<Gs1Host> } = {}
+): Promise<Gs1Capability> {
+  if (cached) return cached;
+  const createHost = options.createHost ?? (() => createGs1Host({ context }));
+  const analyser = context.createAnalyser();
+  analyser.fftSize = 2048;
+  const silentSink = context.createGain();
+  silentSink.gain.value = 0;
+  analyser.connect(silentSink);
+  silentSink.connect(context.destination);
+  let host: Gs1Host | undefined;
+  try {
+    const verdict = await probeGs1Output({
+      analyser,
+      createHost: async () => {
+        host = await createHost();
+        host.output.connect(analyser);
+        return host;
+      },
+    });
+    cached = verdict;
+    return verdict;
+  } finally {
+    try {
+      host?.dispose();
+    } catch {
+      /* already gone */
+    }
+    try {
+      analyser.disconnect();
+      silentSink.disconnect();
+    } catch {
+      /* already gone */
+    }
+  }
+}
+
 export function gs1Capability(): Gs1Capability | undefined {
   return cached;
 }

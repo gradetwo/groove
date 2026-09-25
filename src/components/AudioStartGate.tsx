@@ -77,8 +77,11 @@ export function AudioStartGate({ children, onStart }: AudioStartGateProps) {
          * bundle budget for the initial route is a hard gate — a screen whose only job is one button must not pay for
          * the engine it is about to measure.
          */
+        const engine = getActiveAudioEngine();
         const [live, offline] = await Promise.all([
-          import("../audio/gs1/gs1Capability").then((m) => m.ensureGs1Capability()).catch(() => undefined),
+          // The live probe runs **in the context it is judging** (see `ensureLiveGs1Capability`), and it can switch
+          // GS-1 off for the session when this browser renders it silent.
+          engine?.probeLiveGs1().catch(() => undefined),
           import("../audio/gs1/gs1OfflineCapability").then((m) => m.ensureOfflineGs1Capability()).catch(() => undefined),
         ]);
         void live;
@@ -195,20 +198,11 @@ export function AudioStartGate({ children, onStart }: AudioStartGateProps) {
             <div style={{ font: "700 15px/1 inherit", letterSpacing: "0.16em" }}>
               GROOVE <span style={{ color: "#f0b45a" }}>LAB</span>
             </div>
-            <div style={{ font: "500 9.5px/1 ui-monospace, monospace", letterSpacing: "0.14em", opacity: 0.55 }}>
-              {environment}
-            </div>
           </div>
-          <p style={{ maxWidth: 280, fontSize: 12, lineHeight: 1.6, opacity: 0.72, margin: 0 }}>
-            手机与 Safari 只在点击后允许出声。点一下，音频引擎就此启动。
-            <br />
-            <span style={{ fontSize: 11, opacity: 0.75 }}>
-              Browsers only allow audio after a tap — this is that tap.
-            </span>
-          </p>
           <button type="button" data-testid="audio-start-button" onClick={() => void start()} disabled={busy} style={buttonStyle}>
             {busy ? "正在启动… / Starting…" : "启动音频引擎 / Start Audio Engine"}
           </button>
+          <div style={{ font: "500 10px/1.5 ui-monospace, monospace", opacity: 0.45 }}>{environment}</div>
           {error ? (
             <div
               data-testid="audio-start-error"
