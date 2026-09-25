@@ -1,23 +1,23 @@
 {
-  "version": "2.20.0",
+  "version": "2.21.0",
   "releaseDate": "2026-09-25",
   "changelogCount": 10,
   "latest": {
-    "version": "2.20.0",
+    "version": "2.21.0",
     "date": "2026-09-25",
     "category": "feature",
     "title": {
-      "zh": "新增开场点击页与排障面板",
-      "en": "A start screen, and a diagnostic panel"
+      "zh": "调试开关与开场页",
+      "en": "A debug switch, and a new start screen"
     },
     "highlights": [
       {
-        "zh": "首次进入多了一个开始页：点一下才允许播放声音（手机浏览器的要求），同时让两个音频能力检测在真实点击时跑完，导出与播放的兜底因此更可靠。",
-        "en": "A start screen on the first visit: one tap is what lets browsers play audio, and it is where the two audio capability checks run with a real gesture behind them."
+        "zh": "设置里新增「调试」开关（各端都有）。打开后页面上方出现可拖动、可收成小圆点的面板：显示采样率、合成引擎状态、实时电平与引擎报告的声部数/负载。",
+        "en": "A Debug switch in Settings on every surface: a draggable panel (collapses to a pill) with the sample rate, the synth engine's state, a live level and the engine's own voice count and load."
       },
       {
-        "zh": "新增排障面板（网址后加 `?diag=1`）：显示浏览器、采样率、合成引擎状态、各轨道加载情况与实时输出电平；可一键开关合成引擎试听对比，并把整份报告复制出来。",
-        "en": "A diagnostic panel at `?diag=1`: the browser, sample rate, synth-engine state, per-track host status and a live output reading — with a one-click synth-engine toggle for A/B listening and a Copy report button."
+        "zh": "开场页重做：点一下才解锁声音；失败会停住并给出原因与重试。解锁改成在点击的同一瞬间完成——之前先等加载，手势提前用掉，手机上可能直接没声音。",
+        "en": "A rebuilt start screen: one tap unlocks audio, and a failure stays with the reason and a retry. The unlock now happens inside the tap — the previous version awaited a load first, spending the gesture before the context resumed."
       }
     ],
     "truncated": false
