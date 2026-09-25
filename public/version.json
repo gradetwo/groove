@@ -1,23 +1,23 @@
 {
-  "version": "2.22.0",
+  "version": "2.23.0",
   "releaseDate": "2026-09-25",
   "changelogCount": 10,
   "latest": {
-    "version": "2.22.0",
+    "version": "2.23.0",
     "date": "2026-09-25",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "修好预览的怪音/没声音；开屏按钮重做",
-      "en": "The preview defect fixed; the start screen rebuilt"
+      "zh": "每个曲风自己的主奏音色；导出更省内存",
+      "en": "Each genre voices its own lead; lighter exports"
     },
     "highlights": [
       {
-        "zh": "修好「点轨道预览按钮几下就没声音或变怪音」。两个原因：合成引擎收到的定时音符用错了时间基准（引擎是懒加载的，差多少就晚多少），以及上一个音符的释放事件会掐掉刚按下的新音符。",
-        "en": "Fixed the lane going silent or wrong after tapping a track's preview button: timed notes were addressed in the wrong frame clock (the engine loads lazily, so they landed late), and the previous note's release cut the new one."
+        "zh": "音色改为按曲风设计：同一种乐器在不同曲风里可以有不同的声音。UK Garage 的主奏换成它自己的管风琴音色（按实测调到接近原生参考：亮度 ×0.9、电平 +0.8 dB）。",
+        "en": "Timbre is now chosen per genre: the same instrument can sound different in different genres. UK Garage's lead gets its own organ voice, measured to sit close to the native reference (brightness ×0.9, level +0.8 dB)."
       },
       {
-        "zh": "开屏按参考项目的尺寸重做：去掉多余文字，按钮不再占满整行，版本号放在按钮下方。",
-        "en": "The start screen now uses the reference project's measurements: no extra paragraph, a content-sized button, and the build number below it."
+        "zh": "分轨导出更省内存，并在预计占用较大时先提示：之前会同时把全部轨道读进内存（峰值约三份），Safari 内存不足会直接重启页面。",
+        "en": "Stems export uses less memory and warns first when the estimate is large: it used to hold all stems in memory at once (about three copies), and Safari restarts the page when it runs out."
       }
     ],
     "truncated": false
