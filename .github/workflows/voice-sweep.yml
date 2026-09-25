@@ -1,0 +1,67 @@
+name: Voice Sweep
+
+# The per-genre GS-1 voicing sweep, fanned out.
+#
+# The owner's rule is that every genre voices its own lanes, and the measurement that decides is
+# `scripts/probe_gs1_instrument_voicing.mjs`: it renders a lane with GS-1 and with `--no-gs1` and compares the two against
+# the native reference. All 159 genres reach GS-1 through only **26** lane/instrument pairs, so the sweep is 26
+# measurements — but each is four renders of a few seconds, which is half an hour on one machine and a few minutes
+# across a matrix.
+#
+# This exists because that is the loop: measure everything, fix the instrument (not the genre — one patch covers dozens
+# of genres), measure again. Running it here keeps the local machine for the thinking.
+on:
+  workflow_dispatch:
+    inputs:
+      lanes:
+        description: "Which lane to sweep (all | chords | lead | fx)"
+        required: false
+        default: all
+      per_instrument:
+        description: "Genres to sample per instrument"
+        required: false
+        default: "2"
+
+jobs:
+  sweep:
+    name: Sweep shard ${{ matrix.shard }}/6
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The probe renders through the **built** app, exactly like the groove gate, so the bundle has to exist.
+      - name: Build
+        run: npm run build
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Sweep instruments
+        run: |
+          node scripts/probe_gs1_instrument_voicing.mjs \
+            --lane=${{ github.event.inputs.lanes || 'all' }} \
+            --per-instrument=${{ github.event.inputs.per_instrument || '2' }} \
+            --shard=${{ matrix.shard }}/6 \
+            --out=voicing-shard-${{ matrix.shard }}.json
+
+      - name: Upload report
+        uses: actions/upload-artifact@v5
+        with:
+          name: voicing-shard-${{ matrix.shard }}
+          path: voicing-shard-${{ matrix.shard }}.json
+          if-no-files-found: error
+          retention-days: 14
