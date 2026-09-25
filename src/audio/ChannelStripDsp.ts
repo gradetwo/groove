@@ -75,7 +75,6 @@ import {
   type TrackInsertParams,
 } from "../data/trackInsert";
 import { makeSaturationCurve } from "./EffectsRack";
-import { StereoWidth } from "./StereoWidth";
 
 /**
  * High-pass Q. `1/sqrt(2)` is the Butterworth (maximally flat) value: the high-pass is
@@ -165,15 +164,6 @@ export class ChannelStrip {
    * never disconnect them.
    */
   private readonly internalNodes: readonly AudioNode[];
-
-  /**
-   * The stereo-spread stage, created **on demand** and kept for the strip's life.
-   *
-   * Lazy because `width` is 0 for every genre that has not asked for it, and the strip's own discipline is that a
-   * disabled stage must cost nothing — an unbuilt stage costs nothing at all. Kept once built because a strip's
-   * nodes have fixed identity (see the class header) and because a genre that asks for width asks for it always.
-   */
-  private widthStage: StereoWidth | null = null;
 
   private params: TrackInsertParams;
   private routingSignature = "";
@@ -282,7 +272,6 @@ export class ChannelStrip {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
-    this.widthStage?.dispose();
     for (const node of [this.input, ...this.internalNodes, this.output]) {
       try {
         node.disconnect();
@@ -338,8 +327,6 @@ export class ChannelStrip {
 
     // The width stage's amount, when a genre has asked for one. Nothing is built for `width = 0`: the
     // stage does not exist, so there is no gain to keep in step and no delays in the graph.
-    if (this.widthStage) this.widthStage.setAmount(p.width ?? 0);
-
     // `null` is the WaveShaper's linear (transparent) mode. Rebuilt from the corrected
     // master-rack curve, whose small-signal slope is exactly 1 (tanh(k·x)/k, not /tanh(k)).
     if (p.driveEnabled) {
@@ -387,13 +374,15 @@ export class ChannelStrip {
     }
 
     /**
-     * The stereo-spread stage sits last, after the drive and before the strip's output.
+     * `p.width` is deliberately **not** wired here yet.
      *
-     * Last because it is an *image* stage: everything before it shapes the sound, and widening a signal that is
-     * about to be reshaped would only make the reshaping less predictable. Absent unless a genre asked (see
-     * `widthStage`), and when it is present the strip's outgoing edges end there rather than at `output`.
+     * The stage exists and is tested (`src/audio/StereoWidth.ts`), and no genre sets `width`: enabling it widens the
+     * mix and costs the per-note claim, which the plan records as a measured trade. Keeping it out of the strip also
+     * keeps its delay/LFO graph out of every page — the bundle budget caught it at 220.6 KB against 220 KB — so
+     * wiring it back is a deliberate change (one `tail` here plus the genre it is for), not a coincidence of an
+     * unused import.
      */
-    const tail: AudioNode = (p.width ?? 0) > 0 ? this.ensureWidthStage().input : this.output;
+    const tail: AudioNode = this.output;
 
     if (p.driveEnabled) {
       // Dry/wet split. `driveIn` is the split point; both legs sum at the tail.
@@ -408,20 +397,6 @@ export class ChannelStrip {
       // directly. With every stage off — and no width — this is a straight wire.
       prev.connect(tail);
     }
-  }
-
-  /**
-   * The width stage, built the first time a genre asks for it and connected once.
-   *
-   * `input` is the strip's own tail input and `output` the strip's output, so the stage is transparent to the rest
-   * of the graph: callers only ever see `strip.input` and `strip.output`.
-   */
-  private ensureWidthStage(): StereoWidth {
-    if (this.widthStage) return this.widthStage;
-    const stage = new StereoWidth(this.ctx, this.params.width ?? 0);
-    stage.output.connect(this.output);
-    this.widthStage = stage;
-    return stage;
   }
 
   /**

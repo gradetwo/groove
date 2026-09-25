@@ -17,8 +17,14 @@ const BUDGETS = {
    * entry chunk + modulepreloads + CSS. This is the number users actually feel, and
    * it is the one that regressed silently before (every genre chunk was pulled into
    * the first paint). Measured 186 KB after A-01, down from ~358 KB.
+   *
+   * 220 → 221 on 2026-09-25, and this is the only kind of raise that is allowed: the start screen and the debug
+   * switch are both **entry** UI by nature (the first thing a visitor sees, and a setting), the panel and both
+   * capability probes behind them are dynamic imports, and the first attempt was trimmed twice — the widener stage
+   * was unwired from the strip and the card moved to inline styles — before this. What it bought is measured: the
+   * screen that makes audio work on mobile browsers, and the switch that turns the diagnostic panel on.
    */
-  initialRouteGzipKb: 220,
+  initialRouteGzipKb: 221,
   /**
    * GS-1 vendored core. The Rust→WASM engine artifacts are not `.js`, so every
    * budget above simply does not see them: a GS-1 bump could grow the payload 40%

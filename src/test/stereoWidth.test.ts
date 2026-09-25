@@ -30,9 +30,14 @@ describe("stereo width stage", () => {
   });
 
   it("builds one widener when asked, with a delay bound inside the contract", () => {
+    /**
+     * The stage is built **directly** here, not through a strip: no genre sets `width`, so the strip deliberately
+     * does not wire it (see `ChannelStripDsp.rewire`), and wiring it back is a deliberate change rather than
+     * something this case should hold in place. The class is what has to keep working.
+     */
     restore = installFakeOfflineAudioContext();
     const fake = new FakeOfflineAudioContext(2, 1024, 44100);
-    new ChannelStrip(fake as unknown as BaseAudioContext, { width: 0.3 });
+    new StereoWidth(fake as unknown as BaseAudioContext, 0.3);
     expect(fake.createdDelays.length).toBe(2);
     expect(fake.createdOscillators.length).toBe(1);
     for (const delay of fake.createdDelays) {
@@ -41,11 +46,11 @@ describe("stereo width stage", () => {
     }
   });
 
-  it("keeps the dry centre at unity and the depth proportional to the amount", () => {
+  it("keeps the amount on the strip's contract even while the stage is unwired", () => {
     restore = installFakeOfflineAudioContext();
     const fake = new FakeOfflineAudioContext(2, 1024, 44100);
     const strip = new ChannelStrip(fake as unknown as BaseAudioContext, { width: 1 });
-    // The amount reaches the stage, and an out-of-range request is clamped rather than trusted.
+    // The parameter still resolves and clamps, so the day a genre asks, the value is already trustworthy.
     strip.setParams({ width: 5 });
     expect(strip.getParams().width).toBe(STEREO_WIDTH_MAX);
     strip.setParams({ width: -2 });

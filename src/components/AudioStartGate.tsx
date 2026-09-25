@@ -1,5 +1,6 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { initIosAudioUnlock } from "../audio/iosAudioUnlock";
+import { APP_VERSION } from "../version";
 
 /**
  * The entry gate: one tap that makes audio work, before anything asks it to.
@@ -36,9 +37,25 @@ export interface AudioStartGateProps {
 export function AudioStartGate({ children, onStart }: AudioStartGateProps) {
   const [open, setOpen] = useState(() => !audioGateCompleted());
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  /** Read inside `finally` to decide whether the gate may close: state updates are not visible in the same tick. */
+  const errorRef = useRef<string | null>(null);
 
   const start = useCallback(async () => {
     setBusy(true);
+    setError(null);
+    errorRef.current = null;
+    /**
+     * **Synchronously, before any `await`.** Safari only honours a resume that happens inside the gesture itself, and
+     * an `await import()` — which is what the probes need — spends the gesture before the context is ever resumed. The
+     * sibling synth project's start screen carries the same comment for the same reason, and this is the lesson taken
+     * from it: unlock first, then do the slow work.
+     */
+    try {
+      initIosAudioUnlock().unlock();
+    } catch {
+      /* an unlocker that cannot run is not a reason to refuse the app */
+    }
     try {
       if (onStart) {
         await onStart();
@@ -47,8 +64,6 @@ export function AudioStartGate({ children, onStart }: AudioStartGateProps) {
          * Order matters, and only slightly: unlocking first means the live probe below runs against a context that is
          * actually running, which is the difference between a verdict and `unmeasured`.
          */
-        const unlocker = initIosAudioUnlock();
-        unlocker.unlock();
         /**
          * Both probes are imported **here**, after the tap: they pull in the GS-1 host and the WASM plumbing, and the
          * bundle budget for the initial route is a hard gate — a screen whose only job is one button must not pay for
@@ -68,67 +83,138 @@ export function AudioStartGate({ children, onStart }: AudioStartGateProps) {
       }
     } catch (error) {
       /**
-       * Swallowed on purpose, and it still closes the gate. A browser whose audio stack refuses to start is exactly
-       * the situation this screen exists for; keeping someone out of the app because a probe threw would be worse
-       * than the defect the probe is looking for. The reason goes to the console, where a report can pick it up.
+       * The gate **stays** and says why, with the diagnostics line beside it, exactly as the sibling synth project's
+       * does. The first version closed anyway; that is wrong for this screen's purpose, because the one moment a
+       * person can act on "audio did not start" is while they are still looking at the button.
        */
+      const message = error instanceof Error ? error.message : String(error);
+      errorRef.current = message;
+      setError(message);
       // eslint-disable-next-line no-console
       console.warn("[audio-start] the gate could not finish its work:", error);
     } finally {
       setBusy(false);
-      setOpen(false);
+      if (!errorRef.current) setOpen(false);
     }
   }, [onStart]);
 
   if (!open) return <>{children}</>;
 
+  /**
+   * The card, after the sibling synth project's start screen: a mask over the app, a brand block with the version
+   * (the first thing a returning visitor wants to know is which build they are looking at), one large button, and —
+   * when it fails — the reason, a one-line environment diagnostic and a retry. The app stays mounted underneath.
+   */
+  const environment =
+    typeof navigator === "undefined"
+      ? ""
+      : `${APP_VERSION} · ${navigator.userAgent.includes("Safari") && !navigator.userAgent.includes("Chrome") ? "Safari" : "browser"} · ${
+          typeof AudioContext === "undefined" ? "no AudioContext" : "AudioContext ok"
+        }`;
+
+  /**
+   * Inline styles on purpose, after the bundle budget came within a few hundred bytes of its limit: every Tailwind
+   * utility in this card is a **new CSS rule** in the entry bundle (arbitrary values like `z-[2147483646]` cannot be
+   * reused), and this screen's job is one button. The layout is a handful of properties; paying a rule table for it is
+   * not a trade worth making on the route every visitor loads.
+   */
+  const cardStyle: React.CSSProperties = {
+    position: "fixed",
+    inset: 0,
+    zIndex: 2147483646,
+    display: "grid",
+    placeItems: "center",
+    background: "rgba(0,0,0,0.86)",
+    padding: 24,
+    textAlign: "center",
+  };
+  const boxStyle: React.CSSProperties = {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 18,
+    width: "100%",
+    maxWidth: 340,
+    padding: "30px 24px",
+    borderRadius: 16,
+    border: "1px solid rgba(255,255,255,0.14)",
+    background: "#0d0d12",
+    color: "#f2f2f6",
+  };
+  const buttonStyle: React.CSSProperties = {
+    width: "100%",
+    minHeight: 46,
+    borderRadius: 14,
+    border: "1px solid rgba(255,255,255,0.35)",
+    background: "linear-gradient(180deg,#ffd089,#e9a02c 62%,#d98c1c)",
+    color: "#231703",
+    font: "700 14px/1 inherit",
+    letterSpacing: "0.08em",
+    cursor: busy ? "default" : "pointer",
+    opacity: busy ? 0.65 : 1,
+  };
+
   return (
     <>
       {children}
-      <div
-        data-testid="audio-start-gate"
-        role="dialog"
-        aria-label="开始"
-        style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 2147483646,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 20,
-          background: "rgba(8, 8, 12, 0.94)",
-          color: "#f2f2f6",
-          textAlign: "center",
-          padding: 24,
-        }}
-      >
-        <div style={{ fontSize: 30, letterSpacing: "0.08em", fontWeight: 600 }}>GROOVE</div>
-        <p style={{ maxWidth: 380, fontSize: 14, lineHeight: 1.6, opacity: 0.78 }}>
-          点击开始，浏览器才会允许播放声音。
-          <br />
-          <span style={{ opacity: 0.7 }}>Tap to start — browsers only allow audio after a tap.</span>
-        </p>
-        <button
-          type="button"
-          data-testid="audio-start-button"
-          onClick={() => void start()}
-          disabled={busy}
-          style={{
-            font: "inherit",
-            fontSize: 16,
-            padding: "12px 34px",
-            borderRadius: 999,
-            border: "1px solid rgba(255,255,255,0.35)",
-            background: busy ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.18)",
-            color: "#f2f2f6",
-            cursor: busy ? "default" : "pointer",
-            minHeight: 44,
-          }}
-        >
-          {busy ? "准备中…" : "开始"}
-        </button>
+      <div data-testid="audio-start-gate" role="dialog" aria-label="开始" style={cardStyle}>
+        <div style={boxStyle}>
+          <div style={{ font: "700 15px/1 ui-monospace, SFMono-Regular, Menlo, monospace", letterSpacing: "0.18em" }}>
+            GROOVE LAB
+          </div>
+          <div style={{ font: "500 9.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace", opacity: 0.6 }}>
+            {environment}
+          </div>
+          <p style={{ maxWidth: 280, fontSize: 12, lineHeight: 1.6, opacity: 0.78, margin: 0 }}>
+            点击开始，浏览器才会允许播放声音。
+            <br />
+            Browsers only allow audio after a tap.
+          </p>
+          <button type="button" data-testid="audio-start-button" onClick={() => void start()} disabled={busy} style={buttonStyle}>
+            {busy ? "正在启动… / Starting…" : "启动音频 / Start audio"}
+          </button>
+          {error ? (
+            <div
+              data-testid="audio-start-error"
+              role="alert"
+              style={{
+                width: "100%",
+                textAlign: "left",
+                display: "grid",
+                gap: 6,
+                padding: 10,
+                borderRadius: 12,
+                border: "1px solid rgba(255,255,255,0.14)",
+                background: "rgba(0,0,0,0.4)",
+              }}
+            >
+              <div style={{ font: "700 11px/1 ui-monospace, monospace", letterSpacing: "0.12em", color: "#f0b45a" }}>
+                启动失败 / Startup failed
+              </div>
+              <p style={{ margin: 0, font: "400 10.5px/1.5 ui-monospace, monospace", opacity: 0.75, wordBreak: "break-word" }}>
+                {error}
+              </p>
+              <button
+                type="button"
+                data-testid="audio-start-retry"
+                onClick={() => void start()}
+                disabled={busy}
+                style={{
+                  minHeight: 32,
+                  borderRadius: 8,
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  background: "transparent",
+                  color: "#f2f2f6",
+                  font: "600 10.5px/1 ui-monospace, monospace",
+                  letterSpacing: "0.1em",
+                  cursor: "pointer",
+                }}
+              >
+                重试 / Retry
+              </button>
+            </div>
+          ) : null}
+        </div>
       </div>
     </>
   );
