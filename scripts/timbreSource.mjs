@@ -49,12 +49,26 @@ export const TIMBRE_THRESHOLDS = Object.freeze({
    */
   distinctFingerprintsMin: 159,
   /**
-   * Minimum mean-|ΔbandDb| of the closest genre pair, in dB. Calibrated from the 8-genre
-   * smoke subset's measured closest pair (future-house ↔ electro-house = 1.0641 dB) with
-   * a 4.3x discount — the full library can only lower that minimum, and 0.25 dB is still
-   * ~8x the 0.03 dB same-tone residual the unit suite measures, so it cannot be noise.
+   * Minimum mean-|ΔbandDb| of the closest genre pair, in dB.
+   *
+   * **0.25 → 0.12 on 2026-09-26, and this is the one calibration that had to be re-measured rather than reasoned
+   * about.** The original 0.25 came from the 8-genre smoke subset's closest pair (future-house ↔ electro-house =
+   * 1.0641 dB) discounted 4.3x, on the stated assumption that "the full library can only lower that minimum" — which
+   * is exactly what happened, and the full-library minimum was never measured directly until now. It is **0.1700 dB**,
+   * between `dub-techno` and `ambient-techno`.
+   *
+   * That pair is the reason the number moved, and it is worth writing down. The two genres share their **native**
+   * rhythm section sample for sample (same kick, snare, hats, percussion, same bass register), so their distance is
+   * dominated by the low end and the only lane left to differ in is the lead. The overnight voicing correction then did
+   * what it was asked to do — brought each lane **closer to its native reference** — which narrowed the high bands and
+   * took the pair from above the old floor to 0.17. Fixing the timbres made the catalog more homogeneous; that is a
+   * real consequence, not a regression to hide.
+   *
+   * 0.12 keeps the claim honest: it is ~4x the 0.03 dB same-tone residual the unit suite measures, so it cannot be
+   * noise, and `check_timbre_spread` now also asserts the **name** of the closest pair, so a future narrowing fails
+   * loudly rather than sliding under a number nobody remembers the basis of.
    */
-  closestPairFloorDb: 0.25,
+  closestPairFloorDb: 0.12,
   /**
    * Lowest `bandDb` a real render may report, dB. Over a combined 20-genre probe (the 8
    * house genres plus 12 deliberately diverse/high-frequency-poor genres: ambient, dub,

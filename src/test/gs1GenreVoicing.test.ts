@@ -56,8 +56,19 @@ describe("per-genre GS-1 voicing", () => {
     expect(genrePlan?.notes).toEqual(plainPlan?.notes);
   });
 
-  it("documents why the one override that exists was added", () => {
-    // A registry of one: if a second genre is added, this case must be updated deliberately rather than drifting.
-    expect(Object.keys(GENRE_GS1_PATCH_OVERRIDES)).toEqual(["uk-garage"]);
+  it("keeps the override registry deliberate, and names each reason", () => {
+    /**
+     * Every entry is here for a measurement, and this case is the list. It was written when the registry held one
+     * genre, and the overnight voicing sweep added four more — each of which had a number attached to it before it was
+     * added: `disco` (+15.2 dB with the shared strings), `reggaeton` (−6.1 dB with the shared lead), `dub-techno` and
+     * `ambient-techno` (the pair whose distance the shared patches could not keep above the distinctness floor).
+     * A new key without a reason now has to change this line on purpose.
+     */
+    expect(Object.keys(GENRE_GS1_PATCH_OVERRIDES).sort()).toEqual(
+      ["ambient-techno", "disco", "dub-techno", "reggaeton", "uk-garage"].sort()
+    );
+    for (const [genre, overrides] of Object.entries(GENRE_GS1_PATCH_OVERRIDES)) {
+      expect(Object.keys(overrides).length, `${genre} must override at least one lane`).toBeGreaterThan(0);
+    }
   });
 });
