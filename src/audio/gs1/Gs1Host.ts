@@ -138,14 +138,14 @@ export interface Gs1Host {
    * aligned with sample-accurate native voices addresses them this many frames early.
    */
   readonly scheduledNoteLatencyFrames: number;
-  noteOn(note: number, velocity: number, pan?: number): void;
+  noteOn(note: number, velocity: number, pan?: number, cents?: number): void;
   noteOff(note: number): void;
   /**
    * Frame-addressed note events: `atFrame` is an absolute frame index in the context's timeline
    * (`Math.round(when * sampleRate)`), which is what lets a lookahead scheduler drive this
    * engine without either posting early or inheriting main-thread jitter.
    */
-  noteOnAt(note: number, velocity: number, atFrame: number, pan?: number): void;
+  noteOnAt(note: number, velocity: number, atFrame: number, pan?: number, cents?: number): void;
   noteOffAt(note: number, atFrame: number): void;
   /**
    * Bend **one** note, in semitones (MPE) — the per-note pitch A3's variation needs.
@@ -442,14 +442,15 @@ export async function createGs1Host(options: Gs1HostOptions): Promise<Gs1Host> {
     get scheduledNoteLatencyFrames() {
       return scheduledNoteLatencyFrames;
     },
-    noteOn(note, velocity, pan) {
-      if (pan === undefined) post({ type: "noteOn", note, velocity });
-      else post({ type: "noteOnPan", note, velocity, pan });
+    noteOn(note, velocity, pan, cents) {
+      const tuning = cents === undefined ? {} : { cents };
+      if (pan === undefined) post({ type: "noteOn", note, velocity, ...tuning });
+      else post({ type: "noteOnPan", note, velocity, pan, ...tuning });
     },
     noteOff(note) {
       post({ type: "noteOff", note });
     },
-    noteOnAt(note, velocity, atFrame, pan) {
+    noteOnAt(note, velocity, atFrame, pan, cents) {
       if (!Number.isFinite(atFrame)) {
         throw new Error(`[Gs1Host] refusing to schedule a note at frame ${atFrame}`);
       }
@@ -459,6 +460,9 @@ export async function createGs1Host(options: Gs1HostOptions): Promise<Gs1Host> {
         velocity,
         atFrame: Math.round(atFrame),
         ...(pan === undefined ? {} : { pan }),
+        // The tuning rides with the note so the worklet can apply it *at the note's frame* (see the protocol doc);
+        // sending it separately retuned whichever voice was still sounding on that key.
+        ...(cents === undefined || !Number.isFinite(cents) ? {} : { cents }),
       });
     },
     importSample(samples, sampleRate) {

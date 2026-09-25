@@ -707,8 +707,15 @@ export async function renderPatternOffline(
                  * must not share a nudge, or the chord moves as a block.
                  */
                 const variation = variationFor(trackIdx, stepIdx, plannedIndex);
-                if (variation) chordHost.setTuningNote(plannedNote.note, variation.detuneCents);
-                chordHost.noteOnAt(plannedNote.note, plannedNote.velocity, plannedNote.atFrame, plannedNote.pan);
+                // The nudge rides with the note: sending it separately retuned whichever voice was still sounding on
+                // that key (see the worklet protocol's `cents`).
+                chordHost.noteOnAt(
+                  plannedNote.note,
+                  plannedNote.velocity,
+                  plannedNote.atFrame,
+                  plannedNote.pan,
+                  variation ? variation.detuneCents : undefined
+                );
                 chordHost.noteOffAt(plannedNote.note, plannedNote.offFrame);
               });
               return;
@@ -744,8 +751,13 @@ export async function renderPatternOffline(
               const plannedNote = planned.notes[0];
               // GS-1's half of A3's per-note variation — see the chord block above for why tuning is the parameter.
               const variation = variationFor(trackIdx, stepIdx, 0);
-              if (variation) leadHost.setTuningNote(plannedNote.note, variation.detuneCents);
-              leadHost.noteOnAt(plannedNote.note, plannedNote.velocity, plannedNote.atFrame, plannedNote.pan);
+              leadHost.noteOnAt(
+                plannedNote.note,
+                plannedNote.velocity,
+                plannedNote.atFrame,
+                plannedNote.pan,
+                variation ? variation.detuneCents : undefined
+              );
               leadHost.noteOffAt(plannedNote.note, plannedNote.offFrame);
               return;
             }
@@ -780,9 +792,14 @@ export async function renderPatternOffline(
             if (planned) {
               const plannedNote = planned.notes[0];
               const variation = variationFor(trackIdx, stepIdx, 0);
-              if (variation && plannedNote) fxHost.setTuningNote(plannedNote.note, variation.detuneCents);
               if (plannedNote) {
-                fxHost.noteOnAt(plannedNote.note, plannedNote.velocity, plannedNote.atFrame, plannedNote.pan);
+                fxHost.noteOnAt(
+                  plannedNote.note,
+                  plannedNote.velocity,
+                  plannedNote.atFrame,
+                  plannedNote.pan,
+                  variation ? variation.detuneCents : undefined
+                );
                 fxHost.noteOffAt(plannedNote.note, plannedNote.offFrame);
               }
               return;
