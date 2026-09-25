@@ -8,7 +8,6 @@ import { triggerHaptic, HapticPatterns } from "../../../utils/haptics";
 import { parseScaleString, quantizePitchToScale } from "../../../utils/scaleTheory";
 import { publishPlayhead } from "../playheadBus";
 import { installProbeHooks, uninstallProbeHooks } from "../../../platform/probeHooks";
-import { diagRequested, installDiagnostics } from "../../../platform/diagnostics";
 import { patternForExport } from "../../../data/songFlatten";
 import { editorPositionFor } from "../../../data/songFlatten";
 import { loadLayoutPrefs, type LayoutPrefs } from "../layoutPrefs";
@@ -401,8 +400,19 @@ export function useAudioEngineLifecycle({
      * and copies one JSON blob. Installed here because this is where the engine is in scope, and removed with it.
      */
     let cleanupDiag: (() => void) | undefined;
-    if (diagRequested()) {
-      cleanupDiag = installDiagnostics(engine);
+    /**
+     * Loaded **on demand**: the panel is a development surface, and the bundle budget is a hard gate (it failed at
+     * 221.8 KB against 220 KB when this was a static import). The flag check is inlined for the same reason — the
+     * panel's own module is the thing that must not be in the initial route.
+     */
+    try {
+      if (new URLSearchParams(window.location.search).get("diag") === "1") {
+        void import("../../../platform/diagnostics").then((mod) => {
+          cleanupDiag = mod.installDiagnostics(engine);
+        });
+      }
+    } catch {
+      /* no window, or a URL that cannot be parsed: nothing to install */
     }
     const cleanup = onAudioEngineReady ? onAudioEngineReady(engine) : undefined;
 
