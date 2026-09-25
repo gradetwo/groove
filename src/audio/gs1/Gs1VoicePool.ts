@@ -167,6 +167,28 @@ export class Gs1VoicePool {
    * The plan is capped at the measured polyphony ceiling before anything is sent, and the patch is
    * pushed to the host when it changes.
    */
+  /**
+   * What each track's host is doing, for the in-app diagnostic (`?diag=1`).
+   *
+   * Deliberately tiny and read-only: the question a defect report has to answer is "did this track get a host, what
+   * variant, which patch, and did it ever become ready" — and none of that is visible from outside otherwise.
+   */
+  status(): Array<Record<string, unknown>> {
+    const out: Array<Record<string, unknown>> = [];
+    for (const [trackIdx, slot] of this.slots) {
+      out.push({
+        trackIdx,
+        role: slot.role,
+        instrument: slot.instrument ?? null,
+        patch: slot.patch,
+        ready: slot.ready,
+        variant: slot.host?.variant ?? null,
+        hasHost: Boolean(slot.host),
+      });
+    }
+    return out;
+  }
+
   tryPlay(
     trackIdx: number,
     role: MixTrackId,

@@ -8,6 +8,7 @@ import { triggerHaptic, HapticPatterns } from "../../../utils/haptics";
 import { parseScaleString, quantizePitchToScale } from "../../../utils/scaleTheory";
 import { publishPlayhead } from "../playheadBus";
 import { installProbeHooks, uninstallProbeHooks } from "../../../platform/probeHooks";
+import { diagRequested, installDiagnostics } from "../../../platform/diagnostics";
 import { patternForExport } from "../../../data/songFlatten";
 import { editorPositionFor } from "../../../data/songFlatten";
 import { loadLayoutPrefs, type LayoutPrefs } from "../layoutPrefs";
@@ -391,10 +392,23 @@ export function useAudioEngineLifecycle({
     if (probeInstalled) {
       cleanupProbe = uninstallProbeHooks;
     }
+
+    /**
+     * The diagnostic panel (`?diag=1` only — see `src/platform/diagnostics.ts`).
+     *
+     * A user-facing report is worth more than another probe of ours when the fault only appears on one audio stack:
+     * it reads the environment, both capability verdicts, the hosts' own status and a live measurement of the master,
+     * and copies one JSON blob. Installed here because this is where the engine is in scope, and removed with it.
+     */
+    let cleanupDiag: (() => void) | undefined;
+    if (diagRequested()) {
+      cleanupDiag = installDiagnostics(engine);
+    }
     const cleanup = onAudioEngineReady ? onAudioEngineReady(engine) : undefined;
 
     return () => {
       cleanup?.();
+      cleanupDiag?.();
       cleanupProbe?.();
       engine.destroy();
       engineRef.current = null;
