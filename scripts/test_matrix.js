@@ -537,6 +537,12 @@ async function runTestOnTarget(target, baseUrl) {
   await context.addInitScript(() => {
     try {
       localStorage.setItem("groove_onboarding_completed", "true");
+      /**
+       * The entry gate (`AudioStartGate`) is a full-screen overlay until it is tapped, so a run that does not start
+       * from "audio already unlocked" would be clicking the gate on every interaction. Seeding it is what the app
+       * itself does after a real first visit, not a way around a check.
+       */
+      localStorage.setItem("groove_audio_started", "1");
     } catch (_) {}
   });
   const page = await context.newPage();
