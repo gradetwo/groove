@@ -1,23 +1,23 @@
 {
-  "version": "2.25.0",
+  "version": "2.26.0",
   "releaseDate": "2026-09-25",
   "changelogCount": 10,
   "latest": {
-    "version": "2.25.0",
+    "version": "2.26.0",
     "date": "2026-09-26",
     "category": "fix",
     "title": {
-      "zh": "音色按曲风校正：起音对齐、路由修正",
-      "en": "Voicing corrected per genre: attacks aligned, a routing fix"
+      "zh": "音符长度不再短于它自己的起音",
+      "en": "A note is never shorter than its own attack"
     },
     "highlights": [
       {
-        "zh": "修好一类听感问题：有些合成音色的起音比它替代的原生音色慢很多（例：0.55 秒对 0.15 秒），被曲风的时值切短时音符还没到峰值，听起来又轻又糊。现在按原生音色对齐（实测峰值 +3.7 dB）。",
-        "en": "Fixed a class of voicing problem: some synth voices attacked far slower than the native sound they replace (0.55 s against 0.15 s), so a short note was cut before it arrived and sounded thin. They now follow their native presets (measured +3.7 dB peak)."
+        "zh": "修好一类听感问题：起音比音符还长时，音符会在起音中途被切掉，听起来又轻又不完整。全库 318 条轨里有 55 条如此，最严重差了 5 倍。",
+        "en": "Fixed a class of voicing problem: when an instrument attacks slower than the note it is given, the note is cut mid-attack and sounds thin. 55 of the catalogue's 318 routed lanes did that, the worst by a factor of five."
       },
       {
-        "zh": "修正一条路由错误（正弦主奏被接到脉冲音色）并按实测调整若干音色的电平与滤波；新增两把 CI 标尺，26 个乐器在三个音区、两种奏法下全部落在 ±0.7 dB 内。",
-        "en": "A routing mistake is fixed (a sine lead was wired to a pulse patch), several voices' level and filter are corrected from measurement, and two CI measurement tools now show all 26 instruments within ±0.7 dB across three registers and two articulations."
+        "zh": "规则：音符不短于「起音 × 2.5」。实测 breakcore 和弦 −38.9 → −12.0 dBFS（+26.9 dB），GS-1 +10.5 dB；实时引擎与导出器都生效。",
+        "en": "The rule: a note is never shorter than its attack times 2.5. Measured on breakcore's chords, −38.9 → −12.0 dBFS (+26.9 dB) and +10.5 dB through GS-1, in both the live engine and the exporter."
       }
     ],
     "truncated": false
