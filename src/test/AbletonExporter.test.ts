@@ -274,4 +274,52 @@ describe("Ableton exporter · the clip shape (stage 5's ALS item)", () => {
     expect(session.slice(0, session.indexOf("</ClipSlot>"))).toContain('<MidiClip Id="');
     expect(xml).toMatch(/<MidiClip Id="\d+" Time="0">/);
   });
+
+  /**
+   * One clip per **section**, which in Ableton's session matrix means one clip per **scene** — the shape a song export needs and
+   * a single flattened clip could not express. The builder places each of `clips` in scene *i*; with one clip, everything is
+   * exactly as it was (the other suite's six cases still pass untouched).
+   */
+  it("fills a scene per clip and leaves the rest empty", () => {
+    const pattern = (trackId: string) =>
+      ({
+        genre_id: "techno",
+        bpm: 130,
+        timeSignature: "4/4",
+        resolution: "1/16",
+        totalSteps: 16,
+        tracks: [
+          {
+            track_id: trackId,
+            name: trackId,
+            steps: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+            velocity: new Array(16).fill(100),
+            pitch: [36],
+          },
+        ],
+      }) as unknown as SequencerPattern;
+
+    const one = buildAbletonLiveSetXml({ bpm: 130, pattern: pattern("kick"), genreName: "x" } as never);
+    const two = buildAbletonLiveSetXml({
+      bpm: 130,
+      pattern: pattern("kick"),
+      genreName: "x",
+      clips: [
+        { pattern: pattern("kick"), name: "verse" },
+        { pattern: pattern("snare"), name: "chorus" },
+      ],
+    } as never);
+
+    /**
+     * The empty-slot template is what a scene without a clip looks like, so one more section means one fewer of them — per
+     * track. (Counting `<MidiClip>` inside a scene's slot is not possible with a regex: the match runs past the slot's own
+     * boundary and finds the next track's clip, which is how the first version of this check read 7 where it expected 0.)
+     */
+    const emptySlots = (xml: string) => (xml.match(/<ClipSlot><Value \/><\/ClipSlot>/g) ?? []).length;
+    // The set carries eight tracks (the palette's size), each with eight scenes: a second clip fills one more scene in **every**
+    // track, so the drop is a multiple of the track count rather than one.
+    const drop = emptySlots(one) - emptySlots(two);
+    expect(drop).toBeGreaterThan(0);
+    expect(drop % 8).toBe(0);
+  });
 });

@@ -148,6 +148,14 @@ export function buildAbletonLiveSetXml(options: ExportAlsOptions): string {
     const sendBTargetId = nextId();
     const sendBModId = nextId();
 
+    /**
+     * One clip slot's XML, for one pattern and one scene.
+     *
+     * The parameter is named `pattern` deliberately: the body below refers to `pattern` throughout, so shadowing means this
+     * extraction needs **no** edits inside it. A section is a **scene** in Ableton's session matrix, which is what an
+     * arrangement already is (`docs/DAW_MCP_REFACTOR.md`, stage 5's ALS item).
+     */
+    const buildClipSlot = (pattern: SequencerPattern, sceneId: number): string => {
     // Notes collection: map of midiKey -> array of events
     const keyMap = new Map<number, NoteEventData[]>();
     const steps = track.steps || [];
@@ -265,7 +273,7 @@ export function buildAbletonLiveSetXml(options: ExportAlsOptions): string {
     const clipId = nextId();
     const clipTimeSigId = nextId();
 
-    const clipSlot0 = `<ClipSlot Id="0">
+    const clipSlot0 = `<ClipSlot Id="${sceneId}">
 \t\t\t\t\t\t\t\t<LomId Value="0" />
 \t\t\t\t\t\t\t\t<ClipSlot>
 \t\t\t\t\t\t\t\t\t<Value>
@@ -325,10 +333,19 @@ export function buildAbletonLiveSetXml(options: ExportAlsOptions): string {
 \t\t\t\t\t\t\t\t<HasStop Value="true" />
 \t\t\t\t\t\t\t\t<NeedRefreeze Value="true" />
 \t\t\t\t\t\t\t</ClipSlot>`;
+    return clipSlot0;
+  };
 
-    // Slots 1 to 7 empty
+  /**
+   * The clip slots for this track: one per section, in scene order.
+   *
+   * Omitted, `options.clips` is the single pattern in scene 0 — which is what this exporter has always produced, byte for byte.
+   */
+  const clipsForExport = options.clips?.length ? options.clips : [{ pattern, name: undefined }];
+  const clipSlotsXml = clipsForExport.map((clip, index) => buildClipSlot(clip.pattern, index)).join("\n\t\t\t\t\t\t");
+
     const otherSlots: string[] = [];
-    for (let s = 1; s < sceneCount; s++) {
+    for (let s = clipsForExport.length; s < sceneCount; s++) {
       otherSlots.push(`<ClipSlot Id="${s}">
 \t\t\t\t\t\t\t\t<LomId Value="0" />
 \t\t\t\t\t\t\t\t<ClipSlot><Value /></ClipSlot>
@@ -456,7 +473,7 @@ export function buildAbletonLiveSetXml(options: ExportAlsOptions): string {
 \t\t\t\t<MainSequencer>
 \t\t\t\t\t<LomId Value="0" />
 \t\t\t\t\t<ClipSlotList>
-\t\t\t\t\t\t${clipSlot0}
+\t\t\t\t\t\t${clipSlotsXml}
 \t\t\t\t\t\t${otherSlots.join("\n\t\t\t\t\t\t")}
 \t\t\t\t\t</ClipSlotList>
 \t\t\t\t\t<MonitoringEnum Value="1" />
