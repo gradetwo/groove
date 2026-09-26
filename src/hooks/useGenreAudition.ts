@@ -121,6 +121,8 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
    */
   const [metronome, setMetronomeFlag] = useState(false);
   const engineRef = useRef<AudioEngine | null>(null);
+  /** The audition function, in a ref so the probe surface — built once, with the engine — always calls the current one. */
+  const toggleAuditionRef = useRef<((genre: Genre) => Promise<void>) | null>(null);
   /** When the engine last reported a step, for the sub-step interpolation. */
   const lastStepRef = useRef<{ step: number; at: number } | null>(null);
   /** Read through a ref so the engine's callback never closes over a stale mode/queue. */
@@ -192,7 +194,16 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
          * The phone shell builds its own engine, so without this the probes that drive `?probe=1` have nothing to hold on a
          * phone — which is what stopped the audition soak from being able to read the engine's own load numbers.
          */
-        if (installProbeHooks({ engine: engineRef.current })) {
+        if (
+          installProbeHooks({
+            engine: engineRef.current,
+            auditionById: async (genreId: string) => {
+              const { ALL_GENRES } = await import("../data/genres");
+              const genre = ALL_GENRES.find((entry) => entry.id === genreId);
+              if (genre) await toggleAuditionRef.current?.(genre);
+            },
+          })
+        ) {
           cleanupProbeRef.current = uninstallProbeHooks;
         }
         if (isDebugModeEnabled() || debugModeForcedByUrl()) {
@@ -274,6 +285,7 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
     },
     [playingGenreId, stopAudition, metronome]
   );
+  toggleAuditionRef.current = toggleAudition;
 
   const isPlaying = useCallback(
     (genreId: string) => playingGenreId === genreId,

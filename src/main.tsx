@@ -30,6 +30,14 @@ import { initIosAudioUnlock } from "./audio/iosAudioUnlock";
  * React would mean a cold load paints the default skin and then swaps, which is a visible flash. Same
  * reasoning as `data-density`.
  */
+/**
+ * The page's **launch** query, recorded before any routing can rewrite it.
+ *
+ * The probes ask for their seam with `?probe=1`, and a shell that navigates rewrites the query — the phone's routing took it
+ * to `/m/home`, then to `/m/home?genre=…`. The flag is a property of the load, so it is captured here, in the entry, where
+ * nothing has moved yet; `platform/probeHooks.ts` reads it. The same capture serves `?diag=1`.
+ */
+(window as unknown as { __grooveLaunchSearch?: string }).__grooveLaunchSearch = window.location.search;
 applyStoredSkin();
 // Before the first paint, so a phone with the preference on never shows a spinning record first.
 applyStoredLightPlayer();
