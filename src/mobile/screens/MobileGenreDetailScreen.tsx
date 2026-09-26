@@ -48,6 +48,7 @@ import { useLanguage, type Language, type MessageKey } from "../../i18n/Language
 import type { Genre, I18nString } from "../../types/genre";
 import { genreArtBackground } from "../genreArt";
 import { GenreCover } from "../../components/GenreCover";
+import { useCoverWarmup } from "../../hooks/useCoverWarmup";
 
 const CJK = /[\u3400-\u9fff]/;
 const chineseName = (genre: { aliases?: string[] }): string =>
@@ -206,6 +207,9 @@ export function MobileGenreDetailScreen({
   onOpenGenre,
 }: MobileGenreDetailScreenProps) {
   const { t } = useLanguage();
+  // The hero is the page's first impression: have its picture decoded before it paints, for the genre named in the route as
+  // well as the one that eventually loads (they are the same id, and the second call is a no-op through the dedupe).
+  useCoverWarmup(genreId ? [genreId] : []);
   const [genre, setGenre] = useState<Genre | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "missing">(genreId ? "loading" : "missing");
 

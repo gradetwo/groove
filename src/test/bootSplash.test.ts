@@ -13,15 +13,16 @@ describe("the boot splash", () => {
 
   it("is inside the React root, so the first commit replaces it", () => {
     const root = html.slice(html.indexOf('<div id="root">'));
-    expect(root).toContain('id="boot-splash"');
+    // The ids are minified by hand (`bs`), because every byte here is inside the initial-route budget.
+    expect(root).toContain("<div id=bs>");
     // …and it is the root's *content*, not a sibling that would have to be removed by hand.
-    expect(root.indexOf('id="boot-splash"')).toBeLessThan(root.indexOf("</div>\n    <style>"));
+    expect(root.indexOf("<div id=bs>")).toBeLessThan(root.indexOf("</div>\n    <style>"));
   });
 
   it("styles itself inline, with no stylesheet, font or script to wait for", () => {
     const style = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
-    expect(style).toContain("#boot-splash");
-    expect(style).toContain("background: #0a0b0d");
+    expect(style).toContain("#bs{");
+    expect(style).toContain("background:#0a0b0d");
     // A media query for reduced motion: the bar is decoration, not information.
     expect(style).toContain("prefers-reduced-motion");
   });
