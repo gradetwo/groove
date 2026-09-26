@@ -185,6 +185,51 @@ export interface AddMcpSectionInput {
   transpose?: number;
 }
 
+export interface DuplicateMcpSectionInput {
+  songId: string;
+  /** The section to copy, by position in the arrangement. */
+  index: number;
+  /** Where the copy goes; right after the original when omitted. */
+  at?: number;
+  /** How many passes the copy gets; the original's when omitted. */
+  bars?: number;
+  label?: string;
+}
+
+/**
+ * Copy a section, which is the other half of "write a chorus, then a second chorus".
+ *
+ * Both composers who drove this server asked for a songwriting shortcut of this shape, and the reason is that the alternative is
+ * `add_section` plus re-typing every override — the whole point of a chorus being repeated is that it is the same and then
+ * slightly different (one more pass, a fill, a ramp). The copy keeps the original's slot and **all** its overrides, and the
+ * caller changes what it wants afterwards.
+ */
+export function duplicateMcpSection(input: DuplicateMcpSectionInput): SongSummary {
+  const song = songs.get(input.songId);
+  if (!song) throw new Error(`unknown songId "${input.songId}" — create one with create_song`);
+  const original = song.sections[input.index];
+  if (!original) {
+    throw new Error(
+      `this song has no section ${input.index} (it has ${song.sections.length}: 0…${Math.max(0, song.sections.length - 1)})`
+    );
+  }
+  const at = input.at ?? input.index + 1;
+  if (at < 0 || at > song.sections.length) {
+    throw new Error(`at=${at} is outside the arrangement (0…${song.sections.length})`);
+  }
+  const copy: SongSection = {
+    ...original,
+    id: `${original.id}-copy-${song.sections.length}`,
+    ...(input.bars !== undefined ? { bars: input.bars } : {}),
+    ...(input.label !== undefined ? { label: input.label } : {}),
+  };
+  const sections = [...song.sections];
+  sections.splice(at, 0, copy);
+  const next: Song = { ...song, sections };
+  songs.set(input.songId, next);
+  return summariseSong(next);
+}
+
 /**
  * Add a section to a song.
  *

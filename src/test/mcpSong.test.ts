@@ -13,6 +13,7 @@ import {
   addMcpSection,
   clearMcpSongs,
   createMcpSong,
+  duplicateMcpSection,
   flattenMcpSong,
   getMcpSong,
   setMcpClip,
@@ -319,5 +320,47 @@ describe("MCP · bars means passes, and the summary says so", () => {
     expect(summary.totalBars).toBeGreaterThan(0);
     const single = createMcpSong({ genreId: "chicago-house", genre, bars: 1 });
     expect(summary.secondsEstimate).toBeGreaterThan(single.secondsEstimate);
+  });
+});
+
+describe("MCP · duplicate_section", () => {
+  /** Both composers asked for this: a second chorus should not mean re-typing the first one's overrides. */
+  it("copies a section with its clip and every override", () => {
+    const before = createMcpSong({ genreId: "chicago-house", genre: findGenre("chicago-house") });
+    addMcpSection({
+      songId: before.songId,
+      slot: "A",
+      bars: 4,
+      label: "chorus",
+      velocityScale: 0.8,
+      transpose: 2,
+      fill: true,
+    });
+    // `create_song` already places a first section, so the arrangement is: that one, the chorus, its copy.
+    const summary = duplicateMcpSection({ songId: before.songId, index: 1, bars: 8, label: "chorus 2" });
+    const song = getMcpSong(before.songId)!;
+    expect(song.sections).toHaveLength(3);
+    const first = song.sections[1];
+    const copy = song.sections[2];
+    expect(copy.slot).toBe(first.slot);
+    expect(copy.velocityScale).toBe(first.velocityScale);
+    expect(copy.transpose).toBe(first.transpose);
+    expect(copy.overrides?.fill).toEqual(first.overrides?.fill);
+    // …and only what the caller asked to differ, differs.
+    expect(copy.bars).toBe(8);
+    expect(copy.label).toBe("chorus 2");
+    expect(copy.id).not.toBe(first.id);
+    expect(summary.sections).toHaveLength(3);
+  });
+
+  it("places the copy where asked and refuses a position outside the arrangement", () => {
+    const before = createMcpSong({ genreId: "chicago-house", genre: findGenre("chicago-house") });
+    addMcpSection({ songId: before.songId, slot: "A", bars: 1, label: "verse" });
+    duplicateMcpSection({ songId: before.songId, index: 1, at: 0, label: "intro" });
+    const labels = getMcpSong(before.songId)!.sections.map((section) => section.label);
+    // The copy goes where it was asked to; the seed section from `create_song` has no label of its own.
+    expect(labels).toEqual(["intro", undefined, "verse"]);
+    expect(() => duplicateMcpSection({ songId: before.songId, index: 0, at: 99 })).toThrow(/outside the arrangement/);
+    expect(() => duplicateMcpSection({ songId: before.songId, index: 42 })).toThrow(/no section 42/);
   });
 });
