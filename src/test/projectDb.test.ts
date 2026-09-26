@@ -243,6 +243,26 @@ describe("IndexedDB Multi-Project Hub Engine (P7-02)", () => {
     const secondRun = await migrateLegacyLocalStorage();
     expect(secondRun).toBeNull();
   });
+
+  /**
+   * A project using the slots beyond A and B must survive the store — or be refused — never lose them silently.
+   *
+   * The save path assembled `{ A, B }` by hand until the clip-count work fixed it, so this is the case that would have caught that;
+   * and the store's treatment of a field the schema did not know about before today was unproven, which is why it is measured rather
+   * than assumed.
+   */
+  it("keeps extraClips through a save and a load", async () => {
+    const project = createBlankProject(sampleGenre, "Four Slots");
+    const withExtra = { ...project, extraClips: { C: { ...project.patterns.A } } } as unknown as typeof project;
+
+    await saveProject(withExtra);
+    const loaded = await getProject(project.id);
+
+    expect(loaded).toBeTruthy();
+    expect(loaded?.patterns.A).toBeDefined();
+    expect(loaded?.extraClips?.C).toBeDefined();
+  });
+
 });
 
 describe("the .groove package carries an arrangement (C1)", () => {
