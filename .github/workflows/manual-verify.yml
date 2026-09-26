@@ -134,6 +134,13 @@ jobs:
         if: inputs.scope == 'audio' || inputs.scope == 'verify' || inputs.scope == 'all'
         run: npm run build
 
+      # A4's last question, measured where the analyser's own loudness and 13-band shape are available: one song rendered twice,
+      # as written and with the `fx` lane cleared. A mix that moves means the lane is audible.
+      - name: Texture-lane contribution (A4)
+        if: inputs.scope == 'audio' || inputs.scope == 'verify' || inputs.scope == 'all'
+        continue-on-error: true
+        run: node scripts/probe_texture_contribution.mjs --genre=techno --out=loudness-report/texture.json
+
       - name: Arrangement playback (B7)
         if: inputs.scope == 'audio' || inputs.scope == 'verify' || inputs.scope == 'all'
         # The control below is the step that decides what this one's number means, so it must run even when this one fails —
