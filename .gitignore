@@ -64,8 +64,11 @@ wrangler.toml
 # MCP server bundle (built by `npm run mcp:build`)
 dist-mcp/
 
-# Cover-pipeline scratch (the batch runner's own working files, never shipped)
+# The cover pipeline's working directories: review dumps, rejects, installers and caches. The *shipped* artwork is
+# `public/covers/<genre>.jpg` and `public/covers/<skin>/<genre>.jpg`; none of these are loaded by the app.
+public/covers/_installed/
+public/covers/_rejected/
+public/covers/_review/
 public/covers/_batch_scratch/
-public/covers/_BATCH_STATE.md
-public/covers/_batch_progress.log
-public/covers/_batch_keepalive.sh
+public/covers/__pycache__/
+public/covers/_batch_*
