@@ -174,6 +174,25 @@ now paid for that lesson four times.
 `docs/AUDIO_REVIEW.md` answers "User location is not supported for the API use". So the next thing this plan proposes is not
 a sixth detector but a **capture button in the app**: let the person who can hear the pop hand over the signal.
 
+### 1i. Where the pop stands, and what would finish it (2026-09-26)
+
+**Characterised, reproducible, and not the core.** The reviewer's description and my own sample-level check agree on every
+particular: a **one-sample step at each note's release**, GS-1 only, up to −4.3 dBFS, broadband to Nyquist, larger in the
+right channel (the lane is panned +0.6). The trigger is the note-off — rendering with the note-offs unscheduled drops the
+high-frequency outliers from 181×/154×/135× the signal's own median slope to 41×/38×/33× and moves the survivors to the
+note-ons. And the core is clean in **five** configurations now: a note-off between `process` calls, a release mid-attack, a
+release **inside** a block, a one-sample chunk, and one reproducing `organStab` **exactly** (its ids and values, released at
+the lane's real 148 ms, which lands in the 0.22 s decay).
+
+So the step is introduced **between the core and the file**: the worklet's copy of the wasm output buffer, the host node's
+gain or channel configuration, or the exporter's mixdown. The instrument that settles it is small and does not exist yet:
+have the worklet post the ±8 wasm-buffer samples around a note-off, and compare them with the same samples in the rendered
+file. That is one `postMessage` and a probe, not another day of bisecting.
+
+**What is deliberately not being done meanwhile**: guessing. The five detectors earlier in this file each produced a
+confident wrong answer, and the last one — "it is only the note's own decay" — was itself wrong because it read a different
+metric's false positives. The next change to this path will be made against the buffer capture, not against a theory.
+
 ## 2. Velocity response belongs in the core — **partly done from Groove's side**
 
 Every native preset carries `velocityToCutoff` (1.0–2.2 octaves) and `velocityToAttack`/`Decay`; the core reads velocity
