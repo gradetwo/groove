@@ -123,6 +123,18 @@ narrow now: the envelope **does not ramp at all** at note-off — and an A/B agr
 release: `ENV_RELEASE` 4 s shrinks it to 61× the sound's own median slope, the shipped 1.3 s gives 181×, and 0.15 s makes it
 **2487×**. A release that is *inversely* proportional to the click is not a release; it is a cut.
 
+**And the core survives the exact shipped patch, released where the lane releases it.** Four upstream cases now pass: a
+note-off between `process` calls, a release **mid-attack**, a release **inside a block** (the worklet's own shape), and one
+reproducing `organStab` **exactly** — its own ids and values, released at the lane's real 148 ms, which lands **during the
+decay** (0.22 s) rather than in the attack. The first in-block case also had to be fixed for the same reason this whole
+investigation keeps repeating: it compared the two renders with a 25 % tolerance, which cannot see a 0.09 step on a 0.5 peak,
+and passed while doing so.
+
+So the core is not the source in any configuration Groove can put it in, and the step is introduced **between the core and
+the file**: the worklet's buffer copy, the host's gain and connection, or the exporter's mixdown. The next measurement is at
+that boundary — capture the wasm output buffer around a note-off and compare it with the final output, which says which side
+of the line the step appears on.
+
 **The A/B ran, and the trigger is the note-off.** With the GS-1 note-offs never scheduled (`--no-note-off`), the same lead
 stem's high-frequency outliers fall from **181x / 154x / 135x** the signal's own median slope to **41x / 38x / 33x** — a
 4.5x reduction, and the surviving peaks move to different times (the note-ons). So the step is triggered by the off.
