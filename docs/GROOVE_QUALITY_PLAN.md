@@ -56,6 +56,21 @@ of notes, and **not carry top end** — percussion, a low sweep, a chord stab �
 all three measurements produced. **The proxy was never evidence that the lane is inaudible**; it was evidence that the lane is not
 *high-frequency*.
 
+**And nothing needs building at all: the MCP already is the instrument.** `render_song` bounces a song and `analyze_audio`
+returns its **gated loudness and 13-band shape** — both of which the probe lacked, and both of which are exactly the measurement
+described above. So A4's whole-mix A/B is two MCP calls over one edit: mute the `fx` lane in a section, render, analyse, unmute,
+render, analyse, and compare LUFS and the bands.
+
+That is worth saying because it inverts the direction the last three rounds were heading. Each one assumed the measurement had to be
+built into a browser probe, and the last one even catalogued the DSP that would have to be written; the tool that answers the
+question — with the analyser's own loudness and the same 13-band fingerprint the timbre baseline uses — has been in the toolset since
+the MCP was written. The probe's role stays what it was: the **structural** check that both renders differ at all.
+
+**What that leaves for ③b**, in order: take the A/B through the MCP on a genre whose prose names risers (`techno`, `hard_electro`);
+read whether the mix moves; if it does, A4 closes as implemented and audible and ③b is nothing more than this measurement; if it does
+not, the lane's level or instrument changes, that is a real audio edit, and it goes through the CI audio batch with a baseline
+re-record behind it.
+
 **And it is nearly free to take, because the probe already has both renders.** `probe_arrangement_audio.mjs` builds
 `withoutTextureLane(song)` and renders it beside the untouched song — that is how the top-end proxy A/B was measured — so the
 whole-mix comparison needs **no extra render**, which matters on a probe that has already been cut down once for exceeding its budget.
