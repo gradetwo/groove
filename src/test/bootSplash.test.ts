@@ -19,6 +19,19 @@ describe("the boot splash", () => {
     expect(root.indexOf("<div id=bs>")).toBeLessThan(root.indexOf("</div>\n    <style>"));
   });
 
+  it("still loads the application", () => {
+    /**
+     * The regression this test exists for, found by CI's voice sweep rather than by a reader.
+     *
+     * The commit that added the splash rewrote the end of the document and **deleted the entry script**: the page has rendered a
+     * permanent splash ever since, with no error anywhere, and every build after it was a dead shell. A test that only inspects
+     * the splash cannot see that — so this one asserts the tag the whole app hangs off.
+     */
+    expect(html).toContain('<script type="module" src="/src/main.tsx"></script>');
+    // …and it is inside the body, after the root the app renders into.
+    expect(html.indexOf('<div id="root"')).toBeLessThan(html.indexOf('src="/src/main.tsx"'));
+  });
+
   it("styles itself inline, with no stylesheet, font or script to wait for", () => {
     const style = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
     expect(style).toContain("#bs{");
