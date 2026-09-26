@@ -76,6 +76,8 @@ const soloRole = arg("--solo", "");
 const gs1Param = arg("--gs1-param", "");
 /** Zero every track's sends (`--sends=0`), to tell a voice apart from the echo of one. */
 const sendsOff = arg("--sends", "") === "0";
+/** A/B: skip the GS-1 note-offs entirely (`--no-note-off`). */
+const noNoteOff = process.argv.includes("--no-note-off");
 /** Render the authored skeleton instead of the shipping pattern (see the note at the call site). */
 const raw = process.argv.includes("--raw");
 /**
@@ -130,7 +132,7 @@ try {
   await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
 
   const result = await page.evaluate(
-    async ({ genreId, bars, seamlessLoop, noGs1, stemRole, soloRole, gs1Param, sendsOff, raw }) => {
+    async ({ genreId, bars, seamlessLoop, noGs1, stemRole, soloRole, gs1Param, sendsOff, noNoteOff, raw }) => {
       const [genres, wav, mix, trackStates, gs1Tracks] = await Promise.all([
         import("/src/data/genres/index.ts"),
         import("/src/audio/WavExporter.ts"),
@@ -141,6 +143,7 @@ try {
         import("/src/audio/gs1/gs1Tracks.ts"),
       ]);
       if (noGs1) gs1Tracks.setGs1RoutingEnabled(false);
+      if (noNoteOff) globalThis.__noNoteOff = true;
       if (gs1Param) {
         const [rawId, rawValue] = String(gs1Param).split("=");
         const patches = await import("/src/data/gs1Patches.ts");
@@ -213,7 +216,7 @@ try {
           : null,
       };
     },
-    { genreId: genre, bars, seamlessLoop, noGs1, stemRole, soloRole, gs1Param, sendsOff, raw }
+    { genreId: genre, bars, seamlessLoop, noGs1, stemRole, soloRole, gs1Param, sendsOff, noNoteOff, raw }
   );
 
   await browser.close();
