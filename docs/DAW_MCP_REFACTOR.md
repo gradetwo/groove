@@ -128,6 +128,33 @@ resolve a local fix, and a detector that fires on the music is not evidence abou
 The fade itself did what it was supposed to do — it removed the step at the boundary — which is why the count moved at all rather
 than not. What was wrong was expecting a number about the *whole file* to measure an edit to *twenty milliseconds* of it.
 
+### Stage 3 answered: there is no sample-level click to remove, and the fade stays an option (2026-09-28)
+
+CI ran the corrected, local criterion (run 36258712237):
+
+```
+boundary click : worst step within ±10 ms of the jump 2.47e-2 → 2.47e-2  · no-jump control 2.47e-2 → 2.47e-2
+boundary fade  : discontinuities 1208 → 1205
+```
+
+Read it carefully, because it says three things:
+
+1. the worst step in the window is **identical before and after the fade** — so the fade is not touching whatever the worst step is;
+2. it is **identical to the no-jump control**, where the material is continuous — so the worst step near a boundary is **a drum
+   transient**, not the boundary;
+3. and the whole-file count still moved by three samples, which is the fade doing exactly what it does.
+
+Together: **the boundary is not a sample-level discontinuity.** A section's mute or velocity change is a discontinuity in the
+*envelope*, and the waveform between two sections is continuous whenever the boundary falls where the signal is near zero — which
+is where a bar line usually falls. The composer's ~2406 "discontinuities" are the music's own transients; the counter counts
+transients, and reading them as clicks is the same mistake this project has now recorded four times (the detector fires on the
+music, so it cannot testify about the edit).
+
+**So the fade ships as an option, not as a default.** It is correct, cheap, five to ten milliseconds, and it is what a DAW does at
+an arrangement boundary — but nothing measured here demands it, and turning it on by default would change every rendered song on
+evidence that does not support it. What *did* change is the record: stage 3's premise ("the flatten's boundaries produce clicks")
+is now measured rather than assumed, and it is **not** supported for the arrangement tested.
+
 ## What this is not
 
 It is not a rewrite of the sequencer, the audio engine or the genre library — those are the parts this project has spent its
