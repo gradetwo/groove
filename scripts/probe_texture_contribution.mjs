@@ -17,7 +17,7 @@ const value = (name, fallback) => {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
   return hit ? hit.split("=")[1] : fallback;
 };
-const genre = value("genre", "techno");
+const genre = value("genre", "hard-techno");
 const out = value("out", "");
 const BUNDLE = path.resolve("dist-mcp/groove-mcp.mjs");
 
