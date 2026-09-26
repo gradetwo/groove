@@ -129,7 +129,12 @@ try {
      */
     const fill = formsModule.fillForTracks(clip.tracks, stepsPerPass);
     const sections = [
-      { id: "probe-s1", slot: "A", bars: 2, label: "build", overrides: { velocityRamp: ramp } },
+      /**
+       * The build carries `riser` as well, because the club form's build step does — that is what A4 asks about: does the top
+       * end rise **only** where the arrangement says it should. Without the flag the probe renders the same audio and reports
+       * nothing about it.
+       */
+      { id: "probe-s1", slot: "A", bars: 2, label: "build", overrides: { velocityRamp: ramp, riser: true } },
       { id: "probe-s2", slot: "A", bars: 2, label: "fill", ...(fill ? { overrides: { fill } } : {}) },
     ];
     const song = {
@@ -242,6 +247,22 @@ try {
     const buildSections = sections
       .map((section, index) => ({ section, index }))
       .filter((entry) => entry.section.overrides?.velocityRamp);
+    /**
+     * The bars the arrangement marks as a **riser**, which is A4's question: does the top end rise only where the
+     * arrangement says it should?
+     *
+     * The club form's build step carries both a `velocityRamp` and `riser: true`, so these spans overlap the build's — which
+     * is the point (the riser is what the build asks for on top of the ramp), and why they are reported side by side rather than
+     * merged. The band measure here is the same first-difference high band the fill check uses: a **proxy** for "top end", not
+     * the plan's three bands. It answers whether the arranged bars gain top end at all before anyone extends it.
+     */
+    const riserSpans = sections
+      .map((section, index) => ({ section, index }))
+      .filter((entry) => entry.section.overrides?.riser)
+      .map((entry) => {
+        const start = sections.slice(0, entry.index).reduce((sum, section) => sum + section.bars, 0);
+        return { start, end: start + Math.max(1, Math.floor(entry.section.bars)) - 1 };
+      });
     const buildSpans = buildSections.map((entry) => {
       const start = sections.slice(0, entry.index).reduce((sum, section) => sum + section.bars, 0);
       return { start, end: start + Math.max(1, Math.floor(entry.section.bars)) - 1 };
@@ -256,6 +277,33 @@ try {
       buildSpans,
       medianOnsets: [...onsetCounts].sort((a, b) => a - b)[Math.floor(onsetCounts.length / 2)],
       audio: {
+        riserBars: riserSpans.flatMap((span) => {
+          const out = [];
+          for (let bar = span.start; bar < span.end; bar += 1) out.push(bar);
+          return out;
+        }),
+        riserHigh: riserSpans.flatMap((span) => {
+          const out = [];
+          for (let bar = span.start; bar < span.end; bar += 1) {
+            out.push(highBand(withFill.channels, bar * barSeconds, (bar + 1) * barSeconds, withFill.buffer.sampleRate));
+          }
+          return out;
+        }),
+        otherHigh: (() => {
+          const riser = new Set(
+            riserSpans.flatMap((span) => {
+              const out = [];
+              for (let bar = span.start; bar < span.end; bar += 1) out.push(bar);
+              return out;
+            })
+          );
+          const out = [];
+          for (let bar = 0; bar < bars; bar += 1) {
+            if (riser.has(bar)) continue;
+            out.push(highBand(withFill.channels, bar * barSeconds, (bar + 1) * barSeconds, withFill.buffer.sampleRate));
+          }
+          return out;
+        })(),
         seconds: withFill.buffer.duration,
         barSeconds,
         fillRms: fillBars.map((bar) => ({
@@ -383,6 +431,16 @@ try {
   } else {
     console.log(`✅ Arrangement audio (${genreId}, club form): ${summary.bars} bars rendered`);
     console.log(`   onsets per bar   : ${summary.onsetsPerBar}`);
+    if (measured.audio.riserBars.length > 0) {
+      const mean = (values) => (values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0);
+      const relative = mean(measured.audio.otherHigh) > 0
+        ? (mean(measured.audio.riserHigh) / mean(measured.audio.otherHigh) - 1) * 100
+        : 0;
+      console.log(
+        `   riser bars ${measured.audio.riserBars.join(", ")}: top-end proxy ${relative >= 0 ? "+" : ""}${relative.toFixed(1)}% ` +
+          `against the other bars (one high band; the plan's three-band split is still to come)`
+      );
+    }
     console.log(`   mean velocity/bar: ${summary.meanVelocityPerBar}`);
     console.log(
       `   fill bars ${summary.fillBars}: high band ${summary.fillHighGainPct.map((p) => `${p >= 0 ? "+" : ""}${p}%`).join(", ")} ` +

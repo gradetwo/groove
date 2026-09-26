@@ -9,7 +9,27 @@ It is deliberately *not* a to-do list derived from the report: four of the repor
 implemented, and the measurements below say which. The two workstreams (this and the skin/gate work) are
 independent — nothing here touches CSS, and the gates added here do not overlap `probe:skins`.
 
-######## A4/B5 surveyed: the data side exists, the measurement needs one extension (2026-09-28)
+######## A4/B5 measured: the riser is declared and never read (2026-09-28)
+
+The survey said the arrangement already declares a riser. Measuring it says more than that, and it is worth stating plainly:
+
+* `probe_arrangement_audio.mjs` now flags the bars the arrangement marks as a **riser** and reports their top-end proxy against
+  the other bars. On `chicago-house` the riser bar reads **−25.7%** — but that number is confounded: the riser and the velocity
+  ramp occupy the **same** bars (the club form's build step carries both), so "riser bars against the others" is measuring the
+  ramp, which starts at 0.25 velocity;
+* the decisive check is therefore not the band comparison but a **search for a reader**. `riser` appears in `arrangementForm.ts`
+  (the declaration), in genre prose, and as an **instrument name** (`fx_riser`, `riser: "fx"`) — it is **never read** as a step
+  override by the generator, the engine or the renderer.
+
+So the texture lane does not exist yet: the data says "the texture lane arrives over its last pass", and nothing acts on it. That
+turns A4 from "measure whether the top end rises" into **implement B5 and then measure** — and the measurement to use is the
+**A/B** the rest of this plan uses rather than the confounded bar comparison: render the same form with and without
+`riser: true` and compare the plan's three top bands, which is only meaningful once the flag does something.
+
+The probe keeps its riser report (it is how the next round will see the flag start working), with the confound written down so
+nobody reads −25.7% as a defect.
+
+### A4/B5 surveyed: the data side exists, the measurement needs one extension (2026-09-28)
 
 A4's exit criterion is "the top three bands gain energy **only** in the arranged bars", and B5 is the arrangement data that names
 those bars. Surveyed before writing any code, and most of it is already here:
