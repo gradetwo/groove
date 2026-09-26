@@ -25,6 +25,17 @@ export interface FlattenedSong {
   problems: string[];
   /** Playable bars in the timeline (what the song's length means). */
   totalBars: number;
+  /**
+   * The step each section starts at, in the flattened pattern.
+   *
+   * The flatten is what **discards** the section boundaries — a renderer handed only the pattern cannot know where one section
+   * ended and the next began — and a section's hard mute or velocity jump is exactly where an audio boundary should be faded.
+   * So the boundary list is returned rather than thrown away: the data stays data, and the fade happens in the render path where
+   * the samples are (`docs/DAW_MCP_REFACTOR.md`, stage 3).
+   *
+   * The first entry is always `0`; a song with no sections has none.
+   */
+  boundaries: number[];
   /** Steps in the flattened pattern — the sum of each bar's clip length, so mixed clip lengths work. */
   totalSteps: number;
 }
@@ -105,13 +116,13 @@ export function flattenSong(song: Song): FlattenedSong {
 
   if (!bars.length) {
     problems.push("nothing to render: the song has no playable bars");
-    return { pattern: skeletonPattern(song), problems, totalBars: 0, totalSteps: 0 };
+    return { pattern: skeletonPattern(song), problems, totalBars: 0, totalSteps: 0, boundaries: [] };
   }
 
   const firstClip = clipFor(song, bars[0].slot);
   if (!firstClip) {
     problems.push(`clip ${bars[0].slot} is missing`);
-    return { pattern: skeletonPattern(song), problems, totalBars: bars.length, totalSteps: 0 };
+    return { pattern: skeletonPattern(song), problems, totalBars: bars.length, totalSteps: 0, boundaries: [] };
   }
 
   const baseTracks = firstClip.tracks ?? [];
@@ -136,6 +147,21 @@ export function flattenSong(song: Song): FlattenedSong {
     const clip = clipFor(song, bar.slot)!;
     return sum + clipSteps(clip);
   }, 0);
+
+  /**
+   * Where each **section** begins, in flattened steps.
+   *
+   * `playable` is one entry per bar, so a boundary is a step index that belongs to a bar whose `barInSection` is 0 — the first
+   * bar of a section — which is the same test the timeline uses to place a section's overrides.
+   */
+  const boundaries: number[] = [];
+  {
+    let offset = 0;
+    for (const bar of playable) {
+      if (bar.barInSection === 0) boundaries.push(offset);
+      offset += clipSteps(clipFor(song, bar.slot)!);
+    }
+  }
 
   const tracks: SequencerTrack[] = baseTracks.map((baseTrack, trackIdx) => {
     /**
@@ -264,7 +290,7 @@ export function flattenSong(song: Song): FlattenedSong {
     tracks,
   };
 
-  return { pattern, problems, totalBars: playable.length, totalSteps };
+  return { pattern, problems, totalBars: playable.length, totalSteps, boundaries };
 }
 
 /** A clip's length in steps: its declared `totalSteps`, else its longest lane. */
