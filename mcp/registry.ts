@@ -527,6 +527,9 @@ export const TOOLS: ToolDefinition[] = [
           bars: 1,
           bitrateKbps: args.bitrateKbps as number | undefined,
           genreId: song.genreId,
+          // The caller's own title, whitelisted in the worker — never model prose, and never the whole name in place of the genre
+          // and tempo. A song with no name (its genre id) lands on the previous `_master_` form by construction.
+          nameSlug: song.name,
         });
         return { ...(result as unknown as Record<string, unknown>), songId: song.id, totalSteps: flattened.pattern.totalSteps };
       } catch (error) {

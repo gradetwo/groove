@@ -33,6 +33,14 @@ export interface RenderOptions {
   bitrateKbps?: number;
   genreId?: string;
   /**
+   * A slug for the file name, from the caller's own song title.
+   *
+   * The server has never let model text name a file, and it still does not: this is whitelisted to `[a-z0-9-]`, lowercased, cut
+   * to 40 characters, and joined to the genre and tempo rather than replacing them. What it buys is a file called
+   * `neo-soul_my-ballad_80bpm.mp3` instead of `neo-soul_master_80bpm.mp3` for a caller that named its song.
+   */
+  nameSlug?: string;
+  /**
    * Also render each track in isolation and report its peak.
    *
    * Off by default because it costs one extra render per track (eight on a full pattern) and most calls only
@@ -228,7 +236,21 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
 
   const dir = outputDirectory(options);
   const bpm = pattern.bpm ?? 120;
-  const filename = `${options.genreId ?? pattern.genre_id ?? "groove"}_master_${bpm}bpm.${options.format}`;
+  /**
+   * `genre_master_<bpm>bpm` by default, and `genre_<slug>_<bpm>bpm` when the caller's song has a name.
+   *
+   * The slug comes from the *caller's title*, never from model prose: it is whitelisted to `[a-z0-9-]` (so nothing can escape the
+   * output directory, no separators, no dots, no unicode surprises), lowercased, collapsed and cut to 40 characters, and an
+   * empty result falls back to the previous `master` form. The genre and the tempo are always present, so the file still says
+   * what it is even if the title is nonsense.
+   */
+  const slug = (options.nameSlug ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+  const middle = slug.length > 0 ? slug : "master";
+  const filename = `${options.genreId ?? pattern.genre_id ?? "groove"}_${middle}_${bpm}bpm.${options.format}`;
   const file = path.join(dir, filename.replace(/[^a-z0-9_.-]/gi, "_"));
   const written = Buffer.from(result.base64, "base64");
   writeFileSync(file, written);
