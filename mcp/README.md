@@ -89,6 +89,29 @@ before anything was changed; the file:line is the evidence.
 | O1 | `analyze_audio` reports ~2406 discontinuities | **plausible, unverified by ear.** `flattenSong` renders the sections into one pattern with no cross-fade at mute/velocity jumps, so a click at a section boundary is possible. It is a listening question, and the fix (a 5–10 ms fade at the jumps) is small if it is audible. |
 | F1 | no C-pop / mandopop genre | **true.** `search_genres "mandopop"` returns nothing out of 159 genres; writing a Chinese ballad means substituting neo-soul, which is a real style mismatch. This is a **data** task (a genre file plus its mix and voicing), not a tool fix. |
 
+**P3 surveyed (2026-09-28)**: the app's exporter is **pure**, which makes this smaller than it looked.
+`exportProjectPackage(project, appVersion)` (`src/features/sequencer/projectDb.ts:496`) only *builds* the package object — no browser,
+no IndexedDB — and a wrapper beside it does the `JSON.stringify`. The module's IndexedDB work is all inside functions, so the MCP
+server (Node) can import it the way it already imports `genreMix`. What is missing is therefore a **mapping**, not a dependency:
+`export_groove` has to turn a song (clips + sections + tempo, which `get_song` now returns) into the `GrooveProject` the exporter
+takes, run the package's own validation, and write the JSON under `GROOVE_MCP_OUT` like the render tools do. The mapping is the
+design question, and reading the type answers it: **`GrooveProject` holds exactly two patterns** — `patterns: { A, B }` plus
+`activeSlot` and `songMode` (`src/types/project.ts:12-27`) — and **nothing that can carry a clip slot or a section**. A song has
+up to four clips and an ordered arrangement, so a `.groove` export of a song is **lossy today** and no amount of wrapping changes
+that.
+
+Three honest routes, in order of how much they cost:
+
+1. **export the A/B clips as the project's two patterns**, and say in the tool's result exactly what was dropped (C/D clips and
+   the section timeline). Useful immediately, honest by construction, no format change;
+2. **refuse** a song that uses more than A and B, and export the rest — same code, a stricter contract;
+3. **extend the package format** with an optional arrangement field and bump its version (`validateGroovePackage` is the gate
+   that would have to learn it). This is the only route that makes the round trip lossless, and it is a **format decision for the
+   owner**, not something a tool should slip in.
+
+The tool should ship route 1 or 2 and name the limitation in its output; route 3 is recorded here so the choice is made
+deliberately rather than by accident.
+
 **Order, by what unblocks composition rather than by what is easiest**: P1 (expose `set_clip` and pass `clips` through
 `create_song`), P2 (`get_song`), P3 (`export_groove`), P4 (mp3 in `analyze_audio`), then the two small ones, then O1 if it is
 audible, then F1 as content work.
