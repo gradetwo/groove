@@ -1,0 +1,120 @@
+import { describe, it, expect } from "vitest";
+import { laneFromNotes, laneStaysOnGrid, notesFromLane, stepPitches } from "../data/noteLayer";
+import type { SequencerTrack } from "../types/genre";
+
+/**
+ * The note layer, phase P1 of `docs/PRO_EDITOR_PLAN.md`.
+ *
+ * The catalogue speaks in step arrays; the editor's direction is a note list. These cases pin the two things that make
+ * that migration safe: the expansion is faithful (a genre's lane becomes the same notes), and the write-back **refuses**
+ * anything a step array cannot say rather than rounding it away.
+ */
+const lane = (over: Partial<SequencerTrack> = {}): SequencerTrack =>
+  ({
+    track_id: "kick",
+    name: "Kick",
+    instrument: "punchy_kick",
+    steps: [1, 0, 0, 0, 1, 0, 0, 0],
+    ...over,
+  }) as SequencerTrack;
+
+describe("expanding a lane into notes", () => {
+  it("turns each active step into one note, with the step's own velocity and gate", () => {
+    const notes = notesFromLane(
+      lane({ velocity: [100, 0, 0, 0, 64, 0, 0, 0], gate: [0.5, 0.8, 0.8, 0.8, 2, 0.8, 0.8, 0.8] }),
+      8
+    );
+    expect(notes).toHaveLength(2);
+    expect(notes[0]).toMatchObject({ startStep: 0, durationSteps: 0.5, velocity: 100 / 127, pitch: 0 });
+    expect(notes[1]).toMatchObject({ startStep: 4, durationSteps: 2, velocity: 64 / 127, pitch: 0 });
+  });
+
+  it("expands a stored chord into one note per pitch on the step", () => {
+    const notes = notesFromLane(
+      lane({
+        track_id: "chords",
+        steps: [1, 0, 0, 0, 0, 0, 0, 0],
+        pitches: [[48, 55, 60], null, null, null, null, null, null, null],
+      }),
+      8
+    );
+    expect(notes.map((n) => n.pitch)).toEqual([48, 55, 60]);
+    expect(new Set(notes.map((n) => n.startStep))).toEqual(new Set([0]));
+  });
+
+  it("expands a ratchet into evenly spaced hits inside the step", () => {
+    const notes = notesFromLane(
+      lane({ steps: [1, 0, 0, 0, 0, 0, 0, 0], gate: [1, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8], ratchet: [4, 1, 1, 1, 1, 1, 1, 1] }),
+      8
+    );
+    expect(notes.map((n) => n.startStep)).toEqual([0, 0.25, 0.5, 0.75]);
+    expect(notes.every((n) => n.durationSteps === 0.25)).toBe(true);
+  });
+
+  it("reads a step's pitches as the stack first, then the root, then nothing", () => {
+    const track = lane({ track_id: "chords", pitch: [60, 62, null, null, null, null, null, null], pitches: [[60, 64], null, null, null, null, null, null, null] });
+    expect(stepPitches(track, 0)).toEqual([60, 64]);
+    expect(stepPitches(track, 1)).toEqual([62]);
+    expect(stepPitches(track, 2)).toEqual([]);
+  });
+});
+
+describe("writing notes back as a step array", () => {
+  it("round-trips a grid-aligned lane, notes → arrays → notes", () => {
+    const track = lane({
+      velocity: [100, 0, 0, 0, 64, 0, 0, 0],
+      gate: [0.5, 0.8, 0.8, 0.8, 2, 0.8, 0.8, 0.8],
+      pitch: [36, null, null, null, 38, null, null, null],
+    });
+    const notes = notesFromLane(track, 8);
+    const arrays = laneFromNotes(notes, 8);
+    expect(arrays).not.toBeNull();
+    expect(arrays!.steps).toEqual(track.steps);
+    expect(arrays!.pitch).toEqual(track.pitch);
+    expect(arrays!.velocity).toEqual(track.velocity);
+    expect(arrays!.gate).toEqual(track.gate);
+    expect(notesFromLane({ ...track, ...arrays! } as SequencerTrack, 8)).toEqual(notes);
+  });
+
+  it("keeps a stored chord as a stored chord", () => {
+    const track = lane({
+      track_id: "chords",
+      steps: [1, 0, 0, 0, 0, 0, 0, 0],
+      pitches: [[48, 55, 60], null, null, null, null, null, null, null],
+    });
+    const arrays = laneFromNotes(notesFromLane(track, 8), 8);
+    expect(arrays!.pitches?.[0]).toEqual([48, 55, 60]);
+    // The root stays in `pitch`, which is the track type's own contract.
+    expect(arrays!.pitch[0]).toBe(48);
+  });
+
+  it("refuses what a step array cannot say, instead of rounding", () => {
+    const offGrid = notesFromLane(lane(), 8).map((note) => ({ ...note, startStep: note.startStep + 0.25 }));
+    expect(laneFromNotes(offGrid, 8)).toBeNull();
+    expect(laneStaysOnGrid(offGrid, 8)).toBe(false);
+
+    // …but a fractional *duration* is free: `gate` is a float, and 0.5 or 2.5 steps is a normal pattern value.
+    const fractional = notesFromLane(lane(), 8).map((note) => ({ ...note, durationSteps: 1.5 }));
+    expect(laneFromNotes(fractional, 8)?.gate?.[0]).toBe(1.5);
+
+    // Two hits on one step with different velocities is a sequence, not a chord.
+    const twoOnOneStep = [
+      { trackId: "kick" as const, pitch: 0, startStep: 0, durationSteps: 1, velocity: 1 },
+      { trackId: "kick" as const, pitch: 1, startStep: 0, durationSteps: 1, velocity: 0.5 },
+    ];
+    expect(laneFromNotes(twoOnOneStep, 8)).toBeNull();
+  });
+
+  it("accepts a chord whose notes agree, and only then", () => {
+    const chord = [48, 55, 60].map((pitch) => ({
+      trackId: "chords" as const,
+      pitch,
+      startStep: 2,
+      durationSteps: 4,
+      velocity: 0.8,
+    }));
+    expect(laneStaysOnGrid(chord, 8)).toBe(true);
+    const disagreeing = chord.map((note, i) => ({ ...note, velocity: i === 0 ? 0.4 : 0.8 }));
+    expect(laneStaysOnGrid(disagreeing, 8)).toBe(false);
+  });
+});
