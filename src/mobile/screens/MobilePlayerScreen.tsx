@@ -39,6 +39,8 @@ import type { Genre } from "../../types/genre";
 import { CATEGORY_SWATCH } from "../genreArt";
 import { MobileGenrePicker } from "../MobileGenrePicker";
 import { VinylCanvas, type VinylClock } from "../vinyl/VinylCanvas";
+import { useLightPlayer } from "../../hooks/useLightPlayer";
+import { useLabelArt } from "../../hooks/useLabelArt";
 import { PLAY_MODE_LABEL_KEYS, type PlayMode } from "../vinyl/vinylMath";
 
 const MODE_ICONS: Record<PlayMode, React.ReactNode> = {
@@ -142,6 +144,9 @@ function PlayerForGenre({
   onCollapse,
   onOpenDetail,
 }: MobilePlayerScreenProps & { genre: Genre }) {
+  const { lightPlayer } = useLightPlayer();
+  // The record's label prints the genre's own artwork, in the active skin (see `bakeLabel`).
+  const labelArt = useLabelArt(genre.id);
   const { t } = useLanguage();
   const [listOpen, setListOpen] = useState(false);
   /** The reference's "落针…": the needle is on its way down for about half a second. */
@@ -291,6 +296,9 @@ function PlayerForGenre({
             bpmOutRef={bpmOutRef}
             progressRef={progressRef}
             totalSteps={genre.sequencer_pattern?.totalSteps || 16}
+            /* 更多 → 播放器: stop the motion, keep the clock (and therefore the sound). */
+            lite={lightPlayer}
+            labelArt={labelArt}
           />
         </button>
 

@@ -202,5 +202,11 @@ export const mobileMessages = {
   mobile_more_help: { en: "Manual & tours", zh: "手册与引导" },
   mobile_more_search: { en: "Search genres and views", zh: "搜索曲风与页面" },
   mobile_more_language: { en: "Language", zh: "语言" },
+  mobile_more_player: { en: "Player", zh: "播放器" },
+  mobile_light_player: { en: "Lighter player", zh: "精简动效" },
+  mobile_light_player_hint: {
+    en: "Stops the record's motion — the sound is unchanged",
+    zh: "关闭唱片动效以省电，声音不变",
+  },
   mobile_more_about: { en: "Groove Lab · an interactive genre atlas and sequencer", zh: "Groove Lab · 交互式曲风图谱与音序器" },
 };

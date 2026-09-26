@@ -1,23 +1,23 @@
 {
-  "version": "2.27.0",
+  "version": "2.28.0",
   "releaseDate": "2026-09-26",
   "changelogCount": 10,
   "latest": {
-    "version": "2.27.0",
+    "version": "2.28.0",
     "date": "2026-09-26",
-    "category": "feat",
+    "category": "feature",
     "title": {
-      "zh": "每套皮肤用上自己的曲风配图，桌面端也开始展示",
-      "en": "Each skin uses its own genre artwork, and the desktop shows it too"
+      "zh": "手机版：唱片中心印上曲风图，新增「精简动效」开关",
+      "en": "Mobile: the genre's art on the record's label, and a lighter-player switch"
     },
     "highlights": [
       {
-        "zh": "每套皮肤显示对应曲风配图（六套皮肤各 159 张，此前界面一直只用共享图）；缺图时自动退回共享图。",
-        "en": "Every skin shows its own genre cover — six skins of 159 images the UI had never used — falling back to the shared image when one is missing."
+        "zh": "播放条里的封面改用当前皮肤自己的图（之前仍是旧版共享图）；黑胶唱片中心浅色区域印上该曲风的配图，位于最下层，唱片文字全部保留。",
+        "en": "The mini player now shows the active skin's own cover (it was still the old shared image), and the record's label prints the genre's artwork as its bottom layer with every line of text kept."
       },
       {
-        "zh": "桌面端新增三处：曲风详情头图、探索卡片缩略图、对比列头；开屏按钮改为只显示中文。",
-        "en": "Three new desktop placements: the genre detail hero, explore-card thumbnails and the compare columns. The start button is Chinese-only now."
+        "zh": "设置里新增「精简动效」开关：关闭唱片与界面的装饰动画以省电，声音与走带完全不变；偏好会记住，并在首帧前生效。",
+        "en": "A new Lighter player switch in settings: decorative motion stops to save power while the sound and transport are untouched. The choice is remembered and applied before the first frame."
       }
     ],
     "truncated": false

@@ -231,6 +231,15 @@ export interface LabelSpec {
    */
   displayFont: string;
   monoFont: string;
+  /**
+   * The genre's own artwork, printed onto the label under everything else.
+   *
+   * "The light area in the middle of the record" is where a real pressing prints its paper label, so the genre's picture
+   * belongs there — under the ticks, the name and the footer, which all stay exactly as they are. The image is loaded by
+   * the caller (canvas drawing is synchronous and an `Image` is not), and `key` is the URL it came from so the cache
+   * re-bakes when the skin changes rather than reusing the previous skin's print.
+   */
+  cover?: { image: CanvasImageSource; key: string } | null;
 }
 
 /**
@@ -254,6 +263,29 @@ export function bakeLabel(spec: LabelSpec, size = 512): BakedSprite | null {
   g.beginPath();
   g.arc(radius, radius, radius, 0, tau);
   g.fill();
+
+  /**
+   * The genre's picture, clipped to the label's circle and kept quiet.
+   *
+   * Alpha rather than a blend mode, and the whole label's radius rather than an inset disc: the printed paper of a
+   * pressing *is* the picture, and everything drawn after this (the ring, the ticks, the name, the footer) has to stay
+   * legible over it. 0.5 measured as "clearly the genre's own art" while the 9 px mono footer still reads.
+   */
+  if (spec.cover?.image) {
+    g.save();
+    g.beginPath();
+    g.arc(radius, radius, radius, 0, tau);
+    g.clip();
+    g.globalAlpha = 0.5;
+    try {
+      g.drawImage(spec.cover.image, 0, 0, size, size);
+    } catch {
+      /* A broken image must not cost the label: the paper is already painted. */
+    }
+    g.restore();
+    g.globalAlpha = 1;
+  }
+
   g.strokeStyle = spec.accent;
   g.lineWidth = 3 * scale;
   g.globalAlpha = 0.9;
@@ -357,6 +389,7 @@ export function labelCacheKey(spec: LabelSpec): string {
     spec.displayFont,
     spec.monoFont,
     lanes,
+    spec.cover?.key ?? "",
   ].join("~");
 }
 

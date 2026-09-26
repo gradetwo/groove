@@ -19,6 +19,7 @@ import "./styles/desktopTokens.css";
  */
 
 import { applyStoredSkin } from "./hooks/useSkin";
+import { applyStoredLightPlayer } from "./hooks/useLightPlayer";
 import { initPwa } from "./utils/pwa";
 import { initIosAudioUnlock } from "./audio/iosAudioUnlock";
 
@@ -30,6 +31,8 @@ import { initIosAudioUnlock } from "./audio/iosAudioUnlock";
  * reasoning as `data-density`.
  */
 applyStoredSkin();
+// Before the first paint, so a phone with the preference on never shows a spinning record first.
+applyStoredLightPlayer();
 
 // Initialize PWA Service Worker & App Shell offline caching (P4-07)
 initPwa();

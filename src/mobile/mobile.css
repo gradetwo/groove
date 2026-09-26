@@ -715,3 +715,26 @@
   content-visibility: auto;
   contain-intrinsic-size: auto 620px;
 }
+
+/**
+ * The "lighter player" preference (更多 → 播放器).
+ *
+ * A class on the document element rather than a prop threaded through every component. The selectors are the ones that
+ * actually animate in this stylesheet, read off it rather than guessed: the screen-entry rise, the player's step dots, the
+ * big transport icon's breath, the cue list's equaliser bars and the explore screen's legacy panel. None of them carry
+ * information, and all of them repaint on a phone that is supposed to be saving power.
+ *
+ * The record's own motion is not here: `VinylCanvas` skips its paint through the `lite` prop while keeping the clock, so
+ * the sound and the transport are untouched either way. `animation: none` rather than `animation-play-state: paused` —
+ * a paused animation still holds its compositor layer on some engines, and the cost is the point.
+ *
+ * Transitions stay: they are short, they run on interaction, and removing them makes the UI feel broken rather than calm.
+ */
+html.m-lite .m-rise,
+html.m-lite .m-player[data-playing="true"] .m-dot,
+html.m-lite .m-player[data-playing="true"] .m-tbig,
+html.m-lite .m-player[data-playing="true"] .m-cue-item.on .m-eq i,
+html.m-lite [data-testid="mobile-explore-chords-legacy"] > section,
+html.m-lite .m-orb-wrap::before {
+  animation: none !important;
+}
