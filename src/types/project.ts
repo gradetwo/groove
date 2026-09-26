@@ -1,3 +1,4 @@
+import type { ClipSlot } from "./song";
 import { SequencerPattern } from "./genre";
 import type { SongSection } from "./song";
 import { EffectsRackState, DrumKitType } from "../audio/AudioEngine";
@@ -19,10 +20,22 @@ export interface GrooveProject {
   timeSignature: string;
   resolution: "1/8" | "1/16" | "1/32";
   stepCount: number;
+  /**
+   * The two slots the step editor shows. Required, and always present, because every project ever saved has them.
+   */
   patterns: {
     A: SequencerPattern;
     B: SequencerPattern;
   };
+  /**
+   * The slots beyond those two, when a composition uses them.
+   *
+   * `ClipSlot` has been `"A" | "B" | "C" | "D"` since the song layer was written, and the MCP tools and the `.groove`
+   * arrangement already compose with all four; the editor's own model was the part still holding two. Adding them here is
+   * **additive on purpose**: a project saved with two patterns keeps its exact shape, and a reader that does not know this field
+   * carries it through (see `docs/GROOVE_PACKAGE_FORMAT.md` for the same commitment on the package).
+   */
+  extraClips?: Partial<Record<ClipSlot, SequencerPattern>>;
   activeSlot: "A" | "B";
   songMode: boolean;
   /**
@@ -83,3 +96,19 @@ export interface GrooveProjectPackage {
 
 export type ProjectSortField = "updatedAt" | "name" | "bpm" | "genreName";
 export type ProjectSortOrder = "asc" | "desc";
+
+
+/**
+ * The pattern a slot holds, wherever it lives.
+ *
+ * The editor's two slots are required fields and the others are optional, so every lookup by a `ClipSlot` has to go through one
+ * place rather than indexing `patterns` directly — which is exactly what the type checker reported when `songChain` was widened to
+ * `ClipSlot[]` (four TS7053 errors in `useTransportControls`, `projectDb` and the store).
+ */
+export function patternForSlot(
+  project: Pick<GrooveProject, "patterns" | "extraClips">,
+  slot: ClipSlot
+): SequencerPattern | undefined {
+  if (slot === "A" || slot === "B") return project.patterns[slot];
+  return project.extraClips?.[slot];
+}
