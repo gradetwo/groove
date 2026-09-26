@@ -257,6 +257,25 @@ was about to become.
 Recorded as closed-by-evidence rather than quietly dropped, because the plan's job is to be corrected by the code, and this is the
 third item in this document that reading the artifact retired (the fade's layer, the ALS shape, and now this).
 
+## The clip count, surveyed (the last capability gap)
+
+Stage 4's follow-up is "the editor and the share codec should have the clip slots MCP already composes with". Reading it first says
+the gap is **narrower than it looks and wider than one edit**:
+
+* **`ClipSlot` is already `"A" | "B" | "C" | "D"`** with `CLIP_SLOTS` exported (`src/types/song.ts:15-17`) — the song layer, the MCP
+  tools and the `.groove` `arrangement` all speak four slots today;
+* what is still two is the **editor's** model: `patterns: { A, B }` and `songChain: ("A" | "B")[]` in the store
+  (`useSequencerStore.ts:84,94`), the same pair in the project type (`src/types/project.ts:32`), the project hub
+  (`ProjectHubModal.tsx:56`) and the **share codec**, which encodes the two-slot chain into the URL;
+* that is **40 non-test references**, and the share codec's is the one that is not a rename: a link written by today's app must keep
+  decoding, which is the same compatibility promise the `.groove` format now carries in
+  [`GROOVE_PACKAGE_FORMAT.md`](GROOVE_PACKAGE_FORMAT.md).
+
+**So the shape of the work is**: widen the editor's model to `ClipSlot` (type-only in most of the 40), give the store somewhere to
+hold C and D, and teach the share codec a longer form that **still decodes the old one**. The first step is type-only and
+test-guarded — `songChain: ClipSlot[]` — which is why it is the one to do first, with the existing store, project-hub, share and
+studio-view suites passing unchanged.
+
 ## What this is not
 
 It is not a rewrite of the sequencer, the audio engine or the genre library — those are the parts this project has spent its
