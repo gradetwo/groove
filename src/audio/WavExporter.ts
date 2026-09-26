@@ -128,6 +128,14 @@ export interface RenderWavOptions {
    */
   onLimiterKind?: (kind: MasterLimiterKind) => void;
   /**
+   * Override the reverb **send** high-pass for this render, in Hz (0 disables it).
+   *
+   * Diagnostic: the send's low-end shaping is a global choice, so the only honest way to judge it is to render the same genre
+   * twice and compare the wet band — `scripts/render_genre_wav.mjs --reverb-hpf=<hz>`. Applied **after** the genre's FX
+   * profile, because that profile is written last and would otherwise overwrite it.
+   */
+  reverbSendHighpassHz?: number;
+  /**
    * Called once per render with how many GS-1 hosts failed to load after their retries.
    *
    * `0` in every normal render. Anything else means a `chords`/`lead` track was voiced by the native
@@ -340,6 +348,18 @@ export async function renderPatternOffline(
   // `default_bpm`). An unknown/custom genre resolves to null and the graph keeps its
   // defaults, exactly as playback does.
   if (tailGenreFx) applyGenreFxToGraph(graph, tailGenreFx, bpm);
+  if (typeof options.reverbSendHighpassHz === "number") {
+    // Last, on purpose: `applyGenreFxToGraph` writes the genre's own reverb profile.
+    graph.reverb.setParams({ sendHighpassHz: options.reverbSendHighpassHz });
+  }
+  /**
+   * Echo the value the bus ended up with, for probes.
+   *
+   * The A/B flag (`--reverb-hpf`) exists so the send shaping can be judged rather than asserted, and the first attempt at that
+   * measurement produced two byte-identical files — which is only interpretable if the effective value is visible. This is the
+   * same diagnostic pattern as the GS-1 capture flag.
+   */
+  (globalThis as unknown as { __reverbHpfEffective?: number }).__reverbHpfEffective = graph.reverb.getParams().sendHighpassHz;
 
   // V-01: the same seeded generator the live engine uses. `Math.random()` here meant an
   // export never matched the audition it was rendered from, which broke the project's
@@ -601,7 +621,18 @@ export async function renderPatternOffline(
       const pitchVal = track.pitch && track.pitch[stepIdx] !== undefined && track.pitch[stepIdx] !== null ? track.pitch[stepIdx]! : 0;
       const gateVal = track.gate && track.gate[stepIdx] !== undefined ? track.gate[stepIdx] : 0.8;
 
-      const trackDest = trackStrips[trackIdx].insert.input;
+      /**
+       * A/B: bypass the channel strip (`globalThis.__noStrip`).
+       *
+       * The strip's compressor is a `DynamicsCompressorNode` — the browser's own, with no lookahead — and the pop this work
+       * has been chasing sits ~15 ms **after** each note-off, is absent from the core's own output, and is bigger in the
+       * channel the lane is panned towards. A compressor's gain moving as a note's release drops the level is the shape of
+       * that, and this switch removes the strip to see it.
+       */
+      const trackDest =
+        (globalThis as unknown as { __noStrip?: boolean }).__noStrip === true
+          ? trackStrips[trackIdx].gain
+          : trackStrips[trackIdx].insert.input;
       const trackId = (track.track_id || "").toLowerCase();
       const lowerName = track.name.toLowerCase();
       // Exporter parity: resolve the same per-track instrument the live engine does, so a

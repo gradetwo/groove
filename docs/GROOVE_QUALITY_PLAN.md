@@ -9,7 +9,34 @@ It is deliberately *not* a to-do list derived from the report: four of the repor
 implemented, and the measurements below say which. The two workstreams (this and the skin/gate work) are
 independent — nothing here touches CSS, and the gates added here do not overlap `probe:skins`.
 
-#### The first frame, and why images were arriving late (2026-09-27)
+##### An external AI report, audited claim by claim (2026-09-27)
+
+A Gemini report listed twelve audio defects with file paths and code. **Every path was wrong** — `src/audio/export/AudioExporter.ts`,
+`renderTail.ts`, `mixer/TrackChannel.ts`, `synthesis/DrumKitModels.ts`, `effects/ReverbBus.ts`, `synthesis/PolySynth.ts`,
+`effects/DelayBus.ts`, `mixer/MixerBus.ts`, `engine/AudioContextManager.ts` and `synthesis/AnatomyKickEngine.ts` do not exist —
+which is why each claim was checked against the real tree and, where possible, measured, rather than acted on. Nine are false or
+already solved; two were real and are fixed.
+
+| Claim | Verdict |
+|---|---|
+| Export tail truncated, no reverb/delay release window | **False.** `resolveRenderTailSec(genreFx, bpm)` derives the tail from the genre's own FX and `totalDurationSec = totalSteps * stepDur + tailSec` (`WavExporter.ts:282-286`), with `foldLoopTail` for seamless loops (`:92`). |
+| Fader/Cutoff written with `=` or raw `setValueAtTime`, causing pops | **False.** The master fader carries the **Q11** note describing exactly that zipper artefact and smooths with `setTargetAtTime` (15 ms; `AudioEngine.ts:1208-1228`), the track fader 5 ms (`:925`), 22 `setTargetAtTime` sites in `src/audio`. |
+| No hi-hat choke group | **False.** `openHiHatVoices` with "Acoustic Choke Group: Closed hi-hat cuts ringing open hi-hat" (`AudioEngine.ts:2411-2413`, cleared `:592`, `:1494`). |
+| Kick sub accumulation, "350-500 ms, no stealing, no adaptive release" | **Partly.** Overlap is real and there is no kick choke (only the hi-hat group; kick sidechains *bass*), but the decays are 0.65 s (808, `DrumKitModels.ts:591`) and 0.695 s (Anatomy, `AnatomyKickEngine.ts:41`), a pitch envelope exists, and the global 128-source cap steals the voice nearest to finishing (`voiceRegistry.ts:156-167`). Left alone: the current behaviour is bounded and measured, and changing it would invalidate every baseline for a non-defect. |
+| Snare machine-gun, identical every hit | **Mostly false.** `hitVariation(noisePosition)` gives ±6 cents, ±4 % decay and level (`noise.ts:178-219`), and each hit reads a different noise slice (`DrumKitModels.ts:840`). The **band-pass centre is velocity-only** (`:830`) — the one grain of truth. |
+| Mobile lock-screen resume missing | **Partly — fixed.** A `visibilitychange`/`focus` handler existed, but it returned early on non-iOS and only resumed on `"suspended"`, never on Safari's `"interrupted"`. See the fix above. |
+| Reverb bus low-end leak | **True — fixed.** See the fix above; measured. |
+| Resonance gain explosion | **False.** `resonanceCompensationGainDb()` (−0.6 dB per Q above 1, capped −6 dB, `PolySynth.ts:1286-1303`) is applied pre-filter; per-voice Q is a fixed preset (max 8.0); GS-1's `FILTER_RES` is normalized 0-1 and never written by `gs1Patches.ts`. The only raw-Q UI is the master FX rack, and it sits before the trim and the true-peak limiter. |
+| Clap lacks a multi-pulse cluster | **False.** Three pre-delay bursts at 0/11/22 ms, each 12 ms and reading a different noise slice, plus a 30 ms-onset body (`DrumKitModels.ts:1387-1437`). |
+| Delay feedback without damping | **False.** The feedback loop is `delay -> damp(lowpass) -> fb -> delay` in both ping-pong legs (`DelayBus.ts:30-40`), with the reasoning that produced it in the header. |
+| Master headroom / limiter pumping | **Was real, already reworked.** `MIX_LOUDNESS_NOTES.md:153-156` records 121/159 genres peaking over 0 dBFS as defect **N-15** under the old 3 ms compressor; `:234-236` records the current result — **0/159 over ceiling, worst −1.027 dBTP** — with the limiter at −1.0 dBTP, 3 ms lookahead and 80/400 ms program-dependent release (`MasterLimiter.ts:54-117`). |
+| Audio node leak, `stop()` without `disconnect()` | **False.** `voiceRegistry.ts:34-58` disconnects the source **and** its gain from an `onended` handler, armed on every registration (`:178-180`) and on prune (`:200-211`); every drum voice registers (`AudioEngine.ts:2369-2480`). |
+
+The lesson is the one this file keeps relearning: a report is a **list of hypotheses**, and the file paths being wrong is a
+signal about the rest. Fourteen claims, eleven checks, two fixes — and both fixes were measurable, which is what made them
+worth making.
+
+## The first frame, and why images were arriving late (2026-09-27)
 
 Two owner reports, one cause each.
 

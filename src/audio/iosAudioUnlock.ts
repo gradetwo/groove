@@ -58,6 +58,10 @@ export class IosAudioUnlocker {
 
   private userActionHandler: (() => void) | null = null;
   private visibilityHandler: (() => void) | null = null;
+  /** Resumes whenever the context is not running; see the handler that installs it. */
+  private resumeIfNotRunning: (() => void) | null = null;
+  /** Reacts to the context being interrupted by the system, which is not a visibility change. */
+  private stateChangeHandler: (() => void) | null = null;
 
   private constructor() {
     if (typeof window !== "undefined") {
@@ -164,29 +168,59 @@ export class IosAudioUnlocker {
       window.addEventListener(evt, this.userActionHandler!, { capture: true, passive: true });
     });
 
-    // Handle background / foreground switching
-    this.visibilityHandler = () => {
-      if (!this.isIOS) return;
-      if (document.hidden || !document.hasFocus()) {
-        // App in background: halt silent channel to conserve battery
-        this.destroyChannelTag();
-      } else {
-        // App returned to foreground: re-activate media channel
-        this.startMediaChannel();
-        if (this.audioContext && this.audioContext.state === "suspended") {
-          this.audioContext.resume().catch(() => {});
-        }
-      }
+    /**
+     * Background/foreground handling.
+     *
+     * Two things were wrong with this, both of them the "lock the phone and come back to silence" report:
+     *
+     * 1. it returned immediately on anything that was not iOS, so an Android phone got **no** foreground resume at all — the
+     *    media-channel trick below is genuinely iOS-only, but resuming the context is not;
+     * 2. it only resumed when the state was exactly `"suspended"`, and Safari's lock-screen interruption reports
+     *    **`"interrupted"`** instead (a state the TypeScript union does not even name), which fell through the check and left
+     *    the app silent until a reload.
+     *
+     * So the platform-specific part stays iOS-only and the resume happens whenever the context is not running, on
+     * foreground, on focus, and on the context's own `statechange` (which is what fires when the system interrupts it).
+     */
+    const resumeIfNotRunning = () => {
+      const ctx = this.audioContext;
+      if (!ctx) return;
+      // `interrupted` is Safari's own state and is not in the `AudioContextState` union; comparing as a string is the only
+      // way to see it, and `!== "running"` catches it along with `suspended` and `closed`.
+      if ((ctx.state as string) !== "running") ctx.resume().catch(() => {});
     };
+    this.resumeIfNotRunning = resumeIfNotRunning;
+
+    this.visibilityHandler = () => {
+      if (document.hidden || !document.hasFocus()) {
+        // App in background: halt silent channel to conserve battery (an iOS-only mechanism).
+        if (this.isIOS) this.destroyChannelTag();
+        return;
+      }
+      if (this.isIOS) this.startMediaChannel();
+      resumeIfNotRunning();
+    };
+
+    /** The system interrupting the context is not a visibility change, and it needs the same answer. */
+    const stateChangeHandler = () => {
+      if (!document.hidden) resumeIfNotRunning();
+    };
+    this.stateChangeHandler = stateChangeHandler;
 
     document.addEventListener("visibilitychange", this.visibilityHandler);
     window.addEventListener("focus", this.visibilityHandler);
     window.addEventListener("blur", this.visibilityHandler);
+    this.audioContext?.addEventListener?.("statechange", stateChangeHandler);
   }
 
   public dispose(): void {
     if (typeof window === "undefined") return;
 
+    if (this.stateChangeHandler) {
+      this.audioContext?.removeEventListener?.("statechange", this.stateChangeHandler);
+      this.stateChangeHandler = null;
+    }
+    this.resumeIfNotRunning = null;
     if (this.userActionHandler) {
       const events = ["click", "touchstart", "touchend", "pointerdown", "keydown"];
       events.forEach((evt) => {
