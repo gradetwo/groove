@@ -69,7 +69,7 @@ const value = (name, fallback) => {
   return hit ? hit.slice(name.length + 3) : fallback;
 };
 
-const genre = value("genre", "house");
+const genre = value("genre", "uk-garage");
 const out = value("out", "");
 const port = Number(value("port", "6181")) || 6181;
 
@@ -84,6 +84,37 @@ const { server } = await startStaticServer(port);
  */
 const browser = await chromium.launch({ args: ["--autoplay-policy=no-user-gesture-required"] });
 const page = await browser.newPage();
+/**
+ * Surface the page's own failures.
+ *
+ * A probe that reports "the surface never appeared" without saying whether the app threw on the way there is a probe that
+ * costs another run to interpret — and this one has already cost several.
+ */
+const pageFailures = [];
+page.on("pageerror", (error) => pageFailures.push(`pageerror: ${error.message}`));
+page.on("console", (message) => {
+  if (message.type() === "error") pageFailures.push(`console: ${message.text().slice(0, 200)}`);
+});
+
+/**
+ * Keep the surface once it has existed, because the app **installs and removes** it.
+ *
+ * The engine's teardown calls `uninstallProbeHooks`, and StudioView mounts more than once on a cold hash route, so the seam
+ * appears and then vanishes — which is why a 3-second wait found it, a 5-second wait did not, and `waitForFunction` timings
+ * out. An accessor installed before any app code runs records the first surface the app publishes, and that reference is what
+ * the probe drives.
+ */
+await page.addInitScript(() => {
+  let seen;
+  Object.defineProperty(window, "__grooveProbe", {
+    configurable: true,
+    get: () => seen,
+    set: (value) => {
+      seen = value;
+      window.__grooveProbeSeen = value;
+    },
+  });
+});
 
 try {
   /**
@@ -126,6 +157,7 @@ try {
    *    navigated away from the studio instead of starting anything;
    * 4. a settle, not a poll: `waitForFunction` was the flaky half of this probe.
    */
+  console.error("debug: surface at 0s:", await page.evaluate(() => Boolean(window.__grooveProbe)));
   const gate = page.locator('[data-testid="audio-start-gate"]');
   if (await gate.count()) {
     await gate.getByRole("button").first().click();
@@ -143,13 +175,14 @@ try {
     await page.waitForTimeout(1500);
   }
   await page.waitForTimeout(4000);
-  const surfaceReady = await page.evaluate(() => Boolean(window.__grooveProbe));
+  const surfaceReady = await page.evaluate(() => Boolean(window.__grooveProbeSeen));
   if (!surfaceReady) {
     // Where it stopped, so the next attempt does not have to guess: the URL, the visible text, and whether the Studio
     // tab was even found.
     console.error("debug: url", page.url());
     console.error("debug: studio tab found:", await page.getByRole("button", { name: "Studio", exact: true }).count());
     console.error("debug: body", (await page.evaluate(() => document.body.innerText)).slice(0, 160).replace(/\n+/g, " | "));
+    console.error("debug: page failures", pageFailures.slice(0, 5));
   }
   if (!surfaceReady) throw new Error("the probe surface never appeared — is the app serving ?probe=1 on this route?");
 
@@ -162,7 +195,7 @@ try {
    */
   const result = await page.evaluate(
     async ({ genreId, sampleMs }) => {
-      const probe = window.__grooveProbe;
+      const probe = window.__grooveProbeSeen || window.__grooveProbe;
       if (!probe) return { error: "no probe surface" };
       const state = probe.readState();
       const bpm = state.bpm || 120;
