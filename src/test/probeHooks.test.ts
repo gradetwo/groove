@@ -43,6 +43,28 @@ describe("probe hooks · only when the URL asks", () => {
     expect(window.__grooveProbe).toBeUndefined();
   });
 
+  it("installs when the page asked before the app started, even though the modules loaded first", () => {
+    /**
+     * The regression the CI voice sweep caught.
+     *
+     * Every module in the entry graph is evaluated **before** `main.tsx` runs, so a flag captured at module load reads the
+     * launch search as undefined and comes out false — which is what happened: the studio probe waited 30 s for
+     * `window.__grooveProbe` on `?tab=studio&probe=1` and timed out. The answer is read on first use instead, and this test
+     * reproduces the ordering rather than the mechanism.
+     */
+    uninstallProbeHooks();
+    const launch = (window as unknown as { __grooveLaunchSearch?: string }).__grooveLaunchSearch;
+    try {
+      // No explicit search: the decision must come from the page's own record of how it was opened.
+      (window as unknown as { __grooveLaunchSearch?: string }).__grooveLaunchSearch = "?tab=studio&probe=1";
+      expect(installProbeHooks(surface)).toBe(true);
+      expect(window.__grooveProbe?.engine).toBe(surface.engine);
+      uninstallProbeHooks();
+    } finally {
+      (window as unknown as { __grooveLaunchSearch?: string }).__grooveLaunchSearch = launch;
+    }
+  });
+
   it("keeps what an earlier install brought, because both shells install it", () => {
     // The desktop studio installs the seam with its engine; the phone shell installs it with `auditionById`. Whichever runs
     // second must not erase the first — that is exactly what made a surface with `auditionById` report it as missing.
