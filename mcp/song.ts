@@ -91,6 +91,8 @@ export interface CreateMcpSongInput {
   resolution?: "1/8" | "1/16" | "1/32";
   /** Bars in the first section; a clip that is four bars long contributes four bars per pass. */
   bars?: number;
+  /** What the first section is, so the shape reads "intro ×4" rather than "A ×4" (`add_section` has always taken this). */
+  label?: string;
   /** Extra clips the arrangement may reference, keyed by slot (the agent can point a later section at one). */
   clips?: Partial<Record<ClipSlot, SequencerPattern>>;
 }
@@ -121,7 +123,12 @@ export function createMcpSong(input: CreateMcpSongInput): SongSummary {
    * what tells a model its 9999-bar request became 64. Pre-clamping here silently produced the clamped song and an
    * empty `problems` list, which is the sort of quiet edit an agent cannot learn from.
    */
-  const arranged: Song = { ...withClips, sections: [{ ...song.sections[0], bars: input.bars ?? 1 }] };
+  const arranged: Song = {
+    ...withClips,
+    sections: [
+      { ...song.sections[0], bars: input.bars ?? 1, ...(input.label ? { label: input.label } : {}) },
+    ],
+  };
   songs.set(id, arranged);
   return summariseSong(arranged);
 }
