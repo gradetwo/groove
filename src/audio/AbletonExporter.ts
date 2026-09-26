@@ -29,7 +29,7 @@ export interface ExportAlsOptions {
    * version of a song is one clip per section at its own position, and that is what this list is for
    * (`docs/DAW_MCP_REFACTOR.md`, stage 5's ALS item). Omitted or empty, the builder behaves exactly as it always has.
    */
-  clips?: Array<{ pattern: SequencerPattern; startBeats: number; name?: string }>;
+  clips?: Array<{ pattern: SequencerPattern; name?: string }>;
   genreName?: string;
   scaleName?: string;
 }
@@ -558,7 +558,16 @@ export function buildAbletonLiveSetXml(options: ExportAlsOptions): string {
   // Scenes
   const scenesXml = Array.from({ length: sceneCount }, (_, idx) => {
     const sId = idx;
-    const sName = idx === 0 ? escapeXml(`${genreName} Groove`) : `Scene ${idx + 1}`;
+    /**
+     * The scene is named after the section it carries, because a scene **is** an arrangement section here. With one clip the
+     * name is what it always was.
+     */
+    const clipName = options.clips?.[idx]?.name;
+    const sName = clipName
+      ? escapeXml(clipName)
+      : idx === 0
+        ? escapeXml(`${genreName} Groove`)
+        : `Scene ${idx + 1}`;
     return `<Scene Id="${sId}" Value="${sName}" />`;
   }).join("\n\t\t");
 

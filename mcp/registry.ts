@@ -10,6 +10,7 @@ import { z } from "zod";
 import { clonePattern, findGenre, getChordProgression, getGenre, getGenreRelations, libraryIndex, listCategories, listChordProgressions, listGenres, listMasterclasses, searchGenres } from "./library";
 import { applyPatternOps, comparePatterns, patternStatistics, validatePattern, type PatternOp } from "./pattern";
 import { patternFromGenre } from "../src/data/genreMix";
+import { flattenSong } from "../src/data/songFlatten";
 import { APP_VERSION } from "../src/version";
 import { exportProjectPackage, validateGroovePackage } from "../src/features/sequencer/projectDb";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
@@ -267,10 +268,49 @@ export const TOOLS: ToolDefinition[] = [
     title: "Export Ableton Live set",
     description: "An .als project (gzipped XML) for a pattern, returned as base64. Live 10/11/12 can open it.",
     readOnly: true,
-    inputSchema: { genreId: z.string().optional(), pattern: patternSchema.optional(), bpm: z.number().min(20).max(300).optional() },
+    inputSchema: {
+      genreId: z.string().optional(),
+      pattern: patternSchema.optional(),
+      bpm: z.number().min(20).max(300).optional(),
+      songId: z
+        .string()
+        .optional()
+        .describe(
+          "export a song instead of a loop: one clip per section, each in its own scene and named after the section, which is what Ableton's session matrix is for"
+        ),
+    },
     handler: async (args) => {
+      /**
+       * A song exports as **one clip per section**, each placed in its own scene and named after the section.
+       *
+       * The material comes from flattening **each section on its own** — a one-section song handed to the same `flattenSong` the
+       * app renders with — so the exporter cannot diverge from what plays, and the lanes come from the first section's pattern
+       * because a Live set's track list belongs to the set rather than to one clip.
+       */
+      const songId = args.songId as string | undefined;
+      if (songId) {
+        const song = getMcpSong(songId);
+        if (!song) return failure(`unknown songId "${songId}" — create one with create_song`);
+        if (!song.sections.length) return failure("this song has no sections to export");
+        const clips = song.sections.map((section, index) => ({
+          pattern: flattenSong({ ...song, sections: [section] }).pattern,
+          name: section.label ?? `${section.slot}${index + 1}`,
+        }));
+        const file = await exportAbleton(clips[0].pattern, {
+          bpm: args.bpm as number | undefined ?? song.bpm,
+          genreName: args.genreId as string | undefined ?? song.genreId,
+          clips,
+        });
+        return {
+          filename: file.filename,
+          mimeType: file.mimeType,
+          bytes: file.bytes.length,
+          base64: toBase64(file.bytes),
+          sections: clips.length,
+        };
+      }
       const pattern = patternFromArgs(args as { genreId?: string; pattern?: unknown });
-      if (!pattern) return failure("provide either genreId or pattern");
+      if (!pattern) return failure("provide either genreId, pattern or songId");
       const file = await exportAbleton(pattern, { bpm: args.bpm as number | undefined });
       return { filename: file.filename, mimeType: file.mimeType, bytes: file.bytes.length, base64: toBase64(file.bytes) };
     },
