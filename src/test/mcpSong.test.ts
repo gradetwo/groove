@@ -365,3 +365,29 @@ describe("MCP · duplicate_section", () => {
     expect(() => duplicateMcpSection({ songId: before.songId, index: 42 })).toThrow(/no section 42/);
   });
 });
+
+describe("the composer's v2 report: two bugs in the song summary", () => {
+  /**
+   * Both were found by an AI driving the server, and both are arithmetic the caller could not see through.
+   *
+   * (a) `create_song`'s `clips` schema used `z.record(enum, schema)`, which makes **every** key required, so a caller sending the
+   * slots it actually had (`{B, C}`) was refused with "expected object, received undefined at clips.A" while the description said
+   * "clips beyond the seeded A". (b) `secondsEstimate` went through bars with a hard-coded sixteen steps per bar, so a genre's
+   * 64-step clip — four bars per pass — reported three seconds where it plays twelve.
+   */
+  it("measures seconds from the steps, not through a bar assumption", () => {
+    const genre = findGenre("chicago-house");
+    const summary = createMcpSong({ genreId: "chicago-house", genre, bars: 1 });
+    const steps = (summary as unknown as { totalSteps: number }).totalSteps;
+    expect(summary.secondsEstimate).toBeCloseTo(steps * (60 / summary.bpm / 4), 1);
+  });
+
+  it("accepts a clips object that names only the slots the caller has", () => {
+    const genre = findGenre("chicago-house");
+    const pattern = patternFromGenre(genre!);
+    // The shape the schema must accept: a subset, not all four keys.
+    const summary = createMcpSong({ genreId: "chicago-house", genre, clips: { B: pattern, C: pattern } });
+    const song = getMcpSong(summary.songId)!;
+    expect(Object.keys(song.clips ?? {}).sort()).toEqual(["A", "B", "C"]);
+  });
+});

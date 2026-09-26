@@ -415,7 +415,9 @@ export const TOOLS: ToolDefinition[] = [
         .optional()
         .describe('what the first section is, e.g. "intro" — `add_section` has always taken this and `create_song` did not'),
       clips: z
-        .record(z.enum(["A", "B", "C", "D"]), patternSchema)
+        // `.optional()` on the **value** type, so a caller may send the slots it has: `z.record(keys, schema)` makes every key
+        // required, which is what a composer hit when it sent `{B, C}` and got "expected object, received undefined at clips.A".
+        .record(z.enum(["A", "B", "C", "D"]), patternSchema.optional())
         .optional()
         .describe(
           "clips beyond the seeded A, keyed by slot — the verse/chorus path. Without it a song can only ever have one clip and the contrast has to be squeezed out of section overrides. `set_clip` replaces one later."

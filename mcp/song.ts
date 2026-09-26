@@ -99,9 +99,15 @@ export function summariseSong(song: Song): SongSummary {
      * and both are returned by `create_song` and by `add_section` (so the estimate moves as sections are added).
      */
     passBars: totalPasses > 0 ? Math.max(1, Math.round(timeline.totalBars / totalPasses)) : 1,
-    secondsEstimate: Number(
-      ((timeline.totalBars * 16 * (60 / song.bpm) * 4) / 16).toFixed(1)
-    ),
+    /**
+     * Seconds, from the **step count** rather than from the bar count.
+     *
+     * The first version went through bars with a hard-coded sixteen steps to a bar, which is wrong the moment a clip is not one
+     * bar long: a genre's seeded clip is 64 steps (four bars per pass), so a one-pass song reported three seconds where it plays
+     * twelve. The timeline counts a pass as one bar whatever the clip's length, so the bar count cannot be the basis; the step
+     * count can, at sixteenth notes.
+     */
+    secondsEstimate: Number((flattened.totalSteps * (60 / song.bpm / 4)).toFixed(1)),
   };
 }
 
