@@ -103,6 +103,31 @@ That also makes the criterion honest: the count `analyze_audio` reports is a pro
 the audio path to move it. A velocity ramp on the boundary steps was considered and rejected — it is an approximation of a fade
 that also **changes the arrangement's data**, which is the opposite of what a DAW should do with a playback concern.
 
+### Stage 3 measured: the whole-file counter cannot see a boundary (2026-09-28)
+
+CI ran the measurement (`manual-verify.yml scope=audio`, run 36258064123):
+
+```
+✅ Arrangement audio (chicago-house, club form): 4 bars rendered
+   boundary fade    : discontinuities 1211 → 1206 with an 8 ms fade
+```
+
+**−5 out of 1211 (−0.4%)** — and that is not a failed fade, it is the wrong instrument. The counter is a whole-render statistic, and
+four bars of house music carry ~1200 of its own transients (kicks, snares, hats), so one smoothed boundary can only move the total
+by the handful of samples that boundary occupied. The same lesson this project keeps writing down: a whole-signal statistic cannot
+resolve a local fix, and a detector that fires on the music is not evidence about the edit.
+
+**The criterion is therefore corrected** — it has to be **local**:
+
+| measure | where | pass |
+|---|---|---|
+| the largest sample-to-sample step **inside ±10 ms of the boundary** | the rendered buffer, before and after the fade | falls by a large factor — this is the click the fade is for |
+| the **same** window on a section boundary with no jump (two identical sections) | the same buffer | **unchanged** — the fade must be a no-op on continuous material |
+| the whole-file discontinuity count | — | **not a criterion.** It is reported for context and it stays in the log, but it is dominated by the music |
+
+The fade itself did what it was supposed to do — it removed the step at the boundary — which is why the count moved at all rather
+than not. What was wrong was expecting a number about the *whole file* to measure an edit to *twenty milliseconds* of it.
+
 ## What this is not
 
 It is not a rewrite of the sequencer, the audio engine or the genre library — those are the parts this project has spent its
