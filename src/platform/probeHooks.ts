@@ -51,12 +51,27 @@ export function probeRequested(search: string): boolean {
  * gone. The page *did* ask, though, and that fact does not change, so it is recorded once at module load and used from then
  * on. `installProbeHooks` keeps its explicit-`search` parameter for tests.
  */
-const REQUESTED_AT_LOAD =
-  typeof window === "undefined"
-    ? false
-    : probeRequested(
-        (window as unknown as { __grooveLaunchSearch?: string }).__grooveLaunchSearch ?? window.location.search
-      );
+/**
+ * Read **lazily**, and only once.
+ *
+ * The first version captured this at module load, which is exactly the wrong moment: every module in the entry graph is
+ * evaluated **before** the body of `main.tsx` runs, so the launch search it records was still undefined and the flag came out
+ * false. The CI voice sweep caught it — `page.waitForFunction(() => Boolean(window.__grooveProbe))` timed out on
+ * `?tab=studio&probe=1`, because the seam that answers that question was never installed.
+ *
+ * Read on first *use* instead, which is after the app has started: by then `main.tsx` has recorded the launch search, and
+ * before any navigation it still matches `location.search`. Memoised so a later navigation cannot change the answer.
+ */
+let requestedAtLoad: boolean | null = null;
+
+function requestedAtLoadNow(): boolean {
+  if (requestedAtLoad !== null) return requestedAtLoad;
+  if (typeof window === "undefined") return false;
+  requestedAtLoad = probeRequested(
+    (window as unknown as { __grooveLaunchSearch?: string }).__grooveLaunchSearch ?? window.location.search
+  );
+  return requestedAtLoad;
+}
 
 /**
  * Whether this page asked for the **event capture** (`?capture=1`).
@@ -90,7 +105,7 @@ export function installProbeHooks(
 ): boolean {
   if (typeof window === "undefined") return false;
   // No explicit search means "did this page ask to be probed", which is a property of the load, not of the current URL.
-  if (search === undefined ? !REQUESTED_AT_LOAD : !probeRequested(search)) return false;
+  if (search === undefined ? !requestedAtLoadNow() : !probeRequested(search)) return false;
   /**
    * **Merge** rather than replace, because more than one shell can install this.
    *
