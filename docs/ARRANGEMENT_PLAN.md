@@ -294,6 +294,28 @@ the part that could tell the arrangement from the loop. So the next move is the 
 whether they are all near −85 (a scaling/unit problem) or whether the array is stale (a reading-order problem) — and once the
 spectrum is real, the ratio finally means what the plan says it means.
 
+**The raw bins say the reading is real, and that the test itself is too weak.** Run 36266339588:
+
+```
+raw bins : [-76.6, -99.3, -110.3, -128.2, -145.9] · max -75.16 dB · minDecibels -100 · fftSize 2048
+raw bins : [-85.1, -67.7, -84.9, -104.5, -120.3] · max -67.19 dB · minDecibels -100 · fftSize 2048
+```
+
+The bins are **not** all at the floor (maxes of −75 and −67 dB), so the spectrum is being read correctly — it is simply quiet
+overall, because `minDecibels` is −100 and the probe averages all 1024 bins, most of which hold nothing but the float floor. That
+flattening is fine for a comparison, since both sides get it.
+
+What it exposes is the **experiment**: the two sections are the same clip, one at `velocityScale` 0.55 with the lead muted, and the
+metric reduces each section to one **mean spectrum over a whole bar**. A level change and one missing lane barely move that mean,
+and the "same-section floor" is the music's own movement between two sets of frames — so ≈1× is what this design produces whether or
+not the transport plays the arrangement. The probe has been asking a question its own geometry cannot answer.
+
+**Two changes make it answer**: make the sections **structurally** different (a second clip with a lane the first lacks) so the
+means differ by construction; and compute the floor from two **time-aligned** windows in one section (the same beats of adjacent
+bars) so the music cancels instead of counting as noise. Then a ratio well above 1 means the transport switched clips and 1 means
+it did not — which is the judgement B7 has waited for.
+
+
 **What to narrow next**, in the order the evidence suggests: the FFT bands say nothing about *where* the silence is, so the probe
 should report the analyser's **waveform** (`getFloatTimeDomainData`'s peak/RMS), which separates "no signal reaches the analyser"
 from "no signal is generated"; and it should print `probe.readState()` alongside it, which says whether the engine believes it is
