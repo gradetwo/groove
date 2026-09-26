@@ -12,6 +12,7 @@ import {
   exportStemsZip,
   triggerWavDownload,
 } from "../../../audio/WavExporter";
+import { getActiveAudioEngine } from "../../../audio/activeEngine";
 import { exportMasterMp3 } from "../../../audio/Mp3Exporter";
 import { exportProjectToGrooveFile } from "../projectDb";
 import type { SequencerState } from "../useSequencerStore";
@@ -335,10 +336,21 @@ export function useExportActions({
       showToast(
         t("export_stems_rendering")
       );
+      /**
+       * The **live** mixer state, passed explicitly.
+       *
+       * Without it the exporter derives mute/solo/volume/pan from the pattern, which is right for a pattern that carries
+       * them — and it is how a user's S/A state can disagree with what they exported. The engine owns the states the app
+       * is actually playing through, so the export asks it rather than re-deriving.
+       */
+      const liveStates = getActiveAudioEngine()?.getTrackStates();
       const result = await exportStemsZip(patternRef.current, currentGenre.id, {
         bpm,
         swing,
         drumKit,
+        ...(liveStates && liveStates.length === patternRef.current.tracks.length
+          ? { trackStates: liveStates }
+          : {}),
       });
       triggerWavDownload(result.blob, result.filename);
       // Same honesty rule as the master export: a stem whose GS-1 voice did not load is a valid
