@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { laneFromNotes, laneStaysOnGrid, notesFromLane, stepPitches } from "../data/noteLayer";
+import {
+  isOnGrid,
+  laneFromNotes,
+  laneNotesToTimed,
+  laneStaysOnGrid,
+  notesFromLane,
+  stepPitches,
+} from "../data/noteLayer";
 import type { SequencerTrack } from "../types/genre";
 
 /**
@@ -116,5 +123,55 @@ describe("writing notes back as a step array", () => {
     expect(laneStaysOnGrid(chord, 8)).toBe(true);
     const disagreeing = chord.map((note, i) => ({ ...note, velocity: i === 0 ? 0.4 : 0.8 }));
     expect(laneStaysOnGrid(disagreeing, 8)).toBe(false);
+  });
+});
+
+/**
+ * The bridge to the scheduler.
+ *
+ * `planGs1Notes` already takes `{ note, time, duration, velocity }` in seconds, so the note layer needs one conversion —
+ * and it is where an **off-grid** note finally means something, which is the whole reason the layer exists.
+ */
+describe("steps to seconds", () => {
+  it("converts a step position to seconds at the tempo's 16th", () => {
+    const [first] = laneNotesToTimed(
+      [{ trackId: "lead", pitch: 72, startStep: 4, durationSteps: 2, velocity: 0.9 }],
+      { bpm: 120 }
+    );
+    // 120 bpm, 16th steps: each step is 60 / 120 / 4 = 0.125 s.
+    expect(first.time).toBeCloseTo(0.5, 9);
+    expect(first.duration).toBeCloseTo(0.25, 9);
+    expect(first.note).toBe(72);
+  });
+
+  it("keeps an off-grid start as an off-grid time", () => {
+    const [note] = laneNotesToTimed(
+      [{ trackId: "lead", pitch: 72, startStep: 4.5, durationSteps: 1, velocity: 0.9 }],
+      { bpm: 120 }
+    );
+    expect(note.time).toBeCloseTo(0.5625, 9);
+  });
+
+  it("carries per-note pan and tuning through, and never invents them", () => {
+    const [withExtras] = laneNotesToTimed(
+      [{ trackId: "lead", pitch: 72, startStep: 0, durationSteps: 1, velocity: 0.9, pan: -0.4, cents: 7 }],
+      { bpm: 100 }
+    );
+    expect(withExtras.pan).toBe(-0.4);
+    expect(withExtras.cents).toBe(7);
+    const [plain] = laneNotesToTimed([{ trackId: "lead", pitch: 72, startStep: 0, durationSteps: 1, velocity: 0.9 }], { bpm: 100 });
+    expect("pan" in plain).toBe(false);
+    expect("cents" in plain).toBe(false);
+  });
+
+  it("refuses a nonsense tempo instead of dividing by it", () => {
+    expect(laneNotesToTimed([{ trackId: "lead", pitch: 72, startStep: 0, durationSteps: 1, velocity: 1 }], { bpm: 0 })).toEqual([]);
+  });
+
+  it("answers whether a lane is on the grid, which is what chooses the editor's view", () => {
+    const onGrid = [{ trackId: "lead" as const, pitch: 72, startStep: 4, durationSteps: 1.5, velocity: 1 }];
+    const offGrid = [{ ...onGrid[0], startStep: 4.25 }];
+    expect(isOnGrid(onGrid)).toBe(true);
+    expect(isOnGrid(offGrid)).toBe(false);
   });
 });

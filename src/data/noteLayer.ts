@@ -198,3 +198,52 @@ export function laneFromNotes(notes: readonly LaneNote[], length: number): LaneA
 export function laneStaysOnGrid(notes: readonly LaneNote[], length: number): boolean {
   return laneFromNotes(notes, length) !== null;
 }
+
+/**
+ * The note layer's bridge to the scheduler: steps → seconds.
+ *
+ * `planGs1Notes` (and the exporter's scheduler) already take notes in the engine's own shape — `{ note, time, duration,
+ * velocity, pan?, cents? }` with times in seconds — so the note layer needs exactly one conversion, and it belongs here
+ * beside the data rather than in each caller.
+ *
+ * The conversion is where an **off-grid** note finally means something: a lane at 120 bpm has a step of `60 / 120 / 4`
+ * seconds (a 16th), and `startStep: 4.5` is therefore a note starting half a 16th after the fifth step. Nothing in the
+ * engine needs to change for that; it takes a time and converts it to an absolute frame itself.
+ */
+export interface TimedNote {
+  note: number;
+  time: number;
+  duration: number;
+  velocity: number;
+  pan?: number;
+  cents?: number;
+}
+
+export function laneNotesToTimed(
+  notes: readonly LaneNote[],
+  options: { bpm: number; /** Steps per beat: 4 for 16th-note steps, which is the catalogue's grid. */ stepsPerBeat?: number }
+): TimedNote[] {
+  const bpm = Number(options.bpm);
+  const stepsPerBeat = Number(options.stepsPerBeat ?? 4);
+  if (!(bpm > 0) || !(stepsPerBeat > 0)) return [];
+  const secondsPerStep = 60 / bpm / stepsPerBeat;
+  return notes.map((note) => ({
+    note: note.pitch,
+    time: note.startStep * secondsPerStep,
+    duration: Math.max(secondsPerStep / 32, note.durationSteps * secondsPerStep),
+    velocity: note.velocity,
+    ...(note.pan === undefined ? {} : { pan: note.pan }),
+    ...(note.cents === undefined ? {} : { cents: note.cents }),
+  }));
+}
+
+/**
+ * Whether a lane's notes line up with the grid they claim to be on.
+ *
+ * The editor shows a lattice or a free grid depending on the answer, so it is one function rather than a condition
+ * repeated in the views. A note is on the grid when its start is a whole step: durations are free by design (see
+ * `laneFromNotes`).
+ */
+export function isOnGrid(notes: readonly LaneNote[]): boolean {
+  return notes.every((note) => Math.abs(note.startStep - Math.round(note.startStep)) < EPSILON);
+}
