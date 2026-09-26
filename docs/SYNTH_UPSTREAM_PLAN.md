@@ -82,7 +82,19 @@ something in that sequence puts a step in the output that a block-aligned start 
 That also explains every earlier refutation rather than contradicting them: the steal fade, the supersede rule, the
 per-note tuning and the patch are all *inputs* to the event, and the defect is in how the event is applied.
 
-**What is left to bisect, with the measurement that makes it cheap:**
+**And then the measurement itself became the suspect.** The next test asked whether the *effects* hide a fixed-block
+assumption — they run after the voices and a split render hands them short blocks — and the upstream suite now pins that
+they are chunk-stable (chorus, delay and reverb enabled, divergence no worse than the dry path). So the DSP is not
+chunk-dependent, and yet block-aligning the events moved the number six-fold.
+
+That is the confound: the ratio flags **any** large sample step, and a bright stack whose voices line up produces large
+steps musically. Block-aligning the events changes *which* samples coincide and therefore the interference pattern — it is
+a different render, not a fixed one. **The metric cannot tell this owner's pop from a legitimately steep waveform**, just
+as an absolute step bound could not. What is needed next is a detector that is specifically about the boundary (envelope
+continuity across a note's end) or a timestamp from the person who can hear it — and the honest thing to record is that
+two rounds of A/Bs were run against a number that could not answer the question.
+
+**What the bisect did rule out, all with the same stem and metric:**
 
 * the chunk-invariance test already bounds the *split alone* at 0.0056 on a ~0.5 signal (the parameter smoother's drift,
   not a discontinuity) — so the step comes from the **event application**, not from a shorter chunk by itself;
