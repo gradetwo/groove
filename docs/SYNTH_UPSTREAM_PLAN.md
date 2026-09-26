@@ -174,6 +174,27 @@ now paid for that lesson four times.
 `docs/AUDIO_REVIEW.md` answers "User location is not supported for the API use". So the next thing this plan proposes is not
 a sixth detector but a **capture button in the app**: let the person who can hear the pop hand over the signal.
 
+### 1j. The instrument answered it: the core is smooth at the file's own pop times (2026-09-26)
+
+The event capture collects now (12 events, the same twelve note-offs the reviewer listed by time), and at the six of them that
+belong to the lead's own notes the **core's output is continuous across the boundary**:
+
+```
+off note 72  frame 25931   before … 0.0095, 0.0088, 0.0079   after 0.0070, 0.0060, 0.0051   step 0.0010
+off note 75  frame 56876   before … 0.0054, 0.0039, 0.0018   after -0.0006, -0.0034, -0.0063 step 0.0025
+off note 74  frame 71472   before … -0.0104, -0.0101, -0.0093 after -0.0079, -0.0060, -0.0036 step 0.0014
+```
+
+Those steps are the waveform's own slope. The **rendered file** has a step of **0.089** at the same moments (§1h). So the
+discontinuity is added **after** the core's output — and the candidates are now a short list of nodes rather than a theory:
+the worklet's copy to its output (ruled out, the capture reads the same buffer), the **channel strip** (`ChannelStripDsp`,
+worklet-based, with its own fallback when a worklet is unavailable in an `OfflineAudioContext`), the fader/pan, and the
+**master limiter** (also worklet-based, also with a compressor fallback that the first render of every fresh offline context
+starts on).
+
+The next measurement is the same capture at the next node downstream, one node at a time. The one thing this rules out for
+certain is asking the core again.
+
 ### 1i. Where the pop stands, and what would finish it (2026-09-26)
 
 **Characterised, reproducible, and not the core.** The reviewer's description and my own sample-level check agree on every
