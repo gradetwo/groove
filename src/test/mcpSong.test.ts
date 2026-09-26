@@ -302,3 +302,22 @@ describe("MCP · the render's file name", () => {
     // The worker substitutes "master" for an empty slug, which is the name every render had before this existed.
   });
 });
+
+describe("MCP · bars means passes, and the summary says so", () => {
+  /**
+   * Both composers who drove this server read `bars` as measures and built a song four times the length they intended —
+   * a genre's seeded clip is 64 steps, i.e. **4 measures per pass** — and neither could tell until it was rendered. The
+   * summary now carries the two numbers that make it unmissable.
+   */
+  it("reports measures per pass and an estimated duration", () => {
+    const genre = findGenre("chicago-house");
+    const summary = createMcpSong({ genreId: "chicago-house", genre, bars: 4 });
+    expect(summary.passBars).toBeGreaterThanOrEqual(1);
+    expect(summary.secondsEstimate).toBeGreaterThan(0);
+    // Four passes expand into `passBars × 4` measures, which is the relationship the timeline guarantees.
+    expect(summary.totalBars).toBe(summary.passBars * 4);
+    expect(summary.totalBars).toBeGreaterThan(0);
+    const single = createMcpSong({ genreId: "chicago-house", genre, bars: 1 });
+    expect(summary.secondsEstimate).toBeGreaterThan(single.secondsEstimate);
+  });
+});

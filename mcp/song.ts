@@ -29,6 +29,10 @@ let sequence = 0;
 
 /** What a tool returns: the whole arrangement in a shape a model can read and edit. */
 export interface SongSummary {
+  /** How many measures one pass of a clip is worth for this song: a genre's seeded pattern is 4. */
+  passBars: number;
+  /** How long the arrangement currently is, in seconds — the number `bars` makes hard to judge. */
+  secondsEstimate: number;
   songId: string;
   name: string;
   genreId: string;
@@ -58,6 +62,14 @@ export interface SongSummary {
 export function summariseSong(song: Song): SongSummary {
   const timeline = resolveTimeline(song);
   const flattened = flattenSong(song);
+  /**
+   * Measures per pass, taken from the timeline rather than re-derived.
+   *
+   * The first version computed it from the clip's step count and disagreed with the timeline that expands the arrangement —
+   * the timeline is the thing that decides, so the summary reads its arithmetic instead of repeating it (and being subtly
+   * wrong about a clip whose `totalSteps` differs from its track's step array).
+   */
+  const totalPasses = song.sections.reduce((sum, section) => sum + Math.max(1, Math.floor(section.bars)), 0);
   return {
     songId: song.id,
     name: song.name,
@@ -78,6 +90,18 @@ export function summariseSong(song: Song): SongSummary {
     })),
     problems: flattened.problems,
     totalSteps: flattened.totalSteps,
+    /**
+     * The two numbers that make `bars` unambiguous, because both composers who drove this server read it as "measures".
+     *
+     * A section's `bars` counts **passes of its clip**, and a genre's seeded clip is four measures long (`patternFromGenre`
+     * gives 64 steps at 16 per bar), so `bars: 44` is 176 measures and about eight minutes — which one of them found out by
+     * rendering it. `passBars` says what one pass is worth for this song, `secondsEstimate` says how long the whole thing is,
+     * and both are returned by `create_song` and by `add_section` (so the estimate moves as sections are added).
+     */
+    passBars: totalPasses > 0 ? Math.max(1, Math.round(timeline.totalBars / totalPasses)) : 1,
+    secondsEstimate: Number(
+      ((timeline.totalBars * 16 * (60 / song.bpm) * 4) / 16).toFixed(1)
+    ),
   };
 }
 
