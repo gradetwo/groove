@@ -10,6 +10,7 @@ import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { ALL_GENRES } from "../data/genres";
+import { SKINS } from "../data/skins";
 
 const COVERS_DIR = path.join(process.cwd(), "public", "covers");
 
@@ -35,6 +36,30 @@ describe("genre covers", () => {
     const ids = new Set(ALL_GENRES.map((genre) => `${genre.id}.jpg`));
     const orphans = fs.readdirSync(COVERS_DIR).filter((name) => name.endsWith(".jpg") && !ids.has(name));
     expect(orphans).toEqual([]);
+  });
+
+  /**
+   * The per-skin sets, which is what a reader actually sees.
+   *
+   * `public/covers/<skin>/<genre>.jpg` is each skin's own artwork (see `components/GenreCover`: the skin's image first,
+   * the shared one behind it), and the desktop now shows them in the genre hero, the explore cards and the compare
+   * columns. A missing or truncated file there is a broken image on **one** skin only, which is exactly the kind of hole a
+   * shared-set check cannot see. The skin list comes from `SKINS` so a new skin cannot be forgotten here.
+   */
+  it("ships the same set for every skin, with no holes", () => {
+    for (const skin of SKINS) {
+      const dir = path.join(COVERS_DIR, skin.id);
+      expect(fs.existsSync(dir), `public/covers/${skin.id}`).toBe(true);
+      const missing = ALL_GENRES.filter((genre) => !fs.existsSync(path.join(dir, `${genre.id}.jpg`)));
+      expect(missing.map((genre) => genre.id), `${skin.id}: missing covers`).toEqual([]);
+      const tooSmall = ALL_GENRES.filter((genre) => fs.statSync(path.join(dir, `${genre.id}.jpg`)).size < 2048);
+      expect(tooSmall.map((genre) => genre.id), `${skin.id}: truncated covers`).toEqual([]);
+      const ids = new Set(ALL_GENRES.map((genre) => `${genre.id}.jpg`));
+      const orphans = fs
+        .readdirSync(dir)
+        .filter((name) => name.endsWith(".jpg") && !ids.has(name));
+      expect(orphans, `${skin.id}: orphan covers`).toEqual([]);
+    }
   });
 
   it("records where the images come from", () => {
