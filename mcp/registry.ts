@@ -596,16 +596,40 @@ export const TOOLS: ToolDefinition[] = [
     name: "render_song",
     title: "Render the arrangement",
     description:
-      "Bounce a song created with create_song: every section, in order, with its repeats, mutes and velocity scale, through the app's own offline engine (WAV or MP3, written under GROOVE_MCP_OUT). Needs headless Chromium.",
+      "Bounce a song created with create_song: every section, in order, with its repeats, mutes and velocity scale, through the app's own offline engine (WAV or MP3, written under GROOVE_MCP_OUT). Needs headless Chromium. Long arrangements take minutes and the call reports no progress — check the song's `secondsEstimate` first and use `maxDurationSec` to refuse rather than hang.",
     readOnly: false,
     inputSchema: {
       songId: z.string().describe("the id create_song returned"),
       format: z.enum(["wav", "mp3"]).default("wav"),
       bitrateKbps: z.number().int().min(32).max(320).optional().describe("MP3 only; default 192"),
+      maxDurationSec: z
+        .number()
+        .min(1)
+        .max(1800)
+        .optional()
+        .describe(
+          "refuse to render a song longer than this. A guard against the unbounded hang a composer hit (2816 steps ran 15 minutes with no result): the estimated duration is checked *before* the browser starts."
+        ),
     },
     handler: async (args) => {
       try {
         const { song, flattened } = flattenMcpSong(String(args.songId));
+        /**
+         * The guard, and it runs **before** the browser starts.
+         *
+         * A composer's 2816-step arrangement rendered for fifteen minutes with no result and no way to tell "working" from
+         * "stuck"; the estimate the summary already carries is what makes refusing cheap, and the message says what to do
+         * instead of leaving the caller to guess.
+         */
+        const budget = args.maxDurationSec as number | undefined;
+        if (budget !== undefined) {
+          const estimate = summariseSong(song).secondsEstimate;
+          if (estimate > budget) {
+            return failure(
+              `this song is about ${estimate}s and maxDurationSec is ${budget}s — shorten the arrangement, raise the limit, or render one section with render_audio`
+            );
+          }
+        }
         const result = await renderAudio(flattened.pattern, {
           format: (args.format as "wav" | "mp3") ?? "wav",
           // The flattened pattern *is* the song, so one pass plays all of it (B2).
