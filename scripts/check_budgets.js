@@ -31,7 +31,20 @@ const BUDGETS = {
    * the owner asked for — and two were deleted again when the measurement said they did not help. The next feature in
    * this area has to find its bytes elsewhere; this raise is recorded so that is a decision rather than a surprise.
    */
-  initialRouteGzipKb: 222,
+  /**
+   * 222 → 223 on 2026-09-27, for the **first frame**.
+   *
+   * The owner reported a black screen of a few seconds on a cold PWA launch: `#root` was empty until React had downloaded,
+   * parsed and run the entry chunk, and the only thing on screen meanwhile was the body background. The fix is a splash drawn
+   * by the document itself — and it has to be **inline in the HTML** to work, because any external stylesheet, font or script
+   * reintroduces exactly the wait it exists to cover. It is 733 bytes of markup and CSS, minified by hand (the animated bar
+   * and the reduced-motion override included), which is ~0.45 KB gzip of this budget.
+   *
+   * Measured cost, not a guess: `npm run check:budget` read 221.9 KB before it and 222.4 KB after. As with the two raises
+   * above, this is the shape of the feature rather than slack — and the next feature in this area has to find its bytes
+   * elsewhere.
+   */
+  initialRouteGzipKb: 223,
   /**
    * GS-1 vendored core. The Rust→WASM engine artifacts are not `.js`, so every
    * budget above simply does not see them: a GS-1 bump could grow the payload 40%

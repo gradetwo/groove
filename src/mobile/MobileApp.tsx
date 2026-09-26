@@ -17,6 +17,8 @@ import { useGenreAudition } from "../hooks/useGenreAudition";
 import { auditionArrangementFor } from "./mobileGenreData";
 import { MobileModuleTabBar } from "./MobileModuleTabBar";
 import { MobilePlayerBar } from "./MobilePlayerBar";
+import { preloadGenreCover } from "./genreArt";
+import { useSkin } from "../hooks/useSkin";
 import { MOBILE_MODULE_PLAN_KEYS, type MobileModule } from "./mobileModules";
 import { GENRE_INDEX, loadGenre } from "./mobileGenreData";
 import { nextGenreForMode, nextPlayMode, normalisePlayMode, type PlayMode } from "./vinyl/vinylMath";
@@ -88,6 +90,14 @@ const MobileMoreScreen = React.lazy(() =>
 /** Where the play mode is remembered between sessions. */
 export const MOBILE_PLAY_MODE_KEY = "groove_mobile_play_mode";
 
+/**
+ * The genre the phone shell falls back to, and the one the persistent player bar starts on.
+ *
+ * It is the same id every route without a genre resolves to (`App.tsx`: `route.genreId || "chicago-house"`), so the bar, the
+ * full player and the desktop studio all name the same default instead of three opinions about "nothing chosen yet".
+ */
+const DEFAULT_MOBILE_GENRE = "chicago-house";
+
 export interface MobileAppProps {
   module: MobileModule;
   /** Show the full-screen player (`/m/home?player=1&genre=`). */
@@ -124,6 +134,8 @@ export function MobileApp({
   onOpenHelp,
   onOpenSearch,
 }: MobileAppProps) {
+  /** The active skin, so warmed artwork is the file this device will actually draw. */
+  const { skin } = useSkin();
   const { t } = useLanguage();
 
   /**
@@ -287,8 +299,45 @@ export function MobileApp({
 
   const isPlayer = module === "home" && Boolean(mobilePlayer) && Boolean(genreId);
   const isDetail = module === "home" && Boolean(genreId) && !mobilePlayer;
+  /**
+   * The bar is **always** there on the home module, and it has a genre even before anything has played.
+   *
+   * It used to appear only once something was playing, which meant a whole slot of the screen filled in one frame the moment
+   * a card was tapped — the owner's "卡顿和突兀" — and left nothing to press when the library had not been used yet. The bar
+   * now starts on the shell's default genre (the same `chicago-house` every route without a genre resolves to) with its play
+   * control in the *play* state, so tapping it starts that genre and the rest of the shell — the queue that mode and next
+   * advance through — is already seeded with a real genre.
+   */
+  const defaultGenreId = genreId ?? playingGenreId ?? DEFAULT_MOBILE_GENRE;
+  /**
+   * What the bar is showing: whatever is playing, else the last thing it showed, else the default.
+   *
+   * Falling straight back to the default the moment the transport stops would make the bar announce a genre nobody chose —
+   * the same kind of jump the user is complaining about, in the other direction.
+   */
+  const lastBarGenreRef = useRef<string | null>(null);
+  const barGenreId = playingGenreId ?? lastBarGenreRef.current ?? defaultGenreId;
+  lastBarGenreRef.current = barGenreId;
+
+  /**
+   * Warm what the player and the bar draw, in the size they draw it.
+   *
+   * The bar shows a thumbnail and the vinyl label bakes a 512 px picture from the **original** file, which nothing has fetched
+   * yet — so today tapping a card shows a blank disc for a moment and "next" shows another one. Fetching both as soon as the
+   * genre is known costs one thumbnail and one original per genre, ahead of the tap that needs them.
+   */
+  const warmedArtRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!barGenreId) return;
+    const key = `${skin ?? "default"}:${barGenreId}`;
+    if (warmedArtRef.current.has(key)) return;
+    warmedArtRef.current.add(key);
+    void preloadGenreCover(barGenreId, { skin });
+    void preloadGenreCover(barGenreId, { skin, thumb: false });
+  }, [barGenreId, skin]);
+  const barIsPlaying = Boolean(playingGenreId) && playingGenreId === barGenreId;
   // The bar is the collapsed *form* of the player, so it is hidden while the full player is open.
-  const showPlayerBar = module === "home" && !isPlayer && Boolean(playingGenreId);
+  const showPlayerBar = module === "home" && !isPlayer;
   /**
    * The module bar belongs to browsing, not to a full-screen surface.
    *
@@ -322,11 +371,18 @@ export function MobileApp({
           module === "jam" && showTabBar ? "h-[100dvh] overflow-hidden" : "min-h-[100dvh]"
         }`}
         style={{
+          /**
+           * The bar is fixed and always on the home module, so its height is always reserved.
+           *
+           * It used to be `72px` for the tab bar alone, which was right only while the bar was conditional — and it meant
+           * that as soon as something played, the last row of the library slid under the bar. The tab bar is 56px, the bar
+           * sits 56px up from the bottom and is ~62px tall, so the home module needs 56 + 62 + a 12px gap.
+           */
           paddingBottom: showTabBar
-            ? "calc(72px + env(safe-area-inset-bottom))"
+            ? "calc(130px + env(safe-area-inset-bottom))"
             : isDetail
               ? "calc(84px + env(safe-area-inset-bottom))"
-              : "env(safe-area-inset-bottom)",
+              : "calc(72px + env(safe-area-inset-bottom))",
         }}
       >
         {showShellHeader && (
@@ -415,15 +471,15 @@ export function MobileApp({
       </main>
 
       {/* The bar sits above the tab bar; the content above reserves room for both. */}
-      {showPlayerBar && playingGenreId && (
+      {showPlayerBar && (
         <MobilePlayerBar
-          genreId={playingGenreId}
-          isPlaying
+          genreId={barGenreId}
+          isPlaying={barIsPlaying}
           aboveTabBar={showTabBar}
           playMode={playMode}
-          onToggle={stopAudition}
+          onToggle={() => (barIsPlaying ? stopAudition() : handleToggleAudition(barGenreId))}
           onCycleMode={cyclePlayMode}
-          onOpen={() => onOpenPlayer?.(playingGenreId)}
+          onOpen={() => onOpenPlayer?.(barGenreId)}
           /* The rail and the tempo both come from the transport, so the bar cannot disagree with it. */
           readClock={readClock}
           readTempo={readTempo}

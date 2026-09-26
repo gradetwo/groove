@@ -26,9 +26,11 @@
  * category chunks into the phone's first paint, which is exactly the regression this screen was
  * rewritten to remove.
  */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronRight, Pause, Search } from "lucide-react";
 import { GENRE_INDEX, type GenreIndexItem } from "../mobileGenreData";
+import { preloadGenreCovers } from "../genreArt";
+import { useSkin } from "../../hooks/useSkin";
 import { TIMELINE_STORIES, type TimelineStory } from "../../data/timeline_stories";
 import { useLanguage } from "../../i18n/LanguageContext";
 import type { GenreCategory } from "../../types/genre";
@@ -80,6 +82,14 @@ export interface MobileHomeScreenProps {
  * than a thumb can scroll past the first screen), and a filter change restarts from one chunk because
  * the result set is different.
  */
+/**
+ * How many covers to warm on the first pass.
+ *
+ * One screenful of the phone list is about six rows; eight covers the fold with a little slack and costs ~100 KB at thumbnail
+ * size, which is a rounding error next to the entry chunk.
+ */
+const HOME_WARM_COVERS = 8;
+
 const FIRST_CHUNK = 24;
 
 /** Run something when the browser is idle, falling back to a macrotask (jsdom has no `requestIdleCallback`). */
@@ -98,6 +108,9 @@ export function MobileHomeScreen({ playingGenreId, onSelectGenre }: MobileHomeSc
   const { t } = useLanguage();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<GenreCategory | "all">("all");
+  const { skin } = useSkin();
+  /** Covers already asked for, so a re-render does not restart a download the browser is already doing. */
+  const warmedCoversRef = useRef<Set<string>>(new Set());
 
   const genres = useMemo(() => {
     return GENRE_INDEX.filter(
@@ -125,6 +138,28 @@ export function MobileHomeScreen({ playingGenreId, onSelectGenre }: MobileHomeSc
 
   /** The rows to render: the head of the filtered list, and everything once the list is short. */
   const visibleGenres = genres.length > shown ? genres.slice(0, shown) : genres;
+
+  /**
+   * Warm the covers the list is about to draw, instead of letting each one download as its element appears.
+   *
+   * That was the owner's complaint in one line — "每次都是触发才下载" — and `loading="lazy"` cannot fix it: lazy decides
+   * *when* to start, not whether the bitmap is ready when the element is painted. The first screenful is warmed eagerly (it is
+   * above the fold and is part of the first impression), the rest as the list grows, and the playing genre last so it is
+   * refreshed even when it is further down. Warming is capped at three at a time, so it never competes with the transport.
+   */
+  const warmIds = useMemo(() => {
+    const head = visibleGenres.slice(0, HOME_WARM_COVERS).map((genre) => genre.id);
+    if (playingGenreId && !head.includes(playingGenreId)) head.push(playingGenreId);
+    return head;
+  }, [visibleGenres, playingGenreId]);
+  useEffect(() => {
+    // Keyed by skin as well as id: a skin change means a different file, so it is a different warm-up rather than a repeat.
+    const key = (id: string) => `${skin ?? "default"}:${id}`;
+    const missing = warmIds.filter((id) => !warmedCoversRef.current.has(key(id)));
+    if (missing.length === 0) return;
+    for (const id of missing) warmedCoversRef.current.add(key(id));
+    void preloadGenreCovers(missing, { skin, concurrency: 3 });
+  }, [warmIds, skin]);
 
   return (
     <div className="m-rise px-4 pb-4" data-testid="mobile-home">
