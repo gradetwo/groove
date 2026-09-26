@@ -1,0 +1,956 @@
+{
+ "goa-trance": {
+  "flat": 0.8354,
+  "mid": 0.126,
+  "big": 0.0386,
+  "near_mad": 1.45
+ },
+ "moombahton": {
+  "flat": 0.8419,
+  "mid": 0.1252,
+  "big": 0.0329,
+  "near_mad": 1.44
+ },
+ "samba": {
+  "flat": 0.8514,
+  "mid": 0.1103,
+  "big": 0.0383,
+  "near_mad": 1.36
+ },
+ "black-metal": {
+  "flat": 0.8515,
+  "mid": 0.1153,
+  "big": 0.0331,
+  "near_mad": 1.25
+ },
+ "psytrance": {
+  "flat": 0.8539,
+  "mid": 0.111,
+  "big": 0.0352,
+  "near_mad": 1.28
+ },
+ "salsa": {
+  "flat": 0.8598,
+  "mid": 0.1089,
+  "big": 0.0313,
+  "near_mad": 1.3
+ },
+ "reggae": {
+  "flat": 0.8606,
+  "mid": 0.1119,
+  "big": 0.0275,
+  "near_mad": 1.32
+ },
+ "industrial-techno": {
+  "flat": 0.8623,
+  "mid": 0.1122,
+  "big": 0.0255,
+  "near_mad": 1.36
+ },
+ "hardcore-gabber": {
+  "flat": 0.8649,
+  "mid": 0.1101,
+  "big": 0.025,
+  "near_mad": 1.35
+ },
+ "brostep": {
+  "flat": 0.8672,
+  "mid": 0.0977,
+  "big": 0.0351,
+  "near_mad": 1.27
+ },
+ "idm": {
+  "flat": 0.8697,
+  "mid": 0.1003,
+  "big": 0.03,
+  "near_mad": 1.22
+ },
+ "shoe-gaze": {
+  "flat": 0.8718,
+  "mid": 0.104,
+  "big": 0.0242,
+  "near_mad": 1.22
+ },
+ "frenchcore": {
+  "flat": 0.874,
+  "mid": 0.0963,
+  "big": 0.0296,
+  "near_mad": 1.16
+ },
+ "afrobeat": {
+  "flat": 0.8775,
+  "mid": 0.0969,
+  "big": 0.0256,
+  "near_mad": 1.24
+ },
+ "tearout-dubstep": {
+  "flat": 0.8788,
+  "mid": 0.0929,
+  "big": 0.0284,
+  "near_mad": 1.12
+ },
+ "edm-trap": {
+  "flat": 0.8794,
+  "mid": 0.0931,
+  "big": 0.0275,
+  "near_mad": 1.13
+ },
+ "hardstyle": {
+  "flat": 0.8831,
+  "mid": 0.0908,
+  "big": 0.0261,
+  "near_mad": 1.17
+ },
+ "bossa-nova": {
+  "flat": 0.8844,
+  "mid": 0.0966,
+  "big": 0.019,
+  "near_mad": 1.27
+ },
+ "delta-blues": {
+  "flat": 0.8852,
+  "mid": 0.0948,
+  "big": 0.0199,
+  "near_mad": 1.26
+ },
+ "happy-hardcore": {
+  "flat": 0.8852,
+  "mid": 0.0889,
+  "big": 0.0259,
+  "near_mad": 1.12
+ },
+ "breakcore": {
+  "flat": 0.8871,
+  "mid": 0.0872,
+  "big": 0.0257,
+  "near_mad": 1.05
+ },
+ "hard-trap": {
+  "flat": 0.8894,
+  "mid": 0.0885,
+  "big": 0.0221,
+  "near_mad": 1.13
+ },
+ "tropical-house": {
+  "flat": 0.8905,
+  "mid": 0.0895,
+  "big": 0.02,
+  "near_mad": 1.15
+ },
+ "lofi-hip-hop": {
+  "flat": 0.8915,
+  "mid": 0.0972,
+  "big": 0.0114,
+  "near_mad": 4.58
+ },
+ "metalcore": {
+  "flat": 0.8919,
+  "mid": 0.0868,
+  "big": 0.0213,
+  "near_mad": 1.1
+ },
+ "texas-blues": {
+  "flat": 0.8947,
+  "mid": 0.0852,
+  "big": 0.0201,
+  "near_mad": 1.14
+ },
+ "eurodance": {
+  "flat": 0.8963,
+  "mid": 0.0795,
+  "big": 0.0243,
+  "near_mad": 1.01
+ },
+ "halftime": {
+  "flat": 0.8971,
+  "mid": 0.0845,
+  "big": 0.0184,
+  "near_mad": 1.06
+ },
+ "chicago-blues": {
+  "flat": 0.8979,
+  "mid": 0.0786,
+  "big": 0.0235,
+  "near_mad": 1.05
+ },
+ "liquid-dnb": {
+  "flat": 0.8987,
+  "mid": 0.0831,
+  "big": 0.0182,
+  "near_mad": 1.09
+ },
+ "hard-trance": {
+  "flat": 0.8988,
+  "mid": 0.0787,
+  "big": 0.0225,
+  "near_mad": 0.99
+ },
+ "vocal-trance": {
+  "flat": 0.899,
+  "mid": 0.0809,
+  "big": 0.0201,
+  "near_mad": 1.0
+ },
+ "electro-house": {
+  "flat": 0.8999,
+  "mid": 0.0746,
+  "big": 0.0255,
+  "near_mad": 0.97
+ },
+ "chicago-drill": {
+  "flat": 0.9002,
+  "mid": 0.0768,
+  "big": 0.023,
+  "near_mad": 0.97
+ },
+ "future-bass": {
+  "flat": 0.9004,
+  "mid": 0.0771,
+  "big": 0.0226,
+  "near_mad": 0.96
+ },
+ "hybrid-trap": {
+  "flat": 0.9021,
+  "mid": 0.0789,
+  "big": 0.019,
+  "near_mad": 1.04
+ },
+ "hard-bop": {
+  "flat": 0.9024,
+  "mid": 0.0796,
+  "big": 0.018,
+  "near_mad": 1.06
+ },
+ "nu-disco-house": {
+  "flat": 0.9025,
+  "mid": 0.0774,
+  "big": 0.0201,
+  "near_mad": 1.05
+ },
+ "wave": {
+  "flat": 0.9026,
+  "mid": 0.0791,
+  "big": 0.0183,
+  "near_mad": 1.06
+ },
+ "uplifting-trance": {
+  "flat": 0.9033,
+  "mid": 0.0841,
+  "big": 0.0126,
+  "near_mad": 1.11
+ },
+ "bebop": {
+  "flat": 0.9038,
+  "mid": 0.0792,
+  "big": 0.0171,
+  "near_mad": 1.06
+ },
+ "east-coast-hip-hop": {
+  "flat": 0.9051,
+  "mid": 0.0798,
+  "big": 0.0151,
+  "near_mad": 1.07
+ },
+ "acid-techno": {
+  "flat": 0.9063,
+  "mid": 0.0724,
+  "big": 0.0213,
+  "near_mad": 0.93
+ },
+ "grunge": {
+  "flat": 0.907,
+  "mid": 0.0769,
+  "big": 0.0161,
+  "near_mad": 1.05
+ },
+ "progressive-trance": {
+  "flat": 0.9072,
+  "mid": 0.0771,
+  "big": 0.0157,
+  "near_mad": 0.95
+ },
+ "electric-blues": {
+  "flat": 0.9077,
+  "mid": 0.0725,
+  "big": 0.0198,
+  "near_mad": 0.93
+ },
+ "thrash-metal": {
+  "flat": 0.9086,
+  "mid": 0.072,
+  "big": 0.0194,
+  "near_mad": 0.9
+ },
+ "acid-jazz": {
+  "flat": 0.909,
+  "mid": 0.072,
+  "big": 0.019,
+  "near_mad": 0.94
+ },
+ "dancehall": {
+  "flat": 0.9114,
+  "mid": 0.072,
+  "big": 0.0166,
+  "near_mad": 0.98
+ },
+ "disco": {
+  "flat": 0.9114,
+  "mid": 0.0702,
+  "big": 0.0184,
+  "near_mad": 0.9
+ },
+ "euro-trance": {
+  "flat": 0.9116,
+  "mid": 0.0759,
+  "big": 0.0124,
+  "near_mad": 1.02
+ },
+ "g-funk": {
+  "flat": 0.9127,
+  "mid": 0.0736,
+  "big": 0.0137,
+  "near_mad": 1.08
+ },
+ "speedbass": {
+  "flat": 0.9128,
+  "mid": 0.068,
+  "big": 0.0191,
+  "near_mad": 0.93
+ },
+ "funk": {
+  "flat": 0.913,
+  "mid": 0.0681,
+  "big": 0.0189,
+  "near_mad": 0.96
+ },
+ "glitch-hop": {
+  "flat": 0.9138,
+  "mid": 0.0684,
+  "big": 0.0178,
+  "near_mad": 0.98
+ },
+ "vaporwave": {
+  "flat": 0.9144,
+  "mid": 0.0778,
+  "big": 0.0077,
+  "near_mad": 4.77
+ },
+ "chillwave": {
+  "flat": 0.9148,
+  "mid": 0.0745,
+  "big": 0.0107,
+  "near_mad": 1.17
+ },
+ "j-pop": {
+  "flat": 0.9148,
+  "mid": 0.0675,
+  "big": 0.0177,
+  "near_mad": 1.01
+ },
+ "sambass": {
+  "flat": 0.9148,
+  "mid": 0.0681,
+  "big": 0.017,
+  "near_mad": 0.9
+ },
+ "city-pop": {
+  "flat": 0.9152,
+  "mid": 0.0723,
+  "big": 0.0125,
+  "near_mad": 1.05
+ },
+ "ragga-jungle": {
+  "flat": 0.9154,
+  "mid": 0.0693,
+  "big": 0.0152,
+  "near_mad": 0.86
+ },
+ "kuduro": {
+  "flat": 0.9156,
+  "mid": 0.072,
+  "big": 0.0124,
+  "near_mad": 1.1
+ },
+ "soul": {
+  "flat": 0.9157,
+  "mid": 0.0702,
+  "big": 0.014,
+  "near_mad": 1.01
+ },
+ "jungle": {
+  "flat": 0.9161,
+  "mid": 0.07,
+  "big": 0.0139,
+  "near_mad": 0.97
+ },
+ "traditional-jazz": {
+  "flat": 0.9166,
+  "mid": 0.0673,
+  "big": 0.0161,
+  "near_mad": 0.99
+ },
+ "southern-hip-hop": {
+  "flat": 0.9177,
+  "mid": 0.068,
+  "big": 0.0143,
+  "near_mad": 1.02
+ },
+ "speed-garage": {
+  "flat": 0.918,
+  "mid": 0.0683,
+  "big": 0.0137,
+  "near_mad": 0.94
+ },
+ "math-rock": {
+  "flat": 0.9187,
+  "mid": 0.0656,
+  "big": 0.0157,
+  "near_mad": 0.87
+ },
+ "detroit-techno": {
+  "flat": 0.919,
+  "mid": 0.0633,
+  "big": 0.0177,
+  "near_mad": 0.92
+ },
+ "synth-pop": {
+  "flat": 0.9194,
+  "mid": 0.063,
+  "big": 0.0176,
+  "near_mad": 0.86
+ },
+ "melodic-house": {
+  "flat": 0.9195,
+  "mid": 0.0658,
+  "big": 0.0147,
+  "near_mad": 0.93
+ },
+ "tech-trance": {
+  "flat": 0.9202,
+  "mid": 0.0637,
+  "big": 0.0161,
+  "near_mad": 0.88
+ },
+ "k-pop": {
+  "flat": 0.9204,
+  "mid": 0.0672,
+  "big": 0.0124,
+  "near_mad": 0.97
+ },
+ "heavy-metal": {
+  "flat": 0.9225,
+  "mid": 0.0583,
+  "big": 0.0192,
+  "near_mad": 0.79
+ },
+ "punk-rock": {
+  "flat": 0.9225,
+  "mid": 0.064,
+  "big": 0.0135,
+  "near_mad": 1.02
+ },
+ "old-school-hip-hop": {
+  "flat": 0.923,
+  "mid": 0.0613,
+  "big": 0.0157,
+  "near_mad": 0.86
+ },
+ "death-metal": {
+  "flat": 0.9232,
+  "mid": 0.0617,
+  "big": 0.0151,
+  "near_mad": 0.88
+ },
+ "progressive-rock": {
+  "flat": 0.9234,
+  "mid": 0.0612,
+  "big": 0.0154,
+  "near_mad": 0.87
+ },
+ "cumbia": {
+  "flat": 0.9235,
+  "mid": 0.0572,
+  "big": 0.0193,
+  "near_mad": 0.9
+ },
+ "dream-trance": {
+  "flat": 0.9246,
+  "mid": 0.065,
+  "big": 0.0104,
+  "near_mad": 1.0
+ },
+ "west-coast-hip-hop": {
+  "flat": 0.9248,
+  "mid": 0.0607,
+  "big": 0.0144,
+  "near_mad": 0.99
+ },
+ "electro": {
+  "flat": 0.9265,
+  "mid": 0.057,
+  "big": 0.0164,
+  "near_mad": 0.77
+ },
+ "jazz-fusion": {
+  "flat": 0.9277,
+  "mid": 0.0597,
+  "big": 0.0125,
+  "near_mad": 0.9
+ },
+ "footwork": {
+  "flat": 0.9283,
+  "mid": 0.0605,
+  "big": 0.0112,
+  "near_mad": 0.95
+ },
+ "motown": {
+  "flat": 0.9288,
+  "mid": 0.0601,
+  "big": 0.0111,
+  "near_mad": 0.85
+ },
+ "doom-metal": {
+  "flat": 0.9298,
+  "mid": 0.0568,
+  "big": 0.0134,
+  "near_mad": 0.84
+ },
+ "jersey-club": {
+  "flat": 0.9303,
+  "mid": 0.0618,
+  "big": 0.008,
+  "near_mad": 0.84
+ },
+ "neurofunk": {
+  "flat": 0.9303,
+  "mid": 0.0543,
+  "big": 0.0154,
+  "near_mad": 0.86
+ },
+ "bassline": {
+  "flat": 0.9313,
+  "mid": 0.0573,
+  "big": 0.0115,
+  "near_mad": 0.89
+ },
+ "jump-up": {
+  "flat": 0.9316,
+  "mid": 0.0538,
+  "big": 0.0146,
+  "near_mad": 0.75
+ },
+ "dub": {
+  "flat": 0.9323,
+  "mid": 0.0529,
+  "big": 0.0148,
+  "near_mad": 0.72
+ },
+ "bachata": {
+  "flat": 0.9325,
+  "mid": 0.0519,
+  "big": 0.0156,
+  "near_mad": 0.82
+ },
+ "acid-house": {
+  "flat": 0.9326,
+  "mid": 0.0534,
+  "big": 0.0139,
+  "near_mad": 0.76
+ },
+ "chicago-house": {
+  "flat": 0.9333,
+  "mid": 0.0539,
+  "big": 0.0129,
+  "near_mad": 0.78
+ },
+ "chillstep": {
+  "flat": 0.9337,
+  "mid": 0.0505,
+  "big": 0.0158,
+  "near_mad": 0.74
+ },
+ "schranz": {
+  "flat": 0.9338,
+  "mid": 0.055,
+  "big": 0.0112,
+  "near_mad": 0.78
+ },
+ "breakbeat": {
+  "flat": 0.9339,
+  "mid": 0.0546,
+  "big": 0.0114,
+  "near_mad": 0.86
+ },
+ "chiptune": {
+  "flat": 0.9345,
+  "mid": 0.0509,
+  "big": 0.0147,
+  "near_mad": 0.79
+ },
+ "hard-techno": {
+  "flat": 0.9356,
+  "mid": 0.049,
+  "big": 0.0154,
+  "near_mad": 0.75
+ },
+ "smooth-jazz": {
+  "flat": 0.9356,
+  "mid": 0.0506,
+  "big": 0.0138,
+  "near_mad": 0.73
+ },
+ "techstep": {
+  "flat": 0.9357,
+  "mid": 0.0491,
+  "big": 0.0151,
+  "near_mad": 0.72
+ },
+ "boom-bap": {
+  "flat": 0.9359,
+  "mid": 0.0528,
+  "big": 0.0113,
+  "near_mad": 0.82
+ },
+ "brooklyn-drill": {
+  "flat": 0.9363,
+  "mid": 0.0485,
+  "big": 0.0152,
+  "near_mad": 0.76
+ },
+ "big-beat": {
+  "flat": 0.9365,
+  "mid": 0.0526,
+  "big": 0.0109,
+  "near_mad": 0.78
+ },
+ "melodic-dubstep": {
+  "flat": 0.9369,
+  "mid": 0.0493,
+  "big": 0.0137,
+  "near_mad": 0.67
+ },
+ "hard-rock": {
+  "flat": 0.9376,
+  "mid": 0.0482,
+  "big": 0.0142,
+  "near_mad": 0.8
+ },
+ "traditional-pop": {
+  "flat": 0.9378,
+  "mid": 0.053,
+  "big": 0.0092,
+  "near_mad": 0.78
+ },
+ "jersey-drill": {
+  "flat": 0.938,
+  "mid": 0.0514,
+  "big": 0.0107,
+  "near_mad": 0.81
+ },
+ "kawaii-future-bass": {
+  "flat": 0.9382,
+  "mid": 0.0544,
+  "big": 0.0073,
+  "near_mad": 0.89
+ },
+ "dubstep": {
+  "flat": 0.9384,
+  "mid": 0.0536,
+  "big": 0.0081,
+  "near_mad": 0.82
+ },
+ "contemporary-rnb": {
+  "flat": 0.9385,
+  "mid": 0.0521,
+  "big": 0.0094,
+  "near_mad": 0.85
+ },
+ "new-wave": {
+  "flat": 0.9391,
+  "mid": 0.0508,
+  "big": 0.0101,
+  "near_mad": 0.87
+ },
+ "reggaeton": {
+  "flat": 0.9392,
+  "mid": 0.0495,
+  "big": 0.0113,
+  "near_mad": 0.75
+ },
+ "modal-jazz": {
+  "flat": 0.9394,
+  "mid": 0.0494,
+  "big": 0.0112,
+  "near_mad": 0.75
+ },
+ "alternative-rock": {
+  "flat": 0.9395,
+  "mid": 0.0498,
+  "big": 0.0107,
+  "near_mad": 0.78
+ },
+ "downtempo": {
+  "flat": 0.94,
+  "mid": 0.0505,
+  "big": 0.0095,
+  "near_mad": 0.83
+ },
+ "future-house": {
+  "flat": 0.9409,
+  "mid": 0.0474,
+  "big": 0.0117,
+  "near_mad": 0.76
+ },
+ "gypsy-jazz": {
+  "flat": 0.9416,
+  "mid": 0.0453,
+  "big": 0.013,
+  "near_mad": 0.79
+ },
+ "raw-techno": {
+  "flat": 0.9422,
+  "mid": 0.0476,
+  "big": 0.0102,
+  "near_mad": 0.81
+ },
+ "future-garage": {
+  "flat": 0.9423,
+  "mid": 0.0506,
+  "big": 0.0071,
+  "near_mad": 0.74
+ },
+ "rock-and-roll": {
+  "flat": 0.9427,
+  "mid": 0.0482,
+  "big": 0.009,
+  "near_mad": 0.81
+ },
+ "neo-soul": {
+  "flat": 0.9441,
+  "mid": 0.0472,
+  "big": 0.0088,
+  "near_mad": 0.73
+ },
+ "free-jazz": {
+  "flat": 0.9447,
+  "mid": 0.0424,
+  "big": 0.0128,
+  "near_mad": 0.65
+ },
+ "cool-jazz": {
+  "flat": 0.9456,
+  "mid": 0.0423,
+  "big": 0.0122,
+  "near_mad": 0.71
+ },
+ "deathstep": {
+  "flat": 0.9458,
+  "mid": 0.0437,
+  "big": 0.0105,
+  "near_mad": 0.71
+ },
+ "uk-funky": {
+  "flat": 0.9459,
+  "mid": 0.0489,
+  "big": 0.0052,
+  "near_mad": 0.86
+ },
+ "uk-garage": {
+  "flat": 0.9459,
+  "mid": 0.0455,
+  "big": 0.0087,
+  "near_mad": 0.75
+ },
+ "amapiano": {
+  "flat": 0.9464,
+  "mid": 0.0448,
+  "big": 0.0088,
+  "near_mad": 0.71
+ },
+ "bass-house": {
+  "flat": 0.9468,
+  "mid": 0.044,
+  "big": 0.0092,
+  "near_mad": 0.63
+ },
+ "deep-house": {
+  "flat": 0.9479,
+  "mid": 0.0455,
+  "big": 0.0066,
+  "near_mad": 0.74
+ },
+ "emo-rap": {
+  "flat": 0.9494,
+  "mid": 0.0392,
+  "big": 0.0114,
+  "near_mad": 0.75
+ },
+ "afro-house": {
+  "flat": 0.9498,
+  "mid": 0.043,
+  "big": 0.0072,
+  "near_mad": 0.76
+ },
+ "lofi-house": {
+  "flat": 0.9525,
+  "mid": 0.0421,
+  "big": 0.0053,
+  "near_mad": 0.75
+ },
+ "ambient-techno": {
+  "flat": 0.9531,
+  "mid": 0.0434,
+  "big": 0.0034,
+  "near_mad": 0.74
+ },
+ "microhouse": {
+  "flat": 0.9539,
+  "mid": 0.0413,
+  "big": 0.0048,
+  "near_mad": 0.85
+ },
+ "ambient-dub": {
+  "flat": 0.9543,
+  "mid": 0.0383,
+  "big": 0.0074,
+  "near_mad": 0.6
+ },
+ "blues-rock": {
+  "flat": 0.955,
+  "mid": 0.0364,
+  "big": 0.0086,
+  "near_mad": 0.68
+ },
+ "ghetto-house": {
+  "flat": 0.9554,
+  "mid": 0.0415,
+  "big": 0.0031,
+  "near_mad": 0.69
+ },
+ "grime": {
+  "flat": 0.9563,
+  "mid": 0.0395,
+  "big": 0.0042,
+  "near_mad": 0.71
+ },
+ "minimal-techno": {
+  "flat": 0.9566,
+  "mid": 0.036,
+  "big": 0.0074,
+  "near_mad": 0.61
+ },
+ "dub-techno": {
+  "flat": 0.9574,
+  "mid": 0.0331,
+  "big": 0.0095,
+  "near_mad": 0.49
+ },
+ "2-step-garage": {
+  "flat": 0.9583,
+  "mid": 0.0351,
+  "big": 0.0066,
+  "near_mad": 0.58
+ },
+ "trip-hop": {
+  "flat": 0.9585,
+  "mid": 0.0358,
+  "big": 0.0057,
+  "near_mad": 0.61
+ },
+ "french-house": {
+  "flat": 0.9587,
+  "mid": 0.0344,
+  "big": 0.0069,
+  "near_mad": 0.63
+ },
+ "synthwave": {
+  "flat": 0.9597,
+  "mid": 0.0344,
+  "big": 0.0059,
+  "near_mad": 0.68
+ },
+ "alternative-rnb": {
+  "flat": 0.9602,
+  "mid": 0.033,
+  "big": 0.0067,
+  "near_mad": 0.68
+ },
+ "post-punk": {
+  "flat": 0.9603,
+  "mid": 0.0338,
+  "big": 0.0059,
+  "near_mad": 0.66
+ },
+ "ambient": {
+  "flat": 0.9622,
+  "mid": 0.0352,
+  "big": 0.0027,
+  "near_mad": 0.66
+ },
+ "conscious-hip-hop": {
+  "flat": 0.9629,
+  "mid": 0.0323,
+  "big": 0.0049,
+  "near_mad": 0.73
+ },
+ "peak-time-techno": {
+  "flat": 0.9638,
+  "mid": 0.0295,
+  "big": 0.0067,
+  "near_mad": 0.51
+ },
+ "tech-house": {
+  "flat": 0.9639,
+  "mid": 0.0289,
+  "big": 0.0072,
+  "near_mad": 0.47
+ },
+ "drift-phonk": {
+  "flat": 0.9641,
+  "mid": 0.0305,
+  "big": 0.0054,
+  "near_mad": 0.52
+ },
+ "uk-drill": {
+  "flat": 0.9655,
+  "mid": 0.0294,
+  "big": 0.0051,
+  "near_mad": 0.68
+ },
+ "cloud-rap": {
+  "flat": 0.9665,
+  "mid": 0.0308,
+  "big": 0.0026,
+  "near_mad": 0.58
+ },
+ "post-dubstep": {
+  "flat": 0.9667,
+  "mid": 0.0272,
+  "big": 0.006,
+  "near_mad": 0.52
+ },
+ "trap-rap": {
+  "flat": 0.9673,
+  "mid": 0.0283,
+  "big": 0.0044,
+  "near_mad": 0.53
+ },
+ "phonk": {
+  "flat": 0.9704,
+  "mid": 0.0274,
+  "big": 0.0021,
+  "near_mad": 0.53
+ },
+ "progressive-house": {
+  "flat": 0.9726,
+  "mid": 0.024,
+  "big": 0.0034,
+  "near_mad": 0.41
+ },
+ "riddim": {
+  "flat": 0.975,
+  "mid": 0.0219,
+  "big": 0.0031,
+  "near_mad": 0.37
+ }
+}

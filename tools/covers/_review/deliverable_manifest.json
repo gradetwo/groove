@@ -1,0 +1,4939 @@
+{
+ "generated": "2026-09-26",
+ "model": "Qwen-Image-2.1",
+ "size": [
+  1024,
+  1024
+ ],
+ "skins": {
+  "default": {
+   "count": 159,
+   "sidecars": 155,
+   "rejected": 11,
+   "rejected_genres": [
+    "acid-techno",
+    "alternative-rnb",
+    "ambient",
+    "bossa-nova",
+    "chicago-drill",
+    "chillwave",
+    "cloud-rap",
+    "melodic-dubstep",
+    "microhouse",
+    "smooth-jazz",
+    "traditional-pop"
+   ],
+   "tiles": [
+    {
+     "genre": "2-step-garage",
+     "md5": "269d334a00885507620523cbf06d94af",
+     "bytes": 155660
+    },
+    {
+     "genre": "acid-house",
+     "md5": "01be0a761e90e748e07b073fd54fe254",
+     "bytes": 121818
+    },
+    {
+     "genre": "acid-jazz",
+     "md5": "9cec2c5df275021fb980f4597eaa5ba6",
+     "bytes": 145097
+    },
+    {
+     "genre": "acid-techno",
+     "md5": "d5a4492e1b9d29d328010783a5eeb45f",
+     "bytes": 249804
+    },
+    {
+     "genre": "afro-house",
+     "md5": "0d0e16b663221ffd0c5b81e1e8a5b8e4",
+     "bytes": 139027
+    },
+    {
+     "genre": "afrobeat",
+     "md5": "39e3c96034ebea2712e5d949b8dfdfbf",
+     "bytes": 191119
+    },
+    {
+     "genre": "alternative-rnb",
+     "md5": "36b8212fef1b15f9598ec477385d2e8f",
+     "bytes": 105934
+    },
+    {
+     "genre": "alternative-rock",
+     "md5": "46955b5b4797ca4f3402d7c9bda8d31f",
+     "bytes": 184955
+    },
+    {
+     "genre": "amapiano",
+     "md5": "0eaaf6de0abca68d03c7ead781b1fc98",
+     "bytes": 116986
+    },
+    {
+     "genre": "ambient-dub",
+     "md5": "50da72080f470700968fabf8fe1379b3",
+     "bytes": 120233
+    },
+    {
+     "genre": "ambient-techno",
+     "md5": "7730f6734f3cb77fe73e82e2b1359e80",
+     "bytes": 89609
+    },
+    {
+     "genre": "ambient",
+     "md5": "e846f4f0be9c6f90e8c77de654d58acb",
+     "bytes": 89085
+    },
+    {
+     "genre": "bachata",
+     "md5": "63b827f3e6be242d067498417ec97bd9",
+     "bytes": 143171
+    },
+    {
+     "genre": "bass-house",
+     "md5": "92a8ad3c44c54f919b315ebb5e6eef25",
+     "bytes": 139159
+    },
+    {
+     "genre": "bassline",
+     "md5": "60923dd0ee4c057e398fdf10ad72a248",
+     "bytes": 145802
+    },
+    {
+     "genre": "bebop",
+     "md5": "57d1bfe6ded323eec094babaacb95a28",
+     "bytes": 145478
+    },
+    {
+     "genre": "big-beat",
+     "md5": "5df0d0acd92c8ac46ac7a0e3d7607003",
+     "bytes": 172355
+    },
+    {
+     "genre": "black-metal",
+     "md5": "baaaa22c4876596b4519d04478690bf2",
+     "bytes": 174742
+    },
+    {
+     "genre": "blues-rock",
+     "md5": "f3894850c2f6f62ca50f94c78e4707a6",
+     "bytes": 139762
+    },
+    {
+     "genre": "boom-bap",
+     "md5": "6d62614845325529dcde5a674b18da92",
+     "bytes": 162399
+    },
+    {
+     "genre": "bossa-nova",
+     "md5": "5c6926e44c13220433deb622efe3ba25",
+     "bytes": 154128
+    },
+    {
+     "genre": "breakbeat",
+     "md5": "91ba54c72b91997b6fa893cad9d14b7e",
+     "bytes": 135728
+    },
+    {
+     "genre": "breakcore",
+     "md5": "954bef35cdf1b99ddadce9c49760793b",
+     "bytes": 208064
+    },
+    {
+     "genre": "brooklyn-drill",
+     "md5": "25cccbe28912c67e4aa4219f86db6f1f",
+     "bytes": 133510
+    },
+    {
+     "genre": "brostep",
+     "md5": "8b3bd677f3ce47aee5d812a172f17ec3",
+     "bytes": 257011
+    },
+    {
+     "genre": "chicago-blues",
+     "md5": "2c717831bb014da22e04cf05dfb11395",
+     "bytes": 156207
+    },
+    {
+     "genre": "chicago-drill",
+     "md5": "2880fd8e38f7a9ecffc78b22061ae602",
+     "bytes": 153627
+    },
+    {
+     "genre": "chicago-house",
+     "md5": "05e8597070ade4cd5e9bc9500aa9558c",
+     "bytes": 169032
+    },
+    {
+     "genre": "chillstep",
+     "md5": "49258d688bc81435c5f9cec8a252ce7c",
+     "bytes": 168913
+    },
+    {
+     "genre": "chillwave",
+     "md5": "ad5af194e0b073b975483244ae357af1",
+     "bytes": 214887
+    },
+    {
+     "genre": "chiptune",
+     "md5": "fa0060ad9565c4bf320348862f13a6b8",
+     "bytes": 146148
+    },
+    {
+     "genre": "city-pop",
+     "md5": "c7dd29bb011d5f70e37f9ee356badb3f",
+     "bytes": 163343
+    },
+    {
+     "genre": "cloud-rap",
+     "md5": "0826e11542df1c429ddeb075a1c33bfa",
+     "bytes": 109060
+    },
+    {
+     "genre": "conscious-hip-hop",
+     "md5": "06981a8b8dde22e79029590eb1b4853d",
+     "bytes": 143541
+    },
+    {
+     "genre": "contemporary-rnb",
+     "md5": "f090e3b53d3ef0e88eee27500595dbc9",
+     "bytes": 119415
+    },
+    {
+     "genre": "cool-jazz",
+     "md5": "91a513348e3ef32ae78a8c9a3afd721b",
+     "bytes": 124004
+    },
+    {
+     "genre": "cumbia",
+     "md5": "38a7a352f784b114fddafce7bd46719a",
+     "bytes": 181036
+    },
+    {
+     "genre": "dancehall",
+     "md5": "fab4c46d3d27f35d16b5c8cd3290e710",
+     "bytes": 182563
+    },
+    {
+     "genre": "death-metal",
+     "md5": "bc8ae8f66712c27ae832b057abe39026",
+     "bytes": 155528
+    },
+    {
+     "genre": "deathstep",
+     "md5": "e19fbf28668d438ed68faa7dace40c64",
+     "bytes": 176498
+    },
+    {
+     "genre": "deep-house",
+     "md5": "dbdc446436d15d44ae8a7b7cbc7b5ae9",
+     "bytes": 130685
+    },
+    {
+     "genre": "delta-blues",
+     "md5": "e4315195a7f6cced3628e6a6c2a20c9e",
+     "bytes": 167149
+    },
+    {
+     "genre": "detroit-techno",
+     "md5": "0d3e8228cc711b4c8351136cf464c6a1",
+     "bytes": 162961
+    },
+    {
+     "genre": "disco",
+     "md5": "df81e81327b1e673c4ea49b6495194a2",
+     "bytes": 138355
+    },
+    {
+     "genre": "doom-metal",
+     "md5": "d03660e09910a4513d73128d9a05dda9",
+     "bytes": 170885
+    },
+    {
+     "genre": "downtempo",
+     "md5": "8ce991779c557f2fbebcc450c915089c",
+     "bytes": 108151
+    },
+    {
+     "genre": "dream-trance",
+     "md5": "9299118fc34683bd00ed7c43e1eb1ca4",
+     "bytes": 117233
+    },
+    {
+     "genre": "drift-phonk",
+     "md5": "34c569150bd4351f48778e893b33af02",
+     "bytes": 146405
+    },
+    {
+     "genre": "dub-techno",
+     "md5": "19690f5ef202922efd1407a57450108e",
+     "bytes": 103691
+    },
+    {
+     "genre": "dub",
+     "md5": "627e2e7dafb64f7db8fbf100b1e547e9",
+     "bytes": 141672
+    },
+    {
+     "genre": "dubstep",
+     "md5": "f5976d8ee0e4cb12a449cf0511cca75f",
+     "bytes": 117274
+    },
+    {
+     "genre": "east-coast-hip-hop",
+     "md5": "0b07f4b54a3c3fceb6da11b08d97224a",
+     "bytes": 171394
+    },
+    {
+     "genre": "edm-trap",
+     "md5": "835e9b55b1bc628a30f993c4f1755314",
+     "bytes": 230135
+    },
+    {
+     "genre": "electric-blues",
+     "md5": "d17aa555ba36ef4b619d81a451230a0f",
+     "bytes": 142622
+    },
+    {
+     "genre": "electro-house",
+     "md5": "7acc62b8e3c3099585d7c07747233b94",
+     "bytes": 142003
+    },
+    {
+     "genre": "electro",
+     "md5": "c2a67a5b43e70a9d3c11ee52ecd7dcb8",
+     "bytes": 161919
+    },
+    {
+     "genre": "emo-rap",
+     "md5": "51bfa1e6c5cae0a6dd040a40ed2457ed",
+     "bytes": 150998
+    },
+    {
+     "genre": "euro-trance",
+     "md5": "323acc536a7e4106e8ffb0ec931e9945",
+     "bytes": 141836
+    },
+    {
+     "genre": "eurodance",
+     "md5": "392dde1a32d14e87cdf47154dcabc2c7",
+     "bytes": 175047
+    },
+    {
+     "genre": "footwork",
+     "md5": "0f7660a78b8f2fef2e135109909fb65d",
+     "bytes": 149814
+    },
+    {
+     "genre": "free-jazz",
+     "md5": "a2727c824486e54adb931b2a22a65100",
+     "bytes": 195568
+    },
+    {
+     "genre": "french-house",
+     "md5": "19273db8d52579cafae1d4558f064564",
+     "bytes": 133830
+    },
+    {
+     "genre": "frenchcore",
+     "md5": "3c63b75c799e997ec4e6977c8e6f3e5a",
+     "bytes": 252621
+    },
+    {
+     "genre": "funk",
+     "md5": "8bf5eabcae99b6ed6a4c38da1cb0a898",
+     "bytes": 150271
+    },
+    {
+     "genre": "future-bass",
+     "md5": "5f6809acbd55a9cf0a9aff0409b474f8",
+     "bytes": 146219
+    },
+    {
+     "genre": "future-garage",
+     "md5": "cb58ed9f16b48754934ac62a63abdcd5",
+     "bytes": 118090
+    },
+    {
+     "genre": "future-house",
+     "md5": "f7fa6d9ff6d8e5f5ee05fc0060d30801",
+     "bytes": 139993
+    },
+    {
+     "genre": "g-funk",
+     "md5": "40e5a73b8daecc46dd8772b110c385ce",
+     "bytes": 174573
+    },
+    {
+     "genre": "ghetto-house",
+     "md5": "1eea04ccdff39f9798c28a416eabd995",
+     "bytes": 111998
+    },
+    {
+     "genre": "glitch-hop",
+     "md5": "4bcb33860faffe0c62753219ba944c6d",
+     "bytes": 207917
+    },
+    {
+     "genre": "goa-trance",
+     "md5": "783143520872f5132e678328b2bf9d0a",
+     "bytes": 220321
+    },
+    {
+     "genre": "grime",
+     "md5": "b62d2b88fd3c59daa1e8f1bc69c9d942",
+     "bytes": 91552
+    },
+    {
+     "genre": "grunge",
+     "md5": "c5231291e07831927e1c3dc77e583b70",
+     "bytes": 149633
+    },
+    {
+     "genre": "gypsy-jazz",
+     "md5": "7e61018f5d3466160cb79d8101dcbdac",
+     "bytes": 170841
+    },
+    {
+     "genre": "halftime",
+     "md5": "86ae14aa9bb3fdd40872a4c27c1e56b8",
+     "bytes": 153581
+    },
+    {
+     "genre": "happy-hardcore",
+     "md5": "16aa5a9549cb0ca09cfa63b0b20db77e",
+     "bytes": 147815
+    },
+    {
+     "genre": "hard-bop",
+     "md5": "a40c834ce5e73fbe3afa8550f36ce42e",
+     "bytes": 155492
+    },
+    {
+     "genre": "hard-rock",
+     "md5": "0823b76ae4293af9b8b2a5460b2d94f2",
+     "bytes": 177822
+    },
+    {
+     "genre": "hard-techno",
+     "md5": "20a75219eafa2c34a9e9b2996a7d2ba1",
+     "bytes": 172301
+    },
+    {
+     "genre": "hard-trance",
+     "md5": "f01a652f5a0069270dbb4ffd1102eaa9",
+     "bytes": 130937
+    },
+    {
+     "genre": "hard-trap",
+     "md5": "7fd8a1f2390cdc0aa54703170d5660b3",
+     "bytes": 159222
+    },
+    {
+     "genre": "hardcore-gabber",
+     "md5": "7ba821dfc00b9dd11a847425d8316608",
+     "bytes": 211140
+    },
+    {
+     "genre": "hardstyle",
+     "md5": "f49b0cc341e341b0da51ec70aeb59801",
+     "bytes": 227151
+    },
+    {
+     "genre": "heavy-metal",
+     "md5": "dec57f701e3c5355f053981edefa0240",
+     "bytes": 211494
+    },
+    {
+     "genre": "hybrid-trap",
+     "md5": "48771eb05442568e4e1dee0106668da8",
+     "bytes": 195588
+    },
+    {
+     "genre": "idm",
+     "md5": "c670cb68067ded771b451a6da8a2afda",
+     "bytes": 204392
+    },
+    {
+     "genre": "industrial-techno",
+     "md5": "b187e9f4b91f6b18ab5ad451b600a30f",
+     "bytes": 187190
+    },
+    {
+     "genre": "j-pop",
+     "md5": "78be4d8017696309163e00afc76aed8b",
+     "bytes": 167424
+    },
+    {
+     "genre": "jazz-fusion",
+     "md5": "ad050b72a64c413a87367ec6c6eb8e2d",
+     "bytes": 156337
+    },
+    {
+     "genre": "jersey-club",
+     "md5": "e5726d0737fa4c5cb98cfa665e57bd48",
+     "bytes": 105210
+    },
+    {
+     "genre": "jersey-drill",
+     "md5": "07224af4990e959ac2964ae6390741a0",
+     "bytes": 153882
+    },
+    {
+     "genre": "jump-up",
+     "md5": "9cca93b1ab438fde3f0e4d52b8b30f16",
+     "bytes": 151144
+    },
+    {
+     "genre": "jungle",
+     "md5": "93f9b5bb475efb013516950e70a7df05",
+     "bytes": 146646
+    },
+    {
+     "genre": "k-pop",
+     "md5": "107d7353ee0bdb68e00192c4d531d31a",
+     "bytes": 120647
+    },
+    {
+     "genre": "kawaii-future-bass",
+     "md5": "def84e1bfabdd2bf90cd1a2dac10a2f4",
+     "bytes": 129940
+    },
+    {
+     "genre": "kuduro",
+     "md5": "5599650d16fb38b629b6fa8cca7c63b1",
+     "bytes": 176354
+    },
+    {
+     "genre": "liquid-dnb",
+     "md5": "08b59cdb6ed41a1760af787011c197f5",
+     "bytes": 152815
+    },
+    {
+     "genre": "lofi-hip-hop",
+     "md5": "90bd59539603ff86cbf36793dacda1c9",
+     "bytes": 145770
+    },
+    {
+     "genre": "lofi-house",
+     "md5": "7a8b120df008d81179cb212dfa0bc7d8",
+     "bytes": 132043
+    },
+    {
+     "genre": "math-rock",
+     "md5": "bfac37dc290827f89c5f10f704dec560",
+     "bytes": 171461
+    },
+    {
+     "genre": "melodic-dubstep",
+     "md5": "28a11584bac9b37498b40ad05e3a5b88",
+     "bytes": 179182
+    },
+    {
+     "genre": "melodic-house",
+     "md5": "03a8ea08abd9bca9d16eb39d33328643",
+     "bytes": 147017
+    },
+    {
+     "genre": "metalcore",
+     "md5": "5dae3f974360efb8ab8c152f98d6319c",
+     "bytes": 204613
+    },
+    {
+     "genre": "microhouse",
+     "md5": "9f52cfa4da8044e2f4d571e097120ed1",
+     "bytes": 77166
+    },
+    {
+     "genre": "minimal-techno",
+     "md5": "6ac3f58c43ff98b4b468cd3150553aa3",
+     "bytes": 87416
+    },
+    {
+     "genre": "modal-jazz",
+     "md5": "9d2070b2f7aa71dc1174b4598a21893a",
+     "bytes": 143436
+    },
+    {
+     "genre": "moombahton",
+     "md5": "5f6c20759d82e1d4191cde926c9faba1",
+     "bytes": 155281
+    },
+    {
+     "genre": "motown",
+     "md5": "37a6e0df0c788247636aef6ff9f2959b",
+     "bytes": 158426
+    },
+    {
+     "genre": "neo-soul",
+     "md5": "b883795773009b2fc7fb4c9bfeb482e0",
+     "bytes": 115789
+    },
+    {
+     "genre": "neurofunk",
+     "md5": "12b6c82a6f4a57f2f08e4186cf68f136",
+     "bytes": 187625
+    },
+    {
+     "genre": "new-wave",
+     "md5": "e3e4270235646f4374fa9152ba28656d",
+     "bytes": 118684
+    },
+    {
+     "genre": "nu-disco-house",
+     "md5": "9e944067426b2542ab036afd6189fba2",
+     "bytes": 175092
+    },
+    {
+     "genre": "old-school-hip-hop",
+     "md5": "96c74e9b916f144fd507423e0beaad0d",
+     "bytes": 193299
+    },
+    {
+     "genre": "peak-time-techno",
+     "md5": "964daef5db46b98e9d78e2a166672d5b",
+     "bytes": 104939
+    },
+    {
+     "genre": "phonk",
+     "md5": "6afdb27686845c7f6f480dae9ab1b7d5",
+     "bytes": 114187
+    },
+    {
+     "genre": "post-dubstep",
+     "md5": "a4df0b525a37fd998e53a15f9a0441f4",
+     "bytes": 107715
+    },
+    {
+     "genre": "post-punk",
+     "md5": "a99497e3b9c9426894e10f8417ddc3e4",
+     "bytes": 119619
+    },
+    {
+     "genre": "progressive-house",
+     "md5": "91c668c3e5c3c190ba9adfb266148497",
+     "bytes": 104344
+    },
+    {
+     "genre": "progressive-rock",
+     "md5": "ef9130b50f66896d19da457d112c4175",
+     "bytes": 148392
+    },
+    {
+     "genre": "progressive-trance",
+     "md5": "827f8f20360c0fdaf3a0bd3e9d81081d",
+     "bytes": 123596
+    },
+    {
+     "genre": "psytrance",
+     "md5": "1d7e63a3b7d71432d2cb9169ae72f827",
+     "bytes": 223169
+    },
+    {
+     "genre": "punk-rock",
+     "md5": "2236832981c8c517e2531ef7b0ce7f2e",
+     "bytes": 212781
+    },
+    {
+     "genre": "ragga-jungle",
+     "md5": "e3ef560dda239a3ee8e6076ae488cddf",
+     "bytes": 163611
+    },
+    {
+     "genre": "raw-techno",
+     "md5": "408361d565c83eaa6c667b93cf003ec6",
+     "bytes": 108319
+    },
+    {
+     "genre": "reggae",
+     "md5": "b2c3ac42053891384e343e145e9eb875",
+     "bytes": 189365
+    },
+    {
+     "genre": "reggaeton",
+     "md5": "0efeb27551340b03214172a02cdb144b",
+     "bytes": 166451
+    },
+    {
+     "genre": "riddim",
+     "md5": "528637f58288c4924d69763663761724",
+     "bytes": 116463
+    },
+    {
+     "genre": "rock-and-roll",
+     "md5": "81af56a21d446f0564c0613810922db3",
+     "bytes": 158094
+    },
+    {
+     "genre": "salsa",
+     "md5": "9836f2d410856a775d2e5cb77d36a602",
+     "bytes": 217390
+    },
+    {
+     "genre": "samba",
+     "md5": "587b94b3236dd3ce32a9ac2c4be52f43",
+     "bytes": 223056
+    },
+    {
+     "genre": "sambass",
+     "md5": "539e2005dc5ec005539ac044ac72f6a7",
+     "bytes": 204500
+    },
+    {
+     "genre": "schranz",
+     "md5": "301ab7bdbe4afd8321a4c7013e2e4f77",
+     "bytes": 151624
+    },
+    {
+     "genre": "shoe-gaze",
+     "md5": "6385910495a67d8a1453ef8647b1b468",
+     "bytes": 167836
+    },
+    {
+     "genre": "smooth-jazz",
+     "md5": "d403a1e5e73bb9378cd66d61cf3c7ef2",
+     "bytes": 170117
+    },
+    {
+     "genre": "soul",
+     "md5": "39c3dcc217465f859a6b0f8260f70d00",
+     "bytes": 144351
+    },
+    {
+     "genre": "southern-hip-hop",
+     "md5": "1abbf936b7f64956d8d134c00b499de5",
+     "bytes": 174704
+    },
+    {
+     "genre": "speed-garage",
+     "md5": "4d57c22aee1271e7799ab10bdf71c2ac",
+     "bytes": 141827
+    },
+    {
+     "genre": "speedbass",
+     "md5": "839bdfd3c7200461c7aa76975b379219",
+     "bytes": 150998
+    },
+    {
+     "genre": "synth-pop",
+     "md5": "dee585eef63721a20d4129522177f1cf",
+     "bytes": 159553
+    },
+    {
+     "genre": "synthwave",
+     "md5": "d71b0a7341010e27aed5e6dad8538212",
+     "bytes": 133384
+    },
+    {
+     "genre": "tearout-dubstep",
+     "md5": "fd9cb0368b746f90e69d9c287368fa70",
+     "bytes": 231958
+    },
+    {
+     "genre": "tech-house",
+     "md5": "b80563b49aa009fa8b9f61da53a14576",
+     "bytes": 98464
+    },
+    {
+     "genre": "tech-trance",
+     "md5": "57071a26742d1878e7a2628bd4796422",
+     "bytes": 148626
+    },
+    {
+     "genre": "techstep",
+     "md5": "3ad442aaf4fcd3a13eeda2fae574946f",
+     "bytes": 95871
+    },
+    {
+     "genre": "texas-blues",
+     "md5": "55659c7584e2fc45c59352ec2c96c5dc",
+     "bytes": 169206
+    },
+    {
+     "genre": "thrash-metal",
+     "md5": "0e6e1a47fdd386804eedb203a717b9f6",
+     "bytes": 235292
+    },
+    {
+     "genre": "traditional-jazz",
+     "md5": "2ac63c7c31cf57234667785fd7fce211",
+     "bytes": 190433
+    },
+    {
+     "genre": "traditional-pop",
+     "md5": "545eaa8b4751f3d9e06832fa0a6f96ba",
+     "bytes": 99281
+    },
+    {
+     "genre": "trap-rap",
+     "md5": "4d53b3c641859c59b43d927bf1030370",
+     "bytes": 117177
+    },
+    {
+     "genre": "trip-hop",
+     "md5": "507e0f4d411d5cdeb028c14a4462e921",
+     "bytes": 118948
+    },
+    {
+     "genre": "tropical-house",
+     "md5": "bc1387e529e200781886bb24ed0f64cc",
+     "bytes": 181492
+    },
+    {
+     "genre": "uk-drill",
+     "md5": "bb7c028eb5aa177387236647d2450cb5",
+     "bytes": 105204
+    },
+    {
+     "genre": "uk-funky",
+     "md5": "fbe72d49baa912ad71d1bb9ae8677e31",
+     "bytes": 93372
+    },
+    {
+     "genre": "uk-garage",
+     "md5": "da279e4f1a510ea901a8f1d812479e33",
+     "bytes": 146233
+    },
+    {
+     "genre": "uplifting-trance",
+     "md5": "5f32d949d6509e6900b17bdfa2fa6730",
+     "bytes": 129724
+    },
+    {
+     "genre": "vaporwave",
+     "md5": "01911d4cf7100f44a376240936208d2a",
+     "bytes": 144708
+    },
+    {
+     "genre": "vocal-trance",
+     "md5": "f059f22f38f999cb946540c3cf70e794",
+     "bytes": 114509
+    },
+    {
+     "genre": "wave",
+     "md5": "fa0fa9ea334284e6f5971a4747a70f67",
+     "bytes": 118620
+    },
+    {
+     "genre": "west-coast-hip-hop",
+     "md5": "21345a60381999d619fee86e35e7ab72",
+     "bytes": 217873
+    }
+   ]
+  },
+  "minimal": {
+   "count": 159,
+   "sidecars": 156,
+   "rejected": 7,
+   "rejected_genres": [
+    "afro-house",
+    "city-pop",
+    "death-metal",
+    "microhouse",
+    "old-school-hip-hop",
+    "soul",
+    "vaporwave"
+   ],
+   "tiles": [
+    {
+     "genre": "2-step-garage",
+     "md5": "c18c28975f1a475d4f9a2e0ae7f529cc",
+     "bytes": 153718
+    },
+    {
+     "genre": "acid-house",
+     "md5": "801c29f5732be48588add8d2f180e00b",
+     "bytes": 138448
+    },
+    {
+     "genre": "acid-jazz",
+     "md5": "0d8258098991f6842dbb9c647d30a692",
+     "bytes": 163896
+    },
+    {
+     "genre": "acid-techno",
+     "md5": "cd6a8115a0e3547463c958606d28a3da",
+     "bytes": 183027
+    },
+    {
+     "genre": "afro-house",
+     "md5": "3c7dd8c2f76414a24b8b4952a600d835",
+     "bytes": 153786
+    },
+    {
+     "genre": "afrobeat",
+     "md5": "efa10083d59a78c31d258ec6e8d465e8",
+     "bytes": 147862
+    },
+    {
+     "genre": "alternative-rnb",
+     "md5": "f5e6f23d15ce4d446081f290f66de7a8",
+     "bytes": 95912
+    },
+    {
+     "genre": "alternative-rock",
+     "md5": "0607a393c7da5255353f809509cfeb43",
+     "bytes": 160582
+    },
+    {
+     "genre": "amapiano",
+     "md5": "b84dcfcd5d29b6e9ac3638abcddc34e8",
+     "bytes": 98609
+    },
+    {
+     "genre": "ambient-dub",
+     "md5": "3c7cacc45b9cb561a7d70bdfd1f6cf56",
+     "bytes": 94647
+    },
+    {
+     "genre": "ambient-techno",
+     "md5": "4d808eefa341e87e0e33397fce0fbe54",
+     "bytes": 92446
+    },
+    {
+     "genre": "ambient",
+     "md5": "b300ebaf685d140eed1536d03f098d6c",
+     "bytes": 114110
+    },
+    {
+     "genre": "bachata",
+     "md5": "4660d48a6edd73f8c5e5e727bef631cb",
+     "bytes": 114815
+    },
+    {
+     "genre": "bass-house",
+     "md5": "7caff0961f7b9d8338576c39f5cbf4d3",
+     "bytes": 156141
+    },
+    {
+     "genre": "bassline",
+     "md5": "33e98db86631259576c093fc7f53d2e0",
+     "bytes": 171664
+    },
+    {
+     "genre": "bebop",
+     "md5": "be7d9ac76447bf249c0cbc43e8fa9bdc",
+     "bytes": 184345
+    },
+    {
+     "genre": "big-beat",
+     "md5": "80752025d3d6a9dd80d37a6428b161cf",
+     "bytes": 165770
+    },
+    {
+     "genre": "black-metal",
+     "md5": "71aee3a42e4fb9a69d29ecf83b4b98c9",
+     "bytes": 224611
+    },
+    {
+     "genre": "blues-rock",
+     "md5": "0b3df79d26bbab913998986aeb5524e3",
+     "bytes": 95761
+    },
+    {
+     "genre": "boom-bap",
+     "md5": "e876017d59bfd9dad69a37114b4f375c",
+     "bytes": 124452
+    },
+    {
+     "genre": "bossa-nova",
+     "md5": "7ae95f335f918a4be667b1026010184d",
+     "bytes": 132671
+    },
+    {
+     "genre": "breakbeat",
+     "md5": "99ba68048c16c2f87e084897bf36a2f1",
+     "bytes": 120772
+    },
+    {
+     "genre": "breakcore",
+     "md5": "a80e3af38c7004aeafe36144bbc7a71d",
+     "bytes": 147649
+    },
+    {
+     "genre": "brooklyn-drill",
+     "md5": "ce656fc12d3647112a5e2401ea8c532b",
+     "bytes": 124638
+    },
+    {
+     "genre": "brostep",
+     "md5": "661abce3aab260e55fd9eddacab9957c",
+     "bytes": 180582
+    },
+    {
+     "genre": "chicago-blues",
+     "md5": "3ee3ec9f0cad7ea4f21f8c7179584bde",
+     "bytes": 117457
+    },
+    {
+     "genre": "chicago-drill",
+     "md5": "c9fb9f66cb09f9d0593b1fede6cd3310",
+     "bytes": 163475
+    },
+    {
+     "genre": "chicago-house",
+     "md5": "1d4e6c2eebb0d617adecdf7bbced02b8",
+     "bytes": 143573
+    },
+    {
+     "genre": "chillstep",
+     "md5": "d8e7a7476b31143b5458651225781d5a",
+     "bytes": 129944
+    },
+    {
+     "genre": "chillwave",
+     "md5": "36faf6c3fb642572a0dfec86dcb699bf",
+     "bytes": 143176
+    },
+    {
+     "genre": "chiptune",
+     "md5": "95576516af83ef34738923c49600af3e",
+     "bytes": 110085
+    },
+    {
+     "genre": "city-pop",
+     "md5": "b354d16e0c46875e62db7794752c0bb7",
+     "bytes": 152421
+    },
+    {
+     "genre": "cloud-rap",
+     "md5": "255d77a71a1d14b39e39593cbd66fd61",
+     "bytes": 84960
+    },
+    {
+     "genre": "conscious-hip-hop",
+     "md5": "196e17e4496e34ffea8f1f1588dbc87d",
+     "bytes": 92227
+    },
+    {
+     "genre": "contemporary-rnb",
+     "md5": "c23746e64c1815ff814f09e0f88d7458",
+     "bytes": 115266
+    },
+    {
+     "genre": "cool-jazz",
+     "md5": "91b003841177f255cbf71dc487528d06",
+     "bytes": 146465
+    },
+    {
+     "genre": "cumbia",
+     "md5": "1797d555fd3534ccd68290d7ea0aa1c4",
+     "bytes": 112275
+    },
+    {
+     "genre": "dancehall",
+     "md5": "471279da5eb14b0c5656f518ed08ab76",
+     "bytes": 156999
+    },
+    {
+     "genre": "death-metal",
+     "md5": "a40fd4c518b80349640f0c4eaa2f166f",
+     "bytes": 144620
+    },
+    {
+     "genre": "deathstep",
+     "md5": "4e3530892d83089d5465ae5dd5ada5ef",
+     "bytes": 160605
+    },
+    {
+     "genre": "deep-house",
+     "md5": "d93f07a8e760edde47a9a6215d3c9a6e",
+     "bytes": 152730
+    },
+    {
+     "genre": "delta-blues",
+     "md5": "ac3b7312da64b102bdf8f8649fd1cfad",
+     "bytes": 241275
+    },
+    {
+     "genre": "detroit-techno",
+     "md5": "65c8c93108102dc77f55bd6ef30f936a",
+     "bytes": 254197
+    },
+    {
+     "genre": "disco",
+     "md5": "0dd3d72499af6246322f19beb67b8cb9",
+     "bytes": 107271
+    },
+    {
+     "genre": "doom-metal",
+     "md5": "851f71a3390a9118b764a7e791d04351",
+     "bytes": 125920
+    },
+    {
+     "genre": "downtempo",
+     "md5": "d3d0529b9e4cf00537c2cdd3c0ee9b94",
+     "bytes": 103629
+    },
+    {
+     "genre": "dream-trance",
+     "md5": "eb7feddd0098ef8ccd15f9604531930d",
+     "bytes": 114404
+    },
+    {
+     "genre": "drift-phonk",
+     "md5": "6a2c44479858a4c165f43261d5bac61e",
+     "bytes": 116547
+    },
+    {
+     "genre": "dub-techno",
+     "md5": "4a88d6e38e86669fcfa27c0e6df687d1",
+     "bytes": 96648
+    },
+    {
+     "genre": "dub",
+     "md5": "e0739ce7abbd76a1307cf03341b4bee9",
+     "bytes": 140409
+    },
+    {
+     "genre": "dubstep",
+     "md5": "303ef7b876d60a3c5d3fbef6fc57fb91",
+     "bytes": 111530
+    },
+    {
+     "genre": "east-coast-hip-hop",
+     "md5": "1a2f291ada1e7390a77e4b279a68c4be",
+     "bytes": 101229
+    },
+    {
+     "genre": "edm-trap",
+     "md5": "176ae3dd37629250d08d0aa4aabd67ce",
+     "bytes": 228002
+    },
+    {
+     "genre": "electric-blues",
+     "md5": "91bf79884601911a6215b0e4a4208e61",
+     "bytes": 131638
+    },
+    {
+     "genre": "electro-house",
+     "md5": "264517fe3018ca35a590dc270f1ca03a",
+     "bytes": 219999
+    },
+    {
+     "genre": "electro",
+     "md5": "543d72603bc94619a623c502f0b8d55a",
+     "bytes": 104258
+    },
+    {
+     "genre": "emo-rap",
+     "md5": "cf31f9bd9c1f74e4f5384933212f7d44",
+     "bytes": 130372
+    },
+    {
+     "genre": "euro-trance",
+     "md5": "fe3f1b18658b731234ebb3c9a3f424c7",
+     "bytes": 150615
+    },
+    {
+     "genre": "eurodance",
+     "md5": "a7e0ce6cdd3dc694672c7183a632935b",
+     "bytes": 166381
+    },
+    {
+     "genre": "footwork",
+     "md5": "093a6010a176e3d51b681472a87f628b",
+     "bytes": 133971
+    },
+    {
+     "genre": "free-jazz",
+     "md5": "114f4ebf71128262196f885a2586125c",
+     "bytes": 96764
+    },
+    {
+     "genre": "french-house",
+     "md5": "4e73f0771053e77028dfd9fa7b89436d",
+     "bytes": 114443
+    },
+    {
+     "genre": "frenchcore",
+     "md5": "f8ffcc4a0562c79d4f4482e1448356a9",
+     "bytes": 202892
+    },
+    {
+     "genre": "funk",
+     "md5": "355f70feb0f294b5be35230306644b42",
+     "bytes": 103835
+    },
+    {
+     "genre": "future-bass",
+     "md5": "b3cb0a31a14ccde93a835b3fb84bba78",
+     "bytes": 152528
+    },
+    {
+     "genre": "future-garage",
+     "md5": "26ed64e672b6f73f9ac246bead34b059",
+     "bytes": 146800
+    },
+    {
+     "genre": "future-house",
+     "md5": "4e6db613bd677a8fcda7000dd6aa61a7",
+     "bytes": 138255
+    },
+    {
+     "genre": "g-funk",
+     "md5": "0708433195dea4f9fd90a3843a28fdcc",
+     "bytes": 129045
+    },
+    {
+     "genre": "ghetto-house",
+     "md5": "8caff45ee7e78e117bdfc9e9769bddff",
+     "bytes": 80315
+    },
+    {
+     "genre": "glitch-hop",
+     "md5": "fc58ecd03631e78edfe786adc33d7d35",
+     "bytes": 154284
+    },
+    {
+     "genre": "goa-trance",
+     "md5": "f756b04076fd463f740cc27bb48f91b0",
+     "bytes": 221127
+    },
+    {
+     "genre": "grime",
+     "md5": "74318bc0dbd6e88ed8b5242510bd425d",
+     "bytes": 116406
+    },
+    {
+     "genre": "grunge",
+     "md5": "ece9019193054600d61cb47ba04fc0f5",
+     "bytes": 160328
+    },
+    {
+     "genre": "gypsy-jazz",
+     "md5": "b36fd5b8c2301d396ec4d64c1e902e41",
+     "bytes": 113016
+    },
+    {
+     "genre": "halftime",
+     "md5": "7eb561410c8b35ca26a56793255bb0cd",
+     "bytes": 237208
+    },
+    {
+     "genre": "happy-hardcore",
+     "md5": "7af0661223f7a8ff8eaff1ed0fd18b37",
+     "bytes": 188439
+    },
+    {
+     "genre": "hard-bop",
+     "md5": "7c2ebcfc8ff23231418ce842298ecae4",
+     "bytes": 130873
+    },
+    {
+     "genre": "hard-rock",
+     "md5": "f62e22d81ea979af05d6d1e881fc3fe1",
+     "bytes": 99677
+    },
+    {
+     "genre": "hard-techno",
+     "md5": "85852475ba506dd8ec5fb57a099bd361",
+     "bytes": 109183
+    },
+    {
+     "genre": "hard-trance",
+     "md5": "363a1538186af08abd84d9edb81d5edf",
+     "bytes": 154196
+    },
+    {
+     "genre": "hard-trap",
+     "md5": "d301c186a5e2d22708861a2a8668be8d",
+     "bytes": 234679
+    },
+    {
+     "genre": "hardcore-gabber",
+     "md5": "1360c3255be899fa4e1d8f54d0f267a9",
+     "bytes": 294642
+    },
+    {
+     "genre": "hardstyle",
+     "md5": "fd4d39187b1106fb6c4f768f13b0645c",
+     "bytes": 177789
+    },
+    {
+     "genre": "heavy-metal",
+     "md5": "61c1c1935be46b91ac63f6a76057a2d6",
+     "bytes": 177661
+    },
+    {
+     "genre": "hybrid-trap",
+     "md5": "8b0a5689f71d3a31eb952ca9aa0bfb33",
+     "bytes": 151914
+    },
+    {
+     "genre": "idm",
+     "md5": "82f0e31d762a89576d5ea4c4594c0612",
+     "bytes": 196543
+    },
+    {
+     "genre": "industrial-techno",
+     "md5": "b406e2c6dbedc6989292f190cb49bb9e",
+     "bytes": 222941
+    },
+    {
+     "genre": "j-pop",
+     "md5": "3a59e7c4d0ef9a28329ec0abcca3feb8",
+     "bytes": 143886
+    },
+    {
+     "genre": "jazz-fusion",
+     "md5": "d0273ab58129b0611ab785b8bd1bcb2b",
+     "bytes": 108659
+    },
+    {
+     "genre": "jersey-club",
+     "md5": "ff548958b0f9c3e95c591cae69b7e488",
+     "bytes": 104409
+    },
+    {
+     "genre": "jersey-drill",
+     "md5": "69d33e257f2845af8ea484e0f99b4140",
+     "bytes": 138195
+    },
+    {
+     "genre": "jump-up",
+     "md5": "dde200592793bece27d5d6736b6cbd6d",
+     "bytes": 89501
+    },
+    {
+     "genre": "jungle",
+     "md5": "36dd20a7070b0438272eaee6c0ecb7f7",
+     "bytes": 140026
+    },
+    {
+     "genre": "k-pop",
+     "md5": "680df25a044ca9852822f4234c17a87a",
+     "bytes": 88502
+    },
+    {
+     "genre": "kawaii-future-bass",
+     "md5": "f548a1a16a55ffa583223aad1461599b",
+     "bytes": 107707
+    },
+    {
+     "genre": "kuduro",
+     "md5": "2c86d891e7ddbccc3e65cbf3d480a33d",
+     "bytes": 171027
+    },
+    {
+     "genre": "liquid-dnb",
+     "md5": "1af36242e94ea6285ad0724acea1cb08",
+     "bytes": 127870
+    },
+    {
+     "genre": "lofi-hip-hop",
+     "md5": "a40802f11d96ae7473504872bd72c52d",
+     "bytes": 97755
+    },
+    {
+     "genre": "lofi-house",
+     "md5": "ede5687bd37bfa544bb5a9289d5ea549",
+     "bytes": 91067
+    },
+    {
+     "genre": "math-rock",
+     "md5": "83149357b639ebd3510f729fd8557910",
+     "bytes": 123614
+    },
+    {
+     "genre": "melodic-dubstep",
+     "md5": "4a20344cec47f09f5209d486d1feb1f8",
+     "bytes": 184521
+    },
+    {
+     "genre": "melodic-house",
+     "md5": "a98b0c9e3dba3922c8ffacfdf26b8243",
+     "bytes": 101217
+    },
+    {
+     "genre": "metalcore",
+     "md5": "e845124b3e4878b6eb26c2706d42f75a",
+     "bytes": 168455
+    },
+    {
+     "genre": "microhouse",
+     "md5": "7a7cfb30897dcad56cef468587b80250",
+     "bytes": 60122
+    },
+    {
+     "genre": "minimal-techno",
+     "md5": "f4033f10f1462849994b8ea20d855863",
+     "bytes": 82253
+    },
+    {
+     "genre": "modal-jazz",
+     "md5": "80a5ff09963b340f51a5a32910b94f82",
+     "bytes": 87475
+    },
+    {
+     "genre": "moombahton",
+     "md5": "da76bc9a4fc3fd262aeee2f5698e1bff",
+     "bytes": 175457
+    },
+    {
+     "genre": "motown",
+     "md5": "67440d306d1d9ff07db56d85a30e30fe",
+     "bytes": 103964
+    },
+    {
+     "genre": "neo-soul",
+     "md5": "3efe269438c3788ddb3f7845f424be24",
+     "bytes": 111163
+    },
+    {
+     "genre": "neurofunk",
+     "md5": "7f659f59602ff60c3c52d85cf3a02f61",
+     "bytes": 152655
+    },
+    {
+     "genre": "new-wave",
+     "md5": "a8f93cb9787e5051dc319907b25cd8d8",
+     "bytes": 102940
+    },
+    {
+     "genre": "nu-disco-house",
+     "md5": "eadc303db3d0dbff35258acbfe970b85",
+     "bytes": 163532
+    },
+    {
+     "genre": "old-school-hip-hop",
+     "md5": "f3d2c96dbcad4b18b624f25d89d24f03",
+     "bytes": 86361
+    },
+    {
+     "genre": "peak-time-techno",
+     "md5": "5c6d167b7a66a254e5088ec21770a802",
+     "bytes": 83138
+    },
+    {
+     "genre": "phonk",
+     "md5": "bc45765eae27e5b4d54781c91c1454ee",
+     "bytes": 92401
+    },
+    {
+     "genre": "post-dubstep",
+     "md5": "561b205023983b86e1607c3ab21e4f83",
+     "bytes": 78730
+    },
+    {
+     "genre": "post-punk",
+     "md5": "92170d34f55725acf82a8bd1d01aee64",
+     "bytes": 97901
+    },
+    {
+     "genre": "progressive-house",
+     "md5": "93c152165d738f3925930e3574f6d023",
+     "bytes": 90738
+    },
+    {
+     "genre": "progressive-rock",
+     "md5": "c72daf8db80997dc04f83ab12d92e402",
+     "bytes": 175566
+    },
+    {
+     "genre": "progressive-trance",
+     "md5": "bb74159718d8db44b01f33c17c4e6ac5",
+     "bytes": 200934
+    },
+    {
+     "genre": "psytrance",
+     "md5": "828799e80ffc5ef40992cd72eec07e97",
+     "bytes": 246540
+    },
+    {
+     "genre": "punk-rock",
+     "md5": "96ae4183c419b52748adfb89af7ae11f",
+     "bytes": 154604
+    },
+    {
+     "genre": "ragga-jungle",
+     "md5": "17ac63c41aee394344d54c1a17c65d2b",
+     "bytes": 126871
+    },
+    {
+     "genre": "raw-techno",
+     "md5": "83be0592449064d08d9424394dbd213c",
+     "bytes": 137643
+    },
+    {
+     "genre": "reggae",
+     "md5": "a09bf5aa2800e492b8a141f663b279cf",
+     "bytes": 156444
+    },
+    {
+     "genre": "reggaeton",
+     "md5": "df0694189cf5931d605d36b6a396ff87",
+     "bytes": 88980
+    },
+    {
+     "genre": "riddim",
+     "md5": "248fd108b37086d113dd1e5189a33ab2",
+     "bytes": 112685
+    },
+    {
+     "genre": "rock-and-roll",
+     "md5": "43c9ba360357b8a58ba6a21f030cf425",
+     "bytes": 95849
+    },
+    {
+     "genre": "salsa",
+     "md5": "ec90809351337c5fef966bb6e7dad781",
+     "bytes": 165064
+    },
+    {
+     "genre": "samba",
+     "md5": "3a1777b9d6d83491ffcbc1d08bc2338b",
+     "bytes": 126229
+    },
+    {
+     "genre": "sambass",
+     "md5": "2c26a64b8ff8153910570980fbeb630f",
+     "bytes": 119396
+    },
+    {
+     "genre": "schranz",
+     "md5": "c0ff55403464b4c22e34c88b5eebc7bd",
+     "bytes": 82131
+    },
+    {
+     "genre": "shoe-gaze",
+     "md5": "dc06df630e63b6af056cd340efaf3ca7",
+     "bytes": 148861
+    },
+    {
+     "genre": "smooth-jazz",
+     "md5": "276b3672032f33041c0fa2fe30801e2d",
+     "bytes": 63543
+    },
+    {
+     "genre": "soul",
+     "md5": "b99104181336b439c787857f6345c3ff",
+     "bytes": 145062
+    },
+    {
+     "genre": "southern-hip-hop",
+     "md5": "3dda802348293d6a653eb1787804810c",
+     "bytes": 100160
+    },
+    {
+     "genre": "speed-garage",
+     "md5": "c2cc32f14963d58a7434318ae2afadf1",
+     "bytes": 132219
+    },
+    {
+     "genre": "speedbass",
+     "md5": "9404ee14bf70c3e8f9bac3bad67e02c5",
+     "bytes": 194902
+    },
+    {
+     "genre": "synth-pop",
+     "md5": "c419c7a6c13b90efea208df5dd9ef707",
+     "bytes": 148969
+    },
+    {
+     "genre": "synthwave",
+     "md5": "52084530e75213feb2ac4b23b4c85ab8",
+     "bytes": 135260
+    },
+    {
+     "genre": "tearout-dubstep",
+     "md5": "3327d5292705042ee327a7be5c3cf9cc",
+     "bytes": 181022
+    },
+    {
+     "genre": "tech-house",
+     "md5": "0af4ab70b29f41cba257b5b25b8e1a19",
+     "bytes": 99433
+    },
+    {
+     "genre": "tech-trance",
+     "md5": "c120eaf387c0297aa254b4f00c1bdb2b",
+     "bytes": 181309
+    },
+    {
+     "genre": "techstep",
+     "md5": "58d8a6ecf4ac3fd2e400f01b2808af4f",
+     "bytes": 131276
+    },
+    {
+     "genre": "texas-blues",
+     "md5": "3a011d94f160f88f4c5a22e4c2541d1e",
+     "bytes": 177312
+    },
+    {
+     "genre": "thrash-metal",
+     "md5": "750d230a7006f1634a8fa82014870e95",
+     "bytes": 178294
+    },
+    {
+     "genre": "traditional-jazz",
+     "md5": "f8b8a8bb29488b483374b1186d982ca5",
+     "bytes": 109649
+    },
+    {
+     "genre": "traditional-pop",
+     "md5": "bf2d257b163a8ccaa2e1232eff4397f3",
+     "bytes": 91315
+    },
+    {
+     "genre": "trap-rap",
+     "md5": "ab686dcfab0c1e52b60ef769f0928c33",
+     "bytes": 93679
+    },
+    {
+     "genre": "trip-hop",
+     "md5": "f89e610e6ee9d9ac685e113bf48cf926",
+     "bytes": 86185
+    },
+    {
+     "genre": "tropical-house",
+     "md5": "c60fd1ecde3df555c61f28ef352e5e9d",
+     "bytes": 95750
+    },
+    {
+     "genre": "uk-drill",
+     "md5": "1fc3490fb5cd82b416a093f078ffd58f",
+     "bytes": 119309
+    },
+    {
+     "genre": "uk-funky",
+     "md5": "879318f450799e67629370c8779663af",
+     "bytes": 117321
+    },
+    {
+     "genre": "uk-garage",
+     "md5": "82c61a7715a2140ecbf1e2ad9db70d8f",
+     "bytes": 126554
+    },
+    {
+     "genre": "uplifting-trance",
+     "md5": "39845346d886c182b6d7ec81837f4141",
+     "bytes": 156941
+    },
+    {
+     "genre": "vaporwave",
+     "md5": "5e21ae1af64fdd33bf73bd4f732db543",
+     "bytes": 117560
+    },
+    {
+     "genre": "vocal-trance",
+     "md5": "f6c2dcfbaa4ff7f6c7b19e661c33fc92",
+     "bytes": 89370
+    },
+    {
+     "genre": "wave",
+     "md5": "326ae00d1f0c949fd9dc8371a847a806",
+     "bytes": 124858
+    },
+    {
+     "genre": "west-coast-hip-hop",
+     "md5": "d530090d50f404269bc5fb3daecb553d",
+     "bytes": 105657
+    }
+   ]
+  },
+  "comic": {
+   "count": 159,
+   "sidecars": 156,
+   "rejected": 10,
+   "rejected_genres": [
+    "alternative-rnb",
+    "chicago-blues",
+    "chicago-house",
+    "chillstep",
+    "electro",
+    "jungle",
+    "nu-disco-house",
+    "soul",
+    "traditional-pop",
+    "vaporwave"
+   ],
+   "tiles": [
+    {
+     "genre": "2-step-garage",
+     "md5": "f15762fecc47fa3a7f951c2f7299c8c2",
+     "bytes": 598017
+    },
+    {
+     "genre": "acid-house",
+     "md5": "26f4c7cedc20d41f7dc34292078544c0",
+     "bytes": 656372
+    },
+    {
+     "genre": "acid-jazz",
+     "md5": "eecc3cfa271ebf1e0486604e8d7c4e14",
+     "bytes": 720504
+    },
+    {
+     "genre": "acid-techno",
+     "md5": "229cabb85f0ff6ce381984da56d4e56a",
+     "bytes": 699655
+    },
+    {
+     "genre": "afro-house",
+     "md5": "c043bcb6baa3528fe37a10896d04de93",
+     "bytes": 692776
+    },
+    {
+     "genre": "afrobeat",
+     "md5": "736753daad71413ea0306687444565bd",
+     "bytes": 675774
+    },
+    {
+     "genre": "alternative-rnb",
+     "md5": "ddd87c5bf4246c76f042d834622c9496",
+     "bytes": 678337
+    },
+    {
+     "genre": "alternative-rock",
+     "md5": "fe04316bbeb50cca1e22a705924829d7",
+     "bytes": 638303
+    },
+    {
+     "genre": "amapiano",
+     "md5": "29b648af2680cd02760d8cae753b5d2a",
+     "bytes": 659176
+    },
+    {
+     "genre": "ambient-dub",
+     "md5": "60dabcda2c40e661c8b59f49123d2abf",
+     "bytes": 615530
+    },
+    {
+     "genre": "ambient-techno",
+     "md5": "e0269d06b15a053c3f6e0ffff21e0284",
+     "bytes": 704090
+    },
+    {
+     "genre": "ambient",
+     "md5": "1073a482d622f7e145e8d175828ed8c6",
+     "bytes": 541340
+    },
+    {
+     "genre": "bachata",
+     "md5": "e2a6e6af9540010f281da300f47c197e",
+     "bytes": 702008
+    },
+    {
+     "genre": "bass-house",
+     "md5": "1a3b2a8ff5faf931aebbd8e55d005da4",
+     "bytes": 640748
+    },
+    {
+     "genre": "bassline",
+     "md5": "b2e0e406e269b8452910327f7ea228b2",
+     "bytes": 667084
+    },
+    {
+     "genre": "bebop",
+     "md5": "0b67f26bd25e119d8bb16256a576cd30",
+     "bytes": 698876
+    },
+    {
+     "genre": "big-beat",
+     "md5": "44073a1f083f9b950e876fd59b3b8e7e",
+     "bytes": 659545
+    },
+    {
+     "genre": "black-metal",
+     "md5": "fd07f29b6c58d370e42b545748156036",
+     "bytes": 758766
+    },
+    {
+     "genre": "blues-rock",
+     "md5": "d7ebe5dbc924ba0a17368945f19eccf3",
+     "bytes": 585842
+    },
+    {
+     "genre": "boom-bap",
+     "md5": "a1bcd0a924b474c4d8042261b5a333ac",
+     "bytes": 680393
+    },
+    {
+     "genre": "bossa-nova",
+     "md5": "152455a2412e9604d1d7d2ba22df0916",
+     "bytes": 686443
+    },
+    {
+     "genre": "breakbeat",
+     "md5": "82abe8a8cb4fd75986b6367cf1abfa50",
+     "bytes": 720180
+    },
+    {
+     "genre": "breakcore",
+     "md5": "4d9cc76e3f0092fb0401cbc10151711a",
+     "bytes": 704628
+    },
+    {
+     "genre": "brooklyn-drill",
+     "md5": "621cfea2f14ad517e429a0566a595bd7",
+     "bytes": 673676
+    },
+    {
+     "genre": "brostep",
+     "md5": "57f1990214a904d7f5ef4cd087f391d7",
+     "bytes": 740784
+    },
+    {
+     "genre": "chicago-blues",
+     "md5": "7d7ebac06802374560a69c6aac115a74",
+     "bytes": 661014
+    },
+    {
+     "genre": "chicago-drill",
+     "md5": "2f5d04eae6a9adc4a5c5ec3948b625ca",
+     "bytes": 712442
+    },
+    {
+     "genre": "chicago-house",
+     "md5": "4aef501e233897a1ad51d9f3c1061536",
+     "bytes": 601001
+    },
+    {
+     "genre": "chillstep",
+     "md5": "e7b85a7c0b737dfbf254c58162a05d18",
+     "bytes": 591993
+    },
+    {
+     "genre": "chillwave",
+     "md5": "637fe101e8d107e399bad1d9dc8e8849",
+     "bytes": 634464
+    },
+    {
+     "genre": "chiptune",
+     "md5": "00b528d1c8a0bc8ab3c305e5d4705e27",
+     "bytes": 601799
+    },
+    {
+     "genre": "city-pop",
+     "md5": "01d6702edd27c0947368ddcb47a4dc6e",
+     "bytes": 671206
+    },
+    {
+     "genre": "cloud-rap",
+     "md5": "9923327168aa336884d74ce9b598e2c5",
+     "bytes": 728537
+    },
+    {
+     "genre": "conscious-hip-hop",
+     "md5": "2470526a03b234f1ac145604fc59702e",
+     "bytes": 602330
+    },
+    {
+     "genre": "contemporary-rnb",
+     "md5": "c9baa2f8adc566ce78d6f32491ca5dce",
+     "bytes": 713159
+    },
+    {
+     "genre": "cool-jazz",
+     "md5": "ad9cdd305a0c37a2be5d0fc45609c242",
+     "bytes": 604931
+    },
+    {
+     "genre": "cumbia",
+     "md5": "e1e1da9f365372ac0c3c090798192c9d",
+     "bytes": 720881
+    },
+    {
+     "genre": "dancehall",
+     "md5": "3e179ad4f6bea7b8ea0eabc6873a11e1",
+     "bytes": 711331
+    },
+    {
+     "genre": "death-metal",
+     "md5": "9659ccc86c6de163aabbbdf2ea763ff2",
+     "bytes": 621809
+    },
+    {
+     "genre": "deathstep",
+     "md5": "99a30c3eedec74a40a89cb41b7d6b36b",
+     "bytes": 636928
+    },
+    {
+     "genre": "deep-house",
+     "md5": "836e53c086cc5e217bc68b13497aeab4",
+     "bytes": 626570
+    },
+    {
+     "genre": "delta-blues",
+     "md5": "fc3a460a444e4e301353d4112c67aff2",
+     "bytes": 640797
+    },
+    {
+     "genre": "detroit-techno",
+     "md5": "975518616e420d2cef0749f6e684911f",
+     "bytes": 684921
+    },
+    {
+     "genre": "disco",
+     "md5": "58a96fb7b49911406f29fee92c758aa8",
+     "bytes": 680305
+    },
+    {
+     "genre": "doom-metal",
+     "md5": "384d7f3cee3db54c27e1543a71b4b36d",
+     "bytes": 642921
+    },
+    {
+     "genre": "downtempo",
+     "md5": "846cbf7fadd092c66bc85434099909ab",
+     "bytes": 667798
+    },
+    {
+     "genre": "dream-trance",
+     "md5": "1118c7dc27a7cbb436c4c4c6f758473c",
+     "bytes": 696496
+    },
+    {
+     "genre": "drift-phonk",
+     "md5": "556b31390d4585b4073c7c7098b81e08",
+     "bytes": 647514
+    },
+    {
+     "genre": "dub-techno",
+     "md5": "4b2b3def74783b3e6799f1ae06776dae",
+     "bytes": 635887
+    },
+    {
+     "genre": "dub",
+     "md5": "c8fcd74604d439cb77ecb87616cccb0e",
+     "bytes": 695942
+    },
+    {
+     "genre": "dubstep",
+     "md5": "22c33ca98a92f1fbc21bb6b5512728a6",
+     "bytes": 628787
+    },
+    {
+     "genre": "east-coast-hip-hop",
+     "md5": "a6ff34debae4584c75cb3d4d91327242",
+     "bytes": 644557
+    },
+    {
+     "genre": "edm-trap",
+     "md5": "6d37c6a9ebdd49d9dcda118609e61c51",
+     "bytes": 714615
+    },
+    {
+     "genre": "electric-blues",
+     "md5": "4b43045c0cf8ca5249eb6ec038af59a7",
+     "bytes": 591537
+    },
+    {
+     "genre": "electro-house",
+     "md5": "a5878bc75439f402c22e8ced077e59ea",
+     "bytes": 621245
+    },
+    {
+     "genre": "electro",
+     "md5": "a381cca5ab0d416a21279abdd6fb43aa",
+     "bytes": 572190
+    },
+    {
+     "genre": "emo-rap",
+     "md5": "566c1151c2ac7d945e3d288f85b72e17",
+     "bytes": 712215
+    },
+    {
+     "genre": "euro-trance",
+     "md5": "3591dfa7adaf202dd51b9403fd6812d5",
+     "bytes": 690179
+    },
+    {
+     "genre": "eurodance",
+     "md5": "25e17bd92086def5fe1ccf0d5751937d",
+     "bytes": 659146
+    },
+    {
+     "genre": "footwork",
+     "md5": "df810e848cada28da0d24b6b9ab4862e",
+     "bytes": 698477
+    },
+    {
+     "genre": "free-jazz",
+     "md5": "76e6190dd1aaec0d34bde5ffb86b3fff",
+     "bytes": 681906
+    },
+    {
+     "genre": "french-house",
+     "md5": "c8ce9d8294cf6ed049a1bdf2619b033e",
+     "bytes": 636988
+    },
+    {
+     "genre": "frenchcore",
+     "md5": "ed046054ad47381ee57df405d83b872b",
+     "bytes": 679338
+    },
+    {
+     "genre": "funk",
+     "md5": "b1509975a0ece7d981c56284b608ed10",
+     "bytes": 506277
+    },
+    {
+     "genre": "future-bass",
+     "md5": "f584d3eae4ecf09d87942fd8705ee875",
+     "bytes": 728039
+    },
+    {
+     "genre": "future-garage",
+     "md5": "86c5c0c737e5a832354ff2bc80bf61b2",
+     "bytes": 693420
+    },
+    {
+     "genre": "future-house",
+     "md5": "f9acf08eab8ec93a96fd5161be49ebe3",
+     "bytes": 650843
+    },
+    {
+     "genre": "g-funk",
+     "md5": "903a17cc1fb9aa1fb676f3a671d8259c",
+     "bytes": 581319
+    },
+    {
+     "genre": "ghetto-house",
+     "md5": "45ca7771bc60e03d27c18126cc8fbe55",
+     "bytes": 636745
+    },
+    {
+     "genre": "glitch-hop",
+     "md5": "cd59ac9d4a9d2c7270d21a14a2b6775c",
+     "bytes": 631493
+    },
+    {
+     "genre": "goa-trance",
+     "md5": "2ca176bb5a6297c3e20d867b79b0d4c7",
+     "bytes": 729302
+    },
+    {
+     "genre": "grime",
+     "md5": "0351ee7f2cd3d9b69646fba77a91125b",
+     "bytes": 648480
+    },
+    {
+     "genre": "grunge",
+     "md5": "bf02352677aa18f1f68b8912de736ef2",
+     "bytes": 675397
+    },
+    {
+     "genre": "gypsy-jazz",
+     "md5": "531376df9bd62a484ec441f63023423d",
+     "bytes": 601588
+    },
+    {
+     "genre": "halftime",
+     "md5": "55e1d998edcaf4abaff4e6d87364a05d",
+     "bytes": 707084
+    },
+    {
+     "genre": "happy-hardcore",
+     "md5": "f6244df02cad0ddb8787c441ca3efd67",
+     "bytes": 727495
+    },
+    {
+     "genre": "hard-bop",
+     "md5": "3f574cefb5d039d84b3062a468953d91",
+     "bytes": 668280
+    },
+    {
+     "genre": "hard-rock",
+     "md5": "db4ffb546cec11019ddf8430300f12f7",
+     "bytes": 586724
+    },
+    {
+     "genre": "hard-techno",
+     "md5": "1e2eb74a1e9d8a3be042aec065ab6705",
+     "bytes": 591581
+    },
+    {
+     "genre": "hard-trance",
+     "md5": "15f56e8dda57113e8f53aa05e82652d1",
+     "bytes": 549133
+    },
+    {
+     "genre": "hard-trap",
+     "md5": "3539e020a016ab96087cfb7f752cda4d",
+     "bytes": 713268
+    },
+    {
+     "genre": "hardcore-gabber",
+     "md5": "5a85f2af5d7473206e3bf192870f5d2e",
+     "bytes": 721133
+    },
+    {
+     "genre": "hardstyle",
+     "md5": "849af683ea1496c01069996fe0530917",
+     "bytes": 620183
+    },
+    {
+     "genre": "heavy-metal",
+     "md5": "70a94a6fdc36fcb67c1ec4216d4fc1c9",
+     "bytes": 648262
+    },
+    {
+     "genre": "hybrid-trap",
+     "md5": "63fcaeca01d9f6658a8071b6be762001",
+     "bytes": 643512
+    },
+    {
+     "genre": "idm",
+     "md5": "ab465bbdaddf18b90c3e0b6014b939ab",
+     "bytes": 748772
+    },
+    {
+     "genre": "industrial-techno",
+     "md5": "24bdb8bbb6016dcc86be5e6c986b3ef6",
+     "bytes": 703444
+    },
+    {
+     "genre": "j-pop",
+     "md5": "3f19be6881c5c3d91ba79deac3dac171",
+     "bytes": 713097
+    },
+    {
+     "genre": "jazz-fusion",
+     "md5": "c9ef1bc521855b3df15094eab82e2208",
+     "bytes": 611501
+    },
+    {
+     "genre": "jersey-club",
+     "md5": "dd32542f432327e96b13dffe7ef7c55c",
+     "bytes": 632257
+    },
+    {
+     "genre": "jersey-drill",
+     "md5": "10b1c5ac188351445d1efa2bb41fe6c1",
+     "bytes": 665718
+    },
+    {
+     "genre": "jump-up",
+     "md5": "1d6660e27487e63f7aaf8c80eb21b88c",
+     "bytes": 651409
+    },
+    {
+     "genre": "jungle",
+     "md5": "1a3d261a90664dc6326f4c13c8af5b29",
+     "bytes": 648524
+    },
+    {
+     "genre": "k-pop",
+     "md5": "b573183ba90351f5d7338c95be98fb30",
+     "bytes": 712749
+    },
+    {
+     "genre": "kawaii-future-bass",
+     "md5": "703886e4e70e7cef4e5c43e83e441bba",
+     "bytes": 666275
+    },
+    {
+     "genre": "kuduro",
+     "md5": "3fbd0b70300842d6a8e9cb19abd41bfc",
+     "bytes": 745176
+    },
+    {
+     "genre": "liquid-dnb",
+     "md5": "5ed47c7717889dc285b8695962030fd2",
+     "bytes": 680897
+    },
+    {
+     "genre": "lofi-hip-hop",
+     "md5": "b8b1b453cd25072d3e75f0712d23b130",
+     "bytes": 624476
+    },
+    {
+     "genre": "lofi-house",
+     "md5": "09f08f587072544757c47ee7ba4d71f2",
+     "bytes": 640993
+    },
+    {
+     "genre": "math-rock",
+     "md5": "211b3f29c0594fbeded8960c7deb8993",
+     "bytes": 652876
+    },
+    {
+     "genre": "melodic-dubstep",
+     "md5": "9c2de2898c0811b7a0f514c807e279e0",
+     "bytes": 733340
+    },
+    {
+     "genre": "melodic-house",
+     "md5": "0f05b64a30a4f6f0ddae700e32d42c00",
+     "bytes": 665853
+    },
+    {
+     "genre": "metalcore",
+     "md5": "aa56b36ed0394d641c9bff6061b0ea27",
+     "bytes": 656168
+    },
+    {
+     "genre": "microhouse",
+     "md5": "0965295b99fd2c36121fbbf3b8de3b16",
+     "bytes": 690499
+    },
+    {
+     "genre": "minimal-techno",
+     "md5": "3846af7218ee395246c1ff90bc2728b2",
+     "bytes": 623008
+    },
+    {
+     "genre": "modal-jazz",
+     "md5": "f228d30982e92ba17b5be9cd5dbeda1b",
+     "bytes": 603600
+    },
+    {
+     "genre": "moombahton",
+     "md5": "6134a5ea8dc46a6692bef0b635ec4adb",
+     "bytes": 708913
+    },
+    {
+     "genre": "motown",
+     "md5": "1c3b8921ea450cf955d5f97d611dc416",
+     "bytes": 727378
+    },
+    {
+     "genre": "neo-soul",
+     "md5": "78aae6213ea8db64fd665e8a8f88af4f",
+     "bytes": 667397
+    },
+    {
+     "genre": "neurofunk",
+     "md5": "31ae4d9e5a03ce6f3d3ba2b2bc8d1447",
+     "bytes": 591660
+    },
+    {
+     "genre": "new-wave",
+     "md5": "42af1595391729b9caa4bb5ce3e3e63c",
+     "bytes": 545651
+    },
+    {
+     "genre": "nu-disco-house",
+     "md5": "24fb8f6ec889d031f19da8cea8e9a0ca",
+     "bytes": 626055
+    },
+    {
+     "genre": "old-school-hip-hop",
+     "md5": "02f4f4c417f5ead7bbe3fb61939b8c68",
+     "bytes": 546734
+    },
+    {
+     "genre": "peak-time-techno",
+     "md5": "b3d951874fb652c41524962d28f87bef",
+     "bytes": 625575
+    },
+    {
+     "genre": "phonk",
+     "md5": "1b51a75f938fe883b99f702d3b1939c0",
+     "bytes": 639911
+    },
+    {
+     "genre": "post-dubstep",
+     "md5": "6968e4fab64f21e55162b477a85ba631",
+     "bytes": 645288
+    },
+    {
+     "genre": "post-punk",
+     "md5": "ced32772be83e4258416c17f0e291f2c",
+     "bytes": 639972
+    },
+    {
+     "genre": "progressive-house",
+     "md5": "d9a0b7bd2e73b95f582cc46503cacb68",
+     "bytes": 666865
+    },
+    {
+     "genre": "progressive-rock",
+     "md5": "4c31b32b133615539119591ea2791e88",
+     "bytes": 652881
+    },
+    {
+     "genre": "progressive-trance",
+     "md5": "da4a5c31d95c816e14eb99a6a1a21e5a",
+     "bytes": 736784
+    },
+    {
+     "genre": "psytrance",
+     "md5": "743331deae3ed464f761ea1cebd33662",
+     "bytes": 665514
+    },
+    {
+     "genre": "punk-rock",
+     "md5": "cbc6c2305d72a491e9ec56c6dcdde6a1",
+     "bytes": 565725
+    },
+    {
+     "genre": "ragga-jungle",
+     "md5": "1024270f9f5fb35b5f591a1cc91ceeed",
+     "bytes": 683402
+    },
+    {
+     "genre": "raw-techno",
+     "md5": "dee3771998630fde8a2a69923f9dd89c",
+     "bytes": 699520
+    },
+    {
+     "genre": "reggae",
+     "md5": "32d47d2537af54573b85feb7c371c261",
+     "bytes": 721065
+    },
+    {
+     "genre": "reggaeton",
+     "md5": "0bc2e0767d70728bbf978adf680fea2d",
+     "bytes": 659294
+    },
+    {
+     "genre": "riddim",
+     "md5": "c2ac1809e68bd4280a4cfe523640cf39",
+     "bytes": 517668
+    },
+    {
+     "genre": "rock-and-roll",
+     "md5": "b8351cf80c02977468e1d9e5317e7785",
+     "bytes": 422317
+    },
+    {
+     "genre": "salsa",
+     "md5": "04433b5a48b05de14b041198568dd906",
+     "bytes": 718754
+    },
+    {
+     "genre": "samba",
+     "md5": "791c8dec6774e6bc21e92a7b90921d4b",
+     "bytes": 711333
+    },
+    {
+     "genre": "sambass",
+     "md5": "c9e5fe2085efbc514934564d785d617d",
+     "bytes": 675932
+    },
+    {
+     "genre": "schranz",
+     "md5": "c23c54eb50dffec10d27c5f34a7796fc",
+     "bytes": 606354
+    },
+    {
+     "genre": "shoe-gaze",
+     "md5": "d2bd0e5c01b55b3dac3829aa2e6f43f2",
+     "bytes": 726964
+    },
+    {
+     "genre": "smooth-jazz",
+     "md5": "56d29ff18744ac1f68373b672226797d",
+     "bytes": 688382
+    },
+    {
+     "genre": "soul",
+     "md5": "2c39f8af1257fcc49c395d1f2f34c154",
+     "bytes": 614497
+    },
+    {
+     "genre": "southern-hip-hop",
+     "md5": "1ca4134ac89bc334ef9044b5c59a5496",
+     "bytes": 587522
+    },
+    {
+     "genre": "speed-garage",
+     "md5": "1892d9ef385442ddaff9366fb38c90ee",
+     "bytes": 681064
+    },
+    {
+     "genre": "speedbass",
+     "md5": "46241bdeed7b21ccff51f72d7621a5ce",
+     "bytes": 733427
+    },
+    {
+     "genre": "synth-pop",
+     "md5": "5268b149df30dd57a8238bdaf0c8eb3d",
+     "bytes": 657599
+    },
+    {
+     "genre": "synthwave",
+     "md5": "a08e8ef2640a007cbf8ab039e119493c",
+     "bytes": 628798
+    },
+    {
+     "genre": "tearout-dubstep",
+     "md5": "3d903b82d68940d8b6f274a4c94bea16",
+     "bytes": 715296
+    },
+    {
+     "genre": "tech-house",
+     "md5": "b72b58a5542c8c2f0e6389fc43caaadd",
+     "bytes": 457656
+    },
+    {
+     "genre": "tech-trance",
+     "md5": "227165aff69fdfb24be0bd64e198461d",
+     "bytes": 639962
+    },
+    {
+     "genre": "techstep",
+     "md5": "08dd433447fe6c550a05527766fe52fc",
+     "bytes": 645344
+    },
+    {
+     "genre": "texas-blues",
+     "md5": "f92abeba039ef0a20f092be48432567c",
+     "bytes": 684262
+    },
+    {
+     "genre": "thrash-metal",
+     "md5": "520bb7b442f9aa9451222aa9c623593a",
+     "bytes": 650276
+    },
+    {
+     "genre": "traditional-jazz",
+     "md5": "0c60abe0fa0bdedae2d4cebecdfc1a28",
+     "bytes": 671895
+    },
+    {
+     "genre": "traditional-pop",
+     "md5": "1c7b92be0c1d1f6605ce828cf4a04efa",
+     "bytes": 613699
+    },
+    {
+     "genre": "trap-rap",
+     "md5": "cd29bfd95c34ec35ff7ebdd6f4937db2",
+     "bytes": 671269
+    },
+    {
+     "genre": "trip-hop",
+     "md5": "0ddd76d34315db794561ed502efa8f47",
+     "bytes": 624611
+    },
+    {
+     "genre": "tropical-house",
+     "md5": "440ba05ae751b52b52b47cc64749ecf2",
+     "bytes": 740780
+    },
+    {
+     "genre": "uk-drill",
+     "md5": "0a1f047ea8440fbd5335b447a93286e1",
+     "bytes": 675463
+    },
+    {
+     "genre": "uk-funky",
+     "md5": "582a696de3d405ef81dbe558a8d7245e",
+     "bytes": 731795
+    },
+    {
+     "genre": "uk-garage",
+     "md5": "26f635dbf1e2b6931b427c3aaa38dd02",
+     "bytes": 634744
+    },
+    {
+     "genre": "uplifting-trance",
+     "md5": "8c712de42523ec8dd12c4ce25cca0b39",
+     "bytes": 660278
+    },
+    {
+     "genre": "vaporwave",
+     "md5": "b3fe891b40001caa1effc81014f8838e",
+     "bytes": 631846
+    },
+    {
+     "genre": "vocal-trance",
+     "md5": "4ed4a8b30b67ab72891df748820c8b30",
+     "bytes": 640093
+    },
+    {
+     "genre": "wave",
+     "md5": "dadc0313b51a7dd92be6ce466cf34f52",
+     "bytes": 611020
+    },
+    {
+     "genre": "west-coast-hip-hop",
+     "md5": "c9f2d2d5c524f1947f11028cc8aa08db",
+     "bytes": 659703
+    }
+   ]
+  },
+  "soviet": {
+   "count": 159,
+   "sidecars": 156,
+   "rejected": 29,
+   "rejected_genres": [
+    "afro-house",
+    "alternative-rnb",
+    "ambient-techno",
+    "big-beat",
+    "black-metal",
+    "chicago-blues",
+    "chicago-drill",
+    "death-metal",
+    "detroit-techno",
+    "dream-trance",
+    "drift-phonk",
+    "emo-rap",
+    "euro-trance",
+    "free-jazz",
+    "goa-trance",
+    "happy-hardcore",
+    "hard-rock",
+    "hard-trance",
+    "hardstyle",
+    "j-pop",
+    "k-pop",
+    "kawaii-future-bass",
+    "microhouse",
+    "ragga-jungle",
+    "southern-hip-hop",
+    "synthwave",
+    "thrash-metal",
+    "vaporwave",
+    "west-coast-hip-hop"
+   ],
+   "tiles": [
+    {
+     "genre": "2-step-garage",
+     "md5": "fe94b5a18a2a9ef59616dfa2cf476848",
+     "bytes": 338961
+    },
+    {
+     "genre": "acid-house",
+     "md5": "0abc5248b76a0152ec4c0888fe4bc0e9",
+     "bytes": 301073
+    },
+    {
+     "genre": "acid-jazz",
+     "md5": "b709414d5cee47650b052f321562c429",
+     "bytes": 295181
+    },
+    {
+     "genre": "acid-techno",
+     "md5": "61f69d4819388e163fccf398e102bcbe",
+     "bytes": 338953
+    },
+    {
+     "genre": "afro-house",
+     "md5": "a49283b28820f46b78454b298e508c7e",
+     "bytes": 330426
+    },
+    {
+     "genre": "afrobeat",
+     "md5": "ff8b03098ff92eca9d5914247340f9a0",
+     "bytes": 343157
+    },
+    {
+     "genre": "alternative-rnb",
+     "md5": "7c80652a529da7635f1ec4d9aced7f14",
+     "bytes": 247740
+    },
+    {
+     "genre": "alternative-rock",
+     "md5": "6438cd8fae44e3989d4b2afc9fa3c2cc",
+     "bytes": 290677
+    },
+    {
+     "genre": "amapiano",
+     "md5": "1140ebfe82d8a9aa1cd00c914ec78d04",
+     "bytes": 296748
+    },
+    {
+     "genre": "ambient-dub",
+     "md5": "b69c5b5a821ded9b187eabd4a8800573",
+     "bytes": 299025
+    },
+    {
+     "genre": "ambient-techno",
+     "md5": "f99b3cdf274928fb17213c8d18c9bf7c",
+     "bytes": 267970
+    },
+    {
+     "genre": "ambient",
+     "md5": "9a72f34ad840cfcede752f0170a8a062",
+     "bytes": 234332
+    },
+    {
+     "genre": "bachata",
+     "md5": "40f77e8cf5ba0f6f17a42f881e14cb2a",
+     "bytes": 269914
+    },
+    {
+     "genre": "bass-house",
+     "md5": "3f0da4ba79648bc82dcbf12ab65b031e",
+     "bytes": 308247
+    },
+    {
+     "genre": "bassline",
+     "md5": "6547296bd8e4c583720da147bf1317f8",
+     "bytes": 285938
+    },
+    {
+     "genre": "bebop",
+     "md5": "61ceb0dd99e10c1755b4a8596ea4fe83",
+     "bytes": 357912
+    },
+    {
+     "genre": "big-beat",
+     "md5": "2d96c217fe7533a11815c33a55595167",
+     "bytes": 315481
+    },
+    {
+     "genre": "black-metal",
+     "md5": "4e71f86d738591133000e4713d6ab020",
+     "bytes": 411934
+    },
+    {
+     "genre": "blues-rock",
+     "md5": "fb92a3402dbac463c59f938704a21726",
+     "bytes": 277983
+    },
+    {
+     "genre": "boom-bap",
+     "md5": "dfddf7a75922239473a2811081822c6b",
+     "bytes": 355093
+    },
+    {
+     "genre": "bossa-nova",
+     "md5": "6c271d8b1c7814381d75781aefc9235e",
+     "bytes": 299215
+    },
+    {
+     "genre": "breakbeat",
+     "md5": "84a0f9229332307237634c24df507703",
+     "bytes": 302601
+    },
+    {
+     "genre": "breakcore",
+     "md5": "413b7715fbacd0736807ae0437c11427",
+     "bytes": 343117
+    },
+    {
+     "genre": "brooklyn-drill",
+     "md5": "85388a5911ac124dfce3aaec2cfc223e",
+     "bytes": 266965
+    },
+    {
+     "genre": "brostep",
+     "md5": "154072154447b0f99a7d2fad5dec879a",
+     "bytes": 324392
+    },
+    {
+     "genre": "chicago-blues",
+     "md5": "ee6ab386102a65f1910295659950fadd",
+     "bytes": 335747
+    },
+    {
+     "genre": "chicago-drill",
+     "md5": "3d837c369ea96db6928bf6a1e10c6a66",
+     "bytes": 341275
+    },
+    {
+     "genre": "chicago-house",
+     "md5": "9fb480b7d79bbc6f1156888511768dbf",
+     "bytes": 333011
+    },
+    {
+     "genre": "chillstep",
+     "md5": "7a4e2d48210cb318ed28b067d0db2fce",
+     "bytes": 307874
+    },
+    {
+     "genre": "chillwave",
+     "md5": "8d70531ca3ebb708c54c19344589bfe9",
+     "bytes": 392876
+    },
+    {
+     "genre": "chiptune",
+     "md5": "d04deeab03d1ccba2e62a3df7954fb96",
+     "bytes": 288873
+    },
+    {
+     "genre": "city-pop",
+     "md5": "909c2d7db553b9180b945bf92f8d3047",
+     "bytes": 310020
+    },
+    {
+     "genre": "cloud-rap",
+     "md5": "c04f100fd82853c093abb2972c7c028c",
+     "bytes": 275424
+    },
+    {
+     "genre": "conscious-hip-hop",
+     "md5": "90322b59a5e885892087a408903cbe7a",
+     "bytes": 307508
+    },
+    {
+     "genre": "contemporary-rnb",
+     "md5": "8bc1291e1efa063e890f099edcee4aac",
+     "bytes": 243409
+    },
+    {
+     "genre": "cool-jazz",
+     "md5": "153c2a92e58c71fd4b720915621f54b2",
+     "bytes": 283383
+    },
+    {
+     "genre": "cumbia",
+     "md5": "e301befaeed3efc2fb6ba63db9f35e11",
+     "bytes": 360923
+    },
+    {
+     "genre": "dancehall",
+     "md5": "87f95550d4a6dc85b7c0d66746475ae9",
+     "bytes": 318062
+    },
+    {
+     "genre": "death-metal",
+     "md5": "8a0ec2a870920b2329471517f68be7bd",
+     "bytes": 307280
+    },
+    {
+     "genre": "deathstep",
+     "md5": "e14269bfb582a0d36c2cd92b158e5846",
+     "bytes": 343318
+    },
+    {
+     "genre": "deep-house",
+     "md5": "ed506963a19f3dc3df7c75d6aa8bb975",
+     "bytes": 251500
+    },
+    {
+     "genre": "delta-blues",
+     "md5": "19b09a6ea5754db24999e9b0aaa50af9",
+     "bytes": 341770
+    },
+    {
+     "genre": "detroit-techno",
+     "md5": "c24d9e617b6e99695839b14ad98effc7",
+     "bytes": 332174
+    },
+    {
+     "genre": "disco",
+     "md5": "1e4cdbc4a9aa69fb071b264ad64f8fe6",
+     "bytes": 313652
+    },
+    {
+     "genre": "doom-metal",
+     "md5": "5af67545985683e2a3727dffef76d231",
+     "bytes": 369483
+    },
+    {
+     "genre": "downtempo",
+     "md5": "ad8f2078cbbcd2090ee3ffa11534f423",
+     "bytes": 246109
+    },
+    {
+     "genre": "dream-trance",
+     "md5": "a0807b3e92519c14ee538b4113cef4f6",
+     "bytes": 268266
+    },
+    {
+     "genre": "drift-phonk",
+     "md5": "fbb26f48992a60abbaa256670eb9993a",
+     "bytes": 317601
+    },
+    {
+     "genre": "dub-techno",
+     "md5": "17105ff71ca66ab1d9704c32b0d4f789",
+     "bytes": 323415
+    },
+    {
+     "genre": "dub",
+     "md5": "f61af958f17a42a18e78166559f315dc",
+     "bytes": 306649
+    },
+    {
+     "genre": "dubstep",
+     "md5": "30de3af48eb5fef5b5de103b41b6206f",
+     "bytes": 257828
+    },
+    {
+     "genre": "east-coast-hip-hop",
+     "md5": "65e67301ef96fcbabc5c77cd915ff99e",
+     "bytes": 323660
+    },
+    {
+     "genre": "edm-trap",
+     "md5": "fbc71384920a37e1f54eaab217e40e8a",
+     "bytes": 349647
+    },
+    {
+     "genre": "electric-blues",
+     "md5": "88395b8e1bf342fd30b5f9fb98b5721f",
+     "bytes": 341531
+    },
+    {
+     "genre": "electro-house",
+     "md5": "492f255f0f0c3ee055ac941eb9b4c0ed",
+     "bytes": 304553
+    },
+    {
+     "genre": "electro",
+     "md5": "ab30167ddbbec3bc376778e6e98fbdf4",
+     "bytes": 305888
+    },
+    {
+     "genre": "emo-rap",
+     "md5": "04c443cf0e9e445abd8bf8a66a9aaeb4",
+     "bytes": 249984
+    },
+    {
+     "genre": "euro-trance",
+     "md5": "94f1a050a0d00e7d386ed9638fd2672b",
+     "bytes": 316798
+    },
+    {
+     "genre": "eurodance",
+     "md5": "d80f3c0096857a724273ef1014627255",
+     "bytes": 346394
+    },
+    {
+     "genre": "footwork",
+     "md5": "18580fc90bda0530c4b9fe2b44a7f19c",
+     "bytes": 371029
+    },
+    {
+     "genre": "free-jazz",
+     "md5": "0fb04cf533eabdbff3a28c88b0e117b1",
+     "bytes": 368885
+    },
+    {
+     "genre": "french-house",
+     "md5": "6fc694334b3692f106a61354ff4902a2",
+     "bytes": 340939
+    },
+    {
+     "genre": "frenchcore",
+     "md5": "b1f93a440be0786cb0b35856b1df445a",
+     "bytes": 359465
+    },
+    {
+     "genre": "funk",
+     "md5": "85f7e9890811e997219950fedbef8972",
+     "bytes": 335694
+    },
+    {
+     "genre": "future-bass",
+     "md5": "56030d1bb9a9ec61cf2dba7c3ee83269",
+     "bytes": 314304
+    },
+    {
+     "genre": "future-garage",
+     "md5": "eb7e83813ae8a6e6c761d4649070003e",
+     "bytes": 353737
+    },
+    {
+     "genre": "future-house",
+     "md5": "dfcd168ac317467a1aa5791cbd98bebe",
+     "bytes": 356775
+    },
+    {
+     "genre": "g-funk",
+     "md5": "606375a5143258fb80b396bbc9d63525",
+     "bytes": 325934
+    },
+    {
+     "genre": "ghetto-house",
+     "md5": "be3aaef2397f746331930cffd5e53c6f",
+     "bytes": 291723
+    },
+    {
+     "genre": "glitch-hop",
+     "md5": "a964643227f82023197f596544aa36e8",
+     "bytes": 321563
+    },
+    {
+     "genre": "goa-trance",
+     "md5": "287b00f6550addf24c98085286344911",
+     "bytes": 388101
+    },
+    {
+     "genre": "grime",
+     "md5": "0c6c807dc344e96a7056b41644a91419",
+     "bytes": 252562
+    },
+    {
+     "genre": "grunge",
+     "md5": "e5c04f140809ddd30341bd15bbc022b7",
+     "bytes": 328067
+    },
+    {
+     "genre": "gypsy-jazz",
+     "md5": "6ecb8b0b33a641071c84f3a71748bbdf",
+     "bytes": 289462
+    },
+    {
+     "genre": "halftime",
+     "md5": "3ec48c5fbba226e7aadbed8846a3f193",
+     "bytes": 340808
+    },
+    {
+     "genre": "happy-hardcore",
+     "md5": "2c6fca751d8b526084d8287c9418c335",
+     "bytes": 321529
+    },
+    {
+     "genre": "hard-bop",
+     "md5": "d7e455a38b3e8f9442ab22b2fe67dd72",
+     "bytes": 326048
+    },
+    {
+     "genre": "hard-rock",
+     "md5": "be673775d64059032d5d420a6a77dba4",
+     "bytes": 300477
+    },
+    {
+     "genre": "hard-techno",
+     "md5": "33fbe1a216af2c2cb747da0587fc3585",
+     "bytes": 301252
+    },
+    {
+     "genre": "hard-trance",
+     "md5": "45aabde4f14ba516464a871228478795",
+     "bytes": 346954
+    },
+    {
+     "genre": "hard-trap",
+     "md5": "899475dd10dacbd524facd027c48a128",
+     "bytes": 297726
+    },
+    {
+     "genre": "hardcore-gabber",
+     "md5": "b8a33ac1a6e309cc4f062e9f05078286",
+     "bytes": 339973
+    },
+    {
+     "genre": "hardstyle",
+     "md5": "8ef6c3e0e0dc922f28fb9ad027c28b04",
+     "bytes": 336644
+    },
+    {
+     "genre": "heavy-metal",
+     "md5": "eb7c7f66510e5f5a6452d4257052f5f6",
+     "bytes": 288016
+    },
+    {
+     "genre": "hybrid-trap",
+     "md5": "5edc1f98509eb7d4c2ed2f6e2bd239d4",
+     "bytes": 353822
+    },
+    {
+     "genre": "idm",
+     "md5": "ad112e0fb1d675944f96a9c986e99696",
+     "bytes": 378921
+    },
+    {
+     "genre": "industrial-techno",
+     "md5": "d3a41b0d3633dfe01ea346e3224344a0",
+     "bytes": 347298
+    },
+    {
+     "genre": "j-pop",
+     "md5": "123a6fdd96bf63b9b2e303e0ad71daf0",
+     "bytes": 370340
+    },
+    {
+     "genre": "jazz-fusion",
+     "md5": "4018ce601f98d15d655ad5013f672adf",
+     "bytes": 319581
+    },
+    {
+     "genre": "jersey-club",
+     "md5": "b52c0fb2ec1b037055d1d656f6543dfc",
+     "bytes": 238810
+    },
+    {
+     "genre": "jersey-drill",
+     "md5": "d46d6c459fdfa0e4be614d33d26fb833",
+     "bytes": 325180
+    },
+    {
+     "genre": "jump-up",
+     "md5": "ee6cb3efcc564bb329a7e16a48b7e773",
+     "bytes": 302521
+    },
+    {
+     "genre": "jungle",
+     "md5": "a0f5e1c6a59b7627a65e311855f26bec",
+     "bytes": 299283
+    },
+    {
+     "genre": "k-pop",
+     "md5": "9466d3311bac54f03cb73f7e2b9d82e4",
+     "bytes": 285333
+    },
+    {
+     "genre": "kawaii-future-bass",
+     "md5": "0c667c133e3af471260fc94e71676f6b",
+     "bytes": 319354
+    },
+    {
+     "genre": "kuduro",
+     "md5": "a5e5fa76941bd3792be51e0dda010b5b",
+     "bytes": 319354
+    },
+    {
+     "genre": "liquid-dnb",
+     "md5": "e8613434d038556648b91919da4020b8",
+     "bytes": 361416
+    },
+    {
+     "genre": "lofi-hip-hop",
+     "md5": "b8ae678f4b1e7a98945b598416f146f5",
+     "bytes": 289959
+    },
+    {
+     "genre": "lofi-house",
+     "md5": "fd3bc7f493892e085aecfcdfd58f004a",
+     "bytes": 271770
+    },
+    {
+     "genre": "math-rock",
+     "md5": "b6766266768867f0d6f88c94aa2a0730",
+     "bytes": 322280
+    },
+    {
+     "genre": "melodic-dubstep",
+     "md5": "7fcb9d4387e7fb37d8562617b9c31fb9",
+     "bytes": 303837
+    },
+    {
+     "genre": "melodic-house",
+     "md5": "084cbd9c071b8b813b92548c5e22a06e",
+     "bytes": 238812
+    },
+    {
+     "genre": "metalcore",
+     "md5": "97b787ae43523bcbc30f2c3546188c3e",
+     "bytes": 352809
+    },
+    {
+     "genre": "microhouse",
+     "md5": "282e98117661555062e8397724a7beaa",
+     "bytes": 315338
+    },
+    {
+     "genre": "minimal-techno",
+     "md5": "f7c466ca08396726051de0c2e876726d",
+     "bytes": 319886
+    },
+    {
+     "genre": "modal-jazz",
+     "md5": "3c5676241874746841b3d28b7aae3949",
+     "bytes": 311071
+    },
+    {
+     "genre": "moombahton",
+     "md5": "0e5637eaa4cb948e07e6fe5be6a4f57a",
+     "bytes": 345657
+    },
+    {
+     "genre": "motown",
+     "md5": "bb22a538830445a376bb652e0f1d6c51",
+     "bytes": 334713
+    },
+    {
+     "genre": "neo-soul",
+     "md5": "a95d53761c2af489fbaa11c468614135",
+     "bytes": 283556
+    },
+    {
+     "genre": "neurofunk",
+     "md5": "db3d9a8ac0cc11f9d19da4af4ff50977",
+     "bytes": 321478
+    },
+    {
+     "genre": "new-wave",
+     "md5": "7b55e13480720adb25115e8e35491bf0",
+     "bytes": 268320
+    },
+    {
+     "genre": "nu-disco-house",
+     "md5": "2cc30799ec2722a51cf2fa83f3952501",
+     "bytes": 351295
+    },
+    {
+     "genre": "old-school-hip-hop",
+     "md5": "7eabc74f8cb15b61291643d242938bde",
+     "bytes": 337696
+    },
+    {
+     "genre": "peak-time-techno",
+     "md5": "b5cadc864e1c7243bc5c971f89c04743",
+     "bytes": 217513
+    },
+    {
+     "genre": "phonk",
+     "md5": "46ea315c63c55b860ffc16058170b108",
+     "bytes": 283196
+    },
+    {
+     "genre": "post-dubstep",
+     "md5": "80de6863f59c680ceefe8e5557912e45",
+     "bytes": 268766
+    },
+    {
+     "genre": "post-punk",
+     "md5": "a65cd55edc273e7a91aba6af72f17255",
+     "bytes": 277308
+    },
+    {
+     "genre": "progressive-house",
+     "md5": "5306236cf5b37d150f23b6074c28cf52",
+     "bytes": 253231
+    },
+    {
+     "genre": "progressive-rock",
+     "md5": "69bf6ac21581e6f68dc9001ec70ca6e2",
+     "bytes": 269499
+    },
+    {
+     "genre": "progressive-trance",
+     "md5": "eeeef28a7cad5afcf635354b26995e13",
+     "bytes": 309370
+    },
+    {
+     "genre": "psytrance",
+     "md5": "cc54ae0fe646aef723b7bc4c62884e9c",
+     "bytes": 358597
+    },
+    {
+     "genre": "punk-rock",
+     "md5": "ea38f1af3faede79d7348abc90c143c8",
+     "bytes": 333534
+    },
+    {
+     "genre": "ragga-jungle",
+     "md5": "ec3aaabe394dc38150d3f4ad6f1f4383",
+     "bytes": 223648
+    },
+    {
+     "genre": "raw-techno",
+     "md5": "48d72f00ed4c202366ab5a9d68dbe526",
+     "bytes": 267830
+    },
+    {
+     "genre": "reggae",
+     "md5": "fd5706665e20868f18f260d272910770",
+     "bytes": 335277
+    },
+    {
+     "genre": "reggaeton",
+     "md5": "f1bb8c579aa25a478ce5675f22f9a885",
+     "bytes": 380973
+    },
+    {
+     "genre": "riddim",
+     "md5": "704a9c928e5754bf6d9920c457570601",
+     "bytes": 266660
+    },
+    {
+     "genre": "rock-and-roll",
+     "md5": "18ef6a4a8fc758d9c63432e24b04764b",
+     "bytes": 277425
+    },
+    {
+     "genre": "salsa",
+     "md5": "cc3b9b7b8bf1ccec471965f174b6aec4",
+     "bytes": 336426
+    },
+    {
+     "genre": "samba",
+     "md5": "4e9f2b0ee8e7dd6b7e81eac1e6cdf56d",
+     "bytes": 359074
+    },
+    {
+     "genre": "sambass",
+     "md5": "88b92b124c656b6088dc5129fde4f290",
+     "bytes": 360364
+    },
+    {
+     "genre": "schranz",
+     "md5": "31fd76c48b49e0dcfac8018c360cae12",
+     "bytes": 283207
+    },
+    {
+     "genre": "shoe-gaze",
+     "md5": "97745ad46150a31b0bace6dc5616f929",
+     "bytes": 383224
+    },
+    {
+     "genre": "smooth-jazz",
+     "md5": "71f632e00ddac735d3e0661e3ab63bd4",
+     "bytes": 283855
+    },
+    {
+     "genre": "soul",
+     "md5": "7fb9392f2b40bfdf72c5896229a76a0f",
+     "bytes": 257219
+    },
+    {
+     "genre": "southern-hip-hop",
+     "md5": "fcbfd3ea744056ae2da3635f56ecdd91",
+     "bytes": 345613
+    },
+    {
+     "genre": "speed-garage",
+     "md5": "f4e2c895231b281a58b400cc664256c2",
+     "bytes": 304962
+    },
+    {
+     "genre": "speedbass",
+     "md5": "1c03defe8b8cdc05e03c0a86c618a843",
+     "bytes": 319390
+    },
+    {
+     "genre": "synth-pop",
+     "md5": "dea55bb3aec62430351df3529337a42c",
+     "bytes": 310949
+    },
+    {
+     "genre": "synthwave",
+     "md5": "661fa3cfce0c123b897f3fcec1a0df40",
+     "bytes": 320530
+    },
+    {
+     "genre": "tearout-dubstep",
+     "md5": "b37ddb2f70a439c03046b5fa5ef4b85c",
+     "bytes": 358008
+    },
+    {
+     "genre": "tech-house",
+     "md5": "8f65bc5db52087f27683a728de460b92",
+     "bytes": 209415
+    },
+    {
+     "genre": "tech-trance",
+     "md5": "1b86e85deec1dd3b7f4d756661aa35d0",
+     "bytes": 309795
+    },
+    {
+     "genre": "techstep",
+     "md5": "4768a13e3410a26787b0b7a98140db03",
+     "bytes": 233277
+    },
+    {
+     "genre": "texas-blues",
+     "md5": "4f2d675227369d2fe41b16937524a06a",
+     "bytes": 357840
+    },
+    {
+     "genre": "thrash-metal",
+     "md5": "2d68d07361744c22f387cbe276841f81",
+     "bytes": 360882
+    },
+    {
+     "genre": "traditional-jazz",
+     "md5": "019a9bb393b159d909361c3f5406bab2",
+     "bytes": 287555
+    },
+    {
+     "genre": "traditional-pop",
+     "md5": "f6f09ac4d3237bc6a54ed227df0748c9",
+     "bytes": 236578
+    },
+    {
+     "genre": "trap-rap",
+     "md5": "33a0271fb850537d5e4941f097dfea82",
+     "bytes": 278893
+    },
+    {
+     "genre": "trip-hop",
+     "md5": "6dacfbfa02076759c10e62f0c8798018",
+     "bytes": 232154
+    },
+    {
+     "genre": "tropical-house",
+     "md5": "729e083e865116a49663e0066dcdebf6",
+     "bytes": 280910
+    },
+    {
+     "genre": "uk-drill",
+     "md5": "b0d70a771af975e62c677f92456883f6",
+     "bytes": 306953
+    },
+    {
+     "genre": "uk-funky",
+     "md5": "4baa33f5407e4d7999985eac6b69c86b",
+     "bytes": 269373
+    },
+    {
+     "genre": "uk-garage",
+     "md5": "216e06dcf41eacc9542f4bcc4569c65f",
+     "bytes": 300313
+    },
+    {
+     "genre": "uplifting-trance",
+     "md5": "486c46af466da632cab2bebe81cb1657",
+     "bytes": 303448
+    },
+    {
+     "genre": "vaporwave",
+     "md5": "75ed77754e555ebd7181543f84b3471e",
+     "bytes": 293164
+    },
+    {
+     "genre": "vocal-trance",
+     "md5": "42f48e7a9a6f7f9f53431bf1f46218a6",
+     "bytes": 339672
+    },
+    {
+     "genre": "wave",
+     "md5": "d6c47dae34331708a2d7ac08c4dd1bd5",
+     "bytes": 249837
+    },
+    {
+     "genre": "west-coast-hip-hop",
+     "md5": "a85f65f2bd5ad21cde018139d10ef76c",
+     "bytes": 349537
+    }
+   ]
+  },
+  "sovietYears": {
+   "count": 159,
+   "sidecars": 156,
+   "rejected": 24,
+   "rejected_genres": [
+    "acid-jazz",
+    "afro-house",
+    "amapiano",
+    "chicago-blues",
+    "chicago-house",
+    "dancehall",
+    "detroit-techno",
+    "doom-metal",
+    "dream-trance",
+    "electro",
+    "future-garage",
+    "ghetto-house",
+    "happy-hardcore",
+    "hard-rock",
+    "hybrid-trap",
+    "j-pop",
+    "jungle",
+    "kawaii-future-bass",
+    "melodic-house",
+    "new-wave",
+    "phonk",
+    "southern-hip-hop",
+    "vaporwave",
+    "wave"
+   ],
+   "tiles": [
+    {
+     "genre": "2-step-garage",
+     "md5": "ece0a5525c9ec51fa785d86ebe2b5992",
+     "bytes": 246726
+    },
+    {
+     "genre": "acid-house",
+     "md5": "a066c594fbcfb8f8662fe0d837713917",
+     "bytes": 258956
+    },
+    {
+     "genre": "acid-jazz",
+     "md5": "9f272eb6828ae81ce63b6549882f6f79",
+     "bytes": 305194
+    },
+    {
+     "genre": "acid-techno",
+     "md5": "8461b7719fd4cc50afd5cf4e97a09430",
+     "bytes": 367914
+    },
+    {
+     "genre": "afro-house",
+     "md5": "5e7758124758947a75b056d4022619e9",
+     "bytes": 292011
+    },
+    {
+     "genre": "afrobeat",
+     "md5": "cfeeeb43aba2c09b75e66958181b0a63",
+     "bytes": 344648
+    },
+    {
+     "genre": "alternative-rnb",
+     "md5": "0f81f1fa24d4ed0761b3e4ba63b0cc27",
+     "bytes": 261443
+    },
+    {
+     "genre": "alternative-rock",
+     "md5": "ba3aadf51cff1ab911fdaaf16c147da9",
+     "bytes": 319611
+    },
+    {
+     "genre": "amapiano",
+     "md5": "45c5a1eb0be7e974411fded7488f9e08",
+     "bytes": 252502
+    },
+    {
+     "genre": "ambient-dub",
+     "md5": "8001eec97e7030e7da0f492ac9c3b30d",
+     "bytes": 237395
+    },
+    {
+     "genre": "ambient-techno",
+     "md5": "9d4b2ed8d1eaf0eb97bfa63f292ece73",
+     "bytes": 267990
+    },
+    {
+     "genre": "ambient",
+     "md5": "83a3396bfa83aa5d5d2c2d38965c3a3b",
+     "bytes": 239752
+    },
+    {
+     "genre": "bachata",
+     "md5": "f95c389b80e7e07fbe9f326596bdad79",
+     "bytes": 291415
+    },
+    {
+     "genre": "bass-house",
+     "md5": "6ffd637aa96d8107200c1bdcba1e0e79",
+     "bytes": 303218
+    },
+    {
+     "genre": "bassline",
+     "md5": "b4057689de60ee360934f136aeb79fd9",
+     "bytes": 318299
+    },
+    {
+     "genre": "bebop",
+     "md5": "ec5513b0511cf2f731bd5871c9f8731a",
+     "bytes": 308317
+    },
+    {
+     "genre": "big-beat",
+     "md5": "6b6df16cac87951ee78741a10b7a62d9",
+     "bytes": 334011
+    },
+    {
+     "genre": "black-metal",
+     "md5": "f90438e6a46460753e098baf40d95bc1",
+     "bytes": 467541
+    },
+    {
+     "genre": "blues-rock",
+     "md5": "f0da3c39eff9d200cf6bbadf5f239af4",
+     "bytes": 279226
+    },
+    {
+     "genre": "boom-bap",
+     "md5": "3a2e217cc8a9eea3824675a2bf215abc",
+     "bytes": 276517
+    },
+    {
+     "genre": "bossa-nova",
+     "md5": "df500743e7c56bfa7a655e7ba328e27e",
+     "bytes": 310115
+    },
+    {
+     "genre": "breakbeat",
+     "md5": "05533f42a97bfa3229aaff06016afe52",
+     "bytes": 352058
+    },
+    {
+     "genre": "breakcore",
+     "md5": "2aa547ac1c5f9ec792fa71a9923daee9",
+     "bytes": 371850
+    },
+    {
+     "genre": "brooklyn-drill",
+     "md5": "fdb1c549e0b69b311f46ef801633d85c",
+     "bytes": 281114
+    },
+    {
+     "genre": "brostep",
+     "md5": "31e945d7388091d8a6ae7cab6cf46f6e",
+     "bytes": 417427
+    },
+    {
+     "genre": "chicago-blues",
+     "md5": "503611ca14b8e2c1b4942a010077b123",
+     "bytes": 304281
+    },
+    {
+     "genre": "chicago-drill",
+     "md5": "961a24cef3683d1c8d73654fb084fa30",
+     "bytes": 294910
+    },
+    {
+     "genre": "chicago-house",
+     "md5": "8f3b622305d879b4491310c2906ae72c",
+     "bytes": 300259
+    },
+    {
+     "genre": "chillstep",
+     "md5": "03ee9455f99a276c96f2e5df9a4d26e5",
+     "bytes": 301566
+    },
+    {
+     "genre": "chillwave",
+     "md5": "7e0be47c07205c0b807f127867d89caa",
+     "bytes": 291437
+    },
+    {
+     "genre": "chiptune",
+     "md5": "52343bba92d801654d9b12d062aee6bb",
+     "bytes": 282574
+    },
+    {
+     "genre": "city-pop",
+     "md5": "a34cb92ce5e86643d89f1feefdfd26e3",
+     "bytes": 310130
+    },
+    {
+     "genre": "cloud-rap",
+     "md5": "16472349d677f5e18df3e95b366fd355",
+     "bytes": 269505
+    },
+    {
+     "genre": "conscious-hip-hop",
+     "md5": "870c66a1b09254d93758a243599e5396",
+     "bytes": 262113
+    },
+    {
+     "genre": "contemporary-rnb",
+     "md5": "f77dd7a052b3b23f1f6dc363a57c8306",
+     "bytes": 249690
+    },
+    {
+     "genre": "cool-jazz",
+     "md5": "9ab40d556f1099cc854f64e5cb1e3a95",
+     "bytes": 301919
+    },
+    {
+     "genre": "cumbia",
+     "md5": "d6ab177d660919c131dae743c1b5ff16",
+     "bytes": 318078
+    },
+    {
+     "genre": "dancehall",
+     "md5": "ef180511f61b57e395ad67d6e2be8afe",
+     "bytes": 291275
+    },
+    {
+     "genre": "death-metal",
+     "md5": "91bb62d0f242b0baf6eb02c1e635c6d0",
+     "bytes": 248919
+    },
+    {
+     "genre": "deathstep",
+     "md5": "f15cb2cc052df45435b4b9cd1665061f",
+     "bytes": 302936
+    },
+    {
+     "genre": "deep-house",
+     "md5": "0340838cded6c0b234f8476846c104a5",
+     "bytes": 260003
+    },
+    {
+     "genre": "delta-blues",
+     "md5": "cd07e4105dd7d0734602bd929ebe923a",
+     "bytes": 374095
+    },
+    {
+     "genre": "detroit-techno",
+     "md5": "2bb874cef6502b0a6f0f541fb9b40074",
+     "bytes": 278561
+    },
+    {
+     "genre": "disco",
+     "md5": "45ffdff4e496843f66dbf99363266638",
+     "bytes": 365286
+    },
+    {
+     "genre": "doom-metal",
+     "md5": "493b9ac17363a0c44ea81f1afa03cfb9",
+     "bytes": 334485
+    },
+    {
+     "genre": "downtempo",
+     "md5": "03a6908573d04a866d3d1b1a70a2eed7",
+     "bytes": 262680
+    },
+    {
+     "genre": "dream-trance",
+     "md5": "ddb7305e9a88c626db44260299e05f15",
+     "bytes": 206401
+    },
+    {
+     "genre": "drift-phonk",
+     "md5": "44df35be19bc150c85b1f8a02cf27a36",
+     "bytes": 277893
+    },
+    {
+     "genre": "dub-techno",
+     "md5": "efe657ae88d84b1e8f09e9dd6ee2e3fe",
+     "bytes": 286537
+    },
+    {
+     "genre": "dub",
+     "md5": "19bbb7e0f97a91900b1c27dc0ffb7b79",
+     "bytes": 279088
+    },
+    {
+     "genre": "dubstep",
+     "md5": "762dbf7059907d42a0291de5414fb22d",
+     "bytes": 293103
+    },
+    {
+     "genre": "east-coast-hip-hop",
+     "md5": "a3ee5071e47b673e84965119fef2be74",
+     "bytes": 328259
+    },
+    {
+     "genre": "edm-trap",
+     "md5": "8991b938b6e1a64e7df4db8d416ec2d8",
+     "bytes": 346005
+    },
+    {
+     "genre": "electric-blues",
+     "md5": "c9c762e7f39bf813aeb5a97733693e7c",
+     "bytes": 303108
+    },
+    {
+     "genre": "electro-house",
+     "md5": "1bff08620b3511cb7c1d33e1c34b4682",
+     "bytes": 300753
+    },
+    {
+     "genre": "electro",
+     "md5": "ee484c871064d6eec86f93dfd1344147",
+     "bytes": 287827
+    },
+    {
+     "genre": "emo-rap",
+     "md5": "09dc9c47cab2a60223d39d57dd54dd49",
+     "bytes": 284460
+    },
+    {
+     "genre": "euro-trance",
+     "md5": "805ddb6f1eceb4b9709cdace0e381b59",
+     "bytes": 295600
+    },
+    {
+     "genre": "eurodance",
+     "md5": "b76a0c9cd1664ae778bd0db8f521781a",
+     "bytes": 344533
+    },
+    {
+     "genre": "footwork",
+     "md5": "91f028a3db81aada564bfd466991a7da",
+     "bytes": 327348
+    },
+    {
+     "genre": "free-jazz",
+     "md5": "a9460bf872f6492a691c86384db84182",
+     "bytes": 294532
+    },
+    {
+     "genre": "french-house",
+     "md5": "04a89e3faa8b787a3be5ca00a9291f6e",
+     "bytes": 253945
+    },
+    {
+     "genre": "frenchcore",
+     "md5": "5a8d518aef06cf4d3eecd71c58df6f19",
+     "bytes": 331137
+    },
+    {
+     "genre": "funk",
+     "md5": "3bacde9d2ce214400e3745cf0f7330da",
+     "bytes": 272786
+    },
+    {
+     "genre": "future-bass",
+     "md5": "ffbdacf493ef56a0466aee165a6aa115",
+     "bytes": 302627
+    },
+    {
+     "genre": "future-garage",
+     "md5": "efc2299bc53b440bf57bc7d17483a39b",
+     "bytes": 302770
+    },
+    {
+     "genre": "future-house",
+     "md5": "5fe44041ac8c9215ec4686b3356353e3",
+     "bytes": 339913
+    },
+    {
+     "genre": "g-funk",
+     "md5": "d4283ca7f696475a2c1f6b2b52d79982",
+     "bytes": 281284
+    },
+    {
+     "genre": "ghetto-house",
+     "md5": "d97edfab3c51a1f18908eeaa4b9d1b8c",
+     "bytes": 249265
+    },
+    {
+     "genre": "glitch-hop",
+     "md5": "c76655f71f5b253c7edb35e37b2bd3cf",
+     "bytes": 312696
+    },
+    {
+     "genre": "goa-trance",
+     "md5": "78a1d8797f01caea81c530c35e271734",
+     "bytes": 343773
+    },
+    {
+     "genre": "grime",
+     "md5": "49aaf5e5f1cceeddcb9a120f4e8d534d",
+     "bytes": 234016
+    },
+    {
+     "genre": "grunge",
+     "md5": "a9218c80f1ec7a484ea3594f20c3c15a",
+     "bytes": 376113
+    },
+    {
+     "genre": "gypsy-jazz",
+     "md5": "92cca5b6f2fca59a98b74254f45059f4",
+     "bytes": 301852
+    },
+    {
+     "genre": "halftime",
+     "md5": "f10b722d2477d2e5a6c31119513e1562",
+     "bytes": 355913
+    },
+    {
+     "genre": "happy-hardcore",
+     "md5": "7d1e30147b19e46d21c4735cb20027bf",
+     "bytes": 266573
+    },
+    {
+     "genre": "hard-bop",
+     "md5": "5265049521fcb63f56ee4b496cf603c7",
+     "bytes": 281921
+    },
+    {
+     "genre": "hard-rock",
+     "md5": "ba99b402dcdc10070ac3212ec4e3bad7",
+     "bytes": 281502
+    },
+    {
+     "genre": "hard-techno",
+     "md5": "b0105bee94dd432815ddd3c124a7aa47",
+     "bytes": 307739
+    },
+    {
+     "genre": "hard-trance",
+     "md5": "126cf7367e047116cae947a4bb0b10d7",
+     "bytes": 331092
+    },
+    {
+     "genre": "hard-trap",
+     "md5": "33c876a52c1c9fb7d909e695672710ed",
+     "bytes": 363839
+    },
+    {
+     "genre": "hardcore-gabber",
+     "md5": "efd343ac0c2d48963099fbe1ed8ff41a",
+     "bytes": 328494
+    },
+    {
+     "genre": "hardstyle",
+     "md5": "066c95fc4517d5dd7a6623553ac7afc5",
+     "bytes": 323760
+    },
+    {
+     "genre": "heavy-metal",
+     "md5": "17e06a052a950e7dd08e408efdd37d31",
+     "bytes": 329744
+    },
+    {
+     "genre": "hybrid-trap",
+     "md5": "158e55b23895f50d30146d215bb1eb50",
+     "bytes": 264601
+    },
+    {
+     "genre": "idm",
+     "md5": "c184246d29fd7cdf63fb100407eb59d7",
+     "bytes": 369156
+    },
+    {
+     "genre": "industrial-techno",
+     "md5": "00949e169dc660a94c5f2c713c163eac",
+     "bytes": 367814
+    },
+    {
+     "genre": "j-pop",
+     "md5": "6c754190b92398f03b9b6bc813f00812",
+     "bytes": 280765
+    },
+    {
+     "genre": "jazz-fusion",
+     "md5": "8f6cfbd5c8d60f895756606861f84fa6",
+     "bytes": 306480
+    },
+    {
+     "genre": "jersey-club",
+     "md5": "63818e2f44cc82733a4ec99a43d653ee",
+     "bytes": 261085
+    },
+    {
+     "genre": "jersey-drill",
+     "md5": "657fdfef84e87f73cd04dc1f4c3fd30f",
+     "bytes": 336629
+    },
+    {
+     "genre": "jump-up",
+     "md5": "6dda4d66541c72ebd3a57b63e7705bd8",
+     "bytes": 290811
+    },
+    {
+     "genre": "jungle",
+     "md5": "0aa9465f2d18b475713cd5fc6feea5e8",
+     "bytes": 244366
+    },
+    {
+     "genre": "k-pop",
+     "md5": "a1da978b2d984af663319fac8260e303",
+     "bytes": 299117
+    },
+    {
+     "genre": "kawaii-future-bass",
+     "md5": "b7cf3b867b1115c06678100f7277f3cb",
+     "bytes": 264915
+    },
+    {
+     "genre": "kuduro",
+     "md5": "aec0f7947304f73069e56064f924f532",
+     "bytes": 358847
+    },
+    {
+     "genre": "liquid-dnb",
+     "md5": "1b5a597780b7c08fa1ed28520eaa48d4",
+     "bytes": 268992
+    },
+    {
+     "genre": "lofi-hip-hop",
+     "md5": "4ae0bf2238777a50880844acc841d407",
+     "bytes": 308050
+    },
+    {
+     "genre": "lofi-house",
+     "md5": "ce3e1d7ed78fe6da11385c0bcdee17cb",
+     "bytes": 269368
+    },
+    {
+     "genre": "math-rock",
+     "md5": "bf648d9034ec6e28790108bb515f0030",
+     "bytes": 365363
+    },
+    {
+     "genre": "melodic-dubstep",
+     "md5": "b6651af812e11180fb58d3bc9fcf4aeb",
+     "bytes": 316238
+    },
+    {
+     "genre": "melodic-house",
+     "md5": "1b2eff34347f7a3b084ce43ed7e76d73",
+     "bytes": 259547
+    },
+    {
+     "genre": "metalcore",
+     "md5": "94774f24d634f86ede6c2d335d3862f8",
+     "bytes": 326341
+    },
+    {
+     "genre": "microhouse",
+     "md5": "fe17d4d901d486ec535555207a3e302a",
+     "bytes": 212911
+    },
+    {
+     "genre": "minimal-techno",
+     "md5": "e5e9969095419bbb8f583c6fde232222",
+     "bytes": 232511
+    },
+    {
+     "genre": "modal-jazz",
+     "md5": "cc2202b63ba33aed9815241a404579c4",
+     "bytes": 221775
+    },
+    {
+     "genre": "moombahton",
+     "md5": "26fb8c39b468effe35874dc5c514a0fc",
+     "bytes": 419640
+    },
+    {
+     "genre": "motown",
+     "md5": "5055c418b7c84b783743b54ba204ef65",
+     "bytes": 276977
+    },
+    {
+     "genre": "neo-soul",
+     "md5": "4288ffffdbea08c140e6cc4256c78d7f",
+     "bytes": 256200
+    },
+    {
+     "genre": "neurofunk",
+     "md5": "fd4e7ac6c0112a6faefe786ce1b295f2",
+     "bytes": 321344
+    },
+    {
+     "genre": "new-wave",
+     "md5": "675d7e395d29d75a8801d2e6199b68fc",
+     "bytes": 255121
+    },
+    {
+     "genre": "nu-disco-house",
+     "md5": "928b97f7c292acd72c9d9618139a697a",
+     "bytes": 351608
+    },
+    {
+     "genre": "old-school-hip-hop",
+     "md5": "020af6a559292e3115fb54db63ce1c48",
+     "bytes": 310084
+    },
+    {
+     "genre": "peak-time-techno",
+     "md5": "13e70ede8ef2bae22f2b1a23a54a6cf4",
+     "bytes": 227316
+    },
+    {
+     "genre": "phonk",
+     "md5": "3cde46d4bea64d1a1d505a32f5604344",
+     "bytes": 210454
+    },
+    {
+     "genre": "post-dubstep",
+     "md5": "f22772fc07f514c2e5992e00959850b5",
+     "bytes": 206916
+    },
+    {
+     "genre": "post-punk",
+     "md5": "25047b49793efcc104c570a3b6332495",
+     "bytes": 267953
+    },
+    {
+     "genre": "progressive-house",
+     "md5": "0778391f915c460dbb197c0ef3256623",
+     "bytes": 189660
+    },
+    {
+     "genre": "progressive-rock",
+     "md5": "f0cd0d9bef54e87860dffcc879faae68",
+     "bytes": 334767
+    },
+    {
+     "genre": "progressive-trance",
+     "md5": "42b8d0f4727852e14204bce0d7c606ea",
+     "bytes": 315368
+    },
+    {
+     "genre": "psytrance",
+     "md5": "05035eb9057f65de1a7193b64ec566fb",
+     "bytes": 331012
+    },
+    {
+     "genre": "punk-rock",
+     "md5": "085d2fbdd712bdbc79a6693c8d142e07",
+     "bytes": 350996
+    },
+    {
+     "genre": "ragga-jungle",
+     "md5": "b999add6b956745ef4c75ce87330c63e",
+     "bytes": 309414
+    },
+    {
+     "genre": "raw-techno",
+     "md5": "dda7557988c6f6fea57b04f1e9e73631",
+     "bytes": 305984
+    },
+    {
+     "genre": "reggae",
+     "md5": "4874738b9684706bb51bc9f661a35c75",
+     "bytes": 360199
+    },
+    {
+     "genre": "reggaeton",
+     "md5": "5cd035e63418cbbfaf69aa8cf4932910",
+     "bytes": 293125
+    },
+    {
+     "genre": "riddim",
+     "md5": "af8d7c1d2bf8b7abd8f67759a279efb6",
+     "bytes": 242136
+    },
+    {
+     "genre": "rock-and-roll",
+     "md5": "613c2de0e0cfd0604c5c23457fac14bc",
+     "bytes": 305987
+    },
+    {
+     "genre": "salsa",
+     "md5": "264f8934bb45db94802dddc59b604ff3",
+     "bytes": 340408
+    },
+    {
+     "genre": "samba",
+     "md5": "98bf71f2bb36dfbd0e49b8f6cbe538a8",
+     "bytes": 400380
+    },
+    {
+     "genre": "sambass",
+     "md5": "cd2600d7c7daf4f5b74db3fd867f64dc",
+     "bytes": 345081
+    },
+    {
+     "genre": "schranz",
+     "md5": "4cc33585100ad3f35b38403f6874cab8",
+     "bytes": 336911
+    },
+    {
+     "genre": "shoe-gaze",
+     "md5": "1f67faec916eb9c5283e8623b1518599",
+     "bytes": 339283
+    },
+    {
+     "genre": "smooth-jazz",
+     "md5": "d8c3bc52ea7a7eb64b94a2551cf29c8c",
+     "bytes": 260358
+    },
+    {
+     "genre": "soul",
+     "md5": "c7b76ffb7d0e9b3014ac4ac12c52e6ab",
+     "bytes": 306182
+    },
+    {
+     "genre": "southern-hip-hop",
+     "md5": "39eeded8f7c9d5cdaedf6221e4faf24c",
+     "bytes": 272507
+    },
+    {
+     "genre": "speed-garage",
+     "md5": "df356c960fc798991590c1f8ee964a63",
+     "bytes": 323778
+    },
+    {
+     "genre": "speedbass",
+     "md5": "65fdcab1f7b08e7d62506eb09e12f2bf",
+     "bytes": 319668
+    },
+    {
+     "genre": "synth-pop",
+     "md5": "4db8e4f63253403f4723e0d9579e09bf",
+     "bytes": 294083
+    },
+    {
+     "genre": "synthwave",
+     "md5": "bca66df09ba9f297f85c47b2351c1702",
+     "bytes": 235669
+    },
+    {
+     "genre": "tearout-dubstep",
+     "md5": "f9313a65b0db2701c4d76b51addf1669",
+     "bytes": 352758
+    },
+    {
+     "genre": "tech-house",
+     "md5": "782149cf2d7245fbd08cd38c8a79ab15",
+     "bytes": 238197
+    },
+    {
+     "genre": "tech-trance",
+     "md5": "98613b4ba86cda899489b6548954f153",
+     "bytes": 353756
+    },
+    {
+     "genre": "techstep",
+     "md5": "b4eec3c2b4c4d29c7e5279ce0ad883fc",
+     "bytes": 243186
+    },
+    {
+     "genre": "texas-blues",
+     "md5": "744ab015993e5d510b475663cb67c9ab",
+     "bytes": 317238
+    },
+    {
+     "genre": "thrash-metal",
+     "md5": "1e665f740f8d704ebf33bd23d97bd6b5",
+     "bytes": 408119
+    },
+    {
+     "genre": "traditional-jazz",
+     "md5": "5f3209028fec9a9a6b78abcfcf011780",
+     "bytes": 323076
+    },
+    {
+     "genre": "traditional-pop",
+     "md5": "00c703aec94670e7c81da1edd91e003e",
+     "bytes": 251324
+    },
+    {
+     "genre": "trap-rap",
+     "md5": "818c38a36ddb3c6ba011c6700281bc30",
+     "bytes": 310655
+    },
+    {
+     "genre": "trip-hop",
+     "md5": "115e71c075a3a7c6cf7ebfd40be0b2f1",
+     "bytes": 269797
+    },
+    {
+     "genre": "tropical-house",
+     "md5": "0ffc9c612134bfb53703b739bf6b4121",
+     "bytes": 330535
+    },
+    {
+     "genre": "uk-drill",
+     "md5": "97741846eb7ca893f7484c912453c210",
+     "bytes": 223620
+    },
+    {
+     "genre": "uk-funky",
+     "md5": "831227c229350ab3bf15276357bf064e",
+     "bytes": 260020
+    },
+    {
+     "genre": "uk-garage",
+     "md5": "62826e559d31e2e1cdce73fb365857b9",
+     "bytes": 258489
+    },
+    {
+     "genre": "uplifting-trance",
+     "md5": "7cd8224bb8122b6bb061703a26578e9c",
+     "bytes": 308524
+    },
+    {
+     "genre": "vaporwave",
+     "md5": "15a714d8ff83d717ae00800afa76262f",
+     "bytes": 212039
+    },
+    {
+     "genre": "vocal-trance",
+     "md5": "b0fbc8e414f088493bc9b6ee8e8ed1ae",
+     "bytes": 263351
+    },
+    {
+     "genre": "wave",
+     "md5": "fb4297bfd5fe7373c1f566e35d13144b",
+     "bytes": 239099
+    },
+    {
+     "genre": "west-coast-hip-hop",
+     "md5": "5e938b086818b3eab20b8a4245dfde82",
+     "bytes": 319140
+    }
+   ]
+  },
+  "pixel": {
+   "count": 159,
+   "sidecars": 157,
+   "rejected": 19,
+   "rejected_genres": [
+    "alternative-rnb",
+    "amapiano",
+    "ambient",
+    "brooklyn-drill",
+    "chicago-blues",
+    "cloud-rap",
+    "free-jazz",
+    "french-house",
+    "future-garage",
+    "ghetto-house",
+    "idm",
+    "j-pop",
+    "microhouse",
+    "post-dubstep",
+    "progressive-house",
+    "riddim",
+    "soul",
+    "uk-funky",
+    "vaporwave"
+   ],
+   "tiles": [
+    {
+     "genre": "2-step-garage",
+     "md5": "3a68e03f8306819d2f8b1fdd3cac6a07",
+     "bytes": 137271
+    },
+    {
+     "genre": "acid-house",
+     "md5": "262edb8cad0dca6fbf92ebde793b4c2e",
+     "bytes": 177060
+    },
+    {
+     "genre": "acid-jazz",
+     "md5": "c014e355e9c41df3183c0d979484d640",
+     "bytes": 210783
+    },
+    {
+     "genre": "acid-techno",
+     "md5": "ac8329b6310b1900105fba7f5c03ceb2",
+     "bytes": 218213
+    },
+    {
+     "genre": "afro-house",
+     "md5": "c3a26a3dbce683559cf5b07ede5a6490",
+     "bytes": 168857
+    },
+    {
+     "genre": "afrobeat",
+     "md5": "ee4d004ae02f7846c684113c9062f3cf",
+     "bytes": 274482
+    },
+    {
+     "genre": "alternative-rnb",
+     "md5": "4566cb6fde8f098ce15e8b923e0f42aa",
+     "bytes": 151974
+    },
+    {
+     "genre": "alternative-rock",
+     "md5": "75609ede95fcf7114873d3b6a432dbb4",
+     "bytes": 176258
+    },
+    {
+     "genre": "amapiano",
+     "md5": "a2b66c1aeef41d43fb334f45f3b245af",
+     "bytes": 167572
+    },
+    {
+     "genre": "ambient-dub",
+     "md5": "0edf81ed00d02c803899f311c237f8b0",
+     "bytes": 142219
+    },
+    {
+     "genre": "ambient-techno",
+     "md5": "2674e2394f56ca2b4852bf3321135cf6",
+     "bytes": 148517
+    },
+    {
+     "genre": "ambient",
+     "md5": "fa2be06c236227cfb4041a13e91bbf16",
+     "bytes": 157184
+    },
+    {
+     "genre": "bachata",
+     "md5": "0d6b427ea9f13e3da2b74662c297cd1e",
+     "bytes": 190169
+    },
+    {
+     "genre": "bass-house",
+     "md5": "8b5024c1452eaf211338824f9fa81205",
+     "bytes": 148077
+    },
+    {
+     "genre": "bassline",
+     "md5": "6458297990065c975e12b694ec530168",
+     "bytes": 191964
+    },
+    {
+     "genre": "bebop",
+     "md5": "2c52345bfe6e00eee8e80575f4eba5cd",
+     "bytes": 226980
+    },
+    {
+     "genre": "big-beat",
+     "md5": "7a12094a2c10ed45a8e9d77b9d3594e1",
+     "bytes": 170704
+    },
+    {
+     "genre": "black-metal",
+     "md5": "c5759083ccb91faaf3b4ee33550bc190",
+     "bytes": 274055
+    },
+    {
+     "genre": "blues-rock",
+     "md5": "faca041a3afc8a328691336d119e828f",
+     "bytes": 150902
+    },
+    {
+     "genre": "boom-bap",
+     "md5": "e01f7e312c4d0f842e70370a914726e9",
+     "bytes": 184460
+    },
+    {
+     "genre": "bossa-nova",
+     "md5": "3ea493f15e3e3ddc8d8f45493dfcba99",
+     "bytes": 282451
+    },
+    {
+     "genre": "breakbeat",
+     "md5": "7d28b1962c230a1b20d19b1a4c68f818",
+     "bytes": 190139
+    },
+    {
+     "genre": "breakcore",
+     "md5": "3e5d9c19a5efe4278822da6c1b0e67e2",
+     "bytes": 241187
+    },
+    {
+     "genre": "brooklyn-drill",
+     "md5": "e9d6662f930dd42973bd87265665a9a8",
+     "bytes": 143993
+    },
+    {
+     "genre": "brostep",
+     "md5": "bb59eb53428f43e8d514f1b239fa1933",
+     "bytes": 288040
+    },
+    {
+     "genre": "chicago-blues",
+     "md5": "b680c659f7f48cc8f152a0d03ad17ee5",
+     "bytes": 238384
+    },
+    {
+     "genre": "chicago-drill",
+     "md5": "1f1d38d6b70a32f33c4a154ed5e01b68",
+     "bytes": 209948
+    },
+    {
+     "genre": "chicago-house",
+     "md5": "19fe68dd4667b8130bcc9e1644a158fd",
+     "bytes": 181253
+    },
+    {
+     "genre": "chillstep",
+     "md5": "79120847c86057db3ae68db5ba1aafe6",
+     "bytes": 160957
+    },
+    {
+     "genre": "chillwave",
+     "md5": "3e80e82847135004665a6741e7a2e76e",
+     "bytes": 247094
+    },
+    {
+     "genre": "chiptune",
+     "md5": "9edd7563dac6fb9b82dec5212b55b1eb",
+     "bytes": 179046
+    },
+    {
+     "genre": "city-pop",
+     "md5": "9aaec22e6ad4b32f5adc5f55fcae762d",
+     "bytes": 234470
+    },
+    {
+     "genre": "cloud-rap",
+     "md5": "7cf2cb980ad1931ab53b48f47afdffcc",
+     "bytes": 134993
+    },
+    {
+     "genre": "conscious-hip-hop",
+     "md5": "203813225a9ceb442fe3f5af1aec71dc",
+     "bytes": 159020
+    },
+    {
+     "genre": "contemporary-rnb",
+     "md5": "6d2964703c76592fa7cae655c55c1eaf",
+     "bytes": 190399
+    },
+    {
+     "genre": "cool-jazz",
+     "md5": "454879b08e0e4f757cf31bc06c9269c1",
+     "bytes": 168423
+    },
+    {
+     "genre": "cumbia",
+     "md5": "122765071906e4b1699bdb75ee3099cf",
+     "bytes": 217275
+    },
+    {
+     "genre": "dancehall",
+     "md5": "c81c6f22b9e183f1059714583af68452",
+     "bytes": 214972
+    },
+    {
+     "genre": "death-metal",
+     "md5": "4d933a16fa05e2cb92db583f48041166",
+     "bytes": 201637
+    },
+    {
+     "genre": "deathstep",
+     "md5": "89e721320fcff247dc387cd8f250e449",
+     "bytes": 152460
+    },
+    {
+     "genre": "deep-house",
+     "md5": "987907aa7132311271e6d8d68b8736bd",
+     "bytes": 168227
+    },
+    {
+     "genre": "delta-blues",
+     "md5": "bda2a556c254749edf34a645498f74d3",
+     "bytes": 266029
+    },
+    {
+     "genre": "detroit-techno",
+     "md5": "4c4ddcc92aeac41b792cfab31406a3bf",
+     "bytes": 203686
+    },
+    {
+     "genre": "disco",
+     "md5": "715bb2ab2a00fd2620437329a7840339",
+     "bytes": 206646
+    },
+    {
+     "genre": "doom-metal",
+     "md5": "4266a52391f788aa621fb9439815023f",
+     "bytes": 182270
+    },
+    {
+     "genre": "downtempo",
+     "md5": "1581db1e5814389217aca11805b64169",
+     "bytes": 178566
+    },
+    {
+     "genre": "dream-trance",
+     "md5": "bc564e25d577a19463d8a0c8b6c41591",
+     "bytes": 228798
+    },
+    {
+     "genre": "drift-phonk",
+     "md5": "6e7d863fceda9032c15aa8eadb2b7ee3",
+     "bytes": 126849
+    },
+    {
+     "genre": "dub-techno",
+     "md5": "9c695429cf396983132ebe8330f548bd",
+     "bytes": 134447
+    },
+    {
+     "genre": "dub",
+     "md5": "826bcb65a199495c96936bb730c914c1",
+     "bytes": 167718
+    },
+    {
+     "genre": "dubstep",
+     "md5": "afba896ce1d839617a8da84e7d888770",
+     "bytes": 177152
+    },
+    {
+     "genre": "east-coast-hip-hop",
+     "md5": "1c77381826dc9cff1980f04542b8d7a2",
+     "bytes": 234142
+    },
+    {
+     "genre": "edm-trap",
+     "md5": "3d9e406aeeb238aa9331971241d7c8be",
+     "bytes": 253072
+    },
+    {
+     "genre": "electric-blues",
+     "md5": "393fe81575ebce88678ebdab92a76fcc",
+     "bytes": 216713
+    },
+    {
+     "genre": "electro-house",
+     "md5": "05cf64d69b0f6b58c7723732db9d6a25",
+     "bytes": 226560
+    },
+    {
+     "genre": "electro",
+     "md5": "fb4571fa3682885abaeb3d880d7c7136",
+     "bytes": 187559
+    },
+    {
+     "genre": "emo-rap",
+     "md5": "7687d97e9282d8b53dd31ecc1c241119",
+     "bytes": 160258
+    },
+    {
+     "genre": "euro-trance",
+     "md5": "de92b9dd2fd23565c4d2dc64cea8c93a",
+     "bytes": 222137
+    },
+    {
+     "genre": "eurodance",
+     "md5": "c79625a7535e7471cbc563cfedac4e85",
+     "bytes": 231899
+    },
+    {
+     "genre": "footwork",
+     "md5": "22c544b9d6e9c86acd1f28a20f1654ce",
+     "bytes": 209363
+    },
+    {
+     "genre": "free-jazz",
+     "md5": "3f71fd54337cb257db551000d05a11be",
+     "bytes": 187411
+    },
+    {
+     "genre": "french-house",
+     "md5": "62608cd3381a60c36550aca8381206a1",
+     "bytes": 126317
+    },
+    {
+     "genre": "frenchcore",
+     "md5": "d330ac4985b214d240a407bcae4d6e17",
+     "bytes": 249088
+    },
+    {
+     "genre": "funk",
+     "md5": "3d66c1830799dad5a91daa69e670a266",
+     "bytes": 221161
+    },
+    {
+     "genre": "future-bass",
+     "md5": "d62e6006a9dfa1de47e629ed482e6ff3",
+     "bytes": 227620
+    },
+    {
+     "genre": "future-garage",
+     "md5": "57caf14996ca6fc79909226e264c19f2",
+     "bytes": 169906
+    },
+    {
+     "genre": "future-house",
+     "md5": "b58a99017a6dafdb435445cfc5e437f6",
+     "bytes": 190347
+    },
+    {
+     "genre": "g-funk",
+     "md5": "b375703c7df27cf1127a14fe6d2f6fcd",
+     "bytes": 241012
+    },
+    {
+     "genre": "ghetto-house",
+     "md5": "a6455fe00d468fb750e034d1e30219db",
+     "bytes": 184951
+    },
+    {
+     "genre": "glitch-hop",
+     "md5": "f8d3034869d254ad084e9d4fa7722889",
+     "bytes": 224042
+    },
+    {
+     "genre": "goa-trance",
+     "md5": "2fba77baf619901f392af6ac515e7074",
+     "bytes": 327003
+    },
+    {
+     "genre": "grime",
+     "md5": "f1556863fb6affdb062e0be2ef667090",
+     "bytes": 146155
+    },
+    {
+     "genre": "grunge",
+     "md5": "bcc579c2aa1c21282eddcabbde0085f0",
+     "bytes": 226250
+    },
+    {
+     "genre": "gypsy-jazz",
+     "md5": "ec4c9ce50e26cfdd1121cc718112be89",
+     "bytes": 174240
+    },
+    {
+     "genre": "halftime",
+     "md5": "de6ca520d908be04525da4ff91b7d8e7",
+     "bytes": 228645
+    },
+    {
+     "genre": "happy-hardcore",
+     "md5": "5919f84fb00ee983626582c3450f6909",
+     "bytes": 255740
+    },
+    {
+     "genre": "hard-bop",
+     "md5": "ffeeb56840e032c062c778d9a14a9476",
+     "bytes": 229267
+    },
+    {
+     "genre": "hard-rock",
+     "md5": "a29cff39da3587686f6e54c6b398ad9e",
+     "bytes": 186519
+    },
+    {
+     "genre": "hard-techno",
+     "md5": "fb3a6cc4edf3aa2aae9cfd91aa093323",
+     "bytes": 174376
+    },
+    {
+     "genre": "hard-trance",
+     "md5": "9b374b3bc1358270d45fff6f3786f86f",
+     "bytes": 233145
+    },
+    {
+     "genre": "hard-trap",
+     "md5": "1a5b540780e138b107bc60184677c16d",
+     "bytes": 235387
+    },
+    {
+     "genre": "hardcore-gabber",
+     "md5": "7d16c9fbc34e80d9b02ba936f575bcab",
+     "bytes": 275488
+    },
+    {
+     "genre": "hardstyle",
+     "md5": "1507a1dbe07de2df4b2a93d9c6c6c5e8",
+     "bytes": 262161
+    },
+    {
+     "genre": "heavy-metal",
+     "md5": "1646aa9239f6c18f84cbeb4eee7c9006",
+     "bytes": 187512
+    },
+    {
+     "genre": "hybrid-trap",
+     "md5": "1687b4b4f2d0f9ca5afd0c37a33593a9",
+     "bytes": 238994
+    },
+    {
+     "genre": "idm",
+     "md5": "4eaaf8f253aaf61b61690ae7243fb674",
+     "bytes": 207326
+    },
+    {
+     "genre": "industrial-techno",
+     "md5": "015f8f0ae65b2a02e6cb28c68a2de4b2",
+     "bytes": 286958
+    },
+    {
+     "genre": "j-pop",
+     "md5": "8923b689a6b7f207253582e72f7d9537",
+     "bytes": 204415
+    },
+    {
+     "genre": "jazz-fusion",
+     "md5": "57a772d2f34368a12814a842ca0d66ec",
+     "bytes": 214423
+    },
+    {
+     "genre": "jersey-club",
+     "md5": "196f8e0bf56105f04e0dc2b531940be1",
+     "bytes": 171007
+    },
+    {
+     "genre": "jersey-drill",
+     "md5": "456e305542d6d8035e867cd9be779240",
+     "bytes": 186715
+    },
+    {
+     "genre": "jump-up",
+     "md5": "50251bad6aa59b18956219710d48d692",
+     "bytes": 176718
+    },
+    {
+     "genre": "jungle",
+     "md5": "da17f73298cc710fe5e93c212c7d1da7",
+     "bytes": 201821
+    },
+    {
+     "genre": "k-pop",
+     "md5": "c8ba5afeb037d2ec64a43c8815fd3f00",
+     "bytes": 223295
+    },
+    {
+     "genre": "kawaii-future-bass",
+     "md5": "185303b5bb237d3c24abf911f7528cf5",
+     "bytes": 199671
+    },
+    {
+     "genre": "kuduro",
+     "md5": "261aa95ea546d1ca4b39893bc0353627",
+     "bytes": 233595
+    },
+    {
+     "genre": "liquid-dnb",
+     "md5": "ff8386fcd2536dbb919293c22d14ed6d",
+     "bytes": 239199
+    },
+    {
+     "genre": "lofi-hip-hop",
+     "md5": "989cdca52d4b8f7bf505fd3868c5b901",
+     "bytes": 169926
+    },
+    {
+     "genre": "lofi-house",
+     "md5": "e81bd16769a70e183fb77288f82c541e",
+     "bytes": 169776
+    },
+    {
+     "genre": "math-rock",
+     "md5": "8cb245554a3d57c10f967a3d2b3fdd0d",
+     "bytes": 196457
+    },
+    {
+     "genre": "melodic-dubstep",
+     "md5": "c02a34ac58a5a4709706cc8d87ea8810",
+     "bytes": 167889
+    },
+    {
+     "genre": "melodic-house",
+     "md5": "901d70109ad50eaad22d5fc2a4caab4c",
+     "bytes": 206917
+    },
+    {
+     "genre": "metalcore",
+     "md5": "774d60cb50474ab9e8685b15005d4b72",
+     "bytes": 229804
+    },
+    {
+     "genre": "microhouse",
+     "md5": "46022a5a69de357b466a2f65838dbccd",
+     "bytes": 226956
+    },
+    {
+     "genre": "minimal-techno",
+     "md5": "54dee367f51deaa73ab899153d1bc678",
+     "bytes": 149940
+    },
+    {
+     "genre": "modal-jazz",
+     "md5": "8c5d5e405002f4ebdec368356fc840b0",
+     "bytes": 168094
+    },
+    {
+     "genre": "moombahton",
+     "md5": "9d46ce7457684bde20d199800f770689",
+     "bytes": 324101
+    },
+    {
+     "genre": "motown",
+     "md5": "0d25ef432ccc40834e2feae5b0036985",
+     "bytes": 188835
+    },
+    {
+     "genre": "neo-soul",
+     "md5": "0bb9e50370a6441764e56466a1cf0533",
+     "bytes": 165969
+    },
+    {
+     "genre": "neurofunk",
+     "md5": "3bb4f12f8358682bd06b53d1258e70e2",
+     "bytes": 184760
+    },
+    {
+     "genre": "new-wave",
+     "md5": "c3e6126454f7199b8f147119705038a6",
+     "bytes": 208305
+    },
+    {
+     "genre": "nu-disco-house",
+     "md5": "f7e71d5f15dc359b8a66d8fe3125cb27",
+     "bytes": 239143
+    },
+    {
+     "genre": "old-school-hip-hop",
+     "md5": "f23d73306c5bb651082fd92cf57be265",
+     "bytes": 201783
+    },
+    {
+     "genre": "peak-time-techno",
+     "md5": "d21c3e594847816d67990e3e27bc0ef0",
+     "bytes": 119279
+    },
+    {
+     "genre": "phonk",
+     "md5": "518089433c95b1dfb2b45c42e3f1c54f",
+     "bytes": 122122
+    },
+    {
+     "genre": "post-dubstep",
+     "md5": "3ff8071dcbfe2e279c992e46b4b8efae",
+     "bytes": 108198
+    },
+    {
+     "genre": "post-punk",
+     "md5": "f9115f4f324ca8a9e33f2f7805e9e46c",
+     "bytes": 148989
+    },
+    {
+     "genre": "progressive-house",
+     "md5": "8a3627e90b87b8e5859f091ab3af74c3",
+     "bytes": 162676
+    },
+    {
+     "genre": "progressive-rock",
+     "md5": "4cb14c4f6df2edcb6b1cf229e6687af1",
+     "bytes": 203075
+    },
+    {
+     "genre": "progressive-trance",
+     "md5": "063714c79b466603ab4440578f11db86",
+     "bytes": 205279
+    },
+    {
+     "genre": "psytrance",
+     "md5": "ed3ac53df749ecb831aa02efb08bda39",
+     "bytes": 299279
+    },
+    {
+     "genre": "punk-rock",
+     "md5": "82a9eab43513aafb45172af5bd31836c",
+     "bytes": 216948
+    },
+    {
+     "genre": "ragga-jungle",
+     "md5": "b416ca52252add707b8e6a7bbc2c5d67",
+     "bytes": 194047
+    },
+    {
+     "genre": "raw-techno",
+     "md5": "bd560df5ec7f45022222b151b64d1cb4",
+     "bytes": 163840
+    },
+    {
+     "genre": "reggae",
+     "md5": "dfcd11bc9e0c2ef63ff8c45c6b5358ae",
+     "bytes": 289060
+    },
+    {
+     "genre": "reggaeton",
+     "md5": "7e47d7274ecd6d7a854e80bf1c473556",
+     "bytes": 183446
+    },
+    {
+     "genre": "riddim",
+     "md5": "b67b4889f5554f318ffd99d21328839e",
+     "bytes": 146220
+    },
+    {
+     "genre": "rock-and-roll",
+     "md5": "6e9b5df0acd15ded8c17042b23bddd85",
+     "bytes": 180861
+    },
+    {
+     "genre": "salsa",
+     "md5": "5fd92123795fa2d26981061fe96b16da",
+     "bytes": 287144
+    },
+    {
+     "genre": "samba",
+     "md5": "100da9d99cea9f8d59a4ca86921cfcf1",
+     "bytes": 299187
+    },
+    {
+     "genre": "sambass",
+     "md5": "c3df6c43668dd2e8af6ed56195e71554",
+     "bytes": 196064
+    },
+    {
+     "genre": "schranz",
+     "md5": "7fade25c51506da90d9ab15e2fb3c5b3",
+     "bytes": 167725
+    },
+    {
+     "genre": "shoe-gaze",
+     "md5": "725af0403a3641d7a155d01fdc69a8c2",
+     "bytes": 245791
+    },
+    {
+     "genre": "smooth-jazz",
+     "md5": "40a001848d1e80fe79e141d7a05fe786",
+     "bytes": 176653
+    },
+    {
+     "genre": "soul",
+     "md5": "66fd2cf7137b8721aac75ed128609e4c",
+     "bytes": 187018
+    },
+    {
+     "genre": "southern-hip-hop",
+     "md5": "f78e8186b4f0ad07b40635bd67b4729d",
+     "bytes": 222035
+    },
+    {
+     "genre": "speed-garage",
+     "md5": "62e91491babec41e73838baf4661cc59",
+     "bytes": 208346
+    },
+    {
+     "genre": "speedbass",
+     "md5": "e460a4c598789d5cc6c967e42478c884",
+     "bytes": 203786
+    },
+    {
+     "genre": "synth-pop",
+     "md5": "cda48abef5aa7b51c078a0c371403db4",
+     "bytes": 204581
+    },
+    {
+     "genre": "synthwave",
+     "md5": "3476d2de081b14092a0e638f98ac2d3b",
+     "bytes": 178095
+    },
+    {
+     "genre": "tearout-dubstep",
+     "md5": "d41424a74e196612017182de0ec1ee47",
+     "bytes": 242606
+    },
+    {
+     "genre": "tech-house",
+     "md5": "45970a4e8d136a161e81db4fdfa905a6",
+     "bytes": 120528
+    },
+    {
+     "genre": "tech-trance",
+     "md5": "7ba934deec6d123db480737be282b94d",
+     "bytes": 196104
+    },
+    {
+     "genre": "techstep",
+     "md5": "8e53a91c162b51a7752c522c44e40c10",
+     "bytes": 153443
+    },
+    {
+     "genre": "texas-blues",
+     "md5": "097d5f03370e64735bc8d2310982fa90",
+     "bytes": 253986
+    },
+    {
+     "genre": "thrash-metal",
+     "md5": "147115659e8b475bd7ebb9a064ba940e",
+     "bytes": 200752
+    },
+    {
+     "genre": "traditional-jazz",
+     "md5": "3ecca848d89f15f1ad9f8e7a64e9091d",
+     "bytes": 224800
+    },
+    {
+     "genre": "traditional-pop",
+     "md5": "4d3b37a321d3cbd0f5604f5572689e2b",
+     "bytes": 176545
+    },
+    {
+     "genre": "trap-rap",
+     "md5": "d2ec4ada7201b14d2b045b01c2e8507f",
+     "bytes": 121606
+    },
+    {
+     "genre": "trip-hop",
+     "md5": "b65e4e2f4a9338437d85ccc2a36c0c88",
+     "bytes": 133850
+    },
+    {
+     "genre": "tropical-house",
+     "md5": "679113296ff266e0e21927ab15fff0dc",
+     "bytes": 246286
+    },
+    {
+     "genre": "uk-drill",
+     "md5": "d48b87b0c902689a63aa02ac3822214b",
+     "bytes": 142978
+    },
+    {
+     "genre": "uk-funky",
+     "md5": "a164b9c767e1223e0c9f01127662e600",
+     "bytes": 178555
+    },
+    {
+     "genre": "uk-garage",
+     "md5": "e6833c1e6ca08c356405706c712922f4",
+     "bytes": 179798
+    },
+    {
+     "genre": "uplifting-trance",
+     "md5": "55d8f89bf133da3af96ece41f9cecaec",
+     "bytes": 242917
+    },
+    {
+     "genre": "vaporwave",
+     "md5": "4a683d128d64818eafce638e0393e379",
+     "bytes": 222060
+    },
+    {
+     "genre": "vocal-trance",
+     "md5": "e6e204451182e12e03da1f4c7a68dd79",
+     "bytes": 215926
+    },
+    {
+     "genre": "wave",
+     "md5": "d80b8b592e39a008b7a9cf13b9838f34",
+     "bytes": 215962
+    },
+    {
+     "genre": "west-coast-hip-hop",
+     "md5": "d263bcb8bbcd440cbb20cdd836b6681e",
+     "bytes": 219354
+    }
+   ]
+  }
+ },
+ "totals": {
+  "tiles": 954,
+  "bytes": 279604007,
+  "rejected": 100
+ }
+}

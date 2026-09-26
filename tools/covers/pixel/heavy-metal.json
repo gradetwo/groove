@@ -1,0 +1,14 @@
+{
+  "model": "qwen-image-2.1",
+  "preset": "quality",
+  "size": "1024x1024",
+  "steps": 40,
+  "seed": 1863,
+  "skin": "pixel",
+  "genre": "heavy-metal",
+  "prompt": "Authentic 16-bit pixel art, low-resolution console graphics, square album cover, scene: a massive steel speaker cabinet with a glowing grille and riveted seams, expressing the sound of heavy metal \u2014 chugging riffs, double-kick drive, heavy power, drawing on the English Midlands in the early 1970s, a stack of valve amps and riveted steel. Strict pixel grid with hard aliased edges and no anti-aliasing, limited palette of about twenty colours drawn from deep indigo (#10121c), panel indigo (#1a1d2e, #262a44), pale ink (#e8e8f0), mint accent (#4ce0b3) with cyan (#5bc8ff), pink (#ff6b97) and violet (#b06bff) incident light. Ordered dithering for all shading, flat chunky clusters of pixels, a single-pixel rim light, strong readable silhouette, flat-shaded scene with a clear horizon or floor line, CRT scanline veil over the whole image, soft phosphor bloom on the brightest pixels only, faint vignette. Nostalgic, crisp, deliberately low-resolution. No anti-aliasing, no smooth curves, no lettering, no HUD text, no UI.",
+  "origin": "the English Midlands in the early 1970s, a stack of valve amps and riveted steel",
+  "negative_prompt": "text, letters, words, typography, logo, watermark, signature, small print, fine print, corner mark, caption, UI, screenshot, frame, border, photograph of a real person, celebrity, album cover, brand, clipart, flat vector icon, stock photo, generic corporate imagery, floating geometric shapes, plastic 3D render, oversaturated HDR, low detail, blurry, jpeg artifacts",
+  "postprocess": "pixelate_160_nearest",
+  "timestamp": "2026-09-25T18:08:57Z"
+}

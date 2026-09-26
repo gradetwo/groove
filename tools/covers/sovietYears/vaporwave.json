@@ -1,0 +1,20 @@
+{
+  "model": "qwen-image-2.1",
+  "preset": "quality",
+  "size": "1024x1024",
+  "steps": 40,
+  "seed": 1784,
+  "skin": "sovietYears",
+  "genre": "vaporwave",
+  "prompt": "1920s Soviet constructivist propaganda poster, two flat inks on coarse aged paper, square album cover, subject: a marble bust beside an old television on a pastel pink grid floor as a monumental photomontage silhouette or severely reduced geometric icon, expressing the sound of vaporwave \u2014 slowed nostalgic samples, hazy reverb, faded memory, drawing on early-1990s corporate computer imagery and dead mall aesthetics, pastel and hazy. Aged paper ground (#f4f1e1) as the third colour, flag red (#cc0000) used as a large flat field covering a third to half of the image, dense black (#111111) carrying all structure. Aggressive diagonals, skewed and sheared geometry, a red wedge or beam cutting across the square, radiating and concentric flat shapes, hard overlapping masses, zero-blur plate-offset shadows, coarse paper fibre, flat misregistered ink, poster pasted and printed too heavily. Monumental, collective, graphic. No gradients, no soft shadows, no 3D, no text, no Cyrillic, no lettering. Hold the skin's medium and palette exactly: use only the skin's ground, ink and one accent, and do not drift into another medium. Render only the physical medium and materials named above. 1920s Soviet constructivist propaganda poster, two flat inks on coarse aged paper, square album cover, subject: a classical bust on a plinth beside a CRT television as flat black and paper shapes with one flat red field and a paper-white floor. Aged paper ground (#f4f1e1) as the third colour, flag red (#cc0000) used as one large flat field covering a third to half of the image, dense black (#111111) carrying all structure. Aggressive diagonals, skewed sheared geometry, hard overlapping flat masses, zero-blur plate-offset shadows, coarse paper fibre, flat misregistered ink. No pink, no pastel tint, no gradient floor; hard flat inks only. No gradients, no soft shadows, no glow, no 3D, no photorealism, no text, no letters, no numerals, no signature, no logo.",
+  "origin": "early-1990s corporate computer imagery and dead mall aesthetics, pastel and hazy",
+  "negative_prompt": "text, letters, words, typography, logo, watermark, signature, small print, fine print, corner mark, caption, UI, screenshot, frame, border, photograph of a real person, celebrity, album cover, brand, clipart, flat vector icon, stock photo, generic corporate imagery, floating geometric shapes, plastic 3D render, oversaturated HDR, low detail, blurry, jpeg artifacts",
+  "postprocess": null,
+  "timestamp": "2026-09-25T18:49:05Z",
+  "review": {
+    "decision": "regenerated_after_reject",
+    "reasons": [
+      "R2"
+    ]
+  }
+}

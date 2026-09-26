@@ -84,3 +84,7 @@ public/covers/comic/
 public/covers/soviet/
 public/covers/sovietYears/
 public/covers/pixel/
+
+tools/covers/__pycache__/
+tools/covers/_batch_scratch/
+public/covers/_*

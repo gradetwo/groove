@@ -1,0 +1,185 @@
+{
+  "skin": "sovietYears",
+  "reviewed": 159,
+  "rejected": 24,
+  "regen_ok": 0,
+  "reasons": {
+    "R1": 3,
+    "R2": 14,
+    "R3": 7,
+    "R4": 2
+  },
+  "r5_count": 28,
+  "rejects": [
+    {
+      "genre": "kawaii-future-bass",
+      "reasons": [
+        "R2"
+      ],
+      "hint": "Pastel pink/blue/yellow puffy cloud with hearts - no constructivist language at all."
+    },
+    {
+      "genre": "future-garage",
+      "reasons": [
+        "R2"
+      ],
+      "hint": "Violet/purple night dominates; glossy rain - reads as a different skin."
+    },
+    {
+      "genre": "dream-trance",
+      "reasons": [
+        "R2"
+      ],
+      "hint": "Purple clouds and soft rendering; red/black/paper language broken."
+    },
+    {
+      "genre": "happy-hardcore",
+      "reasons": [
+        "R2"
+      ],
+      "hint": "Rainbow beams (green/blue/violet/yellow) as a major field - explicitly banned."
+    },
+    {
+      "genre": "melodic-house",
+      "reasons": [
+        "R2"
+      ],
+      "hint": "Green aurora is a major colour - reads like the default skin, not sovietYears."
+    },
+    {
+      "genre": "vaporwave",
+      "reasons": [
+        "R2"
+      ],
+      "hint": "Pink tiled floor as a large field; pastel palette breaks the skin."
+    },
+    {
+      "genre": "j-pop",
+      "reasons": [
+        "R2"
+      ],
+      "hint": "Pastel multicolour confetti and building; blues and pastels major."
+    },
+    {
+      "genre": "wave",
+      "reasons": [
+        "R2"
+      ],
+      "hint": "Soft fog gradient / atmospheric perspective - photographic, banned medium."
+    },
+    {
+      "genre": "dancehall",
+      "reasons": [
+        "R2"
+      ],
+      "hint": "Green/yellow/orange sound-system tower - greens banned as a major colour."
+    },
+    {
+      "genre": "phonk",
+      "reasons": [
+        "R2"
+      ],
+      "hint": "Violet night haze dominant; off-palette and soft."
+    },
+    {
+      "genre": "southern-hip-hop",
+      "reasons": [
+        "R2"
+      ],
+      "hint": "Multicolour patchwork car (blue/green/yellow/pink) as the main subject."
+    },
+    {
+      "genre": "afro-house",
+      "reasons": [
+        "R2"
+      ],
+      "hint": "Orange sunset gradient and atmospheric horizon - gradients banned."
+    },
+    {
+      "genre": "new-wave",
+      "reasons": [
+        "R2"
+      ],
+      "hint": "Cyan glowing waveform across both figures - banned blue and glow."
+    },
+    {
+      "genre": "electro",
+      "reasons": [
+        "R2"
+      ],
+      "hint": "Cyan neon lines plus a 3D-shaded robot arm and gradient - neon/3D/gloss banned."
+    },
+    {
+      "genre": "detroit-techno",
+      "reasons": [
+        "R3"
+      ],
+      "hint": "'IW' monogram signature burnt into the red field (D.3 corner-mark defect)."
+    },
+    {
+      "genre": "ghetto-house",
+      "reasons": [
+        "R3"
+      ],
+      "hint": "Maker's-mark / seal emblem in the bottom-left corner (D.3 signature defect)."
+    },
+    {
+      "genre": "hard-rock",
+      "reasons": [
+        "R3"
+      ],
+      "hint": "'Moxthal' pseudo-brand wordmark on the amp head - real-brand echo, lettering banned."
+    },
+    {
+      "genre": "doom-metal",
+      "reasons": [
+        "R3"
+      ],
+      "hint": "Large distorted 'RIESN' lettering carved into the monolith - lettering banned."
+    },
+    {
+      "genre": "acid-jazz",
+      "reasons": [
+        "R3"
+      ],
+      "hint": "Garbled cursive pseudo-word lettered across the organ front - text defect."
+    },
+    {
+      "genre": "jungle",
+      "reasons": [
+        "R3"
+      ],
+      "hint": "Newspaper carries a pseudo-headline and body text - garbled lettering, banned."
+    },
+    {
+      "genre": "hybrid-trap",
+      "reasons": [
+        "R3"
+      ],
+      "hint": "Huge legible '8080' numerals plus panel text - lettering/numerals banned."
+    },
+    {
+      "genre": "chicago-blues",
+      "reasons": [
+        "R1"
+      ],
+      "hint": "Wrong instrument: a concert harp instead of a blues harmonica."
+    },
+    {
+      "genre": "amapiano",
+      "reasons": [
+        "R1",
+        "R4"
+      ],
+      "hint": "No amapiano signifier (no piano or log drum) and a stock whisky-glass prop."
+    },
+    {
+      "genre": "chicago-house",
+      "reasons": [
+        "R1",
+        "R4"
+      ],
+      "hint": "Disco-ball stock cliche over a live kit; no Chicago-house machine identity."
+    }
+  ]
+}

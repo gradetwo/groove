@@ -1,0 +1,21 @@
+{
+  "model": "qwen-image-2.1",
+  "preset": "quality",
+  "size": "1024x1024",
+  "steps": 40,
+  "seed": 1923,
+  "skin": "pixel",
+  "genre": "soul",
+  "prompt": "Authentic 16-bit pixel art, low-resolution console graphics, square album cover, scene: a vintage microphone and a Hammond organ in a warm wood-panelled room, expressing the sound of soul \u2014 warm gospel chords, passionate vocal, deep groove, drawing on Memphis and Detroit in the mid-1960s, a Hammond organ and a vintage microphone. Strict pixel grid with hard aliased edges and no anti-aliasing, limited palette of about twenty colours drawn from deep indigo (#10121c), panel indigo (#1a1d2e, #262a44), pale ink (#e8e8f0), mint accent (#4ce0b3) with cyan (#5bc8ff), pink (#ff6b97) and violet (#b06bff) incident light. Ordered dithering for all shading, flat chunky clusters of pixels, a single-pixel rim light, strong readable silhouette, flat-shaded scene with a clear horizon or floor line, CRT scanline veil over the whole image, soft phosphor bloom on the brightest pixels only, faint vignette. Nostalgic, crisp, deliberately low-resolution. No anti-aliasing, no smooth curves, no lettering, no HUD text, no UI. Hold the skin's medium and palette exactly: use only the skin's ground, ink and one accent, and do not drift into another medium. One dominant silhouette, clean deliberate framing, no lettering of any kind, no watermark or fine print, no melted or impossible geometry; the tile must read at 120px. Render only the physical medium and materials named above. Authentic 16-bit pixel art, hard aliased edges, no anti-aliasing, deep indigo ground #10121c covering about seventy percent of the frame with panels #1a1d2e/#262a44, pale ink #e8e8f0, mint #4ce0b3 accent with cyan #5bc8ff and pink #ff6b97, ordered dithering, CRT scanlines: a Memphis studio in the mid-1960s - a Hammond organ with its drawbars and two manuals at the left, a vintage chrome ribbon microphone on a stand at the right, both lit by one cold indigo rim light with a single mint spill. Keep the room indigo and cool: no warm brown wood panelling dominating, no orange interior. The organ nameboard is a plain blank panel carrying no lettering at all. No text, no letters, no gold lettering, no brand marks, no pseudo-words, no anti-aliasing, no smooth gradients.",
+  "origin": "Memphis and Detroit in the mid-1960s, a Hammond organ and a vintage microphone",
+  "negative_prompt": "text, letters, words, typography, logo, watermark, signature, small print, fine print, corner mark, caption, UI, screenshot, frame, border, photograph of a real person, celebrity, album cover, brand, clipart, flat vector icon, stock photo, generic corporate imagery, floating geometric shapes, plastic 3D render, oversaturated HDR, low detail, blurry, jpeg artifacts",
+  "postprocess": "pixelate_160_nearest",
+  "timestamp": "2026-09-25T18:42:46Z",
+  "review": {
+    "decision": "regenerated_after_reject",
+    "reasons": [
+      "R2",
+      "R3"
+    ]
+  }
+}

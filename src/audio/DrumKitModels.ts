@@ -1541,7 +1541,8 @@ function synthesizeMetalModel(
 ): DrumVoiceCleanup {
   const sources: AudioScheduledSourceNode[] = [];
   const gains: GainNode[] = [];
-  const f0 = spec.baseHz * mult;
+  // No `f0` here: the partials are built from `spec.baseHz * ratio` and transposed by `mult` through `scheduleCluster`, so a
+  // base-frequency local would be a value nothing reads.
   const decay = spec.decay * timbre.decayScale;
 
   const bus = ctx.createGain();

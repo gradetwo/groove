@@ -1,0 +1,14 @@
+{
+  "model": "qwen-image-2.1",
+  "preset": "quality",
+  "size": "1024x1024",
+  "steps": 40,
+  "seed": 2375,
+  "skin": "sovietYears",
+  "genre": "death-metal",
+  "prompt": "1920s Soviet constructivist propaganda poster, two flat inks on coarse aged paper, square album cover, subject: a wall of stacked amplifier cabinets glowing red in a dark room as a monumental photomontage silhouette or severely reduced geometric icon, expressing the sound of death metal \u2014 down-tuned blast riffs, guttural roar, brutal weight, drawing on Florida and Stockholm in the early 1990s, down-tuned riffs and blast beats. Aged paper ground (#f4f1e1) as the third colour, flag red (#cc0000) used as a large flat field covering a third to half of the image, dense black (#111111) carrying all structure. Aggressive diagonals, skewed and sheared geometry, a red wedge or beam cutting across the square, radiating and concentric flat shapes, hard overlapping masses, zero-blur plate-offset shadows, coarse paper fibre, flat misregistered ink, poster pasted and printed too heavily. Monumental, collective, graphic. No gradients, no soft shadows, no 3D, no text, no Cyrillic, no lettering.",
+  "origin": "Florida and Stockholm in the early 1990s, down-tuned riffs and blast beats",
+  "negative_prompt": "text, letters, words, typography, logo, watermark, signature, small print, fine print, corner mark, caption, UI, screenshot, frame, border, photograph of a real person, celebrity, album cover, brand, clipart, flat vector icon, stock photo, generic corporate imagery, floating geometric shapes, plastic 3D render, oversaturated HDR, low detail, blurry, jpeg artifacts",
+  "postprocess": null,
+  "timestamp": "2026-09-25T17:25:52Z"
+}

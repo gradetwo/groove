@@ -1,0 +1,20 @@
+{
+  "model": "qwen-image-2.1",
+  "preset": "quality",
+  "size": "1024x1024",
+  "steps": 40,
+  "seed": 2355,
+  "skin": "sovietYears",
+  "genre": "chicago-blues",
+  "prompt": "1920s Soviet constructivist propaganda poster, two flat inks on coarse aged paper, square album cover, subject: a battered hollow-body guitar and a harp on a bar stool in a smoky room as a monumental photomontage silhouette or severely reduced geometric icon, expressing the sound of chicago blues \u2014 raw electric slide, shuffling live band, drawing on Chicago's South Side clubs of the 1950s, a hollow-body guitar and a harp. Aged paper ground (#f4f1e1) as the third colour, flag red (#cc0000) used as a large flat field covering a third to half of the image, dense black (#111111) carrying all structure. Aggressive diagonals, skewed and sheared geometry, a red wedge or beam cutting across the square, radiating and concentric flat shapes, hard overlapping masses, zero-blur plate-offset shadows, coarse paper fibre, flat misregistered ink, poster pasted and printed too heavily. Monumental, collective, graphic. No gradients, no soft shadows, no 3D, no text, no Cyrillic, no lettering. The genre's own instruments, venue and era must be unmistakable: it must read as this specific music to a listener of it, not as generic music imagery. Render only the physical medium and materials named above. 1920s Soviet constructivist propaganda poster, two flat inks on coarse aged paper, square album cover, subject: an electric archtop guitar and a harmonica (mouth harp) as flat black silhouettes on a bar stool with one flat red field. Aged paper ground (#f4f1e1) as the third colour, flag red (#cc0000) used as one large flat field covering a third to half of the image, dense black (#111111) carrying all structure. Aggressive diagonals, skewed sheared geometry, hard overlapping flat masses, zero-blur plate-offset shadows, coarse paper fibre, flat misregistered ink. No concert harp, no orchestral instrument. No gradients, no soft shadows, no glow, no 3D, no photorealism, no text, no letters, no numerals, no signature, no logo.",
+  "origin": "Chicago's South Side clubs of the 1950s, a hollow-body guitar and a harp",
+  "negative_prompt": "text, letters, words, typography, logo, watermark, signature, small print, fine print, corner mark, caption, UI, screenshot, frame, border, photograph of a real person, celebrity, album cover, brand, clipart, flat vector icon, stock photo, generic corporate imagery, floating geometric shapes, plastic 3D render, oversaturated HDR, low detail, blurry, jpeg artifacts",
+  "postprocess": null,
+  "timestamp": "2026-09-25T18:51:49Z",
+  "review": {
+    "decision": "regenerated_after_reject",
+    "reasons": [
+      "R1"
+    ]
+  }
+}

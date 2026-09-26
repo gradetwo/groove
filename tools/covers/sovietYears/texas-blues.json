@@ -1,0 +1,14 @@
+{
+  "model": "qwen-image-2.1",
+  "preset": "quality",
+  "size": "1024x1024",
+  "steps": 40,
+  "seed": 1630,
+  "skin": "sovietYears",
+  "genre": "texas-blues",
+  "prompt": "1920s Soviet constructivist propaganda poster, two flat inks on coarse aged paper, square album cover, subject: a battered Stratocaster on a wooden porch, dust on the boards as a monumental photomontage silhouette or severely reduced geometric icon, expressing the sound of texas blues \u2014 sharp overdriven lead, shuffling roadhouse groove, drawing on Austin and the Texas roadhouses of the 1970s, a Stratocaster on a wooden porch. Aged paper ground (#f4f1e1) as the third colour, flag red (#cc0000) used as a large flat field covering a third to half of the image, dense black (#111111) carrying all structure. Aggressive diagonals, skewed and sheared geometry, a red wedge or beam cutting across the square, radiating and concentric flat shapes, hard overlapping masses, zero-blur plate-offset shadows, coarse paper fibre, flat misregistered ink, poster pasted and printed too heavily. Monumental, collective, graphic. No gradients, no soft shadows, no 3D, no text, no Cyrillic, no lettering.",
+  "origin": "Austin and the Texas roadhouses of the 1970s, a Stratocaster on a wooden porch",
+  "negative_prompt": "text, letters, words, typography, logo, watermark, signature, small print, fine print, corner mark, caption, UI, screenshot, frame, border, photograph of a real person, celebrity, album cover, brand, clipart, flat vector icon, stock photo, generic corporate imagery, floating geometric shapes, plastic 3D render, oversaturated HDR, low detail, blurry, jpeg artifacts",
+  "postprocess": null,
+  "timestamp": "2026-09-25T17:52:33Z"
+}

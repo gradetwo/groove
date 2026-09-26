@@ -1,0 +1,2855 @@
+{
+  "_header": {
+    "generated": "2026-09-25T18:26:37Z",
+    "skin": "sovietYears",
+    "images": 159,
+    "note": "skin-specific extension; flags are suspects for visual confirmation",
+    "flag_counts": {
+      "dark_tile": 62,
+      "low_paper_field": 114,
+      "not_flat_print": 15
+    }
+  },
+  "flag_counts": {
+    "dark_tile": 62,
+    "low_paper_field": 114,
+    "not_flat_print": 15
+  },
+  "flagged": {
+    "2-step-garage": [
+      "dark_tile"
+    ],
+    "acid-house": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "acid-jazz": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "acid-techno": [
+      "low_paper_field"
+    ],
+    "afro-house": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "alternative-rnb": [
+      "dark_tile"
+    ],
+    "amapiano": [
+      "low_paper_field"
+    ],
+    "ambient-techno": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "bachata": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "bass-house": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "bassline": [
+      "low_paper_field"
+    ],
+    "bebop": [
+      "low_paper_field"
+    ],
+    "big-beat": [
+      "low_paper_field"
+    ],
+    "black-metal": [
+      "not_flat_print",
+      "dark_tile"
+    ],
+    "bossa-nova": [
+      "low_paper_field"
+    ],
+    "breakbeat": [
+      "low_paper_field",
+      "not_flat_print",
+      "dark_tile"
+    ],
+    "brooklyn-drill": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "brostep": [
+      "low_paper_field",
+      "not_flat_print",
+      "dark_tile"
+    ],
+    "chicago-blues": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "chicago-house": [
+      "low_paper_field"
+    ],
+    "chillstep": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "chiptune": [
+      "low_paper_field"
+    ],
+    "city-pop": [
+      "low_paper_field"
+    ],
+    "cloud-rap": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "conscious-hip-hop": [
+      "low_paper_field"
+    ],
+    "contemporary-rnb": [
+      "dark_tile"
+    ],
+    "cool-jazz": [
+      "low_paper_field",
+      "not_flat_print",
+      "dark_tile"
+    ],
+    "cumbia": [
+      "low_paper_field"
+    ],
+    "death-metal": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "deep-house": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "delta-blues": [
+      "low_paper_field",
+      "not_flat_print"
+    ],
+    "detroit-techno": [
+      "low_paper_field"
+    ],
+    "disco": [
+      "low_paper_field",
+      "not_flat_print"
+    ],
+    "doom-metal": [
+      "low_paper_field"
+    ],
+    "downtempo": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "dream-trance": [
+      "dark_tile"
+    ],
+    "drift-phonk": [
+      "low_paper_field"
+    ],
+    "dub": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "dub-techno": [
+      "dark_tile"
+    ],
+    "dubstep": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "east-coast-hip-hop": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "edm-trap": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "electric-blues": [
+      "low_paper_field"
+    ],
+    "electro": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "electro-house": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "emo-rap": [
+      "low_paper_field"
+    ],
+    "euro-trance": [
+      "low_paper_field"
+    ],
+    "eurodance": [
+      "low_paper_field"
+    ],
+    "footwork": [
+      "low_paper_field"
+    ],
+    "free-jazz": [
+      "low_paper_field"
+    ],
+    "french-house": [
+      "low_paper_field"
+    ],
+    "frenchcore": [
+      "low_paper_field"
+    ],
+    "funk": [
+      "low_paper_field"
+    ],
+    "future-bass": [
+      "low_paper_field"
+    ],
+    "future-garage": [
+      "dark_tile"
+    ],
+    "future-house": [
+      "low_paper_field"
+    ],
+    "ghetto-house": [
+      "low_paper_field"
+    ],
+    "glitch-hop": [
+      "low_paper_field"
+    ],
+    "goa-trance": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "grunge": [
+      "low_paper_field"
+    ],
+    "gypsy-jazz": [
+      "low_paper_field"
+    ],
+    "halftime": [
+      "low_paper_field",
+      "not_flat_print"
+    ],
+    "happy-hardcore": [
+      "low_paper_field"
+    ],
+    "hard-rock": [
+      "low_paper_field"
+    ],
+    "hard-techno": [
+      "low_paper_field"
+    ],
+    "hard-trance": [
+      "low_paper_field"
+    ],
+    "hard-trap": [
+      "low_paper_field",
+      "not_flat_print"
+    ],
+    "hardcore-gabber": [
+      "low_paper_field",
+      "not_flat_print"
+    ],
+    "heavy-metal": [
+      "low_paper_field"
+    ],
+    "hybrid-trap": [
+      "dark_tile"
+    ],
+    "idm": [
+      "low_paper_field"
+    ],
+    "industrial-techno": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "jazz-fusion": [
+      "low_paper_field"
+    ],
+    "jersey-club": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "jersey-drill": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "jump-up": [
+      "low_paper_field"
+    ],
+    "jungle": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "k-pop": [
+      "low_paper_field"
+    ],
+    "kuduro": [
+      "low_paper_field",
+      "not_flat_print"
+    ],
+    "liquid-dnb": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "lofi-hip-hop": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "lofi-house": [
+      "low_paper_field"
+    ],
+    "math-rock": [
+      "low_paper_field"
+    ],
+    "melodic-dubstep": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "melodic-house": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "microhouse": [
+      "low_paper_field"
+    ],
+    "moombahton": [
+      "low_paper_field",
+      "not_flat_print"
+    ],
+    "motown": [
+      "low_paper_field"
+    ],
+    "neo-soul": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "neurofunk": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "new-wave": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "nu-disco-house": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "old-school-hip-hop": [
+      "low_paper_field"
+    ],
+    "peak-time-techno": [
+      "dark_tile"
+    ],
+    "phonk": [
+      "dark_tile"
+    ],
+    "post-punk": [
+      "not_flat_print"
+    ],
+    "progressive-house": [
+      "dark_tile"
+    ],
+    "progressive-rock": [
+      "low_paper_field"
+    ],
+    "progressive-trance": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "psytrance": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "punk-rock": [
+      "low_paper_field"
+    ],
+    "raw-techno": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "reggae": [
+      "low_paper_field"
+    ],
+    "reggaeton": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "riddim": [
+      "dark_tile"
+    ],
+    "rock-and-roll": [
+      "low_paper_field"
+    ],
+    "salsa": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "samba": [
+      "low_paper_field",
+      "not_flat_print"
+    ],
+    "sambass": [
+      "low_paper_field",
+      "not_flat_print"
+    ],
+    "schranz": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "smooth-jazz": [
+      "low_paper_field"
+    ],
+    "soul": [
+      "low_paper_field"
+    ],
+    "speed-garage": [
+      "dark_tile"
+    ],
+    "speedbass": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "synth-pop": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "tech-house": [
+      "low_paper_field"
+    ],
+    "tech-trance": [
+      "low_paper_field"
+    ],
+    "techstep": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "thrash-metal": [
+      "low_paper_field",
+      "not_flat_print",
+      "dark_tile"
+    ],
+    "traditional-jazz": [
+      "low_paper_field"
+    ],
+    "traditional-pop": [
+      "low_paper_field"
+    ],
+    "trap-rap": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "trip-hop": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "tropical-house": [
+      "low_paper_field"
+    ],
+    "uk-drill": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "uk-funky": [
+      "low_paper_field"
+    ],
+    "uk-garage": [
+      "low_paper_field",
+      "dark_tile"
+    ],
+    "uplifting-trance": [
+      "low_paper_field"
+    ]
+  },
+  "images": {
+    "2-step-garage": {
+      "red_field": 0.392,
+      "paper_field": 0.177,
+      "black_field": 0.3434,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4732,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0161,
+      "flags": [
+        "dark_tile"
+      ],
+      "luma_mean": 78.25,
+      "palette_distance": 0.0404
+    },
+    "acid-house": {
+      "red_field": 0.3615,
+      "paper_field": 0.0138,
+      "black_field": 0.3838,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4435,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0332,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 77.48,
+      "palette_distance": 0.0594
+    },
+    "acid-jazz": {
+      "red_field": 0.2505,
+      "paper_field": 0.0087,
+      "black_field": 0.4931,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3011,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0244,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 69.37,
+      "palette_distance": 0.0858
+    },
+    "acid-techno": {
+      "red_field": 0.3176,
+      "paper_field": 0.004,
+      "black_field": 0.3055,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3112,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0361,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 91.69,
+      "palette_distance": 0.0349
+    },
+    "afro-house": {
+      "red_field": 0.3598,
+      "paper_field": 0.0804,
+      "black_field": 0.2983,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3629,
+      "bottom_edge": 0.0,
+      "top_edge": 0.022,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 88.45,
+      "palette_distance": 0.05
+    },
+    "afrobeat": {
+      "red_field": 0.3357,
+      "paper_field": 0.1654,
+      "black_field": 0.3549,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3445,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0542,
+      "flags": [],
+      "luma_mean": 90.4,
+      "palette_distance": 0.0305
+    },
+    "alternative-rnb": {
+      "red_field": 0.3648,
+      "paper_field": 0.2053,
+      "black_field": 0.3004,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4183,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0269,
+      "flags": [
+        "dark_tile"
+      ],
+      "luma_mean": 88.22,
+      "palette_distance": 0.0184
+    },
+    "alternative-rock": {
+      "red_field": 0.3432,
+      "paper_field": 0.2719,
+      "black_field": 0.2383,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3915,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0278,
+      "flags": [],
+      "luma_mean": 112.27,
+      "palette_distance": 0.0675
+    },
+    "amapiano": {
+      "red_field": 0.387,
+      "paper_field": 0.0269,
+      "black_field": 0.2874,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4233,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0381,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 96.73,
+      "palette_distance": 0.0346
+    },
+    "ambient": {
+      "red_field": 0.2537,
+      "paper_field": 0.2808,
+      "black_field": 0.3261,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.438,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0176,
+      "flags": [],
+      "luma_mean": 98.9,
+      "palette_distance": 0.0381
+    },
+    "ambient-dub": {
+      "red_field": 0.2763,
+      "paper_field": 0.2188,
+      "black_field": 0.3687,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4598,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0107,
+      "flags": [],
+      "luma_mean": 93.3,
+      "palette_distance": 0.0283
+    },
+    "ambient-techno": {
+      "red_field": 0.3023,
+      "paper_field": 0.1196,
+      "black_field": 0.4039,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3907,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0254,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 78.01,
+      "palette_distance": 0.0574
+    },
+    "bachata": {
+      "red_field": 0.4162,
+      "paper_field": 0.014,
+      "black_field": 0.2898,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4346,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0693,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 88.8,
+      "palette_distance": 0.03
+    },
+    "bass-house": {
+      "red_field": 0.2911,
+      "paper_field": 0.0732,
+      "black_field": 0.4263,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4091,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0186,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 79.26,
+      "palette_distance": 0.0486
+    },
+    "bassline": {
+      "red_field": 0.3277,
+      "paper_field": 0.0103,
+      "black_field": 0.3272,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3933,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0469,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 90.18,
+      "palette_distance": 0.0336
+    },
+    "bebop": {
+      "red_field": 0.3314,
+      "paper_field": 0.0039,
+      "black_field": 0.3018,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3776,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0625,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 100.77,
+      "palette_distance": 0.0453
+    },
+    "big-beat": {
+      "red_field": 0.2944,
+      "paper_field": 0.0566,
+      "black_field": 0.2819,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3186,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0337,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 105.06,
+      "palette_distance": 0.0526
+    },
+    "black-metal": {
+      "red_field": 0.176,
+      "paper_field": 0.205,
+      "black_field": 0.2929,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.2822,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0264,
+      "flags": [
+        "not_flat_print",
+        "dark_tile"
+      ],
+      "luma_mean": 85.63,
+      "palette_distance": 0.0437
+    },
+    "blues-rock": {
+      "red_field": 0.4088,
+      "paper_field": 0.1583,
+      "black_field": 0.203,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4321,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0278,
+      "flags": [],
+      "luma_mean": 104.65,
+      "palette_distance": 0.0519
+    },
+    "boom-bap": {
+      "red_field": 0.3609,
+      "paper_field": 0.1591,
+      "black_field": 0.2944,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.408,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0112,
+      "flags": [],
+      "luma_mean": 97.87,
+      "palette_distance": 0.0349
+    },
+    "bossa-nova": {
+      "red_field": 0.2188,
+      "paper_field": 0.0431,
+      "black_field": 0.3384,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3379,
+      "bottom_edge": 0.0,
+      "top_edge": 0.021,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 102.67,
+      "palette_distance": 0.0502
+    },
+    "breakbeat": {
+      "red_field": 0.314,
+      "paper_field": 0.0334,
+      "black_field": 0.4315,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.2988,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0522,
+      "flags": [
+        "low_paper_field",
+        "not_flat_print",
+        "dark_tile"
+      ],
+      "luma_mean": 71.89,
+      "palette_distance": 0.0655
+    },
+    "breakcore": {
+      "red_field": 0.3472,
+      "paper_field": 0.2733,
+      "black_field": 0.2755,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3279,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0547,
+      "flags": [],
+      "luma_mean": 105.53,
+      "palette_distance": 0.0502
+    },
+    "brooklyn-drill": {
+      "red_field": 0.2751,
+      "paper_field": 0.0229,
+      "black_field": 0.509,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3822,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0146,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 61.01,
+      "palette_distance": 0.0946
+    },
+    "brostep": {
+      "red_field": 0.2435,
+      "paper_field": 0.04,
+      "black_field": 0.3692,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.2251,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0469,
+      "flags": [
+        "low_paper_field",
+        "not_flat_print",
+        "dark_tile"
+      ],
+      "luma_mean": 89.28,
+      "palette_distance": 0.0485
+    },
+    "chicago-blues": {
+      "red_field": 0.34,
+      "paper_field": 0.0504,
+      "black_field": 0.3694,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3135,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0259,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 77.12,
+      "palette_distance": 0.0615
+    },
+    "chicago-drill": {
+      "red_field": 0.422,
+      "paper_field": 0.3253,
+      "black_field": 0.1607,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.48,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0176,
+      "flags": [],
+      "luma_mean": 115.06,
+      "palette_distance": 0.0749
+    },
+    "chicago-house": {
+      "red_field": 0.3777,
+      "paper_field": 0.0052,
+      "black_field": 0.2596,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3616,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0347,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 97.64,
+      "palette_distance": 0.0369
+    },
+    "chillstep": {
+      "red_field": 0.3453,
+      "paper_field": 0.1121,
+      "black_field": 0.4118,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4184,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0229,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 75.81,
+      "palette_distance": 0.0558
+    },
+    "chillwave": {
+      "red_field": 0.2254,
+      "paper_field": 0.5139,
+      "black_field": 0.146,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3622,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0171,
+      "flags": [],
+      "luma_mean": 145.77,
+      "palette_distance": 0.1421
+    },
+    "chiptune": {
+      "red_field": 0.3058,
+      "paper_field": 0.0323,
+      "black_field": 0.3407,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4333,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0269,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 99.12,
+      "palette_distance": 0.0388
+    },
+    "city-pop": {
+      "red_field": 0.3571,
+      "paper_field": 0.036,
+      "black_field": 0.2645,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4142,
+      "bottom_edge": 0.0,
+      "top_edge": 0.021,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 105.27,
+      "palette_distance": 0.0533
+    },
+    "cloud-rap": {
+      "red_field": 0.2101,
+      "paper_field": 0.0515,
+      "black_field": 0.4412,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3873,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0317,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 87.79,
+      "palette_distance": 0.0571
+    },
+    "conscious-hip-hop": {
+      "red_field": 0.3237,
+      "paper_field": 0.0124,
+      "black_field": 0.3094,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4752,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0425,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 99.79,
+      "palette_distance": 0.0411
+    },
+    "contemporary-rnb": {
+      "red_field": 0.3747,
+      "paper_field": 0.1798,
+      "black_field": 0.4022,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4989,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0205,
+      "flags": [
+        "dark_tile"
+      ],
+      "luma_mean": 78.66,
+      "palette_distance": 0.0448
+    },
+    "cool-jazz": {
+      "red_field": 0.3173,
+      "paper_field": 0.0525,
+      "black_field": 0.4138,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.2994,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0229,
+      "flags": [
+        "low_paper_field",
+        "not_flat_print",
+        "dark_tile"
+      ],
+      "luma_mean": 78.37,
+      "palette_distance": 0.0647
+    },
+    "cumbia": {
+      "red_field": 0.3669,
+      "paper_field": 0.0027,
+      "black_field": 0.3099,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3315,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0371,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 96.25,
+      "palette_distance": 0.0347
+    },
+    "dancehall": {
+      "red_field": 0.4364,
+      "paper_field": 0.1953,
+      "black_field": 0.1622,
+      "green_major": 0.0023,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4721,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0254,
+      "flags": [],
+      "luma_mean": 114.59,
+      "palette_distance": 0.0767
+    },
+    "death-metal": {
+      "red_field": 0.365,
+      "paper_field": 0.1097,
+      "black_field": 0.425,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4883,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0195,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 68.27,
+      "palette_distance": 0.0558
+    },
+    "deathstep": {
+      "red_field": 0.3604,
+      "paper_field": 0.2631,
+      "black_field": 0.299,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4086,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0425,
+      "flags": [],
+      "luma_mean": 97.93,
+      "palette_distance": 0.0327
+    },
+    "deep-house": {
+      "red_field": 0.2841,
+      "paper_field": 0.0166,
+      "black_field": 0.4833,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3767,
+      "bottom_edge": 0.0,
+      "top_edge": 0.022,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 66.24,
+      "palette_distance": 0.0873
+    },
+    "delta-blues": {
+      "red_field": 0.2408,
+      "paper_field": 0.0135,
+      "black_field": 0.3038,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.2891,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0454,
+      "flags": [
+        "low_paper_field",
+        "not_flat_print"
+      ],
+      "luma_mean": 104.46,
+      "palette_distance": 0.0525
+    },
+    "detroit-techno": {
+      "red_field": 0.2669,
+      "paper_field": 0.1042,
+      "black_field": 0.3256,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3637,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0269,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 101.61,
+      "palette_distance": 0.0438
+    },
+    "disco": {
+      "red_field": 0.2183,
+      "paper_field": 0.013,
+      "black_field": 0.3764,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.2699,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0459,
+      "flags": [
+        "low_paper_field",
+        "not_flat_print"
+      ],
+      "luma_mean": 92.19,
+      "palette_distance": 0.0462
+    },
+    "doom-metal": {
+      "red_field": 0.3142,
+      "paper_field": 0.0079,
+      "black_field": 0.3036,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3537,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0439,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 99.43,
+      "palette_distance": 0.0415
+    },
+    "downtempo": {
+      "red_field": 0.2865,
+      "paper_field": 0.0,
+      "black_field": 0.3478,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4258,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0366,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 85.04,
+      "palette_distance": 0.0606
+    },
+    "dream-trance": {
+      "red_field": 0.4023,
+      "paper_field": 0.1769,
+      "black_field": 0.2349,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.5067,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0249,
+      "flags": [
+        "dark_tile"
+      ],
+      "luma_mean": 87.34,
+      "palette_distance": 0.0074
+    },
+    "drift-phonk": {
+      "red_field": 0.3526,
+      "paper_field": 0.0415,
+      "black_field": 0.2893,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4328,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0322,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 98.13,
+      "palette_distance": 0.0358
+    },
+    "dub": {
+      "red_field": 0.2312,
+      "paper_field": 0.1059,
+      "black_field": 0.4817,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4225,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0186,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 78.09,
+      "palette_distance": 0.077
+    },
+    "dub-techno": {
+      "red_field": 0.3761,
+      "paper_field": 0.1217,
+      "black_field": 0.33,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3895,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0327,
+      "flags": [
+        "dark_tile"
+      ],
+      "luma_mean": 88.22,
+      "palette_distance": 0.0324
+    },
+    "dubstep": {
+      "red_field": 0.3222,
+      "paper_field": 0.0689,
+      "black_field": 0.4377,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4003,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0186,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 69.05,
+      "palette_distance": 0.0684
+    },
+    "east-coast-hip-hop": {
+      "red_field": 0.4051,
+      "paper_field": 0.0483,
+      "black_field": 0.3142,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3244,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0322,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 89.02,
+      "palette_distance": 0.0348
+    },
+    "edm-trap": {
+      "red_field": 0.3163,
+      "paper_field": 0.0111,
+      "black_field": 0.3535,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4015,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0234,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 88.36,
+      "palette_distance": 0.0386
+    },
+    "electric-blues": {
+      "red_field": 0.4301,
+      "paper_field": 0.0231,
+      "black_field": 0.2024,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4636,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0405,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 107.72,
+      "palette_distance": 0.062
+    },
+    "electro": {
+      "red_field": 0.2674,
+      "paper_field": 0.0164,
+      "black_field": 0.4207,
+      "green_major": 0.0003,
+      "blue_major": 0.0,
+      "flat_fraction": 0.388,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0371,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 83.41,
+      "palette_distance": 0.048
+    },
+    "electro-house": {
+      "red_field": 0.3527,
+      "paper_field": 0.0503,
+      "black_field": 0.3573,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4256,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0176,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 86.73,
+      "palette_distance": 0.0466
+    },
+    "emo-rap": {
+      "red_field": 0.3028,
+      "paper_field": 0.0152,
+      "black_field": 0.2466,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3962,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0391,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 111.63,
+      "palette_distance": 0.0675
+    },
+    "euro-trance": {
+      "red_field": 0.3135,
+      "paper_field": 0.0381,
+      "black_field": 0.3053,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3727,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0449,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 103.79,
+      "palette_distance": 0.0497
+    },
+    "eurodance": {
+      "red_field": 0.3267,
+      "paper_field": 0.0227,
+      "black_field": 0.2557,
+      "green_major": 0.0,
+      "blue_major": 0.0001,
+      "flat_fraction": 0.3703,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0303,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 106.3,
+      "palette_distance": 0.0561
+    },
+    "footwork": {
+      "red_field": 0.35,
+      "paper_field": 0.034,
+      "black_field": 0.2783,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3346,
+      "bottom_edge": 0.0,
+      "top_edge": 0.022,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 100.92,
+      "palette_distance": 0.0425
+    },
+    "free-jazz": {
+      "red_field": 0.2437,
+      "paper_field": 0.017,
+      "black_field": 0.3901,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4423,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0278,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 99.32,
+      "palette_distance": 0.0378
+    },
+    "french-house": {
+      "red_field": 0.4294,
+      "paper_field": 0.0051,
+      "black_field": 0.2797,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4871,
+      "bottom_edge": 0.0,
+      "top_edge": 0.021,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 90.98,
+      "palette_distance": 0.0254
+    },
+    "frenchcore": {
+      "red_field": 0.369,
+      "paper_field": 0.0353,
+      "black_field": 0.2627,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.356,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0513,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 98.63,
+      "palette_distance": 0.0374
+    },
+    "funk": {
+      "red_field": 0.3321,
+      "paper_field": 0.0029,
+      "black_field": 0.2904,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.5002,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0298,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 100.99,
+      "palette_distance": 0.0456
+    },
+    "future-bass": {
+      "red_field": 0.3707,
+      "paper_field": 0.0057,
+      "black_field": 0.2733,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.405,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0684,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 99.35,
+      "palette_distance": 0.0418
+    },
+    "future-garage": {
+      "red_field": 0.2497,
+      "paper_field": 0.1217,
+      "black_field": 0.427,
+      "green_major": 0.0,
+      "blue_major": 0.0327,
+      "flat_fraction": 0.314,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0322,
+      "flags": [
+        "dark_tile"
+      ],
+      "luma_mean": 74.2,
+      "palette_distance": 0.0401
+    },
+    "future-house": {
+      "red_field": 0.2145,
+      "paper_field": 0.0924,
+      "black_field": 0.3569,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3021,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0527,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 103.82,
+      "palette_distance": 0.0498
+    },
+    "g-funk": {
+      "red_field": 0.2334,
+      "paper_field": 0.1612,
+      "black_field": 0.2443,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4226,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0396,
+      "flags": [],
+      "luma_mean": 122.12,
+      "palette_distance": 0.0896
+    },
+    "ghetto-house": {
+      "red_field": 0.3182,
+      "paper_field": 0.0558,
+      "black_field": 0.2639,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4756,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0171,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 108.9,
+      "palette_distance": 0.0605
+    },
+    "glitch-hop": {
+      "red_field": 0.3568,
+      "paper_field": 0.046,
+      "black_field": 0.2963,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4114,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0332,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 100.71,
+      "palette_distance": 0.0442
+    },
+    "goa-trance": {
+      "red_field": 0.2453,
+      "paper_field": 0.0709,
+      "black_field": 0.4456,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3576,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0439,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 75.7,
+      "palette_distance": 0.0616
+    },
+    "grime": {
+      "red_field": 0.4193,
+      "paper_field": 0.2485,
+      "black_field": 0.2842,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4773,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0225,
+      "flags": [],
+      "luma_mean": 90.74,
+      "palette_distance": 0.0174
+    },
+    "grunge": {
+      "red_field": 0.3122,
+      "paper_field": 0.0782,
+      "black_field": 0.2903,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3127,
+      "bottom_edge": 0.0,
+      "top_edge": 0.022,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 98.17,
+      "palette_distance": 0.0365
+    },
+    "gypsy-jazz": {
+      "red_field": 0.291,
+      "paper_field": 0.011,
+      "black_field": 0.3339,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3253,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0493,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 98.67,
+      "palette_distance": 0.0405
+    },
+    "halftime": {
+      "red_field": 0.2421,
+      "paper_field": 0.0348,
+      "black_field": 0.3908,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.2832,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0557,
+      "flags": [
+        "low_paper_field",
+        "not_flat_print"
+      ],
+      "luma_mean": 95.95,
+      "palette_distance": 0.0457
+    },
+    "happy-hardcore": {
+      "red_field": 0.3099,
+      "paper_field": 0.0942,
+      "black_field": 0.2963,
+      "green_major": 0.0096,
+      "blue_major": 0.0289,
+      "flat_fraction": 0.3437,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0444,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 98.56,
+      "palette_distance": 0.0354
+    },
+    "hard-bop": {
+      "red_field": 0.3494,
+      "paper_field": 0.231,
+      "black_field": 0.2994,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4709,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0278,
+      "flags": [],
+      "luma_mean": 102.75,
+      "palette_distance": 0.0458
+    },
+    "hard-rock": {
+      "red_field": 0.3003,
+      "paper_field": 0.0546,
+      "black_field": 0.2673,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3576,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0254,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 110.34,
+      "palette_distance": 0.0644
+    },
+    "hard-techno": {
+      "red_field": 0.422,
+      "paper_field": 0.051,
+      "black_field": 0.1768,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3719,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0391,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 113.08,
+      "palette_distance": 0.0715
+    },
+    "hard-trance": {
+      "red_field": 0.3232,
+      "paper_field": 0.0018,
+      "black_field": 0.3233,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3861,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0312,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 94.0,
+      "palette_distance": 0.0316
+    },
+    "hard-trap": {
+      "red_field": 0.1533,
+      "paper_field": 0.089,
+      "black_field": 0.4314,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.1942,
+      "bottom_edge": 0.0,
+      "top_edge": 0.043,
+      "flags": [
+        "low_paper_field",
+        "not_flat_print"
+      ],
+      "luma_mean": 92.75,
+      "palette_distance": 0.0605
+    },
+    "hardcore-gabber": {
+      "red_field": 0.4759,
+      "paper_field": 0.0007,
+      "black_field": 0.2168,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.1766,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0239,
+      "flags": [
+        "low_paper_field",
+        "not_flat_print"
+      ],
+      "luma_mean": 96.9,
+      "palette_distance": 0.0388
+    },
+    "hardstyle": {
+      "red_field": 0.4483,
+      "paper_field": 0.1851,
+      "black_field": 0.2232,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3731,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0142,
+      "flags": [],
+      "luma_mean": 97.98,
+      "palette_distance": 0.0376
+    },
+    "heavy-metal": {
+      "red_field": 0.2704,
+      "paper_field": 0.1007,
+      "black_field": 0.3816,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3362,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0317,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 93.39,
+      "palette_distance": 0.045
+    },
+    "hybrid-trap": {
+      "red_field": 0.3932,
+      "paper_field": 0.1203,
+      "black_field": 0.3244,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.44,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0356,
+      "flags": [
+        "dark_tile"
+      ],
+      "luma_mean": 86.92,
+      "palette_distance": 0.031
+    },
+    "idm": {
+      "red_field": 0.3411,
+      "paper_field": 0.0456,
+      "black_field": 0.1606,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4246,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0376,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 122.06,
+      "palette_distance": 0.0911
+    },
+    "industrial-techno": {
+      "red_field": 0.3389,
+      "paper_field": 0.0919,
+      "black_field": 0.3501,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3192,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0254,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 82.73,
+      "palette_distance": 0.0556
+    },
+    "j-pop": {
+      "red_field": 0.3512,
+      "paper_field": 0.1747,
+      "black_field": 0.2471,
+      "green_major": 0.0005,
+      "blue_major": 0.0159,
+      "flat_fraction": 0.4582,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0371,
+      "flags": [],
+      "luma_mean": 103.75,
+      "palette_distance": 0.046
+    },
+    "jazz-fusion": {
+      "red_field": 0.323,
+      "paper_field": 0.0151,
+      "black_field": 0.282,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3743,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0264,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 103.52,
+      "palette_distance": 0.0507
+    },
+    "jersey-club": {
+      "red_field": 0.3499,
+      "paper_field": 0.1198,
+      "black_field": 0.3012,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.491,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0166,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 84.78,
+      "palette_distance": 0.0352
+    },
+    "jersey-drill": {
+      "red_field": 0.3719,
+      "paper_field": 0.0338,
+      "black_field": 0.3275,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3756,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0234,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 79.28,
+      "palette_distance": 0.0562
+    },
+    "jump-up": {
+      "red_field": 0.2727,
+      "paper_field": 0.0102,
+      "black_field": 0.3906,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3706,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0312,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 94.82,
+      "palette_distance": 0.0439
+    },
+    "jungle": {
+      "red_field": 0.3149,
+      "paper_field": 0.0224,
+      "black_field": 0.45,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4306,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0249,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 69.49,
+      "palette_distance": 0.0707
+    },
+    "k-pop": {
+      "red_field": 0.3654,
+      "paper_field": 0.0442,
+      "black_field": 0.2947,
+      "green_major": 0.0,
+      "blue_major": 0.0161,
+      "flat_fraction": 0.4028,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0503,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 93.13,
+      "palette_distance": 0.0261
+    },
+    "kawaii-future-bass": {
+      "red_field": 0.3745,
+      "paper_field": 0.3732,
+      "black_field": 0.0502,
+      "green_major": 0.0,
+      "blue_major": 0.0018,
+      "flat_fraction": 0.5336,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0171,
+      "flags": [],
+      "luma_mean": 150.8,
+      "palette_distance": 0.1515
+    },
+    "kuduro": {
+      "red_field": 0.2522,
+      "paper_field": 0.021,
+      "black_field": 0.2952,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.2517,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0425,
+      "flags": [
+        "low_paper_field",
+        "not_flat_print"
+      ],
+      "luma_mean": 106.14,
+      "palette_distance": 0.0553
+    },
+    "liquid-dnb": {
+      "red_field": 0.3954,
+      "paper_field": 0.0453,
+      "black_field": 0.3334,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4251,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0376,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 79.51,
+      "palette_distance": 0.0371
+    },
+    "lofi-hip-hop": {
+      "red_field": 0.2584,
+      "paper_field": 0.0001,
+      "black_field": 0.3745,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0376,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 88.48,
+      "palette_distance": 0.0658
+    },
+    "lofi-house": {
+      "red_field": 0.3058,
+      "paper_field": 0.0198,
+      "black_field": 0.2431,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3997,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0176,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 117.9,
+      "palette_distance": 0.082
+    },
+    "math-rock": {
+      "red_field": 0.2506,
+      "paper_field": 0.0134,
+      "black_field": 0.2772,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.303,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0366,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 113.31,
+      "palette_distance": 0.0723
+    },
+    "melodic-dubstep": {
+      "red_field": 0.3441,
+      "paper_field": 0.0551,
+      "black_field": 0.4651,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3871,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0083,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 67.89,
+      "palette_distance": 0.0794
+    },
+    "melodic-house": {
+      "red_field": 0.2601,
+      "paper_field": 0.0047,
+      "black_field": 0.4456,
+      "green_major": 0.0802,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3864,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0327,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 69.32,
+      "palette_distance": 0.1103
+    },
+    "metalcore": {
+      "red_field": 0.3649,
+      "paper_field": 0.3766,
+      "black_field": 0.1508,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4223,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0347,
+      "flags": [],
+      "luma_mean": 117.87,
+      "palette_distance": 0.079
+    },
+    "microhouse": {
+      "red_field": 0.3646,
+      "paper_field": 0.0162,
+      "black_field": 0.1375,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.6264,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0181,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 133.63,
+      "palette_distance": 0.1185
+    },
+    "minimal-techno": {
+      "red_field": 0.4346,
+      "paper_field": 0.3493,
+      "black_field": 0.048,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.5672,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0132,
+      "flags": [],
+      "luma_mean": 142.15,
+      "palette_distance": 0.1383
+    },
+    "modal-jazz": {
+      "red_field": 0.2878,
+      "paper_field": 0.2378,
+      "black_field": 0.266,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.5811,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0083,
+      "flags": [],
+      "luma_mean": 119.37,
+      "palette_distance": 0.0843
+    },
+    "moombahton": {
+      "red_field": 0.2723,
+      "paper_field": 0.0317,
+      "black_field": 0.318,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.2255,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0425,
+      "flags": [
+        "low_paper_field",
+        "not_flat_print"
+      ],
+      "luma_mean": 97.93,
+      "palette_distance": 0.0362
+    },
+    "motown": {
+      "red_field": 0.3971,
+      "paper_field": 0.0117,
+      "black_field": 0.2818,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4671,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0308,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 91.87,
+      "palette_distance": 0.0255
+    },
+    "neo-soul": {
+      "red_field": 0.3295,
+      "paper_field": 0.0016,
+      "black_field": 0.4125,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4171,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0225,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 69.05,
+      "palette_distance": 0.0808
+    },
+    "neurofunk": {
+      "red_field": 0.3769,
+      "paper_field": 0.0038,
+      "black_field": 0.3352,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3796,
+      "bottom_edge": 0.0,
+      "top_edge": 0.041,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 87.4,
+      "palette_distance": 0.0383
+    },
+    "new-wave": {
+      "red_field": 0.4164,
+      "paper_field": 0.0317,
+      "black_field": 0.3619,
+      "green_major": 0.0,
+      "blue_major": 0.0214,
+      "flat_fraction": 0.3939,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0269,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 75.96,
+      "palette_distance": 0.0437
+    },
+    "nu-disco-house": {
+      "red_field": 0.3453,
+      "paper_field": 0.0692,
+      "black_field": 0.3654,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3319,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0293,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 77.59,
+      "palette_distance": 0.0665
+    },
+    "old-school-hip-hop": {
+      "red_field": 0.3018,
+      "paper_field": 0.0996,
+      "black_field": 0.173,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3572,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0303,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 126.62,
+      "palette_distance": 0.1012
+    },
+    "peak-time-techno": {
+      "red_field": 0.4982,
+      "paper_field": 0.1747,
+      "black_field": 0.2617,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.5697,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0376,
+      "flags": [
+        "dark_tile"
+      ],
+      "luma_mean": 83.41,
+      "palette_distance": 0.0178
+    },
+    "phonk": {
+      "red_field": 0.2839,
+      "paper_field": 0.1556,
+      "black_field": 0.4124,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.5049,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0293,
+      "flags": [
+        "dark_tile"
+      ],
+      "luma_mean": 84.39,
+      "palette_distance": 0.0283
+    },
+    "post-dubstep": {
+      "red_field": 0.3828,
+      "paper_field": 0.2375,
+      "black_field": 0.2867,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.5995,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0269,
+      "flags": [],
+      "luma_mean": 102.51,
+      "palette_distance": 0.045
+    },
+    "post-punk": {
+      "red_field": 0.3589,
+      "paper_field": 0.1308,
+      "black_field": 0.1755,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.2756,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0117,
+      "flags": [
+        "not_flat_print"
+      ],
+      "luma_mean": 118.18,
+      "palette_distance": 0.082
+    },
+    "progressive-house": {
+      "red_field": 0.3588,
+      "paper_field": 0.1841,
+      "black_field": 0.405,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.6345,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0322,
+      "flags": [
+        "dark_tile"
+      ],
+      "luma_mean": 75.68,
+      "palette_distance": 0.05
+    },
+    "progressive-rock": {
+      "red_field": 0.2976,
+      "paper_field": 0.004,
+      "black_field": 0.3342,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.373,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0381,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 93.1,
+      "palette_distance": 0.0443
+    },
+    "progressive-trance": {
+      "red_field": 0.229,
+      "paper_field": 0.0078,
+      "black_field": 0.4472,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3556,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0767,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 85.46,
+      "palette_distance": 0.0544
+    },
+    "psytrance": {
+      "red_field": 0.2284,
+      "paper_field": 0.0015,
+      "black_field": 0.4805,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.386,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0425,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 67.46,
+      "palette_distance": 0.0855
+    },
+    "punk-rock": {
+      "red_field": 0.2954,
+      "paper_field": 0.0708,
+      "black_field": 0.3241,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3505,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0649,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 100.78,
+      "palette_distance": 0.0431
+    },
+    "ragga-jungle": {
+      "red_field": 0.3128,
+      "paper_field": 0.1548,
+      "black_field": 0.3167,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.405,
+      "bottom_edge": 0.0,
+      "top_edge": 0.04,
+      "flags": [],
+      "luma_mean": 100.56,
+      "palette_distance": 0.0391
+    },
+    "raw-techno": {
+      "red_field": 0.2909,
+      "paper_field": 0.0489,
+      "black_field": 0.4545,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3321,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0195,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 73.78,
+      "palette_distance": 0.0746
+    },
+    "reggae": {
+      "red_field": 0.3814,
+      "paper_field": 0.0328,
+      "black_field": 0.2378,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3298,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0469,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 104.9,
+      "palette_distance": 0.0538
+    },
+    "reggaeton": {
+      "red_field": 0.4351,
+      "paper_field": 0.0063,
+      "black_field": 0.3045,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4183,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0278,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 86.92,
+      "palette_distance": 0.0203
+    },
+    "riddim": {
+      "red_field": 0.4182,
+      "paper_field": 0.2357,
+      "black_field": 0.297,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.5251,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0327,
+      "flags": [
+        "dark_tile"
+      ],
+      "luma_mean": 87.58,
+      "palette_distance": 0.0125
+    },
+    "rock-and-roll": {
+      "red_field": 0.4268,
+      "paper_field": 0.0198,
+      "black_field": 0.2778,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3987,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0444,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 97.22,
+      "palette_distance": 0.0355
+    },
+    "salsa": {
+      "red_field": 0.3104,
+      "paper_field": 0.0556,
+      "black_field": 0.3816,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3633,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0518,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 83.44,
+      "palette_distance": 0.0525
+    },
+    "samba": {
+      "red_field": 0.2852,
+      "paper_field": 0.016,
+      "black_field": 0.3388,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.2685,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0718,
+      "flags": [
+        "low_paper_field",
+        "not_flat_print"
+      ],
+      "luma_mean": 97.13,
+      "palette_distance": 0.0355
+    },
+    "sambass": {
+      "red_field": 0.2979,
+      "paper_field": 0.0033,
+      "black_field": 0.3567,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.2713,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0195,
+      "flags": [
+        "low_paper_field",
+        "not_flat_print"
+      ],
+      "luma_mean": 90.16,
+      "palette_distance": 0.0532
+    },
+    "schranz": {
+      "red_field": 0.2934,
+      "paper_field": 0.064,
+      "black_field": 0.4479,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3075,
+      "bottom_edge": 0.0,
+      "top_edge": 0.04,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 74.14,
+      "palette_distance": 0.0624
+    },
+    "shoe-gaze": {
+      "red_field": 0.3305,
+      "paper_field": 0.3472,
+      "black_field": 0.2218,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4028,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0376,
+      "flags": [],
+      "luma_mean": 115.65,
+      "palette_distance": 0.0737
+    },
+    "smooth-jazz": {
+      "red_field": 0.3731,
+      "paper_field": 0.0452,
+      "black_field": 0.3088,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4875,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0229,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 90.51,
+      "palette_distance": 0.0379
+    },
+    "soul": {
+      "red_field": 0.3918,
+      "paper_field": 0.0493,
+      "black_field": 0.2904,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3078,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0225,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 90.75,
+      "palette_distance": 0.0509
+    },
+    "southern-hip-hop": {
+      "red_field": 0.2703,
+      "paper_field": 0.1988,
+      "black_field": 0.2672,
+      "green_major": 0.0033,
+      "blue_major": 0.0139,
+      "flat_fraction": 0.3809,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0249,
+      "flags": [],
+      "luma_mean": 110.65,
+      "palette_distance": 0.0629
+    },
+    "speed-garage": {
+      "red_field": 0.371,
+      "paper_field": 0.1279,
+      "black_field": 0.3339,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3648,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0117,
+      "flags": [
+        "dark_tile"
+      ],
+      "luma_mean": 80.33,
+      "palette_distance": 0.0488
+    },
+    "speedbass": {
+      "red_field": 0.4601,
+      "paper_field": 0.0251,
+      "black_field": 0.2383,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3492,
+      "bottom_edge": 0.0,
+      "top_edge": 0.04,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 84.12,
+      "palette_distance": 0.0344
+    },
+    "synth-pop": {
+      "red_field": 0.3295,
+      "paper_field": 0.0548,
+      "black_field": 0.4486,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3957,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0317,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 70.82,
+      "palette_distance": 0.0733
+    },
+    "synthwave": {
+      "red_field": 0.3561,
+      "paper_field": 0.1338,
+      "black_field": 0.2728,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.5323,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0103,
+      "flags": [],
+      "luma_mean": 102.51,
+      "palette_distance": 0.0467
+    },
+    "tearout-dubstep": {
+      "red_field": 0.3051,
+      "paper_field": 0.2025,
+      "black_field": 0.2299,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.328,
+      "bottom_edge": 0.0,
+      "top_edge": 0.041,
+      "flags": [],
+      "luma_mean": 112.19,
+      "palette_distance": 0.0669
+    },
+    "tech-house": {
+      "red_field": 0.3638,
+      "paper_field": 0.0053,
+      "black_field": 0.3244,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.5184,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0146,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 93.01,
+      "palette_distance": 0.0322
+    },
+    "tech-trance": {
+      "red_field": 0.2773,
+      "paper_field": 0.0347,
+      "black_field": 0.3886,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.347,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0454,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 90.25,
+      "palette_distance": 0.0384
+    },
+    "techstep": {
+      "red_field": 0.2477,
+      "paper_field": 0.0062,
+      "black_field": 0.4707,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4156,
+      "bottom_edge": 0.0,
+      "top_edge": 0.02,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 79.25,
+      "palette_distance": 0.0716
+    },
+    "texas-blues": {
+      "red_field": 0.4037,
+      "paper_field": 0.1861,
+      "black_field": 0.2666,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3616,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0269,
+      "flags": [],
+      "luma_mean": 92.44,
+      "palette_distance": 0.0246
+    },
+    "thrash-metal": {
+      "red_field": 0.3123,
+      "paper_field": 0.0523,
+      "black_field": 0.3981,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.2834,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0288,
+      "flags": [
+        "low_paper_field",
+        "not_flat_print",
+        "dark_tile"
+      ],
+      "luma_mean": 81.49,
+      "palette_distance": 0.0469
+    },
+    "traditional-jazz": {
+      "red_field": 0.3273,
+      "paper_field": 0.0005,
+      "black_field": 0.2811,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3604,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0254,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 98.29,
+      "palette_distance": 0.0398
+    },
+    "traditional-pop": {
+      "red_field": 0.3836,
+      "paper_field": 0.02,
+      "black_field": 0.3069,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4537,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0347,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 91.91,
+      "palette_distance": 0.0437
+    },
+    "trap-rap": {
+      "red_field": 0.2631,
+      "paper_field": 0.03,
+      "black_field": 0.4883,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3213,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0088,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 70.83,
+      "palette_distance": 0.0843
+    },
+    "trip-hop": {
+      "red_field": 0.2986,
+      "paper_field": 0.0008,
+      "black_field": 0.4704,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3951,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0254,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 66.64,
+      "palette_distance": 0.085
+    },
+    "tropical-house": {
+      "red_field": 0.3445,
+      "paper_field": 0.003,
+      "black_field": 0.2653,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3643,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0439,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 103.15,
+      "palette_distance": 0.0487
+    },
+    "uk-drill": {
+      "red_field": 0.3091,
+      "paper_field": 0.0049,
+      "black_field": 0.4868,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.5582,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0273,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 64.6,
+      "palette_distance": 0.0797
+    },
+    "uk-funky": {
+      "red_field": 0.3628,
+      "paper_field": 0.0115,
+      "black_field": 0.3421,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4642,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0132,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 94.26,
+      "palette_distance": 0.0292
+    },
+    "uk-garage": {
+      "red_field": 0.248,
+      "paper_field": 0.032,
+      "black_field": 0.4665,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.507,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0371,
+      "flags": [
+        "low_paper_field",
+        "dark_tile"
+      ],
+      "luma_mean": 69.58,
+      "palette_distance": 0.0702
+    },
+    "uplifting-trance": {
+      "red_field": 0.3494,
+      "paper_field": 0.0079,
+      "black_field": 0.2528,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.3868,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0215,
+      "flags": [
+        "low_paper_field"
+      ],
+      "luma_mean": 110.03,
+      "palette_distance": 0.0651
+    },
+    "vaporwave": {
+      "red_field": 0.3062,
+      "paper_field": 0.2765,
+      "black_field": 0.0857,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.5712,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0181,
+      "flags": [],
+      "luma_mean": 147.59,
+      "palette_distance": 0.1451
+    },
+    "vocal-trance": {
+      "red_field": 0.4766,
+      "paper_field": 0.2343,
+      "black_field": 0.215,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4282,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0264,
+      "flags": [],
+      "luma_mean": 97.96,
+      "palette_distance": 0.0386
+    },
+    "wave": {
+      "red_field": 0.2844,
+      "paper_field": 0.4319,
+      "black_field": 0.1358,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.4714,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0146,
+      "flags": [],
+      "luma_mean": 129.26,
+      "palette_distance": 0.0995
+    },
+    "west-coast-hip-hop": {
+      "red_field": 0.3084,
+      "paper_field": 0.1264,
+      "black_field": 0.1907,
+      "green_major": 0.0,
+      "blue_major": 0.0,
+      "flat_fraction": 0.336,
+      "bottom_edge": 0.0,
+      "top_edge": 0.0571,
+      "flags": [],
+      "luma_mean": 123.52,
+      "palette_distance": 0.0939
+    }
+  }
+}

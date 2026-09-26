@@ -1,0 +1,20 @@
+{
+  "model": "qwen-image-2.1",
+  "preset": "quality",
+  "size": "1024x1024",
+  "steps": 40,
+  "seed": 2037,
+  "skin": "soviet",
+  "genre": "hard-rock",
+  "prompt": "Heavy-industry machined-metal rendering, square album cover, subject: a stack of Marshall cabinets with a Les Paul leaning against them built as industrial machinery, expressing the sound of hard rock \u2014 heavy riffing, screaming lead, stadium power, drawing on London and Los Angeles in the early 1970s, a wall of valve amplifiers. Cold gunmetal ground (#1b1e21, panels #22262a / #2b3034) with visible vertical brushed-steel grain, bone-white (#ede4cc) raked highlights, brass (#e6c766) as the single warm accent on one rated part. Stamped-steel plates with square corners, 2 px milled edges, inset bevels, rivets, seams, cast pitting and chipped paint, wide stencilled capital shapes with no readable letters, technical-plate frontal composition, low-key raking light, oil sheen, faint oxidation in the recesses. Cold, heavy, precise and premium. No text, no numbers, no logos. One dominant silhouette, clean deliberate framing, no lettering of any kind, no watermark or fine print, no melted or impossible geometry; the tile must read at 120px. Render only the physical medium and materials named above. Heavy-industry machined-metal rendering, square album cover, cold gunmetal ground #1b1e21 with visible vertical brushed-steel grain, bone-white #ede4cc raked highlights, brass #e6c766 on exactly one rated part, stamped-steel plates with square corners, 2 px milled edges, inset bevels, rivets, seams, cast pitting and chipped paint, technical-plate frontal composition, low-key raking light, oil sheen, faint oxidation in the recesses, cold heavy precise and premium, no words, no numbers, no logos, no brand names, no lettering band, no landscape, no neon, no colour outside gunmetal bone and one brass accent a stack of steel amplifier cabinets with a steel Les Paul leaning against them, cabinet faces carry only tiny illegible milled marks, no brand names, no readable words.",
+  "origin": "London and Los Angeles in the early 1970s, a wall of valve amplifiers",
+  "negative_prompt": "text, letters, words, typography, logo, watermark, signature, small print, fine print, corner mark, caption, UI, screenshot, frame, border, photograph of a real person, celebrity, album cover, brand, clipart, flat vector icon, stock photo, generic corporate imagery, floating geometric shapes, plastic 3D render, oversaturated HDR, low detail, blurry, jpeg artifacts",
+  "postprocess": null,
+  "timestamp": "2026-09-25T18:46:00Z",
+  "review": {
+    "decision": "regenerated_after_reject",
+    "reasons": [
+      "R3"
+    ]
+  }
+}

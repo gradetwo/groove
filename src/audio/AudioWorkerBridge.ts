@@ -8,7 +8,6 @@ export class AudioWorkerBridge {
   private worker: Worker | null = null;
   private fallbackTimerId: any = null;
   private onTickCallback?: (now: number) => void;
-  private intervalMs: number = 20;
 
   constructor() {
     this.initWorker();
@@ -50,7 +49,7 @@ export class AudioWorkerBridge {
   }
 
   public start(intervalMs: number = 20): void {
-    this.intervalMs = intervalMs;
+    // The interval is handed to the worker below; the main thread does not need to remember it.
     if (this.worker) {
       this.worker.postMessage({ type: "START", intervalMs });
     } else {

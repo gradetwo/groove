@@ -58,8 +58,6 @@ export class IosAudioUnlocker {
 
   private userActionHandler: (() => void) | null = null;
   private visibilityHandler: (() => void) | null = null;
-  /** Resumes whenever the context is not running; see the handler that installs it. */
-  private resumeIfNotRunning: (() => void) | null = null;
   /** Reacts to the context being interrupted by the system, which is not a visibility change. */
   private stateChangeHandler: (() => void) | null = null;
 
@@ -189,7 +187,6 @@ export class IosAudioUnlocker {
       // way to see it, and `!== "running"` catches it along with `suspended` and `closed`.
       if ((ctx.state as string) !== "running") ctx.resume().catch(() => {});
     };
-    this.resumeIfNotRunning = resumeIfNotRunning;
 
     this.visibilityHandler = () => {
       if (document.hidden || !document.hasFocus()) {
@@ -220,7 +217,6 @@ export class IosAudioUnlocker {
       this.audioContext?.removeEventListener?.("statechange", this.stateChangeHandler);
       this.stateChangeHandler = null;
     }
-    this.resumeIfNotRunning = null;
     if (this.userActionHandler) {
       const events = ["click", "touchstart", "touchend", "pointerdown", "keydown"];
       events.forEach((evt) => {
