@@ -145,7 +145,7 @@ jobs:
       - name: Texture-lane contribution (A4)
         if: inputs.scope == 'audio' || inputs.scope == 'verify' || inputs.scope == 'all'
         continue-on-error: true
-        run: node scripts/probe_texture_contribution.mjs --genre=techno --out=loudness-report/texture.json
+        run: node scripts/probe_texture_contribution.mjs --genre=hard-techno --out=loudness-report/texture.json
 
       - name: Arrangement playback (B7)
         if: inputs.scope == 'audio' || inputs.scope == 'verify' || inputs.scope == 'all'
