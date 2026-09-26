@@ -275,6 +275,25 @@ The loop has **no sections at all** — nothing to play but the pattern the edit
 silence is in the probe's audio path, and B7 has **never been heard by its check**: the transport is neither confirmed nor
 refuted, and the ratio has been a number about nothing on all five runs.
 
+**Answered: the app is playing loudly, and the FFT reading is what lies.** Run 36265694456 printed both diagnostics:
+
+```
+window levels    : A -85.1 dB · B -80.5 dB · frames 46/46
+analyser         : waveform peak 0.858145 · rms 0.328211
+engine state     : {"currentGenre":{"id":"uk-garage","name":"UK Garage", … }}
+```
+
+A time-domain **peak of 0.858 (−1.3 dBFS) and an RMS of 0.33** is a loud, playing mix — and the same analyser calls it −85 dB in the
+frequency domain, on both the arrangement and the control loop. So the app **is** making sound, the transport is running, and the
+silence was never in the music: it is in how the probe reads the spectrum. That retires the three candidates the previous round
+listed (analyser off the sounding bus, `engine.play()` not starting, autoplay) in one step, and it is the sixth run's worth of
+−80 dBFS explained.
+
+What it does **not** yet do is judge B7, and the difference matters: a waveform proves sound, not *which* music, and the ratio was
+the part that could tell the arrangement from the loop. So the next move is the FFT path itself — read a few raw bin values to see
+whether they are all near −85 (a scaling/unit problem) or whether the array is stale (a reading-order problem) — and once the
+spectrum is real, the ratio finally means what the plan says it means.
+
 **What to narrow next**, in the order the evidence suggests: the FFT bands say nothing about *where* the silence is, so the probe
 should report the analyser's **waveform** (`getFloatTimeDomainData`'s peak/RMS), which separates "no signal reaches the analyser"
 from "no signal is generated"; and it should print `probe.readState()` alongside it, which says whether the engine believes it is
