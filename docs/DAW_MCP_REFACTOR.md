@@ -271,6 +271,20 @@ the gap is **narrower than it looks and wider than one edit**:
   decoding, which is the same compatibility promise the `.groove` format now carries in
   [`GROOVE_PACKAGE_FORMAT.md`](GROOVE_PACKAGE_FORMAT.md).
 
+**Tried, and measured.** The type-only widening of `songChain`/`activeSlot` to `ClipSlot` was applied across the **10 non-test files**
+that spell `"A" | "B"` and taken to the type checker. It gets exactly two thirds of the way there and stops at a boundary that is the
+whole point of the change:
+
+* the widening itself is mechanical — the errors it causes are prop types in `SequencerModals`, `SequencerPanel`,
+  `useAudioEngineLifecycle` and the store, all of the same shape;
+* and then four **TS7053** errors appear in `useTransportControls`, `projectDb` and the store, all of the form "cannot index
+  `{ A: SequencerPattern; B: SequencerPattern }` with a `ClipSlot`".
+
+That second group is not a rename: it is the store and the project format needing somewhere to **hold** C and D. So the clip count
+splits cleanly into "widen the types" (mechanical, ten files) and "give the project four patterns" (a model change, with the share
+codec's compatibility promise attached). The trial was reverted rather than left half-applied — a tree that does not type-check is
+worse than an unfinished plan — and this paragraph is what it bought.
+
 **So the shape of the work is**: widen the editor's model to `ClipSlot` (type-only in most of the 40), give the store somewhere to
 hold C and D, and teach the share codec a longer form that **still decodes the old one**. The first step is type-only and
 test-guarded — `songChain: ClipSlot[]` — which is why it is the one to do first, with the existing store, project-hub, share and
