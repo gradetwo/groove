@@ -126,6 +126,14 @@ jobs:
       # count `analyze_audio` reports, and does it leave a song with no jumps alone? The probe drives a browser and renders the
       # club form several times, which is minutes of work and the reason it belongs here rather than on a laptop — the club form
       # alone took the browser down when it was run with a smaller budget.
+      # B7 — is the arrangement actually *played*? The transport feeds the engine the flattened song (the first slice landed),
+      # but nothing had produced the listening proof: the probe samples the master analyser inside two deliberately different
+      # sections and compares that distance against the same-section noise floor. It needs a browser and real time, so it runs
+      # here, and its ratio is the number that closes the item — or says plainly that it does not.
+      - name: Arrangement playback (B7)
+        if: inputs.scope == 'audio' || inputs.scope == 'verify' || inputs.scope == 'all'
+        run: node scripts/probe_arrangement_playback.mjs --genre=uk-garage
+
       - name: Section-boundary fade (stage 3 measurement)
         if: inputs.scope == 'audio' || inputs.scope == 'all'
         run: node scripts/probe_arrangement_audio.mjs --genre=chicago-house
