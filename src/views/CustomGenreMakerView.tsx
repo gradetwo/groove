@@ -970,6 +970,8 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
               <div className="flex justify-center bg-black/50 p-4 rounded-2xl border border-line overflow-hidden">
                 <canvas
                   ref={posterCanvasRef}
+                  role="img"
+                  aria-label={t("genre_maker_poster_label")}
                   className="max-h-[500px] w-auto rounded-xl shadow-2xl border border-line"
                 />
               </div>

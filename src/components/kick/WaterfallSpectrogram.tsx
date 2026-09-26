@@ -217,6 +217,13 @@ export const WaterfallSpectrogram: React.FC<WaterfallSpectrogramProps> = ({
       {/* Canvas */}
       <div className="relative w-full aspect-[16/9] sm:aspect-[21/9] max-h-[280px]">
         <canvas
+          /**
+           * A canvas has no text, so without a role and a label it is announced as nothing at all. This component takes no
+           * language hook (its parent does), so the label is written once in English rather than threading i18n through the
+           * DSP visualisers.
+           */
+          role="img"
+          aria-label="Waterfall spectrogram of the kick: frequency over time, brightness is energy."
           ref={canvasRef}
           width={800}
           height={340}

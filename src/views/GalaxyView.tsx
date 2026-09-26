@@ -1585,7 +1585,17 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({
   return (
     <div ref={containerRef} className="relative w-full h-[calc(100dvh-64px)] overflow-hidden bg-[#04060a] select-none text-[#eae6dc]">
       {/* 3D WebGL Canvas */}
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full block cursor-grab active:cursor-grabbing" />
+      <canvas
+        ref={canvasRef}
+        /**
+         * The galaxy is a picture, so it says so and describes itself. Its labels and its list are rendered as real DOM
+         * beside it (`labelsContainerRef` below), which is what a screen reader reads; this role stops the canvas being
+         * announced as nothing at all.
+         */
+        role="img"
+        aria-label={t("galaxy_canvas_label")}
+        className="absolute inset-0 w-full h-full block cursor-grab active:cursor-grabbing"
+      />
 
       {/* 3D Projected Screen Labels Container */}
       <div ref={labelsContainerRef} className="absolute inset-0 pointer-events-none overflow-hidden z-10">
