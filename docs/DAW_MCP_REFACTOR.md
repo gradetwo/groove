@@ -271,6 +271,19 @@ the gap is **narrower than it looks and wider than one edit**:
   decoding, which is the same compatibility promise the `.groove` format now carries in
   [`GROOVE_PACKAGE_FORMAT.md`](GROOVE_PACKAGE_FORMAT.md).
 
+**The share codec needed nothing, and that is worth one test rather than one memory.** `SequencerUrlShare` validates a section's
+slot with `CLIP_SLOTS.includes` (`:329`) and the per-lane clip choice the same way (`:346`), and it does not carry the bar chain at
+all — the receiver derives it from the sections, exactly as the store does. So a link may already name C or D, and a link written
+today (which names only A and B) decodes unchanged: **no format change, no migration, no compatibility risk**.
+
+`src/test/SequencerUrlShare.test.ts` pins both halves: a link whose sections are `["A", "C"]` round-trips, and one whose sections
+are `["A", "B", "A"]` still does. Writing that test took three attempts, and each failure was the codec doing its job — an
+inconsistent payload (`totalSteps: 16` with a four-step lane) makes the encoder refuse the whole thing and return an empty string,
+which decodes to `null` rather than to a half-link.
+
+**What is left of the clip count is the interface**: the model, the store, the project type and the share codec all speak four slots
+now, and the editor still shows two. That is a UI slice, not a data one.
+
 **The exact seam, listed.** Widening again with the resolver in place leaves **six** errors, and they are the whole remaining job:
 
 | site | what it does today |
