@@ -153,6 +153,29 @@ if (coversCheck.status !== 0) {
   process.exit(1);
 }
 
+/**
+ * The application starts, or nothing ships.
+ *
+ * This is the check that was missing when a "cosmetic" `index.html` edit deleted the entry script: the build produced a dead
+ * shell, every probe that drives a surface would have failed for a confusing reason, and the deploy would have published it.
+ * The probe serves `dist` and requires React to take over, so the failure is one sentence instead of a mystery.
+ */
+const bootCheck = spawnSync(process.execPath, [path.join(ROOT, "scripts", "probe_boot.mjs")], {
+  cwd: ROOT,
+  stdio: "inherit",
+});
+if (bootCheck.status !== 0) {
+  console.error(
+    [
+      "",
+      "\u274c Refusing to deploy: the built application does not start.",
+      "   Run `npm run build` and then `npm run probe:boot`; the probe's message says what the page did instead.",
+      "",
+    ].join("\n")
+  );
+  process.exit(1);
+}
+
 const args = preview
   ? ["wrangler", "versions", "upload", "--preview-alias", previewAlias]
   : ["wrangler", "deploy", ...(dryRun ? ["--dry-run"] : [])];
