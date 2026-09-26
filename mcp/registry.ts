@@ -13,12 +13,12 @@ import { patternFromGenre } from "../src/data/genreMix";
 import { flattenSong } from "../src/data/songFlatten";
 import { APP_VERSION } from "../src/version";
 import { exportProjectPackage, validateGroovePackage } from "../src/features/sequencer/projectDb";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { exportAbleton, exportMidi, loudnessReport, shareUrl, toBase64 } from "./exporting";
 import { analyseWavFile, renderAudio } from "./render/worker";
-import { addMcpSection, createMcpSong, duplicateMcpSection, flattenMcpSong, getMcpSong, setMcpClip, summariseSong } from "./song";
+import { addMcpSection, createMcpSong, duplicateMcpSection, flattenMcpSong, getMcpSong, importMcpSong, setMcpClip, summariseSong } from "./song";
 import type { ClipSlot } from "../src/types/song";
 import type { SequencerPattern } from "../src/types/genre";
 
@@ -657,6 +657,47 @@ export const TOOLS: ToolDefinition[] = [
           at: args.at as number | undefined,
           bars: args.bars as number | undefined,
           label: args.label as string | undefined,
+        });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    /**
+     * The other half of `export_groove`, and the answer to a composer's report that a song "lives only in the server's map, so a
+     * restart loses the whole arrangement": a package can be read back, validated, and put back into the server to continue.
+     */
+    name: "import_groove",
+    title: "Load a .groove package back into a song",
+    description:
+      "Read a .groove package from disk, validate it with the app's own validator, and create a song from it — the clips, the sections and the tempo as they were exported. Use it after a server restart, or to continue a package someone else wrote; the imported song gets a new songId, so importing the same file twice gives two independent songs.",
+    readOnly: false,
+    inputSchema: {
+      path: z.string().describe("a .groove file under GROOVE_MCP_OUT (or anywhere readable)"),
+      name: z.string().max(80).optional().describe("a name for the imported song; the package's own when omitted"),
+    },
+    handler: (args) => {
+      try {
+        const file = args.path as string;
+        if (!existsSync(file)) return failure(`no such file: ${file}`);
+        const parsed = JSON.parse(readFileSync(file, "utf8")) as unknown;
+        // The app's validator is the gate: a package that fails it is not imported, rather than imported as something else.
+        const pkg = validateGroovePackage(parsed);
+        const arrangement = pkg.arrangement;
+        if (!arrangement) {
+          return failure(
+            "this package is a v1 project (two patterns, no arrangement), so there is no song to import — use get_pattern and create_song instead"
+          );
+        }
+        return importMcpSong({
+          name: (args.name as string | undefined) ?? pkg.project.name,
+          genreId: pkg.project.genreId,
+          bpm: pkg.project.bpm,
+          swing: pkg.project.swing,
+          resolution: pkg.project.resolution,
+          clips: arrangement.clips as Partial<Record<ClipSlot, SequencerPattern>>,
+          sections: arrangement.sections as never[],
         });
       } catch (error) {
         return failure((error as Error).message);

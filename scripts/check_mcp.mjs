@@ -202,6 +202,19 @@ try {
     JSON.stringify(exported).slice(0, 160)
   );
 
+  /**
+   * The round trip a composer actually needs: export the package, read it back, and find the arrangement intact. Before
+   * `import_groove`, a server restart lost the whole composition — the report's complaint — and the package could only be
+   * written, not read.
+   */
+  const imported = payload(await client.request("tools/call", { name: "import_groove", arguments: { path: exported.path } }));
+  check(
+    "import_groove restores the arrangement under a new songId",
+    imported.songId !== song.songId && (imported.sections ?? []).length === 2 && (imported.clips ?? []).includes("B"),
+    JSON.stringify({ songId: imported.songId, sections: imported.sections?.length, clips: imported.clips })
+  );
+
+
   const found = payload(await client.request("tools/call", { name: "search_genres", arguments: { query: "chicago" } }));
   check("search_genres finds chicago-house", (found.matches ?? []).some((match) => match.id === "chicago-house"), JSON.stringify(found.matches?.[0] ?? {}));
 

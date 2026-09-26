@@ -157,6 +157,44 @@ export function createMcpSong(input: CreateMcpSongInput): SongSummary {
   return summariseSong(arranged);
 }
 
+/**
+ * Put a song back into the server, under a new id.
+ *
+ * This is the other half of `export_groove`: a package carries the arrangement, so a server that restarted (or a second session)
+ * can pick a composition up instead of losing it. The clips and sections are taken as they are — the package was validated before
+ * it was written and is validated again on the way in — and only the id is regenerated, so importing the same file twice gives two
+ * independent songs rather than one that silently overwrites itself.
+ */
+export function importMcpSong(input: {
+  name: string;
+  genreId: string;
+  bpm: number;
+  swing?: number;
+  resolution?: "1/8" | "1/16" | "1/32";
+  clips: Partial<Record<ClipSlot, SequencerPattern>>;
+  sections: SongSection[];
+}): SongSummary {
+  const slots = Object.keys(input.clips) as ClipSlot[];
+  if (!slots.length) throw new Error("this package carries no clips to import");
+  const id = `mcp-song-${++sequence}`;
+  const song: Song = createSong({
+    id,
+    name: input.name,
+    genreId: input.genreId,
+    bpm: input.bpm,
+    swing: input.swing,
+    resolution: input.resolution,
+    clip: input.clips[slots[0]]!,
+  });
+  const next: Song = {
+    ...song,
+    clips: { ...song.clips, ...input.clips },
+    ...(input.sections.length ? { sections: input.sections } : {}),
+  };
+  songs.set(id, next);
+  return summariseSong(next);
+}
+
 export function getMcpSong(songId: string): Song | undefined {
   return songs.get(songId);
 }
