@@ -34,7 +34,8 @@ import React, { useEffect, useRef } from "react";
 import { ChevronRight, Pause, Play, Repeat, Repeat1, Shuffle } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { GENRE_INDEX_MAP } from "./mobileGenreData";
-import { CATEGORY_SWATCH, genreCoverUrl } from "./genreArt";
+import { CATEGORY_SWATCH } from "./genreArt";
+import { GenreCover } from "../components/GenreCover";
 import { loopProgress, PLAY_MODE_LABEL_KEYS, type PlayMode } from "./vinyl/vinylMath";
 import type { VinylClock } from "./vinyl/VinylCanvas";
 
@@ -168,16 +169,8 @@ export function MobilePlayerBar({
             className="relative h-10 w-10 flex-none overflow-hidden rounded-[13px] ring-1 ring-[rgba(232,232,255,0.14)]"
             style={{ background: accent }}
           >
-            {/* The genre's own cover when one is on disk, over the category colour while it loads. */}
-            <img
-              src={genreCoverUrl(genre.id)}
-              alt=""
-              className="h-full w-full object-cover"
-              loading="lazy"
-              onError={(event) => {
-                event.currentTarget.style.display = "none";
-              }}
-            />
+            {/* The active skin's cover, over the category colour while it loads — the same resolution the tiles use. */}
+            <GenreCover genreId={genre.id} className="h-full w-full object-cover" />
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[13.5px] font-semibold leading-tight">{genre.name}</span>

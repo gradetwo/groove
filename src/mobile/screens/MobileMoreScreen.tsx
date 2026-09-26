@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { SkinPicker } from "../SkinPicker";
+import { LightPlayerToggle } from "../LightPlayerToggle";
 import { APP_VERSION } from "../../version";
 
 export interface MobileMoreScreenProps {
@@ -66,6 +67,9 @@ export function MobileMoreScreen({
 
       {/* 外观 comes first: it changes the whole screen, so it is the one row worth seeing at the top. */}
       <SkinPicker />
+
+      {/* The player's own cost is the one setting that is about the phone rather than about taste. */}
+      <LightPlayerToggle />
 
       <ul className="mt-3 flex flex-col gap-2.5">
         {rows.map((row) => (

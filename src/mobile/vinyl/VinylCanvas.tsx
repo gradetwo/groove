@@ -142,6 +142,23 @@ export interface VinylCanvasProps {
    * whole-BPM change, not every frame.
    */
   onBpmTick?: (bpm: number) => void;
+  /**
+   * Paint a still picture instead of an animated one — the "lighter player" preference.
+   *
+   * The loop keeps running: the clock, the beat slaves, the damper and the published tempo are all still live, because
+   * they are what the *transport* reads. What stops is the painting, except when the picture's own inputs change (a new
+   * genre, a new skin, a lane turning on), so the record is drawn once and then left alone. That is where the cost was:
+   * a rotated disc blit, the bloom, the sheen and the label wash over 422k pixels per frame.
+   */
+  lite?: boolean;
+  /**
+   * The artwork printed on the label, already loaded by the caller.
+   *
+   * Passed in rather than fetched here: the bake is synchronous, and a canvas that started loading images would have to
+   * redraw when they arrive — with an invalidation path of its own. The caller already knows the genre and the skin, and
+   * `key` (the URL) makes the label re-bake when they change.
+   */
+  labelArt?: { image: CanvasImageSource; key: string } | null;
 }
 
 /**
@@ -290,6 +307,8 @@ export function VinylCanvas({
   onScrubSound,
   onScrubSoundEnd,
   onBpmTick,
+  lite = false,
+  labelArt = null,
 }: VinylCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -306,6 +325,7 @@ export function VinylCanvas({
     footer,
     totalSteps,
     onBpmTick,
+    labelArt,
   });
   liveRef.current = {
     playing,
@@ -319,6 +339,7 @@ export function VinylCanvas({
     footer,
     totalSteps,
     onBpmTick,
+    labelArt,
   };
   /** Jog state: in refs so a drag never re-renders React at pointer-move rate. */
   const dragRef = useRef<{ lastX: number; lastT: number; velocity: number; travel: number; tapped: boolean } | null>(null);
@@ -450,6 +471,7 @@ export function VinylCanvas({
         accent: accentHex,
         displayFont,
         monoFont,
+        cover: liveRef.current.labelArt ?? null,
       };
       const key = labelCacheKey(spec);
       if (!label || label.key !== key) label = { key, sprite: bakeLabel(spec) };
@@ -1090,7 +1112,9 @@ export function VinylCanvas({
         for (const on of lane) laneKey += on ? "1" : "0";
         laneKey += "|";
       }
-      const propKey = `${state.artSeed}~${state.title}~${state.subtitle}~${state.footer}~${state.accent}~${state.totalSteps}~${accentHex}~${displayFont}~${monoFont}~${laneKey}`;
+      // The label art's key is part of the picture: an image that arrives after the first paint has to cause a redraw,
+      // or a phone in lite mode would keep the plain paper forever.
+      const propKey = `${state.artSeed}~${state.title}~${state.subtitle}~${state.footer}~${state.accent}~${state.totalSteps}~${accentHex}~${displayFont}~${monoFont}~${laneKey}~${state.labelArt?.key ?? ""}`;
       if (propKey !== lastPropKey) {
         lastPropKey = propKey;
         dirty = true;
@@ -1104,6 +1128,13 @@ export function VinylCanvas({
        * and returns without touching the canvas. `paintedIdle` is what makes the *first* settled frame
        * paint: the frame on which the last thing stopped moving still has to be drawn.
        */
+      /**
+       * Lite mode paints **only when the picture's inputs change** (`dirty`, set above from `propKey`), so the first
+       * frame still draws and a genre or skin change still redraws. Everything before this line — the clock, the beat
+       * slaves, the springs, the damper and the tempo readout — runs exactly as it does otherwise, which is why the
+       * switch does not touch the sound or the transport.
+       */
+      if (lite && !dirty) return;
       if (idle && paintedIdle && !dirty) return;
 
       /**
