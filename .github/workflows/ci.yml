@@ -116,6 +116,12 @@ jobs:
       - name: Production Build
         run: npm run build
 
+      - name: The built app starts
+        # The cheapest check with the widest blast radius, and the one that was missing when a "cosmetic" `index.html` edit
+        # deleted the entry script: `dist` was a dead shell with no error anywhere. `deploy.mjs` refuses a build that does not
+        # start, and this makes the same refusal part of the pull-request gate.
+        run: npm run probe:boot
+
       - name: Bundle Budget & Performance Gate
         run: npm run check:budget
 
