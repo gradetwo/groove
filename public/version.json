@@ -1,27 +1,27 @@
 {
-  "version": "2.34.0",
+  "version": "2.34.1",
   "releaseDate": "2026-09-28",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.0",
+    "version": "2.34.1",
     "date": "2026-09-28",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "修好每个音符事件处的爆音（GS-1 分块输出错位）",
-      "en": "The click at every note event is gone — a split block was assembled wrong"
+      "zh": "MCP 作曲打通：可做变奏、可读回、可导出工程包",
+      "en": "MCP composition: set_clip, get_song and export_groove — songs can vary, be read back and be exported"
     },
     "highlights": [
       {
-        "zh": "GS-1 引擎把被事件切开的音频块按每块自己的位置拼接，之前会把最后一块放到块首并留下残留数据。",
-        "en": "The GS-1 engine now assembles an event-split audio block per chunk; it used to place the last chunk at the start of the block and leave stale data behind."
+        "zh": "新增 set_clip：不再只能有 clip A，主歌/副歌变奏可用；create_song 也接受 clips 与首段 label。",
+        "en": "New set_clip: no longer limited to clip A, so verse/chorus variations work; create_song takes clips and a first-section label."
       },
       {
-        "zh": "实测：该分轨的高频包络离群值由 181.6×/153.6×/134.5× 变为「无异常」，全频段最大步进降到 1.19× p99.9。",
-        "en": "Measured: the stem's high-frequency outlier went from 181.6x/153.6x/134.5x to none, with the full-band worst step at 1.19x p99.9."
+        "zh": "新增 get_song 与 export_groove：编排可读回，并导出为校验过的 .groove 包（编排随包保留）。",
+        "en": "New get_song and export_groove: the arrangement can be read back and exported as a validated .groove package, carried rather than flattened."
       },
       {
-        "zh": "响度与音色基线在修复后仍然通过，分布不变。",
-        "en": "The loudness and timbre baselines still pass after the fix, with the spreads unchanged."
+        "zh": "渲染文件名可用自己的歌名（白名单后拼接）；MCP 文档重复段落与断表已修。",
+        "en": "A render can be named after your own song title (whitelisted); the duplicated MCP docs section is fixed."
       }
     ],
     "truncated": false
