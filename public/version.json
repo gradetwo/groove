@@ -1,27 +1,27 @@
 {
-  "version": "2.34.3",
+  "version": "2.34.4",
   "releaseDate": "2026-09-28",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.3",
+    "version": "2.34.4",
     "date": "2026-09-28",
     "category": "feature",
     "title": {
-      "zh": "MCP 作曲闭环：Ableton 一节一 clip、工程包可导入",
-      "en": "MCP composition closes the loop: one Ableton clip per section, importable packages, duplicate_section"
+      "zh": "编辑器支持四个 clip 槽位；MCP 两处修复",
+      "en": "The editor holds four clip slots; two MCP fixes"
     },
     "highlights": [
       {
-        "zh": "导出 Ableton 时一首歌变成「一段一个 scene」，scene 名即段落名。",
-        "en": "Ableton export makes one clip per scene, each named after its section."
+        "zh": "槽位控件与复制控件支持 A–D，切到空槽会自动创建并保留。",
+        "en": "The slot and copy controls work across A–D; switching to an empty slot creates and keeps it."
       },
       {
-        "zh": "新增 import_groove：把 .groove 包读回、经校验后继续编辑。",
-        "en": "New import_groove: read a .groove package back and continue editing it."
+        "zh": "修复 create_song 的 clips 只传部分槽位会被拒，以及 secondsEstimate 低估四倍。",
+        "en": "Fixed create_song refusing a partial clips object, and secondsEstimate reading four times too low."
       },
       {
-        "zh": "新增 duplicate_section 与 render_song 的 maxDurationSec 护栏。",
-        "en": "New duplicate_section and render_song's maxDurationSec guard."
+        "zh": "新增 .groove 包格式规范文档（含版本兼容承诺）。",
+        "en": "Added the .groove package format specification, with its compatibility commitment."
       }
     ],
     "truncated": false
