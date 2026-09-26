@@ -1,19 +1,23 @@
 {
-  "version": "2.28.1",
+  "version": "2.29.0",
   "releaseDate": "2026-09-26",
   "changelogCount": 10,
   "latest": {
-    "version": "2.28.1",
+    "version": "2.29.0",
     "date": "2026-09-26",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "导出分轨时按你实际听到的混音状态导出",
-      "en": "Stem export now honours the mixer state you are actually hearing"
+      "zh": "调试面板新增「录制 10 秒」：把你听到的声音直接发我们",
+      "en": "A 'record 10 seconds' button in the diagnostics panel: send us the sound you hear"
     },
     "highlights": [
       {
-        "zh": "修好：导出分轨没有带上实时的静音/独奏/音量/声像，而是从 pattern 重新推导——按 S 独奏后导出的结果可能和你听到的不一致。现在直接取当前引擎的实时状态。",
-        "en": "Fixed: stem export did not carry the live mute/solo/volume/pan and re-derived them from the pattern, so what you exported after pressing S could differ from what you heard."
+        "zh": "开启调试（设置 → 音频 → 调试）后打开诊断面板，按「录制 10 秒」会把主输出录成文件并下载——录的是实时输出，不是你听不到的那份离线渲染。",
+        "en": "With debug on (Settings → Audio → Debug), the diagnostics panel gains a record button that captures the live master output to a file — the signal you are hearing, not an offline render."
+      },
+      {
+        "zh": "录完会显示文件名与大小；若浏览器拒绝录音会明确报错，而不是静默无反应。",
+        "en": "It reports the file name and size when it finishes, and says so plainly when the browser refuses — a button that quietly does nothing is the failure this avoids."
       }
     ],
     "truncated": false

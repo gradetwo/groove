@@ -1673,6 +1673,17 @@ export class AudioEngine {
     return this.masterAnalyser || this.analyser;
   }
 
+  /**
+   * A node to record the **master output** from — the diagnostic capture's tap (`platform/audioCapture.ts`).
+   *
+   * The master analyser is a passthrough, so connecting it to a `MediaStreamDestination` fans the signal out rather than
+   * stealing it: playback is untouched, and what gets recorded is the post-master signal, which is what the ears are on.
+   * Falls back to the master gain for a graph built without an analyser.
+   */
+  public getCaptureTap(): AudioNode | null {
+    return this.masterAnalyser || this.masterGain;
+  }
+
   public getStereoAnalysers(): { left: AnalyserNode | null; right: AnalyserNode | null } {
     return {
       left: this.analyserL || this.analyser,

@@ -22,6 +22,9 @@
  */
 import type { AudioEngine } from "../audio/AudioEngine";
 import { ensureOfflineGs1Capability, gs1OfflineCapability } from "../audio/gs1/gs1OfflineCapability";
+import { captureMasterAudio } from "./audioCapture";
+import { triggerWavDownload } from "../audio/WavExporter";
+
 
 /** Whether this page asked for the diagnostic panel. */
 export function diagRequested(search: string = typeof window === "undefined" ? "" : window.location.search): boolean {
@@ -306,6 +309,34 @@ export function installDiagnostics(engine: AudioEngine): () => void {
         notes.push(`gs1=${engine.isGs1Enabled()}`);
       },
       "diag-gs1"
+    )
+  );
+  /**
+   * **录制** — the one button that needs a person rather than a metric.
+   *
+   * Six rounds of detectors disagreed with the listener about a pop after every note (see the upstream plan's §1g),
+   * because they measured a stem render. This records the **live master output** — the signal the ears are actually on —
+   * and downloads it, so the next step is reading the file the owner heard rather than building a sixth detector.
+   */
+  buttons.appendChild(
+    small(
+      "录制 10 秒",
+      () => {
+        notes.push("recording…");
+        void render();
+        void captureMasterAudio(10).then(
+          (result) => {
+            triggerWavDownload(result.blob, result.filename);
+            notes.push(`saved ${result.filename} (${result.seconds.toFixed(1)}s, ${Math.round(result.blob.size / 1024)} KB)`);
+            void render();
+          },
+          (error: unknown) => {
+            notes.push(`record failed: ${error instanceof Error ? error.message : String(error)}`);
+            void render();
+          }
+        );
+      },
+      "diag-record"
     )
   );
   buttons.appendChild(
