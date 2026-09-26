@@ -9,7 +9,27 @@ It is deliberately *not* a to-do list derived from the report: four of the repor
 implemented, and the measurements below say which. The two workstreams (this and the skin/gate work) are
 independent — nothing here touches CSS, and the gates added here do not overlap `probe:skins`.
 
-### The loudness drift's root cause, measured (2026-09-27)
+#### The first frame, and why images were arriving late (2026-09-27)
+
+Two owner reports, one cause each.
+
+**A cold PWA launch showed a black screen for a few seconds.** `#root` was empty until React had fetched, parsed and run the
+entry chunk; the only thing painted meanwhile was the body background. `index.html` now draws the first frame itself — inline
+markup and inline style, no stylesheet, no font, no script, so it paints with the document — and it lives *inside* `#root`, so
+React's first commit replaces it and no code path of ours can leave it behind. It is 733 bytes, minified by hand, and the
+initial-route budget moved **222 → 223 KB** to hold it (measured 221.9 before, 222.4 after; the raise is recorded in
+`scripts/check_budgets.js` with the same reasoning as the two before it). `src/test/bootSplash.test.ts` holds the two
+properties that make it work: inside the root, and no external resource.
+
+**Images were fetched only when their element appeared** — "涉及到图片加载的地方，没有合适的预加载，每次都是触发才下载". That is
+not something `loading="lazy"` can fix: lazy decides *when to start*, not whether the bitmap is ready when the element paints.
+So `genreArt.ts` gained `preloadGenreCover` / `preloadGenreCovers`, which fetch and then `await image.decode()` — the step that
+actually makes the first paint instant — and the shells warm what they are about to draw: the phone home screen warms the
+first screenful of thumbnails (eight, keyed by skin, three at a time so warming never competes with the transport), and the
+shell warms both sizes of the bar's genre, because the vinyl label bakes its picture from the **original** file that nothing
+has fetched at that point.
+
+## The loudness drift's root cause, measured (2026-09-27)
 
 The re-record kept refusing to publish: its sentinel `alternative-rock` measured **−10.782 LUFS** on the warm page and
 **−11.493** after a page reload — Δ **−0.711 dB** — with the tool's own words, "a page that has rendered too many genres

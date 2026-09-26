@@ -121,3 +121,52 @@ export function genreArtBackground(genre: { id: string; category: string }): str
     `linear-gradient(${angle}deg, hsl(${first} 60% 14%), hsl(${second} 55% 8%))`,
   ].join(", ");
 }
+
+/**
+ * Warm a cover so the first paint with it is instant.
+ *
+ * Every image in the app is fetched when its element is first rendered, which is why opening the player or scrolling a list
+ * shows a blank tile for a moment and then a picture. `loading="lazy"` cannot help with that: lazy only decides *when*
+ * to start, not whether the bitmap is ready when the element appears.
+ *
+ * This resolves after `decode()`, so the browser has the pixels compiled and the paint is immediate. It is safe to call for
+ * an image already in cache (it resolves from memory) and safe to call repeatedly — the browser deduplicates the request, and
+ * the caller keeps its own set of what it has already asked for.
+ */
+export function preloadGenreCover(
+  id: string,
+  options: { skin?: string; thumb?: boolean } = {}
+): Promise<void> {
+  if (typeof Image === "undefined") return Promise.resolve();
+  const candidates = options.thumb === false ? genreCoverCandidates(id, options.skin) : genreCoverThumbCandidates(id, options.skin);
+  const url = candidates[0] ?? genreCoverUrl(id);
+  return new Promise((resolve) => {
+    const image = new Image();
+    // The same hint the rendered <img> carries, so the two never compete for the main thread.
+    image.decoding = "async";
+    image.onload = () => {
+      // `decode()` is what actually makes the paint instant; a browser without it resolves on load.
+      if (typeof image.decode === "function") image.decode().then(resolve, resolve);
+      else resolve();
+    };
+    image.onerror = () => resolve();
+    image.src = url;
+  });
+}
+
+/** Warm several covers, at most `concurrency` at a time so warming never competes with the transport. */
+export async function preloadGenreCovers(
+  ids: readonly string[],
+  options: { skin?: string; thumb?: boolean; concurrency?: number } = {}
+): Promise<void> {
+  const concurrency = Math.max(1, options.concurrency ?? 3);
+  let index = 0;
+  const workers = Array.from({ length: Math.min(concurrency, ids.length) }, async () => {
+    while (index < ids.length) {
+      const id = ids[index];
+      index += 1;
+      await preloadGenreCover(id, options);
+    }
+  });
+  await Promise.all(workers);
+}

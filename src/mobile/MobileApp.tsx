@@ -17,6 +17,8 @@ import { useGenreAudition } from "../hooks/useGenreAudition";
 import { auditionArrangementFor } from "./mobileGenreData";
 import { MobileModuleTabBar } from "./MobileModuleTabBar";
 import { MobilePlayerBar } from "./MobilePlayerBar";
+import { preloadGenreCover } from "./genreArt";
+import { useSkin } from "../hooks/useSkin";
 import { MOBILE_MODULE_PLAN_KEYS, type MobileModule } from "./mobileModules";
 import { GENRE_INDEX, loadGenre } from "./mobileGenreData";
 import { nextGenreForMode, nextPlayMode, normalisePlayMode, type PlayMode } from "./vinyl/vinylMath";
@@ -132,6 +134,8 @@ export function MobileApp({
   onOpenHelp,
   onOpenSearch,
 }: MobileAppProps) {
+  /** The active skin, so warmed artwork is the file this device will actually draw. */
+  const { skin } = useSkin();
   const { t } = useLanguage();
 
   /**
@@ -314,6 +318,23 @@ export function MobileApp({
   const lastBarGenreRef = useRef<string | null>(null);
   const barGenreId = playingGenreId ?? lastBarGenreRef.current ?? defaultGenreId;
   lastBarGenreRef.current = barGenreId;
+
+  /**
+   * Warm what the player and the bar draw, in the size they draw it.
+   *
+   * The bar shows a thumbnail and the vinyl label bakes a 512 px picture from the **original** file, which nothing has fetched
+   * yet — so today tapping a card shows a blank disc for a moment and "next" shows another one. Fetching both as soon as the
+   * genre is known costs one thumbnail and one original per genre, ahead of the tap that needs them.
+   */
+  const warmedArtRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!barGenreId) return;
+    const key = `${skin ?? "default"}:${barGenreId}`;
+    if (warmedArtRef.current.has(key)) return;
+    warmedArtRef.current.add(key);
+    void preloadGenreCover(barGenreId, { skin });
+    void preloadGenreCover(barGenreId, { skin, thumb: false });
+  }, [barGenreId, skin]);
   const barIsPlaying = Boolean(playingGenreId) && playingGenreId === barGenreId;
   // The bar is the collapsed *form* of the player, so it is hidden while the full player is open.
   const showPlayerBar = module === "home" && !isPlayer;
