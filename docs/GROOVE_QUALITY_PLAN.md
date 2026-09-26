@@ -9,6 +9,30 @@ It is deliberately *not* a to-do list derived from the report: four of the repor
 implemented, and the measurements below say which. The two workstreams (this and the skin/gate work) are
 independent — nothing here touches CSS, and the gates added here do not overlap `probe:skins`.
 
+### The loudness drift's root cause, measured (2026-09-27)
+
+The re-record kept refusing to publish: its sentinel `alternative-rock` measured **−10.782 LUFS** on the warm page and
+**−11.493** after a page reload — Δ **−0.711 dB** — with the tool's own words, "a page that has rendered too many genres
+renders the same genre differently".
+
+It is the **WebAssembly memory budget**, and it is not reclaimable:
+
+* each GS-1 host instantiates a WASM core in its context's worklet scope; the pool's own comment records the wall from
+  `scripts/probe_gs1_memory_release.mjs` — **~124 hosts**, then every further `WebAssembly.instantiate` fails with
+  `RangeError: … Out of memory`, "whatever teardown is used (`dispose()`, an explicit `gc()`, `OfflineAudioContext.close()`)";
+* a **page reload** resets the JS realm but **not** the process's WASM memory, so recycling the page (which the tool does every
+  12 measurements) does not give the budget back — which is why the sentinel moved even on the freshly reloaded page;
+* measured directly with the new `scripts/probe_render_determinism.mjs`: in a **fresh** page two to four renders of
+  `chicago-house` or `alternative-rock` agree to **0.003 / 0.000 dB**, the limiter is the **worklet** every time and no GS-1
+  host fails — and warming the page with **40** other genres **kills the tab** ("Target page, context or browser has been
+  closed"), i.e. ~80–120 hosts is past the budget on a desktop too.
+
+**So the fix is to sweep in chunks across processes**: `scripts/run_loudness_sweep.mjs` runs the measurement in invocations of
+~20 genres (each a fresh Chromium, therefore a fresh WASM budget) and merges their `genres` tables into the one report the trim
+step reads. The same fact is why the stems path was optimised to build hosts only for the track it plays (~7 exports per page
+→ ~31), and it is the audio-side twin of the owner's "after a few dozen tracks the phone stutters with the covers": the page's
+resources are finite and the code has to respect that rather than discover it.
+
 ## Method
 
 Everything below comes from `scripts/analyze_export_audio.mjs`, which renders each genre through the app's **own**

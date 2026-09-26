@@ -29,6 +29,19 @@
  *   node scripts/measure_genre_loudness.mjs --sample=3      # is the report still true?
  *   node scripts/measure_genre_loudness.mjs --force-fallback  # measure the degraded limiter path
  *
+ * **A full sweep must be run as several invocations, not one.**
+ *
+ * The measuring page recycles itself (`--reload-every`) because a page that has rendered many genres starts rendering them
+ * differently — but a reload only resets the JS realm, **not** the process's WebAssembly memory, and the GS-1 core's
+ * `WebAssembly.Memory` is never given back (`WavExporter` documents the wall: ~124 hosts and then every further
+ * `WebAssembly.instantiate` fails, "whatever teardown is used"). A previous 159-genre run therefore aborted exactly as its
+ * own guard requires — `alternative-rock` measured −10.782 LUFS on the warm page and −11.493 after a reload, Δ −0.711 dB —
+ * with the reload having restored nothing.
+ *
+ * So: run chunks of ~20 genres as **separate invocations** (`--limit=N` for the first, `--genres=a,b,…` for the rest, from
+ * the ids the first run lists). Each invocation is a fresh browser process, which is the only thing that actually returns the
+ * WASM budget. `scripts/run_loudness_sweep.mjs` does that and merges the chunks.
+ *
  * A full run recycles its measuring page (see `--reload-every`) because a page that has rendered
  * ~50-75 genres starts rendering the same genre up to 2.45 dB louder; the sentinel check aborts the
  * run if that happens anyway.
