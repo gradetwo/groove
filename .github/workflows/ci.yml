@@ -116,6 +116,10 @@ jobs:
       - name: Production Build
         run: npm run build
 
+      # The boot probe drives a real browser, so this job needs one. Chromium only: a page to open.
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
       - name: The built app starts
         # The cheapest check with the widest blast radius, and the one that was missing when a "cosmetic" `index.html` edit
         # deleted the entry script: `dist` was a dead shell with no error anywhere. `deploy.mjs` refuses a build that does not
