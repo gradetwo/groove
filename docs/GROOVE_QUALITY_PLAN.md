@@ -66,6 +66,31 @@ built into a browser probe, and the last one even catalogued the DSP that would 
 question — with the analyser's own loudness and the same 13-band fingerprint the timbre baseline uses — has been in the toolset since
 the MCP was written. The probe's role stays what it was: the **structural** check that both renders differ at all.
 
+**Measured through the MCP (run 36280296934): the `fx` lane contributes 0.00009 LU.** Both readings, from
+`probe_texture_contribution.mjs` on `hard-techno`:
+
+```
+as written      : -12.630437 LUFS · true peak -1.300013 dBFS
+fx lane cleared : -12.630345 LUFS · true peak -1.299975 dBFS
+difference      : 0.00009 LU
+```
+
+So the answer to A4 is finally unambiguous, and it is none of the three earlier guesses: the lane **exists** in all 159 genres, it
+**holds notes** in all 159, and clearing it moves the mix by **nine hundred-thousandths of a LU** — the master limiter holds the level
+either way, and nothing of that lane reaches the output. The measurement is not "the lane is quiet"; it is "the lane is not in the
+mix".
+
+**What ③b therefore is — an audio edit, not a data one.** Adding notes would change nothing (there are notes); adding the lane would
+change nothing (there is a lane). What has to change is the lane's **level or instrument** in the genre's mix so its material is
+audible at all, and that is the kind of change this project measures before and after, then re-records the loudness and timbre
+baselines for, on CI. That is exactly the batch the objective named, and it now has its justification in numbers rather than in a
+premise.
+
+**Worth stating plainly for the record**: three earlier conclusions on this item were wrong (no lane / empty lane / proxy says
+silent), each from a measurement one step short of the question. The one that answered it was the one the plan already had the tools
+for — the MCP's own `render_song` + `analyze_audio` — and it took two CI runs to get the probe itself right (a missing `mcp:build`,
+then a genre **file** name where a genre **id** was required).
+
 **The execution recipe, so the next session runs it instead of rediscovering it.** Two ways, both already wired for CI:
 
 * **through the MCP**, which is the measurement this section settled on: a small script that boots the server over stdio (the shape
