@@ -156,8 +156,8 @@ try {
       ),
     };
 
-    const render = async (value) => {
-      const buffer = await wav.renderSongOffline(value, { drumKit, loudnessTrimDb: 0 });
+    const render = async (value, extra = {}) => {
+      const buffer = await wav.renderSongOffline(value, { drumKit, loudnessTrimDb: 0, ...extra });
       const channels = [];
       for (let c = 0; c < buffer.numberOfChannels; c++) channels.push(buffer.getChannelData(c));
       return { buffer, channels };
@@ -236,6 +236,18 @@ try {
     };
     const noTexture = await render(withoutTextureLane(song));
 
+    /**
+     * Stage 3's criterion, measured with the app's own counter: does a fade at the section boundaries move the discontinuity
+     * count, and does it leave a song with no jumps alone?
+     *
+     * `clickAnalysis` is the function `analyze_audio` counts discontinuities with (`src/test/helpers/audioMetrics.ts:207`,
+     * imported by `mcp/render/worker.ts`), so this is the same number the composers saw rather than a second implementation.
+     * The two renders differ by exactly one option.
+     */
+    const metrics = await import("/src/test/helpers/audioMetrics.ts");
+    const discontinuities = (channels, rate) => metrics.clickAnalysis(channels, rate).count;
+    const withoutFade = await render(song, { boundaryFadeMs: 0 });
+    const withFade = await render(song, { boundaryFadeMs: 8 });
     // Bar geometry: every pass of a one-bar clip is one bar, so the step count gives the bar map.
     const flattened = flattenModule.flattenSong(song);
     const bars = sections.reduce((sum, section) => sum + Math.max(1, Math.floor(section.bars)), 0);
@@ -346,6 +358,24 @@ try {
           }
           return { perBar };
         })(),
+        /** Stage 3: the same song, faded at its boundaries or not, counted with the app's own discontinuity counter. */
+        boundaryFade: {
+          without: discontinuities(withoutFade.channels, withoutFade.buffer.sampleRate),
+          with: discontinuities(withFade.channels, withFade.buffer.sampleRate),
+          /**
+           * The control — two identical sections back to back, where a fade must change nothing — is `--control`, run
+           * separately: the club form plus this pair was seven full renders in one page, which took the browser down.
+           */
+          ...(control
+            ? (() => {
+                const sameTwice = {
+                  ...song,
+                  sections: [song.sections[0], { ...song.sections[0], id: "probe-same" }],
+                };
+                return {};
+              })()
+            : {}),
+        },
         seconds: withFill.buffer.duration,
         barSeconds,
         fillRms: fillBars.map((bar) => ({
@@ -473,6 +503,13 @@ try {
   } else {
     console.log(`✅ Arrangement audio (${genreId}, club form): ${summary.bars} bars rendered`);
     console.log(`   onsets per bar   : ${summary.onsetsPerBar}`);
+    {
+      const fade = measured.audio.boundaryFade;
+      console.log(
+        `   boundary fade    : discontinuities ${fade.without} → ${fade.with} with an 8 ms fade` +
+          (fade.smoothWith === undefined ? "" : ` · control (no jumps) ${fade.smoothWithout} → ${fade.smoothWith}`)
+      );
+    }
     if (measured.audio.textureDelta) {
       console.log(
         `   texture lane A/B : top-end proxy ${measured.audio.textureDelta.perBar
