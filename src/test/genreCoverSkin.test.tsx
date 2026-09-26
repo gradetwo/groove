@@ -1,7 +1,7 @@
 import React from "react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { GenreCover, genreCoverForSkin } from "../mobile/GenreCover";
+import { GenreCover, genreCoverForSkin } from "../components/GenreCover";
 import { SKIN_CHANGED_EVENT, SKIN_STORAGE_KEY } from "../features/settings/skinPrefs";
 
 /**

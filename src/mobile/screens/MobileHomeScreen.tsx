@@ -33,7 +33,7 @@ import { TIMELINE_STORIES, type TimelineStory } from "../../data/timeline_storie
 import { useLanguage } from "../../i18n/LanguageContext";
 import type { GenreCategory } from "../../types/genre";
 import { CATEGORY_SWATCH, genreArtBackground } from "../genreArt";
-import { GenreCover } from "../GenreCover";
+import { GenreCover } from "../../components/GenreCover";
 import { genreMatchesQuery, genreNameZh } from "../genreQuery";
 
 /**

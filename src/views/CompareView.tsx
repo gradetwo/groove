@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import { GenreCover } from "../components/GenreCover";
 import { Columns, Plus, X, Play, Pause, Square, Minus, Sliders, ExternalLink, Sparkles, Activity, ArrowRightLeft, Music, CheckCircle, Volume2, Disc3, Flame, Radio, Clock, Layers, Zap, Info, Mic2, Users, Loader2, GitBranch } from "lucide-react";
 import { Genre, GenreRadarMetrics, SequencerTrack, SequencerPattern } from "../types/genre";
 import { ALL_GENRES, GENRES_MAP } from "../data/genres";
@@ -1359,13 +1360,20 @@ export const CompareView: React.FC<CompareViewProps> = ({
                     </div>
                   </div>
 
-                  <div>
-                    <h3 className="font-black text-text text-xl tracking-wide">
-                      {genre.name}
-                    </h3>
-                    <p className="text-xs text-text-sub font-medium mt-1">
-                      {genre.origin_year} · {genre.origin_place[language]}
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <GenreCover
+                      genreId={genre.id}
+                      testId={`compare-cover-${genre.id}`}
+                      className="h-12 w-12 flex-none rounded-xl object-cover ring-1 ring-line"
+                    />
+                    <div>
+                      <h3 className="font-black text-text text-xl tracking-wide">
+                        {genre.name}
+                      </h3>
+                      <p className="text-xs text-text-sub font-medium mt-1">
+                        {genre.origin_year} · {genre.origin_place[language]}
+                      </p>
+                    </div>
                   </div>
 
                   {/* Sync Audition Status Badge */}

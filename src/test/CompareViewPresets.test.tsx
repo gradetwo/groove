@@ -183,3 +183,26 @@ describe("CompareView same-origin (lineage) comparison (N-06)", () => {
     );
   }, TEST_TIMEOUT);
 });
+
+/**
+ * The compare columns show each genre's artwork, in the skin the reader has chosen.
+ *
+ * Small on purpose: `GenreCover` owns the skin resolution and the fallback chain (see `genreCoverSkin.test.tsx`); what
+ * this pins is that the desktop view is *wired* to it, which is the half that was missing on the phone shell for as long
+ * as the covers have existed.
+ */
+describe("CompareView genre artwork", () => {
+  it("gives each compared genre its own cover", async () => {
+    const pair = await initialPair();
+    render(
+      <LanguageProvider>
+        <CompareView initialGenres={pair} onSelectGenre={vi.fn()} onOpenStudio={vi.fn()} />
+      </LanguageProvider>
+    );
+    const covers = await screen.findAllByTestId(/^compare-cover-/, {}, { timeout: ASYNC_TIMEOUT });
+    expect(covers.length).toBeGreaterThanOrEqual(2);
+    for (const cover of covers) {
+      expect(cover.getAttribute("src")).toMatch(/^\/covers\/(default|[a-zA-Z]+)\//);
+    }
+  }, TEST_TIMEOUT);
+});

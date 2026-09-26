@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
+import { GenreCover } from "../components/GenreCover";
 import { 
   Search, 
   Sliders, 
@@ -460,6 +461,13 @@ export const ExploreListView: React.FC<ExploreListViewProps> = ({
                         }`}
                       >
                         <div className="space-y-2">
+                          {/* The skin's artwork for this genre, small: the grid is for scanning names, and the
+                              picture is the fastest way to recognise one. */}
+                          <GenreCover
+                            genreId={genre.id}
+                            testId={`explore-cover-${genre.id}`}
+                            className="h-24 w-full rounded-xl object-cover ring-1 ring-line"
+                          />
                           <div className="flex items-center justify-between">
                             <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${color.badge}`}>
                               {genre.category}
