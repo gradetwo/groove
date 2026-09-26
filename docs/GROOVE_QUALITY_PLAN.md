@@ -56,6 +56,19 @@ of notes, and **not carry top end** — percussion, a low sweep, a chord stab �
 all three measurements produced. **The proxy was never evidence that the lane is inaudible**; it was evidence that the lane is not
 *high-frequency*.
 
+**And it is nearly free to take, because the probe already has both renders.** `probe_arrangement_audio.mjs` builds
+`withoutTextureLane(song)` and renders it beside the untouched song — that is how the top-end proxy A/B was measured — so the
+whole-mix comparison needs **no extra render**, which matters on a probe that has already been cut down once for exceeding its budget.
+What it needs is a measurement the in-page helper set does not carry: `src/test/helpers/audioMetrics.ts` exports peak, correlation,
+click and decay statistics but **no gated loudness and no band fingerprint** (those live on the Node side, in `mcp/render/` and the
+app's audio modules).
+
+So the next step is a small one either way: import the app's own loudness module in the page if it is import-safe there — the
+precedent is set, the probe already dynamic-imports `audioMetrics` — or compute the comparison over bands in the probe itself and say
+in the output that it is the probe's own arithmetic rather than the analyser's. Either way the number to read is the **same song with
+the `fx` lane muted**, and the decision it drives is already written above: a mix that moves means A4 closes as implemented and
+audible; a mix that does not means the lane's level or instrument is what ③b has to change.
+
 **So the measurement A4 actually needs is direct**: render the same song with the `fx` lane muted (`section.mute` takes lane ids) and
 compare **the whole mix** — gated loudness and the 13-band shape — rather than one band. If the lane moves the mix, the machinery and
 the material are both fine and A4 closes as "implemented, audible, measured"; if it does not move the mix at all, then the lane's
