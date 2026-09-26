@@ -390,12 +390,18 @@ const PatternSlotControls = memo<PatternSlotControlsProps>(function PatternSlotC
             <button
               data-toolbar-id="pattern-slot" data-toolbar-tier="1"
               type="button"
-              onClick={() => onCopySlot(activeSlot === "A" ? "A" : "B", activeSlot === "A" ? "B" : "A")}
+              onClick={() => onCopySlot(activeSlot, CLIP_SLOTS[(CLIP_SLOTS.indexOf(activeSlot) + 1) % CLIP_SLOTS.length])}
               className="h-7 px-1.5 text-text-sub hover:text-accent transition-colors ml-0.5"
               title={
-                activeSlot === "A" ? t("toolbar_copy_a_to_b") : t("toolbar_copy_b_to_a")
+                activeSlot === "A"
+                  ? t("toolbar_copy_a_to_b")
+                  : activeSlot === "B"
+                    ? t("toolbar_copy_b_to_a")
+                    : // Beyond the two translated cases the target is named directly: inventing keys for a copy that nobody has
+                      // translated yet would be inventing copy, not translating it.
+                      `${activeSlot} → ${CLIP_SLOTS[(CLIP_SLOTS.indexOf(activeSlot) + 1) % CLIP_SLOTS.length]}`
               }
-              aria-label="Copy pattern slot"
+              aria-label="Copy pattern slot to the next slot"
             >
               <Copy className="w-3 h-3" />
             </button>
