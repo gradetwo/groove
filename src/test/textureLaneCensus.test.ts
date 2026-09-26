@@ -27,9 +27,29 @@ describe("which catalogued clips carry a texture lane (A4's content census)", ()
       );
       if (lane) withLane.push(`${idOf(genre)}:${lane.track_id}`);
     }
+    /**
+     * …and whether any of those lanes holds **material**, which is the question the fix turns on.
+     *
+     * A lane that exists and is silent needs notes, not a new voice; a lane with notes whose riser is inaudible needs something else
+     * entirely. The census reports both counts so the difference is a number rather than an assumption.
+     */
+    let withNotes = 0;
+    const silent: string[] = [];
+    for (const genre of genres) {
+      const pattern = patternFromGenre(genre as never);
+      const lane = pattern?.tracks?.find((track) =>
+        TEXTURE.test(`${track.track_id ?? ""} ${track.name ?? ""}`.toLowerCase())
+      );
+      if (!lane) continue;
+      const hits = (lane.steps ?? []).reduce((sum: number, value: number) => sum + (value > 0 ? 1 : 0), 0);
+      if (hits > 0) withNotes += 1;
+      else silent.push(idOf(genre));
+    }
+
     // Printed rather than asserted: the point is the list, and a hard expectation here would have to be rewritten by the very change
     // this census exists to plan.
     console.log(`texture lanes: ${withLane.length}/${genres.length} clips — ${withLane.join(", ") || "(none)"}`);
+    console.log(`with material: ${withNotes}/${withLane.length} — silent: ${silent.length} (${silent.slice(0, 6).join(", ")}…)`);
     expect(genres.length).toBeGreaterThan(100);
   });
 });

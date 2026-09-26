@@ -34,6 +34,33 @@ is where the flaky `mobileApp` timeouts came from.
   **download the artifact**, and apply it with `node scripts/apply_loudness_trims.mjs`. The workflow says so itself — "the
   loudness numbers decide what ships, and an auto-committed re-record is how a bad run becomes the truth".
 
+### A4's third measurement: the fx lanes are **full and quiet**, not empty (2026-09-28)
+
+The census, extended to count material rather than only structure, reports both numbers:
+
+```
+texture lanes: 159/159 clips — chicago-house:fx, … kuduro:fx
+with material: 159/159 — silent: 0
+```
+
+So every genre owns the voice **and every one of them sequences it**. That retires the previous correction too ("the lanes are
+empty") and it changes what A4's remaining work is for the third time — which is worth stating plainly rather than quietly fixing,
+because three confident conclusions in a row have each been one measurement short:
+
+1. "no clip has a lane" — from an A/B that removed it and saw no change in a **top-end proxy**;
+2. "the lanes are empty" — from a census of **structure** alone;
+3. now: the lanes exist and hold notes, and removing one still did not move the **top-end proxy**.
+
+Those three together point somewhere none of them looked: the proxy is the thing that has been constant. A lane can be present, full
+of notes, and **not carry top end** — percussion, a low sweep, a chord stab — and a top-end proxy would report exactly the "no change"
+all three measurements produced. **The proxy was never evidence that the lane is inaudible**; it was evidence that the lane is not
+*high-frequency*.
+
+**So the measurement A4 actually needs is direct**: render the same song with the `fx` lane muted (`section.mute` takes lane ids) and
+compare **the whole mix** — gated loudness and the 13-band shape — rather than one band. If the lane moves the mix, the machinery and
+the material are both fine and A4 closes as "implemented, audible, measured"; if it does not move the mix at all, then the lane's
+**level or instrument** is what needs the change, not its notes.
+
 ### A4 corrected again: every clip **has** an fx lane, and every one of them is empty (2026-09-28)
 
 The entry below concluded "the catalogued clips carry no lane for it to play". A census of the whole library says otherwise —
