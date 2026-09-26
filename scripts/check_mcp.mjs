@@ -146,6 +146,51 @@ try {
   check("list_genres answers with rows", Array.isArray(genres.genres) && genres.genres.length === 5, JSON.stringify(genres).slice(0, 120));
   check("list_genres reports the library total", genres.total >= 100, String(genres.total));
 
+  /**
+   * The composition chain, as far as it is browser-free: create a song, add a section, replace a clip, read it back, export it.
+   *
+   * This is the half of the composer's workflow that the gate can check without Chromium (rendering has its own scope, because
+   * it needs a browser). Two AI composers drove the server end to end and tripped over things this would have caught: `bars`
+   * meaning **passes** rather than measures — they built arrangements four times the length they intended — and a song being
+   * limited to clip A because `set_clip` existed and no tool reached it.
+   */
+  const song = payload(await client.request("tools/call", { name: "create_song", arguments: { genreId: "chicago-house", bars: 2, label: "verse" } }));
+  check("create_song returns a songId", typeof song.songId === "string" && song.songId.length > 0, JSON.stringify(song).slice(0, 140));
+  check(
+    "create_song says what a pass is worth and how long the song is",
+    Number.isFinite(song.passBars) && song.passBars >= 1 && Number.isFinite(song.secondsEstimate) && song.secondsEstimate > 0,
+    `passBars=${song.passBars} seconds=${song.secondsEstimate}`
+  );
+  check(
+    "bars counts passes: two passes expand to passBars x 2 measures",
+    song.totalBars === song.passBars * 2,
+    `totalBars=${song.totalBars} passBars=${song.passBars}`
+  );
+
+  const withSection = payload(
+    await client.request("tools/call", { name: "add_section", arguments: { songId: song.songId, slot: "A", bars: 2, label: "chorus" } })
+  );
+  check("add_section places a second section", (withSection.sections ?? []).length === 2, JSON.stringify(withSection.shape ?? ""));
+
+  const withClip = payload(
+    await client.request("tools/call", { name: "set_clip", arguments: { songId: song.songId, slot: "B", genreId: "chicago-house" } })
+  );
+  check("set_clip gives a song a second clip", (withClip.clips ?? []).includes("B"), JSON.stringify(withClip.clips ?? []));
+
+  const readBack = payload(await client.request("tools/call", { name: "get_song", arguments: { songId: song.songId } }));
+  check(
+    "get_song reads the arrangement back with its clips",
+    readBack.clips?.A && readBack.clips?.B && (readBack.sections ?? []).length === 2,
+    `clips=${Object.keys(readBack.clips ?? {}).join(",")} sections=${(readBack.sections ?? []).length}`
+  );
+
+  const exported = payload(await client.request("tools/call", { name: "export_groove", arguments: { songId: song.songId } }));
+  check(
+    "export_groove writes a validated v2 package",
+    exported.version === 2 && exported.clips?.includes?.("B") !== false && Number.isFinite(exported.bytes),
+    JSON.stringify(exported).slice(0, 160)
+  );
+
   const found = payload(await client.request("tools/call", { name: "search_genres", arguments: { query: "chicago" } }));
   check("search_genres finds chicago-house", (found.matches ?? []).some((match) => match.id === "chicago-house"), JSON.stringify(found.matches?.[0] ?? {}));
 
