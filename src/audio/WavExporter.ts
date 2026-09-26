@@ -601,7 +601,18 @@ export async function renderPatternOffline(
       const pitchVal = track.pitch && track.pitch[stepIdx] !== undefined && track.pitch[stepIdx] !== null ? track.pitch[stepIdx]! : 0;
       const gateVal = track.gate && track.gate[stepIdx] !== undefined ? track.gate[stepIdx] : 0.8;
 
-      const trackDest = trackStrips[trackIdx].insert.input;
+      /**
+       * A/B: bypass the channel strip (`globalThis.__noStrip`).
+       *
+       * The strip's compressor is a `DynamicsCompressorNode` — the browser's own, with no lookahead — and the pop this work
+       * has been chasing sits ~15 ms **after** each note-off, is absent from the core's own output, and is bigger in the
+       * channel the lane is panned towards. A compressor's gain moving as a note's release drops the level is the shape of
+       * that, and this switch removes the strip to see it.
+       */
+      const trackDest =
+        (globalThis as unknown as { __noStrip?: boolean }).__noStrip === true
+          ? trackStrips[trackIdx].gain
+          : trackStrips[trackIdx].insert.input;
       const trackId = (track.track_id || "").toLowerCase();
       const lowerName = track.name.toLowerCase();
       // Exporter parity: resolve the same per-track instrument the live engine does, so a

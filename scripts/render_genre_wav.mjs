@@ -80,6 +80,10 @@ const sendsOff = arg("--sends", "") === "0";
 const noNoteOff = process.argv.includes("--no-note-off");
 /** Capture the core's own samples around scheduled events (`--capture-events`), for the pop investigation. */
 const captureEvents = process.argv.includes("--capture-events");
+/** Bypass the track channel strips (`--no-strip`), to test whether the pop is the strip's compressor. */
+const noStrip = process.argv.includes("--no-strip");
+/** Bypass the master bus compressor (`--no-bus-comp`), the other browser compressor in the path. */
+const noBusComp = process.argv.includes("--no-bus-comp");
 /** Where to write the captured events, when `--capture-events` is on. */
 const capturesOut = arg("--captures-out", "");
 /** Render the authored skeleton instead of the shipping pattern (see the note at the call site). */
@@ -147,6 +151,8 @@ try {
       noNoteOff: process.argv.includes("--no-note-off"),
       captureEvents: process.argv.includes("--capture-events"),
       noGs1: process.argv.includes("--no-gs1"),
+      noStrip: process.argv.includes("--no-strip"),
+      noBusComp: process.argv.includes("--no-bus-comp"),
     }
   );
   page.on("pageerror", (error) => console.error("[page]", error.message));
@@ -173,6 +179,7 @@ try {
         import("/src/audio/gs1/gs1Tracks.ts"),
       ]);
       if (noGs1) gs1Tracks.setGs1RoutingEnabled(false);
+      if (flags.noStrip) globalThis.__noStrip = true;
       if (flags.noNoteOff) globalThis.__noNoteOff = true;
       if (gs1Param) {
         const [rawId, rawValue] = String(gs1Param).split("=");
@@ -213,6 +220,9 @@ try {
         mixerStates[soloIndex] = { ...mixerStates[soloIndex], solo: true };
       }
       const buffer = await wav.renderPatternOffline(pattern, {
+        // Read from the init-script flags rather than a destructured parameter: four flags have now failed to arrive that
+        // way in this file, and `__probeFlags` is one object the page reads by name.
+        ...(flags.noBusComp ? { masterBusCompEnabled: false } : {}),
         bars,
         seamlessLoop,
         trackStates: mixerStates,
