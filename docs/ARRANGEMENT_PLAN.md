@@ -263,6 +263,24 @@ ratio, the floor and the section distance are all statements about silence — a
 far. Three CI runs have now reported ~−80 dBFS; the earlier two were diagnosed as a suspended context and a missing genre, and
 this one has a running context, a genre loaded, 46 frames per window and still no signal.
 
+**The control ran, and it is silent too — so the probe is what is broken, not the transport.** Run 36265037064, both measurements
+side by side:
+
+```
+arrangement : ❌ 3.62 dB/band against a 5.00 floor (ratio 0.7×)   · levels A -84.0 dB · B -80.8 dB · frames 46/46
+plain loop  : ❌ 5.10 dB/band against a 6.77 floor (ratio 0.8×)   · levels A -85.2 dB · B -80.4 dB · frames 45/46
+```
+
+The loop has **no sections at all** — nothing to play but the pattern the editor is on — and it measures the same −85 dBFS. So the
+silence is in the probe's audio path, and B7 has **never been heard by its check**: the transport is neither confirmed nor
+refuted, and the ratio has been a number about nothing on all five runs.
+
+**What to narrow next**, in the order the evidence suggests: the FFT bands say nothing about *where* the silence is, so the probe
+should report the analyser's **waveform** (`getFloatTimeDomainData`'s peak/RMS), which separates "no signal reaches the analyser"
+from "no signal is generated"; and it should print `probe.readState()` alongside it, which says whether the engine believes it is
+playing and which pattern it holds. Those two answers cut the three remaining candidates — the analyser being tapped off the bus
+that carries the sound, `engine.play()` not starting the transport, and autoplay — down to one.
+
 **So the next experiment is a control, not another look at the ratio**: measure a **plain loop** (no sections at all) with the same
 probe and the same analyser. If the loop is also at −80 dBFS then the probe's audio path is what is broken and B7's listening
 proof simply does not exist yet; if the loop is loud and the song stays silent, *that* is a real finding about the transport and
