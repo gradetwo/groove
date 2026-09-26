@@ -216,6 +216,16 @@ try {
       if (!analyser) return { error: "the engine exposes no master analyser" };
       // A suspended context is silence, and silence is what the first honest run measured: resume it here, then insist.
       if (analyser.context?.state !== "running") await analyser.context?.resume?.();
+      /**
+       * Hand the engine the pattern the session is holding.
+       *
+       * The app does this from the console when it mounts; a probe that only calls `play()` runs an engine with nothing to
+       * play, which is why both windows measured about −85 dBFS even with the surface reached. `readState().pattern` is the
+       * same object the store renders (eight tracks, the genre's own bpm), and `setPattern` is the engine's own entry point
+       * for it.
+       */
+      const sessionPattern = state.pattern;
+      if (sessionPattern) probe.engine.setPattern(sessionPattern, true);
       const contextState = analyser.context?.state ?? "unknown";
       if (contextState !== "running") return { error: `the audio context is ${contextState}, not running` };
       const bins = new Float32Array(analyser.frequencyBinCount);
