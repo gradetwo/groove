@@ -63,3 +63,12 @@ scripts/*.progress.json
 wrangler.toml
 # MCP server bundle (built by `npm run mcp:build`)
 dist-mcp/
+
+# The cover pipeline's working directories: review dumps, rejects, installers and caches. The *shipped* artwork is
+# `public/covers/<genre>.jpg` and `public/covers/<skin>/<genre>.jpg`; none of these are loaded by the app.
+public/covers/_installed/
+public/covers/_rejected/
+public/covers/_review/
+public/covers/_batch_scratch/
+public/covers/__pycache__/
+public/covers/_batch_*
