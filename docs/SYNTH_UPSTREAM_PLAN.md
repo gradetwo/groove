@@ -174,6 +174,31 @@ now paid for that lesson four times.
 `docs/AUDIO_REVIEW.md` answers "User location is not supported for the API use". So the next thing this plan proposes is not
 a sixth detector but a **capture button in the app**: let the person who can hear the pop hand over the signal.
 
+### 1k. The window was too short, and the exclusion list is now six deep (2026-09-28)
+
+§1j compared eight samples at the event. The symptom is 13-15 ms **after** it, so that window could not see the step it was
+built for — it only proved the core is continuous *at* the event. The worklet's capture now spans **2048 frames (46 ms)**,
+collected across the chunks that follow, and `compare_event_capture.mjs` walks the whole window against the file:
+
+```
+off note 72 frame 25931   core's largest step 2.68e-3 at 2.6 ms   file's largest step 8.88e-2 at 15.0 ms
+```
+
+Thirty times larger, at exactly the reported time. The core is exonerated across the window the symptom occupies, and each
+downstream stage was then excluded by A/B with the click-envelope probe (which walks the whole file):
+
+| bypass | result | verdict |
+|---|---|---|
+| note-offs unscheduled | 181.7× → **41×** | the **trigger** is the note-off |
+| channel strip | **181.6×** | excluded |
+| master bus compressor | **181.4×** | excluded |
+| master FX rack | **181.6×** | excluded |
+| true-peak limiter (ceiling +12 dB) | **181.6×** | excluded |
+| reverb + delay returns (`--sends=0`) | **186.8×** | excluded |
+
+What remains is static: the loudness trim, the makeup gain, the DC blocker, the panner, and the host's output gain. The flags
+for the next bisection are committed, so each answer costs one render.
+
 ### 1j. The instrument answered it: the core is smooth at the file's own pop times (2026-09-26)
 
 The event capture collects now (12 events, the same twelve note-offs the reviewer listed by time), and at the six of them that

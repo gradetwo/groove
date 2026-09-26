@@ -153,6 +153,10 @@ try {
       noGs1: process.argv.includes("--no-gs1"),
       noStrip: process.argv.includes("--no-strip"),
       noBusComp: process.argv.includes("--no-bus-comp"),
+      noFxRack: process.argv.includes("--no-fx-rack"),
+      directOut: process.argv.includes("--direct-out"),
+      limiterCeilingDb: arg("--limiter-ceiling", ""),
+      sendsOff: process.argv.includes("--sends=0"),
       reverbHpf: arg("--reverb-hpf", ""),
     }
   );
@@ -224,6 +228,10 @@ try {
         // Read from the init-script flags rather than a destructured parameter: four flags have now failed to arrive that
         // way in this file, and `__probeFlags` is one object the page reads by name.
         ...(flags.noBusComp ? { masterBusCompEnabled: false } : {}),
+        ...(flags.noFxRack ? { bypassFxRack: true } : {}),
+        ...(flags.directOut ? { directOut: true } : {}),
+        // A ceiling of +12 dB is the limiter effectively off, which is how "is the ceiling the step?" gets answered.
+        ...(flags.limiterCeilingDb === "" ? {} : { limiterCeilingDb: Number(flags.limiterCeilingDb) }),
         // Read from the init-script flags, never from a bare Node variable: five flags have now failed to reach this
         // evaluate that way, each costing a run to notice.
         ...(flags.reverbHpf === "" ? {} : { reverbSendHighpassHz: Number(flags.reverbHpf) }),

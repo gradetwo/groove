@@ -134,6 +134,10 @@ export interface RenderWavOptions {
    * profile, because that profile is written last and would otherwise overwrite it.
    */
   reverbSendHighpassHz?: number;
+  /** Diagnostic: bypass the master FX rack (see `createMasterGraph`). */
+  bypassFxRack?: boolean;
+  /** Diagnostic: the GS-1 host's output goes straight to the destination, bypassing the master graph entirely. */
+  directOut?: boolean;
   /**
    * Called once per render with how many GS-1 hosts failed to load after their retries.
    *
@@ -324,6 +328,8 @@ export async function renderPatternOffline(
   // from `MASTER_FADER_DEFAULT`.
   const graph = buildMasterGraph(ctx, {
     loudnessTrimDb,
+    // Diagnostic only; see the note in `createMasterGraph`'s chain wiring.
+    bypassFxRack: options.bypassFxRack,
     // The graph owns the detector bus (A2): the worklet compressor's second input, tapped per lane *before* its duck
     // gain so a deliberate dip is not mistaken for a quiet passage. See `busCompDetectorInput` for why it is not
     // created here.
@@ -454,6 +460,8 @@ export async function renderPatternOffline(
    * scheduler below runs straight-line and must not await. The patch is pushed once, up front.
    */
   const gs1Hosts = new Map<number, Gs1Host>();
+  /** See the option of the same name: the whole master graph is skipped for this render. */
+  const directOut = options.directOut === true;
   let gs1HostFailures = 0;
   /**
    * Asked of **this** kind of context, before any host is built.
@@ -560,7 +568,16 @@ export async function renderPatternOffline(
       if (patchNeedsSample(routed.patch)) {
         await host.importSample(generateTextureSample(ctx.sampleRate), ctx.sampleRate);
       }
-      host.output.connect(trackStrips[t].insert.input);
+      /**
+       * Diagnostic: the host's output straight to the destination, bypassing the entire master graph.
+       *
+       * This splits the remaining question in half. The core's own buffer is smooth 46 ms around every note-off while the file
+       * carries a step 15 ms after it, and six graph stages are already excluded by A/B; if the step survives *this*, then it
+       * is not in the graph at all and the capture is reading the wrong thing — which is worth knowing before bisecting five
+       * static nodes that a static node cannot plausibly produce.
+       */
+      if (directOut) host.output.connect(ctx.destination);
+      else host.output.connect(trackStrips[t].insert.input);
       gs1Hosts.set(t, host);
     }
   }
