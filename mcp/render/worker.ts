@@ -336,6 +336,15 @@ export function measure(channels: Float32Array[], sampleRate: number): Record<st
     pinnedSamples: clippedSampleCount(channels),
     discontinuities: clicks.count,
     worstDiscontinuityDb: clicks.worstDb,
+    /**
+     * Where the worst one is, in seconds — the position a count cannot give.
+     *
+     * A composer asked for exactly this: `discontinuities` fell from 2406 to 2013 on a song with real clip switches, and a single
+     * number cannot say whether the remainder are splice clicks at section boundaries or the music's own transients. The counter
+     * has always computed the index (`worstIndex`); this is the same number expressed where the caller can look at it. Aggregating
+     * by section boundary is the next step and needs the boundary list, which `flattenSong` already returns.
+     */
+    worstDiscontinuitySec: clicks.worstIndex === null ? null : Number((clicks.worstIndex / sampleRate).toFixed(4)),
     correlation: channels.length > 1 ? channelCorrelation(channels[0], channels[1]) : 1,
     sideToMidDb: sideToMidDb(channels),
     tailRmsDb: tailRmsDb(channels, sampleRate, 50),
