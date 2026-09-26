@@ -122,7 +122,10 @@ jobs:
           npm run check:timbre
           npm run check:loudness:fresh
 
-      # P0.9 — the 159-genre trim re-record, which is ~1 hour of single-core offline rendering and the reason
+      # P0.9 — the 159-genre trim re-record. It runs **chunked, across processes**: a single browser process exhausts the
+      # WASM budget after roughly forty renders and the run aborts on its own sentinel (which is why it never completed on a
+      # laptop either). `record:loudness` is `run_loudness_sweep.mjs`, which measures eight genres per fresh process.
+      #
       # `check:loudness:fresh` was red. It belongs here rather than on a laptop for the usual reason, and here
       # specifically because it is the one job whose *output* is the deliverable.
       #
@@ -132,7 +135,7 @@ jobs:
       # commits the diff.
       - name: Loudness trim re-record (159 genres, artifact only)
         if: inputs.scope == 'trim' || inputs.scope == 'all'
-        run: npm run record:loudness -- --out=loudness-report/loudness.baseline.json
+        run: npm run record:loudness -- --out=loudness-report/loudness.baseline.json --chunk=8
 
       - name: Upload the loudness report
         if: (inputs.scope == 'trim' || inputs.scope == 'all') && always()
