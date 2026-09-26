@@ -366,7 +366,9 @@ export const TOOLS: ToolDefinition[] = [
         .min(1)
         .max(64)
         .optional()
-        .describe("how many times the first section repeats its clip; default 1"),
+        .describe(
+          "how many PASSES of the clip the first section repeats — not measures. A genre's seeded clip is 4 measures per pass, so `bars: 4` is 16 measures. The result reports `passBars` (measures per pass) and `secondsEstimate`."
+        ),
       label: z
         .string()
         .max(24)
@@ -545,7 +547,15 @@ export const TOOLS: ToolDefinition[] = [
     inputSchema: {
       songId: z.string().describe("the id create_song returned"),
       slot: z.enum(["A", "B", "C", "D"]),
-      bars: z.number().int().min(1).max(64).optional().describe("clip repeats; default 1"),
+      bars: z
+        .number()
+        .int()
+        .min(1)
+        .max(64)
+        .optional()
+        .describe(
+          "how many PASSES of the section's clip — not measures. The result reports `passBars` and a running `secondsEstimate`."
+        ),
       label: z.string().max(24).optional().describe('e.g. "intro", "drop", "fill"'),
       mute: z.array(z.string()).max(16).optional().describe("track ids silenced in this section"),
       velocityScale: z.number().min(0).max(2).optional().describe("1 = as written, 0.8 = a quieter build"),
