@@ -17,6 +17,7 @@ import { PianoRollLane } from "./PianoRollLane";
 import { MasterAnalyzerSuite } from "../analyzer/MasterAnalyzerSuite";
 import { DEMO_TRACKS_CONFIG } from "./trackConfig";
 import { APP_VERSION } from "../../version";
+import type { ClipSlot } from "../../types/song";
 
 export interface SequencerPanelProps {
   pattern: SequencerPattern;
@@ -98,8 +99,8 @@ export interface SequencerPanelProps {
   onAddSteps: (count: number) => void;
   onRemoveSteps: (count: number) => void;
   onScrollByPixels: (delta: number) => void;
-  onSwitchSlot: (slot: "A" | "B") => void;
-  onCopySlot: (from: "A" | "B", to: "A" | "B") => void;
+  onSwitchSlot: (slot: ClipSlot) => void;
+  onCopySlot: (from: ClipSlot, to: ClipSlot) => void;
   onToggleSongMode: () => void;
   onToggleBlindCompare: () => void;
   /**

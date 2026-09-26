@@ -315,7 +315,7 @@ function skeletonPattern(song: Song): SequencerPattern {
 /** What a session currently is: a loop, or an arrangement. */
 export interface ExportPatternInput {
   songMode: boolean;
-  activeSlot: "A" | "B";
+  activeSlot: ClipSlot;
   patterns: { A: SequencerPattern; B: SequencerPattern };
   current: SequencerPattern;
   sections: SongSection[];

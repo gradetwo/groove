@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import type { ClipSlot } from "../../types/song";
 import {
   X,
   Plus,
@@ -46,14 +47,14 @@ export interface ProjectHubModalProps {
   onClose: () => void;
   currentGenre: Genre;
   currentPatterns: { A: SequencerPattern; B: SequencerPattern };
-  activeSlot: "A" | "B";
+  activeSlot: ClipSlot;
   bpm: number;
   swing: number;
   timeSignature: string;
   resolution: "1/8" | "1/16" | "1/32";
   stepCount: number;
   songMode: boolean;
-  songChain: ("A" | "B")[];
+  songChain: (ClipSlot)[];
   loopRange: [number, number] | null;
   effectsRackState: EffectsRackState;
   drumKit: DrumKitType;

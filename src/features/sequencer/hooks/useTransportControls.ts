@@ -4,6 +4,8 @@ import type { SequencerAction, SequencerState, StudioHistorySnapshot } from "../
 import { triggerHaptic, HapticPatterns } from "../../../utils/haptics";
 import { announcer } from "../../../platform/announcer";
 import { useLanguage } from "../../../i18n/LanguageContext";
+import { patternForSlot } from "../../../types/project";
+import type { ClipSlot } from "../../../types/song";
 
 export interface UseTransportControlsOptions {
   engineRef: React.MutableRefObject<AudioEngine | null>;
@@ -35,8 +37,8 @@ export interface UseTransportControlsResult {
   handleTogglePlay: () => void;
   handleUndo: () => void;
   handleRedo: () => void;
-  handleSwitchSlot: (slot: "A" | "B") => void;
-  handleCopySlot: (from: "A" | "B", to: "A" | "B") => void;
+  handleSwitchSlot: (slot: ClipSlot) => void;
+  handleCopySlot: (from: ClipSlot, to: ClipSlot) => void;
   handleToggleSongMode: () => void;
   handleToggleBlindCompare: () => void;
   handleToggleMetronome: () => void;
@@ -226,15 +228,17 @@ export function useTransportControls({
   }, [redo, t, showToast]);
 
   const handleSwitchSlot = useCallback(
-    (slot: "A" | "B") => {
+    (slot: ClipSlot) => {
       commit({ type: "SWITCH_PATTERN_SLOT", slot });
-      if (engineRef.current) engineRef.current.setPattern(seqStateRef.current.patterns[slot]);
+      // A slot the project does not hold is not a pattern to hand the engine; the transport keeps what it has.
+      const slotPattern = patternForSlot(seqStateRef.current, slot);
+      if (slotPattern && engineRef.current) engineRef.current.setPattern(slotPattern);
     },
     [commit]
   );
 
   const handleCopySlot = useCallback(
-    (from: "A" | "B", to: "A" | "B") => {
+    (from: ClipSlot, to: ClipSlot) => {
       commit({ type: "COPY_PATTERN_SLOT", from, to });
       showToast(t("transport_slot_copied", { from, to }));
     },

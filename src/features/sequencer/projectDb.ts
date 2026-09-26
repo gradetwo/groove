@@ -18,6 +18,7 @@ import { DrumKitType, EffectsRackState } from "../../audio/AudioEngine";
 import { APP_VERSION } from "../../version";
 import { clonePattern } from "./useSequencerStore";
 import { patternFromGenre } from "../../data/genreMix";
+import type { ClipSlot } from "../../types/song";
 
 export const GROOVE_DB_NAME = "groove_projects_db";
 export const GROOVE_DB_VERSION = 1;
@@ -117,8 +118,9 @@ export function generateProjectId(): string {
 /**
  * Calculates summary metrics for quick rendering in cards
  */
-export function calculateSnapshotSummary(patterns: { A: SequencerPattern; B: SequencerPattern }, activeSlot: "A" | "B"): ProjectSnapshotSummary {
-  const activePattern = patterns[activeSlot] || patterns.A;
+export function calculateSnapshotSummary(patterns: { A: SequencerPattern; B: SequencerPattern }, activeSlot: ClipSlot): ProjectSnapshotSummary {
+  const activePattern =
+    (activeSlot === "A" || activeSlot === "B" ? patterns[activeSlot] : undefined) || patterns.A;
   const tracks = activePattern?.tracks || [];
   let activeSteps = 0;
 

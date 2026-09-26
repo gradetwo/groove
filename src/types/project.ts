@@ -30,19 +30,19 @@ export interface GrooveProject {
   /**
    * The slots beyond those two, when a composition uses them.
    *
-   * `ClipSlot` has been `"A" | "B" | "C" | "D"` since the song layer was written, and the MCP tools and the `.groove`
+   * `ClipSlot` has been `ClipSlot | "C" | "D"` since the song layer was written, and the MCP tools and the `.groove`
    * arrangement already compose with all four; the editor's own model was the part still holding two. Adding them here is
    * **additive on purpose**: a project saved with two patterns keeps its exact shape, and a reader that does not know this field
    * carries it through (see `docs/GROOVE_PACKAGE_FORMAT.md` for the same commitment on the package).
    */
   extraClips?: Partial<Record<ClipSlot, SequencerPattern>>;
-  activeSlot: "A" | "B";
+  activeSlot: ClipSlot;
   songMode: boolean;
   /**
    * The legacy bar chain, still written so an older build (and the hub's list view) can read the order.
    * `sections` is the source of truth from B1 on; `songChain` is derived from it via `sectionsToSongChain`.
    */
-  songChain: ("A" | "B")[];
+  songChain: (ClipSlot)[];
   /**
    * The arrangement (B1). Optional because projects saved before it exist and `.groove` packages carry whatever
    * the project had: a reader that finds none migrates `songChain` losslessly (`migrateSongChain`).
