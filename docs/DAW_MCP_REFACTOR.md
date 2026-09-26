@@ -227,6 +227,36 @@ rather than "Scene 1" and "Scene 2".
 This is the second time this item has been corrected before it was written (the first was flatten's layer for the fade), and both
 times the correction came from reading the artifact's own model rather than trusting the plan's wording.
 
+## Stage 4 is already done, and the plan did not know (2026-09-28)
+
+Before writing the ownership migration, the store was read again — and it says this about itself
+(`src/features/sequencer/useSequencerStore.ts:86-96`):
+
+```ts
+/**
+ * The arrangement (B1), and the source of truth for the bar order.
+ *
+ * `songChain` is kept as a derived view (see `sectionsToSongChain`) because the studio, the project hub and the
+ * share codec still speak it: deriving it here is what stops the two from disagreeing, which hand-writing both
+ * would guarantee.
+ */
+sections: SongSection[];
+songChain: ("A" | "B")[];
+```
+
+That is **exactly** what stage 4 was going to build: the arrangement is the source of truth and the two-slot shape is a **derived
+view** kept for the code that still speaks it. The saved snapshot carries `sections` (`useSequencerStore.ts:264`), and
+`sectionsToSongChain`/`sectionsFromSongChain` (`src/types/song.ts:384-403`) are the conversions. So C2's premise — "the app has
+two models and a DAW needs one" — was **out of date when it was written**: the second model is already the first model's view.
+
+**What is actually left is a capability, not a model**: the store's arrangement can reference the two slots the step editor shows,
+while the MCP layer composes with four (`A`–`D`). That is a clip count, not an ownership problem — a feature with a clear shape
+(one more clip slot in the editor and the share codec) rather than a rewrite of the app's hottest module, which is what stage 4
+was about to become.
+
+Recorded as closed-by-evidence rather than quietly dropped, because the plan's job is to be corrected by the code, and this is the
+third item in this document that reading the artifact retired (the fade's layer, the ALS shape, and now this).
+
 ## What this is not
 
 It is not a rewrite of the sequencer, the audio engine or the genre library — those are the parts this project has spent its
