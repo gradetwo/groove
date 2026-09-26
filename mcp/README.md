@@ -112,6 +112,9 @@ Three honest routes, in order of how much they cost:
 The tool should ship route 1 or 2 and name the limitation in its output; route 3 is recorded here so the choice is made
 deliberately rather than by accident.
 
+The `.groove` package itself is specified in [`docs/GROOVE_PACKAGE_FORMAT.md`](../docs/GROOVE_PACKAGE_FORMAT.md), including its validation rules and the
+version-1 compatibility commitment.
+
 **Order, by what unblocks composition rather than by what is easiest**: P1 (expose `set_clip` and pass `clips` through
 `create_song`), P2 (`get_song`), P3 (`export_groove`), P4 (mp3 in `analyze_audio`), then the two small ones, then O1 if it is
 audible, then F1 as content work.

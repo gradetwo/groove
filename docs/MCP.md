@@ -100,6 +100,8 @@ is B2's `flattenSong`, so the tool cannot render something the app would not). S
 | `export_groove` ▣ | `songId`, `outputDir?` | a **validated** `.groove` package under `GROOVE_MCP_OUT`, carrying the arrangement rather than a flattened copy |
 | `render_song` ▣ | `songId`, `format?`, `bitrateKbps?`, `maxDurationSec?` | a WAV/MP3 path under `GROOVE_MCP_OUT`, its duration, loudness and true peak — every section, in order |
 
+The package this writes is specified field by field in [`GROOVE_PACKAGE_FORMAT.md`](GROOVE_PACKAGE_FORMAT.md).
+
 **`bars` counts passes, not measures.** A genre's seeded clip is four measures long (64 steps at 16 to the bar), so `bars: 4` is
 sixteen measures; every song summary reports `passBars` (measures per pass) and `secondsEstimate`, which is what to read before
 rendering. `render_song` also takes `maxDurationSec` and refuses before it starts the browser, because long arrangements take
