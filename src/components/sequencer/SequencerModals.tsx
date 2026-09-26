@@ -139,6 +139,12 @@ export const SequencerModals: React.FC<SequencerModalsProps> = ({
           A: seqState.activeSlot === "A" ? pattern : seqState.patterns.A,
           B: seqState.activeSlot === "B" ? pattern : seqState.patterns.B,
         }}
+        /**
+         * The slots beyond the editor's two travel with the project, or a save through this path would **drop** them: the store
+         * creates C or D on first switch, and until this prop existed the payload that persists a project assembled `{A, B}` by
+         * hand.
+         */
+        currentExtraClips={seqState.extraClips}
         activeSlot={seqState.activeSlot}
         bpm={bpm}
         swing={swing}
