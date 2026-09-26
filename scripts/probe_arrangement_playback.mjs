@@ -240,6 +240,12 @@ try {
       const bins = new Float32Array(analyser.frequencyBinCount);
       const read = () => {
         analyser.getFloatFrequencyData(bins);
+        if (!rawBins.first.length) {
+          rawBins.first = [bins[1], bins[8], bins[64], bins[512], bins[bins.length - 1]].map((v) =>
+            Number.isFinite(v) ? Number(v.toFixed(1)) : String(v)
+          );
+          for (let i = 0; i < bins.length; i += 1) if (Number.isFinite(bins[i])) rawBins.max = Math.max(rawBins.max, bins[i]);
+        }
         return Array.from(bins);
       };
       /**
@@ -251,6 +257,14 @@ try {
        * tapped off the bus that carries the sound, while a non-zero peak with a −80 dB spectrum would mean the opposite. The
        * engine's own view of itself comes back with it.
        */
+      /**
+       * The raw bins, because the waveform proves sound and the spectrum denies it.
+       *
+       * Peak 0.858 with bands at −85 dB is a contradiction that only a raw look resolves: if *every* bin sits at the floor the
+       * reading is wrong as a whole (units, scaling, or an analyser that was reconfigured after it was wired), and if the low
+       * bins are high while the rest are at the floor then the reading is fine and the bands being averaged are the wrong ones.
+       */
+      const rawBins = { first: [], max: -Infinity, minDecibels: analyser.minDecibels, fftSize: analyser.fftSize };
       const time = new Float32Array(analyser.fftSize);
       const wave = { peak: 0, rms: 0 };
       const readWave = () => {
@@ -323,6 +337,7 @@ try {
         meanLevelB: meanLevel(windows.b),
         wavePeak: wave.peak,
         waveRms: wave.rms,
+        rawBins,
         // Whatever the engine believes about itself: playing or not, and which material it holds.
         statePreview: (() => {
           try {
@@ -367,6 +382,11 @@ try {
       `   analyser         : waveform peak ${report.wavePeak?.toFixed(6) ?? "n/a"} · rms ${report.waveRms?.toFixed(6) ?? "n/a"}`
     );
     console.log(`   engine state     : ${report.statePreview ?? "n/a"}`);
+    /** The bins themselves: all at the floor means the reading is wrong; a loud low end means the reading is fine. */
+    console.log(
+      `   raw bins         : [${(report.rawBins?.first ?? []).join(", ")}] · max ${report.rawBins?.max ?? "n/a"} dB` +
+        ` · minDecibels ${report.rawBins?.minDecibels ?? "n/a"} · fftSize ${report.rawBins?.fftSize ?? "n/a"}`
+    );
     if (ratio < 3) process.exitCode = 1;
   }
 } finally {
