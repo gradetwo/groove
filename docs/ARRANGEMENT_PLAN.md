@@ -250,6 +250,25 @@ Two readings, and the second is the one to act on first:
   comparison should be near zero, and its being the same order as the signal says the two sampling windows are not aligned with
   the music — so the ratio is currently measuring the probe's own timing rather than the transport.
 
+**The diagnostic answered, and the answer is silence.** Run 36263103572, with the windows spanning whole bars and the levels
+printed:
+
+```
+❌ the two sections differ by 4.59 dB/band against a same-section noise floor of 5.25 (ratio 0.9×)
+   window levels    : A -84.5 dB · B -80.2 dB · frames A/B 46/46
+```
+
+**−84.5 and −80.2 dBFS is not music.** The probe is measuring the noise floor of an audio graph that is not producing sound, so the
+ratio, the floor and the section distance are all statements about silence — and B7 is neither confirmed nor refuted by any run so
+far. Three CI runs have now reported ~−80 dBFS; the earlier two were diagnosed as a suspended context and a missing genre, and
+this one has a running context, a genre loaded, 46 frames per window and still no signal.
+
+**So the next experiment is a control, not another look at the ratio**: measure a **plain loop** (no sections at all) with the same
+probe and the same analyser. If the loop is also at −80 dBFS then the probe's audio path is what is broken and B7's listening
+proof simply does not exist yet; if the loop is loud and the song stays silent, *that* is a real finding about the transport and
+it is worth following into `patternForExport`. Until one of those two is measured, the honest state of B7 is "the arrangement is
+played structurally and has never been heard by the check".
+
 **The diagnostic that decides between them** is the level of each window: if the windows are near −80 dBFS the probe is measuring
 silence again (the failure it already reported once), and if they are at a normal level while the floor stays near 10 dB the
 windows are too short or not held inside one section long enough, and the floor has to come down before its ratio means anything.
