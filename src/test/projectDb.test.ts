@@ -244,3 +244,54 @@ describe("IndexedDB Multi-Project Hub Engine (P7-02)", () => {
     expect(secondRun).toBeNull();
   });
 });
+
+describe("the .groove package carries an arrangement (C1)", () => {
+  /**
+   * The composer's round trip, at the format level: compose a song, export it, read it back, and find the arrangement intact.
+   *
+   * Before this field the export was lossy — `GrooveProject` is `patterns: { A, B }` and has nowhere to put a clip slot or a
+   * section (`src/types/project.ts:12-27`) — so an agent that composed a song through MCP could not round-trip it. This is the
+   * test that should have been red yesterday and is green now.
+   */
+  const project = {
+    id: "p1",
+    name: "a song",
+    genreId: "chicago-house",
+    genreName: "Chicago House",
+    bpm: 124,
+    swing: 0,
+    timeSignature: "4/4",
+    resolution: "1/16",
+    stepCount: 16,
+    patterns: { A: { bpm: 124, tracks: [] }, B: { bpm: 124, tracks: [] } },
+    activeSlot: "A",
+    songMode: true,
+  } as unknown as Parameters<typeof exportProjectPackage>[0];
+
+  it("writes version 2 with the arrangement and validates", () => {
+    const arrangement = {
+      clips: { A: { bpm: 124, tracks: [] }, B: { bpm: 124, tracks: [] } },
+      sections: [{ slot: "A", bars: 8, label: "verse" }],
+      activeSlot: "B",
+    } as unknown as Parameters<typeof exportProjectPackage>[2];
+    const pkg = exportProjectPackage(project, "2.34.0", arrangement);
+    expect(pkg.version).toBe(2);
+    const read = validateGroovePackage(JSON.parse(JSON.stringify(pkg)));
+    expect(Object.keys(read.arrangement!.clips).sort()).toEqual(["A", "B"]);
+    expect(read.arrangement!.sections).toHaveLength(1);
+    expect(read.arrangement!.activeSlot).toBe("B");
+  });
+
+  it("still writes a v1 package for a plain two-pattern project", () => {
+    const pkg = exportProjectPackage(project, "2.34.0");
+    expect(pkg.version).toBe(1);
+    expect(pkg.arrangement).toBeUndefined();
+    // …and a v1 package is valid as it stands: no arrangement means "one clip, no sections", not "broken".
+    expect(() => validateGroovePackage(JSON.parse(JSON.stringify(pkg)))).not.toThrow();
+  });
+
+  it("rejects a v2 arrangement that promises clips and has none", () => {
+    const pkg = exportProjectPackage(project, "2.34.0", { clips: {}, sections: [] } as never);
+    expect(() => validateGroovePackage(pkg)).toThrow(/carries no clips/);
+  });
+});
