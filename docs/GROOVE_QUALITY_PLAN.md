@@ -80,6 +80,18 @@ So the answer to A4 is finally unambiguous, and it is none of the three earlier 
 either way, and nothing of that lane reaches the output. The measurement is not "the lane is quiet"; it is "the lane is not in the
 mix".
 
+**And the first guess about that edit — "the lane's level is too low" — is already eliminated.** Reading where the lane's level
+comes from: the genre mixes set `fx` to **0.68, 0.56, 0.3, 0.48, 0.52 …** (`src/data/genreMix.ts:94-138`) — healthy values, not a
+muted lane — and the engine wires the voice properly: `AudioEngine.ts:2248` and `WavExporter.ts:870` both branch on `trackId === "fx"`,
+`instrumentPresets.ts:227` maps it to `noiseSweep`, and `trackBuses.ts:42-58` routes it to the **music** bus like any other musical
+lane.
+
+So the lane is mixed at a normal level, has notes in every genre, is wired to a voice, and still moves the mix by nine
+hundred-thousandths of a LU. "Turn it up" is therefore **not** the fix, which is worth knowing before anyone turns it up and watches
+the meter not move. What is left is narrower and more interesting: the **preset's own output** (`noiseSweep` at whatever gain and
+envelope it is built with) and the **lane's note data** (`pitch`, `gate`, `pitches`) — to be settled by the same A/B, one rung
+further down, rather than by a third theory.
+
 **What ③b therefore is — an audio edit, not a data one.** Adding notes would change nothing (there are notes); adding the lane would
 change nothing (there is a lane). What has to change is the lane's **level or instrument** in the genre's mix so its material is
 audible at all, and that is the kind of change this project measures before and after, then re-records the loudness and timbre
