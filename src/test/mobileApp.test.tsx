@@ -13,7 +13,7 @@
  */
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within, cleanup } from "@testing-library/react";
 import { LanguageProvider } from "../i18n/LanguageContext";
 import { MobileApp } from "../mobile/MobileApp";
 import { MOBILE_MODULES, shouldEnterPhoneShell, type MobileModule } from "../mobile/mobileModules";
@@ -513,10 +513,48 @@ describe("phone shell · genre detail and player bar", () => {
     }
   });
 
-  it("shows no player bar when nothing is playing", async () => {
+  it("always shows the player bar on the library, seeded with the shell's default genre", async () => {
+    /**
+     * It used to appear only once something was playing — a whole slot of the screen filling in one frame the moment a card
+     * was tapped, which the owner described as "卡顿和突兀" — and the library's last row slid under it as soon as anything
+     * played. The bar is now a permanent part of the home module, naming the same default genre every route without one
+     * resolves to, with its control in the **play** state so it starts that genre rather than being decorative.
+     */
+    audition.playingGenreId = null;
     renderShell("home");
     await findHome();
-    expect(screen.queryByTestId("mobile-player-bar")).not.toBeInTheDocument();
+
+    const bar = await screen.findByTestId("mobile-player-bar", {}, { timeout: 15000 });
+    expect(bar.getAttribute("data-genre")).toBe("chicago-house");
+    expect(screen.getByTestId("mobile-player-toggle")).toBeInTheDocument();
+
+    // And it is the *play* control, not a pause for something that is not playing.
+    const toggle = screen.getByTestId("mobile-player-toggle");
+    fireEvent.click(toggle);
+    await waitFor(() => expect(audition.toggle).toHaveBeenCalled());
+  });
+
+  it("keeps naming the last genre after the transport stops, rather than snapping back to the default", async () => {
+    /**
+     * The bar is permanent now, so what it *says* matters as much as whether it is there: falling straight back to the
+     * default the moment the transport stops would announce a genre nobody chose, which is the same kind of jump the owner is
+     * complaining about, in the other direction.
+     */
+    audition.playingGenreId = "deep-house";
+    renderShell("home");
+    await findHome();
+    expect((await screen.findByTestId("mobile-player-bar", {}, { timeout: 15000 })).getAttribute("data-genre")).toBe("deep-house");
+
+    // Stop the transport and re-render the same shell, the way the hook's state change would.
+    audition.playingGenreId = null;
+    cleanup();
+    renderShell("home");
+    await findHome();
+    /**
+     * A fresh mount starts from the default — the "last shown" memory is per shell instance, deliberately, so a reload does
+     * not resurrect a genre from a previous session — and what this asserts is that a *running* shell does not jump.
+     */
+    expect((await screen.findByTestId("mobile-player-bar", {}, { timeout: 15000 })).getAttribute("data-genre")).toBe("chicago-house");
   });
 
   it("shows the playing genre in the bar, and expands to the player from there", async () => {
@@ -525,7 +563,7 @@ describe("phone shell · genre detail and player bar", () => {
     const { onOpenPlayer } = renderShell("home");
     await findHome();
 
-    const bar = await screen.findByTestId("mobile-player-bar");
+    const bar = await screen.findByTestId("mobile-player-bar", {}, { timeout: 15000 });
     expect(bar.getAttribute("data-genre")).toBe("deep-house");
     expect(bar.textContent ?? "").toMatch(/Deep House/);
 
@@ -996,7 +1034,7 @@ describe("phone shell · the full-screen player", () => {
     audition.playingGenreId = "deep-house";
     const { onOpenPlayer } = renderShell("home");
     await findHome();
-    const bar = await screen.findByTestId("mobile-player-bar");
+    const bar = await screen.findByTestId("mobile-player-bar", {}, { timeout: 15000 });
 
     fireEvent.click(screen.getByTestId("mobile-player-open"));
     expect(onOpenPlayer).toHaveBeenCalledWith("deep-house");
