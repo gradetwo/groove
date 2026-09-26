@@ -1,27 +1,23 @@
 {
-  "version": "2.30.0",
+  "version": "2.31.0",
   "releaseDate": "2026-09-26",
   "changelogCount": 10,
   "latest": {
-    "version": "2.30.0",
+    "version": "2.31.0",
     "date": "2026-09-26",
     "category": "fix",
     "title": {
-      "zh": "修好 uplifting trance 的刺耳感",
-      "en": "Uplifting trance's lead and chords are no longer harsh"
+      "zh": "修好七个音色被误设成高通滤波（发尖/发薄）",
+      "en": "Seven patches were accidentally high-passed — thin and harsh"
     },
     "highlights": [
       {
-        "zh": "GS-1 的 supersaw 用错滤波模型（压到 3.2 kHz）：过零率是原生 6.6 倍、6 kHz 以上能量 8 倍，就是刺耳来源。",
-        "en": "GS-1's supersaw used the wrong filter model (closed to 3.2 kHz): 6.6x the native zero-crossing rate and 8x its above-6-kHz energy — the source of the harshness."
+        "zh": "滤波类型参数里 1 = 高通（0 = 低通），但代码注释一直写「SVF」，于是七个音色一直被高通掉低频：实测 strings_lead 过零率是原生的 11 倍。",
+        "en": "Filter type 1 is a HIGH-PASS (0 is the lowpass), but the comments called it \"SVF\" — so seven patches had their body filtered away, with strings_lead measuring eleven times the native's zero-crossing rate."
       },
       {
-        "zh": "改用原生 Supersaw 的滤波形状后：过零率 10.7k→2.6 kHz，高频占比 0.175→0.018（原生 0.022），和弦轨由偏亮变为略暗。",
-        "en": "With the native Supersaw's shape: zero-crossing 10.7k to 2.6 kHz, above-6-kHz share 0.175 to 0.018 (native 0.022), chords from brighter to slightly darker."
-      },
-      {
-        "zh": "手机版打开调试后，播放器等页面也会显示诊断窗口。",
-        "en": "With debug on, mobile shows the diagnostics panel on the player and other screens too."
+        "zh": "按原生预设的截止频率改回低通后：strings_lead 11×→2.2×、guitar_lead 5.8×→0.9×（略暗于原生）、bell_lead 的 −38 dB 电平也回来了。",
+        "en": "Flipped to the lowpass their native presets use, at the native cutoffs: strings_lead 11x to 2.2x, guitar_lead 5.8x to 0.9x (slightly darker than native), and bell_lead's −38 dB level recovered."
       }
     ],
     "truncated": false
