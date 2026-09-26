@@ -128,6 +128,31 @@ if (fs.existsSync(distVersionFile)) {
   );
 }
 
+/**
+ * The payload gate, at the last moment before the bytes leave the machine.
+ *
+ * The cover-production batch used to live in `public/covers`, so the build copied it into `dist` and every deploy published it:
+ * 794 MB under `dist/covers` where about 285 MB is artwork, including 410 MB of scratch. `npm run verify` catches that now, but
+ * a deploy can be run on its own — and the whole point is that the junk never reaches the network — so the same check runs here
+ * and **refuses to deploy**.
+ */
+const coversCheck = spawnSync(process.execPath, [path.join(ROOT, "scripts", "check_covers_payload.mjs"), "--dir=dist/covers"], {
+  cwd: ROOT,
+  stdio: "inherit",
+});
+if (coversCheck.status !== 0) {
+  console.error(
+    [
+      "",
+      "\u274c Refusing to deploy: the covers payload contains something that is not artwork.",
+      "   Something in `public/covers/` is not a `<genre>.jpg`, a `<skin>/<genre>.jpg`, `_thumbs/**` or `CREDITS.md`,",
+      "   and the build has copied it. Production tooling belongs in `tools/covers/`.",
+      "",
+    ].join("\n")
+  );
+  process.exit(1);
+}
+
 const args = preview
   ? ["wrangler", "versions", "upload", "--preview-alias", previewAlias]
   : ["wrangler", "deploy", ...(dryRun ? ["--dry-run"] : [])];
