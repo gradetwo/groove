@@ -344,7 +344,8 @@ describe("MCP · duplicate_section", () => {
     const copy = song.sections[2];
     expect(copy.slot).toBe(first.slot);
     expect(copy.velocityScale).toBe(first.velocityScale);
-    expect(copy.transpose).toBe(first.transpose);
+    // `transpose` is an override, not a top-level field — the copy has to keep it either way.
+    expect(copy.overrides?.transpose).toBe(first.overrides?.transpose);
     expect(copy.overrides?.fill).toEqual(first.overrides?.fill);
     // …and only what the caller asked to differ, differs.
     expect(copy.bars).toBe(8);
