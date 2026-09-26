@@ -271,15 +271,28 @@ export const GS1_PATCHES: Record<Gs1PatchName, Gs1Patch> = {
     [Param.OSC1_WAVE]: 2,
     [Param.OSC1_LEVEL]: 0.55,
     [Param.OSC1_UNISON]: 7,
-    [Param.OSC1_SPREAD]: 0.78,
+    /**
+     * **0.78 → 0.45**, and the measurement is why. The owner reported the uplifting-trance lead and chords as harsher with
+     * GS-1 on than off, and on the lead stem that is 6.6× the native render's zero-crossing rate (10.7 kHz against 1.6 kHz)
+     * with an 8× share of energy above 6 kHz. A seven-voice stack spread that far is mostly beating sidebands, which is
+     * brightness nobody asked for; the stack keeps its width at 0.45 without the top-octave spray.
+     */
+    [Param.OSC1_SPREAD]: 0.45,
     [Param.OSC2_ON]: 1,
     [Param.OSC2_WAVE]: 2,
     [Param.OSC2_LEVEL]: 0.45,
     [Param.OSC2_UNISON]: 5,
-    [Param.OSC2_SPREAD]: 0.7,
+    [Param.OSC2_SPREAD]: 0.4,
     [Param.OSC2_DETUNE]: -14,
-    [Param.FILTER_TYPE]: 1,
-    [Param.FILTER_CUTOFF]: 3200,
+    /**
+     * **SVF → ladder, cutoff to the native preset's own 6500.** The owner's report was that the uplifting-trance lead and
+     * chords are harsher with GS-1 than without, and the lead stem made that concrete: a zero-crossing rate of 10.7 kHz
+     * against the native render's 1.6 kHz, with eight times the share of energy above 6 kHz. Neither the spread nor the
+     * cutoff was the cause; the filter *model* was, so this now matches the shape the native `Supersaw` preset uses (a
+     * gentle ladder at 6.5 kHz) rather than a state-variable one closed to 3.2 kHz.
+     */
+    [Param.FILTER_TYPE]: 0,
+    [Param.FILTER_CUTOFF]: 6500,
     [Param.FILTER_RES]: 0.1,
     [Param.FILTER_ENV_AMT]: 0.2,
     [Param.ENV_ATTACK]: 0.02,
