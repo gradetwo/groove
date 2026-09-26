@@ -242,6 +242,28 @@ try {
         analyser.getFloatFrequencyData(bins);
         return Array.from(bins);
       };
+      /**
+       * The waveform, and it is what separates the two ways this probe can see silence.
+       *
+       * Five runs have reported ~−80 dBFS on the FFT bands, and the control proved the plain loop is silent too — so the silence
+       * is in the probe's audio path, not in the transport. The FFT cannot say *where*, because a −80 dB floor looks the same
+       * whether no signal reaches the analyser or no signal is generated: a time-domain peak of exactly 0 means the analyser is
+       * tapped off the bus that carries the sound, while a non-zero peak with a −80 dB spectrum would mean the opposite. The
+       * engine's own view of itself comes back with it.
+       */
+      const time = new Float32Array(analyser.fftSize);
+      const wave = { peak: 0, rms: 0 };
+      const readWave = () => {
+        analyser.getFloatTimeDomainData(time);
+        let peak = 0;
+        let sum = 0;
+        for (let i = 0; i < time.length; i += 1) {
+          peak = Math.max(peak, Math.abs(time[i]));
+          sum += time[i] * time[i];
+        }
+        wave.peak = Math.max(wave.peak, peak);
+        wave.rms = Math.max(wave.rms, Math.sqrt(sum / time.length));
+      };
 
       await probe.engine.play();
       const started = performance.now();
@@ -259,6 +281,7 @@ try {
          */
         if (t > 0 && t < secondsPerBar) windows.a.push(read());
         if (t > secondsPerBar && t < secondsPerBar * 2) windows.b.push(read());
+        readWave();
       };
       const timer = setInterval(sample, 40);
       await new Promise((resolve) => setTimeout(resolve, secondsPerBar * 2000 + 300));
@@ -298,6 +321,16 @@ try {
         selfDistanceA: noise,
         meanLevelA: meanLevel(windows.a),
         meanLevelB: meanLevel(windows.b),
+        wavePeak: wave.peak,
+        waveRms: wave.rms,
+        // Whatever the engine believes about itself: playing or not, and which material it holds.
+        statePreview: (() => {
+          try {
+            return JSON.stringify(probe.readState()).slice(0, 300);
+          } catch (error) {
+            return `readState threw: ${String(error)}`;
+          }
+        })(),
       };
     },
     { genreId: genre, sampleMs: 40, controlLoop }
@@ -329,6 +362,11 @@ try {
       `   window levels    : A ${report.meanLevelA?.toFixed(1) ?? "n/a"} dB · B ${report.meanLevelB?.toFixed(1) ?? "n/a"} dB` +
         ` · frames A/B ${report.frames?.a ?? 0}/${report.frames?.b ?? 0}`
     );
+    /** Zero means the analyser is tapped off the sounding bus; non-zero with a −80 dB spectrum means the opposite. */
+    console.log(
+      `   analyser         : waveform peak ${report.wavePeak?.toFixed(6) ?? "n/a"} · rms ${report.waveRms?.toFixed(6) ?? "n/a"}`
+    );
+    console.log(`   engine state     : ${report.statePreview ?? "n/a"}`);
     if (ratio < 3) process.exitCode = 1;
   }
 } finally {
