@@ -235,6 +235,27 @@ probe was measuring silence, because it had clicked the start gate but never ope
 check that cannot tell silence from music is worse than no check, and this one now says so out loud — which is the state
 it is handed over in: **it fails, with a number, until a genre is playing.**
 
+**Its first CI run reports a number, and the number is not yet evidence about the transport.** Run 36261801889:
+
+```
+❌ the two sections differ by 5.43 dB/band against a same-section noise floor of 9.94 (ratio 0.5×)
+```
+
+Two readings, and the second is the one to act on first:
+
+* taken at face value, the two deliberately different sections are **less** different from each other than one section is from
+  itself — which would mean the transport still loops the pattern being edited, i.e. the first slice's wiring is not doing what its
+  unit cases say;
+* but a **9.94 dB/band floor on a section measured against itself** is far too high to be a noise floor. A clean same-section
+  comparison should be near zero, and its being the same order as the signal says the two sampling windows are not aligned with
+  the music — so the ratio is currently measuring the probe's own timing rather than the transport.
+
+**The diagnostic that decides between them** is the level of each window: if the windows are near −80 dBFS the probe is measuring
+silence again (the failure it already reported once), and if they are at a normal level while the floor stays near 10 dB the
+windows are too short or not held inside one section long enough, and the floor has to come down before its ratio means anything.
+Either way the number is recorded rather than hidden, and B7 stays open until a run shows a ratio well above 1 **with a floor that
+looks like a floor**.
+
 **What it takes, and how it would be verified.** The transport already knows the bar it is on; the missing piece is
 that the *engine* is handed one pattern and told to repeat it. The shape that fits this codebase is the one B2
 established for export — derive the timeline once (`resolveTimeline`), then switch the playing clip at a pass
