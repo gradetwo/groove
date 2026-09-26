@@ -74,6 +74,8 @@ const soloRole = arg("--solo", "");
  * and a deployed artefact. The patch table is a plain object in the page, so the probe can edit it before rendering.
  */
 const gs1Param = arg("--gs1-param", "");
+/** Zero every track's sends (`--sends=0`), to tell a voice apart from the echo of one. */
+const sendsOff = arg("--sends", "") === "0";
 /** Render the authored skeleton instead of the shipping pattern (see the note at the call site). */
 const raw = process.argv.includes("--raw");
 /**
@@ -128,7 +130,7 @@ try {
   await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
 
   const result = await page.evaluate(
-    async ({ genreId, bars, seamlessLoop, noGs1, stemRole, soloRole, gs1Param, raw }) => {
+    async ({ genreId, bars, seamlessLoop, noGs1, stemRole, soloRole, gs1Param, sendsOff, raw }) => {
       const [genres, wav, mix, trackStates, gs1Tracks] = await Promise.all([
         import("/src/data/genres/index.ts"),
         import("/src/audio/WavExporter.ts"),
@@ -166,6 +168,12 @@ try {
         return { error: `no track with track_id ${stemRole}` };
       }
       const mixerStates = trackStates.deriveTrackStates(pattern);
+      if (sendsOff) {
+        for (const state of mixerStates) {
+          state.sendA = 0;
+          state.sendB = 0;
+        }
+      }
       if (soloRole) {
         const soloIndex = pattern.tracks.findIndex((track) => track.track_id === soloRole);
         if (soloIndex < 0) return { error: `no track with track_id ${soloRole}` };
@@ -205,7 +213,7 @@ try {
           : null,
       };
     },
-    { genreId: genre, bars, seamlessLoop, noGs1, stemRole, soloRole, gs1Param, raw }
+    { genreId: genre, bars, seamlessLoop, noGs1, stemRole, soloRole, gs1Param, sendsOff, raw }
   );
 
   await browser.close();
