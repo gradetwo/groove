@@ -758,12 +758,12 @@ export const studioMessages = {
    * gets told, rather than getting a quiet surprise.
    */
   export_wav_degraded_gs1: {
-    en: "Exported {filename}, but {count} GS-1 voice(s) could not load — the chords/lead track used the built-in synth instead. Reload and export again for a clean master.",
-    zh: "已导出 {filename}，但有 {count} 个 GS-1 音色未能加载——和弦/主音轨使用了内置合成器。请刷新页面后重新导出以获得正常母带。",
+    en: "Exported {filename}, but {count} GS-1 voice(s) could not load — the chords/lead track used the built-in synth instead. The app's WASM budget is per browser process and is not returned by a reload, so close this tab, open Groove in a new one, and export again for a clean master.",
+    zh: "已导出 {filename}，但有 {count} 个 GS-1 音色未能加载——和弦/主音轨使用了内置合成器。GS-1 的 WASM 额度按浏览器进程计且刷新不会归还，请关闭本标签页、在新标签页重新打开 Groove 后再导出，即可得到正常母带。",
   },
   export_wav_degraded_limiter: {
-    en: "Exported {filename}, but the true-peak limiter could not load — this file is louder and less controlled than the preview. Reload and export again for a clean master.",
-    zh: "已导出 {filename}，但真实峰值限幅器未能加载——该文件比试听更响、控制更差。请刷新页面后重新导出以获得正常母带。",
+    en: "Exported {filename}, but the true-peak limiter could not load — this file is louder and less controlled than the preview. Try exporting once more; if it happens again, open Groove in a new tab.",
+    zh: "已导出 {filename}，但真实峰值限幅器未能加载——该文件比试听更响、控制更差。请再导出一次；若仍如此，请在新标签页重新打开 Groove。",
   },
   export_wav_failed: { en: "WAV export failed: {error}", zh: "WAV 导出失败: {error}" },
   export_stems_rendering: { en: "Rendering 8 stems and packaging ZIP...", zh: "正在逐轨离线渲染 8 轨 Stems 并打包 ZIP..." },

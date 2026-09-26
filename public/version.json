@@ -7,21 +7,17 @@
     "date": "2026-09-27",
     "category": "feature",
     "title": {
-      "zh": "手机播放条常驻，曲库改用 256px 缩略图（更省解码、不再突然弹出）",
+      "zh": "手机播放条常驻，曲库改用 256px 缩略图",
       "en": "A permanent phone player bar, and 256px cover thumbnails for the library"
     },
     "highlights": [
       {
-        "zh": "手机首页的播放条不再「点了才出现」：它常驻在原来的位置，并以默认曲风（Chicago House）预填名称、BPM、封面和播放键，停止播放后仍保留你最后听的那首。",
-        "en": "The phone player bar no longer appears only once something plays: it is permanent, seeded with the default genre (name, BPM, cover, play control), and keeps naming the last genre after the transport stops."
+        "zh": "首页播放条不再「点了才出现」：常驻原位，以默认曲风预填名称/BPM/封面/播放键，停止后保留最后听的曲风。",
+        "en": "The phone player bar is permanent: seeded with the default genre (name, BPM, cover, play control), and it keeps naming the last genre after the transport stops."
       },
       {
-        "zh": "曲库封面改为 256×256 缩略图并异步解码：原来每张磁贴都在解码 1024×1024（单张 130KB–626KB）只为画 56px，实测 comic/deep-house 从 626570 字节降到 16729 字节。",
-        "en": "Cover art is now a 256x256 thumbnail decoded asynchronously: tiles used to decode 1024x1024 (130-626 KB each) to draw 56px, measured at 626570 to 16729 bytes for comic/deep-house."
-      },
-      {
-        "zh": "兜底链保留两个维度：皮肤缩略图 → 共享缩略图 → 皮肤原图 → 共享原图；黑胶标签仍用原图（它烘焙在 512px）。",
-        "en": "The fallback keeps both dimensions: skin thumb, shared thumb, skin original, shared original; the vinyl label still uses the original, because it bakes at 512px."
+        "zh": "曲库封面改为 256×256 缩略图并异步解码：原来每张磁贴解码 1024×1024（130–626KB）只画 56px，实测单张 626570→16729 字节。",
+        "en": "Cover art is a 256x256 thumbnail decoded asynchronously: tiles decoded 1024x1024 (130-626 KB) to draw 56px, measured at 626570 to 16729 bytes."
       }
     ],
     "truncated": false
