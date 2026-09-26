@@ -34,6 +34,23 @@ is where the flaky `mobileApp` timeouts came from.
   **download the artifact**, and apply it with `node scripts/apply_loudness_trims.mjs`. The workflow says so itself — "the
   loudness numbers decide what ships, and an auto-committed re-record is how a bad run becomes the truth".
 
+### A4 corrected again: every clip **has** an fx lane, and every one of them is empty (2026-09-28)
+
+The entry below concluded "the catalogued clips carry no lane for it to play". A census of the whole library says otherwise —
+`src/test/textureLaneCensus.test.ts` reports **159 of 159** clips with a texture lane, every one of them called `fx`:
+
+```
+texture lanes: 159/159 clips — chicago-house:fx, deep-house:fx, … kuduro:fx
+```
+
+The A/B measurement that closed A4 was right about what it measured — removing the lane changed nothing on the three genres sampled
+— and the conclusion drawn from it was too broad: "removing it changes nothing" means the lane is **silent**, not that it is
+**absent**. Every genre owns the voice and none of them sequences it.
+
+So A4's remaining work is **material, not structure**: the lane exists, `songFlatten.textureLanes` already reads it, and what a genre
+needs is **notes in it** for the bars the arrangement marks as a riser. That is a pattern-data change across the genres that want one,
+and it needs the loudness and timbre baselines re-recorded afterwards — which is why it belongs in a CI audio batch.
+
 ## A4 answered: the riser machinery works and nothing plays it (2026-09-28)
 
 The clean measurement is an **A/B**, not a bar comparison: the riser and the velocity ramp occupy the same bars, so "riser bars
