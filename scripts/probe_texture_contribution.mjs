@@ -135,6 +135,27 @@ try {
   const withLane = await read(asWritten.songId, "as written");
   const withoutLane = await read(withoutTexture.songId, "fx lane cleared");
 
+  /**
+   * The next rung: the same song with the `fx` lane **rewritten** to something unmistakable.
+   *
+   * "Cleared" and "as written" measure the same thing in opposite directions, so if the lane is inaudible both readings agree — and
+   * they did, to nine hundred-thousandths of a LU. Turning the lane up is not the fix (its mix level is already 0.3–0.68 and the
+   * engine wires it to `noiseSweep`), so the question is whether **the voice makes sound at all** or whether the genre's own note data
+   * is what is quiet. A lane saturated with steps at full velocity and a definite pitch answers that: if this still moves nothing, the
+   * preset is silent; if it moves, the data is.
+   */
+  const loud = structuredClone(cleared.pattern);
+  const fxLane = (loud.tracks ?? []).find((track) => /(^|[^a-z])(fx|riser|texture|sweep|noise)([^a-z]|$)/.test(`${track.track_id ?? ""} ${track.name ?? ""}`.toLowerCase()));
+  let rewrite = null;
+  if (fxLane) {
+    fxLane.steps = (fxLane.steps ?? []).map(() => 1);
+    fxLane.velocity = (fxLane.steps ?? []).map(() => 120);
+    if (Array.isArray(fxLane.pitch)) fxLane.pitch = fxLane.pitch.map(() => 60);
+    const loudSong = payload(await client.request("tools/call", { name: "create_song", arguments: { genreId: genre, bars: 4 } }));
+    await client.request("tools/call", { name: "set_clip", arguments: { songId: loudSong.songId, slot: "A", pattern: loud } });
+    rewrite = await read(loudSong.songId, "fx lane saturated");
+  }
+
   const deltaLufs =
     Number.isFinite(withLane.integratedLufs) && Number.isFinite(withoutLane.integratedLufs)
       ? Number((withLane.integratedLufs - withoutLane.integratedLufs).toFixed(2))
@@ -144,6 +165,21 @@ try {
   console.log(`  as written      : ${withLane.integratedLufs} LUFS · true peak ${withLane.truePeakDb} dBFS`);
   console.log(`  fx lane cleared : ${withoutLane.integratedLufs} LUFS · true peak ${withoutLane.truePeakDb} dBFS`);
   console.log(`  difference      : ${deltaLufs === null ? "n/a" : `${deltaLufs} LU`} — a mix that moves means the lane is audible`);
+  if (rewrite) {
+    const deltaLoud = Number((withLane.integratedLufs - rewrite.integratedLufs).toFixed(2));
+    console.log(`  fx saturated    : ${rewrite.integratedLufs} LUFS — ${deltaLoud} LU against "as written"`);
+    console.log(
+      deltaLoud === 0
+        ? "  → a saturated lane still moves nothing: the voice/preset is what is silent, not the notes"
+        : "  → a saturated lane moves the mix: the genres' fx note data is what is quiet"
+    );
+    if (out) {
+      const report = JSON.parse((await import("node:fs")).readFileSync(out, "utf8"));
+      report.rewrite = rewrite;
+      report.deltaLoudLufs = deltaLoud;
+      (await import("node:fs")).writeFileSync(out, `${JSON.stringify(report, null, 2)}\n`);
+    }
+  }
 
   if (out) {
     fs.mkdirSync(path.dirname(out), { recursive: true });
