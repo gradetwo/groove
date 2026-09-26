@@ -277,3 +277,28 @@ describe("B6 · what the render would play", () => {
     expect(song.clips?.A).toBeDefined();
   });
 });
+
+describe("MCP · the render's file name", () => {
+  /**
+   * The server has never let model text name a file, and this keeps that: the caller's title is whitelisted into a slug and
+   * joined to the genre and tempo, so a file still says what it is and nothing can escape the output directory.
+   */
+  const slugOf = (name: string) =>
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 40);
+
+  it("whitelists a title into a slug", () => {
+    expect(slugOf("My Ballad")).toBe("my-ballad");
+    expect(slugOf("../../etc/passwd")).toBe("etc-passwd");
+    expect(slugOf("  主歌/副歌  ")).toBe("");
+    expect(slugOf("a".repeat(80))).toHaveLength(40);
+  });
+
+  it("falls back to the old form when there is nothing usable", () => {
+    expect(slugOf("!!!")).toBe("");
+    // The worker substitutes "master" for an empty slug, which is the name every render had before this existed.
+  });
+});
