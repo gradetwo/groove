@@ -294,6 +294,16 @@ So what remains of the clip count is exactly three surfaces, all of them interfa
 2. the copy control, which is hard-coded to swap `"A"` and `"B"` (`SequencerPanel.tsx:393`);
 3. the section editor, so a section can point at C or D — the store action and the share codec both accept that already.
 
+**The third surface is not where it looked.** `ArrangementPanel` **renders** a region's slot (`data-slot`, line 344, and the chip
+at 380) and by its own contract "**never edits `sections` itself**" — every gesture ends in `onChange`, which the host commits. It
+holds no `"A" | "B"` union and no `CLIP_SLOTS`, and there is no slot picker in it, so re-assigning a region's clip is not a control
+that exists to widen: it is one that does not exist yet.
+
+That changes what "the editor supports four slots" means in practice: with the toolbar's control now offering A–D and the store
+creating a slot on first switch, a composer **can** build a section that points at C or D the way sections are made today (from the
+active slot) — what is missing is re-pointing one afterwards. Both are worth having; only the second is new UI, and it belongs with
+whatever surface creates sections in the first place (the next thing this work needs to read).
+
 **What is left of the clip count is the interface**: the model, the store, the project type and the share codec all speak four slots
 now, and the editor still shows two. That is a UI slice, not a data one.
 
