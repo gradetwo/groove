@@ -1,23 +1,23 @@
 {
-  "version": "2.26.0",
-  "releaseDate": "2026-09-25",
+  "version": "2.27.0",
+  "releaseDate": "2026-09-26",
   "changelogCount": 10,
   "latest": {
-    "version": "2.26.0",
+    "version": "2.27.0",
     "date": "2026-09-26",
-    "category": "fix",
+    "category": "feat",
     "title": {
-      "zh": "音符长度不再短于它自己的起音",
-      "en": "A note is never shorter than its own attack"
+      "zh": "每套皮肤用上自己的曲风配图，桌面端也开始展示",
+      "en": "Each skin uses its own genre artwork, and the desktop shows it too"
     },
     "highlights": [
       {
-        "zh": "修好一类听感问题：起音比音符还长时，音符会在起音中途被切掉，听起来又轻又不完整。全库 318 条轨里有 55 条如此，最严重差了 5 倍。",
-        "en": "Fixed a class of voicing problem: when an instrument attacks slower than the note it is given, the note is cut mid-attack and sounds thin. 55 of the catalogue's 318 routed lanes did that, the worst by a factor of five."
+        "zh": "每套皮肤显示对应曲风配图（六套皮肤各 159 张，此前界面一直只用共享图）；缺图时自动退回共享图。",
+        "en": "Every skin shows its own genre cover — six skins of 159 images the UI had never used — falling back to the shared image when one is missing."
       },
       {
-        "zh": "规则：音符不短于「起音 × 2.5」。实测 breakcore 和弦 −38.9 → −12.0 dBFS（+26.9 dB），GS-1 +10.5 dB；实时引擎与导出器都生效。",
-        "en": "The rule: a note is never shorter than its attack times 2.5. Measured on breakcore's chords, −38.9 → −12.0 dBFS (+26.9 dB) and +10.5 dB through GS-1, in both the live engine and the exporter."
+        "zh": "桌面端新增三处：曲风详情头图、探索卡片缩略图、对比列头；开屏按钮改为只显示中文。",
+        "en": "Three new desktop placements: the genre detail hero, explore-card thumbnails and the compare columns. The start button is Chinese-only now."
       }
     ],
     "truncated": false
