@@ -239,9 +239,17 @@ try {
       const windows = { a: [], b: [] };
       const sample = () => {
         const t = (performance.now() - started) / 1000;
-        // Section A is bar 0, section B is bar 1: sample the middle of each.
-        if (t > secondsPerBar * 0.25 && t < secondsPerBar * 0.75) windows.a.push(read());
-        if (t > secondsPerBar * 1.25 && t < secondsPerBar * 1.75) windows.b.push(read());
+        /**
+         * Section A is bar 0 and section B is bar 1, and each window now spans its **whole** bar rather than its middle half.
+         *
+         * The first CI run reported a same-section "noise floor" of 9.94 dB/band against a 5.43 dB/band section difference
+         * (ratio 0.5×) — and a floor that large from comparing a section with itself is not a floor. With ~12 frames per
+         * window, halving them leaves ~6 frames of a bar whose content changes from beat to beat, so the "floor" was measuring
+         * the music's own variation rather than measurement noise. Doubling the window halves that variance again before the
+         * ratio is trusted; the levels are printed with it so silence and a real floor stay distinguishable.
+         */
+        if (t > 0 && t < secondsPerBar) windows.a.push(read());
+        if (t > secondsPerBar && t < secondsPerBar * 2) windows.b.push(read());
       };
       const timer = setInterval(sample, 40);
       await new Promise((resolve) => setTimeout(resolve, secondsPerBar * 2000 + 300));
@@ -302,6 +310,15 @@ try {
     console.log(
       `\n${ratio >= 3 ? "✅" : "❌"} the two sections differ by ${distanceAB.toFixed(2)} dB/band ` +
         `against a same-section noise floor of ${selfDistanceA?.toFixed(2) ?? "n/a"} (ratio ${ratio.toFixed(1)}×)`
+    );
+    /**
+     * The levels come with the ratio, because the two ways this measurement can be wrong look identical in the ratio: silence
+     * (both windows near −80 dBFS) and a floor that is really the music's own variation. Printing them is what tells the two
+     * apart, and it is the diagnostic the plan named before the next run.
+     */
+    console.log(
+      `   window levels    : A ${measured.aMean?.toFixed(1) ?? "n/a"} dB · B ${measured.bMean?.toFixed(1) ?? "n/a"} dB` +
+        ` · frames A/B ${measured.aFrames ?? 0}/${measured.bFrames ?? 0}`
     );
     if (ratio < 3) process.exitCode = 1;
   }
