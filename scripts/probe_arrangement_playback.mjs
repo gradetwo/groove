@@ -214,8 +214,13 @@ try {
       if (!controlLoop) probe.commit({
         type: "SET_SECTIONS",
         sections: [
-          { id: "probe-a", slot: "A", bars: 1, label: "probe A" },
-          { id: "probe-b", slot: "A", bars: 1, velocityScale: 0.55, mute: ["lead"], label: "probe B" },
+          { id: "probe-a", slot: "A", bars: 2, label: "probe A" },
+          /**
+           * Structurally different, not merely quieter: the drums are muted, so the section's **spectral shape** changes rather
+           * than its level. The earlier pair (0.55 velocity, lead muted) was so close that a mean spectrum over a bar could not
+           * tell them apart — the geometry could not answer the question it was asked.
+           */
+          { id: "probe-b", slot: "A", bars: 2, velocityScale: 0.75, mute: ["kick", "snare", "hihat", "percussion"], label: "probe B" },
         ],
       });
       // The store's song-mode action is a toggle, so set it by reading the live state rather than assuming.
@@ -281,7 +286,7 @@ try {
 
       await probe.engine.play();
       const started = performance.now();
-      const windows = { a: [], b: [] };
+      const windows = { a: [], a2: [], b: [] };
       const sample = () => {
         const t = (performance.now() - started) / 1000;
         /**
@@ -293,8 +298,14 @@ try {
          * the music's own variation rather than measurement noise. Doubling the window halves that variance again before the
          * ratio is trusted; the levels are printed with it so silence and a real floor stay distinguishable.
          */
+        /**
+         * Section A occupies bars 0–1 and section B bars 2–3, so the windows are **the same beats of different bars**: `a` and
+         * `a2` are two bars of the *same* section (the noise floor, time-aligned, so the music's own movement cancels) and `b` is
+         * the first bar of the other section (the signal).
+         */
         if (t > 0 && t < secondsPerBar) windows.a.push(read());
-        if (t > secondsPerBar && t < secondsPerBar * 2) windows.b.push(read());
+        if (t > secondsPerBar && t < secondsPerBar * 2) windows.a2.push(read());
+        if (t > secondsPerBar * 2 && t < secondsPerBar * 3) windows.b.push(read());
         readWave();
       };
       const timer = setInterval(sample, 40);
@@ -333,6 +344,8 @@ try {
         frames: { a: windows.a.length, b: windows.b.length },
         distanceAB: spectrumDistance(mean(windows.a), mean(windows.b)),
         selfDistanceA: noise,
+        /** The time-aligned floor: two different bars of the same section, so what remains is measurement noise. */
+        alignedFloor: spectrumDistance(mean(windows.a), mean(windows.a2)),
         meanLevelA: meanLevel(windows.a),
         meanLevelB: meanLevel(windows.b),
         wavePeak: wave.peak,
@@ -363,10 +376,15 @@ try {
     console.error("❌ one section produced no analyser frames — the transport may not have reached it");
     process.exitCode = 1;
   } else {
-    const ratio = selfDistanceA ? distanceAB / selfDistanceA : Infinity;
+    /**
+     * The ratio uses the **time-aligned** floor when it exists: two bars of the same section, same beats, so the music's own
+     * movement cancels instead of being counted as noise. The frame-split floor stays in the output for comparison.
+     */
+    const floor = report.alignedFloor ?? selfDistanceA;
+    const ratio = floor ? distanceAB / floor : Infinity;
     console.log(
       `\n${ratio >= 3 ? "✅" : "❌"} the two sections differ by ${distanceAB.toFixed(2)} dB/band ` +
-        `against a same-section noise floor of ${selfDistanceA?.toFixed(2) ?? "n/a"} (ratio ${ratio.toFixed(1)}×)`
+        `against a time-aligned floor of ${floor?.toFixed(2) ?? "n/a"} (ratio ${ratio.toFixed(1)}×; frame-split floor ${selfDistanceA?.toFixed(2) ?? "n/a"})`
     );
     /**
      * The levels come with the ratio, because the two ways this measurement can be wrong look identical in the ratio: silence
