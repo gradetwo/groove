@@ -8,6 +8,7 @@
  */
 
 import { DrumPattern, Track } from "../types/genre";
+import { captureRequested } from "../platform/probeHooks";
 import { createZipArchive } from "../utils/zip";
 import {
   DrumKitType,
@@ -500,8 +501,11 @@ export async function renderPatternOffline(
            * caller can compare them with the rendered file at the same frames — the measurement that says which side of the
            * worklet boundary a discontinuity is on. Off in every normal render.
            */
-          const capture = Boolean((globalThis as unknown as { __gs1Capture?: boolean }).__gs1Capture);
-          if (capture) (globalThis as unknown as { __gs1CaptureEnabled?: boolean }).__gs1CaptureEnabled = true;
+          // The URL flag, the same one the pool reads: the exporter builds its **own** hosts (that is what the retry loop
+          // above is for), so a flag only the pool honours captures nothing here — which is exactly what happened.
+          const capture = captureRequested(
+            typeof window === "undefined" ? "" : window.location.search
+          );
           const candidate = await createGs1Host({
             context: ctx,
             ...(capture

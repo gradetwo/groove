@@ -37,6 +37,7 @@
  * moment: the pool silences and disposes its hosts and the native engine takes the notes.
  */
 import type { MixTrackId } from "../../data/genreMix";
+import { captureRequested } from "../../platform/probeHooks";
 import { createGs1Host, type Gs1Host } from "./Gs1Host";
 import { gs1VelocityRoute } from "../../data/gs1Patches";
 import {
@@ -152,7 +153,8 @@ export class Gs1VoicePool {
          * attempt wired this into the exporter's capability probe instead, which never creates the voices, and captured
          * exactly nothing for an hour of confusion.
          */
-        const capture = Boolean((globalThis as unknown as { __gs1Capture?: boolean }).__gs1Capture);
+        const capture =
+          typeof window !== "undefined" && captureRequested(window.location.search);
         if (capture) (globalThis as unknown as { __gs1CaptureEnabled?: boolean }).__gs1CaptureEnabled = true;
         const host = await this.createHost({
           context: this.ctx,

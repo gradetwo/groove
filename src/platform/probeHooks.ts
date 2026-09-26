@@ -30,6 +30,21 @@ export function probeRequested(search: string): boolean {
   }
 }
 
+/**
+ * Whether this page asked for the **event capture** (`?capture=1`).
+ *
+ * A URL flag rather than a global the tool sets afterwards: this app already answers `?probe=1` and `?diag=1` from
+ * `location.search`, and a probe that has to reach into the page to set a flag first has silently failed three times in this
+ * work (the flag never arrived and every reading of it was `undefined`). `location.search` cannot fail to arrive.
+ */
+export function captureRequested(search: string): boolean {
+  try {
+    return new URLSearchParams(search).get("capture") === "1";
+  } catch {
+    return false;
+  }
+}
+
 declare global {
   interface Window {
     __grooveProbe?: GrooveProbeSurface;
