@@ -384,6 +384,23 @@ are lazy module/WASM compilation completing mid-life, and any worklet whose proc
 installed. `scripts/probe_render_state_fork.mjs` reproduces it in about 90 seconds, which is where that round should
 start.
 
+### The audio batch's sequencing, revised again (2026-09-28)
+
+The note below assumes a re-record is two hours of CI and that nothing can be released between audio changes. Two things
+changed on 2026-09-28 and the sequencing should be read with them in mind:
+
+* the re-record itself is now **chunked across processes** (`scripts/run_loudness_sweep.mjs`, 20 invocations of 8 genres), so
+  it completes instead of aborting on the sentinel — and a re-record is a background job rather than a blocked afternoon;
+* **the largest audio defect in this plan was found and fixed**: the worklet assembled an event-split block wrongly, which put a
+  one-sample step at **every note-on and note-off** on the GS-1 path. Measured on the stem the owner first reported, the
+  high-frequency envelope outliers went **181.6× / 153.6× / 134.5× → none**, and `probe:continuity` now guards it. The loudness
+  and timbre gates were re-run afterwards and both pass, so this fix is **already in the released baseline** (v2.34.0) rather
+  than waiting for the batch.
+
+That leaves **A4 (P2.4 top-end texture)** as the next audio item, and it still depends on the arrangement data (B5). Its
+"one batch" constraint is weaker than it was: the re-record is a background job now, and `check:loudness:fresh` will say whether
+drift is inside tolerance.
+
 ### Revision — 2026-09-23, after P0.9: one audio batch, then one re-record
 
 P0.9 landed (159 trims re-recorded and applied; `check:loudness:fresh` green at Δ +0.00 dB). That changes how the
