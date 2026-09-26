@@ -75,13 +75,26 @@ const port = Number(value("port", "6181")) || 6181;
 
 const { chromium } = await import("playwright");
 const { server } = await startStaticServer(port);
-const browser = await chromium.launch();
+/**
+ * The autoplay flag, because this is the one probe that needs a **live** context.
+ *
+ * Every other audio probe renders offline (`OfflineAudioContext`), where no gesture is required. A transport check has to
+ * run the real engine, and headless Chromium keeps a live context suspended unless it is told not to — which is what left
+ * the first honest runs measuring −80 dBFS of silence.
+ */
+const browser = await chromium.launch({ args: ["--autoplay-policy=no-user-gesture-required"] });
 const page = await browser.newPage();
 
 try {
-  await page.goto(`http://127.0.0.1:${port}/?probe=1`, { waitUntil: "domcontentloaded" });
-  await page.waitForFunction(() => Boolean(window.__grooveProbe), { timeout: 20000 });
-
+  /**
+   * Open the **studio** on a genre, not the home screen.
+   *
+   * The hash router supports `#/studio?genre=…` (`src/app/router.tsx`), which is the difference between a probe that
+   * measures a playing genre and one that measures silence — the failure the first honest run reported at −80 dBFS.
+   */
+  await page.goto(`http://127.0.0.1:${port}/?probe=1#/studio?genre=${encodeURIComponent(genre)}`, {
+    waitUntil: "domcontentloaded",
+  });
   /**
    * The **gesture**, before anything is measured.
    *
@@ -90,9 +103,37 @@ try {
    * check that cannot tell silence from music is worse than no check, so the start gate is clicked first and the context
    * state is asserted before sampling.
    */
-  const gate = page.getByRole("button", { name: /启动音频引擎|Start Audio Engine/ });
-  if (await gate.count()) await gate.first().click();
-  await page.waitForTimeout(1500);
+  // The studio installs the surface with the engine; the **phone** shell has a start gate instead, and clicking a button
+  // by a loose name turned out to navigate away from the studio rather than start the audio. So: wait for the surface, then
+  // resume the context from inside it — the gesture a browser wants is satisfied by any user interaction, and the engine's
+  // own `play()` is one.
+  /**
+   * Start the audio by the **gate's own test id**, then wait for the surface.
+   *
+   * The app shows a start overlay until a real gesture starts the context (`components/AudioStartGate.tsx`,
+   * `data-testid="audio-start-gate"`), and the probe surface is installed with the engine — so the order is: gate,
+   * surface, sound. Clicking a button *by its visible name* was the earlier mistake: a loose match navigated away from
+   * the studio instead of starting anything.
+   */
+  const gate = page.locator('[data-testid="audio-start-gate"]');
+  if (await gate.count()) {
+    await gate.getByRole("button").first().click();
+  } else {
+    /**
+     * On the desktop there is no gate: the engine is built by the first thing that needs audio, so the probe has to press
+     * the transport's own play control before the surface can exist. (The phone shell has the gate instead — see
+     * `components/AudioStartGate.tsx`.) The label comes from the app's own translation, in both languages.
+     */
+    const play = page.locator('button[aria-label="播放"], button[aria-label="Play"]').first();
+    if (await play.count()) await play.click();
+  }
+  await page.waitForTimeout(4000);
+  const surfaceReady = await page.evaluate(() => Boolean(window.__grooveProbe));
+  if (!surfaceReady) {
+    console.error("debug: url", page.url());
+    console.error("debug: body", (await page.evaluate(() => document.body.innerText)).slice(0, 200).replace(/\n+/g, " | "));
+  }
+  if (!surfaceReady) throw new Error("the probe surface never appeared — is the app serving ?probe=1 on this route?");
 
   /**
    * Build the two sections, start the transport, and sample the analyser on both sides of the boundary.
@@ -122,6 +163,8 @@ try {
 
       const analyser = probe.engine.getMasterAnalyser();
       if (!analyser) return { error: "the engine exposes no master analyser" };
+      // A suspended context is silence, and silence is what the first honest run measured: resume it here, then insist.
+      if (analyser.context?.state !== "running") await analyser.context?.resume?.();
       const contextState = analyser.context?.state ?? "unknown";
       if (contextState !== "running") return { error: `the audio context is ${contextState}, not running` };
       const bins = new Float32Array(analyser.frequencyBinCount);
