@@ -222,6 +222,19 @@ a pass boundary, and a probe cannot observe it either: the engine is created ins
 (a deliberate test hook) rather than a probe change. Until then the plan says plainly that B7 is verified structurally
 and not audibly, and a listening check by a human is the honest substitute.
 
+**The probe exists now, and it fails honestly.** `scripts/probe_arrangement_playback.mjs` drives the built app with
+`?probe=1`, builds a two-section song whose halves are deliberately different (the second at `velocityScale` 0.55 with the
+lead muted), plays it, and samples the master analyser inside each section — comparing the spectral distance between the
+two against the *same-section* distance, which is the noise floor. That ratio is the whole judgement: a transport that
+plays the arrangement moves the spectrum; one that loops the pattern being edited does not.
+
+Its first two runs are worth recording because they are the reason the check is shaped this way. Run one reported a
+difference between the sections and a same-section floor of `null` — a bug in the probe's own spectrum maths, which
+summed *arrays*. Run two fixed the maths and **failed**: both windows sat at −80 dBFS and the ratio was 0.8×, i.e. the
+probe was measuring silence, because it had clicked the start gate but never opened a genre, so nothing was playing. A
+check that cannot tell silence from music is worse than no check, and this one now says so out loud — which is the state
+it is handed over in: **it fails, with a number, until a genre is playing.**
+
 **What it takes, and how it would be verified.** The transport already knows the bar it is on; the missing piece is
 that the *engine* is handed one pattern and told to repeat it. The shape that fits this codebase is the one B2
 established for export — derive the timeline once (`resolveTimeline`), then switch the playing clip at a pass
