@@ -626,6 +626,21 @@ which is the owner's rule arriving as numbers rather than as taste, so they got 
 `brassLead`). The residual ×1.5–1.8 readings are recorded rather than tuned away: a zero-crossing ratio is a coarse
 instrument, and the complaints that started this were ×4–6.6.
 
+### The two outliers the sweep left behind are detector artefacts, not voices (2026-09-26)
+
+The controlled calibration — the authority, not the detector — ran on both of them and clears them:
+
+```
+✅ lead    growl_lead  held/stab/quiet 60:+0/+0.3/+0  72:+0.3/+0.4/+0.1  84:+0/+0.3/+0  reg 0.3  vel 0.9  ×1.06
+✅ chords  warm_pad    held/stab/quiet 36:+0/-0.1/+0  48:-0.5/-0.6/+0    60:+0/+0/+0     reg 0.5  vel 1.5  ×0.97
+✅ lead    warm_pad    held/stab/quiet 60:+0/+0.5/+0  72:-0.3/+0/+0      84:+0/+0/+0     reg 0.3  vel   0  ×1.05
+```
+
+Every axis is inside ±0.6 dB and the brightness multiplier is within 6 %, so the sweep's `growl_lead` 0.09 and `warm_pad`
+2.25 are properties of the **genre stems** those lanes appear in (short, dense parts against a quiet native render), not of
+the voices. That is the fourth time this pattern has repeated in this work, and it is why the plan writes the rule down:
+**the detector lists, the calibration decides.**
+
 ### The catalogue-wide check, before and after the filter fix (2026-09-26)
 
 The `Voice Sweep` workflow ran on the fixed code (`gh workflow run voice-sweep.yml`, six voicing + four calibration shards,
