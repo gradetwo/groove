@@ -72,7 +72,7 @@ Read-only tools are marked ▢, tools that change something outside the session 
 ### Song (arrangement)
 
 An agent composes a *timeline* here, not a loop: `create_song` returns a `songId`, `add_section` places clips on it,
-and ### Sections carry the arrangement's own dynamics (B5)
+and `render_song` bounces the whole arrangement through the offline engine it uses for a pattern.
 
 A section is not only "which clip, how many times":
 
@@ -94,22 +94,7 @@ is B2's `flattenSong`, so the tool cannot render something the app would not). S
 | :--- | :--- | :--- |
 | `create_song` ▣ | `genreId?`, `pattern?`, `name?`, `bpm?`, `swing?`, `resolution?`, `bars?` | `songId` plus the arrangement summary; clip A is seeded from the genre's *arranged* pattern, or from an explicit `pattern` |
 | `add_section` ▣ | `songId`, `slot`, `bars?`, `label?`, `mute?`, `velocityScale?`, `velocityRamp?`, `fill?`, `transpose?`, `index?` | the whole arrangement (shape, bar count, per-section overrides, problems) |
-| ### Sections carry the arrangement's own dynamics (B5)
-
-A section is not only "which clip, how many times":
-
-* `velocityScale` — one multiplier for the whole section (a quieter breakdown);
-* `velocityRamp: [from, to]` — the multiplier at the section's first and last pass, so `[0.6, 1]` over eight
-  passes *is* an eight-bar build;
-* `fill: true` — a drum fill on the section's last pass. The lanes come from the clip (`fillForTracks`), not from
-  a list the model would have to guess: a pattern with no drum-ish lane gets no fill rather than a fill on a chord;
-* `transpose` (±24) — moves the section's pitched lanes. Drums are untouched by construction: only a step that
-  carries a pitch moves, and a kick carries none.
-
-Every one of them is reported back in the summary's `overrides`, and all of them end up in the same flattened
-pattern the app's own export renders — there is no second renderer.
-
-`render_song` ▣ | `songId`, `format?`, `bitrateKbps?` | a WAV/MP3 path under `GROOVE_MCP_OUT`, its duration, loudness and true peak — every section, in order |
+| `render_song` ▣ | `songId`, `format?`, `bitrateKbps?` | a WAV/MP3 path under `GROOVE_MCP_OUT`, its duration, loudness and true peak — every section, in order |
 
 ### Sequencer
 
