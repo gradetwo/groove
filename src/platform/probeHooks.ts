@@ -24,6 +24,14 @@ export interface GrooveProbeSurface {
   readState?: () => SequencerState;
   /** The store's own commit, so a probe can turn song mode on without clicking a button by its label. */
   commit?: (action: SequencerAction, recordHistory?: boolean) => void;
+  /**
+   * Start (or stop) one genre's audition, by id — the phone shell's own path.
+   *
+   * The audition soak needs to switch genres a few dozen times, and driving that through the DOM turned out to be three
+   * rounds of finding the right button on the right screen. This is the same call the row button makes, so the resource
+   * behaviour under test is identical and the probe stops depending on markup.
+   */
+  auditionById?: (genreId: string) => Promise<void> | void;
 }
 
 /** Whether this page asked to be probed. Split out so the test can pass a search string instead of a window. */
@@ -34,6 +42,21 @@ export function probeRequested(search: string): boolean {
     return false;
   }
 }
+
+/**
+ * What the page asked for **at load**, remembered.
+ *
+ * A shell that navigates rewrites the query string — the phone's own routing took `?probe=1` to `/m/home` and then to
+ * `/m/home?genre=…` — so by the time an engine exists and calls `installProbeHooks`, the flag that asked for the seam is
+ * gone. The page *did* ask, though, and that fact does not change, so it is recorded once at module load and used from then
+ * on. `installProbeHooks` keeps its explicit-`search` parameter for tests.
+ */
+const REQUESTED_AT_LOAD =
+  typeof window === "undefined"
+    ? false
+    : probeRequested(
+        (window as unknown as { __grooveLaunchSearch?: string }).__grooveLaunchSearch ?? window.location.search
+      );
 
 /**
  * Whether this page asked for the **event capture** (`?capture=1`).
@@ -63,10 +86,20 @@ declare global {
  */
 export function installProbeHooks(
   surface: GrooveProbeSurface,
-  search: string = typeof window === "undefined" ? "" : window.location.search
+  search: string | undefined = undefined
 ): boolean {
-  if (typeof window === "undefined" || !probeRequested(search)) return false;
-  window.__grooveProbe = surface;
+  if (typeof window === "undefined") return false;
+  // No explicit search means "did this page ask to be probed", which is a property of the load, not of the current URL.
+  if (search === undefined ? !REQUESTED_AT_LOAD : !probeRequested(search)) return false;
+  /**
+   * **Merge** rather than replace, because more than one shell can install this.
+   *
+   * The desktop studio installs the seam with its engine and the phone shell installs it with its own; whichever runs second
+   * used to overwrite the first, which is how a surface that had `auditionById` ended up without it (the soak's first run
+   * against the seam reported exactly that). A probe asking for `engine` and a probe asking for `auditionById` are not in
+   * conflict.
+   */
+  window.__grooveProbe = { ...(window.__grooveProbe ?? {}), ...surface } as GrooveProbeSurface;
   return true;
 }
 

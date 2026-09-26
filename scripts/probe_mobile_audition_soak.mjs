@@ -128,13 +128,20 @@ try {
    * perfectly healthy. `history.replaceState` puts it back before any engine exists, which is early enough: the flag is read
    * when the audition engine is built, on the first tap.
    */
-  await page.evaluate(() => {
-    const url = new URL(window.location.href);
-    if (url.searchParams.get("probe") !== "1") {
-      url.searchParams.set("probe", "1");
-      window.history.replaceState(null, "", `${url.pathname}?${url.searchParams.toString()}${url.hash}`);
-    }
-  });
+  /**
+   * The shell rewrites its query on **every** navigation (home → detail), so the flag is re-applied before each tap rather
+   * than once. The engine — and with it the seam — is built on the first audition, so the flag only has to be present at that
+   * moment, and "at that moment" is just before the click that starts it.
+   */
+  const restoreProbeFlag = () =>
+    page.evaluate(() => {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get("probe") !== "1") {
+        url.searchParams.set("probe", "1");
+        window.history.replaceState(null, "", `${url.pathname}?${url.searchParams.toString()}${url.hash}`);
+      }
+    });
+  await restoreProbeFlag();
 
   /**
    * The phone shell's start gate, which is also the gesture the browser's autoplay policy wants.
@@ -156,67 +163,59 @@ try {
    * the ids (`data-testid="mobile-genre-art-<id>"`), so the list is whatever the shell is showing.
    */
   const genres = await page.evaluate(() =>
-    Array.from(document.querySelectorAll('[data-testid^="mobile-genre-art-"]'))
-      .map((element) => (element.getAttribute("data-testid") ?? "").replace("mobile-genre-art-", ""))
+    Array.from(document.querySelectorAll('[data-testid^="mobile-genre-row-"]'))
+      .map((element) => (element.getAttribute("data-testid") ?? "").replace("mobile-genre-row-", ""))
       .filter(Boolean)
   );
   if (genres.length === 0) throw new Error("no genre tiles on the phone home screen");
 
   /**
-   * The first audition — **and it must come before the surface is read**.
+   * Start the first audition **through the seam**, then drive the switches the same way.
    *
-   * The phone shell builds its engine lazily, on the first thing that needs audio, so at page load there is no engine and no
-   * probe surface. The first run of this soak waited four seconds and then failed with "the surface never appeared", which
-   * was true and unhelpful: the surface appears when a genre is tapped.
+   * The DOM route cost three rounds — the art span is decorative, the row button opens a detail page, and the next control
+   * lives on a player screen that this shell had not mounted. `auditionById` is the same call the row button makes, so the
+   * resource behaviour under test is unchanged and the probe no longer depends on markup.
    */
-  const firstTile = page.locator(`[data-testid="mobile-genre-art-${genres[0]}"]`).first();
-  if (await firstTile.count()) await firstTile.click({ force: true });
+  const firstAudition = await page.evaluate(async (genreId) => {
+    const probe = window.__grooveProbe;
+    if (!probe?.auditionById) return "no auditionById on the surface";
+    await probe.auditionById(genreId);
+    return "ok";
+  }, genres[0]);
+  if (firstAudition !== "ok") throw new Error(`first audition: ${firstAudition}`);
   await page.waitForTimeout(holdMs);
   const surface = await page.evaluate(() => Boolean(window.__grooveProbe));
-  if (!surface) {
-    // Say what the page actually looks like rather than only that the surface is missing: the URL, what is on screen, and
-    // whether the shell even got as far as a genre.
-    const diagnosis = await page.evaluate(() => ({
-      href: window.location.href,
-      tiles: document.querySelectorAll('[data-testid^="mobile-genre-art-"]').length,
-      gate: Boolean(document.querySelector('[data-testid="audio-start-gate"]')),
-      playerBar: Boolean(document.querySelector('[data-testid^="mobile-player"], .m-playerbar, [data-testid="mobile-player-bar"]')),
-      probeFlag: new URLSearchParams(window.location.search).get("probe"),
-      testIds: Array.from(document.querySelectorAll("[data-testid]"))
-        .map((element) => element.getAttribute("data-testid"))
-        .filter((id) => id && !id.startsWith("mobile-genre-art-"))
-        .slice(0, 12),
-      text: document.body.innerText.slice(0, 120).replace(/\n+/g, " | "),
-    }));
-    throw new Error(`the probe surface never appeared after a first audition: ${JSON.stringify(diagnosis)}`);
-  }
+  if (!surface) throw new Error("the probe surface never appeared after a first audition");
 
+  const summary = [];
   for (let index = 0; index < count; index += 1) {
-    // The first tile was tapped above to bring the engine up; the loop starts from the second genre so no step is wasted.
-    const genreId = genres[(index + 1) % genres.length];
-    const tile = page.locator(`[data-testid="mobile-genre-art-${genreId}"]`).first();
-    if (await tile.count()) {
-      await tile.click({ force: true });
-    } else {
-      // The tiles are the phone home screen's own hook; a shell that has not loaded them yet is worth reporting.
-      failures.push(`no tile for ${genreId}`);
-      await page.waitForTimeout(500);
-      continue;
+    if (index > 0) {
+      const genreId = genres[(index + 1) % genres.length];
+      const switched = await page.evaluate(async (id) => {
+        const probe = window.__grooveProbe;
+        if (!probe?.auditionById) return "no auditionById";
+        await probe.auditionById(id);
+        return "ok";
+      }, genreId);
+      if (switched !== "ok") {
+        failures.push(`switch ${index}: ${switched}`);
+        break;
+      }
     }
     await page.waitForTimeout(holdMs);
     const diagnostics = await readDiagnostics();
-    summary.push({ index, genreId, ...diagnostics });
+    summary.push({ index, ...diagnostics });
     const row = summary[summary.length - 1];
     console.log(
-      `${String(index + 1).padStart(2)}/${count} ${genreId.padEnd(18)} hosts ${String(row.hostCount).padStart(2)} ` +
-        `ready ${String(row.readyHosts).padStart(2)}  maxLoad ${(row.maxLoad ?? 0).toFixed(3)}  ` +
-        `violations ${String(row.totalViolations).padStart(3)}  heap ${row.usedHeapMb ?? "?"} MB`
+      `${String(index + 1).padStart(2)}/${count} hosts ${String(row.hostCount).padStart(2)} ready ${String(row.readyHosts).padStart(2)}  ` +
+        `maxLoad ${(row.maxLoad ?? 0).toFixed(3)}  violations ${String(row.totalViolations).padStart(3)}  heap ${row.usedHeapMb ?? "?"} MB`
     );
   }
 
   // Stop the last audition so the engine is idle when the numbers are read.
-  const last = page.locator('[data-testid^="mobile-genre-art-"]').first();
-  if (await last.count()) await last.click();
+  await page.evaluate(async () => {
+    await window.__grooveProbe?.auditionById?.("");
+  });
 } finally {
   const report = { count, holdMs, failures: failures.slice(0, 10), summary };
   if (out) fs.writeFileSync(out, JSON.stringify(report, null, 1));
