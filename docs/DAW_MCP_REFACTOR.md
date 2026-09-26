@@ -294,6 +294,18 @@ So what remains of the clip count is exactly three surfaces, all of them interfa
 2. the copy control, which is hard-coded to swap `"A"` and `"B"` (`SequencerPanel.tsx:393`);
 3. the section editor, so a section can point at C or D — the store action and the share codec both accept that already.
 
+**The round-trip check is still owed, and one attempt to write it failed honestly.** `projectDb.test.ts` should hold a case that
+saves a project carrying `extraClips` and loads it back — either it survives or the store refuses it, never loses it silently — and
+that case is **not written yet**. Three attempts placed it in a fresh `describe`, which has no access to the suite's `sampleGenre`
+fixture, so all three failed for that reason rather than for anything about the store; they were reverted each time rather than
+committed red. The lesson is mechanical and now recorded: **this file's fixtures live inside its own `describe`, so a new case belongs
+inside that block, not beside it.**
+
+What that leaves unproven is worth stating plainly: `saveProject`/`getProject` are exercised by fifteen passing cases, and none of
+them carries a field the schema did not know about before today, so **whether an `extraClips` survives a store round trip is not yet
+established**. The save *path* now includes it (the previous commit); the store's treatment of it is the next thing to measure, and it
+is the last open item in the clip count.
+
 **And the real remaining gap is persistence, not a picker.** `SequencerModals.tsx:140` builds the project payload by hand —
 `patterns: { A: …, B: seqState.activeSlot === "B" ? pattern : seqState.patterns.B }` — and passes `songChain` (already widened to
 `ClipSlot[]`) beside it. It never mentions `extraClips`, so **a project saved through that path would drop C and D**: the state has
