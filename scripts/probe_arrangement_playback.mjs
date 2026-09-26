@@ -317,8 +317,8 @@ try {
      * apart, and it is the diagnostic the plan named before the next run.
      */
     console.log(
-      `   window levels    : A ${measured.aMean?.toFixed(1) ?? "n/a"} dB · B ${measured.bMean?.toFixed(1) ?? "n/a"} dB` +
-        ` · frames A/B ${measured.aFrames ?? 0}/${measured.bFrames ?? 0}`
+      `   window levels    : A ${report.meanLevelA?.toFixed(1) ?? "n/a"} dB · B ${report.meanLevelB?.toFixed(1) ?? "n/a"} dB` +
+        ` · frames A/B ${report.frames?.a ?? 0}/${report.frames?.b ?? 0}`
     );
     if (ratio < 3) process.exitCode = 1;
   }
