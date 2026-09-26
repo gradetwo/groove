@@ -1,23 +1,27 @@
 {
-  "version": "2.29.0",
+  "version": "2.30.0",
   "releaseDate": "2026-09-26",
   "changelogCount": 10,
   "latest": {
-    "version": "2.29.0",
+    "version": "2.30.0",
     "date": "2026-09-26",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "调试面板新增「录制 10 秒」：把你听到的声音直接发我们",
-      "en": "A 'record 10 seconds' button in the diagnostics panel: send us the sound you hear"
+      "zh": "修好 uplifting trance 的刺耳感",
+      "en": "Uplifting trance's lead and chords are no longer harsh"
     },
     "highlights": [
       {
-        "zh": "开启调试（设置 → 音频 → 调试）后打开诊断面板，按「录制 10 秒」会把主输出录成文件并下载——录的是实时输出，不是你听不到的那份离线渲染。",
-        "en": "With debug on (Settings → Audio → Debug), the diagnostics panel gains a record button that captures the live master output to a file — the signal you are hearing, not an offline render."
+        "zh": "GS-1 的 supersaw 用错滤波模型（压到 3.2 kHz）：过零率是原生 6.6 倍、6 kHz 以上能量 8 倍，就是刺耳来源。",
+        "en": "GS-1's supersaw used the wrong filter model (closed to 3.2 kHz): 6.6x the native zero-crossing rate and 8x its above-6-kHz energy — the source of the harshness."
       },
       {
-        "zh": "录完会显示文件名与大小；若浏览器拒绝录音会明确报错，而不是静默无反应。",
-        "en": "It reports the file name and size when it finishes, and says so plainly when the browser refuses — a button that quietly does nothing is the failure this avoids."
+        "zh": "改用原生 Supersaw 的滤波形状后：过零率 10.7k→2.6 kHz，高频占比 0.175→0.018（原生 0.022），和弦轨由偏亮变为略暗。",
+        "en": "With the native Supersaw's shape: zero-crossing 10.7k to 2.6 kHz, above-6-kHz share 0.175 to 0.018 (native 0.022), chords from brighter to slightly darker."
+      },
+      {
+        "zh": "手机版打开调试后，播放器等页面也会显示诊断窗口。",
+        "en": "With debug on, mobile shows the diagnostics panel on the player and other screens too."
       }
     ],
     "truncated": false

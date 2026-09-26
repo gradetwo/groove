@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Genre } from "../types/genre";
 import type { SequencerPattern } from "../types/genre";
 import { AudioEngine } from "../audio/AudioEngine";
+import { setActiveAudioEngine } from "../audio/activeEngine";
+import { debugModeForcedByUrl, isDebugModeEnabled } from "../platform/debugMode";
 import { createVinylScrub, type VinylScrub } from "../audio/VinylScrub";
 import { patternFromGenre } from "../data/genreMix";
 import { arrangementSections, type ArrangementFormId } from "../data/arrangementForm";
@@ -138,8 +140,11 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
   // Clean up engine on unmount
   useEffect(() => {
     return () => {
+      cleanupDiagRef.current?.();
+      cleanupDiagRef.current = null;
       if (engineRef.current) {
         engineRef.current.stop();
+        setActiveAudioEngine(null);
         engineRef.current = null;
       }
       scrubRef.current?.dispose();
@@ -170,6 +175,20 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
         engineRef.current = new AudioEngine({
           onStop: () => setPlayingGenreId(null),
         });
+        /**
+         * The phone shell's engine is the **active** one, and it carries the diagnostic panel.
+         *
+         * Both of those were desktop-only until now: only `useAudioEngineLifecycle` (the studio view) registered an engine
+         * or installed the panel, so on the phone the start gate's `primeAudioContext` had nothing to prime and the debug
+         * switch turned on a panel that no code path ever built — which is exactly what the owner reported.
+         */
+        setActiveAudioEngine(engineRef.current);
+        if (isDebugModeEnabled() || debugModeForcedByUrl()) {
+          void import("../platform/diagnostics").then((mod) => {
+            // The panel is a diagnostic, never a reason to fail a playback path.
+            cleanupDiagRef.current = mod.installDiagnostics(engineRef.current!);
+          });
+        }
         engineRef.current.setOnStep((info) => {
           if (typeof info?.step === "number") {
             const previous = observedStepRef.current;
@@ -301,6 +320,8 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
    * should reuse the same voice.
    */
   const scrubRef = useRef<VinylScrub | null>(null);
+  /** The diagnostics panel's teardown, when the debug switch asked for one. */
+  const cleanupDiagRef = useRef<(() => void) | null>(null);
 
   const startVinylScrub = useCallback((velocity: number) => {
     const target = engineRef.current?.getScrubTarget();
