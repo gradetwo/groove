@@ -281,6 +281,19 @@ are `["A", "B", "A"]` still does. Writing that test took three attempts, and eac
 inconsistent payload (`totalSteps: 16` with a four-step lane) makes the encoder refuse the whole thing and return an empty string,
 which decodes to `null` rather than to a half-link.
 
+**And the store is already there too.** `SWITCH_PATTERN_SLOT` takes a `ClipSlot` (`useSequencerStore.ts:185`) and its reducer reads
+`extraClips` with `patterns.A` as the fallback (`:375-390`), so the store can already switch to C or D. Its one wrinkle is worth
+naming before the surfaces are built: switching to a slot that holds nothing sets `pattern` to a clone of A but does **not** write it
+into `extraClips`, so leaving and returning re-derives it rather than keeping what the user saw. Either the switch should persist
+the clone, or an empty slot should be a visible "create" action instead of an implicit copy — a small decision that belongs with the
+UI work rather than before it.
+
+So what remains of the clip count is exactly three surfaces, all of them interface:
+
+1. the slot buttons (today a two-way A/B control in the sequencer panel);
+2. the copy control, which is hard-coded to swap `"A"` and `"B"` (`SequencerPanel.tsx:393`);
+3. the section editor, so a section can point at C or D — the store action and the share codec both accept that already.
+
 **What is left of the clip count is the interface**: the model, the store, the project type and the share codec all speak four slots
 now, and the editor still shows two. That is a UI slice, not a data one.
 
