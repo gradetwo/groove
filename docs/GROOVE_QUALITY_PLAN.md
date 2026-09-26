@@ -9,7 +9,30 @@ It is deliberately *not* a to-do list derived from the report: four of the repor
 implemented, and the measurements below say which. The two workstreams (this and the skin/gate work) are
 independent — nothing here touches CSS, and the gates added here do not overlap `probe:skins`.
 
-####### The CI voice sweep, on the code as it stands (2026-09-28)
+######## Where the voicing objective stands (2026-09-28)
+
+An assessment of the standing objective — "voice every genre's GS-1 lane by that genre's own habit, verify it against the native
+render through CI shards, fix what the measurement flags, keep the baselines and the budget consistent, ship in small releases" —
+with the evidence for each part, so that "done" is a reading rather than a feeling.
+
+| part | evidence |
+|---|---|
+| every lane voiced by its genre's own habit | `GENRE_GS1_PATCH_OVERRIDES` + the resolver in `data/gs1Patches.ts`; every genre reaches GS-1 through one of **26** lane/instrument pairs |
+| verified against the native render, fanned out through CI shards | run `36240459975`: **sweep 6/6** and **calibration 26/26 `ok`**, on the tree that includes every fix below |
+| fix what the measurement flags | the seven accidentally high-passed patches (v2.31.0), the supersaw (v2.30.0), and the worklet's event-split block assembly — the one-sample step at every note-on and note-off (v2.34.0), measured 181.6×/153.6×/134.5× → none |
+| keep the loudness and timbre baselines consistent | 159 trims re-recorded across 20 processes and applied (arranged p90−p10 **6.294 → 5.694 dB**), `check:loudness` and `check:timbre` green after the worklet fix |
+| keep the bundle budget consistent | **222.8 / 223 KB**, the limit moved once this session (222 → 223) with the measurement recorded in `scripts/check_budgets.js` |
+| ship in small releases | v2.28.0 → v2.34.0, each verified live (version.json, the entry module, the covers payload) |
+
+**What remains is the plan's own tail, not the voicing work**: A4 (top-end texture, behind B5's arrangement data), the note
+editor's P2/P3 slices, per-lane arrangement slots, ALS one-clip-per-section, and B7's arrangement-playback probe (parked on an
+environmental limitation: the container reports `[MasterLimiter] AudioWorklet unavailable`). Those are tracked where they belong —
+`docs/GROOVE_QUALITY_PLAN.md` and `docs/ARRANGEMENT_PLAN.md` — and the objective stays open for them.
+
+Two defects found this session were invisible to a green suite and now have measurement guards on every pull request: the build
+that did not start (`probe:boot`) and the step at every note event (`probe:continuity`).
+
+## The CI voice sweep, on the code as it stands (2026-09-28)
 
 Run `36235310090` on `dev`, after every change in this document's recent entries — the seven high-passed patches, the reverb
 send's shaping, the probe seam, the artwork thumbnails, the payload gate — completed **success**, all ten shards:
