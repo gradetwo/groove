@@ -122,6 +122,11 @@ jobs:
         # start, and this makes the same refusal part of the pull-request gate.
         run: npm run probe:boot
 
+      - name: No step at the note events
+        # The measurement that found the worklet's wrong block assembly (a one-sample step at every note-on and note-off on the
+        # GS-1 path), kept as the guard for it: a synthetic unit test was tried first and passed against the broken code twice.
+        run: npm run probe:continuity
+
       - name: Bundle Budget & Performance Gate
         run: npm run check:budget
 
