@@ -155,6 +155,34 @@ an arrangement boundary — but nothing measured here demands it, and turning it
 evidence that does not support it. What *did* change is the record: stage 3's premise ("the flatten's boundaries produce clicks")
 is now measured rather than assumed, and it is **not** supported for the arrangement tested.
 
+## Stage 4 reconnaissance: the bridge already exists (2026-09-28)
+
+C2 says the app has two models for "what is playing" — a project (`patterns: { A, B }`) and a song (clips plus sections) — and that a
+DAW needs one. A survey of the consumers says where the seam is and, usefully, that **the bridge is already built**:
+
+| module | what it does with the two-pattern shape |
+|---|---|
+| `src/features/sequencer/useSequencerStore.ts` | **the document lives here** — this is the one that has to move |
+| `src/data/songFlatten.ts` | the **converter**: `sessionSong(...)` builds a `Song` from the editor's state and `flattenSong` renders it |
+| `src/features/sequencer/{projectDb,projectStorage,useProjectHub}.ts` | persistence of the project shape |
+| `src/features/sequencer/useExportActions.ts` | the exporters, which already go through the flatten |
+| `src/views/StudioView.tsx`, `src/components/sequencer/*` | the UI, which edits two slots |
+| `src/hooks/useGenreAudition.ts` | audition, same two slots |
+
+Twelve non-test modules touch `patterns.{A,B}` and fourteen mention `activeSlot`, and the important one is `songFlatten`'s
+`sessionSong`: the app **already** turns its editor state into a song at the boundary, and the arrangement path already renders
+through it. So stage 4 is not "add a song model" — it is "**make the song the document and derive the two editor slots from it**",
+which is the reverse of today's direction and therefore a change of ownership rather than a new concept.
+
+**The acceptance line, stated before the change:** the existing suites for the store, the project hub, the flatten and the studio
+view must pass **unchanged** wherever behaviour is meant to be unchanged. A migration that needs its tests rewritten is a
+migration that changed behaviour, and it should have to say so.
+
+**The first move**, deliberately the smallest one that changes ownership rather than plumbing: give the store an arrangement
+(clips keyed by slot plus the ordered sections), keep `patterns.A/B` as **views onto it** for the editors, and let `sessionSong`
+read the arrangement directly instead of reconstructing one. Every other module in the table then keeps working against the same
+shape until it is its turn.
+
 ## What this is not
 
 It is not a rewrite of the sequencer, the audio engine or the genre library — those are the parts this project has spent its
