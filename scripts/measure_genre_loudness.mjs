@@ -1200,10 +1200,35 @@ async function waitForServer(url) {
              */
             gs1HostFailures: entry.gs1HostFailures ?? 0,
             trimDb: entry.trimDb,
-            trimmedLufs: Number.isFinite(entry.trimmedLufs) ? Number(entry.trimmedLufs.toFixed(3)) : null,
-            trimmedPeakDb: Number.isFinite(entry.trimmedPeakDb) ? Number(entry.trimmedPeakDb.toFixed(3)) : null,
-            trimmedTruePeakDb: Number.isFinite(entry.trimmedTruePeakDb) ? Number(entry.trimmedTruePeakDb.toFixed(3)) : null,
-            trimmedRmsDb: Number.isFinite(entry.trimmedRmsDb) ? Number(entry.trimmedRmsDb.toFixed(3)) : null,
+            /**
+             * The post-trim measurement, and **a zero trim's post-trim measurement is the arranged one**.
+             *
+             * The renderer skips the extra pass when the trim is 0 — there is nothing to apply — which left
+             * `trimmed*` null on those rows. The report's own gate treats that as "a trim that was never rendered at its
+             * shipped value is not evidence", which is right: a row with no post-trim number is a hole. But for a zero
+             * trim the shipped value *is* the arranged render, so the honest number is the one already measured, and the
+             * 2026-09-28 sweep produced 124 such rows against a committed report that had filled them.
+             */
+            trimmedLufs: Number.isFinite(entry.trimmedLufs)
+              ? Number(entry.trimmedLufs.toFixed(3))
+              : Number.isFinite(entry.arrangedLufs) && entry.trimDb === 0
+                ? Number(entry.arrangedLufs.toFixed(3))
+                : null,
+            trimmedPeakDb: Number.isFinite(entry.trimmedPeakDb)
+              ? Number(entry.trimmedPeakDb.toFixed(3))
+              : Number.isFinite(entry.arrangedPeakDb) && entry.trimDb === 0
+                ? Number(entry.arrangedPeakDb.toFixed(3))
+                : null,
+            trimmedTruePeakDb: Number.isFinite(entry.trimmedTruePeakDb)
+              ? Number(entry.trimmedTruePeakDb.toFixed(3))
+              : Number.isFinite(entry.arrangedTruePeakDb) && entry.trimDb === 0
+                ? Number(entry.arrangedTruePeakDb.toFixed(3))
+                : null,
+            trimmedRmsDb: Number.isFinite(entry.trimmedRmsDb)
+              ? Number(entry.trimmedRmsDb.toFixed(3))
+              : Number.isFinite(entry.arrangedRmsDb) && entry.trimDb === 0
+                ? Number(entry.arrangedRmsDb.toFixed(3))
+                : null,
             /**
              * The repeat spread, and a row that cannot produce one is **not** a row.
              *

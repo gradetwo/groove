@@ -9,7 +9,35 @@ It is deliberately *not* a to-do list derived from the report: four of the repor
 implemented, and the measurements below say which. The two workstreams (this and the skin/gate work) are
 independent — nothing here touches CSS, and the gates added here do not overlap `probe:skins`.
 
-###### How a cosmetic HTML edit killed the application (2026-09-28)
+####### The CI voice sweep, on the code as it stands (2026-09-28)
+
+Run `36235310090` on `dev`, after every change in this document's recent entries — the seven high-passed patches, the reverb
+send's shaping, the probe seam, the artwork thumbnails, the payload gate — completed **success**, all ten shards:
+
+```
+✓ Sweep shard 1-6/6        four renders per lane/instrument, GS-1 against --no-gs1 and against the native reference
+✓ Calibration shard 1-4/4  the controlled per-instrument calibration, 26 lane/instrument pairs
+```
+
+The calibration artifacts, merged:
+
+| metric | worst | where |
+|---|---|---|
+| held-note level | **+0.30 dB** | `chords/m1_organ` |
+| stab level | **−0.80 dB** | `chords/m1_organ` |
+| register spread | **0.40 dB** | `chords/warm_pad` |
+| velocity spread | **1.20 dB** | `chords/distorted_guitar` |
+| brightness ratio | **1.04×** | `chords/rhodes_ep` |
+
+**26 of 26 verdicts are `ok`.** That is the objective's own test — every genre/lane voiced by a patch derived from its native
+preset, measured against the native render rather than asserted — and it is green on the current tree, fanned out across CI
+shards rather than run on the machine that is also re-recording the loudness baseline.
+
+Two things made it possible to trust: the measurement is a **calibration** (a controlled pair), not a detector, so its verdict
+is the one that counts; and the four false-positive detectors recorded in §1g of `docs/SYNTH_UPSTREAM_PLAN.md` are why nothing
+here is decided by a ratio alone.
+
+## How a cosmetic HTML edit killed the application (2026-09-28)
 
 The commit that added the inline first frame — the fix for the PWA's black screen — rewrote the end of `index.html` and, in doing
 so, **deleted `<script type="module" src="/src/main.tsx">`**. Every build after it was a dead shell: the document painted the

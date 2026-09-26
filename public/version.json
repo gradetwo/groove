@@ -1,25 +1,29 @@
 {
-  "version": "2.31.0",
-  "releaseDate": "2026-09-26",
+  "version": "2.33.0",
+  "releaseDate": "2026-09-28",
   "changelogCount": 10,
   "latest": {
-    "version": "2.31.0",
-    "date": "2026-09-26",
+    "version": "2.33.0",
+    "date": "2026-09-28",
     "category": "fix",
     "title": {
-      "zh": "修好七个音色被误设成高通滤波（发尖/发薄）",
-      "en": "Seven patches were accidentally high-passed — thin and harsh"
+      "zh": "冷启动不再黑屏、图片提前加载、混响送出收低频、锁屏可恢复、发布包更干净",
+      "en": "No black screen on a cold start, warmed artwork, a shaped reverb send, lock-screen resume, and no cover tooling in the payload"
     },
     "highlights": [
       {
-        "zh": "滤波类型参数里 1 = 高通（0 = 低通），但代码注释一直写「SVF」，于是七个音色一直被高通掉低频：实测 strings_lead 过零率是原生的 11 倍。",
-        "en": "Filter type 1 is a HIGH-PASS (0 is the lowpass), but the comments called it \"SVF\" — so seven patches had their body filtered away, with strings_lead measuring eleven times the native's zero-crossing rate."
+        "zh": "首次打开不再黑屏：文档自带内联首屏，React 挂载后接管。",
+        "en": "A cold launch no longer shows a black screen: the document draws its own inline first frame until React takes over."
       },
       {
-        "zh": "按原生预设的截止频率改回低通后：strings_lead 11×→2.2×、guitar_lead 5.8×→0.9×（略暗于原生）、bell_lead 的 −38 dB 电平也回来了。",
-        "en": "Flipped to the lowpass their native presets use, at the native cutoffs: strings_lead 11x to 2.2x, guitar_lead 5.8x to 0.9x (slightly darker than native), and bell_lead's −38 dB level recovered."
+        "zh": "图片提前取好并解码：曲库、详情与黑胶标签不再等到显示时才下载。",
+        "en": "Artwork is fetched and decoded before the paint: library, detail and the vinyl label no longer download on appearance."
+      },
+      {
+        "zh": "混响送出加 160Hz 高通：低频立体声成分实测减少 2.8 dB，整轨仅变化 0.001 dB。",
+        "en": "The reverb send is high-passed at 160 Hz: 2.8 dB less low-frequency side energy, with the mix moving 0.001 dB."
       }
     ],
-    "truncated": false
+    "truncated": true
   }
 }
