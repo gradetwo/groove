@@ -92,9 +92,18 @@ is B2's `flattenSong`, so the tool cannot render something the app would not). S
 
 | Tool | Arguments | Returns |
 | :--- | :--- | :--- |
-| `create_song` ▣ | `genreId?`, `pattern?`, `name?`, `bpm?`, `swing?`, `resolution?`, `bars?` | `songId` plus the arrangement summary; clip A is seeded from the genre's *arranged* pattern, or from an explicit `pattern` |
+| `create_song` ▣ | `genreId?`, `pattern?`, `name?`, `bpm?`, `swing?`, `resolution?`, `bars?`, `label?`, `clips?` | `songId` plus the arrangement summary; clip A is seeded from the genre's *arranged* pattern, or from an explicit `pattern`, and `clips` seeds further slots |
+| `set_clip` ▣ | `songId`, `slot`, `pattern?`, `genreId?` | the song's shape after one slot's clip is replaced (or seeded from a genre) — how a section gets its own variation |
 | `add_section` ▣ | `songId`, `slot`, `bars?`, `label?`, `mute?`, `velocityScale?`, `velocityRamp?`, `fill?`, `transpose?`, `index?` | the whole arrangement (shape, bar count, per-section overrides, problems) |
-| `render_song` ▣ | `songId`, `format?`, `bitrateKbps?` | a WAV/MP3 path under `GROOVE_MCP_OUT`, its duration, loudness and true peak — every section, in order |
+| `duplicate_section` ▣ | `songId`, `index`, `at?`, `bars?`, `label?` | the arrangement with a copy of that section, its clip and **all** its overrides intact |
+| `get_song` ▢ | `songId`, `includePatterns?` | the clips (each with its pattern), the sections in order, the shape and the tempo — what makes a composition readable and re-exportable |
+| `export_groove` ▣ | `songId`, `outputDir?` | a **validated** `.groove` package under `GROOVE_MCP_OUT`, carrying the arrangement rather than a flattened copy |
+| `render_song` ▣ | `songId`, `format?`, `bitrateKbps?`, `maxDurationSec?` | a WAV/MP3 path under `GROOVE_MCP_OUT`, its duration, loudness and true peak — every section, in order |
+
+**`bars` counts passes, not measures.** A genre's seeded clip is four measures long (64 steps at 16 to the bar), so `bars: 4` is
+sixteen measures; every song summary reports `passBars` (measures per pass) and `secondsEstimate`, which is what to read before
+rendering. `render_song` also takes `maxDurationSec` and refuses before it starts the browser, because long arrangements take
+minutes and the call reports no progress while it runs.
 
 ### Sequencer
 
