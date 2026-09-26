@@ -9,7 +9,25 @@ It is deliberately *not* a to-do list derived from the report: four of the repor
 implemented, and the measurements below say which. The two workstreams (this and the skin/gate work) are
 independent — nothing here touches CSS, and the gates added here do not overlap `probe:skins`.
 
-######## Where the voicing objective stands (2026-09-28)
+######## A4/B5 surveyed: the data side exists, the measurement needs one extension (2026-09-28)
+
+A4's exit criterion is "the top three bands gain energy **only** in the arranged bars", and B5 is the arrangement data that names
+those bars. Surveyed before writing any code, and most of it is already here:
+
+* **the data exists** — `src/data/arrangementForm.ts` already gives a step a `riser: true` flag, and the club form's `build`
+  step carries it ("the build asks for a riser as well as the ramp: the texture lane arrives over its last pass"). So B5's
+  "a `texture` lane only in the bars the arrangement names" is a declaration the forms already make;
+* **the instrument is close** — `scripts/probe_arrangement_audio.mjs` renders the whole arrangement per bar and already reports a
+  **fill's high band** (`fillHighGainPct`) and a **build's rendered level** (`buildGainPct`), with the calibration that the master
+  chain hands back most of a build (12 dB of velocity renders +1.81 dB).
+
+So A4's remaining work is **one measurement, then whatever it shows**: extend the probe to split each bar into the plan's three
+top bands and to flag the **riser** bars (not only the fill bars), render the club form on a genre with a riser, and read whether
+the top three bands rise in those bars alone. If they do, A4 is a measurement that closes it; if they do not, the number says
+which band is missing and the texture lane is where the fix goes — and that is an audio change, so it joins the baseline batch at
+the end rather than starting one.
+
+### Where the voicing objective stands (2026-09-28)
 
 An assessment of the standing objective — "voice every genre's GS-1 lane by that genre's own habit, verify it against the native
 render through CI shards, fix what the measurement flags, keep the baselines and the budget consistent, ship in small releases" —
