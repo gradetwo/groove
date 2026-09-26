@@ -626,6 +626,25 @@ which is the owner's rule arriving as numbers rather than as taste, so they got 
 `brassLead`). The residual ×1.5–1.8 readings are recorded rather than tuned away: a zero-crossing ratio is a coarse
 instrument, and the complaints that started this were ×4–6.6.
 
+### The catalogue-wide check, before and after the filter fix (2026-09-26)
+
+The `Voice Sweep` workflow ran on the fixed code (`gh workflow run voice-sweep.yml`, six voicing + four calibration shards,
+artefacts downloaded) and the instrument table is the verification this work has been missing:
+
+| lane | instrument | brightness ratio **before** | **after** |
+| --- | --- | --- | --- |
+| lead | `strings_lead` | **11.46** | **2.35** |
+| chords | `guitar_lead` | **5.83** | below the top ten |
+| lead | `pluck_synth` | 4.30 | below the top ten |
+| lead | `bell_lead` | 1.60 with a −38 dB level | below the top ten |
+| chords | `distorted_guitar` | 3.77 | 3.56 |
+| chords | `brass_synth` | 2.47 | 2.47 (unchanged — that patch was never high-passed) |
+
+Two rows are the new outliers, and neither is a filter mistake: **`growl_lead` at 0.09** (nine times *darker* than its native
+render, so a voice-content difference rather than a filter one) and **`warm_pad` at 2.25**. They stay on the list rather than
+being "fixed" on the spot, because this detector is a detector — the five-metric lesson in `SYNTH_UPSTREAM_PLAN.md` §1g is
+exactly that a ratio cannot decide what a voice should sound like, and the controlled calibration is what can.
+
 ### The filter-type trap: seven patches high-passed, and the comment that hid it (2026-09-26)
 
 The owner reported the uplifting-trance lead and chords as harsher with GS-1 on than off. Measured, the lead stem ran at
