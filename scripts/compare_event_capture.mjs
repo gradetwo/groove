@@ -87,16 +87,49 @@ console.log(
 const boundaryStep = (before, after) =>
   before.length && after.length ? Math.abs(after[0] - before[before.length - 1]) : Number.NaN;
 
+/**
+ * The **whole window** each capture carries, not just the boundary sample.
+ *
+ * The first version compared the eight samples at the event, which established that the core's output is continuous *at* a
+ * note-off. The symptom Groove measured sits 13-15 ms **after** it, so the window is now 2048 frames and this finds the largest
+ * step in it — and the same step in the rendered file at the same frames. Where they disagree, the discontinuity was introduced
+ * between the core's buffer and the file; where the capture carries it too, the core wrote it.
+ */
+const largestStep = (samples) => {
+  let worst = 0;
+  let at = 0;
+  for (let i = 1; i < samples.length; i += 1) {
+    const step = Math.abs(samples[i] - samples[i - 1]);
+    if (step > worst) {
+      worst = step;
+      at = i;
+    }
+  }
+  return { worst, at };
+};
+
 for (const event of events) {
   const at = Math.round(event.frame);
-  const captureStep = boundaryStep(event.before ?? [], event.after ?? []);
+  const after = event.after ?? [];
+  const captureStep = boundaryStep(event.before ?? [], after);
   const fileLeft = stepAt(channels[0], at, 2);
   const fileRight = channels[1] ? stepAt(channels[1], at, 2) : null;
   const verdict = (fileStep, p999) =>
     p999 && fileStep > p999 * 3 ? `STEP (${(fileStep / p999).toFixed(1)}x p99.9)` : `slope (${(fileStep / (p999 || 1)).toFixed(2)}x)`;
+  const inWindow = after.length > 1 ? largestStep(after) : null;
+  const inFile = largestStep(Array.from(channels[0].slice(at, at + Math.max(1, after.length))));
+  const ms = (offset) => `${((offset / rate) * 1000).toFixed(1)}ms`;
   console.log(
     `${event.off ? "off" : "on "} note ${String(event.note).padStart(3)} frame ${String(at).padStart(7)}  ` +
-      `capture ${captureStep.toExponential(2)}  file L ${fileLeft.toExponential(2)} ${verdict(fileLeft, p999Left)}` +
-      `${fileRight === null ? "" : `  R ${fileRight.toExponential(2)} ${verdict(fileRight, p999Right)}`}`
+      `capture@event ${captureStep.toExponential(2)}  file L ${fileLeft.toExponential(2)} ${verdict(fileLeft, p999Left)}` +
+      `${fileRight === null ? "" : `  R ${fileRight.toExponential(2)}`}` +
+      (inWindow && after.length === inFile ? "" : "")
   );
+  if (inWindow) {
+    console.log(
+      `      window ${after.length} frames · largest step — core ${inWindow.worst.toExponential(2)} at ${ms(inWindow.at)}` +
+        ` · file ${inFile.worst.toExponential(2)} at ${ms(inFile.at)}` +
+        (inFile.worst > inWindow.worst * 3 ? "   ← the file has a step the core does not" : "")
+    );
+  }
 }

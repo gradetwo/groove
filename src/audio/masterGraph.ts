@@ -142,6 +142,8 @@ export interface MasterGraphOptions {
   limiterReleaseSlowMs?: number;
   /** Initial send-bus parameters (per-genre defaults are applied later via setters). */
   reverb?: Partial<ReverbParams>;
+  /** Diagnostic: route the DC blocker straight to the trim, skipping the master FX rack. See the chain wiring below. */
+  bypassFxRack?: boolean;
   delay?: Partial<DelayParams>;
   /** Initial master FX rack state. */
   fx?: Partial<EffectsRackState>;
@@ -475,8 +477,20 @@ export function buildMasterGraph(
   drumParallelGain.connect(masterGain);
   musicGlue.connect(masterGain);
   masterGain.connect(dcBlocker);
-  dcBlocker.connect(fxRack.inputNode);
-  fxRack.outputNode.connect(loudnessTrimGain);
+  /**
+   * The master FX rack can be bypassed **for diagnosis** (`bypassFxRack`), which exists because of a measurement.
+   *
+   * Groove's UK Garage lead has a one-sample step in the rendered file 15 ms after every note-off, and the GS-1 core's own
+   * output — captured from inside the worklet — is smooth across that whole window, so the step is introduced downstream. Two
+   * candidates are already excluded by A/B (the track strip, the bus compressor); the rack holds the remaining time-varying
+   * effects (chorus, flanger, phaser), whose delay lines are exactly the kind of stage that can produce a step.
+   */
+  if (options.bypassFxRack) {
+    dcBlocker.connect(loudnessTrimGain);
+  } else {
+    dcBlocker.connect(fxRack.inputNode);
+    fxRack.outputNode.connect(loudnessTrimGain);
+  }
   loudnessTrimGain.connect(masterMakeupGain);
   if (busCompEnabled) {
     masterMakeupGain.connect(masterBusComp);

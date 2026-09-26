@@ -134,6 +134,8 @@ export interface RenderWavOptions {
    * profile, because that profile is written last and would otherwise overwrite it.
    */
   reverbSendHighpassHz?: number;
+  /** Diagnostic: bypass the master FX rack (see `createMasterGraph`). */
+  bypassFxRack?: boolean;
   /**
    * Called once per render with how many GS-1 hosts failed to load after their retries.
    *
@@ -324,6 +326,8 @@ export async function renderPatternOffline(
   // from `MASTER_FADER_DEFAULT`.
   const graph = buildMasterGraph(ctx, {
     loudnessTrimDb,
+    // Diagnostic only; see the note in `createMasterGraph`'s chain wiring.
+    bypassFxRack: options.bypassFxRack,
     // The graph owns the detector bus (A2): the worklet compressor's second input, tapped per lane *before* its duck
     // gain so a deliberate dip is not mistaken for a quiet passage. See `busCompDetectorInput` for why it is not
     // created here.
