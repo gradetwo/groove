@@ -144,7 +144,28 @@ export class Gs1VoicePool {
     this.slots.set(trackIdx, slot);
     slot.creating = (async () => {
       try {
-        const host = await this.createHost({ context: this.ctx });
+        /**
+         * The diagnostic capture (`globalThis.__gs1Capture`), which the **pool** is the right place for.
+         *
+         * Every GS-1 host in the app — live and offline — is built here, so a probe that wants the core's own samples around
+         * scheduled events only has to set the flag: the pool then asks the worklet for them and collects them. The first
+         * attempt wired this into the exporter's capability probe instead, which never creates the voices, and captured
+         * exactly nothing for an hour of confusion.
+         */
+        const capture = Boolean((globalThis as unknown as { __gs1Capture?: boolean }).__gs1Capture);
+        if (capture) (globalThis as unknown as { __gs1CaptureEnabled?: boolean }).__gs1CaptureEnabled = true;
+        const host = await this.createHost({
+          context: this.ctx,
+          ...(capture
+            ? {
+                captureEvents: true,
+                onEventCapture: (event: unknown) => {
+                  const sink = globalThis as unknown as { __gs1Captures?: unknown[] };
+                  (sink.__gs1Captures ??= []).push(event);
+                },
+              }
+            : {}),
+        });
         const ready = await host.ready;
         if (this.disposed || this.slots.get(trackIdx) !== slot) {
           host.dispose();

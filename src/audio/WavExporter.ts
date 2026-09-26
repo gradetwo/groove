@@ -493,7 +493,27 @@ export async function renderPatternOffline(
       let host: Gs1Host | null = null;
       for (let attempt = 0; attempt < GS1_HOST_LOAD_ATTEMPTS && !host; attempt++) {
         try {
-          const candidate = await createGs1Host({ context: ctx });
+          /**
+           * Diagnostic capture, when a probe asked for it (`globalThis.__gs1Capture`).
+           *
+           * The worklet then posts the core's own samples around every scheduled event and they are collected here, so a
+           * caller can compare them with the rendered file at the same frames — the measurement that says which side of the
+           * worklet boundary a discontinuity is on. Off in every normal render.
+           */
+          const capture = Boolean((globalThis as unknown as { __gs1Capture?: boolean }).__gs1Capture);
+          if (capture) (globalThis as unknown as { __gs1CaptureEnabled?: boolean }).__gs1CaptureEnabled = true;
+          const candidate = await createGs1Host({
+            context: ctx,
+            ...(capture
+              ? {
+                  captureEvents: true,
+                  onEventCapture: (event: unknown) => {
+                    const sink = globalThis as unknown as { __gs1Captures?: unknown[] };
+                    (sink.__gs1Captures ??= []).push(event);
+                  },
+                }
+              : {}),
+          });
           await candidate.ready;
           host = candidate;
         } catch {

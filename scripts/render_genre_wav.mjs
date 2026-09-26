@@ -76,6 +76,12 @@ const soloRole = arg("--solo", "");
 const gs1Param = arg("--gs1-param", "");
 /** Zero every track's sends (`--sends=0`), to tell a voice apart from the echo of one. */
 const sendsOff = arg("--sends", "") === "0";
+/** A/B: skip the GS-1 note-offs entirely (`--no-note-off`). */
+const noNoteOff = process.argv.includes("--no-note-off");
+/** Capture the core's own samples around scheduled events (`--capture-events`), for the pop investigation. */
+const captureEvents = process.argv.includes("--capture-events");
+/** Where to write the captured events, when `--capture-events` is on. */
+const capturesOut = arg("--captures-out", "");
 /** Render the authored skeleton instead of the shipping pattern (see the note at the call site). */
 const raw = process.argv.includes("--raw");
 /**
@@ -130,7 +136,7 @@ try {
   await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
 
   const result = await page.evaluate(
-    async ({ genreId, bars, seamlessLoop, noGs1, stemRole, soloRole, gs1Param, sendsOff, raw }) => {
+    async ({ genreId, bars, seamlessLoop, noGs1, stemRole, soloRole, gs1Param, sendsOff, noNoteOff, captureEvents, raw }) => {
       const [genres, wav, mix, trackStates, gs1Tracks] = await Promise.all([
         import("/src/data/genres/index.ts"),
         import("/src/audio/WavExporter.ts"),
@@ -141,6 +147,8 @@ try {
         import("/src/audio/gs1/gs1Tracks.ts"),
       ]);
       if (noGs1) gs1Tracks.setGs1RoutingEnabled(false);
+      if (noNoteOff) globalThis.__noNoteOff = true;
+      if (captureEvents) globalThis.__gs1Capture = true;
       if (gs1Param) {
         const [rawId, rawValue] = String(gs1Param).split("=");
         const patches = await import("/src/data/gs1Patches.ts");
@@ -185,6 +193,9 @@ try {
         trackStates: mixerStates,
         ...(stemIndex === undefined ? {} : { stemTrackIdx: stemIndex }),
       });
+      const captures = captureEvents ? (globalThis.__gs1Captures ?? []) : [];
+      const captureEnabled = Boolean(globalThis.__gs1CaptureEnabled);
+      const captureFlag = Boolean(globalThis.__gs1Capture);
       const bytes = new Uint8Array(wav.encodeAudioBufferToWav(buffer));
       /**
        * Base64 in chunks, and the chunk is 32 KB rather than 1 MB: `String.fromCharCode.apply` passes every byte as
@@ -213,12 +224,18 @@ try {
           : null,
       };
     },
-    { genreId: genre, bars, seamlessLoop, noGs1, stemRole, soloRole, gs1Param, sendsOff, raw }
+    { genreId: genre, bars, seamlessLoop, noGs1, stemRole, soloRole, gs1Param, sendsOff, noNoteOff, captureEvents, raw }
   );
 
   await browser.close();
 
   if (result.error) throw new Error(result.error);
+  if (captureEvents && capturesOut) {
+    fs.writeFileSync(capturesOut, JSON.stringify(result.captures ?? [], null, 1));
+    console.log(
+      `captured ${(result.captures ?? []).length} event(s) -> ${capturesOut} (capture flag flag in page: ${result.captureFlag}, exporter saw it: ${result.captureEnabled})`
+    );
+  }
   const bytes = Buffer.from(result.base64, "base64");
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, bytes);

@@ -116,6 +116,15 @@ export interface Gs1HostOptions {
   context: BaseAudioContext;
   /** Starting polyphony ceiling. Defaults to {@link GS1_DEFAULT_POLYPHONY}. */
   maxPolyphony?: number;
+  /**
+   * **Diagnostic only.** Ask the worklet to post the core's own output samples around each scheduled event.
+   *
+   * Used to answer "is this discontinuity in the core or in the rendered file": the caller compares the posted samples with
+   * the file at the same frames. Off by default — one `postMessage` per event on the audio thread is not a thing to leave on.
+   */
+  captureEvents?: boolean;
+  /** Receives what {@link captureEvents} asks for. */
+  onEventCapture?: (capture: unknown) => void;
   /** Overrides, for tests and for a future asset-pipeline change. */
   processorUrl?: string;
   simdUrl?: string;
@@ -288,6 +297,10 @@ export async function createGs1Host(options: Gs1HostOptions): Promise<Gs1Host> {
   const {
     context,
     maxPolyphony = GS1_DEFAULT_POLYPHONY,
+    // Diagnostic only (see `captureEvents` on the options): the worklet then posts the core's own samples around each
+    // scheduled event, which is how "is the discontinuity in the core or in the file" gets answered.
+    captureEvents = false,
+    onEventCapture,
     processorUrl = workletProcessorUrl,
     simdUrl = simdWasmUrl,
     scalarUrl = scalarWasmUrl,
@@ -309,6 +322,7 @@ export async function createGs1Host(options: Gs1HostOptions): Promise<Gs1Host> {
       wasmBytes: bytes,
       sampleRate: context.sampleRate,
       maxPolyphony,
+      ...(captureEvents ? { captureEvents: true } : {}),
     },
   });
 
@@ -349,6 +363,10 @@ export async function createGs1Host(options: Gs1HostOptions): Promise<Gs1Host> {
             return;
           }
           resolve({ abi, variant });
+          break;
+        }
+        case "eventCapture": {
+          onEventCapture?.(event.data);
           break;
         }
         case "analysis": {
