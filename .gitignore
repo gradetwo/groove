@@ -71,6 +71,7 @@ public/covers/_rejected/
 public/covers/_review/
 public/covers/_batch_scratch/
 public/covers/__pycache__/
+public/covers/_thumbs/
 public/covers/_batch_*
 
 # The per-skin genre artwork is a **deploy-time asset drop**, not source: six skins of 159 JPEGs is ~200 MB, which belongs

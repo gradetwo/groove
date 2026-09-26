@@ -428,8 +428,22 @@ async function measureGenre(page, genreId, trimDb, { discard = false } = {}) {
         };
       };
 
+      /**
+       * Repeats, with a **retry for a render that did not measure**.
+       *
+       * Two full re-records died at the publish-time self-check below, each on a different genre (`salsa`, then `bebop`),
+       * because one of that genre's repeats came back without a finite integrated loudness — the check is right to refuse a
+       * hole, but a single transient failure should not cost the whole run. A non-finite result is re-rendered; only if it
+       * stays non-finite does the row go missing, and then the check below reports it by name as before.
+       */
       for (let r = 0; r < repeatsArg; r++) {
-        runs.push(await render(mixModule.applyGenreMixDefaults(genre.sequencer_pattern, genre.id)));
+        let measured = null;
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          measured = await render(mixModule.applyGenreMixDefaults(genre.sequencer_pattern, genre.id));
+          if (Number.isFinite(measured.integratedLufs)) break;
+          console.log(`  retrying ${genre.id}: attempt ${attempt + 1} measured ${measured.integratedLufs}`);
+        }
+        runs.push(measured);
       }
       // Median across repeats: the renderer's noise-based drum voices are not seeded,
       // so a single render carries a few tenths of a dB of run-to-run variation.

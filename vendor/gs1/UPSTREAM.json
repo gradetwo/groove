@@ -5,7 +5,7 @@
     "version": "2.1.6",
     "commit": "f26186786b611f06a2dc02cbdf72fd8bbb5d5571",
     "license": "MIT",
-    "dirty": false
+    "dirty": true
   },
   "abi": 9,
   "files": {
@@ -22,8 +22,8 @@
       "bytes": 55039
     },
     "src/audio/worklet-processor.js": {
-      "sha256": "d8d358325e7b59c3165a4393e0de71ab2c1bd7fcff784fbeb11d834d146be7ce",
-      "bytes": 43092
+      "sha256": "a3483f62edc96527fc337cc5ec4efbd4eebbdc5663de33b6ff7df96344787040",
+      "bytes": 43869
     },
     "src/generated/synth_core_scalar.wasm": {
       "sha256": "7727fa76698cb07510ecfa18ae3ebbb0aa55e94bc40c617dbccdbe2bd52393f6",
