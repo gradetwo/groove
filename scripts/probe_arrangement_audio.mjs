@@ -260,6 +260,32 @@ try {
     };
     const withoutFade = await render(jumpSong, { boundaryFadeMs: 0 });
     const withFade = await render(jumpSong, { boundaryFadeMs: 8 });
+    /**
+     * The **local** criterion, because the whole-file count cannot see an edit this small: four bars of house carry ~1200 of
+     * their own transients (CI measured 1211 → 1206 for an 8 ms fade, −0.4%), so a number about the entire render says nothing
+     * about twenty milliseconds of it. This measures the click itself — the largest sample-to-sample step inside ±10 ms of the
+     * boundary — and the same window on a boundary with **no** jump, where the fade must be a no-op.
+     */
+    const boundaryStep = 32; // two bars of sixteen steps, then the second section starts
+    const windowStep = (channels, sampleRate, atSample, ms) => {
+      const half = Math.max(1, Math.round((ms / 1000) * sampleRate));
+      const from = Math.max(1, atSample - half);
+      const to = Math.min(channels[0].length - 1, atSample + half);
+      let worst = 0;
+      for (const channel of channels) {
+        for (let i = from; i <= to; i += 1) worst = Math.max(worst, Math.abs(channel[i] - channel[i - 1]));
+      }
+      return worst;
+    };
+    const atBoundary = (result) =>
+      Math.round(boundaryStep * (60 / jumpSong.bpm / 4) * result.buffer.sampleRate);
+    /** Two identical sections: their boundary is not a jump, so the fade has nothing to remove. */
+    const smoothSong = {
+      ...jumpSong,
+      sections: [jumpSong.sections[0], { ...jumpSong.sections[0], id: "probe-smooth-b" }],
+    };
+    const smoothWithout = await render(smoothSong, { boundaryFadeMs: 0 });
+    const smoothWith = await render(smoothSong, { boundaryFadeMs: 8 });
     // Bar geometry: every pass of a one-bar clip is one bar, so the step count gives the bar map.
     const flattened = flattenModule.flattenSong(song);
     const bars = sections.reduce((sum, section) => sum + Math.max(1, Math.floor(section.bars)), 0);
@@ -372,8 +398,15 @@ try {
         })(),
         /** Stage 3: the same song, faded at its boundaries or not, counted with the app's own discontinuity counter. */
         boundaryFade: {
+          /** Whole-file counts, for context only — dominated by the music's own transients. */
           without: discontinuities(withoutFade.channels, withoutFade.buffer.sampleRate),
           with: discontinuities(withFade.channels, withFade.buffer.sampleRate),
+          /** The click itself, ±10 ms around the jump, before and after the fade. */
+          clickWithout: windowStep(withoutFade.channels, withoutFade.buffer.sampleRate, atBoundary(withoutFade), 10),
+          clickWith: windowStep(withFade.channels, withFade.buffer.sampleRate, atBoundary(withFade), 10),
+          /** The control: the same window on a boundary with no jump, where the fade must change nothing. */
+          clickSmoothWithout: windowStep(smoothWithout.channels, smoothWithout.buffer.sampleRate, atBoundary(smoothWithout), 10),
+          clickSmoothWith: windowStep(smoothWith.channels, smoothWith.buffer.sampleRate, atBoundary(smoothWith), 10),
           /**
            * The control — two identical sections back to back, where a fade must change nothing — is `--control`, run
            * separately: the club form plus this pair was seven full renders in one page, which took the browser down.
@@ -517,6 +550,10 @@ try {
     console.log(`   onsets per bar   : ${summary.onsetsPerBar}`);
     {
       const fade = measured.audio.boundaryFade;
+      console.log(
+        `   boundary click   : worst step within ±10 ms of the jump ${fade.clickWithout.toExponential(2)} → ${fade.clickWith.toExponential(2)}` +
+          ` · no-jump control ${fade.clickSmoothWithout.toExponential(2)} → ${fade.clickSmoothWith.toExponential(2)}`
+      );
       console.log(
         `   boundary fade    : discontinuities ${fade.without} → ${fade.with} with an 8 ms fade` +
           (fade.smoothWith === undefined ? "" : ` · control (no jumps) ${fade.smoothWithout} → ${fade.smoothWith}`)
