@@ -626,6 +626,36 @@ which is the owner's rule arriving as numbers rather than as taste, so they got 
 `brassLead`). The residual ×1.5–1.8 readings are recorded rather than tuned away: a zero-crossing ratio is a coarse
 instrument, and the complaints that started this were ×4–6.6.
 
+### The filter-type trap: seven patches high-passed, and the comment that hid it (2026-09-26)
+
+The owner reported the uplifting-trance lead and chords as harsher with GS-1 on than off. Measured, the lead stem ran at
+**10.7 kHz zero-crossing against the native render's 1.6 kHz**, with **eight times** the share of energy above 6 kHz — and
+the attribution test that followed separated the two things a first fix had changed together:
+
+```
+filter model A @ 6.5 kHz   ZCR 11 040 Hz   >6 kHz 0.186
+filter model B @ 3.2 kHz   ZCR  2 487 Hz   >6 kHz 0.018
+```
+
+The cutoff barely mattered; the **model** was everything. The reason is in the core's own enum: `FilterType::from_u32`
+maps **1 to `Hp`** and 0 to the lowpass every native preset uses — while the patch table's comments had called 1 *"SVF"*.
+So **seven tonal patches** (`sustainedStrings`, `cleanPluck`, `squareLead`, `bellMallet`, `discoStrings`, `ambientStrings`,
+`sineLead`) had been filtering their own body away since they were written, and the comment is why it survived review — and
+why an audit during the same session read "type 1" across the table and concluded the patches were fine.
+
+They now use the lowpass at the **native preset's own cutoff**, which is this plan's founding rule, and the numbers came
+back:
+
+```
+strings_lead   ZCR 1740 Hz vs native  785 Hz   (was 11x)
+guitar_lead    ZCR 1671 Hz vs native 1888 Hz   (was 5.8x; now slightly darker)
+bell_lead      ZCR  563 Hz vs native  485 Hz   (its -38 dB level deficit is gone too)
+```
+
+The two **texture** beds keep their high-pass deliberately — a hiss or crackle layer is where removing the low end is the
+point — and `src/test/gs1FilterTypes.test.ts` now states both halves of that rule, so a new string, pluck or lead patch
+cannot repeat it.
+
 ### Why the note layer comes next (2026-09-26)
 
 The owner's re-framing is worth recording here because it is the answer to a question this file kept running into: the
