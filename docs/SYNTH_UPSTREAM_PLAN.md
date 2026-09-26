@@ -103,6 +103,29 @@ two rounds of A/Bs were run against a number that could not answer the question.
 * the honest Groove-side workaround — snapping events to block boundaries — is **not** acceptable: it costs up to 2.9 ms of
   timing accuracy at 44.1 kHz, which is exactly the thing a professional editor is supposed to get right.
 
+### 1g. Five detectors, and the pattern they share
+
+The fifth measurement was the most promising and the shortest-lived: correlate the audio's onsets with the notes the plan
+schedules and list the ones nothing explains. It reported **ten unexplained events** in the GS-1 stem against **none** in
+the native render — exactly the owner's complaint — and refuted itself the moment the events were inspected:
+
+```
+0.76s: before 0.0320/525Hz   onset 0.0294/1125Hz   after 0.0231/550Hz
+1.18s (a real note):                              0.0821/1700Hz
+```
+
+Those "events" are quieter than a real note's onset (0.029 against 0.082) and sit in the same 500–1400 Hz band as the note
+around them: they are the **note's own decay** crossing a threshold scaled to the loudest note in the file.
+
+**The pattern is worth more than any of the five.** Every threshold detector built here has flagged a *normal musical
+shape* as a defect — a bright waveform's sample steps, a slow attack's envelope, a decaying note's body, a block-aligned
+event set that simply contained fewer notes. A threshold cannot tell "unusual" from "musical", and this investigation has
+now paid for that lesson four times.
+
+**And the one instrument that could settle it by listening is unavailable here**: the `agy` review documented in
+`docs/AUDIO_REVIEW.md` answers "User location is not supported for the API use". So the next thing this plan proposes is not
+a sixth detector but a **capture button in the app**: let the person who can hear the pop hand over the signal.
+
 ## 2. Velocity response belongs in the core — **partly done from Groove's side**
 
 Every native preset carries `velocityToCutoff` (1.0–2.2 octaves) and `velocityToAttack`/`Decay`; the core reads velocity
