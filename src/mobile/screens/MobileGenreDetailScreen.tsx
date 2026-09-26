@@ -47,7 +47,7 @@ import { TIMELINE_STORIES, type TimelineStory } from "../../data/timeline_storie
 import { useLanguage, type Language, type MessageKey } from "../../i18n/LanguageContext";
 import type { Genre, I18nString } from "../../types/genre";
 import { genreArtBackground } from "../genreArt";
-import { GenreCover } from "../GenreCover";
+import { GenreCover } from "../../components/GenreCover";
 
 const CJK = /[\u3400-\u9fff]/;
 const chineseName = (genre: { aliases?: string[] }): string =>

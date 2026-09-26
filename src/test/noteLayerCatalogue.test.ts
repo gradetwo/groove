@@ -19,7 +19,7 @@ describe("the catalogue through the note layer", () => {
     const mismatches: string[] = [];
 
     for (const genre of ALL_GENRES) {
-      const patternSteps = genre.sequencer_pattern.total_steps || genre.sequencer_pattern.totalSteps || 16;
+      const patternSteps = genre.sequencer_pattern.totalSteps || 16;
       for (const track of genre.sequencer_pattern.tracks as SequencerTrack[]) {
         total.lanes += 1;
         const notes = notesFromLane(track, patternSteps);

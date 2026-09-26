@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import { GenreCover } from "../components/GenreCover";
 import { 
   Play, 
   Pause, 
@@ -329,6 +330,16 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
                 <span className="font-semibold">{genre.time_signature} Time</span>
               </div>
             </div>
+          </div>
+
+          {/* The genre's own artwork, in the skin the reader has chosen. Hidden on narrow widths, where the title
+              block needs the room more than the picture does. */}
+          <div className="hidden md:block shrink-0">
+            <GenreCover
+              genreId={genre.id}
+              testId={`genre-detail-cover-${genre.id}`}
+              className="h-40 w-40 rounded-2xl object-cover ring-1 ring-line shadow-2xl"
+            />
           </div>
 
           {/* Call to Actions */}
