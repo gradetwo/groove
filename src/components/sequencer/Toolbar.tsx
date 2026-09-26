@@ -37,7 +37,7 @@ import { isControlVisible } from "./toolbarTiers";
 import { DrumKitType, EffectsRackState } from "../../audio/AudioEngine";
 import { CustomKickPreset, loadCustomKickPresets } from "../../audio/AnatomyKickEngine";
 import { triggerHaptic, HapticPatterns, getHapticSettings, setHapticEnabled, setHapticIntensity } from "../../utils/haptics";
-import type { ClipSlot } from "../../types/song";
+import { CLIP_SLOTS, type ClipSlot } from "../../types/song";
 
 /* ------------------------------------------------------------------------- *
  * D-05: master-FX parameter mapping.
@@ -360,32 +360,32 @@ const PatternSlotControls = memo<PatternSlotControlsProps>(function PatternSlotC
       {/* Pattern Slots Switcher (P3-02) */}
       {onSwitchSlot && (
         <div className="flex items-center bg-panel2 border border-line rounded-lg p-0.5 shrink-0">
-          <button
-            data-toolbar-id="pattern-slot" data-toolbar-tier="1"
-            type="button"
-            onClick={() => onSwitchSlot("A")}
-            className={`h-7 px-2 rounded font-['JetBrains_Mono'] text-xs font-bold transition-all ${
-              activeSlot === "A"
-                ? "bg-accent text-[#0a0b0d] shadow-sm"
-                : "text-text-sub hover:text-text"
-            }`}
-            title={t("toolbar_pattern_a_title")}
-          >
-            {blindCompare ? "?1" : "PTN A"}
-          </button>
-          <button
-            data-toolbar-id="pattern-slot" data-toolbar-tier="1"
-            type="button"
-            onClick={() => onSwitchSlot("B")}
-            className={`h-7 px-2 rounded font-['JetBrains_Mono'] text-xs font-bold transition-all ${
-              activeSlot === "B"
-                ? "bg-accent text-[#0a0b0d] shadow-sm"
-                : "text-text-sub hover:text-text"
-            }`}
-            title={t("toolbar_pattern_b_title")}
-          >
-            {blindCompare ? "?2" : "PTN B"}
-          </button>
+          {/**
+            * The slots come from `CLIP_SLOTS` rather than being written out two at a time: the model, the store, the project
+            * format and the share codec all carry A–D (the MCP tools compose with them), and this control was the last place
+            * still spelling two of them by hand. The blind-test labels stay positional, and the A/B tooltips keep their
+            * translations while C/D fall back to their letter.
+            */}
+          {CLIP_SLOTS.map((slot, index) => (
+            <button
+              key={slot}
+              data-toolbar-id="pattern-slot" data-toolbar-tier="1"
+              type="button"
+              onClick={() => onSwitchSlot(slot)}
+              className={`h-7 px-2 rounded font-['JetBrains_Mono'] text-xs font-bold transition-all ${
+                activeSlot === slot ? "bg-accent text-[#0a0b0d] shadow-sm" : "text-text-sub hover:text-text"
+              }`}
+              title={
+                slot === "A"
+                  ? t("toolbar_pattern_a_title")
+                  : slot === "B"
+                    ? t("toolbar_pattern_b_title")
+                    : `PTN ${slot}`
+              }
+            >
+              {blindCompare ? `?${index + 1}` : `PTN ${slot}`}
+            </button>
+          ))}
           {onCopySlot && (
             <button
               data-toolbar-id="pattern-slot" data-toolbar-tier="1"
