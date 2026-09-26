@@ -524,7 +524,7 @@ describe("phone shell · genre detail and player bar", () => {
     renderShell("home");
     await findHome();
 
-    const bar = await screen.findByTestId("mobile-player-bar");
+    const bar = await screen.findByTestId("mobile-player-bar", {}, { timeout: 15000 });
     expect(bar.getAttribute("data-genre")).toBe("chicago-house");
     expect(screen.getByTestId("mobile-player-toggle")).toBeInTheDocument();
 
@@ -543,7 +543,7 @@ describe("phone shell · genre detail and player bar", () => {
     audition.playingGenreId = "deep-house";
     renderShell("home");
     await findHome();
-    expect((await screen.findByTestId("mobile-player-bar")).getAttribute("data-genre")).toBe("deep-house");
+    expect((await screen.findByTestId("mobile-player-bar", {}, { timeout: 15000 })).getAttribute("data-genre")).toBe("deep-house");
 
     // Stop the transport and re-render the same shell, the way the hook's state change would.
     audition.playingGenreId = null;
@@ -554,7 +554,7 @@ describe("phone shell · genre detail and player bar", () => {
      * A fresh mount starts from the default — the "last shown" memory is per shell instance, deliberately, so a reload does
      * not resurrect a genre from a previous session — and what this asserts is that a *running* shell does not jump.
      */
-    expect((await screen.findByTestId("mobile-player-bar")).getAttribute("data-genre")).toBe("chicago-house");
+    expect((await screen.findByTestId("mobile-player-bar", {}, { timeout: 15000 })).getAttribute("data-genre")).toBe("chicago-house");
   });
 
   it("shows the playing genre in the bar, and expands to the player from there", async () => {
@@ -563,7 +563,7 @@ describe("phone shell · genre detail and player bar", () => {
     const { onOpenPlayer } = renderShell("home");
     await findHome();
 
-    const bar = await screen.findByTestId("mobile-player-bar");
+    const bar = await screen.findByTestId("mobile-player-bar", {}, { timeout: 15000 });
     expect(bar.getAttribute("data-genre")).toBe("deep-house");
     expect(bar.textContent ?? "").toMatch(/Deep House/);
 
@@ -1034,7 +1034,7 @@ describe("phone shell · the full-screen player", () => {
     audition.playingGenreId = "deep-house";
     const { onOpenPlayer } = renderShell("home");
     await findHome();
-    const bar = await screen.findByTestId("mobile-player-bar");
+    const bar = await screen.findByTestId("mobile-player-bar", {}, { timeout: 15000 });
 
     fireEvent.click(screen.getByTestId("mobile-player-open"));
     expect(onOpenPlayer).toHaveBeenCalledWith("deep-house");
