@@ -115,23 +115,41 @@ try {
    * surface, sound. Clicking a button *by its visible name* was the earlier mistake: a loose match navigated away from
    * the studio instead of starting anything.
    */
+  /**
+   * Four steps, each of which cost a run to find (recorded in `docs/ARRANGEMENT_PLAN.md`):
+   *
+   * 1. `#/studio?genre=…` loads the studio **on its Chords view**, where there is no transport at all — so the Studio tab
+   *    is clicked first;
+   * 2. the desktop has no `audio-start-gate` (that is the phone shell) — the engine, and therefore the probe surface, is
+   *    built by the first thing that needs audio, which is the transport's own play control;
+   * 3. the transport's control is found by the **app's own label** (`播放`/`Play`), not a loose text match, which once
+   *    navigated away from the studio instead of starting anything;
+   * 4. a settle, not a poll: `waitForFunction` was the flaky half of this probe.
+   */
   const gate = page.locator('[data-testid="audio-start-gate"]');
   if (await gate.count()) {
     await gate.getByRole("button").first().click();
   } else {
+    // The nav item's label comes from the app's own translation, and the exact-name match is what the debug dump's
+    // "Studio" text implies; a `hasText` regex was matching nothing.
+    const studioTab = page.getByRole("button", { name: "Studio", exact: true }).first();
+    if (await studioTab.count()) await studioTab.click();
     /**
-     * On the desktop there is no gate: the engine is built by the first thing that needs audio, so the probe has to press
-     * the transport's own play control before the surface can exist. (The phone shell has the gate instead — see
-     * `components/AudioStartGate.tsx`.) The label comes from the app's own translation, in both languages.
+     * …and **stop there**. The surface exists once the studio mounts (the engine lifecycle installs it), and pressing the
+     * transport by hand turned out to tear the engine down again — the cleanup removes the hook — so the surface appeared
+     * after the tab click and vanished after the play click. The transport is started from inside the surface instead
+     * (`probe.engine.play()`), which is the whole reason the seam exists.
      */
-    const play = page.locator('button[aria-label="播放"], button[aria-label="Play"]').first();
-    if (await play.count()) await play.click();
+    await page.waitForTimeout(1500);
   }
   await page.waitForTimeout(4000);
   const surfaceReady = await page.evaluate(() => Boolean(window.__grooveProbe));
   if (!surfaceReady) {
+    // Where it stopped, so the next attempt does not have to guess: the URL, the visible text, and whether the Studio
+    // tab was even found.
     console.error("debug: url", page.url());
-    console.error("debug: body", (await page.evaluate(() => document.body.innerText)).slice(0, 200).replace(/\n+/g, " | "));
+    console.error("debug: studio tab found:", await page.getByRole("button", { name: "Studio", exact: true }).count());
+    console.error("debug: body", (await page.evaluate(() => document.body.innerText)).slice(0, 160).replace(/\n+/g, " | "));
   }
   if (!surfaceReady) throw new Error("the probe surface never appeared — is the app serving ?probe=1 on this route?");
 
