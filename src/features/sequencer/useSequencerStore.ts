@@ -378,15 +378,32 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
         ...state.patterns,
         [state.activeSlot]: state.pattern,
       };
+      const beyond = action.slot !== "A" && action.slot !== "B";
+      // Written out rather than indexed by `action.slot`: a boolean variable cannot narrow a union for the type checker, and
+      // indexing the two-slot object with a `ClipSlot` is exactly what it refuses.
       const nextPattern = clonePattern(
-        action.slot === "A" || action.slot === "B"
-          ? updatedPatterns[action.slot]
-          : state.extraClips?.[action.slot] ?? updatedPatterns.A
+        beyond
+          ? state.extraClips?.[action.slot] ?? updatedPatterns.A
+          : action.slot === "A"
+            ? updatedPatterns.A
+            : updatedPatterns.B
       );
       const stepCount = nextPattern.tracks[0]?.steps?.length || state.stepCount;
+      /**
+       * Switching to a slot that held nothing **keeps** what it derives.
+       *
+       * The first version cloned `patterns.A` into `pattern` and wrote nothing, so leaving C and coming back re-derived it: the
+       * user's edits to it would have been lost the moment they looked away. Creating the slot on first switch is the
+       * least-surprising rule, and it is what makes the interface's third and fourth slots real rather than views of A.
+       */
+      const extraClips =
+        beyond && !state.extraClips?.[action.slot]
+          ? { ...(state.extraClips ?? {}), [action.slot]: nextPattern }
+          : state.extraClips;
       return {
         ...state,
         patterns: updatedPatterns,
+        ...(extraClips ? { extraClips } : {}),
         activeSlot: action.slot,
         pattern: nextPattern,
         stepCount,
