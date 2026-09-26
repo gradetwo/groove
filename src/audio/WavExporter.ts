@@ -136,6 +136,18 @@ export interface RenderWavOptions {
   reverbSendHighpassHz?: number;
   /** Diagnostic: bypass the master FX rack (see `createMasterGraph`). */
   bypassFxRack?: boolean;
+  /**
+   * A short fade at each **section boundary** of the flattened arrangement, in milliseconds (0 disables it; 5–10 is the plan's
+   * range).
+   *
+   * `flattenSong` returns the step index each section starts at because a section's hard mute or velocity jump is where an audio
+   * boundary should be faded and the flatten is what discards that knowledge. The fade happens **here**, after rendering,
+   * because this is where the samples are — the arrangement's data is not edited, which would be the wrong thing for a playback
+   * concern (`docs/DAW_MCP_REFACTOR.md`, stage 3).
+   */
+  boundaryFadeMs?: number;
+  /** The step index each section starts at, from `flattenSong`; the first is 0 and is not faded. */
+  boundaries?: readonly number[];
   /** Diagnostic: the GS-1 host's output goes straight to the destination, bypassing the master graph entirely. */
   directOut?: boolean;
   /**
@@ -926,6 +938,33 @@ export async function renderPatternOffline(
   options.onLimiterKind?.(limiterKind);
 
   const rendered = await ctx.startRendering();
+
+  /**
+   * The section-boundary fade, applied to the rendered samples.
+   *
+   * A fade of `n` samples is centred on the boundary: the tail of the outgoing section ramps down and the head of the incoming
+   * one ramps up, so a hard mute or velocity jump becomes a few milliseconds of transition instead of a step. Boundary 0 is
+   * skipped — the start of a song has nothing before it to fade from.
+   */
+  if (options.boundaryFadeMs && options.boundaryFadeMs > 0 && options.boundaries?.length) {
+    const stepSec = (60 / bpm) / 4;
+    const half = Math.max(1, Math.round((options.boundaryFadeMs / 1000 / 2) * rendered.sampleRate));
+    for (const boundary of options.boundaries) {
+      if (boundary <= 0) continue;
+      const at = Math.round(boundary * stepSec * rendered.sampleRate);
+      if (at <= 0 || at >= rendered.length) continue;
+      for (let channel = 0; channel < rendered.numberOfChannels; channel += 1) {
+        const data = rendered.getChannelData(channel);
+        const from = Math.max(0, at - half);
+        const to = Math.min(rendered.length, at + half);
+        for (let i = from; i < to; i += 1) {
+          // A triangle: 0 at the edges, 1 at the boundary, so the two sides join rather than both being scaled down.
+          const distance = Math.abs(i - at) / half;
+          data[i] *= Math.max(0, Math.min(1, distance));
+        }
+      }
+    }
+  }
 
   /**
    * A **seamless loop** asset (P0.6's other half): the render above is the loop *plus* its tail, which is right for
