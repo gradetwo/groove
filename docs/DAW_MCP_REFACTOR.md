@@ -203,6 +203,30 @@ the existing `flattenSong` can do by being handed a one-section song, so no new 
 positions** and that their count equals the section count. That is a check on the artifact Ableton will open, not on the code that
 produced it, which is the only kind of evidence this item deserves.
 
+### Stage 5's ALS design, corrected: a section is a **scene**, not a start beat (2026-09-28)
+
+The design recorded above says the exporter should take `clips: Array<{ pattern, startBeats, name }>`. Reading the builder says
+that is the wrong shape for Ableton, and the right one is both simpler and more native:
+
+* the set is built with **`sceneCount = 8`** (`src/audio/AbletonExporter.ts:106`) and eight scenes are named
+  (`:542`, "Scene 1…8");
+* **per track**, the builder emits one `ClipSlot Id="0"` that holds the `MidiClip`, then fills scenes 1–7 with **empty** slots
+  (`:331`);
+* consequently the "64 clip slots" counted earlier are tracks × scenes, and the `Time="0"` on that clip is its position **inside
+  the clip**, not a position in the song.
+
+Ableton's session view is a **matrix of scenes × tracks**, and that matrix *is* an arrangement: section 1 in scene 0, section 2 in
+scene 1, and so on. So "one clip per section" means **one clip per scene** — no `startBeats`, no timeline arithmetic, and
+`Time="0"` stays correct in every one of them. That also explains why eight is the number worth having: it is the number of
+sections the export can carry, and a longer song needs it raised rather than a different mechanism.
+
+**So the `clips` field keeps its purpose and changes its shape**: the caller supplies the sections in order, and the builder places
+the i-th in scene i. `clips[i].name` becomes the scene name, which is how a composer opens the file and sees "verse" and "chorus"
+rather than "Scene 1" and "Scene 2".
+
+This is the second time this item has been corrected before it was written (the first was flatten's layer for the fade), and both
+times the correction came from reading the artifact's own model rather than trusting the plan's wording.
+
 ## What this is not
 
 It is not a rewrite of the sequencer, the audio engine or the genre library — those are the parts this project has spent its
