@@ -9,7 +9,31 @@ It is deliberately *not* a to-do list derived from the report: four of the repor
 implemented, and the measurements below say which. The two workstreams (this and the skin/gate work) are
 independent — nothing here touches CSS, and the gates added here do not overlap `probe:skins`.
 
-##### An external AI report, audited claim by claim (2026-09-27)
+###### How a cosmetic HTML edit killed the application (2026-09-28)
+
+The commit that added the inline first frame — the fix for the PWA's black screen — rewrote the end of `index.html` and, in doing
+so, **deleted `<script type="module" src="/src/main.tsx">`**. Every build after it was a dead shell: the document painted the
+splash forever, React never mounted, and the page reported **nothing** — no `pageerror`, no console error, no failed request.
+Production was unaffected (v2.32.0 had been built before the edit), but the next release would have published a page with no
+application in it.
+
+It was caught by **CI's voice sweep**, which waited 30 s for a probe seam that is installed by the app that was no longer
+loading. Nothing local saw it: the loudness sweep opens a bare document that imports the renderer directly, and the other probes
+drive surfaces or their own pages. The lesson is not "be careful with HTML" — it is that a probe which loads **the built
+application** and asserts that it **starts** is the cheapest check with the widest blast radius, and there was not one.
+
+There is now:
+
+* `scripts/probe_boot.mjs` — serves `dist`, requires `index.html` to name a module script, opens the app, and waits for the
+  document's own first frame to **disappear** (which is React's first commit, so it proves "the application started" rather than
+  "some screen exists"), failing on any page error, console error or failed request;
+* `npm run probe:boot`, wired into `verify` immediately after the build;
+* the same check inside `scripts/deploy.mjs`, which now **refuses to upload a build that does not start**;
+* `bootSplash.test.ts` asserts the entry tag exists and comes after `#root`.
+
+Its first run rejected the existing `dist` — correctly, because that build *was* the dead shell.
+
+## An external AI report, audited claim by claim (2026-09-27)
 
 A Gemini report listed twelve audio defects with file paths and code. **Every path was wrong** — `src/audio/export/AudioExporter.ts`,
 `renderTail.ts`, `mixer/TrackChannel.ts`, `synthesis/DrumKitModels.ts`, `effects/ReverbBus.ts`, `synthesis/PolySynth.ts`,

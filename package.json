@@ -27,7 +27,7 @@
     "handoff:e2e": "node scripts/slow_pack.mjs run --only e2e --label e2e",
     "slow:export": "node scripts/slow_pack.mjs export",
     "slow:verify": "node scripts/slow_pack.mjs verify",
-    "verify": "npm run check:node && npm run check:actions && npm run version:check && npm run docs:check && npm run redlines && npm run check:layers && npm run check:isolation && npm run check:css && npm run check:skins && npm run check:skin-roles && npm run check:docs:refs && npm run typecheck && npm run lint && npm run lint:data && npm run test && npm run build && npm run probe:toolbar && npm run probe:grid-gutter && npm run probe:arrangement && npm run probe:live-arrangement && npm run check:budget && npm run check:covers && npm run check:gs1 && npm run check:mcp && npm run check:layout && npm run check:loudness && npm run check:loudness:fresh && npm run check:timbre && npm run test:e2e && npm run test:e2e:mobile && npm run probe:jank && npm run probe:skins",
+    "verify": "npm run check:node && npm run check:actions && npm run version:check && npm run docs:check && npm run redlines && npm run check:layers && npm run check:isolation && npm run check:css && npm run check:skins && npm run check:skin-roles && npm run check:docs:refs && npm run typecheck && npm run lint && npm run lint:data && npm run test && npm run build && npm run probe:boot && npm run probe:toolbar && npm run probe:grid-gutter && npm run probe:arrangement && npm run probe:live-arrangement && npm run check:budget && npm run check:covers && npm run check:gs1 && npm run check:mcp && npm run check:layout && npm run check:loudness && npm run check:loudness:fresh && npm run check:timbre && npm run test:e2e && npm run test:e2e:mobile && npm run probe:jank && npm run probe:skins",
     "package": "npm run verify && python3 scripts/package.py",
     "deploy": "npm run verify && npm run deploy:only",
     "deploy:only": "node scripts/deploy.mjs",
@@ -67,7 +67,8 @@
     "check:groove": "node scripts/check_groove.mjs",
     "check:skin-roles": "node scripts/check_skin_roles.mjs",
     "probe:live-arrangement": "node scripts/probe_live_arrangement.mjs",
-    "check:covers": "node scripts/check_covers_payload.mjs"
+    "check:covers": "node scripts/check_covers_payload.mjs",
+    "probe:boot": "node scripts/probe_boot.mjs"
   },
   "dependencies": {
     "@breezystack/lamejs": "^1.2.7",
