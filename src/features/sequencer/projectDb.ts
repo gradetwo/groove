@@ -4,7 +4,14 @@
  * tags, favorites, .groove package export/import, and legacy migration.
  */
 
-import { GrooveProject, GrooveProjectPackage, ProjectSnapshotSummary, ProjectSortField, ProjectSortOrder } from "../../types/project";
+import {
+  GrooveProject,
+  GrooveProjectArrangement,
+  GrooveProjectPackage,
+  ProjectSnapshotSummary,
+  ProjectSortField,
+  ProjectSortOrder,
+} from "../../types/project";
 import { Genre, SequencerPattern } from "../../types/genre";
 import { DEFAULT_FX_STATE } from "../../audio/EffectsRack";
 import { DrumKitType, EffectsRackState } from "../../audio/AudioEngine";
@@ -487,18 +494,46 @@ export function validateGroovePackage(data: unknown): GrooveProjectPackage {
     throw new Error("Invalid .groove package: required patterns or genreId missing");
   }
 
+  /**
+   * v2's arrangement, when it is there.
+   *
+   * A v1 package has none and is valid as it stands — that is what "one clip, no sections" looks like — so this only checks the
+   * shape of what a v2 package claims, rather than requiring the field and breaking every file written before today.
+   */
+  if (pkg.arrangement !== undefined) {
+    const arrangement = pkg.arrangement as Record<string, unknown>;
+    if (!arrangement || typeof arrangement !== "object") {
+      throw new Error("Invalid .groove package: arrangement must be an object");
+    }
+    if (!arrangement.clips || typeof arrangement.clips !== "object") {
+      throw new Error("Invalid .groove package: arrangement is missing its clips");
+    }
+    if (!Array.isArray(arrangement.sections)) {
+      throw new Error("Invalid .groove package: arrangement is missing its sections");
+    }
+    if (Object.keys(arrangement.clips as Record<string, unknown>).length === 0) {
+      throw new Error("Invalid .groove package: arrangement carries no clips");
+    }
+  }
+
   return pkg as GrooveProjectPackage;
 }
 
 /**
  * Serializes a project into a standard .groove exchange package
  */
-export function exportProjectPackage(project: GrooveProject, appVersion: string = APP_VERSION): GrooveProjectPackage {
+export function exportProjectPackage(
+  project: GrooveProject,
+  appVersion: string = APP_VERSION,
+  arrangement?: GrooveProjectArrangement
+): GrooveProjectPackage {
   return {
     format: "groove-project",
-    version: 1,
+    // A package that carries an arrangement is v2; one that does not is byte-for-byte the v1 shape it always was.
+    version: arrangement ? 2 : 1,
     exportedAt: Date.now(),
     appVersion,
+    ...(arrangement ? { arrangement } : {}),
     project: {
       ...project,
       patterns: {
