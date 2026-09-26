@@ -10,6 +10,11 @@ import { z } from "zod";
 import { clonePattern, findGenre, getChordProgression, getGenre, getGenreRelations, libraryIndex, listCategories, listChordProgressions, listGenres, listMasterclasses, searchGenres } from "./library";
 import { applyPatternOps, comparePatterns, patternStatistics, validatePattern, type PatternOp } from "./pattern";
 import { patternFromGenre } from "../src/data/genreMix";
+import { APP_VERSION } from "../src/version";
+import { exportProjectPackage, validateGroovePackage } from "../src/features/sequencer/projectDb";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { exportAbleton, exportMidi, loudnessReport, shareUrl, toBase64 } from "./exporting";
 import { analyseWavFile, renderAudio } from "./render/worker";
 import { addMcpSection, createMcpSong, flattenMcpSong, getMcpSong, setMcpClip, summariseSong } from "./song";
@@ -456,6 +461,76 @@ export const TOOLS: ToolDefinition[] = [
           return { ...summary, clips: Object.keys(song.clips ?? {}) };
         }
         return { ...summary, clips: song.clips, sections: song.sections };
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    /**
+     * P3 of the composer's report, unblocked by C1: the project package can now carry a song's arrangement, so exporting one is
+     * a mapping rather than a lossy guess.
+     *
+     * The two-pattern `GrooveProject` the exporter takes is filled from the song's A and B clips (both required by its schema),
+     * and the **whole** arrangement rides along in the package's `arrangement` field — clips, sections and the active slot — so
+     * what comes out is the composition, not a flattened copy of it.
+     */
+    name: "export_groove",
+    title: "Export a song as a .groove project package",
+    description:
+      "Write a song created with create_song as a validated .groove package under GROOVE_MCP_OUT, carrying its clips and sections. This is the composition-to-project path: the package is what the app imports, and validateGroovePackage checks it before anything is written.",
+    readOnly: false,
+    inputSchema: {
+      songId: z.string().describe("the id create_song returned"),
+      outputDir: z.string().optional().describe("where to write it; defaults to GROOVE_MCP_OUT"),
+    },
+    handler: (args) => {
+      try {
+        const song = getMcpSong(args.songId as string);
+        if (!song) return failure(`unknown songId "${args.songId}" — create one with create_song`);
+        const clips = song.clips ?? {};
+        const slots = Object.keys(clips) as ClipSlot[];
+        const a = clips.A ?? clips[slots[0]];
+        const b = clips.B ?? a;
+        if (!a) return failure("this song has no clips to export");
+
+        const project = {
+          id: song.id,
+          name: song.name,
+          genreId: song.genreId,
+          genreName: findGenre(song.genreId)?.name ?? song.genreId,
+          bpm: song.bpm,
+          swing: song.swing,
+          timeSignature: "4/4",
+          resolution: song.resolution,
+          // The pattern's own step count, read the way the project type asks for it (a track's steps array).
+          stepCount: a.tracks?.[0]?.steps?.length ?? 16,
+          patterns: { A: a, B: b },
+          activeSlot: (clips.A ? "A" : "B") as "A" | "B",
+          songMode: song.sections.length > 1,
+        } as unknown as Parameters<typeof exportProjectPackage>[0];
+
+        const arrangement = {
+          clips,
+          sections: song.sections,
+          activeSlot: clips.A ? "A" : "B",
+        } as unknown as Parameters<typeof exportProjectPackage>[2];
+
+        // Validated **before** anything is written: a package that fails its own gate must not reach the disk.
+        const pkg = validateGroovePackage(exportProjectPackage(project, APP_VERSION, arrangement));
+        const dir = (args.outputDir as string | undefined) || process.env.GROOVE_MCP_OUT || mkdtempSync(path.join(os.tmpdir(), "groove-mcp-"));
+        mkdirSync(dir, { recursive: true });
+        const file = path.join(dir, `${(song.name || song.genreId).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "song"}.groove`);
+        writeFileSync(file, `${JSON.stringify(pkg, null, 2)}\n`);
+        return {
+          path: file,
+          filename: path.basename(file),
+          bytes: Buffer.byteLength(JSON.stringify(pkg)),
+          version: pkg.version,
+          clips: slots,
+          sections: song.sections.length,
+          carried: "clips and sections ride in the package's arrangement field; nothing is flattened",
+        };
       } catch (error) {
         return failure((error as Error).message);
       }
