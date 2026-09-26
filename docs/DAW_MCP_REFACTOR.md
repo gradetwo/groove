@@ -294,6 +294,17 @@ So what remains of the clip count is exactly three surfaces, all of them interfa
 2. the copy control, which is hard-coded to swap `"A"` and `"B"` (`SequencerPanel.tsx:393`);
 3. the section editor, so a section can point at C or D — the store action and the share codec both accept that already.
 
+**And the real remaining gap is persistence, not a picker.** `SequencerModals.tsx:140` builds the project payload by hand —
+`patterns: { A: …, B: seqState.activeSlot === "B" ? pattern : seqState.patterns.B }` — and passes `songChain` (already widened to
+`ClipSlot[]`) beside it. It never mentions `extraClips`, so **a project saved through that path would drop C and D**: the state has
+them, the store creates them on first switch, and the payload that persists the project does not carry them.
+
+That is the concrete meaning of "give the project four patterns", and it is more important than re-pointing a region:
+the slot controls shipped, the store keeps what it creates, the format's `arrangement` carries four slots, and the **project save
+path** is the one place still assembling two by hand. The next step is to thread `extraClips` through that payload, the snapshot and
+`projectDb`, with the existing project/hub suites as the acceptance line — and to check `projectDb`'s validator the way the package's
+was checked, so a project carrying C and D either round-trips or is refused rather than silently losing them.
+
 **The third surface is not where it looked.** `ArrangementPanel` **renders** a region's slot (`data-slot`, line 344, and the chip
 at 380) and by its own contract "**never edits `sections` itself**" — every gesture ends in `onChange`, which the host commits. It
 holds no `"A" | "B"` union and no `CLIP_SLOTS`, and there is no slot picker in it, so re-assigning a region's clip is not a control
