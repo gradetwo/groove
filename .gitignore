@@ -72,3 +72,14 @@ public/covers/_review/
 public/covers/_batch_scratch/
 public/covers/__pycache__/
 public/covers/_batch_*
+
+# The per-skin genre artwork is a **deploy-time asset drop**, not source: six skins of 159 JPEGs is ~200 MB, which belongs
+# next to the build that copies `public/` into `dist/`, not in the repository. `src/test/genreCovers.test.ts` states the
+# contract: a skin whose directory is absent is skipped (this checkout has no drop), while one that is present must be
+# complete. The shared `public/covers/<genre>.jpg` set *is* tracked, because it is what every skin falls back to.
+public/covers/default/
+public/covers/minimal/
+public/covers/comic/
+public/covers/soviet/
+public/covers/sovietYears/
+public/covers/pixel/
