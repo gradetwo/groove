@@ -1,23 +1,27 @@
 {
-  "version": "2.34.2",
+  "version": "2.34.3",
   "releaseDate": "2026-09-28",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.2",
+    "version": "2.34.3",
     "date": "2026-09-28",
-    "category": "audio",
+    "category": "feature",
     "title": {
-      "zh": "响度基线改为在 CI 上重录（159 曲风）并应用，配平更准",
-      "en": "The loudness baseline was re-recorded on CI (159 genres) and applied"
+      "zh": "MCP 作曲闭环：Ableton 一节一 clip、工程包可导入",
+      "en": "MCP composition closes the loop: one Ableton clip per section, importable packages, duplicate_section"
     },
     "highlights": [
       {
-        "zh": "159 个曲风的响度基线在 GitHub 上分块重录完成（每块独立进程），报告作为证据一并入库。",
-        "en": "All 159 genres were re-recorded in chunks on GitHub (a fresh process per chunk), with the report committed as the evidence."
+        "zh": "导出 Ableton 时一首歌变成「一段一个 scene」，scene 名即段落名。",
+        "en": "Ableton export makes one clip per scene, each named after its section."
       },
       {
-        "zh": "跨曲风响度分布进一步收窄：p90−p10 5.69 dB、全距 11.8 dB；音色与响度门禁均通过。",
-        "en": "The cross-genre spread tightened to p90−p10 5.69 dB and an 11.8 dB full range; the timbre and loudness gates both pass."
+        "zh": "新增 import_groove：把 .groove 包读回、经校验后继续编辑。",
+        "en": "New import_groove: read a .groove package back and continue editing it."
+      },
+      {
+        "zh": "新增 duplicate_section 与 render_song 的 maxDurationSec 护栏。",
+        "en": "New duplicate_section and render_song's maxDurationSec guard."
       }
     ],
     "truncated": false
