@@ -69,6 +69,22 @@ exists rather than at a promise.
 Stage 4 is the largest and the one to do last: stages 1–3 give the AI a working round trip **without** moving the UI's document
 model, and if the model moves badly the earlier stages still stand on their own.
 
+## Stage 3's criterion, defined before the code (2026-09-28)
+
+The section-boundary fade exists because `analyze_audio` counts ~**2406 discontinuities** on a rendered song and the flatten it
+measures has no cross-fade where a section's mute or velocity jumps. "Is it audible?" is a listening question; "did the count
+move?" is not, so the criterion is the count:
+
+| what | where | pass |
+|---|---|---|
+| `analyze_audio`'s `discontinuities` | one long arrangement with hard jumps at its boundaries — the **club** form on `chicago-house` (eight sections, mutes and a velocity ramp), rendered through `render_song` at its own tempo | the count falls **substantially** (the boundaries are the only thing the fade touches) |
+| the same count on a song with **no** jumps | two identical sections back to back | **unchanged** — a fade that alters continuous material is a defect, not a fix |
+| the fade's length | in the flatten | **5–10 ms**, which is what the plan asked for and what a boundary in a DAW's arrangement view gets |
+
+The measurement is taken **twice in one page** (before and after) with the same seed, so the difference is the fade and not the
+renderer, and the tool is `analyze_audio`'s own counter rather than a second implementation of it. `flattenSong` gains the fade as
+a parameter with a default, so a caller that wants the old behaviour (or a test that wants to compare the two) can ask for it.
+
 ## What this is not
 
 It is not a rewrite of the sequencer, the audio engine or the genre library — those are the parts this project has spent its
