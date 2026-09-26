@@ -271,6 +271,21 @@ the gap is **narrower than it looks and wider than one edit**:
   decoding, which is the same compatibility promise the `.groove` format now carries in
   [`GROOVE_PACKAGE_FORMAT.md`](GROOVE_PACKAGE_FORMAT.md).
 
+**The exact seam, listed.** Widening again with the resolver in place leaves **six** errors, and they are the whole remaining job:
+
+| site | what it does today |
+|---|---|
+| `useTransportControls.ts:232` | `patterns[slot]` when the transport hands a clip to the engine |
+| `projectDb.ts:122` | `patterns[activeSlot] \|\| patterns.A` when restoring a snapshot |
+| `useSequencerStore.ts:379` | `updatedPatterns[action.slot]` in the reducer that writes a pattern |
+| `useSequencerStore.ts:391` | `state.patterns[action.from]` when copying one slot's pattern into another |
+| `types/project.ts:112` | the resolver's own `patterns[slot]`, which `slot === "A" \|\| slot === "B"` does narrow — it only failed because the alias below was broken |
+| `types/song.ts:15` | `export type ClipSlot = "A" \| "B" \| "C" \| "D"` — a blind `"A" \| "B"` → `ClipSlot` replacement hits the substring inside the alias and makes it self-referential |
+
+The first four are the reducer and the readers **storing and fetching** a slot, which is what "give the project four patterns"
+means; the last two are mechanical and are the reason a scripted replacement is not enough on its own. Recorded here so the next
+attempt starts from this table rather than from the file list.
+
 **Tried, and measured.** The type-only widening of `songChain`/`activeSlot` to `ClipSlot` was applied across the **10 non-test files**
 that spell `"A" | "B"` and taken to the type checker. It gets exactly two thirds of the way there and stops at a boundary that is the
 whole point of the change:
