@@ -1,29 +1,29 @@
 {
-  "version": "2.33.0",
+  "version": "2.34.0",
   "releaseDate": "2026-09-28",
   "changelogCount": 10,
   "latest": {
-    "version": "2.33.0",
+    "version": "2.34.0",
     "date": "2026-09-28",
     "category": "fix",
     "title": {
-      "zh": "冷启动不再黑屏、图片提前加载、混响送出收低频、锁屏可恢复、发布包更干净",
-      "en": "No black screen on a cold start, warmed artwork, a shaped reverb send, lock-screen resume, and no cover tooling in the payload"
+      "zh": "修好每个音符事件处的爆音（GS-1 分块输出错位）",
+      "en": "The click at every note event is gone — a split block was assembled wrong"
     },
     "highlights": [
       {
-        "zh": "首次打开不再黑屏：文档自带内联首屏，React 挂载后接管。",
-        "en": "A cold launch no longer shows a black screen: the document draws its own inline first frame until React takes over."
+        "zh": "GS-1 引擎把被事件切开的音频块按每块自己的位置拼接，之前会把最后一块放到块首并留下残留数据。",
+        "en": "The GS-1 engine now assembles an event-split audio block per chunk; it used to place the last chunk at the start of the block and leave stale data behind."
       },
       {
-        "zh": "图片提前取好并解码：曲库、详情与黑胶标签不再等到显示时才下载。",
-        "en": "Artwork is fetched and decoded before the paint: library, detail and the vinyl label no longer download on appearance."
+        "zh": "实测：该分轨的高频包络离群值由 181.6×/153.6×/134.5× 变为「无异常」，全频段最大步进降到 1.19× p99.9。",
+        "en": "Measured: the stem's high-frequency outlier went from 181.6x/153.6x/134.5x to none, with the full-band worst step at 1.19x p99.9."
       },
       {
-        "zh": "混响送出加 160Hz 高通：低频立体声成分实测减少 2.8 dB，整轨仅变化 0.001 dB。",
-        "en": "The reverb send is high-passed at 160 Hz: 2.8 dB less low-frequency side energy, with the mix moving 0.001 dB."
+        "zh": "响度与音色基线在修复后仍然通过，分布不变。",
+        "en": "The loudness and timbre baselines still pass after the fix, with the spreads unchanged."
       }
     ],
-    "truncated": true
+    "truncated": false
   }
 }

@@ -3,7 +3,7 @@
   "upstream": {
     "name": "groove-synth-gs1",
     "version": "2.1.6",
-    "commit": "603f955473f57f2ed5d68907ab04d3665de965ce",
+    "commit": "5a7f0b7377f563f1285ebf46bcedb40d8a99b0a7",
     "license": "MIT",
     "dirty": false
   },
@@ -22,8 +22,8 @@
       "bytes": 55039
     },
     "src/audio/worklet-processor.js": {
-      "sha256": "207d0d75366ccc7050a95c6224c1ff0292a5e0590d72663b1ae8eee8331845f8",
-      "bytes": 46052
+      "sha256": "056138d9ed9cada16f185b5c51e140aefcede72f919a200a93b830ccd1172df3",
+      "bytes": 47705
     },
     "src/generated/synth_core_scalar.wasm": {
       "sha256": "7727fa76698cb07510ecfa18ae3ebbb0aa55e94bc40c617dbccdbe2bd52393f6",
