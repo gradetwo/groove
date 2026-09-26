@@ -37,8 +37,14 @@ for (const dir of dirs) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const relative = `${path.relative(ROOT, dir)}/${entry.name}`;
     if (entry.isFile()) {
-      if (entry.name.endsWith(".jpg")) allowed += 1;
-      else offenses.push(`${relative} (only .jpg files belong at this level)`);
+      /**
+       * Artwork, plus the artwork's **attribution**.
+       *
+       * `CREDITS.md` records that the covers are Unsplash-licensed photographs (seeded Lorem Picsum), and attribution belongs
+       * with the thing it credits — it is a few kilobytes, not payload.
+       */
+      if (entry.name.endsWith(".jpg") || entry.name === "CREDITS.md") allowed += 1;
+      else offenses.push(`${relative} (only .jpg files — and CREDITS.md — belong at this level)`);
       continue;
     }
     if (entry.name === "_thumbs") {

@@ -4,7 +4,7 @@
  * On-demand async loading ensures initial bundle size remains ultra-compact (<300KB).
  */
 
-import { Genre, SequencerPattern } from "../types/genre";
+import { Genre } from "../types/genre";
 
 // In-memory cache for lazily loaded genre packs
 const genreCache = new Map<string, Genre>();
