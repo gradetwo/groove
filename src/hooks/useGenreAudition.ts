@@ -4,6 +4,7 @@ import type { SequencerPattern } from "../types/genre";
 import { AudioEngine } from "../audio/AudioEngine";
 import { setActiveAudioEngine } from "../audio/activeEngine";
 import { debugModeForcedByUrl, isDebugModeEnabled } from "../platform/debugMode";
+import { installProbeHooks, uninstallProbeHooks } from "../platform/probeHooks";
 import { createVinylScrub, type VinylScrub } from "../audio/VinylScrub";
 import { patternFromGenre } from "../data/genreMix";
 import { arrangementSections, type ArrangementFormId } from "../data/arrangementForm";
@@ -140,6 +141,8 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
   // Clean up engine on unmount
   useEffect(() => {
     return () => {
+      cleanupProbeRef.current?.();
+      cleanupProbeRef.current = null;
       cleanupDiagRef.current?.();
       cleanupDiagRef.current = null;
       if (engineRef.current) {
@@ -183,6 +186,15 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
          * switch turned on a panel that no code path ever built — which is exactly what the owner reported.
          */
         setActiveAudioEngine(engineRef.current);
+        /**
+         * The measurement seam, for the same reason the desktop studio has one.
+         *
+         * The phone shell builds its own engine, so without this the probes that drive `?probe=1` have nothing to hold on a
+         * phone — which is what stopped the audition soak from being able to read the engine's own load numbers.
+         */
+        if (installProbeHooks({ engine: engineRef.current })) {
+          cleanupProbeRef.current = uninstallProbeHooks;
+        }
         if (isDebugModeEnabled() || debugModeForcedByUrl()) {
           void import("../platform/diagnostics").then((mod) => {
             // The panel is a diagnostic, never a reason to fail a playback path.
@@ -322,6 +334,8 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
   const scrubRef = useRef<VinylScrub | null>(null);
   /** The diagnostics panel's teardown, when the debug switch asked for one. */
   const cleanupDiagRef = useRef<(() => void) | null>(null);
+  /** The probe hook's teardown, when the page asked to be probed. */
+  const cleanupProbeRef = useRef<(() => void) | null>(null);
 
   const startVinylScrub = useCallback((velocity: number) => {
     const target = engineRef.current?.getScrubTarget();
