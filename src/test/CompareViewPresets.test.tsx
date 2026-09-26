@@ -202,7 +202,7 @@ describe("CompareView genre artwork", () => {
     const covers = await screen.findAllByTestId(/^compare-cover-/, {}, { timeout: ASYNC_TIMEOUT });
     expect(covers.length).toBeGreaterThanOrEqual(2);
     for (const cover of covers) {
-      expect(cover.getAttribute("src")).toMatch(/^\/covers\/(default|[a-zA-Z]+)\//);
+      expect(cover.getAttribute("src")).toMatch(/^\/covers\/(_thumbs\/)?(default|[a-zA-Z]+)\//);
     }
   }, TEST_TIMEOUT);
 });

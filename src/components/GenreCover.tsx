@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { genreCoverCandidates, genreCoverUrl } from "../mobile/genreArt";
+import { genreCoverCandidates, genreCoverThumbCandidates, genreCoverUrl } from "../mobile/genreArt";
 import { useSkin } from "../hooks/useSkin";
 
 /**
@@ -22,13 +22,20 @@ export interface GenreCoverProps {
   /** `loading="lazy"` unless a caller wants the hero image immediately. */
   eager?: boolean;
   testId?: string;
+  /**
+   * Use the 256 px thumbnail rather than the 1024 px original.
+   *
+   * The default, because almost every placement is a tile: the originals are 130-626 KB each and a library screen decodes
+   * one megapixel per tile. Pass `false` only where the image is genuinely large — the vinyl label bakes at 512 px.
+   */
+  thumb?: boolean;
 }
 
-export function GenreCover({ genreId, className, eager = false, testId }: GenreCoverProps) {
+export function GenreCover({ genreId, className, eager = false, testId, thumb = true }: GenreCoverProps) {
   const { skin } = useSkin();
   const [failed, setFailed] = useState<readonly string[]>([]);
 
-  const candidates = genreCoverCandidates(genreId, skin);
+  const candidates = thumb ? genreCoverThumbCandidates(genreId, skin) : genreCoverCandidates(genreId, skin);
   const src = candidates.find((candidate) => !failed.includes(candidate));
   // Nothing left to try: the generated art behind this element is the tile, which is the pre-cover behaviour.
   if (!src) return null;
@@ -39,6 +46,8 @@ export function GenreCover({ genreId, className, eager = false, testId }: GenreC
       alt=""
       data-testid={testId}
       loading={eager ? "eager" : "lazy"}
+      // Decoding a cover is not a reason to block the frame: the library decodes dozens at once.
+      decoding="async"
       className={className}
       onError={() => setFailed((previous) => (previous.includes(src) ? previous : [...previous, src]))}
     />
@@ -50,7 +59,7 @@ export function GenreCover({ genreId, className, eager = false, testId }: GenreC
  *
  * Kept next to the component so "which image does this skin show" has one answer in the codebase.
  */
-export function genreCoverForSkin(genreId: string, skin: string | undefined): string {
-  const [primary] = genreCoverCandidates(genreId, skin);
+export function genreCoverForSkin(genreId: string, skin: string | undefined, thumb = true): string {
+  const [primary] = thumb ? genreCoverThumbCandidates(genreId, skin) : genreCoverCandidates(genreId, skin);
   return primary ?? genreCoverUrl(genreId);
 }

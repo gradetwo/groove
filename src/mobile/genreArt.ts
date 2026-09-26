@@ -75,6 +75,34 @@ export function genreCoverCandidates(id: string, skin?: string): string[] {
   return skin ? [`/covers/${encodeURIComponent(skin)}/${file}`, `/covers/${file}`] : [`/covers/${file}`];
 }
 
+/**
+ * The **thumbnail** candidates, in the same order.
+ *
+ * The shipped covers are 1024x1024 — 130 KB to 626 KB each — and a genre tile shows them at 56 px, so every tile in the
+ * library decoded a megapixel to draw a thumbnail: a screenful is tens of megabytes and hundreds of megapixels of decode, on
+ * the main thread, while the transport is running. That is a plausible cause of the owner's "after a few dozen tracks it
+ * stutters, but the recorded audio is fine" — the audio graph is a separate thread and stays clean while the UI does not.
+ *
+ * `public/covers/_thumbs/**` holds 256x256 versions (13 MB for all six skins plus the shared set, ~12 KB each), generated
+ * from the same originals by `scripts/make_cover_thumbs.mjs`. Callers use these for anything up to a couple of hundred pixels
+ * — tiles, cards, the player bar, the detail header — and the full image only where it is genuinely large (the vinyl label,
+ * which bakes at 512 px).
+ */
+export function genreCoverThumbCandidates(id: string, skin?: string): string[] {
+  const file = `${encodeURIComponent(id)}.jpg`;
+  /**
+   * Thumbnail first, then the same order the full-size list uses.
+   *
+   * The chain keeps both dimensions of the fallback — the skin's own art before the shared set, and a thumbnail before the
+   * original — so a skin whose thumbnails were never generated still gets its own picture rather than the shared one.
+   */
+  const thumb = (prefix: string) => `/covers/_thumbs/${prefix}${file}`;
+  const full = (prefix: string) => `/covers/${prefix}${file}`;
+  return skin
+    ? [thumb(`${encodeURIComponent(skin)}/`), thumb(""), full(`${encodeURIComponent(skin)}/`), full("")]
+    : [thumb(""), full("")];
+}
+
 /** A CSS background for a genre's tile: deterministic, distinct, and no asset required. */
 export function genreArtBackground(genre: { id: string; category: string }): string {
   const hash = hashGenreId(genre.id);
