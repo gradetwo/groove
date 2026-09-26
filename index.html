@@ -118,5 +118,11 @@
       @keyframes bs{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
       @media (prefers-reduced-motion:reduce){#bs i:after{animation:none;inset:0}}
     </style>
+    <!--
+      The entry. This line was deleted by the edit that added the splash above — the app never booted again, and the only thing
+      that noticed was CI's voice sweep timing out waiting for a probe seam that could never install. `bootSplash.test.ts` now
+      asserts this tag exists, because "a cosmetic HTML change" is exactly how a page loses its application.
+    -->
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
