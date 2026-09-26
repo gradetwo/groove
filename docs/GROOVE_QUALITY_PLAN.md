@@ -66,6 +66,19 @@ built into a browser probe, and the last one even catalogued the DSP that would 
 question — with the analyser's own loudness and the same 13-band fingerprint the timbre baseline uses — has been in the toolset since
 the MCP was written. The probe's role stays what it was: the **structural** check that both renders differ at all.
 
+**The execution recipe, so the next session runs it instead of rediscovering it.** Two ways, both already wired for CI:
+
+* **through the MCP**, which is the measurement this section settled on: a small script that boots the server over stdio (the shape
+  `scripts/check_mcp.mjs` already has), calls `create_song` on `techno`, `render_song(format="wav")`, `analyze_audio`, then
+  `add_section` with `mute: ["fx"]` on a copy and renders and analyses again, and prints the two LUFS readings and the two 13-band
+  shapes. Run it from the `audio` scope of `manual-verify.yml`, which already installs Chromium and builds;
+* **through the render probe**, if a browser-only path is preferred: `probe_arrangement_audio.mjs` already renders
+  `withoutTextureLane(song)` beside the untouched song, so a whole-mix number there needs no extra render — but it needs a band
+  measure the in-page helper set does not have, which is why the MCP path is the shorter one.
+
+Either way the number to read is small and the decision is already made: a mix that moves closes A4; a mix that does not means the
+lane's level or instrument changes, and that edit goes behind a CI baseline re-record.
+
 **What that leaves for ③b**, in order: take the A/B through the MCP on a genre whose prose names risers (`techno`, `hard_electro`);
 read whether the mix moves; if it does, A4 closes as implemented and audible and ③b is nothing more than this measurement; if it does
 not, the lane's level or instrument changes, that is a real audio edit, and it goes through the CI audio batch with a baseline
