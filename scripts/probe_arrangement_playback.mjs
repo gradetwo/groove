@@ -70,6 +70,15 @@ const value = (name, fallback) => {
 };
 
 const genre = value("genre", "uk-garage");
+/**
+ * The control experiment, and the one that decides what the last three runs meant.
+ *
+ * Every run so far has measured ~−80 dBFS, so the ratio has been a statement about silence. With this flag the probe commits **no
+ * sections** and measures the plain loop instead, with the same analyser and the same windows: a silent loop means the probe's own
+ * audio path is broken and B7 has no listening proof yet, while a loud loop with a silent song is a real finding about the
+ * transport. The numbers are identical either way, which is what makes it a control.
+ */
+const controlLoop = process.argv.includes("--control-loop");
 const out = value("out", "");
 const port = Number(value("port", "6181")) || 6181;
 
@@ -194,7 +203,7 @@ try {
    * of analyser frames is taken on each side.
    */
   const result = await page.evaluate(
-    async ({ genreId, sampleMs }) => {
+    async ({ genreId, sampleMs, controlLoop }) => {
       const probe = window.__grooveProbeSeen || window.__grooveProbe;
       if (!probe) return { error: "no probe surface" };
       const state = probe.readState();
@@ -202,7 +211,7 @@ try {
       const secondsPerBar = (60 / bpm) * 4;
 
       // Two one-bar sections that are audibly different: the same clip, the second quieter with the lead muted.
-      probe.commit({
+      if (!controlLoop) probe.commit({
         type: "SET_SECTIONS",
         sections: [
           { id: "probe-a", slot: "A", bars: 1, label: "probe A" },
@@ -291,7 +300,7 @@ try {
         meanLevelB: meanLevel(windows.b),
       };
     },
-    { genreId: genre, sampleMs: 40 }
+    { genreId: genre, sampleMs: 40, controlLoop }
   );
 
   const report = { genre, ...result };

@@ -138,6 +138,13 @@ jobs:
         if: inputs.scope == 'audio' || inputs.scope == 'verify' || inputs.scope == 'all'
         run: node scripts/probe_arrangement_playback.mjs --genre=uk-garage
 
+      # The control: the same probe and analyser measuring a **plain loop**. If this is silent too, the probe's audio path is what
+      # is broken and B7 has no listening proof yet; if it is loud while the song above is silent, that is a finding about the
+      # transport rather than about the measurement.
+      - name: Arrangement playback control (B7, plain loop)
+        if: inputs.scope == 'audio' || inputs.scope == 'verify' || inputs.scope == 'all'
+        run: node scripts/probe_arrangement_playback.mjs --genre=uk-garage --control-loop
+
       - name: Section-boundary fade (stage 3 measurement)
         if: inputs.scope == 'audio' || inputs.scope == 'all'
         run: node scripts/probe_arrangement_audio.mjs --genre=chicago-house
