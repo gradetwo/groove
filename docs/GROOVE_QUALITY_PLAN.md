@@ -254,6 +254,34 @@ There is now:
 
 Its first run rejected the existing `dist` — correctly, because that build *was* the dead shell.
 
+## A second external report, audited (2026-09-28)
+
+The same composer's longer report, read after the first. Its roadmap repeats the earlier one (Chromium dependency, dual note model,
+automation lanes, hardcoded synth parameters, transactions, SSE/WebSocket transport, stems), and its **history section is where it
+goes wrong**, which matters more than the roadmap because a wrong history is how a plan gets built on sand:
+
+| its claim | what the code says |
+|---|---|
+| "v2.34.0 重构了 Worklet 内部的事件消费队列…达到样本级对齐" | v2.34.0 fixed **one** bug: the worklet copied the whole block once after splitting it at due events, so every note-on and note-off landed a step early. The commit is called "the note-event step fixed in the worklet" because that is what it was — a copy offset, not a queue rebuild. |
+| "推行了 `clip-count widening` 改造，支持灵活的 Clip 实例映射" | the widening was **tried, measured and reverted** — the app keeps two editor slots and MCP composes four through the `arrangement` field. The other report recorded that correctly and called it the honest outcome; this one reports the half-finished version as shipped. |
+| "缺乏…Undo/Redo 历史栈" | the **app** records history per `onChange` (the arrangement panel's contract is written in terms of it). The **MCP server** has none, which is the narrower and correct claim. |
+| "`.groove` 包…解耦为项目元数据、总线链、时间线段落、音轨定义与片段库" | close enough to be useful: the package carries the project, its rack, and (v2) an `arrangement` of clips and sections. |
+
+**What it contributes that the first report did not** — and it is worth having:
+
+* **汉语声调与"倒字"** (`§4.3`): the four tones constrain melodic direction, so a rising melody over 上声+去声 reads as the wrong
+  word. That is a real musical constraint for Chinese lyrics, not a preference, and it is the one item in either report that asks for
+  something the project has no answer to at all — no tone data, no pinyin, no alignment check. A `prosody` tool or even a **warning**
+  would be new capability rather than a fix;
+* **a short preview render** (`groove_preview_clip`, 2–4 bars) for iterating on one bar without bouncing the song. The MCP already
+  renders a pattern (`render_audio`) and a song (`render_song`), so this is closer to a convenience than a feature — but the argument
+  behind it, that checking one snare's reverb should not cost a full bounce, is the same argument that produced `maxDurationSec`.
+
+**What the audit does not change**: nothing here is a regression to fix. The actionable items remain the ones already open — the
+Chromium dependency and the render time (measured, with the super-linear growth recorded), the note model's two vocabularies (in the
+refactor plan's stage 4, closed by evidence as already-consistent for the parts that matter), and now the prosody question, which is
+the only genuinely new one.
+
 ## An external AI report, audited claim by claim (2026-09-27)
 
 A Gemini report listed twelve audio defects with file paths and code. **Every path was wrong** — `src/audio/export/AudioExporter.ts`,
