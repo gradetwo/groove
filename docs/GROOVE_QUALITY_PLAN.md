@@ -9,7 +9,32 @@ It is deliberately *not* a to-do list derived from the report: four of the repor
 implemented, and the measurements below say which. The two workstreams (this and the skin/gate work) are
 independent — nothing here touches CSS, and the gates added here do not overlap `probe:skins`.
 
-### A4 answered: the riser machinery works and nothing plays it (2026-09-28)
+#### Heavy work runs on CI, not on the laptop (2026-09-28)
+
+Two rounds of running everything locally ended with the laptop as the bottleneck and CI finding five things the laptop could not:
+
+| what CI caught that a local run did not | why local could not see it |
+|---|---|
+| the published repo still carried the cover-production batch (`public/covers/_batch_scratch`, 17 non-artwork items) | the local tree was cleaned and the mirror's copies were gitignored, so they were never removed there |
+| the mirror's `CREDITS.md` was missing | the mirror was updated by copying the files I had touched, and a test needs that one |
+| the mirror still ran the **old** `mobileApp` test against the new player bar | the test rewrite was never mirrored — a mirror is a copy, not a patch set |
+| version drift in the mirror | the version files are generated, and no local command checks the mirror |
+| `probe:boot` had no browser in the job that runs it | the step was added without the install it needs |
+
+And the cost was real in the other direction too: a two-hour loudness re-record on the laptop competed with builds and tests, which
+is where the flaky `mobileApp` timeouts came from.
+
+**So, the split:**
+
+* **on CI** (`.github/workflows/`): the full test suite and coverage, the browser matrix, the loudness and timbre gates, the
+  chunked loudness re-record, the GS-1 voice sweep, the probes that drive a browser;
+* **on the laptop**: reading code, small edits, a **single test file** (`npx vitest run src/test/<file>.test.ts`), and the
+  commands that need the working tree (`docs:check`, `check:covers`, `version:sync`, `probe:boot` against a fresh `dist`);
+* **the re-record recipe**, which is the one that matters most: run `manual-verify.yml` with `scope=audio` or `scope=all`,
+  **download the artifact**, and apply it with `node scripts/apply_loudness_trims.mjs`. The workflow says so itself — "the
+  loudness numbers decide what ships, and an auto-committed re-record is how a bad run becomes the truth".
+
+## A4 answered: the riser machinery works and nothing plays it (2026-09-28)
 
 The clean measurement is an **A/B**, not a bar comparison: the riser and the velocity ramp occupy the same bars, so "riser bars
 against the others" measures the ramp (that is the −18…−28% below, and it means nothing). What the texture lane *itself*
