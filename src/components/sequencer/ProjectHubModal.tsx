@@ -47,6 +47,8 @@ export interface ProjectHubModalProps {
   onClose: () => void;
   currentGenre: Genre;
   currentPatterns: { A: SequencerPattern; B: SequencerPattern };
+  /** The slots beyond the editor's two; absent for every project that never used one. */
+  currentExtraClips?: Partial<Record<ClipSlot, SequencerPattern>>;
   activeSlot: ClipSlot;
   bpm: number;
   swing: number;
@@ -74,6 +76,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
   onClose,
   currentGenre,
   currentPatterns,
+  currentExtraClips,
   activeSlot,
   bpm,
   swing,
@@ -208,6 +211,8 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     newProj.patterns = {
       A: currentPatterns.A,
       B: currentPatterns.B,
+      // Carried through **additively**: a project with no extra slots is written exactly as it always was.
+      ...(currentExtraClips ? { extraClips: currentExtraClips } : {}),
     };
     newProj.activeSlot = activeSlot;
     newProj.songMode = songMode;
