@@ -323,9 +323,9 @@ export const TOOLS: ToolDefinition[] = [
     name: "analyze_audio",
     title: "Analyse a rendered WAV",
     description:
-      "Measure a WAV this server produced: gated loudness, true peak, pinned samples, discontinuity count, stereo correlation, tail level and the 13-band spectral shape. No browser needed.",
+      "Measure a WAV this server produced: gated loudness, true peak, pinned samples, discontinuity count, stereo correlation, tail level and the 13-band spectral shape. No browser needed. **A render already returns its own gated loudness and true peak for either format** — reach for this only when the extra metrics are what you want, not to measure a file you just rendered.",
     readOnly: true,
-    inputSchema: { path: z.string().describe("a .wav path, normally one render_audio returned") },
+    inputSchema: { path: z.string().describe("a .wav path this server produced; the analyser decodes the app's own 16-bit PCM — there is no MP3 decoder here, because a render already reports its loudness and true peak") },
     handler: (args) => {
       try {
         return analyseWavFile(String(args.path));
