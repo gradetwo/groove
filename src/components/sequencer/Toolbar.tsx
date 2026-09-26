@@ -37,6 +37,7 @@ import { isControlVisible } from "./toolbarTiers";
 import { DrumKitType, EffectsRackState } from "../../audio/AudioEngine";
 import { CustomKickPreset, loadCustomKickPresets } from "../../audio/AnatomyKickEngine";
 import { triggerHaptic, HapticPatterns, getHapticSettings, setHapticEnabled, setHapticIntensity } from "../../utils/haptics";
+import type { ClipSlot } from "../../types/song";
 
 /* ------------------------------------------------------------------------- *
  * D-05: master-FX parameter mapping.
@@ -107,7 +108,7 @@ export interface ToolbarProps {
   isZh: boolean;
   stepsPerBar: number;
   groupSize: number;
-  activeSlot?: "A" | "B";
+  activeSlot?: ClipSlot;
   songMode?: boolean;
   blindCompare?: boolean;
   isMetronome?: boolean;
@@ -162,8 +163,8 @@ export interface ToolbarProps {
   onAddSteps: (count: number) => void;
   onRemoveSteps: (count: number) => void;
   onScrollByPixels: (delta: number) => void;
-  onSwitchSlot?: (slot: "A" | "B") => void;
-  onCopySlot?: (from: "A" | "B", to: "A" | "B") => void;
+  onSwitchSlot?: (slot: ClipSlot) => void;
+  onCopySlot?: (from: ClipSlot, to: ClipSlot) => void;
   onToggleSongMode?: () => void;
   onToggleBlindCompare?: () => void;
   onToggleMetronome?: () => void;
@@ -321,11 +322,11 @@ const MeterControls = memo<MeterControlsProps>(function MeterControls({
 });
 
 interface PatternSlotControlsProps {
-  activeSlot: "A" | "B";
+  activeSlot: ClipSlot;
   songMode: boolean;
   blindCompare: boolean;
-  onSwitchSlot?: (slot: "A" | "B") => void;
-  onCopySlot?: (from: "A" | "B", to: "A" | "B") => void;
+  onSwitchSlot?: (slot: ClipSlot) => void;
+  onCopySlot?: (from: ClipSlot, to: ClipSlot) => void;
   onToggleSongMode?: () => void;
   onToggleBlindCompare?: () => void;
   /** B3: opens the arrangement view (desktop/iPad only — the host decides by passing a handler). */

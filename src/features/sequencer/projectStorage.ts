@@ -5,6 +5,7 @@
 
 import { SequencerPattern, Genre } from "../../types/genre";
 import type { SongSection } from "../../types/song";
+import type { ClipSlot } from "../../types/song";
 
 export const PROJECT_STORAGE_KEY = "groove_project_v1";
 export const STORAGE_VERSION = 1;
@@ -27,9 +28,9 @@ export interface PersistedProject {
     A: SequencerPattern;
     B: SequencerPattern;
   };
-  activeSlot: "A" | "B";
+  activeSlot: ClipSlot;
   songMode: boolean;
-  songChain: ("A" | "B")[];
+  songChain: (ClipSlot)[];
   /**
    * The arrangement (B1). Optional so a snapshot written before it hydrates through `migrateSongChain` rather
    * than being read as "no arrangement"; `songChain` is still written beside it for older readers.

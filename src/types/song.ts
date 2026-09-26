@@ -1,7 +1,7 @@
 /**
  * The song model: clips and an arrangement.
  *
- * Until now a project was two patterns and a `songChain` of `"A" | "B"` letters that **nothing rendered or played**
+ * Until now a project was two patterns and a `songChain` of `ClipSlot` letters that **nothing rendered or played**
  * — the field was persisted and copied around, but the renderer repeated a single pattern `bars` times. This file
  * is the model that makes the chain real: clips hold the patterns the step sequencer edits, and sections place
  * those clips on a timeline.
@@ -376,10 +376,10 @@ export function duplicateSection(song: Song, id: string): Song {
 /**
  * Migrate the historical `songChain` into sections.
  *
- * `songChain: ("A" | "B")[]` was one bar per letter, so the mapping is one 1-bar section per entry. A project
+ * `songChain: (ClipSlot)[]` was one bar per letter, so the mapping is one 1-bar section per entry. A project
  * saved before this change therefore opens with exactly the bars it had, in the same order.
  */
-export function migrateSongChain(song: Omit<Song, "sections"> & { sections?: SongSection[] }, songChain: Array<"A" | "B">): Song {
+export function migrateSongChain(song: Omit<Song, "sections"> & { sections?: SongSection[] }, songChain: Array<ClipSlot>): Song {
   if (song.sections?.length) return { ...song, sections: song.sections };
   return { ...song, sections: sectionsFromSongChain(song.id, songChain) };
 }
@@ -390,8 +390,8 @@ export function migrateSongChain(song: Omit<Song, "sections"> & { sections?: Son
  * An empty chain becomes one bar of A rather than nothing: a project with no sections cannot play, and the old
  * default was `["A", "B"]`-ish in spirit (something, not silence).
  */
-export function sectionsFromSongChain(songId: string, songChain: Array<"A" | "B">): SongSection[] {
-  const chain = songChain?.length ? songChain : (["A"] as Array<"A" | "B">);
+export function sectionsFromSongChain(songId: string, songChain: Array<ClipSlot>): SongSection[] {
+  const chain = songChain?.length ? songChain : (["A"] as Array<ClipSlot>);
   return chain.map((slot, index) => ({ id: `${songId}-s${index + 1}`, slot, bars: 1 }));
 }
 
@@ -399,7 +399,7 @@ export function sectionsFromSongChain(songId: string, songChain: Array<"A" | "B"
  * The reverse of `migrateSongChain`, for code paths that still speak the old shape (the current persistence layer
  * and the project-hub modal do). Lossy by nature: it can only express A/B and one bar per entry.
  */
-export function toSongChain(song: Song): Array<"A" | "B"> {
+export function toSongChain(song: Song): Array<ClipSlot> {
   return sectionsToSongChain(song.sections);
 }
 
@@ -410,10 +410,10 @@ export function toSongChain(song: Song): Array<"A" | "B"> {
  * (it holds two patterns, not a clip library) — so the derivation lives here, once, instead of being re-implemented
  * where the two could disagree.
  */
-export function sectionsToSongChain(sections: readonly SongSection[]): Array<"A" | "B"> {
-  const chain: Array<"A" | "B"> = [];
+export function sectionsToSongChain(sections: readonly SongSection[]): Array<ClipSlot> {
+  const chain: Array<ClipSlot> = [];
   for (const section of sections) {
-    const slot: "A" | "B" = section.slot === "B" ? "B" : "A";
+    const slot: ClipSlot = section.slot === "B" ? "B" : "A";
     for (let bar = 0; bar < clampBars(section.bars); bar += 1) chain.push(slot);
   }
   return chain;

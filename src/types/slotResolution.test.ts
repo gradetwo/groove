@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { patternForSlot } from "./project";
 import type { SequencerPattern } from "./genre";
+import type { ClipSlot } from "../types/song";
 
 /**
  * The slot resolver — the one place a `ClipSlot` becomes a pattern.
  *
- * `ClipSlot` has been `"A" | "B" | "C" | "D"` since the song layer was written and the MCP tools compose with all four, while the
+ * `ClipSlot` has been `ClipSlot | "C" | "D"` since the song layer was written and the MCP tools compose with all four, while the
  * editor's model held two. Adding the extras is **additive** (`extraClips` is optional), and every lookup by slot goes through
  * here so the two required slots and the optional ones cannot be confused — which is exactly what the type checker reported when
  * `songChain` was widened (`docs/DAW_MCP_REFACTOR.md`).

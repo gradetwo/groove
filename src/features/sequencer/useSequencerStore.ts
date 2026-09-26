@@ -15,6 +15,7 @@ import {
   clearSavedProject,
 } from "./projectStorage";
 import { EffectsRackState, DEFAULT_FX_STATE } from "../../audio/EffectsRack";
+import type { ClipSlot } from "../../types/song";
 
 export interface StudioHistorySnapshot {
   pattern: SequencerPattern;
@@ -33,11 +34,11 @@ export interface StudioHistorySnapshot {
     A: SequencerPattern;
     B: SequencerPattern;
   };
-  activeSlot?: "A" | "B";
+  activeSlot?: ClipSlot;
   /** F-04: transport/song settings that used to consume a history entry without being restored. */
   stepCount?: number;
   songMode?: boolean;
-  songChain?: Array<"A" | "B">;
+  songChain?: Array<ClipSlot>;
   loopRange?: [number, number] | null;
   isMetronome?: boolean;
   isCountIn?: boolean;
@@ -81,7 +82,9 @@ export interface SequencerState {
     A: SequencerPattern;
     B: SequencerPattern;
   };
-  activeSlot: "A" | "B";
+  /** The slots beyond the editor's two, when a composition uses them (see `GrooveProject.extraClips`). */
+  extraClips?: Partial<Record<ClipSlot, SequencerPattern>>;
+  activeSlot: ClipSlot;
   songMode: boolean;
   /**
    * The arrangement (B1), and the source of truth for the bar order.
@@ -91,7 +94,7 @@ export interface SequencerState {
    * would guarantee.
    */
   sections: SongSection[];
-  songChain: ("A" | "B")[];
+  songChain: (ClipSlot)[];
   blindTestMode: boolean;
   bpm: number;
   swing: number;
@@ -160,14 +163,14 @@ export type SequencerAction =
       type: "LOAD_PROJECT";
       genre: Genre;
       patterns: { A: SequencerPattern; B: SequencerPattern };
-      activeSlot: "A" | "B";
+      activeSlot: ClipSlot;
       bpm: number;
       swing: number;
       timeSignature: string;
       resolution: "1/8" | "1/16" | "1/32";
       stepCount: number;
       songMode?: boolean;
-      songChain?: ("A" | "B")[];
+      songChain?: (ClipSlot)[];
       /** B1: the arrangement, when the project carries one. */
       sections?: SongSection[];
       loopRange?: [number, number] | null;
@@ -179,10 +182,10 @@ export type SequencerAction =
        */
       effectsRack?: EffectsRackState;
     }
-  | { type: "SWITCH_PATTERN_SLOT"; slot: "A" | "B" }
-  | { type: "COPY_PATTERN_SLOT"; from: "A" | "B"; to: "A" | "B" }
+  | { type: "SWITCH_PATTERN_SLOT"; slot: ClipSlot }
+  | { type: "COPY_PATTERN_SLOT"; from: ClipSlot; to: ClipSlot }
   | { type: "TOGGLE_SONG_MODE" }
-  | { type: "SET_SONG_CHAIN"; chain: ("A" | "B")[] }
+  | { type: "SET_SONG_CHAIN"; chain: (ClipSlot)[] }
   | { type: "SET_SECTIONS"; sections: SongSection[] }
   | { type: "TOGGLE_BLIND_TEST" }
   | { type: "SET_LOOP_RANGE"; range: [number, number] | null }
@@ -375,7 +378,11 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
         ...state.patterns,
         [state.activeSlot]: state.pattern,
       };
-      const nextPattern = clonePattern(updatedPatterns[action.slot]);
+      const nextPattern = clonePattern(
+        action.slot === "A" || action.slot === "B"
+          ? updatedPatterns[action.slot]
+          : state.extraClips?.[action.slot] ?? updatedPatterns.A
+      );
       const stepCount = nextPattern.tracks[0]?.steps?.length || state.stepCount;
       return {
         ...state,
@@ -387,7 +394,13 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
     }
 
     case "COPY_PATTERN_SLOT": {
-      const sourcePattern = clonePattern(action.from === state.activeSlot ? state.pattern : state.patterns[action.from]);
+      const sourcePattern = clonePattern(
+        action.from === state.activeSlot
+          ? state.pattern
+          : action.from === "A" || action.from === "B"
+            ? state.patterns[action.from]
+            : state.extraClips?.[action.from] ?? state.patterns.A
+      );
       const updatedPatterns = {
         ...state.patterns,
         [action.to]: sourcePattern,
