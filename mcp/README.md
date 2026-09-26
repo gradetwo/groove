@@ -95,7 +95,22 @@ no IndexedDB — and a wrapper beside it does the `JSON.stringify`. The module's
 server (Node) can import it the way it already imports `genreMix`. What is missing is therefore a **mapping**, not a dependency:
 `export_groove` has to turn a song (clips + sections + tempo, which `get_song` now returns) into the `GrooveProject` the exporter
 takes, run the package's own validation, and write the JSON under `GROOVE_MCP_OUT` like the render tools do. The mapping is the
-design question — a song is an arrangement and a project is a pair of patterns plus a rack — and it is the next thing to write.
+design question, and reading the type answers it: **`GrooveProject` holds exactly two patterns** — `patterns: { A, B }` plus
+`activeSlot` and `songMode` (`src/types/project.ts:12-27`) — and **nothing that can carry a clip slot or a section**. A song has
+up to four clips and an ordered arrangement, so a `.groove` export of a song is **lossy today** and no amount of wrapping changes
+that.
+
+Three honest routes, in order of how much they cost:
+
+1. **export the A/B clips as the project's two patterns**, and say in the tool's result exactly what was dropped (C/D clips and
+   the section timeline). Useful immediately, honest by construction, no format change;
+2. **refuse** a song that uses more than A and B, and export the rest — same code, a stricter contract;
+3. **extend the package format** with an optional arrangement field and bump its version (`validateGroovePackage` is the gate
+   that would have to learn it). This is the only route that makes the round trip lossless, and it is a **format decision for the
+   owner**, not something a tool should slip in.
+
+The tool should ship route 1 or 2 and name the limitation in its output; route 3 is recorded here so the choice is made
+deliberately rather than by accident.
 
 **Order, by what unblocks composition rather than by what is easiest**: P1 (expose `set_clip` and pass `clips` through
 `create_song`), P2 (`get_song`), P3 (`export_groove`), P4 (mp3 in `analyze_audio`), then the two small ones, then O1 if it is
