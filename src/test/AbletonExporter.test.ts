@@ -236,3 +236,42 @@ describe("Ableton Live (.als) Project Exporter (P7-01)", () => {
     expect(xml).toContain('<LoopEnd Value="3.5" />');
   });
 });
+
+  /**
+   * The baseline "one clip per section" has to change, stated as a check on the **artifact** Ableton opens rather than on the
+   * code that writes it (`docs/DAW_MCP_REFACTOR.md`, stage 5's ALS item).
+   *
+   * Today the exporter takes **one pattern** and emits **one** `MidiClip` at `Time="0"`. When it gains a clip list, this test is
+   * the diff: the same parse, with one element per section at distinct, increasing start positions.
+   */
+describe("Ableton exporter · the clip shape (stage 5's ALS item)", () => {
+  it("writes exactly one MidiClip today, at time zero", () => {
+    // Its own minimal pattern: the other suite's `mockPattern` is scoped to that block, and this check is about the clip shape.
+    const pattern = {
+      genre_id: "techno",
+      bpm: 130,
+      timeSignature: "4/4",
+      resolution: "1/16",
+      totalSteps: 16,
+      tracks: [
+        {
+          track_id: "kick",
+          name: "Kick",
+          steps: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+          velocity: new Array(16).fill(100),
+          pitch: [36],
+        },
+      ],
+    } as unknown as SequencerPattern;
+    const xml = buildAbletonLiveSetXml({ bpm: 130, pattern, genreName: "Berlin Techno" } as never);
+    /**
+     * The **session** clip slot is `Id="0"` and holds one `MidiClip` at `Time="0"` — the builder hard-codes that pair, and a
+     * multi-section export is exactly this becoming a slot per section. Counting `<MidiClip>` elements would not say anything:
+     * a Live set also carries arrangement clips and one slot per track.
+     */
+    expect(xml).toContain('<ClipSlot Id="0">');
+    const session = xml.slice(xml.indexOf('<ClipSlot Id="0">'));
+    expect(session.slice(0, session.indexOf("</ClipSlot>"))).toContain('<MidiClip Id="');
+    expect(xml).toMatch(/<MidiClip Id="\d+" Time="0">/);
+  });
+});
