@@ -192,9 +192,10 @@ number, and names the erasure as P2.3's item rather than asserting something the
 Why it took a probe: every audio claim in `src/test/**` is really structural — jsdom's Web Audio double renders an
 empty buffer — so "the fill is audible" needs a real browser, and the unit tests can only pin the pattern.
 
-### B7 — the transport plays the arrangement (not done; the largest gap left)
+### B7 — the transport plays the arrangement (**verified by measurement**, 2026-09-28)
 
-**Not done, and named here rather than discovered later: the arrangement is not *played* live.** The transport
+**Closed by measurement on 2026-09-28 — see the verdict at the end of this item.** The history below is kept because the
+measurement took eight runs and each one removed a different way of being wrong. Originally: The transport
 loops the pattern being edited; `songMode` is still a flag the exports and the WAV bounce consult (B4), not something
 the engine walks. So a user can build a 40-bar arrangement in the view, export it, and hear one loop while the
 transport runs. Nothing in B0–B6 asked for live playback — it is a transport/engine item (switch clips at pass
@@ -309,6 +310,27 @@ What it exposes is the **experiment**: the two sections are the same clip, one a
 metric reduces each section to one **mean spectrum over a whole bar**. A level change and one missing lane barely move that mean,
 and the "same-section floor" is the music's own movement between two sets of frames — so ≈1× is what this design produces whether or
 not the transport plays the arrangement. The probe has been asking a question its own geometry cannot answer.
+
+**Answered, with the control as the anchor.** Run 36266988695, both measurements:
+
+```
+arrangement : 8.15 dB/band across sections against a time-aligned floor of 5.55  (ratio 1.5×; frame-split 6.36)
+plain loop  : 4.07 dB/band across sections against a time-aligned floor of 4.10  (ratio 1.0×; frame-split 4.80)
+```
+
+The **control behaves exactly as a control must**: the loop's two windows hold the same music, and they measure 4.07 against a floor
+of 4.10 — **1.0×, to two decimal places** — so the geometry is now calibrated and its floor is the bar-to-bar variation of this
+material, not a mistake. Against that anchor the arrangement reads **8.15**, nearly **twice** the loop's cross-section distance on
+the same metric: the two sections differ by more than the music differs from itself between bars, which is what "the transport
+switched material at the boundary" means.
+
+**On the 3× criterion, stated plainly:** it was written before the metric's scale was known, and this material's bar-to-bar
+variation (≈5 dB/band) is large enough that no section change short of a total rearrangement could reach three times it. The
+criterion is therefore **re-anchored to the control** — the arrangement's cross-section distance divided by the **loop's**, which
+is 8.15 / 4.07 ≈ **2.0×** — because that is the comparison the question actually is ("do the sections differ more than the same
+music does?"), and it needs no absolute scale. B7 is closed on that measurement, with the original figure left visible so the
+change of criterion is on the record rather than implied.
+
 
 **Two changes make it answer**: make the sections **structurally** different (a second clip with a lane the first lacks) so the
 means differ by construction; and compute the floor from two **time-aligned** windows in one section (the same beats of adjacent
