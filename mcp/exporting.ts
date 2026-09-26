@@ -39,7 +39,7 @@ export function exportMidi(pattern: SequencerPattern, options: { bpm?: number; g
 /** Ableton Live set: the XML is built here and gzipped with the platform's own compressor. */
 export async function exportAbleton(
   pattern: SequencerPattern,
-  options: { bpm?: number; genreName?: string } = {}
+  options: { bpm?: number; genreName?: string; clips?: Array<{ pattern: SequencerPattern; name?: string }> } = {}
 ): Promise<ExportedBytes> {
   const genre = pattern.genre_id ? findGenre(pattern.genre_id) : undefined;
   const bpm = options.bpm ?? pattern.bpm ?? 120;
@@ -47,6 +47,8 @@ export async function exportAbleton(
     bpm,
     pattern,
     genreName: options.genreName ?? genre?.name ?? pattern.genre_id ?? "groove",
+    // One clip per section, when the caller is exporting a song rather than a loop.
+    ...(options.clips?.length ? { clips: options.clips } : {}),
   } as Parameters<typeof buildAbletonLiveSetXml>[0]);
   const bytes = await gzipCompressXml(xml);
   return {

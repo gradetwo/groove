@@ -184,6 +184,17 @@ try {
     `clips=${Object.keys(readBack.clips ?? {}).join(",")} sections=${(readBack.sections ?? []).length}`
   );
 
+  /**
+   * The song reaches a DAW as an arrangement rather than one flattened clip: `export_ableton` with a songId places one clip per
+   * section, in its own scene, named after the section.
+   */
+  const alsSong = payload(await client.request("tools/call", { name: "export_ableton", arguments: { songId: song.songId } }));
+  check(
+    "export_ableton exports a song as one clip per section",
+    alsSong.sections === 2 && alsSong.filename?.endsWith(".als") && Number.isFinite(alsSong.bytes),
+    JSON.stringify({ sections: alsSong.sections, filename: alsSong.filename })
+  );
+
   const exported = payload(await client.request("tools/call", { name: "export_groove", arguments: { songId: song.songId } }));
   check(
     "export_groove writes a validated v2 package",
