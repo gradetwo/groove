@@ -1,27 +1,23 @@
 {
-  "version": "2.34.1",
+  "version": "2.34.2",
   "releaseDate": "2026-09-28",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.1",
+    "version": "2.34.2",
     "date": "2026-09-28",
-    "category": "feature",
+    "category": "audio",
     "title": {
-      "zh": "MCP 作曲打通：可做变奏、可读回、可导出工程包",
-      "en": "MCP composition: set_clip, get_song and export_groove — songs can vary, be read back and be exported"
+      "zh": "响度基线改为在 CI 上重录（159 曲风）并应用，配平更准",
+      "en": "The loudness baseline was re-recorded on CI (159 genres) and applied"
     },
     "highlights": [
       {
-        "zh": "新增 set_clip：不再只能有 clip A，主歌/副歌变奏可用；create_song 也接受 clips 与首段 label。",
-        "en": "New set_clip: no longer limited to clip A, so verse/chorus variations work; create_song takes clips and a first-section label."
+        "zh": "159 个曲风的响度基线在 GitHub 上分块重录完成（每块独立进程），报告作为证据一并入库。",
+        "en": "All 159 genres were re-recorded in chunks on GitHub (a fresh process per chunk), with the report committed as the evidence."
       },
       {
-        "zh": "新增 get_song 与 export_groove：编排可读回，并导出为校验过的 .groove 包（编排随包保留）。",
-        "en": "New get_song and export_groove: the arrangement can be read back and exported as a validated .groove package, carried rather than flattened."
-      },
-      {
-        "zh": "渲染文件名可用自己的歌名（白名单后拼接）；MCP 文档重复段落与断表已修。",
-        "en": "A render can be named after your own song title (whitelisted); the duplicated MCP docs section is fixed."
+        "zh": "跨曲风响度分布进一步收窄：p90−p10 5.69 dB、全距 11.8 dB；音色与响度门禁均通过。",
+        "en": "The cross-genre spread tightened to p90−p10 5.69 dB and an 11.8 dB full range; the timbre and loudness gates both pass."
       }
     ],
     "truncated": false
