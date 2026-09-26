@@ -60,6 +60,20 @@ const noGs1 = process.argv.includes("--no-gs1");
  * listened to one at a time instead of one file that has to be argued about as a whole.
  */
 const stemRole = arg("--stem", "");
+/**
+ * Solo one lane, the way the app's S button does (`--solo=lead`).
+ *
+ * The bug this reproduces: solo a lane, export stems, and the soloed lane's stem contained a single note. The mixer
+ * state is what the exporter gates on, so setting it here is the same input the app gives it.
+ */
+const soloRole = arg("--solo", "");
+/**
+ * Override one GS-1 parameter on **every** patch, for an A/B without a build (`--gs1-param=13=0`).
+ *
+ * Which parameters matter is a question about the *voice*, and a rebuild per guess would make each answer cost a minute
+ * and a deployed artefact. The patch table is a plain object in the page, so the probe can edit it before rendering.
+ */
+const gs1Param = arg("--gs1-param", "");
 /** Render the authored skeleton instead of the shipping pattern (see the note at the call site). */
 const raw = process.argv.includes("--raw");
 /**
@@ -114,7 +128,7 @@ try {
   await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
 
   const result = await page.evaluate(
-    async ({ genreId, bars, seamlessLoop, noGs1, stemRole, raw }) => {
+    async ({ genreId, bars, seamlessLoop, noGs1, stemRole, soloRole, gs1Param, raw }) => {
       const [genres, wav, mix, trackStates, gs1Tracks] = await Promise.all([
         import("/src/data/genres/index.ts"),
         import("/src/audio/WavExporter.ts"),
@@ -125,6 +139,14 @@ try {
         import("/src/audio/gs1/gs1Tracks.ts"),
       ]);
       if (noGs1) gs1Tracks.setGs1RoutingEnabled(false);
+      if (gs1Param) {
+        const [rawId, rawValue] = String(gs1Param).split("=");
+        const patches = await import("/src/data/gs1Patches.ts");
+        const id = Number(rawId);
+        const value = Number(rawValue);
+        if (!Number.isFinite(id) || !Number.isFinite(value)) return { error: `bad --gs1-param ${gs1Param}` };
+        for (const patch of Object.values(patches.GS1_PATCHES)) patch[id] = value;
+      }
       const entry = genres.ALL_GENRES.find((g) => g.id === genreId);
       if (!entry) return { error: `unknown genre ${genreId}` };
       /**
@@ -143,10 +165,16 @@ try {
       if (stemRole && (stemIndex === undefined || stemIndex < 0)) {
         return { error: `no track with track_id ${stemRole}` };
       }
+      const mixerStates = trackStates.deriveTrackStates(pattern);
+      if (soloRole) {
+        const soloIndex = pattern.tracks.findIndex((track) => track.track_id === soloRole);
+        if (soloIndex < 0) return { error: `no track with track_id ${soloRole}` };
+        mixerStates[soloIndex] = { ...mixerStates[soloIndex], solo: true };
+      }
       const buffer = await wav.renderPatternOffline(pattern, {
         bars,
         seamlessLoop,
-        trackStates: trackStates.deriveTrackStates(pattern),
+        trackStates: mixerStates,
         ...(stemIndex === undefined ? {} : { stemTrackIdx: stemIndex }),
       });
       const bytes = new Uint8Array(wav.encodeAudioBufferToWav(buffer));
@@ -177,7 +205,7 @@ try {
           : null,
       };
     },
-    { genreId: genre, bars, seamlessLoop, noGs1, stemRole, raw }
+    { genreId: genre, bars, seamlessLoop, noGs1, stemRole, soloRole, gs1Param, raw }
   );
 
   await browser.close();
