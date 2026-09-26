@@ -247,4 +247,33 @@ describe("B6 · what the render would play", () => {
     const added = addMcpSection({ songId: created.songId, slot: "B", bars: 4, label: "chorus" });
     expect(added.shape).toBe("A×1 → chorus×4");
   });
+
+  /**
+   * The composer's report, encoded: a song could only ever have clip A because the tool did not pass `clips` through, and its
+   * first section could not be labelled because `create_song` did not take the argument `add_section` has always had.
+   */
+  it("seeds extra clips at creation and labels the first section", () => {
+    const genre = findGenre("chicago-house");
+    const variation = { ...patternFromGenre(genre!), name: "chorus" } as never;
+    const summary = createMcpSong({
+      genreId: "chicago-house",
+      genre,
+      clips: { B: variation },
+      label: "verse",
+    });
+    const song = getMcpSong(summary.songId)!;
+    expect(Object.keys(song.clips ?? {}).sort()).toEqual(["A", "B"]);
+    expect(song.sections[0].label).toBe("verse");
+  });
+
+  it("replaces one clip afterwards, which is the verse/chorus path", () => {
+    const genre = findGenre("chicago-house");
+    const before = createMcpSong({ genreId: "chicago-house", genre });
+    const replacement = { ...patternFromGenre(genre!), name: "chorus" } as never;
+    setMcpClip(before.songId, "B", replacement);
+    const song = getMcpSong(before.songId)!;
+    expect(Object.keys(song.clips ?? {})).toContain("B");
+    // A is untouched: replacing a slot is not a rewrite of the song.
+    expect(song.clips?.A).toBeDefined();
+  });
 });

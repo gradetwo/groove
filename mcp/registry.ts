@@ -9,9 +9,11 @@
 import { z } from "zod";
 import { clonePattern, findGenre, getChordProgression, getGenre, getGenreRelations, libraryIndex, listCategories, listChordProgressions, listGenres, listMasterclasses, searchGenres } from "./library";
 import { applyPatternOps, comparePatterns, patternStatistics, validatePattern, type PatternOp } from "./pattern";
+import { patternFromGenre } from "../src/data/genreMix";
 import { exportAbleton, exportMidi, loudnessReport, shareUrl, toBase64 } from "./exporting";
 import { analyseWavFile, renderAudio } from "./render/worker";
-import { addMcpSection, createMcpSong, flattenMcpSong } from "./song";
+import { addMcpSection, createMcpSong, flattenMcpSong, getMcpSong, setMcpClip, summariseSong } from "./song";
+import type { ClipSlot } from "../src/types/song";
 import type { SequencerPattern } from "../src/types/genre";
 
 /** MCP tool results are text for maximum client compatibility; JSON is the text. */
@@ -360,6 +362,17 @@ export const TOOLS: ToolDefinition[] = [
         .max(64)
         .optional()
         .describe("how many times the first section repeats its clip; default 1"),
+      label: z
+        .string()
+        .max(24)
+        .optional()
+        .describe('what the first section is, e.g. "intro" — `add_section` has always taken this and `create_song` did not'),
+      clips: z
+        .record(z.enum(["A", "B", "C", "D"]), patternSchema)
+        .optional()
+        .describe(
+          "clips beyond the seeded A, keyed by slot — the verse/chorus path. Without it a song can only ever have one clip and the contrast has to be squeezed out of section overrides. `set_clip` replaces one later."
+        ),
     },
     handler: (args) => {
       try {
@@ -375,7 +388,74 @@ export const TOOLS: ToolDefinition[] = [
           swing: args.swing as number | undefined,
           resolution: args.resolution as "1/8" | "1/16" | "1/32" | undefined,
           bars: args.bars as number | undefined,
+          label: args.label as string | undefined,
+          clips: args.clips as Partial<Record<ClipSlot, SequencerPattern>> | undefined,
         });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    /**
+     * P1 of the composer's report: `setMcpClip` existed and no tool reached it, so a song could only ever have clip A.
+     *
+     * This is the minimum for the standard verse/chorus workflow — write a variation, point a later section at it — instead of
+     * squeezing the contrast out of `mute`/`velocityRamp`/`transpose`/`fill`.
+     */
+    name: "set_clip",
+    title: "Replace one of a song's clips",
+    description:
+      "Set a slot's clip (A–D) to an explicit pattern or one derived from a genre's arranged pattern, then point sections at it with add_section. Replaces what is there; returns the song's shape.",
+    readOnly: false,
+    inputSchema: {
+      songId: z.string().describe("the id create_song returned"),
+      slot: z.enum(["A", "B", "C", "D"]),
+      pattern: patternSchema.optional().describe("the clip to store; omit it to seed the slot from the genre instead"),
+      genreId: z.string().optional().describe("seed the slot from a genre's arranged pattern (used when pattern is absent)"),
+    },
+    handler: (args) => {
+      try {
+        const songId = args.songId as string;
+        const slot = args.slot as ClipSlot;
+        let pattern = args.pattern as SequencerPattern | undefined;
+        if (!pattern && args.genreId) {
+          const genre = findGenre(args.genreId as string);
+          if (!genre) return failure(`unknown genreId "${args.genreId}"`);
+          pattern = patternFromGenre(genre);
+        }
+        if (!pattern) return failure("provide either pattern or genreId");
+        return setMcpClip(songId, slot, pattern);
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    /**
+     * P2: the song lived only in this process's map, so a composition could not be read back or re-exported.
+     *
+     * It returns the clips **with their patterns**, the sections in order, and the shape — everything needed to write a project
+     * package or hand the arrangement to another exporter.
+     */
+    name: "get_song",
+    title: "Read a song back",
+    description:
+      "Return a song's clips (each with its full pattern), its sections in order, its shape and its tempo. This is what makes a composition re-exportable: render_song and the exporters take a songId, and without this the arrangement could not be inspected once created.",
+    readOnly: true,
+    inputSchema: {
+      songId: z.string().describe("the id create_song returned"),
+      includePatterns: z.boolean().optional().describe("include each clip's full pattern (default true)"),
+    },
+    handler: (args) => {
+      try {
+        const song = getMcpSong(args.songId as string);
+        if (!song) return failure(`unknown songId "${args.songId}" — create one with create_song`);
+        const summary = summariseSong(song);
+        if (args.includePatterns === false) {
+          return { ...summary, clips: Object.keys(song.clips ?? {}) };
+        }
+        return { ...summary, clips: song.clips, sections: song.sections };
       } catch (error) {
         return failure((error as Error).message);
       }

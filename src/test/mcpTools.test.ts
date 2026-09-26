@@ -241,12 +241,14 @@ describe("MCP · the declared surface", () => {
   it("marks exactly the tools that write as non-read-only", () => {
     /**
      * A read-only annotation is a promise to the client: it may call the tool freely, and the tool will not change
-     * anything. Four tools break that promise on purpose — `render_audio` and `render_song` write a file under
-     * `GROOVE_MCP_OUT`, and `create_song`/`add_section` mutate the server's session-local song map (B6). Everything
-     * else, including every genre reader, is a pure read.
+     * anything. Five tools break that promise on purpose — `render_audio` and `render_song` write a file under
+     * `GROOVE_MCP_OUT`, and `create_song`/`add_section`/`set_clip` mutate the server's session-local song map (B6).
+     * Everything else, including every genre reader and `get_song`, is a pure read.
      */
     const writers = TOOLS.filter((tool) => !tool.readOnly).map((tool) => tool.name);
-    expect(writers).toEqual(["render_audio", "create_song", "add_section", "render_song"]);
+    expect(writers).toEqual(["render_audio", "create_song", "set_clip", "add_section", "render_song"]);
+    // …and the read-only promise is kept for the reader that was added with them.
+    expect(TOOLS.find((tool) => tool.name === "get_song")?.readOnly).toBe(true);
   });
 
   it("declares resources and prompts that can be built", () => {
