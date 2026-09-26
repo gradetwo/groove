@@ -130,6 +130,10 @@ jobs:
       # but nothing had produced the listening proof: the probe samples the master analyser inside two deliberately different
       # sections and compares that distance against the same-section noise floor. It needs a browser and real time, so it runs
       # here, and its ratio is the number that closes the item — or says plainly that it does not.
+      - name: Build (the playback probe serves dist)
+        if: inputs.scope == 'audio' || inputs.scope == 'verify' || inputs.scope == 'all'
+        run: npm run build
+
       - name: Arrangement playback (B7)
         if: inputs.scope == 'audio' || inputs.scope == 'verify' || inputs.scope == 'all'
         run: node scripts/probe_arrangement_playback.mjs --genre=uk-garage
