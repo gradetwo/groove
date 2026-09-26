@@ -15,10 +15,15 @@ import type { SequencerAction, SequencerState } from "../features/sequencer/useS
 
 export interface GrooveProbeSurface {
   engine: AudioEngine;
-  /** The current sequencer state, read at call time (a snapshot would go stale immediately). */
-  readState: () => SequencerState;
+  /**
+   * The current sequencer state, read at call time (a snapshot would go stale immediately).
+   *
+   * Optional because the **phone shell** has no sequencer store: it builds its own audition engine and installs this seam
+   * for the resource probes, which need the engine and nothing else. A probe that needs the state checks for these first.
+   */
+  readState?: () => SequencerState;
   /** The store's own commit, so a probe can turn song mode on without clicking a button by its label. */
-  commit: (action: SequencerAction, recordHistory?: boolean) => void;
+  commit?: (action: SequencerAction, recordHistory?: boolean) => void;
 }
 
 /** Whether this page asked to be probed. Split out so the test can pass a search string instead of a window. */
