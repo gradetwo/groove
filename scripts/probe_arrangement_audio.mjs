@@ -246,8 +246,20 @@ try {
      */
     const metrics = await import("/src/test/helpers/audioMetrics.ts");
     const discontinuities = (channels, rate) => metrics.clickAnalysis(channels, rate).count;
-    const withoutFade = await render(song, { boundaryFadeMs: 0 });
-    const withFade = await render(song, { boundaryFadeMs: 8 });
+    /**
+     * A **small** song for this pair, because the club form is minutes of audio per render and five of them outran the probe's
+     * own timeout. Two sections whose second one **mutes the drums** is a hard jump at a known step, which is what the fade is
+     * for, at a fraction of the weight.
+     */
+    const jumpSong = {
+      ...song,
+      sections: [
+        { id: "probe-jump-a", slot: "A", bars: 2 },
+        { id: "probe-jump-b", slot: "A", bars: 2, mute: ["kick", "snare", "hihat", "percussion"] },
+      ],
+    };
+    const withoutFade = await render(jumpSong, { boundaryFadeMs: 0 });
+    const withFade = await render(jumpSong, { boundaryFadeMs: 8 });
     // Bar geometry: every pass of a one-bar clip is one bar, so the step count gives the bar map.
     const flattened = flattenModule.flattenSong(song);
     const bars = sections.reduce((sum, section) => sum + Math.max(1, Math.floor(section.bars)), 0);
