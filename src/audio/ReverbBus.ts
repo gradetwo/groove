@@ -74,6 +74,18 @@ export interface ReverbParams {
   width: number;
   /** Return level 0..1 (the old code hard-coded 0.35 and had no setter). */
   returnLevel: number;
+  /**
+   * High-pass on the **send** input, in Hz (0 disables it).
+   *
+   * The bus used to take whatever a track sent it: `input -> convolver`. A convolution reverb fed full-band signal puts
+   * kick and bass energy into a stereo tail, which is the classic way to make a mix muddy and to lose low end when the two
+   * channels are summed — the standard practice is to keep everything below ~120-160 Hz out of a reverb send altogether.
+   * The delay bus already damps its repeats for the same reason (in the feedback loop); this is the reverb's equivalent,
+   * and it applies to the send rather than the return so the dry signal is untouched.
+   *
+   * Measurable: `scripts/render_genre_wav.mjs --reverb-hpf=<hz>` renders the same genre with and without it.
+   */
+  sendHighpassHz: number;
 }
 
 /**
@@ -99,6 +111,11 @@ export const DEFAULT_REVERB_PARAMS: ReverbParams = {
   preDelayMs: 20,
   width: 1,
   returnLevel: 0.35,
+  /**
+   * 160 Hz, Butterworth (Q 0.707): the usual place to stop a reverb send, high enough to keep kick and bass fundamentals
+   * out of the tail and low enough that nothing a reverb is *for* — the room, the air, the tail of a chord — is lost.
+   */
+  sendHighpassHz: 160,
 };
 
 /** Time constant of the click-free return-level ramp (seconds). */
@@ -173,6 +190,8 @@ function resolveParams(base: ReverbParams, patch: Partial<ReverbParams>): Reverb
     preDelayMs: clampParam(patch.preDelayMs, 0, REVERB_PREDELAY_MAX_MS, base.preDelayMs),
     width: clampParam(patch.width, 0, 1, base.width),
     returnLevel: clampParam(patch.returnLevel, 0, 1, base.returnLevel),
+    // 0 is meaningful here (it means "off"), so it is clamped to a range that includes it rather than to a positive minimum.
+    sendHighpassHz: clampParam(patch.sendHighpassHz, 0, 20000, base.sendHighpassHz),
   };
 }
 
@@ -237,6 +256,8 @@ export class ReverbBus {
 
   private readonly ctx: BaseAudioContext;
   private readonly convolver: ConvolverNode;
+  /** Send shaping; see {@link ReverbParams.sendHighpassHz}. */
+  private readonly sendHighpass: BiquadFilterNode;
   private params: ReverbParams;
   private impulse: AudioBuffer | null = null;
   private buildCount = 0;
@@ -258,15 +279,40 @@ export class ReverbBus {
     this.currentReturnTarget = initialReturn;
     this.output.gain.setValueAtTime(initialReturn, ctx.currentTime);
 
-    this.input.connect(this.convolver);
+    /**
+     * The send's high-pass sits **before** the convolver, so the tail is built from a band-limited signal rather than
+     * filtered afterwards (filtering the return would leave the low end in the tail's own decay envelope, which is most of
+     * the mud).
+     */
+    this.sendHighpass = ctx.createBiquadFilter();
+    this.sendHighpass.type = "highpass";
+    this.sendHighpass.Q.value = 0.707;
+    this.applySendHighpass();
+
+    this.input.connect(this.sendHighpass);
+    this.sendHighpass.connect(this.convolver);
     this.convolver.connect(this.output);
 
     this.rebuildImpulse();
   }
 
+  /**
+   * Write the send high-pass into the node, with 0 meaning genuinely bypassed.
+   *
+   * A `highpass` at 0 Hz is not bypassed — it is a filter with a degenerate corner — so the frequency is clamped to a value
+   * that is inaudible in practice and the node is left in place (rebuilding the graph to remove one node would mean
+   * rebuilding the IR).
+   */
+  private applySendHighpass(): void {
+    const hz = this.params.sendHighpassHz;
+    const value = Number.isFinite(hz) && hz > 0 ? Math.min(hz, 20000) : 10;
+    this.sendHighpass.frequency.setValueAtTime(value, this.ctx.currentTime);
+  }
+
   public setParams(patch: Partial<ReverbParams>): void {
     if (this.disposed) return;
     const next = resolveParams(this.params, patch);
+    const sendShapingChanged = next.sendHighpassHz !== this.params.sendHighpassHz;
     const previous = this.params;
     this.params = next;
 
@@ -276,6 +322,7 @@ export class ReverbBus {
       next.preDelayMs !== previous.preDelayMs ||
       next.width !== previous.width;
     if (synthesisChanged) this.rebuildImpulse();
+    if (sendShapingChanged) this.applySendHighpass();
 
     this.applyReturnLevel();
   }
@@ -289,6 +336,7 @@ export class ReverbBus {
     this.disposed = true;
     try {
       this.input.disconnect();
+      this.sendHighpass.disconnect();
     } catch {
       /* already torn down */
     }

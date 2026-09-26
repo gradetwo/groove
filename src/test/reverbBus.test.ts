@@ -516,7 +516,16 @@ describe("ReverbBus: cheap parameter changes and stable graph", () => {
 
     expect((convolver as any).normalize).toBe(false);
     expect(convolver!.buffer).toBe(bus.getImpulse());
-    expect((convolver as any).incoming).toContain(input);
+    /**
+     * The send's high-pass sits between them: `input -> highpass -> convolver`.
+     *
+     * Filtering the send rather than the return is the point — the tail is then built from a band-limited signal instead of
+     * having its low end filtered after the fact, which leaves the mud inside the tail's own decay envelope.
+     */
+    const sendFilter = (convolver as any).incoming[0];
+    expect(sendFilter.type).toBe("highpass");
+    expect(sendFilter.Q.value).toBeCloseTo(0.707, 3);
+    expect((sendFilter as any).incoming).toContain(input);
     expect((output as any).incoming).toContain(convolver);
 
     bus.setParams({ decaySec: 2, damping: 0.8 });
@@ -524,6 +533,27 @@ describe("ReverbBus: cheap parameter changes and stable graph", () => {
     expect(bus.output).toBe(output);
     expect(getConvolver()).toBe(convolver);
     expect(convolver!.buffer).toBe(bus.getImpulse());
+  });
+
+  it("shapes the send, and 0 means genuinely bypassed", () => {
+    /**
+     * The bus used to take whatever a track sent it — `input -> convolver` — so kick and bass energy went into a stereo
+     * tail. The filter is on the **send**, before the convolver: filtering the return afterwards would leave the low end
+     * inside the tail's own decay envelope, which is most of the mud.
+     */
+    const { bus: shaped } = makeBus({ sendHighpassHz: 160 });
+    const shapedFilter = (shaped as unknown as { sendHighpass: { frequency: { value: number }; type: string } })
+      .sendHighpass;
+    expect(shapedFilter.type).toBe("highpass");
+    expect(shapedFilter.frequency.value).toBe(160);
+
+    // 0 is the "off" case and must not leave a degenerate 0 Hz high-pass in the path.
+    const { bus: off } = makeBus({ sendHighpassHz: 0 });
+    expect((off as unknown as { sendHighpass: { frequency: { value: number } } }).sendHighpass.frequency.value).toBe(10);
+
+    // …and it stays live, because the genre's own FX profile is written after the graph is built.
+    shaped.setParams({ sendHighpassHz: 90 });
+    expect(shapedFilter.frequency.value).toBe(90);
   });
 
   it("disposes cleanly and is inert afterwards", () => {

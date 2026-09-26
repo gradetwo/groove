@@ -153,6 +153,7 @@ try {
       noGs1: process.argv.includes("--no-gs1"),
       noStrip: process.argv.includes("--no-strip"),
       noBusComp: process.argv.includes("--no-bus-comp"),
+      reverbHpf: arg("--reverb-hpf", ""),
     }
   );
   page.on("pageerror", (error) => console.error("[page]", error.message));
@@ -223,6 +224,9 @@ try {
         // Read from the init-script flags rather than a destructured parameter: four flags have now failed to arrive that
         // way in this file, and `__probeFlags` is one object the page reads by name.
         ...(flags.noBusComp ? { masterBusCompEnabled: false } : {}),
+        // Read from the init-script flags, never from a bare Node variable: five flags have now failed to reach this
+        // evaluate that way, each costing a run to notice.
+        ...(flags.reverbHpf === "" ? {} : { reverbSendHighpassHz: Number(flags.reverbHpf) }),
         bars,
         seamlessLoop,
         trackStates: mixerStates,
@@ -250,6 +254,7 @@ try {
         sampleRate: buffer.sampleRate,
         channels: buffer.numberOfChannels,
         limiterKind: null,
+        reverbHpfEffective: globalThis.__reverbHpfEffective ?? null,
         bpm: pattern.bpm,
         tracks: pattern.tracks.length,
         // The resolved table is already the track map (`ResolvedGenreMix = Record<MixTrackId, TrackMix>`).
@@ -269,6 +274,9 @@ try {
   await browser.close();
 
   if (result.error) throw new Error(result.error);
+  if (process.argv.some((a) => a.startsWith("--reverb-hpf")) || process.env.GROOVE_PRINT_REVERB_HPF) {
+    console.log(`reverb send high-pass in this render: ${result.reverbHpfEffective} Hz`);
+  }
   if (captureEvents && capturesOut) {
     const captures = result.captures ?? [];
     fs.writeFileSync(capturesOut, JSON.stringify(captures, null, 1));
