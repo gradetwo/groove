@@ -564,12 +564,28 @@ export const TOOLS: ToolDefinition[] = [
         const pkg = validateGroovePackage(exportProjectPackage(project, APP_VERSION, arrangement));
         const dir = (args.outputDir as string | undefined) || process.env.GROOVE_MCP_OUT || mkdtempSync(path.join(os.tmpdir(), "groove-mcp-"));
         mkdirSync(dir, { recursive: true });
-        const file = path.join(dir, `${(song.name || song.genreId).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "song"}.groove`);
-        writeFileSync(file, `${JSON.stringify(pkg, null, 2)}\n`);
+        /**
+         * The name keeps whatever script the caller wrote, and strips only what a path cannot carry.
+         *
+         * The first version whitelisted `[a-z0-9]`, so a Chinese title became nothing and every export was `song.groove` — a
+         * composer reported exactly that. Separators, control characters and leading dots go; letters and digits of any script
+         * stay, which is what modern filesystems and browsers accept.
+         */
+        const slug = (song.name || song.genreId)
+          .normalize("NFKC")
+          .replace(/[\s/\\:*?"<>|]+/g, "-")
+          .replace(/[\u0000-\u001f\u007f]/g, "")
+          .replace(/^[.\-]+|[.\-]+$/g, "")
+          .slice(0, 40);
+        const file = path.join(dir, `${slug || "song"}.groove`);
+        const json = `${JSON.stringify(pkg, null, 2)}\n`;
+        writeFileSync(file, json);
         return {
           path: file,
           filename: path.basename(file),
-          bytes: Buffer.byteLength(JSON.stringify(pkg)),
+          // The bytes actually written, not a second serialisation of the same object: the two disagree, and the file is the
+          // one that matters (a composer noticed the mismatch).
+          bytes: Buffer.byteLength(json),
           version: pkg.version,
           clips: slots,
           sections: song.sections.length,

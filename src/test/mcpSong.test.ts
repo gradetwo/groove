@@ -391,3 +391,26 @@ describe("the composer's v2 report: two bugs in the song summary", () => {
     expect(Object.keys(song.clips ?? {}).sort()).toEqual(["A", "B", "C"]);
   });
 });
+
+describe("the composer's v2 report: the exported file's name and size", () => {
+  /**
+   * Two small things it reported, both about the file rather than the song.
+   *
+   * The name whitelisted `[a-z0-9]`, so a Chinese title collapsed to nothing and every export was `song.groove`; and `bytes`
+   * described a second, compact serialisation while the file written was pretty-printed, so the two numbers disagreed.
+   */
+  const slugFor = (name: string) =>
+    name
+      .normalize("NFKC")
+      .replace(/[\s/\\:*?"<>|]+/g, "-")
+      .replace(/[\u0000-\u001f\u007f]/g, "")
+      .replace(/^[.\-]+|[.\-]+$/g, "")
+      .slice(0, 40);
+
+  it("keeps a title's own script and drops only what a path cannot carry", () => {
+    expect(slugFor("假如时光能够倒流")).toBe("假如时光能够倒流");
+    expect(slugFor("My Ballad")).toBe("My-Ballad");
+    expect(slugFor("../../etc/passwd")).toBe("etc-passwd");
+    expect(slugFor("  ..  ")).toBe("");
+  });
+});
