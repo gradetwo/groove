@@ -122,6 +122,15 @@ jobs:
           npm run check:timbre
           npm run check:loudness:fresh
 
+      # Stage 3 of `docs/DAW_MCP_REFACTOR.md`: does a fade at the arrangement's section boundaries move the discontinuity
+      # count `analyze_audio` reports, and does it leave a song with no jumps alone? The probe drives a browser and renders the
+      # club form several times, which is minutes of work and the reason it belongs here rather than on a laptop — the club form
+      # alone took the browser down when it was run with a smaller budget.
+      - name: Section-boundary fade (stage 3 measurement)
+        if: inputs.scope == 'audio' || inputs.scope == 'all'
+        run: node scripts/probe_arrangement_audio.mjs --genre=chicago-house
+
+
       # P0.9 — the 159-genre trim re-record. It runs **chunked, across processes**: a single browser process exhausts the
       # WASM budget after roughly forty renders and the run aborts on its own sentinel (which is why it never completed on a
       # laptop either). `record:loudness` is `run_loudness_sweep.mjs`, which measures eight genres per fresh process.
