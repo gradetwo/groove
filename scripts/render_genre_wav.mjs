@@ -132,11 +132,37 @@ try {
   if (!engine) throw new Error(`unknown browser ${browserName} (chromium | webkit | firefox)`);
   const browser = await engine.launch({ args: browserName === "chromium" ? ["--no-sandbox"] : [] });
   const page = await browser.newPage();
+  /**
+   * Probe flags go in **before** the app loads, not through `page.evaluate`'s argument list.
+   *
+   * The destructured parameters have silently failed to arrive three times in this file (`--no-note-off`, the pattern push,
+   * and now the event capture), each time costing a run to notice. An init script is a single serialisable object the page
+   * reads by name, so a flag is either in `__probeFlags` or it is not — there is no plumbing left to get wrong.
+   */
+  await page.addInitScript(
+    (flags) => {
+      window.__probeFlags = flags;
+    },
+    {
+      noNoteOff: process.argv.includes("--no-note-off"),
+      captureEvents: process.argv.includes("--capture-events"),
+      noGs1: process.argv.includes("--no-gs1"),
+    }
+  );
   page.on("pageerror", (error) => console.error("[page]", error.message));
-  await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
+  await page.goto(captureEvents ? `${url}${url.includes("?") ? "&" : "?"}capture=1` : url, {
+    waitUntil: "domcontentloaded",
+    timeout: 60000,
+  });
 
   const result = await page.evaluate(
     async ({ genreId, bars, seamlessLoop, noGs1, stemRole, soloRole, gs1Param, sendsOff, noNoteOff, captureEvents, raw }) => {
+      const pageSearch = (globalThis.location?.search) ?? "(no location)";
+      const flags = globalThis.__probeFlags ?? {};
+      const flagSetImmediately = (() => {
+        if (flags.captureEvents) globalThis.__gs1Capture = true;
+        return Boolean(globalThis.__gs1Capture);
+      })();
       const [genres, wav, mix, trackStates, gs1Tracks] = await Promise.all([
         import("/src/data/genres/index.ts"),
         import("/src/audio/WavExporter.ts"),
@@ -147,8 +173,7 @@ try {
         import("/src/audio/gs1/gs1Tracks.ts"),
       ]);
       if (noGs1) gs1Tracks.setGs1RoutingEnabled(false);
-      if (noNoteOff) globalThis.__noNoteOff = true;
-      if (captureEvents) globalThis.__gs1Capture = true;
+      if (flags.noNoteOff) globalThis.__noNoteOff = true;
       if (gs1Param) {
         const [rawId, rawValue] = String(gs1Param).split("=");
         const patches = await import("/src/data/gs1Patches.ts");
@@ -196,6 +221,7 @@ try {
       const captures = captureEvents ? (globalThis.__gs1Captures ?? []) : [];
       const captureEnabled = Boolean(globalThis.__gs1CaptureEnabled);
       const captureFlag = Boolean(globalThis.__gs1Capture);
+      const sameRealm = captureFlag === flagSetImmediately;
       const bytes = new Uint8Array(wav.encodeAudioBufferToWav(buffer));
       /**
        * Base64 in chunks, and the chunk is 32 KB rather than 1 MB: `String.fromCharCode.apply` passes every byte as
@@ -222,6 +248,9 @@ try {
               Object.entries(mix.GENRE_MIX_RESOLVED[genreId]).map(([id, t]) => [id, Number(t.pan.toFixed(3))])
             )
           : null,
+        // The event capture, when `--capture-events` asked for it. This field's absence is what made three rounds of
+        // diagnostics read `undefined`: the page was collecting them correctly and the probe never handed them back.
+        ...(captureEvents ? { captures, pageSearch, captureFlag, captureEnabled } : {}),
       };
     },
     { genreId: genre, bars, seamlessLoop, noGs1, stemRole, soloRole, gs1Param, sendsOff, noNoteOff, captureEvents, raw }
@@ -231,9 +260,11 @@ try {
 
   if (result.error) throw new Error(result.error);
   if (captureEvents && capturesOut) {
-    fs.writeFileSync(capturesOut, JSON.stringify(result.captures ?? [], null, 1));
+    const captures = result.captures ?? [];
+    fs.writeFileSync(capturesOut, JSON.stringify(captures, null, 1));
     console.log(
-      `captured ${(result.captures ?? []).length} event(s) -> ${capturesOut} (capture flag flag in page: ${result.captureFlag}, exporter saw it: ${result.captureEnabled})`
+      `captured ${captures.length} event(s) -> ${capturesOut} (page search "${result.pageSearch}", pool/exporter flag ` +
+        `${result.captureEnabled}, page global ${result.captureFlag})`
     );
   }
   const bytes = Buffer.from(result.base64, "base64");
