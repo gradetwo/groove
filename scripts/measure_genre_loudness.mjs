@@ -29,6 +29,19 @@
  *   node scripts/measure_genre_loudness.mjs --sample=3      # is the report still true?
  *   node scripts/measure_genre_loudness.mjs --force-fallback  # measure the degraded limiter path
  *
+ * **A full sweep must be run as several invocations, not one.**
+ *
+ * The measuring page recycles itself (`--reload-every`) because a page that has rendered many genres starts rendering them
+ * differently — but a reload only resets the JS realm, **not** the process's WebAssembly memory, and the GS-1 core's
+ * `WebAssembly.Memory` is never given back (`WavExporter` documents the wall: ~124 hosts and then every further
+ * `WebAssembly.instantiate` fails, "whatever teardown is used"). A previous 159-genre run therefore aborted exactly as its
+ * own guard requires — `alternative-rock` measured −10.782 LUFS on the warm page and −11.493 after a reload, Δ −0.711 dB —
+ * with the reload having restored nothing.
+ *
+ * So: run chunks of ~20 genres as **separate invocations** (`--limit=N` for the first, `--genres=a,b,…` for the rest, from
+ * the ids the first run lists). Each invocation is a fresh browser process, which is the only thing that actually returns the
+ * WASM budget. `scripts/run_loudness_sweep.mjs` does that and merges the chunks.
+ *
  * A full run recycles its measuring page (see `--reload-every`) because a page that has rendered
  * ~50-75 genres starts rendering the same genre up to 2.45 dB louder; the sentinel check aborts the
  * run if that happens anyway.
@@ -428,8 +441,22 @@ async function measureGenre(page, genreId, trimDb, { discard = false } = {}) {
         };
       };
 
+      /**
+       * Repeats, with a **retry for a render that did not measure**.
+       *
+       * Two full re-records died at the publish-time self-check below, each on a different genre (`salsa`, then `bebop`),
+       * because one of that genre's repeats came back without a finite integrated loudness — the check is right to refuse a
+       * hole, but a single transient failure should not cost the whole run. A non-finite result is re-rendered; only if it
+       * stays non-finite does the row go missing, and then the check below reports it by name as before.
+       */
       for (let r = 0; r < repeatsArg; r++) {
-        runs.push(await render(mixModule.applyGenreMixDefaults(genre.sequencer_pattern, genre.id)));
+        let measured = null;
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          measured = await render(mixModule.applyGenreMixDefaults(genre.sequencer_pattern, genre.id));
+          if (Number.isFinite(measured.integratedLufs)) break;
+          console.log(`  retrying ${genre.id}: attempt ${attempt + 1} measured ${measured.integratedLufs}`);
+        }
+        runs.push(measured);
       }
       // Median across repeats: the renderer's noise-based drum voices are not seeded,
       // so a single render carries a few tenths of a dB of run-to-run variation.
