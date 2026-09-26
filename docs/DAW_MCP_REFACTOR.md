@@ -183,6 +183,26 @@ migration that changed behaviour, and it should have to say so.
 read the arrangement directly instead of reconstructing one. Every other module in the table then keeps working against the same
 shape until it is its turn.
 
+### Stage 5's ALS item, surveyed (2026-09-28)
+
+"One clip per section" is not a small change, and the survey says exactly why — which is the point of surveying it.
+
+* `export_ableton` builds its file from **one pattern**: `exportAbleton(pattern, { bpm, genreName })` calls
+  `buildAbletonLiveSetXml({ bpm, pattern, genreName })` (`mcp/exporting.ts:40-57`);
+* the builder's input is `ExportAlsOptions`, whose required field is **`pattern: SequencerPattern`** (singular,
+  `src/audio/AbletonExporter.ts:16-18`).
+
+So an exported **song** becomes a single flattened clip today, and giving it one clip per section means the builder has to accept
+**a list of clips with where each one starts** — a shape change in the exporter, not a flag.
+
+**The design, recorded rather than guessed**: the song's sections are already a list with lengths, so the exporter needs
+`clips: Array<{ pattern, startBeats, name }>` and a song path that produces it by flattening **each section on its own** — which
+the existing `flattenSong` can do by being handed a one-section song, so no new flattening logic is needed.
+
+**How it would be verified**: parse the produced XML and assert the `<MidiClip>` elements sit at **distinct, increasing start
+positions** and that their count equals the section count. That is a check on the artifact Ableton will open, not on the code that
+produced it, which is the only kind of evidence this item deserves.
+
 ## What this is not
 
 It is not a rewrite of the sequencer, the audio engine or the genre library — those are the parts this project has spent its
