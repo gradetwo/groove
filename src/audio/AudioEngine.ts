@@ -19,7 +19,7 @@ import {
 } from "./DrumKitModels";
 import { playPolySynthNote, DEFAULT_SYNTH_PRESETS, SynthPreset } from "./PolySynth";
 import { resolveInstrumentPreset } from "./instrumentPresets";
-import { EffectsRack, EffectsRackState, DEFAULT_FX_STATE } from "./EffectsRack";
+import { EffectsRack, EffectsRackState } from "./EffectsRack";
 import { LiveRecorder, QuantizedStepResult } from "./LiveRecorder";
 import { initIosAudioUnlock } from "./iosAudioUnlock";
 import { ensureLiveGs1Capability, gs1Capability } from "./gs1/gs1Capability";
@@ -151,24 +151,16 @@ export class AudioEngine {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
   /**
-   * Genre loudness-match gain. Deliberately a *separate* stage from `masterGain` so
-   * `getMasterVolume()` / `getEffectiveMasterVolume()` and the console fader keep
-   * meaning "the level the user asked for".
+   * The master ceiling (worklet when available, compressor fallback otherwise).
+   *
+   * The engine used to keep its own `loudnessTrimGain`, `limiter` and `channelSplitter` handles beside this one. Nothing read
+   * them — the graph-introspection tests address `masterGraph`'s own fields — so they were dead state, and the comment on
+   * `limiter` claimed a purpose ("downstream analyser wiring still addresses one node") that was not true of a private field
+   * no code could see. The graph owns those nodes; the engine holds the handle it actually calls.
    */
-  private loudnessTrimGain: GainNode | null = null;
-  /**
-   * Master ceiling input node. E-12: this is the `input` of the true-peak lookahead
-   * limiter handle (`masterLimiter`), kept under its historical name so the graph
-   * introspection tests and downstream analyser wiring still address one node. On the
-   * worklet path `masterLimiter.output` is a distinct node; on the compressor fallback
-   * the two are the same node.
-   */
-  private limiter: AudioNode | null = null;
-  /** The master ceiling (worklet when available, compressor fallback otherwise). */
   private masterLimiter: MasterLimiterHandle | null = null;
   private analyser: AnalyserNode | null = null;
   private masterAnalyser: AnalyserNode | null = null;
-  private channelSplitter: ChannelSplitterNode | null = null;
   private analyserL: AnalyserNode | null = null;
   private analyserR: AnalyserNode | null = null;
   private isPlaying: boolean = false;
@@ -243,7 +235,6 @@ export class AudioEngine {
   // Metronome, Count-In, and Loop Region (P3-07)
   private isMetronome: boolean = false;
   private isCountIn: boolean = false;
-  private countInRemaining: number = 0;
   private loopRange: [number, number] | null = null;
 
   /** N-02: binaural (HRTF) monitoring toggle; off by default. */
@@ -401,10 +392,8 @@ export class AudioEngine {
           this.gs1Pool = this.gs1PoolFactory
             ? this.gs1PoolFactory(this.ctx)
             : new Gs1VoicePool(this.ctx);
-          this.limiter = graph.limiter.input;
           this.masterLimiter = graph.limiter;
           this.masterFxRack = graph.fxRack;
-          this.loudnessTrimGain = graph.loudnessTrimGain;
 
           // Metering taps are owned by the graph; these references keep the rest of the
           // engine (analyser getters, spectrum/phase consumers) unchanged.
@@ -2042,7 +2031,9 @@ export class AudioEngine {
      * auditioning them as the lane's declared instrument would make two different pads sound identical.
      * The scheduler never passes it, so a pattern still renders exactly as its data says.
      */
-    instrumentOverride?: string
+    // Kept in the option bag because callers pass it, and deliberately unused: auditioning a pad must not impersonate the
+    // lane's declared instrument (see the note above), which is what reading this would do.
+    _instrumentOverride?: string
   ): void {
     if (!this.ctx) this.initAudioContext();
     if (!this.ctx) return;
@@ -2778,11 +2769,8 @@ export class AudioEngine {
     this.gs1Pool?.dispose();
     this.gs1Pool = null;
     this.masterGain = null;
-    this.loudnessTrimGain = null;
-    this.limiter = null;
     this.analyser = null;
     this.masterAnalyser = null;
-    this.channelSplitter = null;
     this.analyserL = null;
     this.analyserR = null;
   }

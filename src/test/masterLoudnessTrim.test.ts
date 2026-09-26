@@ -29,11 +29,20 @@ describe("master loudness trim", () => {
 
   it("keeps the trim as the last linear stage before the limiter", () => {
     const engine = new AudioEngine();
-    const internals = engine as unknown as {
+    /**
+     * The graph, not the engine.
+     *
+     * The engine used to keep copies of these handles (`loudnessTrimGain`, `limiter`, `channelSplitter`) that nothing read —
+     * the comment claimed the introspection tests addressed them, but they were private, so nothing could. `masterGraph` owns
+     * the nodes and this test asserts the graph's topology, which is the thing it was always checking.
+     */
+    const internals = (engine as unknown as { masterGraph: unknown }).masterGraph as {
       masterGain: any;
       loudnessTrimGain: any;
-      masterFxRack: { inputNode: any; outputNode: any };
-      limiter: any;
+      /** The graph calls it `fxRack`; the engine's historical name for the same object was `masterFxRack`. */
+      fxRack: { inputNode: any; outputNode: any };
+      /** The handle; the ceiling node itself is `limiter.input` (that is what the engine used to copy). */
+      limiter: { input: { incoming: any[] } };
     };
 
     expect(internals.loudnessTrimGain).toBeTruthy();
@@ -43,17 +52,17 @@ describe("master loudness trim", () => {
     // measured loudness). See the topology note in masterGraph.ts.
     // Q12: the DC blocker's biquad is the only thing between the fader and the rack, so the
     // fader is asserted indirectly — it is the blocker's source, and the blocker is one node.
-    expect(internals.masterFxRack.inputNode.incoming.length).toBe(1);
-    expect(internals.masterFxRack.inputNode.incoming[0].type).toBe("highpass");
-    expect(internals.loudnessTrimGain.incoming).toContain(internals.masterFxRack.outputNode);
+    expect(internals.fxRack.inputNode.incoming.length).toBe(1);
+    expect(internals.fxRack.inputNode.incoming[0].type).toBe("highpass");
+    expect(internals.loudnessTrimGain.incoming).toContain(internals.fxRack.outputNode);
     /**
      * The trim is still the last *linear* gain, and the two stages that follow it are the fixed
      * makeup and the mastering bus compressor — the stage that lowers the crest the limiter
      * would otherwise have to absorb entirely. Both are after the trim, so its meaning (one
      * linear match per genre) is unchanged; the limiter is still the final ceiling.
      */
-    expect(internals.limiter.incoming.length).toBe(1);
-    const beforeLimiter = internals.limiter.incoming[0];
+    expect(internals.limiter.input.incoming.length).toBe(1);
+    const beforeLimiter = internals.limiter.input.incoming[0];
     expect(beforeLimiter).not.toBe(internals.loudnessTrimGain);
     // A DynamicsCompressorNode double tuned to the mastering bus settings, i.e. the bus
     // compressor rather than a bare gain.
@@ -131,7 +140,10 @@ describe("master loudness trim", () => {
 
   it("never disturbs the master fader or the hearing-protection clamp", () => {
     const engine = new AudioEngine();
-    const internals = engine as unknown as { masterGain: FakeGainNode; loudnessTrimGain: FakeGainNode };
+    const internals = (engine as unknown as { masterGraph: unknown }).masterGraph as {
+      masterGain: FakeGainNode;
+      loudnessTrimGain: FakeGainNode;
+    };
     engine.setHearingProtection(true);
     engine.setMaxVolumeLimit(0.85);
     engine.setMasterVolume(0.8);

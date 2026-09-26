@@ -34,7 +34,6 @@ import { ensureOfflineGs1Capability } from "./gs1/gs1OfflineCapability";
 import { LOUDNESS_TRIM_MAX_DB, LOUDNESS_TRIM_MIN_DB, getGenreLoudnessTrimDb } from "../data/genreMix";
 import { createSeededNoiseBuffer, noisePositionFor } from "./noise";
 import {
-  chordVoicingForStep,
   chordNotesForStep,
   chordVoiceGain,
   chordNoteDuration,

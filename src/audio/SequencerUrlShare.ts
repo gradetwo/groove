@@ -3,7 +3,7 @@
  * Serializes groove state into a compact URL-safe base64 string for instant sharing.
  */
 
-import { MAX_NOTE_GATE_STEPS, SequencerPattern, SequencerTrack } from "../types/genre";
+import { MAX_NOTE_GATE_STEPS, SequencerTrack } from "../types/genre";
 import {
   CLIP_SLOTS,
   MAX_SECTION_BARS,

@@ -6,7 +6,7 @@
  */
 
 import { scheduleNoteEnvelope } from "./noteEnvelope";
-import { getChordMidiNotes, ChordDefinition, Inversion } from "../utils/chordTheory";
+import { getChordMidiNotes, ChordDefinition } from "../utils/chordTheory";
 import { VoiceRegistry, createEngineAudioContext } from "./voiceRegistry";
 import { createMasterLimiter, type MasterLimiterHandle } from "./MasterLimiter";
 import { initIosAudioUnlock } from "./iosAudioUnlock";
@@ -34,8 +34,6 @@ export interface ChordPlaybackInfo {
 export class ChordAudioEngine {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
-  /** E-12: master ceiling input node (see `AudioEngine.limiter`). */
-  private limiter: AudioNode | null = null;
   /** E-12: the true-peak limiter handle (worklet or compressor fallback). */
   private masterLimiter: MasterLimiterHandle | null = null;
   private isPlaying = false;
@@ -59,7 +57,6 @@ export class ChordAudioEngine {
   private timerId: any = null;
   private nextEventTime = 0;
   private currentChordIdx = 0;
-  private currentBeat = 0;
   private activeChords: ChordDefinition[] = [];
   private onPlaybackStep?: (info: ChordPlaybackInfo) => void;
 
@@ -79,7 +76,6 @@ export class ChordAudioEngine {
           // (Worklet when available, legacy compressor fallback otherwise.)
           const limiterHandle = createMasterLimiter(this.ctx);
           this.masterLimiter = limiterHandle;
-          this.limiter = limiterHandle.input;
 
           this.masterGain.connect(limiterHandle.input);
           limiterHandle.output.connect(this.ctx.destination);
@@ -292,7 +288,7 @@ export class ChordAudioEngine {
 
     const gain = this.ctx.createGain();
     const peakGain = Math.min(0.9, velocity * 0.24);
-    const envelope = scheduleNoteEnvelope(gain.gain, {
+    scheduleNoteEnvelope(gain.gain, {
       now,
       peak: peakGain,
       gateSec: noteDuration,
@@ -356,7 +352,7 @@ export class ChordAudioEngine {
 
     const gain = this.ctx.createGain();
     const peakGain = Math.min(0.85, velocity * 0.22);
-    const envelope = scheduleNoteEnvelope(gain.gain, {
+    scheduleNoteEnvelope(gain.gain, {
       now,
       peak: peakGain,
       gateSec: noteDuration,
@@ -536,7 +532,6 @@ export class ChordAudioEngine {
     this.onPlaybackStep = onStep;
     this.isPlaying = true;
     this.currentChordIdx = 0;
-    this.currentBeat = 0;
     this.nextEventTime = this.ctx.currentTime + 0.05;
 
     this.scheduleNext();
@@ -599,6 +594,5 @@ export class ChordAudioEngine {
     }
     this.ctx = null;
     this.masterGain = null;
-    this.limiter = null;
   }
 }

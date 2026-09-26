@@ -329,12 +329,6 @@ export function buildMasterGraph(
       : typeof options.limiterDetector === "object"
         ? (options.limiterDetector ?? null)
         : null;
-  const limiterDetectorNode: AudioNode | null =
-    options.limiterDetector === "internal"
-      ? detectorBus
-      : typeof options.limiterDetector === "object"
-        ? (options.limiterDetector ?? null)
-        : null;
   const busComp: BusCompressorHandle = createBusCompressor(ctx, {
     thresholdDb: options.masterBusCompThresholdDb,
     kneeDb: options.masterBusCompKneeDb,

@@ -69,8 +69,6 @@ export function generateMidiBytes(options: ExportMidiOptions): Uint8Array {
     : resolution === "1/32" 
     ? TICKS_PER_QUARTER / 8 
     : TICKS_PER_QUARTER / 4;
-  const noteDurationTicks = Math.round(ticksPerStep * 0.85);
-
   const allEvents: MidiEvent[] = [];
 
   // 1. Tempo Meta Event at tick 0

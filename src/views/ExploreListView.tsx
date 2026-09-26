@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { GenreCover } from "../components/GenreCover";
+import { useCoverWarmup } from "../hooks/useCoverWarmup";
 import { 
   Search, 
   Sliders, 
@@ -29,6 +30,9 @@ export interface ExploreListViewProps {
   onOpenHelp?: () => void;
   isFallback?: boolean;
 }
+
+/** How many of the list's covers to warm: two rows of the widest grid, plus slack. */
+const EXPLORE_WARM_COVERS = 9;
 
 const CATEGORY_COLORS: Record<GenreCategory, { badge: string; text: string; border: string }> = {
   Electronic: { badge: "bg-cyan-500/15 border-cyan-500/40 text-cyan-300", text: "text-cyan-400", border: "border-cyan-500/40" },
@@ -190,6 +194,18 @@ export const ExploreListView: React.FC<ExploreListViewProps> = ({
       }
     }
   };
+
+  /**
+   * Warm the first cards of the filtered list, which are the ones the first paint shows.
+   *
+   * The grid renders every group, so its images are fetched as each element appears; warming the head means the visible cards
+   * are ready before they are painted rather than after. See `useCoverWarmup` for the dedupe/skin/concurrency rules.
+   */
+  const warmCoverIds = useMemo(
+    () => filteredGenres.slice(0, EXPLORE_WARM_COVERS).map((genre) => genre.id),
+    [filteredGenres]
+  );
+  useCoverWarmup(warmCoverIds);
 
   return (
     <div 

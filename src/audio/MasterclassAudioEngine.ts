@@ -31,7 +31,6 @@ export class MasterclassAudioEngine {
   private bpm = 100;
   private timerId: number | null = null;
   private nextNoteTime = 0;
-  private currentCycle = 0;
 
   // Master Gain & Output with Brickwall Limiter
   private masterGain: GainNode | null = null;
@@ -354,7 +353,6 @@ export class MasterclassAudioEngine {
     if (this.masterGain) rampBusMute(this.masterGain, this.ctx, false, this.masterVolume);
     this.isPlaying = true;
     this.nextNoteTime = this.ctx.currentTime + 0.05;
-    this.currentCycle = 0;
     this.scheduledPulseTimes = [];
 
     const lookahead = 25; // ms
