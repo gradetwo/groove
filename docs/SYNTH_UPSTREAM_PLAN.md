@@ -123,6 +123,18 @@ narrow now: the envelope **does not ramp at all** at note-off — and an A/B agr
 release: `ENV_RELEASE` 4 s shrinks it to 61× the sound's own median slope, the shipped 1.3 s gives 181×, and 0.15 s makes it
 **2487×**. A release that is *inversely* proportional to the click is not a release; it is a cut.
 
+**The A/B ran, and the trigger is the note-off.** With the GS-1 note-offs never scheduled (`--no-note-off`), the same lead
+stem's high-frequency outliers fall from **181x / 154x / 135x** the signal's own median slope to **41x / 38x / 33x** — a
+4.5x reduction, and the surviving peaks move to different times (the note-ons). So the step is triggered by the off.
+
+**And the core is not where it goes wrong.** Three upstream cases now pass: a note-off between two `process` calls, a release
+**mid-attack** (the shipped lane's 0.15 s attack against its ~0.148 s notes, which is the stage-switch path the first test
+missed), and a one-sample chunk. The envelope ramps in all of them.
+
+What is left is the **worklet's application of the off** — or the host's framing of its frame — and the next experiment starts
+there: log the chunk boundaries and the applied frames around an off, and compare against the same note released through the
+core directly. The probe flag stays, because it is the control that measurement needs.
+
 **Next experiment, once the loudness re-record stops using the machine**: render the same stem with (a) the note-offs never
 scheduled and (b) the worklet's supersede rule disabled, both judged by the high-frequency envelope view. The plan already
 called for re-running (b) with a detector that can see the pop; this is that re-run.
