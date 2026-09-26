@@ -15,7 +15,21 @@ import { chordNotesForStep } from "./chordVoicing";
 
 export interface ExportAlsOptions {
   bpm: number;
+  /**
+   * The clip the export is built from. Still required, so every existing caller and every existing test is unaffected.
+   *
+   * When `clips` is given this is the one the **track list** is taken from — the lanes are the song's, not each section's — and
+   * the clips are what get placed on the timeline.
+   */
   pattern: SequencerPattern;
+  /**
+   * One clip per arrangement section: where each starts, in beats from the top of the set.
+   *
+   * `pattern` alone produces a single session clip, which is what an exported **song** was reduced to until now. A DAW-native
+   * version of a song is one clip per section at its own position, and that is what this list is for
+   * (`docs/DAW_MCP_REFACTOR.md`, stage 5's ALS item). Omitted or empty, the builder behaves exactly as it always has.
+   */
+  clips?: Array<{ pattern: SequencerPattern; startBeats: number; name?: string }>;
   genreName?: string;
   scaleName?: string;
 }
