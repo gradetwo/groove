@@ -85,6 +85,24 @@ The measurement is taken **twice in one page** (before and after) with the same 
 renderer, and the tool is `analyze_audio`'s own counter rather than a second implementation of it. `flattenSong` gains the fade as
 a parameter with a default, so a caller that wants the old behaviour (or a test that wants to compare the two) can ask for it.
 
+### Stage 3's mechanism, corrected before it was written (2026-09-28)
+
+Stage 3 said "`flattenSong` gains the fade". Reading the type says that is the wrong layer: `FlattenedSong` is
+`pattern: SequencerPattern` plus counts and problems (`src/data/songFlatten.ts:21-30`) — **data, not samples** — so there is
+nothing in it to cross-fade. Worse, the flatten is exactly what **discards** the section boundaries, so a renderer handed only the
+flattened pattern cannot know where they were.
+
+The mechanism is therefore two pieces, and both are small:
+
+1. **`flattenSong` returns the boundaries** — the step index each section starts at, which it already computes as it lays the
+   timeline out. That is data, and it is the piece the flatten currently throws away;
+2. **the offline render path fades at those boundaries** — a 5–10 ms fade at the sample position the step index maps to, applied
+   where the samples exist. `renderPatternOffline` already takes the flattened pattern, so it takes the boundary list with it.
+
+That also makes the criterion honest: the count `analyze_audio` reports is a property of the **audio**, so the fade has to be in
+the audio path to move it. A velocity ramp on the boundary steps was considered and rejected — it is an approximation of a fade
+that also **changes the arrangement's data**, which is the opposite of what a DAW should do with a playback concern.
+
 ## What this is not
 
 It is not a rewrite of the sequencer, the audio engine or the genre library — those are the parts this project has spent its
