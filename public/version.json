@@ -1,23 +1,19 @@
 {
-  "version": "2.28.0",
+  "version": "2.28.1",
   "releaseDate": "2026-09-26",
   "changelogCount": 10,
   "latest": {
-    "version": "2.28.0",
+    "version": "2.28.1",
     "date": "2026-09-26",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "手机版：唱片中心印上曲风图，新增「精简动效」开关",
-      "en": "Mobile: the genre's art on the record's label, and a lighter-player switch"
+      "zh": "导出分轨时按你实际听到的混音状态导出",
+      "en": "Stem export now honours the mixer state you are actually hearing"
     },
     "highlights": [
       {
-        "zh": "播放条里的封面改用当前皮肤自己的图（之前仍是旧版共享图）；黑胶唱片中心浅色区域印上该曲风的配图，位于最下层，唱片文字全部保留。",
-        "en": "The mini player now shows the active skin's own cover (it was still the old shared image), and the record's label prints the genre's artwork as its bottom layer with every line of text kept."
-      },
-      {
-        "zh": "设置里新增「精简动效」开关：关闭唱片与界面的装饰动画以省电，声音与走带完全不变；偏好会记住，并在首帧前生效。",
-        "en": "A new Lighter player switch in settings: decorative motion stops to save power while the sound and transport are untouched. The choice is remembered and applied before the first frame."
+        "zh": "修好：导出分轨没有带上实时的静音/独奏/音量/声像，而是从 pattern 重新推导——按 S 独奏后导出的结果可能和你听到的不一致。现在直接取当前引擎的实时状态。",
+        "en": "Fixed: stem export did not carry the live mute/solo/volume/pan and re-derived them from the pattern, so what you exported after pressing S could differ from what you heard."
       }
     ],
     "truncated": false
