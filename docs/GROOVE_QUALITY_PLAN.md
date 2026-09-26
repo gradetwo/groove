@@ -9,6 +9,26 @@ It is deliberately *not* a to-do list derived from the report: four of the repor
 implemented, and the measurements below say which. The two workstreams (this and the skin/gate work) are
 independent — nothing here touches CSS, and the gates added here do not overlap `probe:skins`.
 
+### A4 answered: the riser machinery works and nothing plays it (2026-09-28)
+
+The clean measurement is an **A/B**, not a bar comparison: the riser and the velocity ramp occupy the same bars, so "riser bars
+against the others" measures the ramp (that is the −18…−28% below, and it means nothing). What the texture lane *itself*
+contributes is measured by rendering the same song **with that lane removed** and looking at the difference per bar —
+`probe_arrangement_audio.mjs` now does exactly that, finding the lane the way `songFlatten.textureLanes` finds it.
+
+| genre | texture lane's contribution to the top end, per bar |
+|---|---|
+| chicago-house | −0.3%, −0.9%, −1.3%, −0.9% |
+| uplifting-trance | −0.1%, +0.0%, +0.0%, +0.0% |
+| detroit-techno | −1.0%, −0.4%, −0.8%, +0.8% |
+
+Those are **render noise**, not a contribution: removing the texture lane changes nothing, on any bar, in any of the three. So the
+mechanism is implemented and **the catalogued clips carry no lane for it to play** — a genre's 8-track pattern has no `fx`/`riser`/
+`texture`/`sweep`/`noise` lane, which is why an arrangement that marks a riser produces no audible riser.
+
+That is A4's answer, and it makes the remaining work **content rather than code**: the fix (if the owner wants risers to be
+audible) is to give the clips that should have them a texture lane with material in the arranged bars — a mix/curation change
+across genres, which belongs in the audio batch with the baseline re-record rather than in a probe-driven afternoon.
 ### A4/B5 measured — and corrected: the texture lane **is** implemented (2026-09-28)
 
 The survey said the arrangement already declares a riser. Measuring it says more than that, and it is worth stating plainly:

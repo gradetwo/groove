@@ -209,6 +209,33 @@ try {
       sections: [{ id: "probe-loop", slot: "A", bars: 2 }],
     });
 
+    /**
+     * A4's measurement, and it is an A/B rather than a bar comparison.
+     *
+     * The riser and the velocity ramp occupy the **same** bars (the build step carries both), so comparing "riser bars against
+     * the others" measures the ramp — which is why the first attempt read −25.7% and meant nothing. The clean question is what
+     * the **texture lane itself** contributes, and the way to ask it is to render the same song **without that lane** and look
+     * at the difference per bar. The lane is found the way `songFlatten.textureLanes` finds it (its own regex is not exported,
+     * so it is repeated here deliberately, in a probe).
+     */
+    const textureLaneIds = (tracks) =>
+      tracks
+        .filter((track) =>
+          /(^|[^a-z])(fx|riser|texture|sweep|noise)([^a-z]|$)/.test(`${track.track_id ?? ""} ${track.name ?? ""}`)
+        )
+        .map((track) => track.track_id);
+    const withoutTextureLane = (source) => {
+      const clips = { ...(source.clips ?? {}) };
+      for (const [slot, pattern] of Object.entries(clips)) {
+        if (!pattern?.tracks) continue;
+        const drop = new Set(textureLaneIds(pattern.tracks));
+        if (drop.size === 0) continue;
+        clips[slot] = { ...pattern, tracks: pattern.tracks.filter((track) => !drop.has(track.track_id)) };
+      }
+      return { ...source, clips };
+    };
+    const noTexture = await render(withoutTextureLane(song));
+
     // Bar geometry: every pass of a one-bar clip is one bar, so the step count gives the bar map.
     const flattened = flattenModule.flattenSong(song);
     const bars = sections.reduce((sum, section) => sum + Math.max(1, Math.floor(section.bars)), 0);
@@ -303,6 +330,21 @@ try {
             out.push(highBand(withFill.channels, bar * barSeconds, (bar + 1) * barSeconds, withFill.buffer.sampleRate));
           }
           return out;
+        })(),
+        /**
+         * The texture lane's own contribution to the top end, per bar: the same song rendered without it.
+         *
+         * A positive number in the bars the arrangement marks as a riser, and ~0% elsewhere, is A4's exit criterion measured
+         * rather than asserted.
+         */
+        textureDelta: (() => {
+          const perBar = [];
+          for (let bar = 0; bar < bars; bar += 1) {
+            const withLane = highBand(withFill.channels, bar * barSeconds, (bar + 1) * barSeconds, withFill.buffer.sampleRate);
+            const withoutLane = highBand(noTexture.channels, bar * barSeconds, (bar + 1) * barSeconds, noTexture.buffer.sampleRate);
+            perBar.push(withoutLane > 0 ? (withLane / withoutLane - 1) * 100 : 0);
+          }
+          return { perBar };
         })(),
         seconds: withFill.buffer.duration,
         barSeconds,
@@ -431,6 +473,13 @@ try {
   } else {
     console.log(`✅ Arrangement audio (${genreId}, club form): ${summary.bars} bars rendered`);
     console.log(`   onsets per bar   : ${summary.onsetsPerBar}`);
+    if (measured.audio.textureDelta) {
+      console.log(
+        `   texture lane A/B : top-end proxy ${measured.audio.textureDelta.perBar
+          .map((value, bar) => `bar ${bar} ${value >= 0 ? "+" : ""}${value.toFixed(1)}%`)
+          .join(", ")}`
+      );
+    }
     if (measured.audio.riserBars.length > 0) {
       const mean = (values) => (values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0);
       const relative = mean(measured.audio.otherHigh) > 0
