@@ -80,7 +80,18 @@ for (const [index, chunk] of chunks.entries()) {
   }
 }
 
-/** Merge: every chunk's rows, plus the seed's header fields, into one report. */
+/**
+ * Merge: every chunk's rows into one report, with the header **recomputed** from them.
+ *
+ * The header is a summary of the rows — the library median, the three spreads (legacy → arranged → trimmed) and the list of
+ * genres whose target is capped by dynamics — so inheriting it from a seed describes a different set of measurements. That is
+ * exactly what the first merged sweep did, and the report's own gate caught it: a row whose trim is zero came back with no
+ * post-trim measurement, and the spreads disagreed with the rows beneath them.
+ *
+ * The formulas are the measurement tool's own (`spreadOf` and the percentile of the arranged values); they are repeated here
+ * because that file runs a measurement when imported, and a two-hour sweep is not the place to find out that a summary helper
+ * was not exported.
+ */
 const merged = { ...seed, genres: {} };
 for (const [index] of chunks.entries()) {
   const chunkPath = path.join(chunkDir, `chunk-${String(index).padStart(2, "0")}.json`);
@@ -97,5 +108,55 @@ if (measured !== ids.length) {
 }
 merged.genreCount = measured;
 merged.generatedAt = new Date().toISOString();
+
+/** A zero trim's post-trim measurement is the arranged render — the tool does this too, for rows it measures itself. */
+for (const row of Object.values(merged.genres)) {
+  if (row.trimDb === 0) {
+    for (const [from, to] of [
+      ["arrangedLufs", "trimmedLufs"],
+      ["arrangedPeakDb", "trimmedPeakDb"],
+      ["arrangedTruePeakDb", "trimmedTruePeakDb"],
+      ["arrangedRmsDb", "trimmedRmsDb"],
+    ]) {
+      if (!Number.isFinite(row[to]) && Number.isFinite(row[from])) row[to] = row[from];
+    }
+  }
+}
+
+const spreadOf = (key) => {
+  const values = Object.values(merged.genres)
+    .map((row) => row[key])
+    .filter((value) => Number.isFinite(value))
+    .sort((a, b) => a - b);
+  if (values.length === 0) return null;
+  const at = (fraction) => values[Math.min(values.length - 1, Math.floor(values.length * fraction))];
+  return {
+    count: values.length,
+    min: Number(values[0].toFixed(3)),
+    max: Number(values[values.length - 1].toFixed(3)),
+    median: Number(at(0.5).toFixed(3)),
+    p90p10: Number((at(0.9) - at(0.1)).toFixed(3)),
+    fullRange: Number((values[values.length - 1] - values[0]).toFixed(3)),
+  };
+};
+const pass = (legacyKey, beforeKey, afterKey) => ({
+  legacyBefore: spreadOf(legacyKey),
+  arrangedBefore: spreadOf(beforeKey),
+  after: spreadOf(afterKey),
+});
+merged.spread = {
+  ...pass("legacyLufs", "arrangedLufs", "trimmedLufs"),
+  metric: merged.spread?.metric ?? "LUFS (ITU-R BS.1770-4 gated integrated loudness)",
+  lufs: pass("legacyLufs", "arrangedLufs", "trimmedLufs"),
+  rms: pass("legacyRmsDb", "arrangedRmsDb", "trimmedRmsDb"),
+};
+const arranged = Object.values(merged.genres)
+  .map((row) => row.arrangedLufs)
+  .filter((value) => Number.isFinite(value))
+  .sort((a, b) => a - b);
+merged.libraryMedianLufs = Number(arranged[Math.floor(arranged.length / 2)].toFixed(3));
+merged.cappedByDynamics = Object.entries(merged.genres)
+  .filter(([, row]) => row.targetCappedByDynamics)
+  .map(([id]) => id);
 fs.writeFileSync(outPath, `${JSON.stringify(merged, null, 1)}\n`);
 console.log(`\n✅ ${measured} genre(s) merged into ${path.relative(ROOT, outPath)} from ${chunks.length} process(es)`);

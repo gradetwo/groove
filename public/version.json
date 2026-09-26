@@ -1,25 +1,29 @@
 {
-  "version": "2.32.0",
-  "releaseDate": "2026-09-27",
+  "version": "2.33.0",
+  "releaseDate": "2026-09-28",
   "changelogCount": 10,
   "latest": {
-    "version": "2.32.0",
-    "date": "2026-09-27",
-    "category": "feature",
+    "version": "2.33.0",
+    "date": "2026-09-28",
+    "category": "fix",
     "title": {
-      "zh": "手机播放条常驻，曲库改用 256px 缩略图",
-      "en": "A permanent phone player bar, and 256px cover thumbnails for the library"
+      "zh": "冷启动不再黑屏、图片提前加载、混响送出收低频、锁屏可恢复、发布包更干净",
+      "en": "No black screen on a cold start, warmed artwork, a shaped reverb send, lock-screen resume, and no cover tooling in the payload"
     },
     "highlights": [
       {
-        "zh": "首页播放条不再「点了才出现」：常驻原位，以默认曲风预填名称/BPM/封面/播放键，停止后保留最后听的曲风。",
-        "en": "The phone player bar is permanent: seeded with the default genre (name, BPM, cover, play control), and it keeps naming the last genre after the transport stops."
+        "zh": "首次打开不再黑屏：文档自带内联首屏，React 挂载后接管。",
+        "en": "A cold launch no longer shows a black screen: the document draws its own inline first frame until React takes over."
       },
       {
-        "zh": "曲库封面改为 256×256 缩略图并异步解码：原来每张磁贴解码 1024×1024（130–626KB）只画 56px，实测单张 626570→16729 字节。",
-        "en": "Cover art is a 256x256 thumbnail decoded asynchronously: tiles decoded 1024x1024 (130-626 KB) to draw 56px, measured at 626570 to 16729 bytes."
+        "zh": "图片提前取好并解码：曲库、详情与黑胶标签不再等到显示时才下载。",
+        "en": "Artwork is fetched and decoded before the paint: library, detail and the vinyl label no longer download on appearance."
+      },
+      {
+        "zh": "混响送出加 160Hz 高通：低频立体声成分实测减少 2.8 dB，整轨仅变化 0.001 dB。",
+        "en": "The reverb send is high-passed at 160 Hz: 2.8 dB less low-frequency side energy, with the mix moving 0.001 dB."
       }
     ],
-    "truncated": false
+    "truncated": true
   }
 }
