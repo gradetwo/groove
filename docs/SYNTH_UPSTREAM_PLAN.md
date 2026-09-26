@@ -66,6 +66,31 @@ The next experiment is therefore the split itself, staged rather than inferred: 
 remaining suspect is the chunking or something in the voice's own start (`gs_voice_reset` + `gs_voice_phase` on a slot whose
 filter is still ringing).
 
+### 1b. **Found it**: the pop is the event split — a mid-block note start
+
+The staged experiment the plan asked for, run on the UK Garage lead stem (the owner's "little pop after every note"):
+
+| render | worst step / p99.9 |
+| --- | --- |
+| events at their real frames (the app's own path) | **7.76** |
+| the same events snapped to a **128-frame block boundary** | **1.33** |
+
+Six times smaller, and the difference is nothing but *where in the block a note starts*. So the pop is the worklet's
+**event split**: `gs_process(chunk)` for the part of the block before a due event, then the event, then the rest — and
+something in that sequence puts a step in the output that a block-aligned start does not.
+
+That also explains every earlier refutation rather than contradicting them: the steal fade, the supersede rule, the
+per-note tuning and the patch are all *inputs* to the event, and the defect is in how the event is applied.
+
+**What is left to bisect, with the measurement that makes it cheap:**
+
+* the chunk-invariance test already bounds the *split alone* at 0.0056 on a ~0.5 signal (the parameter smoother's drift,
+  not a discontinuity) — so the step comes from the **event application**, not from a shorter chunk by itself;
+* next: apply the same note with the effects path bypassed (a dry, single-voice patch) and with the reverb/delay returns
+  muted, one at a time, watching the same ratio. A global/effect buffer being reset by a note-on would show up immediately;
+* the honest Groove-side workaround — snapping events to block boundaries — is **not** acceptable: it costs up to 2.9 ms of
+  timing accuracy at 44.1 kHz, which is exactly the thing a professional editor is supposed to get right.
+
 ## 2. Velocity response belongs in the core — **partly done from Groove's side**
 
 Every native preset carries `velocityToCutoff` (1.0–2.2 octaves) and `velocityToAttack`/`Decay`; the core reads velocity
