@@ -103,6 +103,30 @@ two rounds of A/Bs were run against a number that could not answer the question.
 * the honest Groove-side workaround — snapping events to block boundaries — is **not** acceptable: it costs up to 2.9 ms of
   timing accuracy at 44.1 kHz, which is exactly the thing a professional editor is supposed to get right.
 
+### 1h. **The reviewer found it: a one-sample step at every note-off, in the GS-1 render only** (2026-09-26)
+
+The `agy` review (with the prompt fixed to let it *read the audio* — see `docs/AUDIO_REVIEW.md`) was given the UK Garage lead
+rendered two ways, opaque names, and asked one question. Its answer, abridged but not paraphrased:
+
+* the pop is in **`clip-a`** — the **GS-1** render — and **not** in `clip-b`, the native one, which "releases smoothly";
+* it appears at **every one of the twelve note-offs**: 0.603, 1.306, 1.636, 2.424, 3.121, 3.452, 4.241, 4.941, 5.271, 6.058,
+  6.759, 7.089 s;
+* the signal is a **single-sample vertical step** (≈22.7 µs), no amplitude release at all, peaking at **20 005/32768 ≈
+  −4.3 dBFS**, typically −12 to −5.7 dBFS, **larger in the right channel** than the left;
+* spectrally it is a **broadband impulse** flat to Nyquist, with 12–20 kHz energy jumping **40–70 dB** — "a dry, sharp click
+  with no tail".
+
+Three things follow. The times are **exactly** the ones the high-frequency envelope detector reported in §1d (1.306, 3.121,
+4.241, 4.941, 6.759, 7.089…), so that detector was right and my later "it is only the note's own decay" retraction was reading
+a *different* metric's false positives. The right-channel emphasis matches the lane's `pan: +0.6`. And the mechanism is
+narrow now: the envelope **does not ramp at all** at note-off — and an A/B agrees, because the step scales with the patch's
+release: `ENV_RELEASE` 4 s shrinks it to 61× the sound's own median slope, the shipped 1.3 s gives 181×, and 0.15 s makes it
+**2487×**. A release that is *inversely* proportional to the click is not a release; it is a cut.
+
+**Next experiment, once the loudness re-record stops using the machine**: render the same stem with (a) the note-offs never
+scheduled and (b) the worklet's supersede rule disabled, both judged by the high-frequency envelope view. The plan already
+called for re-running (b) with a detector that can see the pop; this is that re-run.
+
 ### 1g. Five detectors, and the pattern they share
 
 The fifth measurement was the most promising and the shortest-lived: correlate the audio's onsets with the notes the plan
