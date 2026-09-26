@@ -136,6 +136,12 @@ jobs:
 
       # A4's last question, measured where the analyser's own loudness and 13-band shape are available: one song rendered twice,
       # as written and with the `fx` lane cleared. A mix that moves means the lane is audible.
+      # The probe speaks to the MCP server over stdio, so the server has to be built — the audio scope builds the **web app**,
+      # which is a different artifact.
+      - name: Build the MCP server (the texture probe uses it)
+        if: inputs.scope == 'audio' || inputs.scope == 'verify' || inputs.scope == 'all'
+        run: npm run mcp:build
+
       - name: Texture-lane contribution (A4)
         if: inputs.scope == 'audio' || inputs.scope == 'verify' || inputs.scope == 'all'
         continue-on-error: true
