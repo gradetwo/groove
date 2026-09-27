@@ -8,6 +8,24 @@
  */
 import { z } from "zod";
 import { clonePattern, findGenre, getChordProgression, getGenre, getGenreRelations, suggestProgression, libraryIndex, listCategories, listChordProgressions, listGenres, listMasterclasses, searchGenres } from "./library";
+
+/**
+ * What to say when a `genreId` does not exist (fifth report, P1.2).
+ *
+ * The composer behind that report typed `"techno"` and `"cinematic-orchestral"`, got "provide either genreId or pattern", and concluded the ids had to be read out
+ * of the source. In fact **`list_genres` is a tool** — the message never said so, and a message that can only say "no" wastes the one moment a caller is
+ * guaranteed to be paying attention. It now names the tool, the count, and the nearest ids when the miss looks like an abbreviation (`techno` → real ids
+ * containing it, such as `detroit-techno`).
+ */
+function unknownGenre(wanted: string): string {
+  const ids = listGenres({ limit: 500 }).genres.map((genre) => genre.id);
+  const tokens = wanted.trim().toLowerCase().split(/[^a-z0-9]+/).filter((token) => token.length >= 3);
+  const near = ids.filter((id) => tokens.some((token) => id.includes(token))).slice(0, 3);
+  return (
+    `no genre "${wanted}" — list_genres returns all ${ids.length} of them with names and categories` +
+    (near.length ? `; closest: ${near.map((id) => `"${id}"`).join(", ")}` : "")
+  );
+}
 import { applyPatternOps, comparePatterns, patternStatistics, validatePattern, type PatternOp } from "./pattern";
 import { patternFromGenre } from "../src/data/genreMix";
 import { generateMelody } from "./melody";
@@ -221,7 +239,11 @@ export const TOOLS: ToolDefinition[] = [
     },
     handler: (args) => {
       const base = patternFromArgs(args as { genreId?: string; pattern?: unknown });
-      if (!base) return failure("provide either genreId or pattern");
+      if (!base) {
+        // A genreId that was supplied but not found deserves better than the message for supplying nothing at all.
+        const wanted = (args as { genreId?: string }).genreId;
+        return failure(wanted ? unknownGenre(wanted) : "provide either genreId or pattern");
+      }
       const result = applyPatternOps(base, args.ops as PatternOp[]);
       return { applied: result.applied, pattern: result.pattern, validation: validatePattern(result.pattern) };
     },
@@ -234,7 +256,11 @@ export const TOOLS: ToolDefinition[] = [
     inputSchema: { genreId: z.string().optional(), pattern: patternSchema.optional() },
     handler: (args) => {
       const pattern = patternFromArgs(args as { genreId?: string; pattern?: unknown });
-      if (!pattern) return failure("provide either genreId or pattern");
+      if (!pattern) {
+        // `create_song` reaches here when a supplied genreId did not resolve, so this is the message most composers will actually see.
+        const wanted = (args as { genreId?: string }).genreId;
+        return failure(wanted ? unknownGenre(wanted) : "provide either genreId or pattern");
+      }
       return validatePattern(pattern);
     },
   },
@@ -246,7 +272,11 @@ export const TOOLS: ToolDefinition[] = [
     inputSchema: { genreId: z.string().optional(), pattern: patternSchema.optional() },
     handler: (args) => {
       const pattern = patternFromArgs(args as { genreId?: string; pattern?: unknown });
-      if (!pattern) return failure("provide either genreId or pattern");
+      if (!pattern) {
+        // `create_song` reaches here when a supplied genreId did not resolve, so this is the message most composers will actually see.
+        const wanted = (args as { genreId?: string }).genreId;
+        return failure(wanted ? unknownGenre(wanted) : "provide either genreId or pattern");
+      }
       return patternStatistics(pattern);
     },
   },
@@ -276,7 +306,11 @@ export const TOOLS: ToolDefinition[] = [
     inputSchema: { genreId: z.string().optional(), pattern: patternSchema.optional(), bpm: z.number().min(20).max(300).optional() },
     handler: (args) => {
       const pattern = patternFromArgs(args as { genreId?: string; pattern?: unknown });
-      if (!pattern) return failure("provide either genreId or pattern");
+      if (!pattern) {
+        // `create_song` reaches here when a supplied genreId did not resolve, so this is the message most composers will actually see.
+        const wanted = (args as { genreId?: string }).genreId;
+        return failure(wanted ? unknownGenre(wanted) : "provide either genreId or pattern");
+      }
       const file = exportMidi(pattern, { bpm: args.bpm as number | undefined });
       return { filename: file.filename, mimeType: file.mimeType, bytes: file.bytes.length, base64: toBase64(file.bytes) };
     },
@@ -350,7 +384,11 @@ export const TOOLS: ToolDefinition[] = [
     },
     handler: (args) => {
       const pattern = patternFromArgs(args as { genreId?: string; pattern?: unknown });
-      if (!pattern) return failure("provide either genreId or pattern");
+      if (!pattern) {
+        // `create_song` reaches here when a supplied genreId did not resolve, so this is the message most composers will actually see.
+        const wanted = (args as { genreId?: string }).genreId;
+        return failure(wanted ? unknownGenre(wanted) : "provide either genreId or pattern");
+      }
       return estimateKey(pattern);
     },
   },
@@ -697,7 +735,11 @@ export const TOOLS: ToolDefinition[] = [
     inputSchema: { genreId: z.string().optional(), pattern: patternSchema.optional(), origin: z.string().url().optional() },
     handler: (args) => {
       const pattern = patternFromArgs(args as { genreId?: string; pattern?: unknown });
-      if (!pattern) return failure("provide either genreId or pattern");
+      if (!pattern) {
+        // `create_song` reaches here when a supplied genreId did not resolve, so this is the message most composers will actually see.
+        const wanted = (args as { genreId?: string }).genreId;
+        return failure(wanted ? unknownGenre(wanted) : "provide either genreId or pattern");
+      }
       return shareUrl(pattern, { origin: args.origin as string | undefined });
     },
   },
@@ -851,7 +893,11 @@ export const TOOLS: ToolDefinition[] = [
     },
     handler: async (args) => {
       const pattern = patternFromArgs(args as { genreId?: string; pattern?: unknown });
-      if (!pattern) return failure("provide either genreId or pattern");
+      if (!pattern) {
+        // `create_song` reaches here when a supplied genreId did not resolve, so this is the message most composers will actually see.
+        const wanted = (args as { genreId?: string }).genreId;
+        return failure(wanted ? unknownGenre(wanted) : "provide either genreId or pattern");
+      }
       return renderAudio(pattern, {
         format: (args.format as "wav" | "mp3") ?? "wav",
         bars: args.bars as number | undefined,
@@ -924,7 +970,10 @@ export const TOOLS: ToolDefinition[] = [
       try {
         const genreId = args.genreId as string | undefined;
         const genre = genreId ? findGenre(genreId) : undefined;
-        if (!genre && !args.pattern) return failure("provide either genreId or pattern");
+        if (!genre && !args.pattern) {
+        const wanted = (args as { genreId?: string }).genreId;
+        return failure(wanted ? unknownGenre(wanted) : "provide either genreId or pattern");
+      }
         return createMcpSong({
           genreId: genreId ?? "custom",
           genre: genre ?? null,
