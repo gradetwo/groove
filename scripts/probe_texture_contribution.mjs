@@ -138,7 +138,22 @@ try {
   const read = async (songId, label) => {
     const rendered = payload(await client.request("tools/call", { name: "render_song", arguments: { songId, format: "wav" } }));
     const analysed = payload(await client.request("tools/call", { name: "analyze_audio", arguments: { path: rendered.path } }));
-    return { label, path: rendered.path, integratedLufs: analysed.integratedLufs, truePeakDb: analysed.truePeakDb, bands: analysed.bands ?? analysed.spectrum ?? null };
+    /**
+     * The keys come out with the reading, because `analyze_audio`'s shape is the one thing this probe has had to guess twice —
+     * and the **bands** matter more than the loudness here: under a master limiter, adding a quiet element moves integrated
+     * loudness very little whether or not the element is audible, which is why "saturated moved it 0.2 LU" is a weak statement and
+     * a band comparison is a strong one.
+     */
+    return {
+      label,
+      path: rendered.path,
+      integratedLufs: analysed.integratedLufs,
+      truePeakDb: analysed.truePeakDb,
+      // The reply's keys, because its shape is the one thing this probe has had to guess twice.
+      metricKeys: Object.keys(analysed).slice(0, 24),
+      // The bands matter more than the loudness: under a master limiter a quiet element barely moves the whole-file figure.
+      bands: analysed.bands ?? analysed.spectrum ?? analysed.bandEnergies ?? analysed.bandShape ?? null,
+    };
   };
 
   const withLane = await read(asWritten.songId, "as written");
@@ -165,12 +180,29 @@ try {
     rewrite = await read(loudSong.songId, "fx lane saturated");
   }
 
+  /** The bands, when the analyser names them — the metric that can see a quiet lane under a limiter. */
+  if (Array.isArray(withLane.bands) && Array.isArray(withoutLane.bands)) {
+    const deltas = withLane.bands.map((value, index) => Number((value - (withoutLane.bands[index] ?? value)).toFixed(2)));
+    console.log(`  band deltas     : [${deltas.join(", ")}] dB (as written minus cleared)`);
+  } else {
+    console.log("  band deltas     : no band array in the analyser's reply (see the keys above)");
+  }
+
+  console.log(`  analyze keys    : ${(withLane.metricKeys ?? []).join(", ")}`);
+  if (Array.isArray(withLane.bands) && Array.isArray(withoutLane.bands)) {
+    const deltas = withLane.bands.map((value, index) => Number((value - (withoutLane.bands[index] ?? value)).toFixed(2)));
+    console.log(`  band deltas     : [${deltas.join(", ")}] dB (as written minus cleared)`);
+  } else {
+    console.log("  band deltas     : no band array in the analyser reply (see the keys above)");
+  }
+
   const deltaLufs =
     Number.isFinite(withLane.integratedLufs) && Number.isFinite(withoutLane.integratedLufs)
       ? Number((withLane.integratedLufs - withoutLane.integratedLufs).toFixed(2))
       : null;
 
   console.log(`\ntexture lane contribution (${genre}):`);
+  console.log(`  analyze keys    : ${(withLane.metricKeys ?? []).join(", ")}`);
   console.log(`  as written      : ${withLane.integratedLufs} LUFS · true peak ${withLane.truePeakDb} dBFS`);
   console.log(`  fx lane cleared : ${withoutLane.integratedLufs} LUFS · true peak ${withoutLane.truePeakDb} dBFS`);
   console.log(`  difference      : ${deltaLufs === null ? "n/a" : `${deltaLufs} LU`} — a mix that moves means the lane is audible`);
