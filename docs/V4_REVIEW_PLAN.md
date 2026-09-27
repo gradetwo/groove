@@ -877,6 +877,32 @@ implemented**" — reachable and truthful, so an agent discovers the absence ins
 No further investment. The paired gate keeps printing **0.8× of its control** and stays `continue-on-error`; the section change is simply **not demonstrated by
 that measurement**, and that is now a recorded state of affairs rather than an open task. Reconciling the time-course reading is explicitly out of scope.
 
+## The tempo map's renderer half: the seam is located, and it is a two-step change
+
+The reading half is in (`src/data/tempoMap.ts`, five criteria passing) and the reporting half is in (`secondsEstimate` follows the map, identical without one).
+What is left is the renderer, and reading it gives the seam exactly:
+
+* `src/audio/WavExporter.ts:301` computes **one** `const stepDur = 60 / bpm / 4` and uses it for the whole render — `totalDurationSec` (`:311`), every event time
+  (`:625`) and the swing offset (`:652`). That single rate *is* the "one grid" the fourth report described, in one line.
+* `flattenSong` returns `{ pattern, problems, totalBars, totalSteps, boundaries }` (`src/data/songFlatten.ts:293`), so the map can travel with the flattened
+  pattern — additive, and absent when the song has none.
+
+**Two steps, and the order matters more than the change:**
+
+1. **Introduce the seam with identical arithmetic.** Replace the single `stepDur` with a per-bar lookup that, for a song with **no** map, returns exactly
+   `60 / bpm / 4` — the same number by the same formula. The criterion is the one this project trusts most: **the render is byte-identical**, which the
+   determinism probe already measures to 0.005 dB and the recorded timbre and loudness baselines would catch if it moved. Nothing about the feature is added in
+   this step; it exists to prove the seam is inert.
+2. **Then make it tempo-aware**, bar by bar, from the map — and the criterion is that a `jump` point moves the notes after it by exactly the ratio while the
+   notes before it do not move at all.
+
+**Why not one step**: a change that alters the arithmetic and the scheduling at once cannot tell you which of them broke a baseline, and this project has the
+baselines to make that distinction cheap. The first step is also the one that satisfies the acceptance line written in the decision record — "absent →
+byte-identical" — on its own.
+
+The realtime engine's equivalent is `AudioEngine.getStepDuration()` (`:1837`, `:2064`, `:2116`), which is the same single-rate assumption live; it comes after
+the offline path for the same reason PDC's offline half came before its realtime one.
+
 ## What is deliberately rejected
 
 * **Audio in context** (`render_preview` returning audio data). The MCP keeps returning file paths plus an analysis summary; a
