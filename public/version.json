@@ -1,27 +1,27 @@
 {
-  "version": "2.34.12",
+  "version": "2.34.13",
   "releaseDate": "2026-09-28",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.12",
+    "version": "2.34.13",
     "date": "2026-09-28",
     "category": "feature",
     "title": {
-      "zh": "快速预览与歌词绑定",
-      "en": "Fast previews, and a lyric bound to its notes"
+      "zh": "编排视图：每轨一行，分轨片段首次可见",
+      "en": "Arrangement view: one row per lane, so per-lane clips can be seen"
     },
     "highlights": [
       {
-        "zh": "render_preview_clip：一段 14.4 秒音频 1.45 秒渲完，调试不必每次重跑全曲。",
-        "en": "render_preview_clip: 14.4 s of audio in 1.45 s, so a composing loop stops re-rendering the whole piece."
+        "zh": "编排面板新增每轨一行：显示该轨在每段播放哪个片段，以及它是否与段落默认不同。",
+        "en": "The arrangement panel gains one row per lane, showing which clip each lane plays per section and when it differs from the section's own."
       },
       {
-        "zh": "set_vocal_melody：音节与音高同索引绑定，写入即检查倒字；声调由你提供，工具从不猜拼音。",
-        "en": "set_vocal_melody: syllables bound at the same index as their pitch, checked as written; tones are yours, never guessed."
+        "zh": "该能力在模型里已存在很久（SongSection.slots），此前在界面上完全不可见。",
+        "en": "The capability has been in the model for a long time (SongSection.slots) and was invisible in the UI until now."
       },
       {
-        "zh": "响度工具改为按需迭代：一次调用一次渲染，不再撞上 30 秒的客户端超时。",
-        "en": "The loudness loop is opt-in: one render per call, so it no longer meets a client's 30 s timeout."
+        "zh": "只读视图，不改动音频，包体不变。",
+        "en": "A read-only view: audio is untouched and the bundle budget is unchanged."
       }
     ],
     "truncated": false
