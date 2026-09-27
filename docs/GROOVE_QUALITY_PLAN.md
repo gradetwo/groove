@@ -66,6 +66,36 @@ built into a browser probe, and the last one even catalogued the DSP that would 
 question — with the analyser's own loudness and the same 13-band fingerprint the timbre baseline uses — has been in the toolset since
 the MCP was written. The probe's role stays what it was: the **structural** check that both renders differ at all.
 
+### A4's fourth measurement: the 0.00009 LU was a **no-op measured as a result** (2026-09-28)
+
+Run 36281541687, with the probe sending the op the field it actually reads:
+
+```
+clear_track     : [{"op":"clear_track","ok":true,"detail":"fx cleared"}]
+as written      : -12.630427 LUFS
+fx lane cleared : -12.590274 LUFS      ← 0.04 LU
+fx saturated    : -12.829229 LUFS      ← 0.2 LU
+→ a saturated lane moves the mix: the genres' fx note data is what is quiet
+```
+
+The previous run's "0.00009 LU" was not a measurement of anything: the probe sent `trackId` where `mcp/pattern.ts:86` declares `track`,
+so `clear_track` **cleared nothing**, reported `ok: false`, and the "cleared" render was the same audio as "as written" — which is
+what a difference of nine hundred-thousandths of a LU looks like. The tool said so at the time; the probe was not printing the op's
+report, so nothing read it. **A no-op that looks like a result is the worst failure a measurement can have**, and this one produced a
+confident conclusion ("the lane is not in the mix") and wrote it into this document as measured fact.
+
+**What the lane actually does**: clearing it moves the mix by **0.04 LU**, and saturating it by **0.2 LU** — so the lane, its preset
+(`noiseSweep`), its bus and its notes all work, and its contribution is **real but faint**. That is the honest reading, and it changes
+③b's job from "make it audible" to "**decide how loud a texture lane should be**": a riser is meant to be prominent in a build, and at
+0.04 LU it cannot be. Raising the lane's level (or its preset's gain) is a real audio edit, and it brings the CI baseline re-record
+with it — which is exactly what the objective named.
+
+**The guard that would have caught it, now in the probe**: it prints the op's own report before it measures anything, and checks the
+shape of what came back. Both were added after this failure, and both are the reason the next run could be trusted. The deeper lesson
+is the one this project keeps relearning in different clothes: **a measurement must be shown to have done something before its number
+is believed** — the detector that fires on the music, the analysis that reads silence, the proxy that cannot see the band, and now a
+command that silently did nothing.
+
 **Measured through the MCP (run 36280296934): the `fx` lane contributes 0.00009 LU.** Both readings, from
 `probe_texture_contribution.mjs` on `hard-techno`:
 
