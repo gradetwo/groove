@@ -307,6 +307,9 @@ export const TOOLS: ToolDefinition[] = [
           bytes: file.bytes.length,
           base64: toBase64(file.bytes),
           sections: clips.length,
+          // The render's own answer about itself: a caller asking for a mono analysis pass can confirm it got one.
+          channels: result.channels,
+          sampleRate: result.sampleRate,
         };
       }
       const pattern = patternFromArgs(args as { genreId?: string; pattern?: unknown });
