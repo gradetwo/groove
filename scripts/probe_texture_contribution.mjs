@@ -178,10 +178,10 @@ try {
   const normalized = payload(
     await client.request("tools/call", {
       name: "normalize_loudness",
-      // **-24**, deliberately: the material measures about -12.6 LUFS, so this asks for roughly -11.4 dB of trim. A large number is the
-      // honest instrument here — it separates "the option never reaches the graph" from "the effect is smaller than expected", and those two
-      // have opposite fixes. -14 asked for -1.37 dB and nothing moved; if -11.4 dB also does nothing, the option is inert.
-      arguments: { songId: analysisRate.songId, targetLufs: -24, truePeakCeilingDb: -1 },
+      // Back to the ordinary target. The −24 experiment answered its question: the option **does** reach the graph (the mix moved 4.97 dB for a
+      // requested 11.37 dB), and the shortfall was the control law, which treated an option that *replaces* the genre's trim as though it
+      // adjusted it. With the base subtracted the tool should now land on the target in one call.
+      arguments: { songId: analysisRate.songId, targetLufs: -14, truePeakCeilingDb: -1 },
     })
   );
   const targetAsked = normalized.targetLufs ?? -14;

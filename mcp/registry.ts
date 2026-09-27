@@ -21,6 +21,7 @@ import os from "node:os";
 import path from "node:path";
 import { exportAbleton, exportMidi, loudnessReport, shareUrl, toBase64 } from "./exporting";
 import { analyseWavFile, renderAudio } from "./render/worker";
+import { getGenreLoudnessTrimDb } from "../src/data/genreMix";
 import { addMcpSection, createMcpSong, duplicateMcpSection, flattenMcpSong, getMcpSong, importMcpSong, makeUniqueMcpSection, mcpSongHistory, setMcpClip, summariseSong, undoMcpSong } from "./song";
 import type { ClipSlot } from "../src/types/song";
 import type { SequencerPattern } from "../src/types/genre";
@@ -392,18 +393,29 @@ export const TOOLS: ToolDefinition[] = [
         });
 
         const before = await render();
-        const gainDb = target - before.integratedLufs;
+        /**
+         * The option **replaces** the genre's own trim rather than adjusting it, so the control law has to be relative to that base.
+         *
+         * The first version asked for `target − measured` directly (−1.37 dB) and nothing moved; the second asked for −11.37 dB and the mix
+         * moved only 4.97 dB. Both are the same fact seen twice: the genres carry a substantial positive trim, so setting the option to a
+         * number does not *change* the level by that number, it *replaces* whatever the genre had. A control law that ignores its base is a
+         * control law that does not converge, which is exactly what the measurement showed.
+         */
+        const baseTrimDb = getGenreLoudnessTrimDb(flattened.pattern.genre_id);
+        const deltaDb = target - before.integratedLufs;
         const headroomDb = ceiling - before.truePeakDb;
-        const appliedDb = Math.min(gainDb, headroomDb);
+        const appliedDeltaDb = Math.min(deltaDb, headroomDb);
+        const appliedDb = baseTrimDb + appliedDeltaDb;
         // Which bound decided it, with a small tolerance so a target that is *exactly* peak-limited is reported as such rather than by noise.
-        const limitedBy = gainDb - appliedDb > 0.05 ? "truePeak" : "target";
+        const limitedBy = deltaDb - appliedDeltaDb > 0.05 ? "truePeak" : "target";
         const after = await render(Number(appliedDb.toFixed(3)));
         return {
           songId: song.id,
           targetLufs: target,
           truePeakCeilingDb: ceiling,
           before: reading(before),
-          gainDb: Number(gainDb.toFixed(3)),
+          gainDb: Number(deltaDb.toFixed(3)),
+          baseTrimDb: Number(baseTrimDb.toFixed(3)),
           appliedTrimDb: Number(appliedDb.toFixed(3)),
           limitedBy,
           after: reading(after),
