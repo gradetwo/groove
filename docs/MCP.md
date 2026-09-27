@@ -105,6 +105,24 @@ is B2's `flattenSong`, so the tool cannot render something the app would not). S
 
 The package this writes is specified field by field in [`GROOVE_PACKAGE_FORMAT.md`](GROOVE_PACKAGE_FORMAT.md).
 
+### The standard composing workflow, in six calls
+
+A composer arriving at this server has 45 tools and no order to them; this is the order, and every step is one line of intent. The fifth evaluation's own
+complaint was that the names have to be guessed, so the names are here — and each description says what it is for rather than only what it takes.
+
+| # | call | what it is for |
+|---|---|---|
+| 1 | `create_song` | start from a genre's pattern or from one you already have; its reply carries `secondsEstimate`, which is the number that makes `bars` unambiguous |
+| 2 | `set_clip` | give a section its own variation — a clip is what a section plays, and four slots (`A`-`D`) are shared song-wide |
+| 3 | `apply_pattern_ops` (op `add_lane`) | a **second** lane of a kind (`laneId`), so a counter-melody, a doubled part or an audio lane can exist at all — the ops are how one tool carries many small transforms |
+| 4 | `add_section` | place sections in order, with `bars` counted as **passes of the clip**, and per-section `mute` / `velocityScale` / `velocityRamp` |
+| 5 | `set_tempo` | tempo points at whole bars, `jump` or `linear` — how a multi-movement piece stops being one grid |
+| 6 | `render_song` | bounce it; check `secondsEstimate` first and use `maxDurationSec` to refuse rather than hang |
+
+Two companions worth knowing at the same point: `set_lane_slots` binds a lane to its own clip across **many** sections in one all-or-nothing call (the matrix
+rather than 72 requests), and `analyze_audio` is the ear — it returns the energy curve, loudness, true peak and spectral balance for a rendered file, which is
+what closes the write-render-listen-revise loop.
+
 ### What the owner decided in September 2026, and what holds it in place
 
 Five questions were put to the owner after the fourth evaluation of this server, and all five are answered. They are recorded here with the acceptance line each
