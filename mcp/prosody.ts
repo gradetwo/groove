@@ -80,6 +80,65 @@ function applySandhi(tones: number[]): { expected: string[]; sandhi: ProsodyRepo
   return { expected: directions, sandhi };
 }
 
+/**
+ * Move a melody's notes until the tones stop reversing (sixth report, item VII — the half that was genuinely missing).
+ *
+ * The report's point was exact: the **check** existed and the **generation** ignored it, which is the state most easily mistaken for finished work. This is the
+ * missing half, and it is written here rather than in the generator so that both use **one** rule: it calls `validateProsody` on its own output and repairs what
+ * that call reports, so the two can never disagree about what a reversal is.
+ *
+ * **Why one forward sweep converges**: a warning at index `i` compares note `i` with note `i-1`, so changing note `i` can only disturb the pair `(i, i+1)` — which
+ * the sweep has not reached yet. Repairing in index order therefore fixes each pair once, and the final validation confirms it; a second and third pass exist for
+ * safety, and whatever remains is **reported** rather than hidden.
+ *
+ * The repair prefers the direction the tone asks for (`rise` → up by the threshold, `fall` → down by it, `level`/`dip` → hold), and falls back to **holding the
+ * previous pitch** whenever the range clamp would leave the interval wrong — a repeated note is never a reversal, so the fallback is always safe.
+ */
+export function satisfyTones(
+  pitches: readonly number[],
+  tones: readonly number[],
+  options: { threshold?: number; range?: [number, number] } = {}
+): { pitches: number[]; adjusted: number; remaining: number } {
+  const threshold = Math.max(1, options.threshold ?? 2);
+  const [lo, hi] = options.range ?? [0, 127];
+  const out = [...pitches];
+  const checked = Math.min(tones.length, out.length);
+  const usable = tones.slice(0, checked) as number[];
+  const seen = () => validateProsody({ tones: usable, pitches: out.slice(0, checked), threshold });
+  let adjusted = 0;
+
+  /**
+   * **One warning at a time, then look again.** Repairing from a list collected before any change was wrong in a way the property test caught immediately: the
+   * list is computed against the old array, so its indices and expected directions stop describing the melody as soon as the first fix lands, and the pass leaves
+   * reversals behind that it believes it has fixed. Re-validating after each repair is slower and honest.
+   */
+  for (let guard = 0; guard < 256; guard += 1) {
+    const warning = seen().warnings[0];
+    if (!warning) break;
+    const i = warning.index;
+    if (i < 1 || i >= out.length) break;
+    const previous = out[i - 1]!;
+    const target = warning.expected === "rise" ? previous + threshold : warning.expected === "fall" ? previous - threshold : previous;
+    const clamped = Math.max(lo, Math.min(hi, target));
+    const interval = clamped - previous;
+    const stillWrong =
+      (warning.expected === "rise" && interval <= -threshold) ||
+      (warning.expected === "fall" && interval >= threshold) ||
+      (warning.expected === "level" && Math.abs(interval) >= threshold * 2) ||
+      (warning.expected === "dip" && interval >= threshold * 2);
+    // A range that will not allow the direction the tone asks for falls back to holding the note: no movement is never a reversal.
+    const next = stillWrong ? previous : clamped;
+    if (next === out[i]) {
+      // The repair cannot move this note any further, so stop rather than spin: whatever remains is reported by `remaining`.
+      break;
+    }
+    out[i] = next;
+    adjusted += 1;
+  }
+
+  return { pitches: out, adjusted, remaining: seen().warnings.length };
+}
+
 export function validateProsody(options: ProsodyOptions): ProsodyReport {
   const tones = options.tones ?? [];
   const pitches = options.pitches ?? [];
