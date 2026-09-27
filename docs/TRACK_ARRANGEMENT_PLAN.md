@@ -8,7 +8,7 @@
 
 `docs/ARRANGEMENT_PLAN.md` 的 B3 已经落地，可以放心依赖：
 
-- **一条时间轴上的段落区块**：顶部小节标尺，A/B 片段作为区块排在轴上，拖动移动、拖底部横带重复、PC 键盘微调、iPad 触摸。实现分两层：算术在 `src/features/arrangement/songEdit.ts`（区块位置、落点、键盘模型、id 生成），DOM 在 `src/components/arrangement/ArrangementPanel.tsx`（区块、标尺、指针捕获、≥44px 目标）。
+- **一条时间轴上的段落区块**：顶部小节标尺，A/B 片段作为区块排在轴上，拖动移动、拖底部横带重复、PC 键盘微调、iPad 触摸。实现分两层：算术在 `src/features/arrangement/songEdit.ts`（区块位置、落点、键盘模型、id 生成），DOM 在 `src/components/arrangement/ArrangementPanel.tsx`（区块、标尺、指针捕获、≥44px 目标）。**（2026-09-28 注：这一条是对的，而我在另一份文档里曾据一次限定目录的 `ls` 断言该组件不存在 —— 它一直就在这里。）**
 - **段落级的覆盖**：`SongSection` 带 `mute: string[]`（逐段静音某些轨）、`velocityScale`（整段力度）、`label`，以及 `overrides`（B5 的渐强 `velocityRamp` 与 `fill`）。
 - **渲染/导出跟随时间轴**：`patternForExport` 把 `Song` 拍平成一条 pattern，WAV、MP3、MIDI、分轨都走它；因此**导出长度等于歌曲小节数**这一点在 MIDI 上已经成立。
 - **门禁**：`src/test/arrangementForm.test.ts`（24 例）、`src/test/arrangementPanel.test.tsx`（14 例）、`src/test/songEdit.test.ts`（15 例）、`probe:arrangement`（驱动构建产物量区块位置与触控目标）。
@@ -23,7 +23,8 @@ Song { clips: { A, B }, sections: [{ slot, bars, mute?, velocityScale?, override
 
 一个段落指向**一个槽位**，对八条轨同时生效。所以能做到的是"这一段用 A、那一段用 B"，做不到的是"这一段鼓用 A、贝斯用 B"。Logic 的 Tracks 区正是后者：**每条轨一行、各自摆自己的片段**。
 
-这一条缺口也是 B4 里那个具体项的原因：`AbletonExporter` 现在整首写**一个 clip**（`src/audio/AbletonExporter.ts` 里没有任何 `sections` 处理），而计划要求"每个段落一个 clip"。
+这一条缺口也是 B4 里那个具体项的原因。**（2026-09-28 更正：本条已过时。）** 写这句话时 `AbletonExporter` 的确整首写一个 clip；现在它接受
+`clips?: Array<{ pattern; name? }>`（`src/audio/AbletonExporter.ts:32`），缺省时"与这个导出器一直以来的产物**逐字节相同**"（`:344`），并按 `:565` 为每个 clip 命名 —— 而 MCP 的 `export_ableton` 早已按 `song.sections` 填好这个列表。所以"每段一个 clip"**已经具备**，并且有测试守着（`src/test/AbletonExporter.test.ts:248` 与 `:283`）。当时 grep `sections` 得到 0 就下了结论，**而概念在，只是名字叫 `clips`**。
 
 ## 三、要动的地方（按依赖顺序）
 
@@ -31,7 +32,7 @@ Song { clips: { A, B }, sections: [{ slot, bars, mute?, velocityScale?, override
    - **A. 轨道行**：`lanes: Record<MixTrackId, Array<{ slot, bars }>>`，每轨自己的时间轴。最贴近 Logic，也最贵：段落的对齐、总长度、迁移都要重新定义。
    - **B. 段落 × 轨的槽位**：`SongSection.slots: Partial<Record<MixTrackId, ClipSlot>>`，缺省回落到段落自己的 `slot`。**推荐先做 B**：它与现有语义同构（段落仍是时间单位），已有文件迁移是"什么都不写"，而且第一刀不需要新的时间轴概念。
 2. **归一化与拍平**（`src/data/songFlatten.ts`）：`resolveTimeline` / `patternForExport` 现在按段落取一个片段；改成按轨取，缺省回落。**这是唯一会改变渲染的地方。**
-3. **视图**（`src/features/arrangement/songEdit.ts` + `ArrangementPanel.tsx`）：在现有标尺下加**轨头 + 每轨一行**，每行的区块来自第 1 步；拖动/复制/删除对单行生效；键盘模型复用现有 `songEdit` 的落点算术。轨头要能静音/独奏（复用引擎既有的 mute/solo，而不是再加一套状态）。
+3. **视图**（`src/features/arrangement/songEdit.ts` + `ArrangementPanel.tsx`）**（2026-09-28：已完成 ✓ —— `songEdit.trackRows` + `setSectionLaneSlot`，视图在 `src/components/arrangement/TrackRows.tsx`，已挂进面板；每格可设置该轨自己的片段）**：在现有标尺下加**轨头 + 每轨一行**，每行的区块来自第 1 步；拖动/复制/删除对单行生效；键盘模型复用现有 `songEdit` 的落点算术。轨头要能静音/独奏（复用引擎既有的 mute/solo，而不是再加一套状态）。
 4. **导出**：MIDI/ALS/WAV 都经第 2 步，所以它们自动跟随；ALS 顺带把"每段一个 clip"补上（B4 剩余项），因为它本来就是按段落切片的格式。
 5. **分享与持久化**：`sections` 已经在 `.groove` 与分享链接里（B1），新字段走同一条路；旧文件读出来就是"没有分轨覆盖"，行为不变。
 6. **手机**：`src/platform/surfaceCapabilities.ts` 里明确分轨视图属于桌面/iPad 能力，手机继续用现有单轴视图——这是声明过契约的做法，不是遗漏。
