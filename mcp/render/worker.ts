@@ -149,7 +149,7 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
   }
   const page = await ensurePage();
   const result = await page.evaluate(
-    async ({ pattern: patternArg, format, bars, bitrateKbps, trackPeaks }) => {
+    async ({ pattern: patternArg, format, bars, bitrateKbps, trackPeaks, sampleRate, channels: channelCount }) => {
       /**
        * These specifiers are resolved by the *browser* (the app's dev server), not by Node, so they are built
        * from variables: a literal would send `tsc` looking for `/src/...` on the filesystem and fail.
@@ -172,8 +172,8 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
          * 8 kHz a three-minute song is about a fifth of the work. The channel count is still the exporter's two: mono needs that
          * parameter thread through as well, and it is not done yet.
          */
-        ...(options.sampleRate ? { sampleRate: options.sampleRate } : {}),
-        ...(options.channels ? { channels: options.channels } : {}),
+        ...(sampleRate ? { sampleRate } : {}),
+        ...(channelCount ? { channels: channelCount } : {}),
         onLimiterKind: (kind: string) => {
           limiterKind = kind;
         },
@@ -244,7 +244,15 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
         trackPeaksDb,
       };
     },
-    { pattern, format: options.format, bars: options.bars, bitrateKbps: options.bitrateKbps, trackPeaks: options.trackPeaks === true }
+    {
+      pattern,
+      format: options.format,
+      bars: options.bars,
+      bitrateKbps: options.bitrateKbps,
+      trackPeaks: options.trackPeaks === true,
+      sampleRate: options.sampleRate,
+      channels: options.channels,
+    }
   );
 
   const dir = outputDirectory(options);
