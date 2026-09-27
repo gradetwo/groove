@@ -1,27 +1,27 @@
 {
-  "version": "2.34.5",
+  "version": "2.34.6",
   "releaseDate": "2026-09-28",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.5",
+    "version": "2.34.6",
     "date": "2026-09-28",
     "category": "feature",
     "title": {
-      "zh": "四槽编辑器上线；修 MCP 的 clips 与时长估计；包格式规范",
-      "en": "Four-slot editor; MCP clips and duration fixes; the package format spec"
+      "zh": "MCP 新增：撤销、和声、旋律与声调检查",
+      "en": "MCP gains undo, harmony, melody and a prosody check"
     },
     "highlights": [
       {
-        "zh": "编辑器槽位与复制控件支持 A–D，切到空槽会创建并保留，工程保存也带上它们。",
-        "en": "The editor's slot and copy controls cover A–D; switching to an empty slot creates and keeps it, and saving carries them."
+        "zh": "undo_song：每次改动都有 opId，get_song 列出可回退的历史。",
+        "en": "undo_song: every change carries an opId, and get_song lists what is undoable."
       },
       {
-        "zh": "修复 create_song 的 clips 只传部分槽位被拒、secondsEstimate 低估四倍、导出文件名的中文塌陷。",
-        "en": "Fixed create_song refusing a partial clips object, secondsEstimate reading four times low, and Chinese titles collapsing in file names."
+        "zh": "set_chord_progression / suggest_progression：按情绪挑选进行并渲染到指定调。",
+        "en": "set_chord_progression and suggest_progression: choose a progression by emotion and render it in a key."
       },
       {
-        "zh": "新增 .groove 包格式规范（校验规则与版本兼容承诺），并记录 A4 的纹理轨测量结论。",
-        "en": "Added the .groove package specification with its validation rules and compatibility commitment, and recorded A4's texture-lane measurement."
+        "zh": "generate_melody（轮廓优先、AABA、音域受限）与 validate_prosody（倒字只警告）。",
+        "en": "generate_melody (contour-first, AABA, range-bounded) and validate_prosody (倒字, advisory)."
       }
     ],
     "truncated": false
