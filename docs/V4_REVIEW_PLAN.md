@@ -601,6 +601,28 @@ the target and blamed the limiter fails, which is the difference between reporti
 the tool already returned — decided it. Recorded here because this plan has now spent four rounds on a tool whose arithmetic was right from the
 first attempt.
 
+## The dev-branch report's items 1 and 5, closed with numbers
+
+```
+✅ normalize_loudness : -12.63 → -12.674 LUFS (target -14, trim -1.37 dB, masterLimiter, 2 pass(es), peaks -1.3)
+✅ render_preview_clip : 1.45s at 8000 Hz, 1 channel(s) (14.40s of audio)
+```
+
+**Item 1** — the timeout risk and the preview tool. A preview of a section renders **14.4 seconds of audio in 1.45 s** at 8 kHz mono, against
+**6–24 s** for a full-rate song render measured in the same runs. That is the recommendation's own argument, stated as a number: an agent
+debugging a two-bar change does not have to spend the budget of a client's 30 s timeout, and **the same run is evidence for why it matters** —
+one round earlier a `tools/call` that rendered **did** time out at 30 s, in this project's own probe, because `normalize_loudness` was doing up to
+four renders inside one request. The preview's acceptance (`≤ 3 s`) and the loudness loop's default (`passes: 1`) come from the same lesson seen
+from two sides.
+
+**Item 5** — the loudness tool, and the honest limit. `masterLimiter` with **2 passes** and the peak identical across both: the tool reached the
+ceiling-bound conclusion and **proved it with its own readings**, so the acceptance accepts it. What a caller gets is not a number that quietly
+missed: it is a measurement with an explanation, which is what "get me to −14 LUFS" deserves on a graph where the master limiter holds the
+output.
+
+**Both were reached inside the probe's timeouts, which is the point of the `passes` change** — and both are now green in CI rather than green in
+an argument.
+
 ## What is deliberately rejected
 
 * **Audio in context** (`render_preview` returning audio data). The MCP keeps returning file paths plus an analysis summary; a
