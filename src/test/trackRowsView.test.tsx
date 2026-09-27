@@ -71,3 +71,21 @@ describe("TrackRows", () => {
     expect(screen.getByTestId("track-rows").getAttribute("data-empty")).toBe("true");
   });
 });
+
+describe("TrackRows with an edit host", () => {
+  it("offers a control per cell only when the host can accept one, and reports the intent rather than editing", async () => {
+    const seen: Array<[string, string, string | null]> = [];
+    render(<TrackRows song={song()} onSetLaneSlot={(sectionId, trackId, slot) => seen.push([sectionId, trackId, slot])} />);
+    const selects = screen.getAllByTestId("track-cell-select");
+    // One per cell: two lanes, two sections.
+    expect(selects).toHaveLength(4);
+    (selects[1] as HTMLSelectElement).value = "C";
+    selects[1]!.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(seen).toEqual([["s2", "kick", "C"]]); // row-major: index 1 is the first row's second cell
+  });
+
+  it("stays read-only without a host, which is what keeps its other tests meaning what they meant", () => {
+    render(<TrackRows song={song()} />);
+    expect(screen.queryAllByTestId("track-cell-select")).toHaveLength(0);
+  });
+});

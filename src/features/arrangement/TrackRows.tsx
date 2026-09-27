@@ -1,5 +1,6 @@
 import React from "react";
 import { sectionRegions, trackRows } from "./songEdit";
+import type { ClipSlot } from "../../types/song";
 import type { Song } from "../../types/song";
 
 /**
@@ -13,7 +14,19 @@ import type { Song } from "../../types/song";
  * here" — expressible in the model since it landed and invisible in the UI ever since — is now on screen. Dragging and editing come later; they are
  * `applyArrangementCommand`'s job, not this file's.
  */
-export function TrackRows({ song }: { song: Song }): React.ReactElement {
+export interface TrackRowsProps {
+  song: Song;
+  /**
+   * Called when a lane's own clip is changed for a section: the new slot, or `null` for the section's default.
+   *
+   * Optional, and the component is read-only without it — which is what keeps it usable on its own and keeps its existing tests meaning what they
+   * meant. The view never edits the song itself: it reports the intent, and the host applies it through the command layer the way every other
+   * structural edit in this panel is applied.
+   */
+  onSetLaneSlot?: (sectionId: string, trackId: string, slot: ClipSlot | null) => void;
+}
+
+export function TrackRows({ song, onSetLaneSlot }: TrackRowsProps): React.ReactElement {
   const rows = trackRows(song);
   const regions = sectionRegions(song);
   const cellStyle: React.CSSProperties = {
@@ -54,8 +67,29 @@ export function TrackRows({ song }: { song: Song }): React.ReactElement {
               data-override={cell.override ? "true" : "false"}
               data-muted={cell.muted ? "true" : "false"}
             >
-              {cell.slot}
-              {cell.override ? <span title="this lane plays its own clip here"> *</span> : null}
+              {onSetLaneSlot ? (
+                <select
+                  aria-label={`${row.name} clip in ${cell.sectionId}`}
+                  data-testid="track-cell-select"
+                  value={cell.override ? cell.slot : ""}
+                  onChange={(event) =>
+                    onSetLaneSlot(cell.sectionId, row.trackId, (event.target.value || null) as ClipSlot | null)
+                  }
+                  style={{ background: "transparent", color: "inherit", fontSize: 11 }}
+                >
+                  <option value="">{cell.slot} (section)</option>
+                  {(["A", "B", "C", "D"] as ClipSlot[]).map((slot) => (
+                    <option key={slot} value={slot}>
+                      {slot}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <>
+                  {cell.slot}
+                  {cell.override ? <span title="this lane plays its own clip here"> *</span> : null}
+                </>
+              )}
               {cell.muted ? <span title="silenced for this section"> ✕</span> : null}
             </div>
           ))}
