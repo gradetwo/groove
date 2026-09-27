@@ -524,7 +524,28 @@ path**. This is the second time this exact shape has appeared — the `sampleRat
 because the value has to cross three layers (the tool, the Node side of `page.evaluate`, and the page's own parameter list) and each layer names
 it differently. The acceptance check is what noticed, which is the entire reason for writing it before believing the tool.
 
-**The next diagnostic is a read, not a change**: `WavExporter.ts:325-345` shows how `loudnessTrimDb` is combined (it is a `Math.max(...)` with a
+**The read is done, and it clears the clamp.** `masterGraph.ts:268-269` sets `MASTER_TRIM_MIN_DB = -12` and `MAX = 12`, and
+`WavExporter.ts:332` combines an explicit option as
+`Math.max(LOUDNESS_TRIM_MIN_DB, Math.min(LOUDNESS_TRIM_MAX_DB, optionOrGenreTrim))` — so −1.37 dB passes through untouched, and an explicit option
+**replaces** the genre's own trim rather than folding against it. The exporter is not the problem.
+
+That leaves a contradiction worth stating plainly rather than guessing at: all four layers are verifiably present — `RenderOptions.loudnessTrimDb`
+and the page-call field, the page callback's parameter list, the spread into `renderPatternOffline`, and the exporter's use of it — and the
+measurement says the output did not move. Reading has now cleared the clamp and the exporter, so **the next step has to be an experiment rather
+than another read**.
+
+**The decisive experiment, and it is one CI run**: ask for **−12 dB** instead of −1.37. That separates the two remaining explanations, which no
+amount of reading will:
+
+* if the output **still** does not move, the option is **inert** somewhere between the tool and the graph, and the place to instrument is the page
+  (print the value the callback receives, exactly as the `ReferenceError` was caught);
+* if it **does** move by 12 dB, then the plumbing works and the −1.37 dB result needs a different explanation — most likely that the measurement
+  is taken after a limiter that holds the level, which would itself be worth knowing.
+
+An extreme value is the honest instrument here: it is the difference between "the effect is smaller than I expected" and "there is no effect",
+and those two have opposite fixes.
+
+: `WavExporter.ts:325-345` shows how `loudnessTrimDb` is combined (it is a `Math.max(...)` with a
 condition on the option being finite), and the question is whether that combination lets a **negative** trim through or folds it against the
 genre's own trim. A negative trim is the ordinary case for a mix that is already too loud, and the run above is that case.
 
