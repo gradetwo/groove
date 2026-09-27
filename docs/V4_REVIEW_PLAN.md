@@ -553,6 +553,30 @@ genre's own trim. A negative trim is the ordinary case for a mix that is already
 7.9 s and 8.4 s** while the **8 kHz analysis render took 1.8 s** — a factor of 4–13 between the full-rate renders and the analysis pass, on the
 same material, in the same run.
 
+## Clip slots are song-global, so three verses cannot have three melodies — and the fix needs no schema change
+
+Reported from composing, and verified in the tool: `set_clip` is described as "set **a slot's** clip (A–D) … **Replaces what is there**", and a
+section stores a **slot reference** (`add_section`), so two sections pointing at slot B are the **same clip**. A song whose verses have
+different lyrics therefore cannot give them different melodies: the third verse must reuse the first's clip, and this session's composer worked
+around it with `transpose` and `velocityScale` — which is legitimate technique (motif repetition and transposition are real compositional
+tools) but is a **product limit**, not a musical one. The earlier evaluations did not hit it because their verses repeated their lyrics.
+
+This is the same root as the dev-branch report's claim 6 ("destructive edit or make-unique"), stated from the other side: that report asks what
+`set_clip` should **do** when a slot is shared, and this reports what a composer **cannot** do because it is.
+
+**And the fix needs no schema change**, which is the part worth noticing:
+
+* `ClipSlot` is already `"A" | "B" | "C" | "D"` and `set_clip` already accepts all four (`mcp/registry.ts:702`), so there are **two free slots**
+  in the ordinary case;
+* the `.groove` format already carries the slots, and this project's editor gained all four in workstream 3a of this plan;
+* so **make-unique is an allocation plus a repoint**: copy the clip into a free slot, point **that one section** at it, and leave every other
+  section where it was. No widening, no migration, and nothing that waits on the `track_id` question;
+* with all four slots in use the operation must **say so** rather than overwrite — a song that needs five distinct clips needs a wider slot set,
+  and that is a deliberate report rather than a silent loss.
+
+The missing primitive today is the repoint: `add_section` adds, `duplicate_section` duplicates, and **nothing changes an existing section's
+slot**. That, plus the copy-on-write decision, is the work.
+
 ## What is deliberately rejected
 
 * **Audio in context** (`render_preview` returning audio data). The MCP keeps returning file paths plus an analysis summary; a
