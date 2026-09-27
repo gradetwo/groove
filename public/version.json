@@ -1,23 +1,27 @@
 {
-  "version": "2.34.9",
+  "version": "2.34.10",
   "releaseDate": "2026-09-28",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.9",
+    "version": "2.34.10",
     "date": "2026-09-28",
     "category": "fix",
     "title": {
-      "zh": "实时对齐：把引擎里存了却从未使用的补偿接上",
-      "en": "Realtime alignment: connecting the compensation the engine stored but never used"
+      "zh": "修复：旋律步数越界与和声 op 被校验拒绝",
+      "en": "Fixes: a melody that overran its pattern, and a harmony op the schema rejected"
     },
     "highlights": [
       {
-        "zh": "现场播放与离线导出现在重新对齐；此前离线已补偿、实时的 3 ms 补偿无人读取。",
-        "en": "Live playback and the offline bounce agree again: offline was compensated, and the realtime 3 ms was read by nothing."
+        "zh": "generate_melody bars=4 曾返回 96 步（应为 64）：负长度切片把 32 个幽灵乐句追加到了尾部。",
+        "en": "generate_melody with bars=4 returned 96 steps instead of 64: a negative slice length appended 32 ghost phrases."
       },
       {
-        "zh": "传输起点按限幅器延迟提前调度，用户设过的值优先，且减法以 35 ms 安全余量为界。",
-        "en": "The transport schedules earlier by the limiter's latency, a user value wins, and the subtraction is bounded by the 35 ms margin."
+        "zh": "set_chord_progression 已加入运行时 schema；此前实现、文档与 suggest_progression 都推荐它，但校验会直接打回。",
+        "en": "set_chord_progression is now in the runtime schema; the implementation, the docs and suggest_progression all recommended it while validation rejected it."
+      },
+      {
+        "zh": "新增测试：op 类型与运行时 schema 的成员必须一一对应，两者不能再各自漂移。",
+        "en": "New test: the op type and the runtime schema must list the same members, so neither can drift alone."
       }
     ],
     "truncated": false

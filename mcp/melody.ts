@@ -130,7 +130,18 @@ export function generateMelody(options: MelodyOptions): GeneratedMelody {
     const { kind, degrees } = chosen.get(label)!;
     contours.push(kind);
     const fromStep = phraseIndex * perPhrase * STEPS_PER_BAR;
+    /**
+     * A phrase that does not fit in the pattern is **skipped**, not truncated — and `bars` small enough to overrun is the ordinary case, not
+     * an exotic one: `perPhrase` has a floor of two bars, so four bars of form need eight bars of pattern.
+     *
+     * The bug this replaces was worse than a missing phrase. `toStep` was clamped to `slots` while `fromStep` was not, so for the fourth phrase
+     * of a four-bar request `length` came out **negative** — and `slice(0, -32)` is not empty, it returns the first 32 elements, which
+     * `splice(96, 0, …)` then **appended** to a 64-step array. `bars: 4` returned **96 steps** with 32 ghost copies of phrase A at the end;
+     * `bars: 8` was fine (128 slots, phrases fit) and `bars: 2` was fine (`slice(0, -64)` of a 32-step array is empty), which is exactly why it
+     * survived the tests.
+     */
     const toStep = Math.min(slots, fromStep + perPhrase * STEPS_PER_BAR);
+    if (fromStep >= toStep) break;
     phrases.push({ label, contour: kind, fromStep, toStep });
 
     /**
@@ -142,7 +153,8 @@ export function generateMelody(options: MelodyOptions): GeneratedMelody {
      */
     const firstOccurrence = built.get(label);
     if (firstOccurrence !== undefined) {
-      const length = toStep - fromStep;
+      // Never negative: `toStep` is clamped and `fromStep` is checked above, and this line is what made that matter.
+      const length = Math.max(0, toStep - fromStep);
       steps.splice(fromStep, length, ...steps.slice(firstOccurrence, firstOccurrence + length));
       pitch.splice(fromStep, length, ...pitch.slice(firstOccurrence, firstOccurrence + length));
       velocity.splice(fromStep, length, ...velocity.slice(firstOccurrence, firstOccurrence + length));
