@@ -217,3 +217,22 @@ run remotely (rendering certainly may not), and none of that should be invented 
 | `src/test/mcpTools.test.ts` | every pure handler: schemas, determinism, error messages, no library mutation |
 | `npm run redlines` (R7a) | the tool/resource/prompt sets are still declared in full, and nothing under `src/` imports `mcp/` |
 | `npm run check:budget` | unchanged by construction (the server is outside the web build) |
+
+## Gaps this contract is *not* missing (2026-09-28)
+
+An external evaluation (a "v4" report, written against v2.34.3) listed read-tools, resources, prompts, project persistence, mixer
+buses, render SLOs and a changelog resource among the gaps. Checked against the code, most of them are already here, and the checklist
+matters more than the report: **ordering work by a stale gap spends the budget on finished work.** The full table, with file:line on both
+sides, is in [`V4_REVIEW_PLAN.md`](V4_REVIEW_PLAN.md); the short version:
+
+| claimed missing | actually |
+|---|---|
+| read/analysis tools | `get_pattern`, `pattern_statistics`, `validate_pattern`, `compare_genres`, `get_loudness_report`, `render_audio`, `analyze_audio`, `get_song` are all declared above |
+| Resources and Prompts | four resources and three prompts are declared, registered, and now **checked against this document** by `npm run check:mcp` |
+| project persistence, an arrangement model | `.groove` version 2 carries `arrangement` and validates it; [`GROOVE_PACKAGE_FORMAT.md`](GROOVE_PACKAGE_FORMAT.md) is the specification |
+| undo | the **app** keeps history per `onChange`; the **MCP server** does not, and that narrower claim is the open work |
+| mixer buses and a channel strip | `ReverbBus`, `DelayBus`, `MasterLimiter`, `ChannelStripDsp` and the channel-strip view exist; what is missing is the mixer *view*, inserts, sidechain and PDC |
+| render SLOs | already measured and recorded, including the super-linear growth, in [`GROOVE_QUALITY_PLAN.md`](GROOVE_QUALITY_PLAN.md) |
+
+Two further corrections are the report's own: **Logic has no global Chord Track**, and its "AI" is embedded rather than absent. Those
+are the places where it is more accurate than the evaluations that came before it.
