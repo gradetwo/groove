@@ -346,6 +346,78 @@ export const TOOLS: ToolDefinition[] = [
     },
   },
   {
+    /**
+     * Recommendation 5 of the dev-branch report, as a closed loop rather than a suggestion: measure, compute, **render again**, measure again.
+     *
+     * Every render already answers with gated loudness and true peak, and the graph has always accepted an explicit master trim — the missing
+     * piece was that nothing on the MCP side could set it, so a caller measuring −17.31 LUFS against a −14 target had to hand-compute a gain and
+     * edit the pattern by hand. This uses the plumbing added for exactly that.
+     *
+     * The gain is bounded by the true-peak ceiling and **which bound won is reported**: that is the difference between "it reached the target"
+     * and "it reached the ceiling, so the target was not reachable" — the second being a real answer a caller can act on.
+     */
+    name: "normalize_loudness",
+    title: "Render a song to a target loudness",
+    description:
+      "Render a song, measure it, compute the master trim that would reach a target integrated loudness, render again with it, and report both readings plus which bound decided the trim. The gain is capped by a true-peak ceiling, so the answer distinguishes reaching the target from reaching the ceiling. Returns the path of the normalized file.",
+    readOnly: false,
+    inputSchema: {
+      songId: z.string().describe("the song to normalize"),
+      targetLufs: z.number().min(-40).max(0).optional().describe("default −14, the usual streaming target"),
+      truePeakCeilingDb: z.number().min(-12).max(0).optional().describe("default −1 dBTP, the usual delivery ceiling"),
+      format: z.enum(["wav", "mp3"]).optional().describe("default wav"),
+      sampleRate: z.number().int().min(8000).max(96000).optional(),
+      channels: z.number().int().min(1).max(2).optional(),
+    },
+    handler: async (args) => {
+      try {
+        const { song, flattened } = flattenMcpSong(String(args.songId));
+        const target = (args.targetLufs as number | undefined) ?? -14;
+        const ceiling = (args.truePeakCeilingDb as number | undefined) ?? -1;
+        const format = (args.format as "wav" | "mp3" | undefined) ?? "wav";
+        const analysis = {
+          format,
+          bars: 1,
+          genreId: song.genreId,
+          nameSlug: song.name,
+          ...(args.sampleRate ? { sampleRate: args.sampleRate as number } : {}),
+          ...(args.channels ? { channels: args.channels as 1 | 2 } : {}),
+        };
+        const render = (trimDb?: number) =>
+          renderAudio(flattened.pattern, { ...analysis, ...(trimDb !== undefined ? { loudnessTrimDb: trimDb } : {}) });
+        const reading = (result: Awaited<ReturnType<typeof renderAudio>>) => ({
+          integratedLufs: Number(result.integratedLufs.toFixed(3)),
+          truePeakDb: Number(result.truePeakDb.toFixed(3)),
+          path: result.path,
+        });
+
+        const before = await render();
+        const gainDb = target - before.integratedLufs;
+        const headroomDb = ceiling - before.truePeakDb;
+        const appliedDb = Math.min(gainDb, headroomDb);
+        // Which bound decided it, with a small tolerance so a target that is *exactly* peak-limited is reported as such rather than by noise.
+        const limitedBy = gainDb - appliedDb > 0.05 ? "truePeak" : "target";
+        const after = await render(Number(appliedDb.toFixed(3)));
+        return {
+          songId: song.id,
+          targetLufs: target,
+          truePeakCeilingDb: ceiling,
+          before: reading(before),
+          gainDb: Number(gainDb.toFixed(3)),
+          appliedTrimDb: Number(appliedDb.toFixed(3)),
+          limitedBy,
+          after: reading(after),
+          note:
+            limitedBy === "target"
+              ? "the trim reached the target; re-measure to confirm, and check the true peak is still under the ceiling"
+              : `the true-peak ceiling capped the trim at ${appliedDb.toFixed(3)} dB, so the target was not reachable without exceeding ${ceiling} dBTP — lower the target or accept the ceiling`,
+        };
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
     name: "spectral_balance",
     title: "Spectral balance of a rendered file",
     description:
