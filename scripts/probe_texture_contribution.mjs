@@ -211,6 +211,23 @@ try {
       `(target ${normalized.targetLufs ?? -14}, trim ${normalized.appliedTrimDb} dB, ${normalized.limitedBy}, ${normalized.passes} pass(es), peaks ${normalized.after?.truePeakDb})`
   );
   if (!loudnessOk) process.exitCode = 1;
+
+  /**
+   * Recommendation 1's acceptance: a preview must come back in seconds, because the whole point is an agent that does not time out and re-issue
+   * the call. Three seconds is the line; the tool reports its own wall-clock time, so this check reads the number the caller would see.
+   */
+  const preview = payload(
+    await client.request("tools/call", {
+      name: "render_preview_clip",
+      arguments: { songId: analysisRate.songId, index: 0, bars: 4 },
+    })
+  );
+  const previewOk = typeof preview.seconds === "number" && preview.seconds <= 3 && preview.preview === true;
+  console.log(
+    `  ${previewOk ? "✅" : "❌"} render_preview_clip : ${preview.seconds}s at ${preview.sampleRate} Hz, ${preview.channels} channel(s) ` +
+      `(${preview.durationSec?.toFixed?.(2) ?? preview.durationSec}s of audio)`
+  );
+  if (!previewOk) process.exitCode = 1;
   const coarse = await (async () => {
     const startedAt = Date.now();
     const rendered = payload(
