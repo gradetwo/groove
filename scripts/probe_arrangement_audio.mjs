@@ -286,6 +286,75 @@ try {
       sampleRate: withRack.buffer.sampleRate,
     };
 
+    /**
+     * The fourth report's second item, measured rather than quoted.
+     *
+     * The report names a −8 dB phase null at 38 Hz when two sub kicks are stacked, and cites `src/dsp/kickEngine.ts` — a file that does not exist, so its
+     * number has no source here. The engine's own API is what makes the claim testable: `synthesizeAnatomyKickVoice` schedules **one voice into a context
+     * the caller owns**, so two calls with two presets and the same destination *are* the stacking.
+     *
+     * The two presets are the ones the report names: `berlin-orphic` at `basePitch: 42` and `somatic-808-gravity` at `basePitch: 36`. Six hertz apart, so
+     * their overlap sits right where the report puts the notch.
+     *
+     * The criterion was written before this code: band energy 30–45 Hz over the first 60 ms, classified as **cancellation** below −1 dB against the louder
+     * single, **reinforcement** above +1 dB, and **inconclusive** in between — because two signals that differ this much in level can make a window-energy
+     * comparison about level rather than phase.
+     */
+    const kickPhase = await (async () => {
+      const kick = await import("/src/audio/AnatomyKickEngine.ts");
+      const sampleRate = 44100;
+      const frames = Math.round(sampleRate * 0.5);
+      const renderPresets = async (presetIds) => {
+        const ctx = new OfflineAudioContext(1, frames, sampleRate);
+        const dest = ctx.createGain();
+        dest.connect(ctx.destination);
+        for (const presetId of presetIds) kick.synthesizeAnatomyKickVoice(ctx, dest, 0, 1, presetId, null);
+        const buffer = await ctx.startRendering();
+        return buffer.getChannelData(0);
+      };
+      /** Energy at one frequency over the first `ms`, by Goertzel: narrow enough to see a notch, cheap enough to run in a probe. */
+      const toneEnergy = (samples, frequency, ms) => {
+        const n = Math.min(samples.length, Math.round((ms / 1000) * sampleRate));
+        const coeff = 2 * Math.cos((2 * Math.PI * frequency) / sampleRate);
+        let s1 = 0;
+        let s2 = 0;
+        for (let i = 0; i < n; i += 1) {
+          const s0 = samples[i] + coeff * s1 - s2;
+          s2 = s1;
+          s1 = s0;
+        }
+        return Math.sqrt(Math.max(0, s1 * s1 + s2 * s2 - coeff * s1 * s2)) / Math.max(1, n);
+      };
+      const band = (samples) => {
+        let sum = 0;
+        let count = 0;
+        for (let f = 30; f <= 45; f += 1) {
+          sum += toneEnergy(samples, f, 60) ** 2;
+          count += 1;
+        }
+        return Math.sqrt(sum / count);
+      };
+
+      const A = await renderPresets(["berlin-orphic"]);
+      const B = await renderPresets(["somatic-808-gravity"]);
+      const AB = await renderPresets(["berlin-orphic", "somatic-808-gravity"]);
+      const eA = band(A);
+      const eB = band(B);
+      const eAB = band(AB);
+      const louder = Math.max(eA, eB);
+      const ratio = louder > 0 ? eAB / louder : 0;
+      const at38 = Math.max(toneEnergy(A, 38, 60), toneEnergy(B, 38, 60));
+      return {
+        presetA: "berlin-orphic (basePitch 42)",
+        presetB: "somatic-808-gravity (basePitch 36)",
+        band30to45: { a: eA, b: eB, ab: eAB },
+        ratioToLouderDb: Number((20 * Math.log10(Math.max(ratio, 1e-9))).toFixed(2)),
+        notch38Db: at38 > 0 ? Number((20 * Math.log10(Math.max(toneEnergy(AB, 38, 60) / at38, 1e-9))).toFixed(2)) : null,
+        verdict: ratio < 0.891 ? "cancellation" : ratio > 1.122 ? "reinforcement" : "inconclusive",
+      };
+    })();
+
+
     const withoutFade = await render(jumpSong, { boundaryFadeMs: 0 });
     const withFade = await render(jumpSong, { boundaryFadeMs: 8 });
     /**
@@ -451,6 +520,8 @@ try {
         },
         /** The FX rack's latency, measured as the difference between two renders of the same song. */
         latency,
+        /** Item 2: two stacked sub kicks against each alone, over the window the report's claim is about. */
+        kickPhase,
         seconds: withFill.buffer.duration,
         barSeconds,
         fillRms: fillBars.map((bar) => ({
@@ -582,6 +653,17 @@ try {
       `   fx rack latency  : first sound at ${measured.audio.latency.withoutRackMs} ms bypassed vs ` +
         `${measured.audio.latency.withRackMs} ms with the rack (${measured.audio.latency.sampleRate} Hz)`
     );
+    {
+      const k = measured.audio.kickPhase;
+      const ok = k.verdict !== "inconclusive";
+      console.log(
+        `   ${k.verdict === "cancellation" ? "❌" : k.verdict === "reinforcement" ? "✅" : "⚠️"} kick stacking : ` +
+          `${k.band30to45.a.toExponential(3)} (${k.presetA.split(" ")[0]}) · ${k.band30to45.b.toExponential(3)} (${k.presetB.split(" ")[0]}) · ` +
+          `${k.band30to45.ab.toExponential(3)} stacked = ${k.ratioToLouderDb >= 0 ? "+" : ""}${k.ratioToLouderDb} dB vs the louder single, ` +
+          `38 Hz ${k.notch38Db >= 0 ? "+" : ""}${k.notch38Db} dB → ${k.verdict}`
+      );
+      if (!ok) console.log("   (inconclusive: the two singles differ enough in level that this window cannot separate phase from gain)");
+    }
     {
       const fade = measured.audio.boundaryFade;
       console.log(
