@@ -191,6 +191,27 @@ question that track factory raises. Two pieces:
   remainder of B4, and it is the obvious next slice;
 * **the arrangement view**: track headers and a row per lane, which is UI work with its own risk.
 
+**And the "ALS writes one clip" remainder is done too — my own grep said otherwise.**
+
+`docs/TRACK_ARRANGEMENT_PLAN.md` complains that `AbletonExporter` writes the whole song as one clip and "has no `sections` handling". That was
+true when it was written. It is not true now:
+
+```ts
+clips?: Array<{ pattern: SequencerPattern; name?: string }>;                  // AbletonExporter.ts:32
+const clipsForExport = options.clips?.length ? options.clips : [{ pattern, name: undefined }];   // :344
+const clipName = options.clips?.[idx]?.name;                                  // :565
+```
+
+and the fallback is documented as "the single pattern in scene 0 — which is what this exporter has always produced, **byte for byte**", which is
+the additive shape this project keeps using. The MCP tool already fills `clips` from `song.sections`, so per-section clips exist today under a
+different name.
+
+The lesson is the one this plan keeps relearning: **a grep for `sections` in that file returns zero, and zero was the wrong answer** — the
+concept is there under the name the exporter chose. Naming is not evidence; behaviour is.
+
+What that leaves is not code but a **criterion**: nothing in the suite appears to assert the count, so "three sections export as three clips" is a
+claim without a test. Writing it is the next slice, in the exporter's own test file, read first.
+
 **And the acceptance line is not just written down — it is a test.** `src/test/sectionLaneSlots.test.ts`:
 
 ```
