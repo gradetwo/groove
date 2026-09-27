@@ -191,6 +191,24 @@ question that track factory raises. Two pieces:
   remainder of B4, and it is the obvious next slice;
 * **the arrangement view**: track headers and a row per lane, which is UI work with its own risk.
 
+**And the acceptance line is not just written down — it is a test.** `src/test/sectionLaneSlots.test.ts`:
+
+```
+it("flattens byte-identically when no lane names a clip")           # :67
+    expect(JSON.stringify(withField.pattern)).toBe(JSON.stringify(without.pattern));
+    expect(withField.totalSteps).toBe(without.totalSteps);
+
+it("falls back for a lane the named clip does not have, rather than taking another lane's steps")   # :75
+    expect(Array.from(percussion.steps), "A's percussion, not B's kick lane").toEqual([0, 0, 1, 0]);
+```
+
+The first is exactly the property the plan demanded ("this has to be written as a test, not believed"), and the second is the subtle one the
+model's own comment warns about — a lane the named clip does not contain must fall back rather than silently take another lane's steps,
+which is a bug that would be invisible in a mix and obvious in a stem.
+
+So the region timeline's model half is **present and held to its stated property**, which makes the remaining work smaller than the census
+alone suggested. What is left is the two pieces named above, and the ALS one is next.
+
 The plan also wrote the acceptance line for this work in advance, and it is the one to hold: **a song with no per-lane overrides must render
 byte-identically to today**. With the model already in place, that test should exist — checking whether it does is part of the next slice, and
 if it does not, writing it is worth more than the feature.
