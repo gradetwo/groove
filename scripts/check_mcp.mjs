@@ -260,6 +260,17 @@ try {
   check("get_genre includes the mix and loudness trim", Boolean(genre?.mix) && typeof genre?.loudnessTrimDb === "number");
 
   const patternResult = payload(await client.request("tools/call", { name: "get_pattern", arguments: { genreId: "chicago-house" } }));
+
+  /**
+   * The two analysis tools the evaluation asked for and did not exist. Loudness is deliberately not one of them: every render already
+   * returns gated loudness and true peak, which `docs/MCP.md` has said since the analyser was written.
+   */
+  const key = payload(await client.request("tools/call", { name: "estimate_key", arguments: { genreId: "chicago-house" } }));
+  check(
+    "estimate_key reports a tonic, a mode and a fit from the notes",
+    typeof key.tonic === "string" && (key.mode === "major" || key.mode === "minor") && Number.isFinite(key.fit) && key.notes > 0,
+    JSON.stringify({ tonic: key.tonic, mode: key.mode, fit: key.fit, notes: key.notes })
+  );
   const pattern = patternResult.pattern;
   check("get_pattern returns a pattern with tracks", Array.isArray(pattern?.tracks) && pattern.tracks.length > 0);
 
