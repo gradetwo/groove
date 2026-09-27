@@ -933,6 +933,35 @@ That also decides the shape of the change: the no-map path is the *existing* cod
 criterion the decision record already set — "absent → byte-identical" — is then satisfied by construction, and the automations that check it (the determinism
 probe's six rows, the timbre baseline's 159 genres, the loudness report's fresh re-renders) are guards rather than oracles.
 
+## Closing status, 2026-09-28 — what is done, and what is parked on purpose
+
+The five answers the owner gave are all **implemented, tested and released**, and this section exists because a plan that still lists finished work as
+outstanding is the same failure as one that lists stale facts as current — a mistake this document has already made twice.
+
+| decision | state |
+|---|---|
+| **1A — a second lane of a kind** | **done, and usable**: `SequencerTrack.laneId` (additive), addressing by `laneId` first and kind as fallback, `validatePattern` comparing a lane's **identity**, the flattener keeping both, the exporter naming by `name` — and now **`add_lane`**, so an agent can actually create one. Four test files. |
+| **2B — a tempo track** | **done**: `tempoTrack` on `Song` and on the flattened pattern, read by `tempoMap.ts` (`jump`/`linear`), scheduled by the renderer through an extracted `stepTiming`, reported by `secondsEstimate`, written by **`set_tempo`**. The no-map path keeps the **literal** old expressions, so "absent → byte-identical" is a property of the source rather than a proof about floating point. |
+| **3B — the lane matrix over MCP** | **done**: `setSectionLaneSlots` (deep-equal to N single calls, all-or-nothing by object identity) and the tool **`set_lane_slots`**, which also reports the slots the edited sections share. |
+| **4 — audio tracks and SVS** | **done as scoped**: `docs/AUDIO_TRACKS_AND_SVS_PLAN.md`, and **`synthesize_vocal`** reserved, read-only, and honest — held there by a gate case. |
+| **5 — B7** | **frozen**: the paired gate keeps reporting **0.8× of its control**, tolerated, with no further investment. |
+| the fourth report's items | **①** non-ASCII titles no longer collide (five criteria); **④** the kick-phase claim is **measured** — 6.23 dB lost against the louder single, 13.45 dB at 38 Hz, which incoherent addition rules out as a level artefact, so phase alignment is worth building **with that as its acceptance line**; **②** the three files it cites do not exist, so those were corrections rather than work. |
+
+**One bug was found and fixed before release**, by the criterion doing its job: the tempo accumulation added a bar's length at **every step**, making a bar
+sixteen times too long. Two assertions failed, a diagnostic printed the intermediates, and the arithmetic — not the tests — was wrong.
+
+**Three gates that had been red for weeks are green**: a layer violation (`genreArt` moved down a layer), a lint error in the slug whitelist's
+control-character strip, and a probe crashing on a report file it does not create. A fourth defect was found in the same place: `probe_texture_contribution`'s
+`check(...)` results had **never been printed**, so its verdicts had been silent since they were written.
+
+**Parked on purpose, and named rather than forgotten:**
+
+* **audio tracks as a ninth *kind*** — a different question from the multiplicity decision 1A answered, and it touches the same compatibility promise. The scoping
+  document recommends the read-only slice first (play a sample, measure its latency into PDC's table, change no export path), which needs no format decision;
+* **SVS** — reserved by the owner's own decision; the interface says so and a gate holds it there;
+* **B7's missing evidence** — frozen, and the honest reading stands: the section change is not demonstrated by that measurement;
+* **the kick phase alignment itself** — worth building, with the probe's criterion as its acceptance line, and not started.
+
 ## What is deliberately rejected
 
 * **Audio in context** (`render_preview` returning audio data). The MCP keeps returning file paths plus an analysis summary; a
