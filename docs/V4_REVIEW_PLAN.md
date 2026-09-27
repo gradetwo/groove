@@ -248,6 +248,33 @@ setup rather than this difference-of-two-renders trick, and that is the next sli
 the channel strip). It needs its own probe — an impulse in, the first non-zero sample out — because a declared latency is exactly the kind
 of number that drifts from the measured one, and the difference is inaudible until it is not.
 
+## PDC's offline half, confirmed by a prediction that came true
+
+The latency table predicted 10.408 ms − 3.0 ms = **7.408 ms** once the lookahead was compensated, and the first run after the change:
+
+```
+fx rack latency  : first sound at 7.415 ms bypassed vs 7.415 ms with the rack (44100 Hz)
+```
+
+**7.415 ms**, against a prediction of 7.408 — agreement to 0.007 ms, or about a third of one sample. That is the kind of check this project
+keeps asking for and rarely gets: not "the change looks right" but **a number written down beforehand that the measurement then hit**. It
+also settles what the compensation did: exactly the limiter's lookahead and nothing else, with the FX rack still contributing zero.
+
+The same run answers the question the change deserved to be asked — did it damage the audio?
+
+* ✅ **timbre**: "The 159 genres carry distinct, well-formed timbre fingerprints" — the baseline **held**;
+* ✅ **loudness**: "still describes the code (3 genre(s) re-rendered, all within ±0.35 dB)" — so no re-record was needed;
+* ✅ **determinism**, now **with PDC in the path**: six renders across a page and a reload, RMS −9.052 to −9.054 dBFS, "renders are consistent
+  in this page";
+* ⚠️ B7 unchanged and still marginal (1.5× against its control's 1.0×), which is the criterion flagged earlier — the arrangement/control
+  contrast is not strong enough to be a gate, and re-anchoring it is still on the list.
+
+A 3 ms shift is invisible to a whole-signal statistic, which is exactly why the baselines holding is *expected* rather than reassuring — and
+why the latency row, which is a local measurement, is the one that could see it.
+
+**Still open in workstream 6**: the realtime path (a `DelayNode` with a crossfade, so live playback is aligned too), track factory, folder and
+summing tracks, the region timeline, audio tracks and SVS.
+
 ## What is deliberately rejected
 
 * **Audio in context** (`render_preview` returning audio data). The MCP keeps returning file paths plus an analysis summary; a
