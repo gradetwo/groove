@@ -120,6 +120,14 @@ export interface Song {
   id: string;
   name: string;
   genreId: string;
+  /**
+   * Optional tempo changes over the song's bars (owner decision 2b).
+   *
+   * Absent, every bar costs `4 * 60 / bpm` and nothing about the song differs from before; present, the map is read by `src/data/tempoMap.ts` and the
+   * renderer is expected to schedule from it rather than restarting the audio context. Additive in the same shape as `arrangement`, `extraClips`, `slots`,
+   * `syllables` and `laneId`.
+   */
+  tempoTrack?: Array<{ atBar: number; bpm: number; curve?: "jump" | "linear" }>;
   bpm: number;
   swing: number;
   resolution: "1/8" | "1/16" | "1/32";
