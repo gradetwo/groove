@@ -192,6 +192,25 @@ engine.
 does not is expected to land inside 0.005 dB. PDC — the next piece, and the one that can make phase coherence worse — can be checked
 against this instead of against an impression.
 
+**And the declared number is 3 ms** — so the measured 10.408 ms decomposes.
+
+`MASTER_LIMITER_LOOKAHEAD_MS = 3.0` (`MasterLimiter.ts:90`), and the worklet's latency is
+`Math.max(1, Math.round((requestedLookaheadMs / 1000) * ctx.sampleRate))` (`:608`) — about 132 samples at 44.1 kHz — while the fallback sets
+`latencySamples: 0` (`:582`). Against the measured baseline:
+
+| path | declared | measured first sound |
+|---|---|---|
+| worklet | **3 ms** | **10.408 ms** |
+| fallback | **0 ms** | not yet measured (the probe reports `hosts failed`, so it cannot force the fallback) |
+
+So the shared 10.408 ms is **3 ms of limiter lookahead plus about 7.4 ms of everything else** — the drum voice's own start, the channel
+strip, the graph — and that is a testable relation rather than a note: a future run that lands on the fallback should measure about 7.4 ms,
+and a run that shows 10.4 ms on both paths would mean the declared lookahead is not being applied at all, which is the kind of bug this
+table exists to catch.
+
+**PDC's first concrete obligation**, therefore: compensate **3 ms** on the `worklet` path and **nothing** on the fallback — and the check
+that it did is the pair (`limiterKind`, first sound), which the determinism probe is already halfway to printing.
+
 **The limiter's latency is declared, and it differs by path.**
 
 Reading the chain rather than measuring it first turned up the fact the table needs: the master limiter **declares** its latency —
