@@ -210,6 +210,22 @@ try {
   /**
    * Decision 3b's tool half, held to the two properties the report asked for: one call for a matrix, and **nothing applied** when one entry is wrong.
    */
+  /**
+   * Decision 2b at the tool boundary: a tempo map is a **validated** write, and the reported length follows it. Browser-free by nature — nothing here renders.
+   */
+  const tempoApplied = payload(
+    await client.request("tools/call", { name: "set_tempo", arguments: { songId: song.songId, tempoTrack: [{ atBar: 0, bpm: 240 }] } })
+  );
+  const tempoRejected = await client.request("tools/call", {
+    name: "set_tempo",
+    arguments: { songId: song.songId, tempoTrack: [{ atBar: -1, bpm: 120 }] },
+  });
+  check(
+    "set_tempo accepts a map and refuses an unreadable point",
+    typeof tempoApplied.secondsEstimate === "number" && tempoRejected?.isError === true,
+    `estimate ${tempoApplied.secondsEstimate}s; rejected: ${tempoRejected?.isError === true}`
+  );
+
   const laneProbe = payload(
     await client.request("tools/call", { name: "make_unique", arguments: { songId: song.songId, index: 0 } })
   );

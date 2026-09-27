@@ -421,6 +421,47 @@ export function makeUniqueMcpSection(input: {
 }
 
 /**
+ * Set a song's tempo map (owner decision 2b), with the same discipline the batch lane slots use.
+ *
+ * A **written** map is validated rather than filtered. `tempoMap.ts` ignores a point it cannot read, which is right for reading a file someone else wrote; a
+ * caller who is *writing* one should be told that bar −2 or 0 BPM is not going to do anything, because silently dropping it means the tempo they asked for is
+ * not the tempo they get. So the whole change is rejected and the song is untouched, which is the transaction `set_lane_slots` established.
+ */
+export function setMcpTempo(
+  songId: string,
+  tempoTrack: ReadonlyArray<{ atBar: number; bpm: number; curve?: "jump" | "linear" }>
+): { summary: SongSummary; problems: string[] } {
+  const song = songs.get(songId);
+  if (!song) throw new Error(`unknown songId "${songId}" — create one with create_song`);
+
+  const problems: string[] = [];
+  tempoTrack.forEach((point, index) => {
+    if (!Number.isFinite(point?.atBar) || point.atBar < 0 || !Number.isInteger(point.atBar)) {
+      problems.push(`point ${index}: atBar must be a whole bar, 0 or more`);
+    }
+    if (!Number.isFinite(point?.bpm) || point.bpm < 20 || point.bpm > 300) {
+      problems.push(`point ${index}: bpm must be between 20 and 300`);
+    }
+    if (point?.curve !== undefined && point.curve !== "jump" && point.curve !== "linear") {
+      problems.push(`point ${index}: curve must be "jump" or "linear"`);
+    }
+  });
+  if (problems.length) return { summary: summariseSong(song), problems };
+
+  const next = tempoTrack.length
+    ? { ...song, tempoTrack: tempoTrack.map((point) => ({ atBar: point.atBar, bpm: point.bpm, ...(point.curve ? { curve: point.curve } : {}) })) }
+    : // Clearing removes the key rather than storing an empty array, so a song that never had a map and one that stopped are identical.
+      (() => {
+        const { tempoTrack: _drop, ...rest } = song;
+        return rest as Song;
+      })();
+
+  rememberSong(song.id, "set_tempo");
+  songs.set(song.id, next);
+  return { summary: summariseSong(next), problems: [] };
+}
+
+/**
  * The batch lane-slot edit, at the tool boundary (owner decision 3b).
  *
  * **Known limit, stated rather than hidden**: the sharing report counts each section's own `slot`, so a per-lane override that points a lane at a clip another
