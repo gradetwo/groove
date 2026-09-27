@@ -121,6 +121,14 @@ try {
       arguments: { genreId: genre, ops: [{ op: "clear_track", trackId: "fx" }] },
     })
   );
+  /**
+   * The op's reply is the one thing this probe cannot guess, and the first run of it crashed instead of saying so:
+   * `Cannot read properties of undefined (reading 'tracks')` at the line that assumed `{ pattern }`. A probe that dies on an
+   * unexpected shape costs a twenty-minute CI round trip, so the shape is checked and the server's own answer is printed.
+   */
+  if (!cleared?.pattern) {
+    throw new Error(`apply_pattern_ops did not return a pattern — the server said: ${JSON.stringify(cleared).slice(0, 300)}`);
+  }
   await client.request("tools/call", {
     name: "set_clip",
     arguments: { songId: withoutTexture.songId, slot: "A", pattern: cleared.pattern },
