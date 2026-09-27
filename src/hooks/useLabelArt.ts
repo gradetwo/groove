@@ -9,7 +9,7 @@
  * Returns `null` until an image has decoded; the label bakes with its paper and gains the picture on the next frame.
  */
 import { useEffect, useState } from "react";
-import { genreCoverCandidates } from "../mobile/genreArt";
+import { genreCoverCandidates } from "../utils/genreArt";
 import { useSkin } from "./useSkin";
 
 export interface LabelArt {

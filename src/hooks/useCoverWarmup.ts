@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { preloadGenreCover, preloadGenreCovers } from "../mobile/genreArt";
+import { preloadGenreCover, preloadGenreCovers } from "../utils/genreArt";
 import { useSkin } from "./useSkin";
 
 /**

@@ -1,0 +1,172 @@
+/**
+ * Per-genre artwork.
+ *
+ * The library shows one tile per genre and every genre should look like *itself*, not like a category
+ * colour repeated. Two layers, in order:
+ *
+ *  1. `public/covers/<genre-id>.jpg` when it exists — drop a real photo in and it wins, with no code
+ *     change. That is the hook for licensing actual artwork, which is a decision for whoever ships it,
+ *     not something a build step can invent.
+ *  2. otherwise a **generated** cover: a deterministic gradient seeded by the genre id, tinted by its
+ *     category. Not stock photography, and the docs say so — but every genre gets a distinct,
+ *     recognisable tile today.
+ */
+
+/**
+ * Category hue ranges, taken from the reference artwork the user pointed at: an aurora palette of
+ * violet → pink → teal over a deep navy ground, not flat category colours.
+ */
+const CATEGORY_HUES: Record<string, [number, number]> = {
+  Electronic: [168, 196],
+  "Rock/Metal": [318, 344],
+  "Hip Hop": [256, 284],
+  "Jazz/Blues": [204, 232],
+  "Pop/R&B": [286, 312],
+  "Latin/World": [150, 178],
+};
+
+/**
+ * One colour per category, from the reference palette.
+ *
+ * The desktop galaxy view derives colours from cluster membership; the phone shell needs exactly six
+ * stable, high-contrast swatches, so it maps the six categories it already has rather than inventing a
+ * seventh colour source. It lives beside the generated art (rather than on the home screen) so the
+ * player bar and the player can use it without statically importing the home screen — which would drag
+ * the library list's module into the shell's first-paint chunk.
+ */
+export const CATEGORY_SWATCH: Record<string, string> = {
+  // A cool, high-contrast set. The reference designs leaned on amber for everything, which made every
+  // genre's tile look identical (and yellow); these six read as distinct at tile size.
+  Electronic: "#5eead4",
+  "Rock/Metal": "#fb7185",
+  "Hip Hop": "#a78bfa",
+  "Jazz/Blues": "#60a5fa",
+  "Pop/R&B": "#f0abfc",
+  "Latin/World": "#34d399",
+};
+
+/** Stable 32-bit hash: the same genre always gets the same art. */
+export function hashGenreId(id: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < id.length; i += 1) {
+    hash ^= id.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash >>> 0;
+}
+
+/** The real cover if one has been dropped in `public/covers/`, else null. */
+export function genreCoverUrl(id: string): string {
+  return `/covers/${encodeURIComponent(id)}.jpg`;
+}
+
+/**
+ * Skin-aware cover candidates, in priority order:
+ *
+ *  1. `public/covers/<skin>/<genre>.jpg` — art made for this skin's style.
+ *  2. `public/covers/<genre>.jpg` — the shared/scraped fallback.
+ *
+ * Callers should try them in order (e.g. an <img> onError handler or a
+ * pre-resolved manifest), so a skin that has no art yet degrades to today's
+ * behaviour instead of showing a broken tile.
+ */
+export function genreCoverCandidates(id: string, skin?: string): string[] {
+  const file = `${encodeURIComponent(id)}.jpg`;
+  return skin ? [`/covers/${encodeURIComponent(skin)}/${file}`, `/covers/${file}`] : [`/covers/${file}`];
+}
+
+/**
+ * The **thumbnail** candidates, in the same order.
+ *
+ * The shipped covers are 1024x1024 — 130 KB to 626 KB each — and a genre tile shows them at 56 px, so every tile in the
+ * library decoded a megapixel to draw a thumbnail: a screenful is tens of megabytes and hundreds of megapixels of decode, on
+ * the main thread, while the transport is running. That is a plausible cause of the owner's "after a few dozen tracks it
+ * stutters, but the recorded audio is fine" — the audio graph is a separate thread and stays clean while the UI does not.
+ *
+ * `public/covers/_thumbs/**` holds 256x256 versions (13 MB for all six skins plus the shared set, ~12 KB each), generated
+ * from the same originals by `scripts/make_cover_thumbs.mjs`. Callers use these for anything up to a couple of hundred pixels
+ * — tiles, cards, the player bar, the detail header — and the full image only where it is genuinely large (the vinyl label,
+ * which bakes at 512 px).
+ */
+export function genreCoverThumbCandidates(id: string, skin?: string): string[] {
+  const file = `${encodeURIComponent(id)}.jpg`;
+  /**
+   * Thumbnail first, then the same order the full-size list uses.
+   *
+   * The chain keeps both dimensions of the fallback — the skin's own art before the shared set, and a thumbnail before the
+   * original — so a skin whose thumbnails were never generated still gets its own picture rather than the shared one.
+   */
+  const thumb = (prefix: string) => `/covers/_thumbs/${prefix}${file}`;
+  const full = (prefix: string) => `/covers/${prefix}${file}`;
+  return skin
+    ? [thumb(`${encodeURIComponent(skin)}/`), thumb(""), full(`${encodeURIComponent(skin)}/`), full("")]
+    : [thumb(""), full("")];
+}
+
+/** A CSS background for a genre's tile: deterministic, distinct, and no asset required. */
+export function genreArtBackground(genre: { id: string; category: string }): string {
+  const hash = hashGenreId(genre.id);
+  const [hueA, hueB] = CATEGORY_HUES[genre.category] ?? [172, 196];
+  const spread = hueB - hueA;
+  const first = hueA + (hash % Math.max(1, Math.abs(spread) + 1)) * Math.sign(spread || 1);
+  const second = first + 34;
+  const angle = 120 + (hash % 7) * 20;
+  const blob = 40 + (hash % 40);
+  // Three aurora bands over a dark ground: the layered look of the reference's covers, generated
+  // rather than photographed (see the file header for why).
+  return [
+    `radial-gradient(130% 90% at ${blob}% 8%, hsl(${first} 82% 62%) 0%, transparent 58%)`,
+    `radial-gradient(120% 110% at ${100 - blob}% 34%, hsl(${second} 76% 52%) 0%, transparent 62%)`,
+    `radial-gradient(150% 120% at 50% 118%, hsl(${(first + second) / 2} 70% 40%) 0%, transparent 66%)`,
+    `linear-gradient(${angle}deg, hsl(${first} 60% 14%), hsl(${second} 55% 8%))`,
+  ].join(", ");
+}
+
+/**
+ * Warm a cover so the first paint with it is instant.
+ *
+ * Every image in the app is fetched when its element is first rendered, which is why opening the player or scrolling a list
+ * shows a blank tile for a moment and then a picture. `loading="lazy"` cannot help with that: lazy only decides *when*
+ * to start, not whether the bitmap is ready when the element appears.
+ *
+ * This resolves after `decode()`, so the browser has the pixels compiled and the paint is immediate. It is safe to call for
+ * an image already in cache (it resolves from memory) and safe to call repeatedly — the browser deduplicates the request, and
+ * the caller keeps its own set of what it has already asked for.
+ */
+export function preloadGenreCover(
+  id: string,
+  options: { skin?: string; thumb?: boolean } = {}
+): Promise<void> {
+  if (typeof Image === "undefined") return Promise.resolve();
+  const candidates = options.thumb === false ? genreCoverCandidates(id, options.skin) : genreCoverThumbCandidates(id, options.skin);
+  const url = candidates[0] ?? genreCoverUrl(id);
+  return new Promise((resolve) => {
+    const image = new Image();
+    // The same hint the rendered <img> carries, so the two never compete for the main thread.
+    image.decoding = "async";
+    image.onload = () => {
+      // `decode()` is what actually makes the paint instant; a browser without it resolves on load.
+      if (typeof image.decode === "function") image.decode().then(resolve, resolve);
+      else resolve();
+    };
+    image.onerror = () => resolve();
+    image.src = url;
+  });
+}
+
+/** Warm several covers, at most `concurrency` at a time so warming never competes with the transport. */
+export async function preloadGenreCovers(
+  ids: readonly string[],
+  options: { skin?: string; thumb?: boolean; concurrency?: number } = {}
+): Promise<void> {
+  const concurrency = Math.max(1, options.concurrency ?? 3);
+  let index = 0;
+  const workers = Array.from({ length: Math.min(concurrency, ids.length) }, async () => {
+    while (index < ids.length) {
+      const id = ids[index];
+      index += 1;
+      await preloadGenreCover(id, options);
+    }
+  });
+  await Promise.all(workers);
+}
