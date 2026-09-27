@@ -1,6 +1,6 @@
 # GROOVE LAB 下一阶段演进与完善规划（v2.0 路线图）
 
-> **当前基线**：v2.34.16（`package.json` / `public/version.json` 实测；基线 commit `d480684`）
+> **当前基线**：v2.34.16（`package.json` / `public/version.json` 实测；基线 commit `273f8e3`，2026-09-28）
 > **交付状态（E-09 复核，2026-09-14）**：Phase 0–6 已交付；**Phase 7** 交付 P7-01 / P7-02 / P7-03，**P7-04 未交付**；**Phase 8** 仅交付 P8-01，**P8-02 / P8-03 未交付**。逐项证据见下方各阶段状态说明与 `BACKLOG.md`。
 > **核心定位**：从「世界音乐曲风学习库」向「**专业级 Web 律动工作站与交互式乐理工作坊（Web-Native Groove Workstation & Interactive Musicology Suite）**」全面跨越。
 
@@ -121,3 +121,94 @@ gantt
 1. **N-01 / P8-02 iPad 硬件调音台视窗**：补齐大屏专业混音手感（8 根推子 + Pan/Send + 峰值表）。
 2. **N-02 / P8-03 HRTF 3D 空间音频**：`PannerNode(panningModel: "HRTF")` 环形声场，兑现空间音频沉浸体验。
 3. **N-03 / P7-04 局域网 WebRTC 锁相合奏**：Master 时钟 + 扫码加入 + 分轨分工，打通多人合奏场景。
+
+---
+
+## 五、 专业工作站缺口的分阶段开发计划（源自 v4 评估，2026-09-28）
+
+> **编号说明**：本节采用 **v4 评估的 Phase 0–3 编号**，与上文 **Phase 5–8**（v2.0 路线图）是**两套编号**——上文是"已交付功能的继续演进"，本节是"专业 DAW 缺口的补齐计划"。
+>
+> **每项都带「现状 / 缺口 / 验收线」**，因为本项目的规则是：**计划条目止于一道门禁，而不是一个承诺**。现状一律以**本仓库当天的代码与实测**为准（v2.34.16）；我**没有核对过**的地方会明说，而不是写成"已完成"或"未完成"。
+>
+> **Phase 4 只列远期，不排期**（见本节末）。
+
+### 5.1 M1（Phase 0 的前置冲刺）：Agent 最小可用闭环
+
+| 项 | 现状 | 缺口 / 验收线 |
+|---|---|---|
+| 契约版本化 + `groove://changelog` | `groove://changelog` **已注册**（`mcp/registry.ts`，文档 `docs/MCP.md`，且有门禁**比较两侧**） | **缺**"契约版本发现"工具（`get_contract_version`）。验收线：agent 能在一次读调用里拿到契约版本与能力列表 |
+| `undo` / opId 轻量事务日志 | `undo_song` ✓、每次写入带 `opId` ✓、服务器端历史 ✓ | **缺 `redo`**、`snapshot` / `restore`。验收线：一串工具调用可逐步撤回**并前滚**到起点摘要 |
+| `get_energy_curve` 粗粒度版 | **已交付**（作为 `analyze_audio` 的返回字段 `energyCurveDb` / `energySpreadDb`） | ⚠️ **SLO 未达标**：3 分钟曲目 **≤1 s** ✗，实测 **1.8 s**（8 kHz 单声道）✓。验收线：要么达标，要么把 SLO 改成实测值（**不允许留一个永远红着的指标**） |
+| `style_ref` + 示例库 MVP | 示例库 ✓（3 曲风 × 2 例，`mcp/examples.ts` + `groove://examples/{genre}` + `get_example`） | **缺生成器上的 `style_ref` 参数**。验收线：同一 seed 下 `style_ref` 改变生成结果，且两次运行一致 |
+| 和声层最小集 | **已交付**（`set_chord_progression` + `suggest_progression`） | — |
+| `generate_melody` + `validate_prosody` | **已交付**（contour-first ✓、仅告警 ✓、含 3+3 变调 ✓） | — |
+| **M1 验收：一分钟闭环 ≤90 s 零人工** | **从未测过** | 验收线：一次端到端计时（生成→能量自检→修正→导出 `.groove` + WAV 预览），**墙钟 ≤90 s**，并把这个数字记进文档 |
+
+### 5.2 Phase 0：引擎下沉与契约地基
+
+| 项 | 现状 | 验收线 |
+|---|---|---|
+| 抽取 headless core（模型/生成/编排/渲染调度，零 DOM） | ❌ 能力都在浏览器侧；**MCP 走浏览器桥接**（评估预言的"桥接态"，今天仍是） | 核心可在无 DOM 环境跑完整管线 |
+| Project Schema v2 + 可复现 manifest（seed + 引擎版本） | 🟡 `.groove` v1 格式与兼容承诺已在 `docs/GROOVE_PACKAGE_FORMAT.md`；**manifest 无** | 同一工程 + 同一 manifest 在任意运行时产出**一致**结果 |
+| RenderTarget 抽象（AudioContext / OfflineAudioContext / Node） | ❌ （渲染目前依赖 `OfflineAudioContext`） | 同一工程经三个 target 输出一致 |
+| golden render 双档确定性 | 🟡 **同运行时确定性已实测 0.005 dB** ✓（音频探针）；**跨运行时 epsilon 无** | 跨运行时比较（float32 WAV）在 epsilon 内 |
+| MCP 直接复用 core + 工具全 opId 化 + **与 UI 共享 Undo** | 🟡 MCP 侧 opId + undo ✓；**共享同一操作日志 ✗** | 在 UI 里的一次改动能被 agent 撤回，反之亦然 |
+| 渲染后端切生产态（上表 SLO 全量生效） | ❌ 仍桥接态 | **无浏览器会话**下完成"生成→渲染→导出" |
+
+### 5.3 Phase 1：片段化与时间线
+
+| 项 | 现状 | 验收线 |
+|---|---|---|
+| **Global Tracks：Tempo 曲线** | ✅ **已交付**（`tempoTrack` + `set_tempo`，2.34.15） | — |
+| Global Tracks：**Chord Track** | ❌（只有 pattern 层和声工具） | 和弦轨可被读写，且与 pattern 的进行**同一真相** |
+| Global Tracks：Signature | ❌ | 拍号变化影响小节长度与步数 |
+| **Region 数据模型**（非破坏性引用 Pattern） | ❌（今天是 Pattern + Section + `slots`） | 同一 Pattern 可被多个 Region 引用，改一处**不**改另一处 |
+| Timeline Arrange View（拖拽/裁剪/分离/循环/交叉淡化） | ❌（有的是**段落级**编排面板 + 车道矩阵） | 上条验收的人工版：能在时间线上拖出一个 Region 并交叉淡化 |
+| 动态轨道系统 + **Folder Track** | ❌（`laneId` ✓ 解决了**同种类多条**；**编组未做**） | 编组可折叠、可对整组设音量、导出为一条总线 |
+| 连续 Automation Lanes（贝塞尔） | ❌ | 一条 2 小节 Filter 上升曲线在渲染里可被测出 |
+| MCP 同步：`region.*` / `track.*` / `automation.*` / `draw_automation` | ❌ | **Phase 1 总验收**：agent 能"把 Bass 第二小节换成静音，并在其上画一条 2 小节 Filter 上升曲线" |
+
+### 5.4 Phase 2：音频破冰与混音台（**进行中**）
+
+| 项 | 现状 | 验收线 |
+|---|---|---|
+| **Audio Track** | 🟡 **进行中**：`audio` 已成为第九种 `track_id`（类型 ✓ 别名 ✓ 分享 codec ✓ guard ✓），见 `docs/AUDIO_TRACKS_AND_SVS_PLAN.md` §1b | 采样可被播放；引用不存在的采样**报错而不是静音**；往返与 `.groove` 兼容 |
+| **PDC 子项一/二/三** | ✅ **全部已交付**（延迟表 ✓；离线域样本级补偿 ✓ 预测 7.408 ms / 实测 **7.415 ms** ✓；实时域静态补偿 + 双 DelayNode 交叉淡化 + 梳状探针 ✓） | — |
+| WASM 音频引擎（**Signalsmith Stretch, MIT**，规避 Rubber Band GPL） | ❌ 全仓库无任何时间拉伸代码 | 拉伸后的音频经 `analyze_audio` 判定无金属感/无爆音 |
+| Mixer View（Insert FX / Send / Bus） | ❌（总线路由的**数据层**在 `src/audio/trackBuses.ts` ✓，无视图） | 混音视图可改 Insert/Send，且与 MCP 工具同一真相 |
+| Sidechain 路由 | ❌ | 侧链压缩可被 `analyze_audio` 测出增益回落 |
+| 麦克风录音 + Track Alternatives / Comping | ❌ | 录一段、留两个 take、选一个进混音 |
+| MCP 同步：`mix.*` / `route_sidechain` / **`get_fx_latency`** | ❌（**延迟表存在，但没有工具暴露它**） | `get_fx_latency` 返回延迟表；agent 能据此解释相位问题 |
+| **Phase 2 验收**：场景 B（AI 自动混音）端到端 + 梳状探针与双档确定性全绿 | 🟡 探针 ✓ / 场景 B ❌ | §5.6 场景 B 跑通 |
+
+### 5.5 Phase 3：完整歌曲工具链
+
+| 项 | 现状 | 验收线 |
+|---|---|---|
+| 和声层全量：Chord Track 交互 / 音阶锁定 / `transform_pattern(arp/strum)` / 动机发展 | 🟡 最小集 ✓；**`motif_ops` 与全量 ✗** | 一个动机经 4 种 ops 发展后仍是**同一个动机**（可被听觉与统计同时认出） |
+| 人声路径 A：录音 + Vocal Chain + 离线修音 | ❌ | 录一条干声 → 修音 → 与伴奏同相 |
+| 人声路径 B：**SVS 桥**（VocalTrack 规范 + 四格式导出 + `vocal.synthesize(engine)`） | 🟡 **按业主决定：接口预留、实现留空** ✓（`synthesize_vocal` 可达、只读、**诚实返回 reserved** ✓，门禁守住） | 上游 synth 项目接入时的数据交换标准（见 `docs/SYNTH_UPSTREAM_PLAN.md`） |
+| Mastering Chain（多段压缩 / True Peak Limiter / BS.1770-4 LUFS） | 🟡 限幅器 ✓ + LUFS 归一化 ✓ + 报告 ✓；**多段压缩 ✗** | 一条链把混音送到 **−14 LUFS** 且真峰 ≤ −1 dBTP |
+| `export_lufs_target` | ❌（有 `normalize_loudness`，无导出目标） | 导出即达目标响度，且报告说明被什么限制（target / true peak / limiter） |
+| Web MIDI（功能检测 + 兜底） | ❌ | 无 MIDI 设备时**不报错**，有设备时可用 |
+| 工程保存/加载（`.groove`） | ✅ 已有（`export_groove` / `import_groove` / `share_url`） | — |
+| **Phase 3 验收**：零到"含人声路径的发行就绪 WAV（−14 LUFS）"全流程可在浏览器完成 | ❌ | 与 M1 的"一分钟闭环"同一种测法：**端到端、有时钟、有数字** |
+
+### 5.6 Phase 4（**远期规划，不排期**）
+
+AI 导演模式（v3.0+）：自然语言直接操控 Timeline / Mixer / Automation、闭环全自动（自动 comping / 混音 / 母带 / 过渡生成）、参考曲目风格迁移、Agent 评测基座全量运行与社区曲风包生态。
+**本节不为它分解任务、不估工时** —— 它依赖 Phase 0–3 的全部地基；等到 Phase 2 出口达成后再评估。
+
+### 5.7 跨阶段四原则的现状
+
+| 原则 | 现状 |
+|---|---|
+| **No UI-only Features**（用户可见能力须同相位进入 MCP 契约） | 🟡 本轮新增能力均已同步（`set_tempo` / `set_lane_slots` / `add_lane` / `synthesize_vocal`）；Phase 1–2 的 UI 尚不存在 |
+| **全员种子化**（一切生成器接受 seed） | ✅ 基本成立 |
+| **全员 opId 化**（一切变更进入与 UI 共享的操作日志） | 🟡 MCP 侧 ✓；**与 UI 共享 ✗** |
+| **golden render 双档确定性先行** | 🟡 同运行时 ✓（**0.005 dB**）；跨运行时 epsilon ✗ |
+
+### 5.8 我**没有核对**的两处（因此本节不声称它们的状态）
+
+1. v4 评估 §5.9.1 的「Agent 评测基座：三族指标体系」（服从性 Gate / 赋能性看板 / 质量看板）—— **未读、未查**；
+2. §5.2.1 prompts / few-shot 示例工程的**具体内容**—— 知道有 4 条 prompt 与示例资源，**未逐条比对**。
