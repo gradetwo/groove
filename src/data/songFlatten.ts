@@ -290,7 +290,14 @@ export function flattenSong(song: Song): FlattenedSong {
     tracks,
   };
 
-  return { pattern, problems, totalBars: playable.length, totalSteps, boundaries };
+  return {
+    // Additive: a song with no tempo map returns the very same pattern object, so nothing downstream can observe this change.
+    pattern: song.tempoTrack?.length ? { ...pattern, tempoTrack: song.tempoTrack } : pattern,
+    problems,
+    totalBars: playable.length,
+    totalSteps,
+    boundaries,
+  };
 }
 
 /** A clip's length in steps: its declared `totalSteps`, else its longest lane. */

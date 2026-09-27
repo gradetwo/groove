@@ -112,6 +112,13 @@ export interface SequencerTrack {
 }
 
 export interface SequencerPattern {
+  /**
+   * The song's tempo changes, carried onto the flattened pattern (owner decision 2b) because the renderer is handed a pattern and nothing else.
+   *
+   * Optional and absent by default: a song with no `tempoTrack` produces a pattern with **no such key**, which is what keeps an existing render byte-identical
+   * rather than merely equivalent (`WavExporter` branches on this field instead of using a prefix sum unconditionally).
+   */
+  tempoTrack?: Array<{ atBar: number; bpm: number; curve?: "jump" | "linear" }>;
   genre_id: string;
   bpm: number;
   scale: string;
