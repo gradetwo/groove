@@ -427,7 +427,18 @@ export const TOOLS: ToolDefinition[] = [
         const previous = attempts.length >= 2 ? attempts[attempts.length - 2]! : attempts[0]!;
         const residual = target - previous.integratedLufs;
         const headroom = ceiling - previous.truePeakDb;
-        const limitedBy = residual - headroom > 0.05 ? "truePeak" : "target";
+        /**
+         * Three outcomes, and the third was measured rather than assumed.
+         *
+         * The runs that produced this: a −1.37 dB request moved the mix 0.04 dB; −11.37 moved it 4.97; and the iterating version drove the
+         * trim to −3.916 dB and moved the reading from −12.674 to −13.122 while the **true peak did not move at all** (−1.3 dBTP every
+         * time). A trim upstream of a limiter cannot lower the output if the limiter restores what it removes, and a peak that never leaves the
+         * ceiling across three different trims is that behaviour seen directly. So the answer is not always "it reached the target": on this
+         * chain the loudness is the **limiter's**, and an upstream trim mostly buys nothing.
+         */
+        const peakPinned =
+          attempts.length >= 2 && attempts.every((attempt) => Math.abs(attempt.truePeakDb - attempts[0]!.truePeakDb) <= 0.05);
+        const limitedBy = peakPinned && Math.abs(best.result.integratedLufs - target) > 0.2 ? "masterLimiter" : residual - headroom > 0.05 ? "truePeak" : "target";
         const after = best.result;
         return {
           songId: song.id,
@@ -447,7 +458,9 @@ export const TOOLS: ToolDefinition[] = [
               ? "the trim reached the target; re-measure to confirm, and check the true peak is still under the ceiling"
               : limitedBy === "truePeak"
                 ? `the true-peak ceiling capped the trim at ${best.trimDb.toFixed(3)} dB, so the target was not reachable without exceeding ${ceiling} dBTP — lower the target or accept the ceiling`
-                : `the trim settled at ${best.trimDb.toFixed(3)} dB after ${attempts.length} pass(es) and the reading is still ${Number((after.integratedLufs - target).toFixed(2))} LU from the target — the master limiter makes this nonlinear, so a further pass is worth trying`,
+                : limitedBy === "masterLimiter"
+                  ? `the true peak stayed at ${attempts[0]!.truePeakDb.toFixed(2)} dBTP across ${attempts.length} different trims and the reading settled at ${Number((after.integratedLufs - target).toFixed(2))} LU from the target — the master limiter is holding the output, so an upstream trim cannot set loudness on this chain. This is a property of the graph, measured, not a failure of the request`
+                  : `the trim settled at ${best.trimDb.toFixed(3)} dB after ${attempts.length} pass(es), ${Number((after.integratedLufs - target).toFixed(2))} LU from the target — a further pass is worth trying`,
         };
       } catch (error) {
         return failure((error as Error).message);

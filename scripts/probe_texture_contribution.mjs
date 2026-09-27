@@ -188,6 +188,16 @@ try {
   const withinTarget = Math.abs((normalized.after?.integratedLufs ?? NaN) - targetAsked) <= 0.3;
   const peakLimited =
     normalized.limitedBy === "truePeak" && (normalized.after?.truePeakDb ?? NaN) <= (normalized.truePeakCeilingDb ?? -1) + 0.1;
+  /**
+   * The third outcome, and it has to be **proven by the readings** rather than accepted as an excuse: the master limiter holding the output is a
+   * claim about the graph, so the check requires that the peak did not move across every attempt the tool made. A tool that missed the target and
+   * merely said "the limiter did it" would fail here, which is the point.
+   */
+  const limiterHeld =
+    normalized.limitedBy === "masterLimiter" &&
+    Array.isArray(normalized.attempts) &&
+    normalized.attempts.length >= 2 &&
+    normalized.attempts.every((attempt) => Math.abs(attempt.truePeakDb - normalized.attempts[0].truePeakDb) <= 0.05);
   const loudnessOk = Boolean(normalized.after) && (withinTarget || peakLimited);
   check(
     `normalize_loudness reaches ${normalized.targetLufs ?? -14} LUFS or reports the ceiling that stopped it`,
@@ -198,7 +208,7 @@ try {
   // every check in this file had been silent — the numbers that appeared were plain `console.log` calls.
   console.log(
     `  ${loudnessOk ? "✅" : "❌"} normalize_loudness : ${normalized.before?.integratedLufs} → ${normalized.after?.integratedLufs} LUFS ` +
-      `(target ${normalized.targetLufs ?? -14}, trim ${normalized.appliedTrimDb} dB, ${normalized.limitedBy}, peaks ${normalized.after?.truePeakDb})`
+      `(target ${normalized.targetLufs ?? -14}, trim ${normalized.appliedTrimDb} dB, ${normalized.limitedBy}, ${normalized.passes} pass(es), peaks ${normalized.after?.truePeakDb})`
   );
   if (!loudnessOk) process.exitCode = 1;
   const coarse = await (async () => {
