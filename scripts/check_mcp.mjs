@@ -176,6 +176,21 @@ try {
    * limited to clip A because `set_clip` existed and no tool reached it.
    */
   const song = payload(await client.request("tools/call", { name: "create_song", arguments: { genreId: "chicago-house", bars: 2, label: "verse" } }));
+  /**
+   * Make-unique, on the chain the gate already builds: two sections sharing a slot, one of them given its own copy, and the other left alone.
+   * This is the property a composer could not get — three verses with three melodies — so the gate holds it rather than a description of it.
+   */
+  const uniqueSection = payload(
+    await client.request("tools/call", { name: "make_unique", arguments: { songId: song.songId, index: 0 } })
+  );
+  check(
+    "make_unique gives a section its own slot and reports which",
+    typeof uniqueSection.allocatedSlot === "string" &&
+      uniqueSection.allocatedSlot !== "A" &&
+      uniqueSection.repointedSection === uniqueSection.sections?.[0]?.id,
+    `slot ${uniqueSection.allocatedSlot}, section ${uniqueSection.repointedSection}`
+  );
+
   check("create_song returns a songId", typeof song.songId === "string" && song.songId.length > 0, JSON.stringify(song).slice(0, 140));
   check(
     "create_song says what a pass is worth and how long the song is",

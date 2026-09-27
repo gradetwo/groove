@@ -93,6 +93,7 @@ is B2's `flattenSong`, so the tool cannot render something the app would not). S
 | Tool | Arguments | Returns |
 | :--- | :--- | :--- |
 | `create_song` ▣ | `genreId?`, `pattern?`, `name?`, `bpm?`, `swing?`, `resolution?`, `bars?`, `label?`, `clips?` | `songId` plus the arrangement summary; clip A is seeded from the genre's *arranged* pattern, or from an explicit `pattern`, and `clips` seeds further slots |
+| `make_unique` ▣ | `songId`, `sectionId?`, `index?`, `pattern?` | **a clip slot is song-global**, so two sections pointing at B are the same clip; this copies a section's clip into a free slot (A–D) and repoints **only that section**, which is how three verses get three melodies. Fails with an explanation when all four slots are in use rather than overwriting |
 | `set_clip` ▣ | `songId`, `slot`, `pattern?`, `genreId?` | the song's shape after one slot's clip is replaced (or seeded from a genre) — how a section gets its own variation |
 | `add_section` ▣ | `songId`, `slot`, `bars?`, `label?`, `mute?`, `velocityScale?`, `velocityRamp?`, `fill?`, `transpose?`, `index?` | the whole arrangement (shape, bar count, per-section overrides, problems) |
 | `duplicate_section` ▣ | `songId`, `index`, `at?`, `bars?`, `label?` | the arrangement with a copy of that section, its clip and **all** its overrides intact |
