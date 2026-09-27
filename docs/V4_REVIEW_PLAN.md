@@ -97,6 +97,24 @@ it in the caller's key, and report both the roman numerals and the pitches.
 Recording this before writing it because it is the third time in this plan that reading the data changed what the work is: the harmony
 "subsystem" is a roman-numeral renderer plus a chooser, not a new model.
 
+## The mono mystery, solved: the render tools reply in a different shape from every other tool
+
+The probe's own diagnostic answered it in one run — `render reply : raw`, which is what the probe's `payload()` returns when the reply is
+**not a JSON text part**. Every browser-free tool answers with a JSON string in `content[0].text`, which is why `payload()` works
+everywhere else; `render_audio` and `render_song` return something else — a plain-text or structured result — so `rendered.channels` was
+never undefined because the field was missing. It was undefined because **the parser never saw the object**.
+
+That retires the whole line of enquiry with one line of evidence:
+
+* the 8 kHz analysis render's **0.1 s** stands (it is measured from the request, not from the reply);
+* **mono is neither confirmed nor refuted** — the probe could not read the answer, and no amount of re-running it would have changed that;
+* and there is a **real interface inconsistency** behind it: the render tools reply in a different shape from the other fourteen, which is
+  the kind of thing that costs every client an hour and is invisible in the tool list.
+
+The fix belongs on the server side — the render tools should reply the way the others do, with the metrics as a JSON text part — and the
+probe's reading is then ordinary. It is worth doing before the example library (workstream 5), because a client that cannot parse a render
+reply cannot use `get_energy_curve` either.
+
 ## The mono verification: the field was already there, and the fix attempted for it was not
 
 Reading `render_song`'s handler before editing it — which is the rule the previous round broke — shows it returns the **whole render
