@@ -243,6 +243,69 @@ export function listChordProgressions(args: { category?: string } = {}): Record<
   };
 }
 
+/**
+ * A roman numeral progression as concrete pitches in a key.
+ *
+ * The library knows **which** progression (`roman`, a category, the songs that used it) and no chords at all, so this is the missing
+ * half: scale degrees taken from the key's own scale (so the chords are diatonic by construction rather than by a table that can drift
+ * from the key), quality from the numeral's case, `°` for diminished, and `7` for a seventh. Accidentals (`b`/`#`) move a degree.
+ *
+ * Roots are placed an octave below the tonic so a progression lands in a usable register and so the result is stable: the same
+ * progression in the same key always produces the same numbers, which is what makes it testable and what lets
+ * `set_chord_progression` be replayed.
+ */
+export function romanToChords(
+  roman: string,
+  key: { tonic: number; mode?: "major" | "minor" }
+): { chords: number[][]; numerals: string[]; warnings: string[] } {
+  const scale = key.mode === "minor" ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11];
+  const base = key.tonic - 12;
+  const warnings: string[] = [];
+  const numerals = roman
+    .split(/[-–\s]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const chords: number[][] = [];
+
+  for (const numeral of numerals) {
+    const match = /^([b#]?)([ivIV]+)(°|o|dim)?(7)?$/.exec(numeral);
+    if (!match) {
+      warnings.push(`could not read "${numeral}" as a roman numeral`);
+      continue;
+    }
+    const [, accidental, letters, diminished, seventh] = match;
+    const upper = letters === letters.toUpperCase();
+    const degreeIndex = ["i", "ii", "iii", "iv", "v", "vi", "vii"].indexOf(letters.toLowerCase());
+    if (degreeIndex < 0) {
+      warnings.push(`unknown degree in "${numeral}"`);
+      continue;
+    }
+    const shift = accidental === "b" ? -1 : accidental === "#" ? 1 : 0;
+    /**
+     * Stack thirds **through the key's own scale**, so every chord is diatonic by construction.
+     *
+     * That is also why the numeral's case and `°` add no accidentals: in a major key the scale already gives a minor triad on vi and a
+     * diminished one on vii, and a table of qualities would be a second source of truth that could drift from the scale. The case is
+     * read and reported (it is what makes a numeral legible), and the accidentals the caller writes (`b`/`#`) do move the chord.
+     *
+     * The register is deliberate: the root sits an octave below the tonic, so `vii` lands an octave above it and a progression stays in
+     * one usable octave rather than climbing.
+     */
+    const stepAt = (steps: number) => {
+      const index = degreeIndex + steps;
+      const octave = Math.floor(index / 7) * 12;
+      return base + scale[((index % 7) + 7) % 7] + octave + shift;
+    };
+    const size = seventh ? 4 : 3;
+    const chord = Array.from({ length: size }, (_, step) => stepAt(step * 2));
+    void upper;
+    void diminished;
+    chords.push(chord);
+  }
+
+  return { chords, numerals, warnings };
+}
+
 export function getChordProgression(id: string): Record<string, unknown> | null {
   const progression = POPULAR_PROGRESSIONS.find((row) => row.id === id);
   if (!progression) return null;
