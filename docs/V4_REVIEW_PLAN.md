@@ -413,6 +413,38 @@ and offline must agree again**, which is a check that can be written before the 
 **Still open in workstream 6**: the realtime path (a `DelayNode` with a crossfade, so live playback is aligned too), track factory, folder and
 summing tracks, the region timeline, audio tracks and SVS.
 
+## B7's gate has been red, and the control says why the fix is a paired comparison
+
+Reading the criterion rather than the verdicts:
+
+```js
+const floor = report.alignedFloor ?? selfDistanceA;   // two bars of the same section: the method's own noise
+const ratio = floor ? distanceAB / floor : Infinity;
+console.log(`${ratio >= 3 ? "✅" : "❌"} the two sections differ by …`);
+```
+
+**The gate is `ratio ≥ 3`** — and every CI reading in this session has been **1.5× and 1.7×** for the arrangement against floors of 4.8–6.1, with
+the **control** at 1.0× and 1.2×. So the gate has been **failing**, not "marginal": the earlier note in this file that it "closed on 2.0×" was
+an understatement of the gap, and the ✅ on the arrangement step in the logs is a different check in the same step.
+
+The control is the important part, and it is the reason the fix is not to lower the threshold. The probe takes `controlLoop`, so the same
+measurement runs on material where **no section change happens** — and there its ratio is **1.0–1.2×**, which is what this method's noise
+floor looks like end to end rather than in one window pair. Two numbers follow from that:
+
+* the section change B7 is looking for is **real but small**: 1.5× against a control of 1.0× means the arrangement differs from itself by
+  about **half again** what the method differs from itself on unchanged material;
+* an **absolute** threshold of 3 cannot express that, and picking one that passes today would be fitting the gate to the data — the failure
+  mode this project keeps recording.
+
+**So the hardening is to replace the absolute threshold with a paired comparison**: run the probe on the arrangement and on the control in the
+same CI invocation, and gate on `ratio_arrangement ≥ k · ratio_control` (k = 2 as a starting point, stated as a choice rather than derived),
+with **medians over repeats** on both sides because a single 40 ms-window measurement is exactly the kind of number that moves by a factor of
+1.5 between runs. That is a stronger statement than `ratio ≥ 3` ever was: it says the arrangement carries a change the control does not, which
+is the actual claim.
+
+**What this round did not do**: change the gate. Replacing a threshold is a decision about what the project is willing to call evidence, and it
+belongs in the plan before it belongs in the probe — which is where it now is.
+
 ## What is deliberately rejected
 
 * **Audio in context** (`render_preview` returning audio data). The MCP keeps returning file paths plus an analysis summary; a
