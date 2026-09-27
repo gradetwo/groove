@@ -107,6 +107,19 @@ const totalSteps = patternSteps * bars;                                  // :318
 
 **在那之前叙述上能做的、且已经做了的**：描述里说明该调用**报不了进度** ✓、给出 `maxDurationSec` 事前拒绝 ✓、并指明替代路径 ✓ —— 唯一还缺的是把**实测耗时量级**填进去 ✓（数字要来自探针 ✓）。
 
+## 二·十、"跳过母带"这个单位选错了 —— 应该是"跳过**电平级**"
+
+上一节我写"需要给导出器加一个**跳过母带**的选项"。读完 `masterGraph.ts` 与它在 `WavExporter` 里的用法，这个单位是**错的** ✗：
+
+* 母带图**不只是电平级** ✓ —— 声部连接的是 `graph.drumBusInput` / `graph.musicBusInput` ✓，send 连的是 `graph.reverb.input` ✓ → **整张图的缺失会让整首歌静音** ✗✓；
+* 分块真正必须**只做一次**的东西，是**改变电平的那一段** ✓✓：`loudnessTrimDb`（响度修剪 ✓）、`masterMakeupDb`（补偿增益 ✓）、`masterBusCompEnabled`（总线压缩 ✓）、以及**限幅器**（`limiterDetector` / 上限 ✓）。
+
+`MasterGraphOptions` 今天暴露的是 `analysers` ✓、`loudnessTrimDb` ✓、`masterMakeupDb` ✓、`masterBusCompEnabled` ✓（以及诊断用的 `bypassFxRack` ✓）—— **没有一个已确认的"限幅器开关"** ✓。
+
+**所以下一步的读法已经精确** ✓：查 `masterGraph.ts` 里限幅器的选项族（是否已有 `limiter…` 开关 ✓）。若有 → 实现只是把四个参数按"块"与"最终"两种模式传下去 ✓✓（**不需要给导出器加结构性的分支** ✓）；若没有 → 才需要加一个 `limiterEnabled` ✓。
+
+**判据不变** ✓：不传时**逐字节不变** ✓（现有渲染测试 + 确定性探针守住 ✓）；传时"分块拼接 vs 单次整曲"**逐样本在 epsilon 内** ✓，且**段落边界无电平台阶** ✓。
+
 ## 三、行动清单（按报告的分级）
 
 1. **P0.1 —— 渲染的可观测性**：给 `render_song` 一条**心跳/进度**通道（至少"已渲染 N/M 小节"），并把**预期耗时量级**写进描述（"每分钟音频约需 X 秒"，X 用本仓库实测而非估计）；
