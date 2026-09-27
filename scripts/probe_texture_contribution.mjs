@@ -175,7 +175,7 @@ try {
     return {
       label: "8 kHz analysis render",
       seconds: Number(((Date.now() - startedAt) / 1000).toFixed(1)),
-      sampleRate: rendered.sampleRate,
+      sampleRate: rendered.sampleRate ?? 8000,
       integratedLufs: analysed.integratedLufs,
       metricKeys: Object.keys(analysed).slice(0, 6),
       bands: analysed.bandDb ?? null,
