@@ -1185,6 +1185,28 @@ export const PROMPTS: PromptDefinition[] = [
     ].join("\n"),
   },
   {
+    /**
+     * The few-shot prompt the evaluation asked for, and the one that closes the loop with workstream 5's examples: it makes the agent
+     * **read a recipe before writing one**, which is what turns an example library into a teaching device rather than a pile of JSON.
+     */
+    name: "compose_with_examples",
+    title: "Compose a section from a worked example",
+    description: "Imitate a worked example's recipe rather than its JSON: read the examples for a genre, then build a section with the same tools.",
+    arguments: [
+      { name: "genreId", description: "the genre to work in", required: true },
+      { name: "goal", description: "what the section should do, e.g. 'a four-bar verse that leaves room for a vocal'", required: true },
+    ],
+    build: (args) => [
+      `Compose in ${args.genreId} for this goal: ${args.goal}.`,
+      "",
+      `1. Read \`groove://examples/${args.genreId}\` (or call get_example with genreId "${args.genreId}"). Each example carries a **recipe** — the tool calls, in order, that produced it — and that recipe is what you are imitating, not the pattern's JSON.`,
+      "2. Start from the genre's own arranged pattern (get_pattern) rather than from nothing; the first example is that pattern, unchanged, and it is the baseline every change is measured against.",
+      "3. Make your changes with apply_pattern_ops (set_step, set_velocity, clear_track, set_chord_progression, …) so every edit is reproducible from the calls alone. If you need harmony, suggest_progression chooses a progression for a feeling and renders it in a key; if you need a line, generate_melody writes one contour-first, in key, inside a bounded range, and the same seed reproduces it.",
+      "4. Say what you changed and why, and quote the numbers you checked: pattern_statistics for density and velocity spread, validate_pattern for correctness, and — if you render — the loudness, true peak and energy curve analyze_audio returns.",
+      "5. If a change went wrong, undo_song returns the song to the state before it, so an experiment does not have to be permanent.",
+    ].join("\n"),
+  },
+  {
     name: "practice_plan",
     title: "Practice plan",
     description: "Build a study order from the app's own masterclass and tutorial data.",

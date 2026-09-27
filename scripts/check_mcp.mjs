@@ -160,7 +160,7 @@ try {
 
   const prompts = await client.request("prompts/list", {});
   const promptNames = (prompts?.prompts ?? []).map((prompt) => prompt.name);
-  check("prompts/list returns the three prompts", ["compose_groove", "explain_genre", "practice_plan"].every((name) => promptNames.includes(name)));
+  check("prompts/list returns the three prompts", ["compose_groove", "explain_genre", "practice_plan", "compose_with_examples"].every((name) => promptNames.includes(name)));
 
   // ---- real calls -----------------------------------------------------------------------------------------
   const genres = payload(await client.request("tools/call", { name: "list_genres", arguments: { limit: 5 } }));

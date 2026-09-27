@@ -26,7 +26,7 @@ export interface MCPExample {
 }
 
 /** Genres with examples so far. Deliberately short: one worked pair is worth more than forty auto-generated ones. */
-export const EXAMPLE_GENRES = ["chicago-house"] as const;
+export const EXAMPLE_GENRES = ["chicago-house", "deep-house", "hard-techno"] as const;
 
 const clean = (value: string): string => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 
