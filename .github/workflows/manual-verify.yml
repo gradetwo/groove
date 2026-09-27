@@ -142,6 +142,13 @@ jobs:
         if: inputs.scope == 'audio' || inputs.scope == 'verify' || inputs.scope == 'all'
         run: npm run mcp:build
 
+      # Workstream 6's prerequisite, and the one the loudness re-record has been waiting on: the same genre must render the same way twice,
+      # and must not depend on how many genres the page has already rendered. Every other audio number in this project assumes it.
+      - name: Render determinism (workstream 6's prerequisite)
+        if: inputs.scope == 'audio' || inputs.scope == 'verify' || inputs.scope == 'all'
+        continue-on-error: true
+        run: node scripts/probe_render_determinism.mjs --genre=chicago-house
+
       - name: Texture-lane contribution (A4)
         if: inputs.scope == 'audio' || inputs.scope == 'verify' || inputs.scope == 'all'
         continue-on-error: true
