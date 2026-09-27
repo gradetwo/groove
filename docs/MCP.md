@@ -139,6 +139,7 @@ minutes and the call reports no progress while it runs.
 | `apply_pattern_ops` ▢ | `pattern`, `ops[]` | a **new** pattern with the operations applied (never mutates the library) |
 | `validate_pattern` ▢ | `pattern` | diagnostics: step-count agreement, velocity range, unknown track ids, gate/pitch length mismatches |
 | `pattern_statistics` ▢ | `pattern` | per-track density, velocity spread, note range, off-beat ratio, recommended swing |
+| `validate_prosody` ▢ | `tones[]`, `pitches[]`, `syllables?`, `threshold?` | the reversals between a lyric's tones and a melody's movement — advisory, never throws, no pinyin guessing, and 3+3 sandhi changes what it expects rather than rewriting your tones |
 | `generate_melody` ▢ | `tonic`, `mode?`, `bars?`, `form?`, `range?`, `seed?`, `density?` | lane-shaped arrays (`steps`, `pitch`, `velocity`, `gate`) plus the contours, phrase ranges and interval statistics — contour-first, in key by construction, at most two octaves, deterministic for a seed, `AABA` repeating its first phrase literally |
 | `suggest_progression` ▢ | `tonic?`, `mode?`, `emotion?`, `category?`, `avoid?` | a progression from the committed library for a feeling, rendered in the key: the roman numerals, the concrete chords, and the songs that used it — feed `chords` to `apply_pattern_ops` **`set_chord_progression`** |
 | `estimate_key` ▢ | `genreId?`, `pattern?` | the tonic, mode and fit from the pattern's **pitches** (a pitch-class histogram against major/minor profiles) — the notes rather than an FFT of a kick-heavy loop |
