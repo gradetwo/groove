@@ -34,6 +34,7 @@ import {
 } from "../../features/arrangement/songEdit";
 import { ARRANGEMENT_FORMS, ARRANGEMENT_FORM_IDS, formBars, type ArrangementFormId } from "../../data/arrangementForm";
 import { TrackRows } from "../../features/arrangement/TrackRows";
+import { setSectionLaneSlot } from "../../features/arrangement/songEdit";
 
 /**
  * The view's measurements, exported because the touch contract is a number.
@@ -330,7 +331,13 @@ export const ArrangementPanel: React.FC<ArrangementPanelProps> = ({
 
               {/* One row per lane, read-only: the first place `SongSection.slots` is visible to a person. */}
               <div className="mt-1 overflow-x-auto">
-                <TrackRows song={song} />
+                <TrackRows
+                  song={song}
+                  onSetLaneSlot={(sectionId, trackId, slot) => {
+                    const next = setSectionLaneSlot(song, sectionId, trackId, slot);
+                    if (next !== song) onChange({ sections: next.sections, gesture: `arrangement:lane-slot:${sectionId}`, continuous: false });
+                  }}
+                />
               </div>
 
               <div
