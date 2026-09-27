@@ -22,6 +22,7 @@ export function isDrumTrack(
   index: number
 ): boolean {
   const trackId = (track.track_id || "").toLowerCase();
+  if (trackId === "audio") return false;
   if (trackId && DRUM_TRACK_IDS.has(trackId)) return true;
 
   const combined = `${trackId} ${track.name || ""} ${track.instrument || ""}`.toLowerCase();
