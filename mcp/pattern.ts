@@ -329,8 +329,14 @@ export function validatePattern(pattern: SequencerPattern): {
   const steps = pattern.totalSteps ?? pattern.tracks[0].steps.length;
   const seen = new Set<string>();
   for (const track of pattern.tracks) {
-    if (seen.has(track.track_id)) problems.push(`duplicate track id "${track.track_id}"`);
-    seen.add(track.track_id);
+    /**
+     * A lane's **identity** is `laneId ?? track_id` (owner decision 1A): two lanes of one kind are two lanes when they carry different names, and a duplicate
+     * is still a duplicate when they do not. Comparing `track_id` alone rejected every song with a second lead — which is exactly what this decision exists to
+     * allow, and the criterion test found it as `duplicate track id "lead"`.
+     */
+    const laneKey = track.laneId ?? track.track_id;
+    if (seen.has(laneKey)) problems.push(`duplicate track id "${laneKey}"`);
+    seen.add(laneKey);
     if (!TRACK_IDS.includes(track.track_id as TrackId)) {
       warnings.push(`track id "${track.track_id}" is not one of the eight the app mixes (it will still render)`);
     }
