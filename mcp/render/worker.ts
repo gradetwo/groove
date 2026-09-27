@@ -275,6 +275,36 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
  * Only the metrics are returned — never the PCM — because the caller is a model: a 10-second stereo float array
  * would be four million numbers of context for a result that is eight.
  */
+/**
+ * The energy curve an agent can reason about, at one value per second.
+ *
+ * This is the cheap half of the evaluation's proposal: it needs no new render path, because the WAV it reads is already decoded — and
+ * a curve is the measurement a closed loop actually uses ("the build should rise into the drop"), where a single LUFS figure cannot
+ * say whether anything moved. One second is deliberately bpm-free: the caller may not know the tempo, and a second is coarse enough to
+ * be stable and fine enough to show a build over eight bars.
+ */
+export function energyCurveDb(channels: Float32Array[], sampleRate: number): { curve: number[]; spreadDb: number } {
+  const perWindow = Math.max(1, Math.floor(sampleRate));
+  const total = channels[0]?.length ?? 0;
+  const windows: number[] = [];
+  for (let start = 0; start + perWindow <= total; start += perWindow) {
+    let sum = 0;
+    let count = 0;
+    for (const channel of channels) {
+      for (let i = start; i < start + perWindow; i += 1) {
+        const value = channel[i];
+        sum += value * value;
+        count += 1;
+      }
+    }
+    const rms = Math.sqrt(sum / Math.max(1, count));
+    windows.push(Number((20 * Math.log10(Math.max(rms, 1e-6))).toFixed(2)));
+  }
+  // The spread is the plainest statement of "something happened across this song": the loudest window minus the quietest.
+  const spread = windows.length ? Math.max(...windows) - Math.min(...windows) : 0;
+  return { curve: windows, spreadDb: Number(spread.toFixed(2)) };
+}
+
 export function analyseWavFile(filePath: string): Record<string, unknown> {
   const { channels, sampleRate } = decodeWav(readFileSync(filePath));
   return {
@@ -283,6 +313,14 @@ export function analyseWavFile(filePath: string): Record<string, unknown> {
     channels: channels.length,
     durationSec: channels[0].length / sampleRate,
     ...measure(channels, sampleRate),
+    /**
+     * The curve lives with the metrics rather than behind its own tool: an agent that has rendered a song already has the WAV, and
+     * one more call to read a curve it could have had for free would be the token economy this project keeps refusing to waste.
+     */
+    ...(() => {
+      const { curve, spreadDb } = energyCurveDb(channels, sampleRate);
+      return { energyCurveDb: curve, energySpreadDb: spreadDb };
+    })(),
   };
 }
 
