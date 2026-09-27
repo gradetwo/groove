@@ -33,7 +33,7 @@ import {
   type SectionRegion,
 } from "../../features/arrangement/songEdit";
 import { ARRANGEMENT_FORMS, ARRANGEMENT_FORM_IDS, formBars, type ArrangementFormId } from "../../data/arrangementForm";
-import { TrackRows } from "../../features/arrangement/TrackRows";
+import { TrackRows } from "./TrackRows";
 import { setSectionLaneSlot } from "../../features/arrangement/songEdit";
 
 /**
