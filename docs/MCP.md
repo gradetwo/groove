@@ -100,6 +100,7 @@ is B2's `flattenSong`, so the tool cannot render something the app would not). S
 | `get_song` ▢ | `songId`, `includePatterns?` | the clips (each with its pattern), the sections in order, the shape and the tempo — what makes a composition readable and re-exportable |
 | `export_groove` ▣ | `songId`, `outputDir?` | a **validated** `.groove` package under `GROOVE_MCP_OUT`, carrying the arrangement rather than a flattened copy |
 | `undo_song` ▣ | `songId`, `steps?` | the arrangement as it now stands, one change back by default — every song change is recorded with an `opId`, which `get_song` lists under `history` |
+| `render_preview_clip` ▣ | `songId?`, `sectionId?`, `index?`, `genreId?`, `bars?`, `sampleRate?`, `channels?`, `format?` | a **fast** render of one section for iterating: 8 kHz mono by default (**~1.8 s** measured, against 6–24 s at full rate), labelled `preview: true` and carrying its own wall-clock time. Use it while composing and `render_song`/`render_audio` for anything you deliver |
 | `render_song` ▣ | `songId`, `format?`, `bitrateKbps?`, `maxDurationSec?` | a WAV/MP3 path under `GROOVE_MCP_OUT`, its duration, loudness and true peak — every section, in order |
 
 The package this writes is specified field by field in [`GROOVE_PACKAGE_FORMAT.md`](GROOVE_PACKAGE_FORMAT.md).
