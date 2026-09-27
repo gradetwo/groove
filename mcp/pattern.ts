@@ -56,7 +56,19 @@ export function resolveTrackId(name: string): TrackId | null {
   return TRACK_ALIASES[normalised] ?? null;
 }
 
+/**
+ * Find a lane **by `laneId` first, then by kind** (owner decision 1A).
+ *
+ * The order is the whole point: a lane named `lead-2` is reachable by that name, while everything that says `"lead"` keeps meaning "the lead lane" and finds
+ * the first one — so a song can carry two leads without changing what any existing caller, export or `validatePattern` run means. The exact-name pass is
+ * case-sensitive because a `laneId` is a machine name, not prose; the kind pass keeps the alias handling it has always had.
+ */
 function findTrack(pattern: SequencerPattern, name: string): SequencerTrack | null {
+  const wanted = name.trim();
+  if (wanted.length > 0) {
+    const byLaneId = pattern.tracks.find((track) => track.laneId === wanted);
+    if (byLaneId) return byLaneId;
+  }
   const id = resolveTrackId(name);
   if (!id) return null;
   return pattern.tracks.find((track) => track.track_id === id) ?? null;
