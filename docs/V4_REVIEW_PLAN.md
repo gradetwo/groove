@@ -903,6 +903,36 @@ byte-identical" — on its own.
 The realtime engine's equivalent is `AudioEngine.getStepDuration()` (`:1837`, `:2064`, `:2116`), which is the same single-rate assumption live; it comes after
 the offline path for the same reason PDC's offline half came before its realtime one.
 
+## The tempo seam, read line by line — and why "the same arithmetic" is not enough
+
+The three places the single rate reaches, from the code:
+
+```ts
+const stepDur = 60 / bpm / 4;                                      // :301
+const totalDurationSec = totalSteps * stepDur + tailSec;           // :311
+for (let step = 0; step < totalSteps; step++) {
+  const unswungTime = step * stepDur;                              // :625  ← linear in the constant
+  const swingOffset = swingOffsetSeconds(step, effSwing, stepDur);  // :652
+```
+
+`step * stepDur` is the thing that has to change: with a tempo map a step's time is the **cumulative sum of the bars before it**, not a multiple. So the seam is a
+prefix sum — `stepStarts[step]` — plus a per-step duration for the swing offset.
+
+**And that is where a trap sits**, which is worth writing down before the edit: computing the prefix sum as `Σ per-bar seconds` and using it **even when there is
+no map** would *look* identical and not be. `Σ (n copies of c)` and `n * c` are the same real number and **not always the same float**, so `totalDurationSec` and
+every event time could move in the last bits — and the determinism probe, which measures to 0.005 dB, would be the thing to notice. "The same arithmetic" is not
+the same claim as "the same expression".
+
+So the seam must **branch on whether a map exists**:
+
+* **no map** → keep the literal expressions `step * stepDur` and `totalSteps * stepDur`, so byte-identity is a property of the source rather than of a proof about
+  floating point;
+* **a map** → use the prefix sums, where the cumulative form is the correct one anyway.
+
+That also decides the shape of the change: the no-map path is the *existing* code path untouched, not a generalised one that happens to reduce to it. The
+criterion the decision record already set — "absent → byte-identical" — is then satisfied by construction, and the automations that check it (the determinism
+probe's six rows, the timbre baseline's 159 genres, the loudness report's fresh re-renders) are guards rather than oracles.
+
 ## What is deliberately rejected
 
 * **Audio in context** (`render_preview` returning audio data). The MCP keeps returning file paths plus an analysis summary; a
