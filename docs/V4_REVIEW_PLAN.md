@@ -170,6 +170,31 @@ Reconnaissance rather than code, because a head-less render at the wrong rate is
 So the next step is one grep for the context construction (the alias form), and the two outcomes are both useful: a small slice, or a
 real find.
 
+## The region timeline is mostly built, and `docs/TRACK_ARRANGEMENT_PLAN.md` already says which half is not
+
+The evaluation lists a "region timeline" as a missing capability. There is a committed plan for exactly that — `docs/TRACK_ARRANGEMENT_PLAN.md`
+— and a census against it says most of the model is already in the tree:
+
+| that plan's step | state |
+|---|---|
+| **1. model** — per-lane clip choice | ✅ `SongSection.slots?: Partial<Record<string, ClipSlot>>` (`src/types/song.ts:110`), whose own comment calls itself "the first step of the per-track arrangement" and addresses lanes by `track_id` — the additive shape, exactly like `arrangement` and `extraClips` |
+| **2. normalise and flatten** | ✅ `songFlatten.ts:90` — `bar.slots?.[baseTrack.track_id]`, with the fallback the model describes |
+| **4. export** | 🟡 WAV and MIDI follow the flatten and so follow per-lane choices; **ALS does not** — `src/audio/AbletonExporter.ts` mentions `sections` **zero** times, which is the plan's own complaint: the whole song becomes one clip |
+| **3. the view** — track headers plus one row per lane | ⏳ not built; **this** is the region timeline the evaluation means, and it is UI work |
+| **5. share and persistence** | ✅ the same path as `arrangement`, already in `.groove` |
+| **6. phones** | a declared capability boundary, not an omission |
+
+So the region timeline is **not** a model gap — the model landed with `slots` — and what is left is concrete and independent of the `track_id`
+question that track factory raises. Two pieces:
+
+* **ALS per-section clips**: pure logic, unit-testable by counting clips, no audio touched, no schema decision needed. The plan calls it the
+  remainder of B4, and it is the obvious next slice;
+* **the arrangement view**: track headers and a row per lane, which is UI work with its own risk.
+
+The plan also wrote the acceptance line for this work in advance, and it is the one to hold: **a song with no per-lane overrides must render
+byte-identically to today**. With the model already in place, that test should exist — checking whether it does is part of the next slice, and
+if it does not, writing it is worth more than the feature.
+
 ## Track factory is a schema change, and the real gap is multiplicity
 
 Reading before writing, and this is the fourth time in this plan that reading changed what the work is:
