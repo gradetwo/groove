@@ -503,6 +503,35 @@ evidence of a defect class is how a report acquires a claim its source does not 
 semantics for `set_clip`, (1) a named short-render tool plus a discoverable budget, (3) the syllable-binding interface, then (2) automation lanes,
 with (4) staying the owner's synth project.
 
+## The loudness tool's arithmetic is right and the render ignored it — a criterion doing its job
+
+The first audio-scope run of the acceptance:
+
+```
+❌ normalize_loudness : -12.63 → -12.674 LUFS (target -14, trim -1.37 dB, target, peaks -1.3)
+```
+
+Read it carefully, because everything except one step is correct:
+
+* the song measures **−12.63 LUFS**, already **louder** than the −14 target, so the trim must be negative: `−14 − (−12.63) = −1.37 dB` — and
+  the tool reports exactly that;
+* the peak is **−1.3 dBTP** against a −1 ceiling, so the headroom bound is **+0.3 dB**; the applied trim is therefore the target bound, and
+  `limitedBy: "target"` is the right answer;
+* **and the re-render did not move**: −12.674 is −12.63 within measurement noise, where a −1.37 dB trim should have landed at ≈ −14.0.
+
+So the tool's arithmetic, its bound and its reporting are all right, and **`loudnessTrimDb` is not reaching the graph through the MCP render
+path**. This is the second time this exact shape has appeared — the `sampleRate`/`channels` options were also plumbed, type-checked, and inert,
+because the value has to cross three layers (the tool, the Node side of `page.evaluate`, and the page's own parameter list) and each layer names
+it differently. The acceptance check is what noticed, which is the entire reason for writing it before believing the tool.
+
+**The next diagnostic is a read, not a change**: `WavExporter.ts:325-345` shows how `loudnessTrimDb` is combined (it is a `Math.max(...)` with a
+condition on the option being finite), and the question is whether that combination lets a **negative** trim through or folds it against the
+genre's own trim. A negative trim is the ordinary case for a mix that is already too loud, and the run above is that case.
+
+**Also from the same run**, and worth recording because it is the budget table's third data point: the texture probe's renders took **23.6 s,
+7.9 s and 8.4 s** while the **8 kHz analysis render took 1.8 s** — a factor of 4–13 between the full-rate renders and the analysis pass, on the
+same material, in the same run.
+
 ## What is deliberately rejected
 
 * **Audio in context** (`render_preview` returning audio data). The MCP keeps returning file paths plus an analysis summary; a
