@@ -180,6 +180,33 @@ try {
    * Make-unique, on the chain the gate already builds: two sections sharing a slot, one of them given its own copy, and the other left alone.
    * This is the property a composer could not get — three verses with three melodies — so the gate holds it rather than a description of it.
    */
+  /**
+   * The vocal binding, on the chain the gate already builds. It is browser-free by nature — the tool writes notes and checks tones, it renders
+   * nothing — so unlike the loudness and preview checks this one belongs here, where it runs in seconds.
+   */
+  const vocal = payload(
+    await client.request("tools/call", {
+      name: "set_vocal_melody",
+      arguments: { songId: song.songId, syllables: ["能", "够"], tones: [2, 4], pitches: [60, 64] },
+    })
+  );
+  check(
+    "set_vocal_melody binds one syllable per note and warns about the 倒字",
+    vocal.notes?.length === 2 &&
+      vocal.notes.every((note) => typeof note.syllable === "string" && typeof note.pitch === "number") &&
+      vocal.prosody?.warnings?.length === 1,
+    `${vocal.notes?.length} note(s), ${vocal.prosody?.warnings?.length} warning(s): ${vocal.prosody?.warnings?.[0]?.detail ?? ""}`.slice(0, 120)
+  );
+  const mismatched = await client.request("tools/call", {
+    name: "set_vocal_melody",
+    arguments: { songId: song.songId, syllables: ["能", "够"], tones: [2], pitches: [60, 64] },
+  });
+  check(
+    "set_vocal_melody refuses a syllable/tone mismatch rather than guessing",
+    mismatched?.isError === true || /one tone per syllable/.test(JSON.stringify(mismatched)),
+    JSON.stringify(mismatched).slice(0, 120)
+  );
+
   const uniqueSection = payload(
     await client.request("tools/call", { name: "make_unique", arguments: { songId: song.songId, index: 0 } })
   );
