@@ -54,6 +54,14 @@ export interface SequencerTrack {
   velocity?: number[]; // 0 - 127
   pitch?: (number | null)[]; // MIDI note (e.g. 36 for C2, 60 for C4) — the *root* of the step
   /**
+   * The syllable sung on each step, or `null` for a step with no word.
+   *
+   * A lyric used to be an annotation beside the music; this is the field that binds it to the notes, so a syllable and its pitch sit on the same
+   * index and a prosody check can read one against the other without a separate mapping. Additive in the same way `pitches` was: a track without
+   * `syllables` is an instrumental line, exactly as before, and every export, share link and old project stays valid.
+   */
+  syllables?: (string | null)[];
+  /**
    * Every note sounding on a step, as a stack — the chord.
    *
    * `pitch` remains the root (the lowest note) so that everything which reads "the note of this
