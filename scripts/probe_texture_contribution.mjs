@@ -69,7 +69,12 @@ class Client {
     const id = this.nextId++;
     const payload = JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n";
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error(`${method} timed out`)), 30000);
+      /**
+       * 30 s, like a real client — and it has already fired here once, on a `tools/call` that renders. That is the strongest evidence
+       * this project has for the preview tool's existence. Raised for the probe so a slow render is measured rather than aborting the run;
+       * the number a *client* uses is the one that matters, which is why `render_preview_clip` defaults to a fast rate.
+       */
+      const timer = setTimeout(() => reject(new Error(`${method} timed out after ${CLIENT_TIMEOUT_MS} ms`)), CLIENT_TIMEOUT_MS);
       this.pending.set(id, (message) => {
         clearTimeout(timer);
         if (message.error) reject(new Error(`${method}: ${message.error.message}`));
@@ -88,6 +93,9 @@ class Client {
     await new Promise((resolve) => setTimeout(resolve, 150));
   }
 }
+
+/** A real MCP client's timeout is 30-60 s; this probe renders, so it waits longer and reports what the render cost. */
+const CLIENT_TIMEOUT_MS = Number(process.env.GROOVE_PROBE_TIMEOUT_MS ?? 180000);
 
 const failures = [];
 const notes = [];
@@ -181,7 +189,7 @@ try {
       // Back to the ordinary target. The −24 experiment answered its question: the option **does** reach the graph (the mix moved 4.97 dB for a
       // requested 11.37 dB), and the shortfall was the control law, which treated an option that *replaces* the genre's trim as though it
       // adjusted it. With the base subtracted the tool should now land on the target in one call.
-      arguments: { songId: analysisRate.songId, targetLufs: -14, truePeakCeilingDb: -1 },
+      arguments: { songId: analysisRate.songId, targetLufs: -14, truePeakCeilingDb: -1, passes: 2 },
     })
   );
   const targetAsked = normalized.targetLufs ?? -14;
