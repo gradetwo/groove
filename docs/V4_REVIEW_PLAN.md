@@ -191,6 +191,25 @@ question that track factory raises. Two pieces:
   remainder of B4, and it is the obvious next slice;
 * **the arrangement view**: track headers and a row per lane, which is UI work with its own risk.
 
+**The clip-count criterion I was about to write already exists too.**
+
+`src/test/AbletonExporter.test.ts` has a block for exactly this — `describe("Ableton exporter · the clip shape (stage 5's ALS item)")` — and in
+it:
+
+```
+it("writes exactly one MidiClip today, at time zero")     # :248
+it("fills a scene per clip and leaves the rest empty")     # :283
+```
+
+The first is the default path (no `clips` given → one clip, at zero), the second is the multi-clip path with a `clips` array — which is the
+count criterion, written and passing. So the sixth time this plan has gone looking for work the report implies and found the work already
+done and already held to a test.
+
+**What that means for workstream 6's region-timeline item: the non-UI half is closed.** The model (`SongSection.slots`), the flatten, the
+fallback semantics, the byte-identical guarantee when no lane overrides, and the per-section ALS clips are all present **and tested**. What
+remains is the **view** — track headers and a row per lane — which is UI work with its own risk, and which the evaluation is right to call
+missing.
+
 **And the "ALS writes one clip" remainder is done too — my own grep said otherwise.**
 
 `docs/TRACK_ARRANGEMENT_PLAN.md` complains that `AbletonExporter` writes the whole song as one clip and "has no `sections` handling". That was
