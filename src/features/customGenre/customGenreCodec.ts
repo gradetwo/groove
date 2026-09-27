@@ -55,10 +55,9 @@ export async function encodeGenreToSharePayload(genre: CustomGenre | Genre): Pro
       radar.bassEnergy,
       radar.melodicFocus,
     ],
-    ctx: {
-      en: genre.cultural_context?.en || "",
-      zh: genre.cultural_context?.zh || "",
-    },
+    ...(genre.cultural_context?.en || genre.cultural_context?.zh
+      ? { ctx: { en: genre.cultural_context?.en || "", zh: genre.cultural_context?.zh || "" } }
+      : {}),
     plc: genre.origin_place,
     yr: genre.origin_year,
     art: genre.representative_artists,

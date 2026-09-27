@@ -32,7 +32,7 @@ export interface ShareableCustomGenrePayload {
   ts: string; // time_signature
   scale: string;
   r: [number, number, number, number, number, number]; // 6 radar metrics in order: groove, brightness, harmonicComplexity, rhythmDensity, bassEnergy, melodicFocus
-  ctx: { en: string; zh: string }; // cultural_context
+  ctx?: { en: string; zh: string }; // cultural_context
   plc?: { en: string; zh: string }; // origin_place
   yr?: string; // origin_year
   art?: string[]; // representative_artists
