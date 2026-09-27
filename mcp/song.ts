@@ -20,6 +20,7 @@ import {
   type SongSection,
 } from "../src/types/song";
 import { fillForTracks } from "../src/data/arrangementForm";
+import { setSectionLaneSlots } from "../src/features/arrangement/songEdit";
 import { flattenSong, type FlattenedSong } from "../src/data/songFlatten";
 import { patternFromGenre } from "../src/data/genreMix";
 import type { Genre, SequencerPattern } from "../src/types/genre";
@@ -408,6 +409,44 @@ export function makeUniqueMcpSection(input: {
   rememberSong(song.id, "make_unique");
   songs.set(song.id, next);
   return { summary: summariseSong(next), allocatedSlot: free, sectionId: section.id };
+}
+
+/**
+ * The batch lane-slot edit, at the tool boundary (owner decision 3b).
+ *
+ * The pure function in `songEdit` holds the rule — deep-equal to N single calls, and all-or-nothing when any entry is invalid — so this only has to do the
+ * store's part: remember the change for undo, write it, and report what the edited sections now share. That last piece is the same honesty `set_vocal_melody`
+ * and `make_unique` carry: a lane slot is **song-global**, so binding three movements to clip B means all three play B, and a caller should be told that
+ * rather than discover it.
+ */
+export function setMcpLaneSlots(
+  songId: string,
+  edits: ReadonlyArray<{ sectionId: string; trackId: string; slot: ClipSlot | null }>
+): { summary: SongSummary; applied: number; problems: string[]; sharedSlots: Array<{ slot: ClipSlot; sections: number }> } {
+  const song = songs.get(songId);
+  if (!song) throw new Error(`unknown songId "${songId}" — create one with create_song`);
+
+  const result = setSectionLaneSlots(song, edits);
+  if (result.problems.length) {
+    // All-or-nothing: the store is not written, so a caller cannot be left with a half-bound matrix.
+    return { summary: summariseSong(song), applied: 0, problems: result.problems, sharedSlots: [] };
+  }
+
+  rememberSong(song.id, "set_lane_slots");
+  songs.set(song.id, result.song);
+
+  const touched = new Set(edits.map((edit) => edit.sectionId));
+  const counts = new Map<ClipSlot, number>();
+  for (const section of result.song.sections ?? []) {
+    const slot = (section.slot ?? null) as ClipSlot | null;
+    if (slot) counts.set(slot, (counts.get(slot) ?? 0) + 1);
+  }
+  const sharedSlots = [...counts.entries()]
+    .filter(([, count]) => count > 1)
+    .filter(([slot]) => (result.song.sections ?? []).some((section) => touched.has(section.id) && section.slot === slot))
+    .map(([slot, sections]) => ({ slot, sections }));
+
+  return { summary: summariseSong(result.song), applied: result.applied.length, problems: [], sharedSlots };
 }
 
 /** Replace one clip, which is how an agent gives a section its own variation. */
