@@ -22,6 +22,7 @@ import path from "node:path";
 import { exportAbleton, exportMidi, loudnessReport, shareUrl, toBase64 } from "./exporting";
 import { analyseWavFile, renderAudio } from "./render/worker";
 import { getGenreLoudnessTrimDb } from "../src/data/genreMix";
+import { setVocalMelody } from "./vocal";
 import { addMcpSection, createMcpSong, duplicateMcpSection, flattenMcpSong, getMcpSong, importMcpSong, makeUniqueMcpSection, mcpSongHistory, setMcpClip, summariseSong, undoMcpSong } from "./song";
 import type { ClipSlot } from "../src/types/song";
 import type { SequencerPattern } from "../src/types/genre";
@@ -550,6 +551,89 @@ export const TOOLS: ToolDefinition[] = [
           note:
             `a ${seconds}s preview at ${result.sampleRate} Hz and ${result.channels} channel(s) — for iterating, not for delivery; ` +
             "use render_song or render_audio when the file matters",
+        };
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    /**
+     * The tool half of `setVocalMelody`, and the answer to the dev-branch report's third item from the composing side: a lyric used to be an
+     * annotation beside the notes, so nothing could check a syllable's tone against the pitch it was sung on.
+     *
+     * It is a **song** tool rather than a pattern tool for the same reason `set_clip` is: a pattern an agent built is easy to lose, and a song's
+     * clip is where a composer's work actually lives. It says which slot it edited, and points at `make_unique` when that slot is shared — the
+     * honesty about song-global slots belongs in the reply, not in a doc the caller may not read.
+     */
+    name: "set_vocal_melody",
+    title: "Bind a lyric to a melody and check its tones (倒字)",
+    description:
+      "Put syllables on a song's vocal lane, one per note and at the same index as its pitch, and return the prosody check on the result. Give `pitches` to set the melody yourself, or give only the lyric and a melody is written for it. Tones are input (1 阴平, 2 阳平, 3 上声, 4 去声, 0/5 neutral) and never guessed: a rising tone sung on a falling interval is reported as a warning, because that is what makes a listener hear the wrong word.",
+    readOnly: false,
+    inputSchema: {
+      songId: z.string().optional().describe("the song whose clip to edit"),
+      sectionId: z.string().optional().describe("which section, by id; default the first"),
+      index: z.number().int().min(0).optional().describe("or the section's position"),
+      pattern: patternSchema.optional().describe("instead of a song: bind on a bare pattern, which is returned rather than stored"),
+      track: z.string().max(40).optional().describe("the lane to sing on; default lead"),
+      syllables: z.array(z.string().max(8)).min(1).max(64).describe("one syllable per note, in order"),
+      tones: z.array(z.number().int().min(0).max(5)).min(1).max(64).describe("one tone per syllable"),
+      pitches: z.array(z.number().int().min(0).max(127)).optional().describe("the notes to sing them on; omitted, a melody is written"),
+      seed: z.number().int().min(0).max(1_000_000).optional(),
+      tonic: z.number().int().min(0).max(108).optional().describe("key for a written melody; default 60"),
+      mode: z.enum(["major", "minor"]).optional(),
+    },
+    handler: (args) => {
+      try {
+        const shared = {
+          track: args.track as string | undefined,
+          syllables: args.syllables as string[],
+          tones: args.tones as number[],
+          pitches: args.pitches as number[] | undefined,
+          seed: args.seed as number | undefined,
+          tonic: args.tonic as number | undefined,
+          mode: args.mode as "major" | "minor" | undefined,
+        };
+        if (args.pattern) {
+          const result = setVocalMelody({ pattern: args.pattern as SequencerPattern, ...shared });
+          return {
+            pattern: result.pattern,
+            trackId: result.trackId,
+            notes: result.notes,
+            prosody: result.prosody,
+            ...(result.warnings.length ? { warnings: result.warnings } : {}),
+          };
+        }
+        if (!args.songId) return failure("provide either songId (with index or sectionId) or pattern");
+
+        const song = getMcpSong(String(args.songId)) as unknown as { sections: Array<{ id: string; slot: ClipSlot }>; clips: Record<string, SequencerPattern> };
+        const at = args.sectionId
+          ? song.sections.findIndex((section) => section.id === args.sectionId)
+          : Math.max(0, Math.min(song.sections.length - 1, Math.floor((args.index as number | undefined) ?? 0)));
+        if (at < 0) return failure(`no section "${args.sectionId}" in song "${args.songId}"`);
+        const section = song.sections[at]!;
+        const clip = song.clips[section.slot];
+        if (!clip) return failure(`section ${section.id} points at clip ${section.slot}, which this song does not have`);
+
+        const result = setVocalMelody({ pattern: clip, ...shared });
+        const summary = setMcpClip(String(args.songId), section.slot, result.pattern);
+        const sharers = song.sections.filter((candidate) => candidate.slot === section.slot).length;
+        return {
+          ...summary,
+          editedSlot: section.slot,
+          trackId: result.trackId,
+          notes: result.notes,
+          prosody: result.prosody,
+          ...(result.warnings.length ? { warnings: result.warnings } : {}),
+          ...(sharers > 1
+            ? {
+                sharedSlot: true,
+                note:
+                  `clip ${section.slot} is played by ${sharers} sections, so this edit changed all of them — call make_unique on section ` +
+                  `${section.id} first if only this one should sing these words`,
+              }
+            : {}),
         };
       } catch (error) {
         return failure((error as Error).message);

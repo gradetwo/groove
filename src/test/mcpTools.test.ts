@@ -246,7 +246,7 @@ describe("MCP · the declared surface", () => {
      * Everything else, including every genre reader and `get_song`, is a pure read.
      */
     const writers = TOOLS.filter((tool) => !tool.readOnly).map((tool) => tool.name);
-    expect(writers).toEqual(["normalize_loudness", "render_preview_clip", "render_audio", "create_song", "make_unique", "set_clip", "export_groove", "add_section", "duplicate_section", "import_groove", "undo_song", "render_song"]);
+    expect(writers).toEqual(["normalize_loudness", "render_preview_clip", "set_vocal_melody", "render_audio", "create_song", "make_unique", "set_clip", "export_groove", "add_section", "duplicate_section", "import_groove", "undo_song", "render_song"]);
     // …and the read-only promise is kept for the reader that was added with them.
     expect(TOOLS.find((tool) => tool.name === "get_song")?.readOnly).toBe(true);
   });
