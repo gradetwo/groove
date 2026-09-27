@@ -118,7 +118,7 @@ try {
   const cleared = payload(
     await client.request("tools/call", {
       name: "apply_pattern_ops",
-      arguments: { genreId: genre, ops: [{ op: "clear_track", trackId: "fx" }] },
+      arguments: { genreId: genre, ops: [{ op: "clear_track", track: "fx" }] },
     })
   );
   /**
@@ -126,6 +126,7 @@ try {
    * `Cannot read properties of undefined (reading 'tracks')` at the line that assumed `{ pattern }`. A probe that dies on an
    * unexpected shape costs a twenty-minute CI round trip, so the shape is checked and the server's own answer is printed.
    */
+  console.log(`  clear_track     : ${JSON.stringify(cleared?.applied ?? cleared).slice(0, 200)}`);
   if (!cleared?.pattern) {
     throw new Error(`apply_pattern_ops did not return a pattern — the server said: ${JSON.stringify(cleared).slice(0, 300)}`);
   }
