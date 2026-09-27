@@ -192,6 +192,24 @@ engine.
 does not is expected to land inside 0.005 dB. PDC — the next piece, and the one that can make phase coherence worse — can be checked
 against this instead of against an impression.
 
+**The limiter's latency is declared, and it differs by path.**
+
+Reading the chain rather than measuring it first turned up the fact the table needs: the master limiter **declares** its latency —
+`MasterLimiter.latencySeconds = latencySamples / ctx.sampleRate` (`MasterLimiter.ts:667`), exposed through
+`AudioEngine.getMasterLimiterLatencySeconds()` (`AudioEngine.ts:1095`) — and the declared value is **0 on the `DynamicsCompressor`
+fallback and non-zero on the worklet path** (`:583` versus the worklet's own). The comment there says it plainly: "the whole master bus is
+delayed by this much on the worklet path (0 on the compressor fallback). Live playback and the offline bounce are delayed identically, so
+the exporter-parity rule is unaffected".
+
+Two consequences, both worth having before PDC is written:
+
+* **PDC has to compensate one path and not the other.** A mix rendered on the worklet and one rendered on the fallback are shifted relative
+  to each other by exactly that latency — which is the same asymmetry the determinism probe reports per row (`limiter worklet` in every line
+  of its first run) and the same one the loudness re-record tripped over;
+* **the declared number should be read in the browser, not from a grep.** The value is computed from `ctx.sampleRate`, so the honest way to
+  put it in the table is for a probe to print `limiterKind` and `latencySeconds` together — the pair, because either alone is misleading.
+  That is the next slice, and it is the reason the measurement rides in the audio scope rather than in a unit test.
+
 **Second prerequisite, first row measured: the FX rack costs no latency.**
 
 ```
