@@ -81,6 +81,24 @@ Track factory / folder+summing tracks / region timeline / PDC / audio tracks / S
 **behind** the workstreams above: they are the largest changes in the document and the ones whose prerequisites (PDC latency table,
 golden render, schema versioning) the earlier workstreams establish.
 
+## Workstream 4's harmony half is smaller than the report assumed
+
+The evaluation asks for a "harmony minimum set" — `set_chord_progression` plus `suggest_progression` — as though harmony is absent. Reading
+the tool list says otherwise, and this is the same pattern the earlier items followed:
+
+* **the reading half exists**: `list_chord_progressions` and `get_chord_progression` are declared tools over a committed progression
+  library (`mcp/registry.ts`); an agent can already ask what progressions exist and what one contains;
+* **the writing half is one op**, not a subsystem: `apply_pattern_ops` already carries `set_pitch` and the `chords` lane exists, so
+  `set_chord_progression` belongs there as a **deterministic, serializable operation** — which is also what the evaluation's own
+  recommendation 12 asks for ("a deterministic, serializable pipeline reused for rhythm and melody").
+
+The design that follows from the split: the **op** takes concrete chords (`{ op: "set_chord_progression", chords: number[][] }`) because
+`mcp/pattern.ts` is pure and cannot reach the library, and the **tool layer** resolves a progression id to those chords before applying
+it. That keeps the operations replayable without the library, and keeps the library the single source of what a named progression is.
+
+`suggest_progression` is the genuinely new half: it needs a key and a mood and a rule for voice leading, and nothing in the tree does
+that today.
+
 ## Workstream 3, the 8 kHz render: what is established, and the one check that gates it
 
 Reconnaissance rather than code, because a head-less render at the wrong rate is worse than a slow one:
