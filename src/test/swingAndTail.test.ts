@@ -111,7 +111,9 @@ describe("P0.6 · the render tail follows the genre's own decay", () => {
   it("is what the renderer uses for its length", () => {
     const source = fs.readFileSync(path.resolve(__dirname, "..", "audio", "WavExporter.ts"), "utf8");
     expect(source).toMatch(/resolveRenderTailSec\(tailGenreFx, bpm\)/);
-    expect(source).toMatch(/totalSteps \* stepDur \+ tailSec/);
+    expect(source).toMatch(/const totalDurationSec = \(stepStarts \? stepStarts\[totalSteps\]! : totalSteps \* stepDur\) \+ tailSec;/);
+    // The no-map arithmetic is still the literal this test was written for — the branch made it conditional, not different.
+    expect(source).toMatch(/: totalSteps \* stepDur\) \+ tailSec/);
     // The literal that cut boom-bap's tail must be gone.
     expect(source).not.toMatch(/totalSteps \* stepDur \+ 0\.6/);
   });
