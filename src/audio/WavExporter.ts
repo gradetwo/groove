@@ -994,7 +994,35 @@ export async function renderPatternOffline(
     return loop;
   };
 
-  if (limiterKind === "worklet") return asRequested(rendered) as AudioBuffer;
+  /**
+   * PDC, offline: the master bus is delayed by the limiter's lookahead, and that delay is a real,
+   * measured number — `MASTER_LIMITER_LOOKAHEAD_MS` is 3 ms, and the fallback re-run below applies
+   * the *same kernel*, so **both** paths end up delayed by it. Until this, nothing on the render
+   * path read `latencySamples` at all: `getMasterLimiterLatencySeconds()` had exactly one consumer,
+   * a settings screen that displayed it.
+   *
+   * The compensation is a trim, not a filter: drop `latencySamples` frames from the head and pad the
+   * same number of silent frames at the tail, so the buffer's length and the position of every later
+   * event are unchanged and only the **alignment** moves. That is the property the comb-filter test
+   * describes — make the real path behave like the aligned case — and the reason this runs *before*
+   * `asRequested`: the seamless-loop fold must see the corrected timeline.
+   */
+  const compensate = (buffer: AudioBuffer, latencySamples: number): AudioBuffer => {
+    if (!Number.isFinite(latencySamples) || latencySamples <= 0) return buffer;
+    const compensated = ctx.createBuffer(buffer.numberOfChannels, buffer.length, buffer.sampleRate);
+    for (let c = 0; c < buffer.numberOfChannels; c += 1) {
+      const source = buffer.getChannelData(c);
+      const target = new Float32Array(buffer.length);
+      // Shift earlier by the latency; the head is what the limiter's silence was, the tail becomes silence.
+      for (let i = 0; i + latencySamples < source.length; i += 1) target[i] = source[i + latencySamples];
+      compensated.copyToChannel(target, c);
+    }
+    return compensated;
+  };
+
+  if (limiterKind === "worklet") {
+    return asRequested(compensate(rendered, graph.limiter.latencySamples)) as AudioBuffer;
+  }
 
   /**
    * The fallback path has no true-peak ceiling — its own warning says so ("no true-peak ceiling,
@@ -1011,7 +1039,11 @@ export async function renderPatternOffline(
   const guarded = applyOfflineCeiling(channels, rendered.sampleRate);
   const out = ctx.createBuffer(rendered.numberOfChannels, rendered.length, rendered.sampleRate);
   for (let c = 0; c < rendered.numberOfChannels; c += 1) out.copyToChannel(guarded.channels[c], c);
-  return asRequested(out) as AudioBuffer;
+  /**
+   * The guard delays by the same lookahead the worklet does, on purpose — it exists so a guarded render is aligned with a worklet one.
+   * Trimming both by the same amount preserves that alignment and fixes the absolute position, which is the part PDC is about.
+   */
+  return asRequested(compensate(out, guarded.latencySamples)) as AudioBuffer;
 }
 
 /**
@@ -1027,13 +1059,14 @@ export async function renderPatternOffline(
 export function applyOfflineCeiling(
   channels: readonly Float32Array[],
   sampleRate: number
-): { channels: Float32Array[]; gainReductionDb: number } {
+): { channels: Float32Array[]; gainReductionDb: number; latencySamples: number } {
   const result = limitBuffers(
     channels.map((channel) => Float32Array.from(channel)),
     sampleRate,
     { ceilingDb: MASTER_LIMITER_INTERNAL_CEILING_DB }
   );
-  return { channels: result.channels, gainReductionDb: result.gainReductionDb };
+  // The delay is part of the contract, not an accident: a guarded render is aligned with a worklet one.
+  return { channels: result.channels, gainReductionDb: result.gainReductionDb, latencySamples: result.latencySamples };
 }
 
 function synthFX(ctx: BaseAudioContext, dest: AudioNode, time: number, vel: number, pitchOffset: number, stepDur: number, gateVal: number): void {

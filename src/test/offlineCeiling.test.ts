@@ -178,17 +178,17 @@ describe("renderPatternOffline wiring", () => {
     );
   });
 
-  it("returns the worklet render untouched and guards only the fallback", () => {
+  it("compensates latency on both paths and guards only the fallback", () => {
     /**
-     * The worklet path returns early, the fallback path runs the ceiling kernel — and since the seamless-loop
-     * option (P0.6) both go out through the same helper, which is what this asserts instead of a bare `return
-     * rendered;`: a loop that only joins itself, or a ceiling that is only applied, on one of the two paths is not
-     * a guarantee. The early return still has to come *before* the guard, so the fallback only pays for the kernel
-     * it needs.
+     * This test used to assert that the worklet render was returned **untouched** — and PDC deliberately ended that: the master bus is
+     * delayed by the limiter's lookahead on both paths (the fallback runs the same kernel on purpose, so a guarded render aligns with a
+     * worklet one), so both are now trimmed by `compensate(...)` before they go out. What still has to hold is the shape that made the
+     * original assertion worth writing: the worklet path returns early and never pays for the ceiling kernel, the fallback applies the
+     * guard, and both go out through the seamless-loop helper rather than a bare `return`.
      */
-    expect(source).toMatch(/if\s*\(\s*limiterKind\s*===\s*"worklet"\s*\)\s*return\s+asRequested\(/);
-    expect(source).toMatch(/applyOfflineCeiling\(\s*channels\s*,\s*rendered\.sampleRate\s*\)/);
-    expect(source).toMatch(/return\s+asRequested\(out\)\s+as\s+AudioBuffer;/);
+    expect(source).toMatch(/if\s*\(\s*limiterKind\s*===\s*"worklet"\s*\)\s*\{[\s\S]*?return\s+asRequested\(compensate\(/);
+    expect(source).toMatch(/if\s*\(\s*limiterKind\s*===\s*"worklet"\s*\)\s*\{[\s\S]*?\}[\s\S]*?applyOfflineCeiling\(\s*channels\s*,\s*rendered\.sampleRate\s*\)/);
+    expect(source).toMatch(/return\s+asRequested\(compensate\(out,\s*guarded\.latencySamples\)\)\s+as\s+AudioBuffer;/);
   });
 });
 
