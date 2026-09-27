@@ -1,27 +1,27 @@
 {
-  "version": "2.34.7",
+  "version": "2.34.8",
   "releaseDate": "2026-09-28",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.7",
+    "version": "2.34.8",
     "date": "2026-09-28",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "MCP 范例库：按曲风的可模仿配方 + few-shot 提示",
-      "en": "MCP example library: imitable recipes per genre, plus a few-shot prompt"
+      "zh": "导出对齐（PDC）：补偿限幅器前瞻延迟",
+      "en": "Export alignment (PDC): compensating the limiter's lookahead"
     },
     "highlights": [
       {
-        "zh": "get_example 与 groove://examples/{genre}：每个范例自带产生它的工具调用序列。",
-        "en": "get_example and groove://examples/{genre}: each example carries the tool calls that produced it."
+        "zh": "导出的每一次渲染此前都带着 3 ms 偏移，因为延迟被声明、被显示、却从未被施加。",
+        "en": "Every exported render carried a 3 ms shift: the latency was declared, displayed, and never applied."
       },
       {
-        "zh": "范例由曲风库构建而非粘贴，因此不会随曲风变化而漂移，且都通过 validate_pattern。",
-        "en": "Examples are built from the genre library rather than pasted, so they cannot drift, and every one passes validate_pattern."
+        "zh": "现在两条路径都按 limiter 前瞻裁剪对齐，长度与事件位置不变；预测 7.408 ms，实测 7.415 ms。",
+        "en": "Both paths are now trimmed by the limiter's lookahead, keeping length and event positions; predicted 7.408 ms, measured 7.415 ms."
       },
       {
-        "zh": "新增 compose_with_examples 提示：先读配方再动手，并提醒 undo_song 让实验不必永久。",
-        "en": "New compose_with_examples prompt: read a recipe before writing, and undo_song so an experiment need not be permanent."
+        "zh": "音色与响度基线均守住（±0.35 dB 内），无需重录。",
+        "en": "The timbre and loudness baselines held (within ±0.35 dB), so no re-record was needed."
       }
     ],
     "truncated": false
