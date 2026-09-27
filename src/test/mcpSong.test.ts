@@ -403,8 +403,9 @@ describe("the composer's v2 report: the exported file's name and size", () => {
     name
       .normalize("NFKC")
       .replace(/[\s/\\:*?"<>|]+/g, "-")
+      // eslint-disable-next-line no-control-regex -- stripping control characters is the point of this line, not an accident
       .replace(/[\u0000-\u001f\u007f]/g, "")
-      .replace(/^[.\-]+|[.\-]+$/g, "")
+      .replace(/^[.-]+|[.-]+$/g, "")
       .slice(0, 40);
 
   it("keeps a title's own script and drops only what a path cannot carry", () => {
