@@ -21,7 +21,7 @@ import os from "node:os";
 import path from "node:path";
 import { exportAbleton, exportMidi, loudnessReport, shareUrl, toBase64 } from "./exporting";
 import { analyseWavFile, renderAudio } from "./render/worker";
-import { addMcpSection, createMcpSong, duplicateMcpSection, flattenMcpSong, getMcpSong, importMcpSong, mcpSongHistory, setMcpClip, summariseSong, undoMcpSong } from "./song";
+import { addMcpSection, createMcpSong, duplicateMcpSection, flattenMcpSong, getMcpSong, importMcpSong, makeUniqueMcpSection, mcpSongHistory, setMcpClip, summariseSong, undoMcpSong } from "./song";
 import type { ClipSlot } from "../src/types/song";
 import type { SequencerPattern } from "../src/types/genre";
 
@@ -680,6 +680,42 @@ export const TOOLS: ToolDefinition[] = [
           label: args.label as string | undefined,
           clips: args.clips as Partial<Record<ClipSlot, SequencerPattern>> | undefined,
         });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    /**
+     * The other half of `set_clip`, and the answer to the dev-branch report's claim 6 from the composing side: a slot is **song-global**, so two
+     * sections pointing at B are the same clip. This gives one section its own copy in a free slot and repoints only that section, which is what
+     * lets three verses have three melodies. It says so when all four slots are in use instead of overwriting one.
+     */
+    name: "make_unique",
+    title: "Give one section its own copy of its clip",
+    description:
+      "Copy the clip a section plays into a free slot (A-D) and point only that section at it, so editing it no longer changes every other section that shared the clip. Returns which slot was allocated and which section was repointed. Fails with an explanation when all four slots are in use, because a song needing five distinct clips needs a wider slot set rather than an overwrite.",
+    readOnly: false,
+    inputSchema: {
+      songId: z.string().describe("the id create_song returned"),
+      sectionId: z.string().optional().describe("the section to make unique, by id"),
+      index: z.number().int().min(0).optional().describe("or by position, when the id is not to hand"),
+      pattern: patternSchema.optional().describe("optional replacement clip for the new slot; omitted, the current clip is copied"),
+    },
+    handler: (args) => {
+      try {
+        const result = makeUniqueMcpSection({
+          songId: String(args.songId),
+          ...(args.sectionId ? { sectionId: args.sectionId as string } : {}),
+          ...(args.index !== undefined ? { index: args.index as number } : {}),
+          ...(args.pattern ? { pattern: args.pattern as SequencerPattern } : {}),
+        });
+        return {
+          ...result.summary,
+          allocatedSlot: result.allocatedSlot,
+          repointedSection: result.sectionId,
+          note: `section ${result.sectionId} now plays its own copy in slot ${result.allocatedSlot}; set_clip on ${result.allocatedSlot} changes it without touching the others`,
+        };
       } catch (error) {
         return failure((error as Error).message);
       }

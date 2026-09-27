@@ -359,6 +359,57 @@ export function addMcpSection(input: AddMcpSectionInput): SongSummary {
   return summariseSong(inserted);
 }
 
+/**
+ * Give one section its own copy of the clip it plays — "make unique".
+ *
+ * The gap this closes, reported from composing: a clip slot is **song-global**, so two sections pointing at B are the *same* clip, and a song
+ * whose verses have different lyrics cannot give them different melodies. `set_clip` replaces a slot, which changes every section that reads it;
+ * there was no way to change one section.
+ *
+ * It needs no schema change: `ClipSlot` is already A–D, `set_clip` already accepts all four, the `.groove` format carries them and the editor
+ * gained all four in this plan's workstream 3a. So this is an **allocation plus a repoint** — copy the clip into a free slot and point that one
+ * section at it — and when all four slots are taken it **says so** rather than overwriting, because a song needing five distinct clips needs a
+ * wider slot set, and that is a decision rather than a silent loss.
+ */
+export function makeUniqueMcpSection(input: {
+  songId: string;
+  /** Which section, by id or by position. One of the two is required. */
+  sectionId?: string;
+  index?: number;
+  /** Optional replacement clip for the new slot; omitted, the section's current clip is copied. */
+  pattern?: SequencerPattern;
+}): { summary: SongSummary; allocatedSlot: ClipSlot; sectionId: string } {
+  const song = songs.get(input.songId);
+  if (!song) throw new Error(`unknown songId "${input.songId}" — create one with create_song`);
+  if (!song.sections.length) throw new Error(`song "${input.songId}" has no sections to make unique`);
+
+  const at = input.sectionId
+    ? song.sections.findIndex((section) => section.id === input.sectionId)
+    : Math.max(0, Math.min(song.sections.length - 1, Math.floor(input.index ?? 0)));
+  if (at < 0) throw new Error(`no section "${input.sectionId}" in song "${input.songId}"`);
+  const section = song.sections[at]!;
+
+  const taken = new Set(Object.keys(song.clips ?? {}));
+  const free = (["A", "B", "C", "D"] as ClipSlot[]).find((slot) => !taken.has(slot));
+  if (!free) {
+    throw new Error(
+      `all four clip slots are in use (${[...taken].sort().join(", ")}), so this section cannot be given its own copy — ` +
+        "a song that needs five distinct clips needs a wider slot set, which is a decision rather than something to overwrite"
+    );
+  }
+
+  const source = input.pattern ?? song.clips?.[section.slot];
+  if (!source) throw new Error(`section ${section.id} points at clip ${section.slot}, which this song does not have`);
+  const next: Song = {
+    ...song,
+    clips: { ...song.clips, [free]: source },
+    sections: song.sections.map((current, index) => (index === at ? { ...current, slot: free } : current)),
+  };
+  rememberSong(song.id, "make_unique");
+  songs.set(song.id, next);
+  return { summary: summariseSong(next), allocatedSlot: free, sectionId: section.id };
+}
+
 /** Replace one clip, which is how an agent gives a section its own variation. */
 export function setMcpClip(songId: string, slot: ClipSlot, pattern: SequencerPattern): SongSummary {
   const song = songs.get(songId);
