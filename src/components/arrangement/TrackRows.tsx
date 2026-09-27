@@ -1,5 +1,5 @@
 import React from "react";
-import { sectionRegions, trackRows } from "./songEdit";
+import { sectionRegions, trackRows } from "../../features/arrangement/songEdit";
 import type { ClipSlot } from "../../types/song";
 import type { Song } from "../../types/song";
 

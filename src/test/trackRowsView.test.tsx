@@ -1,7 +1,7 @@
 import React from "react";
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { TrackRows } from "../features/arrangement/TrackRows";
+import { TrackRows } from "../components/arrangement/TrackRows";
 import type { Song } from "../types/song";
 
 /**
