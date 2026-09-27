@@ -42,6 +42,7 @@ import {
 } from "./chordVoicing";
 import { resolveChordTreatment } from "../data/genreVoicing";
 import { buildMasterGraph } from "./masterGraph";
+import { barSeconds, type TempoPoint } from "../data/tempoMap";
 import {
   limitBuffers,
   MASTER_LIMITER_INTERNAL_CEILING_DB,
@@ -299,6 +300,17 @@ export async function renderPatternOffline(
     : (pattern.swing ? (pattern.swing > 1 ? pattern.swing / 100 : pattern.swing) : 0);
   const swing = Math.max(0, Math.min(0.75, baseSwing));
   const stepDur = 60 / bpm / 4;
+  /**
+   * A tempo map, if the pattern carries one (owner decision 2b) — read defensively, the way `totalSteps` already is a few lines below.
+   *
+   * **The no-map path is the existing code, not a generalisation that reduces to it.** `Σ (n copies of c)` and `n * c` are the same real number and not always
+   * the same float, so a prefix sum used unconditionally would move the total duration and every event time in the last bits; the determinism probe resolves
+   * 0.005 dB and would notice. Branching keeps byte-identity a property of the source.
+   */
+  const patternTempo = (pattern as { tempoTrack?: TempoPoint[] }).tempoTrack ?? [];
+  const tempoAware = patternTempo.length > 0;
+  const stepTimeAt = (step: number): number => (stepStarts ? stepStarts[step]! : step * stepDur);
+  const stepLengthAt = (step: number): number => (stepStarts ? stepStarts[step + 1]! - stepStarts[step]! : stepDur);
   const patternSteps =
     (pattern as any).totalSteps && (pattern as any).totalSteps > 0
       ? (pattern as any).totalSteps
@@ -308,7 +320,16 @@ export async function renderPatternOffline(
   // lines below for the graph; resolve it here first so the render length can depend on it.
   const tailGenreFx = resolveGenreFx(pattern.genre_id);
   const tailSec = resolveRenderTailSec(tailGenreFx, bpm);
-  const totalDurationSec = totalSteps * stepDur + tailSec;
+  const stepStarts = (() => {
+    if (!tempoAware) return null;
+    const starts = [0];
+    for (let step = 0; step < totalSteps; step += 1) {
+      const bar = Math.floor(step / 16);
+      starts.push(starts[step]! + barSeconds({ bpm, tempoTrack: patternTempo }, bar));
+    }
+    return starts;
+  })();
+  const totalDurationSec = (stepStarts ? stepStarts[totalSteps]! : totalSteps * stepDur) + tailSec;
 
   const OfflineContextClass =
     (typeof window !== "undefined" && (window.OfflineAudioContext || (window as any).webkitOfflineAudioContext)) ||
@@ -622,7 +643,7 @@ export async function renderPatternOffline(
 
   // Step scheduling loop
   for (let step = 0; step < totalSteps; step++) {
-    const unswungTime = step * stepDur;
+    const unswungTime = stepTimeAt(step);
 
     pattern.tracks.forEach((track: Track, trackIdx: number) => {
       // Stem mode check: only render requested track if stemTrackIdx is specified
@@ -649,7 +670,7 @@ export async function renderPatternOffline(
       // F-03/P0.5: per-track swing offset, from the shared rule both engines use.
       const trackSwingOffset = track.swing !== undefined ? track.swing / 100 : 0;
       const effSwing = Math.max(0, Math.min(0.75, swing + trackSwingOffset));
-      const swingOffset = swingOffsetSeconds(step, effSwing, stepDur);
+      const swingOffset = swingOffsetSeconds(step, effSwing, stepLengthAt(step));
       const stepTime = unswungTime + swingOffset;
 
       const velVal = track.velocity && track.velocity[stepIdx] !== undefined ? track.velocity[stepIdx] : 100;
