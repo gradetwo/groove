@@ -816,7 +816,52 @@ export const RESOURCES: ResourceDefinition[] = [
     mimeType: "application/json",
     read: () => JSON.stringify(listMasterclasses()),
   },
+  {
+    /**
+     * The contract itself. `docs/MCP.md` documented this URI and the registry never declared it — the same class of mismatch as the
+     * changelog below, found by the gate that now compares the two sides rather than by a reader noticing.
+     */
+    uri: "groove://docs",
+    name: "MCP contract",
+    description: "This server's contract: the tools, resources and prompts it exposes, and what each one promises.",
+    mimeType: "text/markdown",
+    read: () => {
+      try {
+        return readFileSync(path.resolve("docs/MCP.md"), "utf8");
+      } catch (error) {
+        return `could not read docs/MCP.md: ${(error as Error).message}`;
+      }
+    },
+  },
+  {
+    /**
+     * The resource `docs/MCP.md` has documented since the contract was written and the registry never declared.
+     *
+     * A reader of the contract saw a resource that did not exist; an agent that asked for it got "not found". It is the release
+     * notes the app itself shows, so the data was always there — only the declaration was missing, which is why the gate now
+     * compares the documented URIs against the declared ones rather than trusting either side.
+     */
+    uri: "groove://changelog",
+    name: "Changelog",
+    description: "The release notes the app itself shows, newest first.",
+    mimeType: "application/json",
+    read: () => JSON.stringify(changelog()),
+  },
 ];
+
+/**
+ * The committed changelog, as the app ships it.
+ *
+ * Read from the same file the web build copies into `dist/`, so the agent and the UI cannot disagree about what changed.
+ */
+function changelog(): unknown {
+  const file = path.resolve("public/changelog.json");
+  try {
+    return JSON.parse(readFileSync(file, "utf8"));
+  } catch (error) {
+    return { error: `could not read ${file}: ${(error as Error).message}` };
+  }
+}
 
 export interface PromptDefinition {
   name: string;

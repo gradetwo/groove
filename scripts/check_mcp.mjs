@@ -11,6 +11,7 @@
  * says so, and the render path has its own probe (`scripts/analyze_export_audio.mjs`).
  */
 import { spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -133,6 +134,26 @@ try {
   check("tools carry a description for the model", (tools?.tools ?? []).every((tool) => (tool.description ?? "").length > 40));
 
   const resources = await client.request("resources/list", {});
+
+  /**
+   * Every URI the contract documents must be a URI the server declares.
+   *
+   * This is the check that would have caught `groove://changelog`: `docs/MCP.md` documented it from the day the contract was
+   * written and the registry never declared it, so a reader saw a resource that answered "not found". Comparing the two sides needs
+   * no maintenance — the contract is the list.
+   */
+  {
+    const contract = readFileSync(new URL("../docs/MCP.md", import.meta.url), "utf8");
+    const documented = [...new Set([...contract.matchAll(/(groove:\/\/[a-z-]+(?:\/[a-z-]+|\/\{[a-z]+\})*)/g)].map((match) => match[1]))];
+    const declared = new Set((resources.resources ?? []).map((resource) => resource.uri));
+    const missing = documented.filter((uri) => !declared.has(uri));
+    check(
+      "every documented resource is declared",
+      missing.length === 0,
+      missing.length ? `documented but not declared: ${missing.join(", ")}` : `${documented.length} documented URI(s)`
+    );
+  }
+
   const uriTemplate = (resources?.resources ?? []).map((resource) => resource.uri);
   check("resources/list returns the library resources", uriTemplate.includes("groove://genres"));
   check("a genre document template is declared", uriTemplate.some((uri) => uri.includes("genre")), uriTemplate.join(" "));
