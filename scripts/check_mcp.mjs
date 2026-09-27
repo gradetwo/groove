@@ -213,6 +213,24 @@ try {
   /**
    * Decision 2b at the tool boundary: a tempo map is a **validated** write, and the reported length follows it. Browser-free by nature — nothing here renders.
    */
+  /**
+   * Owner decision 4: the SVS stub must **say it is reserved**, so neither a human reading the tool list nor a gate watching the surface can mistake it for a
+   * capability. It also validates, so the shape a real implementation would take is exercised now.
+   */
+  const vocalStub = await client.request("tools/call", {
+    name: "synthesize_vocal",
+    arguments: { syllables: ["能", "够"], tones: [2, 4] },
+  });
+  const vocalStubMismatch = await client.request("tools/call", {
+    name: "synthesize_vocal",
+    arguments: { syllables: ["能", "够"], tones: [2] },
+  });
+  check(
+    "synthesize_vocal says it is reserved, and validates its arguments",
+    /reserved/.test(JSON.stringify(vocalStub)) && /one tone per syllable/.test(JSON.stringify(vocalStubMismatch)),
+    JSON.stringify(vocalStub).slice(0, 100)
+  );
+
   const tempoApplied = payload(
     await client.request("tools/call", { name: "set_tempo", arguments: { songId: song.songId, tempoTrack: [{ atBar: 0, bpm: 240 }] } })
   );

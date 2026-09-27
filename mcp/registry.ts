@@ -641,6 +641,33 @@ export const TOOLS: ToolDefinition[] = [
     },
   },
   {
+    /**
+     * Owner decision 4: the singing-synthesis interface is **reserved and empty**, and it says so.
+     *
+     * A hole an agent will guess at is worse than a refusal: with no tool at all it builds a vocal out of what it has and produces something that sounds like a
+     * mistake. This is reachable, validates the arguments a real implementation would need, and answers honestly — so the absence is a fact about the server
+     * instead of a surprise, and a `check:mcp` case holds the answer in place.
+     */
+    name: "synthesize_vocal",
+    title: "Sing a lyric (reserved — not implemented)",
+    description:
+      "Reserved for singing synthesis (SVS) and **not implemented**: this call always reports that the capability is reserved, and changes nothing. It exists so an agent discovers the absence instead of guessing, and it validates the arguments a future implementation would take (a lyric, one tone per syllable, and the lane to sing on) so the failure explains what is missing rather than what is malformed.",
+    readOnly: true,
+    inputSchema: {
+      syllables: z.array(z.string().max(8)).min(1).max(64).describe("one syllable per note, as set_vocal_melody takes them"),
+      tones: z.array(z.number().int().min(0).max(5)).min(1).max(64).describe("one tone per syllable"),
+      track: z.string().max(40).optional().describe("the lane to sing on; default lead"),
+    },
+    handler: (args) => {
+      if ((args.syllables as string[]).length !== (args.tones as number[]).length) {
+        return failure("one tone per syllable, as set_vocal_melody requires — and note that this tool is reserved and does not sing anything yet");
+      }
+      return failure(
+        "reserved, not implemented: singing synthesis is an interface here and no implementation. For a sung line today use set_vocal_melody (which binds syllables to notes and checks the tones) with the synth voices the genre already has; the SVS direction is the upstream synth project (docs/SYNTH_UPSTREAM_PLAN.md)."
+      );
+    },
+  },
+  {
     name: "spectral_balance",
     title: "Spectral balance of a rendered file",
     description:
