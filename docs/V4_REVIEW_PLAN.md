@@ -81,6 +81,23 @@ Track factory / folder+summing tracks / region timeline / PDC / audio tracks / S
 **behind** the workstreams above: they are the largest changes in the document and the ones whose prerequisites (PDC latency table,
 golden render, schema versioning) the earlier workstreams establish.
 
+## Workstream 3, the 8 kHz render: what is established, and the one check that gates it
+
+Reconnaissance rather than code, because a head-less render at the wrong rate is worse than a slow one:
+
+* `src/audio/WavExporter.ts` **accepts** `sampleRate` (`:63`) and uses it for the render's length and the WAV header (`:290`, `:319`),
+  so the option exists and is not decorative;
+* the MCP render path calls `wav.renderPatternOffline(pattern, { … })` (`mcp/render/worker.ts:162`), so passing a rate through is a
+  one-line change on that side;
+* **but `src/` contains exactly one `new OfflineAudioContext` — in `AnatomyKickEngine.ts:658`, which is unrelated.** The context that
+  `renderPatternOffline` renders into is therefore constructed some other way (an alias, or through a helper), and that is the check
+  that has to happen first: if the context's own rate follows `options.sampleRate`, an 8 kHz analysis render is a small, honest slice;
+  if it does not, the option **relabels the file** and any 8 kHz analysis would be reading audio at the wrong speed — a bug worth
+  finding on its own terms before `analyze_song` is built on top of it.
+
+So the next step is one grep for the context construction (the alias form), and the two outcomes are both useful: a small slice, or a
+real find.
+
 ## What is deliberately rejected
 
 * **Audio in context** (`render_preview` returning audio data). The MCP keeps returning file paths plus an analysis summary; a
