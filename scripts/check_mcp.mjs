@@ -217,6 +217,29 @@ try {
    * Owner decision 4: the SVS stub must **say it is reserved**, so neither a human reading the tool list nor a gate watching the surface can mistake it for a
    * capability. It also validates, so the shape a real implementation would take is exercised now.
    */
+  /**
+   * Owner decision 1A made usable: a second lane of a kind, through the op an agent can actually call.
+   */
+  const addedLane = payload(
+    await client.request("tools/call", {
+      name: "apply_pattern_ops",
+      arguments: { genreId: "chicago-house", ops: [{ op: "add_lane", track: "lead", laneId: "counter", name: "Counter" }] },
+    })
+  );
+  const duplicateLane = payload(
+    await client.request("tools/call", {
+      name: "apply_pattern_ops",
+      arguments: { genreId: "chicago-house", ops: [{ op: "add_lane", track: "lead", laneId: "lead" }] },
+    })
+  );
+  check(
+    "add_lane appends a second lane of a kind and refuses a duplicate id",
+    (addedLane.applied ?? [])[0]?.ok === true &&
+      (addedLane.pattern?.tracks ?? []).filter((track) => track.track_id === "lead").length === 2 &&
+      (duplicateLane.applied ?? [])[0]?.ok === false,
+    JSON.stringify((addedLane.applied ?? [])[0] ?? {}).slice(0, 100)
+  );
+
   const vocalStub = await client.request("tools/call", {
     name: "synthesize_vocal",
     arguments: { syllables: ["能", "够"], tones: [2, 4] },

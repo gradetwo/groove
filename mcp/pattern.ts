@@ -103,6 +103,14 @@ export type PatternOp =
    * library the single source of what a named progression is.
    */
   | { op: "set_chord_progression"; track?: string; chords: number[][]; velocity?: number }
+  /**
+   * Add a second lane of a kind (owner decision 1A, made usable).
+   *
+   * `laneId` defaults to `<kind>-<n>`, derived from how many lanes of that kind exist, so two calls never collide by accident. `from` copies an existing lane's
+   * arrays — by `laneId` first, then by kind — so a counter-melody can start from the melody it answers. A name is required to be **distinct** inside the
+   * pattern, because the exporter names tracks by `name` (`AbletonExporter.ts:128`) and two identical names would produce two identical tracks in a Live set.
+   */
+  | { op: "add_lane"; track: string; laneId?: string; from?: string; name?: string }
   | { op: "clear_track"; track: string }
   | { op: "copy_track"; from: string; to: string };
 
@@ -273,6 +281,50 @@ export function applyPatternOps(pattern: SequencerPattern, ops: PatternOp[]): Ap
         if (from.pitch) to.pitch = [...from.pitch];
         if (from.gate) to.gate = [...from.gate];
         applied.push({ op: op.op, ok: true, detail: `${from.track_id} → ${to.track_id}` });
+        break;
+      }
+      case "add_lane": {
+        const kind = resolveTrackId(op.track);
+        if (!kind) {
+          applied.push({ op: op.op, ok: false, detail: `"${op.track}" is not a lane kind — try kick, snare, hihat, percussion, bass, chords, lead or fx` });
+          break;
+        }
+        const sameKind = next.tracks.filter((track) => track.track_id === kind).length;
+        const laneId = (op.laneId ?? `${kind}-${sameKind + 1}`).trim();
+        if (!laneId) {
+          applied.push({ op: op.op, ok: false, detail: "a laneId cannot be empty" });
+          break;
+        }
+        if (next.tracks.some((track) => (track.laneId ?? track.track_id) === laneId)) {
+          applied.push({ op: op.op, ok: false, detail: `a lane called "${laneId}" already exists` });
+          break;
+        }
+        // A copied source, addressed the way everything else addresses lanes: by its own name first, then by kind.
+        const source = op.from ? findTrack(next, op.from) : null;
+        if (op.from && !source) {
+          applied.push({ op: op.op, ok: false, detail: `no lane "${op.from}" to copy from` });
+          break;
+        }
+        const steps = source ? [...source.steps] : next.tracks[0]!.steps.map(() => 0);
+        const firstOfKind = next.tracks.find((track) => track.track_id === kind);
+        const name = (op.name ?? `${source?.name ?? firstOfKind?.name ?? kind} ${sameKind + 1}`).trim();
+        if (next.tracks.some((track) => track.name === name)) {
+          applied.push({ op: op.op, ok: false, detail: `a lane named "${name}" already exists — the exporter names tracks by it` });
+          break;
+        }
+        next.tracks.push({
+          track_id: kind,
+          laneId,
+          name,
+          instrument: source?.instrument ?? next.tracks[0]!.instrument,
+          steps,
+          ...(source?.velocity ? { velocity: [...source.velocity] } : {}),
+          ...(source?.pitch ? { pitch: [...source.pitch] } : {}),
+          ...(source?.gate ? { gate: [...source.gate] } : {}),
+          ...(source?.pitches ? { pitches: source.pitches.map((stack) => (stack ? [...stack] : stack)) } : {}),
+          ...(source?.syllables ? { syllables: [...source.syllables] } : {}),
+        } as (typeof next.tracks)[number]);
+        applied.push({ op: op.op, ok: true, detail: `${kind} lane "${laneId}" named "${name}"${source ? ` copied from "${op.from}"` : ""}` });
         break;
       }
       case "set_chord_progression": {

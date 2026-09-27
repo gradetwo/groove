@@ -80,6 +80,13 @@ const opSchema = z.discriminatedUnion("op", [
   z.object({ op: z.literal("humanize"), amount: z.number().min(0).max(1).optional(), velocityAmount: z.number().min(0).max(1).optional(), seed: z.number().int().optional(), tracks: z.array(z.string()).optional() }),
   z.object({ op: z.literal("swing"), amount: z.number().min(0).max(100) }),
   z.object({
+    op: z.literal("add_lane"),
+    track: z.string().max(40),
+    laneId: z.string().max(60).optional(),
+    from: z.string().max(60).optional(),
+    name: z.string().max(60).optional(),
+  }),
+  z.object({
     op: z.literal("set_chord_progression"),
     track: z.string().optional(),
     chords: z.array(z.array(z.number().int().min(0).max(127))).min(1),
