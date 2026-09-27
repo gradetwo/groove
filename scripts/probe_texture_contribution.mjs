@@ -178,6 +178,7 @@ try {
       sampleRate: rendered.sampleRate ?? 8000,
       channels: rendered.channels ?? null,
       replyKeys: Object.keys(rendered).slice(0, 24),
+      failureText: typeof rendered.raw === "string" ? rendered.raw.slice(0, 200) : null,
       integratedLufs: analysed.integratedLufs,
       metricKeys: Object.keys(analysed).slice(0, 6),
       bands: analysed.bandDb ?? null,
@@ -254,6 +255,7 @@ try {
   }
   console.log(`  render timings  : ${timings.join(" · ")}`);
   console.log(`  render reply    : ${(coarse.replyKeys ?? []).join(", ")}`);
+  if (coarse.failureText) console.log(`  render failure  : ${coarse.failureText}`);
   console.log(
     `  analysis pass   : ${coarse.sampleRate} Hz, ${coarse.channels ?? "?"} channel(s), at ${coarse.seconds}s` +
       (withLane.seconds ? ` (44.1 kHz took ${withLane.seconds}s)` : "")
