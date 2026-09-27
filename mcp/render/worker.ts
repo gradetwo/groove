@@ -16,6 +16,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { readFileSync, writeFileSync, mkdirSync, mkdtempSync, existsSync } from "node:fs";
 import type { SequencerPattern } from "../../src/types/genre";
 import { measureLoudness, truePeakDbChannels } from "../../src/test/helpers/loudness";
+import { songSlug } from "../../src/utils/songSlug";
 import { fingerprintChannels } from "../../src/test/helpers/timbre";
 import {
   channelCorrelation,
@@ -275,12 +276,9 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
    * empty result falls back to the previous `master` form. The genre and the tempo are always present, so the file still says
    * what it is even if the title is nonsense.
    */
-  const slug = (options.nameSlug ?? "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 40);
-  const middle = slug.length > 0 ? slug : "master";
+  // `songSlug` keeps an ASCII name byte-identical, gives a non-ASCII title a stable token of its own instead of collapsing it to `master` (which
+  // made two differently-named songs share one path and overwrite), and leaves an unnamed song on its historical default.
+  const middle = songSlug(options.nameSlug);
   const filename = `${options.genreId ?? pattern.genre_id ?? "groove"}_${middle}_${bpm}bpm.${options.format}`;
   const file = path.join(dir, filename.replace(/[^a-z0-9_.-]/gi, "_"));
   const written = Buffer.from(result.base64, "base64");
