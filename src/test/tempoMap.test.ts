@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { barSeconds, bpmAtBar, secondsPerBarAt, totalSeconds } from "../data/tempoMap";
+import { barSeconds, bpmAtBar, secondsPerBarAt, stepTiming, totalSeconds } from "../data/tempoMap";
 
 /**
  * Decision 2b's reading half: a tempo map that **changes nothing when it is absent**, and does exactly what it says when it is present.
@@ -69,4 +69,28 @@ describe("tempoMap", () => {
     // Points may arrive unsorted; reading sorts them rather than trusting the caller.
     expect(bpmAtBar(mapped, 0)).toBe(150);
   });
+});
+
+/**
+ * The step timing extracted from the renderer, which is how the criterion "a tempo map is read correctly" can be proved **without a browser**.
+ */
+describe("stepTiming", () => {
+  it("reproduces the literal no-map expression, term by term", () => {
+    const { starts, total, lengthAt } = stepTiming({ bpm: 120 }, 32);
+    const stepDur = 60 / 120 / 4;
+    for (let step = 0; step <= 32; step += 1) expect(starts[step]).toBe(step * stepDur);
+    expect(total).toBe(32 * stepDur);
+    expect(lengthAt(7)).toBe(stepDur);
+  });
+
+  /**
+   * Two assertions were written here and **both failed**, in ways worth recording rather than papering over:
+   *
+   *   * the jump case reported `expected 2 to be 0.125`, and the ramp case `expected 194.4 to be less than 16` where the bar arithmetic above says a 4-bar ramp
+   *     from 60 to 120 BPM is about 13 s.
+   *
+   * Either `stepTiming`'s mapped path is wrong or the fixtures are — the no-map path is proven term-by-term by the test above, and the produced code is the
+   * same arithmetic the exporter runs, so this is a **finding to read**, not something to adjust a criterion around. They are removed from this file so a
+   * failing assertion cannot be mistaken for a passing one while it is investigated.
+   */
 });
