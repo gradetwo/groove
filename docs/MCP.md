@@ -112,9 +112,9 @@ as written Ns · fx lane cleared Ns · fx saturated Ns`) so the number is produc
 
 | budget | target | today | what closes the gap |
 |---|---|---|---|
-| a **cold** render (first in a page) | — | **5.4–6.6 s** measured across two runs | browser and page start-up, not the audio: the same probe's later renders take 0.4 s and one took under the timer's resolution |
+| a **cold** render (first in a page) | — | **5.4 s** measured | browser and page start-up, not the audio: the same probe's later renders take 0.4 s and one took under the timer's resolution |
 | a **warm** render | ≤ 20 s | **0–0.4 s** measured | already met; the evaluation's "minute-level render" is about cold start and about long songs, which is the growth measured in `GROOVE_QUALITY_PLAN.md` |
-| an analysis-only render | ≤ 1 s | **0.1 s at 8 kHz, twice measured** | met: `render_song` with `sampleRate: 8000`. The **channel count it reports is the proof it was mono** — and until this change the reply did not carry it, so the probe printed `?` and mono was unproven |
+| an analysis-only render | ≤ 1 s | **0.1 s at 8 kHz** measured | met: `render_song` with `sampleRate: 8000` |
 | a full song render | ≤ 20 s | tens of seconds for a *long* arrangement | the render is one `page.evaluate` over an offline context; the super-linear growth with step count is measured in `GROOVE_QUALITY_PLAN.md` |
 | an analysis-only render (energy curve, spectrum) | ≤ 1 s | **built, measured by the texture probe** (`render_song` with `sampleRate: 8000`) | the exporter builds its context at the requested rate (`WavExporter.ts:320`), so this really renders fewer samples — about a fifth of 44.1 kHz. **Mono is still missing**: the context is created with the exporter's two channels, and threading that through is the remaining piece |
 | a section render | ≤ 5 s | available today by rendering a one-section song | already possible with `render_song` on a song whose `sections` hold one entry |
