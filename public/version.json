@@ -1,27 +1,27 @@
 {
-  "version": "2.34.13",
+  "version": "2.34.14",
   "releaseDate": "2026-09-28",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.13",
+    "version": "2.34.14",
     "date": "2026-09-28",
     "category": "feature",
     "title": {
-      "zh": "编排视图：每轨一行，分轨片段首次可见",
-      "en": "Arrangement view: one row per lane, so per-lane clips can be seen"
+      "zh": "分轨片段可编辑，CI 恢复健康",
+      "en": "Per-lane clips are editable, and CI is healthy again"
     },
     "highlights": [
       {
-        "zh": "编排面板新增每轨一行：显示该轨在每段播放哪个片段，以及它是否与段落默认不同。",
-        "en": "The arrangement panel gains one row per lane, showing which clip each lane plays per section and when it differs from the section's own."
+        "zh": "编排面板每轨一格可设置该轨自己的片段，也可以还原为段落默认。",
+        "en": "Each cell in the arrangement view can set a lane's own clip, or clear it back to the section's default."
       },
       {
-        "zh": "该能力在模型里已存在很久（SongSection.slots），此前在界面上完全不可见。",
-        "en": "The capability has been in the model for a long time (SongSection.slots) and was invisible in the UI until now."
+        "zh": "修好了两个长期红的门禁：层依赖违规（genreArt 下移一层）与一处 lint 错误。",
+        "en": "Two long-red gates fixed: a layer violation (genreArt moved down a layer) and a lint error."
       },
       {
-        "zh": "只读视图，不改动音频，包体不变。",
-        "en": "A read-only view: audio is untouched and the bundle budget is unchanged."
+        "zh": "探针不再因读取一个自己并不创建的报告文件而崩溃。",
+        "en": "The probe no longer crashes reading a report file it does not create."
       }
     ],
     "truncated": false
