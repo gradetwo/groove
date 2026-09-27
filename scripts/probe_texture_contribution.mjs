@@ -339,6 +339,7 @@ try {
     report.deltaLoudLufs = deltaLoud;
     fs.writeFileSync(out, `${JSON.stringify(report, null, 2)}\n`);
   }
+  }
 
   if (out) {
     fs.mkdirSync(path.dirname(out), { recursive: true });
