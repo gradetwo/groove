@@ -152,7 +152,8 @@ try {
       // The reply's keys, because its shape is the one thing this probe has had to guess twice.
       metricKeys: Object.keys(analysed).slice(0, 24),
       // The bands matter more than the loudness: under a master limiter a quiet element barely moves the whole-file figure.
-      bands: analysed.bands ?? analysed.spectrum ?? analysed.bandEnergies ?? analysed.bandShape ?? null,
+      bands: analysed.bandDb ?? null,
+      centroidHz: analysed.centroidHz ?? null,
     };
   };
 
@@ -189,6 +190,11 @@ try {
   }
 
   console.log(`  analyze keys    : ${(withLane.metricKeys ?? []).join(", ")}`);
+  if (Number.isFinite(withLane.centroidHz) && Number.isFinite(withoutLane.centroidHz)) {
+    console.log(
+      `  centroid        : ${withLane.centroidHz} Hz as written · ${withoutLane.centroidHz} Hz cleared — where the lane sits`
+    );
+  }
   if (Array.isArray(withLane.bands) && Array.isArray(withoutLane.bands)) {
     const deltas = withLane.bands.map((value, index) => Number((value - (withoutLane.bands[index] ?? value)).toFixed(2)));
     console.log(`  band deltas     : [${deltas.join(", ")}] dB (as written minus cleared)`);
