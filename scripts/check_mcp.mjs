@@ -207,6 +207,40 @@ try {
     JSON.stringify(mismatched).slice(0, 120)
   );
 
+  /**
+   * Decision 3b's tool half, held to the two properties the report asked for: one call for a matrix, and **nothing applied** when one entry is wrong.
+   */
+  const laneProbe = payload(
+    await client.request("tools/call", { name: "make_unique", arguments: { songId: song.songId, index: 0 } })
+  );
+  const firstSection = laneProbe.repointedSection;
+  const laneBatch = payload(
+    await client.request("tools/call", {
+      name: "set_lane_slots",
+      arguments: { songId: song.songId, edits: [{ sectionId: firstSection, trackId: "lead", slot: "B" }] },
+    })
+  );
+  check(
+    "set_lane_slots applies a whole batch in one call",
+    laneBatch.applied === 1,
+    `applied ${laneBatch.applied}`.slice(0, 120)
+  );
+  const laneRejected = await client.request("tools/call", {
+    name: "set_lane_slots",
+    arguments: {
+      songId: song.songId,
+      edits: [
+        { sectionId: firstSection, trackId: "lead", slot: "A" },
+        { sectionId: "no-such-section", trackId: "lead", slot: "A" },
+      ],
+    },
+  });
+  check(
+    "set_lane_slots applies nothing when one entry is invalid, and says which",
+    /nothing was applied/.test(JSON.stringify(laneRejected)) && /no section/.test(JSON.stringify(laneRejected)),
+    JSON.stringify(laneRejected).slice(0, 120)
+  );
+
   const uniqueSection = payload(
     await client.request("tools/call", { name: "make_unique", arguments: { songId: song.songId, index: 0 } })
   );

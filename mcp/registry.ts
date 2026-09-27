@@ -23,7 +23,7 @@ import { exportAbleton, exportMidi, loudnessReport, shareUrl, toBase64 } from ".
 import { analyseWavFile, renderAudio } from "./render/worker";
 import { getGenreLoudnessTrimDb } from "../src/data/genreMix";
 import { setVocalMelody } from "./vocal";
-import { addMcpSection, createMcpSong, duplicateMcpSection, flattenMcpSong, getMcpSong, importMcpSong, makeUniqueMcpSection, mcpSongHistory, setMcpClip, summariseSong, undoMcpSong } from "./song";
+import { addMcpSection, createMcpSong, duplicateMcpSection, flattenMcpSong, getMcpSong, importMcpSong, makeUniqueMcpSection, mcpSongHistory, setMcpClip, setMcpLaneSlots, summariseSong, undoMcpSong } from "./song";
 import type { ClipSlot } from "../src/types/song";
 import type { SequencerPattern } from "../src/types/genre";
 
@@ -938,6 +938,59 @@ export const TOOLS: ToolDefinition[] = [
           allocatedSlot: result.allocatedSlot,
           repointedSection: result.sectionId,
           note: `section ${result.sectionId} now plays its own copy in slot ${result.allocatedSlot}; set_clip on ${result.allocatedSlot} changes it without touching the others`,
+        };
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    /**
+     * Owner decision 3b, the tool half: the whole lane matrix in one call.
+     *
+     * The batch is **all-or-nothing** — an entry naming a section, a lane or a clip the song does not have leaves the song untouched and says which entry was
+     * wrong — because a half-applied matrix is the failure the fourth report was worried about, and because a caller that has to check which half landed will
+     * simply send the whole thing again.
+     */
+    name: "set_lane_slots",
+    title: "Set a lane's own clip across many sections at once",
+    description:
+      "Bind one lane to its own clip for several sections in a single call — the 9-movement x 8-lane matrix rather than 72 requests. All-or-nothing: if any entry names a section, a lane or a clip this song does not have, nothing is applied and the reply lists what was wrong. Reports which slots the edited sections end up sharing, because a clip slot is song-global. Use `null` for a slot to clear an override back to the section's own.",
+    readOnly: false,
+    inputSchema: {
+      songId: z.string().describe("the id create_song returned"),
+      edits: z
+        .array(
+          z.object({
+            sectionId: z.string(),
+            trackId: z.string().max(40),
+            slot: z.enum(["A", "B", "C", "D"]).nullable(),
+          })
+        )
+        .min(1)
+        .max(128)
+        .describe("one entry per cell; `slot: null` clears the override"),
+    },
+    handler: (args) => {
+      try {
+        const result = setMcpLaneSlots(
+          String(args.songId),
+          args.edits as Array<{ sectionId: string; trackId: string; slot: ClipSlot | null }>
+        );
+        if (result.problems.length) {
+          return failure(`nothing was applied — ${result.problems.join("; ")}`);
+        }
+        return {
+          ...result.summary,
+          applied: result.applied,
+          ...(result.sharedSlots.length
+            ? {
+                sharedSlots: result.sharedSlots,
+                note: `these slots are played by more than one section, so a later set_clip on them changes every one of those sections: ${result.sharedSlots
+                  .map((entry) => `${entry.slot} (${entry.sections} sections)`)
+                  .join(", ")} — call make_unique on a section first if only that one should differ`,
+              }
+            : {}),
         };
       } catch (error) {
         return failure((error as Error).message);
