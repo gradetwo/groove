@@ -178,15 +178,19 @@ try {
   const normalized = payload(
     await client.request("tools/call", {
       name: "normalize_loudness",
-      arguments: { songId: analysisRate.songId, targetLufs: -14, truePeakCeilingDb: -1 },
+      // **-24**, deliberately: the material measures about -12.6 LUFS, so this asks for roughly -11.4 dB of trim. A large number is the
+      // honest instrument here — it separates "the option never reaches the graph" from "the effect is smaller than expected", and those two
+      // have opposite fixes. -14 asked for -1.37 dB and nothing moved; if -11.4 dB also does nothing, the option is inert.
+      arguments: { songId: analysisRate.songId, targetLufs: -24, truePeakCeilingDb: -1 },
     })
   );
-  const withinTarget = Math.abs((normalized.after?.integratedLufs ?? NaN) - -14) <= 0.3;
+  const targetAsked = normalized.targetLufs ?? -14;
+  const withinTarget = Math.abs((normalized.after?.integratedLufs ?? NaN) - targetAsked) <= 0.3;
   const peakLimited =
     normalized.limitedBy === "truePeak" && (normalized.after?.truePeakDb ?? NaN) <= (normalized.truePeakCeilingDb ?? -1) + 0.1;
   const loudnessOk = Boolean(normalized.after) && (withinTarget || peakLimited);
   check(
-    "normalize_loudness reaches -14 LUFS or reports the ceiling that stopped it",
+    `normalize_loudness reaches ${normalized.targetLufs ?? -14} LUFS or reports the ceiling that stopped it`,
     loudnessOk,
     `${normalized.before?.integratedLufs} → ${normalized.after?.integratedLufs} LUFS (trim ${normalized.appliedTrimDb} dB, ${normalized.limitedBy}, peaks ${normalized.after?.truePeakDb})`
   );
@@ -194,7 +198,7 @@ try {
   // every check in this file had been silent — the numbers that appeared were plain `console.log` calls.
   console.log(
     `  ${loudnessOk ? "✅" : "❌"} normalize_loudness : ${normalized.before?.integratedLufs} → ${normalized.after?.integratedLufs} LUFS ` +
-      `(target -14, trim ${normalized.appliedTrimDb} dB, ${normalized.limitedBy}, peaks ${normalized.after?.truePeakDb})`
+      `(target ${normalized.targetLufs ?? -14}, trim ${normalized.appliedTrimDb} dB, ${normalized.limitedBy}, peaks ${normalized.after?.truePeakDb})`
   );
   if (!loudnessOk) process.exitCode = 1;
   const coarse = await (async () => {
