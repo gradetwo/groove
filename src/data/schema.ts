@@ -281,8 +281,15 @@ export function validateGenre(genre: Genre): GenreValidationResult {
     errors.push("Missing 'sequencer_pattern'");
   } else {
     const pattern = genre.sequencer_pattern;
-    if (!Array.isArray(pattern.tracks) || pattern.tracks.length !== 8) {
-      errors.push(`'sequencer_pattern.tracks' must contain exactly 8 tracks (received ${pattern.tracks?.length ?? 0})`);
+    /**
+     * **At least** the eight roles, not exactly eight (owner decision 2026-09-28).
+     *
+     * The count was a proxy for "all eight roles are present", and the loop below checks that directly — so the exact number only ever forbade **extra** lanes:
+     * an `audio` lane (the ninth kind) or a second lane of a kind (`laneId`). Both are additive, so the floor stays and the ceiling goes; a package that drops a
+     * role still fails, which the tests pin from both sides.
+     */
+    if (!Array.isArray(pattern.tracks) || pattern.tracks.length < 8) {
+      errors.push(`'sequencer_pattern.tracks' must contain at least the 8 roles (received ${pattern.tracks?.length ?? 0})`);
     } else {
       const trackIds = pattern.tracks.map((t) => t.track_id);
       for (const reqId of REQUIRED_TRACK_IDS) {
