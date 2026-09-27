@@ -648,6 +648,26 @@ So "continuous automation across sections is missing" is **true of the parameter
 more parameter if the render path exposes one — not a general envelope system that pretends to cover parameters it cannot reach. Both are
 additive and neither needs the `track_id` decision.
 
+**And the seam is closed, and the remaining gap is structural.**
+
+`songFlatten.ts:171`'s "would not reach it" turns out to describe a **bug that was already fixed**: the `filled` clause a few lines below builds the
+velocity array whenever a section carries a fill, precisely so the section's `velocityRamp` **does** reach the hits the fill adds. So of claim 2's
+four parts, three are present — the per-section ramp, the riser, and the fill's velocity — and only the parameter set is narrow.
+
+Then the question is which parameters the render path actually exposes, and `MasterGraphOptions` answers it: `loudnessTrimDb`, **`masterMakeupDb`**
+("one number for the whole record, applied identically in the live graph and the offline exporter, so parity holds"), the mastering bus
+compressor and its release. Those are whole-mix parameters — and **every one of them sits upstream of the master limiter**.
+
+That collides with what item 5 measured: the limiter **holds the output**, so a trim upstream of it mostly relieves limiting instead of changing
+the level. **Automation of an upstream parameter is automation that looks like it does nothing**, and the graph's own option list is evidence for
+that, not a guess.
+
+**So claim 2's honest conclusion is structural rather than a missing feature**: builds and risers are expressible (and clamped, and composable with
+`velocityScale`); automating a whole-mix parameter would be absorbed by the limiter; and per-track parameters (the channel strip) are upstream of it
+too. A general automation lane needs a parameter **downstream of the limiting** to be worth having, and the graph does not have one today. That is
+worth writing down as the answer instead of shipping an envelope system whose first use would be reported as "it did nothing" — which is exactly
+the report item 5 experience, one level up.
+
 **What I did not do this round**: write the model. Reading changed what the work is for the fifth time in this plan, and the difference here is
 that the feature is *narrower* than advertised rather than already built — which is worth knowing before spending rounds on it.
 
