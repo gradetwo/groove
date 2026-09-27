@@ -169,13 +169,14 @@ try {
   const coarse = await (async () => {
     const startedAt = Date.now();
     const rendered = payload(
-      await client.request("tools/call", { name: "render_song", arguments: { songId: analysisRate.songId, format: "wav", sampleRate: 8000 } })
+      await client.request("tools/call", { name: "render_song", arguments: { songId: analysisRate.songId, format: "wav", sampleRate: 8000 , channels: 1 } })
     );
     const analysed = payload(await client.request("tools/call", { name: "analyze_audio", arguments: { path: rendered.path } }));
     return {
       label: "8 kHz analysis render",
       seconds: Number(((Date.now() - startedAt) / 1000).toFixed(1)),
       sampleRate: rendered.sampleRate ?? 8000,
+      channels: rendered.channels ?? null,
       integratedLufs: analysed.integratedLufs,
       metricKeys: Object.keys(analysed).slice(0, 6),
       bands: analysed.bandDb ?? null,
@@ -252,7 +253,7 @@ try {
   }
   console.log(`  render timings  : ${timings.join(" · ")}`);
   console.log(
-    `  analysis pass   : ${coarse.sampleRate} Hz at ${coarse.seconds}s` +
+    `  analysis pass   : ${coarse.sampleRate} Hz, ${coarse.channels ?? "?"} channel(s), at ${coarse.seconds}s` +
       (withLane.seconds ? ` (44.1 kHz took ${withLane.seconds}s)` : "")
   );
 
