@@ -479,6 +479,30 @@ detector that fires on the music, an analysis that reads silence, a proxy blind 
 
 `check_b7_pair.mjs` stays as it is in the meantime. It is failing, and it is failing correctly; the number it replaced was passing nothing.
 
+## A third evaluation (dev-branch composing report): six claims, checked
+
+A third report arrived, written from composing on `dev` rather than from reading it, and it is the most useful of the three because its claims
+come with reproductions. Checked one by one:
+
+| claim | verdict |
+|---|---|
+| **1. long renders risk client RPC timeouts**; add a `render_preview_clip` | **true, and already measured**: a 44.1 kHz render took **24.4 s** on a loaded CI runner and 5–7 s cold, while the **8 kHz mono analysis render takes 1.8 s** (13.5×). A short-render budget exists in `docs/MCP.md`; a **named preview tool does not**, and the part that actually exists — `render_audio` on a pattern, `render_song` on a one-section song — is not discoverable from the tool list |
+| **2. no continuous automation across sections** | **true**: per-step values and a per-section `velocityScale` exist; a continuous envelope crossing a section boundary does not. The task notes call this a *composition* primitive, which is the right frame |
+| **3. vocal lead is not first-class; no `set_vocal_melody`** | **half stale**: `validate_prosody` exists as of this plan's workstream 4 and takes tones, pitches and optional syllable text — but it only **checks**; nothing binds syllable text to notes in one call, and the report's ask is the binding |
+| **4. GS-1 is not in the export pipeline** | **true**, and it is the owner's own synth item. Nothing in this plan contradicts it |
+| **5. `get_loudness_report` reads but cannot act** | **true, and the smallest of the six to close**: the measurement exists (`integratedLufs`, `truePeakDb`) and a per-genre `loudnessTrimDb` already exists, so a write tool has both the number and the mechanism |
+| **6. clip reference semantics are undefined** (destructive edit vs make-unique) | **true and important**: `set_clip` on a slot two sections share does not say whether it edits both. Note this is a **behaviour** decision, not a schema one, so it does not wait on the `track_id` question |
+
+**And one inference to correct**, because it is about evidence rather than features: the report reads commit `a22bcd9` ("the analysis render never
+worked; the budget table says so") as proof of "hangs and inconsistency in headless environments". The commit says something narrower and more
+specific — the page callback named a variable that exists only on the Node side, so `render_song` threw
+`ReferenceError: options is not defined` and **returned fast**; the failure looked like a very quick render, not a hang. Reading commit subjects as
+evidence of a defect class is how a report acquires a claim its source does not support.
+
+**Ordering, if the owner wants this report worked next** — smallest closed loop first: (5) the loudness write tool, (6) copy-on-write
+semantics for `set_clip`, (1) a named short-render tool plus a discoverable budget, (3) the syllable-binding interface, then (2) automation lanes,
+with (4) staying the owner's synth project.
+
 ## What is deliberately rejected
 
 * **Audio in context** (`render_preview` returning audio data). The MCP keeps returning file paths plus an analysis summary; a
