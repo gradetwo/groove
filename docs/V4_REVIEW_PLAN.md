@@ -671,6 +671,19 @@ the report item 5 experience, one level up.
 **What I did not do this round**: write the model. Reading changed what the work is for the fifth time in this plan, and the difference here is
 that the feature is *narrower* than advertised rather than already built — which is worth knowing before spending rounds on it.
 
+### Correction: the panel exists — I searched one directory and concluded from it
+
+The section above says `src/features/arrangement/` "contains exactly one file … and there is no `ArrangementPanel.tsx`". The first half is true and the
+conclusion is **wrong**: `ArrangementPanel.tsx` lives in **`src/components/arrangement/`** (555 lines, `ArrangementPanelProps { song, selectedId,
+onSelect, onChange, onClose, onGenerate? }`), which a directory-scoped `ls` could not see.
+
+So the view **does** exist, my "the view does not exist at all" was a claim made from the wrong evidence, and the work is **smaller** than that
+section says: `trackRows` plus `TrackRows` mount into a panel that already takes the `song` they need. This is the **third** time in this plan that a
+name- or location-scoped search produced a confident wrong answer (a `sections` grep that returned 0, and a `render_song` field that arrived under a
+different shape), and the lesson is the same each time: **search by behaviour, not by where you expect the file to be**.
+
+The section is left in place rather than rewritten, because the mistake is the most useful part of it.
+
 ## The arrangement view: the logic exists and has no view at all
 
 Following `docs/TRACK_ARRANGEMENT_PLAN.md`'s step 3 to its file turned up something the plan's own text hides: **`src/features/arrangement/` contains
