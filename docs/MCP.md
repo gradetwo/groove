@@ -140,6 +140,7 @@ minutes and the call reports no progress while it runs.
 | `pattern_statistics` ▢ | `pattern` | per-track density, velocity spread, note range, off-beat ratio, recommended swing |
 | `validate_prosody` ▢ | `tones[]`, `pitches[]`, `syllables?`, `threshold?` | the reversals between a lyric's tones and a melody's movement — advisory, never throws, no pinyin guessing, and 3+3 sandhi changes what it expects rather than rewriting your tones |
 | `generate_melody` ▢ | `tonic`, `mode?`, `bars?`, `form?`, `range?`, `seed?`, `density?` | lane-shaped arrays (`steps`, `pitch`, `velocity`, `gate`) plus the contours, phrase ranges and interval statistics — contour-first, in key by construction, at most two octaves, deterministic for a seed, `AABA` repeating its first phrase literally |
+| `get_example` ▢ | `genreId`, `index?` | worked examples for a genre — the pattern the app itself arranges, and a variation built with the composition tools — each with the tool calls that produced it. Built from the genre library rather than pasted, so an example cannot drift from what the tools do |
 | `suggest_progression` ▢ | `tonic?`, `mode?`, `emotion?`, `category?`, `avoid?` | a progression from the committed library for a feeling, rendered in the key: the roman numerals, the concrete chords, and the songs that used it — feed `chords` to `apply_pattern_ops` **`set_chord_progression`** |
 | `estimate_key` ▢ | `genreId?`, `pattern?` | the tonic, mode and fit from the pattern's **pitches** (a pitch-class histogram against major/minor profiles) — the notes rather than an FFT of a kick-heavy loop |
 | `spectral_balance` ▢ | `path` | the 13-band shape of a rendered WAV with named bands, plus the spectral centroid — the same fingerprint the timbre baseline uses |
@@ -183,6 +184,7 @@ an agent can render, measure, change one op and measure again.
 | `groove://genres` | the whole library index as JSON |
 | `groove://genre/{id}` | one genre document |
 | `groove://loudness` | the loudness baseline table |
+| `groove://examples/{genre}` | worked examples for a genre: each pattern plus the recipe that produced it |
 | `groove://changelog` | the release notes the app itself shows |
 
 ### Prompts

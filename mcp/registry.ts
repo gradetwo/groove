@@ -11,6 +11,7 @@ import { clonePattern, findGenre, getChordProgression, getGenre, getGenreRelatio
 import { applyPatternOps, comparePatterns, patternStatistics, validatePattern, type PatternOp } from "./pattern";
 import { patternFromGenre } from "../src/data/genreMix";
 import { generateMelody } from "./melody";
+import { EXAMPLE_GENRES, examplesFor } from "./examples";
 import { validateProsody } from "./prosody";
 import { flattenSong } from "../src/data/songFlatten";
 import { APP_VERSION } from "../src/version";
@@ -459,6 +460,33 @@ export const TOOLS: ToolDefinition[] = [
       } catch (error) {
         return failure((error as Error).message);
       }
+    },
+  },
+  {
+    /**
+     * Few-shot material, callable: an agent that is about to compose asks what a good result looks like here, and gets a pattern plus the
+     * chain of calls that made it.
+     */
+    name: "get_example",
+    title: "Get worked examples for a genre",
+    description:
+      "Worked examples for a genre: the pattern the app itself arranges, and a variation built with the composition tools — each with the recipe (the tool calls, in order) that produced it. Built from the genre library rather than pasted, so an example cannot drift from what the tools do. Imitate the recipe, not the JSON.",
+    readOnly: true,
+    inputSchema: {
+      genreId: z.string().describe("the genre to get examples for; list_example_genres names the ones that have any"),
+      index: z.number().int().min(0).optional().describe("which example; all of them when omitted"),
+    },
+    handler: (args) => {
+      const examples = examplesFor(String(args.genreId));
+      if (!examples.length) {
+        return failure(
+          `no worked examples for "${args.genreId}" yet — they exist for: ${EXAMPLE_GENRES.join(", ")}`
+        );
+      }
+      const index = args.index as number | undefined;
+      if (index === undefined) return { total: examples.length, examples };
+      const one = examples[index];
+      return one ? one : failure(`index ${index} is outside the ${examples.length} example(s) for ${args.genreId}`);
     },
   },
   {
@@ -986,6 +1014,16 @@ export const RESOURCES: ResourceDefinition[] = [
     description: "The committed LUFS/true-peak measurement for every genre.",
     mimeType: "application/json",
     read: () => JSON.stringify(loudnessReport()),
+  },
+  {
+    /**
+     * Worked examples, as a resource because that is what they are: reference material a client can list and read.
+     */
+    uri: "groove://examples/{genre}",
+    name: "Worked examples",
+    description: "Composition examples for a genre — each with the recipe that produced it, so an agent imitates the chain rather than the JSON.",
+    mimeType: "application/json",
+    read: (genreId?: string) => JSON.stringify(examplesFor(genreId ?? "chicago-house")),
   },
   {
     uri: "groove://masterclasses",

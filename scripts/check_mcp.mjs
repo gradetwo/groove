@@ -310,22 +310,49 @@ try {
     );
   }
 
+  /**
+   * The example library's acceptance line from docs/V4_REVIEW_PLAN.md: every example passes the **same gate any pattern does**.
+   *
+   * Written as a loop rather than a `map`, because `await` inside a `map` callback is a syntax error at module scope — which is how the
+   * first version of this check failed, loudly and immediately.
+   */
+  const exampleRows = payload(await client.request("tools/call", { name: "get_example", arguments: { genreId: "chicago-house" } }));
+  const rows = exampleRows.examples ?? [];
+  let validExamples = 0;
+  for (const row of rows) {
+    const validation = payload(
+      await client.request("tools/call", { name: "validate_pattern", arguments: { pattern: row.pattern } })
+    );
+    if (validation.ok === true) validExamples += 1;
+  }
+  check(
+    "get_example returns examples whose patterns validate",
+    rows.length >= 2 && validExamples === rows.length && rows.every((row) => (row.recipe ?? []).length > 0),
+    `${rows.length} example(s), ${validExamples} valid`
+  );
+  const missingGenre = payload(await client.request("tools/call", { name: "get_example", arguments: { genreId: "no-such-genre" } }));
+  check(
+    "get_example names the genres it has examples for when asked about one it does not",
+    typeof missingGenre.raw === "string" && missingGenre.raw.includes("no worked examples"),
+    String(missingGenre.raw ?? "").slice(0, 80)
+  );
+
   const suggested = payload(
-    await client.request("tools/call", { name: "suggest_progression", arguments: { tonic: 60, mode: "major", emotion: "nostalgic" } })
+  await client.request("tools/call", { name: "suggest_progression", arguments: { tonic: 60, mode: "major", emotion: "nostalgic" } })
   );
   check(
-    "suggest_progression renders a committed progression in the caller's key",
-    typeof suggested.id === "string" &&
-      Array.isArray(suggested.chords) &&
-      suggested.chords.length === suggested.numerals.length &&
-      suggested.chords.every((chord) => Array.isArray(chord) && chord.length >= 3) &&
-      suggested.chords.flat().every((note) => note >= 0 && note <= 127),
-    `${suggested.id} ${suggested.roman} → ${JSON.stringify(suggested.chords ?? []).slice(0, 80)}`
+  "suggest_progression renders a committed progression in the caller's key",
+  typeof suggested.id === "string" &&
+    Array.isArray(suggested.chords) &&
+    suggested.chords.length === suggested.numerals.length &&
+    suggested.chords.every((chord) => Array.isArray(chord) && chord.length >= 3) &&
+    suggested.chords.flat().every((note) => note >= 0 && note <= 127),
+  `${suggested.id} ${suggested.roman} → ${JSON.stringify(suggested.chords ?? []).slice(0, 80)}`
   );
   check(
-    "estimate_key reports a tonic, a mode and a fit from the notes",
-    typeof key.tonic === "string" && (key.mode === "major" || key.mode === "minor") && Number.isFinite(key.fit) && key.notes > 0,
-    JSON.stringify({ tonic: key.tonic, mode: key.mode, fit: key.fit, notes: key.notes })
+  "estimate_key reports a tonic, a mode and a fit from the notes",
+  typeof key.tonic === "string" && (key.mode === "major" || key.mode === "minor") && Number.isFinite(key.fit) && key.notes > 0,
+  JSON.stringify({ tonic: key.tonic, mode: key.mode, fit: key.fit, notes: key.notes })
   );
   const pattern = patternResult.pattern;
   check("get_pattern returns a pattern with tracks", Array.isArray(pattern?.tracks) && pattern.tracks.length > 0);
@@ -334,35 +361,35 @@ try {
   const clearedAt = kick.steps.findIndex((on, index) => on && index > 0);
   const before = kick.steps[clearedAt];
   const composed = payload(
-    await client.request("tools/call", {
-      name: "apply_pattern_ops",
-      arguments: {
-        pattern,
-        ops: [
-          { op: "clear_step", track: "kick", step: clearedAt },
-          { op: "set_step", track: "kick", step: 15, velocity: 96 },
-          { op: "swing", amount: 30 },
-          { op: "humanize", seed: 7, amount: 0.2, tracks: ["hihat"] },
-        ],
-      },
-    })
+  await client.request("tools/call", {
+    name: "apply_pattern_ops",
+    arguments: {
+      pattern,
+      ops: [
+        { op: "clear_step", track: "kick", step: clearedAt },
+        { op: "set_step", track: "kick", step: 15, velocity: 96 },
+        { op: "swing", amount: 30 },
+        { op: "humanize", seed: 7, amount: 0.2, tracks: ["hihat"] },
+      ],
+    },
+  })
   );
   const after = composed.pattern.tracks.find((track) => track.track_id === "kick");
   check("apply_pattern_ops clears the step it was told to", after.steps[clearedAt] === 0, `${before} → ${after.steps[clearedAt]}`);
   check("apply_pattern_ops sets the step it was told to", after.steps[15] === 1);
   check("apply_pattern_ops sets swing", composed.pattern.swing === 30);
   check(
-    "apply_pattern_ops does not mutate the pattern it was given",
-    pattern.tracks.find((track) => track.track_id === "kick").steps[clearedAt] === before,
-    "the library's pattern changed"
+  "apply_pattern_ops does not mutate the pattern it was given",
+  pattern.tracks.find((track) => track.track_id === "kick").steps[clearedAt] === before,
+  "the library's pattern changed"
   );
   check("every op is reported", (composed.applied ?? []).length === 4 && composed.applied.every((row) => row.ok));
 
   const invalid = payload(
-    await client.request("tools/call", {
-      name: "apply_pattern_ops",
-      arguments: { pattern, ops: [{ op: "set_step", track: "theremin", step: 0 }] },
-    })
+  await client.request("tools/call", {
+    name: "apply_pattern_ops",
+    arguments: { pattern, ops: [{ op: "set_step", track: "theremin", step: 0 }] },
+  })
   );
   check("an unknown track is reported, not thrown", invalid.applied?.[0]?.ok === false, JSON.stringify(invalid.applied?.[0] ?? {}));
 
@@ -390,28 +417,28 @@ try {
    * this gate deliberately never does — `render_audio` is treated the same way).
    */
   check(
-    "the song tools are declared",
-    ["create_song", "add_section", "render_song"].every((name) => names.includes(name)),
-    names.filter((name) => name.includes("song")).join(", ")
+  "the song tools are declared",
+  ["create_song", "add_section", "render_song"].every((name) => names.includes(name)),
+  names.filter((name) => name.includes("song")).join(", ")
   );
   const created = payload(
-    await client.request("tools/call", { name: "create_song", arguments: { genreId: "chicago-house", bars: 2 } })
+  await client.request("tools/call", { name: "create_song", arguments: { genreId: "chicago-house", bars: 2 } })
   );
   check(
-    "create_song seeds a song with one repeated section",
-    typeof created.songId === "string" && created.totalBars === 2 && (created.clips ?? []).includes("A"),
-    JSON.stringify(created).slice(0, 140)
+  "create_song seeds a song with one repeated section",
+  typeof created.songId === "string" && created.totalBars === 2 && (created.clips ?? []).includes("A"),
+  JSON.stringify(created).slice(0, 140)
   );
   const arranged = payload(
-    await client.request("tools/call", {
-      name: "add_section",
-      arguments: { songId: created.songId, slot: "A", bars: 4, label: "drop", velocityScale: 0.8 },
-    })
+  await client.request("tools/call", {
+    name: "add_section",
+    arguments: { songId: created.songId, slot: "A", bars: 4, label: "drop", velocityScale: 0.8 },
+  })
   );
   check(
-    "add_section grows the arrangement and reports its shape",
-    arranged.totalBars === 6 && arranged.shape === "A×2 → drop×4" && arranged.problems.length === 0,
-    JSON.stringify({ bars: arranged.totalBars, shape: arranged.shape, problems: arranged.problems })
+  "add_section grows the arrangement and reports its shape",
+  arranged.totalBars === 6 && arranged.shape === "A×2 → drop×4" && arranged.problems.length === 0,
+  JSON.stringify({ bars: arranged.totalBars, shape: arranged.shape, problems: arranged.problems })
   );
   /**
    * B5 overrides through the tool surface: a model asked for "a build, then a fill" has to be able to say so, and the
@@ -419,40 +446,40 @@ try {
    * verb safe to offer without describing this genre's lane names.
    */
   const withOverrides = payload(
-    await client.request("tools/call", {
-      name: "add_section",
-      arguments: {
-        songId: created.songId,
-        slot: "A",
-        bars: 8,
-        label: "build",
-        velocityRamp: [0.6, 1],
-        fill: true,
-        transpose: -2,
-      },
-    })
+  await client.request("tools/call", {
+    name: "add_section",
+    arguments: {
+      songId: created.songId,
+      slot: "A",
+      bars: 8,
+      label: "build",
+      velocityRamp: [0.6, 1],
+      fill: true,
+      transpose: -2,
+    },
+  })
   );
   const overrideSection = (withOverrides.sections ?? []).find((section) => section.label === "build");
   check(
-    "add_section carries a build, a fill and a transposition",
-    overrideSection?.overrides?.velocityRamp?.[0] === 0.6 &&
-      overrideSection?.overrides?.velocityRamp?.[1] === 1 &&
-      Array.isArray(overrideSection?.overrides?.fill?.steps) &&
-      overrideSection.overrides.fill.steps.length > 0 &&
-      overrideSection?.overrides?.transpose === -2,
-    JSON.stringify(overrideSection?.overrides ?? {}).slice(0, 160)
+  "add_section carries a build, a fill and a transposition",
+  overrideSection?.overrides?.velocityRamp?.[0] === 0.6 &&
+    overrideSection?.overrides?.velocityRamp?.[1] === 1 &&
+    Array.isArray(overrideSection?.overrides?.fill?.steps) &&
+    overrideSection.overrides.fill.steps.length > 0 &&
+    overrideSection?.overrides?.transpose === -2,
+  JSON.stringify(overrideSection?.overrides ?? {}).slice(0, 160)
   );
   check(
-    "the ramp reaches the timeline as a per-bar velocity scale",
-    (withOverrides.totalBars ?? 0) === 14 && withOverrides.problems.length === 0,
-    JSON.stringify({ bars: withOverrides.totalBars, problems: withOverrides.problems })
+  "the ramp reaches the timeline as a per-bar velocity scale",
+  (withOverrides.totalBars ?? 0) === 14 && withOverrides.problems.length === 0,
+  JSON.stringify({ bars: withOverrides.totalBars, problems: withOverrides.problems })
   );
 
   const renderSongSchema = (tools?.tools ?? []).find((tool) => tool.name === "render_song");
   check(
-    "render_song takes a songId and is marked as changing the session",
-    Boolean(renderSongSchema) && JSON.stringify(renderSongSchema.inputSchema).includes("songId"),
-    JSON.stringify(renderSongSchema?.inputSchema ?? {}).slice(0, 120)
+  "render_song takes a songId and is marked as changing the session",
+  Boolean(renderSongSchema) && JSON.stringify(renderSongSchema.inputSchema).includes("songId"),
+  JSON.stringify(renderSongSchema?.inputSchema ?? {}).slice(0, 120)
   );
 
   const resource = await client.request("resources/read", { uri: "groove://genres" });
