@@ -792,6 +792,34 @@ source in this tree. But the pieces needed to test the claim do:
 If it is cancellation, the fix has a criterion to satisfy (align the peaks and re-measure); if it is not, the report's item is retired with a number
 instead of an argument. Either way the answer comes from the engine, not from a file that does not exist.
 
+## The kick-phase claim, measured: the report was right, and the number is worse than it claimed
+
+The probe ran in the audio scope:
+
+```
+❌ kick stacking : 0.2845 (berlin-orphic, basePitch 42) · 0.3663 (somatic-808-gravity, basePitch 36)
+                  · 0.1787 stacked = −6.23 dB vs the louder single, 38 Hz −13.45 dB → cancellation
+```
+
+**Two sub kicks stacked lose 6.23 dB** of 30–45 Hz energy against the louder of them alone, and **13.45 dB at 38 Hz** — the frequency the report named, where it
+claimed −8 dB. So the direction is confirmed and the magnitude is **worse than claimed**.
+
+**And the drop is itself the proof, which is the part worth stating.** Two *independent* sources add in energy: a sum can never sit below its loudest component
+when the two are incoherent — `√(a² + b²) ≥ max(a, b)` by construction. Measuring **6.23 dB below** the louder single therefore cannot be a level or
+normalisation artefact; it can only be destructive interference between the two voices. Nothing in that path attenuates the sum (each voice applies its own
+`volume`, and two voices into one destination add), so the finding does not need the engine's internals to be trusted — the arithmetic rules the alternatives
+out.
+
+**So the answer to the question this item was built to ask is: yes, auto phase alignment is worth building — and it now has a criterion to satisfy.** Align
+the two voices' initial phase and the stacked band energy should come back **at or above the louder single** rather than 6.23 dB below it, with the 38 Hz
+notch gone. That is a measurable acceptance line for a future change, written before the change exists, which is the same shape as PDC's prediction
+(10.408 − 3.0 = 7.408 ms, measured 7.415).
+
+Worth noting where the report was imprecise, since it affects how the feature should be built: it attributes the null to the two presets' "initial phase
+happening to coincide at bar 0 and invert over the 30–50 ms window". The measurement says the interaction is real and large; **it does not say the mechanism is
+initial phase**, and a fix should be built against the criterion (band energy of the stack vs the louder single) rather than against that explanation. If
+alignment alone does not recover the energy, the next candidate is the frequency envelope of each preset, and the probe will say so.
+
 ## What is deliberately rejected
 
 * **Audio in context** (`render_preview` returning audio data). The MCP keeps returning file paths plus an analysis summary; a
