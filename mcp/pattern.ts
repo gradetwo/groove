@@ -83,6 +83,14 @@ export type PatternOp =
   | { op: "transpose"; semitones: number; tracks?: string[] }
   | { op: "humanize"; amount?: number; velocityAmount?: number; seed?: number; tracks?: string[] }
   | { op: "swing"; amount: number }
+  /**
+   * Place a chord progression on a lane, **one chord per bar**.
+   *
+   * The chords are concrete (`number[][]`, MIDI notes) rather than a progression id, because this module is pure and cannot reach the
+   * progression library — the tool layer resolves an id first. That keeps the operation replayable without the library and leaves the
+   * library the single source of what a named progression is.
+   */
+  | { op: "set_chord_progression"; track?: string; chords: number[][]; velocity?: number }
   | { op: "clear_track"; track: string }
   | { op: "copy_track"; from: string; to: string };
 
@@ -253,6 +261,32 @@ export function applyPatternOps(pattern: SequencerPattern, ops: PatternOp[]): Ap
         if (from.pitch) to.pitch = [...from.pitch];
         if (from.gate) to.gate = [...from.gate];
         applied.push({ op: op.op, ok: true, detail: `${from.track_id} → ${to.track_id}` });
+        break;
+      }
+      case "set_chord_progression": {
+        const lane = findTrack(next, op.track ?? "chords") ?? findTrack(next, "chords");
+        if (!lane) {
+          applied.push({ op: op.op, ok: false, detail: `no chords lane on this pattern (looked for "${op.track ?? "chords"}")` });
+          break;
+        }
+        const stepsPerBar = 16;
+        const bars = Math.max(1, Math.floor((lane.steps?.length ?? stepsPerBar) / stepsPerBar));
+        const taken = Math.min(bars, op.chords.length);
+        lane.pitches = lane.pitches ?? lane.steps.map(() => null);
+        lane.steps = lane.steps.map(() => 0);
+        for (let bar = 0; bar < taken; bar += 1) {
+          const chord = (op.chords[bar] ?? []).filter((note) => Number.isFinite(note) && note > 0).slice(0, 8);
+          if (!chord.length) continue;
+          const at = bar * stepsPerBar;
+          lane.steps[at] = 1;
+          lane.pitches[at] = chord.map((note) => Math.round(note));
+          if (lane.velocity) lane.velocity[at] = clampVelocity(op.velocity ?? 100);
+        }
+        applied.push({
+          op: op.op,
+          ok: true,
+          detail: `${taken} chord(s) on ${lane.track_id}, one per bar${op.chords.length > taken ? ` (${op.chords.length - taken} beyond the pattern were dropped)` : ""}`,
+        });
         break;
       }
       default: {

@@ -194,7 +194,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "apply_pattern_ops",
     title: "Compose with pattern operations",
     description:
-      "Apply a list of operations (set_step, clear_step, set_velocity, set_pitch, set_gate, transpose, humanize, swing, clear_track, copy_track) to a pattern and return the new pattern plus a per-operation report. The input is never mutated; seeded operations are deterministic.",
+      "Apply a list of operations (set_step, clear_step, set_velocity, set_pitch, set_gate, transpose, humanize, swing, clear_track, copy_track, set_chord_progression) to a pattern and return the new pattern plus a per-operation report. The input is never mutated; seeded operations are deterministic.",
     readOnly: true,
     inputSchema: {
       genreId: z.string().optional().describe("start from this genre's pattern"),
