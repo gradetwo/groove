@@ -736,6 +736,37 @@ That is the honest remaining slice, and it is small and additive: a command-laye
 siblings, and a control on the cell `TrackRows` already draws. Both keep the existing discipline — pure function in `songEdit` with its own test,
 `onChange` with a named gesture, and a view that computes nothing.
 
+## The red layer gate: what it is, why it is right, and the two ways this project has fixed it before
+
+CI's `verify` fails on two undeclared violations that predate this session:
+
+```
+[R2] src/hooks/useCoverWarmup.ts -> src/mobile/genreArt — logic imports ui
+[R2] src/hooks/useLabelArt.ts    -> src/mobile/genreArt — logic imports ui
+```
+
+`git log` puts the last change to `useCoverWarmup.ts` at `143d4cd`, an earlier session's cover warm-up refactor, so **the gate has been red for a while
+and nobody read it** — which is worse than a failure, because a gate that is always red stops meaning anything.
+
+**The rule is explicit** (`scripts/check_layers.mjs:42`): "R2 logic must not import ui (components, views, ui primitives). **Types are not exempt**". The
+two hooks are logic; `src/mobile/genreArt` is classified ui; and the project's `ALLOW` list is **deliberately empty**, with a comment recounting the two
+times it was not — and both were fixed the same way, by **inverting the dependency** rather than excusing it: "the loader now takes a resolver that
+`src/app/installCustomGenreResolver.ts` supplies", and "`useAppShortcuts.ts` importing `NavTab` from a component (since moved…)".
+
+**What the two hooks actually import** decides which inversion each needs:
+
+| import | what it is | the honest fix |
+|---|---|---|
+| `genreCoverCandidates` (in `useLabelArt`) | **pure string building** — no DOM, no React | **move it down** to `src/utils/`, and have `genreArt` re-export it so its existing consumers do not move |
+| `preloadGenreCover` / `preloadGenreCovers` (in `useCoverWarmup`) | touches `Image`, i.e. a **platform capability** | moving it does not help: R3 forbids logic reading platform capabilities too, so the hook must **take the loader as an argument** — the same shape as the resolver fix |
+
+So neither fix is an allow-list entry, and neither is a rewrite: one function moves down a layer, one hook takes a parameter. That the project already
+fixed this exact rule twice by inverting the dependency is the strongest evidence for how to fix it the third time.
+
+**Not done in this round**, deliberately: it means editing two modules this session has never read, at the tail of a round. The next round reads
+`genreArt` and both hooks first — which is the practice that has held up all session and the one whose absence produced the wrong "the view does not
+exist" claim.
+
 ## What is deliberately rejected
 
 * **Audio in context** (`render_preview` returning audio data). The MCP keeps returning file paths plus an analysis summary; a
