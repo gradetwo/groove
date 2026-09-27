@@ -1,27 +1,27 @@
 {
-  "version": "2.34.11",
+  "version": "2.34.12",
   "releaseDate": "2026-09-28",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.11",
+    "version": "2.34.12",
     "date": "2026-09-28",
     "category": "feature",
     "title": {
-      "zh": "段落独立片段与响度闭环",
-      "en": "Per-section clips, and a loudness loop that reports its limits"
+      "zh": "快速预览与歌词绑定",
+      "en": "Fast previews, and a lyric bound to its notes"
     },
     "highlights": [
       {
-        "zh": "make_unique：槽位是歌曲级的，此工具把某段落的片段复制到空槽并只重指该段，三段主歌终于能各有旋律。",
-        "en": "make_unique: a slot is song-global, so this copies one section's clip into a free slot and repoints only that section."
+        "zh": "render_preview_clip：一段 14.4 秒音频 1.45 秒渲完，调试不必每次重跑全曲。",
+        "en": "render_preview_clip: 14.4 s of audio in 1.45 s, so a composing loop stops re-rendering the whole piece."
       },
       {
-        "zh": "normalize_loudness：测量再渲染再测量，并如实报告三种结局——达标、被峰值上限挡住、或被主限制器持有。",
-        "en": "normalize_loudness: measure, render, measure, and report three honest outcomes — target, peak ceiling, or held by the master limiter."
+        "zh": "set_vocal_melody：音节与音高同索引绑定，写入即检查倒字；声调由你提供，工具从不猜拼音。",
+        "en": "set_vocal_melody: syllables bound at the same index as their pitch, checked as written; tones are yours, never guessed."
       },
       {
-        "zh": "修了探针里从未被打印的检查：此前它的 ✅/❌ 一直是静默的。",
-        "en": "Fixed the probe's checks, which had never been printed — its pass/fail had been silent all along."
+        "zh": "响度工具改为按需迭代：一次调用一次渲染，不再撞上 30 秒的客户端超时。",
+        "en": "The loudness loop is opt-in: one render per call, so it no longer meets a client's 30 s timeout."
       }
     ],
     "truncated": false
