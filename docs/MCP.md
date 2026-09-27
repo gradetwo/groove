@@ -185,6 +185,8 @@ an agent can render, measure, change one op and measure again.
 | `groove://genre/{id}` | one genre document |
 | `groove://loudness` | the loudness baseline table |
 | `groove://examples/{genre}` | worked examples for a genre: each pattern plus the recipe that produced it |
+
+Prompts: `compose_groove`, `explain_genre`, `practice_plan` and **`compose_with_examples`** — the last one is the few-shot path, which sends an agent to read a worked example's **recipe** before it writes anything, and reminds it of `undo_song` so an experiment does not have to be permanent.
 | `groove://changelog` | the release notes the app itself shows |
 
 ### Prompts
