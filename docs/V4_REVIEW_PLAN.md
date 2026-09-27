@@ -767,6 +767,31 @@ fixed this exact rule twice by inverting the dependency is the strongest evidenc
 `genreArt` and both hooks first — which is the practice that has held up all session and the one whose absence produced the wrong "the view does not
 exist" claim.
 
+## The fourth report's kick-phase claim: the file is wrong, the API is right, and the criterion is written
+
+The report cites `src/dsp/kickEngine.ts` for a −8 dB phase null at 38 Hz when two sub kicks are stacked. **That file does not exist**, so the number has no
+source in this tree. But the pieces needed to test the claim do:
+
+* the presets are real — `KICK_PRESETS` (`src/audio/AnatomyKickEngine.ts:122`), with `berlin-orphic` at `basePitch: 42` (the report says 40 Hz);
+* `resolveKickPresetParams(presetId)` (`:323`) turns a preset into `SomaticKickParams`;
+* `synthesizeAnatomyKickVoice(ctx, dest, time, vel, presetIdOrParams, …)` (`:813`) schedules **one voice into a context the caller owns** — which is the
+  part that matters here: two calls with two presets and the same `dest` **are** the stacking the report describes, so no new engine is needed;
+* the engine already renders offline (`exportWav`, `:654`) and the test suite drives it with a fake context (`src/test/AnatomyKickEngine.test.ts:295`),
+  which is why the existing tests say nothing about phase: **a fake context has no samples to cancel.**
+
+**The criterion, written before the probe exists**, so the answer is a measurement rather than a reading of the report:
+
+1. in one page, render three buffers offline at 44.1 kHz — preset A alone, preset B alone, and both scheduled into the same destination at the same
+   time;
+2. measure **narrow-band energy** (a Goertzel at 30–45 Hz, plus the specific 38 Hz the report names) in the first **60 ms**, which is the window the claim
+   is about;
+3. report `E(A)`, `E(B)`, `E(A+B)`, their ratio to `max(E)` in dB, and the depth at 38 Hz relative to the louder of the two alone;
+4. **classification, stated in advance**: *cancellation* if `E(A+B)` sits **below** `max(E(A), E(B))` by more than 1 dB at 38 Hz; *reinforcement* if above;
+   **inconclusive** if `E(A)` and `E(B)` differ enough that level dominates the comparison — the same three-way honesty the loudness tool ended up with.
+
+If it is cancellation, the fix has a criterion to satisfy (align the peaks and re-measure); if it is not, the report's item is retired with a number
+instead of an argument. Either way the answer comes from the engine, not from a file that does not exist.
+
 ## What is deliberately rejected
 
 * **Audio in context** (`render_preview` returning audio data). The MCP keeps returning file paths plus an analysis summary; a
