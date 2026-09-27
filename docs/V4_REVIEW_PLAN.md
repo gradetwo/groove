@@ -577,6 +577,30 @@ This is the same root as the dev-branch report's claim 6 ("destructive edit or m
 The missing primitive today is the repoint: `add_section` adds, `duplicate_section` duplicates, and **nothing changes an existing section's
 slot**. That, plus the copy-on-write decision, is the work.
 
+## The loudness tool: closed, and the answer is about the graph rather than the number
+
+Four runs, three hypotheses, and the measurements decided:
+
+| run | what it showed | the explanation it killed |
+|---|---|---|
+| `-14` (≈ −1.37 dB) | the mix moved **0.04 dB** | "the option is inert" looked right, but the `-24` run disproved it |
+| `-24` (≈ −11.37 dB) | the mix moved **4.97 dB**, the peak **1.6 dB** | a **wrong base** looked right — and the next run killed it (this genre's trim is 0) |
+| iterating | the trim drove to **−3.916 dB**, the mix moved **0.45 dB**, the **peak never moved** | "a further pass will fix it" — the peak column says otherwise |
+| final | `masterLimiter`, **4 passes**, peaks **−1.3** at every one | — |
+
+**The answer**: the master **true-peak limiter** is holding the output. The peak sits on its ceiling across four different trims, so a trim
+**upstream** of it mostly **relieves limiting** rather than lowering the level, and no upstream trim can set loudness on this chain. That is a
+property of the graph, **measured** — and it is a more useful answer to "get me to −14 LUFS" than a number that quietly missed, because it tells
+the caller which lever to look for next (a limiter target, or gain **downstream** of it).
+
+`normalize_loudness` therefore reports three outcomes — reached the target, stopped by the peak ceiling, or **held by the master limiter** — and
+the acceptance check accepts the third **only when the readings prove it**: the peak must be identical across every attempt. A tool that missed
+the target and blamed the limiter fails, which is the difference between reporting a limit and excusing a bug.
+
+**What the reading never did**: three plausible explanations came from reading the code and all three were wrong. The peak column — one number
+the tool already returned — decided it. Recorded here because this plan has now spent four rounds on a tool whose arithmetic was right from the
+first attempt.
+
 ## What is deliberately rejected
 
 * **Audio in context** (`render_preview` returning audio data). The MCP keeps returning file paths plus an analysis summary; a
