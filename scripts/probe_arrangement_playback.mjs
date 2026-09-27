@@ -333,6 +333,28 @@ try {
         for (let i = 0; i < left.length; i++) sum += Math.abs(left[i] - right[i]);
         return sum / left.length;
       };
+      /**
+       * The same distance, applied **frame by frame** instead of to the means.
+       *
+       * This is the difference B7 needs and the mean could not express: `distance(mean(a), mean(b))` asks "do these two sections sound alike on
+       * average", which a rearrangement of the same kit and mix answers "yes" to. `mean(distance(a[i], b[i]))` asks "does frame *i* of one
+       * section match frame *i* of the other", which a rearrangement answers "no" to — because the windows are already time-aligned.
+       *
+       * Two copies of the same material score ~0 here; the same material in a different order scores high. That is the dimension a section
+       * change lives in.
+       */
+      const timeCourseDistance = (left, right) => {
+        if (!left || !right) return null;
+        const frames = Math.min(left.length, right.length);
+        if (frames < 2) return null;
+        let sum = 0;
+        for (let i = 0; i < frames; i++) {
+          const frameDistance = spectrumDistance(left[i], right[i]);
+          if (frameDistance === null) return null;
+          sum += frameDistance;
+        }
+        return sum / frames;
+      };
       const noise = (() => {
         const frames = windows.a;
         if (frames.length < 4) return null;
@@ -346,6 +368,14 @@ try {
         selfDistanceA: noise,
         /** The time-aligned floor: two different bars of the same section, so what remains is measurement noise. */
         alignedFloor: spectrumDistance(mean(windows.a), mean(windows.a2)),
+        /**
+         * The temporal reading, which is the one a section change should move.
+         *
+         * `timeCourseAB` compares the two sections frame by frame; `timeCourseFloor` does the same for two bars of the *same* section, which is
+         * what this method's own temporal noise looks like. Their ratio is B7's claim in the dimension the feature actually lives in.
+         */
+        timeCourseAB: timeCourseDistance(windows.a, windows.b),
+        timeCourseFloor: timeCourseDistance(windows.a, windows.a2),
         meanLevelA: meanLevel(windows.a),
         meanLevelB: meanLevel(windows.b),
         wavePeak: wave.peak,
