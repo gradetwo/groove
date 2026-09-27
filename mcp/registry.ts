@@ -18,7 +18,7 @@ import os from "node:os";
 import path from "node:path";
 import { exportAbleton, exportMidi, loudnessReport, shareUrl, toBase64 } from "./exporting";
 import { analyseWavFile, renderAudio } from "./render/worker";
-import { addMcpSection, createMcpSong, duplicateMcpSection, flattenMcpSong, getMcpSong, importMcpSong, setMcpClip, summariseSong } from "./song";
+import { addMcpSection, createMcpSong, duplicateMcpSection, flattenMcpSong, getMcpSong, importMcpSong, mcpSongHistory, setMcpClip, summariseSong, undoMcpSong } from "./song";
 import type { ClipSlot } from "../src/types/song";
 import type { SequencerPattern } from "../src/types/genre";
 
@@ -501,10 +501,11 @@ export const TOOLS: ToolDefinition[] = [
         const song = getMcpSong(args.songId as string);
         if (!song) return failure(`unknown songId "${args.songId}" — create one with create_song`);
         const summary = summariseSong(song);
+        const history = mcpSongHistory(args.songId as string);
         if (args.includePatterns === false) {
-          return { ...summary, clips: Object.keys(song.clips ?? {}) };
+          return { ...summary, clips: Object.keys(song.clips ?? {}), history };
         }
-        return { ...summary, clips: song.clips, sections: song.sections };
+        return { ...summary, clips: song.clips, sections: song.sections, history };
       } catch (error) {
         return failure((error as Error).message);
       }
@@ -717,6 +718,29 @@ export const TOOLS: ToolDefinition[] = [
           clips: arrangement.clips as Partial<Record<ClipSlot, SequencerPattern>>,
           sections: arrangement.sections as never[],
         });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    /**
+     * The tool boundary's undo, which an evaluation listed as missing ("no opId/undo/snapshot transaction semantics") and which
+     * matters most for exactly the calls an agent gets wrong: a `set_clip` on the wrong slot, a `duplicate_section` one time too
+     * many. Re-sending the whole arrangement was the only fix before this.
+     */
+    name: "undo_song",
+    title: "Undo a song's last change",
+    description:
+      "Return a song to the state before its most recent change (or before the one `steps` changes ago) and report the arrangement as it now stands. Every change a song tool makes is recorded with an opId, which get_song lists under `history` so the caller can see what is undoable before undoing it.",
+    readOnly: false,
+    inputSchema: {
+      songId: z.string().describe("the id create_song returned"),
+      steps: z.number().int().min(1).max(50).optional().describe("how many changes back to go; default 1"),
+    },
+    handler: (args) => {
+      try {
+        return undoMcpSong(args.songId as string, (args.steps as number | undefined) ?? 1);
       } catch (error) {
         return failure((error as Error).message);
       }

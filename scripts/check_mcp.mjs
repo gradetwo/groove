@@ -224,6 +224,22 @@ try {
   );
 
   /**
+   * The undo acceptance line from docs/V4_REVIEW_PLAN.md: a sequence of tool calls returns to its starting arrangement.
+   */
+  const beforeUndo = payload(await client.request("tools/call", { name: "get_song", arguments: { songId: song.songId, includePatterns: false } }));
+  const undone = payload(await client.request("tools/call", { name: "undo_song", arguments: { songId: song.songId, steps: 2 } }));
+  check(
+    "undo_song steps back and reports the arrangement as it now stands",
+    (undone.sections ?? []).length === 1 && (beforeUndo.sections ?? []).length === 2,
+    `before ${beforeUndo.sections?.length} sections, after ${undone.sections?.length}`
+  );
+  check(
+    "get_song lists what is undoable",
+    Array.isArray(beforeUndo.history) && beforeUndo.history.length >= 2 && typeof beforeUndo.history[0]?.opId === "string",
+    `history entries: ${beforeUndo.history?.length ?? 0}`
+  );
+
+  /**
    * The round trip a composer actually needs: export the package, read it back, and find the arrangement intact. Before
    * `import_groove`, a server restart lost the whole composition — the report's complaint — and the package could only be
    * written, not read.
