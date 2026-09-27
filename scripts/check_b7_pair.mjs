@@ -27,7 +27,22 @@ const ratioOf = (file) => {
   const report = JSON.parse(readFileSync(file, "utf8"));
   const floor = report.alignedFloor ?? report.selfDistanceA;
   if (!report.distanceAB || !floor) return null;
-  return { ratio: report.distanceAB / floor, genre: report.genre, distanceAB: report.distanceAB, floor };
+  return {
+    ratio: report.distanceAB / floor,
+    genre: report.genre,
+    distanceAB: report.distanceAB,
+    floor,
+    /**
+     * The temporal reading, reported alongside rather than instead of the mean-spectrum one.
+     *
+     * The mean asks "do these sections sound alike on average", which a rearrangement of the same material answers "yes" to — and that is why
+     * the first honest verdict was 0.86× of the control. The time course asks "does frame *i* match frame *i*", which is the question a
+     * rearrangement answers "no" to. Both are printed; only the second is expected to move.
+     */
+    timeCourse: report.timeCourseAB && report.timeCourseFloor ? report.timeCourseAB / report.timeCourseFloor : null,
+    timeCourseAB: report.timeCourseAB ?? null,
+    timeCourseFloor: report.timeCourseFloor ?? null,
+  };
 };
 
 const arrangement = ratioOf(arrangementPath);
@@ -43,6 +58,21 @@ console.log(
   `${ok ? "✅" : "❌"} B7 paired: arrangement ${arrangement.ratio.toFixed(2)}× vs control ${control.ratio.toFixed(2)}× ` +
     `= ${paired.toFixed(2)}× of the control (gate: ≥ ${FACTOR}×)`
 );
+if (arrangement.timeCourse !== null && control.timeCourse !== null) {
+  const pairedTime = arrangement.timeCourse / control.timeCourse;
+  const timeOk = pairedTime >= FACTOR;
+  console.log(
+    `${timeOk ? "✅" : "❌"} B7 paired (time course): arrangement ${arrangement.timeCourse.toFixed(2)}× vs control ` +
+      `${control.timeCourse.toFixed(2)}× = ${pairedTime.toFixed(2)}× of the control (gate: ≥ ${FACTOR}×)`
+  );
+  if (!timeOk) {
+    console.error(
+      `   the frame-by-frame reading does not separate the two sections from the control either — so the finding is about the arrangement ` +
+        `itself (a musical decision) rather than about the metric (a measurement problem).`
+    );
+  }
+}
+
 if (!ok) {
   /**
    * A failure here is a statement about evidence, not about the feature: the section change B7 exists to demonstrate is currently smaller
