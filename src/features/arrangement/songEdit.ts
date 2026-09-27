@@ -14,6 +14,7 @@ import {
   removeSection,
   resolveTimeline,
   sectionTranspose,
+  type ClipSlot,
   type Song,
   type SongSection,
 } from "../../types/song";
@@ -46,6 +47,66 @@ export function sectionRegions(song: Song): SectionRegion[] {
     regions.push({ section, startBar: bar.barIndex, bars: Math.max(1, Math.min(MAX_SECTION_BARS, Math.floor(section.bars))) });
   }
   return regions;
+}
+
+/** One stage of one lane: what it plays, where it starts, and whether it differs from its section's slot. */
+export interface TrackRowCell {
+  sectionId: string;
+  slot: ClipSlot;
+  startBar: number;
+  bars: number;
+  /** Silenced for this section — a breakdown or a drop. */
+  muted: boolean;
+  /** True when this lane names its **own** clip for the section, which is the thing no view has ever shown. */
+  override: boolean;
+}
+
+/** One lane's row across the whole timeline. */
+export interface TrackRow {
+  trackId: string;
+  name: string;
+  cells: TrackRowCell[];
+}
+
+/**
+ * The per-lane rows a track view draws — the last piece of model work before that view can exist.
+ *
+ * Built from `sectionRegions`, so the rows describe **the timeline the renderer will produce** rather than the raw section list: a section whose
+ * slot has no clip is skipped there with a reason, and a view laid out from the raw list would draw a stage that never plays.
+ *
+ * Each cell resolves the lane's slot with the same fallback the flattener uses (`section.slots?.[trackId] ?? section.slot`) and marks whether that
+ * fallback was needed. `override` is the point of the whole row: "this lane plays a different clip here" is expressible in the model today
+ * (`SongSection.slots`) and has been invisible in the UI since it landed.
+ *
+ * Lanes come from the clips' own tracks, unioned in first-seen order, because that is what the song will actually render — a lane the clips do not
+ * have is not a row.
+ */
+export function trackRows(song: Song): TrackRow[] {
+  const order: string[] = [];
+  const names = new Map<string, string>();
+  for (const clip of Object.values(song.clips ?? {})) {
+    for (const track of clip?.tracks ?? []) {
+      if (!order.includes(track.track_id)) {
+        order.push(track.track_id);
+        names.set(track.track_id, track.name || track.track_id);
+      }
+    }
+  }
+  const regions = sectionRegions(song);
+  return order.map((trackId) => {
+    const cells = regions.map((region) => {
+      const override = region.section.slots?.[trackId];
+      return {
+        sectionId: region.section.id,
+        slot: (override ?? region.section.slot) as ClipSlot,
+        startBar: region.startBar,
+        bars: region.bars,
+        muted: (region.section.mute ?? []).includes(trackId),
+        override: Boolean(override),
+      };
+    });
+    return { trackId, name: names.get(trackId) ?? trackId, cells };
+  });
 }
 
 /** Total bars the view's ruler must draw, as the renderer counts them. */
