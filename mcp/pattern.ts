@@ -14,7 +14,7 @@ import type { SequencerPattern, SequencerTrack } from "../src/types/genre";
 import { clonePattern } from "./library";
 
 /** The names a caller may use for a track; the app's ids plus the aliases it accepts in its own UI. */
-export const TRACK_IDS = ["kick", "snare", "hihat", "percussion", "bass", "chords", "lead", "fx"] as const;
+export const TRACK_IDS = ["kick", "snare", "hihat", "percussion", "bass", "chords", "lead", "fx", "audio"] as const;
 export type TrackId = (typeof TRACK_IDS)[number];
 
 const TRACK_ALIASES: Record<string, TrackId> = {
@@ -43,6 +43,10 @@ const TRACK_ALIASES: Record<string, TrackId> = {
   arp: "lead",
   fx: "fx",
   effect: "fx",
+  audio: "audio",
+  sample: "audio",
+  sampler: "audio",
+  loop: "audio",
 };
 
 /**

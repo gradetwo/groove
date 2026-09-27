@@ -41,13 +41,17 @@ export interface ShareableCustomGenrePayload {
   forkName?: string;
   // Compact tracks: [track_id, steps, pitch, gate]
   tracks: Array<{
-    t: 'kick' | 'snare' | 'hihat' | 'percussion' | 'bass' | 'chords' | 'lead' | 'fx';
+    t: 'kick' | 'snare' | 'hihat' | 'percussion' | 'bass' | 'chords' | 'lead' | 'fx' | 'audio';
     s: number[];
     p?: (number | null)[];
     g?: number[];
     v?: number;
     m?: boolean;
     sw?: number;
+    /** The lane's own name (decision 1A). Absent for every lane that has none, which is every lane written before it existed. */
+    l?: string;
+    /** An audio lane's sample, by id into the catalogue that ships with the app (decision 4). Absent for every other kind. */
+    sa?: string;
   }>;
 }
 

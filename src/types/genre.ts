@@ -47,7 +47,14 @@ export interface DrumPatternFeatures {
 export const MAX_NOTE_GATE_STEPS = 16;
 
 export interface SequencerTrack {
-  track_id: 'kick' | 'snare' | 'hihat' | 'percussion' | 'bass' | 'chords' | 'lead' | 'fx';
+  /**
+   * What a lane **is**: seven synthesised voices, a drum group, and — since the owner's decision of 2026-09-28 — **`audio`**, a lane that plays a sample.
+   *
+   * The union is closed on purpose, and widening it is an event rather than a detail: every exhaustive switch over it becomes a compile error. Reading this one
+   * found that the codebase has **almost none** — widening it raises a single type error — so an audio lane that routes as a drum, or falls through to silence,
+   * would fail silently. The safety comes from tests (`audioKindShare.test.ts` and the drum-set consistency test), not from the compiler.
+   */
+  track_id: 'kick' | 'snare' | 'hihat' | 'percussion' | 'bass' | 'chords' | 'lead' | 'fx' | 'audio';
   /**
    * An optional second name for this lane, so a song can have **two lanes of one kind** (owner decision 1A).
    *
@@ -59,6 +66,14 @@ export interface SequencerTrack {
    * everything referring to `"lead"` still ignores.
    */
   laneId?: string;
+  /**
+   * An **audio** lane's sample, named by id into the catalogue that ships with the app (owner decision 4).
+   *
+   * That indirection is the decision, not a first step towards one: a file path is not portable, a hash needs a store, and embedding bytes in a share link is
+   * neither — while an id into a catalogue the app already carries survives all three. A lane whose `assetId` names nothing must be an **error**, not silence,
+   * which is the loud-failure half still to be built.
+   */
+  sample?: { assetId: string };
   name: string;
   instrument: string;
   steps: number[]; // 1 or 0 (16 or 32 steps)

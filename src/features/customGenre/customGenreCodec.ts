@@ -19,6 +19,16 @@ const DEFAULT_TRACK_NAMES: Record<string, string> = {
 /**
  * Encodes a CustomGenre (or standard Genre) into a compact shareable URL string
  */
+/**
+ * An audio lane's sample, read defensively until the field is on `SequencerTrack` (the sample catalogue is the next slice of the ninth-kind work).
+ *
+ * Reading it here rather than waiting means a lane that carries one **shares with it** instead of arriving silent at the other end, which is the failure this
+ * whole kind has to avoid.
+ */
+function sampleAssetId(track: SequencerTrack): string | undefined {
+  return (track as { sample?: { assetId?: string } }).sample?.assetId;
+}
+
 export async function encodeGenreToSharePayload(genre: CustomGenre | Genre): Promise<string> {
   const radar = genre.radar_metrics || {
     groove: 5,
@@ -63,6 +73,9 @@ export async function encodeGenreToSharePayload(genre: CustomGenre | Genre): Pro
       v: t.volume,
       m: t.mute,
       sw: t.swing,
+      // Conditional, so a lane that has neither key encodes exactly as it did before they existed.
+      ...(t.laneId ? { l: t.laneId } : {}),
+      ...(sampleAssetId(t) ? { sa: sampleAssetId(t) } : {}),
     })),
   };
 
@@ -135,7 +148,9 @@ export async function decodeSharePayloadToGenre(encoded: string): Promise<Custom
 
     const tracks: SequencerTrack[] = payload.tracks.map((t) => ({
       track_id: t.t,
-      name: DEFAULT_TRACK_NAMES[t.t] || t.t.toUpperCase(),
+      ...(t.l ? { laneId: t.l } : {}),
+      ...(t.sa ? { sample: { assetId: t.sa } } : {}),
+      name: t.l ?? DEFAULT_TRACK_NAMES[t.t] ?? t.t.toUpperCase(),
       instrument: DEFAULT_TRACK_NAMES[t.t] || t.t,
       steps: t.s,
       pitch: t.p,

@@ -28,6 +28,7 @@ export const MAX_STEPS = 64;
 export const MAX_TEXT_LENGTH = 200;
 
 const ALLOWED_TRACK_IDS = new Set([
+  "audio",
   "kick",
   "snare",
   "hihat",
@@ -193,6 +194,18 @@ export function validateSharePayload(json: string): SharePayloadValidation {
       return { ok: false, reason: "invalid track volume" };
     }
 
+    // This loop **rebuilds** each entry, so anything not copied here is dropped in silence — which is how a shared groove would lose a second lane's name,
+    // or an audio lane's sample, without anyone noticing. Both are copied when present and absent when not, so a payload without them is unchanged.
+    const laneId = track.l === undefined ? undefined : asText(track.l, 60);
+    if (track.l !== undefined && !laneId) return { ok: false, reason: "invalid lane id" };
+
+    const sampleId = track.sa === undefined ? undefined : asText(track.sa, 80);
+    if (track.sa !== undefined && !sampleId) return { ok: false, reason: "invalid sample id" };
+    // A sample belongs to the kind that plays one; saying otherwise is a contradiction rather than a variation.
+    if (sampleId && trackId !== "audio") {
+      return { ok: false, reason: "a sample id is only meaningful on an audio lane" };
+    }
+
     tracks.push({
       t: trackId as ShareableCustomGenrePayload["tracks"][number]["t"],
       s: steps,
@@ -203,6 +216,8 @@ export function validateSharePayload(json: string): SharePayloadValidation {
       ...(typeof track.sw === "number" && Number.isFinite(track.sw)
         ? { sw: Math.max(-50, Math.min(50, track.sw)) }
         : {}),
+      ...(laneId ? { l: laneId } : {}),
+      ...(sampleId ? { sa: sampleId } : {}),
     });
   }
 
