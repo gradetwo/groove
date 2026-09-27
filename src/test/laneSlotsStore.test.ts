@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { addMcpSection, clearMcpSongs, createMcpSong, getMcpSong, setMcpClip, setMcpLaneSlots } from "../../mcp/song";
+import { addMcpSection, clearMcpSongs, createMcpSong, getMcpSong, setMcpClip, setMcpLaneSlots, summariseSong } from "../../mcp/song";
 
 /**
  * The store half of decision 3b, asserted where no fixture is shared.
@@ -51,5 +51,24 @@ describe("setMcpLaneSlots", () => {
     expect(result.problems.join(" | ")).toContain("no clip");
     // The store is untouched, which is the transaction the report asked for.
     expect(JSON.stringify(getMcpSong(songId))).toBe(before);
+  });
+});
+
+/**
+ * Decision 2b's reporting half: a song's reported length must follow its tempo map, and must not move for a song that has none.
+ */
+describe("secondsEstimate and the tempo map", () => {
+  it("keeps the old arithmetic exactly when there is no tempo map", () => {
+    const raw = getMcpSong(song()) as never as Record<string, unknown>;
+    // The formula this project has always used, written out rather than re-derived: 16 steps at 120 bpm on a 16th grid.
+    expect(summariseSong(raw as never).secondsEstimate).toBeCloseTo(Number((16 * (60 / 120 / 4)).toFixed(1)), 6);
+  });
+
+  it("halves the estimate when the map doubles the tempo from the first bar", () => {
+    const raw = getMcpSong(song()) as never as Record<string, unknown>;
+    const before = summariseSong(raw as never).secondsEstimate;
+    const mapped = { ...raw, tempoTrack: [{ atBar: 0, bpm: 240 }] };
+    const after = summariseSong(mapped as never).secondsEstimate;
+    expect(after).toBeCloseTo(before / 2, 1);
   });
 });
