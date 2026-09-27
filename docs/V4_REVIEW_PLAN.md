@@ -81,6 +81,22 @@ Track factory / folder+summing tracks / region timeline / PDC / audio tracks / S
 **behind** the workstreams above: they are the largest changes in the document and the ones whose prerequisites (PDC latency table,
 golden render, schema versioning) the earlier workstreams establish.
 
+## The harmony gap, located exactly: the library knows *which* progression, not *what it sounds like*
+
+Reading `mcp/library.ts` closes the question of what `set_chord_progression` and `suggest_progression` still need:
+
+* `listChordProgressions` and `getChordProgression` return `id`, a bilingual name, **`roman`** (`"vi-IV-I-V"`), `category`, `emotion`,
+  `description` and the songs that use it — and **no concrete chords at all**;
+* so the library is the source of **which** progression, and nothing in the tree turns a roman numeral into pitches in a key.
+
+That is the missing piece, and it is small, deterministic and testable: a `romanToChords(roman, key)` step — scale degrees, chord
+quality by numeral case, seventh where the numeral says so — which gives the tool layer the pitches that
+`set_chord_progression`'s op takes. `suggest_progression` then has a clean shape: pick from the library by emotion and category, render
+it in the caller's key, and report both the roman numerals and the pitches.
+
+Recording this before writing it because it is the third time in this plan that reading the data changed what the work is: the harmony
+"subsystem" is a roman-numeral renderer plus a chooser, not a new model.
+
 ## The mono verification: the field was already there, and the fix attempted for it was not
 
 Reading `render_song`'s handler before editing it — which is the rule the previous round broke — shows it returns the **whole render
