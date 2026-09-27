@@ -711,6 +711,31 @@ because a view cannot change it.
 already built (smaller), and the view does not exist at all (larger) — and it is a new component tree rather than an edit to one, so it deserves a
 round with the context to write it properly rather than the tail of one.
 
+## The region timeline is complete — and the one thing missing is a way to *set* a lane's clip
+
+Reading the panel instead of assuming, as the last correction taught: **editing already exists and is wired**, so this item is not "the view needs
+commands":
+
+```
+resizeSection(song, drag.id, …)            :167   applyArrangementCommand(song, id, command)   :187
+moveSection(song, id, dropIndexForBar(…))  :172   commandForKey(event.key, shift, meta)        :199
+…→ onChange({ sections: next.sections, gesture: "arrangement:move:<id>", continuous: true })   :173
+setSectionLabel …  :219        the mute toggle …  :224
+```
+
+Every structural edit goes through `onChange` with a **named gesture** and a `continuous` flag, which is what makes a drag undoable as one action rather
+than fifty. So the full list for this item is now present and tested: the model (`SongSection.slots`), the flatten, the fallback semantics, the
+byte-identical guarantee when no lane overrides, per-section ALS clips, the command layer, dragging, and the keyboard model.
+
+**What my work added, and what it exposed.** The only genuinely missing piece when I started was visibility — `slots` was expressible and invisible —
+and `TrackRows` supplies it. But reading this far also shows the **reverse** gap, which no one has stated before because nothing displayed the feature:
+the panel can **show** a lane's own clip (`:331`'s lane renders the section's regions) and cannot **set** it. `songEdit` has no lane-slot setter and no
+cell has a control.
+
+That is the honest remaining slice, and it is small and additive: a command-layer `setSectionLaneSlot(song, id, trackId, slot | null)` beside its
+siblings, and a control on the cell `TrackRows` already draws. Both keep the existing discipline — pure function in `songEdit` with its own test,
+`onChange` with a named gesture, and a view that computes nothing.
+
 ## What is deliberately rejected
 
 * **Audio in context** (`render_preview` returning audio data). The MCP keeps returning file paths plus an analysis summary; a
