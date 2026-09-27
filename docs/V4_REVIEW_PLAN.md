@@ -192,6 +192,21 @@ engine.
 does not is expected to land inside 0.005 dB. PDC — the next piece, and the one that can make phase coherence worse — can be checked
 against this instead of against an impression.
 
+**Second prerequisite, first row measured: the FX rack costs no latency.**
+
+```
+fx rack latency : first sound at 10.408 ms bypassed vs 10.408 ms with the rack (44100 Hz)
+```
+
+Identical to the millisecond across two renders of the same song, one through the rack and one past it — so **PDC does not have to compensate
+for the rack**, which is one worry retired rather than one number collected. The 10.408 ms that both share is the rest of the path (the drum
+voice's own start, the channel strip, the master limiter), and it now has a baseline: whatever the individual rows turn out to be, they have
+to add up to it.
+
+Worth stating what the measurement can and cannot say: two renders that agree to a millisecond are evidence about a **10.408 ms** scale, so a
+latency under about 22 samples (0.5 ms) would hide inside it. The buses' and limiter's own rows therefore need the impulse-in-a-single-effect
+setup rather than this difference-of-two-renders trick, and that is the next slice.
+
 **Second prerequisite still open**: a **latency table** for the effects PDC has to compensate (`ReverbBus`, `DelayBus`, the master limiter,
 the channel strip). It needs its own probe — an impulse in, the first non-zero sample out — because a declared latency is exactly the kind
 of number that drifts from the measured one, and the difference is inaudible until it is not.
