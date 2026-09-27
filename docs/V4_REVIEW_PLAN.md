@@ -820,6 +820,63 @@ happening to coincide at bar 0 and invert over the 30–50 ms window". The measu
 initial phase**, and a fix should be built against the criterion (band energy of the stack vs the louder single) rather than against that explanation. If
 alignment alone does not recover the energy, the next candidate is the frequency envelope of each preset, and the probe will say so.
 
+## Owner decisions, 2026-09-28 — and the mandate they create
+
+Five questions were put to the owner after the fourth report, and all five are now answered. Recorded here **with the acceptance line each one implies**, so the
+next rounds work from a mandate rather than from a memory of a conversation.
+
+| # | question | decision |
+|---|---|---|
+| 1 | track model: how to allow a second lane of a kind | **A — keep the eight `track_id`s as roles, add an optional `laneId`; additive, v1 stays readable** |
+| 2 | multi-movement tempo | **(b) a tempo track**: tempo points with `jump`/`linear` transitions |
+| 3 | lane slots over MCP | **(b) batch operation *and* an MCP tool `set_lane_slots`** |
+| 4 | audio tracks and SVS | **scope both**; for SVS, **reserve the interface and leave it empty** — do not implement it |
+| 5 | B7's missing evidence | **stop investing**; the paired gate keeps reporting what it measures |
+
+### A. Batch lane slots, and the tool (decision 3b) — smallest, and first
+
+The report is right that a 9-movement × 8-lane matrix should not be 72 round trips; the "partial dirty state" it fears is overstated (every song change is
+atomic in the store and undoable), but the round-trip count is real. Criterion, before the code:
+
+* a batch of N edits is **deep-equal** to N single `setSectionLaneSlot` calls — reusing that function on an accumulator makes this true by construction;
+* **any** invalid entry (unknown section, unknown track, a slot the song does not have) leaves the song **entirely unchanged** — the transaction the report
+  asked for;
+* what cannot be applied is **reported**, not silently dropped, and the reply carries the same **shared-slot** warning `make_unique` gives;
+* the tool returns the summary plus what it applied, and `check:mcp` asserts the all-or-nothing property.
+
+### B. A second lane of a kind (decision 1A)
+
+`SequencerTrack` gains an **optional** `laneId`. Addressing becomes "**by `laneId` first, falling back to `track_id`**", so a second lead is
+`{ track_id: "lead", laneId: "lead-2" }` and nothing that exists today changes meaning. Criterion, before the code:
+
+* a track without `laneId` behaves **byte-identically** everywhere (`validatePattern`, the flattener, the exporter);
+* two lanes of one kind flatten into two lanes, and every existing lookup still finds the first by `track_id`;
+* the Ableton exporter emits **distinct** track names for them;
+* `.groove` v1 files stay readable — the field is additive, exactly as `arrangement`, `extraClips`, `slots` and `syllables` were.
+
+The blast radius was read before the decision and is unchanged: `validatePattern`, drum routing (those ids are roles), the GS-1 lane hosts, the exporter, the
+format's compatibility promise, and the URL share codec's budget.
+
+### C. A tempo track (decision 2b)
+
+`Song` gains an optional `tempoTrack: Array<{ atBar; bpm; curve?: "jump" | "linear" }>`. Criterion, before the code:
+
+* **no** `tempoTrack` → flatten, step counts and render **byte-identical** to today;
+* a `jump` point changes the durations of the bars after it by exactly the tempo ratio, and the step counts follow;
+* `linear` interpolates **per bar**, so the total duration is the sum of the interpolated bars rather than a single rate;
+* the renderer reads the map **while scheduling** instead of resetting the audio context — the failure mode the report described.
+
+### D. Audio tracks, and an SVS interface that says it is empty (decision 4)
+
+Scoped in a document of its own (`docs/AUDIO_TRACKS_AND_SVS_PLAN.md`): audio tracks as a new lane kind with a sample-playback path and its PDC interaction;
+SVS as **an interface with no implementation**. For the second, the honest shape is a provider interface plus a tool that returns "**reserved, not
+implemented**" — reachable and truthful, so an agent discovers the absence instead of guessing, and nobody mistakes a stub for a feature.
+
+### E. B7 is frozen (decision 5)
+
+No further investment. The paired gate keeps printing **0.8× of its control** and stays `continue-on-error`; the section change is simply **not demonstrated by
+that measurement**, and that is now a recorded state of affairs rather than an open task. Reconciling the time-course reading is explicitly out of scope.
+
 ## What is deliberately rejected
 
 * **Audio in context** (`render_preview` returning audio data). The MCP keeps returning file paths plus an analysis summary; a
