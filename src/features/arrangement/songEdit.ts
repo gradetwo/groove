@@ -250,6 +250,56 @@ export function commandForKey(key: string, shiftKey = false, metaKey = false): A
 }
 
 /** The longest label a section may carry. Long enough for "second chorus (no hats)", short enough for a region. */
+/**
+ * Give one lane its own clip for one section, or `null` to fall back to the section's slot.
+ *
+ * The last piece of the per-lane arrangement, and the one nothing has been able to do: `SongSection.slots` has been expressible since it landed and
+ * there was no way to **set** it — not in the UI, and not in the command layer. `TrackRows` made the state visible; this makes it editable.
+ *
+ * Two properties, both matching the file's other commands: an unknown slot or an unknown lane changes **nothing** and returns `song` itself, so a
+ * caller's `next !== song` check skips the edit and no spurious gesture is recorded; and `null` **removes** the key rather than storing a null, so the
+ * section falls back exactly as a section that never had the field.
+ */
+export function setSectionLaneSlot(song: Song, id: string, trackId: string, slot: ClipSlot | null): Song {
+  const section = (song.sections ?? []).find((candidate) => candidate.id === id);
+  if (!section) return song;
+  // A slot the song does not have would render as nothing; refusing silently is the same choice a bad `moveSection` index makes.
+  if (slot !== null && !Object.keys(song.clips ?? {}).includes(slot)) return song;
+
+  const current = section.slots ?? {};
+  /**
+   * Setting a lane to the slot its section already plays is a **clear**, not an override.
+   *
+   * An override that equals the default is not an override, and storing one would make "this lane is different here" false in the data and in the row
+   * view — the `*` marker would appear on a lane that plays exactly what the section says. My first version stored it, and the test that asks for an
+   * unchanged song caught it.
+   */
+  if (slot !== null && slot === section.slot) slot = null;
+  const nextSlots: Partial<Record<string, ClipSlot>> = { ...current };
+  if (slot === null) {
+    if (!(trackId in current)) return song;
+    delete nextSlots[trackId];
+  } else {
+    if (current[trackId] === slot) return song;
+    nextSlots[trackId] = slot;
+  }
+
+  return {
+    ...song,
+    sections: song.sections.map((candidate) =>
+      candidate.id === id
+        ? Object.keys(nextSlots).length
+          ? { ...candidate, slots: nextSlots }
+          : // Drop the field entirely when it becomes empty, so a section that has never overridden a lane and one that has stopped are identical.
+            (() => {
+              const { slots: _drop, ...rest } = candidate;
+              return rest as SongSection;
+            })()
+        : candidate
+    ),
+  };
+}
+
 export const MAX_SECTION_LABEL = 32;
 
 /**
