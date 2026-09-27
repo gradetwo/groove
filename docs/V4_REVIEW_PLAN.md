@@ -170,6 +170,32 @@ Reconnaissance rather than code, because a head-less render at the wrong rate is
 So the next step is one grep for the context construction (the alias form), and the two outcomes are both useful: a small slice, or a
 real find.
 
+## Workstream 6's first prerequisite, measured: renders are deterministic to 0.005 dB
+
+The determinism probe now runs in the audio scope, and its first CI run answers the question every other audio number depends on:
+
+```
+same page     #1  limiter worklet   hosts failed 0  RMS -9.053 dBFS  peak -1.3 dBFS
+same page     #2  limiter worklet   hosts failed 0  RMS -9.053 dBFS  peak -1.3 dBFS
+same page     #3  limiter worklet   hosts failed 0  RMS -9.053 dBFS  peak -1.3 dBFS
+after reload  #1  limiter worklet   hosts failed 0  RMS -9.053 dBFS  peak -1.3 dBFS
+after reload  #2  limiter worklet   hosts failed 0  RMS -9.053 dBFS  peak -1.3 dBFS
+after reload  #3  limiter worklet   hosts failed 0  RMS -9.058 dBFS  peak -1.3 dBFS
+```
+
+So: **identical within a page, and within 0.005 dB across a reload** — which is the golden-render property, stated in the form this project
+can actually measure. And every row names the limiter as **`worklet`**, which settles the drift the loudness re-record once refused to
+publish: that was the **`DynamicsCompressor` fallback**, exactly as the probe's own comment hypothesised, and not a nondeterministic
+engine.
+
+**What that buys the rest of workstream 6**: a change that alters the sound now has a baseline to be measured against, and a change that
+does not is expected to land inside 0.005 dB. PDC — the next piece, and the one that can make phase coherence worse — can be checked
+against this instead of against an impression.
+
+**Second prerequisite still open**: a **latency table** for the effects PDC has to compensate (`ReverbBus`, `DelayBus`, the master limiter,
+the channel strip). It needs its own probe — an impulse in, the first non-zero sample out — because a declared latency is exactly the kind
+of number that drifts from the measured one, and the difference is inaudible until it is not.
+
 ## What is deliberately rejected
 
 * **Audio in context** (`render_preview` returning audio data). The MCP keeps returning file paths plus an analysis summary; a
