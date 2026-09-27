@@ -22,6 +22,42 @@ question, and doing both at once would put two format-affecting changes in one r
 sample in a render, measure its latency into the table, and change no export path — which answers "what does an audio lane cost in PDC" without answering "what
 is an audio lane in the format".
 
+## 1b. The owner chose the ninth *kind* — and the blast radius, read from the code
+
+**Decision (2026-09-28): `audio` becomes the ninth `track_id` kind.** So the format question this document was waiting on is answered: an audio lane is a **role**,
+not a mode inside an existing one.
+
+Reading it produced one finding worth more than the change itself: **widening the closed union produces exactly one type error** —
+
+```
+src/features/customGenre/customGenreCodec.ts(58,5): error TS2322: Type '{ t: "kick" | … | "audio"; … }[]'
+  is not assignable to type '{ t: "kick" | … | "fx"; … }[]'
+```
+
+— because **the codebase's dispatch sites are mostly not exhaustive**. A closed union is normally the instrument that enumerates its own consequences; here it does
+not, so **an audio lane that routes as a drum, or that falls through to silence, fails silently**. The safety has to come from tests, not from `tsc`. The sites
+that route by kind, found by **behaviour** rather than by name:
+
+| site | what it decides today | what an audio lane needs |
+|---|---|---|
+| `src/features/customGenre/customGenreCodec.ts:58` | a hardcoded eight-member union in the **share codec** | the only compiler-visible one: widen it, and carry the sample reference through the compact form |
+| `src/data/schema.ts:24` `REQUIRED_TRACK_IDS` | which **roles** a `.groove` package must contain | `audio` must be **allowed** and **not required** — additivity, the same rule as `arrangement`, `slots`, `laneId`, `tempoTrack` |
+| `src/data/genreMix.ts:38` `MIX_TRACK_IDS` | per-kind mix defaults from the genre tables | a kind a genre never mentions needs a **defined default**, not `undefined` |
+| `src/audio/trackBuses.ts:24` `DRUM_ROLES` | bus routing | a genuine decision: which bus an audio lane belongs to |
+| `src/utils/trackUtils.ts:4`, `CompareView.tsx:41`, `GenreDetailView.tsx:72` | three copies of the **drum** set | correct by absence — `audio` is not a drum — and worth a test, because three copies is three chances to drift |
+| `src/audio/gs1/gs1Tracks.ts` | GS-1 voice hosts, one per melodic kind | an audio lane plays **no** GS-1 voice; it must be excluded explicitly |
+| `mcp/render/worker.ts` and the exporter | one MIDI lane per track | the stated rule: a lane with no MIDI is **skipped and the reply says so** — no export path otherwise changes |
+| PDC's latency table | one measured row (the master limiter) | the audio path's own latency as a **measured** row |
+
+### The order this implies
+
+1. **The format half, criterion-first**: the share codec widened, `audio` allowed-but-not-required in `.groove`, a mix default for an unmentioned kind, the bus
+   decided, GS-1 exclusion explicit, the exporter's skip-and-say-so rule — each with a test that a song **without** an audio lane is byte-identical;
+2. **The sample reference** — the read-only slice: an `assetId` naming an entry in a catalogue that **ships with the app**, so nothing needs a file path, a hash
+   store or embedding, and a reference that names nothing is an **error rather than silence**;
+3. **Its latency, measured** into PDC's table, and the audio-scope probe as the judge;
+4. **No export path changes** beyond the skip-and-say-so rule.
+
 ## 2. SVS: an interface with no implementation
 
 The owner asked for the interface to be **reserved and left empty**, and the honest way to do that is to expose it and have it **say so**, rather than to leave a
