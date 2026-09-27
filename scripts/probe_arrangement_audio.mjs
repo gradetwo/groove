@@ -156,6 +156,19 @@ try {
       ),
     };
 
+    /**
+     * Where a render first makes sound — the only honest way to get a latency.
+     *
+     * A declared latency is exactly the kind of number that drifts from the measured one, and the difference is inaudible until it is not.
+     * The floor is well above the noise a silent graph produces, so the first crossing is the onset rather than a denormal.
+     */
+    const firstNonZeroMs = (channels, sampleRate, floor = 1e-4) => {
+      for (let i = 0; i < (channels[0]?.length ?? 0); i += 1) {
+        for (const channel of channels) if (Math.abs(channel[i]) > floor) return Number(((i / sampleRate) * 1000).toFixed(3));
+      }
+      return null;
+    };
+
     const render = async (value, extra = {}) => {
       const buffer = await wav.renderSongOffline(value, { drumKit, loudnessTrimDb: 0, ...extra });
       const channels = [];
@@ -258,6 +271,21 @@ try {
         { id: "probe-jump-b", slot: "A", bars: 2, mute: ["kick", "snare", "hihat", "percussion"] },
       ],
     };
+    /**
+     * Workstream 6's second prerequisite, first row: what the FX rack costs in latency.
+     *
+     * `bypassFxRack` exists as a diagnostic in the exporter, so the same song can be measured with and without it — and comparing the two
+     * onsets is the rack's contribution rather than an impression of it. Every other effect in the chain (the master limiter, the channel
+     * strip) is in both renders, so what differs is the rack.
+     */
+    const withRack = await render(jumpSong);
+    const withoutRack = await render(jumpSong, { bypassFxRack: true });
+    const latency = {
+      withRackMs: firstNonZeroMs(withRack.channels, withRack.buffer.sampleRate),
+      withoutRackMs: firstNonZeroMs(withoutRack.channels, withoutRack.buffer.sampleRate),
+      sampleRate: withRack.buffer.sampleRate,
+    };
+
     const withoutFade = await render(jumpSong, { boundaryFadeMs: 0 });
     const withFade = await render(jumpSong, { boundaryFadeMs: 8 });
     /**
@@ -421,6 +449,8 @@ try {
               })()
             : {}),
         },
+        /** The FX rack's latency, measured as the difference between two renders of the same song. */
+        latency,
         seconds: withFill.buffer.duration,
         barSeconds,
         fillRms: fillBars.map((bar) => ({
@@ -548,6 +578,10 @@ try {
   } else {
     console.log(`✅ Arrangement audio (${genreId}, club form): ${summary.bars} bars rendered`);
     console.log(`   onsets per bar   : ${summary.onsetsPerBar}`);
+    console.log(
+      `   fx rack latency  : first sound at ${measured.audio.latency.withoutRackMs} ms bypassed vs ` +
+        `${measured.audio.latency.withRackMs} ms with the rack (${measured.audio.latency.sampleRate} Hz)`
+    );
     {
       const fade = measured.audio.boundaryFade;
       console.log(

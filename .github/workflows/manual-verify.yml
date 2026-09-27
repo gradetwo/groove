@@ -144,6 +144,10 @@ jobs:
 
       # Workstream 6's prerequisite, and the one the loudness re-record has been waiting on: the same genre must render the same way twice,
       # and must not depend on how many genres the page has already rendered. Every other audio number in this project assumes it.
+      # Workstream 6's second prerequisite: the FX rack's latency, measured as the difference between two renders of the same song in
+      # `probe_arrangement_audio`, which the step below already runs. No separate step, because a second probe measuring the same graph
+      # is how two numbers start disagreeing.
+
       - name: Render determinism (workstream 6's prerequisite)
         if: inputs.scope == 'audio' || inputs.scope == 'verify' || inputs.scope == 'all'
         continue-on-error: true
