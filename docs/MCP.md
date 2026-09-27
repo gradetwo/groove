@@ -139,6 +139,7 @@ minutes and the call reports no progress while it runs.
 | `apply_pattern_ops` ▢ | `pattern`, `ops[]` | a **new** pattern with the operations applied (never mutates the library) |
 | `validate_pattern` ▢ | `pattern` | diagnostics: step-count agreement, velocity range, unknown track ids, gate/pitch length mismatches |
 | `pattern_statistics` ▢ | `pattern` | per-track density, velocity spread, note range, off-beat ratio, recommended swing |
+| `suggest_progression` ▢ | `tonic?`, `mode?`, `emotion?`, `category?`, `avoid?` | a progression from the committed library for a feeling, rendered in the key: the roman numerals, the concrete chords, and the songs that used it — feed `chords` to `apply_pattern_ops` **`set_chord_progression`** |
 | `estimate_key` ▢ | `genreId?`, `pattern?` | the tonic, mode and fit from the pattern's **pitches** (a pitch-class histogram against major/minor profiles) — the notes rather than an FFT of a kick-heavy loop |
 | `spectral_balance` ▢ | `path` | the 13-band shape of a rendered WAV with named bands, plus the spectral centroid — the same fingerprint the timbre baseline uses |
 | `compare_genres` ▢ | `a`, `b` | bpm/key/track/pattern/mix differences |

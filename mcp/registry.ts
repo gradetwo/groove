@@ -7,7 +7,7 @@
  * the picture.
  */
 import { z } from "zod";
-import { clonePattern, findGenre, getChordProgression, getGenre, getGenreRelations, libraryIndex, listCategories, listChordProgressions, listGenres, listMasterclasses, searchGenres } from "./library";
+import { clonePattern, findGenre, getChordProgression, getGenre, getGenreRelations, suggestProgression, libraryIndex, listCategories, listChordProgressions, listGenres, listMasterclasses, searchGenres } from "./library";
 import { applyPatternOps, comparePatterns, patternStatistics, validatePattern, type PatternOp } from "./pattern";
 import { patternFromGenre } from "../src/data/genreMix";
 import { flattenSong } from "../src/data/songFlatten";
@@ -361,6 +361,36 @@ export const TOOLS: ToolDefinition[] = [
       const pattern = patternFromArgs(args as { genreId?: string; pattern?: unknown });
       if (!pattern) return failure("provide either genreId or pattern");
       return shareUrl(pattern, { origin: args.origin as string | undefined });
+    },
+  },
+  {
+    /**
+     * The genuinely new half of the harmony work: the library says **which** progression and `romanToChords` says what it sounds like,
+     * so this joins them and reports both — the numerals so a caller can see the choice, the pitches so it can be applied.
+     */
+    name: "suggest_progression",
+    title: "Suggest a chord progression in a key",
+    description:
+      "Pick a progression from the committed library for an emotion or category and render it in the caller's key: returns the roman numerals, the concrete chords, and the songs that used it. Feed `chords` to apply_pattern_ops with set_chord_progression. It is a chooser plus a renderer rather than a generator, so every result traces to a committed entry.",
+    readOnly: true,
+    inputSchema: {
+      tonic: z.number().int().min(0).max(127).optional().describe("MIDI note of the key's tonic; default 60 (C)"),
+      mode: z.enum(["major", "minor"]).optional().describe("default major"),
+      emotion: z.string().max(60).optional().describe('what the music should feel like, e.g. "nostalgic", "uplifting"'),
+      category: z.string().max(40).optional().describe("the library's category, matched exactly"),
+      avoid: z.string().max(200).optional().describe("progression ids not to pick, comma separated"),
+    },
+    handler: (args) => {
+      try {
+        return suggestProgression({
+          key: { tonic: args.tonic as number | undefined, mode: args.mode as "major" | "minor" | undefined },
+          emotion: args.emotion as string | undefined,
+          category: args.category as string | undefined,
+          avoid: args.avoid as string | undefined,
+        });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
     },
   },
   {
