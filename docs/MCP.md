@@ -105,6 +105,39 @@ is B2's `flattenSong`, so the tool cannot render something the app would not). S
 
 The package this writes is specified field by field in [`GROOVE_PACKAGE_FORMAT.md`](GROOVE_PACKAGE_FORMAT.md).
 
+### What three external evaluations claimed, and what the code actually does
+
+Three reviews of this server were written by people composing with it. Their claims were checked one by one against the tree, and most were narrower,
+staler, or already built than they read. This is the standing record, because the alternative is that the next reader has to re-derive it — and the
+pattern is itself the finding: **a review describes what its author could see, and a feature that is present but invisible reads as absent.**
+
+| the claim | what the code does |
+|---|---|
+| "the read tools are missing" | they exist; the **list** was the thing that was incomplete |
+| "there are 4 resources and 3 prompts" | true when written; both have grown, and `check:mcp` now asserts every documented resource is declared |
+| "`.groove` has no arrangement" | `version: 1 \| 2` with an optional `arrangement` has existed; `docs/GROOVE_PACKAGE_FORMAT.md` is the spec |
+| "buses and a channel strip are missing" | both exist |
+| "render SLOs are not recorded" | they are, in the table above — and the numbers come from CI, not from a plan |
+| "there is no server-side undo" | **true, and fixed**: `undo_song` plus per-song history, every change carrying an `opId` |
+| "no mixer view, inserts, sidechain or PDC" | **true**; PDC now exists offline and in realtime (see the budget section), the rest is workstream 6's remainder |
+| "no prosody or tone support" | **true, and fixed**: `validate_prosody`, and `set_vocal_melody` binds a syllable at the same index as its pitch |
+| "the harmony minimum set is missing" | the **reading** half existed; the writing half is one op (`set_chord_progression`) plus `romanToChords` and `suggest_progression` |
+| "long renders risk a client's 30 s timeout; add a preview tool" | **true and measured**: a full-rate render takes 6–24 s. `render_preview_clip` renders 14.4 s of audio in **1.45 s** — and the timeout **was** hit in this project's own probe, by a tool doing four renders in one request |
+| "`get_loudness_report` reads but cannot act" | **true, and answered**: `normalize_loudness` measures, renders and measures again — and reports that on this chain the **master limiter holds the output**, so an upstream trim cannot set loudness |
+| "clip references are ambiguous (destructive or make-unique)" | **true, and fixed**: `make_unique` copies a section's clip into a free slot and repoints only that section |
+| "no continuous automation across sections" | **narrower than stated**: a per-section `velocityRamp` and a riser into the next section exist; what is absent is a **non-velocity** parameter — and one upstream of the limiter would be absorbed, so the honest answer is structural |
+| "`AbletonExporter` writes one clip for the whole song" | **stale**: it takes `clips` and fills a scene per clip; the MCP tool passes one per section, and tests hold both behaviours |
+| "the region timeline is missing" | the model, flatten, fallback rules, byte-identical guarantee, per-section ALS clips **and the command layer** were all present; what was missing was **a view of a lane's own clip** — and that is now in the arrangement panel |
+
+Two lessons worth carrying past this server:
+
+* **prove the instrument works before believing its number.** Four failure modes were caught here by exactly that: a detector that fires on the music, an
+  analysis that reads silence, a proxy blind to its band, and a command that silently did nothing. `analyze_audio`'s energy curve, the comb-filter
+  criterion and the B7 control all exist because of it;
+* **a gate that is always red stops meaning anything.** Two of this project's gates had been failing for weeks — a layer violation and a lint error —
+  while every run printed the failure. Reading the failing step is what fixed them, and the honest gate for a measurement that does not yet support its
+  claim is one that says so, which is why B7 reports **0.8× of its control** rather than passing on a threshold chosen to fit it.
+
 ### Render budgets, as numbers rather than intentions (2026-09-28)
 
 An external evaluation proposed staged render SLOs, on the correct observation that a minute-level render makes an agent's
