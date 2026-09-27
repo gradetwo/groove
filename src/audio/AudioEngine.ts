@@ -1576,14 +1576,36 @@ export class AudioEngine {
         ? this.loopRange[0]
         : 0;
     const now = this.ctx ? this.ctx.currentTime : 0;
+    /**
+     * PDC, realtime: schedule **earlier** by the master bus's latency.
+     *
+     * The limiter delays everything that leaves the graph by its lookahead, so a step scheduled at time `t` is heard at `t + lookahead`.
+     * Realtime cannot trim the way the offline renderer now does, so the only way to make a nominal event land at its nominal time is to
+     * ask for it sooner — which is what `latencyCompensationMs` was always for, and why this is a connection rather than a new mechanism.
+     *
+     * The value is the limiter's own latency unless the user has set one, because the number is already computed, already exposed, and
+     * already displayed in the settings screen; `latencySeconds` is 0 on the compressor fallback, so the fallback needs no compensation
+     * and this needs no branch. The 35 ms safety margin below is an order of magnitude larger than the ~3 ms being subtracted, so the
+     * schedule stays in the future even at the default.
+     */
+    const requestedCompensationSec = this.latencyCompensationMs > 0
+      ? this.latencyCompensationMs / 1000
+      : this.getMasterLimiterLatencySeconds();
+    /**
+     * …but never past the margin. A user's compensation is clamped to 100 ms while the safety margin below it is 35 ms, so the naive
+     * subtraction would schedule the first step **in the past** for a large manual value — which the scheduler would then fire as soon as
+     * it could, i.e. as a stutter rather than as compensation. Bounded this way the default (3 ms) is applied in full, and a value larger
+     * than the margin is applied as far as it safely can be.
+     */
+    const compensationSec = Math.max(0, Math.min(requestedCompensationSec, 0.035));
     if (this.isCountIn) {
       const beatSec = 60.0 / this.bpm;
       for (let b = 0; b < 4; b++) {
-        this.playMetronome(now + 0.035 + b * beatSec, b === 0);
+        this.playMetronome(now + 0.035 - compensationSec + b * beatSec, b === 0);
       }
-      this.nextStepTime = now + 0.035 + 4 * beatSec;
+      this.nextStepTime = now + 0.035 - compensationSec + 4 * beatSec;
     } else {
-      this.nextStepTime = now + 0.035;
+      this.nextStepTime = now + 0.035 - compensationSec;
     }
     this.stepQueue = [];
     this.lastReportedStep = -1;
