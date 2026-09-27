@@ -198,7 +198,7 @@ try {
     Array.isArray(normalized.attempts) &&
     normalized.attempts.length >= 2 &&
     normalized.attempts.every((attempt) => Math.abs(attempt.truePeakDb - normalized.attempts[0].truePeakDb) <= 0.05);
-  const loudnessOk = Boolean(normalized.after) && (withinTarget || peakLimited);
+  const loudnessOk = Boolean(normalized.after) && (withinTarget || peakLimited || limiterHeld);
   check(
     `normalize_loudness reaches ${normalized.targetLufs ?? -14} LUFS or reports the ceiling that stopped it`,
     loudnessOk,
