@@ -170,6 +170,37 @@ Reconnaissance rather than code, because a head-less render at the wrong rate is
 So the next step is one grep for the context construction (the alias form), and the two outcomes are both useful: a small slice, or a
 real find.
 
+## Track factory is a schema change, and the real gap is multiplicity
+
+Reading before writing, and this is the fourth time in this plan that reading changed what the work is:
+
+* **`track_id` is a closed union of eight kinds** — `'kick' | 'snare' | 'hihat' | 'percussion' | 'bass' | 'chords' | 'lead' | 'fx'`
+  (`src/types/genre.ts:50`) — not an open string;
+* **lanes are addressed by kind, not by identity**: `findTrack` is `pattern.tracks.find((track) => track.track_id === id)`
+  (`mcp/pattern.ts:62`), and `copy_track` reports itself as `from → to` (`:263`). So a **second `lead` is unaddressable** — the first match
+  wins, and no op can say which one it meant;
+* the assumption is load-bearing, not theoretical: `mcp/examples.ts:55` finds `lead` this way, and so does anything that routes a lane to a
+  voice, an instrument or a stem.
+
+So "add a track" is **not** an op on top of the existing model; it is a change to the model. And the more useful framing is that the
+limitation an agent actually hits is **multiplicity** — one lane of each kind, so a counter-melody, a second percussion line or a doubled
+chord part cannot be expressed at all — rather than the absence of a button.
+
+**The blast radius to read before deciding**, in the order it would be felt:
+
+| consumer | why it matters |
+|---|---|
+| `validatePattern` (`mcp/pattern.ts`) | it is the gate every example and every op result passes; unknown lanes may already be rejected |
+| drum routing and voices | `kick`/`snare`/`hihat`/`percussion` are not names, they are **roles** the engine routes to specific voices |
+| GS-1 lanes | `chords`, `lead`, `fx` are the lanes the GS-1 path hosts; a second instance has to be given a host |
+| the Ableton exporter | it writes one track per lane, so it needs a naming rule for a second |
+| **the `.groove` format** | `project.patterns {A,B}` requires the pattern shape, and the v1 compatibility promise is that **v1 stays readable forever** — so any widening has to be additive in the same way `arrangement` and `extraClips` were |
+| the URL share codec | it has a size budget, and a widened lane set is a schema version question there too |
+
+None of that is a reason not to do it. It is the reason the work is written down before it is done: the last three times this plan looked
+like N features and turned out to be one op (harmony, melody, prosody), this time it looks like one op and turns out to be a schema change —
+and the schema is the one thing in this project with a written compatibility promise attached.
+
 ## Workstream 6's first prerequisite, measured: renders are deterministic to 0.005 dB
 
 The determinism probe now runs in the audio scope, and its first CI run answers the question every other audio number depends on:
