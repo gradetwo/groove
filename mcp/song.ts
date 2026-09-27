@@ -22,6 +22,7 @@ import {
 import { fillForTracks } from "../src/data/arrangementForm";
 import { setSectionLaneSlots } from "../src/features/arrangement/songEdit";
 import { flattenSong, type FlattenedSong } from "../src/data/songFlatten";
+import { totalSeconds } from "../src/data/tempoMap";
 import { patternFromGenre } from "../src/data/genreMix";
 import type { Genre, SequencerPattern } from "../src/types/genre";
 
@@ -126,9 +127,8 @@ export function summariseSong(song: Song): SongSummary {
     /**
      * The two numbers that make `bars` unambiguous, because both composers who drove this server read it as "measures".
      *
-     * A section's `bars` counts **passes of its clip**, and a genre's seeded clip is four measures long (`patternFromGenre`
-     * gives 64 steps at 16 per bar), so `bars: 44` is 176 measures and about eight minutes — which one of them found out by
-     * rendering it. `passBars` says what one pass is worth for this song, `secondsEstimate` says how long the whole thing is,
+     * A section's `bars` counts **passes of its clip**, and a genre's seeded clip is **one bar** of 16 sixteenth steps (`patternFromGenre` gives 16,
+     * measured as `totalSteps: 704 = 44 bars x 16`), so `bars: 44` is 44 measures — the reading both composers had to unlearn. `passBars` says what one pass is worth for this song, `secondsEstimate` says how long the whole thing is,
      * and both are returned by `create_song` and by `add_section` (so the estimate moves as sections are added).
      */
     passBars: totalPasses > 0 ? Math.max(1, Math.round(timeline.totalBars / totalPasses)) : 1,
@@ -140,7 +140,16 @@ export function summariseSong(song: Song): SongSummary {
      * twelve. The timeline counts a pass as one bar whatever the clip's length, so the bar count cannot be the basis; the step
      * count can, at sixteenth notes.
      */
-    secondsEstimate: Number((flattened.totalSteps * (60 / song.bpm / 4)).toFixed(1)),
+    /**
+     * A song with no tempo map keeps **exactly** the arithmetic it had (`totalSteps * (60 / bpm / 4)`), so nothing about an existing song's reported length
+     * moves; a song with one is summed bar by bar through `totalSeconds`, because a single rate cannot describe a piece whose tempo changes.
+     */
+    secondsEstimate: Number(
+      (song.tempoTrack?.length
+        ? totalSeconds(song, flattened.totalBars)
+        : flattened.totalSteps * (60 / song.bpm / 4)
+      ).toFixed(1)
+    ),
   };
 }
 
