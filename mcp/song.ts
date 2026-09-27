@@ -414,6 +414,9 @@ export function makeUniqueMcpSection(input: {
 /**
  * The batch lane-slot edit, at the tool boundary (owner decision 3b).
  *
+ * **Known limit, stated rather than hidden**: the sharing report counts each section's own `slot`, so a per-lane override that points a lane at a clip another
+ * section already plays is not yet counted as sharing. The report is therefore a lower bound; widening it to effective playback is a small follow-up.
+ *
  * The pure function in `songEdit` holds the rule — deep-equal to N single calls, and all-or-nothing when any entry is invalid — so this only has to do the
  * store's part: remember the change for undo, write it, and report what the edited sections now share. That last piece is the same honesty `set_vocal_melody`
  * and `make_unique` carry: a lane slot is **song-global**, so binding three movements to clip B means all three play B, and a caller should be told that
