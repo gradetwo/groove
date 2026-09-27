@@ -948,6 +948,9 @@ export const TOOLS: ToolDefinition[] = [
         .int()
         .min(1)
         .max(64)
+        .describe(
+          "how many bars this section lasts — **at most 64 per section** (`MAX_SECTION_BARS`); a longer piece uses more sections rather than a longer one, which is also what keeps a render chunkable"
+        )
         .optional()
         .describe(
           "A genre's clip is a one-bar loop of 16 sixteenth steps, seeded per genre; a song's `totalSteps` is its bars multiplied by 16"
