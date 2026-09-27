@@ -445,6 +445,40 @@ is the actual claim.
 **What this round did not do**: change the gate. Replacing a threshold is a decision about what the project is willing to call evidence, and it
 belongs in the plan before it belongs in the probe — which is where it now is.
 
+## B7's first honest verdict: no evidence — and the measurement is the reason, not the music
+
+The paired gate's first run:
+
+```
+❌ the two sections differ by 5.04 dB/band against a time-aligned floor of 4.31 (ratio 1.2×; frame-split 5.32)
+❌ the two sections differ by 7.17 dB/band against a time-aligned floor of 5.31 (ratio 1.4×; frame-split 7.79)
+❌ B7 paired: arrangement 1.17× vs control 1.35× = 0.86× of the control (gate: ≥ 2×)
+```
+
+**The control differs from itself more than the arrangement does** — 1.35× against 1.17×, or **0.86× of the control**. So B7's claim that a
+section change is audible *as a change* has **no support from this measurement at all**, and the ✅ that used to appear on that step belonged to a
+different assertion (the arrangement rendered). A gate that has been red for its whole life, replaced by one that says why.
+
+**What it does not mean**, and this matters more than the verdict: it is **not** evidence that the audio does not change between sections. It is
+evidence that **this measurement cannot see the change**, and the diagnosis is in the metric itself.
+
+The probe compares **mean spectra** — 13 bands averaged over each section's windows. A section change is a **temporal** rearrangement: the same
+kit, the same instruments, the same mix, playing in a different order. Its average spectrum is therefore very nearly the same, and the ratio
+lands at ~1 — while the method's own window-to-window variation (the control, and the two-bars-apart floor) is of the same size. **The metric
+throws away exactly the dimension the feature lives in**, which is the same failure this project has recorded four times in other guises: a
+detector that fires on the music, an analysis that reads silence, a proxy blind to its band, a command that silently did nothing. This one is
+**a mean that is blind to time**.
+
+**So the honest next step is a measurement that can see it**, not a lower factor and not a musical change:
+
+* compare **time courses** rather than means — per-bar (or per-beat) energy, onset counts or band energy sequences, correlated across the
+  section boundary. A rearrangement changes *when* things happen, and a sequence comparison is sensitive to precisely that;
+* keep the same control discipline: the control's own time-course self-difference is the floor, and the paired gate is again a ratio of ratios;
+* and if that measurement also says no evidence, then the finding is about the arrangement — which is a **musical** decision, and not one to make
+  by instrument.
+
+`check_b7_pair.mjs` stays as it is in the meantime. It is failing, and it is failing correctly; the number it replaced was passing nothing.
+
 ## What is deliberately rejected
 
 * **Audio in context** (`render_preview` returning audio data). The MCP keeps returning file paths plus an analysis summary; a
