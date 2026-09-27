@@ -331,12 +331,14 @@ try {
       (withLane.seconds ? ` (44.1 kHz took ${withLane.seconds}s)` : "")
   );
 
-  if (out) {
-      const report = JSON.parse((await import("node:fs")).readFileSync(out, "utf8"));
-      report.rewrite = rewrite;
-      report.deltaLoudLufs = deltaLoud;
-      (await import("node:fs")).writeFileSync(out, `${JSON.stringify(report, null, 2)}\n`);
-    }
+  if (out && fs.existsSync(out)) {
+    // Merge into a report an earlier step left, when there is one. This block used to read unconditionally and crashed a CI run with
+    // `ENOENT … loudness-report/texture.json`: it assumed a file it does not create, on a runner that had not created it yet.
+    const report = JSON.parse(fs.readFileSync(out, "utf8"));
+    report.rewrite = rewrite;
+    report.deltaLoudLufs = deltaLoud;
+    fs.writeFileSync(out, `${JSON.stringify(report, null, 2)}\n`);
+  }
   }
 
   if (out) {
