@@ -316,6 +316,42 @@ export const TOOLS: ToolDefinition[] = [
     },
   },
   {
+    /**
+     * The report asked for `analyze_loudness`, `analyze_spectral_balance` and `estimate_key`. Loudness needs no tool — **every render
+     * already returns gated loudness and true peak**, which is what this server has said since the analyser was written — so this adds
+     * the two that were genuinely absent, and says in its description why the third is not here.
+     */
+    name: "estimate_key",
+    title: "Estimate a pattern's key",
+    description:
+      "Estimate the key of a pattern from **its notes** — a pitch-class histogram fitted against major and minor profiles — and report the tonic, the mode and the fit. It reads the composition rather than the audio on purpose: the notes are what the composer chose, while an FFT estimate of a loop with a kick on every beat is mostly a statement about the kick. Per-render loudness needs no tool: render_audio and render_song already return gated loudness and true peak.",
+    readOnly: true,
+    inputSchema: {
+      genreId: z.string().optional().describe("estimate this genre's pattern"),
+      pattern: patternSchema.optional().describe("or a pattern you have"),
+    },
+    handler: (args) => {
+      const pattern = patternFromArgs(args as { genreId?: string; pattern?: unknown });
+      if (!pattern) return failure("provide either genreId or pattern");
+      return estimateKey(pattern);
+    },
+  },
+  {
+    name: "spectral_balance",
+    title: "Spectral balance of a rendered file",
+    description:
+      "The 13-band spectral shape of a WAV this server produced, with the bands named (sub, low, low-mid, mid, high-mid, high) rather than left as indices, plus the spectral centroid. This is the same fingerprint the timbre baseline uses, so a reading here is comparable with it. No browser needed.",
+    readOnly: true,
+    inputSchema: { path: z.string().describe("a .wav path this server produced") },
+    handler: (args) => {
+      try {
+        return analyseWavFile(args.path as string);
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
     name: "share_url",
     title: "Build a share link",
     description: "A URL that opens the app with this groove loaded. Reports whether fidelity had to be reduced to fit the URL budget.",
@@ -878,6 +914,70 @@ export const RESOURCES: ResourceDefinition[] = [
  *
  * Read from the same file the web build copies into `dist/`, so the agent and the UI cannot disagree about what changed.
  */
+/**
+ * A key estimate from the notes, not from the audio.
+ *
+ * The profile weights are Krumhansl-Kessler's (published, and short enough to carry here): correlate the pitch-class histogram against
+ * each rotation of the major and minor profiles and take the best. The honest limit is in the return value — `fit` is a correlation, so a
+ * pattern with three notes will report a key and a low fit rather than pretending to certainty.
+ */
+function estimateKey(pattern: { tracks?: Array<{ pitch?: Array<number | null>; pitches?: Array<number[] | null> }> }): Record<string, unknown> {
+  const histogram = new Array(12).fill(0);
+  let notes = 0;
+  for (const track of pattern.tracks ?? []) {
+    for (const value of track.pitch ?? []) {
+      if (typeof value === "number" && value > 0) {
+        histogram[value % 12] += 1;
+        notes += 1;
+      }
+    }
+    for (const stack of track.pitches ?? []) {
+      for (const value of stack ?? []) {
+        if (typeof value === "number" && value > 0) {
+          histogram[value % 12] += 1;
+          notes += 1;
+        }
+      }
+    }
+  }
+  if (!notes) return { error: "this pattern carries no pitches to estimate a key from", notes: 0 };
+
+  const major = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
+  const minor = [6.33, 2.68, 3.52, 5.38, 2.6, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
+  const correlate = (profile: number[], tonic: number) => {
+    const rotated = profile.map((_, index) => profile[(index - tonic + 12) % 12]);
+    const mean = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;
+    const hm = mean(histogram);
+    const pm = mean(rotated);
+    let num = 0;
+    let hd = 0;
+    let pd = 0;
+    for (let i = 0; i < 12; i += 1) {
+      num += (histogram[i] - hm) * (rotated[i] - pm);
+      hd += (histogram[i] - hm) ** 2;
+      pd += (rotated[i] - pm) ** 2;
+    }
+    return hd && pd ? num / Math.sqrt(hd * pd) : 0;
+  };
+
+  const names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+  let best = { tonic: 0, mode: "major", fit: -2 };
+  for (let tonic = 0; tonic < 12; tonic += 1) {
+    for (const [mode, profile] of [["major", major], ["minor", minor]] as const) {
+      const fit = correlate(profile as number[], tonic);
+      if (fit > best.fit) best = { tonic, mode, fit };
+    }
+  }
+  return {
+    tonic: names[best.tonic],
+    mode: best.mode,
+    fit: Number(best.fit.toFixed(3)),
+    notes,
+    histogram: Object.fromEntries(names.map((name, index) => [name, histogram[index]])),
+    note: "estimated from the pattern's pitches; `fit` is a correlation, so a sparse pattern reports a low fit rather than certainty",
+  };
+}
+
 function changelog(): unknown {
   const file = path.resolve("public/changelog.json");
   try {

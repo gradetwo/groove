@@ -103,6 +103,10 @@ is B2's `flattenSong`, so the tool cannot render something the app would not). S
 
 The package this writes is specified field by field in [`GROOVE_PACKAGE_FORMAT.md`](GROOVE_PACKAGE_FORMAT.md).
 
+**Loudness needs no analysis tool.** `render_audio` and `render_song` already return gated loudness and true peak for the file they wrote;
+`analyze_audio` adds the discontinuities, correlation, tail, spectral shape and energy curve. An evaluation proposed `analyze_loudness` as
+a separate tool — it would return a number the caller already has.
+
 **`bars` counts passes, not measures.** A genre's seeded clip is four measures long (64 steps at 16 to the bar), so `bars: 4` is
 sixteen measures; every song summary reports `passBars` (measures per pass) and `secondsEstimate`, which is what to read before
 rendering. `render_song` also takes `maxDurationSec` and refuses before it starts the browser, because long arrangements take
@@ -116,6 +120,8 @@ minutes and the call reports no progress while it runs.
 | `apply_pattern_ops` ▢ | `pattern`, `ops[]` | a **new** pattern with the operations applied (never mutates the library) |
 | `validate_pattern` ▢ | `pattern` | diagnostics: step-count agreement, velocity range, unknown track ids, gate/pitch length mismatches |
 | `pattern_statistics` ▢ | `pattern` | per-track density, velocity spread, note range, off-beat ratio, recommended swing |
+| `estimate_key` ▢ | `genreId?`, `pattern?` | the tonic, mode and fit from the pattern's **pitches** (a pitch-class histogram against major/minor profiles) — the notes rather than an FFT of a kick-heavy loop |
+| `spectral_balance` ▢ | `path` | the 13-band shape of a rendered WAV with named bands, plus the spectral centroid — the same fingerprint the timbre baseline uses |
 | `compare_genres` ▢ | `a`, `b` | bpm/key/track/pattern/mix differences |
 
 `apply_pattern_ops` is the composition primitive. Each op is one of:
