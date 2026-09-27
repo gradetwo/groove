@@ -272,6 +272,30 @@ The same run answers the question the change deserved to be asked — did it dam
 A 3 ms shift is invisible to a whole-signal statistic, which is exactly why the baselines holding is *expected* rather than reassuring — and
 why the latency row, which is a local measurement, is the one that could see it.
 
+### The realtime half, and a parity the offline fix broke
+
+Reading the realtime path before touching it turned up the same defect class a second time, and a consequence of last round's change that
+has to be stated plainly.
+
+**The realtime hook exists and is not connected.** `AudioEngine` carries `latencyCompensationMs` — default `0`, clamped to ±100 ms,
+persisted with the other audio settings, exposed through `getLatencyCompensation()` — and the code's own comments describe it and two
+neighbours as settings "**reachable only from the console**" (`AudioSettingsTab.tsx:12`, `SettingsModal.tsx:45`). Grepping every reference
+outside the engine finds: a settings tab that reads it, a modal comment, and unit tests. **Nothing on the audio path reads it.** So it is
+declared, stored, displayed and never applied — the same shape as the limiter latency itself, which is presumably not a coincidence: this
+project's recurring defect is a number that is computed correctly and then not used.
+
+**The consequence of the offline fix, which this round would have missed if it had gone straight to code.** The limiter's own comment says
+"live playback and the offline bounce are delayed identically, so the exporter-parity rule is unaffected" — that was true **before** PDC and
+is **false after it**. The offline bounce is now aligned (trimmed by the lookahead); live playback is still delayed by the same lookahead;
+so they differ by **3 ms**, and the property the comment relies on no longer holds. That is not a reason to revert — trimming is the correct
+behaviour, and a nominal event should land at its nominal time — it is a reason to finish the realtime half.
+
+**What "finished" means, concretely**: realtime cannot trim, so it must **schedule earlier** by the compensation — which is precisely what
+`latencyCompensationMs` is for. So the work is not a new mechanism but a connection: apply the knob to the scheduling path, and default it
+to the limiter's latency when the worklet (rather than the fallback) is in the graph, with the user's value still winning when they set one.
+The criterion is the pair already used elsewhere — `limiterKind` beside a measured first-sound — plus the parity statement itself: **live
+and offline must agree again**, which is a check that can be written before the change.
+
 **Still open in workstream 6**: the realtime path (a `DelayNode` with a crossfade, so live playback is aligned too), track factory, folder and
 summing tracks, the region timeline, audio tracks and SVS.
 
