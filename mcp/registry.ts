@@ -384,6 +384,7 @@ export const TOOLS: ToolDefinition[] = [
           ...(args.sampleRate ? { sampleRate: args.sampleRate as number } : {}),
           ...(args.channels ? { channels: args.channels as 1 | 2 } : {}),
         };
+        const baseTrimSeed = () => Number(getGenreLoudnessTrimDb(flattened.pattern.genre_id).toFixed(3));
         const render = (trimDb?: number) =>
           renderAudio(flattened.pattern, { ...analysis, ...(trimDb !== undefined ? { loudnessTrimDb: trimDb } : {}) });
         const reading = (result: Awaited<ReturnType<typeof renderAudio>>) => ({
@@ -394,35 +395,59 @@ export const TOOLS: ToolDefinition[] = [
 
         const before = await render();
         /**
-         * The option **replaces** the genre's own trim rather than adjusting it, so the control law has to be relative to that base.
+         * **Iterate, because a limiter makes this a nonlinear problem.**
          *
-         * The first version asked for `target − measured` directly (−1.37 dB) and nothing moved; the second asked for −11.37 dB and the mix
-         * moved only 4.97 dB. Both are the same fact seen twice: the genres carry a substantial positive trim, so setting the option to a
-         * number does not *change* the level by that number, it *replaces* whatever the genre had. A control law that ignores its base is a
-         * control law that does not converge, which is exactly what the measurement showed.
+         * Two measurements said so before any code did. Asking for −1.37 dB moved the mix by 0.04 dB; asking for −11.37 dB moved it by 4.97
+         * dB and the peak by only 1.6. Neither is proportional, and the two do not share a ratio or an offset — which rules out a wrong base
+         * and points at the master **true-peak limiter** sitting downstream of the trim: on this material it was already reducing by roughly
+         * 6.4 dB, so trimming the input partly *relieves* that reduction instead of lowering the output. A linear control law cannot converge
+         * against that, and no amount of reading the trim constants would have said so.
+         *
+         * So the trim is corrected per measurement: measure, adjust by the residual, measure again, up to three times. Each round is bounded
+         * by the true-peak ceiling, the readings are returned, and `converged` says whether the loop is what produced the answer — because
+         * "it took three passes" is information a caller should have.
          */
+        let best = { result: before, trimDb: baseTrimSeed(), lufs: before.integratedLufs };
+        const attempts: Array<{ trimDb: number; integratedLufs: number; truePeakDb: number }> = [
+          { trimDb: best.trimDb, integratedLufs: before.integratedLufs, truePeakDb: before.truePeakDb },
+        ];
+        for (let round = 0; round < 3; round += 1) {
+          const residual = target - best.lufs;
+          if (Math.abs(residual) <= 0.2) break;
+          const headroom = ceiling - best.result.truePeakDb;
+          const nextTrim = best.trimDb + Math.min(residual, headroom);
+          const next = await render(Number(nextTrim.toFixed(3)));
+          best = { result: next, trimDb: Number(nextTrim.toFixed(3)), lufs: next.integratedLufs };
+          attempts.push({ trimDb: best.trimDb, integratedLufs: next.integratedLufs, truePeakDb: next.truePeakDb });
+        }
+        /** The seed: what a render with no explicit option would use, so the loop starts from the graph's own baseline. */
         const baseTrimDb = getGenreLoudnessTrimDb(flattened.pattern.genre_id);
-        const deltaDb = target - before.integratedLufs;
-        const headroomDb = ceiling - before.truePeakDb;
-        const appliedDeltaDb = Math.min(deltaDb, headroomDb);
-        const appliedDb = baseTrimDb + appliedDeltaDb;
         // Which bound decided it, with a small tolerance so a target that is *exactly* peak-limited is reported as such rather than by noise.
-        const limitedBy = deltaDb - appliedDeltaDb > 0.05 ? "truePeak" : "target";
-        const after = await render(Number(appliedDb.toFixed(3)));
+        // Which bound took the last step: the ceiling if it stopped the trim short of the residual, the target otherwise.
+        const previous = attempts.length >= 2 ? attempts[attempts.length - 2]! : attempts[0]!;
+        const residual = target - previous.integratedLufs;
+        const headroom = ceiling - previous.truePeakDb;
+        const limitedBy = residual - headroom > 0.05 ? "truePeak" : "target";
+        const after = best.result;
         return {
           songId: song.id,
           targetLufs: target,
           truePeakCeilingDb: ceiling,
           before: reading(before),
-          gainDb: Number(deltaDb.toFixed(3)),
+          gainDb: Number((target - before.integratedLufs).toFixed(3)),
           baseTrimDb: Number(baseTrimDb.toFixed(3)),
-          appliedTrimDb: Number(appliedDb.toFixed(3)),
+          appliedTrimDb: best.trimDb,
+          passes: attempts.length,
+          converged: Math.abs((after.integratedLufs ?? 0) - target) <= 0.2,
+          attempts,
           limitedBy,
           after: reading(after),
           note:
             limitedBy === "target"
               ? "the trim reached the target; re-measure to confirm, and check the true peak is still under the ceiling"
-              : `the true-peak ceiling capped the trim at ${appliedDb.toFixed(3)} dB, so the target was not reachable without exceeding ${ceiling} dBTP — lower the target or accept the ceiling`,
+              : limitedBy === "truePeak"
+                ? `the true-peak ceiling capped the trim at ${best.trimDb.toFixed(3)} dB, so the target was not reachable without exceeding ${ceiling} dBTP — lower the target or accept the ceiling`
+                : `the trim settled at ${best.trimDb.toFixed(3)} dB after ${attempts.length} pass(es) and the reading is still ${Number((after.integratedLufs - target).toFixed(2))} LU from the target — the master limiter makes this nonlinear, so a further pass is worth trying`,
         };
       } catch (error) {
         return failure((error as Error).message);
