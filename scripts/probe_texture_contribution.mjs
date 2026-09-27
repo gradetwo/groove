@@ -161,6 +161,27 @@ try {
   };
 
   const withLane = await read(asWritten.songId, "as written");
+  /**
+   * The same song at 8 kHz, which is the analysis lever: `WavExporter` builds its context at the requested rate, so this really does
+   * render fewer samples. The two readings' `seconds` are the number the budget table needs.
+   */
+  const analysisRate = payload(await client.request("tools/call", { name: "create_song", arguments: { genreId: genre, bars: 4 } }));
+  const coarse = await (async () => {
+    const startedAt = Date.now();
+    const rendered = payload(
+      await client.request("tools/call", { name: "render_song", arguments: { songId: analysisRate.songId, format: "wav", sampleRate: 8000 } })
+    );
+    const analysed = payload(await client.request("tools/call", { name: "analyze_audio", arguments: { path: rendered.path } }));
+    return {
+      label: "8 kHz analysis render",
+      seconds: Number(((Date.now() - startedAt) / 1000).toFixed(1)),
+      sampleRate: rendered.sampleRate,
+      integratedLufs: analysed.integratedLufs,
+      metricKeys: Object.keys(analysed).slice(0, 6),
+      bands: analysed.bandDb ?? null,
+      centroidHz: analysed.centroidHz ?? null,
+    };
+  })();
   const withoutLane = await read(withoutTexture.songId, "fx lane cleared");
 
   /**
@@ -226,10 +247,14 @@ try {
     /**
    * The timings, because the SLO table in `docs/MCP.md` is only worth publishing if a CI run keeps producing the numbers.
    */
-  for (const reading of [withLane, withoutLane, rewrite].filter(Boolean)) {
+  for (const reading of [withLane, withoutLane, rewrite, coarse].filter(Boolean)) {
     timings.push(`${reading.label} ${reading.seconds}s`);
   }
   console.log(`  render timings  : ${timings.join(" · ")}`);
+  console.log(
+    `  analysis pass   : ${coarse.sampleRate} Hz at ${coarse.seconds}s` +
+      (withLane.seconds ? ` (44.1 kHz took ${withLane.seconds}s)` : "")
+  );
 
   if (out) {
       const report = JSON.parse((await import("node:fs")).readFileSync(out, "utf8"));
