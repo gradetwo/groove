@@ -21,9 +21,11 @@ describe("the tempo seam", () => {
 
   it("keeps the literal old expressions on the no-map side", () => {
     // These two are the source of byte-identity: the existing arithmetic, verbatim.
-    expect(source).toMatch(/const stepTimeAt = \(step: number\): number => \(stepStarts \? stepStarts\[step\]! : step \* stepDur\);/);
-    expect(source).toMatch(/const stepLengthAt = \(step: number\): number => \(stepStarts \? stepStarts\[step \+ 1\]! - stepStarts\[step\]! : stepDur\);/);
-    expect(source).toMatch(/const totalDurationSec = \(stepStarts \? stepStarts\[totalSteps\]! : totalSteps \* stepDur\) \+ tailSec;/);
+    expect(source).toMatch(/const stepTimeAt = \(step: number\): number => \(timing \? timing\.starts\[step\]! : step \* stepDur\);/);
+    expect(source).toMatch(/const stepLengthAt = \(step: number\): number => \(timing \? timing\.lengthAt\(step\) : stepDur\);/);
+    expect(source).toMatch(/const totalDurationSec = \(timing \? timing\.total : totalSteps \* stepDur\) \+ tailSec;/);
+    // And the extracted timing is only consulted when there is a map, so the no-map arithmetic is never even computed the other way.
+    expect(source).toMatch(/const timing = tempoAware \? stepTiming\(\{ bpm, tempoTrack: patternTempo \}, totalSteps\) : null;/);
   });
 
   it("uses them at the two sites that were linear in the constant", () => {

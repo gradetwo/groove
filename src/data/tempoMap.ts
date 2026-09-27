@@ -75,3 +75,36 @@ export function totalSeconds(song: { bpm: number; tempoTrack?: TempoPoint[] }, b
   for (let bar = 0; bar < Math.max(0, Math.floor(bars)); bar += 1) seconds += barSeconds(song, bar);
   return seconds;
 }
+
+/**
+ * A step's start time and length for a whole pattern — the arithmetic `WavExporter` used to do inline with one constant.
+ *
+ * The **no-map path reproduces `step * (60 / bpm / 4)` exactly**, as the literal expression, because `Σ (n copies of c)` and `n * c` are the same real number and
+ * not always the same float: a prefix sum used unconditionally would move every event time in the last bits, and this project's determinism probe resolves
+ * 0.005 dB. That is why this function branches instead of generalising.
+ *
+ * Extracted from the renderer so the timing can be **proved without a browser** — the criterion a tempo map most needs, and the one a probe can only show
+ * indirectly.
+ */
+export function stepTiming(
+  song: { bpm: number; tempoTrack?: TempoPoint[] },
+  totalSteps: number,
+  stepsPerBar = 16
+): { starts: number[]; lengthAt: (step: number) => number; total: number } {
+  const stepDur = 60 / song.bpm / 4;
+  const points = usablePoints(song);
+  if (points.length === 0) {
+    const starts: number[] = [];
+    for (let step = 0; step <= totalSteps; step += 1) starts.push(step * stepDur);
+    return { starts, lengthAt: () => stepDur, total: totalSteps * stepDur };
+  }
+  const starts: number[] = [0];
+  for (let step = 0; step < totalSteps; step += 1) {
+    starts.push(starts[step]! + barSeconds(song, Math.floor(step / stepsPerBar)));
+  }
+  return {
+    starts,
+    lengthAt: (step: number) => starts[Math.min(step + 1, totalSteps)]! - starts[Math.min(step, totalSteps)]!,
+    total: starts[totalSteps]!,
+  };
+}

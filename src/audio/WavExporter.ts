@@ -42,7 +42,7 @@ import {
 } from "./chordVoicing";
 import { resolveChordTreatment } from "../data/genreVoicing";
 import { buildMasterGraph } from "./masterGraph";
-import { barSeconds, type TempoPoint } from "../data/tempoMap";
+import { stepTiming, type TempoPoint } from "../data/tempoMap";
 import {
   limitBuffers,
   MASTER_LIMITER_INTERNAL_CEILING_DB,
@@ -309,8 +309,8 @@ export async function renderPatternOffline(
    */
   const patternTempo = (pattern as { tempoTrack?: TempoPoint[] }).tempoTrack ?? [];
   const tempoAware = patternTempo.length > 0;
-  const stepTimeAt = (step: number): number => (stepStarts ? stepStarts[step]! : step * stepDur);
-  const stepLengthAt = (step: number): number => (stepStarts ? stepStarts[step + 1]! - stepStarts[step]! : stepDur);
+  const stepTimeAt = (step: number): number => (timing ? timing.starts[step]! : step * stepDur);
+  const stepLengthAt = (step: number): number => (timing ? timing.lengthAt(step) : stepDur);
   const patternSteps =
     (pattern as any).totalSteps && (pattern as any).totalSteps > 0
       ? (pattern as any).totalSteps
@@ -320,16 +320,8 @@ export async function renderPatternOffline(
   // lines below for the graph; resolve it here first so the render length can depend on it.
   const tailGenreFx = resolveGenreFx(pattern.genre_id);
   const tailSec = resolveRenderTailSec(tailGenreFx, bpm);
-  const stepStarts = (() => {
-    if (!tempoAware) return null;
-    const starts = [0];
-    for (let step = 0; step < totalSteps; step += 1) {
-      const bar = Math.floor(step / 16);
-      starts.push(starts[step]! + barSeconds({ bpm, tempoTrack: patternTempo }, bar));
-    }
-    return starts;
-  })();
-  const totalDurationSec = (stepStarts ? stepStarts[totalSteps]! : totalSteps * stepDur) + tailSec;
+  const timing = tempoAware ? stepTiming({ bpm, tempoTrack: patternTempo }, totalSteps) : null;
+  const totalDurationSec = (timing ? timing.total : totalSteps * stepDur) + tailSec;
 
   const OfflineContextClass =
     (typeof window !== "undefined" && (window.OfflineAudioContext || (window as any).webkitOfflineAudioContext)) ||
