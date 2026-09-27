@@ -11,6 +11,7 @@ import { clonePattern, findGenre, getChordProgression, getGenre, getGenreRelatio
 import { applyPatternOps, comparePatterns, patternStatistics, validatePattern, type PatternOp } from "./pattern";
 import { patternFromGenre } from "../src/data/genreMix";
 import { generateMelody } from "./melody";
+import { validateProsody } from "./prosody";
 import { flattenSong } from "../src/data/songFlatten";
 import { APP_VERSION } from "../src/version";
 import { exportProjectPackage, validateGroovePackage } from "../src/features/sequencer/projectDb";
@@ -362,6 +363,36 @@ export const TOOLS: ToolDefinition[] = [
       const pattern = patternFromArgs(args as { genreId?: string; pattern?: unknown });
       if (!pattern) return failure("provide either genreId or pattern");
       return shareUrl(pattern, { origin: args.origin as string | undefined });
+    },
+  },
+  {
+    /**
+     * The one item in the whole evaluation that asks for something with no answer anywhere in the tree, and the reason it takes tones as
+     * **input**: an LLM's pinyin is the least reliable link in the chain, so this check reads tone against melodic movement and never
+     * guesses the tone. It warns rather than errors, and it does not rewrite the caller's tones when sandhi changes the expectation.
+     */
+    name: "validate_prosody",
+    title: "Check lyrics against a melody (倒字)",
+    description:
+      "Compare a lyric's tones with the melody's movement and report reversals — a rising tone sung on a falling interval, or the reverse, which is what makes a listener hear the wrong word. Takes one tone per syllable (1 阴平, 2 阳平, 3 上声, 4 去声, 0/5 neutral) and one MIDI pitch per syllable; it does not guess pinyin, because that is the least reliable link in the chain. **Advisory only**: it warns and never throws, and 3+3 sandhi changes what it expects rather than rewriting the tones you sent.",
+    readOnly: true,
+    inputSchema: {
+      tones: z.array(z.number().int().min(0).max(5)).min(1).describe("one tone per syllable"),
+      pitches: z.array(z.number().int().min(0).max(127)).min(1).describe("one MIDI note per syllable"),
+      syllables: z.array(z.string().max(8)).optional().describe("optional syllable text, used to point at the warning in your own words"),
+      threshold: z.number().int().min(1).max(12).optional().describe("semitones that count as an intentional direction; default 2"),
+    },
+    handler: (args) => {
+      try {
+        return validateProsody({
+          tones: args.tones as number[],
+          pitches: args.pitches as number[],
+          syllables: args.syllables as string[] | undefined,
+          threshold: args.threshold as number | undefined,
+        });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
     },
   },
   {

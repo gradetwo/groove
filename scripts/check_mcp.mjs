@@ -274,6 +274,23 @@ try {
   /**
    * The melody half: deterministic for a seed, in key, and inside the range it reports.
    */
+  /**
+   * The prosody check, held to its two promises: it catches a direction reversal, and it never throws.
+   */
+  const prosody = payload(
+    await client.request("tools/call", { name: "validate_prosody", arguments: { tones: [2, 4], pitches: [60, 64], syllables: ["能", "够"] } })
+  );
+  {
+    const clean = payload(
+      await client.request("tools/call", { name: "validate_prosody", arguments: { tones: [2, 4], pitches: [60, 58] } })
+    );
+    check(
+      "validate_prosody warns on a reversal and stays silent when the melody follows the tones",
+      (prosody.warnings ?? []).length === 1 && (clean.warnings ?? []).length === 0,
+      `warnings ${(prosody.warnings ?? []).length} / clean ${(clean.warnings ?? []).length}`
+    );
+  }
+
   const melody = payload(
     await client.request("tools/call", { name: "generate_melody", arguments: { tonic: 60, mode: "major", bars: 8, seed: 7 } })
   );
