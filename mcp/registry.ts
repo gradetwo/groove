@@ -369,6 +369,15 @@ export const TOOLS: ToolDefinition[] = [
       format: z.enum(["wav", "mp3"]).optional().describe("default wav"),
       sampleRate: z.number().int().min(8000).max(96000).optional(),
       channels: z.number().int().min(1).max(2).optional(),
+      passes: z
+        .number()
+        .int()
+        .min(1)
+        .max(3)
+        .optional()
+        .describe(
+          "how many measure-and-correct rounds to run inside this call; **default 1**, because each round is a full render and a client's 30-second RPC timeout is real. A second call continues from the trim this one reports"
+        ),
     },
     handler: async (args) => {
       try {
@@ -411,7 +420,8 @@ export const TOOLS: ToolDefinition[] = [
         const attempts: Array<{ trimDb: number; integratedLufs: number; truePeakDb: number }> = [
           { trimDb: best.trimDb, integratedLufs: before.integratedLufs, truePeakDb: before.truePeakDb },
         ];
-        for (let round = 0; round < 3; round += 1) {
+        const maxPasses = Math.max(1, Math.min(3, (args.passes as number | undefined) ?? 1));
+        for (let round = 1; round < maxPasses; round += 1) {
           const residual = target - best.lufs;
           if (Math.abs(residual) <= 0.2) break;
           const headroom = ceiling - best.result.truePeakDb;
@@ -453,7 +463,9 @@ export const TOOLS: ToolDefinition[] = [
           attempts,
           limitedBy,
           after: reading(after),
+          nextTrimDb: best.trimDb,
           note:
+            attempts.length < maxPasses ? "the loop stopped at the requested number of passes" :
             limitedBy === "target"
               ? "the trim reached the target; re-measure to confirm, and check the true peak is still under the ceiling"
               : limitedBy === "truePeak"
