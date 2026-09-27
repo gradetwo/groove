@@ -66,3 +66,44 @@ describe("satisfyTones", () => {
     expect(satisfyTones(pitches, tones, { threshold: 5 }).adjusted).toBe(0);
   });
 });
+
+/**
+ * The wiring: `generate_melody` with tones must satisfy them, and without tones must be exactly the melody it always was.
+ */
+describe("generateMelody and the tones", () => {
+  const base = { tonic: 60, mode: "minor" as const, bars: 4, seed: 7, density: 0.6 };
+
+  it("produces a melody that passes the prosody check when it is given the words' tones", async () => {
+    const { generateMelody } = await import("../../mcp/melody");
+    const tones = [2, 4, 4, 3, 1, 2, 4, 3, 1, 1, 4, 2];
+    const melody = generateMelody({ ...base, tones });
+    const sounding = melody.pitch.filter((_, index) => melody.steps[index]! > 0);
+    const checked = Math.min(tones.length, sounding.length);
+    expect(checked).toBeGreaterThan(3);
+    const { warnings } = validateProsody({ tones: tones.slice(0, checked), pitches: sounding.slice(0, checked) });
+    expect(warnings, JSON.stringify(warnings)).toEqual([]);
+    expect(melody.prosody?.remaining).toBe(0);
+  });
+
+  it("is byte-identical to the old output when no tones are given", async () => {
+    const { generateMelody } = await import("../../mcp/melody");
+    const withoutTones = generateMelody(base);
+    const withEmpty = generateMelody({ ...base, tones: [] });
+    expect(withEmpty.pitch).toEqual(withoutTones.pitch);
+    expect(withEmpty.steps).toEqual(withoutTones.steps);
+    // And the reply does not grow a `prosody` field it has nothing to say with.
+    expect(withoutTones.prosody).toBeUndefined();
+    expect("prosody" in withEmpty).toBe(false);
+  });
+
+  it("keeps rhythm and form while moving pitches, which is what makes it a repair rather than a rewrite", async () => {
+    const { generateMelody } = await import("../../mcp/melody");
+    const plain = generateMelody({ ...base, seed: 11, density: 0.7 });
+    const toned = generateMelody({ ...base, seed: 11, density: 0.7, tones: [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4] });
+    expect(toned.steps).toEqual(plain.steps);
+    expect(toned.velocity).toEqual(plain.velocity);
+    expect(toned.contour).toEqual(plain.contour);
+    // A run of falling tones really did need work, and the report says how much.
+    expect(toned.prosody?.adjusted ?? 0).toBeGreaterThan(0);
+  });
+});

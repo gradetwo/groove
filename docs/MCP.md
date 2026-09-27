@@ -123,6 +123,10 @@ Two companions worth knowing at the same point: `set_lane_slots` binds a lane to
 rather than 72 requests), and `analyze_audio` is the ear — it returns the energy curve, loudness, true peak and spectral balance for a rendered file, which is
 what closes the write-render-listen-revise loop.
 
+A third companion belongs to a song with words: pass **`tones`** to `generate_melody` (one tone per sounding note) and the melody is written **against** the
+lyric's tones — the reply reports how many notes it moved and whether any reversal survived — and `validate_prosody` then checks the same melody with the same
+rule, so "the generation respected the tones" and "the checker agrees" are one claim rather than two.
+
 ### What the owner decided in September 2026, and what holds it in place
 
 Five questions were put to the owner after the fourth evaluation of this server, and all five are answered. They are recorded here with the acceptance line each

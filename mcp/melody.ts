@@ -1,3 +1,4 @@
+import { satisfyTones } from "./prosody";
 /**
  * Melody generation, contour first.
  *
@@ -15,6 +16,11 @@
  * `AABA` repeats the first phrase **literally**, which is what makes it a form rather than four unrelated phrases.
  */
 export interface MelodyOptions {
+  /**
+   * One tone per **sounding** note, in the order the notes are played (1 阴平 / 2 阳平 / 3 上声 / 4 去声 / 0 or 5 neutral), so a melody can be written against
+   * the words rather than checked after the fact (sixth report, item VII). Absent, the generator behaves exactly as it did.
+   */
+  tones?: number[];
   tonic: number;
   mode?: "major" | "minor";
   /** Bars of 4/4 to write; eight gives an AABA with two-bar phrases. */
@@ -30,6 +36,11 @@ export interface MelodyOptions {
 }
 
 export interface GeneratedMelody {
+  /**
+   * What the tone constraint did, when the caller supplied one (sixth report, item VII): how many notes were checked, how many had to move, and how many reversals
+   * survived. Present only when tones were given — a melody with no words has nothing to report, and the reply stays the shape it always was.
+   */
+  prosody?: { checked: number; adjusted: number; remaining: number };
   /** Lane-shaped arrays, ready to drop onto a track (`steps`, `pitch`, `velocity`, `gate`). */
   steps: number[];
   pitch: number[];
@@ -178,7 +189,22 @@ export function generateMelody(options: MelodyOptions): GeneratedMelody {
     }
   }
 
+  const soundingIndexes = pitch.map((_, index) => index).filter((index) => steps[index] > 0);
   const sounding = pitch.filter((_, index) => steps[index] > 0);
+
+  /**
+   * The 倒字 repair, when the caller supplied tones: it runs **after** the phrase structure exists, so it moves pitches without touching rhythm or form, and it
+   * calls the same validator a caller would. Anything it cannot fix is reported rather than hidden, and with no tones this block does not run at all — which is
+   * what keeps the output byte-identical to before.
+   */
+  const prosodyFeedback = (() => {
+    const tones = options.tones;
+    if (!tones || tones.length === 0 || sounding.length === 0) return null;
+    const checked = Math.min(tones.length, sounding.length);
+    const repaired = satisfyTones(sounding.slice(0, checked), tones.slice(0, checked), { range: [lo, hi] });
+    for (let i = 0; i < checked; i += 1) pitch[soundingIndexes[i]!] = repaired.pitches[i]!;
+    return { checked, adjusted: repaired.adjusted, remaining: repaired.remaining };
+  })();
   const intervals: number[] = [];
   for (let i = 1; i < sounding.length; i += 1) intervals.push(sounding[i] - sounding[i - 1]);
 
@@ -187,6 +213,7 @@ export function generateMelody(options: MelodyOptions): GeneratedMelody {
     pitch,
     velocity,
     gate,
+    ...(prosodyFeedback ? { prosody: prosodyFeedback } : {}),
     contour: contours,
     phrases,
     range: [lo, hi],
