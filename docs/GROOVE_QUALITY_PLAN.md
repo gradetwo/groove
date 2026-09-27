@@ -66,6 +66,32 @@ built into a browser probe, and the last one even catalogued the DSP that would 
 question — with the analyser's own loudness and the same 13-band fingerprint the timbre baseline uses — has been in the toolset since
 the MCP was written. The probe's role stays what it was: the **structural** check that both renders differ at all.
 
+### A4 answered in the frequency domain: the lane is audible, modest, and mid-band (2026-09-28)
+
+Run 36282433126, with the probe reading the analyser's real fields (`bandDb`, `centroidHz`):
+
+```
+band deltas : [-0.19, -0.1, 0.01, 0.26, 0.52, 0.7, 0.45, 0.27, 0.35, 0.37, 0, -0.35, -0.69] dB (as written minus cleared)
+centroid    : 99.33 Hz as written · 95.48 Hz cleared
+```
+
+Read as what it is: clearing the `fx` lane **lowers the mix's mid bands by up to 0.7 dB** (bands 4–9, the ones either side of speech
+range), and barely moves the centroid, which the kick and bass dominate at ~99 Hz. So the lane is **present, audible and modest** —
+none of the three things the earlier readings claimed (absent / silent / not in the mix), all of which were artefacts of a `clear_track`
+that cleared nothing.
+
+**A4 therefore closes as implemented and audible**, with its size measured rather than asserted: a texture lane contributes about
+**0.04 LU and 0.7 dB in its loudest band** on this genre. Whether that is *enough* for a riser is a **taste decision, not a
+measurement** — a riser is meant to be prominent in a build and 0.7 dB is not prominent, so raising the lane's level or its preset's
+gain remains a reasonable edit, but it is the owner's call and the instrument to verify it now exists (this probe, before and after,
+plus the CI baseline re-record the objective named).
+
+**What this item cost, recorded honestly**: five measurements and five conclusions, four of them wrong, each wrong in a different way —
+a proxy that cannot see the band, a census of structure without material, a conclusion generalised from three genres, and finally a
+command that did nothing while reporting success. The one that answered it took two days of round trips and reads a number the
+analyser had been returning **since the MCP was written** (`bandDb`, which is also what the timbre baseline uses). The cost was not the
+tooling; it was believing each intermediate number without first checking it had measured anything.
+
 ### A4's fourth measurement: the 0.00009 LU was a **no-op measured as a result** (2026-09-28)
 
 Run 36281541687, with the probe sending the op the field it actually reads:
