@@ -103,6 +103,22 @@ is B2's `flattenSong`, so the tool cannot render something the app would not). S
 
 The package this writes is specified field by field in [`GROOVE_PACKAGE_FORMAT.md`](GROOVE_PACKAGE_FORMAT.md).
 
+### Render budgets, as numbers rather than intentions (2026-09-28)
+
+An external evaluation proposed staged render SLOs, on the correct observation that a minute-level render makes an agent's
+trial-and-error loop unusable. What this server can honestly claim today is narrower, and it comes from CI logs rather than from a
+plan: each song render in the audio scope takes **tens of seconds**, and the texture probe now prints its timings (`render timings :
+as written Ns · fx lane cleared Ns · fx saturated Ns`) so the number is produced by every run instead of being remembered.
+
+| budget | target | today | what closes the gap |
+|---|---|---|---|
+| a full song render | ≤ 20 s | tens of seconds | the render is one `page.evaluate` over an offline context; the super-linear growth with step count is measured in `GROOVE_QUALITY_PLAN.md` |
+| an analysis-only render (energy curve, spectrum) | ≤ 1 s | not built | an 8 kHz mono offline render — 1/12 the samples, which is the evaluation's own suggestion and the next slice of this work |
+| a section render | ≤ 5 s | available today by rendering a one-section song | already possible with `render_song` on a song whose `sections` hold one entry |
+
+`analyze_audio` is browser-free and reads a file in milliseconds; the budgets above are about **rendering**, which is why the analysis
+tools landed before the render path changed.
+
 **Loudness needs no analysis tool.** `render_audio` and `render_song` already return gated loudness and true peak for the file they wrote;
 `analyze_audio` adds the discontinuities, correlation, tail, spectral shape and energy curve. An evaluation proposed `analyze_loudness` as
 a separate tool — it would return a number the caller already has.

@@ -135,7 +135,9 @@ try {
     arguments: { songId: withoutTexture.songId, slot: "A", pattern: cleared.pattern },
   });
 
+  const timings = [];
   const read = async (songId, label) => {
+    const startedAt = Date.now();
     const rendered = payload(await client.request("tools/call", { name: "render_song", arguments: { songId, format: "wav" } }));
     const analysed = payload(await client.request("tools/call", { name: "analyze_audio", arguments: { path: rendered.path } }));
     /**
@@ -150,6 +152,7 @@ try {
       integratedLufs: analysed.integratedLufs,
       truePeakDb: analysed.truePeakDb,
       // The reply's keys, because its shape is the one thing this probe has had to guess twice.
+      seconds: Number(((Date.now() - startedAt) / 1000).toFixed(1)),
       metricKeys: Object.keys(analysed).slice(0, 24),
       // The bands matter more than the loudness: under a master limiter a quiet element barely moves the whole-file figure.
       bands: analysed.bandDb ?? null,
@@ -220,7 +223,15 @@ try {
         ? "  → a saturated lane still moves nothing: the voice/preset is what is silent, not the notes"
         : "  → a saturated lane moves the mix: the genres' fx note data is what is quiet"
     );
-    if (out) {
+    /**
+   * The timings, because the SLO table in `docs/MCP.md` is only worth publishing if a CI run keeps producing the numbers.
+   */
+  for (const reading of [withLane, withoutLane, rewrite].filter(Boolean)) {
+    timings.push(`${reading.label} ${reading.seconds}s`);
+  }
+  console.log(`  render timings  : ${timings.join(" · ")}`);
+
+  if (out) {
       const report = JSON.parse((await import("node:fs")).readFileSync(out, "utf8"));
       report.rewrite = rewrite;
       report.deltaLoudLufs = deltaLoud;
