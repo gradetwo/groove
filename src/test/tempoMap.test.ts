@@ -94,3 +94,32 @@ describe("stepTiming", () => {
    * failing assertion cannot be mistaken for a passing one while it is investigated.
    */
 });
+
+/**
+ * The step timing's **mapped** path, restored after the failure that found the bug in it.
+ *
+ * The first version of these two assertions failed — `expected 2 to be 0.125`, and a ramp total of 194.4 s where the bar arithmetic says 12.15 — and a diagnostic
+ * that printed the intermediate values located the fault in `stepTiming`'s accumulation rather than in the reading: it added a bar's length at **every step**,
+ * making a bar sixteen times too long. `bpmAtBar`, `barSeconds` and `totalSeconds` were right throughout.
+ */
+describe("stepTiming, mapped", () => {
+  it("moves the steps after a jump by exactly the ratio and leaves the ones before it alone", () => {
+    const plain = stepTiming({ bpm: 120 }, 64);
+    const mapped = stepTiming({ bpm: 120, tempoTrack: [{ atBar: 2, bpm: 240 }] }, 64);
+    for (let step = 0; step <= 2 * 16; step += 1) expect(mapped.starts[step]).toBe(plain.starts[step]);
+    // The first step of the new tempo starts exactly where the old one left off: no gap, no overlap.
+    expect(mapped.starts[32]).toBe(plain.starts[32]);
+    expect(mapped.starts[64]! - mapped.starts[32]!).toBeCloseTo((plain.starts[64]! - plain.starts[32]!) / 2, 10);
+  });
+
+  it("sums interpolated bars for a linear ramp, and agrees with the bar arithmetic", () => {
+    const ramp = { bpm: 60, tempoTrack: [{ atBar: 0, bpm: 60, curve: "linear" as const }, { atBar: 4, bpm: 120 }] };
+    const ramped = stepTiming(ramp, 64);
+    const flat = stepTiming({ bpm: 60 }, 64);
+    expect(ramped.total).toBeLessThan(flat.total);
+    expect(ramped.total).toBeGreaterThan(flat.total / 2);
+    // Two independent routes to the same number: the step grid and the bar arithmetic.
+    expect(ramped.total).toBeCloseTo(totalSeconds(ramp, 4), 10);
+    expect(ramped.starts[64]! - ramped.starts[48]!).toBeLessThan(ramped.starts[16]! - ramped.starts[0]!);
+  });
+});

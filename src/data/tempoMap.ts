@@ -98,9 +98,21 @@ export function stepTiming(
     for (let step = 0; step <= totalSteps; step += 1) starts.push(step * stepDur);
     return { starts, lengthAt: () => stepDur, total: totalSteps * stepDur };
   }
-  const starts: number[] = [0];
-  for (let step = 0; step < totalSteps; step += 1) {
-    starts.push(starts[step]! + barSeconds(song, Math.floor(step / stepsPerBar)));
+  /**
+   * A step is **one sixteenth of its own bar**, and a bar's length is added **once per bar**, not once per step.
+   *
+   * The first version added `barSeconds(bar)` at every step, which made a bar sixteen times too long — the diagnostic run showed `starts[32] = 64 s` where two
+   * bars at 2 s is 4 s. The reading helpers were right all along (`bpmAtBar` gave `[120, 240, …]`, `barSeconds` `[2, 2, 1, 1, 1]`, `totalSeconds(4)` 12.15 s);
+   * the accumulation was mine.
+   */
+  const bars = Math.ceil(totalSteps / stepsPerBar);
+  const barStarts: number[] = [0];
+  for (let bar = 0; bar < bars; bar += 1) barStarts.push(barStarts[bar]! + barSeconds(song, bar));
+  const starts: number[] = [];
+  for (let step = 0; step <= totalSteps; step += 1) {
+    const bar = Math.floor(step / stepsPerBar);
+    const withinBar = step - bar * stepsPerBar;
+    starts.push(barStarts[bar]! + (withinBar / stepsPerBar) * barSeconds(song, bar));
   }
   return {
     starts,
