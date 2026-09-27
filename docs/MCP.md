@@ -105,6 +105,28 @@ is B2's `flattenSong`, so the tool cannot render something the app would not). S
 
 The package this writes is specified field by field in [`GROOVE_PACKAGE_FORMAT.md`](GROOVE_PACKAGE_FORMAT.md).
 
+### What the owner decided in September 2026, and what holds it in place
+
+Five questions were put to the owner after the fourth evaluation of this server, and all five are answered. They are recorded here with the acceptance line each
+one has to satisfy, because a decision whose criterion lives only in a conversation is a decision that erodes.
+
+| decision | what shipped | what holds it |
+|---|---|---|
+| **non-ASCII song titles** must not collide | a title with no ASCII in it gets a stable token derived from itself; ASCII names are byte-identical and an unnamed song is still `master` | `src/test/songSlug.test.ts` — five cases, including the pair of Chinese titles that exposed it |
+| **lane multiplicity**: keep the eight `track_id`s as roles, add optional `laneId` | addressed by `laneId` first, kind as fallback, so `{track_id: "lead", laneId: "lead-2"}` is a distinct lane that everything naming `"lead"` still ignores | `laneIdAddressing.test.ts` (four cases) and `laneIdFlatten.test.ts`, which also proves `validatePattern` accepts two lanes of a kind — the rule that rejected every such song |
+| **lane slots over MCP**: a batch op and a tool | `set_lane_slots`: 72 cells in one all-or-nothing call, reporting the slots the edited sections share | `setSectionLaneSlotsBatch.test.ts` (deep-equality with N single calls, transaction by object identity, the 72-cell case) and `laneSlotsStore.test.ts` |
+| **a tempo track** for multi-movement pieces | `tempoTrack` points at whole bars, `jump` or `linear`, absent meaning byte-identical; `set_tempo` writes it, validated rather than filtered; the renderer reads it while scheduling | `tempoMap.test.ts` (absent, jump ratio, per-bar interpolation, unreadable points ignored), `tempoCarry.test.ts` (the map travels, additively), `tempoStore.test.ts`, and `tempoSeamWiring.test.ts` for the branch that keeps the no-map expressions literal |
+| **audio tracks and SVS** | audio tracks scoped in `docs/AUDIO_TRACKS_AND_SVS_PLAN.md`; **SVS reserved and empty**, exposed so the absence is discoverable | `check:mcp` asserts the stub says it is reserved and validates its arguments |
+
+Two things learned while building them, both worth carrying:
+
+* **"the same arithmetic" is not "the same expression".** `Σ (n copies of c)` and `n * c` agree in real arithmetic and not always in floating point, so the
+  tempo seam **branches** and the no-map path keeps the literal old expressions — byte-identity as a property of the source, not a proof about rounding. The
+  determinism probe (0.005 dB), the 159-genre timbre baseline and the fresh loudness re-renders are then guards rather than oracles;
+* **a bar's length belongs to the bar, not to each of its steps.** The first version of the tempo accumulation added a bar's length at every step, making a bar
+  sixteen times too long. It was found by a diagnostic that printed the intermediate values after two assertions failed — and it is the reason those assertions
+  are in the file today rather than adjusted away.
+
 ### What three external evaluations claimed, and what the code actually does
 
 Three reviews of this server were written by people composing with it. Their claims were checked one by one against the tree, and most were narrower,
