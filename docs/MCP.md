@@ -156,7 +156,6 @@ an agent can render, measure, change one op and measure again.
 | `groove://genre/{id}` | one genre document |
 | `groove://loudness` | the loudness baseline table |
 | `groove://changelog` | the release notes the app itself shows |
-| `groove://docs/architecture` | `ARCHITECTURE_SURFACES.md` |
 
 ### Prompts
 
