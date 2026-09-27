@@ -316,6 +316,22 @@ try {
    * Written as a loop rather than a `map`, because `await` inside a `map` callback is a syntax error at module scope — which is how the
    * first version of this check failed, loudly and immediately.
    */
+  /**
+   * `set_chord_progression` end to end, because the runtime schema rejected it while the implementation, the docs and `suggest_progression`'s
+   * own reply all recommended it. A tool the gate never calls is a tool whose schema can be wrong for weeks.
+   */
+  const chordsApplied = payload(
+    await client.request("tools/call", {
+      name: "apply_pattern_ops",
+      arguments: { genreId: "chicago-house", ops: [{ op: "set_chord_progression", chords: [[48, 52, 55], [53, 57, 60]] }] },
+    })
+  );
+  check(
+    "apply_pattern_ops accepts set_chord_progression",
+    (chordsApplied.applied ?? [])[0]?.ok === true,
+    JSON.stringify((chordsApplied.applied ?? [])[0] ?? {}).slice(0, 120)
+  );
+
   const exampleRows = payload(await client.request("tools/call", { name: "get_example", arguments: { genreId: "chicago-house" } }));
   const rows = exampleRows.examples ?? [];
   let validExamples = 0;

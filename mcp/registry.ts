@@ -77,6 +77,12 @@ const opSchema = z.discriminatedUnion("op", [
   z.object({ op: z.literal("transpose"), semitones: z.number().int(), tracks: z.array(z.string()).optional() }),
   z.object({ op: z.literal("humanize"), amount: z.number().min(0).max(1).optional(), velocityAmount: z.number().min(0).max(1).optional(), seed: z.number().int().optional(), tracks: z.array(z.string()).optional() }),
   z.object({ op: z.literal("swing"), amount: z.number().min(0).max(100) }),
+  z.object({
+    op: z.literal("set_chord_progression"),
+    track: z.string().optional(),
+    chords: z.array(z.array(z.number().int().min(0).max(127))).min(1),
+    velocity: z.number().int().min(1).max(127).optional(),
+  }),
   z.object({ op: z.literal("clear_track"), track: z.string() }),
   z.object({ op: z.literal("copy_track"), from: z.string(), to: z.string() }),
 ]);
@@ -569,7 +575,7 @@ export const TOOLS: ToolDefinition[] = [
         .max(64)
         .optional()
         .describe(
-          "how many PASSES of the clip the first section repeats — not measures. A genre's seeded clip is 4 measures per pass, so `bars: 4` is 16 measures. The result reports `passBars` (measures per pass) and `secondsEstimate`."
+          "A genre's clip is a one-bar loop of 16 sixteenth steps, seeded per genre; a song's `totalSteps` is its bars multiplied by 16"
         ),
       label: z
         .string()

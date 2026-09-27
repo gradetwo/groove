@@ -19,6 +19,28 @@ describe("generateMelody", () => {
     expect(other.pitch).not.toEqual(a.pitch);
   });
 
+  it("returns exactly bars × 16 steps, including at four bars where the form does not fit", () => {
+    /**
+     * The regression: `perPhrase` has a floor of two bars, so a four-bar request cannot hold an AABA of four phrases — and the first version
+     * clamped `toStep` without checking `fromStep`, giving a **negative** copy length. `slice(0, -32)` returns the first 32 elements rather than
+     * nothing, and `splice(96, 0, ...)` appended them: 96 steps for `bars: 4`, with 32 ghost copies of phrase A at the end. Eight bars and two
+     * bars were both fine, which is why the existing tests missed it.
+     */
+    for (const bars of [2, 4, 8, 12]) {
+      const melody = generateMelody({ ...base, bars });
+      expect(melody.steps.length, `bars: ${bars}`).toBe(bars * 16);
+      expect(melody.pitch.length).toBe(bars * 16);
+      expect(melody.velocity.length).toBe(bars * 16);
+      expect(melody.gate.length).toBe(bars * 16);
+      // And the reported phrases must stay inside the pattern rather than past its end.
+      for (const phrase of melody.phrases) {
+        expect(phrase.fromStep).toBeLessThan(bars * 16);
+        expect(phrase.toStep).toBeLessThanOrEqual(bars * 16);
+        expect(phrase.toStep).toBeGreaterThan(phrase.fromStep);
+      }
+    }
+  });
+
   it("keeps every note inside the range it reports, which is at most two octaves", () => {
     const melody = generateMelody({ ...base, range: [60, 84] });
     const sounding = melody.pitch.filter((_, index) => melody.steps[index] > 0);
