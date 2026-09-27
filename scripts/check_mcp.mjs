@@ -271,6 +271,28 @@ try {
    * The harmony pair, end to end and browser-free: choose a progression for a feeling, render it in a key, and check that what came
    * back is the progression it says it is.
    */
+  /**
+   * The melody half: deterministic for a seed, in key, and inside the range it reports.
+   */
+  const melody = payload(
+    await client.request("tools/call", { name: "generate_melody", arguments: { tonic: 60, mode: "major", bars: 8, seed: 7 } })
+  );
+  const again = payload(
+    await client.request("tools/call", { name: "generate_melody", arguments: { tonic: 60, mode: "major", bars: 8, seed: 7 } })
+  );
+  {
+    const scale = [0, 2, 4, 5, 7, 9, 11];
+    const sounding = (melody.pitch ?? []).filter((_, index) => (melody.steps ?? [])[index] > 0);
+    check(
+      "generate_melody is seeded, in key and inside its range",
+      sounding.length > 0 &&
+        JSON.stringify(melody.pitch) === JSON.stringify(again.pitch) &&
+        sounding.every((note) => note >= melody.range[0] && note <= melody.range[1]) &&
+        sounding.every((note) => scale.includes((((note - 60) % 12) + 12) % 12)),
+      `${sounding.length} notes in ${JSON.stringify(melody.range)}, contours ${(melody.contour ?? []).join("")}`
+    );
+  }
+
   const suggested = payload(
     await client.request("tools/call", { name: "suggest_progression", arguments: { tonic: 60, mode: "major", emotion: "nostalgic" } })
   );

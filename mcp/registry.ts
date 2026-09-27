@@ -10,6 +10,7 @@ import { z } from "zod";
 import { clonePattern, findGenre, getChordProgression, getGenre, getGenreRelations, suggestProgression, libraryIndex, listCategories, listChordProgressions, listGenres, listMasterclasses, searchGenres } from "./library";
 import { applyPatternOps, comparePatterns, patternStatistics, validatePattern, type PatternOp } from "./pattern";
 import { patternFromGenre } from "../src/data/genreMix";
+import { generateMelody } from "./melody";
 import { flattenSong } from "../src/data/songFlatten";
 import { APP_VERSION } from "../src/version";
 import { exportProjectPackage, validateGroovePackage } from "../src/features/sequencer/projectDb";
@@ -361,6 +362,42 @@ export const TOOLS: ToolDefinition[] = [
       const pattern = patternFromArgs(args as { genreId?: string; pattern?: unknown });
       if (!pattern) return failure("provide either genreId or pattern");
       return shareUrl(pattern, { origin: args.origin as string | undefined });
+    },
+  },
+  {
+    /**
+     * The melody half of workstream 4, and the piece the evaluation's diagnosis pointed at: lyrics arrive with no melodic shape to attach
+     * to, so the shape is chosen first (a contour per phrase), the key's scale supplies the notes, and the range is bounded by
+     * construction. Seeded, so a second attempt is a different melody rather than a different sound.
+     */
+    name: "generate_melody",
+    title: "Generate a melody",
+    description:
+      "Write a melody contour-first: a named contour per phrase (arch, valley, rising, falling), the contour mapped onto the key's own scale so every note is in key by construction, and notes placed on an eighth-note grid with seeded rests. Returns lane-shaped arrays (steps, pitch, velocity, gate) ready for a track, plus the contours, phrase ranges, the range used and interval statistics. AABA repeats its first phrase literally. Deterministic for a seed.",
+    readOnly: true,
+    inputSchema: {
+      tonic: z.number().int().min(0).max(108).describe("MIDI note of the key's tonic"),
+      mode: z.enum(["major", "minor"]).optional().describe("default major"),
+      bars: z.number().int().min(2).max(32).optional().describe("bars of 4/4; default 8, which gives an AABA of two-bar phrases"),
+      form: z.enum(["AABA", "ABAB"]).optional().describe("default AABA"),
+      range: z.tuple([z.number().int(), z.number().int()]).optional().describe("inclusive MIDI range; at most two octaves, clamped"),
+      seed: z.number().int().min(0).max(1_000_000).optional().describe("default 1; the same seed gives the same melody"),
+      density: z.number().min(0.1).max(1).optional().describe("how many eighth-note slots carry a note; default 0.55"),
+    },
+    handler: (args) => {
+      try {
+        return generateMelody({
+          tonic: args.tonic as number,
+          mode: args.mode as "major" | "minor" | undefined,
+          bars: args.bars as number | undefined,
+          form: args.form as "AABA" | "ABAB" | undefined,
+          range: args.range as [number, number] | undefined,
+          seed: args.seed as number | undefined,
+          density: args.density as number | undefined,
+        });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
     },
   },
   {
