@@ -254,6 +254,55 @@ export function listChordProgressions(args: { category?: string } = {}): Record<
  * progression in the same key always produces the same numbers, which is what makes it testable and what lets
  * `set_chord_progression` be replayed.
  */
+/**
+ * Choose a progression from the library and render it in the caller's key.
+ *
+ * The library supplies *which* progression — it carries roman numerals, a category, an emotion and the songs that used it — and
+ * `romanToChords` supplies what it sounds like. This joins them, and it is deliberately a **chooser plus a renderer** rather than a
+ * generator: everything it returns can be traced to a committed entry, and the caller can read the numerals to see why.
+ */
+export function suggestProgression(args: {
+  key?: { tonic?: number; mode?: "major" | "minor" };
+  emotion?: string;
+  category?: string;
+  avoid?: string;
+}): Record<string, unknown> {
+  const wanted = (args.emotion ?? "").toLowerCase();
+  const category = (args.category ?? "").toLowerCase();
+  const avoid = new Set((args.avoid ?? "").split(/[,\s]+/).filter(Boolean));
+
+  const scored = POPULAR_PROGRESSIONS.map((progression) => {
+    const emotion = `${progression.emotion?.en ?? ""} ${progression.emotion?.zh ?? ""}`.toLowerCase();
+    let score = 0;
+    // The emotion match is the point of asking: a hit on the caller's word beats a category hit beats being first in the list.
+    for (const word of wanted.split(/[,\s]+/).filter(Boolean)) if (emotion.includes(word)) score += 4;
+    if (category && (progression.category ?? "").toLowerCase() === category) score += 2;
+    if (avoid.has(progression.id)) score -= 100;
+    return { progression, score };
+  }).sort((a, b) => b.score - a.score || (a.progression.id < b.progression.id ? -1 : 1));
+
+  const picked = scored[0]?.progression;
+  if (!picked) return { error: "no progressions in the library" };
+
+  const tonic = args.key?.tonic ?? 60;
+  const mode = args.key?.mode ?? "major";
+  const roman = Array.isArray(picked.roman) ? picked.roman.join("-") : String(picked.roman);
+  const { chords, numerals, warnings } = romanToChords(roman, { tonic, mode });
+  return {
+    id: picked.id,
+    name: bilingual(picked.name),
+    roman,
+    category: picked.category,
+    emotion: bilingual(picked.emotion),
+    songs: (picked.songs ?? []).slice(0, 3).map((song) => `${song.title} — ${song.artist}`),
+    key: { tonic, mode },
+    numerals,
+    chords,
+    ...(warnings.length ? { warnings } : {}),
+    why: `chosen for "${args.emotion ?? picked.category ?? "any"}" from ${POPULAR_PROGRESSIONS.length} committed progressions; feed \`chords\` to apply_pattern_ops with set_chord_progression`,
+  };
+}
+
 export function romanToChords(
   roman: string,
   key: { tonic: number; mode?: "major" | "minor" }

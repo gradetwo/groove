@@ -266,6 +266,23 @@ try {
    * returns gated loudness and true peak, which `docs/MCP.md` has said since the analyser was written.
    */
   const key = payload(await client.request("tools/call", { name: "estimate_key", arguments: { genreId: "chicago-house" } }));
+
+  /**
+   * The harmony pair, end to end and browser-free: choose a progression for a feeling, render it in a key, and check that what came
+   * back is the progression it says it is.
+   */
+  const suggested = payload(
+    await client.request("tools/call", { name: "suggest_progression", arguments: { tonic: 60, mode: "major", emotion: "nostalgic" } })
+  );
+  check(
+    "suggest_progression renders a committed progression in the caller's key",
+    typeof suggested.id === "string" &&
+      Array.isArray(suggested.chords) &&
+      suggested.chords.length === suggested.numerals.length &&
+      suggested.chords.every((chord) => Array.isArray(chord) && chord.length >= 3) &&
+      suggested.chords.flat().every((note) => note >= 0 && note <= 127),
+    `${suggested.id} ${suggested.roman} → ${JSON.stringify(suggested.chords ?? []).slice(0, 80)}`
+  );
   check(
     "estimate_key reports a tonic, a mode and a fit from the notes",
     typeof key.tonic === "string" && (key.mode === "major" || key.mode === "minor") && Number.isFinite(key.fit) && key.notes > 0,
