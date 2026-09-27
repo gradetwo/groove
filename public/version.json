@@ -1,27 +1,27 @@
 {
-  "version": "2.34.14",
+  "version": "2.34.15",
   "releaseDate": "2026-09-28",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.14",
+    "version": "2.34.15",
     "date": "2026-09-28",
     "category": "feature",
     "title": {
-      "zh": "分轨片段可编辑，CI 恢复健康",
-      "en": "Per-lane clips are editable, and CI is healthy again"
+      "zh": "整批：非英文命名、分轨矩阵、多乐章变速",
+      "en": "One batch: non-ASCII titles, the lane matrix, and multi-movement tempo"
     },
     "highlights": [
       {
-        "zh": "编排面板每轨一格可设置该轨自己的片段，也可以还原为段落默认。",
-        "en": "Each cell in the arrangement view can set a lane's own clip, or clear it back to the section's default."
+        "zh": "非英文曲名不再退化为同一个文件名而互相覆盖；ASCII 命名逐字节不变。",
+        "en": "Non-ASCII titles no longer collapse to one filename and overwrite each other; ASCII names are byte-identical."
       },
       {
-        "zh": "修好了两个长期红的门禁：层依赖违规（genreArt 下移一层）与一处 lint 错误。",
-        "en": "Two long-red gates fixed: a layer violation (genreArt moved down a layer) and a lint error."
+        "zh": "新增 set_lane_slots（9×8 矩阵一次调用、全有或全无）、set_tempo（速度点，jump/linear）。",
+        "en": "New set_lane_slots (a 9x8 matrix in one all-or-nothing call) and set_tempo (tempo points, jump/linear)."
       },
       {
-        "zh": "探针不再因读取一个自己并不创建的报告文件而崩溃。",
-        "en": "The probe no longer crashes reading a report file it does not create."
+        "zh": "轨道可带可选 laneId，于是同一种类能有两轨；留空的 singsynthesis 接口明说自己未实现。",
+        "en": "Lanes may carry an optional laneId so a kind can have two; the reserved SVS interface says it is not implemented."
       }
     ],
     "truncated": false
