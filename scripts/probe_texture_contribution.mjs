@@ -166,6 +166,37 @@ try {
    * render fewer samples. The two readings' `seconds` are the number the budget table needs.
    */
   const analysisRate = payload(await client.request("tools/call", { name: "create_song", arguments: { genreId: genre, bars: 4 } }));
+
+  /**
+   * Recommendation 5's acceptance, in the audio scope because it **renders** — `check:mcp` is deliberately browser-free, so this cannot live
+   * there. The tool is allowed either answer: reach the target, or reach the true-peak ceiling and say so. Both are correct; only silence
+   * about which one happened would be a failure.
+   *
+   * The −14 target is deliberately higher than the mix's natural level, so the trim should be positive and the ceiling should not bind —
+   * if the ceiling does bind here, that is worth knowing and the detail line says so.
+   */
+  const normalized = payload(
+    await client.request("tools/call", {
+      name: "normalize_loudness",
+      arguments: { songId: analysisRate.songId, targetLufs: -14, truePeakCeilingDb: -1 },
+    })
+  );
+  const withinTarget = Math.abs((normalized.after?.integratedLufs ?? NaN) - -14) <= 0.3;
+  const peakLimited =
+    normalized.limitedBy === "truePeak" && (normalized.after?.truePeakDb ?? NaN) <= (normalized.truePeakCeilingDb ?? -1) + 0.1;
+  const loudnessOk = Boolean(normalized.after) && (withinTarget || peakLimited);
+  check(
+    "normalize_loudness reaches -14 LUFS or reports the ceiling that stopped it",
+    loudnessOk,
+    `${normalized.before?.integratedLufs} → ${normalized.after?.integratedLufs} LUFS (trim ${normalized.appliedTrimDb} dB, ${normalized.limitedBy}, peaks ${normalized.after?.truePeakDb})`
+  );
+  // Printed here **and** flushed at the end: this probe's `check` helper only collects, and until this round nothing printed the arrays, so
+  // every check in this file had been silent — the numbers that appeared were plain `console.log` calls.
+  console.log(
+    `  ${loudnessOk ? "✅" : "❌"} normalize_loudness : ${normalized.before?.integratedLufs} → ${normalized.after?.integratedLufs} LUFS ` +
+      `(target -14, trim ${normalized.appliedTrimDb} dB, ${normalized.limitedBy}, peaks ${normalized.after?.truePeakDb})`
+  );
+  if (!loudnessOk) process.exitCode = 1;
   const coarse = await (async () => {
     const startedAt = Date.now();
     const rendered = payload(
@@ -274,6 +305,16 @@ try {
     fs.writeFileSync(out, `${JSON.stringify({ genre, withLane, withoutLane, deltaLufs }, null, 2)}\n`);
     console.log(`  report          : ${out}`);
   }
+  /**
+   * The checks, at last.
+   *
+   * `check(...)` has always pushed into `notes` and `failures`, and nothing ever printed either: the visible output of this probe came
+   * entirely from `console.log`. A check nobody reads is the "command that silently did nothing" failure mode in its purest form, so the
+   * arrays are flushed here and a failure sets the exit code.
+   */
+  for (const line of notes) console.log(`  ${line}`);
+  for (const line of failures) console.error(`  ${line}`);
+  if (failures.length) process.exitCode = 1;
 } finally {
   client.close?.();
 }
