@@ -671,6 +671,33 @@ the report item 5 experience, one level up.
 **What I did not do this round**: write the model. Reading changed what the work is for the fifth time in this plan, and the difference here is
 that the feature is *narrower* than advertised rather than already built — which is worth knowing before spending rounds on it.
 
+## The arrangement view: the logic exists and has no view at all
+
+Following `docs/TRACK_ARRANGEMENT_PLAN.md`'s step 3 to its file turned up something the plan's own text hides: **`src/features/arrangement/` contains
+exactly one file, `songEdit.ts`, and there is no `ArrangementPanel.tsx`** — the plan names a component that does not exist, and `songEdit`'s
+functions have **no consumer in `src/components/`**.
+
+That changes the size of the work, in the direction the plan did not expect. The command layer is complete and pure:
+
+```
+sectionRegions(song)            arrangementBars(song)          moveSection(song, id, toIndex)
+resizeSection(song, id, bars)   duplicateSectionInPlace(...)   dropIndexForBar(song, bar)
+applyArrangementCommand(...)    commandForKey(key, shift, meta) setSectionLabel(song, id, label)
+```
+
+So a section timeline's **arithmetic, keyboard model and commands are already built** — and nothing renders them. Building "track headers plus a row
+per lane" is therefore not extending a panel; it is building the **first** view of a model that has been complete and unused.
+
+**The smallest honest slice, given that**: a **read-only** track-row view — one row per lane, each stage showing the clip slot that lane plays (from
+the section's `slot` and its per-lane `slots`) and whether it is muted, laid out with `sectionRegions`. No drag, no new state, no new command: those
+exist and can come second. It makes the per-lane arrangement **visible** for the first time, which is the thing the evaluation is actually asking
+for, and its criterion is cheap — a render test that the rows show the slots the song says, plus the standing rule that **audio does not change**,
+because a view cannot change it.
+
+**What this round did not do**: write the component. Two reads in a row have now moved the size of this item in opposite directions — the model was
+already built (smaller), and the view does not exist at all (larger) — and it is a new component tree rather than an edit to one, so it deserves a
+round with the context to write it properly rather than the tail of one.
+
 ## What is deliberately rejected
 
 * **Audio in context** (`render_preview` returning audio data). The MCP keeps returning file paths plus an analysis summary; a
