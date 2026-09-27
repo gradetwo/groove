@@ -81,6 +81,26 @@ Track factory / folder+summing tracks / region timeline / PDC / audio tracks / S
 **behind** the workstreams above: they are the largest changes in the document and the ones whose prerequisites (PDC latency table,
 golden render, schema versioning) the earlier workstreams establish.
 
+## The mono verification: the field was already there, and the fix attempted for it was not
+
+Reading `render_song`'s handler before editing it — which is the rule the previous round broke — shows it returns the **whole render
+result**:
+
+```ts
+return { ...(result as unknown as Record<string, unknown>), songId: song.id, totalSteps: … };
+```
+
+`RenderResult` already carries `channels: buffer.numberOfChannels` (the worker has reported it since it was written) and `sampleRate`. So
+the channel count **is** returned, the probe **does** read it, and the change attempted in the previous round — adding `channels` to a
+hand-written return object — was aimed at a return object that does not exist. It went into `export_ableton`'s handler instead, broke
+the type check, was committed anyway, and was reverted.
+
+Two lessons, both recorded rather than smoothed over: **the anchor `sections: clips.length` exists in more than one tool**, and **a
+red type check is not a thing to commit past** — the round after a revert is worth spending on reading the code instead of repairing the
+guess.
+
+What the `? channel(s)` in run 36287591164 therefore needs is one more run with the probe as it now stands, not another code change.
+
 ## Workstream 4's harmony half is smaller than the report assumed
 
 The evaluation asks for a "harmony minimum set" — `set_chord_progression` plus `suggest_progression` — as though harmony is absent. Reading
