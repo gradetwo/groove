@@ -37,6 +37,14 @@ export interface RenderOptions {
   /** 1 for a mono analysis render; the default stays the stereo the exporter has always produced. */
   channels?: 1 | 2;
   /**
+   * Explicit master-bus trim, in dB, overriding whatever the genre's own trim would be.
+   *
+   * The offline graph has carried `loudnessTrimDb` all along (`masterGraph.ts:81`, `WavExporter.ts:74`), and `AudioEngine` applies the same
+   * number live (`:384`) — but nothing on the MCP side could set it, so a caller that measured a track at −17 LUFS had no way to ask for
+   * −14 except by hand-computing a gain and editing the pattern. This is the mechanism a loudness write tool needs; the tool is next.
+   */
+  loudnessTrimDb?: number;
+  /**
    * A slug for the file name, from the caller's own song title.
    *
    * The server has never let model text name a file, and it still does not: this is whitelisted to `[a-z0-9-]`, lowercased, cut
@@ -149,7 +157,7 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
   }
   const page = await ensurePage();
   const result = await page.evaluate(
-    async ({ pattern: patternArg, format, bars, bitrateKbps, trackPeaks, sampleRate, channels: channelCount }) => {
+    async ({ pattern: patternArg, format, bars, bitrateKbps, trackPeaks, sampleRate, channels: channelCount, loudnessTrimDb }) => {
       /**
        * These specifiers are resolved by the *browser* (the app's dev server), not by Node, so they are built
        * from variables: a literal would send `tsc` looking for `/src/...` on the filesystem and fail.
@@ -174,6 +182,7 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
          */
         ...(sampleRate ? { sampleRate } : {}),
         ...(channelCount ? { channels: channelCount } : {}),
+        ...(Number.isFinite(loudnessTrimDb) ? { loudnessTrimDb } : {}),
         onLimiterKind: (kind: string) => {
           limiterKind = kind;
         },
@@ -252,6 +261,7 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
       trackPeaks: options.trackPeaks === true,
       sampleRate: options.sampleRate,
       channels: options.channels,
+      loudnessTrimDb: options.loudnessTrimDb,
     }
   );
 
