@@ -623,6 +623,34 @@ output.
 **Both were reached inside the probe's timeouts, which is the point of the `passes` change** — and both are now green in CI rather than green in
 an argument.
 
+## The automation gap is narrower than the report says: a ramp exists, one parameter wide
+
+Read before writing, and the third evaluation's second item narrows the same way the others did:
+
+* **a per-section ramp already exists**: `SectionOverrides.velocityRamp?: [number, number]` (`src/types/song.ts:67`), documented as "the velocity
+  multiplier at the section's first and last pass: an 8-bar build is `[0.6, 1]`" — so a build **across a section's passes** is a thing the
+  arrangement can already ask for;
+* it **multiplies** `velocityScale` rather than replacing it ("a quiet build" and "a build" compose), and it is clamped to `[0, 4]` with a stated
+  reason: a share link must not be able to turn a section into a 1000× gain;
+* **a riser into the next section also exists** — a flag that puts "a fill-shaped hit on the clip's **texture lane** (`fx`), rising across its
+  steps" (`:70`).
+
+So "continuous automation across sections is missing" is **true of the parameter set and not of the idea**:
+
+| what the report asks for | state |
+|---|---|
+| a build inside a section | ✅ `velocityRamp` |
+| a riser into the next section | ✅ a flag, on the `fx` lane |
+| automation of a **non-velocity** parameter (the report names filter cutoff and reverb wet) | ⚠️ nothing |
+| a ramp that is provably **continuous across a boundary** | ⚠️ and there is a comment at `songFlatten.ts:171` saying a section's `velocityRamp` "would not reach" something — which is exactly the seam to read next |
+
+**The smallest honest slice, therefore**, is not a new automation model: it is (a) the boundary case that comment points at, measured, and (b) one
+more parameter if the render path exposes one — not a general envelope system that pretends to cover parameters it cannot reach. Both are
+additive and neither needs the `track_id` decision.
+
+**What I did not do this round**: write the model. Reading changed what the work is for the fifth time in this plan, and the difference here is
+that the feature is *narrower* than advertised rather than already built — which is worth knowing before spending rounds on it.
+
 ## What is deliberately rejected
 
 * **Audio in context** (`render_preview` returning audio data). The MCP keeps returning file paths plus an analysis summary; a
