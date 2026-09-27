@@ -250,7 +250,53 @@ export function commandForKey(key: string, shiftKey = false, metaKey = false): A
 }
 
 /** The longest label a section may carry. Long enough for "second chorus (no hats)", short enough for a region. */
+/** One cell of the matrix: a lane's own clip for a section, or `null` to fall back to the section's slot. */
+export interface LaneSlotEdit {
+  sectionId: string;
+  trackId: string;
+  slot: ClipSlot | null;
+}
+
 /**
+ * The same edit, `N` times, in **one** call — and all-or-nothing.
+ *
+ * The fourth report is right that a 9-movement × 8-lane matrix should not be 72 round trips, and it is right to worry about a half-applied result even though
+ * the store itself is atomic (every song change goes through one `songs.set` and one undo entry). What it asked for is a transaction, so this is one: every
+ * edit is validated against the song **before** anything is applied, and if any of them names a section, a lane or a slot the song does not have, the original
+ * song comes back untouched with the reason in `problems`.
+ *
+ * Applying through `setSectionLaneSlot` on an accumulator — rather than reimplementing the rule — is what makes a batch **deep-equal to N single calls**,
+ * including the case the test suite already pins: setting a lane to its section's own slot is a *clear*, not an override.
+ */
+export function setSectionLaneSlots(
+  song: Song,
+  edits: readonly LaneSlotEdit[]
+): { song: Song; applied: LaneSlotEdit[]; problems: string[] } {
+  if (edits.length === 0) return { song, applied: [], problems: [] };
+
+  const sectionIds = new Set((song.sections ?? []).map((section) => section.id));
+  const lanes = new Set<string>();
+  for (const clip of Object.values(song.clips ?? {})) {
+    for (const track of clip?.tracks ?? []) lanes.add(track.track_id);
+  }
+  const slots = new Set(Object.keys(song.clips ?? {}));
+
+  const problems: string[] = [];
+  for (const edit of edits) {
+    if (!sectionIds.has(edit.sectionId)) problems.push(`no section "${edit.sectionId}"`);
+    if (!lanes.has(edit.trackId)) problems.push(`no lane "${edit.trackId}"`);
+    if (edit.slot !== null && !slots.has(edit.slot)) problems.push(`no clip ${edit.slot} in this song`);
+  }
+  // All-or-nothing: nothing is applied unless every edit is valid, so a caller cannot be left with a half-bound matrix.
+  if (problems.length) return { song, applied: [], problems };
+
+  let next = song;
+  for (const edit of edits) next = setSectionLaneSlot(next, edit.sectionId, edit.trackId, edit.slot);
+  return { song: next, applied: [...edits], problems: [] };
+}
+
+/**
+ * Give one lane its own clip for one section, or `null` to fall back to the section's slot./**
  * Give one lane its own clip for one section, or `null` to fall back to the section's slot.
  *
  * The last piece of the per-lane arrangement, and the one nothing has been able to do: `SongSection.slots` has been expressible since it landed and
