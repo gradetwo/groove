@@ -25,6 +25,38 @@ import { patternFromGenre } from "../src/data/genreMix";
 import type { Genre, SequencerPattern } from "../src/types/genre";
 
 const songs = new Map<string, Song>();
+
+/**
+ * What each song looked like **before** its last change, per `opId`.
+ *
+ * The app keeps history per `onChange`; the MCP server kept none, so an agent could only fix a mistake by re-sending the whole state
+ * — and the evaluation that prompted this work listed exactly that. Each entry is the previous state plus a stable id and the tool
+ * that caused the change, which is what makes "undo to here" answerable rather than "undo one thing".
+ */
+interface SongHistoryEntry {
+  opId: string;
+  /** The tool whose call produced the change the entry can undo. */
+  op: string;
+  /** The state to return to. */
+  before: Song;
+  at: number;
+}
+
+const history = new Map<string, SongHistoryEntry[]>();
+let opSequence = 0;
+
+/** Remember the current state of a song before it is replaced. Safe to call for an id that does not exist yet. */
+export function rememberSong(songId: string, op = "edit"): string {
+  const current = songs.get(songId);
+  const opId = `op-${++opSequence}`;
+  if (current) {
+    const entries = history.get(songId) ?? [];
+    entries.push({ opId, op, before: structuredClone(current), at: Date.now() });
+    // Bounded: an agent that iterates a thousand times should not hold a thousand songs.
+    history.set(songId, entries.slice(-50));
+  }
+  return opId;
+}
 let sequence = 0;
 
 /** What a tool returns: the whole arrangement in a shape a model can read and edit. */
@@ -159,6 +191,7 @@ export function createMcpSong(input: CreateMcpSongInput): SongSummary {
       { ...song.sections[0], bars: input.bars ?? 1, ...(input.label ? { label: input.label } : {}) },
     ],
   };
+  rememberSong(id, "create_song");
   songs.set(id, arranged);
   return summariseSong(arranged);
 }
@@ -197,6 +230,7 @@ export function importMcpSong(input: {
     clips: { ...song.clips, ...input.clips },
     ...(input.sections.length ? { sections: input.sections } : {}),
   };
+  rememberSong(id, "create_song");
   songs.set(id, next);
   return summariseSong(next);
 }
@@ -270,6 +304,7 @@ export function duplicateMcpSection(input: DuplicateMcpSectionInput): SongSummar
   const sections = [...song.sections];
   sections.splice(at, 0, copy);
   const next: Song = { ...song, sections };
+  rememberSong(input.songId, "add_section");
   songs.set(input.songId, next);
   return summariseSong(next);
 }
@@ -319,6 +354,7 @@ export function addMcpSection(input: AddMcpSectionInput): SongSummary {
           sections.splice(at, 0, moved);
           return { ...appended, sections };
         })();
+  rememberSong(song.id, "duplicate_section");
   songs.set(song.id, inserted);
   return summariseSong(inserted);
 }
@@ -328,6 +364,7 @@ export function setMcpClip(songId: string, slot: ClipSlot, pattern: SequencerPat
   const song = songs.get(songId);
   if (!song) throw new Error(`unknown songId "${songId}" — create one with create_song`);
   const next: Song = { ...song, clips: { ...song.clips, [slot]: pattern } };
+  rememberSong(songId, "set_clip");
   songs.set(songId, next);
   return summariseSong(next);
 }
@@ -354,4 +391,26 @@ export function describeMcpSong(songId: string): string {
 export function clearMcpSongs(): void {
   songs.clear();
   sequence = 0;
+}
+
+
+/**
+ * Return a song to the state before its most recent change (or before the one `steps` changes ago).
+ *
+ * The store's history is per `onChange`; this is the same idea at the tool boundary, which is where an agent can actually use it: a
+ * wrong `set_clip` or an over-eager `duplicate_section` is one call to undo rather than a re-send of the whole arrangement.
+ */
+export function undoMcpSong(songId: string, steps = 1): SongSummary {
+  const entries = history.get(songId);
+  if (!entries?.length) throw new Error(`nothing to undo for "${songId}" — it has not been changed since it was created`);
+  const take = Math.max(1, Math.min(Math.floor(steps), entries.length));
+  const entry = entries[entries.length - take];
+  history.set(songId, entries.slice(0, entries.length - take));
+  songs.set(songId, entry.before);
+  return summariseSong(entry.before);
+}
+
+/** The changes a song has recorded, newest last — what an agent reads to decide how far back to go. */
+export function mcpSongHistory(songId: string): Array<{ opId: string; op: string; at: number }> {
+  return (history.get(songId) ?? []).map(({ opId, op, at }) => ({ opId, op, at }));
 }
