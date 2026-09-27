@@ -792,6 +792,15 @@ export const TOOLS: ToolDefinition[] = [
       songId: z.string().describe("the id create_song returned"),
       format: z.enum(["wav", "mp3"]).default("wav"),
       bitrateKbps: z.number().int().min(32).max(320).optional().describe("MP3 only; default 192"),
+      sampleRate: z
+        .number()
+        .int()
+        .min(8000)
+        .max(96000)
+        .optional()
+        .describe(
+          "render rate; 8000 makes an analysis pass about a fifth of the work, and the exporter builds its context at this rate so the audio really is fewer samples rather than a relabelled file"
+        ),
       maxDurationSec: z
         .number()
         .min(1)
@@ -822,6 +831,7 @@ export const TOOLS: ToolDefinition[] = [
         }
         const result = await renderAudio(flattened.pattern, {
           format: (args.format as "wav" | "mp3") ?? "wav",
+          ...(args.sampleRate ? { sampleRate: args.sampleRate as number } : {}),
           // The flattened pattern *is* the song, so one pass plays all of it (B2).
           bars: 1,
           bitrateKbps: args.bitrateKbps as number | undefined,

@@ -32,6 +32,8 @@ export interface RenderOptions {
   bars?: number;
   bitrateKbps?: number;
   genreId?: string;
+  /** Render rate: an analysis render can ask for 8000 and get fewer samples, not a relabelled file. */
+  sampleRate?: number;
   /**
    * A slug for the file name, from the caller's own song title.
    *
@@ -161,6 +163,14 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
       let limiterKind = "fallback";
       const buffer = await wav.renderPatternOffline(patternArg as never, {
         bars: barsArg,
+        /**
+         * The analysis lever, and it is honest on both sides: `WavExporter` builds its context with this rate
+         * (`src/audio/WavExporter.ts:320` — `new OfflineContextClass(2, lengthInSamples, sampleRate)`), so a lower rate really does
+         * render fewer samples rather than relabelling a 44.1 kHz file. An energy curve or a spectrum does not need 44.1 kHz, and at
+         * 8 kHz a three-minute song is about a fifth of the work. The channel count is still the exporter's two: mono needs that
+         * parameter thread through as well, and it is not done yet.
+         */
+        ...(options.sampleRate ? { sampleRate: options.sampleRate } : {}),
         onLimiterKind: (kind: string) => {
           limiterKind = kind;
         },

@@ -113,7 +113,7 @@ as written Ns · fx lane cleared Ns · fx saturated Ns`) so the number is produc
 | budget | target | today | what closes the gap |
 |---|---|---|---|
 | a full song render | ≤ 20 s | tens of seconds | the render is one `page.evaluate` over an offline context; the super-linear growth with step count is measured in `GROOVE_QUALITY_PLAN.md` |
-| an analysis-only render (energy curve, spectrum) | ≤ 1 s | not built | an 8 kHz mono offline render — 1/12 the samples, which is the evaluation's own suggestion and the next slice of this work |
+| an analysis-only render (energy curve, spectrum) | ≤ 1 s | **built, measured by the texture probe** (`render_song` with `sampleRate: 8000`) | the exporter builds its context at the requested rate (`WavExporter.ts:320`), so this really renders fewer samples — about a fifth of 44.1 kHz. **Mono is still missing**: the context is created with the exporter's two channels, and threading that through is the remaining piece |
 | a section render | ≤ 5 s | available today by rendering a one-section song | already possible with `render_song` on a song whose `sections` hold one entry |
 
 `analyze_audio` is browser-free and reads a file in milliseconds; the budgets above are about **rendering**, which is why the analysis
