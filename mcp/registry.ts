@@ -792,6 +792,13 @@ export const TOOLS: ToolDefinition[] = [
       range: z.tuple([z.number().int(), z.number().int()]).optional().describe("inclusive MIDI range; at most two octaves, clamped"),
       seed: z.number().int().min(0).max(1_000_000).optional().describe("default 1; the same seed gives the same melody"),
       density: z.number().min(0.1).max(1).optional().describe("how many eighth-note slots carry a note; default 0.55"),
+      tones: z
+        .array(z.number().int().min(0).max(5))
+        .max(64)
+        .optional()
+        .describe(
+          "**one tone per sounding note**, in playing order (1 阴平 / 2 阳平 / 3 上声 / 4 去声 / 0 or 5 neutral): the melody is then written against the words, and the reply reports how many notes it had to move (`prosody.adjusted`) and whether any reversal survived (`prosody.remaining`). Omit it and the melody is exactly what it was before this parameter existed. Use `validate_prosody` to check tones against a melody you already have"
+        ),
     },
     handler: (args) => {
       try {
