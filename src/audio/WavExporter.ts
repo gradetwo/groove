@@ -61,6 +61,8 @@ export interface RenderWavOptions {
   swing?: number;
   bars?: number;
   sampleRate?: number;
+  /** 1 renders a mono analysis pass; the default is the stereo this exporter has always produced. */
+  channels?: 1 | 2;
   trackStates?: TrackState[];
   stemTrackIdx?: number;
   drumKit?: DrumKitType;
@@ -317,7 +319,13 @@ export async function renderPatternOffline(
   }
 
   const lengthInSamples = Math.ceil(totalDurationSec * sampleRate);
-  const ctx = new OfflineContextClass(2, lengthInSamples, sampleRate);
+  /**
+   * One channel or two, and an **analysis** render may ask for one: the exporter has always produced stereo, and a mono context is a
+   * different graph (panning and stereo effects collapse), so this is offered for measurement rather than for delivery. The same
+   * reasoning as `sampleRate`: fewer samples, honestly rendered, rather than a stereo file relabelled.
+   */
+  const channelCount = options.channels === 1 ? 1 : 2;
+  const ctx = new OfflineContextClass(channelCount, lengthInSamples, sampleRate);
 
   // Genre loudness-match trim. Applied through the shared graph below so the offline
   // renderer uses the *same* stage, in the same relative position, as playback.

@@ -34,6 +34,8 @@ export interface RenderOptions {
   genreId?: string;
   /** Render rate: an analysis render can ask for 8000 and get fewer samples, not a relabelled file. */
   sampleRate?: number;
+  /** 1 for a mono analysis render; the default stays the stereo the exporter has always produced. */
+  channels?: 1 | 2;
   /**
    * A slug for the file name, from the caller's own song title.
    *
@@ -171,6 +173,7 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
          * parameter thread through as well, and it is not done yet.
          */
         ...(options.sampleRate ? { sampleRate: options.sampleRate } : {}),
+        ...(options.channels ? { channels: options.channels } : {}),
         onLimiterKind: (kind: string) => {
           limiterKind = kind;
         },

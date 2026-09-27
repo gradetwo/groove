@@ -801,6 +801,15 @@ export const TOOLS: ToolDefinition[] = [
         .describe(
           "render rate; 8000 makes an analysis pass about a fifth of the work, and the exporter builds its context at this rate so the audio really is fewer samples rather than a relabelled file"
         ),
+      channels: z
+        .number()
+        .int()
+        .min(1)
+        .max(2)
+        .optional()
+        .describe(
+          "1 for a mono analysis render; panning and stereo effects collapse, so this is for measuring rather than for delivery. The default is the stereo this exporter has always produced."
+        ),
       maxDurationSec: z
         .number()
         .min(1)
@@ -832,6 +841,7 @@ export const TOOLS: ToolDefinition[] = [
         const result = await renderAudio(flattened.pattern, {
           format: (args.format as "wav" | "mp3") ?? "wav",
           ...(args.sampleRate ? { sampleRate: args.sampleRate as number } : {}),
+          ...(args.channels ? { channels: args.channels as 1 | 2 } : {}),
           // The flattened pattern *is* the song, so one pass plays all of it (B2).
           bars: 1,
           bitrateKbps: args.bitrateKbps as number | undefined,
