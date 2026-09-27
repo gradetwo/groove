@@ -48,6 +48,17 @@ export const MAX_NOTE_GATE_STEPS = 16;
 
 export interface SequencerTrack {
   track_id: 'kick' | 'snare' | 'hihat' | 'percussion' | 'bass' | 'chords' | 'lead' | 'fx';
+  /**
+   * An optional second name for this lane, so a song can have **two lanes of one kind** (owner decision 1A).
+   *
+   * `track_id` is a role — it says what a lane *is*, and the engine routes drums, GS-1 hosts and exports by it — so a second lead cannot be expressed by
+   * widening it. A lane that carries no `laneId` behaves **exactly** as before, every existing lookup still finds the first lane of a kind by `track_id`, and
+   * `.groove` v1 files stay readable: the field is additive in the same shape as `arrangement`, `extraClips`, `slots` and `syllables`.
+   *
+   * Addressing is "**by `laneId` first, then by kind**" (`mcp/pattern.ts`'s `findTrack`), so `{ track_id: "lead", laneId: "lead-2" }` is a distinct lane that
+   * everything referring to `"lead"` still ignores.
+   */
+  laneId?: string;
   name: string;
   instrument: string;
   steps: number[]; // 1 or 0 (16 or 32 steps)
