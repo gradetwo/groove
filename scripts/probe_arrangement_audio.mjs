@@ -300,6 +300,68 @@ try {
      * single, **reinforcement** above +1 dB, and **inconclusive** in between — because two signals that differ this much in level can make a window-energy
      * comparison about level rather than phase.
      */
+    /**
+     * **Chunked rendering, measured before it is built** (fifth report P0, sixth report VI).
+     *
+     * The design under test: a chunk is **a song with a subset of its sections** — no step slicing, no new exporter option — so this needs no production change to
+     * measure. What it must answer is whether the parts add up to the whole, and the suspicion is already named: the master chain is **stateful** (the bus
+     * compressor has an envelope, the limiter has lookahead), so a chunk that masters itself is only ever approximate.
+     *
+     * So the measurement pins the fork rather than a hope: it renders the song whole, then renders it one section at a time with the same master settings, and
+     * reports how far apart the concatenation and the whole are. If the difference is at the level of the state, the answer is the design already chosen — master
+     * once, **after** concatenation — and this number is what justifies building it rather than assuming it.
+     *
+     * Wrapped so that a failure here cannot take the run down: it prints a number or it prints why it could not.
+     */
+    const chunking = await (async () => {
+      try {
+        const parts = song.sections ?? [];
+        if (parts.length < 2) return { skipped: `only ${parts.length} section(s) in this fixture` };
+        const whole = await render(song, {});
+        const pieces = [];
+        for (let index = 0; index < parts.length; index += 1) {
+          // A section-level chunk: the same song with one section. This is the cut `planRenderChunks` generalises to bars.
+          const piece = await render(
+            { ...song, id: `${song.id}-chunk-${index}`, sections: [parts[index]] },
+            {}
+          );
+          pieces.push(piece.channels);
+        }
+        const channels = whole.channels.length;
+        const wholeSamples = whole.channels[0].length;
+        let chunkSamples = 0;
+        for (const piece of pieces) chunkSamples += piece[0].length;
+        let maxAbsDiff = 0;
+        let sumAbsDiff = 0;
+        let compared = 0;
+        const limit = Math.min(wholeSamples, chunkSamples);
+        // Compare sample by sample where the two have the same length: an offset would show up as a huge difference, which is itself the finding.
+        let at = 0;
+        for (const piece of pieces) {
+          for (let i = 0; i < piece[0].length && at + i < limit; i += 1) {
+            for (let c = 0; c < channels; c += 1) {
+              const diff = Math.abs(piece[c][i] - whole.channels[c][at + i]);
+              if (diff > maxAbsDiff) maxAbsDiff = diff;
+              sumAbsDiff += diff;
+              compared += 1;
+            }
+          }
+          at += piece[0].length;
+        }
+        return {
+          sections: parts.length,
+          wholeSamples,
+          chunkSamples,
+          lengthRatio: Number((chunkSamples / Math.max(1, wholeSamples)).toFixed(4)),
+          maxAbsDiff: Number(maxAbsDiff.toExponential(3)),
+          meanAbsDiff: Number((sumAbsDiff / Math.max(1, compared)).toExponential(3)),
+          compared,
+        };
+      } catch (error) {
+        return { error: String(error && error.message ? error.message : error) };
+      }
+    })();
+
     const kickPhase = await (async () => {
       const kick = await import("/src/audio/AnatomyKickEngine.ts");
       const sampleRate = 44100;
@@ -522,6 +584,7 @@ try {
         latency,
         /** Item 2: two stacked sub kicks against each alone, over the window the report's claim is about. */
         kickPhase,
+        chunking,
         seconds: withFill.buffer.duration,
         barSeconds,
         fillRms: fillBars.map((bar) => ({
@@ -663,6 +726,16 @@ try {
           `38 Hz ${k.notch38Db >= 0 ? "+" : ""}${k.notch38Db} dB → ${k.verdict}`
       );
       if (!ok) console.log("   (inconclusive: the two singles differ enough in level that this window cannot separate phase from gain)");
+    }
+    {
+      const c = measured.audio.chunking ?? { error: "not collected" };
+      console.log(
+        c.error
+          ? `   ⚠️ chunked vs whole : could not measure (${c.error})`
+          : c.skipped
+            ? `   ⚠️ chunked vs whole : ${c.skipped}`
+            : `   chunked vs whole : ${c.sections} sections · length ${c.lengthRatio}x · max |Δ| ${c.maxAbsDiff} · mean |Δ| ${c.meanAbsDiff} (${c.compared} samples)`
+      );
     }
     {
       const fade = measured.audio.boundaryFade;
