@@ -436,6 +436,41 @@ try {
      *
      * Wrapped like its neighbours: it prints a number or it prints why it could not.
      */
+    /**
+     * **The lane cost curve: 1, 4, 16, 64 audio lanes, rendered rather than extrapolated.**
+     *
+     * The hundred-lane question had been answered by arithmetic — flatten steps multiplied by lanes — and arithmetic is what the earlier rounds of this session kept having to
+     * correct. This renders the same arrangement with a clip holding 1, 4, 16 and 64 audio tracks, using the shape the latency block already uses
+     * (`{ track_id: "audio", sample: { assetId } }`) and the `render` helper that already exists, so nothing here is a second way of building a graph.
+     *
+     * **It reports time and not peak memory, and the output says so.** This context exposes no reliable way to ask for peak memory, and a figure from something unreliable would be
+     * an invented number of exactly the kind this session has retracted twice.
+     */
+    const renderLaneCurve = await (async () => {
+      try {
+        const lane = (index) => ({ track_id: "audio", name: `lane-${index}`, sample: { assetId: "probe-impulse" } });
+        const points = [];
+        const short = [sections[0]];
+        for (const count of [1, 4, 16, 64]) {
+          const value = {
+            ...song,
+            id: `lanes-${count}`,
+            clips: { A: { ...clip, tracks: Array.from({ length: count }, (_, index) => lane(index)) } },
+            sections: short,
+          };
+          const started = performance.now();
+          const { buffer } = await render(value);
+          const seconds = Number(((performance.now() - started) / 1000).toFixed(4));
+          points.push({ lanes: count, seconds, frames: buffer.length });
+          // Printed as each point lands, so a long curve reports progress instead of going quiet for ten minutes.
+          console.log(`   lane curve       : ${count} lanes ${seconds}s (${buffer.length} frames)`);
+        }
+        return { points, note: "time only; peak memory is NOT measured, because this context exposes no reliable way to ask for it" };
+      } catch (error) {
+        return { error: error && error.message ? error.message : String(error) };
+      }
+    })();
+
     const audioLaneLatency = await (async () => {
       try {
         const [scheduler, graph] = await Promise.all([
@@ -897,6 +932,7 @@ try {
         kickPhase,
         chunking,
         audioLaneLatency,
+      renderLaneCurve,
         renderProfile,
         renderSplit,
         seconds: withFill.buffer.duration,
