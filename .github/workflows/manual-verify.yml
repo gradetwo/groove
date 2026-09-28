@@ -248,10 +248,14 @@ jobs:
       # numbers were read from. `scripts/sfizz_oracle.mjs` pins those numbers, so a different sfizz turns the job red instead of quietly changing what "agreement"
       # means.
       #
-      # The build tree is cached per commit: a warm run is a no-op rather than a second code path, so a cache miss costs time and never changes the result.
+      # The build tree is cached per **tag**: a warm run is a no-op rather than a second code path, so a cache miss costs time and never changes the result.
       #
-      # It is pinned to a **commit** on `develop`, not a tag, because `sfizz` has no tag matching the library's version — the first version of this step asked for `v1.2.3` and
-      # the build died with `fatal: Remote branch v1.2.3 not found`, which is what happens when a pin is assumed instead of read.
+      # It is pinned to **tag `1.2.3`** of `sfztools/sfizz` — the **library** repository, because that is where the render client lives (`sfizz-ui` has no `clients/`
+      # directory at all). The tag has **no `v`**: an earlier version asked for `v1.2.3`, which does not exist, and the clone said so.
+      #
+      # **Measured 2026-09-28**: the client lands at `sfizz/build/library/bin/sfizz_render`, not at `clients/sfizz_render`. That is why the build step discovers it
+      # with `find` rather than trusting a path: the first version hard-coded a plausible one and died with `ENOENT` after a successful build — a failure that says
+      # nothing about the build and everything about the assumption.
       - name: Cache the sfizz build
         if: inputs.scope == 'sfizz' || inputs.scope == 'all'
         uses: actions/cache@v5
