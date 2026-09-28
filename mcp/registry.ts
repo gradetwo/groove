@@ -1,3 +1,4 @@
+import { lanesWithoutMidi } from "./pattern";
 /**
  * The MCP surface, declared once.
  *
@@ -1500,7 +1501,14 @@ export const TOOLS: ToolDefinition[] = [
           // and tempo. A song with no name (its genre id) lands on the previous `_master_` form by construction.
           nameSlug: song.name,
         });
-        return { ...(result as unknown as Record<string, unknown>), songId: song.id, totalSteps: flattened.pattern.totalSteps };
+        const skipped = lanesWithoutMidi(flattened.pattern);
+        return {
+          ...(result as unknown as Record<string, unknown>),
+          songId: song.id,
+          totalSteps: flattened.pattern.totalSteps,
+          // Reported rather than performed in silence: a lane that vanishes from a render has to say why it did.
+          ...(skipped.length ? { skippedLanes: skipped, skippedNote: "these lanes are not in the render; an audio lane's sample needs the audio-track path, which is not built yet" } : {}),
+        };
       } catch (error) {
         return failure((error as Error).message);
       }
