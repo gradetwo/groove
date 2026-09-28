@@ -243,6 +243,32 @@ design — so the run was healthy, and the probe block I was waiting for simply 
 **And it prevents a worse mistake than waiting**: the status endpoint makes a stalled run and a working one look identical, which is exactly the shape of check that cannot
 tell you what you care about. The step API can.
 
+## The audio scope's long pole: it is the whole probe, and the arithmetic now closes
+
+Third observation, and this one identified it. The "step" is not a step inside the probe:
+
+```yaml
+- name: Section-boundary fade (stage 3 measurement)
+  run: node scripts/probe_arrangement_audio.mjs --genre=chicago-house
+```
+
+**It is the entire probe**, named after one of its own readings, and it contains the render baseline, the split, the chunking experiment, the boundary fade and the latency
+measurement — all of them rendering the arrangement repeatedly.
+
+**And the arithmetic closes**, which is what turns an observation into an understanding:
+
+| figure | source |
+|---|---|
+| one render | **72.33 s** — measured by the split |
+| renders the probe makes | roughly 15–25, the chunking experiment alone accounting for several |
+| therefore | **20–30 minutes** — exactly the observed step time |
+
+So the long pole is **not a defect**. It is *N renders at ~70 seconds each*, and two independent measurements agree on that: the per-render price from the split, and the total
+divided by the count.
+
+**The actionable part is now predictable**: the probe's cost is proportional to how many times it renders the arrangement, so making the scope faster means **rendering less**,
+not rewriting anything — and with the per-render price known, the saving from dropping any given measurement can be worked out before doing it.
+
 ## The audio scope's long pole, measured twice
 
 Both audio-scope runs spent their time in the same place: **`Section-boundary fade (stage 3 measurement)`**, twenty minutes and more on that step alone, while the rest of the
