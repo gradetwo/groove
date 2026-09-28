@@ -34,7 +34,12 @@ export interface SampleAsset {
    *
    * Optional, so every existing entry — and every song that references one — behaves exactly as before.
    */
-  sfz?: { url: string };
+  /**
+   * Where this instrument's SFZ lives: `url` is the **pinned source**, `fallbackUrl` the mirror — tried only when the source does not answer.
+   *
+   * Both are carried because the two hosts fail differently: an upstream reorganisation 404s, a misrouted mirror 403s. A loader with one address cannot tell those apart.
+   */
+  sfz?: { url: string; fallbackUrl?: string };
 }
 
 /**

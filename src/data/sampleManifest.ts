@@ -233,17 +233,26 @@ export function sampleAssetsFromManifest(manifest: SampleManifest, root: string)
       seconds: entry.durationSeconds,
     };
     if (entry.sfz) {
-      const url = mirrorSfzUrl(manifest, entry.id, root);
+      /**
+       * **Source first, mirror as the fallback** — the owner's decision, and the reverse of the first implementation.
+       *
+       * Both addresses are carried because the two hosts fail differently: a pinned source 404s when the upstream library is reorganised, while a mirror 403s or times out when its public
+       * routing is wrong. A loader holding only one address cannot tell "this file is gone" from "this host is broken".
+       */
+      const source = sourceSfzUrl(manifest, entry.id);
+      const mirror = mirrorSfzUrl(manifest, entry.id, root);
+      const url = source ?? mirror;
       /**
        * Checked rather than asserted with `!`. An entry that declares an `sfz` should always resolve to a URL, so this branch is unreachable in practice — but the
        * compiler cannot know that, and a non-null assertion here would turn "should always" into "cannot fail", which is the assumption that eventually ships a broken
        * URL. Reporting it costs one line and keeps the failure legible.
        */
       if (!url) {
-        problems.push(`"${entry.id}" declares an sfz but no URL could be resolved against the mirror`);
+        // Reported when **neither** address exists, which now means the entry has no pin and no usable mirror — a different fault from the mirror alone being unreachable.
+        problems.push(`"${entry.id}" declares an sfz but neither a pinned source nor a mirror URL could be resolved`);
         continue;
       }
-      asset.sfz = { url };
+      asset.sfz = mirror && mirror !== url ? { url, fallbackUrl: mirror } : { url };
     }
     assets.push(asset);
   }
