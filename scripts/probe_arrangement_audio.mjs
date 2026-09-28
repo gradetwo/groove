@@ -309,9 +309,10 @@ try {
      *
      *   * an **empty** `OfflineAudioContext` of the same length, rendered — the floor the browser charges for the buffer and the graph walk;
      *   * the **flatten**, which is pure JavaScript and needs no audio at all;
-     *   * the **encode**, which is the WAV write.
+     * Two stages, not three: an earlier version also reported an "encode" that built a Blob of raw float samples, which is not what the renderer does, so it was
+     * removed rather than renamed. The WAV write's real cost is part of the remainder below.
      *
-     * Whatever the full render costs beyond those is reported as an **unexplained remainder** rather than attributed to a guess: this project's rule is that a number
+     * Whatever the full render costs beyond these is reported as an **unexplained remainder** rather than attributed to a guess: this project's rule is that a number
      * nobody measured is not a number. Naming the remainder is the honest version, and it is also the thing a later probe would have to close.
      *
      * Wrapped like its neighbours: it prints numbers or prints why it could not.
