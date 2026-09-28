@@ -13,6 +13,7 @@
  * lands inside that bar, and how a long sample crosses into the next section, is the playback path's business — and it will be measured, not assumed.
  */
 import { SAMPLE_CATALOGUE, sampleReferenceProblem } from "../data/sampleCatalogue";
+import { totalSeconds } from "../data/tempoMap";
 import type { SampleAsset } from "../data/sampleCatalogue";
 import type { SequencerTrack } from "../types/genre";
 
@@ -75,4 +76,20 @@ export function planAudioLaneEvents(song: PlanInput, catalogue: readonly SampleA
   });
 
   return { events, problems };
+}
+
+/**
+ * When an event happens, in seconds — from the **tempo map**, not from a second copy of the arithmetic.
+ *
+ * The renderer already knows what a bar costs (`tempoMap.ts`'s `barSeconds`, which the exporter's `stepTiming` uses), and an audio lane's sample has to start at the
+ * same instant every other voice does. Computing that here from `60 / bpm` would be the oldest defect in this codebase: two places that compute one thing, and agree
+ * until one of them is fixed.
+ *
+ * So this sums the bars before the event — which is also the only correct answer once a song has a tempo map, because a bar's length then depends on where it is.
+ */
+export function audioLaneEventSeconds(
+  event: Pick<AudioLaneEvent, "atBar">,
+  song: { bpm: number; tempoTrack?: Array<{ atBar: number; bpm: number; curve?: "jump" | "linear" }> }
+): number {
+  return totalSeconds(song, event.atBar);
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { planAudioLaneEvents } from "../audio/audioLanePlan";
+import { audioLaneEventSeconds, planAudioLaneEvents } from "../audio/audioLanePlan";
+import { totalSeconds } from "../data/tempoMap";
 import type { SequencerTrack } from "../types/genre";
 import type { SampleAsset } from "../data/sampleCatalogue";
 
@@ -89,5 +90,48 @@ describe("planAudioLaneEvents", () => {
       ],
     }, CATALOGUE);
     expect(plan.events.map((event) => event.atStep)).toEqual([0]);
+  });
+});
+
+/**
+ * The event's time in seconds — and the point is that it is **not computed here**.
+ *
+ * A second implementation of "what a bar costs" would agree with the renderer until one of them changed, which is the defect this codebase has paid for most often. So
+ * the criteria compare this against the tempo map's own answers rather than against arithmetic written for the test.
+ */
+describe("audioLaneEventSeconds", () => {
+  it("matches a bar's cost from the tempo map when there is no tempo map at all", () => {
+    const plain = { bpm: 120 };
+    expect(audioLaneEventSeconds({ atBar: 0 }, plain)).toBe(0);
+    expect(audioLaneEventSeconds({ atBar: 1 }, plain)).toBeCloseTo(2, 10);
+    expect(audioLaneEventSeconds({ atBar: 4 }, plain)).toBeCloseTo(totalSeconds(plain, 4), 10);
+  });
+
+  it("follows a tempo map, so a sample starts with the music rather than with a stale tempo", () => {
+    const mapped = { bpm: 66, tempoTrack: [{ atBar: 0, bpm: 66 }, { atBar: 2, bpm: 132 }] };
+    // Two bars at 66, then a bar at double the tempo: the event in the fast section lands where the music does.
+    expect(audioLaneEventSeconds({ atBar: 2 }, mapped)).toBeCloseTo((4 * 60) / 66 * 2, 10);
+    expect(audioLaneEventSeconds({ atBar: 3 }, mapped)).toBeCloseTo((4 * 60) / 66 * 2 + (4 * 60) / 132, 10);
+    // And always equal to the map's own prefix, which is the whole assertion.
+    for (const bar of [0, 1, 2, 3, 8]) expect(audioLaneEventSeconds({ atBar: bar }, mapped)).toBeCloseTo(totalSeconds(mapped, bar), 10);
+  });
+
+  it("starts the first bar of a section where the plan says that section is", () => {
+    const song = { bpm: 90, tempoTrack: [{ atBar: 4, bpm: 180 }] };
+    const plan = planAudioLaneEvents(
+      {
+        clips: { A: { tracks: [audioLane()] } },
+        sections: [{ id: "s1", slot: "A", bars: 4 }, { id: "s2", slot: "A", bars: 2 }],
+        boundaries: [0, 4],
+      },
+      CATALOGUE
+    );
+    expect(plan.events).toHaveLength(2);
+    // The second event is the one that matters: it is where the tempo doubles, so a hand-written conversion would be wrong by construction.
+    expect(audioLaneEventSeconds(plan.events[1]!, song)).toBeCloseTo(totalSeconds(song, 4), 10);
+    // The discriminating case is a bar **after** the change: there the map's answer differs from the naive one, so this cannot pass by coincidence.
+    const after = { atBar: 6 };
+    expect(audioLaneEventSeconds(after, song)).toBeCloseTo(totalSeconds(song, 6), 10);
+    expect(audioLaneEventSeconds(after, song)).not.toBeCloseTo(6 * ((4 * 60) / 90), 3);
   });
 });
