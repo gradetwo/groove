@@ -348,6 +348,45 @@ try {
           }
           at += piece[0].length;
         }
+        /**
+         * **Variant two: masterless chunks, with every tail but the last trimmed.**
+         *
+         * The first number said why both halves are needed. The extra length is the genre's reverb/delay tail, which every render carries, so `extra / (chunks - 1)`
+         * **is** the tail length — the measurement supplies the constant rather than the code declaring one. And the sample-level disagreement says per-chunk
+         * mastering is unusable, so the chunks here go out with no trim, no makeup and no bus compressor. The limiter cannot be switched off (no such option), so
+         * whatever difference remains **is** the limiter's own state — which is exactly the number that decides whether "master once, after concatenation" is
+         * achievable this way or needs a masterless path through the graph.
+         */
+        const masterless = { loudnessTrimDb: 0, masterMakeupDb: 0, masterBusCompEnabled: false };
+        const lean = [];
+        for (let index = 0; index < parts.length; index += 1) {
+          const piece = await render({ ...song, id: `${song.id}-lean-${index}`, sections: [parts[index]] }, masterless);
+          lean.push(piece.channels);
+        }
+        const leanSamples = lean.reduce((sum, piece) => sum + piece[0].length, 0);
+        const extra = leanSamples - wholeSamples;
+        const tailFrames = parts.length > 1 ? Math.max(0, Math.round(extra / (parts.length - 1))) : 0;
+        const kept = lean.map((piece, index) =>
+          index === lean.length - 1 ? piece : piece.map((channel) => channel.subarray(0, Math.max(0, channel.length - tailFrames)))
+        );
+        const keptSamples = kept.reduce((sum, piece) => sum + piece[0].length, 0);
+        let leanMax = 0;
+        let leanSum = 0;
+        let leanCompared = 0;
+        let leanAt = 0;
+        for (const piece of kept) {
+          const frames = Math.min(piece[0].length, Math.max(0, wholeSamples - leanAt));
+          for (let i = 0; i < frames; i += 1) {
+            for (let c = 0; c < channels; c += 1) {
+              const diff = Math.abs(piece[c][i] - whole.channels[c][leanAt + i]);
+              if (diff > leanMax) leanMax = diff;
+              leanSum += diff;
+              leanCompared += 1;
+            }
+          }
+          leanAt += piece[0].length;
+        }
+
         return {
           sections: parts.length,
           wholeSamples,
@@ -356,6 +395,11 @@ try {
           maxAbsDiff: Number(maxAbsDiff.toExponential(3)),
           meanAbsDiff: Number((sumAbsDiff / Math.max(1, compared)).toExponential(3)),
           compared,
+          tailFrames,
+          leanLengthRatio: Number((keptSamples / Math.max(1, wholeSamples)).toFixed(4)),
+          leanMaxAbsDiff: Number(leanMax.toExponential(3)),
+          leanMeanAbsDiff: Number((leanSum / Math.max(1, leanCompared)).toExponential(3)),
+          leanCompared,
         };
       } catch (error) {
         return { error: String(error && error.message ? error.message : error) };
@@ -734,7 +778,8 @@ try {
           ? `   ⚠️ chunked vs whole : could not measure (${c.error})`
           : c.skipped
             ? `   ⚠️ chunked vs whole : ${c.skipped}`
-            : `   chunked vs whole : ${c.sections} sections · length ${c.lengthRatio}x · max |Δ| ${c.maxAbsDiff} · mean |Δ| ${c.meanAbsDiff} (${c.compared} samples)`
+            : `   chunked vs whole : ${c.sections} sections · length ${c.lengthRatio}x · max |Δ| ${c.maxAbsDiff} · mean |Δ| ${c.meanAbsDiff} (${c.compared} samples)\n` +
+              `   lean chunks      : tail ${c.tailFrames} frames trimmed · length ${c.leanLengthRatio}x · max |Δ| ${c.leanMaxAbsDiff} · mean |Δ| ${c.leanMeanAbsDiff} (${c.leanCompared} samples)`
       );
     }
     {
