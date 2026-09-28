@@ -364,8 +364,13 @@ try {
      */
     const renderSplit = await (async () => {
       try {
-        const song = measured.songForSplit;
-        if (!song) return { error: "no song in scope to render" };
+        /**
+         * The song is the one **this probe already built**, not a new name for it.
+         *
+         * The first version read `measured.songForSplit`, which does not exist, so the block reported `could not measure (measured is not defined)` — and the neighbouring
+         * profile block, which uses `song` and worked, was the evidence in plain sight. Inventing a second name for an existing value is the "two places, one thing" defect
+         * in miniature, and this is the **second** time in this file: the first was an extra `import` of a module the probe already had.
+         */
         const time = async (extra) => {
           const started = performance.now();
           await render(song, extra);
