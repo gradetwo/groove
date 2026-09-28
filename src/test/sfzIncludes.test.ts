@@ -88,3 +88,39 @@ describe("expandIncludes — the real library's resolution rule", () => {
     expect(result.included).toEqual(["Programs/keymaps/shared.sfz"]);
   });
 });
+
+/**
+ * `#define` and `$VAR`, with the scope rule the real library forced: **global and in order**.
+ *
+ * `Programs/keymaps/keymap_basic.sfz` defines keys and files reached later in the include tree use them — which a per-file scope could not reproduce, and which is why sfizz
+ * resolved `key=$KICK_SNRIGHT_KEY` to 36 while our parser left it literal and matched every note. The last criterion is the loop back to that defect: an **undefined**
+ * variable is left untouched, so `parseSfz` still marks the region and it never answers a note.
+ */
+describe("expandIncludes — defines and substitution", () => {
+  it("substitutes a variable defined earlier in the same file", () => {
+    const result = expandIncludes("#define $KEY 36\n<region> key=$KEY", files({}));
+    expect(result.problems).toEqual([]);
+    // The `#define` line produces **no output** — it changes what later lines mean rather than being content, which is also why there is no leading newline.
+    expect(result.text).toBe("<region> key=36");
+  });
+
+  it("carries a definition into a file reached later in the tree, which is the real library's shape", () => {
+    const result = expandIncludes('#define $KICK 36\n#include "mappings/kick.sfz"', files({ "Programs/mappings/kick.sfz": "<group>\nkey=$KICK" }), { path: "Programs/01.sfz" });
+    expect(result.problems).toEqual([]);
+    // The included file sees the parent's definition, and so does anything the parent expands after it.
+    expect(result.text).toContain("key=36");
+  });
+
+  it("leaves an undefined variable untouched, so the region stays unselectable rather than defaulting", () => {
+    const result = expandIncludes("<region> key=$NEVER_DEFINED", files({}));
+    // Untouched here — and `parseSfz` then marks it unresolved, which is the behaviour proved in the parse criteria.
+    expect(result.text).toBe("<region> key=$NEVER_DEFINED");
+    const [region] = parseSfz(result.text);
+    expect(region!.unresolved).toEqual(["$NEVER_DEFINED"]);
+  });
+
+  it("does not change text that has neither a define nor an include", () => {
+    const plain = "<global> tune=10\n<region> sample=a.wav\n";
+    expect(expandIncludes(plain, files({})).text).toBe(plain);
+  });
+});

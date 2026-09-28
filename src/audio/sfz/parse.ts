@@ -120,8 +120,14 @@ export function parseSfz(text: string): SfzRegion[] {
     return {
       ...DEFAULTS,
       sample: merged.sample ?? "",
-      lokey: num(merged.lokey, DEFAULTS.lokey),
-      hikey: num(merged.hikey, DEFAULTS.hikey),
+      /**
+       * `key` is SFZ's shorthand for `lokey` and `hikey` together, and **not handling it was the second silent widening of a key range** in this file.
+       *
+       * Measured: the real kit writes `key=$KICK_SNRIGHT_KEY`, which now resolves to 36 — and note 38 still matched that kick, while sfizz triggered no voice for 38 at
+       * all. The reason was here: only `lokey`/`hikey` were read, so `key=36` was ignored and the range stayed 0–127. The explicit opcodes win when both are present.
+       */
+      lokey: num(merged.lokey, num(merged.key, DEFAULTS.lokey)),
+      hikey: num(merged.hikey, num(merged.key, DEFAULTS.hikey)),
       lovel: num(merged.lovel, DEFAULTS.lovel),
       hivel: num(merged.hivel, DEFAULTS.hivel),
       // Left undefined when absent, because "no transposition" is the real behaviour and 60 is only a value a file may choose.
