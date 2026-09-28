@@ -11,6 +11,8 @@
  * The catalogue is a **parameter** everywhere it is read, so the shipped-empty case and a populated case are both testable, and so that adding real assets later is
  * an edit to one array rather than a change to the rule.
  */
+import { parseManifest, sampleAssetsFromManifest } from "./sampleManifest";
+
 export interface SampleAsset {
   assetId: string;
   /** What a composer would call it. */
@@ -77,4 +79,23 @@ export function sampleReferenceProblem(
       : `no sample "${assetId}" — no samples ship with the app yet, so every sample reference is an error until they do`;
   }
   return null;
+}
+
+/**
+ * The catalogue a **manifest** describes — the last pure link between a library's metadata and the playback path.
+ *
+ * Both halves already existed: `parseManifest` validates the manifest and `sampleAssetsFromManifest` turns it into catalogue entries. This joins them and returns the problems
+ * from both, so a caller gets one answer instead of two partial ones. It is pure — the caller fetches the text, which keeps the network out of the data layer and keeps this
+ * testable with a literal string.
+ *
+ * A manifest that does not parse yields **no catalogue and its errors**, rather than an empty catalogue: those are different facts, and conflating them is how "the library
+ * failed to load" becomes "the library has no instruments".
+ */
+export function catalogueFromManifestText(text: string, root: string): { assets: SampleAsset[]; problems: string[] } {
+  const parsed = parseManifest(text);
+  if (!parsed.ok || !parsed.manifest) {
+    return { assets: [], problems: parsed.errors.map((error) => `manifest: ${error}`) };
+  }
+  const { assets, problems } = sampleAssetsFromManifest(parsed.manifest, root);
+  return { assets, problems };
 }

@@ -195,3 +195,30 @@ describe("the manifest validates its own promises", () => {
     expect(zero.errors.join("\n")).toMatch(/durationSeconds must be a positive number/);
   });
 });
+
+/**
+ * The last pure link: manifest **text** in, catalogue assets and problems out.
+ *
+ * The parts already existed and this joins them, which is worth a criterion because the join has one decision in it: a manifest that fails to parse must produce **no assets and
+ * its errors**, not an empty catalogue. Those are different facts — "the library failed to load" and "the library has no instruments" lead a composer to different actions.
+ */
+describe("catalogueFromManifestText", () => {
+  it("returns the assets a valid manifest describes, resolved against the mirror", async () => {
+    const { catalogueFromManifestText } = await import("../data/sampleCatalogue");
+    const text = manifest([
+      { id: "kit", name: "Kit", licence: "CC0", prefix: "kit", sfz: "Programs/kit.sfz", durationSeconds: 2.5, files: [{ path: "Programs/kit.sfz", bytes: 100 }] },
+    ]);
+    const { assets, problems } = catalogueFromManifestText(text, "https://cdn.example/samples");
+    expect(problems).toEqual([]);
+    expect(assets.map((asset) => asset.assetId)).toEqual(["kit"]);
+    expect(assets[0]!.sfz).toEqual({ url: "https://cdn.example/samples/kit/Programs/kit.sfz" });
+  });
+
+  it("reports a manifest that does not parse instead of returning an empty catalogue", async () => {
+    const { catalogueFromManifestText } = await import("../data/sampleCatalogue");
+    const broken = catalogueFromManifestText("{ not json", "https://cdn.example");
+    expect(broken.assets).toEqual([]);
+    // The distinction matters: an empty catalogue says "no instruments", while these errors say "the manifest is wrong".
+    expect(broken.problems[0]).toMatch(/manifest: manifest is not valid JSON/);
+  });
+});
