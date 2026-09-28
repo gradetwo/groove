@@ -1268,8 +1268,11 @@ export const TOOLS: ToolDefinition[] = [
         const slug = (song.name || song.genreId)
           .normalize("NFKC")
           .replace(/[\s/\\:*?"<>|]+/g, "-")
-          .replace(/[\u0000-\u001f\u007f]/g, "")
-          .replace(/^[.\-]+|[.\-]+$/g, "")
+          // Control characters are stripped from a filename slug, which is deliberate — the rule objects to writing them literally, so the Unicode category says the same
+          // thing and is harder to misread: `Cc` is the control-character category, and it includes DEL.
+          .replace(/\p{Cc}/gu, "")
+          // `-` last in a character class needs no escape; the escapes were flagged and were redundant.
+          .replace(/^[.-]+|[.-]+$/g, "")
           .slice(0, 40);
         const file = path.join(dir, `${slug || "song"}.groove`);
         const json = `${JSON.stringify(pkg, null, 2)}\n`;

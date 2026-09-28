@@ -28,7 +28,7 @@ describe("audioDurationSeconds", () => {
   it("refuses a duration that is not positive, whether it arrives as zero, NaN or nonsense", () => {
     // The invented value this mechanism exists to avoid: zero would be a duration nobody measured.
     for (const bad of ["0", "0.0", "N/A", "-1"]) {
-      expect(() => audioDurationSeconds("x.flac", runner(bad)), `\"${bad}\" must be refused`).toThrow(DurationError);
+      expect(() => audioDurationSeconds("x.flac", runner(bad)), `"${bad}" must be refused`).toThrow(DurationError);
     }
     expect(() => audioDurationSeconds("x.flac", runner("0"))).toThrow(/duration of 0/);
   });
