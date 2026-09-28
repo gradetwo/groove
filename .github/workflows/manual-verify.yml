@@ -13,7 +13,7 @@
 #
 #   profile  all | pc | mobile   which Playwright targets to run
 #   only     a target-name substring (e.g. "iPhone 14 (竖屏"), empty means all of the profile
-#   scope    e2e | verify | audio | jank | skins | sfizz | all
+#   scope    e2e | verify | audio | jank | skins | sfizz | mirror | all
 #
 # Every scope except `audio` needs a production build: `e2e` and `verify` build in their own step, and `jank`
 # and `skins` are handed one by the explicit Build step above them.
@@ -38,6 +38,7 @@ on:
           - jank
           - skins
           - sfizz
+          - mirror
           - all
       profile:
         description: "Playwright profile (e2e scope)"
@@ -303,6 +304,29 @@ jobs:
 
       # A4 needs `node_modules`, and this scope never installed them — the other scopes get them from their build steps. Without this the step fails on a missing
       # `vitest` rather than on anything to do with the oracle, which is the least useful kind of red.
+      # The **mirror run**: a migration rather than a verification, so it is its own scope and never part of a release gate.
+      #
+      # It downloads a whole library — 1.2 GB across 1660 files for the one this was built against — which is exactly the kind of work that belongs in CI and **not** in a
+      # local session, and exactly the kind that must not run on every push. It is the operation the whole mirror chain exists for: derive the file plan from the SFZ, fetch and
+      # hash every file, measure every duration, and print the **manifest entry** — the one artifact of a mirror that belongs in the repository.
+      - name: Fetch the pinned library
+        if: inputs.scope == 'mirror' || inputs.scope == 'all'
+        run: |
+          git clone --depth 1 --branch develop https://github.com/sfzinstruments/virtuosity_drums.git library || true
+          if [ ! -d library/.git ]; then
+            git clone https://github.com/sfzinstruments/virtuosity_drums.git library
+          fi
+          git -C library checkout 9f04cf9a7345 2>/dev/null || git -C library fetch --depth 1 origin 9f04cf9a7345 && git -C library checkout 9f04cf9a7345
+          du -sh library | cut -f1
+
+      - name: Run the mirror and print the manifest entry
+        if: inputs.scope == 'mirror' || inputs.scope == 'all'
+        env:
+          SFZ_MIRROR_RUN: "1"
+          SFZ_MIRROR_ROOT: library
+          SFZ_MIRROR_OUT: library-mirror
+        run: npx vitest run src/test/mirrorRun.test.ts
+
       - name: Install dependencies for the A4 test
         if: inputs.scope == 'sfizz' || inputs.scope == 'all'
         run: npm ci
