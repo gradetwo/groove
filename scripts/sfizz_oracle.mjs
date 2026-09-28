@@ -65,7 +65,7 @@ export function renderWithSfizz(dir) {
       stdio: ["ignore", "pipe", "pipe"],
     });
   } catch (error) {
-    throw new Error(`could not run ${SFIZZ} (${error.message}) — set SFIZZ_RENDER or build sfizz-ui with -DSFIZZ_RENDER=ON`);
+    throw new Error(`could not run ${SFIZZ} (${error.message}) — set SFIZZ_RENDER, or build sfztools/sfizz at tag 1.2.3 with -DSFIZZ_RENDER=ON`);
   }
   if (!existsSync(out)) throw new Error(`${SFIZZ} reported success but wrote no WAV`);
   return readWav(out);
