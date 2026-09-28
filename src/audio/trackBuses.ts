@@ -40,13 +40,20 @@ export function resolveGroupBus(
   const id = typeof role === "string" ? role.trim().toLowerCase() : "";
   if (DRUM_ROLES.has(id)) return "drum";
   if (id === "bass" || id === "chords" || id === "lead" || id === "fx") return "music";
+  /**
+   * An audio lane belongs on the **music** bus, and the kind decides before the name (owner decision 2026-09-28).
+   *
+   * Without this it fell through to the name hints below, so a sample lane called "Riser Kick" landed on the **drum** bus — the one bus with parallel compression,
+   * which this file's own note says a stray melodic track must never reach. The same rule as `isDrumTrack` and the mix roles: an explicit kind beats a guess.
+   */
+  if (id === "audio") return "music";
 
   const lower = typeof name === "string" ? name.toLowerCase() : "";
   if (lower && DRUM_NAME_HINTS.some((hint) => lower.includes(hint))) return "drum";
   return "music";
 }
 
-/** The eight roles a bus decision covers, for gates and documentation. */
+/** The roles a bus decision covers, for gates and documentation — the eight mix roles, which `GROUP_BUS_ROLES` is asserted against. */
 export const GROUP_BUS_ROLES: readonly { role: string; bus: GroupBus }[] = [
   { role: "kick", bus: "drum" },
   { role: "snare", bus: "drum" },
