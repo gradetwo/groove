@@ -203,6 +203,31 @@ prevented several blind patches in this workstream and whose violation caused fo
 What the run *did* confirm, from the same probe: the audio lane's latency is still **0 ms** (`scheduled at 0s, first sound at frame 0`), and the chunk difference is still
 spread through the whole chunk (`head 1.412 · mid 1.71 · tail 0.6964`), so neither of those has drifted.
 
+## The MIDI writer now has two independent confirmations, not one
+
+The writer built for the sfizz oracle was already confirmed **by sfizz** — a C++ implementation that read its output and rendered audio from it. With `mido` installed in
+`~/music/groove/.venv`, it has a second, unrelated one, and the second is what makes "an external implementation understands this file" a fact rather than an anecdote:
+
+```
+mido: type=0 tracks=1 ticks_per_beat=480 length=0.7500s
+  tempo@0: 500000 µs/quarter = 120.0 bpm
+mido reads: [('note-on',0,60,100), ('note-off',240,60,0), ('note-on',240,60,100), ('note-off',480,60,0), ('note-on',480,64,90), ('note-off',720,64,0)]
+matches the expectations written by hand in this repository's test: True
+```
+
+Two details are worth keeping, because neither was arranged for:
+
+* **`length=0.7500 s` is third-party arithmetic** — mido computed it from the tempo and the last note-off itself, so the tick-to-second conversion is confirmed by
+  something other than the code that produced the ticks;
+* **the off-before-on ordering at tick 240 survived** — a repeated pitch ends before the next begins, which is the one ordering detail that silently truncates notes when
+  it is wrong, and it is now confirmed by an implementation that has no reason to agree with ours.
+
+**Why it is a recorded one-off rather than a test**: `mido` is a Python package in a local virtualenv, and CI has neither. Enforcing it there would take a `pip install`
+step; the file records the evidence and the option instead of implying a check that does not run.
+
+**And the CI policy, as the owner restated it**: heavy work — browser probes, renders and profiling, the sfizz build, the full chain, the device matrix — belongs in the
+`manual-verify` scopes and in `ci.yml`. Locally the cheap instruments run: `typecheck`, `lint`, and the unit suite.
+
 ## Method notes worth keeping, all learned by being wrong here
 
 * **A local green is evidence about the tree that was checked, not the tree that is pushed.** A release failed on `'"kick" | … | "fx"' and '"audio"' have no
