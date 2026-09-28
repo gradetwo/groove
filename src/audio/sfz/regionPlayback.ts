@@ -43,12 +43,18 @@ export function playbackForNote(
   const region = roundRobinPick(covering, nth);
   if (!region) return null;
 
-  const semitones = note - region.pitchKeycenter;
+  /**
+   * Undefined `pitchKeycenter` means **no transposition**: the sample plays at its recorded rate.
+   *
+   * Measured, not reasoned: with the 60-default model a real kick came out at ratio 0.28 (down 22 semitones), while sfizz rendered the same note at about 1× through the
+   * real kit and through a one-region control. A drum that is not told to transpose must not be transposed.
+   */
+  const semitones = region.pitchKeycenter === undefined ? 0 : note - region.pitchKeycenter;
   const ratio = Math.pow(2, semitones / 12) * Math.pow(2, region.tuneCents / 1200);
 
   return {
     sample: region.sample,
-    rootKey: region.pitchKeycenter,
+    rootKey: region.pitchKeycenter ?? note,
     semitones,
     ratio,
     tuneCents: region.tuneCents,

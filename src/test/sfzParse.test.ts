@@ -16,8 +16,13 @@ describe("parseSfz", () => {
     expect(region!.hikey).toBe(127);
     expect(region!.lovel).toBe(0);
     expect(region!.hivel).toBe(127);
-    // The default that detunes everything if it is guessed: SFZ says 60.
-    expect(region!.pitchKeycenter).toBe(60);
+    /**
+     * **No default transposition** — and this assertion used to say 60, confidently, in a comment about defaults that detune everything when guessed wrong.
+     *
+     * A real library settled it: with the 60-default model the kick of `virtuosity_drums` came out at ratio 0.28, while sfizz played it at about 1× both through the real
+     * kit and through a one-region control with `pitch_keycenter` set. An unset opcode now means "play it as recorded".
+     */
+    expect(region!.pitchKeycenter).toBeUndefined();
     expect(region!.tuneCents).toBe(0);
     expect(region!.seqLength).toBe(1);
   });
