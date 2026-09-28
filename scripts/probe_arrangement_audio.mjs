@@ -448,6 +448,15 @@ try {
      */
     const renderLaneCurve = await (async () => {
       try {
+        /**
+         * **What this measures, stated exactly.** The catalogue this project ships is **empty** (the read-only-slice constraint), and `renderSongOffline` takes no catalogue or
+         * sample-loader option — so these lanes carry an `assetId` that resolves to nothing. The curve therefore measures the **lane and graph machinery** (one voice chain per
+         * lane, the master chain, the render), **not** sample decoding or playback.
+         *
+         * The latency block below reaches a real impulse by building its own `OfflineAudioContext` and injecting a loader, which is the right shape for that question and the wrong
+         * one for this: here the 64-lane cost is what is wanted, and loading 64 samples would measure the loader instead. **The label is the point** — the first version was
+         * silent about it, which is how a number ends up meaning something other than it says.
+         */
         const lane = (index) => ({ track_id: "audio", name: `lane-${index}`, sample: { assetId: "probe-impulse" } });
         const points = [];
         const short = [sections[0]];
