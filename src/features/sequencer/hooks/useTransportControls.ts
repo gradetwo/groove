@@ -6,8 +6,13 @@ import { announcer } from "../../../platform/announcer";
 import { useLanguage } from "../../../i18n/LanguageContext";
 import { patternForSlot } from "../../../types/project";
 import type { ClipSlot } from "../../../types/song";
+import { playAudioLanes } from "../../../audio/audioLanePlayback";
 
 export interface UseTransportControlsOptions {
+  /**
+   * The arrangement's song, as a **getter** so a re-render cannot hand the lanes a different object each time. Absent means the audio-lane path does nothing at all.
+   */
+  arrangementSong?: () => { clips: Record<string, { tracks?: unknown[] } | undefined>; sections: Array<{ id?: string; slot?: string; bars?: number }>; boundaries?: number[]; bpm: number } | null;
   engineRef: React.MutableRefObject<AudioEngine | null>;
   seqStateRef: React.MutableRefObject<SequencerState>;
   isPlaying: boolean;
@@ -58,6 +63,7 @@ export interface UseTransportControlsResult {
  */
 export function useTransportControls({
   engineRef,
+  arrangementSong,
   seqStateRef,
   isPlaying,
   setIsPlaying,
@@ -157,6 +163,27 @@ export function useTransportControls({
     releasePreviewScope?.();
     try {
       await engine.play();
+
+      /**
+       * Audio lanes, started **beside** the transport rather than inside the engine.
+       *
+       * The engine knows only patterns — a song is an app-layer object — so the caller that owns the arrangement is the one that can hand the lanes their song, their context and the same
+       * mixing destination the engine uses for everything else. Guarded three ways so this cannot alter existing behaviour: no `arrangementSong` (the default), no resolved song, or no live
+       * context all mean nothing happens.
+       *
+       * **And it never blocks playback**: the promise is swallowed, exactly as the engine swallows its own GS1 probe, because a lane that cannot load must not stop the rest of the song from
+       * playing. Problems are reported on the console rather than as a toast, since this path runs at transport start where a modal interruption would be worse than a log line.
+       */
+      const song = arrangementSong?.();
+      const context = engine.audioContext;
+      const destination = engine.musicDestination;
+      if (song && context && destination) {
+        void playAudioLanes({ song: song as never, context, destination })
+          .then((result) => {
+            for (const problem of result.problems) console.warn(`[audio-lane] ${problem}`);
+          })
+          .catch((error: unknown) => console.warn(`[audio-lane] ${error instanceof Error ? error.message : String(error)}`));
+      }
     } catch (error) {
       // A rejected resume is a real failure worth reporting, not a reason to claim playback.
       console.warn("[transport] playback could not start", error);
