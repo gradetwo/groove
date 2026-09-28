@@ -1,10 +1,9 @@
 /**
  * The song model: clips and an arrangement.
  *
- * Until now a project was two patterns and a `songChain` of `ClipSlot` letters that **nothing rendered or played**
- * — the field was persisted and copied around, but the renderer repeated a single pattern `bars` times. This file
- * is the model that makes the chain real: clips hold the patterns the step sequencer edits, and sections place
- * those clips on a timeline.
+ * A project is clips and an arrangement: clips hold the patterns the step sequencer edits, and sections place those clips on a timeline, where they are rendered,
+ * exported and shared. (The history is worth one line and no more: this began as two patterns and a `songChain` of `ClipSlot` letters that nothing rendered or
+ * played, and this file is the model that made the chain real.)
  *
  * The split matters for where the work goes: **the step sequencer keeps editing a `SequencerPattern`** (a clip),
  * and a new arrangement surface edits `sections`. Nothing about the editing model changes; it gains a parent.
