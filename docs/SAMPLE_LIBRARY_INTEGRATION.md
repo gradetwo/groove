@@ -459,6 +459,24 @@ grep -rn "planAudioLaneEvents|createSampleLoader|scheduleAudioLane|browserSample
 * ⭐ **引擎的边界不变** ✓：它继续只懂 pattern ✓，音频车道是"谁拥有编排、谁负责启动"✓；
 * ⭐ 而**"只在有音频车道时才动"仍然由 `playAudioLanes` 自己保证** ✓（空计划 ⇒ 空报告 ✓ 不是失败 ✓）。
 
+### ⭐⭐ 落点已经读到底了：`arrangementSong` + `useTransportControls`（2026-09-28）
+
+按上一轮的决定（挂钩在持有 song 的那一层 ✓）继续读，落点两处都找到了 ✓：
+
+| 需要的东西 | 在哪 | 证据 |
+|---|---|---|
+| ⭐ **song 形状的对象** | `src/views/StudioView.tsx:266` | `const arrangementSong = useMemo(...)` ✓ —— 正是 `clips`/`sections`/`boundaries`/`bpm` 那种形状 ✓ |
+| ⭐ **编排真正开始播放的那一处** | `src/hooks/useTransportControls.ts` | `StudioView:536` 从它解构出 `handleTogglePlay` ✓，并传给它 `engineRef` ✓ 与 `seqStateRef` ✓ |
+
+**所以第 2 刀的形状是** ✓：
+
+1. `useTransportControls` 多收一个 **`arrangementSong`** ✓（或一个取值函数 ✓，以免每次渲染都换新对象 ✓）；
+2. 在它调用 `engine.play()` / `playScoped()` 的那一处**并排调用 `playAudioLanes`** ✓；
+3. **context 与 destination 从引擎取** ✓ —— 引擎自己持有 `ctx` ✓（`AudioEngine.play()` 里就能看到 ✓），**不需要新拉管道** ✓；
+4. **失败不阻塞** ✓：`playAudioLanes` 的 promise 被 **catch 并具名报告** ✓ —— 与引擎对 GS1 探测的取舍相同 ✓（`void this.probeLiveGs1().catch(() => undefined)` ✓）。
+
+⭐ 而**落刀时的判据**已经在手边 ✓：`playAudioLanes` 的 3 条 ✓（无车道 ⇒ 空报告 ✓、能解析的资产 ⇒ 进入加载器 ✓、解析不到的资产 ⇒ **具名报出** ✓）+ 目录运行时的 2 条 ✓ —— ⭐ **所以这一刀要新增的判据只有一条** ✓：**"播放开始时，编排的歌被交给了音频车道"** ✓（用一个假的 transport 依赖去断言调用 ✓，不需要浏览器 ✓）。
+
 ### 挂钩要做的三件事（已在文档里定形 ✓）
 
 1. ⭐ **只在有音频车道时才动** ✓ —— 由 `playAudioLanes` 自己保证（**空计划返回空报告 ✓ 不是失败 ✓**）；
