@@ -103,3 +103,37 @@ describe("writeMidi", () => {
     expect(on.bytes.slice(1)).toEqual([127, 127]);
   });
 });
+
+/**
+ * Control changes — added because a real library needed them, and **proved here because an untested feature is the thing this workstream keeps criticising.**
+ *
+ * The experiment they were built for came out negative (the `virtuosity_drums` kit stayed silent with its own `set_cc*` values sent as CC events, and sfizz's log showed
+ * `NumVoices: 0` rather than a volume problem), so the feature's justification is not that it fixed that — it is that MIDI export needs CCs anyway and a writer that
+ * silently drops them would be a trap.
+ */
+describe("writeMidi control changes", () => {
+  it("writes a CC event where the seconds say, before the notes at the same tick", () => {
+    const path = join(mkdtempSync(join(tmpdir(), "midi-")), "cc.mid");
+    // At 120 bpm, 960 ticks per second: a CC at 0.25 s lands on tick 240, and it must precede a note that starts there.
+    writeMidi(path, {
+      bpm: 120,
+      controls: [{ cc: 101, value: 127, atSeconds: 0.25 }],
+      notes: [{ note: 38, velocity: 100, startSeconds: 0.25, durationSeconds: 0.25 }],
+    });
+    const parsed = parse(readFileSync(path));
+    const kinds = parsed.events.map((event) => `${event.kind}@${event.tick}`);
+    // The CC is written as a control event and sorts before the note-on at the same tick.
+    expect(kinds).toContain("other@240");
+    expect(kinds.indexOf("other@240")).toBeLessThan(kinds.indexOf("note-on@240"));
+    const cc = parsed.events.find((event) => event.kind === "other" && event.tick === 240)!;
+    // 0xB0 status, then the controller and the value.
+    expect(cc.bytes.slice(0, 3)).toEqual([0xb0, 101, 127]);
+  });
+
+  it("clamps a controller and its value rather than writing an unreadable byte", () => {
+    const path = join(mkdtempSync(join(tmpdir(), "midi-")), "clampcc.mid");
+    writeMidi(path, { controls: [{ cc: 999, value: -5, atSeconds: 0 }], notes: [] });
+    const cc = parse(readFileSync(path)).events.find((event) => event.kind === "other")!;
+    expect(cc.bytes.slice(0, 3)).toEqual([0xb0, 127, 0]);
+  });
+});

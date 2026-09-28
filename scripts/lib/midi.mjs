@@ -23,7 +23,7 @@ function variableLength(value) {
 
 /**
  * @param {string} path
- * @param {{ bpm?: number, notes: Array<{ note: number, velocity?: number, startSeconds: number, durationSeconds: number, channel?: number }> }} score
+ * @param {{ bpm?: number, controls?: Array<{ cc: number, value: number, atSeconds?: number, channel?: number }>, notes: Array<{ note: number, velocity?: number, startSeconds: number, durationSeconds: number, channel?: number }> }} score
  */
 export function writeMidi(path, score) {
   const bpm = score.bpm ?? 120;
@@ -37,6 +37,17 @@ export function writeMidi(path, score) {
     bytes: [0xff, 0x51, 0x03, (microsecondsPerQuarter >> 16) & 0xff, (microsecondsPerQuarter >> 8) & 0xff, microsecondsPerQuarter & 0xff],
     order: 0,
   });
+
+  /**
+   * Control changes, added because a real library needed them: the `virtuosity_drums` kit renders **silence** without its own `set_cc*` values, which is the difference
+   * between a cosmetic control block and a load-bearing one. The experiment that established this is the first real use of this feature, and MIDI export needs it anyway.
+   */
+  for (const control of score.controls ?? []) {
+    const tick = Math.round((control.atSeconds ?? 0) * ticksPerSecond);
+    const cc = Math.max(0, Math.min(127, Math.round(control.cc)));
+    const value = Math.max(0, Math.min(127, Math.round(control.value)));
+    events.push({ tick, bytes: [0xb0 | (control.channel ?? 0), cc, value], order: -1 });
+  }
 
   for (const note of score.notes) {
     const channel = note.channel ?? 0;
