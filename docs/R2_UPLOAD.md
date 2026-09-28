@@ -118,3 +118,42 @@ GET https://groove.wangda.today/samples/manifest.json
 **构建本身是对的** ✓：`dist/samples/manifest.json` = **347158 字节** ✓ → ⭐ **所以这是"网站自清单提交以来还没重新部署"** ✓✓ —— 重新部署一次即可 ✓。
 
 ⚠️ 而 `npm run deploy` 会先跑 `npm run verify`（**完整校验链** ✓）；只部署用 `npm run deploy:only` ✓（`node scripts/deploy.mjs` ✓，用 `.env` 里的 `CLOUDFLARE_API_TOKEN` ✓）—— ⭐ **而"重新部署生产"是业主的决定，不是我的** ✓。
+
+## 7. 业主的三条决定（2026-09-28）—— 以及一条必须先说清的技术点
+
+### ① 上传**不必**反复测试（CI 与本地都不要）
+
+> 原话要旨：**第一次创建好、验证好就够；后续除非改动，否则没必要测试上传** ✓；**而访问测试只测最小的那一个文件** ✓。
+
+**所以**：
+* `manual-verify.yml` 的 **`mirror` scope 不再作为常规验证** ✓ —— 它是**迁移工具**（每库一次 ✓），不是判据 ✓；保留它**手动**可用 ✓，但从"每次都跑"里拿出来 ✓；
+* ⭐ **任何"能不能取到"的检查，只取最小的那个文件** ✓ —— 而不是 1659 个 ✓（一次上传的核对已经做完并被记录 ✓：**1659 objects · 442411669 bytes · 与清单逐字节相符** ✓✓）。
+
+### ② SFZ 的下载策略：**先源地址，源不可用才回退 R2**
+
+> 这是对**运行时**行为的决定 ✓，而当前实现与它相反 ✗。
+
+**要改的地方**（已定位 ✓）：`sampleAssetsFromManifest` 目前**只用镜像 root** 拼 `sfz.url` ✓ → 需要变成：
+
+| 字段 | 含义 |
+|---|---|
+| `sfz.url` | ⭐ **源地址优先** ✓ —— 清单里已有 `repo` + `pin` ✓，所以源地址是**可推导且钉住的** ✓（`https://raw.githubusercontent.com/<repo>/<pin>/<prefix><sfz>` ✓） |
+| `sfz.fallbackUrl` | ⭐ **R2 镜像** ✓ —— 只有源失败或资源不存在时才用 ✓ |
+
+⭐ 而**采样文件**同理 ✓（`sample=` 里那些 ✓）—— 源在库仓里 ✓，R2 是镜像 ✓。
+
+⭐⭐ **这个策略有一个直接的好处，值得写下来**：**它让"用户自备库"的逃生门变成默认路径的一部分** ✓ —— 源可用时连 R2 都不需要 ✓；而 **R2 的存在是为了"源消失时还能用"** ✓✓，这正是当初选它的理由 ✓。
+
+⚠️ **而它有一个必须验的风险** ✗：**跨域** ✓ —— `raw.githubusercontent.com` 的 CORS 是允许的 ✓（项目里已用它取过 `.sfz` ✓），但**源站与 R2 的失败模式不同**（403/404/超时 ✓）→ ⭐ **回退的判据必须是"任何非 2xx 或网络错误"** ✓，而不只是 404 ✓。
+
+### ③ ⚠️ 生产那几个值：**`wrangler secret bulk` 设的是"运行时"秘密，不是"构建时"变量**
+
+业主设的四个键 ✓：`R2_ACCOUNT_ID` ✓ `R2_ACCESS_KEY_ID` ✓ `R2_SECRET_ACCESS_KEY` ✓ `VITE_SAMPLE_ROOT` ✓。
+
+⭐ **前三个是运行时秘密 ✓ —— 对上传脚本/Worker 运行时有用 ✓；那是对的 ✓。**
+
+⚠️ **而 `VITE_SAMPLE_ROOT` 不是** ✗✓：**Vite 在构建时把它内联进产物** ✓ → **一个运行时秘密到不了 `dist/assets/*.js`** ✗✓ —— **它必须在"构建那一刻"的环境里** ✓。
+
+⭐ 而**这一条现在其实已经满足** ✓✓：**业主的 `.env.local` 里就有它** ✓，而**我构建后搜过产物** ✓：`dist/assets/StudioView-*.js` **里有 `r2mirror.groove.wangda.today`** ✓✓ —— ⭐ **所以只要部署是"本机/CI 先 `npm run build` 再 deploy"，它就已经被内联了** ✓。
+
+⚠️ **只有当构建发生在 Cloudflare 侧**（Pages 的 CI 构建 ✓ / Workers Builds ✓）时，才必须把它设成**构建变量**（Pages → Settings → Environment variables ✓ 或 Workers Builds 的 build variables ✓）—— ⭐ **判据很简单**：**部署后看产物里有没有那个域名** ✓。

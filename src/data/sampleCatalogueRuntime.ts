@@ -21,6 +21,10 @@ export interface CatalogueRuntime {
   problems: readonly string[];
   /** True once a load has completed successfully; the UI uses this rather than guessing. */
   ready: boolean;
+  /** Whether a mirror root is configured at all — "not set up" and "set up and broken" are different states to report. */
+  configured: boolean;
+  /** True while a fetch is in flight, so an interface can say "loading" instead of "nothing yet". */
+  loading: boolean;
   load(): Promise<{ assets: SampleAsset[]; problems: string[] }>;
 }
 
@@ -75,6 +79,14 @@ export function createCatalogueRuntime(options: CatalogueRuntimeOptions = {}): C
   return {
     get assets() {
       return assets;
+    },
+    /** Whether a mirror root is configured at all — the difference between "not set up" and "set up and broken". */
+    get configured() {
+      return root !== "";
+    },
+    /** True while a fetch is in flight, so an interface can say "loading" rather than "nothing yet". */
+    get loading() {
+      return inFlight !== null;
     },
     get problems() {
       return problems;
