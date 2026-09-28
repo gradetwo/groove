@@ -39,6 +39,21 @@ quietly.
    reporting, and the audio-scope criterion (**chunked versus single-pass, sample for sample within epsilon**, plus no level step at a section boundary).
 2. **The audio path's latency, measured into PDC's table** — a **measured** row, never a declared one, following the master limiter's 7.415 ms.
 
+## The chunking measurement: designed, in the probe, before any production change
+
+The probe is the right place to prove this, and reading it made the design smaller than I had been carrying around:
+
+* the probe already has `render(song, extra) → { buffer, channels[] }` (a page-side offline render of a **song**), which the boundary-click block uses;
+* so a **chunk is a song with a subset of its sections** — no step-slicing, no new exporter option, and `planRenderChunks`'s bar-level plan is the general case that
+  the section-level cut already satisfies;
+* render each chunk **masterless** (the four parameters: `loudnessTrimDb: 0`, `masterMakeupDb: 0`, `masterBusCompEnabled: false`, a ceiling above the signal),
+  concatenate the channel arrays, and compare against a single whole-song render: **max |difference|**, plus the level either side of each boundary;
+* print the result the way `kickPhase` prints its verdict, so the first run produces a number rather than a gate. **Deciding whether to gate it comes after reading it** —
+  which is the same order as every other measurement in this project, and the reason its gates mean something.
+
+Nothing here needs a production change until the numbers say the chunked path matches the whole one. If they do not, the next suspect is already named: the master
+chain is stateful, so a chunk that masters itself is only ever approximate.
+
 ## Method notes worth keeping, all learned by being wrong here
 
 * **A local green is evidence about the tree that was checked, not the tree that is pushed.** A release failed on `'"kick" | … | "fx"' and '"audio"' have no
