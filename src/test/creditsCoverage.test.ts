@@ -54,8 +54,20 @@ describe("credits coverage", () => {
     }
     const parsed = parseManifest(manifestText);
     expect(parsed.ok, `the manifest does not parse: ${parsed.errors.join("; ")}`).toBe(true);
+    /**
+     * **The premise refined, and the refinement matters.** The first version checked every CC BY entry in the manifest — and a negative control for that never ran, because
+     * the manifest had no CC BY entry. Once `salamander-grand` was declared, this test failed: a library **declared** with a pin, whose samples nobody has downloaded, is
+     * not yet redistributed, so demanding its credit in the "redistributed" list was one step too eager.
+     *
+     * Redistribution begins when an entry can reach the catalogue, which is exactly when `sampleAssetsFromManifest` accepts it — and that requires a `durationSeconds`.
+     * So the obligation follows that, no earlier and no later.
+     */
     const requiring = parsed.manifest!.entries.filter(
-      (entry) => !entry.excludedReason && (entry.licence === "CC-BY" || entry.licence === "CC-BY-SA")
+      (entry) =>
+        !entry.excludedReason &&
+        typeof entry.durationSeconds === "number" &&
+        entry.durationSeconds > 0 &&
+        (entry.licence === "CC-BY" || entry.licence === "CC-BY-SA")
     );
     /**
      * **Only the first list counts**, and separating them was the fix for the hollow guard.
