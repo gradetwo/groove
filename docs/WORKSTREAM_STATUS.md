@@ -149,6 +149,27 @@ that: the trim fixes the **length** (already exact, `1x`) and nothing else.
 This is the third time in this block that a measurement changed the plan rather than confirming it (the tail's existence, the state's reach, and now the tension
 itself), which is the argument for measuring **before** building rather than after.
 
+## The GS-1 e2e failure: a **correct** engine, and a test that hard-codes a default
+
+Two `verify` runs failed on **different** iPhone targets, and six hypotheses died before the right answer came from reading **who writes the flag**:
+
+| hypothesis | verdict |
+|---|---|
+| a target watchdog timeout | ✗ the watchdog is 480 s; the failures reported 74 s and 87 s |
+| the service worker returning HTML for a `.js` asset | ✗ that fallback is gated to `mode === "navigate"` / `.html` |
+| the `/assets/*` branch doing the same | ✗ it has no HTML fallback at all |
+| COOP/COEP/CORP blocking a module worker | ✗ the repository has no `Cross-Origin-*` configuration |
+| the harness intercepting routes | ✗ no `page.route` / `abort` in the matrix |
+| two sources of truth for the GS-1 switch | ✗ `useGs1Setting` uses `useSyncExternalStore` against the module flag — **one** source |
+
+**The answer**: `AudioEngine.probeLiveGs1()` **measures** whether GS-1 makes a sound in this browser and switches it off when it does not — its own comment says "measured, not guessed", and it names Safari's worklet rendering the GS-1 core silent. So on a WebKit/iOS target the engine **deliberately** turns GS-1 off, the panel **faithfully** renders OFF through the shared store, and the e2e assertion `"GS-1 should default to on inside the panel"` fails. **Nothing in the app is wrong.**
+
+It also explains the two symptoms that made this look like a flake: the verdict depends on `ensureLiveGs1Capability` finishing, and if the probe runs **before** audio unlock it returns `unmeasured` — which the code says "changes nothing". So ON or OFF depends on **a race with the first user gesture**, and the earlier green run was the `unmeasured` branch.
+
+**The fix, and why it is not a relaxation**: a test that hard-codes a **default** is wrong when a runtime capability probe is allowed to change that default. The assertion becomes the **invariant**: wait for the probe to settle, then accept ON, or accept OFF **only with the measured reason on the console** — which needs a `page.on("console")` listener attached **inside this test** (the harness currently captures `pageerror` only, at `scripts/test_matrix.js:551`, and a page-scoped listener cannot leak into other cases). If it starts OFF without that reason, the test still fails, because then something really did go wrong.
+
+Recorded before the patch because the patch touches an e2e harness this machine cannot run — and this workstream's rule is that the fix follows the reading, not the other way round.
+
 ## Method notes worth keeping, all learned by being wrong here
 
 * **A local green is evidence about the tree that was checked, not the tree that is pushed.** A release failed on `'"kick" | … | "fx"' and '"audio"' have no
