@@ -45,7 +45,7 @@ describe("mirrorFiles", () => {
     expect(result.problems.join("\n")).toMatch(/4 bytes ≠ 99/);
   });
 
-  it("skips a plan entry containing a glob character, naming it — the real library has one", async () => {
+  it("skips a `*`-prefixed built-in, naming it as the built-in it is — the real library writes sample=*silence", async () => {
     const requested: string[] = [];
     const result = await mirrorFiles({
       plan: plan("Programs/*silence", "Samples/kick.wav"),
@@ -58,7 +58,10 @@ describe("mirrorFiles", () => {
     expect(result.fetched).toBe(1);
     expect(result.skipped).toHaveLength(1);
     expect(result.skipped[0]!.path).toBe("Programs/*silence");
-    expect(result.skipped[0]!.reason).toMatch(/glob character/);
+    // The reason must say **what it is**, not merely that it was skipped: the first version said "a glob character", which reached the right behaviour through an
+    // explanation that would have sent a later reader looking for a pattern to expand.
+    expect(result.skipped[0]!.reason).toMatch(/SFZ built-ins/);
+    expect(result.skipped[0]!.reason).toMatch(/\*silence/);
     // And it was never requested: a URL containing `*` cannot exist, so asking for it would be a failure with no information in it.
     expect(requested.every((url) => !url.includes("*"))).toBe(true);
   });

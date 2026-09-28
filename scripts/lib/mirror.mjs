@@ -10,8 +10,12 @@
  */
 import { matchManifestEntry } from "./files.mjs";
 
-/** A path with a glob character is not a file, and is reported rather than requested. */
-const GLOB = /[*?[\]]/;
+/**
+ * SFZ's `*`-prefixed names are **built-ins, not files**, and `*silence` is the one a real library uses: `sample=*silence` means "play nothing" rather than "fetch a file called
+ * `*silence`". The first version of this step skipped it as "a path containing a glob character", which reached the right behaviour through the wrong explanation — and a wrong
+ * explanation is what a later reader acts on.
+ */
+const BUILT_IN = /^\*|[*?[\]]/;
 
 /**
  * @returns {Promise<{ ok: boolean, fetched: number, skipped: Array<{path:string, reason:string}>, problems: string[] }>}
@@ -22,10 +26,10 @@ export async function mirrorFiles({ plan, baseUrl, fetchImpl = fetch, outDir = n
   let fetched = 0;
 
   for (const file of plan) {
-    if (GLOB.test(file.path)) {
+    if (BUILT_IN.test(file.path)) {
       skipped.push({
         path: file.path,
-        reason: "the path contains a glob character, so it is either a pattern to expand or a filename to confirm — neither is a URL a mirror can request",
+        reason: "`*`-prefixed names are SFZ built-ins, not files — `*silence` means \"play nothing\", so there is nothing to mirror",
       });
       continue;
     }
