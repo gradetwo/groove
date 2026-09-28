@@ -134,7 +134,8 @@ describe("B6 · add_section", () => {
   it("clamps an absurd bar count to the model's own ceiling", () => {
     const created = createMcpSong({ genreId: "custom", pattern: clip(16) });
     const added = addMcpSection({ songId: created.songId, slot: "A", bars: 9999 });
-    expect(added.totalBars).toBe(65);
+    // The ceiling moved from 64 to 256 by the owner's decision of 2026-09-28; the clamp still happens, one past the limit.
+    expect(added.totalBars).toBe(257);
     expect(added.problems.join(" ")).toMatch(/clamped/);
   });
 });
