@@ -17,6 +17,13 @@ export interface SampleAsset {
   name: string;
   kind: "loop" | "one-shot";
   seconds: number;
+  /**
+   * Where the bytes are, **inside the app** — a path the app itself serves, not a user's file and not an absolute URL.
+   *
+   * That indirection is what keeps the `.groove` format unchanged: a song or a shared genre carries the **id**, and the id resolves here. Optional, because an asset
+   * may be declared before its audio exists — and an asset without a url is refused, loudly, rather than fetched from nowhere.
+   */
+  url?: string;
 }
 
 /**
