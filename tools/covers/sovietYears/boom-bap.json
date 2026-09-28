@@ -1,0 +1,14 @@
+{
+  "model": "qwen-image-2.1",
+  "preset": "quality",
+  "size": "1024x1024",
+  "steps": 40,
+  "seed": 1976,
+  "skin": "sovietYears",
+  "genre": "boom-bap",
+  "prompt": "1920s Soviet constructivist propaganda poster, two flat inks on coarse aged paper, square album cover, subject: a turntable and a crate of vinyl records on a graffiti-free subway platform as a monumental photomontage silhouette or severely reduced geometric icon, expressing the sound of boom bap \u2014 dusty sampled loops, punchy swung drums, drawing on New York City of the early 1990s, a crate of vinyl and a dusty drum break. Aged paper ground (#f4f1e1) as the third colour, flag red (#cc0000) used as a large flat field covering a third to half of the image, dense black (#111111) carrying all structure. Aggressive diagonals, skewed and sheared geometry, a red wedge or beam cutting across the square, radiating and concentric flat shapes, hard overlapping masses, zero-blur plate-offset shadows, coarse paper fibre, flat misregistered ink, poster pasted and printed too heavily. Monumental, collective, graphic. No gradients, no soft shadows, no 3D, no text, no Cyrillic, no lettering.",
+  "origin": "New York City of the early 1990s, a crate of vinyl and a dusty drum break",
+  "negative_prompt": "text, letters, words, typography, logo, watermark, signature, small print, fine print, corner mark, caption, UI, screenshot, frame, border, photograph of a real person, celebrity, album cover, brand, clipart, flat vector icon, stock photo, generic corporate imagery, floating geometric shapes, plastic 3D render, oversaturated HDR, low detail, blurry, jpeg artifacts",
+  "postprocess": null,
+  "timestamp": "2026-09-25T17:22:39Z"
+}

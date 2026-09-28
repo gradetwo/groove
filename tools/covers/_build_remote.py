@@ -31,6 +31,12 @@ data = load("_batch_data", os.path.join(COVERS, "_batch_data.py"))
 with open("/tmp/cg_payload_parts.json") as fh:
     parts = json.load(fh)
 
+# Drive mirror stays ON so every tile has an off-VM copy.  The first VM was lost
+# with the only copy of its later tiles precisely because this was off.
+# Set CG_MIRROR_DRIVE=0 only for a session whose Drive is not mounted yet.
+import os as _os
+parts["cfg"]["mirror_drive"] = _os.environ.get("CG_MIRROR_DRIVE", "1") == "1"
+
 # --- skip list: every (skin, genre) whose local jpg already verifies ---------
 skip = []
 for skin in runner.SKINS:

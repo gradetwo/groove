@@ -17,6 +17,7 @@ fails verification stays in staging and is reported; nothing is ever deleted.
 import json
 import os
 import shlex
+import shutil
 import subprocess
 import sys
 import time
@@ -27,17 +28,25 @@ from colabgen import ssh as sm  # noqa: E402
 from PIL import Image  # noqa: E402
 
 COVERS = "/home/crow/music/groove/public/covers"
-STAGING = os.path.join(COVERS, "_batch_scratch", "fetched")
-MANIFEST = os.path.join(COVERS, "_batch_scratch", "sync_manifest.json")
+STAGING = os.environ.get("CG_SYNC_STAGING", os.path.join(COVERS, "_batch_scratch", "fetched"))
+BACKOFF = [20, 45, 90, 180, 180, 180, 180, 180, 180, 180]  # ssh retry sleeps (10 attempts)
+MANIFEST = os.environ.get("CG_SYNC_MANIFEST", os.path.join(COVERS, "_batch_scratch", "sync_manifest.json"))
 LOG = os.path.join(COVERS, "_batch_progress.log")
-RUN = "covers-gen"
-SESSION = "batch"
+RUN = os.environ.get("CG_SYNC_RUN", "covers-gen2")
+SESSION = os.environ.get("CG_SYNC_SESSION", "batch2")
 REMOTE_DIR = f"/content/.colabgen/runs/{RUN}"
+# Each run gets its own staging + manifest so parallel runs (main + regen waves)
+# cannot confuse each other's delta tracking.  Only the main run owns the
+# REMOTE_ACTIVE marker that stops a local runner from starting a second writer.
+MANAGES_MARKER = os.environ.get("CG_SYNC_MARKER", "0") == "1"
 ARCHIVE = "_sync.tar.gz"
 SKINS = ["default", "minimal", "comic", "soviet", "sovietYears", "pixel"]
 CONTROL = {"script.py", "run.pid", "run.json"}
 MAX_FILES_PER_CYCLE = 400
-BACKOFF = (20, 45, 90, 180, 180, 180, 180, 180, 180, 180)
+LOCK_LEASE_S = 240      # a lock older than this is stale even if its holder is alive
+PASS_DEADLINE_S = 180   # hard wall on one fetch+install pass
+SSH_TIMEOUT = 120
+SCP_TIMEOUT = 120
 
 
 def log(line):
@@ -49,32 +58,99 @@ def log(line):
 
 
 def ssh_retry(cmd, timeout=300):
-    """Run one ssh command, retrying transient slot contention for ~25 min."""
-    last = (255, "")
-    for i, delay in enumerate(BACKOFF):
-        rc, out = sm.ssh_run(SESSION, cmd, timeout=timeout, with_cuda_env=False)
-        if rc == 0:
-            if i:
-                log(f"ssh-recovered after {i} retries")
-            return rc, out
-        last = (rc, out)
+    """ONE quick ssh attempt.  The sync must never hold a retry train while the
+    runtime's single ssh slot is needed; a failed cycle is retried by the timer.
+    The lock lease plus the pass deadline guarantee it cannot wedge others."""
+    rc, out = sm.ssh_run(SESSION, cmd, timeout=min(timeout, SSH_TIMEOUT), with_cuda_env=False)
+    if rc != 0:
         tail = " ".join((out or "").split())[-170:]
-        log(f"ssh-retry {i+1}/{len(BACKOFF)} rc={rc} sleep={delay}s {tail}")
-        time.sleep(delay)
-    return last
+        log(f"ssh-attempt failed rc={rc} {tail} (cycle skipped, generation has priority)")
+    return rc, out
 
 
-def scp_retry(remote, local):
+def scp_retry(remote, local, tries=2, pause=20):
     last = (255, "")
-    for i, delay in enumerate(BACKOFF):
-        rc, out = sm.scp_get(SESSION, remote, local, timeout=900)
+    for i in range(tries):
+        rc, out = sm.scp_get(SESSION, remote, local, timeout=SCP_TIMEOUT)
         if rc == 0 and os.path.exists(local) and os.path.getsize(local) > 0:
             return rc, out
         last = (rc, out)
         tail = " ".join((out or "").split())[-170:]
-        log(f"scp-retry {i+1}/{len(BACKOFF)} rc={rc} sleep={delay}s {tail}")
-        time.sleep(delay)
+        log(f"scp-retry {i+1}/{tries} rc={rc} {tail}")
+        time.sleep(pause)
     return last
+
+
+def _owner_text():
+    lock = os.path.join(COVERS, "_batch_scratch", "gpu.lock")
+    try:
+        with open(os.path.join(lock, "owner")) as fh:
+            return fh.read().strip()
+    except Exception:
+        return "unknown"
+
+
+def gpu_lock_acquire(timeout=15):
+    """Take the shared runtime lock.
+
+    A lock is stale if its holder is DEAD *or* if the lease is older than
+    LOCK_LEASE_S -- a hung-but-alive holder (the failure that wedged every sync)
+    must not be able to block the timer forever.  The lease is re-read right
+    before stealing so a legitimate long pass is not raced.
+    """
+    lock = os.path.join(COVERS, "_batch_scratch", "gpu.lock")
+    waited = 0
+    while waited <= timeout:
+        try:
+            os.mkdir(lock)
+            with open(os.path.join(lock, "owner"), "w") as fh:
+                fh.write(f"sync pid={os.getpid()} ts={time.time():.0f}")
+            return True
+        except FileExistsError:
+            holder = _owner_text()
+            stale = False
+            try:
+                pid = int(holder.split("pid=")[-1].split()[0])
+            except Exception:
+                pid = None
+            try:
+                ts = float(holder.split("ts=")[-1].split()[0])
+            except Exception:
+                ts = None
+            if pid is not None:
+                try:
+                    os.kill(pid, 0)
+                    alive = True
+                except Exception:
+                    alive = False
+                if not alive:
+                    stale = True
+            if ts is not None and (time.time() - ts) > LOCK_LEASE_S:
+                stale = True
+            if ts is None and pid is None:
+                stale = True
+            if stale:
+                # re-read once, then steal: avoids racing a holder that just refreshed
+                time.sleep(1)
+                holder2 = _owner_text()
+                if holder2 == holder:
+                    try:
+                        shutil.rmtree(lock)
+                        log(f"lock-STOLEN from '{holder}' (dead or lease>{LOCK_LEASE_S}s)")
+                        continue
+                    except Exception:
+                        pass
+            log(f"SYNC-SKIP lock held by '{holder}' (generation or another sync) — next cycle")
+            return False
+    log(f"SYNC-SKIP lock held by '{_owner_text()}' after {timeout}s wait")
+    return False
+
+
+def gpu_lock_release():
+    try:
+        shutil.rmtree(os.path.join(COVERS, "_batch_scratch", "gpu.lock"))
+    except Exception:
+        pass
 
 
 def load_manifest():
@@ -93,9 +169,13 @@ def save_manifest(man):
 
 
 def remote_listing():
+    """One quick listing; a failure just skips this cycle."""
     rc, out = ssh_retry(
         f"cd {REMOTE_DIR} 2>/dev/null || exit 3; "
-        "find . -type f -printf '%P\\t%s\\t%T@\\n'", timeout=300)
+        "find . -type f -printf '%P\\t%s\\t%T@\\n'", timeout=SSH_TIMEOUT)
+    if rc == 3:
+        log(f"run-dir absent for {RUN} (rc=3) — nothing to fetch")
+        return None
     if rc != 0:
         return None
     files = {}
@@ -129,6 +209,8 @@ def verify(path):
 
 
 def touch_remote_marker(alive=True):
+    if not MANAGES_MARKER:
+        return
     marker = os.path.join(COVERS, "_batch_scratch", "REMOTE_ACTIVE")
     if alive:
         with open(marker, "w") as fh:
@@ -155,13 +237,33 @@ def remote_status():
     return alive, n
 
 
-def main():
-    os.makedirs(STAGING, exist_ok=True)
-    man = load_manifest()
+def _alarm(signum, frame):
+    raise TimeoutError(f"sync pass exceeded {PASS_DEADLINE_S}s deadline")
 
+
+def main():
+    import signal
+    os.makedirs(STAGING, exist_ok=True)
+    if not gpu_lock_acquire(timeout=15):
+        log("SYNC-SKIP generation holds the runtime lock — will try next cycle")
+        return 0
+    try:
+        signal.signal(signal.SIGALRM, _alarm)
+        signal.alarm(PASS_DEADLINE_S)
+        return sync_cycle()
+    except TimeoutError as exc:
+        log(f"PASS-DEADLINE {exc} — lock released, will continue next cycle")
+        return 1
+    finally:
+        signal.alarm(0)
+        gpu_lock_release()
+
+
+def sync_cycle():
+    man = load_manifest()
     remote = remote_listing()
     if remote is None:
-        log("listing-FAILED after full backoff — will retry next cycle")
+        log("listing-failed (single attempt) — will retry next cycle")
         return 1
     touch_remote_marker(alive=True)
 
@@ -217,16 +319,27 @@ def main():
                 continue
             dest_dir = os.path.join(COVERS, skin)
             os.makedirs(dest_dir, exist_ok=True)
-            tmp = os.path.join(dest_dir, name + ".part")
-            shutil.copy2(src, tmp)
-            os.replace(tmp, os.path.join(dest_dir, name))
+            dest = os.path.join(dest_dir, name)
+            already = os.path.exists(dest)
+            if already:
+                ok_dest, _d = verify(dest)
+                already = ok_dest
+            if not already:
+                tmp = dest + ".part"
+                shutil.copy2(src, tmp)
+                os.replace(tmp, dest)
+                meta_src = os.path.join(sdir, genre + ".json")
+                if os.path.exists(meta_src):
+                    mt = os.path.join(dest_dir, genre + ".json.part")
+                    shutil.copy2(meta_src, mt)
+                    os.replace(mt, os.path.join(dest_dir, genre + ".json"))
+            # never delete a fetched original: keep it under _installed/<skin>/
+            inst = os.path.join(STAGING, "_installed", skin)
+            os.makedirs(inst, exist_ok=True)
+            shutil.move(src, os.path.join(inst, name))
             meta_src = os.path.join(sdir, genre + ".json")
             if os.path.exists(meta_src):
-                mt = os.path.join(dest_dir, genre + ".json.part")
-                shutil.copy2(meta_src, mt)
-                os.replace(mt, os.path.join(dest_dir, genre + ".json"))
-                os.remove(meta_src)
-            os.remove(src)
+                shutil.move(meta_src, os.path.join(inst, genre + ".json"))
             placed += 1
 
     remote_state = {}

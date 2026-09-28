@@ -1,0 +1,21 @@
+{
+  "model": "qwen-image-2.1",
+  "preset": "quality",
+  "size": "1024x1024",
+  "steps": 40,
+  "seed": 1752,
+  "skin": "pixel",
+  "genre": "ambient",
+  "prompt": "Authentic 16-bit pixel art, low-resolution console graphics, square album cover, scene: a wide empty hall filled with slow-drifting fog and one distant window, expressing the sound of ambient \u2014 slow evolving pads, no pulse, weightless drift, drawing on a 1970s English studio, tape loops and a treated piano left to decay. Strict pixel grid with hard aliased edges and no anti-aliasing, limited palette of about twenty colours drawn from deep indigo (#10121c), panel indigo (#1a1d2e, #262a44), pale ink (#e8e8f0), mint accent (#4ce0b3) with cyan (#5bc8ff), pink (#ff6b97) and violet (#b06bff) incident light. Ordered dithering for all shading, flat chunky clusters of pixels, a single-pixel rim light, strong readable silhouette, flat-shaded scene with a clear horizon or floor line, CRT scanline veil over the whole image, soft phosphor bloom on the brightest pixels only, faint vignette. Nostalgic, crisp, deliberately low-resolution. No anti-aliasing, no smooth curves, no lettering, no HUD text, no UI. The genre's own instruments, venue and era must be unmistakable: it must read as this specific music to a listener of it, not as generic music imagery. One dominant silhouette, clean deliberate framing, no lettering of any kind, no watermark or fine print, no melted or impossible geometry; the tile must read at 120px. Render only the physical medium and materials named above. Authentic 16-bit pixel art, hard aliased edges, no anti-aliasing, deep indigo ground #10121c with panels #1a1d2e/#262a44, pale ink #e8e8f0, mint #4ce0b3 accent and violet #b06bff, ordered dithering, CRT scanlines: a 1970s English studio at night - a grand piano with its lid propped open and a reel-to-reel tape machine beside it, a loop of tape threaded between the reels, one bare hanging lamp above, a rain-streaked window beyond. The piano and tape machine form one big dark silhouette filling at least half the sheet; fog is a thin veil behind them, never the whole image. No featureless gradient, no empty frame, no soft airbrushed haze, no anti-aliasing, no text, no lettering.",
+  "origin": "a 1970s English studio, tape loops and a treated piano left to decay",
+  "negative_prompt": "text, letters, words, typography, logo, watermark, signature, small print, fine print, corner mark, caption, UI, screenshot, frame, border, photograph of a real person, celebrity, album cover, brand, clipart, flat vector icon, stock photo, generic corporate imagery, floating geometric shapes, plastic 3D render, oversaturated HDR, low detail, blurry, jpeg artifacts",
+  "postprocess": "pixelate_160_nearest",
+  "timestamp": "2026-09-25T18:40:23Z",
+  "review": {
+    "decision": "regenerated_after_reject",
+    "reasons": [
+      "R1",
+      "R3"
+    ]
+  }
+}

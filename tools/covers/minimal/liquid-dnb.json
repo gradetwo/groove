@@ -1,0 +1,14 @@
+{
+  "model": "qwen-image-2.1",
+  "preset": "quality",
+  "size": "1024x1024",
+  "steps": 40,
+  "seed": 1693,
+  "skin": "minimal",
+  "genre": "liquid-dnb",
+  "prompt": "Swiss editorial graphic design, minimal offset print on uncoated white paper, square album cover, subject: rain-slick neon street reflected in a puddle, a lone passing car reduced to pure geometry, expressing the sound of liquid dnb \u2014 smooth rolling breaks, warm sub bass, soulful haze, drawing on Bristol and London in the mid-1990s, rolling breaks and a warm sub-bass. Flat paper-white ground (#fafafa), ink-black (#141414) hairline geometry, strict invisible modular grid, very generous empty space, asymmetric and deliberate placement. Exactly one element in ultramarine blue (#2358e6); everything else black on white. No gradients, no shadows, no glow, no blur, no 3D, no texture beyond uncoated paper tooth. One continuous hairline abstraction of the music. No text. CRITICAL \u2014 minimum structure: the composition must fill at least half the sheet and contain 3 to 6 distinct black elements, including one large solid black shape occupying roughly a third of the frame. White space frames the subject; it is not the whole image. No empty white squares.",
+  "origin": "Bristol and London in the mid-1990s, rolling breaks and a warm sub-bass",
+  "negative_prompt": "text, letters, words, typography, logo, watermark, signature, small print, fine print, corner mark, caption, UI, screenshot, frame, border, photograph of a real person, celebrity, album cover, brand, clipart, flat vector icon, stock photo, generic corporate imagery, floating geometric shapes, plastic 3D render, oversaturated HDR, low detail, blurry, jpeg artifacts",
+  "postprocess": null,
+  "timestamp": "2026-09-25T16:04:54Z"
+}

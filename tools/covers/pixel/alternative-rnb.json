@@ -1,0 +1,20 @@
+{
+  "model": "qwen-image-2.1",
+  "preset": "quality",
+  "size": "1024x1024",
+  "steps": 40,
+  "seed": 2400,
+  "skin": "pixel",
+  "genre": "alternative-rnb",
+  "prompt": "Authentic 16-bit pixel art, low-resolution console graphics, square album cover, scene: a microphone on a stand in an empty concrete rehearsal room, cold window light, expressing the sound of alternative rnb \u2014 hazy spacious chords, breathy intimate vocals, sparse beats, drawing on Toronto and Los Angeles of the 2010s, hazy chambers and a treated vocal. Strict pixel grid with hard aliased edges and no anti-aliasing, limited palette of about twenty colours drawn from deep indigo (#10121c), panel indigo (#1a1d2e, #262a44), pale ink (#e8e8f0), mint accent (#4ce0b3) with cyan (#5bc8ff), pink (#ff6b97) and violet (#b06bff) incident light. Ordered dithering for all shading, flat chunky clusters of pixels, a single-pixel rim light, strong readable silhouette, flat-shaded scene with a clear horizon or floor line, CRT scanline veil over the whole image, soft phosphor bloom on the brightest pixels only, faint vignette. Nostalgic, crisp, deliberately low-resolution. No anti-aliasing, no smooth curves, no lettering, no HUD text, no UI. Avoid the obvious stock cliche for this genre; choose a specific physical object or place instead of a floating instrument or a generic swirl. Render only the physical medium and materials named above. Authentic 16-bit pixel art, hard aliased edges, no anti-aliasing anywhere, deep indigo ground #10121c with panel indigos #1a1d2e/#262a44, pale ink #e8e8f0, mint #4ce0b3 accent with cyan #5bc8ff and pink #ff6b97 incident light, ordered dithering, CRT scanline veil, faint vignette: a Toronto night studio - a treated vocal booth with acoustic foam, a large-diaphragm condenser microphone behind a round pop filter on a boom stand, a sparse mixing console with two lit faders, a coiled cable on the floor. The booth and console fill at least half the frame as one dominant silhouette; the microphone is not alone in an empty room, no fog, no empty space. No anti-aliasing, no smooth gradients, no text, no lettering, no UI, no HUD.",
+  "origin": "Toronto and Los Angeles of the 2010s, hazy chambers and a treated vocal",
+  "negative_prompt": "text, letters, words, typography, logo, watermark, signature, small print, fine print, corner mark, caption, UI, screenshot, frame, border, photograph of a real person, celebrity, album cover, brand, clipart, flat vector icon, stock photo, generic corporate imagery, floating geometric shapes, plastic 3D render, oversaturated HDR, low detail, blurry, jpeg artifacts",
+  "postprocess": "pixelate_160_nearest",
+  "timestamp": "2026-09-25T18:40:02Z",
+  "review": {
+    "decision": "regenerated_after_reject",
+    "reasons": [
+      "R4"
+    ]
+  }
+}

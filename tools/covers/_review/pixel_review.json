@@ -1,0 +1,164 @@
+{
+  "skin": "pixel",
+  "reviewed": 159,
+  "rejected": 19,
+  "regen_ok": 0,
+  "reasons": {
+    "R1": 16,
+    "R2": 3,
+    "R3": 14,
+    "R4": 2
+  },
+  "r5_count": 116,
+  "rejects": [
+    {
+      "genre": "alternative-rnb",
+      "reasons": [
+        "R4",
+        "R1"
+      ],
+      "hint": "A lone mic in an empty fogged room is the exact cliche already rejected for default/alternative-rnb. Regen as a Toronto night studio: treated vocal booth, condenser behind a pop filter, sparse lit console."
+    },
+    {
+      "genre": "amapiano",
+      "reasons": [
+        "R1",
+        "R2"
+      ],
+      "hint": "Reads as a generic jazz-lounge still life (concert bass drum + whisky glass) in dominant warm brown, not amapiano. Regen with the amapiano log drum + a small electric piano on a township stoop, cool indigo ground, no whisky, no brown wood interiors."
+    },
+    {
+      "genre": "ambient",
+      "reasons": [
+        "R1",
+        "R3"
+      ],
+      "hint": "Featureless slow fog with one window: no musical identity and it reads as a soft blur at 120px. Regen as a 1970s English studio with a tape-loop reel-to-reel and an open piano filling half the sheet."
+    },
+    {
+      "genre": "brooklyn-drill",
+      "reasons": [
+        "R3"
+      ],
+      "hint": "The corner-store sign renders as legible nonsense lettering ('LECNDIEP'). Keep the storefront, gate and car, but make every sign a blank/abstract unmarked plate."
+    },
+    {
+      "genre": "chicago-blues",
+      "reasons": [
+        "R1"
+      ],
+      "hint": "Model read 'harp' as an orchestral concert harp. Regen with the two real objects only: a battered hollow-body guitar and a pocket-sized ten-hole blues harmonica on a stool."
+    },
+    {
+      "genre": "cloud-rap",
+      "reasons": [
+        "R1",
+        "R3"
+      ],
+      "hint": "A phone face-down on the floor reads as an unidentifiable dark blob in a near-empty frame. Regen from the ceiling: glow-in-the-dark star clusters, ceiling fan, headphones on a shelf as the dominant silhouette."
+    },
+    {
+      "genre": "free-jazz",
+      "reasons": [
+        "R3",
+        "R1"
+      ],
+      "hint": "Render added a garbled prone green figure on the stage and left no focal point. Regen as three clear instrument shapes (sax, smashed snare/cymbal, upright bass) with radiating impact lines and no human figure."
+    },
+    {
+      "genre": "french-house",
+      "reasons": [
+        "R1",
+        "R3"
+      ],
+      "hint": "'A filter knob on a glowing mixer' came back as an unidentifiable black ribbed cylinder. Regen an unmistakable three-quarter-view mixer with faders and one big silver filter knob, centred and lit."
+    },
+    {
+      "genre": "future-garage",
+      "reasons": [
+        "R1",
+        "R3"
+      ],
+      "hint": "Pure rain-soaked pavement texture with no subject at all. Regen a late-2000s London kerb with a sampler and headphones on a low wall and violet club light from a doorway; pavement only the lower third."
+    },
+    {
+      "genre": "ghetto-house",
+      "reasons": [
+        "R1",
+        "R3"
+      ],
+      "hint": "A bare bulb over a stripped floor - nothing musical in frame. Regen a raw basement with a lit step-sequencer drum machine on an upturned crate and its cables as the focal object."
+    },
+    {
+      "genre": "idm",
+      "reasons": [
+        "R1",
+        "R3"
+      ],
+      "hint": "A lattice of gears and clock faces collapses into muddy noise at thumbnail with no focal point. Regen one dominant object: a hardware sequencer with a green screen and an illuminated step grid, plus a tape loop."
+    },
+    {
+      "genre": "j-pop",
+      "reasons": [
+        "R1",
+        "R4"
+      ],
+      "hint": "A flat grid of pastel rectangles with confetti - the banned abstract-geometry/stock vocabulary, and nothing genre-specific. Regen an actual Tokyo arena stage: synth bank, drum riser, two anonymous performer silhouettes, mirrored floor."
+    },
+    {
+      "genre": "microhouse",
+      "reasons": [
+        "R1",
+        "R3"
+      ],
+      "hint": "Model invented a small mascot creature instead of the briefed hairline crack; subject is ~10% of the frame over a flat gradient. Regen a full-frame close-up: brushed metal, one hairline crack corner to corner, one tiny click dial with two mint LEDs."
+    },
+    {
+      "genre": "post-dubstep",
+      "reasons": [
+        "R1",
+        "R3"
+      ],
+      "hint": "A dark empty box with a light band - interchangeable with dub-techno/minimal-techno, and near-empty at thumbnail. Regen a 2010 London bedsit: subwoofer with a hand on it, three clipped-vocal bars, one cold window-light streak."
+    },
+    {
+      "genre": "progressive-house",
+      "reasons": [
+        "R1",
+        "R3"
+      ],
+      "hint": "The briefed staircase of light did not render; it is a thin diagonal streak on an empty field. Regen real architecture: a wide club staircase, each tread edged with one mint light line, rolling bass bands below."
+    },
+    {
+      "genre": "riddim",
+      "reasons": [
+        "R1",
+        "R3"
+      ],
+      "hint": "A small coil on an ~80% empty dark stage: weakest luma_std (19.1) and unique-colour count in the skin. Regen a full-width composition: subwoofer left, modular rack right, thick coiled wobble-spring of light flexing between them."
+    },
+    {
+      "genre": "soul",
+      "reasons": [
+        "R2",
+        "R3"
+      ],
+      "hint": "Warm brown wood panelling dominates and scores the skin's worst palette_distance (0.411); the organ nameboard also carries garbled gold pseudo-lettering. Regen with a cool indigo ground and a blank, unlettered nameboard."
+    },
+    {
+      "genre": "uk-funky",
+      "reasons": [
+        "R1",
+        "R3"
+      ],
+      "hint": "The 'glow stick' is an unidentifiable glowing squiggle on a bare floor filling ~75% of the frame. Regen a bare community hall with a stacked PA, a folding table with a mixer, and the warping bassline as a bold mint zigzag."
+    },
+    {
+      "genre": "vaporwave",
+      "reasons": [
+        "R2"
+      ],
+      "hint": "Pilot tile, never post-pixelated (NEAREST-160 roundtrip MAD 4.77 vs <=1.45 for the batch): reads as a smooth airbrushed synthwave painting, exactly the failure documented in ART_DIRECTION.md D.2. Regen and then apply the mandatory 160px point-filter downsample/upsample."
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "model": "qwen-image-2.1",
+  "preset": "quality",
+  "size": "1024x1024",
+  "steps": 40,
+  "seed": 1494,
+  "skin": "default",
+  "genre": "future-bass",
+  "prompt": "High-end cinematic 3D render album cover, square, subject: a cloud of glowing geometric shards bursting above a dark stage, artistically expressing the sound of future bass \u2014 pitched vocal chops, lush supersaws, emotional drop, drawing on the mid-2010s internet, pitched vocal chops and luminous supersaws. Deep near-black indigo ground (#0b0b14) fading to pure dark at the edges, lit only by emitted light: mint-teal (#5eead4) as the single sharp accent, an aurora wash of soft violet (#a78bfa) and rose (#fb7185) behind. Volumetric haze, bloom, long-exposure light trails, glass and water caustics, deep focus, generous negative space, subtle film grain over smooth gradients, premium and quietly futuristic. No text.",
+  "origin": "the mid-2010s internet, pitched vocal chops and luminous supersaws",
+  "negative_prompt": "text, letters, words, typography, logo, watermark, signature, small print, fine print, corner mark, caption, UI, screenshot, frame, border, photograph of a real person, celebrity, album cover, brand, clipart, flat vector icon, stock photo, generic corporate imagery, floating geometric shapes, plastic 3D render, oversaturated HDR, low detail, blurry, jpeg artifacts",
+  "postprocess": null,
+  "timestamp": "2026-09-25T15:04:25Z"
+}

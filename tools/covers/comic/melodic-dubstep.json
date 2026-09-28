@@ -1,0 +1,14 @@
+{
+  "model": "qwen-image-2.1",
+  "preset": "quality",
+  "size": "1024x1024",
+  "steps": 40,
+  "seed": 1712,
+  "skin": "comic",
+  "genre": "melodic-dubstep",
+  "prompt": "Vintage 1970s comic book printing, four-colour press on warm newsprint cream paper (#f4e9d2), square album cover, subject: a glowing wireframe heart pulsing in a dark void drawn bold and heroic, expressing the sound of melodic dubstep \u2014 emotional melodic lead, deep bass, half-time, drawing on the late-2000s UK, an emotional lead over deep half-time bass. Heavy black ink (#111014) keylines of varied weight, flat unshaded spot colour, large visible Ben-Day halftone dot screens, colour plates (process cyan #0b6e7f, magenta #c4006e, orange #f08a1e) deliberately offset 1-3 px out of register so edges fringe. Dynamic low-angle composition, radiating action lines and speed lines, hard zero-blur black drop shadows, ink bleed into paper fibre, slightly worn edges. Loud and energetic, limited ink palette, no rendering or gradients inside shapes. No text, no speech balloons, no lettering.",
+  "origin": "the late-2000s UK, an emotional lead over deep half-time bass",
+  "negative_prompt": "text, letters, words, typography, logo, watermark, signature, small print, fine print, corner mark, caption, UI, screenshot, frame, border, photograph of a real person, celebrity, album cover, brand, clipart, flat vector icon, stock photo, generic corporate imagery, floating geometric shapes, plastic 3D render, oversaturated HDR, low detail, blurry, jpeg artifacts",
+  "postprocess": null,
+  "timestamp": "2026-09-25T16:43:41Z"
+}

@@ -1,0 +1,20 @@
+{
+  "model": "qwen-image-2.1",
+  "preset": "quality",
+  "size": "1024x1024",
+  "steps": 40,
+  "seed": 2082,
+  "skin": "sovietYears",
+  "genre": "acid-jazz",
+  "prompt": "1920s Soviet constructivist propaganda poster, two flat inks on coarse aged paper, square album cover, subject: a saxophone and a Fender Rhodes sharing a cramped club stage, one bare bulb overhead as a monumental photomontage silhouette or severely reduced geometric icon, expressing the sound of acid jazz \u2014 live funk drums, walking bass, sharp brass stabs, drawing on London jazz-dance clubs of the early 1990s, a Fender Rhodes beside live horns. Aged paper ground (#f4f1e1) as the third colour, flag red (#cc0000) used as a large flat field covering a third to half of the image, dense black (#111111) carrying all structure. Aggressive diagonals, skewed and sheared geometry, a red wedge or beam cutting across the square, radiating and concentric flat shapes, hard overlapping masses, zero-blur plate-offset shadows, coarse paper fibre, flat misregistered ink, poster pasted and printed too heavily. Monumental, collective, graphic. No gradients, no soft shadows, no 3D, no text, no Cyrillic, no lettering. One dominant silhouette, clean deliberate framing, no lettering of any kind, no watermark or fine print, no melted or impossible geometry; the tile must read at 120px. Render only the physical medium and materials named above. 1920s Soviet constructivist propaganda poster, two flat inks on coarse aged paper, square album cover, subject: a jazz quintet of flat black silhouettes (saxophone, drums, Hammond organ) on aged paper with one flat red field. Aged paper ground (#f4f1e1) as the third colour, flag red (#cc0000) used as one large flat field covering a third to half of the image, dense black (#111111) carrying all structure. Aggressive diagonals, skewed sheared geometry, hard overlapping flat masses, zero-blur plate-offset shadows, coarse paper fibre, flat misregistered ink. No lettering, no cursive script, no pseudo-word on the instrument or anywhere else. No gradients, no soft shadows, no glow, no 3D, no photorealism, no text, no letters, no numerals, no signature, no logo.",
+  "origin": "London jazz-dance clubs of the early 1990s, a Fender Rhodes beside live horns",
+  "negative_prompt": "text, letters, words, typography, logo, watermark, signature, small print, fine print, corner mark, caption, UI, screenshot, frame, border, photograph of a real person, celebrity, album cover, brand, clipart, flat vector icon, stock photo, generic corporate imagery, floating geometric shapes, plastic 3D render, oversaturated HDR, low detail, blurry, jpeg artifacts",
+  "postprocess": null,
+  "timestamp": "2026-09-25T18:51:18Z",
+  "review": {
+    "decision": "regenerated_after_reject",
+    "reasons": [
+      "R3"
+    ]
+  }
+}
