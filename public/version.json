@@ -1,27 +1,27 @@
 {
-  "version": "2.34.17",
+  "version": "2.34.18",
   "releaseDate": "2026-09-28",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.17",
+    "version": "2.34.18",
     "date": "2026-09-28",
     "category": "feature",
     "title": {
-      "zh": "音频轨作为第九种轨道；旋律写作与声调闭环",
-      "en": "Audio as the ninth lane kind, and melody writing that answers the tones"
+      "zh": "放宽上限：2048 小节／256 小节／八个槽位",
+      "en": "Relaxed ceilings: 2048 bars, 256 per section, eight slots"
     },
     "highlights": [
       {
-        "zh": "新增 audio 轨道种类：分享格式、包校验、混音角色与总线归属四处都按种类而非名字决定。",
-        "en": "A new `audio` lane kind: the share format, package validation, mix role and bus are all decided by the kind rather than by the name."
+        "zh": "曲长上限 512→2048 小节（约 68 分钟），段落上限 64→256 小节，于是九乐章那类作品不必再被切成权宜的小段。",
+        "en": "Song length 512 to 2048 bars and section length 64 to 256, so a nine-movement piece no longer has to be chopped into workaround sections."
       },
       {
-        "zh": "generate_melody 可选 tones：旋律按歌词四声写作，校验与生成共用同一条规则。",
-        "en": "`generate_melody` takes optional tones: the melody is written against the lyric's tones, and generation and checking share one rule."
+        "zh": "clip 槽位 A–D 扩到 A–H；槽位表成为唯一源头，六处硬编码的「四」随之修正。",
+        "en": "Clip slots go from A-D to A-H: the array is the one source of truth, six hardcoded fours were corrected, and the tool boundary no longer refuses the new slots."
       },
       {
-        "zh": "未知 genreId 会点名 list_genres 并给出最接近的 id；契约新增六步标准作曲流程。",
-        "en": "An unknown genreId now names `list_genres` and suggests the nearest id, and the contract documents a six-step composing workflow."
+        "zh": "render_song 的描述给出实测量级（每分钟音频约 6 秒），并标出哪一项尚未实测。",
+        "en": "render_song's description carries the measured magnitude (about 6 seconds per minute of audio on the analysis path) and says plainly which number is not measured."
       }
     ],
     "truncated": false
