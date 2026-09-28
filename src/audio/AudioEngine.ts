@@ -1528,6 +1528,26 @@ export class AudioEngine {
     return verdict;
   }
 
+  /**
+   * The live context, for a caller that has to build its own nodes.
+   *
+   * The audio-lane playback path is the first such caller: it plans lanes, loads samples through the SFZ-aware loader and places them, all of which needs a context. Everything it needs
+   * exists inside this class already, and the alternative — teaching the engine about songs — was rejected as a far larger change than the feature.
+   */
+  public get audioContext(): AudioContext | null {
+    return this.ctx;
+  }
+
+  /**
+   * Where a placed sound belongs, by **the same rule the engine itself uses** to place one (see the `destination` computation below).
+   *
+   * One definition on purpose: a lane that landed somewhere else would be mixed differently from everything the engine plays, and the difference would show up as "the sample sounds wrong
+   * next to the drums" rather than as a routing bug.
+   */
+  public get musicDestination(): AudioNode | null {
+    return this.masterGraph ? this.masterGraph.musicBusInput : this.masterGain;
+  }
+
   public async play(options: { keepPreviewScope?: boolean } = {}): Promise<void> {
     /**
      * A session that never passed the start screen (a returning visitor, a probe) has no live verdict yet, so the first
