@@ -78,6 +78,26 @@ function findTrack(pattern: SequencerPattern, name: string): SequencerTrack | nu
   return pattern.tracks.find((track) => track.track_id === id) ?? null;
 }
 
+/**
+ * Lanes a MIDI renderer cannot play, with the reason (owner decision 2026-09-28 — the ninth kind, `audio`).
+ *
+ * The exporter schedules notes; an audio lane has none, so it is **skipped**. The rule this function exists for is that skipping must never be **silent**: a lane
+ * that disappears from a render without a word is the kind of absence that gets diagnosed as "the mix sounds thin" a week later.
+ *
+ * It is pure and lives here rather than in the render path so the answer can be proved without a browser — the render behaviour itself (that an audio lane really
+ * produces no notes rather than falling through to a default voice) is a claim for the audio scope, not for this file.
+ */
+export function lanesWithoutMidi(pattern: SequencerPattern): Array<{ track_id: string; laneId?: string; name: string; reason: string }> {
+  return (pattern.tracks ?? [])
+    .filter((track) => track.track_id === "audio")
+    .map((track) => ({
+      track_id: track.track_id,
+      ...(track.laneId ? { laneId: track.laneId } : {}),
+      name: track.name,
+      reason: "an audio lane has no notes to schedule, so a MIDI render skips it",
+    }));
+}
+
 /** Deterministic 0..1 from a string seed — no clock, no `Math.random`, so a run is reproducible. */
 function seededRandom(seed: number): () => number {
   let state = (seed | 0) || 0x2f6e2b1;
