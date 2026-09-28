@@ -6,9 +6,23 @@
       "name": "Virtuosity Drums — Basic Kit",
       "licence": "CC0",
       "prefix": "virtuosity-drums",
+      "repo": "sfzinstruments/virtuosity_drums",
+      "pin": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
       "sfz": "Programs/01-basic-kit.sfz",
       "files": [],
       "needs": ["lokey", "hikey", "pitch_keycenter", "lovel", "hivel", "seq_length", "seq_position"]
+    },
+    {
+      "id": "salamander-grand",
+      "name": "Salamander Grand Piano",
+      "licence": "CC-BY",
+      "attribution": "Alexander Holm",
+      "prefix": "salamander-grand",
+      "repo": "sfzinstruments/SalamanderGrandPiano",
+      "pin": "3382bf9496bba2486f5ab0de55a264d1dfc38404",
+      "sfz": "SalamanderGrandPiano.sfz",
+      "files": [],
+      "needs": ["lokey", "hikey", "pitch_keycenter", "lovel", "hivel", "tune"]
     }
   ]
 }
