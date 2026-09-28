@@ -52,12 +52,20 @@ describe("the flatten's cost curve", () => {
       const ms = performance.now() - started;
       // Work is counted here, not read from `totalSteps`, whose meaning is different.
       const steps = lanes * bars * 16;
-      return { lanes, bars, steps, ms, usPerStep: (ms * 1000) / steps, flattenedBars: flattened.totalBars };
+      /**
+       * A **size** column, because the hundred-lane question has two halves and only the time half was measured.
+       *
+       * `JSON.stringify(...).length` is a **proxy**, not an allocator measurement — it counts characters of the serialised form, which is honest about what it is and stable
+       * to the byte, unlike a heap reading. It answers "how much data does the flatten hand to the renderer", which is the part this test can speak to; the audio buffer's own
+       * footprint is the browser's and is measured elsewhere.
+       */
+      const megabytes = JSON.stringify(flattened).length / 1_000_000;
+      return { lanes, bars, steps, ms, usPerStep: (ms * 1000) / steps, megabytes, flattenedBars: flattened.totalBars };
     });
 
     for (const row of rows) {
       console.log(
-        `   flatten cost : ${String(row.lanes).padStart(3)} lanes × ${String(row.bars).padStart(3)} bars = ${String(row.steps).padStart(7)} steps → ${row.ms.toFixed(2).padStart(8)} ms (${row.usPerStep.toFixed(3)} µs/step)`
+        `   flatten cost : ${String(row.lanes).padStart(3)} lanes × ${String(row.bars).padStart(3)} bars = ${String(row.steps).padStart(7)} steps → ${row.ms.toFixed(2).padStart(8)} ms (${row.usPerStep.toFixed(3)} µs/step), data ${row.megabytes.toFixed(2)} MB (JSON proxy)`
       );
       expect(row.flattenedBars).toBe(row.bars);
       expect(row.usPerStep).toBeGreaterThan(0);
@@ -67,6 +75,8 @@ describe("the flatten's cost curve", () => {
     const largest = rows[rows.length - 1]!;
     const projected = (largest.usPerStep * 2048 * 100 * 16) / 1_000_000;
     console.log(`   projection   : ${largest.usPerStep.toFixed(3)} µs/step × 2048 bars × 100 lanes × 16 steps ≈ ${projected.toFixed(1)} s of flattening before any audio is rendered`);
-    console.log("   note         : memory is not measured here — the hundred-lane question needs both, and this is the time half.");
+    const perStepMb = largest.megabytes / largest.steps;
+    console.log(`   projection   : data ${(perStepMb * 2048 * 100 * 16).toFixed(0)} MB of flattened steps at 2048 bars × 100 lanes (JSON proxy), against about 1.1 GB for the audio buffer of a six-minute eight-lane song`);
+    console.log("   note         : the JSON figure is a proxy for the data handed to the renderer, not an allocator measurement; the audio buffer is measured in the browser.");
   });
 });
