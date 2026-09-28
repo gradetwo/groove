@@ -124,3 +124,23 @@ describe("expandIncludes — defines and substitution", () => {
     expect(expandIncludes(plain, files({})).text).toBe(plain);
   });
 });
+
+/**
+ * A trailing comment on a directive — the bug that left 48 regions of a real library unresolvable.
+ *
+ * The library writes `#define $HH_PPREROLL 1000 //Was effectively 0 up to version 0.925`, and the definition pattern anchored its end with `\s*$`, so every define carrying a
+ * comment was silently ignored. The parser had stripped `//` since its first version; the preprocessor had not, which is the same line-grammar assumption one layer down.
+ */
+describe("expandIncludes — comments on directives", () => {
+  it("still reads a define that carries a trailing comment", () => {
+    const result = expandIncludes("#define $KEY 36 //GM splash cymbal key\n<region> key=$KEY", files({}));
+    expect(result.problems).toEqual([]);
+    expect(result.text).toBe("<region> key=36");
+  });
+
+  it("still reads an include that carries a trailing comment", () => {
+    const result = expandIncludes('#include "k.sfz" // the keymap\n', files({ "k.sfz": "<region> sample=a.wav" }));
+    expect(result.problems).toEqual([]);
+    expect(result.text).toContain("sample=a.wav");
+  });
+});

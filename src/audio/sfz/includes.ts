@@ -83,6 +83,15 @@ export function expandIncludes(
   const out: string[] = [];
 
   /**
+   * Comments are stripped **before** a directive is recognised, and that is a bug fix rather than tidiness.
+   *
+   * The real library writes `#define $HH_PPREROLL 1000 //Was effectively 0 up to version 0.925`, and the pattern that reads definitions anchored its end with `\s*$` — so
+   * every define carrying a trailing comment was **silently ignored**, which left 48 regions holding unresolved variables. It is the same mistake as the parser's very
+   * first one (`<region> sample=… // comment` on a line), one layer down: the line grammar was assumed rather than read.
+   */
+  const stripComment = (line: string): string => line.replace(/\/\/.*$/, "");
+
+  /**
    * The chain is seeded with the **entry point**, and that seeding is a bug fix rather than tidiness.
    *
    * The fallback resolves a root-relative path against `chain[0]`. With `stack` empty at the top level, the first recursive call was the first thing to populate it — so
@@ -91,7 +100,8 @@ export function expandIncludes(
    */
   const chain = stack.length > 0 ? stack : [path];
 
-  lines.forEach((line, index) => {
+  lines.forEach((rawLine, index) => {
+    const line = stripComment(rawLine);
     const define = line.match(DEFINE);
     if (define) {
       // A definition produces no output of its own; it changes what later lines mean, including in files included afterwards.
