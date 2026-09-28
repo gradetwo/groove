@@ -7,6 +7,7 @@ import { useLanguage } from "../../../i18n/LanguageContext";
 import { patternForSlot } from "../../../types/project";
 import type { ClipSlot } from "../../../types/song";
 import { playAudioLanes } from "../../../audio/audioLanePlayback";
+import { appCatalogueRuntime } from "../../../data/sampleCatalogueRuntime";
 
 export interface UseTransportControlsOptions {
   /**
@@ -178,7 +179,16 @@ export function useTransportControls({
       const context = engine.audioContext;
       const destination = engine.musicDestination;
       if (song && context && destination) {
-        void playAudioLanes({ song: song as never, context, destination })
+        /**
+         * **The catalogue has to be fetched before the lanes can resolve anything.**
+         *
+         * The previous commit passed no catalogue, so the path fell back to the shipped empty one and would have stayed silent **even with a mirror configured** — the wiring was inert for a
+         * reason that had nothing to do with the missing credentials. Loaded here, at playback start, rather than at app start: it is one fetch per session thanks to the runtime's own
+         * single-flight, and a session that never plays an audio lane never pays for it.
+         */
+        void appCatalogueRuntime
+          .load()
+          .then(({ assets }) => playAudioLanes({ song: song as never, context, destination, catalogue: assets }))
           .then((result) => {
             for (const problem of result.problems) console.warn(`[audio-lane] ${problem}`);
           })
