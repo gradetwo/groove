@@ -171,3 +171,39 @@ describe("the key shorthand", () => {
     expect(b!.hikey).toBe(36);
   });
 });
+
+/**
+ * Inheritance belongs to the region's **own** group — the criterion that would have caught a real bug.
+ *
+ * The parser used to merge the **final** `global` and `group` into every region, so a file with two groups gave them all the last one's values. Its comment claimed the
+ * opposite, which is why the criterion matters more than the comment. A real library — kick under `<group> key=$KICK_SNRIGHT_KEY`, snare under another — is what exposed
+ * it: every region ended up with the last group's key, and notes that should have sounded did not.
+ */
+describe("group inheritance is per region", () => {
+  it("gives each region the group it is inside, not the one that came last", () => {
+    const regions = parseSfz(`
+<group> key=35
+<region> sample=kick.wav
+<group> key=38
+<region> sample=snare.wav
+`);
+    expect(regions[0]).toMatchObject({ sample: "kick.wav", lokey: 35, hikey: 35 });
+    expect(regions[1]).toMatchObject({ sample: "snare.wav", lokey: 38, hikey: 38 });
+    // And the consequence that was actually observed: the right note reaches the right sample.
+    expect(regionsForNote(regions, 35).map((r) => r.sample)).toEqual(["kick.wav"]);
+    expect(regionsForNote(regions, 38).map((r) => r.sample)).toEqual(["snare.wav"]);
+  });
+
+  it("still lets a region override its group, and a global apply throughout", () => {
+    const regions = parseSfz(`
+<global> tune=10
+<group> key=35 lokey=30
+<region> sample=a.wav hikey=40
+<group> key=50
+<region> sample=b.wav
+`);
+    // tune from global, key/lokey from its own group, hikey from the region.
+    expect(regions[0]).toMatchObject({ sample: "a.wav", tuneCents: 10, lokey: 30, hikey: 40 });
+    expect(regions[1]).toMatchObject({ sample: "b.wav", tuneCents: 10, lokey: 50, hikey: 50 });
+  });
+});

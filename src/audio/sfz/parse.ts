@@ -45,6 +45,14 @@ export interface SfzRegion {
    * correctly triggered nothing. The failure mode was not an error but a plausible wrong answer, which is the one this workstream keeps having to hunt down.
    */
   unresolved: string[];
+  /**
+   * The `global` and `group` values **as they stood when this region was created** — captured at that moment, not read at the end.
+   *
+   * The first version merged in the **final** `global` and `group` for every region, so a file with two `<group>` blocks gave every region the **last** one's values. Its
+   * comment asserted the opposite ("so a region cannot be affected by where in the file it appeared relative to its group"), which is the kind of comment this workstream
+   * has learned to treat as a claim rather than a fact. A real library, whose kick and snare live under different `<group> key=…` blocks, is what exposed it.
+   */
+  inherited?: Record<string, string>;
 }
 
 const DEFAULTS: Omit<SfzRegion, "sample" | "opcodes" | "unresolved"> = {
@@ -94,7 +102,7 @@ export function parseSfz(text: string): SfzRegion[] {
         current = group;
       } else if (name === "region") {
         current = {};
-        regions.push({ ...DEFAULTS, sample: "", opcodes: current, unresolved: [] });
+        regions.push({ ...DEFAULTS, sample: "", opcodes: current, unresolved: [], inherited: { ...global, ...group } } as SfzRegion & { inherited: Record<string, string> });
       } else {
         // A header this subset does not model (curve, effect, …) is skipped, not fatal — and its opcodes are ignored with it.
         current = null;
@@ -114,9 +122,9 @@ export function parseSfz(text: string): SfzRegion[] {
     ...new Set(Object.values(opcodes).flatMap((value) => value.match(/\$[A-Za-z_][A-Za-z0-9_]*/g) ?? [])),
   ];
 
-  // Inheritance is resolved **after** parsing, so a region cannot be affected by where in the file it appeared relative to its group.
+  // Inheritance is resolved from each region's own snapshot, taken when it was created — the group it is *inside*, not whichever group came last.
   return regions.map((region) => {
-    const merged = { ...global, ...group, ...region.opcodes };
+    const merged = { ...(region.inherited ?? {}), ...region.opcodes };
     return {
       ...DEFAULTS,
       sample: merged.sample ?? "",

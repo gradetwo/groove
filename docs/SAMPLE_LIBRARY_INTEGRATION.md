@@ -176,6 +176,27 @@ REAL note 42 →  ratio 1.0000     ⚠️ 采样名是空的
 
 ⭐⭐ **`note 38` 现在与 sfizz 一致了** ✓✓ —— 而**同一个修复让 35/36 也变成了"无播放"** ✗，所以还有一层没读到 ✓；另有一个 **`sample=` 为空的 region** ✗（解析产物 ✓，按本工作流的规矩**它不该可被选中** ✓）。
 
+### ⭐⭐⭐⭐ 第三层：**继承必须是"该 region 自己所在的 group"** —— 以及最终结果（2026-09-28）
+
+那个 bug 就在我自己的代码里 ✓✓：解析器在**最后**用**最终的** `global`/`group` 合并**每一个** region ✗ → 于是一个有两个 `<group>` 的文件，会让**所有** region 拿到**最后一个** group 的值 ✗✓ —— ⭐ **而它的注释还声称了相反的性质** ✗（"region 不会受它在文件里相对 group 的位置影响" ✓）→ **又一条"断言了代码没有的性质"的注释** ✓✓。
+
+**修法是快照** ✓：在 region **被创建的那一刻**记下当时的 `global`/`group` ✓✓ —— 于是它继承的是**它所在的那个 group** ✓。**判据**就是那条本该早就存在的 ✓：两个 `<group>` 各自 `key=` ⇒ **各自的 region 拿各自的值** ✓✓。
+
+**修好后的实测（真实库，一条题外话都不加）** ✓✓：
+
+```
+REAL regions=1676  unresolvedRegions=48  emptySamples=0
+REAL note 35 → kickmic_kick_snoff_vl4_rr1.flac      （$KICK_SNWRONG_KEY = 35，"错"底鼓）
+REAL note 36 → kickmic_kick_snon_vl4_rr1.flac       （$KICK_SNRIGHT_KEY = 36，"对"底鼓）
+REAL note 38 → kickmic_snare_center_vl29.flac       （军鼓）
+REAL note 42 → kickmic_hh_closed_vl4_rr1.flac       （闭镲）
+REAL note 46 → kickmic_hh_open_vl4_rr1.flac         （开镲）
+```
+
+⭐⭐ **与我们先前"sfizz 对 38 一个声部都不触发"并不矛盾** ✓：我本地**只取了一个采样的文件** ✓ —— 军鼓与镲的文件不在 ✓ → sfizz 找不到文件 ⇒ 没有声部 ✓✓。**而我们的映射现在与原库自己的定义逐条吻合** ✓✓（35/36 正是它 define 的那一对 ✓，38/42/46 是标准鼓位 ✓）。
+
+⚠️ 而 **48 个 region 仍带未解析变量** ✓ —— 那是**诚实且安全**的 ✓✓：它们**不可被选中** ✓，而不是拿一个回退音域去应答 ✓（这正是上一轮修的那条 ✓）。
+
 **下一轮要追的两件事（都已具名 ✓）**：为什么 `key=35/36` 的 region 匹配不到 35/36 ✓（怀疑在 `<group>` 的 `key` 与 `locc`/`hikey` 继承 ✓），以及那个空采样 region 从哪来 ✓。
 
 ### ⭐⭐⭐ 而我们的解析器却"成功"匹配了 note 38 —— 这是一个真缺陷
