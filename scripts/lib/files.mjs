@@ -39,3 +39,21 @@ export async function matchesManifestEntry(path, expected) {
   if (typeof expected.bytes === "number" && actual.bytes !== expected.bytes) problems.push(`${actual.bytes} bytes ≠ ${expected.bytes}`);
   return { ok: problems.length === 0, problems, actual };
 }
+
+/**
+ * The same check for bytes that are **not on disk yet**, which is the mirror's case: it verifies what it fetched before writing anything.
+ *
+ * Sharing the rule matters more than saving a function: a mirror that checked files by a different rule than the manifest describes would be checking the wrong thing, which is
+ * the defect this workstream keeps removing at every layer.
+ */
+export function fingerprintBytes(bytes) {
+  return { sha256: createHash("sha256").update(bytes).digest("hex"), bytes: bytes.length };
+}
+
+export function matchManifestEntry(bytes, expected) {
+  const actual = fingerprintBytes(bytes);
+  const problems = [];
+  if (expected.sha256 && actual.sha256 !== expected.sha256) problems.push(`sha256 ${actual.sha256} ≠ ${expected.sha256}`);
+  if (typeof expected.bytes === "number" && actual.bytes !== expected.bytes) problems.push(`${actual.bytes} bytes ≠ ${expected.bytes}`);
+  return { ok: problems.length === 0, problems, actual };
+}
