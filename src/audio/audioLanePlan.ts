@@ -32,7 +32,7 @@ export interface AudioLanePlan {
   problems: string[];
 }
 
-interface PlanInput {
+export interface PlanInput {
   /** The song's clips by slot, so a lane can be found through the section that plays it. */
   clips: Record<string, { tracks?: SequencerTrack[] } | undefined>;
   /** The sections in order, each with the slot it plays and how many bars it lasts. */
