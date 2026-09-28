@@ -24,6 +24,15 @@ export interface SampleAsset {
    * may be declared before its audio exists — and an asset without a url is refused, loudly, rather than fetched from nowhere.
    */
   url?: string;
+  /**
+   * Set when this entry is an **instrument defined by an SFZ** rather than a single sample: `url` then points at the `.sfz`, and the regions inside it name the samples.
+   *
+   * A separate field rather than a new `kind`, deliberately: `kind` describes a sample's **time shape** (`loop` or `one-shot`), while this describes **how the entry is
+   * resolved**. Merging two different questions into one field is the conflation this codebase keeps paying for.
+   *
+   * Optional, so every existing entry — and every song that references one — behaves exactly as before.
+   */
+  sfz?: { url: string };
 }
 
 /**
