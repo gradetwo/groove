@@ -195,6 +195,25 @@ Two lessons worth carrying past this server:
   while every run printed the failure. Reading the failing step is what fixed them, and the honest gate for a measurement that does not yet support its
   claim is one that says so, which is why B7 reports **0.8× of its control** rather than passing on a threshold chosen to fit it.
 
+### The latency table, and the row the audio lane adds — measured, and it is zero
+
+PDC's offline compensation exists and its first row is a **measurement**: the master limiter's lookahead, predicted at 7.408 ms and **measured at 7.415 ms**.
+
+The ninth lane kind's playback path now has its own row, and the honest answer came from an impulse rather than from reasoning:
+
+| path | latency | how it is known |
+|---|---|---|
+| master limiter (lookahead) | **7.415 ms** | predicted 7.408 from the declared lookahead, then measured on the rendered pair |
+| **an audio lane's sample** | **0 ms** | `AudioBufferSourceNode.start(when)` is specified to begin **exactly at `when`**, and the probe confirms it: an impulse handed to the **real scheduler and the real adapter** through a fake loader (bypassing decode, which is asynchronous byte-fetching rather than a scheduling delay) appears at **the frame it was scheduled for** |
+
+So PDC has **nothing to compensate** for the audio lane, and that is recorded **with its reason** rather than with an invented correction. Two notes worth keeping:
+
+* the first run of that probe printed **−500 ms**, which is impossible — the number was right and **my label was wrong** (it subtracted a hardcoded 0.5 s expectation
+  while the plan schedules a section's lane at that **section's first bar**, which is t=0 at 120 bpm). The label now reports the plan's own time. **A wrong annotation
+  can make a right measurement look like a broken path**, and this workstream has now hit that three times;
+* the row is subject to the same rule as the limiter's: it is a **measurement**, so if the adapter changes (`decodeAudioData` moves into the worklet, a resampler is
+  added, a ring buffer appears) the row must be **re-measured**, not re-reasoned.
+
 ### Render budgets, as numbers rather than intentions (2026-09-28)
 
 An external evaluation proposed staged render SLOs, on the correct observation that a minute-level render makes an agent's
