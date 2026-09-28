@@ -1,3 +1,4 @@
+import { CLIP_SLOTS } from "../types/song";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   addMcpSection,
@@ -74,13 +75,14 @@ describe("make_unique", () => {
     expect(JSON.stringify(song.clips.A)).not.toBe(JSON.stringify(song.clips[made.allocatedSlot]));
   });
 
-  it("refuses when all four slots are taken, instead of overwriting one", () => {
+  it("refuses when every slot is taken, instead of overwriting one", () => {
     const songId = songWithTwoVerses();
-    for (const slot of ["B", "C", "D"] as const) {
+    for (const slot of CLIP_SLOTS) {
+      if ((getMcpSong(songId) as never as { clips: Record<string, unknown> }).clips[slot]) continue;
       const seed = (getMcpSong(songId) as never as { clips: Record<string, unknown> }).clips.A;
       setMcpClip(songId, slot, seed as never);
     }
-    expect(() => makeUniqueMcpSection({ songId, index: 0 })).toThrow(/all four clip slots are in use/);
+    expect(() => makeUniqueMcpSection({ songId, index: 0 })).toThrow(/clip slots are in use/);
   });
 
   it("is undoable like every other song change", () => {
