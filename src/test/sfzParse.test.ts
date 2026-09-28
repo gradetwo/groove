@@ -145,3 +145,29 @@ describe("unresolved variables", () => {
     expect(unresolvedVariables(onlyVariables).variables.sort()).toEqual(["$A", "$B"]);
   });
 });
+
+/**
+ * `key` — the shorthand for `lokey` and `hikey` together, and the second silent widening this file has had.
+ *
+ * Measured: the real kit writes `key=$KICK_SNRIGHT_KEY` (36 once the variables resolve) and note 38 still matched that kick, while sfizz triggered nothing for 38. Only
+ * `lokey`/`hikey` were read, so `key=36` was ignored and the range fell back to 0–127. The criteria below pin the shorthand and its precedence.
+ */
+describe("the key shorthand", () => {
+  it("sets the whole range from one opcode", () => {
+    const [region] = parseSfz("<region> sample=kick.wav key=36");
+    expect(region!.lokey).toBe(36);
+    expect(region!.hikey).toBe(36);
+    // And it no longer answers a note it has no business answering.
+    expect(regionsForNote(parseSfz("<region> sample=kick.wav key=36"), 38)).toEqual([]);
+    expect(regionsForNote(parseSfz("<region> sample=kick.wav key=36"), 36).map((r) => r.sample)).toEqual(["kick.wav"]);
+  });
+
+  it("lets the explicit opcodes override the shorthand, whichever order they appear in", () => {
+    const [a] = parseSfz("<region> sample=a.wav key=36 lokey=40");
+    expect(a!.lokey).toBe(40);
+    expect(a!.hikey).toBe(36);
+    const [b] = parseSfz("<region> sample=b.wav lokey=40 key=36");
+    expect(b!.lokey).toBe(40);
+    expect(b!.hikey).toBe(36);
+  });
+});

@@ -37,6 +37,18 @@ function resolvePath(fromPath: string, wanted: string): string {
 }
 
 const INCLUDE = /^\s*#include\s+"([^"]+)"\s*$/;
+const DEFINE = /^\s*#define\s+\$([A-Za-z_][A-Za-z0-9_]*)\s+(\S+)\s*$/;
+
+/**
+ * `$VAR` substitution, scoped **globally and in order** — decided by measurement rather than by taste.
+ *
+ * The real library defines its keys in `Programs/keymaps/keymap_basic.sfz` (`#define $KICK_SNRIGHT_KEY 36`) and uses them in files reached later, deeper in the include
+ * tree, which sfizz resolves. A per-file scope would not reproduce that; a global map that grows as the tree is walked does. Definitions are therefore inherited by
+ * includes **and** by whatever the parent expands afterwards, which is the rule that makes this library read the way sfizz reads it.
+ */
+function substitute(line: string, defines: Map<string, string>): string {
+  return line.replace(/\$([A-Za-z_][A-Za-z0-9_]*)/g, (whole, name: string) => defines.get(name) ?? whole);
+}
 
 /**
  * Where an include's path is resolved from — and this is **evidence-driven, not guessed**.
@@ -58,7 +70,12 @@ function resolveCandidates(rootPath: string, fromPath: string, wanted: string): 
 export function expandIncludes(
   text: string,
   read: IncludeReader,
-  { path = "", maxDepth = 8, stack = [] as string[] }: { path?: string; maxDepth?: number; stack?: string[] } = {}
+  {
+    path = "",
+    maxDepth = 8,
+    stack = [] as string[],
+    defines = new Map<string, string>(),
+  }: { path?: string; maxDepth?: number; stack?: string[]; defines?: Map<string, string> } = {}
 ): ExpandIncludesResult {
   const problems: string[] = [];
   const included: string[] = [];
@@ -75,9 +92,16 @@ export function expandIncludes(
   const chain = stack.length > 0 ? stack : [path];
 
   lines.forEach((line, index) => {
+    const define = line.match(DEFINE);
+    if (define) {
+      // A definition produces no output of its own; it changes what later lines mean, including in files included afterwards.
+      defines.set(define[1]!, define[2]!);
+      return;
+    }
+
     const match = line.match(INCLUDE);
     if (!match) {
-      out.push(line);
+      out.push(substitute(line, defines));
       return;
     }
     const candidates = resolveCandidates(chain[0]!, path, match[1]!);
@@ -102,7 +126,7 @@ export function expandIncludes(
       return;
     }
 
-    const nested = expandIncludes(child, read, { path: wanted, maxDepth, stack: [...chain, wanted] });
+    const nested = expandIncludes(child, read, { path: wanted, maxDepth, stack: [...chain, wanted], defines });
     out.push(nested.text);
     problems.push(...nested.problems);
     included.push(wanted, ...nested.included);

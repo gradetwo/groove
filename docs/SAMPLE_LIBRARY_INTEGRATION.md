@@ -158,6 +158,26 @@ Programs/keymaps/keymap_basic.sfz:2: #define $KICK_SNRIGHT_KEY 36
 
 ⭐ **这个库把底鼓映射到 35/36** ✓，而我打的是 **38** ✗ → **sfizz 的 0 个声部是正确行为** ✓✓。
 
+### 已修的两层，以及它们暴露的第三、第四层（2026-09-28）
+
+**第一层 `#define` + `$VAR`：已实现** ✓（`expandIncludes` 同层 ✓，**5 条判据** ✓）。作用域规则**由测量决定** ✓：那个库在 `keymaps/keymap_basic.sfz` 里 define ✓，而**更深处的文件**用它们 ✓ → 所以定义是**全局且按出现顺序生效**的 ✓✓（每文件作用域**无法**复现这个库 ✓）。
+
+**第二层 `key=`：已实现** ✓（**2 条判据** ✓）。⭐ `key` 是 **`lokey` + `hikey` 的简写** ✓，而我们**只读了后两者** ✗ → 于是 `key=36` 被忽略 ⇒ 音域又回落到 **0–127** ✓✓ —— ⭐ **这是同一个"静默放宽音域"的缺陷第二次出现** ✓（第一次是未解析变量 ✓）。
+
+**修好之后的实测** ✓：
+
+```
+REAL regions=1676  unresolvedRegions=0
+REAL note 35 → no playback      ⚠️ 而库里 $KICK_SNWRONG_KEY 就是 35
+REAL note 36 → no playback      ⚠️ 而 $KICK_SNRIGHT_KEY 就是 36
+REAL note 38 → no playback      ✅ 与 sfizz 一致（它确实 0 个声部）
+REAL note 42 →  ratio 1.0000     ⚠️ 采样名是空的
+```
+
+⭐⭐ **`note 38` 现在与 sfizz 一致了** ✓✓ —— 而**同一个修复让 35/36 也变成了"无播放"** ✗，所以还有一层没读到 ✓；另有一个 **`sample=` 为空的 region** ✗（解析产物 ✓，按本工作流的规矩**它不该可被选中** ✓）。
+
+**下一轮要追的两件事（都已具名 ✓）**：为什么 `key=35/36` 的 region 匹配不到 35/36 ✓（怀疑在 `<group>` 的 `key` 与 `locc`/`hikey` 继承 ✓），以及那个空采样 region 从哪来 ✓。
+
 ### ⭐⭐⭐ 而我们的解析器却"成功"匹配了 note 38 —— 这是一个真缺陷
 
 因为 `$KICK_SNRIGHT_KEY` **没有被替换** ✓，`num()` 就把 `key=` 的值当成**不可解析** ✓ → 回退到默认 **0–127** ✗✓ → 于是**每一个 region 都匹配每一个音符** ✓✓。
