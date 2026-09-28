@@ -371,15 +371,31 @@ try {
          * profile block, which uses `song` and worked, was the evidence in plain sight. Inventing a second name for an existing value is the "two places, one thing" defect
          * in miniature, and this is the **second** time in this file: the first was an extra `import` of a module the probe already had.
          */
-        const time = async (extra) => {
+        const once = async (extra) => {
           const started = performance.now();
           await render(song, extra);
           return (performance.now() - started) / 1000;
         };
+
+        /**
+         * **Three samples and a median, because one sample produced two incompatible answers.**
+         *
+         * The first version measured each variant once. Two runs of the same step then disagreed by a factor of seven — the effects rack was 26% of the render in one and 3.8% in the
+         * other — and in the second run **turning the master stage off made the render 16 s slower**, which is physically absurd. So the readings were noise, and a single reading of a
+         * ninety-second browser render on a shared machine cannot be anything else.
+         *
+         * All three are kept and printed. A median with its spread is a measurement; a median alone would hide the very thing that made the first attempt worthless.
+         */
+        const measure = async (extra) => {
+          const samples = [];
+          for (let i = 0; i < 3; i += 1) samples.push(await once(extra));
+          const sorted = [...samples].sort((a, b) => a - b);
+          return { median: sorted[1], samples: samples.map((value) => Number(value.toFixed(4))) };
+        };
         // One discarded pass first: the flatten curve showed what a cold first reading does to a timing (132 ms against 3.6 ms).
-        await time({});
-        const full = await time({});
-        const withoutRack = await time({ bypassFxRack: true });
+        await once({});
+        const full = await measure({});
+        const withoutRack = await measure({ bypassFxRack: true });
 
         /**
          * A third point, using the `masterless` options **this probe already defines for its chunking work** — read before use, because the last two blocks added here named
@@ -389,14 +405,18 @@ try {
          * and it does **not** remove the limiter, which has no switch. Calling the difference "the master chain's cost" would be the same mistake as calling `*silence` a glob:
          * the behaviour would be right and the explanation would not, and the explanation is what a later reader acts on.
          */
-        const withoutMasterKnobs = await time({ loudnessTrimDb: 0, masterMakeupDb: 0, masterBusCompEnabled: false });
+        const withoutMasterKnobs = await measure({ loudnessTrimDb: 0, masterMakeupDb: 0, masterBusCompEnabled: false });
         return {
-          fullSeconds: Number(full.toFixed(4)),
-          withoutRackSeconds: Number(withoutRack.toFixed(4)),
-          rackSeconds: Number((full - withoutRack).toFixed(4)),
-          remainderSeconds: Number(withoutRack.toFixed(4)),
-          withoutMasterKnobsSeconds: Number(withoutMasterKnobs.toFixed(4)),
-          masterKnobsSeconds: Number((full - withoutMasterKnobs).toFixed(4)),
+          // Medians for the comparison, and every raw sample beside them, because the spread is what made the first attempt worthless.
+          fullSeconds: Number(full.median.toFixed(4)),
+          fullSamples: full.samples,
+          withoutRackSeconds: Number(withoutRack.median.toFixed(4)),
+          withoutRackSamples: withoutRack.samples,
+          rackSeconds: Number((full.median - withoutRack.median).toFixed(4)),
+          remainderSeconds: Number(withoutRack.median.toFixed(4)),
+          withoutMasterKnobsSeconds: Number(withoutMasterKnobs.median.toFixed(4)),
+          withoutMasterKnobsSamples: withoutMasterKnobs.samples,
+          masterKnobsSeconds: Number((full.median - withoutMasterKnobs.median).toFixed(4)),
         };
       } catch (error) {
         return { error: String(error && error.message ? error.message : error) };
@@ -1026,10 +1046,10 @@ try {
       console.log(
         r.error
           ? `   ⚠️ render split   : could not measure (${r.error})`
-          : `   render split     : full ${r.fullSeconds}s · bypassFxRack ${r.withoutRackSeconds}s (rack ${r.rackSeconds}s) · master knobs off ${r.withoutMasterKnobsSeconds}s (${r.masterKnobsSeconds}s)`
+          : `   render split     : full ${r.fullSeconds}s ${JSON.stringify(r.fullSamples)} · bypassFxRack ${r.withoutRackSeconds}s ${JSON.stringify(r.withoutRackSamples)} (rack ${r.rackSeconds}s) · master knobs off ${r.withoutMasterKnobsSeconds}s ${JSON.stringify(r.withoutMasterKnobsSamples)} (${r.masterKnobsSeconds}s)`
       );
       if (!r.error) {
-        console.log("                      the rack is 26%-ish of the render; the remainder (voices + graph + the limiter, which has no switch) is the rest");
+        console.log("                      medians of three, with all three samples beside them: a single reading of a ninety-second render disagreed with itself by a factor of seven");
         console.log("                      `masterless` disables loudness trim, makeup and bus comp — NOT the limiter, so that figure is labelled for the three knobs it actually turns off");
       }
     }
