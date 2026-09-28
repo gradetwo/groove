@@ -121,6 +121,34 @@ signature: a large max, a small mean, and **no improvement from a lead-in**, bec
 boundary trim at the start as well as the end, and the conclusion is "chunking is exact apart from each render's own attack". If it is spread across the boundary, the
 state hypothesis stands. **Same rule as the boundary-click instrument: a number that does not separate the two cases cannot decide between them.**
 
+## The localisation: the difference is everywhere, so chunking cannot be a substitute for a whole-song bounce
+
+```
+where the diff is: head max 1.412 mean 0.2275 · mid max 1.71 mean 0.1868 · tail max 0.6964 mean 0.1837
+```
+
+**It is not the start.** The middle carries the largest max (1.71) and the three means are the same order (0.18–0.23), so the difference is **spread through the whole
+chunk** rather than concentrated at each render's fresh attack — which refutes the explanation I wrote down last round, and does so cleanly, because that explanation
+predicted exactly the opposite shape.
+
+**So the state hypothesis stands, and it is not a boundary effect**: the engine's whole-song state — reverb tails, the bus compressor, the drum parallel path — runs
+across the entire piece, and a chunk rendered on its own never has it. Section-level chunking therefore **cannot be sample-exact**, and no amount of trimming changes
+that: the trim fixes the **length** (already exact, `1x`) and nothing else.
+
+### What that means for P0, which is the real outcome of this measurement
+
+**Progress and equivalence are in tension, and the numbers say so.** A chunked bounce is a *different master* — not a broken one, but a different one — so:
+
+* **the single whole-song render stays the deliverable**, and its equivalence with itself is trivially true;
+* **chunked rendering is offered as an explicitly labelled mode** for a long piece: a movement at a time, each mastered on its own, which buys **observability** (N/M
+  bars, a file per movement, bounded memory) and **not** equivalence. The label has to say that, because the alternative is a composer discovering that two bounces of
+  the same song differ and having no idea why;
+* and the acceptance line for that mode is therefore **"same length, stated difference"** rather than sample equality — with the numbers from this run quoted in the
+  docs so nobody has to re-derive them.
+
+This is the third time in this block that a measurement changed the plan rather than confirming it (the tail's existence, the state's reach, and now the tension
+itself), which is the argument for measuring **before** building rather than after.
+
 ## Method notes worth keeping, all learned by being wrong here
 
 * **A local green is evidence about the tree that was checked, not the tree that is pushed.** A release failed on `'"kick" | … | "fx"' and '"audio"' have no
