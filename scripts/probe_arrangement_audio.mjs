@@ -301,6 +301,68 @@ try {
      * comparison about level rather than phase.
      */
     /**
+     * **The audio lane's own latency**, measured with a synthetic impulse (owner decision 2026-09-28, the read-only slice's last step).
+     *
+     * The catalogue ships empty, so there is no real sample to decode — but the question does not need one: "which frame does the scheduling path put the sound at"
+     * has nothing to do with what the sample contains. So an impulse at frame 0 is handed to the **real scheduler and the real adapter** through a fake loader
+     * (bypassing decode, which is asynchronous byte-fetching rather than a scheduling delay), and the first non-zero frame of the render says where the audio path put
+     * it. Expected: exactly where it was asked to be, because `AudioBufferSourceNode.start(when)` is specified to begin exactly then.
+     *
+     * A zero here is a **result**, not a non-event: the row this feeds says "no compensation, because the start is exact by specification", rather than a
+     * compensation invented to fill a table.
+     *
+     * Wrapped like its neighbours: it prints a number or it prints why it could not.
+     */
+    const audioLaneLatency = await (async () => {
+      try {
+        const [scheduler, graph] = await Promise.all([
+          import("/src/audio/audioLaneScheduler.ts"),
+          import("/src/audio/browserSampleGraph.ts"),
+        ]);
+        const sampleRate = 44100;
+        const atSeconds = 0.5;
+        const frames = Math.round(sampleRate * 1);
+        const context = new OfflineAudioContext(1, frames, sampleRate);
+        const impulse = context.createBuffer(1, 64, sampleRate);
+        impulse.getChannelData(0)[0] = 1;
+
+        const asset = { assetId: "probe-impulse", name: "Probe impulse", kind: "one-shot", seconds: 0.01 };
+        const loader = { load: async () => impulse, decodes: () => 0 };
+        const plan = {
+          clips: { A: { tracks: [{ track_id: "audio", name: "Probe", sample: { assetId: "probe-impulse" } }] } },
+          sections: [{ id: "probe", slot: "A", bars: 1 }],
+          boundaries: [0],
+          bpm: 120,
+        };
+        const report = await scheduler.scheduleAudioLaneSamples(
+          plan,
+          loader,
+          graph.browserSampleSink(context, context.destination),
+          0,
+          [asset]
+        );
+        const rendered = await context.startRendering();
+        const channel = rendered.getChannelData(0);
+        let first = -1;
+        for (let i = 0; i < channel.length; i += 1) {
+          if (Math.abs(channel[i]) > 1e-4) {
+            first = i;
+            break;
+          }
+        }
+        return {
+          atSeconds,
+          scheduled: report.scheduled,
+          firstNonZeroFrame: first,
+          latencyMs: first < 0 ? null : Number((((first / sampleRate) - atSeconds) * 1000).toFixed(4)),
+          problems: report.problems.length,
+        };
+      } catch (error) {
+        return { error: String(error && error.message ? error.message : error) };
+      }
+    })();
+
+    /**
      * **Chunked rendering, measured before it is built** (fifth report P0, sixth report VI).
      *
      * The design under test: a chunk is **a song with a subset of its sections** — no step slicing, no new exporter option — so this needs no production change to
@@ -708,6 +770,7 @@ try {
         /** Item 2: two stacked sub kicks against each alone, over the window the report's claim is about. */
         kickPhase,
         chunking,
+        audioLaneLatency,
         seconds: withFill.buffer.duration,
         barSeconds,
         fillRms: fillBars.map((bar) => ({
@@ -849,6 +912,14 @@ try {
           `38 Hz ${k.notch38Db >= 0 ? "+" : ""}${k.notch38Db} dB → ${k.verdict}`
       );
       if (!ok) console.log("   (inconclusive: the two singles differ enough in level that this window cannot separate phase from gain)");
+    }
+    {
+      const l = measured.audio.audioLaneLatency ?? { error: "not collected" };
+      console.log(
+        l.error
+          ? `   ⚠️ audio lane path : could not measure (${l.error})`
+          : `   audio lane path  : asked at ${l.atSeconds}s, first sound at frame ${l.firstNonZeroFrame} → **${l.latencyMs} ms** of its own latency (${l.scheduled} sample(s) scheduled, ${l.problems} problem(s))`
+      );
     }
     {
       const c = measured.audio.chunking ?? { error: "not collected" };
