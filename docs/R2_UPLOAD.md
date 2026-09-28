@@ -86,3 +86,35 @@ curl -sI https://<你的公开域名>/virtuosity-drums/Programs/01-basic-kit.sfz
 ```
 
 ⭐ **要看到 `200` 与一个 `content-length`** ✓ —— ⚠️ 而**如果看到 `403`**，那说明桶的公开访问没打开 ✓（或 CORS/域名没绑对 ✓），**而不是路径写错了** ✓。
+
+## 6. 已验过的三件事（2026-09-28，业主设好 `.env.local` 与 `gh secret set` 之后）
+
+### ① `VITE_SAMPLE_ROOT` 的格式与生效 ✅
+
+`.env.local` 里是 `VITE_SAMPLE_ROOT=https://r2mirror.groove.wangda.today` ✓ —— 自定义域 ✓、无末尾斜杠 ✓、**格式正确** ✓。
+
+⭐ 而**它确实生效** ✓✓：`npx vite build` 之后，**产物里能搜到这个域名** ✓（`dist/assets/StudioView-*.js` ✓）—— 所以**本地部署这条路已经拿到了 root** ✓。
+
+⚠️ 而 `gh secret set` **目前没有任何 workflow 引用它** ✓（部署是本地 `node scripts/deploy.mjs` ✓，`.github/workflows/` 里只有 `ci.yml`/`manual-verify.yml`/`voice-sweep.yml` ✓，没有一个用 `VITE_` ✓）→ ⭐ **无害，但也没起作用** ✓。**如果将来改成在 CI 里构建，就必须在那一步加 `env: VITE_SAMPLE_ROOT: ${{ secrets.VITE_SAMPLE_ROOT }}`** ✓，否则线上会是空的 ✓。
+
+### ② R2 的域名与公开访问 ✅（**用对照验的** ✓）
+
+```
+真路径 /virtuosity-drums/Programs/01-basic-kit.sfz → 404（server: cloudflare）
+假路径 /definitely-not-here.sfz                    → 404
+```
+
+⭐ **两者都是 404** ✓ → ⭐ **所以 404 的含义是"对象不在"，而不是"被拒绝"** ✓✓ —— **桶是空的**（上传还没做 ✓），**而域名是活的、公开访问是开的** ✓✓。⭐ **如果公开访问没开，对照会给出 403 而不是 404** ✓ —— **这就是对照组的作用** ✓。
+
+### ③ ⚠️ 线上清单**还没有被提供** ✗ —— 一个真问题
+
+```
+GET https://groove.wangda.today/samples/manifest.json
+→ HTTP/2 200  ✗  但 content-type: text/html, 内容是 index.html 的 SPA 兜底
+```
+
+⭐ **所以应用取到的是 HTML，不是清单** ✗✓ —— ⚠️ 而它**看起来像 200 ✓**，**所以症状会被误读成"清单坏了"** ✗✓（我的运行时会如实报一个解析问题 ✓，但**根因是路由/部署，不是清单** ✓）。
+
+**构建本身是对的** ✓：`dist/samples/manifest.json` = **347158 字节** ✓ → ⭐ **所以这是"网站自清单提交以来还没重新部署"** ✓✓ —— 重新部署一次即可 ✓。
+
+⚠️ 而 `npm run deploy` 会先跑 `npm run verify`（**完整校验链** ✓）；只部署用 `npm run deploy:only` ✓（`node scripts/deploy.mjs` ✓，用 `.env` 里的 `CLOUDFLARE_API_TOKEN` ✓）—— ⭐ **而"重新部署生产"是业主的决定，不是我的** ✓。
