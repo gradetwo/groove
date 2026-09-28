@@ -222,3 +222,29 @@ describe("catalogueFromManifestText", () => {
     expect(broken.problems[0]).toMatch(/manifest: manifest is not valid JSON/);
   });
 });
+
+/**
+ * Source-first addressing: the URL derived from the pin the manifest already carries.
+ *
+ * The owner's decision is that the **source is tried first and the mirror is the fallback**, reversing what the first implementation did. Two things are asserted, and the second is the one that
+ * matters for the fallback actually being reachable: a pinned source URL is produced, and it is **derived** — no second URL field to drift out of step with `repo`/`pin`.
+ */
+describe("sourceSfzUrl", () => {
+  it("derives a pinned raw URL from the entry's own repo and pin", async () => {
+    const { sourceSfzUrl, parseManifest } = await import("../data/sampleManifest");
+    const parsed = parseManifest(manifest([
+      { id: "kit", name: "Kit", licence: "CC0", prefix: "kit", repo: "sfzinstruments/virtuosity_drums", pin: "9f04cf9a7345", sfz: "Programs/01-basic-kit.sfz", files: [{ path: "Programs/01-basic-kit.sfz", bytes: 10 }] },
+    ]));
+    expect(sourceSfzUrl(parsed.manifest!, "kit")).toBe("https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a7345/kit/Programs/01-basic-kit.sfz");
+  });
+
+  it("returns nothing without a pin, rather than an address that would drift with the default branch", async () => {
+    const { sourceSfzUrl, parseManifest } = await import("../data/sampleManifest");
+    const parsed = parseManifest(manifest([
+      { id: "kit", name: "Kit", licence: "CC0", prefix: "kit", repo: "someone/library", sfz: "k.sfz", files: [] },
+    ]));
+    // Unpinned means the address could change under us, so there is no honest source address to give — the mirror is the only stable one.
+    expect(sourceSfzUrl(parsed.manifest!, "kit")).toBeUndefined();
+    expect(sourceSfzUrl(parsed.manifest!, "not-an-entry")).toBeUndefined();
+  });
+});
