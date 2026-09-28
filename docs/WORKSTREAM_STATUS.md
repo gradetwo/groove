@@ -326,6 +326,30 @@ provable before its output exists**, and those are two different questions.
 So the rule for waiting on one of these: **check the sha, then check the step, and only then decide that something is missing.** "No output" is ambiguous between three states —
 still running, not in this build, and broken — and the sha plus the step name distinguish all three without waiting.
 
+## Measure elapsed time from the run's timestamps, not from how many rounds have passed
+
+Watching a long probe across several rounds, I concluded it had been running "over two hours" and started treating that as an anomaly worth diagnosing. The clock said otherwise:
+
+```
+now              2026-09-28T20:44:45Z
+job started      2026-09-28T20:17:28Z     → 27 minutes
+probe step       2026-09-28T20:23:32Z     → 21 minutes
+```
+
+**Twenty-one minutes, which is exactly what the same step took in the earlier runs.** No anomaly existed. My sense of elapsed time came from the number of conversation rounds, and rounds are not a
+clock: a round can be a few minutes of my work while the job moves not at all, or the reverse.
+
+It is the fourth instance of one shape, and by now the shape is the point — **a signal that cannot distinguish the two outcomes I care about.** "How long it feels" cannot separate *slow*
+from *stuck*; `started_at` can. So:
+
+```
+gh api repos/<owner>/<repo>/actions/runs/<id>/jobs \
+  --jq '.jobs[] | "\(.name) | started \(.started_at) | \(.status)"'
+date -u +%Y-%m-%dT%H:%M:%SZ
+```
+
+And the workflow's own `timeout-minutes: 150` bounds the wait, so a stuck job ends by itself rather than needing to be inferred.
+
 ## Method notes worth keeping, all learned by being wrong here
 
 * **A local green is evidence about the tree that was checked, not the tree that is pushed.** A release failed on `'"kick" | … | "fx"' and '"audio"' have no
