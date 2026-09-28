@@ -321,10 +321,15 @@ try {
         const seconds = 4;
         const rate = 44100;
         const frames = Math.round(seconds * rate);
-        const flatten = await import("/src/data/songFlatten.ts");
 
+        /**
+         * The song and the flatten module are the ones **this probe already has** — `song` is built above it, and `flattenModule` is imported in the same
+         * `Promise.all`. The first version of this block imported `songFlatten.ts` a second time and read `measured.song`, which does not exist in this scope: it
+         * measured nothing and reported `measured is not defined`. Reusing what is already here is both the fix and the rule — a second import of the same module is
+         * how two places start computing one thing.
+         */
         const startedFlatten = performance.now();
-        const flattened = flatten.flattenSong?.(measured.song) ?? null;
+        const flattened = flattenModule.flattenSong(song);
         const flattenSeconds = (performance.now() - startedFlatten) / 1000;
 
         const context = new OfflineAudioContext(2, frames, rate);
@@ -332,19 +337,14 @@ try {
         await context.startRendering();
         const emptyRenderSeconds = (performance.now() - startedRender) / 1000;
 
-        const encodeStart = performance.now();
-        const buffer = new OfflineAudioContext(2, frames, rate).createBuffer(2, frames, rate);
-        const encoded = new Blob([buffer.getChannelData(0)], { type: "audio/wav" });
-        const encodeSeconds = (performance.now() - encodeStart) / 1000;
-
         return {
           seconds,
           emptyRenderSeconds: Number(emptyRenderSeconds.toFixed(4)),
           flattenSeconds: Number(flattenSeconds.toFixed(4)),
-          flattenBars: flattened ? flattened.totalBars ?? null : null,
-          flattenSteps: flattened ? flattened.totalSteps ?? null : null,
-          encodeSeconds: Number(encodeSeconds.toFixed(4)),
-          encodeBytes: encoded.size,
+          flattenBars: flattened.totalBars ?? null,
+          flattenSteps: flattened.totalSteps ?? null,
+          // The WAV encode is deliberately **not** reported as measured: the version that was here built a Blob of raw float samples and called it an encode, which is
+          // not what the renderer does. What the renderer's own encode costs is part of the remainder, and the remainder is where an unmeasured number is supposed to be.
         };
       } catch (error) {
         return { error: String(error && error.message ? error.message : error) };
@@ -973,7 +973,7 @@ try {
       console.log(
         p.error
           ? `   ⚠️ render profile : could not measure (${p.error})`
-          : `   render profile   : ${p.seconds}s at 44.1kHz — **empty context ${p.emptyRenderSeconds}s** (the floor), flatten ${p.flattenSeconds}s (${p.flattenBars} bars / ${p.flattenSteps} steps), encode ${p.encodeSeconds}s (${p.encodeBytes}B)`
+          : `   render profile   : ${p.seconds}s at 44.1kHz — **empty context ${p.emptyRenderSeconds}s** (the floor the browser charges), flatten ${p.flattenSeconds}s (${p.flattenBars} bars / ${p.flattenSteps} steps)`
       );
       if (!p.error) console.log("                      the full render's cost beyond these is the remainder; attributing it to a guess is what this probe refuses to do");
     }
