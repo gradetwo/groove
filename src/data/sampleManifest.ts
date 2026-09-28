@@ -47,6 +47,13 @@ export interface SampleManifestEntry {
   durationSeconds?: number;
   /** Set when this project deliberately does not ship it, with the reason. */
   excludedReason?: string;
+  /**
+   * **Where the bytes came from.** These were written into the manifest and then **silently dropped by the parser**, which built a fresh object from the fields it knew — so a
+   * caller could not tell which commit of a library its files belonged to. A pin that does not survive parsing is not a pin, and no criterion noticed because the test that used
+   * this entry only checked that it parsed.
+   */
+  repo?: string;
+  pin?: string;
 }
 
 export interface SampleManifest {
@@ -138,6 +145,15 @@ export function parseManifest(text: string): ManifestResult {
       attribution: entry.attribution,
       prefix: entry.prefix,
       sfz: entry.sfz,
+      /**
+       * **Carried through because the first version dropped them.** The manifest writes `repo` and `pin`, the parser rebuilt each entry from the fields it knew, and these two
+       * were silently lost — so a caller could not tell which commit of a library its files came from. **A pin that does not survive parsing is not a pin**, and nothing noticed
+       * because the test that used this entry only checked that it parsed.
+       *
+       * It was found by a criterion on the **shipped** manifest, which is the difference between testing a fixture and testing real data.
+       */
+      repo: typeof entry.repo === "string" ? entry.repo : undefined,
+      pin: typeof entry.pin === "string" ? entry.pin : undefined,
       files: Array.isArray(entry.files) ? (entry.files as SampleManifestFile[]) : [],
       needs: entry.needs,
       excludedReason: entry.excludedReason,
