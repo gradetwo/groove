@@ -428,9 +428,43 @@ try {
           overAt += piece[0].length;
         }
 
+        /**
+         * **Where the difference lives**, which the three variants could not say.
+         *
+         * All three reported max ≈ 1.7 and a small mean, and the overlap — which carries the boundary state across — was no better. A difference concentrated at
+         * **each render's own start** (a limiter attack, where a whole-song render has only one) produces exactly that: a big max, a small mean, and no improvement
+         * from a lead-in. So each lean chunk's own frames are split into a head, a middle and a tail of roughly 50 ms, and the difference is reported per segment.
+         *
+         * The head winning means a start trim settles it; spread evenly across the tail and middle means the state hypothesis stands. A number that cannot separate
+         * the two cases cannot decide between them — which is the whole reason this block exists rather than another variant.
+         */
+        const window50 = Math.round(0.05 * (whole.buffer.sampleRate || 44100));
+        const segments = { head: { max: 0, sum: 0, n: 0 }, middle: { max: 0, sum: 0, n: 0 }, tail: { max: 0, sum: 0, n: 0 } };
+        let segAt = 0;
+        for (const piece of lean) {
+          const frames = Math.min(piece[0].length, Math.max(0, wholeSamples - segAt));
+          for (let i = 0; i < frames; i += 1) {
+            const where = i < window50 ? "head" : i >= frames - window50 ? "tail" : "middle";
+            for (let c = 0; c < channels; c += 1) {
+              const diff = Math.abs(piece[c][i] - whole.channels[c][segAt + i]);
+              if (diff > segments[where].max) segments[where].max = diff;
+              segments[where].sum += diff;
+              segments[where].n += 1;
+            }
+          }
+          segAt += piece[0].length;
+        }
+        const segmentReport = Object.fromEntries(
+          Object.entries(segments).map(([name, value]) => [
+            name,
+            { max: Number(value.max.toExponential(3)), mean: Number((value.sum / Math.max(1, value.n)).toExponential(3)), samples: value.n },
+          ])
+        );
+
         return {
           sections: parts.length,
           wholeSamples,
+          segments: segmentReport,
           chunkSamples,
           lengthRatio: Number((chunkSamples / Math.max(1, wholeSamples)).toFixed(4)),
           maxAbsDiff: Number(maxAbsDiff.toExponential(3)),
@@ -825,7 +859,8 @@ try {
             ? `   ⚠️ chunked vs whole : ${c.skipped}`
             : `   chunked vs whole : ${c.sections} sections · length ${c.lengthRatio}x · max |Δ| ${c.maxAbsDiff} · mean |Δ| ${c.meanAbsDiff} (${c.compared} samples)\n` +
               `   lean chunks      : tail ${c.tailFrames} frames trimmed · length ${c.leanLengthRatio}x · max |Δ| ${c.leanMaxAbsDiff} · mean |Δ| ${c.leanMeanAbsDiff} (${c.leanCompared} samples)` +
-              `\n   overlap chunks   : length ${c.overlapLengthRatio}x · max |Δ| ${c.overlapMaxAbsDiff} · mean |Δ| ${c.overlapMeanAbsDiff} (${c.overlapCompared} samples)`
+              `\n   overlap chunks   : length ${c.overlapLengthRatio}x · max |Δ| ${c.overlapMaxAbsDiff} · mean |Δ| ${c.overlapMeanAbsDiff} (${c.overlapCompared} samples)` +
+              (c.segments ? `\n   where the diff is: head max ${c.segments.head.max} mean ${c.segments.head.mean} · mid max ${c.segments.middle.max} mean ${c.segments.middle.mean} · tail max ${c.segments.tail.max} mean ${c.segments.tail.mean}` : "")
       );
     }
     {
