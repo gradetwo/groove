@@ -80,3 +80,16 @@ describe("createCatalogueRuntime", () => {
     expect(problems.join(" ")).toMatch(/404/);
   });
 });
+
+describe("the application's shared runtime", () => {
+  it("exists as one instance, and stays empty while no mirror root is configured", async () => {
+    const { appCatalogueRuntime } = await import("../data/sampleCatalogueRuntime");
+    // Imported twice through the module cache: one instance, so no two callers can disagree about which assets exist.
+    const again = (await import("../data/sampleCatalogueRuntime")).appCatalogueRuntime;
+    expect(again).toBe(appCatalogueRuntime);
+    // With no `VITE_SAMPLE_ROOT` in the test environment, the honest answer is an empty catalogue and no fetch — the property that makes wiring it into the engine safe.
+    const result = await appCatalogueRuntime.load();
+    expect(result.assets).toEqual([]);
+    expect(appCatalogueRuntime.ready).toBe(false);
+  });
+});
