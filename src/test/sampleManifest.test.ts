@@ -149,3 +149,30 @@ describe("sampleAssetsFromManifest", () => {
     expect(problems.every((problem) => /gives no durationSeconds/.test(problem))).toBe(true);
   });
 });
+
+/**
+ * The promises a mirror acts on, checked where they are written rather than after a download.
+ *
+ * Before this, `files` only had to be an array — an entry could carry `[{ bytes: -5 }]` or a twenty-character hash and pass. The failure would then appear as a broken mirror
+ * **after** 1.2 GB had been fetched, which is the worst possible moment and the reason the manifest exists in the first place.
+ */
+describe("the manifest validates its own promises", () => {
+  it("requires a path and sane bytes and hashes for every file", () => {
+    const bad = parseManifest(manifest([{ id: "x", name: "X", licence: "CC0", files: [{ bytes: 10 }, { path: "a.wav", bytes: -5 }, { path: "b.wav", sha256: "abc" }] }]));
+    expect(bad.ok).toBe(false);
+    const messages = bad.errors.join("\n");
+    expect(messages).toMatch(/files\[0\]: path is required/);
+    expect(messages).toMatch(/bytes must be a positive number/);
+    expect(messages).toMatch(/sha256 must be 64 lower-case hex characters/);
+  });
+
+  it("accepts a well-formed file list and refuses a duration that is not positive", () => {
+    const good = parseManifest(manifest([{ id: "x", name: "X", licence: "CC0", durationSeconds: 1.9, files: [{ path: "a.wav", bytes: 93103, sha256: "a".repeat(64) }] }]));
+    expect(good.ok, good.errors.join("; ")).toBe(true);
+
+    const zero = parseManifest(manifest([{ id: "x", name: "X", licence: "CC0", durationSeconds: 0, files: [] }]));
+    expect(zero.ok).toBe(false);
+    // A zero duration is the invented value this whole mechanism exists to avoid, so it is refused at the door.
+    expect(zero.errors.join("\n")).toMatch(/durationSeconds must be a positive number/);
+  });
+});

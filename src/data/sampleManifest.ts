@@ -102,7 +102,34 @@ export function parseManifest(text: string): ManifestResult {
       // Not a style preference: redistributing a CC BY library without attribution is a licence violation, so it is an error and it is reported as one.
       errors.push(`${where}: licence ${licence} requires attribution, and none is given`);
     }
-    if (!Array.isArray(entry.files)) errors.push(`${where}: files must be an array`);
+    /**
+     * The file list and the duration are **promises a mirror will act on**, so they are checked here rather than trusted.
+     *
+     * Before this, `files` only had to be an array: an entry could carry `[{ bytes: -5 }]` or a hash of twenty characters and pass, and the mistake would surface as a failed
+     * mirror **after a library had been downloaded** — which is the worst moment to learn it, and the reason a manifest exists at all.
+     */
+    if (!Array.isArray(entry.files)) {
+      errors.push(`${where}: files must be an array`);
+    } else {
+      entry.files.forEach((file, fileIndex) => {
+        const spot = `${where}.files[${fileIndex}]`;
+        const candidate = file as Partial<SampleManifestFile>;
+        if (typeof candidate?.path !== "string" || candidate.path.trim() === "") {
+          errors.push(`${spot}: path is required`);
+          return;
+        }
+        if (candidate.bytes !== undefined && (!Number.isFinite(candidate.bytes) || candidate.bytes <= 0)) {
+          errors.push(`${spot} (${candidate.path}): bytes must be a positive number (got ${JSON.stringify(candidate.bytes)})`);
+        }
+        if (candidate.sha256 !== undefined && !/^[0-9a-f]{64}$/.test(candidate.sha256)) {
+          // A hash of the wrong length cannot match anything, so it would turn a mirror's verification into a guaranteed failure with a confusing message.
+          errors.push(`${spot} (${candidate.path}): sha256 must be 64 lower-case hex characters`);
+        }
+      });
+    }
+    if (entry.durationSeconds !== undefined && (!Number.isFinite(entry.durationSeconds) || entry.durationSeconds <= 0)) {
+      errors.push(`${where}: durationSeconds must be a positive number when present (got ${JSON.stringify(entry.durationSeconds)})`);
+    }
 
     entries.push({
       id: entry.id,
