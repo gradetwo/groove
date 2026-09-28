@@ -275,11 +275,21 @@ jobs:
           fi
           cmake -S sfizz -B sfizz/build -DCMAKE_BUILD_TYPE=Release -DSFIZZ_RENDER=ON
           cmake --build sfizz/build --target sfizz_render -j"$(nproc)"
+          # The client's path is **discovered, not assumed**. An earlier version hard-coded `build/clients/sfizz_render` and the job died with
+          # `spawnSync ... ENOENT` *after a successful build* — a failure that says nothing about the build and everything about the assumption. If it is genuinely
+          # absent, the tree is printed so the next failure explains itself instead of sending someone to read the logs of a green step.
+          found="$(find sfizz/build -type f -name sfizz_render -print -quit)"
+          if [ -z "$found" ]; then
+            echo "sfizz_render was not produced; what the build did leave behind:"
+            find sfizz/build -maxdepth 4 -type f -name "*sfizz*" | head -20
+            exit 1
+          fi
+          echo "sfizz_render: $PWD/$found"
+          echo "SFIZZ_RENDER=$PWD/$found" >> "$GITHUB_ENV"
 
       - name: Prove the sfizz oracle reads like the known one
         if: inputs.scope == 'sfizz' || inputs.scope == 'all'
-        env:
-          SFIZZ_RENDER: ./sfizz/build/clients/sfizz_render
+        # SFIZZ_RENDER arrives through GITHUB_ENV from the build step, which located the binary rather than trusting a path.
         run: node scripts/sfizz_oracle.mjs
 
       - name: Upload coverage
