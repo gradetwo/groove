@@ -77,7 +77,15 @@ describe.skipIf(!enabled)("the mirror run", () => {
     console.log(`   measured     : ${measured.length} files, longest ${String(entry.durationSeconds)}s, builtIns ${builtIns.length}`);
     const parsed = parseManifest(JSON.stringify({ version: 1, entries: [entry] }));
     expect(parsed.ok, `the produced entry does not parse as a manifest: ${parsed.errors.join("; ")}`).toBe(true);
-    // Printed last, and printing is the deliverable: this JSON is what goes into `public/samples/manifest.json`.
-    console.log(`MANIFEST_ENTRY ${JSON.stringify(entry)}`);
+    /**
+     * **Written to a file as well as printed, because the print does not survive.** The first successful run measured all 1659 files and then produced an entry of well over a
+     * hundred kilobytes, which GitHub truncated inside a single log line — so the numbers were visible (`longest 14.529542s`) and the artifact was not. A file is the deliverable;
+     * the log line is a summary.
+     */
+    const { writeFileSync: writeJson } = await import("node:fs");
+    const entryPath = process.env.SFZ_MIRROR_ENTRY ?? "manifest-entry.json";
+    writeJson(entryPath, JSON.stringify(entry, null, 2));
+    console.log(`   entry        : written to ${entryPath} (${JSON.stringify(entry).length} characters)`);
+    console.log(`MANIFEST_ENTRY_SUMMARY ${JSON.stringify({ id: entry.id, files: (entry.files as unknown[]).length, durationSeconds: entry.durationSeconds })}`);
   }, 30 * 60 * 1000);
 });
