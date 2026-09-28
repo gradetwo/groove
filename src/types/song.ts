@@ -138,9 +138,23 @@ export interface Song {
 }
 
 /** A section longer than this is a mistake, not an arrangement (and it would allocate minutes of audio). */
-export const MAX_SECTION_BARS = 64;
+/**
+ * How long one section may be, in bars.
+ *
+ * Raised from 64 to **256** by the owner's decision of 2026-09-28 ("relax the ceilings"), because a long movement had to be chopped into sections of at most 64 to
+ * fit — which is a workaround for a limit rather than a way of writing music. 256 bars is a little over eight minutes at 120 bpm in 4/4, so a movement can now be
+ * one section. It stays finite because the renderer allocates per bar: a bound that does not exist is a bound that is discovered as an out-of-memory.
+ */
+export const MAX_SECTION_BARS = 256;
 /** A song longer than this is refused by the renderer; it is 32 minutes at 120 BPM. */
-export const MAX_SONG_BARS = 512;
+/**
+ * How long a song may be, in bars.
+ *
+ * Raised from 512 to **2048** by the same decision: the fifth report's composer finished a nine-movement piece at **348** bars and was already near the old ceiling,
+ * so the old number was a wall in the path of the work it was built for. 2048 bars is about 68 minutes at 120 bpm in 4/4, and it remains finite because every bar
+ * becomes steps in one flattened pattern — the reason chunked rendering is being built rather than assumed.
+ */
+export const MAX_SONG_BARS = 2048;
 
 /** One bar of one clip, after the timeline has been resolved. */
 export interface SongBar {

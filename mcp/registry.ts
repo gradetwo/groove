@@ -955,9 +955,11 @@ export const TOOLS: ToolDefinition[] = [
         .number()
         .int()
         .min(1)
-        .max(64)
+        // Kept numerically equal to `MAX_SECTION_BARS` (src/types/song.ts); `sectionCeilings.test.ts` asserts they still agree, because a hardcoded copy is
+        // exactly how a model's bound and a tool's bound drift apart.
+        .max(256)
         .describe(
-          "how many bars this section lasts — **at most 64 per section** (`MAX_SECTION_BARS`); a longer piece uses more sections rather than a longer one, which is also what keeps a render chunkable"
+          "how many bars this section lasts — **at most 256 per section** (`MAX_SECTION_BARS`); a longer piece uses more sections rather than a longer one, which is also what keeps a render chunkable"
         )
         .optional()
         .describe(

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { flattenSong } from "../data/songFlatten";
 import { validatePattern } from "../../mcp/pattern";
-import { MAX_SONG_BARS } from "../types/song";
+import { MAX_SECTION_BARS, MAX_SONG_BARS } from "../types/song";
 import type { Song } from "../types/song";
 
 /**
@@ -67,7 +67,7 @@ describe("long patterns", () => {
     expect(flattenSong(song(128, 2)).totalSteps).toBe(256);
   });
 
-  it("flattens a 512-bar song into 64 bars, which is a finding rather than a rule", () => {
+  it("honours a song's own length up to MAX_SONG_BARS, now that the per-section cap was relaxed", () => {
     /**
      * **Measured, and not yet explained.** A song whose single section says `bars: 512` flattens to **64** bars; `bars: 8` gives 8 and `bars: 1` gives 1, so the
      * count is honoured and then capped somewhere at 64 — and **not in `songFlatten.ts`**, which contains no such number (grep for `slice`, `MAX`, `Math.min`
@@ -81,8 +81,19 @@ describe("long patterns", () => {
      * arrangement is not rendered at all — which would be a P0 far above the missing progress the report described. That is **not established here**: the
      * composer's song was built through `add_section`, and this fixture builds one directly. It is the first thing to check next.
      */
+    // The finding this test was written for — a single section capped at 64 bars — was resolved by the owner's decision of 2026-09-28, which raised
+    // `MAX_SECTION_BARS` to 256 and `MAX_SONG_BARS` to 2048. So the same input now flattens to **exactly what it asked for**, which is the better assertion.
     expect(flattenSong(song(16, 8)).totalBars).toBe(8);
     expect(flattenSong(song(16, 64)).totalBars).toBe(64);
-    expect(flattenSong(song(16, MAX_SONG_BARS)).totalBars).toBe(64);
+    // **Two ceilings, and they are different things**: one section tops out at `MAX_SECTION_BARS`, and a song at `MAX_SONG_BARS` is reached with several of them.
+    expect(flattenSong(song(16, MAX_SECTION_BARS)).totalBars).toBe(MAX_SECTION_BARS);
+    expect(flattenSong(song(16, MAX_SECTION_BARS + 1)).totalBars).toBe(MAX_SECTION_BARS);
+    const sections = Math.ceil(MAX_SONG_BARS / MAX_SECTION_BARS);
+    const long: Song = {
+      ...song(16, MAX_SECTION_BARS),
+      sections: Array.from({ length: sections }, (_, index) => ({ id: `s${index + 1}`, slot: "A", bars: MAX_SECTION_BARS })),
+    } as unknown as Song;
+    expect(flattenSong(long).totalBars).toBe(sections * MAX_SECTION_BARS);
+    expect(flattenSong(long).totalBars).toBeGreaterThanOrEqual(MAX_SONG_BARS);
   });
 });

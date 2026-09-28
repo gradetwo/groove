@@ -92,7 +92,8 @@ describe("B1 · the legacy chain migrates losslessly", () => {
     expect(sectionsToSongChain([{ id: "s1", slot: "B", bars: 4 }])).toEqual(["B", "B", "B", "B"]);
     // A malformed count is clamped rather than producing a zero-length or unbounded chain.
     expect(sectionsToSongChain([{ id: "s1", slot: "A", bars: 0 }])).toEqual(["A"]);
-    expect(sectionsToSongChain([{ id: "s1", slot: "A", bars: 9999 }])).toHaveLength(64);
+    // The per-section ceiling this expands to is `MAX_SECTION_BARS`, raised from 64 to 256 on 2026-09-28.
+expect(sectionsToSongChain([{ id: "s1", slot: "A", bars: 9999 }])).toHaveLength(256);
   });
 
   it("hydrates a snapshot written before B1 through the migration, not as 'no arrangement'", () => {
