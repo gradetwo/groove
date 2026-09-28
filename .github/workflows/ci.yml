@@ -30,6 +30,11 @@ jobs:
       # deprecated on runners (2025-09-19) and now forces onto Node 24 with a warning.
       # This is a *different* Node version from `.nvmrc` below: this one is the workflow's
       # own runtime, `.nvmrc` is the project's floor (`engines` / `engine-strict`).
+      # `ffprobe` measures a sample's duration and reads both FLAC and WAV. It is **not** on the runner by default — the same lesson as `metaflac`, in the other workflow: a
+      # tool that exists on a development machine is not a tool that exists in CI, and the mirror chain's criteria need it in this job as well as in `manual-verify`.
+      - name: Install measurement dependencies
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
       - name: Checkout repository
         uses: actions/checkout@v5
 
