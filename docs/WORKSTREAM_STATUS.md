@@ -377,6 +377,17 @@ the line number of the closing call (`}, { genreId, ramp: rampPair });`) with th
 The general form, since this is the fifth member of one family: **a check that only validates syntax cannot validate placement.** Which side of a boundary a line is on is a property of the
 program's structure, and `git show` plus a line number answers it; a green `node --check` does not, and never will.
 
+## Do not block on a long deploy — work, and check back
+
+The owner's instruction, after watching a deploy hold a turn for twenty minutes: **a long build or deploy is not a reason to stop working.** Poll it, do something else meanwhile, and check again.
+
+It is the same rule as the four instrument ones, applied to my own behaviour rather than to a measurement: **a blocking wait is a signal that tells me nothing while consuming the thing I have least of**.
+The four rules were about readings that cannot distinguish two outcomes; this one is about a *process* that cannot produce anything until it finishes, and the response is the same — get a better
+arrangement rather than a better reading: start it in the background, keep working, and look at it on a schedule.
+
+Concretely: `npm run deploy` runs `verify` first (node, actions, version, docs, the unit suite, the build), so it is minutes of waiting with a full queue of work behind it. **Waiting adds nothing to
+the result**; checking later costs one command.
+
 ## Method notes worth keeping, all learned by being wrong here
 
 * **A local green is evidence about the tree that was checked, not the tree that is pushed.** A release failed on `'"kick" | … | "fx"' and '"audio"' have no
