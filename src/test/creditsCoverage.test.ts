@@ -3,20 +3,16 @@ import { readFileSync } from "node:fs";
 import { parseManifest } from "../data/sampleManifest";
 
 /**
- * ⚠️ **KNOWN HOLLOW — the third check does not yet read the manifest, and must not be trusted until it does.**
+ * The half of the Credit rule that a person can forget: **a manifest entry whose licence requires attribution must be credited in the README's redistributed list.**
  *
- * A negative control proves it: with a `public/samples/manifest.json` containing a **CC-BY entry credited nowhere**, the suite still reports 3 passed. So the file is not
- * reaching the assertion — most likely the read at module scope — and the check currently passes for the wrong reason. That is worse than having no check, because it
- * looks like protection.
+ * **This check was hollow twice, and negative controls caught both.** The first version accepted the entry's name appearing **anywhere** in the README — and the planned
+ * table already names Accurate-Salamander, so an entry added without being credited passed. The second version searched the whole `## Credits` section, which also
+ * contains that planned table, so it passed for the same reason one level down. The diagnostic that settled it printed `cwd`, `existsSync` and the file length — **all
+ * correct** — which proved the reading was fine and the **assertion** was wrong.
  *
- * The stronger rule it is *meant* to enforce is already written and was itself a correction: the entry must be credited **inside the Credits section** and the
- * **attribution's own names** must appear there, because "Accurate-Salamander" is mentioned in the planned table and a mention of what may arrive one day is not a credit
- * for what is redistributed today.
- *
- * Next step is a diagnostic, not a guess: have the test **print what it reads** and compare it with the file on disk. Fixing this is a prerequisite for shipping any
- * library with an attribution obligation.
- *
- * The half of the Credit rule that a person can forget: **a manifest entry whose licence requires attribution must be credited in the README.**
+ * The fix is structural as well as logical: the README now separates `### Redistributed by this project` from `### Planned, not yet included`, because *planning to
+ * credit someone is not crediting them*, and the check reads **only the first list**. A negative control now fails as it should (with the entry named in the message) and
+ * the positive case passes, and both were run before this comment replaced the warning.
  *
  * The manifest enforces that the attribution *exists* in the data; this enforces that it *reaches the reader*, which is where a licence obligation actually lives — a
  * credit buried in a JSON file nobody opens is not a credit. It reads the real manifest if one has been added and passes vacuously until then, so it also carries a guard
@@ -37,8 +33,11 @@ describe("credits coverage", () => {
   it("finds the Credits section, so the check below cannot pass for the wrong reason", () => {
     const section = README.split("## Credits")[1];
     expect(section, "README.md has no ## Credits section — the obligation has nowhere to land").toBeDefined();
-    // The section must actually name the libraries, not merely exist as a heading.
-    expect(section!).toMatch(/VCSL|Salamander|Karoryfer|Virtuosity/);
+    // The separating headings must exist, or the coverage check below would search an empty string and pass for that reason instead.
+    expect(README).toContain("### Redistributed by this project");
+    expect(README).toContain("### Planned, not yet included");
+    // And the planned list must still name the libraries — the headings must not have swallowed the content.
+    expect(README.split("### Planned")[1]!).toMatch(/VCSL|Salamander|Karoryfer|Virtuosity/);
   });
 
   it("states the rule rather than relying on whoever adds the next library to remember it", () => {
@@ -50,7 +49,7 @@ describe("credits coverage", () => {
   it("credits every manifest entry whose licence requires it", () => {
     if (manifestText === null) {
       // No manifest yet: nothing is redistributed, so there is nothing to credit. Stated rather than silently skipped.
-      expect(README).toMatch(/No audio library is bundled today/);
+      expect(README).toMatch(/None yet/);
       return;
     }
     const parsed = parseManifest(manifestText);
@@ -58,7 +57,14 @@ describe("credits coverage", () => {
     const requiring = parsed.manifest!.entries.filter(
       (entry) => !entry.excludedReason && (entry.licence === "CC-BY" || entry.licence === "CC-BY-SA")
     );
-    const creditsSection = README.split("## Credits")[1]!.split("\n## ")[0]!;
+    /**
+     * **Only the first list counts**, and separating them was the fix for the hollow guard.
+     *
+     * The section used to hold one table that mixed "redistributed" with "planned", so a manifest entry credited nowhere still passed: its name was already there as a
+     * **plan**. The diagnostic that settled it printed `cwd`, `existsSync` and the file length — all correct, which proved the fault was in the assertion rather than the
+     * reading. Now the obligation is checked against `### Redistributed by this project` **only**, and the planned list is explicitly not evidence.
+     */
+    const creditsSection = README.split("### Redistributed by this project")[1]!.split("### Planned")[0]!;
 
     /**
      * **The first version of this check was hollow, and only a negative control caught it.**
