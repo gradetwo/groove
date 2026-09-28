@@ -264,14 +264,19 @@ jobs:
           path: sfizz
           key: sfizz-1.2.3-ubuntu-24.04
 
-      # `flac` brings `metaflac`, which is how a sample's duration is measured — and it is needed by **two** scopes: `sfizz` (for the A4 criteria) and `mirror` (for the survey).
-      # The first version installed it only for `sfizz`, and the mirror run then failed on `spawnSync metaflac ENOENT` **after** fetching 1659 files — the right error with the
-      # right reason, caught by a gate that did not cover the run that needed it.
+      # The duration tool is needed by **two** scopes: `sfizz` (for the A4 criteria) and `mirror` (for the survey). The first version installed it only for `sfizz`, and the
+      # mirror run then failed on `spawnSync metaflac ENOENT` **after** fetching 1659 files — the right error with the right reason, caught by a gate that did not cover the run
+      # that needed it.
       - name: Install measurement dependencies
         if: inputs.scope == 'sfizz' || inputs.scope == 'mirror' || inputs.scope == 'all'
         run: |
           sudo apt-get update
-          sudo apt-get install -y flac
+          # `ffmpeg` provides `ffprobe`, which is how a sample's duration is measured — and it reads **both** FLAC and WAV, which this library ships.
+          #
+          # Three iterations of one mistake are recorded here so a fourth is less likely: `metaflac` worked on the two FLAC samples the chain was tested with; it is not
+          # installed on the runner at all until asked for; and `ffprobe` — which is on every development machine — is not either. **A tool that exists locally is not a tool
+          # that exists in CI**, and the mirror run is what found out, twice.
+          sudo apt-get install -y ffmpeg
           if [ "${{ inputs.scope }}" = "sfizz" ] || [ "${{ inputs.scope }}" = "all" ]; then
             sudo apt-get install -y cmake build-essential libsndfile1-dev libjack-jackd2-dev
           fi
