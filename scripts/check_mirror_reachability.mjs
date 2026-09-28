@@ -48,6 +48,27 @@ const checks = [
   { label: "smallest sample", path: `${prefix}${smallest.path}`, bytes: smallest.bytes },
 ];
 
+/**
+ * **And the include tree, because the entry file answering proves almost nothing.**
+ *
+ * The first version of this check passed on the entry program while **all 126 of its includes had never been uploaded** — the plan was derived from `sample=` opcodes and said nothing about `.sfz`
+ * files, so the gap was structural and the check inherited it. One include is now fetched: it is the smallest honest test of "the program tree is on the mirror", because a library whose entry
+ * parses and whose includes are missing produces exactly the same silence as one that was never uploaded.
+ */
+async function checkOneInclude() {
+  try {
+    const program = await (await fetch(`${base}/${prefix}${entry.sfz}`)).text();
+    const include = /^\s*#include\s+"([^"]+)"/m.exec(program)?.[1];
+    if (!include) return { label: "one include", ok: true, note: "the entry program has no includes" };
+    // Relative to the directory of the file that wrote it — the same rule the resolver uses, which is why this path is built rather than guessed.
+    const directory = entry.sfz.includes("/") ? entry.sfz.slice(0, entry.sfz.lastIndexOf("/") + 1) : "";
+    const response = await fetch(`${base}/${prefix}${directory}${include}`, { method: "HEAD" });
+    return { label: "one include", ok: response.ok, note: `${response.status} · ${directory}${include}` };
+  } catch (error) {
+    return { label: "one include", ok: false, note: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 let failures = 0;
 for (const check of checks) {
   const url = `${base}/${check.path}`;
@@ -67,5 +88,13 @@ for (const check of checks) {
   }
 }
 
-console.log(failures === 0 ? `\n✅ the mirror serves what the manifest describes (${base}/${prefix})` : `\n❌ ${failures} of ${checks.length} checks failed`);
+// The include is checked last, and its result joins the same count.
+const includeCheck = await checkOneInclude();
+if (includeCheck.ok) console.log(`  ✅ ${includeCheck.label.padEnd(16)} ${includeCheck.note}`);
+else {
+  failures += 1;
+  console.log(`  ❌ ${includeCheck.label.padEnd(16)} ${includeCheck.note}`);
+}
+
+console.log(failures === 0 ? `\n✅ the mirror serves what the manifest describes (${base}/${prefix})` : `\n❌ ${failures} of ${checks.length + 1} checks failed`);
 process.exit(failures === 0 ? 0 : 1);
