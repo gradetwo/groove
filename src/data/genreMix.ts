@@ -548,6 +548,14 @@ export function getGenreLoudnessTrimDb(genreId: string | undefined | null): numb
 export function resolveMixTrackId(track: Pick<SequencerTrack, "track_id" | "name">): MixTrackId | null {
   const id = (track.track_id || "").toLowerCase();
   if ((MIX_TRACK_IDS as readonly string[]).includes(id)) return id as MixTrackId;
+  /**
+   * An audio lane takes the **FX** mix, and it is decided by the **kind** rather than by the name (owner decision 2026-09-28).
+   *
+   * Without this it fell through to the name table below, where a lane called "Riser" became FX and a lane called "Vox Chop" matched nothing and got **no mix at
+   * all** — an undefined level decided by whatever the composer happened to type. `fx` is the closest of the eight to a sample lane (a drum, a bass or a melody it
+   * is not) and saying so once here is better than leaving it to naming luck. Same rule as `isDrumTrack`: an explicit kind beats a guess.
+   */
+  if (id === "audio") return "fx";
 
   const name = (track.name || "").toLowerCase();
   if (name.includes("kick")) return "kick";
