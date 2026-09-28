@@ -942,7 +942,11 @@ try {
         kickPhase,
         chunking,
         audioLaneLatency,
-      renderLaneCurve,
+        /**
+         * In the object the evaluate **returns**, which is a different object from the one an earlier patch appended it to: that replace matched a same-named key six spaces deep somewhere
+         * else, so `measured.renderLaneCurve` was undefined and the Node-side print stayed silent — the same "two places, one thing" mistake as the block that named a song twice.
+         */
+        renderLaneCurve,
         renderProfile,
         renderSplit,
         seconds: withFill.buffer.duration,
