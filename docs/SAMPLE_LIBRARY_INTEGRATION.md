@@ -475,6 +475,19 @@ grep -rn "planAudioLaneEvents|createSampleLoader|scheduleAudioLane|browserSample
 3. **context 与 destination 从引擎取** ✓ —— 引擎自己持有 `ctx` ✓（`AudioEngine.play()` 里就能看到 ✓），**不需要新拉管道** ✓；
 4. **失败不阻塞** ✓：`playAudioLanes` 的 promise 被 **catch 并具名报告** ✓ —— 与引擎对 GS1 探测的取舍相同 ✓（`void this.probeLiveGs1().catch(() => undefined)` ✓）。
 
+### ⭐⭐ 精确到行的落刀位置（2026-09-28）
+
+`useTransportControls` 的路径与行号都读到了 ✓：
+
+| 处 | 内容 |
+|---|---|
+| 文件 | ⭐ **`src/features/sequencer/hooks/useTransportControls.ts`** ✓（**不在 `src/hooks`** —— 我第一次找错了目录 ✓） |
+| 选项类型 | `:10` `UseTransportControlsOptions` ✓ · `engineRef` `:11` ✓ |
+| ⭐ **落刀处** | ⭐ **`:159` `await engine.play();`** ✓ —— `const engine = engineRef.current;` 在 `:137` ✓ |
+| 另一处播放 | `:194` 附近还有一次（preview/作用域路径 ✓），**也要并排调用** ✓，否则"预览时车道不响、播放时才响"✓ |
+
+**落刀时仍然缺的一项**（也已具名 ✓）：**引擎暴露 context 与 destination 的方式** ✗ —— `playAudioLanes` 需要两者 ✓，而引擎自己持有 `ctx` ✓（`AudioEngine.play()` 里可见 ✓）。⭐ **先读它的公开访问器**（或 `sink` 的接法 ✓），**再落刀** ✓ —— **这是本功能第四次"先读再动"** ✓，而前三次每次都改变了计划 ✓。
+
 ⭐ 而**落刀时的判据**已经在手边 ✓：`playAudioLanes` 的 3 条 ✓（无车道 ⇒ 空报告 ✓、能解析的资产 ⇒ 进入加载器 ✓、解析不到的资产 ⇒ **具名报出** ✓）+ 目录运行时的 2 条 ✓ —— ⭐ **所以这一刀要新增的判据只有一条** ✓：**"播放开始时，编排的歌被交给了音频车道"** ✓（用一个假的 transport 依赖去断言调用 ✓，不需要浏览器 ✓）。
 
 ### 挂钩要做的三件事（已在文档里定形 ✓）
