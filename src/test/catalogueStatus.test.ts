@@ -48,3 +48,35 @@ describe("describeCatalogueStatus", () => {
     expect(describeCatalogueStatus({ ...base, ready: true, assetCount: 3 }).summary).toMatch(/3 instruments available/);
   });
 });
+
+describe("describeRuntimeStatus", () => {
+  it("reads a runtime's own fields, so a caller cannot forget one", async () => {
+    const { describeRuntimeStatus } = await import("../data/sampleCatalogueStatus");
+    const { createCatalogueRuntime } = await import("../data/sampleCatalogueRuntime");
+    const runtime = createCatalogueRuntime({ root: "" });
+    // No root configured: the shipped state, reported as a capability rather than an error.
+    expect(describeRuntimeStatus(runtime).phase).toBe("unconfigured");
+  });
+
+  it("reports loading while a fetch is in flight, and ready once it resolves", async () => {
+    const { describeRuntimeStatus } = await import("../data/sampleCatalogueStatus");
+    const { createCatalogueRuntime } = await import("../data/sampleCatalogueRuntime");
+    let release: (() => void) | null = null;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const runtime = createCatalogueRuntime({
+      root: "https://cdn.example",
+      fetchImpl: async () => {
+        await gate;
+        return { ok: true, status: 200, text: async () => JSON.stringify({ version: 1, entries: [{ id: "k", name: "K", licence: "CC0", prefix: "k", sfz: "k.sfz", durationSeconds: 1, files: [{ path: "k.sfz", bytes: 1 }] }] }) };
+      },
+    });
+    const pending = runtime.load();
+    // In flight: "loading" is a different sentence from "nothing yet", and an interface that cannot tell them apart looks broken.
+    expect(describeRuntimeStatus(runtime).phase).toBe("loading");
+    release!();
+    await pending;
+    expect(describeRuntimeStatus(runtime).phase).toBe("ready");
+  });
+});

@@ -64,3 +64,25 @@ export function describeCatalogueStatus(input: CatalogueStatusInput): CatalogueS
     detail,
   };
 }
+
+/**
+ * The status of a runtime, in the shape this module describes — so a caller does not have to remember which fields to pass.
+ *
+ * Structural rather than importing the runtime type: the status module has no business depending on how the catalogue is fetched, and a cycle between the two would be a real risk once a UI
+ * imports both.
+ */
+export function describeRuntimeStatus(runtime: {
+  configured: boolean;
+  loading: boolean;
+  ready: boolean;
+  problems: readonly string[];
+  assets: readonly unknown[];
+}): CatalogueStatus {
+  return describeCatalogueStatus({
+    configured: runtime.configured,
+    loading: runtime.loading,
+    ready: runtime.ready,
+    problems: runtime.problems,
+    assetCount: runtime.assets.length,
+  });
+}
