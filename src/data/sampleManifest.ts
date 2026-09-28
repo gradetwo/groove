@@ -13,6 +13,8 @@
  *
  * This module is pure: it parses and validates, and fetching anything is somebody else's job.
  */
+import type { SampleAsset } from "./sampleCatalogue";
+
 export type SampleLicence = "CC0" | "CC-BY" | "CC-BY-SA" | "CC-Sampling-Plus" | "unknown";
 
 export interface SampleManifestFile {
@@ -36,6 +38,13 @@ export interface SampleManifestEntry {
   files: SampleManifestFile[];
   /** SFZ features it needs, so a compatibility question has an answer in the data rather than in someone's memory. */
   needs?: string[];
+  /**
+   * How long the instrument's longest sample is, in seconds — the one field the manifest cannot infer and the catalogue needs.
+   *
+   * Optional here so an entry can be declared before it is measured, and **required by the bridge**: `sampleAssetsFromManifest` skips an entry without it and says so,
+   * because inventing `0` would put a wrong number into the catalogue where a missing one is honest.
+   */
+  durationSeconds?: number;
   /** Set when this project deliberately does not ship it, with the reason. */
   excludedReason?: string;
 }
@@ -105,6 +114,9 @@ export function parseManifest(text: string): ManifestResult {
       files: Array.isArray(entry.files) ? (entry.files as SampleManifestFile[]) : [],
       needs: entry.needs,
       excludedReason: entry.excludedReason,
+      // Carried through explicitly: the parser builds each entry field by field, so a field it forgets is silently `undefined` downstream — which is exactly how the
+      // bridge concluded that every entry had no duration.
+      durationSeconds: typeof entry.durationSeconds === "number" ? entry.durationSeconds : undefined,
     });
   });
 
@@ -123,4 +135,58 @@ export function mirrorSfzUrl(manifest: SampleManifest, entryId: string, root: st
   if (!entry?.sfz) return undefined;
   const prefix = entry.prefix ? `${entry.prefix.replace(/\/$/, "")}/` : "";
   return `${root.replace(/\/$/, "")}/${prefix}${entry.sfz}`;
+}
+
+/**
+ * The bridge from the manifest to the **catalogue the playback path already uses** — so nothing downstream needs to know a manifest exists.
+ *
+ * Each shippable entry becomes a `SampleAsset`: the id, the name, the duration, and — when the entry is an instrument — an `sfz` whose `url` is resolved against the
+ * mirror. That is the whole point of the design the owner approved: the bytes live on the CDN, the repository holds the manifest, and the song format never learns about
+ * either.
+ *
+ * Two entries are **skipped with a reason** rather than guessed at: one that is deliberately excluded (that is the decision, not an oversight), and one that has no
+ * `durationSeconds`. A catalogue entry with an invented duration would be a wrong number where a missing one is honest, and this project has spent enough rounds removing
+ * numbers that came from nowhere.
+ */
+export function sampleAssetsFromManifest(manifest: SampleManifest, root: string): { assets: SampleAsset[]; problems: string[] } {
+  const assets: SampleAsset[] = [];
+  const problems: string[] = [];
+
+  for (const entry of manifest.entries) {
+    if (entry.excludedReason) continue;
+    if (typeof entry.durationSeconds !== "number" || !(entry.durationSeconds > 0)) {
+      problems.push(`"${entry.id}" is not in the catalogue: the manifest gives no durationSeconds, and a duration nobody measured is not a duration`);
+      continue;
+    }
+    /**
+     * `kind` is `"one-shot"` even for an instrument, and that is a deliberate compromise rather than an oversight: `kind` describes a **sample's time shape**, and an
+     * instrument is a **collection** whose members each have their own. The union has no better member, and inventing one would be the conflation this design avoids —
+     * `sfz` is a separate field precisely because "defined by an SFZ" answers a different question.
+     *
+     * The return type is `SampleAsset[]` rather than a loose record for a reason worth keeping: the first version returned `Record<string, unknown>` and wrote
+     * `kind: "instrument"`, **a value the union does not have**, and the compiler had nothing to check it against. Real types would have caught it.
+     */
+    const asset: SampleAsset = {
+      assetId: entry.id,
+      name: entry.name,
+      kind: "one-shot",
+      seconds: entry.durationSeconds,
+    };
+    if (entry.sfz) {
+      const url = mirrorSfzUrl(manifest, entry.id, root);
+      /**
+       * Checked rather than asserted with `!`. An entry that declares an `sfz` should always resolve to a URL, so this branch is unreachable in practice — but the
+       * compiler cannot know that, and a non-null assertion here would turn "should always" into "cannot fail", which is the assumption that eventually ships a broken
+       * URL. Reporting it costs one line and keeps the failure legible.
+       */
+      if (!url) {
+        problems.push(`"${entry.id}" declares an sfz but no URL could be resolved against the mirror`);
+        continue;
+      }
+      asset.sfz = { url };
+    }
+    assets.push(asset);
+  }
+
+  return { assets, problems };
 }
