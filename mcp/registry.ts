@@ -1437,7 +1437,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "render_song",
     title: "Render the arrangement",
     description:
-      "Bounce a song created with create_song: every section, in order, with its repeats, mutes and velocity scale, through the app's own offline engine (WAV or MP3, written under GROOVE_MCP_OUT). Needs headless Chromium. Long arrangements take minutes and the call reports no progress — check the song's `secondsEstimate` first and use `maxDurationSec` to refuse rather than hang.",
+      "Bounce a song created with create_song: every section, in order, with its repeats, mutes and velocity scale, through the app's own offline engine (WAV or MP3, written under GROOVE_MCP_OUT). Needs headless Chromium. Long arrangements take minutes and the call reports no progress: a song reaches the renderer as **one** flattened pattern and the time goes into the page's `OfflineAudioContext.startRendering()`, which has no callback. So this call cannot report progress, and the two numbers that matter are the ones it gives you **before** it starts — check the song's `secondsEstimate`, and use `maxDurationSec` to refuse rather than hang. For magnitude, the **measured** figure the audio-scope probe has is **14.4 s of audio in 1.45 s — about 6 seconds per minute of audio** (`docs/MCP.md`'s budget table, the section-preview row). A full 48 kHz stereo bounce is heavier and this server has **not** measured it, so treat that as a floor rather than a promise.",
     readOnly: false,
     inputSchema: {
       songId: z.string().describe("the id create_song returned"),
