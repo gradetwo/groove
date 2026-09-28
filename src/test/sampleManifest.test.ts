@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import { mirrorSfzUrl, parseManifest, shippableEntries } from "../data/sampleManifest";
 
 /**
@@ -78,5 +79,55 @@ describe("parseManifest", () => {
     // An entry that is not an instrument has no SFZ to fetch, which is a legitimate answer rather than an error.
     expect(mirrorSfzUrl(parsed, "samples-only", "https://cdn.example")).toBeUndefined();
     expect(mirrorSfzUrl(parsed, "nope", "https://cdn.example")).toBeUndefined();
+  });
+});
+
+/**
+ * The bridge from the manifest to the catalogue the playback path already uses — the last piece that lets the bytes live on a CDN while the song format stays unchanged.
+ */
+describe("sampleAssetsFromManifest", () => {
+  const root = "https://cdn.example/samples";
+
+  it("turns a shippable instrument into a catalogue entry whose sfz url is resolved against the mirror", async () => {
+    const { sampleAssetsFromManifest } = await import("../data/sampleManifest");
+    const parsed = parseManifest(
+      manifest([
+        { id: "vcsl-piano", name: "VCSL Piano", licence: "CC0", prefix: "vcsl", sfz: "piano.sfz", durationSeconds: 3.5, files: [] },
+        { id: "riser", name: "Riser", licence: "CC0", durationSeconds: 2, files: [] },
+      ])
+    ).manifest!;
+    const { assets, problems } = sampleAssetsFromManifest(parsed, root);
+    expect(problems).toEqual([]);
+    expect(assets.map((asset) => asset.assetId)).toEqual(["vcsl-piano", "riser"]);
+    // The instrument carries the sfz; the plain sample does not, which is what keeps every existing path byte-identical.
+    expect(assets[0]!.sfz).toEqual({ url: "https://cdn.example/samples/vcsl/piano.sfz" });
+    expect(assets[1]!.sfz).toBeUndefined();
+    expect(assets[0]!.seconds).toBe(3.5);
+  });
+
+  it("skips an excluded entry silently and an unmeasured one loudly, because the two are different facts", async () => {
+    const { sampleAssetsFromManifest } = await import("../data/sampleManifest");
+    const parsed = parseManifest(
+      manifest([
+        { id: "vsco2", name: "VSCO 2 CE", licence: "CC-Sampling-Plus", files: [], excludedReason: "vague terms, not redistributed" },
+        { id: "unmeasured", name: "Not measured yet", licence: "CC0", files: [] },
+      ])
+    ).manifest!;
+    const { assets, problems } = sampleAssetsFromManifest(parsed, root);
+    // Exclusion is a decision, so it produces no catalogue entry and no complaint; a missing duration is a gap, so it produces a reason.
+    expect(assets).toEqual([]);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toMatch(/"unmeasured" is not in the catalogue: the manifest gives no durationSeconds/);
+  });
+
+  it("produces nothing at all from the empty manifest this repository ships", async () => {
+    const { sampleAssetsFromManifest } = await import("../data/sampleManifest");
+    const shipped = JSON.parse(readFileSync("public/samples/manifest.json", "utf8"));
+    const parsed = parseManifest(JSON.stringify(shipped));
+    expect(parsed.ok, parsed.errors.join("; ")).toBe(true);
+    // The shipped manifest parses and yields nothing, which is the honest state: no library is redistributed yet.
+    const { assets, problems } = sampleAssetsFromManifest(parsed.manifest!, root);
+    expect(assets).toEqual([]);
+    expect(problems).toEqual([]);
   });
 });
