@@ -120,14 +120,23 @@ describe("sampleAssetsFromManifest", () => {
     expect(problems[0]).toMatch(/"unmeasured" is not in the catalogue: the manifest gives no durationSeconds/);
   });
 
-  it("produces nothing at all from the empty manifest this repository ships", async () => {
+  it("reports the gap in the manifest this repository actually ships, instead of inventing a duration", async () => {
     const { sampleAssetsFromManifest } = await import("../data/sampleManifest");
     const shipped = JSON.parse(readFileSync("public/samples/manifest.json", "utf8"));
     const parsed = parseManifest(JSON.stringify(shipped));
+    // It must parse: the shipped manifest is data this project relies on, so a mistake in it should fail here rather than at runtime.
     expect(parsed.ok, parsed.errors.join("; ")).toBe(true);
-    // The shipped manifest parses and yields nothing, which is the honest state: no library is redistributed yet.
+
+    /**
+     * And it declares a real instrument whose duration nobody has measured — because the samples have not been downloaded. The honest outcome is therefore **not** an
+     * entry with `seconds: 0`: it is **no entry and a reason**, which is what the bridge is for. The first version of this test asserted an empty manifest yields
+     * nothing; the manifest is no longer empty, and asserting the old state would have been asserting the past.
+     */
     const { assets, problems } = sampleAssetsFromManifest(parsed.manifest!, root);
     expect(assets).toEqual([]);
-    expect(problems).toEqual([]);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toMatch(/gives no durationSeconds/);
+    // The declared entry is the one being reported, so the message can be acted on rather than just noticed.
+    expect(problems[0]).toMatch(/virtuosity-drums-basic/);
   });
 });
