@@ -13,7 +13,7 @@
 #
 #   profile  all | pc | mobile   which Playwright targets to run
 #   only     a target-name substring (e.g. "iPhone 14 (竖屏"), empty means all of the profile
-#   scope    e2e | verify | audio | jank | skins | all
+#   scope    e2e | verify | audio | jank | skins | sfizz | all
 #
 # Every scope except `audio` needs a production build: `e2e` and `verify` build in their own step, and `jank`
 # and `skins` are handed one by the explicit Build step above them.
@@ -37,6 +37,7 @@ on:
           - trim
           - jank
           - skins
+          - sfizz
           - all
       profile:
         description: "Playwright profile (e2e scope)"
@@ -238,6 +239,42 @@ jobs:
           path: e2e-out/
           if-no-files-found: ignore
           retention-days: 14
+
+      # The sfizz oracle: sfizz publishes no Linux binary and no image, so the reference renderer has to be compiled here.
+      #
+      # It is a **scope of its own** rather than part of `audio`, because it is slow (a recursive clone and a full compile) and because it answers a different
+      # question. `audio` asks whether this project renders correctly; this asks whether the **reference** it is judged against in this environment is the one the
+      # numbers were read from. `scripts/sfizz_oracle.mjs` pins those numbers, so a different sfizz turns the job red instead of quietly changing what "agreement"
+      # means.
+      #
+      # The build tree is cached per ref: a warm run is a no-op rather than a second code path, so a cache miss costs time and never changes the result.
+      - name: Cache the sfizz build
+        if: inputs.scope == 'sfizz' || inputs.scope == 'all'
+        uses: actions/cache@v5
+        with:
+          path: sfizz-ui/build
+          key: sfizz-ui-v1.2.3-ubuntu-24.04
+
+      - name: Install sfizz build dependencies
+        if: inputs.scope == 'sfizz' || inputs.scope == 'all'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake build-essential libsndfile1-dev libjack-jackd2-dev
+
+      - name: Build sfizz_render
+        if: inputs.scope == 'sfizz' || inputs.scope == 'all'
+        run: |
+          if [ ! -d sfizz-ui/.git ]; then
+            git clone --recursive --branch v1.2.3 --depth 1 https://github.com/sfztools/sfizz-ui.git sfizz-ui
+          fi
+          cmake -S sfizz-ui -B sfizz-ui/build -DCMAKE_BUILD_TYPE=Release -DSFIZZ_RENDER=ON
+          cmake --build sfizz-ui/build --target sfizz_render -j"$(nproc)"
+
+      - name: Prove the sfizz oracle reads like the known one
+        if: inputs.scope == 'sfizz' || inputs.scope == 'all'
+        env:
+          SFIZZ_RENDER: ./sfizz-ui/build/clients/sfizz_render
+        run: node scripts/sfizz_oracle.mjs
 
       - name: Upload coverage
         if: always()
