@@ -99,6 +99,28 @@ beginning of chunk 2**, while a chunk rendered on its own simply starts dry. The
 slicing. It needs one after all: sample-exact chunking must render with **overlap** — each chunk rendered from `tail` frames (or bars) *before* its start, with the
 lead-in discarded — and that requires rendering a **range**, which is the general case `planRenderChunks` was written for. The pieces fit; my shortcut did not.
 
+## The third chunking measurement: the overlap did not help, and that is not yet a conclusion
+
+```
+chunked vs whole : length 1.0266x · max |Δ| 1.674  · mean |Δ| 0.1649
+lean chunks      : length 1x      · max |Δ| 1.7    · mean |Δ| 0.1351
+overlap chunks   : length 1.0266x · max |Δ| 1.716  · mean |Δ| 0.1876
+```
+
+The overlap variant — each chunk rendered with the previous section in front of it, the lead-in discarded — is **no better**, and its mean is slightly worse. The tempting
+reading is "so continuity was not the cause", and **that reading is not yet earned**, because one shape explains all three rows at once:
+
+* **max is ~1.7 in every variant** — including the one that carries the boundary state across;
+* **mean is small and nearly constant** (~0.13–0.19);
+* and the overlap's extra length is exactly the **last** chunk's untrimmed tail (1.0266x), which is what its slice arithmetic should produce.
+
+A difference concentrated at one place per chunk — a **limiter attack at each render's own start**, where the whole-song render has only one — produces exactly that
+signature: a large max, a small mean, and **no improvement from a lead-in**, because the lead-in does not remove the fresh start.
+
+**So the next measurement is localisation, not another variant**: find *where* the difference lives. If it is the first few milliseconds of each render, the answer is a
+boundary trim at the start as well as the end, and the conclusion is "chunking is exact apart from each render's own attack". If it is spread across the boundary, the
+state hypothesis stands. **Same rule as the boundary-click instrument: a number that does not separate the two cases cannot decide between them.**
+
 ## Method notes worth keeping, all learned by being wrong here
 
 * **A local green is evidence about the tree that was checked, not the tree that is pushed.** A release failed on `'"kick" | … | "fx"' and '"audio"' have no
