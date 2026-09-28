@@ -1,23 +1,27 @@
 {
-  "version": "2.34.16",
+  "version": "2.34.17",
   "releaseDate": "2026-09-28",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.16",
+    "version": "2.34.17",
     "date": "2026-09-28",
     "category": "feature",
     "title": {
-      "zh": "add_lane：同一种类的第二条轨道",
-      "en": "add_lane: a second lane of a kind"
+      "zh": "音频轨作为第九种轨道；旋律写作与声调闭环",
+      "en": "Audio as the ninth lane kind, and melody writing that answers the tones"
     },
     "highlights": [
       {
-        "zh": "新增 add_lane 操作：为某一种类追加第二条轨道，可用 from 从已有轨道复制作为起点。",
-        "en": "New add_lane op: append a second lane of a kind, optionally copying an existing lane as its starting point."
+        "zh": "新增 audio 轨道种类：分享格式、包校验、混音角色与总线归属四处都按种类而非名字决定。",
+        "en": "A new `audio` lane kind: the share format, package validation, mix role and bus are all decided by the kind rather than by the name."
       },
       {
-        "zh": "新轨按 laneId 寻址，种类仍指第一条；重名或重复 id 会带理由拒绝。",
-        "en": "The new lane is addressed by laneId while the kind still means the first; a duplicate id or name is refused with a reason."
+        "zh": "generate_melody 可选 tones：旋律按歌词四声写作，校验与生成共用同一条规则。",
+        "en": "`generate_melody` takes optional tones: the melody is written against the lyric's tones, and generation and checking share one rule."
+      },
+      {
+        "zh": "未知 genreId 会点名 list_genres 并给出最接近的 id；契约新增六步标准作曲流程。",
+        "en": "An unknown genreId now names `list_genres` and suggests the nearest id, and the contract documents a six-step composing workflow."
       }
     ],
     "truncated": false
