@@ -5,4 +5,13 @@ export interface MidiNote {
   durationSeconds: number;
   channel?: number;
 }
-export declare function writeMidi(path: string, score: { bpm?: number; notes: MidiNote[] }): { bytes: number; ticksPerSecond: number };
+export interface MidiControl {
+  cc: number;
+  value: number;
+  atSeconds?: number;
+  channel?: number;
+}
+export declare function writeMidi(
+  path: string,
+  score: { bpm?: number; controls?: MidiControl[]; notes: MidiNote[] }
+): { bytes: number; ticksPerSecond: number };
