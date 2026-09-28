@@ -9,6 +9,10 @@
 # So: compare **every tracked file**, copy the ones that differ, and fail loudly if anything still differs afterwards. A local green is evidence about the tree
 # that was checked, not about the tree that gets pushed; this script is what makes those the same tree.
 #
+#
+# **Order matters:** commit locally **first**, then run this. It walks `git ls-files`, so a file that is still untracked is invisible to it — which cost a round when a
+# brand-new test file was written, synced, and skipped in the same command.
+#
 # Usage: scripts/sync_release_mirror.sh [mirror-path]
 set -euo pipefail
 
