@@ -297,6 +297,23 @@ remainder.
 
 Recorded here rather than in my head because the third time it is noticed, someone should be able to find out in one line that it was already known twice.
 
+## Check the sha a dispatched run is actually testing
+
+I read a probe's progress for several hours across many rounds, and every reading came from a run whose `headSha` was **older than the commit I had just pushed.** The workflow was
+dispatched against the `dev` ref, the mirror's push had not become visible to Actions yet, and nothing in the run's output says so — the log looks exactly like the log of the build I
+meant to test.
+
+**It cost more than time.** A block I had added was absent from the output, so I spent a round concluding it had failed to print, when in fact it had never been in that build.
+
+The check is one line, and it belongs before any reading is believed:
+
+```
+gh run view <id> --json headSha -q .headSha
+```
+
+**A dispatched run is a run of *some* commit, not of *my* commit**, and the two differ whenever the ref lags. This is the same family as "read the step, not the status" — a signal
+that does not distinguish the thing you care about — and it is the one that took longest to notice, because the output was plausible the whole time.
+
 ## Method notes worth keeping, all learned by being wrong here
 
 * **A local green is evidence about the tree that was checked, not the tree that is pushed.** A release failed on `'"kick" | … | "fx"' and '"audio"' have no
