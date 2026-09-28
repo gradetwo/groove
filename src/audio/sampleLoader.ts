@@ -89,7 +89,29 @@ export function createSampleLoader(
       }
       if (!asset.sfz) throw new Error(`sample "${assetId}" is not an instrument (it has no sfz), so a note cannot select a sample from it`);
 
-      const resolution = resolveInstrumentNote(asset, await fetchSfzText(asset.sfz.url), note, options);
+      /**
+       * **The source first, the mirror only if the source does not answer** — the owner's decision, and the reason both addresses are carried in the catalogue.
+       *
+       * The trigger is **any failure**, not a 404: the two hosts fail differently (an upstream reorganisation answers 404, a misrouted mirror answers 403 or times out), and a rule that only
+       * recognised one of those would give up on the address that would have worked. What matters is that the instrument resolves, not which host served it.
+       *
+       * **And both failures are reported when both fail**, naming each address, because "the source is gone and the mirror is misrouted" and "the instrument does not exist anywhere" send a
+       * reader to different places.
+       */
+      let sfzText: string;
+      try {
+        sfzText = await fetchSfzText(asset.sfz.url);
+      } catch (primaryError) {
+        const fallback = asset.sfz.fallbackUrl;
+        if (!fallback) throw primaryError;
+        try {
+          sfzText = await fetchSfzText(fallback);
+        } catch (fallbackError) {
+          const reason = (error: unknown) => (error instanceof Error ? error.message : String(error));
+          throw new Error(`${asset.assetId}: neither address served the SFZ — source ${asset.sfz.url}: ${reason(primaryError)}; mirror ${fallback}: ${reason(fallbackError)}`);
+        }
+      }
+      const resolution = resolveInstrumentNote(asset, sfzText, note, options);
       if (!resolution.ok || !resolution.note) throw new Error(resolution.reason ?? `note ${note} could not be resolved for "${assetId}"`);
 
       // Through `load`, so a sample shared by several notes is decoded once — the single-flight rule applies to the sample, not to the note.
