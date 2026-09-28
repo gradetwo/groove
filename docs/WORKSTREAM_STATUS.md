@@ -243,6 +243,18 @@ design — so the run was healthy, and the probe block I was waiting for simply 
 **And it prevents a worse mistake than waiting**: the status endpoint makes a stalled run and a working one look identical, which is exactly the shape of check that cannot
 tell you what you care about. The step API can.
 
+## The audio scope's long pole, measured twice
+
+Both audio-scope runs spent their time in the same place: **`Section-boundary fade (stage 3 measurement)`**, twenty minutes and more on that step alone, while the rest of the
+scope moved quickly. It is a step that renders the arrangement many times over, so being slow is expected — but "expected" and "the thing that dominates" are different claims,
+and the second one is now measured rather than assumed.
+
+It matters because of what it costs elsewhere: a probe reading that arrives half an hour late is a round spent waiting, and this session spent several. **If that scope ever needs
+to get faster, this is the first thing to split** — and the way to split it is the way the render split was done: one existing switch, one discarded warm-up, and a labelled
+remainder.
+
+Recorded here rather than in my head because the third time it is noticed, someone should be able to find out in one line that it was already known twice.
+
 ## Method notes worth keeping, all learned by being wrong here
 
 * **A local green is evidence about the tree that was checked, not the tree that is pushed.** A release failed on `'"kick" | … | "fx"' and '"audio"' have no
