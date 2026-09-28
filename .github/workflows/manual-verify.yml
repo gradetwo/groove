@@ -267,7 +267,9 @@ jobs:
         if: inputs.scope == 'sfizz' || inputs.scope == 'all'
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake build-essential libsndfile1-dev libjack-jackd2-dev
+          # `flac` brings `metaflac`, which is how a sample's duration is measured. It is not in the default runner image, and the alternative — parsing FLAC's header by
+          # hand — took three wrong guesses before the tool was noticed.
+          sudo apt-get install -y cmake build-essential libsndfile1-dev libjack-jackd2-dev flac
 
       - name: Build sfizz_render
         if: inputs.scope == 'sfizz' || inputs.scope == 'all'
