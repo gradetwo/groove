@@ -138,7 +138,35 @@ note 38 → sample=../Samples/kickmic/kick/kickmic_kick_snoff_vl4_rr1.flac
 
 ⭐ **126 个 include、零问题、1676 个 region、1659 个不重复采样，六个鼓音符全部解析** ✓✓ —— 这是本项目第一次让一个**真实音色库**跑通解析 ✓。
 
-### ⚠️ 而它同时暴露一个**必须用 sfizz 裁决**的疑点
+### ⭐⭐ 追问到底：为什么 sfizz 对 note 38 **一个声部都不触发**（2026-09-28）
+
+日志说 `NumVoices: 0` ✓ 而 `NumSamples: 1024` ✓ —— 采样全在 ✓、声部为零 ✓。逐层读下去，答案在库自己的文件里 ✓：
+
+```
+<master>                          ← SFZ v2 的头，我们的子集不认识
+#include "mappings/kick_dampen.sfz"
+tune_cc72=1200
+<group>
+key=$KICK_SNWRONG_KEY             ← ⭐ 变量替换
+key=$KICK_SNRIGHT_KEY
+```
+
+```
+Programs/keymaps/keymap_basic.sfz:1: #define $KICK_SNWRONG_KEY 35
+Programs/keymaps/keymap_basic.sfz:2: #define $KICK_SNRIGHT_KEY 36
+```
+
+⭐ **这个库把底鼓映射到 35/36** ✓，而我打的是 **38** ✗ → **sfizz 的 0 个声部是正确行为** ✓✓。
+
+### ⭐⭐⭐ 而我们的解析器却"成功"匹配了 note 38 —— 这是一个真缺陷
+
+因为 `$KICK_SNRIGHT_KEY` **没有被替换** ✓，`num()` 就把 `key=` 的值当成**不可解析** ✓ → 回退到默认 **0–127** ✗✓ → 于是**每一个 region 都匹配每一个音符** ✓✓。
+
+> ⭐ **一个未解析的变量，静默地变成了"匹配一切"** ✗ —— 这正是本工作流一路在防的那种失败 ✓✓：**不是报错，而是"拿到一个错采样却没有任何错误可看"** ✓。
+
+**所以"SFZ 支持做到哪"现在有了一个具体的、被测出来的答案** ✓✓（而不是一张预测表 ✗）：这个库需要 **`#define` + `$VAR` 替换** ✓、**`<master>`** ✓、以及它那套 CC/曲线调制 ✓ —— **而第一件必须做的是让"未解析的变量"变成错误，而不是默认值** ✓✓。
+
+### ⚠️ 以及那个必须用 sfizz 裁决的疑点
 
 `rootKey=60` 是 SFZ 的**默认值** ✓ —— 也就是说这个库**没有**为这些 region 设置 `pitch_keycenter` ✗✓ → 于是底鼓被判成 **0.28×**（降 22 个半音 ✗）。**这对鼓组很可疑** ✓：鼓采样通常按**它自己的音高**录制 ✓，而"未设置即 60"会把它们全部移调 ✗。
 
