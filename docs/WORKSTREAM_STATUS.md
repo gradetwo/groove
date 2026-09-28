@@ -170,6 +170,21 @@ It also explains the two symptoms that made this look like a flake: the verdict 
 
 Recorded before the patch because the patch touches an e2e harness this machine cannot run — and this workstream's rule is that the fix follows the reading, not the other way round.
 
+## TRACK A closed: SFZ real instruments, judged by sfizz, in CI
+
+The four steps the objective named, each with its evidence, and the last one running **in CI** with readings identical to the development machine:
+
+| step | what it means | evidence |
+|---|---|---|
+| **A1** the oracle | sfizz builds from source in CI at tag `1.2.3` (cached, discovered rather than assumed) and reads like the known one | `✅ sfizz oracle agrees with its known reading` — `2 ch, 14336 frames, 0.3251 s, peak 0.0824`, same locally and in CI |
+| **A2** the parser | `<global>` → `<group>` → `<region>` inheritance, key/velocity ranges, `tune`, round-robin, unknown opcodes ignored | 7 criteria; and the fixtures knew the format better than the first parser did (`<region> sample=x key=v` on one line) |
+| **A3** the mapping | a note becomes a sample, a root and a **ratio** — one formula in the whole codebase | 5 criteria: root is 1, an octave is exactly 2 or 0.5, a tritone is 2^(6/12), `tune=100` is exactly a semitone and **combines** with the interval |
+| **A4** the agreement | **sfizz's own output judges this project's mapping** — the same region, the same pitch | `note 40: 220.05 vs 220.00 · note 52: 277.24 vs 277.18 · note 60: 440.04 vs 440.00 · note 72: 466.21 vs 466.16` — 0.01–0.02%, in CI |
+
+**What A4 deliberately does not compare, and why that is the honest version.** This project decides *which sample* and *at what ratio*; sfizz also applies a default amplitude envelope (release ≈ 0.075 s) and a default gain (−15.7 dB), both **measured**. Sample-for-sample amplitude equality would therefore be measuring sfizz's envelope rather than this code. The expectation is computed as `sourceFrequency × ratio` where the ratio comes from `playbackForNote` itself, so the mapping is what is on trial. Note 72 is the load-bearing case: −12 semitones **and** `tune=100` in one expected number.
+
+**Two things had to be fixed for the criterion to mean anything**, and both were found by the instrument rather than by reasoning: the fixture's notes all sat on their own region's roots, so every expected ratio was 1 and a wrong ratio would have looked exactly like a right one; and the pitch estimator's first version read 3838 Hz for a 220 Hz sine, because it compared each lag against a **running** maximum. Its known limit — a strong second harmonic under a weak fundamental reads an octave high — is written into the module's contract with YIN named as the fix, rather than hidden, because **a real library's samples are not harmonic-free**.
+
 ## Method notes worth keeping, all learned by being wrong here
 
 * **A local green is evidence about the tree that was checked, not the tree that is pushed.** A release failed on `'"kick" | … | "fx"' and '"audio"' have no
