@@ -559,6 +559,13 @@ export const StudioView: React.FC<StudioViewProps> = ({
     handleToggleCountIn,
   } = useTransportControls({
     engineRef,
+    /**
+     * The arrangement's song, handed to the audio lanes **as a getter** so a re-render cannot hand them a different object each time.
+     *
+     * This is the whole of the wiring: `arrangementSong` already existed here (it is what the arrangement view draws), and the transport already knows when playback starts. Nothing else
+     * has to learn about samples, and the engine keeps knowing only patterns.
+     */
+    arrangementSong: () => arrangementSong,
     seqStateRef,
     isPlaying,
     setIsPlaying,
