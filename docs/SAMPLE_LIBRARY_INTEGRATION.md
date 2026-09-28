@@ -208,7 +208,40 @@ REAL note 46 → kickmic_hh_open_vl4_rr1.flac         （开镲）
 
 **修好之后的实测** ✓：`unresolvedRegions` 从 **48 → 12** ✓✓，`$HH_PPREROLL` 完全解决 ✓，而 **crash（note 49）也正确映射** ✓✓。
 
-### ⏳ 剩下的 12 个：`$FLATRIDE_CRASH_KEY`（已具名 ✓）
+### ⭐⭐⭐⭐⭐ 第五层：**真实库用的是 Windows 行尾（`\r\n`）** —— 以及全清的最终读数（2026-09-28）
+
+⭐ 决定性的一步不是猜正则 ✗，而是**把那 8 个不匹配的 define 行原样打印出来** ✓✓：
+
+```
+未命中的 define 行: 8
+'#define $FLATRIDE_CRASH_KEY 55 //GM splash cymbal key\r'      ← ⭐ CR
+```
+
+**它们全部同时含 `//` 与 `\r`** ✓ —— 即**真实库的文件是 CRLF** ✗✓。⭐ 修法不是打补丁 ✓，而是**读取前先归一化行尾** ✓✓（**一条独立成立的理由**：一个只认自己机器行尾的解析器，并没有在**读文件** ✓）。
+
+⭐ 而诊断顺带说明了责任划分 ✓：**`parseSfz` 早就按 `/\r?\n/` 切分** ✓✓ —— **只有预处理器不是** ✗。
+
+**修好之后的最终读数（一个真实音色库，整条链）** ✓✓✓：
+
+```
+includes=126  problems=0  regions=1676
+unresolvedRegions=0  variables=none  emptySamples=0
+
+note 35 → kickmic_kick_snoff_vl4_rr1     （"错"底鼓）
+note 36 → kickmic_kick_snon_vl4_rr1      （"对"底鼓）
+note 38 → kickmic_snare_center_vl29      （军鼓）
+note 42 → kickmic_hh_closed_vl4_rr1      （闭镲）
+note 46 → kickmic_hh_open_vl4_rr1        （开镲）
+note 49 → kickmic_crash_crash_vl3_rr1    （吊镲）
+note 55 → kickmic_flatride_crash_vl4     ⭐ 就是先前坏掉的那个；而库里那行注释正写着 "GM splash cymbal key" ✓✓
+note 57 → kickmic_crash_sizzle_vl3_rr1   （镲 sizzle）
+```
+
+⭐⭐ **于是"SFZ 支持做到哪"这条线，第一次有了一个真实音色库的完整答案** ✓✓：**126 个 include、1676 个 region、零问题、零未解析变量、八个鼓位全部映射到该库自己意图的采样** ✓✓ —— ⭐ **而且 note 55 由该库自己的注释佐证** ✓✓。
+
+⚠️ **仍未做的**（都已具名 ✓）：**`<master>`** 头 ✓、**CC/曲线调制层** ✓（仍未测出是否承重 ✓ —— 先测再建 ✓）、以及**把这条真实库判据搬进 CI** ✓（`/tmp/vd` 是本地下载 ✓ —— 它属于"重活" ✓，按业主要求应放 CI ✓✓）。
+
+### ⏳ 历史记录：剩下的 12 个：`$FLATRIDE_CRASH_KEY`
 
 它**确实被定义**（`keymap_basic.sfz:23` = **55** ✓），而 note 55 却"无播放" ✗ → ⭐ 所以这**不是缺定义**，而是**那 12 个 region 走到的链路里，定义尚未生效** ✓（它们位于 `room_epic_all.sfz` / `oh_epic_all.sfz` 这类"**全量/Epic**"文件里 ✓ —— 而 `01-basic-kit.sfz` 并不包含它们 ✓✓，所以它们是从**别的入口**进来的 ✗✓，那个入口的 include 顺序就是下一轮要读的东西 ✓）。
 

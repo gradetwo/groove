@@ -79,7 +79,14 @@ export function expandIncludes(
 ): ExpandIncludesResult {
   const problems: string[] = [];
   const included: string[] = [];
-  const lines = text.split("\n");
+  /**
+   * Line endings are normalised **first**, because real libraries ship `\r\n`.
+   *
+   * Measured: eight `#define` lines in `virtuosity_drums`' keymap carry both a trailing comment **and** a carriage return, and none of them matched — leaving
+   * `$FLATRIDE_CRASH_KEY` (55) and seven others undefined, which showed up as twelve regions that could not be resolved. Normalising here is justified on its own terms:
+   * a parser that only reads the line endings of the machine it was written on is not reading the file.
+   */
+  const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
   const out: string[] = [];
 
   /**
