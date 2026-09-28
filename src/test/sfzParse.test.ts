@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { parseSfz, regionsForNote, roundRobinPick } from "../audio/sfz/parse";
+import { parseSfz, regionsForNote, roundRobinPick, unresolvedVariables } from "../audio/sfz/parse";
+import { playbackForNote } from "../audio/sfz/regionPlayback";
 
 /**
  * The SFZ subset's criteria (A2), hand-derived rather than borrowed from sfizz — because nobody can compare against a reference before they can parse at all.
@@ -98,5 +99,49 @@ describe("region selection", () => {
     const plain = parseSfz("<region> sample=only.wav");
     expect(roundRobinPick(plain, 7)!.sample).toBe("only.wav");
     expect(roundRobinPick([], 0)).toBeNull();
+  });
+});
+
+/**
+ * The criteria for the defect a real library exposed: **an unresolved variable must never become a key range of 0–127.**
+ *
+ * A kit wrote `key=$KICK_SNRIGHT_KEY`, SFZ's `#define` layer was not implemented, the value failed to parse as a number, and the old fallback made **every region match
+ * every note** — so note 38 answered with a kick while sfizz, which understands the variables, correctly triggered nothing. These four assertions exist so that the
+ * plausible wrong answer cannot come back.
+ */
+describe("unresolved variables", () => {
+  const withVariable = `
+<region> sample=fixed.wav lokey=36 hikey=36 pitch_keycenter=36
+<region> sample=var.wav key=$KICK_SNRIGHT_KEY
+`;
+
+  it("marks a region that still holds a variable, naming it", () => {
+    const regions = parseSfz(withVariable);
+    expect(regions[0]!.unresolved).toEqual([]);
+    expect(regions[1]!.unresolved).toEqual(["$KICK_SNRIGHT_KEY"]);
+  });
+
+  it("never lets a marked region answer a note — the failure was a plausible wrong sample, not an error", () => {
+    const regions = parseSfz(withVariable);
+    // The marked region claims keys 0–127 by fallback; it must be excluded anyway, for every note tried.
+    for (const note of [0, 36, 38, 64, 127]) {
+      const matched = regionsForNote(regions, note).map((region) => region.sample);
+      expect(matched, `note ${note} must not reach the variable region`).not.toContain("var.wav");
+    }
+    // And the region that is fully understood still works.
+    expect(regionsForNote(regions, 36).map((region) => region.sample)).toEqual(["fixed.wav"]);
+  });
+
+  it("reports the variables and how many regions hold them, so the gap is visible rather than silent", () => {
+    const report = unresolvedVariables(parseSfz(withVariable));
+    expect(report).toEqual({ variables: ["$KICK_SNRIGHT_KEY"], regions: 1 });
+    expect(unresolvedVariables(parseSfz("<region> sample=plain.wav"))).toEqual({ variables: [], regions: 0 });
+  });
+
+  it("produces no playback at all when every region is unresolved, rather than a default answer", () => {
+    const onlyVariables = parseSfz("<region> sample=v.wav key=$A key2=$B");
+    const playback = playbackForNote(onlyVariables, 38);
+    expect(playback).toBeNull();
+    expect(unresolvedVariables(onlyVariables).variables.sort()).toEqual(["$A", "$B"]);
   });
 });
