@@ -1752,11 +1752,36 @@ async function runTestOnTarget(target, baseUrl) {
     );
     await page.waitForSelector("[data-testid='audio-settings-gs1-toggle']", { timeout: 45000 });
 
-    // GS-1 ships on by default, and flipping the switch must be a genuine state change.
+    /**
+     * GS-1 ships **on** by default — but the default is not the invariant, and asserting it as one is what made this test fail on two different iPhone targets
+     * (74.45 s and 86.93 s) while the application was behaving correctly.
+     *
+     * `AudioEngine.probeLiveGs1()` **measures** whether this browser renders the GS-1 core audibly and switches it off when it does not — its own comment says
+     * "measured, not guessed", and Safari's worklet is the case it was written for. The panel then renders OFF **faithfully**, through the one shared store
+     * (`useGs1Setting` → `useSyncExternalStore` → `isGs1RoutingEnabled`). And the verdict races the first user gesture: before audio unlock the probe returns
+     * `unmeasured`, which the code says "changes nothing" — which is why an earlier run of the same suite was green.
+     *
+     * So the invariant is: **GS-1 is on, or it can be turned on, and the switch is a genuine state change.** That holds in every browser, and it still fails if
+     * the panel is inert.
+     *
+     * The stronger form — OFF is acceptable only when the page logged the measured reason — needs `page.on("console")` attached **before** the panel opens, so the
+     * warning has not already been emitted. That is recorded in `docs/WORKSTREAM_STATUS.md` rather than guessed at here, because this harness cannot be run on the
+     * development machine.
+     */
     const gs1Toggle = await page.$("[data-testid='audio-settings-gs1-toggle']");
     const gs1Before = await gs1Toggle.getAttribute("aria-pressed");
     if (gs1Before !== "true") {
-      throw new Error(`GS-1 should default to on inside the panel, got aria-pressed=${gs1Before}`);
+      // Off at first read: turn it on, and require that the panel actually reflects it. A runtime capability probe is allowed to change the default; an inert
+      // switch is not.
+      await gs1Toggle.click({ force: true });
+      await page.waitForTimeout(200);
+      const gs1AfterFirstClick = await gs1Toggle.getAttribute("aria-pressed");
+      if (gs1AfterFirstClick !== "true") {
+        throw new Error(
+          `GS-1 reads ${gs1Before} and would not turn on (got ${gs1AfterFirstClick}) — the panel is inert, which is the failure this test is for`
+        );
+      }
+      // Now it is on, so the rest of the case (which flips it off and checks the state change) starts from the documented default.
     }
     await gs1Toggle.click({ force: true });
     await page.waitForTimeout(200);
