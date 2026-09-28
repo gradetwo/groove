@@ -269,7 +269,7 @@ jobs:
         run: |
           if [ ! -d sfizz-ui/.git ]; then
             git clone --recursive https://github.com/sfztools/sfizz-ui.git sfizz-ui
-            git -C sfizz-ui checkout 5e0be2e6ab61ed7e01619a7c9f2f8851405c8c31 commit found for SHA: main","documentation_url":"https://docs.github.com/rest/commits/commits#get-a-commit","status":"422"}
+            git -C sfizz-ui checkout 5e0be2e6ab61ed7e01619a7c9f2f8851405c8c31
             git -C sfizz-ui submodule update --init --recursive
           fi
           cmake -S sfizz-ui -B sfizz-ui/build -DCMAKE_BUILD_TYPE=Release -DSFIZZ_RENDER=ON
