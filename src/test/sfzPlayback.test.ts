@@ -61,3 +61,27 @@ describe("playbackForNote", () => {
     expect(playbackForNote(layered, 40)!.sample).toBe("wide.wav");
   });
 });
+
+/**
+ * The criterion for the semantic that a real library corrected: **a region that does not set `pitch_keycenter` is not transposed.**
+ *
+ * The measurement that settled it — a kick played at 0.51 s through the real `virtuosity_drums` kit and 0.53 s through a one-region control with `pitch_keycenter` set,
+ * against 0.28× / ~1.9 s predicted by the 60-default model — is why this exists as a test rather than as a comment. It is the one behaviour whose wrongness produced a
+ * plausible-looking number rather than an error.
+ */
+describe("a region with no pitch_keycenter", () => {
+  it("plays the sample at its recorded rate, whatever note is asked for", () => {
+    const untransposed = parseSfz("<region> sample=drum.wav lokey=0 hikey=127");
+    expect(untransposed[0]!.pitchKeycenter).toBeUndefined();
+    for (const note of [36, 38, 42, 46, 90]) {
+      const playback = playbackForNote(untransposed, note)!;
+      expect(playback.ratio, `note ${note} must not be transposed`).toBe(1);
+      expect(playback.semitones).toBe(0);
+      // The reported root is the note itself when there is none, so a reply cannot print a root the file never declared.
+      expect(playback.rootKey).toBe(note);
+    }
+    // And `tune` still applies, because it is an explicit instruction rather than an absence.
+    const tuned = parseSfz("<region> sample=drum.wav tune=100");
+    expect(playbackForNote(tuned, 38)!.ratio).toBeCloseTo(Math.pow(2, 1 / 12), 10);
+  });
+});

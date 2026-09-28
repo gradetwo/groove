@@ -9,8 +9,11 @@
  * `seq_length`/`seq_position` — plus the rule that an opcode it does not know is **ignored rather than fatal**, because a picky parser is a parser nobody can point at
  * a real library.
  *
- * SFZ's defaults that this file has to state rather than assume: a region with no key range covers **0–127**, with no velocity range **0–127**, and the default
- * `pitch_keycenter` is **60** — the last one is the kind of default that silently detunes everything if it is guessed wrong, so it is written here and asserted.
+ * SFZ's defaults that this file states rather than assumes: a region with no key range covers **0–127**, and with no velocity range **0–127**.
+ *
+ * And `pitch_keycenter` has **no default transposition**: a region that does not set it plays its sample at the recorded rate. The first version of this file asserted
+ * 60 as the default — confidently, in a comment about defaults that "silently detune everything if guessed wrong" — and a comparison against sfizz on a real library
+ * showed the assertion was the thing that was wrong. `pitch_keycenter` is now optional, and `regionPlayback` treats an unset one as ratio 1.
  */
 export interface SfzRegion {
   /** The sample path exactly as written, relative to the SFZ file's directory. */
@@ -19,7 +22,14 @@ export interface SfzRegion {
   hikey: number;
   lovel: number;
   hivel: number;
-  pitchKeycenter: number;
+  /**
+   * SFZ's `pitch_keycenter`, or **undefined when the region does not set it** — and undefined means **no transposition**, not 60.
+   *
+   * This was wrong until a real library was compared against sfizz: the kick of `virtuosity_drums` played at 0.51 s through the real kit and 0.53 s through a
+   * one-region control with `pitch_keycenter` set explicitly, while the 60-default model predicted 0.28× and about 1.9 s. So a region without the opcode plays its
+   * sample at the recorded rate, and 60 only applies where it is written.
+   */
+  pitchKeycenter?: number;
   /** Cents, SFZ's `tune`. Zero when absent. */
   tuneCents: number;
   /** Round-robin selector, both 1-based in SFZ. `seq_length` 1 (the default) means "no round-robin". */
@@ -34,7 +44,6 @@ const DEFAULTS: Omit<SfzRegion, "sample" | "opcodes"> = {
   hikey: 127,
   lovel: 0,
   hivel: 127,
-  pitchKeycenter: 60,
   tuneCents: 0,
   seqLength: 1,
   seqPosition: 1,
@@ -102,7 +111,8 @@ export function parseSfz(text: string): SfzRegion[] {
       hikey: num(merged.hikey, DEFAULTS.hikey),
       lovel: num(merged.lovel, DEFAULTS.lovel),
       hivel: num(merged.hivel, DEFAULTS.hivel),
-      pitchKeycenter: num(merged.pitch_keycenter, DEFAULTS.pitchKeycenter),
+      // Left undefined when absent, because "no transposition" is the real behaviour and 60 is only a value a file may choose.
+      pitchKeycenter: merged.pitch_keycenter === undefined ? undefined : num(merged.pitch_keycenter, 0),
       tuneCents: num(merged.tune, DEFAULTS.tuneCents),
       seqLength: Math.max(1, num(merged.seq_length, DEFAULTS.seqLength)),
       seqPosition: Math.max(1, num(merged.seq_position, DEFAULTS.seqPosition)),
