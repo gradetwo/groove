@@ -127,6 +127,19 @@ A third companion belongs to a song with words: pass **`tones`** to `generate_me
 lyric's tones — the reply reports how many notes it moved and whether any reversal survived — and `validate_prosody` then checks the same melody with the same
 rule, so "the generation respected the tones" and "the checker agrees" are one claim rather than two.
 
+### Two ceilings, and what to do before they move
+
+Both are design decisions waiting on the owner, and neither should stop a composer in the meantime. The numbers are the code's, not estimates:
+
+| ceiling | what it is | what to do about it today |
+|---|---|---|
+| **512 bars per song** (`MAX_SONG_BARS`, `src/types/song.ts:143`) | the whole arrangement. The fifth report's composer used **348** and was near it | a longer piece is **two songs** rendered in sequence, or the same song with fewer, longer sections — and note the **separate** limit below, which is the one that actually bites first |
+| **64 bars per section** (`MAX_SECTION_BARS`, `:141`) | one section's length, and the tool **refuses** `bars` above it rather than clamping | a long movement is **several sections**, which is what sections are for. A 348-bar piece is already several |
+| **four clip slots** (`A`-`D`) | a clip is what a section plays, and slots are shared song-wide | per-lane differences come from **`set_lane_slots`** (a lane's own clip for a section), **`make_unique`** (a section's own copy rather than a shared slot), and per-section **`mute` / `velocityScale` / `velocityRamp`** — which is how the report's own nine movements were already distinguished. A genuinely different movement that none of those can express is a **second song** |
+
+**Rendering in two passes is the documented answer to a piece too long to render in one call**: `render_song` reports `secondsEstimate`, and `maxDurationSec` refuses in
+advance rather than hanging, so a two-pass render is a decision a caller can make from numbers rather than from a timeout.
+
 ### What the owner decided in September 2026, and what holds it in place
 
 Five questions were put to the owner after the fourth evaluation of this server, and all five are answered. They are recorded here with the acceptance line each
