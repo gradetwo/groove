@@ -80,3 +80,36 @@ describe("the flatten's cost curve", () => {
     console.log("   note         : the JSON figure is a proxy for the data handed to the renderer, not an allocator measurement; the audio buffer is measured in the browser.");
   });
 });
+
+/**
+ * The controlled experiment the size column asked for: **fixed steps, varying lanes.**
+ *
+ * The curve had two rows with identical step counts — 64 lanes × 64 bars at 108.66 ms and 8 lanes × 512 bars at 7.53 ms — a factor of fourteen for the same amount of work.
+ * One pair establishes nothing, so this holds the work **constant at 65536 steps** and moves only the lane count: lanes × bars × 16 = 65536, so bars = 4096 / lanes.
+ *
+ * If time rises with lanes at constant steps, then the flatten's cost is a function of **lanes** and not only of steps — and lanes are exactly the axis the hundred-lane
+ * question turns on. If it does not, the earlier pair was noise and says so.
+ */
+describe("the flatten: lanes against steps, controlled", () => {
+  it("holds steps constant and varies only the lane count", () => {
+    const STEPS = 65536;
+    for (let pass = 0; pass < 2; pass += 1) flattenSong(songWith(16, 256) as never);
+
+    const rows = [4, 8, 16, 32, 64, 128].map((lanes) => {
+      const bars = STEPS / (lanes * 16);
+      expect(Number.isInteger(bars), `${lanes} lanes must divide ${STEPS} steps into whole bars`).toBe(true);
+      const song = songWith(lanes, bars);
+      const started = performance.now();
+      flattenSong(song as never);
+      const ms = performance.now() - started;
+      return { lanes, bars, ms };
+    });
+
+    for (const row of rows) console.log(`   fixed steps  : ${String(row.lanes).padStart(4)} lanes × ${String(row.bars).padStart(5)} bars = 65536 steps → ${row.ms.toFixed(2).padStart(8)} ms`);
+    const first = rows[0]!.ms;
+    const last = rows[rows.length - 1]!.ms;
+    console.log(`   ratio        : 128 lanes took ${(last / first).toFixed(2)}× what 4 lanes took, at identical step counts`);
+    console.log("   reading      : a ratio near 1 says steps dominate and the earlier pair was noise; a ratio well above 1 says lanes dominate at fixed work.");
+    expect(rows.every((row) => row.ms > 0)).toBe(true);
+  });
+});
