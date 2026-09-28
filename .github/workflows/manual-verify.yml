@@ -334,7 +334,19 @@ jobs:
           SFZ_MIRROR_RUN: "1"
           SFZ_MIRROR_ROOT: library
           SFZ_MIRROR_OUT: library-mirror
+          SFZ_MIRROR_ENTRY: manifest-entry.json
         run: npx vitest run src/test/mirrorRun.test.ts
+
+      # The entry is **uploaded**, not merely printed: it runs to well over a hundred kilobytes for 1659 files, and a log line that size is truncated. The first successful run
+      # produced the number that matters (`longest 14.529542s`) and lost the artifact, which is the wrong way round.
+      - name: Upload the manifest entry
+        if: (inputs.scope == 'mirror' || inputs.scope == 'all') && always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: sample-manifest-entry
+          path: manifest-entry.json
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Install dependencies for the A4 test
         if: inputs.scope == 'sfizz' || inputs.scope == 'all'
