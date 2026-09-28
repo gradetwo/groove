@@ -264,13 +264,17 @@ jobs:
           path: sfizz
           key: sfizz-1.2.3-ubuntu-24.04
 
-      - name: Install sfizz build dependencies
-        if: inputs.scope == 'sfizz' || inputs.scope == 'all'
+      # `flac` brings `metaflac`, which is how a sample's duration is measured — and it is needed by **two** scopes: `sfizz` (for the A4 criteria) and `mirror` (for the survey).
+      # The first version installed it only for `sfizz`, and the mirror run then failed on `spawnSync metaflac ENOENT` **after** fetching 1659 files — the right error with the
+      # right reason, caught by a gate that did not cover the run that needed it.
+      - name: Install measurement dependencies
+        if: inputs.scope == 'sfizz' || inputs.scope == 'mirror' || inputs.scope == 'all'
         run: |
           sudo apt-get update
-          # `flac` brings `metaflac`, which is how a sample's duration is measured. It is not in the default runner image, and the alternative — parsing FLAC's header by
-          # hand — took three wrong guesses before the tool was noticed.
-          sudo apt-get install -y cmake build-essential libsndfile1-dev libjack-jackd2-dev flac
+          sudo apt-get install -y flac
+          if [ "${{ inputs.scope }}" = "sfizz" ] || [ "${{ inputs.scope }}" = "all" ]; then
+            sudo apt-get install -y cmake build-essential libsndfile1-dev libjack-jackd2-dev
+          fi
 
       - name: Build sfizz_render
         if: inputs.scope == 'sfizz' || inputs.scope == 'all'
