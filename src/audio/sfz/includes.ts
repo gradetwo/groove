@@ -38,6 +38,23 @@ function resolvePath(fromPath: string, wanted: string): string {
 
 const INCLUDE = /^\s*#include\s+"([^"]+)"\s*$/;
 
+/**
+ * Where an include's path is resolved from — and this is **evidence-driven, not guessed**.
+ *
+ * The first version resolved only against the **including file's directory**, which is what SFZ says and what a synthetic fixture cannot contradict. Running the real
+ * library showed it is not enough: `Programs/mappings/kickmic_basic.sfz` contains `#include "mappings/kick_dampen.sfz"`, and that file lives at
+ * `Programs/mappings/kick_dampen.sfz` — so resolving from the including file produced `Programs/mappings/mappings/kick_dampen.sfz` and found nothing, 119 times over.
+ *
+ * So both bases are tried, in this order, and the choice is recorded here because the fallback is not a guess: the file that needs it is a real, pinned library. Trying
+ * the including file first keeps the documented behaviour intact for files that follow it; falling back to the root keeps this library working.
+ */
+function resolveCandidates(rootPath: string, fromPath: string, wanted: string): string[] {
+  if (wanted.startsWith("/") || /^[a-zA-Z]+:/.test(wanted)) return [wanted];
+  const relative = resolvePath(fromPath, wanted);
+  const fromRoot = resolvePath(rootPath, wanted);
+  return relative === fromRoot ? [relative] : [relative, fromRoot];
+}
+
 export function expandIncludes(
   text: string,
   read: IncludeReader,
@@ -48,22 +65,34 @@ export function expandIncludes(
   const lines = text.split("\n");
   const out: string[] = [];
 
+  /**
+   * The chain is seeded with the **entry point**, and that seeding is a bug fix rather than tidiness.
+   *
+   * The fallback resolves a root-relative path against `chain[0]`. With `stack` empty at the top level, the first recursive call was the first thing to populate it — so
+   * `chain[0]` became the first *included* file, the root was computed as that file's directory, and the fallback looked in `Programs/keymaps/mappings/…` instead of
+   * `Programs/mappings/…`. A criterion written as the real nested chain caught it; the flat version of the same criterion could not have.
+   */
+  const chain = stack.length > 0 ? stack : [path];
+
   lines.forEach((line, index) => {
     const match = line.match(INCLUDE);
     if (!match) {
       out.push(line);
       return;
     }
-    const wanted = resolvePath(path, match[1]!);
+    const candidates = resolveCandidates(chain[0]!, path, match[1]!);
     const where = `${path || "<root>"}:${index + 1}`;
 
-    if (stack.includes(wanted)) {
+    // The first candidate that exists wins; if none does, the error names the one SFZ's own rule would have chosen, which is the informative one.
+    const wanted = candidates.find((candidate) => read(candidate) !== undefined) ?? candidates[0]!;
+
+    if (chain.includes(wanted)) {
       // A cycle is reported rather than followed: includes can legitimately reference each other, and an unguarded resolver recurses until the stack dies.
-      problems.push(`${where}: circular include of "${wanted}" (already reading ${stack.join(" → ")})`);
+      problems.push(`${where}: circular include of "${wanted}" (already reading ${chain.join(" → ")})`);
       return;
     }
-    if (stack.length >= maxDepth) {
-      problems.push(`${where}: include depth ${stack.length + 1} exceeds maxDepth ${maxDepth} at "${wanted}"`);
+    if (chain.length >= maxDepth) {
+      problems.push(`${where}: include depth ${chain.length + 1} exceeds maxDepth ${maxDepth} at "${wanted}"`);
       return;
     }
 
@@ -73,7 +102,7 @@ export function expandIncludes(
       return;
     }
 
-    const nested = expandIncludes(child, read, { path: wanted, maxDepth, stack: [...stack, wanted] });
+    const nested = expandIncludes(child, read, { path: wanted, maxDepth, stack: [...chain, wanted] });
     out.push(nested.text);
     problems.push(...nested.problems);
     included.push(wanted, ...nested.included);

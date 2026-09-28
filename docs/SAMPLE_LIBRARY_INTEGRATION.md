@@ -120,6 +120,30 @@ problems: included file "mappings/kickmic_basic.sfz" was not found
 
 **所以"SFZ 支持做到哪"此刻的诚实答案是：一个真实库的 region，今天一个都解析不出来** ✗ —— 而**原因不是 opcode，是文件链还没取全** ✓。⭐ **这正是"用真实文件测"而不是"在文档里预测"的价值** ✓：仪器**直接给出了下一步要取哪些文件** ✓✓（`mappings/kickmic_basic.sfz` ✓ `mappings/snaremic_basic.sfz` ✓ `mappings/closemic_perc.sfz` ✓ …），不需要猜 ✓。
 
+### ⭐⭐ 修好之后：**一个真实音色库第一次完整解析成功** ✓✓（2026-09-28）
+
+修的是**解析基点的 bug** ✓（见 `includes.ts` 的注释）：真实库的 include **不是**相对"提出它的文件" ✗✓，而是相对**入口程序** ✓（`keymaps/kickmic_basic.sfz` 里写 `mappings/kick_dampen.sfz` ✓，而文件在 `Programs/mappings/` ✓）。现在**两个基点都试** ✓（提出者优先 ✓，保持 SFZ 的记载行为 ✓；根作为回退 ✓），并把**为什么需要回退**写在那里 ✓（因为**一个真实的、钉住的库需要它** ✓）。
+
+而那个 bug 是**被一条写成"真实嵌套链"形状的判据抓住的** ✓✓ —— 写成平铺版本的同一判据**抓不到它** ✗（根与提出者同目录 ⇒ 两个候选相同 ⇒ 回退永不触发 ✓✓）。
+
+**然后拿真实库复测** ✓✓：
+
+```
+includes=126   problems=0
+regions=1676   withSample=1667   distinctSamples=1659
+playable 36/38/42/46/49/51 → 6 / 6
+note 38 → sample=../Samples/kickmic/kick/kickmic_kick_snoff_vl4_rr1.flac
+          rootKey=60  semitones=-22  ratio=0.2806
+```
+
+⭐ **126 个 include、零问题、1676 个 region、1659 个不重复采样，六个鼓音符全部解析** ✓✓ —— 这是本项目第一次让一个**真实音色库**跑通解析 ✓。
+
+### ⚠️ 而它同时暴露一个**必须用 sfizz 裁决**的疑点
+
+`rootKey=60` 是 SFZ 的**默认值** ✓ —— 也就是说这个库**没有**为这些 region 设置 `pitch_keycenter` ✗✓ → 于是底鼓被判成 **0.28×**（降 22 个半音 ✗）。**这对鼓组很可疑** ✓：鼓采样通常按**它自己的音高**录制 ✓，而"未设置即 60"会把它们全部移调 ✗。
+
+⭐ **裁决方式已经现成** ✓✓：**让 sfizz 渲染同一个 SFZ 的同一个音符** ✓，再量输出音高/频谱 ✓✓ —— 正是 **A4 的形状**，只不过这次的对象是**真实音色库**而不是自制夹具 ✓。**在拿到那个对照之前，我不改任何映射** ✗✓（否则就是拿猜测去覆盖一个未测量的行为 ✓）。
+
 **下一步因此是机械的** ✓：把 `mappings/*.sfz` 也取到 ✓ → 重跑同一个测量 ✓ → region 会出现 ✓ → **那时才知道 opcode 那一层真正的缺口** ✓。
 
 ### 决定（自治，已记理由 ✓）：**先做 `#include`**
