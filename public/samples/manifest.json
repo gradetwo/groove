@@ -1,4 +1,14 @@
 {
   "version": 1,
-  "entries": []
+  "entries": [
+    {
+      "id": "virtuosity-drums-basic",
+      "name": "Virtuosity Drums — Basic Kit",
+      "licence": "CC0",
+      "prefix": "virtuosity-drums",
+      "sfz": "Programs/01-basic-kit.sfz",
+      "files": [],
+      "needs": ["lokey", "hikey", "pitch_keycenter", "lovel", "hivel", "seq_length", "seq_position"]
+    }
+  ]
 }
