@@ -1,5 +1,21 @@
 # Where the two workstreams stand (2026-09-28, live v2.34.18)
 
+## Where to start reading
+
+This workstream's record is spread across several documents, each of which answers one question. Read in this order:
+
+| document | the question it answers | one-line state |
+|---|---|---|
+| [`SAMPLE_LIBRARY_INTEGRATION.md`](SAMPLE_LIBRARY_INTEGRATION.md) | how a real library lands here — bytes, manifest, licence, and what SFZ it needs | the mirror chain runs end to end: **1660 files planned, 1659 fetched, 1 skipped, 0 problems, longest sample 14.529542 s measured** |
+| [`SCALE_HUNDRED_LANES.md`](SCALE_HUNDRED_LANES.md) | what a hundred lanes cost, and whether Rust is the answer | the browser's floor is **0.005%** and the flatten is **~0.4 s**; **render timings are not yet reproducible and the 26% rack figure is withdrawn** |
+| [`RUST_DECISION.md`](RUST_DECISION.md) | the owner's answer to that question, and why | **no new repository, no Rust** — the reasoning is there, including where Rust *would* pay |
+| [`WOW_EVALUATION.md`](WOW_EVALUATION.md) | the proposal that came before, assessed against this repository's own facts | direction right, priority wrong: sampling playback was already built here |
+| [`AUDIO_TRACKS_AND_SVS_PLAN.md`](AUDIO_TRACKS_AND_SVS_PLAN.md) | the ninth track kind, its blast radius, and the part deliberately left empty | format half shipped and CI-verified; SVS is a reserved interface with no implementation |
+| `WORKSTREAM_STATUS.md` (this file) | what happened, in order, with the mistakes kept in | — |
+
+**A note on how to read any of it**: the numbers here are labelled by how they were obtained, and the failures are kept rather than tidied away. Where a figure was withdrawn — the "26% effects rack" above — the withdrawal is in the document next to the number, because a reader who sees only the second version learns nothing about why the first was wrong.
+
+
 One page, because the rounds are long and nobody should have to read them to find out what is done, what is left, and what is left **on purpose**.
 
 ## The fifth report (a composer's first-hand session) — every item closed
