@@ -350,6 +350,19 @@ date -u +%Y-%m-%dT%H:%M:%SZ
 
 And the workflow's own `timeout-minutes: 150` bounds the wait, so a stuck job ends by itself rather than needing to be inferred.
 
+**Measured, so the size of the error is on record**: two consecutive readings forty-one seconds apart —
+
+```
+now              2026-09-28T20:44:45Z    (end of one round)
+now              2026-09-28T20:45:26Z    (start of the next)
+job started      2026-09-28T20:17:28Z
+probe step       2026-09-28T20:23:32Z
+```
+
+**A round is about a minute of wall time** while the probe needs twenty-plus, so "several rounds have passed" and "the job has had time" differ by an order of magnitude. That is why the
+impression was wrong rather than merely imprecise, and it is the number that makes the rule usable: waiting is bounded by the CI clock, and a single bounded sleep covers what felt like
+many rounds.
+
 ## Method notes worth keeping, all learned by being wrong here
 
 * **A local green is evidence about the tree that was checked, not the tree that is pushed.** A release failed on `'"kick" | … | "fx"' and '"audio"' have no
