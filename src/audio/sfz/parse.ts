@@ -37,9 +37,17 @@ export interface SfzRegion {
   seqPosition: number;
   /** Every opcode the region ended up with, after inheritance, for anything this subset does not model yet. */
   opcodes: Record<string, string>;
+  /**
+   * Variables this region still contains — `$KICK_SNRIGHT_KEY` and friends — because SFZ's `#define`/`$VAR` layer is not implemented.
+   *
+   * **A marked region never matches a note.** That is the whole point: before this existed, an unresolved `key=$KICK_SNRIGHT_KEY` failed to parse as a number, fell back to
+   * the 0–127 default, and made **every region match every note** — so a real drum kit answered note 38 with a kick while sfizz, which does understand the variables,
+   * correctly triggered nothing. The failure mode was not an error but a plausible wrong answer, which is the one this workstream keeps having to hunt down.
+   */
+  unresolved: string[];
 }
 
-const DEFAULTS: Omit<SfzRegion, "sample" | "opcodes"> = {
+const DEFAULTS: Omit<SfzRegion, "sample" | "opcodes" | "unresolved"> = {
   lokey: 0,
   hikey: 127,
   lovel: 0,
@@ -86,7 +94,7 @@ export function parseSfz(text: string): SfzRegion[] {
         current = group;
       } else if (name === "region") {
         current = {};
-        regions.push({ ...DEFAULTS, sample: "", opcodes: current });
+        regions.push({ ...DEFAULTS, sample: "", opcodes: current, unresolved: [] });
       } else {
         // A header this subset does not model (curve, effect, …) is skipped, not fatal — and its opcodes are ignored with it.
         current = null;
@@ -100,6 +108,11 @@ export function parseSfz(text: string): SfzRegion[] {
       current[match[1]!.toLowerCase()] = value;
     }
   }
+
+  /** Every `$NAME` a value still contains, deduplicated — reported rather than silently defaulted. */
+  const unresolvedIn = (opcodes: Record<string, string>): string[] => [
+    ...new Set(Object.values(opcodes).flatMap((value) => value.match(/\$[A-Za-z_][A-Za-z0-9_]*/g) ?? [])),
+  ];
 
   // Inheritance is resolved **after** parsing, so a region cannot be affected by where in the file it appeared relative to its group.
   return regions.map((region) => {
@@ -117,6 +130,7 @@ export function parseSfz(text: string): SfzRegion[] {
       seqLength: Math.max(1, num(merged.seq_length, DEFAULTS.seqLength)),
       seqPosition: Math.max(1, num(merged.seq_position, DEFAULTS.seqPosition)),
       opcodes: merged,
+      unresolved: unresolvedIn(merged),
     };
   });
 }
@@ -130,7 +144,19 @@ export function parseSfz(text: string): SfzRegion[] {
  */
 export function regionsForNote(regions: readonly SfzRegion[], note: number, velocity = 100, channel = 1): SfzRegion[] {
   const covering = regions.filter(
-    (region) => note >= region.lokey && note <= region.hikey && velocity >= region.lovel && velocity <= region.hivel
+    (region) =>
+      /**
+       * A region holding unresolved variables is **not selectable**, and this is a defect fix rather than caution.
+       *
+       * Measured: a real kit writes `key=$KICK_SNRIGHT_KEY`, which SFZ's own `#define` layer resolves to 36. Without that layer the value is not a number, the old code
+       * fell back to the 0-127 default, and **every region matched every note** — note 38 came back as a kick while sfizz, which understands the variables, correctly
+       * triggered nothing. The failure was a plausible wrong answer rather than an error, which is the kind this workstream keeps having to hunt down.
+       */
+      region.unresolved.length === 0 &&
+      note >= region.lokey &&
+      note <= region.hikey &&
+      velocity >= region.lovel &&
+      velocity <= region.hivel
   );
   void channel;
   if (covering.length === 0) return [];
@@ -149,4 +175,17 @@ export function roundRobinPick(regions: readonly SfzRegion[], nth: number): SfzR
   if (cycle === 1) return regions[0]!;
   const position = (nth % cycle) + 1;
   return regions.find((region) => region.seqPosition === position) ?? regions[0]!;
+}
+
+/**
+ * Every variable a file still contains, and how many regions hold one — the report that makes an unimplemented `#define` layer **visible instead of silent**.
+ *
+ * It exists because of a measured failure rather than for tidiness: a real kit's `key=$KICK_SNRIGHT_KEY` used to match every note and answer with a kick. An instrument
+ * whose variables are unresolved should say so, by name, and then produce nothing.
+ */
+export function unresolvedVariables(regions: readonly SfzRegion[]): { variables: string[]; regions: number } {
+  return {
+    variables: [...new Set(regions.flatMap((region) => region.unresolved))],
+    regions: regions.filter((region) => region.unresolved.length > 0).length,
+  };
 }
