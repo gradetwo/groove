@@ -144,3 +144,22 @@ describe("expandIncludes — comments on directives", () => {
     expect(result.text).toContain("sample=a.wav");
   });
 });
+
+/**
+ * Windows line endings, which a real library actually ships.
+ *
+ * Eight `#define` lines in `virtuosity_drums`' keymap carry both a trailing comment and a carriage return, and none matched the definition pattern — so `$FLATRIDE_CRASH_KEY`
+ * (55) and seven others were never defined, and twelve regions came out unresolvable. The fix is to normalise line endings before reading anything, which is justified on
+ * its own terms rather than as a patch for one file.
+ */
+describe("expandIncludes — CRLF files", () => {
+  it("reads a define and an include from a file with Windows line endings", () => {
+    const crlf = "#define $KEY 36 //GM splash cymbal key\r\n#include \"k.sfz\"\r\n<region> key=$KEY\r\n";
+    const result = expandIncludes(crlf, files({ "k.sfz": "<region> sample=a.wav\r\n" }));
+    expect(result.problems).toEqual([]);
+    expect(result.text).toContain("key=36");
+    expect(result.text).toContain("sample=a.wav");
+    // And no carriage returns survive into the parsed output, so downstream matching never has to think about them.
+    expect(result.text.includes("\r")).toBe(false);
+  });
+});
