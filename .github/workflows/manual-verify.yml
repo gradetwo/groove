@@ -260,7 +260,7 @@ jobs:
         if: inputs.scope == 'sfizz' || inputs.scope == 'all'
         uses: actions/cache@v5
         with:
-          path: sfizz/build
+          path: sfizz
           key: sfizz-1.2.3-ubuntu-24.04
 
       - name: Install sfizz build dependencies
@@ -273,6 +273,9 @@ jobs:
         if: inputs.scope == 'sfizz' || inputs.scope == 'all'
         run: |
           if [ ! -d sfizz/.git ]; then
+            # A cache can restore the build tree without the repository, and `git clone` into a non-empty directory fails with exit 128 — which is
+            # exactly what the first warm-cache run did. So the repository, not just its build output, is what gets cached, and this clears any partial state.
+            rm -rf sfizz
             # `sfizz_render` lives in the **library** repository, not in `sfizz`: the UI project has no `clients/` directory at all, which is why the first
             # attempts to build it there could not have worked. The tag is `1.2.3`, with no `v` — an earlier attempt asked for `v1.2.3` and the clone failed.
             git clone --recursive --branch 1.2.3 --depth 1 https://github.com/sfztools/sfizz.git sfizz
@@ -295,6 +298,12 @@ jobs:
         if: inputs.scope == 'sfizz' || inputs.scope == 'all'
         # SFIZZ_RENDER arrives through GITHUB_ENV from the build step, which located the binary rather than trusting a path.
         run: node scripts/sfizz_oracle.mjs
+
+      # A4 needs `node_modules`, and this scope never installed them — the other scopes get them from their build steps. Without this the step fails on a missing
+      # `vitest` rather than on anything to do with the oracle, which is the least useful kind of red.
+      - name: Install dependencies for the A4 test
+        if: inputs.scope == 'sfizz' || inputs.scope == 'all'
+        run: npm ci
 
       # A4, enforced rather than described: sfizz's own output judges this project's mapping — the same region chosen, the same pitch produced. The test skips when the
       # binary is absent, which is why it is safe in the ordinary suite and meaningful here, where the binary has just been built.
