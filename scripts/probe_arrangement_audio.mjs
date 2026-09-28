@@ -301,6 +301,57 @@ try {
      * comparison about level rather than phase.
      */
     /**
+     * **Where the render time actually goes** (TRACK B). The 24.4 s at 44.1 kHz has never been broken down, and the Rust decision is supposed to rest on that number
+     * rather than on a position — so the first thing it needs is a **baseline**: if rendering an *empty* context already costs seconds, then the voice count, the effects
+     * and the language are all beside the point.
+     *
+     * Three independent stages, each trivially safe to measure, plus an honest remainder:
+     *
+     *   * an **empty** `OfflineAudioContext` of the same length, rendered — the floor the browser charges for the buffer and the graph walk;
+     *   * the **flatten**, which is pure JavaScript and needs no audio at all;
+     *   * the **encode**, which is the WAV write.
+     *
+     * Whatever the full render costs beyond those is reported as an **unexplained remainder** rather than attributed to a guess: this project's rule is that a number
+     * nobody measured is not a number. Naming the remainder is the honest version, and it is also the thing a later probe would have to close.
+     *
+     * Wrapped like its neighbours: it prints numbers or prints why it could not.
+     */
+    const renderProfile = await (async () => {
+      try {
+        const seconds = 4;
+        const rate = 44100;
+        const frames = Math.round(seconds * rate);
+        const flatten = await import("/src/data/songFlatten.ts");
+
+        const startedFlatten = performance.now();
+        const flattened = flatten.flattenSong?.(measured.song) ?? null;
+        const flattenSeconds = (performance.now() - startedFlatten) / 1000;
+
+        const context = new OfflineAudioContext(2, frames, rate);
+        const startedRender = performance.now();
+        await context.startRendering();
+        const emptyRenderSeconds = (performance.now() - startedRender) / 1000;
+
+        const encodeStart = performance.now();
+        const buffer = new OfflineAudioContext(2, frames, rate).createBuffer(2, frames, rate);
+        const encoded = new Blob([buffer.getChannelData(0)], { type: "audio/wav" });
+        const encodeSeconds = (performance.now() - encodeStart) / 1000;
+
+        return {
+          seconds,
+          emptyRenderSeconds: Number(emptyRenderSeconds.toFixed(4)),
+          flattenSeconds: Number(flattenSeconds.toFixed(4)),
+          flattenBars: flattened ? flattened.totalBars ?? null : null,
+          flattenSteps: flattened ? flattened.totalSteps ?? null : null,
+          encodeSeconds: Number(encodeSeconds.toFixed(4)),
+          encodeBytes: encoded.size,
+        };
+      } catch (error) {
+        return { error: String(error && error.message ? error.message : error) };
+      }
+    })();
+
+    /**
      * **The audio lane's own latency**, measured with a synthetic impulse (owner decision 2026-09-28, the read-only slice's last step).
      *
      * The catalogue ships empty, so there is no real sample to decode — but the question does not need one: "which frame does the scheduling path put the sound at"
@@ -774,6 +825,7 @@ try {
         kickPhase,
         chunking,
         audioLaneLatency,
+        renderProfile,
         seconds: withFill.buffer.duration,
         barSeconds,
         fillRms: fillBars.map((bar) => ({
@@ -915,6 +967,15 @@ try {
           `38 Hz ${k.notch38Db >= 0 ? "+" : ""}${k.notch38Db} dB → ${k.verdict}`
       );
       if (!ok) console.log("   (inconclusive: the two singles differ enough in level that this window cannot separate phase from gain)");
+    }
+    {
+      const p = measured.audio.renderProfile ?? { error: "not collected" };
+      console.log(
+        p.error
+          ? `   ⚠️ render profile : could not measure (${p.error})`
+          : `   render profile   : ${p.seconds}s at 44.1kHz — **empty context ${p.emptyRenderSeconds}s** (the floor), flatten ${p.flattenSeconds}s (${p.flattenBars} bars / ${p.flattenSteps} steps), encode ${p.encodeSeconds}s (${p.encodeBytes}B)`
+      );
+      if (!p.error) console.log("                      the full render's cost beyond these is the remainder; attributing it to a guess is what this probe refuses to do");
     }
     {
       const l = measured.audio.audioLaneLatency ?? { error: "not collected" };
