@@ -173,6 +173,23 @@ export function shippableEntries(manifest: SampleManifest): SampleManifestEntry[
 }
 
 /** Where an entry's SFZ can be fetched from, given the mirror root. Undefined when the entry is not an instrument. */
+/**
+ * Where an instrument's SFZ lives **at its source**, derived from the pin the manifest already carries.
+ *
+ * The owner's decision is that **the source comes first and the mirror is the fallback** — the reverse of what the first implementation did. Deriving it from `repo` and `pin` rather than storing
+ * another URL has two consequences worth stating: the address is **pinned to a commit**, so it cannot drift with the library's default branch, and the manifest does not carry a second copy of
+ * information it already has.
+ *
+ * The mirror's role becomes what it was chosen for: **a library whose source disappears still works.** That also makes the "bring your own library" escape hatch part of the default path rather than
+ * a special case — with a live source, no mirror is involved at all.
+ */
+export function sourceSfzUrl(manifest: SampleManifest, entryId: string): string | undefined {
+  const entry = manifest.entries.find((candidate) => candidate.id === entryId);
+  if (!entry?.sfz || !entry.repo || !entry.pin) return undefined;
+  const prefix = entry.prefix ? `${entry.prefix.replace(/\/$/, "")}/` : "";
+  return `https://raw.githubusercontent.com/${entry.repo}/${entry.pin}/${prefix}${entry.sfz}`;
+}
+
 export function mirrorSfzUrl(manifest: SampleManifest, entryId: string, root: string): string | undefined {
   const entry = manifest.entries.find((candidate) => candidate.id === entryId);
   if (!entry?.sfz) return undefined;
