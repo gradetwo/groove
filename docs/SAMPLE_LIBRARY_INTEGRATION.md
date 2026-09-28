@@ -441,6 +441,24 @@ grep -rn "planAudioLaneEvents|createSampleLoader|scheduleAudioLane|browserSample
 
 **"歌"在引擎里从哪来** ✗ —— `playAudioLanes` 需要 `clips` ✓、`sections` ✓、`boundaries` ✓、`bpm` ✓，而**引擎持有的可能是另一种形状**（单 pattern ✓ / 编排态 ✓ / preview scope ✓ 三种状态都存在 ✓）。⭐ **在没读清它之前插进去，就是本工作流已经栽过的那种猜测** ✓✓（`catalogue` 选项那次 ✓）。
 
+### ⭐⭐ 而必读的那件事读完了，结论是：**挂钩不该在引擎里**（2026-09-28）
+
+上一轮写下"必须读清 song 在引擎里从哪来"。读完了 ✓：
+
+| 事实 | 证据 |
+|---|---|
+| `AudioEngine` 只持有**单个 pattern** | `:296` `private pattern: SequencerPattern \| null = null` ✓；写入只有 `setPattern` ✓（`:739` ✓） |
+| 而 **`engine.play()` 被多处调用** | `ConsolePanel.tsx:319` ✓ · `ChallengeView.tsx:218/241/249` ✓ · `CompareView.tsx:295` ✓ |
+| **song / sections 在 app 层** | ⭐ `src/views/StudioView.tsx` ✓ · `src/hooks/useGenreAudition.ts` ✓ |
+
+⭐ **所以引擎不知道 song** ✗✓ —— **在 `play()` 里插一个需要 clips/sections/boundaries 的调用，就必须先让引擎知道 song** ✓，而那是**一个比这个功能大得多的改动** ✗✓（引擎当前"只懂 pattern"是它的一个清晰边界 ✓）。
+
+**决定：挂钩放在持有 song 的那个调用者身上** ✓✓ —— `playAudioLanes` 由**启动播放的那一处**（`StudioView` ✓，编排播放的所在 ✓）与 `engine.play()` **并排调用** ✓：
+
+* ⭐ **一行也不动那个 1700 行的引擎文件** ✓✓ —— 风险与它的体量成比例地小 ✓；
+* ⭐ **引擎的边界不变** ✓：它继续只懂 pattern ✓，音频车道是"谁拥有编排、谁负责启动"✓；
+* ⭐ 而**"只在有音频车道时才动"仍然由 `playAudioLanes` 自己保证** ✓（空计划 ⇒ 空报告 ✓ 不是失败 ✓）。
+
 ### 挂钩要做的三件事（已在文档里定形 ✓）
 
 1. ⭐ **只在有音频车道时才动** ✓ —— 由 `playAudioLanes` 自己保证（**空计划返回空报告 ✓ 不是失败 ✓**）；
