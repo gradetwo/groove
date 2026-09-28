@@ -133,7 +133,20 @@ describe("sampleAssetsFromManifest", () => {
      * nothing; the manifest is no longer empty, and asserting the old state would have been asserting the past.
      */
     const { assets, problems } = sampleAssetsFromManifest(parsed.manifest!, root);
-    expect(assets).toEqual([]);
+    /**
+     * **This used to assert that nothing came out, and it was right at the time.** Now the manifest carries a real, measured instrument, so the bridge produces one — which is the
+     * closure this whole chain was built for: a manifest entry, derived from the SFZ, whose files were fetched, hashed and measured, resolving into a catalogue asset with an
+     * `sfz` URL.
+     *
+     * The **half that still has no duration keeps being reported as a gap**, and that half is asserted too, because "one works and one is honestly incomplete" is the state that
+     * actually exists and the one a future change should not quietly break.
+     */
+    expect(assets.map((asset) => asset.assetId)).toContain("virtuosity-drums-basic");
+    const instrument = assets.find((asset) => asset.assetId === "virtuosity-drums-basic")!;
+    // A real instrument, resolved against the mirror, with a duration that was measured rather than guessed.
+    expect(instrument.sfz?.url).toMatch(/virtuosity-drums\/Programs\/01-basic-kit\.sfz$/);
+    expect(instrument.seconds).toBeCloseTo(14.529542, 6);
+    expect(problems.join("\n")).toMatch(/salamander-grand/);
     /**
      * One problem **per declared entry**, and each naming its entry — not a count I pencilled in.
      *
@@ -141,12 +154,18 @@ describe("sampleAssetsFromManifest", () => {
      * the file rather than the property it cares about. The property is: nothing becomes a catalogue entry without a measured duration, and every such gap is reported by
      * name.
      */
-    expect(parsed.manifest!.entries.length).toBeGreaterThan(0);
-    expect(problems).toHaveLength(parsed.manifest!.entries.filter((entry) => !entry.excludedReason).length);
-    for (const entry of parsed.manifest!.entries) {
-      if (!entry.excludedReason) expect(problems.join("\n")).toContain(entry.id);
+    /**
+     * **The general form of that assertion, rather than a count.** It used to require one problem per shipped entry, which was true while every entry lacked a duration — and
+     * stopped being true the moment one of them was measured. What it should always have said is: an entry appears in `problems` **if and only if** it has no measured duration.
+     */
+    const shippedEntries = parsed.manifest!.entries.filter((entry) => !entry.excludedReason);
+    const withoutDuration = shippedEntries.filter((entry) => typeof entry.durationSeconds !== "number");
+    expect(shippedEntries.length).toBeGreaterThan(0);
+    expect(problems).toHaveLength(withoutDuration.length);
+    for (const entry of withoutDuration) expect(problems.join("\n")).toContain(entry.id);
+    for (const entry of shippedEntries.filter((entry) => typeof entry.durationSeconds === "number")) {
+      expect(problems.join("\n"), `${entry.id} has a measured duration and must not be reported as a gap`).not.toContain(entry.id);
     }
-    expect(problems.every((problem) => /gives no durationSeconds/.test(problem))).toBe(true);
   });
 });
 
