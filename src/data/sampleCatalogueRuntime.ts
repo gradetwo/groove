@@ -85,3 +85,16 @@ export function createCatalogueRuntime(options: CatalogueRuntimeOptions = {}): C
     load,
   };
 }
+
+/**
+ * The application's one catalogue runtime.
+ *
+ * One instance rather than one per caller: the manifest is fetched once per session, and the engine, the offline render and any future UI must all see the **same** assets — otherwise one
+ * of them resolves an instrument while another reports it missing, which is the "two places, one thing" failure this workstream has hit five times.
+ *
+ * The root comes from `VITE_SAMPLE_ROOT` and **defaults to empty**, which is the state the runtime treats as "no mirror configured": it fetches nothing and the catalogue stays empty.
+ * That is what makes wiring this into the engine a change that cannot alter behaviour until a mirror is configured and populated.
+ */
+export const appCatalogueRuntime = createCatalogueRuntime({
+  root: typeof import.meta !== "undefined" && import.meta.env ? String(import.meta.env.VITE_SAMPLE_ROOT ?? "") : "",
+});
