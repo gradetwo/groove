@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint 'src/**/*.{ts,tsx}' --quiet",
+    "lint": "eslint . --quiet",
     "format": "prettier --write 'src/**/*.{ts,tsx}'",
     "lint:data": "vitest run src/test/schema.test.ts src/test/schemaFields.test.ts src/test/genreContentAudit.test.ts src/test/genreHarmony.test.ts src/test/genreIndexDrift.test.ts src/test/genreIdReferences.test.ts src/test/genreLinks.test.ts",
     "build": "tsc && vite build",
