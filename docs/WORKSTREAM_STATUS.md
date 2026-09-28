@@ -185,6 +185,24 @@ The four steps the objective named, each with its evidence, and the last one run
 
 **Two things had to be fixed for the criterion to mean anything**, and both were found by the instrument rather than by reasoning: the fixture's notes all sat on their own region's roots, so every expected ratio was 1 and a wrong ratio would have looked exactly like a right one; and the pitch estimator's first version read 3838 Hz for a 220 Hz sine, because it compared each lag against a **running** maximum. Its known limit — a strong second harmonic under a weak fundamental reads an octave high — is written into the module's contract with YIN named as the fix, rather than hidden, because **a real library's samples are not harmonic-free**.
 
+## TRACK B: the baseline probe has a bug, and the run was green anyway
+
+The audio scope passed (`completed success`) and the new block reported:
+
+```
+⚠️ render profile : could not measure (measured is not defined)
+```
+
+**Both halves of that are worth stating.** The bug is mine: the profile block reads `measured.song`, which does not exist in that scope, so it never measured anything. And
+the run was **green** — because the probe never gates: it prints numbers or prints why it could not, by design. That design is why a broken measurement cannot turn the
+chain red, and it is also why a broken measurement can go unnoticed. The print is the alarm, and it fired.
+
+**The fix is not to guess the right variable.** It is to read what the probe actually has in scope and pass the song through deliberately — the same rule that has
+prevented several blind patches in this workstream and whose violation caused four red CI runs in TRACK A.
+
+What the run *did* confirm, from the same probe: the audio lane's latency is still **0 ms** (`scheduled at 0s, first sound at frame 0`), and the chunk difference is still
+spread through the whole chunk (`head 1.412 · mid 1.71 · tail 0.6964`), so neither of those has drifted.
+
 ## Method notes worth keeping, all learned by being wrong here
 
 * **A local green is evidence about the tree that was checked, not the tree that is pushed.** A release failed on `'"kick" | … | "fx"' and '"audio"' have no
