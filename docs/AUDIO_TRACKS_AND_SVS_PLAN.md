@@ -74,6 +74,21 @@ that route by kind, found by **behaviour** rather than by name:
 
 ⚠️ 把它写成"待测"而不是"待建"，正是本会话反复纠正的那种**用词把工作量藏起来**的错误 ✓（"待测"听起来像半小时，"建一条采样播放通路并把它接进渲染与 PDC"是另一回事 ✓）。
 
+## 1d. 只读切片的路线与判据（第一块已落地）
+
+**已完成的第一块** ✓：`src/audio/audioLanePlan.ts` 的 `planAudioLaneEvents` ✓ —— **纯的**、**不需要音频图** ✓、**5 条判据全过** ✓✓（无音频轨 → 零事件零问题 ✓；每段一个事件且在该段起始小节 ✓；引用不可播 → **点名段落**的问题 ✓；clip 缺失 → 不造事件 ✓；**发布的空目录 ⇒ 一切引用被拒** ✓）。
+
+**剩下两步，顺序与判据都已写定** ✓：
+
+| 步 | 做什么 | 判据（先写） |
+|---|---|---|
+| **2. 音频图** | 解码采样并调度 ✓（`decodeAudioData` + `AudioBufferSourceNode` ✓，与 `DrumKitModels.ts` 同一套 ✓），**消费 `planAudioLaneEvents` 的结果** ✓ | ⭐ **消费这份计划** ✓（而不是另算一遍起点 ✗ —— 那是"两处算术会漂移"的老问题 ✓）；**没有音频轨的歌逐字节不变** ✓✓（渲染与播放都要 ✓）；引用不可播 → **报错，不静音** ✓ |
+| **3. 延迟入表** | 把音频路径的延迟**实测**进 PDC 的延迟表 ✓（照主限幅器 **7.415 ms** 那条 ✓：**探针先给数字** ✓ → 再写进表 ✓✓） | **实测行**，不是声明行 ✓；且**探针做裁判** ✓ |
+
+**自我约束**（只读切片的定义 ✓）：**不改任何导出路径** ✓ —— 这一步只让采样**能被播放与测量** ✓，不让它改变一个字节的交付物 ✓。
+
+⚠️ **一条刻意的克制** ✓：`planAudioLaneEvents` **不会**先接进 `render_song` 的回复 ✗ —— 因为**今天什么都不会播** ✓，而把一份"计划"放进回复等于**给一个还不存在的功能做广告** ✓。它会和**图**一起出现 ✓，那时它是**事实**而不是愿景 ✓。
+
 ## 2. SVS: an interface with no implementation
 
 The owner asked for the interface to be **reserved and left empty**, and the honest way to do that is to expose it and have it **say so**, rather than to leave a
