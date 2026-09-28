@@ -134,9 +134,18 @@ describe("sampleAssetsFromManifest", () => {
      */
     const { assets, problems } = sampleAssetsFromManifest(parsed.manifest!, root);
     expect(assets).toEqual([]);
-    expect(problems).toHaveLength(1);
-    expect(problems[0]).toMatch(/gives no durationSeconds/);
-    // The declared entry is the one being reported, so the message can be acted on rather than just noticed.
-    expect(problems[0]).toMatch(/virtuosity-drums-basic/);
+    /**
+     * One problem **per declared entry**, and each naming its entry — not a count I pencilled in.
+     *
+     * The first version asserted exactly one problem, which was true while the manifest held one instrument; adding a second broke a test that was measuring my memory of
+     * the file rather than the property it cares about. The property is: nothing becomes a catalogue entry without a measured duration, and every such gap is reported by
+     * name.
+     */
+    expect(parsed.manifest!.entries.length).toBeGreaterThan(0);
+    expect(problems).toHaveLength(parsed.manifest!.entries.filter((entry) => !entry.excludedReason).length);
+    for (const entry of parsed.manifest!.entries) {
+      if (!entry.excludedReason) expect(problems.join("\n")).toContain(entry.id);
+    }
+    expect(problems.every((problem) => /gives no durationSeconds/.test(problem))).toBe(true);
   });
 });
