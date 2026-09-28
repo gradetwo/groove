@@ -135,6 +135,26 @@ Point any stdio MCP client at `dist-mcp/groove-mcp.mjs`. The full contract — e
 what is deliberately not exposed — is in [docs/MCP.md](docs/MCP.md), with client configuration in
 [mcp/README.md](mcp/README.md).
 
+## Credits
+
+**The rule, stated once so it is not a matter of memory**: sound libraries that this project **bundles or redistributes** are credited here, **by the attribution their
+licence requires**, at the moment they are added — and the sample manifest's licence check (`CC BY` demands an attribution; `CC0` does not) is what makes the obligation
+mechanical rather than a promise. A test enforces the other half: every manifest entry whose licence requires attribution must appear in this section.
+
+**No audio library is bundled today.** The sample catalogue ships empty on purpose, so nothing below is a claim of inclusion — it is what is planned, with the credit
+each one will require when it arrives.
+
+| library | licence | attribution it requires (when added) |
+|---|---|---|
+| **VCSL** — Versilian Community Sample Library | CC0 | none required; credited here as a courtesy ✓ |
+| **Virtuosity Drums** — Versilian Studios / Karoryfer | CC0 | none required; credited here as a courtesy ✓ |
+| **Karoryfer** free instruments | CC0 (release-dependent) | none for the CC0 releases; **some older releases are CC-BY-4.0**, so each version is confirmed before use rather than assumed |
+| **Accurate-Salamander** | **CC BY** | ⭐ **required**: **Chisato Yamauchi**, for the re-mastering of the **Salamander Grand Piano** by **Alexander Holm** — both names, because the licence is the original author's as much as the re-masterer's |
+| **VSCO 2 CE** | CC Sampling Plus 1.0 | ⚠️ **not redistributed by this project** — the terms are vague, so it is available only as a library the user supplies from their own machine, where no redistribution by us takes place |
+
+Code dependencies are credited separately, in [public/THIRD_PARTY_NOTICES.md](public/THIRD_PARTY_NOTICES.md), because they have a different obligation and a different
+audience.
+
 ## License
 
 MIT — see [LICENSE](LICENSE). The bundled GS-1 synth core and the DSP libraries compiled into it are
