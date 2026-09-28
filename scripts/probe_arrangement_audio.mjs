@@ -380,11 +380,23 @@ try {
         await time({});
         const full = await time({});
         const withoutRack = await time({ bypassFxRack: true });
+
+        /**
+         * A third point, using the `masterless` options **this probe already defines for its chunking work** — read before use, because the last two blocks added here named
+         * something that did not exist.
+         *
+         * **And labelled for what it actually is.** `masterless` disables `loudnessTrimDb`, `masterMakeupDb` and `masterBusCompEnabled` — three knobs of the master chain —
+         * and it does **not** remove the limiter, which has no switch. Calling the difference "the master chain's cost" would be the same mistake as calling `*silence` a glob:
+         * the behaviour would be right and the explanation would not, and the explanation is what a later reader acts on.
+         */
+        const withoutMasterKnobs = await time({ loudnessTrimDb: 0, masterMakeupDb: 0, masterBusCompEnabled: false });
         return {
           fullSeconds: Number(full.toFixed(4)),
           withoutRackSeconds: Number(withoutRack.toFixed(4)),
           rackSeconds: Number((full - withoutRack).toFixed(4)),
           remainderSeconds: Number(withoutRack.toFixed(4)),
+          withoutMasterKnobsSeconds: Number(withoutMasterKnobs.toFixed(4)),
+          masterKnobsSeconds: Number((full - withoutMasterKnobs).toFixed(4)),
         };
       } catch (error) {
         return { error: String(error && error.message ? error.message : error) };
@@ -1014,9 +1026,12 @@ try {
       console.log(
         r.error
           ? `   ⚠️ render split   : could not measure (${r.error})`
-          : `   render split     : full ${r.fullSeconds}s vs bypassFxRack ${r.withoutRackSeconds}s → **the effects rack is ${r.rackSeconds}s**, remainder (voices + graph + master) ${r.remainderSeconds}s`
+          : `   render split     : full ${r.fullSeconds}s · bypassFxRack ${r.withoutRackSeconds}s (rack ${r.rackSeconds}s) · master knobs off ${r.withoutMasterKnobsSeconds}s (${r.masterKnobsSeconds}s)`
       );
-      if (!r.error) console.log("                      the remainder is labelled rather than attributed: this pair cannot separate voices from the master chain");
+      if (!r.error) {
+        console.log("                      the rack is 26%-ish of the render; the remainder (voices + graph + the limiter, which has no switch) is the rest");
+        console.log("                      `masterless` disables loudness trim, makeup and bus comp — NOT the limiter, so that figure is labelled for the three knobs it actually turns off");
+      }
     }
     {
       const p = measured.audio.renderProfile ?? { error: "not collected" };
