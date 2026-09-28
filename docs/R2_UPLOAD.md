@@ -38,3 +38,51 @@ public sample mirror and is simpler; the choice is a deployment decision rather 
 2. `VITE_SAMPLE_ROOT` is set to the public base URL, which is the one change that turns the catalogue from empty to populated — **until then the runtime catalogue stays empty by
    design, so nothing in the app can change**;
 3. the manifest's `files[]` is checked against what is actually on the mirror, and any disagreement is reported by path rather than as a failed upload.
+
+## 5. `VITE_SAMPLE_ROOT`：放在哪、什么格式（2026-09-28，读完代码后的确切答案）
+
+### 格式（一行，无引号，末尾不要斜杠）
+
+```
+VITE_SAMPLE_ROOT=https://<你的公开域名>
+```
+
+* **不要引号** ✓、**不要 `export`** ✓ —— `.env` 语法就是 `KEY=value` ✓；
+* **末尾斜杠可以不带** ✓ —— 代码会剥掉它（`root.replace(/\/$/, "")` ✓），**带了也对** ✓；
+* ⭐ **它必须指向"桶的公开根"** ✓ —— 也就是 **`prefix` 所在的那一层** ✓：清单里 `virtuosity-drums-basic` 的 `prefix` 是 `virtuosity-drums` ✓、`sfz` 是 `Programs/01-basic-kit.sfz` ✓，所以最终 URL 是
+
+```
+https://<你的公开域名>/virtuosity-drums/Programs/01-basic-kit.sfz
+```
+
+### 放在哪（**这里有一个陷阱** ⚠️）
+
+| 用途 | 放哪 |
+|---|---|
+| **本机开发** | `.env.local` ✓（**已被 gitignore** ✓ —— `.gitignore:44 .env.*` ✓） |
+| ⚠️ **线上部署** | ⭐ **必须放进"构建时"的环境** ✗✓ —— **不能只放 `.env.local`** |
+
+⭐ **原因**：Vite 把 `VITE_*` **在构建时内联进产物** ✓ —— 所以**部署包里的值是构建那一刻的值** ✓。而 `.env.local` **被忽略、CI 看不到它** ✓ → **只放那里，线上就是空的** ✗✓。
+
+三种可选做法（按侵入性排序 ✓）：
+
+1. ⭐ **Cloudflare Pages 的环境变量**（如果部署在 Pages 上构建 ✓ —— `.env` 里有 `CLOUDFLARE_API_TOKEN` ✓，看起来是 ✓）：Settings → Environment variables → 加 `VITE_SAMPLE_ROOT` ✓；
+2. **GitHub Action 的构建步骤** ✓：仓库 variable/secret + 给 `npm run build` 那一步加 `env:` ✓；
+3. **提交一个 `.env.production`** ✓（最简单 ✓，代价是这个公开 URL 进仓库 ✓ —— **而它本来就是公开地址** ✓，所以这个代价可以接受 ✓）。
+
+⭐ 现在**任何 workflow 里都没有 `VITE_`** ✗（已查 ✓）→ 所以**线上构建目前拿不到它** ✓，第 1/2/3 条必须选一条 ✓。
+
+### 清单在哪（**两者故意不同源** ✓）
+
+* **清单**：`/samples/manifest.json` ✓ —— 由本仓库发布 ✓（`public/samples/manifest.json` ✓，347 KB ✓）；
+* **采样字节**：R2 ✓。
+
+⭐ 这正是既定的托管决定 ✓：**仓库里是清单，R2 上是字节** ✓✓ —— 所以**清单里的 `sha256`/`bytes` 才能用来核对 R2 上的东西** ✓。
+
+### ⭐ 设好之后怎么验（一条命令 ✓）
+
+```
+curl -sI https://<你的公开域名>/virtuosity-drums/Programs/01-basic-kit.sfz | head -3
+```
+
+⭐ **要看到 `200` 与一个 `content-length`** ✓ —— ⚠️ 而**如果看到 `403`**，那说明桶的公开访问没打开 ✓（或 CORS/域名没绑对 ✓），**而不是路径写错了** ✓。
