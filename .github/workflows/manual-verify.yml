@@ -240,7 +240,8 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
-      # The sfizz oracle: sfizz publishes no Linux binary and no image, so the reference renderer has to be compiled here.
+      # The sfizz oracle: sfizz publishes no Linux binary and no image, so the reference renderer has to be compiled here. `sfizz_render` is a client of the **library**
+      # repository (`sfztools/sfizz`), not of the UI project — a distinction that cost three CI runs and is written here so it costs none.
       #
       # It is a **scope of its own** rather than part of `audio`, because it is slow (a recursive clone and a full compile) and because it answers a different
       # question. `audio` asks whether this project renders correctly; this asks whether the **reference** it is judged against in this environment is the one the
@@ -249,14 +250,14 @@ jobs:
       #
       # The build tree is cached per commit: a warm run is a no-op rather than a second code path, so a cache miss costs time and never changes the result.
       #
-      # It is pinned to a **commit** on `develop`, not a tag, because `sfizz-ui` has no tag matching the library's version — the first version of this step asked for `v1.2.3` and
+      # It is pinned to a **commit** on `develop`, not a tag, because `sfizz` has no tag matching the library's version — the first version of this step asked for `v1.2.3` and
       # the build died with `fatal: Remote branch v1.2.3 not found`, which is what happens when a pin is assumed instead of read.
       - name: Cache the sfizz build
         if: inputs.scope == 'sfizz' || inputs.scope == 'all'
         uses: actions/cache@v5
         with:
-          path: sfizz-ui/build
-          key: sfizz-ui-5e0be2e6ab61-ubuntu-24.04
+          path: sfizz/build
+          key: sfizz-1.2.3-ubuntu-24.04
 
       - name: Install sfizz build dependencies
         if: inputs.scope == 'sfizz' || inputs.scope == 'all'
@@ -267,18 +268,18 @@ jobs:
       - name: Build sfizz_render
         if: inputs.scope == 'sfizz' || inputs.scope == 'all'
         run: |
-          if [ ! -d sfizz-ui/.git ]; then
-            git clone --recursive https://github.com/sfztools/sfizz-ui.git sfizz-ui
-            git -C sfizz-ui checkout 5e0be2e6ab61ed7e01619a7c9f2f8851405c8c31
-            git -C sfizz-ui submodule update --init --recursive
+          if [ ! -d sfizz/.git ]; then
+            # `sfizz_render` lives in the **library** repository, not in `sfizz`: the UI project has no `clients/` directory at all, which is why the first
+            # attempts to build it there could not have worked. The tag is `1.2.3`, with no `v` — an earlier attempt asked for `v1.2.3` and the clone failed.
+            git clone --recursive --branch 1.2.3 --depth 1 https://github.com/sfztools/sfizz.git sfizz
           fi
-          cmake -S sfizz-ui -B sfizz-ui/build -DCMAKE_BUILD_TYPE=Release -DSFIZZ_RENDER=ON
-          cmake --build sfizz-ui/build --target sfizz_render -j"$(nproc)"
+          cmake -S sfizz -B sfizz/build -DCMAKE_BUILD_TYPE=Release -DSFIZZ_RENDER=ON
+          cmake --build sfizz/build --target sfizz_render -j"$(nproc)"
 
       - name: Prove the sfizz oracle reads like the known one
         if: inputs.scope == 'sfizz' || inputs.scope == 'all'
         env:
-          SFIZZ_RENDER: ./sfizz-ui/build/clients/sfizz_render
+          SFIZZ_RENDER: ./sfizz/build/clients/sfizz_render
         run: node scripts/sfizz_oracle.mjs
 
       - name: Upload coverage
