@@ -314,6 +314,18 @@ gh run view <id> --json headSha -q .headSha
 **A dispatched run is a run of *some* commit, not of *my* commit**, and the two differ whenever the ref lags. This is the same family as "read the step, not the status" — a signal
 that does not distinguish the thing you care about — and it is the one that took longest to notice, because the output was plausible the whole time.
 
+## A running step's log is not readable — only the finished one's
+
+While `Section-boundary fade (stage 3 measurement)` runs, `gh run view --log` returns **nothing for it**, and there is no partial output. The step is the whole probe, so this is
+forty minutes of a long-running run whose log is empty until the step ends and then arrives all at once.
+
+**That combination produced a wasted round.** The probe printed nothing, and I concluded that a block I had added had failed to print — when in fact the block was in the build and
+the log simply was not readable yet. The thing that settled it was checking the run's `headSha` against the mirror's (see the note above): **the block's presence in the build is
+provable before its output exists**, and those are two different questions.
+
+So the rule for waiting on one of these: **check the sha, then check the step, and only then decide that something is missing.** "No output" is ambiguous between three states —
+still running, not in this build, and broken — and the sha plus the step name distinguish all three without waiting.
+
 ## Method notes worth keeping, all learned by being wrong here
 
 * **A local green is evidence about the tree that was checked, not the tree that is pushed.** A release failed on `'"kick" | … | "fx"' and '"audio"' have no
