@@ -103,6 +103,25 @@
 | ⭐ 真实原因是 **`#include "keymaps/keymap_basic.sfz"`** ✓✓ | 我一度以为"它用了另一种头形式" ✗✓ |
 | opcode 大量是 **CC/曲线驱动** ✓（`set_cc90` ✓ `tune_cc90` ✓ `tune_curvecc90` ✓ `width_cc106` ✓ `off_mode` ✓ `note_polyphony` ✓ `loop_mode` ✓ `group` ✓） | "`lokey`/`hivel`/`seq_length` 这些就够" ✗ |
 
+### 已实现并**对真实库跑过一次**（结果见下 ✓）
+
+`#include` 已实现（`src/audio/sfz/includes.ts` ✓，**5 条判据** ✓：展开 ✓ 嵌套 ✓ **循环报错** ✓ 缺失点名 ✓ **无 include 时逐字符不变** ✓✓），**I/O 注入** ✓ 所以循环/缺失/深度都能在无网络下测 ✓。
+
+**⭐ 然后拿真实库真跑了一次，得到这一轮最有价值的读数** ✓✓：
+
+```
+includes=1  problems=6  →  regions=0  →  playable(36/38/42/46)=0
+problems: included file "mappings/kickmic_basic.sfz" was not found
+          included file "mappings/snaremic_basic.sfz" was not found
+          included file "mappings/closemic_perc.sfz" was not found …
+```
+
+⭐ **include 链是三级** ✓✓：`01-basic-kit.sfz` → `keymaps/keymap_basic.sfz` → **`mappings/*.sfz`** ✓ —— 我只取了两级 ✗，于是展开器**逐个点名**了缺什么 ✓✓。
+
+**所以"SFZ 支持做到哪"此刻的诚实答案是：一个真实库的 region，今天一个都解析不出来** ✗ —— 而**原因不是 opcode，是文件链还没取全** ✓。⭐ **这正是"用真实文件测"而不是"在文档里预测"的价值** ✓：仪器**直接给出了下一步要取哪些文件** ✓✓（`mappings/kickmic_basic.sfz` ✓ `mappings/snaremic_basic.sfz` ✓ `mappings/closemic_perc.sfz` ✓ …），不需要猜 ✓。
+
+**下一步因此是机械的** ✓：把 `mappings/*.sfz` 也取到 ✓ → 重跑同一个测量 ✓ → region 会出现 ✓ → **那时才知道 opcode 那一层真正的缺口** ✓。
+
 ### 决定（自治，已记理由 ✓）：**先做 `#include`**
 
 ⭐ 理由 ✓：它**不是**可选项 ✓ —— 真实库**普遍**用它把"程序"与"键位映射"分开 ✓✓；而它**小而可判** ✓：在包含文件里按**相对路径**解析 ✓、**递归** ✓、带**循环与深度守卫** ✓（include 可以互相引用 ✓，那是经典陷阱 ✓）。
