@@ -163,3 +163,27 @@ describe("expandIncludes — CRLF files", () => {
     expect(result.text.includes("\r")).toBe(false);
   });
 });
+
+/**
+ * `included` — the list of files the expander read — pinned, because the mirror is about to depend on it.
+ *
+ * The structural gap that produced an unreachable program was this: the mirror plan was derived from `sample=` opcodes and said nothing about `.sfz` files, so **419 program files were never
+ * uploaded** while the check on the entry program passed. The expander already knows every file it read, so the plan can mirror exactly those instead of copying a directory and hoping. That
+ * makes this list load-bearing, and a load-bearing list needs a contract rather than an assumption.
+ *
+ * What the mirror needs from it, and therefore what is asserted: **every file the expansion actually read is named**, nested includes included.
+ */
+describe("the expander reports the files it read", () => {
+  it("names nested includes, so a mirror can mirror exactly them", () => {
+    const files: Record<string, string> = {
+      "entry.sfz": '<region> sample=a.wav key=38\n#include "a.sfz"\n',
+      "a.sfz": '<region> sample=b.wav key=39\n#include "b.sfz"\n',
+      "b.sfz": "<region> sample=c.wav key=40\n",
+    };
+    const result = expandIncludes(files["entry.sfz"]!, (path) => files[path], { path: "entry.sfz" });
+    // Both hops, not just the first: a mirror that stopped at one level would leave the deeper includes missing, which is the same silence by a shorter route.
+    expect(result.included).toContain("a.sfz");
+    expect(result.included).toContain("b.sfz");
+    expect(result.problems).toEqual([]);
+  });
+});
