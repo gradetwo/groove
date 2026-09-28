@@ -327,6 +327,9 @@ try {
         impulse.getChannelData(0)[0] = 1;
 
         const asset = { assetId: "probe-impulse", name: "Probe impulse", kind: "one-shot", seconds: 0.01 };
+        // What the plan says, not what the probe hoped: the first bar of a song at this bpm is t=0, and hardcoding 0.5 as the expectation is how the first version of
+        // this block printed a *negative* latency and made a correct result look like a broken path.
+        const expectedSeconds = 0;
         const loader = { load: async () => impulse, decodes: () => 0 };
         const plan = {
           clips: { A: { tracks: [{ track_id: "audio", name: "Probe", sample: { assetId: "probe-impulse" } }] } },
@@ -351,10 +354,10 @@ try {
           }
         }
         return {
-          atSeconds,
+          expectedSeconds,
           scheduled: report.scheduled,
           firstNonZeroFrame: first,
-          latencyMs: first < 0 ? null : Number((((first / sampleRate) - atSeconds) * 1000).toFixed(4)),
+          latencyMs: first < 0 ? null : Number((((first / sampleRate) - expectedSeconds) * 1000).toFixed(4)),
           problems: report.problems.length,
         };
       } catch (error) {
@@ -918,7 +921,7 @@ try {
       console.log(
         l.error
           ? `   ⚠️ audio lane path : could not measure (${l.error})`
-          : `   audio lane path  : asked at ${l.atSeconds}s, first sound at frame ${l.firstNonZeroFrame} → **${l.latencyMs} ms** of its own latency (${l.scheduled} sample(s) scheduled, ${l.problems} problem(s))`
+          : `   audio lane path  : scheduled at ${l.expectedSeconds}s, first sound at frame ${l.firstNonZeroFrame} → **${l.latencyMs} ms** of its own latency (${l.scheduled} sample(s) scheduled, ${l.problems} problem(s))`
       );
     }
     {
