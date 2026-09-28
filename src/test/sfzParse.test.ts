@@ -207,3 +207,26 @@ describe("group inheritance is per region", () => {
     expect(regions[1]).toMatchObject({ sample: "b.wav", tuneCents: 10, lokey: 50, hikey: 50 });
   });
 });
+
+/**
+ * `<master>` — SFZ v2's other global-scope header, which a real library uses for its `ampeg_release` and `tune_cc*` opcodes.
+ *
+ * Before this, `<master>` was an *unknown* header, so `current` was set to null and **every opcode in it was dropped** — including, in principle, a key range. The rule is the
+ * minimal honest one: it applies to the regions that follow, as a global does. What SFZ distinguishes between the two is reset points, and modelling that with no consumer
+ * for it would be inventing behaviour nobody asked for.
+ */
+describe("the master header", () => {
+  it("applies to the regions that follow, like a global", () => {
+    const regions = parseSfz("<master> key=36 tune=10\n<region> sample=kick.wav");
+    expect(regions).toHaveLength(1);
+    expect(regions[0]).toMatchObject({ sample: "kick.wav", lokey: 36, hikey: 36, tuneCents: 10 });
+    // And the opcodes are kept rather than dropped, so nothing set there is silently lost.
+    expect(regions[0]!.opcodes.tune).toBe("10");
+  });
+
+  it("does not disturb a file that never uses it", () => {
+    const plain = parseSfz("<region> sample=a.wav key=40");
+    expect(plain[0]).toMatchObject({ lokey: 40, hikey: 40 });
+    expect(plain[0]!.opcodes.master).toBeUndefined();
+  });
+});

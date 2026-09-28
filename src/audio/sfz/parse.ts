@@ -94,7 +94,14 @@ export function parseSfz(text: string): SfzRegion[] {
     if (header) {
       const name = header[1]!.toLowerCase();
       rest = header[2]!;
-      if (name === "global") {
+      if (name === "global" || name === "master") {
+        /**
+         * `<master>` is SFZ v2's other global-scope header, and a real library uses it — its `ampeg_release`, `tune_cc*` and bleed opcodes live there.
+         *
+         * Treating it as `<global>` is the minimal honest rule: its opcodes apply to the regions that follow, exactly as a global's do. The distinction SFZ draws between the
+         * two is about reset points rather than about scope, and modelling that without a consumer for it would be inventing behaviour nobody has asked for. What matters
+         * immediately is that its opcodes are **kept** instead of dropped, so a range or pitch set there cannot be silently lost.
+         */
         global = {};
         current = global;
       } else if (name === "group") {
