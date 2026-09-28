@@ -363,6 +363,20 @@ probe step       2026-09-28T20:23:32Z
 impression was wrong rather than merely imprecise, and it is the number that makes the rule usable: waiting is bounded by the CI clock, and a single bounded sleep covers what felt like
 many rounds.
 
+## `node --check` cannot see which side of an async boundary a line is on
+
+The lane-curve block returned its points and the CI log showed nothing — indistinguishable from a block that never ran. It **had** run: the `headSha` matched, and `git show` of that build's
+own copy of the file showed the block present and silent.
+
+The cause was one line of scoping that no syntax check can report: **the `console.log` was inside `page.evaluate`, and a browser's console does not reach Node's stdout.** Every other
+block in that probe returns its data and is printed from Node; this one was the exception, and the exception is invisible until you ask which side of the evaluate boundary a line sits on.
+
+**Then the fix repeated the mistake.** The new print landed at line 231 — inside an evaluate that runs from 106 to 982 — and `node --check` passed both times. What caught it was comparing
+the line number of the closing call (`}, { genreId, ramp: rampPair });`) with the line number of the print: **forty lines of reading against another round of a silent log.**
+
+The general form, since this is the fifth member of one family: **a check that only validates syntax cannot validate placement.** Which side of a boundary a line is on is a property of the
+program's structure, and `git show` plus a line number answers it; a green `node --check` does not, and never will.
+
 ## Method notes worth keeping, all learned by being wrong here
 
 * **A local green is evidence about the tree that was checked, not the tree that is pushed.** A release failed on `'"kick" | … | "fx"' and '"audio"' have no
