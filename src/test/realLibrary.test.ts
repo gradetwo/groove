@@ -144,7 +144,10 @@ describe.skipIf(files === null)("the mirror chain on a real library", () => {
       writeFileSync(path, Buffer.from(await (await fetch(`https://raw.githubusercontent.com/${REPO}/${PIN}/${file.path}`)).arrayBuffer()));
       const measured = audioDurationSeconds(path, { run: (command, args) => execFileSync(command, args, { encoding: "utf8" }) });
       durations.push(`${file.path.split("/").pop()}:${measured.seconds.toFixed(4)}s`);
-      expect(measured.sampleRate).toBe(48000);
+      // The module reports seconds only: the tool it uses now is `ffprobe`, which reads both FLAC and WAV, and it does not report a sample rate. The stale assertion asked for
+      // 48000 and failed **after** the whole library had been fetched — found by the full suite, and the same class of mistake as the manifest criterion that asserted a count
+      // instead of a property.
+      expect(measured.seconds).toBeGreaterThan(0);
     }
     expect(durations.join(" ")).toMatch(/kickmic_snare_center_vl29\.flac:1\.9340s/);
     expect(durations.join(" ")).toMatch(/kickmic_kick_snoff_vl4_rr1\.flac:3\.0857s/);
