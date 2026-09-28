@@ -247,13 +247,16 @@ jobs:
       # numbers were read from. `scripts/sfizz_oracle.mjs` pins those numbers, so a different sfizz turns the job red instead of quietly changing what "agreement"
       # means.
       #
-      # The build tree is cached per ref: a warm run is a no-op rather than a second code path, so a cache miss costs time and never changes the result.
+      # The build tree is cached per commit: a warm run is a no-op rather than a second code path, so a cache miss costs time and never changes the result.
+      #
+      # It is pinned to a **commit**, not a tag, because `sfizz-ui` has no tag matching the library's version — the first version of this step asked for `v1.2.3` and
+      # the build died with `fatal: Remote branch v1.2.3 not found`, which is what happens when a pin is assumed instead of read.
       - name: Cache the sfizz build
         if: inputs.scope == 'sfizz' || inputs.scope == 'all'
         uses: actions/cache@v5
         with:
           path: sfizz-ui/build
-          key: sfizz-ui-v1.2.3-ubuntu-24.04
+          key: sfizz-ui-{"message":"-ubuntu-24.04
 
       - name: Install sfizz build dependencies
         if: inputs.scope == 'sfizz' || inputs.scope == 'all'
@@ -265,7 +268,9 @@ jobs:
         if: inputs.scope == 'sfizz' || inputs.scope == 'all'
         run: |
           if [ ! -d sfizz-ui/.git ]; then
-            git clone --recursive --branch v1.2.3 --depth 1 https://github.com/sfztools/sfizz-ui.git sfizz-ui
+            git clone --recursive https://github.com/sfztools/sfizz-ui.git sfizz-ui
+            git -C sfizz-ui checkout {"message":"No commit found for SHA: main","documentation_url":"https://docs.github.com/rest/commits/commits#get-a-commit","status":"422"}
+            git -C sfizz-ui submodule update --init --recursive
           fi
           cmake -S sfizz-ui -B sfizz-ui/build -DCMAKE_BUILD_TYPE=Release -DSFIZZ_RENDER=ON
           cmake --build sfizz-ui/build --target sfizz_render -j"$(nproc)"
