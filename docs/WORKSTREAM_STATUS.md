@@ -7,7 +7,7 @@ This workstream's record is spread across several documents, each of which answe
 | document | the question it answers | one-line state |
 |---|---|---|
 | [`SAMPLE_LIBRARY_INTEGRATION.md`](SAMPLE_LIBRARY_INTEGRATION.md) | how a real library lands here — bytes, manifest, licence, and what SFZ it needs | the mirror chain runs end to end: **1660 files planned, 1659 fetched, 1 skipped, 0 problems, longest sample 14.529542 s measured** |
-| [`SCALE_HUNDRED_LANES.md`](SCALE_HUNDRED_LANES.md) | what a hundred lanes cost, and whether Rust is the answer | the browser's floor is **0.005%** and the flatten is **~0.4 s**; **render timings are not yet reproducible and the 26% rack figure is withdrawn** |
+| [`SCALE_HUNDRED_LANES.md`](SCALE_HUNDRED_LANES.md) | what a hundred lanes cost, and whether Rust is the answer | browser floor **0.005%**; flatten **138.94 ms for 409 600 steps** (the old "~18 s" is refuted); the master knobs were 21% of one render and **~2% of another** — enough to say the rack is **≲2–3%**, not enough to say what exactly |
 | [`RUST_DECISION.md`](RUST_DECISION.md) | the owner's answer to that question, and why | **no new repository, no Rust** — the reasoning is there, including where Rust *would* pay |
 | [`WOW_EVALUATION.md`](WOW_EVALUATION.md) | the proposal that came before, assessed against this repository's own facts | direction right, priority wrong: sampling playback was already built here |
 | [`AUDIO_TRACKS_AND_SVS_PLAN.md`](AUDIO_TRACKS_AND_SVS_PLAN.md) | the ninth track kind, its blast radius, and the part deliberately left empty | format half shipped and CI-verified; SVS is a reserved interface with no implementation |
