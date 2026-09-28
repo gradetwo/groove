@@ -222,6 +222,7 @@ try {
       sections: [{ id: "probe-loop", slot: "A", bars: 2 }],
     });
 
+
     /**
      * A4's measurement, and it is an A/B rather than a bar comparison.
      *
@@ -471,8 +472,8 @@ try {
           const { buffer } = await render(value);
           const seconds = Number(((performance.now() - started) / 1000).toFixed(4));
           points.push({ lanes: count, seconds, frames: buffer.length });
-          // Printed as each point lands, so a long curve reports progress instead of going quiet for ten minutes.
-          console.log(`   lane curve       : ${count} lanes ${seconds}s (${buffer.length} frames)`);
+          // **No print here.** A `console.log` inside `page.evaluate` runs in the browser and never reaches this log — the points are returned and printed from Node after the evaluate
+          // returns. This line existed and printed nothing for exactly that reason, which cost a round of thinking the block had never run.
         }
         return { points, note: "time only; peak memory is NOT measured, because this context exposes no reliable way to ask for it" };
       } catch (error) {
@@ -968,6 +969,20 @@ try {
       },
     };
   }, { genreId, ramp: rampPair });
+
+  /**
+   * **Printed here, in Node, because a `console.log` inside `page.evaluate` never reaches this log.**
+   *
+   * Every other block in the probe returns its data and is printed out here; the lane curve was the exception — it logged inside the page, so it produced points, printed nothing, and looked
+   * exactly like a block that had never run. A round went into that, and what distinguished the two was checking the run's `headSha` and then `git show`-ing the build's own copy of this
+   * file: the block was present at line 449 and silent.
+   */
+  const laneCurve = measured.renderLaneCurve;
+  if (laneCurve?.error) console.log(`   lane curve       : could not measure (${laneCurve.error})`);
+  else if (laneCurve?.points) {
+    for (const point of laneCurve.points) console.log(`   lane curve       : ${point.lanes} lane(s) ${point.seconds}s (${point.frames} frames)`);
+    console.log(`                      ${laneCurve.note}`);
+  }
 
   // ── the assertions ───────────────────────────────────────────────────────────────────────────────
   if (!measured.fillBars.length) await fail(`the ${genreId} club form produced no fill — the generator found no lane`);
