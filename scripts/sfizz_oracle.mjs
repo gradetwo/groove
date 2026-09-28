@@ -57,6 +57,63 @@ export function buildFixture(dir) {
   return { sourceFrames: frames };
 }
 
+/**
+ * A **multi-region** fixture, for the comparison A4 actually needs: three samples with three different roots, three regions with different key ranges and one with
+ * `tune`, and a three-note phrase that walks across them. A single region cannot fail the interesting ways — wrong region chosen, wrong root, wrong ratio — because
+ * with one region every note takes the same path.
+ *
+ * It is exported rather than inlined so the comparison and the oracle share one definition of "the fixture", and so a change to it changes both.
+ */
+export function buildMultiFixture(dir) {
+  const samples = [
+    { name: "low.wav", freq: 220, lokey: 0, hikey: 47, root: 40 },
+    { name: "mid.wav", freq: 440, lokey: 48, hikey: 71, root: 60 },
+    { name: "high.wav", freq: 880, lokey: 72, hikey: 127, root: 84, tune: 100 },
+  ];
+  for (const sample of samples) {
+    const frames = Math.round(SR * SECONDS);
+    const bytes = Buffer.alloc(44 + frames * 2);
+    bytes.write("RIFF", 0, "ascii");
+    bytes.writeUInt32LE(36 + frames * 2, 4);
+    bytes.write("WAVE", 8, "ascii");
+    bytes.write("fmt ", 12, "ascii");
+    bytes.writeUInt32LE(16, 16);
+    bytes.writeUInt16LE(1, 20);
+    bytes.writeUInt16LE(1, 22);
+    bytes.writeUInt32LE(SR, 24);
+    bytes.writeUInt32LE(SR * 2, 28);
+    bytes.writeUInt16LE(2, 32);
+    bytes.writeUInt16LE(16, 34);
+    bytes.write("data", 36, "ascii");
+    bytes.writeUInt32LE(frames * 2, 40);
+    for (let i = 0; i < frames; i += 1) {
+      bytes.writeInt16LE(Math.round(Math.sin((2 * Math.PI * sample.freq * i) / SR) * PEAK * 32767), 44 + i * 2);
+    }
+    writeFileSync(join(dir, sample.name), bytes);
+  }
+  writeFileSync(
+    join(dir, "multi.sfz"),
+    samples
+      .map(
+        (sample) =>
+          `<region> sample=${sample.name} lokey=${sample.lokey} hikey=${sample.hikey} pitch_keycenter=${sample.root}` +
+          (sample.tune ? ` tune=${sample.tune}` : "")
+      )
+      .join("\n") + "\n"
+  );
+  // Three notes, one per region, then a repeat of the middle one so round-robin and range selection both have something to get wrong.
+  writeMidi(join(dir, "phrase.mid"), {
+    bpm: 120,
+    notes: [
+      { note: 40, velocity: 100, startSeconds: 0, durationSeconds: NOTE_SECONDS },
+      { note: 60, velocity: 100, startSeconds: 0.3, durationSeconds: NOTE_SECONDS },
+      { note: 72, velocity: 100, startSeconds: 0.6, durationSeconds: NOTE_SECONDS },
+      { note: 60, velocity: 100, startSeconds: 0.9, durationSeconds: NOTE_SECONDS },
+    ],
+  });
+  return { samples: samples.map((sample) => sample.name), notes: [40, 60, 72, 60] };
+}
+
 /** Render the fixture with sfizz and read the result. Throws with the reason rather than returning a guessed shape. */
 export function renderWithSfizz(dir) {
   const out = join(dir, "out.wav");
@@ -73,6 +130,17 @@ export function renderWithSfizz(dir) {
 
 function main() {
   const dir = mkdtempSync(join(tmpdir(), "sfizz-oracle-"));
+  if (process.argv.includes("--multi")) {
+    // The multi-region fixture has no pinned numbers yet: the point of printing them is to have them, and to hand the comparison a reference it can be built against.
+    const { samples, notes } = buildMultiFixture(dir);
+    const out = join(dir, "multi.wav");
+    execFileSync(SFIZZ, ["--sfz", join(dir, "multi.sfz"), "--midi", join(dir, "phrase.mid"), "--wav", out, "-s", String(SR)], { stdio: "ignore" });
+    const wav = readWav(out);
+    console.log(`   fixture : ${samples.join(", ")} — notes ${notes.join(", ")}`);
+    console.log(`   sfizz   : ${wav.channels} ch, ${wav.frames} frames (${(wav.frames / wav.sampleRate).toFixed(4)}s), peak ${wav.peak.toFixed(4)}, rms ${wav.rms.toFixed(4)}`);
+    console.log("   (numbers printed, not pinned: this fixture exists to give the comparison something concrete to compare against)");
+    return;
+  }
   const { sourceFrames } = buildFixture(dir);
   const wav = renderWithSfizz(dir);
   const seconds = wav.frames / wav.sampleRate;
