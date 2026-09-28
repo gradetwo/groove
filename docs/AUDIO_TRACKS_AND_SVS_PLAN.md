@@ -58,6 +58,22 @@ that route by kind, found by **behaviour** rather than by name:
 3. **Its latency, measured** into PDC's table, and the audio-scope probe as the judge;
 4. **No export path changes** beyond the skip-and-say-so rule.
 
+## 1c. 关于"把音频路径的延迟实测进 PDC 表" —— 它是一个**功能**，不是一个测量
+
+第九种 kind 的目标里写着"最后把音频路径的延迟**实测**进 PDC 的延迟表"。读到代码，这句话**预设了一个并不存在的东西** ✗✓：
+
+| 核查 | 结果 |
+|---|---|
+| 有谁在解码/播放采样？ | 只有 `src/audio/DrumKitModels.ts` ✓ —— 那是**鼓组模型**，不是音频车道 ✓ |
+| 导出器里有音频车道的声部吗？ | **没有** ✗ —— 我按 `audio` / `sample` / `voice` 搜过，一无所获 ✓✓ |
+| PDC 的离线补偿在吗？ | **在** ✓（`latencySamples` ✓、头部裁剪 + 尾部补零 ✓、`:1011` 的说明 ✓），而表里**已有一行实测**：主限幅器 ✓ |
+
+所以：**音频车道没有播放通路** ✗ → **它的延迟无从测量** ✗ → 这一项**卡在"要先把通路建出来"** ✓，**不是卡在一次测量** ✓✓。
+
+**这正是本文档第 1 节所写的"只读切片"** ✓（播放一个采样 ✓ → **把它的延迟测进表** ✓ → **不改任何导出路径** ✓）—— 也就是说：**第九种 kind 的格式半边已经完成** ✓✓（类型 ✓ 分享 ✓ 校验 ✓ 混音角色 ✓ 总线 ✓ GS-1 ✓ 采样目录 ✓ 跳过并说明 ✓），而**播放半边是一件独立的、有明确第一步的新工作** ✓。
+
+⚠️ 把它写成"待测"而不是"待建"，正是本会话反复纠正的那种**用词把工作量藏起来**的错误 ✓（"待测"听起来像半小时，"建一条采样播放通路并把它接进渲染与 PDC"是另一回事 ✓）。
+
 ## 2. SVS: an interface with no implementation
 
 The owner asked for the interface to be **reserved and left empty**, and the honest way to do that is to expose it and have it **say so**, rather than to leave a
