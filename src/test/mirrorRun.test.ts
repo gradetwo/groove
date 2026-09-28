@@ -35,8 +35,20 @@ describe.skipIf(!enabled)("the mirror run", () => {
     expect(program, `${ROOT}/Programs/01-basic-kit.sfz is missing — fetch the .sfz tree first`).toBeDefined();
 
     const expanded = expandIncludes(program!, read, { path: "Programs/01-basic-kit.sfz" });
-    const plan = samplePathsFor(parseSfz(expanded.text), "Programs/01-basic-kit.sfz");
-    console.log(`   mirror run   : ${plan.length} files planned`);
+    /**
+     * **The plan carries the program tree, not only the samples it names.**
+     *
+     * The first version planned `sample=` paths alone, so **419 `.sfz` files — the entry program and every one of its 126 includes — were never uploaded**, while a reachability check on the entry
+     * program was still passing because it had been built on the same plan. The expander has always known which files it read, so the plan takes them from there: **the program tree is carried by
+     * construction rather than by remembering to copy a directory.**
+     */
+    // Named `programEntry` rather than `entryPath`: this file already declares that name further down, and the typechecker caught the collision instead of letting the later one shadow the earlier.
+    const programEntry = "Programs/01-basic-kit.sfz";
+    const programFiles = [programEntry, ...expanded.included].map((path) => ({ path, regions: 0 }));
+    const sampleFiles = samplePathsFor(parseSfz(expanded.text), programEntry);
+    // Deduplicated by path, because a program that also names an `.sfz` as a sample would otherwise be fetched twice.
+    const plan = [...new Map([...programFiles, ...sampleFiles].map((file) => [file.path, file])).values()];
+    console.log(`   mirror run   : ${plan.length} files planned (${programFiles.length} program, ${sampleFiles.length} sample)`);
 
     const result = await mirrorFiles({
       plan,
