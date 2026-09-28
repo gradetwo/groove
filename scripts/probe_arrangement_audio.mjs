@@ -387,6 +387,47 @@ try {
           leanAt += piece[0].length;
         }
 
+        /**
+         * **Variant three: overlapping renders.**
+         *
+         * The finding it tests is that state crosses the boundary — chunk one's reverb decays into the start of chunk two in the whole render, while a chunk
+         * rendered alone starts dry. So a chunk is rendered here with the **previous section in front of it**, and everything before the chunk's own start is
+         * discarded. That lead-in is what carries the reverb, the limiter and the compressor into the chunk.
+         *
+         * Note what this does **not** need: step slicing. A chunk is still "a song with a subset of its sections", just with one extra section at the front — so
+         * the simplification survives, which is not what I expected when I recorded the correction.
+         */
+        const overlapped = [];
+        for (let index = 0; index < parts.length; index += 1) {
+          const ownFrames = lean[index][0].length;
+          if (index === 0) {
+            overlapped.push(lean[index].map((channel) => channel.subarray(0, ownFrames)));
+            continue;
+          }
+          const lead = await render(
+            { ...song, id: `${song.id}-lead-${index}`, sections: [parts[index - 1], parts[index]] },
+            masterless
+          );
+          overlapped.push(lead.channels.map((channel) => channel.subarray(Math.max(0, channel.length - ownFrames))));
+        }
+        const overSamples = overlapped.reduce((sum, piece) => sum + piece[0].length, 0);
+        let overMax = 0;
+        let overSum = 0;
+        let overCompared = 0;
+        let overAt = 0;
+        for (const piece of overlapped) {
+          const frames = Math.min(piece[0].length, Math.max(0, wholeSamples - overAt));
+          for (let i = 0; i < frames; i += 1) {
+            for (let c = 0; c < channels; c += 1) {
+              const diff = Math.abs(piece[c][i] - whole.channels[c][overAt + i]);
+              if (diff > overMax) overMax = diff;
+              overSum += diff;
+              overCompared += 1;
+            }
+          }
+          overAt += piece[0].length;
+        }
+
         return {
           sections: parts.length,
           wholeSamples,
@@ -400,6 +441,10 @@ try {
           leanMaxAbsDiff: Number(leanMax.toExponential(3)),
           leanMeanAbsDiff: Number((leanSum / Math.max(1, leanCompared)).toExponential(3)),
           leanCompared,
+          overlapLengthRatio: Number((overSamples / Math.max(1, wholeSamples)).toFixed(4)),
+          overlapMaxAbsDiff: Number(overMax.toExponential(3)),
+          overlapMeanAbsDiff: Number((overSum / Math.max(1, overCompared)).toExponential(3)),
+          overlapCompared: overCompared,
         };
       } catch (error) {
         return { error: String(error && error.message ? error.message : error) };
@@ -779,7 +824,8 @@ try {
           : c.skipped
             ? `   ⚠️ chunked vs whole : ${c.skipped}`
             : `   chunked vs whole : ${c.sections} sections · length ${c.lengthRatio}x · max |Δ| ${c.maxAbsDiff} · mean |Δ| ${c.meanAbsDiff} (${c.compared} samples)\n` +
-              `   lean chunks      : tail ${c.tailFrames} frames trimmed · length ${c.leanLengthRatio}x · max |Δ| ${c.leanMaxAbsDiff} · mean |Δ| ${c.leanMeanAbsDiff} (${c.leanCompared} samples)`
+              `   lean chunks      : tail ${c.tailFrames} frames trimmed · length ${c.leanLengthRatio}x · max |Δ| ${c.leanMaxAbsDiff} · mean |Δ| ${c.leanMeanAbsDiff} (${c.leanCompared} samples)` +
+              `\n   overlap chunks   : length ${c.overlapLengthRatio}x · max |Δ| ${c.overlapMaxAbsDiff} · mean |Δ| ${c.overlapMeanAbsDiff} (${c.overlapCompared} samples)`
       );
     }
     {
