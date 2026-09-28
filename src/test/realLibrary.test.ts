@@ -1,4 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { execFileSync } from "node:child_process";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
+import { audioDurationSeconds } from "../../scripts/lib/audio_duration.mjs";
+import { mirrorFiles } from "../../scripts/lib/mirror.mjs";
+import { samplePathsFor } from "../audio/sfz/mirrorPlan";
 import { expandIncludes } from "../audio/sfz/includes";
 import { parseSfz, unresolvedVariables } from "../audio/sfz/parse";
 import { playbackForNote } from "../audio/sfz/regionPlayback";
@@ -94,5 +100,54 @@ describe.skipIf(files === null)("a real library, read end to end", () => {
   it("says the pin it read, so a failure identifies the data rather than only the code", () => {
     expect(PIN).toMatch(/^[0-9a-f]{12,40}$/);
     expect(files!.size).toBeGreaterThan(400);
+  });
+});
+
+/**
+ * The mirror chain, exercised on the real library: **plan → fetch → measure**.
+ *
+ * Three pieces were built separately and this is the first time they run one after another on real data — `samplePathsFor` says which files the program needs, `mirrorFiles`
+ * fetches them and verifies them against promises (there are none yet, so it verifies nothing and says so by succeeding), and `audioDurationSeconds` asks `metaflac` how long
+ * they are.
+ *
+ * **The two durations are pinned because two independent tools agreed on them**: `metaflac` reported `92832 samples` at `48000 Hz` and `ffprobe` reported `1.934000 s` for the
+ * same file. So a change here that moves these numbers is a change in the chain, not in my arithmetic.
+ */
+describe.skipIf(files === null)("the mirror chain on a real library", () => {
+  it("plans the files, fetches two of them, and measures their durations", async () => {
+    const read = (path: string) => files!.get(path);
+    const program = files!.get("Programs/01-basic-kit.sfz")!;
+    const expanded = expandIncludes(program, read, { path: "Programs/01-basic-kit.sfz" });
+    const plan = samplePathsFor(parseSfz(expanded.text), "Programs/01-basic-kit.sfz");
+
+    // The plan is derived from the SFZ, and its size is the first number anyone asking "what does this library cost" wants.
+    expect(plan.length).toBe(1660);
+    // `*silence` is SFZ's built-in, so it is planned as a path but must never be requested.
+    expect(plan.some((file) => file.path.includes("*silence"))).toBe(true);
+
+    const wanted = plan.filter((file) => /kickmic_(snare_center_vl29|kick_snoff_vl4_rr1)\.flac$/.test(file.path));
+    expect(wanted).toHaveLength(2);
+
+    const result = await mirrorFiles({
+      plan: wanted,
+      baseUrl: `https://raw.githubusercontent.com/${REPO}/${PIN}`,
+      expected: new Map(),
+    });
+    expect(result.problems).toEqual([]);
+    expect(result.fetched).toBe(2);
+
+    // And the durations, asked of the tool that knows — checked against two independent readings rather than against this code.
+    const durations: string[] = [];
+    for (const file of wanted) {
+      const path = `/tmp/vd-mirror/${file.path}`;
+      mkdirSync(dirname(path), { recursive: true });
+      writeFileSync(path, Buffer.from(await (await fetch(`https://raw.githubusercontent.com/${REPO}/${PIN}/${file.path}`)).arrayBuffer()));
+      const measured = audioDurationSeconds(path, { run: (command, args) => execFileSync(command, args, { encoding: "utf8" }) });
+      durations.push(`${file.path.split("/").pop()}:${measured.seconds.toFixed(4)}s`);
+      expect(measured.sampleRate).toBe(48000);
+    }
+    expect(durations.join(" ")).toMatch(/kickmic_snare_center_vl29\.flac:1\.9340s/);
+    expect(durations.join(" ")).toMatch(/kickmic_kick_snoff_vl4_rr1\.flac:3\.0857s/);
+    console.log(`   mirror chain : ${plan.length} files planned, 2 fetched and verified, durations ${durations.join(" ")}`);
   });
 });
