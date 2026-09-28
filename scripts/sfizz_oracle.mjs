@@ -101,17 +101,35 @@ export function buildMultiFixture(dir) {
       )
       .join("\n") + "\n"
   );
-  // Three notes, one per region, then a repeat of the middle one so round-robin and range selection both have something to get wrong.
+  /**
+   * The phrase is built so the pitch criterion **has discriminating power**, which the first version did not: every note sat on its own region's root, so the expected
+   * ratio was 1 everywhere and a wrong ratio would have looked exactly like a right one.
+   *
+   *   note 40 — low region (root 40):  +0 semitones → 220 × 1      = 220.00 Hz
+   *   note 52 — mid region (root 60):  −8 semitones → 440 × 2^(−8/12) = 277.18 Hz
+   *   note 60 — mid region (root 60):  +0 semitones → 440 × 1      = 440.00 Hz
+   *   note 72 — high region (root 84): −12 semitones **and** tune=100 → 880 × 0.5 × 2^(1/12) = 466.16 Hz
+   *
+   * The last one is the most valuable: it is the only note that exercises pitch **and** `tune` in one expected number.
+   *
+   * The notes are 0.6 s apart rather than 0.3 s so each measurement window is free of the previous note's release tail — sfizz's default envelope has one, measured at
+   * about 0.075 s, and a later window would otherwise contain two pitches.
+   */
+  const phrase = [
+    { note: 40, startSeconds: 0 },
+    { note: 52, startSeconds: 0.6 },
+    { note: 60, startSeconds: 1.2 },
+    { note: 72, startSeconds: 1.8 },
+  ];
   writeMidi(join(dir, "phrase.mid"), {
     bpm: 120,
-    notes: [
-      { note: 40, velocity: 100, startSeconds: 0, durationSeconds: NOTE_SECONDS },
-      { note: 60, velocity: 100, startSeconds: 0.3, durationSeconds: NOTE_SECONDS },
-      { note: 72, velocity: 100, startSeconds: 0.6, durationSeconds: NOTE_SECONDS },
-      { note: 60, velocity: 100, startSeconds: 0.9, durationSeconds: NOTE_SECONDS },
-    ],
+    notes: phrase.map((entry) => ({ ...entry, velocity: 100, durationSeconds: NOTE_SECONDS })),
   });
-  return { samples: samples.map((sample) => sample.name), notes: [40, 60, 72, 60] };
+  return {
+    samples: samples.map((sample) => sample.name),
+    notes: phrase.map((entry) => entry.note),
+    regions: samples,
+  };
 }
 
 /** Render the fixture with sfizz and read the result. Throws with the reason rather than returning a guessed shape. */

@@ -296,6 +296,12 @@ jobs:
         # SFIZZ_RENDER arrives through GITHUB_ENV from the build step, which located the binary rather than trusting a path.
         run: node scripts/sfizz_oracle.mjs
 
+      # A4, enforced rather than described: sfizz's own output judges this project's mapping — the same region chosen, the same pitch produced. The test skips when the
+      # binary is absent, which is why it is safe in the ordinary suite and meaningful here, where the binary has just been built.
+      - name: A4 — this project's mapping against sfizz's render
+        if: inputs.scope == 'sfizz' || inputs.scope == 'all'
+        run: npx vitest run src/test/sfizzAgreement.test.ts
+
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@v5
