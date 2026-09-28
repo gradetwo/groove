@@ -1,3 +1,4 @@
+import { CLIP_SLOTS } from "../../types/song";
 import React from "react";
 import { sectionRegions, trackRows } from "../../features/arrangement/songEdit";
 import type { ClipSlot } from "../../types/song";
@@ -78,7 +79,7 @@ export function TrackRows({ song, onSetLaneSlot }: TrackRowsProps): React.ReactE
                   style={{ background: "transparent", color: "inherit", fontSize: 11 }}
                 >
                   <option value="">{cell.slot} (section)</option>
-                  {(["A", "B", "C", "D"] as ClipSlot[]).map((slot) => (
+                  {CLIP_SLOTS.map((slot) => (
                     <option key={slot} value={slot}>
                       {slot}
                     </option>

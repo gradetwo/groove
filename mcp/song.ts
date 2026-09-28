@@ -1,3 +1,4 @@
+import { CLIP_SLOTS } from "../src/types/song";
 /**
  * B6 — the song surface an agent composes with.
  *
@@ -400,7 +401,7 @@ export function makeUniqueMcpSection(input: {
   const section = song.sections[at]!;
 
   const taken = new Set(Object.keys(song.clips ?? {}));
-  const free = (["A", "B", "C", "D"] as ClipSlot[]).find((slot) => !taken.has(slot));
+  const free = CLIP_SLOTS.find((slot) => !taken.has(slot));
   if (!free) {
     throw new Error(
       `all four clip slots are in use (${[...taken].sort().join(", ")}), so this section cannot be given its own copy — ` +

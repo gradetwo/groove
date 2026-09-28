@@ -12,9 +12,16 @@
 import type { SequencerPattern } from "./genre";
 
 /** The clip slots a project can hold. `A`/`B` are the historical pair; the rest are new. */
-export type ClipSlot = "A" | "B" | "C" | "D";
+/**
+ * The clip slots a song may use, in the order the UI shows them.
+ *
+ * **The array is the source of truth and the type derives from it**, which this change made obvious: widening the type alone changed nothing at all, because every
+ * consumer reads `CLIP_SLOTS`. Raised from `A`-`D` to `A`-`H` by the owner's decision of 2026-09-28 — four slots shared song-wide is the ceiling the fifth report hit
+ * on a nine-movement piece, where the movements were distinguished by mutes, velocity ramps and per-lane overrides instead of by material.
+ */
+export const CLIP_SLOTS = ["A", "B", "C", "D", "E", "F", "G", "H"] as const;
+export type ClipSlot = (typeof CLIP_SLOTS)[number];
 
-export const CLIP_SLOTS: readonly ClipSlot[] = ["A", "B", "C", "D"];
 
 /**
  * A drum fill: extra hits added to the last pass of a section.

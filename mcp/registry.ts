@@ -1,3 +1,7 @@
+import { CLIP_SLOTS } from "../src/types/song";
+
+/** The slot enum, derived from the one array so a tool cannot refuse a slot the model allows. */
+const clipSlotSchema = z.enum([...CLIP_SLOTS] as [string, ...string[]]);
 import { lanesWithoutMidi } from "./pattern";
 /**
  * The MCP surface, declared once.
@@ -973,7 +977,7 @@ export const TOOLS: ToolDefinition[] = [
       clips: z
         // `.optional()` on the **value** type, so a caller may send the slots it has: `z.record(keys, schema)` makes every key
         // required, which is what a composer hit when it sent `{B, C}` and got "expected object, received undefined at clips.A".
-        .record(z.enum(["A", "B", "C", "D"]), patternSchema.optional())
+        .record(clipSlotSchema, patternSchema.optional())
         .optional()
         .describe(
           "clips beyond the seeded A, keyed by slot — the verse/chorus path. Without it a song can only ever have one clip and the contrast has to be squeezed out of section overrides. `set_clip` replaces one later."
@@ -1101,7 +1105,7 @@ export const TOOLS: ToolDefinition[] = [
           z.object({
             sectionId: z.string(),
             trackId: z.string().max(40),
-            slot: z.enum(["A", "B", "C", "D"]).nullable(),
+            slot: clipSlotSchema.nullable(),
           })
         )
         .min(1)
@@ -1148,7 +1152,7 @@ export const TOOLS: ToolDefinition[] = [
     readOnly: false,
     inputSchema: {
       songId: z.string().describe("the id create_song returned"),
-      slot: z.enum(["A", "B", "C", "D"]),
+      slot: clipSlotSchema,
       pattern: patternSchema.optional().describe("the clip to store; omit it to seed the slot from the genre instead"),
       genreId: z.string().optional().describe("seed the slot from a genre's arranged pattern (used when pattern is absent)"),
     },
@@ -1294,7 +1298,7 @@ export const TOOLS: ToolDefinition[] = [
     readOnly: false,
     inputSchema: {
       songId: z.string().describe("the id create_song returned"),
-      slot: z.enum(["A", "B", "C", "D"]),
+      slot: clipSlotSchema,
       bars: z
         .number()
         .int()
