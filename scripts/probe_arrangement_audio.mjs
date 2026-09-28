@@ -353,6 +353,40 @@ try {
     })();
 
     /**
+     * **Where the render time goes** (TRACK B's split). The baseline says the browser's floor is 0.12% of realtime, so the 24.4 s is spent in the graph's *content* — and this
+     * separates one part of that content from the rest using a switch the probe **already** uses elsewhere (`bypassFxRack`), rather than new graph code. Writing a second way to
+     * build the graph is how two places start computing one thing, and this probe has already been repaired once for reading a variable that did not exist.
+     *
+     * What it can honestly report from one pair: the **effects rack's share** of the render, as full minus bypassed. Whatever remains is voice synthesis, the node graph and
+     * the master chain together — **labelled as a remainder rather than attributed**, because this pair cannot separate them, and a number nobody measured is not a number.
+     *
+     * Wrapped like its neighbours: it prints numbers or prints why it could not.
+     */
+    const renderSplit = await (async () => {
+      try {
+        const song = measured.songForSplit;
+        if (!song) return { error: "no song in scope to render" };
+        const time = async (extra) => {
+          const started = performance.now();
+          await render(song, extra);
+          return (performance.now() - started) / 1000;
+        };
+        // One discarded pass first: the flatten curve showed what a cold first reading does to a timing (132 ms against 3.6 ms).
+        await time({});
+        const full = await time({});
+        const withoutRack = await time({ bypassFxRack: true });
+        return {
+          fullSeconds: Number(full.toFixed(4)),
+          withoutRackSeconds: Number(withoutRack.toFixed(4)),
+          rackSeconds: Number((full - withoutRack).toFixed(4)),
+          remainderSeconds: Number(withoutRack.toFixed(4)),
+        };
+      } catch (error) {
+        return { error: String(error && error.message ? error.message : error) };
+      }
+    })();
+
+    /**
      * **The audio lane's own latency**, measured with a synthetic impulse (owner decision 2026-09-28, the read-only slice's last step).
      *
      * The catalogue ships empty, so there is no real sample to decode — but the question does not need one: "which frame does the scheduling path put the sound at"
@@ -827,6 +861,7 @@ try {
         chunking,
         audioLaneLatency,
         renderProfile,
+        renderSplit,
         seconds: withFill.buffer.duration,
         barSeconds,
         fillRms: fillBars.map((bar) => ({
@@ -968,6 +1003,15 @@ try {
           `38 Hz ${k.notch38Db >= 0 ? "+" : ""}${k.notch38Db} dB → ${k.verdict}`
       );
       if (!ok) console.log("   (inconclusive: the two singles differ enough in level that this window cannot separate phase from gain)");
+    }
+    {
+      const r = measured.audio.renderSplit ?? { error: "not collected" };
+      console.log(
+        r.error
+          ? `   ⚠️ render split   : could not measure (${r.error})`
+          : `   render split     : full ${r.fullSeconds}s vs bypassFxRack ${r.withoutRackSeconds}s → **the effects rack is ${r.rackSeconds}s**, remainder (voices + graph + master) ${r.remainderSeconds}s`
+      );
+      if (!r.error) console.log("                      the remainder is labelled rather than attributed: this pair cannot separate voices from the master chain");
     }
     {
       const p = measured.audio.renderProfile ?? { error: "not collected" };
