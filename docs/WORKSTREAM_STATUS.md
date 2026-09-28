@@ -228,6 +228,21 @@ step; the file records the evidence and the option instead of implying a check t
 **And the CI policy, as the owner restated it**: heavy work — browser probes, renders and profiling, the sfizz build, the full chain, the device matrix — belongs in the
 `manual-verify` scopes and in `ci.yml`. Locally the cheap instruments run: `typecheck`, `lint`, and the unit suite.
 
+## Telling "slow" from "stuck" in CI, in one command
+
+The audio scope takes twenty to thirty minutes, and twice this session a run looked stalled when it was working. `gh run view --json status` answers the wrong question — it
+says *in progress* either way. The question worth asking is **which step**, and since when:
+
+```
+gh api repos/<owner>/<repo>/actions/runs/<id>/jobs   --jq '.jobs[].steps[] | select(.status=="in_progress") | "RUNNING: \(.name) (started \(.started_at))"'
+```
+
+**It settled the question both times.** Once the answer was `Section-boundary fade (stage 3 measurement)`, a step that renders the arrangement many times over and is slow by
+design — so the run was healthy, and the probe block I was waiting for simply had not been reached yet. The other time it exposed a build step that was genuinely failing.
+
+**And it prevents a worse mistake than waiting**: the status endpoint makes a stalled run and a working one look identical, which is exactly the shape of check that cannot
+tell you what you care about. The step API can.
+
 ## Method notes worth keeping, all learned by being wrong here
 
 * **A local green is evidence about the tree that was checked, not the tree that is pushed.** A release failed on `'"kick" | … | "fx"' and '"audio"' have no
