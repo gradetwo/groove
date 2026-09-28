@@ -80,6 +80,25 @@ reading is about the instrument, not the audio: this probe cannot distinguish a 
 therefore **unproven rather than refuted**, and the next step is a measurement that separates the two cases (the control has to differ) before any de-clicking work is
 justified.
 
+## The second chunking measurement: the tail was the length, and something else is the discontinuity
+
+```
+chunked vs whole : 2 sections · length 1.0266x · max |Δ| 1.674 · mean |Δ| 0.1649 (5612082 samples)
+lean chunks      : tail 74685 frames trimmed · length 1x · max |Δ| 1.7 · mean |Δ| 0.135 (5612082 samples)
+```
+
+**What the trim settled**: the extra length was the genre's reverb/delay tail and nothing else — **74685 frames (1.694 s at 44.1 kHz)**, a number the measurement
+**derived** (`extra / (chunks - 1)`) rather than a constant anyone declared, and with it trimmed the concatenation is **exactly** the song's length (`1x`). That
+also refutes the alternative I had written down: there is no hidden pre-roll or lookahead padding in the length.
+
+**What it did not settle**: the sample-level difference is essentially unchanged (1.674 → 1.7). So neither the trim, nor the makeup, nor the bus compressor was the
+cause. **The cause is state carried across the boundary** — and the reverb is the clearest one: in the whole-song render, chunk 1's reverb **decays into the
+beginning of chunk 2**, while a chunk rendered on its own simply starts dry. The limiter and the compressor have the same property.
+
+**Which corrects my own simplification from the previous round.** I had reduced a chunk to "a song with a subset of its sections" because that needed no step
+slicing. It needs one after all: sample-exact chunking must render with **overlap** — each chunk rendered from `tail` frames (or bars) *before* its start, with the
+lead-in discarded — and that requires rendering a **range**, which is the general case `planRenderChunks` was written for. The pieces fit; my shortcut did not.
+
 ## Method notes worth keeping, all learned by being wrong here
 
 * **A local green is evidence about the tree that was checked, not the tree that is pushed.** A release failed on `'"kick" | … | "fx"' and '"audio"' have no
