@@ -54,6 +54,32 @@ The probe is the right place to prove this, and reading it made the design small
 Nothing here needs a production change until the numbers say the chunked path matches the whole one. If they do not, the next suspect is already named: the master
 chain is stateful, so a chunk that masters itself is only ever approximate.
 
+## The first chunking measurement, read (audio scope, run 36391076005)
+
+```
+chunked vs whole : 2 sections · length 1.0266x · max |Δ| 1.674 · mean |Δ| 0.1649 (5612082 samples)
+```
+
+Two findings, and the first one was not on the list:
+
+* **the chunks are 2.66% longer than the song** — each render carries the genre's **own reverb/delay tail**, so concatenating chunks appends a tail **per chunk**.
+  Chunking therefore has to trim every chunk's tail but the last. That is a structural requirement the design had not named, and it is exactly the kind of thing a
+  measurement exists to say before the code does.
+* **max |Δ| 1.674 and mean |Δ| 0.1649** — full-scale, sample-level disagreement. So per-chunk mastering is not merely approximate: it is **unusable**, which turns the
+  A/B fork from a preference into a requirement. The chosen design — masterless chunks, concatenate, then master **once** — is now backed by numbers rather than by
+  reasoning about statefulness.
+
+```text
+boundary click   : worst step within ±10 ms of the jump 2.30e-2 → 2.30e-2 · no-jump control 2.30e-2 → 2.30e-2
+boundary fade    : discontinuities 1210 → 1212 with an 8 ms fade
+```
+
+**And the sixth report's click claim comes back as "no evidence, from an instrument that cannot currently tell."** The fade changes the click metric **not at all**,
+and the **no-jump control is identical** — 2.30e-2 for a real jump, a smooth boundary, with and without the fade. When the control equals the treatment, the honest
+reading is about the instrument, not the audio: this probe cannot distinguish a boundary click from ordinary samples, so it cannot testify either way. The claim is
+therefore **unproven rather than refuted**, and the next step is a measurement that separates the two cases (the control has to differ) before any de-clicking work is
+justified.
+
 ## Method notes worth keeping, all learned by being wrong here
 
 * **A local green is evidence about the tree that was checked, not the tree that is pushed.** A release failed on `'"kick" | … | "fx"' and '"audio"' have no
