@@ -19,6 +19,11 @@ const counts = ((argv.find((a) => a.startsWith("--lanes=")) ?? "--lanes=1,4,16,6
   .map((value) => Number(value.trim()))
   .filter((value) => Number.isFinite(value) && value > 0);
 const asJson = argv.includes("--json");
+/**
+ * **A timeout per lane count, because a probe that hangs is worse than one that fails.** The first version had none, and a CI run sat for the better part of an hour with no output — a job that never finishes reports nothing, while a job that gives up
+ * reports which count could not be measured. The default is generous: the probes are slow because each one starts a dev server and a browser.
+ */
+const timeoutMs = Number((argv.find((a) => a.startsWith("--timeout=")) ?? "--timeout=420000").split("=")[1]);
 
 const points = [];
 const failures = [];
@@ -28,8 +33,10 @@ for (const lanes of counts) {
   const result = spawnSync(
     process.execPath,
     ["scripts/probe_arrangement_audio.mjs", `--genre=${genre}`, "--only=lane", `--lanes=${lanes}`, "--json"],
-    { encoding: "utf8", stdio: ["ignore", "pipe", "inherit"] }
+    { encoding: "utf8", stdio: ["ignore", "pipe", "inherit"], timeout: timeoutMs }
   );
+  // `spawnSync` reports a timeout through `signal`, and it is a result rather than an exception: the curve simply has one fewer point.
+  const timedOut = result.signal !== null || result.error?.code === "ETIMEDOUT";
   const line = (result.stdout ?? "").split("\n").find((candidate) => candidate.trim().startsWith("{"));
   let point;
   try {
@@ -40,7 +47,11 @@ for (const lanes of counts) {
   }
   if (!point) {
     failures.push(lanes);
-    console.log("could not be measured (the browser process did not finish the render)");
+    console.log(
+      timedOut
+        ? `could not be measured (no result within ${Math.round(timeoutMs / 1000)}s — the probe is left behind by this limit)`
+        : "could not be measured (the browser process did not finish the render)"
+    );
     continue;
   }
   points.push(point);

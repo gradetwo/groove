@@ -108,8 +108,18 @@ function applyControlLine(line: string, defaults: Map<number, number>): void {
 /**
  * The cents a region's `tune_ccN` opcodes contribute at these controller values.
  *
- * **Measured rather than derived from the name**: `tune_cc90=1200` rendered through sfizz gives 0 cents at CC90 = 0, +1200 at 127 and +600 at 63.5 — the mapping is linear from zero and there is no centre to it. The curve opcodes (`tune_curveccN`) say
- * which shape to use and are ignored here, which is exact for the default linear curve and recorded as a limit for a file that names another.
+ * **Two shapes, both measured through sfizz, and the second one is why this function exists at all.**
+ *
+ * ```
+ *   no curve opcode (or 0), tune_cc90=1200   CC 0 → 0       64 → +600   127 → +1200     linear from zero
+ *   tune_curvecc90=1,       tune_cc90=1200   CC 0 → −1200   64 → 0      127 → +1200     bipolar about 64
+ * ```
+ *
+ * The first version of this function ignored `tune_curveccN` and applied the linear rule to everything, which put `virtuosity_drums` **an octave sharp at rest**: both of its tuning knobs use curve 1, whose whole point is that the declared default of 63.5 is the
+ * neutral position his labels say it is ("Master tune", "Kick tune").
+ *
+ * Other curve indices exist and are not modelled — measured at CC 32, index 2 reads +909 cents and index 4 +90, so they are genuinely different shapes rather than aliases. A file naming one is treated as linear, and that limit is stated rather than
+ * hidden: the two shapes below cover every library this project mirrors.
  */
 export function ccTuneCents(opcodes: Record<string, string>, cc: ReadonlyMap<number, number>): number {
   let cents = 0;
@@ -118,8 +128,12 @@ export function ccTuneCents(opcodes: Record<string, string>, cc: ReadonlyMap<num
     if (!match) continue;
     const span = Number(raw);
     if (!Number.isFinite(span)) continue;
-    // An unset controller is 0, which is what makes "no controller sent" mean no detuning.
-    cents += (span * (cc.get(Number(match[1])) ?? 0)) / 127;
+    const controller = Number(match[1]);
+    // An unset controller is 0, which is what makes "no controller sent" mean no detuning under the linear rule.
+    const value = cc.get(controller) ?? 0;
+    const curve = Number(opcodes[`tune_curvecc${controller}`] ?? 0);
+    // Curve 1 spans −span to +span with its neutral at 64, which is what `set_ccN=63.5` is for in the libraries that use it.
+    cents += curve === 1 ? span * ((2 * value) / 127 - 1) : (span * value) / 127;
   }
   return cents;
 }

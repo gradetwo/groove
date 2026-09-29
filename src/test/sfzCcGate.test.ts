@@ -109,6 +109,26 @@ describe("controller-driven tuning", () => {
     expect(regions[0]!.tuneCents).toBe(300);
   });
 
+  it("reads `tune_curveccN=1` as bipolar about 64, which is what the shipped kit needs", () => {
+    /**
+     * The shape that made the previous implementation an octave wrong. Measured through sfizz: with curve 1, CC 0 is −1200 cents, 64 is 0 and 127 is +1200 — so the neutral position is the middle, which is why `virtuosity_drums` declares 63.5 for both of its tuning
+     * knobs and calls them "Master tune" and "Kick tune".
+     */
+    const regions = parseSfz("<control>\nset_cc90=64\n<region> sample=tone.wav pitch_keycenter=60 tune_cc90=1200 tune_curvecc90=1");
+    // Nine cents at 64, not zero: `2 × 64 / 127 − 1` is 0.0079, and the endpoint at 127 is what the formula is pinned to.
+    expect(regions[0]!.tuneCents).toBeCloseTo(9.45, 1);
+    const low = parseSfz("<control>\nset_cc90=0\n<region> sample=tone.wav pitch_keycenter=60 tune_cc90=1200 tune_curvecc90=1")[0]!;
+    expect(low.tuneCents).toBe(-1200);
+    const high = parseSfz("<control>\nset_cc90=127\n<region> sample=tone.wav pitch_keycenter=60 tune_cc90=1200 tune_curvecc90=1")[0]!;
+    expect(high.tuneCents).toBeCloseTo(1200, 6);
+  });
+
+  it("treats a curve it does not model as linear, and says so in the code rather than in silence", () => {
+    // Indices beyond 1 are real shapes (index 2 reads +909 cents at CC 32 through sfizz), and none of the mirrored libraries uses them.
+    const regions = parseSfz("<control>\nset_cc90=127\n<region> sample=tone.wav pitch_keycenter=60 tune_cc90=1200 tune_curvecc90=2");
+    expect(regions[0]!.tuneCents).toBe(1200);
+  });
+
   it("leaves an instrument with no controller tuning at exactly zero", () => {
     // The common case must not acquire a detune by accident.
     expect(parseSfz("<region> sample=tone.wav pitch_keycenter=60")[0]!.tuneCents).toBe(0);

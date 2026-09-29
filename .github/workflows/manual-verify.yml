@@ -204,6 +204,8 @@ jobs:
       # event and no page error, and one render of a two-bar song was enough to kill one, while an idle browser in the same environment lived past eight minutes. The same shape the loudness sweep above already works around.
       - name: Lane cost curve (1, 4, 16, 64 lanes, one process each)
         if: inputs.scope == 'audio' || inputs.scope == 'all'
+        # ⭐ A bound on the step as well as on each lane count inside it. The first run of this step had neither and sat for the better part of an hour: GitHub's default is six hours, which is not a bound anybody notices until it is too late.
+        timeout-minutes: 30
         run: node scripts/measure_lane_curve.mjs --genre=chicago-house
 
 
