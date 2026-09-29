@@ -2097,3 +2097,43 @@ tag    FAILED (exit 1)
 | ⭐ **B：让失败【不再静默】—— 在失败信息里明确说"线上已更新，而 main/tag 没有"** ✓✓ | ⭐ **最小 ✓ 且最有用 ✓ —— 因为"部分发布"最危险的地方是它看起来像失败 ✗，而实际上一半成功了 ✗✓** |
 
 ⭐ **按业主的常设自主权，我选 B 并把它写进 `release.sh` 的失败路径** ✓ —— ⭐ **因为 A 会重排一条已经被验证过三次的顺序 ✓，而 B 只改一句话** ✓✓。
+
+
+## 67. ⭐⭐⭐⭐ 根因：`sync_release_mirror.sh` **只复制并验证，不提交也不推送**（2026-09-28 晚 ✓）
+
+### 读到的
+
+```bash
+:13  # **Order matters:** commit locally **first**, then run this.
+     # It walks `git ls-files`, so a file that is still untracked is invisible to it.
+:19  SOURCE="$(git rev-parse --show-toplevel)"
+:33    cp "$SOURCE/$file" "$target"          ← ⭐ 复制 ✓
+:52  echo "copied $copied file(s) …"
+:67  echo "✅ every tracked file matches; the mirror is a copy of $(git rev-parse --short HEAD)"
+```
+
+⭐⭐ **而整个 67 行里没有 `git commit` ✗，也没有 `git push` ✗** ✓✓ —— ⭐ **它把文件复制进镜像的【工作树】✓、然后逐文件验证一致 ✓ —— 然后就结束了** ✓。
+
+### ⭐⭐ 所以发布的六步里，镜像【从来没有被提交过】
+
+| 步 | 做了什么 |
+|---|---|
+| ⭐ **`mirror`** | ⭐ **`./scripts/sync_release_mirror.sh`** ✓ —— **复制 ✓ 验证 ✓ 不提交 ✗** |
+| ⭐ **`remote`** | ⭐ **`git -C ../release/groove-github push origin dev` ✓ + 检查 `origin/main` 是 `origin/dev` 的祖先 ✓** ✗✓ |
+
+⚠️ **于是 `remote` 推上去的是【上一次提交】✗ —— 而不是刚刚复制进去的那一份** ✗✓✓ —— ⭐ **而它检查的"fast-forward"也就能通过 ✓，因为两者都是旧的那一份** ✗✓✓。
+
+### ⭐⭐⭐ 而这解释了我这一整段的习惯
+
+⭐ **我每一轮的做法是** ✓：**`./scripts/sync_release_mirror.sh` → `cd ../release/groove-github && git add -A && git commit && git push`** ✓✓ —— ⭐ **也就是说：提交与推送一直是【我】在做 ✓ —— 所以镜像一直是对的 ✓，而我从未注意到发布脚本里缺了这两步** ✗✓✓。
+
+⭐⭐ **而这是"顺序"这件事的又一个版本** ✓：**脚本把"复制"与"提交"分开是对的 ✓（那句注释还专门讲了顺序 ✓）—— 而 `release.sh` 只调用了其中一半 ✗✓** —— ⭐ **于是发布链上有一环是空转的 ✓，直到第七步用【内容】去查它 ✓，才被发现** ✓✓。
+
+### ⭐ 所以修法有两条，而它们其实是同一件
+
+| 选项 | 评价 |
+|---|---|
+| ⭐ **A：`release.sh` 的 `mirror` 步之后加一次镜像的 `git add -A && git commit && git push`** ✓✓ | ⭐ **最直接 ✓ —— 而那正是我每轮手工做的那两步** ✓ |
+| ⭐ **B：让 `sync_release_mirror.sh` 自己在验证通过后提交** ✓ | ⚠️ **会把"复制"与"提交"两个动作绑在一起 ✗，而那句注释解释了为什么它们该分开** ✓ |
+
+⭐ **所以选 A** ✓ —— ⭐ **并且在提交信息里写明这次发布** ✓（**`release: v<version>`** ✓）—— ⭐ **于是镜像仓的历史也会像本仓一样，有一眼能认出的发布点** ✓✓。
