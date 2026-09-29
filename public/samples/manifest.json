@@ -15803,9 +15803,167 @@
         "bytes": 255425351,
         "url": "https://github.com/sfzinstruments/karoryfer.meatbass/releases/download/v1.001/Karoryfer.Meatbass.v1.001.zip"
       },
-      "sfz": "Meatbass/Programs/04_pizz.sfz",
+      "sfz": "Meatbass/Programs/01_arco_modwheel.sfz",
       "durationSeconds": 8.196485,
-      "mirroredAt": "2026-09-29"
+      "mirroredAt": "2026-09-29",
+      "instruments": [
+        {
+          "sfz": "Meatbass/Programs/01_arco_modwheel.sfz",
+          "name": "arco modwheel"
+        },
+        {
+          "sfz": "Meatbass/Programs/02_arco_3vel.sfz",
+          "name": "arco 3vel"
+        },
+        {
+          "sfz": "Meatbass/Programs/03_arco_5vel.sfz",
+          "name": "arco 5vel"
+        },
+        {
+          "sfz": "Meatbass/Programs/04_pizz.sfz",
+          "name": "pizz"
+        },
+        {
+          "sfz": "Meatbass/Programs/arco_basic.sfz",
+          "name": "arco basic"
+        },
+        {
+          "sfz": "Meatbass/Programs/arco_basic_legato_map.sfz",
+          "name": "arco basic legato map"
+        },
+        {
+          "sfz": "Meatbass/Programs/arco_basic_map.sfz",
+          "name": "arco basic map"
+        },
+        {
+          "sfz": "Meatbass/Programs/arco_looped_basic_legato_map.sfz",
+          "name": "arco looped basic legato map"
+        },
+        {
+          "sfz": "Meatbass/Programs/arco_looped_basic_map.sfz",
+          "name": "arco looped basic map"
+        },
+        {
+          "sfz": "Meatbass/Programs/arco_looped_six_legato_first_map.sfz",
+          "name": "arco looped six legato first map"
+        },
+        {
+          "sfz": "Meatbass/Programs/arco_looped_six_legato_map.sfz",
+          "name": "arco looped six legato map"
+        },
+        {
+          "sfz": "Meatbass/Programs/arco_looped_six_map.sfz",
+          "name": "arco looped six map"
+        },
+        {
+          "sfz": "Meatbass/Programs/arco_looped_three_legato_map.sfz",
+          "name": "arco looped three legato map"
+        },
+        {
+          "sfz": "Meatbass/Programs/arco_looped_three_map.sfz",
+          "name": "arco looped three map"
+        },
+        {
+          "sfz": "Meatbass/Programs/arco_mw_basic_legato_map.sfz",
+          "name": "arco mw basic legato map"
+        },
+        {
+          "sfz": "Meatbass/Programs/arco_mw_basic_map.sfz",
+          "name": "arco mw basic map"
+        },
+        {
+          "sfz": "Meatbass/Programs/arco_mw_six_legato_first_map.sfz",
+          "name": "arco mw six legato first map"
+        },
+        {
+          "sfz": "Meatbass/Programs/arco_mw_six_legato_map.sfz",
+          "name": "arco mw six legato map"
+        },
+        {
+          "sfz": "Meatbass/Programs/arco_mw_six_map.sfz",
+          "name": "arco mw six map"
+        },
+        {
+          "sfz": "Meatbass/Programs/arco_mw_three_legato_map.sfz",
+          "name": "arco mw three legato map"
+        },
+        {
+          "sfz": "Meatbass/Programs/arco_mw_three_map.sfz",
+          "name": "arco mw three map"
+        },
+        {
+          "sfz": "Meatbass/Programs/arco_six.sfz",
+          "name": "arco six"
+        },
+        {
+          "sfz": "Meatbass/Programs/arco_six_legato_first_map.sfz",
+          "name": "arco six legato first map"
+        },
+        {
+          "sfz": "Meatbass/Programs/arco_six_legato_map.sfz",
+          "name": "arco six legato map"
+        },
+        {
+          "sfz": "Meatbass/Programs/arco_six_map.sfz",
+          "name": "arco six map"
+        },
+        {
+          "sfz": "Meatbass/Programs/arco_three.sfz",
+          "name": "arco three"
+        },
+        {
+          "sfz": "Meatbass/Programs/arco_three_legato_map.sfz",
+          "name": "arco three legato map"
+        },
+        {
+          "sfz": "Meatbass/Programs/arco_three_map.sfz",
+          "name": "arco three map"
+        },
+        {
+          "sfz": "Meatbass/Programs/pizz_basic.sfz",
+          "name": "pizz basic"
+        },
+        {
+          "sfz": "Meatbass/Programs/pizz_basic_legato_map.sfz",
+          "name": "pizz basic legato map"
+        },
+        {
+          "sfz": "Meatbass/Programs/pizz_basic_map.sfz",
+          "name": "pizz basic map"
+        },
+        {
+          "sfz": "Meatbass/Programs/pizz_six.sfz",
+          "name": "pizz six"
+        },
+        {
+          "sfz": "Meatbass/Programs/pizz_six_legato_first_map.sfz",
+          "name": "pizz six legato first map"
+        },
+        {
+          "sfz": "Meatbass/Programs/pizz_six_legato_map.sfz",
+          "name": "pizz six legato map"
+        },
+        {
+          "sfz": "Meatbass/Programs/pizz_six_map.sfz",
+          "name": "pizz six map"
+        },
+        {
+          "sfz": "Meatbass/Programs/pizz_three.sfz",
+          "name": "pizz three"
+        },
+        {
+          "sfz": "Meatbass/Programs/pizz_three_legato_first_map.sfz",
+          "name": "pizz three legato first map"
+        },
+        {
+          "sfz": "Meatbass/Programs/pizz_three_legato_map.sfz",
+          "name": "pizz three legato map"
+        },
+        {
+          "sfz": "Meatbass/Programs/pizz_three_map.sfz",
+          "name": "pizz three map"
+        }
+      ]
     },
     {
       "id": "karoryfer-emilyguitar",
@@ -17802,7 +17960,33 @@
       },
       "sfz": "Emilyguitar/emily_basic.sfz",
       "durationSeconds": 4.218776,
-      "mirroredAt": "2026-09-29"
+      "mirroredAt": "2026-09-29",
+      "instruments": [
+        {
+          "sfz": "Emilyguitar/emily_basic.sfz",
+          "name": "emily basic"
+        },
+        {
+          "sfz": "Emilyguitar/emily_chords.sfz",
+          "name": "emily chords"
+        },
+        {
+          "sfz": "Emilyguitar/emily_chords_wide.sfz",
+          "name": "emily chords wide"
+        },
+        {
+          "sfz": "Emilyguitar/emily_clean.sfz",
+          "name": "emily clean"
+        },
+        {
+          "sfz": "Emilyguitar/emily_five_voice.sfz",
+          "name": "emily five voice"
+        },
+        {
+          "sfz": "Emilyguitar/emily_three_voice.sfz",
+          "name": "emily three voice"
+        }
+      ]
     },
     {
       "id": "vcsl",

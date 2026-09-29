@@ -11,29 +11,8 @@
  * Usage: node scripts/build_sample_manifest.mjs <entry-id> [--write]
  */
 import fs from "node:fs";
+import { programsFrom } from "./lib/programs.mjs";
 import path from "node:path";
-
-/**
- * The programs a library actually offers, from the SFZ files it holds.
- *
- * A sample library splits its files by articulation — VCSL's four families are 155 SFZ files across 88 instruments, a harmonica alone having six variants — so the file list is not the instrument list. The rule is to group by directory
- * and base name (dropping the ` - <articulation>` suffix) and keep one program per group, preferring `- Keyswitch`, because those files are designed to switch articulation by key range and so cover the others. Listing every variant would
- * turn an instrument list into an articulation list; listing none would leave the library unplayable.
- */
-export function programsFrom(sfzPaths) {
-  const groups = new Map();
-  for (const path of sfzPaths) {
-    const base = path.replace(/\.sfz$/i, "").replace(/\s+-\s+.*$/, "");
-    if (!groups.has(base)) groups.set(base, []);
-    groups.get(base).push(path);
-  }
-  return [...groups.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([base, variants]) => ({
-      sfz: variants.find((variant) => / - Keyswitch\.sfz$/i.test(variant)) ?? [...variants].sort()[0],
-      name: base.split("/").pop(),
-    }));
-}
 
 const MANIFEST = path.join(process.cwd(), "public", "samples", "manifest.json");
 const argv = process.argv.slice(2);

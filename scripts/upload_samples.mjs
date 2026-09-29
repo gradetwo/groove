@@ -17,6 +17,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { programsFrom } from "./lib/programs.mjs";
 
 const MANIFEST = path.join(process.cwd(), "public", "samples", "manifest.json");
 const argv = process.argv.slice(2);
@@ -136,10 +137,15 @@ if (entry.archive) {
   walk(workdir);
   entry.files = found;
   const sfzFiles = found.filter((f) => f.path.endsWith(".sfz"));
+  /**
+   * The programs the archive holds, by the same rule the manifest builder uses. A library with several programs used to be reduced to one — whichever file sat nearest the root — so an archive with 39 programs offered a single instrument.
+   */
+  const programs = programsFrom(sfzFiles.map((file) => file.path));
+  entry.instruments = programs.length > 1 ? programs : undefined;
   // ⭐ The entry point is chosen, not guessed: a file at the top level if there is one, otherwise the shortest path, because a library's root program is nearer the root than its includes.
   const pick = sfzFiles.find((f) => !f.path.includes("/")) ?? [...sfzFiles].sort((a, b) => a.path.length - b.path.length)[0];
-  entry.sfz = pick ? pick.path : "";
-  console.log(`  unpacked ${found.length} file(s) · ${sfzFiles.length} sfz · entry: ${entry.sfz || "✗ none found"}`);
+  entry.sfz = programs[0]?.sfz ?? (pick ? pick.path : "");
+  console.log(`  unpacked ${found.length} file(s) · ${sfzFiles.length} sfz · ${programs.length} instrument(s) · entry: ${entry.sfz || "✗ none found"}`);
   if (!entry.sfz) {
     // ⚠️ An archive with no SFZ cannot be played, whatever else it contains — the same judgement the manifest builder makes for a tree.
     console.error("  ❌ no .sfz anywhere in the archive — this library cannot be played without mappings");
