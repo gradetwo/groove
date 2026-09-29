@@ -215,3 +215,21 @@ export function unresolvedVariables(regions: readonly SfzRegion[]): { variables:
     regions: regions.filter((region) => region.unresolved.length > 0).length,
   };
 }
+
+
+/**
+ * The `default_path` a file declared, read from the same text a caller would parse.
+ *
+ * Separate from `parseSfz` because it is a property of the **file** rather than of any region — and because a caller resolving sample addresses needs it whether or not the file produced a region this parser understood. It
+ * runs the same `#define` layer first, since a declaration may be written in terms of a variable (`default_path=$DIR/`).
+ */
+export function readDefaultPath(text: string): string | undefined {
+  const defined = applyDefines(text).text;
+  // The declaration lives in `<control>` in modern files and `<global>` in older ones; both are scanned rather than assumed, because the cost of the wrong guess is a sample resolved one directory too high.
+  for (const line of defined.split(/\r?\n/)) {
+    const clean = line.replace(/\/\/.*$/, "").trim();
+    const match = clean.match(/^default_path\s*=\s*(.+)$/);
+    if (match) return match[1]!.trim().replace(/^"|"$/g, "");
+  }
+  return undefined;
+}
