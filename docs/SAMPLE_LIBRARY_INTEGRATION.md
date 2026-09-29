@@ -684,11 +684,32 @@ sfz 总数              155
 
 实测（夹具就是这四份真文件，判据在 `src/test/realLibraryParse.test.ts`）：include 链进得去，那个最底层的文件解出 **16 个 region**，16 个样本路径互不相同。已经能用的东西比预想的多：`<global>`/`<master>`/`<group>`/`<region>` 的作用域继承、头部与 opcode 同行、`#define` 的收集、轮转字段、未知头部跳过而不报错。
 
-## 两个缺口，按实测大小排序
+## 更正：那"两个缺口"是我量错了（2026-09-29）
 
-**一、include 要能从库根解析。** `mappings/kickmic_basic.sfz` 里写着 `#include "mappings/kick_dampen.sfz"`。按"相对包含它的文件所在目录"解析（展开器现在的规则，也是多数库的规则）会得到 `mappings/mappings/kick_dampen.sfz`。**桶里说明这个库要的是哪一种**：`Programs/mappings/kick_dampen.sfz` 存在，嵌套那一份不存在。所以加载器要先试包含文件所在目录、再试程序根目录，两者都没有才报。这一条影响大，因为漏掉的那些文件正是多数 region 所在。
+上一版这里写着两个缺口——include 要能从库根解析、`$名字` 要代入——**两条都是错的**。`includes.ts` 早就实现了这两件事：`resolveCandidates` 先试包含文件所在目录、再试程序根目录，`substitute` 做 `$VAR` 代入（全局、按顺序）。
 
-**二、`$名字` 要代入。** 解析器收集 `#define`，但从不代入值，于是 16 个 region 的 `key` 全是字面量 `"$KICK_SNWRONG_KEY"`——整个套鼓压在一个键上。这一条决定了音符落到哪个 region。
+错在夹具不全：程序 include 的是 `keymaps/keymap_basic.sfz`，而我只放了名字相近的另一份 `keymaps/default/keymap_basic.sfz`。定义文件不在链上，于是十六个 region 全部留着字面量 `$KICK_SNWRONG_KEY`，而我把这个结果归因给了"解析器不代入"，而不是"我的夹具缺文件"。
+
+补上定义文件与 `mappings/kick_dampen.sfz` 之后，实测是：
+
+```
+included: 4  ["keymaps/keymap_basic.sfz", "mappings/kickmic_basic.sfz",
+              "mappings/kick_dampen.sfz", "mappings/kickmic/kick_snoff_map.sfz"]
+problems: 26    （夹具只有这四份，其余 include 如实报缺）
+regions: 16
+lokey/hikey: 35/35        ← 变量已代入成音符号
+hivel: 31, 63, 95, 127    ← 四个力度层，一层不缺
+seq_length: 4             ← 轮转
+unresolved: 0
+```
+
+`mappings/kick_dampen.sfz` 出现在 `included` 里这件事本身，就是库根回退在工作的证据：那份 include 写在 `mappings/kickmic_basic.sfz` 里，按包含文件所在目录解析会得到 `mappings/mappings/...`，是第二个候选（库根）命中的。
+
+## 一个真缺口：`<master>` 清空了外层 `<global>`
+
+程序最外层的 `<global>` 给底鼓那组声明了 `locc101=1`、`tune_cc90=1200`、`note_polyphony=3`、`group=501`。而底鼓的 region **一个都没带上**：被 include 的 `mappings/kickmic_basic.sfz` 打开了自己的 `<master>`，解析器在那里把全局域清空了（`global = {}`）。把 `<master>` 当作 `<global>` 是当初写下的最小规则，这就是它的后果。
+
+它在静止时看不出来：`locc101=1` 在默认 CC101 下本来就通过，`tune_cc90=1200` 在默认 CC90=63.5 时约为零音分。所以这个库照样能播——也正因如此，**一份能用的文件判不了"清空"对不对**。判它的是 sfizz 在**非默认 CC** 下的输出：如果外层的 `<global>` 值应当存活，那么把 CC90 移开时它必须变调，而这份解析器的 region 不会动。A4 那套"用 sfizz 的输出判"的机制正是干这个的。
 
 ## CC 与调制层的范围（决定）
 

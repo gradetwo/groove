@@ -5,8 +5,12 @@
  * as fixtures — and the shape it turns out to have is not the shape the earlier note assumed.
  *
  * The program file holds **no regions at all**, and that is not an obstacle: it is a routing document. `<control>` declares the CC defaults and their labels, three `<global>` blocks state the defaults for each microphone's regions, and the
- * regions arrive through `#include`. So the parser sees: `control` → `global` → include → `master` → `group` → include → `region`, four levels deep, with `<master>` and `<group>` opcodes inherited downward and two different keymap
+ * regions arrive through `#include`. So the parser sees: `control` → `global` → include → `master` → `group` → include → `region`, four levels deep, with `<master>` and `<group>` opcodes inherited downward and a keymap file of
  * `#define`s naming the notes.
+ *
+ * **It reads all of it.** An earlier version of this file claimed two gaps — that includes had to fall back to the library root and that `$name` was never substituted — and both claims were wrong. They came from measuring with an incomplete
+ * fixture set: the program includes `keymaps/keymap_basic.sfz`, the fixtures held only the different file `keymaps/default/keymap_basic.sfz`, so no definitions were loaded and every region kept a literal `$KICK_SNWRONG_KEY`. The expander
+ * had implemented both behaviours already. These criteria now assert what it does, and the note about the missing files stays because a partial fixture must not be mistaken for a parser that gave up.
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
@@ -31,9 +35,15 @@ describe("a real library's include chain", () => {
     const program = readFileSync(path.join(ROOT, "01-basic-kit.sfz"), "utf8");
     expect(program).not.toMatch(/<region>/);
     const { expanded, regions } = parseProgram();
+    expect(expanded.included).toContain("keymaps/keymap_basic.sfz");
     expect(expanded.included).toContain("mappings/kickmic_basic.sfz");
     expect(expanded.included).toContain("mappings/kickmic/kick_snoff_map.sfz");
-    expect(regions.length).toBeGreaterThan(0);
+    /**
+     * **And the fallback that this file's own author needed**: `mappings/kickmic_basic.sfz` writes `#include "mappings/kick_dampen.sfz"`, which from the including file's directory would be `mappings/mappings/kick_dampen.sfz`. The
+     * expander tries that first, then the library root, and the root is where the file is — so the path below is the second candidate having won.
+     */
+    expect(expanded.included).toContain("mappings/kick_dampen.sfz");
+    expect(regions.length).toBe(16);
     /**
      * **The fixtures are four files of a much larger chain, so most includes are reported rather than followed — and the reports are the criterion.** Every problem names a path, none is silent, and each of them is a file this fixture set does
      * not hold: that is what makes the partial fixture honest rather than a parser that quietly gave up.
@@ -61,70 +71,55 @@ describe("a real library's include chain", () => {
     expect(regions.filter((region) => region.opcodes.seq_length !== undefined)).toHaveLength(declared);
   });
 
-  /**
-   * **The one thing standing between this parser and this library, measured rather than predicted.**
-   *
-   * `keymaps/default/keymap_basic.sfz` is 67 lines of `#define $KICK_SNWRONG_KEY 35` and its siblings, and the mappings write `key=$KICK_SNWRONG_KEY`. The parser collects those definitions but never substitutes them, so every one of the
-   * sixteen regions carries the literal string as its key — one key for the whole kit, which would put every drum on one note.
-   *
-   * The criterion is the rule rather than the number: a value that contains a variable the definitions do not resolve must be **reported**, and the report must agree with what the regions contain. Substitution is the next piece of
-   * parser work, and this test flips to asserting `key === "35"` when it lands.
-   */
-  it("reports every variable it could not substitute, agreeing with what the regions carry", () => {
-    const { regions } = parseProgram();
-    const report = unresolvedVariables(regions);
-    const carrying = regions.filter((region) =>
-      Object.values(region.opcodes).some((value) => typeof value === "string" && value.includes("$"))
-    );
-    expect(report.regions).toBe(carrying.length);
-    expect(report.variables).toContain("$KICK_SNWRONG_KEY");
-    // Named rather than dropped: a caller can say which note the instrument failed to place, instead of silently mapping every region onto one key.
-    expect(report.variables.every((variable) => variable.startsWith("$"))).toBe(true);
-  });
 });
 
-describe("the two things this library needs that the parser does not do", () => {
-  const paths = new Set(
-    (JSON.parse(readFileSync("public/samples/manifest.json", "utf8")).entries as { id: string; files: { path: string }[] }[])
-      .find((entry) => entry.id === "virtuosity-drums-basic")!
-      .files.map((file) => file.path)
-  );
-
-  it("resolves an include written from the library root, which is how this library writes them", () => {
+describe("what the parser already does with this library", () => {
+  it("substitutes the keymap's definitions, so the regions carry note numbers rather than variable names", () => {
     /**
-     * `mappings/kickmic_basic.sfz` contains `#include "mappings/kick_dampen.sfz"`. Resolved against the including file's own directory — the rule the expander implements, and the rule most libraries follow — that path becomes
-     * `mappings/mappings/kick_dampen.sfz`. **The mirror says which one this library means**: the root-relative form exists and the nested form does not.
+     * **The claim this replaces was wrong.** With the definition file in the chain, every region's key is the number the keymap defines — 35 — and nothing is left unresolved. A partial fixture made a working substitution look like a missing
+     * one, which is why the fixture set now includes the file the program actually includes rather than a similarly named one.
      */
-    expect(paths.has("Programs/mappings/kick_dampen.sfz")).toBe(true);
-    expect(paths.has("Programs/mappings/mappings/kick_dampen.sfz")).toBe(false);
-    // So a loader has to try the including file's directory first and the program root second, and report only when neither has it.
-    expect(paths.has("Programs/keymaps/keymap_basic.sfz")).toBe(true);
+    const { regions } = parseProgram();
+    const keys = new Set(regions.map((region) => region.opcodes.key ?? region.inherited.key));
+    expect([...keys]).toEqual(["35"]);
+    expect(unresolvedVariables(regions)).toEqual({ variables: [], regions: 0 });
   });
 
-  it("has the definitions the mappings need, and the mappings use them", () => {
+  it("resolves the key to a note number, the velocity layers, and the round-robin length", () => {
+    // The typed fields rather than the raw opcode dictionary: `key` becomes `lokey`/`hikey`, and these are the values a note is matched against.
+    const { regions } = parseProgram();
+    expect(new Set(regions.map((region) => `${region.lokey}/${region.hikey}`))).toEqual(new Set(["35/35"]));
+    // Four velocity layers, and every one of them present: a missing layer would be a silent region rather than an error.
+    expect(new Set(regions.map((region) => region.hivel))).toEqual(new Set([31, 63, 95, 127]));
+    expect(new Set(regions.map((region) => region.opcodes.seq_length))).toEqual(new Set(["4"]));
+  });
+
+  it("inherits `<master>` and `<group>` downward, and keeps the CC opcodes it does not act on", () => {
+    const { regions } = parseProgram();
+    const first = regions[0]!;
+    // `ampeg_hold` is stated in the master block of one included file and reaches a region declared two includes deeper.
+    expect(first.opcodes.ampeg_hold).toBe("0.2");
     /**
-     * The other gap, measured: `keymaps/default/keymap_basic.sfz` is 67 lines of `#define $NAME value`, and the mappings write `key=$KICK_SNWRONG_KEY`. The parser collects the definitions and does not substitute them, so all sixteen
-     * regions of the kick microphone carry one literal key — which would put the whole kit on a single note.
+     * **Kept rather than dropped.** This library is full of CC-driven opcodes, and the subset does not act on them yet — but a parser that discarded them would make the file look simpler than it is, and the next reader of these regions
+     * could not tell "the file does not say" from "we threw it away".
      */
-    const keymap = readFileSync(path.join(ROOT, "keymaps/default/keymap_basic.sfz"), "utf8");
-    const defined = new Set((keymap.match(/^#define\s+(\$[A-Za-z0-9_]+)/gm) ?? []).map((line) => line.replace(/^#define\s+/, "").trim()));
+    expect(first.opcodes.tune_cc72).toBe("1200");
+    expect(first.opcodes.tune_curvecc72).toBe("1");
+  });
+
+  it("records that an outer `<global>`'s values do not reach regions inside an included `<master>`", () => {
     /**
-     * A rule rather than a count: **every variable the mapping file uses is defined by the keymap file**. That is what makes substitution possible at all — a name without a definition could not be resolved by any loader, and one with a
-     * definition is what the next piece of work reads.
+     * **Measured, and not yet settled.** The program's first `<global>` states `locc101=1`, `tune_cc90=1200`, `note_polyphony=3` and `group=501` for the kick's microphone; the kick's regions carry none of them, because the included file
+     * opens its own `<master>` and the parser clears the global scope there. Treating `<master>` as `<global>` is the documented minimal rule, and this is its consequence.
+     *
+     * It is invisible at rest: `locc101=1` passes at the default CC101 anyway, and `tune_cc90=1200` is about zero cents at the default CC90 of 63.5. So the library still plays — which is exactly why a file that works cannot settle
+     * whether the reset is right. What settles it is sfizz at a **non-default** CC: if the outer `<global>`'s values survive, moving CC90 must transpose while this parser's regions stay put.
      */
-    const usedInMapping = new Set(readFileSync(path.join(ROOT, "mappings/kickmic_basic.sfz"), "utf8").match(/\$[A-Za-z0-9_]+/g) ?? []);
-    const mappingUsesKey = new Set([...usedInMapping].filter((name) => name.includes("KEY") || name.includes("TIME")));
-    for (const name of mappingUsesKey) expect(defined, `${name} is not defined`).toContain(name);
-    // The declarations are also used by files this fixture set does not hold, so the keymap is larger than what one mapping file needs.
-    expect(defined.size).toBeGreaterThan(mappingUsesKey.size);
-    // The `key=` sits in the `<group>` of the microphone's mapping file, not in the region file the group includes.
-    const mapping = readFileSync(path.join(ROOT, "mappings/kickmic_basic.sfz"), "utf8");
-    expect(mapping).toMatch(/key=\$KICK_SNWRONG_KEY/);
-    {
-      const { regions } = parseProgram();
-      const keys = new Set(regions.map((region) => region.opcodes.key ?? region.inherited.key));
-      // One literal key, not a number: substitution is the next parser change, and this assertion is what will change with it.
-      expect([...keys]).toEqual(["$KICK_SNWRONG_KEY"]);
-    }
+    const program = readFileSync(path.join(ROOT, "01-basic-kit.sfz"), "utf8");
+    expect(program).toMatch(/^locc101=1$/m);
+    expect(program).toMatch(/^tune_cc90=1200$/m);
+    const { regions } = parseProgram();
+    expect(regions[0]!.opcodes.locc101).toBeUndefined();
+    expect(regions[0]!.opcodes.tune_cc90).toBeUndefined();
   });
 });
