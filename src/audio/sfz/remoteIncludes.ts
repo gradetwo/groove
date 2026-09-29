@@ -9,6 +9,23 @@
  */
 import { expandIncludes, type ExpandIncludesResult } from "./includes";
 
+/** Rejects rather than waiting forever — the caller's fallback and error reporting both depend on getting an answer. */
+function withTimeout<T>(promise: Promise<T>, ms: number, what: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${what}: no answer within ${ms} ms`)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+}
+
 export interface RemoteIncludeOptions {
   /** Fetches one file, already source-first with the mirror as fallback. */
   fetchText: (url: string) => Promise<string>;
@@ -22,6 +39,8 @@ export interface RemoteIncludeOptions {
    */
   baseUrl?: string;
   maxDepth?: number;
+  /** Per request, so one slow or throttled address cannot stall the expansion. */
+  requestTimeoutMs?: number;
 }
 
 export interface RemoteExpandResult extends ExpandIncludesResult {
@@ -43,7 +62,28 @@ export async function expandRemoteIncludes(text: string, options: RemoteIncludeO
     const wanted = result.missing.filter((path) => !attempted.has(path));
     if (wanted.length === 0) break;
 
-    for (const path of wanted) {
+    /**
+     * **Sequentially, with a timeout — both learned from CI.** The first version fired every candidate at once: for this library that is ~240 requests to `raw.githubusercontent`, half of them certain
+     * 404s, and the end-to-end step then ran **25 minutes in CI against 2–3 locally**. A shared CI egress is exactly where a burst like that gets throttled or left hanging, and with no timeout a single
+     * stuck request stalls the whole chain — which is what "in_progress" for 25 minutes looked like.
+     *
+     * Neither change is a workaround for CI: **an application resolving a real library would make the same burst**, so the timeout and the serialisation improve the product, not the test.
+     */
+    /**
+     * **Bounded concurrency, not full serialisation and not all at once — measured, both ways.**
+     *
+     * The first version fired every candidate at once: ~240 requests to `raw.githubusercontent`, half of them certain 404s, and the end-to-end step ran **25 minutes in CI against 2–3 locally**; a shared
+     * egress is where a burst like that gets throttled or left hanging. The correction was to serialise them, which was **slower still locally** (over ten minutes) because 230 round trips are 230
+     * round trips.
+     *
+     * So: a small fixed window, and a timeout per request. Neither is a concession to CI — an application resolving a real library makes the same requests, so a bounded window and a deadline improve the
+     * product as much as the test.
+     */
+    const window = 8;
+    for (let start = 0; start < wanted.length; start += window) {
+      await Promise.all(wanted.slice(start, start + window).map((path) => fetchOne(path)));
+    }
+    async function fetchOne(path: string): Promise<void> {
       attempted.add(path);
       try {
         // Resolved against the program's own address, so a relative include becomes a real URL without a second implementation of the resolver's rules.
@@ -53,7 +93,9 @@ export async function expandRemoteIncludes(text: string, options: RemoteIncludeO
          * genuinely absent.
          */
         const absolute = /^[a-z][a-z0-9+.-]*:\/\//i.test(path);
-        files.set(path, await options.fetchText(absolute ? path : new URL(path, options.baseUrl ?? options.programUrl).toString()));
+        const target = absolute ? path : new URL(path, options.baseUrl ?? options.programUrl).toString();
+        // A hung request must not become a hung render: a real library has hundreds of candidate paths and a CDN is entitled to be slow, not to be infinite.
+        files.set(path, await withTimeout(options.fetchText(target), options.requestTimeoutMs ?? 10_000, target));
       } catch (error) {
         failures.push(`${path}: ${error instanceof Error ? error.message : String(error)}`);
       }
