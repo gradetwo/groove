@@ -472,3 +472,41 @@ ArrangementViewV2:97   playArrangementV2(arrangement, {}, player)
 ### ⭐ 而判据是现成的，而且业主已经把它指出来了
 
 ⭐⭐ **`/new` 里的那行 `Play (audio engine not connected yet)` 应当消失 ✓ —— 而 `Play` 应当真的出声** ✓✓ —— ⭐ **界面如实报告自己的状态 ✓，所以"那行字还在不在"就是一个不需要读代码的判据** ✓✓。
+
+
+## 20. ⭐⭐⭐⭐⭐ 引擎的创建者具名了：`useAudioEngineLifecycle`（2026-09-28 晚 ✓）
+
+### 读到的（`src/features/sequencer/hooks/useAudioEngineLifecycle.ts` ✓）
+
+```
+:92   export function useAudioEngineLifecycle({ … })
+:285  const engine = new AudioEngine({ … })           ← ⭐ 引擎在这里被创建 ✓
+:427  setActiveAudioEngine(engine);                   ← ⭐ 并注册到全局 ✓
+:431  setActiveAudioEngine(null);                     ← ⭐ 清理 ✓
+:562  return { updatePlayhead, clearPlayhead, engineReady };
+```
+
+⭐ **而它被谁调用** ✓：**`src/views/StudioView.tsx:455` ✓** 与 **`src/components/console/ConsolePanel.tsx`** ✗ —— ⭐ **两个都是 studio 那边的界面 ✓，而 `/new` 一个都不渲染** ✗✓✓。
+
+### ⭐⭐ 所以修法毫无歧义，而它需要一点判断
+
+| 选项 | 评价 |
+|---|---|
+| ⭐ **A：把整个 `useAudioEngineLifecycle` 搬到两个路由之上** ✗ | ⚠️ **不行 ✓ —— 它是一个 562 行的 hook ✓，牵着 sequencer 状态 ✓（`updatePlayhead` ✓ `clearPlayhead` ✓）** ✗✓ |
+| ⭐ **B：抽出其中【创建 + 注册 + 回调】那一小段 ✓，做成一个小 hook ✓，从两个路由之上调用** ✓✓ | ⭐ **最对 ✓ —— 因为"引擎存在"与"sequencer 在跑"本来就是两件事** ✓✓ |
+
+⭐⭐ **而 B 的理由，与第 19 节那条完全相同** ✓✓：**引擎是【全局】的 ✓（`activeEngine.ts` 就是它的注册表 ✓），而 sequencer 是【局部】的** ✗✓ —— ⭐ **把全局的东西挂在一个需要本地状态的 hook 上，于是它就只能在本地界面里被创建** ✗✓✓ —— ⭐ **这是同一个成因的第二个层次** ✓。
+
+### ⭐ 而修法的判据，仍然是那句业主已经拍下来的话
+
+⭐⭐ **`/new` 里的 `Play (audio engine not connected yet)` 应当消失 ✓，而 `Play` 应当真的出声** ✓✓ —— ⭐ **它不需要读代码就能判** ✓。
+
+### ⚠️ 而我这一轮的三个路径都猜错了
+
+| 我猜的 | 实际 |
+|---|---|
+| ⚠️ **`src/components/StudioView.tsx`** ✗ | ⭐ **`src/views/StudioView.tsx`** ✓ |
+| ⚠️ **在 `components/` 里** ✗ | ⭐ **`src/features/sequencer/hooks/`** ✓ |
+| ⚠️ **一个组件创建引擎** ✗ | ⭐ **一个 hook 创建它** ✓ |
+
+⭐⭐ **而三次都是 `grep -rln` 一下就解决的事 ✓ —— 与我早先那三次（import 块 ✓ 函数名 ✓ 文件是否存在 ✓）一模一样** ✓ —— ⭐ **规律很清楚：我在"找东西"上的默认动作是【回忆】✗，而正确的默认动作是【搜一下】✓** ✓✓。
