@@ -554,3 +554,38 @@ export interface IncludeReader {
 3. ⭐ **而每一轮都是同一个 `expandIncludes`** ✓ → **语义只有一份** ✓✓。
 
 ⚠️ **而波次式有一个必须防的** ✗：**include 循环** ✓ —— ⭐ 展开器**已经有 cycle/depth 守卫** ✓✓（本工作流早先就被一个循环 include 教过 ✓），**所以波次循环的终止条件是"`missing` 不再变化"** ✓，而**不是"取到一个固定的轮数"** ✓。
+
+## ⭐⭐ 最后一层：采样路径要变成**地址**，而不是查表键（2026-09-28，端到端探针点名）
+
+端到端探针在 include 打通之后给出的下一条 ✓：
+
+```
+loadNote threw: no sample "../Samples/kickmic/snare/kickmic_snare_center_vl29.flac"
+                — the catalogue holds virtuosity-drums-basic
+```
+
+⭐ **加载器把 region 的 `sample=` 当作"目录里的 `assetId`"去查** ✗✓ —— **而目录里装的是乐器，不是文件** ✗✓（**清单列的是文件 ✓，但目录是乐器级的** ✓）。
+
+### ⭐⭐ 而修法是一行 URL 语义，不是一套新的基准算术
+
+```ts
+const primary  = new URL(region.sample, asset.sfz.url).toString();
+const fallback = asset.sfz.fallbackUrl ? new URL(region.sample, asset.sfz.fallbackUrl).toString() : undefined;
+```
+
+⭐ **`../Samples/kickmic/snare/x.flac` 相对 `…/Programs/01-basic-kit.sfz`** → ⭐ **`…/Samples/kickmic/snare/x.flac`** ✓✓ —— **一步就对了** ✓。
+
+⚠️ 而这**正是我先前栽过两次的地方** ✗✓：① 源地址多拼了一层 `prefix` ✓；② include 用 `new URL(path, programUrl)` 相对**程序目录**解析、而路径已经是根相对 ✗✓。
+
+### ⭐ 为什么这次不会再栽：**这次的两个地址都是"程序自己的地址"**
+
+| 处 | 基准 | 对不对 |
+|---|---|---|
+| **include** | 库根（**路径是根相对的** ✓） | ⭐ 需要把库根**显式算出来** ✓（`url` 去掉 `sfz.path` ✓）—— 因为路径不是相对程序的 ✗ |
+| ⭐ **采样** | ⭐ **程序自己的 URL** ✓ | ✅ **因为 `sample=` 就是相对程序文件的** ✓（`../Samples/…` ✓）—— ⭐ **所以一行 `new URL` 就够，而任何"基准算术"都会再次引入同一类错** ✓✓ |
+
+⭐ **两个地址、两种相对关系** ✓ —— ⭐ 而它们**各自都有真实数据可以对照** ✓（`included 126 · regions 1676` ✓ 与 1659 个采样文件 ✓），**所以错了会立刻显形** ✓。
+
+### ⚠️ 而它要改的地方（已定位 ✓）
+
+`sampleLoader.loadNote`（`src/audio/sampleLoader.ts:85`）✓：region 解析出 `sample` 之后 ✓，**不再走 `load(assetId)` 的目录查找** ✓，而是**按上面两条地址解码** ✓ —— ⭐ 而**回退判据仍然是"任何失败"** ✓（源优先 ✓ 镜像回退 ✓），**与 SFZ 程序本身同一套规则** ✓✓。
