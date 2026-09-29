@@ -32,6 +32,8 @@ step "build" npx vite build
 step "deploy" npm run deploy:only
 
 step "mirror" ./scripts/sync_release_mirror.sh
+# ⭐ The tag, which this script used to ask for in its final line without making it.
+step "tag" bash scripts/tag_release.sh
 
 cd "$(dirname "$0")/.." || exit 1
 printf '  %-16s ' "remote"
