@@ -73,7 +73,11 @@ function storedBytes() {
   }
 }
 
-const planned = (entry.files ?? []).reduce((sum, f) => sum + (f.bytes ?? 0), 0);
+/**
+ * ⭐ **An archive entry knows what it will send before it is unpacked: the archive's own size.** Its `files` list is empty until then — filled by the step that sees the bytes — so summing `files` would report zero and make the
+ * budget check meaningless, which is exactly what happened on the first run against a release-shaped entry.
+ */
+const planned = entry.archive ? entry.archive.bytes : (entry.files ?? []).reduce((sum, f) => sum + (f.bytes ?? 0), 0);
 const stored = storedBytes();
 // ⭐ The ceiling is the owner's: 12 GB, chosen so the four libraries and the three Karoryfer instruments all fit.
 const ceiling = 12 * GB;
@@ -83,7 +87,10 @@ if (stored + planned >= ceiling) {
   console.error("  ❌ over the ceiling — nothing will be uploaded");
   process.exit(1);
 }
-if ((entry.files ?? []).length === 0) {
+/**
+ * ⭐ The guard asks the question that fits the entry's shape. A tree entry with no files has not been enumerated and must be built first; an archive entry has no files *yet* by design, and its size is carried by the archive.
+ */
+if (!entry.archive && (entry.files ?? []).length === 0) {
   console.error("  ❌ the entry lists no files — run scripts/build_sample_manifest.mjs first");
   process.exit(1);
 }

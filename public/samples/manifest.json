@@ -3,7 +3,7 @@
   "entries": [
     {
       "id": "virtuosity-drums-basic",
-      "name": "Virtuosity Drums — Basic Kit",
+      "name": "Virtuosity Drums \u2014 Basic Kit",
       "licence": "CC0",
       "prefix": "virtuosity-drums",
       "repo": "sfzinstruments/virtuosity_drums",
@@ -11653,6 +11653,36 @@
       "enumeratedAt": "2026-09-29",
       "durationSeconds": 25.862625,
       "mirroredAt": "2026-09-29"
+    },
+    {
+      "id": "karoryfer-meatbass",
+      "name": "Karoryfer Meatbass",
+      "licence": "CC0",
+      "repo": "sfzinstruments/karoryfer.meatbass",
+      "sourceUrl": "https://github.com/sfzinstruments/karoryfer.meatbass",
+      "prefix": "karoryfer-meatbass",
+      "files": [],
+      "archive": {
+        "tag": "v1.001",
+        "asset": "Karoryfer.Meatbass.v1.001.zip",
+        "bytes": 255425351,
+        "url": "https://github.com/sfzinstruments/karoryfer.meatbass/releases/download/v1.001/Karoryfer.Meatbass.v1.001.zip"
+      }
+    },
+    {
+      "id": "karoryfer-emilyguitar",
+      "name": "Karoryfer Emilyguitar",
+      "licence": "CC0",
+      "repo": "sfzinstruments/karoryfer.emilyguitar",
+      "sourceUrl": "https://github.com/sfzinstruments/karoryfer.emilyguitar",
+      "prefix": "karoryfer-emilyguitar",
+      "files": [],
+      "archive": {
+        "tag": "v1.001",
+        "asset": "Karoryfer.Emilyguitar.v1.001.zip",
+        "bytes": 103484350,
+        "url": "https://github.com/sfzinstruments/karoryfer.emilyguitar/releases/download/v1.001/Karoryfer.Emilyguitar.v1.001.zip"
+      }
     }
   ]
 }
