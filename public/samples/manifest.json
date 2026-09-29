@@ -3,7 +3,7 @@
   "entries": [
     {
       "id": "virtuosity-drums-basic",
-      "name": "Virtuosity Drums \u2014 Basic Kit",
+      "name": "Virtuosity Drums — Basic Kit",
       "licence": "CC0",
       "prefix": "virtuosity-drums",
       "repo": "sfzinstruments/virtuosity_drums",
@@ -17803,30 +17803,6 @@
       "sfz": "Emilyguitar/emily_basic.sfz",
       "durationSeconds": 4.218776,
       "mirroredAt": "2026-09-29"
-    },
-    {
-      "id": "vcsl",
-      "name": "VCSL \u2014 Versilian Community Sample Library (four families)",
-      "licence": "CC0",
-      "repo": "sgossner/VCSL",
-      "pin": "dfcf4a4918771eee884b96ad4493de82ef84daf6",
-      "sourceUrl": "https://github.com/sgossner/VCSL",
-      "prefix": "vcsl",
-      "paths": [
-        "Aerophones",
-        "Idiophones",
-        "Membranophones",
-        "Electrophones"
-      ],
-      "files": [],
-      "needs": [
-        "key",
-        "lokey",
-        "hikey",
-        "pitch_keycenter",
-        "lovel",
-        "hivel"
-      ]
     }
   ]
 }

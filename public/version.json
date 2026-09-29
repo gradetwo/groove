@@ -1,27 +1,23 @@
 {
-  "version": "2.34.29",
+  "version": "2.34.30",
   "releaseDate": "2026-09-29",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.29",
+    "version": "2.34.30",
     "date": "2026-09-29",
     "category": "feature",
     "title": {
-      "zh": "四件真实乐器都已就位",
-      "en": "Four real instruments, all in place"
+      "zh": "关于里能联系到我们了",
+      "en": "The About panel can reach us now"
     },
     "highlights": [
       {
-        "zh": "电贝斯与电吉他加入：Karoryfer 的两件免费乐器已镜像，各自带 587 与 331 个文件。",
-        "en": "Electric bass and electric guitar join: two Karoryfer instruments are mirrored, with 587 and 331 files."
+        "zh": "设置里的关于新增两行：联系地址，以及发邮件上报问题。",
+        "en": "The About panel in settings has two new rows: the contact address, and a line to report a bug by email."
       },
       {
-        "zh": "清单现在逐个文件带哈希，并带实测时长——四件乐器共 3244 个文件，全部核对过。",
-        "en": "The manifest now carries a hash per file and a measured duration — 3244 files across four instruments, all verified."
-      },
-      {
-        "zh": "可达性检查会遍历每一个乐器，而不是只看第一个。",
-        "en": "The reachability check walks every instrument rather than only the first."
+        "zh": "上报那条带着主题，于是来信是标好的，而不是一句无题的问候。",
+        "en": "The bug line carries a subject, so a report arrives labelled rather than as a bare greeting."
       }
     ],
     "truncated": false
