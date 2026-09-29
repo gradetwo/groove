@@ -37,6 +37,22 @@ import { generateMelody } from "./melody";
 import { EXAMPLE_GENRES, examplesFor } from "./examples";
 import { validateProsody } from "./prosody";
 import { flattenSong } from "../src/data/songFlatten";
+import {
+  addMcpTake,
+  addMcpTrack,
+  createMcpArrangement,
+  describeMcpArrangement,
+  removeMcpTrack,
+  renameMcpTrack,
+  selectMcpTake,
+  setMcpTrackFlag,
+  setMcpTrackInstrument,
+  setMcpTrackKind,
+  setMcpTrackParent,
+  setMcpTrackSteps,
+  summariseArrangement,
+  getMcpArrangement,
+} from "./arrangement";
 import { APP_VERSION } from "../src/version";
 import { exportProjectPackage, validateGroovePackage } from "../src/features/sequencer/projectDb";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
@@ -140,6 +156,249 @@ export interface ToolDefinition {
 }
 
 export const TOOLS: ToolDefinition[] = [
+  /**
+   * The arrangement surface — the v2 model the interface has used since `/new`.
+   *
+   * It sits first because it is where a project starts: the song tools below build a **v1 song** (clips, sections, lane slots), and an agent asked to "start a new arrangement" should not have to reach past that to find the tools that add tracks, choose
+   * an instrument, write steps or file a recording.
+   *
+   * The kind list is repeated in the schemas rather than shared through a constant, because a `z.enum` is what a client reads for its own validation — and one source of truth for it is `TrackKindV2`, which the compiler checks these against.
+   */
+  {
+    name: "create_arrangement",
+    title: "Create an arrangement",
+    description:
+      "Start a v2 arrangement: a template's tracks, or a blank one with a single track of the kind you choose. Returns the arrangementId every other arrangement tool takes, plus the tracks and any problem that would stop it being heard.",
+    readOnly: false,
+    inputSchema: {
+      templateId: z
+        .string()
+        .optional()
+        .describe("a template id: drums-bass, drums-bass-chords or samplers — any summary lists them; omit for a blank arrangement"),
+      blankKind: z
+        .enum(["instrument", "drumkit", "sampler", "fx", "folder"])
+        .optional()
+        .describe("the kind the blank arrangement's single track gets; ignored when templateId is given"),
+      songId: z.string().optional().describe("the v1 song this is an arrangement of; defaults to a scratch id"),
+    },
+    handler: (args) => {
+      try {
+        return createMcpArrangement({
+          templateId: args.templateId as string | undefined,
+          blankKind: args.blankKind as never,
+          songId: args.songId as string | undefined,
+        });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "get_arrangement",
+    title: "Read an arrangement",
+    description: "The arrangement's tracks, each one's kind, instrument, steps and takes, plus anything that would stop it being heard.",
+    readOnly: true,
+    inputSchema: { arrangementId: z.string() },
+    handler: (args) => {
+      try {
+        const arrangement = getMcpArrangement(String(args.arrangementId));
+        if (!arrangement) throw new Error(`unknown arrangementId "${String(args.arrangementId)}" — create one with create_arrangement`);
+        return summariseArrangement(String(args.arrangementId), arrangement);
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "describe_arrangement",
+    title: "Describe an arrangement",
+    description: "One line per track, for reading rather than parsing.",
+    readOnly: true,
+    inputSchema: { arrangementId: z.string() },
+    handler: (args) => {
+      try {
+        return describeMcpArrangement(String(args.arrangementId));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "add_arrangement_track",
+    title: "Add a track",
+    description: "Add a track to an arrangement. A sampler track starts with the default instrument already set, because a sampler that cannot sound is the mistake this model names.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      kind: z.enum(["instrument", "drumkit", "sampler", "fx", "folder"]),
+      name: z.string().max(40).optional(),
+    },
+    handler: (args) => {
+      try {
+        return addMcpTrack(String(args.arrangementId), args.kind as never, args.name as string | undefined);
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "remove_arrangement_track",
+    title: "Remove a track",
+    description: "Remove a track and the notes it held. A folder's children are not removed with it — they keep existing, detached.",
+    readOnly: false,
+    inputSchema: { arrangementId: z.string(), trackId: z.string() },
+    handler: (args) => {
+      try {
+        return removeMcpTrack(String(args.arrangementId), String(args.trackId));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "set_arrangement_track_kind",
+    title: "Set a track's kind",
+    description:
+      "Change what a track is. Becoming a sampler gives it the default instrument, keeping one it already had; leaving a sampler drops the instrument, since a drum or effect track does not play a catalogue asset.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      trackId: z.string(),
+      kind: z.enum(["instrument", "drumkit", "sampler", "fx", "folder"]),
+    },
+    handler: (args) => {
+      try {
+        return setMcpTrackKind(String(args.arrangementId), String(args.trackId), args.kind as never);
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "rename_arrangement_track",
+    title: "Rename a track",
+    description: "Give a track the name a person will read.",
+    readOnly: false,
+    inputSchema: { arrangementId: z.string(), trackId: z.string(), name: z.string().min(1).max(40) },
+    handler: (args) => {
+      try {
+        return renameMcpTrack(String(args.arrangementId), String(args.trackId), String(args.name));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "set_arrangement_track_flag",
+    title: "Mute or solo a track",
+    description: "Mute or solo a track. Soloing is what a person uses to hear one part of an arrangement on its own.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      trackId: z.string(),
+      flag: z.enum(["muted", "soloed"]),
+      value: z.boolean(),
+    },
+    handler: (args) => {
+      try {
+        return setMcpTrackFlag(String(args.arrangementId), String(args.trackId), args.flag as "muted" | "soloed", Boolean(args.value));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "set_arrangement_track_parent",
+    title: "Put a track in a folder",
+    description: "Attach a track to a folder track, or pass null to detach it. Folding is display only and must never change what is heard.",
+    readOnly: false,
+    inputSchema: { arrangementId: z.string(), trackId: z.string(), parentId: z.string().nullable() },
+    handler: (args) => {
+      try {
+        return setMcpTrackParent(String(args.arrangementId), String(args.trackId), args.parentId === null ? null : String(args.parentId));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "set_arrangement_track_instrument",
+    title: "Choose a sampler track's instrument",
+    description:
+      "Point a sampler track at a catalogue asset — the mirrored libraries include virtuosity-drums-basic, salamander-grand, karoryfer-meatbass (39 instruments), karoryfer-emilyguitar (6) and vcsl (88). Refused for any other kind of track.",
+    readOnly: false,
+    inputSchema: { arrangementId: z.string(), trackId: z.string(), assetId: z.string().describe("a catalogue asset id") },
+    handler: (args) => {
+      try {
+        return setMcpTrackInstrument(String(args.arrangementId), String(args.trackId), String(args.assetId));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "set_arrangement_track_steps",
+    title: "Write a track's steps",
+    description:
+      "Set the whole step pattern a track plays: a step is on when its value is non-zero. The length is yours, so a pattern is the steps it has rather than padded to sixteen. Refused for effect and folder tracks, whose silence is their definition.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      trackId: z.string(),
+      steps: z.array(z.number()).min(1).max(64).describe("one entry per step; non-zero is on"),
+    },
+    handler: (args) => {
+      try {
+        return setMcpTrackSteps(String(args.arrangementId), String(args.trackId), args.steps as number[]);
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "add_arrangement_take",
+    title: "File a recording onto a track",
+    description:
+      "Put a take on a track: audio for a sampler, a sequence for anything else — recording is an input form rather than a track kind. The new take becomes the one that plays. Give startBar and endBar when the transport was rolling.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      trackId: z.string(),
+      source: z.enum(["audio", "midi"]),
+      label: z.string().max(40).optional(),
+      recordedAt: z.number().optional().describe("epoch milliseconds; defaults to now"),
+      startBar: z.number().int().min(0).optional(),
+      endBar: z.number().int().min(0).optional(),
+    },
+    handler: (args) => {
+      try {
+        return addMcpTake(String(args.arrangementId), {
+          trackId: String(args.trackId),
+          source: args.source as "audio" | "midi",
+          label: args.label as string | undefined,
+          recordedAt: args.recordedAt as number | undefined,
+          startBar: args.startBar as number | undefined,
+          endBar: args.endBar as number | undefined,
+        });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "select_arrangement_take",
+    title: "Choose which take plays",
+    description: "Choose the take a track plays, or pass null to clear the choice. Refused when the take is not on that track, naming the ones that are.",
+    readOnly: false,
+    inputSchema: { arrangementId: z.string(), trackId: z.string(), takeId: z.string().nullable() },
+    handler: (args) => {
+      try {
+        return selectMcpTake(String(args.arrangementId), String(args.trackId), args.takeId === null ? null : String(args.takeId));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
   {
     name: "list_genres",
     title: "List genres",

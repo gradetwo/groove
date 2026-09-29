@@ -69,6 +69,49 @@ Read-only tools are marked ▢, tools that change something outside the session 
 | `get_chord_progression` ▢ | `id` | degrees, roman numerals, example songs, emotional tag |
 | `get_loudness_report` ▢ | `genreId?` | the committed baseline (LUFS, true peak, trim) for one genre or the whole table |
 
+### Arrangement (the v2 model behind `/new`)
+
+The song tools above compose a **v1 song** — clips, sections, lane slots. The interface's `/new` route uses a different model, and until this group existed an agent could not reach it at all: no way to add a track, choose its kind, point a
+sampler at one of the mirrored libraries, write the steps it plays, or file a recording onto it.
+
+Every operation here calls `src/data/arrangementEdits` — the same code a track row's button calls — so an agent's edit and a person's edit cannot become two behaviours. What is added is the id: MCP calls are stateless, so `create_arrangement`
+returns an `arrangementId` that every other tool in this group takes. The arrangements live in the server process and are not persisted, exactly as the songs are not.
+
+Two things this surface states rather than leaves to be discovered:
+
+* **A sampler track always has an instrument.** A new one is created with the default catalogue asset, and changing a track's kind to `sampler` gives it one too — so the same kind of track sounds regardless of how it came to exist. A summary reports the
+  asset, and warns when a sampler somehow has none, because a silent sampler reads as a broken renderer.
+* **A request that cannot be carried out is refused out loud.** The data layer returns the arrangement unchanged when an instrument is pointed at a non-sampler track, which is right for a button and useless for a caller that cannot see the screen. The tool
+  raises instead, and an unknown `trackId` is answered with the ids that do exist.
+
+| Tool | Arguments | Returns |
+| :--- | :--- | :--- |
+| `create_arrangement` ▣ | `templateId?`, `blankKind?`, `songId?` | the new `arrangementId`, its tracks, the template ids it would accept, and any problem |
+| `get_arrangement` ▢ | `arrangementId` | every track's kind, name, flags, `sampleAssetId`, `steps` with `stepsOn`, and takes |
+| `describe_arrangement` ▢ | `arrangementId` | one line per track, for reading rather than parsing |
+| `add_arrangement_track` ▣ | `arrangementId`, `kind`, `name?` | the arrangement with the track added |
+| `remove_arrangement_track` ▣ | `arrangementId`, `trackId` | the arrangement without it; a folder's children detach rather than disappear |
+| `set_arrangement_track_kind` ▣ | `arrangementId`, `trackId`, `kind` | the kind changed, with the instrument rule above |
+| `rename_arrangement_track` ▣ | `arrangementId`, `trackId`, `name` | the renamed track |
+| `set_arrangement_track_flag` ▣ | `arrangementId`, `trackId`, `flag`, `value` | muted or soloed |
+| `set_arrangement_track_parent` ▣ | `arrangementId`, `trackId`, `parentId` | attached to a folder, or detached with `null` |
+| `set_arrangement_track_instrument` ▣ | `arrangementId`, `trackId`, `assetId` | the sampler track pointed at a catalogue asset; refused for any other kind |
+| `set_arrangement_track_steps` ▣ | `arrangementId`, `trackId`, `steps` | the pattern written whole; a step is on when non-zero, and the length is the caller's |
+| `add_arrangement_take` ▣ | `arrangementId`, `trackId`, `source`, `label?`, `recordedAt?`, `startBar?`, `endBar?` | the take filed and selected; a bar range is claimed when one is given |
+| `select_arrangement_take` ▣ | `arrangementId`, `trackId`, `takeId` | which take plays, or cleared with `null` |
+
+A minimal call, as it looks over stdio:
+
+```
+create_arrangement        { "templateId": "samplers" }        → arrangement-1, two sampler tracks, each with virtuosity-drums-basic
+add_arrangement_track     { "arrangementId": "arrangement-1", "kind": "drumkit", "name": "Kit" }
+describe_arrangement      { "arrangementId": "arrangement-1" }
+  arrangement-1 (3 track(s))
+    sampler-1  Sampler 1 (sampler) · plays virtuosity-drums-basic · 4/16 steps
+    sampler-2  Sampler 2 (sampler) · plays virtuosity-drums-basic · 4/16 steps
+    drumkit-3  Kit (drumkit) · 4/16 steps
+```
+
 ### Song (arrangement)
 
 An agent composes a *timeline* here, not a loop: `create_song` returns a `songId`, `add_section` places clips on it,
