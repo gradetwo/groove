@@ -15,6 +15,7 @@ import { TrackListV2 } from "./TrackListV2";
 import { TakeSelectorV2 } from "./TakeSelectorV2";
 import { RecordButtonV2 } from "./RecordButtonV2";
 import { NewProjectPanelV2 } from "./NewProjectPanelV2";
+import { playArrangementV2, type ArrangementPlayer } from "../../audio/playArrangementV2";
 
 export interface ArrangementViewV2Props {
   songId: string;
@@ -22,9 +23,16 @@ export interface ArrangementViewV2Props {
   capture: () => Promise<CaptureOutcome>;
   /** The bar the transport is on; the take selector marks what would be heard there. */
   bar?: number;
+  /**
+   * ⭐ The engine, injected — `playAudioLanes` with the app's context and destination in the application, a fake in a criterion.
+   *
+   * Optional on purpose: the view can be rendered and judged **before** the engine is wired, so the interface work and the audio wiring are not one indivisible change. When it is absent the play button says so
+   * rather than pretending to play.
+   */
+  player?: ArrangementPlayer;
 }
 
-export function ArrangementViewV2({ songId, capture, bar = 0 }: ArrangementViewV2Props) {
+export function ArrangementViewV2({ songId, capture, bar = 0, player }: ArrangementViewV2Props) {
   /**
    * ⭐ **A new project starts by choosing what it is** — which is Logic's `Choose a Project`, and the owner's "there is no good new-project entry". `undefined` means the choice has not been made, and the panel is
    * what the route shows until it is; only then is there an arrangement to edit.
@@ -36,6 +44,8 @@ export function ArrangementViewV2({ songId, capture, bar = 0 }: ArrangementViewV
   const [choosing, setChoosing] = useState(true);
   const [arrangement, setArrangement] = useState<ArrangementV2>(() => createArrangementFromTemplate(songId, undefined, "instrument"));
   const [selectedTrackId, setSelectedTrackId] = useState<string | undefined>(undefined);
+  /** What the last play reported — **zero is shown, not hidden**: "nothing was planned" is a fact a user should see rather than a silent no-op. */
+  const [played, setPlayed] = useState<number | undefined>(undefined);
 
   const onAddTrack = useCallback((kind: TrackKindV2, name: string) => {
     setArrangement((current) => {
@@ -76,6 +86,24 @@ export function ArrangementViewV2({ songId, capture, bar = 0 }: ArrangementViewV
         onToggleCollapse={(trackId, collapsed) => setArrangement((current) => setCollapsed(current, trackId, collapsed))}
         onChangeKind={(trackId, kind) => setArrangement((current) => changeTrackKind(current, trackId, kind))}
       />
+
+      <div data-testid="arrangement-transport">
+        <button
+          type="button"
+          disabled={player === undefined}
+          onClick={async () => {
+            if (player === undefined) return;
+            // ⭐ The compiled arrangement, with the notes a v1 pattern would carry — an empty map means "a track with nothing on it", which is silence rather than an error.
+            const result = await playArrangementV2(arrangement, {}, player);
+            setPlayed(result.planned);
+          }}
+        >
+          Play
+        </button>
+        {/* ⭐ Said rather than clicked into nothing: without an engine the button is disabled and this explains why. */}
+        {player === undefined && <span> (audio engine not connected yet)</span>}
+        {played !== undefined && <span data-testid="arrangement-played"> planned {played} lane event(s)</span>}
+      </div>
 
       <div data-testid="arrangement-detail">
         {selected === undefined ? (
