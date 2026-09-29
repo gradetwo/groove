@@ -13,6 +13,28 @@
 import fs from "node:fs";
 import path from "node:path";
 
+/**
+ * The programs a library actually offers, from the SFZ files it holds.
+ *
+ * A sample library splits its files by articulation — VCSL's four families are 155 SFZ files across 88 instruments, a harmonica alone having six variants — so the file list is not the instrument list. The rule is to group by directory
+ * and base name (dropping the ` - <articulation>` suffix) and keep one program per group, preferring `- Keyswitch`, because those files are designed to switch articulation by key range and so cover the others. Listing every variant would
+ * turn an instrument list into an articulation list; listing none would leave the library unplayable.
+ */
+export function programsFrom(sfzPaths) {
+  const groups = new Map();
+  for (const path of sfzPaths) {
+    const base = path.replace(/\.sfz$/i, "").replace(/\s+-\s+.*$/, "");
+    if (!groups.has(base)) groups.set(base, []);
+    groups.get(base).push(path);
+  }
+  return [...groups.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([base, variants]) => ({
+      sfz: variants.find((variant) => / - Keyswitch\.sfz$/i.test(variant)) ?? [...variants].sort()[0],
+      name: base.split("/").pop(),
+    }));
+}
+
 const MANIFEST = path.join(process.cwd(), "public", "samples", "manifest.json");
 const argv = process.argv.slice(2);
 const entryId = argv.find((a) => !a.startsWith("--"));
@@ -84,6 +106,19 @@ if (!write) {
 }
 
 entry.files = blobs.map((node) => ({ path: node.path, bytes: node.size ?? 0 }));
+/**
+ * The declared programs, when the library holds more than one. A single-program library keeps `sfz`, which says the same thing without a list; a multi-program one also keeps `sfz` as its first program, so a reader that knows only
+ * that field still points at something real.
+ */
+const programs = programsFrom(sfzFiles.map((node) => node.path));
+if (programs.length > 1) {
+  entry.instruments = programs;
+  entry.sfz = programs[0].sfz;
+  console.log(`  instruments ${programs.length} (from ${sfzFiles.length} sfz)`);
+} else {
+  entry.instruments = undefined;
+  if (programs.length === 1) entry.sfz = programs[0].sfz;
+}
 entry.enumeratedAt = new Date().toISOString().slice(0, 10);
 // durationSeconds and sha256 are left exactly as they were: they need bytes this step never fetches.
 fs.writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2) + "\n");

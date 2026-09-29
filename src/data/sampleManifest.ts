@@ -141,8 +141,12 @@ export function parseManifest(text: string): ManifestResult {
           errors.push(`${spot}: path is required`);
           return;
         }
-        if (candidate.bytes !== undefined && (!Number.isFinite(candidate.bytes) || candidate.bytes <= 0)) {
-          errors.push(`${spot} (${candidate.path}): bytes must be a positive number (got ${JSON.stringify(candidate.bytes)})`);
+        /**
+         * Zero is allowed and negative is not. The rule used to demand a positive number, which refused a file that really is empty — VCSL ships a `Non-standard pitch (please transpose).txt` of zero bytes, and the repository's own
+         * enumeration wrote it out and then could not parse its own manifest. What the rule is for is catching a size that is missing or nonsense, and zero is neither: it is a size.
+         */
+        if (candidate.bytes !== undefined && (!Number.isFinite(candidate.bytes) || candidate.bytes < 0)) {
+          errors.push(`${spot} (${candidate.path}): bytes must be a number of zero or more (got ${JSON.stringify(candidate.bytes)})`);
         }
         if (candidate.sha256 !== undefined && !/^[0-9a-f]{64}$/.test(candidate.sha256)) {
           // A hash of the wrong length cannot match anything, so it would turn a mirror's verification into a guaranteed failure with a confusing message.
