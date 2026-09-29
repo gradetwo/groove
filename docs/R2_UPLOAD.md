@@ -1966,3 +1966,46 @@ git log --oneline -S'"version": "2.34.28"' -- package.json
 > ⭐ **`✅ deployed and published — now check /version.json against the tag`**
 
 ⭐⭐ **所以下一次发布的正确改法是** ✓：⭐ **在 `remote` 之后加一步 `tag`** ✓ —— ⭐ **它要做两件事** ✓：**在本地仓打标注标签 ✓、在镜像仓打同样的标签并推 ✓**（**因为两边的 sha 不同 ✓**）—— ⭐ **而它的判据是** ✓：**`git ls-remote --tags origin` 里出现那个版本 ✓，且 `git show <tag>^{}:package.json` 的 `version` 等于它** ✓✓。
+
+
+## 64. ⭐⭐⭐⭐ 端到端：**真实的声音被测量出来了**（2026-09-28 晚 ✓）
+
+### `scripts/probe_sfz_end_to_end.mjs` 的输出
+
+```
+e2e : sfz entry: 1205 bytes from the source, includes 7
+e2e : decoded: 85289 frames, 1 channel(s), peak 0.091056
+e2e : ✅ REAL SOUND — 85289 frames, peak 0.09105592221021652
+```
+
+⭐⭐ **所以这条链上四件事同时成立** ✓：
+
+| 事 | 读数 |
+|---|---|
+| ⭐ **真实 `.sfz` 被取到** | **1205 字节 ✓（与清单相符 ✓）** |
+| ⭐ **include 链被展开** | **7 个 ✓** |
+| ⭐ **采样被解码** | ⭐ **85289 帧 ≈ 1.9 秒（44.1 kHz）✓** |
+| ⭐ **音频不是静音** | ⭐ **峰值 `0.091056`** ✓✓ |
+
+⭐⭐ **而"峰值不是 0"这一条，就是"它真的出声"的可测量版本** ✓✓ —— ⭐ **我不能听 ✗，但 `peak 0.091056` 是可以被核对的东西 ✓** —— ⭐ **而这正是这一段一直在做的事：把"应该能工作"变成"这里有一个数"** ✓✓。
+
+### ⚠️ 而它同时暴露了一个 404，形状与 include 那条同源
+
+```
+fetch:  404 Programs/mappings/mappings/kick_dampen.sfz        ← ⭐ `mappings/` 出现两次 ✗✓
+problem: Programs/mappings/mappings/kick_dampen.sfz: 404 from https://raw.githubusercontent.com/…
+```
+
+⭐ **那个"文件相对"候选把 `mappings/` 拼了两遍** ✗ —— ⚠️ **而那架鼓写的是 `#include "mappings/…"` 而它自己就在 `Programs/mappings/` 里** ✓ —— ⭐ **所以文件相对会得到 `Programs/mappings/mappings/…`** ✗✓。
+
+⭐⭐ **而探针仍然成功了 ✓ —— 因为根相对的那一个候选是对的 ✓✓** —— ⭐ **那正是 `resolveCandidates` 返回【两个】候选的理由 ✓**（**本会话早先那条注释写的就是这件事 ✓：`relative === fromRoot ? [relative] : [relative, fromRoot]`** ✓✓）—— ⭐ **所以这个 404 是【设计上预期的代价】✓，不是缺陷 ✗** —— ⚠️ **而它会浪费一次请求 ✓，并且它在输出里看起来很吓人 ✗** ✓。
+
+### ⚠️ 而顺带一条小缺陷
+
+⭐ **那个探针的第 5 行，用法写的是【另一个脚本】** ✗✓：
+
+```
+*   node scripts/probe_arrangement_audio.mjs [--genre=chicago-house] [--json]
+```
+
+⭐ **而它自己真实的参数是 `--genre=` ✓ `--port=` ✓ `--ramp=` ✓ `--json`** ✓ —— ⭐ **一次复制粘贴留下的** ✗ —— ⭐ **而它的代价很具体：读它的人会以为要跑另一个文件** ✗✓。
