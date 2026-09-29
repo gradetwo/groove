@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { checkLibraryLicence, checkManifestLicences } from "../data/libraryLicence";
+import { readFileSync } from "node:fs";
+import { canonicalLicence, checkLibraryLicence, checkManifestLicences, requiresAttribution } from "../data/libraryLicence";
 
 /**
  * The licence check that runs **before** four libraries are downloaded — because attribution is an obligation of the licence and the mirror is the redistribution.
@@ -38,5 +39,26 @@ describe("library licences", () => {
     expect(check.problems.some((problem) => problem.startsWith("a:"))).toBe(true);
     expect(check.problems.some((problem) => problem.startsWith("c:"))).toBe(true);
     expect(check.problems.some((problem) => problem.startsWith("b:"))).toBe(false);
+  });
+
+});
+
+describe("the manifest this repository ships", () => {
+  it("satisfies every licence it claims, which is the rule the two vocabularies kept breaking", () => {
+    /**
+     * The end-to-end rule the checker exists for, applied to the real file. Two gaps lived here and neither was visible: the manifest spells licences `CC0`/`CC-BY` while this checker knew only the SPDX forms, so every entry read as an unknown licence;
+     * and the two hand-written entries carried no `sourceUrl`, without which a licence claim cannot be checked against where the bytes came from. Both are fixed, and this is the assertion that keeps them fixed.
+     */
+    const manifest = JSON.parse(readFileSync("public/samples/manifest.json", "utf8")) as {
+      entries: { id: string; licence: string; attribution?: string; sourceUrl?: string; excludedReason?: string }[];
+    };
+    const shippable = manifest.entries.filter((entry) => !entry.excludedReason);
+    const check = checkManifestLicences(shippable);
+    expect(check.problems).toEqual([]);
+    expect(check.ok).toBe(true);
+    // And the entries a licence obliges credit for are the ones that declare it.
+    for (const entry of shippable.filter((candidate) => requiresAttribution(canonicalLicence(candidate.licence)))) {
+      expect(entry.attribution, `${entry.id} needs attribution`).toBeTruthy();
+    }
   });
 });
