@@ -21,6 +21,2101 @@
       ],
       "files": [
         {
+          "path": "Programs/01-basic-kit.sfz",
+          "bytes": 1205,
+          "sha256": "a04683d87ad820bcb6045b8accf199fbcf69cb7b151674a7fd6c3df5ec526906"
+        },
+        {
+          "path": "Programs/02-full-kit.sfz",
+          "bytes": 3130,
+          "sha256": "805034d3b0f9352bfaeb1dd49d6ab15c313289d2b83f64fe1cd5a695ecd0a732"
+        },
+        {
+          "path": "Programs/03-kick-mic.sfz",
+          "bytes": 618,
+          "sha256": "d2fcfebfbb05567b996d9bcf9fc805136f9b1daf1fd0248f6ec018ea65a1e249"
+        },
+        {
+          "path": "Programs/04-snare-mic.sfz",
+          "bytes": 664,
+          "sha256": "e867ab2f2b196f5ef483c95ece4f377f8666e0924138ef1ec684088700610b4f"
+        },
+        {
+          "path": "Programs/05-oh-mic.sfz",
+          "bytes": 977,
+          "sha256": "2be19c63ed9e832d58f58aa0d6b3854b716a5c15a15055cfc2a6a1e72ebd1e03"
+        },
+        {
+          "path": "Programs/06-mid-mic.sfz",
+          "bytes": 987,
+          "sha256": "223d91d9ba9bfd3937a4f9225c68d92238ff8dc0be852577a0e616122d7042dd"
+        },
+        {
+          "path": "Programs/07-room-mic.sfz",
+          "bytes": 993,
+          "sha256": "bfbabce37bd300b7c82c13343b25d52551ea587bc50432054f5f3fc5697395f3"
+        },
+        {
+          "path": "Programs/08-vintage-mic.sfz",
+          "bytes": 832,
+          "sha256": "245d7b6de5d4c534c8a3a410703680aeb9716abc4ba646ad63daeb40da7369b9"
+        },
+        {
+          "path": "Programs/keymaps/default/keymap_basic.sfz",
+          "bytes": 2152,
+          "sha256": "e0141c67d9943b33525a2b96d669f677f94241c1c5a7e39b47937a7bea1900fc"
+        },
+        {
+          "path": "Programs/keymaps/default/keymap.sfz",
+          "bytes": 3438,
+          "sha256": "e9cbd0dc885bd8b54ac64bb14aea96a4acffad481ac08e03edb658248f4c056b"
+        },
+        {
+          "path": "Programs/keymaps/hihat_on_pedal_alt/keymap_basic.sfz",
+          "bytes": 2152,
+          "sha256": "e0141c67d9943b33525a2b96d669f677f94241c1c5a7e39b47937a7bea1900fc"
+        },
+        {
+          "path": "Programs/keymaps/hihat_on_pedal_alt/keymap.sfz",
+          "bytes": 3444,
+          "sha256": "93eabcd7bb2edc8954aeb65fad4e7abcdefc4a8e45197cba1218d713c7022d03"
+        },
+        {
+          "path": "Programs/keymaps/hihat_on_pedal/keymap_basic.sfz",
+          "bytes": 2152,
+          "sha256": "e0141c67d9943b33525a2b96d669f677f94241c1c5a7e39b47937a7bea1900fc"
+        },
+        {
+          "path": "Programs/keymaps/hihat_on_pedal/keymap.sfz",
+          "bytes": 3530,
+          "sha256": "625c0836cfbd6a23a777d24a8d7e40b777ffe24b32cf29965a6382bbfad216e4"
+        },
+        {
+          "path": "Programs/keymaps/keymap_basic.sfz",
+          "bytes": 2152,
+          "sha256": "e0141c67d9943b33525a2b96d669f677f94241c1c5a7e39b47937a7bea1900fc"
+        },
+        {
+          "path": "Programs/keymaps/keymap.sfz",
+          "bytes": 3442,
+          "sha256": "07047e2e4b94d46b09da5f9eb9f6fd07e7dcca6cb41a73fef95af4c757cc2a5a"
+        },
+        {
+          "path": "Programs/keymaps/perc_down/keymap_basic.sfz",
+          "bytes": 2161,
+          "sha256": "a8f2d5392fd0689830cb1a6b9c6a8eefeff8a0551c7e965de46b75a3d087e9ae"
+        },
+        {
+          "path": "Programs/keymaps/perc_down/keymap.sfz",
+          "bytes": 3424,
+          "sha256": "d67f1fe8245d60447271832a87eaca9518e831ad8ab75409c4399e515e839a55"
+        },
+        {
+          "path": "Programs/mappings/closemic_epic_perc.sfz",
+          "bytes": 3220,
+          "sha256": "540ccff43ae6233db058f718eed1d8058daa6c1f4d3c190ae01c503a58132165"
+        },
+        {
+          "path": "Programs/mappings/closemic_perc.sfz",
+          "bytes": 3145,
+          "sha256": "3fc152b1364d5eb2bb8b2e2cce722ca59ea9cab717d62f931b97d3892f3bb202"
+        },
+        {
+          "path": "Programs/mappings/kick_dampen.sfz",
+          "bytes": 212,
+          "sha256": "8eb00ce8c862a25acaa951cef289ad612a6cbe4a2802849f94494d84631c3292"
+        },
+        {
+          "path": "Programs/mappings/kickmic_all.sfz",
+          "bytes": 6339,
+          "sha256": "8c70a2f5645abfda3ce79943c0273d282ecd96b54fb7c3798db63113c9dfe59f"
+        },
+        {
+          "path": "Programs/mappings/kickmic_basic.sfz",
+          "bytes": 2825,
+          "sha256": "c6d776d87a91e6184a348f456a4d57f4672033a5c5ab347aafbffeaf063f054e"
+        },
+        {
+          "path": "Programs/mappings/kickmic/crash_crash_map.sfz",
+          "bytes": 1617,
+          "sha256": "a3c322a918d6afccdedc69e14702d09cbea96757b8c01c804f8683b153cb1b03"
+        },
+        {
+          "path": "Programs/mappings/kickmic/crash_sizzle_map.sfz",
+          "bytes": 1629,
+          "sha256": "872887c74ee43ce2ae0f018a69b53a3d6141692441242e9615844b33ab723d1c"
+        },
+        {
+          "path": "Programs/mappings/kickmic/flatride_crash_map.sfz",
+          "bytes": 414,
+          "sha256": "27a0e57cd0a8c85ea1de582f3d66b90a7d0158384ceb4309c8f7a60cf6c5ab05"
+        },
+        {
+          "path": "Programs/mappings/kickmic/flatride_ride_map.sfz",
+          "bytes": 1593,
+          "sha256": "3bed19e94ecdef0e06db01b379d58179ebcbeb7496e17eec5cf76544cd06b848"
+        },
+        {
+          "path": "Programs/mappings/kickmic/hh_34_map.sfz",
+          "bytes": 1876,
+          "sha256": "7eab70c4bd097e0deab08632713fc50b1f4237e8d9a5713dbcb004bf3c434fa2"
+        },
+        {
+          "path": "Programs/mappings/kickmic/hh_closed_map.sfz",
+          "bytes": 1940,
+          "sha256": "225f8f9babb4e9554d1e7614db7b69e8451c576bbbb3159db35c642909f1050b"
+        },
+        {
+          "path": "Programs/mappings/kickmic/hh_half_map.sfz",
+          "bytes": 1908,
+          "sha256": "dfbf01b95d4e3a71735d33e479a0d8368e13d105087c65ef6f797f5e2e1973dc"
+        },
+        {
+          "path": "Programs/mappings/kickmic/hh_open_map.sfz",
+          "bytes": 1417,
+          "sha256": "94e82f5854afe39acbeed18694fcef603b63d3a8adc8f470e722adfae0fc45a6"
+        },
+        {
+          "path": "Programs/mappings/kickmic/hh_pedal_map.sfz",
+          "bytes": 1461,
+          "sha256": "4d8c4e1ff3261136acb1063c838a7c6f33c4f25ecf196f9d709a9efec47d65b6"
+        },
+        {
+          "path": "Programs/mappings/kickmic/hh_silences_basic_map.sfz",
+          "bytes": 434,
+          "sha256": "fd3341d7ae45cf79a9406e1075a3c9628bf3141221d05aaa98a23e5caad60dc6"
+        },
+        {
+          "path": "Programs/mappings/kickmic/hh_silences_map.sfz",
+          "bytes": 2164,
+          "sha256": "ce483d34ddb3f1bc4ead63ebaaa960372b353cf7960fd8ad9bbc35279e636be8"
+        },
+        {
+          "path": "Programs/mappings/kickmic/hh_splash_map.sfz",
+          "bytes": 359,
+          "sha256": "347259661d0956b8cd40a64ba44a9bbae8c4a5decb1380039d090982a6d73413"
+        },
+        {
+          "path": "Programs/mappings/kickmic/htom_center_map.sfz",
+          "bytes": 1400,
+          "sha256": "4a83288c9a78f53c112212c334dc2bf5c3af14cd3d9c09842e12fe9651bdf32c"
+        },
+        {
+          "path": "Programs/mappings/kickmic/htom_offcenter_map.sfz",
+          "bytes": 1448,
+          "sha256": "1682ba90012a37d4b1b5ccedbc4f5794594e31ae10c9d95403375727ca1723ad"
+        },
+        {
+          "path": "Programs/mappings/kickmic/kick_snoff_map.sfz",
+          "bytes": 1988,
+          "sha256": "3f45acb042e134c49cbd6d6bf7f71286fe922b7b5ba2e6a359e9bd2769fc5918"
+        },
+        {
+          "path": "Programs/mappings/kickmic/kick_snon_map.sfz",
+          "bytes": 1972,
+          "sha256": "704d7038c1b1c4c4869977c98e5fb1d2e3932f8c891eec84d93c5f02dbca45d8"
+        },
+        {
+          "path": "Programs/mappings/kickmic/ltom_center_map.sfz",
+          "bytes": 1400,
+          "sha256": "c94e14335fe700adfa96de9a8a31796331a1aed897d688ee7b7eea2cfa38fe16"
+        },
+        {
+          "path": "Programs/mappings/kickmic/ltom_crossstick_map.sfz",
+          "bytes": 916,
+          "sha256": "673b0837b0a1fb163eea4bb6f86a7d48139f85dcc8e27cb4a6eefe89f872d977"
+        },
+        {
+          "path": "Programs/mappings/kickmic/ltom_halfopen_map.sfz",
+          "bytes": 1432,
+          "sha256": "be1cbdee7bb9c1f3f8c899e36f87a60d88d12edd41d0224ac5f6d28efbf37cdf"
+        },
+        {
+          "path": "Programs/mappings/kickmic/ltom_muted_map.sfz",
+          "bytes": 1384,
+          "sha256": "187d89094f801b53e377eb9820a22e90ff51acd1aaf5daf2d87cbed84cffa6e1"
+        },
+        {
+          "path": "Programs/mappings/kickmic/ltom_offcenter_map.sfz",
+          "bytes": 1080,
+          "sha256": "40343c325e2f2e077527fc2c74af5a50a578f88e29bb41d00047f712eb238da5"
+        },
+        {
+          "path": "Programs/mappings/kickmic/ltom_rimshot_map.sfz",
+          "bytes": 886,
+          "sha256": "d81ca33bb7fbc6d26b37a2ea733964e8a867c1db356dc5fca7d76801279d59bb"
+        },
+        {
+          "path": "Programs/mappings/kickmic/ride_bell_map.sfz",
+          "bytes": 1125,
+          "sha256": "74250f4fa3a4def472c3a4a43e075e5ee5cd9467df57257c67a5e688c6b7a72e"
+        },
+        {
+          "path": "Programs/mappings/kickmic/ride_ride_map.sfz",
+          "bytes": 1497,
+          "sha256": "0a94da14d3d4ae83177e07ae7c72c3502210ea5ad535395245100bc4b93d56df"
+        },
+        {
+          "path": "Programs/mappings/kickmic/snare_buzz_map.sfz",
+          "bytes": 1044,
+          "sha256": "37c677919776a1f32e0d2751cedd71c4d325c5c82686c3b0ae7bde1d29e56e91"
+        },
+        {
+          "path": "Programs/mappings/kickmic/snare_center_map.sfz",
+          "bytes": 3259,
+          "sha256": "b0fa214103c9a58c4e3cf4feda2d0451b289ed8a50f3ecd79622abd596a1667d"
+        },
+        {
+          "path": "Programs/mappings/kickmic/snare_crossstick_map.sfz",
+          "bytes": 1496,
+          "sha256": "21d4cdc7bd0c0a210974662050c2308dee700556d968e640dde3e466c9263c05"
+        },
+        {
+          "path": "Programs/mappings/kickmic/snare_flam_map.sfz",
+          "bytes": 1044,
+          "sha256": "8a8175696ebfece7032361792857b2d7253787cf28c90037a3a0c52c8c4393d1"
+        },
+        {
+          "path": "Programs/mappings/kickmic/snare_halfopen_map.sfz",
+          "bytes": 1464,
+          "sha256": "2039b23904a2d73487958d22f3a0fe522c29a4ff77f5f2a351aa68c6e26fda56"
+        },
+        {
+          "path": "Programs/mappings/kickmic/snare_muted_map.sfz",
+          "bytes": 1416,
+          "sha256": "47690eec8043699fb884d37e56eeb67c2f6bebf4fc9c2f560997ac03746b3ac6"
+        },
+        {
+          "path": "Programs/mappings/kickmic/snare_offcenter_map.sfz",
+          "bytes": 3367,
+          "sha256": "c090cec69a40f63012627d78e39d777a6348f7e3cea75f26821db09fef136168"
+        },
+        {
+          "path": "Programs/mappings/kickmic/snare_rimshot_map.sfz",
+          "bytes": 1080,
+          "sha256": "cbc2b41fab98d1d0a7d8ea26368ba1591fc781472255b69fd955219a7ac882e4"
+        },
+        {
+          "path": "Programs/mappings/kickmic/snare_roll_end_map.sfz",
+          "bytes": 563,
+          "sha256": "ad12f920f5ca1ba5543af8963d83517cfba1d5bc9437c70c0a8ae779f0e303ae"
+        },
+        {
+          "path": "Programs/mappings/kickmic/snare_roll_map.sfz",
+          "bytes": 609,
+          "sha256": "5c39e4b29242c73ce6d310e839c612f17d24df0696a8a16f59edefc50f557e71"
+        },
+        {
+          "path": "Programs/mappings/kickmic/snare_stickshot1_map.sfz",
+          "bytes": 735,
+          "sha256": "36d622904deec93e3f56b1f53e22cde76101013585075f7e08a93e11672ff223"
+        },
+        {
+          "path": "Programs/mappings/kickmic/snare_stickshot2_map.sfz",
+          "bytes": 1496,
+          "sha256": "5351de5a666e7a69a5fb5ad3f8e7379cd4e434af31ed43abb782016e977fc190"
+        },
+        {
+          "path": "Programs/mappings/kickmic/snareoff_buzz_map.sfz",
+          "bytes": 1116,
+          "sha256": "48b390b1c5a98bfea6fb69e307ed9444dc1a97124342020ee738130e81acdc60"
+        },
+        {
+          "path": "Programs/mappings/kickmic/snareoff_center_map.sfz",
+          "bytes": 1140,
+          "sha256": "cab200b9f0749eb13a74d018b02c44acc73d9ab6e6f148aa849a4124b4dd1472"
+        },
+        {
+          "path": "Programs/mappings/kickmic/snareoff_crossstick_map.sfz",
+          "bytes": 996,
+          "sha256": "c2c7e759868464380b132d38347c6d3eb6760b6b0d4cc838be29cd36ea31bb40"
+        },
+        {
+          "path": "Programs/mappings/kickmic/snareoff_flam_map.sfz",
+          "bytes": 1116,
+          "sha256": "08709bf2ad6f6a72f60691843bae48c08b8d2d67ad4669d1402bab10c60af0ac"
+        },
+        {
+          "path": "Programs/mappings/kickmic/snareoff_halfopen_map.sfz",
+          "bytes": 1164,
+          "sha256": "7ef88b3f81d6b7bc75990f463b89b3dad0770f27a9c87a696fd533c051ed42a9"
+        },
+        {
+          "path": "Programs/mappings/kickmic/snareoff_muted_map.sfz",
+          "bytes": 1128,
+          "sha256": "b50c7accdf2ee1002e23ad327485edb7150d0f5755eae0c8ad24e8f0bd061ad0"
+        },
+        {
+          "path": "Programs/mappings/kickmic/snareoff_offcenter_map.sfz",
+          "bytes": 1176,
+          "sha256": "cdc4485c5239b8de86cb23d87f82721a9e8a458bfd6fe48eef5b634fecae7453"
+        },
+        {
+          "path": "Programs/mappings/kickmic/snareoff_roll_end_map.sfz",
+          "bytes": 595,
+          "sha256": "f330941bfc4c53d955dab029e55682775be6686d42cacc565570269b986b86bc"
+        },
+        {
+          "path": "Programs/mappings/kickmic/snareoff_roll_map.sfz",
+          "bytes": 639,
+          "sha256": "bd42a7665dc9f4cb4dc28a8d7c481ad82115a9da3ccbbe3818931a1a1742e951"
+        },
+        {
+          "path": "Programs/mappings/kickmic/snareoff_stickshot1_map.sfz",
+          "bytes": 996,
+          "sha256": "bd8575fb0a8a0225030a6e8f15163bb1aca7b08e601ec4194bd1b349f776119c"
+        },
+        {
+          "path": "Programs/mappings/kickmic/snareoff_stickshot2_map.sfz",
+          "bytes": 1188,
+          "sha256": "9e30102e54dedb94fc9ecf0b6b117e6cbc3bc6097a3c252cae6736bae92c7599"
+        },
+        {
+          "path": "Programs/mappings/lofi_all.sfz",
+          "bytes": 5875,
+          "sha256": "51bf9f22f009b24f52dc6b64a6449dac22e93973735f6b1ea518aab308e868cc"
+        },
+        {
+          "path": "Programs/mappings/lofi_epic_all.sfz",
+          "bytes": 6031,
+          "sha256": "ce402f421b851679012957f737e2440f5842d6cbcfeab2bbf7542effd2604b92"
+        },
+        {
+          "path": "Programs/mappings/lofi/crash_crash_map.sfz",
+          "bytes": 1545,
+          "sha256": "1ad37fea4fec281622bb19a8853cada8fb1454fe3e569df532074c24e4ddfda0"
+        },
+        {
+          "path": "Programs/mappings/lofi/crash_sizzle_map.sfz",
+          "bytes": 1557,
+          "sha256": "ee1fdd7deb1db7d3c279d8e622928e71e41b1a2c2bdec5de9f742db0ffdcc6bd"
+        },
+        {
+          "path": "Programs/mappings/lofi/flatride_crash_map.sfz",
+          "bytes": 390,
+          "sha256": "086f0f40db0bdb576f0da5ceef1c6754ddb37f720badd61e727c826003cf5d10"
+        },
+        {
+          "path": "Programs/mappings/lofi/flatride_ride_map.sfz",
+          "bytes": 1521,
+          "sha256": "73222ed27d9485651c374fbc13dc68cd61c4e6ef68504a5ad23d8f43bf95abc1"
+        },
+        {
+          "path": "Programs/mappings/lofi/hh_34_map.sfz",
+          "bytes": 1780,
+          "sha256": "6fe6503b2f56a8750555742f23960094d0be3553f60a8580309a5b17da49896e"
+        },
+        {
+          "path": "Programs/mappings/lofi/hh_closed_map.sfz",
+          "bytes": 1844,
+          "sha256": "954efe8850a7fb0fd8c1c25995098d13532a5cee8093ae40ecc8072faf12c40f"
+        },
+        {
+          "path": "Programs/mappings/lofi/hh_half_map.sfz",
+          "bytes": 1812,
+          "sha256": "d6aa092c20b6cd60f011eee19f288aa2eb105efa1ed74af3a447cf2e2a0229e7"
+        },
+        {
+          "path": "Programs/mappings/lofi/hh_open_map.sfz",
+          "bytes": 1345,
+          "sha256": "511d71be5041379bb10bc151a9a93e63fd564a6626422f7421466ad84cfe540e"
+        },
+        {
+          "path": "Programs/mappings/lofi/hh_pedal_map.sfz",
+          "bytes": 1389,
+          "sha256": "1f4e18699812d2866c87e181a927cd210385d8f4c7f3fa65c47f109c1374abf4"
+        },
+        {
+          "path": "Programs/mappings/lofi/hh_silences_epic_map.sfz",
+          "bytes": 2168,
+          "sha256": "0582bd9cb903c09125072ea5ec4478bb2f38d778c5a6953b80898157ecd6e36c"
+        },
+        {
+          "path": "Programs/mappings/lofi/hh_silences_map.sfz",
+          "bytes": 2174,
+          "sha256": "0fe8994a5ff3e4f493a6fcc75d270c4bf5f80638fd3ce1270a4e3bcd0780d557"
+        },
+        {
+          "path": "Programs/mappings/lofi/hh_splash_map.sfz",
+          "bytes": 335,
+          "sha256": "3a472aa4099fe059ecdb32d01e4a1e0abeaa0f79392db4db45333df8521d1b4d"
+        },
+        {
+          "path": "Programs/mappings/lofi/htom_center_map.sfz",
+          "bytes": 1304,
+          "sha256": "f1458ded79f7f42d9230700f026f9311c7ccdc6e810eb65fe566a4d67cb74c60"
+        },
+        {
+          "path": "Programs/mappings/lofi/htom_offcenter_map.sfz",
+          "bytes": 1352,
+          "sha256": "cc2527a997fc03e908f0dc61a83837ce9f7564eba61bfc32995310d4f13309b3"
+        },
+        {
+          "path": "Programs/mappings/lofi/kick_snoff_map.sfz",
+          "bytes": 1892,
+          "sha256": "3504c5de548753d677ceb2cee5eacfde0bee9175c749ebad9948f227981d7263"
+        },
+        {
+          "path": "Programs/mappings/lofi/kick_snon_map.sfz",
+          "bytes": 1876,
+          "sha256": "7d35ec2001f62f3bb1a9406ad651298ebed6de7e1cefb0b2935181f45065b861"
+        },
+        {
+          "path": "Programs/mappings/lofi/ltom_center_map.sfz",
+          "bytes": 1304,
+          "sha256": "ba0029d2d7934e8f643b70cbc5f5baac3211a8d6497b31e42b050a638d8792b2"
+        },
+        {
+          "path": "Programs/mappings/lofi/ltom_crossstick_map.sfz",
+          "bytes": 856,
+          "sha256": "7b67c3ed49c9b73650957519d3b8bca35f522cbb2b3999e05a928e1893f6d9aa"
+        },
+        {
+          "path": "Programs/mappings/lofi/ltom_halfopen_map.sfz",
+          "bytes": 1336,
+          "sha256": "051027ac564ae68e50ffb41af0ff12ae0e99d27d764915f464dfc0eb6d22f9b3"
+        },
+        {
+          "path": "Programs/mappings/lofi/ltom_muted_map.sfz",
+          "bytes": 1288,
+          "sha256": "9118fb28f810ec88bcddc41263d88ed20853d2aa4757a66d50f64169d60198b8"
+        },
+        {
+          "path": "Programs/mappings/lofi/ltom_offcenter_map.sfz",
+          "bytes": 1008,
+          "sha256": "51be137cb191a6038e044ba64433be062b7b9365f7493c78b49e6ce81242558b"
+        },
+        {
+          "path": "Programs/mappings/lofi/ltom_rimshot_map.sfz",
+          "bytes": 826,
+          "sha256": "a2035c26786941fddfd15feee90d803055b5a2861314392f38928d48fa14dd76"
+        },
+        {
+          "path": "Programs/mappings/lofi/ride_bell_map.sfz",
+          "bytes": 1071,
+          "sha256": "a9429a1add171afeaf56344f852e79e75b85012173d621caaf48ca0d1c4f2977"
+        },
+        {
+          "path": "Programs/mappings/lofi/ride_ride_map.sfz",
+          "bytes": 1425,
+          "sha256": "9aa8380307db4602f4168525f2196549959d8ee6334130f2ad6cc9bcf4c2d8b0"
+        },
+        {
+          "path": "Programs/mappings/lofi/snare_buzz_map.sfz",
+          "bytes": 972,
+          "sha256": "cc9b9544306438855e444def71fc7e27a31791e8ae4a51b37c072498a85f3d5c"
+        },
+        {
+          "path": "Programs/mappings/lofi/snare_center_map.sfz",
+          "bytes": 3043,
+          "sha256": "ef7c102dcf463f4a2bdb7f1c83f10b41586dfeccd9ed26aca4e0d1a1451f9fa6"
+        },
+        {
+          "path": "Programs/mappings/lofi/snare_crossstick_map.sfz",
+          "bytes": 1400,
+          "sha256": "c3f66f8dce351fe476f4142fdcc1900a166ee6f329e7623f23f87749437af2b3"
+        },
+        {
+          "path": "Programs/mappings/lofi/snare_flam_map.sfz",
+          "bytes": 972,
+          "sha256": "6b1202b1e734c8c5f865296ef015821ab0e8e4b55c1704ade6ea3980a0b2c047"
+        },
+        {
+          "path": "Programs/mappings/lofi/snare_halfopen_map.sfz",
+          "bytes": 1368,
+          "sha256": "740e55ed94c6fd3eff699d7eb3f8efb99acdb69fd618f4d4a188bcb84db4bfaf"
+        },
+        {
+          "path": "Programs/mappings/lofi/snare_muted_map.sfz",
+          "bytes": 1320,
+          "sha256": "c47d6344a73df65243157ba27ef0b1042b671bc0e987110eb9772a328679d1bc"
+        },
+        {
+          "path": "Programs/mappings/lofi/snare_offcenter_map.sfz",
+          "bytes": 3151,
+          "sha256": "8f3fcfaffd920a2d21f2a379a3de962d83b253b6345d0da3e15305d15bc472d4"
+        },
+        {
+          "path": "Programs/mappings/lofi/snare_rimshot_map.sfz",
+          "bytes": 1008,
+          "sha256": "d43e2579aa0662b274222353316ffff9424eeee7d277ee43cd940c516d83b8ce"
+        },
+        {
+          "path": "Programs/mappings/lofi/snare_roll_end_map.sfz",
+          "bytes": 527,
+          "sha256": "feb7ba7cae86f4e596f68b88c3920b1ca671ae72582e20120f6c705912445dfc"
+        },
+        {
+          "path": "Programs/mappings/lofi/snare_roll_map.sfz",
+          "bytes": 579,
+          "sha256": "961593bd2317e392390e37f40e870ff00d48f37c28e321cb1ee2df0f3829c135"
+        },
+        {
+          "path": "Programs/mappings/lofi/snare_stickshot1_map.sfz",
+          "bytes": 687,
+          "sha256": "9eeaa046e8453a618e49a4856c35a007bfac975e22009e1132c36321fe4a81b2"
+        },
+        {
+          "path": "Programs/mappings/lofi/snare_stickshot2_map.sfz",
+          "bytes": 1400,
+          "sha256": "da40bb3b20777d98623a134532b772d22c7f987db894789f85f4efda81cb0230"
+        },
+        {
+          "path": "Programs/mappings/lofi/snareoff_buzz_map.sfz",
+          "bytes": 1044,
+          "sha256": "45859fc08e474b1d8b28066fbff8802344cea8515d1cd987d34c929549836808"
+        },
+        {
+          "path": "Programs/mappings/lofi/snareoff_center_map.sfz",
+          "bytes": 1068,
+          "sha256": "7a1e85ba251820e4b9ee6cba1446a7d58b7b7f663b5ab6264446c4f904d885f5"
+        },
+        {
+          "path": "Programs/mappings/lofi/snareoff_crossstick_map.sfz",
+          "bytes": 936,
+          "sha256": "0da911b158c1090b1106fd311cca773b4bbe6d1cb191a66f79388c65ea9c08de"
+        },
+        {
+          "path": "Programs/mappings/lofi/snareoff_flam_map.sfz",
+          "bytes": 1044,
+          "sha256": "f2c14e11e7ec909311488c4dec09b79beb93bb4088f9ebc0017720538e0997c9"
+        },
+        {
+          "path": "Programs/mappings/lofi/snareoff_halfopen_map.sfz",
+          "bytes": 1092,
+          "sha256": "55b88322b6454061bd728b748bcc401451023eaf8575a61985830df0e3ddfd2b"
+        },
+        {
+          "path": "Programs/mappings/lofi/snareoff_muted_map.sfz",
+          "bytes": 1056,
+          "sha256": "4f23948d21198e6480f4c07cd2ee186f0a2bd2c7439a3e35369ebc2647b2d163"
+        },
+        {
+          "path": "Programs/mappings/lofi/snareoff_offcenter_map.sfz",
+          "bytes": 1104,
+          "sha256": "546d1133e2d6b415d1b2919cdf478f5c926f7d01bc41a2fc0416720ec2002c27"
+        },
+        {
+          "path": "Programs/mappings/lofi/snareoff_roll_end_map.sfz",
+          "bytes": 559,
+          "sha256": "e1f01876b461a9e62093a4df875ce22f963fc8c0da65077bfb9ead590ce2fc05"
+        },
+        {
+          "path": "Programs/mappings/lofi/snareoff_roll_map.sfz",
+          "bytes": 609,
+          "sha256": "af1d07c82de051a1f6d671325847aa2c2e3de86ec2de1882c2477b6158b587c4"
+        },
+        {
+          "path": "Programs/mappings/lofi/snareoff_stickshot1_map.sfz",
+          "bytes": 936,
+          "sha256": "6768fe63c98b3394c48ba6c9a13da4122218a7a528db4dc623ff10461b10e911"
+        },
+        {
+          "path": "Programs/mappings/lofi/snareoff_stickshot2_map.sfz",
+          "bytes": 1116,
+          "sha256": "628228490b91bdd3c57b325373fd3f18203675701807dc71067040a342868dd1"
+        },
+        {
+          "path": "Programs/mappings/mid_all.sfz",
+          "bytes": 5811,
+          "sha256": "29a1b887cbdb6964dc39813f7a8ab1a25385d14bc3a72bebcf23196bd08366ac"
+        },
+        {
+          "path": "Programs/mappings/mid_epic_all.sfz",
+          "bytes": 5982,
+          "sha256": "7255e4f98c198e443b8fd58aadaea5410e1f10b12fd576b23ddaf7343536f4c8"
+        },
+        {
+          "path": "Programs/mappings/mid_epic_perc.sfz",
+          "bytes": 2786,
+          "sha256": "ecb03c8940c61a056e70b31c857fa89b87c077b18177d96abdf8f99bc30e79e3"
+        },
+        {
+          "path": "Programs/mappings/mid_perc.sfz",
+          "bytes": 3105,
+          "sha256": "dcfd0641809be3b240d22bad49934672cdf192700f6054ef08b4c269b693f954"
+        },
+        {
+          "path": "Programs/mappings/mid/crash_crash_map.sfz",
+          "bytes": 1521,
+          "sha256": "a11934cfe29ee8ab9ca010223e210684ed237455aab2465de0255917fdcf7844"
+        },
+        {
+          "path": "Programs/mappings/mid/crash_sizzle_map.sfz",
+          "bytes": 1533,
+          "sha256": "27890f5e2c0e3bc8aa1e7df25d72206618c578cbe112af797b8b4533e020748e"
+        },
+        {
+          "path": "Programs/mappings/mid/flatride_crash_map.sfz",
+          "bytes": 382,
+          "sha256": "5548feda0169ea795c589db250c679ce59edde4015f102554fd875ccc8b1185b"
+        },
+        {
+          "path": "Programs/mappings/mid/flatride_ride_map.sfz",
+          "bytes": 1497,
+          "sha256": "c7644c944273009570a94a9c258439ce427504745ceb1e01a0ea0b732b6c45db"
+        },
+        {
+          "path": "Programs/mappings/mid/hh_34_map.sfz",
+          "bytes": 1748,
+          "sha256": "13e42d2493ae53b66ea3950407c76e151c1a66c4c1dd02b7ecf3f789d2b89138"
+        },
+        {
+          "path": "Programs/mappings/mid/hh_closed_map.sfz",
+          "bytes": 1812,
+          "sha256": "375bad58dd8f3763978642a9f4834953fedf5079da2e5bfae1acee3f7e7ff0cc"
+        },
+        {
+          "path": "Programs/mappings/mid/hh_half_map.sfz",
+          "bytes": 1780,
+          "sha256": "95a082a8bf8a8de85044f3543a89701e4015adc2cbc77a469e75b55cc65f84e7"
+        },
+        {
+          "path": "Programs/mappings/mid/hh_open_map.sfz",
+          "bytes": 1321,
+          "sha256": "a3ffe560f25daf219fc0820e4196b2d60d3c5c80a51fe4a03392c315dd8e8dd1"
+        },
+        {
+          "path": "Programs/mappings/mid/hh_pedal_map.sfz",
+          "bytes": 1365,
+          "sha256": "d20bfc9fd2ece2ebb2aa3cccb2e0f636abc0d38d63b3d8862fa86273009f6882"
+        },
+        {
+          "path": "Programs/mappings/mid/hh_silences_epic_map.sfz",
+          "bytes": 2168,
+          "sha256": "007a4a9f1c09c5938fad9474957f96f14a949a814c710ea888e933321ed44566"
+        },
+        {
+          "path": "Programs/mappings/mid/hh_silences_map.sfz",
+          "bytes": 2176,
+          "sha256": "a4a39d97cab35ddd81688ce55e7dc6aee6e549562609a8309b6d446f1faba342"
+        },
+        {
+          "path": "Programs/mappings/mid/hh_splash_map.sfz",
+          "bytes": 327,
+          "sha256": "c767d01e0f1e411fe14cd1bab873f44c28fc0b79cc299d9b2bcd295e0a65de6e"
+        },
+        {
+          "path": "Programs/mappings/mid/htom_center_map.sfz",
+          "bytes": 1272,
+          "sha256": "cead380516daf8b357af1a0939171bda9faf505f51c1c1e06a6fea4a5d92f6f5"
+        },
+        {
+          "path": "Programs/mappings/mid/htom_offcenter_map.sfz",
+          "bytes": 1320,
+          "sha256": "b6481916c5f4bad200c2f22e08cf692f7eb3ec6487e9ec9f5977b75fa4c9fb5e"
+        },
+        {
+          "path": "Programs/mappings/mid/kick_snoff_map.sfz",
+          "bytes": 1860,
+          "sha256": "329713b84b9ff6e3bae42d53209eb73f1a8d71a726e676ad73b1840eeb5b151b"
+        },
+        {
+          "path": "Programs/mappings/mid/kick_snon_map.sfz",
+          "bytes": 1844,
+          "sha256": "117647fda55b9c2b28981c5e6f4303384d8d5cce029fa1074ae531ffe94bf3d5"
+        },
+        {
+          "path": "Programs/mappings/mid/ltom_center_map.sfz",
+          "bytes": 1272,
+          "sha256": "e9d742138ccdb3d6f1a88bb4a09316d0aa8f31a0effeec374fcf707e71e4eee8"
+        },
+        {
+          "path": "Programs/mappings/mid/ltom_crossstick_map.sfz",
+          "bytes": 836,
+          "sha256": "3e0b5b3df46dc19028cc06b3d8f347af5b494ea05c4a95f57eddd78dd8b8714a"
+        },
+        {
+          "path": "Programs/mappings/mid/ltom_halfopen_map.sfz",
+          "bytes": 1304,
+          "sha256": "b226f83c71ed9bda5862edbd4b441a6087395bcc1e69b693a9754b72efd1b0f7"
+        },
+        {
+          "path": "Programs/mappings/mid/ltom_muted_map.sfz",
+          "bytes": 1256,
+          "sha256": "10f699444377168b488a24bb4b46967608cfe668dff4a7dd82a8e8c39ac84457"
+        },
+        {
+          "path": "Programs/mappings/mid/ltom_offcenter_map.sfz",
+          "bytes": 984,
+          "sha256": "aefdf75454b7714617a05cf19d382107585ed129141e4559ccc12946d5c4ec83"
+        },
+        {
+          "path": "Programs/mappings/mid/ltom_rimshot_map.sfz",
+          "bytes": 806,
+          "sha256": "3b92a9572cdc2b2e65b1494e4ba156c08aacaf942685e562d54e5a74d626bd4f"
+        },
+        {
+          "path": "Programs/mappings/mid/ride_bell_map.sfz",
+          "bytes": 1053,
+          "sha256": "48afd8cdcdcc06e36ebc756d1c91f8d5d52c277bb903fac3512a788f2cbda8a1"
+        },
+        {
+          "path": "Programs/mappings/mid/ride_ride_map.sfz",
+          "bytes": 1401,
+          "sha256": "d2d799e9819dc43a62a8ae1c44a0f731b7e3bb95a28372b70b7c43459cabfa33"
+        },
+        {
+          "path": "Programs/mappings/mid/snare_buzz_map.sfz",
+          "bytes": 948,
+          "sha256": "57a14699cd9e85828bef34ca3b151d78a556270d7c01e6a55eb773e8b5280ef5"
+        },
+        {
+          "path": "Programs/mappings/mid/snare_center_map.sfz",
+          "bytes": 2971,
+          "sha256": "925db156dc01567fa609723a9f4708f77cc9fbcdc456bd56fab5d91481ffe44c"
+        },
+        {
+          "path": "Programs/mappings/mid/snare_crossstick_map.sfz",
+          "bytes": 1368,
+          "sha256": "8979c8ba8f020d0ca8e7f59d841416451b7bc778948f440f47cde0d2c1228a58"
+        },
+        {
+          "path": "Programs/mappings/mid/snare_flam_map.sfz",
+          "bytes": 948,
+          "sha256": "622171d90fb4ad03f0e325b62d27fd71048dcb9ee27f1e6fa07dc4cf8c9fddc5"
+        },
+        {
+          "path": "Programs/mappings/mid/snare_halfopen_map.sfz",
+          "bytes": 1336,
+          "sha256": "133f6319574e98f302ababab4f6498712a602110c6033a23354d732352c94725"
+        },
+        {
+          "path": "Programs/mappings/mid/snare_muted_map.sfz",
+          "bytes": 1288,
+          "sha256": "77697a1b7c253a52b381166b1271522caa3dfe8c9259a5a9b4708676532cce65"
+        },
+        {
+          "path": "Programs/mappings/mid/snare_offcenter_map.sfz",
+          "bytes": 3079,
+          "sha256": "addf41b1371ca9688a87eaf6444317a4d088ae0e8abc16ce064f1da4af54b406"
+        },
+        {
+          "path": "Programs/mappings/mid/snare_rimshot_map.sfz",
+          "bytes": 984,
+          "sha256": "109c8ba4a842d0457d67d76aff4b93eada3b37ceaba8b90047703f9d89cdaa52"
+        },
+        {
+          "path": "Programs/mappings/mid/snare_roll_end_map.sfz",
+          "bytes": 515,
+          "sha256": "3084e9e919bbf1129c354bf2d55d4f73195ff02420956fd00a38135d5d89caa2"
+        },
+        {
+          "path": "Programs/mappings/mid/snare_roll_map.sfz",
+          "bytes": 569,
+          "sha256": "c8c291249d62ad8035e7b87db004a378d900b149f5b0fb02937e9572872f5963"
+        },
+        {
+          "path": "Programs/mappings/mid/snare_stickshot1_map.sfz",
+          "bytes": 671,
+          "sha256": "f6ad7e8b7fc7cfb532bb53570318e55a2b861810daee0f7347bd5a1b13ef2c29"
+        },
+        {
+          "path": "Programs/mappings/mid/snare_stickshot2_map.sfz",
+          "bytes": 1368,
+          "sha256": "5282c54fb887cb956407c9b956011bef6af70709a73534448edc6e5b66743da2"
+        },
+        {
+          "path": "Programs/mappings/mid/snareoff_buzz_map.sfz",
+          "bytes": 1020,
+          "sha256": "566f986eb3d0684f603ebde582359c231b882cc23317a91260e1ebac8534b401"
+        },
+        {
+          "path": "Programs/mappings/mid/snareoff_center_map.sfz",
+          "bytes": 1044,
+          "sha256": "bed41795cfbc1d47b48e2341f6679a3c9b7f4dfdc5f96fa1234a05a66c732fbb"
+        },
+        {
+          "path": "Programs/mappings/mid/snareoff_crossstick_map.sfz",
+          "bytes": 916,
+          "sha256": "5b31bdeab45fbb041ac3420ed5d7c3dacd60bbc3f88132347032586dd112ff61"
+        },
+        {
+          "path": "Programs/mappings/mid/snareoff_flam_map.sfz",
+          "bytes": 1020,
+          "sha256": "3488b186ec554945abf5156694e10a46a806c1a1691762bc63ab26feaea4126c"
+        },
+        {
+          "path": "Programs/mappings/mid/snareoff_halfopen_map.sfz",
+          "bytes": 1068,
+          "sha256": "ced6527917fc690a02b3ed139984e30dad3e21a0361656b1b5496036c7519850"
+        },
+        {
+          "path": "Programs/mappings/mid/snareoff_muted_map.sfz",
+          "bytes": 1032,
+          "sha256": "1833e39556a3b38fc83104a91e52f52d9a047949a4915e1b977bd9b722b5e507"
+        },
+        {
+          "path": "Programs/mappings/mid/snareoff_offcenter_map.sfz",
+          "bytes": 1080,
+          "sha256": "177f45763f89c7a13fc6063c92c873a7004054a4ea1051368083a3fe6cf770b0"
+        },
+        {
+          "path": "Programs/mappings/mid/snareoff_roll_end_map.sfz",
+          "bytes": 547,
+          "sha256": "2fd819af74118b9b8e452ac55b774ed891ceb75744deaee87841e9be7da627c3"
+        },
+        {
+          "path": "Programs/mappings/mid/snareoff_roll_map.sfz",
+          "bytes": 599,
+          "sha256": "b7f93aab1a58cd50bb418c6d12694a93ca22ec008a3f3cd223479a6bc30383b8"
+        },
+        {
+          "path": "Programs/mappings/mid/snareoff_stickshot1_map.sfz",
+          "bytes": 916,
+          "sha256": "3eb229cd53db57bec77232bd1f78fc35fb4c492de79e6e2d88ebea1cd7e55e43"
+        },
+        {
+          "path": "Programs/mappings/mid/snareoff_stickshot2_map.sfz",
+          "bytes": 1092,
+          "sha256": "357bca486658e6ac79761c89051d6821b5a2808928ee57ca125213226a92cf39"
+        },
+        {
+          "path": "Programs/mappings/mutecurves.sfz",
+          "bytes": 122,
+          "sha256": "383a0605d403ff03d209ca018985e32dc03460b4962d71229772613c31777010"
+        },
+        {
+          "path": "Programs/mappings/oh_all.sfz",
+          "bytes": 5766,
+          "sha256": "ee242aaf97cfc971f6e37099f4eaf9ded7966cc4989fd89f505312ba4f427ded"
+        },
+        {
+          "path": "Programs/mappings/oh_basic.sfz",
+          "bytes": 2515,
+          "sha256": "2e50dbcdd461e41cf8550ab5cb77207062cf06aa62618133221624e75c7c8e2a"
+        },
+        {
+          "path": "Programs/mappings/oh_epic_all.sfz",
+          "bytes": 5932,
+          "sha256": "dd7ca562d2eacf201798a17f6230b9938da49126acd134076ef466d5af93af72"
+        },
+        {
+          "path": "Programs/mappings/oh_epic_perc.sfz",
+          "bytes": 3320,
+          "sha256": "210eef805a6b7019d4f49bcc2b8484f817e02aa840a7345bcb170533cd2f9d45"
+        },
+        {
+          "path": "Programs/mappings/oh_perc.sfz",
+          "bytes": 3925,
+          "sha256": "3649940b832f8299e0cffbefd27f722572a9f1a1f4c114ca9248d7413a1b8929"
+        },
+        {
+          "path": "Programs/mappings/oh/crash_crash_map.sfz",
+          "bytes": 1497,
+          "sha256": "c09e9b3f5118fa3b49dcebfb567b1a8e2b41590e7018a413d8ef8f67e134b20f"
+        },
+        {
+          "path": "Programs/mappings/oh/crash_sizzle_map.sfz",
+          "bytes": 1509,
+          "sha256": "5ac76853055dc336c532d2c6b17923608e398c7f9ce35b868cf72854ea1d17c8"
+        },
+        {
+          "path": "Programs/mappings/oh/flatride_crash_map.sfz",
+          "bytes": 374,
+          "sha256": "51935dae3094446fe101fc75e9d0858a118177767311f8f3ef2b544b67b17e76"
+        },
+        {
+          "path": "Programs/mappings/oh/flatride_ride_map.sfz",
+          "bytes": 1473,
+          "sha256": "0437fc2c8d3cfe2caa5b98b7d9beb4fc9ba8d4c104199f9ba2c0d40d0317cf0f"
+        },
+        {
+          "path": "Programs/mappings/oh/hh_34_map.sfz",
+          "bytes": 1716,
+          "sha256": "85f9eddcefc060772dce76733f11ffe3b7be1bedfc8674bf922e6863adab05a8"
+        },
+        {
+          "path": "Programs/mappings/oh/hh_closed_map.sfz",
+          "bytes": 1780,
+          "sha256": "10c675d0e585f57ce2b7e0a8de5e298305e2d6c8f75321abd328fe2d731782e6"
+        },
+        {
+          "path": "Programs/mappings/oh/hh_half_map.sfz",
+          "bytes": 1748,
+          "sha256": "03c83618fd63f1ea84867e2af11c2e62ba8c47493836aab3dbc704364b8160b5"
+        },
+        {
+          "path": "Programs/mappings/oh/hh_open_map.sfz",
+          "bytes": 1297,
+          "sha256": "f928ccd4968f5c02950ee6301a92314b9c59a679f6cca41277cb8370578412f3"
+        },
+        {
+          "path": "Programs/mappings/oh/hh_pedal_map.sfz",
+          "bytes": 1341,
+          "sha256": "bfd815d5823ed9cb8c76787c81ae59c32838889e1a90a450a3e2f29efc2aef7a"
+        },
+        {
+          "path": "Programs/mappings/oh/hh_silences_basic_map.sfz",
+          "bytes": 423,
+          "sha256": "0565cc79e2b70c215fab31c46c386a2b3ff9a3774d9f124dcbe354c1454a07e3"
+        },
+        {
+          "path": "Programs/mappings/oh/hh_silences_epic_map.sfz",
+          "bytes": 2168,
+          "sha256": "49a26a4e52e388192e0ac5ad97ae724f2e2351eb0207ec0e4b833b1aaec5f7b7"
+        },
+        {
+          "path": "Programs/mappings/oh/hh_silences_map.sfz",
+          "bytes": 2158,
+          "sha256": "2c381c6c6b6b2b1d3b030d472627ecd3f66352ea195bfd6363b04efddf7151ec"
+        },
+        {
+          "path": "Programs/mappings/oh/hh_splash_map.sfz",
+          "bytes": 319,
+          "sha256": "35503813afafdaa7cdf6ea51e0244f7b7819e7e61307ac726dd61ba97e5bec62"
+        },
+        {
+          "path": "Programs/mappings/oh/htom_center_map.sfz",
+          "bytes": 1240,
+          "sha256": "113f5ae98cdbfeac0d62f081e934a18bbe1e0f0141da3ee7c1efabd9c056ecc0"
+        },
+        {
+          "path": "Programs/mappings/oh/htom_offcenter_map.sfz",
+          "bytes": 1288,
+          "sha256": "45ff085621195db3a41f05b024941790a0f3d09e617df2010a6098137bfe784c"
+        },
+        {
+          "path": "Programs/mappings/oh/kick_snoff_map.sfz",
+          "bytes": 1828,
+          "sha256": "b0166d39e4e233fdaf91b982164f0aa583cbcc4ff93ef77ba8b351436a202211"
+        },
+        {
+          "path": "Programs/mappings/oh/kick_snon_map.sfz",
+          "bytes": 1812,
+          "sha256": "4052a2a2ab1f992c2dfaac17eee3a8bae09034f05ad2c593f8cb0ed13bc25670"
+        },
+        {
+          "path": "Programs/mappings/oh/ltom_center_map.sfz",
+          "bytes": 1240,
+          "sha256": "648884a4692d4a14c60554cf47b44baa21d17b59c4a564c1b8d13cbde96515ec"
+        },
+        {
+          "path": "Programs/mappings/oh/ltom_crossstick_map.sfz",
+          "bytes": 816,
+          "sha256": "13bce2e6d1fa91bafdda1ffe437fabc0ce2ebffed05dcbfa2ce2fcbc4afb6413"
+        },
+        {
+          "path": "Programs/mappings/oh/ltom_halfopen_map.sfz",
+          "bytes": 1272,
+          "sha256": "745e446cc4236a3abcb78a7d7f9497b14afa4201301cce49c57c813500c56c35"
+        },
+        {
+          "path": "Programs/mappings/oh/ltom_muted_map.sfz",
+          "bytes": 1224,
+          "sha256": "267de324bec83e36a0dead5beb3ad909183ae9578c45bea7f820eee2491a988a"
+        },
+        {
+          "path": "Programs/mappings/oh/ltom_offcenter_map.sfz",
+          "bytes": 960,
+          "sha256": "2999844d8477e5817a68a9f35b387ec19a74b296d2ecfa712f77d377321e074c"
+        },
+        {
+          "path": "Programs/mappings/oh/ltom_rimshot_map.sfz",
+          "bytes": 786,
+          "sha256": "fc2b1e7a0e12a6b4c824be5a5e47fea119e4d04066fb482813e14d2098779eaf"
+        },
+        {
+          "path": "Programs/mappings/oh/ride_bell_map.sfz",
+          "bytes": 1035,
+          "sha256": "2a3855b88b8fa9cf5758d23254f7a8b5e43f4d06efeb20fe8b8a8ec07c93f925"
+        },
+        {
+          "path": "Programs/mappings/oh/ride_ride_map.sfz",
+          "bytes": 1377,
+          "sha256": "59592e9c831b8e2e588ee9dd63a5302a45f38a1d49d23cdb661268e5deb64be5"
+        },
+        {
+          "path": "Programs/mappings/oh/snare_buzz_map.sfz",
+          "bytes": 924,
+          "sha256": "f7f32d51f24a73f4f4127ec1ba74d8bd6bde85faa027fa2630880e1df73143e2"
+        },
+        {
+          "path": "Programs/mappings/oh/snare_center_map.sfz",
+          "bytes": 2899,
+          "sha256": "be28b46f4d4159e312980fa61205118a6ee9ec045be8b42708f5d6129064b497"
+        },
+        {
+          "path": "Programs/mappings/oh/snare_crossstick_map.sfz",
+          "bytes": 1336,
+          "sha256": "c7ed9862f807f528fc364ef54aaf66d1291370de65b201cb1ba2e9b7fb18567b"
+        },
+        {
+          "path": "Programs/mappings/oh/snare_flam_map.sfz",
+          "bytes": 924,
+          "sha256": "4f0a991d870c7af23d1c0d7f87a27ad01ee1318c866ee646299fcdfc0c825c60"
+        },
+        {
+          "path": "Programs/mappings/oh/snare_halfopen_map.sfz",
+          "bytes": 1304,
+          "sha256": "c99a68d808d9352a617f5a9e6a869fc921672c0f63d46b3686b0db1d4dc2fae5"
+        },
+        {
+          "path": "Programs/mappings/oh/snare_muted_map.sfz",
+          "bytes": 1256,
+          "sha256": "5c1e471078c6d88ddceba31f80cdd90c173b07cec0f68656327a5d4cae048d3a"
+        },
+        {
+          "path": "Programs/mappings/oh/snare_offcenter_map.sfz",
+          "bytes": 3007,
+          "sha256": "b1ebfd63bc27daed3686db8340e949e21a2a9761f1d64aeeca6f78a9f9062a8c"
+        },
+        {
+          "path": "Programs/mappings/oh/snare_rimshot_map.sfz",
+          "bytes": 960,
+          "sha256": "eef1554211b1b4b01a48945acf161189a5385f68710cdcaf0c5feb8aa343a6e6"
+        },
+        {
+          "path": "Programs/mappings/oh/snare_roll_end_map.sfz",
+          "bytes": 503,
+          "sha256": "90ec1b5a7e18c4ecb4b3f04a44414d2def1b37e0e7b5923dab840714e3682794"
+        },
+        {
+          "path": "Programs/mappings/oh/snare_roll_map.sfz",
+          "bytes": 559,
+          "sha256": "a73fd358ebdb513573a9b185b7ab4a91f8a9169013e38514f0c41aec6f696513"
+        },
+        {
+          "path": "Programs/mappings/oh/snare_stickshot1_map.sfz",
+          "bytes": 655,
+          "sha256": "29fd050c21c2fb1f8d5c288eaeff8f0347e6ac6b13f90ddc5e9f3bf8a8595e58"
+        },
+        {
+          "path": "Programs/mappings/oh/snare_stickshot2_map.sfz",
+          "bytes": 1336,
+          "sha256": "07a0a74677bdd92b9d9603069e0f26296f5fe71d4040432132a1b72697d2ca29"
+        },
+        {
+          "path": "Programs/mappings/oh/snareoff_buzz_map.sfz",
+          "bytes": 996,
+          "sha256": "55e30a00c14b1f8547136d307d3acb9f84004146260f84693fc3b1df0b2494e4"
+        },
+        {
+          "path": "Programs/mappings/oh/snareoff_center_map.sfz",
+          "bytes": 1020,
+          "sha256": "b7fdb978a16a17856ef1c8a00c003ad870fe08f065865b9edd14ceee5c1f3c7b"
+        },
+        {
+          "path": "Programs/mappings/oh/snareoff_crossstick_map.sfz",
+          "bytes": 896,
+          "sha256": "aa4ed046a0692eda86025b73d736f7cf42c26ad94e02a165d2e3e8fa8e63c81e"
+        },
+        {
+          "path": "Programs/mappings/oh/snareoff_flam_map.sfz",
+          "bytes": 996,
+          "sha256": "b536520673e717ddbe457d9e4615f803ffcd87596bcd5810711d1e27894474b9"
+        },
+        {
+          "path": "Programs/mappings/oh/snareoff_halfopen_map.sfz",
+          "bytes": 1044,
+          "sha256": "4bbbb6dc8dddd68635c2fccf2d9376f9cab55d7a0b7f6a02074de75d12565e2f"
+        },
+        {
+          "path": "Programs/mappings/oh/snareoff_muted_map.sfz",
+          "bytes": 1008,
+          "sha256": "7bed9d6ea51effeb6e06acef96b232acb8de7bde3b3e8c6a1590595abb1670e8"
+        },
+        {
+          "path": "Programs/mappings/oh/snareoff_offcenter_map.sfz",
+          "bytes": 1056,
+          "sha256": "8ff9af88f691182474ea9c14315b160c761c7aa4f37606b8537430f9a06fa2b2"
+        },
+        {
+          "path": "Programs/mappings/oh/snareoff_roll_end_map.sfz",
+          "bytes": 535,
+          "sha256": "7dc8bd9c86173646f1d5e0cf2573465596851eacff27319d7c3afaf5a5ae35e3"
+        },
+        {
+          "path": "Programs/mappings/oh/snareoff_roll_map.sfz",
+          "bytes": 589,
+          "sha256": "1f01b3b90b576847c508d3bd864ab0eea24a2b35c5fb0cd1d4d7326214501d13"
+        },
+        {
+          "path": "Programs/mappings/oh/snareoff_stickshot1_map.sfz",
+          "bytes": 896,
+          "sha256": "f79a316da3a4b7901450b57ac7d2404a21824b545b50d55c0b3f5eb11602243d"
+        },
+        {
+          "path": "Programs/mappings/oh/snareoff_stickshot2_map.sfz",
+          "bytes": 1068,
+          "sha256": "beba2f79864edff7a0a251836ce0a96e78dc0d82dcd049b2eaa267e777e4d158"
+        },
+        {
+          "path": "Programs/mappings/perc/close/agogo_high_map.sfz",
+          "bytes": 2955,
+          "sha256": "5a26c190d7f0f8bf68793fe9489d378d58013fc21184fda03f78c517e3eb43fb"
+        },
+        {
+          "path": "Programs/mappings/perc/close/agogo_low_map.sfz",
+          "bytes": 1858,
+          "sha256": "428beb23d64d3de0a8afa94c6d6cf5315e715c9271d7c5d4ad020c8aca4da535"
+        },
+        {
+          "path": "Programs/mappings/perc/close/belltree_map.sfz",
+          "bytes": 1166,
+          "sha256": "d4fe0ba001ba7d87e05edc9307b654754a80300d769828c8a0d1acee66112b79"
+        },
+        {
+          "path": "Programs/mappings/perc/close/bongo_high_map.sfz",
+          "bytes": 3003,
+          "sha256": "22cfb6f2cf14e855f694910f2bd68d5e531374ae5258bfe7a280e9ac0c5be107"
+        },
+        {
+          "path": "Programs/mappings/perc/close/bongo_low_map.sfz",
+          "bytes": 3003,
+          "sha256": "4a8da8dc96250e2496217851d11ae0fdb789f5d0ee05e0f3870d242e04c5b997"
+        },
+        {
+          "path": "Programs/mappings/perc/close/cabasa_map.sfz",
+          "bytes": 1906,
+          "sha256": "f317c32b778c32ba9e3731fc035be5a93152066165df6dbd6b797b0ccdb889b4"
+        },
+        {
+          "path": "Programs/mappings/perc/close/claves_map.sfz",
+          "bytes": 3003,
+          "sha256": "8bd83eaacf6e651cfd00a0bdb6b8a233a9d8e665be6e2a4d257d99dd09099cdd"
+        },
+        {
+          "path": "Programs/mappings/perc/close/conga_muted_map.sfz",
+          "bytes": 2002,
+          "sha256": "d67019996d0f2664010805420400940efa96e5adeda1ac884a137efa6fea1496"
+        },
+        {
+          "path": "Programs/mappings/perc/close/conga_open_map.sfz",
+          "bytes": 3115,
+          "sha256": "b123657eae9711536305fb7426099200508b4e5a0f1ed066426ef371b4715919"
+        },
+        {
+          "path": "Programs/mappings/perc/close/cowbell_map.sfz",
+          "bytes": 2727,
+          "sha256": "c408565dd62fc16446a416738fa9bb94817b5f00945b7b23585ae0c656e732b8"
+        },
+        {
+          "path": "Programs/mappings/perc/close/guiro_fast_map.sfz",
+          "bytes": 769,
+          "sha256": "1ef78f8fe9343e7f0b2e3662558ee2bd4c246b1222bd58df4d01b3505424332d"
+        },
+        {
+          "path": "Programs/mappings/perc/close/guiro_slow_map.sfz",
+          "bytes": 761,
+          "sha256": "e6d37691a39399ba5978821481ada7f938c7502923f2a33772eaeb733eb17523"
+        },
+        {
+          "path": "Programs/mappings/perc/close/jinglebell_map.sfz",
+          "bytes": 857,
+          "sha256": "d3273ee3239011cef7b05a87046d5dc8178ea027e2fec768465359943cb9d992"
+        },
+        {
+          "path": "Programs/mappings/perc/close/shaker_down_map.sfz",
+          "bytes": 713,
+          "sha256": "f4038f12fd6e72d049597b302199d6a65d50384b7ff4e47b0157d4d5b4180844"
+        },
+        {
+          "path": "Programs/mappings/perc/close/shaker_up_map.sfz",
+          "bytes": 713,
+          "sha256": "01f6be6cdafe9283ab195c02ce77e2db9abd4030366d422accd173c8e6cf93a9"
+        },
+        {
+          "path": "Programs/mappings/perc/close/tambourine_map.sfz",
+          "bytes": 1037,
+          "sha256": "161c5a285d5771c79c66464399a57d58ba37bf90bd372f3080cb68ef83f40a0d"
+        },
+        {
+          "path": "Programs/mappings/perc/close/triangle_muted_map.sfz",
+          "bytes": 849,
+          "sha256": "7d5b45fb9bb6e9338512dc021d195c41ba24215cb5284ab56241cab8ccd832d8"
+        },
+        {
+          "path": "Programs/mappings/perc/close/triangle_open_map.sfz",
+          "bytes": 1970,
+          "sha256": "c1e7fe18e4c15b8964bcc90e90060388d922eea6b603c98ff37dce33e1431cd6"
+        },
+        {
+          "path": "Programs/mappings/perc/close/tumba_map.sfz",
+          "bytes": 4244,
+          "sha256": "276e09ae2e7fe0e4c6aeea6519c69897662be7ab1c5a852488acad287f6fbc42"
+        },
+        {
+          "path": "Programs/mappings/perc/close/vibraslap_map.sfz",
+          "bytes": 2082,
+          "sha256": "0c49dd3cc2071da2f7071b7d1957d1a5a665333ddddc57efcacaa10423e860f7"
+        },
+        {
+          "path": "Programs/mappings/perc/close/whistle_long_map.sfz",
+          "bytes": 196,
+          "sha256": "57e43b102e7238da146ed8c667e0ad2d723197fcf104abafd07f82e2c8d77322"
+        },
+        {
+          "path": "Programs/mappings/perc/close/whistle_short_map.sfz",
+          "bytes": 626,
+          "sha256": "72d14fb28602b9cfce01dec78c00d2e1f365f927ec1596c749831855152ff08d"
+        },
+        {
+          "path": "Programs/mappings/perc/mid/agogo_high_map.sfz",
+          "bytes": 2859,
+          "sha256": "fb5994eaa7965f069abc2a0ccd28aea6f62e9de41700e6f8d77ceb2c37fafb55"
+        },
+        {
+          "path": "Programs/mappings/perc/mid/agogo_low_map.sfz",
+          "bytes": 1794,
+          "sha256": "1409fcf3958efd24cbf3db9f074b6c317ab6cb468b5b0a86118b31c337f52eaf"
+        },
+        {
+          "path": "Programs/mappings/perc/mid/belltree_map.sfz",
+          "bytes": 1122,
+          "sha256": "c27aa06f2d2d1ff810f5b04fbdb179af481d7a45c8d4c36be96718bc2010985a"
+        },
+        {
+          "path": "Programs/mappings/perc/mid/bongo_high_map.sfz",
+          "bytes": 2907,
+          "sha256": "a3109010bd78f029cfa183f5e28c84dee276b7d4c1900068ec80dcc6a3ad24d9"
+        },
+        {
+          "path": "Programs/mappings/perc/mid/bongo_low_map.sfz",
+          "bytes": 2907,
+          "sha256": "47459ab340e4666cd5a811198bf425c7b7b7f0e50449767491f79dad56cf43e8"
+        },
+        {
+          "path": "Programs/mappings/perc/mid/cabasa_map.sfz",
+          "bytes": 1842,
+          "sha256": "7eb3f36d0f11ec3d809ac87181deadc26e3270d4e016456aa4c2e9b22a905b83"
+        },
+        {
+          "path": "Programs/mappings/perc/mid/claves_map.sfz",
+          "bytes": 2907,
+          "sha256": "f8f66e204137b0df4960449511c049e4fa89d60ec33df2aee7357b507db79141"
+        },
+        {
+          "path": "Programs/mappings/perc/mid/conga_muted_map.sfz",
+          "bytes": 1938,
+          "sha256": "11b158c2507fddbe15cc221dcb64765d2cf4b7c18426d86f4371eda08f766df0"
+        },
+        {
+          "path": "Programs/mappings/perc/mid/conga_open_map.sfz",
+          "bytes": 3019,
+          "sha256": "24f69b913463a43a255f999b95b4a239ead28a3b7a61a396ed8cb246939a17e4"
+        },
+        {
+          "path": "Programs/mappings/perc/mid/cowbell_map.sfz",
+          "bytes": 2643,
+          "sha256": "96fca5f31bd33301bbdf60f249a4a70fd248365b6205d9dbb14c94e27a3c0ef8"
+        },
+        {
+          "path": "Programs/mappings/perc/mid/guiro_fast_map.sfz",
+          "bytes": 737,
+          "sha256": "944507cfee54e26738e3f74c0f60163c4ddf4ac833c61c88f747713208775895"
+        },
+        {
+          "path": "Programs/mappings/perc/mid/guiro_slow_map.sfz",
+          "bytes": 729,
+          "sha256": "5e0530dc10605d507ffd8c623d5503b6600f161391ec7ae4b15176b8cf74c699"
+        },
+        {
+          "path": "Programs/mappings/perc/mid/jinglebell_map.sfz",
+          "bytes": 825,
+          "sha256": "393fc0bcf4d970d6cb34398a21cbee65730c105afaec0e8ddc2792c1012564ba"
+        },
+        {
+          "path": "Programs/mappings/perc/mid/shaker_down_map.sfz",
+          "bytes": 685,
+          "sha256": "decd9f080bb6f9f2ef8b63b569a24b5c1f84ab6967e9444b2a1994ef2b311869"
+        },
+        {
+          "path": "Programs/mappings/perc/mid/shaker_up_map.sfz",
+          "bytes": 685,
+          "sha256": "e63e964c574af499833e82e95f2692820b03ea9604fb5d6b44030056ed4ff95c"
+        },
+        {
+          "path": "Programs/mappings/perc/mid/tambourine_map.sfz",
+          "bytes": 997,
+          "sha256": "8570f9a67f1ee27ffc9139fb31d83c1df23d202573dc3e6718b323e8059cf80a"
+        },
+        {
+          "path": "Programs/mappings/perc/mid/triangle_muted_map.sfz",
+          "bytes": 817,
+          "sha256": "eef20bef897379558e2ba99ef1efc91d64b56bd91a3c00046537eaaf657d19d2"
+        },
+        {
+          "path": "Programs/mappings/perc/mid/triangle_open_map.sfz",
+          "bytes": 1906,
+          "sha256": "79e9750d5b1e78d0bf21761712f8da24c182142cbb500f2211790ecf39329d51"
+        },
+        {
+          "path": "Programs/mappings/perc/mid/tumba_map.sfz",
+          "bytes": 4116,
+          "sha256": "c91bef7810e6bc35ec233d43b138f76ce5b13f500e87c7a12440fe00b1c60243"
+        },
+        {
+          "path": "Programs/mappings/perc/mid/vibraslap_map.sfz",
+          "bytes": 2018,
+          "sha256": "930fa4c485e5a9e812f282c486e04026e3ac5da421298e5013c98fa1d048fa29"
+        },
+        {
+          "path": "Programs/mappings/perc/mid/whistle_long_map.sfz",
+          "bytes": 190,
+          "sha256": "91c2c00eadeef0fd7caaa9b2ccaabec8bf9785beca2c1c47000c9405644fa196"
+        },
+        {
+          "path": "Programs/mappings/perc/mid/whistle_short_map.sfz",
+          "bytes": 608,
+          "sha256": "8547d677f9ed02d444c85cd63e56e2628f672933f79aed3825ff31cc70db44a5"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/agogo_high_map.sfz",
+          "bytes": 2955,
+          "sha256": "1db4dc7f3a5f7354674bb3ae3a0c57bba7917c7fe067f790c1763879e72f0047"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/agogo_low_map.sfz",
+          "bytes": 1858,
+          "sha256": "75e46816e8a9ff5ff1cf070219838cc25399e96a2291042ee95e8c01b9bb1c0e"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/belltree_map.sfz",
+          "bytes": 1166,
+          "sha256": "59525cc0a8df13e3e2bb6ba5ebb7bc5171d9f74d1d99f11b41cf9ee688ced83c"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/bongo_high_map.sfz",
+          "bytes": 3003,
+          "sha256": "67b82b5e536f636939340e050494fced220e611e6e8873499bf7560608c908fd"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/bongo_low_map.sfz",
+          "bytes": 3003,
+          "sha256": "448f535e028dcf6c80191b426287ee4fa9493b43e6d3419cf8155357ac500200"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/cabasa_map.sfz",
+          "bytes": 1906,
+          "sha256": "883bdd1ef8d980fcddac71ac42dce414ccd5b50ee21f6c113085eee032ee3fee"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/claves_map.sfz",
+          "bytes": 3003,
+          "sha256": "e0c5b7c0e421b2c09ee85cb1a89d39325d8849fd1feb6267420175696faf9101"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/conga_muted_map.sfz",
+          "bytes": 2002,
+          "sha256": "b0fc6c862630a0753154397203930da62aa51eff46e2ddd62f07bbbfeb453bc6"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/conga_open_map.sfz",
+          "bytes": 3115,
+          "sha256": "bd2cd788ee280120377b2f36b64ecdf9ddf261beb13d1af0985bd344be0b7ec4"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/cowbell_map.sfz",
+          "bytes": 2727,
+          "sha256": "3f248bcb5c576c890be6bdf1e41028c6b9db0f1c0eeacbd084f544ac45f2efce"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/cuica_muted_map.sfz",
+          "bytes": 461,
+          "sha256": "c830e414bcd9b80c612eb3555e5afeaef7a0f606ccabe31f555fc431740ffa48"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/cuica_open_map.sfz",
+          "bytes": 650,
+          "sha256": "cf2bb1ad292bc17c74b82bd33f39e3d87636c031c9951c5e8cc10f74aa447553"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/guiro_fast_map.sfz",
+          "bytes": 769,
+          "sha256": "7615c54a7998b2b92617b164a48e67930e4734cc2340d594cd3574a3e470c375"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/guiro_slow_map.sfz",
+          "bytes": 761,
+          "sha256": "176354f96d3138d3c757235c0f2edc7e8c77220464b6448834bd7529e9abf9f6"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/jinglebell_map.sfz",
+          "bytes": 857,
+          "sha256": "7025f956fdd57b68d520401440534f5033c2a7c6c6236251214a02654fec96f0"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/shaker_down_map.sfz",
+          "bytes": 713,
+          "sha256": "7354ee1fbfba01abeadaf54564c08bc2d50a4f7a76b089cadbd6873b54734301"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/shaker_up_map.sfz",
+          "bytes": 713,
+          "sha256": "7248341b34da6522ae13464a845dc36fc11a21849908f8d535415cd50c50b343"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/tambourine_map.sfz",
+          "bytes": 1037,
+          "sha256": "96a7d1773bde25b745024f6fd534a5541be015e41a11c247286cca3d7f6a6c22"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/timbale_13_map.sfz",
+          "bytes": 2353,
+          "sha256": "c46abfc63bedefacafcbfd2f514a4e3b25c35e037192c1aef972587825cbad49"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/timbale_14_map.sfz",
+          "bytes": 1844,
+          "sha256": "52c903c495c735aa3f22dc3d2eb0097cf1bf3c980bc5b1f5bec8edd76fc5059d"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/triangle_muted_map.sfz",
+          "bytes": 849,
+          "sha256": "112c7ba81cfa820d07b1731611a4a4d5d1cf45bbe24f5843b31661ba7a9cbc4a"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/triangle_open_map.sfz",
+          "bytes": 1970,
+          "sha256": "c261ec517a61601a9c8159aabdb44782a3dd363be2efcfef84ab6791414eccee"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/tumba_map.sfz",
+          "bytes": 4244,
+          "sha256": "18b41ef496431896636c3e18b0c8eb07ac1b7ac8e3dbccc38e7de8111caae874"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/vibraslap_map.sfz",
+          "bytes": 2082,
+          "sha256": "f05964da9b59f9e0093200a30b13c01a6e9e2095b3402060631f38d5ca45095e"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/whistle_long_map.sfz",
+          "bytes": 196,
+          "sha256": "825f2cbca9b690cce0305cae83efe8373691dae6699d91dcf09a718fd445ecf0"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/whistle_short_map.sfz",
+          "bytes": 626,
+          "sha256": "afd430507c589c7262b47ebcfaaacf2ee3caf8d05aeceba2b7886bd31584ee37"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/woodblock_high_map.sfz",
+          "bytes": 2706,
+          "sha256": "b5c2f129327fdf5737288529da5afb10b0ca100f4a1a708430e49b36b2f62796"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/woodblock_low_map.sfz",
+          "bytes": 2706,
+          "sha256": "8a020f1118662cf1b7647b18ebceb83e08c5a3f38d97f3e288242e1ef77ca1e8"
+        },
+        {
+          "path": "Programs/mappings/perc/oh/woodblock_map.sfz",
+          "bytes": 2002,
+          "sha256": "b0fc6c862630a0753154397203930da62aa51eff46e2ddd62f07bbbfeb453bc6"
+        },
+        {
+          "path": "Programs/mappings/perc/room/agogo_high_map.sfz",
+          "bytes": 2883,
+          "sha256": "19a258772f30f115591b99be5d7066f025672692f0d8a769e929368f97592020"
+        },
+        {
+          "path": "Programs/mappings/perc/room/agogo_low_map.sfz",
+          "bytes": 1810,
+          "sha256": "6f2eaf1611b161d364878818928f7b0ff69b77601473ef73219b7825e47d6527"
+        },
+        {
+          "path": "Programs/mappings/perc/room/belltree_map.sfz",
+          "bytes": 1133,
+          "sha256": "fe05d80aa91b8c07667c5ed3cd34b971ad24853df90270d7ad3dea5432662d87"
+        },
+        {
+          "path": "Programs/mappings/perc/room/bongo_high_map.sfz",
+          "bytes": 2931,
+          "sha256": "67d1d9933ebe7d92ac9cb7c97bcc6d9ed478be001916814aad19874848b210c6"
+        },
+        {
+          "path": "Programs/mappings/perc/room/bongo_low_map.sfz",
+          "bytes": 2931,
+          "sha256": "dc1901d6826e31e683e7db811663280ca9e81a725469154d2878f1a2fb7d9c68"
+        },
+        {
+          "path": "Programs/mappings/perc/room/cabasa_map.sfz",
+          "bytes": 1858,
+          "sha256": "da487609532f755aac6fc57a25475047e027955209fb57e733fd938c96f4be49"
+        },
+        {
+          "path": "Programs/mappings/perc/room/claves_map.sfz",
+          "bytes": 2931,
+          "sha256": "69c019696ab9d92fcdcba1355db3eae3991407ba0c3d709f4641c786a9511cca"
+        },
+        {
+          "path": "Programs/mappings/perc/room/conga_muted_map.sfz",
+          "bytes": 1954,
+          "sha256": "8b35fb2ba7a621beb26f51ff71d11af8e2a90ee963f06722d42d24ae630a4259"
+        },
+        {
+          "path": "Programs/mappings/perc/room/conga_open_map.sfz",
+          "bytes": 3043,
+          "sha256": "0ff69e464afa33d568526f790d56a5418fbbd9708e03d4cc70097ef189678d3b"
+        },
+        {
+          "path": "Programs/mappings/perc/room/cowbell_map.sfz",
+          "bytes": 2664,
+          "sha256": "e56c52fec6e960210c15bbc922a9fccf9222d67294bc568690f90256e5e50ce8"
+        },
+        {
+          "path": "Programs/mappings/perc/room/guiro_fast_map.sfz",
+          "bytes": 745,
+          "sha256": "89c7983d0847ae2f47c80936a7548dccd9440acbeced459a09c8908f145f1081"
+        },
+        {
+          "path": "Programs/mappings/perc/room/guiro_slow_map.sfz",
+          "bytes": 737,
+          "sha256": "face0eed4f75bf9f27c4e88438ad6e984ad04d67f5a361da15475fd79fcea0f9"
+        },
+        {
+          "path": "Programs/mappings/perc/room/jinglebell_map.sfz",
+          "bytes": 833,
+          "sha256": "276c10183dfdfe8428c61fbd9babda03345cd00dfe6878ca7bfe41355939f1b1"
+        },
+        {
+          "path": "Programs/mappings/perc/room/shaker_down_map.sfz",
+          "bytes": 692,
+          "sha256": "a39f9fc5fa91c3591f9449d94c6057285daf401e8d3964b179348a29d591dce5"
+        },
+        {
+          "path": "Programs/mappings/perc/room/shaker_up_map.sfz",
+          "bytes": 692,
+          "sha256": "9c020b1afdeced244d0747f2a5454529851ae96e92da2dbee1da21ff3c7b6e8e"
+        },
+        {
+          "path": "Programs/mappings/perc/room/tambourine_map.sfz",
+          "bytes": 1007,
+          "sha256": "7c027c507ad5b1efc1de35ac972e525847aef0b034bce0a36d26bc5fe1789c67"
+        },
+        {
+          "path": "Programs/mappings/perc/room/triangle_muted_map.sfz",
+          "bytes": 825,
+          "sha256": "7a43aba73d1effa1fc6cac768f77fcbf7a653d647d95138f5820b8c195f13400"
+        },
+        {
+          "path": "Programs/mappings/perc/room/triangle_open_map.sfz",
+          "bytes": 1922,
+          "sha256": "eb7083e011bc4abaf420c8257103ed4a75ea915ec8a674b5b4c5c029daf4378d"
+        },
+        {
+          "path": "Programs/mappings/perc/room/tumba_map.sfz",
+          "bytes": 4148,
+          "sha256": "c1faac678e6abd76518c3a6510c4bb26ec7c9eb4953453c6e126534168b1180e"
+        },
+        {
+          "path": "Programs/mappings/perc/room/vibraslap_map.sfz",
+          "bytes": 2034,
+          "sha256": "8a509212a9d5c5eb1f78c769cea6836535a7deb6a1fba2494adc220f72892281"
+        },
+        {
+          "path": "Programs/mappings/perc/room/whistle_long_map.sfz",
+          "bytes": 190,
+          "sha256": "9f2b7ac4a2ad08d573c6de7d264043f2d917f2e28687fe1cc39ddf47368bd562"
+        },
+        {
+          "path": "Programs/mappings/perc/room/whistle_short_map.sfz",
+          "bytes": 608,
+          "sha256": "97ed83f5176fe92cd2b8c01a356818894670c576fd587a978f9d54050c892417"
+        },
+        {
+          "path": "Programs/mappings/room_all.sfz",
+          "bytes": 5850,
+          "sha256": "0ef00f517c4cfb488cf893ff29a68d0b5db06aafb4f93fc7758a824d5faf133c"
+        },
+        {
+          "path": "Programs/mappings/room_epic_all.sfz",
+          "bytes": 6017,
+          "sha256": "3fa8c7e6584302644bb7f18f8b721753d99eb7a282d4eca20099af7222d9882d"
+        },
+        {
+          "path": "Programs/mappings/room_epic_perc.sfz",
+          "bytes": 2806,
+          "sha256": "5ec7d3f27018231d74c6652bcb8285926976938721216a8756e0ebf1e1793286"
+        },
+        {
+          "path": "Programs/mappings/room_perc.sfz",
+          "bytes": 3125,
+          "sha256": "c0d77bb498c181445f14707827a467c07328fb3e796759c8a08eb5c2c1c61013"
+        },
+        {
+          "path": "Programs/mappings/room/crash_crash_map.sfz",
+          "bytes": 1545,
+          "sha256": "154faab40bf137bec3ad84ab354d7ce6f8ded8f838ded9a514ec655b22b4695d"
+        },
+        {
+          "path": "Programs/mappings/room/crash_sizzle_map.sfz",
+          "bytes": 1557,
+          "sha256": "4639c71e00605c232c579461110753d9ff20986d405edd8bbdb3e3f463aa9536"
+        },
+        {
+          "path": "Programs/mappings/room/flatride_crash_map.sfz",
+          "bytes": 390,
+          "sha256": "f2b1c996e76d5e60d4317d3aea6860b3d0f4ab1bd76b9628fd650dc8daec7358"
+        },
+        {
+          "path": "Programs/mappings/room/flatride_ride_map.sfz",
+          "bytes": 1521,
+          "sha256": "f9d1799d4a47521f639e7e48e7fa2bfc94ac0e2549db1e87d2a5fdfce14b0f11"
+        },
+        {
+          "path": "Programs/mappings/room/hh_34_map.sfz",
+          "bytes": 1780,
+          "sha256": "eab03eb8bb04c08c5746cc7709ac7ba3db04f57251acd4f257f1b9d46a5dc951"
+        },
+        {
+          "path": "Programs/mappings/room/hh_closed_map.sfz",
+          "bytes": 1844,
+          "sha256": "9023e05357ef0956bd87ab7bddd925c1b41bb72bd8093f009072b9c214b6d5da"
+        },
+        {
+          "path": "Programs/mappings/room/hh_half_map.sfz",
+          "bytes": 1812,
+          "sha256": "20ccf94807c948dce5a39a59416dca7e4212838dd1ec28b7be229b4eea5bbac3"
+        },
+        {
+          "path": "Programs/mappings/room/hh_open_map.sfz",
+          "bytes": 1345,
+          "sha256": "e3810a2c16ca8bac1df5005df110dcb13ee2a12c59d743e438939e671a2d665c"
+        },
+        {
+          "path": "Programs/mappings/room/hh_pedal_map.sfz",
+          "bytes": 1389,
+          "sha256": "319dc109e6edffaf02d4774c1e8a69a36df941aae604f397d1ad4fcfc7984618"
+        },
+        {
+          "path": "Programs/mappings/room/hh_silences_epic_map.sfz",
+          "bytes": 2168,
+          "sha256": "4bf1cd5733b99a0345acbe632b21e7569928860bcb3127fc747e471da3463a1a"
+        },
+        {
+          "path": "Programs/mappings/room/hh_silences_map.sfz",
+          "bytes": 2158,
+          "sha256": "a738fbee33e73428204639041ad7e7cff25006b5ade3e6930460e2da427e9b57"
+        },
+        {
+          "path": "Programs/mappings/room/hh_splash_map.sfz",
+          "bytes": 335,
+          "sha256": "7c3c7edad916feb787e8b21668d84c396d4ffc74d20cb7dd46d332488192f059"
+        },
+        {
+          "path": "Programs/mappings/room/htom_center_map.sfz",
+          "bytes": 1304,
+          "sha256": "b95b9c70fb8ac8cba6c1d9fda01019496e03d77fa6acdb287145e247144857e5"
+        },
+        {
+          "path": "Programs/mappings/room/htom_offcenter_map.sfz",
+          "bytes": 1352,
+          "sha256": "c898f34dbcc6fca73971bdd7e4f4d3ffdf778c7d40b26b4bb80099d78e100bd3"
+        },
+        {
+          "path": "Programs/mappings/room/kick_snoff_map.sfz",
+          "bytes": 1892,
+          "sha256": "62d043af5a3305a5c638a900d2ca155a23dbd903e3422843e0925aceb7fbfaa1"
+        },
+        {
+          "path": "Programs/mappings/room/kick_snon_map.sfz",
+          "bytes": 1876,
+          "sha256": "a2dc08e7a8e283c9a1932575f1f29493425494d29b2fa9a158e9d7cd5d81ecf4"
+        },
+        {
+          "path": "Programs/mappings/room/ltom_center_map.sfz",
+          "bytes": 1304,
+          "sha256": "07d4fc78af6ad479ced446d1ba297cec63a82d8fdc63408162f640f2b233c049"
+        },
+        {
+          "path": "Programs/mappings/room/ltom_crossstick_map.sfz",
+          "bytes": 856,
+          "sha256": "e1f2e907306ab1753b3dc69442b1ffefd737e0846c31fb148cbbac2f75a968e0"
+        },
+        {
+          "path": "Programs/mappings/room/ltom_halfopen_map.sfz",
+          "bytes": 1336,
+          "sha256": "a4376f208a1993193514e35bd063c88efe3fdf2f3928a2064aef60774428e16c"
+        },
+        {
+          "path": "Programs/mappings/room/ltom_muted_map.sfz",
+          "bytes": 1288,
+          "sha256": "4f95aa40f4aaa977683227266e390e523137c39e42013a86ccaabcbd0bb9e560"
+        },
+        {
+          "path": "Programs/mappings/room/ltom_offcenter_map.sfz",
+          "bytes": 1008,
+          "sha256": "d095b55b703f8b3a96147233619cc03d59dd0efe6a4fcffed5c570fe3d4774af"
+        },
+        {
+          "path": "Programs/mappings/room/ltom_rimshot_map.sfz",
+          "bytes": 826,
+          "sha256": "5008a2ceaf030f51fa083c979e7e25c17cc34ce3546ab775c925d7d44b05915a"
+        },
+        {
+          "path": "Programs/mappings/room/ride_bell_map.sfz",
+          "bytes": 1071,
+          "sha256": "9cb891454fe9339642d4d66c1649b8f32a6fbeed5adb8867d7fa438e6f882137"
+        },
+        {
+          "path": "Programs/mappings/room/ride_ride_map.sfz",
+          "bytes": 1425,
+          "sha256": "9f2f89075777427483545cbccfe70a79db938d25c18f5e8cc2c42d797823f13e"
+        },
+        {
+          "path": "Programs/mappings/room/snare_buzz_map.sfz",
+          "bytes": 972,
+          "sha256": "c835349ca14c5919e3dca06626699ea2a7d8e6ab74de00b618c578a6b6259aeb"
+        },
+        {
+          "path": "Programs/mappings/room/snare_center_map.sfz",
+          "bytes": 3043,
+          "sha256": "414a58bd062ee414995b6cead902c2eb756ee8a58427fd9d06b05ba024739396"
+        },
+        {
+          "path": "Programs/mappings/room/snare_crossstick_map.sfz",
+          "bytes": 1400,
+          "sha256": "df44f15364290187e36ad5e3fecfbc1e4f1f6852cd852714b72017451ced3015"
+        },
+        {
+          "path": "Programs/mappings/room/snare_flam_map.sfz",
+          "bytes": 972,
+          "sha256": "083b861a3df900cce4a94f5e7ebdd486281930828af31e38b9d342b4e7ccb4da"
+        },
+        {
+          "path": "Programs/mappings/room/snare_halfopen_map.sfz",
+          "bytes": 1368,
+          "sha256": "34a94cf5d735010e292738515cff7273d8395adf731a46cec65cf14d9cb61dc7"
+        },
+        {
+          "path": "Programs/mappings/room/snare_muted_map.sfz",
+          "bytes": 1320,
+          "sha256": "9249467e736d84dc8b6bfbbaf782a02b6be0517bda1ccfc6a57c03394d192b63"
+        },
+        {
+          "path": "Programs/mappings/room/snare_offcenter_map.sfz",
+          "bytes": 3151,
+          "sha256": "f66b34e658e334d348c0257788beb6a418448bb0f1a817ffb3876c148267bfd5"
+        },
+        {
+          "path": "Programs/mappings/room/snare_rimshot_map.sfz",
+          "bytes": 1008,
+          "sha256": "ebf70fcbb1149d42030e37d45f0a1653bccf36f183d32667138f70f3aa04168c"
+        },
+        {
+          "path": "Programs/mappings/room/snare_roll_end_map.sfz",
+          "bytes": 527,
+          "sha256": "93410769720401c63ae1a5c1ced2769797bc1a8b6bb165299df16905ca99555c"
+        },
+        {
+          "path": "Programs/mappings/room/snare_roll_map.sfz",
+          "bytes": 579,
+          "sha256": "dd534d810842b9ce1579d231180862aeaddd27c381dd703d3b779d2a52b40633"
+        },
+        {
+          "path": "Programs/mappings/room/snare_stickshot1_map.sfz",
+          "bytes": 687,
+          "sha256": "f94ee6385aac014c48963c516b030e62cccea50e1d790f38c05034179dae5702"
+        },
+        {
+          "path": "Programs/mappings/room/snare_stickshot2_map.sfz",
+          "bytes": 1400,
+          "sha256": "46f1bfb143cab107dcd25a525fdb9556959c10f39908b14ca56d4e93f66b8004"
+        },
+        {
+          "path": "Programs/mappings/room/snareoff_buzz_map.sfz",
+          "bytes": 1044,
+          "sha256": "4c840fba3e47fb1de9ff330f33fa3683bfcea24b8f6c7cee29287590760490b8"
+        },
+        {
+          "path": "Programs/mappings/room/snareoff_center_map.sfz",
+          "bytes": 1068,
+          "sha256": "1b9cfa93aac7fa137cc1969368392ee24fdf7d577c3d488ff963365341d016e2"
+        },
+        {
+          "path": "Programs/mappings/room/snareoff_crossstick_map.sfz",
+          "bytes": 936,
+          "sha256": "357825318ad783b5fb5b66e459db67a418bff70bcebad21313480425761a0b8c"
+        },
+        {
+          "path": "Programs/mappings/room/snareoff_flam_map.sfz",
+          "bytes": 1044,
+          "sha256": "1f310dfa9a4ffee6a70267c94ef8a381df34dce3f4a10ee896898f307f94742f"
+        },
+        {
+          "path": "Programs/mappings/room/snareoff_halfopen_map.sfz",
+          "bytes": 1092,
+          "sha256": "b865c9aca2f107048ac4557160bde2eb1af5aca0573bc63a5f5b970f5a93c382"
+        },
+        {
+          "path": "Programs/mappings/room/snareoff_muted_map.sfz",
+          "bytes": 1056,
+          "sha256": "86fcb9603d6914b6dcbab577434197722385803039e540ab725bdcc6b29ebfe3"
+        },
+        {
+          "path": "Programs/mappings/room/snareoff_offcenter_map.sfz",
+          "bytes": 1104,
+          "sha256": "2318b9cf8de6997f1e0c994d0649141e7cedfef651136a76607d06b86e333730"
+        },
+        {
+          "path": "Programs/mappings/room/snareoff_roll_end_map.sfz",
+          "bytes": 559,
+          "sha256": "fedbe34b384d3d1351a55a1ec6dc0d43a653db0353fe8f12e186738fbcad4016"
+        },
+        {
+          "path": "Programs/mappings/room/snareoff_roll_map.sfz",
+          "bytes": 609,
+          "sha256": "45adbb3a5e471d41c3c641d0a7d1c9518d2abc2c91a3d3287ff01a8881ec3f3f"
+        },
+        {
+          "path": "Programs/mappings/room/snareoff_stickshot1_map.sfz",
+          "bytes": 936,
+          "sha256": "fe3961c175395408afc4d2cd1fd0ce0e39c71dc42acc4a3d75c763891eba8ff0"
+        },
+        {
+          "path": "Programs/mappings/room/snareoff_stickshot2_map.sfz",
+          "bytes": 1116,
+          "sha256": "333c4af69426b8315aee4c7101a89a2cffe72edce7c7f7ca394f63710e534217"
+        },
+        {
+          "path": "Programs/mappings/snaremic_all.sfz",
+          "bytes": 6239,
+          "sha256": "b519df20acba9a6505f0c23cc2a792a482fab2fa7bcc7e2aa5d697a8158a6638"
+        },
+        {
+          "path": "Programs/mappings/snaremic_basic.sfz",
+          "bytes": 2849,
+          "sha256": "e7139acc9bde9f0a330c4e0bf42c9a4adf0408c41b086d3891cef90a2ae5b1ce"
+        },
+        {
+          "path": "Programs/mappings/snaremic/crash_crash_map.sfz",
+          "bytes": 1641,
+          "sha256": "978a34bc49f90c98719f2aa06027b2789c047cc9ad7ec1939859def0caaa74d3"
+        },
+        {
+          "path": "Programs/mappings/snaremic/crash_sizzle_map.sfz",
+          "bytes": 1653,
+          "sha256": "e383315db8dbeb02b1f4b3d4f31edf2e926a9f3158dd72e74d247185885c04ed"
+        },
+        {
+          "path": "Programs/mappings/snaremic/flatride_crash_map.sfz",
+          "bytes": 422,
+          "sha256": "4ae45844956dad570d8574c1899c57a78a498a6dd93a99a1ab168167cee8ac2f"
+        },
+        {
+          "path": "Programs/mappings/snaremic/flatride_ride_map.sfz",
+          "bytes": 1617,
+          "sha256": "d519397ee3895533b1ca5a412c4312ebe9d640d45a051aa969b861bd997b1d37"
+        },
+        {
+          "path": "Programs/mappings/snaremic/hh_34_map.sfz",
+          "bytes": 1908,
+          "sha256": "664b1503713118bd16bcc13f45fe1970d022fcb6da59d8f9b932f4f1c879c615"
+        },
+        {
+          "path": "Programs/mappings/snaremic/hh_closed_map.sfz",
+          "bytes": 1972,
+          "sha256": "5b49605cd98d5aa2197d25a85b75fde24257dfbbe483a283ba91daa0f1b66e8d"
+        },
+        {
+          "path": "Programs/mappings/snaremic/hh_half_map.sfz",
+          "bytes": 1940,
+          "sha256": "47d2eb0ef83447c1fa4bcf77183873890dfb6222e8c9728e99a6076498feae90"
+        },
+        {
+          "path": "Programs/mappings/snaremic/hh_open_map.sfz",
+          "bytes": 1441,
+          "sha256": "5829bed89fa8721d86fa29d4dc473eebf4085366ff938a512ef5e7675d9eca66"
+        },
+        {
+          "path": "Programs/mappings/snaremic/hh_pedal_map.sfz",
+          "bytes": 1485,
+          "sha256": "93d7b978f173744c7d1dff54754c746fa2a0eddc510b54705fa11208434e7831"
+        },
+        {
+          "path": "Programs/mappings/snaremic/hh_silences_basic_map.sfz",
+          "bytes": 434,
+          "sha256": "626af2b03ceaf537b154e184641feec3feaf563748f62c0b52a571bda3d96e85"
+        },
+        {
+          "path": "Programs/mappings/snaremic/hh_silences_map.sfz",
+          "bytes": 2157,
+          "sha256": "9168e2c6f6d957d5c3b3546b7c57ca0e9b0c215813382e595d47624a82c74658"
+        },
+        {
+          "path": "Programs/mappings/snaremic/hh_splash_map.sfz",
+          "bytes": 367,
+          "sha256": "eaae4f87120b757a9884777c0c8df6365cabbbf8d852b963454860a095acb6b5"
+        },
+        {
+          "path": "Programs/mappings/snaremic/htom_center_map.sfz",
+          "bytes": 1432,
+          "sha256": "b78c5b9bbd4ee3d9258353bc917da2ce7a0410f999411cf28579deca949267d7"
+        },
+        {
+          "path": "Programs/mappings/snaremic/htom_offcenter_map.sfz",
+          "bytes": 1480,
+          "sha256": "18a32122cb2f284018c61ea16767157a7db55a1bedb6a28b01ade535028bf6b1"
+        },
+        {
+          "path": "Programs/mappings/snaremic/kick_snoff_map.sfz",
+          "bytes": 2020,
+          "sha256": "78162f318c64fb750f0fa114c67712cf92e80cd6ac1a029273fc4eaa7e0ab56e"
+        },
+        {
+          "path": "Programs/mappings/snaremic/kick_snon_map.sfz",
+          "bytes": 2004,
+          "sha256": "20fd089773b53ee7a9e3885fc7a88a7ed8461b2d41002c1a82573258c28f251b"
+        },
+        {
+          "path": "Programs/mappings/snaremic/ltom_center_map.sfz",
+          "bytes": 1432,
+          "sha256": "febdb844a360a6392d9a3cd336aaf70d5a1268134f67d94b8960498a7445e166"
+        },
+        {
+          "path": "Programs/mappings/snaremic/ltom_crossstick_map.sfz",
+          "bytes": 936,
+          "sha256": "69e022e9203601fc41ac0ef36b82ffb33b75d7ff40c4648fc456bb11dc9e5503"
+        },
+        {
+          "path": "Programs/mappings/snaremic/ltom_halfopen_map.sfz",
+          "bytes": 1464,
+          "sha256": "3edcfcbfdf2801966f17635e1dc1190a13c077688e1d3871df4f826b266b84dd"
+        },
+        {
+          "path": "Programs/mappings/snaremic/ltom_muted_map.sfz",
+          "bytes": 1416,
+          "sha256": "56b281f4cd175c9b46753d2451c033e13de0edb42c5da48c6dbc7ad9aeb19aae"
+        },
+        {
+          "path": "Programs/mappings/snaremic/ltom_offcenter_map.sfz",
+          "bytes": 1104,
+          "sha256": "de3271abd847aab9d62361fe0b81287ba85f00985ec93f939c603dfbbfa1a9bf"
+        },
+        {
+          "path": "Programs/mappings/snaremic/ltom_rimshot_map.sfz",
+          "bytes": 906,
+          "sha256": "bb30915d674d8c19c41e33d0e45fe27ce05c0f3a423beceb3ee812b0d0f47277"
+        },
+        {
+          "path": "Programs/mappings/snaremic/ride_bell_map.sfz",
+          "bytes": 1143,
+          "sha256": "b2da378087f1d872abf0cf1700064c37d88c0e8302f47716f3a8d35e7bccf1b5"
+        },
+        {
+          "path": "Programs/mappings/snaremic/ride_ride_map.sfz",
+          "bytes": 1521,
+          "sha256": "cbbe29a755ed4334dd87076971b6c038499f7d995d4b98c18aac60fedb3da343"
+        },
+        {
+          "path": "Programs/mappings/snaremic/snare_buzz_map.sfz",
+          "bytes": 1068,
+          "sha256": "3da3eea77869699ce6a6bd3d5b6f9481f32736a638819ecb175ed3b5dad639a6"
+        },
+        {
+          "path": "Programs/mappings/snaremic/snare_center_map.sfz",
+          "bytes": 3331,
+          "sha256": "6f7aa41772236f14e9f8c036656fbac70cb5ef9972c42eedafba68b2a24afd73"
+        },
+        {
+          "path": "Programs/mappings/snaremic/snare_crossstick_map.sfz",
+          "bytes": 1528,
+          "sha256": "f866216d28ac28658e0bc6df2b7ec9c3ca3685ab24c665eaf3cd83fd1a265db9"
+        },
+        {
+          "path": "Programs/mappings/snaremic/snare_flam_map.sfz",
+          "bytes": 1068,
+          "sha256": "ef2bbe4e689bd30ab513e221a5a6086066cc0734617d47921db336eb95ef0428"
+        },
+        {
+          "path": "Programs/mappings/snaremic/snare_halfopen_map.sfz",
+          "bytes": 1496,
+          "sha256": "86aff5fe7fa78930c7c46497b6d7288d0f96c467a9b12a39cb12e6212f71af76"
+        },
+        {
+          "path": "Programs/mappings/snaremic/snare_muted_map.sfz",
+          "bytes": 1448,
+          "sha256": "751383d43f25e6a275f31d83de6ff89dc3b4303f6729a17c5a2262369edec6e7"
+        },
+        {
+          "path": "Programs/mappings/snaremic/snare_offcenter_map.sfz",
+          "bytes": 3439,
+          "sha256": "2faae3fc6128d2466aa15dbd2b3ba54aaf771fa0852f006f0fe3c3bf5bf6b8be"
+        },
+        {
+          "path": "Programs/mappings/snaremic/snare_rimshot_map.sfz",
+          "bytes": 1104,
+          "sha256": "7a8a52d4e2bb3e5f511364ab9ecb5f1043e848e9940738c0dc20ea2158876c2c"
+        },
+        {
+          "path": "Programs/mappings/snaremic/snare_roll_end_map.sfz",
+          "bytes": 575,
+          "sha256": "fe71315916843d5d2412f820b1568930b577c869247b0bd186d4c8c367a1b720"
+        },
+        {
+          "path": "Programs/mappings/snaremic/snare_roll_map.sfz",
+          "bytes": 619,
+          "sha256": "216ce190b086026f4a90b3f86bf8e8989b0fc416c6942216250dc48d32384783"
+        },
+        {
+          "path": "Programs/mappings/snaremic/snare_stickshot1_map.sfz",
+          "bytes": 751,
+          "sha256": "77a488b9947838a2e8774529408994dc012d939b72d749d473755911830380db"
+        },
+        {
+          "path": "Programs/mappings/snaremic/snare_stickshot2_map.sfz",
+          "bytes": 1528,
+          "sha256": "f61b58fbd0e019d56bd6db23f98e4686c01cb25286ecc0466250be65c95fe652"
+        },
+        {
+          "path": "Programs/mappings/snaremic/snareoff_buzz_map.sfz",
+          "bytes": 1140,
+          "sha256": "6bd3e717f4c3c77a2fcce15ba0c25d2d4589778529790e90e56e313d551a3a20"
+        },
+        {
+          "path": "Programs/mappings/snaremic/snareoff_center_map.sfz",
+          "bytes": 1164,
+          "sha256": "c920170e821201b80133f34d5b43b03f3b1a67167ea98ce523e9ff1b35a0543c"
+        },
+        {
+          "path": "Programs/mappings/snaremic/snareoff_crossstick_map.sfz",
+          "bytes": 1016,
+          "sha256": "d4864d95ba8943d8b59b8d7f552fe46801a0acb6baddf9bc82e2737a366ccf99"
+        },
+        {
+          "path": "Programs/mappings/snaremic/snareoff_flam_map.sfz",
+          "bytes": 1140,
+          "sha256": "1046158951a37959b82e1cefac879b35dbd934e6b322e5d4e6679d3e856fe68f"
+        },
+        {
+          "path": "Programs/mappings/snaremic/snareoff_halfopen_map.sfz",
+          "bytes": 1188,
+          "sha256": "ac4b5108d86aebd2c10ced28c51c09f40a4d78909e5e9cdf608bf7d921cfc4ec"
+        },
+        {
+          "path": "Programs/mappings/snaremic/snareoff_muted_map.sfz",
+          "bytes": 1152,
+          "sha256": "eac0fb735a2a57f31fb14857b9b48cfec19c37a511d94e682e2f74909a03018e"
+        },
+        {
+          "path": "Programs/mappings/snaremic/snareoff_offcenter_map.sfz",
+          "bytes": 1200,
+          "sha256": "88b7b67f0aa3dd7269627c2102000349b452499a10a3ffcc90f4e4fcc3239b13"
+        },
+        {
+          "path": "Programs/mappings/snaremic/snareoff_roll_end_map.sfz",
+          "bytes": 607,
+          "sha256": "cac85de9b32b9730ef8673e944eba7274cc36d0473037618fe66b76ddca1557c"
+        },
+        {
+          "path": "Programs/mappings/snaremic/snareoff_roll_map.sfz",
+          "bytes": 649,
+          "sha256": "17b4de6aba4f20c1606981c9e8349144721028ce454d8a13adf5a038c22de8b1"
+        },
+        {
+          "path": "Programs/mappings/snaremic/snareoff_stickshot1_map.sfz",
+          "bytes": 1016,
+          "sha256": "c19f6097203b164ca1fa78d1fc40fd4b2ee98ffe220073b8e424f2d7fba499cc"
+        },
+        {
+          "path": "Programs/mappings/snaremic/snareoff_stickshot2_map.sfz",
+          "bytes": 1212,
+          "sha256": "27989ca605a2c9df87e9da9508b213d37fe8df743720a8c6c2f29d67bf72deb9"
+        },
+        {
           "path": "Samples/kickmic/crash/kickmic_crash_crash_vl1_rr1.flac",
           "bytes": 527259,
           "sha256": "06d470903cd52e72fa610ddc9f85e2727d7192bf4594813be6a7357c03c5d4c6"
