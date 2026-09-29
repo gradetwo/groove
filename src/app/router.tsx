@@ -5,6 +5,14 @@ import { normaliseMobileModule, type MobileModule } from "../mobile/mobileModule
 export interface RouteState {
   tab: NavTab;
   /**
+   * ⭐ **A new project rather than a place to browse** — and this route is the one that must **not** get a genre.
+   *
+   * Every other route in this file may fall back to the studio's default genre, because a missing genre there means "the user did not say". Here it means "the user asked for a blank project", which is why the
+   * owner could not reach the new arrangement at all: `App.tsx` resolves `route.genreId || "chicago-house"`, and a genre was therefore always present. Its own route rather than a fourteenth nav word follows the
+   * precedent set for `/console`.
+   */
+  newProject?: boolean;
+  /**
    * Phone-shell module (`/m/<module>`), when the phone UI is what should render.
    *
    * The phone redesign is a separate surface during the rebuild (see `src/mobile/MobileApp.tsx`), so
@@ -154,6 +162,12 @@ export function parseUrlToRoute(pathname: string, search: string, hash: string =
   if (cleanPath === "/console" || cleanPath.startsWith("/console/")) {
     const gParam = params.get("genre");
     return { tab: "console", genreId: gParam || undefined };
+  }
+
+  // Check a new project: /new — ⭐ **before the studio fallback**, because that fallback is what always supplied a genre.
+  if (cleanPath === "/new" || cleanPath.startsWith("/new/")) {
+    // ⭐ Deliberately **no `genreId`**, not even `undefined` from a missing parameter: this route means "blank", and a genre here would be the default leaking back in.
+    return { tab: "studio", newProject: true };
   }
 
   // Check studio: /studio?genre=

@@ -1,3 +1,5 @@
+import { captureWithBrowser } from "./audio/captureBrowser";
+import { createOpfsRecordingStore } from "./audio/opfsRecordingStore";
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { LanguageProvider, useLanguage } from "./i18n/LanguageContext";
 import { Header, NavTab } from "./components/Header";
@@ -44,6 +46,8 @@ const SettingsModal = React.lazy(() =>
   import("./components/settings/SettingsModal").then((m) => ({ default: m.SettingsModal }))
 );
 const StudioView = React.lazy(() => import("./views/StudioView").then((m) => ({ default: m.StudioView })));
+// ⭐ The new arrangement, reached only by `/new` — the route that deliberately has no genre.
+const ArrangementViewV2 = React.lazy(() => import("./components/arrangement/ArrangementViewV2").then((m) => ({ default: m.ArrangementViewV2 })));
 const ChordProgressionsView = React.lazy(() => import("./views/ChordProgressionsView").then((m) => ({ default: m.ChordProgressionsView })));
 const GalaxyView = React.lazy(() => import("./views/GalaxyView").then((m) => ({ default: m.GalaxyView })));
 const HorizontalTimelineView = React.lazy(() => import("./views/HorizontalTimelineView").then((m) => ({ default: m.HorizontalTimelineView })));
@@ -577,7 +581,22 @@ const MainApp: React.FC = () => {
             </div>
           }
         >
-            {currentTab === "studio" && (
+            {/* ⭐ The new-project route renders the arrangement **instead of** the studio, so the genre default never reaches it: it does not enter `StudioView` at all. */}
+            {route.newProject && (
+              <React.Suspense fallback={null}>
+                <ArrangementViewV2
+                  songId="new"
+                  capture={async () => {
+                    // The store is the browser's own filesystem; if it is unavailable the capture reports that rather than throwing, which is the same rule the recording path follows everywhere else.
+                    const root = await navigator.storage?.getDirectory?.();
+                    if (!root) return { ok: false, refusal: "unsupported", summary: "This browser cannot store recordings, so recording is unavailable here." };
+                    return captureWithBrowser(createOpfsRecordingStore(root as never), { source: "audio" });
+                  }}
+                />
+              </React.Suspense>
+            )}
+
+            {currentTab === "studio" && !route.newProject && (
               <ErrorBoundary
                 fallbackTitle={t("error_studio_title")}
                 fallbackDescription={t("error_studio_desc")}
