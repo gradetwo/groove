@@ -1,27 +1,27 @@
 {
-  "version": "2.34.19",
+  "version": "2.34.20",
   "releaseDate": "2026-09-29",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.19",
-    "date": "2026-09-28",
+    "version": "2.34.20",
+    "date": "2026-09-29",
     "category": "feature",
     "title": {
-      "zh": "真实采样乐器：SFZ、R2 镜像与清单",
-      "en": "Real sampled instruments: SFZ support, an R2 mirror and a manifest"
+      "zh": "编排 v2：任意轨道、takes 与录音",
+      "en": "Arrangement v2: arbitrary tracks, takes and recording"
     },
     "highlights": [
       {
-        "zh": "SFZ 子集解析器：include、变量、按 region 继承、`<master>`；与 sfizz 逐音符对照。",
-        "en": "An SFZ subset parser — includes, variables, per-region inheritance, `<master>` — verified note by note against sfizz."
+        "zh": "新编排模型：任意轨道、文件夹收纳、增删与静音独奏；旧歌只读投影，逐字段比对。",
+        "en": "A new arrangement model: arbitrary tracks, folder grouping, add and delete, mute and solo; old songs are projected read-only and compared field by field."
       },
       {
-        "zh": "清单随仓库发布：1659 个采样带哈希与体积，实测最长 14.53 秒；字节镜像到 R2。",
-        "en": "A manifest shipped in the repository: 1659 samples with hashes and sizes, longest measured at 14.53 s; the bytes mirrored to R2."
+        "zh": "录音：takes 与 comp 是同一机制的两用，字节只存本机（IndexedDB/OPFS）。",
+        "en": "Recording: takes and comping are one mechanism used twice, with the bytes kept on the device (IndexedDB/OPFS)."
       },
       {
-        "zh": "采样地址源优先，源不可用才回退镜像，两个都失败时两个地址都被点名。",
-        "en": "Sample addresses are source-first, falling back to the mirror, and both are named when both fail."
+        "zh": "界面：轨道列表、take 选择器、录一段；三块共用同一份编排。",
+        "en": "Interface: a track list, a take selector and a record button, all three reading one arrangement."
       }
     ],
     "truncated": true
