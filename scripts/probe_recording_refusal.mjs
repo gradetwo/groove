@@ -56,16 +56,35 @@ try {
     const { captureWithBrowser } = await import("/src/audio/captureBrowser.ts");
     const { createMemoryRecordingStore } = await import("/src/audio/recordingStore.ts");
     const store = createMemoryRecordingStore();
-    const supported = typeof navigator.mediaDevices?.getUserMedia === "function" && typeof MediaRecorder !== "undefined";
+    // ⭐ The three facts separately, because "unsupported" collapses them and they mean different things to a user: no secure context, no media stack at all, or a browser that cannot record.
+    const diagnostics = {
+      isSecureContext: window.isSecureContext,
+      hasMediaDevices: typeof navigator.mediaDevices === "object" && navigator.mediaDevices !== null,
+      hasGetUserMedia: typeof navigator.mediaDevices?.getUserMedia === "function",
+      hasMediaRecorder: typeof MediaRecorder !== "undefined",
+      origin: location.origin,
+    };
+    const { isRecordingSupported } = await import("/src/audio/captureBrowser.ts");
+    const supported = isRecordingSupported();
+    // ⭐ The **raw** error, because the classification is what is under suspicion: reading `error.name` is the difference between knowing and inferring.
+    const raw = await navigator.mediaDevices
+      .getUserMedia({ audio: true })
+      .then(() => "ok")
+      .catch((error) => `${error?.name ?? "?"}: ${error?.message ?? "?"}`);
     const outcome = await captureWithBrowser(store, { source: "audio", recordedAt: Date.now() });
-    return { supported, outcome, stored: await store.list() };
+    return { diagnostics, supported, raw, outcome, stored: await store.list() };
   });
 
-  log(`MediaRecorder present: ${result.supported}`);
+  // ⭐ Printed before the verdict: the whole point is to see **which** fact is missing rather than only that something was refused.
+  log(`diagnostics: ${JSON.stringify(result.diagnostics)}`);
+  log(`isRecordingSupported(): ${result.supported}`);
+  log(`getUserMedia rejects with: ${result.raw}`);
   log(`outcome: ok=${result.outcome.ok} refusal=${result.outcome.refusal ?? "-"}`);
 
   // ⭐ Every assertion here is about a failure being **reported**, because that is what a user meets.
-  const named = ["no-device", "permission-denied", "unsupported", "failed"];
+  // ⭐ The refusals the classifier may name — `unavailable` included, because "every API is present and the browser still refused" is the case this probe actually runs in, and it is **not** the same
+  // claim as "this browser cannot record".
+  const named = ["no-device", "permission-denied", "unsupported", "unavailable", "failed"];
   if (result.outcome.ok) {
     failed = true;
     log("❌ a capture succeeded with no microphone — the stream was never requested or the refusal was ignored");

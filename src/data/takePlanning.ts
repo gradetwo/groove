@@ -49,7 +49,11 @@ export function planTakeFromCapture(capture: CaptureResult, idOverride?: string)
 }
 
 /** Why a capture could not start, in the user's terms — the same shape as the catalogue's status, and for the same reason: the causes look identical from outside. */
-export type CaptureRefusal = "permission-denied" | "no-device" | "unsupported" | "failed";
+/**
+ * ⭐ `unsupported` means **the browser cannot record** and is decided by capability, never inferred from an exception; `unavailable` is the distinct case the probe found — every API present and the browser
+ * still refusing to produce a stream. Collapsing the two told a user with a working microphone that their browser could not record, which is a lie the capability check had already ruled out.
+ */
+export type CaptureRefusal = "permission-denied" | "no-device" | "unsupported" | "unavailable" | "failed";
 
 export function classifyCaptureRefusal(error: unknown): { refusal: CaptureRefusal; summary: string } {
   const name = error instanceof Error ? error.name : "";
@@ -60,8 +64,10 @@ export function classifyCaptureRefusal(error: unknown): { refusal: CaptureRefusa
   if (name === "NotFoundError" || name === "OverconstrainedError") {
     return { refusal: "no-device", summary: "No recording device was found. Connect a microphone or interface and try again." };
   }
-  if (name === "NotSupportedError" || name === "TypeError") {
-    return { refusal: "unsupported", summary: "This browser cannot record audio, so recording is unavailable here." };
+  if (name === "NotSupportedError") {
+    // ⭐ Read from the browser rather than inferred: `getUserMedia` exists and refuses anyway, which says nothing about whether the *browser* can record.
+    return { refusal: "unavailable", summary: "The browser would not provide a recording stream — a device may be missing, busy, or blocked by a policy on this machine." };
   }
+  // ⚠️ `TypeError` is deliberately **not** mapped to a capability claim: it also covers being called wrongly, and an over-broad mapping here is what produced the wrong sentence in the first place.
   return { refusal: "failed", summary: "Recording failed to start." };
 }

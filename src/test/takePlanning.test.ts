@@ -41,7 +41,9 @@ describe("planning a take from a capture", () => {
 
   it("separates a missing device from an unsupported browser and from an unknown failure", () => {
     expect(classifyCaptureRefusal(Object.assign(new Error("x"), { name: "NotFoundError" })).refusal).toBe("no-device");
-    expect(classifyCaptureRefusal(Object.assign(new Error("x"), { name: "NotSupportedError" })).refusal).toBe("unsupported");
+    // ⭐ Every API present and the browser refusing anyway is its own case, not "this browser cannot record" — the probe found that sentence being said to a machine with a working microphone.
+    expect(classifyCaptureRefusal(Object.assign(new Error("x"), { name: "NotSupportedError" })).refusal).toBe("unavailable");
+    expect(classifyCaptureRefusal(Object.assign(new Error("x"), { name: "TypeError" })).refusal).toBe("failed");
     expect(classifyCaptureRefusal(new Error("mystery")).refusal).toBe("failed");
   });
 });
