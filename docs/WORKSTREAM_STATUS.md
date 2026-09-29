@@ -6,7 +6,7 @@ This workstream's record is spread across several documents, each of which answe
 
 | document | the question it answers | one-line state |
 |---|---|---|
-| [`SAMPLE_LIBRARY_INTEGRATION.md`](SAMPLE_LIBRARY_INTEGRATION.md) | how a real library lands here — bytes, manifest, licence, and what SFZ it needs | the mirror chain runs end to end: **1660 files planned, 1659 fetched, 1 skipped, 0 problems, longest sample 14.529542 s measured** |
+| [`SAMPLE_LIBRARY_INTEGRATION.md`](SAMPLE_LIBRARY_INTEGRATION.md) | how a real library lands here — bytes, manifest, licence, and what SFZ it needs | ⭐ **it sounds, end to end and on real bytes**: live manifest → source-first SFZ → **126 includes fetched over the network** → **1676 regions** → a sample address → a decoded buffer (85289 frames, peak 0.091 — and 1.93399 s against the manifest's own measured 1.9340 s). Guarded by a criterion in CI's `audio` scope. What does **not** exist is a way for a user to trigger it — that is a feature, not a wire |
 | [`SCALE_HUNDRED_LANES.md`](SCALE_HUNDRED_LANES.md) | what a hundred lanes cost, and whether Rust is the answer | browser floor **0.005%**; flatten **138.94 ms for 409 600 steps** (the old "~18 s" is refuted); the master knobs were 21% of one render and **~2% of another** — enough to say the rack is **≲2–3%**, not enough to say what exactly |
 | [`RUST_DECISION.md`](RUST_DECISION.md) | the owner's answer to that question, and why | **no new repository, no Rust** — the reasoning is there, including where Rust *would* pay |
 | [`WOW_EVALUATION.md`](WOW_EVALUATION.md) | the proposal that came before, assessed against this repository's own facts | direction right, priority wrong: sampling playback was already built here |
