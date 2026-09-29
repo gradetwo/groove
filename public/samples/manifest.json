@@ -10411,7 +10411,8 @@
           "sha256": "e9c1e8b370d1e77b334af53931a8879f83dde92ac452322de29aa58f9a4c21eb"
         }
       ],
-      "durationSeconds": 14.529542
+      "durationSeconds": 14.529542,
+      "sourceUrl": "https://github.com/sfzinstruments/virtuosity_drums"
     },
     {
       "id": "salamander-grand",
@@ -14410,7 +14411,8 @@
       ],
       "enumeratedAt": "2026-09-29",
       "durationSeconds": 25.862625,
-      "mirroredAt": "2026-09-29"
+      "mirroredAt": "2026-09-29",
+      "sourceUrl": "https://github.com/sfzinstruments/SalamanderGrandPiano"
     },
     {
       "id": "karoryfer-meatbass",

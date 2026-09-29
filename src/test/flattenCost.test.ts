@@ -75,6 +75,17 @@ describe("the flatten's cost curve", () => {
     const largest = rows[rows.length - 1]!;
     const projected = (largest.usPerStep * 2048 * 100 * 16) / 1_000_000;
     console.log(`   projection   : ${largest.usPerStep.toFixed(3)} µs/step × 2048 bars × 100 lanes × 16 steps ≈ ${projected.toFixed(1)} s of flattening before any audio is rendered`);
+    /**
+     * **A budget on the size, because size is the hundred-lane constraint.** The time half is three orders of magnitude away from mattering (0.106 µs per step projects to about 0.3 s at 2048 bars × 100 lanes), while the data half is 159 MB at that shape
+     * against a ~1.1 GB audio buffer — so a change that makes a step heavier is the change that hurts, and it is the change nobody would notice by reading a printed table.
+     *
+     * The bound is **bytes per step**, which is shape-independent, rather than a total that a bigger song would exceed by design. Measured: about 48 bytes per step at every shape above. 120 leaves room for a field or two and catches a step that starts
+     * carrying something large — a copied pattern, a whole lane, a second sample reference.
+     */
+    const bytesPerStep = (largest.megabytes * 1_000_000) / largest.steps;
+    console.log(`   budget       : ${bytesPerStep.toFixed(1)} bytes/step of flattened data (limit 120)`);
+    expect(bytesPerStep).toBeLessThan(120);
+
     const perStepMb = largest.megabytes / largest.steps;
     console.log(`   projection   : data ${(perStepMb * 2048 * 100 * 16).toFixed(0)} MB of flattened steps at 2048 bars × 100 lanes (JSON proxy), against about 1.1 GB for the audio buffer of a six-minute eight-lane song`);
     console.log("   note         : the JSON figure is a proxy for the data handed to the renderer, not an allocator measurement; the audio buffer is measured in the browser.");

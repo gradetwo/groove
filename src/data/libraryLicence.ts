@@ -25,21 +25,40 @@ export interface LicenceCheck {
 /** Licences whose obligations we know how to satisfy. **An unknown licence is a problem rather than a shrug**: a new library must not slip in unlabelled. */
 const LICENCES = ["CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0", "CC-BY-3.0", "CC-BY-SA-3.0", "public-domain"] as const;
 
+/**
+ * **SPDX is the canonical spelling and the manifest's short forms are synonyms.**
+ *
+ * The two vocabularies were written by different hands: the manifest says `CC0` and `CC-BY`, this checker knows `CC0-1.0` and `CC-BY-4.0`. Left alone they disagree in the way that matters — a library whose licence is `CC0` reads as "unknown licence" to the
+ * checker, so its credits could not be checked at all. Mapping here rather than rewriting the manifest keeps one canonical vocabulary while the file that people edit stays short.
+ */
+const LICENCE_SYNONYMS: Record<string, string> = {
+  CC0: "CC0-1.0",
+  "CC-BY": "CC-BY-4.0",
+  "CC-BY-SA": "CC-BY-SA-4.0",
+  "CC-BY-3": "CC-BY-3.0",
+  "CC-BY-SA-3": "CC-BY-SA-3.0",
+};
+
+export function canonicalLicence(licence: string): string {
+  return LICENCE_SYNONYMS[licence] ?? licence;
+}
+
 /** The ones that oblige a credit. Kept as a rule rather than a list of exceptions: anything starting `CC-BY` owes attribution. */
-function requiresAttribution(licence: string): boolean {
+export function requiresAttribution(licence: string): boolean {
   return licence.startsWith("CC-BY");
 }
 
 export function checkLibraryLicence(entry: LibraryLicence): LicenceCheck {
   const problems: string[] = [];
 
-  if (!(LICENCES as readonly string[]).includes(entry.licence)) {
+  const licence = canonicalLicence(entry.licence);
+  if (!(LICENCES as readonly string[]).includes(licence)) {
     problems.push(`${entry.id}: unknown licence "${entry.licence}" — it must be one we know how to satisfy before its bytes are mirrored`);
   }
 
   // ⭐ The obligation, not a nicety: mirroring a CC-BY library without its credit redistributes it wrongly, and the mirror is the redistribution.
-  if (requiresAttribution(entry.licence) && !entry.attribution?.trim()) {
-    problems.push(`${entry.id}: ${entry.licence} requires attribution, and this entry carries none`);
+  if (requiresAttribution(licence) && !entry.attribution?.trim()) {
+    problems.push(`${entry.id}: ${licence} requires attribution, and this entry carries none`);
   }
 
   if (!entry.sourceUrl?.trim()) {
