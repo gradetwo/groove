@@ -971,3 +971,53 @@ new URL("/Data/notes.txt", "https://raw.githubusercontent.com/sfzinstruments/Sal
 ### ⭐ 而修法是明确的一条
 
 ⭐ **要么让 `resolvePath` 不产生开头的 `/`** ✓（**把它变成真正的相对路径 ✓**）—— ⭐ **要么在 `:92` 把开头斜杠剥掉再 `new URL`** ✓✓ —— ⭐ **前者更对 ✓：因为那个 `/` 在语义上就是"仓库根相对" ✓，而它不该以 URL 的形式被误解** ✓。
+
+
+## 35. ⭐⭐⭐⭐ 真正的病灶：**`https://` 里的空段被路径归一化吃掉了** —— 而它上一轮就被记录过一次（2026-09-28 晚 ✓）
+
+### 读到的（`includes.ts:33`）
+
+```ts
+function resolvePath(fromPath: string, wanted: string): string {
+  if (wanted.startsWith("/") || /^[a-zA-Z]+:/.test(wanted)) return wanted;
+  const directory = fromPath.includes("/") ? fromPath.slice(0, fromPath.lastIndexOf("/")) : "";
+  const parts = `${directory}/${wanted}`.split("/");
+  const out: string[] = [];
+  for (const part of parts) {
+    if (part === "" || part === ".") continue;      // ⭐⭐ 空段被【跳过】✗
+    if (part === "..") out.pop();
+    else out.push(part);
+  }
+  return out.join("/");
+}
+```
+
+### ⭐ 所以病灶是
+
+⭐ **当 `fromPath` 是一个完整的 URL 时** ✗✓：
+
+```
+fromPath = "https://raw.githubusercontent.com/sfzi…/<pin>/Program.sfz"
+split("/") → ["https:", "", "raw.githubusercontent.com", "sfzi…", "<pin>", "Program.sfz"]
+                    ↑ 这个空段被 continue 跳掉 ✗
+join("/")  → "https:/raw.githubusercontent.com/sfzi…/<pin>/Data/notes.txt"
+                ↑ ⭐ 双斜杠变成了单斜杠 ✗✓✓
+```
+
+⭐⭐ **而 `https:/…` 不是一条合法 URL** ✗ —— ⭐ **于是 `new URL(target, baseUrl)` 把它当成相对路径 ✗，最终请求到一个不存在的地方 ✓ —— 症状只是"missing"** ✗✓。
+
+### ⭐⭐ 而它**不是新 bug**：本会话早先已经记录过它一次
+
+⭐ 我当时写下的是 ✓：**"`new URL` on a full URL mangled `https://` → `https:/`"** ✓✓ —— ⭐ **也就是说：这个陷阱在鼓那一架上出现过 ✓，我修了当时的那一处 ✗，而它躺在另一个函数里等着** ✓✓ —— ⭐ **而那个函数的注释还写着"不发明一个解析器：SFZ 路径是相对的"** ✓ —— ⭐ **它假设的正是"相对路径" ✓，而调用方喂给它的是一条 URL** ✗✓✓。
+
+### ⭐ 而本会话的注释里，答案也已经写过
+
+⭐ `remoteIncludes.ts` 的 `programUrl` 字段旁边写着 ✓：**"`programUrl` 必须是一条纯路径** ✓ —— **地址只在 fetch 的时候拼**"** ✓✓ —— ⭐ **而探针传进去的是 URL** ✗✓ —— ⭐ **所以修法不是改 `resolvePath` ✗，而是让调用方遵守那条已经写下的约定** ✓✓。
+
+### ⭐ 三个可选的修法，按"是否把误解留在原地"排序
+
+| 选项 | 评价 |
+|---|---|
+| ⭐ **A：调用方传【纯路径】✓（如 `sfzi…/<pin>/Program.sfz`）** ✓✓ | ⭐ **最对 ✓ —— 它遵守了那条已经写下的约定 ✓，而 `resolvePath` 与 `new URL` 各自做自己该做的** ✓ |
+| **B：`resolvePath` 识别 URL 前缀并原样保留 ✓** | ⚠️ **能work ✓，但把"路径函数也要懂 URL"这件事塞进了一个声明只做相对路径的函数** ✗ |
+| **C：fetch 时剥掉重复斜杠** | ⚠️ **最差 ✗ —— 它让一个坏地址看起来像好的** ✗✓ |
