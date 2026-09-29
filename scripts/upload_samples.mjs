@@ -187,5 +187,12 @@ fs.writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2) + "\n");
 console.log(`  measured ${measured} file(s) · hashed ${hashed} · longest ${longest.toFixed(6)} s · manifest updated`);
 
 // ⭐ The transfer itself is rclone's: it chunks, resumes and verifies, and this script does not reimplement any of that.
-execFileSync("rclone", ["copy", workdir, `:s3:groove/${entry.prefix}/`, "--transfers", "8", "--checkers", "16", "--stats-one-line", ...r2Config()], { stdio: "inherit" });
-console.log(`✅ copied to r2:groove/${entry.prefix}/ — now run scripts/check_mirror_reachability.mjs`);
+/**
+ * ⭐ **Only the paths the manifest lists are copied.** Copying the working directory sent everything in it, including the `.git` objects `git fetch` had left behind — about 700 MB that the manifest did not describe, which broke the one
+ * contract the manifest exists to keep: that what is declared is what is stored. Copying by list makes the two the same thing by construction rather than by remembering to exclude the right directories.
+ */
+const listFile = path.join(workdir, "..", `${entryId}.files`);
+fs.writeFileSync(listFile, (entry.files ?? []).map((f) => f.path).join("\n") + "\n");
+execFileSync("rclone", ["copy", workdir, `:s3:groove/${entry.prefix}/`, "--files-from", listFile, "--transfers", "8", "--checkers", "16", "--stats-one-line", ...r2Config()], { stdio: "inherit" });
+fs.rmSync(listFile, { force: true });
+console.log(`✅ copied to :s3:groove/${entry.prefix}/ — now run scripts/check_mirror_reachability.mjs`);
