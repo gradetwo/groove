@@ -53,3 +53,27 @@ export function setTrackParent(arrangement: ArrangementV2, trackId: string, pare
   if (parentId === trackId) return arrangement;
   return { ...arrangement, tracks: arrangement.tracks.map((track) => (track.id === trackId ? { ...track, parentId } : track)) };
 }
+
+/**
+ * The rest of what a track header does: mute, solo, rename, and folding a folder.
+ *
+ * All of them are `map` over the track list, and the reason to write them here rather than inline in a component is the same reason the others are here: they are the states a song can be in, and a song
+ * that is soloed in the model but not in the mixer — or folded in one view and not another — is a contradiction nobody can debug from the screen.
+ *
+ * **Folding is a display state and nothing else.** `setCollapsed` deliberately touches only `collapsed`, and there is a criterion for it, because a fold that silenced its children would be blamed on the
+ * audio engine rather than on this function.
+ */
+export function setTrackFlag(arrangement: ArrangementV2, trackId: string, flag: "muted" | "soloed", value: boolean): ArrangementV2 {
+  return { ...arrangement, tracks: arrangement.tracks.map((track) => (track.id === trackId ? { ...track, [flag]: value } : track)) };
+}
+
+export function renameTrack(arrangement: ArrangementV2, trackId: string, name: string): ArrangementV2 {
+  // An empty name would leave a nameless row that nothing can be said about; the caller's own name is kept instead.
+  const trimmed = name.trim();
+  if (!trimmed) return arrangement;
+  return { ...arrangement, tracks: arrangement.tracks.map((track) => (track.id === trackId ? { ...track, name: trimmed } : track)) };
+}
+
+export function setCollapsed(arrangement: ArrangementV2, trackId: string, collapsed: boolean): ArrangementV2 {
+  return { ...arrangement, tracks: arrangement.tracks.map((track) => (track.id === trackId ? { ...track, collapsed } : track)) };
+}
