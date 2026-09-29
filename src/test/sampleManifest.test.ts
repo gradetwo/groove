@@ -157,10 +157,13 @@ describe("sampleAssetsFromManifest", () => {
      * `salamander-grand` specifically, then asserted the list was empty once that entry was measured — and both pinned one moment's data. Deriving the expected set from the manifest means a library that is declared but not yet
      * mirrored is reported, and one that has been mirrored is not, without editing this test when either changes.
      */
-    const declared = shipped.entries.filter((entry) => (entry.sfz || entry.archive) && entry.durationSeconds === undefined).map((entry) => entry.id);
+    // ⭐ The parameters are annotated because `shipped` comes from `JSON.parse` and is therefore `any` — the same reason the earlier version of this line failed the type check rather than the test.
+    const declared = (shipped.entries as Array<{ id: string; sfz?: string; archive?: unknown; durationSeconds?: number }>)
+      .filter((entry) => Boolean(entry.sfz || entry.archive) && entry.durationSeconds === undefined)
+      .map((entry) => entry.id);
     /**
-     * ⭐ **The id is read from the leading quoted word**, because the message is \ — and splitting on the first colon takes \ instead, since that
-     * colon belongs to \. Both earlier attempts at this line did that, and printing the two lists is what showed it.
+     * ⭐ **The id is read from the leading quoted word.** The message is of the form `"karoryfer-meatbass" is not in the catalogue: …`, and splitting on the first colon yields `"…" is not in the catalogue`, because that colon
+     * belongs to `catalogue:`. Two earlier attempts at this line did exactly that; printing the two lists is what showed it.
      */
     const reported = [...new Set(problems.flatMap((problem) => { const match = /^"([^"]+)"/.exec(problem); return match ? [match[1]!] : []; }))];
     expect(reported.sort()).toEqual(declared.sort());
