@@ -189,3 +189,36 @@ describe("new projects, templates, and changing a track's kind", () => {
     expect(back.tracks[0]!.kind).toBe("sampler");
   });
 });
+
+describe("a v2 arrangement's own notes", () => {
+  it("gives a new track content, and a sampler track the asset that makes it audible", async () => {
+    const { createArrangement } = await import("../data/arrangementEdits");
+    const arr = createArrangement("s", "sampler");
+    const id = arr.tracks[0]!.id;
+    // ⭐ Content arrives with the track: an empty track is silent, and a silent track looks like a broken engine.
+    expect(arr.notesByTrack?.[id]?.some((step) => step === 1)).toBe(true);
+    // ⭐ And the asset, which is the half that is easy to miss: a sampler lane with no asset resolves to nothing.
+    expect(arr.tracks[0]!.sample).toEqual({ assetId: "virtuosity-drums-basic" });
+  });
+
+  it("takes a deleted track's notes with it, so no orphan can fire under a reused id", async () => {
+    const { addTrack, createArrangement, removeTrack } = await import("../data/arrangementEdits");
+    let arr = createArrangement("s");
+    arr = addTrack(arr, "instrument", "Lead");
+    const id = arr.tracks[1]!.id;
+    expect(arr.notesByTrack?.[id]).toBeDefined();
+
+    const after = removeTrack(arr, id);
+    // ⭐ The same class of problem as a folder's orphaned children, which already has a criterion: what is unreachable must not stay behind making a noise.
+    expect(after.notesByTrack?.[id]).toBeUndefined();
+  });
+
+  it("gives every template track notes, so a template is audible the moment it is created", async () => {
+    const { createArrangementFromTemplate, TEMPLATES } = await import("../data/arrangementEdits");
+    for (const template of TEMPLATES) {
+      const arr = createArrangementFromTemplate("s", template.id);
+      const sounded = arr.tracks.filter((track) => arr.notesByTrack?.[track.id]?.some((step) => step === 1));
+      expect(sounded.length).toBe(template.kinds.length);
+    }
+  });
+});

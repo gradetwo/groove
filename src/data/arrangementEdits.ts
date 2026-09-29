@@ -7,6 +7,7 @@
  * Every function returns a **new arrangement**, because a track list is state that an interface re-renders from; mutating in place is how a UI ends up showing something the model does not say.
  */
 import type { ArrangementV2, TakeRegion, TrackKindV2, TrackV2 } from "../types/arrangementV2";
+import { defaultContentFor } from "./defaultContent";
 
 let nextId = 1;
 
@@ -26,7 +27,15 @@ function freshId(kind: TrackKindV2): string {
  * at, and an empty list has none.
  */
 export function createArrangement(songId: string, kind: TrackKindV2 = "instrument"): ArrangementV2 {
-  return { songId, tracks: [{ id: freshId(kind), kind, name: DEFAULT_NAME[kind] }], sourceSlots: [] };
+  const id = freshId(kind);
+  const content = defaultContentFor(kind);
+  // ⭐ Content arrives with the track: an empty track is silent, and a silent track looks like a broken engine.
+  return {
+    songId,
+    tracks: [{ id, kind, name: DEFAULT_NAME[kind], ...(content.sample ? { sample: content.sample } : {}) }],
+    notesByTrack: { [id]: content.steps },
+    sourceSlots: [],
+  };
 }
 
 const DEFAULT_NAME: Record<TrackKindV2, string> = {
@@ -55,7 +64,16 @@ export const TEMPLATES: readonly Template[] = [
 export function createArrangementFromTemplate(songId: string, templateId: string | undefined, blankKind: TrackKindV2 = "instrument"): ArrangementV2 {
   const template = TEMPLATES.find((candidate) => candidate.id === templateId);
   if (!template) return createArrangement(songId, blankKind);
-  return { songId, tracks: template.kinds.map(({ kind, name }) => ({ id: freshId(kind), kind, name })), sourceSlots: [] };
+
+  const tracks: TrackV2[] = [];
+  const notesByTrack: Record<string, number[]> = {};
+  for (const { kind, name } of template.kinds) {
+    const id = freshId(kind);
+    const content = defaultContentFor(kind);
+    tracks.push({ id, kind, name, ...(content.sample ? { sample: content.sample } : {}) });
+    notesByTrack[id] = content.steps;
+  }
+  return { songId, tracks, notesByTrack, sourceSlots: [] };
 }
 
 /**
@@ -77,7 +95,13 @@ export function changeTrackKind(arrangement: ArrangementV2, trackId: string, kin
 }
 
 export function addTrack(arrangement: ArrangementV2, kind: TrackKindV2, name: string, extra: Partial<TrackV2> = {}): ArrangementV2 {
-  return { ...arrangement, tracks: [...arrangement.tracks, { id: freshId(kind), kind, name, ...extra }] };
+  const id = freshId(kind);
+  const content = defaultContentFor(kind);
+  return {
+    ...arrangement,
+    tracks: [...arrangement.tracks, { id, kind, name, ...(content.sample ? { sample: content.sample } : {}), ...extra }],
+    notesByTrack: { ...(arrangement.notesByTrack ?? {}), [id]: content.steps },
+  };
 }
 
 /**
@@ -98,7 +122,10 @@ export function removeTrack(arrangement: ArrangementV2, trackId: string): Arrang
       }
     }
   }
-  return { ...arrangement, tracks: arrangement.tracks.filter((track) => !doomed.has(track.id)) };
+  // ⭐ The notes go with the track. Leaving them would keep orphans that fire the next time something reuses that id — the same class of problem as a folder's orphaned children.
+  const notes = { ...(arrangement.notesByTrack ?? {}) };
+  for (const id of doomed) delete notes[id];
+  return { ...arrangement, tracks: arrangement.tracks.filter((track) => !doomed.has(track.id)), notesByTrack: notes };
 }
 
 /** Move a track into a folder, or out of one with `parentId: undefined`. Refuses a folder into itself, which would make the tree unrenderable. */

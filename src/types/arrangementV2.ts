@@ -70,6 +70,15 @@ export interface ArrangementV2 {
   /** The v1 song this was projected from — **kept, not copied**, so nothing can drift out of step with it. */
   songId: string;
   tracks: TrackV2[];
+  /**
+   * ⭐ **What each track plays**, keyed by `trackId` — because notes are **content**, not identity, exactly as takes are.
+   *
+   * A v1 song keeps its notes in clips, which is why the earlier design note said "notes stay in the pattern". That describes the old model; a v2 arrangement is not bound to eight slots, so its notes live here, beside
+   * the tracks that hold them, and `compileArrangementToLanes(arrangement, notes)` already assumed a map of this shape.
+   *
+   * **Keys are `trackId`s, which makes deletion a data question**, not just a list edit: a track's notes have to go with it or the model keeps orphans that fire the next time something reuses that id.
+   */
+  notesByTrack?: Record<string, number[]>;
   /** Every clip slot that carried at least one track, so a projection can be checked for completeness. */
   sourceSlots: string[];
 }
