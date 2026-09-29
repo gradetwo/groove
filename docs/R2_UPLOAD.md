@@ -1460,3 +1460,35 @@ operation error S3: GetBucketVersioning … AccessDenied
 | ⭐ **桶现在** | **1136.3 MB** ✓ |
 | ⭐ **上限** | **12 GB** ✓ |
 | ⭐ **余量** | **约 10.9 GB** ✓✓ —— ⭐ **而这与第 32 节那份"选上的 7 项 ≈ 6.93 GB"的清单相容 ✓** ✓ |
+
+
+## 49. ⭐⭐⭐ 核对器为什么只验了鼓那一架：`find` 取的是【第一个】条目（2026-09-28 晚 ✓）
+
+### 读到的（`scripts/check_mirror_reachability.mjs`）
+
+```js
+:35  const entry = manifest.entries.find((c) => c.sfz && !c.excludedReason);
+:42  const prefix = entry.prefix ? `${entry.prefix.replace(/\/$/, "")}/` : "";
+:43  const smallest = [...entry.files].sort((a, b) => (a.bytes ?? 0) - (b.bytes ?? 0))[0];
+:46  const checks = [
+       { label: "sfz",             path: `${prefix}${entry.sfz}`,   bytes: … },
+       { label: "smallest sample", path: `${prefix}${smallest.path}`, bytes: smallest.bytes },
+     ];
+```
+
+⭐⭐ **所以病灶是 `find` ✗ —— 它取【第一个】有 `sfz` 的条目 ✓** —— ⭐ **而 `virtuosity-drums-basic` 在数组里排第一 ✓，于是 `salamander-grand` 永远不会被检查** ✗✓✓ —— ⭐ **这正是上一轮它只报鼓那一架的原因 ✓**。
+
+### ⭐ 而它离"能改"很近
+
+⭐ **`prefix` ✓ `files` ✓ `sfz` ✓ `smallest` ✓ `checks` ✓ 全都已经是"针对一个条目"的形状 ✓** —— ⭐ **所以修法是把这段逻辑包进一个 `for (const entry of shippable)` 循环 ✓**，而**不必重写任何一处 ✗** ✓✓。
+
+### ⭐⭐ 而这条缺陷的形状，与本会话早先那条是同一种
+
+| 条 | 形状 |
+|---|---|
+| ⭐ **早先** | ⭐ **`check_mirror_reachability` 对一个库报成功 ✓，而它【只测了两个对象】✗** |
+| ⭐ **现在** | ⭐ **它对一个库报成功 ✓，而它【只测了一个库】✗** |
+
+⭐⭐ **两次都是"覆盖范围比它读起来的样子小"** ✓ —— ⭐ **而两次的症状都是"成功"✗** —— ⭐ **这正是这类缺陷危险的地方：它不报错 ✓，它报好消息** ✓✓。
+
+⭐ **所以核对器自己要有一条判据** ✓：**它必须【遍历清单里所有该发的条目】✓，并在输出里【逐个列出】✓** —— ⭐ **于是"只测了一个"这件事在输出里就看得见 ✗✓，而不是要靠读代码才发现** ✓✓。
