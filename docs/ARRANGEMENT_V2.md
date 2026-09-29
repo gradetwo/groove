@@ -451,3 +451,24 @@ ArrangementViewV2:97   playArrangementV2(arrangement, {}, player)
 | ⭐ **B：把引擎的创建【抬到两个块之外】✓ —— 一直渲染它 ✓，只把【界面】按路由条件渲染** ✓✓ | ⭐ **最对 ✓ —— 因为"音频引擎存在"与"显示 studio 界面"本来就是两件事** ✓✓ |
 
 ⭐⭐ **而那句提示语（"audio engine not connected yet"）本身就是一个好判据** ✓：**它说的是实话 ✓ —— 而它之所以看得见，是因为界面如实报告了自己的状态 ✓✓** —— ⭐ **所以修好之后，那行字应当消失 ✓，而 `Play` 应当真的出声** ✓。
+
+
+## 19. ⭐⭐⭐ 那条接线的证据链与修法位置（2026-09-28 晚 ✓）
+
+### 四个位置合起来说明了一切
+
+| 位置 | 它是什么 | 含义 |
+|---|---|---|
+| ⭐ **`App.tsx:1081` `<AudioStartGate>`** ✓ | ⭐ **它在【一切之上】✓（入口门 ✓）** | ⭐ **所以它对 `/new` 也在跑 ✓ —— 而它只 `getActiveAudioEngine()` / `primeAudioContext()` ✗，即【使用】已注册的引擎 ✓，不创建它** ✓✓ |
+| ⭐ **`App.tsx:624` `onAudioEngineReady={handleEngineReady}`** ✓ | ⭐ **它挂在 `StudioView` 上 ✓** | ⭐ **引擎的创建与 `setActiveAudioEngine` 在 `StudioView` 里** ✓ |
+| ⚠️ **`App.tsx:609` `currentTab === "studio" && !route.newProject`** ✗ | ⭐ **studio 块被 `/new` 排除** ✗ | ⭐ **于是创建者不会被渲染** ✗✓ |
+| ⭐ **`App.tsx:595` `engineInstance ? … : undefined`** ✓ | ⭐ **`/new` 的 `player`** | ⭐ **`engineInstance` 恒为 `null` → `player` 是 `undefined` → 按钮如实报"引擎未接"** ✓✓ |
+| ⭐ **`src/audio/activeEngine.ts`** ✓ | ⭐ **全局注册表** ✓（`setActiveAudioEngine` ✓ `getActiveAudioEngine` ✓） | ⭐ **引擎是全局单例 ✓ —— 所以"存在"与"显示哪个界面"本来无关** ✓✓ |
+
+### ⭐ 所以修法是一条具体的举动
+
+⭐ **把"创建引擎 + `setActiveAudioEngine` + 回调 `onAudioEngineReady`"从 `StudioView` 里【抽出来】✓，放进一个在两个路由之外渲染的小组件/钩子** ✓✓ —— ⭐ **理由**：**"音频引擎存在"是全局的 ✓（`activeEngine.ts` 就是证据 ✓），而"显示 studio 界面"是本地的** ✗✓ —— ⭐ **把全局的东西挂在本地块上，正是这个缺陷的成因** ✓。
+
+### ⭐ 而判据是现成的，而且业主已经把它指出来了
+
+⭐⭐ **`/new` 里的那行 `Play (audio engine not connected yet)` 应当消失 ✓ —— 而 `Play` 应当真的出声** ✓✓ —— ⭐ **界面如实报告自己的状态 ✓，所以"那行字还在不在"就是一个不需要读代码的判据** ✓✓。
