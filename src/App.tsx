@@ -1,5 +1,3 @@
-import { createArrangementPlayer } from "./audio/playerFromEngine";
-import { appCatalogueRuntime } from "./data/sampleCatalogueRuntime";
 import { captureWithBrowser } from "./audio/captureBrowser";
 import { createOpfsRecordingStore } from "./audio/opfsRecordingStore";
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
@@ -49,7 +47,7 @@ const SettingsModal = React.lazy(() =>
 );
 const StudioView = React.lazy(() => import("./views/StudioView").then((m) => ({ default: m.StudioView })));
 // ⭐ The new arrangement, reached only by `/new` — the route that deliberately has no genre.
-const ArrangementViewV2 = React.lazy(() => import("./components/arrangement/ArrangementViewV2").then((m) => ({ default: m.ArrangementViewV2 })));
+const NewProjectView = React.lazy(() => import("./views/NewProjectView").then((m) => ({ default: m.NewProjectView })));
 const ChordProgressionsView = React.lazy(() => import("./views/ChordProgressionsView").then((m) => ({ default: m.ChordProgressionsView })));
 const GalaxyView = React.lazy(() => import("./views/GalaxyView").then((m) => ({ default: m.GalaxyView })));
 const HorizontalTimelineView = React.lazy(() => import("./views/HorizontalTimelineView").then((m) => ({ default: m.HorizontalTimelineView })));
@@ -583,23 +581,16 @@ const MainApp: React.FC = () => {
             </div>
           }
         >
-            {/* ⭐ The new-project route renders the arrangement **instead of** the studio, so the genre default never reaches it: it does not enter `StudioView` at all. */}
+            {/*
+              The new-project route renders the arrangement instead of the studio. Its audio engine is created by that view, because the studio-owned lifecycle is not rendered here — see `NewProjectView`.
+            */}
             {route.newProject && (
               <React.Suspense fallback={null}>
-                <ArrangementViewV2
-                  songId="new"
-                  /**
-                   * ⭐ The app's own engine instance, not the studio's ref: by the time this route renders there is one, and when there is not, the view says so instead of looking broken.
-                   */
-                  player={
-                    engineInstance
-                      ? createArrangementPlayer({ engine: engineInstance, loadCatalogue: () => appCatalogueRuntime.load() })
-                      : undefined
-                  }
+                <NewProjectView
                   capture={async () => {
-                    // The store is the browser's own filesystem; if it is unavailable the capture reports that rather than throwing, which is the same rule the recording path follows everywhere else.
+                    // The store is the browser's own filesystem; if it is unavailable the capture reports that rather than pretending to record.
                     const root = await navigator.storage?.getDirectory?.();
-                    if (!root) return { ok: false, refusal: "unsupported", summary: "This browser cannot store recordings, so recording is unavailable here." };
+                    if (!root) return { ok: false, refusal: "unsupported", summary: "This browser cannot store recordings" };
                     return captureWithBrowser(createOpfsRecordingStore(root as never), { source: "audio" });
                   }}
                 />
