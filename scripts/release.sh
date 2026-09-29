@@ -49,17 +49,7 @@ step "mirror commit" bash scripts/commit_release_mirror.sh
 # ⭐ The tag, which this script used to ask for in its final line without making it.
 step "tag" bash scripts/tag_release.sh
 
-cd "$(dirname "$0")/.." || exit 1
-printf '  %-16s ' "remote"
-if git -C ../release/groove-github push origin dev >/tmp/release_step.log 2>&1 \
-  && git -C ../release/groove-github fetch -q origin \
-  && git -C ../release/groove-github merge-base --is-ancestor origin/main origin/dev; then
-  echo "ok"
-else
-  echo "FAILED"
-  tail -8 /tmp/release_step.log | sed 's/^/  /'
-  echo "❌ not fast-forwarding main; stop and look"
-  exit 1
-fi
+# ⭐ Publishing `dev` **and** fast-forwarding `main`, with both read back by content. The old inline block pushed dev and only checked that main was an ancestor of it, so main never advanced on its own.
+step "remote" bash scripts/publish_mirror_main.sh
 
 echo "✅ deployed and published — now check /version.json against the tag"
