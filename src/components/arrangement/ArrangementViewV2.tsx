@@ -9,7 +9,7 @@
  */
 import { useCallback, useMemo, useState } from "react";
 import type { ArrangementV2, TrackKindV2 } from "../../types/arrangementV2";
-import { addTrack, createArrangement, removeTrack, setCollapsed, setTrackFlag, selectTrackTake } from "../../data/arrangementEdits";
+import { addTrack, changeTrackKind, createArrangement, removeTrack, setCollapsed, setTrackFlag, selectTrackTake } from "../../data/arrangementEdits";
 import type { CaptureOutcome } from "../../audio/captureTake";
 import { TrackListV2 } from "./TrackListV2";
 import { TakeSelectorV2 } from "./TakeSelectorV2";
@@ -50,6 +50,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0 }: ArrangementViewV
         }}
         onToggle={(trackId, flag, value) => setArrangement((current) => setTrackFlag(current, trackId, flag, value))}
         onToggleCollapse={(trackId, collapsed) => setArrangement((current) => setCollapsed(current, trackId, collapsed))}
+        onChangeKind={(trackId, kind) => setArrangement((current) => changeTrackKind(current, trackId, kind))}
       />
 
       <div data-testid="arrangement-detail">

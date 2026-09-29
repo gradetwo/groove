@@ -9,7 +9,7 @@ import type { ArrangementV2 } from "../types/arrangementV2";
  * The rules themselves are covered by the criteria on `arrangementEdits`; this file must not restate them, or the interface and the model would each have their own copy of what a mute means.
  */
 const arr = (tracks: ArrangementV2["tracks"]): ArrangementV2 => ({ songId: "s", tracks, sourceSlots: ["A"] });
-const handlers = () => ({ onAddTrack: vi.fn(), onRemoveTrack: vi.fn(), onToggle: vi.fn(), onToggleCollapse: vi.fn() });
+const handlers = () => ({ onAddTrack: vi.fn(), onRemoveTrack: vi.fn(), onToggle: vi.fn(), onToggleCollapse: vi.fn(), onChangeKind: vi.fn() });
 
 describe("TrackListV2", () => {
   it("passes a mute toggle straight through, without deciding anything itself", () => {
@@ -41,5 +41,21 @@ describe("TrackListV2", () => {
     // Folding hides the row **in the interface**; whether it silences anything is the compile's business and is asserted there.
     expect(screen.queryByTestId("track-k")).toBeNull();
     expect(screen.getByTestId("track-f")).toBeDefined();
+  });
+});
+
+describe("changing a track's kind from its row", () => {
+  it("reports the chosen kind for that track, and does not decide the field rules itself", () => {
+    const h = handlers();
+    render(<TrackListV2 arrangement={arr([{ id: "t1", kind: "sampler", name: "Kick" }])} {...h} />);
+    // ⭐ The component reports a choice; what happens to `sample` or `takes` is `changeTrackKind`'s business, and it has its own criteria.
+    fireEvent.change(screen.getByLabelText("Kick kind"), { target: { value: "instrument" } });
+    expect(h.onChangeKind).toHaveBeenCalledWith("t1", "instrument");
+  });
+
+  it("shows the track's current kind, so the row cannot disagree with the model", () => {
+    const h = handlers();
+    render(<TrackListV2 arrangement={arr([{ id: "t1", kind: "drumkit", name: "Drums" }])} {...h} />);
+    expect((screen.getByLabelText("Drums kind") as HTMLSelectElement).value).toBe("drumkit");
   });
 });
