@@ -43,7 +43,14 @@ if (tree.truncated) {
   process.exit(1);
 }
 
-const blobs = (tree.tree ?? []).filter((node) => node.type === "blob");
+/**
+ * ⭐ **Repository metadata is not part of the instrument.** The reachability check found `.gitattributes` sitting in `salamander-grand`'s file list as its "smallest sample" — harmless at 252 bytes, but the manifest was describing
+ * files that are not the library, which is why its count was 668 rather than the 665 that are actually samples and mappings. Excluding paths that begin with `.` removes exactly those, and keeps `README` and `LICENSE`, which are
+ * small, are documentation, and in the case of a licence are part of what the attribution requirement refers to.
+ */
+const isInstrumentFile = (path) => !path.split("/").some((segment) => segment.startsWith("."));
+
+const blobs = (tree.tree ?? []).filter((node) => node.type === "blob" && isInstrumentFile(node.path));
 const sfzFiles = blobs.filter((node) => node.path.endsWith(".sfz"));
 const audio = blobs.filter((node) => /\.(wav|flac|aiff|aif|ogg|mp3)$/i.test(node.path));
 const bytes = blobs.reduce((sum, node) => sum + (node.size ?? 0), 0);

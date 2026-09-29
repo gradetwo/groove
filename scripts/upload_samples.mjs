@@ -122,7 +122,8 @@ if (entry.archive) {
     for (const dirent of fs.readdirSync(dir, { withFileTypes: true })) {
       const full = path.join(dir, dirent.name);
       if (dirent.isDirectory()) walk(full);
-      else found.push({ path: path.relative(workdir, full), bytes: fs.statSync(full).size });
+      // ⭐ The same rule the manifest builder uses: repository metadata is not part of the instrument, so it is neither described nor uploaded.
+      else if (!dirent.name.startsWith(".")) found.push({ path: path.relative(workdir, full), bytes: fs.statSync(full).size });
     }
   };
   walk(workdir);
