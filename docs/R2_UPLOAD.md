@@ -690,3 +690,26 @@ samples referenced: 0
 1. ⭐ **`expandIncludes` 要能在"库根"上解析（已经会 ✓ —— 鼓那一架用的就是它 ✓）**；
 2. ⚠️ **而 ARIA v2 的语法要单独看** ✗ —— ⭐ **`#define $STR_RES 20` 这类变量、以及 `$` 变量在 opcode 里的用法 ✓，是 SFZ v2 的东西** ✓ —— ⭐ **我的解析器对变量是支持的 ✓（`unresolvedVariables` 那个函数就是为它写的 ✓），但 ARIA 的扩展要逐个确认** ✓；
 3. ⭐ **所以"传之前先跑一次 include 展开 + region 计数"应当成为镜像那一步的一部分** ✓✓ —— ⭐ **一个库若在展开后仍然 0 个 region，就不该传** ✗✓（**那与"没有 `.sfz`"是同一类判断 ✓，只是更晚一层 ✓**）。
+
+
+## 27. ⭐⭐⭐ 预检成为真的一步，而它对 Salamander 说：**展开后仍然 0 个 region**（2026-09-28 晚 ✓）
+
+⭐ 我把那次临时预检写成了一个可重复的探针 ✓（**`/tmp/probe_lib.mts` 的正式版将在下一轮落进 `scripts/`** ✓），**它用本会话为浏览器写的那条异步 include 链** ✓（`expandRemoteIncludes` ✓ —— ⭐ **因为 `IncludeReader` 是同步的 ✗，而网络是异步的 ✓，那个函数正是为此而写** ✓）。
+
+### 读数
+
+```
+included 0 · regions 0 · missing 6 · problems 13
+❌ NOT PLAYABLE as-is — zero regions even after expansion
+```
+
+### ⭐ 而病因**很可能是我付过学费的那个区分**
+
+⭐ **它 6 个 include 一个都没取到** ✗ —— ⭐ 而我在探针里给的 `baseUrl` 是 **`.sfz` 自己的目录** ✗✓ —— ⚠️ **而 include 在 SFZ 里通常是【库根相对】✓**（**鼓那一架就是：`Programs/mappings/…` 是相对库根的 ✓** ✓✓）。
+
+| 关系 | 需要什么 |
+|---|---|
+| ⭐ **include** | ⭐ **库根**（**要显式算出来 ✓**）—— **本会话已经为一个库付过这次学费** ✓ |
+| ⭐ **采样** | **程序目录**（**`new URL` 就够 ✓**） |
+
+⭐ **所以下一轮的第一步是看清楚那 6 条 `#include` 写的是什么** ✓ —— ⭐ **而这一步是纯读 ✓，不需要下载任何字节** ✓✓。
