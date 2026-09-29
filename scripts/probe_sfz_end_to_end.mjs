@@ -194,4 +194,14 @@ try {
   process.exitCode = result.ok ? 0 : 1;
 } finally {
   await browser.close().catch(() => undefined);
+  /**
+   * **The dev server has to be killed on the way out, including when everything worked.**
+   *
+   * Only the failure path did this, so a **successful** run printed `REAL SOUND` and then hung: the spawned vite process kept Node's event loop alive and the probe never exited. Locally that looked like
+   * `timeout` killing it with 124; in CI it looked like a step **`in_progress` for 25 minutes whose log only appears when the process ends** — which is where the time actually went, and why the fetch
+   * rewrite, correct as it was, did not fix it.
+   *
+   * A criterion that cannot exit makes every caller look stuck, so this is not tidiness: it is the difference between a measurement and a hang.
+   */
+  server.kill("SIGTERM");
 }
