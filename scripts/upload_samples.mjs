@@ -150,15 +150,6 @@ if (entry.archive) {
   execFileSync("git", ["-C", workdir, "checkout", "--quiet", "FETCH_HEAD"], { stdio: "inherit" });
 }
 
-/**
- * ⭐ A shallow clone at the pin, because a manifest entry names a commit and the bytes have to be that commit's. Measured durations come from these bytes, which is the only way `durationSeconds` can mean "measured" rather than "declared".
- */
-const workdir = fs.mkdtempSync(path.join(os.tmpdir(), `groove-mirror-${entryId}-`));
-console.log(`  cloning ${entry.repo} @ ${entry.pin} → ${workdir}`);
-/**
- * ⭐ **A commit cannot be cloned with `--branch`.** That flag takes a branch or tag name, so `clone --depth 1 --branch <sha>` fails with exit 128 — which is exactly what the first real run did. Fetching the commit by sha does
- * work, and it fetches only that commit's tree, so the shallow-clone intent is kept.
- */
 
 // ⭐ Durations, measured rather than declared — the same instrument the manifest was built with.
 let measured = 0;
