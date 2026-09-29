@@ -1237,3 +1237,50 @@ rclone copy <dir> :s3:groove/<prefix>/   --s3-provider Cloudflare   --s3-access-
 | ⭐ **`storedBytes()` 用 `:s3:` + 参数，而不是 `r2:groove`** ✓ | **`scripts/upload_samples.mjs`** ✓ |
 | ⭐ **参数从 `.env.local` 读** ✓（**`dotenv` 或直接解析那个文件 ✓**） | 同上 ✓ |
 | ⭐ **`rclone copy` 同样用 `:s3:`** ✓ | 同上 ✓ |
+
+
+## 43. ⭐⭐⭐ Karoryfer 的清单条目形状：**用 `archive` 而不是 `pin` 的树**（2026-09-28 晚 ✓）
+
+### 已读到的两种形状
+
+| | 键 |
+|---|---|
+| ⭐ **现有条目** | `id` ✓ `name` ✓ `licence` ✓ `repo` ✓ `pin` ✓ `prefix` ✓ `sfz` ✓ `files` ✓ `needs` ✓（**`salamander-grand` 还有 `attribution` ✓ `enumeratedAt` ✓**） |
+| ⭐ **zip 形态给出的** | `tag` ✓ `asset` ✓ `bytes` ✓ `url` ✓（**`karoryfer.meatbass` @ `v1.001` → `Karoryfer.Meatbass.v1.001.zip` = 255,425,351 字节** ✓） |
+
+### ⭐⭐ 而这是一个真决定：**zip 库的"pin"是什么**
+
+⚠️ **对 git 树，`pin` 是 commit sha ✓ —— 因为【树】就是要发布的东西** ✓ —— ⭐ **而对 Karoryfer，要发布的是 Release 的【资产】✗，不是那个 tag 的树** ✗✓ —— ⭐ **所以如果把 `pin` 写成 tag 的 sha ✗，清单就在说一件不准确的事** ✓。
+
+⭐⭐ **所以决定是：加一个 `archive` 字段** ✓✓：
+
+```json
+{
+  "id": "karoryfer-meatbass",
+  "name": "Karoryfer Meatbass",
+  "licence": "CC0",
+  "repo": "sfzinstruments/karoryfer.meatbass",
+  "prefix": "karoryfer-meatbass",
+  "sfz": "…（解包后才知道 ✓）",
+  "archive": {
+    "tag": "v1.001",
+    "asset": "Karoryfer.Meatbass.v1.001.zip",
+    "bytes": 255425351,
+    "url": "https://github.com/sfzinstruments/karoryfer.meatbass/releases/download/v1.001/Karoryfer.Meatbass.v1.001.zip",
+    "sha256": "…（下载后实测 ✓）"
+  },
+  "files": [],
+  "needs": "…"
+}
+```
+
+⭐ **而 `files` 与 `sfz` 在下载并解包之前【留空】✓ —— 这与 `salamander-grand` 当初 `files: 0` 是同一种诚实 ✓**（**"声明了、没枚举过"** ✓）—— ⭐ **而上传器会在解包之后填上它们 ✓✓**。
+
+### ⭐ 所以上传器只需要一个分支
+
+| 情形 | 取字节 | 判据 |
+|---|---|---|
+| ⭐ **有 `archive`** | ⭐ **下载 `url` ✓ → 校验 `bytes`（与 `sha256` ✓）→ 解包** ✓ | ⭐ **解包后枚举 → 填 `files` 与 `sfz`** ✓ |
+| **有 `pin`** | ⭐ **按 sha `fetch --depth 1`** ✓ | **已实现 ✓（本轮修好 ✓）** |
+
+⭐⭐ **而 `bytes` 这一项是 zip 形态里【唯一可核对的】东西** ✓ —— ⭐ **因为 GitHub 的 Release 资产没有 git 的不可变性保证 ✗** —— ⭐ **所以 `sha256` 在下载时实测并写进清单 ✓，正是让"这次传的就是上次核对的"成为可验证的** ✓✓。
