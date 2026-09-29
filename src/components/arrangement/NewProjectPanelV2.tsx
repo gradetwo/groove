@@ -44,14 +44,18 @@ export function NewProjectPanelV2({ onCreate }: NewProjectPanelV2Props) {
     <div data-testid="new-project-panel-v2" className="flex flex-col gap-4 p-6 max-w-4xl">
       <h2 className="text-lg font-semibold text-text">New Project</h2>
 
-      <div data-testid="template-cards" className="flex flex-wrap gap-3">
+      {/*
+        Equal columns rather than wrapped boxes. `flex flex-wrap` sized each card to its own sentence, so in this container two fitted, the third did not, and the fourth wrapped again — a two-one-one stack whose raggedness reads as
+        breakage. A grid makes every card the same width and puts them in rows that line up.
+      */}
+      <div data-testid="template-cards" className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {cards.map((card) => (
           <button
             key={card.id}
             type="button"
             aria-pressed={selected === card.id}
             data-testid={`template-${card.id}`}
-            className={`flex flex-col items-start gap-1 p-4 rounded border text-left min-w-56 ${selected === card.id ? "border-[var(--d-accent)] bg-[var(--d-accent-soft)]" : "border-[var(--d-border,rgba(255,255,255,0.15))] bg-[var(--d-surface,rgba(255,255,255,0.04))]"}`}
+            className={`flex flex-col items-start gap-1 p-4 rounded border text-left h-full ${selected === card.id ? "border-[var(--d-accent)] bg-[var(--d-accent-soft)]" : "border-[var(--d-border,rgba(255,255,255,0.15))] bg-[var(--d-surface,rgba(255,255,255,0.04))]"}`}
             onClick={() => setSelected(card.id)}
           >
             <strong>{card.name}</strong>
