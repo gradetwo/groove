@@ -211,3 +211,19 @@ describe("the expander reports what it could not read", () => {
     expect(result.problems).toEqual([]);
   });
 });
+
+/**
+ * `missing` must survive recursion — the bug that made an asynchronous caller see `missing: []` while `problems` listed 119 unresolvable includes.
+ *
+ * The synchronous reader only suffered a worse message, so nothing failed. The **asynchronous** caller is driven by `missing`: it fetched the first level, every level below stayed unfetched, and the
+ * library parsed to **zero regions** while reporting nothing wrong at the top. A real library is 126 includes deep, so "one level worked" was indistinguishable from "nothing worked".
+ */
+describe("missing paths propagate out of nested includes", () => {
+  it("reports a missing include two levels down, not just the first level", () => {
+    const files: Record<string, string> = { "entry.sfz": '#include "a.sfz"\n', "a.sfz": '#include "b.sfz"\n' };
+    const result = expandIncludes(files["entry.sfz"]!, (path) => files[path], { path: "entry.sfz" });
+    // `b.sfz` was fetched by nobody, and the caller that could have fetched it only reads this list. **Before the fix this array was empty** — the parent collected `nested.problems` and
+    // `nested.included` but dropped `nested.missing`, so an asynchronous caller resolved exactly one level and the library parsed to zero regions.
+    expect(result.missing).toContain("b.sfz");
+  });
+});

@@ -24,7 +24,12 @@ export interface RemoteIncludeOptions {
   maxDepth?: number;
 }
 
-export async function expandRemoteIncludes(text: string, options: RemoteIncludeOptions): Promise<ExpandIncludesResult> {
+export interface RemoteExpandResult extends ExpandIncludesResult {
+  /** One entry per pass, for diagnosing a loop that stops early or never stops — the shape of the loop is data, not something to infer from a total. */
+  waves: Array<{ fetched: string[]; failed: string[]; missingAfter: number }>;
+}
+
+export async function expandRemoteIncludes(text: string, options: RemoteIncludeOptions): Promise<RemoteExpandResult> {
   const files = new Map<string, string>([[options.programUrl, text]]);
   const attempted = new Set<string>();
   const failures: string[] = [];
@@ -32,6 +37,7 @@ export async function expandRemoteIncludes(text: string, options: RemoteIncludeO
   // The synchronous reader answers from what has been fetched so far; anything else returns `undefined`, which is precisely how the expander reports it back as `missing`.
   const read = (path: string) => files.get(path);
 
+  const waves: RemoteExpandResult["waves"] = [];
   let result = expandIncludes(text, read, { path: options.programUrl, maxDepth: options.maxDepth });
   for (;;) {
     const wanted = result.missing.filter((path) => !attempted.has(path));
@@ -53,8 +59,9 @@ export async function expandRemoteIncludes(text: string, options: RemoteIncludeO
       }
     }
     result = expandIncludes(text, read, { path: options.programUrl, maxDepth: options.maxDepth });
+    waves.push({ fetched: [...wanted], failed: [...failures], missingAfter: result.missing.length });
   }
 
   // Both failures are kept: what the expander could not resolve, and what the network could not deliver.
-  return failures.length === 0 ? result : { ...result, problems: [...result.problems, ...failures] };
+  return failures.length === 0 ? { ...result, waves } : { ...result, problems: [...result.problems, ...failures], waves };
 }
