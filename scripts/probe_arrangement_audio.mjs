@@ -31,6 +31,20 @@ const playwright = require("playwright");
 const ROOT = process.cwd();
 const argv = process.argv.slice(2);
 const asJson = argv.includes("--json");
+/**
+ * `--only=lane` measures the lane curve and nothing else.
+ *
+ * Every other block ran first and the whole evaluate had to survive all of them for the curve to appear at all — and it did not survive: the browser disconnected mid-run, at a different point each time. Measuring one thing should not
+ * require five unrelated things to succeed first, and a failure is easier to attribute when only one block is running.
+ */
+const only = (argv.find((a) => a.startsWith("--only=")) ?? "").split("=")[1] || undefined;
+/**
+ * **One lane count per process, because a browser here does not survive many renders.** The repository already knew this: the loudness sweep is chunked across processes because "a single browser process exhausts the WASM budget after roughly
+ * forty renders and the run aborts on its own sentinel (which is why it never completed on a laptop either)". This probe dies sooner — sometimes on the very first render — so the curve is measured the same way the sweep is: `--lanes=<n>` renders
+ * one count and exits, and `measure_lane_curve.mjs` runs one process per count.
+ */
+const laneCounts = (argv.find((a) => a.startsWith("--lanes=")) ?? "").split("=")[1];
+const laneCount = laneCounts ? Number(laneCounts) : undefined;
 const genreId = (argv.find((a) => a.startsWith("--genre=")) ?? "--genre=chicago-house").split("=")[1];
 const port = Number((argv.find((a) => a.startsWith("--port=")) ?? "--port=3188").split("=")[1]);
 /**
@@ -81,7 +95,10 @@ const waitForServer = async () => {
   throw new Error("vite did not start");
 };
 
-const browser = await chromium.launch({ args: ["--no-sandbox"] });
+/**
+ * `--enable-precise-memory-info` makes `performance.memory` update on every allocation rather than on a slow timer — without it the readings below are too coarse to be worth printing.
+ */
+const browser = await chromium.launch({ args: ["--no-sandbox", "--enable-precise-memory-info"] });
 const fail = async (message) => {
   console.error(`❌ ${message}`);
   await browser.close().catch(() => {});
@@ -101,9 +118,19 @@ try {
       body: '<!doctype html><html><head><meta charset="utf-8"></head><body></body></html>',
     })
   );
+  /**
+   * **Where the page says what happened.** A `console.log` inside `page.evaluate` never reaches this log — the probe learned that the hard way — so the page's own messages are forwarded here, and the three ways a render can end the page
+   * are each recorded: a crash, a page error, and the browser disconnecting. Without them a dead evaluate is indistinguishable from a block that never ran.
+   */
+  page.on("console", (message) => console.log(`[page] ${message.text()}`));
+  page.on("pageerror", (error) => console.log(`[pageerror] ${error.message}`));
+  page.on("crash", () => console.log("[crash] the renderer crashed"));
+  browser.on("disconnected", () => console.log("[browser] disconnected"));
+  // A switch for the heap sampling, so a failure can be attributed: the same probe runs with and without it and the difference says which one broke.
+  if (process.env.PROBE_NO_HEAP === "1") await page.addInitScript(() => { window.__probeNoHeap = true; });
   await page.goto(`${base}/__arrangement_probe__.html`, { waitUntil: "domcontentloaded", timeout: 60000 });
 
-  const measured = await page.evaluate(async ({ genreId: id, ramp }) => {
+  const measured = await page.evaluate(async ({ genreId: id, ramp, only, laneCount }) => {
     const [wav, genresModule, mixModule, formsModule, flattenModule, trackUtils, loudness] = await Promise.all([
       import("/src/audio/WavExporter.ts"),
       import("/src/data/genres/index.ts"),
@@ -214,6 +241,79 @@ try {
       return count ? Math.sqrt(sum / count) : 0;
     };
 
+    /**
+     * Extracted so the curve can be measured **first** when `--only=lane` is passed. Every render before this point — the fill comparisons, the rack comparison — had to succeed for the curve to appear at all, and the browser was
+     * disconnecting during them; measuring one thing should not require four unrelated renders to survive.
+     */
+    const measureLaneCurve = async () => {
+      try {
+        /**
+         * **What this measures, stated exactly.** The catalogue this project ships is **empty** (the read-only-slice constraint), and `renderSongOffline` takes no catalogue or
+         * sample-loader option — so these lanes carry an `assetId` that resolves to nothing. The curve therefore measures the **lane and graph machinery** (one voice chain per
+         * lane, the master chain, the render), **not** sample decoding or playback.
+         *
+         * The latency block below reaches a real impulse by building its own `OfflineAudioContext` and injecting a loader, which is the right shape for that question and the wrong
+         * one for this: here the 64-lane cost is what is wanted, and loading 64 samples would measure the loader instead. **The label is the point** — the first version was
+         * silent about it, which is how a number ends up meaning something other than it says.
+         */
+        const lane = (index) => ({ track_id: "audio", name: `lane-${index}`, sample: { assetId: "probe-impulse" } });
+        const points = [];
+        const short = [sections[0]];
+        /**
+         * **The heap is sampled while the render runs, and the number is a sampled lower bound rather than a peak.** `render` is asynchronous, so the page's event loop is free between its awaits and a timer can read
+         * `performance.memory.usedJSHeapSize` — which is Chromium-only and page-wide, so it includes the application as well as the render. The note returned with the curve says all of that, because a number whose limits
+         * are unstated is the kind this project has had to retract.
+         */
+        /**
+ * Sampling can be switched off with `PROBE_NO_HEAP=1`, because it was added while diagnosing a failure and the only way to tell whether it caused one is to run without it.
+ */
+const memory = typeof performance !== "undefined" && !window.__probeNoHeap ? performance.memory : undefined;
+        for (const count of laneCount === undefined ? [1, 4, 16, 64] : [laneCount]) {
+          const value = {
+            ...song,
+            id: `lanes-${count}`,
+            clips: { A: { ...clip, tracks: Array.from({ length: count }, (_, index) => lane(index)) } },
+            sections: short,
+          };
+          // Forwarded to Node by the console listener, so which lane count was running when the page died is in the log.
+          console.log(`lane curve: rendering ${count} lane(s)`);
+          let peakHeapBytes = memory ? memory.usedJSHeapSize : undefined;
+          const sampler = memory ? setInterval(() => { peakHeapBytes = Math.max(peakHeapBytes, memory.usedJSHeapSize); }, 10) : undefined;
+          const started = performance.now();
+          const { buffer } = await render(value);
+          const seconds = Number(((performance.now() - started) / 1000).toFixed(4));
+          if (sampler !== undefined) clearInterval(sampler);
+          if (memory) peakHeapBytes = Math.max(peakHeapBytes, memory.usedJSHeapSize);
+          points.push({
+            lanes: count,
+            seconds,
+            frames: buffer.length,
+            ...(peakHeapBytes === undefined ? {} : { peakHeapMB: Number((peakHeapBytes / (1024 * 1024)).toFixed(1)) }),
+          });
+          // **No print here.** A `console.log` inside `page.evaluate` runs in the browser and never reaches this log — the points are returned and printed from Node after the evaluate
+          // returns. This line existed and printed nothing for exactly that reason, which cost a round of thinking the block had never run.
+        }
+        return { points, memory: Boolean(memory), note: "time and sampled heap; the heap reading is a lower bound (sampled every 10ms during the render), Chromium-only, and page-wide rather than the render alone. Time is wall clock inside the browser." };
+      } catch (error) {
+        return { error: error && error.message ? error.message : String(error) };
+      }
+    };
+    /**
+     * **The smallest render that can fail.** `--only=smoke` renders the two-bar song once and returns. The browser dies during the earlier renders — a long-lived idle browser survived eight minutes here, so it is this work rather than the
+     * environment — and the fastest way to say which part is to have a configuration that does nothing else.
+     */
+    if (only === "smoke") {
+      const started = performance.now();
+      const { buffer } = await render(song);
+      return { only, smoke: { seconds: Number(((performance.now() - started) / 1000).toFixed(4)), frames: buffer.length, channels: buffer.numberOfChannels, sampleRate: buffer.sampleRate } };
+    }
+
+    /**
+     * **The early exit.** With `--only=lane` the curve runs here, before anything else renders, and the result is returned immediately — the failure that motivated this happened during those earlier renders, so the curve must not be behind
+     * them. The note about what is measured travels with the data rather than being printed, because a `console.log` inside this evaluate does not reach the run's log.
+     */
+    if (only === "lane") return { only, renderLaneCurve: await measureLaneCurve() };
+
     const withFill = await render(song);
     const control = await render(withoutFill);
     /** The same genre's **loop**, so the song's range can be compared with the loop's rather than asserted alone. */
@@ -318,7 +418,7 @@ try {
      *
      * Wrapped like its neighbours: it prints numbers or prints why it could not.
      */
-    const renderProfile = await (async () => {
+    const renderProfile = only && only !== "renderProfile" ? { skipped: true } : await (async () => {
       try {
         const seconds = 4;
         const rate = 44100;
@@ -363,7 +463,7 @@ try {
      *
      * Wrapped like its neighbours: it prints numbers or prints why it could not.
      */
-    const renderSplit = await (async () => {
+    const renderSplit = only && only !== "renderSplit" ? { skipped: true } : await (async () => {
       try {
         /**
          * The song is the one **this probe already built**, not a new name for it.
@@ -447,41 +547,10 @@ try {
      * **It reports time and not peak memory, and the output says so.** This context exposes no reliable way to ask for peak memory, and a figure from something unreliable would be
      * an invented number of exactly the kind this session has retracted twice.
      */
-    const renderLaneCurve = await (async () => {
-      try {
-        /**
-         * **What this measures, stated exactly.** The catalogue this project ships is **empty** (the read-only-slice constraint), and `renderSongOffline` takes no catalogue or
-         * sample-loader option — so these lanes carry an `assetId` that resolves to nothing. The curve therefore measures the **lane and graph machinery** (one voice chain per
-         * lane, the master chain, the render), **not** sample decoding or playback.
-         *
-         * The latency block below reaches a real impulse by building its own `OfflineAudioContext` and injecting a loader, which is the right shape for that question and the wrong
-         * one for this: here the 64-lane cost is what is wanted, and loading 64 samples would measure the loader instead. **The label is the point** — the first version was
-         * silent about it, which is how a number ends up meaning something other than it says.
-         */
-        const lane = (index) => ({ track_id: "audio", name: `lane-${index}`, sample: { assetId: "probe-impulse" } });
-        const points = [];
-        const short = [sections[0]];
-        for (const count of [1, 4, 16, 64]) {
-          const value = {
-            ...song,
-            id: `lanes-${count}`,
-            clips: { A: { ...clip, tracks: Array.from({ length: count }, (_, index) => lane(index)) } },
-            sections: short,
-          };
-          const started = performance.now();
-          const { buffer } = await render(value);
-          const seconds = Number(((performance.now() - started) / 1000).toFixed(4));
-          points.push({ lanes: count, seconds, frames: buffer.length });
-          // **No print here.** A `console.log` inside `page.evaluate` runs in the browser and never reaches this log — the points are returned and printed from Node after the evaluate
-          // returns. This line existed and printed nothing for exactly that reason, which cost a round of thinking the block had never run.
-        }
-        return { points, note: "time only; peak memory is NOT measured, because this context exposes no reliable way to ask for it" };
-      } catch (error) {
-        return { error: error && error.message ? error.message : String(error) };
-      }
-    })();
+    if (only) console.log(`probe: only ${only}`)
+    const renderLaneCurve = only && only !== "renderLaneCurve" ? { skipped: true } : await measureLaneCurve();
 
-    const audioLaneLatency = await (async () => {
+    const audioLaneLatency = only && only !== "audioLaneLatency" ? { skipped: true } : await (async () => {
       try {
         const [scheduler, graph] = await Promise.all([
           import("/src/audio/audioLaneScheduler.ts"),
@@ -546,7 +615,7 @@ try {
      *
      * Wrapped so that a failure here cannot take the run down: it prints a number or it prints why it could not.
      */
-    const chunking = await (async () => {
+    const chunking = only && only !== "chunking" ? { skipped: true } : await (async () => {
       try {
         const parts = song.sections ?? [];
         if (parts.length < 2) return { skipped: `only ${parts.length} section(s) in this fixture` };
@@ -718,7 +787,7 @@ try {
       }
     })();
 
-    const kickPhase = await (async () => {
+    const kickPhase = only && only !== "kickPhase" ? { skipped: true } : await (async () => {
       const kick = await import("/src/audio/AnatomyKickEngine.ts");
       const sampleRate = 44100;
       const frames = Math.round(sampleRate * 0.5);
@@ -984,7 +1053,10 @@ try {
   const laneCurve = measured.renderLaneCurve;
   if (laneCurve?.error) console.log(`   lane curve       : could not measure (${laneCurve.error})`);
   else if (laneCurve?.points) {
-    for (const point of laneCurve.points) console.log(`   lane curve       : ${point.lanes} lane(s) ${point.seconds}s (${point.frames} frames)`);
+    for (const point of laneCurve.points) {
+      const heap = point.peakHeapMB === undefined ? "heap not measurable here" : `peak heap sampled ${point.peakHeapMB} MB`;
+      console.log(`   lane curve       : ${point.lanes} lane(s) ${point.seconds}s (${point.frames} frames) · ${heap}`);
+    }
     console.log(`                      ${laneCurve.note}`);
   }
 

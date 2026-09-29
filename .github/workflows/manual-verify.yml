@@ -200,6 +200,12 @@ jobs:
         if: inputs.scope == 'audio' || inputs.scope == 'all'
         run: node scripts/probe_arrangement_audio.mjs --genre=chicago-house
 
+      # ⭐ The lane cost curve, and the reason it is its own step: **one lane count per process**. A single browser process here does not survive a series of renders — the probe's runs ended in `[browser] disconnected` with no crash
+      # event and no page error, and one render of a two-bar song was enough to kill one, while an idle browser in the same environment lived past eight minutes. The same shape the loudness sweep above already works around.
+      - name: Lane cost curve (1, 4, 16, 64 lanes, one process each)
+        if: inputs.scope == 'audio' || inputs.scope == 'all'
+        run: node scripts/measure_lane_curve.mjs --genre=chicago-house
+
 
       # P0.9 — the 159-genre trim re-record. It runs **chunked, across processes**: a single browser process exhausts the
       # WASM budget after roughly forty renders and the run aborts on its own sentinel (which is why it never completed on a

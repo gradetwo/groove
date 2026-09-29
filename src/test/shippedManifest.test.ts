@@ -28,8 +28,13 @@ describe("the manifest this repository ships", () => {
 
   it("keeps the measured instrument's figures exactly as the mirror produced them", () => {
     const entry = parseManifest(JSON.stringify(shipped)).manifest!.entries.find((candidate) => candidate.id === "virtuosity-drums-basic")!;
-    // 1659 files, not 1660: the plan has one more, and the extra one is `*silence`, which is a built-in rather than a file.
-    expect(entry.files).toHaveLength(1659);
+    /**
+     * **The list records what the mirror holds, and this used to assert 1659 samples.** It is 2078 now because the entry's own six programs and the keymaps they pull in were in the bucket while the list omitted them — nothing was broken,
+     * since the application fetches the includes at runtime and reachability checked one of them, but nothing would have noticed one of the 419 going missing either. What this test is for is the figures below, so it no longer pins a roster
+     * length; the assertion that the program is listed keeps the list from being truncated back to samples.
+     */
+    expect(entry.files.map((file) => file.path)).toContain("Programs/01-basic-kit.sfz");
+    expect(entry.files.length).toBeGreaterThan(1659);
     // The longest sample, measured rather than guessed — and the figure two independent tools agreed on.
     expect(entry.durationSeconds).toBeCloseTo(14.529542, 6);
     // Pinned, because a different commit of the library is a different set of files.
