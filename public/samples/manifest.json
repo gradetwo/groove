@@ -3,7 +3,7 @@
   "entries": [
     {
       "id": "virtuosity-drums-basic",
-      "name": "Virtuosity Drums \u2014 Basic Kit",
+      "name": "Virtuosity Drums — Basic Kit",
       "licence": "CC0",
       "prefix": "virtuosity-drums",
       "repo": "sfzinstruments/virtuosity_drums",
@@ -11661,13 +11661,3488 @@
       "repo": "sfzinstruments/karoryfer.meatbass",
       "sourceUrl": "https://github.com/sfzinstruments/karoryfer.meatbass",
       "prefix": "karoryfer-meatbass",
-      "files": [],
+      "files": [
+        {
+          "path": "Meatbass/GUI/01_arco_modwheel.xml",
+          "bytes": 4878,
+          "sha256": "8b4eaa4aa09f5f26c316687fc428b8b536629095c2e7aba279569bfeab032274"
+        },
+        {
+          "path": "Meatbass/GUI/02_arco_3vel.xml",
+          "bytes": 4507,
+          "sha256": "2c0af1a78c9af4b977c0c2bf94693e33084c33e509de9156cd1056a8fc248570"
+        },
+        {
+          "path": "Meatbass/GUI/03_arco_5vel.xml",
+          "bytes": 4506,
+          "sha256": "397e8e2fb21ed1b7b72dbbeb7896328ecf2822b2cb6183dd31c2ff91ef504ed0"
+        },
+        {
+          "path": "Meatbass/GUI/04_pizz.xml",
+          "bytes": 4332,
+          "sha256": "0bc4d0673cc71bb424e0cf1f321c23bce1db51f7778305f5eb75803450bd8f3f"
+        },
+        {
+          "path": "Meatbass/GUI/Info_tab.png",
+          "bytes": 431758,
+          "sha256": "87dc438805f35fc482fb5a79ff10c5f29728f724003f1ea093a63346bd3ccab1"
+        },
+        {
+          "path": "Meatbass/GUI/Smallish_g.png",
+          "bytes": 12425,
+          "sha256": "98385a65506f37abd5e26687249302e79ca24e811788346a9fa93b4e30cb8470"
+        },
+        {
+          "path": "Meatbass/GUI/aria_info.xml",
+          "bytes": 236,
+          "sha256": "40284f7a19f0c2c990295bd633446c9e530da6ff1afde204a9ee5f1cb3b3889c"
+        },
+        {
+          "path": "Meatbass/GUI/btn_url.png",
+          "bytes": 643,
+          "sha256": "59488f3253178ef50f4110a3185c5af3400e1f023d9e875f618bf267217c6003"
+        },
+        {
+          "path": "Meatbass/GUI/meatbass_controls_tab.png",
+          "bytes": 431584,
+          "sha256": "f9fb1a40afb8c06ca5d3b0067964e1cf17cec0232aca1dd93b1c9e085cb90d44"
+        },
+        {
+          "path": "Meatbass/LICENSE",
+          "bytes": 7167,
+          "sha256": "a19d58aaab15c4d0019e569d1c073d1b5286fdd37dbeee7a58a7d1ae76045ae1"
+        },
+        {
+          "path": "Meatbass/Meatbass.bank.xml",
+          "bytes": 1428,
+          "sha256": "00337a5a86e7b3207f49640d48edfb26375dc6a52f63e01feccaae7c3b17cb04"
+        },
+        {
+          "path": "Meatbass/Programs/01_arco_modwheel.sfz",
+          "bytes": 3272,
+          "sha256": "55ea0ebe13b2b9639515090dee809eb938739314b8c032f710bf8ba763e50af1"
+        },
+        {
+          "path": "Meatbass/Programs/02_arco_3vel.sfz",
+          "bytes": 2798,
+          "sha256": "008cf9b04358b4e499104792956c7c8d9f926df233c84d5ac195910cf3b82631"
+        },
+        {
+          "path": "Meatbass/Programs/03_arco_5vel.sfz",
+          "bytes": 2597,
+          "sha256": "977f2c3b0b70477e7f50f847a1122eb84d51d350f3bf2251cd53b751015d7fc8"
+        },
+        {
+          "path": "Meatbass/Programs/04_pizz.sfz",
+          "bytes": 2550,
+          "sha256": "af95601d4be39dea012a10bdec49b72c376a68ad201e31c5dc37e5f21512a628"
+        },
+        {
+          "path": "Meatbass/Programs/arco_basic.sfz",
+          "bytes": 17705,
+          "sha256": "1c831e59ef82aa7bccbb9d99fd33a0fad777090471e995aa2a27ce26cb797b2d"
+        },
+        {
+          "path": "Meatbass/Programs/arco_basic_legato_map.sfz",
+          "bytes": 35064,
+          "sha256": "5e1629c7c4dbdd5a0f87ed6f02a7da667aabcbea4bd8f7f1d4ac48f2aba20c3c"
+        },
+        {
+          "path": "Meatbass/Programs/arco_basic_map.sfz",
+          "bytes": 16116,
+          "sha256": "f3aea0e5d62eefc1c4ebc5270a578d0195fd9a48c2e14c600cc73d1e4b0b0a30"
+        },
+        {
+          "path": "Meatbass/Programs/arco_looped_basic_legato_map.sfz",
+          "bytes": 29490,
+          "sha256": "5512d51d3b4a47d6a2932e471be13f563df58d5e0901b8cf35e03ccfd37799fe"
+        },
+        {
+          "path": "Meatbass/Programs/arco_looped_basic_map.sfz",
+          "bytes": 10627,
+          "sha256": "72821c9cec3bdb4ab1cd63bce8b176a2efeb2353767fe252a39a22d77d173871"
+        },
+        {
+          "path": "Meatbass/Programs/arco_looped_six_legato_first_map.sfz",
+          "bytes": 58983,
+          "sha256": "9c8b11b5d42e6ac7b651e05c7d118cd899b91a4b4edd6b3b6acbb4fb79b99259"
+        },
+        {
+          "path": "Meatbass/Programs/arco_looped_six_legato_map.sfz",
+          "bytes": 59130,
+          "sha256": "1445a861d8c88869445ff047631041f5116543009cfce55caf2a5d660627cc0d"
+        },
+        {
+          "path": "Meatbass/Programs/arco_looped_six_map.sfz",
+          "bytes": 58017,
+          "sha256": "f1947f61d69276ad02823447c2f52289a8cb12faaeee118d0b58172e93d6bc8a"
+        },
+        {
+          "path": "Meatbass/Programs/arco_looped_three_legato_map.sfz",
+          "bytes": 81078,
+          "sha256": "9c4069a5491e922706bd8b6932b9bc56f9cab88f5c52bc7ed4caede0904b8541"
+        },
+        {
+          "path": "Meatbass/Programs/arco_looped_three_map.sfz",
+          "bytes": 29664,
+          "sha256": "299b1beeafd4e2cdc2eea7f11b1bd0f74c5350f91c4796975785b5530370c89d"
+        },
+        {
+          "path": "Meatbass/Programs/arco_mw_basic_legato_map.sfz",
+          "bytes": 9404,
+          "sha256": "1da9407ac454d56624ff7532d62513d0fd6f118d5e0e86c60067e5d12ea92b72"
+        },
+        {
+          "path": "Meatbass/Programs/arco_mw_basic_map.sfz",
+          "bytes": 3403,
+          "sha256": "dcff82f4fe269968d84e406e2072da608650e468e8ebf5e591395bae3fad885d"
+        },
+        {
+          "path": "Meatbass/Programs/arco_mw_six_legato_first_map.sfz",
+          "bytes": 19727,
+          "sha256": "340982b96f29c2015d97eaff347d3fa5a9c7df4c7505b0bd0941d7afda1bae20"
+        },
+        {
+          "path": "Meatbass/Programs/arco_mw_six_legato_map.sfz",
+          "bytes": 19668,
+          "sha256": "f9c86f91417fc1646c193ef8fc3b6376273e9c2e34b5c53ac4519a695f4a1c9f"
+        },
+        {
+          "path": "Meatbass/Programs/arco_mw_six_map.sfz",
+          "bytes": 17356,
+          "sha256": "a8fc59a0c53e6449a4aab51a6edd65aca9767f0f6d0b436f01ed0fe23dcb0293"
+        },
+        {
+          "path": "Meatbass/Programs/arco_mw_three_legato_map.sfz",
+          "bytes": 25928,
+          "sha256": "6d5a82156f60c6423cb953889e92d34a0127390a3d9fff41cfe27266c284cfce"
+        },
+        {
+          "path": "Meatbass/Programs/arco_mw_three_map.sfz",
+          "bytes": 10920,
+          "sha256": "30b1ece2ca035a46f040e1cc0de7fb1a40ef7c9a27a215a68e7a8a2c556a55d8"
+        },
+        {
+          "path": "Meatbass/Programs/arco_six.sfz",
+          "bytes": 66182,
+          "sha256": "63e62d650018072d5f95110ed5f210c7cd96dcdc12b8559adb8c48105c44bed8"
+        },
+        {
+          "path": "Meatbass/Programs/arco_six_legato_first_map.sfz",
+          "bytes": 68566,
+          "sha256": "95461f95d2ded32788c399447dcf68e7ae3e0733a153cb613950c37ba62e2de6"
+        },
+        {
+          "path": "Meatbass/Programs/arco_six_legato_map.sfz",
+          "bytes": 71800,
+          "sha256": "4d2836db9f3b0ad8d49648285f0dc98c648db3aafdddc0fce7314fffc78586b3"
+        },
+        {
+          "path": "Meatbass/Programs/arco_six_map.sfz",
+          "bytes": 66190,
+          "sha256": "4cb20e4bfe740d75d9770046bbf784df04ebb70a9cd5f243ceeac2a528b866f4"
+        },
+        {
+          "path": "Meatbass/Programs/arco_three.sfz",
+          "bytes": 47846,
+          "sha256": "366fb2a18a50e943cf0c388072a6359e31b3574743e93504b62c8cee424b83eb"
+        },
+        {
+          "path": "Meatbass/Programs/arco_three_legato_map.sfz",
+          "bytes": 94864,
+          "sha256": "b1e95f8051d321efda254f631bec014db7366b6f24d8d3fc8eaefa89d6b29f45"
+        },
+        {
+          "path": "Meatbass/Programs/arco_three_map.sfz",
+          "bytes": 44651,
+          "sha256": "2977de4587b1369ff9955faa05a57fccf5929168e731f99a60b3ccf005939461"
+        },
+        {
+          "path": "Meatbass/Programs/pizz_basic.sfz",
+          "bytes": 26997,
+          "sha256": "58e7ebfa0c53180f78793cdecfe8757095779c26ba364a86bf28e02bb3b3d80e"
+        },
+        {
+          "path": "Meatbass/Programs/pizz_basic_legato_map.sfz",
+          "bytes": 50357,
+          "sha256": "f19051d926700589de487f8c75564c4c2a498aa0d392f09e3c2ede24129d2368"
+        },
+        {
+          "path": "Meatbass/Programs/pizz_basic_map.sfz",
+          "bytes": 24625,
+          "sha256": "04c3dedab9c2b94f9be31fece2051d70272db8974a57745606d87a856c673701"
+        },
+        {
+          "path": "Meatbass/Programs/pizz_six.sfz",
+          "bytes": 89916,
+          "sha256": "1cb671042c7fea08c5ced1ebf28485860aeba9893d917c0d09b3401911c09697"
+        },
+        {
+          "path": "Meatbass/Programs/pizz_six_legato_first_map.sfz",
+          "bytes": 99241,
+          "sha256": "c455fb371fa8544470359e0f2132b68c0cb25e7d5772abf8393454b81fde05ef"
+        },
+        {
+          "path": "Meatbass/Programs/pizz_six_legato_map.sfz",
+          "bytes": 110689,
+          "sha256": "68183856a27c55f7d64bd81b46f61747c7a74cbdb9784529085fd2386fba7aa6"
+        },
+        {
+          "path": "Meatbass/Programs/pizz_six_map.sfz",
+          "bytes": 94921,
+          "sha256": "cbfa9dfbd3be25c3f6e5854ce4f9995163e1c70aefa6016769a143a7193ce65b"
+        },
+        {
+          "path": "Meatbass/Programs/pizz_three.sfz",
+          "bytes": 64928,
+          "sha256": "0170bb4382dd4a1c5f8ad497d197d9fc5339077b9743da73dcd9a86230763f15"
+        },
+        {
+          "path": "Meatbass/Programs/pizz_three_legato_first_map.sfz",
+          "bytes": 71673,
+          "sha256": "b8adbc3c211de86dd0d6ca5b2e968d7df24d2ca880740fa7ecfe28f358406f79"
+        },
+        {
+          "path": "Meatbass/Programs/pizz_three_legato_map.sfz",
+          "bytes": 76442,
+          "sha256": "54a2394ddc2c33cb1bd43a8233725fb235de7a8be9b023b50419211fda7cbd37"
+        },
+        {
+          "path": "Meatbass/Programs/pizz_three_map.sfz",
+          "bytes": 64262,
+          "sha256": "646613d96442c0da7aa98083d86d3b0e7347809ab6dd0e89009ab622942508aa"
+        },
+        {
+          "path": "Meatbass/Samples/arco/a0_vl1_down.wav",
+          "bytes": 729750,
+          "sha256": "cf2fc440a253ce87d27f6cacf2ed109c6ba31aecafc9ef92a3e225ac445b71c8",
+          "durationSeconds": 5.494694
+        },
+        {
+          "path": "Meatbass/Samples/arco/a0_vl1_up.wav",
+          "bytes": 664302,
+          "sha256": "708f38d1528b2b80dd93811c38c99ccd73ab48847d8a996fe9bfa1b228cfb8af",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/arco/a0_vl2_down.wav",
+          "bytes": 615016,
+          "sha256": "59429ed76cd97ec7f721fadd7576d66a0664f7b7a738c734b3e239c27fe27af4",
+          "durationSeconds": 4.62746
+        },
+        {
+          "path": "Meatbass/Samples/arco/a0_vl2_up.wav",
+          "bytes": 577656,
+          "sha256": "ae9140dd85cb850dc628acf2c98a5bb84a6a7966aa81e8a5afab4a10af3d356c",
+          "durationSeconds": 4.345079
+        },
+        {
+          "path": "Meatbass/Samples/arco/a0_vl3_down.wav",
+          "bytes": 513960,
+          "sha256": "e71d5fc98fe605370f88b922965031ca575ac18fb964e087880f736119ecdd37",
+          "durationSeconds": 3.863628
+        },
+        {
+          "path": "Meatbass/Samples/arco/a0_vl3_up.wav",
+          "bytes": 479082,
+          "sha256": "4fe112c186bbd2f8fba02f738c0a4e52d1d77356b8113269cf3e004ec76f7b7f",
+          "durationSeconds": 3.6
+        },
+        {
+          "path": "Meatbass/Samples/arco/a0_vl4_down.wav",
+          "bytes": 455374,
+          "sha256": "10fcc7f3d81fd36604d15a82917ea6e118eeb0644020aaf7b9cc6600863cea70",
+          "durationSeconds": 3.420794
+        },
+        {
+          "path": "Meatbass/Samples/arco/a0_vl4_up.wav",
+          "bytes": 439392,
+          "sha256": "343d3b00662dd51e07da77c981530a4f595324b575a2039f69761a0cd4cf5b46",
+          "durationSeconds": 3.3
+        },
+        {
+          "path": "Meatbass/Samples/arco/a0_vl5_down.wav",
+          "bytes": 420432,
+          "sha256": "be673f9240684ab6537534229c66a0dd13a511aa1d5f075348e4462008081095",
+          "durationSeconds": 3.156689
+        },
+        {
+          "path": "Meatbass/Samples/arco/a0_vl5_up.wav",
+          "bytes": 373242,
+          "sha256": "c97b9bc0ab56e579197c2ac70c2ae28345ea1201cb531934104ee2f6884b7add",
+          "durationSeconds": 2.8
+        },
+        {
+          "path": "Meatbass/Samples/arco/a1_vl1_down.wav",
+          "bytes": 849522,
+          "sha256": "3079ff6920a42e21da5910f132595b79a05ed0b6bccab3efaadf5700252eeafd",
+          "durationSeconds": 6.4
+        },
+        {
+          "path": "Meatbass/Samples/arco/a1_vl1_up.wav",
+          "bytes": 1048054,
+          "sha256": "b24198389450a3c6faf9259ac30b575df0f96e6117b8f97a4d2a91af1abd7c99",
+          "durationSeconds": 7.900612
+        },
+        {
+          "path": "Meatbass/Samples/arco/a1_vl2_down.wav",
+          "bytes": 545848,
+          "sha256": "cd1c9b498894c2a9062bd865ac1ebc2e442587395e1c792d261dac9547e73003",
+          "durationSeconds": 4.104649
+        },
+        {
+          "path": "Meatbass/Samples/arco/a1_vl2_up.wav",
+          "bytes": 902442,
+          "sha256": "dd8f402f1572357cf184307e4474a2fe86d7e1e896e824b8264a970f265e2710",
+          "durationSeconds": 6.8
+        },
+        {
+          "path": "Meatbass/Samples/arco/a1_vl3_down.wav",
+          "bytes": 637842,
+          "sha256": "747d3ea3b05ba3ad181336cab5d934fcd8bf6f9e37c88c5d38ed64f5edd560de",
+          "durationSeconds": 4.8
+        },
+        {
+          "path": "Meatbass/Samples/arco/a1_vl3_up.wav",
+          "bytes": 584922,
+          "sha256": "1deee864d3e4376301c55609f7b1305a9bb43e093acdfa7e70b08ad558c99a34",
+          "durationSeconds": 4.4
+        },
+        {
+          "path": "Meatbass/Samples/arco/a1_vl4_down.wav",
+          "bytes": 614880,
+          "sha256": "2f831258430ac98541b87eddebbe48cbde1297839d8371c4dc958791c4f77bf9",
+          "durationSeconds": 4.62644
+        },
+        {
+          "path": "Meatbass/Samples/arco/a1_vl4_up.wav",
+          "bytes": 611382,
+          "sha256": "02313a1a511b715b004f2f6c3cd8c97a89cdca8277d39d4c99704570034412b3",
+          "durationSeconds": 4.6
+        },
+        {
+          "path": "Meatbass/Samples/arco/a1_vl5_down.wav",
+          "bytes": 570414,
+          "sha256": "8365e922261e2d04e4d3ff7181399baee72c4c10f1e91a338cfb9e146fe7d43f",
+          "durationSeconds": 4.29034
+        },
+        {
+          "path": "Meatbass/Samples/arco/a1_vl5_up.wav",
+          "bytes": 544864,
+          "sha256": "29801a298f662964e5abf63f79af210ee703c78c5786932f0101b6b231cd144a",
+          "durationSeconds": 4.097211
+        },
+        {
+          "path": "Meatbass/Samples/arco/a2_vl1_down.wav",
+          "bytes": 849522,
+          "sha256": "80528ee5e4621e413d66278a85e24a7a364ef0c91103cd288e22f1942b5c7057",
+          "durationSeconds": 6.4
+        },
+        {
+          "path": "Meatbass/Samples/arco/a2_vl1_up.wav",
+          "bytes": 859696,
+          "sha256": "c879655efdf5f31cd293e36f2d0baf28d2c086037c3bad98251deb11bd6b3868",
+          "durationSeconds": 6.476893
+        },
+        {
+          "path": "Meatbass/Samples/arco/a2_vl2_down.wav",
+          "bytes": 673812,
+          "sha256": "7e98f19999bc34d2c3835983bce287f77bebf5fbb21d8f08bf6d47b64b545f82",
+          "durationSeconds": 5.071882
+        },
+        {
+          "path": "Meatbass/Samples/arco/a2_vl2_up.wav",
+          "bytes": 770142,
+          "sha256": "38cdc5eac8435a8e0e4e550d1c6acf2aa7d7b6cb45fab0d719abdf1c36a3781c",
+          "durationSeconds": 5.8
+        },
+        {
+          "path": "Meatbass/Samples/arco/a2_vl3_down.wav",
+          "bytes": 611382,
+          "sha256": "6c66992e47c6f4bd28244569be49686fdca8783c65a09b77888e628616b62266",
+          "durationSeconds": 4.6
+        },
+        {
+          "path": "Meatbass/Samples/arco/a2_vl3_up.wav",
+          "bytes": 643570,
+          "sha256": "270302c712ea065535c3a22882fec96c1d3da09293afff8452034a347ab05522",
+          "durationSeconds": 4.843288
+        },
+        {
+          "path": "Meatbass/Samples/arco/a2_vl4_down.wav",
+          "bytes": 575764,
+          "sha256": "05b6e4e86a7ae0e0aa8dcf9fcf91691578c437b0e9d8fb8d4af5e653379b5b76",
+          "durationSeconds": 4.330771
+        },
+        {
+          "path": "Meatbass/Samples/arco/a2_vl4_up.wav",
+          "bytes": 584922,
+          "sha256": "3803c40be004ad9daf2198e3bf2fd7404dd2686381d17c2ea15edfd03be252ad",
+          "durationSeconds": 4.4
+        },
+        {
+          "path": "Meatbass/Samples/arco/a2_vl5_down.wav",
+          "bytes": 542098,
+          "sha256": "26bd6d12820c2458e7ca6df0c8c53f68bea432dab61b3b7a1b01ff318ea8cc12",
+          "durationSeconds": 4.076304
+        },
+        {
+          "path": "Meatbass/Samples/arco/a2_vl5_up.wav",
+          "bytes": 611382,
+          "sha256": "0a1412b5033f6e07fe308d4e6778b65cf6b3fd68fde2b4e343da08f7094fe4b7",
+          "durationSeconds": 4.6
+        },
+        {
+          "path": "Meatbass/Samples/arco/a3_vl1_down.wav",
+          "bytes": 749592,
+          "sha256": "67671468509a00b53be9a30ed2e7b10d063f5b8f521d518d54f97c28c08d32e5",
+          "durationSeconds": 5.644671
+        },
+        {
+          "path": "Meatbass/Samples/arco/a3_vl1_up.wav",
+          "bytes": 670992,
+          "sha256": "4f7e74831a46f731a88e9c160ea38b8fdae87592ce203cb42c4168f99f978be8",
+          "durationSeconds": 5.050567
+        },
+        {
+          "path": "Meatbass/Samples/arco/a3_vl2_down.wav",
+          "bytes": 657000,
+          "sha256": "2ea46ec7a7230603b46e314b266a899b5ce342f14165548ac13c257171dc8722",
+          "durationSeconds": 4.944807
+        },
+        {
+          "path": "Meatbass/Samples/arco/a3_vl2_up.wav",
+          "bytes": 611382,
+          "sha256": "43ea0d60766cfa899e683830faaab8a14638f5ae7cd944f64a98c724a21a45b5",
+          "durationSeconds": 4.6
+        },
+        {
+          "path": "Meatbass/Samples/arco/a3_vl3_down.wav",
+          "bytes": 611382,
+          "sha256": "d90cef767c992db3093e4279a1d02540ed503da284002dba595f757421dedde1",
+          "durationSeconds": 4.6
+        },
+        {
+          "path": "Meatbass/Samples/arco/a3_vl3_up.wav",
+          "bytes": 551874,
+          "sha256": "5af1b02a721ee7c5f32554bcdaad5cae14ee022308daeba012ea78134d27a237",
+          "durationSeconds": 4.150204
+        },
+        {
+          "path": "Meatbass/Samples/arco/a3_vl4_down.wav",
+          "bytes": 420262,
+          "sha256": "cada967f287f23eb6e81cef56dc7f07d314010b709354fc6c94fc2041d49aaa6",
+          "durationSeconds": 3.155397
+        },
+        {
+          "path": "Meatbass/Samples/arco/a3_vl4_up.wav",
+          "bytes": 436812,
+          "sha256": "a79ee5b5c76a9b5ebda78ba051f3e9f7f75f59d45b6aebed7356fa6c3f1364f2",
+          "durationSeconds": 3.280499
+        },
+        {
+          "path": "Meatbass/Samples/arco/a3_vl5_down.wav",
+          "bytes": 430090,
+          "sha256": "f9b7d832080d0a0e0732dc993604a7b812cef170b03a9049aa84ac376d9c159a",
+          "durationSeconds": 3.229683
+        },
+        {
+          "path": "Meatbass/Samples/arco/a3_vl5_up.wav",
+          "bytes": 367606,
+          "sha256": "d3356747a103d613596d6f204cfd15a590c04e4016a5da99ad68ca17a29d672a",
+          "durationSeconds": 2.757392
+        },
+        {
+          "path": "Meatbass/Samples/arco/a4_vl1_down.wav",
+          "bytes": 680728,
+          "sha256": "a2af1c6a3a8743d5fe3a2231c754c13922663870944f77d362740fef137e046a",
+          "durationSeconds": 5.12415
+        },
+        {
+          "path": "Meatbass/Samples/arco/a4_vl1_up.wav",
+          "bytes": 664302,
+          "sha256": "ae5ea97182523a2e4c0f3a5b852631038b39dbca6fd173c79da82ac784b4373d",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/arco/a4_vl2_down.wav",
+          "bytes": 578794,
+          "sha256": "c8c0832d6836835ee2020b9fb41c14dbe0cba8c845159660cc350a6e47cc9aef",
+          "durationSeconds": 4.353673
+        },
+        {
+          "path": "Meatbass/Samples/arco/a4_vl2_up.wav",
+          "bytes": 611382,
+          "sha256": "8a9c1ef288fb46d3747bf59ff8eee9c20ab333688962280e67b479e0cb4facf8",
+          "durationSeconds": 4.6
+        },
+        {
+          "path": "Meatbass/Samples/arco/a4_vl3_down.wav",
+          "bytes": 479082,
+          "sha256": "bc6b6ae11ae053893f313ac52fdec1cd55086844d42ec8eb18cdb5d4d82c682f",
+          "durationSeconds": 3.6
+        },
+        {
+          "path": "Meatbass/Samples/arco/a4_vl3_up.wav",
+          "bytes": 465852,
+          "sha256": "f2a5cbc99825a31499c2b5920dc087bf4ddaa8af9762b7565a7e759ca8fbd678",
+          "durationSeconds": 3.5
+        },
+        {
+          "path": "Meatbass/Samples/arco/a4_vl4_down.wav",
+          "bytes": 395238,
+          "sha256": "7a8125088946eb6eaf7aabbcbe1b1c85601aa4642a9280350fc5bc5a6355b29a",
+          "durationSeconds": 2.966259
+        },
+        {
+          "path": "Meatbass/Samples/arco/a4_vl4_up.wav",
+          "bytes": 391848,
+          "sha256": "96e2e965948e314e5383fcf2018fa57ab6dc5e9929eb7518a1d1a29e77cd3255",
+          "durationSeconds": 2.940635
+        },
+        {
+          "path": "Meatbass/Samples/arco/a4_vl5_down.wav",
+          "bytes": 322090,
+          "sha256": "e63d363048a6853b821fb81022a1c096bb1a50f42b4a6092dea19f974fa42132",
+          "durationSeconds": 2.413356
+        },
+        {
+          "path": "Meatbass/Samples/arco/a4_vl5_up.wav",
+          "bytes": 274338,
+          "sha256": "92db668f6c1d75f181a2a660f53074f9e6b4f5f7d16bb594c2543058de78c183",
+          "durationSeconds": 2.052426
+        },
+        {
+          "path": "Meatbass/Samples/arco/c1_vl1_down.wav",
+          "bytes": 947674,
+          "sha256": "eff1aaebcf35bceb0a53327616d2f3135174cd62188174f3ef792722bf56f49b",
+          "durationSeconds": 7.141882
+        },
+        {
+          "path": "Meatbass/Samples/arco/c1_vl1_up.wav",
+          "bytes": 1008282,
+          "sha256": "1d81765e5fcd349e70fcff3b5aec32c9f27a70e7d7b85cd94e5f1f74ceaf0143",
+          "durationSeconds": 7.6
+        },
+        {
+          "path": "Meatbass/Samples/arco/c1_vl2_down.wav",
+          "bytes": 1087198,
+          "sha256": "b129e13a70c419ddbd515b2fe21d66563d5e8da858fe076bea2844ceefaa3a17",
+          "durationSeconds": 8.196485
+        },
+        {
+          "path": "Meatbass/Samples/arco/c1_vl2_up.wav",
+          "bytes": 1034742,
+          "sha256": "82408b303b561e6137f8e3b0aaf33cf544c7f310ae93c67a2cd8f4b04bf6c4df",
+          "durationSeconds": 7.8
+        },
+        {
+          "path": "Meatbass/Samples/arco/c1_vl3_down.wav",
+          "bytes": 749046,
+          "sha256": "e34917d61168825bbb7a7b5f3ea423594b4fe4c20553d6c7dd6ac82e63e1af25",
+          "durationSeconds": 5.640544
+        },
+        {
+          "path": "Meatbass/Samples/arco/c1_vl3_up.wav",
+          "bytes": 760896,
+          "sha256": "d423224a79fbb5ed03510abbabccda89e7206d1ffe9fe006875edc5bc44c1bab",
+          "durationSeconds": 5.730113
+        },
+        {
+          "path": "Meatbass/Samples/arco/c1_vl4_down.wav",
+          "bytes": 621858,
+          "sha256": "fdee9f5c458e22ddee1b785d6c20500eac68a86ea931ee89f98d0f2303a0172d",
+          "durationSeconds": 4.679184
+        },
+        {
+          "path": "Meatbass/Samples/arco/c1_vl4_up.wav",
+          "bytes": 607680,
+          "sha256": "cbf193d7d6ad97cefbbbc75ae8a108e918888a397f7a7a6b42ae8a5f05aeaa91",
+          "durationSeconds": 4.572018
+        },
+        {
+          "path": "Meatbass/Samples/arco/c1_vl5_down.wav",
+          "bytes": 611382,
+          "sha256": "20638d99a507b13efe2ed1b25fb6c9ccd58509117d7203e501875a0fdb5816a0",
+          "durationSeconds": 4.6
+        },
+        {
+          "path": "Meatbass/Samples/arco/c1_vl5_up.wav",
+          "bytes": 625968,
+          "sha256": "7a87cd435f009725ea9918e21e156b66b1357ab46158aabb1c18d95f2d4be3f2",
+          "durationSeconds": 4.710249
+        },
+        {
+          "path": "Meatbass/Samples/arco/c2_vl1_down.wav",
+          "bytes": 928902,
+          "sha256": "883f340c5c1d1b8579703a03bd81579ce169ec6e2823cf3d7052a890d8c52bfb",
+          "durationSeconds": 7
+        },
+        {
+          "path": "Meatbass/Samples/arco/c2_vl1_up.wav",
+          "bytes": 955362,
+          "sha256": "0e81d23bd3c3cd161fc478db443f74f9f796b9024f63fb095f0d457ba43b053e",
+          "durationSeconds": 7.2
+        },
+        {
+          "path": "Meatbass/Samples/arco/c2_vl2_down.wav",
+          "bytes": 684264,
+          "sha256": "a52795225dcc38d4689f4d227db10616ac30ad31d35251ddbd9ac16179f72f84",
+          "durationSeconds": 5.150884
+        },
+        {
+          "path": "Meatbass/Samples/arco/c2_vl2_up.wav",
+          "bytes": 875982,
+          "sha256": "93639d9720e3d23c0ad1bdd0582bc85ec66644babaa49927509646516510d09e",
+          "durationSeconds": 6.6
+        },
+        {
+          "path": "Meatbass/Samples/arco/c2_vl3_down.wav",
+          "bytes": 631258,
+          "sha256": "095f7cd7b9a32a1a1e42ff7600abbe38857f4f56bedf6471968f577b50a3e671",
+          "durationSeconds": 4.750227
+        },
+        {
+          "path": "Meatbass/Samples/arco/c2_vl3_up.wav",
+          "bytes": 686254,
+          "sha256": "72c9c01c5f21ba2181094c80e86bbb3ce57b6ae6b592a513c36896c73ab62f4a",
+          "durationSeconds": 5.165918
+        },
+        {
+          "path": "Meatbass/Samples/arco/c2_vl4_down.wav",
+          "bytes": 502882,
+          "sha256": "5eb4c1500a650f9d832465b7b7c2c1328dd321de0f9e02de944ad604714c9cb5",
+          "durationSeconds": 3.779887
+        },
+        {
+          "path": "Meatbass/Samples/arco/c2_vl4_up.wav",
+          "bytes": 572584,
+          "sha256": "70cc60cb0093d7b88003589fa8f5b3408765080282326cdfcbe33b0008125906",
+          "durationSeconds": 4.306735
+        },
+        {
+          "path": "Meatbass/Samples/arco/c2_vl5_down.wav",
+          "bytes": 505542,
+          "sha256": "faceb2c8cd8b1fd0b2d29bc1b1aa60aa5c53b07abd276fa5f8a2df3b05771c6b",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/arco/c2_vl5_up.wav",
+          "bytes": 505542,
+          "sha256": "9175364263503f24c590a777c72a17c9f4b82be692bab97955d05f15faca5113",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/arco/c3_vl1_down.wav",
+          "bytes": 928902,
+          "sha256": "4eb2ea1fd357f1179e9ed8a33669027997f100ba9005f208c49dc8f46d6f7f1d",
+          "durationSeconds": 7
+        },
+        {
+          "path": "Meatbass/Samples/arco/c3_vl1_up.wav",
+          "bytes": 1039848,
+          "sha256": "6358c1ea79001a5774720051cd4bdb96430eb1e0e41a414b20d1e9b66f1a98be",
+          "durationSeconds": 7.838594
+        },
+        {
+          "path": "Meatbass/Samples/arco/c3_vl2_down.wav",
+          "bytes": 721368,
+          "sha256": "e48195347c376a09c4ceb6df4bff2cefd85ab0ae18b3f8767e124f3cd6ea1a71",
+          "durationSeconds": 5.431338
+        },
+        {
+          "path": "Meatbass/Samples/arco/c3_vl2_up.wav",
+          "bytes": 690762,
+          "sha256": "a4d2ae3fca4ce831aa40a9fa8528a5629ae934c03d472762980cfe1ef09278f6",
+          "durationSeconds": 5.2
+        },
+        {
+          "path": "Meatbass/Samples/arco/c3_vl3_down.wav",
+          "bytes": 605214,
+          "sha256": "5340d5800ec5c578aac6f89b208f98ce0f7a9c820b23555d76c41803ec0e63ae",
+          "durationSeconds": 4.553379
+        },
+        {
+          "path": "Meatbass/Samples/arco/c3_vl3_up.wav",
+          "bytes": 640846,
+          "sha256": "77696a5535f98ec7710229bad34b2dbcd8a4ff67521a53a4cc1f8cbfaa350b50",
+          "durationSeconds": 4.822698
+        },
+        {
+          "path": "Meatbass/Samples/arco/c3_vl4_down.wav",
+          "bytes": 509388,
+          "sha256": "2f6bab137deafa7e5fcd098853b096b66c09262e99889fe3b0dc1438d5ea2404",
+          "durationSeconds": 3.82907
+        },
+        {
+          "path": "Meatbass/Samples/arco/c3_vl4_up.wav",
+          "bytes": 508992,
+          "sha256": "5b6b00d99b49a9d5edb6d317dc6db93bb2759e1e16ae96cb0e1d07d45041b264",
+          "durationSeconds": 3.826077
+        },
+        {
+          "path": "Meatbass/Samples/arco/c3_vl5_down.wav",
+          "bytes": 479082,
+          "sha256": "2f7e87a5e1ae5281ffe68a97813ede5abef3487b47fca09e18a6c4c61db74ae2",
+          "durationSeconds": 3.6
+        },
+        {
+          "path": "Meatbass/Samples/arco/c3_vl5_up.wav",
+          "bytes": 479082,
+          "sha256": "89399cfc1fdd854f02ccc055b39475a813ec5e2453cb5480a77ab8326dcfa393",
+          "durationSeconds": 3.6
+        },
+        {
+          "path": "Meatbass/Samples/arco/c4_vl1_down.wav",
+          "bytes": 535098,
+          "sha256": "ae7022a9ef576e305b66a5511b5762dc939ccb5a0cc062cad8fa2d9b2269a15a",
+          "durationSeconds": 4.023401
+        },
+        {
+          "path": "Meatbass/Samples/arco/c4_vl1_up.wav",
+          "bytes": 614878,
+          "sha256": "ba29ca49f6c0bca6803ef3b04e29e8b8ba63891b5ef36533cab047f65fff4d53",
+          "durationSeconds": 4.626417
+        },
+        {
+          "path": "Meatbass/Samples/arco/c4_vl2_down.wav",
+          "bytes": 589014,
+          "sha256": "3ab4a10b1a8959226fa3f347116acea2730429cc9e9a2d33b4f95767092b3658",
+          "durationSeconds": 4.43093
+        },
+        {
+          "path": "Meatbass/Samples/arco/c4_vl2_up.wav",
+          "bytes": 518772,
+          "sha256": "5cac53c12f700b18878abcb7395645b8843e9ee0a2fc0edf42629d9025816b5a",
+          "durationSeconds": 3.9
+        },
+        {
+          "path": "Meatbass/Samples/arco/c4_vl3_down.wav",
+          "bytes": 492312,
+          "sha256": "e0d041976b4a92c8674dd7ee0dac0a43c1200dcfc70e03b99df4d3ac9e55ce8a",
+          "durationSeconds": 3.7
+        },
+        {
+          "path": "Meatbass/Samples/arco/c4_vl3_up.wav",
+          "bytes": 441736,
+          "sha256": "265fbd3bcea9c45117854cce4873d97ec4ffb12a961cb88fa0433d63d2bfed9e",
+          "durationSeconds": 3.31771
+        },
+        {
+          "path": "Meatbass/Samples/arco/c4_vl4_down.wav",
+          "bytes": 461280,
+          "sha256": "f180355235bf7ef500c131ed354d706aae5535f05f213c7c5e02fadce18b03fb",
+          "durationSeconds": 3.465442
+        },
+        {
+          "path": "Meatbass/Samples/arco/c4_vl4_up.wav",
+          "bytes": 447414,
+          "sha256": "b033bd369ba7bd4ce4ab583a3cdfb54118565ab52bc9a29595170c884c5d3e2f",
+          "durationSeconds": 3.360635
+        },
+        {
+          "path": "Meatbass/Samples/arco/c4_vl5_down.wav",
+          "bytes": 386472,
+          "sha256": "f9e5628ff0d8c9cc1b2df4a83f1014d53a90586d90b0138874bb289809ab0719",
+          "durationSeconds": 2.9
+        },
+        {
+          "path": "Meatbass/Samples/arco/c4_vl5_up.wav",
+          "bytes": 410550,
+          "sha256": "adaed4fc788ce1eedf4439eaa416991abb9fd300d398341278fe21a2a1478951",
+          "durationSeconds": 3.081995
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb1_vl1_down.wav",
+          "bytes": 1013914,
+          "sha256": "1fa418561162e9290cda55aec2f5a01ea0d1757b66190827a53c2939405061f4",
+          "durationSeconds": 7.642585
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb1_vl1_up.wav",
+          "bytes": 955360,
+          "sha256": "07baaa9be9d7b6af920536d69d8b5fa9fccd40438c4f01f9c32b336bd712c8da",
+          "durationSeconds": 7.2
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb1_vl2_down.wav",
+          "bytes": 1018094,
+          "sha256": "2e2e5ca5ec892abc01571a202d121690d96c638b50925843568eafa5da9cbfe3",
+          "durationSeconds": 7.674172
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb1_vl2_up.wav",
+          "bytes": 895990,
+          "sha256": "65430bfb3bfd65935f1dc17a151033d54489f06ba675ba8cdf4d00bd3a49c575",
+          "durationSeconds": 6.751247
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb1_vl3_down.wav",
+          "bytes": 743680,
+          "sha256": "867009ffefc579ab81378b162bb2803172c8f078e9c9de7dc4056cd1a99209f5",
+          "durationSeconds": 5.6
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb1_vl3_up.wav",
+          "bytes": 670316,
+          "sha256": "9ab725eeec7f1adba233b708b39036be0aa8faf8e1f1d0940773f5f8b91560fa",
+          "durationSeconds": 5.045465
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb1_vl4_down.wav",
+          "bytes": 589478,
+          "sha256": "657a4a61dc3cb72af725144bc46ff01933cf675b3c77512071319faff334b74e",
+          "durationSeconds": 4.434444
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb1_vl4_up.wav",
+          "bytes": 532000,
+          "sha256": "5f7074816400e91aeca1d13002d0d57b5ef274e0c7b87d89810b11cdf62d897e",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb1_vl5_down.wav",
+          "bytes": 532000,
+          "sha256": "cb344ae4b7db3a3b43a45d38790cbfa5958e8d20da0e017ce1c04d5ba09197b7",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb1_vl5_up.wav",
+          "bytes": 479080,
+          "sha256": "ce9ffd346eeede9fb60ada4dbbda0e247c0216b3193f85fb5bbdd08dfcd48361",
+          "durationSeconds": 3.6
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb2_vl1_down.wav",
+          "bytes": 895782,
+          "sha256": "5b9b09e2e65087fffaf6c7c73aead1020d643478f61cade5f5446863b294811a",
+          "durationSeconds": 6.74966
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb2_vl1_up.wav",
+          "bytes": 928902,
+          "sha256": "c79105d3805b81fac48b1b74b7c8ec69ec47898f1cb2abca007e35bb66ebc826",
+          "durationSeconds": 7
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb2_vl2_down.wav",
+          "bytes": 683322,
+          "sha256": "1f6148e162cbd2e48362bcc591587f89b6823054e3c8214c1148f3534b57786a",
+          "durationSeconds": 5.143764
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb2_vl2_up.wav",
+          "bytes": 717222,
+          "sha256": "e4b376eb605ff0f98ee2a7dc850b6e7bbff7acf6ce21fcf385114977a37c7112",
+          "durationSeconds": 5.4
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb2_vl3_down.wav",
+          "bytes": 652290,
+          "sha256": "ddcd1e3e2d92abb09cb5cb094b747cd2904e5d49ef5fce799a67cd3491587590",
+          "durationSeconds": 4.909206
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb2_vl3_up.wav",
+          "bytes": 685600,
+          "sha256": "097541eba39cd945098f769c5c15ae390133ecc39695572bb8cd633cf8d1a81d",
+          "durationSeconds": 5.160975
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb2_vl4_down.wav",
+          "bytes": 549258,
+          "sha256": "c6da43a82906193ba3eef6d534dd72560fbe867ad76537e57c0abcdbb92f2571",
+          "durationSeconds": 4.130431
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb2_vl4_up.wav",
+          "bytes": 536382,
+          "sha256": "5d5525c475225e7e0d8ee6173d180092c7922edb93d0c268fba9400041e822d9",
+          "durationSeconds": 4.033107
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb2_vl5_down.wav",
+          "bytes": 528780,
+          "sha256": "67317b8b295935e0cddc8ce6ed2e05dcb17298c9a4048425c5e0bbf2a39dd3ff",
+          "durationSeconds": 3.975646
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb2_vl5_up.wav",
+          "bytes": 558462,
+          "sha256": "3e01720cbc9fee03dc878315f85b56892e6bd7972a1b2c706c87230c50cff9bd",
+          "durationSeconds": 4.2
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb3_vl1_down.wav",
+          "bytes": 861502,
+          "sha256": "434faf5cb690084e3c36bab727996e22a83b72158990229f4af9af4ff520b904",
+          "durationSeconds": 6.490567
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb3_vl1_up.wav",
+          "bytes": 939560,
+          "sha256": "b763d1c6a245fe32329bba27af5264f8f7f17c48dadc5193ff3d9d8671688008",
+          "durationSeconds": 7.080567
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb3_vl2_down.wav",
+          "bytes": 764104,
+          "sha256": "eb0371d71e8e160a04d955534544f196dd4b70ce6bf86456e64de9c199d87776",
+          "durationSeconds": 5.754376
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb3_vl2_up.wav",
+          "bytes": 707912,
+          "sha256": "576f9980ae479d5a91a609a2d457b4d0cf4878e43093c931b2c88c01050918e1",
+          "durationSeconds": 5.329637
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb3_vl3_down.wav",
+          "bytes": 649360,
+          "sha256": "6bfe134d05c559102d962706d103931ab30ec549af34dcda26cc31e51b1cbd5b",
+          "durationSeconds": 4.887075
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb3_vl3_up.wav",
+          "bytes": 558460,
+          "sha256": "44c8434a1a855e4ef1f25500d7ad2aeb98847b3c2365c56aad0c8feddc077ec3",
+          "durationSeconds": 4.2
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb3_vl4_down.wav",
+          "bytes": 543188,
+          "sha256": "fd9df5b2abea61ee04e7cbc81047ee85e283cc21d55719986962445f8485fd38",
+          "durationSeconds": 4.084558
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb3_vl4_up.wav",
+          "bytes": 498842,
+          "sha256": "f96c854abfebd036f8e9f868a3db23093540ec817b62c3e6a0afde4dd2fca448",
+          "durationSeconds": 3.749365
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb3_vl5_down.wav",
+          "bytes": 485030,
+          "sha256": "3843249ded656a149313d24b0136d4b2910797fbe55d6810ef66c874fb1dc30c",
+          "durationSeconds": 3.644966
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb3_vl5_up.wav",
+          "bytes": 447352,
+          "sha256": "3d6396f0272ee21afe4bb106593a2f9603adaa6e70399619ac196d342ba6d744",
+          "durationSeconds": 3.360181
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb4_vl1_down.wav",
+          "bytes": 696822,
+          "sha256": "25e6f24467b49cf46a5f30bde573bc5877a8f3af8712417b500b77cd34948947",
+          "durationSeconds": 5.245805
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb4_vl1_up.wav",
+          "bytes": 664302,
+          "sha256": "dd9d601262298046f1ec4cd74cfe2ee208a9a4ab994f3b0eb9a89429af4a6ca8",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb4_vl2_down.wav",
+          "bytes": 571692,
+          "sha256": "0622ce5b47a7c8fc91e07197836d51fcc42e7a6712bc5da0b51da0fe37679258",
+          "durationSeconds": 4.3
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb4_vl2_up.wav",
+          "bytes": 502792,
+          "sha256": "000811d496e274f5fdf5031fbfad0637f5348ed00cd786565ccf9c531faf0a7e",
+          "durationSeconds": 3.779206
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb4_vl3_down.wav",
+          "bytes": 524670,
+          "sha256": "7cdaf39b12005b1e61cc7a12befebf8c5afffcf6ea9db5973ed46f21cd80ff67",
+          "durationSeconds": 3.94458
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb4_vl3_up.wav",
+          "bytes": 468450,
+          "sha256": "e92b215694094485e351689d6e73fb448aec3ceea243f15de4b68f9eaaca9ffc",
+          "durationSeconds": 3.519637
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb4_vl4_down.wav",
+          "bytes": 471840,
+          "sha256": "d019e8e7500e4ad9ba9def8baabd0c553161d0bfa26eda0396b5621437996ff6",
+          "durationSeconds": 3.545261
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb4_vl4_up.wav",
+          "bytes": 389812,
+          "sha256": "0399a941983e60c6ce05f09ddb59bfbb879040f5cfc4c7ffac4146ecf75bfbf9",
+          "durationSeconds": 2.925238
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb4_vl5_down.wav",
+          "bytes": 366316,
+          "sha256": "207cce60f5c6875d87eb05b32a83f21e9b18f83e62b6eaf5f24bd464947420d7",
+          "durationSeconds": 2.747642
+        },
+        {
+          "path": "Meatbass/Samples/arco/eb4_vl5_up.wav",
+          "bytes": 324108,
+          "sha256": "6586e0fc105592d661588d976359e896e9a33c163a90c882c6e140fef4d6a804",
+          "durationSeconds": 2.428617
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb1_vl1_down.wav",
+          "bytes": 770142,
+          "sha256": "68bb7c00b8480acd4d149fd0d98178b36b619d8d52c9cd14d823d8c4488aa2a8",
+          "durationSeconds": 5.8
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb1_vl1_up.wav",
+          "bytes": 913402,
+          "sha256": "9c593df7779dc1b6b009b59a8dd8e8299e4d67395510b5242b938ddf9479d98e",
+          "durationSeconds": 6.882834
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb1_vl2_down.wav",
+          "bytes": 725362,
+          "sha256": "7a79d062f5a2ffde2cf8bd9b25947f85a02524542ec5e0902b21d06af1bbdf3d",
+          "durationSeconds": 5.461519
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb1_vl2_up.wav",
+          "bytes": 717222,
+          "sha256": "0dd07dd5f8919dce714a7670491171cd75e6498781cb96e7fc250d99a42d53f2",
+          "durationSeconds": 5.4
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb1_vl3_down.wav",
+          "bytes": 564022,
+          "sha256": "b2f69f3a476ef347839452ad6ba85e54980c8a5c5ec5439002933976c3216136",
+          "durationSeconds": 4.242018
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb1_vl3_up.wav",
+          "bytes": 637842,
+          "sha256": "2e8a7b23267bda65020a828b4ffdc50c459d21a209d42341f4cb00a55d780cdc",
+          "durationSeconds": 4.8
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb1_vl4_down.wav",
+          "bytes": 517198,
+          "sha256": "40f73c01e69e4c6e184500cb326d78e8c997e566be295bee7e01c43568a6c8e6",
+          "durationSeconds": 3.888095
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb1_vl4_up.wav",
+          "bytes": 516910,
+          "sha256": "1f2e16e86559746df71a941288a69b98fde71bfab7c6523014a4168868e251c1",
+          "durationSeconds": 3.885918
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb1_vl5_down.wav",
+          "bytes": 439392,
+          "sha256": "081093b29c7491e853e5aa30bf3b40f044715d118f9d1dce1e4dae063cc16834",
+          "durationSeconds": 3.3
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb1_vl5_up.wav",
+          "bytes": 452622,
+          "sha256": "704d5be40db614a9e62de5f989108d19630421160dc6e733cacf397991655f7d",
+          "durationSeconds": 3.4
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb2_vl1_down.wav",
+          "bytes": 875982,
+          "sha256": "979435376bb1ccd791672cdea714eefeedb560db44ec489fc27059a5be7e0f9b",
+          "durationSeconds": 6.6
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb2_vl1_up.wav",
+          "bytes": 964524,
+          "sha256": "80ed26300b08f97a85902c0ef6365ee61b427a6fe8828fc2545b9ba3c12b1b1a",
+          "durationSeconds": 7.269252
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb2_vl2_down.wav",
+          "bytes": 739762,
+          "sha256": "d5ed1dcafbe7c0a62cd937f43444b15fb06e3984e582b38b6dcccc8390f16504",
+          "durationSeconds": 5.570363
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb2_vl2_up.wav",
+          "bytes": 743682,
+          "sha256": "17e2832fb3fcc402e49aa69d164eb50c9c8e0471af0137d0b2f7e207514aafd7",
+          "durationSeconds": 5.6
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb2_vl3_down.wav",
+          "bytes": 596484,
+          "sha256": "27c8c198ebbf00e4b6f81e5dc296b9bde257f933e21c46c751df30ca4b92b393",
+          "durationSeconds": 4.487392
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb2_vl3_up.wav",
+          "bytes": 637842,
+          "sha256": "344f9a5336bfa64eb9e50079fac8a21aa7a20f425d3490f264d4db57bf975023",
+          "durationSeconds": 4.8
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb2_vl4_down.wav",
+          "bytes": 527176,
+          "sha256": "7097b2ee137a350b4fad95ae38315b38f141d753c2e007eba7c0ac919e67ab08",
+          "durationSeconds": 3.963515
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb2_vl4_up.wav",
+          "bytes": 515824,
+          "sha256": "13ed08cd817749b6b78cee032569396107e125e0cb2f650c6bba279cd38d1938",
+          "durationSeconds": 3.87771
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb2_vl5_down.wav",
+          "bytes": 370590,
+          "sha256": "58a159701cc8ee7baa22b6bd29a7388df52acc67cd6a1a8fd5a8019c672302ad",
+          "durationSeconds": 2.779955
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb2_vl5_up.wav",
+          "bytes": 465852,
+          "sha256": "99daf754b146146bd956de603c111e7c2f347494432df4dbaa543cad0438b3a4",
+          "durationSeconds": 3.5
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb3_vl1_down.wav",
+          "bytes": 758838,
+          "sha256": "8989517c4d5cddc718ade9693f412ae1a058548973298d8578527819ec2b330a",
+          "durationSeconds": 5.714558
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb3_vl1_up.wav",
+          "bytes": 680512,
+          "sha256": "b07dbd1db46a1459c499fec8818a046ea43bece3cc53f3dd0161d810d5af7dbd",
+          "durationSeconds": 5.122517
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb3_vl2_down.wav",
+          "bytes": 743682,
+          "sha256": "bd050be94673e146759ce9ada63be9a73558441c4b58fdeebbf5c7ea45c53d8a",
+          "durationSeconds": 5.6
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb3_vl2_up.wav",
+          "bytes": 660300,
+          "sha256": "29fd18f57ced7e239c244b3db8eec61f1bdbdc093eac2c0d4d18cae151de4495",
+          "durationSeconds": 4.969751
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb3_vl3_down.wav",
+          "bytes": 584922,
+          "sha256": "cd2a6ed4358dbd1f8bd8e4e560ccf10d44a1e3a943c0dcbac1e38cf796657eb7",
+          "durationSeconds": 4.4
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb3_vl3_up.wav",
+          "bytes": 570262,
+          "sha256": "7e30ee33745186f628bf1b0585c9874c2aa3cd257905ee4aa6bb6f2e7413c921",
+          "durationSeconds": 4.289184
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb3_vl4_down.wav",
+          "bytes": 511266,
+          "sha256": "7e586e168f28a1d515428fab0e3ffb0161b675dbaf18239c21b06654846f40ac",
+          "durationSeconds": 3.843265
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb3_vl4_up.wav",
+          "bytes": 486604,
+          "sha256": "2571e82860feb53dba7f565db01ebeab4fe4824f54c3421b4ff0147c488324f5",
+          "durationSeconds": 3.656848
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb3_vl5_down.wav",
+          "bytes": 386472,
+          "sha256": "eb99eeb7d24aa01f831c06ba12e3767c2ecdc63e0ce86675a77eb7c8025c07f3",
+          "durationSeconds": 2.9
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb3_vl5_up.wav",
+          "bytes": 399702,
+          "sha256": "74c474d7966d28cbdd51d048bc38f798ed973a4be548ac9a9a8eb8d1b75c36a1",
+          "durationSeconds": 3
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb4_vl1_down.wav",
+          "bytes": 553614,
+          "sha256": "247e3663754a004aa4cf72717e3b951dbb4df94d0f7eec7d18e0c62e2cdb70b0",
+          "durationSeconds": 4.163356
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb4_vl1_up.wav",
+          "bytes": 501204,
+          "sha256": "21bebca5ee001a03e82183514663ed8d7aaab348b6020be11fb4abcca7b41413",
+          "durationSeconds": 3.767211
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb4_vl2_down.wav",
+          "bytes": 611382,
+          "sha256": "eb066e51a42791f866b9904d35113baed7e0b3b5e72cfdff621a14a8fab1ced3",
+          "durationSeconds": 4.6
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb4_vl2_up.wav",
+          "bytes": 576082,
+          "sha256": "cb6aa962be3e6a5b22aedafad58add252ba31b5d363241b9e5f710a1ba7709e3",
+          "durationSeconds": 4.333175
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb4_vl3_down.wav",
+          "bytes": 350686,
+          "sha256": "aafc83bb1cc0d5c3b05bda65a6b2a2da7b73934d4abb67b80980af152ed61ad2",
+          "durationSeconds": 2.629501
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb4_vl3_up.wav",
+          "bytes": 360012,
+          "sha256": "a72d49872f117450fbc7e4d75d13527605763219189e684a76a728625c49c706",
+          "durationSeconds": 2.7
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb4_vl4_down.wav",
+          "bytes": 312910,
+          "sha256": "4893524ce282025f99572e96a910a7065aabf0c73b938ef5ae79b7cfc3c19610",
+          "durationSeconds": 2.343968
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb4_vl4_up.wav",
+          "bytes": 307092,
+          "sha256": "7667afd6830a2060808a0dfdbe140a1b76729c23c30571244032f3b51b081437",
+          "durationSeconds": 2.3
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb4_vl5_down.wav",
+          "bytes": 293862,
+          "sha256": "4e09700548940577684ce5b22e727ee6621af0132ce0d7e8aa2ce75fa0e99bab",
+          "durationSeconds": 2.2
+        },
+        {
+          "path": "Meatbass/Samples/arco/gb4_vl5_up.wav",
+          "bytes": 307092,
+          "sha256": "f990220c70928fc472bed4c3a9fbba4e4a5d62a711d462a2f1897ccf498dfff7",
+          "durationSeconds": 2.3
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a0_vl1_down.wav",
+          "bytes": 699344,
+          "sha256": "df999feb4332545318b7fa279d59c32638e9e9653c1bb3043a0771258e32a491",
+          "durationSeconds": 5.261973
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a0_vl1_up.wav",
+          "bytes": 603514,
+          "sha256": "94e0d83e13828f4284478d6944828499bb3b68c5d24b1bfe19ca204805fcdc00",
+          "durationSeconds": 4.537642
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a0_vl2_down.wav",
+          "bytes": 355424,
+          "sha256": "823d41a93be20b0d1be7cfd7d83b229fe196eac02df76b8b099cc2393d81d65e",
+          "durationSeconds": 2.662426
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a0_vl2_up.wav",
+          "bytes": 433246,
+          "sha256": "8b85765c3218d128ea398fe282ce3f498a32173b0d902bc3c59b13a6ca90bb43",
+          "durationSeconds": 3.250658
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a0_vl3_down.wav",
+          "bytes": 397078,
+          "sha256": "177a0cebee4c63da3305e67a648367a412930a3932839fce05e80901e2a4f722",
+          "durationSeconds": 2.977279
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a0_vl3_up.wav",
+          "bytes": 373114,
+          "sha256": "502da7c5664ea05cd5eaeefc92f5f3ece812a3b95a5817293a3d4f69d5679e9d",
+          "durationSeconds": 2.796145
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a1_vl1_down.wav",
+          "bytes": 750100,
+          "sha256": "3eb8c3f91993970deebae2e3a30bea99f18acd2858db4d2c00a7e11caf5807fd",
+          "durationSeconds": 5.645624
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a1_vl1_up.wav",
+          "bytes": 926378,
+          "sha256": "4384e52ddd9b633818c31d29fdaa4e6fd79c1a86aff3d26289c2047559a0b645",
+          "durationSeconds": 6.978027
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a1_vl2_down.wav",
+          "bytes": 483850,
+          "sha256": "9190c2b789468922b1f1f099cf9971f7bf1bccc49b26df68abcbeb08719baf2e",
+          "durationSeconds": 3.633152
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a1_vl2_up.wav",
+          "bytes": 717830,
+          "sha256": "4ed64fbb621d008b7c29f471be7fc44b102800ce64941e4ca20ba0e985cefc9d",
+          "durationSeconds": 5.401701
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a1_vl3_down.wav",
+          "bytes": 560072,
+          "sha256": "36d3c2077658a6d663071dbc6d53b1c48235404e242336a33e67ca37fc0fdb56",
+          "durationSeconds": 4.209274
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a1_vl3_up.wav",
+          "bytes": 504668,
+          "sha256": "41403cc9d0be2ecc542369444449ab1a28f207cb6fd238e5624728bc95a7aae9",
+          "durationSeconds": 3.790499
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a2_vl1_down.wav",
+          "bytes": 763124,
+          "sha256": "5bf70f83f6ebc2c9345369c91b1e0415b48c626fd9fa298d127a3e7c7070bbb6",
+          "durationSeconds": 5.744059
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a2_vl1_up.wav",
+          "bytes": 730702,
+          "sha256": "fce3ac4eaf0cbca9072285683a3419181edadb50a7cd99bc4e52af86a63037f1",
+          "durationSeconds": 5.499002
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a2_vl2_down.wav",
+          "bytes": 559130,
+          "sha256": "781f906c07804a252223dedfb24b04fbab399a149838a9de6d6cd800bd8f3428",
+          "durationSeconds": 4.202154
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a2_vl2_up.wav",
+          "bytes": 614306,
+          "sha256": "597e0e22161c48b4885403c37c24ed8315dabe894054899624053fe9b307ba96",
+          "durationSeconds": 4.619206
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a2_vl3_down.wav",
+          "bytes": 557278,
+          "sha256": "9f3063beffb40156dc8bd1e97fb1085b9f2e74da568ebc16bb87aa8189a9b60c",
+          "durationSeconds": 4.188163
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a2_vl3_up.wav",
+          "bytes": 588076,
+          "sha256": "5892a720188d705194204bccab04a541a911f07b3395f7d675ccf69f0e3fc959",
+          "durationSeconds": 4.420952
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a3_vl1_down.wav",
+          "bytes": 702518,
+          "sha256": "2162a9f35e1868e0fcac4e80abc3cbad57f1ac3e7d332f9faf7996feda7646ea",
+          "durationSeconds": 5.285964
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a3_vl1_up.wav",
+          "bytes": 633400,
+          "sha256": "1b6b86079aa21c3cfda685e8198653ae4e2f67322b1c4b32ef52d787b77ab735",
+          "durationSeconds": 4.763537
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a3_vl2_down.wav",
+          "bytes": 563902,
+          "sha256": "7d8d6c9b3413ee84ef63a6438bd08cc332e51bc2323c397e6adc147217ae665a",
+          "durationSeconds": 4.238231
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a3_vl2_up.wav",
+          "bytes": 535676,
+          "sha256": "8bb29f58056cc936c86c0a27218cf9b5d5720714c174ac8deb3eb0e838e6eb77",
+          "durationSeconds": 4.024875
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a3_vl3_down.wav",
+          "bytes": 530488,
+          "sha256": "551f68d482b1acddea618d7b681fc642ad96f59d965792507ecf78e80f8eb804",
+          "durationSeconds": 3.985669
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a3_vl3_up.wav",
+          "bytes": 504170,
+          "sha256": "086b2b8901f3a720c13c4b2d2190cc75323aa22eb9975440a6d2ab2a2f464b7c",
+          "durationSeconds": 3.786735
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a4_vl1_down.wav",
+          "bytes": 621698,
+          "sha256": "e7a2eca0b5aad9d1681c1af09e42bb5d95ecaed177e92ab159d8c299d742e482",
+          "durationSeconds": 4.675079
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a4_vl1_up.wav",
+          "bytes": 609452,
+          "sha256": "edb6061f3d0d1c9cf41856ab7203aacfbae1529b55c7317434fb11ec247837c1",
+          "durationSeconds": 4.582517
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a4_vl2_down.wav",
+          "bytes": 475820,
+          "sha256": "a97676804ae45c796fc9ea8086e64c99d4ea575153c37e6c93dcdde9263254d2",
+          "durationSeconds": 3.572449
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a4_vl2_up.wav",
+          "bytes": 554174,
+          "sha256": "4b8721262cabec12ae8a34fedfa45226ad3f301272943c362ee2de8f46135718",
+          "durationSeconds": 4.164694
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a4_vl3_down.wav",
+          "bytes": 428818,
+          "sha256": "aaa6cee106cc3ae9720fbf3ba0eacccdcfc6fcdae37d2776df039b41c64cc6c2",
+          "durationSeconds": 3.217188
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/a4_vl3_up.wav",
+          "bytes": 415094,
+          "sha256": "22d713c3c3650ee73999a91570a85b1d34b4f8d55ac35454f8be5c6c67c0fca8",
+          "durationSeconds": 3.113447
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/c1_vl1_down.wav",
+          "bytes": 850132,
+          "sha256": "e94d7681b784048144412322956cf19ed65f29c63862e0878139260b65cb2bae",
+          "durationSeconds": 6.401723
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/c1_vl1_up.wav",
+          "bytes": 941648,
+          "sha256": "37939520e26127b6ced8ef6f9898bff398cf291d620e62be367772920776728e",
+          "durationSeconds": 7.093447
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/c1_vl2_down.wav",
+          "bytes": 1008632,
+          "sha256": "c0fc322e57d98893e784ccbb4d3acc250faca26fb3537be97719737290da0231",
+          "durationSeconds": 7.599751
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/c1_vl2_up.wav",
+          "bytes": 915206,
+          "sha256": "af95a632c173661720347510e91beef6693493f2ae13e85a67c3051c18877fb0",
+          "durationSeconds": 6.893583
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/c1_vl3_down.wav",
+          "bytes": 621844,
+          "sha256": "7d2051094b86ab9ed54c7e0eeb3ba2a61a5d9c10c55713c2c48ccf374ab0aa4c",
+          "durationSeconds": 4.67619
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/c1_vl3_up.wav",
+          "bytes": 645818,
+          "sha256": "92d63c0d5231e568fe1f4e122085e81fa4cea2f3f851632084c87c0aed7a679b",
+          "durationSeconds": 4.857392
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/c2_vl1_down.wav",
+          "bytes": 833284,
+          "sha256": "597b4a9a08bdf01a733eb80b21e35192d2296329775d3c3e71c1072c088c7cc9",
+          "durationSeconds": 6.274376
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/c2_vl1_up.wav",
+          "bytes": 825890,
+          "sha256": "b12100537444067e6f583ac863f386d20f6c0ad162688d9004cf6374139ca135",
+          "durationSeconds": 6.218481
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/c2_vl2_down.wav",
+          "bytes": 541876,
+          "sha256": "e6273e33d690323510a78492bac43634649228db7aefd9ef30b714dd47cc9be4",
+          "durationSeconds": 4.071746
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/c2_vl2_up.wav",
+          "bytes": 754286,
+          "sha256": "7a4d0c206302a23a44e231a074b9d1ac3dbe2b3369af8bf7e7f9d5f8561d3599",
+          "durationSeconds": 5.677256
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/c2_vl3_down.wav",
+          "bytes": 529390,
+          "sha256": "cf9796734b4f8b4094ec745c3d8ad79424215c983d070ce1c9dfa6cccffaa411",
+          "durationSeconds": 3.97737
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/c2_vl3_up.wav",
+          "bytes": 566984,
+          "sha256": "e6d7362efe3d9c5c3a479d0201b3b46b3c3a80dc9c180a9955731f1931a5cb6b",
+          "durationSeconds": 4.261519
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/c3_vl1_down.wav",
+          "bytes": 869198,
+          "sha256": "dcdb0994f6bbdc6da1c74bb6b7e6600e68e3618b5614114eee11a62abf614603",
+          "durationSeconds": 6.545828
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/c3_vl1_up.wav",
+          "bytes": 944476,
+          "sha256": "494e44867414e3434aa731f44c11fd1ac717d270a48027c078f673f3fecac300",
+          "durationSeconds": 7.11483
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/c3_vl2_down.wav",
+          "bytes": 642578,
+          "sha256": "b96903a9f4dd139472415dcb386ae492b67b1e5e0f9369f864181b4557bef621",
+          "durationSeconds": 4.832902
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/c3_vl2_up.wav",
+          "bytes": 577336,
+          "sha256": "8eddd1490750de0f2af39b0fbdd4d1efc980aba977fe94be45bf7b92b74cfa09",
+          "durationSeconds": 4.339773
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/c3_vl3_down.wav",
+          "bytes": 531944,
+          "sha256": "b9e42ceeb9225eccce81f5ad97ffaa4450a1cb247fcd3fe8483dd5eae137771e",
+          "durationSeconds": 3.996667
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/c3_vl3_up.wav",
+          "bytes": 538400,
+          "sha256": "609edb2adb3b9bc7bbe426ccba83e67c731e01e4e7fc6ae9648ef28323df52b4",
+          "durationSeconds": 4.045465
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/c4_vl1_down.wav",
+          "bytes": 511360,
+          "sha256": "70d4c9ca5d86f4ec643ef40e5d7eba6f2c11ed207b391779935bc212b5844928",
+          "durationSeconds": 3.841088
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/c4_vl1_up.wav",
+          "bytes": 566900,
+          "sha256": "1f77c8f2e6acd7156d7cdffcf9b758bd64d0616abd6f3dc3f659f44e7ff1c5e3",
+          "durationSeconds": 4.260884
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/c4_vl2_down.wav",
+          "bytes": 522080,
+          "sha256": "f3044a4d14c7e882c65fb8e0d97c3dfaf7316b6393bbd8ba8b3a11f4979fcc1a",
+          "durationSeconds": 3.922109
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/c4_vl2_up.wav",
+          "bytes": 472922,
+          "sha256": "591e7b8f5d79265fb4bf271c9b2e45a94020a0e4314f0dea6db758eb93234fe1",
+          "durationSeconds": 3.550544
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/c4_vl3_down.wav",
+          "bytes": 452836,
+          "sha256": "c532342996d653058172857ee8b18848a5845c67e29e94fa890061441c575e40",
+          "durationSeconds": 3.39873
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/c4_vl3_up.wav",
+          "bytes": 386354,
+          "sha256": "fd8d9cf85104eacc1a2eda8550891fbacfc407c7edb2dae09cc0934c97fd6221",
+          "durationSeconds": 2.896213
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/eb1_vl1_down.wav",
+          "bytes": 914256,
+          "sha256": "0ed417f747124d71a98fc07b6688e4070c338244f235032e9c00d27202fb5d15",
+          "durationSeconds": 6.886417
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/eb1_vl1_up.wav",
+          "bytes": 831578,
+          "sha256": "ec5d6c68b0d882a411a320a27c34f762436077ed99b3aa6d1283c47182e7b836",
+          "durationSeconds": 6.261497
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/eb1_vl2_down.wav",
+          "bytes": 871316,
+          "sha256": "542510151326d39f87aee6f483f06c3c155fd3b2dca4f76c5f013be075200827",
+          "durationSeconds": 6.561859
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/eb1_vl2_up.wav",
+          "bytes": 771758,
+          "sha256": "11ad9d0780ba9f6e57ec5e120f13da9cb8399e6882b051f566433818ab11d80e",
+          "durationSeconds": 5.809342
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/eb1_vl3_down.wav",
+          "bytes": 606042,
+          "sha256": "f39e3bb66115514141855d070f140005912ee53438f8cccfb9f6b7b3442710ce",
+          "durationSeconds": 4.556757
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/eb1_vl3_up.wav",
+          "bytes": 592002,
+          "sha256": "16fc6a52d4d775d02ffc4b7bbd50e28af36387e039f61f32592531e79ddd47af",
+          "durationSeconds": 4.450635
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/eb2_vl1_down.wav",
+          "bytes": 810572,
+          "sha256": "40b1d3af6c77d95fc7f7bacbd2ceb5e5847027866e6c322623ac3ee41b8722bc",
+          "durationSeconds": 6.102698
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/eb2_vl1_up.wav",
+          "bytes": 768280,
+          "sha256": "b84a1e0b94b0788393ab3f64e01fc14b1d0236edb5ae35b98efc59158bb902de",
+          "durationSeconds": 5.783039
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/eb2_vl2_down.wav",
+          "bytes": 571562,
+          "sha256": "f73c75722d7c2b993afc8c7195e79b70ee6e8cbb95c6bd6cdcefe39c5d227dbd",
+          "durationSeconds": 4.296122
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/eb2_vl2_up.wav",
+          "bytes": 552166,
+          "sha256": "f61875631b2f09881c6aa2e3f56033e0b124da154258a71af02d21be9f08ef79",
+          "durationSeconds": 4.149524
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/eb2_vl3_down.wav",
+          "bytes": 581056,
+          "sha256": "171b4312ec06c9a7a513e6c0d4e96d28765556d346bf9f3467abf15360620255",
+          "durationSeconds": 4.367891
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/eb2_vl3_up.wav",
+          "bytes": 572218,
+          "sha256": "6b9ce28b6254400f10f3f88e402520febe25b3c981493df0cfd67a94491b18f0",
+          "durationSeconds": 4.301088
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/eb3_vl1_down.wav",
+          "bytes": 778856,
+          "sha256": "d53d43b7f82a7d8693e1e1e2e8ef1516f3df05c48ffc41a5cc3fd9d4e9524794",
+          "durationSeconds": 5.862993
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/eb3_vl1_up.wav",
+          "bytes": 863474,
+          "sha256": "9fec81010896ea3936350f98b33f57afabc6074cef3afb12bb5e749e6134d1f3",
+          "durationSeconds": 6.502585
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/eb3_vl2_down.wav",
+          "bytes": 687306,
+          "sha256": "f9bbe12a57d928538814e99d93e52c0a09be48b07883862b78de7e9d7409c94e",
+          "durationSeconds": 5.170998
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/eb3_vl2_up.wav",
+          "bytes": 621416,
+          "sha256": "b18fb36251d3959ad4cb7af18c4e78c1cc6d07f77aa1e893f63fa6e21325f3ef",
+          "durationSeconds": 4.672971
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/eb3_vl3_down.wav",
+          "bytes": 589740,
+          "sha256": "1ee74eaf8a1800e48abe74f3a304cfc250478bce403572dd3993f794e85b076a",
+          "durationSeconds": 4.433537
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/eb3_vl3_up.wav",
+          "bytes": 496482,
+          "sha256": "afa0762de89c7d046ff8c6c2b0cfc7f94d83caed3356423f84f9dae64cb90b24",
+          "durationSeconds": 3.728639
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/eb4_vl1_down.wav",
+          "bytes": 667216,
+          "sha256": "8468b5bf9d05a89541d3c44bee6ec95f8c29d000b993fdee9c465c0c3f8c3bd0",
+          "durationSeconds": 5.019138
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/eb4_vl1_up.wav",
+          "bytes": 627956,
+          "sha256": "2b3f1aa088fcad667dc26887e2b953097855633ffc642e77bbcf82c76dfd847e",
+          "durationSeconds": 4.722381
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/eb4_vl2_down.wav",
+          "bytes": 528562,
+          "sha256": "4b541a5e3367bf4260e8a159520f7a273da94b6abe30c27f309e1f48634e53ab",
+          "durationSeconds": 3.971111
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/eb4_vl2_up.wav",
+          "bytes": 436148,
+          "sha256": "b6597dea699ee5e446e584f9af3e9f3cc9c464c06cb648148835671867cfd560",
+          "durationSeconds": 3.272585
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/eb4_vl3_down.wav",
+          "bytes": 476086,
+          "sha256": "76da62061eb22c85855e3d5b8ca31502a0df9ae953fb5ef72ac73a079161267a",
+          "durationSeconds": 3.574467
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/eb4_vl3_up.wav",
+          "bytes": 406412,
+          "sha256": "7696ab332ffa234c3b4f0669418b81b88f035e43e8f8a23d114ab3bf0504f0ab",
+          "durationSeconds": 3.047823
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/gb1_vl1_down.wav",
+          "bytes": 667802,
+          "sha256": "2c628d5ce912703057d1525dc4f7c32d0eb5c0555ab60fe523f3304425f11549",
+          "durationSeconds": 5.02356
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/gb1_vl1_up.wav",
+          "bytes": 663046,
+          "sha256": "2716d27238ab76552864e6031ed989355eebaaa4bede10fca6d77aca8ee88684",
+          "durationSeconds": 4.987619
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/gb1_vl2_down.wav",
+          "bytes": 618592,
+          "sha256": "b89357b1b5f6b35d73a68a2ae04d6b15553b6e89c59ef3ee0ea318ab58739484",
+          "durationSeconds": 4.65161
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/gb1_vl2_up.wav",
+          "bytes": 571324,
+          "sha256": "650a145303d095b8c6e4433d658c1308deb80e2404739c56e4ca14db6ba51ba1",
+          "durationSeconds": 4.294331
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/gb1_vl3_down.wav",
+          "bytes": 476714,
+          "sha256": "f87e7afb4f76da58f69e7eecc845a258efbacb042cd7ee62d92e8b1eb630911b",
+          "durationSeconds": 3.579206
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/gb1_vl3_up.wav",
+          "bytes": 533398,
+          "sha256": "becca080eb37432fa6c23fc9158b08c210cca163668d9b5a34cdf6a733e5e76d",
+          "durationSeconds": 4.007664
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/gb2_vl1_down.wav",
+          "bytes": 791836,
+          "sha256": "2fbec8bfa40b4d4a5482e3dbcd6aa442fb735740de75a2ac10de48801d326f57",
+          "durationSeconds": 5.961088
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/gb2_vl1_up.wav",
+          "bytes": 861278,
+          "sha256": "9e70628b9890b9872bf3cd65db12b1a7c7feef9c0e0a9f56d9262c41857e6ce1",
+          "durationSeconds": 6.485964
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/gb2_vl2_down.wav",
+          "bytes": 602678,
+          "sha256": "993979a2c98e9e9b778513b8acb40500295195484419c9a832f886a7359625e9",
+          "durationSeconds": 4.531315
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/gb2_vl2_up.wav",
+          "bytes": 632684,
+          "sha256": "0fb8be592909b4a22b2662ec207e6bc46fd1b3c7b418ebec9a2c5a441bd6d35f",
+          "durationSeconds": 4.758118
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/gb2_vl3_down.wav",
+          "bytes": 494132,
+          "sha256": "7ee674b278f1af2c83d85988912677eb5067595d0513a36cc4b9f28b172e01b5",
+          "durationSeconds": 3.710862
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/gb2_vl3_up.wav",
+          "bytes": 551590,
+          "sha256": "035d6c19e39d9d4acf6c7ec7b4dc4d167dccd1422be678741693b4c09068114b",
+          "durationSeconds": 4.14517
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/gb3_vl1_down.wav",
+          "bytes": 718376,
+          "sha256": "4699d70732d6024f6b5ce4564bbf9b7845898dabcb6a7133ed19c459c16da3ea",
+          "durationSeconds": 5.405828
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/gb3_vl1_up.wav",
+          "bytes": 623752,
+          "sha256": "6bd94cfebaa9f93d5439c4e10c0d8c2356cc89f061fa2baa8f5d7d470ece6479",
+          "durationSeconds": 4.690612
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/gb3_vl2_down.wav",
+          "bytes": 690992,
+          "sha256": "557a7ea8732bca66252b60448bab44e6c06098fe2be83381642cee1e8aaffaab",
+          "durationSeconds": 5.198844
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/gb3_vl2_up.wav",
+          "bytes": 589310,
+          "sha256": "d0ff234a68a8f4eb4d7e18595e0af063d6a7fa09b36f595bd66fe37f7e0046a8",
+          "durationSeconds": 4.430272
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/gb3_vl3_down.wav",
+          "bytes": 532622,
+          "sha256": "ad7292ec766fac9f11e6d50fd1d6289b9deb585b0878035df3a1f0dcd13c3bb7",
+          "durationSeconds": 4.001791
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/gb3_vl3_up.wav",
+          "bytes": 518522,
+          "sha256": "7ca6074a671f8c68f7c25c5eeaecc72f325377cee429765ca4c28ab1595c9c80",
+          "durationSeconds": 3.895215
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/gb4_vl1_down.wav",
+          "bytes": 532238,
+          "sha256": "f59a41a090299180873dceafa0f6be4223e6f7e816d61ba73b0033d9401d6f3a",
+          "durationSeconds": 3.998889
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/gb4_vl1_up.wav",
+          "bytes": 476494,
+          "sha256": "fd18a6f80198528749bbdbf41e3d3050b121740151f93e82c9dbd66007c03db5",
+          "durationSeconds": 3.577551
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/gb4_vl2_down.wav",
+          "bytes": 534368,
+          "sha256": "ccb192bfd1628b37b0cd694affd9def265f6abc95ede7fb8f90260ea3c1fefb5",
+          "durationSeconds": 4.014989
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/gb4_vl2_up.wav",
+          "bytes": 527572,
+          "sha256": "00ce7c411bd383802cbb2f972ff36dd5a8dfcbd31e3bc9da4721f7f05ee144ae",
+          "durationSeconds": 3.963628
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/gb4_vl3_down.wav",
+          "bytes": 307072,
+          "sha256": "14a295e3a1dc3885c1b152d27777d18fcf1dd63f5dbd57dd222bbd8cfab40e83",
+          "durationSeconds": 2.296961
+        },
+        {
+          "path": "Meatbass/Samples/arco_looped/gb4_vl3_up.wav",
+          "bytes": 331258,
+          "sha256": "a89474cd4f55c79ffc28d730dabbf60f39d390e3e436538f97f0d8160c05d1bf",
+          "durationSeconds": 2.479773
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a0_vl1_rr1.wav",
+          "bytes": 664302,
+          "sha256": "baae694da7437e2aa2fbf13c2b4e9a6ce13fe48a88ee301ca7a972ff2cce3a5b",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a0_vl1_rr2.wav",
+          "bytes": 664302,
+          "sha256": "04c85e33d3153322627762c44ff648771680ff96887ac1f4b95e3632b21d2916",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a0_vl1_rr3.wav",
+          "bytes": 664302,
+          "sha256": "43ad4f842ad0424d22d64dac1403aa074a362b8a47a095885fe93549e4007369",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a0_vl1_rr4.wav",
+          "bytes": 664302,
+          "sha256": "6e073068b5228e4013eed479a524cbca7f5d29a3f805b52d04ca5ed2f5f89dfc",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a0_vl2_rr1.wav",
+          "bytes": 664302,
+          "sha256": "88d40bac0fb109a10b733dae671988f9370197c5198906e18cb69664a8f598f2",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a0_vl2_rr2.wav",
+          "bytes": 664302,
+          "sha256": "bacbe1a2b94303d88cbcc1746a7b33c4df50c2f63188541bb94dcf524af62bd9",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a0_vl2_rr3.wav",
+          "bytes": 664302,
+          "sha256": "862c0fe9f2205834ea57598e1e798ff05081dbca9366cc7726128f7c5fa107f5",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a0_vl2_rr4.wav",
+          "bytes": 664302,
+          "sha256": "f57bc55acd0378864575ded7fe775075c6919ebbc6f12cfa02e3fb548e55002b",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a0_vl3_rr1.wav",
+          "bytes": 664302,
+          "sha256": "221bb94d05b3bf5840ae66d07cf1a84b1095761f3f7cbdbd0ded9c84895e2c04",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a0_vl3_rr2.wav",
+          "bytes": 664302,
+          "sha256": "9738bb21120121618d2474185696f140dd2246e1646ce1ea71bc16587830b965",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a0_vl3_rr3.wav",
+          "bytes": 664302,
+          "sha256": "212fd9d367ba81f14a46a7d902d762f636083cb5868f48bcb19cd9107a6ad358",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a0_vl3_rr4.wav",
+          "bytes": 664302,
+          "sha256": "d8e2ecafeeec6d58875fb8cb07f81ce54c2573292d1330a58e28eb99d2f3fd9a",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a0_vl4_rr1.wav",
+          "bytes": 664302,
+          "sha256": "cb879bd1fd62e2ab668accf868e2e775cde7ad1d5784ef865bc4571ca8ee7b4e",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a0_vl4_rr2.wav",
+          "bytes": 664302,
+          "sha256": "f978561292fcb1f0078e6cb562f528529f39102cc7028ed04668c54316d736e7",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a0_vl4_rr3.wav",
+          "bytes": 664302,
+          "sha256": "4759c37ef09b3a517a205e93a950b7939accc4c9bc09f1dfaa94cabbda3d154e",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a0_vl4_rr4.wav",
+          "bytes": 664302,
+          "sha256": "8a76d08b982d5248bd426d27a1fcf0af1cefd01225e70fc3c94c980fee1c5e7d",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a1_vl1_rr1.wav",
+          "bytes": 545232,
+          "sha256": "4243184192f711620ae93fb9a941e2fe1ce42b73346ba38ec862b2e3d2ba0bba",
+          "durationSeconds": 4.1
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a1_vl1_rr2.wav",
+          "bytes": 545232,
+          "sha256": "04e43127463496028d4cb88bbe229e4aab0e5a50cfd88e247d4ad0fe6c0c1a2d",
+          "durationSeconds": 4.1
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a1_vl1_rr3.wav",
+          "bytes": 545232,
+          "sha256": "bb6ebdb377acc3f1b53d5a656b4575a38c23b418d95a488a2a2f01a9480f6404",
+          "durationSeconds": 4.1
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a1_vl1_rr4.wav",
+          "bytes": 545232,
+          "sha256": "e21f922f150ba5310f0cac29fe141de1f8c7e31daeba16287cf7240d35c764fc",
+          "durationSeconds": 4.1
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a1_vl2_rr1.wav",
+          "bytes": 545232,
+          "sha256": "52ad2914e4185cbc60033b5aff2bdb53ed92dc05cbae2e30c7e525f308e83e6b",
+          "durationSeconds": 4.1
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a1_vl2_rr2.wav",
+          "bytes": 545232,
+          "sha256": "5334e9841bd2078251baedf4efc4e9d549480641b537f684935f46f2c4a69398",
+          "durationSeconds": 4.1
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a1_vl2_rr3.wav",
+          "bytes": 545232,
+          "sha256": "d43aaa881e661808e6a7792208a2a30acaf7218e395a882fbc62170a93c6abe0",
+          "durationSeconds": 4.1
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a1_vl2_rr4.wav",
+          "bytes": 545232,
+          "sha256": "28a8ffd11520bd331101f7419ba9a813a1f9801cf836637199d9fce881616998",
+          "durationSeconds": 4.1
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a1_vl3_rr1.wav",
+          "bytes": 545232,
+          "sha256": "060f2fee87767e2a8b2e87cf194cc971634b07be6886a423108b2b84f5c76146",
+          "durationSeconds": 4.1
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a1_vl3_rr2.wav",
+          "bytes": 545232,
+          "sha256": "d806d682590ae79e34e874c40aa78807ea8ec0f221e36a1d85d7d18d616e4896",
+          "durationSeconds": 4.1
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a1_vl3_rr3.wav",
+          "bytes": 545232,
+          "sha256": "a21cebd9c28becc076b5f4832459445b6a3948652267d28f73c77e15cb527df5",
+          "durationSeconds": 4.1
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a1_vl3_rr4.wav",
+          "bytes": 545232,
+          "sha256": "4f6f21420dfffbe3d71617faf767b16e4adbb2aec5c52b843299b21bcbeca690",
+          "durationSeconds": 4.1
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a1_vl4_rr1.wav",
+          "bytes": 545232,
+          "sha256": "dad26c7ad093cf0d1017eed58e5d2d0af2444d8aa7855ec2b2c09133f9c37ca5",
+          "durationSeconds": 4.1
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a1_vl4_rr2.wav",
+          "bytes": 545232,
+          "sha256": "d0e9f25bae672ddef67f45bafa186dd0db262f787abb401ae9001f4407850cae",
+          "durationSeconds": 4.1
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a1_vl4_rr3.wav",
+          "bytes": 545232,
+          "sha256": "8957f7b7619bfc44f59dab3e348715e3bc66c059ba5e6a97ca669d3ca10508ee",
+          "durationSeconds": 4.1
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a1_vl4_rr4.wav",
+          "bytes": 545232,
+          "sha256": "a8373ceb4d39729cb58ca7becb749eca659f363de6a9a0282d4ac1abf5870b3a",
+          "durationSeconds": 4.1
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a2_vl1_rr1.wav",
+          "bytes": 505540,
+          "sha256": "92188892ec6ea6eb06efdb0b5fca50cad4e848196a85eba1d71fbe7c4b61340d",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a2_vl1_rr2.wav",
+          "bytes": 505540,
+          "sha256": "ca40f116bae660e03660d5039036ea080bdcd8d297ea9f1143baed8fb1fb88f6",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a2_vl1_rr3.wav",
+          "bytes": 505540,
+          "sha256": "342dc97786d63f0a02c5280996af68ecdaf15263429e9266a3f60fbc51966078",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a2_vl1_rr4.wav",
+          "bytes": 505540,
+          "sha256": "a3cc8c676542354fa2c7ba06f92df5526ad9d61dbc5f6ad88c3bd3bed989c337",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a2_vl2_rr1.wav",
+          "bytes": 505540,
+          "sha256": "b32a2c5e22a22ef373e19b3c4593f73b78bcdae37ddab38ff03e612150ee2642",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a2_vl2_rr2.wav",
+          "bytes": 505540,
+          "sha256": "40ae99ab6683571f1abf8e6534340e19ca519eb8f3860c1b95f4374161500fa8",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a2_vl2_rr3.wav",
+          "bytes": 505540,
+          "sha256": "b56cfcbc61d97a504113de0215e4f83aba04cd9fbf00cd0514c5bb3a88a4caeb",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a2_vl2_rr4.wav",
+          "bytes": 505540,
+          "sha256": "3ef0cf4302ba1823c6367effd659b56fd2cc32a15fc4e0e0582c1639d7953f9f",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a2_vl3_rr1.wav",
+          "bytes": 505540,
+          "sha256": "8d2e94a4124f0cf9f223a1a74870f5ee45045092614285605d55066c9eadf103",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a2_vl3_rr2.wav",
+          "bytes": 505540,
+          "sha256": "6d1e0cafb334501f0d0795e287a56b05531802cbb8aae1d2b213ccf6241911e7",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a2_vl3_rr3.wav",
+          "bytes": 505540,
+          "sha256": "e636567fd6b52b0d336207e83546f5c23ebdc546b0fe0a8b4bf666a83ae81a58",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a2_vl3_rr4.wav",
+          "bytes": 505540,
+          "sha256": "8eac4c459f81b9adf2fa6080a5cd8dc077e72ee3b8d07b0a705048560eee8ed0",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a2_vl4_rr1.wav",
+          "bytes": 505540,
+          "sha256": "206b9e2ef31c03dfed0be144383ac043e2064e90b49e7a9ce6ad9e5860e86ed4",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a2_vl4_rr2.wav",
+          "bytes": 505540,
+          "sha256": "20dd839ec0bc0a96132d967dde34106a970603e7f94aa1412d46b48b540cf2c9",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a2_vl4_rr3.wav",
+          "bytes": 505540,
+          "sha256": "fd603f5e7f9b56132bd73850b9c0fcbf5f765b5487c0b8e71cf99296174c0d2b",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a2_vl4_rr4.wav",
+          "bytes": 505540,
+          "sha256": "59224e05d3df6c25bc2c839a72e4ab278fa5845e65ec4e8dfcc667b7d4835210",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a3_vl1_rr1.wav",
+          "bytes": 386472,
+          "sha256": "37827100426cbefed080439a88c583eb23efbf9c98ecc261f3aff992f470268d",
+          "durationSeconds": 2.9
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a3_vl1_rr2.wav",
+          "bytes": 386472,
+          "sha256": "3e1bb62e1bc559f47c4cbcbfd5f8b05af6aeeedd042f67aaebf8bc9e9a555b09",
+          "durationSeconds": 2.9
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a3_vl1_rr3.wav",
+          "bytes": 386472,
+          "sha256": "5735cc1863114c321f4b4afa13dcd3527d9d2e596f417c9763cc8f68b0108dbf",
+          "durationSeconds": 2.9
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a3_vl1_rr4.wav",
+          "bytes": 386472,
+          "sha256": "bca38c830d7dd937cae484a7d0a43d56faebaf45f30798a290ca151c18b6ec43",
+          "durationSeconds": 2.9
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a3_vl2_rr1.wav",
+          "bytes": 386472,
+          "sha256": "df9639319674416d407c97da19bed928ccd840e2900f69f12eb4498ca397d565",
+          "durationSeconds": 2.9
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a3_vl2_rr2.wav",
+          "bytes": 386472,
+          "sha256": "fac11dee937eacae68caf301573fcf42e2b3249732cc16cb9b6b6bf6ca76d2d3",
+          "durationSeconds": 2.9
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a3_vl2_rr3.wav",
+          "bytes": 386472,
+          "sha256": "47c4447cc7a6f58b7c49f8835cff553f776947ed04e250d40038c8d05b3b0990",
+          "durationSeconds": 2.9
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a3_vl2_rr4.wav",
+          "bytes": 386472,
+          "sha256": "e8e308af62afc62745e13aa3717b327aa056803333aa50140e66fc11533d76e0",
+          "durationSeconds": 2.9
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a3_vl3_rr1.wav",
+          "bytes": 386472,
+          "sha256": "77d0e30473679840522a16003dfffa1a5a8e6292ca200aabe587af4b5945a85c",
+          "durationSeconds": 2.9
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a3_vl3_rr2.wav",
+          "bytes": 386472,
+          "sha256": "4321660d578e646aed133c9f7f753b3fa96a110e80816f6a4b557e81d1eb94c5",
+          "durationSeconds": 2.9
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a3_vl3_rr3.wav",
+          "bytes": 386472,
+          "sha256": "1dfecbf8118525822fe867b264d6c2cbf76ea0b28d7e04c8c02c56cd06751487",
+          "durationSeconds": 2.9
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a3_vl3_rr4.wav",
+          "bytes": 386472,
+          "sha256": "efbeb0ee42f08b4f819bea2fcbdbcbf821ede2158b29b8554bb5cf76c534f2d5",
+          "durationSeconds": 2.9
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a3_vl4_rr1.wav",
+          "bytes": 386472,
+          "sha256": "074e52f62b413f868f42453e075ce0015ec586cda146bd891bc95a6217ba8e77",
+          "durationSeconds": 2.9
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a3_vl4_rr2.wav",
+          "bytes": 386472,
+          "sha256": "7dcd21ec91579a31d4ad658c08a05de645e713d674637e1cae3afd8d29e226b9",
+          "durationSeconds": 2.9
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a3_vl4_rr3.wav",
+          "bytes": 386472,
+          "sha256": "a7ae0e173dd21a041ff8a314e0c367dd2c61eaa729ef5791d58c28b7002aec6a",
+          "durationSeconds": 2.9
+        },
+        {
+          "path": "Meatbass/Samples/pizz/a3_vl4_rr4.wav",
+          "bytes": 386472,
+          "sha256": "8c5b0643f408e16d39718f1d13440ab30e12027628ebd20a3450d7b7660acef6",
+          "durationSeconds": 2.9
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c1_vl1_rr1.wav",
+          "bytes": 664302,
+          "sha256": "21ad00b761c076264ca91f46b657e933dc97aeeb0fce047418c564af33596280",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c1_vl1_rr2.wav",
+          "bytes": 664302,
+          "sha256": "33da9be619d1acfe231f0af1d8b5a27fc7181bac6a42199696cd069912ab171f",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c1_vl1_rr3.wav",
+          "bytes": 664302,
+          "sha256": "c68f8c03cb9eaf3ec78b598b6bd140c65c6087ba7edfa6d48bd5b27a28c4d2d4",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c1_vl1_rr4.wav",
+          "bytes": 664302,
+          "sha256": "c8aada9a4113343bfc84a72213d5974532a9fdf4de7326a49922288fda578911",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c1_vl2_rr1.wav",
+          "bytes": 664302,
+          "sha256": "091ab69a4f65af1c88cdc0ae9263df51ab0784a920ef0819298e18b123e30d23",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c1_vl2_rr2.wav",
+          "bytes": 664302,
+          "sha256": "8b79fbdd14032d6067884aa3bd798c114f92a6b1de85648113717b3d532343ec",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c1_vl2_rr3.wav",
+          "bytes": 664302,
+          "sha256": "35451b873e8fc229088c9c4f4068c74cd400f659900f5304dfbea3106f2cdb80",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c1_vl2_rr4.wav",
+          "bytes": 664302,
+          "sha256": "146fce632d606e0619782d1a5e3d6b48d052a3c2986325f5acc95b6b75aa4e29",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c1_vl3_rr1.wav",
+          "bytes": 664302,
+          "sha256": "6504ca2dba9651695c3eb83299586903dd2d1f631b854b27a69ca525e25e6eae",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c1_vl3_rr2.wav",
+          "bytes": 664302,
+          "sha256": "ad553bcbb68626841bcde3d5bf8a704eaaf0ba8ed59e9cad6dba4b35c99d187e",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c1_vl3_rr3.wav",
+          "bytes": 664302,
+          "sha256": "e7b2d60ea2ff89b6ca4a77b2da546541570e726e3462bb10d9805de9634c61d9",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c1_vl3_rr4.wav",
+          "bytes": 664302,
+          "sha256": "fd84a6fbaa1381a2b9bd2ae2d881917928efb038714936e9748af460dd47eb40",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c1_vl4_rr1.wav",
+          "bytes": 664302,
+          "sha256": "1f669fea378c72786b4a0e50c1ef20ce3aa5c1c15a54f498bd01cb8cd3f3f649",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c1_vl4_rr2.wav",
+          "bytes": 664302,
+          "sha256": "0c89d32671eabeae6096bf2e68d622950171aa2fe3ac8753496e01f017cae1cf",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c1_vl4_rr3.wav",
+          "bytes": 664302,
+          "sha256": "0b682e332dd572e733d46fedc8948f7ee018210c23a916626c83355c226685e3",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c1_vl4_rr4.wav",
+          "bytes": 664302,
+          "sha256": "270b1df24898baeda888e5536b5933b7c99d7d9bacc74a3e2a89f3d673a35abe",
+          "durationSeconds": 5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c2_vl1_rr1.wav",
+          "bytes": 532000,
+          "sha256": "a1b6c50c17810bddb06476e606a2b0f8a449e5f6252d6807cbe89058a03ee79d",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c2_vl1_rr2.wav",
+          "bytes": 532000,
+          "sha256": "e7f825dcf87e4d68847b85a4a00edf364882daf1506d7f7b55afe0b9a5b23077",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c2_vl1_rr3.wav",
+          "bytes": 532000,
+          "sha256": "4012773fedf7a7217148ff4a02df80636ee212c2f675ae5e38299b7137147266",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c2_vl1_rr4.wav",
+          "bytes": 532000,
+          "sha256": "76a58987bab8b92352dc540c93c7c2f0f353da9e3ebdd50cd63e2942b5abb5f0",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c2_vl2_rr1.wav",
+          "bytes": 532000,
+          "sha256": "3585d538ae1c10f0eeb402e33841535071192a01e09930b2697703c7149babbd",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c2_vl2_rr2.wav",
+          "bytes": 532000,
+          "sha256": "27ef8b02904c11178a7b526bd8bbbf1eb46234a29af15a02e99cdfd25582d0da",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c2_vl2_rr3.wav",
+          "bytes": 532000,
+          "sha256": "d664319406c702b3facc8d759fb4933b648f31250a353cff7e9c8858d7080fcb",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c2_vl2_rr4.wav",
+          "bytes": 532000,
+          "sha256": "c92b5db123d7819f673e48a74e82dbd9a0a4d3875cb6e57b9443ef10b9295b74",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c2_vl3_rr1.wav",
+          "bytes": 532000,
+          "sha256": "511d55cfa51626a2c2531278a41484e5316c401928a8fbb741c67c3105a1d7c9",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c2_vl3_rr2.wav",
+          "bytes": 532000,
+          "sha256": "76dc8c819197c8a98552b2ad3185893e653e03505e7297c3bab716916ff355ed",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c2_vl3_rr3.wav",
+          "bytes": 532000,
+          "sha256": "7848820e7cc1158102a634a09ba08285114d1879eb5e329f518eadf2098af738",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c2_vl3_rr4.wav",
+          "bytes": 532000,
+          "sha256": "3598d4b294acf77e050d138da4fdf180e354767fc730fa38c2e05d764a129a15",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c2_vl4_rr1.wav",
+          "bytes": 532000,
+          "sha256": "8768f1fe1014366d68744f2cbb1afde402fe88e89a6140f86cfc258981182f07",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c2_vl4_rr2.wav",
+          "bytes": 532000,
+          "sha256": "a78a3002fc7e8ba2207b89a911177dbbfb4ff5367f044c0b91637df48e89decb",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c2_vl4_rr3.wav",
+          "bytes": 532000,
+          "sha256": "b42cf1502503cd9e0eb3a85fa402a184cf9ebb2218e507491f6d5b02f2c7da41",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c2_vl4_rr4.wav",
+          "bytes": 532000,
+          "sha256": "49988c91123fa0238e9a050c0001e841ecdd20dc6733829602aa8b8b13bff9ab",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c3_vl1_rr1.wav",
+          "bytes": 505542,
+          "sha256": "4162ed8d8363c1eef6cf94b67554f54fc0b68e675ba8bfcbd0c23f6e824d5e12",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c3_vl1_rr2.wav",
+          "bytes": 505542,
+          "sha256": "aef8b0270529c29e4803a338d3f22151e8f42669e158dd881efafb7edb5c94cf",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c3_vl1_rr3.wav",
+          "bytes": 505542,
+          "sha256": "835b6b1376ad5ec0cf6a39b4720fa3eb33dc4aca345255c09fb764c7d90f8db9",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c3_vl1_rr4.wav",
+          "bytes": 505542,
+          "sha256": "de09e7df2689d66bf17a442359a738d16d6748f6eec84bd94190ad636c354054",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c3_vl2_rr1.wav",
+          "bytes": 505542,
+          "sha256": "0903b6e1ab5b89d80a46041446c93df372701f08ed37c70a40ff4f00dcc8755e",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c3_vl2_rr2.wav",
+          "bytes": 505542,
+          "sha256": "97b437c803af87c596f8bebdb4672f34f868cc58b9c37df3d3ee967d1c78e11c",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c3_vl2_rr3.wav",
+          "bytes": 505542,
+          "sha256": "f45fcbdca7afc35129c28c338bd0d3420e44dca5c0bf71f06405a86c6cec2638",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c3_vl2_rr4.wav",
+          "bytes": 505542,
+          "sha256": "9506a8fe93ef64b80ed17a1b68bc2c50ce0b20e91c973978ec8d0b8b2bf87dd0",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c3_vl3_rr1.wav",
+          "bytes": 505542,
+          "sha256": "c1c194a2f0055fa9a283576c2c9c3a9e4502ff29a3c6b7714a0d7ca3f532c19f",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c3_vl3_rr2.wav",
+          "bytes": 505542,
+          "sha256": "05628f489e1406c5bb8ee03c8ab24241c53b4666470ef467a39470c0fa98d30c",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c3_vl3_rr3.wav",
+          "bytes": 505542,
+          "sha256": "131bc1f872649c29cc6e377c55769d581718caced3c538a8703c508985d3b02b",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c3_vl3_rr4.wav",
+          "bytes": 505542,
+          "sha256": "68d534dda78874bf8fc9c3bb0ad13ac159ef4be0e1f5c59f06649d2ede708722",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c3_vl4_rr1.wav",
+          "bytes": 505542,
+          "sha256": "943f5a41eb468a75465a9f6b63b58e5b2668ad04e44f332a38b1cb29918b0e87",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c3_vl4_rr2.wav",
+          "bytes": 505542,
+          "sha256": "72b1c220870a1f08dba09245be1dcbc93bcfe5f776e7c12c8db35c7e760c2316",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c3_vl4_rr3.wav",
+          "bytes": 505542,
+          "sha256": "c6d7902b3a1df8744a366265715038e77a47cd701d4bb2cf8defaa0eaea4b341",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c3_vl4_rr4.wav",
+          "bytes": 505542,
+          "sha256": "edb145d2181c7bdd09e317743d467c1b7830079bda199325132d7156373ead8d",
+          "durationSeconds": 3.8
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c4_vl1_rr1.wav",
+          "bytes": 333550,
+          "sha256": "5c62650a57b538a278723a5a67cf8f7df6c1e19c798e187f34f4be89a180e8e2",
+          "durationSeconds": 2.5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c4_vl1_rr2.wav",
+          "bytes": 333550,
+          "sha256": "f80f48b226509c872a3fb4a55ce1a52c638aa17311c6509d59067626851acd23",
+          "durationSeconds": 2.5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c4_vl1_rr3.wav",
+          "bytes": 333550,
+          "sha256": "b4a2b750bd17baac1fb003192d1473aba98882e71134dd7718438921e49d628d",
+          "durationSeconds": 2.5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c4_vl1_rr4.wav",
+          "bytes": 333550,
+          "sha256": "dc188edf46fa258fce6d659e3d0ed8e8715bcc878b8fb680d4fdd1b7927f78f7",
+          "durationSeconds": 2.5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c4_vl2_rr1.wav",
+          "bytes": 333550,
+          "sha256": "6996054986683457d155653da7caf32ba02e2c0d3e41010999603ed517031193",
+          "durationSeconds": 2.5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c4_vl2_rr2.wav",
+          "bytes": 333550,
+          "sha256": "743fb713d186f2ca1da5d8d4e17b9c07f873d21b93db06c608c4ca855a80730c",
+          "durationSeconds": 2.5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c4_vl2_rr3.wav",
+          "bytes": 333550,
+          "sha256": "9d17616e162f0ee2390b6752282d0517c00cc0ed356f5ada7869164f54929c9f",
+          "durationSeconds": 2.5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c4_vl2_rr4.wav",
+          "bytes": 333550,
+          "sha256": "972b4561bcc7d0eff3d33ac72242c014e538ed07831c2a288e566098d267fec9",
+          "durationSeconds": 2.5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c4_vl3_rr1.wav",
+          "bytes": 333550,
+          "sha256": "317001fb34c2e281a440a023ae59c0cfd0800d5bbd0ebb58fa9da531d5ac8dd2",
+          "durationSeconds": 2.5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c4_vl3_rr2.wav",
+          "bytes": 333550,
+          "sha256": "c3fdc88662c74709db654b29dfb17a524e7a1468025044b8c847dd731776d9aa",
+          "durationSeconds": 2.5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c4_vl3_rr3.wav",
+          "bytes": 333550,
+          "sha256": "1d9a8f3073bee7045c975cbf7e15a2b1d5f2bcb1adee815fc239c7d4d2871151",
+          "durationSeconds": 2.5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c4_vl3_rr4.wav",
+          "bytes": 333550,
+          "sha256": "560dca49ffca748ef61f50c55f5d054528b744efac67e15b3cb9f769caca0f2e",
+          "durationSeconds": 2.5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c4_vl4_rr1.wav",
+          "bytes": 333550,
+          "sha256": "add0e5c617aa5f456dea66dd0ebbc0f7726305c6360fa6b53b177fcad2d2353f",
+          "durationSeconds": 2.5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c4_vl4_rr2.wav",
+          "bytes": 333550,
+          "sha256": "b39e580f895c1fd5eb296be2552d5fdf87431483e8ab350df875476707e5cf57",
+          "durationSeconds": 2.5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c4_vl4_rr3.wav",
+          "bytes": 333550,
+          "sha256": "c9868ad8a3f026c53c31fad293cb4f33f406f955154242c4285dc3bd9cc9bda9",
+          "durationSeconds": 2.5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/c4_vl4_rr4.wav",
+          "bytes": 333550,
+          "sha256": "f3a28a32878258bd06998bc7e345a02c9da506035d77026ce64ca8541d4cd117",
+          "durationSeconds": 2.5
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb1_vl1_rr1.wav",
+          "bytes": 611380,
+          "sha256": "d032ed374d38320a839b6999f74e6a187f175fca8ed04eb1a98ad10c88c3d21f",
+          "durationSeconds": 4.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb1_vl1_rr2.wav",
+          "bytes": 611380,
+          "sha256": "362e264f1ed4d61ca4a67f493c5c5b81e17e162a51c78b2819cdfbd1e2ff6c8f",
+          "durationSeconds": 4.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb1_vl1_rr3.wav",
+          "bytes": 611380,
+          "sha256": "c8dce05182520f5438dc28be644834551c3b677950df073a8015eca273e6a4a1",
+          "durationSeconds": 4.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb1_vl1_rr4.wav",
+          "bytes": 611380,
+          "sha256": "4c91a897231501a9698f255376ae36e31ca84be25458cd486e80bf648f44bf68",
+          "durationSeconds": 4.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb1_vl2_rr1.wav",
+          "bytes": 611380,
+          "sha256": "2266ba00390b3405827ffc0935ee681093d4355b21a8a1163d6161ab3794d8d9",
+          "durationSeconds": 4.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb1_vl2_rr2.wav",
+          "bytes": 611380,
+          "sha256": "65140160d85f33ab2effe0134965fe637643554ccf23fefd6837af005ab63398",
+          "durationSeconds": 4.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb1_vl2_rr3.wav",
+          "bytes": 611380,
+          "sha256": "34dfc83729de73269dae5ee382a5ae7f49f99e97450f1078a40d706d1075eae6",
+          "durationSeconds": 4.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb1_vl2_rr4.wav",
+          "bytes": 611380,
+          "sha256": "56231098b58b50c34411283df2e2aaa5422e4a8838921d9a49025d49dd5043be",
+          "durationSeconds": 4.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb1_vl3_rr1.wav",
+          "bytes": 611380,
+          "sha256": "78df6ce0bbd79a034fe68f9256fdbd935531ba511caf0f28214ccec3f37390f0",
+          "durationSeconds": 4.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb1_vl3_rr2.wav",
+          "bytes": 611380,
+          "sha256": "1fa35a8e5bb009d78730258775838687be5c965df524b5a9315ce8128a869522",
+          "durationSeconds": 4.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb1_vl3_rr3.wav",
+          "bytes": 611380,
+          "sha256": "487010de6883f6ffc6d79d401ea4902d2177bbc650157f9b038fc38f1b89bf42",
+          "durationSeconds": 4.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb1_vl3_rr4.wav",
+          "bytes": 611380,
+          "sha256": "daaa6ea544f4f27cd01262bb1629ef96c5333b3729009727d361b8f17a7b3c39",
+          "durationSeconds": 4.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb1_vl4_rr1.wav",
+          "bytes": 611380,
+          "sha256": "1a015291a120a9d1424552319fc3429fd2326a79d681be2e972f2ca92d9d3349",
+          "durationSeconds": 4.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb1_vl4_rr2.wav",
+          "bytes": 611380,
+          "sha256": "5caca9a0ef5e0e689e296612b028b7957e086dfa38cadaa0dc1b478bf8f33850",
+          "durationSeconds": 4.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb1_vl4_rr3.wav",
+          "bytes": 611380,
+          "sha256": "6c47b40ebbe46d7b429f6269e19271e66122990dba085900549967ccb651067b",
+          "durationSeconds": 4.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb1_vl4_rr4.wav",
+          "bytes": 611380,
+          "sha256": "ace659da70a50f18a91a0b4cc203579379faa7c2fb1be779588293ab183ae569",
+          "durationSeconds": 4.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb2_vl1_rr1.wav",
+          "bytes": 532000,
+          "sha256": "2e9e567f1663ca710832008a525cf94b906f92067b8d1f80d6b429c3c898d799",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb2_vl1_rr2.wav",
+          "bytes": 532000,
+          "sha256": "cd443cb68c7ab7b0d654286609f68676592b88028a67e66fbf0ab00cf8918c94",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb2_vl1_rr3.wav",
+          "bytes": 532000,
+          "sha256": "3bd764931ae81904eaf50d9c1339c641764cd8b72db521297b581672e2bed2d3",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb2_vl1_rr4.wav",
+          "bytes": 532000,
+          "sha256": "c78d253b7844c4b237dc16d17cac94dfba69ca40b321400b32b8b08aadbd43d8",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb2_vl2_rr1.wav",
+          "bytes": 532000,
+          "sha256": "7af31126e4d6cfb9fc1f7aba4e02f39bd4b7a83eced346c6e3f73f067bde6fe4",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb2_vl2_rr2.wav",
+          "bytes": 532000,
+          "sha256": "d69447945d412d883ee8e8b0b9d3ba0b1eb6f37b06ceeb9cd481bde2b44dcb98",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb2_vl2_rr3.wav",
+          "bytes": 532000,
+          "sha256": "e09836897360ab746bebbcdb7381c5a8c9c6b1813649210fdbb8eb56b262eb40",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb2_vl2_rr4.wav",
+          "bytes": 532000,
+          "sha256": "85ed7b5a3e5e2a6cf22f337fd8ac482c0f63efd6333064de141b46a42610e9aa",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb2_vl3_rr1.wav",
+          "bytes": 532000,
+          "sha256": "29e3214358f270a2a9b3af48a933888b8ccb37fe28329630137125198f76934d",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb2_vl3_rr2.wav",
+          "bytes": 532000,
+          "sha256": "48d589780d23f89cf56339c8ca26af96a928f98855113bb790adefe339825cf8",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb2_vl3_rr3.wav",
+          "bytes": 532000,
+          "sha256": "0466ded34676c17f0e368074309d5ac3515eba10fd1e9fbf921a9d7294a682f9",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb2_vl3_rr4.wav",
+          "bytes": 532000,
+          "sha256": "b621aa182dfa9d53833cfe4640d7a4a4512652ace4cd9eba6fd10604cfb7d4ab",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb2_vl4_rr1.wav",
+          "bytes": 532000,
+          "sha256": "00e55dcd81719b7e74db500b6d22ece7012e84bdcc4ecd9ef3ca0cd85138982d",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb2_vl4_rr2.wav",
+          "bytes": 532000,
+          "sha256": "17fa8b738a057a01898dd6e5eca4470201b80b6b219b8ce549bbc1ed6ccddebc",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb2_vl4_rr3.wav",
+          "bytes": 532000,
+          "sha256": "cab9556d9e4b9ece8567c0480ddece848d41a59e4a003a884773af56974a85bb",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb2_vl4_rr4.wav",
+          "bytes": 532000,
+          "sha256": "ab1a3d2cf23acf15b3c54e0b4669f45e436b30045e3ba18c6d47e8459a8fdc0a",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb3_vl1_rr1.wav",
+          "bytes": 479082,
+          "sha256": "958911ac66b6ac5ed8dfe7f576fc79b735fecfd4fcc4f0e6f150e8a173d94f01",
+          "durationSeconds": 3.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb3_vl1_rr2.wav",
+          "bytes": 479082,
+          "sha256": "3836546b10c535234b74dbff43d877b810059364737349b9b60ccaa431afba17",
+          "durationSeconds": 3.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb3_vl1_rr3.wav",
+          "bytes": 479082,
+          "sha256": "d35dbf2a3944de4554ef67e12441f5d62f2f650004173a61b45b19746aaa55c8",
+          "durationSeconds": 3.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb3_vl1_rr4.wav",
+          "bytes": 479082,
+          "sha256": "2f035ddde6f3bb834486d8ae3a473327cfc4a71926679de43b0004f56d74cc2b",
+          "durationSeconds": 3.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb3_vl2_rr1.wav",
+          "bytes": 479082,
+          "sha256": "e712a3a2a37f148c273c5c0d394533c38501ea2241b5c5fcf56de2b0cd6e41ff",
+          "durationSeconds": 3.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb3_vl2_rr2.wav",
+          "bytes": 479082,
+          "sha256": "f0c1c668ae70ffe749c687eb85276f0e61777f8b4b21043795e4f90f10c553db",
+          "durationSeconds": 3.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb3_vl2_rr3.wav",
+          "bytes": 479082,
+          "sha256": "94d2e8f335029f93303a613da973e50d749a9aef9e086ae46cd1e74dbe1df114",
+          "durationSeconds": 3.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb3_vl2_rr4.wav",
+          "bytes": 479082,
+          "sha256": "5ff58fdc63d0523f37c3c26dfdce3f5fc5ed850b02a0605274dad5cfd6ba2a1a",
+          "durationSeconds": 3.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb3_vl3_rr1.wav",
+          "bytes": 479082,
+          "sha256": "8e86876cd768691872a4ecb250a6d271124f339d7a0f56f3b0e7c88c31450cd9",
+          "durationSeconds": 3.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb3_vl3_rr2.wav",
+          "bytes": 479082,
+          "sha256": "18e57dc6152431c703e755cd44f14b84318e1643f43d9f75a3f50bddc68687e9",
+          "durationSeconds": 3.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb3_vl3_rr3.wav",
+          "bytes": 479082,
+          "sha256": "441d24456e564c64ed2def842e9a64b20db734ef08cefba811f61e8243278531",
+          "durationSeconds": 3.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb3_vl3_rr4.wav",
+          "bytes": 479082,
+          "sha256": "394e420f30f6517c9362925f77256f92216775fdd344fa10819ee2a2ede11d85",
+          "durationSeconds": 3.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb3_vl4_rr1.wav",
+          "bytes": 479082,
+          "sha256": "66656f75bcd28e2ec015b41db1168ceeee782410f991a94ae27a77b719b149db",
+          "durationSeconds": 3.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb3_vl4_rr2.wav",
+          "bytes": 479082,
+          "sha256": "ae9cc0fe48ebfbaa06cd8f3062141e388340e715d516bc53b7a7a251815b0147",
+          "durationSeconds": 3.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb3_vl4_rr3.wav",
+          "bytes": 479082,
+          "sha256": "5f99c49a14c9be5f60871bd8d62a86bbef863519f9bcdb8d713be4276a888422",
+          "durationSeconds": 3.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/eb3_vl4_rr4.wav",
+          "bytes": 479082,
+          "sha256": "bfef742bbf13efc6cee8f9c8bad243c7b5d7ba4b79a8eeb875df260133fa374d",
+          "durationSeconds": 3.6
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb1_vl1_rr1.wav",
+          "bytes": 558462,
+          "sha256": "9a4761663e7af3265352334148fcf39727e91666b8e789e69364d7777326144b",
+          "durationSeconds": 4.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb1_vl1_rr2.wav",
+          "bytes": 558462,
+          "sha256": "43b610474261d474348b12d136766a24d193eeb56dceb392c6c29d1e1b5908e3",
+          "durationSeconds": 4.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb1_vl1_rr3.wav",
+          "bytes": 558462,
+          "sha256": "4a1ebd0660b3c2f08e8dd6a27d92c1fd0b9458ae1518ed03e021b6697ecfa8fd",
+          "durationSeconds": 4.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb1_vl1_rr4.wav",
+          "bytes": 558462,
+          "sha256": "5d9d81b51cf5699ff2a89c9dc9ef9cbe961463cedad879cb55f41b914f3f0129",
+          "durationSeconds": 4.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb1_vl2_rr1.wav",
+          "bytes": 558462,
+          "sha256": "73e3d69fef4c757a8df34dabae15ed66dcb724986810843d6069c6926a2e565a",
+          "durationSeconds": 4.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb1_vl2_rr2.wav",
+          "bytes": 558462,
+          "sha256": "c2f05b5f11de49fd829086d4c32d9983e569792d9fd0d6a72312c6da1b9b9b18",
+          "durationSeconds": 4.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb1_vl2_rr3.wav",
+          "bytes": 558462,
+          "sha256": "6830c28f08ce2e96415b2c41c6653970a63da775aeb4fb12ad0111288b0cb536",
+          "durationSeconds": 4.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb1_vl2_rr4.wav",
+          "bytes": 558462,
+          "sha256": "c192c5ddc57b3f35d3bb576c06e4b185e103988d66cc19450d9bb5464417733f",
+          "durationSeconds": 4.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb1_vl3_rr1.wav",
+          "bytes": 558462,
+          "sha256": "bf60279a41eee281ff045b5c11de65fcbde440fee5aaf09867b7803582e490c4",
+          "durationSeconds": 4.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb1_vl3_rr2.wav",
+          "bytes": 558462,
+          "sha256": "c8c2e915c27b4917c1cf67c24dbdbff76618e10b7dc9bed5da6fd61c0c301e71",
+          "durationSeconds": 4.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb1_vl3_rr3.wav",
+          "bytes": 558462,
+          "sha256": "da950703d96e1fc8d050b4bd2ca060171d1dfa1e1cd3d068b0fb718364870a2c",
+          "durationSeconds": 4.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb1_vl3_rr4.wav",
+          "bytes": 558462,
+          "sha256": "33f2da0fa918acec3be894a638d3a02590c66ebd388d580d801c2caf599bebe0",
+          "durationSeconds": 4.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb1_vl4_rr1.wav",
+          "bytes": 558462,
+          "sha256": "ae2e02924a9ba39c6c6beedb3b62b9e9ac7a3273d14a3b190cee2aae81b6ade9",
+          "durationSeconds": 4.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb1_vl4_rr2.wav",
+          "bytes": 558462,
+          "sha256": "aa77dafb8b1d77fde583b0accb0269056a31ccf60aed0cdb9138dc2f43b4526d",
+          "durationSeconds": 4.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb1_vl4_rr3.wav",
+          "bytes": 558462,
+          "sha256": "75b86489bde90c6656ce45920b7e354b0f076356dfdae76df65560fb6d2c1a7e",
+          "durationSeconds": 4.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb1_vl4_rr4.wav",
+          "bytes": 558462,
+          "sha256": "55fad88c2367726841f4184ad1564431fea75c4f7544ddd683ed4c29df4d7cf2",
+          "durationSeconds": 4.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb2_vl1_rr1.wav",
+          "bytes": 532002,
+          "sha256": "be044116185506b9d7625ce11fd097b22695f59cbd66e787555318fb05c9dd49",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb2_vl1_rr2.wav",
+          "bytes": 532002,
+          "sha256": "cccf791d873f3ee42cdbc5e9b578667509350dab75734175d9666e7934839d99",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb2_vl1_rr3.wav",
+          "bytes": 532002,
+          "sha256": "65b42de580fa63b67f43482b0f80a540ade60ca271027528c7497fd02b363ce4",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb2_vl1_rr4.wav",
+          "bytes": 532002,
+          "sha256": "d49e26999b12d8b784d22f9c331dddcb2bbd816a09fe134bd3ca1b6ba8f061a3",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb2_vl2_rr1.wav",
+          "bytes": 532002,
+          "sha256": "46e3f53eb05a580754da495e455340be01b4e30704fbd19f93dfdacc210cadb4",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb2_vl2_rr2.wav",
+          "bytes": 532002,
+          "sha256": "f8f05a6c6242e22c6e4005d5c9452d9385f0cd5684b6510741cab6613eb6d204",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb2_vl2_rr3.wav",
+          "bytes": 532002,
+          "sha256": "abc072fbd7f46ae284028542fd50bd26e5e8ad7d1e03be94bcc3badb3589a010",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb2_vl2_rr4.wav",
+          "bytes": 532002,
+          "sha256": "833ce2124b62b6d26c5d0d749aea837a51ff1d4b34300a8729356ebacdb2f2f5",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb2_vl3_rr1.wav",
+          "bytes": 532002,
+          "sha256": "505ed4bfbab9fd7b15746f9997044a2c56c944028bb49498bd544018ab0affb2",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb2_vl3_rr2.wav",
+          "bytes": 532002,
+          "sha256": "ca4739c9f5433afe711deced81b92337d9b5b52aa143b5f1bef2e4e331a965bd",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb2_vl3_rr3.wav",
+          "bytes": 532002,
+          "sha256": "f10b018ca28e75442d6d19c142a7bd46ddfd82f17a04fc3baf9c01afec2bf50a",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb2_vl3_rr4.wav",
+          "bytes": 532002,
+          "sha256": "cf211c950afb4b2d60d3307edc2871c52218ae56e279d0d2c1a841e4275a7e77",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb2_vl4_rr1.wav",
+          "bytes": 532002,
+          "sha256": "cc0063510aaa80cab2fa0c2f0de8ea28b14e97ab7fbc13e2035e3e49854f46aa",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb2_vl4_rr2.wav",
+          "bytes": 532002,
+          "sha256": "79e8876b14ae42f320e2f5470d76d08ab8f7cdeee8a79cb4cdb6c9b23feb20de",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb2_vl4_rr3.wav",
+          "bytes": 532002,
+          "sha256": "14b2eb0c438c3a0abd8af608c8be6ca4dacc28aa882effd6e7f8f64f822f34f4",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb2_vl4_rr4.wav",
+          "bytes": 532002,
+          "sha256": "0150bcbabbc10ed95d09d710454f265cea5ac46e917e5c404fb00456fbb19de3",
+          "durationSeconds": 4
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb3_vl1_rr1.wav",
+          "bytes": 426162,
+          "sha256": "3687071fc4cc370ee6cde93ee41c504ac304197e0c4f037bbc04fc49521576be",
+          "durationSeconds": 3.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb3_vl1_rr2.wav",
+          "bytes": 426162,
+          "sha256": "6069a8657602c5c8f35ee07d5b158a541d74dce87ba21504700a56b626720830",
+          "durationSeconds": 3.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb3_vl1_rr3.wav",
+          "bytes": 426162,
+          "sha256": "40ec500f552b89e852df0dea77353b4d76e0791594db21859ff563dd6792f80d",
+          "durationSeconds": 3.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb3_vl1_rr4.wav",
+          "bytes": 426162,
+          "sha256": "b7709211be54203903b7b21402ae82188d7ed02ce826cb544a2af6b932920af9",
+          "durationSeconds": 3.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb3_vl2_rr1.wav",
+          "bytes": 426162,
+          "sha256": "35a2325ef192ae876de0dd35a251a9f0a80af457ed3dcf4b00cb1dd917c683ba",
+          "durationSeconds": 3.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb3_vl2_rr2.wav",
+          "bytes": 426162,
+          "sha256": "54baa4ea1b58adc91b7c7db1dd1bb6dcc8afd23b505163ebc6d38f58de37f9fe",
+          "durationSeconds": 3.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb3_vl2_rr3.wav",
+          "bytes": 426162,
+          "sha256": "846c6aa1d8e881c87de0dc4a685ca93310a5d1d8859af31dabed197478657047",
+          "durationSeconds": 3.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb3_vl2_rr4.wav",
+          "bytes": 426162,
+          "sha256": "4051763d5d9058743b8fc7da64a7882cf2cf1b4a51099c1b1ef7cde7755c9c5e",
+          "durationSeconds": 3.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb3_vl3_rr1.wav",
+          "bytes": 426162,
+          "sha256": "58a60623aa3196c24446494131839cf68ef6b762c70f18a34591c506443c15a7",
+          "durationSeconds": 3.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb3_vl3_rr2.wav",
+          "bytes": 426162,
+          "sha256": "69c065f5ab3f75dd1c638aa083133c2f1998fb71a8f5565dbf68787c7d2065a0",
+          "durationSeconds": 3.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb3_vl3_rr3.wav",
+          "bytes": 426162,
+          "sha256": "b6eebe6412955e4b7cb62154c13f3432f66ce019782d0cfbf434a9e8175998b6",
+          "durationSeconds": 3.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb3_vl3_rr4.wav",
+          "bytes": 426162,
+          "sha256": "02c93efef6ff31d83550127f2c4c9443458289ea1507e6d7539caad827fadc1b",
+          "durationSeconds": 3.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb3_vl4_rr1.wav",
+          "bytes": 426162,
+          "sha256": "f85f8e2a238bb37d8ecd3429f90636984d1fe1df113cb9d8fe69c1666389fed9",
+          "durationSeconds": 3.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb3_vl4_rr2.wav",
+          "bytes": 426162,
+          "sha256": "ae19c88a554888c1a6800887584121f413c5db33db2be68dddb545f581f8bded",
+          "durationSeconds": 3.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb3_vl4_rr3.wav",
+          "bytes": 426162,
+          "sha256": "885435509bb1a2cc07d8db2c7f1eff2adede36162ae1d4dd1a0b34a8c9711a7b",
+          "durationSeconds": 3.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/gb3_vl4_rr4.wav",
+          "bytes": 426162,
+          "sha256": "41e12f97c014dccf58223a4f1bf194a5daf10f94f1b7c2914d0d5f0dcae246af",
+          "durationSeconds": 3.2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc1_rr1.wav",
+          "bytes": 267402,
+          "sha256": "e6cec289e62cdb237efa5918189962404eedb1976ed73eacae81cb6e77742a8b",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc1_rr2.wav",
+          "bytes": 267402,
+          "sha256": "2a78c53808143a68e789b618ddc767ec49072cfdd9be1e28e9d7e92918a565b5",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc1_rr3.wav",
+          "bytes": 267402,
+          "sha256": "4c5ddced8775e928df77f4fc7e19af0a8da3aee9cdf5daf5ad57ca3b337195ea",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc1_rr4.wav",
+          "bytes": 267402,
+          "sha256": "e0980bdca663776ea0f75a866e290a9b50f56215e2dcc1daf5cb0b7ecff98c8e",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc1_rr5.wav",
+          "bytes": 267402,
+          "sha256": "56a9656a02aaf39f3d420cf9f2169e34dbf77d1cb4393ce47d4b0f294b8cff8f",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc2_rr1.wav",
+          "bytes": 267402,
+          "sha256": "00a6668fe06241484a5d7463ac6754f4ab11de23067618c0f836d4ed71ce5af7",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc2_rr2.wav",
+          "bytes": 267402,
+          "sha256": "8520f7b4febd6c308345f09b6e22162f5c52a4821ce6d87dee93b3dce5b3b0cb",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc2_rr3.wav",
+          "bytes": 267402,
+          "sha256": "17b1c296412d748091997d55eab38ca2428d0b417406503614723d87c01063f9",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc2_rr4.wav",
+          "bytes": 267402,
+          "sha256": "7d5db3f19d6258470efe9b4f1bdc1e36976abf7d92ecad3cebfef8413ea62857",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc2_rr5.wav",
+          "bytes": 267402,
+          "sha256": "6cab640d206aea2b56a21d882becc4995150d28049f5c667c147c9824ae6630a",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc3_rr1.wav",
+          "bytes": 267402,
+          "sha256": "d1b3dfaaa9c3c49864658dfa3d4c6191cf7f50594cac8f565018a0b96e1d9676",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc3_rr2.wav",
+          "bytes": 267402,
+          "sha256": "29f2d6d6e2bd6d04953fd8e061b00e1e823fb1375ebb8d39446eecb6d8bc25b0",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc3_rr3.wav",
+          "bytes": 267402,
+          "sha256": "e03ca670d41fadd30d74bebcc40389af934e3d012d2023a3ba42f06d0ef68e20",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc3_rr4.wav",
+          "bytes": 267402,
+          "sha256": "9ae70e07ef7f18c170467df0bb6582fb451778293584af53d00ddd550a15c400",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc3_rr5.wav",
+          "bytes": 267402,
+          "sha256": "6f7a3a713c0d5eb92cfa3f1090b0e2af5be830f91816b5e4d655ab6fe87f454d",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc4_rr1.wav",
+          "bytes": 267402,
+          "sha256": "027e39c806f38642f54db8f8c97d5fc7897fca1bede7909666d00128b86c0141",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc4_rr2.wav",
+          "bytes": 267402,
+          "sha256": "f3a81a5cbd09823ff658b4279390fc24109c393ac70213ce9560bb1b5a6679be",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc4_rr3.wav",
+          "bytes": 267402,
+          "sha256": "5a7d89257e24b4981ae0bd666a912f40591df3489cfef9ae1b4f994086385731",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc4_rr4.wav",
+          "bytes": 267402,
+          "sha256": "0a532ddd84e788c924e82a8262f8a084965c024980c6a7c1b3cc88a78326309c",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc4_rr5.wav",
+          "bytes": 267402,
+          "sha256": "9a431e8033827bfd6152cd2377855134e75e1293fc59449a58e0a29246edffd5",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc5_rr1.wav",
+          "bytes": 267402,
+          "sha256": "93377f32a82d754308ff56e656ff08830d11c6fd79d5297bee90bfc2290980b3",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc5_rr2.wav",
+          "bytes": 267400,
+          "sha256": "ba0d2a1db867c293b6bae8826a5199b3a29f5cbb75404d5766ce3a899d940e90",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc5_rr3.wav",
+          "bytes": 267400,
+          "sha256": "6e1ff9753a472b4d456eb480c878fd035b661f383b969f370cb78c77e182e6c1",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc5_rr4.wav",
+          "bytes": 267400,
+          "sha256": "7be9ec32ae29bca9b90e85026139cc066069ccb221ff3e2c1b094b9d9806720b",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc5_rr5.wav",
+          "bytes": 267400,
+          "sha256": "2a90cb9811584b4ffbc73ccd965aaaf7e5fb44afbf65e474163970b414dc26f4",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc6_rr1.wav",
+          "bytes": 267400,
+          "sha256": "1abd47a493b2b99ab7e88f1e5bc32d61905bda42e7a7231d43298a5f118822ae",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc6_rr2.wav",
+          "bytes": 267400,
+          "sha256": "ea0b68b2d5313483371f608637de126638377c4c2d8f18ee42afda081589f9d5",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc6_rr3.wav",
+          "bytes": 267400,
+          "sha256": "97e3b466588cff083c3734feb4df3a0717dbfcc13d871b97ce39473b3690719e",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc6_rr4.wav",
+          "bytes": 267400,
+          "sha256": "ffe61bdb884e9c42768735b940b3c26ea01ef8f4c4829fd53d2d218923eeb581",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc6_rr5.wav",
+          "bytes": 267400,
+          "sha256": "b1bcdfbb29e390a394b06007a8a954d3f38c2a56849cbd80e783170681314628",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc7_rr1.wav",
+          "bytes": 267400,
+          "sha256": "c910649ebb4c196649ed9d91b4c70e049a8aac7849f9af73071b5df4d95e0682",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc7_rr2.wav",
+          "bytes": 267398,
+          "sha256": "1c4ddd707d0620e8e103a18b5ec5ec39114cb88ad0390487e4c6fa729e9b42a4",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc7_rr3.wav",
+          "bytes": 267398,
+          "sha256": "76ab6264c649816d703cf15105f5f31ed47472ec3b8952a8736f904564cd6f17",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc7_rr4.wav",
+          "bytes": 267398,
+          "sha256": "1408bd963f4d1c36c66b99eba5ad4e66e75a64b0db1b449cc54011714046d152",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc7_rr5.wav",
+          "bytes": 267398,
+          "sha256": "20c2c952fb35a092dfd8cd2b8e94c88b7a08e07036986a23f8a2271ed4000078",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc8_rr1.wav",
+          "bytes": 267398,
+          "sha256": "5658ab60d4b0200ac7517d1b9f49483c0b59634e947fde8761c799a651201828",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc8_rr2.wav",
+          "bytes": 267398,
+          "sha256": "423a1e706c1c9c0633ecc2eb8095645f9201180b8fdd199a61a3880a1c38b614",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc8_rr3.wav",
+          "bytes": 267398,
+          "sha256": "13f3bf795bab8253d2c8e06cc2488d9c8909bd275a1eb2e94440a51a8de13142",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc8_rr4.wav",
+          "bytes": 267398,
+          "sha256": "026befc9ee6a2ffcf2a1a1686a2fd65900a5a95040ed2b0144f096263d48ac64",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/Samples/pizz/perc8_rr5.wav",
+          "bytes": 267398,
+          "sha256": "fe300dba70f4a0b0f7de82b90bd473ba4a1fd3852d97565bf8ac7e284a36c7e6",
+          "durationSeconds": 2
+        },
+        {
+          "path": "Meatbass/readme.txt",
+          "bytes": 1578,
+          "sha256": "7d70e2dc92ff38cab3248fe6f40ed0830f98a2a3b51ba23dcf9b852775e83818"
+        }
+      ],
       "archive": {
         "tag": "v1.001",
         "asset": "Karoryfer.Meatbass.v1.001.zip",
         "bytes": 255425351,
         "url": "https://github.com/sfzinstruments/karoryfer.meatbass/releases/download/v1.001/Karoryfer.Meatbass.v1.001.zip"
-      }
+      },
+      "sfz": "Meatbass/Programs/04_pizz.sfz",
+      "durationSeconds": 8.196485,
+      "mirroredAt": "2026-09-29"
     },
     {
       "id": "karoryfer-emilyguitar",
