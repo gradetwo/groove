@@ -173,6 +173,23 @@ export function setCollapsed(arrangement: ArrangementV2, trackId: string, collap
  * `changeTrackKind` decides whether a track *may* hold a sample; this chooses *which* one it plays. Only a `sampler` track accepts it — on any other kind the field would be a claim that something sounds from a track whose kind
  * says it does not, and the model keeps exactly one place where playing a catalogue asset is true.
  */
+/**
+ * Turn one step of a track's own pattern on or off.
+ *
+ * The steps are the track's content, and until now nothing in the arrangement interface showed them: the rows carried a name, a kind, mute, solo and delete, so a new project was silent in the sense that nothing on screen accounted for
+ * what would be heard. Turning a step is therefore the smallest edit that makes the content both visible and the person's own.
+ *
+ * Refused for `fx` and `folder`: `defaultContentFor` gives them all-zero steps, and that is their definition rather than an omission — a folder makes no sound and an empty effect does nothing.
+ */
+export function toggleStep(arrangement: ArrangementV2, trackId: string, index: number): ArrangementV2 {
+  const track = arrangement.tracks.find((candidate) => candidate.id === trackId);
+  if (!track || track.kind === "fx" || track.kind === "folder") return arrangement;
+  const current = arrangement.notesByTrack?.[trackId] ?? [];
+  if (index < 0 || index >= current.length) return arrangement;
+  const steps = current.map((value, position) => (position === index ? (value ? 0 : 1) : value));
+  return { ...arrangement, notesByTrack: { ...(arrangement.notesByTrack ?? {}), [trackId]: steps } };
+}
+
 export function setTrackSample(arrangement: ArrangementV2, trackId: string, assetId: string): ArrangementV2 {
   return {
     ...arrangement,

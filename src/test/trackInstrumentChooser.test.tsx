@@ -18,6 +18,7 @@ const instruments = [
 
 function renderList(arrangement: ReturnType<typeof addTrack>, overrides: Record<string, unknown> = {}) {
   const onChangeInstrument = vi.fn();
+  const onToggleStep = vi.fn();
   render(
     <TrackListV2
       arrangement={arrangement}
@@ -28,10 +29,11 @@ function renderList(arrangement: ReturnType<typeof addTrack>, overrides: Record<
       onChangeKind={() => undefined}
       instruments={instruments}
       onChangeInstrument={onChangeInstrument}
+      onToggleStep={onToggleStep}
       {...overrides}
     />
   );
-  return { onChangeInstrument };
+  return { onChangeInstrument, onToggleStep };
 }
 
 describe("the instrument chooser in a track row", () => {
@@ -64,5 +66,31 @@ describe("the instrument chooser in a track row", () => {
     resetTrackIdsForTests();
     renderList(addTrack(base(), "sampler", "Sampler 1"), { instruments: [] });
     expect(screen.queryByLabelText("Sampler 1 instrument")).toBeNull();
+  });
+});
+
+describe("a track's own steps in the row", () => {
+  it("shows one control per step, and marks the ones that are on", () => {
+    resetTrackIdsForTests();
+    // `defaultContentFor` gives a drum track every fourth step, so the row must show 16 controls with 4 of them pressed.
+    const withTrack = addTrack(base(), "drumkit", "Drums");
+    renderList(withTrack);
+    const steps = screen.getAllByLabelText(/^Drums step \d+$/);
+    expect(steps).toHaveLength(16);
+    expect(steps.filter((step) => step.getAttribute("aria-pressed") === "true")).toHaveLength(4);
+  });
+
+  it("reports which track and which step were clicked", () => {
+    resetTrackIdsForTests();
+    const withTrack = addTrack(base(), "drumkit", "Drums");
+    const { onToggleStep } = renderList(withTrack);
+    fireEvent.click(screen.getByLabelText("Drums step 2"));
+    expect(onToggleStep).toHaveBeenCalledWith(withTrack.tracks[0]!.id, 1);
+  });
+
+  it("shows no steps for a kind that makes no sound", () => {
+    resetTrackIdsForTests();
+    renderList(addTrack(base(), "folder", "Group"));
+    expect(screen.queryByLabelText("Group steps")).toBeNull();
   });
 });

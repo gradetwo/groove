@@ -1,6 +1,6 @@
 import type { ArrangementV2 } from "../types/arrangementV2";
 import { beforeEach, describe, expect, it } from "vitest";
-import { addTrack, createArrangement, removeTrack, resetTrackIdsForTests, setTrackParent, setTrackSample } from "../data/arrangementEdits";
+import { addTrack, createArrangement, removeTrack, resetTrackIdsForTests, setTrackParent, setTrackSample, toggleStep } from "../data/arrangementEdits";
 
 /**
  * The edits an interface is built from, and the two ways they go quietly wrong.
@@ -254,5 +254,37 @@ describe("choosing the instrument a sampler track plays", () => {
     const named = { ...withSampler, tracks: [{ ...sampler, muted: true, gainDb: -3 }] };
     const edited = setTrackSample(named, sampler.id, "karoryfer-emilyguitar");
     expect(edited.tracks[0]).toMatchObject({ name: "Sampler 1", muted: true, gainDb: -3 });
+  });
+});
+
+describe("editing a track's own steps", () => {
+  it("turns a step on and off again", () => {
+    const withTrack = addTrack(emptyArrangement(), "drumkit", "Drums");
+    const id = withTrack.tracks[0]!.id;
+    const on = toggleStep(withTrack, id, 0);
+    expect(on.notesByTrack![id]![0]).toBe(0); // every 4 from 0: step 0 starts on, so the first toggle takes it off
+    const off = toggleStep(on, id, 0);
+    expect(off.notesByTrack![id]![0]).toBe(1);
+  });
+
+  it("leaves the other steps of that track alone", () => {
+    const withTrack = addTrack(emptyArrangement(), "drumkit", "Drums");
+    const id = withTrack.tracks[0]!.id;
+    const before = withTrack.notesByTrack![id]!;
+    const edited = toggleStep(withTrack, id, 1);
+    expect(edited.notesByTrack![id]!.filter((_, index) => index !== 1)).toEqual(before.filter((_, index) => index !== 1));
+  });
+
+  it("refuses a step outside the pattern rather than growing one", () => {
+    // A 16-step bar is what the data holds; an index beyond it would invent a length nobody chose.
+    const withTrack = addTrack(emptyArrangement(), "drumkit", "Drums");
+    const id = withTrack.tracks[0]!.id;
+    expect(toggleStep(withTrack, id, 99)).toBe(withTrack);
+  });
+
+  it("refuses a kind that makes no sound, because its all-zero steps are its definition", () => {
+    const withFolder = addTrack(emptyArrangement(), "folder", "Group");
+    const id = withFolder.tracks[0]!.id;
+    expect(toggleStep(withFolder, id, 0)).toBe(withFolder);
   });
 });
