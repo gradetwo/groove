@@ -44,7 +44,17 @@ const BUDGETS = {
    * above, this is the shape of the feature rather than slack — and the next feature in this area has to find its bytes
    * elsewhere.
    */
-  initialRouteGzipKb: 223,
+  /**
+   * 223 → 226 on 2026-09-29, and the reason is a process failure rather than a feature.
+   *
+   * **CI had been red for at least forty consecutive pushes and nobody had looked.** Every one of those runs failed on this single check, so the numbers below were being produced and thrown away; the local gate does not build, so nothing local
+   * could catch it either. The limit is raised here because the growth is real and nobody is going to reclaim it by wishing: the entry now carries the arrangement route's track list, step strip and take panel, the mobile sheet's new-project entry, and the
+   * Tailwind utilities those bring, and the initial route measures **224.9 KB** where the last raise left it at 222.4.
+   *
+   * Raising a budget to clear a red gate is exactly what budgets exist to prevent, so two things change with it: `release.sh` now runs this check **before** deploying, which makes it block publishing rather than only annotate a commit, and the
+   * reason each raise is recorded here stays the rule. The next raise needs the same: a measurement, and what grew.
+   */
+  initialRouteGzipKb: 226,
   /**
    * GS-1 vendored core. The Rust→WASM engine artifacts are not `.js`, so every
    * budget above simply does not see them: a GS-1 bump could grow the payload 40%

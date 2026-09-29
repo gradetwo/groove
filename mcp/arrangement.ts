@@ -28,6 +28,9 @@ import {
 } from "../src/data/arrangementEdits";
 import type { ArrangementV2, TrackKindV2, TrackV2 } from "../src/types/arrangementV2";
 import type { PlannedTake } from "../src/data/takePlanning";
+import { compileArrangementToSongInput } from "../src/data/arrangementCompile";
+import { createSong } from "../src/types/song";
+import { flattenSong, type FlattenedSong } from "../src/data/songFlatten";
 
 const arrangements = new Map<string, ArrangementV2>();
 let idSequence = 0;
@@ -274,6 +277,32 @@ function unknownTrack(arrangement: ArrangementV2, trackId: string): string {
 function refuseUnknownTrack(arrangement: ArrangementV2, trackId: string, apply: () => ArrangementV2): ArrangementV2 {
   if (!arrangement.tracks.some((track) => track.id === trackId)) throw new Error(unknownTrack(arrangement, trackId));
   return apply();
+}
+
+/**
+ * The arrangement as something the renderer can bounce, through the same flatten the application uses.
+ *
+ * **An arrangement is one bar of sixteen steps, and saying so here is the point.** The v2 model holds steps per track and no length of its own, so "render the arrangement" means the loop the interface's Play button plays — not a piece. Offering it as a longer
+ * request would be a promise the model cannot keep; when the model gains a length, this follows.
+ *
+ * The chain is the application's own: `compileArrangementToSongInput` projects the tracks onto the eight v1 roles, `createSong` wraps them as one clip and one section, and `flattenSong` turns that into the pattern `renderAudio` takes. Nothing here invents a
+ * second renderer, which is the rule the whole MCP render surface follows.
+ */
+export function flattenMcpArrangement(arrangementId: string): { flattened: FlattenedSong; bars: number } {
+  const arrangement = requireArrangement(arrangementId);
+  if (arrangement.tracks.length === 0) throw new Error("this arrangement has no tracks, so there is nothing to render");
+  const songInput = compileArrangementToSongInput(arrangement, arrangement.notesByTrack ?? {});
+  /**
+   * The clip needs the fields a `SequencerPattern` requires and nothing more: the compiled lanes, and the four the format insists on. `genre_id` is `"custom"` because an arrangement is not a genre's pattern — saying otherwise would make a render claim a
+   * provenance it does not have.
+   */
+  const clip = { genre_id: "custom", bpm: songInput.bpm, scale: "chromatic", resolution: "1/16" as const, tracks: songInput.clips.A.tracks };
+  const song = createSong({ id: arrangement.songId, genreId: "custom", bpm: songInput.bpm, clip });
+  const flattened = flattenSong(song);
+  if (!flattened.totalBars || flattened.totalSteps <= 0) {
+    throw new Error(`cannot render "${arrangementId}": ${flattened.problems.join("; ") || "no playable steps"}`);
+  }
+  return { flattened, bars: flattened.totalBars };
 }
 
 /** One line per track, for a caller reading a log rather than parsing a summary. */
