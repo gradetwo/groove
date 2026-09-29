@@ -50,7 +50,13 @@ if (tree.truncated) {
  */
 const isInstrumentFile = (path) => !path.split("/").some((segment) => segment.startsWith("."));
 
-const blobs = (tree.tree ?? []).filter((node) => node.type === "blob" && isInstrumentFile(node.path));
+/**
+ * ⭐ **A library may be a part of a repository.** VCSL is 5.74 GB, of which `Chordophones` is 3.38 GB — the block that duplicates the orchestral strings VSCO would have provided. The rule that chose the four remaining families is recorded
+ * in the plan; what it needs here is a way to say "these prefixes and no others", so the manifest entry can describe part of a tree rather than all of it. Absent `paths`, every file is included, which is what the other entries want.
+ */
+const wanted = (entry.paths ?? []).filter((prefix) => typeof prefix === "string" && prefix !== "");
+const included = (path) => wanted.length === 0 || wanted.some((prefix) => path === prefix || path.startsWith(`${prefix.replace(/\/$/, "")}/`));
+const blobs = (tree.tree ?? []).filter((node) => node.type === "blob" && isInstrumentFile(node.path) && included(node.path));
 const sfzFiles = blobs.filter((node) => node.path.endsWith(".sfz"));
 const audio = blobs.filter((node) => /\.(wav|flac|aiff|aif|ogg|mp3)$/i.test(node.path));
 const bytes = blobs.reduce((sum, node) => sum + (node.size ?? 0), 0);
@@ -61,6 +67,7 @@ console.log(`  declared sfz: ${entry.sfz ?? "✗ none"}`);
 
 // ⭐ The file the application would open, named rather than assumed: an entry whose `sfz` is absent or not in the tree cannot be played.
 const declaredPresent = entry.sfz ? blobs.some((node) => node.path === entry.sfz) : false;
+if (wanted.length > 0) console.log(`  limited to: ${wanted.join(", ")}`);
 if (entry.sfz && !declaredPresent) {
   const candidates = sfzFiles.slice(0, 5).map((node) => node.path);
   console.error(`  ⚠️ the declared sfz is not in the tree; candidates: ${candidates.join(", ") || "none"}`);
