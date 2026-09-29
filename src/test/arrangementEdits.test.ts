@@ -96,3 +96,45 @@ describe("mute, solo, rename and fold", () => {
     expect(arr.tracks.find((t) => t.id === folder.id)!.collapsed).toBe(true);
   });
 });
+
+describe("choosing takes", () => {
+  const withTakes = () => {
+    let arr = createArrangement("s");
+    arr = addTrack(arr, "sampler", "Drums");
+    const id = arr.tracks[0]!.id;
+    arr = {
+      ...arr,
+      tracks: arr.tracks.map((track) => ({ ...track, takes: [{ id: "t1", recordedAt: 1, source: "audio" as const }, { id: "t2", recordedAt: 2, source: "audio" as const }] })),
+    };
+    return { arr, id };
+  };
+
+  it("refuses to select a take that does not exist, rather than storing a selection that resolves to nothing", async () => {
+    const { selectTrackTake } = await import("../data/arrangementEdits");
+    const { arr, id } = withTakes();
+    // Storing it would silence the track while looking configured — the failure mode that reads as an engine bug.
+    expect(selectTrackTake(arr, id, "gone").tracks[0]!.selectedTakeId).toBeUndefined();
+    expect(selectTrackTake(arr, id, "t2").tracks[0]!.selectedTakeId).toBe("t2");
+  });
+
+  it("splits a region it crosses, so the heard take never depends on array order", async () => {
+    const { assignTakeToRange, selectTrackTake } = await import("../data/arrangementEdits");
+    const { arr, id } = withTakes();
+    const seeded = selectTrackTake(arr, id, "t1");
+    const withRegion = assignTakeToRange(seeded, id, 0, 16, "t1");
+    const split = assignTakeToRange(withRegion, id, 4, 8, "t2");
+    // The original 0–16 becomes 0–4 and 8–16, with 4–8 taken by t2: disjoint, ordered, and no bar served by two regions.
+    expect(split.tracks[0]!.takeRegions).toEqual([
+      { startBar: 0, endBar: 4, takeId: "t1" },
+      { startBar: 4, endBar: 8, takeId: "t2" },
+      { startBar: 8, endBar: 16, takeId: "t1" },
+    ]);
+  });
+
+  it("refuses a backwards range and an unknown take", async () => {
+    const { assignTakeToRange } = await import("../data/arrangementEdits");
+    const { arr, id } = withTakes();
+    expect(assignTakeToRange(arr, id, 8, 8, "t1").tracks[0]!.takeRegions).toBeUndefined();
+    expect(assignTakeToRange(arr, id, 0, 8, "gone").tracks[0]!.takeRegions).toBeUndefined();
+  });
+});
