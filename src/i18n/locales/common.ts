@@ -42,6 +42,10 @@ export const commonMessages = {
   // ⭐ A route rather than a tab: it opens the new arrangement, which deliberately has no genre.
   nav_new_project: { en: "New", zh: "新建" },
   nav_new_project_desc: { en: "Start a new arrangement", zh: "开一首全新的编排" },
+  template_drums_bass_desc: { en: "A drum kit and a bass — the most common pair", zh: "鼓组加贝斯，最常见的两件套" },
+  template_drums_bass_chords_desc: { en: "Add chords and it can carry a whole song", zh: "再加一条和声，能撑起整首" },
+  template_samplers_desc: { en: "Two sampler tracks — the kind that plays real instruments", zh: "两条采样器轨道——就是能听到真实乐器的那一种" },
+  template_blank_desc: { en: "Blank, with one track already typed the way you choose", zh: "空白，但已经有一条你选好类型的轨道" },
   // Phone shell (see `src/components/MobileTabBar.tsx`). Five destinations, not eleven.
   nav_learn: { en: "Learn", zh: "学习" },
   nav_tools: { en: "Tools", zh: "工具" },
