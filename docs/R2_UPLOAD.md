@@ -929,3 +929,45 @@ included 0 · regions 0 · missing 6 · problems 13     ← ⭐ 6 个 include �
 ⭐⭐ **所以这是同一条教训的第三次出现** ✓ —— ⭐ **"include 是根相对，采样是程序相对"** ✓ —— **第一次我为鼓那一架付了学费 ✓，第二次我在 `default_path` 上认出了它 ✓，而这一次它藏在"我以为已经写对的那个函数"里** ✗✓✓。
 
 ⭐ **而修法是明确的** ✓：**`expandRemoteIncludes` 要收一个 `rootUrl` ✓（而不是从 `programUrl` 推 ✗），并把它用在候选解析上** ✓✓ —— ⭐ **探针在调用时显式给出库根 ✓**（**对 Salamander 是仓库根 ✓；对鼓是 `Programs/` 的上一层 ✓**）。
+
+
+## 34. ⭐⭐⭐ Salamander 的 6 个 include 为什么全落空：**一个开头的斜杠，加上 `new URL` 的语义**（2026-09-28 晚 ✓）
+
+### 读到的两条
+
+```ts
+// includes.ts:70
+function resolveCandidates(rootPath, fromPath, wanted) {
+  const relative = resolvePath(fromPath, wanted);   // ⭐ 文件相对
+  const fromRoot = resolvePath(rootPath, wanted);   // ⭐ 根相对
+  return relative === fromRoot ? [relative] : [relative, fromRoot];
+}
+
+// remoteIncludes.ts:92
+const target = absolute ? path : new URL(path, options.baseUrl ?? options.programUrl).toString();
+```
+
+### ⭐⭐ 而问题就在这两条之间
+
+⭐ `resolvePath` 拼出来的候选路径**很可能以 `/` 开头** ✗ —— ⭐ 而 **在 URL 里，开头的 `/` 意思是【主机根相对】** ✗✓✓：
+
+```
+new URL("/Data/notes.txt", "https://raw.githubusercontent.com/sfzinstruments/SalamanderGrandPiano/<pin>/")
+→ https://raw.githubusercontent.com/Data/notes.txt          ⭐ 基准的路径被【丢掉】了 ✗✓✓
+```
+
+⭐⭐ **所以那 6 个 include 请求的是 `raw.githubusercontent.com/Data/notes.txt`** ✗ —— ⭐ **一个不存在的地方 ✓，而错误看起来只是"404 / missing"** ✗✓ —— ⭐ **与鼓那一架当初的症状一模一样** ✓。
+
+### ⭐ 而这是那条教训的第三次，只是又深了一层
+
+| 次 | 陷阱 | 代价 |
+|---|---|---|
+| **1** | ⭐ **对"完整的 URL"做 `new URL` 算术** ✗（**`https://` 被弄成 `https:/`** ✗） | **鼓那一架** ✓ |
+| **2** | ⭐ **`include` 是根相对，而我按程序目录解析** ✗ | **鼓那一架** ✓ |
+| **3** | ⭐ **拼出来的路径带开头斜杠，`new URL` 于是丢掉基准** ✗✓ | ⭐ **Salamander 这一轮** ✓ |
+
+⭐⭐ **三次都是同一句话** ✓：**路径算术只在【相对路径】上有意义 ✓ —— 而"相对"这件事，取决于你正要把它接到什么上面** ✓✓ —— ⭐ **接到文件系统 ✓、接到 URL ✓、接到库根 ✓，是三种不同的"相对"** ✓。
+
+### ⭐ 而修法是明确的一条
+
+⭐ **要么让 `resolvePath` 不产生开头的 `/`** ✓（**把它变成真正的相对路径 ✓**）—— ⭐ **要么在 `:92` 把开头斜杠剥掉再 `new URL`** ✓✓ —— ⭐ **前者更对 ✓：因为那个 `/` 在语义上就是"仓库根相对" ✓，而它不该以 URL 的形式被误解** ✓。
