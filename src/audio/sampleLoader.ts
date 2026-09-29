@@ -17,6 +17,8 @@ import type { SampleAsset } from "../data/sampleCatalogue";
 import { resolveInstrumentNote } from "./sfz/instrument";
 import { expandRemoteIncludes } from "./sfz/remoteIncludes";
 import { sampleAssetForPath } from "./sfz/instrument";
+import { resolveSamplePath } from "./sfz/defaultPath";
+import { readDefaultPath } from "./sfz/parse";
 
 /** Decodes one asset. In the browser this wraps `decodeAudioData`; in a test it is a plain function. */
 export type SampleDecoder = (asset: SampleAsset) => Promise<AudioBuffer>;
@@ -146,7 +148,12 @@ export function createSampleLoader(
        * **A region names a file; the catalogue holds instruments** — so a miss here is expected, not an error. When the catalogue does have it, the id route is still used (it is what the app's own
        * bundled samples rely on); otherwise the path becomes an address, source-first with the mirror as fallback, and goes through the **same** decode cache.
        */
-      const samplePath = resolution.note.samplePath;
+      /**
+       * ⭐ **`default_path` joins the region's `sample` before anything resolves it.** Salamander declares `default_path=Samples/` and names its samples `harmLA0.flac`, so without this the address is one directory too high — not an
+       * error, a missing file, and an instrument that simply does not sound. It is read from the same expanded text the note was resolved against, which is the only place it exists.
+       */
+      const defaultPath = readDefaultPath(expanded.text);
+      const samplePath = resolveSamplePath(resolution.note.samplePath, defaultPath);
       if (findSampleAsset(samplePath, catalogue)) return api.load(samplePath);
       return decodeAsset(sampleAssetForPath(samplePath, { programUrl: asset.sfz.url, programFallbackUrl: asset.sfz.fallbackUrl }));
     },
