@@ -165,6 +165,8 @@ try {
     });
     const regions = parseModule.parseSfz(expanded.text);
     log.push(`expand: included ${expanded.included.length}, missing ${expanded.missing.length}, problems ${expanded.problems.length}, regions ${regions.length}`);
+    log.push(`waves: ${expanded.waves.length}`);
+    expanded.waves.forEach((wave, index) => log.push(`  wave ${index + 1}: fetched ${wave.fetched.length}, failed ${wave.failed.length}, missing after ${wave.missingAfter}`));
     for (const request of requests) log.push(`  fetch: ${request}`);
     for (const problem of expanded.problems.slice(0, 2)) log.push(`  problem: ${problem}`);
     log.push(`sfz entry: ${sfzHead.length} bytes from the source, includes ${(sfzHead.match(/^\s*#include/gm) ?? []).length}`);

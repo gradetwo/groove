@@ -161,6 +161,14 @@ export function expandIncludes(
     out.push(nested.text);
     problems.push(...nested.problems);
     included.push(wanted, ...nested.included);
+    /**
+     * **`nested.missing` has to be merged too, and it was not.** `nested.problems` and `nested.included` were collected from the recursive call, but the paths a nested file could not read were
+     * dropped — so a top-level caller saw `missing: []` while `problems` listed 119 unresolvable includes. For a synchronous reader that only costs a worse message; for an **asynchronous** caller it
+     * is fatal, because `missing` is the list it fetches: the first level resolved, every level below it silently stayed unfetched, and the library parsed to **zero regions** while reporting nothing
+     * wrong at the top.
+     */
+    missing.push(...nested.missing);
+    missing.splice(0, missing.length, ...new Set(missing));
   });
 
   return { text: out.join("\n"), problems, included, missing };
