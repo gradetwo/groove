@@ -754,3 +754,51 @@ included 0 · regions 0 · missing 6 · problems 13
 | ⭐ **B：先读主文件余下的 100 行，看它到底怎么描述 region** ✓✓ | ⭐ **零成本（2113 字节已经在手上 ✓）** ✓ | ⭐ **它会把"要不要实现 ARIA 的模板写法"变成一个看得见的工程量** ✓✓ |
 
 ⭐ **按"先量再解释"的规矩，下一轮做 B** ✓✓ —— ⭐ **因为 A 是在猜"病根在变量"，而 B 是把那 2113 字节读完** ✓。
+
+
+## 29. ⭐⭐⭐ 读完那 2113 字节：**变量出现在 opcode 的【名字】里**，而采样基准是 `default_path`（2026-09-28 晚 ✓）
+
+### 主文件的实际结构（去掉注释后）
+
+```
+#define $STR_RES 20
+#define $HAMMER 21
+#define $PEDAL 22
+#define $RELEASE 72
+#define $OFFSET 98
+#define $VELTRACK 99
+#define $NATURAL C0
+#define $RETUNED C#0
+#define $EXT flac
+<control>
+default_path=Samples/
+label_cc$STR_RES=String Res
+set_hdcc$STR_RES=0.5
+<global>
+amplitude_oncc7=100
+amp_veltrack_oncc$VELTRACK=-100
+ampeg_release_oncc$RELEASE=2
+note_polyphony=1
+off_time=0.5
+…（`#include` 与 region 在后半 ✓）
+```
+
+### ⭐⭐ 而它给出了三个确切的机制，其中第一个我之前没有
+
+| # | 机制 | 我的解析器现在 |
+|---|---|---|
+| **1** | ⭐⭐ **变量出现在 opcode 的【名字】里** ✗✓✓：`label_cc$STR_RES` ✓ `set_hdcc$STR_RES` ✓ `amp_veltrack_oncc$VELTRACK` ✓ | ⚠️ **我支持的是"值里的变量"✗** —— ⭐ **而这里是"键里的变量"** ✗✓✓ |
+| **2** | ⭐ **`default_path=Samples/`** ✓ | ⚠️ **采样路径的基准是它声明的 ✓，而我现在假定是程序目录** ✗ |
+| **3** | ⭐ **`<control>` 与 `<global>` 是两个独立的前导块** ✓ | ✓ **`<global>` 已支持 ✓；`<control>` 是新的一块** ✓ |
+
+### ⭐ 所以"能不能播 Salamander"的答案，现在是工程量的答案
+
+⭐ **不是"基准目录错了"** ✗ —— ⭐ **而是三件可分级的实现** ✓：
+
+| 优先级 | 实现 | 为什么 |
+|---|---|---|
+| **1** | ⭐ **键里的变量插值**（`label_cc$STR_RES` ✓） | ⭐ **不做它，`<control>`/`<global>` 里的行会带着 `$` 被当成未知 opcode** ✗ —— ⭐ **而更糟的是：region 里的 `sample=$EXT/…` 若也用变量，采样路径就会带着 `$`** ✗✓ |
+| **2** | ⭐ **`default_path`** ✓ | **采样基准** ✓ |
+| **3** | **`<control>` 块** | ⭐ **它主要是给编辑器看的 ✓ —— 对出声影响最小 ✓，可以最后** ✓ |
+
+⭐⭐ **而第 1 与第 2 条正是"变量"这件事的两半** ✓ —— ⭐ **也就是说：我先前猜"病根在变量"是对的 ✓，但猜小了 ✗** —— **不是"变量表要展开"，而是"变量会出现在键里，也会决定采样的基准"** ✓✓。
