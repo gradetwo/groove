@@ -7,21 +7,21 @@
     "date": "2026-09-28",
     "category": "feature",
     "title": {
-      "zh": "真实采样乐器：SFZ 支持、R2 镜像与清单",
+      "zh": "真实采样乐器：SFZ、R2 镜像与清单",
       "en": "Real sampled instruments: SFZ support, an R2 mirror and a manifest"
     },
     "highlights": [
       {
-        "zh": "SFZ 子集解析器：包含 include、变量、per-region 继承、`<master>`；用真实库（1676 个 region）与 sfizz 逐音符对照。",
-        "en": "An SFZ subset parser — includes, variables, per-region inheritance, `<master>` — verified note by note against sfizz and against a real 1676-region library."
+        "zh": "SFZ 子集解析器：include、变量、按 region 继承、`<master>`；与 sfizz 逐音符对照。",
+        "en": "An SFZ subset parser — includes, variables, per-region inheritance, `<master>` — verified note by note against sfizz."
       },
       {
-        "zh": "清单（1659 个采样，哈希与体积齐全，实测最长 14.53 秒）随仓库发布；字节镜像到 R2。",
-        "en": "A manifest of 1659 samples with hashes and sizes, longest measured at 14.53 s, shipped in the repository; the bytes are mirrored to R2."
+        "zh": "清单随仓库发布：1659 个采样带哈希与体积，实测最长 14.53 秒；字节镜像到 R2。",
+        "en": "A manifest shipped in the repository: 1659 samples with hashes and sizes, longest measured at 14.53 s; the bytes mirrored to R2."
       },
       {
-        "zh": "采样地址**源优先**：源不可用才回退到镜像；两个地址都会在失败时被点名。",
-        "en": "Sample addresses are **source-first**, falling back to the mirror only when the source fails, and both are named when both fail."
+        "zh": "采样地址源优先，源不可用才回退镜像，两个都失败时两个地址都被点名。",
+        "en": "Sample addresses are source-first, falling back to the mirror, and both are named when both fail."
       }
     ],
     "truncated": true
