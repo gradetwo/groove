@@ -1,27 +1,27 @@
 {
-  "version": "2.34.23",
+  "version": "2.34.24",
   "releaseDate": "2026-09-29",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.23",
+    "version": "2.34.24",
     "date": "2026-09-29",
     "category": "feature",
     "title": {
-      "zh": "/new 先选模板，再进编排",
-      "en": "/new opens on the chooser, then the arrangement"
+      "zh": "新编排能播放了",
+      "en": "The new arrangement can play"
     },
     "highlights": [
       {
-        "zh": "打开 /new 先看到模板卡片：鼓+贝斯、鼓+贝斯+和声、两条采样器，以及空白。",
-        "en": "Opening /new shows template cards: drums+bass, drums+bass+chords, two samplers, and blank."
+        "zh": "在 /new 里按 Play：编排被编译成引擎的车道，交给应用自己的音频引擎。",
+        "en": "Press Play in /new: the arrangement is compiled into engine lanes and handed to the app's own audio engine."
       },
       {
-        "zh": "每张卡上有一句人话说明它给你什么；Details 折叠着 Tempo 与调性。",
-        "en": "Each card carries one sentence saying what it gives you, with tempo and key folded into Details."
+        "zh": "采样器轨道因此真的会出声——这条路以前没有判据。",
+        "en": "A sampler track therefore actually sounds — a path that had no criterion before."
       },
       {
-        "zh": "空白卡带一条默认轨道，类型就在这里选；选中哪张卡，造出来的就是哪张。",
-        "en": "The blank card carries one default track whose kind you choose here, and the created project is the highlighted card."
+        "zh": "引擎还没就绪时，按钮说明原因并显示规划出的事件数（含 0），而不是静默。",
+        "en": "When the engine is not ready the button says so and shows the planned event count, including zero, rather than going silent."
       }
     ],
     "truncated": false
