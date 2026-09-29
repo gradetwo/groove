@@ -39,6 +39,8 @@ export const commonMessages = {
   app_title: { en: "Groove Odyssey", zh: "音乐曲风探索与工作台" },
   app_subtitle: { en: "Interactive Music Genre Learning & Sequencer", zh: "沉浸式交互曲风百科与步进音序器" },
   nav_studio: { en: "Studio", zh: "工作台" },
+  // ⭐ A route rather than a tab: it opens the new arrangement, which deliberately has no genre.
+  nav_new_project: { en: "New", zh: "新建" },
   // Phone shell (see `src/components/MobileTabBar.tsx`). Five destinations, not eleven.
   nav_learn: { en: "Learn", zh: "学习" },
   nav_tools: { en: "Tools", zh: "工具" },

@@ -22,6 +22,7 @@ import {
   Settings,
   BookOpen,
   Sparkles,
+  Plus,
 } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { useDeviceCapabilities } from "../hooks/useDeviceCapabilities";
@@ -243,6 +244,16 @@ export const Header: React.FC<HeaderProps> = ({
           <Sliders className="w-3.5 h-3.5" />
           <span className="truncate max-w-[84px] whitespace-nowrap select-none">{t("nav_studio")}</span>
         </button>
+
+        {/* ⭐ New Project — an **anchor**, not a tab button: "new project" is a route of its own (`/new`), and `onSelectTab` can only express a tab. Its own route rather than a fourteenth nav word follows the precedent set for `/console`. */}
+        <a
+          href="/new"
+          title={t("nav_new_project")}
+          className="flex items-center gap-1.5 text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-lg border transition-all shrink-0 border-line text-text-sub hover:text-text hover:border-line-strong bg-panel2"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span className="truncate max-w-[84px] whitespace-nowrap select-none">{t("nav_new_project")}</span>
+        </a>
 
         {/* 2. Chords */}
         <button
