@@ -100,6 +100,25 @@ describe("the sample loader and an instrument entry", () => {
     await expect(gaps.loadNote("piano", 70)).rejects.toThrow(/cover keys 60–64/);
   });
 
+  it("refuses a note whose regions the file's own controllers switch off, without decoding anything", async () => {
+    /**
+     * The end-to-end path for the gates: `sampleLoader` resolves through `resolveInstrumentNote`, which filters by the file's `<control>` defaults. A file that gates its only region off must produce a refusal that says so — and must not fetch a sample it
+     * will not play, which is why the decode counter is asserted rather than assumed.
+     */
+    const GATED = "<control>\nset_cc1=0\n<region> sample=low.wav lokey=0 hikey=127 pitch_keycenter=60 locc1=64\n";
+    let decodes = 0;
+    const loader = createSampleLoader(
+      async (asset) => {
+        decodes += 1;
+        return fakeBuffer(asset.assetId);
+      },
+      INSTRUMENTS,
+      async () => GATED
+    );
+    await expect(loader.loadNote("piano", 60)).rejects.toThrow(/none of them sound at the controller values/);
+    expect(decodes).toBe(0);
+  });
+
   it("decodes a sample shared by several notes only once — the single-flight rule applies to the sample, not the note", async () => {
     let started = 0;
     const loader = createSampleLoader(
