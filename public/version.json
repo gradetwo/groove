@@ -1,27 +1,27 @@
 {
-  "version": "2.34.26",
+  "version": "2.34.27",
   "releaseDate": "2026-09-29",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.26",
+    "version": "2.34.27",
     "date": "2026-09-29",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "新编排界面用上了应用的样式",
-      "en": "The new arrangement interface uses the app's styling"
+      "zh": "顶部导航加了新建入口",
+      "en": "A New entry in the top navigation"
     },
     "highlights": [
       {
-        "zh": "此前的 /new 是一堆没有样式的文字：组件一个类都没用，而应用是用工具类与设计令牌画的。",
-        "en": "Until now /new was a wall of unstyled text: the components used no classes, while the app is drawn with utilities and tokens."
+        "zh": "顶部导航里多了一个新建，直接进入新编排 /new。",
+        "en": "The top navigation now has a New entry that opens the new arrangement at /new."
       },
       {
-        "zh": "现在卡片、轨道行、take 选择器、录音按钮都使用应用已有的词汇，不新造一套。",
-        "en": "Cards, track rows, the take selector and the record button now use the app's existing vocabulary rather than a new one."
+        "zh": "它是一个链接而不是标签页：新项目是一条自己的路由，不必成为第十四个导航词。",
+        "en": "It is a link rather than a tab: a new project is a route of its own and need not become a fourteenth nav word."
       },
       {
-        "zh": "而原有三层检查都是绿的，所以还补一个「新组件必须用到样式」的检查。",
-        "en": "All three existing checks were green, so a check of the missing kind is added: a new component must use styling."
+        "zh": "手机底部导航的入口还在做。",
+        "en": "The mobile bottom bar entry is still to come."
       }
     ],
     "truncated": false
