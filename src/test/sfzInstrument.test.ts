@@ -104,4 +104,41 @@ describe("sampleAssetForPath", () => {
     expect(asset.url).toBe("https://host/lib/Programs/Samples/a.flac");
     expect(asset.fallbackUrl).toBeUndefined();
   });
+
+  /**
+   * **The gates run before a region is chosen, at the values the file itself declares.** `loccN`/`hiccN` are not modulations: a region outside its range is absent, and choosing one anyway plays a microphone the file says is off.
+   */
+  it("leaves out a region the file's own controller values gate off", () => {
+    // `set_cc1=0` and an unset controller are the same value, and 0 is below the 64 the region asks for.
+    const gated = `
+<control>
+set_cc1=0
+<region> sample=low.wav lokey=0 hikey=127 pitch_keycenter=60 locc1=64
+`;
+    const result = resolveInstrumentNote(instrument(), gated, 60);
+    expect(result.ok).toBe(false);
+    // The reason says which instrument and why, rather than "no region covers note 60" — the regions do cover it; they are switched off.
+    expect(result.reason).toMatch(/none of them sound at the controller values/);
+  });
+
+  it("plays that same region once the file's defaults turn the controller on", () => {
+    // The only difference is `set_cc1=127`, which is how `virtuosity_drums` enables every microphone it declares a gate for.
+    const enabled = `
+<control>
+set_cc1=127
+<region> sample=low.wav lokey=0 hikey=127 pitch_keycenter=60 locc1=64
+`;
+    const result = resolveInstrumentNote(instrument(), enabled, 60);
+    expect(result.ok).toBe(true);
+    expect(result.note?.samplePath).toBe("low.wav");
+  });
+
+  it("still reports the file's regions when every one of them is gated off, so the file can be inspected", () => {
+    // Both are off at rest for the same reason an unset controller is 0: `locc1=64` needs 64 and `locc2=1` needs 1.
+    const gated = "<region> sample=a.wav pitch_keycenter=60 locc1=64\n<region> sample=b.wav pitch_keycenter=60 locc2=1\n";
+    const result = resolveInstrumentNote(instrument(), gated, 60);
+    expect(result.ok).toBe(false);
+    // Both regions are reported: a caller diagnosing "nothing sounds" needs to see what the file defines, not just that nothing does.
+    expect(result.regions.map((region) => region.sample)).toEqual(["a.wav", "b.wav"]);
+  });
 });
