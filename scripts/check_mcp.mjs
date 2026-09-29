@@ -111,6 +111,15 @@ try {
   const tools = await client.request("tools/list", {});
   const names = (tools?.tools ?? []).map((tool) => tool.name);
   check("tools/list returns the full declared surface", names.length >= 18, `${names.length} tools`);
+  /**
+   * **The count, printed rather than only asserted.** `docs/MCP.md` used to say "45 tools" in prose, which stopped being true the moment a feature arrived; the number belongs to the server, so the gate that lists the surface says what it is. A reader
+   * asking "how big is this surface" now has a command for it.
+   */
+  const listedResources = await client.request("resources/list", {});
+  const listedPrompts = await client.request("prompts/list", {});
+  console.log(
+    `   surface      : ${names.length} tools, ${(listedResources?.resources ?? []).length} resources, ${(listedPrompts?.prompts ?? []).length} prompts`
+  );
   for (const required of [
     "list_genres",
     "get_genre",
