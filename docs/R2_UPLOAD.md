@@ -1057,3 +1057,44 @@ new URL("sfzi…/<pin>/Data/notes.txt", "sfzi…/<pin>/Salamander Grand Piano V3
 ⭐ **`readDefaultPath` 不存在** ✗✓（`TypeError: readDefaultPath is not a function` ✓）—— ⭐ **因为第 270 轮我把那次失败的接线【回退】了 ✓，而 `readDefaultPath` 就在被回退的那一批里** ✗✓ —— ⭐ **所以探针引用了一个当时的树里没有的函数** ✗ —— ⭐ **这正是"回退"这个动作的代价 ✓：它让下一次的调用方必须重新读一遍"现在有什么"** ✓✓。
 
 ⭐ **而修法是同一句话** ✓：**接线（`parseSfz` 里跑 `applyDefines` ✓ + `readDefaultPath` ✓）在第 271 轮已经落进 `9f5e873` ✓ —— 所以探针该用的是那一版，而不是我记忆里的形状** ✗✓。
+
+
+## 37. ⭐⭐⭐⭐⭐ **成了：Salamander Grand Piano 是可播的**（2026-09-28 晚 ✓）
+
+### 读数
+
+```
+included 7 · regions 161 · missing 0
+distinct samples: 161 · 第一个: harmLA0.flac
+✅ PLAYABLE — regions exist after expansion
+```
+
+⭐⭐ **7 个 include 全部取到 ✓ · 161 个 region ✓ · 0 个 missing ✓ · 161 个不同的采样** ✓✓ —— ⭐ **而那台钢琴的 `.sfz` 只有 2113 字节** ✓。
+
+### ⭐ 而修法就是那条约定，只是要"两样都给"
+
+| 参数 | 值 | 它服务于 |
+|---|---|---|
+| **`programUrl`** | **`sfzi…/<pin>/Salamander Grand Piano V3.sfz`**（**纯路径** ✓） | **路径算术** ✓ |
+| **`baseUrl`** | **`https://raw.githubusercontent.com/`**（**绝对 URL** ✓） | **fetch 时拼地址** ✓ |
+
+⭐ **于是 `new URL("sfzi…/<pin>/Data/notes.txt", "https://raw.githubusercontent.com/")` 得到正确的地址** ✓✓ —— ⭐ **而 `resolvePath` 从头到尾只看见纯路径 ✓** —— ⭐ **两个函数各自做自己懂的事** ✓。
+
+### ⚠️ 而我先前的一个推论被这一轮否证了
+
+⭐ 我写过 ✓：**"2113 字节装不下 641 个映射，所以那些 region 必然是程序化生成的"** ✗✓ —— ⭐ **错了** ✓：**161 个 region 就在那 7 个 include 的文件里** ✓✓ —— ⭐ **`Data/*.txt` 不只是变量表 ✓，它们里也有 `<region>` 块** ✓ —— ⭐ **而"2 KB 的文件不可能描述 641 个采样"这句话，前提是"所有描述都在主文件里"✗，而那不是真的** ✓。
+
+⭐⭐ **这是本会话第 N 次"从规模推断结构"而错了** ✗ —— ⭐ **而每一次的修法都是同一件事：读它，或者跑它** ✓✓。
+
+### ⭐ 而下一步的落点，读数已经指出
+
+⭐ **第一个采样的名字是 `harmLA0.flac`** ✓ —— ⚠️ **没有 `Samples/` 前缀** ✗✓ —— ⭐ **而文件里声明着 `default_path=Samples/`** ✓✓ —— ⭐ **所以加载时必须做那次拼接 ✓，也就是我已经写好但还没接上线的 `resolveSamplePath`** ✓✓。
+
+### ⭐ 所以"Salamander 能不能播"这条链现在是这样
+
+| 环节 | 状态 |
+|---|---|
+| ⭐ **`#define` 层（键与值 ✓）** | ✅ **已接进 `parseSfz` ✓**（`9f5e873` ✓） |
+| ⭐ **include 展开（7 个 ✓ 0 missing ✓）** | ✅ **本机验证过 ✓** —— ⚠️ **而它要求调用方"两样都给"** ✓ |
+| ⚠️ **`default_path` 的拼接** | ⚠️ **函数已写 ✓ 未接线** ✗ |
+| ⚠️ **把这条路径接进应用加载器** | ⚠️ **未做** ✗ |
