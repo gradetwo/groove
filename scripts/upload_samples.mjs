@@ -160,8 +160,31 @@ if (entry.archive) {
   console.log(`  fetching ${entry.repo} @ ${entry.pin} → ${workdir}`);
   execFileSync("git", ["init", "--quiet", workdir], { stdio: "inherit" });
   execFileSync("git", ["-C", workdir, "remote", "add", "origin", `https://github.com/${entry.repo}.git`], { stdio: "inherit" });
-  execFileSync("git", ["-C", workdir, "fetch", "--depth", "1", "--quiet", "origin", entry.pin], { stdio: "inherit" });
-  execFileSync("git", ["-C", workdir, "checkout", "--quiet", "FETCH_HEAD"], { stdio: "inherit" });
+  /**
+   * **Fetch only the files this entry will use, when the entry says which.** VCSL is 5.74 GB of tree and the four families this project mirrors are 2.41 GB of it, so a plain shallow fetch downloads more than twice what gets uploaded. A partial
+   * clone with a sparse checkout asks for the listed paths and nothing else.
+   *
+   * It is a fallback rather than the only path because it depends on the server supporting filters: if the filtered fetch or the checkout fails, the plain shallow fetch runs and the result is the same tree, only fetched in full. The cost
+   * of being wrong is bandwidth, and the cost of not trying is bandwidth every time.
+   */
+  const sparse = (entry.paths ?? []).filter((prefix) => typeof prefix === "string" && prefix !== "");
+  let narrowed = false;
+  if (sparse.length > 0) {
+    try {
+      execFileSync("git", ["-C", workdir, "sparse-checkout", "set", "--no-cone", ...sparse], { stdio: "inherit" });
+      execFileSync("git", ["-C", workdir, "fetch", "--depth", "1", "--filter=blob:none", "--quiet", "origin", entry.pin], { stdio: "inherit" });
+      execFileSync("git", ["-C", workdir, "checkout", "--quiet", "FETCH_HEAD"], { stdio: "inherit" });
+      narrowed = true;
+      console.log(`  fetched only: ${sparse.join(", ")}`);
+    } catch {
+      console.log("  (the narrowed fetch did not work here; falling back to the whole tree)");
+      execFileSync("git", ["-C", workdir, "sparse-checkout", "disable"], { stdio: "inherit" });
+    }
+  }
+  if (!narrowed) {
+    execFileSync("git", ["-C", workdir, "fetch", "--depth", "1", "--quiet", "origin", entry.pin], { stdio: "inherit" });
+    execFileSync("git", ["-C", workdir, "checkout", "--quiet", "FETCH_HEAD"], { stdio: "inherit" });
+  }
 }
 
 
