@@ -8,6 +8,7 @@ import { playbackForNote } from "../audio/sfz/regionPlayback";
 import { readWav } from "../../scripts/lib/wav.mjs";
 import { measurePitch } from "../../scripts/lib/pitch.mjs";
 import { buildFixture, buildMultiFixture } from "../../scripts/sfizz_oracle.mjs";
+import { writeMidi } from "../../scripts/lib/midi.mjs";
 
 /**
  * A4: **sfizz's actual output judges this project's mapping.**
@@ -92,6 +93,31 @@ describe.skipIf(!available)("A4 — sfizz's output against this project's mappin
     const pitch = measurePitch(wav, { fromSeconds: WINDOW.offset, toSeconds: WINDOW.offset + WINDOW.length });
     expect(pitch, "no pitch measured").not.toBeNull();
     console.log(`   A4 controller tuning: expected ${expectedHz.toFixed(2)} Hz, sfizz ${pitch!.hz.toFixed(2)} Hz (source ${sourceFrames} frames at 440 Hz)`);
+    expect(Math.abs(pitch!.hz - expectedHz) / expectedHz).toBeLessThan(0.01);
+  });
+
+  /**
+   * **The bipolar curve, judged by sfizz like everything else here.** `tune_curveccN=1` is not a decoration: it changes the mapping from linear-from-zero to bipolar-about-64, and the shipped drum kit uses it on both of its tuning knobs. The fixture puts the
+   * controller at 32, where the two shapes differ by more than an octave — linear gives about +300 cents, bipolar about −600 — so agreement cannot be a coincidence of a small difference.
+   */
+  it("plays a curve-1 region at the pitch sfizz produces, where the two shapes differ by an octave", () => {
+    const dir = mkdtempSync(join(tmpdir(), "sfizz-curve-"));
+    const { sourceFrames } = buildFixture(dir);
+    // The controller is **the file's own default**, not a MIDI message: the parser computes a region's cents from `<control>`, so a comparison has to put both sides at the same value. Sending CC 32 in the MIDI would compare sfizz at 32 against this
+    // project at the file's default of 0 — which is exactly the mistake this comment exists to prevent.
+    writeFileSync(join(dir, "curved.sfz"), "<control>\nset_cc90=32\n<region> sample=tone.wav pitch_keycenter=60 tune_cc90=1200 tune_curvecc90=1\n");
+
+    const regions = parseSfz(readFileSync(join(dir, "curved.sfz"), "utf8"));
+    const playback = playbackForNote(regions, 60)!;
+    const expectedHz = 440 * playback.ratio;
+
+    const out = join(dir, "curved.wav");
+    execFileSync(SFIZZ, ["--sfz", join(dir, "curved.sfz"), "--midi", join(dir, "note.mid"), "--wav", out, "-s", String(SR)], { stdio: ["ignore", "pipe", "pipe"] });
+    const wav = readWav(out);
+    const pitch = measurePitch(wav, { fromSeconds: WINDOW.offset, toSeconds: WINDOW.offset + WINDOW.length });
+    expect(pitch, "no pitch measured").not.toBeNull();
+    console.log(`   A4 curve 1 at CC 32: expected ${expectedHz.toFixed(2)} Hz, sfizz ${pitch!.hz.toFixed(2)} Hz (source ${sourceFrames} frames at 440 Hz)`);
+    // A linear reading would be more than an octave away, so 1% is comfortably inside the difference between the two shapes.
     expect(Math.abs(pitch!.hz - expectedHz) / expectedHz).toBeLessThan(0.01);
   });
 });

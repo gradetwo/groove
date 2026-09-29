@@ -24,6 +24,15 @@ step() {
   fi
 }
 
+# **What this gate does not decide, and where those decisions live.**
+#
+# It runs typecheck, lint, styling and the unit suite — no build and no browser — because it has to stay fast enough to run on every change. So the checks that need either are judged elsewhere, and the list is named rather than left to be remembered:
+#
+#   · the bundle budget          → `npm run check:budget` after a build, and **`release.sh` refuses to publish without it**
+#   · the end-to-end Playwright legs, the audio probes, the sfizz comparison → CI (`ci.yml`, and `manual-verify.yml`'s scopes)
+#
+# The reason this paragraph exists: the budget step failed on **forty consecutive pushes** while this gate reported ok each time, because nothing local could see it and nothing else was looking. After pushing, `npm run ci:status` is the answer — the local
+# gate passing only means the local gate passed.
 echo "local gate:"
 step "typecheck" npm run typecheck
 step "lint" npm run lint
