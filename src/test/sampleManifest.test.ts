@@ -153,11 +153,17 @@ describe("sampleAssetsFromManifest", () => {
     expect(instrument.sfz?.fallbackUrl).toMatch(/\/virtuosity-drums\/Programs\/01-basic-kit\.sfz$/);
     expect(instrument.seconds).toBeCloseTo(14.529542, 6);
     /**
-     * ⭐ **No entry is a problem any more, because both have measured durations.** This assertion used to read `toMatch(/salamander-grand/)`, and it was right when it was written: that entry had an `sfz` and no duration, so
-     * the bridge reported it as a gap — and the rule it defended is that such a gap is **named**, not silently defaulted. Salamander has since been mirrored and `ffprobe` measured 641 of its samples, so the gap is closed and the
-     * list is empty. The rule is not lost: it is asserted where a gap is manufactured on purpose, in `survey.test.ts`, which checks that an entry with nothing measured carries no `durationSeconds` key at all rather than a zero.
+     * ⭐ **The rule: every entry that declares a program and has no measured duration is named as a gap, and nothing else is.** The assertion has taken three forms and each failure taught the next one: it first named
+     * `salamander-grand` specifically, then asserted the list was empty once that entry was measured — and both pinned one moment's data. Deriving the expected set from the manifest means a library that is declared but not yet
+     * mirrored is reported, and one that has been mirrored is not, without editing this test when either changes.
      */
-    expect(problems).toEqual([]);
+    const declared = shipped.entries.filter((entry) => (entry.sfz || entry.archive) && entry.durationSeconds === undefined).map((entry) => entry.id);
+    /**
+     * ⭐ **The id is read from the leading quoted word**, because the message is \ — and splitting on the first colon takes \ instead, since that
+     * colon belongs to \. Both earlier attempts at this line did that, and printing the two lists is what showed it.
+     */
+    const reported = [...new Set(problems.flatMap((problem) => { const match = /^"([^"]+)"/.exec(problem); return match ? [match[1]!] : []; }))];
+    expect(reported.sort()).toEqual(declared.sort());
     /**
      * One problem **per declared entry**, and each naming its entry — not a count I pencilled in.
      *
