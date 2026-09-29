@@ -16,6 +16,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 
 const MANIFEST = path.join(process.cwd(), "public", "samples", "manifest.json");
 const argv = process.argv.slice(2);
@@ -109,8 +110,20 @@ execFileSync("git", ["-C", workdir, "checkout", "--quiet", "FETCH_HEAD"], { stdi
 
 // ⭐ Durations, measured rather than declared — the same instrument the manifest was built with.
 let measured = 0;
+let hashed = 0;
 let longest = 0;
 for (const file of entry.files ?? []) {
+  /**
+   * ⭐ **Every file is hashed, before the audio-only filter below.** The existing drum-kit entry carries a `sha256` for all 1659 of its files, including the `.sfz` — a duration says how long a sample is, but only a hash says
+   * which sample it is, and the program file itself should be verifiable too. Putting this after the `continue` would have hashed audio only.
+   */
+  try {
+    file.sha256 = createHash("sha256").update(fs.readFileSync(path.join(workdir, file.path))).digest("hex");
+    hashed += 1;
+  } catch {
+    // A file that cannot be read is reported by its absence from the count, not by an invented hash.
+  }
+
   if (!/\.(wav|flac|aiff|aif|ogg|mp3)$/i.test(file.path)) continue;
   try {
     const seconds = Number(
@@ -128,7 +141,7 @@ for (const file of entry.files ?? []) {
 entry.durationSeconds = longest;
 entry.mirroredAt = new Date().toISOString().slice(0, 10);
 fs.writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2) + "\n");
-console.log(`  measured ${measured} file(s) · longest ${longest.toFixed(6)} s · manifest updated`);
+console.log(`  measured ${measured} file(s) · hashed ${hashed} · longest ${longest.toFixed(6)} s · manifest updated`);
 
 // ⭐ The transfer itself is rclone's: it chunks, resumes and verifies, and this script does not reimplement any of that.
 execFileSync("rclone", ["copy", workdir, `:s3:groove/${entry.prefix}/`, "--transfers", "8", "--checkers", "16", "--stats-one-line", ...r2Config()], { stdio: "inherit" });
