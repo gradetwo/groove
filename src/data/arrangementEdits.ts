@@ -6,7 +6,7 @@
  *
  * Every function returns a **new arrangement**, because a track list is state that an interface re-renders from; mutating in place is how a UI ends up showing something the model does not say.
  */
-import type { ArrangementV2, TrackKindV2, TrackV2 } from "../types/arrangementV2";
+import type { ArrangementV2, TakeRegion, TrackKindV2, TrackV2 } from "../types/arrangementV2";
 
 let nextId = 1;
 
@@ -76,4 +76,51 @@ export function renameTrack(arrangement: ArrangementV2, trackId: string, name: s
 
 export function setCollapsed(arrangement: ArrangementV2, trackId: string, collapsed: boolean): ArrangementV2 {
   return { ...arrangement, tracks: arrangement.tracks.map((track) => (track.id === trackId ? { ...track, collapsed } : track)) };
+}
+
+/**
+ * Choosing takes — the whole-track choice and the per-range one the owner described ("recorded several times, and playback is one you chose, or one flattened from several").
+ *
+ * Both are the same model used at different granularity, and two properties matter more than the writes:
+ *
+ *   * **a region never overlaps another.** Choosing a take for a range splits any region it crosses rather than layering on top, because `resolveTakeForBar` reads the first match — overlapping regions
+ *     would make the audible result depend on array order, which is exactly the kind of invisible coupling that turns "it plays the wrong take" into an unreproducible report;
+ *   * **choosing a take that does not exist is refused**, not stored. A `selectedTakeId` naming nothing resolves to `undefined` and would silence the track while looking configured.
+ */
+export function selectTrackTake(arrangement: ArrangementV2, trackId: string, takeId: string | undefined): ArrangementV2 {
+  return {
+    ...arrangement,
+    tracks: arrangement.tracks.map((track) => {
+      if (track.id !== trackId) return track;
+      // Refused rather than stored: a selection naming a take that is gone would resolve to nothing and silence the track while appearing configured.
+      if (takeId !== undefined && !(track.takes ?? []).some((take) => take.id === takeId)) return track;
+      return takeId === undefined ? { ...track, selectedTakeId: undefined } : { ...track, selectedTakeId: takeId };
+    }),
+  };
+}
+
+export function assignTakeToRange(arrangement: ArrangementV2, trackId: string, startBar: number, endBar: number, takeId: string): ArrangementV2 {
+  return {
+    ...arrangement,
+    tracks: arrangement.tracks.map((track) => {
+      if (track.id !== trackId) return track;
+      if (endBar <= startBar) return track;
+      if (!(track.takes ?? []).some((take) => take.id === takeId)) return track;
+
+      // ⭐ Split every region the new one crosses, so regions stay disjoint: an overlap would make the heard take depend on array order.
+      const kept: TakeRegion[] = [];
+      for (const region of track.takeRegions ?? []) {
+        if (region.endBar <= startBar || region.startBar >= endBar) {
+          kept.push(region);
+          continue;
+        }
+        if (region.startBar < startBar) kept.push({ ...region, endBar: startBar });
+        if (region.endBar > endBar) kept.push({ ...region, startBar: endBar });
+      }
+      kept.push({ startBar, endBar, takeId });
+      // Sorted by start so the stored order matches the musical order, which keeps a saved arrangement readable and a diff meaningful.
+      kept.sort((a, b) => a.startBar - b.startBar);
+      return { ...track, takeRegions: kept };
+    }),
+  };
 }
