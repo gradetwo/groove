@@ -398,3 +398,28 @@ the result**; checking later costs one command.
 * **A finding is not a rule.** The 64-bar clamp was recorded as a finding, the owner's decision resolved it, and the test now asserts the better thing.
 * **Guards should be read, not re-run.** Every time a gate disagreed, reading which step failed was faster than another attempt — and twice the answer was that I had
   changed the wrong code path.
+
+
+## ⚠️ TRACK B 的"车道成本曲线"**从未被测量过**（2026-09-28，读到的事实 ✓）
+
+⭐ 目标里写着：**"为 1/4/16/64 条车道建成本曲线（墙钟 + 峰值内存）"** ✗ —— ⭐ **而我先前几次去 CI 日志里取 `lane curve` 都"取不到"** ✗✓ —— ⭐ **我当时把它归因于"打印坏了"或"那次运行没有跑到"** ✗。
+
+**读一遍代码，答案是另一回事** ✓：
+
+| 检查 | 结果 |
+|---|---|
+| 谁会打印 `lane curve` | ⭐ **只有 `scripts/probe_arrangement_audio.mjs`** ✓ |
+| `.github/workflows/manual-verify.yml` 里有没有跑它 | ⚠️ **没有任何一行提到它** ✗✓ |
+| 最近 6 次成功的 `Manual verify` 里有没有 `lane curve` | **0 次命中** ✗（**与上面一致 ✓**） |
+
+⭐⭐ **所以：那个探针【不在任何 CI scope 里】** ✓✓ —— ⭐ **它只是我在本机跑过的一次性测量 ✓，而"取不到"是因为它从未被派出去** ✗✓。
+
+### ⭐ 而这次归因错误，与本会话的其它几次同形
+
+⭐ **我先把"取不到"解释成了读数问题 ✗，而它是"那个数从未产生"** ✓✓ —— ⭐ **一个数字取不到时，先问"它有没有被量过"，而不是"我是不是读错了地方"** ✓ —— **这与"先量再解释"是同一条规矩的另一面** ✓✓。
+
+### 结论（下一轮要做的）✓
+
+1. ⭐ **把 `probe_arrangement_audio.mjs` 接进 `audio` scope** ✓（**或只接它的车道曲线那一段 ✓**）；
+2. ⭐ **然后在 CI 日志里读 1/4/16/64 的墙钟** ✓ —— ⭐ **那才是 TRACK B 这条账的收尾** ✓；
+3. ⚠️ **峰值内存**：⭐ **仍然没有仪器 ✓ —— 具名，不填** ✓。
