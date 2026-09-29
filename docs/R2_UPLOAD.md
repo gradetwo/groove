@@ -2009,3 +2009,43 @@ problem: Programs/mappings/mappings/kick_dampen.sfz: 404 from https://raw.github
 ```
 
 ⭐ **而它自己真实的参数是 `--genre=` ✓ `--port=` ✓ `--ramp=` ✓ `--json`** ✓ —— ⭐ **一次复制粘贴留下的** ✗ —— ⭐ **而它的代价很具体：读它的人会以为要跑另一个文件** ✗✓。
+
+
+## 65. ⭐⭐⭐⭐ `meatbass` 上传成功，而核对器报了一个【它自己的】缺陷（2026-09-28 晚 ✓）
+
+### `archive` 分支的第一次完整运行
+
+```
+downloading Karoryfer.Meatbass.v1.001.zip (243.6 MB)
+unpacked 587 file(s) · 39 sfz · entry: Meatbass/Programs/04_pizz.sfz
+measured 536 file(s) · hashed 587 · longest 8.196485 s · manifest updated
+✅ copied to :s3:groove/karoryfer-meatbass/
+```
+
+⭐⭐ **而每一个数都与先前的调查对得上** ✓✓：**39 个 `.sfz`（第 22 节量到 39 ✓）· 587 个文件全部带 `sha256`（含非音频 ✓ —— 那处修复的意图 ✓）· 243.6 MB 与声明相符 ✓** ✓。
+
+### ⭐ 而核对器遍历三个库之后，报出这一条
+
+```
+✅ karoryfer-meatbass sfz      200 · 2550 bytes · …/Meatbass/Programs/04_pizz.sfz
+❌ karoryfer-meatbass smallest 200 · 0 bytes   · …/Meatbass/GUI/aria_info.xml
+❌ 1 of 3 checks failed
+```
+
+### ⭐⭐ 而两边读数一比，病灶就清楚了
+
+| 谁 | 说什么 |
+|---|---|
+| ⭐ **清单** | ⭐ **`aria_info.xml` = 236 字节 ✓ · 且清单里【没有】0 字节文件 ✓** |
+| ⚠️ **核对器** | ⚠️ **`200 · 0 bytes`** ✗✓ |
+
+⭐⭐ **所以是核对器把"不知道多大"读成了"0 字节"** ✗✓✓：**它的代码是 `Number(response.headers.get("content-length") ?? "0")`** ✗ —— ⚠️ **而一次 HEAD 响应可以【不带】`content-length`** ✓ —— ⭐ **于是缺失被当成了零，再与 236 比较，于是"失败"** ✗✓。
+
+### ⭐ 所以这条修的不是镜像，而是"未知与零的区别"
+
+| | |
+|---|---|
+| ⭐ **镜像** | ✅ **好的 ✓ —— sfz 那条 `200 · 2550 bytes` ✓，而且 587 个文件都有哈希 ✓** |
+| ⚠️ **核对器** | ⚠️ **要把"没有 `content-length`"报成【未知】✗，而不是 0 ✓** —— ⭐ **或者改用 GET 的 `size_download` ✗/或者按 `sha256` 核对 ✓** |
+
+⭐⭐ **而这条缺陷的形状，与本会话反复出现的那一条完全相同** ✓：**一个信号无法分辨你在意的两种结果 ✓（"0 字节"与"不知道多大"✗）—— 于是要换一个能分辨的 ✔** ✓✓。
