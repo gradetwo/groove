@@ -27,6 +27,8 @@ step() {
 echo "local gate:"
 step "typecheck" npm run typecheck
 step "lint" npm run lint
+# ⭐ The check whose absence let the new interface ship as unstyled text: a component that uses no styling renders as plain markup, and none of the other checks ask about appearance.
+step "styling" node scripts/check_component_styling.mjs
 # The unit suite is the long one, and it is the one that caught assertions left behind by a behaviour change.
 #
 # **Two files are excluded, and the reason is measured rather than assumed.** `mobileApp.test.tsx` and `mobileExplore.test.tsx` are timing-sensitive and fail under the load of a full parallel run — four
