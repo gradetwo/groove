@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseSfz } from "../audio/sfz/parse";
 import { playbackForNote } from "../audio/sfz/regionPlayback";
 import { readWav } from "../../scripts/lib/wav.mjs";
 import { measurePitch } from "../../scripts/lib/pitch.mjs";
-import { buildMultiFixture } from "../../scripts/sfizz_oracle.mjs";
+import { buildFixture, buildMultiFixture } from "../../scripts/sfizz_oracle.mjs";
 
 /**
  * A4: **sfizz's actual output judges this project's mapping.**
@@ -67,5 +67,31 @@ describe.skipIf(!available)("A4 — sfizz's output against this project's mappin
     expect(new Set(measured.map((entry) => Math.round(entry.expectedHz))).size).toBe(4);
     console.log("   A4 agreement (this project's mapping vs sfizz's render):");
     for (const entry of measured) console.log(`     note ${entry.note}: expected ${entry.expectedHz.toFixed(2)} Hz, sfizz ${entry.measuredHz.toFixed(2)} Hz`);
+  });
+
+  /**
+   * **The controller-driven tuning, judged the same way.** `tune_ccN` is linear from zero (measured separately at four controller values), so a file that sets the controller high plays sharp — and this is the case where arithmetic done privately
+   * would agree with itself while disagreeing with sfizz. The fixture puts `tune_cc1=1200` on a region and `set_cc1=127` in the file's `<control>`, which means one octave up with no controller sent at all.
+   */
+  it("plays a controller-tuned region at the pitch sfizz produces for it", () => {
+    const dir = mkdtempSync(join(tmpdir(), "sfizz-tune-"));
+    // The oracle's own fixture gives the 440 Hz tone and the note-60 phrase; only the SFZ is replaced, so the tuning is the one difference.
+    const { sourceFrames } = buildFixture(dir);
+    // `<control>` first, then a region whose tuning comes only from the controller — so the cents can come from nowhere else.
+    writeFileSync(join(dir, "tuned.sfz"), "<control>\nset_cc1=127\n<region> sample=tone.wav pitch_keycenter=60 tune_cc1=1200\n");
+
+    const regions = parseSfz(readFileSync(join(dir, "tuned.sfz"), "utf8"));
+    // The project says one octave, and the assertion below is that sfizz agrees rather than that the arithmetic is self-consistent.
+    expect(regions[0]!.tuneCents).toBeCloseTo(1200, 6);
+    const playback = playbackForNote(regions, 60)!;
+    const expectedHz = 440 * playback.ratio;
+
+    const out = join(dir, "tuned.wav");
+    execFileSync(SFIZZ, ["--sfz", join(dir, "tuned.sfz"), "--midi", join(dir, "note.mid"), "--wav", out, "-s", String(SR)], { stdio: ["ignore", "pipe", "pipe"] });
+    const wav = readWav(out);
+    const pitch = measurePitch(wav, { fromSeconds: WINDOW.offset, toSeconds: WINDOW.offset + WINDOW.length });
+    expect(pitch, "no pitch measured").not.toBeNull();
+    console.log(`   A4 controller tuning: expected ${expectedHz.toFixed(2)} Hz, sfizz ${pitch!.hz.toFixed(2)} Hz (source ${sourceFrames} frames at 440 Hz)`);
+    expect(Math.abs(pitch!.hz - expectedHz) / expectedHz).toBeLessThan(0.01);
   });
 });
