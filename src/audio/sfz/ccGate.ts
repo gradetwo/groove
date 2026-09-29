@@ -18,31 +18,10 @@
  */
 import type { SfzRegion } from "./parse";
 
-/** `set_ccN=value` from a file's `<control>` blocks, later declarations winning. */
-export function readControlDefaults(text: string): Map<number, number> {
-  const defaults = new Map<number, number>();
-  let inControl = false;
-  for (const rawLine of text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n")) {
-    const line = rawLine.replace(/\/\/.*$/, "").trim();
-    if (!line) continue;
-    const header = line.match(/^<([a-zA-Z0-9_]+)>\s*(.*)$/);
-    if (header) {
-      inControl = header[1]!.toLowerCase() === "control";
-      // `set_ccN` may sit on the header line itself (`<control> set_cc1=64`).
-      if (inControl) applyControlLine(header[2] ?? "", defaults);
-      continue;
-    }
-    if (inControl) applyControlLine(line, defaults);
-  }
-  return defaults;
-}
-
-function applyControlLine(line: string, defaults: Map<number, number>): void {
-  for (const match of line.matchAll(/(?:^|\s)set_cc(\d+)\s*=\s*(\S+)/g)) {
-    const value = Number(match[2]);
-    if (Number.isFinite(value)) defaults.set(Number(match[1]), value);
-  }
-}
+/**
+ * The `<control>` reader lives in `parse.ts`: the parser needs the same numbers to evaluate `tune_ccN`, and two readers of one file would be two answers. Re-exported here because this is where a caller looks for what a gate depends on.
+ */
+export { readControlDefaults } from "./parse";
 
 /**
  * Whether a region sounds at these CC values.

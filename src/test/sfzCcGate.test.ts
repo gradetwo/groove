@@ -11,6 +11,7 @@ import { expandIncludes } from "../audio/sfz/includes";
 import { existsSync } from "node:fs";
 import { parseSfz } from "../audio/sfz/parse";
 import { readControlDefaults, regionSoundsAtCc, regionsAtCc } from "../audio/sfz/ccGate";
+import { ccTuneCents } from "../audio/sfz/parse";
 
 const region = (opcodes: string) => parseSfz(`<region> sample=tone.wav pitch_keycenter=60 ${opcodes}`)[0]!;
 
@@ -79,5 +80,37 @@ describe("the CC gates", () => {
     expect(regionsAtCc(regions, defaults)).toHaveLength(regions.length);
     // And the gate is doing something: with the controllers at zero, the same regions are gone.
     expect(regionsAtCc(regions, new Map())).toHaveLength(0);
+  });
+
+});
+
+describe("controller-driven tuning", () => {
+  it("is linear from zero, with no centre, which sfizz settled", () => {
+    /**
+     * Measured by rendering one tone through sfizz at four controller values: `tune_cc90=1200` gives 0 cents at CC90 = 0, +1200 at 127, and +600 at 63.5. So the mapping is `span × cc / 127` — a tuning knob that goes up from rest rather than one that
+     * sits centred at the middle of the range.
+     */
+    const region = parseSfz("<region> sample=tone.wav pitch_keycenter=60 tune_cc90=1200")[0]!;
+    expect(region.tuneCents).toBe(0);
+    expect(ccTuneCents(region.opcodes, new Map([[90, 127]]))).toBe(1200);
+    expect(ccTuneCents(region.opcodes, new Map([[90, 63.5]]))).toBeCloseTo(600, 6);
+    expect(ccTuneCents(region.opcodes, new Map([[90, 0]]))).toBe(0);
+  });
+
+  it("reads the file's own `<control>` defaults, so a region's cents are the cents it plays", () => {
+    // This is the case the drum kit is: `tune_cc90=1200` in a `<global>` and `set_cc90=63.5` in its `<control>`, which at rest is +600 cents rather than nothing.
+    const regions = parseSfz("<control>\nset_cc90=63.5\n<global>\ntune_cc90=1200\n<region> sample=tone.wav pitch_keycenter=60");
+    expect(regions[0]!.tuneCents).toBeCloseTo(600, 6);
+  });
+
+  it("adds to a plain `tune` rather than replacing it", () => {
+    // `tune` is a fixed detune and `tune_ccN` is a movable one; a file that uses both means both.
+    const regions = parseSfz("<control>\nset_cc1=127\n<region> sample=tone.wav pitch_keycenter=60 tune=100 tune_cc1=200");
+    expect(regions[0]!.tuneCents).toBe(300);
+  });
+
+  it("leaves an instrument with no controller tuning at exactly zero", () => {
+    // The common case must not acquire a detune by accident.
+    expect(parseSfz("<region> sample=tone.wav pitch_keycenter=60")[0]!.tuneCents).toBe(0);
   });
 });

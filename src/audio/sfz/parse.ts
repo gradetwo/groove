@@ -74,9 +74,61 @@ const num = (value: string | undefined, fallback: number): number => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+/**
+ * `set_ccN=value` from a file's `<control>` blocks, later declarations winning.
+ *
+ * It lives here rather than beside the gate that consumes it, because the parser needs the same numbers: `tune_ccN` is a **tuning at the controller's current value**, so a region's cents cannot be computed without them. One reader, one answer — a
+ * second implementation for the gate would be a second thing to keep in step.
+ */
+export function readControlDefaults(text: string): Map<number, number> {
+  const defaults = new Map<number, number>();
+  let inControl = false;
+  for (const rawLine of text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n")) {
+    const line = rawLine.replace(/\/\/.*$/, "").trim();
+    if (!line) continue;
+    const header = line.match(/^<([a-zA-Z0-9_]+)>\s*(.*)$/);
+    if (header) {
+      inControl = header[1]!.toLowerCase() === "control";
+      // `set_ccN` may sit on the header line itself (`<control> set_cc1=64`).
+      if (inControl) applyControlLine(header[2] ?? "", defaults);
+      continue;
+    }
+    if (inControl) applyControlLine(line, defaults);
+  }
+  return defaults;
+}
+
+function applyControlLine(line: string, defaults: Map<number, number>): void {
+  for (const match of line.matchAll(/(?:^|\s)set_cc(\d+)\s*=\s*(\S+)/g)) {
+    const value = Number(match[2]);
+    if (Number.isFinite(value)) defaults.set(Number(match[1]), value);
+  }
+}
+
+/**
+ * The cents a region's `tune_ccN` opcodes contribute at these controller values.
+ *
+ * **Measured rather than derived from the name**: `tune_cc90=1200` rendered through sfizz gives 0 cents at CC90 = 0, +1200 at 127 and +600 at 63.5 — the mapping is linear from zero and there is no centre to it. The curve opcodes (`tune_curveccN`) say
+ * which shape to use and are ignored here, which is exact for the default linear curve and recorded as a limit for a file that names another.
+ */
+export function ccTuneCents(opcodes: Record<string, string>, cc: ReadonlyMap<number, number>): number {
+  let cents = 0;
+  for (const [opcode, raw] of Object.entries(opcodes)) {
+    const match = /^tune_cc(\d+)$/.exec(opcode);
+    if (!match) continue;
+    const span = Number(raw);
+    if (!Number.isFinite(span)) continue;
+    // An unset controller is 0, which is what makes "no controller sent" mean no detuning.
+    cents += (span * (cc.get(Number(match[1])) ?? 0)) / 127;
+  }
+  return cents;
+}
+
 export function parseSfz(text: string): SfzRegion[] {
   // ⭐ The `#define` layer runs first: a definition applies from its point onward, and doing it here means the parser never sees a directive nor a `$NAME` it could have resolved.
   text = applyDefines(text).text;
+  // Read from the text as written, once: a `<control>` block applies to every region in the file wherever it sits.
+  const cc = readControlDefaults(text);
 
   const regions: SfzRegion[] = [];
   let global: Record<string, string> = {};
@@ -168,7 +220,8 @@ export function parseSfz(text: string): SfzRegion[] {
       hivel: num(merged.hivel, DEFAULTS.hivel),
       // Left undefined when absent, because "no transposition" is the real behaviour and 60 is only a value a file may choose.
       pitchKeycenter: merged.pitch_keycenter === undefined ? undefined : num(merged.pitch_keycenter, 0),
-      tuneCents: num(merged.tune, DEFAULTS.tuneCents),
+      // `tune` plus whatever the controller-driven tuning adds at rest, so a region's cents are the cents it will play.
+      tuneCents: num(merged.tune, DEFAULTS.tuneCents) + ccTuneCents(merged, cc),
       seqLength: Math.max(1, num(merged.seq_length, DEFAULTS.seqLength)),
       seqPosition: Math.max(1, num(merged.seq_position, DEFAULTS.seqPosition)),
       opcodes: merged,
