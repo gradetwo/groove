@@ -41,6 +41,7 @@ export const commonMessages = {
   nav_studio: { en: "Studio", zh: "工作台" },
   // ⭐ A route rather than a tab: it opens the new arrangement, which deliberately has no genre.
   nav_new_project: { en: "New", zh: "新建" },
+  nav_new_project_desc: { en: "Start a new arrangement", zh: "开一首全新的编排" },
   // Phone shell (see `src/components/MobileTabBar.tsx`). Five destinations, not eleven.
   nav_learn: { en: "Learn", zh: "学习" },
   nav_tools: { en: "Tools", zh: "工具" },
