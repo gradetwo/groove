@@ -32,6 +32,8 @@ step "build" npx vite build
 step "deploy" npm run deploy:only
 
 step "mirror" ./scripts/sync_release_mirror.sh
+# ⭐ Committing what the sync copied: without this the mirror keeps the previous commit, and the push below sends it while the fast-forward check passes.
+step "mirror commit" bash scripts/commit_release_mirror.sh
 # ⭐ The tag, which this script used to ask for in its final line without making it.
 step "tag" bash scripts/tag_release.sh
 
