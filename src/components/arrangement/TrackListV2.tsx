@@ -15,6 +15,8 @@ export interface TrackListV2Props {
   onRemoveTrack: (trackId: string) => void;
   onToggle: (trackId: string, flag: "muted" | "soloed", value: boolean) => void;
   onToggleCollapse: (trackId: string, collapsed: boolean) => void;
+  /** ⭐ Changing what a track **is**. The rule for what happens to its type-specific fields lives in `changeTrackKind`, not here. */
+  onChangeKind: (trackId: string, kind: TrackKindV2) => void;
 }
 
 /** Depth from `parentId`, so what is drawn and what is grouped are the same fact. */
@@ -27,7 +29,7 @@ function depthOf(track: TrackV2, all: readonly TrackV2[], seen = new Set<string>
 
 const ADDABLE: TrackKindV2[] = ["sampler", "instrument", "drumkit", "fx", "folder"];
 
-export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, onToggleCollapse }: TrackListV2Props) {
+export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, onToggleCollapse, onChangeKind }: TrackListV2Props) {
   // A folded folder hides its children from the list; folding is a display state and this is the only place it is read.
   const hidden = new Set<string>();
   for (const track of arrangement.tracks) {
@@ -51,6 +53,18 @@ export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, 
           .map((track) => (
             <li key={track.id} data-testid={`track-${track.id}`} data-depth={depthOf(track, arrangement.tracks)}>
               <span>{track.kind === "folder" ? "▸ " : ""}{track.name}</span>
+              {/* ⭐ The kind is changeable, which the owner asked for: a track's type is a decision, not an identity. The component only reports the choice — what happens to the fields the old kind owned is `changeTrackKind`'s business. */}
+              <select
+                aria-label={`${track.name} kind`}
+                value={track.kind}
+                onChange={(event) => onChangeKind(track.id, event.target.value as TrackKindV2)}
+              >
+                {ADDABLE.map((kind) => (
+                  <option key={kind} value={kind}>
+                    {kind}
+                  </option>
+                ))}
+              </select>
               <button type="button" aria-pressed={Boolean(track.muted)} onClick={() => onToggle(track.id, "muted", !track.muted)}>
                 M
               </button>
