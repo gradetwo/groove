@@ -96,5 +96,33 @@ else {
   console.log(`  ❌ ${includeCheck.label.padEnd(16)} ${includeCheck.note}`);
 }
 
+/**
+ * ⭐ **Every other shippable entry gets its own line, because the detailed check above covers exactly one.** That check once reported success for a library while looking at two objects, and then reported success for one library while
+ * three others existed — both cases where the coverage was narrower than the script read, and both presented as good news. Walking the rest here means "which libraries were checked" is visible in the output rather than discoverable by
+ * reading this file.
+ */
+const others = manifest.entries.filter((candidate) => candidate !== entry && candidate.sfz && candidate.prefix && (candidate.files ?? []).length > 0);
+for (const other of others) {
+  const otherPrefix = `${other.prefix.replace(/\/$/, "")}/`;
+  const theirSmallest = [...other.files].sort((a, b) => (a.bytes ?? 0) - (b.bytes ?? 0))[0];
+  const targets = [
+    { label: `${other.id} sfz`, path: `${otherPrefix}${other.sfz}`, bytes: other.files.find((f) => f.path === other.sfz)?.bytes },
+    { label: `${other.id} smallest`, path: `${otherPrefix}${theirSmallest.path}`, bytes: theirSmallest.bytes },
+  ];
+  for (const target of targets) {
+    const url = `${base}/${target.path}`;
+    try {
+      const response = await fetch(url, { method: "HEAD" });
+      const length = Number(response.headers.get("content-length") ?? "0");
+      const ok = response.status === 200 && (target.bytes === undefined || length === target.bytes);
+      if (!ok) failures += 1;
+      console.log(`  ${ok ? "✅" : "❌"} ${target.label.padEnd(24)} ${response.status} · ${length} bytes · ${url}`);
+    } catch (error) {
+      failures += 1;
+      console.log(`  ❌ ${target.label.padEnd(24)} ${error instanceof Error ? error.message : String(error)} · ${url}`);
+    }
+  }
+}
+
 console.log(failures === 0 ? `\n✅ the mirror serves what the manifest describes (${base}/${prefix})` : `\n❌ ${failures} of ${checks.length + 1} checks failed`);
 process.exit(failures === 0 ? 0 : 1);
