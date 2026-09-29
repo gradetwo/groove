@@ -55,3 +55,44 @@ describe("editing an arrangement", () => {
     expect(setTrackParent(arr, folder.id, folder.id).tracks[0]!.parentId).toBeUndefined();
   });
 });
+
+describe("mute, solo, rename and fold", () => {
+  it("sets mute and solo independently, per track", async () => {
+    const { setTrackFlag } = await import("../data/arrangementEdits");
+    let arr = createArrangement("s");
+    arr = addTrack(arr, "sampler", "Kick");
+    arr = addTrack(arr, "sampler", "Snare");
+    const [kick, snare] = arr.tracks;
+    arr = setTrackFlag(arr, kick!.id, "muted", true);
+    arr = setTrackFlag(arr, snare!.id, "soloed", true);
+    // One track's flag must not follow another's: a shared boolean here would mute or solo the whole arrangement.
+    expect(arr.tracks.find((t) => t.id === kick!.id)!.muted).toBe(true);
+    expect(arr.tracks.find((t) => t.id === kick!.id)!.soloed).toBeUndefined();
+    expect(arr.tracks.find((t) => t.id === snare!.id)!.soloed).toBe(true);
+  });
+
+  it("refuses a blank rename rather than leaving a nameless row", async () => {
+    const { renameTrack } = await import("../data/arrangementEdits");
+    let arr = createArrangement("s");
+    arr = addTrack(arr, "instrument", "Lead");
+    const id = arr.tracks[0]!.id;
+    expect(renameTrack(arr, id, "   ").tracks[0]!.name).toBe("Lead");
+    expect(renameTrack(arr, id, "  Pad  ").tracks[0]!.name).toBe("Pad");
+  });
+
+  it("folds without silencing — a display state must not reach the audio", async () => {
+    const { setCollapsed, compileArrangementToLanes } = await import("../data/arrangementEdits").then(async (edits) => ({
+      setCollapsed: edits.setCollapsed,
+      compileArrangementToLanes: (await import("../data/arrangementCompile")).compileArrangementToLanes,
+    }));
+    let arr = createArrangement("s");
+    arr = addTrack(arr, "folder", "Drums");
+    const folder = arr.tracks[0]!;
+    arr = addTrack(arr, "sampler", "Kick", { parentId: folder.id });
+    const before = compileArrangementToLanes(arr).length;
+    arr = setCollapsed(arr, folder.id, true);
+    // The whole point: folding hides rows, it does not remove lanes. If it did, a collapsed folder would go silent and the bug would be reported against the audio engine.
+    expect(compileArrangementToLanes(arr).length).toBe(before);
+    expect(arr.tracks.find((t) => t.id === folder.id)!.collapsed).toBe(true);
+  });
+});
