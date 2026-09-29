@@ -15,6 +15,7 @@ import {
   clearMcpArrangements,
   createMcpArrangement,
   describeMcpArrangement,
+  flattenMcpArrangement,
   getMcpArrangement,
   removeMcpTrack,
   renameMcpTrack,
@@ -211,5 +212,28 @@ describe("recording onto a track", () => {
     const folded = setMcpTrackCollapsed(arrangementId, before.id, true);
     expect(folded.summary.tracks[0]!.collapsed).toBe(true);
     expect(folded.summary.tracks[0]!.steps).toEqual(before.steps);
+  });
+
+  it("flattens to something the renderer can bounce, through the application's own chain", () => {
+    /**
+     * The last link the surface was missing: an agent could compose an arrangement and not hear it. The chain is the application's — `compileArrangementToSongInput` → `createSong` → `flattenSong` — so this cannot render something the interface would
+     * not, which is the rule the rest of the MCP render surface follows.
+     */
+    const { arrangementId } = createMcpArrangement({ blankKind: "drumkit" });
+    const { flattened, bars } = flattenMcpArrangement(arrangementId);
+    expect(bars).toBeGreaterThan(0);
+    expect(flattened.pattern.tracks.length).toBeGreaterThan(0);
+    // The default drum track has every fourth step, so the flattened pattern has steps to play rather than a silent lane.
+    expect(flattened.totalSteps).toBeGreaterThan(0);
+    expect(flattened.pattern.tracks.some((track) => (track.steps ?? []).some((step) => step !== 0))).toBe(true);
+  });
+
+  it("refuses to render an arrangement with no tracks, and says which arrangement to make", () => {
+    // An empty arrangement would render silence, and silence reads as a broken renderer rather than as an empty arrangement.
+    const { arrangementId } = createMcpArrangement({ blankKind: "drumkit" });
+    const track = summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).tracks[0]!;
+    removeMcpTrack(arrangementId, track.id);
+    expect(() => flattenMcpArrangement(arrangementId)).toThrow(/no tracks/);
+    expect(() => flattenMcpArrangement("arrangement-nope")).toThrow(/create_arrangement/);
   });
 });
