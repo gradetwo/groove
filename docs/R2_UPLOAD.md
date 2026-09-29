@@ -1173,3 +1173,36 @@ const samplePath = resolveSamplePath(resolution.note.samplePath, defaultPathForT
 | ⭐ **P1：`salamander-grand` 713.8 MB** ✗ | **上传器** |
 | ⭐ **在 `/new` 里真的播它** ✗ | **上传 + 指向它** |
 | ⚠️ **P2 ✓ P3 的库** ✗ | **P1 走通之后 ✓** |
+
+
+## 41. ⭐⭐⭐ 上传器写好了，而它的第一次运行就停在一个真事上（2026-09-28 晚 ✓）
+
+### 它做了什么
+
+⭐ **默认只算不传** ✓ —— ⭐ 它跑 `checkMirrorBudget` 那件事（**要传多少 ✓ 现有多少 ✓ 上限多少 ✓**）、列出文件与 `sfz`，**而 `--upload` 才真的动手** ✓✓。**五步里的第 4 步交给 rclone ✓**（**分块 ✓ 续传 ✓ 校验，它已经会** ✓）。
+
+### 而第一次运行的结果
+
+```
+CRITICAL: Failed to create file system for "r2:groove": didn't find section in config file ("r2")
+❌ could not read the bucket size — A budget check that assumes an empty bucket approves anything, so this stops here.
+```
+
+⭐⭐ **两件事同时被这一行证明** ✓：
+
+| # | 事 |
+|---|---|
+| **1** | ⚠️ **本机没有名为 `r2` 的 rclone remote** ✗✓ —— ⭐ **所以鼓那一架当时不是这样传的** ✓（**S3 API ✓、或另一个名字的 remote ✓、或 wrangler ✓**） |
+| **2** | ⭐⭐ **而我的守卫拒绝了，而不是假定桶是空的** ✓✓✓ |
+
+### ⭐ 而第 2 件是这一整段里最该记住的设计
+
+⭐ 如果那个函数在失败时返回 `0` ✗，**预算检查会认为桶是空的 ✓，于是任何上传都会被批准** ✗✓ —— ⭐ **那正是 `checkMirrorBudget` 存在的理由被反过来用** ✗ —— ⭐ **所以它在这里 `process.exit(1)` ✓，并且把理由印出来** ✓✓："**一个假定桶是空的预算检查，会批准任何东西**" ✓。
+
+### ⭐ 所以下一步是"先查清鼓当时怎么传的"
+
+| 要查 | 为什么 |
+|---|---|
+| ⭐ **`rclone.conf` 里有没有别的 remote** ✓ | **决定上传器用 `rclone copy <remote>:groove/…` 还是 S3 API** ✓ |
+| ⭐ **还是当时用了 `wrangler r2 object put`** ✓ | ⭐ **那上传器就该照它写** ✓ |
+| ⭐ **`docs/R2_UPLOAD.md` 的第 4–8 节** ✓ | ⭐ **那里记着当时的命令** ✓✓（**而我这一轮没读它 ✗ —— 又一次"先写后读"** ✗） |
