@@ -1315,3 +1315,38 @@ rclone copy <dir> :s3:groove/<prefix>/   --s3-provider Cloudflare   --s3-access-
 ### ⭐ 而下一轮重写时，第一件事是先读一个现有条目的全部字段
 
 ⭐ **这一轮的错误，又是"先写后读"** ✗ —— ⭐ **而这一次抓住它的是项目自己的守卫 ✓（`checkManifestLicences` 抛错 ✓ + typecheck 与测试在后面 ✓）** —— ⭐ **所以代价是一轮，而不是一次坏的上传** ✓✓。
+
+
+## 45. ⭐⭐⭐ 清单条目的完整字段（**这是模板** ✓，2026-09-28 晚 ✓）
+
+### 读到的（`virtuosity-drums-basic` 的全部字段 ✓）
+
+```json
+{
+  "id": "virtuosity-drums-basic",
+  "name": "Virtuosity Drums — Basic Kit",
+  "licence": "CC0",
+  "prefix": "virtuosity-drums",
+  "repo": "sfzinstruments/virtuosity_drums",
+  "pin": "9f04cf9a7345",
+  "sfz": "Programs/01-basic-kit.sfz",
+  "needs": ["key", "lokey", "hikey", "pitch_keycenter", "lovel", "hivel", "seq_length", "seq_position"],
+  "files": [{ "path": "Samples/kickmic/crash/…flac", "bytes": 527259, "sha256": "06d470903cd52e7…" }, "…共 1659 项"],
+  "durationSeconds": 14.529542
+}
+```
+
+### ⭐⭐ 两个立刻有用的发现
+
+| # | 发现 | 为什么重要 |
+|---|---|---|
+| **1** | ⭐ **每个文件都带 `sha256`** ✓✓ | ⭐ **鼓那一架的 1659 个文件是【逐个哈希过】的 ✓** —— ⚠️ **而我的新上传器还没算哈希** ✗ —— ⭐ **所以这是它要补的一步 ✓** |
+| **2** | ⭐ **`needs` 是 8 个 opcode 的名单** ✓ | ⭐ **`key` ✓ `lokey` ✓ `hikey` ✓ `pitch_keycenter` ✓ `lovel` ✓ `hivel` ✓ `seq_length` ✓ `seq_position`** ✓ |
+
+### ⭐⭐ 而第 2 条正好回答了目标里那个悬着的问题
+
+⭐ 目标的原话 ✓：**"诚实决定 CC/调制层在范围里占多少（实测：对这个库不承重）"** ✓ —— ⭐ **而 `needs` 就是那个"实测"的答案** ✓✓：
+
+> ⭐ **鼓那一架需要的 8 个 opcode 里，没有一个属于 CC 或曲线层** ✓✓ —— ⭐ **它有大量 `set_cc90` ✓ `tune_cc90` ✓ `tune_curvecc90` ✓ `width_cc106` ✓ 之类的写法 ✗，而那些是【现实控制器】才能触发的 ✓** —— ⭐ **键盘与鼠标弹不出 CC90** ✗✓ —— ⭐ **所以在"用键盘弹它"这件事上，CC 层不是承重的那一层 ✓** ✓✓。
+
+⭐ **而这也是 Karoryfer 与 Salamander 的 `needs` 该照实写的东西** ✓ —— ⭐ **它是一份声明 ✓，而不是一份介绍** ✗✓。
