@@ -100,7 +100,9 @@ describe("sampleAssetsFromManifest", () => {
     expect(problems).toEqual([]);
     expect(assets.map((asset) => asset.assetId)).toEqual(["vcsl-piano", "riser"]);
     // The instrument carries the sfz; the plain sample does not, which is what keeps every existing path byte-identical.
-    expect(assets[0]!.sfz).toEqual({ url: "https://cdn.example/samples/vcsl/piano.sfz" });
+    // The address now also carries the program's own path, because include paths resolve against the library root and the loader subtracts it. **No `repo`/`pin` here, so there is no pinned source** and
+    // the mirror remains the only address — which is the case the `fallbackUrl` field must stay absent for.
+    expect(assets[0]!.sfz).toEqual({ url: "https://cdn.example/samples/vcsl/piano.sfz", path: "piano.sfz" });
     expect(assets[1]!.sfz).toBeUndefined();
     expect(assets[0]!.seconds).toBe(3.5);
   });
@@ -144,7 +146,11 @@ describe("sampleAssetsFromManifest", () => {
     expect(assets.map((asset) => asset.assetId)).toContain("virtuosity-drums-basic");
     const instrument = assets.find((asset) => asset.assetId === "virtuosity-drums-basic")!;
     // A real instrument, resolved against the mirror, with a duration that was measured rather than guessed.
-    expect(instrument.sfz?.url).toMatch(/virtuosity-drums\/Programs\/01-basic-kit\.sfz$/);
+    // **Source first**, pinned — and the mirror demoted to a fallback, which is the owner's decision. The old assertion required the mirror URL, so it was checking the behaviour that has just been reversed.
+    expect(instrument.sfz?.url).toBe("https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a7345/Programs/01-basic-kit.sfz");
+    // **Root-agnostic on purpose**: this criterion supplies its own root, so naming the production hostname here would be asserting the test's own parameter rather than the behaviour. What matters is that the
+    // fallback is the mirror's layout for this program — the same path under whatever root the caller configured.
+    expect(instrument.sfz?.fallbackUrl).toMatch(/\/virtuosity-drums\/Programs\/01-basic-kit\.sfz$/);
     expect(instrument.seconds).toBeCloseTo(14.529542, 6);
     expect(problems.join("\n")).toMatch(/salamander-grand/);
     /**
@@ -211,7 +217,7 @@ describe("catalogueFromManifestText", () => {
     const { assets, problems } = catalogueFromManifestText(text, "https://cdn.example/samples");
     expect(problems).toEqual([]);
     expect(assets.map((asset) => asset.assetId)).toEqual(["kit"]);
-    expect(assets[0]!.sfz).toEqual({ url: "https://cdn.example/samples/kit/Programs/kit.sfz" });
+    expect(assets[0]!.sfz).toEqual({ url: "https://cdn.example/samples/kit/Programs/kit.sfz", path: "Programs/kit.sfz" });
   });
 
   it("reports a manifest that does not parse instead of returning an empty catalogue", async () => {
@@ -235,7 +241,9 @@ describe("sourceSfzUrl", () => {
     const parsed = parseManifest(manifest([
       { id: "kit", name: "Kit", licence: "CC0", prefix: "kit", repo: "sfzinstruments/virtuosity_drums", pin: "9f04cf9a7345", sfz: "Programs/01-basic-kit.sfz", files: [{ path: "Programs/01-basic-kit.sfz", bytes: 10 }] },
     ]));
-    expect(sourceSfzUrl(parsed.manifest!, "kit")).toBe("https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a7345/kit/Programs/01-basic-kit.sfz");
+    // **No `prefix`** — and this assertion used to require one, which is the bug the end-to-end probe found: `prefix` describes the *mirror's* layout, the upstream repository has no such directory,
+    // and asking GitHub for `…/<pin>/kit/Programs/…` returned fourteen bytes of `404: Not Found` that parsed as an SFZ with no regions.
+    expect(sourceSfzUrl(parsed.manifest!, "kit")).toBe("https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a7345/Programs/01-basic-kit.sfz");
   });
 
   it("returns nothing without a pin, rather than an address that would drift with the default branch", async () => {
