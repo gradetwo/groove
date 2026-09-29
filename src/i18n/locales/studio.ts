@@ -411,6 +411,11 @@ export const studioMessages = {
   settings_section_about: { en: "This build", zh: "当前构建" },
   settings_about_version: { en: "Version", zh: "版本" },
   settings_about_gs1: { en: "GS-1 voices (chords/lead)", zh: "GS-1 新架构音色（和弦/旋律）" },
+  /**
+   * ⭐ **The contact address, in one place.** `groove@wangda.today` is where anything that needs an address points, and the bug line is a `mailto:` so that reporting one does not require finding this page first.
+   */
+  settings_about_contact: { en: "Contact", zh: "联系" },
+  settings_about_report_bug: { en: "Report a bug by email", zh: "发邮件上报问题" },
   settings_about_gs1_on: { en: "on — switch it in the Audio tab", zh: "已开启 — 可在「音频」页关闭" },
   settings_about_gs1_off: { en: "off — native voices", zh: "已关闭 — 使用原生音色" },
   settings_section_storage: { en: "Local data", zh: "本地数据" },

@@ -491,6 +491,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     {gs1Enabled ? t("settings_about_gs1_on") : t("settings_about_gs1_off")}
                   </span>
                 </div>
+                {/* ⭐ The address anything contact-shaped uses, and a `mailto:` so reporting a bug does not require finding this page first. */}
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-text-sub">{t("settings_about_contact")}</span>
+                  <a
+                    className="font-mono text-text hover:underline"
+                    href="mailto:groove@wangda.today"
+                    data-testid="settings-about-contact"
+                  >
+                    groove@wangda.today
+                  </a>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-text-sub">{t("settings_about_report_bug")}</span>
+                  <a
+                    className="font-mono text-text hover:underline"
+                    href="mailto:groove@wangda.today?subject=groove%20bug%20report"
+                    data-testid="settings-about-report-bug"
+                  >
+                    groove@wangda.today
+                  </a>
+                </div>
                 {onOpenUpdates && (
                   <button
                     type="button"
