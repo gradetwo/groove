@@ -9,9 +9,9 @@
  */
 import { useCallback, useMemo, useState } from "react";
 import type { ArrangementV2, TrackKindV2 } from "../../types/arrangementV2";
-import { addTrack, changeTrackKind, createArrangementFromTemplate, removeTrack, setCollapsed, setTrackFlag, selectTrackTake } from "../../data/arrangementEdits";
+import { addTrack, changeTrackKind, setTrackSample, createArrangementFromTemplate, removeTrack, setCollapsed, setTrackFlag, selectTrackTake } from "../../data/arrangementEdits";
 import type { CaptureOutcome } from "../../audio/captureTake";
-import { TrackListV2 } from "./TrackListV2";
+import { TrackListV2, type InstrumentChoice } from "./TrackListV2";
 import { TakeSelectorV2 } from "./TakeSelectorV2";
 import { RecordButtonV2 } from "./RecordButtonV2";
 import { NewProjectPanelV2 } from "./NewProjectPanelV2";
@@ -30,9 +30,13 @@ export interface ArrangementViewV2Props {
    * rather than pretending to play.
    */
   player?: ArrangementPlayer;
+  /**
+   * The instruments a sampler track may play, injected like `player` and `capture` — the view needs no catalogue to be rendered or judged, and the application decides where the list comes from.
+   */
+  instruments?: readonly InstrumentChoice[];
 }
 
-export function ArrangementViewV2({ songId, capture, bar = 0, player }: ArrangementViewV2Props) {
+export function ArrangementViewV2({ songId, capture, bar = 0, player, instruments }: ArrangementViewV2Props) {
   /**
    * ⭐ **A new project starts by choosing what it is** — which is Logic's `Choose a Project`, and the owner's "there is no good new-project entry". `undefined` means the choice has not been made, and the panel is
    * what the route shows until it is; only then is there an arrangement to edit.
@@ -85,6 +89,8 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player }: Arrangem
         onToggle={(trackId, flag, value) => setArrangement((current) => setTrackFlag(current, trackId, flag, value))}
         onToggleCollapse={(trackId, collapsed) => setArrangement((current) => setCollapsed(current, trackId, collapsed))}
         onChangeKind={(trackId, kind) => setArrangement((current) => changeTrackKind(current, trackId, kind))}
+        instruments={instruments}
+        onChangeInstrument={(trackId, assetId) => setArrangement((current) => setTrackSample(current, trackId, assetId))}
       />
 
       <div data-testid="arrangement-transport" className="flex items-center gap-2">

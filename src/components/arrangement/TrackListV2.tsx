@@ -17,6 +17,17 @@ export interface TrackListV2Props {
   onToggleCollapse: (trackId: string, collapsed: boolean) => void;
   /** ⭐ Changing what a track **is**. The rule for what happens to its type-specific fields lives in `changeTrackKind`, not here. */
   onChangeKind: (trackId: string, kind: TrackKindV2) => void;
+  /**
+   * The instruments a sampler track can play, from the catalogue the application actually loaded. Empty until that load finishes, and empty on a deployment whose manifest carries none — in which case the row shows no
+   * chooser rather than an empty one.
+   */
+  instruments?: readonly InstrumentChoice[];
+  onChangeInstrument?: (trackId: string, assetId: string) => void;
+}
+
+export interface InstrumentChoice {
+  assetId: string;
+  name: string;
 }
 
 /** Depth from `parentId`, so what is drawn and what is grouped are the same fact. */
@@ -29,7 +40,7 @@ function depthOf(track: TrackV2, all: readonly TrackV2[], seen = new Set<string>
 
 const ADDABLE: TrackKindV2[] = ["sampler", "instrument", "drumkit", "fx", "folder"];
 
-export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, onToggleCollapse, onChangeKind }: TrackListV2Props) {
+export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, onToggleCollapse, onChangeKind, instruments = [], onChangeInstrument }: TrackListV2Props) {
   // A folded folder hides its children from the list; folding is a display state and this is the only place it is read.
   const hidden = new Set<string>();
   for (const track of arrangement.tracks) {
@@ -66,6 +77,24 @@ export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, 
                   </option>
                 ))}
               </select>
+              {/*
+                A sampler track plays a catalogue asset, so which one is a property of the track rather than a setting of the app. Shown only when the catalogue offers something and the track can sound — an empty chooser
+                would be a control that does nothing.
+              */}
+              {track.kind === "sampler" && onChangeInstrument && instruments.length > 0 && (
+                <select
+                  className="px-2 h-7 rounded text-xs bg-transparent border border-[var(--d-border,rgba(255,255,255,0.15))] text-text max-w-52"
+                  aria-label={`${track.name} instrument`}
+                  value={track.sample?.assetId ?? ""}
+                  onChange={(event) => onChangeInstrument(track.id, event.target.value)}
+                >
+                  {instruments.map((instrument) => (
+                    <option key={instrument.assetId} value={instrument.assetId}>
+                      {instrument.name}
+                    </option>
+                  ))}
+                </select>
+              )}
               <button type="button" className={`w-7 h-7 rounded text-xs ${track.muted ? "bg-[var(--d-accent)] text-[var(--d-accent-ink)]" : "border border-[var(--d-border,rgba(255,255,255,0.15))] text-text"}`} aria-pressed={Boolean(track.muted)} onClick={() => onToggle(track.id, "muted", !track.muted)}>
                 M
               </button>

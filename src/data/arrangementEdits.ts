@@ -167,6 +167,21 @@ export function setCollapsed(arrangement: ArrangementV2, trackId: string, collap
  *     would make the audible result depend on array order, which is exactly the kind of invisible coupling that turns "it plays the wrong take" into an unreproducible report;
  *   * **choosing a take that does not exist is refused**, not stored. A `selectedTakeId` naming nothing resolves to `undefined` and would silence the track while looking configured.
  */
+/**
+ * Point a sampler track at a different instrument.
+ *
+ * `changeTrackKind` decides whether a track *may* hold a sample; this chooses *which* one it plays. Only a `sampler` track accepts it — on any other kind the field would be a claim that something sounds from a track whose kind
+ * says it does not, and the model keeps exactly one place where playing a catalogue asset is true.
+ */
+export function setTrackSample(arrangement: ArrangementV2, trackId: string, assetId: string): ArrangementV2 {
+  return {
+    ...arrangement,
+    tracks: arrangement.tracks.map((track) =>
+      track.id === trackId && track.kind === "sampler" ? { ...track, sample: { assetId } } : track
+    ),
+  };
+}
+
 export function selectTrackTake(arrangement: ArrangementV2, trackId: string, takeId: string | undefined): ArrangementV2 {
   return {
     ...arrangement,

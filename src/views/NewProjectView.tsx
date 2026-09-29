@@ -4,6 +4,7 @@ import { getActiveAudioEngine, setActiveAudioEngine } from "../audio/activeEngin
 import { createArrangementPlayer } from "../audio/playerFromEngine";
 import { appCatalogueRuntime } from "../data/sampleCatalogueRuntime";
 import { ArrangementViewV2 } from "../components/arrangement/ArrangementViewV2";
+import type { InstrumentChoice } from "../components/arrangement/TrackListV2";
 import { useAudioEngineInstance } from "../features/sequencer/hooks/useAudioEngineInstance";
 import type { CaptureOutcome } from "../audio/captureTake";
 
@@ -52,11 +53,30 @@ export function useNewProjectEngine(): AudioEngine | null {
 
 export function NewProjectView({ capture }: NewProjectViewProps) {
   const engine = useNewProjectEngine();
+  const [instruments, setInstruments] = useState<InstrumentChoice[]>([]);
+
+  /**
+   * The instruments the catalogue actually holds, read from the same load the player uses. An instrument is an asset with an SFZ — the catalogue's own definition rather than a name that happens to look like one — and the list is
+   * allowed to stay empty: a deployment whose manifest carries no instrument then offers no chooser instead of an empty one.
+   */
+  useEffect(() => {
+    let cancelled = false;
+    void appCatalogueRuntime
+      .load()
+      .then(({ assets }) => {
+        if (cancelled) return;
+        setInstruments(assets.filter((asset) => asset.sfz).map((asset) => ({ assetId: asset.assetId, name: asset.name })));
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const player = useMemo(
     () => (engine ? createArrangementPlayer({ engine, loadCatalogue: () => appCatalogueRuntime.load() }) : undefined),
     [engine]
   );
 
-  return <ArrangementViewV2 songId="new" player={player} capture={capture} />;
+  return <ArrangementViewV2 songId="new" player={player} capture={capture} instruments={instruments} />;
 }

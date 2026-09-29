@@ -1,6 +1,6 @@
 import type { ArrangementV2 } from "../types/arrangementV2";
 import { beforeEach, describe, expect, it } from "vitest";
-import { addTrack, createArrangement, removeTrack, resetTrackIdsForTests, setTrackParent } from "../data/arrangementEdits";
+import { addTrack, createArrangement, removeTrack, resetTrackIdsForTests, setTrackParent, setTrackSample } from "../data/arrangementEdits";
 
 /**
  * The edits an interface is built from, and the two ways they go quietly wrong.
@@ -220,5 +220,39 @@ describe("a v2 arrangement's own notes", () => {
       const sounded = arr.tracks.filter((track) => arr.notesByTrack?.[track.id]?.some((step) => step === 1));
       expect(sounded.length).toBe(template.kinds.length);
     }
+  });
+});
+
+describe("choosing the instrument a sampler track plays", () => {
+  it("sets the asset on a sampler track", () => {
+    // The owner's requirement: a sampler track's instrument is a property of the track, chosen in the track list.
+    const withSampler = addTrack(emptyArrangement(), "sampler", "Sampler 1");
+    const sampler = withSampler.tracks[0]!;
+    const edited = setTrackSample(withSampler, sampler.id, "salamander-grand");
+    expect(edited.tracks[0]!.sample).toEqual({ assetId: "salamander-grand" });
+  });
+
+  it("leaves every other track alone", () => {
+    const withTwo = addTrack(addTrack(emptyArrangement(), "sampler", "Sampler 1"), "drumkit", "Drums");
+    const edited = setTrackSample(withTwo, withTwo.tracks[0]!.id, "karoryfer-meatbass");
+    expect(edited.tracks[1]).toBe(withTwo.tracks[1]);
+  });
+
+  it("refuses a track whose kind says it does not sound from a catalogue asset", () => {
+    /**
+     * The kind decides whether a track *may* hold a sample; this chooses which one. Writing the field onto an `instrument` or `fx` track would be a claim that something sounds from a track whose kind says otherwise — and the
+     * model keeps exactly one place where playing a catalogue asset is true.
+     */
+    const withFx = addTrack(emptyArrangement(), "fx", "Reverb");
+    const edited = setTrackSample(withFx, withFx.tracks[0]!.id, "salamander-grand");
+    expect(edited.tracks[0]!.sample).toBeUndefined();
+  });
+
+  it("keeps the rest of the track, so choosing an instrument is not a rename", () => {
+    const withSampler = addTrack(emptyArrangement(), "sampler", "Sampler 1");
+    const sampler = withSampler.tracks[0]!;
+    const named = { ...withSampler, tracks: [{ ...sampler, muted: true, gainDb: -3 }] };
+    const edited = setTrackSample(named, sampler.id, "karoryfer-emilyguitar");
+    expect(edited.tracks[0]).toMatchObject({ name: "Sampler 1", muted: true, gainDb: -3 });
   });
 });
