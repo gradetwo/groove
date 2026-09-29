@@ -49,4 +49,26 @@ describe("RecordButtonV2", () => {
     release?.({ ok: true, reference: "take-1", planned: { take: { id: "take-1", recordedAt: 1, source: "audio" } } });
     await waitFor(() => expect(screen.getByRole("button").textContent).toBe("Record"));
   });
+
+  it("hands the take that was recorded to its caller, which is how it reaches a track", async () => {
+    // The defect this pins: the button captured and dropped the result, so the take list stayed empty however often a person recorded.
+    const onTake = vi.fn();
+    const planned = { take: { id: "take-7", recordedAt: 7, source: "audio" as const } };
+    render(<RecordButtonV2 capture={vi.fn(async () => ({ ok: true as const, reference: "take-7", planned }))} onTake={onTake} />);
+    fireEvent.click(screen.getByRole("button", { name: /record/i }));
+    await waitFor(() => expect(onTake).toHaveBeenCalledWith(planned));
+  });
+
+  it("does not report a take when the capture was refused, because there is none", async () => {
+    const onTake = vi.fn();
+    render(
+      <RecordButtonV2
+        capture={vi.fn(async () => ({ ok: false as const, refusal: "permission-denied" as const, summary: "Permission denied." }))}
+        onTake={onTake}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /record/i }));
+    await waitFor(() => expect(screen.getByTestId("record-refusal")).toBeDefined());
+    expect(onTake).not.toHaveBeenCalled();
+  });
 });

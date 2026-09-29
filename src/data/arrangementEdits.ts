@@ -7,6 +7,7 @@
  * Every function returns a **new arrangement**, because a track list is state that an interface re-renders from; mutating in place is how a UI ends up showing something the model does not say.
  */
 import type { ArrangementV2, TakeRegion, TrackKindV2, TrackV2 } from "../types/arrangementV2";
+import type { PlannedTake } from "./takePlanning";
 import { defaultContentFor } from "./defaultContent";
 
 let nextId = 1;
@@ -167,6 +168,66 @@ export function setCollapsed(arrangement: ArrangementV2, trackId: string, collap
  *     would make the audible result depend on array order, which is exactly the kind of invisible coupling that turns "it plays the wrong take" into an unreproducible report;
  *   * **choosing a take that does not exist is refused**, not stored. A `selectedTakeId` naming nothing resolves to `undefined` and would silence the track while looking configured.
  */
+/**
+ * Point a sampler track at a different instrument.
+ *
+ * `changeTrackKind` decides whether a track *may* hold a sample; this chooses *which* one it plays. Only a `sampler` track accepts it — on any other kind the field would be a claim that something sounds from a track whose kind
+ * says it does not, and the model keeps exactly one place where playing a catalogue asset is true.
+ */
+/**
+ * Turn one step of a track's own pattern on or off.
+ *
+ * The steps are the track's content, and until now nothing in the arrangement interface showed them: the rows carried a name, a kind, mute, solo and delete, so a new project was silent in the sense that nothing on screen accounted for
+ * what would be heard. Turning a step is therefore the smallest edit that makes the content both visible and the person's own.
+ *
+ * Refused for `fx` and `folder`: `defaultContentFor` gives them all-zero steps, and that is their definition rather than an omission — a folder makes no sound and an empty effect does nothing.
+ */
+export function toggleStep(arrangement: ArrangementV2, trackId: string, index: number): ArrangementV2 {
+  const track = arrangement.tracks.find((candidate) => candidate.id === trackId);
+  if (!track || track.kind === "fx" || track.kind === "folder") return arrangement;
+  const current = arrangement.notesByTrack?.[trackId] ?? [];
+  if (index < 0 || index >= current.length) return arrangement;
+  const steps = current.map((value, position) => (position === index ? (value ? 0 : 1) : value));
+  return { ...arrangement, notesByTrack: { ...(arrangement.notesByTrack ?? {}), [trackId]: steps } };
+}
+
+export function setTrackSample(arrangement: ArrangementV2, trackId: string, assetId: string): ArrangementV2 {
+  return {
+    ...arrangement,
+    tracks: arrangement.tracks.map((track) =>
+      track.id === trackId && track.kind === "sampler" ? { ...track, sample: { assetId } } : track
+    ),
+  };
+}
+
+/**
+ * File a finished capture onto a track.
+ *
+ * The missing half of recording. `RecordButtonV2` captured audio and, on success, did nothing with it — no take reached the track, so the take list stayed empty no matter how many times a person recorded. The capture itself was fine;
+ * nothing received it.
+ *
+ * The new take is selected, so it is the one heard rather than one the person has to find, and a capture that covered a bar range also claims that range through `assignTakeToRange` — reusing the splitting rule that keeps regions
+ * disjoint, rather than a second implementation of it here.
+ *
+ * Every kind accepts a take: recording is an input form rather than a track type, and the owner corrected an earlier design that treated it as one. What differs is what was recorded — audio for a sampler, a MIDI sequence for the others — and
+ * that is `Take.source`.
+ */
+export function addTake(arrangement: ArrangementV2, trackId: string, planned: PlannedTake): ArrangementV2 {
+  const track = arrangement.tracks.find((candidate) => candidate.id === trackId);
+  if (!track) return arrangement;
+  const withTake: ArrangementV2 = {
+    ...arrangement,
+    tracks: arrangement.tracks.map((candidate) =>
+      candidate.id === trackId
+        ? { ...candidate, takes: [...(candidate.takes ?? []), planned.take], selectedTakeId: planned.take.id }
+        : candidate
+    ),
+  };
+  return planned.region
+    ? assignTakeToRange(withTake, trackId, planned.region.startBar, planned.region.endBar, planned.take.id)
+    : withTake;
+}
+
 export function selectTrackTake(arrangement: ArrangementV2, trackId: string, takeId: string | undefined): ArrangementV2 {
   return {
     ...arrangement,

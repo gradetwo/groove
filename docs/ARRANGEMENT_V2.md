@@ -570,3 +570,20 @@ ArrangementViewV2:97   playArrangementV2(arrangement, {}, player)
 | ⭐ **B：`/new` 自己建一个引擎 ✓（空 `onStep` ✓，用 `AudioStartGate` 解锁 context ✓），并 `setActiveAudioEngine` 注册 ✓** ✓✓ | ⭐ **最对 ✓ —— 因为"引擎存在"是全局的 ✓，而"sequencer 在跑"是本地的** ✓ |
 
 ⭐⭐ **而 B 与第 19、20 节的结论是同一条，只是更进了一层** ✓：⭐ **引擎（全局）→ 精简到可以独立存在 ✓；sequencer（本地）→ 留在 studio** ✓ —— ⭐ **而它们混在一起，正是这三节一路追下来的成因** ✓✓。
+
+
+## 23. 第 21 节那五条，现在都做完了（2026-09-29，v2.34.31）
+
+业主提的五条，逐条的状态：
+
+| # | 缺口 | 现在 |
+|---|---|---|
+| 1 | 引擎没接，按钮写着 `audio engine not connected yet` | 新建路线自己建引擎、注册到入口门、挂载时解锁。`src/views/NewProjectView.tsx` 与它导出的 `useNewProjectEngine`，五条判据 |
+| 2 | 采样轨道选不到乐器 | 轨道行有下拉，列出目录里带 `sfz` 的资产；数据层 `setTrackSample` 只接受 sampler 类型。八条判据 |
+| 3 | 看不到轨道内容 | 轨道行画十六条步进，长度取自数据；`toggleStep` 翻转一步，越界拒绝，fx 与 folder 拒绝。七条判据 |
+| 4 | 模板卡片排不齐 | 改成窄屏一列、宽屏两列的栅格，等宽等高 |
+| 5 | 录音区是空的 | 录音成功后 `onTake` 把 take 交出去，`addTake` 落到轨道并选中，覆盖小节范围时复用 `assignTakeToRange`。七条判据 |
+
+第 4 条没有配测试。布局在 jsdom 里判不了，它没有排版引擎；断言类名等于验证改动本身而不是结果。
+
+至此 TRACK A 的界面一侧不再是骨架：能选模板、能加删轨道、能改类型、能选乐器、能看能改步进、能录、能播。剩下的是 TRACK B 的成本曲线，以及移动端那条入口。

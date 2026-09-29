@@ -1,6 +1,6 @@
 import type { ArrangementV2 } from "../types/arrangementV2";
 import { beforeEach, describe, expect, it } from "vitest";
-import { addTrack, createArrangement, removeTrack, resetTrackIdsForTests, setTrackParent } from "../data/arrangementEdits";
+import { addTake, addTrack, createArrangement, removeTrack, resetTrackIdsForTests, setTrackParent, setTrackSample, toggleStep } from "../data/arrangementEdits";
 
 /**
  * The edits an interface is built from, and the two ways they go quietly wrong.
@@ -220,5 +220,115 @@ describe("a v2 arrangement's own notes", () => {
       const sounded = arr.tracks.filter((track) => arr.notesByTrack?.[track.id]?.some((step) => step === 1));
       expect(sounded.length).toBe(template.kinds.length);
     }
+  });
+});
+
+describe("choosing the instrument a sampler track plays", () => {
+  it("sets the asset on a sampler track", () => {
+    // The owner's requirement: a sampler track's instrument is a property of the track, chosen in the track list.
+    const withSampler = addTrack(emptyArrangement(), "sampler", "Sampler 1");
+    const sampler = withSampler.tracks[0]!;
+    const edited = setTrackSample(withSampler, sampler.id, "salamander-grand");
+    expect(edited.tracks[0]!.sample).toEqual({ assetId: "salamander-grand" });
+  });
+
+  it("leaves every other track alone", () => {
+    const withTwo = addTrack(addTrack(emptyArrangement(), "sampler", "Sampler 1"), "drumkit", "Drums");
+    const edited = setTrackSample(withTwo, withTwo.tracks[0]!.id, "karoryfer-meatbass");
+    expect(edited.tracks[1]).toBe(withTwo.tracks[1]);
+  });
+
+  it("refuses a track whose kind says it does not sound from a catalogue asset", () => {
+    /**
+     * The kind decides whether a track *may* hold a sample; this chooses which one. Writing the field onto an `instrument` or `fx` track would be a claim that something sounds from a track whose kind says otherwise — and the
+     * model keeps exactly one place where playing a catalogue asset is true.
+     */
+    const withFx = addTrack(emptyArrangement(), "fx", "Reverb");
+    const edited = setTrackSample(withFx, withFx.tracks[0]!.id, "salamander-grand");
+    expect(edited.tracks[0]!.sample).toBeUndefined();
+  });
+
+  it("keeps the rest of the track, so choosing an instrument is not a rename", () => {
+    const withSampler = addTrack(emptyArrangement(), "sampler", "Sampler 1");
+    const sampler = withSampler.tracks[0]!;
+    const named = { ...withSampler, tracks: [{ ...sampler, muted: true, gainDb: -3 }] };
+    const edited = setTrackSample(named, sampler.id, "karoryfer-emilyguitar");
+    expect(edited.tracks[0]).toMatchObject({ name: "Sampler 1", muted: true, gainDb: -3 });
+  });
+});
+
+describe("editing a track's own steps", () => {
+  it("turns a step on and off again", () => {
+    const withTrack = addTrack(emptyArrangement(), "drumkit", "Drums");
+    const id = withTrack.tracks[0]!.id;
+    const on = toggleStep(withTrack, id, 0);
+    expect(on.notesByTrack![id]![0]).toBe(0); // every 4 from 0: step 0 starts on, so the first toggle takes it off
+    const off = toggleStep(on, id, 0);
+    expect(off.notesByTrack![id]![0]).toBe(1);
+  });
+
+  it("leaves the other steps of that track alone", () => {
+    const withTrack = addTrack(emptyArrangement(), "drumkit", "Drums");
+    const id = withTrack.tracks[0]!.id;
+    const before = withTrack.notesByTrack![id]!;
+    const edited = toggleStep(withTrack, id, 1);
+    expect(edited.notesByTrack![id]!.filter((_, index) => index !== 1)).toEqual(before.filter((_, index) => index !== 1));
+  });
+
+  it("refuses a step outside the pattern rather than growing one", () => {
+    // A 16-step bar is what the data holds; an index beyond it would invent a length nobody chose.
+    const withTrack = addTrack(emptyArrangement(), "drumkit", "Drums");
+    const id = withTrack.tracks[0]!.id;
+    expect(toggleStep(withTrack, id, 99)).toBe(withTrack);
+  });
+
+  it("refuses a kind that makes no sound, because its all-zero steps are its definition", () => {
+    const withFolder = addTrack(emptyArrangement(), "folder", "Group");
+    const id = withFolder.tracks[0]!.id;
+    expect(toggleStep(withFolder, id, 0)).toBe(withFolder);
+  });
+});
+describe("filing a finished capture onto a track", () => {
+  it("appends the take and selects it, so it is the one heard rather than one to go looking for", () => {
+    const withTrack = addTrack(emptyArrangement(), "sampler", "Sampler 1");
+    const id = withTrack.tracks[0]!.id;
+    const planned = { take: { id: "take-1", recordedAt: 10, source: "audio" as const } };
+    const filed = addTake(withTrack, id, planned);
+    expect(filed.tracks[0]!.takes).toEqual([planned.take]);
+    expect(filed.tracks[0]!.selectedTakeId).toBe("take-1");
+  });
+
+  it("keeps the takes that were already there", () => {
+    const withTrack = addTrack(emptyArrangement(), "sampler", "Sampler 1");
+    const id = withTrack.tracks[0]!.id;
+    const first = addTake(withTrack, id, { take: { id: "take-1", recordedAt: 1, source: "audio" } });
+    const second = addTake(first, id, { take: { id: "take-2", recordedAt: 2, source: "audio" } });
+    expect(second.tracks[0]!.takes!.map((take) => take.id)).toEqual(["take-1", "take-2"]);
+    expect(second.tracks[0]!.selectedTakeId).toBe("take-2");
+  });
+
+  it("claims the bar range when the capture covered one, using the same splitting rule as choosing a take", () => {
+    const withTrack = addTrack(emptyArrangement(), "sampler", "Sampler 1");
+    const id = withTrack.tracks[0]!.id;
+    const filed = addTake(withTrack, id, {
+      take: { id: "take-1", recordedAt: 1, source: "audio" },
+      region: { startBar: 2, endBar: 4, takeId: "take-1" },
+    });
+    expect(filed.tracks[0]!.takeRegions).toEqual([{ startBar: 2, endBar: 4, takeId: "take-1" }]);
+  });
+
+  it("accepts a take on any kind, because recording is an input form rather than a track type", () => {
+    // The owner corrected an earlier design that treated audio as its own track type; what differs is `Take.source`, not the kind.
+    for (const kind of ["drumkit", "instrument", "sampler"] as const) {
+      const withTrack = addTrack(emptyArrangement(), kind, kind);
+      const id = withTrack.tracks[0]!.id;
+      const filed = addTake(withTrack, id, { take: { id: "take-1", recordedAt: 1, source: "midi" } });
+      expect(filed.tracks[0]!.takes).toHaveLength(1);
+    }
+  });
+
+  it("refuses a track that is not there rather than inventing one", () => {
+    const arrangement = emptyArrangement();
+    expect(addTake(arrangement, "missing", { take: { id: "take-1", recordedAt: 1, source: "audio" } })).toBe(arrangement);
   });
 });
