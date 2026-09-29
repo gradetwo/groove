@@ -1,27 +1,27 @@
 {
-  "version": "2.34.28",
+  "version": "2.34.29",
   "releaseDate": "2026-09-29",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.28",
+    "version": "2.34.29",
     "date": "2026-09-29",
     "category": "feature",
     "title": {
-      "zh": "第一件真实乐器能出声了",
-      "en": "The first real instrument can sound"
+      "zh": "四件真实乐器都已就位",
+      "en": "Four real instruments, all in place"
     },
     "highlights": [
       {
-        "zh": "SFZ 引擎学会了 #define 变量（键与值都插值）与 default_path，于是真实的采样乐器不再静音。",
-        "en": "The SFZ engine learned #define variables in keys as well as values, and default_path, so real sampled instruments are no longer silent."
+        "zh": "电贝斯与电吉他加入：Karoryfer 的两件免费乐器已镜像，各自带 587 与 331 个文件。",
+        "en": "Electric bass and electric guitar join: two Karoryfer instruments are mirrored, with 587 and 331 files."
       },
       {
-        "zh": "萨拉曼德大钢琴已镜像到 R2：668 个文件、641 段时长实测，公网可达且字节相符。",
-        "en": "Salamander Grand Piano is mirrored to R2: 668 files, 641 durations measured, publicly reachable with bytes matching."
+        "zh": "清单现在逐个文件带哈希，并带实测时长——四件乐器共 3244 个文件，全部核对过。",
+        "en": "The manifest now carries a hash per file and a measured duration — 3244 files across four instruments, all verified."
       },
       {
-        "zh": "镜像从此有脚本：清单生成器、预算检查、上传与可达性核对。",
-        "en": "Mirroring now has scripts: a manifest builder, a budget check, an uploader and a reachability check."
+        "zh": "可达性检查会遍历每一个乐器，而不是只看第一个。",
+        "en": "The reachability check walks every instrument rather than only the first."
       }
     ],
     "truncated": false
