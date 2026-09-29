@@ -79,11 +79,7 @@ export async function expandRemoteIncludes(text: string, options: RemoteIncludeO
      * So: a small fixed window, and a timeout per request. Neither is a concession to CI — an application resolving a real library makes the same requests, so a bounded window and a deadline improve the
      * product as much as the test.
      */
-    const window = 8;
-    for (let start = 0; start < wanted.length; start += window) {
-      await Promise.all(wanted.slice(start, start + window).map((path) => fetchOne(path)));
-    }
-    async function fetchOne(path: string): Promise<void> {
+    const fetchOne = async (path: string): Promise<void> => {
       attempted.add(path);
       try {
         // Resolved against the program's own address, so a relative include becomes a real URL without a second implementation of the resolver's rules.
@@ -99,6 +95,11 @@ export async function expandRemoteIncludes(text: string, options: RemoteIncludeO
       } catch (error) {
         failures.push(`${path}: ${error instanceof Error ? error.message : String(error)}`);
       }
+    }
+
+    const window = 8;
+    for (let start = 0; start < wanted.length; start += window) {
+      await Promise.all(wanted.slice(start, start + window).map((path) => fetchOne(path)));
     }
     result = expandIncludes(text, read, { path: options.programUrl, maxDepth: options.maxDepth });
     waves.push({ fetched: [...wanted], failed: [...failures], missingAfter: result.missing.length });
