@@ -39,7 +39,17 @@ export interface SampleAsset {
    *
    * Both are carried because the two hosts fail differently: an upstream reorganisation 404s, a misrouted mirror 403s. A loader with one address cannot tell those apart.
    */
-  sfz?: { url: string; fallbackUrl?: string };
+  sfz?: {
+    url: string;
+    fallbackUrl?: string;
+    /**
+     * The program's own path **relative to the library root** (e.g. `Programs/01-basic-kit.sfz`).
+     *
+     * Needed because include paths are relative to that root, not to the program's directory: subtracting this from `url` gives the base the includes resolve against, which is the same base the
+     * mirror uses. Without it the loader resolved includes against the program's directory and asked for `…/Programs/Programs/…`.
+     */
+    path?: string;
+  };
 }
 
 /**

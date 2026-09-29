@@ -258,7 +258,7 @@ export function sampleAssetsFromManifest(manifest: SampleManifest, root: string)
         problems.push(`"${entry.id}" declares an sfz but neither a pinned source nor a mirror URL could be resolved`);
         continue;
       }
-      asset.sfz = mirror && mirror !== url ? { url, fallbackUrl: mirror } : { url };
+      asset.sfz = { ...(mirror && mirror !== url ? { url, fallbackUrl: mirror } : { url }), path: entry.sfz };
     }
     assets.push(asset);
   }
