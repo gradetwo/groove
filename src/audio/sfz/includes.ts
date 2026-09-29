@@ -147,8 +147,12 @@ export function expandIncludes(
 
     const child = read(wanted);
     if (child === undefined) {
-      // Reported as a **path** as well as a sentence: a synchronous reader cannot be given to a browser, so the async caller's loop is driven by this list.
-      if (!missing.includes(wanted)) missing.push(wanted);
+      /**
+       * **Every candidate, not just the one reported.** The resolver tries the including file's directory first and the root fallback second, and for a real library the **second** is usually the right
+       * one: this library writes `#include "mappings/…"` from inside `Programs/mappings/…`, so the file-relative candidate gets a doubled `mappings/` while the root-relative one is correct. Reporting only
+       * `candidates[0]` meant an asynchronous caller could never fetch the candidate that would have worked — the loop fetched the wrong path, got a 404, and the library resolved to no regions.
+       */
+      for (const candidate of candidates) if (!missing.includes(candidate)) missing.push(candidate);
       problems.push(`${where}: included file "${wanted}" was not found`);
       return;
     }

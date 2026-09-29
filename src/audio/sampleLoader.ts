@@ -15,6 +15,7 @@
 import { findSampleAsset, sampleAssetIds } from "../data/sampleCatalogue";
 import type { SampleAsset } from "../data/sampleCatalogue";
 import { resolveInstrumentNote } from "./sfz/instrument";
+import { expandRemoteIncludes } from "./sfz/remoteIncludes";
 
 /** Decodes one asset. In the browser this wraps `decodeAudioData`; in a test it is a plain function. */
 export type SampleDecoder = (asset: SampleAsset) => Promise<AudioBuffer>;
@@ -111,7 +112,20 @@ export function createSampleLoader(
           throw new Error(`${asset.assetId}: neither address served the SFZ — source ${asset.sfz.url}: ${reason(primaryError)}; mirror ${fallback}: ${reason(fallbackError)}`);
         }
       }
-      const resolution = resolveInstrumentNote(asset, sfzText, note, options);
+      /**
+       * **The program's includes have to be fetched before it can be parsed**, and this is the step that was missing: the entry file of a real library contains **zero `<region>` occurrences** and
+       * only `#include` directives, so handing its raw text to the resolver produced "defines no regions" — which reads as an empty library rather than an unexpanded one.
+       */
+            // The include paths are relative to the **library root**, which is the program's address with its own path removed — the same base the mirror uses, so both layouts agree.
+      const programPath = asset.sfz.path;
+      const baseUrl = programPath ? asset.sfz.url.slice(0, asset.sfz.url.length - programPath.length) : asset.sfz.url;
+      /**
+       * **The expander is given a plain path, not a URL.** It works by string arithmetic on paths — the directory of the including file, a root fallback — and `https://` contains a `//` that its
+       * arithmetic reads as a separator: passing the full URL produced candidates like `https:/raw.githubusercontent.com/…` with **one** slash, which then 404'd and looked exactly like a missing file.
+       * The address is therefore assembled **only at the moment of fetching**, and every path the expander sees stays plain.
+       */
+      const expanded = await expandRemoteIncludes(sfzText, { fetchText: fetchSfzText, programUrl: programPath || asset.sfz.url, baseUrl });
+      const resolution = resolveInstrumentNote(asset, expanded.text, note, options);
       if (!resolution.ok || !resolution.note) throw new Error(resolution.reason ?? `note ${note} could not be resolved for "${assetId}"`);
 
       // Through `load`, so a sample shared by several notes is decoded once — the single-flight rule applies to the sample, not to the note.

@@ -138,17 +138,44 @@ try {
     if (!kit) return { ok: false, log: [...log, "no virtuosity-drums-basic in the catalogue"] };
     log.push(`sfz url: ${kit.sfz.url} | fallback: ${kit.sfz.fallbackUrl ?? "(none)"}`);
 
-    // Resolve a note through the real resolver, with the SFZ fetched from whichever address answers first.
-    const sfzText = await (await fetch(kit.sfz.url)).text();
-    log.push(`sfz text: ${sfzText.length} bytes from the source`);
-    const resolution = instrument.resolveInstrumentNote(kit, sfzText, 38);
-    log.push(`resolve note 38: ok=${resolution.ok} reason=${resolution.reason ?? "-"} regions=${resolution.regions?.length ?? 0}`);
-    if (!resolution.ok) return { ok: false, log };
+    /**
+     * **No manual resolve here.** The first version of this probe fetched the SFZ and called the resolver itself, which meant it **bypassed the loader** — and therefore could not see the include
+     * expansion that the loader now performs. A probe that reproduces a path instead of following it measures the probe. So the only thing done here is what the application does: ask the loader for a
+     * note and see whether a buffer comes back.
+     */
+    // Diagnostics first: the expansion's own numbers, reported before the loader is asked for anything.
+    const includesModule = await import("/src/audio/sfz/remoteIncludes.ts");
+    const parseModule = await import("/src/audio/sfz/parse.ts");
+    const sfzHead = await (await fetch(kit.sfz.url)).text();
+    const programPath = kit.sfz.path ?? "";
+    const base = programPath ? kit.sfz.url.slice(0, kit.sfz.url.length - programPath.length) : kit.sfz.url;
+    log.push(`base: ${base}`);
+    const expanded = await includesModule.expandRemoteIncludes(sfzHead, {
+      fetchText: async (url) => {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`${response.status} from ${url}`);
+        return response.text();
+      },
+      // A **plain path**, like the loader passes: the expander's arithmetic reads `//` in a URL as a separator and produces `https:/…`.
+      programUrl: kit.sfz.path ?? kit.sfz.url,
+      baseUrl: base,
+    });
+    const regions = parseModule.parseSfz(expanded.text);
+    log.push(`expand: included ${expanded.included.length}, missing ${expanded.missing.length}, problems ${expanded.problems.length}, regions ${regions.length}`);
+    for (const problem of expanded.problems.slice(0, 3)) log.push(`  problem: ${problem}`);
+    log.push(`sfz entry: ${sfzHead.length} bytes from the source, includes ${(sfzHead.match(/^\s*#include/gm) ?? []).length}`);
 
     // And load it for real: the loader fetches, decodes and caches, with the browser decoder.
     const context = new OfflineAudioContext(1, 44100, 44100);
     const loader = loaderModule.createSampleLoader(graph.browserSampleDecoder(context), assets);
-    const buffer = await loader.loadNote("virtuosity-drums-basic", 38);
+    let buffer;
+    try {
+      buffer = await loader.loadNote("virtuosity-drums-basic", 38);
+    } catch (error) {
+      // **Failures are returned with their diagnostics, not thrown away.** The first version let the exception escape, which discarded the log — so the one run that had something to say said nothing.
+      log.push(`loadNote threw: ${error instanceof Error ? error.message : String(error)}`);
+      return { ok: false, log };
+    }
     const data = buffer.getChannelData(0);
     let peak = 0;
     for (let i = 0; i < data.length; i += 1) peak = Math.max(peak, Math.abs(data[i]));
