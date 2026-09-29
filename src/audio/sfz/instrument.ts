@@ -65,3 +65,33 @@ export function resolveInstrumentNote(
     note: { samplePath: playback.sample, rootKey: playback.rootKey, ratio: playback.ratio, seqPosition: playback.seqPosition },
   };
 }
+
+/**
+ * A region's `sample=` turned into **an address**, because a catalogue lookup cannot find it.
+ *
+ * The catalogue holds **instruments**, and a region names a **file** (`../Samples/kickmic/snare/x.flac`). Asking the catalogue for that path is what produced
+ * `no sample "…" — the catalogue holds virtuosity-drums-basic`: not a missing library, a wrong kind of question.
+ *
+ * **Two addresses, resolved by URL semantics rather than arithmetic.** The path is relative to **the program file that wrote it**, so `new URL(samplePath, programUrl)` is correct by construction — and the
+ * fallback is derived the same way from the mirror's address. That distinction matters because arithmetic is where this went wrong twice: a source URL that carried the mirror's `prefix`, and includes
+ * resolved against the program's directory when their paths were root-relative. Here the two relationships are different, and only one of them is "relative to the program".
+ */
+export interface InstrumentAddresses {
+  /** Where the program was fetched from, and where the mirror serves it. */
+  programUrl: string;
+  programFallbackUrl?: string;
+}
+
+export function sampleAssetForPath(samplePath: string, addresses: InstrumentAddresses): SampleAsset {
+  const primary = new URL(samplePath, addresses.programUrl).toString();
+  const mirror = addresses.programFallbackUrl ? new URL(samplePath, addresses.programFallbackUrl).toString() : undefined;
+  return {
+    assetId: samplePath,
+    name: samplePath,
+    kind: "one-shot",
+    // Not knowable before decoding; the field exists for display and the loader measures the truth when it decodes.
+    seconds: 0,
+    url: primary,
+    ...(mirror && mirror !== primary ? { fallbackUrl: mirror } : {}),
+  };
+}

@@ -80,3 +80,28 @@ describe("resolveInstrumentNote", () => {
     expect(byVelocity.reason).toMatch(/no playback/);
   });
 });
+
+/**
+ * A region's sample path as an address — the question the catalogue cannot answer, because it holds instruments and the region names a file.
+ */
+describe("sampleAssetForPath", () => {
+  it("resolves the path against the program file, not the library root", async () => {
+    const { sampleAssetForPath } = await import("../audio/sfz/instrument");
+    const asset = sampleAssetForPath("../Samples/kickmic/snare/x.flac", {
+      programUrl: "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a7345/Programs/01-basic-kit.sfz",
+      programFallbackUrl: "https://r2mirror.groove.wangda.today/virtuosity-drums/Programs/01-basic-kit.sfz",
+    });
+    // One step up from `Programs/` — the same relative relationship the SFZ itself expresses.
+    expect(asset.url).toBe("https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a7345/Samples/kickmic/snare/x.flac");
+    expect(asset.fallbackUrl).toBe("https://r2mirror.groove.wangda.today/virtuosity-drums/Samples/kickmic/snare/x.flac");
+    // The path is the id: it is what the region said, and it is what an error should quote back.
+    expect(asset.assetId).toBe("../Samples/kickmic/snare/x.flac");
+  });
+
+  it("omits the fallback when there is no mirror address, rather than inventing one", async () => {
+    const { sampleAssetForPath } = await import("../audio/sfz/instrument");
+    const asset = sampleAssetForPath("Samples/a.flac", { programUrl: "https://host/lib/Programs/k.sfz" });
+    expect(asset.url).toBe("https://host/lib/Programs/Samples/a.flac");
+    expect(asset.fallbackUrl).toBeUndefined();
+  });
+});

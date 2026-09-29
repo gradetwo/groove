@@ -39,6 +39,13 @@ export interface SampleAsset {
    *
    * Both are carried because the two hosts fail differently: an upstream reorganisation 404s, a misrouted mirror 403s. A loader with one address cannot tell those apart.
    */
+  /**
+   * The mirror's address for this asset, used only when `url` fails.
+   *
+   * It belongs on the asset rather than inside `sfz` because a **sample** needs it too: a region's `sample=` becomes an address (source-first, mirror as fallback), and without this field the mirrored copy
+   * of a sample would be unreachable when the upstream library is reorganised.
+   */
+  fallbackUrl?: string;
   sfz?: {
     url: string;
     fallbackUrl?: string;
