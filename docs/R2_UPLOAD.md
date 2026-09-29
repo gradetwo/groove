@@ -1936,3 +1936,33 @@ version:check → local gate → build → deploy → mirror → remote
 | **3** | ⭐ **并把"打标签"加进 `release.sh`** ✓ —— ⭐ **理由是那句自己打印的提示 ✓：它在要求一件它没做的事** ✗✓ |
 
 ⭐⭐ **而这一段最后的交付物，是那两条线上核对** ✓：**`2.34.28` ✓ 与 `salamander-grand`（668 文件 · 25.862625 秒实测）✓** —— ⭐ **也就是说：真实乐器现在【在线上】了 ✓✓**。
+
+
+## 63. ⭐⭐⭐⭐ `v2.34.28` 的三分之三：**标签补上了，而且指向的提交内容确实是这个版本**（2026-09-28 晚 ✓）
+
+### 三件事现在都成立
+
+| 事 | 证据 |
+|---|---|
+| ⭐ **线上** | ⭐ **`/version.json` → `2.34.28`** ✓ · **`/samples/manifest.json` 含 `salamander-grand`（668 文件 · 25.862625 秒实测）** ✓✓ |
+| ⭐ **`main`** | ⭐ **镜像仓 `origin/main` = `06c7370`** ✓（**最新内容 ✓**） |
+| ⭐ **tag** | ⭐ **`refs/tags/v2.34.28` → 剥开 → `1bf4f33`** ✓✓ |
+
+### ⭐ 而"标签指向哪个提交"这件事，是用【内容】找出来的，不是猜的
+
+```bash
+git log --oneline -S'"version": "2.34.28"' -- package.json
+→ 1bf4f33 fix(mirror): exclude repository metadata
+```
+
+⭐⭐ **`git log -S` 找的是"这个字符串的计数在哪条提交上改变"✓ —— 也就是"哪条提交第一次包含它"✓** ✓✓ —— ⚠️ **而那条提交的信息是 `fix(mirror): exclude repository metadata` ✗，与发布无关 ✗** ✓ —— ⭐ **因为镜像仓的提交是同步脚本按【文件】重新提交的 ✓，它的信息来自本地那一条 ✓** ✓✓。
+
+⭐⭐ **所以验证方式必须是读内容** ✓：**`git show 1bf4f33:package.json` → `2.34.28`** ✓✓ —— ⭐ **"推送成功"是状态 ✓，"那个提交的内容是这个版本"才是结果** ✓✓（**同一句话，本会话第 N 次** ✓）。
+
+### ⚠️ 而"打标签"这一步【仍然】不在 `release.sh` 里
+
+⭐ 六步依然是 ✓：**`version:check → local gate → build → deploy → mirror → remote`** ✗ —— ⭐ **而它最后打印的那句话仍在要求一个它不造的标签** ✗✓：
+
+> ⭐ **`✅ deployed and published — now check /version.json against the tag`**
+
+⭐⭐ **所以下一次发布的正确改法是** ✓：⭐ **在 `remote` 之后加一步 `tag`** ✓ —— ⭐ **它要做两件事** ✓：**在本地仓打标注标签 ✓、在镜像仓打同样的标签并推 ✓**（**因为两边的 sha 不同 ✓**）—— ⭐ **而它的判据是** ✓：**`git ls-remote --tags origin` 里出现那个版本 ✓，且 `git show <tag>^{}:package.json` 的 `version` 等于它** ✓✓。
