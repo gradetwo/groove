@@ -9,13 +9,18 @@
  */
 import { useState } from "react";
 import type { CaptureOutcome } from "../../audio/captureTake";
+import type { PlannedTake } from "../../data/takePlanning";
 
 export interface RecordButtonV2Props {
   /** Starting a capture. Injected, so this component can be tested without a microphone — the same seam the capture uses. */
   capture: () => Promise<CaptureOutcome>;
+  /**
+   * Receives what was recorded. Until this existed the button captured and dropped the result: the take never reached a track, so the take list stayed empty however often a person recorded.
+   */
+  onTake?: (planned: PlannedTake) => void;
 }
 
-export function RecordButtonV2({ capture }: RecordButtonV2Props) {
+export function RecordButtonV2({ capture, onTake }: RecordButtonV2Props) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | undefined>(undefined);
 
@@ -25,7 +30,12 @@ export function RecordButtonV2({ capture }: RecordButtonV2Props) {
     const outcome = await capture();
     setBusy(false);
     // ⭐ The refusal's own words. Rewriting them here would be a second answer to "why did this fail", and the first one is the one with criteria.
-    if (!outcome.ok) setMessage(outcome.summary);
+    if (!outcome.ok) {
+      setMessage(outcome.summary);
+      return;
+    }
+    // A refusal says so above; a success has to go somewhere, and the only place a take belongs is the track it was recorded on.
+    onTake?.(outcome.planned);
   };
 
   return (

@@ -7,6 +7,7 @@
  * Every function returns a **new arrangement**, because a track list is state that an interface re-renders from; mutating in place is how a UI ends up showing something the model does not say.
  */
 import type { ArrangementV2, TakeRegion, TrackKindV2, TrackV2 } from "../types/arrangementV2";
+import type { PlannedTake } from "./takePlanning";
 import { defaultContentFor } from "./defaultContent";
 
 let nextId = 1;
@@ -197,6 +198,34 @@ export function setTrackSample(arrangement: ArrangementV2, trackId: string, asse
       track.id === trackId && track.kind === "sampler" ? { ...track, sample: { assetId } } : track
     ),
   };
+}
+
+/**
+ * File a finished capture onto a track.
+ *
+ * The missing half of recording. `RecordButtonV2` captured audio and, on success, did nothing with it — no take reached the track, so the take list stayed empty no matter how many times a person recorded. The capture itself was fine;
+ * nothing received it.
+ *
+ * The new take is selected, so it is the one heard rather than one the person has to find, and a capture that covered a bar range also claims that range through `assignTakeToRange` — reusing the splitting rule that keeps regions
+ * disjoint, rather than a second implementation of it here.
+ *
+ * Every kind accepts a take: recording is an input form rather than a track type, and the owner corrected an earlier design that treated it as one. What differs is what was recorded — audio for a sampler, a MIDI sequence for the others — and
+ * that is `Take.source`.
+ */
+export function addTake(arrangement: ArrangementV2, trackId: string, planned: PlannedTake): ArrangementV2 {
+  const track = arrangement.tracks.find((candidate) => candidate.id === trackId);
+  if (!track) return arrangement;
+  const withTake: ArrangementV2 = {
+    ...arrangement,
+    tracks: arrangement.tracks.map((candidate) =>
+      candidate.id === trackId
+        ? { ...candidate, takes: [...(candidate.takes ?? []), planned.take], selectedTakeId: planned.take.id }
+        : candidate
+    ),
+  };
+  return planned.region
+    ? assignTakeToRange(withTake, trackId, planned.region.startBar, planned.region.endBar, planned.take.id)
+    : withTake;
 }
 
 export function selectTrackTake(arrangement: ArrangementV2, trackId: string, takeId: string | undefined): ArrangementV2 {

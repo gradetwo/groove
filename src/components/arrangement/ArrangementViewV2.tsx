@@ -9,7 +9,7 @@
  */
 import { useCallback, useMemo, useState } from "react";
 import type { ArrangementV2, TrackKindV2 } from "../../types/arrangementV2";
-import { addTrack, changeTrackKind, setTrackSample, toggleStep, createArrangementFromTemplate, removeTrack, setCollapsed, setTrackFlag, selectTrackTake } from "../../data/arrangementEdits";
+import { addTake, addTrack, changeTrackKind, setTrackSample, toggleStep, createArrangementFromTemplate, removeTrack, setCollapsed, setTrackFlag, selectTrackTake } from "../../data/arrangementEdits";
 import type { CaptureOutcome } from "../../audio/captureTake";
 import { TrackListV2, type InstrumentChoice } from "./TrackListV2";
 import { TakeSelectorV2 } from "./TakeSelectorV2";
@@ -119,7 +119,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           <p>Select a track to see its takes.</p>
         ) : (
           <>
-            <RecordButtonV2 capture={capture} />
+            <RecordButtonV2 capture={capture} onTake={(planned) => setArrangement((current) => addTake(current, selected.id, planned))} />
             <TakeSelectorV2 track={selected} bar={bar} onSelect={(takeId) => setArrangement((current) => selectTrackTake(current, selected.id, takeId))} />
           </>
         )}

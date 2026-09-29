@@ -1,6 +1,6 @@
 import type { ArrangementV2 } from "../types/arrangementV2";
 import { beforeEach, describe, expect, it } from "vitest";
-import { addTrack, createArrangement, removeTrack, resetTrackIdsForTests, setTrackParent, setTrackSample, toggleStep } from "../data/arrangementEdits";
+import { addTake, addTrack, createArrangement, removeTrack, resetTrackIdsForTests, setTrackParent, setTrackSample, toggleStep } from "../data/arrangementEdits";
 
 /**
  * The edits an interface is built from, and the two ways they go quietly wrong.
@@ -286,5 +286,49 @@ describe("editing a track's own steps", () => {
     const withFolder = addTrack(emptyArrangement(), "folder", "Group");
     const id = withFolder.tracks[0]!.id;
     expect(toggleStep(withFolder, id, 0)).toBe(withFolder);
+  });
+});
+describe("filing a finished capture onto a track", () => {
+  it("appends the take and selects it, so it is the one heard rather than one to go looking for", () => {
+    const withTrack = addTrack(emptyArrangement(), "sampler", "Sampler 1");
+    const id = withTrack.tracks[0]!.id;
+    const planned = { take: { id: "take-1", recordedAt: 10, source: "audio" as const } };
+    const filed = addTake(withTrack, id, planned);
+    expect(filed.tracks[0]!.takes).toEqual([planned.take]);
+    expect(filed.tracks[0]!.selectedTakeId).toBe("take-1");
+  });
+
+  it("keeps the takes that were already there", () => {
+    const withTrack = addTrack(emptyArrangement(), "sampler", "Sampler 1");
+    const id = withTrack.tracks[0]!.id;
+    const first = addTake(withTrack, id, { take: { id: "take-1", recordedAt: 1, source: "audio" } });
+    const second = addTake(first, id, { take: { id: "take-2", recordedAt: 2, source: "audio" } });
+    expect(second.tracks[0]!.takes!.map((take) => take.id)).toEqual(["take-1", "take-2"]);
+    expect(second.tracks[0]!.selectedTakeId).toBe("take-2");
+  });
+
+  it("claims the bar range when the capture covered one, using the same splitting rule as choosing a take", () => {
+    const withTrack = addTrack(emptyArrangement(), "sampler", "Sampler 1");
+    const id = withTrack.tracks[0]!.id;
+    const filed = addTake(withTrack, id, {
+      take: { id: "take-1", recordedAt: 1, source: "audio" },
+      region: { startBar: 2, endBar: 4, takeId: "take-1" },
+    });
+    expect(filed.tracks[0]!.takeRegions).toEqual([{ startBar: 2, endBar: 4, takeId: "take-1" }]);
+  });
+
+  it("accepts a take on any kind, because recording is an input form rather than a track type", () => {
+    // The owner corrected an earlier design that treated audio as its own track type; what differs is `Take.source`, not the kind.
+    for (const kind of ["drumkit", "instrument", "sampler"] as const) {
+      const withTrack = addTrack(emptyArrangement(), kind, kind);
+      const id = withTrack.tracks[0]!.id;
+      const filed = addTake(withTrack, id, { take: { id: "take-1", recordedAt: 1, source: "midi" } });
+      expect(filed.tracks[0]!.takes).toHaveLength(1);
+    }
+  });
+
+  it("refuses a track that is not there rather than inventing one", () => {
+    const arrangement = emptyArrangement();
+    expect(addTake(arrangement, "missing", { take: { id: "take-1", recordedAt: 1, source: "audio" } })).toBe(arrangement);
   });
 });
