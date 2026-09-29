@@ -33,10 +33,36 @@ if (!entry) {
   process.exit(1);
 }
 
+
+/**
+ * ⭐ **The credentials are an S3 endpoint, not a configured remote.** This machine has no `r2` remote — `rclone listremotes` shows only `blackhole:` — while `.env.local` holds `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID` and
+ * `R2_SECRET_ACCESS_KEY`, and the account id is what forms `https://<account-id>.r2.cloudflarestorage.com`. So the remote is supplied as arguments: rclone still chunks, resumes and verifies, and nothing has to exist in a config
+ * file for the bucket to be reachable.
+ */
+function r2Config() {
+  const env = path.join(process.cwd(), ".env.local");
+  const values = new Map();
+  if (fs.existsSync(env)) {
+    for (const line of fs.readFileSync(env, "utf8").split("\n")) {
+      const match = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/);
+      if (match) values.set(match[1], match[2].replace(/^"|"$/g, ""));
+    }
+  }
+  const account = process.env.R2_ACCOUNT_ID ?? values.get("R2_ACCOUNT_ID");
+  const keyId = process.env.R2_ACCESS_KEY_ID ?? values.get("R2_ACCESS_KEY_ID");
+  const secret = process.env.R2_SECRET_ACCESS_KEY ?? values.get("R2_SECRET_ACCESS_KEY");
+  // ⚠️ Refused rather than defaulted: an uploader that guesses an endpoint is one that can write to the wrong bucket.
+  if (!account || !keyId || !secret) {
+    console.error("❌ R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY are not all present (checked the environment and .env.local)");
+    process.exit(1);
+  }
+  return ["--s3-provider", "Cloudflare", "--s3-access-key-id", keyId, "--s3-secret-access-key", secret, "--s3-endpoint", `https://${account}.r2.cloudflarestorage.com`];
+}
+
 /** What is already in the bucket, read from rclone rather than from a number someone typed once. */
 function storedBytes() {
   try {
-    const out = execFileSync("rclone", ["size", "r2:groove", "--json"], { encoding: "utf8" });
+    const out = execFileSync("rclone", ["size", ":s3:groove", "--json", ...r2Config()], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
     return JSON.parse(out).bytes ?? 0;
   } catch (error) {
     // ⚠️ Refusing rather than assuming zero: a budget check that silently reads 0 would approve anything.
@@ -98,5 +124,5 @@ fs.writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2) + "\n");
 console.log(`  measured ${measured} file(s) · longest ${longest.toFixed(6)} s · manifest updated`);
 
 // ⭐ The transfer itself is rclone's: it chunks, resumes and verifies, and this script does not reimplement any of that.
-execFileSync("rclone", ["copy", workdir, `r2:groove/${entry.prefix}/`, "--transfers", "8", "--checkers", "16", "--stats-one-line"], { stdio: "inherit" });
+execFileSync("rclone", ["copy", workdir, `:s3:groove/${entry.prefix}/`, "--transfers", "8", "--checkers", "16", "--stats-one-line", ...r2Config()], { stdio: "inherit" });
 console.log(`✅ copied to r2:groove/${entry.prefix}/ — now run scripts/check_mirror_reachability.mjs`);
