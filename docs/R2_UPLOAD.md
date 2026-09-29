@@ -1021,3 +1021,39 @@ join("/")  → "https:/raw.githubusercontent.com/sfzi…/<pin>/Data/notes.txt"
 | ⭐ **A：调用方传【纯路径】✓（如 `sfzi…/<pin>/Program.sfz`）** ✓✓ | ⭐ **最对 ✓ —— 它遵守了那条已经写下的约定 ✓，而 `resolvePath` 与 `new URL` 各自做自己该做的** ✓ |
 | **B：`resolvePath` 识别 URL 前缀并原样保留 ✓** | ⚠️ **能work ✓，但把"路径函数也要懂 URL"这件事塞进了一个声明只做相对路径的函数** ✗ |
 | **C：fetch 时剥掉重复斜杠** | ⚠️ **最差 ✗ —— 它让一个坏地址看起来像好的** ✗✓ |
+
+
+## 36. ⭐⭐⭐ 而"纯路径"只改了一半：**调用方要同时给两样**（2026-09-28 晚 ✓）
+
+### 我做的与结果
+
+⭐ 按第 35 节那条约定 ✓，我把探针改成传**纯路径** ✓（`sfzinstruments/SalamanderGrandPiano/<pin>/…` ✓），**地址只在 `fetchText` 里拼** ✓ —— ⭐ **结果仍然是 `included 0 · missing 6`** ✗✓。
+
+### ⭐⭐ 而原因是这条
+
+```ts
+// remoteIncludes.ts:92
+const target = absolute ? path : new URL(path, options.baseUrl ?? options.programUrl).toString();
+```
+
+⭐ **当 `baseUrl` 缺失时，它退回 `programUrl`** ✗ —— ⭐ **而 `programUrl` 现在是【纯路径】✗，不是 URL** ✗✓✓：
+
+```
+new URL("sfzi…/<pin>/Data/notes.txt", "sfzi…/<pin>/Salamander Grand Piano V3.sfz")
+                                        ↑ ⭐ 这不是一个合法的基准 ✗
+```
+
+⭐⭐ **所以正解不是"传纯路径"✗，也不是"传 URL"✗，而是【两者都给】** ✓✓：
+
+| 参数 | 给什么 | 它服务于 |
+|---|---|---|
+| ⭐ **`programUrl`** ✓ | ⭐ **纯路径** ✓（`sfzi…/<pin>/Program.sfz` ✓） | ⭐ **路径算术** ✓（`resolvePath` 的 `directory` 与 `rootPath` ✓） |
+| ⭐ **`baseUrl`** ✓ | ⭐ **绝对 URL** ✓（`https://raw.githubusercontent.com/` ✓） | ⭐ **fetch 时拼地址** ✓ |
+
+⭐ **而这样一来，两个函数各自做自己懂的事** ✓：**`resolvePath` 只在相对路径上工作 ✓（它拿到的正是纯路径 ✓），`new URL` 只在拼地址时工作 ✓（它拿到的基准是合法 URL ✓）** ✓✓ —— ⭐ **第 35 节那三种修法里，A 是对的 ✓，而它需要两样输入，不是一样** ✓。
+
+### ⚠️ 而同一轮还暴露了第二件事
+
+⭐ **`readDefaultPath` 不存在** ✗✓（`TypeError: readDefaultPath is not a function` ✓）—— ⭐ **因为第 270 轮我把那次失败的接线【回退】了 ✓，而 `readDefaultPath` 就在被回退的那一批里** ✗✓ —— ⭐ **所以探针引用了一个当时的树里没有的函数** ✗ —— ⭐ **这正是"回退"这个动作的代价 ✓：它让下一次的调用方必须重新读一遍"现在有什么"** ✓✓。
+
+⭐ **而修法是同一句话** ✓：**接线（`parseSfz` 里跑 `applyDefines` ✓ + `readDefaultPath` ✓）在第 271 轮已经落进 `9f5e873` ✓ —— 所以探针该用的是那一版，而不是我记忆里的形状** ✗✓。
