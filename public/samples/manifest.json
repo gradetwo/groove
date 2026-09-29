@@ -15151,13 +15151,1995 @@
       "repo": "sfzinstruments/karoryfer.emilyguitar",
       "sourceUrl": "https://github.com/sfzinstruments/karoryfer.emilyguitar",
       "prefix": "karoryfer-emilyguitar",
-      "files": [],
+      "files": [
+        {
+          "path": "Emilyguitar/LICENSE",
+          "bytes": 7167,
+          "sha256": "a19d58aaab15c4d0019e569d1c073d1b5286fdd37dbeee7a58a7d1ae76045ae1"
+        },
+        {
+          "path": "Emilyguitar/emily_basic.sfz",
+          "bytes": 33066,
+          "sha256": "6374cae8516592aa50c0bc00de431b9e4ab45d5a8af66ddddc183a3945e907f0"
+        },
+        {
+          "path": "Emilyguitar/emily_chords.sfz",
+          "bytes": 210382,
+          "sha256": "e3edc199f14f6f4a8a7584a9b0d85ea4282f95cef4c483ea5bcd08a3cb80d82b"
+        },
+        {
+          "path": "Emilyguitar/emily_chords_wide.sfz",
+          "bytes": 202417,
+          "sha256": "90c93cddaf662ffb923c940aaecacf777ab440bd009d8c563a9d83130043f170"
+        },
+        {
+          "path": "Emilyguitar/emily_clean.sfz",
+          "bytes": 25385,
+          "sha256": "e4e0fb4938db52459dc369ae4347548b5894bb75b21ea04ff66a2033be0d96cc"
+        },
+        {
+          "path": "Emilyguitar/emily_five_voice.sfz",
+          "bytes": 87562,
+          "sha256": "fc0472d83cfdc1b8e177b4b17676767b325c36e5cdf3a0dc6b869d7429daee21"
+        },
+        {
+          "path": "Emilyguitar/emily_three_voice.sfz",
+          "bytes": 21538,
+          "sha256": "6467be980affd185c17b0daaba6c88d3750eb5758b95ca0551ef33c921eec8d1"
+        },
+        {
+          "path": "Emilyguitar/noises/fingering1_rr1.wav",
+          "bytes": 64816,
+          "sha256": "af99120000fd9ed9ab47dfd5d69625a7b55f3fd9fb4a2c80c3445808a0594d02",
+          "durationSeconds": 0.468753
+        },
+        {
+          "path": "Emilyguitar/noises/fingering1_rr2.wav",
+          "bytes": 64816,
+          "sha256": "a662eb037b4a321634801f3967ea0a00409de3a3800442da3ebc3de55ae2a627",
+          "durationSeconds": 0.468753
+        },
+        {
+          "path": "Emilyguitar/noises/fingering1_rr3.wav",
+          "bytes": 64816,
+          "sha256": "fb259f43ea024321e619b47b1aeb4aacd11bf6c8d789ba0434f78c4993e1fff8",
+          "durationSeconds": 0.468753
+        },
+        {
+          "path": "Emilyguitar/noises/fingering1_rr4.wav",
+          "bytes": 68692,
+          "sha256": "d89fe9ab6bf8878966e6791d69e14aee11db3bc554c179006ddb64ba624c51d1",
+          "durationSeconds": 0.49805
+        },
+        {
+          "path": "Emilyguitar/noises/fingering1_rr5.wav",
+          "bytes": 68692,
+          "sha256": "d232613fa91667fee62040a444097d7774c0f53ca61e7809244b4fcbb3ac01b5",
+          "durationSeconds": 0.49805
+        },
+        {
+          "path": "Emilyguitar/noises/muted1_rr1.wav",
+          "bytes": 53190,
+          "sha256": "8de640f1ae2cddc6d1d2d331dee80ddd743368b881a686b8783a538ca78da083",
+          "durationSeconds": 0.380862
+        },
+        {
+          "path": "Emilyguitar/noises/muted1_rr2.wav",
+          "bytes": 45436,
+          "sha256": "63e2477cc6f820765fcf3b11caf006baa49d5b7460a34748076eb4cad342a0a2",
+          "durationSeconds": 0.322268
+        },
+        {
+          "path": "Emilyguitar/noises/muted1_rr3.wav",
+          "bytes": 45436,
+          "sha256": "2d079980da019c7282e267bd6219fdc74ecc1607ce0a4e659264e3f7f328c087",
+          "durationSeconds": 0.322268
+        },
+        {
+          "path": "Emilyguitar/noises/muted1_rr4.wav",
+          "bytes": 45436,
+          "sha256": "147917e5fd78d3aa7eb1af962759dc1c1da6e31b6066fa0e516e7b1c4aa42009",
+          "durationSeconds": 0.322268
+        },
+        {
+          "path": "Emilyguitar/noises/muted1_rr5.wav",
+          "bytes": 45436,
+          "sha256": "7ee5322eb9e48679adfbe22d63e14548a70b551ed80ca7126981952c2a8e7503",
+          "durationSeconds": 0.322268
+        },
+        {
+          "path": "Emilyguitar/noises/muted2_rr1.wav",
+          "bytes": 49312,
+          "sha256": "6cfebcacefd45319ef5784fbf406d5505f38724236806c8ab6691153f833348a",
+          "durationSeconds": 0.351565
+        },
+        {
+          "path": "Emilyguitar/noises/muted2_rr2.wav",
+          "bytes": 45436,
+          "sha256": "cd3d4e7015becbbad4d6a75f1d0ed84cba54c7cfb2706a1063dd56c67ab9daeb",
+          "durationSeconds": 0.322268
+        },
+        {
+          "path": "Emilyguitar/noises/muted2_rr3.wav",
+          "bytes": 49312,
+          "sha256": "69f73456588d1dff19460d617f1610c815d583a1c453249b1996afd2456ff520",
+          "durationSeconds": 0.351565
+        },
+        {
+          "path": "Emilyguitar/noises/muted2_rr4.wav",
+          "bytes": 49312,
+          "sha256": "0a8911f1d9e1ff745c7a38044fb00ca01325aae3cb245c85b9a5264ccce43614",
+          "durationSeconds": 0.351565
+        },
+        {
+          "path": "Emilyguitar/noises/muted2_rr5.wav",
+          "bytes": 49312,
+          "sha256": "e19821924f3801c3fb09947b9abaaef720ce4c90d8d7fe2adc472578d37c618c",
+          "durationSeconds": 0.351565
+        },
+        {
+          "path": "Emilyguitar/noises/muted3_rr1.wav",
+          "bytes": 57064,
+          "sha256": "7c2d51a1e0c87b6baf77a960c401f3f262a9b39342aaa5c6479afb65bef45ba4",
+          "durationSeconds": 0.410159
+        },
+        {
+          "path": "Emilyguitar/noises/muted3_rr2.wav",
+          "bytes": 45436,
+          "sha256": "bdf2e661715b4a8c8c753659a7c0c66eb878647e10f5704baf1020b62b92a2f8",
+          "durationSeconds": 0.322268
+        },
+        {
+          "path": "Emilyguitar/noises/muted3_rr3.wav",
+          "bytes": 45436,
+          "sha256": "891a946d9c2905978e53f385e0c59080a855b37581e60c90df9f369df4182514",
+          "durationSeconds": 0.322268
+        },
+        {
+          "path": "Emilyguitar/noises/muted3_rr4.wav",
+          "bytes": 37684,
+          "sha256": "bf0e8b1859b9c7d3480bec6aac91d090b2da85ac99f9c71fd2acef01813ecf31",
+          "durationSeconds": 0.263673
+        },
+        {
+          "path": "Emilyguitar/noises/muted3_rr5.wav",
+          "bytes": 41560,
+          "sha256": "72e3919fc886132419c7096edb5778416e824251b13774e484460fc036f58362",
+          "durationSeconds": 0.292971
+        },
+        {
+          "path": "Emilyguitar/noises/muted4_rr1.wav",
+          "bytes": 57064,
+          "sha256": "fdf3742c0fe081c7eda435c5b029e578b44e2341c65e629c04f005d2f7e233b4",
+          "durationSeconds": 0.410159
+        },
+        {
+          "path": "Emilyguitar/noises/muted4_rr2.wav",
+          "bytes": 49312,
+          "sha256": "25594ba35ad2240670ceffd2698472e3e344bd5ab94ec1840851939579f8a613",
+          "durationSeconds": 0.351565
+        },
+        {
+          "path": "Emilyguitar/noises/muted4_rr3.wav",
+          "bytes": 45436,
+          "sha256": "3f47b65dcd249892e927a2bd13530b95b647da3f65fa33d55f5ea3358c6460a1",
+          "durationSeconds": 0.322268
+        },
+        {
+          "path": "Emilyguitar/noises/muted4_rr4.wav",
+          "bytes": 49312,
+          "sha256": "d15020b9d681c18e9c6d8130637e346d2bf43a59e31848278b2540749d71ee84",
+          "durationSeconds": 0.351565
+        },
+        {
+          "path": "Emilyguitar/noises/muted4_rr5.wav",
+          "bytes": 45436,
+          "sha256": "41b885fa71fa59bc9b52d95db89342a5cc6ebd82520b62de2b829d075a1a7ebd",
+          "durationSeconds": 0.322268
+        },
+        {
+          "path": "Emilyguitar/noises/muted5_rr1.wav",
+          "bytes": 29932,
+          "sha256": "3fe81cbfd4c6652338ad1a867b4d17c0c3ed925b8d4180d245c16f3db0bde069",
+          "durationSeconds": 0.205079
+        },
+        {
+          "path": "Emilyguitar/noises/muted5_rr2.wav",
+          "bytes": 33808,
+          "sha256": "5f348d453c1bf2e99aaa93a087a5ee8fadd4863012831a466e99464cbd0117e3",
+          "durationSeconds": 0.234376
+        },
+        {
+          "path": "Emilyguitar/noises/muted5_rr3.wav",
+          "bytes": 29932,
+          "sha256": "5d8e45ca3cd001c8897c97e99b1678e129e777211fda522fbd9b23cd3e7f1688",
+          "durationSeconds": 0.205079
+        },
+        {
+          "path": "Emilyguitar/noises/muted5_rr4.wav",
+          "bytes": 29932,
+          "sha256": "babf8b4cfb14c81129a1b62f90b40f373774998db3ea60c0157aa3f0f56b1c38",
+          "durationSeconds": 0.205079
+        },
+        {
+          "path": "Emilyguitar/noises/muted5_rr5.wav",
+          "bytes": 29932,
+          "sha256": "fe7801aec10c8217fbae0369ef0627d643c527d1965215034545b40fb16f97f4",
+          "durationSeconds": 0.205079
+        },
+        {
+          "path": "Emilyguitar/noises/pickrest1_rr1.wav",
+          "bytes": 126832,
+          "sha256": "db3f61ef073838f6913a861fee4059033d3710c871e25c2caaed30c6fcfdc388",
+          "durationSeconds": 0.937506
+        },
+        {
+          "path": "Emilyguitar/noises/pickrest1_rr2.wav",
+          "bytes": 165592,
+          "sha256": "19aa7fd1c9c62dad970308c6f98dec88ecdc6573ffa4b2fc597f256bd3ce6a6e",
+          "durationSeconds": 1.230476
+        },
+        {
+          "path": "Emilyguitar/noises/pickrest1_rr3.wav",
+          "bytes": 173344,
+          "sha256": "e42a234fcbb1b7a22c53bb3e24ace636e7364d540b1cba42a19880a3bc0ea497",
+          "durationSeconds": 1.28907
+        },
+        {
+          "path": "Emilyguitar/noises/pickrest1_rr4.wav",
+          "bytes": 157840,
+          "sha256": "94911322fbfefb0dd0c8efe321381cb749657559438e67d07a05e4b50e333e5a",
+          "durationSeconds": 1.171882
+        },
+        {
+          "path": "Emilyguitar/noises/pickrest1_rr5.wav",
+          "bytes": 142336,
+          "sha256": "baaa95362a964fd3d7b69a097b51f5328d058669375b92a8f2f7d2a6a910b535",
+          "durationSeconds": 1.054694
+        },
+        {
+          "path": "Emilyguitar/notes/a2_f_rr1.wav",
+          "bytes": 560944,
+          "sha256": "0d58e0992ab32623371b1b94be4200961a7503b3bad796c3bbd40ce530c53469",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a2_f_rr2.wav",
+          "bytes": 560944,
+          "sha256": "752c2c5b65ad4456de25764354344de7606e6494f4d9e97d8a9338aed31beb7e",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a2_f_rr3.wav",
+          "bytes": 560944,
+          "sha256": "1bdafc0243d15ff094d94800fd1528c8c2ace77c65a72f76d1de01bd75a5e0da",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a2_mf_rr1.wav",
+          "bytes": 560944,
+          "sha256": "b0031818b989d576cdc189154c90162e1b545b7ee9c56a6640ce0e7e658079c4",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a2_mf_rr2.wav",
+          "bytes": 560944,
+          "sha256": "f2e4628a8ca606c6effff4a575e25069cddb31894cfb5ca7351c9fc99b4aea7f",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a2_mf_rr3.wav",
+          "bytes": 560944,
+          "sha256": "ff0313427a0aaac3ea939dee0254992f038da19d9d4e31babd45e459921cff68",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a2_mp_rr1.wav",
+          "bytes": 560944,
+          "sha256": "9688299f1462019634805c380c72a27ab4cad0402f298f4a8ba95e4c8a65ebaa",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a2_mp_rr2.wav",
+          "bytes": 560944,
+          "sha256": "ca30e457a389d929a944227047d894ed36aa06b4158099b5e6562ef3ee020292",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a2_mp_rr3.wav",
+          "bytes": 560944,
+          "sha256": "6683a39ee40a6842bac30b523812adb686bcf28c2c10e308d47c32d9d957c7c9",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a2_p_rr1.wav",
+          "bytes": 560946,
+          "sha256": "e728c4291bdc15b35bd0e598d67ac3b480016a9dd183f08699d878dc02948ec4",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a2_p_rr2.wav",
+          "bytes": 560944,
+          "sha256": "e3c442b6bcea4d7ddd882ba7c657e1c936d555dc3a3791d562a46bfdc5642c11",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a2_p_rr3.wav",
+          "bytes": 560944,
+          "sha256": "11da5f48b96027241a5e62139f9f15540bcb8ecf057a5e605143961b0cc45acb",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a3_f_rr1.wav",
+          "bytes": 560944,
+          "sha256": "60fd76d27da5e3a2099a2d52028b8bb0eb931ccc974ef51bd6d5793ea69604a6",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a3_f_rr2.wav",
+          "bytes": 560944,
+          "sha256": "b52e71770ee69846edc29e3710c29b4dd5101d61638c1567b508f200ec494429",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a3_f_rr3.wav",
+          "bytes": 560944,
+          "sha256": "a1d4b8c4af411b395db492fd894d51994ddc733802b5e4b7f741b9ed3dbccb3e",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a3_mf_rr1.wav",
+          "bytes": 560944,
+          "sha256": "97da917363eef473435df5e215cedf18579fdef7d7cb0f677f9a50f085930c13",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a3_mf_rr2.wav",
+          "bytes": 560944,
+          "sha256": "c33b1889ebbb61aa1af07aad550fcfa409a0600c7ffec2b757410cdfddd07428",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a3_mf_rr3.wav",
+          "bytes": 560944,
+          "sha256": "e9ad0eef6c299d175c728c5ebcb5f169f746727bde2b508124c90823328a79a1",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a3_mp_rr1.wav",
+          "bytes": 560944,
+          "sha256": "92881dc3afa984ef20dd405b13ed9713a649076f86eb0d683ffce8989912be93",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a3_mp_rr2.wav",
+          "bytes": 560944,
+          "sha256": "f00cfed9f2f31489a8af5ea0131ed7034107790c32020128308b23c356be88d3",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a3_mp_rr3.wav",
+          "bytes": 560944,
+          "sha256": "df459772e24bff941f2e0ef2c1b9cc08076af561ee71c8651474b1a3aa01191a",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a3_p_rr1.wav",
+          "bytes": 560944,
+          "sha256": "d92e980efba435aebfe43e74ab8f4215879b1d4c740359b6a5ee14e052fd5c49",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a3_p_rr2.wav",
+          "bytes": 560944,
+          "sha256": "f27338edb9169d0ab3598d8e8f62b7318965ab1dfcb49ef013da85f4bc02db58",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a3_p_rr3.wav",
+          "bytes": 560944,
+          "sha256": "19e597a6f90c93f9806495696fb125b70d9148c08c3668aa2714469ac1d57889",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a4_f_rr1.wav",
+          "bytes": 560946,
+          "sha256": "aedc4779fbecebf9c8b722161340c0a06acb0147cd7b7a40a5117f9635318589",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a4_f_rr2.wav",
+          "bytes": 560944,
+          "sha256": "17d35473fe3a3ba04da9c6238e6fc8357bbcaf65e2a8e692f134803457378da1",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a4_f_rr3.wav",
+          "bytes": 560944,
+          "sha256": "bc20cdea10eabe90ac7109d26489e5c30b39b305c245617b24098a4d11599d1c",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a4_mf_rr1.wav",
+          "bytes": 560946,
+          "sha256": "4df039e1d517e727149ba4ef8e1616ead6761ab485fa541f522611a9388471b8",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a4_mf_rr2.wav",
+          "bytes": 560946,
+          "sha256": "70312c3adbff3fa03d297513ac8d1c556e724fe954980908bc002bf1b50ef326",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a4_mf_rr3.wav",
+          "bytes": 560946,
+          "sha256": "dc3461308015fab54f1c738096acd5b6f97092342fdefc2d138dfb325639e82e",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a4_mp_rr1.wav",
+          "bytes": 560946,
+          "sha256": "2650004e015576a74f2e6a1e50af8b98f113df792a0f8607910c234529e7b346",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a4_mp_rr2.wav",
+          "bytes": 560946,
+          "sha256": "8895fbca0fb373cb52cbda49ee7257257ed35c133f946a9c6518e0003d4734a6",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a4_mp_rr3.wav",
+          "bytes": 560946,
+          "sha256": "627c3d25d511f9bc1e70ccc4ce9bd7c605422a85b891ea03729f0f8592ea818d",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a4_p_rr1.wav",
+          "bytes": 560946,
+          "sha256": "7fdbdb45e7202d0a85ced602b7aebb98fead77b3ba885ddd1e37c71f9032aed6",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a4_p_rr2.wav",
+          "bytes": 560946,
+          "sha256": "c9304644259143b6eb97a60718959db4c09dcabda9b5e9cf16a95177c8c1a972",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a4_p_rr3.wav",
+          "bytes": 560946,
+          "sha256": "47f87c67bdc020406cf8e09f98b94583c086e28770a44c8a7fe001432027fd60",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a5_f_rr1.wav",
+          "bytes": 560946,
+          "sha256": "805c33a086cb6f213b15114c177113c895faf1095fa5d0fcab6c6f11f9280a61",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a5_f_rr2.wav",
+          "bytes": 560946,
+          "sha256": "8459b30a34b6ec900f8ee5e812b4e341b5eae8864236d71c119c6ed6961a952e",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a5_f_rr3.wav",
+          "bytes": 560946,
+          "sha256": "917576e800303badef2cbd16825381300e05623daf93ebf903ce975222cf7867",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a5_mf_rr1.wav",
+          "bytes": 560946,
+          "sha256": "dc0dfb831d93b7fad9b67d34c4538220147b88418b26555dd5a55d30eed77e51",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a5_mf_rr2.wav",
+          "bytes": 560946,
+          "sha256": "c6ff157fd6f3d3a55a705560dd8f8452d931c98f0f6b430990c9a9af58955fee",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a5_mf_rr3.wav",
+          "bytes": 560946,
+          "sha256": "6dbb47e356896933940a009c06d19ba7da190189c6f11b05392ab865aa785cff",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a5_mp_rr1.wav",
+          "bytes": 560946,
+          "sha256": "06d1c41f6c76293a67e9a1c667f974f508900dfaa20f345f75f7408b0060da4d",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a5_mp_rr2.wav",
+          "bytes": 560946,
+          "sha256": "bf020766dcee5d4fc94134ad8979fe1ae410beadc66890ef88e85045c31d78c3",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a5_mp_rr3.wav",
+          "bytes": 560946,
+          "sha256": "4dac3b3c493bc3a9acb71cf644656fd5a839a939780ae3785dc932c20b6b1cbe",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a5_p_rr1.wav",
+          "bytes": 560946,
+          "sha256": "1e89187c1f484a99092e87af50070715b0137577337f3fc8add7c67299691612",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a5_p_rr2.wav",
+          "bytes": 560946,
+          "sha256": "5aea5680486162dc466a8e16447d8e71b59554a53d29d8b7130eba52574f3d72",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/a5_p_rr3.wav",
+          "bytes": 560946,
+          "sha256": "6df27e7ce359aa5b7a45101329bc19f630f1f375a814e2349ec6ffad7f1bbfbe",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c3_f_rr1.wav",
+          "bytes": 560944,
+          "sha256": "325779911651325e884454df5423923a9f763c147e32dd223772ba5f28322349",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c3_f_rr2.wav",
+          "bytes": 560944,
+          "sha256": "b54abe35de75962a0591fa4d33145e2060b46ba9c4ebd11c2488ab34aa035c86",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c3_f_rr3.wav",
+          "bytes": 560944,
+          "sha256": "5e7d010b1af45bbe80e37f3fb40d524c0b0c175ae33ea4f68bb1b0c47151d9f2",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c3_mf_rr1.wav",
+          "bytes": 560944,
+          "sha256": "255adb40062435e8774a8d02f26b98f7741f3496b362eb265ca3453f5e4ad55d",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c3_mf_rr2.wav",
+          "bytes": 560944,
+          "sha256": "3fc57d1591cd31e016f6a7f3f97bc39fbaae91ecccdc080049976c02827ac7fe",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c3_mf_rr3.wav",
+          "bytes": 560944,
+          "sha256": "85f9d58b0a1d7d6c49c8bf8936dfc44b6944a5ba838386d12dea89b7ac9c366d",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c3_mp_rr1.wav",
+          "bytes": 560944,
+          "sha256": "905955dffc33333557736368f5e3d1ff9addaf118007a16d23fb4eb699f02a55",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c3_mp_rr2.wav",
+          "bytes": 560944,
+          "sha256": "60dcf7d675a3f3d8bfddc4286114be29b8f2701cb4d6528780490fd15143ebe9",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c3_mp_rr3.wav",
+          "bytes": 560944,
+          "sha256": "4a12e6dc63a082ae0c0b8431f98575158be87be4f7c9951841628f1e28e65e36",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c3_p_rr1.wav",
+          "bytes": 560946,
+          "sha256": "6dc716c5e3f995c74757d726afc2dbf67e13f28df4c916d8f2961a3dd20d18fc",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c3_p_rr2.wav",
+          "bytes": 560944,
+          "sha256": "308bc3ef53fd6b5ce7a8e0e2aa364b27b7c5725ea2b38993169b8ab6a112193d",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c3_p_rr3.wav",
+          "bytes": 560944,
+          "sha256": "2dfd898229d1611a24c575f10d47c643f776c48cc01d3278443f4abf59760a82",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c4_f_rr1.wav",
+          "bytes": 560946,
+          "sha256": "3caf8ba2f821b2c1ca013fddffc2d66a7bacbf109cb9a0dcbc4002540a26a5b3",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c4_f_rr2.wav",
+          "bytes": 560946,
+          "sha256": "d709066b2fd7a3bac9182c987bac9f42ec1f10508915b965adb506529abc2112",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c4_f_rr3.wav",
+          "bytes": 560946,
+          "sha256": "fc33340f5c80994ae6b1855fd283431978ee35929952053eb7b2a598be9ed86e",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c4_mf_rr1.wav",
+          "bytes": 560946,
+          "sha256": "67643ecb0b523745ff80127396a5c8c6e871115102020c34ab84cce3140aab70",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c4_mf_rr2.wav",
+          "bytes": 560946,
+          "sha256": "e98e0204c916f28c2063885d3659b5470cbef5353b12269f705a89c0c5a6eed0",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c4_mf_rr3.wav",
+          "bytes": 560946,
+          "sha256": "6fab6d7a7c598d6e6a803aebd062e83fad58a7eab14758f7f79f705bf959cb27",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c4_mp_rr1.wav",
+          "bytes": 560946,
+          "sha256": "af79b9c1f7df66d3028cac69679a6dde35992dc06fe41cdc7758d287a070e5dc",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c4_mp_rr2.wav",
+          "bytes": 560946,
+          "sha256": "d29aa2e24519f6bfb2cbf2ecad5e8337d9b45194282e62440c29b483be01b1f9",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c4_mp_rr3.wav",
+          "bytes": 560946,
+          "sha256": "898725e135414a6f028d0fd8c1f8bdf7ed3071b87b2935d8d1ee382339a2ddbb",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c4_p_rr1.wav",
+          "bytes": 560946,
+          "sha256": "cc51fcb6d14a3d29f66533a58abcfe32998cb09d2b288290a65b2aea18b600c7",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c4_p_rr2.wav",
+          "bytes": 560946,
+          "sha256": "21aa9e49ee692f6c2baa139c523f55a562e2ded8af95841f3a7a2e2cd436f929",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c4_p_rr3.wav",
+          "bytes": 560946,
+          "sha256": "aa1844d189b7b6c7bf491a4e0e01011b687ba8baeb2e294986a7f0ac0ae7d07a",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c5_f_rr1.wav",
+          "bytes": 560946,
+          "sha256": "2f7f7cca8cff33c217e17887361a6c4dae8f63d96512f19acf1c18fd5d60bb5a",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c5_f_rr2.wav",
+          "bytes": 560946,
+          "sha256": "df021197b87dbb983239951d478e25da3df2b1c66914e27ea8ffb71be4fadfb8",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c5_f_rr3.wav",
+          "bytes": 560946,
+          "sha256": "bfb429e77155f98a15d1caeaac4e0b329f9a41f87f4f189b5e24498bf085c941",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c5_mf_rr1.wav",
+          "bytes": 560946,
+          "sha256": "5e2f79f8b12e1cde3fdaa62e7c441907fd39eb3a222c3d240ae227a241a9f5ee",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c5_mf_rr2.wav",
+          "bytes": 560946,
+          "sha256": "6ee9e8db73062e2390ea73cc8a5a599a58f28d75d2b47d86af1a45a9421e6ddb",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c5_mf_rr3.wav",
+          "bytes": 560946,
+          "sha256": "83a8af58e4dd891076bdb7494eaab50f9a13e449d98c58ea07224f631cf50895",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c5_mp_rr1.wav",
+          "bytes": 560946,
+          "sha256": "db491a413f40a28f3358df15bb277f2d0a34ec80f83f565ffa5430bce9c4620c",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c5_mp_rr2.wav",
+          "bytes": 560946,
+          "sha256": "5e675fd6ec114084428ec2c4e5348783d3e44b9896c6ce3282c851a2f0d54b37",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c5_mp_rr3.wav",
+          "bytes": 560946,
+          "sha256": "8e22c057a27dfdcc254e8b75555831a1493e6df919dea2b5e6e8c03d5266759e",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c5_p_rr1.wav",
+          "bytes": 560946,
+          "sha256": "f9c6a5388e9bae2f84c3641315d6fae5166eb442d0ea4f7e38488d5d76d31aa3",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c5_p_rr2.wav",
+          "bytes": 560946,
+          "sha256": "25832b6e9eef1f867217d1a3aaab8ac955484a8e1044915375d8b813c24b36fe",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c5_p_rr3.wav",
+          "bytes": 560946,
+          "sha256": "d0adc8b991e28936d2feac3e3d49c16b0b31b1e3f3027719e0f7d04ff298ab1f",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c6_f_rr1.wav",
+          "bytes": 560946,
+          "sha256": "53732f9871c88905ef13644362ded09bb1eeec214f47fb74c88cc1fac034c112",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c6_f_rr2.wav",
+          "bytes": 560946,
+          "sha256": "14e4483c5c39cb801e56d545984f4273e81445c45803d70574853936790f074b",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c6_f_rr3.wav",
+          "bytes": 560946,
+          "sha256": "db56291446b6d0fcc4bbdff96532e620ab4e48ed9ba57f69485e05da199d9686",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c6_mf_rr1.wav",
+          "bytes": 560946,
+          "sha256": "7aebd9aacbd66d2348749193357dd391a68e7c2f4b51b4acbc0834b5df643681",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c6_mf_rr2.wav",
+          "bytes": 560946,
+          "sha256": "0d2f93a7d2830789d1b89a09458d2413002db2f90b01b0adc057bfdecaa1318b",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c6_mf_rr3.wav",
+          "bytes": 560946,
+          "sha256": "52faf53449cd3ed8cacc72054eb7fe96f1c91540a0184b7d4619f98f951a216f",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c6_mp_rr1.wav",
+          "bytes": 560946,
+          "sha256": "568f13928b0de8fb9a51dd8aea33681ecdf0b3442e8fad00477df0cca4c3ad5f",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c6_mp_rr2.wav",
+          "bytes": 560946,
+          "sha256": "eeadbf44e0e419166b587b7a8a84091802535231db42a57d1087e7c95cbdffd5",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c6_mp_rr3.wav",
+          "bytes": 560946,
+          "sha256": "32e3a5edc06bee7fbd3447bfa0ebfea0660710310ea89f09949baef53bbe1a81",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c6_p_rr1.wav",
+          "bytes": 560946,
+          "sha256": "da2b60481b905be19823b4d67d97356e62ad097cd362f04624e8490cc87e88c7",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c6_p_rr2.wav",
+          "bytes": 560946,
+          "sha256": "15f0640405a772aae387c3092a02a2244302557869aa9f9bfa7dba562fe25327",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/c6_p_rr3.wav",
+          "bytes": 560946,
+          "sha256": "51f04c4adf8b529ba1934b589e165b915706b802705c49d34e5b5e9245074dfe",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/d6_f_rr1.wav",
+          "bytes": 560944,
+          "sha256": "b7192fbe292ed9fc3688a7815b506c3e43d7308521dd2c9671e0dbd7bb655e10",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/d6_f_rr2.wav",
+          "bytes": 560944,
+          "sha256": "b00d5e3e882a72f06343bd726968181e597bffe3a1c5259796c4dd4b57d8b30e",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/d6_f_rr3.wav",
+          "bytes": 560944,
+          "sha256": "4278aa8a52d722fdef0fae3b786f7d2aab49fb510affa0e2fe7705682b6e0d2c",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/d6_mf_rr1.wav",
+          "bytes": 560944,
+          "sha256": "07a6ca23d75a76aee73875ba685003a27a92c0d9d58af7768904c0206ba2a8c8",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/d6_mf_rr2.wav",
+          "bytes": 560944,
+          "sha256": "47f3a94efc3e1ef29501275fd8599a351ff0fe0e34e6b05291ab5c2b03af4f91",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/d6_mf_rr3.wav",
+          "bytes": 560944,
+          "sha256": "afdc96e75a88a7edc95f868bbc17f1f639adddd3282559d4b4e5bed0d20a9b7a",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/d6_mp_rr1.wav",
+          "bytes": 560944,
+          "sha256": "dc220a53300416c609e933cbfa78412a131999d40ba288b2a0cc360d44361b5a",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/d6_mp_rr2.wav",
+          "bytes": 560944,
+          "sha256": "6a7b0d8cde1b2f8996e64924b1849e37e6cb6bcc37164669802e9fab7b425568",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/d6_mp_rr3.wav",
+          "bytes": 560944,
+          "sha256": "99f0ed0f80a32cee746aa1968ae779c5a03ec4d04e46d9482241ac4bb81e671c",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/d6_p_rr1.wav",
+          "bytes": 560946,
+          "sha256": "fb532fc46461ab15c7222399d79f25b781eb90af4e2c2a3c9029e6b527ab5e9f",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/d6_p_rr2.wav",
+          "bytes": 560944,
+          "sha256": "45e1a60698258070451db803fe3666d3454fa7e0282240a1500adc452448b8a3",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/d6_p_rr3.wav",
+          "bytes": 560944,
+          "sha256": "8dbbcbad9fd6ccd586953a217fe66e230e2aa3af6134b14e05e7f39c8c2b6a4d",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/db2_f_rr1.wav",
+          "bytes": 560946,
+          "sha256": "c4b518bfb7e17fefb91d58b4c4b01554301197753f76feb4b32f9ab4824480e4",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/db2_f_rr2.wav",
+          "bytes": 560946,
+          "sha256": "91c9cf96c4c2efa2b9bcca97f7c0211f49ccf0e0a23152affaf1ade10bece524",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/db2_f_rr3.wav",
+          "bytes": 560946,
+          "sha256": "d92ebe8ca6abc9316bd6d2d6b5e27b63c392c594d9f77a0ba77218927a15ddc4",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/db2_mf_rr1.wav",
+          "bytes": 560946,
+          "sha256": "7056fe063dddb9c5b3d288d9800171a44111772fc0b999498b4b0867d4b67fe6",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/db2_mf_rr2.wav",
+          "bytes": 560946,
+          "sha256": "1425e41d53dfd2a564df17e66fab6762f501e344a9dd4665ab0febadffbb46ec",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/db2_mf_rr3.wav",
+          "bytes": 560946,
+          "sha256": "086799eb5760559f88e0d6d5878c435214bfdd37e8f998383595e393e12855ca",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/db2_mp_rr1.wav",
+          "bytes": 560946,
+          "sha256": "fd42ab961041b693064fd70f6e6f6434934c6c266f96f0fb85b44cf02a5b7e64",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/db2_mp_rr2.wav",
+          "bytes": 560946,
+          "sha256": "219908fb4cc7b6a9e56d111efe26b4fb4422f7c4573f51ace842216cd9428e27",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/db2_mp_rr3.wav",
+          "bytes": 560946,
+          "sha256": "62c6294604a34a96482d06c0db1c3d845167198c8991003b63f410e345e5c3f9",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/db2_p_rr1.wav",
+          "bytes": 560946,
+          "sha256": "8dcee4b9aafd2a33a09f48d57d75ed7f27a60f0ab06b93185759af35f212368f",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/db2_p_rr2.wav",
+          "bytes": 560946,
+          "sha256": "c6ab9a96937e194a6373b9c332f955c1e5a89d29f7652afc1ce1ef0f5b55cf12",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/db2_p_rr3.wav",
+          "bytes": 560946,
+          "sha256": "867c88a8bb0379496ff4ab9ef392a666a2b88987d7a0ef854b39d9ccdc62f071",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/e2_f_rr1.wav",
+          "bytes": 560944,
+          "sha256": "a674f5c6b2ec5f9d37421d51c8518d0a0ad223cf564913151263d7c20c8a4017",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/e2_f_rr2.wav",
+          "bytes": 560944,
+          "sha256": "9a5cfc1ae8068db591a46fad392d086b0d8053f40a5eaac32c974d7ce5681879",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/e2_f_rr3.wav",
+          "bytes": 560944,
+          "sha256": "6d3a4b5da02b38ee5f2d613369065ac3696dae9299785aaadfe61f216cb09ff9",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/e2_mf_rr1.wav",
+          "bytes": 560944,
+          "sha256": "e1a2c4443e754a40afed733430ef52fa35490e110f2bacee429ccffd61e9d201",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/e2_mf_rr2.wav",
+          "bytes": 560944,
+          "sha256": "76c26f3bef07be2dcf32c77f860481e3241681be4be1a0f10c59b3fa252b4c3d",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/e2_mf_rr3.wav",
+          "bytes": 560944,
+          "sha256": "47b54a74563061503b262a3da2e7f440158f801220e6946033a9a90592a7c2ab",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/e2_mp_rr1.wav",
+          "bytes": 560944,
+          "sha256": "2cdfe97743f36ea4e16a7ffbff3ef8f200893bebd0dc9f9a5621dafcdecbe4fd",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/e2_mp_rr2.wav",
+          "bytes": 560944,
+          "sha256": "7945c022de99ab5c06b05e2dddbc1ede7ee1e13e8a6af2cab55d41dc6420fc28",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/e2_mp_rr3.wav",
+          "bytes": 560944,
+          "sha256": "26070800aaee6d941b8be8298afe4ab99b256f73853bd184759b8d035744aeb5",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/e2_p_rr1.wav",
+          "bytes": 560946,
+          "sha256": "7edec7d6aee89f8a753277f8795d0fb8df3fad7c5c5b8a302a04d914055e7af4",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/e2_p_rr2.wav",
+          "bytes": 560944,
+          "sha256": "43e9e1bedbbef484e24f9ac98fcf334d058865064dace97978b344d0385bcbe8",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/e2_p_rr3.wav",
+          "bytes": 560944,
+          "sha256": "1be61987bd929478d21164112ea2ab4007cd3ff2de989dd24c11defc17be1a65",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb3_f_rr1.wav",
+          "bytes": 560946,
+          "sha256": "e7f542e13d171d5f9b2aae495bade31118efbeab5c133ef6defd36eda68c6e08",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb3_f_rr2.wav",
+          "bytes": 560946,
+          "sha256": "70052c7cb54e262cd7a93cc4fb65a96928ab0ef944d691099408d0aec2cd1546",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb3_f_rr3.wav",
+          "bytes": 560946,
+          "sha256": "8a55d3cbece2de16c6dd473b34039aa56807793e7191f8b9212d118899556667",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb3_mf_rr1.wav",
+          "bytes": 560946,
+          "sha256": "12978712adecefb7643c2f0e2632e87f684c26654073ce425e708c70e642c5b5",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb3_mf_rr2.wav",
+          "bytes": 560946,
+          "sha256": "3316256c408d831974bb52e1fca1bcbdcb22038314f79580e0a71634efcb21dd",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb3_mf_rr3.wav",
+          "bytes": 560946,
+          "sha256": "0410a10b96910a5926637ed63cab182bce5d2aae699389f4f221d330ef81d9ac",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb3_mp_rr1.wav",
+          "bytes": 560946,
+          "sha256": "2f5de9b90ddc9f558da9aab376f9c729fe5c2e805b562dc13d6f6196eebf871b",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb3_mp_rr2.wav",
+          "bytes": 560946,
+          "sha256": "4d259df76012b90dd43bbf0e7856825a679bdc483aaa675793391754ee9adccc",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb3_mp_rr3.wav",
+          "bytes": 560946,
+          "sha256": "1e4f77d4ab202af8eedcb9b458ca7d74237c65350c6bfe7096af0753f7e842ef",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb3_p_rr1.wav",
+          "bytes": 560944,
+          "sha256": "fd9e92df98efa35fc539790210705b37c559ad4ab0214fbeb9be8c3e65c7e4e2",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb3_p_rr2.wav",
+          "bytes": 560946,
+          "sha256": "fd8f5ddf6de5d28511d3ce5de407edac863b6dbc0a33361ed403a298ba0a25aa",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb3_p_rr3.wav",
+          "bytes": 560946,
+          "sha256": "abe279e7df508e08d83811cc5b50a118a1203c025715143c3305584f03742369",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb4_f_rr1.wav",
+          "bytes": 560944,
+          "sha256": "6e270011b2733dccb4e5e688be77c86bd9f9d4374c02e219cb55266b24ef16ec",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb4_f_rr2.wav",
+          "bytes": 560944,
+          "sha256": "95a8a3ea238c9e4abd3577e6ade9d9d987ef986aa965bada11a5d9e3ba814b20",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb4_f_rr3.wav",
+          "bytes": 560944,
+          "sha256": "b9515fa498bcc9302b28f6db44015e79f7d1470923a2a001dc00ca7c3f17beef",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb4_mf_rr1.wav",
+          "bytes": 560944,
+          "sha256": "bffb64bc23b38596507e0b62abe5d7df7e70364a0564ca71bdbed27b9b91b8d2",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb4_mf_rr2.wav",
+          "bytes": 560944,
+          "sha256": "b4ba1d2d32a8b0e60386ffebf8cae78d61d892334cc0d4dbd79070fae7a3d550",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb4_mf_rr3.wav",
+          "bytes": 560944,
+          "sha256": "f74dc57a50465d72d5ada7ba1a9e7960c059624c4d300e413330674a317467f3",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb4_mp_rr1.wav",
+          "bytes": 560944,
+          "sha256": "81bcc53beb5209a2b67c30dccf8ffb8c376e9400abfb5de340c181359ad681c8",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb4_mp_rr2.wav",
+          "bytes": 560944,
+          "sha256": "92ec458d2f43c15e1d321e12800114abe3ea53feadcfd8ed0933ce90d579a259",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb4_mp_rr3.wav",
+          "bytes": 560944,
+          "sha256": "bcf1d6719c3bd3130835352cee8c75059908c299e8d65f0b686584096d38ca5b",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb4_p_rr1.wav",
+          "bytes": 560946,
+          "sha256": "1a51f07fec6debaab30b44374ea2a58ac03f22bf332117438379a7c46d908f9a",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb4_p_rr2.wav",
+          "bytes": 560944,
+          "sha256": "b5aad3f45dd94284201341e35cecd92de0a709ee31ef8872972e0bde79847df4",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb4_p_rr3.wav",
+          "bytes": 560944,
+          "sha256": "8584312c1e6301d10fc8e1bafcd8a974edd2d1d9370211e591be9b27a6ec97bd",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb5_f_rr1.wav",
+          "bytes": 560944,
+          "sha256": "aade67a3f4ccfc42dff0b914304bb45b5bfba6b956e4ff4dc4c0ab2e023cf01d",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb5_f_rr2.wav",
+          "bytes": 560944,
+          "sha256": "fa26e26da324df8850a9352f89b22fb9b34cadb906ee4e1ab3bacab17b44ab61",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb5_f_rr3.wav",
+          "bytes": 560944,
+          "sha256": "12196361174f8f02dfed291f621e87eb9db28b0899767c3d91b46b6123d26de1",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb5_mf_rr1.wav",
+          "bytes": 560944,
+          "sha256": "5e673d0d45a382edcfd88ce50850c76dc3ad73be774fbb3af21c60d10c2fed3d",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb5_mf_rr2.wav",
+          "bytes": 560944,
+          "sha256": "b992db0731da59e593d546f4134a7cd34567309880227232bf9fc4d299868c3d",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb5_mf_rr3.wav",
+          "bytes": 560944,
+          "sha256": "20a1294c82236fb3f39c7220946911949dfe67bc12a6c8ef932e1a96e7bdcce7",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb5_mp_rr1.wav",
+          "bytes": 560944,
+          "sha256": "de16428ac68068329e3d2b5345c6a426c83b5f6db3338b83455711a720785d10",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb5_mp_rr2.wav",
+          "bytes": 560944,
+          "sha256": "0f69bce72786272fa13a5140d40ae3c1e100d195f572227418972deb9552c1d8",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb5_mp_rr3.wav",
+          "bytes": 560944,
+          "sha256": "446f0cf244c8098f5570fa307d269c82e776a696e5a6a571cf5d4a342bc32056",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb5_p_rr1.wav",
+          "bytes": 560946,
+          "sha256": "d08f8c880f955c4e4a44d49e4b7759d07dbd9c7f465d96237e5b0fa55a56b174",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb5_p_rr2.wav",
+          "bytes": 560944,
+          "sha256": "ff8fece1c16223530be99e537d8cd38dc01231069a17ae3cf955a108eb3b05f3",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/eb5_p_rr3.wav",
+          "bytes": 560944,
+          "sha256": "03c343e11769d7127c3c301f244cbf60d7534aab227f35bee42b007a28e629da",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb2_f_rr1.wav",
+          "bytes": 560946,
+          "sha256": "d8324a84330ab133ae1ab3468655162ed2dcfeaf6eab208fa4c800f637998781",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb2_f_rr2.wav",
+          "bytes": 560946,
+          "sha256": "865ef2cc712e8c62f545cda84480838eb5e13608468e18a8ce5516eb1f5ef102",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb2_f_rr3.wav",
+          "bytes": 560946,
+          "sha256": "4615d10dc23de1522cba525f08c75a394f533b36441ada55bef2402c1ca373aa",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb2_mf_rr1.wav",
+          "bytes": 560946,
+          "sha256": "aab2c703be7803f4f9f2ca0783700132a7a653aab9ee23b51095423d8a63dfc2",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb2_mf_rr2.wav",
+          "bytes": 560946,
+          "sha256": "528ed4815d1b4f984ae4522687ec2844244e007b45cc73e2ad8355bd69df99e5",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb2_mf_rr3.wav",
+          "bytes": 560946,
+          "sha256": "09985a688c7f5897683d8c23edb6ab3842ef0682d5527c5b790077f931228057",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb2_mp_rr1.wav",
+          "bytes": 560946,
+          "sha256": "33e13b64a364264344faeaa3a98d74fcf40cd72ac865fe7277000e48c20bd2cc",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb2_mp_rr2.wav",
+          "bytes": 560946,
+          "sha256": "8da59ce4d3c0efe0bd73977bf6d49685edd6de8897798df389c5bb37633fa676",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb2_mp_rr3.wav",
+          "bytes": 560946,
+          "sha256": "1f4d83678028e3e5d1e3e2eb7b4c3179c69a9f3ae6afc821d9ff51b136bd20a3",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb2_p_rr1.wav",
+          "bytes": 560946,
+          "sha256": "e9df0c526dce2d995b657c45a3ab788b3edace65863950ae00d41651e09ee4a1",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb2_p_rr2.wav",
+          "bytes": 560946,
+          "sha256": "db4aecfc5b588e782869756ee14c8a515265ca47d1ae4a5a9b886d20e8bcb67c",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb2_p_rr3.wav",
+          "bytes": 560946,
+          "sha256": "a5ed2f0480a211c29259cac58511549a2972c446ac3e8b4694b7bd1e6d8fcf59",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb3_f_rr1.wav",
+          "bytes": 560946,
+          "sha256": "23b9afa3c8c9076def758810245f8a62d29db3aef9fa71d05f432bfc17e554d9",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb3_f_rr2.wav",
+          "bytes": 560946,
+          "sha256": "6914b0e0d8402eeb085f6503cf3915204df36279334739b447389854f4bb4b3b",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb3_f_rr3.wav",
+          "bytes": 560946,
+          "sha256": "7f92144c5bbfc13a1efef524760bf5b85e4d406e72db5f05fad326f17fd63e41",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb3_mf_rr1.wav",
+          "bytes": 560946,
+          "sha256": "0cd292ead34dc8ff7c4e4daf4638d73f3a81b95a50f531c626cf0e737babe785",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb3_mf_rr2.wav",
+          "bytes": 560946,
+          "sha256": "585f0c03e65170edaf6f753f38b71cccddbed447b7c0b3ad788243ce58d66705",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb3_mf_rr3.wav",
+          "bytes": 560946,
+          "sha256": "9ca948881520eb2945f1f78283872b3f74dcff31f3a003e3223b9118cd080654",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb3_mp_rr1.wav",
+          "bytes": 560946,
+          "sha256": "eda77b9d9f77462b0f601713fb54796ba9808e88870fbe1ddd230559d92e941c",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb3_mp_rr2.wav",
+          "bytes": 560946,
+          "sha256": "961ee02d6cb60c76a789e31ddd3abe5c744045673e1bad09b1245c10c2de6505",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb3_mp_rr3.wav",
+          "bytes": 560946,
+          "sha256": "24c5848efc4025a63ab62c79a3bf1cad39b3bd04bdab908eff6b9542c0f1632c",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb3_p_rr1.wav",
+          "bytes": 560946,
+          "sha256": "854bd4dd1f20567b89c86f3726ebad978a84569e0c61c429c95bc20eeb398b9b",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb3_p_rr2.wav",
+          "bytes": 560946,
+          "sha256": "618d4a46a08baac1d0ab6f69d39e98ef505687c6e8754bdb0676cbbbb5ec18b3",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb3_p_rr3.wav",
+          "bytes": 560946,
+          "sha256": "1553282bd4f8c49363c043a137639aaf796d5a74e604337d667da87363b3e481",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb4_f_rr1.wav",
+          "bytes": 560946,
+          "sha256": "f3790290fa763a1555e3fa84b828610de3f007ab86abeb7e8eb48f29c33cf473",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb4_f_rr2.wav",
+          "bytes": 560946,
+          "sha256": "8c3eb2772d4fd6663f514e4c88c592cae48f3a28b40f6104589cd7a47db93dd0",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb4_f_rr3.wav",
+          "bytes": 560946,
+          "sha256": "d62693e018400e0ecaa3a5365161142dc2f7921e53c3e8b8e5a74324a11ed663",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb4_mf_rr1.wav",
+          "bytes": 560946,
+          "sha256": "cfcffc387151aaec0e29f23d28004404ab964d0fd1cd819303a5f7e4711d1e87",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb4_mf_rr2.wav",
+          "bytes": 560946,
+          "sha256": "c6db34c4f6568a6faca9626d8ce829d23a37e29c05c5787f78ede200b0fee0d6",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb4_mf_rr3.wav",
+          "bytes": 560946,
+          "sha256": "0f931f96234b45574ad4c8c03a959c210c5f007ee8a61680a9426b9baed344aa",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb4_mp_rr1.wav",
+          "bytes": 560946,
+          "sha256": "1ad77352a26e1a56a38b73a49c350b5bc9a73e41139bb5f5fa46147533cbf66a",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb4_mp_rr2.wav",
+          "bytes": 560946,
+          "sha256": "e72a60091f450dd5afc7c483271a27e024803500bbc218fbf2f2ddf251a850ca",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb4_mp_rr3.wav",
+          "bytes": 560946,
+          "sha256": "ec4709eeadb504b87bd913268ec0f6686f6734212b30f2a2f9b46e4e0ce59288",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb4_p_rr1.wav",
+          "bytes": 560946,
+          "sha256": "00303711f9dc8089cbd128f59c883d777028c43bb57e046fed7c20cb2eb3e48c",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb4_p_rr2.wav",
+          "bytes": 560946,
+          "sha256": "47c2615b0babffe5b6c26a63694216516ea62e015219d6a41cdd0b2f09f83671",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb4_p_rr3.wav",
+          "bytes": 560946,
+          "sha256": "fe7b5bbb49f5248ba1418e0430c57647f51b66415ec0926d57f94cbd9e5c69a3",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb5_f_rr1.wav",
+          "bytes": 560944,
+          "sha256": "50fb98c21039c41a00cc4a2a6656c79817369df2c1109e46022bf585a2836cb1",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb5_f_rr2.wav",
+          "bytes": 560944,
+          "sha256": "4bc18728bfb9305b486656a83ce2898abe8ff6fd6258fb91fc8f4a8ee1a8d08f",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb5_f_rr3.wav",
+          "bytes": 560944,
+          "sha256": "991441f3e872abed0646f03be1747c4188d116de9cd62748fe0aaddc8af4b3fc",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb5_mf_rr1.wav",
+          "bytes": 560944,
+          "sha256": "32968b1ec8f69bae83231dfa71460d85e5954420257540e91c76a2aa615fde07",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb5_mf_rr2.wav",
+          "bytes": 560944,
+          "sha256": "040e1ac2751a4f8d22b3577d2a71ec97c5197a2ac4ba90f8afc60dbf0e6448a9",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb5_mf_rr3.wav",
+          "bytes": 560944,
+          "sha256": "7ad5141bba4bcff6562f9375efaa027034aa984b0625f02be867b30d926e06b9",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb5_mp_rr1.wav",
+          "bytes": 560944,
+          "sha256": "d62786d353de332bd5e074c8a5d79330466f346222e91b45d42a80453ac3d046",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb5_mp_rr2.wav",
+          "bytes": 560944,
+          "sha256": "20b5c3a8d149ad1863de9303a4b849a027c1d8bf0367ea4741834371519d9637",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb5_mp_rr3.wav",
+          "bytes": 560944,
+          "sha256": "64518dd9b679802d9df43433a5cce737c6f2f9f602e2bc05f45a7b6b70dd5d2b",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb5_p_rr1.wav",
+          "bytes": 560946,
+          "sha256": "9611c0faaee802010d1d67d6678c802c806239c9c7f5b67107039ed21edcfe5c",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb5_p_rr2.wav",
+          "bytes": 560944,
+          "sha256": "f9187688202e05ade45c7b2319945c7a8fde646edbf54cdfa072b00aca338552",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/notes/gb5_p_rr3.wav",
+          "bytes": 560944,
+          "sha256": "2f4e2ae1a658733d4112dbba12ac73518dc0d823cb93d7ba95acb77b8468c504",
+          "durationSeconds": 4.218776
+        },
+        {
+          "path": "Emilyguitar/readme.txt",
+          "bytes": 872,
+          "sha256": "99d83f6184b25de657f8528e6caaf3c35f99f8b1299ee2c4e0ac9a5c2871f924"
+        },
+        {
+          "path": "Emilyguitar/release/a2_release_rr1.wav",
+          "bytes": 22180,
+          "sha256": "c3375258fef93005934c242126287ce97767badbbe52e39e3b173282c1a69a4a",
+          "durationSeconds": 0.146485
+        },
+        {
+          "path": "Emilyguitar/release/a2_release_rr2.wav",
+          "bytes": 18304,
+          "sha256": "e89253a9f5d9acad9f358485631e5b28ff488e833203998afa2fd5745bb40d34",
+          "durationSeconds": 0.117188
+        },
+        {
+          "path": "Emilyguitar/release/a2_release_rr3.wav",
+          "bytes": 22180,
+          "sha256": "8d8ff3d8000878f3de99f8f87e6b05dc8587e4c7aee9ef12921047e31893a746",
+          "durationSeconds": 0.146485
+        },
+        {
+          "path": "Emilyguitar/release/a2_release_rr4.wav",
+          "bytes": 18304,
+          "sha256": "b9bdd50738a502a0ced1cc653cd6c12874eb4c30f0b9f394c4ee3f0e3197b9e8",
+          "durationSeconds": 0.117188
+        },
+        {
+          "path": "Emilyguitar/release/a3_release_rr1.wav",
+          "bytes": 26056,
+          "sha256": "36cac19a5d946465c023b690f36a9793ed3217dea52c01ea43c6fc12f6114eda",
+          "durationSeconds": 0.175782
+        },
+        {
+          "path": "Emilyguitar/release/a3_release_rr2.wav",
+          "bytes": 22180,
+          "sha256": "6321a5c1380dbed4767fff8330c43d7d949aed75316ea9650c90052d8c1025ae",
+          "durationSeconds": 0.146485
+        },
+        {
+          "path": "Emilyguitar/release/a3_release_rr3.wav",
+          "bytes": 26056,
+          "sha256": "afced0c674fcbbb5300bf0ca7d10d27d963dfe04a837ec79be354a7dcd62e087",
+          "durationSeconds": 0.175782
+        },
+        {
+          "path": "Emilyguitar/release/a3_release_rr4.wav",
+          "bytes": 22180,
+          "sha256": "e5e1278bd969df0a5d8ef9c0e0e362d5af370892b05d0db972879a9ed4106648",
+          "durationSeconds": 0.146485
+        },
+        {
+          "path": "Emilyguitar/release/a4_release_rr1.wav",
+          "bytes": 22180,
+          "sha256": "be004f587d6a18b95733189cca993e8757b4315bb0f0e1d2517a9e47d4c3df49",
+          "durationSeconds": 0.146485
+        },
+        {
+          "path": "Emilyguitar/release/a4_release_rr2.wav",
+          "bytes": 22180,
+          "sha256": "fef4e0eee88f2428a0e63a7886f7289e4bb9b984996e06eb1d2698504a7c5787",
+          "durationSeconds": 0.146485
+        },
+        {
+          "path": "Emilyguitar/release/a4_release_rr3.wav",
+          "bytes": 26056,
+          "sha256": "1a1e84a65c91651dfcc7b01455374a009d2965dbf8f9770a567e93c0cc53a216",
+          "durationSeconds": 0.175782
+        },
+        {
+          "path": "Emilyguitar/release/a4_release_rr4.wav",
+          "bytes": 26056,
+          "sha256": "1fe2348d9cd116a484377e637cf4773d85b581a0bd219d8c0b1ddd558edc38a1",
+          "durationSeconds": 0.175782
+        },
+        {
+          "path": "Emilyguitar/release/a5_release_rr1.wav",
+          "bytes": 14430,
+          "sha256": "36f9df1af1b124dd2bdf04f019daebf412896d0b8dd775597dfe324ab786e0dd",
+          "durationSeconds": 0.087891
+        },
+        {
+          "path": "Emilyguitar/release/a5_release_rr2.wav",
+          "bytes": 14428,
+          "sha256": "2c3f0e0b27b552d006cd5d2c0c59e6f742de60ab995367cf05e1387518a3d4c1",
+          "durationSeconds": 0.087891
+        },
+        {
+          "path": "Emilyguitar/release/a5_release_rr3.wav",
+          "bytes": 14428,
+          "sha256": "3b8ddaa1db494fe34b700f2ff1c50e88d9157f2f28d0ba2255f360eb50e5fd01",
+          "durationSeconds": 0.087891
+        },
+        {
+          "path": "Emilyguitar/release/a5_release_rr4.wav",
+          "bytes": 14428,
+          "sha256": "68a36c678b06a5e963479d71fe825d309c93f21a8a4ce47fb08fc7f0afd24e9d",
+          "durationSeconds": 0.087891
+        },
+        {
+          "path": "Emilyguitar/release/c3_release_rr1.wav",
+          "bytes": 18304,
+          "sha256": "6a07f8709d702f56efac8e162c27f11014ea12c573d74f1645d4ba4a9f96f2f0",
+          "durationSeconds": 0.117188
+        },
+        {
+          "path": "Emilyguitar/release/c3_release_rr2.wav",
+          "bytes": 22178,
+          "sha256": "bb0dd99d3aa529f9865e197c6f7230857cfd024ad9986172b9c13fea801f842d",
+          "durationSeconds": 0.146485
+        },
+        {
+          "path": "Emilyguitar/release/c3_release_rr3.wav",
+          "bytes": 26056,
+          "sha256": "b6d719dee82bca327f74f664e05f105d7f2b6d4366530539e7a67d9ff0116a2b",
+          "durationSeconds": 0.175782
+        },
+        {
+          "path": "Emilyguitar/release/c3_release_rr4.wav",
+          "bytes": 22180,
+          "sha256": "824c81a2de2b36cf4658f4274526c95a991cd62cd22ec9542d579648c3f32477",
+          "durationSeconds": 0.146485
+        },
+        {
+          "path": "Emilyguitar/release/c4_release_rr1.wav",
+          "bytes": 18306,
+          "sha256": "321b276da42844b2830e3d34594f61828861f343665cc8d8b061b68cb92218a1",
+          "durationSeconds": 0.117188
+        },
+        {
+          "path": "Emilyguitar/release/c4_release_rr2.wav",
+          "bytes": 18304,
+          "sha256": "4ef3922908cdf1478c8d10a508f6a1342ac84140bad7a3101e9134e2aa093cf0",
+          "durationSeconds": 0.117188
+        },
+        {
+          "path": "Emilyguitar/release/c4_release_rr3.wav",
+          "bytes": 22180,
+          "sha256": "a9a1bb638234b7153ffd94a60fc5de6c6821fcf8e2df5ff230af63434800770f",
+          "durationSeconds": 0.146485
+        },
+        {
+          "path": "Emilyguitar/release/c4_release_rr4.wav",
+          "bytes": 22186,
+          "sha256": "eef48fd6f758fd7b9c32920cbce37c1f5ffaea47de2844cb75fa192d596c52ec",
+          "durationSeconds": 0.146531
+        },
+        {
+          "path": "Emilyguitar/release/c5_release_rr1.wav",
+          "bytes": 14430,
+          "sha256": "7725e18434b1656dc050120cfb8646807fdcb36d2f3a18b5bb01bdea6d0f9a1e",
+          "durationSeconds": 0.087891
+        },
+        {
+          "path": "Emilyguitar/release/c5_release_rr2.wav",
+          "bytes": 14428,
+          "sha256": "53af9e81c88aa4b15abf2b2c221ddaab661b47ffdd8eedbe56ef8d16992d39ce",
+          "durationSeconds": 0.087891
+        },
+        {
+          "path": "Emilyguitar/release/c5_release_rr3.wav",
+          "bytes": 18304,
+          "sha256": "eea7f88dba64db12d89769742544dbbb715c087d2ac300ec85e2876655ddaeb0",
+          "durationSeconds": 0.117188
+        },
+        {
+          "path": "Emilyguitar/release/c5_release_rr4.wav",
+          "bytes": 20240,
+          "sha256": "1a123cb5dd79410261d808d201fc966a1fe2683d73e264e688a341a9502eff1c",
+          "durationSeconds": 0.131837
+        },
+        {
+          "path": "Emilyguitar/release/c6_release_rr1.wav",
+          "bytes": 22182,
+          "sha256": "02ce96d8db473e1fa7390bf3d8a0c5adb62dc0ad3899dec1edc3f27156417f85",
+          "durationSeconds": 0.146485
+        },
+        {
+          "path": "Emilyguitar/release/c6_release_rr2.wav",
+          "bytes": 18304,
+          "sha256": "49d0c94660efde6c35ccb431a4945ed72985234c8e0b0be940da7eba8e06de38",
+          "durationSeconds": 0.117188
+        },
+        {
+          "path": "Emilyguitar/release/c6_release_rr3.wav",
+          "bytes": 22180,
+          "sha256": "1117cd0f4152ac8580dc0b8a6ed265746cec8dbd881f224c63f32fdffe036c6b",
+          "durationSeconds": 0.146485
+        },
+        {
+          "path": "Emilyguitar/release/c6_release_rr4.wav",
+          "bytes": 14428,
+          "sha256": "b5076f246d97b82c96d0c4f75fa0eeec1868b224d58abcf25701802013d86b28",
+          "durationSeconds": 0.087891
+        },
+        {
+          "path": "Emilyguitar/release/d6_release_rr1.wav",
+          "bytes": 26056,
+          "sha256": "c48554bdcf8e0f5d99d1742a89e3f74f4b23c89b40b6322b2b9db65c5a0ee7dd",
+          "durationSeconds": 0.175782
+        },
+        {
+          "path": "Emilyguitar/release/d6_release_rr2.wav",
+          "bytes": 22180,
+          "sha256": "9bec158ae5d9856c357bf2ed063822d26eccd0aae499c491be5f048df18d1107",
+          "durationSeconds": 0.146485
+        },
+        {
+          "path": "Emilyguitar/release/d6_release_rr3.wav",
+          "bytes": 22180,
+          "sha256": "257b9ab60746496e1bca5b1500990e2075dcb416759049abf400006cb88a5562",
+          "durationSeconds": 0.146485
+        },
+        {
+          "path": "Emilyguitar/release/d6_release_rr4.wav",
+          "bytes": 20242,
+          "sha256": "adc7a4846df593c702ec8e13bfbcd53c7caa55c37ff2f547dfb1a375a4073fae",
+          "durationSeconds": 0.131837
+        },
+        {
+          "path": "Emilyguitar/release/db2_release_rr1.wav",
+          "bytes": 26058,
+          "sha256": "9a803d82db17c61d3d15ae19e904ca1210da54d162be1b043e17a2ac67a81065",
+          "durationSeconds": 0.175782
+        },
+        {
+          "path": "Emilyguitar/release/db2_release_rr2.wav",
+          "bytes": 22182,
+          "sha256": "69b60ffa45eb02202fc84b9c38f03f20ef7ffb2a555e72ca102a7557e5cfda5f",
+          "durationSeconds": 0.146485
+        },
+        {
+          "path": "Emilyguitar/release/db2_release_rr3.wav",
+          "bytes": 26058,
+          "sha256": "0a9cb4f146aa3d2504a73edba7059b52d07e32abde6f4aa7510ec40912b7cca9",
+          "durationSeconds": 0.175782
+        },
+        {
+          "path": "Emilyguitar/release/db2_release_rr4.wav",
+          "bytes": 18306,
+          "sha256": "c387f2baee46f588ae922670f3a525a3f0f2c6096a1b3fac7a3124bd952c08a7",
+          "durationSeconds": 0.117188
+        },
+        {
+          "path": "Emilyguitar/release/e2_release_rr1.wav",
+          "bytes": 26056,
+          "sha256": "c28c207fc869aae218d04b8b556b17f5cb970a75d6cb13a5b7f50d428e08ee29",
+          "durationSeconds": 0.175782
+        },
+        {
+          "path": "Emilyguitar/release/e2_release_rr2.wav",
+          "bytes": 26056,
+          "sha256": "22b74963e6434a5159837a8dc349fef31a2267036eaa331eff99bbdcd5614a8b",
+          "durationSeconds": 0.175782
+        },
+        {
+          "path": "Emilyguitar/release/e2_release_rr3.wav",
+          "bytes": 26056,
+          "sha256": "19da925788ed79c9de84302c91d73a3baaceaa284199130deec1397fcd21450d",
+          "durationSeconds": 0.175782
+        },
+        {
+          "path": "Emilyguitar/release/e2_release_rr4.wav",
+          "bytes": 26056,
+          "sha256": "285a49a981bf1b29a64773a8caec0daaf87cf24e8d905d66fbe67c85a5b68eda",
+          "durationSeconds": 0.175782
+        },
+        {
+          "path": "Emilyguitar/release/eb3_release_rr1.wav",
+          "bytes": 26058,
+          "sha256": "d183320d4d05f31479a69e7d24a0985ff7ac720dd691470787121a26d44aff59",
+          "durationSeconds": 0.175782
+        },
+        {
+          "path": "Emilyguitar/release/eb3_release_rr2.wav",
+          "bytes": 22180,
+          "sha256": "26837a73fe8aa88a2699d50b5a195337a87f63894c847c809e84970a1233e14c",
+          "durationSeconds": 0.146485
+        },
+        {
+          "path": "Emilyguitar/release/eb3_release_rr3.wav",
+          "bytes": 22180,
+          "sha256": "4e0d1d77e21230aaa13d164728532458f72921252d4b6c4952d1d72336ba1919",
+          "durationSeconds": 0.146485
+        },
+        {
+          "path": "Emilyguitar/release/eb3_release_rr4.wav",
+          "bytes": 26054,
+          "sha256": "ff07ef8b190ce134d91153d7a6d03544668a61d5d33d74b5fa1ae376ebf042e6",
+          "durationSeconds": 0.175782
+        },
+        {
+          "path": "Emilyguitar/release/eb4_release_rr1.wav",
+          "bytes": 26056,
+          "sha256": "76e5079565c887d752065ad077ffd99c9bfd91030040c10b1f6e24c46005d923",
+          "durationSeconds": 0.175782
+        },
+        {
+          "path": "Emilyguitar/release/eb4_release_rr2.wav",
+          "bytes": 26056,
+          "sha256": "b7d826fc1320bdb451e44e3400e406f2e89907d73ad78fab5b154f0b1195936a",
+          "durationSeconds": 0.175782
+        },
+        {
+          "path": "Emilyguitar/release/eb4_release_rr3.wav",
+          "bytes": 20242,
+          "sha256": "78f102f1e059f8a387a09fe757daf1015665cf789492678fdc8adddc5d1a1ab1",
+          "durationSeconds": 0.131837
+        },
+        {
+          "path": "Emilyguitar/release/eb4_release_rr4.wav",
+          "bytes": 22178,
+          "sha256": "73fa050995d87e0a1227b59b6a146efe756b7a84989bdd93606e299a3dbbb256",
+          "durationSeconds": 0.146485
+        },
+        {
+          "path": "Emilyguitar/release/eb5_release_rr1.wav",
+          "bytes": 14428,
+          "sha256": "8ab883795358086a97b2a40790a272b9585b9861b493273fa944b8812d08a344",
+          "durationSeconds": 0.087891
+        },
+        {
+          "path": "Emilyguitar/release/eb5_release_rr2.wav",
+          "bytes": 22180,
+          "sha256": "d7941b5ee8f40e70ecd30572ebf695874130e0d7de2edfc6fdf9827e16388cd2",
+          "durationSeconds": 0.146485
+        },
+        {
+          "path": "Emilyguitar/release/eb5_release_rr3.wav",
+          "bytes": 22180,
+          "sha256": "135997ee31efcfb7c66756f755730424ddf879219d11fc935c09fcb93e80ca45",
+          "durationSeconds": 0.146485
+        },
+        {
+          "path": "Emilyguitar/release/eb5_release_rr4.wav",
+          "bytes": 18302,
+          "sha256": "6885f3d27a834b532d3fbf4ef098d70d431f2bc45d82387bf1d26c684d2b26bb",
+          "durationSeconds": 0.117188
+        },
+        {
+          "path": "Emilyguitar/release/gb2_release_rr1.wav",
+          "bytes": 29934,
+          "sha256": "388cdc2c61d512959f26340d12eab0e57ac10709698ab772c392e78e7a2d1fe6",
+          "durationSeconds": 0.205079
+        },
+        {
+          "path": "Emilyguitar/release/gb2_release_rr2.wav",
+          "bytes": 33810,
+          "sha256": "1dad5a64faa0edd1c1dc8db4e6ecddb939b029621d443af1e7d3a9c06fe7ae76",
+          "durationSeconds": 0.234376
+        },
+        {
+          "path": "Emilyguitar/release/gb2_release_rr3.wav",
+          "bytes": 22182,
+          "sha256": "8bf18c95981c984bf223e8742542433d1b416d263eca01413017318b2045c1df",
+          "durationSeconds": 0.146485
+        },
+        {
+          "path": "Emilyguitar/release/gb2_release_rr4.wav",
+          "bytes": 29934,
+          "sha256": "74fd66bc1c5a6118c01792cdaad3dd83d60c71c2c13183ece09be8c9612c3c90",
+          "durationSeconds": 0.205079
+        },
+        {
+          "path": "Emilyguitar/release/gb3_release_rr1.wav",
+          "bytes": 22182,
+          "sha256": "245168699baabd88f399087e7825c94e55423eba9690d101d2eb129306333de8",
+          "durationSeconds": 0.146485
+        },
+        {
+          "path": "Emilyguitar/release/gb3_release_rr2.wav",
+          "bytes": 26056,
+          "sha256": "e1571c81c0876ab0216fbbb0b9ad95c2a30c663d734513932ce65feeec88644e",
+          "durationSeconds": 0.175782
+        },
+        {
+          "path": "Emilyguitar/release/gb3_release_rr3.wav",
+          "bytes": 18304,
+          "sha256": "78361d1599a6d886b0bd8fba631464e8015b7c2e8d08d91eeaf7066ab5fde3a2",
+          "durationSeconds": 0.117188
+        },
+        {
+          "path": "Emilyguitar/release/gb3_release_rr4.wav",
+          "bytes": 24118,
+          "sha256": "81a5a4c2b2decd7649e2e8ba9217379d8c258aeb6555b4d6385864abb443e2f7",
+          "durationSeconds": 0.161134
+        },
+        {
+          "path": "Emilyguitar/release/gb4_release_rr1.wav",
+          "bytes": 26058,
+          "sha256": "9f1dc3ccd5878d52d83e1175e6598ffac13883285f9159717a642ef16fdcd97f",
+          "durationSeconds": 0.175782
+        },
+        {
+          "path": "Emilyguitar/release/gb4_release_rr2.wav",
+          "bytes": 26056,
+          "sha256": "2270a2bcecd0734894fbad8314f412395da4ab177f815fed5a0bc408e2a36cc8",
+          "durationSeconds": 0.175782
+        },
+        {
+          "path": "Emilyguitar/release/gb4_release_rr3.wav",
+          "bytes": 22180,
+          "sha256": "04f5e8ea584a063482a3648235fa2af46fd6d93f64c0059ac6d65a737858245c",
+          "durationSeconds": 0.146485
+        },
+        {
+          "path": "Emilyguitar/release/gb4_release_rr4.wav",
+          "bytes": 20242,
+          "sha256": "edb61c0ba32a56b9abb037288187facd0c3a852d3968f3fce012e45fd3c2ecb2",
+          "durationSeconds": 0.131837
+        },
+        {
+          "path": "Emilyguitar/release/gb5_release_rr1.wav",
+          "bytes": 22180,
+          "sha256": "dcec7164ac3ef32824a82efb7f186cee9e4e1d54d54aab3fd7246113143c19d6",
+          "durationSeconds": 0.146485
+        },
+        {
+          "path": "Emilyguitar/release/gb5_release_rr2.wav",
+          "bytes": 22180,
+          "sha256": "6faa44ca89b3efc73231452d23c4b61271af2eb00559d52239eabbcf14c34221",
+          "durationSeconds": 0.146485
+        },
+        {
+          "path": "Emilyguitar/release/gb5_release_rr3.wav",
+          "bytes": 18302,
+          "sha256": "ef165051321c8fc6a5784a0a77ccd81fd17d1ee59cd309b06c39f5c2ce0debab",
+          "durationSeconds": 0.117188
+        },
+        {
+          "path": "Emilyguitar/release/gb5_release_rr4.wav",
+          "bytes": 18304,
+          "sha256": "910517d4187a7ec8a25c91eaf5da2057629d21af1acf43f68359d7c4f87a90ed",
+          "durationSeconds": 0.117188
+        }
+      ],
       "archive": {
         "tag": "v1.001",
         "asset": "Karoryfer.Emilyguitar.v1.001.zip",
         "bytes": 103484350,
         "url": "https://github.com/sfzinstruments/karoryfer.emilyguitar/releases/download/v1.001/Karoryfer.Emilyguitar.v1.001.zip"
-      }
+      },
+      "sfz": "Emilyguitar/emily_basic.sfz",
+      "durationSeconds": 4.218776,
+      "mirroredAt": "2026-09-29"
     }
   ]
 }
