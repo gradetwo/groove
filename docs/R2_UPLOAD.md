@@ -1284,3 +1284,34 @@ rclone copy <dir> :s3:groove/<prefix>/   --s3-provider Cloudflare   --s3-access-
 | **有 `pin`** | ⭐ **按 sha `fetch --depth 1`** ✓ | **已实现 ✓（本轮修好 ✓）** |
 
 ⭐⭐ **而 `bytes` 这一项是 zip 形态里【唯一可核对的】东西** ✓ —— ⭐ **因为 GitHub 的 Release 资产没有 git 的不可变性保证 ✗** —— ⭐ **所以 `sha256` 在下载时实测并写进清单 ✓，正是让"这次传的就是上次核对的"成为可验证的** ✓✓。
+
+
+## 44. ⚠️⭐ 写 P2 条目时撞到的形状：**`needs` 是一份 opcode 名单**（2026-09-28 晚 ✓）
+
+### 我写的 vs 真实的
+
+| | |
+|---|---|
+| ⚠️ **我写的** | `"needs": "an electric bass, the register most arrangements are built on"` ✗✓ |
+| ⭐ **真实的** | **`["key", "lokey"]`** ✓ —— ⭐ **一份"这个库需要引擎支持哪些 opcode"的名单** ✓✓ |
+
+⭐ **所以它是给【引擎能力】用的 ✓，不是给【人读的介绍】用的** ✗✓ —— ⭐ **而我把一句人话写进了一个机读字段** ✗ —— ⭐ **`checkManifestLicences` 立刻抛错 ✓，这就是它的用处** ✓✓。
+
+### ⭐ 而处理方式是按纪律回退，而不是留着坏的
+
+```
+回退后: ['virtuosity-drums-basic', 'salamander-grand']   ← ⭐ 树干净 ✓
+```
+
+⭐⭐ **两条 Karoryfer 条目连同它们的错形状一起撤掉了 ✓** —— ⭐ **而已经查到的【数据】没有丢 ✓**（**下一条就能直接用 ✓**）：
+
+| repo | licence | tag | asset | bytes |
+|---|---|---|---|---|
+| **`karoryfer.meatbass`** ✓ | **CC0-1.0** ✓ | `v1.001` ✓ | `Karoryfer.Meatbass.v1.001.zip` ✓ | **255,425,351** ✓ |
+| **`karoryfer.emilyguitar`** ✓ | **CC0-1.0** ✓ | `v1.001` ✓ | `Karoryfer.Emilyguitar.v1.001.zip` ✓ | **103,484,350** ✓ |
+
+⭐ **两条都是 CC0-1.0** ✓（**无需署名 ✓**）· **各有 `LICENSE` 与 `readme.txt`** ✓。
+
+### ⭐ 而下一轮重写时，第一件事是先读一个现有条目的全部字段
+
+⭐ **这一轮的错误，又是"先写后读"** ✗ —— ⭐ **而这一次抓住它的是项目自己的守卫 ✓（`checkManifestLicences` 抛错 ✓ + typecheck 与测试在后面 ✓）** —— ⭐ **所以代价是一轮，而不是一次坏的上传** ✓✓。
