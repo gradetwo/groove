@@ -146,7 +146,12 @@ them. Confusing the two is how a licence obligation quietly goes unmet while the
 
 ### Redistributed by this project
 
-**None yet.** The sample catalogue ships empty on purpose, so no sound library is bundled or redistributed today, and this list is empty rather than nearly-empty.
+| library | licence | attribution it requires |
+|---|---|---|
+| **Salamander Grand Piano** (`salamander-grand`) | **CC BY** | **Chisato Yamauchi**, for the re-mastering, and **Alexander Holm**, for the original Salamander Grand Piano — both names are required by the licence |
+
+It was planned before it was mirrored; the two lists exist so that the credit does not stay behind in the plan once the bytes go up. **Every name in the row is required, not merely the library's name** — for CC BY the licence names
+the authors.
 
 When one is added, its row goes here and names exactly what its licence requires — for a CC BY library that means **the author, not just the library**.
 
@@ -159,7 +164,6 @@ Nothing in this list is claimed to be included; each row says what will be requi
 | **VCSL** — Versilian Community Sample Library | CC0 | none required; credited as a courtesy |
 | **Virtuosity Drums** — Versilian Studios / Karoryfer | CC0 | none required; credited as a courtesy |
 | **Karoryfer** free instruments | CC0 (release-dependent) | none for the CC0 releases; **some older releases are CC-BY-4.0**, so each version is confirmed before use rather than assumed |
-| **Accurate-Salamander** | **CC BY** | **Chisato Yamauchi**, for the re-mastering, and **Alexander Holm**, for the original Salamander Grand Piano — both names, because the licence belongs to the original author as much as to the re-masterer |
 | **VSCO 2 CE** | CC Sampling Plus 1.0 | ⚠️ **not redistributed by this project** — the terms are vague, so it can only be a library the user supplies, where no redistribution by us takes place |
 
 Code dependencies are credited separately, in [public/THIRD_PARTY_NOTICES.md](public/THIRD_PARTY_NOTICES.md), because they carry a different obligation and a different
