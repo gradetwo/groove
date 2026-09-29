@@ -26,9 +26,11 @@ describe("ArrangementViewV2", () => {
   it("drops the selection when the selected track is removed, so the take selector cannot describe a track that is gone", () => {
     render(<ArrangementViewV2 songId="s" capture={noCapture} />);
     fireEvent.click(screen.getByRole("button", { name: "+ sampler" }));
-    // Adding selects it, so the take selector is showing — and removing it must clear that.
+    // Adding selects the new track, so the take selector is showing — and removing *it* must clear the selection, leaving the default track behind.
     expect(screen.getByTestId("take-selector-v2")).toBeDefined();
-    fireEvent.click(screen.getAllByRole("button", { name: "×" })[0]!);
+    // ⭐ The **last** one: a new arrangement now starts with a default track (the owner's requirement), so the added track is not the first row. Removing the first would test removing the default instead.
+    const removers = screen.getAllByRole("button", { name: "×" });
+    fireEvent.click(removers[removers.length - 1]!);
     expect(screen.getByTestId("arrangement-detail").textContent).toMatch(/Select a track/);
   });
 });
