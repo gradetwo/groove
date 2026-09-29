@@ -103,20 +103,9 @@ export const MobileMoreSheet: React.FC<MobileMoreSheetProps> = ({
               {t(group.titleKey)}
             </h3>
             <ul>
-              {group.items.map((item) => (
-                <li key={item.kind === "tab" ? `tab-${item.tab}` : `action-${item.id}`}>
-                  <button
-                    type="button"
-                    data-testid={
-                      item.kind === "tab" ? `mobile-sheet-tab-${item.tab}` : `mobile-sheet-action-${item.id}`
-                    }
-                    onPointerUp={(e) => {
-                      e.preventDefault();
-                      if (item.kind === "tab") onSelectTab(item.tab);
-                      else onAction(item.id);
-                    }}
-                    className="flex min-h-[56px] w-full items-center gap-3 rounded-xl px-2 text-left transition-colors active:bg-panel2"
-                  >
+              {group.items.map((item) => {
+                const content = (
+                  <>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[13.5px] font-semibold text-text">
                         {t(item.labelKey)}
@@ -126,9 +115,45 @@ export const MobileMoreSheet: React.FC<MobileMoreSheetProps> = ({
                       </span>
                     </span>
                     <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0 text-text-dim" />
-                  </button>
-                </li>
-              ))}
+                  </>
+                );
+                const rowClass =
+                  "flex min-h-[56px] w-full items-center gap-3 rounded-xl px-2 text-left transition-colors active:bg-panel2";
+                /**
+                 * A link renders as one. Every other row calls back into the tab model; this one leaves it, and an anchor is what makes that difference visible to a browser, a keyboard and a screen reader alike. Closing the sheet on
+                 * the way out keeps the destination from arriving underneath an open menu.
+                 */
+                if (item.kind === "link") {
+                  return (
+                    <li key={`link-${item.id}`}>
+                      <a
+                        href={item.href}
+                        data-testid={`mobile-sheet-link-${item.id}`}
+                        onPointerUp={() => onClose()}
+                        className={rowClass}
+                      >
+                        {content}
+                      </a>
+                    </li>
+                  );
+                }
+                return (
+                  <li key={item.kind === "tab" ? `tab-${item.tab}` : `action-${item.id}`}>
+                    <button
+                      type="button"
+                      data-testid={item.kind === "tab" ? `mobile-sheet-tab-${item.tab}` : `mobile-sheet-action-${item.id}`}
+                      onPointerUp={(e) => {
+                        e.preventDefault();
+                        if (item.kind === "tab") onSelectTab(item.tab);
+                        else onAction(item.id);
+                      }}
+                      className={rowClass}
+                    >
+                      {content}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           </section>
         ))}

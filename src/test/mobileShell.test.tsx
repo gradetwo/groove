@@ -162,12 +162,17 @@ describe("MobileMoreSheet", () => {
     renderWithLang(<MobileMoreSheet open onClose={noop} onSelectTab={noop} onAction={noop} />);
     const rows = MOBILE_SHEET_GROUPS.flatMap((g) => g.items);
     for (const item of rows) {
+      // Every kind, not just the two that existed when this was written: a row added later is exactly the one whose target nobody would check.
       const id =
-        item.kind === "tab" ? `mobile-sheet-tab-${item.tab}` : `mobile-sheet-action-${item.id}`;
-      const button = screen.getByTestId(id);
-      expect(button.className, `${id} height`).toMatch(/min-h-\[56px\]/);
+        item.kind === "tab"
+          ? `mobile-sheet-tab-${item.tab}`
+          : item.kind === "link"
+            ? `mobile-sheet-link-${item.id}`
+            : `mobile-sheet-action-${item.id}`;
+      const row = screen.getByTestId(id);
+      expect(row.className, `${id} height`).toMatch(/min-h-\[56px\]/);
       // Label plus description: a bare list of view names is what makes a menu hard to use.
-      expect(button.textContent?.trim().length ?? 0).toBeGreaterThan(0);
+      expect(row.textContent?.trim().length ?? 0).toBeGreaterThan(0);
     }
   });
 });
@@ -219,3 +224,25 @@ describe("piano roll is not offered on phones", () => {
     expect(hasChordsCta).toBe(true);
   });
 });
+describe("the new-project entry on a phone", () => {
+  const noop = () => {};
+
+  it("offers it as a link to /new, not as a tab", () => {
+    /**
+     * The desktop decision holds on the phone and for the same reason: a new project is a route of its own rather than a destination inside the tab model. Rendering it as an anchor is what makes that visible to a browser and a keyboard
+     * rather than a button that happens to navigate.
+     */
+    renderWithLang(<MobileMoreSheet open onClose={noop} onSelectTab={noop} onAction={noop} />);
+    const link = screen.getByTestId("mobile-sheet-link-new-project");
+    expect(link.tagName).toBe("A");
+    expect(link).toHaveAttribute("href", "/new");
+  });
+
+  it("closes the sheet on the way out, so the destination does not arrive under an open menu", () => {
+    const onClose = vi.fn();
+    renderWithLang(<MobileMoreSheet open onClose={onClose} onSelectTab={noop} onAction={noop} />);
+    fireEvent.pointerUp(screen.getByTestId("mobile-sheet-link-new-project"));
+    expect(onClose).toHaveBeenCalled();
+  });
+});
+
