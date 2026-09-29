@@ -81,7 +81,10 @@ const waitForServer = async () => {
   throw new Error("vite did not start");
 };
 
-const browser = await chromium.launch({ args: ["--no-sandbox"] });
+/**
+ * `--enable-precise-memory-info` makes `performance.memory` update on every allocation rather than on a slow timer — without it the readings below are too coarse to be worth printing.
+ */
+const browser = await chromium.launch({ args: ["--no-sandbox", "--enable-precise-memory-info"] });
 const fail = async (message) => {
   console.error(`❌ ${message}`);
   await browser.close().catch(() => {});
@@ -101,6 +104,8 @@ try {
       body: '<!doctype html><html><head><meta charset="utf-8"></head><body></body></html>',
     })
   );
+  // A switch for the heap sampling, so a failure can be attributed: the same probe runs with and without it and the difference says which one broke.
+  if (process.env.PROBE_NO_HEAP === "1") await page.addInitScript(() => { window.__probeNoHeap = true; });
   await page.goto(`${base}/__arrangement_probe__.html`, { waitUntil: "domcontentloaded", timeout: 60000 });
 
   const measured = await page.evaluate(async ({ genreId: id, ramp }) => {
@@ -461,6 +466,15 @@ try {
         const lane = (index) => ({ track_id: "audio", name: `lane-${index}`, sample: { assetId: "probe-impulse" } });
         const points = [];
         const short = [sections[0]];
+        /**
+         * **The heap is sampled while the render runs, and the number is a sampled lower bound rather than a peak.** `render` is asynchronous, so the page's event loop is free between its awaits and a timer can read
+         * `performance.memory.usedJSHeapSize` — which is Chromium-only and page-wide, so it includes the application as well as the render. The note returned with the curve says all of that, because a number whose limits
+         * are unstated is the kind this project has had to retract.
+         */
+        /**
+ * Sampling can be switched off with `PROBE_NO_HEAP=1`, because it was added while diagnosing a failure and the only way to tell whether it caused one is to run without it.
+ */
+const memory = typeof performance !== "undefined" && !window.__probeNoHeap ? performance.memory : undefined;
         for (const count of [1, 4, 16, 64]) {
           const value = {
             ...song,
@@ -468,14 +482,23 @@ try {
             clips: { A: { ...clip, tracks: Array.from({ length: count }, (_, index) => lane(index)) } },
             sections: short,
           };
+          let peakHeapBytes = memory ? memory.usedJSHeapSize : undefined;
+          const sampler = memory ? setInterval(() => { peakHeapBytes = Math.max(peakHeapBytes, memory.usedJSHeapSize); }, 10) : undefined;
           const started = performance.now();
           const { buffer } = await render(value);
           const seconds = Number(((performance.now() - started) / 1000).toFixed(4));
-          points.push({ lanes: count, seconds, frames: buffer.length });
+          if (sampler !== undefined) clearInterval(sampler);
+          if (memory) peakHeapBytes = Math.max(peakHeapBytes, memory.usedJSHeapSize);
+          points.push({
+            lanes: count,
+            seconds,
+            frames: buffer.length,
+            ...(peakHeapBytes === undefined ? {} : { peakHeapMB: Number((peakHeapBytes / (1024 * 1024)).toFixed(1)) }),
+          });
           // **No print here.** A `console.log` inside `page.evaluate` runs in the browser and never reaches this log — the points are returned and printed from Node after the evaluate
           // returns. This line existed and printed nothing for exactly that reason, which cost a round of thinking the block had never run.
         }
-        return { points, note: "time only; peak memory is NOT measured, because this context exposes no reliable way to ask for it" };
+        return { points, memory: Boolean(memory), note: "time and sampled heap; the heap reading is a lower bound (sampled every 10ms during the render), Chromium-only, and page-wide rather than the render alone. Time is wall clock inside the browser." };
       } catch (error) {
         return { error: error && error.message ? error.message : String(error) };
       }
@@ -984,7 +1007,10 @@ try {
   const laneCurve = measured.renderLaneCurve;
   if (laneCurve?.error) console.log(`   lane curve       : could not measure (${laneCurve.error})`);
   else if (laneCurve?.points) {
-    for (const point of laneCurve.points) console.log(`   lane curve       : ${point.lanes} lane(s) ${point.seconds}s (${point.frames} frames)`);
+    for (const point of laneCurve.points) {
+      const heap = point.peakHeapMB === undefined ? "heap not measurable here" : `peak heap sampled ${point.peakHeapMB} MB`;
+      console.log(`   lane curve       : ${point.lanes} lane(s) ${point.seconds}s (${point.frames} frames) · ${heap}`);
+    }
     console.log(`                      ${laneCurve.note}`);
   }
 
