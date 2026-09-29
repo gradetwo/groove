@@ -7,7 +7,8 @@
  *
  * Fetching the SFZ text is deliberately **not** done here: I/O is not pure, and this stays pure so its criteria need no browser and no network.
  */
-import { parseSfz } from "./parse";
+import { parseSfz, readControlDefaults } from "./parse";
+import { regionsAtCc } from "./ccGate";
 import { playbackForNote, playbackGap } from "./regionPlayback";
 import type { SfzRegion } from "./parse";
 import type { SampleAsset } from "../../data/sampleCatalogue";
@@ -54,9 +55,18 @@ export function resolveInstrumentNote(
     return { ok: false, regions, reason: `instrument "${asset.assetId}" defines no regions` };
   }
 
-  const playback = playbackForNote(regions, note, options);
+  /**
+   * **The controller gates first, at the values the file itself declares.** `loccN`/`hiccN` decide whether a region exists rather than how loud it is, and with no controller sent the file's own `<control>` block is where those values come from — `virtuosity_drums`
+   * turns every one of its microphones on by setting CC101 to 127 there. So a gate that would silence every region is not a bug in the file; it is a file whose defaults say so.
+   */
+  const audible = regionsAtCc(regions, readControlDefaults(sfzText));
+  if (audible.length === 0) {
+    return { ok: false, regions, reason: `instrument "${asset.assetId}" has ${regions.length} region(s) and none of them sound at the controller values the file declares` };
+  }
+
+  const playback = playbackForNote(audible, note, options);
   if (!playback) {
-    return { ok: false, regions, reason: playbackGap(regions, note) };
+    return { ok: false, regions, reason: playbackGap(audible, note) };
   }
 
   return {
