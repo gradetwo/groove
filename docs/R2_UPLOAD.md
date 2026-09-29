@@ -482,3 +482,37 @@ ceiling 10.00 GB
 | **3** | ⭐ **CI 里的那一步** ✓ | **凭据走 secret ✓；scope 单独一个（`mirror`）✓，不与每次 push 混在一起** ✓✓ |
 
 ⭐⭐ **而这三件都不是"接一根线"** ✗ —— ⭐ **它们是把一件手工做过一次的事，变成一件可以重复、可以核对、可以交给机器的事** ✓✓ —— ⭐ **而"手工做过一次"正是本工作流一路在替换的东西** ✓（**录一次音的探针 ✓ 手工核对过的 tag ✓ 手工查过的 lint ✓** ✓）。
+
+
+## 21. ⭐⭐⭐ Karoryfer 的真身：**`sfzinstruments` 下的 30 个独立仓库**，交付物是 Release 的 `.zip`（2026-09-28 晚，业主指路 + 查证 ✓）
+
+⭐ 业主指出 ✓：**Karoryfer 已把大部分免费资源迁到 GitHub ✓，在 `sfzinstruments` 组织页搜 `karoryfer` 就能找到独立仓库 ✓，进入后从 Releases 下载打包好的 `.zip`** ✓✓。
+
+### ⭐ 查证结果
+
+| 事实 | 数字 |
+|---|---|
+| ⭐ **`karoryfer.*` 仓库数** | ⭐ **30 个** ✓（`emilyguitar` ✓ `unruly-drums` ✓ `swirly-drums` ✓ `big-rusty-drums` ✓ `black-and-green-guitars` ✓ `meatbass` ✓ `ergo` ✓ `black-and-blue-basses` ✓ `shinyguitar` ✓ `scarypiano` ✓ `sneakybass` ✓ `HorsePulse` ✓ `big-little-bass` ✓ `cowsynth` ✓ `pastabass` ✓ `TheHatWithThePhat` ✓ `war-tuba` ✓ `fashionbass` ✓ `272-merry-orks` ✓ …） |
+| ⭐ **30 个仓库合计（含历史）** | ⭐ **8.02 GB** ✗ |
+| ⚠️ **全部加起来（30 个 + 三架 + 现有 443 MB）** | ⭐ **17.90 GB** ✗✓✓ —— **对 10 GB 上限超了约 80%** |
+
+### ⚠️ 而它与前三架是**两种不同的取法** ✗✓
+
+| | 前三架 | ⭐ **Karoryfer** |
+|---|---|---|
+| 交付物 | **git 树里的采样与 `.sfz`** ✓ | ⭐ **Release 里的 `.zip`** ✓✓ |
+| 取法 | **`build_sample_manifest.mjs` 枚举树** ✓ | ⚠️ **要下载资产并解包，再枚举** ✗ |
+| 例子 | —— | `karoryfer.cowsynth` @ `v1.001` → **1 个资产** ✓ · **`Karoryfer.Cowsynth.v1.001.zip` = 13.4 MB** ✓ |
+
+⭐ **所以"Karoryfer"不是清单里的一行 ✗，而是三十行候选 ✓** —— ⭐ **而 10 GB 上限让"选哪几个"成为一个必须回答的问题 ✓，不是一个偏好** ✓✓。
+
+### ⭐ 而按业主的常设自主权（"需要决策的，你按较优方案选并留痕" ✓），我的选择是：**小而互补的三个** ✓
+
+| 候选 | 仓库体积 | 它补上什么 |
+|---|---|---|
+| ⭐ **`karoryfer.meatbass`** ✓ | **243 MB** | ⭐ **一个能弹的贝斯** ✓（**VCSL/VSCO 没有 `.sfz`，而合成贝斯不是采样贝斯** ✓） |
+| ⭐ **`karoryfer.emilyguitar`** ✓ | **99 MB** | ⭐ **一把电吉他** ✓（**现有乐器里完全没有吉他** ✓） |
+| ⭐ **`karoryfer.war-tuba`** ✓ | **104 MB** | ⭐ **一件铜管** ✓（**管弦的"另一个音区"，而 VCSL/VSCO 现在播不了** ✓） |
+| **合计** | ⭐ **约 446 MB** ✓✓ | ⭐ **加上三架 9.45 GB 与现有 443 MB，仍在 10 GB 之内** ✓ |
+
+⚠️ **而这是按【仓库体积】估的 ✓ —— Release 的 `.zip` 尺寸要逐个查过才算数 ✓**（**`cowsynth` 那个例子说明两者可能接近 ✓ 也可能不同** ✗）。
