@@ -201,8 +201,17 @@ describe("the manifest validates its own promises", () => {
     expect(bad.ok).toBe(false);
     const messages = bad.errors.join("\n");
     expect(messages).toMatch(/files\[0\]: path is required/);
-    expect(messages).toMatch(/bytes must be a positive number/);
+    // The wording follows the rule, which changed to allow zero: an empty file is a size, and VCSL ships one.
+    expect(messages).toMatch(/bytes must be a number of zero or more/);
     expect(messages).toMatch(/sha256 must be 64 lower-case hex characters/);
+  });
+
+  it("accepts a file of zero bytes, because zero is a size rather than a missing one", () => {
+    // VCSL ships `Non-standard pitch (please transpose).txt` at zero bytes; the rule refused it and the repository could not parse its own enumeration.
+    const parsed = parseManifest(
+      manifest([{ id: "x", name: "X", licence: "CC0", files: [{ path: "note.txt", bytes: 0 }] }])
+    );
+    expect(parsed.ok, parsed.errors.join("; ")).toBe(true);
   });
 
   it("accepts a well-formed file list and refuses a duration that is not positive", () => {

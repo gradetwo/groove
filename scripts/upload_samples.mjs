@@ -17,6 +17,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { programsFrom } from "./lib/programs.mjs";
 
 const MANIFEST = path.join(process.cwd(), "public", "samples", "manifest.json");
 const argv = process.argv.slice(2);
@@ -136,10 +137,15 @@ if (entry.archive) {
   walk(workdir);
   entry.files = found;
   const sfzFiles = found.filter((f) => f.path.endsWith(".sfz"));
+  /**
+   * The programs the archive holds, by the same rule the manifest builder uses. A library with several programs used to be reduced to one — whichever file sat nearest the root — so an archive with 39 programs offered a single instrument.
+   */
+  const programs = programsFrom(sfzFiles.map((file) => file.path));
+  entry.instruments = programs.length > 1 ? programs : undefined;
   // ⭐ The entry point is chosen, not guessed: a file at the top level if there is one, otherwise the shortest path, because a library's root program is nearer the root than its includes.
   const pick = sfzFiles.find((f) => !f.path.includes("/")) ?? [...sfzFiles].sort((a, b) => a.path.length - b.path.length)[0];
-  entry.sfz = pick ? pick.path : "";
-  console.log(`  unpacked ${found.length} file(s) · ${sfzFiles.length} sfz · entry: ${entry.sfz || "✗ none found"}`);
+  entry.sfz = programs[0]?.sfz ?? (pick ? pick.path : "");
+  console.log(`  unpacked ${found.length} file(s) · ${sfzFiles.length} sfz · ${programs.length} instrument(s) · entry: ${entry.sfz || "✗ none found"}`);
   if (!entry.sfz) {
     // ⚠️ An archive with no SFZ cannot be played, whatever else it contains — the same judgement the manifest builder makes for a tree.
     console.error("  ❌ no .sfz anywhere in the archive — this library cannot be played without mappings");
@@ -154,8 +160,31 @@ if (entry.archive) {
   console.log(`  fetching ${entry.repo} @ ${entry.pin} → ${workdir}`);
   execFileSync("git", ["init", "--quiet", workdir], { stdio: "inherit" });
   execFileSync("git", ["-C", workdir, "remote", "add", "origin", `https://github.com/${entry.repo}.git`], { stdio: "inherit" });
-  execFileSync("git", ["-C", workdir, "fetch", "--depth", "1", "--quiet", "origin", entry.pin], { stdio: "inherit" });
-  execFileSync("git", ["-C", workdir, "checkout", "--quiet", "FETCH_HEAD"], { stdio: "inherit" });
+  /**
+   * **Fetch only the files this entry will use, when the entry says which.** VCSL is 5.74 GB of tree and the four families this project mirrors are 2.41 GB of it, so a plain shallow fetch downloads more than twice what gets uploaded. A partial
+   * clone with a sparse checkout asks for the listed paths and nothing else.
+   *
+   * It is a fallback rather than the only path because it depends on the server supporting filters: if the filtered fetch or the checkout fails, the plain shallow fetch runs and the result is the same tree, only fetched in full. The cost
+   * of being wrong is bandwidth, and the cost of not trying is bandwidth every time.
+   */
+  const sparse = (entry.paths ?? []).filter((prefix) => typeof prefix === "string" && prefix !== "");
+  let narrowed = false;
+  if (sparse.length > 0) {
+    try {
+      execFileSync("git", ["-C", workdir, "sparse-checkout", "set", "--no-cone", ...sparse], { stdio: "inherit" });
+      execFileSync("git", ["-C", workdir, "fetch", "--depth", "1", "--filter=blob:none", "--quiet", "origin", entry.pin], { stdio: "inherit" });
+      execFileSync("git", ["-C", workdir, "checkout", "--quiet", "FETCH_HEAD"], { stdio: "inherit" });
+      narrowed = true;
+      console.log(`  fetched only: ${sparse.join(", ")}`);
+    } catch {
+      console.log("  (the narrowed fetch did not work here; falling back to the whole tree)");
+      execFileSync("git", ["-C", workdir, "sparse-checkout", "disable"], { stdio: "inherit" });
+    }
+  }
+  if (!narrowed) {
+    execFileSync("git", ["-C", workdir, "fetch", "--depth", "1", "--quiet", "origin", entry.pin], { stdio: "inherit" });
+    execFileSync("git", ["-C", workdir, "checkout", "--quiet", "FETCH_HEAD"], { stdio: "inherit" });
+  }
 }
 
 

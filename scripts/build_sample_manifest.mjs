@@ -11,6 +11,7 @@
  * Usage: node scripts/build_sample_manifest.mjs <entry-id> [--write]
  */
 import fs from "node:fs";
+import { programsFrom } from "./lib/programs.mjs";
 import path from "node:path";
 
 const MANIFEST = path.join(process.cwd(), "public", "samples", "manifest.json");
@@ -84,6 +85,19 @@ if (!write) {
 }
 
 entry.files = blobs.map((node) => ({ path: node.path, bytes: node.size ?? 0 }));
+/**
+ * The declared programs, when the library holds more than one. A single-program library keeps `sfz`, which says the same thing without a list; a multi-program one also keeps `sfz` as its first program, so a reader that knows only
+ * that field still points at something real.
+ */
+const programs = programsFrom(sfzFiles.map((node) => node.path));
+if (programs.length > 1) {
+  entry.instruments = programs;
+  entry.sfz = programs[0].sfz;
+  console.log(`  instruments ${programs.length} (from ${sfzFiles.length} sfz)`);
+} else {
+  entry.instruments = undefined;
+  if (programs.length === 1) entry.sfz = programs[0].sfz;
+}
 entry.enumeratedAt = new Date().toISOString().slice(0, 10);
 // durationSeconds and sha256 are left exactly as they were: they need bytes this step never fetches.
 fs.writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2) + "\n");
