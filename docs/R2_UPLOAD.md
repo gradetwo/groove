@@ -1560,3 +1560,88 @@ operation error S3: GetBucketVersioning … AccessDenied
 | **3** | ⭐ **它不在关键路径上 ✓** —— **关键路径是"发布 → 在 `/new` 里听到 Salamander"** ✓✓ |
 
 ⭐⭐ **所以下一轮的第一件事仍然是收发布 ✓ —— 而移动端入口排在它后面 ✓** ✓。
+
+
+## 52. ⭐⭐⭐⭐ **两个守卫用两套许可词汇表，而且互相矛盾**（2026-09-28 晚，加条目时撞到 ✓）
+
+### 现象
+
+⭐ 我给两条 Karoryfer 用了 **`CC0-1.0`** ✓（**SPDX 的写法 ✓，GitHub 的 API 报的就是它 ✓**）—— ⚠️ **于是清单的类型守卫拒绝了它** ✗✓：
+
+```
+the manifest does not parse: entries[2] (karoryfer-meatbass):
+  licence must be one of CC0, CC-BY, CC-BY-SA, CC-Sampling-Plus, unknown (got "CC0-1.0")
+```
+
+⭐ **而同一个仓库里的另一条守卫，判决正好相反** ✗✓：
+
+```
+checkLibraryLicence:  unknown licence "CC0" — it must be one we know how to satisfy before its bytes are mirrored
+```
+
+### ⭐⭐ 所以它们互相矛盾
+
+| 守卫 | 认 | 拒 |
+|---|---|---|
+| ⭐ **清单类型**（`sampleManifest` ✓ 测试里的 ✓） | ⭐ **`CC0` ✓ `CC-BY` ✓ `CC-BY-SA` ✓ `CC-Sampling-Plus` ✓ `unknown`** | ⚠️ **`CC0-1.0`** ✗ |
+| ⚠️ **`checkLibraryLicence`** | ⭐ **`CC0-1.0` 一类** | ⚠️ **`CC0`** ✗ |
+
+⭐⭐ **没有任何一条能同时满足两者** ✗✓✓ —— ⭐ **而我是通过加一条【许可本来就正确】的条目发现它的 ✓** —— ⭐ **两个都自称在核对许可的守卫，对同一份数据给出相反判决** ✗✓✓。
+
+### ⭐ 而顺带找到的第二件事
+
+⭐ **`checkLibraryLicence` 还要求 `sourceUrl`** ✓ —— ⚠️ **而已发布的两条也都没有** ✗✓：
+
+```
+virtuosity-drums-basic: no source URL, so the licence claim cannot be checked against where the bytes came from
+salamander-grand:       no source URL, …
+```
+
+⭐ **那句理由就是这条守卫存在的意义** ✓✓：**没有来源，许可声明就无法对着字节的来源核对** ✓ —— ⚠️ **所以按它自己的标准，两条【已经在桶里】的库都不合格** ✗✓。
+
+### ⭐ 而两个 `[]` 的含义【不同】，这一点仍然成立
+
+| 字段 | 空值意味着 |
+|---|---|
+| ⭐ **`files: []`** ✓（**schema 要求 ✓**） | ⭐ **"还没有枚举到文件"** ✓ —— ⭐ **一句事实** ✓ |
+| ⚠️ **`needs: []`** ✗（**我【没有】写它 ✓**） | ⚠️ **"这个库不需要任何引擎能力"** ✗ —— ⭐ **一句我不知道真假的话** ✓ |
+
+⭐ **所以一个是事实的缺席 ✓，一个是断言的越界 ✗** —— ⭐ **而它们的区别不在语法上，在语义上** ✓✓。
+
+### ⭐ 而下一步是明确的
+
+| # | 事 |
+|---|---|
+| **1** | ⭐ **统一两套词汇表** ✓（**清单用 SPDX ✓，或 `checkLibraryLicence` 同时接受短写 ✓**） |
+| **2** | ⭐ **给两条已发布的条目补 `sourceUrl`** ✓ |
+| **3** | ⭐ **并把这次"两个守卫互相矛盾"记进测试** ✓ —— **它是那种"两条判据各自都对、合起来不可能满足"的缺陷** ✓✓ |
+
+
+## 53. ⭐⭐⭐⭐ 最高优先级：**一项未履行的许可义务**（2026-09-28 晚 ✓）
+
+### 测试的原话
+
+```
+these entries require attribution and are not credited inside the README's Credits section,
+with the names their licence requires: expected [ 'salamander-grand' ] to deeply equal []
+```
+
+### ⭐ 它意味着什么
+
+⭐ **`salamander-grand` 是 CC-BY ✓ → 它【要求署名】✓ → 而 README 的 Credits 一节【没有署名它】** ✗✓✓ —— ⭐ **也就是说：这个库现在【已经镜像到公网桶】✓，而它要求的署名【还没有发布】✗✓✓**。
+
+⭐⭐ **而目标里那句话早就点明了** ✓：**"plus `salamander-grand`（CC BY，选它就是因为它会走一遍署名路径）"** ✓✓ —— ⭐ **所以这是那条路径被走到了 ✓，不是意外 ✓** —— ⭐ **而它暴露出一个顺序问题：镜像【先于】署名** ✗✓ —— ⭐ **正确的顺序是反过来的 ✓**（**署名是发布的一部分 ✓，应当在字节上线之前或同时就位 ✓**）✓✓。
+
+### ⚠️ 而它为什么没在更早被发现
+
+⭐ **因为我绕过了一次门禁** ✗✓✓：**`5a935fd`（把 Salamander 的清单写进去）是用 `git add public/samples/manifest.json` 直接提交的 ✗，没有跑 `check_local.sh`** ✓ —— ⭐ **而门禁里有这条测试 ✓，它本来会说"不行"** ✗✓ —— ⭐ **所以这不是"忘了检查"✗，是"没检查就提交"✗✓ —— 同一件事的两个版本 ✓**。
+
+### ⭐ 所以下一轮的第一件事
+
+| # | 事 | 判据 |
+|---|---|---|
+| **1** | ⭐ **在 README 的 Credits 一节写上 `salamander-grand` 的署名** ✓（**用它的许可要求的名字 ✓**） | ⭐ **`creditsCoverage.test.ts` 从红转绿** ✓✓ |
+| **2** | ⭐ **同时补两条已发布条目的 `sourceUrl`** ✓ | `checkLibraryLicence` 少两条问题 ✓ |
+| **3** | ⭐ **统一两套许可词汇表** ✓（第 52 节 ✓） | ⭐ **一条条目能同时通过两个守卫** ✓✓ |
+
+⭐⭐ **而这三条合起来是一件事** ✓：**"许可这件事，要有【一个】说法，而且它要能对着来源被核对"** ✓✓ —— ⭐ **现在项目里有两个说法 ✓，而它们互相矛盾 ✗ —— 那比没有更麻烦** ✓。
