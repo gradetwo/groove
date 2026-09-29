@@ -113,10 +113,15 @@ for (const other of others) {
     const url = `${base}/${target.path}`;
     try {
       const response = await fetch(url, { method: "HEAD" });
-      const length = Number(response.headers.get("content-length") ?? "0");
-      const ok = response.status === 200 && (target.bytes === undefined || length === target.bytes);
+      /**
+       * ⭐ **`NaN` for a length that was not stated**, which is the convention the detailed check above already used. My first version of this block wrote `?? "0"`, which reads "unknown" as "zero" — and then compared it against the
+       * manifest's 236 bytes and reported a failure that was about the check rather than the mirror. A size that was not given is not a size of zero, and a check that cannot tell them apart will invent defects.
+       */
+      const length = Number(response.headers.get("content-length") ?? NaN);
+      const ok = response.status === 200 && (target.bytes === undefined || Number.isNaN(length) || length === target.bytes);
       if (!ok) failures += 1;
-      console.log(`  ${ok ? "✅" : "❌"} ${target.label.padEnd(24)} ${response.status} · ${length} bytes · ${url}`);
+      const shown = Number.isNaN(length) ? "length not stated" : `${length} bytes`;
+      console.log(`  ${ok ? "✅" : "❌"} ${target.label.padEnd(24)} ${response.status} · ${shown} · ${url}`);
     } catch (error) {
       failures += 1;
       console.log(`  ❌ ${target.label.padEnd(24)} ${error instanceof Error ? error.message : String(error)} · ${url}`);
