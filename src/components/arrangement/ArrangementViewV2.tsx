@@ -73,7 +73,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player }: Arrangem
   }
 
   return (
-    <div data-testid="arrangement-view-v2">
+    <div data-testid="arrangement-view-v2" className="flex flex-col gap-4 p-4 text-text">
       <TrackListV2
         arrangement={arrangement}
         onAddTrack={onAddTrack}
@@ -87,7 +87,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player }: Arrangem
         onChangeKind={(trackId, kind) => setArrangement((current) => changeTrackKind(current, trackId, kind))}
       />
 
-      <div data-testid="arrangement-transport">
+      <div data-testid="arrangement-transport" className="flex items-center gap-2">
         <button
           type="button"
           disabled={player === undefined}
@@ -106,7 +106,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player }: Arrangem
         {played !== undefined && <span data-testid="arrangement-played"> planned {played} lane event(s)</span>}
       </div>
 
-      <div data-testid="arrangement-detail">
+      <div data-testid="arrangement-detail" className="flex flex-col gap-2 p-3 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] bg-[var(--d-surface,rgba(255,255,255,0.04))]">
         {selected === undefined ? (
           // Said rather than left blank, so an empty panel reads as "nothing selected" instead of "something is broken".
           <p>Select a track to see its takes.</p>
@@ -119,10 +119,10 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player }: Arrangem
       </div>
 
       {/* Selecting a track is by clicking its row's name; kept as a button so a keyboard can do it too. */}
-      <ul data-testid="arrangement-track-picker">
+      <ul data-testid="arrangement-track-picker" className="flex flex-wrap gap-2">
         {arrangement.tracks.map((track) => (
           <li key={track.id}>
-            <button type="button" onClick={() => setSelectedTrackId(track.id)} aria-pressed={track.id === selectedTrackId}>
+            <button type="button" className="px-2 py-1 rounded text-xs border border-[var(--d-border,rgba(255,255,255,0.15))] text-text" onClick={() => setSelectedTrackId(track.id)} aria-pressed={track.id === selectedTrackId}>
               {track.name}
             </button>
           </li>

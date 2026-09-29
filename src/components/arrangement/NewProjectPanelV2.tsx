@@ -41,16 +41,17 @@ export function NewProjectPanelV2({ onCreate }: NewProjectPanelV2Props) {
   const cards = [...TEMPLATES.map((template) => ({ id: template.id, name: template.name })), { id: "blank", name: "Blank" }];
 
   return (
-    <div data-testid="new-project-panel-v2">
-      <h2>New Project</h2>
+    <div data-testid="new-project-panel-v2" className="flex flex-col gap-4 p-6 max-w-4xl">
+      <h2 className="text-lg font-semibold text-text">New Project</h2>
 
-      <div data-testid="template-cards">
+      <div data-testid="template-cards" className="flex flex-wrap gap-3">
         {cards.map((card) => (
           <button
             key={card.id}
             type="button"
             aria-pressed={selected === card.id}
             data-testid={`template-${card.id}`}
+            className={`flex flex-col items-start gap-1 p-4 rounded border text-left min-w-56 ${selected === card.id ? "border-[var(--d-accent)] bg-[var(--d-accent-soft)]" : "border-[var(--d-border,rgba(255,255,255,0.15))] bg-[var(--d-surface,rgba(255,255,255,0.04))]"}`}
             onClick={() => setSelected(card.id)}
           >
             <strong>{card.name}</strong>
@@ -60,23 +61,23 @@ export function NewProjectPanelV2({ onCreate }: NewProjectPanelV2Props) {
         ))}
       </div>
 
-      <button type="button" onClick={() => setDetailsOpen((open) => !open)} aria-expanded={detailsOpen}>
+      <button type="button" className="self-start px-3 py-1 rounded text-sm text-text opacity-80" onClick={() => setDetailsOpen((open) => !open)} aria-expanded={detailsOpen}>
         Details
       </button>
       {detailsOpen && (
-        <div data-testid="new-project-details">
+        <div data-testid="new-project-details" className="flex flex-wrap gap-4 items-center text-sm text-text opacity-90">
           {/* Folded away like Logic's: the tempo and key are not what someone is deciding when they start. */}
-          <label>
-            Tempo <input type="number" defaultValue={120} aria-label="Tempo" />
+          <label className="flex items-center gap-2">
+            Tempo <input type="number" className="w-20 px-2 py-1 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] bg-transparent text-text" defaultValue={120} aria-label="Tempo" />
           </label>
-          <label>
-            Key <input type="text" defaultValue="C Major" aria-label="Key" />
+          <label className="flex items-center gap-2">
+            Key <input type="text" className="w-28 px-2 py-1 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] bg-transparent text-text" defaultValue="C Major" aria-label="Key" />
           </label>
           {selected === "blank" && (
             <label>
               {/* ⭐ Only the blank card needs this: the templates bring their own tracks. */}
               First track
-              <select aria-label="First track kind" value={blankKind} onChange={(event) => setBlankKind(event.target.value as TrackKindV2)}>
+              <select className="px-2 py-1 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] bg-transparent text-text" aria-label="First track kind" value={blankKind} onChange={(event) => setBlankKind(event.target.value as TrackKindV2)}>
                 {KIND_LABELS.map(({ kind, en }) => (
                   <option key={kind} value={kind}>
                     {en}
@@ -88,9 +89,9 @@ export function NewProjectPanelV2({ onCreate }: NewProjectPanelV2Props) {
         </div>
       )}
 
-      <footer>
+      <footer className="flex justify-end">
         {/* ⭐ One primary button, and the choice it commits is the one on screen. */}
-        <button type="button" onClick={() => onCreate(selected === "blank" ? undefined : selected, blankKind)}>
+        <button type="button" className="px-4 py-2 rounded bg-[var(--d-accent)] text-[var(--d-accent-ink)] font-medium" onClick={() => onCreate(selected === "blank" ? undefined : selected, blankKind)}>
           Create
         </button>
       </footer>

@@ -26,11 +26,11 @@ export function TakeSelectorV2({ track, bar, availableReferences, onSelect }: Ta
 
   if (takes.length === 0) {
     // An empty list is a fact worth stating: a selector that rendered nothing would look broken rather than empty.
-    return <div data-testid="take-selector-v2">No takes recorded on this track yet.</div>;
+    return <div data-testid="take-selector-v2" className="text-sm text-text opacity-70">No takes recorded on this track yet.</div>;
   }
 
   return (
-    <div data-testid="take-selector-v2">
+    <div data-testid="take-selector-v2" className="flex flex-wrap gap-2">
       {takes.map((take) => {
         const missing = availableReferences !== undefined && !availableReferences.includes(take.id);
         return (
@@ -38,6 +38,7 @@ export function TakeSelectorV2({ track, bar, availableReferences, onSelect }: Ta
             key={take.id}
             type="button"
             data-testid={`take-${take.id}`}
+            className={`px-3 py-1 rounded border text-sm text-text ${playing?.id === take.id ? "border-[var(--d-accent)] bg-[var(--d-accent-soft)]" : "border-[var(--d-border,rgba(255,255,255,0.15))]"}`}
             aria-pressed={playing?.id === take.id}
             data-playing={playing?.id === take.id ? "true" : "false"}
             data-missing={missing ? "true" : "false"}

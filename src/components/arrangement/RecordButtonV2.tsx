@@ -29,12 +29,12 @@ export function RecordButtonV2({ capture }: RecordButtonV2Props) {
   };
 
   return (
-    <div data-testid="record-button-v2">
-      <button type="button" onClick={start} disabled={busy}>
+    <div data-testid="record-button-v2" className="flex items-center gap-3">
+      <button type="button" className="px-3 py-1 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] text-sm text-text disabled:opacity-50" onClick={start} disabled={busy}>
         {busy ? "Recording…" : "Record"}
       </button>
       {message !== undefined && (
-        <p role="status" data-testid="record-refusal">
+        <p role="status" data-testid="record-refusal" className="text-sm text-text opacity-80">
           {message}
         </p>
       )}
