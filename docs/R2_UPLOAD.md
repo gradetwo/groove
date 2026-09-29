@@ -1206,3 +1206,34 @@ CRITICAL: Failed to create file system for "r2:groove": didn't find section in c
 | ⭐ **`rclone.conf` 里有没有别的 remote** ✓ | **决定上传器用 `rclone copy <remote>:groove/…` 还是 S3 API** ✓ |
 | ⭐ **还是当时用了 `wrangler r2 object put`** ✓ | ⭐ **那上传器就该照它写** ✓ |
 | ⭐ **`docs/R2_UPLOAD.md` 的第 4–8 节** ✓ | ⭐ **那里记着当时的命令** ✓✓（**而我这一轮没读它 ✗ —— 又一次"先写后读"** ✗） |
+
+
+## 42. ⭐⭐⭐ 答案：本机没有 `r2` remote，而**凭据本身就是 S3 端点**（2026-09-28 晚，读文档得到 ✓）
+
+### 读到的
+
+| 位置 | 内容 |
+|---|---|
+| ⭐ **第 10 行** | **`R2_ACCOUNT_ID` 构成 S3 端点** ✓：**`https://<account-id>.r2.cloudflarestorage.com`** ✓✓ |
+| ⭐ **第 29 行** | **`.env.local` 里就是那四个键** ✓ |
+| ⭐ **`rclone listremotes`** | ⚠️ **只有 `blackhole:`** ✗✓ —— **`rclone.conf` 只有 100 字节** ✓ |
+
+⭐⭐ **所以：当时的上传走的是 S3 API ✓，而不是一个叫 `r2` 的 rclone remote** ✗✓ —— ⭐ **而 `rclone` 可以【不配任何 remote】直接用 `:s3:` 加参数** ✓✓：
+
+```bash
+rclone copy <dir> :s3:groove/<prefix>/   --s3-provider Cloudflare   --s3-access-key-id "$R2_ACCESS_KEY_ID"   --s3-secret-access-key "$R2_SECRET_ACCESS_KEY"   --s3-endpoint "https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com"
+```
+
+⭐ **而这样一来，"不必自己写分块与续传"那条判断依然成立** ✓✓ —— ⭐ **只是 remote 由参数给出 ✓，而不是由配置给出** ✓。
+
+### ⭐ 而这一轮的错误顺序，值得记最后一条
+
+⭐ **我写了上传器 ✗，然后才发现它连桶都读不到** ✗✓ —— ⭐ **而文档第 10 行与第 29 行就在那里 ✓，写着凭据构成的是什么** ✓ —— ⭐ **这是本会话第 N 次"先写后读"** ✗ —— ⭐ **而修法永远是同一句：动手之前读那一行** ✓✓。
+
+### ⭐ 所以上传器的下一步改动是明确的
+
+| 改动 | 位置 |
+|---|---|
+| ⭐ **`storedBytes()` 用 `:s3:` + 参数，而不是 `r2:groove`** ✓ | **`scripts/upload_samples.mjs`** ✓ |
+| ⭐ **参数从 `.env.local` 读** ✓（**`dotenv` 或直接解析那个文件 ✓**） | 同上 ✓ |
+| ⭐ **`rclone copy` 同样用 `:s3:`** ✓ | 同上 ✓ |
