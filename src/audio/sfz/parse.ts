@@ -1,3 +1,5 @@
+import { applyDefines } from "./defines";
+
 /**
  * An SFZ subset, parsed by hand — the first half of real-instrument support (owner decision, inside groove, no new repository).
  *
@@ -73,6 +75,9 @@ const num = (value: string | undefined, fallback: number): number => {
 };
 
 export function parseSfz(text: string): SfzRegion[] {
+  // ⭐ The `#define` layer runs first: a definition applies from its point onward, and doing it here means the parser never sees a directive nor a `$NAME` it could have resolved.
+  text = applyDefines(text).text;
+
   const regions: SfzRegion[] = [];
   let global: Record<string, string> = {};
   let group: Record<string, string> = {};
