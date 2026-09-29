@@ -40,3 +40,28 @@ describe("ArrangementViewV2", () => {
     expect(screen.getByTestId("arrangement-detail").textContent).toMatch(/Select a track/);
   });
 });
+
+describe("the play button and the engine seam", () => {
+  const chooserThrough = () => {
+    render(<ArrangementViewV2 songId="s" capture={noCapture} />);
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+  };
+
+  it("is disabled and says why when no engine is connected, rather than looking broken", () => {
+    chooserThrough();
+    const play = screen.getByRole("button", { name: /Play/ }) as HTMLButtonElement;
+    // ⭐ The interface work and the audio wiring are separate changes on purpose; the button must not pretend.
+    expect(play.disabled).toBe(true);
+    expect(screen.getByTestId("arrangement-transport").textContent).toMatch(/not connected yet/);
+  });
+
+  it("hands the arrangement to the injected engine and reports what it planned, including zero", async () => {
+    const play = vi.fn(async () => ({ planned: 0 }));
+    render(<ArrangementViewV2 songId="s" capture={noCapture} player={{ play }} />);
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    fireEvent.click(screen.getByRole("button", { name: /Play/ }));
+    // Zero is shown, not hidden: "nothing was planned" is a fact a user should see rather than a silent no-op.
+    await screen.findByTestId("arrangement-played");
+    expect(screen.getByTestId("arrangement-played").textContent).toMatch(/planned 0/);
+  });
+});
