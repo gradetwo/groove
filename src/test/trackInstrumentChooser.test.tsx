@@ -7,7 +7,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import React from "react";
-import { TrackListV2 } from "../components/arrangement/TrackListV2";
+import { TrackListV2, groupInstruments, libraryOfAsset } from "../components/arrangement/TrackListV2";
 import { addTrack, createArrangement, resetTrackIdsForTests, setTrackSample } from "../data/arrangementEdits";
 
 const base = () => ({ ...createArrangement("s"), tracks: [] });
@@ -92,5 +92,48 @@ describe("a track's own steps in the row", () => {
     resetTrackIdsForTests();
     renderList(addTrack(base(), "folder", "Group"));
     expect(screen.queryByLabelText("Group steps")).toBeNull();
+  });
+
+});
+
+describe("grouping the instrument list by library", () => {
+  it("reads the library out of a catalogue id, single or multi-instrument", () => {
+    // A multi-instrument library names its programs `entry:program`; a single-instrument entry is its own library.
+    expect(libraryOfAsset("salamander-grand")).toBe("salamander-grand");
+    expect(libraryOfAsset("vcsl:Baroque-Alto-Recorder-Keyswitch")).toBe("vcsl");
+  });
+
+  it("groups labelled instruments by library, in order", () => {
+    // 135 instruments across five libraries is a question rather than a choice; grouped, it is five lists.
+    const grouped = groupInstruments([
+      { assetId: "vcsl:Tom", name: "Tom", library: "vcsl" },
+      { assetId: "salamander-grand", name: "Piano", library: "salamander-grand" },
+      { assetId: "vcsl:Whistle", name: "Whistle", library: "vcsl" },
+    ]);
+    expect(grouped.map(([library]) => library)).toEqual(["salamander-grand", "vcsl"]);
+    expect(grouped[1]![1].map((instrument) => instrument.name)).toEqual(["Tom", "Whistle"]);
+  });
+
+  it("leaves the list flat when the caller does not say which library each came from", () => {
+    // A group of one is worse than no group, and a caller with a single library should not have to render one.
+    const flat = groupInstruments([{ assetId: "a", name: "A" }, { assetId: "b", name: "B" }]);
+    expect(flat).toHaveLength(1);
+    expect(flat[0]![0]).toBeUndefined();
+    expect(flat[0]![1]).toHaveLength(2);
+  });
+
+  it("renders one option group per library, and the options are still findable by name", () => {
+    resetTrackIdsForTests();
+    const withSampler = addTrack(base(), "sampler", "Sampler 1");
+    renderList(withSampler, {
+      instruments: [
+        { assetId: "vcsl:Tom", name: "Tom", library: "vcsl" },
+        { assetId: "salamander-grand", name: "Salamander Grand Piano", library: "salamander-grand" },
+      ],
+    });
+    const select = screen.getByLabelText("Sampler 1 instrument");
+    expect(select.querySelectorAll("optgroup")).toHaveLength(2);
+    // The grouping is presentation; the option a person picks is still selected by its own name and value.
+    expect(screen.getByRole("option", { name: "Salamander Grand Piano" })).toBeDefined();
   });
 });
