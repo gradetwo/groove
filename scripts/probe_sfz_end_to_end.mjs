@@ -144,6 +144,7 @@ try {
      * note and see whether a buffer comes back.
      */
     // Diagnostics first: the expansion's own numbers, reported before the loader is asked for anything.
+    const requests = [];
     const includesModule = await import("/src/audio/sfz/remoteIncludes.ts");
     const parseModule = await import("/src/audio/sfz/parse.ts");
     const sfzHead = await (await fetch(kit.sfz.url)).text();
@@ -151,8 +152,10 @@ try {
     const base = programPath ? kit.sfz.url.slice(0, kit.sfz.url.length - programPath.length) : kit.sfz.url;
     log.push(`base: ${base}`);
     const expanded = await includesModule.expandRemoteIncludes(sfzHead, {
+      // Every request and its outcome, traced: the wave loop's failure mode is "which path did it ask for", and guessing that has already cost several rounds.
       fetchText: async (url) => {
         const response = await fetch(url);
+        if (requests.length < 12) requests.push(`${response.status} ${url.replace(base, "")}`);
         if (!response.ok) throw new Error(`${response.status} from ${url}`);
         return response.text();
       },
@@ -162,7 +165,8 @@ try {
     });
     const regions = parseModule.parseSfz(expanded.text);
     log.push(`expand: included ${expanded.included.length}, missing ${expanded.missing.length}, problems ${expanded.problems.length}, regions ${regions.length}`);
-    for (const problem of expanded.problems.slice(0, 3)) log.push(`  problem: ${problem}`);
+    for (const request of requests) log.push(`  fetch: ${request}`);
+    for (const problem of expanded.problems.slice(0, 2)) log.push(`  problem: ${problem}`);
     log.push(`sfz entry: ${sfzHead.length} bytes from the source, includes ${(sfzHead.match(/^\s*#include/gm) ?? []).length}`);
 
     // And load it for real: the loader fetches, decodes and caches, with the browser decoder.
