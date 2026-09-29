@@ -187,3 +187,27 @@ describe("the expander reports the files it read", () => {
     expect(result.problems).toEqual([]);
   });
 });
+
+/**
+ * `missing` — the paths the reader could not supply, which is what an asynchronous caller loops on.
+ *
+ * A browser cannot read synchronously, so it cannot be handed to `expandIncludes` directly. The fix is not a second async expander (a second copy of the include semantics) but **waves**: run the
+ * one implementation with whatever is available, fetch exactly what it could not read, run it again. That loop needs the **paths**, not sentences — and `problems` only ever had sentences.
+ */
+describe("the expander reports what it could not read", () => {
+  it("lists a missing include by path, once, and still explains it", () => {
+    const result = expandIncludes('<region> sample=a.wav key=38\n#include "gone.sfz"\n#include "gone.sfz"\n', () => undefined, { path: "entry.sfz" });
+    // By path: the caller's next step is to fetch it, and it needs a URL, not a message.
+    expect(result.missing).toEqual(["gone.sfz"]);
+    // And the sentence is still there, because a human reading a log needs one.
+    expect(result.problems.join("\n")).toMatch(/gone\.sfz/);
+  });
+
+  it("reports nothing missing when everything resolves", () => {
+    const files: Record<string, string> = { "entry.sfz": '#include "a.sfz"\n', "a.sfz": "<region> sample=a.wav key=38\n" };
+    const result = expandIncludes(files["entry.sfz"]!, (path) => files[path], { path: "entry.sfz" });
+    // An empty list is what ends the wave loop, so it has to be empty rather than merely problem-free.
+    expect(result.missing).toEqual([]);
+    expect(result.problems).toEqual([]);
+  });
+});

@@ -20,6 +20,13 @@ export interface ExpandIncludesResult {
   problems: string[];
   /** The paths that were read, in the order they were resolved, so a caller can report what an instrument actually loaded. */
   included: string[];
+  /**
+   * **The include paths the reader could not supply**, deduplicated and in the order they were met.
+   *
+   * `problems` already describes each one in a sentence, but an **asynchronous** caller needs the paths themselves: the browser cannot read synchronously, so it runs this function with whatever it
+   * has, fetches exactly what is missing, and runs the same function again. That keeps the include semantics in **one** implementation instead of growing a second, async copy of them.
+   */
+  missing: string[];
 }
 
 /** Joins a directory and a path without inventing a resolver: SFZ paths are relative, and `..` is normal in them. */
@@ -79,6 +86,7 @@ export function expandIncludes(
 ): ExpandIncludesResult {
   const problems: string[] = [];
   const included: string[] = [];
+  const missing: string[] = [];
   /**
    * Line endings are normalised **first**, because real libraries ship `\r\n`.
    *
@@ -139,6 +147,8 @@ export function expandIncludes(
 
     const child = read(wanted);
     if (child === undefined) {
+      // Reported as a **path** as well as a sentence: a synchronous reader cannot be given to a browser, so the async caller's loop is driven by this list.
+      if (!missing.includes(wanted)) missing.push(wanted);
       problems.push(`${where}: included file "${wanted}" was not found`);
       return;
     }
@@ -149,5 +159,5 @@ export function expandIncludes(
     included.push(wanted, ...nested.included);
   });
 
-  return { text: out.join("\n"), problems, included };
+  return { text: out.join("\n"), problems, included, missing };
 }
