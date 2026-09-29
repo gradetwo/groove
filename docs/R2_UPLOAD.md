@@ -1704,3 +1704,43 @@ with the names their licence requires: expected [ 'salamander-grand' ] to deeply
 ### ⚠️ 而"本机传过一次"这件事仍有价值
 
 ⭐ **它证明的不是"CI 不必要"✗，而是"这条链【能通】"✓** —— ⭐ **那两种结论在本会话里出现过好几次** ✓：**一次性录音探针 ✓ 手工核对的 tag ✓ 用 `tail` 读的 lint ✓** —— ⭐ **本机跑一次是把"它能不能工作"变成一个已知 ✓；而 CI 是把"它每次都能工作"变成一个已知** ✓✓。
+
+
+## 56. ⚠️⭐⭐ **更正第 55 节：`mirror` 早已是一个 CI scope**（2026-09-28 晚 ✓）
+
+### 事实
+
+⭐ `.github/workflows/manual-verify.yml:16` 写着 ✓：
+
+```
+#   scope    e2e | verify | audio | jank | skins | sfizz | mirror | all
+```
+
+⭐⭐ **所以第 55 节那份"待建的设计"✗，写的是一个【已经存在】的开关** —— ⭐ **而它自己的注释比我的设计更准** ✓✓：
+
+> ⭐ **":329 The mirror run: a migration rather than a verification, so it is its own scope and never part of a release gate."**
+> ⭐ **":332 …exactly the kind that must not run on every push. It is the operation the whole mirror chain exists for: derive… hash every file, measure every duration, and print the **manifest entry** — the one artifact of a mirror that belongs in the repo"**
+
+### ⭐ 它与我写的那份，差在【一件事】上
+
+| | CI 的 `mirror` scope | 我第 55 节写的 |
+|---|---|---|
+| ⭐ **触发** | ⭐ **`workflow_dispatch` ✓ 独立 scope ✓** | 同 ✓ |
+| ⭐ **不在 push 上跑** | ⭐ **明说了 ✓** | 同 ✓ |
+| ⭐ **哈希每个文件 ✓ 实测每个时长** | ⭐ **做了 ✓** | 同 ✓ |
+| ⭐ **产物** | ⭐ **打印【清单条目】✓**（**"那个属于仓库的产物"** ✓✓） | ⚠️ **我写的是"上传到 R2 ✓ 再核对可达性"** ✗✓ |
+| ⭐ **上传** | ⚠️ **不在这个 scope 里** ✗ | ⚠️ **我把它写进了同一步** ✗ |
+
+⭐⭐ **而它那个分工有道理** ✓：**"算出并打印清单条目"是【可核对的产物】✓（进 git ✓），而"写桶"是一次【有后果的动作】✗** —— ⭐ **把两者分开，意味着跑一次 scope 可以先看到"将要发生什么"✓，而桶不动** ✓✓ —— ⭐ **那正是我这一整段反复主张的那件事：先算、再动、然后核对** ✓✓。
+
+### ⚠️ 而这是本会话【第三次】"为一个已存在的东西写设计"
+
+| 次 | 我以为不存在 | 实际 |
+|---|---|---|
+| **1** | ⭐ **`parse.ts` 的 import 块** ✗ | **它一条 import 都没有 ✓** |
+| **2** | ⭐ **`readDefaultPath`** ✗ | **它在我回退的那一批里 ✓** |
+| **3** | ⭐ **CI 的 `mirror` scope** ✗ | ⭐ **它从第 16 行就写着 ✓** |
+
+⭐⭐ **三次的形状完全一样** ✓：**我先写下一个形状 ✓，然后才发现现实是另一个形状 ✗** —— ⭐ **而三次的修法都只需要读一行** ✓（**`head -20` ✓ `grep` 一次 ✓ `grep scope` 一次** ✓✓）。
+
+⭐ **所以第 55 节应当被读作"这个 scope 的设计理由"✓，而不是"要建的东西"✗** ✓ —— ⭐ **而它真正剩下的待办只有一件** ✓：⭐ **`mirror` scope 的产物（清单条目）怎么【回到仓库】✓ —— 手动 ✓ 还是让作业开 PR ✗** ✓。
