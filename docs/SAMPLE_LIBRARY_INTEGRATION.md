@@ -667,3 +667,43 @@ sfz 总数              155
 88 件乐器仍然不少，但那是这个库的真实结构：它是一件件乐器，不是一件。把它们压成一条会让 87 件无法选择，把它们全部展开会让 155 个奏法各占一行。
 
 同理适用于 Karoryfer 那两个已经镜像的条目：meatbass 的 zip 里有 39 个 sfz，而现在只声明了一个（`Meatbass/Programs/04_pizz.sfz`，拨奏贝斯）。按同一规则重跑会声明出它的乐器列表，而字节已经在桶里，所以那是一件只改清单的事。
+
+
+## 真库到底长什么样：量出来的答案（2026-09-29）
+
+`Programs/01-basic-kit.sfz`（76 行）里的 `<region>` 是**零个，而这是设计如此**：它是一份路由文档。真实的四层结构是
+
+```
+01-basic-kit.sfz      <control>（set_ccN 默认值与标签）+ 三个 <global> + 7 条 #include
+  └ mappings/kickmic_basic.sfz        <master>（ampeg_release、tune_cc72、amp_veltrack、locc102）
+      └ <group key=$KICK_SNWRONG_KEY> + #include
+          └ mappings/kickmic/kick_snoff_map.sfz    16 个 <region>（sample、hivel、seq_length、amp_velcurve_N）
+```
+
+键位名来自 `keymaps/default/keymap_basic.sfz`，那是 67 行 `#define $名字 值`。
+
+实测（夹具就是这四份真文件，判据在 `src/test/realLibraryParse.test.ts`）：include 链进得去，那个最底层的文件解出 **16 个 region**，16 个样本路径互不相同。已经能用的东西比预想的多：`<global>`/`<master>`/`<group>`/`<region>` 的作用域继承、头部与 opcode 同行、`#define` 的收集、轮转字段、未知头部跳过而不报错。
+
+## 两个缺口，按实测大小排序
+
+**一、include 要能从库根解析。** `mappings/kickmic_basic.sfz` 里写着 `#include "mappings/kick_dampen.sfz"`。按"相对包含它的文件所在目录"解析（展开器现在的规则，也是多数库的规则）会得到 `mappings/mappings/kick_dampen.sfz`。**桶里说明这个库要的是哪一种**：`Programs/mappings/kick_dampen.sfz` 存在，嵌套那一份不存在。所以加载器要先试包含文件所在目录、再试程序根目录，两者都没有才报。这一条影响大，因为漏掉的那些文件正是多数 region 所在。
+
+**二、`$名字` 要代入。** 解析器收集 `#define`，但从不代入值，于是 16 个 region 的 `key` 全是字面量 `"$KICK_SNWRONG_KEY"`——整个套鼓压在一个键上。这一条决定了音符落到哪个 region。
+
+## CC 与调制层的范围（决定）
+
+按文件证据定范围，而不是按想象：
+
+| 层 | 在不在范围 | 理由 |
+| --- | --- | --- |
+| `#define` / `$名字` 代入 | **在，先做** | 决定音符落到哪个 region |
+| include 的库根回退 | **在，先做** | 决定多数 region 能不能被找到 |
+| `<control>` 的 `set_ccN` 默认值 | **在，随后** | 默认 CC 值参与下面两条的判断 |
+| `loccN` / `hiccN` 区域条件 | **在，随后** | 决定一个 region **是否发声**。这份文件里默认值都通过（CC101/102/103/105 默认 127），但那是这份库的事实，不是通则 |
+| `tune_ccN` / `tune_curveccN` | **在，随后** | 默认 CC90=63.5 时偏移约为 0，所以"忽略"在静止时恰好正确；但它错在 CC 一动就错，而谱面可以送 CC |
+| `amplitude_onccN` / `width_onccN` 等连续调制与曲线 | **不在** | 改变音量与声像，不改变"哪个样本、什么音高" |
+| `seq_length` / `seq_position` 轮转 | 已能读，**选择留待** | 影响重复敲击用哪个样本，不影响能否发声 |
+| `amp_velcurve_N` | **不在** | 改变力度对应的音量 |
+| `group` / `off_mode` / `note_polyphony` / `loop_mode` | **不在** | 声音抢占与循环，不改变样本与音高 |
+
+一句话：**在范围里的是"哪个样本、什么音高、发不发声"，不在范围里的是"多响、怎么抢、怎么轮"。** 这个界线是可以对着一份真文件逐条核对的，而不是一句"支持一个子集"。
