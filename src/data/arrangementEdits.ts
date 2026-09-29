@@ -8,7 +8,7 @@
  */
 import type { ArrangementV2, TakeRegion, TrackKindV2, TrackV2 } from "../types/arrangementV2";
 import type { PlannedTake } from "./takePlanning";
-import { defaultContentFor } from "./defaultContent";
+import { DEFAULT_SAMPLER_ASSET, defaultContentFor } from "./defaultContent";
 
 let nextId = 1;
 
@@ -90,7 +90,12 @@ export function changeTrackKind(arrangement: ArrangementV2, trackId: string, kin
     tracks: arrangement.tracks.map((track) => {
       if (track.id !== trackId) return track;
       const { sample: _dropped, ...rest } = track;
-      return { ...rest, kind, ...(kind === "sampler" && track.sample ? { sample: track.sample } : {}) };
+      /**
+       * **A track that becomes a sampler gets the default instrument, exactly as a new one does.** `defaultContentFor` gives every sampler track an asset "because without it the lane compiles and the planner resolves it to nothing", and a kind
+       * change used to leave the sample unset — so a sampler track sounded or not depending on how it had been created. An asset already chosen is kept rather than replaced.
+       */
+      const sample = kind === "sampler" ? (track.sample ?? { assetId: DEFAULT_SAMPLER_ASSET }) : undefined;
+      return { ...rest, kind, ...(sample ? { sample } : {}) };
     }),
   };
 }
@@ -189,6 +194,24 @@ export function toggleStep(arrangement: ArrangementV2, trackId: string, index: n
   if (index < 0 || index >= current.length) return arrangement;
   const steps = current.map((value, position) => (position === index ? (value ? 0 : 1) : value));
   return { ...arrangement, notesByTrack: { ...(arrangement.notesByTrack ?? {}), [trackId]: steps } };
+}
+
+/**
+ * Set a track's whole step pattern at once.
+ *
+ * `toggleStep` is what a person does — one step at a time, seeing the result — while an agent composing through MCP states the pattern it means. Sixteen toggles would also be sixteen chances to disagree with the array the caller sent, and a
+ * tool whose result depends on the order of its calls is not the kind this surface wants.
+ *
+ * The length is the caller's: a pattern is the steps it has, so this neither pads nor truncates. A step is **on when its value is non-zero** — the model stores on or off rather than a velocity, and stating the rule as "non-zero" is what makes
+ * `0.4` mean the same thing here as it would anywhere else in JavaScript instead of a third convention nobody remembers.
+ *
+ * Refused for `fx` and `folder`, for the reason `toggleStep` refuses them: their all-zero steps are their definition rather than an omission.
+ */
+export function setTrackSteps(arrangement: ArrangementV2, trackId: string, steps: readonly number[]): ArrangementV2 {
+  const track = arrangement.tracks.find((candidate) => candidate.id === trackId);
+  if (!track || track.kind === "fx" || track.kind === "folder") return arrangement;
+  const normalised = steps.map((value) => (value ? 1 : 0));
+  return { ...arrangement, notesByTrack: { ...(arrangement.notesByTrack ?? {}), [trackId]: normalised } };
 }
 
 export function setTrackSample(arrangement: ArrangementV2, trackId: string, assetId: string): ArrangementV2 {
