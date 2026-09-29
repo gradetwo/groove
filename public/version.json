@@ -1,27 +1,27 @@
 {
-  "version": "2.34.20",
+  "version": "2.34.21",
   "releaseDate": "2026-09-29",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.20",
+    "version": "2.34.21",
     "date": "2026-09-29",
     "category": "feature",
     "title": {
-      "zh": "编排 v2：任意轨道、takes 与录音",
-      "en": "Arrangement v2: arbitrary tracks, takes and recording"
+      "zh": "新编排有了入口：/new",
+      "en": "The new arrangement has an entrance: /new"
     },
     "highlights": [
       {
-        "zh": "新编排模型：任意轨道、文件夹收纳、增删与静音独奏；旧歌只读投影，逐字段比对。",
-        "en": "A new arrangement model: arbitrary tracks, folder grouping, add and delete, mute and solo; old songs are projected read-only and compared field by field."
+        "zh": "打开 /new 进入新编排：默认带一条轨道，类型由新建时选择。",
+        "en": "Open /new for the new arrangement: one track to start, typed by what you choose when creating."
       },
       {
-        "zh": "录音：takes 与 comp 是同一机制的两用，字节只存本机（IndexedDB/OPFS）。",
-        "en": "Recording: takes and comping are one mechanism used twice, with the bytes kept on the device (IndexedDB/OPFS)."
+        "zh": "这条路由刻意不带曲风——其它路由都退回默认曲风，它是第一个例外。",
+        "en": "This route deliberately carries no genre; every other route falls back to a default, and it is the first exception."
       },
       {
-        "zh": "界面：轨道列表、take 选择器、录一段；三块共用同一份编排。",
-        "en": "Interface: a track list, a take selector and a record button, all three reading one arrangement."
+        "zh": "模板三种：鼓+贝斯、鼓+贝斯+和声、两条采样器；也可以空白。",
+        "en": "Three templates — drums+bass, drums+bass+chords, two samplers — plus blank."
       }
     ],
     "truncated": true
