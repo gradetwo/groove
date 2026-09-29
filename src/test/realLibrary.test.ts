@@ -92,8 +92,17 @@ describe.skipIf(files === null)("a real library, read end to end", () => {
       const playback = playbackForNote(regions, Number(note));
       expect(playback, `note ${note} must resolve`).not.toBeNull();
       expect(playback!.sample.split("/").pop(), `note ${note} resolves to the wrong sample`).toBe(sample);
-      // Nothing should be transposed: this kit's regions set no pitch_keycenter, and a drum plays as recorded.
-      expect(playback!.ratio, `note ${note} must not be transposed`).toBeCloseTo(1, 6);
+      /**
+       * **No interval transposition**, which is what "a drum plays as recorded" means: this kit's regions set no `pitch_keycenter`, so nothing moves the sample by semitones. The ratio is not 1 for every note, though, and the reason is measured rather
+       * than assumed — the kick carries `tune_cc90=1200` from the program's `<global>` **and** `tune_cc72=1200` from its microphone's `<master>`, each with a declared default of 63.5, and sfizz's `tune_ccN` is linear from zero, so the two together are
+       * +1200 cents at rest. The assertion below is that the ratio is exactly the region's own cents, so the tuning is accounted for and nothing else is.
+       */
+      const region = regions.find((candidate) => candidate.lokey === Number(note) && candidate.hikey === Number(note));
+      expect(region?.pitchKeycenter, `note ${note} must not set a key centre`).toBeUndefined();
+      expect(playback!.ratio, `note ${note}: the ratio must come from its own tuning and nothing else`).toBeCloseTo(
+        Math.pow(2, (region?.tuneCents ?? 0) / 1200),
+        6
+      );
     }
   });
 
