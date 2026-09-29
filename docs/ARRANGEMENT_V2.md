@@ -537,3 +537,36 @@ ArrangementViewV2:97   playArrangementV2(arrangement, {}, player)
 ### ⚠️ 而这一轮我不再请你试
 
 ⭐ **前面几轮我把"能打开的界面"当成了"能试的东西"** ✗✓ —— ⭐ **而截图证明那不对 ✓** —— ⭐ **所以接下来的做法是** ✓：**1–5 逐条做完 ✓，每条都有自己的判据 ✓，做完之后我一次性说明"现在可以试什么、以及怎么试"** ✓✓。
+
+
+## 22. ⭐⭐⭐⭐ 读清了：`/new` 不需要 studio 那套生命周期，只需要一个引擎实例（2026-09-28 晚 ✓）
+
+### 读到的（`useAudioEngineLifecycle.ts:283` ✓）
+
+```
+:283  const engine = new AudioEngine({
+:284    onStep: ({ step }) => {
+:285      const state = seqStateRef.current;      ← ⭐ 回调【伸进 sequencer 的状态】✗✓
+…             （播放头位置 ✓ 编辑位置映射 ✓ 一整段）
+```
+
+⭐ **所以"把创建那一段抽出来"是行不通的** ✗✓ —— ⭐ **因为引擎的 `onStep` 回调正是驱动 studio 播放头的东西 ✓，而它与 `seqStateRef` · `editorPositionFor` 长在一起** ✗。
+
+### ⭐⭐ 而两者要的东西本来不同
+
+| | studio | ⭐ **`/new`** |
+|---|---|---|
+| 要什么 | ⭐ **播放头 UI ✓ 步进回调 ✓ 监听矩阵 ✓ 峰值表** ✓ | ⭐ **一个能出声的引擎** ✓ |
+| 谁驱动播放 | **sequencer** ✓ | ⭐ **`createArrangementPlayer` ✓（`playArrangementV2` ✓）** ✓ |
+| `onStep` | **必需** ✓ | ⭐ **不需要 ✗ —— 或空实现** ✓ |
+
+⭐⭐ **而 `createArrangementPlayer` 要的只是 `{ audioContext, musicDestination }`** ✓ —— ⭐ **所以一个 `new AudioEngine({})` 加上已解锁的 context 就够了** ✓✓。
+
+### ⭐ 于是修法从"抽出一个 562 行的 hook"变成"建一个精简引擎"
+
+| 选项 | 评价 |
+|---|---|
+| **A：把 `useAudioEngineLifecycle` 抽出来共用** ✗ | ⚠️ **会把 sequencer 拖到 `/new` 上 ✗ —— 而那条路由没有 sequencer** ✗ |
+| ⭐ **B：`/new` 自己建一个引擎 ✓（空 `onStep` ✓，用 `AudioStartGate` 解锁 context ✓），并 `setActiveAudioEngine` 注册 ✓** ✓✓ | ⭐ **最对 ✓ —— 因为"引擎存在"是全局的 ✓，而"sequencer 在跑"是本地的** ✓ |
+
+⭐⭐ **而 B 与第 19、20 节的结论是同一条，只是更进了一层** ✓：⭐ **引擎（全局）→ 精简到可以独立存在 ✓；sequencer（本地）→ 留在 studio** ✓ —— ⭐ **而它们混在一起，正是这三节一路追下来的成因** ✓✓。
