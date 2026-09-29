@@ -414,3 +414,40 @@ ArrangementViewV2:97   playArrangementV2(arrangement, {}, player)
 ### ⚠️ 而 A 会引出一个必须一起答的问题
 
 ⭐ **`notesByTrack` 里的 key 是 `trackId` ✓** —— ⭐ **所以删除一条轨道时，它的音符必须一起走** ✗✓ —— ⭐ **否则模型里会留下孤儿音符 ✓，而它们会在下一次有人复用那个 id 时突然响起** ✗✓✓（**与"文件夹的子轨"是同一类问题 ✓，而那一条已经有判据 ✓**）。
+
+
+## 18. ⚠️⭐⭐⭐ **业主实测：`/new` 里 `Play (audio engine not connected yet)`**（2026-09-28 晚 ✓）
+
+### 截图里的读数（业主提供的两张 ✓）
+
+| 界面 | 读数 |
+|---|---|
+| **New Project** | ⭐ **`Drums + Bass` ✓ `Drums + Bass + Chords` ✓ `Samplers` ✓ `Blank`（选中 ✓）· 一个 `Create` 按钮** ✓ |
+| ⚠️ **布局** | ⚠️ **卡片排得不齐 ✗：（1,2）并排 ✓、（3）独占一行 ✓、（4）`Blank` 又独占一行** ✗✓ —— ⭐ **栅格没有填满 ✓** |
+| **新编排** | ⭐ **`+ sampler` `+ instrument` `+ drumkit` `+ fx` `+ folder`** ✓ · **`Sampler 1` / `Sampler 2` 行（类型下拉 ✓ `M` ✓ `S` ✓ `×`）** ✓ |
+| ⚠️⭐ **播放** | ⚠️ **`Play (audio engine not connected yet)`** ✗✓✓ |
+| **录音区** | **`Select a track to see its takes.`** ✓ + **`Sampler 1` `Sampler 2` 两个按钮** ✓ |
+
+### ⭐⭐ 而根因就在那句话里，而且它在代码里只有一个位置
+
+```tsx
+:587  {route.newProject && ( … <ArrangementViewV2 … player={engineInstance ? createArrangementPlayer(…) : undefined} … /> )}
+:609  {currentTab === "studio" && !route.newProject && ( … onAudioEngineReady={handleEngineReady} … )}
+```
+
+⭐⭐ **所以** ✓：**唯一创建音频引擎的地方是 studio 那个块（`:624` 的 `onAudioEngineReady` ✓），而它被 `!route.newProject` 排除在外 ✗✓✓** —— ⭐ **于是 `/new` 上 `engineInstance` 永远是 `null` ✓ → `player` 是 `undefined` ✓ → 按钮如实写着"引擎还没接上"** ✗✓✓。
+
+### ⭐ 所以这是一个【接线】缺陷，不是功能缺失
+
+| 已有的 | 缺的 |
+|---|---|
+| ⭐ **界面 ✓ 模板 ✓ 轨道 ✓ 类型切换 ✓ M/S ✓ 删除 ✓ 录音区 ✓** | ⚠️ **引擎 ✗ —— 而它一直在项目里 ✓，只是没有为这条路由创建** ✗✓ |
+
+### ⭐⭐ 而修法的形状是明确的：**把"建引擎"从 studio 块里【抬出来】**
+
+| 选项 | 评价 |
+|---|---|
+| **A：在 `/new` 分支里再渲染一个引擎块** ✗ | ⚠️ **会产生两个引擎 ✓（或两份创建逻辑 ✗）** |
+| ⭐ **B：把引擎的创建【抬到两个块之外】✓ —— 一直渲染它 ✓，只把【界面】按路由条件渲染** ✓✓ | ⭐ **最对 ✓ —— 因为"音频引擎存在"与"显示 studio 界面"本来就是两件事** ✓✓ |
+
+⭐⭐ **而那句提示语（"audio engine not connected yet"）本身就是一个好判据** ✓：**它说的是实话 ✓ —— 而它之所以看得见，是因为界面如实报告了自己的状态 ✓✓** —— ⭐ **所以修好之后，那行字应当消失 ✓，而 `Play` 应当真的出声** ✓。
