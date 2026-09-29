@@ -16,6 +16,7 @@ import { findSampleAsset, sampleAssetIds } from "../data/sampleCatalogue";
 import type { SampleAsset } from "../data/sampleCatalogue";
 import { resolveInstrumentNote } from "./sfz/instrument";
 import { expandRemoteIncludes } from "./sfz/remoteIncludes";
+import { sampleAssetForPath } from "./sfz/instrument";
 
 /** Decodes one asset. In the browser this wraps `decodeAudioData`; in a test it is a plain function. */
 export type SampleDecoder = (asset: SampleAsset) => Promise<AudioBuffer>;
@@ -55,6 +56,25 @@ export function createSampleLoader(
   const cache = new Map<string, Promise<AudioBuffer>>();
   let decodes = 0;
 
+  /**
+   * Decode an **asset**, with the single-flight rule in one place.
+   *
+   * Extracted so a region's sample can be decoded without a catalogue lookup: the catalogue holds instruments while a region names a file, so the sample path becomes an address
+   * (`sampleAssetForPath`) and must still share this cache — a sample used by several notes is decoded once whichever route reached it.
+   */
+  const decodeAsset = (asset: SampleAsset): Promise<AudioBuffer> => {
+    const cached = cache.get(asset.assetId);
+    if (cached) return cached;
+    decodes += 1;
+    const pending = decode(asset).catch((error: unknown) => {
+      // Rule 2: a failure leaves the cache as it was, so the next caller gets a real attempt rather than yesterday's error.
+      cache.delete(asset.assetId);
+      throw error;
+    });
+    cache.set(asset.assetId, pending);
+    return pending;
+  };
+
   const api: SampleLoader = {
     load(assetId: string): Promise<AudioBuffer> {
       const cached = cache.get(assetId);
@@ -73,14 +93,7 @@ export function createSampleLoader(
         );
       }
 
-      decodes += 1;
-      const pending = decode(asset).catch((error: unknown) => {
-        // Rule 2: a failure leaves the cache as it was, so the next caller gets a real attempt rather than yesterday's error.
-        cache.delete(assetId);
-        throw error;
-      });
-      cache.set(assetId, pending);
-      return pending;
+      return decodeAsset(asset);
     },
     async loadNote(assetId, note, options = {}) {
       const asset = findSampleAsset(assetId, catalogue);
@@ -129,7 +142,13 @@ export function createSampleLoader(
       if (!resolution.ok || !resolution.note) throw new Error(resolution.reason ?? `note ${note} could not be resolved for "${assetId}"`);
 
       // Through `load`, so a sample shared by several notes is decoded once — the single-flight rule applies to the sample, not to the note.
-      return api.load(/* the resolved sample path is the id the catalogue holds */ resolution.note.samplePath);
+      /**
+       * **A region names a file; the catalogue holds instruments** — so a miss here is expected, not an error. When the catalogue does have it, the id route is still used (it is what the app's own
+       * bundled samples rely on); otherwise the path becomes an address, source-first with the mirror as fallback, and goes through the **same** decode cache.
+       */
+      const samplePath = resolution.note.samplePath;
+      if (findSampleAsset(samplePath, catalogue)) return api.load(samplePath);
+      return decodeAsset(sampleAssetForPath(samplePath, { programUrl: asset.sfz.url, programFallbackUrl: asset.sfz.fallbackUrl }));
     },
     decodes: () => decodes,
   };
