@@ -25,6 +25,13 @@ export interface SampleManifestFile {
   bytes?: number;
 }
 
+/** One program in a library, named as a person would choose it. */
+export interface ManifestInstrument {
+  /** Relative to `prefix`, like `sfz`. */
+  sfz: string;
+  name: string;
+}
+
 export interface SampleManifestEntry {
   id: string;
   name: string;
@@ -35,6 +42,15 @@ export interface SampleManifestEntry {
   prefix?: string;
   /** The SFZ that defines it, relative to `prefix`. */
   sfz?: string;
+  /**
+   * The programs a library holds, when it holds more than one.
+   *
+   * A sample library is a set of program files — VCSL's four families are 155 SFZ files across dozens of instruments, each with its own Keyswitch, Staccato and Sustain variants — while this entry used to describe a single one. Written that
+   * way, uploading such a library would put all of its bytes on the CDN and offer exactly one instrument in the catalogue, with the rest unreachable.
+   *
+   * Absent for a single-instrument entry, where `sfz` says the same thing without a list. Present, it takes precedence and each program becomes its own asset.
+   */
+  instruments?: ManifestInstrument[];
   files: SampleManifestFile[];
   /** SFZ features it needs, so a compatibility question has an answer in the data rather than in someone's memory. */
   needs?: string[];
@@ -145,6 +161,12 @@ export function parseManifest(text: string): ManifestResult {
       attribution: entry.attribution,
       prefix: entry.prefix,
       sfz: entry.sfz,
+      // Carried through like every other field: the parser builds entries field by field, so one it forgets disappears silently.
+      instruments: Array.isArray(entry.instruments)
+        ? (entry.instruments as { sfz?: unknown; name?: unknown }[])
+            .filter((program) => typeof program.sfz === "string")
+            .map((program) => ({ sfz: String(program.sfz), name: typeof program.name === "string" ? program.name : String(program.sfz) }))
+        : undefined,
       /**
        * **Carried through because the first version dropped them.** The manifest writes `repo` and `pin`, the parser rebuilt each entry from the fields it knew, and these two
        * were silently lost — so a caller could not tell which commit of a library its files came from. **A pin that does not survive parsing is not a pin**, and nothing noticed
@@ -183,9 +205,10 @@ export function shippableEntries(manifest: SampleManifest): SampleManifestEntry[
  * The mirror's role becomes what it was chosen for: **a library whose source disappears still works.** That also makes the "bring your own library" escape hatch part of the default path rather than
  * a special case — with a live source, no mirror is involved at all.
  */
-export function sourceSfzUrl(manifest: SampleManifest, entryId: string): string | undefined {
+export function sourceSfzUrl(manifest: SampleManifest, entryId: string, sfz?: string): string | undefined {
   const entry = manifest.entries.find((candidate) => candidate.id === entryId);
-  if (!entry?.sfz || !entry.repo || !entry.pin) return undefined;
+  const program = sfz ?? entry?.sfz;
+  if (!program || !entry?.repo || !entry.pin) return undefined;
   /**
    * **No `prefix` here — and the end-to-end probe proved why.** `prefix` describes the **mirror's** layout, where libraries are separated by a directory; the upstream repository has no such
    * directory, so building `…/<pin>/<prefix><sfz>` asked GitHub for a path that does not exist and got **14 bytes of `404: Not Found`** back. The resolver then parsed that as SFZ and found no regions,
@@ -193,14 +216,15 @@ export function sourceSfzUrl(manifest: SampleManifest, entryId: string): string 
    *
    * Two layouts, two addresses: the source is `repo/pin/sfz`, the mirror is `root/prefix/sfz`.
    */
-  return `https://raw.githubusercontent.com/${entry.repo}/${entry.pin}/${entry.sfz}`;
+  return `https://raw.githubusercontent.com/${entry.repo}/${entry.pin}/${program}`;
 }
 
-export function mirrorSfzUrl(manifest: SampleManifest, entryId: string, root: string): string | undefined {
+export function mirrorSfzUrl(manifest: SampleManifest, entryId: string, root: string, sfz?: string): string | undefined {
   const entry = manifest.entries.find((candidate) => candidate.id === entryId);
-  if (!entry?.sfz) return undefined;
-  const prefix = entry.prefix ? `${entry.prefix.replace(/\/$/, "")}/` : "";
-  return `${root.replace(/\/$/, "")}/${prefix}${entry.sfz}`;
+  const program = sfz ?? entry?.sfz;
+  if (!program) return undefined;
+  const prefix = entry?.prefix ? `${entry.prefix.replace(/\/$/, "")}/` : "";
+  return `${root.replace(/\/$/, "")}/${prefix}${program}`;
 }
 
 /**
@@ -232,35 +256,46 @@ export function sampleAssetsFromManifest(manifest: SampleManifest, root: string)
      * The return type is `SampleAsset[]` rather than a loose record for a reason worth keeping: the first version returned `Record<string, unknown>` and wrote
      * `kind: "instrument"`, **a value the union does not have**, and the compiler had nothing to check it against. Real types would have caught it.
      */
-    const asset: SampleAsset = {
-      assetId: entry.id,
-      name: entry.name,
-      kind: "one-shot",
-      seconds: entry.durationSeconds,
-    };
-    if (entry.sfz) {
+    /**
+     * One asset per program. A library with several programs used to produce one asset pointing at one of them, so the rest of its bytes were uploaded and nothing could select them; `instruments` is the list, and an entry with only
+     * `sfz` keeps producing exactly one asset under the entry's own id — which is what the two published entries rely on.
+     */
+    const programs: { sfz?: string; name: string; assetId: string }[] = entry.instruments?.length
+      ? entry.instruments.map((program) => ({
+          sfz: program.sfz,
+          name: program.name,
+          // A slug of the program's path rather than its position: a stable id must not move when the list is reordered, and the name is for people to read.
+          assetId: `${entry.id}:${program.sfz.replace(/\.sfz$/i, "").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "")}`,
+        }))
+      : [{ sfz: entry.sfz, name: entry.name, assetId: entry.id }];
+
+    for (const program of programs) {
       /**
-       * **Source first, mirror as the fallback** — the owner's decision, and the reverse of the first implementation.
-       *
-       * Both addresses are carried because the two hosts fail differently: a pinned source 404s when the upstream library is reorganised, while a mirror 403s or times out when its public
-       * routing is wrong. A loader holding only one address cannot tell "this file is gone" from "this host is broken".
+       * `kind` is `"one-shot"` even for an instrument, and that is a deliberate compromise rather than an oversight: `kind` describes a sample's time shape, and an instrument is a **collection** whose members each have their own. The
+       * union has no better member, and inventing one would weaken a field that is currently exact.
        */
-      const source = sourceSfzUrl(manifest, entry.id);
-      const mirror = mirrorSfzUrl(manifest, entry.id, root);
-      const url = source ?? mirror;
-      /**
-       * Checked rather than asserted with `!`. An entry that declares an `sfz` should always resolve to a URL, so this branch is unreachable in practice — but the
-       * compiler cannot know that, and a non-null assertion here would turn "should always" into "cannot fail", which is the assumption that eventually ships a broken
-       * URL. Reporting it costs one line and keeps the failure legible.
-       */
-      if (!url) {
-        // Reported when **neither** address exists, which now means the entry has no pin and no usable mirror — a different fault from the mirror alone being unreachable.
-        problems.push(`"${entry.id}" declares an sfz but neither a pinned source nor a mirror URL could be resolved`);
-        continue;
+      const asset: SampleAsset = {
+        assetId: program.assetId,
+        name: program.name,
+        kind: "one-shot",
+        seconds: entry.durationSeconds,
+      };
+      if (program.sfz) {
+        /**
+         * **Source first, mirror as the fallback.** Both addresses are carried because the two hosts fail differently: a pinned source 404s when the upstream library is reorganised, a misrouted mirror 403s. A loader holding one
+         * address cannot tell "this file is gone" from "this host is broken".
+         */
+        const source = sourceSfzUrl(manifest, entry.id, program.sfz);
+        const mirror = mirrorSfzUrl(manifest, entry.id, root, program.sfz);
+        const url = source ?? mirror;
+        if (!url) {
+          problems.push(`"${entry.id}" declares the instrument ${program.sfz} but neither a pinned source nor a mirror URL could be resolved`);
+          continue;
+        }
+        asset.sfz = { ...(mirror && mirror !== url ? { url, fallbackUrl: mirror } : { url }), path: program.sfz };
       }
-      asset.sfz = { ...(mirror && mirror !== url ? { url, fallbackUrl: mirror } : { url }), path: entry.sfz };
+      assets.push(asset);
     }
-    assets.push(asset);
   }
 
   return { assets, problems };
