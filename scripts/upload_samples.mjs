@@ -95,6 +95,62 @@ if (!doUpload) {
 }
 
 /**
+ * ⭐ **Two shapes of source.** A git entry names a commit; a release entry names an asset. Both end in a directory of bytes, so everything after this point is the same — which is the reason to normalise here rather than branch
+ * again later.
+ */
+let workdir;
+if (entry.archive) {
+  workdir = fs.mkdtempSync(path.join(os.tmpdir(), `groove-mirror-${entryId}-`));
+  const zipPath = path.join(workdir, entry.archive.asset);
+  console.log(`  downloading ${entry.archive.asset} (${fmt(entry.archive.bytes)})`);
+  execFileSync("curl", ["-fsSL", "-o", zipPath, entry.archive.url], { stdio: "inherit" });
+  // ⭐ The declared size is checked before unpacking: a release asset has none of git's immutability, so the byte count is the one thing that can be verified cheaply, and a mismatch means the asset changed.
+  const actual = fs.statSync(zipPath).size;
+  if (actual !== entry.archive.bytes) {
+    console.error(`  ❌ ${entry.archive.asset} is ${actual} bytes, the manifest says ${entry.archive.bytes} — refusing to unpack`);
+    process.exit(1);
+  }
+  execFileSync("unzip", ["-q", "-o", zipPath, "-d", workdir], { stdio: "inherit" });
+  fs.rmSync(zipPath, { force: true });
+
+  /**
+   * ⭐ **`files` and `sfz` are filled here, because only a step that has seen the bytes can fill them.** The entry declares what it knows — tag, asset, size, url — and leaves these empty rather than guessing; the same rule
+   * applies to `sha256` and `durationSeconds`, both computed below.
+   */
+  const found = [];
+  const walk = (dir) => {
+    for (const dirent of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, dirent.name);
+      if (dirent.isDirectory()) walk(full);
+      else found.push({ path: path.relative(workdir, full), bytes: fs.statSync(full).size });
+    }
+  };
+  walk(workdir);
+  entry.files = found;
+  const sfzFiles = found.filter((f) => f.path.endsWith(".sfz"));
+  // ⭐ The entry point is chosen, not guessed: a file at the top level if there is one, otherwise the shortest path, because a library's root program is nearer the root than its includes.
+  const pick = sfzFiles.find((f) => !f.path.includes("/")) ?? [...sfzFiles].sort((a, b) => a.path.length - b.path.length)[0];
+  entry.sfz = pick ? pick.path : "";
+  console.log(`  unpacked ${found.length} file(s) · ${sfzFiles.length} sfz · entry: ${entry.sfz || "✗ none found"}`);
+  if (!entry.sfz) {
+    // ⚠️ An archive with no SFZ cannot be played, whatever else it contains — the same judgement the manifest builder makes for a tree.
+    console.error("  ❌ no .sfz anywhere in the archive — this library cannot be played without mappings");
+    process.exit(1);
+  }
+  /**
+   * ⚠️ `needs` is **not** written here. It is the list of opcodes the library actually uses, which means parsing its SFZ with the project's own parser — and that is TypeScript, while this is a script. Leaving it for a step that can
+   * import the parser is better than deriving it with a regex here and calling that a declaration.
+   */
+} else {
+  workdir = fs.mkdtempSync(path.join(os.tmpdir(), `groove-mirror-${entryId}-`));
+  console.log(`  fetching ${entry.repo} @ ${entry.pin} → ${workdir}`);
+  execFileSync("git", ["init", "--quiet", workdir], { stdio: "inherit" });
+  execFileSync("git", ["-C", workdir, "remote", "add", "origin", `https://github.com/${entry.repo}.git`], { stdio: "inherit" });
+  execFileSync("git", ["-C", workdir, "fetch", "--depth", "1", "--quiet", "origin", entry.pin], { stdio: "inherit" });
+  execFileSync("git", ["-C", workdir, "checkout", "--quiet", "FETCH_HEAD"], { stdio: "inherit" });
+}
+
+/**
  * ⭐ A shallow clone at the pin, because a manifest entry names a commit and the bytes have to be that commit's. Measured durations come from these bytes, which is the only way `durationSeconds` can mean "measured" rather than "declared".
  */
 const workdir = fs.mkdtempSync(path.join(os.tmpdir(), `groove-mirror-${entryId}-`));
@@ -103,10 +159,6 @@ console.log(`  cloning ${entry.repo} @ ${entry.pin} → ${workdir}`);
  * ⭐ **A commit cannot be cloned with `--branch`.** That flag takes a branch or tag name, so `clone --depth 1 --branch <sha>` fails with exit 128 — which is exactly what the first real run did. Fetching the commit by sha does
  * work, and it fetches only that commit's tree, so the shallow-clone intent is kept.
  */
-execFileSync("git", ["init", "--quiet", workdir], { stdio: "inherit" });
-execFileSync("git", ["-C", workdir, "remote", "add", "origin", `https://github.com/${entry.repo}.git`], { stdio: "inherit" });
-execFileSync("git", ["-C", workdir, "fetch", "--depth", "1", "--quiet", "origin", entry.pin], { stdio: "inherit" });
-execFileSync("git", ["-C", workdir, "checkout", "--quiet", "FETCH_HEAD"], { stdio: "inherit" });
 
 // ⭐ Durations, measured rather than declared — the same instrument the manifest was built with.
 let measured = 0;
