@@ -313,15 +313,37 @@ describe("a library that holds several instruments", () => {
     expect(assets[1]!.sfz?.url).toBe("https://raw.githubusercontent.com/sgossner/VCSL/abc123/Idiophones/Glockenspiel.sfz");
   });
 
-  it("gives each instrument a stable id derived from its path, not its position", () => {
-    // Position would move every id when the list is reordered, and the ids are what a song or a shared genre records.
+  it("gives each instrument a short id from its own file name, not its position", () => {
+    /**
+     * Position would move every id when the list is reordered, and the ids are what a song or a shared genre records. The file name rather than the whole path, because the entry id already names the library: slugging the path produced
+     * `karoryfer-meatbass:Meatbass-Programs-02-arco-3vel`, naming the library twice.
+     */
     const parsed = parseManifest(manifest([libraryEntry])).manifest!;
     const { assets } = sampleAssetsFromManifest(parsed, "https://cdn.example/samples");
+    expect(assets.map((asset) => asset.assetId)).toEqual(["vcsl:Ball-Whistle", "vcsl:Glockenspiel", "vcsl:Tom"]);
+  });
+
+  it("falls back to the whole path for names that would collide, so an id never points at two instruments", () => {
+    // Two programs in different directories with the same file name is the case a base-name slug cannot tell apart, and an id that collided would select the wrong instrument.
+    const parsed = parseManifest(
+      manifest([
+        {
+          ...libraryEntry,
+          instruments: [
+            { sfz: "Aerophones/Edge-blown/Pipe Organ.sfz", name: "Pipe Organ (edge)" },
+            { sfz: "Idiophones/Struck/Pipe Organ.sfz", name: "Pipe Organ (struck)" },
+            { sfz: "Idiophones/Struck/Glockenspiel.sfz", name: "Glockenspiel" },
+          ],
+        },
+      ])
+    ).manifest!;
+    const { assets } = sampleAssetsFromManifest(parsed, "https://cdn.example/samples");
     expect(assets.map((asset) => asset.assetId)).toEqual([
-      "vcsl:Aerophones-Ball-Whistle",
-      "vcsl:Idiophones-Glockenspiel",
-      "vcsl:Membranophones-Tom",
+      "vcsl:Aerophones-Edge-blown-Pipe-Organ",
+      "vcsl:Idiophones-Struck-Pipe-Organ",
+      "vcsl:Glockenspiel",
     ]);
+    expect(new Set(assets.map((asset) => asset.assetId)).size).toBe(assets.length);
   });
 
   it("keeps a single-instrument entry under its own id, which is what the published entries rely on", () => {

@@ -37,6 +37,7 @@ import { generateMelody } from "./melody";
 import { EXAMPLE_GENRES, examplesFor } from "./examples";
 import { validateProsody } from "./prosody";
 import { flattenSong } from "../src/data/songFlatten";
+import { listCatalogueInstruments } from "./instruments";
 import {
   addMcpTake,
   addMcpTrack,
@@ -166,6 +167,24 @@ export const TOOLS: ToolDefinition[] = [
    *
    * The kind list is repeated in the schemas rather than shared through a constant, because a `z.enum` is what a client reads for its own validation — and one source of truth for it is `TrackKindV2`, which the compiler checks these against.
    */
+  {
+    name: "list_arrangement_instruments",
+    title: "List playable instruments",
+    description:
+      "The catalogue assets a sampler track can play, with the library each came from and the measured duration. A multi-instrument library names each program `<library>:<program>`, e.g. vcsl declares 88 of them. Read this before set_arrangement_track_instrument.",
+    readOnly: true,
+    inputSchema: {
+      library: z.string().optional().describe("narrow to one library id, as listed in `libraries`"),
+      limit: z.number().int().min(1).max(500).optional().describe("how many to return, for a library with dozens of programs"),
+    },
+    handler: (args) => {
+      try {
+        return listCatalogueInstruments({ library: args.library as string | undefined, limit: args.limit as number | undefined });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
   {
     name: "create_arrangement",
     title: "Create an arrangement",

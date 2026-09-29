@@ -90,11 +90,14 @@ Two things this surface states rather than leaves to be discovered:
 
 * **A sampler track always has an instrument.** A new one is created with the default catalogue asset, and changing a track's kind to `sampler` gives it one too — so the same kind of track sounds regardless of how it came to exist. A summary reports the
   asset, and warns when a sampler somehow has none, because a silent sampler reads as a broken renderer.
+* **Choosing an instrument has two halves and both are here.** `list_arrangement_instruments` says what exists and `set_arrangement_track_instrument` puts one on a track; the id the first returns is the id the second accepts, which a criterion holds together. The list is read from the manifest in the repository rather than from the network, so "what can I play" answers the same offline as online.
+
 * **A request that cannot be carried out is refused out loud.** The data layer returns the arrangement unchanged when an instrument is pointed at a non-sampler track, which is right for a button and useless for a caller that cannot see the screen. The tool
   raises instead, and an unknown `trackId` is answered with the ids that do exist.
 
 | Tool | Arguments | Returns |
 | :--- | :--- | :--- |
+| `list_arrangement_instruments` ▢ | `library?`, `limit?` | the catalogue assets a sampler track can play, each with its library and measured duration; `vcsl` alone declares 88 |
 | `create_arrangement` ▣ | `templateId?`, `blankKind?`, `songId?` | the new `arrangementId`, its tracks, the template ids it would accept, and any problem |
 | `get_arrangement` ▢ | `arrangementId` | every track's kind, name, flags, `sampleAssetId`, `steps` with `stepsOn`, and takes |
 | `describe_arrangement` ▢ | `arrangementId` | one line per track, for reading rather than parsing |
