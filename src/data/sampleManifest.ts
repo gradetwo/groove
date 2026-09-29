@@ -186,8 +186,14 @@ export function shippableEntries(manifest: SampleManifest): SampleManifestEntry[
 export function sourceSfzUrl(manifest: SampleManifest, entryId: string): string | undefined {
   const entry = manifest.entries.find((candidate) => candidate.id === entryId);
   if (!entry?.sfz || !entry.repo || !entry.pin) return undefined;
-  const prefix = entry.prefix ? `${entry.prefix.replace(/\/$/, "")}/` : "";
-  return `https://raw.githubusercontent.com/${entry.repo}/${entry.pin}/${prefix}${entry.sfz}`;
+  /**
+   * **No `prefix` here — and the end-to-end probe proved why.** `prefix` describes the **mirror's** layout, where libraries are separated by a directory; the upstream repository has no such
+   * directory, so building `…/<pin>/<prefix><sfz>` asked GitHub for a path that does not exist and got **14 bytes of `404: Not Found`** back. The resolver then parsed that as SFZ and found no regions,
+   * which looks exactly like a library with no instruments.
+   *
+   * Two layouts, two addresses: the source is `repo/pin/sfz`, the mirror is `root/prefix/sfz`.
+   */
+  return `https://raw.githubusercontent.com/${entry.repo}/${entry.pin}/${entry.sfz}`;
 }
 
 export function mirrorSfzUrl(manifest: SampleManifest, entryId: string, root: string): string | undefined {

@@ -495,3 +495,31 @@ grep -rn "planAudioLaneEvents|createSampleLoader|scheduleAudioLane|browserSample
 1. ⭐ **只在有音频车道时才动** ✓ —— 由 `playAudioLanes` 自己保证（**空计划返回空报告 ✓ 不是失败 ✓**）；
 2. **目录用 `appCatalogueRuntime`** ✓（第 1.5 刀 ✓）—— **一个实例，于是引擎、离线渲染与 UI 不可能对"存在哪些资产"产生分歧** ✓；
 3. **失败不阻塞播放** ✓ —— 音频车道加载不了时，**其余轨道照常播** ✓，并把问题**具名报出** ✓（这条与引擎既有的 `probeLiveGs1`"吞掉异常"是同一种取舍 ✓）。
+
+## ⭐⭐⭐ 端到端探针（2026-09-28）：第一次真的跑真实字节，而它抓到两个
+
+`scripts/probe_sfz_end_to_end.mjs` ✓ —— 复用编排探针的启动样板 ✓（**逐行复用，不重写** ✓），然后在真实页面里走**应用走的那条路** ✓：线上清单（**在 Node 里取、传进页面** ✓，因为探针在 `localhost` ✓ 而清单在生产域 ✓）→ 目录 ✓ → **源优先取 SFZ** ✓ → 解析 ✓ → 取采样 ✓ → 解码 ✓ → **断言峰值非零** ✓。
+
+### ① 源地址**多了一层 `prefix`** ✗✓ —— 已修 ✓
+
+```
+旧: https://raw.githubusercontent.com/<repo>/<pin>/virtuosity-drums/Programs/…   ✗ 14 字节 "404: Not Found"
+新: https://raw.githubusercontent.com/<repo>/<pin>/Programs/…                    ✓ 1205 字节
+```
+
+⭐ **`prefix` 描述的是镜像的布局** ✓（**库之间靠一层目录分开** ✓），**而源仓库没有这一层** ✓✓ —— ⭐ **两个布局，两个地址** ✓：**源是 `repo/pin/sfz`** ✓、**镜像是 `root/prefix/sfz`** ✓。
+
+⚠️ 而这个错**伪装得很像"这个库没有乐器"** ✗✓：14 字节的 404 正文被当作 SFZ 解析 ✓ → **`defines no regions`** ✓ —— ⭐ **一个路由失败，被读成了一个内容失败** ✓。
+
+### ② ⭐ 加载器**不展开 include** ✗✓ —— **这是"能响"的最后一个拦路石**
+
+```
+sfz text: 1205 bytes from the source       ✓ 文件本身对了
+resolve note 38: ok=false … defines no regions
+```
+
+⭐ 因为**入口程序里有 0 个 `<region>`** ✓ —— **它只有 `#include`** ✓✓（**这正是本工作流从一开始就测出来的那条** ✓）。
+
+**所以加载器必须** ✓：取到程序文本后 ✓ → **用 `IncludeReader` 展开** ✓（`expandIncludes` ✓ 已建、已测、已用于镜像侧 ✓✓）→ **再解析** ✓。⭐ 而 include 的取法要**相对于写下它的那个文件的地址** ✓（源优先 ✓、镜像回退 ✓ —— **同一套两地址规则** ✓）。
+
+⭐ 而修好之后，`resolveInstrumentNote` 才会看到真实的 1676 个 region ✓✓ —— ⭐ **那才是"能响"的最后一步** ✓。
