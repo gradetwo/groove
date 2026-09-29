@@ -183,6 +183,13 @@ jobs:
         continue-on-error: true
         run: node scripts/check_b7_pair.mjs /tmp/b7-arrangement.json /tmp/b7-control.json
 
+      # ⭐ The end-to-end criterion for real instruments: live manifest → catalogue → source-first SFZ → 126 includes over the network → 1676 regions → a sample address → a decoded buffer with
+      # non-zero peak. It exists because every layer of this path had its own criteria and the **path between them** had none — five separate bugs lived in the seams and each was found by running the
+      # whole thing, not by reading any part of it. Heavy (a browser, a dev server, the network) and therefore here rather than on a laptop.
+      - name: Real instrument, end to end (fetch, expand, decode)
+        if: inputs.scope == 'audio' || inputs.scope == 'all'
+        run: node scripts/probe_sfz_end_to_end.mjs
+
       - name: Section-boundary fade (stage 3 measurement)
         if: inputs.scope == 'audio' || inputs.scope == 'all'
         run: node scripts/probe_arrangement_audio.mjs --genre=chicago-house
