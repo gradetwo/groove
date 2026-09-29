@@ -38,6 +38,13 @@ const asJson = argv.includes("--json");
  * require five unrelated things to succeed first, and a failure is easier to attribute when only one block is running.
  */
 const only = (argv.find((a) => a.startsWith("--only=")) ?? "").split("=")[1] || undefined;
+/**
+ * **One lane count per process, because a browser here does not survive many renders.** The repository already knew this: the loudness sweep is chunked across processes because "a single browser process exhausts the WASM budget after roughly
+ * forty renders and the run aborts on its own sentinel (which is why it never completed on a laptop either)". This probe dies sooner — sometimes on the very first render — so the curve is measured the same way the sweep is: `--lanes=<n>` renders
+ * one count and exits, and `measure_lane_curve.mjs` runs one process per count.
+ */
+const laneCounts = (argv.find((a) => a.startsWith("--lanes=")) ?? "").split("=")[1];
+const laneCount = laneCounts ? Number(laneCounts) : undefined;
 const genreId = (argv.find((a) => a.startsWith("--genre=")) ?? "--genre=chicago-house").split("=")[1];
 const port = Number((argv.find((a) => a.startsWith("--port=")) ?? "--port=3188").split("=")[1]);
 /**
@@ -123,7 +130,7 @@ try {
   if (process.env.PROBE_NO_HEAP === "1") await page.addInitScript(() => { window.__probeNoHeap = true; });
   await page.goto(`${base}/__arrangement_probe__.html`, { waitUntil: "domcontentloaded", timeout: 60000 });
 
-  const measured = await page.evaluate(async ({ genreId: id, ramp, only }) => {
+  const measured = await page.evaluate(async ({ genreId: id, ramp, only, laneCount }) => {
     const [wav, genresModule, mixModule, formsModule, flattenModule, trackUtils, loudness] = await Promise.all([
       import("/src/audio/WavExporter.ts"),
       import("/src/data/genres/index.ts"),
@@ -261,7 +268,7 @@ try {
  * Sampling can be switched off with `PROBE_NO_HEAP=1`, because it was added while diagnosing a failure and the only way to tell whether it caused one is to run without it.
  */
 const memory = typeof performance !== "undefined" && !window.__probeNoHeap ? performance.memory : undefined;
-        for (const count of [1, 4, 16, 64]) {
+        for (const count of laneCount === undefined ? [1, 4, 16, 64] : [laneCount]) {
           const value = {
             ...song,
             id: `lanes-${count}`,
@@ -291,6 +298,16 @@ const memory = typeof performance !== "undefined" && !window.__probeNoHeap ? per
         return { error: error && error.message ? error.message : String(error) };
       }
     };
+    /**
+     * **The smallest render that can fail.** `--only=smoke` renders the two-bar song once and returns. The browser dies during the earlier renders — a long-lived idle browser survived eight minutes here, so it is this work rather than the
+     * environment — and the fastest way to say which part is to have a configuration that does nothing else.
+     */
+    if (only === "smoke") {
+      const started = performance.now();
+      const { buffer } = await render(song);
+      return { only, smoke: { seconds: Number(((performance.now() - started) / 1000).toFixed(4)), frames: buffer.length, channels: buffer.numberOfChannels, sampleRate: buffer.sampleRate } };
+    }
+
     /**
      * **The early exit.** With `--only=lane` the curve runs here, before anything else renders, and the result is returned immediately — the failure that motivated this happened during those earlier renders, so the curve must not be behind
      * them. The note about what is measured travels with the data rather than being printed, because a `console.log` inside this evaluate does not reach the run's log.
