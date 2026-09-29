@@ -165,7 +165,8 @@ The package this writes is specified field by field in [`GROOVE_PACKAGE_FORMAT.m
 
 ### The standard composing workflow, in six calls
 
-A composer arriving at this server has 45 tools and no order to them; this is the order, and every step is one line of intent. The fifth evaluation's own
+A composer arriving at this server meets a few dozen tools and no order to them; this is the order, and every step is one line of intent. **The count is deliberately not written here** — it was 45 when this section was written and it grows whenever a
+feature arrives, so a number in this sentence would be wrong more often than right; `npm run check:mcp` prints the surface it actually has. The fifth evaluation's own
 complaint was that the names have to be guessed, so the names are here — and each description says what it is for rather than only what it takes.
 
 | # | call | what it is for |

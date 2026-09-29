@@ -4,7 +4,7 @@ import { getActiveAudioEngine, setActiveAudioEngine } from "../audio/activeEngin
 import { createArrangementPlayer } from "../audio/playerFromEngine";
 import { appCatalogueRuntime } from "../data/sampleCatalogueRuntime";
 import { ArrangementViewV2 } from "../components/arrangement/ArrangementViewV2";
-import type { InstrumentChoice } from "../components/arrangement/TrackListV2";
+import { libraryOfAsset, type InstrumentChoice } from "../components/arrangement/TrackListV2";
 import { useAudioEngineInstance } from "../features/sequencer/hooks/useAudioEngineInstance";
 import type { CaptureOutcome } from "../audio/captureTake";
 
@@ -65,7 +65,12 @@ export function NewProjectView({ capture }: NewProjectViewProps) {
       .load()
       .then(({ assets }) => {
         if (cancelled) return;
-        setInstruments(assets.filter((asset) => asset.sfz).map((asset) => ({ assetId: asset.assetId, name: asset.name })));
+        setInstruments(
+          assets
+            .filter((asset) => asset.sfz)
+            // The library comes from the id rather than from a second lookup: a multi-instrument library names its programs `entry:program`, and the entry is the library.
+            .map((asset) => ({ assetId: asset.assetId, name: asset.name, library: libraryOfAsset(asset.assetId) }))
+        );
       })
       .catch(() => undefined);
     return () => {

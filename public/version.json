@@ -1,27 +1,27 @@
 {
-  "version": "2.34.32",
+  "version": "2.34.33",
   "releaseDate": "2026-09-29",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.32",
+    "version": "2.34.33",
     "date": "2026-09-29",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "VCSL 四族与全部程序都进来了",
-      "en": "VCSL's four families, and every program"
+      "zh": "采样器按文件真实意图演奏",
+      "en": "Samplers play what the file actually says"
     },
     "highlights": [
       {
-        "zh": "VCSL 的四个族已镜像：2651 个文件、2488 段实测，声明 88 件乐器。",
-        "en": "VCSL's four families are mirrored: 2651 files, 2488 measured, 88 instruments declared."
+        "zh": "文件用控制器关掉的音区不再发声，之前会照弹。",
+        "en": "A region the file switches off with a controller no longer sounds; before it played anyway."
       },
       {
-        "zh": "Karoryfer 两件不再只给一件乐器：贝斯声明 39 件，吉他 6 件。",
-        "en": "The two Karoryfer libraries no longer offer one instrument each: the bass declares 39, the guitar 6."
+        "zh": "控制器的曲线 1 是双极的：整套鼓之前高一个八度，现在不会了。",
+        "en": "Controller curve 1 is bipolar: the drum kit was an octave sharp, and is not now."
       },
       {
-        "zh": "取树时只取需要的路径，5.74 GB 的库不必整棵下载。",
-        "en": "A pinned tree is fetched by path, so a 5.74 GB library need not be downloaded whole."
+        "zh": "选乐器按库分组，135 件乐器分在五个库下。",
+        "en": "The instrument chooser groups by library: 135 instruments under five of them."
       }
     ],
     "truncated": false

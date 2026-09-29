@@ -32,6 +32,34 @@ export interface TrackListV2Props {
 export interface InstrumentChoice {
   assetId: string;
   name: string;
+  /**
+   * Which library it came from, for grouping the list. The catalogue holds **135 instruments** across five libraries, and a flat list of 135 is a question rather than a choice; grouped, it is five libraries with their programs under them.
+   */
+  library?: string;
+}
+
+/** The library a catalogue id belongs to: `entry` for a single-instrument one, `entry:program` for a member of a multi-instrument library. */
+/**
+ * The instruments grouped for rendering: one entry per library, in the order the caller gave them, or a single unlabelled group when the caller does not say which library each came from. `undefined` as the label is what the renderer uses to
+ * decide between `<optgroup>` and a plain list.
+ */
+export function groupInstruments(
+  instruments: readonly InstrumentChoice[]
+): Array<[string | undefined, InstrumentChoice[]]> {
+  const labelled = instruments.some((instrument) => instrument.library !== undefined);
+  if (!labelled) return [[undefined, [...instruments]]];
+  const groups = new Map<string, InstrumentChoice[]>();
+  for (const instrument of instruments) {
+    const library = instrument.library ?? "other";
+    if (!groups.has(library)) groups.set(library, []);
+    groups.get(library)!.push(instrument);
+  }
+  return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
+}
+
+export function libraryOfAsset(assetId: string): string {
+  const separator = assetId.indexOf(":");
+  return separator === -1 ? assetId : assetId.slice(0, separator);
 }
 
 /** Depth from `parentId`, so what is drawn and what is grouped are the same fact. */
@@ -92,11 +120,26 @@ export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, 
                   value={track.sample?.assetId ?? ""}
                   onChange={(event) => onChangeInstrument(track.id, event.target.value)}
                 >
-                  {instruments.map((instrument) => (
-                    <option key={instrument.assetId} value={instrument.assetId}>
-                      {instrument.name}
-                    </option>
-                  ))}
+                  {/*
+                    Grouped by library when the caller says which one each instrument came from, and flat when it does not — so a caller with one library, or with no library information, gets the simple list rather than a group of one.
+                  */}
+                  {groupInstruments(instruments).map(([library, group]) =>
+                    library === undefined ? (
+                      group.map((instrument) => (
+                        <option key={instrument.assetId} value={instrument.assetId}>
+                          {instrument.name}
+                        </option>
+                      ))
+                    ) : (
+                      <optgroup key={library} label={library}>
+                        {group.map((instrument) => (
+                          <option key={instrument.assetId} value={instrument.assetId}>
+                            {instrument.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )
+                  )}
                 </select>
               )}
               <button type="button" className={`w-7 h-7 rounded text-xs ${track.muted ? "bg-[var(--d-accent)] text-[var(--d-accent-ink)]" : "border border-[var(--d-border,rgba(255,255,255,0.15))] text-text"}`} aria-pressed={Boolean(track.muted)} onClick={() => onToggle(track.id, "muted", !track.muted)}>

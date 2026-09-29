@@ -38,6 +38,26 @@ describe("the CC gates", () => {
     expect(regionSoundsAtCc(gated, new Map([[1, 65]]))).toBe(false);
   });
 
+  it("reads `set_ccN` only inside `<control>`, which is where sfizz honours it", () => {
+    /**
+     * Measured with the same tone at four placements, where "does it sound" is the signal — a region with `locc1=64` sounds only if the controller is at least 64:
+     *
+     * ```
+     *   no set_cc                     silent
+     *   <control> set_cc1=127         sounds
+     *   <global>  set_cc1=127         silent
+     *   <master>  set_cc1=127         silent
+     *   on the region itself          silent
+     * ```
+     *
+     * So the reader's scope is not a simplification: `set_cc` anywhere else is a no-op in the reference engine, and treating it as an initial value there would make a region sound that sfizz leaves silent.
+     */
+    expect(readControlDefaults("<control>\nset_cc1=127\n").get(1)).toBe(127);
+    expect(readControlDefaults("<global>\nset_cc1=127\n").has(1)).toBe(false);
+    expect(readControlDefaults("<master>\nset_cc1=127\n").has(1)).toBe(false);
+    expect(readControlDefaults("<region> sample=t.wav set_cc1=127\n").has(1)).toBe(false);
+  });
+
   it("treats a controller nobody has set as zero", () => {
     // Measured with no CC sent at all: `locc1=64` is silent and `hicc1=0` sounds.
     expect(regionSoundsAtCc(region("locc1=64"), new Map())).toBe(false);

@@ -6,7 +6,8 @@ import { audioDurationSeconds } from "../../scripts/lib/audio_duration.mjs";
 import { mirrorFiles } from "../../scripts/lib/mirror.mjs";
 import { samplePathsFor } from "../audio/sfz/mirrorPlan";
 import { expandIncludes } from "../audio/sfz/includes";
-import { parseSfz, unresolvedVariables } from "../audio/sfz/parse";
+import { parseSfz, readControlDefaults, unresolvedVariables } from "../audio/sfz/parse";
+import { regionsAtCc } from "../audio/sfz/ccGate";
 import { playbackForNote } from "../audio/sfz/regionPlayback";
 
 /**
@@ -86,6 +87,13 @@ describe.skipIf(files === null)("a real library, read end to end", () => {
       unresolvedRegions: EXPECTED.unresolvedRegions,
       problems: 0,
     });
+
+    /**
+     * **Every region sounds at the controller values the file itself declares**, which is the end-to-end form of the gate: this library gates each microphone on a controller (`locc101=1`, `locc102=43`) and turns them all on in its `<control>` block. A gate that
+     * dropped regions here would silence parts of the kit that its author intended to be audible — and the assertion is against the file's own defaults rather than against a value this test chose.
+     */
+    const audible = regionsAtCc(regions, readControlDefaults(expanded.text));
+    expect(audible.length, "every region must sound at the file's declared controller values").toBe(regions.length);
 
     // And the musical claim, checked note by note rather than in aggregate.
     for (const [note, sample] of Object.entries(EXPECTED.notes)) {
