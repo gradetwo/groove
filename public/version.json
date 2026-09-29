@@ -1,27 +1,27 @@
 {
-  "version": "2.34.24",
+  "version": "2.34.25",
   "releaseDate": "2026-09-29",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.24",
+    "version": "2.34.25",
     "date": "2026-09-29",
     "category": "feature",
     "title": {
-      "zh": "新编排能播放了",
-      "en": "The new arrangement can play"
+      "zh": "新轨道一出生就有内容",
+      "en": "A new track arrives with content"
     },
     "highlights": [
       {
-        "zh": "在 /new 里按 Play：编排被编译成引擎的车道，交给应用自己的音频引擎。",
-        "en": "Press Play in /new: the arrangement is compiled into engine lanes and handed to the app's own audio engine."
+        "zh": "新建轨道带一段符合类型的节奏；采样器轨还带着示例库的资产。",
+        "en": "A new track arrives with a pattern suited to its kind, and a sampler track also carries the sample library's asset."
       },
       {
-        "zh": "采样器轨道因此真的会出声——这条路以前没有判据。",
-        "en": "A sampler track therefore actually sounds — a path that had no criterion before."
+        "zh": "编排自己保存音符（notesByTrack）；删除轨道时音符一起走。",
+        "en": "The arrangement keeps its own notes, and a deleted track takes its notes with it."
       },
       {
-        "zh": "引擎还没就绪时，按钮说明原因并显示规划出的事件数（含 0），而不是静默。",
-        "en": "When the engine is not ready the button says so and shows the planned event count, including zero, rather than going silent."
+        "zh": "因此 /new 里按 Play 会真的规划出事件，而采样器轨道会出声。",
+        "en": "So pressing Play in /new plans real events, and a sampler track sounds."
       }
     ],
     "truncated": false
