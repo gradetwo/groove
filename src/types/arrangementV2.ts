@@ -33,6 +33,37 @@ export interface TrackV2 {
   fromLaneId?: string;
   /** Present on `sampler` tracks: the catalogue asset whose SFZ and samples this track plays. */
   sample?: { assetId: string };
+  /**
+   * Everything recorded onto this track, **whatever kind it is** — takes are content, not identity.
+   *
+   * A recording is an **input form**, not a track kind: an instrument or drum track records a MIDI performance and an audio track records sound, and both end up here with `source` saying which. Modelling
+   * recording as a fifth kind would have made the two inseparable.
+   */
+  takes?: Take[];
+  /** Which take plays when no region overrides it — the whole-track choice. */
+  selectedTakeId?: string;
+  /**
+   * Per-range choices: "this section came from take 3, the next from take 7".
+   *
+   * Ranges and a whole-track selection are **one mechanism with two uses**, not two features: comping is what you get by choosing per range, and swapping the whole performance is what you get by choosing once.
+   */
+  takeRegions?: TakeRegion[];
+}
+
+export interface Take {
+  id: string;
+  /** Sortable, so "the most recent take" needs no separate pointer, and a list order cannot disagree with it. */
+  recordedAt: number;
+  /** What was recorded — the one field that distinguishes an audio take from a MIDI one, instead of the track's kind doing it. */
+  source: "audio" | "midi";
+  label?: string;
+}
+
+export interface TakeRegion {
+  /** Bars, inclusive start and exclusive end, so adjacent regions neither overlap nor leave a gap. */
+  startBar: number;
+  endBar: number;
+  takeId: string;
 }
 
 export interface ArrangementV2 {
