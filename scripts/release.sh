@@ -36,6 +36,8 @@ step() {
 # The version, changelog and derived files are edited by hand before this runs — `package.json` is the one human-edited place, and `version:check` is what proves the rest followed.
 echo "release:"
 step "version:check" npm run version:check
+# ⭐ A version is published once: content that changed must carry a new version, or the tag stops describing what is live.
+step "version:new" bash scripts/check_version_is_new.sh
 step "local gate" bash scripts/check_local.sh
 step "build" npx vite build
 

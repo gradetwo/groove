@@ -1,29 +1,29 @@
 {
-  "version": "2.34.31",
+  "version": "2.34.32",
   "releaseDate": "2026-09-29",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.31",
+    "version": "2.34.32",
     "date": "2026-09-29",
     "category": "feature",
     "title": {
-      "zh": "新建编排终于能用了",
-      "en": "The new-project route works now"
+      "zh": "VCSL 四族与全部程序都进来了",
+      "en": "VCSL's four families, and every program"
     },
     "highlights": [
       {
-        "zh": "新建路线有了自己的音频引擎，不再是空壳，按播放会出声。",
-        "en": "The new-project route has its own audio engine, so it is no longer a shell and Play makes a sound."
+        "zh": "VCSL 的四个族已镜像：2651 个文件、2488 段实测，声明 88 件乐器。",
+        "en": "VCSL's four families are mirrored: 2651 files, 2488 measured, 88 instruments declared."
       },
       {
-        "zh": "采样轨道可以挑乐器，四件真实乐器里选一件。",
-        "en": "A sampler track can choose its instrument, from the four real libraries."
+        "zh": "Karoryfer 两件不再只给一件乐器：贝斯声明 39 件，吉他 6 件。",
+        "en": "The two Karoryfer libraries no longer offer one instrument each: the bass declares 39, the guitar 6."
       },
       {
-        "zh": "每条轨道的十六步看得见，也能点。",
-        "en": "Each track's sixteen steps are visible and tappable."
+        "zh": "取树时只取需要的路径，5.74 GB 的库不必整棵下载。",
+        "en": "A pinned tree is fetched by path, so a 5.74 GB library need not be downloaded whole."
       }
     ],
-    "truncated": true
+    "truncated": false
   }
 }
