@@ -3,7 +3,7 @@
   "entries": [
     {
       "id": "virtuosity-drums-basic",
-      "name": "Virtuosity Drums \u2014 Basic Kit",
+      "name": "Virtuosity Drums — Basic Kit",
       "licence": "CC0",
       "prefix": "virtuosity-drums",
       "repo": "sfzinstruments/virtuosity_drums",
@@ -8326,8 +8326,2681 @@
       "prefix": "salamander-grand",
       "repo": "sfzinstruments/SalamanderGrandPiano",
       "pin": "3382bf9496bba2486f5ab0de55a264d1dfc38404",
-      "sfz": "SalamanderGrandPiano.sfz",
-      "files": [],
+      "sfz": "Salamander Grand Piano V3.sfz",
+      "files": [
+        {
+          "path": ".gitattributes",
+          "bytes": 252
+        },
+        {
+          "path": "Data/hammer.txt",
+          "bytes": 4497
+        },
+        {
+          "path": "Data/notes.txt",
+          "bytes": 1306
+        },
+        {
+          "path": "Data/pedal.txt",
+          "bytes": 502
+        },
+        {
+          "path": "Data/region.txt",
+          "bytes": 3787
+        },
+        {
+          "path": "Data/str_res.txt",
+          "bytes": 6484
+        },
+        {
+          "path": "Data/tune_nat.txt",
+          "bytes": 539
+        },
+        {
+          "path": "Data/tune_ret.txt",
+          "bytes": 576
+        },
+        {
+          "path": "Data/vel_01.txt",
+          "bytes": 621
+        },
+        {
+          "path": "Data/vel_02.txt",
+          "bytes": 620
+        },
+        {
+          "path": "Data/vel_03.txt",
+          "bytes": 624
+        },
+        {
+          "path": "Data/vel_04.txt",
+          "bytes": 622
+        },
+        {
+          "path": "Data/vel_05.txt",
+          "bytes": 622
+        },
+        {
+          "path": "Data/vel_06.txt",
+          "bytes": 622
+        },
+        {
+          "path": "Data/vel_07.txt",
+          "bytes": 620
+        },
+        {
+          "path": "Data/vel_08.txt",
+          "bytes": 621
+        },
+        {
+          "path": "Data/vel_09.txt",
+          "bytes": 621
+        },
+        {
+          "path": "Data/vel_10.txt",
+          "bytes": 622
+        },
+        {
+          "path": "Data/vel_11.txt",
+          "bytes": 622
+        },
+        {
+          "path": "Data/vel_12.txt",
+          "bytes": 622
+        },
+        {
+          "path": "Data/vel_13.txt",
+          "bytes": 622
+        },
+        {
+          "path": "Data/vel_14.txt",
+          "bytes": 624
+        },
+        {
+          "path": "Data/vel_15.txt",
+          "bytes": 622
+        },
+        {
+          "path": "Data/vel_16.txt",
+          "bytes": 623
+        },
+        {
+          "path": "LICENSE",
+          "bytes": 19467
+        },
+        {
+          "path": "README.md",
+          "bytes": 4980
+        },
+        {
+          "path": "Salamander Grand Piano V3.sfz",
+          "bytes": 2113
+        },
+        {
+          "path": "Samples/A0v1.flac",
+          "bytes": 2164885
+        },
+        {
+          "path": "Samples/A0v10.flac",
+          "bytes": 2799401
+        },
+        {
+          "path": "Samples/A0v11.flac",
+          "bytes": 2734680
+        },
+        {
+          "path": "Samples/A0v12.flac",
+          "bytes": 2785384
+        },
+        {
+          "path": "Samples/A0v13.flac",
+          "bytes": 2814539
+        },
+        {
+          "path": "Samples/A0v14.flac",
+          "bytes": 2730478
+        },
+        {
+          "path": "Samples/A0v15.flac",
+          "bytes": 2740560
+        },
+        {
+          "path": "Samples/A0v16.flac",
+          "bytes": 2864588
+        },
+        {
+          "path": "Samples/A0v2.flac",
+          "bytes": 2179707
+        },
+        {
+          "path": "Samples/A0v3.flac",
+          "bytes": 2346995
+        },
+        {
+          "path": "Samples/A0v4.flac",
+          "bytes": 2607698
+        },
+        {
+          "path": "Samples/A0v5.flac",
+          "bytes": 2638509
+        },
+        {
+          "path": "Samples/A0v6.flac",
+          "bytes": 2634082
+        },
+        {
+          "path": "Samples/A0v7.flac",
+          "bytes": 2764837
+        },
+        {
+          "path": "Samples/A0v8.flac",
+          "bytes": 2685849
+        },
+        {
+          "path": "Samples/A0v9.flac",
+          "bytes": 2727560
+        },
+        {
+          "path": "Samples/A1v1.flac",
+          "bytes": 2166601
+        },
+        {
+          "path": "Samples/A1v10.flac",
+          "bytes": 2709073
+        },
+        {
+          "path": "Samples/A1v11.flac",
+          "bytes": 2732379
+        },
+        {
+          "path": "Samples/A1v12.flac",
+          "bytes": 2786755
+        },
+        {
+          "path": "Samples/A1v13.flac",
+          "bytes": 2779724
+        },
+        {
+          "path": "Samples/A1v14.flac",
+          "bytes": 2782403
+        },
+        {
+          "path": "Samples/A1v15.flac",
+          "bytes": 2823992
+        },
+        {
+          "path": "Samples/A1v16.flac",
+          "bytes": 2879654
+        },
+        {
+          "path": "Samples/A1v2.flac",
+          "bytes": 2186772
+        },
+        {
+          "path": "Samples/A1v3.flac",
+          "bytes": 2262291
+        },
+        {
+          "path": "Samples/A1v4.flac",
+          "bytes": 2242163
+        },
+        {
+          "path": "Samples/A1v5.flac",
+          "bytes": 2402980
+        },
+        {
+          "path": "Samples/A1v6.flac",
+          "bytes": 2691797
+        },
+        {
+          "path": "Samples/A1v7.flac",
+          "bytes": 2668737
+        },
+        {
+          "path": "Samples/A1v8.flac",
+          "bytes": 2707617
+        },
+        {
+          "path": "Samples/A1v9.flac",
+          "bytes": 2707943
+        },
+        {
+          "path": "Samples/A2v1.flac",
+          "bytes": 1823625
+        },
+        {
+          "path": "Samples/A2v10.flac",
+          "bytes": 1931380
+        },
+        {
+          "path": "Samples/A2v11.flac",
+          "bytes": 1928332
+        },
+        {
+          "path": "Samples/A2v12.flac",
+          "bytes": 1976480
+        },
+        {
+          "path": "Samples/A2v13.flac",
+          "bytes": 2011461
+        },
+        {
+          "path": "Samples/A2v14.flac",
+          "bytes": 1991765
+        },
+        {
+          "path": "Samples/A2v15.flac",
+          "bytes": 2049937
+        },
+        {
+          "path": "Samples/A2v16.flac",
+          "bytes": 2086327
+        },
+        {
+          "path": "Samples/A2v2.flac",
+          "bytes": 1856830
+        },
+        {
+          "path": "Samples/A2v3.flac",
+          "bytes": 1838734
+        },
+        {
+          "path": "Samples/A2v4.flac",
+          "bytes": 1898385
+        },
+        {
+          "path": "Samples/A2v5.flac",
+          "bytes": 1887699
+        },
+        {
+          "path": "Samples/A2v6.flac",
+          "bytes": 1877093
+        },
+        {
+          "path": "Samples/A2v7.flac",
+          "bytes": 1903028
+        },
+        {
+          "path": "Samples/A2v8.flac",
+          "bytes": 1901758
+        },
+        {
+          "path": "Samples/A2v9.flac",
+          "bytes": 1945375
+        },
+        {
+          "path": "Samples/A3v1.flac",
+          "bytes": 1423583
+        },
+        {
+          "path": "Samples/A3v10.flac",
+          "bytes": 1758312
+        },
+        {
+          "path": "Samples/A3v11.flac",
+          "bytes": 1790713
+        },
+        {
+          "path": "Samples/A3v12.flac",
+          "bytes": 1788330
+        },
+        {
+          "path": "Samples/A3v13.flac",
+          "bytes": 1814316
+        },
+        {
+          "path": "Samples/A3v14.flac",
+          "bytes": 1814660
+        },
+        {
+          "path": "Samples/A3v15.flac",
+          "bytes": 1874239
+        },
+        {
+          "path": "Samples/A3v16.flac",
+          "bytes": 1901195
+        },
+        {
+          "path": "Samples/A3v2.flac",
+          "bytes": 1568956
+        },
+        {
+          "path": "Samples/A3v3.flac",
+          "bytes": 1660396
+        },
+        {
+          "path": "Samples/A3v4.flac",
+          "bytes": 1757672
+        },
+        {
+          "path": "Samples/A3v5.flac",
+          "bytes": 1738211
+        },
+        {
+          "path": "Samples/A3v6.flac",
+          "bytes": 1763993
+        },
+        {
+          "path": "Samples/A3v7.flac",
+          "bytes": 1813811
+        },
+        {
+          "path": "Samples/A3v8.flac",
+          "bytes": 1787465
+        },
+        {
+          "path": "Samples/A3v9.flac",
+          "bytes": 1796674
+        },
+        {
+          "path": "Samples/A4v1.flac",
+          "bytes": 1302933
+        },
+        {
+          "path": "Samples/A4v10.flac",
+          "bytes": 1442501
+        },
+        {
+          "path": "Samples/A4v11.flac",
+          "bytes": 1452468
+        },
+        {
+          "path": "Samples/A4v12.flac",
+          "bytes": 1451680
+        },
+        {
+          "path": "Samples/A4v13.flac",
+          "bytes": 1468684
+        },
+        {
+          "path": "Samples/A4v14.flac",
+          "bytes": 1480560
+        },
+        {
+          "path": "Samples/A4v15.flac",
+          "bytes": 1531315
+        },
+        {
+          "path": "Samples/A4v16.flac",
+          "bytes": 1602001
+        },
+        {
+          "path": "Samples/A4v2.flac",
+          "bytes": 1308537
+        },
+        {
+          "path": "Samples/A4v3.flac",
+          "bytes": 1353378
+        },
+        {
+          "path": "Samples/A4v4.flac",
+          "bytes": 1383657
+        },
+        {
+          "path": "Samples/A4v5.flac",
+          "bytes": 1389193
+        },
+        {
+          "path": "Samples/A4v6.flac",
+          "bytes": 1412851
+        },
+        {
+          "path": "Samples/A4v7.flac",
+          "bytes": 1395306
+        },
+        {
+          "path": "Samples/A4v8.flac",
+          "bytes": 1382828
+        },
+        {
+          "path": "Samples/A4v9.flac",
+          "bytes": 1412927
+        },
+        {
+          "path": "Samples/A5v1.flac",
+          "bytes": 697245
+        },
+        {
+          "path": "Samples/A5v10.flac",
+          "bytes": 1123676
+        },
+        {
+          "path": "Samples/A5v11.flac",
+          "bytes": 1108296
+        },
+        {
+          "path": "Samples/A5v12.flac",
+          "bytes": 1119370
+        },
+        {
+          "path": "Samples/A5v13.flac",
+          "bytes": 1107301
+        },
+        {
+          "path": "Samples/A5v14.flac",
+          "bytes": 1162414
+        },
+        {
+          "path": "Samples/A5v15.flac",
+          "bytes": 1126306
+        },
+        {
+          "path": "Samples/A5v16.flac",
+          "bytes": 1170434
+        },
+        {
+          "path": "Samples/A5v2.flac",
+          "bytes": 692482
+        },
+        {
+          "path": "Samples/A5v3.flac",
+          "bytes": 698413
+        },
+        {
+          "path": "Samples/A5v4.flac",
+          "bytes": 717980
+        },
+        {
+          "path": "Samples/A5v5.flac",
+          "bytes": 893488
+        },
+        {
+          "path": "Samples/A5v6.flac",
+          "bytes": 1023382
+        },
+        {
+          "path": "Samples/A5v7.flac",
+          "bytes": 1093287
+        },
+        {
+          "path": "Samples/A5v8.flac",
+          "bytes": 1109347
+        },
+        {
+          "path": "Samples/A5v9.flac",
+          "bytes": 1109304
+        },
+        {
+          "path": "Samples/A6v1.flac",
+          "bytes": 526856
+        },
+        {
+          "path": "Samples/A6v10.flac",
+          "bytes": 677301
+        },
+        {
+          "path": "Samples/A6v11.flac",
+          "bytes": 657585
+        },
+        {
+          "path": "Samples/A6v12.flac",
+          "bytes": 681845
+        },
+        {
+          "path": "Samples/A6v13.flac",
+          "bytes": 670257
+        },
+        {
+          "path": "Samples/A6v14.flac",
+          "bytes": 691884
+        },
+        {
+          "path": "Samples/A6v15.flac",
+          "bytes": 698766
+        },
+        {
+          "path": "Samples/A6v16.flac",
+          "bytes": 724195
+        },
+        {
+          "path": "Samples/A6v2.flac",
+          "bytes": 571359
+        },
+        {
+          "path": "Samples/A6v3.flac",
+          "bytes": 565397
+        },
+        {
+          "path": "Samples/A6v4.flac",
+          "bytes": 620431
+        },
+        {
+          "path": "Samples/A6v5.flac",
+          "bytes": 665943
+        },
+        {
+          "path": "Samples/A6v6.flac",
+          "bytes": 651860
+        },
+        {
+          "path": "Samples/A6v7.flac",
+          "bytes": 667567
+        },
+        {
+          "path": "Samples/A6v8.flac",
+          "bytes": 681474
+        },
+        {
+          "path": "Samples/A6v9.flac",
+          "bytes": 667115
+        },
+        {
+          "path": "Samples/A7v1.flac",
+          "bytes": 241393
+        },
+        {
+          "path": "Samples/A7v10.flac",
+          "bytes": 377699
+        },
+        {
+          "path": "Samples/A7v11.flac",
+          "bytes": 377168
+        },
+        {
+          "path": "Samples/A7v12.flac",
+          "bytes": 374698
+        },
+        {
+          "path": "Samples/A7v13.flac",
+          "bytes": 384467
+        },
+        {
+          "path": "Samples/A7v14.flac",
+          "bytes": 363441
+        },
+        {
+          "path": "Samples/A7v15.flac",
+          "bytes": 370376
+        },
+        {
+          "path": "Samples/A7v16.flac",
+          "bytes": 384330
+        },
+        {
+          "path": "Samples/A7v2.flac",
+          "bytes": 330590
+        },
+        {
+          "path": "Samples/A7v3.flac",
+          "bytes": 366359
+        },
+        {
+          "path": "Samples/A7v4.flac",
+          "bytes": 366018
+        },
+        {
+          "path": "Samples/A7v5.flac",
+          "bytes": 365182
+        },
+        {
+          "path": "Samples/A7v6.flac",
+          "bytes": 360892
+        },
+        {
+          "path": "Samples/A7v7.flac",
+          "bytes": 349834
+        },
+        {
+          "path": "Samples/A7v8.flac",
+          "bytes": 392082
+        },
+        {
+          "path": "Samples/A7v9.flac",
+          "bytes": 356638
+        },
+        {
+          "path": "Samples/C1v1.flac",
+          "bytes": 2438456
+        },
+        {
+          "path": "Samples/C1v10.flac",
+          "bytes": 2522080
+        },
+        {
+          "path": "Samples/C1v11.flac",
+          "bytes": 2534515
+        },
+        {
+          "path": "Samples/C1v12.flac",
+          "bytes": 2540684
+        },
+        {
+          "path": "Samples/C1v13.flac",
+          "bytes": 2551193
+        },
+        {
+          "path": "Samples/C1v14.flac",
+          "bytes": 2584712
+        },
+        {
+          "path": "Samples/C1v15.flac",
+          "bytes": 2616594
+        },
+        {
+          "path": "Samples/C1v16.flac",
+          "bytes": 2585455
+        },
+        {
+          "path": "Samples/C1v2.flac",
+          "bytes": 2442369
+        },
+        {
+          "path": "Samples/C1v3.flac",
+          "bytes": 2472280
+        },
+        {
+          "path": "Samples/C1v4.flac",
+          "bytes": 2479481
+        },
+        {
+          "path": "Samples/C1v5.flac",
+          "bytes": 2498437
+        },
+        {
+          "path": "Samples/C1v6.flac",
+          "bytes": 2510076
+        },
+        {
+          "path": "Samples/C1v7.flac",
+          "bytes": 2507952
+        },
+        {
+          "path": "Samples/C1v8.flac",
+          "bytes": 2514395
+        },
+        {
+          "path": "Samples/C1v9.flac",
+          "bytes": 2508365
+        },
+        {
+          "path": "Samples/C2v1.flac",
+          "bytes": 1980907
+        },
+        {
+          "path": "Samples/C2v10.flac",
+          "bytes": 2571694
+        },
+        {
+          "path": "Samples/C2v11.flac",
+          "bytes": 2596170
+        },
+        {
+          "path": "Samples/C2v12.flac",
+          "bytes": 2608263
+        },
+        {
+          "path": "Samples/C2v13.flac",
+          "bytes": 2624902
+        },
+        {
+          "path": "Samples/C2v14.flac",
+          "bytes": 2642260
+        },
+        {
+          "path": "Samples/C2v15.flac",
+          "bytes": 2680349
+        },
+        {
+          "path": "Samples/C2v16.flac",
+          "bytes": 2698276
+        },
+        {
+          "path": "Samples/C2v2.flac",
+          "bytes": 2100686
+        },
+        {
+          "path": "Samples/C2v3.flac",
+          "bytes": 2252210
+        },
+        {
+          "path": "Samples/C2v4.flac",
+          "bytes": 2222842
+        },
+        {
+          "path": "Samples/C2v5.flac",
+          "bytes": 2510357
+        },
+        {
+          "path": "Samples/C2v6.flac",
+          "bytes": 2532539
+        },
+        {
+          "path": "Samples/C2v7.flac",
+          "bytes": 2540876
+        },
+        {
+          "path": "Samples/C2v8.flac",
+          "bytes": 2561685
+        },
+        {
+          "path": "Samples/C2v9.flac",
+          "bytes": 2564042
+        },
+        {
+          "path": "Samples/C3v1.flac",
+          "bytes": 1624899
+        },
+        {
+          "path": "Samples/C3v10.flac",
+          "bytes": 1745075
+        },
+        {
+          "path": "Samples/C3v11.flac",
+          "bytes": 1756061
+        },
+        {
+          "path": "Samples/C3v12.flac",
+          "bytes": 1753840
+        },
+        {
+          "path": "Samples/C3v13.flac",
+          "bytes": 1803471
+        },
+        {
+          "path": "Samples/C3v14.flac",
+          "bytes": 1801932
+        },
+        {
+          "path": "Samples/C3v15.flac",
+          "bytes": 1854312
+        },
+        {
+          "path": "Samples/C3v16.flac",
+          "bytes": 1875350
+        },
+        {
+          "path": "Samples/C3v2.flac",
+          "bytes": 1651757
+        },
+        {
+          "path": "Samples/C3v3.flac",
+          "bytes": 1689056
+        },
+        {
+          "path": "Samples/C3v4.flac",
+          "bytes": 1689449
+        },
+        {
+          "path": "Samples/C3v5.flac",
+          "bytes": 1731432
+        },
+        {
+          "path": "Samples/C3v6.flac",
+          "bytes": 1737740
+        },
+        {
+          "path": "Samples/C3v7.flac",
+          "bytes": 1724174
+        },
+        {
+          "path": "Samples/C3v8.flac",
+          "bytes": 1741485
+        },
+        {
+          "path": "Samples/C3v9.flac",
+          "bytes": 1759949
+        },
+        {
+          "path": "Samples/C4v1.flac",
+          "bytes": 1265676
+        },
+        {
+          "path": "Samples/C4v10.flac",
+          "bytes": 1817704
+        },
+        {
+          "path": "Samples/C4v11.flac",
+          "bytes": 1818768
+        },
+        {
+          "path": "Samples/C4v12.flac",
+          "bytes": 1776181
+        },
+        {
+          "path": "Samples/C4v13.flac",
+          "bytes": 1768613
+        },
+        {
+          "path": "Samples/C4v14.flac",
+          "bytes": 1787908
+        },
+        {
+          "path": "Samples/C4v15.flac",
+          "bytes": 1829283
+        },
+        {
+          "path": "Samples/C4v16.flac",
+          "bytes": 1772214
+        },
+        {
+          "path": "Samples/C4v2.flac",
+          "bytes": 1448551
+        },
+        {
+          "path": "Samples/C4v3.flac",
+          "bytes": 1697814
+        },
+        {
+          "path": "Samples/C4v4.flac",
+          "bytes": 1628805
+        },
+        {
+          "path": "Samples/C4v5.flac",
+          "bytes": 1685205
+        },
+        {
+          "path": "Samples/C4v6.flac",
+          "bytes": 1728236
+        },
+        {
+          "path": "Samples/C4v7.flac",
+          "bytes": 1716540
+        },
+        {
+          "path": "Samples/C4v8.flac",
+          "bytes": 1774472
+        },
+        {
+          "path": "Samples/C4v9.flac",
+          "bytes": 1747731
+        },
+        {
+          "path": "Samples/C5v1.flac",
+          "bytes": 1238975
+        },
+        {
+          "path": "Samples/C5v10.flac",
+          "bytes": 1545522
+        },
+        {
+          "path": "Samples/C5v11.flac",
+          "bytes": 1464734
+        },
+        {
+          "path": "Samples/C5v12.flac",
+          "bytes": 1537892
+        },
+        {
+          "path": "Samples/C5v13.flac",
+          "bytes": 1498911
+        },
+        {
+          "path": "Samples/C5v14.flac",
+          "bytes": 1534248
+        },
+        {
+          "path": "Samples/C5v15.flac",
+          "bytes": 1492303
+        },
+        {
+          "path": "Samples/C5v16.flac",
+          "bytes": 1531778
+        },
+        {
+          "path": "Samples/C5v2.flac",
+          "bytes": 1355346
+        },
+        {
+          "path": "Samples/C5v3.flac",
+          "bytes": 1378629
+        },
+        {
+          "path": "Samples/C5v4.flac",
+          "bytes": 1468588
+        },
+        {
+          "path": "Samples/C5v5.flac",
+          "bytes": 1532927
+        },
+        {
+          "path": "Samples/C5v6.flac",
+          "bytes": 1529239
+        },
+        {
+          "path": "Samples/C5v7.flac",
+          "bytes": 1543329
+        },
+        {
+          "path": "Samples/C5v8.flac",
+          "bytes": 1516971
+        },
+        {
+          "path": "Samples/C5v9.flac",
+          "bytes": 1542971
+        },
+        {
+          "path": "Samples/C6v1.flac",
+          "bytes": 567727
+        },
+        {
+          "path": "Samples/C6v10.flac",
+          "bytes": 692563
+        },
+        {
+          "path": "Samples/C6v11.flac",
+          "bytes": 727868
+        },
+        {
+          "path": "Samples/C6v12.flac",
+          "bytes": 722945
+        },
+        {
+          "path": "Samples/C6v13.flac",
+          "bytes": 701778
+        },
+        {
+          "path": "Samples/C6v14.flac",
+          "bytes": 709598
+        },
+        {
+          "path": "Samples/C6v15.flac",
+          "bytes": 722505
+        },
+        {
+          "path": "Samples/C6v16.flac",
+          "bytes": 730412
+        },
+        {
+          "path": "Samples/C6v2.flac",
+          "bytes": 534649
+        },
+        {
+          "path": "Samples/C6v3.flac",
+          "bytes": 553119
+        },
+        {
+          "path": "Samples/C6v4.flac",
+          "bytes": 601137
+        },
+        {
+          "path": "Samples/C6v5.flac",
+          "bytes": 642347
+        },
+        {
+          "path": "Samples/C6v6.flac",
+          "bytes": 667159
+        },
+        {
+          "path": "Samples/C6v7.flac",
+          "bytes": 689877
+        },
+        {
+          "path": "Samples/C6v8.flac",
+          "bytes": 695617
+        },
+        {
+          "path": "Samples/C6v9.flac",
+          "bytes": 689941
+        },
+        {
+          "path": "Samples/C7v1.flac",
+          "bytes": 405957
+        },
+        {
+          "path": "Samples/C7v10.flac",
+          "bytes": 459825
+        },
+        {
+          "path": "Samples/C7v11.flac",
+          "bytes": 444551
+        },
+        {
+          "path": "Samples/C7v12.flac",
+          "bytes": 459884
+        },
+        {
+          "path": "Samples/C7v13.flac",
+          "bytes": 470922
+        },
+        {
+          "path": "Samples/C7v14.flac",
+          "bytes": 427030
+        },
+        {
+          "path": "Samples/C7v15.flac",
+          "bytes": 444280
+        },
+        {
+          "path": "Samples/C7v16.flac",
+          "bytes": 462505
+        },
+        {
+          "path": "Samples/C7v2.flac",
+          "bytes": 405498
+        },
+        {
+          "path": "Samples/C7v3.flac",
+          "bytes": 434222
+        },
+        {
+          "path": "Samples/C7v4.flac",
+          "bytes": 401277
+        },
+        {
+          "path": "Samples/C7v5.flac",
+          "bytes": 414109
+        },
+        {
+          "path": "Samples/C7v6.flac",
+          "bytes": 419770
+        },
+        {
+          "path": "Samples/C7v7.flac",
+          "bytes": 441141
+        },
+        {
+          "path": "Samples/C7v8.flac",
+          "bytes": 412115
+        },
+        {
+          "path": "Samples/C7v9.flac",
+          "bytes": 413637
+        },
+        {
+          "path": "Samples/C8v1.flac",
+          "bytes": 331147
+        },
+        {
+          "path": "Samples/C8v10.flac",
+          "bytes": 412965
+        },
+        {
+          "path": "Samples/C8v11.flac",
+          "bytes": 430355
+        },
+        {
+          "path": "Samples/C8v12.flac",
+          "bytes": 401592
+        },
+        {
+          "path": "Samples/C8v13.flac",
+          "bytes": 443825
+        },
+        {
+          "path": "Samples/C8v14.flac",
+          "bytes": 455589
+        },
+        {
+          "path": "Samples/C8v15.flac",
+          "bytes": 458197
+        },
+        {
+          "path": "Samples/C8v16.flac",
+          "bytes": 421807
+        },
+        {
+          "path": "Samples/C8v2.flac",
+          "bytes": 347437
+        },
+        {
+          "path": "Samples/C8v3.flac",
+          "bytes": 302459
+        },
+        {
+          "path": "Samples/C8v4.flac",
+          "bytes": 306364
+        },
+        {
+          "path": "Samples/C8v5.flac",
+          "bytes": 302658
+        },
+        {
+          "path": "Samples/C8v6.flac",
+          "bytes": 402315
+        },
+        {
+          "path": "Samples/C8v7.flac",
+          "bytes": 395305
+        },
+        {
+          "path": "Samples/C8v8.flac",
+          "bytes": 428472
+        },
+        {
+          "path": "Samples/C8v9.flac",
+          "bytes": 426387
+        },
+        {
+          "path": "Samples/D#1v1.flac",
+          "bytes": 2169326
+        },
+        {
+          "path": "Samples/D#1v10.flac",
+          "bytes": 2876881
+        },
+        {
+          "path": "Samples/D#1v11.flac",
+          "bytes": 2892784
+        },
+        {
+          "path": "Samples/D#1v12.flac",
+          "bytes": 2896372
+        },
+        {
+          "path": "Samples/D#1v13.flac",
+          "bytes": 2921669
+        },
+        {
+          "path": "Samples/D#1v14.flac",
+          "bytes": 2933400
+        },
+        {
+          "path": "Samples/D#1v15.flac",
+          "bytes": 2944808
+        },
+        {
+          "path": "Samples/D#1v16.flac",
+          "bytes": 2983375
+        },
+        {
+          "path": "Samples/D#1v2.flac",
+          "bytes": 2497323
+        },
+        {
+          "path": "Samples/D#1v3.flac",
+          "bytes": 2496013
+        },
+        {
+          "path": "Samples/D#1v4.flac",
+          "bytes": 2570362
+        },
+        {
+          "path": "Samples/D#1v5.flac",
+          "bytes": 2840893
+        },
+        {
+          "path": "Samples/D#1v6.flac",
+          "bytes": 2851218
+        },
+        {
+          "path": "Samples/D#1v7.flac",
+          "bytes": 2847777
+        },
+        {
+          "path": "Samples/D#1v8.flac",
+          "bytes": 2889777
+        },
+        {
+          "path": "Samples/D#1v9.flac",
+          "bytes": 2901002
+        },
+        {
+          "path": "Samples/D#2v1.flac",
+          "bytes": 2087725
+        },
+        {
+          "path": "Samples/D#2v10.flac",
+          "bytes": 2606773
+        },
+        {
+          "path": "Samples/D#2v11.flac",
+          "bytes": 2575005
+        },
+        {
+          "path": "Samples/D#2v12.flac",
+          "bytes": 2579711
+        },
+        {
+          "path": "Samples/D#2v13.flac",
+          "bytes": 2611764
+        },
+        {
+          "path": "Samples/D#2v14.flac",
+          "bytes": 2621999
+        },
+        {
+          "path": "Samples/D#2v15.flac",
+          "bytes": 2693272
+        },
+        {
+          "path": "Samples/D#2v16.flac",
+          "bytes": 2700194
+        },
+        {
+          "path": "Samples/D#2v2.flac",
+          "bytes": 2295789
+        },
+        {
+          "path": "Samples/D#2v3.flac",
+          "bytes": 2435017
+        },
+        {
+          "path": "Samples/D#2v4.flac",
+          "bytes": 2546475
+        },
+        {
+          "path": "Samples/D#2v5.flac",
+          "bytes": 2578767
+        },
+        {
+          "path": "Samples/D#2v6.flac",
+          "bytes": 2571610
+        },
+        {
+          "path": "Samples/D#2v7.flac",
+          "bytes": 2586193
+        },
+        {
+          "path": "Samples/D#2v8.flac",
+          "bytes": 2577675
+        },
+        {
+          "path": "Samples/D#2v9.flac",
+          "bytes": 2579428
+        },
+        {
+          "path": "Samples/D#3v1.flac",
+          "bytes": 1381434
+        },
+        {
+          "path": "Samples/D#3v10.flac",
+          "bytes": 1809266
+        },
+        {
+          "path": "Samples/D#3v11.flac",
+          "bytes": 1815803
+        },
+        {
+          "path": "Samples/D#3v12.flac",
+          "bytes": 1769835
+        },
+        {
+          "path": "Samples/D#3v13.flac",
+          "bytes": 1790968
+        },
+        {
+          "path": "Samples/D#3v14.flac",
+          "bytes": 1842436
+        },
+        {
+          "path": "Samples/D#3v15.flac",
+          "bytes": 1860531
+        },
+        {
+          "path": "Samples/D#3v16.flac",
+          "bytes": 1861439
+        },
+        {
+          "path": "Samples/D#3v2.flac",
+          "bytes": 1580308
+        },
+        {
+          "path": "Samples/D#3v3.flac",
+          "bytes": 1743106
+        },
+        {
+          "path": "Samples/D#3v4.flac",
+          "bytes": 1746227
+        },
+        {
+          "path": "Samples/D#3v5.flac",
+          "bytes": 1790253
+        },
+        {
+          "path": "Samples/D#3v6.flac",
+          "bytes": 1745644
+        },
+        {
+          "path": "Samples/D#3v7.flac",
+          "bytes": 1748888
+        },
+        {
+          "path": "Samples/D#3v8.flac",
+          "bytes": 1770977
+        },
+        {
+          "path": "Samples/D#3v9.flac",
+          "bytes": 1772749
+        },
+        {
+          "path": "Samples/D#4v1.flac",
+          "bytes": 1329951
+        },
+        {
+          "path": "Samples/D#4v10.flac",
+          "bytes": 1553345
+        },
+        {
+          "path": "Samples/D#4v11.flac",
+          "bytes": 1572307
+        },
+        {
+          "path": "Samples/D#4v12.flac",
+          "bytes": 1645028
+        },
+        {
+          "path": "Samples/D#4v13.flac",
+          "bytes": 1674994
+        },
+        {
+          "path": "Samples/D#4v14.flac",
+          "bytes": 1691587
+        },
+        {
+          "path": "Samples/D#4v15.flac",
+          "bytes": 1619221
+        },
+        {
+          "path": "Samples/D#4v16.flac",
+          "bytes": 1617165
+        },
+        {
+          "path": "Samples/D#4v2.flac",
+          "bytes": 1365324
+        },
+        {
+          "path": "Samples/D#4v3.flac",
+          "bytes": 1448930
+        },
+        {
+          "path": "Samples/D#4v4.flac",
+          "bytes": 1550296
+        },
+        {
+          "path": "Samples/D#4v5.flac",
+          "bytes": 1529007
+        },
+        {
+          "path": "Samples/D#4v6.flac",
+          "bytes": 1526123
+        },
+        {
+          "path": "Samples/D#4v7.flac",
+          "bytes": 1568599
+        },
+        {
+          "path": "Samples/D#4v8.flac",
+          "bytes": 1652067
+        },
+        {
+          "path": "Samples/D#4v9.flac",
+          "bytes": 1583173
+        },
+        {
+          "path": "Samples/D#5v1.flac",
+          "bytes": 1198920
+        },
+        {
+          "path": "Samples/D#5v10.flac",
+          "bytes": 1299972
+        },
+        {
+          "path": "Samples/D#5v11.flac",
+          "bytes": 1333643
+        },
+        {
+          "path": "Samples/D#5v12.flac",
+          "bytes": 1346881
+        },
+        {
+          "path": "Samples/D#5v13.flac",
+          "bytes": 1308203
+        },
+        {
+          "path": "Samples/D#5v14.flac",
+          "bytes": 1371140
+        },
+        {
+          "path": "Samples/D#5v15.flac",
+          "bytes": 1375399
+        },
+        {
+          "path": "Samples/D#5v16.flac",
+          "bytes": 1413841
+        },
+        {
+          "path": "Samples/D#5v2.flac",
+          "bytes": 1226144
+        },
+        {
+          "path": "Samples/D#5v3.flac",
+          "bytes": 1232031
+        },
+        {
+          "path": "Samples/D#5v4.flac",
+          "bytes": 1263747
+        },
+        {
+          "path": "Samples/D#5v5.flac",
+          "bytes": 1234965
+        },
+        {
+          "path": "Samples/D#5v6.flac",
+          "bytes": 1274068
+        },
+        {
+          "path": "Samples/D#5v7.flac",
+          "bytes": 1240910
+        },
+        {
+          "path": "Samples/D#5v8.flac",
+          "bytes": 1276573
+        },
+        {
+          "path": "Samples/D#5v9.flac",
+          "bytes": 1305830
+        },
+        {
+          "path": "Samples/D#6v1.flac",
+          "bytes": 767576
+        },
+        {
+          "path": "Samples/D#6v10.flac",
+          "bytes": 783385
+        },
+        {
+          "path": "Samples/D#6v11.flac",
+          "bytes": 810901
+        },
+        {
+          "path": "Samples/D#6v12.flac",
+          "bytes": 804486
+        },
+        {
+          "path": "Samples/D#6v13.flac",
+          "bytes": 805108
+        },
+        {
+          "path": "Samples/D#6v14.flac",
+          "bytes": 784144
+        },
+        {
+          "path": "Samples/D#6v15.flac",
+          "bytes": 817807
+        },
+        {
+          "path": "Samples/D#6v16.flac",
+          "bytes": 781652
+        },
+        {
+          "path": "Samples/D#6v2.flac",
+          "bytes": 745050
+        },
+        {
+          "path": "Samples/D#6v3.flac",
+          "bytes": 749154
+        },
+        {
+          "path": "Samples/D#6v4.flac",
+          "bytes": 743953
+        },
+        {
+          "path": "Samples/D#6v5.flac",
+          "bytes": 776942
+        },
+        {
+          "path": "Samples/D#6v6.flac",
+          "bytes": 748419
+        },
+        {
+          "path": "Samples/D#6v7.flac",
+          "bytes": 771589
+        },
+        {
+          "path": "Samples/D#6v8.flac",
+          "bytes": 778561
+        },
+        {
+          "path": "Samples/D#6v9.flac",
+          "bytes": 774129
+        },
+        {
+          "path": "Samples/D#7v1.flac",
+          "bytes": 486944
+        },
+        {
+          "path": "Samples/D#7v10.flac",
+          "bytes": 489991
+        },
+        {
+          "path": "Samples/D#7v11.flac",
+          "bytes": 515419
+        },
+        {
+          "path": "Samples/D#7v12.flac",
+          "bytes": 514343
+        },
+        {
+          "path": "Samples/D#7v13.flac",
+          "bytes": 483234
+        },
+        {
+          "path": "Samples/D#7v14.flac",
+          "bytes": 493124
+        },
+        {
+          "path": "Samples/D#7v15.flac",
+          "bytes": 534846
+        },
+        {
+          "path": "Samples/D#7v16.flac",
+          "bytes": 551221
+        },
+        {
+          "path": "Samples/D#7v2.flac",
+          "bytes": 497381
+        },
+        {
+          "path": "Samples/D#7v3.flac",
+          "bytes": 490560
+        },
+        {
+          "path": "Samples/D#7v4.flac",
+          "bytes": 473644
+        },
+        {
+          "path": "Samples/D#7v5.flac",
+          "bytes": 472541
+        },
+        {
+          "path": "Samples/D#7v6.flac",
+          "bytes": 461818
+        },
+        {
+          "path": "Samples/D#7v7.flac",
+          "bytes": 475024
+        },
+        {
+          "path": "Samples/D#7v8.flac",
+          "bytes": 485801
+        },
+        {
+          "path": "Samples/D#7v9.flac",
+          "bytes": 478906
+        },
+        {
+          "path": "Samples/F#1v1.flac",
+          "bytes": 1768820
+        },
+        {
+          "path": "Samples/F#1v10.flac",
+          "bytes": 2690006
+        },
+        {
+          "path": "Samples/F#1v11.flac",
+          "bytes": 2711519
+        },
+        {
+          "path": "Samples/F#1v12.flac",
+          "bytes": 2729124
+        },
+        {
+          "path": "Samples/F#1v13.flac",
+          "bytes": 2727847
+        },
+        {
+          "path": "Samples/F#1v14.flac",
+          "bytes": 2765040
+        },
+        {
+          "path": "Samples/F#1v15.flac",
+          "bytes": 2762913
+        },
+        {
+          "path": "Samples/F#1v16.flac",
+          "bytes": 2792731
+        },
+        {
+          "path": "Samples/F#1v2.flac",
+          "bytes": 2063507
+        },
+        {
+          "path": "Samples/F#1v3.flac",
+          "bytes": 2263896
+        },
+        {
+          "path": "Samples/F#1v4.flac",
+          "bytes": 2613244
+        },
+        {
+          "path": "Samples/F#1v5.flac",
+          "bytes": 2660928
+        },
+        {
+          "path": "Samples/F#1v6.flac",
+          "bytes": 2650092
+        },
+        {
+          "path": "Samples/F#1v7.flac",
+          "bytes": 2684060
+        },
+        {
+          "path": "Samples/F#1v8.flac",
+          "bytes": 2694821
+        },
+        {
+          "path": "Samples/F#1v9.flac",
+          "bytes": 2696747
+        },
+        {
+          "path": "Samples/F#2v1.flac",
+          "bytes": 1846818
+        },
+        {
+          "path": "Samples/F#2v10.flac",
+          "bytes": 2343261
+        },
+        {
+          "path": "Samples/F#2v11.flac",
+          "bytes": 2376880
+        },
+        {
+          "path": "Samples/F#2v12.flac",
+          "bytes": 2363308
+        },
+        {
+          "path": "Samples/F#2v13.flac",
+          "bytes": 2407608
+        },
+        {
+          "path": "Samples/F#2v14.flac",
+          "bytes": 2405155
+        },
+        {
+          "path": "Samples/F#2v15.flac",
+          "bytes": 2430966
+        },
+        {
+          "path": "Samples/F#2v16.flac",
+          "bytes": 2490944
+        },
+        {
+          "path": "Samples/F#2v2.flac",
+          "bytes": 1983201
+        },
+        {
+          "path": "Samples/F#2v3.flac",
+          "bytes": 2163309
+        },
+        {
+          "path": "Samples/F#2v4.flac",
+          "bytes": 2174299
+        },
+        {
+          "path": "Samples/F#2v5.flac",
+          "bytes": 2314774
+        },
+        {
+          "path": "Samples/F#2v6.flac",
+          "bytes": 2338769
+        },
+        {
+          "path": "Samples/F#2v7.flac",
+          "bytes": 2307655
+        },
+        {
+          "path": "Samples/F#2v8.flac",
+          "bytes": 2331259
+        },
+        {
+          "path": "Samples/F#2v9.flac",
+          "bytes": 2339282
+        },
+        {
+          "path": "Samples/F#3v1.flac",
+          "bytes": 1664654
+        },
+        {
+          "path": "Samples/F#3v10.flac",
+          "bytes": 1816439
+        },
+        {
+          "path": "Samples/F#3v11.flac",
+          "bytes": 1796864
+        },
+        {
+          "path": "Samples/F#3v12.flac",
+          "bytes": 1806073
+        },
+        {
+          "path": "Samples/F#3v13.flac",
+          "bytes": 1816533
+        },
+        {
+          "path": "Samples/F#3v14.flac",
+          "bytes": 1830639
+        },
+        {
+          "path": "Samples/F#3v15.flac",
+          "bytes": 1854286
+        },
+        {
+          "path": "Samples/F#3v16.flac",
+          "bytes": 1815793
+        },
+        {
+          "path": "Samples/F#3v2.flac",
+          "bytes": 1506111
+        },
+        {
+          "path": "Samples/F#3v3.flac",
+          "bytes": 1754406
+        },
+        {
+          "path": "Samples/F#3v4.flac",
+          "bytes": 1767209
+        },
+        {
+          "path": "Samples/F#3v5.flac",
+          "bytes": 1775604
+        },
+        {
+          "path": "Samples/F#3v6.flac",
+          "bytes": 1802747
+        },
+        {
+          "path": "Samples/F#3v7.flac",
+          "bytes": 1800780
+        },
+        {
+          "path": "Samples/F#3v8.flac",
+          "bytes": 1805025
+        },
+        {
+          "path": "Samples/F#3v9.flac",
+          "bytes": 1822051
+        },
+        {
+          "path": "Samples/F#4v1.flac",
+          "bytes": 1199292
+        },
+        {
+          "path": "Samples/F#4v10.flac",
+          "bytes": 1495027
+        },
+        {
+          "path": "Samples/F#4v11.flac",
+          "bytes": 1481344
+        },
+        {
+          "path": "Samples/F#4v12.flac",
+          "bytes": 1549067
+        },
+        {
+          "path": "Samples/F#4v13.flac",
+          "bytes": 1491508
+        },
+        {
+          "path": "Samples/F#4v14.flac",
+          "bytes": 1571127
+        },
+        {
+          "path": "Samples/F#4v15.flac",
+          "bytes": 1556619
+        },
+        {
+          "path": "Samples/F#4v16.flac",
+          "bytes": 1554241
+        },
+        {
+          "path": "Samples/F#4v2.flac",
+          "bytes": 1301432
+        },
+        {
+          "path": "Samples/F#4v3.flac",
+          "bytes": 1338739
+        },
+        {
+          "path": "Samples/F#4v4.flac",
+          "bytes": 1317911
+        },
+        {
+          "path": "Samples/F#4v5.flac",
+          "bytes": 1441445
+        },
+        {
+          "path": "Samples/F#4v6.flac",
+          "bytes": 1453107
+        },
+        {
+          "path": "Samples/F#4v7.flac",
+          "bytes": 1484679
+        },
+        {
+          "path": "Samples/F#4v8.flac",
+          "bytes": 1495175
+        },
+        {
+          "path": "Samples/F#4v9.flac",
+          "bytes": 1516761
+        },
+        {
+          "path": "Samples/F#5v1.flac",
+          "bytes": 1040868
+        },
+        {
+          "path": "Samples/F#5v10.flac",
+          "bytes": 1147890
+        },
+        {
+          "path": "Samples/F#5v11.flac",
+          "bytes": 1162182
+        },
+        {
+          "path": "Samples/F#5v12.flac",
+          "bytes": 1169784
+        },
+        {
+          "path": "Samples/F#5v13.flac",
+          "bytes": 1155608
+        },
+        {
+          "path": "Samples/F#5v14.flac",
+          "bytes": 1238210
+        },
+        {
+          "path": "Samples/F#5v15.flac",
+          "bytes": 1219482
+        },
+        {
+          "path": "Samples/F#5v16.flac",
+          "bytes": 1258455
+        },
+        {
+          "path": "Samples/F#5v2.flac",
+          "bytes": 1073200
+        },
+        {
+          "path": "Samples/F#5v3.flac",
+          "bytes": 1114230
+        },
+        {
+          "path": "Samples/F#5v4.flac",
+          "bytes": 1119439
+        },
+        {
+          "path": "Samples/F#5v5.flac",
+          "bytes": 1145753
+        },
+        {
+          "path": "Samples/F#5v6.flac",
+          "bytes": 1180064
+        },
+        {
+          "path": "Samples/F#5v7.flac",
+          "bytes": 1189998
+        },
+        {
+          "path": "Samples/F#5v8.flac",
+          "bytes": 1164441
+        },
+        {
+          "path": "Samples/F#5v9.flac",
+          "bytes": 1173927
+        },
+        {
+          "path": "Samples/F#6v1.flac",
+          "bytes": 458733
+        },
+        {
+          "path": "Samples/F#6v10.flac",
+          "bytes": 696164
+        },
+        {
+          "path": "Samples/F#6v11.flac",
+          "bytes": 679207
+        },
+        {
+          "path": "Samples/F#6v12.flac",
+          "bytes": 698769
+        },
+        {
+          "path": "Samples/F#6v13.flac",
+          "bytes": 655144
+        },
+        {
+          "path": "Samples/F#6v14.flac",
+          "bytes": 703793
+        },
+        {
+          "path": "Samples/F#6v15.flac",
+          "bytes": 682072
+        },
+        {
+          "path": "Samples/F#6v16.flac",
+          "bytes": 701195
+        },
+        {
+          "path": "Samples/F#6v2.flac",
+          "bytes": 471711
+        },
+        {
+          "path": "Samples/F#6v3.flac",
+          "bytes": 596575
+        },
+        {
+          "path": "Samples/F#6v4.flac",
+          "bytes": 605865
+        },
+        {
+          "path": "Samples/F#6v5.flac",
+          "bytes": 618762
+        },
+        {
+          "path": "Samples/F#6v6.flac",
+          "bytes": 665664
+        },
+        {
+          "path": "Samples/F#6v7.flac",
+          "bytes": 682900
+        },
+        {
+          "path": "Samples/F#6v8.flac",
+          "bytes": 655340
+        },
+        {
+          "path": "Samples/F#6v9.flac",
+          "bytes": 661406
+        },
+        {
+          "path": "Samples/F#7v1.flac",
+          "bytes": 585050
+        },
+        {
+          "path": "Samples/F#7v10.flac",
+          "bytes": 573186
+        },
+        {
+          "path": "Samples/F#7v11.flac",
+          "bytes": 592865
+        },
+        {
+          "path": "Samples/F#7v12.flac",
+          "bytes": 587353
+        },
+        {
+          "path": "Samples/F#7v13.flac",
+          "bytes": 572098
+        },
+        {
+          "path": "Samples/F#7v14.flac",
+          "bytes": 580297
+        },
+        {
+          "path": "Samples/F#7v15.flac",
+          "bytes": 589555
+        },
+        {
+          "path": "Samples/F#7v16.flac",
+          "bytes": 565916
+        },
+        {
+          "path": "Samples/F#7v2.flac",
+          "bytes": 542101
+        },
+        {
+          "path": "Samples/F#7v3.flac",
+          "bytes": 551382
+        },
+        {
+          "path": "Samples/F#7v4.flac",
+          "bytes": 570635
+        },
+        {
+          "path": "Samples/F#7v5.flac",
+          "bytes": 548407
+        },
+        {
+          "path": "Samples/F#7v6.flac",
+          "bytes": 546743
+        },
+        {
+          "path": "Samples/F#7v7.flac",
+          "bytes": 555659
+        },
+        {
+          "path": "Samples/F#7v8.flac",
+          "bytes": 582250
+        },
+        {
+          "path": "Samples/F#7v9.flac",
+          "bytes": 541733
+        },
+        {
+          "path": "Samples/harmLA0.flac",
+          "bytes": 255386
+        },
+        {
+          "path": "Samples/harmLA1.flac",
+          "bytes": 272244
+        },
+        {
+          "path": "Samples/harmLA2.flac",
+          "bytes": 263110
+        },
+        {
+          "path": "Samples/harmLA3.flac",
+          "bytes": 252726
+        },
+        {
+          "path": "Samples/harmLA4.flac",
+          "bytes": 264718
+        },
+        {
+          "path": "Samples/harmLA5.flac",
+          "bytes": 259336
+        },
+        {
+          "path": "Samples/harmLC1.flac",
+          "bytes": 263110
+        },
+        {
+          "path": "Samples/harmLC2.flac",
+          "bytes": 258318
+        },
+        {
+          "path": "Samples/harmLC3.flac",
+          "bytes": 253633
+        },
+        {
+          "path": "Samples/harmLC4.flac",
+          "bytes": 259274
+        },
+        {
+          "path": "Samples/harmLC5.flac",
+          "bytes": 256165
+        },
+        {
+          "path": "Samples/harmLC6.flac",
+          "bytes": 250074
+        },
+        {
+          "path": "Samples/harmLD#1.flac",
+          "bytes": 257266
+        },
+        {
+          "path": "Samples/harmLD#2.flac",
+          "bytes": 261928
+        },
+        {
+          "path": "Samples/harmLD#3.flac",
+          "bytes": 261096
+        },
+        {
+          "path": "Samples/harmLD#4.flac",
+          "bytes": 256379
+        },
+        {
+          "path": "Samples/harmLD#5.flac",
+          "bytes": 263332
+        },
+        {
+          "path": "Samples/harmLD#6.flac",
+          "bytes": 256813
+        },
+        {
+          "path": "Samples/harmLF#1.flac",
+          "bytes": 262524
+        },
+        {
+          "path": "Samples/harmLF#2.flac",
+          "bytes": 271060
+        },
+        {
+          "path": "Samples/harmLF#3.flac",
+          "bytes": 258166
+        },
+        {
+          "path": "Samples/harmLF#4.flac",
+          "bytes": 257975
+        },
+        {
+          "path": "Samples/harmLF#5.flac",
+          "bytes": 267374
+        },
+        {
+          "path": "Samples/harmSA0.flac",
+          "bytes": 178862
+        },
+        {
+          "path": "Samples/harmSA1.flac",
+          "bytes": 186159
+        },
+        {
+          "path": "Samples/harmSA2.flac",
+          "bytes": 185981
+        },
+        {
+          "path": "Samples/harmSA3.flac",
+          "bytes": 186379
+        },
+        {
+          "path": "Samples/harmSA4.flac",
+          "bytes": 156974
+        },
+        {
+          "path": "Samples/harmSA5.flac",
+          "bytes": 169211
+        },
+        {
+          "path": "Samples/harmSC1.flac",
+          "bytes": 185044
+        },
+        {
+          "path": "Samples/harmSC2.flac",
+          "bytes": 184590
+        },
+        {
+          "path": "Samples/harmSC3.flac",
+          "bytes": 185015
+        },
+        {
+          "path": "Samples/harmSC4.flac",
+          "bytes": 171481
+        },
+        {
+          "path": "Samples/harmSC5.flac",
+          "bytes": 176373
+        },
+        {
+          "path": "Samples/harmSC6.flac",
+          "bytes": 182397
+        },
+        {
+          "path": "Samples/harmSD#1.flac",
+          "bytes": 175943
+        },
+        {
+          "path": "Samples/harmSD#2.flac",
+          "bytes": 173444
+        },
+        {
+          "path": "Samples/harmSD#3.flac",
+          "bytes": 174563
+        },
+        {
+          "path": "Samples/harmSD#4.flac",
+          "bytes": 171557
+        },
+        {
+          "path": "Samples/harmSD#5.flac",
+          "bytes": 180487
+        },
+        {
+          "path": "Samples/harmSD#6.flac",
+          "bytes": 189071
+        },
+        {
+          "path": "Samples/harmSF#1.flac",
+          "bytes": 180952
+        },
+        {
+          "path": "Samples/harmSF#2.flac",
+          "bytes": 179729
+        },
+        {
+          "path": "Samples/harmSF#3.flac",
+          "bytes": 176537
+        },
+        {
+          "path": "Samples/harmSF#4.flac",
+          "bytes": 174543
+        },
+        {
+          "path": "Samples/harmSF#5.flac",
+          "bytes": 169559
+        },
+        {
+          "path": "Samples/harmV3A0.flac",
+          "bytes": 172285
+        },
+        {
+          "path": "Samples/harmV3A1.flac",
+          "bytes": 173285
+        },
+        {
+          "path": "Samples/harmV3A2.flac",
+          "bytes": 171899
+        },
+        {
+          "path": "Samples/harmV3A3.flac",
+          "bytes": 171560
+        },
+        {
+          "path": "Samples/harmV3A4.flac",
+          "bytes": 168681
+        },
+        {
+          "path": "Samples/harmV3A5.flac",
+          "bytes": 169457
+        },
+        {
+          "path": "Samples/harmV3C1.flac",
+          "bytes": 168114
+        },
+        {
+          "path": "Samples/harmV3C2.flac",
+          "bytes": 173135
+        },
+        {
+          "path": "Samples/harmV3C3.flac",
+          "bytes": 166101
+        },
+        {
+          "path": "Samples/harmV3C4.flac",
+          "bytes": 170533
+        },
+        {
+          "path": "Samples/harmV3C5.flac",
+          "bytes": 172604
+        },
+        {
+          "path": "Samples/harmV3C6.flac",
+          "bytes": 169923
+        },
+        {
+          "path": "Samples/harmV3D#1.flac",
+          "bytes": 170194
+        },
+        {
+          "path": "Samples/harmV3D#2.flac",
+          "bytes": 169058
+        },
+        {
+          "path": "Samples/harmV3D#3.flac",
+          "bytes": 172741
+        },
+        {
+          "path": "Samples/harmV3D#4.flac",
+          "bytes": 172222
+        },
+        {
+          "path": "Samples/harmV3D#5.flac",
+          "bytes": 167875
+        },
+        {
+          "path": "Samples/harmV3D#6.flac",
+          "bytes": 177184
+        },
+        {
+          "path": "Samples/harmV3F#1.flac",
+          "bytes": 173150
+        },
+        {
+          "path": "Samples/harmV3F#2.flac",
+          "bytes": 168882
+        },
+        {
+          "path": "Samples/harmV3F#3.flac",
+          "bytes": 168930
+        },
+        {
+          "path": "Samples/harmV3F#4.flac",
+          "bytes": 174028
+        },
+        {
+          "path": "Samples/harmV3F#5.flac",
+          "bytes": 171059
+        },
+        {
+          "path": "Samples/pedalD1.flac",
+          "bytes": 824409
+        },
+        {
+          "path": "Samples/pedalD2.flac",
+          "bytes": 832915
+        },
+        {
+          "path": "Samples/pedalU1.flac",
+          "bytes": 77855
+        },
+        {
+          "path": "Samples/pedalU2.flac",
+          "bytes": 67694
+        },
+        {
+          "path": "Samples/rel1.flac",
+          "bytes": 65800
+        },
+        {
+          "path": "Samples/rel10.flac",
+          "bytes": 64739
+        },
+        {
+          "path": "Samples/rel11.flac",
+          "bytes": 62880
+        },
+        {
+          "path": "Samples/rel12.flac",
+          "bytes": 65049
+        },
+        {
+          "path": "Samples/rel13.flac",
+          "bytes": 63589
+        },
+        {
+          "path": "Samples/rel14.flac",
+          "bytes": 65184
+        },
+        {
+          "path": "Samples/rel15.flac",
+          "bytes": 64733
+        },
+        {
+          "path": "Samples/rel16.flac",
+          "bytes": 64941
+        },
+        {
+          "path": "Samples/rel17.flac",
+          "bytes": 63124
+        },
+        {
+          "path": "Samples/rel18.flac",
+          "bytes": 64463
+        },
+        {
+          "path": "Samples/rel19.flac",
+          "bytes": 65818
+        },
+        {
+          "path": "Samples/rel2.flac",
+          "bytes": 65814
+        },
+        {
+          "path": "Samples/rel20.flac",
+          "bytes": 63266
+        },
+        {
+          "path": "Samples/rel21.flac",
+          "bytes": 61488
+        },
+        {
+          "path": "Samples/rel22.flac",
+          "bytes": 62347
+        },
+        {
+          "path": "Samples/rel23.flac",
+          "bytes": 63501
+        },
+        {
+          "path": "Samples/rel24.flac",
+          "bytes": 63789
+        },
+        {
+          "path": "Samples/rel25.flac",
+          "bytes": 63836
+        },
+        {
+          "path": "Samples/rel26.flac",
+          "bytes": 64540
+        },
+        {
+          "path": "Samples/rel27.flac",
+          "bytes": 63514
+        },
+        {
+          "path": "Samples/rel28.flac",
+          "bytes": 62755
+        },
+        {
+          "path": "Samples/rel29.flac",
+          "bytes": 64416
+        },
+        {
+          "path": "Samples/rel3.flac",
+          "bytes": 62713
+        },
+        {
+          "path": "Samples/rel30.flac",
+          "bytes": 62281
+        },
+        {
+          "path": "Samples/rel31.flac",
+          "bytes": 64405
+        },
+        {
+          "path": "Samples/rel32.flac",
+          "bytes": 63896
+        },
+        {
+          "path": "Samples/rel33.flac",
+          "bytes": 65237
+        },
+        {
+          "path": "Samples/rel34.flac",
+          "bytes": 65028
+        },
+        {
+          "path": "Samples/rel35.flac",
+          "bytes": 62480
+        },
+        {
+          "path": "Samples/rel36.flac",
+          "bytes": 63338
+        },
+        {
+          "path": "Samples/rel37.flac",
+          "bytes": 63314
+        },
+        {
+          "path": "Samples/rel38.flac",
+          "bytes": 62182
+        },
+        {
+          "path": "Samples/rel39.flac",
+          "bytes": 62861
+        },
+        {
+          "path": "Samples/rel4.flac",
+          "bytes": 65645
+        },
+        {
+          "path": "Samples/rel40.flac",
+          "bytes": 63966
+        },
+        {
+          "path": "Samples/rel41.flac",
+          "bytes": 62226
+        },
+        {
+          "path": "Samples/rel42.flac",
+          "bytes": 63106
+        },
+        {
+          "path": "Samples/rel43.flac",
+          "bytes": 61000
+        },
+        {
+          "path": "Samples/rel44.flac",
+          "bytes": 64654
+        },
+        {
+          "path": "Samples/rel45.flac",
+          "bytes": 64774
+        },
+        {
+          "path": "Samples/rel46.flac",
+          "bytes": 60464
+        },
+        {
+          "path": "Samples/rel47.flac",
+          "bytes": 63775
+        },
+        {
+          "path": "Samples/rel48.flac",
+          "bytes": 62870
+        },
+        {
+          "path": "Samples/rel49.flac",
+          "bytes": 65187
+        },
+        {
+          "path": "Samples/rel5.flac",
+          "bytes": 67904
+        },
+        {
+          "path": "Samples/rel50.flac",
+          "bytes": 64851
+        },
+        {
+          "path": "Samples/rel51.flac",
+          "bytes": 64456
+        },
+        {
+          "path": "Samples/rel52.flac",
+          "bytes": 61757
+        },
+        {
+          "path": "Samples/rel53.flac",
+          "bytes": 65363
+        },
+        {
+          "path": "Samples/rel54.flac",
+          "bytes": 64475
+        },
+        {
+          "path": "Samples/rel55.flac",
+          "bytes": 60317
+        },
+        {
+          "path": "Samples/rel56.flac",
+          "bytes": 60661
+        },
+        {
+          "path": "Samples/rel57.flac",
+          "bytes": 62320
+        },
+        {
+          "path": "Samples/rel58.flac",
+          "bytes": 62869
+        },
+        {
+          "path": "Samples/rel59.flac",
+          "bytes": 64365
+        },
+        {
+          "path": "Samples/rel6.flac",
+          "bytes": 64228
+        },
+        {
+          "path": "Samples/rel60.flac",
+          "bytes": 62794
+        },
+        {
+          "path": "Samples/rel61.flac",
+          "bytes": 62634
+        },
+        {
+          "path": "Samples/rel62.flac",
+          "bytes": 64289
+        },
+        {
+          "path": "Samples/rel63.flac",
+          "bytes": 63445
+        },
+        {
+          "path": "Samples/rel64.flac",
+          "bytes": 61812
+        },
+        {
+          "path": "Samples/rel65.flac",
+          "bytes": 63777
+        },
+        {
+          "path": "Samples/rel66.flac",
+          "bytes": 63113
+        },
+        {
+          "path": "Samples/rel67.flac",
+          "bytes": 62209
+        },
+        {
+          "path": "Samples/rel68.flac",
+          "bytes": 63016
+        },
+        {
+          "path": "Samples/rel69.flac",
+          "bytes": 63634
+        },
+        {
+          "path": "Samples/rel7.flac",
+          "bytes": 65815
+        },
+        {
+          "path": "Samples/rel70.flac",
+          "bytes": 62235
+        },
+        {
+          "path": "Samples/rel71.flac",
+          "bytes": 64302
+        },
+        {
+          "path": "Samples/rel72.flac",
+          "bytes": 64955
+        },
+        {
+          "path": "Samples/rel73.flac",
+          "bytes": 65240
+        },
+        {
+          "path": "Samples/rel74.flac",
+          "bytes": 63103
+        },
+        {
+          "path": "Samples/rel75.flac",
+          "bytes": 62389
+        },
+        {
+          "path": "Samples/rel76.flac",
+          "bytes": 55686
+        },
+        {
+          "path": "Samples/rel77.flac",
+          "bytes": 64076
+        },
+        {
+          "path": "Samples/rel78.flac",
+          "bytes": 64028
+        },
+        {
+          "path": "Samples/rel79.flac",
+          "bytes": 65881
+        },
+        {
+          "path": "Samples/rel8.flac",
+          "bytes": 66131
+        },
+        {
+          "path": "Samples/rel80.flac",
+          "bytes": 66306
+        },
+        {
+          "path": "Samples/rel81.flac",
+          "bytes": 58584
+        },
+        {
+          "path": "Samples/rel82.flac",
+          "bytes": 67693
+        },
+        {
+          "path": "Samples/rel83.flac",
+          "bytes": 65751
+        },
+        {
+          "path": "Samples/rel84.flac",
+          "bytes": 65091
+        },
+        {
+          "path": "Samples/rel85.flac",
+          "bytes": 64606
+        },
+        {
+          "path": "Samples/rel86.flac",
+          "bytes": 66664
+        },
+        {
+          "path": "Samples/rel87.flac",
+          "bytes": 64663
+        },
+        {
+          "path": "Samples/rel88.flac",
+          "bytes": 63299
+        },
+        {
+          "path": "Samples/rel9.flac",
+          "bytes": 63913
+        }
+      ],
       "needs": [
         "lokey",
         "hikey",
@@ -8335,7 +11008,8 @@
         "lovel",
         "hivel",
         "tune"
-      ]
+      ],
+      "enumeratedAt": "2026-09-29"
     }
   ]
 }
