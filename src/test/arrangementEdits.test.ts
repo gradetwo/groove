@@ -1,3 +1,4 @@
+import type { ArrangementV2 } from "../types/arrangementV2";
 import { beforeEach, describe, expect, it } from "vitest";
 import { addTrack, createArrangement, removeTrack, resetTrackIdsForTests, setTrackParent } from "../data/arrangementEdits";
 
@@ -9,9 +10,12 @@ import { addTrack, createArrangement, removeTrack, resetTrackIdsForTests, setTra
  */
 beforeEach(() => resetTrackIdsForTests());
 
+/** An explicitly empty start: `createArrangement` now gives one default track, which is the owner's requirement — so a criterion about *editing* should say where it starts. */
+const emptyArrangement = (songId = "s"): ArrangementV2 => ({ ...createArrangement(songId), tracks: [] });
+
 describe("editing an arrangement", () => {
   it("gives each track an id of its own, and never reuses one after a deletion", () => {
-    let arr = createArrangement("s");
+    let arr = emptyArrangement();
     arr = addTrack(arr, "sampler", "Drums");
     arr = addTrack(arr, "instrument", "Lead");
     const [first, second] = arr.tracks;
@@ -25,7 +29,7 @@ describe("editing an arrangement", () => {
   });
 
   it("takes a folder's children with it, so nothing stays audible but unreachable", () => {
-    let arr = createArrangement("s");
+    let arr = emptyArrangement();
     arr = addTrack(arr, "folder", "Drums");
     const folder = arr.tracks[0]!;
     arr = addTrack(arr, "sampler", "Kick", { parentId: folder.id });
@@ -38,7 +42,7 @@ describe("editing an arrangement", () => {
   });
 
   it("removes a nested folder's children too, because a folder may contain a folder", () => {
-    let arr = createArrangement("s");
+    let arr = emptyArrangement();
     arr = addTrack(arr, "folder", "Outer");
     const outer = arr.tracks[0]!;
     arr = addTrack(arr, "folder", "Inner", { parentId: outer.id });
@@ -49,7 +53,7 @@ describe("editing an arrangement", () => {
   });
 
   it("refuses to make a folder its own parent, which would make the tree unrenderable", () => {
-    let arr = createArrangement("s");
+    let arr = emptyArrangement();
     arr = addTrack(arr, "folder", "Drums");
     const folder = arr.tracks[0]!;
     expect(setTrackParent(arr, folder.id, folder.id).tracks[0]!.parentId).toBeUndefined();
@@ -59,7 +63,7 @@ describe("editing an arrangement", () => {
 describe("mute, solo, rename and fold", () => {
   it("sets mute and solo independently, per track", async () => {
     const { setTrackFlag } = await import("../data/arrangementEdits");
-    let arr = createArrangement("s");
+    let arr = emptyArrangement();
     arr = addTrack(arr, "sampler", "Kick");
     arr = addTrack(arr, "sampler", "Snare");
     const [kick, snare] = arr.tracks;
@@ -73,7 +77,7 @@ describe("mute, solo, rename and fold", () => {
 
   it("refuses a blank rename rather than leaving a nameless row", async () => {
     const { renameTrack } = await import("../data/arrangementEdits");
-    let arr = createArrangement("s");
+    let arr = emptyArrangement();
     arr = addTrack(arr, "instrument", "Lead");
     const id = arr.tracks[0]!.id;
     expect(renameTrack(arr, id, "   ").tracks[0]!.name).toBe("Lead");
@@ -85,7 +89,7 @@ describe("mute, solo, rename and fold", () => {
       setCollapsed: edits.setCollapsed,
       compileArrangementToLanes: (await import("../data/arrangementCompile")).compileArrangementToLanes,
     }));
-    let arr = createArrangement("s");
+    let arr = emptyArrangement();
     arr = addTrack(arr, "folder", "Drums");
     const folder = arr.tracks[0]!;
     arr = addTrack(arr, "sampler", "Kick", { parentId: folder.id });
@@ -99,7 +103,7 @@ describe("mute, solo, rename and fold", () => {
 
 describe("choosing takes", () => {
   const withTakes = () => {
-    let arr = createArrangement("s");
+    let arr = emptyArrangement();
     arr = addTrack(arr, "sampler", "Drums");
     const id = arr.tracks[0]!.id;
     arr = {
@@ -136,5 +140,52 @@ describe("choosing takes", () => {
     const { arr, id } = withTakes();
     expect(assignTakeToRange(arr, id, 8, 8, "t1").tracks[0]!.takeRegions).toBeUndefined();
     expect(assignTakeToRange(arr, id, 0, 8, "gone").tracks[0]!.takeRegions).toBeUndefined();
+  });
+});
+
+describe("new projects, templates, and changing a track's kind", () => {
+  it("gives a new arrangement one track of the chosen kind, never an empty list", async () => {
+    const { createArrangement } = await import("../data/arrangementEdits");
+    // An empty list is a question; one track is somewhere to start, and the record button has something to point at.
+    const arr = createArrangement("s", "sampler");
+    expect(arr.tracks).toHaveLength(1);
+    expect(arr.tracks[0]!.kind).toBe("sampler");
+  });
+
+  it("builds each template with its own tracks, and falls back to the blank case for an unknown id", async () => {
+    const { createArrangementFromTemplate, TEMPLATES } = await import("../data/arrangementEdits");
+    for (const template of TEMPLATES) {
+      expect(createArrangementFromTemplate("s", template.id).tracks).toHaveLength(template.kinds.length);
+    }
+    // Blank is not a special case in the model: it is "no template", and it still has the one track the choice implies.
+    const blank = createArrangementFromTemplate("s", undefined, "drumkit");
+    expect(blank.tracks).toHaveLength(1);
+    expect(blank.tracks[0]!.kind).toBe("drumkit");
+  });
+
+  it("drops the sample when a track stops being a sampler, and keeps the takes", async () => {
+    const { addTrack, changeTrackKind } = await import("../data/arrangementEdits");
+    let arr = createArrangement("s");
+    arr = addTrack(arr, "sampler", "Drums", { sample: { assetId: "virtuosity-drums-basic" } });
+    const id = arr.tracks[0]!.id;
+    arr = { ...arr, tracks: arr.tracks.map((t) => ({ ...t, takes: [{ id: "t1", recordedAt: 1, source: "audio" as const }], selectedTakeId: "t1" })) };
+
+    const changed = changeTrackKind(arr, id, "instrument");
+    // `sample` belongs to the sound source, and means nothing to a synth: keeping it is a state the shape allows and the semantics do not have.
+    expect(changed.tracks[0]!.sample).toBeUndefined();
+    // ⭐ But takes are **content, not identity** — changing what a track is does not un-record what was played onto it.
+    expect(changed.tracks[0]!.takes).toHaveLength(1);
+    expect(changed.tracks[0]!.selectedTakeId).toBe("t1");
+  });
+
+  it("keeps the sample when a track becomes a sampler", async () => {
+    const { addTrack, changeTrackKind } = await import("../data/arrangementEdits");
+    let arr = addTrack(createArrangement("s"), "sampler", "Drums", { sample: { assetId: "kit" } });
+    const id = arr.tracks[0]!.id;
+    arr = changeTrackKind(arr, id, "instrument");
+    const back = changeTrackKind(arr, id, "sampler");
+    // It was dropped on the way out, so a round trip cannot resurrect it — that is honest, and the criterion says so rather than pretending.
+    expect(back.tracks[0]!.sample).toBeUndefined();
+    expect(back.tracks[0]!.kind).toBe("sampler");
   });
 });

@@ -19,8 +19,61 @@ function freshId(kind: TrackKindV2): string {
   return `${kind}-${nextId++}`;
 }
 
-export function createArrangement(songId: string): ArrangementV2 {
-  return { songId, tracks: [], sourceSlots: [] };
+/**
+ * A new arrangement **with one track of the chosen kind** — because an empty list is a question and one track is a place to start.
+ *
+ * The owner asked for a new-project entry where a template may be chosen *or* blank, and even blank has a default track typed by that choice. The reason is concrete: the record button needs a track to point
+ * at, and an empty list has none.
+ */
+export function createArrangement(songId: string, kind: TrackKindV2 = "instrument"): ArrangementV2 {
+  return { songId, tracks: [{ id: freshId(kind), kind, name: DEFAULT_NAME[kind] }], sourceSlots: [] };
+}
+
+const DEFAULT_NAME: Record<TrackKindV2, string> = {
+  drumkit: "Drums",
+  instrument: "Instrument",
+  sampler: "Sampler",
+  fx: "FX",
+  folder: "Folder",
+};
+
+/** The few common combinations, deliberately few: **a template list long enough to need choosing is the same as no templates.** */
+export interface Template {
+  id: string;
+  name: string;
+  kinds: Array<{ kind: TrackKindV2; name: string }>;
+}
+
+export const TEMPLATES: readonly Template[] = [
+  { id: "drums-bass", name: "Drums + Bass", kinds: [{ kind: "drumkit", name: "Drums" }, { kind: "instrument", name: "Bass" }] },
+  { id: "drums-bass-chords", name: "Drums + Bass + Chords", kinds: [{ kind: "drumkit", name: "Drums" }, { kind: "instrument", name: "Bass" }, { kind: "instrument", name: "Chords" }] },
+  // ⭐ The template that can be heard: sampler tracks are the kind the whole real-instrument path exists for.
+  { id: "samplers", name: "Samplers", kinds: [{ kind: "sampler", name: "Sampler 1" }, { kind: "sampler", name: "Sampler 2" }] },
+];
+
+/** An arrangement from a template — **never empty**: every template has at least one track, and so does the blank case. */
+export function createArrangementFromTemplate(songId: string, templateId: string | undefined, blankKind: TrackKindV2 = "instrument"): ArrangementV2 {
+  const template = TEMPLATES.find((candidate) => candidate.id === templateId);
+  if (!template) return createArrangement(songId, blankKind);
+  return { songId, tracks: template.kinds.map(({ kind, name }) => ({ id: freshId(kind), kind, name })), sourceSlots: [] };
+}
+
+/**
+ * Changing what a track **is** — which the owner asked for — and therefore deciding what happens to the fields that only made sense for the old kind.
+ *
+ * The rule is one sentence: **drop what belongs to the route or the sound source, keep what is content.** A `sample` describes which sample this track plays, which means nothing to a synth, so it must not
+ * survive — a track carrying both would be the "shape permits it, semantics do not" state the model's criteria already guard against. But `takes` are **content, not identity** (the owner's own earlier
+ * correction), so changing what a track is does not un-record what was played onto it, and the take choices travel with them.
+ */
+export function changeTrackKind(arrangement: ArrangementV2, trackId: string, kind: TrackKindV2): ArrangementV2 {
+  return {
+    ...arrangement,
+    tracks: arrangement.tracks.map((track) => {
+      if (track.id !== trackId) return track;
+      const { sample: _dropped, ...rest } = track;
+      return { ...rest, kind, ...(kind === "sampler" && track.sample ? { sample: track.sample } : {}) };
+    }),
+  };
 }
 
 export function addTrack(arrangement: ArrangementV2, kind: TrackKindV2, name: string, extra: Partial<TrackV2> = {}): ArrangementV2 {
