@@ -1,27 +1,27 @@
 {
-  "version": "2.34.25",
+  "version": "2.34.26",
   "releaseDate": "2026-09-29",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.25",
+    "version": "2.34.26",
     "date": "2026-09-29",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "新轨道一出生就有内容",
-      "en": "A new track arrives with content"
+      "zh": "新编排界面用上了应用的样式",
+      "en": "The new arrangement interface uses the app's styling"
     },
     "highlights": [
       {
-        "zh": "新建轨道带一段符合类型的节奏；采样器轨还带着示例库的资产。",
-        "en": "A new track arrives with a pattern suited to its kind, and a sampler track also carries the sample library's asset."
+        "zh": "此前的 /new 是一堆没有样式的文字：组件一个类都没用，而应用是用工具类与设计令牌画的。",
+        "en": "Until now /new was a wall of unstyled text: the components used no classes, while the app is drawn with utilities and tokens."
       },
       {
-        "zh": "编排自己保存音符（notesByTrack）；删除轨道时音符一起走。",
-        "en": "The arrangement keeps its own notes, and a deleted track takes its notes with it."
+        "zh": "现在卡片、轨道行、take 选择器、录音按钮都使用应用已有的词汇，不新造一套。",
+        "en": "Cards, track rows, the take selector and the record button now use the app's existing vocabulary rather than a new one."
       },
       {
-        "zh": "因此 /new 里按 Play 会真的规划出事件，而采样器轨道会出声。",
-        "en": "So pressing Play in /new plans real events, and a sampler track sounds."
+        "zh": "而原有三层检查都是绿的，所以还补一个「新组件必须用到样式」的检查。",
+        "en": "All three existing checks were green, so a check of the missing kind is added: a new component must use styling."
       }
     ],
     "truncated": false
