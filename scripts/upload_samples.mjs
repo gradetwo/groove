@@ -98,7 +98,14 @@ if (!doUpload) {
  */
 const workdir = fs.mkdtempSync(path.join(os.tmpdir(), `groove-mirror-${entryId}-`));
 console.log(`  cloning ${entry.repo} @ ${entry.pin} → ${workdir}`);
-execFileSync("git", ["clone", "--depth", "1", "--branch", entry.pin, `https://github.com/${entry.repo}.git`, workdir], { stdio: "inherit" });
+/**
+ * ⭐ **A commit cannot be cloned with `--branch`.** That flag takes a branch or tag name, so `clone --depth 1 --branch <sha>` fails with exit 128 — which is exactly what the first real run did. Fetching the commit by sha does
+ * work, and it fetches only that commit's tree, so the shallow-clone intent is kept.
+ */
+execFileSync("git", ["init", "--quiet", workdir], { stdio: "inherit" });
+execFileSync("git", ["-C", workdir, "remote", "add", "origin", `https://github.com/${entry.repo}.git`], { stdio: "inherit" });
+execFileSync("git", ["-C", workdir, "fetch", "--depth", "1", "--quiet", "origin", entry.pin], { stdio: "inherit" });
+execFileSync("git", ["-C", workdir, "checkout", "--quiet", "FETCH_HEAD"], { stdio: "inherit" });
 
 // ⭐ Durations, measured rather than declared — the same instrument the manifest was built with.
 let measured = 0;
