@@ -152,7 +152,12 @@ describe("sampleAssetsFromManifest", () => {
     // fallback is the mirror's layout for this program — the same path under whatever root the caller configured.
     expect(instrument.sfz?.fallbackUrl).toMatch(/\/virtuosity-drums\/Programs\/01-basic-kit\.sfz$/);
     expect(instrument.seconds).toBeCloseTo(14.529542, 6);
-    expect(problems.join("\n")).toMatch(/salamander-grand/);
+    /**
+     * ⭐ **No entry is a problem any more, because both have measured durations.** This assertion used to read `toMatch(/salamander-grand/)`, and it was right when it was written: that entry had an `sfz` and no duration, so
+     * the bridge reported it as a gap — and the rule it defended is that such a gap is **named**, not silently defaulted. Salamander has since been mirrored and `ffprobe` measured 641 of its samples, so the gap is closed and the
+     * list is empty. The rule is not lost: it is asserted where a gap is manufactured on purpose, in `survey.test.ts`, which checks that an entry with nothing measured carries no `durationSeconds` key at all rather than a zero.
+     */
+    expect(problems).toEqual([]);
     /**
      * One problem **per declared entry**, and each naming its entry — not a count I pencilled in.
      *
