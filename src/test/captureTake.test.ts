@@ -18,7 +18,8 @@ function fakeDeps(overrides: Partial<CaptureDependencies> = {}) {
     onstop: null,
     onerror: null,
     fire(bytes) {
-      recorder.ondataavailable?.({ data: bytes });
+      // The fake mirrors the real API's shape: a chunk is something whose bytes are read asynchronously.
+      recorder.ondataavailable?.({ data: { arrayBuffer: async () => bytes } });
     },
   };
   const stream = { id: "stream" };

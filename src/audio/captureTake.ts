@@ -16,7 +16,11 @@ import { classifyCaptureRefusal, planTakeFromCapture, type CaptureRefusal, type 
 export interface RecorderLike {
   start(): void;
   stop(): void;
-  ondataavailable: ((event: { data: ArrayBuffer }) => void) | null;
+  /**
+   * ⭐ A real `MediaRecorder` delivers a **`Blob`**, not an `ArrayBuffer` — a fact the type checker surfaced rather than a review. So the chunk is described by the one thing this code needs from it:
+   * a way to read its bytes, which is asynchronous.
+   */
+  ondataavailable: ((event: { data: { arrayBuffer(): Promise<ArrayBuffer> } }) => void) | null;
   onstop: (() => void) | null;
   onerror: ((event: { error?: unknown }) => void) | null;
 }
@@ -54,11 +58,14 @@ export async function captureTake(deps: CaptureDependencies, options: CaptureOpt
   }
 
   try {
-    const chunks: ArrayBuffer[] = [];
+    const chunks: Array<Promise<ArrayBuffer>> = [];
     const bytes = await new Promise<ArrayBuffer>((resolve, reject) => {
       const recorder = deps.createRecorder(stream);
-      recorder.ondataavailable = (event) => chunks.push(event.data);
-      recorder.onstop = () => resolve(joinChunks(chunks));
+      // Read each chunk's bytes as it arrives: the container may be released once the stream ends, and the conversion is asynchronous anyway.
+      recorder.ondataavailable = (event) => chunks.push(event.data.arrayBuffer());
+      recorder.onstop = () => {
+        void Promise.all(chunks).then((parts) => resolve(joinChunks(parts)), reject);
+      };
       recorder.onerror = (event) => reject(event.error ?? new Error("recorder error"));
       recorder.start();
       // The caller decides when to stop by calling `stop()` on this recorder; capturing a fixed length here would make every take the same length for no reason a user asked for.
