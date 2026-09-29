@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { mirrorSfzUrl, parseManifest, shippableEntries } from "../data/sampleManifest";
+import { mirrorSfzUrl, parseManifest, sampleAssetsFromManifest, shippableEntries } from "../data/sampleManifest";
 
 /**
  * The manifest's criteria. Two of them are rules rather than shapes, and both come from the integration discussion: ids must be unique because a manifest that names
@@ -270,3 +270,72 @@ describe("sourceSfzUrl", () => {
     expect(sourceSfzUrl(parsed.manifest!, "not-an-entry")).toBeUndefined();
   });
 });
+describe("a library that holds several instruments", () => {
+  const libraryEntry = {
+    id: "vcsl",
+    name: "VCSL",
+    licence: "CC0",
+    repo: "sgossner/VCSL",
+    pin: "abc123",
+    prefix: "vcsl",
+    durationSeconds: 12.5,
+    files: [],
+    instruments: [
+      { sfz: "Aerophones/Ball Whistle.sfz", name: "Ball Whistle" },
+      { sfz: "Idiophones/Glockenspiel.sfz", name: "Glockenspiel" },
+      { sfz: "Membranophones/Tom.sfz", name: "Tom" },
+    ],
+  };
+
+  it("produces one selectable instrument per declared program, each at its own address", () => {
+    /**
+     * The gap this closes: a library used to yield a single asset whatever it contained, so uploading VCSL's four families would have put 155 instruments' bytes on the CDN while the catalogue offered one. Each program now becomes an
+     * asset whose address is that program's own file.
+     */
+    const parsed = parseManifest(manifest([libraryEntry])).manifest!;
+    const { assets, problems } = sampleAssetsFromManifest(parsed, "https://cdn.example/samples");
+    expect(problems).toEqual([]);
+    expect(assets.map((asset) => asset.name)).toEqual(["Ball Whistle", "Glockenspiel", "Tom"]);
+    expect(assets.map((asset) => asset.sfz?.path)).toEqual([
+      "Aerophones/Ball Whistle.sfz",
+      "Idiophones/Glockenspiel.sfz",
+      "Membranophones/Tom.sfz",
+    ]);
+    expect(assets[1]!.sfz?.url).toBe("https://raw.githubusercontent.com/sgossner/VCSL/abc123/Idiophones/Glockenspiel.sfz");
+  });
+
+  it("gives each instrument a stable id derived from its path, not its position", () => {
+    // Position would move every id when the list is reordered, and the ids are what a song or a shared genre records.
+    const parsed = parseManifest(manifest([libraryEntry])).manifest!;
+    const { assets } = sampleAssetsFromManifest(parsed, "https://cdn.example/samples");
+    expect(assets.map((asset) => asset.assetId)).toEqual([
+      "vcsl:Aerophones-Ball-Whistle",
+      "vcsl:Idiophones-Glockenspiel",
+      "vcsl:Membranophones-Tom",
+    ]);
+  });
+
+  it("keeps a single-instrument entry under its own id, which is what the published entries rely on", () => {
+    const parsed = parseManifest(
+      manifest([{ id: "salamander-grand", name: "Salamander Grand Piano", licence: "CC-BY", attribution: "Alexander Holm", repo: "r", pin: "p", prefix: "salamander-grand", sfz: "Salamander Grand Piano V3.sfz", durationSeconds: 25.86, files: [] }])
+    ).manifest!;
+    const { assets } = sampleAssetsFromManifest(parsed, "https://cdn.example/samples");
+    expect(assets).toHaveLength(1);
+    expect(assets[0]!.assetId).toBe("salamander-grand");
+    expect(assets[0]!.sfz?.path).toBe("Salamander Grand Piano V3.sfz");
+  });
+
+  it("falls back to the mirror when there is no pinned source, rather than losing the instrument", () => {
+    /**
+     * An entry declared before its bytes are pinned still describes instruments. The mirror address is built from `prefix` and the program path, so the asset resolves; what the source adds is a second address to try first, which is
+     * the reason both are carried.
+     */
+    const parsed = parseManifest(manifest([{ ...libraryEntry, repo: undefined, pin: undefined }])).manifest!;
+    const { assets, problems } = sampleAssetsFromManifest(parsed, "https://cdn.example/samples");
+    expect(problems).toEqual([]);
+    expect(assets).toHaveLength(3);
+    expect(assets[0]!.sfz?.url).toBe("https://cdn.example/samples/vcsl/Aerophones/Ball Whistle.sfz");
+    expect(assets[0]!.sfz?.fallbackUrl).toBeUndefined();
+  });
+});
+
