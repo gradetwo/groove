@@ -8,6 +8,11 @@
 # had**, and the script stops at the first failure with the step named.
 set -u
 
+# ⭐ **Whether the deploy has already happened.** Everything before it is a claim about a build; everything after it is a claim about what is live. A failure on the far side therefore leaves a *partly* published release — the site
+# is new while `main` and the tag are not — and that is the dangerous shape, because it presents as a failure. On v2.34.29 exactly that happened: `deploy` succeeded, the tag step refused (correctly, finding no mirror commit carrying
+# the version), and the script's message said "nothing has been published as if this step succeeded" while the site was already serving the new version.
+DEPLOYED=0
+
 step() {
   local name="$1"; shift
   printf '  %-16s ' "$name"
@@ -17,7 +22,13 @@ step() {
     echo "FAILED (exit $?)"
     echo "  ---- last 12 lines ----"
     tail -12 /tmp/release_step.log | sed 's/^/  /'
-    echo "❌ stopping: nothing has been published as if this step succeeded"
+    if [ "$DEPLOYED" = "1" ]; then
+      # ⭐ The honest sentence for this case: the deploy is already out, so this is a **partly** published release rather than a stopped one.
+      echo "⚠️  STOPPING AFTER THE DEPLOY: the live site is already this version, and everything after it — main, the tag — is not."
+      echo "    Push those before leaving this alone, or the release is half done and looks like none of it happened."
+    else
+      echo "❌ stopping: nothing has been published as if this step succeeded"
+    fi
     exit 1
   fi
 }
@@ -30,6 +41,7 @@ step "build" npx vite build
 
 # ⭐ **The gate on publishing.** Everything after this line is a claim about what is live, so it may not run until the deploy that makes it live has succeeded.
 step "deploy" npm run deploy:only
+DEPLOYED=1   # ⭐ From here on a failure leaves the site newer than main and the tag, and the failure path says so.
 
 step "mirror" ./scripts/sync_release_mirror.sh
 # ⭐ Committing what the sync copied: without this the mirror keeps the previous commit, and the push below sends it while the fast-forward check passes.
