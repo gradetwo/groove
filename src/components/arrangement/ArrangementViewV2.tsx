@@ -94,7 +94,8 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player }: Arrangem
           onClick={async () => {
             if (player === undefined) return;
             // ⭐ The compiled arrangement, with the notes a v1 pattern would carry — an empty map means "a track with nothing on it", which is silence rather than an error.
-            const result = await playArrangementV2(arrangement, {}, player);
+            // ⭐ The arrangement's own notes, not an empty map: they are content and they live with the tracks.
+            const result = await playArrangementV2(arrangement, arrangement.notesByTrack ?? {}, player);
             setPlayed(result.planned);
           }}
         >
