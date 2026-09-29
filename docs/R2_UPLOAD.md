@@ -802,3 +802,28 @@ off_time=0.5
 | **3** | **`<control>` 块** | ⭐ **它主要是给编辑器看的 ✓ —— 对出声影响最小 ✓，可以最后** ✓ |
 
 ⭐⭐ **而第 1 与第 2 条正是"变量"这件事的两半** ✓ —— ⭐ **也就是说：我先前猜"病根在变量"是对的 ✓，但猜小了 ✗** —— **不是"变量表要展开"，而是"变量会出现在键里，也会决定采样的基准"** ✓✓。
+
+
+## 30. ⭐⭐⭐ 那两件实现的精确落点（2026-09-28 晚，读解析器得到 ✓）
+
+### 它自己的注释就写着这个缺口
+
+⭐ `src/audio/sfz/parse.ts:41-44` 的原文 ✓：
+
+> ⭐ **"Variables this region still contains — `$KICK_SNRIGHT_KEY` and friends — because SFZ's `#define`/`$VAR` layer is not implemented."**
+> ⭐ **"A marked region never matches a note. That is the whole point: before this existed, an unresolved `key=$KICK_SNRIGHT_KEY` … made every region match every note — so a real drum kit answered note 38 with a kick while sfizz …"**
+
+⭐⭐ **所以"变量层没实现"不是我的新发现 ✓，而是代码里【已经承认并防住】的事** ✓ —— ⭐ **而它防的方式是"标记并拒绝匹配"✓ —— 安全 ✓，但代价是【任何用变量的库都整体不响】** ✗✓。
+
+### 而两件的落点都很具体
+
+| # | 实现 | 落点 | 细节 |
+|---|---|---|---|
+| **1** | ⭐ **变量插值作用于【键与值】两者** ✓✓ | ⭐ **`:82` 那一行**（`key=value` 的解析 ✓）—— ⭐ **在拆出 key/value 之后、查 opcode 之前，对两者各做一次 `$VAR` 替换** ✓ | ⭐ **定义来源**：`#define` ✓（**而 `expandIncludes` 已经把 include 进来的文件合并成一份文本 ✓✓ —— 所以 `Data/notes.txt` 里的定义会自然出现在同一份文本里 ✓**） |
+| **2** | ⭐ **`default_path`** ✓ | ⭐ **采样路径的解析**（**现在 `sampleAssetForPath` 用 `new URL(sample, programUrl)` ✗**） | ⭐ **`sample` 应当先与 `default_path` 拼接 ✓，再相对程序解析 ✓**（**`default_path=Samples/` ✓ —— 而 Salamander 的采样就在 `Samples/` ✓**） |
+
+### ⭐ 而第 1 件有一个必须先定的语义
+
+⭐ **`#define` 的作用域**：**它是文件级的 ✓，还是从定义处往后生效** ✗✓？ —— ⭐ **SFZ 的实践里是"从定义处往后"✓**（**这也解释了为什么 Salamander 把 `#define` 和 `#include` 都放在最前面 ✓**）—— ⭐ **所以实现上应当是"一边扫描一边累积定义"✓，而不是"先收集全部再替换"** ✗✓（**后者在大多数文件上结果相同 ✓，但会在"先使用后定义"的文件上给出不同的答案 ✓**）。
+
+⭐⭐ **而这一条正是"要不要实现 ARIA 到什么程度"这个问题的第一个真实分界** ✓✓：**做键值插值 ✓ + `default_path` ✓ = 让 Salamander 与 Karoryfer 有机会响** ✓；**而 `<control>` 块 ✓、曲线与 CC 调制 ✓ 可以之后再说** ✓（**目标里那句"诚实决定 CC/调制层在范围里占多少"✓，答案正在这里成形 ✓**）。
