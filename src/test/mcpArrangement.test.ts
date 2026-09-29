@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   addMcpTake,
   addMcpTrack,
+  assignMcpTakeRange,
   clearMcpArrangements,
   createMcpArrangement,
   describeMcpArrangement,
@@ -18,6 +19,7 @@ import {
   removeMcpTrack,
   renameMcpTrack,
   selectMcpTake,
+  setMcpTrackCollapsed,
   setMcpTrackFlag,
   setMcpTrackInstrument,
   setMcpTrackKind,
@@ -172,5 +174,42 @@ describe("recording onto a track", () => {
     expect(line).toContain("salamander-grand");
     expect(line).toContain("1 take(s)");
     expect(line).toContain("steps");
+  });
+
+  it("claims an existing take for a bar range, splitting one it crosses", () => {
+    /**
+     * The comping path, as opposed to filing a recording: `add_arrangement_take` claims a range when the recording covered one, and this claims a range for a take that already exists. Ranges stay disjoint, which is the rule `assignTakeToRange`
+     * implements and this reuses rather than restating.
+     */
+    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const track = summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).tracks[0]!;
+    addMcpTake(arrangementId, { trackId: track.id, source: "midi", recordedAt: 1 });
+    addMcpTake(arrangementId, { trackId: track.id, source: "midi", recordedAt: 2 });
+    const claimed = assignMcpTakeRange(arrangementId, track.id, "take-1", 0, 4);
+    expect(claimed.summary.problems).toEqual([]);
+    expect(getMcpArrangement(arrangementId)!.tracks[0]!.takeRegions).toEqual([{ startBar: 0, endBar: 4, takeId: "take-1" }]);
+    // A second range splits the first rather than overlapping it.
+    assignMcpTakeRange(arrangementId, track.id, "take-2", 2, 6);
+    expect(getMcpArrangement(arrangementId)!.tracks[0]!.takeRegions).toEqual([
+      { startBar: 0, endBar: 2, takeId: "take-1" },
+      { startBar: 2, endBar: 6, takeId: "take-2" },
+    ]);
+  });
+
+  it("refuses a range that ends where it starts, and a take that is not there", () => {
+    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const track = summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).tracks[0]!;
+    addMcpTake(arrangementId, { trackId: track.id, source: "midi", recordedAt: 1 });
+    expect(() => assignMcpTakeRange(arrangementId, track.id, "take-1", 4, 4)).toThrow(/must end after it starts/);
+    expect(() => assignMcpTakeRange(arrangementId, track.id, "take-9", 0, 4)).toThrow(/has no take/);
+  });
+
+  it("folds a track without changing what it plays", () => {
+    // Display only, and the criterion says so: the steps are identical either side of the fold.
+    const { arrangementId } = createMcpArrangement({ blankKind: "drumkit" });
+    const before = summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).tracks[0]!;
+    const folded = setMcpTrackCollapsed(arrangementId, before.id, true);
+    expect(folded.summary.tracks[0]!.collapsed).toBe(true);
+    expect(folded.summary.tracks[0]!.steps).toEqual(before.steps);
   });
 });

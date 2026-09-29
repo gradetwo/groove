@@ -13,12 +13,14 @@ import {
   TEMPLATES,
   addTake,
   addTrack,
+  assignTakeToRange,
   changeTrackKind,
   createArrangement,
   createArrangementFromTemplate,
   removeTrack,
   renameTrack,
   selectTrackTake,
+  setCollapsed,
   setTrackFlag,
   setTrackParent,
   setTrackSample,
@@ -238,6 +240,29 @@ export function selectMcpTake(arrangementId: string, trackId: string, takeId: st
     }
     return selectTrackTake(arrangement, trackId, takeId ?? undefined);
   });
+}
+
+/**
+ * Claim an existing take for a bar range — the comping action, as opposed to filing a new recording.
+ *
+ * `add_arrangement_take` claims a range when the recording covered one, which is the common case. This is the other one: a take recorded earlier, or a whole one, claimed for part of the arrangement. The range logic is `assignTakeToRange`, which splits any
+ * range the new one crosses so ranges stay disjoint.
+ */
+export function assignMcpTakeRange(arrangementId: string, trackId: string, takeId: string, startBar: number, endBar: number): ArrangementEditResult {
+  return edit(arrangementId, (arrangement) => {
+    const track = arrangement.tracks.find((candidate) => candidate.id === trackId);
+    if (!track) throw new Error(unknownTrack(arrangement, trackId));
+    if (!(track.takes ?? []).some((take) => take.id === takeId)) {
+      throw new Error(`"${track.name}" has no take "${takeId}" — its takes are ${(track.takes ?? []).map((take) => take.id).join(", ") || "none"}`);
+    }
+    if (endBar <= startBar) throw new Error(`the range must end after it starts (got ${startBar} to ${endBar})`);
+    return assignTakeToRange(arrangement, trackId, startBar, endBar, takeId);
+  });
+}
+
+/** Folding a folder. Display only, which the tool's own description repeats because a client reads that and not this. */
+export function setMcpTrackCollapsed(arrangementId: string, trackId: string, collapsed: boolean): ArrangementEditResult {
+  return edit(arrangementId, (arrangement) => refuseUnknownTrack(arrangement, trackId, () => setCollapsed(arrangement, trackId, collapsed)));
 }
 
 function unknownTrack(arrangement: ArrangementV2, trackId: string): string {

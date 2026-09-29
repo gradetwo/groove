@@ -69,7 +69,16 @@ Read-only tools are marked ▢, tools that change something outside the session 
 | `get_chord_progression` ▢ | `id` | degrees, roman numerals, example songs, emotional tag |
 | `get_loudness_report` ▢ | `genreId?` | the committed baseline (LUFS, true peak, trim) for one genre or the whole table |
 
-### Arrangement (the v2 model behind `/new`)
+## MCP 是功能的一部分，不是收尾工作（业主指示，2026-09-29）
+
+> 以后一个功能开发过程中，MCP 需要第一时间提供
+
+这条要能执行，所以它配了一个守卫，而不是留成一句嘱咐：**`src/test/mcpCoverage.test.ts` 会读 `src/data/arrangementEdits.ts` 的源码，把其中每个会改动模型的导出函数找出来，要求它要么已被某个 MCP 工具暴露，要么在一份写明了理由的例外名单里。** 少了一个，测试会红，并在消息里说清"要么加工具，要么说明为什么不需要"。
+
+为什么用这个形式：一句"MCP 要第一时间提供"在赶时间时总是被推到后面，而"推到后面"的表现不是报错，是没人发现。把新功能的数据层操作与工具对上号，是一条能在写代码时就红、而不是等到有人问"这个 MCP 里有吗"才红的判据。
+
+例外必须写明理由。"显示用、不影响听到什么"是一个理由；"另一个工具已经能用更确定的说法表达同一件事"也是一个理由；"暂时没做"不是。
+
 
 The song tools above compose a **v1 song** — clips, sections, lane slots. The interface's `/new` route uses a different model, and until this group existed an agent could not reach it at all: no way to add a track, choose its kind, point a
 sampler at one of the mirrored libraries, write the steps it plays, or file a recording onto it.
@@ -99,6 +108,8 @@ Two things this surface states rather than leaves to be discovered:
 | `set_arrangement_track_steps` ▣ | `arrangementId`, `trackId`, `steps` | the pattern written whole; a step is on when non-zero, and the length is the caller's |
 | `add_arrangement_take` ▣ | `arrangementId`, `trackId`, `source`, `label?`, `recordedAt?`, `startBar?`, `endBar?` | the take filed and selected; a bar range is claimed when one is given |
 | `select_arrangement_take` ▣ | `arrangementId`, `trackId`, `takeId` | which take plays, or cleared with `null` |
+| `assign_arrangement_take_range` ▣ | `arrangementId`, `trackId`, `takeId`, `startBar`, `endBar` | an existing take claimed for a bar range, splitting any range it crosses |
+| `set_arrangement_track_collapsed` ▣ | `arrangementId`, `trackId`, `collapsed` | folded in the interface; display only, and never a change to what is heard |
 
 A minimal call, as it looks over stdio:
 

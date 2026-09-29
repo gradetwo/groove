@@ -40,11 +40,13 @@ import { flattenSong } from "../src/data/songFlatten";
 import {
   addMcpTake,
   addMcpTrack,
+  assignMcpTakeRange,
   createMcpArrangement,
   describeMcpArrangement,
   removeMcpTrack,
   renameMcpTrack,
   selectMcpTake,
+  setMcpTrackCollapsed,
   setMcpTrackFlag,
   setMcpTrackInstrument,
   setMcpTrackKind,
@@ -380,6 +382,47 @@ export const TOOLS: ToolDefinition[] = [
           startBar: args.startBar as number | undefined,
           endBar: args.endBar as number | undefined,
         });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "assign_arrangement_take_range",
+    title: "Use a take for a bar range",
+    description:
+      "Claim an existing take for part of the arrangement — comping. Ranges never overlap: a new range splits whatever it crosses, so 'this section from take 3, the next from take 7' is expressible without the two fighting.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      trackId: z.string(),
+      takeId: z.string(),
+      startBar: z.number().int().min(0),
+      endBar: z.number().int().min(1).describe("exclusive, and must be greater than startBar"),
+    },
+    handler: (args) => {
+      try {
+        return assignMcpTakeRange(
+          String(args.arrangementId),
+          String(args.trackId),
+          String(args.takeId),
+          Number(args.startBar),
+          Number(args.endBar)
+        );
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "set_arrangement_track_collapsed",
+    title: "Fold a track",
+    description: "Fold a track in the interface. **Display only**: folding never changes what is heard, which is why it is safe to call freely while composing.",
+    readOnly: false,
+    inputSchema: { arrangementId: z.string(), trackId: z.string(), collapsed: z.boolean() },
+    handler: (args) => {
+      try {
+        return setMcpTrackCollapsed(String(args.arrangementId), String(args.trackId), Boolean(args.collapsed));
       } catch (error) {
         return failure((error as Error).message);
       }
