@@ -110,6 +110,7 @@ Two things this surface states rather than leaves to be discovered:
 | `set_arrangement_track_instrument` ▣ | `arrangementId`, `trackId`, `assetId` | the sampler track pointed at a catalogue asset; refused for any other kind |
 | `set_arrangement_track_steps` ▣ | `arrangementId`, `trackId`, `steps` | the pattern written whole; a step is on when non-zero, and the length is the caller's |
 | `add_arrangement_take` ▣ | `arrangementId`, `trackId`, `source`, `label?`, `recordedAt?`, `startBar?`, `endBar?` | the take filed and selected; a bar range is claimed when one is given |
+| `render_arrangement` ▣ | `arrangementId`, `format?`, `bitrateKbps?`, `sampleRate?`, `channels?` | the bounce, through the same offline engine the song and pattern tools use. **An arrangement is one bar of sixteen steps**, so this is the loop, not a piece |
 | `select_arrangement_take` ▣ | `arrangementId`, `trackId`, `takeId` | which take plays, or cleared with `null` |
 | `assign_arrangement_take_range` ▣ | `arrangementId`, `trackId`, `takeId`, `startBar`, `endBar` | an existing take claimed for a bar range, splitting any range it crosses |
 | `set_arrangement_track_collapsed` ▣ | `arrangementId`, `trackId`, `collapsed` | folded in the interface; display only, and never a change to what is heard |
