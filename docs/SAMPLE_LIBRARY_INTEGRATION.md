@@ -705,26 +705,23 @@ unresolved: 0
 
 `mappings/kick_dampen.sfz` 出现在 `included` 里这件事本身，就是库根回退在工作的证据：那份 include 写在 `mappings/kickmic_basic.sfz` 里，按包含文件所在目录解析会得到 `mappings/mappings/...`，是第二个候选（库根）命中的。
 
-## 一个真缺口：`<master>` 清空了外层 `<global>`
+## `<master>` 该不该清空外层 `<global>`：sfizz 判了（2026-09-29）
 
-程序最外层的 `<global>` 给底鼓那组声明了 `locc101=1`、`tune_cc90=1200`、`note_polyphony=3`、`group=501`。而底鼓的 region **一个都没带上**：被 include 的 `mappings/kickmic_basic.sfz` 打开了自己的 `<master>`，解析器在那里把全局域清空了（`global = {}`）。把 `<master>` 当作 `<global>` 是当初写下的最小规则，这就是它的后果。
+程序最外层的 `<global>` 给底鼓那组声明了 `locc101=1`、`tune_cc90=1200`、`note_polyphony=3`、`group=501`，而底鼓的 region 一个都没带上——因为被 include 的 `mappings/kickmic_basic.sfz` 打开了自己的 `<master>`，解析器在那里把全局域清空了。它在静止时看不出来（两个 opcode 在默认 CC 下都是空操作），所以一份能用的文件判不了对错。
 
-它在静止时看不出来：`locc101=1` 在默认 CC101 下本来就通过，`tune_cc90=1200` 在默认 CC90=63.5 时约为零音分。所以这个库照样能播——也正因如此，**一份能用的文件判不了"清空"对不对**。判它的是 sfizz 在**非默认 CC** 下的输出：如果外层的 `<global>` 值应当存活，那么把 CC90 移开时它必须变调，而这份解析器的 region 不会动。A4 那套"用 sfizz 的输出判"的机制正是干这个的。
+**判据是 sfizz 在非默认 CC 下的输出。** 做法：一个 440 Hz 的单音样本，`tune_cc90=1200` 是信号源——它在 CC90 从 0 移到 127 时把一个八度的变调加上去（比值 ≈ 2 表示生效，≈ 1 表示那个值已经没了）。同一个音渲染两次，只改 CC90。
 
-## CC 与调制层的范围（决定）
+```
+  tune 写在 region 上                     比值 2.005   ← 正对照，本来就会生效
+  global(tune) → master → region          1.988   ← 穿过 master，值活着
+  master(tune) → region                   2.005
+  global(tune) → global(other) → region   1.000   ← 第二个 global 清掉了第一个
+  global(tune) → group → region           2.005
+  region 覆盖 global                      1.000
+```
 
-按文件证据定范围，而不是按想象：
+结论是一处**不对称**：**`<global>` 重置全局域，`<master>` 累积**。解析器原来两边都重置，于是 `virtuosity_drums` 写在程序文件里的 `locc101` 与 `tune_cc90` 被悄悄丢掉了。
 
-| 层 | 在不在范围 | 理由 |
-| --- | --- | --- |
-| `#define` / `$名字` 代入 | **在，先做** | 决定音符落到哪个 region |
-| include 的库根回退 | **在，先做** | 决定多数 region 能不能被找到 |
-| `<control>` 的 `set_ccN` 默认值 | **在，随后** | 默认 CC 值参与下面两条的判断 |
-| `loccN` / `hiccN` 区域条件 | **在，随后** | 决定一个 region **是否发声**。这份文件里默认值都通过（CC101/102/103/105 默认 127），但那是这份库的事实，不是通则 |
-| `tune_ccN` / `tune_curveccN` | **在，随后** | 默认 CC90=63.5 时偏移约为 0，所以"忽略"在静止时恰好正确；但它错在 CC 一动就错，而谱面可以送 CC |
-| `amplitude_onccN` / `width_onccN` 等连续调制与曲线 | **不在** | 改变音量与声像，不改变"哪个样本、什么音高" |
-| `seq_length` / `seq_position` 轮转 | 已能读，**选择留待** | 影响重复敲击用哪个样本，不影响能否发声 |
-| `amp_velcurve_N` | **不在** | 改变力度对应的音量 |
-| `group` / `off_mode` / `note_polyphony` / `loop_mode` | **不在** | 声音抢占与循环，不改变样本与音高 |
+已按实测改成"`<global>` 重置、`<master>` 累积"，`<group>` 与 region 的行为本来就是对的。判据两条：真实的底鼓 region 现在带上了 `locc101=1` 与 `tune_cc90=1200`；以及那条不对称本身（第二个 `<global>` 仍然重置）。
 
-一句话：**在范围里的是"哪个样本、什么音高、发不发声"，不在范围里的是"多响、怎么抢、怎么轮"。** 这个界线是可以对着一份真文件逐条核对的，而不是一句"支持一个子集"。
+这个实验也回答了 A4 那套机制的用途：它不只是"音符对不对"，它能在**参数一动就错**的地方判定语义。

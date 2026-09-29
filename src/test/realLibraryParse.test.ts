@@ -80,7 +80,7 @@ describe("what the parser already does with this library", () => {
      * one, which is why the fixture set now includes the file the program actually includes rather than a similarly named one.
      */
     const { regions } = parseProgram();
-    const keys = new Set(regions.map((region) => region.opcodes.key ?? region.inherited.key));
+    const keys = new Set(regions.map((region) => region.opcodes.key));
     expect([...keys]).toEqual(["35"]);
     expect(unresolvedVariables(regions)).toEqual({ variables: [], regions: 0 });
   });
@@ -107,19 +107,26 @@ describe("what the parser already does with this library", () => {
     expect(first.opcodes.tune_curvecc72).toBe("1");
   });
 
-  it("records that an outer `<global>`'s values do not reach regions inside an included `<master>`", () => {
+  it("carries the program's own `<global>` values into regions declared inside an included `<master>`", () => {
     /**
-     * **Measured, and not yet settled.** The program's first `<global>` states `locc101=1`, `tune_cc90=1200`, `note_polyphony=3` and `group=501` for the kick's microphone; the kick's regions carry none of them, because the included file
-     * opens its own `<master>` and the parser clears the global scope there. Treating `<master>` as `<global>` is the documented minimal rule, and this is its consequence.
+     * **This is the defect the sfizz experiment settled, and the assertion is its verdict.** The program's first `<global>` states `locc101=1` and `tune_cc90=1200` for the kick's microphone; the kick's regions are declared inside
+     * `mappings/kickmic_basic.sfz`, which opens with its own `<master>`. The parser used to clear the global scope on that header, so those values vanished — and the earlier version of this test recorded that as a fact.
      *
-     * It is invisible at rest: `locc101=1` passes at the default CC101 anyway, and `tune_cc90=1200` is about zero cents at the default CC90 of 63.5. So the library still plays — which is exactly why a file that works cannot settle
-     * whether the reset is right. What settles it is sfizz at a **non-default** CC: if the outer `<global>`'s values survive, moving CC90 must transpose while this parser's regions stay put.
+     * Rendering one note at two values of CC90 with sfizz, against a fixture whose outer `<global>` sets `tune_cc90=1200`, says which behaviour is right: the octave of transposition survives the inner `<master>` (ratio 1.988) and does
+     * **not** survive a second `<global>` (ratio 1.000). So `<master>` accumulates and `<global>` resets, and the values below must reach the regions.
      */
     const program = readFileSync(path.join(ROOT, "01-basic-kit.sfz"), "utf8");
     expect(program).toMatch(/^locc101=1$/m);
     expect(program).toMatch(/^tune_cc90=1200$/m);
     const { regions } = parseProgram();
-    expect(regions[0]!.opcodes.locc101).toBeUndefined();
+    expect(regions[0]!.opcodes.locc101).toBe("1");
+    expect(regions[0]!.opcodes.tune_cc90).toBe("1200");
+  });
+
+  it("still resets the global scope on a second `<global>`, which sfizz does and `<master>` does not", () => {
+    // The asymmetry is measured rather than assumed: same fixture shape, one header apart, ratios 1.000 and 1.988.
+    const regions = parseSfz("<global>\ntune_cc90=1200\n<global>\nampeg_release=0.5\n<region> sample=tone.wav pitch_keycenter=60\n");
     expect(regions[0]!.opcodes.tune_cc90).toBeUndefined();
+    expect(regions[0]!.opcodes.ampeg_release).toBe("0.5");
   });
 });

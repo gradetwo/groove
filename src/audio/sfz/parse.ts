@@ -107,7 +107,23 @@ export function parseSfz(text: string): SfzRegion[] {
          * two is about reset points rather than about scope, and modelling that without a consumer for it would be inventing behaviour nobody has asked for. What matters
          * immediately is that its opcodes are **kept** instead of dropped, so a range or pitch set there cannot be silently lost.
          */
-        global = {};
+        /**
+         * **`<global>` starts a new global scope; `<master>` does not.** Both were treated as a reset, and sfizz says that is only half right — measured by rendering one note at two values of CC90 against a fixture whose outer
+         * `<global>` sets `tune_cc90=1200`, so an octave of transposition is the signal that a value survived:
+         *
+         * ```
+         *   tune on the region            比值 2.005   (the control: it applies)
+         *   global(tune) → master → region 1.988   ← survives the master
+         *   master(tune) → region          2.005
+         *   global(tune) → global(other) → region 1.000   ← a second global clears the first
+         *   global(tune) → group → region  2.005
+         *   region overriding global       1.000
+         * ```
+         *
+         * So a real library that states `locc101` or `tune_cc90` in its program file and then includes a microphone mapping that opens with `<master>` keeps those values for the included regions — which is how `virtuosity_drums` is
+         * written, and what the previous rule silently discarded.
+         */
+        if (name === "global") global = {};
         current = global;
       } else if (name === "group") {
         group = {};
