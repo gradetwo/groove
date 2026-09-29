@@ -1,6 +1,7 @@
+import { DEFAULT_SAMPLER_ASSET } from "../data/defaultContent";
 import type { ArrangementV2 } from "../types/arrangementV2";
 import { beforeEach, describe, expect, it } from "vitest";
-import { addTake, addTrack, createArrangement, removeTrack, resetTrackIdsForTests, setTrackParent, setTrackSample, toggleStep } from "../data/arrangementEdits";
+import { addTake, addTrack, changeTrackKind, createArrangement, removeTrack, resetTrackIdsForTests, setTrackParent, setTrackSample, setTrackSteps, toggleStep } from "../data/arrangementEdits";
 
 /**
  * The edits an interface is built from, and the two ways they go quietly wrong.
@@ -184,8 +185,11 @@ describe("new projects, templates, and changing a track's kind", () => {
     const id = arr.tracks[0]!.id;
     arr = changeTrackKind(arr, id, "instrument");
     const back = changeTrackKind(arr, id, "sampler");
-    // It was dropped on the way out, so a round trip cannot resurrect it — that is honest, and the criterion says so rather than pretending.
-    expect(back.tracks[0]!.sample).toBeUndefined();
+    /**
+     * **The original choice is not resurrected, and the track is playable anyway.** It was dropped on the way out, so a round trip cannot bring back "kit" — that is still honest. What changed is that becoming a sampler now supplies the default
+     * instrument, the same one `defaultContentFor` gives a new sampler track, because a sampler that cannot sound is the mistake this model names.
+     */
+    expect(back.tracks[0]!.sample).toEqual({ assetId: DEFAULT_SAMPLER_ASSET });
     expect(back.tracks[0]!.kind).toBe("sampler");
   });
 });
@@ -330,5 +334,61 @@ describe("filing a finished capture onto a track", () => {
   it("refuses a track that is not there rather than inventing one", () => {
     const arrangement = emptyArrangement();
     expect(addTake(arrangement, "missing", { take: { id: "take-1", recordedAt: 1, source: "audio" } })).toBe(arrangement);
+  });
+});
+
+describe("setting a whole step pattern", () => {
+  it("stores the steps it was given, in the length it was given", () => {
+    // A pattern is the steps it has: padding to sixteen would invent content, and truncating would discard it.
+    const withTrack = addTrack(emptyArrangement(), "drumkit", "Drums");
+    const id = withTrack.tracks[0]!.id;
+    const edited = setTrackSteps(withTrack, id, [1, 0, 0, 1, 0, 0, 1, 0]);
+    expect(edited.notesByTrack![id]).toEqual([1, 0, 0, 1, 0, 0, 1, 0]);
+  });
+
+  it("turns a step on when its value is non-zero, because a step is a step rather than a velocity", () => {
+    const withTrack = addTrack(emptyArrangement(), "drumkit", "Drums");
+    const id = withTrack.tracks[0]!.id;
+    // 0.4 is on, 3 is on, 0 is off, -1 is on: the rule is "non-zero", not "equals one".
+    expect(setTrackSteps(withTrack, id, [0.4, 3, 0, -1]).notesByTrack![id]).toEqual([1, 1, 0, 1]);
+  });
+
+  it("refuses a kind that makes no sound, and a track that is not there", () => {
+    const withFolder = addTrack(emptyArrangement(), "folder", "Group");
+    const id = withFolder.tracks[0]!.id;
+    expect(setTrackSteps(withFolder, id, [1, 1])).toBe(withFolder);
+    expect(setTrackSteps(withFolder, "missing", [1, 1])).toBe(withFolder);
+  });
+});
+
+describe("changing a track's kind", () => {
+  it("gives a track that becomes a sampler the default instrument, as a new one gets", () => {
+    /**
+     * The inconsistency this closes: `defaultContentFor` gives every new sampler track an asset, and a kind change did not — so the same kind of track sounded or not depending on how it had been created. A sampler track that cannot sound is
+     * the one thing this model calls out as a mistake.
+     */
+    const withTrack = addTrack(emptyArrangement(), "instrument", "Lead");
+    const id = withTrack.tracks[0]!.id;
+    const asSampler = changeTrackKind(withTrack, id, "sampler");
+    expect(asSampler.tracks[0]!.sample).toEqual({ assetId: DEFAULT_SAMPLER_ASSET });
+  });
+
+  it("keeps an instrument that was already chosen rather than replacing it with the default", () => {
+    /**
+     * The round trip through another kind is a different case and loses the choice, which the older criterion beside this one still states. What is asserted here is that setting the same kind again is not an occasion to overwrite a decision:
+     * the default is a fallback for a track that has nothing, not a reset.
+     */
+    const added = addTrack(emptyArrangement(), "sampler", "Keys");
+    const id = added.tracks[0]!.id;
+    const withTrack = setTrackSample(added, id, "salamander-grand");
+    expect(changeTrackKind(withTrack, id, "sampler").tracks[0]!.sample).toEqual({ assetId: "salamander-grand" });
+  });
+
+  it("drops the instrument when the track stops being a sampler", () => {
+    // A drum track holding a catalogue asset would claim something sounds from a kind that does not play one.
+    const added = addTrack(emptyArrangement(), "sampler", "Keys");
+    const id = added.tracks[0]!.id;
+    const withTrack = setTrackSample(added, id, "salamander-grand");
+    expect(changeTrackKind(withTrack, id, "drumkit").tracks[0]!.sample).toBeUndefined();
   });
 });

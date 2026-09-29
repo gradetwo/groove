@@ -40,6 +40,9 @@ step "version:check" npm run version:check
 step "version:new" bash scripts/check_version_is_new.sh
 step "local gate" bash scripts/check_local.sh
 step "build" npx vite build
+# ⭐ The bundle budget, **before** anything is published. It lived only in CI, where it had been failing on every push for forty runs without stopping a release — an advisory check on a site that deploys anyway is an annotation, not a gate. Here it
+# refuses to publish an over-budget bundle.
+step "budget" npm run check:budget
 
 # ⭐ **The gate on publishing.** Everything after this line is a claim about what is live, so it may not run until the deploy that makes it live has succeeded.
 step "deploy" npm run deploy:only

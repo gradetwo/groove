@@ -667,3 +667,61 @@ sfz 总数              155
 88 件乐器仍然不少，但那是这个库的真实结构：它是一件件乐器，不是一件。把它们压成一条会让 87 件无法选择，把它们全部展开会让 155 个奏法各占一行。
 
 同理适用于 Karoryfer 那两个已经镜像的条目：meatbass 的 zip 里有 39 个 sfz，而现在只声明了一个（`Meatbass/Programs/04_pizz.sfz`，拨奏贝斯）。按同一规则重跑会声明出它的乐器列表，而字节已经在桶里，所以那是一件只改清单的事。
+
+
+## 真库到底长什么样：量出来的答案（2026-09-29）
+
+`Programs/01-basic-kit.sfz`（76 行）里的 `<region>` 是**零个，而这是设计如此**：它是一份路由文档。真实的四层结构是
+
+```
+01-basic-kit.sfz      <control>（set_ccN 默认值与标签）+ 三个 <global> + 7 条 #include
+  └ mappings/kickmic_basic.sfz        <master>（ampeg_release、tune_cc72、amp_veltrack、locc102）
+      └ <group key=$KICK_SNWRONG_KEY> + #include
+          └ mappings/kickmic/kick_snoff_map.sfz    16 个 <region>（sample、hivel、seq_length、amp_velcurve_N）
+```
+
+键位名来自 `keymaps/default/keymap_basic.sfz`，那是 67 行 `#define $名字 值`。
+
+实测（夹具就是这四份真文件，判据在 `src/test/realLibraryParse.test.ts`）：include 链进得去，那个最底层的文件解出 **16 个 region**，16 个样本路径互不相同。已经能用的东西比预想的多：`<global>`/`<master>`/`<group>`/`<region>` 的作用域继承、头部与 opcode 同行、`#define` 的收集、轮转字段、未知头部跳过而不报错。
+
+## 更正：那"两个缺口"是我量错了（2026-09-29）
+
+上一版这里写着两个缺口——include 要能从库根解析、`$名字` 要代入——**两条都是错的**。`includes.ts` 早就实现了这两件事：`resolveCandidates` 先试包含文件所在目录、再试程序根目录，`substitute` 做 `$VAR` 代入（全局、按顺序）。
+
+错在夹具不全：程序 include 的是 `keymaps/keymap_basic.sfz`，而我只放了名字相近的另一份 `keymaps/default/keymap_basic.sfz`。定义文件不在链上，于是十六个 region 全部留着字面量 `$KICK_SNWRONG_KEY`，而我把这个结果归因给了"解析器不代入"，而不是"我的夹具缺文件"。
+
+补上定义文件与 `mappings/kick_dampen.sfz` 之后，实测是：
+
+```
+included: 4  ["keymaps/keymap_basic.sfz", "mappings/kickmic_basic.sfz",
+              "mappings/kick_dampen.sfz", "mappings/kickmic/kick_snoff_map.sfz"]
+problems: 26    （夹具只有这四份，其余 include 如实报缺）
+regions: 16
+lokey/hikey: 35/35        ← 变量已代入成音符号
+hivel: 31, 63, 95, 127    ← 四个力度层，一层不缺
+seq_length: 4             ← 轮转
+unresolved: 0
+```
+
+`mappings/kick_dampen.sfz` 出现在 `included` 里这件事本身，就是库根回退在工作的证据：那份 include 写在 `mappings/kickmic_basic.sfz` 里，按包含文件所在目录解析会得到 `mappings/mappings/...`，是第二个候选（库根）命中的。
+
+## `<master>` 该不该清空外层 `<global>`：sfizz 判了（2026-09-29）
+
+程序最外层的 `<global>` 给底鼓那组声明了 `locc101=1`、`tune_cc90=1200`、`note_polyphony=3`、`group=501`，而底鼓的 region 一个都没带上——因为被 include 的 `mappings/kickmic_basic.sfz` 打开了自己的 `<master>`，解析器在那里把全局域清空了。它在静止时看不出来（两个 opcode 在默认 CC 下都是空操作），所以一份能用的文件判不了对错。
+
+**判据是 sfizz 在非默认 CC 下的输出。** 做法：一个 440 Hz 的单音样本，`tune_cc90=1200` 是信号源——它在 CC90 从 0 移到 127 时把一个八度的变调加上去（比值 ≈ 2 表示生效，≈ 1 表示那个值已经没了）。同一个音渲染两次，只改 CC90。
+
+```
+  tune 写在 region 上                     比值 2.005   ← 正对照，本来就会生效
+  global(tune) → master → region          1.988   ← 穿过 master，值活着
+  master(tune) → region                   2.005
+  global(tune) → global(other) → region   1.000   ← 第二个 global 清掉了第一个
+  global(tune) → group → region           2.005
+  region 覆盖 global                      1.000
+```
+
+结论是一处**不对称**：**`<global>` 重置全局域，`<master>` 累积**。解析器原来两边都重置，于是 `virtuosity_drums` 写在程序文件里的 `locc101` 与 `tune_cc90` 被悄悄丢掉了。
+
+已按实测改成"`<global>` 重置、`<master>` 累积"，`<group>` 与 region 的行为本来就是对的。判据两条：真实的底鼓 region 现在带上了 `locc101=1` 与 `tune_cc90=1200`；以及那条不对称本身（第二个 `<global>` 仍然重置）。
+
+这个实验也回答了 A4 那套机制的用途：它不只是"音符对不对"，它能在**参数一动就错**的地方判定语义。

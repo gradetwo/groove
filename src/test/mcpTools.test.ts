@@ -238,17 +238,24 @@ describe("MCP · the declared surface", () => {
     }
   });
 
-  it("marks exactly the tools that write as non-read-only", () => {
+  it("keeps the read-only annotation in step with what a tool does", () => {
     /**
-     * A read-only annotation is a promise to the client: it may call the tool freely, and the tool will not change
-     * anything. Five tools break that promise on purpose — `render_audio` and `render_song` write a file under
-     * `GROOVE_MCP_OUT`, and `create_song`/`add_section`/`set_clip` mutate the server's session-local song map (B6).
-     * Everything else, including every genre reader and `get_song`, is a pure read.
+     * **A rule rather than a roster.** This test used to list the writing tools by name, so adding thirteen arrangement tools broke it even though every one of them was annotated correctly — and a list that has to be edited whenever the surface
+     * grows is one somebody edits wrongly at speed.
+     *
+     * The promise being checked is the client's: `readOnly` means calling the tool changes nothing. So the annotation has to agree with the verb in the name, and the two tools that use a writing verb while only returning bytes are named here rather
+     * than hidden behind a prefix list that would misclassify them.
      */
-    const writers = TOOLS.filter((tool) => !tool.readOnly).map((tool) => tool.name);
-    expect(writers).toEqual(["normalize_loudness", "render_preview_clip", "set_vocal_melody", "render_audio", "create_song", "make_unique", "set_tempo", "set_lane_slots", "set_clip", "export_groove", "add_section", "duplicate_section", "import_groove", "undo_song", "render_song"]);
-    // …and the read-only promise is kept for the reader that was added with them.
-    expect(TOOLS.find((tool) => tool.name === "get_song")?.readOnly).toBe(true);
+    const WRITING_VERBS = new Set(["add", "assign", "create", "duplicate", "export", "import", "make", "normalize", "remove", "rename", "render", "select", "set", "undo"]);
+    const RETURNS_BYTES_DESPITE_THE_VERB = new Set(["export_midi", "export_ableton"]);
+
+    const looksLikeAWriter = (name: string) => WRITING_VERBS.has(name.split("_")[0]!) && !RETURNS_BYTES_DESPITE_THE_VERB.has(name);
+    const mislabelled = TOOLS.filter((tool) => looksLikeAWriter(tool.name) === tool.readOnly).map((tool) => tool.name);
+    expect(mislabelled).toEqual([]);
+    // And the promise holds for the readers the arrangement group added, which is what makes them safe to call freely.
+    for (const name of ["get_arrangement", "describe_arrangement", "get_song", "list_genres"]) {
+      expect(TOOLS.find((tool) => tool.name === name)?.readOnly, name).toBe(true);
+    }
   });
 
   it("declares resources and prompts that can be built", () => {

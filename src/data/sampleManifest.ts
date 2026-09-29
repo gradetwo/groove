@@ -25,6 +25,26 @@ export interface SampleManifestFile {
   bytes?: number;
 }
 
+/**
+ * Program ids: short, stable, and unique within their entry.
+ *
+ * **The slug comes from the program's own file name, not its whole path.** The first version slugged the path, so a meatbass program became `karoryfer-meatbass:Meatbass-Programs-02-arco-3vel` — the library named twice, since the entry id already
+ * carries it. The base name gives `karoryfer-meatbass:02-arco-3vel`, which is what a person reads and types.
+ *
+ * Two programs may share a base name in different directories, and an id that collided would point at the wrong instrument. The whole-path slug is the fallback **for the colliding names only**, so uniqueness is kept without paying for it everywhere. Ids are
+ * derived here rather than stored, so this scheme can change without touching the manifest — but not without changing what a saved song references, which is why it was corrected while nothing had been saved yet.
+ */
+function withProgramIds(entryId: string, instruments: readonly ManifestInstrument[]): { sfz: string; name: string; assetId: string }[] {
+  const slug = (text: string) => text.replace(/\.sfz$/i, "").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const short = instruments.map((program) => slug(program.sfz.split("/").pop() ?? program.sfz));
+  const duplicated = new Set(short.filter((name, index) => short.indexOf(name) !== index));
+  return instruments.map((program, index) => ({
+    sfz: program.sfz,
+    name: program.name,
+    assetId: `${entryId}:${duplicated.has(short[index]!) ? slug(program.sfz) : short[index]}`,
+  }));
+}
+
 /** One program in a library, named as a person would choose it. */
 export interface ManifestInstrument {
   /** Relative to `prefix`, like `sfz`. */
@@ -265,12 +285,7 @@ export function sampleAssetsFromManifest(manifest: SampleManifest, root: string)
      * `sfz` keeps producing exactly one asset under the entry's own id — which is what the two published entries rely on.
      */
     const programs: { sfz?: string; name: string; assetId: string }[] = entry.instruments?.length
-      ? entry.instruments.map((program) => ({
-          sfz: program.sfz,
-          name: program.name,
-          // A slug of the program's path rather than its position: a stable id must not move when the list is reordered, and the name is for people to read.
-          assetId: `${entry.id}:${program.sfz.replace(/\.sfz$/i, "").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "")}`,
-        }))
+      ? withProgramIds(entry.id, entry.instruments)
       : [{ sfz: entry.sfz, name: entry.name, assetId: entry.id }];
 
     for (const program of programs) {
