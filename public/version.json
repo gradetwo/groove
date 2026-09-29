@@ -1,25 +1,29 @@
 {
-  "version": "2.34.30",
+  "version": "2.34.31",
   "releaseDate": "2026-09-29",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.30",
+    "version": "2.34.31",
     "date": "2026-09-29",
     "category": "feature",
     "title": {
-      "zh": "关于里能联系到我们了",
-      "en": "The About panel can reach us now"
+      "zh": "新建编排终于能用了",
+      "en": "The new-project route works now"
     },
     "highlights": [
       {
-        "zh": "设置里的关于新增两行：联系地址，以及发邮件上报问题。",
-        "en": "The About panel in settings has two new rows: the contact address, and a line to report a bug by email."
+        "zh": "新建路线有了自己的音频引擎，不再是空壳，按播放会出声。",
+        "en": "The new-project route has its own audio engine, so it is no longer a shell and Play makes a sound."
       },
       {
-        "zh": "上报那条带着主题，于是来信是标好的，而不是一句无题的问候。",
-        "en": "The bug line carries a subject, so a report arrives labelled rather than as a bare greeting."
+        "zh": "采样轨道可以挑乐器，四件真实乐器里选一件。",
+        "en": "A sampler track can choose its instrument, from the four real libraries."
+      },
+      {
+        "zh": "每条轨道的十六步看得见，也能点。",
+        "en": "Each track's sixteen steps are visible and tappable."
       }
     ],
-    "truncated": false
+    "truncated": true
   }
 }
