@@ -12,6 +12,8 @@ const noCapture = () => new Promise<never>(() => undefined);
 describe("ArrangementViewV2", () => {
   it("shows a track added through the list, in the same arrangement the picker reads", () => {
     render(<ArrangementViewV2 songId="s" capture={noCapture} />);
+    // ⭐ A new project starts by choosing what it is (Logic's Choose a Project), so every criterion goes through Create first.
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
     fireEvent.click(screen.getByRole("button", { name: "+ sampler" }));
     // One arrangement behind both: if the blocks held their own copies, the picker would still be empty here.
     expect(screen.getByTestId("arrangement-track-picker").textContent).toContain("sampler");
@@ -19,12 +21,16 @@ describe("ArrangementViewV2", () => {
 
   it("says nothing is selected rather than showing an empty panel", () => {
     render(<ArrangementViewV2 songId="s" capture={noCapture} />);
+    // ⭐ A new project starts by choosing what it is (Logic's Choose a Project), so every criterion goes through Create first.
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
     // An empty panel reads as broken; a sentence reads as a state.
     expect(screen.getByTestId("arrangement-detail").textContent).toMatch(/Select a track/);
   });
 
   it("drops the selection when the selected track is removed, so the take selector cannot describe a track that is gone", () => {
     render(<ArrangementViewV2 songId="s" capture={noCapture} />);
+    // ⭐ A new project starts by choosing what it is (Logic's Choose a Project), so every criterion goes through Create first.
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
     fireEvent.click(screen.getByRole("button", { name: "+ sampler" }));
     // Adding selects the new track, so the take selector is showing — and removing *it* must clear the selection, leaving the default track behind.
     expect(screen.getByTestId("take-selector-v2")).toBeDefined();

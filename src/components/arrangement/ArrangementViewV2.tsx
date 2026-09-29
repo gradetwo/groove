@@ -9,11 +9,12 @@
  */
 import { useCallback, useMemo, useState } from "react";
 import type { ArrangementV2, TrackKindV2 } from "../../types/arrangementV2";
-import { addTrack, changeTrackKind, createArrangement, removeTrack, setCollapsed, setTrackFlag, selectTrackTake } from "../../data/arrangementEdits";
+import { addTrack, changeTrackKind, createArrangementFromTemplate, removeTrack, setCollapsed, setTrackFlag, selectTrackTake } from "../../data/arrangementEdits";
 import type { CaptureOutcome } from "../../audio/captureTake";
 import { TrackListV2 } from "./TrackListV2";
 import { TakeSelectorV2 } from "./TakeSelectorV2";
 import { RecordButtonV2 } from "./RecordButtonV2";
+import { NewProjectPanelV2 } from "./NewProjectPanelV2";
 
 export interface ArrangementViewV2Props {
   songId: string;
@@ -24,7 +25,16 @@ export interface ArrangementViewV2Props {
 }
 
 export function ArrangementViewV2({ songId, capture, bar = 0 }: ArrangementViewV2Props) {
-  const [arrangement, setArrangement] = useState<ArrangementV2>(() => createArrangement(songId));
+  /**
+   * ⭐ **A new project starts by choosing what it is** — which is Logic's `Choose a Project`, and the owner's "there is no good new-project entry". `undefined` means the choice has not been made, and the panel is
+   * what the route shows until it is; only then is there an arrangement to edit.
+   */
+  /**
+   * ⭐ **`choosing`, not an optional arrangement** — and the difference is not stylistic. An `ArrangementV2 | undefined` cannot be narrowed inside the hooks, so every callback would need a guard whose absence is a
+   * runtime bug rather than a type error. A separate flag keeps the arrangement always valid, so "no arrangement yet" is a thing the component *says* rather than a thing it must remember to check.
+   */
+  const [choosing, setChoosing] = useState(true);
+  const [arrangement, setArrangement] = useState<ArrangementV2>(() => createArrangementFromTemplate(songId, undefined, "instrument"));
   const [selectedTrackId, setSelectedTrackId] = useState<string | undefined>(undefined);
 
   const onAddTrack = useCallback((kind: TrackKindV2, name: string) => {
@@ -37,6 +47,20 @@ export function ArrangementViewV2({ songId, capture, bar = 0 }: ArrangementViewV
   }, []);
 
   const selected = useMemo(() => arrangement.tracks.find((track) => track.id === selectedTrackId), [arrangement, selectedTrackId]);
+
+  // ⭐ The early return sits **after every hook**, because a conditional hook changes their order: the first version of this had it above `useCallback` and produced six type errors, whose real content was a React bug.
+  if (choosing) {
+    return (
+      <NewProjectPanelV2
+        onCreate={(templateId, blankKind) => {
+          // ⭐ The panel reports the choice; **what an arrangement is made of** is `createArrangementFromTemplate`'s business, including the default track a blank project still gets.
+          setArrangement(createArrangementFromTemplate(songId, templateId, blankKind));
+          setSelectedTrackId(undefined);
+          setChoosing(false);
+        }}
+      />
+    );
+  }
 
   return (
     <div data-testid="arrangement-view-v2">
