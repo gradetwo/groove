@@ -247,6 +247,8 @@ Deployed silent-river-9229
 6. ⭐ **打附注 tag** ✓：`git tag -a v<version> -m "…"` ✓ + `git push origin v<version>` ✓；
 7. **核对远端** ✓：`git ls-remote --heads origin main` ✓ + `git ls-remote --tags origin | grep v<version>` ✓。
 
+⚠️ **而 `changelogCount: 10` 不是异常** ✓ —— **已读工具确认**：`scripts/version.mjs:127` 写的是 `changelogCount: trimmed.length` ✓，**即"裁剪之后"的长度** ✓ → ⭐ **它是一个"最近 10 条"的滚动窗口** ✓，**不是总数** ✓。⭐ 所以加了新条目之后它**仍然是 10** ✓（**新的在顶上 ✓，旧的下移 ✓，最老的掉出窗口 ✓**）—— ⭐ **我一度想把它当异常报出来，而读一行代码就解决了** ✓。
+
 ### ⭐ 这一轮（v2.34.19）的实际执行与证据 ✓
 
 ```
