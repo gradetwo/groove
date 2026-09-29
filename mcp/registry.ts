@@ -44,6 +44,7 @@ import {
   assignMcpTakeRange,
   createMcpArrangement,
   describeMcpArrangement,
+  flattenMcpArrangement,
   removeMcpTrack,
   renameMcpTrack,
   selectMcpTake,
@@ -167,6 +168,45 @@ export const TOOLS: ToolDefinition[] = [
    *
    * The kind list is repeated in the schemas rather than shared through a constant, because a `z.enum` is what a client reads for its own validation — and one source of truth for it is `TrackKindV2`, which the compiler checks these against.
    */
+  {
+    name: "render_arrangement",
+    title: "Bounce an arrangement",
+    description:
+      "Render an arrangement to audio through the same offline engine the song and pattern tools use. **An arrangement is one bar of sixteen steps**, so this bounces the loop the interface's Play button plays rather than a piece — when the model gains a length, this follows.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      format: z.enum(["wav", "mp3"]).default("wav"),
+      bitrateKbps: z.number().int().min(32).max(320).optional().describe("MP3 only; default 192"),
+      sampleRate: z.number().int().min(8000).max(96000).optional().describe("render rate; 8000 makes an analysis pass about a fifth of the work"),
+      channels: z.number().int().min(1).max(2).optional().describe("1 for a mono analysis render"),
+    },
+    handler: async (args) => {
+      try {
+        const { flattened, bars } = flattenMcpArrangement(String(args.arrangementId));
+        const result = await renderAudio(flattened.pattern, {
+          format: (args.format as "wav" | "mp3") ?? "wav",
+          ...(args.sampleRate ? { sampleRate: args.sampleRate as number } : {}),
+          ...(args.channels ? { channels: args.channels as 1 | 2 } : {}),
+          // The flattened pattern *is* the arrangement, so one pass plays all of it.
+          bars: 1,
+          bitrateKbps: args.bitrateKbps as number | undefined,
+          genreId: "custom",
+        });
+        const skipped = lanesWithoutMidi(flattened.pattern);
+        return {
+          ...(result as unknown as Record<string, unknown>),
+          arrangementId: String(args.arrangementId),
+          bars,
+          totalSteps: flattened.pattern.totalSteps,
+          // Reported rather than silent: a lane that vanishes from a render has to say why it did.
+          ...(skipped.length ? { skippedLanes: skipped, skippedNote: "these lanes are not in the render; a lane whose sample is missing sounds as nothing" } : {}),
+        };
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
   {
     name: "list_arrangement_instruments",
     title: "List playable instruments",
