@@ -45,9 +45,12 @@ describe("the manifest this repository ships", () => {
 
   it("leaves the second entry honestly incomplete, because nothing has been mirrored for it", () => {
     const salamander = parseManifest(JSON.stringify(shipped)).manifest!.entries.find((candidate) => candidate.id === "salamander-grand")!;
-    // It is CC BY, so its attribution is required and present — and its duration is absent rather than invented, which the bridge reports as a gap.
+    // It is CC BY, so its attribution is required and present.
+    // ⭐ **Its duration is present because it was measured, not invented** — the entry once had none, and this assertion used to read `toBeUndefined()`, which was right then: the gap had to be reported rather than filled with a
+    // guess. Now the library has been mirrored and `ffprobe` measured 641 of its samples, so the fact has changed and the assertion follows it. What must stay true is the distinction the old one defended: a duration that exists is a
+    // **measured** one..
     expect(salamander.licence).toBe("CC-BY");
     expect(salamander.attribution).toContain("Alexander Holm");
-    expect(salamander.durationSeconds).toBeUndefined();
+    expect(salamander.durationSeconds).toBeGreaterThan(0);
   });
 });
