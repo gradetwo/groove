@@ -1,3 +1,5 @@
+import { createArrangementPlayer } from "./audio/playerFromEngine";
+import { appCatalogueRuntime } from "./data/sampleCatalogueRuntime";
 import { captureWithBrowser } from "./audio/captureBrowser";
 import { createOpfsRecordingStore } from "./audio/opfsRecordingStore";
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
@@ -586,6 +588,14 @@ const MainApp: React.FC = () => {
               <React.Suspense fallback={null}>
                 <ArrangementViewV2
                   songId="new"
+                  /**
+                   * ⭐ The app's own engine instance, not the studio's ref: by the time this route renders there is one, and when there is not, the view says so instead of looking broken.
+                   */
+                  player={
+                    engineInstance
+                      ? createArrangementPlayer({ engine: engineInstance, loadCatalogue: () => appCatalogueRuntime.load() })
+                      : undefined
+                  }
                   capture={async () => {
                     // The store is the browser's own filesystem; if it is unavailable the capture reports that rather than throwing, which is the same rule the recording path follows everywhere else.
                     const root = await navigator.storage?.getDirectory?.();
