@@ -157,6 +157,16 @@ export class FakeBufferSourceNode extends FakeNode {
   stop(when?: number) {
     this.stopCalls.push(when);
   }
+  /**
+   * **`onended`, so a criterion can end a voice the way a one-shot drum hit does.**
+   *
+   * The real node fires this when the sample runs out, and the player depends on it: `note_polyphony` counts voices that are *still sounding*, so a voice that has finished must be able to say so. The code under test attaches the handler (it checks `"onended" in source` first), which is why this is a plain property rather than a method.
+   */
+  onended: (() => void) | null = null;
+  /** Fire the end event, as the audio thread does when the sample runs out. */
+  finish() {
+    this.onended?.();
+  }
 }
 
 export class FakeStereoPannerNode extends FakeNode {

@@ -36,6 +36,10 @@ export interface ResolvedInstrumentNote {
    * however briefly you press the key" — and a player that stops at note-off truncates every drum hit.
    */
   oneShot?: boolean;
+  /**
+   * **How many voices of one note may sound at once**, which SFZ spells `note_polyphony=N`. Measured with sfizz on four hits of the same note, each letting the sample ring: absent → 4.04 voices' worth of level, `note_polyphony=1` → 1.01, `=2` → 2.02, `=3` → 3.03. So the opcode caps the simultaneous voices of that note, and **which voice survives was measured too**: with a loud first hit and three quiet ones at `note_polyphony=1` the level stays at the loud one's (0.0831 against a 0.0811 reference), so the **new note is refused** while the cap is reached rather than replacing the oldest.
+   */
+  notePolyphony?: number;
 }
 
 export interface InstrumentResolution {
@@ -98,6 +102,9 @@ export function resolveInstrumentNote(
   const offBy = asInt(answered?.opcodes.off_by);
   // `loop_mode` takes several values; only `one_shot` means "ignore the key release". Anything else keeps the note-off behaviour this project has always had.
   const oneShot = answered?.opcodes.loop_mode === "one_shot";
+  // A value that is not a positive integer is **no cap**, not a cap of zero: `note_polyphony=0` would otherwise silence a note the file plainly intends to sound.
+  const notePolyphony = asInt(answered?.opcodes.note_polyphony);
+  const polyphonyCap = notePolyphony !== undefined && notePolyphony > 0 ? notePolyphony : undefined;
 
   return {
     ok: true,
@@ -110,6 +117,7 @@ export function resolveInstrumentNote(
       ...(group === undefined ? {} : { group }),
       ...(offBy === undefined ? {} : { offBy }),
       ...(oneShot ? { oneShot: true } : {}),
+      ...(polyphonyCap === undefined ? {} : { notePolyphony: polyphonyCap }),
     },
   };
 }
