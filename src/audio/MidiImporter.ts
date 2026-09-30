@@ -163,7 +163,13 @@ export function parseMidiFile(buffer: ArrayBufferLike): {
     reader.pos += headerLength - 6; // skip extra header bytes if any
   }
 
+  /**
+   * ⭐ **120 is what a file that says nothing gets, and the caller is told that it said nothing.**
+   *
+   * Muse, importing through the MCP server, reported that a MIDI file with no tempo event came back as `tempoBpm: 120`, which contradicts the promise that the number is "the tempo the file states". The default is right — something has to be assumed to place the notes in time — but a caller cannot tell an assumption from a measurement, and this project does not let those two look alike.
+   */
   let bpm = 120;
+  let tempoStated = false;
   const notes: ParsedMidiNote[] = [];
   const trackNames: string[] = [];
 
@@ -225,6 +231,8 @@ export function parseMidiFile(buffer: ArrayBufferLike): {
           const us = (b1 << 16) | (b2 << 8) | b3;
           if (us > 0) {
             bpm = Math.round(60000000 / us);
+            // The file said it, so the number is a reading rather than this parser's assumption.
+            tempoStated = true;
           }
         } else if (metaType === 0x03) {
           // Track Name — a person's text, so it is decoded rather than read byte for byte.
@@ -274,7 +282,7 @@ export function parseMidiFile(buffer: ArrayBufferLike): {
     reader.pos = chunkEnd;
   }
 
-  return { format, tracksCount, division: division || 480, bpm, notes, trackNames };
+  return { format, tracksCount, division: division || 480, bpm, tempoStated, notes, trackNames };
 }
 
 /**
