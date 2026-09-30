@@ -117,7 +117,23 @@ export function compileArrangementToSongInput(arrangement: ArrangementV2, notes:
    * That was a real defect and not a cosmetic one: the grid grew to hold a note in bar three while the transport still played a single bar, so a note written there was in the data and never scheduled. The length and the tempo both belong to the arrangement, and this is where they reach the engine. Every consumer of either number reads it here: the audio-lane planner's section walk,
    * `flattenSong`'s placement, and the arrangement player's own pattern.
    */
-  return { clips: { A: { tracks } }, sections: [{ id: "compiled", slot: "A", bars: arrangement.bars ?? 1 }], boundaries: [0], bpm: arrangement.bpm ?? DEFAULT_ARRANGEMENT_BPM };
+  return {
+    clips: { A: { tracks } },
+    sections: [{ id: "compiled", slot: "A", bars: arrangement.bars ?? 1 }],
+    boundaries: [0],
+    bpm: arrangement.bpm ?? DEFAULT_ARRANGEMENT_BPM,
+    /**
+     * ⭐ **The map leaves the arrangement here — and this is the projection that is actually used.**
+     *
+     * The previous attempt patched `songInputFrom` below instead, which the type check answered with `Property
+     * 'tempoTrack' does not exist`: that function is **defined and never called**, so patching it changed nothing. Two
+     * literals meant to say the same thing, one of them dead, is the failure this session has now met four times
+     * (clip slots, lane kinds, melody tones, and this) — the live one is the one that has to say it.
+     *
+     * Spread conditionally, because an arrangement without a map must produce the song input it always produced.
+     */
+    ...(arrangement.tempoTrack?.length ? { tempoTrack: arrangement.tempoTrack } : {}),
+  };
 }
 
 function songInputFrom(arrangement: ArrangementV2, compiled: readonly CompiledLane[]) {
