@@ -125,28 +125,12 @@ export function compileArrangementToSongInput(arrangement: ArrangementV2, notes:
     /**
      * ⭐ **The map leaves the arrangement here — and this is the projection that is actually used.**
      *
-     * The previous attempt patched `songInputFrom` below instead, which the type check answered with `Property
+     * The previous attempt patched a dead `songInputFrom` (now deleted) instead, which the type check answered with `Property
      * 'tempoTrack' does not exist`: that function is **defined and never called**, so patching it changed nothing. Two
      * literals meant to say the same thing, one of them dead, is the failure this session has now met four times
      * (clip slots, lane kinds, melody tones, and this) — the live one is the one that has to say it.
      *
      * Spread conditionally, because an arrangement without a map must produce the song input it always produced.
-     */
-    ...(arrangement.tempoTrack?.length ? { tempoTrack: arrangement.tempoTrack } : {}),
-  };
-}
-
-function songInputFrom(arrangement: ArrangementV2, compiled: readonly CompiledLane[]) {
-  const tracks = compiled.map((entry) => entry.track);
-  return {
-    clips: { A: { tracks } },
-    sections: [{ id: "compiled", slot: "A", bars: arrangement.bars ?? 1 }],
-    boundaries: [0],
-    bpm: arrangement.bpm ?? DEFAULT_ARRANGEMENT_BPM,
-    /**
-     * ⭐ **The arrangement's tempo map travels with the projection — that is the whole of step one.**
-     *
-     * The song layer has always accepted `tempoTrack` (it is what `set_tempo` writes) and the renderer schedules bar by bar from it, so an arrangement carrying a map only had to say so here for a nine-movement piece to stop being nine arrangements rendered apart. Spread conditionally rather than passed as `undefined`, because an absent map must leave the song input **exactly** as it was: nothing that works today changes shape.
      */
     ...(arrangement.tempoTrack?.length ? { tempoTrack: arrangement.tempoTrack } : {}),
   };
