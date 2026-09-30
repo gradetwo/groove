@@ -791,3 +791,27 @@ unresolved: 0
 ```
 
 所以"只认 `<control>`"不是简化，而是参考引擎的行为：写在别处的 `set_ccN` 是空操作，把它当成初值会让 sfizz 判为无声的 region 在这里发声。判据写进 `sfzCcGate.test.ts`，把这条范围规则钉住。
+
+## 乐器分类：清单里声明，代码里推导（2026-09-30）
+
+135 件乐器平铺成一个列表是个问题而不是选择，所以清单的条目多了两个字段，而且**都是声明**：
+
+| 字段 | 是什么 | 为什么在这里 |
+| --- | --- | --- |
+| `category` | 一件乐器的种类："Acoustic Drums"、"Bass"、"Winds" | 这是人对一个库的判断（Mellotron 算键盘还是自成一类，文件里没有答案），所以由人写、由评审看 |
+| `categoryByPath` | 多乐器库里按 **SFZ 路径首段**取分类 | VCSL 的四族不是同一种乐器，而它是一条条目：一个 `category` 会把 88 件乐器归到一个词下，而路径本来就说了每件属于哪一族 |
+| `subcategoryFrom` | 第二级从哪儿来：`"path"` 或 `"filename"` | 分类后仍然很长时才需要第二级（业主的要求）。`"path"` 取路径的第二段（VCSL 自己的结构），`"filename"` 取程序文件名里第一个有意义的词（Karoryfer 把奏法写进名字里：`01_arco_modwheel`） |
+
+推导规则只实现一次（`src/data/sampleManifest.ts`），实测结果是：
+
+```
+  Bass (39)            → arco:27 pizz:12
+  Mallets & Bells (52) → Struck Idiophones:46  Plucked Idiophones:5  Friction Idiophones:1
+  Winds (17)           → Edge-blown Aerophones:10  Free Aerophones:4  Reed Aerophones:2  Lip Aerophones:1
+  Percussion (18)      → Struck Membranophones:17  Other Membranophones:1
+  Guitar (6)           → （无第二级）
+```
+
+最后一行是一条规则的结果，而不是省略：**分不出东西的第二级会被丢掉**。吉他库的六个程序都叫 `emily_*`，文件名规则会给它们同一个词——六个一组挂在一个等于库名的词下面，那不是分类，是重复。
+
+分类与资产一起流到目录（`SampleAsset.category` / `.subcategory`），所以**面板与 MCP 读的是同一份答案**：MCP 的 `list_arrangement_instruments` 返回带计数的树（`categories[].subcategories[]`），并可按 `category`、`subcategory` 与 `query` 筛选。

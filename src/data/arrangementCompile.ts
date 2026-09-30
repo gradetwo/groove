@@ -51,15 +51,24 @@ export function compileArrangementToLanes(arrangement: ArrangementV2, notes: Not
     if (track.kind === "folder") continue;
 
     const trackId = track.fromTrackId ?? ROLE_BY_KIND[track.kind];
-    const steps = notes[track.id];
+    const notesForTrack = notes[track.id] ?? [];
+    /**
+     * **The conversion, and its stated limit.** The engine's lanes trigger at sixteenth-note steps, so a note is placed at the step its start rounds to and its pitch rides along in `pitch`; its **length is not represented**, because a lane's step fires a
+     * one-shot rather than holding a note. That is a limit of this playback path rather than of the model: the notes keep their true positions and lengths, so a path that read beats would need no conversion at all.
+     *
+     * The grid is as long as the notes are — a note written in bar three must not fall off the end of a one-bar array.
+     */
+    const stepCount = Math.max(16, ...notesForTrack.map((note) => Math.round(note.startBeats * STEPS_PER_BEAT) + 1));
+    const { steps, pitches } = stepsFromNotes(notesForTrack, stepCount);
     lanes.push({
       sourceTrackId: track.id,
       track: {
         track_id: trackId,
         name: track.name,
         instrument: track.kind === "sampler" ? "sampler" : "synth",
-        // A lane with no note data still has to occupy the pattern; an empty lane is silence, which is the honest result of "a track with nothing on it".
-        steps: steps && steps.length > 0 ? steps : new Array(16).fill(0),
+        steps,
+        // Only written when something has a pitch, so a lane with no notes keeps the shape it had.
+        ...(pitches.some((value) => value !== 0) ? { pitch: pitches } : {}),
         ...(track.sample ? { sample: { assetId: track.sample.assetId } } : {}),
         ...(track.fromLaneId ? { laneId: track.fromLaneId } : {}),
       } as SequencerTrack,
