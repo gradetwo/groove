@@ -33,6 +33,7 @@ import {
   setArrangementBars,
   setArrangementTempo,
   setTrackFlag,
+  setArrangementTimeSignature,
   setTrackGain,
   setTrackNoteLength,
   setTrackPan,
@@ -486,6 +487,21 @@ function addImportedParts(
 /** ⭐ The arrangement's tempo in beats per minute. It reached the engine as a hardcoded 120 until this existed. */
 export function setMcpArrangementTempo(arrangementId: string, bpm: number): ArrangementEditResult {
   return edit(arrangementId, (arrangement) => setArrangementTempo(arrangement, bpm));
+}
+
+/**
+ * ⭐ **The arrangement's time signature, and the reason this wrapper exists at all.**
+ *
+ * The edit function `setArrangementTimeSignature` was written first and the gate refused the commit:
+ * `mcpCoverage.test.ts` requires **every operation that changes the model to be reachable from an MCP tool**, or to be
+ * listed in `EXCLUDED` with a reason. That is a good rule and it caught exactly the shape Muse kept reporting — a
+ * capability that exists on one side and is unreachable from the other.
+ *
+ * The signature is **validated rather than clamped** (see the edit function): a caller who writes `"4/5"` gets an
+ * error, not a silent 4/4.
+ */
+export function setMcpArrangementTimeSignature(arrangementId: string, timeSignature: string): ArrangementEditResult {
+  return edit(arrangementId, (arrangement) => setArrangementTimeSignature(arrangement, timeSignature));
 }
 
 export function setMcpArrangementBars(arrangementId: string, bars: number): ArrangementEditResult {
