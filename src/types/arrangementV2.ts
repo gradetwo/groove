@@ -66,6 +66,26 @@ export interface TakeRegion {
   takeId: string;
 }
 
+/**
+ * One note, in musical time.
+ *
+ * **This replaces a sixteen-step array, which was the v1 pattern's grid carried into a model that no longer needs it.** A step array cannot say where inside a step a note begins, how long it is held, or what pitch it carries beyond one value per column — and
+ * those are exactly the three things a piano roll writes. The owner's instruction was to stop letting the old step design constrain this one, and this is the piece of it that did.
+ *
+ * Time is **beats** (quarter notes), not steps, so the grid a person sees is a view over the model rather than the model itself. A drum part is not a special case: a drum note is a note with a pitch, exactly as it is in a DAW, which is why one model
+ * covers both the grid and the roll.
+ */
+export interface NoteEvent {
+  /** MIDI note number. */
+  pitch: number;
+  /** Where it starts, in beats from the arrangement's beginning. Fractional positions are the point: a roll is not a grid. */
+  startBeats: number;
+  /** How long it is held, in beats. */
+  lengthBeats: number;
+  /** 1–127, the same scale the keyboard's velocity slider uses. */
+  velocity: number;
+}
+
 export interface ArrangementV2 {
   /** The v1 song this was projected from — **kept, not copied**, so nothing can drift out of step with it. */
   songId: string;
@@ -78,7 +98,7 @@ export interface ArrangementV2 {
    *
    * **Keys are `trackId`s, which makes deletion a data question**, not just a list edit: a track's notes have to go with it or the model keeps orphans that fire the next time something reuses that id.
    */
-  notesByTrack?: Record<string, number[]>;
+  notesByTrack?: Record<string, NoteEvent[]>;
   /** Every clip slot that carried at least one track, so a projection can be checked for completeness. */
   sourceSlots: string[];
 }

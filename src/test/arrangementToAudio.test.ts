@@ -22,7 +22,7 @@ const arrangement: ArrangementV2 = {
 describe("a v2 arrangement reaching the planner", () => {
   it("plans lane events for a sampler track, so an audio track is audible rather than only compilable", () => {
     // ⭐ The engine is untouched: the compile produces the shape the planner already takes, and this asserts the two agree.
-    const song = compileArrangementToSongInput(arrangement, { t1: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0] }) as never;
+    const song = compileArrangementToSongInput(arrangement, { t1: [0, 1, 2, 3].map((beat) => ({ pitch: 36, startBeats: beat, lengthBeats: 0.25, velocity: 100 })) }) as never;
     // ⭐ The catalogue is a parameter **because the shipped one is deliberately empty** — so a criterion that passes `[]` is asking the planner to find an asset that no catalogue holds, and gets a
     // `problem` rather than an event. The first version of this criterion did exactly that and failed; the failure was in the criterion's setup, not in the compile.
     const asset: SampleAsset = { assetId: "virtuosity-drums-basic", name: "Virtuosity Drums", kind: "one-shot", seconds: 1 };

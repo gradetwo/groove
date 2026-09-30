@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_SAMPLER_ASSET, defaultContentFor } from "../data/defaultContent";
+import { notesFromSteps } from "../data/noteEvents";
 import { compileArrangementToLanes } from "../data/arrangementCompile";
 
 /**
@@ -25,10 +26,10 @@ describe("default content for a new track", () => {
 
   it("compiles a default sampler track into a lane that still names its asset", () => {
     // ⭐ The end of the chain, checked here so a default that stopped carrying the asset would fail where it is decided rather than where it is played.
-    const lanes = compileArrangementToLanes({ songId: "s", sourceSlots: [], tracks: [{ id: "t", kind: "sampler", name: "S" }] }, { t: defaultContentFor("sampler").steps });
+    const lanes = compileArrangementToLanes({ songId: "s", sourceSlots: [], tracks: [{ id: "t", kind: "sampler", name: "S" }] }, { t: notesFromSteps(defaultContentFor("sampler").steps) });
     expect(lanes[0]!.track.sample).toBeUndefined();
     // The lane carries what the track carries, so a default that forgot the asset is visible right here.
-    const withAsset = compileArrangementToLanes({ songId: "s", sourceSlots: [], tracks: [{ id: "t", kind: "sampler", name: "S", sample: { assetId: DEFAULT_SAMPLER_ASSET } }] }, { t: defaultContentFor("sampler").steps });
+    const withAsset = compileArrangementToLanes({ songId: "s", sourceSlots: [], tracks: [{ id: "t", kind: "sampler", name: "S", sample: { assetId: DEFAULT_SAMPLER_ASSET } }] }, { t: notesFromSteps(defaultContentFor("sampler").steps) });
     expect(withAsset[0]!.track.sample).toEqual({ assetId: DEFAULT_SAMPLER_ASSET });
   });
 });

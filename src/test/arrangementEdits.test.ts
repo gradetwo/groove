@@ -1,7 +1,7 @@
 import { DEFAULT_SAMPLER_ASSET } from "../data/defaultContent";
 import type { ArrangementV2 } from "../types/arrangementV2";
 import { beforeEach, describe, expect, it } from "vitest";
-import { addTake, addTrack, changeTrackKind, createArrangement, removeTrack, resetTrackIdsForTests, setTrackParent, setTrackSample, setTrackSteps, toggleStep } from "../data/arrangementEdits";
+import { addTake, addTrack, addTrackNote, changeTrackKind, createArrangement, moveTrackNote, removeTrack, removeTrackNote, resetTrackIdsForTests, setTrackNoteLength, setTrackParent, setTrackSample, setTrackSteps, toggleStep } from "../data/arrangementEdits";
 
 /**
  * The edits an interface is built from, and the two ways they go quietly wrong.
@@ -200,7 +200,9 @@ describe("a v2 arrangement's own notes", () => {
     const arr = createArrangement("s", "sampler");
     const id = arr.tracks[0]!.id;
     // ⭐ Content arrives with the track: an empty track is silent, and a silent track looks like a broken engine.
-    expect(arr.notesByTrack?.[id]?.some((step) => step === 1)).toBe(true);
+    // Notes rather than steps: the model holds what a note is, and the grid is derived from it.
+    expect(arr.notesByTrack?.[id]?.length).toBeGreaterThan(0);
+    expect(arr.notesByTrack?.[id]!.every((note) => note.velocity > 0 && note.lengthBeats > 0)).toBe(true);
     // ⭐ And the asset, which is the half that is easy to miss: a sampler lane with no asset resolves to nothing.
     expect(arr.tracks[0]!.sample).toEqual({ assetId: "virtuosity-drums-basic" });
   });
@@ -221,7 +223,8 @@ describe("a v2 arrangement's own notes", () => {
     const { createArrangementFromTemplate, TEMPLATES } = await import("../data/arrangementEdits");
     for (const template of TEMPLATES) {
       const arr = createArrangementFromTemplate("s", template.id);
-      const sounded = arr.tracks.filter((track) => arr.notesByTrack?.[track.id]?.some((step) => step === 1));
+      // A track sounds when it has notes; the template's whole point is that every track it creates is audible.
+      const sounded = arr.tracks.filter((track) => (arr.notesByTrack?.[track.id]?.length ?? 0) > 0);
       expect(sounded.length).toBe(template.kinds.length);
     }
   });
@@ -262,25 +265,32 @@ describe("choosing the instrument a sampler track plays", () => {
 });
 
 describe("editing a track's own steps", () => {
-  it("turns a step on and off again", () => {
+  /**
+   * **The grid is a view, so these criteria are about the notes it writes.** A step array cannot say when a note begins inside a step, how long it is held or what pitch it carries — which is why the model stopped being one, and why the assertions here are on
+   * notes and on the view agreeing with them rather than on array indices.
+   */
+  it("turns a step on and off again, and the notes follow", () => {
     const withTrack = addTrack(emptyArrangement(), "drumkit", "Drums");
     const id = withTrack.tracks[0]!.id;
-    const on = toggleStep(withTrack, id, 0);
-    expect(on.notesByTrack![id]![0]).toBe(0); // every 4 from 0: step 0 starts on, so the first toggle takes it off
-    const off = toggleStep(on, id, 0);
-    expect(off.notesByTrack![id]![0]).toBe(1);
+    const before = withTrack.notesByTrack![id]!.length;
+    const off = toggleStep(withTrack, id, 0);
+    // Step 0 starts on for the default drum pattern, so the first toggle removes a note; the second puts it back.
+    expect(off.notesByTrack![id]!.length).toBe(before - 1);
+    const on = toggleStep(off, id, 0);
+    expect(on.notesByTrack![id]!.length).toBe(before);
+    expect(on.notesByTrack![id]!.some((note) => note.startBeats === 0)).toBe(true);
   });
 
   it("leaves the other steps of that track alone", () => {
     const withTrack = addTrack(emptyArrangement(), "drumkit", "Drums");
     const id = withTrack.tracks[0]!.id;
-    const before = withTrack.notesByTrack![id]!;
     const edited = toggleStep(withTrack, id, 1);
-    expect(edited.notesByTrack![id]!.filter((_, index) => index !== 1)).toEqual(before.filter((_, index) => index !== 1));
+    // Step 1 is empty in the default pattern, so this adds one note and moves nothing else.
+    expect(edited.notesByTrack![id]!.length).toBe(withTrack.notesByTrack![id]!.length + 1);
+    expect(edited.notesByTrack![id]!.filter((note) => note.startBeats % 1 === 0).length).toBe(4);
   });
 
   it("refuses a step outside the pattern rather than growing one", () => {
-    // A 16-step bar is what the data holds; an index beyond it would invent a length nobody chose.
     const withTrack = addTrack(emptyArrangement(), "drumkit", "Drums");
     const id = withTrack.tracks[0]!.id;
     expect(toggleStep(withTrack, id, 99)).toBe(withTrack);
@@ -292,6 +302,7 @@ describe("editing a track's own steps", () => {
     expect(toggleStep(withFolder, id, 0)).toBe(withFolder);
   });
 });
+
 describe("filing a finished capture onto a track", () => {
   it("appends the take and selects it, so it is the one heard rather than one to go looking for", () => {
     const withTrack = addTrack(emptyArrangement(), "sampler", "Sampler 1");
@@ -338,19 +349,27 @@ describe("filing a finished capture onto a track", () => {
 });
 
 describe("setting a whole step pattern", () => {
-  it("stores the steps it was given, in the length it was given", () => {
-    // A pattern is the steps it has: padding to sixteen would invent content, and truncating would discard it.
+  it("writes the steps it was given as notes at those positions", () => {
     const withTrack = addTrack(emptyArrangement(), "drumkit", "Drums");
     const id = withTrack.tracks[0]!.id;
     const edited = setTrackSteps(withTrack, id, [1, 0, 0, 1, 0, 0, 1, 0]);
-    expect(edited.notesByTrack![id]).toEqual([1, 0, 0, 1, 0, 0, 1, 0]);
+    // A step is a sixteenth, so the three that are on are 0.75 beats apart.
+    expect(edited.notesByTrack![id]!.map((note) => note.startBeats)).toEqual([0, 0.75, 1.5]);
+    expect(edited.notesByTrack![id]!.every((note) => note.lengthBeats === 0.25)).toBe(true);
   });
 
   it("turns a step on when its value is non-zero, because a step is a step rather than a velocity", () => {
     const withTrack = addTrack(emptyArrangement(), "drumkit", "Drums");
     const id = withTrack.tracks[0]!.id;
     // 0.4 is on, 3 is on, 0 is off, -1 is on: the rule is "non-zero", not "equals one".
-    expect(setTrackSteps(withTrack, id, [0.4, 3, 0, -1]).notesByTrack![id]).toEqual([1, 1, 0, 1]);
+    expect(setTrackSteps(withTrack, id, [0.4, 3, 0, -1]).notesByTrack![id]!.length).toBe(3);
+  });
+
+  it("keeps the pitch the track already used, so a drum row does not move to middle C", () => {
+    const added = addTrack(emptyArrangement(), "drumkit", "Drums");
+    const id = added.tracks[0]!.id;
+    const gated = { ...added, notesByTrack: { [id]: [{ pitch: 36, startBeats: 0, lengthBeats: 0.25, velocity: 100 }] } };
+    expect(setTrackSteps(gated, id, [0, 1, 0, 0]).notesByTrack![id]!.every((note) => note.pitch === 36)).toBe(true);
   });
 
   it("refuses a kind that makes no sound, and a track that is not there", () => {
@@ -358,6 +377,58 @@ describe("setting a whole step pattern", () => {
     const id = withFolder.tracks[0]!.id;
     expect(setTrackSteps(withFolder, id, [1, 1])).toBe(withFolder);
     expect(setTrackSteps(withFolder, "missing", [1, 1])).toBe(withFolder);
+  });
+});
+
+describe("writing notes directly, which is what a piano roll does", () => {
+  const note = (pitch: number, startBeats: number, lengthBeats = 1) => ({ pitch, startBeats, lengthBeats, velocity: 100 });
+
+  it("adds a note with its own position, length and pitch", () => {
+    const withTrack = addTrack(emptyArrangement(), "instrument", "Keys");
+    const id = withTrack.tracks[0]!.id;
+    const edited = addTrackNote({ ...withTrack, notesByTrack: { [id]: [] } }, id, note(64, 1.5, 2));
+    expect(edited.notesByTrack![id]).toEqual([{ pitch: 64, startBeats: 1.5, lengthBeats: 2, velocity: 100 }]);
+  });
+
+  it("replaces a note at the same cell rather than stacking a second voice on it", () => {
+    // Two notes at one pitch and position are one note with a doubled voice: unremovable with a second click, and heard as a mistake.
+    const withTrack = addTrack(emptyArrangement(), "instrument", "Keys");
+    const id = withTrack.tracks[0]!.id;
+    const once = addTrackNote({ ...withTrack, notesByTrack: { [id]: [] } }, id, note(64, 1, 1));
+    const twice = addTrackNote(once, id, { ...note(64, 1, 2), velocity: 80 });
+    expect(twice.notesByTrack![id]).toHaveLength(1);
+    expect(twice.notesByTrack![id]![0]!.velocity).toBe(80);
+  });
+
+  it("moves a note in time and pitch, and refuses a destination that is occupied", () => {
+    const withTrack = addTrack(emptyArrangement(), "instrument", "Keys");
+    const id = withTrack.tracks[0]!.id;
+    const two = addTrackNote(addTrackNote({ ...withTrack, notesByTrack: { [id]: [] } }, id, note(64, 0)), id, note(67, 1));
+    const moved = moveTrackNote(two, id, { pitch: 64, startBeats: 0 }, { pitch: 65, startBeats: 2 });
+    expect(moved.notesByTrack![id]!.find((entry) => entry.pitch === 65)!.startBeats).toBe(2);
+    // Onto the note already at (67, 1): refused, so both notes survive untouched.
+    const blocked = moveTrackNote(moved, id, { pitch: 65, startBeats: 2 }, { pitch: 67, startBeats: 1 });
+    expect(blocked.notesByTrack![id]!.map((entry) => entry.pitch).sort()).toEqual([65, 67]);
+  });
+
+  it("changes a note's length, with a floor of one step", () => {
+    const withTrack = addTrack(emptyArrangement(), "instrument", "Keys");
+    const id = withTrack.tracks[0]!.id;
+    const one = addTrackNote({ ...withTrack, notesByTrack: { [id]: [] } }, id, note(60, 0, 1));
+    expect(setTrackNoteLength(one, id, { pitch: 60, startBeats: 0 }, 4).notesByTrack![id]![0]!.lengthBeats).toBe(4);
+    // A note shorter than a step is invisible in the grid, so the floor is a step rather than zero.
+    expect(setTrackNoteLength(one, id, { pitch: 60, startBeats: 0 }, 0).notesByTrack![id]![0]!.lengthBeats).toBe(0.25);
+  });
+
+  it("removes a note by position, and refuses the silent kinds", () => {
+    const withTrack = addTrack(emptyArrangement(), "instrument", "Keys");
+    const id = withTrack.tracks[0]!.id;
+    const one = addTrackNote({ ...withTrack, notesByTrack: { [id]: [] } }, id, note(60, 0));
+    expect(removeTrackNote(one, id, { pitch: 60, startBeats: 0 }).notesByTrack![id]).toHaveLength(0);
+    const withFx = addTrack(emptyArrangement(), "fx", "Verb");
+    const fxId = withFx.tracks[0]!.id;
+    // An effect makes no sound, so a note on it would be content nothing accounts for.
+    expect(addTrackNote(withFx, fxId, note(60, 0))).toBe(withFx);
   });
 });
 

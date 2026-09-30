@@ -21,7 +21,7 @@ describe("playing a v2 arrangement", () => {
         { id: "t2", kind: "instrument", name: "Bass" },
       ],
     };
-    const result = await playArrangementV2(arrangement, { t1: [1, 0] }, engine as never);
+    const result = await playArrangementV2(arrangement, { t1: [{ pitch: 36, startBeats: 0, lengthBeats: 0.25, velocity: 100 }] }, engine as never);
     // ⭐ The engine was actually asked: a compile nobody plays is the silent-sampler bug with extra steps.
     expect(engine.play).toHaveBeenCalledTimes(1);
     expect(result.compiledLanes).toBe(2);

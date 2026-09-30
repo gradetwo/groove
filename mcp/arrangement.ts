@@ -13,15 +13,19 @@ import {
   TEMPLATES,
   addTake,
   addTrack,
+  addTrackNote,
   assignTakeToRange,
   changeTrackKind,
   createArrangement,
   createArrangementFromTemplate,
+  moveTrackNote,
   removeTrack,
+  removeTrackNote,
   renameTrack,
   selectTrackTake,
   setCollapsed,
   setTrackFlag,
+  setTrackNoteLength,
   setTrackParent,
   setTrackSample,
   setTrackSteps,
@@ -29,6 +33,7 @@ import {
 import type { ArrangementV2, TrackKindV2, TrackV2 } from "../src/types/arrangementV2";
 import type { PlannedTake } from "../src/data/takePlanning";
 import { compileArrangementToSongInput } from "../src/data/arrangementCompile";
+import { stepsFromNotes, STEPS_PER_BEAT } from "../src/data/noteEvents";
 import { createSong } from "../src/types/song";
 import { flattenSong, type FlattenedSong } from "../src/data/songFlatten";
 
@@ -60,8 +65,10 @@ export interface ArrangementTrackSummary {
   parentId?: string;
   /** The catalogue asset a sampler track plays, when one is chosen. */
   sampleAssetId?: string;
-  /** The steps it plays, as the data holds them — so an agent can read back what it wrote. */
+  /** The step grid its notes fall on, for a caller that thinks in squares. Derived from `notes` rather than stored. */
   steps: number[];
+  /** **The notes themselves** — where each begins, how long it is held, its pitch and velocity. This is the model. */
+  notes: Array<{ pitch: number; startBeats: number; lengthBeats: number; velocity: number }>;
   /** How many of those steps are on, which is the number a person would count. */
   stepsOn: number;
   /** Take ids in recorded order, and which one plays. */
@@ -87,7 +94,12 @@ function requireArrangement(arrangementId: string): ArrangementV2 {
 }
 
 function summariseTrack(track: TrackV2, arrangement: ArrangementV2): ArrangementTrackSummary {
-  const steps = arrangement.notesByTrack?.[track.id] ?? [];
+  const notes = arrangement.notesByTrack?.[track.id] ?? [];
+  /**
+   * **Notes, and the grid that views them.** The model holds notes — start, length, pitch, velocity — because that is what a piano roll writes; the step row is derived for a caller that thinks in squares. A summary that reported only steps would hide a note's length
+   * and its exact position, and one that reported only notes would make a drum pattern unreadable.
+   */
+  const { steps } = stepsFromNotes(notes, Math.max(16, ...notes.map((note) => Math.round(note.startBeats * STEPS_PER_BEAT) + 1)));
   return {
     id: track.id,
     kind: track.kind,
@@ -97,8 +109,9 @@ function summariseTrack(track: TrackV2, arrangement: ArrangementV2): Arrangement
     collapsed: track.collapsed === true,
     ...(track.parentId ? { parentId: track.parentId } : {}),
     ...(track.sample ? { sampleAssetId: track.sample.assetId } : {}),
-    steps: [...steps],
+    steps,
     stepsOn: steps.filter((value) => value !== 0).length,
+    notes: notes.map((note) => ({ pitch: note.pitch, startBeats: note.startBeats, lengthBeats: note.lengthBeats, velocity: note.velocity })),
     takes: (track.takes ?? []).map((take) => take.id),
     ...(track.selectedTakeId ? { selectedTakeId: track.selectedTakeId } : {}),
   };
@@ -243,6 +256,42 @@ export function selectMcpTake(arrangementId: string, trackId: string, takeId: st
     }
     return selectTrackTake(arrangement, trackId, takeId ?? undefined);
   });
+}
+
+/**
+ * The note-level edits — what a piano roll does, exposed to an agent.
+ *
+ * **They exist because the coverage guard said so.** Adding `addTrackNote` and its siblings to the data layer turned `mcpCoverage` red with "these operations change the arrangement and no MCP tool reaches them", which is the rule the owner asked for doing
+ * its job on its first real occasion. The grid tools below remain: a drum pattern is stated as squares, and a melody is stated as notes.
+ */
+export function addMcpNote(arrangementId: string, input: { trackId: string; pitch: number; startBeats: number; lengthBeats?: number; velocity?: number }): ArrangementEditResult {
+  return edit(arrangementId, (arrangement) =>
+    refuseUnknownTrack(arrangement, input.trackId, () =>
+      addTrackNote(arrangement, input.trackId, {
+        pitch: input.pitch,
+        startBeats: input.startBeats,
+        lengthBeats: input.lengthBeats ?? 1,
+        velocity: input.velocity ?? 100,
+      })
+    )
+  );
+}
+
+export function removeMcpNote(arrangementId: string, trackId: string, at: { pitch: number; startBeats: number }): ArrangementEditResult {
+  return edit(arrangementId, (arrangement) => refuseUnknownTrack(arrangement, trackId, () => removeTrackNote(arrangement, trackId, at)));
+}
+
+export function moveMcpNote(
+  arrangementId: string,
+  trackId: string,
+  from: { pitch: number; startBeats: number },
+  to: { pitch: number; startBeats: number }
+): ArrangementEditResult {
+  return edit(arrangementId, (arrangement) => refuseUnknownTrack(arrangement, trackId, () => moveTrackNote(arrangement, trackId, from, to)));
+}
+
+export function setMcpNoteLength(arrangementId: string, trackId: string, at: { pitch: number; startBeats: number }, lengthBeats: number): ArrangementEditResult {
+  return edit(arrangementId, (arrangement) => refuseUnknownTrack(arrangement, trackId, () => setTrackNoteLength(arrangement, trackId, at, lengthBeats)));
 }
 
 /**
