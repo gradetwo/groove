@@ -67,7 +67,11 @@ export function measurePitch(wav, { fromSeconds = 0, toSeconds = null, channel =
   let best = { lag: 0, value: 0 };
   for (let lag = minLag + 1; lag < maxLag; lag += 1) {
     const value = correlation[lag];
-    if (value >= correlation[lag - 1] && value >= correlation[lag + 1] && value >= 0.85 * globalMax) {
+    /**
+     * ⭐ **A tight threshold, not a loose one.** The rule was `>= 0.85 * globalMax`, and that was measured to be fragile: the same 880 Hz tone rendered into two directories measured 890.52 Hz and 880.01 Hz, because the correlation peak of a pure tone is flat-topped and a hair of numerical difference moved the chosen lag by one sample — which at ~50 samples per period is
+     * **2%**, twice the tolerance the callers compare against. `0.99` picks the top of the peak instead of its shoulder, which is the same choice every time. (Two renders into the *same* directory are byte-identical, so the perturbation was in the audio, not in the arithmetic.)
+     */
+    if (value >= correlation[lag - 1] && value >= correlation[lag + 1] && value >= 0.99 * globalMax) {
       best = { lag, value };
       break;
     }
