@@ -655,6 +655,44 @@ try {
   JSON.stringify(renderSongSchema?.inputSchema ?? {}).slice(0, 120)
   );
 
+  /**
+   * The custom-genre tools, called for real. The maker saved to the browser's IndexedDB and the server is a Node
+   * process with none, which is why the capability map recorded this as a gap; the store now sits behind
+   * `CustomGenreStore` and the fork is the app's own `forkGenre`. Re-saving a whole document through the tool is
+   * checked too, because a schema that enumerated fields instead of passing them through would drop the ones it did
+   * not name.
+   */
+  const savedGenre = payload(
+    await client.request("tools/call", { name: "save_custom_genre", arguments: { forkFromGenreId: "chicago-house", name: "Gate Probe" } })
+  );
+  check(
+    "save_custom_genre forks a library genre with its defaults",
+    savedGenre.replaced === false && savedGenre.genre?.forkedFromId === "chicago-house" && savedGenre.genre?.isCustom === true,
+    JSON.stringify({ id: savedGenre.genre?.id, bpm: savedGenre.genre?.default_bpm }).slice(0, 120)
+  );
+  const savedFieldCount = Object.keys(savedGenre.genre ?? {}).length;
+  const resavedGenre = payload(
+    await client.request("tools/call", { name: "save_custom_genre", arguments: { genre: { ...savedGenre.genre, default_bpm: 137 } } })
+  );
+  const rereadGenre = payload(await client.request("tools/call", { name: "get_custom_genre", arguments: { id: savedGenre.genre.id } }));
+  check(
+    "save_custom_genre replaces rather than duplicating, and keeps every field of a document",
+    resavedGenre.replaced === true && rereadGenre?.default_bpm === 137 && Object.keys(rereadGenre ?? {}).length === savedFieldCount,
+    `${savedFieldCount} -> ${Object.keys(rereadGenre ?? {}).length} fields, bpm ${rereadGenre?.default_bpm}`
+  );
+  const listedGenres = payload(await client.request("tools/call", { name: "list_custom_genres", arguments: {} }));
+  const duplicatedGenre = payload(
+    await client.request("tools/call", { name: "duplicate_custom_genre", arguments: { id: savedGenre.genre.id } })
+  );
+  const deletedGenre = payload(
+    await client.request("tools/call", { name: "delete_custom_genre", arguments: { id: duplicatedGenre.copy.id } })
+  );
+  check(
+    "list, duplicate and delete reach the session's custom genres",
+    listedGenres.total === 1 && duplicatedGenre.copy?.id !== savedGenre.genre.id && deletedGenre.remaining?.length === 1,
+    JSON.stringify({ listed: listedGenres.total, copy: duplicatedGenre.copy?.name, remaining: deletedGenre.remaining }).slice(0, 140)
+  );
+
   const resource = await client.request("resources/read", { uri: "groove://genres" });
   const resourceText = resource?.contents?.[0]?.text ?? "";
   check("resources/read serves the library index", resourceText.includes("chicago-house"), `${resourceText.length} chars`);

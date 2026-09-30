@@ -76,8 +76,10 @@ import { analyseWavFile, renderAudio } from "./render/worker";
 import { getGenreLoudnessTrimDb } from "../src/data/genreMix";
 import { setVocalMelody } from "./vocal";
 import { addMcpSection, createMcpSong, duplicateMcpSection, flattenMcpSong, getMcpSong, importMcpSong, makeUniqueMcpSection, mcpSongHistory, setMcpClip, setMcpLaneSlots, setMcpTempo, summariseSong, undoMcpSong } from "./song";
+import { deleteMcpCustomGenre, duplicateMcpCustomGenre, getMcpCustomGenre, listMcpCustomGenres, saveMcpCustomGenre } from "./customGenres";
 import type { ClipSlot } from "../src/types/song";
 import type { SequencerPattern } from "../src/types/genre";
+import type { CustomGenre } from "../src/types/customGenre";
 
 /** MCP tool results are text for maximum client compatibility; JSON is the text. */
 export function json(value: unknown): { content: Array<{ type: "text"; text: string }> } {
@@ -119,6 +121,25 @@ const patternSchema = z
         })
       )
       .min(1),
+  })
+  .passthrough();
+
+/**
+ * A custom genre document, as `get_custom_genre` returns it.
+ *
+ * Only the four fields that decide what is saved and where are named; everything else passes through untouched. A
+ * genre carries more than a hundred recorded fields, and a schema that enumerated them would be a second model to
+ * keep in step with `src/types/genre.ts` — while a schema that enumerated only some of them would **drop the rest**,
+ * because a parsed object keeps what it declares. The pattern is the one part checked for shape, since it is the half
+ * an agent composes with.
+ */
+const customGenreSchema = z
+  .object({
+    id: z.string().describe("the id it is saved under — saving the same id again replaces the first"),
+    name: z.string(),
+    category: z.string().describe("one of the categories list_categories returns"),
+    isCustom: z.literal(true).describe("a custom genre rather than a library one"),
+    sequencer_pattern: z.object({}).passthrough().describe("the genre's tracks, tempo and scale, kept as given"),
   })
   .passthrough();
 
@@ -756,6 +777,87 @@ export const TOOLS: ToolDefinition[] = [
     handler: (args) => {
       const result = getGenreRelations(String(args.id));
       return result ?? failure(`unknown genre "${String(args.id)}"`);
+    },
+  },
+  /**
+   * The custom-genre surface: the maker's Fork and Save, for an agent.
+   *
+   * It sits beside the library tools because it is the same activity one step further on — read a genre, fork it,
+   * save the variation. The store behind it is the server process's own rather than the browser's IndexedDB library:
+   * a genre saved here lives for the session, and the genres a person saved in the app are not visible to these tools.
+   */
+  {
+    name: "list_custom_genres",
+    title: "List saved custom genres",
+    description:
+      "The custom genres saved in this MCP session, newest first: id, name, category, tempo, track count and the genre each was forked from. This is the server session's own store, separate from the browser's IndexedDB library, so it lists what an agent saved here rather than what a person made in the app.",
+    readOnly: true,
+    inputSchema: {},
+    handler: () => listMcpCustomGenres(),
+  },
+  {
+    name: "get_custom_genre",
+    title: "Get a custom genre",
+    description:
+      "One custom genre in full: every recorded field and its eight-track pattern, exactly as save_custom_genre stored it. The pattern's genre_id is the genre's own id, so the pattern can be passed straight to get_pattern, apply_pattern_ops or render_audio.",
+    readOnly: true,
+    inputSchema: { id: z.string().describe("a custom genre id, as list_custom_genres returns") },
+    handler: async (args) => {
+      const genre = await getMcpCustomGenre(String(args.id));
+      return genre ?? failure(`unknown custom genre "${String(args.id)}" — list_custom_genres returns the genres saved in this session`);
+    },
+  },
+  {
+    name: "save_custom_genre",
+    title: "Save a custom genre",
+    description:
+      "Save a custom genre, or fork a library genre and save the fork. Give forkFromGenreId (an id list_genres returns) and the fork copies that genre's metadata, pattern and lineage with the same forkGenre the app's Fork button calls; give genre to save a document you already have, such as one from get_custom_genre. Saving the same id twice replaces the first rather than adding a second. The store is process-local: the genre lives for this session and is separate from the browser's library.",
+    readOnly: false,
+    inputSchema: {
+      forkFromGenreId: z.string().optional().describe("an id to fork, from list_genres or from an earlier save in this session"),
+      genre: customGenreSchema.optional().describe("or a full custom genre document to save as given"),
+      name: z.string().optional().describe('the name to save under; for a fork it replaces the generated "<name> (Variation)"'),
+    },
+    handler: async (args) => {
+      try {
+        return await saveMcpCustomGenre({
+          ...(args.forkFromGenreId === undefined ? {} : { forkFromGenreId: String(args.forkFromGenreId) }),
+          ...(args.genre === undefined ? {} : { genre: args.genre as CustomGenre }),
+          ...(args.name === undefined ? {} : { name: String(args.name) }),
+        });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "delete_custom_genre",
+    title: "Delete a custom genre",
+    description:
+      "Remove a custom genre from this session's store and report the ids that remain. A genre that is not there is refused with the ids that are, rather than reported as deleted.",
+    readOnly: false,
+    inputSchema: { id: z.string().describe("a custom genre id, as list_custom_genres returns") },
+    handler: async (args) => {
+      try {
+        return await deleteMcpCustomGenre(String(args.id));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "duplicate_custom_genre",
+    title: "Duplicate a custom genre",
+    description:
+      "Copy a saved custom genre under a new id and a name ending in (Copy), leaving the original in place, and return the copy. This is the maker's Duplicate button, for an agent that wants a variation without risking the first.",
+    readOnly: false,
+    inputSchema: { id: z.string().describe("a custom genre id, as list_custom_genres returns") },
+    handler: async (args) => {
+      try {
+        return await duplicateMcpCustomGenre(String(args.id));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
     },
   },
   {

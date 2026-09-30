@@ -69,6 +69,26 @@ Read-only tools are marked ▢, tools that change something outside the session 
 | `get_chord_progression` ▢ | `id` | degrees, roman numerals, example songs, emotional tag |
 | `get_loudness_report` ▢ | `genreId?` | the committed baseline (LUFS, true peak, trim) for one genre or the whole table |
 
+### Custom genres
+
+A person forks a genre in the maker and the result is saved to the browser's IndexedDB. The server is a Node process,
+which has no `indexedDB` and did not reach that save at all, so the store moved behind `CustomGenreStore`
+(`src/features/customGenre/customGenreStore.ts`) — an IndexedDB implementation for the browser, an in-memory one for
+Node. The server half lives in `mcp/customGenres.ts`, and the tools below are its surface.
+
+**The fork is the app's own.** `save_custom_genre` with `forkFromGenreId` calls the same `forkGenre` the maker's Fork
+button calls, so the fork carries the library genre's metadata, pattern and lineage. **The store is the server
+process's own**, exactly as the arrangement and song maps are: a genre saved here lives for the session, and it is
+not the library a person saved in the app.
+
+| Tool | Arguments | Returns |
+| :--- | :--- | :--- |
+| `list_custom_genres` ▢ | — | the session's genres, newest first: id, name, category, tempo, track count, and the genre each was forked from |
+| `get_custom_genre` ▢ | `id` | the whole document and its eight-track pattern, as saved |
+| `save_custom_genre` ▣ | `forkFromGenreId?`, `genre?`, `name?` | the saved genre; a fork copies the library genre's defaults, pattern and lineage, and the same id saved twice replaces the first rather than adding a second |
+| `delete_custom_genre` ▣ | `id` | the ids that remain; an id that is not there is refused with the ones that are, rather than reported as deleted |
+| `duplicate_custom_genre` ▣ | `id` | a copy under a new id and a name ending in `(Copy)`, original untouched |
+
 ## MCP 是功能的一部分，不是收尾工作（业主指示，2026-09-29）
 
 > 以后一个功能开发过程中，MCP 需要第一时间提供
