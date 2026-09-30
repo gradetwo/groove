@@ -128,10 +128,31 @@ try {
       console.error(`❌ ${scriptFile} must hold an array of { tool, args } steps`);
       process.exit(2);
     }
+    /**
+     * ⭐ **A step can name what the previous one returned, so a flow needs no hand-carried id.**
+     *
+     * `"songId": "$prev.songId"` reads the last step's reply. Without it a flow has to be run once to learn the id and
+     * then edited to use it — which is how three attempts at measuring a tempo map turned into three failed calls
+     * instead of one measurement.
+     */
+    let previous = undefined;
+    const substitute = (value) => {
+      if (typeof value === "string" && value.startsWith("$prev.")) {
+        const path = value.slice("$prev.".length).split(".");
+        return path.reduce((node, key) => (node === undefined || node === null ? undefined : node[key]), previous);
+      }
+      if (Array.isArray(value)) return value.map(substitute);
+      if (value && typeof value === "object") {
+        return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, substitute(inner)]));
+      }
+      return value;
+    };
     for (const [index, step] of steps.entries()) {
-      const stepReply = await request("tools/call", { name: step.tool, arguments: step.args ?? {} });
+      const stepReply = await request("tools/call", { name: step.tool, arguments: substitute(step.args ?? {}) });
+      const stepResult = stepReply.error ? { error: stepReply.error } : payload(stepReply);
+      previous = stepResult;
       console.log(`── ${index + 1}/${steps.length} ${step.tool}`);
-      console.log(JSON.stringify(stepReply.error ? { error: stepReply.error } : payload(stepReply), null, 2));
+      console.log(JSON.stringify(stepResult, null, 2));
     }
     process.exit(0);
   }
