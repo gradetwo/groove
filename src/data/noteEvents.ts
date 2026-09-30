@@ -16,6 +16,38 @@ export const STEPS_PER_BAR = 16;
 /** A step's length in beats, written once. */
 export const STEP_BEATS = 1 / STEPS_PER_BEAT;
 
+/**
+ * ⭐ **How many beats a bar holds when the bar is not four beats' worth.**
+ *
+ * `STEPS_PER_BAR` is sixteen, and its own comment says why: "sixteenth steps in a bar of **four** beats". That is
+ * right for 4/4 and wrong for everything else, and Muse — composing a piece with a 3/4 movement — had to convert by
+ * hand (`ceil(bars × beatsPerBar / 4)`), arithmetic a caller should not be doing and which nothing was watching.
+ *
+ * **The model has carried the answer all along**: `timeSignature` on the pattern, whose own comment names `"3/4"`,
+ * `"6/8"`, `"5/4"` and `"7/8"`. So this reads it, and nothing else changes yet — the constant stays for the 4/4 paths
+ * until the callers that must vary are threaded through, which is the step after this one.
+ *
+ * **The denominator decides the unit**: in `6/8` a beat is an eighth, so a bar is six eighths — twelve sixteenths, the
+ * same twelve as `3/4`. Getting that wrong is how a "6/8" ends up twice as long as it sounds, so it is a criterion
+ * rather than a comment.
+ *
+ * Unreadable or absent means 4/4: a pattern that never said is not a pattern that asked for something unusual.
+ */
+export function beatsPerBar(timeSignature?: string): number {
+  const match = /^(\d+)\s*\/\s*(\d+)$/.exec((timeSignature ?? "").trim());
+  if (!match) return 4;
+  const perBar = Number(match[1]);
+  const unit = Number(match[2]);
+  if (!Number.isFinite(perBar) || !Number.isFinite(unit) || perBar <= 0 || unit <= 0) return 4;
+  // Beats counted in quarters — the step's own unit — so `6/8` is three quarters' worth of steps, not six.
+  return (perBar * 4) / unit;
+}
+
+/** Sixteenth steps in one bar of the given signature, rounded to whole steps. */
+export function stepsPerBarFor(timeSignature?: string): number {
+  return Math.max(1, Math.round(beatsPerBar(timeSignature) * STEPS_PER_BEAT));
+}
+
 export interface StepView {
   /** One entry per step: 1 where a note starts, 0 where none does. */
   steps: number[];
