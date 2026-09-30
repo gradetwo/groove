@@ -30,6 +30,9 @@ const HATS_WITH_UNUSED_GROUP = `
 <region> sample=closed.wav lokey=42 hikey=42 pitch_keycenter=42 group=1
 `;
 
+/** A plain sustaining region, for the rule that must NOT fade: a key release. */
+const SUSTAINING_ONLY = `<region> sample=pad.wav lokey=48 hikey=48 pitch_keycenter=48`;
+
 const asset: Pick<SampleAsset, "assetId" | "sfz"> = {
   assetId: "hats",
   sfz: { url: "https://example.test/hats.sfz", path: "hats.sfz" },
@@ -44,7 +47,7 @@ function playerFor(sfz: string) {
     decode: async () => new FakeAudioBuffer(1, 48000, 48000) as unknown as AudioBuffer,
     fetchSfzText: async () => sfz,
   });
-  return { player, sources: context.createdBufferSources };
+  return { player, sources: context.createdBufferSources, gains: context.createdGains };
 }
 
 /** How many times a voice was asked to stop — the fake records the calls, so the count is `length` and not the array. */
@@ -140,5 +143,51 @@ describe("a choke and a key release are different rules", () => {
     };
     const closed = await player.audition!({ assetId: "hats", midi: 42 });
     expect(closed.ok).toBe(true);
+  });
+});
+
+
+/**
+ * The **shape** of a choke, measured rather than assumed.
+ *
+ * sfizz's own rendering of a choked hi-hat falls **0.0500 → 0.0088 → 0.0038 → 0.0022 → 0.0007** over the fifty milliseconds that follow: about a twentieth of a second to reach one percent. A voice stopped dead is a step in the waveform, a step is a click, and a click on a choked open hat is the first thing a drummer notices.
+ *
+ * `off_mode` was measured at the same time and made **no difference** — `fast`, `normal` and absent gave identical readings in all eight windows — so the shape below is the whole of what sfizz does here, and there is nothing else to implement for that opcode.
+ */
+describe("a choke is a fade and not a cut", () => {
+  /** Every gain the context handed out, so the criterion finds the ramp instead of assuming which node carries it. */
+  const rampsIn = (gains: { gain: { events: { type: string; value?: number; time?: number }[] } }[]) =>
+    gains.flatMap((node) => node.gain.events.filter((event) => event.type === "linearRampToValueAtTime"));
+
+  it("ramps a gain to zero when a voice is choked", async () => {
+    const { player, gains } = playerFor(HATS_SFZ);
+    await player.audition!({ assetId: "hats", midi: 46 });
+    expect(rampsIn(gains), "the open hat was ramped before anything choked it").toHaveLength(0);
+    await player.audition!({ assetId: "hats", midi: 42 });
+    const ramps = rampsIn(gains);
+    // A ramp **to zero** is the fade; a stop alone would leave a step in the waveform at whatever level the voice had reached.
+    expect(ramps.map((event) => event.value), "the choked voice was stopped without a ramp, which is the click").toContain(0);
+  });
+
+  it("schedules the stop after the ramp, not through it", async () => {
+    // Scheduling the stop before the ramp ends would cut off the fade that was just asked for — an easy way to write this and still get a click.
+    const { player, gains, sources } = playerFor(HATS_SFZ);
+    await player.audition!({ assetId: "hats", midi: 46 });
+    await player.audition!({ assetId: "hats", midi: 42 });
+    const ramp = rampsIn(gains).filter((event) => event.value === 0).pop()!;
+    // `stopCalls` holds the scheduled times themselves, not objects around them — the fake records the argument it was given.
+    const stops = sources[0]!.stopCalls;
+    expect(stops.length).toBeGreaterThan(0);
+    const scheduled = stops[stops.length - 1];
+    expect(typeof scheduled, "the choke did not schedule a stop time").toBe("number");
+    expect(scheduled!).toBeGreaterThan(ramp.time!);
+  });
+
+  it("does not fade a voice the file asked to release, because those are two rules", async () => {
+    // ⭐ A key release is not a choke: a sustaining sample must stop when the key comes up, and fading it would make every note of a piano hang for fifty milliseconds.
+    const { player, gains } = playerFor(SUSTAINING_ONLY);
+    await player.audition!({ assetId: "hats", midi: 48 });
+    player.releaseNote!({ midi: 48 });
+    expect(rampsIn(gains), "a released voice was faded, so a key release is being treated as a choke").toHaveLength(0);
   });
 });

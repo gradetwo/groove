@@ -92,7 +92,8 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
     let stopped = 0;
     for (const voice of set) {
       try {
-        voice.stop();
+        // A fade and not a cut: measured with sfizz, a choke takes about fifty milliseconds to reach one percent, and stopping dead is what a click is.
+        voice.fadeOut();
         stopped += 1;
       } catch {
         // A voice that has already ended is not an error: `stop()` is idempotent in intent, and a choke that throws would silence the note that caused it.
