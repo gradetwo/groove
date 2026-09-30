@@ -144,6 +144,8 @@ export function parseMidiFile(buffer: ArrayBufferLike): {
   tracksCount: number;
   division: number;
   bpm: number;
+  /** Whether the file **stated** a tempo, so a caller can tell this parser's assumed 120 from a reading of the file. */
+  tempoStated: boolean;
   notes: ParsedMidiNote[];
   trackNames: string[];
 } {
