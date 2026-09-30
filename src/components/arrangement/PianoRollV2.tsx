@@ -82,7 +82,7 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
   }, [notes, steps]);
 
   return (
-    <div data-testid="piano-roll-v2" className="flex flex-col gap-2 p-3 rounded border border-[var(--d-border,rgba(255,255,255,0.15))]">
+    <div data-testid="piano-roll-v2" className="flex flex-col gap-2 p-3 rounded border border-[var(--d-line)]">
       <div className="flex flex-wrap items-center gap-3 text-xs text-text opacity-80">
         <span>{t("roll_hint")}</span>
         <label className="flex items-center gap-2">
@@ -95,7 +95,7 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
             value={lengthBeats}
             aria-label={t("roll_length")}
             onChange={(event) => setLengthBeats(Math.max(STEP_BEATS, Number(event.target.value)))}
-            className="w-16 px-1 py-0.5 rounded bg-transparent border border-[var(--d-border,rgba(255,255,255,0.15))] text-text"
+            className="w-16 px-1 py-0.5 rounded bg-transparent border border-[var(--d-line)] text-text"
           />
         </label>
         {onSetBars && (
@@ -108,7 +108,7 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
               data-testid="roll-remove-bar"
               aria-label={t("roll_remove_bar")}
               onClick={() => onSetBars(Math.max(1, Math.round(beats / 4) - 1))}
-              className="px-2 py-0.5 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] text-text"
+              className="px-2 py-0.5 rounded border border-[var(--d-line)] text-text"
             >
               −
             </button>
@@ -120,7 +120,7 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
               data-testid="roll-add-bar"
               aria-label={t("roll_add_bar")}
               onClick={() => onSetBars(Math.round(beats / 4) + 1)}
-              className="px-2 py-0.5 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] text-text"
+              className="px-2 py-0.5 rounded border border-[var(--d-line)] text-text"
             >
               +
             </button>
@@ -192,9 +192,9 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
                           }
                         }}
                         style={{ width: CELL, height: ROW_HEIGHT }}
-                        className={`shrink-0 border-r border-b border-[var(--d-border,rgba(255,255,255,0.06))] ${
+                        className={`shrink-0 border-r border-b border-[var(--d-line)] ${
                           isBlackKey(pitch) ? "bg-[var(--d-panel2,rgba(255,255,255,0.06))]" : "bg-transparent"
-                        } ${step % STEPS_PER_BEAT === 0 ? "border-l border-l-[var(--d-border,rgba(255,255,255,0.2))]" : ""}`}
+                        } ${step % STEPS_PER_BEAT === 0 ? "border-l border-l-[var(--d-line)]" : ""}`}
                       />
                     ))}
                   </div>

@@ -45,7 +45,7 @@ export function InstrumentBrowserV2({ trackId, trackName, assetId, instruments, 
         aria-expanded={open}
         data-testid={`instrument-open-${trackId}`}
         onClick={() => onOpenChange(!open)}
-        className="min-w-0 truncate rounded border border-[var(--d-border,rgba(255,255,255,0.15))] px-1 text-left text-[10px] text-text"
+        className="min-w-0 truncate rounded border border-[var(--d-line)] px-1 text-left text-[10px] text-text"
       >
         {/*
           The track's instrument by name, or the invitation to choose one when it plays none yet.

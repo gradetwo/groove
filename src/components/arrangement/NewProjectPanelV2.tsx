@@ -60,7 +60,7 @@ export function NewProjectPanelV2({ onCreate }: NewProjectPanelV2Props) {
             type="button"
             aria-pressed={selected === card.id}
             data-testid={`template-${card.id}`}
-            className={`flex flex-col items-start gap-1 p-4 rounded border text-left h-full ${selected === card.id ? "border-[var(--d-accent)] bg-[var(--d-accent-soft)]" : "border-[var(--d-border,rgba(255,255,255,0.15))] bg-[var(--d-surface,rgba(255,255,255,0.04))]"}`}
+            className={`flex flex-col items-start gap-1 p-4 rounded border text-left h-full ${selected === card.id ? "border-[var(--d-accent)] bg-[var(--d-accent-soft)]" : "border-[var(--d-line)] bg-[var(--d-surface,rgba(255,255,255,0.04))]"}`}
             onClick={() => setSelected(card.id)}
           >
             <strong>{card.name}</strong>
@@ -77,16 +77,16 @@ export function NewProjectPanelV2({ onCreate }: NewProjectPanelV2Props) {
         <div data-testid="new-project-details" className="flex flex-wrap gap-4 items-center text-sm text-text opacity-90">
           {/* Folded away like Logic's: the tempo and key are not what someone is deciding when they start. */}
           <label className="flex items-center gap-2">
-            Tempo <input type="number" className="w-20 px-2 py-1 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] bg-transparent text-text" defaultValue={120} aria-label="Tempo" />
+            Tempo <input type="number" className="w-20 px-2 py-1 rounded border border-[var(--d-line)] bg-transparent text-text" defaultValue={120} aria-label="Tempo" />
           </label>
           <label className="flex items-center gap-2">
-            Key <input type="text" className="w-28 px-2 py-1 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] bg-transparent text-text" defaultValue="C Major" aria-label="Key" />
+            Key <input type="text" className="w-28 px-2 py-1 rounded border border-[var(--d-line)] bg-transparent text-text" defaultValue="C Major" aria-label="Key" />
           </label>
           {selected === "blank" && (
             <label>
               {/* ⭐ Only the blank card needs this: the templates bring their own tracks. */}
               First track
-              <select className="px-2 py-1 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] bg-transparent text-text" aria-label="First track kind" value={blankKind} onChange={(event) => setBlankKind(event.target.value as TrackKindV2)}>
+              <select className="px-2 py-1 rounded border border-[var(--d-line)] bg-transparent text-text" aria-label="First track kind" value={blankKind} onChange={(event) => setBlankKind(event.target.value as TrackKindV2)}>
                 {KIND_LABELS.map(({ kind, en }) => (
                   <option key={kind} value={kind}>
                     {en}

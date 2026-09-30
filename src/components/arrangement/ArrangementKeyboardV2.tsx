@@ -93,7 +93,7 @@ export function ArrangementKeyboardV2({ baseMidi = 60, onNoteOn, onNoteOff, velo
   }, [baseMidi, press, release]);
 
   return (
-    <div data-testid="arrangement-keyboard" className="flex flex-col gap-2 p-3 rounded border border-[var(--d-border,rgba(255,255,255,0.15))]">
+    <div data-testid="arrangement-keyboard" className="flex flex-col gap-2 p-3 rounded border border-[var(--d-line)]">
       <div className="flex items-center justify-between gap-3">
         <span className="text-xs text-text opacity-80">{t("keyboard_hint")}</span>
         <label className="flex items-center gap-2 text-xs text-text opacity-80">

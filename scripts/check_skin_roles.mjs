@@ -180,3 +180,51 @@ if (divergences.length) {
   process.exit(1);
 }
 console.log("✅ every literal means the same thing on every surface (or is a documented deviation)");
+
+/**
+ * ⭐ **Every `--d-*` token the source uses must be defined by the skins.**
+ *
+ * This is the check that would have caught "the arrangement is a sheet of white in the light skins", and its absence is the whole reason that shipped. The arrangement was written against **`--d-border`** — a token no skin defines — 45 times, each with a dark fallback (`rgba(255,255,255,0.15)`), so on a light skin every border was a pale line on a pale background; `src/index.css` used **`--d-text`** the same way for the audio gate's title, which made the one prompt that resumes a suspended audio context unreadable.
+ *
+ * A fallback is only a fallback if it is rare: a token that is *never* defined turns every use into a literal, and this file already exists to stop literals from meaning different things on different surfaces. The two checks are the same rule from two sides — that one asks whether a literal means one thing everywhere, this one asks whether the token a literal was replaced by exists at all.
+ *
+ * Templates are skipped: `var(--d-track-${kind})` is built at runtime from tokens the skins do define (`--d-track-kick`, `--d-track-bass`, …).
+ */
+const DEFINED_TOKENS = new Set(
+  [...fs.readFileSync(path.join(ROOT, "src", "styles", "desktopTokens.css"), "utf8").matchAll(/(--d-[a-z0-9-]+)\s*:/g)].map(
+    (match) => match[1]
+  )
+);
+const tokenFiles = [];
+const collectTokenFiles = (dir) => {
+  for (const entry of fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })) {
+    const rel = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (!/node_modules|test|__tests__/.test(entry.name)) collectTokenFiles(rel);
+    } else if (/\.(tsx?|css)$/.test(entry.name)) tokenFiles.push(rel);
+  }
+};
+for (const dir of ["src/components", "src/views", "src/features", "src/ui", "src/styles"]) collectTokenFiles(dir);
+tokenFiles.push("src/index.css");
+
+const unknownTokens = new Map();
+for (const file of tokenFiles) {
+  const text = fs.readFileSync(path.join(ROOT, file), "utf8");
+  for (const match of text.matchAll(/var\((--d-[a-z0-9-]+)\s*[,)]/g)) {
+    const token = match[1];
+    if (DEFINED_TOKENS.has(token)) continue;
+    const key = `${token}  (${file})`;
+    unknownTokens.set(key, (unknownTokens.get(key) ?? 0) + 1);
+  }
+}
+
+if (unknownTokens.size > 0) {
+  console.error(
+    `\n❌ ${unknownTokens.size} use(s) of a --d-* token no skin defines. Each one is a dark literal by another name,\n` +
+      "   and on a light skin it paints over its own background. Use the token that already carries this meaning,\n" +
+      "   or add it to src/styles/desktopTokens.css:"
+  );
+  for (const [key, count] of unknownTokens) console.error(`     · ${key} ×${count}`);
+  process.exit(1);
+}
+console.log("✅ every --d-* token the source uses is defined by the skins");

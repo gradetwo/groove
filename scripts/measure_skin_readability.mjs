@@ -58,6 +58,13 @@ const FULL = flag("--full");
  * `verify`, whose budgets are a ratchet that can only go down.
  */
 const REPORT_ONLY = flag("--report");
+/**
+ * `--only=<view>` and `--skins=<a,b>` narrow the sweep, which is what iterating on one page needs.
+ *
+ * The full sweep is thirteen views across six skins and takes a quarter of an hour. The arrangement was added to it, and the first thing worth doing with a newly covered view is measuring **it**, repeatedly, while fixing it — a tool that can only run as a whole is a tool that gets run once.
+ */
+const ONLY_VIEW = argValue("--only", "");
+const ONLY_SKINS = argValue("--skins", "");
 const JSON_OUT = flag("--json");
 const DIST = path.resolve(argValue("--dist", path.join(ROOT, "dist")));
 
@@ -104,6 +111,12 @@ const DESKTOP_VIEWS = [
   { name: "analyzer", url: "/?tab=analyzer", waitFor: "[data-testid='analyzer-view'], [data-testid='mobile-shell']" },
   { name: "kick", url: "/?tab=kick", waitFor: "[data-testid='kick-view'], canvas, [data-testid='mobile-shell']" },
   { name: "galaxy", url: "/?tab=galaxy", waitFor: "canvas, [data-testid='mobile-shell']" },
+  /**
+   * ⭐ **The arrangement route, which no skin measurement had ever visited.**
+   *
+   * It shipped as its own page (`/new`) and the audit's view list still held the six old studio tabs, so "a sheet of white in the light skins" — the owner's words, with a screenshot — could not have been caught by anything here. The view list is the coverage, and a page that is not in it is a page nobody measured.
+   */
+  { name: "arrangement", url: "/new", waitFor: "[data-testid='track-list-add']" },
 ];
 const PHONE_VIEWS = [
   { name: "phone-home", url: "/m/home", waitFor: "[data-testid^='mobile-genre-row-']" },
@@ -356,10 +369,23 @@ async function main() {
   const browser = await chromium.launch();
   const results = [];
 
-  for (const skin of FULL ? SKINS : SAMPLE_SKINS) {
+  const skinsToRun = ONLY_SKINS
+    ? ONLY_SKINS.split(",").map((value) => value.trim()).filter(Boolean)
+    : FULL
+    ? SKINS
+    : SAMPLE_SKINS;
+  for (const skin of skinsToRun) {
     for (const isPhone of [false, true]) {
       const views = isPhone ? PHONE_VIEWS : DESKTOP_VIEWS;
-      const names = isPhone ? (FULL ? views.map((v) => v.name) : SAMPLE_PHONE) : FULL ? views.map((v) => v.name) : SAMPLE_DESKTOP;
+      const names = ONLY_VIEW
+        ? [ONLY_VIEW]
+        : isPhone
+        ? FULL
+          ? views.map((v) => v.name)
+          : SAMPLE_PHONE
+        : FULL
+        ? views.map((v) => v.name)
+        : SAMPLE_DESKTOP;
       for (const view of views.filter((v) => names.includes(v.name))) {
         const context = await browser.newContext({
           viewport: isPhone ? { width: 390, height: 844 } : { width: 1440, height: 900 },
@@ -437,6 +463,10 @@ async function main() {
     challenge: 0,
     "phone-home": 0,
     "phone-challenge": 0,
+    /**
+     * The arrangement starts at zero like the others, **and it has not earned it yet**: its first measurement is what this entry is waiting for. It is written as zero rather than as a large allowance because a budget is a claim about the page, and the honest claim to make before measuring is "nothing here is unreadable".
+     */
+    arrangement: 0,
   };
 
   /**

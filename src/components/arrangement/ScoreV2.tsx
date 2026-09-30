@@ -153,7 +153,7 @@ export function ScoreV2({ notes, bars = 8, width = 900, title }: ScoreV2Props) {
   }, [notes, bars, width]);
 
   return (
-    <div data-testid="score-v2" className="flex flex-col gap-2 p-3 rounded border border-[var(--d-border,rgba(255,255,255,0.15))]">
+    <div data-testid="score-v2" className="flex flex-col gap-2 p-3 rounded border border-[var(--d-line)]">
       <span className="text-xs text-text opacity-80">{title ?? t("score_hint")}</span>
       {problem ? <span data-testid="score-problem" className="text-xs text-[var(--d-danger)]">{problem}</span> : null}
       {/* VexFlow draws into this element; React must not also manage its children, which is why it is empty and ref-driven. */}

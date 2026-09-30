@@ -227,3 +227,93 @@ describe("missing paths propagate out of nested includes", () => {
     expect(result.missing).toContain("b.sfz");
   });
 });
+
+/**
+ * The order of the two candidates, which is what decides how many 404s a real library costs.
+ *
+ * The owner's report: fetching `virtuosity_drums` threw a wall of 404s, among them
+ * `Programs/mappings/mappings/oh/kick_snon_map.sfz`, and then fetched `Programs/mappings/oh/kick_snon_map.sfz` and got a 200. The doubled request was ours — the documented file-relative rule tried first, then the root fallback — and it is not a resolution *failure*, only a wasted round trip repeated across hundreds of includes.
+ *
+ * What makes it avoidable is that the doubled spelling is **visibly** doubled: a file in `mappings/` including `mappings/…` would mean entering `mappings` twice. So the reading that cannot be intended is asked for last, without refusing it.
+ */
+describe("expandIncludes — the doubled candidate is asked for last", () => {
+  const files = (map: Record<string, string>) => (path: string) => map[path];
+
+  it("prefers the root reading when the file-relative one would repeat a directory", () => {
+    // ⭐ The exact case from the report, with the file that produced it.
+    const asked: string[] = [];
+    const recording = (map: Record<string, string>) => (path: string) => {
+      asked.push(path);
+      return map[path];
+    };
+    /**
+     * The chain is written **as the real one is nested**, and that is what makes this criterion able to fail: when the two-level file is called as the top level, the root and its own directory are the same path, there is nothing to order, and the criterion would pass against the broken code.
+     */
+    const result = expandIncludes('#include "mappings/kickmic_basic.sfz"', recording({
+      "Programs/mappings/kickmic_basic.sfz": '#include "mappings/oh/kick_snon_map.sfz"',
+      "Programs/mappings/oh/kick_snon_map.sfz": "<region> sample=kick.wav",
+    }), { path: "Programs/01-basic-kit.sfz" });
+    expect(result.included).toEqual(["Programs/mappings/kickmic_basic.sfz", "Programs/mappings/oh/kick_snon_map.sfz"]);
+    // The doubled spelling is never *read* — the reader is only ever asked for the one that exists.
+    expect(asked).not.toContain("Programs/mappings/mappings/oh/kick_snon_map.sfz");
+    expect(result.missing, "the doubled path was reported missing to the caller, which is what caused the 404").toEqual([]);
+  });
+
+  it("still reads a file whose path really is doubled, because nothing was refused", () => {
+    // The rule only reorders: a library that genuinely keeps a doubled directory still resolves, one request later.
+    const result = expandIncludes('#include "mappings/kickmic_basic.sfz"', files({
+      "Programs/mappings/kickmic_basic.sfz": '#include "mappings/mappings/x.sfz"',
+      "Programs/mappings/mappings/mappings/x.sfz": "<region> sample=x.wav",
+    }), { path: "Programs/01-basic-kit.sfz" });
+    expect(result.text).toContain("sample=x.wav");
+  });
+
+  it("keeps the documented rule first when no directory would repeat", () => {
+    // Unchanged from before: the including file's own directory wins when both readings are possible.
+    const result = expandIncludes('#include "shared.sfz"', files({
+      "Programs/keymaps/shared.sfz": "<region> sample=keymap.wav",
+      "Programs/shared.sfz": "<region> sample=root.wav",
+    }), { path: "Programs/keymaps/keymap.sfz" });
+    expect(result.included).toEqual(["Programs/keymaps/shared.sfz"]);
+  });
+});
+
+/**
+ * **An include that does not own its line, and a line that carries two.**
+ *
+ * Muse, using the MCP server to build a nine-movement piece, reported that Salamander Grand Piano's pitched regions never expanded. The reason was here: the expander required the whole line to be nothing but an include, and the real file writes
+ *
+ * ```
+ * <group> #include "Data/vel_01.txt" lovel=1 hivel=26 #include "Data/region.txt"
+ * ```
+ *
+ * so every include in that file was ignored — and the file still parsed well enough to look as though it had worked. Measured against the real library after the fix: **7 files expanded instead of 49**, **161 regions instead of 1121**.
+ */
+describe("expandIncludes — includes inside a line", () => {
+  const files = (map: Record<string, string>) => (path: string) => map[path];
+
+  it("replaces an include in place and keeps the rest of the line", () => {
+    // ⭐ The exact shape from the real file, including the two includes and the opcodes between them.
+    const result = expandIncludes('<group> #include "Data/vel_01.txt" lovel=1 hivel=26 #include "Data/region.txt"', files({
+      "Data/vel_01.txt": "amp_velcurve_1=0.2",
+      "Data/region.txt": "<region> sample=a.wav",
+    }), { path: "Program.instrument.sfz" });
+    expect(result.problems).toEqual([]);
+    expect(result.included).toEqual(["Data/vel_01.txt", "Data/region.txt"]);
+    // The line's own content survives, in order, around what each include brought.
+    expect(result.text).toBe("<group> amp_velcurve_1=0.2 lovel=1 hivel=26 <region> sample=a.wav");
+  });
+
+  it("still expands an include that owns its line, which is the common case", () => {
+    const result = expandIncludes('#include "a.sfz"', files({ "a.sfz": "<region> sample=a.wav" }), { path: "p.sfz" });
+    expect(result.text).toBe("<region> sample=a.wav");
+  });
+
+  it("reports a missing include without losing the line it was on", () => {
+    // A line that keeps working around a broken include is a library that half-loads, which is worth seeing rather than guessing at.
+    const result = expandIncludes('<group> #include "gone.sfz" lovel=1', files({}), { path: "p.sfz" });
+    expect(result.missing).toEqual(["gone.sfz"]);
+    expect(result.text).toBe("<group>  lovel=1");
+    expect(result.problems.join(" ")).toContain("gone.sfz");
+  });
+});

@@ -80,6 +80,14 @@ step "typecheck" npm run typecheck
 step "lint" npm run lint
 # ⭐ The check whose absence let the new interface ship as unstyled text: a component that uses no styling renders as plain markup, and none of the other checks ask about appearance.
 step "styling" node scripts/check_component_styling.mjs
+# ⭐ **The skin contract, which had a script and no runner.**
+#
+# `npm run check:skin-roles` existed and neither this gate nor CI called it, so the rule it states — a literal means
+# one thing on every surface, and every `--d-*` token the source uses is defined by the skins — was enforceable only
+# by remembering. The new arrangement interface was written against `--d-border` (defined by no skin, 45 uses, dark
+# fallback) and the audio gate's title against `--d-text` (the same), and on the light skins that made the
+# arrangement a sheet of white and the one prompt that resumes audio unreadable. A check nobody runs is a comment.
+step "skins" npm run check:skin-roles
 # The unit suite is the long one, and it is the one that caught assertions left behind by a behaviour change.
 #
 # **Two files are excluded, and the reason is measured rather than assumed.** `mobileApp.test.tsx` and `mobileExplore.test.tsx` are timing-sensitive and fail under the load of a full parallel run — four

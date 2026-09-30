@@ -43,7 +43,10 @@ function resolvePath(fromPath: string, wanted: string): string {
   return out.join("/");
 }
 
-const INCLUDE = /^\s*#include\s+"([^"]+)"\s*$/;
+/**
+ * An include **anywhere in a line**, not only one that owns the whole line: Salamander Grand Piano writes `<group> #include "Data/vel_01.txt" lovel=1 hivel=26 #include "Data/region.txt"`, and the earlier whole-line rule silently ignored every one of them.
+ */
+const INCLUDE = /#include\s+"([^"]+)"/g;
 const DEFINE = /^\s*#define\s+\$([A-Za-z_][A-Za-z0-9_]*)\s+(\S+)\s*$/;
 
 /**
@@ -71,7 +74,18 @@ function resolveCandidates(rootPath: string, fromPath: string, wanted: string): 
   if (wanted.startsWith("/") || /^[a-zA-Z]+:/.test(wanted)) return [wanted];
   const relative = resolvePath(fromPath, wanted);
   const fromRoot = resolvePath(rootPath, wanted);
-  return relative === fromRoot ? [relative] : [relative, fromRoot];
+  if (relative === fromRoot) return [relative];
+  /**
+   * ⭐ **The doubled candidate goes last, and that is a fact about the path rather than a guess about the library.**
+   *
+   * The owner's report: fetching a real library threw a wall of 404s — `Programs/mappings/mappings/oh/kick_snon_map.sfz` among them — and then asked for `Programs/mappings/oh/kick_snon_map.sfz` and got a 200. Both requests were ours: the file-relative reading goes first (the documented rule), then the root-relative fallback, and this library needs the fallback. That order was measured, and it is why the fallback exists.
+   *
+   * But **when the file-relative reading would enter the same directory twice** — the including file lives in `mappings/` and the include starts with `mappings/` — that candidate cannot be what the line means: it would have to say "go into `mappings`, and then into `mappings` again". So the root-relative candidate is asked for first, the 404 stops happening in the ordinary case, and the doubled reading survives only as a genuine last resort. **Nothing is refused**: both are still tried, in the order the evidence supports.
+   */
+  const directory = fromPath.includes("/") ? fromPath.slice(0, fromPath.lastIndexOf("/")) : "";
+  const fromTail = directory.slice(directory.lastIndexOf("/") + 1);
+  const wantedHead = wanted.split("/")[0] ?? "";
+  return wantedHead !== "" && wantedHead === fromTail ? [fromRoot, relative] : [relative, fromRoot];
 }
 
 export function expandIncludes(
@@ -124,43 +138,58 @@ export function expandIncludes(
       return;
     }
 
-    const match = line.match(INCLUDE);
-    if (!match) {
+    /**
+     * ⭐ **Includes are recognised anywhere in a line, and a line may hold several — Salamander Grand Piano writes two, mixed with its own opcodes.**
+     *
+     * The expander required the whole line to be nothing but an include. The file it was written for has other ideas:
+     *
+     * ```
+     * <group> #include "Data/vel_01.txt" lovel=1 hivel=26 #include "Data/region.txt"
+     * ```
+     *
+     * Every include in that file was ignored — the velocity layers and the region definitions never expanded — while the file still parsed well enough to look as though it had worked. The rule is now the one SFZ states: an include is replaced **in place**, the rest of the line stays, and there may be as many as the file likes.
+     */
+    const includes = [...line.matchAll(INCLUDE)].filter((match) => match.index !== undefined);
+    if (includes.length === 0) {
       out.push(substitute(line, defines));
       return;
     }
-    const candidates = resolveCandidates(chain[0]!, path, match[1]!);
+
     const where = `${path || "<root>"}:${index + 1}`;
+    const pieces: string[] = [];
+    let cursor = 0;
+    for (const match of includes) {
+      const start = match.index!;
+      pieces.push(substitute(line.slice(cursor, start), defines));
+      cursor = start + match[0]!.length;
+      const candidates = resolveCandidates(chain[0]!, path, match[1]!);
+      // The first candidate that exists wins; if none does, the error names the one SFZ's own rule would have chosen, which is the informative one.
+      const wanted = candidates.find((candidate) => read(candidate) !== undefined) ?? candidates[0]!;
 
-    // The first candidate that exists wins; if none does, the error names the one SFZ's own rule would have chosen, which is the informative one.
-    const wanted = candidates.find((candidate) => read(candidate) !== undefined) ?? candidates[0]!;
+      if (chain.includes(wanted)) {
+        // A cycle is reported rather than followed: includes can legitimately reference each other, and an unguarded resolver recurses until the stack dies.
+        problems.push(`${where}: circular include of "${wanted}" (already reading ${chain.join(" → ")})`);
+        continue;
+      }
+      if (chain.length >= maxDepth) {
+        problems.push(`${where}: include depth ${chain.length + 1} exceeds maxDepth ${maxDepth} at "${wanted}"`);
+        continue;
+      }
 
-    if (chain.includes(wanted)) {
-      // A cycle is reported rather than followed: includes can legitimately reference each other, and an unguarded resolver recurses until the stack dies.
-      problems.push(`${where}: circular include of "${wanted}" (already reading ${chain.join(" → ")})`);
-      return;
-    }
-    if (chain.length >= maxDepth) {
-      problems.push(`${where}: include depth ${chain.length + 1} exceeds maxDepth ${maxDepth} at "${wanted}"`);
-      return;
-    }
+      const child = read(wanted);
+      if (child === undefined) {
+        /**
+         * **Every candidate, not just the one reported.** The resolver tries the including file's directory first and the root fallback second, and for a real library the **second** is usually the right one: this library writes `#include "mappings/…"` from inside `Programs/mappings/…`, so the file-relative candidate gets a doubled `mappings/` while the root-relative one is correct. Reporting only `candidates[0]` meant an asynchronous caller could never fetch the candidate that would have worked — the loop fetched the wrong path, got a 404, and the library resolved to no regions.
+         */
+        for (const candidate of candidates) if (!missing.includes(candidate)) missing.push(candidate);
+        problems.push(`${where}: included file "${wanted}" was not found`);
+        continue;
+      }
 
-    const child = read(wanted);
-    if (child === undefined) {
-      /**
-       * **Every candidate, not just the one reported.** The resolver tries the including file's directory first and the root fallback second, and for a real library the **second** is usually the right
-       * one: this library writes `#include "mappings/…"` from inside `Programs/mappings/…`, so the file-relative candidate gets a doubled `mappings/` while the root-relative one is correct. Reporting only
-       * `candidates[0]` meant an asynchronous caller could never fetch the candidate that would have worked — the loop fetched the wrong path, got a 404, and the library resolved to no regions.
-       */
-      for (const candidate of candidates) if (!missing.includes(candidate)) missing.push(candidate);
-      problems.push(`${where}: included file "${wanted}" was not found`);
-      return;
-    }
-
-    const nested = expandIncludes(child, read, { path: wanted, maxDepth, stack: [...chain, wanted], defines });
-    out.push(nested.text);
-    problems.push(...nested.problems);
-    included.push(wanted, ...nested.included);
+      const nested = expandIncludes(child, read, { path: wanted, maxDepth, stack: [...chain, wanted], defines });
+      pieces.push(nested.text);
+      problems.push(...nested.problems);
+      included.push(wanted, ...nested.included);
     /**
      * **`nested.missing` has to be merged too, and it was not.** `nested.problems` and `nested.included` were collected from the recursive call, but the paths a nested file could not read were
      * dropped — so a top-level caller saw `missing: []` while `problems` listed 119 unresolvable includes. For a synchronous reader that only costs a worse message; for an **asynchronous** caller it
@@ -169,6 +198,10 @@ export function expandIncludes(
      */
     missing.push(...nested.missing);
     missing.splice(0, missing.length, ...new Set(missing));
+    }
+    // Whatever followed the last include on the line: `<group> #include "…" lovel=1` keeps its `lovel=1`.
+    pieces.push(substitute(line.slice(cursor), defines));
+    out.push(pieces.join(""));
   });
 
   return { text: out.join("\n"), problems, included, missing };

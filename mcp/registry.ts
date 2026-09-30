@@ -13,6 +13,7 @@ import { lanesWithoutMidi } from "./pattern";
  */
 import { z } from "zod";
 import { clonePattern, findGenre, getChordProgression, getGenre, getGenreRelations, suggestProgression, libraryIndex, listCategories, listChordProgressions, listGenres, listMasterclasses, searchGenres } from "./library";
+import { applyChordProgression } from "./progression";
 
 /**
  * What to say when a `genreId` does not exist (fifth report, P1.2).
@@ -969,6 +970,41 @@ export const TOOLS: ToolDefinition[] = [
     readOnly: true,
     inputSchema: { id: z.string() },
     handler: (args) => getChordProgression(String(args.id)) ?? failure(`unknown progression "${String(args.id)}"`),
+  },
+  {
+    name: "apply_chord_progression",
+    title: "Write a chord progression into a pattern",
+    description:
+      "Take the progression `suggest_progression` gave you — or numerals you wrote yourself — and **put it into the music**: the chord lane gets a note at each chord's step, held for the chord's length, and the reply says which lane, how many chords were written, the chords' notes, and anything that did not fit. A pure transform like `apply_pattern_ops`: a pattern in, a pattern out, nothing on the server changed.",
+    readOnly: true,
+    inputSchema: {
+      genreId: z.string().optional().describe("start from this genre's pattern"),
+      pattern: patternSchema.optional().describe("or start from a pattern you already have"),
+      progressionId: z.string().optional().describe("a progression from the library, by id"),
+      roman: z.string().max(120).optional().describe('or the numerals directly, e.g. "i-VI-III-VII"'),
+      tonic: z.number().int().min(0).max(127).optional().describe("MIDI note of the key's tonic; default 60"),
+      mode: z.enum(["major", "minor"]).optional().describe("default major"),
+      chordBeats: z.number().int().min(1).max(16).optional().describe("steps each chord is held; default 4, one bar in a sixteen-step pattern"),
+      track: z.string().max(40).optional().describe('which lane to write to; default the chord lane'),
+      velocity: z.number().int().min(1).max(127).optional().describe("default 100"),
+    },
+    handler: (args) => {
+      const base = patternFromArgs(args as { genreId?: string; pattern?: unknown });
+      if (!base) {
+        const wanted = (args as { genreId?: string }).genreId;
+        return failure(wanted ? unknownGenre(wanted) : "provide either genreId or pattern");
+      }
+      const result = applyChordProgression(base, {
+        ...(args.progressionId === undefined ? {} : { progressionId: String(args.progressionId) }),
+        ...(args.roman === undefined ? {} : { roman: String(args.roman) }),
+        ...(args.tonic === undefined ? {} : { tonic: args.tonic as number }),
+        ...(args.mode === undefined ? {} : { mode: args.mode as "major" | "minor" }),
+        ...(args.chordBeats === undefined ? {} : { chordBeats: args.chordBeats as number }),
+        ...(args.track === undefined ? {} : { track: String(args.track) }),
+        ...(args.velocity === undefined ? {} : { velocity: args.velocity as number }),
+      });
+      return { ...result, validation: validatePattern(result.pattern) };
+    },
   },
   {
     name: "list_masterclasses",

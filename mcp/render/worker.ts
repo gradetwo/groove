@@ -64,6 +64,10 @@ export interface RenderOptions {
   trackPeaks?: boolean;
   /** Where to write; defaults to `GROOVE_MCP_OUT` or a fresh temp directory. */
   outputDir?: string;
+  /**
+   * How long a render may take before the page is declared stuck, in milliseconds. Default 15 minutes, chosen from measurement: a nine-movement piece rendered through this server took three to eight minutes per movement, so anything shorter would kill work that was progressing.
+   */
+  renderTimeoutMs?: number;
 }
 
 export interface RenderResult {
@@ -84,21 +88,77 @@ interface RendererState {
   child: ChildProcess | null;
   browser: import("playwright").Browser | null;
   page: import("playwright").Page | null;
-  port: number;
+  port: number | null;
 }
 
-const state: RendererState = { child: null, browser: null, page: null, port: 0 };
+const state: RendererState = { child: null, browser: null, page: null, port: null };
 
 function appRoot(): string {
   // `dist-mcp/groove-mcp.mjs` sits next to the repo root it was built from.
   return process.env.GROOVE_MCP_ROOT || process.cwd();
 }
 
+/**
+ * **A port nobody is using**, asked of the operating system rather than fixed.
+ *
+ * Muse's report, from a nine-movement piece: a render failed, and every render after it failed too, because port 5411 was held by a **zombie LISTEN socket with no owning process**. The worker asked for a fixed port with `--strictPort`, so Vite refused to start, and the failure looked like "the render hangs" rather than "the port is taken".
+ *
+ * `GROOVE_MCP_PORT` still wins when a caller sets it — a person debugging wants to know the URL they can open — but the default is a port the OS says is free, which removes the whole class of collision.
+ */
+export async function aFreePort(): Promise<number> {
+  const forced = Number(process.env.GROOVE_MCP_PORT ?? "");
+  if (Number.isFinite(forced) && forced > 0) return forced;
+  const net = await import("node:net");
+  return new Promise<number>((resolve, reject) => {
+    const probe = net.createServer();
+    probe.on("error", reject);
+    probe.listen(0, "127.0.0.1", () => {
+      const address = probe.address();
+      const port = typeof address === "object" && address ? address.port : 0;
+      probe.close(() => (port > 0 ? resolve(port) : reject(new Error("could not find a free port"))));
+    });
+  });
+}
+
+/**
+ * The sentence a caller sees when a render outlives its budget.
+ *
+ * It names **what** was being rendered and **how long** it had, because "the render timed out" leaves a person unable to tell a slow piece from a stuck page — which is exactly the position Muse was in while four movements of a piece would not render and nothing said whether work was happening.
+ */
+export function renderTimeoutMessage(what: string, seconds: number): string {
+  return `the render of ${what} did not answer within ${seconds}s — the page may be stuck, and the renderer has been reset so the next call starts a fresh one`;
+}
+
+/**
+ * **A render that stops answering is reported, and the renderer is reset so the next call can work.**
+ *
+ * Muse, rendering a nine-movement piece through this server, described the worst version of this problem: four movements hung with **no CPU progress and no message**, so the only way to tell a stuck page from a slow piece was to give up on it. A page that has stopped answering cannot be asked anything more, and keeping it would make every later render fail the same way — which is what "worked once, then never again" was.
+ *
+ * The default budget is fifteen minutes: the same agent's nine-movement renders took three to eight minutes each, so a shorter one would have killed work that was progressing normally.
+ */
+async function withRenderTimeout<T>(work: Promise<T>, what: string, timeoutMs: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      work,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(renderTimeoutMessage(what, Math.round(timeoutMs / 1000)))), timeoutMs);
+      }),
+    ]);
+  } catch (error) {
+    // A page that did not answer is not a page to keep using.
+    await resetRenderer();
+    throw error;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 async function ensurePage(): Promise<import("playwright").Page> {
   if (state.page) return state.page;
 
   const root = appRoot();
-  const port = Number(process.env.GROOVE_MCP_PORT || 5399);
+  const port = await aFreePort();
   const viteBin = path.join(root, "node_modules", "vite", "bin", "vite.js");
   if (!existsSync(viteBin)) {
     throw new Error(`cannot render: ${viteBin} not found. Run the server from the repository root, or set GROOVE_MCP_ROOT.`);
@@ -109,24 +169,52 @@ async function ensurePage(): Promise<import("playwright").Page> {
     env: { ...process.env, PORT: String(port) },
     stdio: ["ignore", "pipe", "pipe"],
   });
-  await new Promise<void>((resolve, reject) => {
-    let output = "";
-    const onData = (chunk: Buffer) => {
-      output += chunk.toString();
-      if (/Local:\s+http/.test(output) || /ready in/.test(output)) resolve();
-    };
-    state.child?.stdout?.on("data", onData);
-    state.child?.stderr?.on("data", onData);
-    state.child?.on("exit", (code) => reject(new Error(`vite exited early (${code}):\n${output}`)));
-    setTimeout(() => reject(new Error(`vite did not become ready in 60s:\n${output}`)), 60000);
-  });
+  try {
+    await new Promise<void>((resolve, reject) => {
+      let output = "";
+      const onData = (chunk: Buffer) => {
+        output += chunk.toString();
+        if (/Local:\s+http/.test(output) || /ready in/.test(output)) resolve();
+      };
+      state.child?.stdout?.on("data", onData);
+      state.child?.stderr?.on("data", onData);
+      state.child?.on("exit", (code) => reject(new Error(`vite exited early (${code}):\n${output}`)));
+      setTimeout(() => reject(new Error(`vite did not become ready in 60s:\n${output}`)), 60000);
+    });
 
-  const { chromium } = await import("playwright");
-  state.browser = await chromium.launch({ args: ["--no-sandbox"] });
-  state.page = await state.browser.newPage();
-  state.port = port;
-  await state.page.goto(`http://127.0.0.1:${port}`, { waitUntil: "domcontentloaded" });
-  return state.page;
+    const { chromium } = await import("playwright");
+    state.browser = await chromium.launch({ args: ["--no-sandbox"] });
+    state.page = await state.browser.newPage();
+    state.port = port;
+    await state.page.goto(`http://127.0.0.1:${port}`, { waitUntil: "domcontentloaded" });
+    return state.page;
+  } catch (error) {
+    /**
+     * ⭐ **A failed start is cleaned up before it is reported.**
+     *
+     * `state.child` used to be left set when the server or the browser failed, so the next call saw a non-null `child` with a null `page`, started nothing, and waited on a promise that had already rejected — the renderer "degraded" rather than retried, which is what Muse described as renders that worked once and then never again.
+     */
+    await resetRenderer();
+    throw error;
+  }
+}
+
+/** Drop the child, the browser and the page, leaving the next call to start a fresh one. */
+async function resetRenderer(): Promise<void> {
+  try {
+    await state.browser?.close();
+  } catch {
+    /* already gone */
+  }
+  try {
+    state.child?.kill("SIGTERM");
+  } catch {
+    /* already gone */
+  }
+  state.browser = null;
+  state.page = null;
+  state.child = null;
+  state.port = null;
 }
 
 /** Tear the browser and dev server down; called on process exit and by `stopRenderer()`. */
@@ -159,7 +247,8 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
     throw new Error("audio rendering is disabled (GROOVE_MCP_NO_BROWSER=1); the library, pattern, MIDI and share tools do not need a browser");
   }
   const page = await ensurePage();
-  const result = await page.evaluate(
+  const what = `${Math.max(1, Math.min(64, options.bars ?? 1))} bar(s) of ${options.genreId ?? pattern.genre_id ?? "a pattern"}`;
+  const result = await withRenderTimeout(page.evaluate(
     async ({ pattern: patternArg, format, bars, bitrateKbps, trackPeaks, sampleRate, channels: channelCount, loudnessTrimDb }) => {
       /**
        * These specifiers are resolved by the *browser* (the app's dev server), not by Node, so they are built
@@ -266,6 +355,9 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
       channels: options.channels,
       loudnessTrimDb: options.loudnessTrimDb,
     }
+    ),
+    what,
+    options.renderTimeoutMs ?? 900_000
   );
 
   const dir = outputDirectory(options);

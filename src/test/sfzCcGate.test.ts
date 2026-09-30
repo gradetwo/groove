@@ -154,3 +154,50 @@ describe("controller-driven tuning", () => {
     expect(parseSfz("<region> sample=tone.wav pitch_keycenter=60")[0]!.tuneCents).toBe(0);
   });
 });
+
+/**
+ * **`set_hdccN` is a default as well, and a whole instrument hung on it.**
+ *
+ * The owner's report, from the arrangement's transport: `instrument "salamander-grand" has 161 region(s) and none of
+ * them sound at the controller values the file declares` — printed once per step, for a piano.
+ *
+ * Salamander gates every region on `locc20=1`, `locc21=1` or `locc22=1` (string resonance, hammer noise, pedal
+ * noise) and raises those controllers with `set_hdcc20=0.5` — the **normalised** form. Only `set_ccN` was read, so
+ * the controllers looked unset, an unset controller is 0, and `0 >= 1` silenced all 161 regions. The library was
+ * telling the truth and the reader was not.
+ */
+describe("the normalised controller defaults", () => {
+  const region = '<region> sample=x.wav pitch_keycenter=60 locc20=1';
+
+  it("reads `set_hdccN` as the 0–127 value the gates compare in", () => {
+    // 0.5 of the range is 63.5, and the gate asks for at least 1, so the region exists.
+    expect(readControlDefaults("<control>\nset_hdcc20=0.5\n").get(20)).toBe(64);
+    expect(readControlDefaults("<control>\nset_hdcc20=0\n").get(20)).toBe(0);
+    expect(readControlDefaults("<control>\nset_hdcc20=1\n").get(20)).toBe(127);
+  });
+
+  it("lets a region sound that only `set_hdccN` had switched on", () => {
+    // ⭐ The exact shape from the report, and the assertion is the one the message failed: the region sounds.
+    const audible = regionsAtCc(parseSfz(region), readControlDefaults("<control>\nset_hdcc20=0.5\n"));
+    expect(audible).toHaveLength(1);
+  });
+
+  it("still silences the region when the normalised default is zero", () => {
+    // The other half: reading the form must not mean ignoring what it says.
+    const audible = regionsAtCc(parseSfz(region), readControlDefaults("<control>\nset_hdcc20=0\n"));
+    expect(audible).toHaveLength(0);
+  });
+
+  it("takes the last of the two forms, because a control block is read in order", () => {
+    const both = "<control>\nset_hdcc20=1\nset_cc20=0\n";
+    expect(readControlDefaults(both).get(20)).toBe(0);
+    const other = "<control>\nset_cc20=0\nset_hdcc20=1\n";
+    expect(readControlDefaults(other).get(20)).toBe(127);
+  });
+
+  it("clamps a normalised value that a file got wrong, rather than letting it silence everything", () => {
+    // A gate compares against 0–127; a `2` here would otherwise become 254 and fail every `hicc` above it.
+    expect(readControlDefaults("<control>\nset_hdcc20=2\n").get(20)).toBe(127);
+    expect(readControlDefaults("<control>\nset_hdcc20=-1\n").get(20)).toBe(0);
+  });
+});

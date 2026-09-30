@@ -110,7 +110,7 @@ export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, 
     <div data-testid="track-list-v2" className="flex flex-col gap-3 p-4">
       <div data-testid="track-list-add" className="flex flex-wrap gap-2">
         {ADDABLE.map((kind) => (
-          <button key={kind} type="button" className="px-3 py-1 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] text-sm text-text" onClick={() => onAddTrack(kind, kind)}>
+          <button key={kind} type="button" className="px-3 py-1 rounded border border-[var(--d-line)] text-sm text-text" onClick={() => onAddTrack(kind, kind)}>
             + {kind}
           </button>
         ))}
@@ -123,7 +123,7 @@ export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, 
               <span className="min-w-32 text-text">{track.kind === "folder" ? "▸ " : ""}{track.name}</span>
               {/* ⭐ The kind is changeable, which the owner asked for: a track's type is a decision, not an identity. The component only reports the choice — what happens to the fields the old kind owned is `changeTrackKind`'s business. */}
               <select
-                className="px-2 h-7 rounded text-xs bg-transparent border border-[var(--d-border,rgba(255,255,255,0.15))] text-text"
+                className="px-2 h-7 rounded text-xs bg-transparent border border-[var(--d-line)] text-text"
                 aria-label={`${track.name} kind`}
                 value={track.kind}
                 onChange={(event) => onChangeKind(track.id, event.target.value as TrackKindV2)}
@@ -191,14 +191,14 @@ export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, 
                   className="w-16 accent-[var(--d-accent)]"
                 />
               )}
-              <button type="button" className={`w-7 h-7 rounded text-xs ${track.muted ? "bg-[var(--d-accent)] text-[var(--d-accent-ink)]" : "border border-[var(--d-border,rgba(255,255,255,0.15))] text-text"}`} aria-pressed={Boolean(track.muted)} onClick={() => onToggle(track.id, "muted", !track.muted)}>
+              <button type="button" className={`w-7 h-7 rounded text-xs ${track.muted ? "bg-[var(--d-accent)] text-[var(--d-accent-ink)]" : "border border-[var(--d-line)] text-text"}`} aria-pressed={Boolean(track.muted)} onClick={() => onToggle(track.id, "muted", !track.muted)}>
                 M
               </button>
-              <button type="button" className={`w-7 h-7 rounded text-xs ${track.soloed ? "bg-[var(--d-accent)] text-[var(--d-accent-ink)]" : "border border-[var(--d-border,rgba(255,255,255,0.15))] text-text"}`} aria-pressed={Boolean(track.soloed)} onClick={() => onToggle(track.id, "soloed", !track.soloed)}>
+              <button type="button" className={`w-7 h-7 rounded text-xs ${track.soloed ? "bg-[var(--d-accent)] text-[var(--d-accent-ink)]" : "border border-[var(--d-line)] text-text"}`} aria-pressed={Boolean(track.soloed)} onClick={() => onToggle(track.id, "soloed", !track.soloed)}>
                 S
               </button>
               {track.kind === "folder" && (
-                <button type="button" className="px-2 h-7 rounded text-xs border border-[var(--d-border,rgba(255,255,255,0.15))] text-text" aria-expanded={!track.collapsed} onClick={() => onToggleCollapse(track.id, !track.collapsed)}>
+                <button type="button" className="px-2 h-7 rounded text-xs border border-[var(--d-line)] text-text" aria-expanded={!track.collapsed} onClick={() => onToggleCollapse(track.id, !track.collapsed)}>
                   fold
                 </button>
               )}
@@ -221,7 +221,7 @@ export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, 
                       aria-label={`${track.name} bar ${bar + 1} step ${index + 1}`}
                       aria-pressed={value > 0}
                       onClick={() => onToggleStep(track.id, index + bar * 16)}
-                      className={`w-3.5 h-5 rounded-sm border border-[var(--d-border,rgba(255,255,255,0.15))] ${
+                      className={`w-3.5 h-5 rounded-sm border border-[var(--d-line)] ${
                         value > 0 ? "bg-[var(--d-accent)]" : "bg-transparent opacity-40"
                       }`}
                     />

@@ -526,6 +526,27 @@ try {
     suggested.chords.flat().every((note) => note >= 0 && note <= 127),
   `${suggested.id} ${suggested.roman} → ${JSON.stringify(suggested.chords ?? []).slice(0, 80)}`
   );
+
+  /**
+   * ⭐ **The loop the harmony layer was missing: the suggestion gets used, not just printed.**
+   *
+   * `suggest_progression` answers what to play, and nothing could act on the answer — M1 in `z2.md` calls that the composer's core-productivity gap. This calls the two in sequence and checks that the chords **land in the pattern with a length**, because a chord written as a one-step stab is not a chord.
+   */
+  const appliedChords = payload(
+    await client.request("tools/call", {
+      name: "apply_chord_progression",
+      arguments: { genreId: "chicago-house", progressionId: suggested.id, tonic: 60, mode: "major", chordBeats: 4 },
+    })
+  );
+  const appliedTrack = (appliedChords.pattern?.tracks ?? []).find((track) => track.track_id === "chords");
+  check(
+    "apply_chord_progression writes the suggested progression into the pattern",
+    appliedChords.written === (appliedChords.numerals ?? []).length &&
+      (appliedTrack?.steps ?? []).filter((step) => step === 1).length === appliedChords.written &&
+      (appliedTrack?.gate ?? []).filter((gate) => gate > 1).length === appliedChords.written &&
+      appliedChords.validation?.ok === true,
+    `${appliedChords.written} chord(s) into "${appliedChords.track}", validation ${appliedChords.validation?.ok}`
+  );
   check(
   "estimate_key reports a tonic, a mode and a fit from the notes",
   typeof key.tonic === "string" && (key.mode === "major" || key.mode === "minor") && Number.isFinite(key.fit) && key.notes > 0,

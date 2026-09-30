@@ -62,6 +62,29 @@ const hexToRgb = (hex) => {
   const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
   return [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16));
 };
+
+/**
+ * **A colour from a phone skin, in whichever shape that skin wrote it — and a hard error for anything else.**
+ *
+ * The phone palettes are read out of their own stylesheets, and two of them write a line as `rgba(20, 20, 20, 0.1)` rather than as a hex or a triple. `hexToRgb` was applied to every value regardless, so those two produced **`NaN 186 NaN`** — the `186` is the characters `ba` read as hexadecimal — and the generated `--d-line` for `minimal` and `soviet` was **invalid CSS** in every rule that used it. Nothing failed: the sheet was written, the token existed, and the only symptom was a line that never painted.
+ *
+ * So the parse covers the shapes that exist and **refuses the ones that do not**, rather than writing a value that is not a colour. Alpha is dropped deliberately: the `--d-*` contract is a channel triple, and a skin that wants transparency applies it where it is used (`rgb(var(--d-line) / 0.1)`, which the generated sheet already does for its softer steps).
+ */
+const parseColourChannels = (value) => {
+  const text = String(value).trim();
+  const rgbMatch = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/i.exec(text);
+  if (rgbMatch) {
+    const channels = [rgbMatch[1], rgbMatch[2], rgbMatch[3]].map((part) => Math.round(Number(part)));
+    if (channels.every((channel) => Number.isFinite(channel))) return channels;
+  }
+  if (/^#[0-9a-f]{3}$|^#[0-9a-f]{6}$/i.test(text)) {
+    const channels = hexToRgb(text);
+    if (channels.every((channel) => Number.isFinite(channel))) return channels;
+  }
+  throw new Error(
+    `desktop_skins: "${text}" is not a colour this generator can read — a NaN channel would be written into the sheet silently, which is how two skins shipped an invalid --d-line`
+  );
+};
 const rgbToHex = ([r, g, b]) =>
   "#" + [r, g, b].map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0")).join("");
 const luminance = ([r, g, b]) => {
@@ -986,7 +1009,8 @@ const ROLE_TOKEN = {
  * Emit
  * ------------------------------------------------------------------------------------------- */
 
-const channels = (hex) => hexToRgb(hex).join(" ");
+/** Every `--d-*` channel triple goes through the parser above, so a skin that writes a shape it cannot read **fails the generator** instead of shipping `NaN`. */
+const channels = (colour) => parseColourChannels(colour).join(" ");
 
 function tokenRecord(skin) {
   const p = palette(skin);

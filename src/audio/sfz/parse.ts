@@ -99,6 +99,19 @@ export function readControlDefaults(text: string): Map<number, number> {
 }
 
 function applyControlLine(line: string, defaults: Map<number, number>): void {
+  /**
+   * ⭐ **`set_hdccN` is a default too, and it is the form Salamander Grand Piano uses.**
+   *
+   * The owner's report: the arrangement printed `instrument "salamander-grand" has 161 region(s) and none of them sound at the controller values the file declares`, once per step. Every one of those regions gates on `locc20=1`, `locc21=1` or `locc22=1` — "sound when this controller is at least 1" — and the file brings those controllers up with **`set_hdcc20=0.5`**, the **normalised** form (0–1) rather than the raw 0–127 one. Only `set_ccN` was read, so those controllers looked unset, an unset controller is 0, and `0 >= 1` gated the whole instrument out: a piano that could not play a note, with the blame printed against the file.
+   *
+   * Both forms are read now, **in the order they appear**, so a control block that uses one after the other behaves as it reads. `set_hdccN` is scaled into the 0–127 domain because that is the domain `locc`/`hicc` compare in.
+   */
+  for (const match of line.matchAll(/(?:^|\s)set_hdcc(\d+)\s*=\s*(\S+)/g)) {
+    const normalised = Number(match[2]);
+    if (Number.isFinite(normalised)) {
+      defaults.set(Number(match[1]), Math.round(Math.max(0, Math.min(1, normalised)) * 127));
+    }
+  }
   for (const match of line.matchAll(/(?:^|\s)set_cc(\d+)\s*=\s*(\S+)/g)) {
     const value = Number(match[2]);
     if (Number.isFinite(value)) defaults.set(Number(match[1]), value);

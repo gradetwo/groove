@@ -82,3 +82,51 @@ describe("auditioning a note on a sampler track", () => {
     expect(unknown.ok === false && unknown.reason).toMatch(/no sample/);
   });
 });
+
+/**
+ * **A key press has to start the audio context, and a failure has to say so.**
+ *
+ * The owner's report: pressing keys on the arrangement made no sound, the audio-start prompt never appeared, and there was nothing in diagnostics to look at. Both halves were real, and they are the two criteria below.
+ *
+ * The gate that resumes the context shows **once** (it is remembered in `localStorage`), so on every later visit there is no gesture in the session and the browser keeps the context suspended. `play()` resumes it on its own path; **auditioning never did**, so a key press was silent — and the caller discarded the result, so it was silent *with no message*.
+ */
+describe("a suspended audio context", () => {
+  it("is resumed by the key press, because that is where the gesture is", async () => {
+    const context = new FakeAudioContext();
+    context.state = "suspended";
+    const player = playerWith(context);
+    const result = await player.audition!({ assetId: "piano", midi: 40 });
+    expect(context.state).toBe("running");
+    expect(result.ok).toBe(true);
+    // And a voice actually started, so "resumed" is not the whole claim.
+    expect(context.createdBufferSources.length).toBe(1);
+  });
+
+  it("says why when the browser still refuses, instead of sounding nothing", async () => {
+    // ⭐ The half that made this impossible to diagnose: a refusal must travel back as a reason.
+    const context = new FakeAudioContext();
+    context.state = "suspended";
+    context.resume = async () => {
+      // A browser that does not allow it leaves the context exactly where it was.
+    };
+    const player = playerWith(context);
+    const result = await player.audition!({ assetId: "piano", midi: 40 });
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.reason).toContain("audio");
+    // Nothing was started, so a refused note is not a note playing silently.
+    expect(context.createdBufferSources.length).toBe(0);
+  });
+
+  it("leaves a running context alone", async () => {
+    const context = new FakeAudioContext();
+    let resumptions = 0;
+    const original = context.resume.bind(context);
+    context.resume = async () => {
+      resumptions += 1;
+      original();
+    };
+    const player = playerWith(context);
+    expect((await player.audition!({ assetId: "piano", midi: 40 })).ok).toBe(true);
+    expect(resumptions, "a running context was resumed anyway").toBe(0);
+  });
+});

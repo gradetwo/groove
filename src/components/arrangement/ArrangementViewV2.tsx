@@ -196,7 +196,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
   }
 
   /** A transport button. 44 px tall like everything else in the bar: the arrangement is a phone surface too. */
-  const toolButton = "h-11 shrink-0 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] px-2 text-xs text-text disabled:opacity-50";
+  const toolButton = "h-11 shrink-0 rounded border border-[var(--d-line)] px-2 text-xs text-text disabled:opacity-50";
 
   return (
     <div data-testid="arrangement-view-v2" className="flex flex-col gap-2 p-2 text-text">
@@ -255,7 +255,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           <span className="text-[10px] text-text opacity-70">{t("arrangement_position")}</span>
           <span
             data-testid="arrangement-position"
-            className="rounded border border-[var(--d-border,rgba(255,255,255,0.15))] px-1 font-['JetBrains_Mono'] text-xs"
+            className="rounded border border-[var(--d-line)] px-1 font-['JetBrains_Mono'] text-xs"
           >
             {stripBar + 1}.1
           </span>
@@ -272,7 +272,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             data-testid="arrangement-tempo"
             value={arrangement.bpm ?? 120}
             onChange={(event) => setArrangement((current) => setArrangementTempo(current, Number(event.target.value)))}
-            className="h-6 w-14 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] bg-transparent px-1 font-['JetBrains_Mono'] text-xs text-text"
+            className="h-6 w-14 rounded border border-[var(--d-line)] bg-transparent px-1 font-['JetBrains_Mono'] text-xs text-text"
           />
         </label>
         <label className="flex items-center gap-1 text-[10px] text-text opacity-80">
@@ -285,7 +285,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             data-testid="arrangement-bars"
             value={bars}
             onChange={(event) => setArrangement((current) => setArrangementBars(current, Number(event.target.value)))}
-            className="h-6 w-12 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] bg-transparent px-1 font-['JetBrains_Mono'] text-xs text-text"
+            className="h-6 w-12 rounded border border-[var(--d-line)] bg-transparent px-1 font-['JetBrains_Mono'] text-xs text-text"
           />
         </label>
 
@@ -300,7 +300,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           data-testid="arrangement-snap-cycle"
           aria-label={t("arrangement_snap_cycle")}
           onClick={() => setSnap((current) => SNAP_VALUES[(SNAP_VALUES.indexOf(current) + 1) % SNAP_VALUES.length]!)}
-          className="h-11 shrink-0 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] px-1 font-['JetBrains_Mono'] text-xs text-text"
+          className="h-11 shrink-0 rounded border border-[var(--d-line)] px-1 font-['JetBrains_Mono'] text-xs text-text"
         >
           <span className="text-[10px] opacity-70">{t("arrangement_snap")}</span>{" "}
           <span data-testid="arrangement-snap-value">{snap}</span>
@@ -311,7 +311,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           aria-label={t("arrangement_snap_toggle")}
           aria-pressed={snapOn}
           onClick={() => setSnapOn((current) => !current)}
-          className={`h-11 w-11 shrink-0 rounded border text-xs ${snapOn ? "border-[var(--d-accent)] bg-[var(--d-accent)] text-[var(--d-accent-ink)]" : "border-[var(--d-border,rgba(255,255,255,0.15))] text-text"}`}
+          className={`h-11 w-11 shrink-0 rounded border text-xs ${snapOn ? "border-[var(--d-accent)] bg-[var(--d-accent)] text-[var(--d-accent-ink)]" : "border-[var(--d-line)] text-text"}`}
         >
           #
         </button>
@@ -323,7 +323,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           aria-label={t("arrangement_loop")}
           aria-pressed={loopRange !== undefined}
           onClick={toggleLoop}
-          className={`h-11 shrink-0 rounded border px-2 text-xs ${loopRange !== undefined ? "border-[var(--d-accent)] bg-[var(--d-accent)] text-[var(--d-accent-ink)]" : "border-[var(--d-border,rgba(255,255,255,0.15))] text-text"}`}
+          className={`h-11 shrink-0 rounded border px-2 text-xs ${loopRange !== undefined ? "border-[var(--d-accent)] bg-[var(--d-accent)] text-[var(--d-accent-ink)]" : "border-[var(--d-line)] text-text"}`}
         >
           ⟲
         </button>
@@ -387,7 +387,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           <li key={track.id}>
             <button
               type="button"
-              className="h-11 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] px-2 text-xs text-text"
+              className="h-11 rounded border border-[var(--d-line)] px-2 text-xs text-text"
               onClick={() => setSelectedTrackId(track.id)}
               aria-pressed={track.id === selectedTrackId}
             >
@@ -418,15 +418,15 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           `index.css`, so the two cannot drift apart silently.
         */
         data-header-width="240"
-        className="relative max-h-[60vh] overflow-y-auto rounded border border-[var(--d-border,rgba(255,255,255,0.15))]"
+        className="relative max-h-[60vh] overflow-y-auto rounded border border-[var(--d-line)]"
       >
         <div data-testid="arrangement-track-space" className="flex min-w-max flex-col">
           {/* The ruler's row. The lane column begins after a spacer the width of the header column, so the ruler's
               bar 1 sits exactly above the lane's bar 1. The header column has no ruler because this row is inside the
               lane column rather than above the whole grid. */}
-          <div className="flex items-stretch border-b border-[var(--d-border,rgba(255,255,255,0.15))]">
+          <div className="flex items-stretch border-b border-[var(--d-line)]">
             {/* A spacer where the header column is — the ruler starts after it. */}
-            <span data-testid="arrangement-ruler-offset" aria-hidden="true" style={{ width: "var(--arr-head-w)" }} className="shrink-0 border-r border-[var(--d-border,rgba(255,255,255,0.15))]" />
+            <span data-testid="arrangement-ruler-offset" aria-hidden="true" style={{ width: "var(--arr-head-w)" }} className="shrink-0 border-r border-[var(--d-line)]" />
             <div className="sticky left-0 min-w-0 flex-1 overflow-x-auto">
               <div className="relative" style={{ width: laneWidth }}>
                 <ArrangementRulerV2
@@ -457,11 +457,11 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           {/* Track rows. One flex row per track: the header (sticky, so it stays while the lanes scroll sideways) and
               the lane. Headers and lanes are siblings inside one vertical scroller, so their heights cannot drift. */}
           <div data-testid="arrangement-header-column" aria-label={t("arrangement_tracks_label")} className="flex min-w-max">
-            <div className="sticky left-0 z-10 shrink-0 border-r border-[var(--d-border,rgba(255,255,255,0.15))]" style={{ width: "var(--arr-head-w)" }}>
+            <div className="sticky left-0 z-10 shrink-0 border-r border-[var(--d-line)]" style={{ width: "var(--arr-head-w)" }}>
               {/* Adding tracks sits at the top of the header column, which is where every DAW's "new track" is. */}
-              <div data-testid="track-list-add" className="flex flex-wrap items-center gap-1 border-b border-[var(--d-border,rgba(255,255,255,0.15))] p-1">
+              <div data-testid="track-list-add" className="flex flex-wrap items-center gap-1 border-b border-[var(--d-line)] p-1">
                 {(["sampler", "instrument", "drumkit", "fx", "folder"] as const).map((kind) => (
-                  <button key={kind} type="button" className="min-h-[44px] rounded border border-[var(--d-border,rgba(255,255,255,0.15))] px-1 text-[10px] text-text" onClick={() => onAddTrack(kind, kind)}>
+                  <button key={kind} type="button" className="min-h-[44px] rounded border border-[var(--d-line)] px-1 text-[10px] text-text" onClick={() => onAddTrack(kind, kind)}>
                     + {kind}
                   </button>
                 ))}
@@ -472,7 +472,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
                   data-testid={`arrangement-header-row-${track.id}`}
                   onFocusCapture={() => setSelectedTrackId(track.id)}
                   onPointerDown={() => setSelectedTrackId(track.id)}
-                  className={`border-b border-[var(--d-border,rgba(255,255,255,0.15))] ${track.id === selectedTrackId ? "bg-[var(--d-surface,rgba(255,255,255,0.06))]" : ""}`}
+                  className={`border-b border-[var(--d-line)] ${track.id === selectedTrackId ? "bg-[var(--d-surface,rgba(255,255,255,0.06))]" : ""}`}
                 >
                   <TrackHeaderV2
                     track={track}
@@ -504,7 +504,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
               className="relative flex-1"
               style={{
                 width: laneWidth,
-                backgroundImage: `repeating-linear-gradient(to right, var(--d-border, rgba(255,255,255,0.15)) 0 1px, transparent 1px ${pixelsPerBar}px)`,
+                backgroundImage: `repeating-linear-gradient(to right, var(--d-line) 0 1px, transparent 1px ${pixelsPerBar}px)`,
               }}
             >
               <ArrangementLaneV2
@@ -531,7 +531,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
        * (§6.2): one `NoteEvent[]`, two readings, one at a time, and switching views must not move the playhead, scroll
        * the arrangement or change the selection. What is above is the switch; this is the editor.
        */}
-      <div data-testid="arrangement-detail" className="flex flex-col gap-2 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] bg-[var(--d-surface,rgba(255,255,255,0.04))] p-3">
+      <div data-testid="arrangement-detail" className="flex flex-col gap-2 rounded border border-[var(--d-line)] bg-[var(--d-surface,rgba(255,255,255,0.04))] p-3">
         {selected === undefined ? (
           // Said rather than left blank, so an empty panel reads as "nothing selected" instead of "something is broken".
           <p>Select a track to see its takes.</p>
@@ -570,7 +570,14 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
                */
               <ArrangementKeyboardV2
                 onNoteOn={(midi, velocity) => {
-                  void player?.audition?.({ assetId: selected.sample!.assetId, midi, trackId: selected.id, gainDb: selected.gainDb });
+                  /**
+                   * ⭐ **The result is reported, not discarded.**
+                   *
+                   * This used to be `void player?.audition?.(…)`, and that is what turned a real failure into "pressing keys does nothing": on any visit where the audio-start gate did not appear, the browser kept the audio context suspended, the audition could not sound, and the one piece of information that would have said so went into `void`. The owner's report — keys silent, nothing in diagnostics, no way to tell why — is the shape of a discarded result.
+                   */
+                  void player?.audition?.({ assetId: selected.sample!.assetId, midi, trackId: selected.id, gainDb: selected.gainDb })?.then((result) => {
+                    setPlayProblem(result && result.ok === false ? result.reason : undefined);
+                  });
                 }}
                 onNoteOff={(midi) => {
                   player?.releaseNote?.({ midi, trackId: selected.id });

@@ -55,7 +55,7 @@ export function RecordButtonV2({ capture, onTake, disabled = false }: RecordButt
         type="button"
         // 44 px, like every other control in this toolbar: the arrangement is a touch surface on a phone, and a
         // record button is not the one control that may be smaller than a finger.
-        className="h-11 shrink-0 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] px-2 text-xs text-text disabled:opacity-50"
+        className="h-11 shrink-0 rounded border border-[var(--d-line)] px-2 text-xs text-text disabled:opacity-50"
         onClick={start}
         disabled={busy || disabled}
       >

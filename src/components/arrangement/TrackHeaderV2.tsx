@@ -108,7 +108,7 @@ export function TrackHeaderV2({
           aria-label={`${track.name} kind`}
           value={track.kind}
           onChange={(event) => onChangeKind(track.id, event.target.value as TrackKindV2)}
-          className="h-7 w-8 shrink-0 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] bg-transparent text-center text-xs text-text"
+          className="h-7 w-8 shrink-0 rounded border border-[var(--d-line)] bg-transparent text-center text-xs text-text"
         >
           {(["sampler", "instrument", "drumkit", "fx", "folder"] as const).map((kind) => (
             <option key={kind} value={kind}>
@@ -178,7 +178,7 @@ export function TrackHeaderV2({
           data-testid={`track-arm-${track.id}`}
           onClick={() => onToggleArm(track.id, !track.armed)}
           className={`arr-head-desktop-only h-5 w-5 shrink-0 rounded-full border text-[9px] leading-none ${
-            track.armed ? "border-danger bg-danger text-[var(--d-on-accent)]" : "border-[var(--d-border,rgba(255,255,255,0.15))] text-text"
+            track.armed ? "border-danger bg-danger text-[var(--d-on-accent)]" : "border-[var(--d-line)] text-text"
           }`}
         >
           ●
@@ -198,7 +198,7 @@ export function TrackHeaderV2({
             data-testid={`track-solo-${track.id}`}
             onClick={() => onToggle(track.id, "soloed", !track.soloed)}
             className={`arr-head-desktop-only h-5 w-5 shrink-0 rounded text-[9px] ${
-              track.soloed ? "bg-[var(--d-accent)] text-[var(--d-accent-ink)]" : "border border-[var(--d-border,rgba(255,255,255,0.15))] text-text"
+              track.soloed ? "bg-[var(--d-accent)] text-[var(--d-accent-ink)]" : "border border-[var(--d-line)] text-text"
             }`}
           >
             S
@@ -211,7 +211,7 @@ export function TrackHeaderV2({
             data-testid={`track-mute-${track.id}`}
             onClick={() => onToggle(track.id, "muted", !track.muted)}
             className={`arr-head-desktop-only h-5 w-5 shrink-0 rounded text-[9px] ${
-              track.muted ? "bg-[var(--d-accent)] text-[var(--d-accent-ink)]" : "border border-[var(--d-border,rgba(255,255,255,0.15))] text-text"
+              track.muted ? "bg-[var(--d-accent)] text-[var(--d-accent-ink)]" : "border border-[var(--d-line)] text-text"
             }`}
           >
             M
@@ -231,11 +231,11 @@ export function TrackHeaderV2({
         <details className="arr-head-msr relative shrink-0" data-testid={`track-msr-${track.id}`}>
           <summary
             aria-label={t("track_msr_label", { name: track.name })}
-            className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded border border-[var(--d-border,rgba(255,255,255,0.15))] text-[10px] text-text"
+            className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded border border-[var(--d-line)] text-[10px] text-text"
           >
             M/S/R
           </summary>
-          <div className="absolute right-0 top-full z-30 flex flex-col gap-1 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] bg-[var(--d-panel,rgba(20,20,24,0.98))] p-1">
+          <div className="absolute right-0 top-full z-30 flex flex-col gap-1 rounded border border-[var(--d-line)] bg-[var(--d-panel,rgba(20,20,24,0.98))] p-1">
             {onToggleArm && (
               <button
                 type="button"
@@ -275,7 +275,7 @@ export function TrackHeaderV2({
       {/* 8 — the level meter, last as Bitwig's order has it. It is a **picture**: nothing measures a live level on
           this route, so the bar shows unity and the slot is where real metering will land. aria-hidden, because a
           decorative bar with a number in it would be read as a measurement it is not. */}
-      <span data-control="meter" data-testid={`track-meter-${track.id}`} aria-hidden="true" className="flex h-8 w-1.5 shrink-0 items-end overflow-hidden rounded-sm bg-[var(--d-border,rgba(255,255,255,0.15))]">
+      <span data-control="meter" data-testid={`track-meter-${track.id}`} aria-hidden="true" className="flex h-8 w-1.5 shrink-0 items-end overflow-hidden rounded-sm bg-[var(--d-line)]">
         <span className="block w-full" style={{ height: "70%", background: color }} />
       </span>
 

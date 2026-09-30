@@ -763,7 +763,12 @@ html.reduced-motion .animate-orbit {
   font-weight: 700;
   line-height: 1;
   letter-spacing: 0.16em;
-  color: rgb(var(--d-text, 240 240 245));
+  /**
+   * The skin's own ink, not `--d-text` — that token is defined by no skin, so the near-white fallback won on every
+   * one of them and the gate's name was unreadable on the light skins. **A prompt nobody can read is a prompt
+   * nobody answers**, which is how a suspended audio context turns into "pressing keys does nothing".
+   */
+  color: rgb(var(--d-ink));
 }
 .gate-name b {
   color: #ffb340;

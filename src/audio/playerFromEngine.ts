@@ -108,6 +108,34 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
       // Reported rather than thrown, the same way `play` reports a missing engine: a key press that throws is worse than one that is silent for a stated reason.
       return { ok: false as const, reason: "audio engine is not ready" };
     }
+    /**
+     * ⭐ **A key press is a gesture, so it is where a suspended context has to be resumed — and this path never did.**
+     *
+     * The engine resumes its own context inside `play()`, which covers the transport. **Auditioning is a separate path** that starts a voice directly, so on any visit where the audio-start gate did not appear (it shows once, remembered in `localStorage`) there was no gesture in the session at all and the browser kept the context suspended: pressing a key produced **silence and no message**, because the caller discarded the result. That is a bug report with no evidence in it, which is the worst kind.
+     *
+     * `resume()` is called here rather than left to the caller because this is the moment a gesture exists and the note is about to be started — and if the browser still refuses, the reason travels back so the screen can say it instead of staying quiet.
+     */
+    const context = engine.audioContext;
+    if (context.state !== "running") {
+      /**
+       * **Asked as a capability, because the seam's type is `BaseAudioContext` and an offline context has no `resume`.**
+       *
+       * The first version called `context.resume()` directly and the type check refused it — correctly, since the seam exists so an `OfflineAudioContext` can stand in. A context that cannot resume is reported like one that refused, which is the honest answer for both.
+       */
+      const resumable = context as BaseAudioContext & { resume?: () => Promise<void> };
+      if (typeof resumable.resume === "function") {
+        try {
+          await resumable.resume();
+        } catch {
+          // The refusal is reported below, by reading the state rather than by trusting the exception.
+        }
+      }
+      // Read **fresh, into a wider type**: after the check above TypeScript narrows `state` to the value it just matched, so comparing it with `"running"` again reads as a mistake.
+      const stateAfterResume: string = context.state;
+      if (stateAfterResume !== "running") {
+        return { ok: false as const, reason: "the browser has not allowed audio to start — tap the screen or press play once, then play a key" };
+      }
+    }
     const { assets } = await loadCatalogue();
     const loader = createSampleLoader(
       decode ?? browserSampleDecoder(engine.audioContext),

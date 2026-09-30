@@ -67,7 +67,7 @@ export function resolveTrackId(name: string): TrackId | null {
  * the first one — so a song can carry two leads without changing what any existing caller, export or `validatePattern` run means. The exact-name pass is
  * case-sensitive because a `laneId` is a machine name, not prose; the kind pass keeps the alias handling it has always had.
  */
-function findTrack(pattern: SequencerPattern, name: string): SequencerTrack | null {
+export function findTrack(pattern: SequencerPattern, name: string): SequencerTrack | null {
   const wanted = name.trim();
   if (wanted.length > 0) {
     const byLaneId = pattern.tracks.find((track) => track.laneId === wanted);
