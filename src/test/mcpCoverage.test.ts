@@ -37,6 +37,7 @@ const EXPOSED: Record<string, string> = {
   setTrackNoteLength: "set_arrangement_note_length",
   setTrackGain: "set_arrangement_track_gain",
   setArrangementBars: "set_arrangement_bars",
+  setArrangementTempo: "set_arrangement_tempo",
   setTrackPan: "set_arrangement_track_pan",
   addTake: "add_arrangement_take",
   selectTrackTake: "select_arrangement_take",

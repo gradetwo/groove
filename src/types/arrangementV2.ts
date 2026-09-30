@@ -105,6 +105,12 @@ export interface ArrangementV2 {
    * It exists because a note has a position in **musical time**, and musical time has to have somewhere to be. Without it, a roll can only show the sixteen steps a lane happens to hold, and "write something in bar 3" is not a thing a person can do.
    */
   bars?: number;
+  /**
+   * ⭐ **How fast it goes, in beats per minute.** Absent means 120, which is what the compile used to hardcode — so an older file plays exactly as it did, and a new one can say what it wants.
+   *
+   * It belongs to the arrangement rather than to the song it was projected from: a tempo is a performance decision, and the same projection played at two tempos is two performances.
+   */
+  bpm?: number;
   /** Every clip slot that carried at least one track, so a projection can be checked for completeness. */
   sourceSlots: string[];
 }

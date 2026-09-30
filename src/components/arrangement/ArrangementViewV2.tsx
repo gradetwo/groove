@@ -17,6 +17,7 @@ import { RecordButtonV2 } from "./RecordButtonV2";
 import { ArrangementKeyboardV2 } from "./ArrangementKeyboardV2";
 import { PianoRollV2 } from "./PianoRollV2";
 import { ScoreV2 } from "./ScoreV2";
+import { ArrangementRulerV2 } from "./ArrangementRulerV2";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { NewProjectPanelV2 } from "./NewProjectPanelV2";
 import { playArrangementV2, type ArrangementPlayer } from "../../audio/playArrangementV2";
@@ -147,33 +148,9 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
               * **The roll, for a track that plays pitches.** It is here rather than in a separate editor because the owner's complaint was having to leave the arrangement to enter notes; the keyboard below plays, this writes, and both act on the selected track.
               */}
               {/**
-              * **The bar selector**, which is what lets a strip stay useful in an arrangement of any length. It sits with the roll because both answer "where in the arrangement am I", and the roll is what shows the whole of it.
+              * ⭐ **The ruler replaces the stepping buttons.** ‹ › could only move one bar at a time, which is the wrong shape for eight bars and unusable for sixty-four; a ruler says how long the arrangement is and moves the view in one click, which is also what the two Logic screenshots have at the top.
               */}
-            <div data-testid="arrangement-bar-selector" className="flex items-center gap-2 px-1 text-xs text-text">
-              <button
-                type="button"
-                data-testid="arrangement-bar-prev"
-                aria-label={t("bar_previous")}
-                disabled={stripBar === 0}
-                onClick={() => setStripBar(Math.max(0, stripBar - 1))}
-                className="px-2 py-0.5 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] disabled:opacity-40"
-              >
-                ‹
-              </button>
-              <span className="font-['JetBrains_Mono']" data-testid="arrangement-bar-label">
-                {stripBar + 1} / {arrangement.bars ?? 8}
-              </span>
-              <button
-                type="button"
-                data-testid="arrangement-bar-next"
-                aria-label={t("bar_next")}
-                disabled={stripBar + 1 >= (arrangement.bars ?? 8)}
-                onClick={() => setStripBar(Math.min((arrangement.bars ?? 8) - 1, stripBar + 1))}
-                className="px-2 py-0.5 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] disabled:opacity-40"
-              >
-                ›
-              </button>
-            </div>
+            <ArrangementRulerV2 bars={arrangement.bars ?? 8} currentBar={stripBar} onSelectBar={setStripBar} />
             {/**
               * **The tabs.** They read as Logic's do, and they are what makes "look at the score" something a person discovers rather than a setting they have to find.
               */}

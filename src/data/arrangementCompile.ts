@@ -82,5 +82,10 @@ export function compileArrangementToLanes(arrangement: ArrangementV2, notes: Not
 /** The same compile, as the `clips`/`sections` input the planner takes — one lane per track, all in a single slot. */
 export function compileArrangementToSongInput(arrangement: ArrangementV2, notes: NotesByTrack = {}) {
   const tracks = compileArrangementToLanes(arrangement, notes).map((lane) => lane.track);
-  return { clips: { A: { tracks } }, sections: [{ id: "compiled", slot: "A", bars: 1 }], boundaries: [0], bpm: 120 };
+    /**
+   * ⭐ **The section says how long the arrangement is, and it used to say one bar.**
+   *
+   * That was a real defect and not a cosmetic one: the grid grew to hold a note in bar three while the transport still played a single bar, so a note written there was in the data and never scheduled. The length and the tempo both belong to the arrangement, and this is where they reach the engine.
+   */
+  return { clips: { A: { tracks } }, sections: [{ id: "compiled", slot: "A", bars: arrangement.bars ?? 1 }], boundaries: [0], bpm: arrangement.bpm ?? 120 };
 }

@@ -183,6 +183,17 @@ export function renameTrack(arrangement: ArrangementV2, trackId: string, name: s
  *
  * Clamped to 1…128 rather than refused: a slider at its end is not an error, and an imported file with a silly number should open rather than be rejected.
  */
+/**
+ * ⭐ **The arrangement's tempo.** Clamped to 20…300 rather than refused, for the same reason the length is: a slider at its end is not an error, and an imported file with a silly number should open.
+ *
+ * It is stored on the arrangement because the compile had **120 hardcoded** — a value nobody chose, which is how a number becomes a decision without anybody making it.
+ */
+export function setArrangementTempo(arrangement: ArrangementV2, bpm: number): ArrangementV2 {
+  const rounded = Math.round(bpm);
+  const clamped = Math.max(20, Math.min(300, Number.isFinite(rounded) ? rounded : 120));
+  return { ...arrangement, bpm: clamped };
+}
+
 export function setArrangementBars(arrangement: ArrangementV2, bars: number): ArrangementV2 {
   const rounded = Math.round(bars);
   const clamped = Math.max(1, Math.min(MAX_BARS, Number.isFinite(rounded) ? rounded : 1));
