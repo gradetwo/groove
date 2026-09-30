@@ -47,6 +47,7 @@ export const commonMessages = {
   template_samplers_desc: { en: "Two sampler tracks — the kind that plays real instruments", zh: "两条采样器轨道——就是能听到真实乐器的那一种" },
   roll_hint: { en: "Click a cell to write a note, click a note to remove it", zh: "点空格写音符，点音符删除" },
   roll_length: { en: "Length (beats)", zh: "长度（拍）" },
+  roll_resize_note: { en: "Change how long {note} is held", zh: "改变 {note} 的长度" },
   roll_add_note: { en: "Add a note at {note}", zh: "在 {note} 写一个音" },
   roll_remove_note: { en: "Remove the note at {note}", zh: "删除 {note} 上的音" },
   instrument_search: { en: "Search instruments", zh: "搜索乐器" },
