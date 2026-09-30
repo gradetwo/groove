@@ -24,7 +24,7 @@
 | --- | --- | --- | --- |
 | M1 #1 契约版本化 + `groove://changelog` | 元数据 | ✅ | `groove://changelog` 资源存在，`check:mcp` 覆盖 |
 | M1 #2 `undo` / opId | 轻量事务日志 | 🟡 | `undo_song` 存在；**opId 未实现** |
-| M1 #3 `get_energy_curve` 粗粒度版 | 让 Agent 听见结构 | ⬜ | 未实现。分析通道技术（8kHz 单声道）已在 `analyze_audio` 内部使用，缺的是**面向结构的曲线工具** |
+| M1 #3 `get_energy_curve` 粗粒度版 | 让 Agent 听见结构 | 🟡 | **半成品，而且缺口与文档描述的不同**。底层已有 `energyCurveDb(channels, sampleRate)`（`mcp/render/worker.ts:409`），渲染分析路径上已在用（同文件 444 行），8 kHz 单声道分析通道也是现成的（`RenderOptions.sampleRate/channels`）。**真正的缺口**：分析只能经由 `analyze_audio`——它吃的是**一个已渲染的 WAV 路径**（`analyseWavFile`），所以 Agent 想检查"副歌够不够响"要先渲染几分钟再读文件。文档里的用法是直接对作品自检（第 829 行 `get_energy_curve() → chorus 能量 0.58 < 目标 0.65`）。**下一步**：让曲线**直接吃 song/pattern、留在进程内**（复用同一个 `energyCurveDb`、不落盘），返回粗粒度曲线 + 每段峰值 |
 | M1 #4 `style_ref` + 示例库 | 每曲风 2–4 个核心角色示例 | 🟡 | `compose_with_examples` / `get_example` 存在（`check_mcp` 校验示例 pattern 能通过 `validate_pattern`）；**示例库规模未核** |
 | M1 #5 和声层最小集 | `set_chord_progression` + `suggest_progression` | ✅ | `suggest_progression`（读取）+ **`apply_chord_progression`**（写入，本会话实现，10 条判据 + 协议级检查）。命名用 `apply_` 而非 `set_`：本仓库要求以写入动词开头的工具声明 `readOnly: false`，而它是纯变换 |
 | M1 #6 旋律 + 声律校验 | `generate_melody` + `validate_prosody` | ✅ | 两者都在；`check_mcp` 的 90 项里覆盖，含"给了声调必须真的用上"（曾漏传 `tones`，已修） |
