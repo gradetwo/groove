@@ -4,8 +4,8 @@
  * **It owns no rules.** Adding, removing, muting, folding, choosing takes and capturing are all pure functions with their own criteria; this file holds the arrangement value and calls them, so the interface cannot
  * drift from the model. That is the same discipline as each block, applied one level up: the only thing that lives here is *which* arrangement is on screen.
  *
- * Audio is deliberately **not** wired here yet. Playing a v2 arrangement means compiling it into the lanes the engine takes — `compileArrangementToSongInput` — and that step deserves its own criterion rather
- * than being smuggled in with the layout.
+ * Audio is deliberately **not** wired here. Playing a v2 arrangement means compiling it into the pattern the engine's sequencer takes — `playArrangementV2` — and that step deserves its own criterion rather
+ * than being smuggled in with the layout. What this view owns is the button and the report: it starts the arrangement through the injected player and shows what was planned, or why nothing was.
  */
 import { useCallback, useMemo, useState } from "react";
 import type { ArrangementV2, TrackKindV2 } from "../../types/arrangementV2";
@@ -16,6 +16,8 @@ import { TakeSelectorV2 } from "./TakeSelectorV2";
 import { RecordButtonV2 } from "./RecordButtonV2";
 import { ArrangementKeyboardV2 } from "./ArrangementKeyboardV2";
 import { PianoRollV2 } from "./PianoRollV2";
+import { ScoreV2 } from "./ScoreV2";
+import { ArrangementRulerV2 } from "./ArrangementRulerV2";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { NewProjectPanelV2 } from "./NewProjectPanelV2";
 import { playArrangementV2, type ArrangementPlayer } from "../../audio/playArrangementV2";
@@ -56,9 +58,15 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
    * ⭐ **Which bar the strips show, which is not the transport's bar.** `bar` above is where the transport is in the underlying song and is what the take selector marks; this is a view choice — which sixteen squares a row draws. They are separate because an arrangement of eight bars still
    * has one transport, and a person looking at bar three has not thereby moved the playhead.
    */
+  /**
+   * ⭐ **Which editor is open.** Logic puts Piano Roll, Score and Smart Tempo behind tabs because they are three ways of looking at one performance, and switching between them must not move anything. Two of them here: the roll writes, the score reads.
+   */
+  const [editor, setEditor] = useState<"roll" | "score">("roll");
   const [stripBar, setStripBar] = useState(0);
   /** What the last play reported — **zero is shown, not hidden**: "nothing was planned" is a fact a user should see rather than a silent no-op. */
   const [played, setPlayed] = useState<number | undefined>(undefined);
+  /** Why nothing played, when nothing did — the engine can be unreachable or its instrument unresolvable, and both are answers rather than silence. */
+  const [playProblem, setPlayProblem] = useState<string | undefined>(undefined);
 
   const onAddTrack = useCallback((kind: TrackKindV2, name: string) => {
     setArrangement((current) => {
@@ -116,13 +124,35 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             // ⭐ The arrangement's own notes, not an empty map: they are content and they live with the tracks.
             const result = await playArrangementV2(arrangement, arrangement.notesByTrack ?? {}, player);
             setPlayed(result.planned);
+            /**
+             * ⭐ **A reason, shown.** The engine path answers with why when it cannot play — not ready, no transport, a sampler note no region covers — and an interface that discarded that would put the
+             * user back in front of a Play button that does nothing for no stated reason, which is the failure this whole workstream keeps removing.
+             */
+            setPlayProblem(result.reason ?? result.problems?.join("; "));
           }}
         >
           Play
         </button>
+        {/**
+          * **Stop, because the sampler's notes are started on the audio clock and the engine's transport cannot reach them.** Without it, pressing play on a piano arrangement and then wanting it to
+          * stop left every scheduled note ringing — the arrangement player is the only object that holds those voices, so only this button can silence them.
+          */}
+        <button
+          type="button"
+          disabled={player?.stop === undefined}
+          onClick={() => {
+            player?.stop?.();
+            // The report goes with it: once stopped, "planned N lane events" described a play that is over.
+            setPlayed(undefined);
+            setPlayProblem(undefined);
+          }}
+        >
+          Stop
+        </button>
         {/* ⭐ Said rather than clicked into nothing: without an engine the button is disabled and this explains why. */}
         {player === undefined && <span> (audio engine not connected yet)</span>}
         {played !== undefined && <span data-testid="arrangement-played"> planned {played} lane event(s)</span>}
+        {playProblem !== undefined && <span data-testid="arrangement-play-problem"> {playProblem}</span>}
       </div>
 
       <div data-testid="arrangement-detail" className="flex flex-col gap-2 p-3 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] bg-[var(--d-surface,rgba(255,255,255,0.04))]">
@@ -142,34 +172,36 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
               * **The roll, for a track that plays pitches.** It is here rather than in a separate editor because the owner's complaint was having to leave the arrangement to enter notes; the keyboard below plays, this writes, and both act on the selected track.
               */}
               {/**
-              * **The bar selector**, which is what lets a strip stay useful in an arrangement of any length. It sits with the roll because both answer "where in the arrangement am I", and the roll is what shows the whole of it.
+              * ⭐ **The ruler replaces the stepping buttons.** ‹ › could only move one bar at a time, which is the wrong shape for eight bars and unusable for sixty-four; a ruler says how long the arrangement is and moves the view in one click, which is also what the two Logic screenshots have at the top.
               */}
-            <div data-testid="arrangement-bar-selector" className="flex items-center gap-2 px-1 text-xs text-text">
-              <button
-                type="button"
-                data-testid="arrangement-bar-prev"
-                aria-label={t("bar_previous")}
-                disabled={stripBar === 0}
-                onClick={() => setStripBar(Math.max(0, stripBar - 1))}
-                className="px-2 py-0.5 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] disabled:opacity-40"
-              >
-                ‹
-              </button>
-              <span className="font-['JetBrains_Mono']" data-testid="arrangement-bar-label">
-                {stripBar + 1} / {arrangement.bars ?? 8}
-              </span>
-              <button
-                type="button"
-                data-testid="arrangement-bar-next"
-                aria-label={t("bar_next")}
-                disabled={stripBar + 1 >= (arrangement.bars ?? 8)}
-                onClick={() => setStripBar(Math.min((arrangement.bars ?? 8) - 1, stripBar + 1))}
-                className="px-2 py-0.5 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] disabled:opacity-40"
-              >
-                ›
-              </button>
-            </div>
+            <ArrangementRulerV2 bars={arrangement.bars ?? 8} currentBar={stripBar} onSelectBar={setStripBar} />
+            {/**
+              * **The tabs.** They read as Logic's do, and they are what makes "look at the score" something a person discovers rather than a setting they have to find.
+              */}
             {selected.kind !== "fx" && selected.kind !== "folder" && (
+              <div data-testid="arrangement-editor-tabs" role="tablist" className="flex gap-1 px-1 text-xs">
+                {(["roll", "score"] as const).map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="tab"
+                    data-testid={`arrangement-editor-${value}`}
+                    aria-selected={editor === value}
+                    onClick={() => setEditor(value)}
+                    className={`px-3 py-0.5 rounded ${editor === value ? "bg-[var(--d-accent)] text-black" : "text-text opacity-70"}`}
+                  >
+                    {value === "roll" ? t("view_piano_roll") : t("view_score")}
+                  </button>
+                ))}
+              </div>
+            )}
+            {selected.kind !== "fx" && selected.kind !== "folder" && editor === "score" && (
+              /**
+               * **The score and the roll show the same notes.** That is the whole claim of having both, and it is why neither owns the data: they are two readings of one `NoteEvent[]`.
+               */
+              <ScoreV2 notes={arrangement.notesByTrack?.[selected.id] ?? []} bars={arrangement.bars ?? 8} title={`${selected.name} — ${t("view_score")}`} />
+            )}
+            {selected.kind !== "fx" && selected.kind !== "folder" && editor === "roll" && (
             <PianoRollV2
                 notes={arrangement.notesByTrack?.[selected.id] ?? []}
                 // The roll shows the whole arrangement, so its length and the transport's are the same number.

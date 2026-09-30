@@ -17,6 +17,8 @@ import {
   describeMcpArrangement,
   flattenMcpArrangement,
   getMcpArrangement,
+  importMcpMusicXml,
+  importMcpMusicXmlBytes,
   removeMcpTrack,
   renameMcpTrack,
   selectMcpTake,
@@ -29,6 +31,7 @@ import {
   summariseArrangement,
 } from "../../mcp/arrangement";
 import { resetTrackIdsForTests } from "../data/arrangementEdits";
+import { buildMxlZip, toBase64 } from "./fixtures/mxlZip";
 
 beforeEach(() => {
   clearMcpArrangements();
@@ -235,5 +238,82 @@ describe("recording onto a track", () => {
     removeMcpTrack(arrangementId, track.id);
     expect(() => flattenMcpArrangement(arrangementId)).toThrow(/no tracks/);
     expect(() => flattenMcpArrangement("arrangement-nope")).toThrow(/create_arrangement/);
+  });
+});
+
+/**
+ * MusicXML in, at the layer an agent calls.
+ *
+ * The reader has its own criteria; what is checked here is the decision the **tool** makes — which part becomes a track, what the new tracks are called, and that a caller is told which track it just got. The default is the first part, because that is what the tool did before this and a caller's existing scripts must keep working.
+ */
+describe("importing a score onto the arrangement", () => {
+  /** Two named parts with different notes, so "all parts" can be told from "the first part twice". */
+  const twoPartXml = `<?xml version="1.0"?><score-partwise version="4.0">
+    <part-list>
+      <score-part id="P1"><part-name>Right Hand</part-name></score-part>
+      <score-part id="P2"><part-name>Left Hand</part-name></score-part>
+    </part-list>
+    <part id="P1"><measure number="1">
+      <attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>
+      <note><pitch><step>C</step><octave>5</octave></pitch><duration>2</duration></note>
+      <note><pitch><step>D</step><octave>5</octave></pitch><duration>2</duration></note>
+    </measure></part>
+    <part id="P2"><measure number="1">
+      <attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>
+      <note><pitch><step>C</step><octave>3</octave></pitch><duration>4</duration></note>
+    </measure></part>
+  </score-partwise>`;
+
+  it("adds the first part by default, named after the part", () => {
+    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const result = importMcpMusicXml(arrangementId, twoPartXml);
+    expect(result.trackIds).toHaveLength(1);
+    const track = result.summary.tracks.find((candidate) => candidate.id === result.trackIds![0])!;
+    expect(track.name).toBe("Right Hand");
+    expect(track.notes.map((entry) => entry.pitch)).toEqual([72, 74]);
+    expect(result.notes).toBe(2);
+    expect(result.problems).toEqual([]);
+  });
+
+  it('adds every part as its own track when partIndex is "all"', () => {
+    /**
+     * The reason the field is a union rather than a separate `allParts` flag: "part 3, or all parts" is a state with no meaning, and the type makes it unrepresentable instead of leaving the reader of a call to work out which one the handler honoured.
+     */
+    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const result = importMcpMusicXml(arrangementId, twoPartXml, { partIndex: "all" });
+    expect(result.trackIds).toHaveLength(2);
+    const [right, left] = result.trackIds!.map((id) => result.summary.tracks.find((candidate) => candidate.id === id)!);
+    expect(right!.name).toBe("Right Hand");
+    expect(left!.name).toBe("Left Hand");
+    // Each track holds its own part's notes and nothing of the other's.
+    expect(right!.notes.map((entry) => entry.pitch)).toEqual([72, 74]);
+    expect(left!.notes.map((entry) => entry.pitch)).toEqual([48]);
+    expect(result.notes).toBe(3);
+    expect(result.problems).toEqual([]);
+  });
+
+  it("reads a compressed .mxl from its bytes, and says that is what it read", async () => {
+    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const result = await importMcpMusicXmlBytes(arrangementId, toBase64(buildMxlZip([["score.musicxml", twoPartXml]])), { partIndex: "all" });
+    expect(result.format).toBe("mxl");
+    expect(result.summary.tracks.map((track) => track.name)).toContain("Left Hand");
+    expect(result.notes).toBe(3);
+    expect(result.trackIds).toHaveLength(2);
+  });
+
+  it("refuses a part index that is not in the file, naming how many there are", () => {
+    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    expect(() => importMcpMusicXml(arrangementId, twoPartXml, { partIndex: 7 })).toThrow(/2 part\(s\), so there is no part 7/);
+  });
+
+  it("leaves an empty part out and says so, rather than adding a track that holds nothing", () => {
+    const xml = `<?xml version="1.0"?><score-partwise version="4.0">
+      <part-list><score-part id="P1"><part-name>Silent</part-name></score-part></part-list>
+      <part id="P1"><measure number="1"><attributes><divisions>1</divisions></attributes><note><rest/><duration>4</duration></note></measure></part>
+    </score-partwise>`;
+    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const result = importMcpMusicXml(arrangementId, xml, { partIndex: "all" });
+    expect(result.trackIds).toEqual([]);
+    expect(result.problems.join(" ")).toMatch(/"Silent" holds no notes/);
   });
 });

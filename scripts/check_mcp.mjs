@@ -14,6 +14,7 @@ import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
 import fs from "node:fs";
 import path from "node:path";
+import { buildMxlZip } from "../src/test/fixtures/mxl_zip.mjs";
 
 const ROOT = process.cwd();
 const BUNDLE = path.join(ROOT, "dist-mcp", "groove-mcp.mjs");
@@ -566,6 +567,33 @@ try {
   );
   check("an unknown track is reported, not thrown", invalid.applied?.[0]?.ok === false, JSON.stringify(invalid.applied?.[0] ?? {}));
 
+  /**
+   * A pattern's tracks carry fields the registry's schema does not name, and Zod removes every key an object does
+   * not name. So a caller that sent a real pattern got its lyric, its second lane name and its polymeter length
+   * back gone with no error — data loss with nothing to notice. The schema is permissive on the track now, and
+   * this holds it there at the protocol boundary, where the SDK's own parse runs rather than a handler call.
+   */
+  const withTrackFields = JSON.parse(JSON.stringify(pattern));
+  const lyricLane = withTrackFields.tracks.find((track) => track.track_id === "lead");
+  lyricLane.syllables = lyricLane.steps.map((on) => (on ? "字" : null));
+  lyricLane.laneId = "lead-2";
+  lyricLane.trackLength = 12;
+  const keptFields = payload(
+    await client.request("tools/call", {
+      name: "apply_pattern_ops",
+      arguments: { pattern: withTrackFields, ops: [{ op: "swing", amount: 12 }] },
+    })
+  );
+  const keptLane = (keptFields.pattern?.tracks ?? []).find((track) => track.track_id === "lead");
+  check(
+    "apply_pattern_ops returns the track fields its schema does not name",
+    Array.isArray(keptLane?.syllables) &&
+      JSON.stringify(keptLane.syllables) === JSON.stringify(lyricLane.syllables) &&
+      keptLane.laneId === "lead-2" &&
+      keptLane.trackLength === 12,
+    `syllables=${Array.isArray(keptLane?.syllables) ? keptLane.syllables.filter(Boolean).length : "missing"} laneId=${keptLane?.laneId} trackLength=${keptLane?.trackLength}`
+  );
+
   const stats = payload(await client.request("tools/call", { name: "pattern_statistics", arguments: { pattern } }));
   check("pattern_statistics describes every track", (stats.tracks ?? []).length === pattern.tracks.length);
 
@@ -655,9 +683,103 @@ try {
   JSON.stringify(renderSongSchema?.inputSchema ?? {}).slice(0, 120)
   );
 
+  /**
+   * The custom-genre tools, called for real. The maker saved to the browser's IndexedDB and the server is a Node
+   * process with none, which is why the capability map recorded this as a gap; the store now sits behind
+   * `CustomGenreStore` and the fork is the app's own `forkGenre`. Re-saving a whole document through the tool is
+   * checked too, because a schema that enumerated fields instead of passing them through would drop the ones it did
+   * not name.
+   */
+  const savedGenre = payload(
+    await client.request("tools/call", { name: "save_custom_genre", arguments: { forkFromGenreId: "chicago-house", name: "Gate Probe" } })
+  );
+  check(
+    "save_custom_genre forks a library genre with its defaults",
+    savedGenre.replaced === false && savedGenre.genre?.forkedFromId === "chicago-house" && savedGenre.genre?.isCustom === true,
+    JSON.stringify({ id: savedGenre.genre?.id, bpm: savedGenre.genre?.default_bpm }).slice(0, 120)
+  );
+  const savedFieldCount = Object.keys(savedGenre.genre ?? {}).length;
+  const resavedGenre = payload(
+    await client.request("tools/call", { name: "save_custom_genre", arguments: { genre: { ...savedGenre.genre, default_bpm: 137 } } })
+  );
+  const rereadGenre = payload(await client.request("tools/call", { name: "get_custom_genre", arguments: { id: savedGenre.genre.id } }));
+  check(
+    "save_custom_genre replaces rather than duplicating, and keeps every field of a document",
+    resavedGenre.replaced === true && rereadGenre?.default_bpm === 137 && Object.keys(rereadGenre ?? {}).length === savedFieldCount,
+    `${savedFieldCount} -> ${Object.keys(rereadGenre ?? {}).length} fields, bpm ${rereadGenre?.default_bpm}`
+  );
+  const listedGenres = payload(await client.request("tools/call", { name: "list_custom_genres", arguments: {} }));
+  const duplicatedGenre = payload(
+    await client.request("tools/call", { name: "duplicate_custom_genre", arguments: { id: savedGenre.genre.id } })
+  );
+  const deletedGenre = payload(
+    await client.request("tools/call", { name: "delete_custom_genre", arguments: { id: duplicatedGenre.copy.id } })
+  );
+  check(
+    "list, duplicate and delete reach the session's custom genres",
+    listedGenres.total === 1 && duplicatedGenre.copy?.id !== savedGenre.genre.id && deletedGenre.remaining?.length === 1,
+    JSON.stringify({ listed: listedGenres.total, copy: duplicatedGenre.copy?.name, remaining: deletedGenre.remaining }).slice(0, 140)
+  );
+
   const resource = await client.request("resources/read", { uri: "groove://genres" });
   const resourceText = resource?.contents?.[0]?.text ?? "";
   check("resources/read serves the library index", resourceText.includes("chicago-house"), `${resourceText.length} chars`);
+
+  /**
+   * The MusicXML pair over the wire, and the reason this block exists at all.
+   *
+   * `import_arrangement_musicxml` reaches the reader, which used to call `new DOMParser()`. Node has no `DOMParser`, so that tool answered `{"raw":"DOMParser is not defined"}` to every real client from the day it shipped, and this gate — which is the only thing that calls tools the way a client does — never called it. The reader now parses with `saxes` through `src/data/xml.ts`, so the calls below are the proof that the capability exists in the server's own environment, not just under the unit suite's `jsdom`.
+   *
+   * **What this covers of the environment-dependent surface, and how.** The render tools are asserted as declared with their schemas and deliberately never called, because calling one starts Chromium: that is `render_audio`, `render_song`, `render_preview_clip` and `analyze_audio`, and the existing checks above already cover the first and the last. `export_groove` and `import_groove` are called for real earlier in this session, which covers the file system. The zip is covered here. **Every other tool runs on arguments alone**, so this session's calls to the library, pattern, song, harmony, melody, vocal and exporting tools are the pass over that part of the surface.
+   */
+  const xmlArrangement = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "instrument" } }));
+  const exportedScore = payload(
+    await client.request("tools/call", {
+      name: "export_arrangement_musicxml",
+      arguments: { arrangementId: xmlArrangement.arrangementId, title: "Gate", tempoBpm: 120 },
+    })
+  );
+  check(
+    "export_arrangement_musicxml returns a parseable score with the tempo it was given",
+    typeof exportedScore.xml === "string" && exportedScore.xml.includes("<score-partwise") && exportedScore.xml.includes('tempo="120"') && exportedScore.bars >= 1,
+    `${exportedScore.bytes} bytes, ${exportedScore.bars} bar(s)`
+  );
+
+  const twoParts = `<?xml version="1.0"?><score-partwise version="4.0">
+    <part-list><score-part id="P1"><part-name>Right Hand</part-name></score-part><score-part id="P2"><part-name>Left Hand</part-name></score-part></part-list>
+    <part id="P1"><measure number="1"><attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>
+      <note><pitch><step>C</step><octave>5</octave></pitch><duration>2</duration></note><note><pitch><step>D</step><octave>5</octave></pitch><duration>2</duration></note></measure></part>
+    <part id="P2"><measure number="1"><attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>
+      <note><pitch><step>C</step><octave>3</octave></pitch><duration>4</duration></note></measure></part>
+  </score-partwise>`;
+  const importedScore = payload(
+    await client.request("tools/call", {
+      name: "import_arrangement_musicxml",
+      arguments: { arrangementId: xmlArrangement.arrangementId, xml: twoParts, partIndex: "all" },
+    })
+  );
+  check(
+    'import_arrangement_musicxml parses XML in the server and adds one track per part with partIndex "all"',
+    (importedScore.trackIds ?? []).length === 2 &&
+      ["Right Hand", "Left Hand"].every((name) => (importedScore.summary?.tracks ?? []).some((track) => track.name === name)) &&
+      importedScore.notes === 3,
+    `${(importedScore.trackIds ?? []).length} track(s), ${importedScore.notes} note(s)`
+  );
+
+  /**
+   * The compressed path, with **the zip the criteria send**: `src/test/fixtures/mxl_zip.mjs` builds it for both, so this is evidence about the covered code rather than about a second zip builder.
+   */
+  const mxl = payload(
+    await client.request("tools/call", {
+      name: "import_arrangement_musicxml_file",
+      arguments: { arrangementId: xmlArrangement.arrangementId, bytesBase64: Buffer.from(buildMxlZip([["score.musicxml", twoParts]])).toString("base64") },
+    })
+  );
+  check(
+    "import_arrangement_musicxml_file unzips a .mxl in the server and reads the score in it",
+    mxl.format === "mxl" && mxl.notes === 2 && (mxl.summary?.tracks ?? []).some((track) => track.name === "Right Hand"),
+    `format ${mxl.format}, ${mxl.notes} note(s)`
+  );
 
   const prompt = await client.request("prompts/get", { name: "compose_groove", arguments: { genre: "chicago-house" } });
   const promptText = prompt?.messages?.[0]?.content?.text ?? "";

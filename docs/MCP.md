@@ -69,6 +69,26 @@ Read-only tools are marked ▢, tools that change something outside the session 
 | `get_chord_progression` ▢ | `id` | degrees, roman numerals, example songs, emotional tag |
 | `get_loudness_report` ▢ | `genreId?` | the committed baseline (LUFS, true peak, trim) for one genre or the whole table |
 
+### Custom genres
+
+A person forks a genre in the maker and the result is saved to the browser's IndexedDB. The server is a Node process,
+which has no `indexedDB` and did not reach that save at all, so the store moved behind `CustomGenreStore`
+(`src/features/customGenre/customGenreStore.ts`) — an IndexedDB implementation for the browser, an in-memory one for
+Node. The server half lives in `mcp/customGenres.ts`, and the tools below are its surface.
+
+**The fork is the app's own.** `save_custom_genre` with `forkFromGenreId` calls the same `forkGenre` the maker's Fork
+button calls, so the fork carries the library genre's metadata, pattern and lineage. **The store is the server
+process's own**, exactly as the arrangement and song maps are: a genre saved here lives for the session, and it is
+not the library a person saved in the app.
+
+| Tool | Arguments | Returns |
+| :--- | :--- | :--- |
+| `list_custom_genres` ▢ | — | the session's genres, newest first: id, name, category, tempo, track count, and the genre each was forked from |
+| `get_custom_genre` ▢ | `id` | the whole document and its eight-track pattern, as saved |
+| `save_custom_genre` ▣ | `forkFromGenreId?`, `genre?`, `name?` | the saved genre; a fork copies the library genre's defaults, pattern and lineage, and the same id saved twice replaces the first rather than adding a second |
+| `delete_custom_genre` ▣ | `id` | the ids that remain; an id that is not there is refused with the ones that are, rather than reported as deleted |
+| `duplicate_custom_genre` ▣ | `id` | a copy under a new id and a name ending in `(Copy)`, original untouched |
+
 ## MCP 是功能的一部分，不是收尾工作（业主指示，2026-09-29）
 
 > 以后一个功能开发过程中，MCP 需要第一时间提供
@@ -344,6 +364,13 @@ minutes and the call reports no progress while it runs.
 Every op that involves chance takes a **seed**, and the result is deterministic for it: an agent that asks twice
 gets the same groove back, which is what makes a generated pattern worth writing down.
 
+**A pattern keeps the fields the schema does not name.** The `pattern` argument checks the types and ranges of the
+fields listed above and passes every other key through instead of removing it. A track also carries fields the app
+itself writes — `syllables`, `laneId`, `sample`, `mute`, `solo`, `trackLength`, `phaseInvert`, `insert` — and the
+top-level pattern carries `tempoTrack`; a pattern that has them comes back from `apply_pattern_ops` with them
+intact. This is a correction: the track object used to be closed, and Zod removed those keys without an error, so a
+caller that sent a vocal pattern got it back with the lyric gone.
+
 ### Export
 
 | Tool | Arguments | Returns |
@@ -448,3 +475,26 @@ sides, is in [`V4_REVIEW_PLAN.md`](V4_REVIEW_PLAN.md); the short version:
 
 Two further corrections are the report's own: **Logic has no global Chord Track**, and its "AI" is embedded rather than absent. Those
 are the places where it is more accurate than the evaluations that came before it.
+
+## 已有功能的覆盖审计（2026-09-30）
+
+业主问："已有功能 MCP 都提供了吗"。这种问题只能**逐条列举**回答，不能凭印象，所以答案本身就是一份判据：`src/test/mcpCapability.test.ts` 里每个**能力面**一行，写明由哪种 MCP 表面提供——**工具**（做事）、**资源**（读）、**提示词**（怎么问）——或者写明为什么没有。
+
+判据从三个方向维持它：
+
+- `src/views/` 里每个视图都必须有一行：新界面在有人说明"agent 在这里能做什么"之前，这套测试就是红的——而那时补一个工具最便宜；
+- 每个名字都必须存在于**对应的那一类**里：把提示词写进工具列，会让服务器显得比实际能干（这个文件第一版就是这么错的，判据当场抓住）；
+- 一个能力面**什么都没有时必须有理由**：没有理由的空白，在没写它的人眼里就等同于"已覆盖"。
+
+19 个能力面里，18 个有直接覆盖；有 4 处是**部分覆盖并写明理由**：
+
+| 能力面 | 情况 | 理由 |
+| --- | --- | --- |
+| 自定义流派 | 部分 | 保存到浏览器 **IndexedDB**，而 MCP 服务端是 **Node 进程**，没有 `indexedDB`。库可读、可 fork，**保存还到不了** |
+| 挑战/练习 | 部分 | 计划有提示词；**段位与连击**是"这个人练过什么"的记录，不是音乐的属性 |
+| 硬件控制台 | 部分 | 推子写的是**实时播放参数**，不是持久状态；它演奏的那个 pattern 有工具可达 |
+| 鼓的解剖编辑器 | 部分 | 同上：写实时合成参数；**结果是 pattern**，那是可达的 |
+
+还有一处是**明确的界面上限而非缺口**：编排里的**键盘、卷帘、谱面**是输入与展示面，它们改的每一件事都是 `NoteEvent`，而音符有完整的工具（增删移改长度）、能渲染、能导出 MusicXML。没有"打开谱面"这种工具，正如没有"按第三个琴键"这种工具。
+
+**已知的下一步**：把自定义流派的存储挪到一个 Node 也能实现的接口后面（`customGenreDb` 只依赖 IndexedDB），那样"保存自己的流派"就能有工具。

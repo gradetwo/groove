@@ -41,6 +41,9 @@ import { listCatalogueInstruments } from "./instruments";
 import {
   addMcpNote,
   addMcpTake,
+  exportMcpMusicXml,
+  importMcpMusicXml,
+  importMcpMusicXmlBytes,
   addMcpTrack,
   assignMcpTakeRange,
   createMcpArrangement,
@@ -54,6 +57,7 @@ import {
   setMcpTrackCollapsed,
   setMcpTrackFlag,
   setMcpArrangementBars,
+  setMcpArrangementTempo,
   setMcpNoteLength,
   setMcpTrackGain,
   setMcpTrackInstrument,
@@ -74,8 +78,10 @@ import { analyseWavFile, renderAudio } from "./render/worker";
 import { getGenreLoudnessTrimDb } from "../src/data/genreMix";
 import { setVocalMelody } from "./vocal";
 import { addMcpSection, createMcpSong, duplicateMcpSection, flattenMcpSong, getMcpSong, importMcpSong, makeUniqueMcpSection, mcpSongHistory, setMcpClip, setMcpLaneSlots, setMcpTempo, summariseSong, undoMcpSong } from "./song";
+import { deleteMcpCustomGenre, duplicateMcpCustomGenre, getMcpCustomGenre, listMcpCustomGenres, saveMcpCustomGenre } from "./customGenres";
 import type { ClipSlot } from "../src/types/song";
 import type { SequencerPattern } from "../src/types/genre";
+import type { CustomGenre } from "../src/types/customGenre";
 
 /** MCP tool results are text for maximum client compatibility; JSON is the text. */
 export function json(value: unknown): { content: Array<{ type: "text"; text: string }> } {
@@ -86,7 +92,16 @@ export function failure(message: string): { content: Array<{ type: "text"; text:
   return { content: [{ type: "text", text: message }], isError: true };
 }
 
-/** The pattern schema, as loose as the app's own types: an agent may build one step by step. */
+/**
+ * The pattern schema: the fields that are checked, and everything else passed through.
+ *
+ * A pattern is a document the app reads back rather than a request, so both objects are permissive. Zod drops
+ * every key an object does not name, and a track carries fields this list does not: `syllables`, `laneId`,
+ * `sample`, `mute`, `solo`, `trackLength`, `phaseInvert` and `insert` are all written by the app today. The
+ * top-level object was already permissive and the track object was not, so a lyric or a polymeter length sent
+ * through `apply_pattern_ops` came back removed with no error at all. The named fields keep their types and
+ * ranges — this is about not losing data, not about not validating it.
+ */
 const patternSchema = z
   .object({
     genre_id: z.string().describe("which genre this pattern came from (used for naming and the mix)"),
@@ -98,25 +113,46 @@ const patternSchema = z
     totalSteps: z.number().int().positive().optional(),
     tracks: z
       .array(
-        z.object({
-          track_id: z.string(),
-          name: z.string().default(""),
-          instrument: z.string().default(""),
-          steps: z.array(z.number()),
-          velocity: z.array(z.number()).optional(),
-          pitch: z.array(z.number().nullable()).optional(),
-          pitches: z.array(z.array(z.number()).nullable()).optional(),
-          gate: z.array(z.number()).optional(),
-          ratchet: z.array(z.number()).optional(),
-          probability: z.array(z.number()).optional(),
-          pan: z.number().min(-1).max(1).optional(),
-          swing: z.number().min(-50).max(50).optional(),
-          sendA: z.number().min(0).max(1).optional(),
-          sendB: z.number().min(0).max(1).optional(),
-          volume: z.number().optional(),
-        })
+        z
+          .object({
+            track_id: z.string(),
+            name: z.string().default(""),
+            instrument: z.string().default(""),
+            steps: z.array(z.number()),
+            velocity: z.array(z.number()).optional(),
+            pitch: z.array(z.number().nullable()).optional(),
+            pitches: z.array(z.array(z.number()).nullable()).optional(),
+            gate: z.array(z.number()).optional(),
+            ratchet: z.array(z.number()).optional(),
+            probability: z.array(z.number()).optional(),
+            pan: z.number().min(-1).max(1).optional(),
+            swing: z.number().min(-50).max(50).optional(),
+            sendA: z.number().min(0).max(1).optional(),
+            sendB: z.number().min(0).max(1).optional(),
+            volume: z.number().optional(),
+          })
+          .passthrough()
       )
       .min(1),
+  })
+  .passthrough();
+
+/**
+ * A custom genre document, as `get_custom_genre` returns it.
+ *
+ * Only the four fields that decide what is saved and where are named; everything else passes through untouched. A
+ * genre carries more than a hundred recorded fields, and a schema that enumerated them would be a second model to
+ * keep in step with `src/types/genre.ts` — while a schema that enumerated only some of them would **drop the rest**,
+ * because a parsed object keeps what it declares. The pattern is the one part checked for shape, since it is the half
+ * an agent composes with.
+ */
+const customGenreSchema = z
+  .object({
+    id: z.string().describe("the id it is saved under — saving the same id again replaces the first"),
+    name: z.string(),
+    category: z.string().describe("one of the categories list_categories returns"),
+    isCustom: z.literal(true).describe("a custom genre rather than a library one"),
+    sequencer_pattern: z.object({}).passthrough().describe("the genre's tracks, tempo and scale, kept as given"),
   })
   .passthrough();
 
@@ -379,6 +415,92 @@ export const TOOLS: ToolDefinition[] = [
     handler: (args) => {
       try {
         return setMcpTrackFlag(String(args.arrangementId), String(args.trackId), args.flag as "muted" | "soloed", Boolean(args.value));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "export_arrangement_musicxml",
+    title: "Export a score as MusicXML",
+    description:
+      "The arrangement's notes as a MusicXML 4.0 `score-partwise` document — the file a notation program opens. One part, from one track; a note that crosses a barline is written as two tied notes, gaps become rests, and overlapping notes become separate voices, because those are the three things the format cannot express any other way.",
+    readOnly: true,
+    inputSchema: {
+      arrangementId: z.string(),
+      trackId: z.string().optional().describe("which track to write; the first that is not a folder unless said otherwise"),
+      title: z.string().optional(),
+      tempoBpm: z.number().optional(),
+    },
+    handler: (args) => {
+      try {
+        return exportMcpMusicXml(String(args.arrangementId), {
+          ...(args.trackId === undefined ? {} : { trackId: String(args.trackId) }),
+          ...(args.title === undefined ? {} : { title: String(args.title) }),
+          ...(args.tempoBpm === undefined ? {} : { tempoBpm: Number(args.tempoBpm) }),
+        });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "import_arrangement_musicxml",
+    title: "Import a MusicXML score",
+    description:
+      "Read a MusicXML `score-partwise` document and **add** its part as a track, named after the part. Notes that notation splits at a barline are joined back into one, chords arrive as notes that start together, and anything the model cannot hold — a grace note, a second voice inside one staff — is listed in `problems` rather than dropped in silence. `partIndex` names the part to read and defaults to the first; `\"all\"` imports every part as its own track, skipping parts that hold no notes. The reply names the tracks it added in `trackIds`, and reports the file's own `tempoBpm` and time signature when it states them.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      xml: z.string().describe("the whole document, as text"),
+      partIndex: z
+        .union([z.number().int().min(0), z.literal("all")])
+        .optional()
+        .describe('which part to read; the first unless said otherwise, or "all" for one track per part'),
+    },
+    handler: (args) => {
+      try {
+        return importMcpMusicXml(String(args.arrangementId), String(args.xml), {
+          ...(args.partIndex === undefined ? {} : { partIndex: args.partIndex as number | "all" }),
+        });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "import_arrangement_musicxml_file",
+    title: "Import a compressed MusicXML (.mxl)",
+    description:
+      "The same import as `import_arrangement_musicxml`, for a **compressed** `.mxl` file: pass the file's bytes as base64 and the zip is read here, so a caller does not have to unzip it first. A `.mxl` is a zip whose `META-INF/container.xml` names the score, and that is what is followed. A plain `.musicxml` file's bytes are also accepted, and the reply's `format` says which it was. `partIndex` works exactly as in the text tool, `\"all\"` included.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      bytesBase64: z.string().describe("the base64 of the .mxl file's bytes"),
+      partIndex: z
+        .union([z.number().int().min(0), z.literal("all")])
+        .optional()
+        .describe('which part to read; the first unless said otherwise, or "all" for one track per part'),
+    },
+    handler: async (args) => {
+      try {
+        return await importMcpMusicXmlBytes(String(args.arrangementId), String(args.bytesBase64), {
+          ...(args.partIndex === undefined ? {} : { partIndex: args.partIndex as number | "all" }),
+        });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "set_arrangement_tempo",
+    title: "Set the arrangement's tempo",
+    description: "Beats per minute, clamped to 20…300. The arrangement's own tempo rather than the song's: the same projection played at two speeds is two performances.",
+    readOnly: false,
+    inputSchema: { arrangementId: z.string(), bpm: z.number().min(20).max(300) },
+    handler: (args) => {
+      try {
+        return setMcpArrangementTempo(String(args.arrangementId), Number(args.bpm));
       } catch (error) {
         return failure((error as Error).message);
       }
@@ -709,6 +831,87 @@ export const TOOLS: ToolDefinition[] = [
     handler: (args) => {
       const result = getGenreRelations(String(args.id));
       return result ?? failure(`unknown genre "${String(args.id)}"`);
+    },
+  },
+  /**
+   * The custom-genre surface: the maker's Fork and Save, for an agent.
+   *
+   * It sits beside the library tools because it is the same activity one step further on — read a genre, fork it,
+   * save the variation. The store behind it is the server process's own rather than the browser's IndexedDB library:
+   * a genre saved here lives for the session, and the genres a person saved in the app are not visible to these tools.
+   */
+  {
+    name: "list_custom_genres",
+    title: "List saved custom genres",
+    description:
+      "The custom genres saved in this MCP session, newest first: id, name, category, tempo, track count and the genre each was forked from. This is the server session's own store, separate from the browser's IndexedDB library, so it lists what an agent saved here rather than what a person made in the app.",
+    readOnly: true,
+    inputSchema: {},
+    handler: () => listMcpCustomGenres(),
+  },
+  {
+    name: "get_custom_genre",
+    title: "Get a custom genre",
+    description:
+      "One custom genre in full: every recorded field and its eight-track pattern, exactly as save_custom_genre stored it. The pattern's genre_id is the genre's own id, so the pattern can be passed straight to get_pattern, apply_pattern_ops or render_audio.",
+    readOnly: true,
+    inputSchema: { id: z.string().describe("a custom genre id, as list_custom_genres returns") },
+    handler: async (args) => {
+      const genre = await getMcpCustomGenre(String(args.id));
+      return genre ?? failure(`unknown custom genre "${String(args.id)}" — list_custom_genres returns the genres saved in this session`);
+    },
+  },
+  {
+    name: "save_custom_genre",
+    title: "Save a custom genre",
+    description:
+      "Save a custom genre, or fork a library genre and save the fork. Give forkFromGenreId (an id list_genres returns) and the fork copies that genre's metadata, pattern and lineage with the same forkGenre the app's Fork button calls; give genre to save a document you already have, such as one from get_custom_genre. Saving the same id twice replaces the first rather than adding a second. The store is process-local: the genre lives for this session and is separate from the browser's library.",
+    readOnly: false,
+    inputSchema: {
+      forkFromGenreId: z.string().optional().describe("an id to fork, from list_genres or from an earlier save in this session"),
+      genre: customGenreSchema.optional().describe("or a full custom genre document to save as given"),
+      name: z.string().optional().describe('the name to save under; for a fork it replaces the generated "<name> (Variation)"'),
+    },
+    handler: async (args) => {
+      try {
+        return await saveMcpCustomGenre({
+          ...(args.forkFromGenreId === undefined ? {} : { forkFromGenreId: String(args.forkFromGenreId) }),
+          ...(args.genre === undefined ? {} : { genre: args.genre as CustomGenre }),
+          ...(args.name === undefined ? {} : { name: String(args.name) }),
+        });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "delete_custom_genre",
+    title: "Delete a custom genre",
+    description:
+      "Remove a custom genre from this session's store and report the ids that remain. A genre that is not there is refused with the ids that are, rather than reported as deleted.",
+    readOnly: false,
+    inputSchema: { id: z.string().describe("a custom genre id, as list_custom_genres returns") },
+    handler: async (args) => {
+      try {
+        return await deleteMcpCustomGenre(String(args.id));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "duplicate_custom_genre",
+    title: "Duplicate a custom genre",
+    description:
+      "Copy a saved custom genre under a new id and a name ending in (Copy), leaving the original in place, and return the copy. This is the maker's Duplicate button, for an agent that wants a variation without risking the first.",
+    readOnly: false,
+    inputSchema: { id: z.string().describe("a custom genre id, as list_custom_genres returns") },
+    handler: async (args) => {
+      try {
+        return await duplicateMcpCustomGenre(String(args.id));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
     },
   },
   {

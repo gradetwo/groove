@@ -25,6 +25,25 @@ export interface MidiImportResult {
   trackNames: string[];
 }
 
+/**
+ * The three-step decoding above, as a function so a criterion can call it with bytes rather than through a whole file.
+ */
+export function decodeMidiText(bytes: Uint8Array): string {
+  // NULs are stripped with `split`/`join` rather than a regular expression: a control character in a pattern trips `no-control-regex`, and the lint rule is right that it is usually a mistake. `replaceAll` is not in this project's TypeScript lib target, which the gate caught after I had already read past it.
+  const trimmed = (text: string) => text.split("\u0000").join("").trimEnd();
+  try {
+    return trimmed(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+  } catch {
+    // Not UTF-8: the other encoding a Chinese file is likely to use.
+  }
+  try {
+    return trimmed(new TextDecoder("gbk").decode(bytes));
+  } catch {
+    // An environment without the GBK table (a stripped ICU) still deserves a name rather than an exception.
+  }
+  return trimmed(String.fromCharCode(...bytes));
+}
+
 class ByteReader {
   private view: DataView;
   public pos: number = 0;
@@ -54,6 +73,23 @@ class ByteReader {
     const v = this.view.getUint32(this.pos, false);
     this.pos += 4;
     return v;
+  }
+
+  /**
+   * ⭐ **Text a person wrote**, as opposed to a tag the format defines.
+   *
+   * Standard MIDI Files say text is ASCII, and every real file in the wild that carries Chinese writes either **UTF-8** or **GBK** in these bytes. Reading them one byte at a time produced names like `Ã÷Ìì»á¸üºÃ` — which is GBK for "明天会更好", as measured on a real file — and `é¢ç´` for a UTF-8 "钢琴". The bytes are the file's, so the decoding is chosen from them rather than assumed:
+   *
+   *   · **UTF-8 first, strictly**: valid UTF-8 is the only case where a wrong guess is impossible for ASCII too, and a name that decodes cleanly is left alone.
+   *   · **GBK second**, because that is what the other half of the files use. GBK bytes are almost never valid UTF-8, so the first rule rarely has to be second-guessed.
+   *   · **Latin-1 last**, so an undecodable name still shows something rather than nothing.
+   *
+   * Trailing NULs are stripped: a real file pads a short name with them, and `贝司    (BB)\u0000` is not a name.
+   */
+  public readText(len: number): string {
+    const bytes = new Uint8Array(this.view.buffer, this.view.byteOffset + this.pos, len);
+    this.pos += len;
+    return decodeMidiText(bytes);
   }
 
   public readString(len: number): string {
@@ -155,9 +191,12 @@ export function parseMidiFile(buffer: ArrayBufferLike): {
             bpm = Math.round(60000000 / us);
           }
         } else if (metaType === 0x03) {
-          // Track Name
-          const name = reader.readString(metaLen);
+          // Track Name — a person's text, so it is decoded rather than read byte for byte.
+          const name = reader.readText(metaLen);
           trackNames.push(name);
+        } else if (metaType === 0x01 || metaType === 0x04 || metaType === 0x05) {
+          // Text, instrument name and lyric: the same decoding question as a track name, and the same answer.
+          reader.readText(metaLen);
         } else {
           reader.pos += metaLen;
         }

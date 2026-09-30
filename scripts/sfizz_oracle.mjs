@@ -22,6 +22,8 @@ const SECONDS = 0.5;
 const PEAK = 0.5;
 const FREQ = 440;
 const NOTE_SECONDS = 0.25;
+/** The single-note fixture's length: the analysis window (0.08–0.30 s in the criteria) has to sit inside the render, and the tone itself is half a second. */
+const NOTE_SECONDS_FOR_MEASUREMENT = 0.6;
 const SFIZZ = process.env.SFIZZ_RENDER ?? "sfizz_render";
 
 /** What the fixture must read as, before any comparison exists. */
@@ -53,7 +55,10 @@ function writeTone(path) {
 export function buildFixture(dir) {
   const frames = writeTone(join(dir, "tone.wav"));
   writeFileSync(join(dir, "one.sfz"), "<region> sample=tone.wav pitch_keycenter=60 lokey=0 hikey=127\n");
-  writeMidi(join(dir, "note.mid"), { bpm: 120, notes: [{ note: 60, velocity: 100, startSeconds: 0, durationSeconds: NOTE_SECONDS }] });
+  /**
+   * ⭐ **Long enough that the render covers the window the criteria analyse.** It was 0.25 s, and a measurement window of 0.08–0.30 s therefore reached past the end of what sfizz wrote: `readWav` trusts the file's length, so the pitch was measured over the tail of the data and reported 890.48 Hz in one run and 880.01 Hz in three others. A criterion that is right four times out of five is a criterion people re-run until it is green, which is the failure this project keeps paying for.
+   */
+  writeMidi(join(dir, "note.mid"), { bpm: 120, notes: [{ note: 60, velocity: 100, startSeconds: 0, durationSeconds: NOTE_SECONDS_FOR_MEASUREMENT }] });
   return { sourceFrames: frames };
 }
 

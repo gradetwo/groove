@@ -35,6 +35,18 @@ const SR = 44100;
 /** Where in each note's window to measure: past the attack, before the next note, and clear of the previous release tail. */
 const WINDOW = { offset: 0.08, length: 0.22 };
 
+/**
+ * ⭐ **The render must actually contain the window that will be analysed.**
+ *
+ * This exists because a run under load reported **890.48 Hz where the same code reports 880.01 Hz three times out of three**, and the difference was not the arithmetic: `readWav` trusts the file's own length, so a render that sfizz wrote only part of is analysed as if it were complete, and a pitch measured over a truncated signal is a wrong answer that looks like a mapping bug. The assertion names the condition instead — if it fails, the render was short; if the pitch is then wrong, it is arithmetic.
+ *
+ * It is a length check and not a retry: a flaky measurement is worse than a slow one, and this project has already learned that lesson twice.
+ */
+function expectRenderCoversTheWindow(wav: { frames: number; sampleRate: number }, label: string) {
+  const needed = Math.ceil((WINDOW.offset + WINDOW.length) * wav.sampleRate);
+  expect(wav.frames, `${label}: the render holds ${wav.frames} frames, which does not cover the ${needed} the measurement window needs`).toBeGreaterThanOrEqual(needed);
+}
+
 describe.skipIf(!available)("A4 — sfizz's output against this project's mapping", () => {
   it("chooses the same region and produces the same pitch, note for note", () => {
     const dir = mkdtempSync(join(tmpdir(), "sfizz-agree-"));
@@ -46,6 +58,7 @@ describe.skipIf(!available)("A4 — sfizz's output against this project's mappin
     execFileSync(SFIZZ, ["--sfz", join(dir, "multi.sfz"), "--midi", join(dir, "phrase.mid"), "--wav", out, "-s", String(SR)], { stdio: "ignore" });
     expect(existsSync(out)).toBe(true);
     const wav = readWav(out);
+    expectRenderCoversTheWindow(wav, "the multi-note render");
 
     const measured: Array<{ note: number; expectedHz: number; measuredHz: number }> = [];
     fixture.notes.forEach((note, index) => {
@@ -90,6 +103,7 @@ describe.skipIf(!available)("A4 — sfizz's output against this project's mappin
     const out = join(dir, "tuned.wav");
     execFileSync(SFIZZ, ["--sfz", join(dir, "tuned.sfz"), "--midi", join(dir, "note.mid"), "--wav", out, "-s", String(SR)], { stdio: ["ignore", "pipe", "pipe"] });
     const wav = readWav(out);
+    expectRenderCoversTheWindow(wav, "the controller-tuned render");
     const pitch = measurePitch(wav, { fromSeconds: WINDOW.offset, toSeconds: WINDOW.offset + WINDOW.length });
     expect(pitch, "no pitch measured").not.toBeNull();
     console.log(`   A4 controller tuning: expected ${expectedHz.toFixed(2)} Hz, sfizz ${pitch!.hz.toFixed(2)} Hz (source ${sourceFrames} frames at 440 Hz)`);
@@ -114,6 +128,7 @@ describe.skipIf(!available)("A4 — sfizz's output against this project's mappin
     const out = join(dir, "curved.wav");
     execFileSync(SFIZZ, ["--sfz", join(dir, "curved.sfz"), "--midi", join(dir, "note.mid"), "--wav", out, "-s", String(SR)], { stdio: ["ignore", "pipe", "pipe"] });
     const wav = readWav(out);
+    expectRenderCoversTheWindow(wav, "the curve-1 render");
     const pitch = measurePitch(wav, { fromSeconds: WINDOW.offset, toSeconds: WINDOW.offset + WINDOW.length });
     expect(pitch, "no pitch measured").not.toBeNull();
     console.log(`   A4 curve 1 at CC 32: expected ${expectedHz.toFixed(2)} Hz, sfizz ${pitch!.hz.toFixed(2)} Hz (source ${sourceFrames} frames at 440 Hz)`);

@@ -46,6 +46,13 @@ export default defineConfig({
           if (id.includes('node_modules/lucide-react')) {
             return 'vendor-icons';
           }
+          /**
+           * ⭐ **VexFlow in its own chunk**, because of two budgets rather than for tidiness: the initial route is measured at 226 KB gzip, and **every** emitted chunk is measured against 150 KB. A dependency that is not named here is merged into the entry or the shared chunk by
+           * Rollup, which regresses first paint for a feature most sessions never open. The score is imported dynamically as well, so the chunk is fetched only when somebody looks at a score.
+           */
+          if (id.includes('node_modules/vexflow')) {
+            return 'vendor-vexflow';
+          }
           if (id.includes('node_modules/qrcode')) {
             return 'vendor-qrcode';
           }

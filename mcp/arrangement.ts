@@ -11,6 +11,8 @@
  */
 import { stepCountFor } from "../src/data/noteEvents";
 import { toMusicXml } from "../src/data/musicxml";
+import { fromMusicXml, fromMusicXmlBytes } from "../src/data/musicxmlImport";
+import type { MusicXmlImport } from "../src/data/musicxmlImport";
 import {
   TEMPLATES,
   addTake,
@@ -27,6 +29,7 @@ import {
   selectTrackTake,
   setCollapsed,
   setArrangementBars,
+  setArrangementTempo,
   setTrackFlag,
   setTrackGain,
   setTrackNoteLength,
@@ -94,6 +97,8 @@ export interface ArrangementSummary {
   templates: string[];
   /** How long the arrangement is, in bars — absent for an older file, which means "as long as its content needs". */
   bars?: number;
+  /** Beats per minute — absent for an older file, which plays at 120, the value the compile used to hardcode. */
+  bpm?: number;
   /**
    * How many sixteenth steps the arrangement actually spans: its stated length or its last note, whichever is further. **Reported beside `bars` rather than instead of it**, because "where may I write" is a step question and "how long is the"
    * is a bar question.
@@ -154,6 +159,7 @@ export function summariseArrangement(arrangementId: string, arrangement: Arrange
     arrangementId,
     songId: arrangement.songId,
     ...(arrangement.bars === undefined ? {} : { bars: arrangement.bars }),
+    ...(arrangement.bpm === undefined ? {} : { bpm: arrangement.bpm }),
     steps: stepCountFor(allNotes, arrangement.bars),
     trackCount: arrangement.tracks.length,
     tracks: arrangement.tracks.map((track) => summariseTrack(track, arrangement)),
@@ -370,6 +376,88 @@ export function exportMcpMusicXml(arrangementId: string, options: { trackId?: st
 /** How many steps one bar holds, re-exported so the MCP layer does not import the note module directly in two places. */
 import { STEPS_PER_BAR } from "../src/data/noteEvents";
 
+/**
+ * MusicXML in: the file a notation program saved, turned into notes on a track.
+ *
+ * It **adds a track rather than replacing one**, because the file names a part and a person importing a score means "give me this part" rather than "overwrite what I have". The part's own name becomes the track's, so a grand staff imported twice reads as two named parts.
+ *
+ * The problems the reader reports are returned **with** the track: an import that lost a grace note or a second voice says so, and a caller that ignores the list has still been told.
+ *
+ * **Which part is a choice, and all of them is a choice.** `partIndex` takes one index or the word `"all"` rather than being a number with a separate `allParts` flag, because the flag plus the index has a state nobody can define: part three, or every part? A union field makes that unrepresentable, and the default stays the first part.
+ */
+export type MusicXmlPartSelection = number | "all";
+
+export interface ImportMcpMusicXmlOptions {
+  partIndex?: MusicXmlPartSelection;
+}
+
+export function importMcpMusicXml(arrangementId: string, xml: string, options: ImportMcpMusicXmlOptions = {}): ArrangementEditResult & {
+  problems?: string[];
+  notes?: number;
+  trackIds?: string[];
+} {
+  return addImportedParts(arrangementId, fromMusicXml(xml), options);
+}
+
+/**
+ * The same import, from the file's **bytes**: a `.mxl` is a zip, and a caller with one in hand should not have to unzip it first.
+ *
+ * The bytes are decided by their content rather than by a name the caller supplies, and the answer says which it was, so "I imported a zip" and "I imported XML" are different things a caller can see. The decode is base64 because MCP arguments are JSON, and JSON has no bytes.
+ */
+export async function importMcpMusicXmlBytes(arrangementId: string, bytesBase64: string, options: ImportMcpMusicXmlOptions = {}): Promise<
+  ArrangementEditResult & { problems?: string[]; notes?: number; trackIds?: string[]; format?: string }
+> {
+  const bytes = Buffer.from(bytesBase64, "base64");
+  if (bytes.length === 0) throw new Error("the file's bytes are empty — `bytesBase64` must be the base64 of the .mxl (or .musicxml) file itself");
+  const imported = await fromMusicXmlBytes(new Uint8Array(bytes));
+  return { ...addImportedParts(arrangementId, imported, options), format: imported.format };
+}
+
+/**
+ * Add one track per imported part and return the summary, the problems, and **which tracks were added**.
+ *
+ * The track ids are named because they are the whole reason a caller asked: a second call that wants to write notes into the part it just read has to know what to name. They are ids rather than indexes because a later edit names the track by id.
+ */
+function addImportedParts(
+  arrangementId: string,
+  imported: MusicXmlImport,
+  options: ImportMcpMusicXmlOptions
+): ArrangementEditResult & { problems?: string[]; notes?: number; trackIds?: string[] } {
+  const selection = options.partIndex ?? 0;
+  const chosen = selection === "all" ? imported.parts.map((part, index) => ({ part, index })) : imported.parts.map((part, index) => ({ part, index })).filter((candidate) => candidate.index === selection);
+  if (chosen.length === 0) {
+    throw new Error(`the file has ${imported.parts.length} part(s), so there is no part ${selection}`);
+  }
+  /**
+   * A part that holds nothing is a track that holds nothing, and an empty track is one more row for a person to delete. It is left out and said out loud, which is the same treatment every other dropped thing gets.
+   */
+  const problems = [...imported.problems];
+  const withNotes = chosen.filter((candidate) => {
+    if (candidate.part.notes.length > 0) return true;
+    problems.push(`part ${candidate.index + 1} "${candidate.part.name}" holds no notes and was not added as a track`);
+    return false;
+  });
+
+  const result = edit(arrangementId, (current: ArrangementV2) => {
+    let next = current;
+    for (const candidate of withNotes) {
+      const withTrack = addTrack(next, "instrument", candidate.part.name.slice(0, 40) || "Imported");
+      const trackId = withTrack.tracks[withTrack.tracks.length - 1]!.id;
+      // The notes arrive whole rather than one call each: an imported part is one decision, not two hundred edits.
+      next = { ...withTrack, notesByTrack: { ...(withTrack.notesByTrack ?? {}), [trackId]: candidate.part.notes } };
+    }
+    return next;
+  });
+  // Guarded because `slice(-0)` is `slice(0)`, which is the whole list: an import that added no track would otherwise report every track it did not add.
+  const trackIds = withNotes.length === 0 ? [] : result.summary.tracks.slice(-withNotes.length).map((track) => track.id);
+  return { ...result, problems, notes: withNotes.reduce((sum, candidate) => sum + candidate.part.notes.length, 0), trackIds };
+}
+
+/** ⭐ The arrangement's tempo in beats per minute. It reached the engine as a hardcoded 120 until this existed. */
+export function setMcpArrangementTempo(arrangementId: string, bpm: number): ArrangementEditResult {
+  return edit(arrangementId, (arrangement) => setArrangementTempo(arrangement, bpm));
+}
+
 export function setMcpArrangementBars(arrangementId: string, bars: number): ArrangementEditResult {
   return edit(arrangementId, (arrangement) => setArrangementBars(arrangement, bars));
 }
@@ -402,8 +490,9 @@ function refuseUnknownTrack(arrangement: ArrangementV2, trackId: string, apply: 
 /**
  * The arrangement as something the renderer can bounce, through the same flatten the application uses.
  *
- * **An arrangement is one bar of sixteen steps, and saying so here is the point.** The v2 model holds steps per track and no length of its own, so "render the arrangement" means the loop the interface's Play button plays — not a piece. Offering it as a longer
- * request would be a promise the model cannot keep; when the model gains a length, this follows.
+ * **The length and the tempo are the arrangement's.** `compileArrangementToSongInput` reads `arrangement.bars` and `arrangement.bpm` — through the same `stepCountFor` the interface uses — so a note written in
+ * bar three and a tempo set on the arrangement are what a bounce hears, rather than a compile that claimed one bar at 120 bpm. A caller that wants a longer render moves the arrangement's own length with
+ * `set_arrangement_bars`; this stays "render this arrangement" and nothing more.
  *
  * The chain is the application's own: `compileArrangementToSongInput` projects the tracks onto the eight v1 roles, `createSong` wraps them as one clip and one section, and `flattenSong` turns that into the pattern `renderAudio` takes. Nothing here invents a
  * second renderer, which is the rule the whole MCP render surface follows.
