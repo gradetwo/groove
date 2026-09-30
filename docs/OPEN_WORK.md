@@ -18,15 +18,16 @@
 | **截断的 `sample=` 路径被报告** | `SfzRegion.problems`；实测 `sample=Tubular Bells 1/chimes.wav` → `sample="Tubular"` **且** `problems` 点名截断 |
 | **`z2.md` 逐节裁定（第一版）** | `docs/Z2_ADJUDICATION.md`：✅ 已做 / 🟡 半成品 / ⬜ 未实现 / **不做且有理由** 四类，并记录一条**差一个数量级**的 SLO 矛盾 |
 | **MCP 工具面** | **83 个工具**、`npm run check:mcp` = **90 项检查 0 失败** |
+| **`push55` 的 lint（`no-inner-declarations`）** | `66fc7d4`：`truncatedSample` 从解析循环的 `if` 块内**上移到 `parseSfz` 函数体根部**（纯移动，规则未被 disable）；实测 `npm run lint` = **0**、`npm run typecheck` = **0**、`src/test/sfzParse.test.ts` = **17/17** |
 
 ## 二、正在并行进行（各自独立 worktree + 分支，均**未推送**）
 
 | 分支 | 内容 |
 | --- | --- |
-| `feat-criteria` (`../groove-wt20`) | 给三项能力补判据：SFZ 截断报告、批量音符等价性、tempo map 的校验/排序/清除 |
+| `feat-criteria` (`../groove-wt20`) | 给三项能力补判据（已提交 `b227230`，待合并）：SFZ 截断报告、批量音符等价性、tempo map 的校验/排序/清除。顺带修了两个被"没有判据"掩盖的实现缺陷：截断检测对**每个**良构行都报（`[^\s=]+` 把 `pitch_keycenter` 当成截断片段），tempo map **先取整后校验**（`atBar:1.5`、`bpm:300.4` 被静默接受） |
 | `feat-orchestral` (`../groove-wt21`) | 管弦库：量清 vcsl 的字节与暴露情况 → 登记**已镜像但未暴露**的管乐 → 判据 → 估算补齐弦乐/铜管的字节数 |
-| （主树，未推送提交） | 修 `push55` 的 lint：`no-inner-declarations`——`truncatedSample` 被声明在 `if (header) { … }` 块内，需**上移到函数体根部** |
 | `docs-adjudication` (`../groove-wt22`) | 把 `docs/Z2_ADJUDICATION.md` 里每个 🟡/⬜ 变成 ✅（带**已核实**证据）或"不做/分期 + 理由" |
+| `feat-midi-export` (`../groove-wt23`) | 编排 → MIDI 导出（补上 `import_arrangement_midi` 的对称缺口，见 §三.2） |
 
 ## 三、仍未决定或未做（按价值）
 
