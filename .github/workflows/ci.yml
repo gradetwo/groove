@@ -147,9 +147,19 @@ jobs:
     # timeout is *six hours*, so a wedged browser used to hold a runner for an afternoon — measured on 2026-09-23,
     # the iPad leg sat in the matrix step from 07:09 until the run was cancelled at 10:30.
     timeout-minutes: 45
-    # Skipped on schedule: `nightly` runs the same full matrix plus coverage, the loudness baseline
-    # freshness check and the performance gate, so a scheduled run would duplicate this job.
-    if: github.event_name != 'schedule'
+    # ⭐ **The heavy leg runs when a release is being prepared and not on every development push.**
+    #
+    # The owner's decision (2026-09-30): "开发过程中 CI/CD 也不一定要全跑，只跑相关的就好，不能拖慢开发迭代速度，发版时候全跑就可以了". The browser matrix is the slowest thing here — the desktop leg alone is around thirty minutes — and on a
+    # branch nobody is shipping from, that is thirty minutes between a change and its answer.
+    #
+    # So: `validate` (typecheck, lint, unit tests, build, bundle budget) judges every push, and this judges `main`, a pull request, and anything asked for by hand:
+    #
+    #   · `main` is what is live, so its pushes get the full matrix;
+    #   · a pull request is where a change is meant to be judged before it lands;
+    #   · `workflow_dispatch` is how a release asks for everything — `npm run ci:full` does exactly that.
+    #
+    # Skipped on schedule: `nightly` runs the same full matrix plus coverage, the loudness freshness check and the performance gate.
+    if: github.event_name != 'schedule' && (github.ref == 'refs/heads/main' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')
     # Three legs instead of one seven-target run.
     #
     # The targets are independent browsers and devices, and the job used to walk all seven in a single runner:
