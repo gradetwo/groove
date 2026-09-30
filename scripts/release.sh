@@ -43,6 +43,9 @@ step "build" npx vite build
 # ⭐ The bundle budget, **before** anything is published. It lived only in CI, where it had been failing on every push for forty runs without stopping a release — an advisory check on a site that deploys anyway is an annotation, not a gate. Here it
 # refuses to publish an over-budget bundle.
 step "budget" npm run check:budget
+# ⭐ **The full check, at the one moment it is worth its cost.** Development pushes run the fast checks (`validate`); the browser matrix is skipped on `dev` so iteration is not thirty minutes behind every change. A release is where "all of it" belongs, and this
+# step asks for it and waits — so publishing is gated on the same matrix a person would have run by hand.
+step "full CI" bash scripts/ci_full.sh
 
 # ⭐ **The gate on publishing.** Everything after this line is a claim about what is live, so it may not run until the deploy that makes it live has succeeded.
 step "deploy" npm run deploy:only
