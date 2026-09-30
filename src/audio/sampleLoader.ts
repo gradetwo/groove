@@ -36,9 +36,25 @@ export interface SampleLoader {
    * Rejects with a reason when the entry is not an instrument, when its SFZ cannot be fetched, when the note is covered by no region, or when the named sample cannot
    * be decoded — never a silent default, which is the standard the ninth track kind was held to.
    */
-  loadNote(assetId: string, note: number, options?: { velocity?: number; nth?: number }): Promise<AudioBuffer>;
+  /**
+   * One note, resolved and decoded: **the buffer and the rate it must be played at.**
+   *
+   * It used to return the buffer alone, and the ratio `resolveInstrumentNote` had just computed was discarded — so the sampler path had no pitch at all and nothing in the application called this method. Returning both is what makes a
+   * sampler play the note rather than the recording.
+   */
+  loadNote(assetId: string, note: number, options?: { velocity?: number; nth?: number }): Promise<LoadedNote>;
   /** How many decodes have actually run — for a test, and for a probe that wants to prove rule 1 rather than trust it. */
   decodes(): number;
+}
+
+export interface LoadedNote {
+  buffer: AudioBuffer;
+  /** The playback rate this sample needs to sound at the requested note: `2^((note − root)/12) × 2^(cents/1200)`. */
+  ratio: number;
+  /** The sample the note resolved to, relative to the library root — so a diagnostic can name the file rather than the buffer. */
+  samplePath: string;
+  /** The region's key centre, absent when the file sets none — which means "no transposition" rather than 60. */
+  rootKey?: number;
 }
 
 export function createSampleLoader(
@@ -154,8 +170,11 @@ export function createSampleLoader(
        */
       const defaultPath = readDefaultPath(expanded.text);
       const samplePath = resolveSamplePath(resolution.note.samplePath, defaultPath);
-      if (findSampleAsset(samplePath, catalogue)) return api.load(samplePath);
-      return decodeAsset(sampleAssetForPath(samplePath, { programUrl: asset.sfz.url, programFallbackUrl: asset.sfz.fallbackUrl }));
+      const noteInfo = { ratio: resolution.note.ratio, samplePath, ...(resolution.note.rootKey === undefined ? {} : { rootKey: resolution.note.rootKey }) };
+      const buffer = findSampleAsset(samplePath, catalogue)
+        ? await api.load(samplePath)
+        : await decodeAsset(sampleAssetForPath(samplePath, { programUrl: asset.sfz.url, programFallbackUrl: asset.sfz.fallbackUrl }));
+      return { buffer, ...noteInfo };
     },
     decodes: () => decodes,
   };
