@@ -121,6 +121,14 @@ export interface ArrangementV2 {
    * It is here for the same reason `bars` is: a note's `startBeats` is a position in musical time, and how long that position lasts — the compiled pattern's `bpm` — has to come from somewhere. It is what lets an arrangement state its own tempo instead of playing at 120 because that number was written into the compile.
    */
   bpm?: number;
+  /**
+   * ⭐ **Where the tempo changes, when one number cannot say it.**
+   *
+   * Muse composed a nine-movement piece whose movements run at 66–168 bpm and had to split it into **nine arrangements** rendered separately and stitched outside, because an arrangement could carry only a single tempo. The song layer has had a tempo map all along (`set_tempo`), the renderer schedules bar by bar from it (`src/data/tempoMap.ts`), and the arrangement's compile already projects into a song input — so the only thing missing was a way for the arrangement to say it, which is this field.
+   *
+   * Same shape as the song's own points, deliberately: `atBar` is **0-based**, exactly as `set_tempo` documents it, so a caller who has used one can read the other without learning a second convention.
+   */
+  tempoTrack?: { atBar: number; bpm: number; curve?: "jump" | "linear" }[];
   /** Every clip slot that carried at least one track, so a projection can be checked for completeness. */
   sourceSlots: string[];
 }
