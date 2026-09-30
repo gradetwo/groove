@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { parseSfz } from "../audio/sfz/parse";
 import { playbackForNote } from "../audio/sfz/regionPlayback";
 import { readWav } from "../../scripts/lib/wav.mjs";
-import { measurePitch } from "../../scripts/lib/pitch.mjs";
+import { measureToneHz } from "../../scripts/lib/pitch.mjs";
 import { buildFixture, buildMultiFixture } from "../../scripts/sfizz_oracle.mjs";
 import { writeMidi } from "../../scripts/lib/midi.mjs";
 
@@ -70,7 +70,7 @@ describe.skipIf(!available)("A4 — sfizz's output against this project's mappin
       const expectedHz = source!.freq * playback!.ratio;
 
       const startedAt = index * 0.6 + WINDOW.offset;
-      const pitch = measurePitch(wav, { fromSeconds: startedAt, toSeconds: startedAt + WINDOW.length });
+      const pitch = measureToneHz(wav, { fromSeconds: startedAt, toSeconds: startedAt + WINDOW.length });
       expect(pitch, `no pitch measured for note ${note}`).not.toBeNull();
       measured.push({ note, expectedHz, measuredHz: pitch!.hz });
       // 1% is tight enough to catch a wrong semitone (5.9%) and loose enough for a 220 ms window with a release tail behind it.
@@ -104,7 +104,7 @@ describe.skipIf(!available)("A4 — sfizz's output against this project's mappin
     execFileSync(SFIZZ, ["--sfz", join(dir, "tuned.sfz"), "--midi", join(dir, "note.mid"), "--wav", out, "-s", String(SR)], { stdio: ["ignore", "pipe", "pipe"] });
     const wav = readWav(out);
     expectRenderCoversTheWindow(wav, "the controller-tuned render");
-    const pitch = measurePitch(wav, { fromSeconds: WINDOW.offset, toSeconds: WINDOW.offset + WINDOW.length });
+    const pitch = measureToneHz(wav, { fromSeconds: WINDOW.offset, toSeconds: WINDOW.offset + WINDOW.length });
     expect(pitch, "no pitch measured").not.toBeNull();
     console.log(`   A4 controller tuning: expected ${expectedHz.toFixed(2)} Hz, sfizz ${pitch!.hz.toFixed(2)} Hz (source ${sourceFrames} frames at 440 Hz)`);
     expect(Math.abs(pitch!.hz - expectedHz) / expectedHz).toBeLessThan(0.01);
@@ -129,7 +129,7 @@ describe.skipIf(!available)("A4 — sfizz's output against this project's mappin
     execFileSync(SFIZZ, ["--sfz", join(dir, "curved.sfz"), "--midi", join(dir, "note.mid"), "--wav", out, "-s", String(SR)], { stdio: ["ignore", "pipe", "pipe"] });
     const wav = readWav(out);
     expectRenderCoversTheWindow(wav, "the curve-1 render");
-    const pitch = measurePitch(wav, { fromSeconds: WINDOW.offset, toSeconds: WINDOW.offset + WINDOW.length });
+    const pitch = measureToneHz(wav, { fromSeconds: WINDOW.offset, toSeconds: WINDOW.offset + WINDOW.length });
     expect(pitch, "no pitch measured").not.toBeNull();
     console.log(`   A4 curve 1 at CC 32: expected ${expectedHz.toFixed(2)} Hz, sfizz ${pitch!.hz.toFixed(2)} Hz (source ${sourceFrames} frames at 440 Hz)`);
     // A linear reading would be more than an octave away, so 1% is comfortably inside the difference between the two shapes.

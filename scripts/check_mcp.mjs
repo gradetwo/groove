@@ -136,6 +136,7 @@ try {
     "share_url",
     "render_audio",
     "render_arrangement_stems",
+    "render_instrument_note",
     "analyze_audio",
     "get_loudness_report",
   ]) {
