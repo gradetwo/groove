@@ -36,6 +36,14 @@ export interface ResolvedInstrumentNote {
    * however briefly you press the key" — and a player that stops at note-off truncates every drum hit.
    */
   oneShot?: boolean;
+  /**
+   * **How many voices of one note may sound at once**, which SFZ spells `note_polyphony=N`. Measured with sfizz on four hits of the same note, each letting the sample ring: absent → 4.04 voices' worth of level, `note_polyphony=1` → 1.01, `=2` → 2.02, `=3` → 3.03. So the opcode caps the simultaneous voices of that note, and **which voice survives was measured too**: with a loud first hit and three quiet ones at `note_polyphony=1` the level stays at the loud one's (0.0831 against a 0.0811 reference), so the **new note is refused** while the cap is reached rather than replacing the oldest.
+   */
+  notePolyphony?: number;
+  /**
+   * **A linear scale on the note's level**, from `amplitude_onccN` — see the resolver for the measurement. Absent means unchanged, so a file that says nothing about controllers sounds exactly as it did before this existed.
+   */
+  gainScale?: number;
 }
 
 export interface InstrumentResolution {
@@ -75,8 +83,7 @@ export function resolveInstrumentNote(
    * **The controller gates first, at the values the file itself declares.** `loccN`/`hiccN` decide whether a region exists rather than how loud it is, and with no controller sent the file's own `<control>` block is where those values come from — `virtuosity_drums`
    * turns every one of its microphones on by setting CC101 to 127 there. So a gate that would silence every region is not a bug in the file; it is a file whose defaults say so.
    */
-  const audible = regionsAtCc(regions, readControlDefaults(sfzText));
-  if (audible.length === 0) {
+  const audible = regionsAtCc(regions, readControlDefaults(sfzText));  if (audible.length === 0) {
     return { ok: false, regions, reason: `instrument "${asset.assetId}" has ${regions.length} region(s) and none of them sound at the controller values the file declares` };
   }
 
@@ -98,6 +105,27 @@ export function resolveInstrumentNote(
   const offBy = asInt(answered?.opcodes.off_by);
   // `loop_mode` takes several values; only `one_shot` means "ignore the key release". Anything else keeps the note-off behaviour this project has always had.
   const oneShot = answered?.opcodes.loop_mode === "one_shot";
+  // A value that is not a positive integer is **no cap**, not a cap of zero: `note_polyphony=0` would otherwise silence a note the file plainly intends to sound.
+  const notePolyphony = asInt(answered?.opcodes.note_polyphony);
+  const polyphonyCap = notePolyphony !== undefined && notePolyphony > 0 ? notePolyphony : undefined;
+  /**
+   * ⭐ **`amplitude_onccN`: a linear scale of `(CC ÷ 127) × (N ÷ 100)`.**
+   *
+   * Measured with sfizz rather than read off the opcode's name, and the four points fit exactly: with `amplitude_oncc1=100`, CC 32 gives −11.9 dB and CC 64 gives −5.9 dB, which are `20·log10(32/127)` and `20·log10(64/127)`; with the controller at 127, `N=50` gives −6.0 dB and `N=200` gives +6.0 dB. So the controller scales **linearly** (it is a percentage of level, not a number of decibels) and `N` is a percentage of that, which is why `N=100` is "unchanged".
+   *
+   * The controller values come from the file's own `<control>` block, exactly as the `locc`/`hicc` gates do: a file that never sends CC 101 has it at zero, and the measurement above says zero is silence — so a region whose controller is unset must not be quietly played at full level.
+   */
+  const controlValues = readControlDefaults(sfzText);
+  let gainScale = 1;
+  for (const [opcode, value] of Object.entries(answered?.opcodes ?? {})) {
+    const matched = /^amplitude_oncc(\d+)$/.exec(opcode);
+    if (!matched) continue;
+    const controller = Number.parseInt(matched[1]!, 10);
+    const percent = Number.parseFloat(String(value));
+    if (!Number.isFinite(percent)) continue;
+    const cc = controlValues.get(controller) ?? 0;
+    gainScale *= (Math.max(0, Math.min(127, cc)) / 127) * (percent / 100);
+  }
 
   return {
     ok: true,
@@ -110,6 +138,8 @@ export function resolveInstrumentNote(
       ...(group === undefined ? {} : { group }),
       ...(offBy === undefined ? {} : { offBy }),
       ...(oneShot ? { oneShot: true } : {}),
+      ...(polyphonyCap === undefined ? {} : { notePolyphony: polyphonyCap }),
+      ...(gainScale === 1 ? {} : { gainScale }),
     },
   };
 }

@@ -128,22 +128,38 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
        * So SFZ's `off_by=N` means "**stop me** when a voice in group N starts" — the victim names its killer — and this project had it backwards, with criteria that encoded the wrong reading and therefore stayed green.
        */
       choke(note.group);
+      const key = keyFor(trackId, midi);
+      /**
+       * ⭐ **`note_polyphony` is a cap that refuses the new note, and the count is of voices still sounding.**
+       *
+       * Measured with sfizz on four hits of one note: absent → the level of 4.04 voices, `note_polyphony=1` → 1.01, `=2` → 2.02, `=3` → 3.03. And with a loud first hit followed by three quiet ones at `note_polyphony=1`, the level stays at the loud one's (0.0831 against a 0.0811 reference) — so the note that arrives while the cap is reached is **refused**, not swapped in for the oldest.
+       *
+       * The check is here, **before the voice is started**, because the alternative is a note that does not sound and was started anyway. The count has to ignore voices that have finished: a one-shot drum hit ends by itself, and counting those would start refusing notes a minute after the kit was last touched. And what this replaces was worse than it looks — the list was trimmed to eight **without stopping the trimmed voices**, so beyond eight hits a note kept sounding with nothing left able to release it.
+       */
+      const cap = note.notePolyphony ?? MAX_VOICES_PER_NOTE;
+      const sounding = (voices.get(key) ?? []).filter((voice) => !voice.ended);
+      if (sounding.length >= cap) {
+        return { ok: false as const, reason: `note_polyphony=${cap} is already sounding for this note` };
+      }
+      /**
+       * The controller-driven level, in decibels, because that is what the voice takes: `amplitude_onccN` measured as a **linear** scale of `(CC ÷ 127) × (N ÷ 100)`, so a region at CC 64 with `N=100` is about −6 dB. A note with no such opcode has no scale and is started exactly as it was before.
+       */
+      const controllerGainDb = note.gainScale === undefined ? 0 : 20 * Math.log10(Math.max(note.gainScale, 1e-6));
+      const startGainDb = (gainDb ?? 0) + controllerGainDb;
       const voice = startSamplerNote({
         context: engine.audioContext,
         destination: engine.musicDestination,
         buffer: note.buffer,
         ratio: note.ratio,
-        ...(gainDb === undefined ? {} : { gainDb }),
+        ...(startGainDb === 0 ? {} : { gainDb: startGainDb }),
       });
       // Registered under **what silences it** (`off_by`), because that is what a later note looks up: a new note asks "does my group stop anything?", not "who declared that they stop me?".
       rememberGroup(note.offBy, voice);
-      const key = keyFor(trackId, midi);
       // A one-shot key is remembered as such, so the release that follows knows there is nothing to stop.
       if (note.oneShot) oneShotKeys.add(key);
       else oneShotKeys.delete(key);
-      const list = voices.get(key) ?? [];
-      list.push(voice);
-      voices.set(key, list.slice(-MAX_VOICES_PER_NOTE));
+      sounding.push(voice);
+      voices.set(key, sounding);
       return { ok: true as const, ratio: note.ratio, samplePath: note.samplePath };
     } catch (error) {
       // A refusal from the loader is a result here too: the key press is answered with why, and the instrument's own gaps are named rather than turned into silence.

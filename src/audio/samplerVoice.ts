@@ -37,6 +37,12 @@ export interface SamplerVoice {
   fadeOut(seconds?: number): void;
   /** The rate it was started at, reported back so a criterion can check the pitch rather than the code path. */
   ratio: number;
+  /**
+   * **Whether this voice has finished sounding.**
+   *
+   * `note_polyphony` is a cap on *sounding* voices, so counting them means knowing when one has ended — and a one-short drum hit ends by itself, long before anyone releases a key. The node says so through `onended`; without this, a caller counting voices would count hits that finished a minute ago and start refusing new ones.
+   */
+  ended: boolean;
 }
 
 export function startSamplerNote({
@@ -62,8 +68,9 @@ export function startSamplerNote({
   const startedAt = whenSeconds ?? context.currentTime;
   if (seconds === undefined) source.start(startedAt);
   else source.start(startedAt, 0, seconds);
-  return {
+  const voice: SamplerVoice = {
     ratio: safeRatio,
+    ended: false,
     /**
      * The fade a choke uses, and why it exists rather than just calling `stop`: a hard stop on a sounding voice is a step in the waveform, and a step is a click. The measurement above says sfizz spends about fifty milliseconds getting to one percent, so the ramp ends there and `stop` is scheduled a hair after it — scheduling the stop **before** the ramp finishes would cut off the very fade it was asked for.
      */
@@ -75,6 +82,7 @@ export function startSamplerNote({
         gain.gain.setValueAtTime(value, now);
         gain.gain.linearRampToValueAtTime(0, now + seconds);
         source.stop(now + seconds + CHOKE_FADE_TAIL_SECONDS);
+        voice.ended = true;
       } catch {
         // A closed context, or a source that never started: a choke must never be able to throw into the caller that is starting the next note.
       }
@@ -82,9 +90,19 @@ export function startSamplerNote({
     stop(when) {
       try {
         source.stop(when);
+        voice.ended = true;
       } catch {
         // A source that never started, or one already stopped: both are states a caller may reach by pressing and releasing fast, and neither is worth an exception in a key handler.
       }
     },
   };
+  /**
+   * **The node is the authority on when a voice ends**, and a `loop_mode=one_shot` hit ends by itself — nobody presses a key to stop a cymbal. Not every source exposes the event (the test double does not need to), so this is attached only when it is there.
+   */
+  if ("onended" in source) {
+    (source as AudioBufferSourceNode).onended = () => {
+      voice.ended = true;
+    };
+  }
+  return voice;
 }

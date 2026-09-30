@@ -15,6 +15,7 @@ import { readFileSync } from "node:fs";
 import fs from "node:fs";
 import path from "node:path";
 import { buildMxlZip } from "../src/test/fixtures/mxl_zip.mjs";
+import { buildMidiFile, GBK_TRACK_NAME, GBK_TRACK_NAME_BYTES } from "../src/test/fixtures/midi_file.mjs";
 
 const ROOT = process.cwd();
 const BUNDLE = path.join(ROOT, "dist-mcp", "groove-mcp.mjs");
@@ -779,6 +780,32 @@ try {
     "import_arrangement_musicxml_file unzips a .mxl in the server and reads the score in it",
     mxl.format === "mxl" && mxl.notes === 2 && (mxl.summary?.tracks ?? []).some((track) => track.name === "Right Hand"),
     `format ${mxl.format}, ${mxl.notes} note(s)`
+  );
+
+  /**
+   * ⭐ **The MIDI import, over the wire, with bytes this repository builds.**
+   *
+   * The same reasoning as the MusicXML pair above, and one more: the step-model import that existed before threw the file's note lengths away, so an agent asking for a MIDI file used to get a sixteen-step grid back with no way to tell that it had. This checks the thing that made it worth a tool — the tracks arrive named, and a note keeps the length the file gave it.
+   */
+  const midiArrangement = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "instrument" } }));
+  const importedMidiBytes = buildMidiFile({
+    division: 480,
+    tracks: [
+      { name: "Piano", notes: [{ note: 60, startTicks: 0, durationTicks: 960 }] },
+      { nameBytes: GBK_TRACK_NAME_BYTES, notes: [{ note: 55, startTicks: 240, durationTicks: 240 }] },
+    ],
+  });
+  const importedMidi = payload(
+    await client.request("tools/call", {
+      name: "import_arrangement_midi",
+      arguments: { arrangementId: midiArrangement.arrangementId, bytesBase64: Buffer.from(importedMidiBytes).toString("base64"), partIndex: "all" },
+    })
+  );
+  const midiTrackNames = (importedMidi.summary?.tracks ?? []).map((track) => track.name);
+  check(
+    "import_arrangement_midi adds one track per MIDI track, with a GBK name decoded",
+    (importedMidi.trackIds ?? []).length === 2 && midiTrackNames.includes(GBK_TRACK_NAME) && importedMidi.notes === 2,
+    `${(importedMidi.trackIds ?? []).length} track(s) ${JSON.stringify(midiTrackNames)}, ${importedMidi.notes} note(s)`
   );
 
   const prompt = await client.request("prompts/get", { name: "compose_groove", arguments: { genre: "chicago-house" } });

@@ -11,6 +11,18 @@ export interface ParsedMidiNote {
   channel: number;
   note: number;
   velocity: number;
+  /**
+   * **How long the note is held, in ticks** — absent when the file never released it.
+   *
+   * The step-model importer never needed this; an arrangement does. A DAW track holds *notes*, and a note without a length is a drum hit at best. It is paired from the file's own note-offs rather than guessed, and a file that leaves a note hanging says so by leaving this undefined instead of having a length invented for it.
+   */
+  durationTicks?: number;
+  /**
+   * Which track chunk the note came from, counting from zero.
+   *
+   * A format-1 file is **several tracks with names**, and `trackNames[track]` is the name of this one; without the index a multi-track file collapses into a single anonymous part.
+   */
+  track: number;
 }
 
 export interface MidiImportOptions {
@@ -167,6 +179,26 @@ export function parseMidiFile(buffer: ArrayBufferLike): {
 
     let currentTick = 0;
     let runningStatus = 0;
+    /**
+     * **The notes this track has started and not yet released**, keyed by channel and note number.
+     *
+     * A queue rather than a single index, because a file may start the same note twice before releasing either — and pairing a note-off with the wrong one gives the first note the second note's length. Absent pairing would leave every note the same length, which is exactly the difference between a DAW import and a step grid.
+     */
+    const sounding = new Map<string, number[]>();
+    /**
+     * Pair a note-off with the **earliest** unreleased note of that channel and number, which is what a synthesiser does when the same key is struck twice without a release between.
+     *
+     * A note-off with no matching note-on is not an error worth refusing the file over: it is a truncated or hand-edited file, and the alternative — throwing — would make a file that plays perfectly well unimportable.
+     */
+    const closeNote = (channel: number, note: number) => {
+      const queue = sounding.get(`${channel}:${note}`);
+      const index = queue?.shift();
+      if (index === undefined) return;
+      const started = notes[index];
+      if (started === undefined) return;
+      // At least a tick, because a zero-length note is not a note: some files emit note-on and note-off in the same event and would otherwise produce something that cannot sound.
+      started.durationTicks = Math.max(1, currentTick - started.tick);
+    };
 
     while (reader.pos < chunkEnd && reader.pos < reader.length) {
       const delta = reader.readVLQ();
@@ -217,11 +249,18 @@ export function parseMidiFile(buffer: ArrayBufferLike): {
           const note = reader.readUint8();
           const vel = reader.readUint8();
           if (vel > 0) {
-            notes.push({ tick: currentTick, channel, note, velocity: vel });
+            notes.push({ tick: currentTick, channel, note, velocity: vel, track: t });
+            const key = `${channel}:${note}`;
+            const queue = sounding.get(key) ?? [];
+            queue.push(notes.length - 1);
+            sounding.set(key, queue);
+          } else {
+            // A note-on with velocity zero is a note-off, and files use it constantly — ignoring it would leave most of a real file's notes with no length at all.
+            closeNote(channel, note);
           }
         } else if (msgType === 0x80) {
           // Note Off
-          reader.readUint8(); // note
+          closeNote(channel, reader.readUint8());
           reader.readUint8(); // vel
         } else if (msgType === 0xa0 || msgType === 0xb0 || msgType === 0xe0) {
           reader.readUint8();

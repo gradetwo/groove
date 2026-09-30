@@ -43,6 +43,7 @@ import {
   addMcpTake,
   exportMcpMusicXml,
   importMcpMusicXml,
+  importMcpMidi,
   importMcpMusicXmlBytes,
   addMcpTrack,
   assignMcpTakeRange,
@@ -485,6 +486,30 @@ export const TOOLS: ToolDefinition[] = [
     handler: async (args) => {
       try {
         return await importMcpMusicXmlBytes(String(args.arrangementId), String(args.bytesBase64), {
+          ...(args.partIndex === undefined ? {} : { partIndex: args.partIndex as number | "all" }),
+        });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "import_arrangement_midi",
+    title: "Import a MIDI file as tracks",
+    description:
+      "Read a Standard MIDI File and **add** one track per MIDI track, named from the file. Unlike a step-grid import, the file's own note lengths and positions are kept: this is the arrangement's model, not a sixteen-step pattern. A format-0 file that puts several instruments on one track is split by channel. Use `partIndex` to take one part, or `\"all\"` for every part; the reply names the tempo the file states so the arrangement can be set to it.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      bytesBase64: z.string().describe("the .mid file's bytes, base64-encoded"),
+      partIndex: z
+        .union([z.number().int().min(0), z.literal("all")])
+        .optional()
+        .describe('which part to read; the first unless said otherwise, or "all" for one track per part'),
+    },
+    handler: (args) => {
+      try {
+        return importMcpMidi(String(args.arrangementId), String(args.bytesBase64), {
           ...(args.partIndex === undefined ? {} : { partIndex: args.partIndex as number | "all" }),
         });
       } catch (error) {

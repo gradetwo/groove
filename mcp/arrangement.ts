@@ -12,6 +12,8 @@
 import { stepCountFor } from "../src/data/noteEvents";
 import { toMusicXml } from "../src/data/musicxml";
 import { fromMusicXml, fromMusicXmlBytes } from "../src/data/musicxmlImport";
+import type { ImportedPart } from "../src/data/musicxmlImport";
+import { fromMidi } from "../src/data/midiToArrangement";
 import type { MusicXmlImport } from "../src/data/musicxmlImport";
 import {
   TEMPLATES,
@@ -414,13 +416,41 @@ export async function importMcpMusicXmlBytes(arrangementId: string, bytesBase64:
 }
 
 /**
+ * Import a **MIDI file** as arrangement tracks.
+ *
+ * The project has had a MIDI import for a while, but it quantises into the old sixteen-step pattern — so the file's own note lengths and track structure were thrown away on the way in. This reads the file the way the arrangement models music: one track per MIDI track (split further by channel when a format-0 file puts several instruments on one track), notes at their own positions, and each note as long as the file holds it.
+ *
+ * It is a separate tool from the MusicXML one rather than a flag on it, because the bytes are not the same kind of thing and a caller holding a `.mid` should not have to say "this is not XML".
+ */
+export function importMcpMidi(
+  arrangementId: string,
+  bytesBase64: string,
+  options: ImportMcpMusicXmlOptions = {}
+): ArrangementEditResult & { problems?: string[]; notes?: number; trackIds?: string[]; tempoBpm?: number; format?: number } {
+  const bytes = Buffer.from(bytesBase64, "base64");
+  if (bytes.length === 0) {
+    throw new Error("the file's bytes are empty — `bytesBase64` must be the base64 of the .mid file");
+  }
+  const imported = fromMidi(new Uint8Array(bytes));
+  return {
+    ...addImportedParts(arrangementId, imported, options),
+    // Said out loud so a caller can set the arrangement's tempo from the file rather than guessing 120.
+    ...(imported.tempoBpm === undefined ? {} : { tempoBpm: imported.tempoBpm }),
+    format: imported.format,
+  };
+}
+
+/**
  * Add one track per imported part and return the summary, the problems, and **which tracks were added**.
  *
  * The track ids are named because they are the whole reason a caller asked: a second call that wants to write notes into the part it just read has to know what to name. They are ids rather than indexes because a later edit names the track by id.
  */
 function addImportedParts(
   arrangementId: string,
-  imported: MusicXmlImport,
+  /**
+   * **Only the two fields that are actually used**, so a MIDI import travels this same path: the parts, and what the reader could not make sense of. A music-specific type would have made the second import a second implementation, which is how two imports of the same music start disagreeing about note order and track naming.
+   */
+  imported: { parts: ImportedPart[]; problems: string[] },
   options: ImportMcpMusicXmlOptions
 ): ArrangementEditResult & { problems?: string[]; notes?: number; trackIds?: string[] } {
   const selection = options.partIndex ?? 0;
