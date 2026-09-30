@@ -6,6 +6,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_BARS, createArrangement, setArrangementBars, setArrangementTempo, addTrack } from "../data/arrangementEdits";
 import { compileArrangementToSongInput } from "../data/arrangementCompile";
+import { totalSeconds } from "../data/tempoMap";
 
 const note = (pitch: number, startBeats: number) => ({ pitch, startBeats, lengthBeats: 0.25, velocity: 100 });
 
@@ -57,5 +58,38 @@ describe("the arrangement reaches the engine with its own length and tempo", () 
     expect(setArrangementTempo(arrangement, 133.6).bpm).toBe(134);
     // A number that is not a number is not a tempo: it becomes the default rather than NaN.
     expect(setArrangementTempo(arrangement, Number.NaN).bpm).toBe(120);
+  });
+});
+
+/**
+ * **A tempo map reaches the engine, and the durations say so.**
+ *
+ * Muse composed a nine-movement piece at 66–168 bpm and had to render **nine arrangements** and stitch them outside,
+ * because an arrangement could carry only one tempo. Three links had to be added for one arrangement to say it —
+ * the model field, the projection, and the call that creates the song — and the reason this criterion is written
+ * against **durations** rather than against a field being present is that every one of those links can be dropped
+ * without an error: the song still renders, both sections just at the same speed.
+ */
+describe("the arrangement's tempo map reaches the engine", () => {
+  it("carries the map, and two bars at 60 bpm take twice as long as two at 120", () => {
+    const { arrangement, id } = withSampler(4);
+    const notes = { [id]: [note(36, 0)] };
+    const flat = compileArrangementToSongInput(arrangement, notes);
+    const mapped = compileArrangementToSongInput(
+      { ...arrangement, tempoTrack: [{ atBar: 0, bpm: 120 }, { atBar: 2, bpm: 60 }] },
+      notes
+    );
+
+    expect(mapped.tempoTrack).toEqual([{ atBar: 0, bpm: 120 }, { atBar: 2, bpm: 60 }]);
+    // ⭐ Two bars at 120 (4 s) then two at 60 (8 s) — the second half is deliberately slower, so the total can only
+    // be right if the map travelled. With the map dropped the two songs measure the same, which is the bug.
+
+    const slowHalf = totalSeconds({ bpm: mapped.bpm, tempoTrack: mapped.tempoTrack }, 4);
+    const allFlat = totalSeconds({ bpm: mapped.bpm }, 4);
+    expect(slowHalf).toBeCloseTo(12, 1);
+    expect(allFlat).toBeCloseTo(8, 1);
+    expect(slowHalf).toBeGreaterThan(allFlat);
+    // And an arrangement without a map is untouched: the field is absent rather than empty.
+    expect(flat.tempoTrack).toBeUndefined();
   });
 });
