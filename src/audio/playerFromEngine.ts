@@ -116,8 +116,17 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
     );
     try {
       const note = await loader.loadNote(assetId, midi);
-      // ⭐ The choke happens **before** the new voice starts, so the cut is heard as the new note rather than a gap after it.
-      choke(note.offBy);
+      /**
+       * ⭐ **The new note asks about its own `group`, and each voice registered what silences it.** The choke still happens before the new voice starts, so the cut is heard as the new note rather than as a gap after it.
+       *
+       * That is the opposite of what this code did first, and the difference was **measured with sfizz** rather than argued. A frequency-selective measurement — 440 Hz for the note that should be silenced, 1500 Hz for the note that triggers it — over two spellings of the same pair:
+       *
+       *   · `off_by=2` on the 440 Hz region, `group=2` on the 1500 Hz one → **440 Hz falls from 0.0502 to 0.0002** while 1500 Hz keeps sounding: silenced.
+       *   · `off_by=1` on the 1500 Hz region, `group=1` on the 440 Hz one → **440 Hz stays at 0.0502**: nothing is silenced at all.
+       *
+       * So SFZ's `off_by=N` means "**stop me** when a voice in group N starts" — the victim names its killer — and this project had it backwards, with criteria that encoded the wrong reading and therefore stayed green.
+       */
+      choke(note.group);
       const voice = startSamplerNote({
         context: engine.audioContext,
         destination: engine.musicDestination,
@@ -125,7 +134,8 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
         ratio: note.ratio,
         ...(gainDb === undefined ? {} : { gainDb }),
       });
-      rememberGroup(note.group, voice);
+      // Registered under **what silences it** (`off_by`), because that is what a later note looks up: a new note asks "does my group stop anything?", not "who declared that they stop me?".
+      rememberGroup(note.offBy, voice);
       const key = keyFor(trackId, midi);
       // A one-shot key is remembered as such, so the release that follows knows there is nothing to stop.
       if (note.oneShot) oneShotKeys.add(key);

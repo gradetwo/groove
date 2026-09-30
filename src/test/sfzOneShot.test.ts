@@ -15,8 +15,11 @@ const asset: Pick<SampleAsset, "assetId" | "sfz"> = { assetId: "kit", sfz: { url
 
 const ONE_SHOT = `<region> sample=kick.wav lokey=36 hikey=36 pitch_keycenter=36 loop_mode=one_shot`;
 const SUSTAINING = `<region> sample=pad.wav lokey=48 hikey=48 pitch_keycenter=48`;
-const ONE_SHOT_CHOKED = `<region> sample=open.wav lokey=46 hikey=46 pitch_keycenter=46 group=1 loop_mode=one_shot
-<region> sample=closed.wav lokey=42 hikey=42 pitch_keycenter=42 off_by=1`;
+/**
+ * The victim names its killer, which is the direction sfizz measured: the open hat carries `off_by=1` and the closed hat is in group 1.
+ */
+const ONE_SHOT_CHOKED = `<region> sample=open.wav lokey=46 hikey=46 pitch_keycenter=46 off_by=1 loop_mode=one_shot
+<region> sample=closed.wav lokey=42 hikey=42 pitch_keycenter=42 group=1`;
 
 function playerFor(sfz: string) {
   const context = new FakeAudioContext();
