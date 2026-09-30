@@ -34,6 +34,7 @@ function unknownGenre(wanted: string): string {
 }
 import { applyPatternOps, comparePatterns, patternStatistics, validatePattern, type PatternOp } from "./pattern";
 import { patternFromGenre } from "../src/data/genreMix";
+import { MAX_BARS } from "../src/data/arrangementEdits";
 import { generateMelody } from "./melody";
 import { EXAMPLE_GENRES, examplesFor } from "./examples";
 import { validateProsody } from "./prosody";
@@ -2107,7 +2108,7 @@ export const TOOLS: ToolDefinition[] = [
         .number()
         .int()
         .min(1)
-        .max(64)
+        .max(MAX_BARS)
         .optional()
         .describe(
           "how many PASSES of the section's clip — not measures. The result reports `passBars` and a running `secondsEstimate`."
@@ -2162,7 +2163,7 @@ export const TOOLS: ToolDefinition[] = [
       songId: z.string().describe("the id create_song returned"),
       index: z.number().int().min(0).describe("which section to copy, by position in the arrangement"),
       at: z.number().int().min(0).optional().describe("where the copy goes; right after the original when omitted"),
-      bars: z.number().int().min(1).max(64).optional().describe("passes for the copy; the original's when omitted"),
+      bars: z.number().int().min(1).max(MAX_BARS).optional().describe("passes for the copy; the original's when omitted"),
       label: z.string().max(24).optional().describe('a name for the copy, e.g. "chorus 2"'),
     },
     handler: (args) => {
