@@ -75,7 +75,19 @@ export function fromMidi(bytes: Uint8Array): MidiArrangementImport {
       notes: [...part.notes].sort((a, b) => a.startBeats - b.startBeats || a.pitch - b.pitch),
     }));
 
+  /**
+   * ⭐ **A track that held nothing is named rather than dropped in silence.**
+   *
+   * The parts are built from notes, so a track with none simply does not appear — and `problems` spoke only when the *whole file* was empty. In a multi-track file that lets a part vanish with nothing said, which is the difference between "the file has three parts" and "the file had four and one of them was empty".
+   */
+  const emptyTracks = [...byPart.values()].filter((part) => part.notes.length === 0).map((part) => part.name);
   if (parts.length === 0) problems.push("the file holds no notes");
+  else if (emptyTracks.length > 0) {
+    problems.push(`${emptyTracks.length} track(s) held no notes and are not parts: ${emptyTracks.join(", ")}`);
+  }
+  if (!parsed.tempoStated) {
+    problems.push("the file states no tempo, so the arrangement's own default applies rather than a number read from the file");
+  }
   if (withoutLength > 0) {
     problems.push(
       `${withoutLength} note(s) were never released by the file, so they were given the default length of ${UNRELEASED_NOTE_BEATS} beats`
@@ -84,7 +96,12 @@ export function fromMidi(bytes: Uint8Array): MidiArrangementImport {
 
   return {
     parts,
-    ...(parsed.bpm > 0 ? { tempoBpm: parsed.bpm } : {}),
+    /**
+     * ⭐ **The tempo is reported only when the file stated it.**
+     *
+     * A file with no tempo event still needs *some* tempo to place its notes in time, so the parser assumes 120 — and this tool returned that assumption as `tempoBpm: 120`, which reads as "the file says 120". Muse reported it as a contradiction of this tool's own promise ("the tempo the file states"), and it is one: an assumption and a reading must not look alike. The assumption still happens; it is simply not presented as a fact about the file.
+     */
+    ...(parsed.tempoStated ? { tempoBpm: parsed.bpm } : {}),
     division,
     format: parsed.format,
     problems,
