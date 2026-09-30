@@ -2141,6 +2141,8 @@ tag    FAILED (exit 1)
 
 ## 68. ⚠️⭐⭐⭐⭐ **更正第 32 节：VSCO 2 CE 不能上传**（2026-09-28 晚 ✓）
 
+> ⚠️ **本节已被推翻（2026-10-01）。** 业主指出 "CC Sampling Plus 1.0" 是错的，实测上游钉住提交自己的 `LICENSE` 是 **CC0 1.0 Universal**（sha256 `36ffd9dc…f39673`），GitHub 也把 `schollz/VSCO-2-CE` 与上游 `sgossner/VSCO-2-CE` 都判为 `CC0-1.0`。所以 **VSCO 2 CE 已经上传到 R2**：`vsco2ce/` 前缀，372 个对象 / 675102035 字节，本节的结论不成立。完整证据与镜像清单见 `docs/SAMPLE_LIBRARY_INTEGRATION.md` 的「VSCO 2 CE 已入库（2026-10-01）」，README 的 row 已从 "Planned" 移到 "Redistributed by this project"。
+
 ### 读到的
 
 ```
