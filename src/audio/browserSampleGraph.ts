@@ -20,10 +20,33 @@ export function browserSampleDecoder(context: BaseAudioContext): SampleDecoder {
       // The loud failure again: an asset declared without audio is an error, not a silent empty buffer.
       throw new Error(`sample "${asset.assetId}" has no url, so there are no bytes to decode`);
     }
-    const response = await fetch(asset.url);
-    if (!response.ok) throw new Error(`sample "${asset.assetId}" could not be fetched (${response.status})`);
-    // `decodeAudioData` takes ownership of the ArrayBuffer it is given, which is why a fresh one is passed per call and the loader caches the *result*.
-    return context.decodeAudioData(await response.arrayBuffer());
+    /**
+     * ⭐ **Both addresses are tried, and both are named when both fail.**
+     *
+     * Muse, composing through the MCP server, reported that a sample whose primary URL 404s never tried its `fallbackUrl` — the fallback request count was zero. The instrument's **program** already did this (source first, mirror second, both named on failure), so the same library could load its SFZ from the mirror and then fail to load a single note from it: the addressing decision existed in one half of the loader and not in the other.
+     */
+    const reason = (error: unknown) => (error instanceof Error ? error.message : String(error));
+    let primaryError: unknown;
+    try {
+      const response = await fetch(asset.url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      // `decodeAudioData` takes ownership of the ArrayBuffer it is given, which is why a fresh one is passed per call and the loader caches the *result*.
+      return await context.decodeAudioData(await response.arrayBuffer());
+    } catch (error) {
+      primaryError = error;
+    }
+    if (!asset.fallbackUrl) {
+      throw new Error(`sample "${asset.assetId}" could not be fetched from ${asset.url} (${reason(primaryError)})`);
+    }
+    try {
+      const response = await fetch(asset.fallbackUrl);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return await context.decodeAudioData(await response.arrayBuffer());
+    } catch (fallbackError) {
+      throw new Error(
+        `sample "${asset.assetId}": neither address served the bytes — source ${asset.url} (${reason(primaryError)}), mirror ${asset.fallbackUrl} (${reason(fallbackError)})`
+      );
+    }
   };
 }
 

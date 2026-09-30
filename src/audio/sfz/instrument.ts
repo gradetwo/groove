@@ -160,9 +160,21 @@ export interface InstrumentAddresses {
   programFallbackUrl?: string;
 }
 
+/**
+ * **A sample path escaped for a URL, without breaking the paths that are already fine.**
+ *
+ * Muse, composing through the MCP server, reported samples that never fetched: `chimes_G#3_ff_rr1.wav` becomes `…/chimes_G` plus the fragment `3_ff_rr1.wav` under `new URL(path, base)`, because `#` starts a fragment. A `?` in a filename does the same thing to the query string.
+ *
+ * Only those two characters are escaped, and `%` deliberately is not: a path that already carries `%20` would become `%2520` under a blanket `encodeURIComponent`, which is the same class of bug in the other direction. Spaces and unicode are handled by `URL` itself, which is why they never caused this.
+ */
+function encodeSamplePath(samplePath: string): string {
+  return samplePath.replace(/#/g, "%23").replace(/\?/g, "%3F");
+}
+
 export function sampleAssetForPath(samplePath: string, addresses: InstrumentAddresses): SampleAsset {
-  const primary = new URL(samplePath, addresses.programUrl).toString();
-  const mirror = addresses.programFallbackUrl ? new URL(samplePath, addresses.programFallbackUrl).toString() : undefined;
+  const escaped = encodeSamplePath(samplePath);
+  const primary = new URL(escaped, addresses.programUrl).toString();
+  const mirror = addresses.programFallbackUrl ? new URL(escaped, addresses.programFallbackUrl).toString() : undefined;
   return {
     assetId: samplePath,
     name: samplePath,
