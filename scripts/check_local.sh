@@ -26,6 +26,30 @@ if [ -z "${GROOVE_GATE_LOCK_HELD:-}" ]; then
   export GROOVE_GATE_LOCK_HELD=1
 fi
 
+# ⭐ **And wait for the machine to be quiet, because the lock only stops *gates*.**
+#
+# The lock made three gate runs serial, and the suite still failed: `CompareViewLoudness` went red while four worktrees were running suites and builds, with the flatten measuring 103 ms where it measures 1.4 ms alone. It passes alone. That is the third false red from contention, and a false red is worse than no check — it teaches people to re-run until it is green.
+#
+# So the gate reads the load average and waits for it to come down. The number is `nproc` rather than a guess: one runnable process per core is a machine that is busy, and more than that is a machine whose timings cannot be trusted.
+wait_for_a_quiet_machine() {
+  local cpus load1 waited=0
+  cpus="$(nproc 2>/dev/null || echo 4)"
+  while [ -r /proc/loadavg ]; do
+    load1="$(cut -d' ' -f1 /proc/loadavg | cut -d. -f1)"
+    [ -n "$load1" ] || break
+    [ "$load1" -le "$cpus" ] && break
+    if [ "$waited" = 0 ]; then
+      echo "  load ${load1} on ${cpus} cpus is too high for trustworthy timings; waiting for it to drop (another worktree is probably running a suite)"
+    fi
+    if [ "$waited" -ge 900 ]; then
+      echo "  still at load ${load1} after 15 minutes — running anyway, and a timing failure now means nothing"
+      break
+    fi
+    sleep 20
+    waited=$((waited + 20))
+  done
+}
+
 LOG="${TMPDIR:-/tmp}/check_local_step.$(basename "$PWD").$$.log"
 
 failed=0
@@ -63,6 +87,9 @@ step "styling" node scripts/check_component_styling.mjs
 # to the jank budget: it was red, absent from CI, and I routed around it. So CI judges those two, and this gate stays a statement about the code.
 #
 # The exclusion is **named here rather than silent**, and it is two files, not a pattern: a growing list would mean the gate had stopped meaning anything.
+#
+# ⭐ And the machine is asked to be quiet first: with worktrees running suites in parallel, a third timing-sensitive file (`CompareViewLoudness`) went red at 75 times its normal flatten cost and passes alone. **A false red teaches people to re-run until green**, which is the same disease the exclusion above was written to cure.
+wait_for_a_quiet_machine
 step "tests" npx vitest run --exclude '**/mobileApp.test.tsx' --exclude '**/mobileExplore.test.tsx'
 
 if [ "$failed" -ne 0 ]; then
