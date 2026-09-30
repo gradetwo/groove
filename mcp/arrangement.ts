@@ -20,6 +20,7 @@ import {
   addTake,
   addTrack,
   addTrackNote,
+  addTrackNotes,
   assignTakeToRange,
   changeTrackKind,
   createArrangement,
@@ -42,7 +43,7 @@ import {
   setTrackSample,
   setTrackSteps,
 } from "../src/data/arrangementEdits";
-import type { ArrangementV2, TrackKindV2, TrackV2 } from "../src/types/arrangementV2";
+import type { ArrangementV2, NoteEvent, TrackKindV2, TrackV2 } from "../src/types/arrangementV2";
 import type { PlannedTake } from "../src/data/takePlanning";
 import { compileArrangementToSongInput } from "../src/data/arrangementCompile";
 import { stepsFromNotes, STEPS_PER_BEAT } from "../src/data/noteEvents";
@@ -503,6 +504,20 @@ export function setMcpArrangementTempoMap(
   points: readonly { atBar: number; bpm: number; curve?: "jump" | "linear" }[]
 ): ArrangementEditResult {
   return edit(arrangementId, (arrangement) => setArrangementTempoMap(arrangement, points));
+}
+
+/**
+ * ⭐ **A part in one call — 4176 round trips is not a design, it is a loop on the wrong side of the wire.**
+ *
+ * Muse measured it: one movement of one piece needed 4176 `add_arrangement_note` calls, raised
+ * `MaxListenersExceededWarning`, and took hours. The model never required that; only the surface did.
+ *
+ * The tool above this reports note counts before and after, because `addTrackNote` **declines `fx` and `folder` tracks
+ * silently** — a batch that answered "ok" while adding nothing would hide exactly the mistake worth catching, and a
+ * caller comparing counts finds it.
+ */
+export function addMcpTrackNotes(arrangementId: string, trackId: string, notes: readonly NoteEvent[]): ArrangementEditResult {
+  return edit(arrangementId, (arrangement) => addTrackNotes(arrangement, trackId, notes));
 }
 
 /**

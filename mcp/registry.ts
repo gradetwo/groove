@@ -63,6 +63,7 @@ import {
   setMcpArrangementBars,
   setMcpArrangementTempo,
   setMcpArrangementTempoMap,
+  addMcpTrackNotes,
   setMcpArrangementTimeSignature,
   setMcpNoteLength,
   setMcpTrackGain,
@@ -612,6 +613,37 @@ export const TOOLS: ToolDefinition[] = [
           String(args.arrangementId),
           args.points as readonly { atBar: number; bpm: number; curve?: "jump" | "linear" }[]
         );
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "add_arrangement_notes",
+    title: "Add many notes to an arrangement track in one call",
+    description:
+      "A whole part at once. Muse measured the alternative: 4176 notes through `add_arrangement_note` meant **4176 tool calls**, a `MaxListenersExceededWarning`, and hours of wall clock for one movement — the loop sat on the caller's side of the wire, where every iteration costs a round trip. The reply carries `requested` beside the arrangement's own `summary`, because a lane of kind `fx` or `folder` **declines notes silently**: comparing what was asked for with the track's note count afterwards is how that mistake is seen rather than assumed away.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      trackId: z.string().describe("the lane to add to; `fx` and `folder` lanes decline notes"),
+      notes: z
+        .array(
+          z.object({
+            pitch: z.number().int().min(0).max(127),
+            startBeats: z.number().min(0),
+            lengthBeats: z.number().min(0),
+            velocity: z.number().min(0).max(127),
+          })
+        )
+        .min(1)
+        .describe("the notes to add, in any order"),
+    },
+    handler: (args) => {
+      try {
+        const notes = args.notes as readonly { pitch: number; startBeats: number; lengthBeats: number; velocity: number }[];
+        const result = addMcpTrackNotes(String(args.arrangementId), String(args.trackId), notes as never);
+        return { ...result, requested: notes.length };
       } catch (error) {
         return failure((error as Error).message);
       }

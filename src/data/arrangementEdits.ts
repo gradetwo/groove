@@ -366,6 +366,22 @@ export function addTrackNote(arrangement: ArrangementV2, trackId: string, note: 
   return { ...arrangement, notesByTrack: { ...(arrangement.notesByTrack ?? {}), [trackId]: addNote(notes, note) } };
 }
 
+/**
+ * ⭐ **A whole part in one call, because a part is not four thousand calls.**
+ *
+ * Muse measured this: 4176 notes through `add_arrangement_note` meant 4176 tool calls, a `MaxListenersExceededWarning`,
+ * and hours of wall clock — for one movement of one piece. Nothing about the model made that necessary; the loop was
+ * simply on the caller's side of the wire, where every iteration costs a round trip.
+ *
+ * It returns the same shape as its single-note neighbour and reports nothing itself, for the reason recorded on
+ * `removeTrackNote` below: the arrangement **is** the report — a caller compares note counts before and after, which is
+ * also how it discovers that a track of kind `fx` or `folder` swallowed the whole batch, since `addTrackNote` declines
+ * those silently. A batch that returns "ok" while adding nothing would be the worse shape.
+ */
+export function addTrackNotes(arrangement: ArrangementV2, trackId: string, notes: readonly NoteEvent[]): ArrangementV2 {
+  return notes.reduce((current, note) => addTrackNote(current, trackId, note), arrangement);
+}
+
 /** Remove a note at a position. Reported through the arrangement, so a caller can compare before and after. */
 export function removeTrackNote(arrangement: ArrangementV2, trackId: string, at: { pitch: number; startBeats: number }): ArrangementV2 {
   const notes = arrangement.notesByTrack?.[trackId] ?? [];
