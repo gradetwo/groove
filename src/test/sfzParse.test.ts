@@ -67,6 +67,60 @@ describe("parseSfz", () => {
   });
 });
 
+/**
+ * ⭐ **Reading a `sample=` path that contains spaces — measured against sfizz, not read off the grammar.**
+ *
+ * Muse reported `Tubular Bells 1/chimes.wav` arriving as `Tubular`. The fix at the time was to *report* the cut on the
+ * region, on the reading that an unquoted value ends at whitespace and a name with spaces must be quoted. The
+ * reference engine says the opposite, and it is the standard this project settles semantics with: one 440 Hz tone,
+ * only the `sample=` spelling changed —
+ *
+ * ```
+ *   sample=space dir/tone.wav       peak 0.0824    the tone
+ *   sample="space dir/tone.wav"     peak 0.000031  silence
+ * ```
+ *
+ * sfizz reads the spaces and rejects the quotes, so the truncation was ours. `parseSfz` therefore reads an unquoted
+ * sample's value **to the end of the line**, or up to the next `name=` pair when the line carries opcodes after it.
+ * The quoted spelling is still read — a parser more forgiving than the engine is not a defect — but these criteria pin
+ * the **reading** rather than an error, and none of them presents quoting as the better form: it is the spelling
+ * sfizz renders silent.
+ *
+ * This is not a corner: VCSL, which the manifest mirrors, writes every sample path unquoted and many of them inside
+ * directories with spaces. Under the old rule the timpani — the only orchestral instrument the mirror holds —
+ * resolved to a directory name and was silent.
+ */
+describe("reading a sample path that contains spaces", () => {
+  it("reads the unquoted path to the end of the line instead of cutting it at the first space", () => {
+    const [region] = parseSfz("<region> sample=Tubular Bells 1/chimes.wav");
+    // The 0.0824 form: the whole path is what the engine plays, so the whole path is what is read.
+    expect(region!.sample).toBe("Tubular Bells 1/chimes.wav");
+    // The reading this replaces, and the reason the report existed: `Tubular` is a directory, not a sample.
+    expect(region!.sample).not.toBe("Tubular");
+  });
+
+  it("stops the unquoted path at the next `name=` pair and still reads the opcodes that follow", () => {
+    const [region] = parseSfz("<region> sample=space dir/tone.wav pitch_keycenter=60 lokey=1 hikey=2");
+    // "To end of line" has one exception: the next assignment ends the value rather than joining it.
+    expect(region!.sample).toBe("space dir/tone.wav");
+    expect(region).toMatchObject({ pitchKeycenter: 60, lokey: 1, hikey: 2 });
+  });
+
+  it("reads a quoted path whole too, recording that the quoted spelling is the one sfizz renders silent", () => {
+    const [region] = parseSfz('<region> sample="Tubular Bells 1/chimes.wav" pitch_keycenter=60');
+    /**
+     * **The reading, not an error.** The engine rejects the quotes (peak 0.000031); this parser strips them and reads
+     * the same path the unquoted spelling gives. That is a parser more forgiving than its reference, which is allowed —
+     * what is *not* allowed is the old advice that a name with spaces **must** be quoted, because that names the one
+     * spelling that does not play. The value is pinned so a later "fix" cannot quietly make quoting mandatory and take
+     * VCSL's unquoted paths with it.
+     */
+    expect(region!.sample).toBe("Tubular Bells 1/chimes.wav");
+    // The opcode after the quoted path is still read, so the line was understood rather than merely excused.
+    expect(region!.pitchKeycenter).toBe(60);
+  });
+});
+
 describe("region selection", () => {
   const regions = parseSfz(`
     <region> sample=low.wav lokey=0 hikey=59

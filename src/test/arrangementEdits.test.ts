@@ -1,7 +1,7 @@
 import { DEFAULT_SAMPLER_ASSET } from "../data/defaultContent";
 import type { ArrangementV2 } from "../types/arrangementV2";
 import { beforeEach, describe, expect, it } from "vitest";
-import { addTake, addTrack, addTrackNote, changeTrackKind, createArrangement, moveTrackNote, removeTrack, removeTrackNote, resetTrackIdsForTests, setTrackFlag, setTrackGain, setTrackNoteLength, setTrackPan, setTrackParent, setTrackSample, setTrackSteps, toggleStep } from "../data/arrangementEdits";
+import { addTake, addTrack, addTrackNote, addTrackNotes, changeTrackKind, createArrangement, moveTrackNote, removeTrack, removeTrackNote, resetTrackIdsForTests, setArrangementTempoMap, setTrackFlag, setTrackGain, setTrackNoteLength, setTrackPan, setTrackParent, setTrackSample, setTrackSteps, toggleStep } from "../data/arrangementEdits";
 
 /**
  * The edits an interface is built from, and the two ways they go quietly wrong.
@@ -504,5 +504,134 @@ describe("a track's level and its place in the stereo field", () => {
     const two = addTrack(addTrack(emptyArrangement(), "instrument", "Keys"), "instrument", "Bass");
     const edited = setTrackGain(two, two.tracks[0]!.id, -3);
     expect(edited.tracks[1]).toBe(two.tracks[1]);
+  });
+});
+
+/**
+ * ⭐ **A whole part in one call is only safe if it is the same edit as the loop it replaces.**
+ *
+ * Muse measured 4176 notes through `add_arrangement_note` as 4176 round trips, a `MaxListenersExceededWarning` and
+ * hours of wall clock for one movement. The batch exists to remove the round trips, so its contract has to be
+ * **equality with the loop**, not "close enough": a caller must not be able to tell which call wrote a part.
+ */
+describe("adding a batch of notes", () => {
+  const oneHundred = Array.from({ length: 100 }, (_, index) => ({
+    pitch: 40 + (index % 40),
+    startBeats: index * 0.25,
+    lengthBeats: 0.25,
+    velocity: 100,
+  }));
+
+  it("produces exactly the arrangement that adding the same notes one at a time produces", () => {
+    const withTrack = addTrack(emptyArrangement(), "instrument", "Keys");
+    const id = withTrack.tracks[0]!.id;
+    const start = { ...withTrack, notesByTrack: { [id]: [] } };
+
+    const batched = addTrackNotes(start, id, oneHundred);
+    // The loop the batch replaces, written out so the comparison is with behaviour rather than with a second batch.
+    let looped: ArrangementV2 = start;
+    for (const note of oneHundred) looped = addTrackNote(looped, id, note);
+
+    // Length first, so two empty arrays cannot pass the equality below by both being empty.
+    expect(batched.notesByTrack![id]).toHaveLength(100);
+    // Field for field: `toEqual` rather than a count, because a batch that dropped a length or a velocity would still count 100.
+    expect(batched.notesByTrack![id]).toEqual(looped.notesByTrack![id]);
+  });
+
+  it("adds nothing to a kind that makes no sound, and the unchanged count is how that is observed", () => {
+    /**
+     * `fx` and `folder` decline notes silently — their all-zero content is their definition. The batch keeps that rule
+     * rather than reporting success, so the caller's only signal is the note count before and after; this pins that
+     * the signal is real, because a batch that returned "ok" while adding nothing would be the worse shape.
+     */
+    for (const kind of ["fx", "folder"] as const) {
+      const withTrack = addTrack(emptyArrangement(), kind, kind);
+      const id = withTrack.tracks[0]!.id;
+      const before = withTrack.notesByTrack?.[id]?.length ?? 0;
+      const after = addTrackNotes(withTrack, id, oneHundred);
+      expect(after.notesByTrack?.[id]?.length ?? 0, `${kind} must swallow the whole batch`).toBe(before);
+    }
+  });
+});
+
+/**
+ * ⭐ **The tempo map is validated rather than clamped, and the first version was neither.**
+ *
+ * Its neighbours `setArrangementTempo` and `setArrangementBars` clamp, and the comment on this one says why it does
+ * not: a point silently moved is a tempo the caller believes is in the file and is not, so every duration computed
+ * from it is wrong in a way that looks like the caller's own arithmetic. The criteria below are the four ways that
+ * promise can be broken — order, an unreadable bar, an out-of-range bpm, two points on one bar — plus the clear.
+ */
+describe("writing the tempo map", () => {
+  it("stores the points in bar order however they were written", () => {
+    // A map whose meaning depends on the order the caller happened to write it in changes meaning when someone reorders it.
+    const shuffled = [
+      { atBar: 8, bpm: 100 },
+      { atBar: 0, bpm: 120 },
+      { atBar: 4, bpm: 140, curve: "linear" as const },
+    ];
+    const mapped = setArrangementTempoMap(emptyArrangement(), shuffled);
+    expect(mapped.tempoTrack!.map((point) => point.atBar)).toEqual([0, 4, 8]);
+    // The points themselves survive intact, curve included — sorting must not be a rewrite.
+    expect(mapped.tempoTrack).toEqual([
+      { atBar: 0, bpm: 120 },
+      { atBar: 4, bpm: 140, curve: "linear" },
+      { atBar: 8, bpm: 100 },
+    ]);
+  });
+
+  it("throws on a bar that is negative or not a whole number, rather than rounding it into place", () => {
+    /**
+     * **The rounding was the hole.** `Math.round` ran before the check, so `1.5` became `2` and was accepted: a point
+     * the caller wrote was silently moved to a bar they did not choose, which is the exact failure the function's own
+     * comment says it exists to prevent. Measured: `{atBar: 1.5}` and `{atBar: 0.4}` were both accepted before this
+     * criterion existed.
+     */
+    const arrangement = emptyArrangement();
+    expect(() => setArrangementTempoMap(arrangement, [{ atBar: -1, bpm: 120 }])).toThrow(/bars are whole numbers/);
+    expect(() => setArrangementTempoMap(arrangement, [{ atBar: 1.5, bpm: 120 }])).toThrow(/bars are whole numbers/);
+    expect(() => setArrangementTempoMap(arrangement, [{ atBar: 0.4, bpm: 120 }])).toThrow(/bars are whole numbers/);
+    // A whole bar written as a float is still a whole bar, and is not refused.
+    expect(setArrangementTempoMap(arrangement, [{ atBar: 2.0, bpm: 120 }]).tempoTrack![0]!.atBar).toBe(2);
+  });
+
+  it("throws on a bpm outside 20…300, including a fractional one just past the edge", () => {
+    /**
+     * The same rounding hole at the boundary: `300.4` rounded to `300` and was accepted, though the caller wrote a
+     * value the range excludes. The check reads the written value, so the edge is the edge.
+     */
+    const arrangement = emptyArrangement();
+    expect(() => setArrangementTempoMap(arrangement, [{ atBar: 0, bpm: 19 }])).toThrow(/20…300/);
+    expect(() => setArrangementTempoMap(arrangement, [{ atBar: 0, bpm: 301 }])).toThrow(/20…300/);
+    expect(() => setArrangementTempoMap(arrangement, [{ atBar: 0, bpm: 19.6 }])).toThrow(/20…300/);
+    expect(() => setArrangementTempoMap(arrangement, [{ atBar: 0, bpm: 300.4 }])).toThrow(/20…300/);
+    // And the edges themselves are inside the range, so the boundary is inclusive rather than merely nearby.
+    expect(setArrangementTempoMap(arrangement, [{ atBar: 0, bpm: 20 }]).tempoTrack![0]!.bpm).toBe(20);
+    expect(setArrangementTempoMap(arrangement, [{ atBar: 0, bpm: 300 }]).tempoTrack![0]!.bpm).toBe(300);
+  });
+
+  it("keeps the last point written for a bar, so two points cannot fight over one", () => {
+    const mapped = setArrangementTempoMap(emptyArrangement(), [
+      { atBar: 2, bpm: 100 },
+      { atBar: 0, bpm: 120 },
+      { atBar: 2, bpm: 200 },
+    ]);
+    // "Last written" is about call order, not bar order: the bar-2 point of 200 came after the bar-2 point of 100, so it is the one kept.
+    expect(mapped.tempoTrack).toEqual([
+      { atBar: 0, bpm: 120 },
+      { atBar: 2, bpm: 200 },
+    ]);
+  });
+
+  it("clears the map entirely when given no points, leaving no key rather than an empty one", () => {
+    /**
+     * An empty array is a real operation — back to the arrangement's single tempo. **Absent, not `[]`**: readers treat
+     * a missing map as "one tempo" and an empty one as "a map with nothing in it", and the two must not be the same
+     * state (the same distinction `flattenSong` and `tempoAwareTiming` already rely on).
+     */
+    const withMap = setArrangementTempoMap(emptyArrangement(), [{ atBar: 0, bpm: 90 }]);
+    const cleared = setArrangementTempoMap(withMap, []);
+    expect(cleared).not.toHaveProperty("tempoTrack");
+    expect("tempoTrack" in cleared).toBe(false);
   });
 });

@@ -222,15 +222,24 @@ export function setArrangementTempoMap(
     return rest;
   }
   const cleaned = points.map((point, index) => {
-    const atBar = Math.round(point.atBar);
-    const bpm = Math.round(point.bpm);
-    if (!Number.isFinite(atBar) || atBar < 0) {
+    /**
+     * ⭐ **Validated on the value as written, before anything is rounded away.**
+     *
+     * `Math.round` used to run first, which made the checks below blind to what the caller wrote: bar `1.5` became
+     * `2` and bpm `300.4` became `300`, so a point just outside the declared range was accepted and silently moved —
+     * the failure this function's own comment says it exists to prevent. Measured: `{atBar: 1.5}`, `{atBar: 0.4}`,
+     * `{bpm: 300.4}` and `{bpm: 19.6}` were all accepted. A bar is now read exactly (a whole number is the contract,
+     * so rounding it is a decision the caller did not make), and the bpm range is tested against the written value
+     * while an in-range bpm keeps the round-to-integer storage its sibling `setArrangementTempo` uses.
+     */
+    const { atBar, bpm } = point;
+    if (!Number.isInteger(atBar) || atBar < 0) {
       throw new Error(`tempo point ${index + 1} has bar "${point.atBar}" — bars are whole numbers from 0 up`);
     }
     if (!Number.isFinite(bpm) || bpm < 20 || bpm > 300) {
       throw new Error(`tempo point ${index + 1} is ${point.bpm} bpm — the range is 20…300, the same one set_arrangement_tempo enforces`);
     }
-    return { atBar, bpm, ...(point.curve === undefined ? {} : { curve: point.curve }) };
+    return { atBar, bpm: Math.round(bpm), ...(point.curve === undefined ? {} : { curve: point.curve }) };
   });
   // Sorted by bar, then deduplicated to the last point written for a bar, so two points cannot fight over one.
   const byBar = new Map<number, { atBar: number; bpm: number; curve?: "jump" | "linear" }>();
