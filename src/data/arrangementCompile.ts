@@ -17,7 +17,7 @@
  */
 import type { SequencerPattern, SequencerTrack } from "../types/genre";
 import type { ArrangementV2, NoteEvent, TrackV2 } from "../types/arrangementV2";
-import { STEPS_PER_BAR, stepsFromNotes, stepCountFor } from "./noteEvents";
+import { STEPS_PER_BAR, stepsFromNotes, stepCountFor, stepsPerBarFor } from "./noteEvents";
 import { flattenSong } from "./songFlatten";
 import type { Song } from "../types/song";
 
@@ -86,7 +86,7 @@ export function compileArrangementToLanes(arrangement: ArrangementV2, notes: Not
      * The grid is as long as the arrangement is, and at least as long as its notes — a note written in bar three must not fall off the end of a one-bar array.
      */
     // The arrangement's stated length and the notes' reach, whichever is longer — see `stepCountFor`.
-    const stepCount = stepCountFor(notesForTrack, arrangement.bars);
+    const stepCount = stepCountFor(notesForTrack, arrangement.bars, stepsPerBarFor(arrangement.timeSignature));
     const { steps, pitches } = stepsFromNotes(notesForTrack, stepCount);
     compiled.push({
       sourceTrackId: track.id,

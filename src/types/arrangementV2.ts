@@ -129,6 +129,14 @@ export interface ArrangementV2 {
    * Same shape as the song's own points, deliberately: `atBar` is **0-based**, exactly as `set_tempo` documents it, so a caller who has used one can read the other without learning a second convention.
    */
   tempoTrack?: { atBar: number; bpm: number; curve?: "jump" | "linear" }[];
+  /**
+   * ⭐ **How many beats a bar holds, when it is not four.**
+   *
+   * The pattern has carried this all along (`src/types/genre.ts`, whose comment names `"3/4"`, `"6/8"`, `"5/4"` and `"7/8"`), and the arrangement did not — so a 3/4 movement had to be converted by hand, `ceil(bars × beatsPerBar / 4)`, because the step grid is built from a constant that is sixteen *because a bar is four beats*.
+   *
+   * Added exactly as `tempoTrack` above was, and for the same reason: the arithmetic to honour it already exists (`stepsPerBarFor`, and `stepCountFor`'s optional parameter behind it), so what was missing was only a way for an arrangement to say it. Absent means 4/4, which is what every existing arrangement already assumes.
+   */
+  timeSignature?: string;
   /** Every clip slot that carried at least one track, so a projection can be checked for completeness. */
   sourceSlots: string[];
 }
