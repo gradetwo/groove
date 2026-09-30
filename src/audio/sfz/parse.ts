@@ -169,6 +169,26 @@ export function parseSfz(text: string): SfzRegion[] {
   // Read from the text as written, once: a `<control>` block applies to every region in the file wherever it sits.
   const cc = readControlDefaults(text);
 
+  /**
+   * ⭐ **A `sample=` path the grammar truncated, named rather than obeyed in silence.**
+   *
+   * Muse reported `Tubular Bells 1/chimes.wav` arriving as `Tubular`. The truncation is **what the SFZ grammar
+   * says** — an unquoted value ends at whitespace, and a name with spaces must be quoted — so the value is right and
+   * the silence is the bug: a region whose sample quietly became a different file is the failure this project
+   * refuses to leave quiet. Reported, not corrected: guessing the rest of the path would be inventing a reading.
+   *
+   * Declared at the function body root (not inside the parse loop): `no-inner-declarations` rejects a function
+   * declaration in a nested block, and hoisting already made the call site order irrelevant.
+   */
+  function truncatedSample(line: string): string | null {
+    for (const match of line.matchAll(/(?:^|\s)sample\s*=\s*([^\s"]+)/g)) {
+      const trailing = line.slice((match.index ?? 0) + match[0]!.length);
+      // Whitespace followed by something that is not an `opcode=` — the shape of a path cut in half.
+      if (/^\s+[^\s=]+/.test(trailing)) return match[1]!;
+    }
+    return null;
+  }
+
   const regions: SfzRegion[] = [];
   let global: Record<string, string> = {};
   let group: Record<string, string> = {};
@@ -248,23 +268,6 @@ export function parseSfz(text: string): SfzRegion[] {
       }
     }
     if (!current) continue;
-
-    /**
-     * ⭐ **A `sample=` path the grammar truncated, named rather than obeyed in silence.**
-     *
-     * Muse reported `Tubular Bells 1/chimes.wav` arriving as `Tubular`. The truncation is **what the SFZ grammar
-     * says** — an unquoted value ends at whitespace, and a name with spaces must be quoted — so the value is right and
-     * the silence is the bug: a region whose sample quietly became a different file is the failure this project
-     * refuses to leave quiet. Reported, not corrected: guessing the rest of the path would be inventing a reading.
-     */
-    function truncatedSample(line: string): string | null {
-      for (const match of line.matchAll(/(?:^|\s)sample\s*=\s*([^\s"]+)/g)) {
-        const trailing = line.slice((match.index ?? 0) + match[0]!.length);
-        // Whitespace followed by something that is not an `opcode=` — the shape of a path cut in half.
-        if (/^\s+[^\s=]+/.test(trailing)) return match[1]!;
-      }
-      return null;
-    }
 
     // Values may be quoted (a path with spaces); everything else runs to the next whitespace.
     for (const match of rest.matchAll(/([a-zA-Z0-9_]+)\s*=\s*("[^"]*"|[^\s]+)/g)) {
