@@ -310,7 +310,13 @@ export function applyPatternOps(pattern: SequencerPattern, ops: PatternOp[]): Ap
       case "add_lane": {
         const kind = resolveTrackId(op.track);
         if (!kind) {
-          applied.push({ op: op.op, ok: false, detail: `"${op.track}" is not a lane kind — try kick, snare, hihat, percussion, bass, chords, lead or fx` });
+          /**
+           * ⭐ **The list of kinds is derived from the alias table, not typed out beside it.**
+           *
+           * Muse reported that this message omitted `audio` — the ninth kind, added by the owner's decision — so a caller reading it would conclude the kind does not exist. A message that lists the valid values has to get them from where the values live, or it becomes a second, older list.
+           */
+          const kinds = Object.keys(TRACK_ALIASES).sort().join(", ");
+          applied.push({ op: op.op, ok: false, detail: `"${op.track}" is not a lane kind — the kinds are: ${kinds}` });
           break;
         }
         const sameKind = next.tracks.filter((track) => track.track_id === kind).length;

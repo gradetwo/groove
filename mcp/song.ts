@@ -403,9 +403,14 @@ export function makeUniqueMcpSection(input: {
   const taken = new Set(Object.keys(song.clips ?? {}));
   const free = CLIP_SLOTS.find((slot) => !taken.has(slot));
   if (!free) {
+    /**
+     * ⭐ **The count comes from `CLIP_SLOTS`, not from prose.**
+     *
+     * Muse reported this message as stale: it said "all four clip slots", while the owner had already raised the set to `A`–`H` — eight. The failure it describes is real and the sentence was right about the shape of the problem and wrong about the size of it, which is the worst kind of wrong for a message whose whole job is to tell a caller what to do next. Both numbers are derived now, so the text cannot drift from the list again.
+     */
     throw new Error(
-      `all four clip slots are in use (${[...taken].sort().join(", ")}), so this section cannot be given its own copy — ` +
-        "a song that needs five distinct clips needs a wider slot set, which is a decision rather than something to overwrite"
+      `all ${CLIP_SLOTS.length} clip slots are in use (${[...taken].sort().join(", ")}), so this section cannot be given its own copy — ` +
+        `a song that needs ${CLIP_SLOTS.length + 1} distinct clips needs a wider slot set, which is a decision rather than something to overwrite`
     );
   }
 
