@@ -216,18 +216,18 @@ const ALL_TARGETS = [
   },
 
   // 2. Mobile & Tablet Devices (WebKit / iOS)
-  {
-    name: "iPhone 14 (竖屏 Portrait)",
-    browserType: "webkit",
-    device: "iPhone 14",
-    isMobile: true,
-  },
-  {
-    name: "iPhone 14 (横屏 Landscape)",
-    browserType: "webkit",
-    device: "iPhone 14 landscape",
-    isMobile: true,
-  },
+  /**
+   * ⭐ **The iPhone targets are off (owner's decision, 2026-09-30): iPhone support is frozen.**
+   *
+   * They were two of the seven targets and the two that failed most recently, on a worker fetch and a 44 px touch minimum. Neither is fixed — deliberately: the device is not being shipped to, and a frozen device's failures should not
+   * hold up the one that is. To bring them back, restore the two objects below and uncomment the `iPhone 14` leg in `.github/workflows/ci.yml`.
+   *
+   * ```
+   * { name: "iPhone 14 (竖屏 Portrait)", browserType: "webkit", device: "iPhone 14", isMobile: true },
+   * { name: "iPhone 14 (横屏 Landscape)", browserType: "webkit", device: "iPhone 14 landscape", isMobile: true },
+   * ```
+   */
+  // The block above is the whole of what was removed: the two objects, kept as text so re-enabling is a copy rather than a reconstruction.
   {
     name: "iPad Pro 11 (竖屏 Portrait)",
     browserType: "webkit",

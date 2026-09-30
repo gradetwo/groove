@@ -166,8 +166,13 @@ jobs:
         include:
           - leg: Desktop browsers
             only: Desktop
-          - leg: iPhone 14
-            only: iPhone 14
+          # ⭐ **iPhone legs are off, by the owner's decision (2026-09-30): iPhone support is frozen for now.**
+          #
+          # "最近我们iphone都是不更新冻结，所以与iphone有关的各种CI/CD都可以先关掉，以后需要时候我再让你开" — so the leg is commented out rather than deleted, and the matrix targets it filtered to are still in
+          # `scripts/test_matrix.js`. To bring it back: uncomment these two lines, and the matrix script on this machine runs the same legs the job would (the `e2e` profile, not the desktop-only one).
+          #
+          # It is a decision and not a workaround for a flake: the last two iPhone legs failed on a worker fetch and a 44 px touch target, and **both were left unfixed on purpose** — fixing them costs time for a device
+          # nobody is shipping to, and a frozen device's failures should not block the device we are shipping to.
           - leg: iPad Pro 11
             only: iPad Pro 11
 
