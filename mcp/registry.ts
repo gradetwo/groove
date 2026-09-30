@@ -44,6 +44,7 @@ import { listCatalogueInstruments, listSampleLibraries } from "./instruments";
 import {
   addMcpNote,
   addMcpTake,
+  exportMcpArrangementMidi,
   exportMcpMusicXml,
   importMcpMusicXml,
   importMcpMidi,
@@ -446,6 +447,45 @@ export const TOOLS: ToolDefinition[] = [
           ...(args.title === undefined ? {} : { title: String(args.title) }),
           ...(args.tempoBpm === undefined ? {} : { tempoBpm: Number(args.tempoBpm) }),
         });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "export_arrangement_midi",
+    title: "Export an arrangement as a Standard MIDI File",
+    description:
+      "Write the arrangement as a **Standard MIDI File, format 1** — the file a DAW opens — and return its path under GROOVE_MCP_OUT. One MIDI track per lane, named after the lane, with a conductor track carrying the tempo (`bpm` and every `tempoTrack` point) and the time signature, and each note at its own pitch, start, length and velocity. This is the mirror of `import_arrangement_midi`: a file written here imports back into the same notes, so what MCP composed can leave the building. Folders are left out (MIDI has no folder), lanes with no notes are written as empty named tracks, and anything the format cannot carry — a note between ticks, two overlapping notes of one pitch — is listed in `problems` rather than dropped in silence.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      outputDir: z.string().optional().describe("where to write it; defaults to GROOVE_MCP_OUT"),
+      filename: z.string().max(64).optional().describe("the file's name; defaults to the arrangement's id, and `.mid` is appended when missing"),
+    },
+    handler: (args) => {
+      try {
+        const file = exportMcpArrangementMidi(String(args.arrangementId), {
+          ...(args.filename === undefined ? {} : { filename: String(args.filename) }),
+        });
+        const dir = (args.outputDir as string | undefined) || process.env.GROOVE_MCP_OUT || mkdtempSync(path.join(os.tmpdir(), "groove-mcp-"));
+        mkdirSync(dir, { recursive: true });
+        const target = path.join(dir, file.filename);
+        writeFileSync(target, file.bytes);
+        return {
+          path: target,
+          filename: file.filename,
+          mimeType: file.mimeType,
+          bytes: file.bytes.length,
+          format: file.format,
+          division: file.division,
+          tracks: file.tracks,
+          notes: file.notes,
+          bpm: file.bpm,
+          timeSignature: file.timeSignature,
+          tempoEvents: file.tempoEvents,
+          problems: file.problems,
+        };
       } catch (error) {
         return failure((error as Error).message);
       }

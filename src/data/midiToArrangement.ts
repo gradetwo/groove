@@ -13,6 +13,14 @@ export interface MidiArrangementImport {
   parts: ImportedPart[];
   /** The tempo the file states, in quarter notes per minute. */
   tempoBpm?: number;
+  /**
+   * The meter the file states — `"3/4"`, `"6/8"` — or absent when it states none.
+   *
+   * Reported for the same reason `tempoBpm` is: the arrangement has a `timeSignature` field, the file may state
+   * one, and a caller that has to guess which meter it imported is the half-built shape this export closes. Absent
+   * means the file said nothing, not that it said 4/4 — the arrangement's own default is what applies then.
+   */
+  timeSignature?: string;
   /** The file's own resolution, in ticks per quarter note — reported because a caller comparing two imports needs to know they were read at the same scale. */
   division: number;
   /** The format the file declared: 0 for one track holding every channel, 1 for one track per part. */
@@ -102,6 +110,7 @@ export function fromMidi(bytes: Uint8Array): MidiArrangementImport {
      * A file with no tempo event still needs *some* tempo to place its notes in time, so the parser assumes 120 — and this tool returned that assumption as `tempoBpm: 120`, which reads as "the file says 120". Muse reported it as a contradiction of this tool's own promise ("the tempo the file states"), and it is one: an assumption and a reading must not look alike. The assumption still happens; it is simply not presented as a fact about the file.
      */
     ...(parsed.tempoStated ? { tempoBpm: parsed.bpm } : {}),
+    ...(parsed.timeSignature === undefined ? {} : { timeSignature: parsed.timeSignature }),
     division,
     format: parsed.format,
     problems,

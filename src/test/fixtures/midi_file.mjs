@@ -44,7 +44,7 @@ function withLength(bytes, text) {
  * @param {number} [options.format] 0 for one track holding every channel, 1 for one track per part.
  * @param {number} [options.division] Ticks per quarter note.
  * @param {number} [options.microsecondsPerQuarter] Tempo, as the file writes it.
- * @param {Array<{ name?: string, nameBytes?: number[], notes?: Array<{ note: number, velocity?: number, startTicks: number, durationTicks?: number, channel?: number, releaseWithVelocityZero?: boolean }> }>} options.tracks
+ * @param {Array<{ name?: string, nameBytes?: number[], timeSignature?: { numerator: number, denominator: number }, notes?: Array<{ note: number, velocity?: number, startTicks: number, durationTicks?: number, channel?: number, releaseWithVelocityZero?: boolean }> }>} options.tracks
  * @returns {Uint8Array}
  */
 export function buildMidiFile({ format = 1, division = 480, microsecondsPerQuarter, tracks = [] } = {}) {
@@ -54,6 +54,11 @@ export function buildMidiFile({ format = 1, division = 480, microsecondsPerQuart
     const events = [];
     if (track.nameBytes) events.push({ tick: 0, bytes: withLength(0x03, track.nameBytes) });
     else if (track.name !== undefined) events.push({ tick: 0, bytes: withLength(0x03, [...Buffer.from(track.name, "utf8")]) });
+    if (track.timeSignature) {
+      // `FF 58 04 <numerator> <log2 denominator> <clocks per click> <32nds per quarter>` — what a DAW writes in the conductor track.
+      const power = Math.round(Math.log2(track.timeSignature.denominator));
+      events.push({ tick: 0, bytes: [0xff, 0x58, 0x04, track.timeSignature.numerator, power, 24, 8] });
+    }
     if (microsecondsPerQuarter !== undefined) {
       const us = microsecondsPerQuarter;
       events.push({ tick: 0, bytes: [0xff, 0x51, 0x03, (us >> 16) & 0xff, (us >> 8) & 0xff, us & 0xff] });

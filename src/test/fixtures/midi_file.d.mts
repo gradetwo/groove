@@ -17,6 +17,8 @@ export interface MidiFixtureTrack {
   name?: string;
   /** A track name in bytes that are not UTF-8, for the decoding cases. */
   nameBytes?: number[];
+  /** A `0x58` meter event, written as the file writes it: the denominator becomes its power of two. */
+  timeSignature?: { numerator: number; denominator: number };
   notes?: MidiFixtureNote[];
 }
 

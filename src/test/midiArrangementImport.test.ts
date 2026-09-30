@@ -146,6 +146,27 @@ describe("a MIDI file imported as arrangement parts", () => {
     expect(fromMidi(fast).tempoBpm).toBe(200);
   });
 
+  it("reads the meter the file states, so the arrangement can be given the one it was written in", () => {
+    /**
+     * ⭐ The `0x58` meta event was skipped entirely before, which made "export a 3/4 arrangement and read the meter
+     * back" impossible to state as a criterion. Read here independently of the exporter: a file from any DAW says
+     * its meter the same way.
+     */
+    const waltz = buildMidiFile({
+      tracks: [{ name: "Waltz", timeSignature: { numerator: 3, denominator: 4 }, notes: [{ note: 60, startTicks: 0, durationTicks: 480 }] }],
+    });
+    expect(fromMidi(waltz).timeSignature).toBe("3/4");
+
+    const compound = buildMidiFile({
+      tracks: [{ name: "Jig", timeSignature: { numerator: 6, denominator: 8 }, notes: [{ note: 60, startTicks: 0, durationTicks: 240 }] }],
+    });
+    expect(fromMidi(compound).timeSignature).toBe("6/8");
+
+    // A file that states no meter says nothing, rather than being reported as four-four — the arrangement's own default applies then.
+    const silent = buildMidiFile({ tracks: [{ name: "A", notes: [{ note: 60, startTicks: 0, durationTicks: 480 }] }] });
+    expect(fromMidi(silent).timeSignature).toBeUndefined();
+  });
+
   it("sorts notes by start and then pitch, so two reads of one file agree", () => {
     const bytes = buildMidiFile({
       tracks: [

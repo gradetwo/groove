@@ -888,6 +888,39 @@ try {
     `${(importedMidi.trackIds ?? []).length} track(s) ${JSON.stringify(midiTrackNames)}, ${importedMidi.notes} note(s)`
   );
 
+  /**
+   * ⭐ **The export half of the same pair, over the wire.** The composer's report was that an arrangement could
+   * come in from a DAW and not go back out, so this asserts the loop the way the import check above does: call the
+   * tool, read the file it wrote, and hand the bytes back to the **import tool** rather than to a parser written
+   * here. Comparing note multisets before and after is what catches a writer that loses a length or shifts a name.
+   */
+  const noteTuples = (summary, trackIds) =>
+    (summary?.tracks ?? [])
+      .filter((track) => !trackIds || trackIds.includes(track.id))
+      .flatMap((track) => track.notes ?? [])
+      .map((note) => `${note.pitch}@${note.startBeats}+${note.lengthBeats}v${note.velocity}`)
+      .sort();
+  const exportedMidi = payload(await client.request("tools/call", { name: "export_arrangement_midi", arguments: { arrangementId: midiArrangement.arrangementId } }));
+  const exportedMidiBytes = fs.readFileSync(exportedMidi.path);
+  const beforeExport = noteTuples(importedMidi.summary);
+  // A folder's blank arrangement holds no notes, so everything the re-import reports came out of the exported file.
+  const roundTripArrangement = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "folder" } }));
+  const reimportedMidi = payload(
+    await client.request("tools/call", {
+      name: "import_arrangement_midi",
+      arguments: { arrangementId: roundTripArrangement.arrangementId, bytesBase64: exportedMidiBytes.toString("base64"), partIndex: "all" },
+    })
+  );
+  const afterExport = noteTuples(reimportedMidi.summary, reimportedMidi.trackIds);
+  check(
+    "export_arrangement_midi writes a format 1 file that re-imports to the same notes",
+    exportedMidiBytes.subarray(0, 4).toString("ascii") === "MThd" &&
+      exportedMidi.format === 1 &&
+      beforeExport.length > 0 &&
+      JSON.stringify(afterExport) === JSON.stringify(beforeExport),
+    `${exportedMidi.notes} note(s), ${exportedMidiBytes.length} bytes, re-imported ${afterExport.length} of ${beforeExport.length}`
+  );
+
   const prompt = await client.request("prompts/get", { name: "compose_groove", arguments: { genre: "chicago-house" } });
   const promptText = prompt?.messages?.[0]?.content?.text ?? "";
   check("prompts/get builds a usable brief", promptText.includes("chicago-house") && promptText.includes("apply_pattern_ops"), `${promptText.length} chars`);

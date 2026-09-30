@@ -146,6 +146,16 @@ export function parseMidiFile(buffer: ArrayBufferLike): {
   bpm: number;
   /** Whether the file **stated** a tempo, so a caller can tell this parser's assumed 120 from a reading of the file. */
   tempoStated: boolean;
+  /**
+   * ⭐ **The file's own time signature, when it states one** — `"3/4"`, `"6/8"` — read from the `0x58` meta event.
+   *
+   * It was not read before, and an arrangement that carries a `timeSignature` could be exported and not read
+   * back, which is exactly the asymmetry the MIDI export was written to close. The **first** stated signature is
+   * the one reported: it is the one in effect at the start of the music, which is what an arrangement's single
+   * `timeSignature` field can hold. A file that changes meter later is read by its opening meter, and the later
+   * changes are not lost from the file — only unread, which this field does not claim otherwise.
+   */
+  timeSignature?: string;
   notes: ParsedMidiNote[];
   trackNames: string[];
 } {
@@ -172,6 +182,8 @@ export function parseMidiFile(buffer: ArrayBufferLike): {
    */
   let bpm = 120;
   let tempoStated = false;
+  /** The first time signature the file states, which is the meter it opens in. */
+  let timeSignature: string | undefined;
   const notes: ParsedMidiNote[] = [];
   const trackNames: string[] = [];
 
@@ -240,6 +252,18 @@ export function parseMidiFile(buffer: ArrayBufferLike): {
           // Track Name — a person's text, so it is decoded rather than read byte for byte.
           const name = reader.readText(metaLen);
           trackNames.push(name);
+        } else if (metaType === 0x58) {
+          /**
+           * Time Signature: numerator, then the denominator as its **power of two**, then clocks per click and
+           * 32nds per quarter, which nothing here needs. Read as a meter rather than skipped, so a file this
+           * server wrote can be read back as the arrangement it came from.
+           */
+          const numerator = metaLen >= 1 ? reader.readUint8() : 0;
+          const denominatorPower = metaLen >= 2 ? reader.readUint8() : 0;
+          if (metaLen > 2) reader.pos += metaLen - 2;
+          if (timeSignature === undefined && numerator > 0) {
+            timeSignature = `${numerator}/${2 ** Math.min(7, Math.max(0, denominatorPower))}`;
+          }
         } else if (metaType === 0x01 || metaType === 0x04 || metaType === 0x05) {
           // Text, instrument name and lyric: the same decoding question as a track name, and the same answer.
           reader.readText(metaLen);
@@ -284,7 +308,7 @@ export function parseMidiFile(buffer: ArrayBufferLike): {
     reader.pos = chunkEnd;
   }
 
-  return { format, tracksCount, division: division || 480, bpm, tempoStated, notes, trackNames };
+  return { format, tracksCount, division: division || 480, bpm, tempoStated, ...(timeSignature === undefined ? {} : { timeSignature }), notes, trackNames };
 }
 
 /**

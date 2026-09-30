@@ -509,6 +509,19 @@ are the places where it is more accurate than the evaluations that came before i
 
 工具与 `import_arrangement_musicxml` 走**同一条加轨路径**（`addImportedParts`），两条导入因此不会在音序、命名这些事上各自漂移。夹具是**仓库自己按规范写出的字节**（`src/test/fixtures/midi_file.mjs`），CI 不依赖任何人的音乐文件；`npm run check:mcp` 里有一条**协议级**调用，验证中文轨名与音符长度真的过线。
 
+### MIDI 导出：把编排交给 DAW（2026-10-01）
+
+编排一直**进得来、出不去**：`import_arrangement_midi` 能把 DAW 的文件读成编排轨，却没有一个工具把编排写回 MIDI——用 MCP 作曲的人最后**自己写了一个 MIDI 生成器**，才把乐谱交给外部 DAW。导入没有导出是一处不对称，这就是另一半。
+
+`export_arrangement_midi` 写 **Standard MIDI File，format 1：一条编排轨一条 MIDI 轨**，另加一条 conductor 轨放速度与拍号；文件落在 `GROOVE_MCP_OUT`（或 `outputDir`）下并返回路径与轨道摘要。写法是导入器的**镜像**，所以判据不是"我们能写出一个 MIDI"，而是**这个服务器写出的文件，被这个服务器自己的导入器读回来是同一段音乐**：
+
+* **每条轨都写轨名，conductor 轨也有。** 导入器把轨名按出现顺序收进一个数组，再按**轨块下标**取名——少一个名字，后面每条轨都会顶替邻居的名字。
+* **速度写 `bpm`，`tempoTrack` 的每个点各写一条 tempo 事件**，`atBar` 按编排自己的拍号换算成 tick（3/4 的小节是 3 拍，不是 4 拍）；读回来的是最后一条，也就是"文件结束时生效的速度"。
+* **拍号写进 `0x58` meta 事件**，而**导入器为此学会了读它**——否则"导出后读回同一个拍号"这条判据根本无法成立。
+* MIDI 表达不了的事**明说**，不静默近似：文件夹轨不写（MIDI 没有文件夹），同音重叠的音符无法区分（读回时按先进先出配对），比 tick 更细的位置被取整，`velocity` 0 被钳到 1（在 MIDI 里它就是 note-off）。这些都进返回值的 `problems`。
+
+判据在 `src/test/arrangementToMidi.test.ts`（含"导出→导入→音符逐一相同"、速度/拍号往返、tempo map 的落点）；`npm run check:mcp` 里另有一条**协议级**往返：导出写盘，把字节交回 `import_arrangement_midi`，比较前后音符的多重集。
+
 ### 采样库的许可与署名（2026-09-30）
 
 `list_arrangement_instruments` 回答"能弹什么"，`list_sample_libraries` 回答**发布前必须问的那个问题：这些字节从哪来、许可要求什么**。清单里一直带着 `licence`、`sourceUrl`、`repo`、`pin`，而 agent 一个都看不到——对一个**特意为了练习署名路径而钉住的 CC-BY 库**来说，这是最要紧的一处缺口。

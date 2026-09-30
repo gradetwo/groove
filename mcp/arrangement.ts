@@ -14,6 +14,7 @@ import { toMusicXml } from "../src/data/musicxml";
 import { fromMusicXml, fromMusicXmlBytes } from "../src/data/musicxmlImport";
 import type { ImportedPart } from "../src/data/musicxmlImport";
 import { fromMidi } from "../src/data/midiToArrangement";
+import { arrangementToMidi } from "../src/data/arrangementToMidi";
 import type { MusicXmlImport } from "../src/data/musicxmlImport";
 import {
   TEMPLATES,
@@ -378,6 +379,63 @@ export function exportMcpMusicXml(arrangementId: string, options: { trackId?: st
   return { filename: `${safe}.musicxml`, mimeType: "application/vnd.recordare.musicxml+xml", bytes: xml.length, xml, track: track.name, bars };
 }
 
+/**
+ * ⭐ **The arrangement as a Standard MIDI File** — the file a DAW opens, and the half that was missing.
+ *
+ * The import has existed all along, so an agent could bring a DAW's work in and could not hand one back: a
+ * composer working through MCP wrote their own MIDI generator to get a score out. Import without export is an
+ * asymmetry, and this is the other side of it.
+ *
+ * **Every lane becomes a track and the conductor track carries the tempo and the meter**, which is what the
+ * importer reads back: it takes one part per track chunk in a format-1 file, so the round trip is the file's own
+ * structure rather than a convention chosen here. `arrangementToMidi` is pure and returns the bytes; the tool
+ * writes them to disk, which is why this is a writing tool rather than a reader that happens to hand back bytes.
+ *
+ * The `problems` list is returned beside the file and not folded into it: a lane's notes that overlap on one pitch
+ * are something MIDI cannot distinguish, and a caller who is told can decide, while one who is not finds out when
+ * the DAW plays something else.
+ */
+export interface ExportMcpMidiOptions {
+  /** A name for the file. The arrangement's own id is used when omitted, and `.mid` is appended when it is missing. */
+  filename?: string;
+}
+
+export function exportMcpArrangementMidi(
+  arrangementId: string,
+  options: ExportMcpMidiOptions = {}
+): {
+  filename: string;
+  mimeType: string;
+  bytes: Uint8Array;
+  format: number;
+  division: number;
+  tracks: Array<{ id: string; name: string; kind: TrackKindV2; channel: number; notes: number }>;
+  notes: number;
+  bpm: number;
+  timeSignature: string;
+  tempoEvents: Array<{ tick: number; atBar: number; bpm: number }>;
+  problems: string[];
+} {
+  const arrangement = requireArrangement(arrangementId);
+  const file = arrangementToMidi(arrangement);
+  /**
+   * The same Unicode-friendly slug `export_groove` uses: separators and control characters go, letters and digits
+   * of any script stay. A Chinese track name is a name, not a reason for `arrangement.mid`.
+   */
+  const base =
+    (options.filename ?? arrangementId)
+      .normalize("NFKC")
+      .replace(/[\s/\\:*?"<>|]+/g, "-")
+      .replace(/\p{Cc}/gu, "")
+      .replace(/^[.-]+|[.-]+$/g, "")
+      .slice(0, 40) || "arrangement";
+  return {
+    filename: base.toLowerCase().endsWith(".mid") ? base : `${base}.mid`,
+    mimeType: "audio/midi",
+    ...file,
+  };
+}
+
 /** How many steps one bar holds, re-exported so the MCP layer does not import the note module directly in two places. */
 import { STEPS_PER_BAR } from "../src/data/noteEvents";
 
@@ -429,7 +487,7 @@ export function importMcpMidi(
   arrangementId: string,
   bytesBase64: string,
   options: ImportMcpMusicXmlOptions = {}
-): ArrangementEditResult & { problems?: string[]; notes?: number; trackIds?: string[]; tempoBpm?: number; format?: number } {
+): ArrangementEditResult & { problems?: string[]; notes?: number; trackIds?: string[]; tempoBpm?: number; timeSignature?: string; format?: number } {
   const bytes = Buffer.from(bytesBase64, "base64");
   if (bytes.length === 0) {
     throw new Error("the file's bytes are empty — `bytesBase64` must be the base64 of the .mid file");
@@ -439,6 +497,8 @@ export function importMcpMidi(
     ...addImportedParts(arrangementId, imported, options),
     // Said out loud so a caller can set the arrangement's tempo from the file rather than guessing 120.
     ...(imported.tempoBpm === undefined ? {} : { tempoBpm: imported.tempoBpm }),
+    // And the meter, for the same reason: the arrangement has a `timeSignature` and the file may state one.
+    ...(imported.timeSignature === undefined ? {} : { timeSignature: imported.timeSignature }),
     format: imported.format,
   };
 }

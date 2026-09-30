@@ -156,7 +156,7 @@ const CAPABILITIES: Capability[] = [
   {
     surface: "sharing and export",
     feature: "share a link; export a song, a pattern or a score",
-    tools: ["share_url", "export_groove", "import_groove", "export_midi", "export_ableton", "export_arrangement_musicxml"],
+    tools: ["share_url", "export_groove", "import_groove", "export_midi", "export_ableton", "export_arrangement_musicxml", "export_arrangement_midi"],
     resources: ["groove://changelog", "groove://docs"],
   },
   {
