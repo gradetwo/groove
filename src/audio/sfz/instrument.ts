@@ -20,6 +20,15 @@ export interface ResolvedInstrumentNote {
   /** Playback rate: 1 means "at the recorded pitch". */
   ratio: number;
   seqPosition: number;
+  /**
+   * ⭐ **SFZ's choke groups, which a drum kit cannot be played without.**
+   *
+   * `group=N` puts a region in a group, and `off_by=N` says "starting me stops whatever is sounding in group N". That is how a closed hi-hat silences an open one, and a kit whose hats overlap is audibly wrong however good the samples are. The real library this project pins uses both (`group=41` and `off_by=41`).
+   *
+   * It comes out of the resolver rather than being read again by the caller because **only the resolver knows which region answered the note**: one instrument holds the closed hat and the open one, and the file decides which is which.
+   */
+  group?: number;
+  offBy?: number;
 }
 
 export interface InstrumentResolution {
@@ -69,10 +78,29 @@ export function resolveInstrumentNote(
     return { ok: false, regions, reason: playbackGap(audible, note) };
   }
 
+  /**
+   * The choke group and what this region silences, read off the region that answered. **A number that is not a number is left absent rather than becoming `NaN`**: a file that writes `group=hat` has done something the format does not allow, and the honest result is a region with no group rather than every region in one.
+   */
+  const asInt = (value: string | undefined): number | undefined => {
+    if (value === undefined) return undefined;
+    const parsed = Number.parseInt(value, 10);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
+  const answered = audible.find((region) => region.sample === playback.sample);
+  const group = asInt(answered?.opcodes.group);
+  const offBy = asInt(answered?.opcodes.off_by);
+
   return {
     ok: true,
     regions,
-    note: { samplePath: playback.sample, rootKey: playback.rootKey, ratio: playback.ratio, seqPosition: playback.seqPosition },
+    note: {
+      samplePath: playback.sample,
+      rootKey: playback.rootKey,
+      ratio: playback.ratio,
+      seqPosition: playback.seqPosition,
+      ...(group === undefined ? {} : { group }),
+      ...(offBy === undefined ? {} : { offBy }),
+    },
   };
 }
 

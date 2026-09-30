@@ -55,6 +55,13 @@ export interface LoadedNote {
   samplePath: string;
   /** The region's key centre, absent when the file sets none — which means "no transposition" rather than 60. */
   rootKey?: number;
+  /**
+   * The region's choke group and what it silences, passed through from the resolver.
+   *
+   * Carried here rather than looked up again by the player, because **the player never sees the SFZ text**: it gets a decoded buffer, and the file's opinion about which hat silences which is not recoverable from a buffer.
+   */
+  group?: number;
+  offBy?: number;
 }
 
 export function createSampleLoader(
@@ -170,7 +177,14 @@ export function createSampleLoader(
        */
       const defaultPath = readDefaultPath(expanded.text);
       const samplePath = resolveSamplePath(resolution.note.samplePath, defaultPath);
-      const noteInfo = { ratio: resolution.note.ratio, samplePath, ...(resolution.note.rootKey === undefined ? {} : { rootKey: resolution.note.rootKey }) };
+      const noteInfo = {
+        ratio: resolution.note.ratio,
+        samplePath,
+        ...(resolution.note.rootKey === undefined ? {} : { rootKey: resolution.note.rootKey }),
+        // The choke group travels with the note, because only the resolver knew which region answered it.
+        ...(resolution.note.group === undefined ? {} : { group: resolution.note.group }),
+        ...(resolution.note.offBy === undefined ? {} : { offBy: resolution.note.offBy }),
+      };
       const buffer = findSampleAsset(samplePath, catalogue)
         ? await api.load(samplePath)
         : await decodeAsset(sampleAssetForPath(samplePath, { programUrl: asset.sfz.url, programFallbackUrl: asset.sfz.fallbackUrl }));
