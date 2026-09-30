@@ -43,6 +43,38 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
   const voices = new Map<number, SamplerVoice[]>();
   const MAX_VOICES_PER_NOTE = 8;
 
+  /**
+   * ⭐ **The voices that are sounding, with the choke group each belongs to.**
+   *
+   * SFZ's `off_by=N` means "starting me stops whatever is sounding in group N", which is how a closed hi-hat silences an open one. The group is on the note because the resolver read it off the region that answered — the player only has buffers, and a buffer does not say which hat it is.
+   *
+   * Keyed by the note rather than kept in one list so a key release still stops exactly what it started, and the choke runs over all of them because the file's groups are not per key.
+   */
+  const soundingByGroup = new Map<number, Set<SamplerVoice>>();
+  const rememberGroup = (group: number | undefined, voice: SamplerVoice) => {
+    if (group === undefined) return;
+    const set = soundingByGroup.get(group) ?? new Set<SamplerVoice>();
+    set.add(voice);
+    soundingByGroup.set(group, set);
+  };
+  /** Stop every voice in one group, and say how many were stopped so the caller can report it rather than guess. */
+  const choke = (group: number | undefined): number => {
+    if (group === undefined) return 0;
+    const set = soundingByGroup.get(group);
+    if (!set) return 0;
+    let stopped = 0;
+    for (const voice of set) {
+      try {
+        voice.stop();
+        stopped += 1;
+      } catch {
+        // A voice that has already ended is not an error: `stop()` is idempotent in intent, and a choke that throws would silence the note that caused it.
+      }
+    }
+    set.clear();
+    return stopped;
+  };
+
   const audition = async ({ assetId, midi, trackId, gainDb }: { assetId: string; midi: number; trackId?: string; gainDb?: number }) => {
     if (engine.audioContext === null || engine.musicDestination === null) {
       // Reported rather than thrown, the same way `play` reports a missing engine: a key press that throws is worse than one that is silent for a stated reason.
@@ -57,6 +89,8 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
     );
     try {
       const note = await loader.loadNote(assetId, midi);
+      // ⭐ The choke happens **before** the new voice starts, so the cut is heard as the new note rather than a gap after it.
+      choke(note.offBy);
       const voice = startSamplerNote({
         context: engine.audioContext,
         destination: engine.musicDestination,
@@ -64,6 +98,7 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
         ratio: note.ratio,
         ...(gainDb === undefined ? {} : { gainDb }),
       });
+      rememberGroup(note.group, voice);
       const key = keyFor(trackId, midi);
       const list = voices.get(key) ?? [];
       list.push(voice);
