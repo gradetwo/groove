@@ -75,7 +75,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import os from "node:os";
 import path from "node:path";
 import { exportAbleton, exportMidi, loudnessReport, shareUrl, toBase64 } from "./exporting";
-import { analyseWavFile, renderAudio } from "./render/worker";
+import { analyseWavFile, renderAudio, renderStems } from "./render/worker";
 import { getGenreLoudnessTrimDb } from "../src/data/genreMix";
 import { setVocalMelody } from "./vocal";
 import { addMcpSection, createMcpSong, duplicateMcpSection, flattenMcpSong, getMcpSong, importMcpSong, makeUniqueMcpSection, mcpSongHistory, setMcpClip, setMcpLaneSlots, setMcpTempo, summariseSong, undoMcpSong } from "./song";
@@ -2196,6 +2196,39 @@ export const TOOLS: ToolDefinition[] = [
     handler: (args) => {
       try {
         return undoMcpSong(args.songId as string, (args.steps as number | undefined) ?? 1);
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "render_arrangement_stems",
+    title: "Render the arrangement as one file per track",
+    description:
+      "Bounce every track of an arrangement to **its own WAV**, next to each other in one directory, through the same offline engine as `render_arrangement`. Use it when the question is about a part rather than the mix: an agent that can hear the bass alone can fix a balance problem instead of guessing at one. Each reply entry carries the measured duration, sample rate, channel count and true peak of that stem, and a stem that rendered to silence says so rather than being reported as a file nobody can hear.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      sampleRate: z.number().int().min(8000).max(96000).optional().describe("default 44100; a lower rate renders faster and is honest about it"),
+      channels: z.union([z.literal(1), z.literal(2)]).optional().describe("default 2, the exporter's own stereo"),
+    },
+    handler: async (args) => {
+      try {
+        const { flattened, bars } = flattenMcpArrangement(String(args.arrangementId));
+        const result = await renderStems(flattened.pattern, {
+          format: "wav",
+          ...(args.sampleRate ? { sampleRate: args.sampleRate as number } : {}),
+          ...(args.channels ? { channels: args.channels as 1 | 2 } : {}),
+          bars: 1,
+          genreId: "custom",
+        });
+        const skipped = lanesWithoutMidi(flattened.pattern);
+        return {
+          ...result,
+          arrangementId: String(args.arrangementId),
+          bars,
+          ...(skipped.length ? { skippedLanes: skipped, skippedNote: "these lanes are not in the stems; a lane without notes has nothing to render" } : {}),
+        };
       } catch (error) {
         return failure((error as Error).message);
       }
