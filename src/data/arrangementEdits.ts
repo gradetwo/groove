@@ -161,6 +161,33 @@ export function renameTrack(arrangement: ArrangementV2, trackId: string, name: s
   return { ...arrangement, tracks: arrangement.tracks.map((track) => (track.id === trackId ? { ...track, name: trimmed } : track)) };
 }
 
+/**
+ * A track's level, in dB, where 0 is unity.
+ *
+ * **A separate edit from mute rather than a value of it**: Logic's track header has both for the same reason — a muted track keeps its level, and unmuting must not also undo a decision about how loud it is. Clamped to a range the engine can honour (±60 dB is already
+ * inaudible at both ends), so a slider cannot send a value that means "silence by accident".
+ */
+export function setTrackGain(arrangement: ArrangementV2, trackId: string, gainDb: number): ArrangementV2 {
+  const clamped = Math.max(-60, Math.min(12, gainDb));
+  return {
+    ...arrangement,
+    tracks: arrangement.tracks.map((track) => (track.id === trackId ? { ...track, gainDb: clamped } : track)),
+  };
+}
+
+/**
+ * A track's position in the stereo field: **−1 hard left, 0 centre, 1 hard right**, the same scale the genres already use.
+ *
+ * Stored on the track rather than in the notes, because panning a part is a decision about the part; a piano roll that stored it per note would make "move this track a little left" a thing you do 200 times.
+ */
+export function setTrackPan(arrangement: ArrangementV2, trackId: string, pan: number): ArrangementV2 {
+  const clamped = Math.max(-1, Math.min(1, pan));
+  return {
+    ...arrangement,
+    tracks: arrangement.tracks.map((track) => (track.id === trackId ? { ...track, pan: clamped } : track)),
+  };
+}
+
 export function setCollapsed(arrangement: ArrangementV2, trackId: string, collapsed: boolean): ArrangementV2 {
   return { ...arrangement, tracks: arrangement.tracks.map((track) => (track.id === trackId ? { ...track, collapsed } : track)) };
 }

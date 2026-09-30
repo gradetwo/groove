@@ -54,8 +54,10 @@ import {
   setMcpTrackCollapsed,
   setMcpTrackFlag,
   setMcpNoteLength,
+  setMcpTrackGain,
   setMcpTrackInstrument,
   setMcpTrackKind,
+  setMcpTrackPan,
   setMcpTrackParent,
   setMcpTrackSteps,
   summariseArrangement,
@@ -376,6 +378,34 @@ export const TOOLS: ToolDefinition[] = [
     handler: (args) => {
       try {
         return setMcpTrackFlag(String(args.arrangementId), String(args.trackId), args.flag as "muted" | "soloed", Boolean(args.value));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "set_arrangement_track_gain",
+    title: "Set a track's level",
+    description: "A track's level in dB, where 0 is unity. Clamped to −60…+12; a muted track keeps its level, so unmuting does not undo a decision about loudness.",
+    readOnly: false,
+    inputSchema: { arrangementId: z.string(), trackId: z.string(), gainDb: z.number().min(-60).max(12) },
+    handler: (args) => {
+      try {
+        return setMcpTrackGain(String(args.arrangementId), String(args.trackId), Number(args.gainDb));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "set_arrangement_track_pan",
+    title: "Place a track in the stereo field",
+    description: "−1 hard left, 0 centre, 1 hard right — the same scale the genres use. A property of the track rather than of each note, because panning a part is a decision about the part.",
+    readOnly: false,
+    inputSchema: { arrangementId: z.string(), trackId: z.string(), pan: z.number().min(-1).max(1) },
+    handler: (args) => {
+      try {
+        return setMcpTrackPan(String(args.arrangementId), String(args.trackId), Number(args.pan));
       } catch (error) {
         return failure((error as Error).message);
       }
