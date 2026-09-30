@@ -845,6 +845,9 @@
 [class~="bg-[#0c0e14]"] { background-color: rgb(var(--d-panel2)); }
 [class~="bg-[#0a0c12]"] { background-color: rgb(var(--d-panel2)); }
 [class~="to-[#0a0c12]"] { --tw-gradient-to: rgb(var(--d-panel2)); }
+[class~="bg-[#0c0e12]"] { background-color: rgb(var(--d-panel2)); }
+[class~="border-[#b0b3ba]"] { border-color: rgb(var(--d-track-fx)); }
+[class~="to-[#e0e2e8]"] { --tw-gradient-to: rgb(var(--d-track-fx)); }
 [class~="bg-[#0e1117]"] { background-color: rgb(var(--d-panel)); }
 [class~="bg-[#e5a93c]"] { background-color: rgb(var(--d-accent)); }
 [class~="hover:bg-[#e84855]"]:hover { background-color: rgb(var(--d-danger)); }
@@ -977,11 +980,8 @@
 [class~="text-[#c6c4bd]"] { color: rgb(var(--d-ink-2)); }
 [class~="bg-[#101217]/98"] { background-color: rgb(var(--d-panel) / 0.98); }
 [class~="via-[#101217]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-panel)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
-[class~="bg-[#0c0e12]"] { background-color: rgb(var(--d-panel2)); }
-[class~="border-[#b0b3ba]"] { border-color: rgb(var(--d-track-fx)); }
 [class~="to-[#ffe28a]"] { --tw-gradient-to: rgb(var(--d-track-perc)); }
 [class~="from-[#f2f3f7]"] { --tw-gradient-from: rgb(var(--d-track-fx)); }
-[class~="to-[#e0e2e8]"] { --tw-gradient-to: rgb(var(--d-track-fx)); }
 [class~="hover:to-[#ebedf2]"]:hover { --tw-gradient-to: rgb(var(--d-track-fx)); }
 [class~="to-[#ffd060]"] { --tw-gradient-to: rgb(var(--d-track-snare)); }
 [class~="border-[#2a2d36]"] { border-color: rgb(var(--d-surface)); }
