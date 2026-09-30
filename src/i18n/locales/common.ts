@@ -45,6 +45,8 @@ export const commonMessages = {
   template_drums_bass_desc: { en: "A drum kit and a bass — the most common pair", zh: "鼓组加贝斯，最常见的两件套" },
   template_drums_bass_chords_desc: { en: "Add chords and it can carry a whole song", zh: "再加一条和声，能撑起整首" },
   template_samplers_desc: { en: "Two sampler tracks — the kind that plays real instruments", zh: "两条采样器轨道——就是能听到真实乐器的那一种" },
+  ruler_label: { en: "Arrangement ruler", zh: "编排标尺" },
+  ruler_bar: { en: "Go to bar {bar}", zh: "跳到第 {bar} 小节" },
   bar_previous: { en: "Previous bar", zh: "上一小节" },
   bar_next: { en: "Next bar", zh: "下一小节" },
   roll_bars_unit: { en: "bars", zh: "小节" },
