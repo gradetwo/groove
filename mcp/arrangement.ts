@@ -536,7 +536,18 @@ export function flattenMcpArrangement(arrangementId: string): { flattened: Flatt
    * provenance it does not have.
    */
   const clip = { genre_id: "custom", bpm: songInput.bpm, scale: "chromatic", resolution: "1/16" as const, tracks: songInput.clips.A.tracks };
-  const song = createSong({ id: arrangement.songId, genreId: "custom", bpm: songInput.bpm, clip });
+  const song = createSong({
+    id: arrangement.songId,
+    genreId: "custom",
+    bpm: songInput.bpm,
+    clip,
+    /**
+     * ⭐ **The map the projection produced is handed to the song — without this, the two steps before it had no effect.**
+     *
+     * Creating the song with `bpm` alone dropped the map in silence, and that is exactly the failure the criterion is written to catch: two sections at different tempos would still render, just both at one tempo. The earlier attempt at this line was correct and failed only because the projection did not carry the field yet — the type check said so, which is why it is worth keeping the compiler in the loop rather than trusting that a spread "obviously" works.
+     */
+    ...(songInput.tempoTrack?.length ? { tempoTrack: songInput.tempoTrack } : {}),
+  });
   const flattened = flattenSong(song);
   if (!flattened.totalBars || flattened.totalSteps <= 0) {
     throw new Error(`cannot render "${arrangementId}": ${flattened.problems.join("; ") || "no playable steps"}`);
