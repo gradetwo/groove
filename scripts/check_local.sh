@@ -10,16 +10,34 @@
 # So this script checks **exit statuses**, prints only what failed, and stops at the first failure. The output is deliberately boring when everything passes: a line per step and no tail to misread.
 set -u
 
+# ⭐ **One log per run, and one gate per machine.**
+#
+# Both of these come from running several worktrees at once (owner's instruction, 2026-09-30) and reading the result wrong:
+#
+#   · the log path used to be the fixed `/tmp/check_local_step.log`, so **three gates in three worktrees overwrote each other** and a failing run printed another worktree's failure as its own. Found by an agent who noticed the printed paths belonged to a different checkout. The path now carries the checkout and the pid, and a failure prints which file it came from.
+#   · a second full suite on the same machine makes the **timing-sensitive criteria** flake — a real-sfizz pitch criterion failed at load average 24 and passed twice alone, at 880.00 vs 880.01 Hz against a 1% tolerance. A lock is cheaper than a flake: the second gate waits, and says so.
+LOCK="${TMPDIR:-/tmp}/groove-local-gate.lock"
+if [ -z "${GROOVE_GATE_LOCK_HELD:-}" ]; then
+  exec 9>"$LOCK"
+  if ! flock -n 9; then
+    echo "another local gate is running on this machine; waiting for it (a second suite makes timing-sensitive criteria flake)"
+    flock 9
+  fi
+  export GROOVE_GATE_LOCK_HELD=1
+fi
+
+LOG="${TMPDIR:-/tmp}/check_local_step.$(basename "$PWD").$$.log"
+
 failed=0
 step() {
   local name="$1"; shift
   printf '  %-14s ' "$name"
-  if "$@" >/tmp/check_local_step.log 2>&1; then
+  if "$@" >"$LOG" 2>&1; then
     echo "ok"
   else
     echo "FAILED (exit $?)"
-    echo "  ---- last 15 lines ----"
-    tail -15 /tmp/check_local_step.log | sed 's/^/  /'
+    echo "  ---- last 15 lines of $LOG ----"
+    tail -15 "$LOG" | sed 's/^/  /'
     failed=1
   fi
 }
