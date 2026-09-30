@@ -9,12 +9,13 @@
  */
 import { useCallback, useMemo, useState } from "react";
 import type { ArrangementV2, TrackKindV2 } from "../../types/arrangementV2";
-import { addTake, addTrack, changeTrackKind, setTrackGain, setTrackPan, setTrackSample, toggleStep, createArrangementFromTemplate, removeTrack, setCollapsed, setTrackFlag, selectTrackTake } from "../../data/arrangementEdits";
+import { addTake, addTrack, addTrackNote, changeTrackKind, removeTrackNote, setTrackGain, setTrackPan, setTrackSample, toggleStep, createArrangementFromTemplate, removeTrack, setCollapsed, setTrackFlag, selectTrackTake } from "../../data/arrangementEdits";
 import type { CaptureOutcome } from "../../audio/captureTake";
 import { TrackListV2, type InstrumentChoice } from "./TrackListV2";
 import { TakeSelectorV2 } from "./TakeSelectorV2";
 import { RecordButtonV2 } from "./RecordButtonV2";
 import { ArrangementKeyboardV2 } from "./ArrangementKeyboardV2";
+import { PianoRollV2 } from "./PianoRollV2";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { NewProjectPanelV2 } from "./NewProjectPanelV2";
 import { playArrangementV2, type ArrangementPlayer } from "../../audio/playArrangementV2";
@@ -131,6 +132,16 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
               *
               * Pressing a key resolves that instrument's note through the SFZ path and sounds it at the note's rate — the `audition` half of the player, which is what makes a mirrored library testable by hand.
               */}
+            {/**
+              * **The roll, for a track that plays pitches.** It is here rather than in a separate editor because the owner's complaint was having to leave the arrangement to enter notes; the keyboard below plays, this writes, and both act on the selected track.
+              */}
+            {selected.kind !== "fx" && selected.kind !== "folder" && (
+              <PianoRollV2
+                notes={arrangement.notesByTrack?.[selected.id] ?? []}
+                onAddNote={(note) => setArrangement((current) => addTrackNote(current, selected.id, note))}
+                onRemoveNote={(at) => setArrangement((current) => removeTrackNote(current, selected.id, at))}
+              />
+            )}
             {selected.kind === "sampler" && selected.sample ? (
               <ArrangementKeyboardV2
                 onNoteOn={(midi, velocity) => {
