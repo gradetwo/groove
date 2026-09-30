@@ -90,3 +90,93 @@ export function measurePitch(wav, { fromSeconds = 0, toSeconds = null, channel =
 
   return { hz: rate / periodSamples, confidence: best.value, periodSamples };
 }
+
+/**
+ * **The frequency of a tone, found as the peak of its spectrum.**
+ *
+ * This replaces two earlier attempts, and both failures are worth keeping in view because they are the reason for the shape below.
+ *
+ * `measurePitch` estimates a period by autocorrelation, and for exactly the signal the sfizz criteria use that is unstable: two renders of the same 440 Hz tone — into different directories, from a byte-identical source sample — came back as **880.01 Hz and 890.52 Hz**. A pure tone's correlation peak is flat-topped, so a hair of difference in the audio moved the chosen lag by one sample, and at roughly fifty samples per period that is two percent. Tightening the threshold helped and did not settle it: the criterion failed again at 1.195%.
+ *
+ * Zero crossings were the second attempt, and they failed differently: the same criterion then read **867.82 Hz** for an 880 Hz tone. That render carries the library's own amplitude envelope, and a global mean subtraction over a decaying signal leaves a moving mean behind, which shifts crossings asymmetrically.
+ *
+ * A **spectral peak** has neither problem. The tone's magnitude at its own frequency is what it is whether the tone is decaying or steady, and the peak of a smooth magnitude curve can be found to a small fraction of a bin by fitting a parabola to the three points around it. The search runs on a log-spaced grid — a tone is judged in ratio, not in hertz — and is refined twice, so the final precision is far finer than the first grid.
+ *
+ * `confidence` is how far the peak stands above the band's median magnitude, which is what keeps it honest for material that has no pitch: a sweep spreads its energy, and an unpeaked spectrum reports low confidence.
+ *
+ * @returns {{ hz: number, confidence: number, magnitude: number } | null}
+ */
+export function measureToneHz(wav, { fromSeconds = 0, toSeconds = null, channel = 0, minHz = 40, maxHz = 4000 } = {}) {
+  const rate = wav.sampleRate;
+  const start = Math.max(0, Math.round(fromSeconds * rate));
+  const end = Math.min(wav.frames, toSeconds === null ? wav.frames : Math.round(toSeconds * rate));
+  const length = end - start;
+  if (length < 256) return null;
+
+  const samples = wav.data[channel];
+  /** The magnitude at one frequency, by correlation: the same measurement the probe experiments used, because it is exact at the bin asked about. */
+  const magnitudeAt = (hz) => {
+    const omega = (2 * Math.PI * hz) / rate;
+    let re = 0;
+    let im = 0;
+    for (let i = 0; i < length; i += 1) {
+      const t = samples[start + i];
+      re += t * Math.cos(omega * i);
+      im += t * Math.sin(omega * i);
+    }
+    return (2 * Math.hypot(re, im)) / length;
+  };
+
+  const lowest = Math.max(minHz, rate / length);
+  const highest = Math.min(maxHz, rate / 2.2);
+  if (!(highest > lowest)) return null;
+
+  // A log-spaced grid: a tone is judged in ratio, so equal steps in pitch are equal steps here.
+  const steps = 600;
+  const ratio = Math.pow(highest / lowest, 1 / steps);
+  const grid = [];
+  let best = { hz: lowest, magnitude: -1 };
+  for (let i = 0; i <= steps; i += 1) {
+    const hz = lowest * Math.pow(ratio, i);
+    const magnitude = magnitudeAt(hz);
+    grid.push(magnitude);
+    if (magnitude > best.magnitude) best = { hz, magnitude };
+  }
+
+  /** Two parabolic refinements, each on a grid a hundred times finer than the last, around the current best. */
+  let centre = best.hz;
+  let span = centre * (ratio - 1) * 4;
+  for (let pass = 0; pass < 2; pass += 1) {
+    const local = [];
+    for (let i = -8; i <= 8; i += 1) {
+      const hz = centre + (span * i) / 8;
+      if (hz <= lowest || hz >= highest) continue;
+      local.push({ hz, magnitude: magnitudeAt(hz) });
+    }
+    if (local.length === 0) break;
+    const peakIndex = local.reduce((bestIndex, point, index) => (point.magnitude > local[bestIndex].magnitude ? index : bestIndex), 0);
+    const y0 = local[peakIndex - 1]?.magnitude ?? local[peakIndex].magnitude;
+    const y1 = local[peakIndex].magnitude;
+    const y2 = local[peakIndex + 1]?.magnitude ?? local[peakIndex].magnitude;
+    const denominator = y0 - 2 * y1 + y2;
+    const shift = denominator !== 0 ? (0.5 * (y0 - y2)) / denominator : 0;
+    const step = peakIndex + 1 < local.length ? local[peakIndex + 1].hz - local[peakIndex].hz : span / 8;
+    centre = local[peakIndex].hz + shift * step;
+    span = Math.abs(step) * 2;
+  }
+
+  /**
+   * **The peak's prominence among its neighbours, not among the whole grid.**
+   *
+   * The first version compared the peak to the median of every bin, and a **sweep** passed as confident: its energy is spread, so most bins are nearly empty and the median is tiny even though the spectrum around the peak is a plateau. Comparing the peak with the bins within ±20% of it asks the question that matters — is there a *peak* here — and a plateau answers no.
+   */
+  const neighbours = [];
+  for (let i = 0; i <= steps; i += 1) {
+    const hz = lowest * Math.pow(ratio, i);
+    if (hz > centre * 0.8 && hz < centre * 1.25) neighbours.push(grid[i]);
+  }
+  neighbours.sort((a, b) => a - b);
+  const neighbourMedian = neighbours[Math.floor(neighbours.length / 2)] ?? 0;
+  const confidence = best.magnitude > 0 ? Math.max(0, Math.min(1, 1 - neighbourMedian / best.magnitude)) : 0;
+  return { hz: centre, confidence, magnitude: best.magnitude };
+}

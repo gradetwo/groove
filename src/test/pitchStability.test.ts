@@ -7,7 +7,7 @@
  * So this file pins the property that was missing: **the same tone, measured twice from different files, must give the same answer.**
  */
 import { describe, expect, it } from "vitest";
-import { measurePitch } from "../../scripts/lib/pitch.mjs";
+import { measurePitch, measureToneHz } from "../../scripts/lib/pitch.mjs";
 
 const RATE = 44100;
 /** A 440 Hz tone as the oracle writes it: one second, the same phase every time. */
@@ -81,5 +81,72 @@ describe("the pitch estimator", () => {
 
   it("refuses a segment too short to measure rather than guessing", () => {
     expect(measurePitch(tone(440), { fromSeconds: 0, toSeconds: 0.001 })).toBeNull();
+  });
+});
+
+/**
+ * The tone measurement the sfizz criteria use, and **the two ways it is not allowed to fail again**.
+ *
+ * Its two predecessors each failed in a way worth naming. Autocorrelation picked the shoulder of a flat-topped peak and moved by a sample, which at ~50 samples per period is 2% — the same 880 Hz tone measuring 880.01 Hz in one render and 890.52 Hz in another. Zero crossings then read an 880 Hz tone as **867.82 Hz**, because the render carries the library's own amplitude envelope and a global mean subtraction over a decaying signal leaves a moving mean behind.
+ *
+ * So the properties held here are the ones that broke: the same tone twice must measure the same, and a **decaying** tone must measure what a steady one does.
+ */
+describe("the tone measurement", () => {
+  const RATE = 44100;
+  /** A tone with an optional decay, in decibels across the segment — the shape a real sampler's render has. */
+  function tone(hz: number, { seconds = 0.4, decayDb = 0, phase = 0 }: { seconds?: number; decayDb?: number; phase?: number } = {}) {
+    const frames = Math.round(RATE * seconds);
+    const data = new Float32Array(frames);
+    for (let i = 0; i < frames; i += 1) {
+      const progress = i / frames;
+      const amplitude = Math.pow(10, (-decayDb * progress) / 20);
+      data[i] = amplitude * Math.sin(2 * Math.PI * hz * (i / RATE) + phase);
+    }
+    return { sampleRate: RATE, channels: 1, frames, data: [data] };
+  }
+
+  const measured = (wav: ReturnType<typeof tone>) => measureToneHz(wav, { fromSeconds: 0.05, toSeconds: 0.35 });
+
+  it("measures a plain tone to within a fiftieth of a percent", () => {
+    for (const hz of [110, 220, 440, 880, 1760]) {
+      const found = measured(tone(hz));
+      expect(found, `${hz} Hz measured nothing`).not.toBeNull();
+      expect(Math.abs(found!.hz - hz) / hz, `${hz} Hz measured ${found!.hz.toFixed(3)}`).toBeLessThan(0.0002);
+    }
+  });
+
+  it("gives the same answer twice, which is what autocorrelation could not do", () => {
+    // ⭐ The regression: a phase a millionth of a radian off was enough to move the old estimate by two percent.
+    for (const hz of [220, 440, 880]) {
+      const first = measured(tone(hz))!.hz;
+      const second = measured(tone(hz, { phase: 1e-6 }))!.hz;
+      expect(Math.abs(first - second) / first, `${hz} Hz: ${first.toFixed(3)} vs ${second.toFixed(3)}`).toBeLessThan(0.0002);
+    }
+  });
+
+  it("measures a decaying tone as the same pitch, which is what zero crossings could not do", () => {
+    // ⭐ The second failure: a sampler's render has an envelope, and the answer must not depend on it.
+    for (const hz of [220, 440, 880]) {
+      const steady = measured(tone(hz))!.hz;
+      const decaying = measured(tone(hz, { decayDb: 40 }))!.hz;
+      expect(Math.abs(steady - decaying) / steady, `${hz} Hz: ${steady.toFixed(3)} steady vs ${decaying.toFixed(3)} decaying`).toBeLessThan(0.001);
+    }
+  });
+
+  it("does not claim a confident pitch for a signal that has none", () => {
+    // A sweep has no single period, so its energy is spread and the peak does not stand above the band.
+    const seconds = 0.4;
+    const frames = Math.round(RATE * seconds);
+    const sweep = new Float32Array(frames);
+    for (let i = 0; i < frames; i += 1) {
+      const t = i / RATE;
+      sweep[i] = Math.sin(2 * Math.PI * (200 * t + ((2000 - 200) * t * t) / (2 * seconds)));
+    }
+    const found = measureToneHz({ sampleRate: RATE, channels: 1, frames, data: [sweep] }, { fromSeconds: 0.05, toSeconds: 0.35 });
+    expect(found === null || found.confidence < 0.9).toBe(true);
+  });
+
+  it("refuses a segment too short to say anything", () => {
+    expect(measureToneHz(tone(440, { seconds: 0.002 }), {})).toBeNull();
   });
 });
