@@ -204,6 +204,30 @@ export function setArrangementBars(arrangement: ArrangementV2, bars: number): Ar
   return { ...arrangement, bars: clamped };
 }
 
+/**
+ * ⭐ **A signature that cannot be read is refused, and that is deliberately unlike its two neighbours.**
+ *
+ * `setArrangementTempo` and `setArrangementBars` above both **clamp** — an unreadable tempo becomes 120, an unreadable
+ * length becomes 1 — and for a number that is the right call, because something has to be chosen and the choice is
+ * harmless. A time signature is not a number: `"4/5"` or `"waltz"` clamped to `"4/4"` would leave a caller believing a
+ * 7/8 arrangement had been written when a 4/4 one had, and every bar length downstream would be wrong in a way that
+ * looks like the caller's own arithmetic. **An assumption must not look like a reading** — the rule this work has
+ * applied to MIDI tempo, to the analysis curve, and to the summary beside it.
+ *
+ * The value is normalised to `n/d` with no spaces, because two spellings of one signature is how a later comparison
+ * against `"3/4"` starts failing.
+ */
+export function setArrangementTimeSignature(arrangement: ArrangementV2, timeSignature: string): ArrangementV2 {
+  const normalised = timeSignature.trim().replace(/\s*\/\s*/, "/");
+  const match = /^(\d+)\/(\d+)$/.exec(normalised);
+  const perBar = match ? Number(match[1]) : 0;
+  const unit = match ? Number(match[2]) : 0;
+  if (!match || perBar <= 0 || unit <= 0) {
+    throw new Error(`"${timeSignature}" is not a time signature — write it as two positive numbers, e.g. "4/4", "3/4", "6/8"`);
+  }
+  return { ...arrangement, timeSignature: normalised };
+}
+
 export function setTrackGain(arrangement: ArrangementV2, trackId: string, gainDb: number): ArrangementV2 {
   const clamped = Math.max(-60, Math.min(12, gainDb));
   return {
