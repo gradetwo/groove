@@ -111,6 +111,13 @@ Two things this surface states rather than leaves to be discovered:
 | `set_arrangement_track_steps` ▣ | `arrangementId`, `trackId`, `steps` | the pattern written whole; a step is on when non-zero, and the length is the caller's |
 | `add_arrangement_take` ▣ | `arrangementId`, `trackId`, `source`, `label?`, `recordedAt?`, `startBar?`, `endBar?` | the take filed and selected; a bar range is claimed when one is given |
 | `render_arrangement` ▣ | `arrangementId`, `format?`, `bitrateKbps?`, `sampleRate?`, `channels?` | the bounce, through the same offline engine the song and pattern tools use. **An arrangement is one bar of sixteen steps**, so this is the loop, not a piece |
+| `add_arrangement_note` ▣ | `arrangementId`, `trackId`, `pitch`, `startBeats`, `lengthBeats?`, `velocity?` | one note written where it starts in **beats**, how long it is held, its pitch and velocity — the edit a piano roll uses, not limited to a grid |
+| `remove_arrangement_note` ▣ | `arrangementId`, `trackId`, `pitch`, `startBeats` | the note at that position removed; removing nothing is not an error, so a caller may be idempotent |
+| `move_arrangement_note` ▣ | `arrangementId`, `trackId`, `pitch`, `startBeats`, `toPitch`, `toStartBeats` | the note moved in time and pitch; **refused when the destination already holds a note**, rather than merging two into one |
+| `set_arrangement_note_length` ▣ | `arrangementId`, `trackId`, `pitch`, `startBeats`, `lengthBeats` | how long the note is held, with a floor of one step — shorter than that and it is invisible in the grid |
+| `set_arrangement_track_gain` ▣ | `arrangementId`, `trackId`, `gainDb` | the track's level, 0 at unity, clamped to −60…+12; a muted track keeps its level |
+| `set_arrangement_track_pan` ▣ | `arrangementId`, `trackId`, `pan` | −1 hard left, 0 centre, 1 hard right — the scale the genres already use |
+| `render_arrangement` ▣ | `arrangementId`, `format?`, `bitrateKbps?`, `sampleRate?`, `channels?` | the bounce, through the same offline engine the song tools use. **An arrangement is one bar of sixteen steps**, so this is the loop rather than a piece |
 | `select_arrangement_take` ▣ | `arrangementId`, `trackId`, `takeId` | which take plays, or cleared with `null` |
 | `assign_arrangement_take_range` ▣ | `arrangementId`, `trackId`, `takeId`, `startBar`, `endBar` | an existing take claimed for a bar range, splitting any range it crosses |
 | `set_arrangement_track_collapsed` ▣ | `arrangementId`, `trackId`, `collapsed` | folded in the interface; display only, and never a change to what is heard |
