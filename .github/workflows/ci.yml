@@ -2,9 +2,11 @@ name: CI
 
 on:
   push:
-    # `dev` is the branch the CI work lands on (feature work is cherry-picked into it from the local tree and
-    # `main` is moved by merging `dev`); without it here, a push to `dev` would run nothing at all.
-    branches: [main, next, dev]
+    # ⭐ **Every branch**, because branches are how parallel work is kept apart and the fast checks are what tells each one whether it is still healthy. The owner's division of labour (2026-09-30): a development push runs `validate` — typecheck, lint, unit tests, build,
+    # bundle budget — and the browser matrix is reserved for `main` and for a release, which asks for it by hand.
+    #
+    # Before this, only `main`, `next` and `dev` triggered anything, so a branch could only be checked by running the gate on the machine that wrote it — which is exactly what several worktrees at once make hard to do.
+    branches: ["**"]
   pull_request:
     branches: [main, next, dev]
   # The heavy checks live in the `nightly` job: they are slow (the full 7-target browser
@@ -166,7 +168,8 @@ jobs:
     #   · `workflow_dispatch` is how a release asks for everything — `npm run ci:full` does exactly that.
     #
     # Skipped on schedule: `nightly` runs the same full matrix plus coverage, the loudness freshness check and the performance gate.
-    if: github.event_name != 'schedule' && (github.ref == 'refs/heads/main' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')
+    # ⭐ **The matrix runs where the answer matters and nowhere else**: `main` is what is live, a release asks for it by hand, and a development branch gets the fast checks instead. A pull request is a branch push, so it needs no separate rule.
+    if: github.event_name != 'schedule' && (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch')
     # Three legs instead of one seven-target run.
     #
     # The targets are independent browsers and devices, and the job used to walk all seven in a single runner:
