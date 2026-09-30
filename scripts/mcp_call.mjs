@@ -31,11 +31,14 @@ if (!fs.existsSync(SERVER)) {
 
 const outIndex = argv.indexOf("--out");
 const outFile = outIndex >= 0 ? argv[outIndex + 1] : undefined;
+const scriptIndex = argv.indexOf("--script");
+const scriptFile = scriptIndex >= 0 ? argv[scriptIndex + 1] : undefined;
 const rawJson = argv.includes("--json");
 /**
- * The `--out` value is the only non-flag argument that is not positional, and it is only skipped **when `--out` is actually present**. The first version wrote `index !== outIndex + 1` unconditionally, so with no `--out` it dropped index 0 — the tool name — and called a tool named after the JSON string.
+ * The `--out` and `--script` values are the only non-flag arguments that are not positional, and each is skipped **only when its flag is present**. The first version wrote `index !== outIndex + 1` unconditionally, so with no `--out` it dropped index 0 — the tool name — and called a tool named after the JSON string.
  */
-const positional = argv.filter((value, index) => !value.startsWith("--") && !(outIndex >= 0 && index === outIndex + 1));
+const consumed = new Set([outIndex + 1, scriptIndex + 1].filter((index) => index > 0 && argv[index] !== undefined && !argv[index].startsWith("--")));
+const positional = argv.filter((value, index) => !value.startsWith("--") && !consumed.has(index));
 const [tool, argsText] = positional;
 
 const outDir = process.env.GROOVE_MCP_OUT ?? fs.mkdtempSync(path.join(os.tmpdir(), "groove-mcp-call-"));
@@ -101,6 +104,37 @@ try {
     clientInfo: { name: "mcp_call", version: "1" },
   });
   child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized", params: {} })}\n`);
+
+  /**
+   * ⭐ **A flow runs in one session, because the server does not remember anything between processes.**
+   *
+   * Measured, and it cost three rounds of confusion: `create_song` answered with an id, the next invocation answered
+   * `unknown songId`, and the reason is that every call here used to start its own server. Anything stateful —
+   * create, set a tempo map, render, compare — cannot be expressed as separate commands at all. Muse's nine-movement
+   * session worked because her client held one session open, which is the thing this file has to be able to do.
+   *
+   * `--script <file.json>` runs a list of calls in this one process:
+   *
+   * ```json
+   * [{ "tool": "create_song", "args": { "genreId": "chicago-house" } },
+   *  { "tool": "set_tempo", "args": { "songId": "…", "tempoTrack": [{ "atBar": 1, "bpm": 60 }] } }]
+   * ```
+   *
+   * Each reply is printed under a heading naming its tool, so a caller can read the flow rather than infer it.
+   */
+  if (scriptFile) {
+    const steps = JSON.parse(fs.readFileSync(scriptFile, "utf8"));
+    if (!Array.isArray(steps)) {
+      console.error(`❌ ${scriptFile} must hold an array of { tool, args } steps`);
+      process.exit(2);
+    }
+    for (const [index, step] of steps.entries()) {
+      const stepReply = await request("tools/call", { name: step.tool, arguments: step.args ?? {} });
+      console.log(`── ${index + 1}/${steps.length} ${step.tool}`);
+      console.log(JSON.stringify(stepReply.error ? { error: stepReply.error } : payload(stepReply), null, 2));
+    }
+    process.exit(0);
+  }
 
   if (tool === "--list" || tool === undefined) {
     const listed = await request("tools/list", {});
