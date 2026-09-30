@@ -60,6 +60,12 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
   const voices = new Map<number, SamplerVoice[]>();
   const MAX_VOICES_PER_NOTE = 8;
   /**
+   * ⭐ **The keys whose voices ignore a release**, because the region says `loop_mode=one_shot`.
+   *
+   * A drum hit rings out however briefly the key is held, so releasing it must not stop anything — measured with sfizz: the same 0.1-second note on a one-second sample lasts 2.091 s with `one_shot` and 0.341 s without. **A choke still stops these**: `one_shot` governs the key release and `off_by` governs the choke, and they answer different questions.
+   */
+  const oneShotKeys = new Set<number>();
+  /**
    * The sampler steps `play` scheduled, separately from `voices`, because a transport stop is not a key release: it silences everything the arrangement started, whereas `releaseNote` names one key.
    */
   const scheduled: SamplerVoice[] = [];
@@ -121,6 +127,9 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
       });
       rememberGroup(note.group, voice);
       const key = keyFor(trackId, midi);
+      // A one-shot key is remembered as such, so the release that follows knows there is nothing to stop.
+      if (note.oneShot) oneShotKeys.add(key);
+      else oneShotKeys.delete(key);
       const list = voices.get(key) ?? [];
       list.push(voice);
       voices.set(key, list.slice(-MAX_VOICES_PER_NOTE));
@@ -218,6 +227,10 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
     audition,
     releaseNote({ trackId, midi }) {
       const key = keyFor(trackId, midi);
+      /**
+       * ⭐ **A one-shot voice is not stopped by a release, and the count says zero.** Returning the number of voices actually stopped is what makes this visible to a criterion: a file that asks for a ringing drum hit answers `0` here, and one that does not answers the number it stopped.
+       */
+      if (oneShotKeys.has(key)) return 0;
       const list = voices.get(key);
       if (!list) return 0;
       voices.delete(key);
