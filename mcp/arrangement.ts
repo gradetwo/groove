@@ -425,8 +425,9 @@ function refuseUnknownTrack(arrangement: ArrangementV2, trackId: string, apply: 
 /**
  * The arrangement as something the renderer can bounce, through the same flatten the application uses.
  *
- * **An arrangement is one bar of sixteen steps, and saying so here is the point.** The v2 model holds steps per track and no length of its own, so "render the arrangement" means the loop the interface's Play button plays — not a piece. Offering it as a longer
- * request would be a promise the model cannot keep; when the model gains a length, this follows.
+ * **The length and the tempo are the arrangement's.** `compileArrangementToSongInput` reads `arrangement.bars` and `arrangement.bpm` — through the same `stepCountFor` the interface uses — so a note written in
+ * bar three and a tempo set on the arrangement are what a bounce hears, rather than a compile that claimed one bar at 120 bpm. A caller that wants a longer render moves the arrangement's own length with
+ * `set_arrangement_bars`; this stays "render this arrangement" and nothing more.
  *
  * The chain is the application's own: `compileArrangementToSongInput` projects the tracks onto the eight v1 roles, `createSong` wraps them as one clip and one section, and `flattenSong` turns that into the pattern `renderAudio` takes. Nothing here invents a
  * second renderer, which is the rule the whole MCP render surface follows.

@@ -105,6 +105,13 @@ export interface ArrangementV2 {
    * It exists because a note has a position in **musical time**, and musical time has to have somewhere to be. Without it, a roll can only show the sixteen steps a lane happens to hold, and "write something in bar 3" is not a thing a person can do.
    */
   bars?: number;
+  /**
+   * The tempo the arrangement plays at, in beats per minute. Absent means 120, which is what the compiled lanes assumed when this field did not exist.
+   *
+   * It is here for the same reason `bars` is: a note's `startBeats` is a position in musical time, and how long a beat lasts is the other half of that. The engine already owns the tempo of whatever pattern it is handed
+   * (`SequencerPattern.bpm`), so this is what lets an arrangement state its own instead of silently playing at the last tempo the studio used.
+   */
+  bpm?: number;
   /** Every clip slot that carried at least one track, so a projection can be checked for completeness. */
   sourceSlots: string[];
 }
