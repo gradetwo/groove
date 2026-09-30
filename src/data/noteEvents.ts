@@ -161,13 +161,25 @@ function sameGridPosition(a: NoteEvent, b: NoteEvent): boolean {
  * **The longer of the two, deliberately.** A stated length that is shorter than the notes is not a compression, it is a deletion: the compile would drop everything past the end. A stated length that is longer than the notes is just silence, which is a legitimate thing for an arrangement to contain. So the length is respected and the content is
  * never cut.
  */
-export function stepCountFor(notes: readonly NoteEvent[], bars: number | undefined): number {
-    const stated = Math.max(1, Math.round(bars ?? 0)) * STEPS_PER_BAR;
+export function stepCountFor(notes: readonly NoteEvent[], bars: number | undefined, stepsPerBar: number = STEPS_PER_BAR): number {
+    /**
+     * ⭐ **The bar's length is a parameter now, and its default is the constant — so nothing that exists changes.**
+     *
+     * `STEPS_PER_BAR` is sixteen, right for 4/4 and wrong for a 3/4 movement, and Muse had to convert those by hand
+     * because there was no way to say otherwise. Threading it in as an **optional third argument defaulting to the
+     * constant** means every existing caller keeps exactly the arithmetic it had, while a caller who knows the
+     * signature passes `stepsPerBarFor(signature)` and gets twelve where the bar is three quarters.
+     *
+     * A signature that says nothing is therefore not a regression: the default **is** the old behaviour, which is why
+     * this can land without touching a single existing expectation.
+     */
+    const perBar = Math.max(1, Math.round(stepsPerBar));
+    const stated = Math.max(1, Math.round(bars ?? 0)) * perBar;
     const needed = notes.reduce((longest, note) => Math.max(longest, Math.round(note.startBeats * STEPS_PER_BEAT) + 1), 0);
     /**
      * **Rounded up to a whole bar**, because bars are what an arrangement is measured in and a grid of thirty-three steps is two bars and a step — a loop that ends in the middle of a bar is a loop nobody can play along with. The stated length is already a whole number
      * of bars, so this only ever affects the content's reach.
      */
-    const spanned = Math.max(STEPS_PER_BAR, stated, needed);
-    return Math.ceil(spanned / STEPS_PER_BAR) * STEPS_PER_BAR;
+    const spanned = Math.max(perBar, stated, needed);
+    return Math.ceil(spanned / perBar) * perBar;
 }
