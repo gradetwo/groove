@@ -70,6 +70,26 @@
 
 ---
 
+## 下一项的实施方案（已定，可直接执行）
+
+**`get_energy_curve`：让曲线直接吃作品，留在进程内。**
+
+与今天必须绕的远路对比：`analyze_audio` 要**一个已渲染的 WAV 路径**（`analyseWavFile`），而文档里的用法（§5.4 第 829 行）是直接问作品。所以要开的是**入口**，不是分析器——底层与通道都已在位。
+
+| 步骤 | 具体动作 | 位置 |
+| --- | --- | --- |
+| 1 | 复用 `energyCurveDb(channels, sampleRate)`，不新写 DSP | `mcp/render/worker.ts:409` |
+| 2 | 以 `sampleRate: 8000, channels: 1` 渲染分析（`RenderOptions` 已支持这两个字段） | `mcp/render/worker.ts` `RenderOptions` |
+| 3 | 把曲线按 `bars` 归并成粗粒度，并给出每段峰值 | 新增，紧邻 `analyze_audio` |
+| 4 | 注册工具：`readOnly: true`，入参 `songId | genreId+pattern? | bars? | windowMs?`（默认 50 ms） | `mcp/registry.ts`，`analyze_audio` 旁 |
+| 5 | 判据一：曲线条数与请求的 `bars`/窗口**对应**（不是"有个数组就算"） | 新增测试 |
+| 6 | 判据二：同一输入**可重复**；把某段音量整体降低，对应位置的值**必下降**（反向即红） | 新增测试 |
+| 7 | 协议级检查：曲线长度与 `bars` 一致、值域落在函数既有量纲内 | `scripts/check_mcp.mjs`（将成为第 91 项） |
+
+**为什么写成表格**：这个项目的教训是，缺口一旦被描述成"大概要做个能量曲线工具"，下一步就会重新推导一遍位置与形状；把位置钉在行号上，下一步就只剩编辑。
+
+---
+
 ## 能力缺口（Muse 一手使用中点名，按价值排序）
 
 1. **编排侧 tempo map** —— 九个乐章 BPM 各异（66–168），当前只能拆成九个编排分别渲染再外部拼接；一个 `set_tempo_map` 即可省掉整条绕路（`set_tempo` 只作用于 song 层）。
