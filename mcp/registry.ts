@@ -56,6 +56,7 @@ import {
   setMcpTrackCollapsed,
   setMcpTrackFlag,
   setMcpArrangementBars,
+  setMcpArrangementTempo,
   setMcpNoteLength,
   setMcpTrackGain,
   setMcpTrackInstrument,
@@ -447,6 +448,20 @@ export const TOOLS: ToolDefinition[] = [
         return importMcpMusicXml(String(args.arrangementId), String(args.xml), {
           ...(args.partIndex === undefined ? {} : { partIndex: Number(args.partIndex) }),
         });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "set_arrangement_tempo",
+    title: "Set the arrangement's tempo",
+    description: "Beats per minute, clamped to 20…300. The arrangement's own tempo rather than the song's: the same projection played at two speeds is two performances.",
+    readOnly: false,
+    inputSchema: { arrangementId: z.string(), bpm: z.number().min(20).max(300) },
+    handler: (args) => {
+      try {
+        return setMcpArrangementTempo(String(args.arrangementId), Number(args.bpm));
       } catch (error) {
         return failure((error as Error).message);
       }

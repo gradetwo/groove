@@ -28,6 +28,7 @@ import {
   selectTrackTake,
   setCollapsed,
   setArrangementBars,
+  setArrangementTempo,
   setTrackFlag,
   setTrackGain,
   setTrackNoteLength,
@@ -95,6 +96,8 @@ export interface ArrangementSummary {
   templates: string[];
   /** How long the arrangement is, in bars — absent for an older file, which means "as long as its content needs". */
   bars?: number;
+  /** Beats per minute — absent for an older file, which plays at 120, the value the compile used to hardcode. */
+  bpm?: number;
   /**
    * How many sixteenth steps the arrangement actually spans: its stated length or its last note, whichever is further. **Reported beside `bars` rather than instead of it**, because "where may I write" is a step question and "how long is the"
    * is a bar question.
@@ -155,6 +158,7 @@ export function summariseArrangement(arrangementId: string, arrangement: Arrange
     arrangementId,
     songId: arrangement.songId,
     ...(arrangement.bars === undefined ? {} : { bars: arrangement.bars }),
+    ...(arrangement.bpm === undefined ? {} : { bpm: arrangement.bpm }),
     steps: stepCountFor(allNotes, arrangement.bars),
     trackCount: arrangement.tracks.length,
     tracks: arrangement.tracks.map((track) => summariseTrack(track, arrangement)),
@@ -391,6 +395,11 @@ export function importMcpMusicXml(arrangementId: string, xml: string, options: {
     return { ...withTrack, notesByTrack: { ...(withTrack.notesByTrack ?? {}), [trackId]: part.notes } };
   });
   return { ...result, problems: imported.problems, notes: part.notes.length };
+}
+
+/** ⭐ The arrangement's tempo in beats per minute. It reached the engine as a hardcoded 120 until this existed. */
+export function setMcpArrangementTempo(arrangementId: string, bpm: number): ArrangementEditResult {
+  return edit(arrangementId, (arrangement) => setArrangementTempo(arrangement, bpm));
 }
 
 export function setMcpArrangementBars(arrangementId: string, bars: number): ArrangementEditResult {
