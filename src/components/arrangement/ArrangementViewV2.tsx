@@ -9,7 +9,7 @@
  */
 import { useCallback, useMemo, useState } from "react";
 import type { ArrangementV2, TrackKindV2 } from "../../types/arrangementV2";
-import { addTake, addTrack, changeTrackKind, setTrackSample, toggleStep, createArrangementFromTemplate, removeTrack, setCollapsed, setTrackFlag, selectTrackTake } from "../../data/arrangementEdits";
+import { addTake, addTrack, changeTrackKind, setTrackGain, setTrackPan, setTrackSample, toggleStep, createArrangementFromTemplate, removeTrack, setCollapsed, setTrackFlag, selectTrackTake } from "../../data/arrangementEdits";
 import type { CaptureOutcome } from "../../audio/captureTake";
 import { TrackListV2, type InstrumentChoice } from "./TrackListV2";
 import { TakeSelectorV2 } from "./TakeSelectorV2";
@@ -95,6 +95,8 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
         instruments={instruments}
         onChangeInstrument={(trackId, assetId) => setArrangement((current) => setTrackSample(current, trackId, assetId))}
         onToggleStep={(trackId, index) => setArrangement((current) => toggleStep(current, trackId, index))}
+        onChangeGain={(trackId, gainDb) => setArrangement((current) => setTrackGain(current, trackId, gainDb))}
+        onChangePan={(trackId, pan) => setArrangement((current) => setTrackPan(current, trackId, pan))}
       />
 
       <div data-testid="arrangement-transport" className="flex items-center gap-2">

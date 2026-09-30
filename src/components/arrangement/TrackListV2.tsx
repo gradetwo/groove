@@ -31,6 +31,9 @@ export interface TrackListV2Props {
    * Turn one of a track's own steps on or off. Optional so the list can be rendered as a report of the arrangement, without an editing surface.
    */
   onToggleStep?: (trackId: string, index: number) => void;
+  /** A track's level in dB and its place in the stereo field, both inline — Logic's track header has both for a reason: they are what a person reaches for while listening. */
+  onChangeGain?: (trackId: string, gainDb: number) => void;
+  onChangePan?: (trackId: string, pan: number) => void;
 }
 
 /**
@@ -90,7 +93,7 @@ function depthOf(track: TrackV2, all: readonly TrackV2[], seen = new Set<string>
 
 const ADDABLE: TrackKindV2[] = ["sampler", "instrument", "drumkit", "fx", "folder"];
 
-export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, onToggleCollapse, onChangeKind, instruments = [], onChangeInstrument, onToggleStep }: TrackListV2Props) {
+export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, onToggleCollapse, onChangeKind, instruments = [], onChangeInstrument, onToggleStep, onChangeGain, onChangePan }: TrackListV2Props) {
   const { t } = useLanguage();
   // Which row's library panel is open. One at a time: two panels open would make the list jump as each one changes its height.
   const [openLibraryFor, setOpenLibraryFor] = useState<string | undefined>(undefined);
@@ -161,6 +164,41 @@ export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, 
                     // Closing on a choice is what the panel is for: a person who picked one is done with it.
                     setOpenLibraryFor(undefined);
                   }}
+                />
+              )}
+              {/*
+                **Level and pan, in the row.** The owner's reference is Logic's track header, which carries a volume slider and a pan knob beside mute and solo — because a person adjusting a mix is looking at the track, not at a mixer they have to open. The values are
+                the model's own: dB with 0 at unity, and pan −1…1.
+              */}
+              {onChangeGain && (
+                <input
+                  type="range"
+                  min={-60}
+                  max={12}
+                  step={0.5}
+                  value={track.gainDb ?? 0}
+                  aria-label={`${track.name} level`}
+                  data-testid={`track-gain-${track.id}`}
+                  onChange={(event) => onChangeGain(track.id, Number(event.target.value))}
+                  className="w-20 accent-[var(--d-accent)]"
+                />
+              )}
+              {onChangeGain && (
+                <span data-testid={`track-gain-value-${track.id}`} className="w-12 text-right font-['JetBrains_Mono'] text-[10px] text-text opacity-70">
+                  {(track.gainDb ?? 0).toFixed(1)} dB
+                </span>
+              )}
+              {onChangePan && (
+                <input
+                  type="range"
+                  min={-1}
+                  max={1}
+                  step={0.05}
+                  value={track.pan ?? 0}
+                  aria-label={`${track.name} pan`}
+                  data-testid={`track-pan-${track.id}`}
+                  onChange={(event) => onChangePan(track.id, Number(event.target.value))}
+                  className="w-16 accent-[var(--d-accent)]"
                 />
               )}
               <button type="button" className={`w-7 h-7 rounded text-xs ${track.muted ? "bg-[var(--d-accent)] text-[var(--d-accent-ink)]" : "border border-[var(--d-border,rgba(255,255,255,0.15))] text-text"}`} aria-pressed={Boolean(track.muted)} onClick={() => onToggle(track.id, "muted", !track.muted)}>

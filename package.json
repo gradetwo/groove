@@ -73,7 +73,8 @@
     "check:mcp:build": "node scripts/check_mcp_build.mjs",
     "verify:code": "npm run check:node && npm run check:actions && npm run version:check && npm run docs:check && npm run redlines && npm run check:layers && npm run check:isolation && npm run check:css && npm run check:skins && npm run check:skin-roles && npm run check:docs:refs && npm run typecheck && npm run lint && npm run lint:data && npm run test && npm run build && npm run probe:boot && npm run probe:toolbar && npm run probe:grid-gutter && npm run probe:arrangement && npm run probe:live-arrangement && npm run check:budget && npm run check:covers && npm run check:gs1 && npm run check:mcp:build && npm run check:mcp && npm run check:layout && npm run check:loudness && npm run check:loudness:fresh && npm run check:timbre && npm run test:e2e && npm run test:e2e:mobile && npm run probe:continuity && npm run probe:jank && npm run probe:skins",
     "ci:status": "bash scripts/watch_ci.sh",
-    "ci:watch": "bash scripts/watch_ci.sh --watch"
+    "ci:watch": "bash scripts/watch_ci.sh --watch",
+    "push:dev": "bash scripts/push_dev.sh"
   },
   "dependencies": {
     "@breezystack/lamejs": "^1.2.7",

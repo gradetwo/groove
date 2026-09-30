@@ -25,7 +25,9 @@ import {
   selectTrackTake,
   setCollapsed,
   setTrackFlag,
+  setTrackGain,
   setTrackNoteLength,
+  setTrackPan,
   setTrackParent,
   setTrackSample,
   setTrackSteps,
@@ -62,6 +64,10 @@ export interface ArrangementTrackSummary {
   muted: boolean;
   soloed: boolean;
   collapsed: boolean;
+  /** Level in dB, absent meaning unity — the value the row's slider shows. */
+  gainDb?: number;
+  /** −1 to 1, absent meaning centre. */
+  pan?: number;
   parentId?: string;
   /** The catalogue asset a sampler track plays, when one is chosen. */
   sampleAssetId?: string;
@@ -107,6 +113,8 @@ function summariseTrack(track: TrackV2, arrangement: ArrangementV2): Arrangement
     muted: track.muted === true,
     soloed: track.soloed === true,
     collapsed: track.collapsed === true,
+    ...(track.gainDb === undefined ? {} : { gainDb: track.gainDb }),
+    ...(track.pan === undefined ? {} : { pan: track.pan }),
     ...(track.parentId ? { parentId: track.parentId } : {}),
     ...(track.sample ? { sampleAssetId: track.sample.assetId } : {}),
     steps,
@@ -310,6 +318,15 @@ export function assignMcpTakeRange(arrangementId: string, trackId: string, takeI
     if (endBar <= startBar) throw new Error(`the range must end after it starts (got ${startBar} to ${endBar})`);
     return assignTakeToRange(arrangement, trackId, startBar, endBar, takeId);
   });
+}
+
+/** A track's level in dB (0 = unity), or its place in the stereo field (−1 left, 0 centre, 1 right). */
+export function setMcpTrackGain(arrangementId: string, trackId: string, gainDb: number): ArrangementEditResult {
+  return edit(arrangementId, (arrangement) => refuseUnknownTrack(arrangement, trackId, () => setTrackGain(arrangement, trackId, gainDb)));
+}
+
+export function setMcpTrackPan(arrangementId: string, trackId: string, pan: number): ArrangementEditResult {
+  return edit(arrangementId, (arrangement) => refuseUnknownTrack(arrangement, trackId, () => setTrackPan(arrangement, trackId, pan)));
 }
 
 /** Folding a folder. Display only, which the tool's own description repeats because a client reads that and not this. */
