@@ -107,7 +107,15 @@ const fail = async (message) => {
 };
 
 try {
+  /**
+   * ⭐ **Stage markers on the Node side, because a hang here has been invisible.**
+   *
+   * The lane curve's step has timed out on all four lane counts twice, with **no page output at all** — and the page's own `[page]` lines *are* forwarded, so nothing arriving means the probe never reached the render. Every stage below can hang for a different reason (a Vite server that never answers, a browser that will not launch, a page whose module graph never resolves under load), and without these lines the
+   * log says only "no result within N seconds", which is the same sentence for all of them. The next run will name the stage instead.
+   */
+  console.log("probe: waiting for the vite server");
   await waitForServer();
+  console.log(`probe: server ready on ${base}`);
   const page = await browser.newPage();
   page.on("console", (msg) => {
     if (/MasterLimiter|Gs1/.test(msg.text())) process.stdout.write(`  [page] ${msg.text()}\n`);
@@ -129,6 +137,7 @@ try {
   // A switch for the heap sampling, so a failure can be attributed: the same probe runs with and without it and the difference says which one broke.
   if (process.env.PROBE_NO_HEAP === "1") await page.addInitScript(() => { window.__probeNoHeap = true; });
   await page.goto(`${base}/__arrangement_probe__.html`, { waitUntil: "domcontentloaded", timeout: 60000 });
+  console.log("probe: page loaded, evaluating");
 
   const measured = await page.evaluate(async ({ genreId: id, ramp, only, laneCount }) => {
     const [wav, genresModule, mixModule, formsModule, flattenModule, trackUtils, loudness] = await Promise.all([
@@ -1041,7 +1050,7 @@ const memory = typeof performance !== "undefined" && !window.__probeNoHeap ? per
         })),
       },
     };
-  }, { genreId, ramp: rampPair });
+  }, { genreId, ramp: rampPair, only, laneCount });
 
   /**
    * **Printed here, in Node, because a `console.log` inside `page.evaluate` never reaches this log.**
@@ -1050,6 +1059,29 @@ const memory = typeof performance !== "undefined" && !window.__probeNoHeap ? per
    * exactly like a block that had never run. A round went into that, and what distinguished the two was checking the run's `headSha` and then `git show`-ing the build's own copy of this
    * file: the block was present at line 449 and silent.
    */
+  /**
+   * ⭐ **The other half of the early return, and it was missing.**
+   *
+   * `--only=lane` returns `{ only, renderLaneCurve }` from the page before any other render, which is the whole point of the flag: one lane count per process, first, before a browser can be exhausted. But the Node side had no matching early path — it went straight on to read `measured.fillBars` and crashed, so `--only=lane` never worked end to end. It has never produced a lane count, and the CI step that calls it has failed on four counts twice.
+   *
+   * Printed and exited here, so the caller gets its answer and no later block can turn a measured curve into a crash.
+   */
+  if (measured.only === "lane") {
+    const curve = measured.renderLaneCurve;
+    if (asJson) console.log(JSON.stringify({ renderLaneCurve: curve }, null, 2));
+    else if (curve?.error) console.log(`   lane curve       : could not measure (${curve.error})`);
+    else if (curve?.points) {
+      for (const point of curve.points) {
+        const heap = point.peakHeapMB === undefined ? "heap not measurable here" : `peak heap sampled ${point.peakHeapMB} MB`;
+        console.log(`   lane curve       : ${point.lanes} lane(s) ${point.seconds}s (${point.frames} frames) · ${heap}`);
+      }
+      console.log(`                      ${curve.note}`);
+    }
+    await browser.close().catch(() => {});
+    server.kill("SIGTERM");
+    process.exit(0);
+  }
+
   const laneCurve = measured.renderLaneCurve;
   if (laneCurve?.error) console.log(`   lane curve       : could not measure (${laneCurve.error})`);
   else if (laneCurve?.points) {

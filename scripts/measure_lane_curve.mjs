@@ -20,10 +20,12 @@ const counts = ((argv.find((a) => a.startsWith("--lanes=")) ?? "--lanes=1,4,16,6
   .filter((value) => Number.isFinite(value) && value > 0);
 const asJson = argv.includes("--json");
 /**
- * **A timeout per lane count, because a probe that hangs is worse than one that fails.** The first version had none, and a CI run sat for the better part of an hour with no output — a job that never finishes reports nothing, while a job that gives up
- * reports which count could not be measured. The default is generous: the probes are slow because each one starts a dev server and a browser.
+ * **A timeout per lane count, because a probe that hangs is worse than one that fails.** The first version had none, and a CI run sat for the better part of an hour with no output — a job that never finishes reports nothing, while a job that gives up reports which count could not be measured.
+ *
+ * **180 s rather than 420 s, and the reason is measured rather than guessed.** The probe was being asked for one lane count and running the whole probe instead (see the note in `probe_arrangement_audio.mjs`): four counts then cost **28 minutes** of a CI runner to learn nothing. With one count per process actually working, a lane count is seconds of rendering plus a Vite start and a browser
+ * launch, so 180 s is generous — and a count that genuinely needs longer will say so instead of hiding inside a quarter of an hour.
  */
-const timeoutMs = Number((argv.find((a) => a.startsWith("--timeout=")) ?? "--timeout=420000").split("=")[1]);
+const timeoutMs = Number((argv.find((a) => a.startsWith("--timeout=")) ?? "--timeout=180000").split("=")[1]);
 
 const points = [];
 const failures = [];
