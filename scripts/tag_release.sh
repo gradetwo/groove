@@ -28,13 +28,25 @@ if [ -d "$MIRROR" ]; then
   if git -C "$MIRROR" rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
     echo "  (mirror $TAG already exists)"
   else
-    # ⭐ Pointed at the mirror's commit **whose content is this version**, found by `-S` rather than by date: the newest commit in that repository is not necessarily the one that carries the release.
-    RELEASE_COMMIT=$(git -C "$MIRROR" log --format=%H -S"\"version\": \"$VERSION\"" -- package.json | tail -1)
-    if [ -z "$RELEASE_COMMIT" ]; then
-      echo "  ❌ no commit in the mirror carries package.json at $VERSION"
+    # The tag goes on **the mirror's HEAD, after reading the version out of that tree**.
+    #
+    # This used to search for the commit that *introduced* the version string (`git log -S … package.json`)
+    # and tag that. It is the wrong question, and v2.34.34 was tagged wrong because of it: `-S` lists only
+    # commits that **changed** the occurrence, so it returned the commit that bumped `package.json` to
+    # 2.34.34 — five commits before the release. The tag's tree was missing `src/data/stemNaming.ts` and
+    # `src/data/midiToArrangement.ts` while the deployed site had them: a tag that disagreed with the thing
+    # it names.
+    #
+    # Every commit after the bump still carries the version, so "which commit has this version" has many
+    # answers and the only useful one is **the content being released**. That is the mirror's HEAD, and it is
+    # verified by reading it rather than assumed — which keeps the original intent (content, not date) and
+    # drops the part that was wrong.
+    MIRROR_VERSION=$(git -C "$MIRROR" show HEAD:package.json | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).version")
+    if [ "$MIRROR_VERSION" != "$VERSION" ]; then
+      echo "  ❌ the mirror's HEAD carries $MIRROR_VERSION, not $VERSION — tag it only when its content is this release"
       exit 1
     fi
-    git -C "$MIRROR" tag -a "$TAG" -m "$MESSAGE" "$RELEASE_COMMIT"
+    git -C "$MIRROR" tag -a "$TAG" -m "$MESSAGE" HEAD
   fi
   git -C "$MIRROR" push -q origin "$TAG"
 fi
