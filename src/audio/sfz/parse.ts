@@ -40,6 +40,18 @@ export interface SfzRegion {
   /** Every opcode the region ended up with, after inheritance, for anything this subset does not model yet. */
   opcodes: Record<string, string>;
   /**
+   * ⭐ **What is wrong with this region, when something is — as opposed to what is merely missing.**
+   *
+   * Muse reported that an unquoted `sample=` path containing spaces is truncated at the first space
+   * (`Tubular Bells 1/chimes.wav` → `Tubular`). The truncation is **what the SFZ grammar says**: an unquoted value ends
+   * at whitespace, and a name with spaces must be quoted. So the behaviour is right and the silence is the bug — a
+   * region whose sample silently became a different file is exactly the failure this project refuses to leave quiet.
+   *
+   * Kept separate from `unresolved` on purpose: an unresolved `$VAR` is a name nobody supplied, and a truncated path is
+   * a value that arrived wrong. Folding the second into the first would make both unreadable.
+   */
+  problems?: string[];
+  /**
    * Variables this region still contains — `$KICK_SNRIGHT_KEY` and friends — because SFZ's `#define`/`$VAR` layer is not implemented.
    *
    * **A marked region never matches a note.** That is the whole point: before this existed, an unresolved `key=$KICK_SNRIGHT_KEY` failed to parse as a number, fell back to
@@ -209,7 +221,27 @@ export function parseSfz(text: string): SfzRegion[] {
         current = group;
       } else if (name === "region") {
         current = {};
-        regions.push({ ...DEFAULTS, sample: "", opcodes: current, unresolved: [], inherited: { ...global, ...group } } as SfzRegion & { inherited: Record<string, string> });
+        /**
+         * ⭐ **The truncated-path report reads `rest` — the line with its header removed — which the loop assigns before this branch.**
+         *
+         * Two wrong guesses went into this one line, and both are worth recording. The first version read `rest` and
+         * looked correct; when the probe showed no report, I assumed the variable was unset and changed it to
+         * `rawLine` — a name taken from a **different function's** loop, which made it worse. Reading the loop head
+         * settled it: `let rest = line; … if (header) { rest = header[2]!; … }` assigns `rest` **before** the
+         * header chain, so the original line was right and the defect is elsewhere. The probe, not another guess, is
+         * what will find it.
+         */
+        const truncated = truncatedSample(rest);
+        regions.push({
+          ...DEFAULTS,
+          sample: "",
+          opcodes: current,
+          unresolved: [],
+          inherited: { ...global, ...group },
+          ...(truncated === null
+            ? {}
+            : { problems: [`sample path looks truncated at "${truncated}" — a name containing spaces must be quoted`] }),
+        } as SfzRegion & { inherited: Record<string, string> });
       } else {
         // A header this subset does not model (curve, effect, …) is skipped, not fatal — and its opcodes are ignored with it.
         current = null;
@@ -217,12 +249,28 @@ export function parseSfz(text: string): SfzRegion[] {
     }
     if (!current) continue;
 
+    /**
+     * ⭐ **A `sample=` path the grammar truncated, named rather than obeyed in silence.**
+     *
+     * Muse reported `Tubular Bells 1/chimes.wav` arriving as `Tubular`. The truncation is **what the SFZ grammar
+     * says** — an unquoted value ends at whitespace, and a name with spaces must be quoted — so the value is right and
+     * the silence is the bug: a region whose sample quietly became a different file is the failure this project
+     * refuses to leave quiet. Reported, not corrected: guessing the rest of the path would be inventing a reading.
+     */
+    function truncatedSample(line: string): string | null {
+      for (const match of line.matchAll(/(?:^|\s)sample\s*=\s*([^\s"]+)/g)) {
+        const trailing = line.slice((match.index ?? 0) + match[0]!.length);
+        // Whitespace followed by something that is not an `opcode=` — the shape of a path cut in half.
+        if (/^\s+[^\s=]+/.test(trailing)) return match[1]!;
+      }
+      return null;
+    }
+
     // Values may be quoted (a path with spaces); everything else runs to the next whitespace.
     for (const match of rest.matchAll(/([a-zA-Z0-9_]+)\s*=\s*("[^"]*"|[^\s]+)/g)) {
       const value = match[2]!.replace(/^"|"$/g, "");
       current[match[1]!.toLowerCase()] = value;
-    }
-  }
+    }  }
 
   /** Every `$NAME` a value still contains, deduplicated — reported rather than silently defaulted. */
   const unresolvedIn = (opcodes: Record<string, string>): string[] => [
@@ -253,6 +301,18 @@ export function parseSfz(text: string): SfzRegion[] {
       seqPosition: Math.max(1, num(merged.seq_position, DEFAULTS.seqPosition)),
       opcodes: merged,
       unresolved: unresolvedIn(merged),
+      /**
+       * ⭐ **Carried through the rebuild — the reason three "wrong variable name" guesses found nothing.**
+       *
+       * The report is attached where the region is first pushed, and this `map` then builds a **new object** from
+       * `DEFAULTS` and a chosen set of fields. Anything it does not name is silently gone, which is exactly what
+       * happened: the detection ran, the value was computed, and it was dropped one line later. Measuring the data
+       * flow (regex ✓, then the returned keys ✗) found it where guessing the variable name could not.
+       *
+       * Conditional so a clean region carries no key at all, and "checked and clean" stays distinguishable from
+       * "built before anything checked".
+       */
+      ...(region.problems === undefined ? {} : { problems: region.problems }),
     };
   });
 }
