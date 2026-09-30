@@ -219,11 +219,20 @@ export const TOOLS: ToolDefinition[] = [
     readOnly: true,
     inputSchema: {
       library: z.string().optional().describe("narrow to one library id, as listed in `libraries`"),
+      category: z.string().optional().describe('narrow to one kind of instrument, as listed in `categories` — "Bass", "Winds", "Acoustic Drums"'),
+      subcategory: z.string().optional().describe('narrow further, within a category — "arco", "Struck Idiophones"; each category lists its own'),
+      query: z.string().optional().describe("free text; matches the display name, the id and the program's path, ignoring case and separators"),
       limit: z.number().int().min(1).max(500).optional().describe("how many to return, for a library with dozens of programs"),
     },
     handler: (args) => {
       try {
-        return listCatalogueInstruments({ library: args.library as string | undefined, limit: args.limit as number | undefined });
+        return listCatalogueInstruments({
+          library: args.library as string | undefined,
+          category: args.category as string | undefined,
+          subcategory: args.subcategory as string | undefined,
+          query: args.query as string | undefined,
+          limit: args.limit as number | undefined,
+        });
       } catch (error) {
         return failure((error as Error).message);
       }

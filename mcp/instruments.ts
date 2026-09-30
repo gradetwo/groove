@@ -9,6 +9,7 @@
  */
 import { readFileSync } from "node:fs";
 import { catalogueFromManifestText } from "../src/data/sampleCatalogue";
+import { filterInstruments } from "../src/data/instrumentSearch";
 
 const MANIFEST_PATH = "public/samples/manifest.json";
 
@@ -19,6 +20,10 @@ export interface CatalogueInstrument {
   seconds: number;
   /** The library the entry came from, which is the part of the id before the colon for a multi-instrument one. */
   library: string;
+  /** What kind of instrument it is — "Acoustic Drums", "Bass", "Winds". Absent when the manifest does not say, which a caller should show as "uncategorised" rather than invent. */
+  category?: string;
+  /** The second level, for a category too long to scan: VCSL's idiophones divide into struck, plucked and friction, a bass library's programs into arco and pizz. */
+  subcategory?: string;
   /** The SFZ program this instrument is, when it is one. */
   program?: string;
 }
@@ -27,6 +32,10 @@ export interface InstrumentList {
   instruments: CatalogueInstrument[];
   /** Every library the manifest declares, including any that contribute nothing — a gap worth seeing rather than inferring. */
   libraries: string[];
+  /**
+   * The categories the instruments actually carry, **each with the second level underneath it and the counts**, so a caller filters by words that exist rather than ones it guessed, and can see which categories are worth filtering at all.
+   */
+  categories: Array<{ name: string; count: number; subcategories: Array<{ name: string; count: number }> }>;
   /** Why a declared library is not in the list: no measured duration, or a licence that forbids redistribution. */
   problems: string[];
   /** Where the bytes are served from, empty when no root is configured. */
@@ -38,7 +47,20 @@ export interface InstrumentList {
  *
  * `limit` exists because `vcsl` alone declares 88 instruments and a reply carrying all of them is a lot of text for a question that is often "what is there"; the caller can page or narrow instead.
  */
-export function listCatalogueInstruments({ library, limit }: { library?: string; limit?: number } = {}): InstrumentList {
+export function listCatalogueInstruments({
+  library,
+  category,
+  subcategory,
+  query,
+  limit,
+}: {
+  library?: string;
+  category?: string;
+  subcategory?: string;
+  /** Free text, matched the same way the library panel matches it — one rule, so an agent and a person find the same instruments with the same words. */
+  query?: string;
+  limit?: number;
+} = {}): InstrumentList {
   const root = process.env.GROOVE_SAMPLE_ROOT ?? "";
   const text = readFileSync(MANIFEST_PATH, "utf8");
   const { assets, problems } = catalogueFromManifestText(text, root);
@@ -57,15 +79,48 @@ export function listCatalogueInstruments({ library, limit }: { library?: string;
         name: asset.name,
         seconds: asset.seconds,
         library: separator === -1 ? asset.assetId : asset.assetId.slice(0, separator),
+        ...(asset.category ? { category: asset.category } : {}),
+        ...(asset.subcategory ? { subcategory: asset.subcategory } : {}),
         ...(asset.sfz ? { program: asset.sfz.path } : {}),
       };
     })
     .sort((a, b) => a.library.localeCompare(b.library) || a.name.localeCompare(b.name));
 
-  const narrowed = library ? all.filter((instrument) => instrument.library === library) : all;
+  /**
+   * Two filters rather than one, because they answer different questions: `library` is "everything from this download" and `category` is "every bass I have", which crosses libraries. The categories are listed so a caller can see what exists before
+   * filtering by a word it guessed.
+   */
+  const narrowed = filterInstruments(all, query ?? "")
+    .filter((instrument) => library === undefined || instrument.library === library)
+    .filter((instrument) => category === undefined || instrument.category === category)
+    .filter((instrument) => subcategory === undefined || instrument.subcategory === subcategory);
+
+  /**
+   * The tree, built from the instruments rather than from the manifest: a category with nothing in it is not shown as empty, and a count is the number of things a click would actually reveal.
+   */
+  const byCategory = new Map<string, Map<string, number>>();
+  for (const instrument of all) {
+    const name = instrument.category ?? "Uncategorised";
+    if (!byCategory.has(name)) byCategory.set(name, new Map());
+    const subs = byCategory.get(name)!;
+    const sub = instrument.subcategory ?? "";
+    subs.set(sub, (subs.get(sub) ?? 0) + 1);
+  }
+  const categories = [...byCategory.entries()]
+    .map(([name, subs]) => ({
+      name,
+      count: [...subs.values()].reduce((total, value) => total + value, 0),
+      subcategories: [...subs.entries()]
+        .filter(([sub]) => sub !== "")
+        .map(([sub, count]) => ({ name: sub, count }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
   return {
     instruments: limit !== undefined && limit >= 0 ? narrowed.slice(0, limit) : narrowed,
     libraries,
+    categories,
     problems,
     root,
   };

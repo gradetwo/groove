@@ -10412,7 +10412,8 @@
         }
       ],
       "durationSeconds": 14.529542,
-      "sourceUrl": "https://github.com/sfzinstruments/virtuosity_drums"
+      "sourceUrl": "https://github.com/sfzinstruments/virtuosity_drums",
+      "category": "Acoustic Drums"
     },
     {
       "id": "salamander-grand",
@@ -14412,7 +14413,8 @@
       "enumeratedAt": "2026-09-29",
       "durationSeconds": 25.862625,
       "mirroredAt": "2026-09-29",
-      "sourceUrl": "https://github.com/sfzinstruments/SalamanderGrandPiano"
+      "sourceUrl": "https://github.com/sfzinstruments/SalamanderGrandPiano",
+      "category": "Acoustic Piano"
     },
     {
       "id": "karoryfer-meatbass",
@@ -18060,7 +18062,9 @@
           "sfz": "Meatbass/Programs/pizz_three_map.sfz",
           "name": "pizz three map"
         }
-      ]
+      ],
+      "category": "Bass",
+      "subcategoryFrom": "filename"
     },
     {
       "id": "karoryfer-emilyguitar",
@@ -20083,7 +20087,9 @@
           "sfz": "Emilyguitar/emily_three_voice.sfz",
           "name": "emily three voice"
         }
-      ]
+      ],
+      "category": "Guitar",
+      "subcategoryFrom": "filename"
     },
     {
       "id": "vcsl",
@@ -36209,7 +36215,15 @@
       "sfz": "Aerophones/Edge-blown Aerophones/Ball Whistle.sfz",
       "enumeratedAt": "2026-09-29",
       "durationSeconds": 44.425442,
-      "mirroredAt": "2026-09-29"
+      "mirroredAt": "2026-09-29",
+      "category": "Orchestral",
+      "categoryByPath": {
+        "Aerophones": "Winds",
+        "Idiophones": "Mallets & Bells",
+        "Membranophones": "Percussion",
+        "Electrophones": "Electronic"
+      },
+      "subcategoryFrom": "path"
     }
   ]
 }

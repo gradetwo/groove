@@ -69,7 +69,14 @@ export function NewProjectView({ capture }: NewProjectViewProps) {
           assets
             .filter((asset) => asset.sfz)
             // The library comes from the id rather than from a second lookup: a multi-instrument library names its programs `entry:program`, and the entry is the library.
-            .map((asset) => ({ assetId: asset.assetId, name: asset.name, library: libraryOfAsset(asset.assetId) }))
+            .map((asset) => ({
+              assetId: asset.assetId,
+              name: asset.name,
+              library: libraryOfAsset(asset.assetId),
+              // The category the manifest declares, absent when it does not — the panel then groups by library rather than inventing a word.
+              ...(asset.category ? { category: asset.category } : {}),
+              ...(asset.subcategory ? { subcategory: asset.subcategory } : {}),
+            }))
         );
       })
       .catch(() => undefined);
