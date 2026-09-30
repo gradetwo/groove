@@ -26,4 +26,20 @@ else
     [ -e "$target" ] || { mkdir -p "$(dirname "$target")"; cp "$MAIN/public/$file" "$target"; }
   done
 fi
-echo "✅ done — the worktree now has the assets its criteria read"
+
+# ⭐ **And keep the copies out of git's way.** They are untracked *generated* artwork, and `git add -A` in a worktree committed 114 of them — which made CI report "a skin directory exists but its covers are incomplete" on a branch whose content was otherwise identical to a passing one. The list is written into the shared
+# `.git/info/exclude`, so it covers every worktree and the main checkout, and it never becomes part of a commit.
+EXCLUDE="$(git -C "$WORKTREE" rev-parse --git-common-dir)/info/exclude"
+mkdir -p "$(dirname "$EXCLUDE")"
+if ! grep -q "Generated artwork: the cover pipeline" "$EXCLUDE" 2>/dev/null; then
+  {
+    echo ""
+    echo "# Generated artwork: the cover pipeline writes these into the tree, and they are not authored content."
+    echo "# Written by scripts/worktree_assets.sh so that a copy cannot be committed by \`git add -A\`."
+  } >> "$EXCLUDE"
+fi
+(cd "$WORKTREE" && git ls-files --others --exclude-standard public/covers) | while read -r file; do
+  grep -qx "/$file" "$EXCLUDE" 2>/dev/null || echo "/$file" >> "$EXCLUDE"
+done
+
+echo "✅ done — the worktree now has the assets its criteria read, and git ignores the copies"

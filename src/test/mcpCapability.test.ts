@@ -59,12 +59,14 @@ const CAPABILITIES: Capability[] = [
   {
     surface: "CustomGenreMakerView",
     feature: "fork a genre and save your own",
-    tools: ["list_categories", "get_genre", "make_unique"],
+    tools: ["list_genres", "get_genre", "get_pattern", "apply_pattern_ops", "list_custom_genres", "get_custom_genre", "save_custom_genre", "delete_custom_genre", "duplicate_custom_genre"],
     /**
-     * ⭐ **A real gap, stated rather than hidden.** The view saves a custom genre to **IndexedDB**, and the MCP server is a **Node process** with no `indexedDB`: the capability cannot be handed over without moving the store behind an interface the server can implement. What an agent can do today is read the
-     * library it would fork from and rewrite a clip with its own defaults; it cannot save a genre of its own.
+     * **The gap this row used to describe, and what is left of it.** Saving lived only in the browser's IndexedDB, which the Node server does not have, so an agent could read the library it would fork from and keep nothing. The store now sits behind `CustomGenreStore`, and the tools above save, read, copy and delete a genre — a fork
+     * through `save_custom_genre` carries the library's defaults because it calls the maker's own `forkGenre`.
+     *
+     * What remains unreachable is **reach, not saving**: the server keeps its genres in the process for the session, so it can neither read nor change the genres a person saved in the app, and the genres it saves do not survive a restart. That is the store the server owns, exactly as the arrangement and song maps are.
      */
-    reason: "saving a custom genre lives in the browser's IndexedDB, which the Node MCP server does not have — the library is readable through the listed tools, the save is not yet reachable",
+    reason: "saving now works, but into the server's own process-local store: an agent cannot reach the genres saved in the browser's IndexedDB, and what it saves for the session does not survive a restart",
   },
   {
     surface: "ExploreListView",

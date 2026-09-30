@@ -1,14 +1,17 @@
 import { CustomGenre } from "../../types/customGenre";
 import { Genre, GenreCategory, SequencerPattern, SequencerTrack } from "../../types/genre";
+import { CustomGenreStore, InMemoryCustomGenreStore, copyOfCustomGenre, withStoreTimestamp } from "./customGenreStore";
 
 const DB_NAME = "groove_custom_genres_db";
 const DB_VERSION = 1;
 const STORE_NAME = "custom_genres";
 
-let inMemoryStore: Map<string, CustomGenre> = new Map();
-
 /**
  * Check if IndexedDB is available
+ *
+ * Read on every call rather than captured once, because the store is built once while the answer can change under
+ * it: a test installs a fresh fake factory between cases, and the IndexedDB implementation — which is selected when
+ * this module loads — has to follow the factory it currently has.
  */
 function isIndexedDbAvailable(): boolean {
   try {
@@ -59,145 +62,168 @@ function notifyChange() {
 }
 
 /**
+ * The browser store: IndexedDB, with the in-memory map as the safety net it always was.
+ *
+ * The map is written on every save **before** IndexedDB is touched, and every read falls back to it when the database
+ * throws. That is the behaviour this file already had, kept because a failed read must not look like an empty library
+ * to the maker — a save the user watched succeed should still be listed.
+ *
+ * `window.indexedDB` is read per operation rather than captured once, so a page that gets the API late and a test
+ * that swaps in a fresh factory both see the database they expect.
+ */
+export class IndexedDbCustomGenreStore implements CustomGenreStore {
+  private readonly fallback = new Map<string, CustomGenre>();
+
+  private fallbackList(): CustomGenre[] {
+    return [...this.fallback.values()].sort((a, b) => b.updatedAt - a.updatedAt);
+  }
+
+  async list(): Promise<CustomGenre[]> {
+    if (!isIndexedDbAvailable()) return this.fallbackList();
+
+    try {
+      const db = await openCustomGenresDb();
+      return await new Promise<CustomGenre[]>((resolve, reject) => {
+        const transaction = db.transaction(STORE_NAME, "readonly");
+        const request = transaction.objectStore(STORE_NAME).getAll();
+
+        request.onsuccess = () => {
+          const list = (request.result || []) as CustomGenre[];
+          list.sort((a, b) => b.updatedAt - a.updatedAt);
+          resolve(list);
+        };
+
+        request.onerror = () => reject(request.error);
+      });
+    } catch (e) {
+      console.warn("Failed to read from IndexedDB, falling back to in-memory store:", e);
+      return this.fallbackList();
+    }
+  }
+
+  async get(id: string): Promise<CustomGenre | null> {
+    if (!isIndexedDbAvailable()) return this.fallback.get(id) ?? null;
+
+    try {
+      const db = await openCustomGenresDb();
+      return await new Promise<CustomGenre | null>((resolve, reject) => {
+        const transaction = db.transaction(STORE_NAME, "readonly");
+        const request = transaction.objectStore(STORE_NAME).get(id);
+
+        request.onsuccess = () => resolve((request.result as CustomGenre) || null);
+        request.onerror = () => reject(request.error);
+      });
+    } catch (e) {
+      console.warn(`Failed to fetch custom genre ${id} from IndexedDB:`, e);
+      return this.fallback.get(id) ?? null;
+    }
+  }
+
+  async save(genre: CustomGenre): Promise<void> {
+    const stored = withStoreTimestamp(genre);
+    this.fallback.set(stored.id, stored);
+
+    if (!isIndexedDbAvailable()) return;
+
+    try {
+      const db = await openCustomGenresDb();
+      await new Promise<void>((resolve, reject) => {
+        const transaction = db.transaction(STORE_NAME, "readwrite");
+        const request = transaction.objectStore(STORE_NAME).put(stored);
+
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    } catch (e) {
+      console.warn("Failed to persist custom genre in IndexedDB, stored in memory:", e);
+    }
+  }
+
+  async remove(id: string): Promise<void> {
+    this.fallback.delete(id);
+
+    if (!isIndexedDbAvailable()) return;
+
+    try {
+      const db = await openCustomGenresDb();
+      await new Promise<void>((resolve, reject) => {
+        const transaction = db.transaction(STORE_NAME, "readwrite");
+        const request = transaction.objectStore(STORE_NAME).delete(id);
+
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    } catch (e) {
+      console.warn(`Failed to delete custom genre ${id} from IndexedDB:`, e);
+    }
+  }
+
+  async duplicate(id: string): Promise<CustomGenre | null> {
+    const original = await this.get(id);
+    if (!original) return null;
+    const copy = copyOfCustomGenre(original);
+    await this.save(copy);
+    return copy;
+  }
+}
+
+/**
+ * The store for the environment this module was loaded into.
+ *
+ * The argument exists so a test can name the implementation it wants rather than arrange a whole environment; the
+ * default is the question the feature actually asks, which is whether IndexedDB is there.
+ */
+export function createCustomGenreStore(indexedDbAvailable: boolean = isIndexedDbAvailable()): CustomGenreStore {
+  return indexedDbAvailable ? new IndexedDbCustomGenreStore() : new InMemoryCustomGenreStore();
+}
+
+const activeStore: CustomGenreStore = createCustomGenreStore();
+
+/** The store the feature's functions below use, and the one a test reads to see what the environment selected. */
+export function customGenreStore(): CustomGenreStore {
+  return activeStore;
+}
+
+/**
  * Retrieves all saved custom genres, sorted by updatedAt descending
  */
 export async function getAllCustomGenres(): Promise<CustomGenre[]> {
-  if (!isIndexedDbAvailable()) {
-    return Array.from(inMemoryStore.values()).sort((a, b) => b.updatedAt - a.updatedAt);
-  }
-
-  try {
-    const db = await openCustomGenresDb();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(STORE_NAME, "readonly");
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.getAll();
-
-      request.onsuccess = () => {
-        const list = (request.result || []) as CustomGenre[];
-        list.sort((a, b) => b.updatedAt - a.updatedAt);
-        resolve(list);
-      };
-
-      request.onerror = () => {
-        reject(request.error);
-      };
-    });
-  } catch (e) {
-    console.warn("Failed to read from IndexedDB, falling back to in-memory store:", e);
-    return Array.from(inMemoryStore.values()).sort((a, b) => b.updatedAt - a.updatedAt);
-  }
+  return customGenreStore().list();
 }
 
 /**
  * Retrieves a single custom genre by ID
  */
 export async function getCustomGenre(id: string): Promise<CustomGenre | null> {
-  if (!isIndexedDbAvailable()) {
-    return inMemoryStore.get(id) || null;
-  }
-
-  try {
-    const db = await openCustomGenresDb();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(STORE_NAME, "readonly");
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.get(id);
-
-      request.onsuccess = () => {
-        resolve((request.result as CustomGenre) || null);
-      };
-
-      request.onerror = () => {
-        reject(request.error);
-      };
-    });
-  } catch (e) {
-    console.warn(`Failed to fetch custom genre ${id} from IndexedDB:`, e);
-    return inMemoryStore.get(id) || null;
-  }
+  return customGenreStore().get(id);
 }
 
 /**
  * Saves or updates a custom genre
+ *
+ * The change event is dispatched by this wrapper rather than by the store: it is how the maker refreshes itself, and
+ * the MCP process holding the same store implementation has no window to dispatch to.
  */
 export async function saveCustomGenre(genre: CustomGenre): Promise<void> {
-  const updatedGenre: CustomGenre = {
-    ...genre,
-    updatedAt: Date.now(),
-  };
-
-  inMemoryStore.set(updatedGenre.id, updatedGenre);
-
-  if (!isIndexedDbAvailable()) {
-    notifyChange();
-    return;
-  }
-
-  try {
-    const db = await openCustomGenresDb();
-    await new Promise<void>((resolve, reject) => {
-      const transaction = db.transaction(STORE_NAME, "readwrite");
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.put(updatedGenre);
-
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
-    notifyChange();
-  } catch (e) {
-    console.warn("Failed to persist custom genre in IndexedDB, stored in memory:", e);
-    notifyChange();
-  }
+  await customGenreStore().save(genre);
+  notifyChange();
 }
 
 /**
  * Deletes a custom genre by ID
  */
 export async function deleteCustomGenre(id: string): Promise<void> {
-  inMemoryStore.delete(id);
-
-  if (!isIndexedDbAvailable()) {
-    notifyChange();
-    return;
-  }
-
-  try {
-    const db = await openCustomGenresDb();
-    await new Promise<void>((resolve, reject) => {
-      const transaction = db.transaction(STORE_NAME, "readwrite");
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.delete(id);
-
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
-    notifyChange();
-  } catch (e) {
-    console.warn(`Failed to delete custom genre ${id} from IndexedDB:`, e);
-    notifyChange();
-  }
+  await customGenreStore().remove(id);
+  notifyChange();
 }
 
 /**
  * Duplicates an existing custom genre with a new ID and timestamp
  */
 export async function duplicateCustomGenre(id: string): Promise<CustomGenre | null> {
-  const original = await getCustomGenre(id);
-  if (!original) return null;
-
-  const now = Date.now();
-  const copyId = `custom-${original.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-copy-${now.toString().slice(-4)}`;
-  const duplicate: CustomGenre = {
-    ...JSON.parse(JSON.stringify(original)),
-    id: copyId,
-    name: `${original.name} (Copy)`,
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  await saveCustomGenre(duplicate);
-  return duplicate;
+  const copy = await customGenreStore().duplicate(id);
+  if (copy) notifyChange();
+  return copy;
 }
 
 /**
