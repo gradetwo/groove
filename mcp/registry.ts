@@ -43,6 +43,7 @@ import {
   addMcpTake,
   exportMcpMusicXml,
   importMcpMusicXml,
+  importMcpMusicXmlBytes,
   addMcpTrack,
   assignMcpTakeRange,
   createMcpArrangement,
@@ -435,17 +436,44 @@ export const TOOLS: ToolDefinition[] = [
     name: "import_arrangement_musicxml",
     title: "Import a MusicXML score",
     description:
-      "Read a MusicXML `score-partwise` document and **add** its part as a track, named after the part. Notes that notation splits at a barline are joined back into one, chords arrive as notes that start together, and anything the model cannot hold — a grace note, a second voice inside one staff — is listed in `problems` rather than dropped in silence.",
+      "Read a MusicXML `score-partwise` document and **add** its part as a track, named after the part. Notes that notation splits at a barline are joined back into one, chords arrive as notes that start together, and anything the model cannot hold — a grace note, a second voice inside one staff — is listed in `problems` rather than dropped in silence. `partIndex` names the part to read and defaults to the first; `\"all\"` imports every part as its own track, skipping parts that hold no notes. The reply names the tracks it added in `trackIds`, and reports the file's own `tempoBpm` and time signature when it states them.",
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
       xml: z.string().describe("the whole document, as text"),
-      partIndex: z.number().int().min(0).optional().describe("which part to read; the first unless said otherwise"),
+      partIndex: z
+        .union([z.number().int().min(0), z.literal("all")])
+        .optional()
+        .describe('which part to read; the first unless said otherwise, or "all" for one track per part'),
     },
     handler: (args) => {
       try {
         return importMcpMusicXml(String(args.arrangementId), String(args.xml), {
-          ...(args.partIndex === undefined ? {} : { partIndex: Number(args.partIndex) }),
+          ...(args.partIndex === undefined ? {} : { partIndex: args.partIndex as number | "all" }),
+        });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "import_arrangement_musicxml_file",
+    title: "Import a compressed MusicXML (.mxl)",
+    description:
+      "The same import as `import_arrangement_musicxml`, for a **compressed** `.mxl` file: pass the file's bytes as base64 and the zip is read here, so a caller does not have to unzip it first. A `.mxl` is a zip whose `META-INF/container.xml` names the score, and that is what is followed. A plain `.musicxml` file's bytes are also accepted, and the reply's `format` says which it was. `partIndex` works exactly as in the text tool, `\"all\"` included.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      bytesBase64: z.string().describe("the base64 of the .mxl file's bytes"),
+      partIndex: z
+        .union([z.number().int().min(0), z.literal("all")])
+        .optional()
+        .describe('which part to read; the first unless said otherwise, or "all" for one track per part'),
+    },
+    handler: async (args) => {
+      try {
+        return await importMcpMusicXmlBytes(String(args.arrangementId), String(args.bytesBase64), {
+          ...(args.partIndex === undefined ? {} : { partIndex: args.partIndex as number | "all" }),
         });
       } catch (error) {
         return failure((error as Error).message);

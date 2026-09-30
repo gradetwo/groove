@@ -6,6 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { DIVISIONS_PER_QUARTER, noteTypeFor, pitchToMusicXml, toMusicXml } from "../data/musicxml";
+import { fromMusicXml } from "../data/musicxmlImport";
 
 const note = (pitch: number, startBeats: number, lengthBeats = 1, velocity = 100) => ({ pitch, startBeats, lengthBeats, velocity });
 
@@ -117,5 +118,80 @@ describe("MusicXML export", () => {
     const xml = toMusicXml([], 1, { title: 'Rock & Roll <"live">' });
     expect(xml).toContain("Rock &amp; Roll &lt;&quot;live&quot;&gt;");
     expect(textOf(parse(xml), "work-title")).toBe('Rock & Roll <"live">');
+  });
+
+  it("writes the tempo as a mark and as a sound, which is what a reader shows and what it plays", () => {
+    /**
+     * The two spellings carry the same number on purpose. `<metronome>` is what a person reads on the page; `<sound tempo>` is what playback follows, and it is the element files in the wild carry it in. Writing only the mark leaves a reader that ignores notation with no tempo at all.
+     */
+    const doc = parse(toMusicXml([note(60, 0)], 1, { tempoBpm: 132 }));
+    expect(textOf(doc, "per-minute")).toBe("132");
+    expect(doc.querySelector("sound")?.getAttribute("tempo")).toBe("132");
+    expect(doc.querySelector("direction")).not.toBeNull();
+  });
+
+  it("keeps every voice moving forward, so no bar rewinds the cursor past its own start", () => {
+    /**
+     * **The invariant a `<backup>` depends on.** MusicXML is a sequence: a voice after the first is written after a backup that rewinds to the start of *that* measure, and the notes that follow must wind forward from there. A voice whose notes in a measure went backwards could not be written with one rewind, and the first version of the voice
+     * assignment produced exactly that — in a bar of four overlapping notes it wrote two backups in a row and left the cursor at minus sixteen divisions. This walks the document the way a reader does, one voice at a time: each voice starts at the barline, never goes behind it, and ends the bar exactly at the next one.
+     */
+    const walks = [
+      [note(60, 0, 1), note(64, 0.5, 3), note(67, 2.5, 2), note(70, 3, 2)],
+      // Four lines starting together with different lengths: four chords, so four voices, and the bar must still add up on each.
+      [note(60, 0, 4), note(62, 0, 3), note(64, 0, 2), note(65, 0, 1)],
+      [note(60, 0, 2), note(62, 2, 5), note(64, 1, 1), note(65, 6, 3)],
+      [note(48, 0, 6), note(55, 4, 5), note(60, 4, 2), note(67, 11, 1)],
+      /**
+       * The case that made the per-measure rule necessary: a voice whose tie is still crossing the barline while a new line enters underneath it. Reusing that voice would put two independent lines in one `<voice>`, which is a document several readers either merge or refuse.
+       */
+      [note(60, 0, 4.5), note(62, 3, 2), note(64, 4, 2), note(67, 4, 1)],
+    ];
+    for (const original of walks) {
+      const doc = parse(toMusicXml(original, 3));
+      measures(doc).forEach((measure, index) => {
+        /** The measure split at its backups: what one voice's sequence is worth is the cursor the next backup finds. */
+        const voiceEnds: number[] = [];
+        let cursor = 0;
+        for (const child of Array.from(measure.children)) {
+          if (child.tagName === "backup" || child.tagName === "forward" || child.tagName === "note") {
+            const duration = Number(child.querySelector("duration")?.textContent ?? 0);
+            if (child.tagName === "backup") {
+              voiceEnds.push(cursor);
+              cursor -= duration;
+            } else {
+              cursor += duration;
+            }
+          }
+          expect(cursor, `measure ${index + 1} cursor after <${child.tagName}>`).toBeGreaterThanOrEqual(0);
+        }
+        voiceEnds.push(cursor);
+        // Every voice's written music adds up to the measure, so each one ends at the barline rather than early or late.
+        for (const end of voiceEnds) expect(end, `measure ${index + 1} a voice ends at the barline`).toBe(4 * DIVISIONS_PER_QUARTER);
+      });
+      /**
+       * And the reader still gets the notes back, which is the second half of the invariant: a document whose voices are laid out correctly but whose voice numbers a reader follows wrongly would pass the walk above and fail here.
+       */
+      const back = fromMusicXml(toMusicXml(original, 3)).parts[0]!.notes;
+      expect(back).toEqual([...original].sort((a, b) => a.startBeats - b.startBeats || a.pitch - b.pitch));
+    }
+  });
+
+  it("keeps a voice number on one line of music across a barline", () => {
+    /**
+     * A `<voice>` is an identity rather than a per-measure slot. A note tied across a barline is written as a stop in the next measure, and several notation programs refuse a file where one voice in one measure holds two independent lines. The document below has two voices in bar one, one of them tied into bar two, and a new line entering in bar two.
+     */
+    const doc = parse(toMusicXml([note(48, 0, 8), note(60, 0, 8), note(64, 4, 1), note(67, 8, 2)], 2));
+    const voices = notesOf(measures(doc)[1]!)
+      .filter((entry) => entry.querySelector("pitch"))
+      .map((entry) => textOf(entry, "voice"));
+    /**
+     * Bar two holds the tied tail of the two-voice chord and the line that enters there. Three voice numbers for three lines of music would be the bug — the tied tails keep the numbers they sounded in bar one — and two for the two lines is what the round trip then reads back correctly.
+     */
+    expect(new Set(voices).size).toBeGreaterThanOrEqual(2);
+    const tied = notesOf(measures(doc)[1]!).filter((entry) => entry.querySelector('tie[type="stop"]'));
+    expect(tied.length).toBeGreaterThan(0);
+    const tiedVoices = new Set(tied.map((entry) => textOf(entry, "voice")));
+    const fresh = notesOf(measures(doc)[1]!).filter((entry) => textOf(entry, "tie") !== "stop" && entry.querySelector("pitch"));
+    expect(fresh.some((entry) => !tiedVoices.has(textOf(entry, "voice")))).toBe(true);
   });
 });
