@@ -75,7 +75,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import os from "node:os";
 import path from "node:path";
 import { exportAbleton, exportMidi, loudnessReport, shareUrl, toBase64 } from "./exporting";
-import { analyseWavFile, renderAudio, renderStems } from "./render/worker";
+import { analyseWavFile, auditionInstrumentNote, renderAudio, renderStems } from "./render/worker";
 import { getGenreLoudnessTrimDb } from "../src/data/genreMix";
 import { setVocalMelody } from "./vocal";
 import { addMcpSection, createMcpSong, duplicateMcpSection, flattenMcpSong, getMcpSong, importMcpSong, makeUniqueMcpSection, mcpSongHistory, setMcpClip, setMcpLaneSlots, setMcpTempo, summariseSong, undoMcpSong } from "./song";
@@ -2181,6 +2181,32 @@ export const TOOLS: ToolDefinition[] = [
     handler: (args) => {
       try {
         return undoMcpSong(args.songId as string, (args.steps as number | undefined) ?? 1);
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "render_instrument_note",
+    title: "Sound one instrument note and say which sample answered",
+    description:
+      "Render **one note** of one instrument through the app's own sampler, and report what the library did with it: which sample file answered, at what playback ratio, its root key, its choke group, whether the file calls it a one-shot, and its note-polyphony cap. Use it to answer the question a whole-mix render cannot — *does this library resolve, and does it do what its file says?* A note that renders silent is reported as a result with its resolved sample path, because a silent note with a sample path is a gain problem and a silent note without one is a library that did not resolve.",
+    readOnly: false,
+    inputSchema: {
+      assetId: z.string().describe("an instrument from `list_arrangement_instruments`"),
+      midi: z.number().int().min(0).max(127),
+      seconds: z.number().min(0.1).max(10).optional().describe("how much to render; default 2"),
+      gainDb: z.number().min(-60).max(12).optional().describe("a trim for listening; the file's own controller gain is applied regardless"),
+      sampleRate: z.number().int().min(8000).max(96000).optional().describe("default 44100"),
+    },
+    handler: async (args) => {
+      try {
+        return await auditionInstrumentNote(String(args.assetId), Number(args.midi), {
+          format: "wav",
+          seconds: args.seconds as number | undefined,
+          gainDb: args.gainDb as number | undefined,
+          ...(args.sampleRate ? { sampleRate: args.sampleRate as number } : {}),
+        });
       } catch (error) {
         return failure((error as Error).message);
       }

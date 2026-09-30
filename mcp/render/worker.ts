@@ -523,3 +523,133 @@ export async function renderStems(
 
   return { dir, stems, sampleRate, bpm };
 }
+
+/**
+ * **One instrument note, rendered so it can be listened to and measured.**
+ *
+ * This is the question the whole SFZ layer exists to answer — *which sample does this library use for this note, at what rate, and what does the file say about it* — and until now only a CI probe could ask it. The agent surface could render a whole arrangement and not a single drum hit.
+ *
+ * It works the way the end-to-end probe works, because that path is the one already proven in this environment: the page imports the app's own catalogue, loader and graph modules, resolves the note through the same `loadNote` the app plays with, starts it in an `OfflineAudioContext`, and renders. Nothing here re-implements resolution.
+ *
+ * **The resolved fields come back with the audio**, and that is the point rather than a nicety: `samplePath`, `ratio`, `rootKey`, `group`, `offBy`, `oneShot` and `notePolyphony` are what tell a caller whether the library did what the file asked. A silent note with `samplePath` set is a gain problem; a silent note with no `samplePath` is a library that did not resolve.
+ */
+export interface AuditionResult {
+  path: string;
+  filename: string;
+  assetId: string;
+  midi: number;
+  bytes: number;
+  durationSec: number;
+  sampleRate: number;
+  channels: number;
+  truePeakDb: number;
+  /** True when the render carries no signal at all, which is a result rather than a failure. */
+  silent: boolean;
+  resolved: {
+    samplePath: string;
+    ratio: number;
+    rootKey?: number;
+    group?: number;
+    offBy?: number;
+    oneShot?: boolean;
+    notePolyphony?: number;
+  };
+}
+
+/**
+ * `virtuosity-drums-basic_note38.wav`: the instrument, then the note, so two auditions of one library never overwrite each other. `songSlug` handles the sanitising — a multi-instrument library's id contains a colon and a path (`vcsl:Idiophones/Struck`), and that is not a filename anywhere.
+ */
+export function auditionFilename(assetId: string, midi: number): string {
+  return `${songSlug(assetId) || "instrument"}_note${midi}.wav`;
+}
+
+export async function auditionInstrumentNote(
+  assetId: string,
+  midi: number,
+  options: RenderOptions & { seconds?: number; gainDb?: number } = { format: "wav" }
+): Promise<AuditionResult> {
+  if (process.env.GROOVE_MCP_NO_BROWSER === "1") {
+    throw new Error("audio rendering is disabled (GROOVE_MCP_NO_BROWSER=1); auditioning renders through the same offline engine as the other audio tools");
+  }
+  const page = await ensurePage();
+  const dir = outputDirectory(options);
+  const manifestText = readFileSync(path.join(process.cwd(), "public", "samples", "manifest.json"), "utf8");
+  const root = process.env.GROOVE_SAMPLE_ROOT ?? "https://r2mirror.groove.wangda.today";
+  const seconds = Math.min(10, Math.max(0.1, options.seconds ?? 2));
+
+  const rendered = await page.evaluate(
+    async ({ manifestText: text, root: sampleRoot, assetId: id, midi: note, seconds: length, sampleRate: rate, gainDb }) => {
+      const specifier = (path: string) => path;
+      const [catalogue, loaderModule, graph, loudness, exporter] = await Promise.all([
+        import(/* @vite-ignore */ specifier("/src/data/sampleCatalogue.ts")),
+        import(/* @vite-ignore */ specifier("/src/audio/sampleLoader.ts")),
+        import(/* @vite-ignore */ specifier("/src/audio/browserSampleGraph.ts")),
+        import(/* @vite-ignore */ specifier("/src/test/helpers/loudness.ts")),
+        // The encoder lives in `WavExporter`. The first version of this guessed between two other modules that do not export it — a fallback that would have thrown on the very first audition.
+        import(/* @vite-ignore */ specifier("/src/audio/WavExporter.ts")),
+      ]);
+      const { assets } = catalogue.catalogueFromManifestText(text, sampleRoot);
+      const sampleRateValue = rate ?? 44100;
+      const frames = Math.ceil(sampleRateValue * length);
+      const context = new OfflineAudioContext(1, frames, sampleRateValue);
+      const loader = loaderModule.createSampleLoader(graph.browserSampleDecoder(context), assets);
+      // A refusal from the loader is the answer to the question, so it is returned rather than thrown.
+      let loaded;
+      try {
+        loaded = await loader.loadNote(id, note);
+      } catch (error) {
+        return { error: error instanceof Error ? error.message : String(error) };
+      }
+      const source = context.createBufferSource();
+      source.buffer = loaded.buffer;
+      source.playbackRate.value = loaded.ratio;
+      const gain = context.createGain();
+      gain.gain.value = Math.pow(10, (gainDb ?? 0) / 20);
+      source.connect(gain).connect(context.destination);
+      source.start(0);
+      const buffer = await context.startRendering();
+      const channel = buffer.getChannelData(0);
+      const bytes = exporter.encodeAudioBufferToWav(buffer);
+      let binary = "";
+      const view = new Uint8Array(bytes);
+      const chunkSize = 0x8000;
+      for (let i = 0; i < view.length; i += chunkSize) binary += String.fromCharCode(...view.subarray(i, i + chunkSize));
+      return {
+        base64: btoa(binary),
+        durationSec: buffer.duration,
+        sampleRate: buffer.sampleRate,
+        channels: buffer.numberOfChannels,
+        truePeakDb: loudness.truePeakDbChannels([channel]),
+        resolved: {
+          samplePath: loaded.samplePath,
+          ratio: loaded.ratio,
+          ...(loaded.rootKey === undefined ? {} : { rootKey: loaded.rootKey }),
+          ...(loaded.group === undefined ? {} : { group: loaded.group }),
+          ...(loaded.offBy === undefined ? {} : { offBy: loaded.offBy }),
+          ...(loaded.oneShot === undefined ? {} : { oneShot: loaded.oneShot }),
+          ...(loaded.notePolyphony === undefined ? {} : { notePolyphony: loaded.notePolyphony }),
+        },
+      };
+    },
+    { manifestText, root, assetId, midi, seconds, sampleRate: options.sampleRate, gainDb: options.gainDb }
+  );
+
+  if ("error" in rendered) throw new Error(rendered.error);
+  const bytes = Buffer.from(rendered.base64, "base64");
+  const filename = auditionFilename(assetId, midi);
+  const target = path.join(dir, filename);
+  writeFileSync(target, bytes);
+  return {
+    path: target,
+    filename,
+    assetId,
+    midi,
+    bytes: bytes.length,
+    durationSec: Number(rendered.durationSec.toFixed(3)),
+    sampleRate: rendered.sampleRate,
+    channels: rendered.channels,
+    truePeakDb: Number(rendered.truePeakDb.toFixed(2)),
+    silent: rendered.truePeakDb <= -120,
+    resolved: rendered.resolved,
+  };
+}
