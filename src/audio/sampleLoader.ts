@@ -70,6 +70,8 @@ export interface LoadedNote {
   oneShot?: boolean;
   /** The file's `note_polyphony`: a cap on how many voices of this note may sound at once. Measured — see the resolver, where the numbers are. */
   notePolyphony?: number;
+  /** The controller-driven level scale the region asked for (`amplitude_onccN`), applied when the note is started. */
+  gainScale?: number;
 }
 
 export function createSampleLoader(
@@ -195,6 +197,7 @@ export function createSampleLoader(
         // The release behaviour travels with the note for the same reason the choke group does: only the resolver saw the region that answered.
         ...(resolution.note.oneShot === undefined ? {} : { oneShot: resolution.note.oneShot }),
         ...(resolution.note.notePolyphony === undefined ? {} : { notePolyphony: resolution.note.notePolyphony }),
+        ...(resolution.note.gainScale === undefined ? {} : { gainScale: resolution.note.gainScale }),
       };
       const buffer = findSampleAsset(samplePath, catalogue)
         ? await api.load(samplePath)

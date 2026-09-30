@@ -293,14 +293,21 @@ const memory = typeof performance !== "undefined" && !window.__probeNoHeap ? per
           const seconds = Number(((performance.now() - started) / 1000).toFixed(4));
           if (sampler !== undefined) clearInterval(sampler);
           if (memory) peakHeapBytes = Math.max(peakHeapBytes, memory.usedJSHeapSize);
-          points.push({
+          const point = {
             lanes: count,
             seconds,
             frames: buffer.length,
             ...(peakHeapBytes === undefined ? {} : { peakHeapMB: Number((peakHeapBytes / (1024 * 1024)).toFixed(1)) }),
-          });
-          // **No print here.** A `console.log` inside `page.evaluate` runs in the browser and never reaches this log — the points are returned and printed from Node after the evaluate
-          // returns. This line existed and printed nothing for exactly that reason, which cost a round of thinking the block had never run.
+          };
+          points.push(point);
+          /**
+           * Each point is announced as it is measured, and the comment that stood here before was wrong.
+           *
+           * It said a `console.log` inside `page.evaluate` never reaches the log, so printing one would be pointless. The evidence says otherwise: the `[page] lane curve: rendering N lane(s)` lines in a CI run ARE page-side prints, forwarded by the console listener above. What actually happened was worse than a pointless print: the render killed the browser in this environment, `page.evaluate` never returned, and lane counts measured seconds earlier were lost with it. Announcing each point as it lands means a browser that dies afterwards costs nothing.
+           *
+           * Parsed by `measure_lane_curve.mjs`, the one caller that asks for a single count per process.
+           */
+          console.log(`LANE_CURVE ${JSON.stringify(point)}`);
         }
         return { points, memory: Boolean(memory), note: "time and sampled heap; the heap reading is a lower bound (sampled every 10ms during the render), Chromium-only, and page-wide rather than the render alone. Time is wall clock inside the browser." };
       } catch (error) {
