@@ -21,6 +21,12 @@ echo "3/3  cancelling superseded runs, committing the mirror, pushing dev"
 #
 # ⭐ **Cancel the runs this push supersedes.** The owner's point: a queue full of runs for commits nobody will look at again is a queue that delays the one that matters. A run is superseded when it is still going and its commit is **not** the commit about to be
 # pushed — so the newest push keeps its verdict and the older ones stop costing minutes. The check is on the sha rather than on the title, because two pushes can share a title and only one of them is current.
+MESSAGE="${1:-sync}"
+if [ -n "$(git -C ../release/groove-github status --porcelain)" ]; then
+  git -C ../release/groove-github add -A
+  git -C ../release/groove-github commit -q -m "$MESSAGE"
+fi
+# The sha is read **after** the mirror commit, so it is the commit this push publishes — reading it earlier found the previous head and cancelled nothing.
 if command -v gh >/dev/null 2>&1 && [ -d ../release/groove-github/.git ]; then
   # `gh` has no `-C`, and a silently-failing cancel would be worse than none: the subshell makes the repository explicit.
   NEW_SHA=$(git -C ../release/groove-github rev-parse HEAD)
@@ -33,11 +39,6 @@ if command -v gh >/dev/null 2>&1 && [ -d ../release/groove-github/.git ]; then
     echo "     cancelling superseded run $RUN"
     (cd ../release/groove-github && gh run cancel "$RUN" >/dev/null 2>&1) || true
   done
-fi
-MESSAGE="${1:-sync}"
-if [ -n "$(git -C ../release/groove-github status --porcelain)" ]; then
-  git -C ../release/groove-github add -A
-  git -C ../release/groove-github commit -q -m "$MESSAGE"
 fi
 git -C ../release/groove-github push origin dev
 echo "✅ pushed — now read what CI says: npm run ci:status"
