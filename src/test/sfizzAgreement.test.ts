@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseSfz } from "../audio/sfz/parse";
@@ -134,5 +134,35 @@ describe.skipIf(!available)("A4 — sfizz's output against this project's mappin
     console.log(`   A4 curve 1 at CC 32: expected ${expectedHz.toFixed(2)} Hz, sfizz ${pitch!.hz.toFixed(2)} Hz (source ${sourceFrames} frames at 440 Hz)`);
     // A linear reading would be more than an octave away, so 1% is comfortably inside the difference between the two shapes.
     expect(Math.abs(pitch!.hz - expectedHz) / expectedHz).toBeLessThan(0.01);
+  });
+});
+
+/**
+ * **A `sample=` path with spaces: sfizz plays it unquoted, and is silent when it is quoted.**
+ *
+ * Muse reported `sample=Tubular Bells 1/chimes.wav` arriving as `Tubular`, and the fix at the time was to report the cut rather than read it, on the reading that an
+ * unquoted value ends at whitespace and a name with spaces must be quoted. The reference engine says the opposite, and it is the standard this project settles semantics
+ * with, so the parser now reads the spaces. The measurement is a criterion rather than a note because the advice the old behaviour printed was the one form that does not
+ * play: VCSL, which the manifest mirrors, writes every sample path unquoted and many of them inside directories with spaces.
+ */
+describe.skipIf(!available)("sfizz's own reading of a sample path containing a space", () => {
+  it("plays the unquoted form and is silent on the quoted one, which is why the parser reads the spaces", () => {
+    const dir = mkdtempSync(join(tmpdir(), "sfizz-space-"));
+    buildFixture(dir);
+    const spaced = join(dir, "space dir");
+    mkdirSync(spaced, { recursive: true });
+    copyFileSync(join(dir, "tone.wav"), join(spaced, "tone.wav"));
+    writeFileSync(join(dir, "unquoted.sfz"), "<region> sample=space dir/tone.wav pitch_keycenter=60 lokey=0 hikey=127\n");
+    writeFileSync(join(dir, "quoted.sfz"), '<region> sample="space dir/tone.wav" pitch_keycenter=60 lokey=0 hikey=127\n');
+
+    const render = (sfz: string, wav: string) => {
+      execFileSync(SFIZZ, ["--sfz", join(dir, sfz), "--midi", join(dir, "note.mid"), "--wav", join(dir, wav), "-s", String(SR)], { stdio: "ignore" });
+      return readWav(join(dir, wav));
+    };
+    const unquoted = render("unquoted.sfz", "unquoted.wav");
+    const quoted = render("quoted.sfz", "quoted.wav");
+    expect(unquoted.peak, "sfizz no longer plays an unquoted path with a space").toBeGreaterThan(0.05);
+    // Three orders of magnitude down: the tone is simply not there, because the quotes became part of the filename.
+    expect(quoted.peak, "sfizz now accepts the quoted form, so the parser's rule needs revisiting").toBeLessThan(0.001);
   });
 });

@@ -230,3 +230,57 @@ describe("the master header", () => {
     expect(plain[0]!.opcodes.master).toBeUndefined();
   });
 });
+
+/**
+ * A `sample=` path that contains spaces — **measured against sfizz rather than read off the grammar**.
+ *
+ * Muse reported `sample=Tubular Bells 1/chimes.wav` arriving as `Tubular`, and the fix at the time was to *report* the cut on the region, on the reading that an unquoted value
+ * ends at whitespace. The reference engine disagrees, and it is the standard this project settles semantics with: rendering a 440 Hz tone through
+ * `sample=space dir/tone.wav` produces the tone (peak 0.0824), while the quoted form `sample="space dir/tone.wav"` renders **silence** (peak 0.000031). sfizz reads the
+ * spaces and rejects the quotes — so the truncation was ours, and the advice it printed ("a name containing spaces must be quoted") is the one form that does not play.
+ *
+ * This is not a corner: VCSL, which the manifest mirrors, writes every sample path unquoted and many of them inside directories with spaces. Under the old rule the
+ * timpani — the only orchestral instrument the mirror holds — resolved to a file called `Timpani`, which is no file at all.
+ */
+describe("a sample path containing spaces", () => {
+  it("reads the whole path when it is alone on the line, as VCSL writes it", () => {
+    const regions = parseSfz("<region> sample=Timpani 1/Hit/Timpani1_Hit_v2_rr1_Sum.wav\npitch_keycenter=42\nlokey=41\nhikey=44");
+    expect(regions[0]!.sample).toBe("Timpani 1/Hit/Timpani1_Hit_v2_rr1_Sum.wav");
+    // The bug this replaces: `Timpani`.
+    expect(regions[0]!.sample).not.toBe("Timpani");
+    expect(regions[0]).toMatchObject({ pitchKeycenter: 42, lokey: 41, hikey: 44 });
+  });
+
+  it("reads the whole path and still finds the opcodes written after it on the same line", () => {
+    const regions = parseSfz("<region> sample=space dir/tone.wav pitch_keycenter=60 lokey=1 hikey=2");
+    expect(regions[0]).toMatchObject({ sample: "space dir/tone.wav", pitchKeycenter: 60, lokey: 1, hikey: 2 });
+  });
+
+  it("resolves the note to the whole path rather than to a directory name", () => {
+    const regions = parseSfz(`<group> ampeg_release=30
+<region> seq_length=2
+seq_position=1
+lovel=0
+hivel=65
+sample=Timpani 1/Hit/Timpani1_Hit_v2_rr1_Sum.wav
+pitch_keycenter=42
+lokey=41
+hikey=44
+`);
+    const playback = playbackForNote(regions, 42, { velocity: 40 });
+    expect(playback?.sample).toBe("Timpani 1/Hit/Timpani1_Hit_v2_rr1_Sum.wav");
+    expect(playback?.rootKey).toBe(42);
+  });
+
+  it("still accepts the quoted form, which is more forgiving than the engine it is compared against", () => {
+    const regions = parseSfz('<region> sample="space dir/tone.wav" pitch_keycenter=60');
+    expect(regions[0]!.sample).toBe("space dir/tone.wav");
+  });
+
+  it("does not read an empty value as the next opcode's text", () => {
+    // The scanner moves on to the next pair rather than swallowing it, which is what the old pattern did by failing to match.
+    const regions = parseSfz("<region> sample=tone.wav lovel= hivel=63");
+    expect(regions[0]!.opcodes.hivel).toBe("63");
+    expect(regions[0]!.sample).toBe("tone.wav");
+  });
+});
