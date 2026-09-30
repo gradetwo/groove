@@ -147,7 +147,14 @@ export function summariseSong(song: Song): SongSummary {
      */
     secondsEstimate: Number(
       (song.tempoTrack?.length
-        ? totalSeconds(song, flattened.totalBars)
+        ? /**
+           * ⭐ **The bar count is the song's real length, not its pass count — mixing the two is what made a slower song report a shorter time.**
+           *
+           * Measured through the MCP server: a one-pass chicago-house song (`totalSteps: 128`, `passBars: 1`) estimated **15.5 s** with no tempo map, and **1.9 s** after a map slowed it to 60 bpm. Slower cannot be shorter. `totalSeconds` sums bar by bar and it was being given `flattened.totalBars` — **one pass** — so it added a single bar and stopped: `barSeconds(bar 0) = 1.935 s`, which is the 1.9 s in the reply.
+           *
+           * The same song at its true length is **8 bars of 16 steps**, and summing those gives **29.9 s** against the 15.5 s it had at 124 bpm — longer, which is what slowing a song does. The timeline counts a pass as one bar while a clip is four, and this function is asked about **time**, so it takes the step count as the basis, exactly as the no-map branch beside it always has.
+           */
+          totalSeconds(song, Math.max(1, Math.ceil(flattened.totalSteps / 16)))
         : flattened.totalSteps * (60 / song.bpm / 4)
       ).toFixed(1)
     ),
