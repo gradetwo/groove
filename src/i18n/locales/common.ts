@@ -45,6 +45,10 @@ export const commonMessages = {
   template_drums_bass_desc: { en: "A drum kit and a bass — the most common pair", zh: "鼓组加贝斯，最常见的两件套" },
   template_drums_bass_chords_desc: { en: "Add chords and it can carry a whole song", zh: "再加一条和声，能撑起整首" },
   template_samplers_desc: { en: "Two sampler tracks — the kind that plays real instruments", zh: "两条采样器轨道——就是能听到真实乐器的那一种" },
+  keyboard_hint: { en: "Play the selected track with your keyboard, or click the keys", zh: "用电脑键盘或直接点琴键，试听选中的轨道" },
+  keyboard_velocity: { en: "Velocity", zh: "力度" },
+  keyboard_needs_instrument: { en: "This sampler track needs an instrument before it can sound", zh: "这条采样器轨道还没有选乐器，试听不会有声音" },
+  keyboard_needs_sampler: { en: "Select a sampler track to play it", zh: "选中一条采样器轨道才能试听" },
   template_blank_desc: { en: "Blank, with one track already typed the way you choose", zh: "空白，但已经有一条你选好类型的轨道" },
   // Phone shell (see `src/components/MobileTabBar.tsx`). Five destinations, not eleven.
   nav_learn: { en: "Learn", zh: "学习" },
