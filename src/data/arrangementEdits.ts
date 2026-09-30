@@ -7,7 +7,7 @@
  * Every function returns a **new arrangement**, because a track list is state that an interface re-renders from; mutating in place is how a UI ends up showing something the model does not say.
  */
 import type { ArrangementV2, NoteEvent, TakeRegion, TrackKindV2, TrackV2 } from "../types/arrangementV2";
-import { stepCountFor } from "./noteEvents";
+import { stepCountFor, stepsPerBarFor } from "./noteEvents";
 import type { PlannedTake } from "./takePlanning";
 import { DEFAULT_SAMPLER_ASSET, defaultContentFor } from "./defaultContent";
 import { addNote, moveNote, notesFromSteps, removeNote, setNoteLength, stepsFromNotes, STEPS_PER_BEAT } from "./noteEvents";
@@ -263,7 +263,8 @@ export function toggleStep(arrangement: ArrangementV2, trackId: string, index: n
   /**
    * ⭐ **The bound is the arrangement's length**, not a fixed sixteen and not a function of how many notes there happen to be. The old expression divided the note *count* by four, which is a category mistake that survived because both readings gave sixteen for a one-bar pattern.
    */
-  const stepCount = stepCountFor(notes, arrangement.bars);
+  // ⭐ The bar's length comes from the arrangement's signature too, so the grid this edit writes into is the same one the compile builds. Two places computing a bar's length is how a corrected 3/4 grid would have met a sixteen-step one here.
+  const stepCount = stepCountFor(notes, arrangement.bars, stepsPerBarFor(arrangement.timeSignature));
   const { steps, pitches } = stepsFromNotes(notes, stepCount);
   if (index < 0 || index >= stepCount) return arrangement;
   steps[index] = steps[index] ? 0 : 1;

@@ -93,3 +93,32 @@ describe("the arrangement's tempo map reaches the engine", () => {
     expect(flat.tempoTrack).toBeUndefined();
   });
 });
+
+/**
+ * **A bar's length follows the arrangement's time signature.**
+ *
+ * Muse composed a piece with a 3/4 movement and had to convert by hand — `ceil(bars × beatsPerBar / 4)` — because the
+ * step grid is built from `STEPS_PER_BAR = 16`, whose own comment admits the assumption ("a bar of **four** beats").
+ * The pattern had carried `timeSignature` all along; the arrangement had not.
+ *
+ * The criterion is the number, and the negative case beside it, because "the field travelled" would pass while the
+ * grid stayed sixteen: **two bars of 3/4 are twenty-four steps**, and two bars of an arrangement that names no
+ * signature are still thirty-two.
+ */
+describe("the step grid follows the arrangement's time signature", () => {
+  it("gives a 3/4 arrangement twelve steps a bar, and leaves 4/4 alone", () => {
+    const { arrangement, id } = withSampler(2);
+    const notes = { [id]: [note(36, 0)] };
+
+    const common = compileArrangementToSongInput(arrangement, notes);
+    expect(common.clips.A.tracks[0]!.steps, "two bars of an unstated signature").toHaveLength(32);
+
+    const waltz = compileArrangementToSongInput({ ...arrangement, timeSignature: "3/4" }, notes);
+    expect(waltz.clips.A.tracks[0]!.steps, "two bars of 3/4").toHaveLength(24);
+
+    // And 6/8 is the same length as 3/4 — six eighths, not six quarters — which is the case a naive reading gets
+    // wrong by a factor of two.
+    const compound = compileArrangementToSongInput({ ...arrangement, timeSignature: "6/8" }, notes);
+    expect(compound.clips.A.tracks[0]!.steps, "two bars of 6/8").toHaveLength(24);
+  });
+});
