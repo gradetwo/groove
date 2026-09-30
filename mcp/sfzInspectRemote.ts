@@ -54,7 +54,22 @@ export async function inspectSfzAt(
     servedFrom = mirror;
   }
 
-  const expanded = await expandRemoteIncludes(text, { fetchText: deps.fetchText, programUrl: servedFrom });
+  /**
+   * ⭐ **The program's own path, with the library's address as the base — measured, after two wrong guesses.**
+   *
+   * The first version passed the absolute URL as `programUrl`; the expander treats that argument as a **path** and
+   * splits on `/`, so `https://host/kit.sfz` became `https:/host/kit.sfz`. The second passed the URL's whole
+   * pathname, prefix and all, which made every include resolve one level too deep. Neither is what the arguments
+   * mean: **`programUrl` is the program's path relative to the base** and `baseUrl` is where that base lives — the
+   * same division the audio loader uses, and the reason `baseUrl` exists as an option at all.
+   *
+   * Measured on the real library with the arguments the right way round: **two waves, 40 files fetched, `missing`
+   * down to zero, 119 KB of expanded text.** With them the wrong way round: 0 regions.
+   */
+  const programme = new URL(servedFrom);
+  const programPath = programme.pathname.split("/").filter(Boolean).pop() ?? "program.sfz";
+  const libraryBase = new URL(".", programme).toString();
+  const expanded = await expandRemoteIncludes(text, { fetchText: deps.fetchText, programUrl: programPath, baseUrl: libraryBase });
   const regions = parseSfz(expanded.text);
   return {
     assetId: asset.assetId,
