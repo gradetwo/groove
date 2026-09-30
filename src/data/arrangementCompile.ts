@@ -127,6 +127,12 @@ function songInputFrom(arrangement: ArrangementV2, compiled: readonly CompiledLa
     sections: [{ id: "compiled", slot: "A", bars: arrangement.bars ?? 1 }],
     boundaries: [0],
     bpm: arrangement.bpm ?? DEFAULT_ARRANGEMENT_BPM,
+    /**
+     * ⭐ **The arrangement's tempo map travels with the projection — that is the whole of step one.**
+     *
+     * The song layer has always accepted `tempoTrack` (it is what `set_tempo` writes) and the renderer schedules bar by bar from it, so an arrangement carrying a map only had to say so here for a nine-movement piece to stop being nine arrangements rendered apart. Spread conditionally rather than passed as `undefined`, because an absent map must leave the song input **exactly** as it was: nothing that works today changes shape.
+     */
+    ...(arrangement.tempoTrack?.length ? { tempoTrack: arrangement.tempoTrack } : {}),
   };
 }
 
