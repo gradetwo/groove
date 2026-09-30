@@ -79,7 +79,7 @@
 ## 能力缺口（Muse 一手使用中点名，按价值排序）
 
 1. **编排侧 tempo map** —— 九个乐章 BPM 各异（66–168），当前只能拆成九个编排分别渲染再外部拼接；一个 `set_tempo_map` 即可省掉整条绕路（`set_tempo` 只作用于 song 层）。
-   **查证（先读实现再定缺口）**：确认为**真缺口** ✓，位置清楚——**song 层有 tempo map**（`tempoTrack`，逐小节 `{atBar, bpm, curve?}`，`mcp/registry.ts:1863` → `setMcpTempo`），而**编排层只有单一速度**（`set_arrangement_tempo`，同文件 523 行）✓。体量比"加个参数"大：编排模型要能承载 map，调度/渲染要按小节取速度——可参照 song 层已有的 `src/data/tempoMap.ts`（`stepTiming` / `totalSeconds`，其基准错误本会话刚修过 ✓）。**两步走**：① 先让编排速度走与 song 同一套 `stepTiming`，使"每乐章一个速度"能在**一个编排内**按段落边界表达；② 再上多点 map。
+   **查证（先读实现再定缺口）**：确认为**真缺口** ✓，位置清楚——**song 层有 tempo map**（`tempoTrack`，逐小节 `{atBar, bpm, curve?}`，`mcp/registry.ts:1863` → `setMcpTempo`），而**编排层只有单一速度**（`set_arrangement_tempo`，同文件 523 行）✓。体量比"加个参数"大：编排模型要能承载 map，调度/渲染要按小节取速度——可参照 song 层已有的 `src/data/tempoMap.ts`（`stepTiming` / `totalSeconds`，其基准错误本会话刚修过 ✓）。**两步走**：① 先让编排速度走与 song 同一套 `stepTiming`，使"每乐章一个速度"能在**一个编排内**按段落边界表达；② 再上多点 map。 **读编译器后收窄（改动比预估小一个数量级）**：`mcp/arrangement.ts:530` 的 `flattenMcpArrangement` 产出 `songInput`，并在 `:538-539` 用**单一** `bpm: songInput.bpm` 建歌——**没有传 `tempoTrack`** ✗；而 song 层本就支持 `tempoTrack` ✓（`set_tempo` → `setMcpTempo`，`mcp/registry.ts:1863`），渲染也按小节取速度 ✓（`src/data/tempoMap.ts` 的 `stepTiming`）。**所以第一步是"透传"而不是新机制**：编排能表达分段速度 → 编译器落成 song input 的 `tempoTrack` → 建歌时带上，**渲染侧不需要新代码** ✓。**实施三步**：①`mcp/arrangement.ts` 让编排/编译器接受分段速度并产出 `tempoTrack`；② 建歌处（`:539`）把 `tempoTrack` 一并传入（现在只有 `bpm` ✗）；③ 判据——**同一编排内两段不同速度 → 渲染时长等于两段之和**（反向可红）+ `check_mcp` 协议级检查。
 2. **拍号（time signature）** —— 3/4、6/8 现在只能按拍手工换算（`ceil(bars × beatsPerBar / 4)`）。
 3. **MIDI 导出** —— 只有导入。外部 DAW 协作需要它。
 4. **采样器轨的真实渲染** —— `render_arrangement` 对 audio/sampler 轨直接 `skippedTracks`（"an audio lane has no notes to schedule"），真实 SFZ 采样必须绕浏览器自研链路再外部混音。
