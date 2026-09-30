@@ -20,8 +20,8 @@
         "en": "Controller curve 1 is bipolar: the drum kit was an octave sharp, and is not now."
       },
       {
-        "zh": "选乐器按库分组，135 件乐器分在五个库下。",
-        "en": "The instrument chooser groups by library: 135 instruments under five of them."
+        "zh": "新建编排里可以试听采样器：点琴键或敲电脑键盘。",
+        "en": "A keyboard in the new arrangement: click the keys or use the computer keyboard to hear a sampler."
       }
     ],
     "truncated": true

@@ -1,7 +1,7 @@
 import { DEFAULT_SAMPLER_ASSET } from "../data/defaultContent";
 import type { ArrangementV2 } from "../types/arrangementV2";
 import { beforeEach, describe, expect, it } from "vitest";
-import { addTake, addTrack, addTrackNote, changeTrackKind, createArrangement, moveTrackNote, removeTrack, removeTrackNote, resetTrackIdsForTests, setTrackNoteLength, setTrackParent, setTrackSample, setTrackSteps, toggleStep } from "../data/arrangementEdits";
+import { addTake, addTrack, addTrackNote, changeTrackKind, createArrangement, moveTrackNote, removeTrack, removeTrackNote, resetTrackIdsForTests, setTrackFlag, setTrackGain, setTrackNoteLength, setTrackPan, setTrackParent, setTrackSample, setTrackSteps, toggleStep } from "../data/arrangementEdits";
 
 /**
  * The edits an interface is built from, and the two ways they go quietly wrong.
@@ -461,5 +461,43 @@ describe("changing a track's kind", () => {
     const id = added.tracks[0]!.id;
     const withTrack = setTrackSample(added, id, "salamander-grand");
     expect(changeTrackKind(withTrack, id, "drumkit").tracks[0]!.sample).toBeUndefined();
+  });
+});
+
+describe("a track's level and its place in the stereo field", () => {
+  it("sets a level in dB and a pan between the channels", () => {
+    const withTrack = addTrack(emptyArrangement(), "instrument", "Keys");
+    const id = withTrack.tracks[0]!.id;
+    expect(setTrackGain(withTrack, id, -6).tracks[0]!.gainDb).toBe(-6);
+    expect(setTrackPan(withTrack, id, -0.5).tracks[0]!.pan).toBe(-0.5);
+  });
+
+  it("clamps rather than storing a value nothing can honour", () => {
+    // ±60 dB is inaudible at both ends, and a pan past hard left is not a pan; a slider cannot send these, but an imported file or an agent can.
+    const withTrack = addTrack(emptyArrangement(), "instrument", "Keys");
+    const id = withTrack.tracks[0]!.id;
+    expect(setTrackGain(withTrack, id, 999).tracks[0]!.gainDb).toBe(12);
+    expect(setTrackGain(withTrack, id, -999).tracks[0]!.gainDb).toBe(-60);
+    expect(setTrackPan(withTrack, id, 5).tracks[0]!.pan).toBe(1);
+    expect(setTrackPan(withTrack, id, -5).tracks[0]!.pan).toBe(-1);
+  });
+
+  it("keeps a level when the track is muted, so unmuting does not undo it", () => {
+    /**
+     * Mute and level are separate decisions, which is why they are separate edits: Logic's track header has both, and a mute that reset the fader would be a mixer that forgets.
+     */
+    const withTrack = addTrack(emptyArrangement(), "instrument", "Keys");
+    const id = withTrack.tracks[0]!.id;
+    const quiet = setTrackGain(withTrack, id, -12);
+    const muted = setTrackFlag(quiet, id, "muted", true);
+    const unmuted = setTrackFlag(muted, id, "muted", false);
+    expect(unmuted.tracks[0]!.gainDb).toBe(-12);
+    expect(unmuted.tracks[0]!.muted).toBe(false);
+  });
+
+  it("leaves every other track alone", () => {
+    const two = addTrack(addTrack(emptyArrangement(), "instrument", "Keys"), "instrument", "Bass");
+    const edited = setTrackGain(two, two.tracks[0]!.id, -3);
+    expect(edited.tracks[1]).toBe(two.tracks[1]);
   });
 });

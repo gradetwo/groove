@@ -183,11 +183,12 @@ export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, 
                   className="w-20 accent-[var(--d-accent)]"
                 />
               )}
-              {onChangeGain && (
-                <span data-testid={`track-gain-value-${track.id}`} className="w-12 text-right font-['JetBrains_Mono'] text-[10px] text-text opacity-70">
-                  {(track.gainDb ?? 0).toFixed(1)} dB
-                </span>
-              )}
+              {/*
+                **The number shows whether or not the slider does.** The callbacks are optional so the list can be rendered as a report of the arrangement rather than as an editor — and a report that hid every level would be reporting the wrong thing.
+              */}
+              <span data-testid={`track-gain-value-${track.id}`} className="w-12 text-right font-['JetBrains_Mono'] text-[10px] text-text opacity-70">
+                {(track.gainDb ?? 0).toFixed(1)} dB
+              </span>
               {onChangePan && (
                 <input
                   type="range"
