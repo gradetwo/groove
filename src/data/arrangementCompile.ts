@@ -12,7 +12,7 @@
  */
 import type { SequencerTrack } from "../types/genre";
 import type { ArrangementV2, NoteEvent, TrackV2 } from "../types/arrangementV2";
-import { stepsFromNotes, STEPS_PER_BEAT } from "./noteEvents";
+import { stepsFromNotes, stepCountFor } from "./noteEvents";
 
 /**
  * Note data per track id — notes in **musical time**, which is the model.
@@ -56,9 +56,10 @@ export function compileArrangementToLanes(arrangement: ArrangementV2, notes: Not
      * **The conversion, and its stated limit.** The engine's lanes trigger at sixteenth-note steps, so a note is placed at the step its start rounds to and its pitch rides along in `pitch`; its **length is not represented**, because a lane's step fires a
      * one-shot rather than holding a note. That is a limit of this playback path rather than of the model: the notes keep their true positions and lengths, so a path that read beats would need no conversion at all.
      *
-     * The grid is as long as the notes are — a note written in bar three must not fall off the end of a one-bar array.
+     * The grid is as long as the arrangement is, and at least as long as its notes — a note written in bar three must not fall off the end of a one-bar array.
      */
-    const stepCount = Math.max(16, ...notesForTrack.map((note) => Math.round(note.startBeats * STEPS_PER_BEAT) + 1));
+    // The arrangement's stated length and the notes' reach, whichever is longer — see `stepCountFor`.
+    const stepCount = stepCountFor(notesForTrack, arrangement.bars);
     const { steps, pitches } = stepsFromNotes(notesForTrack, stepCount);
     lanes.push({
       sourceTrackId: track.id,

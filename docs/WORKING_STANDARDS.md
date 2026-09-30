@@ -17,6 +17,14 @@ git merge --no-edit <分支名>
 
 清理：`git worktree remove ../groove-wt`（分支保留）。
 
+**新 worktree 缺的是未跟踪的生成资产**，跑门禁前先补一次，否则会看到一条假失败：
+
+```bash
+bash scripts/worktree_assets.sh        # 从主树拷 public/ 下未跟踪的文件，不覆盖已有
+```
+
+这条是实测出来的：`genreCovers.test.ts` 检查 `public/covers/<皮肤>/` 里的成品图，而它们大多是**生成且未跟踪**的——主树每套 159 张，刚建的 worktree 只有被跟踪的那几张，于是那条判据在 worktree 里红、在主树里绿。看起来像代码问题，其实不是。
+
 ## 2. 推送只走 `npm run push:dev`
 
 它按顺序做三件事：**跑完整本地门禁 → 同步镜像 → 提交并推 `dev`**，并且会顺手取消被这次推送取代的 CI 运行。门禁不过就不推。

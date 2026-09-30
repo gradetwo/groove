@@ -31,8 +31,10 @@ export interface PianoRollV2Props {
   onMoveNote?: (from: { pitch: number; startBeats: number }, to: { pitch: number; startBeats: number }) => void;
   /** Drag a note's right edge. Separate from moving because they are separate intentions, and a body that resized is a control nobody can aim. */
   onResizeNote?: (at: { pitch: number; startBeats: number }, lengthBeats: number) => void;
-  /** How much time to show. Four bars of sixteenths fits a screen at this pitch range without horizontal scrolling. */
+  /** How much time to show — the arrangement's own length, so the roll and the transport agree about where the end is. */
   beats?: number;
+  /** Adding and removing bars, when the caller can change the arrangement's length. Optional, so the roll can still be a picture. */
+  onSetBars?: (bars: number) => void;
   /** The lowest and highest pitch drawn. A window rather than all 128, because 128 rows is a scroll bar where a melody is a glance. */
   lowPitch?: number;
   highPitch?: number;
@@ -55,7 +57,7 @@ export function noteName(pitch: number): string {
 
 const isBlackKey = (pitch: number) => [1, 3, 6, 8, 10].includes(pitch % 12);
 
-export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResizeNote, beats = 16, lowPitch = 48, highPitch = 84 }: PianoRollV2Props) {
+export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResizeNote, beats = 16, onSetBars, lowPitch = 48, highPitch = 84 }: PianoRollV2Props) {
   const { t } = useLanguage();
   const [lengthBeats, setLengthBeats] = useState(1);
   const [velocity, setVelocity] = useState(100);
@@ -96,6 +98,34 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
             className="w-16 px-1 py-0.5 rounded bg-transparent border border-[var(--d-border,rgba(255,255,255,0.15))] text-text"
           />
         </label>
+        {onSetBars && (
+          /**
+           * **The length is edited where it is felt.** Logic puts the end of the arrangement on the timeline; here the roll is what shows the whole thing, so the two buttons that change it belong at its head rather than in a settings panel somewhere else.
+           */
+          <span className="flex items-center gap-1">
+            <button
+              type="button"
+              data-testid="roll-remove-bar"
+              aria-label={t("roll_remove_bar")}
+              onClick={() => onSetBars(Math.max(1, Math.round(beats / 4) - 1))}
+              className="px-2 py-0.5 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] text-text"
+            >
+              −
+            </button>
+            <span data-testid="roll-bars" className="font-['JetBrains_Mono']">
+              {Math.round(beats / 4)} {t("roll_bars_unit")}
+            </span>
+            <button
+              type="button"
+              data-testid="roll-add-bar"
+              aria-label={t("roll_add_bar")}
+              onClick={() => onSetBars(Math.round(beats / 4) + 1)}
+              className="px-2 py-0.5 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] text-text"
+            >
+              +
+            </button>
+          </span>
+        )}
         <label className="flex items-center gap-2">
           {t("keyboard_velocity")}
           <input

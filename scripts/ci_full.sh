@@ -15,7 +15,8 @@ command -v gh >/dev/null || { echo "❌ gh is not installed, so CI cannot be ask
 cd "$REPO" || exit 1
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 echo "dispatching the full CI on $BRANCH"
-gh workflow run ci.yml --ref "$BRANCH"
+# `nightly=false` on purpose: a release wants the browser matrix, not the monitoring sweep.
+gh workflow run ci.yml --ref "$BRANCH" -f nightly=false
 
 # The run takes a moment to appear, and matching on the newest id is how the one just asked for is found.
 sleep 10

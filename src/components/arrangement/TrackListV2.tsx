@@ -8,7 +8,7 @@
  * The one thing it does add is **indentation for grouped tracks**, computed from `parentId` rather than stored, so a track's visual depth cannot drift from its grouping.
  */
 import { useState } from "react";
-import { stepsFromNotes, STEPS_PER_BEAT } from "../../data/noteEvents";
+import { stepsFromNotes, stepCountFor } from "../../data/noteEvents";
 import { InstrumentLibraryV2 } from "./InstrumentLibraryV2";
 import { useLanguage } from "../../i18n/LanguageContext";
 import type { ArrangementV2, TrackKindV2, TrackV2 } from "../../types/arrangementV2";
@@ -31,6 +31,11 @@ export interface TrackListV2Props {
    * Turn one of a track's own steps on or off. Optional so the list can be rendered as a report of the arrangement, without an editing surface.
    */
   onToggleStep?: (trackId: string, index: number) => void;
+  /**
+   * Which bar the step strips show, 0-based. **One bar at a time**, because an eight-bar arrangement is 128 squares: at fourteen pixels each that is a row eighteen hundred pixels wide, which is a scroll bar rather than a grid. The roll is where the whole thing is
+   * visible and editable; the strip keeps the job it is good at, which is a pattern at a glance.
+   */
+  bar?: number;
   /** A track's level in dB and its place in the stereo field, both inline — Logic's track header has both for a reason: they are what a person reaches for while listening. */
   onChangeGain?: (trackId: string, gainDb: number) => void;
   onChangePan?: (trackId: string, pan: number) => void;
@@ -41,10 +46,6 @@ export interface TrackListV2Props {
  *
  * Sixteen — one bar of sixteenths — unless the track already has notes past that, in which case the grid grows to hold them rather than hiding them: a note written in bar two must be visible, and a fixed sixteen would drop it silently.
  */
-function stepCountFor(arrangement: { notesByTrack?: Record<string, { startBeats: number }[]> }, trackId: string): number {
-  const notes = arrangement.notesByTrack?.[trackId] ?? [];
-  return Math.max(16, ...notes.map((note) => Math.round(note.startBeats * STEPS_PER_BEAT) + 1));
-}
 
 export interface InstrumentChoice {
   assetId: string;
@@ -93,7 +94,7 @@ function depthOf(track: TrackV2, all: readonly TrackV2[], seen = new Set<string>
 
 const ADDABLE: TrackKindV2[] = ["sampler", "instrument", "drumkit", "fx", "folder"];
 
-export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, onToggleCollapse, onChangeKind, instruments = [], onChangeInstrument, onToggleStep, onChangeGain, onChangePan }: TrackListV2Props) {
+export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, onToggleCollapse, onChangeKind, instruments = [], onChangeInstrument, onToggleStep, bar = 0, onChangeGain, onChangePan }: TrackListV2Props) {
   const { t } = useLanguage();
   // Which row's library panel is open. One at a time: two panels open would make the list jump as each one changes its height.
   const [openLibraryFor, setOpenLibraryFor] = useState<string | undefined>(undefined);
@@ -223,13 +224,15 @@ export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, 
                     **The grid is derived from the notes, not stored beside them.** `stepsFromNotes` is the same conversion the compile uses, so the squares a person sees and the triggers the engine fires cannot disagree — which is exactly what two
                     parallel representations of one performance would eventually do.
                   */}
-                  {stepsFromNotes(arrangement.notesByTrack?.[track.id] ?? [], stepCountFor(arrangement, track.id)).steps.map((value, index) => (
+                  {stepsFromNotes(arrangement.notesByTrack?.[track.id] ?? [], stepCountFor(arrangement.notesByTrack?.[track.id] ?? [], arrangement.bars)).steps
+                    // The bar's own sixteen squares, taken from the arrangement-length view so the two cannot disagree about where a note sits.
+                    .slice(bar * 16, bar * 16 + 16).map((value, index) => (
                     <button
                       key={index}
                       type="button"
-                      aria-label={`${track.name} step ${index + 1}`}
+                      aria-label={`${track.name} bar ${bar + 1} step ${index + 1}`}
                       aria-pressed={value > 0}
-                      onClick={() => onToggleStep(track.id, index)}
+                      onClick={() => onToggleStep(track.id, index + bar * 16)}
                       className={`w-3.5 h-5 rounded-sm border border-[var(--d-border,rgba(255,255,255,0.15))] ${
                         value > 0 ? "bg-[var(--d-accent)]" : "bg-transparent opacity-40"
                       }`}

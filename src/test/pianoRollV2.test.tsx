@@ -12,7 +12,7 @@ import { STEP_BEATS } from "../data/noteEvents";
 
 const renderRoll = (props: Partial<React.ComponentProps<typeof PianoRollV2>> = {}) => {
   // All four spies, because a gesture's meaning is often the spy it did **not** call.
-  const spies = { onAddNote: vi.fn(), onRemoveNote: vi.fn(), onMoveNote: vi.fn(), onResizeNote: vi.fn() };
+  const spies = { onAddNote: vi.fn(), onRemoveNote: vi.fn(), onMoveNote: vi.fn(), onResizeNote: vi.fn(), onSetBars: vi.fn() };
   render(
     <LanguageProvider>
       <PianoRollV2 notes={[]} beats={4} lowPitch={60} highPitch={72} {...spies} {...props} />
@@ -120,5 +120,30 @@ describe("the piano roll", () => {
     // The note carries the remove label; the empty cell beside it carries the write label.
     expect(screen.getByTestId("roll-note-60-0").getAttribute("aria-label")).toMatch(/删除|Remove/);
     expect(screen.getByTestId("roll-cell-60-1").getAttribute("aria-label")).toMatch(/写|Add/);
+  });
+});
+
+describe("the roll and the arrangement's length", () => {
+  it("changes the arrangement's length from where the length is felt", () => {
+    /**
+     * Logic puts the end of the arrangement on the timeline; here the roll is what shows the whole of it, so the two buttons that change it belong at its head rather than in a settings panel somewhere else.
+     */
+    const { onSetBars } = renderRoll({ beats: 16 });
+    // Sixteen beats is four bars, so the label counts bars rather than beats — the unit the arrangement is stated in.
+    expect(screen.getByTestId("roll-bars").textContent).toContain("4");
+    fireEvent.click(screen.getByTestId("roll-add-bar"));
+    expect(onSetBars).toHaveBeenCalledWith(5);
+  });
+
+  it("will not shorten past one bar, because an arrangement of no bars is not an arrangement", () => {
+    const { onSetBars } = renderRoll({ beats: 4 });
+    fireEvent.click(screen.getByTestId("roll-remove-bar"));
+    expect(onSetBars).toHaveBeenCalledWith(1);
+  });
+
+  it("leaves the length controls out when nobody can change the length", () => {
+    // The same rule as the other optional callbacks: the roll can be a picture of the notes rather than an editor of them. `onSetBars: undefined` is what a caller that owns no arrangement passes.
+    renderRoll({ beats: 8, onSetBars: undefined });
+    expect(screen.queryByTestId("roll-add-bar")).toBeNull();
   });
 });

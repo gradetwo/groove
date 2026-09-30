@@ -85,7 +85,7 @@ describe("a track's own steps in the row", () => {
     // `defaultContentFor` gives a drum track every fourth step, so the row must show 16 controls with 4 of them pressed.
     const withTrack = addTrack(base(), "drumkit", "Drums");
     renderList(withTrack);
-    const steps = screen.getAllByLabelText(/^Drums step \d+$/);
+    const steps = screen.getAllByLabelText(/^Drums bar 1 step \d+$/);
     expect(steps).toHaveLength(16);
     expect(steps.filter((step) => step.getAttribute("aria-pressed") === "true")).toHaveLength(4);
   });
@@ -94,7 +94,7 @@ describe("a track's own steps in the row", () => {
     resetTrackIdsForTests();
     const withTrack = addTrack(base(), "drumkit", "Drums");
     const { onToggleStep } = renderList(withTrack);
-    fireEvent.click(screen.getByLabelText("Drums step 2"));
+    fireEvent.click(screen.getByLabelText("Drums bar 1 step 2"));
     expect(onToggleStep).toHaveBeenCalledWith(withTrack.tracks[0]!.id, 1);
   });
 

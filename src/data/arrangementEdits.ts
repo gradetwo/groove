@@ -7,6 +7,7 @@
  * Every function returns a **new arrangement**, because a track list is state that an interface re-renders from; mutating in place is how a UI ends up showing something the model does not say.
  */
 import type { ArrangementV2, NoteEvent, TakeRegion, TrackKindV2, TrackV2 } from "../types/arrangementV2";
+import { stepCountFor } from "./noteEvents";
 import type { PlannedTake } from "./takePlanning";
 import { DEFAULT_SAMPLER_ASSET, defaultContentFor } from "./defaultContent";
 import { addNote, moveNote, notesFromSteps, removeNote, setNoteLength, stepsFromNotes, STEPS_PER_BEAT } from "./noteEvents";
@@ -36,9 +37,19 @@ export function createArrangement(songId: string, kind: TrackKindV2 = "instrumen
     songId,
     tracks: [{ id, kind, name: DEFAULT_NAME[kind], ...(content.sample ? { sample: content.sample } : {}) }],
     notesByTrack: { [id]: notesFromSteps(content.steps, { velocity: 100 }) },
+    // ⭐ Eight bars to start with, because an arrangement exists to hold more than one thing and one bar is where a pattern lives. The templates were written as one-bar patterns, so a new arrangement is long enough for them and short enough to see whole.
+    bars: DEFAULT_BARS,
     sourceSlots: [],
   };
 }
+
+/**
+ * How long a new arrangement is. **Eight rather than one**, because the old one-bar figure was the v1 pattern's length leaking into a surface that is not a pattern: an arrangement is a place where four bars is the shortest useful thing and eight fits on a screen.
+ */
+export const DEFAULT_BARS = 8;
+
+/** The longest an arrangement may be. Long enough for a whole piece, short enough that a player never walks into a wall of silence. */
+export const MAX_BARS = 128;
 
 const DEFAULT_NAME: Record<TrackKindV2, string> = {
   drumkit: "Drums",
@@ -167,6 +178,17 @@ export function renameTrack(arrangement: ArrangementV2, trackId: string, name: s
  * **A separate edit from mute rather than a value of it**: Logic's track header has both for the same reason — a muted track keeps its level, and unmuting must not also undo a decision about how loud it is. Clamped to a range the engine can honour (±60 dB is already
  * inaudible at both ends), so a slider cannot send a value that means "silence by accident".
  */
+/**
+ * ⭐ **How long the arrangement is.** The edit exists because the length is content: it decides where a note may be written, how much the roll shows, and how long a bounce is — and those three must agree, so they read one number rather than three.
+ *
+ * Clamped to 1…128 rather than refused: a slider at its end is not an error, and an imported file with a silly number should open rather than be rejected.
+ */
+export function setArrangementBars(arrangement: ArrangementV2, bars: number): ArrangementV2 {
+  const rounded = Math.round(bars);
+  const clamped = Math.max(1, Math.min(MAX_BARS, Number.isFinite(rounded) ? rounded : 1));
+  return { ...arrangement, bars: clamped };
+}
+
 export function setTrackGain(arrangement: ArrangementV2, trackId: string, gainDb: number): ArrangementV2 {
   const clamped = Math.max(-60, Math.min(12, gainDb));
   return {
@@ -223,7 +245,10 @@ export function toggleStep(arrangement: ArrangementV2, trackId: string, index: n
    * **The grid is a view over notes**, so a toggle is a conversion in both directions rather than an array index flip. The step count is the grid the caller is looking at — sixteen unless the track already says otherwise — and the pitch of a new note is the
    * track's existing lowest note when it has one, so toggling a drum row does not silently move it to middle C.
    */
-  const stepCount = Math.max(16, Math.ceil(notes.length / STEPS_PER_BEAT) * STEPS_PER_BEAT);
+  /**
+   * ⭐ **The bound is the arrangement's length**, not a fixed sixteen and not a function of how many notes there happen to be. The old expression divided the note *count* by four, which is a category mistake that survived because both readings gave sixteen for a one-bar pattern.
+   */
+  const stepCount = stepCountFor(notes, arrangement.bars);
   const { steps, pitches } = stepsFromNotes(notes, stepCount);
   if (index < 0 || index >= stepCount) return arrangement;
   steps[index] = steps[index] ? 0 : 1;
