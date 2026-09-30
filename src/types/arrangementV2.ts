@@ -99,6 +99,12 @@ export interface ArrangementV2 {
    * **Keys are `trackId`s, which makes deletion a data question**, not just a list edit: a track's notes have to go with it or the model keeps orphans that fire the next time something reuses that id.
    */
   notesByTrack?: Record<string, NoteEvent[]>;
+  /**
+   * ⭐ **How long the arrangement is, in bars.** Absent means "as long as it needs to be", which is the honest reading of an older file: the length is then the longest thing written plus a bar, so nothing silently loses its end.
+   *
+   * It exists because a note has a position in **musical time**, and musical time has to have somewhere to be. Without it, a roll can only show the sixteen steps a lane happens to hold, and "write something in bar 3" is not a thing a person can do.
+   */
+  bars?: number;
   /** Every clip slot that carried at least one track, so a projection can be checked for completeness. */
   sourceSlots: string[];
 }

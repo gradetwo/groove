@@ -290,10 +290,15 @@ describe("editing a track's own steps", () => {
     expect(edited.notesByTrack![id]!.filter((note) => note.startBeats % 1 === 0).length).toBe(4);
   });
 
-  it("refuses a step outside the pattern rather than growing one", () => {
+  it("refuses a step beyond the arrangement rather than growing it", () => {
+    /**
+     * **The bound is the arrangement's length.** It was a fixed sixteen, which was the v1 pattern's length; an arrangement is eight bars by default, so step 99 is now a legitimate square and step 999 is not. A toggle past the end is refused rather than
+     * extending the arrangement, because the length is a decision a person makes and not a side effect of a stray click.
+     */
     const withTrack = addTrack(emptyArrangement(), "drumkit", "Drums");
     const id = withTrack.tracks[0]!.id;
-    expect(toggleStep(withTrack, id, 99)).toBe(withTrack);
+    expect(toggleStep(withTrack, id, 99).notesByTrack![id]!.length).toBeGreaterThan(0);
+    expect(toggleStep(withTrack, id, 9999)).toBe(withTrack);
   });
 
   it("refuses a kind that makes no sound, because its all-zero steps are its definition", () => {

@@ -9,7 +9,7 @@
  */
 import { useCallback, useMemo, useState } from "react";
 import type { ArrangementV2, TrackKindV2 } from "../../types/arrangementV2";
-import { addTake, addTrack, addTrackNote, changeTrackKind, moveTrackNote, removeTrackNote, setTrackGain, setTrackNoteLength, setTrackPan, setTrackSample, toggleStep, createArrangementFromTemplate, removeTrack, setCollapsed, setTrackFlag, selectTrackTake } from "../../data/arrangementEdits";
+import { addTake, addTrack, addTrackNote, changeTrackKind, moveTrackNote, removeTrackNote, setArrangementBars, setTrackGain, setTrackNoteLength, setTrackPan, setTrackSample, toggleStep, createArrangementFromTemplate, removeTrack, setCollapsed, setTrackFlag, selectTrackTake } from "../../data/arrangementEdits";
 import type { CaptureOutcome } from "../../audio/captureTake";
 import { TrackListV2, type InstrumentChoice } from "./TrackListV2";
 import { TakeSelectorV2 } from "./TakeSelectorV2";
@@ -52,6 +52,11 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
   const [choosing, setChoosing] = useState(true);
   const [arrangement, setArrangement] = useState<ArrangementV2>(() => createArrangementFromTemplate(songId, undefined, "instrument"));
   const [selectedTrackId, setSelectedTrackId] = useState<string | undefined>(undefined);
+  /**
+   * ⭐ **Which bar the strips show, which is not the transport's bar.** `bar` above is where the transport is in the underlying song and is what the take selector marks; this is a view choice — which sixteen squares a row draws. They are separate because an arrangement of eight bars still
+   * has one transport, and a person looking at bar three has not thereby moved the playhead.
+   */
+  const [stripBar, setStripBar] = useState(0);
   /** What the last play reported — **zero is shown, not hidden**: "nothing was planned" is a fact a user should see rather than a silent no-op. */
   const [played, setPlayed] = useState<number | undefined>(undefined);
 
@@ -96,6 +101,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
         instruments={instruments}
         onChangeInstrument={(trackId, assetId) => setArrangement((current) => setTrackSample(current, trackId, assetId))}
         onToggleStep={(trackId, index) => setArrangement((current) => toggleStep(current, trackId, index))}
+        bar={stripBar}
         onChangeGain={(trackId, gainDb) => setArrangement((current) => setTrackGain(current, trackId, gainDb))}
         onChangePan={(trackId, pan) => setArrangement((current) => setTrackPan(current, trackId, pan))}
       />
@@ -135,9 +141,40 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             {/**
               * **The roll, for a track that plays pitches.** It is here rather than in a separate editor because the owner's complaint was having to leave the arrangement to enter notes; the keyboard below plays, this writes, and both act on the selected track.
               */}
+              {/**
+              * **The bar selector**, which is what lets a strip stay useful in an arrangement of any length. It sits with the roll because both answer "where in the arrangement am I", and the roll is what shows the whole of it.
+              */}
+            <div data-testid="arrangement-bar-selector" className="flex items-center gap-2 px-1 text-xs text-text">
+              <button
+                type="button"
+                data-testid="arrangement-bar-prev"
+                aria-label={t("bar_previous")}
+                disabled={stripBar === 0}
+                onClick={() => setStripBar(Math.max(0, stripBar - 1))}
+                className="px-2 py-0.5 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] disabled:opacity-40"
+              >
+                ‹
+              </button>
+              <span className="font-['JetBrains_Mono']" data-testid="arrangement-bar-label">
+                {stripBar + 1} / {arrangement.bars ?? 8}
+              </span>
+              <button
+                type="button"
+                data-testid="arrangement-bar-next"
+                aria-label={t("bar_next")}
+                disabled={stripBar + 1 >= (arrangement.bars ?? 8)}
+                onClick={() => setStripBar(Math.min((arrangement.bars ?? 8) - 1, stripBar + 1))}
+                className="px-2 py-0.5 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] disabled:opacity-40"
+              >
+                ›
+              </button>
+            </div>
             {selected.kind !== "fx" && selected.kind !== "folder" && (
-              <PianoRollV2
+            <PianoRollV2
                 notes={arrangement.notesByTrack?.[selected.id] ?? []}
+                // The roll shows the whole arrangement, so its length and the transport's are the same number.
+                beats={(arrangement.bars ?? 8) * 4}
+                onSetBars={(bars) => setArrangement((current) => setArrangementBars(current, bars))}
                 onAddNote={(note) => setArrangement((current) => addTrackNote(current, selected.id, note))}
                 onRemoveNote={(at) => setArrangement((current) => removeTrackNote(current, selected.id, at))}
                 onMoveNote={(from, to) => setArrangement((current) => moveTrackNote(current, selected.id, from, to))}

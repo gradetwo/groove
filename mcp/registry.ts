@@ -53,6 +53,7 @@ import {
   selectMcpTake,
   setMcpTrackCollapsed,
   setMcpTrackFlag,
+  setMcpArrangementBars,
   setMcpNoteLength,
   setMcpTrackGain,
   setMcpTrackInstrument,
@@ -378,6 +379,24 @@ export const TOOLS: ToolDefinition[] = [
     handler: (args) => {
       try {
         return setMcpTrackFlag(String(args.arrangementId), String(args.trackId), args.flag as "muted" | "soloed", Boolean(args.value));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "set_arrangement_bars",
+    title: "Make the arrangement longer",
+    description:
+      "How long the arrangement is, in bars, clamped to 1…128. The length is respected even when it is longer than the notes, and the notes are never cut when it is shorter — the arrangement spans whichever reaches further, which the summary reports as `steps`.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      bars: z.number().int().min(1).max(128).describe("a bar is four beats, or sixteen steps"),
+    },
+    handler: (args) => {
+      try {
+        return setMcpArrangementBars(String(args.arrangementId), Number(args.bars));
       } catch (error) {
         return failure((error as Error).message);
       }

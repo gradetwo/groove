@@ -11,6 +11,8 @@ import type { NoteEvent } from "../types/arrangementV2";
 
 /** Sixteenth notes: the grid the interface draws and the resolution the engine's lanes still trigger at. */
 export const STEPS_PER_BEAT = 4;
+/** Sixteenth steps in a bar of four beats. Bars are the unit an arrangement's length is stated in, because that is the unit a musician counts in. */
+export const STEPS_PER_BAR = 16;
 /** A step's length in beats, written once. */
 export const STEP_BEATS = 1 / STEPS_PER_BEAT;
 
@@ -119,4 +121,21 @@ export function sortNotes(notes: readonly NoteEvent[]): NoteEvent[] {
 /** Whether two positions are the same cell. Compared on the step grid, because that is the grid a person clicks. */
 function sameGridPosition(a: NoteEvent, b: NoteEvent): boolean {
   return Math.round(a.startBeats / STEP_BEATS) === Math.round(b.startBeats / STEP_BEATS);
+}
+
+/**
+ * How many steps an arrangement holds: its stated length, or enough to reach its last note — whichever is longer.
+ *
+ * **The longer of the two, deliberately.** A stated length that is shorter than the notes is not a compression, it is a deletion: the compile would drop everything past the end. A stated length that is longer than the notes is just silence, which is a legitimate thing for an arrangement to contain. So the length is respected and the content is
+ * never cut.
+ */
+export function stepCountFor(notes: readonly NoteEvent[], bars: number | undefined): number {
+    const stated = Math.max(1, Math.round(bars ?? 0)) * STEPS_PER_BAR;
+    const needed = notes.reduce((longest, note) => Math.max(longest, Math.round(note.startBeats * STEPS_PER_BEAT) + 1), 0);
+    /**
+     * **Rounded up to a whole bar**, because bars are what an arrangement is measured in and a grid of thirty-three steps is two bars and a step — a loop that ends in the middle of a bar is a loop nobody can play along with. The stated length is already a whole number
+     * of bars, so this only ever affects the content's reach.
+     */
+    const spanned = Math.max(STEPS_PER_BAR, stated, needed);
+    return Math.ceil(spanned / STEPS_PER_BAR) * STEPS_PER_BAR;
 }
