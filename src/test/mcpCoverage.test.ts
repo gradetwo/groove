@@ -92,3 +92,31 @@ describe("the arrangement surface covers the arrangement layer", () => {
     }
   });
 });
+
+/**
+ * ⭐ **The layer above the layer.** `mcpCoverage` checks that every data-layer operation reaches a tool; this checks that every **operation written for MCP** is actually reachable from one. The gap it closes was real: `exportMcpMusicXml` was written, exported, imported into the registry — and no tool used it, while a commit message said one did. Nothing caught that, because a function that no tool names is
+ * simply dead code, which no type checker objects to.
+ *
+ * The rule is mechanical: an exported function in `mcp/arrangement.ts` must be **named** by some tool's handler in `mcp/registry.ts`, or be in the list below with a reason.
+ */
+describe("MCP · the operations written for MCP reach a tool", () => {
+  it("names every exported operation from a tool handler, or says why not", () => {
+    const module = readFileSync("mcp/arrangement.ts", "utf8");
+    const registry = readFileSync("mcp/registry.ts", "utf8");
+    const exported = [...module.matchAll(/^export function (\w+)/gm)].map((match) => match[1]!);
+
+    /** Exported for a caller that is not a tool: the internal helpers the tools are built from. */
+    const NOT_A_TOOL = new Set([
+      // Resets the process-local arrangement map between criteria; a tool that cleared every arrangement a caller had open would be a foot-gun, not a feature.
+      "clearMcpArrangements",
+      "edit",
+      "flattenMcpArrangement",
+      "summariseArrangement",
+      "requireArrangement",
+      "arrangementFromArgs",
+    ]);
+
+    const unreachable = exported.filter((name) => !NOT_A_TOOL.has(name) && !registry.includes(`${name}(`));
+    expect(unreachable, `these operations exist but no tool calls them: ${unreachable.join(", ")}`).toEqual([]);
+  });
+});
