@@ -997,3 +997,115 @@ instrument "salamander-grand" has 161 region(s) and none of them sound at the co
 修好前是 `0 / 161` 且整件乐器**拒绝解析**。剩下 2 个默认不发声是踏板门控（需要 CC64），那是**正确**行为。
 
 **判据**（`sfzCcGate.test.ts`）：`set_hdcc20=0.5` 读成 64、`=0` 读成 0、`=1` 读成 127；**正是报告里那个组合必须让音区发声**（这条判据就是当初那条报错信息的反面）；归一化为 0 时仍然静音；两种写法**按顺序取后者**；越界值夹紧。
+
+## 管弦乐器的缺口：实测（2026-10-01）
+
+结论：业主点名的十四件管弦乐器里，镜像里只有 timpani 一件，上游 VCSL 里只有 timpani 和 harp 两件。剩下十二件（弦乐四件、铜管四件、木管四件中的 flute/oboe/clarinet/bassoon）在钉住的 VCSL 里一个字节都没有，因此这不是"登记漏了"，是"库没有"。
+
+这一节同时更正两处先前的说法：上一版与工单里写着"笛与簧片的字节已在镜像里、只是没暴露"，实测不成立；`scripts/build_sample_manifest.mjs` 的注释里写着 VCSL 的 `Chordophones` 是"独奏弦乐"，实测也不成立，它是竖琴、钢琴与大键琴。
+
+### 镜像现状（`vcsl` 条目）
+
+复现：`node scripts/build_sample_manifest.mjs vcsl`（只报告，不写清单）。
+
+```
+vcsl @ dfcf4a4918771eee884b96ad4493de82ef84daf6
+  files 2651 · bytes 2525491354 (2408.5 MB) · .sfz 155 · audio 2488
+  limited to: Aerophones, Idiophones, Membranophones, Electrophones
+```
+
+按路径第二级统计文件数（清单自身的 `files` 列表）：
+
+| 路径 | 文件 |
+|---|---|
+| Idiophones/Struck Idiophones | 764 |
+| Membranophones/Struck Membranophones | 743 |
+| Aerophones/Edge-blown Aerophones | 394 |
+| Aerophones/Free Aerophones | 253 |
+| Electrophones/TX81Z | 191（另有 4 个 sfz 在族根） |
+| Aerophones/Reed Aerophones | 152 |
+| Idiophones/Plucked Idiophones | 114 |
+| Idiophones/Friction Idiophones | 19 |
+| Aerophones/Lip Aerophones | 13 |
+| Membranophones/Other Membranophones | 4 |
+
+### 暴露现状
+
+复现：`node scripts/mcp_call.mjs list_arrangement_instruments '{"library":"vcsl"}'`。结果是 88 件，与 `programsFrom` 对同样的 155 个 sfz 的分组逐条相同，只有 67 个 sfz 作为奏法变体被折进这 88 组（Keyswitch 优先）。也就是说没有漏登记：`Winds` 少不是折叠规则吃掉了乐器，而是这个族里本来就只有这些乐器。
+
+按乐器名核对十四件（"字节"一列是对清单里 2651 个文件路径做子串匹配，"暴露"一列是对 88 件乐器的名字与 sfz 路径匹配）：
+
+| 乐器 | 镜像里有字节 | 已暴露 | 上游 VCSL 有 |
+|---|---|---|---|
+| timpani | 有，250 个文件 | 有：`vcsl:Timpani-1-Keyswitch`、`vcsl:Timpani-2-Keyswitch` | 有 |
+| harp | 无 | 无 | 有：`Chordophones/Composite Chordophones/Concert Harp.sfz`、`Folk Harp.sfz` |
+| violin / viola / cello / contrabass | 无 | 无 | 无 |
+| horn / trumpet / trombone / tuba | 无 | 无 | 无（`Lip Aerophones` 13 个文件，只有 Didgeridoo） |
+| flute / oboe / clarinet / bassoon | 无 | 无 | 无（`Edge-blown` 是竖笛、陶笛、管风琴、哨子；`Reed` 是 Saxello 与 Tenor Saxophone） |
+
+判据在 `src/test/orchestralCoverage.test.ts`：声称被服务的乐器必须从钉住的源取回、展开 include、解析出音区，并且解析出的 sample 必须是清单里真实存在的文件；声称缺失的乐器则是强断言——清单里没有任何文件的路径含有那个词。将来某个词出现字节时，这条会红，直到它被移进 `servedBy` 并证明能发声。
+
+### 顺带修掉的一个缺陷：镜像里唯一那件管弦乐器此前发不出声
+
+VCSL 的 sample 路径不加引号且含空格（`sample=Timpani 1/Hit/Timpani1_Hit_v2_rr1_Sum.wav`），而解析器在第一个空格处截断，于是 `Timpani 1/Hit/…` 变成 `Timpani`：一个目录名。音区在、解析 ok，但那个文件不存在。
+
+上一版的做法是把截断报告在音区上，依据是"未加引号的值到空格为止，含空格的名字必须加引号"。用 sfizz 量了这条依据，结果是反的：
+
+```
+440 Hz 单音，同样一个音，只改 sample= 的写法
+  sample=space dir/tone.wav      峰值 0.0824   有声音
+  sample="space dir/tone.wav"    峰值 0.000031 静音
+```
+
+sfizz 读空格、拒绝引号，所以"必须加引号"这条建议恰好是唯一不发声的写法。解析器已改为：`sample=` 的值取到行尾，行内后面还有 `名字=` 时取到那里（`sample=space dir/tone.wav pitch_keycenter=60` 两者都读对）。修好之后 `vcsl:Timpani-1-Keyswitch` 的 42 号音解析到 `Timpani 1/Hit/Timpani1_Hit_v4_rr1_Sum.wav`，是清单里真实存在的文件。判据在 `src/test/sfzParse.test.ts`（含一条负对照：把旧规则放回去，5 条判据会红）。
+
+### 补齐剩下的要多少钱
+
+先说结论：弦乐、铜管、木管在 VCSL 里买不到，花多少钱都买不到；只有 harp 能从这个库补，代价是一层力度约 74 MiB。真正有这些乐器的是 VSCO 2 CE，而它的许可是 CC Sampling Plus 1.0，本项目不再分发它（README 的"Planned, not yet included"），所以那部分只能是用户自备。
+
+VCSL 上游钉住提交的完整树元数据（GitHub trees API，未下载任何音频）：
+
+```
+sgossner/VCSL @ dfcf4a4918771eee884b96ad4493de82ef84daf6
+  Aerophones      812 files   793.0 MB
+  Chordophones   1802 files  3462.0 MB
+  Electrophones   195 files   128.3 MB
+  Idiophones      897 files   878.8 MB
+  Membranophones  747 files   608.3 MB
+Chordophones 的两个子树：
+  Composite Chordophones   163 files   237.9 MB   Concert Harp, Folk Harp, Strumstick
+  Zithers                 1639 files  3224.1 MB   Dan Tranh、3 架三角钢琴、2 架立式钢琴、5 架大键琴、Psaltery
+```
+
+`Chordophones` 里没有任何一件弓弦乐器，所以给 `paths` 加它只会多出竖琴与键盘。竖琴按"每个乐器一层力度"估：
+
+| 乐器 | 整个程序 | 一层力度 |
+|---|---|---|
+| Concert Harp | 45 个采样，73.1 MiB | `_f1` 22 个文件 40.6 MiB；`_mf1` 18 个 26.5 MiB |
+| Folk Harp | 58 个采样，79.3 MiB | `v2` 29 个 33.5 MiB；`v3` 29 个 45.8 MiB |
+
+两件各取较轻的一层，连 sfz 正文（15 KB）合计约 74 MiB，而 `Chordophones/Composite Chordophones` 整个前缀是 237.9 MiB（多出来的主要是 Strumstick）。
+
+其余十二件只能换库。VSCO 2 CE（`schollz/VSCO-2-CE`，`SFZ` 分支，钉住 `6dd651d55dde97fd4028699be9d4481f26917891`，3273 个文件、3088.1 MiB、75 个 sfz）全都有。按"每个乐器每个键至少一个采样"（业主要的是先让每件乐器出声，再谈表情）从钉住的树元数据加那 75 个 sfz 正文算出：
+
+| 乐器 | 一层（每个音区一个采样） | 持续音程序全部 |
+|---|---|---|
+| violin | 20.7 MiB | 43.8 MiB |
+| viola | 29.9 | 68.4 |
+| cello | 28.1 | 69.2 |
+| contrabass | 19.8 | 45.7 |
+| horn | 13.5 | 48.3 |
+| trumpet | 13.3 | 38.7 |
+| trombone | 11.5 | 57.4 |
+| tuba | 7.1 | 29.8 |
+| flute | 18.1 | 24.0 |
+| oboe | 10.8 | 22.9 |
+| clarinet | 17.0 | 56.6 |
+| bassoon | 12.9 | 28.3 |
+| harp | 33.7 | 33.7 |
+| timpani | 3.5 | 34.4 |
+| 合计 | 240.0 MiB | 601.2 MiB |
+
+去掉已经能拿到的 harp 与 timpani，剩下十二件是一层约 202.8 MiB，或持续音程序全部约 533.1 MiB。这组数字只是树的元数据与 sfz 正文，音频一个字节都没下。
+
+一句话：要让业主点名的十四件都出声，在许可允许的范围内，VCSL 只能再给一件（harp，约 74 MiB 一层），其余十二件需要引入一个本仓库不能分发的库（VSCO 2 CE，约 203 MiB 一层），或者另找一套 CC0 的管弦乐库。
