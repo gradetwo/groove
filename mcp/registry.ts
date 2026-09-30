@@ -14,6 +14,7 @@ import { lanesWithoutMidi } from "./pattern";
 import { z } from "zod";
 import { clonePattern, findGenre, getChordProgression, getGenre, getGenreRelations, suggestProgression, libraryIndex, listCategories, listChordProgressions, listGenres, listMasterclasses, searchGenres } from "./library";
 import { applyChordProgression } from "./progression";
+import { inspectSfzAt } from "./sfzInspectRemote";
 
 /**
  * What to say when a `genreId` does not exist (fifth report, P1.2).
@@ -547,6 +548,40 @@ export const TOOLS: ToolDefinition[] = [
     handler: (args) => {
       try {
         return setMcpArrangementTimeSignature(String(args.arrangementId), String(args.timeSignature));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "inspect_instrument_sfz",
+    title: "Read an SFZ's parameters without playing it",
+    description:
+      "Which regions set `note_polyphony`, `amplitude_onccN`, `one_shot`, `locc`/`hicc`, `tune`, `loop_mode` and the rest — each value **as written**, and marked when it came from a `<group>` rather than from the region itself. Muse's gap: those parameters had criteria and no way to be seen from a tool, so debugging a sampler meant reading the parser's source. This reads over plain HTTP (source address, then the mirror) and **runs no audio**, so the cheapest question costs a request rather than a browser.",
+    readOnly: true,
+    inputSchema: {
+      url: z.string().describe("the SFZ's address; `list_sample_libraries` reports one per instrument"),
+      fallbackUrl: z.string().optional().describe("the mirror, tried when the source does not answer"),
+    },
+    handler: async (args) => {
+      try {
+        const result = await inspectSfzAt(
+          {
+            assetId: String(args.url),
+            sfz: { url: String(args.url), ...(args.fallbackUrl === undefined ? {} : { fallbackUrl: String(args.fallbackUrl) }) },
+          },
+          {
+            fetchText: async (url: string) => {
+              const response = await fetch(url);
+              if (!response.ok) throw new Error(`HTTP ${response.status} from ${url}`);
+              return response.text();
+            },
+          }
+        );
+        /** A file with no regions is reported as such rather than as "no parameters": they are different facts. */
+        return result.regions === 0
+          ? failure(`${result.servedFrom} parsed to no regions, so there are no parameters to report`)
+          : result;
       } catch (error) {
         return failure((error as Error).message);
       }
