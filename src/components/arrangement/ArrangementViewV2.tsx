@@ -9,7 +9,7 @@
  */
 import { useCallback, useMemo, useState } from "react";
 import type { ArrangementV2, TrackKindV2 } from "../../types/arrangementV2";
-import { addTake, addTrack, addTrackNote, changeTrackKind, removeTrackNote, setTrackGain, setTrackPan, setTrackSample, toggleStep, createArrangementFromTemplate, removeTrack, setCollapsed, setTrackFlag, selectTrackTake } from "../../data/arrangementEdits";
+import { addTake, addTrack, addTrackNote, changeTrackKind, moveTrackNote, removeTrackNote, setTrackGain, setTrackNoteLength, setTrackPan, setTrackSample, toggleStep, createArrangementFromTemplate, removeTrack, setCollapsed, setTrackFlag, selectTrackTake } from "../../data/arrangementEdits";
 import type { CaptureOutcome } from "../../audio/captureTake";
 import { TrackListV2, type InstrumentChoice } from "./TrackListV2";
 import { TakeSelectorV2 } from "./TakeSelectorV2";
@@ -140,6 +140,8 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
                 notes={arrangement.notesByTrack?.[selected.id] ?? []}
                 onAddNote={(note) => setArrangement((current) => addTrackNote(current, selected.id, note))}
                 onRemoveNote={(at) => setArrangement((current) => removeTrackNote(current, selected.id, at))}
+                onMoveNote={(from, to) => setArrangement((current) => moveTrackNote(current, selected.id, from, to))}
+                onResizeNote={(at, lengthBeats) => setArrangement((current) => setTrackNoteLength(current, selected.id, at, lengthBeats))}
               />
             )}
             {selected.kind === "sampler" && selected.sample ? (
