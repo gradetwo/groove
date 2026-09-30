@@ -566,6 +566,33 @@ try {
   );
   check("an unknown track is reported, not thrown", invalid.applied?.[0]?.ok === false, JSON.stringify(invalid.applied?.[0] ?? {}));
 
+  /**
+   * A pattern's tracks carry fields the registry's schema does not name, and Zod removes every key an object does
+   * not name. So a caller that sent a real pattern got its lyric, its second lane name and its polymeter length
+   * back gone with no error — data loss with nothing to notice. The schema is permissive on the track now, and
+   * this holds it there at the protocol boundary, where the SDK's own parse runs rather than a handler call.
+   */
+  const withTrackFields = JSON.parse(JSON.stringify(pattern));
+  const lyricLane = withTrackFields.tracks.find((track) => track.track_id === "lead");
+  lyricLane.syllables = lyricLane.steps.map((on) => (on ? "字" : null));
+  lyricLane.laneId = "lead-2";
+  lyricLane.trackLength = 12;
+  const keptFields = payload(
+    await client.request("tools/call", {
+      name: "apply_pattern_ops",
+      arguments: { pattern: withTrackFields, ops: [{ op: "swing", amount: 12 }] },
+    })
+  );
+  const keptLane = (keptFields.pattern?.tracks ?? []).find((track) => track.track_id === "lead");
+  check(
+    "apply_pattern_ops returns the track fields its schema does not name",
+    Array.isArray(keptLane?.syllables) &&
+      JSON.stringify(keptLane.syllables) === JSON.stringify(lyricLane.syllables) &&
+      keptLane.laneId === "lead-2" &&
+      keptLane.trackLength === 12,
+    `syllables=${Array.isArray(keptLane?.syllables) ? keptLane.syllables.filter(Boolean).length : "missing"} laneId=${keptLane?.laneId} trackLength=${keptLane?.trackLength}`
+  );
+
   const stats = payload(await client.request("tools/call", { name: "pattern_statistics", arguments: { pattern } }));
   check("pattern_statistics describes every track", (stats.tracks ?? []).length === pattern.tracks.length);
 
