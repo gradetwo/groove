@@ -90,7 +90,16 @@ export function failure(message: string): { content: Array<{ type: "text"; text:
   return { content: [{ type: "text", text: message }], isError: true };
 }
 
-/** The pattern schema, as loose as the app's own types: an agent may build one step by step. */
+/**
+ * The pattern schema: the fields that are checked, and everything else passed through.
+ *
+ * A pattern is a document the app reads back rather than a request, so both objects are permissive. Zod drops
+ * every key an object does not name, and a track carries fields this list does not: `syllables`, `laneId`,
+ * `sample`, `mute`, `solo`, `trackLength`, `phaseInvert` and `insert` are all written by the app today. The
+ * top-level object was already permissive and the track object was not, so a lyric or a polymeter length sent
+ * through `apply_pattern_ops` came back removed with no error at all. The named fields keep their types and
+ * ranges — this is about not losing data, not about not validating it.
+ */
 const patternSchema = z
   .object({
     genre_id: z.string().describe("which genre this pattern came from (used for naming and the mix)"),
@@ -102,23 +111,25 @@ const patternSchema = z
     totalSteps: z.number().int().positive().optional(),
     tracks: z
       .array(
-        z.object({
-          track_id: z.string(),
-          name: z.string().default(""),
-          instrument: z.string().default(""),
-          steps: z.array(z.number()),
-          velocity: z.array(z.number()).optional(),
-          pitch: z.array(z.number().nullable()).optional(),
-          pitches: z.array(z.array(z.number()).nullable()).optional(),
-          gate: z.array(z.number()).optional(),
-          ratchet: z.array(z.number()).optional(),
-          probability: z.array(z.number()).optional(),
-          pan: z.number().min(-1).max(1).optional(),
-          swing: z.number().min(-50).max(50).optional(),
-          sendA: z.number().min(0).max(1).optional(),
-          sendB: z.number().min(0).max(1).optional(),
-          volume: z.number().optional(),
-        })
+        z
+          .object({
+            track_id: z.string(),
+            name: z.string().default(""),
+            instrument: z.string().default(""),
+            steps: z.array(z.number()),
+            velocity: z.array(z.number()).optional(),
+            pitch: z.array(z.number().nullable()).optional(),
+            pitches: z.array(z.array(z.number()).nullable()).optional(),
+            gate: z.array(z.number()).optional(),
+            ratchet: z.array(z.number()).optional(),
+            probability: z.array(z.number()).optional(),
+            pan: z.number().min(-1).max(1).optional(),
+            swing: z.number().min(-50).max(50).optional(),
+            sendA: z.number().min(0).max(1).optional(),
+            sendB: z.number().min(0).max(1).optional(),
+            volume: z.number().optional(),
+          })
+          .passthrough()
       )
       .min(1),
   })

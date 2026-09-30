@@ -364,6 +364,13 @@ minutes and the call reports no progress while it runs.
 Every op that involves chance takes a **seed**, and the result is deterministic for it: an agent that asks twice
 gets the same groove back, which is what makes a generated pattern worth writing down.
 
+**A pattern keeps the fields the schema does not name.** The `pattern` argument checks the types and ranges of the
+fields listed above and passes every other key through instead of removing it. A track also carries fields the app
+itself writes — `syllables`, `laneId`, `sample`, `mute`, `solo`, `trackLength`, `phaseInvert`, `insert` — and the
+top-level pattern carries `tempoTrack`; a pattern that has them comes back from `apply_pattern_ops` with them
+intact. This is a correction: the track object used to be closed, and Zod removed those keys without an error, so a
+caller that sent a vocal pattern got it back with the lyric gone.
+
 ### Export
 
 | Tool | Arguments | Returns |
