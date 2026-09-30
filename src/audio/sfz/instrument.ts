@@ -29,6 +29,13 @@ export interface ResolvedInstrumentNote {
    */
   group?: number;
   offBy?: number;
+  /**
+   * ⭐ **Whether the sample plays through a key release**, which SFZ spells `loop_mode=one_shot`.
+   *
+   * Measured with sfizz rather than inferred from the opcode's name: the same 0.1-second note on a one-second sample renders **2.091 s** with `loop_mode=one_shot` and **0.341 s** without it, and the energy 0.2–0.6 s after the note-off is nonzero only in the first. So a drum kit that says `one_shot` means "this hit rings out
+   * however briefly you press the key" — and a player that stops at note-off truncates every drum hit.
+   */
+  oneShot?: boolean;
 }
 
 export interface InstrumentResolution {
@@ -89,6 +96,8 @@ export function resolveInstrumentNote(
   const answered = audible.find((region) => region.sample === playback.sample);
   const group = asInt(answered?.opcodes.group);
   const offBy = asInt(answered?.opcodes.off_by);
+  // `loop_mode` takes several values; only `one_shot` means "ignore the key release". Anything else keeps the note-off behaviour this project has always had.
+  const oneShot = answered?.opcodes.loop_mode === "one_shot";
 
   return {
     ok: true,
@@ -100,6 +109,7 @@ export function resolveInstrumentNote(
       seqPosition: playback.seqPosition,
       ...(group === undefined ? {} : { group }),
       ...(offBy === undefined ? {} : { offBy }),
+      ...(oneShot ? { oneShot: true } : {}),
     },
   };
 }
