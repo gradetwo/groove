@@ -11,13 +11,17 @@
 import { useState } from "react";
 import { TEMPLATES } from "../../data/arrangementEdits";
 import type { TrackKindV2 } from "../../types/arrangementV2";
+import { useLanguage } from "../../i18n/LanguageContext";
 
-/** What each card promises, in one line — the thing a person reads instead of opening it. */
-const DESCRIPTIONS: Record<string, { zh: string; en: string }> = {
-  "drums-bass": { zh: "鼓组加贝斯，最常见的两件套", en: "A drum kit and a bass — the most common pair" },
-  "drums-bass-chords": { zh: "再加一条和声，能撑起整首", en: "Add chords and it can carry a whole song" },
-  samplers: { zh: "两条采样器轨道——就是能听到真实乐器的那一种", en: "Two sampler tracks — the kind that plays real instruments" },
-  blank: { zh: "空白，但已经有一条你选好类型的轨道", en: "Blank, with one track already typed the way you choose" },
+/**
+ * **The key each card's sentence lives under, not the sentence itself.** These were an English/Chinese pair in this file, and the card rendered `?.en` unconditionally — so the chooser read English in a Chinese session while every other surface followed the
+ * language toggle. A string that a person reads belongs in the language files with the rest of them.
+ */
+const DESCRIPTION_KEYS: Record<string, string> = {
+  "drums-bass": "template_drums_bass_desc",
+  "drums-bass-chords": "template_drums_bass_chords_desc",
+  samplers: "template_samplers_desc",
+  blank: "template_blank_desc",
 };
 
 export interface NewProjectPanelV2Props {
@@ -33,6 +37,7 @@ const KIND_LABELS: Array<{ kind: TrackKindV2; zh: string; en: string }> = [
 ];
 
 export function NewProjectPanelV2({ onCreate }: NewProjectPanelV2Props) {
+  const { t } = useLanguage();
   const [selected, setSelected] = useState<string>("blank");
   const [blankKind, setBlankKind] = useState<TrackKindV2>("instrument");
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -60,7 +65,7 @@ export function NewProjectPanelV2({ onCreate }: NewProjectPanelV2Props) {
           >
             <strong>{card.name}</strong>
             {/* ⭐ The sentence is on the card, not behind it: "a few templates" only works if they can be read at a glance. */}
-            <span>{DESCRIPTIONS[card.id]?.en ?? ""}</span>
+            <span>{t(DESCRIPTION_KEYS[card.id] ?? "")}</span>
           </button>
         ))}
       </div>

@@ -11,10 +11,16 @@
  * invisible until something mixed it.
  */
 import type { SequencerTrack } from "../types/genre";
-import type { ArrangementV2, TrackV2 } from "../types/arrangementV2";
+import type { ArrangementV2, NoteEvent, TrackV2 } from "../types/arrangementV2";
+import { stepsFromNotes, STEPS_PER_BEAT } from "./noteEvents";
 
-/** Note data per track id — the one thing a v2 track does not carry, because notes belong to clips in this engine. */
-export type NotesByTrack = Record<string, number[] | undefined>;
+/**
+ * Note data per track id — notes in **musical time**, which is the model.
+ *
+ * It used to be `number[]`, a sixteen-step array: the v1 pattern's grid, carried into a model that no longer needs it and that the owner asked to stop being constrained by it. Notes say when a note begins, how long it lasts and what pitch it is; the step
+ * grid below is what this engine's lanes still trigger at, so the conversion happens **at this boundary** rather than in the model.
+ */
+export type NotesByTrack = Record<string, NoteEvent[] | undefined>;
 
 export interface CompiledLane {
   /** The lane as the engine's planner reads it. */

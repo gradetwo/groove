@@ -7,6 +7,7 @@
  *
  * The one thing it does add is **indentation for grouped tracks**, computed from `parentId` rather than stored, so a track's visual depth cannot drift from its grouping.
  */
+import { stepsFromNotes, STEPS_PER_BEAT } from "../../data/noteEvents";
 import type { ArrangementV2, TrackKindV2, TrackV2 } from "../../types/arrangementV2";
 
 export interface TrackListV2Props {
@@ -27,6 +28,16 @@ export interface TrackListV2Props {
    * Turn one of a track's own steps on or off. Optional so the list can be rendered as a report of the arrangement, without an editing surface.
    */
   onToggleStep?: (trackId: string, index: number) => void;
+}
+
+/**
+ * How many squares to draw for a track.
+ *
+ * Sixteen — one bar of sixteenths — unless the track already has notes past that, in which case the grid grows to hold them rather than hiding them: a note written in bar two must be visible, and a fixed sixteen would drop it silently.
+ */
+function stepCountFor(arrangement: { notesByTrack?: Record<string, { startBeats: number }[]> }, trackId: string): number {
+  const notes = arrangement.notesByTrack?.[trackId] ?? [];
+  return Math.max(16, ...notes.map((note) => Math.round(note.startBeats * STEPS_PER_BEAT) + 1));
 }
 
 export interface InstrumentChoice {
@@ -159,7 +170,11 @@ export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, 
               */}
               {onToggleStep && track.kind !== "fx" && track.kind !== "folder" && (
                 <div className="flex items-center gap-px" role="group" aria-label={`${track.name} steps`}>
-                  {(arrangement.notesByTrack?.[track.id] ?? []).map((value, index) => (
+                  {/*
+                    **The grid is derived from the notes, not stored beside them.** `stepsFromNotes` is the same conversion the compile uses, so the squares a person sees and the triggers the engine fires cannot disagree — which is exactly what two
+                    parallel representations of one performance would eventually do.
+                  */}
+                  {stepsFromNotes(arrangement.notesByTrack?.[track.id] ?? [], stepCountFor(arrangement, track.id)).steps.map((value, index) => (
                     <button
                       key={index}
                       type="button"

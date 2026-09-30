@@ -92,9 +92,16 @@ describe("the sample loader and an instrument entry", () => {
   it("picks the sample the note's region names, and reports the reason when no region covers it", async () => {
     const loader = createSampleLoader(async (asset) => fakeBuffer(asset.assetId), INSTRUMENTS, async () => INSTRUMENT_SFZ);
     // The resolved note is returned as the buffer's identity, so the assertion is about **which** sample answered.
-    expect(((await loader.loadNote("piano", 40)) as unknown as { id: string }).id).toBe("low.wav");
-    expect(((await loader.loadNote("piano", 60)) as unknown as { id: string }).id).toBe("mid.wav");
-    expect(((await loader.loadNote("piano", 68)) as unknown as { id: string }).id).toBe("mid.wav");
+    /**
+     * **The buffer and its rate**, because a sampler that receives only the buffer plays the recording rather than the note. The first assertion is about **which** sample answered; the second is the pitch it must be played at, which the loader used to
+     * compute and discard.
+     */
+    const low = await loader.loadNote("piano", 40);
+    expect((low.buffer as unknown as { id: string }).id).toBe("low.wav");
+    expect(low.samplePath).toBe("low.wav");
+    expect(low.ratio).toBeGreaterThan(0);
+    expect(((await loader.loadNote("piano", 60)).buffer as unknown as { id: string }).id).toBe("mid.wav");
+    expect(((await loader.loadNote("piano", 68)).buffer as unknown as { id: string }).id).toBe("mid.wav");
 
     const gaps = createSampleLoader(async (asset) => fakeBuffer(asset.assetId), [{ ...INSTRUMENTS[0]!, sfz: { url: "/x.sfz" } }], async () => "<region> sample=only.wav lokey=60 hikey=64 pitch_keycenter=60");
     await expect(gaps.loadNote("piano", 70)).rejects.toThrow(/cover keys 60–64/);
@@ -130,13 +137,15 @@ describe("the sample loader and an instrument entry", () => {
       async () => INSTRUMENT_SFZ
     );
     // Three notes, all answered by mid.wav, plus one by low.wav: two decodes, not four.
-    const buffers = await Promise.all([loader.loadNote("piano", 60), loader.loadNote("piano", 61), loader.loadNote("piano", 62), loader.loadNote("piano", 40)]);
+    const notes = await Promise.all([loader.loadNote("piano", 60), loader.loadNote("piano", 61), loader.loadNote("piano", 62), loader.loadNote("piano", 40)]);
     expect(started).toBe(2);
     expect(loader.decodes()).toBe(2);
-    // And the shared sample really is one buffer, not three equal ones.
-    expect(buffers[0]).toBe(buffers[1]);
-    expect(buffers[0]).toBe(buffers[2]);
-    expect(buffers[3]).not.toBe(buffers[0]);
+    // And the shared sample really is one buffer, not three equal ones — the same buffer object, since a decode happened once.
+    expect(notes[0]!.buffer).toBe(notes[1]!.buffer);
+    expect(notes[0]!.buffer).toBe(notes[2]!.buffer);
+    expect(notes[3]!.buffer).not.toBe(notes[0]!.buffer);
+    // The rates differ even though the buffer is shared: three notes, three pitches, one decode — which is the whole point of resolving a note rather than a file.
+    expect(new Set([notes[0]!.ratio, notes[1]!.ratio, notes[2]!.ratio]).size).toBe(3);
   });
 
   it("reports an SFZ it could not fetch, and an instrument that defines no regions", async () => {

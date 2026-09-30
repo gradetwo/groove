@@ -15,6 +15,17 @@ import type { ArrangementV2 } from "../types/arrangementV2";
 export interface ArrangementPlayer {
   /** Hand the compiled lanes to the engine and report what it planned. */
   play(song: ReturnType<typeof compileArrangementToSongInput>): Promise<{ planned: number }>;
+  /**
+   * **One note, right now** — what a key press on a sampler track means.
+   *
+   * Separate from `play` because it answers a different question: `play` compiles an arrangement and hands it to the engine, while this resolves **one** note of **one** instrument through the SFZ path and sounds it at that note's rate. Without it the sampler
+   * could be parsed, chosen and scheduled and still not be playable by hand, which is what "I cannot test the sampler" meant.
+   */
+  audition?(input: { assetId: string; midi: number; trackId?: string; gainDb?: number }): Promise<
+    { ok: true; ratio: number; samplePath: string } | { ok: false; reason: string }
+  >;
+  /** A key release stops the voices that key started, and reports how many it stopped. */
+  releaseNote?(input: { trackId?: string; midi: number }): number;
 }
 
 export interface PlayArrangementResult {

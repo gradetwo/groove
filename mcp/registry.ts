@@ -39,17 +39,21 @@ import { validateProsody } from "./prosody";
 import { flattenSong } from "../src/data/songFlatten";
 import { listCatalogueInstruments } from "./instruments";
 import {
+  addMcpNote,
   addMcpTake,
   addMcpTrack,
   assignMcpTakeRange,
   createMcpArrangement,
   describeMcpArrangement,
   flattenMcpArrangement,
+  moveMcpNote,
+  removeMcpNote,
   removeMcpTrack,
   renameMcpTrack,
   selectMcpTake,
   setMcpTrackCollapsed,
   setMcpTrackFlag,
+  setMcpNoteLength,
   setMcpTrackInstrument,
   setMcpTrackKind,
   setMcpTrackParent,
@@ -411,6 +415,99 @@ export const TOOLS: ToolDefinition[] = [
     handler: (args) => {
       try {
         return setMcpTrackSteps(String(args.arrangementId), String(args.trackId), args.steps as number[]);
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "add_arrangement_note",
+    title: "Write a note",
+    description:
+      "Add one note to a track: where it starts in **beats**, how long it is held, its pitch and velocity. This is the note-level edit a piano roll uses, and it is not limited to a grid — a note may begin between steps and last across several.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      trackId: z.string(),
+      pitch: z.number().int().min(0).max(127).describe("MIDI note; a drum note is just a pitch, as in a DAW"),
+      startBeats: z.number().min(0).describe("beats (quarter notes) from the arrangement's start; fractional is allowed"),
+      lengthBeats: z.number().positive().optional().describe("how long it is held; defaults to one beat"),
+      velocity: z.number().int().min(1).max(127).optional().describe("defaults to 100"),
+    },
+    handler: (args) => {
+      try {
+        return addMcpNote(String(args.arrangementId), {
+          trackId: String(args.trackId),
+          pitch: Number(args.pitch),
+          startBeats: Number(args.startBeats),
+          lengthBeats: args.lengthBeats as number | undefined,
+          velocity: args.velocity as number | undefined,
+        });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "remove_arrangement_note",
+    title: "Remove a note",
+    description: "Remove the note at a pitch and beat position. Removing nothing is not an error, so a caller may be idempotent.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      trackId: z.string(),
+      pitch: z.number().int().min(0).max(127),
+      startBeats: z.number().min(0),
+    },
+    handler: (args) => {
+      try {
+        return removeMcpNote(String(args.arrangementId), String(args.trackId), { pitch: Number(args.pitch), startBeats: Number(args.startBeats) });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "move_arrangement_note",
+    title: "Move a note",
+    description: "Move a note in time and pitch — dragging it in the roll. **Refused when the destination already holds a note**, rather than merging two notes into one.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      trackId: z.string(),
+      pitch: z.number().int().min(0).max(127),
+      startBeats: z.number().min(0),
+      toPitch: z.number().int().min(0).max(127),
+      toStartBeats: z.number().min(0),
+    },
+    handler: (args) => {
+      try {
+        return moveMcpNote(
+          String(args.arrangementId),
+          String(args.trackId),
+          { pitch: Number(args.pitch), startBeats: Number(args.startBeats) },
+          { pitch: Number(args.toPitch), startBeats: Number(args.toStartBeats) }
+        );
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "set_arrangement_note_length",
+    title: "Hold a note longer",
+    description: "Change how long a note is held, with a floor of one step — shorter than that and the note is invisible in the grid.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      trackId: z.string(),
+      pitch: z.number().int().min(0).max(127),
+      startBeats: z.number().min(0),
+      lengthBeats: z.number().positive(),
+    },
+    handler: (args) => {
+      try {
+        return setMcpNoteLength(String(args.arrangementId), String(args.trackId), { pitch: Number(args.pitch), startBeats: Number(args.startBeats) }, Number(args.lengthBeats));
       } catch (error) {
         return failure((error as Error).message);
       }

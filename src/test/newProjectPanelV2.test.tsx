@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { NewProjectPanelV2 } from "../components/arrangement/NewProjectPanelV2";
 import { TEMPLATES } from "../data/arrangementEdits";
+import { LanguageProvider } from "../i18n/LanguageContext";
 
 /**
  * The chooser's job: show every template readably, and report **the choice that is on screen** when Create is pressed.
@@ -39,5 +40,24 @@ describe("the new-project panel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Details" }));
     fireEvent.click(screen.getByTestId("template-drums-bass"));
     expect(screen.queryByLabelText("First track kind")).toBeNull();
+  });
+
+  /**
+   * **The card's sentence follows the language toggle.** It did not: the descriptions were an `{en, zh}` pair inside the component and the card rendered `?.en` unconditionally, so a Chinese session read English here while every other surface switched. The assertion
+   * is against the dictionary's own value rather than against a sentence written here, so it cannot pass by both sides being hardcoded the same way.
+   */
+  it("reads its sentence from the dictionary, in whichever language is on", () => {
+    window.localStorage.setItem("groove_language", "zh");
+    render(
+      <LanguageProvider>
+        <NewProjectPanelV2 onCreate={vi.fn()} />
+      </LanguageProvider>
+    );
+    const card = screen.getByTestId("template-samplers");
+    // The dictionary's own Chinese rendering, as a literal — the same convention the surrounding tests use.
+    expect(card.textContent).toContain("两条采样器轨道");
+    // And the English sentence is different, so the assertion above is about the language rather than about some text existing.
+    expect(card.textContent).not.toContain("Two sampler tracks");
+    window.localStorage.removeItem("groove_language");
   });
 });

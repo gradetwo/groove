@@ -6,9 +6,10 @@
  *
  * Every function returns a **new arrangement**, because a track list is state that an interface re-renders from; mutating in place is how a UI ends up showing something the model does not say.
  */
-import type { ArrangementV2, TakeRegion, TrackKindV2, TrackV2 } from "../types/arrangementV2";
+import type { ArrangementV2, NoteEvent, TakeRegion, TrackKindV2, TrackV2 } from "../types/arrangementV2";
 import type { PlannedTake } from "./takePlanning";
 import { DEFAULT_SAMPLER_ASSET, defaultContentFor } from "./defaultContent";
+import { addNote, moveNote, notesFromSteps, removeNote, setNoteLength, stepsFromNotes, STEPS_PER_BEAT } from "./noteEvents";
 
 let nextId = 1;
 
@@ -34,7 +35,7 @@ export function createArrangement(songId: string, kind: TrackKindV2 = "instrumen
   return {
     songId,
     tracks: [{ id, kind, name: DEFAULT_NAME[kind], ...(content.sample ? { sample: content.sample } : {}) }],
-    notesByTrack: { [id]: content.steps },
+    notesByTrack: { [id]: notesFromSteps(content.steps, { velocity: 100 }) },
     sourceSlots: [],
   };
 }
@@ -67,12 +68,12 @@ export function createArrangementFromTemplate(songId: string, templateId: string
   if (!template) return createArrangement(songId, blankKind);
 
   const tracks: TrackV2[] = [];
-  const notesByTrack: Record<string, number[]> = {};
+  const notesByTrack: Record<string, NoteEvent[]> = {};
   for (const { kind, name } of template.kinds) {
     const id = freshId(kind);
     const content = defaultContentFor(kind);
     tracks.push({ id, kind, name, ...(content.sample ? { sample: content.sample } : {}) });
-    notesByTrack[id] = content.steps;
+    notesByTrack[id] = notesFromSteps(content.steps, { velocity: 100 });
   }
   return { songId, tracks, notesByTrack, sourceSlots: [] };
 }
@@ -106,7 +107,7 @@ export function addTrack(arrangement: ArrangementV2, kind: TrackKindV2, name: st
   return {
     ...arrangement,
     tracks: [...arrangement.tracks, { id, kind, name, ...(content.sample ? { sample: content.sample } : {}), ...extra }],
-    notesByTrack: { ...(arrangement.notesByTrack ?? {}), [id]: content.steps },
+    notesByTrack: { ...(arrangement.notesByTrack ?? {}), [id]: notesFromSteps(content.steps, { velocity: 100 }) },
   };
 }
 
@@ -190,28 +191,70 @@ export function setCollapsed(arrangement: ArrangementV2, trackId: string, collap
 export function toggleStep(arrangement: ArrangementV2, trackId: string, index: number): ArrangementV2 {
   const track = arrangement.tracks.find((candidate) => candidate.id === trackId);
   if (!track || track.kind === "fx" || track.kind === "folder") return arrangement;
-  const current = arrangement.notesByTrack?.[trackId] ?? [];
-  if (index < 0 || index >= current.length) return arrangement;
-  const steps = current.map((value, position) => (position === index ? (value ? 0 : 1) : value));
-  return { ...arrangement, notesByTrack: { ...(arrangement.notesByTrack ?? {}), [trackId]: steps } };
+  const notes = arrangement.notesByTrack?.[trackId] ?? [];
+  /**
+   * **The grid is a view over notes**, so a toggle is a conversion in both directions rather than an array index flip. The step count is the grid the caller is looking at — sixteen unless the track already says otherwise — and the pitch of a new note is the
+   * track's existing lowest note when it has one, so toggling a drum row does not silently move it to middle C.
+   */
+  const stepCount = Math.max(16, Math.ceil(notes.length / STEPS_PER_BEAT) * STEPS_PER_BEAT);
+  const { steps, pitches } = stepsFromNotes(notes, stepCount);
+  if (index < 0 || index >= stepCount) return arrangement;
+  steps[index] = steps[index] ? 0 : 1;
+  const pitch = pitches.find((value) => value > 0) ?? 60;
+  const next = notesFromSteps(steps, { pitches: pitches.map((value) => (value > 0 ? value : pitch)), velocity: 100 });
+  return { ...arrangement, notesByTrack: { ...(arrangement.notesByTrack ?? {}), [trackId]: next } };
 }
 
 /**
- * Set a track's whole step pattern at once.
+ * Set a track's whole step pattern at once — the drum grid's write.
  *
- * `toggleStep` is what a person does — one step at a time, seeing the result — while an agent composing through MCP states the pattern it means. Sixteen toggles would also be sixteen chances to disagree with the array the caller sent, and a
- * tool whose result depends on the order of its calls is not the kind this surface wants.
+ * `toggleStep` is what a person does one square at a time; this is what a caller that already knows the pattern states, and a tool whose result depends on the order of its calls is not the kind this surface wants. The length is the caller's: a pattern is the
+ * steps it has, so this neither pads nor truncates. A step is **on when its value is non-zero**.
  *
- * The length is the caller's: a pattern is the steps it has, so this neither pads nor truncates. A step is **on when its value is non-zero** — the model stores on or off rather than a velocity, and stating the rule as "non-zero" is what makes
- * `0.4` mean the same thing here as it would anywhere else in JavaScript instead of a third convention nobody remembers.
- *
- * Refused for `fx` and `folder`, for the reason `toggleStep` refuses them: their all-zero steps are their definition rather than an omission.
+ * It converts to notes rather than storing a grid, because notes are the model and the grid is a view. A step length is what a drum hit means here; a caller writing pitched music uses the note-level edits instead.
  */
 export function setTrackSteps(arrangement: ArrangementV2, trackId: string, steps: readonly number[]): ArrangementV2 {
   const track = arrangement.tracks.find((candidate) => candidate.id === trackId);
   if (!track || track.kind === "fx" || track.kind === "folder") return arrangement;
+  const existing = arrangement.notesByTrack?.[trackId] ?? [];
+  const pitch = existing.length > 0 ? Math.min(...existing.map((note) => note.pitch)) : 60;
   const normalised = steps.map((value) => (value ? 1 : 0));
-  return { ...arrangement, notesByTrack: { ...(arrangement.notesByTrack ?? {}), [trackId]: normalised } };
+  return { ...arrangement, notesByTrack: { ...(arrangement.notesByTrack ?? {}), [trackId]: notesFromSteps(normalised, { velocity: 100, pitches: normalised.map(() => pitch) }) } };
+}
+
+/**
+ * Add one note — what a piano roll, a keyboard or a MIDI file writes.
+ *
+ * The refusal is the same as the grid's, for the same reason: an effect or folder track makes no sound, so a note on it would be content nothing accounts for.
+ */
+export function addTrackNote(arrangement: ArrangementV2, trackId: string, note: NoteEvent): ArrangementV2 {
+  const track = arrangement.tracks.find((candidate) => candidate.id === trackId);
+  if (!track || track.kind === "fx" || track.kind === "folder") return arrangement;
+  const notes = arrangement.notesByTrack?.[trackId] ?? [];
+  return { ...arrangement, notesByTrack: { ...(arrangement.notesByTrack ?? {}), [trackId]: addNote(notes, note) } };
+}
+
+/** Remove a note at a position. Reported through the arrangement, so a caller can compare before and after. */
+export function removeTrackNote(arrangement: ArrangementV2, trackId: string, at: { pitch: number; startBeats: number }): ArrangementV2 {
+  const notes = arrangement.notesByTrack?.[trackId] ?? [];
+  return { ...arrangement, notesByTrack: { ...(arrangement.notesByTrack ?? {}), [trackId]: removeNote(notes, at) } };
+}
+
+/** Move a note in time and pitch — dragging it in the roll. Refused when the destination already holds a note. */
+export function moveTrackNote(
+  arrangement: ArrangementV2,
+  trackId: string,
+  from: { pitch: number; startBeats: number },
+  to: { pitch: number; startBeats: number }
+): ArrangementV2 {
+  const notes = arrangement.notesByTrack?.[trackId] ?? [];
+  return { ...arrangement, notesByTrack: { ...(arrangement.notesByTrack ?? {}), [trackId]: moveNote(notes, from, to) } };
+}
+
+/** Change how long a note is held. A note shorter than a step is not visible in the grid, so one step is the floor. */
+export function setTrackNoteLength(arrangement: ArrangementV2, trackId: string, at: { pitch: number; startBeats: number }, lengthBeats: number): ArrangementV2 {
+  const notes = arrangement.notesByTrack?.[trackId] ?? [];
+  return { ...arrangement, notesByTrack: { ...(arrangement.notesByTrack ?? {}), [trackId]: setNoteLength(notes, at, lengthBeats) } };
 }
 
 export function setTrackSample(arrangement: ArrangementV2, trackId: string, assetId: string): ArrangementV2 {

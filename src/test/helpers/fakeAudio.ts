@@ -145,14 +145,18 @@ export class FakeBufferSourceNode extends FakeNode {
   playbackRate = new FakeAudioParam();
   loop = false;
   /**
-   * Recorded `start(when, offset)` calls. The offset is what E-06 varies per hit so
-   * repeated drum hits are not bit-identical, so tests need to see it.
+   * Recorded `start(when, offset, duration)` calls. The offset is what E-06 varies per hit so repeated drum hits are not bit-identical, and the duration is what a sampler voice needs to judge: a held key plays the whole sample while a
+   * length-limited one stops early.
    */
-  started: Array<{ when: number; offset: number }> = [];
-  start(when = 0, offset = 0) {
-    this.started.push({ when, offset });
+  started: Array<{ when: number; offset: number; duration?: number }> = [];
+  /** Recorded `stop(when)` calls, so "a key release stops it" is a fact rather than an assumption. */
+  stopCalls: Array<number | undefined> = [];
+  start(when = 0, offset = 0, duration?: number) {
+    this.started.push(duration === undefined ? { when, offset } : { when, offset, duration });
   }
-  stop() {}
+  stop(when?: number) {
+    this.stopCalls.push(when);
+  }
 }
 
 export class FakeStereoPannerNode extends FakeNode {
