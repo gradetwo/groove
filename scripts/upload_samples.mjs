@@ -23,6 +23,16 @@ const MANIFEST = path.join(process.cwd(), "public", "samples", "manifest.json");
 const argv = process.argv.slice(2);
 const entryId = argv.find((a) => !a.startsWith("--"));
 const doUpload = argv.includes("--upload");
+/**
+ * ⭐ **`--measure` separates the half that needs no credentials from the half that does.**
+ *
+ * The two were welded together: the script reads the bucket's size for the budget check *before* it looks at `--upload`, so without `R2_ACCOUNT_ID` and friends it refused to do anything at all — and the measurement lives further down the same path. Downloading, hashing and `ffprobe` need no right to write to a bucket; they need a network and a disk.
+ *
+ * **A correction, because the first version of this comment claimed too much.** It said the manifest carried no duration for any library. Four of the five do: `salamander-grand`, `karoryfer-meatbass`, `karoryfer-emilyguitar` and `vcsl` were measured and marked `mirroredAt: 2026-09-29`, with per-file durations on most of their files. What is missing is `virtuosity-drums-basic`: an entry-level duration with **none** of its 2078 files measured and no `mirroredAt`, which is the state of an entry that was never taken through this script.
+ *
+ * So this mode is not the difference between "no numbers" and "numbers" — it is the difference between "numbers only for whoever holds bucket credentials" and "numbers for anyone with a network", which is what the drum entry needs and what the next library will need too. The upload stays a separate and credentialed act.
+ */
+const doMeasure = argv.includes("--measure");
 
 const GB = 1024 ** 3;
 const MB = 1024 ** 2;
@@ -79,7 +89,10 @@ function storedBytes() {
  * budget check meaningless, which is exactly what happened on the first run against a release-shaped entry.
  */
 const planned = entry.archive ? entry.archive.bytes : (entry.files ?? []).reduce((sum, f) => sum + (f.bytes ?? 0), 0);
-const stored = storedBytes();
+/**
+ * The bucket is read **only when it is about to be used**. Measuring has no opinion about the bucket — it fetches, hashes, times and stops — and a ceiling that cannot be read is not a reason to refuse to measure.
+ */
+const stored = doMeasure && !doUpload ? 0 : storedBytes();
 // ⭐ The ceiling is the owner's: 12 GB, chosen so the four libraries and the three Karoryfer instruments all fit.
 const ceiling = 12 * GB;
 console.log(`${entryId} @ ${entry.pin ?? "?"}`);
@@ -96,9 +109,9 @@ if (!entry.archive && (entry.files ?? []).length === 0) {
   process.exit(1);
 }
 
-if (!doUpload) {
+if (!doUpload && !doMeasure) {
   console.log(`  ${(entry.files ?? []).length} files, ${entry.sfz ?? "no sfz declared"}`);
-  console.log("  (report only — pass --upload to clone, measure and copy)");
+  console.log("  (report only — pass --measure to clone and measure without credentials, --upload to also copy)");
   process.exit(0);
 }
 
@@ -172,8 +185,15 @@ if (entry.archive) {
   if (sparse.length > 0) {
     try {
       execFileSync("git", ["-C", workdir, "sparse-checkout", "set", "--no-cone", ...sparse], { stdio: "inherit" });
-      execFileSync("git", ["-C", workdir, "fetch", "--depth", "1", "--filter=blob:none", "--quiet", "origin", entry.pin], { stdio: "inherit" });
-      execFileSync("git", ["-C", workdir, "checkout", "--quiet", "FETCH_HEAD"], { stdio: "inherit" });
+      /**
+       * ⭐ **Fetch by a ref and check out the pin, which is not the same thing as fetching the pin.**
+       *
+       * `git fetch origin <sha>` used to work and does not any more: GitHub answers `couldn't find remote ref 9f04cf9a7345`, so the narrowed path threw, the fallback ran, and the "fetch only what is listed" promise quietly became a **2.6 GB** tree for the drum kit — the exact cost this branch exists to avoid. And `--depth 1` cannot be combined with checking out an older commit either: a shallow tip does not contain it.
+       *
+       * So: a **blobless** fetch of the remote's default branch (history without file contents, which is small), then a checkout of the pinned commit, whose blobs are fetched lazily and only for the sparse paths. The `--depth 1` is gone because it is what made the checkout impossible; what keeps this cheap is the filter, not the depth.
+       */
+      execFileSync("git", ["-C", workdir, "fetch", "--filter=blob:none", "--quiet", "origin"], { stdio: "inherit" });
+      execFileSync("git", ["-C", workdir, "checkout", "--quiet", entry.pin], { stdio: "inherit" });
       narrowed = true;
       console.log(`  fetched only: ${sparse.join(", ")}`);
     } catch {
@@ -182,8 +202,8 @@ if (entry.archive) {
     }
   }
   if (!narrowed) {
-    execFileSync("git", ["-C", workdir, "fetch", "--depth", "1", "--quiet", "origin", entry.pin], { stdio: "inherit" });
-    execFileSync("git", ["-C", workdir, "checkout", "--quiet", "FETCH_HEAD"], { stdio: "inherit" });
+    execFileSync("git", ["-C", workdir, "fetch", "--filter=blob:none", "--quiet", "origin"], { stdio: "inherit" });
+    execFileSync("git", ["-C", workdir, "checkout", "--quiet", entry.pin], { stdio: "inherit" });
   }
 }
 
@@ -222,6 +242,10 @@ entry.durationSeconds = longest;
 entry.mirroredAt = new Date().toISOString().slice(0, 10);
 fs.writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2) + "\n");
 console.log(`  measured ${measured} file(s) · hashed ${hashed} · longest ${longest.toFixed(6)} s · manifest updated`);
+if (!doUpload) {
+  console.log("  (measured only — nothing was copied; pass --upload, with credentials, to copy the bytes)");
+  process.exit(0);
+}
 
 // ⭐ The transfer itself is rclone's: it chunks, resumes and verifies, and this script does not reimplement any of that.
 /**

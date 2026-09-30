@@ -135,6 +135,7 @@ try {
     "export_ableton",
     "share_url",
     "render_audio",
+    "render_arrangement_stems",
     "analyze_audio",
     "get_loudness_report",
   ]) {
@@ -787,6 +788,22 @@ try {
    *
    * The same reasoning as the MusicXML pair above, and one more: the step-model import that existed before threw the file's note lengths away, so an agent asking for a MIDI file used to get a sixteen-step grid back with no way to tell that it had. This checks the thing that made it worth a tool — the tracks arrive named, and a note keeps the length the file gave it.
    */
+  /**
+   * The licence and provenance of the pinned libraries, over the wire. An agent publishing something made with this material has to be able to say where it came from, and the manifest has carried that all along.
+   */
+  const libraries = payload(await client.request("tools/call", { name: "list_sample_libraries", arguments: {} }));
+  const attribution = (libraries.libraries ?? []).filter((library) => /BY/i.test(library.licence));
+  check(
+    "list_sample_libraries reports each licence and names the ones requiring attribution",
+    (libraries.libraries ?? []).length > 0 &&
+      (libraries.libraries ?? []).every((library) => typeof library.licence === "string") &&
+      attribution.length > 0 &&
+      attribution.every((library) => typeof library.sourceUrl === "string") &&
+      typeof libraries.note === "string" &&
+      attribution.every((library) => libraries.note.includes(library.id)),
+    `${(libraries.libraries ?? []).length} library(ies), ${attribution.length} requiring attribution`
+  );
+
   const midiArrangement = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "instrument" } }));
   const importedMidiBytes = buildMidiFile({
     division: 480,

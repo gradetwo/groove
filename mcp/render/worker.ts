@@ -17,6 +17,8 @@ import { readFileSync, writeFileSync, mkdirSync, mkdtempSync, existsSync } from 
 import type { SequencerPattern } from "../../src/types/genre";
 import { measureLoudness, truePeakDbChannels } from "../../src/test/helpers/loudness";
 import { songSlug } from "../../src/utils/songSlug";
+// The naming rule lives in `src/data` because it is pure: a criterion can hold it without starting a browser.
+import { stemFilename } from "../../src/data/stemNaming";
 import { fingerprintChannels } from "../../src/test/helpers/timbre";
 import {
   channelCorrelation,
@@ -419,4 +421,105 @@ export function measure(channels: Float32Array[], sampleRate: number): Record<st
     centroidHz: fingerprint.centroidHz,
     bandDb: fingerprint.bandDb,
   };
+}
+
+/**
+ * **Per-track stems, written one at a time.**
+ *
+ * The app has had this in the browser for a while (`exportStemsWav`, behind the sequencer's export menu) and the MCP surface had no way to ask for it: an agent could render the whole mix and not the parts, which is the difference between hearing a balance problem and fixing one.
+ *
+ * **One stem per evaluation, and the bytes are written before the next render starts.** The browser-side packer learned that lesson already — its own comment records that a `Promise.all` over every stem materialises all of them at once, and eight stereo stems of a three-minute song is not something to hold in a page — so the same shape is used here: render one, hand its bytes to Node, write it, drop it.
+ *
+ * **The name is decided here rather than in the page**, which makes it one testable rule instead of two: `songSlug` already sanitises a name for a filename, and the track index keeps two identically-named tracks from overwriting each other.
+ */
+export interface StemResult {
+  path: string;
+  filename: string;
+  trackName: string;
+  trackIdx: number;
+  bytes: number;
+  /** Measured from the rendered buffer, not estimated from the pattern. */
+  durationSec: number;
+  sampleRate: number;
+  channels: number;
+  truePeakDb: number;
+  /** True when the stem rendered to silence, which is a fact worth reporting rather than a file nobody can hear. */
+  silent: boolean;
+}
+
+export async function renderStems(
+  pattern: SequencerPattern,
+  options: RenderOptions
+): Promise<{ dir: string; stems: StemResult[]; sampleRate: number; bpm: number }> {
+  if (process.env.GROOVE_MCP_NO_BROWSER === "1") {
+    throw new Error("audio rendering is disabled (GROOVE_MCP_NO_BROWSER=1); stems are rendered through the same offline engine as everything else");
+  }
+  const page = await ensurePage();
+  const dir = outputDirectory(options);
+  const bpm = pattern.bpm || 120;
+  const stems: StemResult[] = [];
+  let sampleRate = options.sampleRate ?? 44100;
+
+  for (let index = 0; index < pattern.tracks.length; index += 1) {
+    const track = pattern.tracks[index]!;
+    const rendered = await page.evaluate(
+      async ({ pattern: patternArg, stemTrackIdx, bars, sampleRate: rate, channels: channelCount }) => {
+        const specifier = (path: string) => path;
+        const [wav, loudness] = await Promise.all([
+          import(/* @vite-ignore */ specifier("/src/audio/WavExporter.ts")),
+          import(/* @vite-ignore */ specifier("/src/test/helpers/loudness.ts")),
+        ]);
+        const buffer = await wav.renderPatternOffline(patternArg as never, {
+          bars: Math.max(1, Math.min(64, bars ?? 1)),
+          stemTrackIdx,
+          ...(rate ? { sampleRate: rate } : {}),
+          ...(channelCount ? { channels: channelCount } : {}),
+        });
+        const channelsOut: Float32Array[] = [];
+        for (let c = 0; c < buffer.numberOfChannels; c += 1) channelsOut.push(buffer.getChannelData(c));
+        const bytes = wav.encodeAudioBufferToWav(buffer);
+        let binary = "";
+        const view = new Uint8Array(bytes);
+        const chunk = 0x8000;
+        for (let i = 0; i < view.length; i += chunk) {
+          binary += String.fromCharCode(...view.subarray(i, i + chunk));
+        }
+        return {
+          base64: btoa(binary),
+          durationSec: buffer.duration,
+          sampleRate: buffer.sampleRate,
+          channels: buffer.numberOfChannels,
+          truePeakDb: loudness.truePeakDbChannels(channelsOut),
+        };
+      },
+      {
+        pattern,
+        stemTrackIdx: index,
+        bars: options.bars,
+        sampleRate: options.sampleRate,
+        channels: options.channels,
+      }
+    );
+
+    const bytes = Buffer.from(rendered.base64, "base64");
+    const filename = stemFilename(track.name || track.track_id || `track_${index + 1}`, index, bpm);
+    const target = path.join(dir, filename);
+    writeFileSync(target, bytes);
+    sampleRate = rendered.sampleRate;
+    stems.push({
+      path: target,
+      filename,
+      trackName: track.name || track.track_id || `track_${index + 1}`,
+      trackIdx: index,
+      bytes: bytes.length,
+      durationSec: Number(rendered.durationSec.toFixed(3)),
+      sampleRate: rendered.sampleRate,
+      channels: rendered.channels,
+      truePeakDb: Number(rendered.truePeakDb.toFixed(2)),
+      // −120 dB is the floor below which a float render is silence for any practical purpose.
+      silent: rendered.truePeakDb <= -120,
+    });
+  }
+
+  return { dir, stems, sampleRate, bpm };
 }
