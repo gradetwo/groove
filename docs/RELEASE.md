@@ -1,5 +1,7 @@
 # 发布
 
+**动手之前先读 [`WORKING_STANDARDS.md`](WORKING_STANDARDS.md)**：那份文档里的十条都是做法（等的时候开 worktree、推送只走 `npm run push:dev`、发布期间不动主工作树、先验后发），这里只讲发布本身。
+
 `package.json` 的 `version` 是唯一需要手改的地方，改完跑 `npm run version:sync`，然后 `bash scripts/release.sh`。
 
 ## 八步
