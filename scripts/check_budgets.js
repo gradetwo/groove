@@ -54,7 +54,16 @@ const BUDGETS = {
    * Raising a budget to clear a red gate is exactly what budgets exist to prevent, so two things change with it: `release.sh` now runs this check **before** deploying, which makes it block publishing rather than only annotate a commit, and the
    * reason each raise is recorded here stays the rule. The next raise needs the same: a measurement, and what grew.
    */
-  initialRouteGzipKb: 226,
+  /**
+   * 226 → 227 on 2026-09-30, and it is **0.1 KB over**: the check read 226.1 KB where the last raise left it at 226.
+   *
+   * What grew is a capability rather than slack: the custom-genre store moved behind an interface so the **MCP server** can read and write one, and `src/app/installCustomGenreResolver.ts` — which is on the entry path, because it is what makes a custom genre playable anywhere in the app — now pulls that seam rather than one IndexedDB
+   * function. The seam is what lets an agent fork a library genre and save it; before it, saving a genre existed only in the browser.
+   *
+   * **Where the bytes come back from**, so this is a loan rather than a habit: the entry does not need the in-memory implementation, which exists for the Node side. Splitting `customGenreStore.ts` so the browser imports only the selection and the IndexedDB implementation should return most of this 1 KB, and the resolver's own import can
+   * shrink to the one function it calls. Whoever does that should **lower this number by what they measure**, which the two raises above never asked for.
+   */
+  initialRouteGzipKb: 227,
   /**
    * GS-1 vendored core. The Rust→WASM engine artifacts are not `.js`, so every
    * budget above simply does not see them: a GS-1 bump could grow the payload 40%
