@@ -174,18 +174,25 @@ try {
     // And load it for real: the loader fetches, decodes and caches, with the browser decoder.
     const context = new OfflineAudioContext(1, 44100, 44100);
     const loader = loaderModule.createSampleLoader(graph.browserSampleDecoder(context), assets);
-    let buffer;
+    let loaded;
     try {
-      buffer = await loader.loadNote("virtuosity-drums-basic", 38);
+      loaded = await loader.loadNote("virtuosity-drums-basic", 38);
     } catch (error) {
       // **Failures are returned with their diagnostics, not thrown away.** The first version let the exception escape, which discarded the log — so the one run that had something to say said nothing.
       log.push(`loadNote threw: ${error instanceof Error ? error.message : String(error)}`);
       return { ok: false, log };
     }
+    /**
+     * ⭐ **`loadNote` returns a `LoadedNote`, not an `AudioBuffer`** — `{ buffer, ratio, samplePath, rootKey?, group?, offBy?, oneShot? }`. This probe kept calling `getChannelData` on the wrapper and failed with `buffer.getChannelData is not a function`, which is a signature drift the browser probe could not have caught anywhere but here.
+     *
+     * The extra fields are printed for the same reason the fetch log is: when a real library stops sounding, the question is which sample answered and at what rate, not only whether bytes arrived.
+     */
+    const buffer = loaded.buffer;
     const data = buffer.getChannelData(0);
     let peak = 0;
     for (let i = 0; i < data.length; i += 1) peak = Math.max(peak, Math.abs(data[i]));
     log.push(`decoded: ${buffer.length} frames, ${buffer.numberOfChannels} channel(s), peak ${peak.toFixed(6)}`);
+    log.push(`resolved: ${loaded.samplePath} at ratio ${loaded.ratio.toFixed(4)}${loaded.rootKey === undefined ? "" : `, root ${loaded.rootKey}`}${loaded.oneShot ? ", one-shot" : ""}${loaded.group === undefined ? "" : `, group ${loaded.group}`}`);
     return { ok: peak > 0, log, frames: buffer.length, peak };
   }, manifestText);
 
