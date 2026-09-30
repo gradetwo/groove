@@ -472,6 +472,24 @@ try {
   }
 
   /**
+   * ⭐ **A declared input has to reach the thing it is declared for.**
+   *
+   * `generate_melody`'s schema documents `tones` as "one tone per sounding note, in playing order", and the generator runs the 倒字 repair with it — but the handler never passed it on, so supplying tone marks changed nothing at all. Muse found it by using `generate_melody` and `validate_prosody` together: each tool looked right alone, and only the pair showed that the tones were ignored.
+   */
+  const withTones = payload(
+    await client.request("tools/call", { name: "generate_melody", arguments: { tonic: 60, mode: "major", bars: 2, seed: 7, tones: [1, 4, 1, 4, 1, 4, 1, 4] } })
+  );
+  const withoutTones = payload(
+    await client.request("tools/call", { name: "generate_melody", arguments: { tonic: 60, mode: "major", bars: 2, seed: 7 } })
+  );
+  check(
+    "generate_melody uses the tones it was given rather than composing as if there were none",
+    // Same seed, different input: if the tones are ignored the two melodies are identical, which is exactly the bug.
+    JSON.stringify(withTones.pitch) !== JSON.stringify(withoutTones.pitch),
+    `tones changed ${(withTones.pitch ?? []).length} note(s): ${JSON.stringify(withTones.pitch ?? []).slice(0, 40)} vs ${JSON.stringify(withoutTones.pitch ?? []).slice(0, 40)}`
+  );
+
+  /**
    * The example library's acceptance line from docs/V4_REVIEW_PLAN.md: every example passes the **same gate any pattern does**.
    *
    * Written as a loop rather than a `map`, because `await` inside a `map` callback is a syntax error at module scope — which is how the

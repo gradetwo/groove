@@ -1610,6 +1610,12 @@ export const TOOLS: ToolDefinition[] = [
           range: args.range as [number, number] | undefined,
           seed: args.seed as number | undefined,
           density: args.density as number | undefined,
+          /**
+           * ⭐ **`tones` reaches the generator, which it did not.**
+           *
+           * The schema declares it — "**one tone per sounding note**, in playing order" — and `generateMelody` accepts it and runs the 倒字 repair with it. The handler simply never passed it on, so a caller who supplied tone marks got a melody composed **as if the words had no tones at all**, and then `validate_prosody` reported the mismatches the input had been given to prevent. Muse found it by using the two tools together, which is the only way this shows up: each one looks right on its own.
+           */
+          tones: args.tones as number[] | undefined,
         });
       } catch (error) {
         return failure((error as Error).message);
