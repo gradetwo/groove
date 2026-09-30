@@ -63,7 +63,18 @@ const BUDGETS = {
    * **Where the bytes come back from**, so this is a loan rather than a habit: the entry does not need the in-memory implementation, which exists for the Node side. Splitting `customGenreStore.ts` so the browser imports only the selection and the IndexedDB implementation should return most of this 1 KB, and the resolver's own import can
    * shrink to the one function it calls. Whoever does that should **lower this number by what they measure**, which the two raises above never asked for.
    */
-  initialRouteGzipKb: 227,
+  /**
+   * 227 → 327 on 2026-09-30, **at the owner's request, and this is the first raise here that is not a feature's doing.**
+   *
+   * The four raises above each record what grew and by how much, because the rule this file keeps is that a limit moves for a measured reason. This one moves for a decision: the owner asked for **100 KB of headroom**, so the reason is stated as what it is rather than dressed up as growth.
+   *
+   * **The measurement, so the headroom is a number and not a feeling**: the initial route read **226.9 KB** against the old 227, which is why the last raise left almost nothing — the arrangement route and the custom-genre seam had consumed it. Against 327 that is **about 100 KB free**.
+   *
+   * **What the room is for**, said plainly because a budget with unknown slack stops being a budget: the next features in this area no longer have to reclaim bytes before they can land. The known candidate is the arrangement route split — `studio` and `new` both pull the arrangement component set into a shared chunk, and splitting them was previously the only way to buy more — and the earlier loan from `customGenreStore` (splitting the Node-side implementation out of the browser import) is now optional rather than owed. **The per-chunk limit is untouched**: this is about the entry route's total, not about any single file.
+   *
+   * ⚠️ **A raise of this size needs the reason it will not become a habit**, and the honest one is that the check is now the only thing standing between "add a dependency to the entry" and "nobody notices". The number to watch is the gap: if a future raise is again under 1 KB, the feature that took it should say what it reclaimed, exactly as this file has always asked.
+   */
+  initialRouteGzipKb: 327,
   /**
    * GS-1 vendored core. The Rust→WASM engine artifacts are not `.js`, so every
    * budget above simply does not see them: a GS-1 bump could grow the payload 40%
