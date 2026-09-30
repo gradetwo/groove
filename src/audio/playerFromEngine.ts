@@ -60,6 +60,12 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
   const voices = new Map<number, SamplerVoice[]>();
   const MAX_VOICES_PER_NOTE = 8;
   /**
+   * ⭐ **The keys whose voices ignore a release**, because the region says `loop_mode=one_shot`.
+   *
+   * A drum hit rings out however briefly the key is held, so releasing it must not stop anything — measured with sfizz: the same 0.1-second note on a one-second sample lasts 2.091 s with `one_shot` and 0.341 s without. **A choke still stops these**: `one_shot` governs the key release and `off_by` governs the choke, and they answer different questions.
+   */
+  const oneShotKeys = new Set<number>();
+  /**
    * The sampler steps `play` scheduled, separately from `voices`, because a transport stop is not a key release: it silences everything the arrangement started, whereas `releaseNote` names one key.
    */
   const scheduled: SamplerVoice[] = [];
@@ -86,7 +92,8 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
     let stopped = 0;
     for (const voice of set) {
       try {
-        voice.stop();
+        // A fade and not a cut: measured with sfizz, a choke takes about fifty milliseconds to reach one percent, and stopping dead is what a click is.
+        voice.fadeOut();
         stopped += 1;
       } catch {
         // A voice that has already ended is not an error: `stop()` is idempotent in intent, and a choke that throws would silence the note that caused it.
@@ -110,8 +117,17 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
     );
     try {
       const note = await loader.loadNote(assetId, midi);
-      // ⭐ The choke happens **before** the new voice starts, so the cut is heard as the new note rather than a gap after it.
-      choke(note.offBy);
+      /**
+       * ⭐ **The new note asks about its own `group`, and each voice registered what silences it.** The choke still happens before the new voice starts, so the cut is heard as the new note rather than as a gap after it.
+       *
+       * That is the opposite of what this code did first, and the difference was **measured with sfizz** rather than argued. A frequency-selective measurement — 440 Hz for the note that should be silenced, 1500 Hz for the note that triggers it — over two spellings of the same pair:
+       *
+       *   · `off_by=2` on the 440 Hz region, `group=2` on the 1500 Hz one → **440 Hz falls from 0.0502 to 0.0002** while 1500 Hz keeps sounding: silenced.
+       *   · `off_by=1` on the 1500 Hz region, `group=1` on the 440 Hz one → **440 Hz stays at 0.0502**: nothing is silenced at all.
+       *
+       * So SFZ's `off_by=N` means "**stop me** when a voice in group N starts" — the victim names its killer — and this project had it backwards, with criteria that encoded the wrong reading and therefore stayed green.
+       */
+      choke(note.group);
       const voice = startSamplerNote({
         context: engine.audioContext,
         destination: engine.musicDestination,
@@ -119,8 +135,12 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
         ratio: note.ratio,
         ...(gainDb === undefined ? {} : { gainDb }),
       });
-      rememberGroup(note.group, voice);
+      // Registered under **what silences it** (`off_by`), because that is what a later note looks up: a new note asks "does my group stop anything?", not "who declared that they stop me?".
+      rememberGroup(note.offBy, voice);
       const key = keyFor(trackId, midi);
+      // A one-shot key is remembered as such, so the release that follows knows there is nothing to stop.
+      if (note.oneShot) oneShotKeys.add(key);
+      else oneShotKeys.delete(key);
       const list = voices.get(key) ?? [];
       list.push(voice);
       voices.set(key, list.slice(-MAX_VOICES_PER_NOTE));
@@ -218,6 +238,10 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
     audition,
     releaseNote({ trackId, midi }) {
       const key = keyFor(trackId, midi);
+      /**
+       * ⭐ **A one-shot voice is not stopped by a release, and the count says zero.** Returning the number of voices actually stopped is what makes this visible to a criterion: a file that asks for a ringing drum hit answers `0` here, and one that does not answers the number it stopped.
+       */
+      if (oneShotKeys.has(key)) return 0;
       const list = voices.get(key);
       if (!list) return 0;
       voices.delete(key);

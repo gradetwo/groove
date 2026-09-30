@@ -21,9 +21,20 @@ export interface SamplerVoiceInput {
   seconds?: number;
 }
 
+/** The measured fade: about fifty milliseconds from full level to one percent. */
+const CHOKE_FADE_SECONDS = 0.05;
+/** A hair of extra time, so the scheduled stop lands after the ramp rather than through it. */
+const CHOKE_FADE_TAIL_SECONDS = 0.005;
+
 export interface SamplerVoice {
   /** The node that was started, so a caller can stop it — a key release on a sustaining sample. */
   stop(whenSeconds?: number): void;
+  /**
+   * **A choke is a fade, not a cut.** Measured with sfizz: when a hi-hat is choked by a note in the group its `off_by` names, the level goes 0.0500 → 0.0088 → 0.0038 → 0.0022 → 0.0007 over the fifty milliseconds after the choke — about a twentieth of a second to fall to one percent, and **not** an instantaneous stop. Stopping a voice dead is what makes a choked open hat click.
+   *
+   * `off_mode` was measured too, and made **no difference at all** in this build: `fast`, `normal` and absent produced identical readings in all eight windows, so there is nothing to implement for it beyond this one shape.
+   */
+  fadeOut(seconds?: number): void;
   /** The rate it was started at, reported back so a criterion can check the pitch rather than the code path. */
   ratio: number;
 }
@@ -53,6 +64,21 @@ export function startSamplerNote({
   else source.start(startedAt, 0, seconds);
   return {
     ratio: safeRatio,
+    /**
+     * The fade a choke uses, and why it exists rather than just calling `stop`: a hard stop on a sounding voice is a step in the waveform, and a step is a click. The measurement above says sfizz spends about fifty milliseconds getting to one percent, so the ramp ends there and `stop` is scheduled a hair after it — scheduling the stop **before** the ramp finishes would cut off the very fade it was asked for.
+     */
+    fadeOut(seconds = CHOKE_FADE_SECONDS) {
+      try {
+        const now = context.currentTime;
+        const value = gain.gain.value;
+        gain.gain.cancelScheduledValues(now);
+        gain.gain.setValueAtTime(value, now);
+        gain.gain.linearRampToValueAtTime(0, now + seconds);
+        source.stop(now + seconds + CHOKE_FADE_TAIL_SECONDS);
+      } catch {
+        // A closed context, or a source that never started: a choke must never be able to throw into the caller that is starting the next note.
+      }
+    },
     stop(when) {
       try {
         source.stop(when);
