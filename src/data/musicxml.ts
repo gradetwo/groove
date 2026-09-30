@@ -127,24 +127,86 @@ export function notesToMeasures(notes: readonly NoteEvent[], bars: number, optio
   }
   const groupList = [...groups.entries()].map(([key, group]) => ({ key, ...group })).sort((a, b) => a.startBeats - b.startBeats || a.lengthBeats - b.lengthBeats);
 
-  /** The voice each chord belongs to: the first whose last note has finished by the time this one starts. */
-  const voiceEnds: number[] = [];
-  const voiceOf = new Map<string, number>();
-  for (const group of groupList) {
-    let voice = voiceEnds.findIndex((voiceEnd) => voiceEnd <= group.startBeats + 1e-9);
-    if (voice === -1) {
-      voice = voiceEnds.length;
-      voiceEnds.push(group.startBeats + group.lengthBeats);
-    } else {
-      voiceEnds[voice] = group.startBeats + group.lengthBeats;
-    }
-    voiceOf.set(group.key, voice);
-  }
-
   const measures: string[] = [];
+  /**
+   * **Voices are assigned inside the measure, and a voice number means the same line of music for the whole part.**
+   *
+   * A `<voice>` is an identity, not a per-measure slot: a later measure rewinds the cursor with a `<backup>` and the notes that follow carry the voice numbers a reader draws as lines. **The first version reused the first voice free anywhere in the piece**, which let a voice hold music that went *backwards* between measures: in a
+   * bar of four overlapping notes it wrote two `<backup>` elements in a row and drove the cursor to minus sixteen divisions, which the cursor criterion below now refuses. Assigning once per measure instead fixed that and introduced the opposite fault: a voice was taken by a group whose tie was still travelling through the bar, and two independent lines collided in one `<voice>`.
+   *
+   * The rule below is that a voice may take a group in measure m only when the group that last took it ended **before m began**, or ended inside m before this group starts. A piece of a tie that starts in m claims that voice for the whole of m, so nothing else may take it.
+   */
+  const voiceOf = new Map<string, number>();
+  /** Every group split at the barlines, in time order — the pieces are what a measure holds, and what a voice claim is made of. */
+  const pieces = groupList
+    .flatMap((group) =>
+      splitAtBarlines(group.startBeats, group.lengthBeats, beatsPerMeasure).map((piece) => ({
+        group,
+        startBeats: piece.startBeats,
+        lengthBeats: piece.lengthBeats,
+        measureIndex: Math.floor(piece.startBeats / beatsPerMeasure),
+        tiedFrom: piece.tiedFrom,
+        tiedTo: piece.tiedTo,
+        voice: -1,
+      }))
+    )
+    .sort((a, b) => a.startBeats - b.startBeats || a.group.lengthBeats - b.group.lengthBeats);
+  /** Where each voice's last group finished, and which of the groups tied from before are holding it in this measure. */
+  const voiceEnds: number[] = [];
+  const heldByContinuation = new Map<number, number>();
+
   for (let index = 0; index < measureCount; index += 1) {
+    for (const piece of pieces) {
+      if (piece.measureIndex !== index) continue;
+      if (piece.voice !== -1) {
+        // A group whose head is in an earlier measure was placed once, there, and every later piece of it belongs to that same voice.
+        voiceOf.set(piece.group.key, piece.voice);
+        continue;
+      }
+      if (voiceOf.has(piece.group.key)) continue;
+      let voice = -1;
+      for (let candidate = 0; candidate < voiceEnds.length; candidate += 1) {
+        // A voice carrying a tie into this measure is not free until that tie ends, whatever else has finished.
+        if (heldByContinuation.get(candidate) === index) continue;
+        const end = voiceEnds[candidate] ?? 0;
+        const endsAtABarline = Math.abs(end / beatsPerMeasure - Math.floor(end / beatsPerMeasure)) < 1e-9;
+        const reusable = endsAtABarline ? end <= piece.startBeats + 1e-9 : Math.floor(end / beatsPerMeasure) < index && end <= piece.startBeats + 1e-9;
+        if (reusable) {
+          voice = candidate;
+          break;
+        }
+      }
+      if (voice === -1) {
+        voice = voiceEnds.length;
+        voiceEnds.push(0);
+      }
+      voiceOf.set(piece.group.key, voice);
+      voiceEnds[voice] = piece.startBeats + piece.lengthBeats;
+      for (const later of pieces) {
+        if (later.voice !== -1 || later.group !== piece.group) continue;
+        later.voice = voice;
+        // Every piece of this group that begins in a later measure holds its voice there, which is what keeps another group from claiming it in between.
+        if (later.tiedFrom) heldByContinuation.set(voice, later.measureIndex);
+      }
+    }
+
     const measureStart = index * beatsPerMeasure * divisionsPerBeat;
     const measureEnd = measureStart + beatsPerMeasure * divisionsPerBeat;
+    const eventsByVoice = new Map<number, { startDivision: number; duration: number; pitches: number[]; tiedFrom?: boolean; tiedTo?: boolean }[]>();
+    for (const piece of pieces) {
+      if (piece.measureIndex !== index || piece.voice < 0) continue;
+      const startDivision = Math.round(piece.startBeats * divisionsPerBeat);
+      if (startDivision < measureStart || startDivision >= measureEnd) continue;
+      const duration = Math.max(1, Math.round(piece.lengthBeats * divisionsPerBeat));
+      const events = eventsByVoice.get(piece.voice) ?? [];
+      // The group is already a chord, so its pitches share one event; a split at a barline makes two events, tied.
+      const chord = events.find((event) => event.startDivision === startDivision && event.duration === duration && event.tiedFrom === piece.tiedFrom);
+      if (chord) chord.pitches.push(...piece.group.pitches);
+      else events.push({ startDivision, duration, pitches: [...piece.group.pitches], tiedFrom: piece.tiedFrom, tiedTo: piece.tiedTo });
+      eventsByVoice.set(piece.voice, events);
+    }
+    for (const events of eventsByVoice.values()) events.sort((a, b) => a.startDivision - b.startDivision);
+
     const body: string[] = [];
     if (index === 0) {
       body.push(
@@ -156,29 +218,24 @@ export function notesToMeasures(notes: readonly NoteEvent[], bars: number, optio
           `      </attributes>`
       );
       if (options.tempoBpm !== undefined) {
-        body.push(`      <direction><direction-type><metronome><beat-unit>quarter</beat-unit><per-minute>${Math.round(options.tempoBpm)}</per-minute></metronome></direction-type></direction>`);
+        const perMinute = Math.round(options.tempoBpm);
+        /**
+         * The mark is what a person sees; `<sound tempo>` is what the file plays back, and it is the element playback follows. Both carry the same number, and the reader takes the mark first, so the two cannot disagree in the round trip.
+         */
+        body.push(
+          `      <direction><direction-type><metronome><beat-unit>quarter</beat-unit><per-minute>${perMinute}</per-minute></metronome></direction-type><sound tempo="${perMinute}"/></direction>`
+        );
       }
     }
 
-    for (let voice = 0; voice < Math.max(1, voiceEnds.length); voice += 1) {
+    const soundingVoices = [...eventsByVoice.keys()].sort((a, b) => a - b);
+    /** A measure nothing plays in is still a measure, and notation has no blank one: it gets one voice of rests, the same as before. */
+    const voices = soundingVoices.length > 0 ? soundingVoices : [0];
+    voices.forEach((voice, position) => {
       // Every voice after the first rewinds the cursor to the measure's start; without it the second voice is written after the first, a measure late.
-      if (voice > 0) body.push(`      <backup><duration>${measureEnd - measureStart}</duration></backup>`);
+      if (position > 0) body.push(`      <backup><duration>${measureEnd - measureStart}</duration></backup>`);
       const voiceNumber = voice + 1;
-
-      const events: { startDivision: number; duration: number; pitches: number[]; tiedFrom?: boolean; tiedTo?: boolean }[] = [];
-      for (const group of groupList) {
-        if (voiceOf.get(group.key) !== voice) continue;
-        for (const piece of splitAtBarlines(group.startBeats, group.lengthBeats, beatsPerMeasure)) {
-          const startDivision = Math.round(piece.startBeats * divisionsPerBeat);
-          if (startDivision < measureStart || startDivision >= measureEnd) continue;
-          const duration = Math.max(1, Math.round(piece.lengthBeats * divisionsPerBeat));
-          // The group is already a chord, so its pitches share one event; a split at a barline makes two events, tied.
-          const chord = events.find((event) => event.startDivision === startDivision && event.duration === duration && event.tiedFrom === piece.tiedFrom);
-          if (chord) chord.pitches.push(...group.pitches);
-          else events.push({ startDivision, duration, pitches: [...group.pitches], tiedFrom: piece.tiedFrom, tiedTo: piece.tiedTo });
-        }
-      }
-      events.sort((a, b) => a.startDivision - b.startDivision);
+      const events = eventsByVoice.get(voice) ?? [];
 
       let cursor = measureStart;
       for (const event of events) {
@@ -195,9 +252,10 @@ export function notesToMeasures(notes: readonly NoteEvent[], bars: number, optio
       }
 
       /**
-       * **Rests fill what a measure does not cover**, because notation has no hole in it. Voice one always gets them; a later voice only when it has something in this measure, so an empty second voice does not add a staff's worth of rests to every bar.
+       * **Rests fill what a measure does not cover**, because notation has no hole in it. This is not only the first voice: a voice that is merely holding a tie from the bar before has no event of its own starting here, and without its rests that voice's written music stops short of the barline — which the criterion above found as a bar whose voices did not add up. A voice with nothing at all in this
+       * measure is left out, so an idle line does not add a staff's worth of rests to every bar; a bar nothing plays in still gets one voice of rests, because a measure is not allowed to be blank.
        */
-      if (voice === 0 || events.length > 0) {
+      if (events.length > 0 || position === 0) {
         let tail = measureEnd - cursor;
         while (tail > 0) {
           const piece = Math.min(tail, 4 * divisionsPerBeat);
@@ -205,7 +263,7 @@ export function notesToMeasures(notes: readonly NoteEvent[], bars: number, optio
           tail -= piece;
         }
       }
-    }
+    });
 
     measures.push(`    <measure number="${index + 1}">\n${body.join("\n")}\n    </measure>`);
   }

@@ -83,10 +83,12 @@
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@types/three": "^0.185.4",
     "clsx": "^2.1.1",
+    "fflate": "^0.8.3",
     "lucide-react": "^1.16.0",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "saxes": "^6.0.0",
     "tailwind-merge": "^2.5.5",
     "three": "^0.185.1",
     "vexflow": "^5.0.0"
