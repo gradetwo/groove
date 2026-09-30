@@ -1,6 +1,19 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import React from "react";
 import { RecordButtonV2, type RecordButtonV2Props } from "../components/arrangement/RecordButtonV2";
+import { LanguageProvider } from "../i18n/LanguageContext";
+
+/**
+ * The provider is explicit and the language is pinned, because the button's own label is now the dictionary's word
+ * for it rather than a literal `Record` — the same change the arrangement toolbar needed when the record control
+ * moved into it. Without a provider `useLanguage` falls back to Chinese, so the assertions below would be reading a
+ * word this file did not mean to judge.
+ */
+const renderButton = (ui: React.ReactElement) => {
+  localStorage.setItem("groove_language", "en");
+  return render(<LanguageProvider>{ui}</LanguageProvider>);
+};
 
 /**
  * The button, and the one thing about it that matters: **a refusal must reach the screen.**
@@ -11,7 +24,7 @@ import { RecordButtonV2, type RecordButtonV2Props } from "../components/arrangem
 describe("RecordButtonV2", () => {
   it("shows the refusal's own sentence, without rewording it", async () => {
     const summary = "The browser would not provide a recording stream — a device may be missing, busy, or blocked by a policy on this machine.";
-    render(<RecordButtonV2 capture={vi.fn(async () => ({ ok: false as const, refusal: "unavailable" as const, summary }))} />);
+    renderButton(<RecordButtonV2 capture={vi.fn(async () => ({ ok: false as const, refusal: "unavailable" as const, summary }))} />);
     fireEvent.click(screen.getByRole("button"));
     // The exact sentence, because a second phrasing here would be a second answer to "why did this fail".
     await waitFor(() => expect(screen.getByTestId("record-refusal").textContent).toBe(summary));
@@ -19,11 +32,15 @@ describe("RecordButtonV2", () => {
 
   it("shows nothing when the capture worked, and does not keep a stale refusal on screen", async () => {
     const capture = vi.fn(async () => ({ ok: false as const, refusal: "no-device" as const, summary: "No recording device was found." }));
-    const { rerender } = render(<RecordButtonV2 capture={capture} />);
+    const { rerender } = renderButton(<RecordButtonV2 capture={capture} />);
     fireEvent.click(screen.getByRole("button"));
     await waitFor(() => expect(screen.getByTestId("record-refusal")).toBeDefined());
 
-    rerender(<RecordButtonV2 capture={vi.fn(async () => ({ ok: true as const, reference: "take-1", planned: { take: { id: "take-1", recordedAt: 1, source: "audio" as const } } }))} />);
+    rerender(
+      <LanguageProvider>
+        <RecordButtonV2 capture={vi.fn(async () => ({ ok: true as const, reference: "take-1", planned: { take: { id: "take-1", recordedAt: 1, source: "audio" as const } } }))} />
+      </LanguageProvider>
+    );
     fireEvent.click(screen.getByRole("button"));
     // A stale refusal left on screen would describe a failure that is no longer the situation.
     await waitFor(() => expect(screen.getByRole("button").textContent).not.toBe("Recording…"));
@@ -40,7 +57,7 @@ describe("RecordButtonV2", () => {
           release = resolve;
         })
     );
-    render(<RecordButtonV2 capture={capture} />);
+    renderButton(<RecordButtonV2 capture={capture} />);
     fireEvent.click(screen.getByRole("button"));
     await waitFor(() => expect(screen.getByRole("button").textContent).toBe("Recording…"));
     expect(screen.getByRole("button")).toHaveProperty("disabled", true);
@@ -54,14 +71,14 @@ describe("RecordButtonV2", () => {
     // The defect this pins: the button captured and dropped the result, so the take list stayed empty however often a person recorded.
     const onTake = vi.fn();
     const planned = { take: { id: "take-7", recordedAt: 7, source: "audio" as const } };
-    render(<RecordButtonV2 capture={vi.fn(async () => ({ ok: true as const, reference: "take-7", planned }))} onTake={onTake} />);
+    renderButton(<RecordButtonV2 capture={vi.fn(async () => ({ ok: true as const, reference: "take-7", planned }))} onTake={onTake} />);
     fireEvent.click(screen.getByRole("button", { name: /record/i }));
     await waitFor(() => expect(onTake).toHaveBeenCalledWith(planned));
   });
 
   it("does not report a take when the capture was refused, because there is none", async () => {
     const onTake = vi.fn();
-    render(
+    renderButton(
       <RecordButtonV2
         capture={vi.fn(async () => ({ ok: false as const, refusal: "permission-denied" as const, summary: "Permission denied." }))}
         onTake={onTake}
