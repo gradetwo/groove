@@ -415,6 +415,64 @@ input[type=range]::-moz-range-thumb {
 }
 
 /**
+ * The arrangement's own track-header column and lane row, kept apart from `--trk-head-w` on purpose.
+ *
+ * `--trk-head-w` is the **studio's** frozen column (142/176 px), tuned for a step grid where a row carries a name,
+ * a type badge and four compact controls. The arrangement is a different surface with a different job: its header
+ * carries Bitwig's documented minimum set — colour, kind, name, volume, record-arm, solo, mute, level meter and the
+ * instrument slot (`docs/ARRANGEMENT_UI_DESIGN.md` §2 and §8 item 2, which asks for **240 px**). Reusing one variable
+ * would mean either the studio's grid or the arrangement's header is the wrong width, and a media query inside a
+ * component cannot reintroduce a second value.
+ *
+ * On a phone the column keeps the same 240 px and the controls that need a mouse scale are hidden by
+ * `.arr-head-desktop-only` below; mute, solo and record-arm move behind one 44 px disclosure
+ * (`.arr-head-msr`) instead of shrinking, which is what WCAG 2.5.5/2.5.8 and the design brief's phone section ask
+ * for. The 639 below is the same number `--trk-head-w`'s query uses, written by `npm run layout:sync`.
+ */
+:root {
+  --arr-head-w: 240px;
+  /**
+   * The lane row height, and therefore the header's.
+   *
+   * 96 px rather than 72 because the header has to hold **Bitwig's eight controls and our instrument chip in one
+   * row** at the 240 px column (§2 and §6.1), and at 72 px the strip, kind, name, volume, arm, solo, mute, meter and
+   * chip do not fit together: the last one would either wrap the row or overlap a neighbour. A taller row is the
+   * same trade the brief makes everywhere else — a real target rather than a hidden one.
+   */
+  --arr-track-h: 96px;
+  --arr-toolbar-h: 44px;
+}
+
+/*
+ * The arrangement header's phone rule, deliberately parallel to `.trk-head-desktop-only` and with the same
+ * `!important`: a conflicting `flex` in an element's own class list beats Tailwind's `hidden` at equal specificity,
+ * which is how the studio's header overflowed its column while carrying `hidden md:flex`.
+ */
+@media (max-width: 639px), (pointer: coarse) {
+  .arr-head-desktop-only {
+    display: none !important;
+  }
+}
+
+/*
+ * The one control that stands in for the whole M/S/R cluster on a touch device.
+ *
+ * It is `<details>`, so the disclosure is keyboard-operable and announced as expanded/collapsed by the browser
+ * rather than by a hand-rolled `aria-expanded` that has to be kept in step. Hidden from `sm` up, where the three
+ * controls are drawn at their desktop size in the header itself.
+ */
+.arr-head-msr {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+@media (min-width: 640px) {
+  .arr-head-msr {
+    display: none !important;
+  }
+}
+
+/**
  * How much of the bottom of the viewport is occupied by the phone's navigation bar.
  *
  * Keyed off a DOM attribute rather than a width media query, because width is the wrong question.

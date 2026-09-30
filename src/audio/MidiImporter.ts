@@ -29,7 +29,11 @@ export interface MidiImportResult {
  * The three-step decoding above, as a function so a criterion can call it with bytes rather than through a whole file.
  */
 export function decodeMidiText(bytes: Uint8Array): string {
-  // NULs are stripped with `split`/`join` rather than a regular expression: a control character in a pattern trips `no-control-regex`, and the lint rule is right that it is usually a mistake. `replaceAll` is not in this project's TypeScript lib target, which the gate caught after I had already read past it.
+  /**
+   * NULs are stripped with a string replacement rather than a regular expression: a control character in a pattern trips `no-control-regex`, and the lint rule is right that it is usually a mistake.
+   *
+   * `split`/`join` rather than `String.prototype.replaceAll`, which is ES2021: `tsconfig.json` targets ES2020 with `lib: ["ES2020", …]`, so `replaceAll` is a **compile error** here even though every runtime that runs this app has it. Both branches of this merge arrived at the same spelling, for the same reason.
+   */
   const trimmed = (text: string) => text.split("\u0000").join("").trimEnd();
   try {
     return trimmed(new TextDecoder("utf-8", { fatal: true }).decode(bytes));

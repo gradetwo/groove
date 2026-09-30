@@ -23,6 +23,14 @@ export interface TrackV2 {
   collapsed?: boolean;
   muted?: boolean;
   soloed?: boolean;
+  /**
+   * Record-armed: the track the user has said they intend to record onto.
+   *
+   * A track flag like `muted`/`soloed` rather than view state, because "this track is armed" is a fact about the
+   * track that outlives the row it is drawn in. **It does not yet decide where a recording lands** — the recording
+   * path still puts a take on the selected track — and that is written here rather than left for the button to imply.
+   */
+  armed?: boolean;
   gainDb?: number;
   pan?: number;
   /** A `folder` this track belongs to, for a Track Stack. */

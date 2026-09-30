@@ -153,15 +153,19 @@ export function setTrackParent(arrangement: ArrangementV2, trackId: string, pare
 }
 
 /**
- * The rest of what a track header does: mute, solo, rename, and folding a folder.
+ * The rest of what a track header does: mute, solo, arm, rename, and folding a folder.
  *
  * All of them are `map` over the track list, and the reason to write them here rather than inline in a component is the same reason the others are here: they are the states a song can be in, and a song
  * that is soloed in the model but not in the mixer — or folded in one view and not another — is a contradiction nobody can debug from the screen.
  *
  * **Folding is a display state and nothing else.** `setCollapsed` deliberately touches only `collapsed`, and there is a criterion for it, because a fold that silenced its children would be blamed on the
  * audio engine rather than on this function.
+ *
+ * `armed` shares this function rather than getting its own: it **is** the same shape of edit — one boolean on one track — and a second function with the same body is the kind of near-duplicate that later drifts.
+ * What `armed` is *not* is the same semantics: nothing reads it when a recording starts (the take still goes to the selected track), which is stated on the field in `TrackV2` rather than implied by the
+ * button's appearance.
  */
-export function setTrackFlag(arrangement: ArrangementV2, trackId: string, flag: "muted" | "soloed", value: boolean): ArrangementV2 {
+export function setTrackFlag(arrangement: ArrangementV2, trackId: string, flag: "muted" | "soloed" | "armed", value: boolean): ArrangementV2 {
   return { ...arrangement, tracks: arrangement.tracks.map((track) => (track.id === trackId ? { ...track, [flag]: value } : track)) };
 }
 
