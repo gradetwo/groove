@@ -10,6 +10,7 @@
  * The map is deliberately not persisted, exactly as the song map is not: the application owns projects, and this is a scratchpad for one session.
  */
 import { stepCountFor } from "../src/data/noteEvents";
+import { toMusicXml } from "../src/data/musicxml";
 import {
   TEMPLATES,
   addTake,
@@ -337,6 +338,38 @@ export function assignMcpTakeRange(arrangementId: string, trackId: string, takeI
  *
  * **Stated in bars rather than steps or seconds**, because a musician counts bars: a caller asking for "four more bars" should not have to know that a bar is sixteen steps, and a caller reading the answer should not have to divide.
  */
+/**
+ * ⭐ **The arrangement as MusicXML** — the file a notation program opens.
+ *
+ * A file rather than a summary, and returned whole rather than as a path: the caller is a process, the document is text, and "here is the score" is more useful than "here is where a score could be written".
+ *
+ * The notes of one track by default, because a track is a voice and one part is what the exporter writes; `trackId` chooses which. Bars come from the arrangement's own length so the score and the transport end in the same place.
+ */
+export function exportMcpMusicXml(arrangementId: string, options: { trackId?: string; title?: string; tempoBpm?: number } = {}): {
+  filename: string;
+  mimeType: string;
+  bytes: number;
+  xml: string;
+  track: string;
+  bars: number;
+} {
+  const arrangement = requireArrangement(arrangementId);
+  const track = options.trackId ? arrangement.tracks.find((candidate) => candidate.id === options.trackId) : arrangement.tracks.find((candidate) => candidate.kind !== "folder");
+  if (!track) throw new Error(`no track to write: ${options.trackId ? `"${options.trackId}" is not in this arrangement` : "the arrangement has no tracks"}`);
+  const notes = arrangement.notesByTrack?.[track.id] ?? [];
+  const bars = Math.round(stepCountFor(notes, arrangement.bars) / STEPS_PER_BAR);
+  const xml = toMusicXml(notes, bars, {
+    title: options.title ?? "Groove arrangement",
+    partName: track.name,
+    ...(options.tempoBpm === undefined ? {} : { tempoBpm: options.tempoBpm }),
+  });
+  const safe = track.name.replace(/[^\w.-]+/g, "-").replace(/^-|-$/g, "") || "track";
+  return { filename: `${safe}.musicxml`, mimeType: "application/vnd.recordare.musicxml+xml", bytes: xml.length, xml, track: track.name, bars };
+}
+
+/** How many steps one bar holds, re-exported so the MCP layer does not import the note module directly in two places. */
+import { STEPS_PER_BAR } from "../src/data/noteEvents";
+
 export function setMcpArrangementBars(arrangementId: string, bars: number): ArrangementEditResult {
   return edit(arrangementId, (arrangement) => setArrangementBars(arrangement, bars));
 }

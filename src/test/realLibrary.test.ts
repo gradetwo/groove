@@ -131,7 +131,7 @@ describe.skipIf(files === null)("a real library, read end to end", () => {
  * same file. So a change here that moves these numbers is a change in the chain, not in my arithmetic.
  */
 describe.skipIf(files === null)("the mirror chain on a real library", () => {
-  it("plans the files, fetches two of them, and measures their durations", async () => {
+  it("plans the files, fetches two of them, and measures their durations", async (ctx) => {
     const read = (path: string) => files!.get(path);
     const program = files!.get("Programs/01-basic-kit.sfz")!;
     const expanded = expandIncludes(program, read, { path: "Programs/01-basic-kit.sfz" });
@@ -153,12 +153,37 @@ describe.skipIf(files === null)("the mirror chain on a real library", () => {
     expect(result.problems).toEqual([]);
     expect(result.fetched).toBe(2);
 
+    /**
+     * ⭐ **Two prerequisites, both checked rather than assumed**, because this criterion blocked a release by *throwing* where it should have skipped: `ffprobe` is not installed on every runner, and a fetch can be rate-limited. It already skipped when the network was
+     * unavailable at the top of the file; the tool it measures with needs the same treatment, and so does a fetch that answers with an error page.
+     */
+    const hasFfprobe = (() => {
+      try {
+        execFileSync("ffprobe", ["-version"], { encoding: "utf8", stdio: "ignore" });
+        return true;
+      } catch {
+        return false;
+      }
+    })();
+    if (!hasFfprobe) {
+      console.log("   mirror chain : skipped — ffprobe is not installed, so durations cannot be measured here");
+      ctx.skip();
+      return;
+    }
+
     // And the durations, asked of the tool that knows — checked against two independent readings rather than against this code.
     const durations: string[] = [];
     for (const file of wanted) {
       const path = `/tmp/vd-mirror/${file.path}`;
+      const response = await fetch(`https://raw.githubusercontent.com/${REPO}/${PIN}/${file.path}`);
+      if (!response.ok) {
+        // Writing an error page to disk and then asking ffprobe about it is how this reported "could not read the file" instead of "the fetch failed".
+        console.log(`   mirror chain : skipped — the sample fetch answered ${response.status}`);
+        ctx.skip();
+        return;
+      }
       mkdirSync(dirname(path), { recursive: true });
-      writeFileSync(path, Buffer.from(await (await fetch(`https://raw.githubusercontent.com/${REPO}/${PIN}/${file.path}`)).arrayBuffer()));
+      writeFileSync(path, Buffer.from(await response.arrayBuffer()));
       const measured = audioDurationSeconds(path, { run: (command, args) => execFileSync(command, args, { encoding: "utf8" }) });
       durations.push(`${file.path.split("/").pop()}:${measured.seconds.toFixed(4)}s`);
       // The module reports seconds only: the tool it uses now is `ffprobe`, which reads both FLAC and WAV, and it does not report a sample rate. The stale assertion asked for

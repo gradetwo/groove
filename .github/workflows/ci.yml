@@ -17,6 +17,13 @@ on:
   schedule:
     - cron: "17 3 * * *"
   workflow_dispatch:
+    inputs:
+      # ⭐ **What a release asks for, and what it does not.** A release wants the browser matrix — the check that the app actually runs — and not the nightly sweep: coverage thresholds, loudness-baseline freshness and the perf gate are **measurements whose value is
+      # in their trend**, and some of them depend on the network and on external tools. They monitor; they do not decide whether a build may ship, and one of them blocked a release for no product reason on 2026-09-30.
+      nightly:
+        description: "Also run the nightly sweep (coverage, loudness freshness, perf)"
+        type: boolean
+        default: false
 
 jobs:
   validate:
@@ -273,7 +280,8 @@ jobs:
   groove-shards:
     name: Groove shard ${{ matrix.shard }}/4
     runs-on: ubuntu-latest
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    # Part of the nightly sweep, so a release dispatch does not pay for it: the four-way fan-out is a measurement (see the note above), not a judging path.
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.nightly)
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -316,7 +324,7 @@ jobs:
     needs: groove-shards
     # `always()` on purpose: when a shard dies, this is the job that *names* the genres that went unmeasured — and
     # it is cheap, because the merge path imports nothing outside Node's standard library.
-    if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    if: always() && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.nightly))
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -359,7 +367,8 @@ jobs:
   nightly:
     name: Nightly (full matrix, coverage, loudness freshness, perf)
     runs-on: ubuntu-latest
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    # Runs on the schedule, or when a dispatch explicitly asks for it — see the `nightly` input above.
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.nightly)
     # This job already carried a 90-minute bound (the full seven-target matrix plus coverage plus the loudness
     # re-render legitimately takes over an hour), so it needs no change: the hang backstop was only missing from the
     # E2E legs, and a second `timeout-minutes` key is not a bigger bound — it is an invalid workflow file, which
