@@ -135,6 +135,7 @@ try {
     "export_ableton",
     "share_url",
     "render_audio",
+    "render_arrangement_stems",
     "analyze_audio",
     "get_loudness_report",
   ]) {
