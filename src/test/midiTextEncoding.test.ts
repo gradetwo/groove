@@ -6,7 +6,7 @@
  * **The documents here are built byte by byte in the test**, which is the only way to have a fixture that is certainly ours: a real file would be somebody's arrangement.
  */
 import { describe, expect, it } from "vitest";
-import { decodeMidiText, parseMidiFile } from "../audio/MidiImporter";
+import { decodeMidiText, importMidiToPattern, parseMidiFile } from "../audio/MidiImporter";
 
 /** A minimal format 0 file with one track whose only event is a track name, then end-of-track. */
 function midiWithTrackName(nameBytes: number[]): ArrayBuffer {
@@ -92,5 +92,74 @@ describe("text in a MIDI file", () => {
     const notMidi = new ArrayBuffer(8);
     new Uint8Array(notMidi).set([0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00]);
     expect(() => parseMidiFile(notMidi)).toThrow(/MThd/);
+  });
+});
+
+/**
+ * A format 1 file with three instrument tracks, built here for the same reason the names are: **a fixture that is certainly ours**, so CI can exercise multi-track, multi-instrument, tempo and time signature without fetching somebody's arrangement and without a network.
+ */
+function multiTrackMidi(): ArrayBuffer {
+  const vlq = (value: number) => (value < 0x80 ? [value] : [0x81, value & 0x7f]);
+  /**
+   * One track: a name, a program change, two notes and an end. Delta times are written as two-byte VLQs so the reader's variable-length path is exercised rather than only its one-byte case.
+   */
+  const track = (name: string, program: number, note: number, channel: number) => {
+    const events = [
+      ...[0x00, 0xff, 0x03, name.length, ...[...name].map((character) => character.charCodeAt(0))],
+      ...[0x00, 0xc0 | channel, program], // program change at tick 0
+      ...[0x00, 0x90 | channel, note, 100], // note on
+      ...[...vlq(240), 0x80 | channel, note, 0], // note off, a quarter note later at 480 ticks per quarter
+      ...[0x00, 0xff, 0x2f, 0x00],
+    ];
+    return [0x4d, 0x54, 0x72, 0x6b, (events.length >> 24) & 0xff, (events.length >> 16) & 0xff, (events.length >> 8) & 0xff, events.length & 0xff, ...events];
+  };
+
+  const conductor = [
+    0x00, 0xff, 0x51, 0x03, 0x07, 0xa1, 0x20, // tempo: 500000 µs per quarter, i.e. 120 bpm
+    0x00, 0xff, 0x58, 0x04, 0x04, 0x02, 0x18, 0x08, // 4/4
+    0x00, 0xff, 0x2f, 0x00,
+  ];
+  const conductorTrack = [0x4d, 0x54, 0x72, 0x6b, 0x00, 0x00, 0x00, conductor.length, ...conductor];
+
+  const body = [...conductorTrack, ...track("Bass", 33, 36, 0), ...track("Piano", 0, 60, 1), ...track("Drums", 0, 38, 9)];
+  const bytes = [
+    0x4d, 0x54, 0x68, 0x64, 0x00, 0x00, 0x00, 0x06,
+    0x00, 0x01, // format 1: several tracks played together
+    0x00, 0x04, // four tracks: one conductor and three instruments
+    0x01, 0xe0, // 480 ticks per quarter
+    ...body,
+  ];
+  const buffer = new ArrayBuffer(bytes.length);
+  new Uint8Array(buffer).set(bytes);
+  return buffer;
+}
+
+describe("a multi-track MIDI file, built here", () => {
+  it("reads every track, its name and its notes", () => {
+    // Multi-instrument files are the case the owner named, and a hand-built one keeps CI free of anybody's music.
+    const parsed = parseMidiFile(multiTrackMidi());
+    expect(parsed.format).toBe(1);
+    expect(parsed.tracksCount).toBe(4);
+    expect(parsed.division).toBe(480);
+    // The conductor track sets the tempo; without it every file would read as the default.
+    expect(parsed.bpm).toBe(120);
+    expect(parsed.trackNames).toEqual(["Bass", "Piano", "Drums"]);
+    // Three instruments, one note each: the notes carry the channel they were played on.
+    expect(parsed.notes.map((note) => note.note).sort((a, b) => a - b)).toEqual([36, 38, 60]);
+  });
+
+  it("places each note where its ticks say, at the file's own division", () => {
+    /**
+     * The tick arithmetic is where a wrong `division` hides: 240 ticks into a 480-tick quarter is an eighth note, and a reader that assumed 96 would put it somewhere else entirely.
+     */
+    const parsed = parseMidiFile(multiTrackMidi());
+    expect(parsed.notes.every((note) => note.tick === 0)).toBe(true);
+  });
+
+  it("imports it into a pattern with the tempo it declares", () => {
+    const result = importMidiToPattern(multiTrackMidi(), { totalSteps: 32 });
+    expect(result.bpm).toBe(120);
+    expect(result.notesFound).toBe(3);
+    expect(result.pattern.tracks.length).toBeGreaterThan(0);
   });
 });
