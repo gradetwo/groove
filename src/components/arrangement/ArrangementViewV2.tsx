@@ -16,6 +16,7 @@ import { TakeSelectorV2 } from "./TakeSelectorV2";
 import { RecordButtonV2 } from "./RecordButtonV2";
 import { ArrangementKeyboardV2 } from "./ArrangementKeyboardV2";
 import { PianoRollV2 } from "./PianoRollV2";
+import { ScoreV2 } from "./ScoreV2";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { NewProjectPanelV2 } from "./NewProjectPanelV2";
 import { playArrangementV2, type ArrangementPlayer } from "../../audio/playArrangementV2";
@@ -56,6 +57,10 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
    * ⭐ **Which bar the strips show, which is not the transport's bar.** `bar` above is where the transport is in the underlying song and is what the take selector marks; this is a view choice — which sixteen squares a row draws. They are separate because an arrangement of eight bars still
    * has one transport, and a person looking at bar three has not thereby moved the playhead.
    */
+  /**
+   * ⭐ **Which editor is open.** Logic puts Piano Roll, Score and Smart Tempo behind tabs because they are three ways of looking at one performance, and switching between them must not move anything. Two of them here: the roll writes, the score reads.
+   */
+  const [editor, setEditor] = useState<"roll" | "score">("roll");
   const [stripBar, setStripBar] = useState(0);
   /** What the last play reported — **zero is shown, not hidden**: "nothing was planned" is a fact a user should see rather than a silent no-op. */
   const [played, setPlayed] = useState<number | undefined>(undefined);
@@ -169,7 +174,33 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
                 ›
               </button>
             </div>
+            {/**
+              * **The tabs.** They read as Logic's do, and they are what makes "look at the score" something a person discovers rather than a setting they have to find.
+              */}
             {selected.kind !== "fx" && selected.kind !== "folder" && (
+              <div data-testid="arrangement-editor-tabs" role="tablist" className="flex gap-1 px-1 text-xs">
+                {(["roll", "score"] as const).map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="tab"
+                    data-testid={`arrangement-editor-${value}`}
+                    aria-selected={editor === value}
+                    onClick={() => setEditor(value)}
+                    className={`px-3 py-0.5 rounded ${editor === value ? "bg-[var(--d-accent)] text-black" : "text-text opacity-70"}`}
+                  >
+                    {value === "roll" ? t("view_piano_roll") : t("view_score")}
+                  </button>
+                ))}
+              </div>
+            )}
+            {selected.kind !== "fx" && selected.kind !== "folder" && editor === "score" && (
+              /**
+               * **The score and the roll show the same notes.** That is the whole claim of having both, and it is why neither owns the data: they are two readings of one `NoteEvent[]`.
+               */
+              <ScoreV2 notes={arrangement.notesByTrack?.[selected.id] ?? []} bars={arrangement.bars ?? 8} title={`${selected.name} — ${t("view_score")}`} />
+            )}
+            {selected.kind !== "fx" && selected.kind !== "folder" && editor === "roll" && (
             <PianoRollV2
                 notes={arrangement.notesByTrack?.[selected.id] ?? []}
                 // The roll shows the whole arrangement, so its length and the transport's are the same number.

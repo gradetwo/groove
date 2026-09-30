@@ -41,6 +41,8 @@ import { listCatalogueInstruments } from "./instruments";
 import {
   addMcpNote,
   addMcpTake,
+  exportMcpMusicXml,
+  importMcpMusicXml,
   addMcpTrack,
   assignMcpTakeRange,
   createMcpArrangement,
@@ -379,6 +381,51 @@ export const TOOLS: ToolDefinition[] = [
     handler: (args) => {
       try {
         return setMcpTrackFlag(String(args.arrangementId), String(args.trackId), args.flag as "muted" | "soloed", Boolean(args.value));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "export_arrangement_musicxml",
+    title: "Export a score as MusicXML",
+    description:
+      "The arrangement's notes as a MusicXML 4.0 `score-partwise` document — the file a notation program opens. One part, from one track; a note that crosses a barline is written as two tied notes, gaps become rests, and overlapping notes become separate voices, because those are the three things the format cannot express any other way.",
+    readOnly: true,
+    inputSchema: {
+      arrangementId: z.string(),
+      trackId: z.string().optional().describe("which track to write; the first that is not a folder unless said otherwise"),
+      title: z.string().optional(),
+      tempoBpm: z.number().optional(),
+    },
+    handler: (args) => {
+      try {
+        return exportMcpMusicXml(String(args.arrangementId), {
+          ...(args.trackId === undefined ? {} : { trackId: String(args.trackId) }),
+          ...(args.title === undefined ? {} : { title: String(args.title) }),
+          ...(args.tempoBpm === undefined ? {} : { tempoBpm: Number(args.tempoBpm) }),
+        });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "import_arrangement_musicxml",
+    title: "Import a MusicXML score",
+    description:
+      "Read a MusicXML `score-partwise` document and **add** its part as a track, named after the part. Notes that notation splits at a barline are joined back into one, chords arrive as notes that start together, and anything the model cannot hold — a grace note, a second voice inside one staff — is listed in `problems` rather than dropped in silence.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      xml: z.string().describe("the whole document, as text"),
+      partIndex: z.number().int().min(0).optional().describe("which part to read; the first unless said otherwise"),
+    },
+    handler: (args) => {
+      try {
+        return importMcpMusicXml(String(args.arrangementId), String(args.xml), {
+          ...(args.partIndex === undefined ? {} : { partIndex: Number(args.partIndex) }),
+        });
       } catch (error) {
         return failure((error as Error).message);
       }

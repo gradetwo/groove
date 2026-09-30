@@ -11,6 +11,7 @@
  */
 import { stepCountFor } from "../src/data/noteEvents";
 import { toMusicXml } from "../src/data/musicxml";
+import { fromMusicXml } from "../src/data/musicxmlImport";
 import {
   TEMPLATES,
   addTake,
@@ -369,6 +370,28 @@ export function exportMcpMusicXml(arrangementId: string, options: { trackId?: st
 
 /** How many steps one bar holds, re-exported so the MCP layer does not import the note module directly in two places. */
 import { STEPS_PER_BAR } from "../src/data/noteEvents";
+
+/**
+ * ⭐ **MusicXML in**: the file a notation program saved, turned into notes on a track.
+ *
+ * It **adds a track rather than replacing one**, because the file names a part and a person importing a score means "give me this part" rather than "overwrite what I have". The part's own name becomes the track's, so a grand staff imported twice reads as two named parts.
+ *
+ * The problems the reader reports are returned **with** the track: an import that lost a grace note or a second voice says so, and a caller that ignores the list has still been told.
+ */
+export function importMcpMusicXml(arrangementId: string, xml: string, options: { partIndex?: number } = {}): ArrangementEditResult & { problems?: string[]; notes?: number } {
+  const imported = fromMusicXml(xml);
+  const index = options.partIndex ?? 0;
+  const part = imported.parts[index];
+  if (!part) throw new Error(`the file has ${imported.parts.length} part(s), so there is no part ${index}`);
+
+  const result = edit(arrangementId, (arrangement) => {
+    const withTrack = addTrack(arrangement, "instrument", part.name.slice(0, 40) || "Imported");
+    const trackId = withTrack.tracks[withTrack.tracks.length - 1]!.id;
+    // The notes arrive whole rather than one call each: an imported part is one decision, not two hundred edits.
+    return { ...withTrack, notesByTrack: { ...(withTrack.notesByTrack ?? {}), [trackId]: part.notes } };
+  });
+  return { ...result, problems: imported.problems, notes: part.notes.length };
+}
 
 export function setMcpArrangementBars(arrangementId: string, bars: number): ArrangementEditResult {
   return edit(arrangementId, (arrangement) => setArrangementBars(arrangement, bars));

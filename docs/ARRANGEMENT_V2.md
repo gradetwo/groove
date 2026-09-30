@@ -659,6 +659,30 @@ ArrangementViewV2:97   playArrangementV2(arrangement, {}, player)
 
 MCP：`set_arrangement_bars`（**65 个工具**），汇总里同时报 `bars` 与 `steps`——"多长"是小节问题，"能写到哪"是步的问题。
 
+
+## 谱面（2026-09-30）
+
+业主给了 Logic 的两张图（MIDI 轨道在编排里的样子、以及 **Score** 里五线谱的样子）并要求：**谱面功能我们也要**，去找可复用开源代码学习或改造，并把 MusicXML 的导入导出一起考虑。
+
+### 三个视图，一份数据
+
+键盘**演奏**，卷帘**写入**，谱面**给人读**。三者是同一个 `NoteEvent[]` 的三种读法——这正是同时拥有它们的意义，也是为什么谁都不拥有数据。Logic 把 Piano Roll／Score／Smart Tempo 放在页签后面，出于同样的理由；我们做两个页签。
+
+### 选型与实测
+
+决定与理由写在 [`SCORE_AND_MUSICXML.md`](SCORE_AND_MUSICXML.md)，调研数据在 [`research/staff-notation-and-musicxml-survey.md`](research/staff-notation-and-musicxml-survey.md)。要点：
+
+- **VexFlow 5**（MIT）直接画我们自己的模型，不必为了显示而绕一圈 MusicXML。
+- **用 `vexflow/core` 加自托管字体，不用 `vexflow/bravura`**。两者的区别只有一处，而这一处正是关键：后者把字体以 base64 内嵌，实测让这个块达到 **381 KB gzip**，撞上 150 KB 单块上限；前者通过 `Font.HOST_URL` 取字形，于是块是 **90.7 KB gzip**，字体是 `public/fonts/bravura/bravura.woff2`（247 KB，走我们自己的源，不告诉 CDN 有人在看谱）。
+- 字体的 OFL 许可证随字体一起放在 `public/fonts/bravura/OFL.txt`——**这是调研特别点出的隐患**：VexFlow 的 npm 包里带字体却不带 OFL 声明，内嵌字体的人有义务自己带上。
+- `manualChunks` 里给 VexFlow 单独一块，并且组件用 `import()` 懒加载：首屏 225.9/226 KB，**谱面对首屏的增量是零**。
+
+### 现在的边界（写在代码里，不靠形状暗示）
+
+C 大调以外的调号、三连音、连音线（slur）、力度记号、每谱表一个声部，以及以中央 C 分高音／低音谱表。这些同时也是导出的边界，因为它们是**记谱层**的边界，不是某一个界面的边界。
+
+空小节画**全休止符**——记谱里没有"空着"，那是"这里没有东西"的写法。渲染失败时显示原因，而不是一个空框：空框读起来像没事，读不出是什么事。
+
 ### 还没做的
 
 卷帘的拖动编辑；以及编排界面上更接近 Logic 的部分（区域块、时间标尺、轨道图标与颜色）。
