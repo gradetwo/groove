@@ -198,6 +198,46 @@ export function setArrangementTempo(arrangement: ArrangementV2, bpm: number): Ar
   return { ...arrangement, bpm: clamped };
 }
 
+/**
+ * ⭐ **The tempo map itself, which the model could carry and no tool could set.**
+ *
+ * Muse's list, re-measured: "arrangement 无 tempo map — 整曲只能一个固定 BPM；变速乐章需手算时间再拼贴". The model,
+ * the projection into the song input and the song's own creation were all built in this session — `tempoTrack` travels
+ * from the arrangement to the renderer — and **there was still no way to say it from the MCP surface**, which is the
+ * half-built shape this repository's `mcpCoverage` invariant exists to catch. `set_arrangement_tempo` writes a single
+ * number; this writes the map.
+ *
+ * Validated, not clamped, for the reason the time signature is: a point silently moved or dropped is a tempo the
+ * caller believes is in the file and is not, and every duration computed from it is then wrong in a way that looks
+ * like the caller's own arithmetic. Points are sorted by bar on the way in, because a map that depends on the order it
+ * was written in is a map that changes meaning when someone reorders it.
+ */
+export function setArrangementTempoMap(
+  arrangement: ArrangementV2,
+  points: readonly { atBar: number; bpm: number; curve?: "jump" | "linear" }[]
+): ArrangementV2 {
+  if (points.length === 0) {
+    // Clearing the map is a real operation: it returns the arrangement to its single tempo rather than to nothing.
+    const { tempoTrack: _cleared, ...rest } = arrangement;
+    return rest;
+  }
+  const cleaned = points.map((point, index) => {
+    const atBar = Math.round(point.atBar);
+    const bpm = Math.round(point.bpm);
+    if (!Number.isFinite(atBar) || atBar < 0) {
+      throw new Error(`tempo point ${index + 1} has bar "${point.atBar}" — bars are whole numbers from 0 up`);
+    }
+    if (!Number.isFinite(bpm) || bpm < 20 || bpm > 300) {
+      throw new Error(`tempo point ${index + 1} is ${point.bpm} bpm — the range is 20…300, the same one set_arrangement_tempo enforces`);
+    }
+    return { atBar, bpm, ...(point.curve === undefined ? {} : { curve: point.curve }) };
+  });
+  // Sorted by bar, then deduplicated to the last point written for a bar, so two points cannot fight over one.
+  const byBar = new Map<number, { atBar: number; bpm: number; curve?: "jump" | "linear" }>();
+  for (const point of cleaned) byBar.set(point.atBar, point);
+  return { ...arrangement, tempoTrack: [...byBar.values()].sort((a, b) => a.atBar - b.atBar) };
+}
+
 export function setArrangementBars(arrangement: ArrangementV2, bars: number): ArrangementV2 {
   const rounded = Math.round(bars);
   const clamped = Math.max(1, Math.min(MAX_BARS, Number.isFinite(rounded) ? rounded : 1));

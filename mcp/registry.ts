@@ -62,6 +62,7 @@ import {
   setMcpTrackFlag,
   setMcpArrangementBars,
   setMcpArrangementTempo,
+  setMcpArrangementTempoMap,
   setMcpArrangementTimeSignature,
   setMcpNoteLength,
   setMcpTrackGain,
@@ -582,6 +583,35 @@ export const TOOLS: ToolDefinition[] = [
         return result.regions === 0
           ? failure(`${result.servedFrom} parsed to no regions, so there are no parameters to report`)
           : result;
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "set_arrangement_tempo_map",
+    title: "Set an arrangement's tempo changes",
+    description:
+      "The whole map, not one number: points at whole bars, each `{ atBar, bpm }` with `atBar` **0-based**, so a movement can change speed without becoming a separate arrangement. Muse's list carried this as a gap three times — \"arrangement 无 tempo map — 整曲只能一个固定 BPM\" — and she was right about the **surface**: the model field, its projection into the song input and the renderer's bar-by-bar scheduling were built earlier in this work, and no tool could set them. Points are **refused rather than clamped** when a bar or tempo cannot be read, sorted by bar (a map whose meaning depends on the order it was written in changes meaning when someone reorders it), and an empty list **clears** the map, returning the arrangement to its single `bpm`.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      points: z
+        .array(
+          z.object({
+            atBar: z.number().int().min(0).describe("0-based bar the change takes effect at"),
+            bpm: z.number().min(20).max(300).describe("20…300, the range set_arrangement_tempo enforces"),
+            curve: z.enum(["jump", "linear"]).optional().describe("default jump"),
+          })
+        )
+        .describe("an empty list clears the map and falls back to the arrangement's single tempo"),
+    },
+    handler: (args) => {
+      try {
+        return setMcpArrangementTempoMap(
+          String(args.arrangementId),
+          args.points as readonly { atBar: number; bpm: number; curve?: "jump" | "linear" }[]
+        );
       } catch (error) {
         return failure((error as Error).message);
       }

@@ -32,6 +32,7 @@ import {
   setCollapsed,
   setArrangementBars,
   setArrangementTempo,
+  setArrangementTempoMap,
   setTrackFlag,
   setArrangementTimeSignature,
   setTrackGain,
@@ -487,6 +488,21 @@ function addImportedParts(
 /** ⭐ The arrangement's tempo in beats per minute. It reached the engine as a hardcoded 120 until this existed. */
 export function setMcpArrangementTempo(arrangementId: string, bpm: number): ArrangementEditResult {
   return edit(arrangementId, (arrangement) => setArrangementTempo(arrangement, bpm));
+}
+
+/**
+ * ⭐ **The map, not one number — and the tool that reaches it is why this exists.**
+ *
+ * Muse re-measured her own list against a later build and kept this entry: "arrangement 无 tempo map — 整曲只能一个固定
+ * BPM". She was right about the **surface** and not about the model: `tempoTrack` on the arrangement, its projection
+ * into the song input, and the song's creation from it were all built earlier in this work. What was missing was a way
+ * to say it from MCP, which is exactly the half-built shape `mcpCoverage.test.ts` refuses.
+ */
+export function setMcpArrangementTempoMap(
+  arrangementId: string,
+  points: readonly { atBar: number; bpm: number; curve?: "jump" | "linear" }[]
+): ArrangementEditResult {
+  return edit(arrangementId, (arrangement) => setArrangementTempoMap(arrangement, points));
 }
 
 /**
