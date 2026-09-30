@@ -15,10 +15,21 @@ function tone(hz: number, seconds = 1, phase = 0) {
   const frames = Math.round(RATE * seconds);
   const data = new Float32Array(frames);
   for (let i = 0; i < frames; i += 1) data[i] = Math.sin(2 * Math.PI * hz * (i / RATE) + phase);
-  return { sampleRate: RATE, channels: 1, frames, data: [data] };
+  /**
+   * **The whole shape `readWav` returns**, not just the fields this file reads: `measurePitch` takes a `ReadWav`, and a fake that is missing `peak`/`rms`/`channels` is a fake that would not compile where the real thing is passed. A cast here would have hidden that the fakes are incomplete.
+   */
+  let peak = 0;
+  let sumSquares = 0;
+  for (let i = 0; i < frames; i += 1) {
+    const magnitude = Math.abs(data[i]!);
+    if (magnitude > peak) peak = magnitude;
+    sumSquares += data[i]! * data[i]!;
+  }
+  return { sampleRate: RATE, channels: 1, frames, data: [data], peak, rms: Math.sqrt(sumSquares / frames), durationSeconds: seconds } as unknown as Parameters<typeof measurePitch>[0];
 }
 
-const measured = (wav: { sampleRate: number; frames: number; data: Float32Array[] }, fromSeconds = 0.08, length = 0.22) =>
+/** The parameter type comes from the module under test rather than being restated, so a change there cannot leave this file describing an older shape. */
+const measured = (wav: Parameters<typeof measurePitch>[0], fromSeconds = 0.08, length = 0.22) =>
   measurePitch(wav, { fromSeconds, toSeconds: fromSeconds + length })?.hz ?? NaN;
 
 describe("the pitch estimator", () => {
@@ -64,7 +75,7 @@ describe("the pitch estimator", () => {
       sweep[i] = Math.sin(2 * Math.PI * (200 * t + ((2000 - 200) * t * t) / (2 * seconds)));
       void hz;
     }
-    const result = measurePitch({ sampleRate: RATE, channels: 1, frames, data: [sweep] }, { fromSeconds: 0.05, toSeconds: 0.35 });
+    const result = measurePitch({ sampleRate: RATE, channels: 1, frames, data: [sweep], peak: 1, rms: 0.7, durationSeconds: seconds } as unknown as Parameters<typeof measurePitch>[0], { fromSeconds: 0.05, toSeconds: 0.35 });
     expect(result === null || result.confidence < 0.9).toBe(true);
   });
 
