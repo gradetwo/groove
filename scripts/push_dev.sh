@@ -7,12 +7,20 @@
 # The order matters: nothing is pushed until the gate passes, so `dev` never carries a commit the local gate has already rejected.
 #
 #   bash scripts/push_dev.sh [commit message for the mirror]
+#   SKIP_LOCAL_GATE=1 bash scripts/push_dev.sh [message]   # push to `dev`; the gate runs on GitHub instead (docs/OPEN_WORK.md §五)
 set -eu
 
 cd "$(dirname "$0")/.." || exit 1
 
-echo "1/3  the full local gate (typecheck, lint, styling, the unit suite)"
-bash scripts/check_local.sh
+if [ "${SKIP_LOCAL_GATE:-}" = "1" ]; then
+  # ⭐ **The gate now lives on GitHub's `dev` branch** (owner's instruction, 2026-10-01), so a push may skip the local
+  # one — **explicitly**, with this variable, and it says so in the log. Spelled out rather than deleted, because the
+  # local gate is still the fastest way to see which step is red: `bash scripts/check_local.sh`.
+  echo "1/3  the local gate is SKIPPED (SKIP_LOCAL_GATE=1) — the gate runs on GitHub's dev branch; see docs/OPEN_WORK.md §五"
+else
+  echo "1/3  the full local gate (typecheck, lint, styling, the unit suite)"
+  bash scripts/check_local.sh
+fi
 
 echo "2/3  the release mirror"
 ./scripts/sync_release_mirror.sh

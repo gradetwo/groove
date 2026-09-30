@@ -51,3 +51,36 @@
 7. **能力要么一起交付，要么别推**。`mcpCoverage.test.ts` 要求**每个改模型的编辑函数都有 MCP 工具触达**，否则必须写进 `EXCLUDED` 并给理由——半件交付=门禁红。
 8. **先读实现再判缺口**。`get_energy_curve` 查证后是"**已有决定、不该做**"；编排 tempo map 查证后是"**只需一处透传**"。
 9. **同一轮内第二次编辑被拒或写成空操作，就停止编辑、改为只读汇报**。
+
+---
+
+## 五、推送与发布流程（2026-10-01 业主指令，现行）
+
+**本地门禁不再是推送前提。门禁在 GitHub 的 `dev` 分支上跑；`dev` 绿了才并入 `main`。**
+
+1. **推 `dev`，跳过本地门禁。**
+   ```bash
+   SKIP_LOCAL_GATE=1 npm run push:dev -- "<message>"
+   ```
+   `SKIP_LOCAL_GATE=1` 是**显式**跳过 `scripts/check_local.sh`，脚本会在日志里说明它跳过了；不设这个变量时行为不变。本地门禁仍作为手动工具保留（它是最快看到哪一步红的方式）：
+   ```bash
+   bash scripts/check_local.sh
+   ```
+   推送发生在镜像 checkout `/home/crow/music/release/groove-github`（它有 `origin`；主仓库没有）。`scripts/push_dev.sh` 会把**工作树里已提交的**内容同步到镜像再推 `dev`，所以**先提交、再推送**，并确认该带的都带了、不该带的没带。跳过门禁不等于跳过纪律：推送前仍要 `npm run typecheck` + 针对改动跑测试 + 树不红。
+
+2. **在 GitHub 上读门禁**（`dev` 的 push 触发 CI，一次约 15 分钟）：
+   ```bash
+   npm run ci:status     # 列出最近几次运行，以及失败时是哪一步
+   npm run ci:watch      # 阻塞到最新一次运行结束，并把它的结论作为退出码
+   ```
+
+3. **只有远程门禁绿了，才把 `dev` 并入 `main`。** 红着不算 ready。
+   ```bash
+   cd /home/crow/music/release/groove-github
+   git fetch -q origin
+   git push origin origin/dev:main     # origin/main 是 origin/dev 的祖先时是快进；被拒就 fetch 后正常 merge 再推
+   ```
+
+4. **推 `main` 到 GitHub**（上一条命令即是；不再有单独的本地门禁要等）。
+
+判定"落地"始终看**内容**而不是日志：`cd /home/crow/music/release/groove-github && git fetch -q origin && git show origin/dev:<path>`。
