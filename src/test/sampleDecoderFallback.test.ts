@@ -80,14 +80,14 @@ describe("sample addresses", () => {
     const asset = sampleAssetForPath("Samples/Bells/chimes_G#3_ff_rr1.wav", { programUrl: "https://mirror.test/sal/Program.sfz" });
     expect(asset.url).toBe("https://mirror.test/sal/Samples/Bells/chimes_G%233_ff_rr1.wav");
     // And the whole filename is in the path, not split into a fragment.
-    expect(new URL(asset.url).hash).toBe("");
-    expect(decodeURIComponent(new URL(asset.url).pathname)).toContain("chimes_G#3_ff_rr1.wav");
+    expect(new URL(asset.url!).hash).toBe("");
+    expect(decodeURIComponent(new URL(asset.url!).pathname)).toContain("chimes_G#3_ff_rr1.wav");
   });
 
   it("keeps a filename containing ? in the path", () => {
     const asset = sampleAssetForPath("Samples/x?y.wav", { programUrl: "https://mirror.test/p.sfz" });
-    expect(new URL(asset.url).search).toBe("");
-    expect(decodeURIComponent(new URL(asset.url).pathname)).toContain("x?y.wav");
+    expect(new URL(asset.url!).search).toBe("");
+    expect(decodeURIComponent(new URL(asset.url!).pathname)).toContain("x?y.wav");
   });
 
   it("does not double-encode a path that is already escaped", () => {
