@@ -149,11 +149,14 @@ them. Confusing the two is how a licence obligation quietly goes unmet while the
 | library | licence | attribution it requires |
 |---|---|---|
 | **Salamander Grand Piano** (`salamander-grand`) | **CC BY** | **Chisato Yamauchi**, for the re-mastering, and **Alexander Holm**, for the original Salamander Grand Piano — both names are required by the licence |
+| **VSCO 2 CE** — Versilian Studios Chamber Orchestra: Community Edition (`vsco2ce`) | **CC0** | none required; **Sam Gossner / Versilian Studios** and **Simon Dalzell / Ivy Audio** are credited as a courtesy, as the library's own `Readme.txt` asks |
 
 It was planned before it was mirrored; the two lists exist so that the credit does not stay behind in the plan once the bytes go up. **Every name in the row is required, not merely the library's name** — for CC BY the licence names
 the authors.
 
 When one is added, its row goes here and names exactly what its licence requires — for a CC BY library that means **the author, not just the library**.
+
+**The VSCO 2 CE licence was read from the library's own file, not from its reputation.** An earlier row here said "CC Sampling Plus 1.0 — not redistributed by this project", and that was wrong. At the pinned commit the repository ships a `LICENSE` whose first line is `CC0 1.0 Universal` and whose body is the full CC0 legal text (`https://github.com/schollz/VSCO-2-CE/blob/6dd651d55dde97fd4028699be9d4481f26917891/LICENSE`, 6555 bytes, sha256 `36ffd9dc…f39673`); GitHub's own licence detection reports `CC0-1.0` for that repository and for its upstream, `sgossner/VSCO-2-CE`. Its `Readme.txt` adds a request rather than a restriction — "You are permitted to use these samples for ANY purpose. We ask that you do not sell the samples directly" — which is why the courtesy credit above exists.
 
 ### Planned, not yet included
 
@@ -164,7 +167,6 @@ Nothing in this list is claimed to be included; each row says what will be requi
 | **VCSL** — Versilian Community Sample Library | CC0 | none required; credited as a courtesy |
 | **Virtuosity Drums** — Versilian Studios / Karoryfer | CC0 | none required; credited as a courtesy |
 | **Karoryfer** free instruments | CC0 (release-dependent) | none for the CC0 releases; **some older releases are CC-BY-4.0**, so each version is confirmed before use rather than assumed |
-| **VSCO 2 CE** | CC Sampling Plus 1.0 | ⚠️ **not redistributed by this project** — the terms are vague, so it can only be a library the user supplies, where no redistribution by us takes place |
 
 Code dependencies are credited separately, in [public/THIRD_PARTY_NOTICES.md](public/THIRD_PARTY_NOTICES.md), because they carry a different obligation and a different
 audience.

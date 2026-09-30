@@ -1061,7 +1061,9 @@ sfizz 读空格、拒绝引号，所以"必须加引号"这条建议恰好是唯
 
 ### 补齐剩下的要多少钱
 
-先说结论：弦乐、铜管、木管在 VCSL 里买不到，花多少钱都买不到；只有 harp 能从这个库补，代价是一层力度约 74 MiB。真正有这些乐器的是 VSCO 2 CE，而它的许可是 CC Sampling Plus 1.0，本项目不再分发它（README 的"Planned, not yet included"），所以那部分只能是用户自备。
+先说结论：弦乐、铜管、木管在 VCSL 里买不到，花多少钱都买不到；只有 harp 能从这个库补，代价是一层力度约 74 MiB。真正有这些乐器的是 VSCO 2 CE。
+
+⚠️ **下面这句原来写的是错的，已保留原文并在此更正**：原文说"VSCO 2 CE 的许可为 CC Sampling Plus 1.0，本项目不再分发它，所以那部分只能是用户自备"。**实测上游自己的 `LICENSE` 是 CC0 1.0 Universal**，可以分发；详细证据见本文最后新增的一节「VSCO 2 CE 已入库（2026-10-01）」。本节后面所有"本仓库不能分发的库"的措辞都按此更正理解。
 
 VCSL 上游钉住提交的完整树元数据（GitHub trees API，未下载任何音频）：
 
@@ -1108,4 +1110,90 @@ Chordophones 的两个子树：
 
 去掉已经能拿到的 harp 与 timpani，剩下十二件是一层约 202.8 MiB，或持续音程序全部约 533.1 MiB。这组数字只是树的元数据与 sfz 正文，音频一个字节都没下。
 
-一句话：要让业主点名的十四件都出声，在许可允许的范围内，VCSL 只能再给一件（harp，约 74 MiB 一层），其余十二件需要引入一个本仓库不能分发的库（VSCO 2 CE，约 203 MiB 一层），或者另找一套 CC0 的管弦乐库。
+一句话：在只允许分发 CC0 的前提下，VCSL 只能再给一件（harp，约 74 MiB 一层）；其余十二件在 VCSL 里不存在，必须换库。而这个"换库"在 2026-10-01 已经发生：**VSCO 2 CE 的许可实测是 CC0，十四件全部按下面这一节入了镜像。**
+
+---
+
+## ⭐⭐⭐ VSCO 2 CE 已入库（2026-10-01）：十四件管弦乐器第一次全部能响
+
+### ① 许可证：CC0，来自上游自己的文件（这是整件事唯一可能被叫停的地方）
+
+上一节把 VSCO 2 CE 记为 **"CC Sampling Plus 1.0，本项目不能分发"**，业主指出这是错的。**实测业主是对的**，原记录已在上文更正。证据是上游钉住提交自己带的文件，逐条如下：
+
+| 位置 | 原文 / 结果 |
+|---|---|
+| `https://github.com/schollz/VSCO-2-CE/blob/6dd651d55dde97fd4028699be9d4481f26917891/LICENSE`（同 `raw.githubusercontent.com/schollz/VSCO-2-CE/6dd651d55dde97fd4028699be9d4481f26917891/LICENSE`） | 第一行 **`CC0 1.0 Universal`**，正文是完整的 CC0 法律文本（`Statement of Purpose` … `http://creativecommons.org/publicdomain/zero/1.0/`）。`sha256 = 36ffd9dc085d529a7e60e1276d73ae5a030b020313e6c5408593a6ae2af39673`，6555 字节 |
+| `https://api.github.com/repos/schollz/VSCO-2-CE` 与上游 `https://api.github.com/repos/sgossner/VSCO-2-CE` | 两个仓库的 `license` 都是 `{"key": "cc0-1.0", "spdx_id": "CC0-1.0"}` |
+| `Readme.txt`（同一仓库，master 与 `SFZ` 分支根目录） | `You are permitted to use these samples for ANY purpose. We ask that you do not sell the samples directly` —— **是请求，不是许可限制**，所以按 CC0 分发，并按该请求致谢 |
+
+`schollz/VSCO-2-CE` 是 `sgossner/VSCO-2-CE` 的 fork，`SFZ` 分支在 fork 上（`master` 没有 `.sfz`）。README 的 "Planned, not yet included" 一行已移到 "Redistributed by this project"，理由与证据写在那一行下面。
+
+### ② 镜像了什么、怎么镜像的：走现有管线，没有手工搬字节
+
+**决定：每件乐器取它的"持续音"程序（14 个），该程序声明的采样全部镜像。** 为什么不是"每件一层力度"，见 ④。
+
+复现（两步都是仓库自带脚本，未改一行上传逻辑）：
+
+```
+node scripts/build_sample_manifest.mjs vsco2ce            # 只报告，不写清单
+node scripts/build_sample_manifest.mjs vsco2ce --write    # 枚举 372 个文件进清单
+TMPDIR=/var/tmp node scripts/upload_samples.mjs vsco2ce --upload   # 量时长、算 sha256、rclone 上传
+```
+
+`paths` 列的是 14 个采样目录 + 14 个 sfz 正文 + `LICENSE`/`README.md`/`Readme.txt`/`How To Install.txt`，于是 `sparse-checkout` 只 fetch 这些，GitHub trees API 也只枚举这些（`.git` 与另外 61 个程序一个字节都没下）：
+
+```
+vsco2ce @ 6dd651d55dde97fd4028699be9d4481f26917891
+  files 372 · bytes 675102035 (643.8 MB) · .sfz 14 · audio 354
+  limited to: Strings/Violin Section/susVib, Strings/Viola Section/susvib, Strings/Cello Section/susvib,
+              Strings/Solo Contrabass/SusVib, Brass/F Horn/sus, Brass/Trumpet/sus, Brass/Tenor Trombone/sus,
+              Brass/Tuba/sus, Woodwinds/Flute/susvib, Woodwinds/Oboe/Vib, Woodwinds/Clarinet/susLong,
+              Woodwinds/Bassoon/sus, Strings/Harp, Percussion/Timpani, <14 个 sfz>, LICENSE, README.md, Readme.txt, How To Install.txt
+```
+
+| 请求的词 | 暴露名 | assetId | 程序 | MiB |
+|---|---|---|---|---|
+| violin | Violin Section, sustained | `vsco2ce:ViolinEnsSusVib` | `ViolinEnsSusVib.sfz` | 43.8 |
+| viola | Viola Section, sustained | `vsco2ce:ViolaEnsSusVib` | `ViolaEnsSusVib.sfz` | 68.4 |
+| cello | Cello Section, sustained | `vsco2ce:CelloEnsSusVib` | `CelloEnsSusVib.sfz` | 69.2 |
+| contrabass | Solo Contrabass, sustained | `vsco2ce:ContrabassSusVB` | `ContrabassSusVB.sfz` | 45.7 |
+| horn | Horn in F, sustained | `vsco2ce:FHornSus` | `FHornSus.sfz` | 48.3 |
+| trumpet | Trumpet, sustained | `vsco2ce:TrumpetSus` | `TrumpetSus.sfz` | 38.7 |
+| trombone | Tenor Trombone, sustained | `vsco2ce:TromboneSus` | `TromboneSus.sfz` | 57.4 |
+| tuba | Tuba, sustained | `vsco2ce:TubaSus` | `TubaSus.sfz` | 29.8 |
+| flute | Flute, sustained | `vsco2ce:FluteSusVib` | `FluteSusVib.sfz` | 24.0 |
+| oboe | Oboe, sustained | `vsco2ce:OboeSusVib` | `OboeSusVib.sfz` | 22.9 |
+| clarinet | Clarinet, sustained | `vsco2ce:ClarinetSus` | `ClarinetSus.sfz` | 56.6 |
+| bassoon | Bassoon, sustained | `vsco2ce:BassoonSus` | `BassoonSus.sfz` | 33.6 |
+| harp | Harp | `vsco2ce:Harp` | `Harp.sfz` | 33.7 |
+| timpani | Timpani | `vsco2ce:Timpani` | `Timpani.sfz` | 71.7 |
+| | | | **合计** | **643.8** |
+
+`durationSeconds = 29.458163`（ffprobe 量出来的最长采样），372 个文件全部带 sha256，354 个音频全部带时长。R2 用量：上传前 3.85 GB，计划 643.8 MB，`4.48 GB of 12.00 GB`，上限 12 GB。
+
+### ③ 顺带修掉的一个缺陷：SFZ 的反斜杠分隔符
+
+VSCO 的 75 个 sfz **全部**用 Windows 分隔符写 `default_path`，例如 `ViolinEnsSusVib.sfz` 的 `default_path=Strings\Violin Section\susVib\`。原来的 `resolveSamplePath` 只在末尾补 `/`，于是拼出来是
+
+```
+Strings\Violin Section\susVib\/VlnEns_susVib_A2_v1.wav      ← 左边反斜杠，中间两个分隔符
+```
+
+不是报错，是每个采样 404 —— 整个库一件都不响。SFZ 规范里 `/` 与 `\` 都是分隔符，所以 `src/audio/sfz/defaultPath.ts` 现在按规范读：两半都归一成 `/`，再去掉重复分隔符。判据在 `src/test/sfzDefaultPath.test.ts`（含真实字符串 `Strings\Violin Section\susVib\` 那一条）。
+
+### ④ 为什么镜像了**所有**力度层，而不是"每件一层"（一处与工单估算的出入）
+
+工单里的估算是"每件一层力度约 240 MiB"，并说"先让每件乐器出声"。**量了之后这个做法不成立**：那 14 个程序一共声明了 1–8 层力度（`lovel`/`hivel`），而 `playbackForNote` 的默认力度是 **100**。只镜像"最响那一层"的结果是：
+
+* 力度 100 以上响，力度 40 的同一个音解析到一个**没有上传的文件** → 404 → 静音；
+* 也就是说"能响"只在默认力度下成立，用户一弹轻音就出现"少音"，而且不会报错。
+
+所以采用的门槛改成"**该程序声明的每个音区、每个力度层的采样都在镜像里**"，代价是 643.8 MiB 而不是约 252 MiB（实测"最响一层"是 252.3 MiB，工单估的 240.0 MiB 与我的差在 viola：工单按 29.9 MiB 算，我量到 38.5 MiB）。判据 `src/test/orchestralCoverage.test.ts` 对每个程序在力度 1/32/64/96/127 上各解析一遍，任何一个解析出的文件不在清单里就红——这正是"每件一层"会踩的那个坑。
+
+### ⑤ 还缺什么
+
+* **表情（articulation）没有**：镜像的是 14 个"持续音"程序。同一批乐器还有拨弦（`*Pizz`）、断奏（`*Stac`/`*Spic`）、震音（`*Trem`）、弱音器（`FHornMute`、`Trumpet*Mute*`）以及把上述合成一个键位的 `*-KS` 程序——VSCO 一共 75 个 sfz，入了 14 个。
+* **其余 61 个程序整族未入**：管风琴、立式钢琴、`Upright Nr1`、马林巴、钟琴、木琴、管钟、短笛、`GM-StylePerc`、VSCO 1 打击乐（drums/varMetal/varWood）、`Miscellania Raw`。这些不是这次点名的十四件。
+* **VCSL 的 `Chordophones`（竖琴与键盘）仍然没镜像**，现在也不必了：harp 由 VSCO 的 `Strings/Harp` 提供。
+* **timpani 多镜像了 10 个文件（37.4 MiB）**：`Percussion/Timpani` 整个目录里有 `Timpani.sfz` 没引用、但 `TimpaniRolls.sfz` 引用的滚奏采样。目录是天然前缀，留着比精确剔除更不容易错；`TimpaniRolls.sfz` 本身没入。
+

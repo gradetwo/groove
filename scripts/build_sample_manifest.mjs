@@ -52,8 +52,10 @@ if (tree.truncated) {
 const isInstrumentFile = (path) => !path.split("/").some((segment) => segment.startsWith("."));
 
 /**
- * ⭐ **A library may be a part of a repository.** VCSL is 5.74 GB, of which `Chordophones` is 3.38 GB — the block that duplicates the orchestral strings VSCO would have provided. The rule that chose the four remaining families is recorded
- * in the plan; what it needs here is a way to say "these prefixes and no others", so the manifest entry can describe part of a tree rather than all of it. Absent `paths`, every file is included, which is what the other entries want.
+ * ⭐ **A library may be a part of a repository.** VCSL is 5.74 GB, of which `Chordophones` is 3.38 GB. This comment used to call that block "the block that duplicates the orchestral strings" and that is **false**: measured against the
+ * pinned tree, `Chordophones` holds harps, three grand pianos, two uprights and five harpsichords — **no bowed instrument at all** (`Composite Chordophones` is harps, pianos and a Strumstick; `Zithers` is the keyboards). So excluding it
+ * costs the mirror nothing it would otherwise have had, and the twelve orchestral instruments the request named are absent from VCSL entirely rather than under-registered. What this needs here is a way to say "these prefixes and no
+ * others", so the manifest entry can describe part of a tree rather than all of it. Absent `paths`, every file is included, which is what the other entries want.
  */
 const wanted = (entry.paths ?? []).filter((prefix) => typeof prefix === "string" && prefix !== "");
 const included = (path) => wanted.length === 0 || wanted.some((prefix) => path === prefix || path.startsWith(`${prefix.replace(/\/$/, "")}/`));
@@ -89,7 +91,17 @@ entry.files = blobs.map((node) => ({ path: node.path, bytes: node.size ?? 0 }));
  * The declared programs, when the library holds more than one. A single-program library keeps `sfz`, which says the same thing without a list; a multi-program one also keeps `sfz` as its first program, so a reader that knows only
  * that field still points at something real.
  */
-const programs = programsFrom(sfzFiles.map((node) => node.path));
+/**
+ * ⭐ **A display name is a judgement, and re-enumerating a tree must not silently replace it.** `programsFrom` derives a name from the program's base name, which is right for a library that names its programs in words (VCSL's "Ball Whistle")
+ * and useless for one that concatenates them — VSCO 2 CE's `ViolinEnsSusVib.sfz` is the violin section's sustained program, and the derived name reads as a file. Those fourteen names are written into the manifest by hand; without this rule one
+ * enumeration run would rename every one of them back and **nothing would report it**, which is the kind of edit that looks like a no-op in a manifest diff. So a program whose `sfz` path is unchanged keeps the name already declared for it,
+ * and only a program with no declared name gets the derived one.
+ */
+const declaredNames = new Map((entry.instruments ?? []).map((program) => [program.sfz, program.name]));
+const programs = programsFrom(sfzFiles.map((node) => node.path)).map((program) => ({
+  ...program,
+  name: declaredNames.get(program.sfz) ?? program.name,
+}));
 if (programs.length > 1) {
   entry.instruments = programs;
   entry.sfz = programs[0].sfz;
