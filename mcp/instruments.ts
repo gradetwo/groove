@@ -125,3 +125,85 @@ export function listCatalogueInstruments({
     root,
   };
 }
+
+/**
+ * **What each declared library is, under what licence, and what is missing.**
+ *
+ * The instrument list answers "what can I play"; this answers the question an agent has to ask *before* it publishes anything — **where the bytes came from and what their licence requires**. The manifest has carried `licence`, `sourceUrl`, `repo` and `pin` all along, and an agent could not see any of it, which is the one gap that matters for the CC-BY library this project pinned on purpose to exercise the attribution path.
+ *
+ * **A duration is reported only when it was measured.** `durationSeconds` is written by the mirroring step with `ffprobe` after the bytes are downloaded; until then it is absent, and this says so with a reason rather than a zero. That is the same rule the rest of this project follows: a number nobody measured is worse than a stated gap.
+ */
+export interface SampleLibrary {
+  id: string;
+  name: string;
+  /** The licence the manifest declares, verbatim — `CC0`, `CC-BY`, and whatever else a later entry says. */
+  licence: string;
+  /** Where the material came from, and where attribution should point. */
+  sourceUrl?: string;
+  /** The upstream repository and the commit the library was pinned to, so a byte-for-byte reference is reproducible. */
+  repo?: string;
+  pin?: string;
+  /** How many instruments this library contributes to the catalogue, which is zero for a library that declares none. */
+  instruments: number;
+  /** The longest sample, **measured by `ffprobe` after download**. Absent when nothing has been downloaded. */
+  durationSeconds?: number;
+  /** Why a field that a caller might expect is not here. */
+  problems: string[];
+}
+
+export function listSampleLibraries(): { libraries: SampleLibrary[]; root: string; note: string } {
+  const root = process.env.GROOVE_SAMPLE_ROOT ?? "";
+  const text = readFileSync(MANIFEST_PATH, "utf8");
+  const { assets, problems: catalogueProblems } = catalogueFromManifestText(text, root);
+  const manifest = JSON.parse(text) as {
+    entries?: Array<{
+      id: string;
+      name?: string;
+      licence?: string;
+      sourceUrl?: string;
+      repo?: string;
+      pin?: string;
+      durationSeconds?: number;
+      needs?: string[];
+    }>;
+  };
+
+  const counts = new Map<string, number>();
+  for (const asset of assets) {
+    if (!asset.sfz) continue;
+    const library = asset.assetId.includes(":") ? asset.assetId.slice(0, asset.assetId.indexOf(":")) : asset.assetId;
+    counts.set(library, (counts.get(library) ?? 0) + 1);
+  }
+
+  const libraries = (manifest.entries ?? []).map((entry) => {
+    const problems: string[] = [];
+    if (entry.licence === undefined) problems.push("the manifest declares no licence, so the material must be treated as all rights reserved");
+    if (entry.durationSeconds === undefined) {
+      problems.push("no measured duration: nothing has been downloaded, so the manifest reports the gap rather than a number");
+    }
+    if ((counts.get(entry.id) ?? 0) === 0) {
+      problems.push("this library contributes no instrument to the catalogue — either it declares none, or the catalogue could not read its SFZ");
+    }
+    return {
+      id: entry.id,
+      name: entry.name ?? entry.id,
+      licence: entry.licence ?? "unknown",
+      ...(entry.sourceUrl === undefined ? {} : { sourceUrl: entry.sourceUrl }),
+      ...(entry.repo === undefined ? {} : { repo: entry.repo }),
+      ...(entry.pin === undefined ? {} : { pin: entry.pin }),
+      instruments: counts.get(entry.id) ?? 0,
+      ...(entry.durationSeconds === undefined ? {} : { durationSeconds: entry.durationSeconds }),
+      problems,
+    };
+  });
+
+  const attribution = libraries.filter((library) => /BY/i.test(library.licence)).map((library) => library.id);
+  return {
+    libraries,
+    root,
+    note:
+      attribution.length === 0
+        ? "No declared library requires attribution by its licence name."
+        : `These libraries require attribution by their licence name: ${attribution.join(", ")}. Point at the \`sourceUrl\` (and the \`repo\`/\`pin\` for a byte-for-byte reference).`,
+  };
+}

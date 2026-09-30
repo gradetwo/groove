@@ -37,7 +37,7 @@ import { generateMelody } from "./melody";
 import { EXAMPLE_GENRES, examplesFor } from "./examples";
 import { validateProsody } from "./prosody";
 import { flattenSong } from "../src/data/songFlatten";
-import { listCatalogueInstruments } from "./instruments";
+import { listCatalogueInstruments, listSampleLibraries } from "./instruments";
 import {
   addMcpNote,
   addMcpTake,
@@ -526,6 +526,21 @@ export const TOOLS: ToolDefinition[] = [
     handler: (args) => {
       try {
         return setMcpArrangementTempo(String(args.arrangementId), Number(args.bpm));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "list_sample_libraries",
+    title: "List sample libraries, their licences and what is missing",
+    description:
+      "The libraries this project has pinned, **with the licence and the provenance of each** — the question to ask before publishing anything made with them. Attribution-required licences are named in the reply, with the `sourceUrl` (and the `repo`/`pin` for a byte-for-byte reference) to point at. A library with no measured duration says so rather than reporting a zero: durations are written by the mirroring step after the bytes are downloaded, and until then the honest answer is that nobody measured one.",
+    readOnly: true,
+    inputSchema: {},
+    handler: () => {
+      try {
+        return listSampleLibraries();
       } catch (error) {
         return failure((error as Error).message);
       }

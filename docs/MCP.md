@@ -508,3 +508,11 @@ are the places where it is more accurate than the evaluations that came before i
 * 文件的结构也保留：一条 MIDI 轨一条编排轨，用文件自己的轨名（**GBK 中文轨名按 GBK 解码**）；**format 0** 的文件把整个乐队塞在一轨里，所以按通道再拆——format 1 不拆，因为那里的轨本来就是分开的。
 
 工具与 `import_arrangement_musicxml` 走**同一条加轨路径**（`addImportedParts`），两条导入因此不会在音序、命名这些事上各自漂移。夹具是**仓库自己按规范写出的字节**（`src/test/fixtures/midi_file.mjs`），CI 不依赖任何人的音乐文件；`npm run check:mcp` 里有一条**协议级**调用，验证中文轨名与音符长度真的过线。
+
+### 采样库的许可与署名（2026-09-30）
+
+`list_arrangement_instruments` 回答"能弹什么"，`list_sample_libraries` 回答**发布前必须问的那个问题：这些字节从哪来、许可要求什么**。清单里一直带着 `licence`、`sourceUrl`、`repo`、`pin`，而 agent 一个都看不到——对一个**特意为了练习署名路径而钉住的 CC-BY 库**来说，这是最要紧的一处缺口。
+
+工具会点名**哪些库按其许可名需要署名**，并给出该指向的 `sourceUrl`（以及 `repo`/`pin`，用于逐字节可复现的引用）。
+
+**没有测量过的时长就写"没有测量"**：`durationSeconds` 是镜像步骤在下载之后用 `ffprobe` 写进去的；在那之前这里报告缺失并说明原因，而不是给一个 0——0 会被读成一个测量结果。
