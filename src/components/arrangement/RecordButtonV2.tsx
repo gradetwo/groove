@@ -10,6 +10,7 @@
 import { useState } from "react";
 import type { CaptureOutcome } from "../../audio/captureTake";
 import type { PlannedTake } from "../../data/takePlanning";
+import { useLanguage } from "../../i18n/LanguageContext";
 
 export interface RecordButtonV2Props {
   /** Starting a capture. Injected, so this component can be tested without a microphone — the same seam the capture uses. */
@@ -18,9 +19,19 @@ export interface RecordButtonV2Props {
    * Receives what was recorded. Until this existed the button captured and dropped the result: the take never reached a track, so the take list stayed empty however often a person recorded.
    */
   onTake?: (planned: PlannedTake) => void;
+  /**
+   * Whether there is anywhere for a take to go.
+   *
+   * ⭐ **A disabled Record is the honest state when no track is selected.** The arrangement's toolbar carries this
+   * button now, and a toolbar is above the selection rather than inside it — so without this, pressing Record with an
+   * empty selection captured audio and dropped it, which is the exact failure the `onTake` callback above was
+   * introduced to fix, reintroduced one layout higher.
+   */
+  disabled?: boolean;
 }
 
-export function RecordButtonV2({ capture, onTake }: RecordButtonV2Props) {
+export function RecordButtonV2({ capture, onTake, disabled = false }: RecordButtonV2Props) {
+  const { t } = useLanguage();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | undefined>(undefined);
 
@@ -40,8 +51,15 @@ export function RecordButtonV2({ capture, onTake }: RecordButtonV2Props) {
 
   return (
     <div data-testid="record-button-v2" className="flex items-center gap-3">
-      <button type="button" className="px-3 py-1 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] text-sm text-text disabled:opacity-50" onClick={start} disabled={busy}>
-        {busy ? "Recording…" : "Record"}
+      <button
+        type="button"
+        // 44 px, like every other control in this toolbar: the arrangement is a touch surface on a phone, and a
+        // record button is not the one control that may be smaller than a finger.
+        className="h-11 shrink-0 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] px-2 text-xs text-text disabled:opacity-50"
+        onClick={start}
+        disabled={busy || disabled}
+      >
+        {busy ? t("arrangement_recording") : t("arrangement_record")}
       </button>
       {message !== undefined && (
         <p role="status" data-testid="record-refusal" className="text-sm text-text opacity-80">

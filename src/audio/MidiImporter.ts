@@ -29,8 +29,14 @@ export interface MidiImportResult {
  * The three-step decoding above, as a function so a criterion can call it with bytes rather than through a whole file.
  */
 export function decodeMidiText(bytes: Uint8Array): string {
-  // NULs are stripped with a string replacement rather than a regular expression: a control character in a pattern trips `no-control-regex`, and the lint rule is right that it is usually a mistake.
-  const trimmed = (text: string) => text.replaceAll("\u0000", "").trimEnd();
+  /**
+   * NULs are stripped with a string replacement rather than a regular expression: a control character in a pattern trips `no-control-regex`, and the lint rule is right that it is usually a mistake.
+   *
+   * `split`/`join` rather than `String.prototype.replaceAll`, which is ES2021: `tsconfig.json` targets ES2020 with
+   * `lib: ["ES2020", …]`, so `replaceAll` is a **compile error** here even though every runtime that runs this app
+   * has it. Nothing else in the file changed — the behaviour is identical for a single separator, which is what NUL is.
+   */
+  const trimmed = (text: string) => text.split("\u0000").join("").trimEnd();
   try {
     return trimmed(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
   } catch {

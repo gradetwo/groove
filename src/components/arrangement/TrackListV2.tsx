@@ -9,7 +9,7 @@
  */
 import { useState } from "react";
 import { stepsFromNotes, stepCountFor } from "../../data/noteEvents";
-import { InstrumentLibraryV2 } from "./InstrumentLibraryV2";
+import { InstrumentBrowserV2 } from "./InstrumentBrowserV2";
 import { useLanguage } from "../../i18n/LanguageContext";
 import type { ArrangementV2, TrackKindV2, TrackV2 } from "../../types/arrangementV2";
 
@@ -139,32 +139,20 @@ export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, 
                 would be a control that does nothing.
               */}
               {/*
-                **The instrument is opened, not scrolled.** It was a flat `<select>` of everything the catalogue holds — 135 instruments — which is a question rather than a choice; the owner asked for Logic's Library shape and got it: search, a category column, and a third column when a
-                category is still long. The row shows what the track plays and opens the panel on demand, so 135 instruments do not sit in every row.
+                **The instrument slot, shared with the new track header.** It is one component because "which
+                instrument is on this track" is one value: the chip that reports it and the library behind it were
+                duplicated when the grid layout arrived, and two copies of a control is how a header and a list come
+                to disagree about what a track plays.
               */}
               {track.kind === "sampler" && onChangeInstrument && instruments.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    aria-label={`${track.name} instrument`}
-                    aria-expanded={openLibraryFor === track.id}
-                    data-testid={`instrument-open-${track.id}`}
-                    onClick={() => setOpenLibraryFor(openLibraryFor === track.id ? undefined : track.id)}
-                    className="px-2 h-7 rounded text-xs bg-transparent border border-[var(--d-border,rgba(255,255,255,0.15))] text-text"
-                  >
-                    {instruments.find((instrument) => instrument.assetId === track.sample?.assetId)?.name ?? t("instrument_choose")}
-                  </button>
-                </div>
-              )}
-              {track.kind === "sampler" && onChangeInstrument && instruments.length > 0 && openLibraryFor === track.id && (
-                <InstrumentLibraryV2
+                <InstrumentBrowserV2
+                  trackId={track.id}
+                  trackName={track.name}
+                  {...(track.sample?.assetId ? { assetId: track.sample.assetId } : {})}
                   instruments={instruments}
-                  currentAssetId={track.sample?.assetId}
-                  onChoose={(assetId) => {
-                    onChangeInstrument(track.id, assetId);
-                    // Closing on a choice is what the panel is for: a person who picked one is done with it.
-                    setOpenLibraryFor(undefined);
-                  }}
+                  onChangeInstrument={onChangeInstrument}
+                  open={openLibraryFor === track.id}
+                  onOpenChange={(open) => setOpenLibraryFor(open ? track.id : undefined)}
                 />
               )}
               {/*
