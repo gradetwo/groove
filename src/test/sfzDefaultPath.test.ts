@@ -35,6 +35,21 @@ describe("SFZ default_path", () => {
     expect(resolveSamplePath("kit.flac", "")).toBe("kit.flac");
   });
 
+  it("reads a backslash separator as a separator, because VSCO 2 CE writes all 75 of its programs that way", () => {
+    /**
+     * ⭐ The case that made this criterion exist: the strings and winds of a real mirrored library declared `default_path=Strings\Violin Section\susVib\`, and the join produced a path with a backslash on one side and
+     * `\/` in the middle. Every sample 404s, and nothing reports it — the instrument is simply silent.
+     */
+    expect(resolveSamplePath("Vln_susVib_A2_v1.wav", "Strings\\Violin Section\\susVib\\")).toBe("Strings/Violin Section/susVib/Vln_susVib_A2_v1.wav");
+    // A `sample=` that is itself written with backslashes is the same rule from the other side.
+    expect(resolveSamplePath("Strings\\Harp\\Harp_C4.wav", undefined)).toBe("Strings/Harp/Harp_C4.wav");
+    // Mixed separators on both halves still compose to one forward-slash path between them.
+    expect(resolveSamplePath("Hit\\Timpani1_Hit_v1.wav", "Percussion/Timpani\\")).toBe("Percussion/Timpani/Hit/Timpani1_Hit_v1.wav");
+    // A default path that is the library root, written either way, joins to the bare leaf.
+    expect(resolveSamplePath("kick.flac", "\\")).toBe("kick.flac");
+    expect(resolveSamplePath("kick.flac", "/")).toBe("kick.flac");
+  });
+
   it("reads the declaration from whichever block carried it", () => {
     expect(defaultPathFrom({ default_path: "Samples/" })).toBe("Samples/");
     // Modern files put it in `<control>`, older ones in `<global>`; the parser merges both into one opcode map, so the lookup is the same.

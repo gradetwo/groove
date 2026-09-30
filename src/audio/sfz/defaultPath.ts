@@ -18,15 +18,22 @@ export function resolveSamplePath(sample: string, defaultPath: string | undefine
   if (sample === "") return sample;
   // ⭐ Absolute and URL forms are not relative to a default path, and joining them would corrupt an address that already works.
   if (/^[a-z][a-z0-9+.-]*:\/\//i.test(sample) || sample.startsWith("/")) return sample;
-  if (defaultPath === undefined || defaultPath === "") return sample;
+
+  /**
+   * ⭐ **SFZ writes its separators either way, and VSCO 2 CE writes `\`.** Every one of that library's 75 programs declares a Windows-style path — `default_path=Strings\Violin Section\susVib\` — so a `sample=` joined to it
+   * unnormalised produced `Strings\Violin Section\susVib\/Vln….wav`: a backslash on the left, the sample's own separator on the right, and **two separators in the middle**. None of that is an error a caller can see; it is a
+   * 404 on every sample of a library that would otherwise sound, which is the failure mode this file exists to prevent. So the separator is read the way SFZ defines it rather than the way it happened to be typed.
+   */
+  const leaf = sample.replace(/\\/g, "/");
+  if (leaf.startsWith("/")) return leaf;
+  if (defaultPath === undefined || defaultPath === "") return leaf;
 
   /**
    * ⭐ Trailing and leading separators are normalised rather than assumed. `default_path=Samples/` with `sample=kick.flac` is the common case, but a `default_path` written without its trailing slash is just as valid, and
-   * `Samples` + `/` + `kick.flac` must not become `Samples//kick.flac`.
+   * `Samples` + `/` + `kick.flac` must not become `Samples//kick.flac`. A default path of `\` or `/` alone is the library root, which must join to the bare leaf rather than to `//leaf`.
    */
-  const base = defaultPath.endsWith("/") ? defaultPath : `${defaultPath}/`;
-  const leaf = sample.startsWith("/") ? sample.slice(1) : sample;
-  return `${base}${leaf}`;
+  const base = defaultPath.replace(/\\/g, "/").replace(/\/+$/, "");
+  return base === "" ? leaf.replace(/^\/+/, "") : `${base}/${leaf.replace(/^\/+/, "")}`;
 }
 
 /** The `default_path` a parsed file declared, from whichever block carried it — `<control>` in modern files, `<global>` in older ones. */
