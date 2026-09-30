@@ -68,6 +68,8 @@ export interface LoadedNote {
    * Measured with sfizz rather than inferred from the opcode's name: the same 0.1-second note on a one-second sample renders **2.091 s** with `one_shot` and **0.341 s** without, and the energy 0.2–0.6 s after the note-off is nonzero only in the first case.
    */
   oneShot?: boolean;
+  /** The controller-driven level scale the region asked for (`amplitude_onccN`), applied when the note is started. */
+  gainScale?: number;
 }
 
 export function createSampleLoader(
@@ -192,6 +194,7 @@ export function createSampleLoader(
         ...(resolution.note.offBy === undefined ? {} : { offBy: resolution.note.offBy }),
         // The release behaviour travels with the note for the same reason the choke group does: only the resolver saw the region that answered.
         ...(resolution.note.oneShot === undefined ? {} : { oneShot: resolution.note.oneShot }),
+        ...(resolution.note.gainScale === undefined ? {} : { gainScale: resolution.note.gainScale }),
       };
       const buffer = findSampleAsset(samplePath, catalogue)
         ? await api.load(samplePath)

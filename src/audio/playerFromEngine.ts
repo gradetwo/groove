@@ -128,12 +128,17 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
        * So SFZ's `off_by=N` means "**stop me** when a voice in group N starts" — the victim names its killer — and this project had it backwards, with criteria that encoded the wrong reading and therefore stayed green.
        */
       choke(note.group);
+      /**
+       * The controller-driven level, in decibels, because that is what the voice takes: `amplitude_onccN` measured as a **linear** scale of `(CC ÷ 127) × (N ÷ 100)`, so a region at CC 64 with `N=100` is about −6 dB. A note with no such opcode has no scale and is started exactly as it was before.
+       */
+      const controllerGainDb = note.gainScale === undefined ? 0 : 20 * Math.log10(Math.max(note.gainScale, 1e-6));
+      const startGainDb = (gainDb ?? 0) + controllerGainDb;
       const voice = startSamplerNote({
         context: engine.audioContext,
         destination: engine.musicDestination,
         buffer: note.buffer,
         ratio: note.ratio,
-        ...(gainDb === undefined ? {} : { gainDb }),
+        ...(startGainDb === 0 ? {} : { gainDb: startGainDb }),
       });
       // Registered under **what silences it** (`off_by`), because that is what a later note looks up: a new note asks "does my group stop anything?", not "who declared that they stop me?".
       rememberGroup(note.offBy, voice);

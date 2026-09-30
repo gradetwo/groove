@@ -498,3 +498,13 @@ are the places where it is more accurate than the evaluations that came before i
 还有一处是**明确的界面上限而非缺口**：编排里的**键盘、卷帘、谱面**是输入与展示面，它们改的每一件事都是 `NoteEvent`，而音符有完整的工具（增删移改长度）、能渲染、能导出 MusicXML。没有"打开谱面"这种工具，正如没有"按第三个琴键"这种工具。
 
 **已知的下一步**：把自定义流派的存储挪到一个 Node 也能实现的接口后面（`customGenreDb` 只依赖 IndexedDB），那样"保存自己的流派"就能有工具。
+
+### MIDI 导入：给编排用的那一条（2026-09-30）
+
+`import_arrangement_midi` 把标准 MIDI 文件读成**编排轨道**，而不是十六步网格。这一条是业主指示的直接结果——"每个功能开发过程中，MCP 要第一时间提供"——也是因为它与既有的 MIDI 导入**不是同一件事**：
+
+* 既有导入（`importMidiToPattern`）量化进旧的 `DrumPattern`，**音符长度被丢掉**：一个持续的和弦与一次鼓击进去出来是同一个东西。
+* 编排的模型是 `NoteEvent {pitch, startBeats, lengthBeats, velocity}`，长度是其中一半。所以解析器现在**把每个 note-off 与它的 note-on 配对**（同音重叠时先进先出——MIDI 本身不携带音符身份，这是唯一可能的约定），文件没释放的音符**不编造长度**，而是用默认值并在 `problems` 里说出来。
+* 文件的结构也保留：一条 MIDI 轨一条编排轨，用文件自己的轨名（**GBK 中文轨名按 GBK 解码**）；**format 0** 的文件把整个乐队塞在一轨里，所以按通道再拆——format 1 不拆，因为那里的轨本来就是分开的。
+
+工具与 `import_arrangement_musicxml` 走**同一条加轨路径**（`addImportedParts`），两条导入因此不会在音序、命名这些事上各自漂移。夹具是**仓库自己按规范写出的字节**（`src/test/fixtures/midi_file.mjs`），CI 不依赖任何人的音乐文件；`npm run check:mcp` 里有一条**协议级**调用，验证中文轨名与音符长度真的过线。

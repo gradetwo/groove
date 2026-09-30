@@ -60,3 +60,29 @@ describe("the arrangement probe threads its flags through", () => {
     expect(early, "the early path must come before the full summary is read").toBeLessThan(full);
   });
 });
+
+describe("the lane curve survives a browser that dies after the render", () => {
+  const outerSource = readFileSync(join(root, "scripts/measure_lane_curve.mjs"), "utf8");
+
+  it("announces each point from the page, because the summary is what gets lost", () => {
+    /**
+     * ⭐ **The failure this exists for, measured in CI.** Four lane counts rendered in about four seconds each, and the run reported "the browser process did not finish the render" for all four: the render kills the browser on that runner, so `page.evaluate` never returned and the results died with it. The summary alone cannot survive that; an announcement per point can.
+     */
+    expect(probeCode).toContain("LANE_CURVE");
+    expect(outerSource, "the caller stopped reading the announcements, so a dead browser loses the curve again").toContain("LANE_CURVE");
+  });
+
+  it("writes the marker the caller parses, character for character", () => {
+    // The two halves live in different files, which is exactly how a marker drifts. This is the contract, spelled once on each side.
+    const producer = /console\.log\(`([A-Z_]+) \$\{JSON\.stringify\(point\)\}`\)/.exec(probeSource);
+    expect(producer, "the probe no longer announces a point in the shape the caller expects").not.toBeNull();
+    const consumer = /match\(\/([A-Z_]+) \(\\n?\{\.\*\\\}\)/.exec(outerSource) ?? /match\(\/([A-Z_]+) /.exec(outerSource);
+    expect(consumer, "the caller no longer parses the announcement").not.toBeNull();
+    expect(consumer![1]).toBe(producer![1]);
+  });
+
+  it("still reads the summary as a fallback", () => {
+    // A run where nothing dies should not have to depend on console output, and a caller that dropped the summary would make the announcement the only path.
+    expect(outerSource).toContain("renderLaneCurve?.points?.[0]");
+  });
+});

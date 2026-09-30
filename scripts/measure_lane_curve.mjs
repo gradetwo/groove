@@ -39,13 +39,32 @@ for (const lanes of counts) {
   );
   // `spawnSync` reports a timeout through `signal`, and it is a result rather than an exception: the curve simply has one fewer point.
   const timedOut = result.signal !== null || result.error?.code === "ETIMEDOUT";
-  const line = (result.stdout ?? "").split("\n").find((candidate) => candidate.trim().startsWith("{"));
+  /**
+   * ⭐ **The announced point first, the summary second, and the order is the point.**
+   *
+   * The probe announces each lane count as it finishes (`LANE_CURVE {…}`) because the summary only arrives when `page.evaluate` returns — and on this runner the render can kill the browser, so the evaluate never returns and every count measured seconds earlier is thrown away with it. That is exactly what two CI runs did: four counts rendered in about four seconds each and the log said "the browser process did not finish the render" for all four.
+   *
+   * The summary is still read as a fallback, because a run where nothing dies should not depend on parsing console output.
+   */
   let point;
-  try {
-    const parsed = JSON.parse(line ?? "");
-    point = parsed?.renderLaneCurve?.points?.[0];
-  } catch {
-    point = undefined;
+  for (const candidate of (result.stdout ?? "").split("\n")) {
+    const announced = candidate.match(/LANE_CURVE (\{.*\})\s*$/);
+    if (!announced) continue;
+    try {
+      const parsed = JSON.parse(announced[1]);
+      if (parsed?.lanes === lanes) point = parsed;
+    } catch {
+      // A truncated line means the browser died mid-write; the next count is unaffected, and a summary fallback may still be there.
+    }
+  }
+  if (!point) {
+    const line = (result.stdout ?? "").split("\n").find((candidate) => candidate.trim().startsWith("{"));
+    try {
+      const parsed = JSON.parse(line ?? "");
+      point = parsed?.renderLaneCurve?.points?.[0];
+    } catch {
+      point = undefined;
+    }
   }
   if (!point) {
     failures.push(lanes);
