@@ -37,24 +37,34 @@ function renderList(arrangement: ReturnType<typeof addTrack>, overrides: Record<
 }
 
 describe("the instrument chooser in a track row", () => {
-  it("offers the catalogue's instruments on a sampler track, with the current one selected", () => {
+  it("shows what the track plays, and opens the library to change it", () => {
+    /**
+     * The panel replaced a flat `<select>`, so the row's job changed: it **reports** the current instrument and opens the browser on demand. 135 instruments in every row was the problem the owner named.
+     */
     resetTrackIdsForTests();
-    // The id is read from the track rather than guessed: `freshId` decides it, and a test that assumes the shape of an identifier is testing its own assumption.
     const added = addTrack(base(), "sampler", "Sampler 1");
     const withSampler = setTrackSample(added, added.tracks[0]!.id, "salamander-grand");
     renderList(withSampler);
-    const chooser = screen.getByLabelText("Sampler 1 instrument") as HTMLSelectElement;
-    expect(chooser.value).toBe("salamander-grand");
-    expect(screen.getByRole("option", { name: "Salamander Grand Piano" })).toBeDefined();
+    const open = screen.getByTestId(`instrument-open-${withSampler.tracks[0]!.id}`);
+    // The button names the instrument the track plays rather than a generic label.
+    expect(open.textContent).toContain("Salamander Grand Piano");
+    expect(screen.queryByTestId("instrument-library")).toBeNull();
+    fireEvent.click(open);
+    expect(screen.getByTestId("instrument-library")).toBeDefined();
   });
 
-  it("reports which track changed and to what", () => {
+
+  it("reports which track changed and to what, and closes on the choice", () => {
     resetTrackIdsForTests();
     const withSampler = addTrack(base(), "sampler", "Sampler 1");
     const { onChangeInstrument } = renderList(withSampler);
-    fireEvent.change(screen.getByLabelText("Sampler 1 instrument"), { target: { value: "salamander-grand" } });
+    fireEvent.click(screen.getByTestId(`instrument-open-${withSampler.tracks[0]!.id}`));
+    fireEvent.click(screen.getByTestId("instrument-option-salamander-grand"));
     expect(onChangeInstrument).toHaveBeenCalledWith(withSampler.tracks[0]!.id, "salamander-grand");
+    // Picking one is the end of the interaction, so the panel is gone rather than left open behind the choice.
+    expect(screen.queryByTestId("instrument-library")).toBeNull();
   });
+
 
   it("shows no chooser on a track whose kind says it does not play a catalogue asset", () => {
     resetTrackIdsForTests();
@@ -122,18 +132,21 @@ describe("grouping the instrument list by library", () => {
     expect(flat[0]![1]).toHaveLength(2);
   });
 
-  it("renders one option group per library, and the options are still findable by name", () => {
+  it("renders the library with a category column, and the instruments of the selected one", () => {
     resetTrackIdsForTests();
     const withSampler = addTrack(base(), "sampler", "Sampler 1");
     renderList(withSampler, {
       instruments: [
-        { assetId: "vcsl:Tom", name: "Tom", library: "vcsl" },
-        { assetId: "salamander-grand", name: "Salamander Grand Piano", library: "salamander-grand" },
+        { assetId: "vcsl:Tom", name: "Tom", library: "vcsl", category: "Percussion" },
+        { assetId: "salamander-grand", name: "Salamander Grand Piano", library: "salamander-grand", category: "Acoustic Piano" },
       ],
     });
-    const select = screen.getByLabelText("Sampler 1 instrument");
-    expect(select.querySelectorAll("optgroup")).toHaveLength(2);
-    // The grouping is presentation; the option a person picks is still selected by its own name and value.
-    expect(screen.getByRole("option", { name: "Salamander Grand Piano" })).toBeDefined();
+    fireEvent.click(screen.getByTestId(`instrument-open-${withSampler.tracks[0]!.id}`));
+    // Both categories are offered with their counts, and the instruments column shows only the selected category's.
+    expect(screen.getByTestId("instrument-category-Percussion").textContent).toContain("1");
+    fireEvent.click(screen.getByTestId("instrument-category-Acoustic Piano"));
+    expect(screen.getByTestId("instrument-option-salamander-grand")).toBeDefined();
+    expect(screen.queryByTestId("instrument-option-vcsl:Tom")).toBeNull();
   });
+
 });

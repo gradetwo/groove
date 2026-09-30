@@ -17,6 +17,18 @@ export interface SampleAsset {
   assetId: string;
   /** What a composer would call it. */
   name: string;
+  /**
+   * **What kind of instrument it is**, for finding it: "Acoustic Drums", "Bass", "Winds".
+   *
+   * Declared in the manifest rather than derived here, because a category is a judgement about a library and the manifest is where judgements about libraries are written down and reviewed. Absent for a plain sample, and absent for an entry whose
+   * author has not said — a picker then shows it under its library instead of inventing a category.
+   */
+  category?: string;
+  /**
+   * **The second level, for a category that is still too big to scan.** VCSL's "Mallets & Bells" holds 52 instruments because it is every idiophone the library has, and its own paths divide them further ("Struck Idiophones", "Plucked Idiophones"); a bass library's 39
+   * programs divide by articulation. The same reasoning as `category`, one level down: it is a judgement or a structure, and either way it belongs in the data rather than in a picker.
+   */
+  subcategory?: string;
   kind: "loop" | "one-shot";
   seconds: number;
   /**

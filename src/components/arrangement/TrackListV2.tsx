@@ -7,7 +7,10 @@
  *
  * The one thing it does add is **indentation for grouped tracks**, computed from `parentId` rather than stored, so a track's visual depth cannot drift from its grouping.
  */
+import { useState } from "react";
 import { stepsFromNotes, STEPS_PER_BEAT } from "../../data/noteEvents";
+import { InstrumentLibraryV2 } from "./InstrumentLibraryV2";
+import { useLanguage } from "../../i18n/LanguageContext";
 import type { ArrangementV2, TrackKindV2, TrackV2 } from "../../types/arrangementV2";
 
 export interface TrackListV2Props {
@@ -44,9 +47,13 @@ export interface InstrumentChoice {
   assetId: string;
   name: string;
   /**
-   * Which library it came from, for grouping the list. The catalogue holds **135 instruments** across five libraries, and a flat list of 135 is a question rather than a choice; grouped, it is five libraries with their programs under them.
+   * Which library it came from. Kept as well as the category because they answer different questions — "everything from this download" and "every bass I have" — and the library is what a missing category falls back to.
    */
   library?: string;
+  /** What kind of instrument it is, declared in the manifest and surfaced by the catalogue. The library browser's left column is built from these. */
+  category?: string;
+  /** The second level, for a category whose list is still long. The library browser shows it as a third column only when it actually divides the category. */
+  subcategory?: string;
 }
 
 /** The library a catalogue id belongs to: `entry` for a single-instrument one, `entry:program` for a member of a multi-instrument library. */
@@ -84,6 +91,9 @@ function depthOf(track: TrackV2, all: readonly TrackV2[], seen = new Set<string>
 const ADDABLE: TrackKindV2[] = ["sampler", "instrument", "drumkit", "fx", "folder"];
 
 export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, onToggleCollapse, onChangeKind, instruments = [], onChangeInstrument, onToggleStep }: TrackListV2Props) {
+  const { t } = useLanguage();
+  // Which row's library panel is open. One at a time: two panels open would make the list jump as each one changes its height.
+  const [openLibraryFor, setOpenLibraryFor] = useState<string | undefined>(undefined);
   // A folded folder hides its children from the list; folding is a display state and this is the only place it is read.
   const hidden = new Set<string>();
   for (const track of arrangement.tracks) {
@@ -124,34 +134,34 @@ export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, 
                 A sampler track plays a catalogue asset, so which one is a property of the track rather than a setting of the app. Shown only when the catalogue offers something and the track can sound — an empty chooser
                 would be a control that does nothing.
               */}
+              {/*
+                **The instrument is opened, not scrolled.** It was a flat `<select>` of everything the catalogue holds — 135 instruments — which is a question rather than a choice; the owner asked for Logic's Library shape and got it: search, a category column, and a third column when a
+                category is still long. The row shows what the track plays and opens the panel on demand, so 135 instruments do not sit in every row.
+              */}
               {track.kind === "sampler" && onChangeInstrument && instruments.length > 0 && (
-                <select
-                  className="px-2 h-7 rounded text-xs bg-transparent border border-[var(--d-border,rgba(255,255,255,0.15))] text-text max-w-52"
-                  aria-label={`${track.name} instrument`}
-                  value={track.sample?.assetId ?? ""}
-                  onChange={(event) => onChangeInstrument(track.id, event.target.value)}
-                >
-                  {/*
-                    Grouped by library when the caller says which one each instrument came from, and flat when it does not — so a caller with one library, or with no library information, gets the simple list rather than a group of one.
-                  */}
-                  {groupInstruments(instruments).map(([library, group]) =>
-                    library === undefined ? (
-                      group.map((instrument) => (
-                        <option key={instrument.assetId} value={instrument.assetId}>
-                          {instrument.name}
-                        </option>
-                      ))
-                    ) : (
-                      <optgroup key={library} label={library}>
-                        {group.map((instrument) => (
-                          <option key={instrument.assetId} value={instrument.assetId}>
-                            {instrument.name}
-                          </option>
-                        ))}
-                      </optgroup>
-                    )
-                  )}
-                </select>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    aria-label={`${track.name} instrument`}
+                    aria-expanded={openLibraryFor === track.id}
+                    data-testid={`instrument-open-${track.id}`}
+                    onClick={() => setOpenLibraryFor(openLibraryFor === track.id ? undefined : track.id)}
+                    className="px-2 h-7 rounded text-xs bg-transparent border border-[var(--d-border,rgba(255,255,255,0.15))] text-text"
+                  >
+                    {instruments.find((instrument) => instrument.assetId === track.sample?.assetId)?.name ?? t("instrument_choose")}
+                  </button>
+                </div>
+              )}
+              {track.kind === "sampler" && onChangeInstrument && instruments.length > 0 && openLibraryFor === track.id && (
+                <InstrumentLibraryV2
+                  instruments={instruments}
+                  currentAssetId={track.sample?.assetId}
+                  onChoose={(assetId) => {
+                    onChangeInstrument(track.id, assetId);
+                    // Closing on a choice is what the panel is for: a person who picked one is done with it.
+                    setOpenLibraryFor(undefined);
+                  }}
+                />
               )}
               <button type="button" className={`w-7 h-7 rounded text-xs ${track.muted ? "bg-[var(--d-accent)] text-[var(--d-accent-ink)]" : "border border-[var(--d-border,rgba(255,255,255,0.15))] text-text"}`} aria-pressed={Boolean(track.muted)} onClick={() => onToggle(track.id, "muted", !track.muted)}>
                 M

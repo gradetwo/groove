@@ -63,6 +63,25 @@ export interface SampleManifestEntry {
   /** The SFZ that defines it, relative to `prefix`. */
   sfz?: string;
   /**
+   * What kind of instrument this entry holds, for a picker to group by. One value, for a single-instrument entry.
+   *
+   * A judgement rather than a fact, which is why it is written here by hand and reviewed: "is a Mellotron a keyboard or its own thing" has no answer inside the file.
+   */
+  category?: string;
+  /**
+   * Per-family categories for a multi-instrument library, keyed by the **first segment of the SFZ path** — `Aerophones`, `Idiophones`.
+   *
+   * VCSL's four families are not one kind of instrument and its entry is one entry: a single `category` would file 88 instruments under one word, while its paths already say which family each belongs to.
+   */
+  categoryByPath?: Record<string, string>;
+  /**
+   * Which **second level** this library has, when its categories are still long lists.
+   *
+   * `"path"` takes the second segment of the program's path — VCSL's own structure, where `Idiophones/Struck Idiophones/Bell.sfz` already says the sub-family. `"filename"` takes the first meaningful word of a program's file name, which is how a library
+   * that puts every articulation in one directory still names them (`01_arco_modwheel` → "arco", `04_pizz` → "pizz"). One rule per library, declared here, rather than a derivation that guesses for all of them.
+   */
+  subcategoryFrom?: "path" | "filename";
+  /**
    * The programs a library holds, when it holds more than one.
    *
    * A sample library is a set of program files — VCSL's four families are 155 SFZ files across dozens of instruments, each with its own Keyswitch, Staccato and Sustain variants — while this entry used to describe a single one. Written that
@@ -185,6 +204,14 @@ export function parseManifest(text: string): ManifestResult {
       attribution: entry.attribution,
       prefix: entry.prefix,
       sfz: entry.sfz,
+      category: typeof entry.category === "string" ? entry.category : undefined,
+      subcategoryFrom: entry.subcategoryFrom === "path" || entry.subcategoryFrom === "filename" ? entry.subcategoryFrom : undefined,
+      categoryByPath:
+        entry.categoryByPath && typeof entry.categoryByPath === "object"
+          ? (Object.fromEntries(
+              Object.entries(entry.categoryByPath as Record<string, unknown>).filter(([, value]) => typeof value === "string")
+            ) as Record<string, string>)
+          : undefined,
       // Carried through like every other field: the parser builds entries field by field, so one it forgets disappears silently.
       instruments: Array.isArray(entry.instruments)
         ? (entry.instruments as { sfz?: unknown; name?: unknown }[])
@@ -284,6 +311,36 @@ export function sampleAssetsFromManifest(manifest: SampleManifest, root: string)
      * One asset per program. A library with several programs used to produce one asset pointing at one of them, so the rest of its bytes were uploaded and nothing could select them; `instruments` is the list, and an entry with only
      * `sfz` keeps producing exactly one asset under the entry's own id — which is what the two published entries rely on.
      */
+    /**
+     * The second level: the path's second segment for a library whose tree says it, or the first word of the program's file name for one whose articulations are named rather than filed. A program with neither gets no subcategory, which a picker shows as one flat
+     * list rather than as a group called "other".
+     */
+    const subcategoryFor = (sfz: string | undefined): string | undefined => {
+      if (!sfz || !entry.subcategoryFrom) return undefined;
+      if (entry.subcategoryFrom === "path") {
+        const segments = sfz.split("/");
+        // The program's own file name is the last segment, so a second segment is a real directory level rather than a part of the name.
+        return segments.length >= 3 ? segments[1] : undefined;
+      }
+      const file = (sfz.split("/").pop() ?? "").replace(/\.sfz$/i, "");
+      // A leading index is the library's ordering, not a word: `01_arco_modwheel` names the articulation after the number.
+      const word = file.replace(/^\d+[\s_-]*/, "").split(/[\s_-]+/)[0] ?? "";
+      return word === "" ? undefined : word;
+    };
+
+    /** The first path segment is the family a multi-instrument library files a program under, which is what `categoryByPath` is keyed by. */
+    /**
+     * **A second level that does not divide anything is not a second level.** Measured on this manifest: the guitar library's six programs are all named `emily_*`, so the filename rule gave every one of them the subcategory "emily" — a group of six under a word
+     * that means "this library". When the entry's programs share one subcategory, it is dropped; when they differ at all, it is kept.
+     */
+    const subcategories = entry.instruments?.length ? entry.instruments.map((program) => subcategoryFor(program.sfz)) : [];
+    const dividesTheEntry = new Set(subcategories.filter((value) => value !== undefined)).size > 1;
+
+    const categoryFor = (sfz: string | undefined): string | undefined => {
+      if (!sfz) return entry.category;
+      const family = sfz.split("/")[0] ?? "";
+      return entry.categoryByPath?.[family] ?? entry.category;
+    };
     const programs: { sfz?: string; name: string; assetId: string }[] = entry.instruments?.length
       ? withProgramIds(entry.id, entry.instruments)
       : [{ sfz: entry.sfz, name: entry.name, assetId: entry.id }];
@@ -298,6 +355,8 @@ export function sampleAssetsFromManifest(manifest: SampleManifest, root: string)
         name: program.name,
         kind: "one-shot",
         seconds: entry.durationSeconds,
+        ...(categoryFor(program.sfz) ? { category: categoryFor(program.sfz)! } : {}),
+        ...(dividesTheEntry && subcategoryFor(program.sfz) ? { subcategory: subcategoryFor(program.sfz)! } : {}),
       };
       if (program.sfz) {
         /**
