@@ -4,8 +4,8 @@
  * **It owns no rules.** Adding, removing, muting, folding, choosing takes and capturing are all pure functions with their own criteria; this file holds the arrangement value and calls them, so the interface cannot
  * drift from the model. That is the same discipline as each block, applied one level up: the only thing that lives here is *which* arrangement is on screen.
  *
- * Audio is deliberately **not** wired here yet. Playing a v2 arrangement means compiling it into the lanes the engine takes — `compileArrangementToSongInput` — and that step deserves its own criterion rather
- * than being smuggled in with the layout.
+ * Audio is deliberately **not** wired here. Playing a v2 arrangement means compiling it into the pattern the engine's sequencer takes — `playArrangementV2` — and that step deserves its own criterion rather
+ * than being smuggled in with the layout. What this view owns is the button and the report: it starts the arrangement through the injected player and shows what was planned, or why nothing was.
  */
 import { useCallback, useMemo, useState } from "react";
 import type { ArrangementV2, TrackKindV2 } from "../../types/arrangementV2";
@@ -65,6 +65,8 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
   const [stripBar, setStripBar] = useState(0);
   /** What the last play reported — **zero is shown, not hidden**: "nothing was planned" is a fact a user should see rather than a silent no-op. */
   const [played, setPlayed] = useState<number | undefined>(undefined);
+  /** Why nothing played, when nothing did — the engine can be unreachable or its instrument unresolvable, and both are answers rather than silence. */
+  const [playProblem, setPlayProblem] = useState<string | undefined>(undefined);
 
   const onAddTrack = useCallback((kind: TrackKindV2, name: string) => {
     setArrangement((current) => {
@@ -122,13 +124,35 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             // ⭐ The arrangement's own notes, not an empty map: they are content and they live with the tracks.
             const result = await playArrangementV2(arrangement, arrangement.notesByTrack ?? {}, player);
             setPlayed(result.planned);
+            /**
+             * ⭐ **A reason, shown.** The engine path answers with why when it cannot play — not ready, no transport, a sampler note no region covers — and an interface that discarded that would put the
+             * user back in front of a Play button that does nothing for no stated reason, which is the failure this whole workstream keeps removing.
+             */
+            setPlayProblem(result.reason ?? result.problems?.join("; "));
           }}
         >
           Play
         </button>
+        {/**
+          * **Stop, because the sampler's notes are started on the audio clock and the engine's transport cannot reach them.** Without it, pressing play on a piano arrangement and then wanting it to
+          * stop left every scheduled note ringing — the arrangement player is the only object that holds those voices, so only this button can silence them.
+          */}
+        <button
+          type="button"
+          disabled={player?.stop === undefined}
+          onClick={() => {
+            player?.stop?.();
+            // The report goes with it: once stopped, "planned N lane events" described a play that is over.
+            setPlayed(undefined);
+            setPlayProblem(undefined);
+          }}
+        >
+          Stop
+        </button>
         {/* ⭐ Said rather than clicked into nothing: without an engine the button is disabled and this explains why. */}
         {player === undefined && <span> (audio engine not connected yet)</span>}
         {played !== undefined && <span data-testid="arrangement-played"> planned {played} lane event(s)</span>}
+        {playProblem !== undefined && <span data-testid="arrangement-play-problem"> {playProblem}</span>}
       </div>
 
       <div data-testid="arrangement-detail" className="flex flex-col gap-2 p-3 rounded border border-[var(--d-border,rgba(255,255,255,0.15))] bg-[var(--d-surface,rgba(255,255,255,0.04))]">

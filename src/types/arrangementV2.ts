@@ -109,6 +109,8 @@ export interface ArrangementV2 {
    * ⭐ **How fast it goes, in beats per minute.** Absent means 120, which is what the compile used to hardcode — so an older file plays exactly as it did, and a new one can say what it wants.
    *
    * It belongs to the arrangement rather than to the song it was projected from: a tempo is a performance decision, and the same projection played at two tempos is two performances.
+   *
+   * It is here for the same reason `bars` is: a note's `startBeats` is a position in musical time, and how long that position lasts — the compiled pattern's `bpm` — has to come from somewhere. It is what lets an arrangement state its own tempo instead of playing at 120 because that number was written into the compile.
    */
   bpm?: number;
   /** Every clip slot that carried at least one track, so a projection can be checked for completeness. */
