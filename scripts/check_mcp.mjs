@@ -343,6 +343,29 @@ try {
     Number.isFinite(song.passBars) && song.passBars >= 1 && Number.isFinite(song.secondsEstimate) && song.secondsEstimate > 0,
     `passBars=${song.passBars} seconds=${song.secondsEstimate}`
   );
+
+  /**
+   * ⭐ **Slowing a song down must make it longer, and that is the whole criterion for the estimate.**
+   *
+   * Muse reported that a tempo map made the estimated length disagree with the render. The measurement found a basis
+   * difference: with no map the estimate counts **steps**, and with one it counted `totalBars` — **passes** — so a
+   * one-pass song summed a single bar and reported 1.9 s where 15.5 s of music had been requested at 124 bpm.
+   *
+   * The check is written as the property rather than the number: halve the tempo over the whole song and the estimate
+   * must grow. Against the old code it fails by construction (1.9 s after 15.5 s), which is what makes it a criterion
+   * rather than a snapshot.
+   */
+  const slowed = payload(
+    await client.request("tools/call", {
+      name: "set_tempo",
+      arguments: { songId: song.songId, tempoTrack: [{ atBar: 0, bpm: Math.max(20, Math.round((song.bpm ?? 120) / 2)) }] },
+    })
+  );
+  check(
+    "slowing a song through a tempo map makes secondsEstimate longer, not shorter",
+    Number.isFinite(slowed.secondsEstimate) && slowed.secondsEstimate > song.secondsEstimate,
+    `${song.secondsEstimate}s at ${song.bpm} bpm → ${slowed.secondsEstimate}s at half the tempo`
+  );
   check(
     "bars counts passes: two passes expand to passBars x 2 measures",
     song.totalBars === song.passBars * 2,
