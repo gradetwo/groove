@@ -3,7 +3,7 @@
  *
  * Writing has one author and one model, so its rules can be exact. Reading has **whatever the file happens to contain**: divisions that change mid-piece, several voices per staff, notes tied across barlines, chords, grace notes, whole measures of rest, and elements from versions we do not implement. The honest posture is therefore:
  *
- *   · **convert what the model can hold** — pitch, start in beats, length in beats, velocity;
+ *   · **convert what the model can hold** — pitch, start in beats, length in beats, velocity, and the syllable a `<lyric>` writes;
  *   · **merge what notation splits** — a note tied across two measures is one note in a model with free positions, so the tie is joined back into one;
  *   · **report what is dropped rather than dropping it silently** — a grace note, a second voice's overlap, a tuplet — because a file that imports "successfully" and lost half a bar is worse than one that says what it could not read.
  *
@@ -66,6 +66,13 @@ interface ParsedNote {
   tieStart: boolean;
   tieStop: boolean;
   isGrace: boolean;
+  /**
+   * The syllable the file writes under this note, from `<lyric><text>` — absent when the note is not sung.
+   *
+   * `<syllabic>` is read past rather than interpreted: this model has one syllable per note and no word grouping, so the syllable's role in a word is
+   * exactly the information it cannot hold, and inventing one from `single`/`begin`/`middle`/`end` would be reading a claim the file does not make.
+   */
+  syllable?: string;
 }
 
 /** What a `<part>` said about tempo and meter, collected while its notes are read. */
@@ -94,6 +101,12 @@ function parseNoteElement(element: XmlElement): ParsedNote {
   const duration = Number(element.querySelector("duration")?.textContent ?? 0);
   // A tie is written twice in MusicXML — as `<tie>` for playback and inside `<notations><tied>` for engraving. Files in the wild carry one, the other, or both, so either is honoured.
   const ties = Array.from(element.querySelectorAll("tie, tied")).map((node) => node.getAttribute("type"));
+  /**
+   * The lyric, read from `<text>` rather than from `<lyric>`: `<lyric>` also holds `<syllabic>`, `<elision>`, `<extend>` and, in multi-verse scores, several
+   * `<text>` elements under numbered `<lyric number="…">`. This writer uses number 1 and a single `<text>`, and a file that carries a second verse is read by
+   * its first, which is the one a singer's line follows.
+   */
+  const syllable = element.querySelector("lyric > text")?.textContent?.trim();
   return {
     ...(pitch ? { midi: pitchToMidi(pitch) } : {}),
     duration: Number.isFinite(duration) ? duration : 0,
@@ -102,6 +115,7 @@ function parseNoteElement(element: XmlElement): ParsedNote {
     tieStart: ties.includes("start"),
     tieStop: ties.includes("stop"),
     isGrace,
+    ...(syllable ? { syllable } : {}),
   };
 }
 
@@ -148,6 +162,11 @@ function readPart(part: XmlElement, problems: string[], metadata: PartMetadata):
      * It is written only by a note that is not itself a chord member. That is the same value either way for a well-formed chord (the cursor has not moved between members), which was measured rather than assumed, but it is what makes a member of a member inherit the chord's start instead of its sibling's.
      */
     let chordStartDivisions = 0;
+    /**
+     * **The note a lyric under a `<chord/>` member belongs to** — the index into `notes` of the last note that was not itself a chord member. `-1` before the
+     * measure's first sounding note, because a lyric with no event to attach it to is better left unread than attached to whatever note came last.
+     */
+    let chordHeadIndex = -1;
 
     for (const child of Array.from(measure.children)) {
       if (child.tagName === "attributes") {
@@ -216,6 +235,16 @@ function readPart(part: XmlElement, problems: string[], metadata: PartMetadata):
           notes[tieBeginning.index] = { ...existing, lengthBeats: Math.max(existing.lengthBeats, endsAt - existing.startBeats) };
           open.delete(parsed.midi);
           if (parsed.tieStart) open.set(parsed.midi, { index: tieBeginning.index, startBeats: existing.startBeats });
+          /**
+           * A tie's continuation is the **same sounding event**, so a syllable written under it belongs to the note the tie began on — a second copy written
+           * where the tie ends is one word printed twice.
+           */
+          if (!parsed.isChord) {
+            chordHeadIndex = tieBeginning.index;
+            if (parsed.syllable && notes[chordHeadIndex]!.syllable === undefined) {
+              notes[chordHeadIndex] = { ...notes[chordHeadIndex]!, syllable: parsed.syllable };
+            }
+          }
         } else {
           notes.push({
             pitch: parsed.midi,
@@ -223,8 +252,19 @@ function readPart(part: XmlElement, problems: string[], metadata: PartMetadata):
             lengthBeats: Math.max(lengthBeats, resolution),
             // MusicXML's `velocity` is rare and optional; 100 is this project's default rather than a claim about the file.
             velocity: 100,
+            // A chord is one sounding event, so its lyric belongs to the note the chord hangs off — never to a member of it.
+            ...(parsed.syllable && !parsed.isChord ? { syllable: parsed.syllable } : {}),
           });
           if (parsed.tieStart) open.set(parsed.midi, { index: notes.length - 1, startBeats });
+          if (!parsed.isChord) chordHeadIndex = notes.length - 1;
+        }
+        /**
+         * **A `<lyric>` on a `<chord/>` member is moved to the note the chord hangs off.** The specification writes the syllable on the chord's first note,
+         * which is where this writer puts it, but an editor may attach it to whichever member the singer's line was drawn under. The model holds one syllable
+         * per sounding event, so the member's lyric is put where that event's syllable belongs rather than dropped in silence.
+         */
+        if (parsed.isChord && parsed.syllable && chordHeadIndex >= 0 && notes[chordHeadIndex]!.syllable === undefined) {
+          notes[chordHeadIndex] = { ...notes[chordHeadIndex]!, syllable: parsed.syllable };
         }
       }
 

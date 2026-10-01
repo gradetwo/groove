@@ -92,6 +92,15 @@ export interface NoteEvent {
   lengthBeats: number;
   /** 1–127, the same scale the keyboard's velocity slider uses. */
   velocity: number;
+  /**
+   * The syllable sung on this note, when this note is a sung one.
+   *
+   * A lyric is written **on the note it is sung on**, not in an array beside a grid: `startBeats` already gives a note identity, and the exporters sort,
+   * split at barlines and merge ties, so a position-indexed list would come back shifted by the first note that moved. `SequencerTrack.syllables` stays
+   * where it is — a step grid is a view over notes, and its index *is* the step — and a projection writes each step's syllable onto the note that sounds
+   * there. Absent means the note is not sung, which is every note in every project written before this field existed.
+   */
+  syllable?: string;
 }
 
 export interface ArrangementV2 {

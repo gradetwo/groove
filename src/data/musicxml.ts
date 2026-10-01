@@ -12,8 +12,9 @@
  *   2. **Gaps become rests.** A measure whose notes do not cover it is not "a measure with holes" — notation needs a rest, and its duration has to be exactly the gap, which means splitting rests at barlines too.
  *   3. **`divisions` is per quarter note**, and every duration is an integer count of them. Sixteenth-note resolution is what the arrangement already has, so `divisions` is 4 and no position can be lost by rounding.
  *   4. **Simultaneous notes in one track become a chord** (`<chord/>` on every note after the first), because a track is a voice. Two notes that start at the same instant in different tracks would be different voices, which is a separate part and out of scope here.
+ *   5. **A lyric is written on the note it is sung on**, as `<lyric number="1"><syllabic>single</syllabic><text>…</text></lyric>`. It goes on the **first** note of a chord and on the **head** of a tie, because that is where a reader looks for it: a syllable repeated on every tied continuation is one word printed several times. `<syllabic>` is `single` for every syllable, because this model holds one syllable per note and no word grouping — a hyphenation this file invented would be a claim about a word it does not know.
  *
- * What is deliberately **not** written yet, rather than quietly approximated: dynamics from velocity, articulation, slurs, tuplets, key signatures other than C, and more than one part. Each of those is a real feature and will be a real change; a file that pretends to have them and does not is worse than one that says C major and four-four.
+ * What is deliberately **not** written yet, rather than quietly approximated: dynamics from velocity, articulation, slurs, tuplets, key signatures other than C, more than one part, and multi-syllable words joined by `<syllabic>begin/middle/end</syllabic>`. Each of those is a real feature and will be a real change; a file that pretends to have them and does not is worse than one that says C major and four-four.
  */
 import type { NoteEvent } from "../types/arrangementV2";
 
@@ -77,6 +78,12 @@ function escapeXml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+/** A syllable as it is written, or `undefined` when there is none. **Whitespace is not a lyric**: an empty `<text>` is a lyric that renders as a gap in the line. */
+function lyricTextOf(note: NoteEvent): string | undefined {
+  const trimmed = note.syllable?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
 /**
  * Split one note into the pieces a measure can hold, tied across the barlines it crosses.
  *
@@ -116,14 +123,18 @@ export function notesToMeasures(notes: readonly NoteEvent[], bars: number, optio
   const ordered = [...notes].filter((note) => note.pitch >= 0 && note.pitch <= 127).sort((a, b) => a.startBeats - b.startBeats || a.pitch - b.pitch);
 
   /** Notes that start together and last the same length are one chord. The key is rounded because two notes at 1.0000001 beats are one chord to a person. */
-  const groups = new Map<string, { startBeats: number; lengthBeats: number; pitches: number[] }>();
+  const groups = new Map<string, { startBeats: number; lengthBeats: number; pitches: number[]; syllable?: string }>();
   for (const note of ordered) {
     const startBeats = Math.max(0, note.startBeats);
     const lengthBeats = Math.max(note.lengthBeats, 0.25);
     const key = `${Math.round(startBeats * 1e6)}:${Math.round(lengthBeats * 1e6)}`;
+    const syllable = lyricTextOf(note);
     const existing = groups.get(key);
-    if (existing) existing.pitches.push(note.pitch);
-    else groups.set(key, { startBeats, lengthBeats, pitches: [note.pitch] });
+    if (existing) {
+      existing.pitches.push(note.pitch);
+      // One syllable per sounding event: a chord is one event, so the first note of it that carries a lyric is the one written.
+      if (existing.syllable === undefined && syllable !== undefined) existing.syllable = syllable;
+    } else groups.set(key, { startBeats, lengthBeats, pitches: [note.pitch], ...(syllable === undefined ? {} : { syllable }) });
   }
   const groupList = [...groups.entries()].map(([key, group]) => ({ key, ...group })).sort((a, b) => a.startBeats - b.startBeats || a.lengthBeats - b.lengthBeats);
 
@@ -192,7 +203,7 @@ export function notesToMeasures(notes: readonly NoteEvent[], bars: number, optio
 
     const measureStart = index * beatsPerMeasure * divisionsPerBeat;
     const measureEnd = measureStart + beatsPerMeasure * divisionsPerBeat;
-    const eventsByVoice = new Map<number, { startDivision: number; duration: number; pitches: number[]; tiedFrom?: boolean; tiedTo?: boolean }[]>();
+    const eventsByVoice = new Map<number, { startDivision: number; duration: number; pitches: number[]; tiedFrom?: boolean; tiedTo?: boolean; syllable?: string }[]>();
     for (const piece of pieces) {
       if (piece.measureIndex !== index || piece.voice < 0) continue;
       const startDivision = Math.round(piece.startBeats * divisionsPerBeat);
@@ -201,8 +212,19 @@ export function notesToMeasures(notes: readonly NoteEvent[], bars: number, optio
       const events = eventsByVoice.get(piece.voice) ?? [];
       // The group is already a chord, so its pitches share one event; a split at a barline makes two events, tied.
       const chord = events.find((event) => event.startDivision === startDivision && event.duration === duration && event.tiedFrom === piece.tiedFrom);
-      if (chord) chord.pitches.push(...piece.group.pitches);
-      else events.push({ startDivision, duration, pitches: [...piece.group.pitches], tiedFrom: piece.tiedFrom, tiedTo: piece.tiedTo });
+      if (chord) {
+        chord.pitches.push(...piece.group.pitches);
+        if (chord.syllable === undefined && piece.group.syllable !== undefined) chord.syllable = piece.group.syllable;
+      } else {
+        events.push({
+          startDivision,
+          duration,
+          pitches: [...piece.group.pitches],
+          tiedFrom: piece.tiedFrom,
+          tiedTo: piece.tiedTo,
+          ...(piece.group.syllable === undefined ? {} : { syllable: piece.group.syllable }),
+        });
+      }
       eventsByVoice.set(piece.voice, events);
     }
     for (const events of eventsByVoice.values()) events.sort((a, b) => a.startDivision - b.startDivision);
@@ -278,11 +300,20 @@ function typeElement(duration: number): string {
 
 function noteElement(
   pitch: number,
-  event: { duration: number; tiedFrom?: boolean; tiedTo?: boolean },
+  event: { duration: number; tiedFrom?: boolean; tiedTo?: boolean; syllable?: string },
   voice: number,
   isChordMember: boolean
 ): string {
   const { step, alter, octave } = pitchToMusicXml(pitch);
+  /**
+   * The lyric goes on the chord's **first** note and on a tie's **head**: a reader draws the syllable once per sounding event, and a tied continuation
+   * carrying it again would print one word twice. `<lyric>` is last because the MusicXML note sequence puts it after `<notations>`, and a document whose
+   * elements are out of order is one a validating reader refuses.
+   */
+  const lyric =
+    !isChordMember && !event.tiedFrom && event.syllable
+      ? `        <lyric number="1"><syllabic>single</syllabic><text>${escapeXml(event.syllable)}</text></lyric>`
+      : "";
   const parts = [
     `      <note>`,
     isChordMember ? `        <chord/>` : "",
@@ -295,6 +326,7 @@ function noteElement(
     event.tiedTo || event.tiedFrom
       ? `        <notations>${event.tiedTo ? `<tied type="start"/>` : ""}${event.tiedFrom ? `<tied type="stop"/>` : ""}</notations>`
       : "",
+    lyric,
     `      </note>`,
   ];
   return parts.filter((line) => line !== "").join("\n");
