@@ -326,3 +326,12 @@ Logic 的**音频轨** ✓、**插件链（AU）** ✓、**自动化（音量/�
 ### 十二.6 工作量与**最大风险** ✗✓
 
 约 **1–2 周**（单人 ✓，**有 Mac 验证环境的前提下** ✓）。**最大风险 = 手头没有 Mac/Logic 做 ground truth** ✗✓（本机是 Linux ✓）→ **缓解** ✓：找社区现成 `.logicx` 样本 ✓ + 用 `logicproformatwriter` 生成"已知正确"的文件做对照 ✓✓——**在没有 ground truth 之前，不声称"导入正确"** ✗✓（只能声称"按 spec 解析出这些值" ✓）。
+
+**缓解措施已核实可行** ✓✓（2026-10-01，查过而非假设 ✓）：
+
+* **[wikibook/logicprox-106](https://github.com/wikibook/logicprox-106)** ✓✓——一本 Logic Pro X 10.6 教材的**示例工程集** ✓。**首选** ✗✓：小型练习工程 ✓、数量多 ✓，**且有配套教材描述每个工程里有什么** ✓✓——**这本身就是一种 ground truth** ✓（不只知道字节，还知道应当解析出什么 ✓）；
+* **[开源混音带（含 Logic 工程）](https://gearspace.com/board/apple-logic-pro/1268888-i-released-open-source-mixtape-github-including-logic-files-_.html)** ✓——**真实工程** ✓，适合**压力测试**（大 ✓、插件多 ✓）；
+* **[LoC：Logic Pro project file（fdd000640）](https://wwws.loc.gov/preservation/digital/formats/fdd/fdd000640.shtml)** ✓ 与 **[archiveteam 的格式页](http://fileformats.archiveteam.org/index.php?title=Logic_Pro_project_file)** ✓——**两份独立于 MIT 那份 spec 的描述** ✓✓，**可用来互校** ✓（若三者对同一字段说法不同 ✓，那就是必须先解决的分歧 ✓✓）。
+
+**⇒ 风险等级下降** ✓✓：**不再是"没有 ground truth"** ✗✓，而是"**ground truth 需要下载并挑出小工程**" ✓——**第一步变得具体且可执行** ✓✓。**仍不变的一条** ✗✓：**在真跑过这些样本之前，不声称"导入正确"** ✓。
+
