@@ -142,6 +142,7 @@ Two things this surface states rather than leaves to be discovered:
 | `select_arrangement_take` ▣ | `arrangementId`, `trackId`, `takeId` | which take plays, or cleared with `null` |
 | `assign_arrangement_take_range` ▣ | `arrangementId`, `trackId`, `takeId`, `startBar`, `endBar` | an existing take claimed for a bar range, splitting any range it crosses |
 | `set_arrangement_track_collapsed` ▣ | `arrangementId`, `trackId`, `collapsed` | folded in the interface; display only, and never a change to what is heard |
+| `import_logic_project` ▣ | `arrangementId`, `projectDataBase64`, `metaDataBase64`, `partIndex?` | one track per MIDI region of a Logic Pro project, named from the region, plus the project's tempo and meter and every problem that says what could not come over — **Phase 1 is MIDI only**, and audio tracks, plugin chains and automation are named in `problems` rather than dropped quietly. `partIndex` is a number or `"all"`, as in the other two imports |
 
 A minimal call, as it looks over stdio:
 
@@ -563,6 +564,27 @@ are the places where it is more accurate than the evaluations that came before i
 * MIDI 表达不了的事**明说**，不静默近似：文件夹轨不写（MIDI 没有文件夹），同音重叠的音符无法区分（读回时按先进先出配对），比 tick 更细的位置被取整，`velocity` 0 被钳到 1（在 MIDI 里它就是 note-off）。这些都进返回值的 `problems`。
 
 判据在 `src/test/arrangementToMidi.test.ts`（含"导出→导入→音符逐一相同"、速度/拍号往返、tempo map 的落点）；`npm run check:mcp` 里另有一条**协议级**往返：导出写盘，把字节交回 `import_arrangement_midi`，比较前后音符的多重集。
+
+### Logic Pro 工程导入：Phase 1 只做 MIDI（2026-10-01）
+
+`import_logic_project` 把 Logic Pro 工程读成**编排轨道**，是 `addImportedParts` 上的**第三个生产者**（前两个是 MusicXML 与 MIDI 导入），不是第二条落库路径——这正是 `src/test/mcpLogicImport.test.ts` 里那条**结构判据**要钉住的：`mcp/arrangement.ts` 里 `addImportedParts` 只有一处定义、三处调用，任何一个导入器自己写 `edit(...)` 或手写 `notesByTrack` 都会让这条断言变红。
+
+`.logicx` 是**目录**，所以工具收的是那两个承载音乐的小文件，而不是整个包：`projectDataBase64`（`Alternatives/NNN/ProjectData`）与 `metaDataBase64`（同目录的 `MetaData.plist`）。`Media/` 里可能有上 GB 的音频，Phase 1 用不上，JSON 参数也传不了。
+
+已实现并各有判据的：
+
+* **记录流**：根帧 magic `23 47 C0 AB` + 逐条记录（4 字节 tag、`+8` 簇号、`+0x1c` 负载长度）。**按长度走，不扫 tag**——负载里可以是任何字节，扫 tag 会扫出不是记录的东西。
+* **音符**：region 的 `qSvE` 里每个音符是 **32 字节事件**，`+0x04` 位置（`38400 + region 内 tick`）、`+0x0b` 力度、`+0x0c` 音高、`+0x1c` 长度；960 PPQ。region 名在 `qeSM` 的 `+0x34`，按 **UTF-8** 解码（真实夹具里有韩文名，逐字节读会变乱码）。
+* **速度**：`gnoS` 的 `+0x3a6`（有 tempo map 时规范点名的那个槽；`+0x92` 在有 map 时可能是播放头相关值），`uint32 = bpm × 10000`。拍号取签名 `qSvE` 的 80 字节头（`+0x0b` 分母指数、`+0x0c` 分子）。
+* **alternative 不能硬编码**：`Resources/ProjectInformation.plist` 的 `ActiveVariant`（可能不是 `000`），plist 的**二进制与 XML 两种写法都读**。一个真实发现：这套 10.0 时代夹具的 `ProjectInformation.plist` **根本没有 `ActiveVariant`**，只有一个按 `"0"` 索引的 `VariantNames` 表——表不等于当前项，所以不拿它当答案，返回 `undefined` 让调用方决定。**文件不存在时读 `undefined`，绝不假装是 `000`**。
+
+**诚实边界（每条都进 `problems`，按名字说，不静默丢）**：`TrackKindV2` 只有 `drumkit|instrument|sampler|fx|folder`，**没有 audio 轨**，所以音频 region 只能报告；AU 插件链、自动化包络同样没有对应物；Drummer/Session Player 轨的音符**能转**，但"这是模型生成的"这个语义转不过去，也要说出来。
+
+**最大的一条保留，必须和结论一起读**：本机**没有 Mac、没有 Logic**，也就**没有 ground truth**——所有判据证明的是"**按规范解析出了这些值**"，**不是"导入是正确的"**。规范取 `jonkubis/logicproformatwriter` 的 `PROJECTDATA_FORMAT.md`（MIT，解析器在 TypeScript 里自己写）；GPL 的分析器只看不抄。真实夹具是某本教材的配套资产（`github.com/wikibook/logicprox-106`，**许可不明**）→ 只放在仓库外的目录里本地验证（`GROOVE_LOGIC_FIXTURES`，默认 `/tmp/logic-fixtures`，不在就**响亮地跳过**），**不提交进仓库**；CI 读的是 `src/test/fixtures/logic_project.mjs` 按规范逐字节写出的工程。
+
+**已知未能可靠读出的一件事，写在代码与 `problems` 里**：Logic 10.x 的 **region 起始位置**与其 note 位置基线对不上（同一 region 的 note 位置否定了它自己的 start 字段），所以**不应用**它——每个 part 从 beat 0 起、内部时值保持不变，并把这个事实作为一条 problem 返回。notes 本身是可靠的；它们在时间轴上的落点还不是。
+
+判据：`src/test/logicImport.test.ts`（按规范构造的字节：音符数/起点/音高、tempo/拍号、ActiveVariant=`004`、音频/自动化/Drummer 逐条进 problems）、`src/test/logicFixtures.test.ts`（真实 `.logicx`，不在则跳过）、`src/test/mcpLogicImport.test.ts`（第三个生产者与"只有一条落库路径"的结构判据）。`npm run check:mcp` 里另有一条**协议级**调用：两个 base64 进，读回音符/速度/拍号，并确认音频被点名。
 
 ### 采样库的许可与署名（2026-09-30）
 

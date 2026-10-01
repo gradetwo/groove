@@ -14,6 +14,7 @@ import { toMusicXml } from "../src/data/musicxml";
 import { fromMusicXml, fromMusicXmlBytes } from "../src/data/musicxmlImport";
 import type { ImportedPart } from "../src/data/musicxmlImport";
 import { fromMidi } from "../src/data/midiToArrangement";
+import { fromLogicProjectBase64 } from "../src/data/logicToArrangement";
 import { arrangementToMidi } from "../src/data/arrangementToMidi";
 import type { MusicXmlImport } from "../src/data/musicxmlImport";
 import {
@@ -500,6 +501,36 @@ export function importMcpMidi(
     // And the meter, for the same reason: the arrangement has a `timeSignature` and the file may state one.
     ...(imported.timeSignature === undefined ? {} : { timeSignature: imported.timeSignature }),
     format: imported.format,
+  };
+}
+
+/**
+ * Import a **Logic Pro project** as arrangement tracks — Phase 1, MIDI only.
+ *
+ * A `.logicx` is a directory, so the caller sends the two files that carry music this model can hold:
+ * `Alternatives/NNN/ProjectData` and its `MetaData.plist`. `Media/` may hold gigabytes of audio that Phase 1 cannot
+ * use, and MCP arguments are JSON, so the two small files travel and the pack does not.
+ *
+ * **It lands through `addImportedParts`, the same road as MusicXML and MIDI.** A Logic importer is the third producer
+ * on that path, not a second implementation — the repo's own reason is that two imports taking two implementations is
+ * where they start disagreeing about note order and track naming.
+ *
+ * Audio tracks, AU plugin chains and automation have **no counterpart** in `TrackKindV2`, and the reader does not drop
+ * them quietly: each reaches `problems` by name. Where a region sits on the timeline is the one reading this version
+ * of `ProjectData` does not yet give reliably, and the reply says so rather than implying the notes start at bar 1.
+ */
+export function importMcpLogicProject(
+  arrangementId: string,
+  projectDataBase64: string,
+  metaDataBase64: string,
+  options: ImportMcpMusicXmlOptions = {}
+): ArrangementEditResult & { problems?: string[]; notes?: number; trackIds?: string[]; tempoBpm?: number; timeSignature?: string } {
+  const imported = fromLogicProjectBase64({ projectDataBase64, metaDataBase64 });
+  return {
+    ...addImportedParts(arrangementId, imported, options),
+    // Said out loud so a caller can set the arrangement's tempo from the project rather than guessing 120.
+    ...(imported.tempoBpm === undefined ? {} : { tempoBpm: imported.tempoBpm }),
+    ...(imported.timeSignature === undefined ? {} : { timeSignature: imported.timeSignature }),
   };
 }
 

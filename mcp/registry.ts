@@ -49,6 +49,7 @@ import {
   exportMcpArrangementMidi,
   exportMcpMusicXml,
   importMcpMusicXml,
+  importMcpLogicProject,
   importMcpMidi,
   importMcpMusicXmlBytes,
   addMcpTrack,
@@ -616,6 +617,31 @@ export const TOOLS: ToolDefinition[] = [
     handler: (args) => {
       try {
         return importMcpMidi(String(args.arrangementId), String(args.bytesBase64), {
+          ...(args.partIndex === undefined ? {} : { partIndex: args.partIndex as number | "all" }),
+        });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "import_logic_project",
+    title: "Import a Logic Pro project as tracks (MIDI only)",
+    description:
+      "Read a **Logic Pro project** and **add** one track per MIDI region, named from the region. A `.logicx` is a directory, so pass the two files that carry the music: `projectDataBase64` (`Alternatives/NNN/ProjectData`) and `metaDataBase64` (`Alternatives/NNN/MetaData.plist`); `Media/` audio is not needed and is not accepted. **Phase 1 is MIDI only.** Audio tracks, AU plugin chains and automation have no counterpart in this model and each is named in `problems` rather than dropped quietly, and so is the one reading this version does not yet give reliably — where a region sits on the timeline. Use `partIndex` to take one part, or `\"all\"` for every part. The reply names the project's tempo and meter so the arrangement can be set from them.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      projectDataBase64: z.string().describe("the alternatives' ProjectData file's bytes, base64-encoded"),
+      metaDataBase64: z.string().describe("the same alternative's MetaData.plist bytes, base64-encoded"),
+      partIndex: z
+        .union([z.number().int().min(0), z.literal("all")])
+        .optional()
+        .describe('which part to read; the first unless said otherwise, or "all" for one track per part'),
+    },
+    handler: (args) => {
+      try {
+        return importMcpLogicProject(String(args.arrangementId), String(args.projectDataBase64), String(args.metaDataBase64), {
           ...(args.partIndex === undefined ? {} : { partIndex: args.partIndex as number | "all" }),
         });
       } catch (error) {

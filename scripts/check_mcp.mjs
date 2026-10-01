@@ -16,6 +16,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { buildMxlZip } from "../src/test/fixtures/mxl_zip.mjs";
 import { buildMidiFile, GBK_TRACK_NAME, GBK_TRACK_NAME_BYTES } from "../src/test/fixtures/midi_file.mjs";
+import { buildLogicProjectData, buildMetaDataPlist } from "../src/test/fixtures/logic_project.mjs";
 
 const ROOT = process.cwd();
 const BUNDLE = path.join(ROOT, "dist-mcp", "groove-mcp.mjs");
@@ -1039,6 +1040,45 @@ try {
       beforeExport.length > 0 &&
       JSON.stringify(afterExport) === JSON.stringify(beforeExport),
     `${exportedMidi.notes} note(s), ${exportedMidiBytes.length} bytes, re-imported ${afterExport.length} of ${beforeExport.length}`
+  );
+
+  /**
+   * ⭐ **The Logic import, over the wire.** The bytes are the same synthetic `ProjectData` the unit criteria read
+   * (`src/test/fixtures/logic_project.mjs`) — the format written down rather than anybody's project, because the real
+   * `.logicx` fixtures are a textbook's assets with no stated licence and are not committed. Two things are asserted
+   * here rather than in the handler: that the tool takes **two base64 files**, and that what this model cannot hold
+   * (an audio track, which this fixture writes) **comes back in `problems`** instead of vanishing.
+   */
+  const logicArrangement = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "instrument" } }));
+  const logicBytes = buildLogicProjectData({
+    bpm: 128,
+    timeSignature: { numerator: 4, denominator: 4 },
+    regions: [
+      { name: "Keys", notes: [{ startTicks: 0, pitch: 60, velocity: 100, lengthTicks: 480 }] },
+      { name: "Vocal", notes: [], audioName: "vocal.aif" },
+    ],
+  });
+  const logicMeta = buildMetaDataPlist({ bpm: 128, numerator: 4, denominator: 4 });
+  const importedLogic = payload(
+    await client.request("tools/call", {
+      name: "import_logic_project",
+      arguments: {
+        arrangementId: logicArrangement.arrangementId,
+        projectDataBase64: Buffer.from(logicBytes).toString("base64"),
+        metaDataBase64: Buffer.from(logicMeta).toString("base64"),
+        partIndex: "all",
+      },
+    })
+  );
+  const logicProblems = importedLogic.problems ?? [];
+  check(
+    "import_logic_project adds a MIDI region, returns its tempo/meter, and names the audio it could not hold",
+    (importedLogic.trackIds ?? []).length === 1 &&
+      importedLogic.notes === 1 &&
+      importedLogic.tempoBpm === 128 &&
+      importedLogic.timeSignature === "4/4" &&
+      logicProblems.some((problem) => problem.includes("audio region reference")),
+    `${(importedLogic.trackIds ?? []).length} track(s), ${importedLogic.notes} note(s), ${importedLogic.tempoBpm} BPM ${importedLogic.timeSignature}, ${logicProblems.length} problem(s)`
   );
 
   const prompt = await client.request("prompts/get", { name: "compose_groove", arguments: { genre: "chicago-house" } });
