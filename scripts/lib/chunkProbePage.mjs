@@ -620,55 +620,53 @@ export async function cut(request) {
     import("/src/test/helpers/loudness.ts"),
     import("/src/test/helpers/timbre.ts"),
   ]);
-  const fixture = requireFixture();
-  const whole = state.whole;
-  if (!whole) throw new Error("the cut arm needs the whole render: call measure({options}) first");
-  if (!state.chunkA || !state.arms.length) {
-    throw new Error("the cut arm needs the chunked arms from a measure({options, arm}) call on this page");
-  }
-  const rate = whole.sampleRate;
-  const splitFrame = Math.round(
-    (state.arms.find((armResult) => armResult.chunkB?.barStartSeconds !== undefined)?.chunkB.barStartSeconds ?? 0) * rate
-  );
-  /** The cut is the whole render's own length: this arm must be a **slice**, so it cannot inherit the merge's frame
-   * count — that would make a short merge look like a difference in the slice. */
-  const frames = whole.frames;
+  /**
+   * **This arm renders the whole piece itself.** It used to read the sweep's `whole` state, and a page that Vite
+   * reloads between two `page.evaluate` calls has no such state — which is the only reason this arm had no verdict.
+   * One whole render plus a slice is a few seconds of audio, far inside the ~99 s a page survives, and owning the
+   * input is what makes the answer independent of everything the rest of the probe did.
+   */
+  const fixture = await build(request.options);
+  const wholeSummary = await whole();
+  const wholeChannels = state.whole.channels;
+  const rate = state.whole.sampleRate;
+  /**
+   * Where to cut: the same frame the second chunk starts its own audio at, expressed from the fixture rather than from
+   * a chunk render — `split` bars of `stepsPerBar` steps, each `stepDur` in the tempo that was actually used. Taken
+   * from the whole render's own length so the two cannot disagree: the split is a fraction of the piece, `split /
+   * totalBars`.
+   */
+  const cutFrame = Math.round((fixture.split / fixture.bars) * wholeSummary.frames);
 
-  /** The piece with a knife, not a renderer: frames [0, splitFrame) then [splitFrame, frames) of the *same* buffer. */
-  const cutChannels = whole.channels.map((channel) => {
-    const out = new Float32Array(frames);
-    const head = Math.min(splitFrame, channel.length);
-    out.set(channel.subarray(0, head), 0);
-    const tailLength = Math.min(frames - splitFrame, Math.max(0, channel.length - splitFrame));
-    if (tailLength > 0) out.set(channel.subarray(splitFrame, splitFrame + tailLength), splitFrame);
+  /** The piece with a knife, not a renderer: frames [0, cutFrame) then [cutFrame, length) of the **same** buffer. */
+  const cutChannels = wholeChannels.map((channel) => {
+    const out = new Float32Array(channel.length);
+    out.set(channel.subarray(0, Math.min(cutFrame, channel.length)), 0);
+    if (cutFrame < channel.length) out.set(channel.subarray(cutFrame), cutFrame);
     return out;
   });
 
   const loud = loudness.measureLoudness(cutChannels, rate);
   const fp = timbre.fingerprintChannels(cutChannels, rate);
   return {
-    splitFrame,
-    splitSeconds: splitFrame / rate,
-    frames,
-    wholeFrames: whole.frames,
-    cutWindow: { fromFrame: Math.max(0, splitFrame - 4410), toFrame: Math.min(frames, splitFrame + 4410) },
-    vsWhole: worstDifference(whole.channels, cutChannels, rate, [
-      { at: splitFrame, frames: 0 },
-    ]),
-    bandL1: bandDistance(whole.metrics.bandDb, fp.bandDb),
-    lufsDelta: loud.integratedLufs - whole.metrics.integratedLufs,
-    truePeakDelta: loud.truePeakDb - whole.metrics.truePeakDb,
-    rmsDelta: fp.rmsDb - whole.metrics.rmsDb,
-    arms: state.arms.map((armResult) => ({
-      label: armResult.label,
-      preRollSec: armResult.preRollSec,
-      /** The splice against the whole in the copy the arm itself measured. */
-      worstDifference: armResult.worstDifference,
-      bandL1: armResult.bandL1,
-      lufsDelta: armResult.lufsDelta,
-      rmsDelta: armResult.rmsDelta,
-      alignment: armResult.alignment,
-    })),
+    options: request.options,
+    fixture,
+    splitFrame: cutFrame,
+    splitSeconds: cutFrame / rate,
+    frames: wholeSummary.frames,
+    wholeFrames: wholeSummary.frames,
+    whole: wholeSummary.metrics,
+    /** A slice cannot change a sample, so this is the analysis's own floor — `-inf` is the correct answer. */
+    vsWhole: worstDifference(wholeChannels, cutChannels, rate, [{ at: cutFrame, frames: 0 }]),
+    bandL1: bandDistance(wholeSummary.metrics.bandDb, fp.bandDb),
+    worstBand: maxBandDelta(wholeSummary.metrics.bandDb, fp.bandDb),
+    lufsDelta: loud.integratedLufs - wholeSummary.metrics.integratedLufs,
+    truePeakDelta: loud.truePeakDb - wholeSummary.metrics.truePeakDb,
+    rmsDelta: fp.rmsDb - wholeSummary.metrics.rmsDb,
+    wholeLufs: wholeSummary.metrics.integratedLufs,
+    cutLufs: loud.integratedLufs,
+    wholeRms: wholeSummary.metrics.rmsDb,
+    cutRms: fp.rmsDb,
   };
 }
 
