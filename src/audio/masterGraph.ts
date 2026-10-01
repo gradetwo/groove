@@ -182,6 +182,15 @@ export interface MasterGraph {
   readonly delay: DelayBus;
   /** True-peak lookahead ceiling (or the compressor fallback). */
   readonly limiter: MasterLimiterHandle;
+  /**
+   * ⭐ **The bus compressor's handle, exposed for the same reason the limiter's is.**
+   *
+   * Both stages swap in asynchronously over a `DynamicsCompressor` placeholder, and a render that begins
+   * before the swap has settled runs a signal path the caller did not ask for. The limiter's `ready` was
+   * awaited and the bus compressor's could not be, because its handle was not reachable from here — which
+   * is exactly the asymmetry that showed up as an intermittent, entirely silent render under concurrency.
+   */
+  readonly busComp: BusCompressorHandle;
   /** Connect this to `ctx.destination`. */
   readonly output: AudioNode;
   /** Present only when `analysers: true`. */
@@ -556,6 +565,7 @@ export function buildMasterGraph(
       return appliedTrimDb;
     },
     busCompressorKind: () => busComp.kind(),
+    busComp,
     duckDetectorInput: detectorBus,
     limiterKind() {
       return limiter.kind;
