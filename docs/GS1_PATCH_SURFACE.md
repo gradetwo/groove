@@ -397,3 +397,23 @@ npm run check:mcp                                        # 85 tools, 93 checks p
 | `get_energy_curve` 缺失 | **已有决定**：曲线随渲染指标一起返回 | `docs/Z2_ADJUDICATION.md:160` |
 | 编排侧 tempo map 缺失 | **一处 pass-through**，已闭合 | `docs/Z2_ADJUDICATION.md:181` |
 | `sound` 命名空间（写音色）完全缺失 | 缺口真实；第一步曾是"有限预设集合"。**本次以"一条不透明 share code + 一个解析缝"闭合了它** | 本文件；`docs/Z2_ADJUDICATION.md:144` |
+
+---
+
+## 9. 逐参数写入：**工具的产物是"模式里的 share code 字符串"，而引擎的逐参数 API 在渲染时才活着** ✗✓（2026-10-01，读代码后更正我自己的判断）
+
+**先更正我自己的一个判断** ✗✓：我先看到 `Gs1Host` 已暴露 `setParam(id,value)` ✓ / `getParam(id)` ✓ / `setPatch(values)` ✓ / `setModRoute(...)` ✓（`src/audio/gs1/Gs1Host.ts:184-196` ✓）就写下"逐参数写入不需要编码器" ✗——**错了** ✗✓，因为：
+
+* `apply_gs1_patch` **不驱动活的引擎** ✓：它把 **`track.gs1Patch`（一个字符串）** 写进 pattern ✓、`readOnly: true` ✓、**返回 pattern** ✓；**引擎是在渲染时解码那个字符串的** ✓✓。
+* 所以"给我这个 lane 的第 42 号参数改成 X"**必须让产物里的 code 反映 X** ✗✓ → **需要重新编码** ✗ → **而 groove 只有 `decodeGs1PatchCode`** ✓（`src/audio/gs1/gs1PatchCode.ts:97` ✓），**没有编码器** ✗✓。
+
+**两条路线，与各自的代价** ✓✓：
+
+| | 做法 | 代价 |
+| --- | --- | --- |
+| **① 重编码** | 把上游 `src/state/share.ts`（`buildPayload`:107 / `encodePatch`:182 ✓）纳入 vendor，用**上游那一份**编码 ✓ | 要动 **vendor 列表**（我们现在只搬 `src/audio/*` ✓）与 `sync-gs1.mjs` ✓；**若顺手同步就会跨 2.1.6 → 2.1.8** ✗✓（必须**单独**验证 ✓） |
+| **② 覆盖层** ✓✓ | `patch`（基数 code）**不动** ✓；`set:{参数:值}` 与其路由另存 ✓；在**唯一那道缝** `resolveGs1Lane` 处经 **`Gs1Host.setParam` / `setModRoute`** 应用 ✓ | **不碰格式、不搬编码器、不跨版本** ✓✓ |
+
+**为什么 ② 不违反"不写第二份"** ✓✓：那条规则保护的是 **"不要重写 synth 的 payload 格式"** ✓✓——而 ② **根本不构造 payload** ✓；**DSP 仍只有引擎那一份** ✓，用的还是**引擎自己的参数入口** ✓。**代价**是"基数 + 覆盖"是**两个表示** ✗✓，所以必须**同一处解析、且读回要能看见最终值** ✓✓（`getParam` ✓）。
+
+**判据（两条路线共用）** ✓✓：`setParam` 之后 **`getParam` 读回该值** ✓✓（**证明值真的到了引擎** ✓）、**其余参数不变** ✓、**渲染出的音频随之改变** ✓、**删掉应用那一步即红** ✗✓。
