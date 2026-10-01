@@ -58,6 +58,18 @@ export interface SampleManifestEntry {
   licence: SampleLicence;
   /** Required when the licence demands it — see `parseManifest`. */
   attribution?: string;
+  /**
+   * Where a person can find the library itself, which `list_sample_libraries` reports as provenance.
+   *
+   * ⭐ **Declared here because the manifest really carries it — six entries do — and this interface did not say
+   * so.** The consumer that needed it read the file through a loose `JSON.parse(...) as { … }`, so the omission
+   * cost nothing until that cast was replaced by this type, at which point the compiler named the missing
+   * field. A field the data has and the type does not is how a caller ends up casting its way around the type
+   * system, which is the failure the types exist to prevent.
+   */
+  sourceUrl?: string;
+  /** When the mirror was last refreshed for this entry, as the manifest records it. */
+  mirroredAt?: string;
   /** Where this instrument's files live under the mirror, e.g. `vcsl/`. */
   prefix?: string;
   /** The SFZ that defines it, relative to `prefix`. */

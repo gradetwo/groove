@@ -9,6 +9,9 @@
  */
 import { readFileSync } from "node:fs";
 import { catalogueFromManifestText } from "../src/data/sampleCatalogue";
+import { parseManifest } from "../src/data/sampleManifest";
+import { mergeUserLibraries } from "../src/data/userLibraries";
+import { readUserLibraries } from "./sampleLibraries";
 import { filterInstruments } from "../src/data/instrumentSearch";
 
 const MANIFEST_PATH = "public/samples/manifest.json";
@@ -147,6 +150,8 @@ export interface SampleLibrary {
   instruments: number;
   /** The longest sample, **measured by `ffprobe` after download**. Absent when nothing has been downloaded. */
   durationSeconds?: number;
+  /** ⭐ Whose library this is: shipped with the project, or registered by the creator. */
+  source: "built-in" | "user";
   /** Why a field that a caller might expect is not here. */
   problems: string[];
 }
@@ -154,19 +159,32 @@ export interface SampleLibrary {
 export function listSampleLibraries(): { libraries: SampleLibrary[]; root: string; note: string } {
   const root = process.env.GROOVE_SAMPLE_ROOT ?? "";
   const text = readFileSync(MANIFEST_PATH, "utf8");
-  const { assets, problems: catalogueProblems } = catalogueFromManifestText(text, root);
-  const manifest = JSON.parse(text) as {
-    entries?: Array<{
-      id: string;
-      name?: string;
-      licence?: string;
-      sourceUrl?: string;
-      repo?: string;
-      pin?: string;
-      durationSeconds?: number;
-      needs?: string[];
-    }>;
-  };
+  /**
+   * ⭐ **The creator's own libraries are merged before anything derives an asset id from the manifest.**
+   *
+   * That position is the whole design, and it is the same one `catalogueFromManifestText` uses: the asset counts
+   * below and the asset list itself both come from one merged manifest, so a library someone registered gets
+   * its ids from `withProgramIds` like any other and resolves through the one resolver. Merging afterwards would
+   * give the same SFZ two ids, or a loading path of its own.
+   *
+   * `readUserLibraries` never throws: a missing file is an empty list and a malformed one is a problem naming
+   * the file, both reported below, because a person who registered a library and cannot see it needs to know
+   * whether the file or the entry is at fault.
+   */
+  const stored = readUserLibraries();
+  const parsed = parseManifest(text);
+  /** Which ids the shipped manifest itself states, so a library can be reported as the caller's own when it is not. */
+  const builtInIds = new Set((parsed.ok && parsed.manifest ? parsed.manifest.entries : []).map((entry) => entry.id));
+  const merged =
+    parsed.ok && parsed.manifest
+      ? mergeUserLibraries(parsed.manifest, stored.libraries)
+      : { manifest: { version: 1 as const, entries: [] }, problems: parsed.errors, added: [] as string[] };
+  /**
+   * The libraries go to the catalogue as well as to the merge, so a registered library's instruments are
+   * counted: `list_sample_libraries` is where a caller finds out what is reachable, and a library listed with
+   * zero instruments would read as broken when it is merely not registered with a duration yet.
+   */
+  const { assets, problems: catalogueProblems } = catalogueFromManifestText(text, root, stored.libraries);
 
   const counts = new Map<string, number>();
   for (const asset of assets) {
@@ -175,7 +193,7 @@ export function listSampleLibraries(): { libraries: SampleLibrary[]; root: strin
     counts.set(library, (counts.get(library) ?? 0) + 1);
   }
 
-  const libraries = (manifest.entries ?? []).map((entry) => {
+  const libraries = merged.manifest.entries.map((entry) => {
     const problems: string[] = [];
     if (entry.licence === undefined) problems.push("the manifest declares no licence, so the material must be treated as all rights reserved");
     if (entry.durationSeconds === undefined) {
@@ -188,6 +206,8 @@ export function listSampleLibraries(): { libraries: SampleLibrary[]; root: strin
       id: entry.id,
       name: entry.name ?? entry.id,
       licence: entry.licence ?? "unknown",
+      /** ⭐ Whose library this is. A caller deciding whether to trust a label needs to know where it came from. */
+      source: builtInIds.has(entry.id) ? ("built-in" as const) : ("user" as const),
       ...(entry.sourceUrl === undefined ? {} : { sourceUrl: entry.sourceUrl }),
       ...(entry.repo === undefined ? {} : { repo: entry.repo }),
       ...(entry.pin === undefined ? {} : { pin: entry.pin }),
@@ -201,6 +221,16 @@ export function listSampleLibraries(): { libraries: SampleLibrary[]; root: strin
   return {
     libraries,
     root,
+    /**
+     * ⭐ **What went wrong with the libraries the creator supplied, and what the catalogue made of the manifest.**
+     *
+     * A registered library that is absent, refused or excluded has to be visible here rather than only in the
+     * file: the whole point of the registry is that a person can tell whether the library they added is
+     * reachable, and "it is not in the list" answers a different question from "it was refused for this reason".
+     */
+    ...(stored.problems.length + merged.problems.length + catalogueProblems.length === 0
+      ? {}
+      : { problems: [...stored.problems, ...merged.problems, ...catalogueProblems] }),
     note:
       attribution.length === 0
         ? "No declared library requires attribution by its licence name."
