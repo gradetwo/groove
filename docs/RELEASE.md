@@ -38,10 +38,12 @@ remote          推 dev，并检查 origin/main 是 origin/dev 的祖先
 
 ```
 线上   curl -s https://groove.wangda.today/version.json
-dev    git -C ../release/groove-github show origin/dev:package.json
-main   git -C ../release/groove-github show origin/main:package.json
-tag    git -C ../release/groove-github show v<version>^{}:package.json
+dev    git show origin/dev:package.json
+main   git show origin/main:package.json
+tag    git show v<version>^{}:package.json
 ```
+
+**⚠️ 这里原本读的是 `git -C ../release/groove-github …`** ✗✓——**那面镜像已经退休** ✓（见 `docs/OPEN_WORK.md` §十："镜像退休与一次性历史归一" ✓）：**主仓库现在有自己的 `origin` 与 `core.sshCommand` ✓，直接在这里读才是远端的内容 ✓**。**镜像的历史是它自己 commit 出来的、与工作仓库平行的一条线** ✗（**无共同祖先，已被一次性强推取代** ✓），**而且落后很多**（**它那边写着 84 个工具，今天是 102 个** ✓）——**继续读它，等于拿一间旧办公室的台账核对今天的发布 ✓**。
 
 四个数都等于要发布的版本，才算成了。标签那一步用的就是这个判据：它不去看推送是否成功，而是拿 `-S` 找出承载该版本的提交，找不到就退出。v2.34.29 的标签就是这样被发现的——线上和部署都没问题，标签根本不存在。
 

@@ -31,13 +31,20 @@ statement about the app. The 5 % floor is unchanged; what changed is which failu
 | `dev` (GitHub) | the agent | integration: feature commits are cherry-picked here, CI runs here |
 | `main` (GitHub) | the human | moved by merging `dev` when it is green |
 
-The two trees have **unrelated histories** (the GitHub tree has always been fed by cherry-picks), so:
+The two trees used to have **unrelated histories**, because the GitHub tree was fed by cherry-picks from a
+retired mirror checkout. **That was normalised once** (2026-10-01, `docs/OPEN_WORK.md` §十): the mirror's history
+was a parallel line with no common ancestor, reconciled by a single `--force-with-lease` after measuring what it
+would discard. **The mirror is retired and the working tree pushes directly**, so the flow is now the ordinary
+one — and the old cherry-pick sequence below is kept only to explain what the history looks like:
 
 ```bash
-# from the GitHub working tree (../release/groove-github)
-git fetch apple2011                 # the remote named apple2011 points at ../../groove
-git cherry-pick <sha>               # one commit at a time — this is the normal flow
-git push origin dev
+# from the working tree, which has its own origin and core.sshCommand
+git push origin HEAD:dev
+
+# ⚠️ Obsolete, and doing it again would rebuild the parallel history:
+# git fetch apple2011            # the remote named apple2011 pointed at ../../groove
+# git cherry-pick <sha>          # one commit at a time — the old normal flow
+# git push origin dev
 ```
 
 The very first sync was a single squashed commit ("sync(dev): bring dev to the local tree's state") because there
