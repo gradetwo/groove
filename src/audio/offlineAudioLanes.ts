@@ -22,8 +22,12 @@
  *     it once, at its section's first bar, and a flattened pattern is one section at bar 0, so that second is zero. This is the case the adjudication called
  *     "silent-but-known": the lane has no notes, and it must still be heard rather than reported as skipped.
  *
+ * **One failure per lane per attempt, not one note**: a lane's remaining notes are skipped once it has failed, because an instrument whose SFZ cannot be fetched
+ * would otherwise report the same missing file once per step and bury the one fact a caller needs. A lane that started **some** notes and failed others appears in
+ * both lists, which is what a partly-covered drum kit actually is.
+ *
  * A lane whose bytes cannot be resolved is **never** silence and never a fallback voice: it is a problem naming the lane, which is what `sampleReferenceProblem`
- * already says for a catalogue miss, and what a failed fetch/decode becomes here.
+ * already says for a catalogue miss, and what a failed fetch or decode becomes here.
  */
 import type { SequencerPattern, SequencerTrack } from "../types/genre";
 import { SAMPLE_CATALOGUE, findSampleAsset, sampleReferenceProblem } from "../data/sampleCatalogue";
@@ -176,11 +180,16 @@ export interface OfflineAudioLaneSink {
 }
 
 export interface OfflineAudioLaneReport {
-  /** Lanes that will contribute audio. */
+  /**
+   * Lanes that contributed at least one sample to the mix.
+   *
+   * **A lane may appear here *and* in `problems`**, and that is the honest reading of a partly-resolved instrument: one note of a kit can have no region while the
+   * rest sound, and calling the whole lane skipped would hide the notes that did reach the file.
+   */
   lanes: OfflineAudioLaneRef[];
   /** Samples actually started — one per note for an instrument, one for a plain sample. */
   events: number;
-  /** Problems, including the plan's own, each naming its lane. */
+  /** Problems, including the plan's own, each naming its lane and the note or fetch that failed. */
   problems: OfflineAudioLaneProblem[];
 }
 
@@ -211,6 +220,7 @@ export async function scheduleOfflineAudioLanes(input: OfflineAudioLaneScheduleI
 
   const problems: OfflineAudioLaneProblem[] = [...plan.problems];
   const failed = new Set<number>();
+  const started = new Set<number>();
   let events = 0;
 
   for (const event of plan.events) {
@@ -224,6 +234,7 @@ export async function scheduleOfflineAudioLanes(input: OfflineAudioLaneScheduleI
         input.sink.start(note.buffer, event, note.ratio);
       }
       events += 1;
+      started.add(event.trackIndex);
     } catch (error) {
       failed.add(event.trackIndex);
       problems.push({
@@ -237,7 +248,10 @@ export async function scheduleOfflineAudioLanes(input: OfflineAudioLaneScheduleI
     }
   }
 
-  // A lane whose every note failed is not "rendered" just because it was planned: the list is the lanes that actually reached the mix.
-  const rendered = plan.lanes.filter((lane) => !failed.has(lane.trackIndex));
+  /**
+   * "Rendered" is "at least one sample reached the mix", not "the lane had no failure": a kit whose note 60 has no region still sounds every other note, and the
+   * reply has to be able to say both. A lane that failed before starting anything is only in `problems`.
+   */
+  const rendered = plan.lanes.filter((lane) => started.has(lane.trackIndex));
   return { lanes: rendered, events, problems };
 }

@@ -90,7 +90,8 @@ export function findTrack(pattern: SequencerPattern, name: string): SequencerTra
  *   · `skippedLanes` — lanes that could not be, **each with the reason** (a catalogue miss, an instrument with no note to resolve, a fetch or decode failure);
  *   · neither key when the pattern has no audio lane at all, which is the additive promise for every existing render.
  *
- * A lane is never in both lists, and it is never absent from both.
+ * A lane that started some of its notes and failed others is in **both** lists, because that is what a partly-covered instrument is; a lane that never started
+ * anything is only in `skippedLanes`.
  */
 export function audioLaneReplyFields(report: OfflineAudioLaneReport | undefined): Record<string, unknown> {
   if (!report) return {};
