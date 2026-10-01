@@ -9,7 +9,7 @@
  * is what the importer already expects: it reads one part per track chunk and only splits a **format 0** file by
  * channel. So the mapping round-trips — each lane comes back as the part it was.
  *
- * Two details are load-bearing for that round trip and are easy to get wrong:
+ * Three details are load-bearing for that round trip and are easy to get wrong:
  *
  *   1. **Every track carries a name event, the conductor track included.** The importer collects track names into
  *      one array in the order the name events appear, and looks a track's name up by its chunk index. A track with
@@ -18,6 +18,8 @@
  *   2. **Positions are integer ticks at a stated division.** The importer divides ticks by the file's own
  *      division, so `startBeats * division` has to be a whole number for a note to come back where it started.
  *      Anything finer is rounded, and that is **reported** rather than left for the caller to notice.
+ *   3. **A lyric is written immediately before the note-on it is sung on**, as the `0x05` event the format reserves for a syllable. The event carries no
+ *      channel or pitch, so "immediately before" is the only statement of which note it belongs to, and the importer reads it that way.
  *
  * What MIDI cannot hold is stated rather than approximated: a folder track has no MIDI counterpart and is left
  * out, and two notes of one pitch that overlap on one lane are indistinguishable in the event stream (MIDI pairs
@@ -76,11 +78,18 @@ export interface ArrangementMidiFile {
   problems: string[];
 }
 
-/** A byte-level event, with an `order` so note-offs sort before note-ons at the same tick. */
+/** A byte-level event, with an `order` so note-offs sort before note-ons at the same tick and a `serial` so events within one order keep the sequence they were built in. */
 interface WriteEvent {
   tick: number;
   order: number;
   bytes: number[];
+  /**
+   * A tie-break inside one tick and one order, used for one thing: **a lyric has to be the event immediately before its own note-on**.
+   *
+   * `order` alone cannot say that when a chord has several note-ons at one tick, and the importer binds a `0x05` event to the note-on that follows it — the
+   * event carries no channel or pitch, so adjacency is the only statement of which note it belongs to that the format has.
+   */
+  serial?: number;
 }
 
 /**
@@ -113,6 +122,17 @@ function trackNameBytes(name: string): number[] {
   return [0xff, 0x03, ...writeVLQ(text.length), ...text];
 }
 
+/**
+ * `FF 05 <len> <utf8>` — a syllable, the event the format reserves for a lyric, written as UTF-8 for the same reason a track name is.
+ *
+ * No `0x01` text event is written beside it. A `0x05` is the lyric; a second text event would say the same word twice, and a reader that displays both would
+ * show it twice. Notation output is MusicXML's job, and that writer emits a real `<lyric>`.
+ */
+function lyricBytes(text: string): number[] {
+  const bytes = [...new TextEncoder().encode(text)];
+  return [0xff, 0x05, ...writeVLQ(bytes.length), ...bytes];
+}
+
 /** `FF 51 03 <µs per quarter>` — the tempo, as the format states it. */
 function tempoBytes(bpm: number): number[] {
   const microsecondsPerQuarter = Math.round(60_000_000 / bpm);
@@ -135,7 +155,7 @@ function timeSignatureBytes(numerator: number, denominator: number): { bytes: nu
 
 /** `MTrk` plus its length and body, ended with the end-of-track meta event every reader expects. */
 function trackChunk(events: WriteEvent[]): number[] {
-  const sorted = [...events].sort((a, b) => a.tick - b.tick || a.order - b.order);
+  const sorted = [...events].sort((a, b) => a.tick - b.tick || a.order - b.order || (a.serial ?? 0) - (b.serial ?? 0));
   const body: number[] = [];
   let previous = 0;
   for (const event of sorted) {
@@ -252,7 +272,13 @@ export function arrangementToMidi(arrangement: ArrangementV2, options: Arrangeme
       }
     }
 
-    for (const note of laneNotes) {
+    /**
+     * **Sorted by start, then pitch, and each lyric is written immediately before its own note-on.** The order is fixed rather than the array's, because the
+     * importer reads a lyric as belonging to the note-on that follows it: two notes at one tick must not be able to swap places between two writes of the
+     * same arrangement. A `serial` keeps that adjacency when a chord writes several note-ons at one tick.
+     */
+    let serial = 0;
+    for (const note of [...laneNotes].sort((a, b) => a.startBeats - b.startBeats || a.pitch - b.pitch)) {
       const rawStart = Math.max(0, note.startBeats) * division;
       const rawLength = Math.max(0, note.lengthBeats) * division;
       const startTick = Math.round(rawStart);
@@ -273,8 +299,10 @@ export function arrangementToMidi(arrangement: ArrangementV2, options: Arrangeme
       const safePitch = Math.max(0, Math.min(127, pitch));
       const safeVelocity = Math.max(1, Math.min(127, velocity));
 
-      events.push({ tick: startTick, order: 1, bytes: [0x90 | channel, safePitch, safeVelocity] });
-      events.push({ tick: startTick + durationTicks, order: 0, bytes: [0x80 | channel, safePitch, 0x40] });
+      const syllable = note.syllable?.trim();
+      if (syllable) events.push({ tick: startTick, order: 1, serial: serial++, bytes: lyricBytes(syllable) });
+      events.push({ tick: startTick, order: 1, serial: serial++, bytes: [0x90 | channel, safePitch, safeVelocity] });
+      events.push({ tick: startTick + durationTicks, order: 0, serial: serial++, bytes: [0x80 | channel, safePitch, 0x40] });
       notes += 1;
     }
 

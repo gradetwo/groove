@@ -1,7 +1,11 @@
 /**
  * Standard MIDI file generator (SMF Type 0) for 8-track groove patterns.
  * Supports variable-length quantity (VLQ) delta timing, tempo meta events,
- * and General MIDI drum/instrument mapping.
+ * lyric meta events (0x05) and General MIDI drum/instrument mapping.
+ *
+ * **A syllable is written as `FF 05 <len> <utf-8>` on the note-on that starts its note**, which is the event the format reserves for a lyric. It is *not*
+ * also written as a `0x01` text event: this file is the DAW export, the syllable has one event of its own, and a reader that showed both would print the
+ * word twice. Notation output — where a text event might be the only thing a program reads — is MusicXML's job, and `toMusicXml` writes the `<lyric>` there.
  */
 
 import { MAX_NOTE_GATE_STEPS, SequencerPattern, SequencerTrack } from "../types/genre";
@@ -50,11 +54,29 @@ function writeVLQ(value: number): number[] {
 
 interface MidiEvent {
   tick: number;
-  type: "noteOn" | "noteOff" | "meta";
+  type: "noteOn" | "noteOff" | "meta" | "lyric";
   channel?: number;
+  /** Which lane wrote this event, so a lyric can be kept next to its own lane's note-on even when two lanes share a channel (every drum lane is channel 10). */
+  lane?: number;
   note?: number;
   velocity?: number;
   metaData?: number[];
+}
+
+/**
+ * The order events sharing a tick are written in — and **the lyric ordering is what makes the importer's binding right**.
+ *
+ * A lyric meta event carries no channel, so in a format-0 file (every lane in one chunk) it cannot be matched to a note by its own bytes: it has to be the
+ * event immediately before the note-on it annotates. The rank below interleaves each lane's lyric with that lane's note-on, so a syllable on the lead lands on
+ * the lead note even when the kick strikes at the same tick. Lane rather than channel, because every drum lane is channel 10 and two of them striking together
+ * would otherwise be indistinguishable here. Meta events stay first, because a tempo or a program change is in effect from the beginning of the tick, not
+ * after the first note of it.
+ */
+function eventRank(event: MidiEvent): number {
+  if (event.type === "meta") return 0;
+  if (event.type === "noteOff") return 1;
+  const lane = event.lane ?? event.channel ?? 0;
+  return (event.type === "lyric" ? 2 : 3) + lane * 2;
 }
 
 /**
@@ -166,6 +188,22 @@ export function generateMidiBytes(options: ExportMidiOptions): Uint8Array {
           : null;
       const notesToExport = chordNotes && chordNotes.length > 0 ? chordNotes : [noteNumber];
 
+      /**
+       * The syllable this step is sung on, written as a lyric meta event at the tick the step sounds on. One event per **step**, not per note: a chord is one
+       * sung syllable, and a ratchet is one syllable struck several times, so the event is written once and the note-on it precedes is the chord's first.
+       */
+      const syllable = typeof track.syllables?.[stepIdx] === "string" ? track.syllables[stepIdx]!.trim() : "";
+      if (syllable) {
+        const text = [...new TextEncoder().encode(syllable)];
+        allEvents.push({
+          tick: stepTick,
+          type: "lyric",
+          channel: mapping.channel,
+          lane: trackIdx,
+          metaData: [0xff, 0x05, ...writeVLQ(text.length), ...text],
+        });
+      }
+
       if (ratchet > 1) {
         const subTicks = Math.round(ticksPerStep / ratchet);
         const subNoteTicks = Math.max(12, Math.round(subTicks * gateVal));
@@ -180,6 +218,7 @@ export function generateMidiBytes(options: ExportMidiOptions): Uint8Array {
               tick: subStart,
               type: "noteOn",
               channel: mapping.channel,
+              lane: trackIdx,
               note: safeNote,
               velocity: subVel,
             });
@@ -187,6 +226,7 @@ export function generateMidiBytes(options: ExportMidiOptions): Uint8Array {
               tick: subEnd,
               type: "noteOff",
               channel: mapping.channel,
+              lane: trackIdx,
               note: safeNote,
               velocity: 0,
             });
@@ -202,6 +242,7 @@ export function generateMidiBytes(options: ExportMidiOptions): Uint8Array {
             tick: stepTick,
             type: "noteOn",
             channel: mapping.channel,
+            lane: trackIdx,
             note: safeNote,
             velocity: vel,
           });
@@ -209,6 +250,7 @@ export function generateMidiBytes(options: ExportMidiOptions): Uint8Array {
             tick: tickEnd,
             type: "noteOff",
             channel: mapping.channel,
+            lane: trackIdx,
             note: safeNote,
             velocity: 0,
           });
@@ -220,11 +262,7 @@ export function generateMidiBytes(options: ExportMidiOptions): Uint8Array {
   // 4. Sort events chronologically
   allEvents.sort((a, b) => {
     if (a.tick !== b.tick) return a.tick - b.tick;
-    if (a.type === "meta") return -1;
-    if (b.type === "meta") return 1;
-    if (a.type === "noteOff" && b.type === "noteOn") return -1;
-    if (a.type === "noteOn" && b.type === "noteOff") return 1;
-    return 0;
+    return eventRank(a) - eventRank(b);
   });
 
   // 5. Serialize track events with delta times
@@ -236,7 +274,7 @@ export function generateMidiBytes(options: ExportMidiOptions): Uint8Array {
     lastTick = ev.tick;
     trackBytes.push(...writeVLQ(delta));
 
-    if (ev.type === "meta" && ev.metaData) {
+    if ((ev.type === "meta" || ev.type === "lyric") && ev.metaData) {
       trackBytes.push(...ev.metaData);
     } else if (ev.type === "noteOn") {
       trackBytes.push(0x90 | (ev.channel! & 0x0f), ev.note! & 0x7f, ev.velocity! & 0x7f);

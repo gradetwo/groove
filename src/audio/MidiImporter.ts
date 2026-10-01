@@ -1,7 +1,8 @@
 /**
  * Standard MIDI File (SMF) Parser & Groove Importer (P4-03)
  * Supports SMF Type 0 and Type 1, variable-length quantity decoding,
- * running status, tempo meta-events, and intelligent 8-track mapping.
+ * running status, tempo and time-signature meta-events, `0x05` lyric meta-events,
+ * and intelligent 8-track mapping.
  */
 
 import { DrumPattern, Track } from "../types/genre";
@@ -23,6 +24,14 @@ export interface ParsedMidiNote {
    * A format-1 file is **several tracks with names**, and `trackNames[track]` is the name of this one; without the index a multi-track file collapses into a single anonymous part.
    */
   track: number;
+  /**
+   * The syllable a `0x05` lyric meta event wrote for this note, when the file carries one.
+   *
+   * The event carries no channel, so it is bound to the note-on it **immediately precedes at the same tick** — which is where every writer puts it and where
+   * this project's exporter puts it. Binding by tick alone would be wrong in a format-0 file, where a whole band shares one chunk: a syllable on the lead
+   * would land on the kick that struck at the same instant.
+   */
+  syllable?: string;
 }
 
 export interface MidiImportOptions {
@@ -206,6 +215,14 @@ export function parseMidiFile(buffer: ArrayBufferLike): {
      */
     const sounding = new Map<string, number[]>();
     /**
+     * The last `0x05` lyric read, waiting for the note-on it annotates.
+     *
+     * A lyric meta event has no channel, so it cannot be matched to a sounding note by anything it carries; the format's own convention is that it sits
+     * immediately before the note-on it belongs to, and that is the rule here. It is only used at the **same tick**, so a lyric whose note never arrives
+     * binds to nothing rather than sliding onto whatever note comes next.
+     */
+    let pendingLyric: { tick: number; text: string } | undefined;
+    /**
      * Pair a note-off with the **earliest** unreleased note of that channel and number, which is what a synthesiser does when the same key is struck twice without a release between.
      *
      * A note-off with no matching note-on is not an error worth refusing the file over: it is a truncated or hand-edited file, and the alternative — throwing — would make a file that plays perfectly well unimportable.
@@ -264,8 +281,15 @@ export function parseMidiFile(buffer: ArrayBufferLike): {
           if (timeSignature === undefined && numerator > 0) {
             timeSignature = `${numerator}/${2 ** Math.min(7, Math.max(0, denominatorPower))}`;
           }
-        } else if (metaType === 0x01 || metaType === 0x04 || metaType === 0x05) {
-          // Text, instrument name and lyric: the same decoding question as a track name, and the same answer.
+        } else if (metaType === 0x05) {
+          /**
+           * Lyric: a syllable, in the same encoding question as a track name and with the same answer. Held rather than discarded, because the note-on that
+           * follows it at this tick is the note it is sung on.
+           */
+          const text = reader.readText(metaLen).trim();
+          pendingLyric = text ? { tick: currentTick, text } : undefined;
+        } else if (metaType === 0x01 || metaType === 0x04) {
+          // Text and instrument name: decoded and dropped, because nothing in this model holds either.
           reader.readText(metaLen);
         } else {
           reader.pos += metaLen;
@@ -283,7 +307,12 @@ export function parseMidiFile(buffer: ArrayBufferLike): {
           const note = reader.readUint8();
           const vel = reader.readUint8();
           if (vel > 0) {
-            notes.push({ tick: currentTick, channel, note, velocity: vel, track: t });
+            /**
+             * The waiting lyric is claimed here, and only when it sits at this tick: that is the note-on it was written for.
+             */
+            const syllable = pendingLyric?.tick === currentTick ? pendingLyric.text : undefined;
+            pendingLyric = undefined;
+            notes.push({ tick: currentTick, channel, note, velocity: vel, track: t, ...(syllable === undefined ? {} : { syllable }) });
             const key = `${channel}:${note}`;
             const queue = sounding.get(key) ?? [];
             queue.push(notes.length - 1);
@@ -381,6 +410,14 @@ export function importMidiToPattern(
       }
       if (t.pitch) {
         t.pitch[stepIdx] = n.note;
+      }
+      /**
+       * The syllable goes back where it came from: the step it sounds on. A lane with no lyric stays `undefined` — an instrumental line, exactly as before —
+       * and a step with no word stays `null`, so the syllables that do exist keep their own index instead of sliding onto their neighbours.
+       */
+      if (n.syllable) {
+        if (!t.syllables) t.syllables = new Array(totalSteps).fill(null);
+        t.syllables[stepIdx] = n.syllable;
       }
     }
   }

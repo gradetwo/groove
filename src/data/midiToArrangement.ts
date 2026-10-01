@@ -71,6 +71,11 @@ export function fromMidi(bytes: Uint8Array): MidiArrangementImport {
       startBeats: note.tick / division,
       lengthBeats: (note.durationTicks ?? division * UNRELEASED_NOTE_BEATS) / division,
       velocity: note.velocity,
+      /**
+       * A syllable the file wrote with a `0x05` lyric event travels onto the note it was sung on, so a vocal line imported from a DAW can be exported again
+       * as notation **with its words** — the round trip this field exists for. Absent on every note of an instrumental file.
+       */
+      ...(note.syllable ? { syllable: note.syllable } : {}),
     });
     byPart.set(key, part);
   }
