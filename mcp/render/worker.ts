@@ -20,6 +20,7 @@ import { songSlug } from "../../src/utils/songSlug";
 // The naming rule lives in `src/data` because it is pure: a criterion can hold it without starting a browser.
 import { stemFilename } from "../../src/data/stemNaming";
 import { fingerprintChannels } from "../../src/test/helpers/timbre";
+import type { OfflineAudioLaneReport } from "../../src/audio/offlineAudioLanes";
 import {
   channelCorrelation,
   clickAnalysis,
@@ -82,6 +83,11 @@ export interface RenderResult {
   integratedLufs: number;
   /** Per-track peaks, so an agent can see the balance without a second call. */
   trackPeaksDb: Record<string, number>;
+  /**
+   * **What the audio lanes contributed, and what could not be mixed.** Always present, so a caller can tell "there were no audio lanes" (`lanes: []`)
+   * from "the lane was dropped" (`problems`), which is the distinction the old `skippedLanes` list could not make.
+   */
+  audioLanes: OfflineAudioLaneReport;
 }
 
 interface RendererState {
@@ -237,6 +243,36 @@ function outputDirectory(options: RenderOptions): string {
 }
 
 /**
+ * **Where the sample manifest is, and where an audio lane's bytes come from** — one definition for every render path.
+ *
+ * A render and an audition must resolve `sample.assetId` against the *same* catalogue and the *same* mirror, or one of them finds an instrument the other calls
+ * missing. Both read this, and the mirror root keeps the audition's default (`GROOVE_SAMPLE_ROOT`, else the project mirror) for the same reason.
+ */
+export function sampleManifestPath(): string {
+  return path.join(appRoot(), "public", "samples", "manifest.json");
+}
+
+export function sampleMirrorRoot(): string {
+  return process.env.GROOVE_SAMPLE_ROOT ?? "https://r2mirror.groove.wangda.today";
+}
+
+/** True when a pattern carries an audio lane at all — the gate that keeps a 1.6 MB manifest read off every synthesised render. */
+export function hasAudioLane(pattern: SequencerPattern): boolean {
+  return (pattern.tracks ?? []).some((track) => (track.track_id || "").toLowerCase() === "audio");
+}
+
+/** The catalogue a render resolves audio lanes against, or empty when nothing has one — so the manifest is read only when it can matter. */
+export function audioLaneCatalogueText(pattern: SequencerPattern): string | null {
+  if (!hasAudioLane(pattern)) return null;
+  try {
+    return readFileSync(sampleManifestPath(), "utf8");
+  } catch {
+    // No manifest on disk is a real state (a caller running outside a checkout): the render proceeds and every lane is reported as unresolvable.
+    return null;
+  }
+}
+
+/**
  * Render a pattern (or a genre's default pattern) and measure it in the same pass.
  *
  * Returning the measurements alongside the file is deliberate: "here is a 4-bar WAV" is far less useful to an
@@ -248,19 +284,31 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
   }
   const page = await ensurePage();
   const what = `${Math.max(1, Math.min(64, options.bars ?? 1))} bar(s) of ${options.genreId ?? pattern.genre_id ?? "a pattern"}`;
+  /**
+   * The catalogue an audio lane resolves against, read and passed in **before** the page starts.
+   *
+   * It travels as the manifest text, exactly as the audition path passes it, so the page parses it with the same `catalogueFromManifestText` and the two cannot
+   * disagree about an asset id. `null` when the pattern has no audio lane, which keeps a 1.6 MB read off every synthesised render.
+   */
+  const manifestText = audioLaneCatalogueText(pattern);
+  const sampleRoot = sampleMirrorRoot();
   const result = await withRenderTimeout(page.evaluate(
-    async ({ pattern: patternArg, format, bars, bitrateKbps, trackPeaks, sampleRate, channels: channelCount, loudnessTrimDb }) => {
+    async ({ pattern: patternArg, format, bars, bitrateKbps, trackPeaks, sampleRate, channels: channelCount, loudnessTrimDb, manifestText: manifest, sampleRoot: mirrorRoot }) => {
       /**
        * These specifiers are resolved by the *browser* (the app's dev server), not by Node, so they are built
        * from variables: a literal would send `tsc` looking for `/src/...` on the filesystem and fail.
        */
       const specifier = (path: string) => path;
-      const [wav, mp3, loudness, metrics] = await Promise.all([
+      const [wav, mp3, loudness, metrics, catalogue] = await Promise.all([
         import(/* @vite-ignore */ specifier("/src/audio/WavExporter.ts")),
         import(/* @vite-ignore */ specifier("/src/audio/Mp3Exporter.ts")),
         import(/* @vite-ignore */ specifier("/src/test/helpers/loudness.ts")),
         import(/* @vite-ignore */ specifier("/src/test/helpers/audioMetrics.ts")),
+        import(/* @vite-ignore */ specifier("/src/data/sampleCatalogue.ts")),
       ]);
+      const audioCatalogue = manifest ? catalogue.catalogueFromManifestText(manifest, mirrorRoot).assets : [];
+      /** The lane report, filled by the renderer rather than re-derived here: what reached the mix is the renderer's answer, not a second guess. */
+      let audioLanes: OfflineAudioLaneReport = { lanes: [], events: 0, problems: [] };
       const barsArg = Math.max(1, Math.min(64, bars ?? 1));
       let limiterKind = "fallback";
       const buffer = await wav.renderPatternOffline(patternArg as never, {
@@ -275,6 +323,14 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
         ...(sampleRate ? { sampleRate } : {}),
         ...(channelCount ? { channels: channelCount } : {}),
         ...(Number.isFinite(loudnessTrimDb) ? { loudnessTrimDb } : {}),
+        ...(audioCatalogue.length
+          ? {
+              audioLaneCatalogue: audioCatalogue,
+              onAudioLanes: (report: OfflineAudioLaneReport) => {
+                audioLanes = report;
+              },
+            }
+          : {}),
         onLimiterKind: (kind: string) => {
           limiterKind = kind;
         },
@@ -290,22 +346,37 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
        */
       const trackPeaksDb: Record<string, number> = {};
       if (trackPeaks) {
-        for (const track of (patternArg as unknown as { tracks: Array<{ track_id: string }> }).tracks) {
+        const tracksArg = (patternArg as unknown as { tracks: Array<Record<string, unknown>> }).tracks;
+        for (let soloIdx = 0; soloIdx < tracksArg.length; soloIdx += 1) {
+          const track = tracksArg[soloIdx]!;
           const solo = {
             ...(patternArg as unknown as Record<string, unknown>),
-            tracks: (patternArg as unknown as { tracks: Array<Record<string, unknown>> }).tracks.map((t) =>
-              t.track_id === track.track_id
-                ? t
-                : { ...t, steps: (t.steps as number[]).map(() => 0), velocity: undefined }
+            /**
+             * **A solo render plays one track, and an audio lane has no steps to zero.** Zeroing every other lane's steps leaves their samples untouched, so
+             * every "solo" would have carried every audio lane in the arrangement; the sample reference is dropped instead, which the lane planner reports as a
+             * problem rather than sounding. The catalogue travels too, so the lane being soloed really is measured.
+             */
+            tracks: tracksArg.map((candidate, idx) =>
+              idx === soloIdx
+                ? candidate
+                : {
+                    ...candidate,
+                    steps: (candidate.steps as number[]).map(() => 0),
+                    velocity: undefined,
+                    ...(String(candidate.track_id).toLowerCase() === "audio" ? { sample: undefined } : {}),
+                  }
             ),
           };
           try {
-            const soloBuffer = await wav.renderPatternOffline(solo as never, { bars: barsArg });
+            const soloBuffer = await wav.renderPatternOffline(solo as never, {
+              bars: barsArg,
+              ...(audioCatalogue.length ? { audioLaneCatalogue: audioCatalogue } : {}),
+            });
             const soloChannels: Float32Array[] = [];
             for (let c = 0; c < soloBuffer.numberOfChannels; c += 1) soloChannels.push(soloBuffer.getChannelData(c));
-            trackPeaksDb[track.track_id] = metrics.samplePeakDb(soloChannels);
+            trackPeaksDb[String(track.track_id)] = metrics.samplePeakDb(soloChannels);
           } catch {
-            trackPeaksDb[track.track_id] = Number.NEGATIVE_INFINITY;
+            trackPeaksDb[String(track.track_id)] = Number.NEGATIVE_INFINITY;
           }
         }
       }
@@ -332,6 +403,7 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
           truePeakDb: loudness.truePeakDbChannels(channels),
           integratedLufs: loudness.measureLoudness(channels, buffer.sampleRate).integratedLufs,
           trackPeaksDb,
+          audioLanes,
         };
       }
       return {
@@ -343,6 +415,7 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
         truePeakDb: loudness.truePeakDbChannels(channels),
         integratedLufs: loudness.measureLoudness(channels, buffer.sampleRate).integratedLufs,
         trackPeaksDb,
+        audioLanes,
       };
     },
     {
@@ -354,6 +427,8 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
       sampleRate: options.sampleRate,
       channels: options.channels,
       loudnessTrimDb: options.loudnessTrimDb,
+      manifestText,
+      sampleRoot,
     }
     ),
     what,
@@ -389,6 +464,8 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
     truePeakDb: result.truePeakDb,
     integratedLufs: result.integratedLufs,
     trackPeaksDb: result.trackPeaksDb,
+    // Always present: a caller has to be able to tell "no audio lanes" from "a lane could not be mixed", and an absent field cannot say either.
+    audioLanes: result.audioLanes ?? { lanes: [], events: 0, problems: [] },
   };
 }
 
@@ -542,7 +619,7 @@ export interface StemResult {
 export async function renderStems(
   pattern: SequencerPattern,
   options: RenderOptions
-): Promise<{ dir: string; stems: StemResult[]; sampleRate: number; bpm: number }> {
+): Promise<{ dir: string; stems: StemResult[]; sampleRate: number; bpm: number; audioLanes: OfflineAudioLaneReport }> {
   if (process.env.GROOVE_MCP_NO_BROWSER === "1") {
     throw new Error("audio rendering is disabled (GROOVE_MCP_NO_BROWSER=1); stems are rendered through the same offline engine as everything else");
   }
@@ -551,21 +628,38 @@ export async function renderStems(
   const bpm = pattern.bpm || 120;
   const stems: StemResult[] = [];
   let sampleRate = options.sampleRate ?? 44100;
+  /** The audio lane of whichever stem has one — a stem render is one lane, so the reports never overlap. */
+  const laneLanes: OfflineAudioLaneReport["lanes"] = [];
+  const laneProblems: OfflineAudioLaneReport["problems"] = [];
+  let laneEvents = 0;
+  const manifestText = audioLaneCatalogueText(pattern);
+  const sampleRoot = sampleMirrorRoot();
 
   for (let index = 0; index < pattern.tracks.length; index += 1) {
     const track = pattern.tracks[index]!;
     const rendered = await page.evaluate(
-      async ({ pattern: patternArg, stemTrackIdx, bars, sampleRate: rate, channels: channelCount }) => {
+      async ({ pattern: patternArg, stemTrackIdx, bars, sampleRate: rate, channels: channelCount, manifestText: manifest, sampleRoot: mirrorRoot }) => {
         const specifier = (path: string) => path;
-        const [wav, loudness] = await Promise.all([
+        const [wav, loudness, catalogue] = await Promise.all([
           import(/* @vite-ignore */ specifier("/src/audio/WavExporter.ts")),
           import(/* @vite-ignore */ specifier("/src/test/helpers/loudness.ts")),
+          import(/* @vite-ignore */ specifier("/src/data/sampleCatalogue.ts")),
         ]);
+        const audioCatalogue = manifest ? catalogue.catalogueFromManifestText(manifest, mirrorRoot).assets : [];
+        let audioLanes: OfflineAudioLaneReport = { lanes: [], events: 0, problems: [] };
         const buffer = await wav.renderPatternOffline(patternArg as never, {
           bars: Math.max(1, Math.min(64, bars ?? 1)),
           stemTrackIdx,
           ...(rate ? { sampleRate: rate } : {}),
           ...(channelCount ? { channels: channelCount } : {}),
+          ...(audioCatalogue.length
+            ? {
+                audioLaneCatalogue: audioCatalogue,
+                onAudioLanes: (report: OfflineAudioLaneReport) => {
+                  audioLanes = report;
+                },
+              }
+            : {}),
         });
         const channelsOut: Float32Array[] = [];
         for (let c = 0; c < buffer.numberOfChannels; c += 1) channelsOut.push(buffer.getChannelData(c));
@@ -582,6 +676,7 @@ export async function renderStems(
           sampleRate: buffer.sampleRate,
           channels: buffer.numberOfChannels,
           truePeakDb: loudness.truePeakDbChannels(channelsOut),
+          audioLanes,
         };
       },
       {
@@ -590,6 +685,8 @@ export async function renderStems(
         bars: options.bars,
         sampleRate: options.sampleRate,
         channels: options.channels,
+        manifestText,
+        sampleRoot,
       }
     );
 
@@ -598,6 +695,9 @@ export async function renderStems(
     const target = path.join(dir, filename);
     writeFileSync(target, bytes);
     sampleRate = rendered.sampleRate;
+    laneLanes.push(...(rendered.audioLanes?.lanes ?? []));
+    laneProblems.push(...(rendered.audioLanes?.problems ?? []));
+    laneEvents += rendered.audioLanes?.events ?? 0;
     stems.push({
       path: target,
       filename,
@@ -613,7 +713,7 @@ export async function renderStems(
     });
   }
 
-  return { dir, stems, sampleRate, bpm };
+  return { dir, stems, sampleRate, bpm, audioLanes: { lanes: laneLanes, events: laneEvents, problems: laneProblems } };
 }
 
 /**
@@ -665,8 +765,8 @@ export async function auditionInstrumentNote(
   }
   const page = await ensurePage();
   const dir = outputDirectory(options);
-  const manifestText = readFileSync(path.join(process.cwd(), "public", "samples", "manifest.json"), "utf8");
-  const root = process.env.GROOVE_SAMPLE_ROOT ?? "https://r2mirror.groove.wangda.today";
+  const manifestText = readFileSync(sampleManifestPath(), "utf8");
+  const root = sampleMirrorRoot();
   const seconds = Math.min(10, Math.max(0.1, options.seconds ?? 2));
 
   const rendered = await page.evaluate(

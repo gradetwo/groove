@@ -1,46 +1,66 @@
 import { describe, expect, it } from "vitest";
-import { lanesWithoutMidi } from "../../mcp/pattern";
+import { audioLaneReplyFields } from "../../mcp/pattern";
+import type { OfflineAudioLaneReport } from "../../src/audio/offlineAudioLanes";
 
 /**
- * The exporter rule for a lane with no notes (owner decision 2026-09-28).
+ * **The reply's audio-lane rule**, which used to be the bug in prose.
  *
- * A MIDI renderer schedules notes, and an audio lane has none, so it is skipped — and the rule is that skipping must never be **silent**. What this file can
- * prove without a browser is which lanes are reported; that they really produce no notes (rather than falling through to a default voice) is a claim for the
- * audio scope.
+ * The old reply asked only "does this lane have `track_id: audio`?" and listed every such lane under `skippedLanes` with the reason "an audio lane has no
+ * notes to schedule, so a MIDI render skips it". Once the offline renderer mixes those lanes, that claim is false in two ways at once: the lane *is* in the
+ * render, and a lane that really was dropped is not distinguishable from one that played. These criteria pin the three states apart — rendered, skipped with a
+ * reason, and no audio lane at all — because "the list got shorter" is not a test of either.
  */
-const lane = (track_id: string, extra: Record<string, unknown> = {}) => ({
-  track_id,
-  name: track_id,
-  instrument: "synth",
-  steps: new Array(16).fill(0),
-  velocity: new Array(16).fill(100),
-  ...extra,
+const report = (overrides: Partial<OfflineAudioLaneReport> = {}): OfflineAudioLaneReport => ({
+  lanes: [],
+  events: 0,
+  problems: [],
+  ...overrides,
 });
 
-const pattern = (tracks: Array<Record<string, unknown>>) =>
-  ({ genre_id: "custom", bpm: 120, scale: "C major", totalSteps: 16, tracks }) as never;
-
-describe("lanes a MIDI render cannot play", () => {
-  it("reports nothing for a song without an audio lane, which is the additive promise", () => {
-    expect(lanesWithoutMidi(pattern([lane("kick"), lane("lead")]))).toEqual([]);
-    expect(
-      lanesWithoutMidi(pattern([lane("kick", { laneId: "kick-2" }), lane("lead", { laneId: "lead-2", name: "Lead 2" })]))
-    ).toEqual([]);
+describe("the audio-lane fields of a render reply", () => {
+  it("says nothing at all for a render with no audio lane, which is the additive promise", () => {
+    expect(audioLaneReplyFields(report())).toEqual({});
+    // And an older caller that has no report at all is not told a lane was skipped.
+    expect(audioLaneReplyFields(undefined)).toEqual({});
   });
 
-  it("names an audio lane and says why it is skipped", () => {
-    const reported = lanesWithoutMidi(pattern([lane("kick"), lane("audio", { laneId: "riser", name: "Riser" })]));
-    expect(reported).toHaveLength(1);
-    expect(reported[0]).toMatchObject({ track_id: "audio", laneId: "riser", name: "Riser" });
-    expect(reported[0]!.reason).toMatch(/no notes to schedule/);
+  it("does **not** claim a lane was skipped when its bytes reached the mix", () => {
+    const fields = audioLaneReplyFields(report({ lanes: [{ trackIndex: 0, track_id: "audio", laneId: "riser", name: "Riser" }], events: 1 }));
+    expect(fields.skippedLanes).toBeUndefined();
+    expect(fields).toEqual({ renderedAudioLanes: [{ track_id: "audio", laneId: "riser", name: "Riser" }] });
   });
 
-  it("reports every audio lane, including a second one of the kind", () => {
-    const reported = lanesWithoutMidi(
-      pattern([lane("audio", { laneId: "a", name: "A" }), lane("kick"), lane("audio", { laneId: "b", name: "B" })])
+  it("names a lane that could not be mixed, with the reason and the asset it named", () => {
+    const fields = audioLaneReplyFields(
+      report({
+        problems: [
+          {
+            trackIndex: 1,
+            track_id: "audio",
+            laneId: "vox",
+            name: "Vox Chop",
+            assetId: "not-in-the-catalogue",
+            reason: 'no sample "not-in-the-catalogue" — the catalogue holds riser',
+          },
+        ],
+      })
     );
-    expect(reported.map((entry) => entry.laneId)).toEqual(["a", "b"]);
-    // And a lane with no laneId still reports, so the message can name it by its kind and name.
-    expect(lanesWithoutMidi(pattern([lane("audio", { name: "Lone" })]))[0]).toMatchObject({ track_id: "audio", name: "Lone" });
+    const skipped = fields.skippedLanes as Array<Record<string, unknown>>;
+    expect(skipped).toHaveLength(1);
+    expect(skipped[0]).toMatchObject({ track_id: "audio", laneId: "vox", name: "Vox Chop", assetId: "not-in-the-catalogue" });
+    // The reason is the point of the entry: without it a caller cannot tell an unresolvable id from a failed fetch.
+    expect(String(skipped[0]!.reason)).toMatch(/not-in-the-catalogue/);
+    expect(String(fields.skippedNote)).toMatch(/why it could not be mixed/);
+  });
+
+  it("keeps a lane out of both lists only when it is in neither — the two are complementary", () => {
+    const fields = audioLaneReplyFields(
+      report({
+        lanes: [{ trackIndex: 0, track_id: "audio", name: "Rendered" }],
+        problems: [{ trackIndex: 1, track_id: "audio", name: "Dropped", reason: "no sample" }],
+      })
+    );
+    expect((fields.renderedAudioLanes as unknown[]).length).toBe(1);
+    expect((fields.skippedLanes as unknown[]).length).toBe(1);
   });
 });

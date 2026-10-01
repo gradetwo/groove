@@ -56,6 +56,10 @@ import { gs1VelocityRoute } from "../data/gs1Patches";
 import { capPlanPolyphony, gs1PatchFor, isGs1RoutingEnabled, planGs1Notes, patchNeedsSample } from "./gs1/gs1Tracks";
 import { generateTextureSample } from "./gs1/textureSample";
 import { applyGenreFxToGraph, resolveGenreFx } from "../data/genreFx";
+import { scheduleOfflineAudioLanes, type OfflineAudioLaneReport } from "./offlineAudioLanes";
+import { browserSampleLoader } from "./browserSampleGraph";
+import { startSamplerNote } from "./samplerVoice";
+import { SAMPLE_CATALOGUE, type SampleAsset } from "../data/sampleCatalogue";
 
 export interface RenderWavOptions {
   bpm?: number;
@@ -129,6 +133,20 @@ export interface RenderWavOptions {
    * `exportMasterWav` / `exportStemsWav` carry it out to their callers.
    */
   onLimiterKind?: (kind: MasterLimiterKind) => void;
+  /**
+   * **The catalogue an audio lane's `sample.assetId` resolves against**, and therefore whether an offline render can mix one at all.
+   *
+   * The shipped catalogue is deliberately empty (see `sampleCatalogue.ts`), so omitting this leaves every audio lane unresolvable and reported — which is the
+   * honest answer for a caller that has no catalogue, not a silent render. `mcp/render/worker.ts` supplies the manifest-backed one the browser session uses.
+   */
+  audioLaneCatalogue?: readonly SampleAsset[];
+  /**
+   * Called once per render with which audio lanes reached the mix and which could not, each with a reason.
+   *
+   * A callback rather than a return value because `renderPatternOffline` resolves to an `AudioBuffer` and widening that would touch every existing caller; this is
+   * the same shape `onLimiterKind` already uses, and for the same reason — a render that quietly dropped a lane has to be able to say so.
+   */
+  onAudioLanes?: (report: OfflineAudioLaneReport) => void;
   /**
    * Override the reverb **send** high-pass for this render, in Hz (0 disables it).
    *
@@ -643,6 +661,15 @@ export async function renderPatternOffline(
         return;
       }
 
+      /**
+       * **An audio lane is not voiced by this chain.** It has no synthesised voice, and until this returned, `track_id: "audio"` fell through to the
+       * `synthesizePercussion` fallback at the bottom — so every audio lane was given a drum hit *under* the sample it was supposed to play, while the MCP reply
+       * also called it skipped. The lane is mixed from its own bytes by `scheduleOfflineAudioLanes` below instead.
+       */
+      if ((track.track_id || "").toLowerCase() === "audio") {
+        return;
+      }
+
       const state = mixerStates[trackIdx] || { mute: false, solo: false, volume: 0.8, pan: 0 };
       if (state.mute) return;
       if (anySolo && !state.solo) return;
@@ -950,6 +977,42 @@ export async function renderPatternOffline(
         }
       }
     });
+  }
+
+  /**
+   * ⭐ **The audio lanes, mixed into the same graph as everything else.**
+   *
+   * Before `startRendering`, so a lane goes through the master bus, the loudness trim and the true-peak limiter exactly as a synthesised track does — placing it
+   * into the finished buffer afterwards would put it past the ceiling and make the two paths disagree about level. The destination is the **music bus**, which is
+   * the routing decision the rest of the codebase already makes for an audio lane (`trackBuses.ts`: `id === "audio"` → `"music"`) and the one the live arrangement
+   * player uses (`playerFromEngine.ts`).
+   *
+   * The report is handed out rather than swallowed: a lane whose bytes could not be fetched or decoded is a fact the caller has to be able to state.
+   */
+  if (pattern.tracks?.some((track) => (track.track_id || "").toLowerCase() === "audio")) {
+    const audioCatalogue = options.audioLaneCatalogue ?? SAMPLE_CATALOGUE;
+    const report = await scheduleOfflineAudioLanes({
+      pattern,
+      catalogue: audioCatalogue,
+      loader: browserSampleLoader(ctx, audioCatalogue),
+      sink: {
+        start(buffer, event, ratio) {
+          startSamplerNote({
+            context: ctx,
+            destination: graph.musicBusInput,
+            buffer,
+            ratio,
+            whenSeconds: Math.max(0, event.atSeconds),
+            ...(event.gainDb === 0 ? {} : { gainDb: event.gainDb }),
+          });
+        },
+      },
+      bpm,
+      ...(patternTempo.length ? { tempoTrack: patternTempo } : {}),
+      totalSteps,
+      ...(options.stemTrackIdx === undefined ? {} : { stemTrackIdx: options.stemTrackIdx }),
+    });
+    options.onAudioLanes?.(report);
   }
 
   // Wait for the limiter module before rendering: an OfflineAudioContext renders in

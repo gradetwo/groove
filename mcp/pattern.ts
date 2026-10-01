@@ -11,6 +11,7 @@
  *     reproduce is a groove it cannot refine.
  */
 import type { SequencerPattern, SequencerTrack } from "../src/types/genre";
+import type { OfflineAudioLaneReport } from "../src/audio/offlineAudioLanes";
 import { clonePattern } from "./library";
 
 /** The names a caller may use for a track; the app's ids plus the aliases it accepts in its own UI. */
@@ -79,23 +80,39 @@ export function findTrack(pattern: SequencerPattern, name: string): SequencerTra
 }
 
 /**
- * Lanes a MIDI renderer cannot play, with the reason (owner decision 2026-09-28 — the ninth kind, `audio`).
+ * What a render's audio-lane report looks like in a tool reply.
  *
- * The exporter schedules notes; an audio lane has none, so it is **skipped**. The rule this function exists for is that skipping must never be **silent**: a lane
- * that disappears from a render without a word is the kind of absence that gets diagnosed as "the mix sounds thin" a week later.
+ * The old reply carried one list, `skippedLanes`, built by asking only "is this an audio lane?" — so a lane whose sample resolved and was about to be mixed was
+ * still reported as **not in the render**, which was both false and the reason the gap went unnoticed: the report agreed with the bug. The renderer's own report is
+ * the only thing that knows the difference, so the reply is shaped from it and says three things distinctly:
  *
- * It is pure and lives here rather than in the render path so the answer can be proved without a browser — the render behaviour itself (that an audio lane really
- * produces no notes rather than falling through to a default voice) is a claim for the audio scope, not for this file.
+ *   · `renderedAudioLanes` — lanes whose bytes reached the mix;
+ *   · `skippedLanes` — lanes that could not be, **each with the reason** (a catalogue miss, an instrument with no note to resolve, a fetch or decode failure);
+ *   · neither key when the pattern has no audio lane at all, which is the additive promise for every existing render.
+ *
+ * A lane is never in both lists, and it is never absent from both.
  */
-export function lanesWithoutMidi(pattern: SequencerPattern): Array<{ track_id: string; laneId?: string; name: string; reason: string }> {
-  return (pattern.tracks ?? [])
-    .filter((track) => track.track_id === "audio")
-    .map((track) => ({
-      track_id: track.track_id,
-      ...(track.laneId ? { laneId: track.laneId } : {}),
-      name: track.name,
-      reason: "an audio lane has no notes to schedule, so a MIDI render skips it",
+export function audioLaneReplyFields(report: OfflineAudioLaneReport | undefined): Record<string, unknown> {
+  if (!report) return {};
+  const fields: Record<string, unknown> = {};
+  if (report.lanes.length) {
+    fields.renderedAudioLanes = report.lanes.map((lane) => ({
+      track_id: lane.track_id,
+      ...(lane.laneId ? { laneId: lane.laneId } : {}),
+      name: lane.name,
     }));
+  }
+  if (report.problems.length) {
+    fields.skippedLanes = report.problems.map((problem) => ({
+      track_id: problem.track_id,
+      ...(problem.laneId ? { laneId: problem.laneId } : {}),
+      name: problem.name,
+      ...(problem.assetId ? { assetId: problem.assetId } : {}),
+      reason: problem.reason,
+    }));
+    fields.skippedNote = "these lanes are not in the render; each entry names the lane and why it could not be mixed";
+  }
+  return fields;
 }
 
 /** Deterministic 0..1 from a string seed — no clock, no `Math.random`, so a run is reproducible. */
