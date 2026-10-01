@@ -1185,6 +1185,31 @@ try {
     `${c4.name} ${c4.frequencyHz} Hz, ${a4.name} ${a4.frequencyHz} Hz, then ${c3.name} ${c3.frequencyHz} Hz`
   );
 
+  /**
+   * The transposition report, on a song the gate builds itself. The arithmetic — that a section transpose and a
+   * GS-1 parameter are counted, with the units kept apart — is pinned by the unit criteria, which carry their
+   * own red halves; what this checks is that the tool is reachable and that its reply cannot be mistaken for a
+   * complete one, since it names the sources it deliberately did not read.
+   */
+  const pitchSong = payload(
+    await client.request("tools/call", { name: "create_song", arguments: { genreId: "chicago-house" } })
+  );
+  const reported = payload(
+    await client.request("tools/call", {
+      name: "get_transposition_report",
+      arguments: { songId: pitchSong.songId ?? pitchSong.id },
+    })
+  );
+  check(
+    "get_transposition_report answers with a total, the sections it read, and what it did not read",
+    typeof reported.totalSemitones === "number" &&
+      Array.isArray(reported.sections) &&
+      reported.sections.length >= 1 &&
+      Array.isArray(reported.notRead) &&
+      reported.notRead.length === 3,
+    `total ${reported.totalSemitones}, ${(reported.sections ?? []).length} section(s), ${(reported.notRead ?? []).length} notRead`
+  );
+
   const prompt = await client.request("prompts/get", { name: "compose_groove", arguments: { genre: "chicago-house" } });
   const promptText = prompt?.messages?.[0]?.content?.text ?? "";
   check("prompts/get builds a usable brief", promptText.includes("chicago-house") && promptText.includes("apply_pattern_ops"), `${promptText.length} chars`);

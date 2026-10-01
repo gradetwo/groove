@@ -215,16 +215,22 @@ export const GS1_PITCH_PARAMETERS: ReadonlyArray<{
 export interface TranspositionInputs {
   /**
    * `SectionOverrides.transpose` (`src/types/song.ts:65` interface, field at `:90`), semitones, clamped ±24.
+   * Read it through the model's own accessor, `sectionTranspose()` (`src/types/song.ts:209`).
    *
-   * ⚠️ **Named for what it is.** The first version of this called it `trackTranspose` and pointed at the same
-   * line, on the strength of a docstring that talks about drums — and there is **no track-level transposition
-   * anywhere in either model**: `TrackV2` (`src/types/arrangementV2.ts`) has none and neither does
-   * `SequencerTrack`. Both `transpose` fields live on sections. A field named for a thing that does not exist
-   * is worse than a missing one, because a caller will trust it.
+   * ⚠️ **This is the section's transposition and the only input for it, and I got that wrong three times**
+   * — every time by reading one line without reading the interface it sits in:
+   *
+   *   1. called it `trackTranspose` — there is **no track-level transposition** in either model
+   *      (`TrackV2` has none, `SequencerTrack` has none);
+   *   2. called it `sectionTranspose` and pointed at `song.ts:186` — that field is on **`SongBar`**, not on
+   *      `SongSection`, and its own docstring says what it is: *"The section's transposition in semitones"*,
+   *      the section's value flattened per bar.
+   *
+   * So there is deliberately **no second input for it here**: a caller passing both the section's override and
+   * a bar's flattened copy would count one transposition twice. The compiler caught the second mistake, which
+   * is why the inputs below are typed rather than loose.
    */
   overridesTranspose?: number;
-  /** `SongSection.transpose` (`src/types/song.ts:186`), semitones. */
-  sectionTranspose?: number;
   /** The lane's GS-1 overrides, keyed by parameter name or numeric id — `gs1PatchOverrides.parameters`. */
   gs1Parameters?: Record<string, number | string> | undefined;
   /** What the sound source declares, when a note has been resolved. */
@@ -247,18 +253,10 @@ export function collectTranspositions(inputs: TranspositionInputs): PitchTranspo
 
   if (typeof inputs.overridesTranspose === "number" && inputs.overridesTranspose !== 0) {
     out.push({
-      source: "section overrides transpose",
+      source: "section transpose",
       semitones: inputs.overridesTranspose,
       reversible: true,
-      detail: "SectionOverrides.transpose — set it back to 0 (src/types/song.ts:65, field at :90)",
-    });
-  }
-  if (typeof inputs.sectionTranspose === "number" && inputs.sectionTranspose !== 0) {
-    out.push({
-      source: "section transpose",
-      semitones: inputs.sectionTranspose,
-      reversible: true,
-      detail: "SongSection.transpose, applied by sectionTranspose (src/types/song.ts:186)",
+      detail: "SectionOverrides.transpose — set it back to 0 (src/types/song.ts:65, field at :90; read via sectionTranspose at :209)",
     });
   }
 

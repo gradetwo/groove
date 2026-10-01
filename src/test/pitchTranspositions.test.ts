@@ -11,13 +11,19 @@ import { GS1_PITCH_PARAMETERS, collectTranspositions, describePitch } from "../d
  */
 describe("the transposition report", () => {
   it("names each source instead of summing them into a number nobody can trace", () => {
-    const report = collectTranspositions({ overridesTranspose: -12, sectionTranspose: 2 });
-    expect(report.map((item) => item.source)).toEqual(["section overrides transpose", "section transpose"]);
-    expect(report.map((item) => item.semitones)).toEqual([-12, 2]);
-    // Reversibility is stated rather than assumed: the model's own fields can be set back.
+    const report = collectTranspositions({ overridesTranspose: -12 });
+    expect(report.map((item) => item.source)).toEqual(["section transpose"]);
+    expect(report.map((item) => item.semitones)).toEqual([-12]);
+    // Reversibility is stated rather than assumed: the model's own field can be set back.
     expect(report.every((item) => item.reversible)).toBe(true);
     expect(report[0]!.detail).toContain("src/types/song.ts:65");
-    expect(report[1]!.detail).toContain("src/types/song.ts:186");
+    /**
+     * ⭐ **One section transposition, counted once.** `song.ts:185` carries a `transpose` on `SongBar` whose own
+     * docstring calls it "the section's transposition in semitones" — the same value flattened per bar. An
+     * earlier version of this took it as a second input, which would have counted one transposition twice; there
+     * is deliberately no such input now, and this asserts the sum of one is one.
+     */
+    expect(report).toHaveLength(1);
   });
 
   it("keeps the GS-1 units apart — semitones are semitones and cents are hundredths", () => {
@@ -42,7 +48,7 @@ describe("the transposition report", () => {
     expect(GS1_PITCH_PARAMETERS.map((item) => item.id)).not.toContain(38);
     expect(collectTranspositions({ gs1Parameters: { PITCH_BEND_RANGE: 12 } })).toEqual([]);
     // A zero is not a transposition either, so a total of zero reports nothing rather than five rows of zero.
-    expect(collectTranspositions({ overridesTranspose: 0, sectionTranspose: 0, gs1Parameters: { OSC1_PITCH: 0 } })).toEqual([]);
+    expect(collectTranspositions({ overridesTranspose: 0, gs1Parameters: { OSC1_PITCH: 0 } })).toEqual([]);
     expect(collectTranspositions({})).toEqual([]);
   });
 

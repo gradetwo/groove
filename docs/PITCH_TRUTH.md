@@ -160,3 +160,11 @@
 2. **「鼓不受移调」在模型层是构造性事实，不是缺口** ✓✓：§1.9 记的「通道 10 与鼓没有特判」**对导入器成立** ✓，但 `src/types/song.ts:85-90` 写明「**only a step that carries a pitch (`pitch` or a `pitches` stack) moves, and kick has neither**」——**回放路径上鼓本来就不动** ✓；**缺口只在导入侧** ✓。
 
 **⇒ 这两条都不改变已落的代码结论，只改变它们的名字与归属** ✓——**而名字错了，调用方就会照错的名字去用** ✗✓。
+
+### §3.3 第三处更正：`SongBar.transpose` 与段落移调**是同一个值** ✗✓✓
+
+**事实** ✓：`SongSection`（`src/types/song.ts:100`）**没有 `transpose` 字段** ✗✓。段落级移调是 **`section.overrides.transpose`**（`SectionOverrides` 在 `:65`、字段 `:90` ✓），**模型的唯一取值点是 `sectionTranspose()`（`:209`）** ✓。而 **`:185` 的 `transpose` 在 `SongBar` 上** ✓，**它自己的 docstring 写着**「**The section's transposition in semitones, when it has one**」✓——**即"段落那个值被按小节摊平了"** ✓✓。
+
+**⇒ 所以「两个段落移调」是我把同一个值的两个阶段当成了两个来源** ✗✓✓——**`collectTranspositions` 若同时收下两者，会把同一个移调加两次** ✗✓（**一个等着发生的 bug** ✓）。**现在只有一个输入**（`overridesTranspose` ✓），**判据里写明"一是几就是一"** ✓。
+
+**⇒ 三处更正，同一个根因** ✗✓：**读一行、不读它所在的接口** ✓。**而第三处是编译器抓住的，不是我** ✓✓——**这正是为什么把输入写成有类型的、而不是松的，值这一次** ✓。
