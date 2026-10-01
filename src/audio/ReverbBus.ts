@@ -375,6 +375,20 @@ export class ReverbBus {
     return this.buildCount;
   }
 
+  /**
+   * **Measurement hook, not a mixing control: trade the impulse for a one-frame silence so the convolution stops costing anything.**
+   *
+   * `setParams({ enabled: false })` only ramps the *return* to zero — a `ConvolverNode` holding a live impulse does the same work whether or not its output is
+   * mixed in, so it cannot answer "what does the reverb cost the render". This can, and it exists for `scripts/profile_offline_render.mjs` (the measurement
+   * `docs/RUST_DECISION.md` §五 step 2 asks for). It is not called anywhere in the app, and nothing about it touches the default path: without a caller the
+   * line below never runs and the sound is byte-identical. The buffer is a real one-frame buffer rather than `null` because the spec forbids a null buffer on a
+   * normalizing convolver, and this one is `normalize = false` by design.
+   */
+  public replaceImpulseWithSilence(): void {
+    this.impulse = this.ctx.createBuffer(2, 1, this.ctx.sampleRate);
+    this.convolver.buffer = this.impulse;
+  }
+
   /** Ramps the return gain; never a step, so toggling cannot click. */
   private applyReturnLevel(): void {
     const target = this.params.enabled ? this.params.returnLevel : 0;

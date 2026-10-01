@@ -61,6 +61,36 @@ import { startSamplerNote } from "./samplerVoice";
 import { SAMPLE_CATALOGUE, type SampleAsset } from "../data/sampleCatalogue";
 import { bufferHasAudio, type ChannelDataBuffer } from "./renderSilence";
 
+/**
+ * **Measurement-only phase timing, and inert unless switched on.**
+ *
+ * `docs/RUST_DECISION.md` §五 step 2 asks where an offline render's wall clock actually goes, and the honest answer needs boundaries inside this function: an
+ * `OfflineAudioContext.startRendering()` is one opaque call, so everything the graph does inside it (voice DSP, convolution, the limiter) cannot be split from
+ * outside. The seams that *can* be timed are the ones in this file.
+ *
+ * Nothing is collected unless `globalThis.__grooveRenderTimings` is set by the caller; the flag is never set by the app. When set, each render replaces the
+ * object with this render's phases under `phases`, plus the context facts a reader needs to interpret them. `performance.now()` is the only cost, and it is
+ * paid whether or not anyone is listening — this is instrumentation that ships, deliberately, so the number can be reproduced with one page-headless run
+ * rather than only by whoever wrote it. See `scripts/profile_offline_render.mjs`.
+ */
+interface RenderPhaseTimings {
+  phases: Record<string, number>;
+  meta?: Record<string, number | string>;
+  /** `performance.now()` at the end of the most recent render, on the page's own clock — lets a driver time the gap after the promise resolved. */
+  lastFinishedAt?: number;
+  /**
+   * Optional live progress channel: called with `(phaseName, msSincePhaseStart, msSinceRenderStart)` as each phase closes, including `phase:enter` when
+   * `startRendering()` is about to be awaited. A driver that never sees `phase:enter` knows the time went into graph/scheduling work; one that sees it and then
+   * waits knows the time is inside the opaque render call. Set by `scripts/profile_offline_render.mjs`; the app never sets it.
+   */
+  onPhase?: (name: string, ms: number, totalMs: number) => void;
+}
+
+function renderTimingSink(): RenderPhaseTimings | null {
+  const sink = (globalThis as unknown as { __grooveRenderTimings?: RenderPhaseTimings }).__grooveRenderTimings;
+  return sink && typeof sink === "object" && sink.phases ? sink : null;
+}
+
 export interface RenderWavOptions {
   bpm?: number;
   swing?: number;
@@ -512,7 +542,24 @@ async function renderPatternOfflineOnce(
    * reasoning as `sampleRate`: fewer samples, honestly rendered, rather than a stereo file relabelled.
    */
   const channelCount = options.channels === 1 ? 1 : 2;
+
+  /**
+   * The phase clock, off unless a caller asked for it. `phases` accumulates across every `renderPatternOffline` call on the page (stems are `n` calls, so the
+   * same names gain `n` entries).
+   */
+  const timings = renderTimingSink();
+  const renderStartedAt = performance.now();
+  let phaseStart = renderStartedAt;
+  const mark = (name: string): void => {
+    if (!timings) return;
+    const now = performance.now();
+    timings.phases[name] = (timings.phases[name] ?? 0) + (now - phaseStart);
+    timings.onPhase?.(name, now - phaseStart, now - renderStartedAt);
+    phaseStart = now;
+  };
+
   const ctx = new OfflineContextClass(channelCount, lengthInSamples, sampleRate);
+  mark("context:create");
 
   // Genre loudness-match trim. Applied through the shared graph below so the offline
   // renderer uses the *same* stage, in the same relative position, as playback.
@@ -572,11 +619,40 @@ async function renderPatternOfflineOnce(
    * same diagnostic pattern as the GS-1 capture flag.
    */
   (globalThis as unknown as { __reverbHpfEffective?: number }).__reverbHpfEffective = graph.reverb.getParams().sendHighpassHz;
+  mark("graph:master+genreFx");
+  if (timings) {
+    const p = graph.reverb.getParams();
+    timings.meta = {
+      // The IR is the convolver's whole memory footprint and its build is on this thread; a reader needs both to interpret `graph:master+genreFx`.
+      reverbDecaySec: p.decaySec,
+      reverbEnabled: String(p.enabled),
+      reverbImpulseBuilds: graph.reverb.getImpulseBuildCount(),
+      reverbImpulseFrames: graph.reverb.getImpulse()?.length ?? 0,
+      sampleRate,
+      channels: channelCount,
+      lengthInSamples,
+      totalSteps,
+      bars,
+      bpm,
+    };
+  }
+
+  /**
+   * The reverb-convolution ablation arm of `scripts/profile_offline_render.mjs`, and inert without that script.
+   *
+   * A `ConvolverNode` is the one stage in the offline graph whose cost is not a function of the pattern (it is a function of the impulse's length and the render's
+   * length), and it is also the one stage `ReverbBus.setParams` cannot remove — so isolating it needs this. Read and applied **after** the metadata above, so the
+   * record still describes the real impulse; the page sets the flag for exactly one render arm and clears it again.
+   */
+  const ablation = (globalThis as unknown as { __grooveRenderAblation?: string }).__grooveRenderAblation;
+  if (ablation === "reverb-convolution") graph.reverb.replaceImpulseWithSilence();
+  if (timings) timings.meta = { ...(timings.meta ?? {}), ablation: ablation ?? "none" };
 
   // V-01: the same seeded generator the live engine uses. `Math.random()` here meant an
   // export never matched the audition it was rendered from, which broke the project's
   // exporter-parity guarantee and made every render irreproducible.
   const noiseBuf = createSeededNoiseBuffer(ctx, 2);
+  mark("noise:seedBuffer");
 
   // Pre-configure track channel strips (Gain + Stereo Panner).
   // F-03: when the caller does not supply mixer state we derive it from the pattern
@@ -692,6 +768,7 @@ async function renderPatternOfflineOnce(
    * with music in it. `unmeasured` leaves everything as it was.
    */
   const gs1Verdict = isGs1RoutingEnabled() ? await ensureOfflineGs1Capability({ sampleRate: ctx.sampleRate }) : "unmeasured";
+  mark("gs1:capabilityProbe");
   const gs1Available = isGs1RoutingEnabled() && gs1Verdict !== "silent";
   if (!gs1Available && isGs1RoutingEnabled()) {
     console.warn(
@@ -818,6 +895,7 @@ async function renderPatternOfflineOnce(
     }
   }
   options.onGs1HostFailures?.(gs1HostFailures);
+  mark("gs1:hostBuild");
   options.onGs1PatchProblems?.(gs1PatchProblems);
   if (gs1PatchProblems.length > 0) {
     console.warn(`[render] refused GS-1 patch code(s): ${gs1PatchProblems.join(" | ")}`);
@@ -854,6 +932,7 @@ async function renderPatternOfflineOnce(
   /** The reasons the lane plan named, for the silence verdict below. */
   let audioLaneProblems: string[] = [];
 
+  const scheduleStartedAt = performance.now();
   // Step scheduling loop
   for (let step = 0; step < totalSteps; step++) {
     const unswungTime = stepTimeAt(step);
@@ -1209,6 +1288,9 @@ async function renderPatternOfflineOnce(
    *
    * The report is handed out rather than swallowed: a lane whose bytes could not be fetched or decoded is a fact the caller has to be able to state.
    */
+  mark("schedule:voices");
+  timings && (timings.phases["meta:scheduleWall"] = (timings.phases["meta:scheduleWall"] ?? 0) + (performance.now() - scheduleStartedAt));
+
   if (pattern.tracks?.some((track) => isAudioLane(track))) {
     plannedAudioLane = true;
     const audioCatalogue = options.audioLaneCatalogue ?? SAMPLE_CATALOGUE;
@@ -1278,10 +1360,22 @@ async function renderPatternOfflineOnce(
   // Wait for the limiter module before rendering: an OfflineAudioContext renders in
   // one shot, so a worklet that installed after `startRendering()` would silently
   // leave the whole bounce on the compressor fallback.
+  mark("audioLanes:loadDecodeSchedule");
+
   const limiterKind = await graph.limiter.ready;
+  if (timings) timings.meta = { ...(timings.meta ?? {}), limiterKind };
+  mark("limiter:ready");
   options.onLimiterKind?.(limiterKind);
 
+  timings?.onPhase?.("phase:enter", 0, performance.now() - renderStartedAt);
+  const renderWallStart = performance.now();
   const rendered = await ctx.startRendering();
+  const renderWallMs = performance.now() - renderWallStart;
+  mark("offline:startRendering");
+  if (timings) {
+    timings.phases["meta:startRenderingWall"] = (timings.phases["meta:startRenderingWall"] ?? 0) + renderWallMs;
+    timings.phases["meta:renderCallCount"] = (timings.phases["meta:renderCallCount"] ?? 0) + 1;
+  }
 
   /**
    * The section-boundary fade, applied to the rendered samples.
@@ -1356,8 +1450,24 @@ async function renderPatternOfflineOnce(
     return compensated;
   };
 
+  /** Set by whichever branch below finishes the render; `renderFinishedAt` is read after it for the one honest end-to-end number. */
+  let result: AudioBuffer;
+  let renderFinishedAt = 0;
+  const finish = (buffer: AudioBuffer): AudioBuffer => {
+    if (timings) {
+      renderFinishedAt = performance.now();
+      timings.phases["meta:totalWall"] = (timings.phases["meta:totalWall"] ?? 0) + (renderFinishedAt - renderStartedAt);
+      timings.phases["meta:toFinished"] = renderFinishedAt - renderStartedAt;
+      timings.lastFinishedAt = renderFinishedAt;
+      timings.onPhase?.("phase:finished", 0, renderFinishedAt - renderStartedAt);
+    }
+    return buffer;
+  };
+
   if (limiterKind === "worklet") {
-    return asRequested(compensate(rendered, graph.limiter.latencySamples)) as AudioBuffer;
+    result = asRequested(compensate(rendered, graph.limiter.latencySamples)) as AudioBuffer;
+    mark("post:buffers");
+    return finish(result);
   }
 
   /**
@@ -1379,7 +1489,9 @@ async function renderPatternOfflineOnce(
    * The guard delays by the same lookahead the worklet does, on purpose — it exists so a guarded render is aligned with a worklet one.
    * Trimming both by the same amount preserves that alignment and fixes the absolute position, which is the part PDC is about.
    */
-  return asRequested(compensate(out, guarded.latencySamples)) as AudioBuffer;
+  result = asRequested(compensate(out, guarded.latencySamples)) as AudioBuffer;
+  mark("post:offlineCeilingFallback");
+  return finish(result);
 }
 
 /**
