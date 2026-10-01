@@ -33,6 +33,18 @@ import { createRenderProgress, runWithProgress } from "../../mcp/render/progress
  */
 const renderCalls = vi.hoisted(() => [] as Array<Record<string, unknown>>);
 /**
+ * **The stub narrates itself exactly as the real renderer does, because the emission lives in the worker.**
+ *
+ * The progress call sites are inside `renderAudio` (`runWithProgress` around the page render), not in the server shell —
+ * so a stub that only throws would prove the token arrived and nothing else. This one reports through the reporter it
+ * was handed, which is what makes the transport test below a test of the real chain: server reads `_meta` → builds a
+ * reporter → hands it to the renderer → the renderer reports → the client receives `notifications/progress`.
+ */
+const renderStub = vi.hoisted(() => ({
+  /** Set by the test that wants the next stub call to speak. */
+  emit: undefined as undefined | ((reporter: unknown) => void),
+}));
+/**
  * The mock's own specifier has to be an absolute URL: the registry reaches the worker as `./render/worker` and this file
  * as `../../mcp/render/worker`, and with ESM those are two module identities. `import.meta.url` needs no import, so it
  * survives hoisting (a top-level `path.resolve(__dirname, …)` did not: the hoisted factory runs before `path` exists).
@@ -40,6 +52,11 @@ const renderCalls = vi.hoisted(() => [] as Array<Record<string, unknown>>);
 vi.mock(new URL("../../mcp/render/worker.ts", import.meta.url).pathname, () => ({
   renderAudio: async (_pattern: unknown, options: Record<string, unknown>) => {
     renderCalls.push(options);
+    const reporter = options.progress as { report: (progress: number, message: string) => void } | undefined;
+    if (renderStub.emit) {
+      renderStub.emit(reporter);
+      return {};
+    }
     throw new Error("stub: this test does not start a browser");
   },
   renderStems: async () => {
@@ -241,5 +258,86 @@ describe("the render tools hand the reporter to the renderer", () => {
     await expect(toolNamed("render_audio").handler({ genreId: "chicago-house" })).rejects.toThrow("stub");
     expect(renderCalls).toHaveLength(1);
     expect("progress" in (renderCalls[0] ?? {})).toBe(false);
+  });
+});
+
+/**
+ * **The token has to arrive, and the notification has to leave.**
+ *
+ * Everything above tests the pieces; this is the seam they are wired across, and it is the kind that fails silently: a
+ * server that read the token from the wrong field, or registered the tool without the second parameter, would pass every
+ * unit test above and never notify anybody. So the real `createServer` is driven by a real MCP `Client` over an
+ * in-memory transport, and what is asserted is what a client receives.
+ *
+ * `_meta` belongs to the **request params**, not to the transport options: SDK >= 1.30 has no `onprogress` and no options
+ * field for it (`Protocol.request({ method, params }, …)`), so a token sent any other way never arrives at all. The token
+ * here is a number because this SDK's client looks its progress handler up by `Number(token)` (`shared/protocol.js`,
+ * `_onprogress`), so an opaque string token is reported as an unknown token and dropped — the spec allows either type and
+ * the server echoes what it was sent, so the description does not promise a type.
+ *
+ * The renderer is the stub from `vi.mock`, which reports through the reporter it was handed exactly as `renderAudio` does
+ * (`runWithProgress` around the page render); the emission sites are in the worker, so a stub that only threw would prove
+ * the token arrived and nothing more.
+ */
+async function withProgressClient<T>(
+  run: (call: (meta?: Record<string, unknown>) => Promise<{ isError?: boolean }>, received: unknown[]) => Promise<T>
+): Promise<T> {
+  const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
+  const { InMemoryTransport } = await import("@modelcontextprotocol/sdk/inMemory.js");
+  const { ProgressNotificationSchema } = await import("@modelcontextprotocol/sdk/types.js");
+  const { createServer } = await import("../../mcp/server");
+
+  const server = createServer();
+  const client = new Client({ name: "progress-probe", version: "1.0.0" });
+  const received: unknown[] = [];
+  client.setNotificationHandler(ProgressNotificationSchema, (notification) => {
+    received.push(notification.params);
+  });
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+  try {
+    const call = (meta?: Record<string, unknown>) =>
+      client.callTool({
+        name: "render_audio",
+        arguments: { genreId: "chicago-house" },
+        ...(meta ? { _meta: meta } : {}),
+      }) as Promise<{ isError?: boolean }>;
+    return await run(call, received);
+  } finally {
+    await client.close();
+    await server.close();
+  }
+}
+
+describe("the server turns a request's progressToken into notifications", () => {
+  it("sends notifications/progress when the request carries a token", async () => {
+    // The first phase of a real render: a cold start announced before it is waited on.
+    renderStub.emit = (reporter) => (reporter as { report: (n: number, m: string) => void }).report(0, "starting the renderer (Vite + Chromium)");
+    try {
+      await withProgressClient(async (call, received) => {
+        const result = await call({ progressToken: 4242 });
+        expect(result.isError, "the stub returns a rendered file, so the call succeeds").toBeFalsy();
+        const notifications = received as Array<{ progressToken?: string | number; progress?: number; message?: string }>;
+        expect(notifications.length, "a token-carrying render must not be silent").toBeGreaterThanOrEqual(1);
+        expect(notifications[0]?.progressToken).toBe(4242);
+        expect(notifications[0]?.message).toContain("starting the renderer");
+      });
+    } finally {
+      renderStub.emit = undefined;
+    }
+  });
+
+  it("sends none when the request carries no token", async () => {
+    // The stub still tries to report; the server handed it no reporter, so nothing can leave.
+    renderStub.emit = (reporter) => (reporter as { report?: unknown } | undefined)?.report;
+    try {
+      await withProgressClient(async (call, received) => {
+        const result = await call();
+        expect(result.isError).toBeFalsy();
+        expect(received, "a token-less render must be silent").toEqual([]);
+      });
+    } finally {
+      renderStub.emit = undefined;
+    }
   });
 });
