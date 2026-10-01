@@ -57,7 +57,7 @@ import { ChannelStrip } from "./ChannelStripDsp";
 import { resolveTrackInsertForGenre } from "../data/genreInsert";
 import { resolveGroupBus } from "./trackBuses";
 import { createGs1Host, type Gs1Host } from "./gs1/Gs1Host";
-import { capPlanPolyphony, applyGs1VoiceRoutes, isGs1RoutingEnabled, planGs1Notes, patchNeedsSample, resolveGs1Lane, type Gs1Voice } from "./gs1/gs1Tracks";
+import { capPlanPolyphony, applyGs1Voice, isGs1RoutingEnabled, planGs1Notes, patchNeedsSample, resolveGs1Lane, type Gs1Voice } from "./gs1/gs1Tracks";
 import { generateTextureSample } from "./gs1/textureSample";
 import { applyGenreFxToGraph, resolveGenreFx } from "../data/genreFx";
 import { scheduleOfflineAudioLanes, isAudioLane, type OfflineAudioLaneReport } from "./offlineAudioLanes";
@@ -1193,11 +1193,12 @@ async function renderPatternOfflineOnce(
       /**
        * The genre decides how a lane is voiced here too, from the pattern's own `genre_id` — the same
        * answer the live engine gives, which is the parity this function exists to keep. A lane's own
-       * `gs1Patch` share code wins over the table, and a code that cannot be read is **reported**
-       * rather than absorbed into the same `null` an unrouted instrument produces.
+       * `gs1Patch` share code wins over the table, its `gs1PatchOverrides` ride with it, and either one
+       * that cannot be read is **reported** rather than absorbed into the same `null` an unrouted
+       * instrument produces.
        */
       const lane = track
-        ? resolveGs1Lane(track.track_id, track.instrument, pattern.genre_id, track.gs1Patch)
+        ? resolveGs1Lane(track.track_id, track.instrument, pattern.genre_id, track.gs1Patch, track.gs1PatchOverrides)
         : ({ kind: "native" } as const);
       if (lane.kind === "problem") {
         const laneName = track?.laneId ?? track?.track_id ?? `track ${t}`;
@@ -1264,9 +1265,12 @@ async function renderPatternOfflineOnce(
        * would render something `gs1.render` would not for the same code. `applyGs1VoiceRoutes`
        * writes all eight slots (clearing the unused ones), so two different codes cannot inherit
        * each other's feel.
+       *
+       * One call, not three: `applyGs1Voice` is also where the lane's **per-parameter overrides**
+       * are written, through the host's own `setParam`, so the file carries the effective values and
+       * not merely the base code (see `gs1ParamOverrides.ts` for why route ② was chosen).
        */
-      host.setPatch(voice.params);
-      applyGs1VoiceRoutes(host, voice);
+      applyGs1Voice(host, voice);
       gs1Voices.set(t, voice);
       /**
        * A sample patch needs its recording (P2.5). Imported **before** the host joins the graph, so the first note

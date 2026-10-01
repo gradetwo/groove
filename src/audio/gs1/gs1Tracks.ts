@@ -26,6 +26,13 @@ import type { MixTrackId } from "../../data/genreMix";
 import { gs1VelocityRoute, resolveGs1Patch, type Gs1Patch, type Gs1PatchName } from "../../data/gs1Patches";
 import { MAX_ROUTES } from "../../../vendor/gs1/src/audio/params";
 import { decodeGs1PatchCode, type Gs1PatchRoute } from "./gs1PatchCode";
+import {
+  applyGs1ParamOverrides,
+  gs1OverridesKey,
+  hasGs1Overrides,
+  resolveGs1PatchOverrides,
+  type ResolvedGs1Overrides,
+} from "./gs1ParamOverrides";
 import type { Gs1Host } from "./Gs1Host";
 
 /** Voices the E3 measurement says one GS-1 instance can sustain alongside the full 8-track app. */
@@ -117,6 +124,15 @@ export interface Gs1Voice {
    * would not, which is the same lie as ignoring the code's parameters.
    */
   routes?: Gs1PatchRoute[];
+  /**
+   * This lane's **per-parameter overrides**, resolved to the engine's own ids and wire values.
+   *
+   * Kept as a separate layer rather than folded into `params`: the base record is what `setPatch`
+   * receives, these are what `setParam`/`setModRoute` receive after it, and the engine's own
+   * `getParam` read-back is therefore the evidence that they landed (see `gs1ParamOverrides.ts` for
+   * why route ② was chosen over re-encoding the code).
+   */
+  overrides?: ResolvedGs1Overrides;
 }
 
 export interface Gs1Plan {
@@ -126,6 +142,8 @@ export interface Gs1Plan {
   velToCutoff?: number;
   /** The resolved code's own routes, when the lane carried a share code. */
   routes?: Gs1PatchRoute[];
+  /** The lane's per-parameter overrides, carried so every host applies the same ones. */
+  overrides?: ResolvedGs1Overrides;
   /**
    * The patch's identity for a live swap check: the share code when there is one, else the patch
    * name. `patch` alone cannot distinguish two different share codes, both of which are `null`.
@@ -146,7 +164,12 @@ export interface Gs1Plan {
 export type LaneGs1Resolution =
   | { kind: "voice"; voice: Gs1Voice }
   | { kind: "native" }
-  | { kind: "problem"; code: string; problem: string };
+  | {
+      kind: "problem";
+      /** The lane's share code, when the problem is with the code itself (absent for an override-only lane). */
+      code?: string;
+      problem: string;
+    };
 
 export interface Gs1PlanOptions {
   role: MixTrackId | string | null | undefined;
@@ -181,6 +204,14 @@ export interface Gs1PlanOptions {
    * returns). Optional: absent keeps the instrument-table answer exactly as before.
    */
   patchCode?: string;
+  /**
+   * The lane's per-parameter overrides, in the shape `SequencerTrack.gs1PatchOverrides` stores.
+   *
+   * Only used when this function resolves for itself (`voice` absent): a caller that already has a
+   * resolved voice is carrying the overrides on it. Present so that a caller cannot pass a code and
+   * have its overrides silently dropped by the self-resolving path.
+   */
+  overrides?: unknown;
   /**
    * An already-resolved voice, from {@link resolveGs1Lane}.
    *
@@ -217,7 +248,8 @@ export function planGs1Notes(options: Gs1PlanOptions): Gs1Plan | null {
    * that collected it from {@link resolveGs1Lane} is the one that reports it, and playing the
    * native engine silently is exactly what that report exists to prevent.
    */
-  const voice = options.voice ?? laneVoice(resolveGs1Lane(role, instrument, options.genreId, options.patchCode));
+  const voice =
+    options.voice ?? laneVoice(resolveGs1Lane(role, instrument, options.genreId, options.patchCode, options.overrides));
   if (!voice) return null;
 
   const latency = Math.max(0, Math.round(options.latencyFrames ?? 0));
@@ -247,6 +279,7 @@ export function planGs1Notes(options: Gs1PlanOptions): Gs1Plan | null {
     params: voice.params,
     velToCutoff: voice.velToCutoff,
     ...(voice.routes ? { routes: voice.routes } : {}),
+    ...(voice.overrides ? { overrides: voice.overrides } : {}),
     patchKey: patchKeyOf(voice),
     notes: planned,
   };
@@ -259,7 +292,15 @@ function laneVoice(resolution: LaneGs1Resolution): Gs1Voice | null {
 
 /** A voice's identity for a live swap check: the share code, else the named patch. */
 export function patchKeyOf(voice: Gs1Voice): string | null {
-  return voice.code ?? voice.patch;
+  const base = voice.code ?? voice.patch;
+  /**
+   * …plus the overrides, when there are any. Two lanes can carry the **same** code with different
+   * per-parameter overrides, and a swap check that compared codes alone would call the second lane
+   * "the same sound" and never write its overrides (`Gs1VoicePool.tryPlay`). With no overrides the
+   * key is exactly what it always was, so nothing else moves.
+   */
+  const overrides = gs1OverridesKey(voice.overrides);
+  return overrides ? `${base ?? ""}#${overrides}` : base;
 }
 
 /**
@@ -304,8 +345,8 @@ export function gs1PatchFor(
 }
 
 /**
- * ⭐ **The single resolution seam.** One lane — its role, instrument, genre and optional share
- * code — becomes one {@link Gs1Voice}, or a reported reason why it cannot.
+ * ⭐ **The single resolution seam.** One lane — its role, instrument, genre, optional share code and
+ * optional per-parameter overrides — becomes one {@link Gs1Voice}, or a reported reason why not.
  *
  * Before this function there were two lookups that were *expected* to agree: `WavExporter` resolved
  * a patch to build the host and `planGs1Notes` resolved one again to plan the notes. That is
@@ -318,15 +359,29 @@ export function gs1PatchFor(
  *
  *   * `voice`   — play this;
  *   * `native`  — this lane was never GS-1's, exactly as `resolveGs1Patch`'s `null` has always meant;
- *   * `problem` — the lane **named a patch** and it cannot be honoured. Never a silent fall back to
- *                 the native engine: that is what makes a typo invisible today.
+ *   * `problem` — the lane **named a patch or an override** and it cannot be honoured. Never a silent
+ *                 fall back to the native engine: that is what makes a typo invisible today.
+ *
+ * The overrides are resolved **here**, once, and travel on the voice: the exporter, the live pool and
+ * `validate_pattern` all read this one answer, so an override cannot reach the room and miss the file.
  */
 export function resolveGs1Lane(
   role: string | null | undefined,
   instrument: string | null | undefined,
   genreId?: string | null,
-  patchCode?: string | null
+  patchCode?: string | null,
+  overrideSetting?: unknown
 ): LaneGs1Resolution {
+  const overrides = resolveGs1PatchOverrides(overrideSetting);
+  if (!overrides.ok) {
+    return {
+      kind: "problem",
+      ...(typeof patchCode === "string" && patchCode.trim() !== "" ? { code: patchCode } : {}),
+      problem: `its per-parameter overrides cannot be read: ${overrides.problem}`,
+    };
+  }
+  const overrideRows = overrides.overrides;
+
   if (typeof patchCode === "string" && patchCode.trim() !== "") {
     const decoded = decodeGs1PatchCode(patchCode);
     if (!decoded.ok) return { kind: "problem", code: patchCode, problem: decoded.problem };
@@ -334,26 +389,85 @@ export function resolveGs1Lane(
      * A code on a lane the engine never schedules would be silence, not a sound: the exporter's
      * drum and bass branches never ask GS-1 for notes. Refusing it is the honest answer.
      */
-    if (role !== "chords" && role !== "lead" && role !== "fx" && role !== "texture") {
+    if (!GS1_SCHEDULED_ROLES.has(String(role))) {
       return {
         kind: "problem",
         code: patchCode,
         problem: `a "${String(role)}" lane is not voiced by GS-1, so a patch on it would never sound`,
       };
     }
+    const routes =
+      overrideRows.routes.length > 0
+        ? withRouteOverrides(decoded.patch.routes, overrideRows)
+        : decoded.patch.routes;
     return {
       kind: "voice",
       voice: {
         patch: null,
         params: decoded.patch.params,
         code: patchCode,
-        ...(decoded.patch.routes.length ? { routes: decoded.patch.routes } : {}),
+        ...(routes && routes.length ? { routes } : {}),
+        ...(hasGs1Overrides(overrideRows) ? { overrides: overrideRows } : {}),
       },
     };
   }
 
   const resolved = resolveRoutedPatch(role, instrument, genreId);
-  return resolved ? { kind: "voice", voice: { ...resolved } } : { kind: "native" };
+  if (!resolved) {
+    /**
+     * A lane whose instrument the table keeps native, carrying overrides, is the same defect as a
+     * share code on a `kick`: the caller named GS-1 parameters that GS-1 will never play. Reported,
+     * not absorbed — an override that silently does nothing is worse than one that is refused.
+     */
+    if (hasGs1Overrides(overrideRows)) {
+      const count = overrideRows.parameters.length + overrideRows.routes.length;
+      return {
+        kind: "problem",
+        problem: `a "${String(role)}" lane with instrument "${String(instrument)}" is not voiced by GS-1, so its ${count} override${count === 1 ? "" : "s"} would never sound`,
+      };
+    }
+    return { kind: "native" };
+  }
+  /**
+   * The base routing is whatever `applyGs1VoiceRoutes` would have written with no overrides — the
+   * table patch's velocity response on slot 0 — so a route override *layers* on the patch instead of
+   * deleting its feel. With no route overrides `routes` stays absent, exactly as before.
+   */
+  const velocity = gs1VelocityRoute(resolved.velToCutoff);
+  const routes = withRouteOverrides([], overrideRows, velocity ? { ...velocity, enabled: true } : null);
+  return {
+    kind: "voice",
+    voice: {
+      ...resolved,
+      ...(routes ? { routes } : {}),
+      ...(hasGs1Overrides(overrideRows) ? { overrides: overrideRows } : {}),
+    },
+  };
+}
+
+/** Roles GS-1 is actually scheduled for — the gate a patch or an override has to pass. */
+const GS1_SCHEDULED_ROLES = new Set(["chords", "lead", "fx", "texture"]);
+
+/**
+ * The route rows a voice is wired with: the base patch's own rows, with the lane's route overrides
+ * folded in **by slot**. `undefined` when the lane carries no route overrides, so every existing
+ * voice keeps the exact routing it had.
+ *
+ * The array is deliberately left sparse when an override names a high slot with none below it:
+ * `applyGs1VoiceRoutes` walks all eight slots and clears every hole, which is what stops a previous
+ * patch's routing from lingering.
+ */
+function withRouteOverrides(
+  base: readonly Gs1PatchRoute[],
+  overrides: ResolvedGs1Overrides,
+  fallback: Gs1PatchRoute | null = null
+): Gs1PatchRoute[] | undefined {
+  if (overrides.routes.length === 0) return undefined;
+  const merged: Gs1PatchRoute[] = base.length > 0 ? [...base] : fallback ? [fallback] : [];
+  for (const route of overrides.routes) {
+    merged[route.index] = { src: route.src, dst: route.dst, amount: route.amount, enabled: route.enabled };
+  }
+  return merged;
 }
 
 /**
@@ -375,6 +489,28 @@ export function applyGs1VoiceRoutes(host: Pick<Gs1Host, "setModRoute">, voice: P
   const route = gs1VelocityRoute(voice.velToCutoff);
   host.setModRoute(0, route?.src ?? 3, route?.dst ?? 0, route?.amount ?? 0, Boolean(route));
   for (let slot = 1; slot < MAX_ROUTES; slot += 1) host.setModRoute(slot, 0, 0, 0, false);
+}
+
+/**
+ * ⭐ **The single application point.** A resolved voice becomes engine state: the base patch through
+ * `setPatch`, the lane's per-parameter overrides through `setParam`/`setModRoute`, the routing last.
+ *
+ * One function with two call sites (the offline exporter and the live pool), exactly like
+ * `applyGs1VoiceRoutes` before it, because the alternative — each caller deciding what to write —
+ * is how the room and the file come to disagree. Order matters: the base first, then the overrides
+ * *on top of it*; writing the overrides first would be overwritten by `setPatch`'s full record.
+ *
+ * The read-back is the proof: after this call, `host.getParam(id)` returns the override for an
+ * overridden id and the base value for every other one (`gs1ParamOverrides.test.ts` asserts both,
+ * on a real `Gs1Host`, for all 224).
+ */
+export function applyGs1Voice(
+  host: Pick<Gs1Host, "setPatch" | "setParam" | "setModRoute">,
+  voice: Pick<Gs1Voice, "params" | "routes" | "velToCutoff" | "overrides">
+): void {
+  host.setPatch(voice.params);
+  applyGs1ParamOverrides(host, voice.overrides);
+  applyGs1VoiceRoutes(host, voice);
 }
 
 /** Whether a patch plays an **imported sample**, and therefore cannot sound until one is loaded. */

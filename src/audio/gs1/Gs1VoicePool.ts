@@ -41,7 +41,7 @@ import { captureRequested } from "../../platform/probeHooks";
 import { createGs1Host, type Gs1Host } from "./Gs1Host";
 import {
   GS1_POLYPHONY_CEILING,
-  applyGs1VoiceRoutes,
+  applyGs1Voice,
   capPlanPolyphony,
   isGs1RoutingEnabled,
   patchNeedsSample,
@@ -284,7 +284,15 @@ export class Gs1VoicePool {
      * it travels to the exporter: the room and the file must resolve a lane through **one** seam, or
      * a lane carrying a patch is GS-1 in the render and something else in the room.
      */
-    patchCode?: string
+    patchCode?: string,
+    /**
+     * The lane's **per-parameter overrides** (`SequencerTrack.gs1PatchOverrides`).
+     *
+     * Last and optional, like `patchCode`, so every existing caller keeps working. It has to arrive
+     * here and not only at the exporter: the room and the file must resolve a lane through one seam,
+     * and a lane whose overrides reached only the file would be two different sounds.
+     */
+    overrides?: unknown
   ): boolean {
     if (this.disposed || !isGs1RoutingEnabled()) return false;
     const slot = this.slots.get(trackIdx);
@@ -297,7 +305,7 @@ export class Gs1VoicePool {
        * and handed to `planGs1Notes` as `voice`, so the patch pushed to the host and the patch the
        * notes were planned under are one object and not two lookups that must agree.
        */
-      const lane = resolveGs1Lane(role, instrument, this.genreId, patchCode);
+      const lane = resolveGs1Lane(role, instrument, this.genreId, patchCode, overrides);
       if (lane.kind === "problem") {
         // The lane named a patch that cannot be read: say so, play it natively, and never pretend
         // the request was honoured.
@@ -328,13 +336,16 @@ export class Gs1VoicePool {
         return false;
       }
       if (slot.patchKey !== plan.patchKey) {
-        slot.host.setPatch(plan.params);
         /**
-         * …and the routing with it, **including when there is none**: a patch swap must clear the previous route or
-         * the next instrument inherits the last one's feel. A share code carries the synth's own routes, and
+         * One call writes the base patch, the lane's per-parameter overrides and the routing —
+         * **including when there is none**: a patch swap must clear the previous route or the next
+         * instrument inherits the last one's feel. A share code carries the synth's own routes, and
          * `applyGs1VoiceRoutes` writes all eight slots, so two different codes cannot blend.
+         *
+         * `patchKey` carries the overrides too (`patchKeyOf`), so two lanes sharing one code with
+         * different overrides are not mistaken for the same sound and skipped.
          */
-        applyGs1VoiceRoutes(slot.host, plan);
+        applyGs1Voice(slot.host, plan);
         slot.patchKey = plan.patchKey;
         /**
          * A sample patch needs its recording (P2.5). Not awaited: this runs inside the scheduler, and the native
