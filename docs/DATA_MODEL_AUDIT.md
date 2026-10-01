@@ -90,3 +90,28 @@ src/types/song.ts:191  "The ramp is folded in here rather than carried alongside
   2. **在 MCP 的工具 schema 描述里把这条说给调用者** ✓✓——**因为报告人的痛本来就在那里 ✓**，**而一个字段名说明白的成本是零 ✓**。
 
 **⇒ 记在这里而不是悄悄放弃** ✓：**"该抛就抛"是对的 ✓，但抛之前要知道它有多重 ✓——734 处，而它要换来的那点收益有更便宜的拿法 ✓✓。**
+
+---
+
+## §2.1 ⭐⭐ 业主要求：**如果 Sequencer 老的设计限制 arrangement，就抛弃老的** —— 实测确有两条（2026-10-01）
+
+**业原话** ✓："**之前很多设计都是 Sequencer 视角，现在我们是 arrangement 视角，如果这两个矛盾或者 Sequencer 老的一些设计影响或者限制 arrangement，那么就果断抛弃老的。**" ✓✓
+
+**⇒ 而这条不是口号，它点到了两条实测存在的限制** ✓✓：
+
+### 限制一：**投影只留起点与一个音高，时值靠 `gate`，而 `gate` 只给 sampler 轨** ✗✓✓
+
+* **`src/data/noteEvents.ts:66-77` `stepsFromNotes`** ✓：**产出 `steps`（0/1）与 `pitches`（每列一个音高 ✓）——`lengthBeats` **根本不进去**** ✗**；**它自己的注释（`:100-102`）写着**："**Notes beyond `stepCount` are ignored here … they are a **length problem**, not a collapse**"** ✓**——作者知道时值是这条投影的牺牲品 ✓**；
+* **`src/data/arrangementCompile.ts:160-166`** ✓：**时值被救进 `gate`** ✓（`:178-180` `note.lengthBeats / STEP_BEATS` → `gate[step]` ✓）——**但同一段注释写明**："**Only the sampler lane is given a gate**" ✗✓✓，**并描述了后果**："**a note the arrangement holds for a beat came out an eighth of that**" ✓✓；
+* **⇒ 所以今天：arrangement 上一个长音，在**sampler 轨**上能活到 `gate` ✓，在**合成器轨**上则丢掉时值 ✗**——**同一个模型，两种命运 ✓**。
+
+### 限制二：**`MAX_NOTE_GATE_STEPS = 16` 再把 `gate` 砍到一小节** ✗✓✓
+
+* **`src/types/genre.ts:47` = 16** ✓；**`src/audio/AudioEngine.ts:2139`** `Math.max(0.05, Math.min(MAX_NOTE_GATE_STEPS, durationSeconds / stepDur))` ✓；**`src/features/sequencer/rollModel.ts:282`** `Math.min(MAX_NOTE_GATE_STEPS, gate)` ✓——**两处都在**消费端**裁剪 ✓**；
+* **⇒ 即使 `gate` 拿到了 4 小节的值，它也会在渲染前被压回 1 小节 ✓**——**这与第一份意见第 2 条的观察完全一致 ✓**。
+
+### 因此**计划改了** ✓✓
+
+**第 2 条此前被我定位为"栅格模型的有意限制，写清即可"** ✗——**按业主这条指示，它应当被拆掉** ✓✓：**它不是"栅格自己的规矩"，而是**老模型对新模型的限制** ✓**（**新的模型有 `lengthBeats`，而渲染链里有三处把长度当成"步的属性"处理 ✗**）。
+
+**拆法的第一步（可判、且不猜）** ✓✓：**把三处 `MAX_NOTE_GATE_STEPS` 的使用分成两类** ✓——**哪些是**栅格自己的编辑上限**（钢琴卷帘的拖拽手感 ✓）、哪些是**渲染的硬上限**（`AudioEngine` ✓）**——**前者留着 ✓，后者对**来自 arrangement 的音符**放开 ✓✓**。**判据**：**一个 4 小节的音，经 arrangement 渲染后必须仍然是 4 小节** ✓（**今天它在合成器轨上丢时值 ✗、在 sampler 轨上被裁到 1 小节 ✗**）。

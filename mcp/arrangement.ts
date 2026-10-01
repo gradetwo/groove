@@ -808,6 +808,49 @@ function refuseUnknownTrack(arrangement: ArrangementV2, trackId: string, apply: 
  * The chain is the application's own: `compileArrangementToSongInput` projects the tracks onto the eight v1 roles, `createSong` wraps them as one clip and one section, and `flattenSong` turns that into the pattern `renderAudio` takes. Nothing here invents a
  * second renderer, which is the rule the whole MCP render surface follows.
  */
+/**
+ * ⭐ **The notes that sound inside a bar span, so a render can cover part of an arrangement.**
+ *
+ * `render_arrangement` renders the whole thing, and its `bars` argument is a **pass count** rather than a span —
+ * a caller wanting bars 8 to 16 of a long piece has no way to ask. The web has a loop range; this is the MCP
+ * side of the same idea, and it belongs here rather than in the tool because the note-to-step mapping is the
+ * flatten's, and re-deriving it in the tool is how an off-by-one-bar gets in
+ * (`docs/AUDITION_AUDIT.md` §6).
+ *
+ * Three decisions, each of which could be quietly wrong:
+ *
+ *   * **The end is exclusive**, matching `assignMcpTakeRange`'s own convention and the `endBar` on a take.
+ *   * **A note that starts before the span but sustains into it is included.** A pad is exactly the case someone
+ *     auditions bars of, and dropping it because its onset is one bar earlier would make a preview that does not
+ *     match what plays.
+ *   * **Nothing is clipped.** A note that begins before the span keeps its own start, so the render is what the
+ *     arrangement actually says rather than a rearrangement of it. That is also why the reply says the range
+ *     covers a span rather than claiming the audio starts at zero.
+ */
+export function notesInBarRange(
+  notesByTrack: Record<string, readonly NoteEvent[]>,
+  range: { startBar: number; endBar: number },
+  beatsPerBar: number
+): Record<string, NoteEvent[]> {
+  if (!(range.endBar > range.startBar)) {
+    throw new Error(`the range must end after it starts (got ${range.startBar} to ${range.endBar})`);
+  }
+  if (!(beatsPerBar > 0) || !(range.startBar >= 0)) {
+    throw new Error(`a range needs a positive bar length and a non-negative start (got ${range.startBar}, ${beatsPerBar})`);
+  }
+  const startBeat = range.startBar * beatsPerBar;
+  const endBeat = range.endBar * beatsPerBar;
+
+  const kept: Record<string, NoteEvent[]> = {};
+  for (const [trackId, notes] of Object.entries(notesByTrack)) {
+    // ⭐ The sustain test is the whole point: a note is in the span when it is still sounding inside it, not
+    // only when it begins there.
+    const inside = notes.filter((note) => note.startBeats < endBeat && note.startBeats + note.lengthBeats > startBeat);
+    if (inside.length > 0) kept[trackId] = [...inside];
+  }
+  return kept;
+}
+
 export function flattenMcpArrangement(arrangementId: string): { flattened: FlattenedSong; bars: number } {
   const arrangement = requireArrangement(arrangementId);
   if (arrangement.tracks.length === 0) throw new Error("this arrangement has no tracks, so there is nothing to render");
