@@ -1,4 +1,5 @@
 import { CLIP_SLOTS } from "../src/types/song";
+import { DEFAULT_NOTE_CONVENTION, type NoteConvention } from "../src/data/pitchTruth";
 /**
  * B6 — the song surface an agent composes with.
  *
@@ -71,6 +72,15 @@ export interface SongSummary {
   songId: string;
   name: string;
   genreId: string;
+  /**
+   * ⭐ **Which name this project gives note 60** — reported always, and `"C4"` when the project states none.
+   *
+   * A reader has to know which convention produced the names in front of them; that is the whole reason this
+   * is on the summary rather than left implicit.
+   */
+  noteConvention: NoteConvention;
+  /** Present only when the project states no convention: says so, and says that nothing needs migrating. */
+  pitchNote?: string;
   bpm: number;
   swing: number;
   /** Clip slots that hold a pattern. */
@@ -109,6 +119,21 @@ export function summariseSong(song: Song): SongSummary {
     songId: song.id,
     name: song.name,
     genreId: song.genreId,
+    /**
+     * ⭐ **The one display choice a project carries, and the sentence an older project deserves.**
+     *
+     * A project that states no convention reads as C4 — the default, and what every project meant before the
+     * field existed. Reporting that is the whole of "migrate and tell": there is nothing to convert, because a
+     * convention is a label and the note numbers are the truth. What a reader needs is to know which convention
+     * produced the names in front of them, which is why this is reported rather than assumed silently.
+     */
+    noteConvention: song.noteConvention ?? DEFAULT_NOTE_CONVENTION,
+    ...(song.noteConvention === undefined
+      ? {
+          pitchNote:
+            "this project states no convention, so its names are read as C4 (note 60 is C4). Nothing about the music differs and no migration is needed: a convention is a label, and the note numbers are unchanged by it.",
+        }
+      : {}),
     bpm: song.bpm,
     swing: song.swing,
     clips: Object.keys(song.clips ?? {}),
@@ -472,6 +497,36 @@ export function setMcpTempo(
   rememberSong(song.id, "set_tempo");
   songs.set(song.id, next);
   return { summary: summariseSong(next), problems: [] };
+}
+
+/**
+ * ⭐ **Set or clear the project's note-name convention** — the one display choice a project carries.
+ *
+ * Clearing **removes the key** rather than storing the default, so a project that never stated a convention and
+ * one whose statement was cleared are byte-identical. That is the same rule `set_tempo` follows for its map,
+ * and it is why an old project needs no migration: `"C4"` is what its absence already means.
+ *
+ * **Nothing about the music moves.** This is the label a reader sees; `src/data/pitchTruth.ts` is the single
+ * place a convention is applied, and its criterion pins that the frequency is identical under all three. The
+ * summary comes back so a caller sees the effect at once — including the note that fires while a project still
+ * states none.
+ */
+export function setMcpNoteConvention(
+  songId: string,
+  convention: NoteConvention | undefined
+): { summary: SongSummary } {
+  const song = songs.get(songId);
+  if (!song) throw new Error(`no song "${songId}"`);
+  const next: Song =
+    convention === undefined
+      ? (() => {
+          const { noteConvention: _drop, ...rest } = song;
+          return rest as Song;
+        })()
+      : { ...song, noteConvention: convention };
+  rememberSong(song.id, "set_note_convention");
+  songs.set(song.id, next);
+  return { summary: summariseSong(next) };
 }
 
 /**

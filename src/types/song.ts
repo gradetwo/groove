@@ -141,6 +141,19 @@ export interface Song {
   clips: Partial<Record<ClipSlot, SequencerPattern>>;
   sections: SongSection[];
   loopRange: [number, number] | null;
+  /**
+   * ⭐ **Which name this project gives a note number** — the one display choice a project has to carry.
+   *
+   * Additive and absent by default: a project without it reads as `"C4"`, exactly as every project did before
+   * the field existed, so an old file or share link stays valid and needs no migration. Same shape and same
+   * reason as `tempoTrack` above.
+   *
+   * **It is a label and nothing else.** Note numbers are the truth, and this never reaches a frequency, a
+   * render or an export: `src/data/pitchTruth.ts` is the single place a convention is applied, and its
+   * criterion pins that switching conventions leaves the frequency identical. So there is nothing to migrate
+   * in a project that states none — only a reader to tell which convention they are looking at.
+   */
+  noteConvention?: "C4" | "C3" | "C5";
 }
 
 /** A section longer than this is a mistake, not an arrangement (and it would allocate minutes of audio). */
