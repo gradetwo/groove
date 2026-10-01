@@ -35,7 +35,15 @@ function unknownGenre(wanted: string): string {
 }
 import { applyPatternOps, comparePatterns, findTrack, patternStatistics, validatePattern, type PatternOp } from "./pattern";
 import { resolveGs1Lane } from "../src/audio/gs1/gs1Tracks";
-import { DEFAULT_PARAMS } from "../vendor/gs1/src/audio/params";
+import { decodeGs1PatchCode, type Gs1PatchRoute } from "../src/audio/gs1/gs1PatchCode";
+import {
+  gs1ParameterReadings,
+  gs1RouteOverrideReadings,
+  gs1RouteReadings,
+  mergeGs1Overrides,
+  type ResolvedGs1Overrides,
+} from "../src/audio/gs1/gs1ParamOverrides";
+import { DEFAULT_PARAMS, MAX_ROUTES } from "../vendor/gs1/src/audio/params";
 import { patternFromGenre } from "../src/data/genreMix";
 import { MAX_BARS } from "../src/data/arrangementEdits";
 import { generateMelody } from "./melody";
@@ -113,6 +121,68 @@ export function failure(message: string): { content: Array<{ type: "text"; text:
 }
 
 /**
+ * One GS-1 sound, described in terms a creator can act on rather than as a vector of 224 numbers.
+ *
+ * The counts are exact for **both** kinds of base, which was checked rather than assumed: the
+ * worklet's own `PARAMS` table (`vendor/gs1/src/audio/worklet-processor.js`) serves exactly the 224
+ * ids of `DEFAULT_PARAMS` and its `defaultValue` agrees with `DEFAULT_PARAMS[id]` for **all 224**
+ * (0 mismatches, measured with `vendor/gs1/src/audio/params.ts` imported at runtime), so a sparse
+ * instrument-table patch leaves the ids it does not name at the synth's default value and
+ * "parametersAtDefault" is not a guess.
+ */
+function describeGs1Sound(input: {
+  source: "code" | "lane" | "table";
+  shareCode: string | null;
+  tablePatch: string | null;
+  params: Record<number, number>;
+  routes: Gs1PatchRoute[];
+  overrides: ResolvedGs1Overrides | undefined;
+  includeUnchanged: boolean;
+  instrument: string | null;
+  track: string | null;
+}): Record<string, unknown> {
+  const baseKind = input.source === "table" ? "table patch" : "share code";
+  const parameters = gs1ParameterReadings(input.params, input.overrides, baseKind, input.includeUnchanged);
+  const routes = gs1RouteReadings(input.routes);
+  const overrideCount = (input.overrides?.parameters.length ?? 0) + (input.overrides?.routes.length ?? 0);
+  const effective = mergeGs1Overrides(input.params, input.overrides);
+  const total = Object.keys(DEFAULT_PARAMS).length;
+  const changed = Object.entries(effective).filter(([id, value]) => value !== DEFAULT_PARAMS[Number(id)]).length;
+  const base =
+    input.source === "table"
+      ? `the instrument table's "${String(input.tablePatch)}"`
+      : input.source === "lane"
+        ? "its own share code"
+        : "this share code";
+  return {
+    ...(input.track ? { track: input.track } : {}),
+    instrument: input.instrument,
+    voiced: true,
+    patch: {
+      kind: base,
+      shareCode: input.shareCode,
+      tablePatch: input.tablePatch,
+      parametersChanged: changed,
+      parametersAtDefault: total - changed,
+    },
+    overrides:
+      overrideCount > 0
+        ? {
+            parameters: gs1ParameterReadings({}, input.overrides, baseKind, true),
+            routes: gs1RouteOverrideReadings(input.overrides?.routes),
+          }
+        : null,
+    parameters,
+    routes,
+    detail:
+      `${input.track ? `lane "${input.track}"` : "this code"} plays ${base}: ` +
+      `${changed} of ${total} parameters away from the synth's default patch` +
+      (overrideCount > 0 ? `, ${overrideCount} of them written as overrides` : "") +
+      (routes.length > 0 ? `, and ${routes.length} modulation row${routes.length === 1 ? "" : "s"}` : ""),
+  };
+}
+
+/**
  * The pattern schema: the fields that are checked, and everything else passed through.
  *
  * A pattern is a document the app reads back rather than a request, so both objects are permissive. Zod drops
@@ -149,6 +219,33 @@ const patternSchema = z
               .string()
               .optional()
               .describe('a GS-1 patch share code ("gs1.1.…", from the synth\'s gs1.patch.get) for this lane — overrides the instrument table'),
+            /**
+             * The per-parameter layer. Typed here so a non-number reaches the protocol edge as an
+             * error rather than a lane that silently plays something else; the *content* (does the
+             * parameter exist, is the route a real source) is validated at the one seam it is used —
+             * `resolveGs1Lane` — and reported by `validate_pattern` naming the lane.
+             */
+            gs1PatchOverrides: z
+              .object({
+                parameters: z
+                  .record(z.string(), z.number())
+                  .optional()
+                  .describe('Param name ("FILTER_CUTOFF") or numeric id ("14") → the engine\'s own value; ranges are the engine\'s, not PARAM_SPECS\'s'),
+                routes: z
+                  .array(
+                    z.object({
+                      index: z.number().int().min(0).max(MAX_ROUTES - 1).optional(),
+                      src: z.union([z.number().int(), z.string()]),
+                      dst: z.union([z.number().int(), z.string()]),
+                      amount: z.number(),
+                      enabled: z.boolean().optional(),
+                    })
+                  )
+                  .optional()
+                  .describe("modulation rows written on top of the base patch, by slot"),
+              })
+              .optional()
+              .describe("per-parameter overrides applied at the one GS-1 resolution seam, beside `gs1Patch`"),
             steps: z.array(z.number()),
             velocity: z.array(z.number()).optional(),
             pitch: z.array(z.number().nullable()).optional(),
@@ -1314,20 +1411,23 @@ export const TOOLS: ToolDefinition[] = [
     },
   },
   /**
-   * The GS-1 **patch pass-through**, and the one place a caller can put a synth share code on a lane.
+   * The GS-1 **patch pass-through**, the per-parameter layer on top of it, and the one place a
+   * caller can shape a lane's GS-1 sound.
    *
    * The synth project already defines the format, the encoder, the decoder and the parameter table
    * (`gs1.patch.get` prints a `gs1.1.` share code; `gs1.patch.set` accepts one). This tool stores
-   * that string on the lane and nothing else — no second model, no parameter editor — and the
-   * renderer, the live engine and `validate_pattern` all read it through `resolveGs1Lane`. A code
-   * that cannot be read is **refused here** (and reported by `validate_pattern`), never written to
-   * a lane where it would quietly become a different instrument.
+   * that string on the lane, and — since the code alone made 0 of the engine's 224 parameters
+   * writable — the caller's per-parameter overrides **beside** it. No payload is built here and no
+   * encoder is vendored: the code is untouched, and the overrides reach the engine through its own
+   * `setParam`/`setModRoute` at the one seam every consumer resolves a lane through
+   * (`resolveGs1Lane`). A code or an override that cannot be read is **refused here** (and reported
+   * by `validate_pattern`), never written to a lane where it would quietly become a different sound.
    */
   {
     name: "apply_gs1_patch",
-    title: "Give a lane a GS-1 patch",
+    title: "Give a lane a GS-1 patch, and write individual parameters",
     description:
-      "Set or clear one lane's own GS-1 sound, as the synth project's own share code (a \"gs1.1.…\" string from gs1.patch.get; gs1.patch.set and gs1.render accept the same string). Overrides the instrument table for that lane only, and reaches the rendered audio and live playback through the same resolution. Returns the new pattern and its validation; a code that cannot be decoded, that carries a second layer, or that sits on a lane GS-1 never plays is refused with the reason, naming the lane. `patch: null` clears the lane back to the instrument table.",
+      "Set or clear one lane's own GS-1 sound, as the synth project's own share code (a \"gs1.1.…\" string from gs1.patch.get; gs1.patch.set and gs1.render accept the same string) — and write **individual parameters and modulation rows** on top of it with `parameters` / `routes`, which is what the share code alone cannot do. Overrides the instrument table for that lane only, and reaches the rendered audio and live playback through the same resolution: the base code goes to the engine's `setPatch`, the overrides to its own `setParam`/`setModRoute`, and `get_gs1_patch` reads the effective result back. Parameter keys are Param names (\"FILTER_CUTOFF\") or numeric ids (\"14\"); values are the engine's own, whose ranges the engine clamps (PARAM_SPECS covers only 84 of 224 parameters and is narrower than what the engine serves, so it is deliberately not used as a filter). Returns the new pattern and its validation; a code that cannot be decoded, an unknown parameter or route, or either on a lane GS-1 never plays is refused with the reason, naming the lane. `patch: null` clears the lane's whole GS-1 sound, overrides included; `parameters: {}` or `routes: []` clears just that half.",
     readOnly: true,
     inputSchema: {
       genreId: z.string().optional().describe("start from this genre's pattern"),
@@ -1339,7 +1439,24 @@ export const TOOLS: ToolDefinition[] = [
       patch: z
         .string()
         .nullable()
-        .describe('a GS-1 share code ("gs1.1.…"), or null to clear this lane\'s own patch and go back to the instrument table'),
+        .optional()
+        .describe('a GS-1 share code ("gs1.1.…"); null clears this lane\'s own patch **and its overrides** and goes back to the instrument table; omit it to leave the code as it is'),
+      parameters: z
+        .record(z.string(), z.number())
+        .optional()
+        .describe('parameter name ("FILTER_CUTOFF", case-insensitive) or numeric id ("14") → the engine\'s own value, e.g. { "FILTER_CUTOFF": 700 }; replaces this lane\'s parameter overrides ({} clears them)'),
+      routes: z
+        .array(
+          z.object({
+            index: z.number().int().min(0).max(MAX_ROUTES - 1).optional().describe("engine slot 0..7; defaults to this row's position"),
+            src: z.union([z.number().int(), z.string()]).describe('a MOD_SOURCES name ("velocity", "lfo", "env"…) or its index'),
+            dst: z.union([z.number().int(), z.string()]).describe('a MOD_DESTS name ("cutoff", "pitch"…) or its index'),
+            amount: z.number(),
+            enabled: z.boolean().optional().describe("defaults to true — writing a row is what turns it on"),
+          })
+        )
+        .optional()
+        .describe("modulation rows written on top of the base patch, by slot, e.g. [{ src: \"velocity\", dst: \"cutoff\", amount: 0.5 }]; replaces this lane's route overrides ([] clears them)"),
     },
     handler: (args) => {
       const base = patternFromArgs(args as { genreId?: string; pattern?: unknown });
@@ -1356,41 +1473,191 @@ export const TOOLS: ToolDefinition[] = [
       }
       const laneKey = track.laneId ?? track.track_id;
 
-      if (args.patch === null || args.patch === undefined) {
+      const patchGiven = args.patch !== undefined;
+      const parametersGiven = args.parameters !== undefined;
+      const routesGiven = args.routes !== undefined;
+      if (!patchGiven && !parametersGiven && !routesGiven) {
+        return failure(
+          `nothing to apply to lane "${laneKey}" — pass \`patch\` (a "gs1.1.…" share code, or null to clear), \`parameters\`, or \`routes\``
+        );
+      }
+      if (args.patch === null && (parametersGiven || routesGiven)) {
+        return failure(
+          `lane "${laneKey}": \`patch: null\` clears the lane's whole GS-1 sound, overrides included — pass \`parameters\`/\`routes\` without \`patch\` to override the instrument table's patch instead`
+        );
+      }
+
+      if (args.patch === null) {
         delete track.gs1Patch;
+        delete track.gs1PatchOverrides;
         return {
           pattern,
           track: laneKey,
           patch: null,
+          overrides: null,
           detail: `lane "${laneKey}" is back on the instrument table's patch`,
           validation: validatePattern(pattern),
         };
       }
 
-      const lane = resolveGs1Lane(track.track_id, track.instrument, base.genre_id, String(args.patch));
+      /**
+       * Each half replaces only itself, so two calls compose: writing a route does not silently drop
+       * the parameter overrides a previous call stored, and `{}` / `[]` is how a caller clears one
+       * half on purpose. The reply carries the resulting layer, so nothing about the merge is hidden.
+       */
+      const stored = track.gs1PatchOverrides;
+      const nextOverrides =
+        parametersGiven || routesGiven
+          ? {
+              ...(parametersGiven
+                ? { parameters: args.parameters as Record<string, number> }
+                : stored?.parameters !== undefined
+                  ? { parameters: stored.parameters }
+                  : {}),
+              ...(routesGiven
+                ? { routes: args.routes as NonNullable<typeof stored>["routes"] }
+                : stored?.routes !== undefined
+                  ? { routes: stored.routes }
+                  : {}),
+            }
+          : stored;
+
+      const nextCode = patchGiven ? String(args.patch) : track.gs1Patch;
+      const lane = resolveGs1Lane(track.track_id, track.instrument, base.genre_id, nextCode, nextOverrides);
       if (lane.kind === "problem") return failure(`lane "${laneKey}": ${lane.problem}`);
       if (lane.kind === "native") {
-        // Unreachable with a non-empty code (the resolver's `voice`/`problem` arms cover it), and
-        // stated rather than asserted away: a caller must never get a success for a patch that did
-        // not land.
+        // Unreachable with a code or an override (the resolver's `voice`/`problem` arms cover it),
+        // and stated rather than asserted away: a caller must never get a success for a patch that
+        // did not land.
         return failure(`lane "${laneKey}": the patch code was neither accepted nor refused`);
       }
-      track.gs1Patch = String(args.patch);
-      const changed = Object.entries(lane.voice.params).filter(
-        ([id, value]) => value !== DEFAULT_PARAMS[Number(id)]
-      ).length;
+
+      if (patchGiven && nextCode !== undefined) track.gs1Patch = nextCode;
+      const resolvedOverrides = lane.voice.overrides;
+      if (resolvedOverrides && (resolvedOverrides.parameters.length > 0 || resolvedOverrides.routes.length > 0)) {
+        track.gs1PatchOverrides = nextOverrides;
+      } else {
+        delete track.gs1PatchOverrides;
+      }
+
+      // The effective record: base code (or table patch) with the overrides folded on, so the count
+      // is "how far the lane's sound is from the synth's default patch" and not "how big the code is".
+      const effective = mergeGs1Overrides(lane.voice.params, resolvedOverrides);
+      const changed = Object.entries(effective).filter(([id, value]) => value !== DEFAULT_PARAMS[Number(id)]).length;
+      const routing = gs1RouteReadings(lane.voice.routes);
+      const overrideCount = (resolvedOverrides?.parameters.length ?? 0) + (resolvedOverrides?.routes.length ?? 0);
+      const baseName = lane.voice.code ? "its own share code" : `the instrument table's "${String(lane.voice.patch)}"`;
       return {
         pattern,
         track: laneKey,
         patch: {
-          shareCode: String(args.patch),
-          /** How far the code is from the synth's own default patch — a real sound, not `INIT`. */
+          shareCode: track.gs1Patch ?? null,
+          /** How far the lane is from the synth's own default patch — a real sound, not `INIT`. */
           parametersChanged: changed,
-          routes: lane.voice.routes?.length ?? 0,
+          routes: routing.length,
         },
-        detail: `lane "${laneKey}" now plays its own share code (${changed} parameter${changed === 1 ? "" : "s"} away from the synth's default patch)`,
+        overrides:
+          resolvedOverrides && overrideCount > 0
+            ? {
+                parameters: gs1ParameterReadings({}, resolvedOverrides, "share code", true),
+                routes: gs1RouteOverrideReadings(resolvedOverrides.routes),
+              }
+            : null,
+        detail:
+          `lane "${laneKey}" plays ${baseName}` +
+          (overrideCount > 0 ? ` with ${overrideCount} per-parameter override${overrideCount === 1 ? "" : "s"} on top` : "") +
+          ` (${changed} parameter${changed === 1 ? "" : "s"} away from the synth's default patch)`,
         validation: validatePattern(pattern),
       };
+    },
+  },
+  /**
+   * The **read side** of the per-parameter layer — and of the code itself.
+   *
+   * It answers "what does this lane actually play" in terms a creator can act on: the parameters that
+   * differ from the synth's default patch, by name, with the engine's own label and formatting; the
+   * modulation rows by source/destination name; and which of those the caller overrode. It is the
+   * tool that makes the write side usable at all — a share code is one opaque string, and without a
+   * read a caller cannot see what it set, or what a `parameters` write changed.
+   */
+  {
+    name: "get_gs1_patch",
+    title: "Read a lane's GS-1 sound (or a share code)",
+    description:
+      "Say what a GS-1 sound actually is, in named parameters rather than 224 numbers: read the lane's own share code and per-parameter overrides (with `genreId`/`pattern` + `track`), or decode a code the caller has (with `patch`). Returns the parameters that differ from the synth's default patch — Param name, engine label, value in its own unit (Hz, %, ms), and whether it came from the code, the instrument table, or an override — plus the modulation rows by source/destination name, and the counts for the parameters that are unchanged. `includeUnchanged: true` lists all 224. A lane with no code and no overrides is reported as playing the instrument table's patch; a lane GS-1 does not voice, and a code or override that cannot be read, are said plainly instead of guessed at.",
+    readOnly: true,
+    inputSchema: {
+      patch: z.string().optional().describe('a share code to read directly ("gs1.1.…"), instead of a lane'),
+      genreId: z.string().optional().describe("read a lane of this genre's pattern"),
+      pattern: patternSchema.optional().describe("or read a lane of a pattern you already have"),
+      track: z.string().min(1).optional().describe('which lane to read ("chords", "lead", "lead-2"…) — required unless `patch` is given'),
+      includeUnchanged: z
+        .boolean()
+        .optional()
+        .describe("also list every parameter still at the synth's default patch (off by default: a code typically sets tens of the 224)"),
+    },
+    handler: (args) => {
+      const includeUnchanged = args.includeUnchanged === true;
+
+      if (args.patch !== undefined) {
+        const decoded = decodeGs1PatchCode(String(args.patch));
+        if (!decoded.ok) return failure(decoded.problem);
+        return describeGs1Sound({
+          source: "code",
+          shareCode: String(args.patch),
+          tablePatch: null,
+          params: decoded.patch.params,
+          routes: decoded.patch.routes,
+          overrides: undefined,
+          includeUnchanged,
+          instrument: null,
+          track: null,
+        });
+      }
+
+      if (args.track === undefined || args.track === null || String(args.track).trim() === "") {
+        return failure(
+          "name the lane to read with `track` (plus `genreId` or `pattern`), or pass the share code itself as `patch`"
+        );
+      }
+      const base = patternFromArgs(args as { genreId?: string; pattern?: unknown });
+      if (!base) {
+        const wanted = (args as { genreId?: string }).genreId;
+        return failure(wanted ? unknownGenre(wanted) : "provide either genreId or pattern");
+      }
+      const track = findTrack(base, String(args.track));
+      if (!track) {
+        const lanes = base.tracks.map((row) => row.laneId ?? row.track_id).join(", ");
+        return failure(`no lane "${String(args.track)}" in this pattern — the lanes are: ${lanes}`);
+      }
+      const laneKey = track.laneId ?? track.track_id;
+      const lane = resolveGs1Lane(
+        track.track_id,
+        track.instrument,
+        base.genre_id,
+        track.gs1Patch,
+        track.gs1PatchOverrides
+      );
+      if (lane.kind === "problem") return failure(`lane "${laneKey}": ${lane.problem}`);
+      if (lane.kind === "native") {
+        return {
+          track: laneKey,
+          instrument: track.instrument ?? null,
+          voiced: false,
+          detail: `lane "${laneKey}" is not voiced by GS-1: instrument "${String(track.instrument)}" has no patch in the GS-1 table (src/data/gs1Patches.ts), so it plays the native engine and there is nothing here to read`,
+        };
+      }
+      return describeGs1Sound({
+        source: lane.voice.code ? "lane" : "table",
+        shareCode: lane.voice.code ?? null,
+        tablePatch: lane.voice.patch,
+        params: lane.voice.params,
+        routes: lane.voice.routes ?? [],
+        overrides: lane.voice.overrides,
+        includeUnchanged,
+        instrument: track.instrument ?? null,
+        track: laneKey,
+      });
     },
   },
   {

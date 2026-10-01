@@ -91,6 +91,45 @@ export interface SequencerTrack {
    * `validatePattern` and `docs/GS1_PATCH_SURFACE.md`.
    */
   gs1Patch?: string;
+  /**
+   * **Per-parameter overrides** on top of {@link gs1Patch} (or on top of the instrument table's patch).
+   *
+   * This is the write side the share code alone could not offer. `apply_gs1_patch` used to accept one
+   * opaque string and nothing else — 0 of the engine's 224 parameters, 0 routes — because the tool
+   * does not drive a live engine: it writes pattern data and the renderer decodes it later. The two
+   * honest shapes were therefore "re-encode the code" (vendor the synth's encoder, a second copy of a
+   * format this repository only reads) or "store the change beside the code and apply it where the
+   * lane is resolved". This is the second: the code stays untouched, and the overrides reach the
+   * engine through its own `setParam`/`setModRoute` at the one resolution seam
+   * (`src/audio/gs1/gs1Tracks.ts`), so the room, the file and `validate_pattern` cannot disagree.
+   *
+   * Keys of `parameters` are `Param` enum names (`"FILTER_CUTOFF"`, case-insensitive) or numeric ids
+   * (`"14"`); values are the engine's raw values. Ranges are **not** checked against `PARAM_SPECS` —
+   * it covers 84 of 224 parameters and is narrower than the range the engine serves, so it would
+   * reject `phonk`'s own `osc2Pitch = 31`. The engine clamps exactly as it does for a value inside a
+   * share code, which is the validation `docs/GS1_PATCH_SURFACE.md` §4 measured its way to.
+   *
+   * Absent means "no overrides", so every existing track, project and share link is unchanged — the
+   * same additive rule `pitches`, `syllables` and `gs1Patch` were added under, and a track that
+   * carries the field but no `gs1Patch` overrides the **instrument table's** patch instead. Like
+   * `gs1Patch`, it is not carried by the share-link whitelist (a recorded gap, not a new one: see
+   * `docs/GS1_PATCH_SURFACE.md` §7.1) and it is not carried by `TrackV2` (§7.3), while the full
+   * pattern — `.groove` v1 files, the project store, `arrangementCompile` — keeps it.
+   */
+  gs1PatchOverrides?: {
+    parameters?: Record<string, number>;
+    routes?: Array<{
+      /** Modulation slot 0..7; defaults to this row's position in the array. */
+      index?: number;
+      /** A `MOD_SOURCES` name (`"velocity"`, `"lfo"`, …) or its index. */
+      src: number | string;
+      /** A `MOD_DESTS` name (`"cutoff"`, `"pitch"`, …) or its index. */
+      dst: number | string;
+      amount: number;
+      /** Defaults to `true`: writing a row is what turns it on. */
+      enabled?: boolean;
+    }>;
+  };
   steps: number[]; // 1 or 0 (16 or 32 steps)
   velocity?: number[]; // 0 - 127
   pitch?: (number | null)[]; // MIDI note (e.g. 36 for C2, 60 for C4) — the *root* of the step

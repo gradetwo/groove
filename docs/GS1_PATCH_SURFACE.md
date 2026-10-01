@@ -8,6 +8,7 @@
 ## 一句话结论
 
 引擎**确实**是一台可打补丁的 GS-1；补丁现在**可以从调用者一路走到渲染出的音频**：synth 的 `gs1.patch.get` 产出 `gs1.1.…` **share code**，`apply_gs1_patch` 把它存在**轨道**上，`resolveGs1Lane`（唯一解析点）把它变成参数与路由，离线渲染、实时播放、`validate_pattern` 三处**读同一个决议**。读不懂的 code **报错并指名轨道**，绝不静默换音色。
+**（2026-10-01 追加，见 §10）** 单个参数与调制路由现在也能写：`apply_gs1_patch` 的 `parameters`/`routes` 与 code 一起存在轨道上（`SequencerTrack.gs1PatchOverrides`），在同一个 `resolveGs1Lane` 解析、由 `applyGs1Voice` 经引擎自己的 `setParam`/`setModRoute` 应用；`get_gs1_patch` 用名字与单位把最终值读回来。payload 格式未动，编码器未 vendored。
 
 ## 1. 引擎这一半（与前一份一致，仍然为真）
 
@@ -361,7 +362,7 @@ npx vite-node scripts/report_gs1_params.ts   # 读 vendor/gs1/src/audio/params.t
 | 222 | `FX_OVR_DEPTH8` | — | | | | 0 |
 | 223 | `FX_OVR_SRC` | — | | | | 0 |
 
-**为什么本次仍然只记录、不实现（理由，以及第一步）**
+**为什么本次仍然只记录、不实现（理由，以及第一步）** —— **已被 §10 取代：路线 ②（覆盖层）已实施，本节保留为决策记录。**
 
 * **写侧的第一步不是加工具，是决定编码器归谁。** 唯一诚实的编码器是 synth 自己的 `buildPayload`（`/home/crow/music/synth/src/state/share.ts`），它**没有被 vendored**，而且 import `persist.ts`（`SCHEMA_VERSION`）与 `midi/takes.ts`——§2 记过，把这半棵子树拖进来会破坏"一文件一哈希"的 pin。**在这里手写一个编码器，就是给同一个格式写第二份实现**：本仓库自己的读+写会互相自洽，却可能和 synth 不一致——正是 `gs1PatchPassthrough.test.ts` 用 synth 自己的编码器产物做 fixture 要防的那件事。所以第一步是一次**决定**：(a) 把上游 `share.ts` 的编码器按哈希 pin 进 `vendor/gs1/`，或 (b) 不加编码器，改为在 `SequencerTrack` 上放一个独立的逐参数覆盖字段，并把它并进**唯一**解析缝 `resolveGs1Lane`（`src/audio/gs1/gs1Tracks.ts:324`），同时保证导出、实时、`validate_pattern` 三处读同一个决议。
 * **读侧的第一步可以立刻做，且不需要编码器**：一个 `get_gs1_patch`，把某条轨道 code 里的 224 个值（84 个带标签/范围）与路由读回来。它只用已存在的 `decodeGs1PatchCode`，能让调用者先看见"我的码到底设了什么"，是加写侧之前该有的那半。判据两个方向：对一个已知 code 断言读回的已知值；把解码器对 `v` 的读取去掉即红。
@@ -417,3 +418,47 @@ npm run check:mcp                                        # 85 tools, 93 checks p
 **为什么 ② 不违反"不写第二份"** ✓✓：那条规则保护的是 **"不要重写 synth 的 payload 格式"** ✓✓——而 ② **根本不构造 payload** ✓；**DSP 仍只有引擎那一份** ✓，用的还是**引擎自己的参数入口** ✓。**代价**是"基数 + 覆盖"是**两个表示** ✗✓，所以必须**同一处解析、且读回要能看见最终值** ✓✓（`getParam` ✓）。
 
 **判据（两条路线共用）** ✓✓：`setParam` 之后 **`getParam` 读回该值** ✓✓（**证明值真的到了引擎** ✓）、**其余参数不变** ✓、**渲染出的音频随之改变** ✓、**删掉应用那一步即红** ✗✓。
+（**已按此实施，见 §10。**）
+
+---
+
+## 10. 逐参数写入：**已实施路线②**（覆盖层 + 唯一缝），以及实测记录
+
+**§8 缺口清单** 的第 1 条（224 个参数 0 个可单独写）与第 3 条（0 条路由）**关闭**；第 2 条随之关闭（140 个只有名字与默认值的参数**可以**按名字写，例如 `FILTER_TYPE`）；第 4 条（19 个具名预设按名字写）**仍未做**——预设仍只能经 `instrument` 名映射，这是一个产品决定，不是遗漏。
+
+**存哪。** `SequencerTrack.gs1PatchOverrides`（`src/types/genre.ts`），**附加字段**，docstring 写明兼容规则：没有这个字段的轨道、工程、分享链接与从前完全一样；有字段而没有 `gs1Patch` 时覆盖**乐器表**的补丁。工具入参是 `parameters`（`Param` 名、AudioParam 名或数字 id → 引擎原值）与 `routes`（`src`/`dst` 用名字或 wire 下标）。像 `gs1Patch` 一样，它不进分享链接白名单（§7.1 已记录的缺口，非新增）。
+
+**哪里应用。** 只有一处解析、一处写入：
+
+| 位置 | 作用 |
+| --- | --- |
+| `resolveGs1Lane(role, instrument, genreId, patchCode, overrides)` | 唯一解析：覆盖层在这里变成 `Gs1Voice.overrides`（已解析成引擎的 id 与 wire 值），路由覆盖按 slot 并进 `voice.routes`，坏值返回 `problem`（指名轨道） |
+| `applyGs1Voice(host, voice)` | 唯一写入点，与既有的 `applyGs1VoiceRoutes` 同一形状：`setPatch(基数)` → `applyGs1ParamOverrides`（`Gs1Host.setParam`/`setModRoute`）→ 路由。两个调用点：`WavExporter` 与 `Gs1VoicePool` |
+| `AudioEngine` 的三个 `tryPlay` | 把 `track.gs1PatchOverrides` 与 `gs1Patch` 一起传下去，房间与文件同一决议 |
+| `validate_pattern` | 读同一缝；读不懂的 code **或**覆盖层 → 指名轨道的 problem |
+
+**payload 格式一行未碰，编码器未 vendored，版本未跨** ✓✓：没有构造 `gs1.1.` 负载，用的是引擎自己的参数入口。
+
+**读回怎么证明值到了引擎。** `Gs1Host.setParam` 写的是 `node.parameters` 里 worklet 每块读的那个 `AudioParam`，所以判据读**两侧**：`getParam`（host 自己的记录）与 `AudioParam.value`（引擎侧），全 224 个逐一比。命令与实测：
+
+```bash
+npx vitest run src/test/gs1ParamWrites.test.ts          # 20 passed
+npx vitest run src/test/gs1PatchPassthrough.test.ts     # 13 passed（导出器与实时池各一处集成判据）
+```
+
+| 判据 | 实测（命令输出） |
+| --- | --- |
+| `setParam` → `getParam` 读回 | `FILTER_CUTOFF 800 -> 700 (AudioParam "filterCutoff" = 700)` |
+| 其余参数不动 | 先把 224 个与 code 对齐，再 before/after 逐一比：`host-side moved [14], engine-side moved [14]` |
+| 渲染音频改变（level） | `MASTER_VOLUME 0.75 -> 0.15`：RMS −35.50 → −49.26 dB（−13.77 dB，解析值 −13.98，容差 2 dB） |
+| 渲染音频改变（pitch） | `OSC1_PITCH -12 -> +12`：centroid 1287 → 2824 Hz（×2.19），指纹距离 9.19 dB（阈值 1.5 / 3 dB） |
+| 渲染音频改变（filter） | `FILTER_TYPE` lp → hp：centroid 4137 Hz（×3.22），距离 12.75 dB（阈值 2 / 3 dB） |
+| **artifact 说的就是渲染用的** | `apply_gs1_patch` 返回的 pattern 里的 `{ FILTER_TYPE: 1 }` → `AudioParam 1` → 渲染 centroid 1287 → 4137 Hz，距离 12.75 dB；去掉该字段即回到 code 的 0 |
+| 反向（红） | 删掉 `applyGs1ParamOverrides(host, voice.overrides);` 一行：读回、音频、artifact 三条判据全红（`expected 800 to be 700`；`the level override's size: expected 13.98 to be less than 2`；`expected 0 to be 1`）。把覆盖写成 `{...DEFAULT_PARAMS, override}` 记录：`notTheCode` 列出 19 个参数（含 14）——**该断言是因为这次红跑才发现缺的** |
+| 路由命名 | `src`/`dst` 按**引擎 wire 顺序**命名，不按 vendored `MOD_SOURCES`；实测 `"velocity" -> src 3`，亮度比 src 3 = 1.402、src 4 = 0.999；`"env" -> dst 2` 使 RMS −34.45 → −31.97 dB |
+
+**为什么不按 `PARAM_SPECS` 做范围校验（本次复测，比 §4 更完整）。** `PARAM_SPECS` 覆盖 84/224，而在重叠处比 worklet 实际服务的范围**窄**的参数有 **7** 个（`OSC1/2_PITCH` ±24 vs ±48、`OSC1/2_DETUNE` ±50 vs ±100、`FILTER_CUTOFF`/`FILTER2_CUTOFF` 40..18000 vs 20..20000、`FX_DELAY_FB` 0..0.9 vs 0..0.95）。所以 `phonk` 的 `osc2Pitch = 31` 被接受（判据里断言了 `PARAM_SPECS.max === 24` 而解析通过）。校验只有两条：**这个参数存在**、**值是有限数**；范围由引擎的 `AudioParam`/核心钳制，与 code 里的值走同一条路。
+
+顺带测到、读侧结论依赖的一条事实：worklet 的 `PARAMS` 正好服务 `DEFAULT_PARAMS` 的 224 个 id，且 `defaultValue` 与 `DEFAULT_PARAMS[id]` **0 处不一致**——所以稀疏的乐器表补丁没说到的参数确实停在合成器默认 patch，"其余 N 个停在默认值"这句话不是猜测。
+
+**一个意外发现，值得单列。** vendored `MOD_SOURCES` 是 synth UI 的**显示顺序**（`lfo, lfo2, env, modwheel, velocity, …`），与引擎 `crates/synth-core/src/params.rs` 的 `ModSrc::from_u32`（`lfo, env, modwheel, velocity, lfo2, …`）在 1..4 上不一致；同一份上游代码里 `modSrcToInt` 用的正是 UI 顺序，所以 **share code 的 `r` 也是按 UI 顺序写的，而引擎按自己的顺序解码**（`engine.setRoute` 甚至把字符串 `src` 直接投给 wasm）。本次没有改它：读取侧按"引擎实际会做什么"命名路由，写入侧把名字解析到引擎的 wire 下标（`WIRE_MOD_SOURCES`，注释与判据都写了来源与实测）。要修的是上游；在 groove 里"顺手修正"会把读出来的名字与 code 作者的本意混在一起。

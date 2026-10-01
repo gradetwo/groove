@@ -39,6 +39,8 @@ const recorded = vi.hoisted(() => ({
   hosts: 0,
   /** Every `setPatch` payload, in host-creation order. */
   patches: [] as Array<Record<number, number>>,
+  /** Every `setParam` write, in order: `[id, value]` — the per-parameter override layer. */
+  setParams: [] as number[][],
   /** Every route write, per host: `[slot, src, dst, amount, enabled]`. */
   routes: [] as number[][],
   noteOnAt: [] as number[][],
@@ -50,6 +52,7 @@ vi.mock("../audio/gs1/Gs1Host", async (importOriginal) => {
     ...actual,
     createGs1Host: async () => {
       recorded.hosts += 1;
+      const written = new Map<number, number>();
       const host = {
         scheduledNoteLatencyFrames: 128,
         ready: Promise.resolve({ abi: GS1_EXPECTED_ABI, variant: "simd" }),
@@ -58,7 +61,17 @@ vi.mock("../audio/gs1/Gs1Host", async (importOriginal) => {
           recorded.noteOnAt.push([note, velocity, atFrame, pan ?? 0]),
         noteOffAt: () => undefined,
         setTuningNote: () => undefined,
-        setPatch: (values: Record<number, number>) => recorded.patches.push({ ...values }),
+        setPatch: (values: Record<number, number>) => {
+          recorded.patches.push({ ...values });
+          for (const [id, value] of Object.entries(values)) written.set(Number(id), value);
+        },
+        // The per-parameter layer goes through the host's own `setParam`, so the mock has to serve it
+        // the way the real adapter does or a lane carrying overrides would throw here.
+        setParam: (id: number, value: number) => {
+          written.set(id, value);
+          recorded.setParams.push([id, value]);
+        },
+        getParam: (id: number) => written.get(id),
         setModRoute: (slot: number, src: number, dst: number, amount: number, enabled: boolean) =>
           recorded.routes.push([slot, src, dst, amount, enabled ? 1 : 0]),
         importSample: () => Promise.resolve({ has: true, code: 0 }),
@@ -146,6 +159,7 @@ afterEach(() => {
   setGs1RoutingEnabled(DEFAULT_GS1_ROUTING_ENABLED);
   recorded.hosts = 0;
   recorded.patches.length = 0;
+  recorded.setParams.length = 0;
   recorded.routes.length = 0;
   recorded.noteOnAt.length = 0;
 });
@@ -355,6 +369,75 @@ describe("the single resolution seam", () => {
     expect(writes.length).toBe(8);
     expect(writes[0][3]).toBeCloseTo(0.3, 5);
     expect(writes[1]).toEqual([1, 0, 0, 0, 0]);
+  });
+});
+
+/**
+ * The per-parameter layer on the two paths that build a host: the offline exporter and the live pool.
+ *
+ * `a real host's read-back` is `gs1ParamWrites.test.ts`; this file answers the different question of
+ * whether the *product's* two host-builders apply the layer at all, in the same place they apply the
+ * base patch. The mocked host records `setPatch` and `setParam` separately, so the assertion can say
+ * "the code went through `setPatch` unchanged, and the override went through `setParam` on top" —
+ * which is the two-representation cost route ② accepted, made checkable.
+ */
+describe("the resolver's overrides reach the host the exporter and the pool build", () => {
+  const overriddenPattern = () => {
+    const pattern = makePattern(ACID_CODE);
+    pattern.tracks[0].gs1PatchOverrides = { parameters: { FILTER_CUTOFF: 700 }, routes: undefined };
+    return pattern;
+  };
+
+  it("applies a lane's overrides to the offline render's host, on top of the untouched code", async () => {
+    restore = installFakeOfflineAudioContext();
+    setGs1RoutingEnabled(true);
+    await renderPatternOffline(overriddenPattern(), { bars: 1, sampleRate: SR });
+
+    const decoded = decodeGs1PatchCode(ACID_CODE);
+    expect(decoded.ok).toBe(true);
+    if (!decoded.ok) return;
+    // The base patch is byte-for-byte the code — the override did not rewrite the artifact…
+    expect(recorded.patches[0]).toEqual(decoded.patch.params);
+    // …and the one parameter came through the engine's own entry point, on top of it.
+    expect(recorded.setParams).toContainEqual([14, 700]);
+    expect(recorded.setParams.filter(([id]) => id !== 14)).toEqual([]);
+  });
+
+  it("applies a lane's overrides to the live pool's host too, so the room is not a second sound", async () => {
+    setGs1RoutingEnabled(true);
+    const notes = [{ note: 60, time: 0, duration: 0.25, velocity: 0.8 }];
+    const pushes: Array<Record<number, number>> = [];
+    const params: number[][] = [];
+    const pool = new Gs1VoicePool({ sampleRate: SR } as BaseAudioContext, {
+      createHost: (async () => ({
+        scheduledNoteLatencyFrames: 128,
+        ready: Promise.resolve({ abi: GS1_EXPECTED_ABI, variant: "simd" }),
+        output: { connect: () => undefined },
+        noteOnAt: () => undefined,
+        noteOffAt: () => undefined,
+        setTuningNote: () => undefined,
+        setPatch: (values: Record<number, number>) => pushes.push({ ...values }),
+        setParam: (id: number, value: number) => params.push([id, value]),
+        getParam: () => undefined,
+        setModRoute: () => undefined,
+        importSample: () => Promise.resolve({ has: true, code: 0 }),
+        allNotesOff: () => undefined,
+        dispose: () => undefined,
+        onAnalysis: () => () => undefined,
+      })) as never,
+    });
+    const overrides = { parameters: { FILTER_CUTOFF: 700 } };
+    await pool.ensureTrack(0, "chords", "warm_pad", {} as AudioNode);
+    expect(pool.tryPlay(0, "chords", "warm_pad", notes, {} as AudioNode, ACID_CODE, overrides)).toBe(true);
+    expect(pushes.length).toBe(1);
+    expect(params).toContainEqual([14, 700]);
+
+    // The swap check must not treat a changed override as the same sound: the same code with another
+    // value has to be written again, or the room keeps the previous lane's parameter.
+    expect(pool.tryPlay(0, "chords", "warm_pad", notes, {} as AudioNode, ACID_CODE, { parameters: { FILTER_CUTOFF: 900 } })).toBe(true);
+    expect(pushes.length).toBe(2);
+    expect(params).toContainEqual([14, 900]);
+    pool.dispose();
   });
 });
 

@@ -2627,7 +2627,10 @@ export class AudioEngine {
           // The lane's own share code, so the room resolves the patch through the same seam the
           // renderer does (`resolveGs1Lane`); without it a lane carrying a patch is GS-1 in the
           // file and the instrument table's patch in the room.
-          this.pattern?.tracks[trackIdx]?.gs1Patch
+          this.pattern?.tracks[trackIdx]?.gs1Patch,
+          // …and its per-parameter overrides, for the same reason: apply them in the file only and
+          // the room plays a different sound from the one that was written.
+          this.pattern?.tracks[trackIdx]?.gs1PatchOverrides
         )
       ) {
         return;
@@ -2692,8 +2695,9 @@ export class AudioEngine {
           instrument,
           [{ note: midi, time, duration: dur, velocity: vel, ...(leadVariation ? { cents: leadVariation.detuneCents } : {}) }],
           dest,
-          // The lane's own share code — see the chords call above.
-          this.pattern?.tracks[trackIdx]?.gs1Patch
+          // The lane's own share code and its overrides — see the chords call above.
+          this.pattern?.tracks[trackIdx]?.gs1Patch,
+          this.pattern?.tracks[trackIdx]?.gs1PatchOverrides
         )
       ) {
         return;
@@ -2744,8 +2748,9 @@ export class AudioEngine {
           this.pattern?.tracks[trackIdx]?.instrument,
           [{ note: midiFallback, time, duration: stepDur * gateVal * 1.5, velocity: vel }],
           dest,
-          // The lane's own share code — see the chords call above.
-          this.pattern?.tracks[trackIdx]?.gs1Patch
+          // The lane's own share code and its overrides — see the chords call above.
+          this.pattern?.tracks[trackIdx]?.gs1Patch,
+          this.pattern?.tracks[trackIdx]?.gs1PatchOverrides
         )
       ) {
         return;

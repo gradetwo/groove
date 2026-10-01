@@ -691,13 +691,20 @@ export function validatePattern(pattern: SequencerPattern): {
     if (highest > 127) problems.push(`track "${track.track_id}" has a velocity above 127 (${highest})`);
     if (track.steps.every((on) => !on)) warnings.push(`track "${track.track_id}" is empty`);
     /**
-     * A lane's own GS-1 patch is validated through the **same seam the renderer uses**
-     * (`resolveGs1Lane`), not by a second set of rules here. An unreadable code, or a code on a lane
-     * GS-1 never schedules, is a **problem naming the lane** — the whole reason this surface exists
-     * is that `resolveGs1Patch` is total, so a typo used to change the instrument and say nothing.
+     * A lane's own GS-1 patch **and its per-parameter overrides** are validated through the **same
+     * seam the renderer uses** (`resolveGs1Lane`), not by a second set of rules here. An unreadable
+     * code, an unreadable override, or either of them on a lane GS-1 never schedules, is a **problem
+     * naming the lane** — the whole reason this surface exists is that `resolveGs1Patch` is total, so
+     * a typo used to change the instrument and say nothing.
      */
-    if (track.gs1Patch !== undefined) {
-      const lane = resolveGs1Lane(track.track_id, track.instrument, undefined, track.gs1Patch);
+    if (track.gs1Patch !== undefined || track.gs1PatchOverrides !== undefined) {
+      const lane = resolveGs1Lane(
+        track.track_id,
+        track.instrument,
+        undefined,
+        track.gs1Patch,
+        track.gs1PatchOverrides
+      );
       if (lane.kind === "problem") {
         problems.push(`track "${laneKey}" carries a GS-1 patch that cannot be played: ${lane.problem}`);
       }
