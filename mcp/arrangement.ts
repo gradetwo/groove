@@ -14,6 +14,8 @@ import { toMusicXml } from "../src/data/musicxml";
 import { fromMusicXml, fromMusicXmlBytes } from "../src/data/musicxmlImport";
 import type { ImportedPart } from "../src/data/musicxmlImport";
 import { fromMidi } from "../src/data/midiToArrangement";
+import type { MidiArrangementImport } from "../src/data/midiToArrangement";
+import { DEFAULT_NOTE_CONVENTION, noteName, type NoteConvention } from "../src/data/pitchTruth";
 import { fromLogicProjectBase64 } from "../src/data/logicToArrangement";
 import { arrangementToMidi } from "../src/data/arrangementToMidi";
 import type { MusicXmlImport } from "../src/data/musicxmlImport";
@@ -547,11 +549,79 @@ export async function importMcpMusicXmlBytes(arrangementId: string, bytesBase64:
  *
  * It is a separate tool from the MusicXML one rather than a flag on it, because the bytes are not the same kind of thing and a caller holding a `.mid` should not have to say "this is not XML".
  */
+/**
+ * ⭐ **The pitch plan an import should have carried all along: what came in, and that nothing moved it.**
+ *
+ * The owner's rule is that a MIDI file stores a note number and no name, so an octave surprise on import is not
+ * the file being wrong but some stage — display, root key, an automatic transposition, drum handling — having
+ * done something unasked. `fromMidi` does none of those things, and this says so in the reply instead of
+ * leaving a caller to infer it from silence: `transposed: false` with an empty `transpositions` list is a
+ * statement that the numbers arriving are the numbers in the file.
+ *
+ * `methods` names the gap rather than hiding it. The importer **does** read channels — it needs them to split a
+ * format-0 file, whose whole band shares one track chunk — but `ImportedPart` carries only `name` and `notes`,
+ * so the channel is consumed and dropped. Channel 10 is therefore **not** identified as drums here, and this
+ * plan says so rather than implying the question was answered. The first step is an optional `channel?: number`
+ * on `ImportedPart`, set by `midiToArrangement` where the channel is already in hand; it is not done here
+ * because `ImportedPart` is shared with the MusicXML importer, which has no channels, and that decision belongs
+ * with whoever compares the two.
+ *
+ * Drum handling itself needs nothing on the model side: `song.ts` says only a step that carries a pitch moves,
+ * and a kick carries none.
+ */
+function midiPitchPlan(imported: MidiArrangementImport): {
+  convention: NoteConvention;
+  notes: number;
+  range?: { lowest: number; highest: number; lowestName: string; highestName: string };
+  transposed: boolean;
+  transpositions: unknown[];
+  methods: string[];
+  notRead: string[];
+} {
+  const notes = imported.parts.flatMap((part) => part.notes ?? []);
+  const base = {
+    convention: DEFAULT_NOTE_CONVENTION,
+    notes: notes.length,
+    transposed: false,
+    /** Empty on purpose: this is the statement that the import applied nothing, not a missing field. */
+    transpositions: [],
+  };
+  const methods = [
+    "the notes' own pitch values, unchanged: `fromMidi` reads them and applies no offset",
+  ];
+  const notRead = [
+    "channel 10 is not identified as drums — the importer reads channels to split a format-0 file but `ImportedPart` carries only `name` and `notes`, so the channel is consumed and dropped (first step: an optional `channel?: number` on `ImportedPart`)",
+    "the target instrument's range — no tool exposes an SFZ's keyranges yet, so compare the range below yourself, or resolve a single note with `get_pitch_report`",
+  ];
+  if (notes.length === 0) {
+    return { ...base, methods, notRead: [...notRead, "the file carries no notes, so there is no range to report"] };
+  }
+  // Looped rather than spread: `Math.min(...notes)` overflows the stack on a file with a few hundred thousand
+  // of them, which is exactly the kind of import this is for.
+  let lowest = notes[0]!.pitch;
+  let highest = notes[0]!.pitch;
+  for (const note of notes) {
+    if (note.pitch < lowest) lowest = note.pitch;
+    if (note.pitch > highest) highest = note.pitch;
+  }
+  return {
+    ...base,
+    range: {
+      lowest,
+      highest,
+      lowestName: noteName(lowest),
+      highestName: noteName(highest),
+    },
+    methods,
+    notRead,
+  };
+}
+
 export function importMcpMidi(
   arrangementId: string,
   bytesBase64: string,
   options: ImportMcpMusicXmlOptions = {}
-): ArrangementEditResult & { problems?: string[]; notes?: number; trackIds?: string[]; tempoBpm?: number; timeSignature?: string; format?: number } {
+): ArrangementEditResult & { problems?: string[]; notes?: number; trackIds?: string[]; tempoBpm?: number; timeSignature?: string; format?: number; pitchPlan?: ReturnType<typeof midiPitchPlan> } {
   const bytes = Buffer.from(bytesBase64, "base64");
   if (bytes.length === 0) {
     throw new Error("the file's bytes are empty — `bytesBase64` must be the base64 of the .mid file");
@@ -564,6 +634,8 @@ export function importMcpMidi(
     // And the meter, for the same reason: the arrangement has a `timeSignature` and the file may state one.
     ...(imported.timeSignature === undefined ? {} : { timeSignature: imported.timeSignature }),
     format: imported.format,
+    /** ⭐ What arrived, in numbers and names, and the statement that nothing transposed it on the way in. */
+    pitchPlan: midiPitchPlan(imported),
   };
 }
 
