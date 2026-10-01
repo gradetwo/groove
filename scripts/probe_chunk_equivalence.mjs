@@ -295,6 +295,26 @@ try {
    * The renderer's own default, the deletion test, and every sweep point. Each arm re-renders the whole piece in the
    * same call it measures against (the app's renderer is deterministic, so this is the reference, not a new take).
    */
+  /**
+   * `--only=cut` renders the whole piece **inside the cut arm's own session** and stops: the arm exists to answer one
+   * question, and giving it its own page is cheaper than making it depend on a sweep that a reload can erase.
+   */
+  if (arg("--only", "") === "cut") {
+    const cut = await session.cut({ options });
+    console.log(
+      `cut arm · ${cut.fixture.genre} · ${cut.fixture.bars} bars split at bar ${cut.fixture.split} · sliced at frame ${cut.splitFrame} (${cut.splitSeconds.toFixed(3)} s) of ${cut.frames}`
+    );
+    console.log(
+      `  slice vs whole: worst diff ${fmt(cut.vsWhole.db, 2)} dBFS · at the cut ${fmt(cut.vsWhole.seamDb, 2)} dBFS`
+    );
+    console.log(
+      `  13-band L1 ${fmt(cut.bandL1, 4)} dB · worst band ${fmt(cut.worstBand.worst, 4)} dB · LUFS ${fmt(cut.wholeLufs, 4)} → ${fmt(cut.cutLufs, 4)} (delta ${fmt(cut.lufsDelta, 4)}) · rms ${fmt(cut.wholeRms, 4)} → ${fmt(cut.cutRms, 4)} (delta ${fmt(cut.rmsDelta, 4)} dB)`
+    );
+    if (!keepOpen) await session.close();
+    server.kill("SIGTERM");
+    process.exit(0);
+  }
+
   const plan = [
     { label: "default pre-roll", preRollSec: undefined },
     { label: "pre-roll deleted", preRollSec: 0 },
