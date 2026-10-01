@@ -247,6 +247,11 @@ class ProbeSession {
     return this.run("measure", request);
   }
 
+  /** The pure cut: slice the whole render, never re-render — see `chunkProbePage.cut`. */
+  cut(request) {
+    return this.run("cut", request);
+  }
+
   collected() {
     return this.run("collected");
   }
@@ -319,6 +324,35 @@ try {
    * recollect. The page's copy lives in module state that a Vite reload can wipe, and a summary that silently lost the
    * arms would be a report of a measurement that did not happen.
    */
+  /**
+   * **The cut arm last**, after every chunked arm, because it explains them: slicing the whole render cannot change a
+   * sample, so the cut's difference from the whole is the analysis's own floor, and anything the splice adds on top of
+   * it is what putting two renders together costs.
+   */
+  let cutResult = null;
+  try {
+    cutResult = await session.cut({});
+  } catch (error) {
+    console.error(`  cut arm failed: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`);
+  }
+  if (cutResult) {
+    console.log("");
+    console.log(
+      `  cut arm (slice the whole render at frame ${cutResult.splitFrame} = ${cutResult.splitSeconds.toFixed(3)} s, nothing re-rendered)`
+    );
+    console.log(
+      `    cut vs whole: worst diff ${fmt(cutResult.vsWhole.db, 2)} dBFS · at seam ${fmt(cutResult.vsWhole.seamDb, 2)} dBFS · band L1 ${fmt(cutResult.bandL1, 4)} dB · LUFS delta ${fmt(cutResult.lufsDelta, 4)} · rms delta ${fmt(cutResult.rmsDelta, 4)} dB · cut ${cutResult.frames} frames vs whole ${cutResult.wholeFrames}`
+    );
+    console.log(
+      `    ${"arm".padEnd(18)} ${"chunkA vs whole".padStart(17)} ${"chunkB vs whole".padStart(17)} ${"splice vs whole".padStart(17)}`
+    );
+    for (const arm of cutResult.arms) {
+      console.log(
+        `    ${String(arm.label).padEnd(18)} ${fmt(arm.alignment?.chunkA?.ratioDb, 2).padStart(17)} ${fmt(arm.alignment?.chunkB?.ratioDb, 2).padStart(17)} ${fmt(arm.alignment?.splice?.ratioDb, 2).padStart(17)}`
+      );
+    }
+  }
+
   const collected = { whole, arms };
   const defaultArm = collected.arms.find((arm) => arm.label === "default pre-roll") ?? collected.arms[0];
   const deletedArm = collected.arms.find((arm) => arm.label === "pre-roll deleted");

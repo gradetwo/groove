@@ -909,16 +909,21 @@ async function renderPatternOfflineOnce(
    * The chunk's own length in **seconds**, ignoring the tail — what `seamlessLoop` folds over, and what
    * `chunkEndFrame` reports.
    *
-   * Deliberately not `timing.starts[toStep] - barStartSeconds`: that is the chunk's length only in absolute time,
-   * and `barStartSeconds` is the *step* origin too, so the subtraction cancels the bar start and returns one bar
-   * (measured: `chunkEndFrame` 88200 = 2 s where the chunk renders 4 s). The scheduled span in steps times the
-   * step's own length is the context's own arithmetic, from the same `stepLengthAt` the notes are placed with.
+   * Taken from the **absolute** tempo times, because that is what the chunk's audio is: the seconds from the bar it
+   * starts at to the bar it stops at. A first version summed `stepLengthAt` over the scheduled steps instead, which
+   * is the same number only when the tempo map agrees with the nominal `stepDur` — and it does not here, because
+   * `options.bpm` is the pattern's 120 while the genre's FX are resolved at 124. Measured on a 2-bar chunk of an
+   * 8.7-second piece: `chunkEndFrame` 341,419 frames where the piece ends at 371,768, so a merge of two such chunks
+   * stopped **0.69 s early** and reported a 0.85 dB RMS difference that had nothing to do with the seam.
+   *
+   * `timing.starts` is bounded by `baseTotalSteps`, which for a chunk is `patternSteps` — the end of the bar the
+   * chunk stops at — so this index always exists. The old note claiming the subtraction "cancels the bar start" was
+   * wrong: `starts[toStep] - barStartSeconds` is absolute end minus absolute start, which is a length.
    */
   const chunkLoopSec = chunkWindow
-    ? Array.from({ length: scheduledSteps }, (_, index) => stepLengthAt(scheduleFrom + index)).reduce(
-        (total, length) => total + length,
-        0
-      )
+    ? timing
+      ? timing.starts[chunkWindow.toStep]! - chunkWindow.barStartSeconds
+      : scheduledSteps * stepDur
     : totalSteps * stepDur;
   /** What a chunk render shifts every absolute schedule time by; 0 for a whole render. */
   const timelineOffsetSec = chunkWindow ? chunkWindow.barStartSeconds : 0;
