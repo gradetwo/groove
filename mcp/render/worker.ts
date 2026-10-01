@@ -1078,6 +1078,25 @@ export async function renderStems(
  *
  * **The resolved fields come back with the audio**, and that is the point rather than a nicety: `samplePath`, `ratio`, `rootKey`, `group`, `offBy`, `oneShot` and `notePolyphony` are what tell a caller whether the library did what the file asked. A silent note with `samplePath` set is a gain problem; a silent note with no `samplePath` is a library that did not resolve.
  */
+/**
+ * ⭐ **The claim side of a note, without the audio.**
+ *
+ * `auditionInstrumentNote` already returns `resolved` beside the render, and its own docstring says why: those
+ * fields are "what tell a caller whether the library did what the file asked". A caller who only wants to know
+ * *which sample a note lands on and what ratio it will be played at* should not have to pay for a render to
+ * find out, and the pitch inspector needs that half without the other. This is the same resolution, returned on
+ * its own.
+ *
+ * What it is not: a statement that the sample's pitch is right. `rootKey` is what the sample **claims**, and
+ * only a render plus a measurement can check the claim — which is what the census in `docs/PITCH_TRUTH.md`
+ * does, and why this shape carries no verdict field.
+ */
+export interface InstrumentNoteResolution {
+  assetId: string;
+  midi: number;
+  resolved: AuditionResult["resolved"];
+}
+
 export interface AuditionResult {
   path: string;
   filename: string;
@@ -1111,8 +1130,8 @@ export function auditionFilename(assetId: string, midi: number): string {
 export async function auditionInstrumentNote(
   assetId: string,
   midi: number,
-  options: RenderOptions & { seconds?: number; gainDb?: number } = { format: "wav" }
-): Promise<AuditionResult> {
+  options: RenderOptions & { seconds?: number; gainDb?: number; resolveOnly?: boolean } = { format: "wav" }
+): Promise<AuditionResult | InstrumentNoteResolution> {
   if (process.env.GROOVE_MCP_NO_BROWSER === "1") {
     throw new Error("audio rendering is disabled (GROOVE_MCP_NO_BROWSER=1); auditioning renders through the same offline engine as the other audio tools");
   }
@@ -1123,7 +1142,7 @@ export async function auditionInstrumentNote(
   const seconds = Math.min(10, Math.max(0.1, options.seconds ?? 2));
 
   const rendered = await page.evaluate(
-    async ({ manifestText: text, root: sampleRoot, assetId: id, midi: note, seconds: length, sampleRate: rate, gainDb }) => {
+    async ({ manifestText: text, root: sampleRoot, assetId: id, midi: note, seconds: length, sampleRate: rate, gainDb, resolveOnly }) => {
       const specifier = (path: string) => path;
       const [catalogue, loaderModule, graph, loudness, exporter] = await Promise.all([
         import(/* @vite-ignore */ specifier("/src/data/sampleCatalogue.ts")),
@@ -1145,6 +1164,25 @@ export async function auditionInstrumentNote(
       } catch (error) {
         return { error: error instanceof Error ? error.message : String(error) };
       }
+      /**
+       * ⭐ **The claim side of a note, built once and shared by both paths.**
+       *
+       * This is what the sound source *says* about the note: which sample file it picked, that file's declared
+       * root key, and the ratio the note will be played at. Note what is **not** here — the sample's *actual*
+       * pitch. Only a render and a measurement can say that, which is why the census in `docs/PITCH_TRUTH.md`
+       * exists and why this function returns the claim rather than an assurance.
+       */
+      const resolved = {
+        samplePath: loaded.samplePath,
+        ratio: loaded.ratio,
+        ...(loaded.rootKey === undefined ? {} : { rootKey: loaded.rootKey }),
+        ...(loaded.group === undefined ? {} : { group: loaded.group }),
+        ...(loaded.offBy === undefined ? {} : { offBy: loaded.offBy }),
+        ...(loaded.oneShot === undefined ? {} : { oneShot: loaded.oneShot }),
+        ...(loaded.notePolyphony === undefined ? {} : { notePolyphony: loaded.notePolyphony }),
+      };
+      // Resolving without rendering: the pitch inspector's source half, and nothing else.
+      if (resolveOnly) return { resolved, resolvedOnly: true };
       const source = context.createBufferSource();
       source.buffer = loaded.buffer;
       source.playbackRate.value = loaded.ratio;
@@ -1165,21 +1203,18 @@ export async function auditionInstrumentNote(
         sampleRate: buffer.sampleRate,
         channels: buffer.numberOfChannels,
         truePeakDb: loudness.truePeakDbChannels([channel]),
-        resolved: {
-          samplePath: loaded.samplePath,
-          ratio: loaded.ratio,
-          ...(loaded.rootKey === undefined ? {} : { rootKey: loaded.rootKey }),
-          ...(loaded.group === undefined ? {} : { group: loaded.group }),
-          ...(loaded.offBy === undefined ? {} : { offBy: loaded.offBy }),
-          ...(loaded.oneShot === undefined ? {} : { oneShot: loaded.oneShot }),
-          ...(loaded.notePolyphony === undefined ? {} : { notePolyphony: loaded.notePolyphony }),
-        },
+        resolved,
       };
     },
-    { manifestText, root, assetId, midi, seconds, sampleRate: options.sampleRate, gainDb: options.gainDb }
+    { manifestText, root, assetId, midi, seconds, sampleRate: options.sampleRate, gainDb: options.gainDb, resolveOnly: options.resolveOnly === true }
   );
 
   if ("error" in rendered) throw new Error(rendered.error);
+  // ⭐ Resolve-only returns here, before a single byte of audio is produced. The page has already done the work
+  // that matters — `loadNote` is the same call the app plays with — so this costs a page call, not a render.
+  if ("resolvedOnly" in rendered) {
+    return { assetId, midi, resolved: rendered.resolved };
+  }
   const bytes = Buffer.from(rendered.base64, "base64");
   const filename = auditionFilename(assetId, midi);
   const target = path.join(dir, filename);

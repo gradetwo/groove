@@ -1439,19 +1439,71 @@ export const TOOLS: ToolDefinition[] = [
         .optional()
         .describe("which name goes with which number; defaults to C4 (scientific pitch notation, note 60 is C4)"),
       cents: z.number().min(-1200).max(1200).optional().describe("micro-tuning for the note, in cents"),
+      assetId: z
+        .string()
+        .optional()
+        .describe(
+          "a catalogue asset to resolve the notes against, e.g. \"vsco2ce:ViolinEnsSusVib\" — adds which sample file each note lands on, that file's declared root key, the ratio it is played at, and what the root sounds at. This is what the source **claims**, not a measurement of it: only a render and a measurement can say whether the claim is true."
+        ),
     },
-    handler: (args) => {
+    handler: async (args) => {
       const raw = args.midi;
       // Narrowed rather than cast: the schema allows one number or a list, and a caller's value arrives loose.
       const wanted: number[] = (Array.isArray(raw) ? raw : [raw]).map((value) => Number(value));
       const convention = (args.convention ?? DEFAULT_NOTE_CONVENTION) as NoteConvention;
       const cents = typeof args.cents === "number" ? args.cents : undefined;
-      const report = wanted.map((midi) =>
-        cents === undefined ? describePitch({ midi, convention }) : describePitch({ midi, convention, cents })
-      );
+      const assetId = typeof args.assetId === "string" && args.assetId.length > 0 ? args.assetId : undefined;
+
+      /**
+       * ⭐ **The sound source's own account, resolved through the same `loadNote` the app plays with.**
+       *
+       * `rootKey` is what the sample file *declares*, and `ratio` is what the engine will multiply by to reach
+       * the note — so `ratioCents` says how far the sample is being moved, and `rootFrequencyHz` says what the
+       * sample's own root sounds at. What none of this says is whether the declaration is **true**: a sample
+       * whose audio is an octave away from its label produces a wrong frequency here exactly as it does in a
+       * render. That is what the census measures by rendering, and this tool will not imply otherwise.
+       *
+       * A browser is needed to resolve, so a failure is reported per note rather than thrown: the number-and-name
+       * half above is pure arithmetic and stays correct either way.
+       */
+      const sources = new Map<number, { samplePath: string; rootKey: number; ratio: number }>();
+      const sourceProblems: string[] = [];
+      if (assetId) {
+        for (const midi of wanted) {
+          try {
+            const resolved = await auditionInstrumentNote(assetId, midi, { format: "wav", resolveOnly: true });
+            if (!("resolved" in resolved)) {
+              sourceProblems.push(`note ${midi}: the source returned audio rather than a resolution`);
+              continue;
+            }
+            const rootKey = resolved.resolved.rootKey;
+            if (typeof rootKey !== "number") {
+              sourceProblems.push(
+                `note ${midi}: ${resolved.resolved.samplePath} states no root key, so there is nothing to compare the note against`
+              );
+              continue;
+            }
+            sources.set(midi, { samplePath: resolved.resolved.samplePath, rootKey, ratio: resolved.resolved.ratio });
+          } catch (error) {
+            sourceProblems.push(`note ${midi}: ${(error as Error).message}`);
+          }
+        }
+      }
+
+      const report = wanted.map((midi) => {
+        const source = sources.get(midi);
+        return describePitch({
+          midi,
+          convention,
+          ...(cents === undefined ? {} : { cents }),
+          ...(source === undefined ? {} : { source }),
+        });
+      });
       return {
         convention,
         defaultConvention: DEFAULT_NOTE_CONVENTION,
+        ...(assetId === undefined ? {} : { assetId }),
+        ...(sourceProblems.length === 0 ? {} : { sourceProblems }),
         /** The reader's first line: the convention is named here too, not only per note. */
         note: `names below are ${convention} (note 60 is ${convention}); the numbers are the truth and do not depend on it`,
         notes: report.map((item) => ({
@@ -1464,6 +1516,20 @@ export const TOOLS: ToolDefinition[] = [
           transposed: item.transposed,
           totalSemitones: item.totalSemitones,
           transpositions: item.transpositions,
+          ...(item.source === undefined
+            ? {}
+            : {
+                source: {
+                  samplePath: item.source.samplePath,
+                  rootKey: item.source.rootKey,
+                  rootFrequencyHz: Number(item.source.rootFrequencyHz.toFixed(6)),
+                  ratio: Number(item.source.ratio.toFixed(9)),
+                  /** How far the sample is being moved to reach this note: +100 for one semitone up. */
+                  ratioCents: Number(item.source.ratioCents.toFixed(3)),
+                  /** ⚠️ The claim, not a verdict: whether it is *true* needs a render and a measurement. */
+                  claimOnly: true,
+                },
+              }),
         })),
       };
     },
