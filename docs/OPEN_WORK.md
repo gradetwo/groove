@@ -84,3 +84,19 @@
 4. **推 `main` 到 GitHub**（上一条命令即是；不再有单独的本地门禁要等）。
 
 判定"落地"始终看**内容**而不是日志：`cd /home/crow/music/release/groove-github && git fetch -q origin && git show origin/dev:<path>`。
+
+---
+
+## 六、本轮新确认的一处缺陷（2026-10-01，最小复现）
+
+**`create_song` 的 `clips` 参数要求四个槽位齐全，与文档不符**（Muse 报告的 #16，这次用两次调用复现了）。
+
+* **不传 `clips`**：正常 ✓ —— `create_song {genreId: "chicago-house", bars: 8}` 返回一个 `A` 段落、`problems: []`、`totalSteps: 1024`、`secondsEstimate: 123.9`。
+* **传部分 `clips`**：**被拒** ✗ —— `create_song {genreId: "chicago-house", bars: 8, clips: {A: "intro"}}` 返回
+  `MCP error -32602: Input validation error: Invalid arguments for tool create_song: Invalid input: expected object, r…`
+
+也就是说：只想给 A 槽一个 clip 的调用者，必须先编造 B/C/D——而这正是"文档说可选、schema 说必填"的那类不一致。
+
+**修法与位置**：`mcp/registry.ts` 里 `create_song` 的 `clips` schema 应为**部分对象**（各槽可选），并补一条判据：**只给 A 槽也能建歌，且返回的段落与槽位正确**。
+
+**为什么现在没修**：三条分支（`feat-audio-lane-render`、`feat-gs1-assessment`、`feat-transform-pattern`）此刻都在改 `mcp/registry.ts`，并发编辑同一文件会互相覆盖。**排队**：等它们落地后再改，一次一个。
