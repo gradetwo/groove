@@ -18,6 +18,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 
 const ROOT = process.cwd();
 const HEADER_LINES = 15; // "header / status section" for version mentions
@@ -56,6 +57,51 @@ for (const doc of ["ROADMAP_V2.md", "BACKLOG.md"]) {
     oks.push(`${doc} status block mentions v${version}`);
   } else {
     problems.push(`${doc} header/status block does not mention the current version v${version}`);
+  }
+}
+
+/* 3) No tracked file may contain a committed merge-conflict marker ------- */
+/*
+ * ⭐ **This check exists because the markers are invisible to everything else.**
+ *
+ * `docs/SAMPLE_LIBRARY_INTEGRATION.md` carried two real conflict blocks — a set of table rows and a pair of whole
+ * sections — that had been committed in an old merge and were still there days later. Every check this repository ran
+ * was green, because the checks look at whether a documented claim matches reality and whether referenced files exist;
+ * none of them looks at whether the prose can be read at all. A user of the project found it by reading.
+ *
+ * The markers are built from pieces rather than written literally, so this script does not match itself, and
+ * `=======` is deliberately **not** checked: seven equals signs on their own line is legitimate Markdown (a setext
+ * heading underline), so matching it would flag correct documents.
+ */
+const CONFLICT_MARKS = ["<".repeat(7) + " ", ">".repeat(7) + " "];
+{
+  let tracked = [];
+  try {
+    tracked = execFileSync("git", ["ls-files", "-z"], { cwd: ROOT, encoding: "utf8" })
+      .split("\0")
+      .filter(Boolean);
+  } catch {
+    problems.push("could not list tracked files (git ls-files failed), so conflict markers were not checked");
+  }
+  const offenders = [];
+  for (const file of tracked) {
+    let text;
+    try {
+      text = read(file);
+    } catch {
+      continue; // unreadable or binary; nothing to say about it here
+    }
+    if (text.split("\n").some((line) => CONFLICT_MARKS.some((mark) => line.startsWith(mark)))) {
+      offenders.push(file);
+    }
+  }
+  if (offenders.length > 0) {
+    problems.push(
+      `committed merge-conflict markers in ${offenders.length} file(s): ${offenders.slice(0, 5).join(", ")}` +
+        (offenders.length > 5 ? ", …" : "")
+    );
+  } else {
+    oks.push(`no conflict markers in ${tracked.length} tracked file(s)`);
   }
 }
 
