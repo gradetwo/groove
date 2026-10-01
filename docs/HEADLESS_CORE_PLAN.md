@@ -473,3 +473,21 @@ browser worklet evidence: limiterKind=worklet
 2. **不改已发布路径的图结构** ✓——**否则会撞上那条"按位置识别 master trim 与 makeup 增益"的结构性判据** ✓✓（**而它是对的 ✓**）。
 
 **⇒ 因此这一件的形状是"在保持图同形的前提下让 DSP 共享"** ✓，**不是"多包两个 gain 节点"** ✗✓。
+
+### 8.5 为什么这件事是设计题而不是替换题（2026-10-01）
+
+**张力只有一条** ✓✓：**`createBusCompressor` 是**同步**的**（`GlueCompressorFactory.ts:60` ✓），**而 `addModule` 是**异步**的** ✓。**所以 `:74-81` 说的"swap needs a fixed input and output to replace the node between"讲的不是 worklet 节点接不上 ✓，而是**模块加载完成后要把老节点换掉，就得有稳定的两端** ✓✓。
+
+**三条路，各自的代价** ✓：
+
+| | 做法 | 代价 |
+| --- | --- | --- |
+| **A** | **在已发布路径上加包装增益** | **每次渲染多两个节点 ✓，且图不再是从前的图** ✗——**即作者否决的那条** ✓ |
+| **B** | **把异步等待挪出去**（调用方 await，或建图前先 await 模块） | **改动面广** ✗：`createBusCompressor` 的所有调用方都要变 ✓ |
+| **C** ⭐ | **在**宿主适配层**里换掉 `createDynamicsCompressor`** | **已发布路径零改动** ✓✓——**工作量落在探针/适配器里，而那里本来就是"宿主差异"的住处** ✓（**适配器已经在改写 `addModule` 与 `fetch`** ✓） |
+
+**⇒ C 在风险上明显更优** ✓✓：**它不碰任何已发布路径 ✓，不加节点 ✓，不改图 ✓**，**而"两个宿主跑同一份 DSP"这个目标同样达到 ✓**——**因为 Node 那侧根本不再用那个库的压缩器** ✓。
+
+**⚠️ 而 A 的前提需要重新量** ✗✓：`GlueCompressorFactory.ts:74-81` 说"按位置识别 master trim 与 makeup 增益的结构性判据立刻发现了" ✓，**但今天那条判据读的是 `options.processorOptions?.makeupDb`（`busCompressorWiring.test.ts:104` ✓）——那是**worklet 路径**的字段 ✓，而不是节点在链上的位置** ✓✓。**所以那句否决可能早于这批判据 ✓**；**这也说明**A 也许已经可行，只是没人重测 ✓**。
+
+**⇒ 下一步（按 C 走，并顺手重测 A 的前提）** ✓：**在无头适配器里把 `ctx.createDynamicsCompressor` 换成项目自己的实现** ✓，**然后看八条里那条响度断言走到哪里** ✓✓。
