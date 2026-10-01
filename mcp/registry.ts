@@ -39,7 +39,7 @@ import { DEFAULT_PARAMS } from "../vendor/gs1/src/audio/params";
 import { patternFromGenre } from "../src/data/genreMix";
 import { MAX_BARS } from "../src/data/arrangementEdits";
 import { generateMelody } from "./melody";
-import { EXAMPLE_GENRES, examplesFor } from "./examples";
+import { examplesFor, listExamples } from "./examples";
 import { validateProsody } from "./prosody";
 import { flattenSong } from "../src/data/songFlatten";
 import { listCatalogueInstruments, listSampleLibraries } from "./instruments";
@@ -1915,6 +1915,24 @@ export const TOOLS: ToolDefinition[] = [
   },
   {
     /**
+     * The index over the examples. `get_example` can only serve a genre a caller already knows; this is how a caller learns which
+     * examples exist and what each one is for. It walks the same `examplesFor` the tool and the resource walk rather than keeping a
+     * list of ids, because a second list is a second thing to keep true.
+     */
+    name: "list_examples",
+    title: "List worked examples",
+    description:
+      "Every worked example the server can serve, as compact rows — id, genre, what it demonstrates and the recipe that produced it — so a caller can choose one and fetch it with get_example. Examples are built from the genre library, so every genre in list_genres has a pair; narrow with genreId or page with limit/offset. The pattern itself stays in get_example.",
+    readOnly: true,
+    inputSchema: {
+      genreId: z.string().optional().describe("only this genre's examples; omit for every genre in the library"),
+      limit: z.number().int().min(1).max(500).optional().describe("default 50"),
+      offset: z.number().int().min(0).optional(),
+    },
+    handler: (args) => listExamples(args as { genreId?: string; limit?: number; offset?: number }),
+  },
+  {
+    /**
      * Few-shot material, callable: an agent that is about to compose asks what a good result looks like here, and gets a pattern plus the
      * chain of calls that made it.
      */
@@ -1924,14 +1942,14 @@ export const TOOLS: ToolDefinition[] = [
       "Worked examples for a genre: the pattern the app itself arranges, and a variation built with the composition tools — each with the recipe (the tool calls, in order) that produced it. Built from the genre library rather than pasted, so an example cannot drift from what the tools do. Imitate the recipe, not the JSON.",
     readOnly: true,
     inputSchema: {
-      genreId: z.string().describe("the genre to get examples for; list_example_genres names the ones that have any"),
+      genreId: z.string().describe("the genre to get examples for; list_examples names every example that exists"),
       index: z.number().int().min(0).optional().describe("which example; all of them when omitted"),
     },
     handler: (args) => {
       const examples = examplesFor(String(args.genreId));
       if (!examples.length) {
         return failure(
-          `no worked examples for "${args.genreId}" yet — they exist for: ${EXAMPLE_GENRES.join(", ")}`
+          `no worked examples for "${args.genreId}" — that is not a genre in the library; list_examples names every example that exists and list_genres the genres`
         );
       }
       const index = args.index as number | undefined;

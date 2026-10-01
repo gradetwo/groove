@@ -126,6 +126,7 @@ try {
     "list_genres",
     "get_genre",
     "search_genres",
+    "list_examples",
     "get_pattern",
     "apply_pattern_ops",
     "validate_pattern",
@@ -600,9 +601,35 @@ try {
   );
   const missingGenre = payload(await client.request("tools/call", { name: "get_example", arguments: { genreId: "no-such-genre" } }));
   check(
-    "get_example names the genres it has examples for when asked about one it does not",
-    typeof missingGenre.raw === "string" && missingGenre.raw.includes("no worked examples"),
-    String(missingGenre.raw ?? "").slice(0, 80)
+    "get_example refuses a genre that is not in the library and points at list_examples",
+    typeof missingGenre.raw === "string" && missingGenre.raw.includes("no worked examples") && missingGenre.raw.includes("list_examples"),
+    String(missingGenre.raw ?? "").slice(0, 120)
+  );
+
+  /**
+   * The pair has to agree. `list_examples` is the index over the same material `get_example` serves, and the two drift the moment one
+   * of them grows a filter, a limit or a cached id list the other does not have. The ids are compared rather than the row count,
+   * because a count can match while the ids do not.
+   */
+  const exampleList = payload(await client.request("tools/call", { name: "list_examples", arguments: { genreId: "chicago-house" } }));
+  const listIds = (exampleList.examples ?? []).map((row) => row.id).sort();
+  const getIds = rows.map((row) => row.id).sort();
+  check(
+    "list_examples and get_example name the same examples for a genre",
+    listIds.length > 0 && JSON.stringify(listIds) === JSON.stringify(getIds),
+    `list: ${listIds.join(", ")} vs get: ${getIds.join(", ")}`
+  );
+  const roundTrips = [];
+  for (const row of exampleList.examples ?? []) {
+    const one = payload(
+      await client.request("tools/call", { name: "get_example", arguments: { genreId: row.genreId, index: row.index } })
+    );
+    roundTrips.push(one.id === row.id);
+  }
+  check(
+    "every example list_examples returns is fetchable by get_example at the index it names",
+    roundTrips.length > 0 && roundTrips.every(Boolean),
+    `${roundTrips.filter(Boolean).length}/${roundTrips.length} round-tripped`
   );
 
   const suggested = payload(

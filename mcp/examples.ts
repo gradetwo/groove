@@ -6,7 +6,7 @@
  * tools an agent calls, so it cannot disagree with what the tools do — and one of them exercises the harmony and melody tools end to end,
  * which is also how this file proves they compose.
  */
-import { findGenre } from "./library";
+import { allGenreIds, findGenre } from "./library";
 import { applyPatternOps } from "./pattern";
 import { suggestProgression } from "./library";
 import { generateMelody } from "./melody";
@@ -100,6 +100,61 @@ export function examplesFor(genreId: string): MCPExample[] {
 function patternFromGenreSafe(genre: unknown): Parameters<typeof applyPatternOps>[0] {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   return patternFromGenre(genre as never);
+}
+
+/**
+ * What a caller needs in order to choose an example and then fetch it.
+ *
+ * The pattern and the notes are the payload and stay in `get_example`; this is the index over the same material, so the two cannot
+ * disagree about what exists. `index` is the position within the genre's pair, which is exactly the argument `get_example` takes.
+ */
+export interface ExampleSummary {
+  id: string;
+  genreId: string;
+  index: number;
+  title: { en: string; zh: string };
+  teaches: string;
+  recipe: string[];
+}
+
+export interface ExampleList {
+  total: number;
+  returned: number;
+  offset: number;
+  /** The genres the filter matched, so a paged caller can see the shape of the whole set. */
+  genres: string[];
+  examples: ExampleSummary[];
+}
+
+/**
+ * Every example there is, paged — the read side of `get_example`.
+ *
+ * It is deliberately built by calling `examplesFor`, the same function `get_example` and the `groove://examples/{genre}` resource call,
+ * rather than by keeping a list of ids: a second list would be a second thing to keep true, and the whole point of building examples
+ * from the genre library is that there is only one. Examples exist for every genre in the library, so the unfiltered listing covers all
+ * of them; `genreId` narrows it, and the default page mirrors `list_genres`.
+ */
+export function listExamples(args: { genreId?: string; limit?: number; offset?: number } = {}): ExampleList {
+  const genreIds = args.genreId ? [clean(args.genreId)] : allGenreIds();
+  const all: ExampleSummary[] = genreIds.flatMap((genreId) =>
+    examplesFor(genreId).map((example, index) => ({
+      id: example.id,
+      genreId: example.genreId,
+      index,
+      title: example.title,
+      teaches: example.teaches,
+      recipe: example.recipe,
+    }))
+  );
+  const offset = Math.max(0, args.offset ?? 0);
+  const limit = Math.min(500, Math.max(1, args.limit ?? 50));
+  return {
+    total: all.length,
+    returned: Math.min(limit, Math.max(0, all.length - offset)),
+    offset,
+    genres: [...new Set(all.map((example) => example.genreId))],
+    examples: all.slice(offset, offset + limit),
+  };
 }
 
 import { patternFromGenre } from "../src/data/genreMix";
