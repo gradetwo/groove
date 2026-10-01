@@ -2,7 +2,7 @@ import { CLIP_SLOTS } from "../src/types/song";
 
 /** The slot enum, derived from the one array so a tool cannot refuse a slot the model allows. */
 const clipSlotSchema = z.enum([...CLIP_SLOTS] as [string, ...string[]]);
-import { lanesWithoutMidi } from "./pattern";
+import { audioLaneReplyFields } from "./pattern";
 /**
  * The MCP surface, declared once.
  *
@@ -247,7 +247,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "render_arrangement",
     title: "Bounce an arrangement",
     description:
-      "Render an arrangement to audio through the same offline engine the song and pattern tools use. **An arrangement is one bar of sixteen steps**, so this bounces the loop the interface's Play button plays rather than a piece — when the model gains a length, this follows.",
+      "Render an arrangement to audio through the same offline engine the song and pattern tools use. **An arrangement is one bar of sixteen steps**, so this bounces the loop the interface's Play button plays rather than a piece — when the model gains a length, this follows. **Audio lanes are mixed**: a `sampler` track's notes are resolved through the app's own SFZ loader and placed at their own steps, a lane with a sample and no notes is played once at the arrangement's start, and a lane whose bytes cannot be resolved is named in `skippedLanes` with the reason rather than dropped.",
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
@@ -268,14 +268,16 @@ export const TOOLS: ToolDefinition[] = [
           bitrateKbps: args.bitrateKbps as number | undefined,
           genreId: "custom",
         });
-        const skipped = lanesWithoutMidi(flattened.pattern);
+        /**
+         * The render's own lane report, not a second derivation: `renderAudio` mixes the lanes and says which ones reached the mix and which could not, and a
+         * reply that recomputed the list here would be the "two places, one thing" failure that caused the gap.
+         */
         return {
           ...(result as unknown as Record<string, unknown>),
           arrangementId: String(args.arrangementId),
           bars,
           totalSteps: flattened.pattern.totalSteps,
-          // Reported rather than silent: a lane that vanishes from a render has to say why it did.
-          ...(skipped.length ? { skippedLanes: skipped, skippedNote: "these lanes are not in the render; a lane whose sample is missing sounds as nothing" } : {}),
+          ...audioLaneReplyFields(result.audioLanes),
         };
       } catch (error) {
         return failure((error as Error).message);
@@ -2569,12 +2571,12 @@ export const TOOLS: ToolDefinition[] = [
           bars: 1,
           genreId: "custom",
         });
-        const skipped = lanesWithoutMidi(flattened.pattern);
+        const audioLanes = result.audioLanes;
         return {
           ...result,
           arrangementId: String(args.arrangementId),
           bars,
-          ...(skipped.length ? { skippedLanes: skipped, skippedNote: "these lanes are not in the stems; a lane without notes has nothing to render" } : {}),
+          ...audioLaneReplyFields(audioLanes),
         };
       } catch (error) {
         return failure((error as Error).message);
@@ -2649,13 +2651,11 @@ export const TOOLS: ToolDefinition[] = [
           // and tempo. A song with no name (its genre id) lands on the previous `_master_` form by construction.
           nameSlug: song.name,
         });
-        const skipped = lanesWithoutMidi(flattened.pattern);
         return {
           ...(result as unknown as Record<string, unknown>),
           songId: song.id,
           totalSteps: flattened.pattern.totalSteps,
-          // Reported rather than performed in silence: a lane that vanishes from a render has to say why it did.
-          ...(skipped.length ? { skippedLanes: skipped, skippedNote: "these lanes are not in the render; an audio lane's sample needs the audio-track path, which is not built yet" } : {}),
+          ...audioLaneReplyFields(result.audioLanes),
         };
       } catch (error) {
         return failure((error as Error).message);

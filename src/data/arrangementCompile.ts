@@ -38,6 +38,16 @@ const ROLE_BY_KIND: Record<Exclude<TrackV2["kind"], "folder">, SequencerTrack["t
 };
 
 /**
+ * A track's level in dB as the pattern's linear fader.
+ *
+ * Clamped at the mixer's own +6 dB ceiling, the same bound the offline lane mixer and `AudioEngine` use, so a stored +12 dB cannot become a lane louder in the file
+ * than it can be in the room.
+ */
+function gainDbToLinear(gainDb: number): number {
+  return Math.min(2, Math.max(0, Math.pow(10, gainDb / 20)));
+}
+
+/**
  * One compiled lane: the lane the planner reads, the v2 track it came from, and — additively — the step grid it was converted from.
  *
  * The grid travels with the lane instead of being recomputed by the pattern compile, because recomputing it is the second implementation of one conversion that this project keeps removing: the same
@@ -101,6 +111,16 @@ export function compileArrangementToLanes(arrangement: ArrangementV2, notes: Not
         ...(pitches.some((value) => value !== 0) ? { pitch: pitches } : {}),
         ...(track.sample ? { sample: { assetId: track.sample.assetId } } : {}),
         ...(track.fromLaneId ? { laneId: track.fromLaneId } : {}),
+        /**
+         * ⭐ **The track's own level and position travel with the lane, or a render cannot honour them.**
+         *
+         * `gainDb` and `pan` are per-lane properties of the arrangement model, and the compile used to drop both: every consumer of the compiled pattern — the
+         * offline renderer, the stems, the live engine's own mixer — then mixed every part at an unasked-for level and centre, so `set_arrangement_track_gain` was
+         * a tool whose value nothing read. They map onto the pattern's existing `volume` (a linear fader) and `pan` (−1…1, the same range) rather than onto new
+         * fields, and they are spread conditionally so an arrangement that states neither compiles to exactly the lane it always did.
+         */
+        ...(typeof track.gainDb === "number" && Number.isFinite(track.gainDb) ? { volume: gainDbToLinear(track.gainDb) } : {}),
+        ...(typeof track.pan === "number" && Number.isFinite(track.pan) ? { pan: Math.max(-1, Math.min(1, track.pan)) } : {}),
       } as SequencerTrack,
     });
   }
