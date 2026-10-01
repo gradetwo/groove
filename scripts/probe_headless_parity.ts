@@ -87,6 +87,14 @@ const TOL_LUFS_DB = Number(arg("--tolerance-lufs-db", "0.5"));
 const TOL_TRUE_PEAK_DB = Number(arg("--tolerance-true-peak-db", "0.1"));
 const GUARD_DB = Number(arg("--gs1-guard-db", "5.0"));
 /**
+ * How much a host may differ from *itself* before the comparison is considered invalid.
+ *
+ * The repository's same-runtime determinism line is 0.005 dB, and stable runs here measure 0.000 dB, so 0.01 dB
+ * separates the two cleanly. This is an instrument-validity gate, not a parity tolerance: a host that will not
+ * reproduce itself cannot be compared with another host.
+ */
+const SELF_TOLERANCE_DB = Number(arg("--self-tolerance-db", "0.01"));
+/**
  * Bisect overrides, applied identically to both hosts. The first step of `docs/HEADLESS_CORE_PLAN.md` is to
  * find which stage of the shared graph the host difference lives in; these flags are how that is done without a
  * second build: `--no-bus-comp`, `--no-fx-rack`, `--direct-out` (bypass the master graph entirely).
@@ -97,6 +105,69 @@ const overrides: Record<string, unknown> = {
   ...(process.argv.includes("--direct-out") ? { directOut: true } : {}),
 };
 if (Object.keys(overrides).length > 0) console.log(`bisect overrides: ${JSON.stringify(overrides)}`);
+
+/**
+ * Bisect flags for the first step.
+ *
+ * `--instrument-curves` counts the WaveShaper `curve` assignments the graph actually performs; `--curve-null-identity`
+ * additionally gives the Node host the browser's pass-through semantics for `curve = null` (which the Node host ignores,
+ * measured). `--per-track` renders one stem per track so a gap can be attributed to a lane.
+ */
+const instrumentCurves = process.argv.includes("--instrument-curves");
+const curveNullIdentity = process.argv.includes("--curve-null-identity");
+const perTrack = process.argv.includes("--per-track");
+/** Turns the kick lane's default insert compressor off, in both hosts: the bisect of the named primitive. */
+const noKickComp = process.argv.includes("--no-kick-comp");
+
+/**
+ * WaveShaper `curve` patch: the measured host gap.
+ *
+ * The Node host ignores `curve = null` (after a non-null curve it stays in place); the browser treats it as
+ * pass-through. Only the transition non-null to null actually diverges, so the counter is what decides whether this
+ * candidate can matter at all: a graph that never performs it is ruled out without a shim.
+ */
+const curveStats = { nodes: 0, setCurve: 0, setNull: 0, nullToNull: 0, nullToCurve: 0, curveToNull: 0, curveToCurve: 0 };
+let curvePatchInstalled = false;
+function installCurvePatch(mode: "instrument" | "identity"): void {
+  if (curvePatchInstalled) return;
+  curvePatchInstalled = true;
+  const proto = (wa as any).WaveShaperNode?.prototype;
+  const desc = proto ? Object.getOwnPropertyDescriptor(proto, "curve") : undefined;
+  if (!proto || !desc || typeof desc.get !== "function" || typeof desc.set !== "function") {
+    console.log("curve patch: WaveShaperNode.prototype.curve is not an accessor here; cannot instrument");
+    return;
+  }
+  const seen = new WeakSet<object>();
+  // Exactly linear, so it is a mathematical identity for the shaper's interpolated lookup.
+  const identity = new Float32Array(1025);
+  for (let i = 0; i < identity.length; i += 1) identity[i] = -1 + (2 * i) / (identity.length - 1);
+  Object.defineProperty(proto, "curve", {
+    configurable: true,
+    enumerable: desc.enumerable,
+    get() {
+      return desc.get!.call(this);
+    },
+    set(value: unknown) {
+      if (!seen.has(this)) {
+        seen.add(this);
+        curveStats.nodes += 1;
+      }
+      const prev = desc.get!.call(this);
+      const hadCurve = prev !== null && prev !== undefined;
+      const wantsCurve = value !== null && value !== undefined;
+      if (!hadCurve && !wantsCurve) curveStats.nullToNull += 1;
+      else if (!hadCurve && wantsCurve) curveStats.nullToCurve += 1;
+      else if (hadCurve && !wantsCurve) curveStats.curveToNull += 1;
+      else curveStats.curveToCurve += 1;
+      if (wantsCurve) curveStats.setCurve += 1;
+      else curveStats.setNull += 1;
+      desc.set!.call(this, !wantsCurve && mode === "identity" ? identity : value);
+    },
+  });
+}
+if (instrumentCurves || curveNullIdentity) {
+  installCurvePatch(curveNullIdentity ? "identity" : "instrument");
+}
 
 /* ------------------------------------------------------------------ the fixture */
 
@@ -189,7 +260,7 @@ function measure(chans: Float32Array[], sampleRate: number, limiterKind = "?"): 
 
 /* ------------------------------------------------------------------ headless host */
 
-async function renderHeadless(withGs1: boolean): Promise<Measured> {
+async function renderHeadless(withGs1: boolean, stemTrackIdx: number | null = null): Promise<Measured> {
   const RealOAC = wa.OfflineAudioContext;
   // Rewrite the app's root-relative worklet asset URLs ("/gs1/workletProcessor.js") to real files.
   function HostOfflineAudioContext(this: unknown, c: number, f: number, r: number) {
@@ -215,6 +286,10 @@ async function renderHeadless(withGs1: boolean): Promise<Measured> {
 
   const wav: any = await import("../src/audio/WavExporter.ts");
   const gs1: any = await import("../src/audio/gs1/gs1Tracks.ts");
+  if (noKickComp) {
+    const inserts: any = await import("../src/data/trackInsert.ts");
+    inserts.ROLE_INSERT_DEFAULTS.kick.compEnabled = false;
+  }
   gs1.setGs1RoutingEnabled(withGs1);
   let limiterKind = "?";
   try {
@@ -223,6 +298,7 @@ async function renderHeadless(withGs1: boolean): Promise<Measured> {
       sampleRate: rate,
       channels,
       ...overrides,
+      ...(stemTrackIdx === null ? {} : { stemTrackIdx }),
       onLimiterKind: (kind: string) => {
         limiterKind = kind;
       },
@@ -250,7 +326,16 @@ async function aFreePort(): Promise<number> {
   });
 }
 
-async function renderBrowserBoth(): Promise<{ on: Measured; off: Measured; onRepeat: Measured }> {
+/**
+ * One Vite + Chromium session, usable for many renders.
+ *
+ * A session rather than one render per call: per-track isolation needs several renders, and starting the dev server and
+ * the browser per stem would dominate the measurement. Every render goes through the same page.
+ */
+async function openBrowser(): Promise<{
+  render: (withGs1: boolean, stemTrackIdx?: number | null) => Promise<Measured>;
+  close: () => Promise<void>;
+}> {
   const port = await aFreePort();
   const viteBin = path.join(ROOT, "node_modules", "vite", "bin", "vite.js");
   if (!existsSync(viteBin)) throw new Error(`cannot render in a browser: ${viteBin} not found`);
@@ -261,6 +346,10 @@ async function renderBrowserBoth(): Promise<{ on: Measured; off: Measured; onRep
   });
   const { chromium } = await import("playwright");
   let browser: any = null;
+  const close = async () => {
+    await browser?.close().catch(() => undefined);
+    child.kill("SIGTERM");
+  };
   try {
     await new Promise<void>((resolve, reject) => {
       let output = "";
@@ -285,14 +374,18 @@ async function renderBrowserBoth(): Promise<{ on: Measured; off: Measured; onRep
      * string expression is never transformed, and the page resolves `/src/...` through the Vite dev server exactly as
      * the worker's does.
      */
-    const render = (withGs1: boolean) => {
-      const args = JSON.stringify({ pattern, bars, rate, channels, withGs1, overrides });
+    const render = async (withGs1: boolean, stemTrackIdx: number | null = null): Promise<Measured> => {
+      const args = JSON.stringify({ pattern, bars, rate, channels, withGs1, overrides, stemTrackIdx, noKickComp });
       const expression = `(async () => {
         const args = ${args};
         const [wav, gs1] = await Promise.all([
           import("/src/audio/WavExporter.ts"),
           import("/src/audio/gs1/gs1Tracks.ts"),
         ]);
+        if (args.noKickComp) {
+          const inserts = await import("/src/data/trackInsert.ts");
+          inserts.ROLE_INSERT_DEFAULTS.kick.compEnabled = false;
+        }
         gs1.setGs1RoutingEnabled(args.withGs1);
         let limiterKind = "?";
         const buffer = await wav.renderPatternOffline(args.pattern, {
@@ -300,6 +393,7 @@ async function renderBrowserBoth(): Promise<{ on: Measured; off: Measured; onRep
           sampleRate: args.rate,
           channels: args.channels,
           ...args.overrides,
+          ...(args.stemTrackIdx === null ? {} : { stemTrackIdx: args.stemTrackIdx }),
           onLimiterKind: (kind) => {
             limiterKind = kind;
           },
@@ -316,9 +410,7 @@ async function renderBrowserBoth(): Promise<{ on: Measured; off: Measured; onRep
         gs1.setGs1RoutingEnabled(true);
         return { base64: btoa(binary), sampleRate: buffer.sampleRate, channels: buffer.numberOfChannels, limiterKind };
       })()`;
-      return page.evaluate(expression);
-    };
-    const decode = (r: { base64: string; sampleRate: number; channels: number; limiterKind: string }): Measured => {
+      const r = await page.evaluate(expression);
       const bytes = Buffer.from(r.base64, "base64");
       const chans: Float32Array[] = [];
       const per = bytes.length / r.channels;
@@ -328,15 +420,10 @@ async function renderBrowserBoth(): Promise<{ on: Measured; off: Measured; onRep
       }
       return measure(chans, r.sampleRate, r.limiterKind);
     };
-    const on = decode(await render(true));
-    const off = decode(await render(false));
-    // A second identical ON render: the repo's same-runtime determinism is 0.005 dB, so this is the floor
-    // the browser-vs-headless delta must be read against.
-    const onRepeat = decode(await render(true));
-    return { on, off, onRepeat };
-  } finally {
-    await browser?.close().catch(() => undefined);
-    child.kill("SIGTERM");
+    return { render, close };
+  } catch (error) {
+    await close();
+    throw error;
   }
 }
 
@@ -344,11 +431,27 @@ async function renderBrowserBoth(): Promise<{ on: Measured; off: Measured; onRep
 
 console.log(`headless-core parity probe — ${bars} bar(s), ${channels}ch @ ${rate} Hz`);
 console.log("browser: starting Vite + Chromium …");
-const browserResults = await renderBrowserBoth();
+const session = await openBrowser();
+let browserResults: { on: Measured; off: Measured; onRepeat: Measured; offRepeat: Measured };
+const browserStems: Measured[] = [];
+try {
+  browserResults = {
+    on: await session.render(true),
+    off: await session.render(false),
+    onRepeat: await session.render(true),
+    offRepeat: await session.render(false),
+  };
+  if (perTrack) {
+    for (let i = 0; i < pattern.tracks.length; i += 1) browserStems.push(await session.render(true, i));
+  }
+} finally {
+  await session.close();
+}
 console.log("browser: done. headless: rendering …");
 const headlessOn = await renderHeadless(true);
 const headlessOnRepeat = await renderHeadless(true);
 const headlessOff = await renderHeadless(false);
+const headlessOffRepeat = await renderHeadless(false);
 
 const bandDelta = (a: Measured, b: Measured): { worst: number; band: number } => {
   let worst = 0;
@@ -371,6 +474,32 @@ const bandDelta = (a: Measured, b: Measured): { worst: number; band: number } =>
  */
 const bandL1 = (a: Measured, b: Measured) => a.bandDb.reduce((sum, v, i) => sum + Math.abs(v - b.bandDb[i]), 0);
 
+/**
+ * A degenerate render is not a measurement.
+ *
+ * The Node host intermittently returns a fully silent buffer at the correct frame count, with the limiter reporting
+ * `worklet` (measured: 1 of 8 and 3 of 6 renders at 44.1 kHz stereo, GS-1 off; see `docs/HEADLESS_CORE_PLAN.md`).
+ * Scoring one would report a ~116 dB "host gap" that is really a failed render, which is the single most misleading
+ * number this probe could print. So it refuses to score a silent render and says so.
+ */
+const allRenders: Array<[string, Measured]> = [
+  ["browser GS-1 ON", browserResults.on],
+  ["browser GS-1 OFF", browserResults.off],
+  ["browser GS-1 ON (repeat)", browserResults.onRepeat],
+  ["browser GS-1 OFF (repeat)", browserResults.offRepeat],
+  ["headless GS-1 ON", headlessOn],
+  ["headless GS-1 OFF", headlessOff],
+  ["headless GS-1 ON (repeat)", headlessOnRepeat],
+  ["headless GS-1 OFF (repeat)", headlessOffRepeat],
+];
+const silentRenders = allRenders.filter(([, m]) => !Number.isFinite(m.lufs));
+if (silentRenders.length > 0) {
+  console.log(`\nDEGENERATE RENDER: ${silentRenders.map(([label]) => label).join(", ")} came back silent (LUFS = -Infinity).`);
+  console.log("That is a host defect, not a parity result. Re-run; the interval is roughly one render in eight.");
+  console.log("Recorded in docs/HEADLESS_CORE_PLAN.md.");
+  process.exit(2);
+}
+
 console.log("\n=== the four renders ===");
 const row = (label: string, m: Measured) =>
   console.log(
@@ -389,12 +518,36 @@ console.log(
       : "  ⚠ different limiter path — the deltas below measure that, not the host DSP")
 );
 
-/** Each host against itself: the floor below which a host-to-host delta means nothing. */
-const browserSelf = bandDelta(browserResults.on, browserResults.onRepeat);
-const headlessSelf = bandDelta(headlessOn, headlessOnRepeat);
+/**
+ * Each host against itself, with GS-1 on and off: the floor below which a host-to-host delta means nothing.
+ *
+ * Split by routing on purpose. The GS-1 worklet carries a load monitor that sheds voices when its measured cost
+ * exceeds a fraction of the render-quantum budget for twelve consecutive blocks (`OVER_LOAD` / `OVER_BLOCKS` in
+ * `vendor/gs1/src/audio/worklet-processor.js`), and that measurement is wall-clock. So a nondeterministic **ON**
+ * alongside a deterministic **OFF** points at the worklet's load monitor, not at the host DSP.
+ */
+const browserSelfOn = bandDelta(browserResults.on, browserResults.onRepeat);
+const browserSelfOff = bandDelta(browserResults.off, browserResults.offRepeat);
+const headlessSelfOn = bandDelta(headlessOn, headlessOnRepeat);
+const headlessSelfOff = bandDelta(headlessOff, headlessOffRepeat);
 console.log(
-  `self-determinism (worst band): browser ${browserSelf.worst.toFixed(3)} dB, headless ${headlessSelf.worst.toFixed(3)} dB`
+  `self-determinism (worst band): browser GS-1 ON ${browserSelfOn.worst.toFixed(3)} dB / OFF ${browserSelfOff.worst.toFixed(
+    3
+  )} dB · headless ON ${headlessSelfOn.worst.toFixed(3)} dB / OFF ${headlessSelfOff.worst.toFixed(3)} dB`
 );
+const selfDeltas: Array<[string, number]> = [
+  ["browser GS-1 ON", browserSelfOn.worst],
+  ["browser GS-1 OFF", browserSelfOff.worst],
+  ["headless GS-1 ON", headlessSelfOn.worst],
+  ["headless GS-1 OFF", headlessSelfOff.worst],
+];
+const unstable = selfDeltas.filter(([, worst]) => worst > SELF_TOLERANCE_DB);
+if (unstable.length > 0) {
+  console.log(`\nINSTRUMENT UNSTABLE: ${unstable.map(([label, worst]) => `${label} ${worst.toFixed(3)} dB`).join(", ")} — above ${SELF_TOLERANCE_DB} dB.`);
+  console.log("A host that will not reproduce itself cannot be compared with another host. Re-run; if it persists,");
+  console.log("the nondeterminism itself is the defect to chase (docs/HEADLESS_CORE_PLAN.md section 6).");
+  process.exit(2);
+}
 
 const sameVoice = bandDelta(browserResults.on, headlessOn);
 const sameNative = bandDelta(browserResults.off, headlessOff);
@@ -413,6 +566,30 @@ for (let i = 0; i < browserResults.on.bandDb.length; i += 1) {
       .padStart(10)}  ${dOn.toFixed(2).padStart(7)}  ${browserResults.off.bandDb[i].toFixed(2).padStart(10)} ${headlessOff.bandDb[i]
       .toFixed(2)
       .padStart(11)} ${dOff.toFixed(2).padStart(7)}`
+  );
+}
+
+if (perTrack) {
+  console.log("\n=== per-track isolation (GS-1 ON, one stem per track) ===");
+  console.log("track      browser LUFS  headless LUFS    dLUFS   worst band  13-band L1");
+  for (let i = 0; i < pattern.tracks.length; i += 1) {
+    const b = browserStems[i];
+    const h = await renderHeadless(true, i);
+    const d = bandDelta(b, h);
+    const name = String((pattern.tracks[i] as { track_id: string }).track_id);
+    console.log(
+      `${name.padEnd(10)} ${b.lufs.toFixed(2).padStart(12)} ${h.lufs.toFixed(2).padStart(14)} ${(b.lufs - h.lufs)
+        .toFixed(2)
+        .padStart(8)} ${d.worst.toFixed(2).padStart(11)} (band ${d.band}) ${bandL1(b, h).toFixed(2).padStart(12)}`
+    );
+  }
+}
+
+if (instrumentCurves || curveNullIdentity) {
+  console.log(`\n=== WaveShaper.curve transitions, headless host (${curveNullIdentity ? "identity on null" : "instrument only"}) ===`);
+  console.log(`nodes=${curveStats.nodes} setCurve=${curveStats.setCurve} setNull=${curveStats.setNull}`);
+  console.log(
+    `null->null=${curveStats.nullToNull} null->curve=${curveStats.nullToCurve} curve->null=${curveStats.curveToNull} curve->curve=${curveStats.curveToCurve}`
   );
 }
 

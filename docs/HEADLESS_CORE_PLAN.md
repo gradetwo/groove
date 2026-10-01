@@ -7,7 +7,8 @@
 1. 业主推翻 Phase 0 的"不做"决定，成立。原来的理由只对"在 Node 里重写一个渲染器"成立；对"跑同一份代码，只换 Web Audio 宿主"不成立。这两件事被原裁定当成了一件。
 2. 实测可行：`node-web-audio-api@2.2.0` 在 Node 里跑起了真的 `renderPatternOffline`、真的 AudioWorklet（GS-1 处理器、母带限幅器、glue 压缩）、真的 vendored GS-1 wasm，并渲染出音频。
 3. 但今天它还不是"同一个声音"。同一 fixture、两个宿主、各自都完全可复现（逐次 0.000 dB），44.1 kHz 立体声下仍有最差频段 1.34 dB、整体响度 1.89 LU 的差。差异在声部/轨道图里，不在 GS-1，也不在母带链。
-4. 因此分期：第一步是把这点差定位到一个具名的宿主原语并处理；在这条判据通过之前，不把 MCP 的渲染路径切到无头。Rust 本地方案不是这条路上的捷径，理由见第 1 节。
+4. 因此分期：第一步是把这点差定位到一个具名的宿主原语并处理。这一步已经做完，见第 6 节：差落在 kick 轨道，具名原语是 DynamicsCompressorNode（关掉 kick 的默认压缩后，整混响度差从 1.886 LU 降到 0.495 LU）与 OscillatorNode 的 saw/square 带限（Node 宿主高 1.40 dB）。同时发现一个阻断性缺陷：Node 宿主会间歇性返回整段静音（约每 8 次 1 次），所以判据探针现在拒绝给静音渲染打分。
+5. 在这条判据通过之前，不把 MCP 的渲染路径切到无头。Rust 本地方案不是这条路上的捷径，理由见第 1 节。
 
 ## 1. 三条路径，同一组判据
 
@@ -133,13 +134,15 @@ same native (browser OFF vs headless OFF): worst 1.11 dB (band 3)
 
 0.005 dB 那个同运行时确定性数字不能用作跨宿主容差：它是同一实现的逐次复现，本探针实测两个宿主各自的逐次差都是 0.000 dB，而宿主之间的差是另一个量级的问题。
 
+探针有两条防线，都在打分之前，退出码 2。第一条是静音渲染不打分：Node 宿主会间歇性返回整段静音（第 6 节），把它当测量会印出一个约 116 dB 的"宿主差"，那是这个探针能印出的最误导人的数字，所以遇到 `LUFS = -Infinity` 它拒绝打分。第二条是自一致性闸门：任一宿主对自身两次渲染的差超过 0.01 dB 就判仪器不稳、拒绝比较。阈值取 0.01 dB 是因为仓库自己的同运行时确定性线是 0.005 dB，而稳定运行实测 0.000 dB。这不是容差，是仪器有效性：一个不能复现自己的宿主没有资格与另一个宿主比较。
+
 当前判定：探针不通过（44.1 kHz 立体声：最差频段 1.34 dB > 1.0，响度 1.89 LU > 0.5）。这是探针该说的话，不是它的缺陷。
 
 ## 5. 分期计划
 
-第一步（现在，小）：把 ≤1.34 dB / 1.89 LU 的宿主差二分到一个具名原语。工具已经就位（`scripts/probe_headless_parity.ts`，带 `--no-bus-comp`、`--no-fx-rack`、`--direct-out`，两个宿主同时生效）。
-判据：探针六条检查全过；或者差值被指名为一个宿主原语，并给出重新标定的容差与理由。
-成本：仓库不加依赖（探针用 `createRequire` 可选加载，缺包时打印 skip 并退出 0，与 `src/test/sfizzAgreement.test.ts` 缺 `sfizz_render` 时同形），一次 spike。
+第一步：把宿主差二分到一个具名原语。已做，见第 6 节。结论是它不止一个原语：DynamicsCompressorNode（主要，kick 轨）与 OscillatorNode 的 saw/square 带限（次要，打击乐轨）。同时发现一个阻断项：Node 宿主间歇性返回整段静音。
+判据：探针六条检查全过。今天仍不过（残项 0.495 LU 已满足 0.5 LU，但最差频段 1.34 dB 未收敛），所以下一步不是放宽容差，而是先修静音缺陷，再裁定压缩器差与振荡器差是否可接受。
+成本：仓库不加依赖（两个探针都用 `createRequire` 可选加载，缺包时打印 skip 并退出 0，与 `src/test/sfizzAgreement.test.ts` 缺 `sfizz_render` 时同形）。
 
 第二步：把 `node-web-audio-api` 写进 `devDependencies` 并加 `probe:headless` 脚本；给 MCP 渲染加一个 `GROOVE_MCP_HEADLESS=1` 开关，在探针通过的前提下在进程内渲染。
 判据：`render_audio` / `render_arrangement` 在 fixture 上与浏览器路径落在同一容差内，`check:mcp` 不变。
@@ -147,6 +150,106 @@ same native (browser OFF vs headless OFF): worst 1.11 dB (band 3)
 第三步：只有当第二步稳定之后才谈默认切换。到那时 Phase 0 的另一项 RenderTarget 抽象才有意义——两个宿主在一个接口后面，探针就是那道闸门。
 
 Rust（c）继续推后。它变成正确答案的条件是二选一：要么只需要一个 GS-1 专用 server，要么决定把整个引擎移植过去。真到那一步，共享物件是 `crates/synth-core`，判据是 `docs/RUST_DECISION.md:53` 那句"Rust 核心与浏览器图逐样本一致"。
+
+## 6. 第一步：宿主差的二分（已做）
+
+工具：`scripts/probe_host_primitives.ts`（最小图 A/B：同一份 builder 源码在两个宿主里各跑一次，样本逐点比较；浏览器侧用 `about:blank`，不需要 Vite）与 `scripts/probe_headless_parity.ts` 的 bisect 开关。基准全部是 44.1 kHz 立体声、1 bar、3 轨 fixture（kick / bass / chords，chords 走 GS-1）。
+
+基准（两次独立运行复现同一组数字）：同一声音最差频段 1.34 dB（band 6），同一原生轨 1.11 dB（band 3），响度差 1.886 LU，真峰值差 0.000 dB，两个宿主各自逐次都是 0.000 dB。
+
+### 候选 1：WaveShaper 的 `curve = null` 空操作。排除。
+
+不改音频，只在 Node 宿主上数图上真正发生的赋值：
+
+```
+nodes=36 setCurve=20 setNull=24
+null->null=24 null->curve=20 curve->null=0 curve->curve=0
+```
+
+`curve->null = 0`。24 次 `null` 全部落在从未有过曲线的节点上，没有旧曲线可留，所以这个宿主差异在这张图上不可能起作用。差值不变（仍是 1.34 dB / 1.886 LU）。写在这里是为了下一个读者不必再试它。
+
+### 候选 2：逐轨隔离。差跟着 kick 轨。
+
+`--per-track`（GS-1 开，每轨单独渲染，两个宿主各一次）：
+
+| 轨 | 浏览器 LUFS | 无头 LUFS | dLUFS | 最差频段 | 13 段 L1 |
+| --- | --- | --- | --- | --- | --- |
+| kick | -13.29 | -15.85 | +2.56 | 1.63 (band 9) | 12.33 |
+| bass | -21.33 | -20.96 | -0.37 | 1.55 (band 0) | 9.49 |
+| chords (GS-1) | -23.14 | -24.07 | +0.93 | 0.28 (band 10) | 1.86 |
+
+两个读法。GS-1 那条轨最紧（最差 0.28 dB），这是一份共享 wasm 该有的样子。整混的响度差主要来自 kick：它是最响的一条轨，也是单轨偏差最大的那条。
+
+### 候选 3：原语级 A/B。具名两个，排除九个。
+
+同一份 builder 源码在两个宿主里跑，逐样本比较（括号内是最大样本差相对峰值的 dB）。发散的原语：
+
+| 原语 | 实测 |
+| --- | --- |
+| `osc-saw` / `osc-square` | Node 宿主 RMS 高 1.40 / 1.41 dB（相对差 -12.8 dB）：非正弦波形的带限（抗混叠）实现不同 |
+| `osc-triangle` | 电平一致，波形形状差 -46.9 dB：同一件事的轻微版本 |
+| `DynamicsCompressorNode` | saw 输入 2.4 dB、sine 输入 2.5 dB、noise 输入 3.8 dB 的相对差；RMS 最多 +1.07 dB |
+
+逐一排除（位级相等，或低于 -88 dB）：
+
+| 原语 | 相对差 |
+| --- | --- |
+| `osc-sine` | -98.2 dB |
+| GainNode 线性斜坡 / 指数斜坡 | -109.0 / -112.5 dB |
+| 频率指数扫频 | -99.8 dB |
+| BiquadFilter lowpass（噪声输入） | -125.7 dB |
+| BiquadFilter highpass Q8（噪声输入） | -113.1 dB |
+| WaveShaper 带曲线 | -88.6 dB |
+| AudioBufferSource 噪声缓冲 | 0.00e+0 |
+| ConvolverNode 带 IR | -99.4 dB |
+| StereoPanner（正弦输入） | -91.7 dB |
+
+一个必须写下来的陷阱：`biquad-*` 与 `stereo-panner` 在锯齿波输入下看起来也差 1.4 dB，而那个差完全是从振荡器继承的。换成宿主一致的输入（正弦，或那个逐位相同的噪声缓冲）它们就一致。所以滤波器、声像、卷积、整形、包络都不是原因，根因收敛到振荡器的带限与压缩器两处。
+
+第二处有出处：`src/audio/DrumKitModels.ts:1330-1345` 的 808 cowbell 用 `osc.type = "square"`，所以振荡器那一项落在打击乐轨上。
+
+### 候选 4：kick 压缩器的占比。它是整混响度差的主要来源。
+
+kick 的默认 insert 就带压缩（`src/data/trackInsert.ts:162-180`：`compEnabled: true`、threshold -12 dB、ratio 4、attack 0.012 s、release 0.12 s、makeup 3 dB）。受控对照，同一条 kick 形状的链（正弦 + 指数频率扫频 + 指数增益衰减 + 波形整形）：
+
+- 不带压缩器：相对差 -118.4 dB，RMS 差 -0.00 dB，整条链位级一致；
+- 加上一个 `DynamicsCompressorNode`：相对差 4.5 dB，RMS 差 -0.43 dB。
+
+差是那一个节点加进去的。把 kick 的压缩关掉再渲染整混（两个宿主同样关）：
+
+| 指标 | 基准 | kick 压缩关 |
+| --- | --- | --- |
+| 响度差 | 1.886 LU | 0.495 LU |
+| band 3 | 1.21 dB | 0.80 dB |
+| band 6 | 1.34 dB | 0.75 dB |
+| 同一原生轨最差频段 | 1.11 dB | 0.83 dB |
+
+所以 1.886 LU 里约 1.4 LU 是 kick 那条轨的压缩器，剩下约 0.5 LU 与约 0.8 dB/段是残项。
+
+### 候选 5：不是原语，是宿主缺陷。Node 宿主会间歇性返回整段静音。
+
+逐次一致性检查抓到的不是小差，而是整段静音：帧数正确（165375）、`limiter=worklet`、`LUFS = -Infinity`、13 段全部落在 -120 底。它不是"差一点"，是一次失败的渲染。计数：
+
+| 配置 | 静音次数 |
+| --- | --- |
+| GS-1 关，44.1 kHz 立体声，N=6（第一次） | 1 |
+| GS-1 关，44.1 kHz 立体声，N=6（第二次） | 3 |
+| GS-1 关，44.1 kHz 立体声，N=8 | 1 |
+| GS-1 关，8 kHz 单声道，N=8 | 2 |
+| GS-1 开，8 kHz 单声道，N=8 | 0 |
+| GS-1 开，44.1 kHz 立体声，N=8 | 0 |
+
+它偏爱 GS-1 关的那条路，与采样率无关，帧数总是对的。两个弱线索（各只跑了一次，不能当结论）：`directOut`（绕开整个母带图）0/8，`masterBusCompEnabled: false` 0/8。另外看到过一次非静音的小不确定：同一对渲染差 0.184 dB（band 5）、0.076 LU。
+
+除整段静音之外，还观察到更小的不确定：8 kHz 单声道下有一次浏览器 GS-1 开 1.076 dB、无头 GS-1 关 1.568 dB 的自差，而同一配置在别的运行里是 0.000 dB。所以不确定有两种强度：整段静音，与几分之一 dB 到几 dB 的差。两者都让单次渲染之间的比较失去意义。
+
+这条缺陷是采用无头路径的阻断项，也是判据探针必须先拒绝静音渲染、并且要求每个宿主先复现自己的原因。
+
+### 仍然没有具名的
+
+1. kick 压缩关掉之后剩下的约 0.495 LU / 约 0.8 dB/段。候选是振荡器带限那一项的贡献、其它轨各自的压缩器、以及母带 glue 与限幅器。
+2. 静音渲染的成因。目前只知道：偏爱 GS-1 关、与帧数无关、限幅器报 worklet。
+3. 浏览器侧 GS-1 开启时偶发的顶层频段差异（约 3.9 dB，三次运行里出现）。GS-1 worklet 里唯一读墙上时钟的分支是负载监视器（`OVER_LOAD` / `OVER_BLOCKS`，见 `public/gs1/workletProcessor.js`），它在离线上下文里用 `performance.now()` 估 DSP 成本并可能降声部数；这是最像的解释，但没有证明。
 
 ## 为什么分期而不是现在就做
 
