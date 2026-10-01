@@ -35,6 +35,7 @@ function unknownGenre(wanted: string): string {
 }
 import { applyPatternOps, comparePatterns, findTrack, patternStatistics, validatePattern, type PatternOp } from "./pattern";
 import { DEFAULT_NOTE_CONVENTION, collectTranspositions, describePitch, type NoteConvention } from "../src/data/pitchTruth";
+import { fromMidi } from "../src/data/midiToArrangement";
 import { resolveGs1Lane } from "../src/audio/gs1/gs1Tracks";
 import { decodeGs1PatchCode, type Gs1PatchRoute } from "../src/audio/gs1/gs1PatchCode";
 import {
@@ -643,12 +644,56 @@ export const TOOLS: ToolDefinition[] = [
       arrangementId: z.string(),
       outputDir: z.string().optional().describe("where to write it; defaults to GROOVE_MCP_OUT"),
       filename: z.string().max(64).optional().describe("the file's name; defaults to the arrangement's id, and `.mid` is appended when missing"),
+      pitchMode: z
+        .enum(["original", "sounding"])
+        .optional()
+        .describe(
+          "which pitch to write. **original** (the default) writes each note's own MIDI number, unchanged — the file a DAW opens holds what the arrangement states. **sounding** applies every transposition the arrangement carries, so the file plays what you hear. The reply always reports the offset it applied and then **reads the file back** to compare, so what landed is measured rather than asserted."
+        ),
     },
     handler: (args) => {
       try {
+        const wantedMode = args.pitchMode === "sounding" ? "sounding" : "original";
+        /**
+         * ⭐ **What "sounding" means here, stated rather than guessed.**
+         *
+         * The arrangement model carries **no transposition at all**: `TrackV2` has no `transpose` field, and the
+         * section-level one lives on the song, not on an arrangement. So `sounding` and `original` write the
+         * same bytes today, and this says so instead of implying otherwise. When an arrangement-level
+         * transposition arrives, this is the one line that changes: collect it and put its semitones here.
+         */
+        const modeTranspositions = collectTranspositions({});
+        const transposeSemitones = modeTranspositions.reduce((sum, item) => sum + item.semitones, 0);
         const file = exportMcpArrangementMidi(String(args.arrangementId), {
           ...(args.filename === undefined ? {} : { filename: String(args.filename) }),
+          ...(transposeSemitones === 0 ? {} : { transposeSemitones }),
         });
+        /**
+         * ⭐ **The round trip, measured rather than asserted.** The owner asked for a comparison against the
+         * file rather than a promise: this reads back the bytes just written and compares the pitches that
+         * landed against the ones the arrangement states, shifted by whatever offset was applied. An exporter
+         * that moved a pitch without saying so fails here and nowhere else.
+         */
+        const arrangement = getMcpArrangement(String(args.arrangementId));
+        const statedPitches = Object.values(arrangement?.notesByTrack ?? {})
+          .flatMap((notes) => (notes ?? []).map((note) => note.pitch))
+          .sort((a, b) => a - b);
+        const reimported = fromMidi(file.bytes);
+        const writtenPitches = reimported.parts
+          .flatMap((part) => part.notes.map((note) => note.pitch))
+          .sort((a, b) => a - b);
+        const shifted = statedPitches.map((pitch) => pitch + transposeSemitones).sort((a, b) => a - b);
+        const roundTrip = {
+          notesStated: statedPitches.length,
+          notesWritten: writtenPitches.length,
+          /** True when the file holds exactly the numbers the arrangement states, moved by the reported offset. */
+          matches: shifted.length === writtenPitches.length && shifted.every((pitch, index) => pitch === writtenPitches[index]),
+          ...(shifted.length === writtenPitches.length && !shifted.every((pitch, index) => pitch === writtenPitches[index])
+            ? {
+                firstDifference: shifted.findIndex((pitch, index) => pitch !== writtenPitches[index]),
+              }
+            : {}),
+        };
         const dir = (args.outputDir as string | undefined) || process.env.GROOVE_MCP_OUT || mkdtempSync(path.join(os.tmpdir(), "groove-mcp-"));
         mkdirSync(dir, { recursive: true });
         const target = path.join(dir, file.filename);
@@ -666,6 +711,19 @@ export const TOOLS: ToolDefinition[] = [
           timeSignature: file.timeSignature,
           tempoEvents: file.tempoEvents,
           problems: file.problems,
+          /** ⭐ Which pitch was asked for, and what was actually applied — never one without the other. */
+          pitchMode: wantedMode,
+          transposeSemitones,
+          ...(transposeSemitones === 0
+            ? {
+                pitchNote:
+                  "this arrangement states no transposition, so `original` and `sounding` write the same bytes here — the mode is reported so that stays visible rather than being assumed",
+              }
+            : {
+                pitchNote: `every note was written ${transposeSemitones > 0 ? "above" : "below"} the arrangement's own number by ${Math.abs(transposeSemitones)} semitone(s), so this file will sound ${Math.abs(transposeSemitones)} semitone(s) ${transposeSemitones > 0 ? "higher" : "lower"} in a DAW than the arrangement states`,
+              }),
+          /** Read back out of the bytes just written, not asserted. */
+          roundTrip,
         };
       } catch (error) {
         return failure((error as Error).message);

@@ -42,6 +42,17 @@ export interface ArrangementToMidiOptions {
   division?: number;
   /** What to call the conductor track. */
   conductorName?: string;
+  /**
+   * ⭐ **A semitone offset applied to every note as it is written** — an export's "heard pitch", against the
+   * default of the notes' own numbers.
+   *
+   * It is applied **where the event bytes are built, not where the overlapping-note map is keyed**. That map
+   * pairs notes of one pitch by adjacency, so shifting the key would let it pair two notes that never shared a
+   * pitch; the map stays on the model's numbers and only the written byte moves. Like every other pitch this
+   * writer emits, the result is clamped into 0–127 and a clamped write is counted in `clampedPitches`, so an
+   * offset large enough to push notes out of range shows up in the reply instead of quietly landing on 127.
+   */
+  transposeSemitones?: number;
 }
 
 export interface ArrangementMidiTempoEvent {
@@ -198,6 +209,8 @@ function readTimeSignature(signature: string | undefined): { numerator: number; 
  */
 export function arrangementToMidi(arrangement: ArrangementV2, options: ArrangementToMidiOptions = {}): ArrangementMidiFile {
   const division = Math.max(1, Math.round(options.division ?? ARRANGEMENT_MIDI_DIVISION));
+  /** Read once, applied only where the event bytes are built — see `ArrangementToMidiOptions.transposeSemitones`. */
+  const transposeSemitones = Math.round(options.transposeSemitones ?? 0);
   const bpm = Math.max(20, Math.min(300, Math.round(arrangement.bpm ?? 120)));
   const signature = readTimeSignature(arrangement.timeSignature);
   const meter = timeSignatureBytes(signature.numerator, signature.denominator);
@@ -287,7 +300,7 @@ export function arrangementToMidi(arrangement: ArrangementV2, options: Arrangeme
       if (Math.abs(rawStart - startTick) > 1e-9) roundedStarts += 1;
       if (Math.abs(rawLength - durationTicks) > 1e-9) roundedLengths += 1;
 
-      const pitch = Math.round(note.pitch);
+      const pitch = Math.round(note.pitch) + transposeSemitones;
       const velocity = Math.round(note.velocity);
       if (pitch < 0 || pitch > 127) clampedPitches += 1;
       /**

@@ -1210,6 +1210,47 @@ try {
     `total ${reported.totalSemitones}, ${(reported.sections ?? []).length} section(s), ${(reported.notRead ?? []).length} notRead`
   );
 
+  /**
+   * The export's round trip, measured rather than asserted: the tool reads back the bytes it just wrote and
+   * compares the pitches that landed against the arrangement's own numbers, shifted by the offset it reports.
+   * An exporter that moved a pitch without saying so fails here — which is the point, since the owner asked for
+   * a comparison against the file rather than a promise about it.
+   */
+  const exportArrangement = payload(
+    await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "instrument" } })
+  );
+  const exportArrangementId = exportArrangement.arrangementId ?? exportArrangement.id;
+  const exportTracks = payload(
+    await client.request("tools/call", { name: "get_arrangement", arguments: { arrangementId: exportArrangementId } })
+  );
+  const exportTrackId = (exportTracks.arrangement?.tracks ?? exportTracks.tracks ?? [])[0]?.id;
+  await client.request("tools/call", {
+    name: "add_arrangement_notes",
+    arguments: {
+      arrangementId: exportArrangementId,
+      trackId: exportTrackId,
+      notes: [
+        { pitch: 60, startBeats: 0, lengthBeats: 1, velocity: 100 },
+        { pitch: 72, startBeats: 2, lengthBeats: 1, velocity: 100 },
+      ],
+    },
+  });
+  const exportedArrangementMidi = payload(
+    await client.request("tools/call", {
+      name: "export_arrangement_midi",
+      arguments: { arrangementId: exportArrangementId, pitchMode: "original" },
+    })
+  );
+  check(
+    "export_arrangement_midi reads its own file back and finds the numbers the arrangement stated",
+    exportedArrangementMidi.roundTrip?.matches === true &&
+      exportedArrangementMidi.roundTrip?.notesStated === 2 &&
+      exportedArrangementMidi.roundTrip?.notesWritten === 2 &&
+      exportedArrangementMidi.pitchMode === "original" &&
+      exportedArrangementMidi.transposeSemitones === 0,
+    `mode ${exportedArrangementMidi.pitchMode}, offset ${exportedArrangementMidi.transposeSemitones}, round trip ${JSON.stringify(exportedArrangementMidi.roundTrip)}`
+  );
+
   const prompt = await client.request("prompts/get", { name: "compose_groove", arguments: { genre: "chicago-house" } });
   const promptText = prompt?.messages?.[0]?.content?.text ?? "";
   check("prompts/get builds a usable brief", promptText.includes("chicago-house") && promptText.includes("apply_pattern_ops"), `${promptText.length} chars`);

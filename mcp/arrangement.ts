@@ -464,6 +464,12 @@ export function exportMcpMusicXml(arrangementId: string, options: { trackId?: st
 export interface ExportMcpMidiOptions {
   /** A name for the file. The arrangement's own id is used when omitted, and `.mid` is appended when it is missing. */
   filename?: string;
+  /**
+   * ⭐ **Semitones added to every written note** — an export's "sounding" mode, against the default of the notes'
+   * own numbers. Passed straight to `arrangementToMidi`, which applies it where the event bytes are built, so
+   * this wrapper never touches a pitch itself.
+   */
+  transposeSemitones?: number;
 }
 
 export function exportMcpArrangementMidi(
@@ -483,7 +489,9 @@ export function exportMcpArrangementMidi(
   problems: string[];
 } {
   const arrangement = requireArrangement(arrangementId);
-  const file = arrangementToMidi(arrangement);
+  const file = arrangementToMidi(arrangement, {
+    ...(options.transposeSemitones === undefined ? {} : { transposeSemitones: options.transposeSemitones }),
+  });
   /**
    * The same Unicode-friendly slug `export_groove` uses: separators and control characters go, letters and digits
    * of any script stay. A Chinese track name is a name, not a reason for `arrangement.mid`.
