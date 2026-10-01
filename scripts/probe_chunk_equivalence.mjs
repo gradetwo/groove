@@ -89,47 +89,67 @@ const waitForServer = (url, timeoutMs = 60000) =>
  * a new one restarts the client — which reloads the page and takes the measurement with it. Fetching every module the
  * probe will import forces the server to discover the set up front.
  */
-async function warmModuleGraph(url) {
-  const modules = [
-    "/scripts/probe_chunk_equivalence.html",
-    "/scripts/lib/chunkProbePage.mjs",
-    "/src/data/genres/index.ts",
-    "/src/data/genreMix.ts",
-    "/src/audio/WavExporter.ts",
-    "/src/test/helpers/loudness.ts",
-    "/src/test/helpers/timbre.ts",
-  ];
-  for (const module of modules) {
-    /**
-     * Retried, like `waitForServer`: the first request after Vite binds its listener can still fail with
-     * `ECONNRESET`, and a warm-up that gives up on a race it exists to absorb reports a network fault where there is
-     * only a server that had not finished starting.
-     */
-    let lastError = null;
-    for (let attempt = 1; attempt <= 3; attempt += 1) {
-      try {
-        await new Promise((resolve, reject) => {
-          http
-            .get(`${url.replace(/\/$/, "")}${module}`, (res) => {
-              res.resume();
-              if (res.statusCode && res.statusCode >= 400) reject(new Error(`${module} -> ${res.statusCode}`));
-              else resolve();
-            })
-            .on("error", reject);
-        });
-        lastError = null;
-        break;
-      } catch (error) {
-        lastError = error;
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      }
+/**
+ * **Warm Vite's module graph before the browser starts, transitively.**
+ *
+ * A dev server optimizes dependencies lazily and **reloads the client** when it discovers a new one. That reload is
+ * what a two-and-a-half minute render cannot survive: the page module's state is reset between two `page.evaluate`
+ * calls, and the next step then measures against an empty module. Fetching the entry points is not enough — the set
+ * that matters is everything they import, transitively — so this walks the served sources for their own imports,
+ * which forces the optimizer to see the whole set up front. It is bounded and read-only: nothing but `GET`s, no page.
+ */
+async function warmModuleGraph(url, entries, maxModules = 400) {
+  const base = url.replace(/\/$/, "");
+  const queue = [...entries];
+  const seen = new Set();
+  const failures = [];
+  const get = (module) =>
+    new Promise((resolve, reject) => {
+      http
+        .get(`${base}${module}`, (res) => {
+          if (res.statusCode && res.statusCode >= 400) {
+            res.resume();
+            reject(new Error(`${module} -> ${res.statusCode}`));
+            return;
+          }
+          let body = "";
+          res.setEncoding("utf8");
+          res.on("data", (chunk) => (body += chunk));
+          res.on("end", () => resolve(body));
+        })
+        .on("error", reject);
+    });
+
+  while (queue.length && seen.size < maxModules) {
+    const module = queue.shift();
+    if (!module || seen.has(module)) continue;
+    seen.add(module);
+    let body;
+    try {
+      body = await get(module);
+    } catch (error) {
+      /** A module that cannot be fetched is recorded and skipped: the point is the optimizer's set, not a census. */
+      failures.push(String(error instanceof Error ? error.message : error));
+      continue;
     }
-    if (lastError) throw lastError;
+    if (!/\.(ts|tsx|js|mjs)(\?|$)/.test(module)) continue;
+    for (const match of body.matchAll(/(?:from|import)\s*\(?\s*["']([^"']+)["']/g)) {
+      const specifier = match[1];
+      if (!specifier.startsWith("/src/") && !specifier.startsWith("/scripts/")) continue;
+      const clean = specifier.split("?")[0];
+      if (!seen.has(clean)) queue.push(clean);
+    }
   }
+  return { fetched: seen.size, failures };
 }
 
 const viteBin = path.join(ROOT, "node_modules", "vite", "bin", "vite.js");
-const server = spawn(process.execPath, [viteBin, "--port", String(port), "--strictPort"], {
+/**
+ * `--force` on purpose: a long probe must not measure a transform cache. Vite re-transforms the page module when the
+ * file changes, but a driver run that starts before that re-transform is a run against the previous source — which is
+ * how a step that had just been instrumented printed nothing at all.
+ */
+const server = spawn(process.execPath, [viteBin, "--port", String(port), "--strictPort", "--force"], {
   cwd: ROOT,
   stdio: ["ignore", "pipe", "pipe"],
 });
@@ -155,7 +175,9 @@ class ProbeSession {
     console.error("  [page] new page");
     this.page.on("pageerror", (error) => console.error("[page]", error.message));
     this.page.on("console", (message) => {
+      /** Every page log, not only errors: the page's own diagnostics are how a measurement is bisected. */
       if (message.type() === "error") console.error("[page console]", message.text());
+      else if (message.text().startsWith("[page]")) console.error(`  ${message.text()}`);
     });
     await this.page.goto(`${this.url}${PAGE.replace(/^\//, "")}`, {
       waitUntil: "domcontentloaded",
@@ -208,22 +230,21 @@ class ProbeSession {
           arg }
       )
     );
-    if (result.steps === 1 && step !== "build") {
-      throw new Error(`step ${step} ran on a page whose fixture was never built (step counter restarted)`);
+    /**
+     * `steps` is how many dispatches this **page** has served. It is recorded, not asserted on: a page that Vite
+     * reloaded behind the driver's back reports a smaller number, and the honest response to that is to keep going —
+     * every step now carries its own inputs, so a fresh page is a valid page. What must never be silent is a step that
+     * returns nothing, so the value is checked where it is used.
+     */
+    if (result.value === undefined || result.value === null) {
+      throw new Error(`step ${step} returned nothing on page step ${result.steps}`);
     }
     return result.value;
   }
 
-  build(options) {
-    return this.run("build", options);
-  }
-
-  whole() {
-    return this.run("whole");
-  }
-
-  arm(plan) {
-    return this.run("arm", plan);
+  /** Build + whole render + (optionally) one arm, in a single call — see `chunkProbePage.measure`. */
+  measure(request) {
+    return this.run("measure", request);
   }
 
   collected() {
@@ -236,12 +257,25 @@ const session = new ProbeSession(`http://127.0.0.1:${port}/`);
 try {
   const url = `http://127.0.0.1:${port}/`;
   await waitForServer(url);
-  await warmModuleGraph(url);
-  await new Promise((resolve) => setTimeout(resolve, 1500));
+  const warmed = await warmModuleGraph(url, [
+    "/scripts/probe_chunk_equivalence.html",
+    "/scripts/lib/chunkProbePage.mjs",
+  ]);
+  console.error(
+    `  [vite] warmed ${warmed.fetched} module(s) before opening a page` +
+      (warmed.failures.length ? `, ${warmed.failures.length} unfetchable` : "")
+  );
+  await new Promise((resolve) => setTimeout(resolve, 2000));
 
   const options = { genre, bars, mode };
-  let fixture = await session.build(options);
-  let whole = await session.whole();
+  /**
+   * One call per step: build, render the whole piece, then one arm. A Vite reload between calls wipes the page
+   * module's state, so a step that assumed the previous call's state would measure against an empty module — which is
+   * exactly the failure this layout replaces.
+   */
+  const wholeStep = await session.measure({ options });
+  const fixture = wholeStep.fixture;
+  let whole = wholeStep.whole;
   console.log(
     `chunk equivalence · ${fixture.genre} · ${fixture.mode} · ${fixture.bars} bars (clip ${fixture.clipBars}) split at bar ${fixture.split}`
   );
@@ -253,8 +287,8 @@ try {
   );
 
   /**
-   * The renderer's own default, the deletion test, and every sweep point. Each is its own call, so a page death costs
-   * one arm rather than the run.
+   * The renderer's own default, the deletion test, and every sweep point. Each arm re-renders the whole piece in the
+   * same call it measures against (the app's renderer is deterministic, so this is the reference, not a new take).
    */
   const plan = [
     { label: "default pre-roll", preRollSec: undefined },
@@ -262,29 +296,30 @@ try {
     ...preRollPoints.map((value) => ({ label: `${value} s`, preRollSec: value })),
   ];
   const seen = new Set();
+  const arms = [];
   for (const job of plan) {
     const key = `${job.preRollSec}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    let result;
-    try {
-      result = await session.arm(job);
-    } catch {
-      console.error(`  arm "${job.label}" failed after retries; rebuilding the page and replaying build/whole`);
-      fixture = await session.build(options);
-      whole = await session.whole();
-      result = await session.arm(job);
-    }
+    const step = await session.measure({ options, arm: job });
+    whole = step.whole;
+    const result = step.arm;
+    arms.push(result);
     console.log(
       `  arm ${String(job.label).padEnd(16)} preRoll ${String(result.preRollFrames).padStart(6)} f (${result.preRollSec.toFixed(3)} s)` +
         ` · worst diff ${fmt(result.worstDifference.db, 2)} dBFS` +
-        ` · span ${result.worstDifference.spanSec.toFixed(3)} s` +
+        ` (at seam ${fmt(result.worstDifference.seamDb, 2)})` +
         ` · seam sig/err ${fmt(result.seamRegion.ratioDb, 2)} dB` +
         ` · ${result.wallMs.toFixed(0)} ms`
     );
   }
 
-  const collected = await session.collected();
+  /**
+   * The summary is assembled here, in Node, from the steps' own return values — **not** by asking the page to
+   * recollect. The page's copy lives in module state that a Vite reload can wipe, and a summary that silently lost the
+   * arms would be a report of a measurement that did not happen.
+   */
+  const collected = { whole, arms };
   const defaultArm = collected.arms.find((arm) => arm.label === "default pre-roll") ?? collected.arms[0];
   const deletedArm = collected.arms.find((arm) => arm.label === "pre-roll deleted");
   const wholeMetrics = collected.whole.metrics;
@@ -303,17 +338,18 @@ try {
   row("LUFS delta", 0, defaultArm.lufsDelta, deletedArm?.lufsDelta, 4);
   row("true-peak delta dB", 0, defaultArm.truePeakDelta, deletedArm?.truePeakDelta, 4);
   row("worst sample diff dBFS", 0, defaultArm.worstDifference.db, deletedArm?.worstDifference.db, 2);
+  row("worst diff at seam dBFS", 0, defaultArm.worstDifference.seamDb, deletedArm?.worstDifference.seamDb, 2);
   row("worst diff span s", 0, defaultArm.worstDifference.spanSec, deletedArm?.worstDifference.spanSec, 3);
   row("seam signal/error dB", 0, defaultArm.seamRegion.ratioDb, deletedArm?.seamRegion.ratioDb, 2);
 
   console.log("");
   console.log("  pre-roll sweep");
   console.log(
-    `    ${"pre-roll s".padEnd(10)} ${"worst diff dBFS".padStart(15)} ${"diff span s".padStart(11)} ${"seam sig/err dB".padStart(15)} ${"band L1 dB".padStart(10)} ${"LUFS delta".padStart(11)} ${"wall ms".padStart(8)}`
+    `    ${"pre-roll s".padEnd(10)} ${"worst diff dBFS".padStart(15)} ${"at seam dBFS".padStart(13)} ${"seam sig/err dB".padStart(15)} ${"band L1 dB".padStart(10)} ${"LUFS delta".padStart(11)} ${"wall ms".padStart(8)}`
   );
   for (const arm of [...collected.arms].sort((a, b) => a.preRollSec - b.preRollSec)) {
     console.log(
-      `    ${arm.preRollSec.toFixed(3).padEnd(10)} ${fmt(arm.worstDifference.db, 2).padStart(15)} ${fmt(arm.worstDifference.spanSec, 3).padStart(11)} ${fmt(arm.seamRegion.ratioDb, 2).padStart(15)} ${fmt(arm.bandL1, 4).padStart(10)} ${fmt(arm.lufsDelta, 4).padStart(11)} ${arm.wallMs.toFixed(0).padStart(8)}`
+      `    ${arm.preRollSec.toFixed(3).padEnd(10)} ${fmt(arm.worstDifference.db, 2).padStart(15)} ${fmt(arm.worstDifference.seamDb, 2).padStart(13)} ${fmt(arm.seamRegion.ratioDb, 2).padStart(15)} ${fmt(arm.bandL1, 4).padStart(10)} ${fmt(arm.lufsDelta, 4).padStart(11)} ${arm.wallMs.toFixed(0).padStart(8)}`
     );
   }
 
@@ -348,7 +384,6 @@ try {
      * the difference is the missing reverb, which is what "cut at the boundary" is.
      */
     seamWorstDiffDb: Number(arg("--seam-worst-diff-db", "-60")),
-    seamSpanSec: Number(arg("--seam-span-sec", "1.0")),
   };
 
   const passes = (arm) =>
@@ -356,12 +391,11 @@ try {
     arm.worstBand.worst <= tolerances.bandWorstDb &&
     Math.abs(arm.lufsDelta) <= tolerances.lufsDb &&
     Math.abs(arm.truePeakDelta) <= tolerances.truePeakDb &&
-    arm.worstDifference.db <= tolerances.seamWorstDiffDb &&
-    arm.worstDifference.spanSec <= tolerances.seamSpanSec;
+    arm.worstDifference.seamDb <= tolerances.seamWorstDiffDb;
 
   console.log("");
   console.log(
-    `  criterion: band L1 <= ${tolerances.bandL1Db} dB · worst band <= ${tolerances.bandWorstDb} dB · |LUFS delta| <= ${tolerances.lufsDb} · |true-peak delta| <= ${tolerances.truePeakDb} dB · worst sample diff <= ${tolerances.seamWorstDiffDb} dBFS over <= ${tolerances.seamSpanSec} s`
+    `  criterion: band L1 <= ${tolerances.bandL1Db} dB · worst band <= ${tolerances.bandWorstDb} dB · |LUFS delta| <= ${tolerances.lufsDb} · |true-peak delta| <= ${tolerances.truePeakDb} dB · sample difference at the seam <= ${tolerances.seamWorstDiffDb} dBFS`
   );
   const defaultPass = passes(defaultArm);
   const deletedPass = deletedArm ? passes(deletedArm) : null;

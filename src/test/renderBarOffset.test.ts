@@ -225,9 +225,13 @@ describe("renderPatternChunkOffline — the graph starts at the offset", () => {
     expect(chunk.barStartFrame).toBe(0);
     expect(chunk.preRollFrames).toBe(0);
     expect(chunk.usedPreRoll).toBe(false);
-    // A whole render has no merge waiting, so its own audio is everything it rendered, tail included.
-    expect(chunk.chunkEndFrame).toBe(chunk.buffer.length);
-    expect(chunk.chunkEndFrame).toBeGreaterThan(Math.round(2 * BAR_SEC * SR));
+    /**
+     * One meaning for `chunkEndFrame` on both paths: the render's own audio. For a whole render that is the scheduled
+     * bars and stops **before** the tail — the merge needs that boundary, and `exportMasterWav` deliberately keeps the
+     * tail by trimming to the buffer's end instead (tested below).
+     */
+    expect(chunk.chunkEndFrame).toBe(Math.round(2 * BAR_SEC * SR));
+    expect(chunk.buffer.length).toBe(chunk.chunkEndFrame + Math.ceil(TAIL_SEC * SR));
     expect(scheduledTimes(FakeOfflineAudioContext.lastInstance!)).toEqual(plainTimes);
   });
 
@@ -329,6 +333,14 @@ describe("exportMasterWav — a chunk is a file of the requested bars", () => {
     expect(exported.toBar).toBe(4);
     expect(exported.filename).toBe("chicago-house_master_120bpm_bars2-4.wav");
     expect(exported.durationSec).toBeCloseTo(2 * BAR_SEC, 6);
+  });
+
+  it("keeps a whole export's tail, which is what the file must end on", async () => {
+    restore = installFakeOfflineAudioContext();
+    const exported = await exportMasterWav(PATTERN, "chicago-house", { bars: 2, sampleRate: SR });
+    // Two bars plus the tail — not the two bars alone, which `chunkEndFrame` reports for a merge's benefit.
+    expect(exported.durationSec).toBeCloseTo(2 * BAR_SEC + TAIL_SEC, 6);
+    expect(exported.durationSec).toBeGreaterThan(2 * BAR_SEC);
   });
 
   it("leaves a whole export's name, duration and buffer untouched", async () => {

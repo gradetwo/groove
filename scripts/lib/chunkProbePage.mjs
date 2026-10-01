@@ -129,9 +129,12 @@ const seamStats = (channels, seams) => {
  * boundary disappears into either. A chunk missing the reverb it should have carried over a boundary differs from the
  * whole render by exactly that missing tail, and the largest absolute sample difference is where that shows.
  */
-const worstDifference = (a, b, sampleRate) => {
+const worstDifference = (a, b, sampleRate, seams = []) => {
   let worst = 0;
   let worstAt = -1;
+  let worstSeam = 0;
+  let worstSeamAt = -1;
+  const inSeam = (frame) => seams.some((seam) => frame >= seam.at - seam.frames && frame <= seam.at + seam.frames);
   for (let c = 0; c < a.length; c += 1) {
     const length = Math.min(a[c].length, b[c].length);
     for (let i = 0; i < length; i += 1) {
@@ -139,6 +142,10 @@ const worstDifference = (a, b, sampleRate) => {
       if (difference > worst) {
         worst = difference;
         worstAt = i;
+      }
+      if (inSeam(i) && difference > worstSeam) {
+        worstSeam = difference;
+        worstSeamAt = i;
       }
     }
   }
@@ -160,6 +167,8 @@ const worstDifference = (a, b, sampleRate) => {
     fromSec: first / sampleRate,
     toSec: last / sampleRate,
     spanSec: (last - first + 1) / sampleRate,
+    seamDb: worstSeam > 0 ? 20 * Math.log10(worstSeam) : -Infinity,
+    seamAtSec: worstSeamAt / sampleRate,
   };
 };
 
@@ -195,33 +204,70 @@ const seamDifference = (a, b, seams, radiusFrames) => {
  * hard splice — exactly the arm the deletion test measures.
  */
 const mergeChunks = (chunks) => {
-  const sampleRate = chunks[0].rendered.buffer.sampleRate;
-  const channels = chunks[0].rendered.buffer.numberOfChannels;
+  const sampleRate = chunks[0].buffer.sampleRate;
+  const channels = chunks[0].buffer.numberOfChannels;
   const pieceStartFrame = (chunk) =>
-    Math.round(chunk.rendered.barStartSeconds * sampleRate) - chunk.rendered.preRollFrames;
-  const totalFrames = Math.max(...chunks.map((chunk) => pieceStartFrame(chunk) + chunk.rendered.buffer.length));
+    Math.round(chunk.barStartSeconds * sampleRate) - chunk.preRollFrames;
+  /**
+   * The piece ends where the **last** chunk's own audio ends — `barStartFrame + chunkEndFrame`, not the end of its
+   * buffer.
+   *
+   * The buffer extends past that point with the render's *tail*, which the whole render also has and which the merge
+   * must not count twice: taking `buffer.length` here (the first version) ran 1.75 s of tail twice into the merged
+   * file and reported a 1 dB RMS difference from a render whose **peak was identical to 0.00 dB** — a measurement
+   * artefact that read exactly like "the chunked path is quieter".
+   */
+  let endFrame = 0;
+  for (const chunk of chunks) {
+    endFrame = Math.max(endFrame, pieceStartFrame(chunk) + chunk.chunkEndFrame);
+  }
   const merged = [];
-  for (let c = 0; c < channels; c += 1) merged.push(new Float32Array(totalFrames));
+  for (let c = 0; c < channels; c += 1) merged.push(new Float32Array(endFrame));
   const seams = [];
-  let pieceEnd = 0;
+  let placedEnd = 0;
   for (let index = 0; index < chunks.length; index += 1) {
-    const { rendered } = chunks[index];
-    const start = pieceStartFrame(chunks[index]);
+    const rendered = chunks[index];
+    const start = pieceStartFrame(rendered);
+    const ownEnd = Math.min(rendered.buffer.length, rendered.chunkEndFrame);
     const length = rendered.buffer.length;
-    const known = Math.max(0, Math.min(pieceEnd, start + length) - start);
-    seams.push({ at: start, frames: known, chunkStart: start, index });
+    const known = Math.max(0, Math.min(placedEnd, ownEnd) - start);
+    seams.push({ at: start, frames: Math.max(0, known), chunkStart: start, index });
     for (let c = 0; c < channels; c += 1) {
       const source = rendered.buffer.getChannelData(c);
       const target = merged[c];
+      /**
+       * The overlap — this chunk's pre-roll against the previous chunk's tail — is **crossfaded**, and the previous
+       * chunk is attenuated as the new one comes up. Keeping both at full gain is what an equal-gain fade over
+       * correlated audio does; a hard switch would be the `preRollSec: 0` arm, so the two arms differ by exactly the
+       * thing under test.
+       */
       for (let i = 0; i < known; i += 1) {
+        /** Weights that **sum to 1**, because the two sides are the same music rendered twice: any other pair makes
+         * the seam dip (equal-gain) or bump (equal-power on correlated audio). */
         const t = known > 1 ? i / (known - 1) : 1;
         target[start + i] = target[start + i] * (1 - t) + source[i] * t;
       }
-      for (let i = known; i < length; i += 1) target[start + i] = source[i];
+      /** Everything after the overlap, up to the end of this chunk's own audio. */
+      for (let i = known; i < ownEnd - start; i += 1) target[start + i] = source[i];
+      /** …and the last piece's tail, which is part of the piece and is truncated by nothing. */
+      if (index === chunks.length - 1) {
+        for (let i = Math.max(known, ownEnd - start); i < length && start + i < endFrame; i += 1) {
+          target[start + i] = source[i];
+        }
+      }
     }
-    pieceEnd = Math.max(pieceEnd, start + length);
+    placedEnd = Math.max(placedEnd, ownEnd);
   }
-  return { channels: merged, sampleRate, seams, frames: totalFrames };
+  /**
+   * A compact geometry line, always. It is the one record that distinguishes "the merge is wrong" from "the renderer
+   * is wrong" when a number looks impossible, and it is four numbers wide: the piece's length, the seam, the overlap
+   * and the peak. The frame counts beside it are each chunk's `[preRollFrames, chunkEndFrame, buffer.length]`.
+   */
+  const mergedPeak = Math.max(...merged.map((channel) => channel.reduce((peak, value) => Math.max(peak, Math.abs(value)), 0)));
+  console.log(
+    `[page] merge frames=${endFrame} seam=${JSON.stringify(seams[seams.length - 1] ?? null)} peak=${mergedPeak.toFixed(6)} chunks=${JSON.stringify(chunks.map((chunk) => [chunk.preRollFrames, chunk.chunkEndFrame, chunk.buffer.length]))}`
+  );
+  return { channels: merged, sampleRate, seams, frames: endFrame, peak: mergedPeak };
 };
 
 /* ------------------------------------------------------------------ the page API */
@@ -236,7 +282,14 @@ function requireFixture() {
 
 /** `build(options)` — the fixture, resolved once per page. Idempotent: a repeat call is a no-op. */
 export async function build(options) {
-  if (state.options && JSON.stringify(state.options) === JSON.stringify(options)) return state.fixture;
+  /**
+   * The idempotent path returns the **metadata**, which is what the page API promises — not the internal state object.
+   * Returning `state.fixture` here (the first version) made the driver's second call read `bars: undefined` and
+   * `split: undefined`, and every arm after the first then rendered a chunk of `undefined` bars: measured, chunk A's
+   * `chunkEndFrame` came out as its whole 757,525-frame buffer and the merge crossfaded a whole buffer's worth of
+   * frames. The first `build` was correct, which is exactly why the failure looked like a renderer bug.
+   */
+  if (state.options && JSON.stringify(state.options) === JSON.stringify(options)) return state.fixture.fixture;
   const [genres, mix] = await Promise.all([
     import("/src/data/genres/index.ts"),
     import("/src/data/genreMix.ts"),
@@ -301,18 +354,22 @@ export async function build(options) {
    * `build` had not run it threw `Cannot read properties of null (reading 'mode')` instead of saying "build has not
    * run" — a page-rebuild loop that looked like a browser problem and was not one.
    */
-  state.fixture = { entry, clip, clipBars, pattern, song, totalBars, splitBar, sections, stepsPerBar, mode: options.mode, genre: options.genre };
+  /**
+   * **One shape for the fixture, and the caller reads that shape.** `bars`/`split` are the names the page reports;
+   * `totalBars`/`splitBar` were the names it stored, and a step that read `state.fixture.bars` after an idempotent
+   * `build` got `undefined` — which then rendered a chunk of `undefined` bars (measured: chunk A's `chunkEndFrame` came
+   * out as its whole buffer, and the merge crossfaded 149,372 frames instead of 74,686).
+   */
+  state.fixture = {
+    fixture: { genre: options.genre, mode: options.mode, bars: totalBars, clipBars, split: splitBar, sections },
+    pattern,
+    song,
+    stepsPerBar,
+  };
   state.whole = null;
   state.chunkA = null;
   state.arms = [];
-  return {
-    genre: options.genre,
-    mode: options.mode,
-    bars: totalBars,
-    clipBars,
-    split: splitBar,
-    sections,
-  };
+  return state.fixture.fixture;
 }
 
 /** Render the whole piece (twice, so the measurement's own floor is known) and keep it as the reference. */
@@ -323,9 +380,11 @@ export async function whole() {
     import("/src/test/helpers/loudness.ts"),
     import("/src/test/helpers/timbre.ts"),
   ]);
-  const { pattern, song, mode } = requireFixture();
+  const { pattern, song, fixture } = requireFixture();
   const render = () =>
-    timedRender(() => (mode === "song" ? wav.renderSongOffline(song, {}) : wav.renderPatternOffline(pattern, { bars: 1 })));
+    timedRender(() => {
+      return fixture.mode === "song" ? wav.renderSongOffline(song, {}) : wav.renderPatternOffline(pattern, { bars: 1 });
+    });
   const first = await render();
   const second = await render();
 
@@ -386,10 +445,23 @@ export async function arm(plan) {
     import("/src/test/helpers/loudness.ts"),
     import("/src/test/helpers/timbre.ts"),
   ]);
-  const { pattern, song, totalBars, splitBar, mode } = requireFixture();
+  const { pattern, song, fixture } = requireFixture();
+  const { split, mode } = fixture;
+  /**
+   * **`bars` is a count of *whole pattern repetitions*, not of bars.** The renderer is `totalSteps = patternSteps *
+   * bars`, so a chunk of this fixture — whose pattern already *is* the whole piece — asks for exactly **one**
+   * repetition and lets `fromBar` select the window (`fromBar * 16` steps to `+16 * bars`); asking for `bars: 2` made
+   * a two-bar chunk render the whole eight-bar pattern **twice**, which measured as chunk A's `chunkEndFrame` being
+   * 682,839 frames of a 4-bar piece.
+   *
+   * `return` inside the arrow is spelled out for the same kind of reason: an arrow with a block body that only
+   * *calls* the renderer returns `undefined`, and `timedRender` then reports `value: undefined` — which surfaced two
+   * frames later as `Cannot read properties of undefined (reading 'buffer')` inside `mergeChunks`, i.e. as a merge bug
+   * rather than a missing `return`.
+   */
   const renderChunk = (fromBar, chunkBars, preRollSec) =>
-    timedRender(() =>
-      mode === "song"
+    timedRender(() => {
+      return mode === "song"
         ? wav.renderSongChunkOffline(song, {
             fromBar,
             bars: chunkBars,
@@ -399,12 +471,22 @@ export async function arm(plan) {
             fromBar,
             bars: chunkBars,
             ...(preRollSec === undefined ? {} : { preRollSec }),
-          })
-    );
+          });
+    });
 
-  if (!state.chunkA) state.chunkA = await renderChunk(0, splitBar, 0);
-  const b = await renderChunk(splitBar, totalBars - splitBar, plan.preRollSec);
-  const chunks = [state.chunkA, b];
+  if (!state.chunkA) state.chunkA = await renderChunk(0, 1, 0);
+  const b = await renderChunk(split, 1, plan.preRollSec);
+  /**
+   * Stated, not assumed. A render result that is missing its buffer is a defect in this file — and the two frames
+   * between here and its first use turn that into a merge error that reads like bad arithmetic.
+   */
+  for (const [name, chunk] of [
+    ["chunk A", state.chunkA],
+    ["chunk B", b],
+  ]) {
+    if (!chunk?.value?.buffer) throw new Error(`${name} produced no buffer (renderer returned ${typeof chunk?.value})`);
+  }
+  const chunks = [state.chunkA.value, b.value];
   const merged = mergeChunks(chunks);
 
   const loud = loudness.measureLoudness(merged.channels, merged.sampleRate);
@@ -425,7 +507,7 @@ export async function arm(plan) {
     preRollFrames: b.value.preRollFrames,
     usedPreRoll: state.chunkA.value.usedPreRoll || b.value.usedPreRoll,
     wallMs: state.chunkA.wallMs + b.wallMs,
-    phases: sumPhases(chunks),
+    phases: sumPhases([state.chunkA, b]),
     chunkA: {
       fromBar: state.chunkA.value.fromBar,
       toBar: state.chunkA.value.toBar,
@@ -449,25 +531,33 @@ export async function arm(plan) {
     rmsDelta: metrics.rmsDb - reference.rmsDb,
     seam: seamStats(merged.channels, merged.seams),
     seamRegion: seamDifference(state.whole.channels, merged.channels, merged.seams, Math.round(0.5 * merged.sampleRate)),
-    worstDifference: worstDifference(state.whole.channels, merged.channels, merged.sampleRate),
+    worstDifference: worstDifference(state.whole.channels, merged.channels, merged.sampleRate, merged.seams),
   };
   state.arms.push(result);
   return result;
 }
 
+/**
+ * **The page's whole vocabulary for the driver: build, render the whole piece, measure one arm — in one call.**
+ *
+ * One call on purpose. A Vite dev server can reload the client (it does, when its dependency optimization decides the
+ * config changed), and a reload resets this module's state — so a driver that built a fixture in one call and measured
+ * an arm in the next was measuring against a page whose state had been wiped, and reported "this page has no fixture"
+ * while a fixture had just been built. A step that carries its own inputs cannot be interrupted that way, and a page
+ * that dies mid-measurement simply gets the same step replayed on a new one.
+ */
+export async function measure(request) {
+  console.log(`[page] measure ${JSON.stringify(request.arm?.label ?? "(whole only)")}`);
+  const fixture = await build(request.options);
+  const wholeSummary = request.whole ?? (await whole());
+  if (!request.arm) return { fixture, whole: wholeSummary, arm: null };
+  return { fixture, whole: wholeSummary, arm: await arm(request.arm) };
+}
+
 /** Everything measured so far on this page, so a driver can print progress and a verdict at the end. */
 export function collected() {
   return {
-    fixture: state.fixture
-      ? {
-          genre: state.fixture.genre,
-          mode: state.fixture.mode,
-          bars: state.fixture.totalBars,
-          clipBars: state.fixture.clipBars,
-          split: state.fixture.splitBar,
-          sections: state.fixture.sections,
-        }
-      : null,
+    fixture: state.fixture?.fixture ?? null,
     whole: state.whole?.summary ?? null,
     arms: state.arms,
   };

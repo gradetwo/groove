@@ -1939,9 +1939,15 @@ async function renderPatternOfflineOnce(
      * `{ bars: 2 }` export down to its tail-less length (measured: a 5.75 s buffer reported as `durationSec` 4) —
      * the kind of defect a chunking change can introduce in the path it is not about.
      */
-    chunkEndFrame: chunkWindow
-      ? Math.min(result.length, chunkWindow.preRollFrames + Math.round(chunkLoopSec * result.sampleRate))
-      : result.length,
+    /**
+     * Where this render's **own audio** stops, as an offset into its own buffer — the tail after it is the tail.
+     *
+     * One meaning for both paths: the pre-roll (0 for a whole render) plus the scheduled length. Giving a whole render
+     * `result.length` here was two bugs at once — it told a merge that a whole render's own audio ran to the end of its
+     * buffer, so a merge using it as a boundary crossfaded the tail as if it were music, and it trimmed a plain
+     * `{ bars: 2 }` export to one bar until `exportMasterWav` was given its own end (see there).
+     */
+    chunkEndFrame: (chunkWindow ? chunkWindow.preRollFrames : 0) + Math.round(chunkLoopSec * result.sampleRate),
     tailSec,
     barStartSeconds: chunkWindow ? chunkWindow.barStartSeconds : 0,
     usedPreRoll: Boolean(chunkWindow && chunkWindow.preRollFrames > 0),
@@ -2109,10 +2115,17 @@ export async function exportMasterWav(
   });
   /**
    * The file is the requested bars, **not** the pre-roll the renderer needed to be correct at the first of them: the
-   * pre-roll is the previous chunk's audio, and a file that began with it would start one reverb-length early. A whole
-   * render has no pre-roll and this is the identity, byte for byte — the same buffer, not a copy.
+   * pre-roll is the previous chunk's audio, and a file that began with it would start one reverb-length early.
+   *
+   * A whole render has no pre-roll and nothing to drop, and it **keeps its tail** — a file must not stop while the
+   * reverb is still sounding — so its end is the buffer's, not `chunkEndFrame`'s. (`chunkEndFrame` is the render's own
+   * audio, which is what a merge needs and what a file must not use.)
    */
-  const audioBuf = trimChunkFrames(chunk, chunk.preRollFrames, chunk.chunkEndFrame);
+  const audioBuf = trimChunkFrames(
+    chunk,
+    chunk.preRollFrames,
+    chunk.preRollFrames > 0 ? chunk.chunkEndFrame : chunk.buffer.length
+  );
   const wavArrayBuffer = encodeAudioBufferToWav(audioBuf);
   const blob = new Blob([wavArrayBuffer], { type: "audio/wav" });
   const bpm = options.bpm || pattern.bpm || 120;
