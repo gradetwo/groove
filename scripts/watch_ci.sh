@@ -5,12 +5,21 @@
 # numbers were produced on each push and thrown away, while "the local gate passed" was read as "this is fine".
 #
 # So: after pushing, ask this. `--watch` waits for the run to finish and reports its jobs; without it, the last few runs are listed with the step that failed, when one did. Either way the answer comes from CI rather than from a summary of the local gate.
+#
+# **Why it no longer reads from the mirror (2026-10-01).** It used to `cd` into `../release/groove-github`
+# and ask `gh` from there. That made the answer depend on a second checkout existing — the check that tells
+# you whether a push succeeded failed when the mirror was moved or left in a strange state — and it asked
+# about whatever branch the mirror happened to be on. `gh` resolves the repository from `origin`, which this
+# repository now has, and the repository it asks about is the one being pushed. See `docs/OPEN_WORK.md` §十.
 set -u
 
-REPO="$(cd "$(dirname "$0")/.." && pwd)/../release/groove-github"
+cd "$(dirname "$0")/.." || exit 1
 command -v gh >/dev/null || { echo "❌ gh is not installed, so CI cannot be read from here"; exit 1; }
-[ -d "$REPO/.git" ] || { echo "❌ $REPO is not a git checkout"; exit 1; }
-cd "$REPO" || exit 1
+# ⭐ **Resolve the repository rather than assume it.** With no `origin`, `gh` would guess; saying which
+# repository the answer is about is the difference between "CI is green" and "some repository's CI is green".
+REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)
+[ -n "$REPO" ] || { echo "❌ gh cannot resolve this repository — is origin set, and are you logged in? (gh auth status)"; exit 1; }
+echo "CI on $REPO"
 
 if [ "${1:-}" = "--watch" ]; then
   RUN=$(gh run list --workflow=ci.yml --limit 1 --json databaseId --jq '.[0].databaseId')
