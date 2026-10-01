@@ -109,8 +109,22 @@ export function compileArrangementToLanes(arrangement: ArrangementV2, notes: Not
      * belongs to; this is written conditionally so a lane with no chords keeps exactly the shape it had.
      */
     const stack = stackFromNotes(notesForTrack, stepCount);
-    // The sampler lane's note lengths travel with it; see `samplerGateFromNotes` for why this is the lane that needs them and a gate-less lane keeps the default.
-    const samplerGate = trackId === "audio" ? samplerGateFromNotes(notesForTrack, stepCount) : null;
+    /**
+     * ⭐ **Every lane gets the note's length, not only the sampler lane.**
+     *
+     * This used to be `trackId === "audio" ? … : null`, and the reasoning was recorded on the builder: only the
+     * sampler lane is voiced as a note rather than a one-shot, so giving the others a gate would change timing
+     * that was already working. That protected the old behaviour at the arrangement's expense — an arrangement
+     * note *states* a length, and a lane that ignores it drops the one thing this model carries that the step grid
+     * cannot. The owner's instruction is that where the sequencer's design limits the arrangement, the sequencer's
+     * design goes, so the condition is gone.
+     *
+     * **This changes what existing arrangements sound like.** An instrument or drum lane used to sound for the
+     * engine's default 0.8 steps whatever the note said; it now holds for as long as the note is written. That is
+     * a deliberate change of sound rather than a silent one, which is why the criterion for it is written against
+     * this function's own output.
+     */
+    const laneGate = gateFromNotes(notesForTrack, stepCount);
     compiled.push({
       sourceTrackId: track.id,
       steps,
@@ -123,7 +137,9 @@ export function compileArrangementToLanes(arrangement: ArrangementV2, notes: Not
         // Only written when something has a pitch, so a lane with no notes keeps the shape it had.
         ...(pitches.some((value) => value !== 0) ? { pitch: pitches } : {}),
         ...(stack.some((column) => column !== null) ? { pitches: stack } : {}),
-        ...(samplerGate ? { gate: samplerGate } : {}),
+        // Written only when something is held, so a lane with no notes keeps the shape it had — the same rule the
+        // `pitch` and `pitches` lines above follow.
+        ...(laneGate.some((steps) => steps > 0) ? { gate: laneGate } : {}),
         ...(track.sample ? { sample: { assetId: track.sample.assetId } } : {}),
         ...(track.fromLaneId ? { laneId: track.fromLaneId } : {}),
         /**
@@ -170,7 +186,7 @@ export function compileArrangementToLanes(arrangement: ArrangementV2, notes: Not
  * cutting a written note short, or holding a shorter one longer — the first removes sound the arrangement asked for, so it is the
  * one to avoid. (The grid already keeps only the lowest pitch of such a stack, which is a separate limit of this conversion.)
  */
-function samplerGateFromNotes(notes: readonly NoteEvent[], stepCount: number): number[] {
+function gateFromNotes(notes: readonly NoteEvent[], stepCount: number): number[] {
   const gate = new Array<number>(stepCount).fill(0);
   for (const note of notes) {
     const step = Math.round(note.startBeats / STEP_BEATS);
