@@ -213,8 +213,16 @@ export const GS1_PITCH_PARAMETERS: ReadonlyArray<{
 
 /** What a caller knows about a lane when it asks what is moving its pitch. */
 export interface TranspositionInputs {
-  /** `SequencerTrack.transpose` (`src/types/song.ts:90`), semitones, clamped ±24 by the model. */
-  trackTranspose?: number;
+  /**
+   * `SectionOverrides.transpose` (`src/types/song.ts:65` interface, field at `:90`), semitones, clamped ±24.
+   *
+   * ⚠️ **Named for what it is.** The first version of this called it `trackTranspose` and pointed at the same
+   * line, on the strength of a docstring that talks about drums — and there is **no track-level transposition
+   * anywhere in either model**: `TrackV2` (`src/types/arrangementV2.ts`) has none and neither does
+   * `SequencerTrack`. Both `transpose` fields live on sections. A field named for a thing that does not exist
+   * is worse than a missing one, because a caller will trust it.
+   */
+  overridesTranspose?: number;
   /** `SongSection.transpose` (`src/types/song.ts:186`), semitones. */
   sectionTranspose?: number;
   /** The lane's GS-1 overrides, keyed by parameter name or numeric id — `gs1PatchOverrides.parameters`. */
@@ -237,12 +245,12 @@ export interface TranspositionInputs {
 export function collectTranspositions(inputs: TranspositionInputs): PitchTransposition[] {
   const out: PitchTransposition[] = [];
 
-  if (typeof inputs.trackTranspose === "number" && inputs.trackTranspose !== 0) {
+  if (typeof inputs.overridesTranspose === "number" && inputs.overridesTranspose !== 0) {
     out.push({
-      source: "track transpose",
-      semitones: inputs.trackTranspose,
+      source: "section overrides transpose",
+      semitones: inputs.overridesTranspose,
       reversible: true,
-      detail: "SequencerTrack.transpose — set it back to 0 (src/types/song.ts:90)",
+      detail: "SectionOverrides.transpose — set it back to 0 (src/types/song.ts:65, field at :90)",
     });
   }
   if (typeof inputs.sectionTranspose === "number" && inputs.sectionTranspose !== 0) {

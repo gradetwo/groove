@@ -11,12 +11,12 @@ import { GS1_PITCH_PARAMETERS, collectTranspositions, describePitch } from "../d
  */
 describe("the transposition report", () => {
   it("names each source instead of summing them into a number nobody can trace", () => {
-    const report = collectTranspositions({ trackTranspose: -12, sectionTranspose: 2 });
-    expect(report.map((item) => item.source)).toEqual(["track transpose", "section transpose"]);
+    const report = collectTranspositions({ overridesTranspose: -12, sectionTranspose: 2 });
+    expect(report.map((item) => item.source)).toEqual(["section overrides transpose", "section transpose"]);
     expect(report.map((item) => item.semitones)).toEqual([-12, 2]);
     // Reversibility is stated rather than assumed: the model's own fields can be set back.
     expect(report.every((item) => item.reversible)).toBe(true);
-    expect(report[0]!.detail).toContain("src/types/song.ts:90");
+    expect(report[0]!.detail).toContain("src/types/song.ts:65");
     expect(report[1]!.detail).toContain("src/types/song.ts:186");
   });
 
@@ -42,7 +42,7 @@ describe("the transposition report", () => {
     expect(GS1_PITCH_PARAMETERS.map((item) => item.id)).not.toContain(38);
     expect(collectTranspositions({ gs1Parameters: { PITCH_BEND_RANGE: 12 } })).toEqual([]);
     // A zero is not a transposition either, so a total of zero reports nothing rather than five rows of zero.
-    expect(collectTranspositions({ trackTranspose: 0, sectionTranspose: 0, gs1Parameters: { OSC1_PITCH: 0 } })).toEqual([]);
+    expect(collectTranspositions({ overridesTranspose: 0, sectionTranspose: 0, gs1Parameters: { OSC1_PITCH: 0 } })).toEqual([]);
     expect(collectTranspositions({})).toEqual([]);
   });
 
@@ -61,7 +61,7 @@ describe("the transposition report", () => {
   });
 
   it("reaches the report a caller reads, with the total beside the list", () => {
-    const transpositions = collectTranspositions({ trackTranspose: -12, gs1Parameters: { OSC1_DETUNE: 50 } });
+    const transpositions = collectTranspositions({ overridesTranspose: -12, gs1Parameters: { OSC1_DETUNE: 50 } });
     const report = describePitch({ midi: 60, transpositions });
     expect(report.midi).toBe(60);
     expect(report.frequencyHz).toBeCloseTo(261.6255653, 6);

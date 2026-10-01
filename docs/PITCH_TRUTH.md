@@ -50,7 +50,7 @@
 
 | # | 来源 | 出处 | 量纲 |
 | --- | --- | --- | --- |
-| 1 | **轨道 `transpose`** | `src/types/song.ts:90`（注释写明 **±24**，并逐音夹回 MIDI 范围） | 半音 |
+| 1 | **段落覆盖 `SectionOverrides.transpose`** ✗✓（**更正**：原先写成「轨道 `transpose`」，而**两个模型里都没有轨道级移调**） | `src/types/song.ts:65` 接口、字段在 `:90`（注释写明 **±24** 并逐音夹回 MIDI 范围） | 半音 |
 | 2 | **段落 `transpose`** | `src/types/song.ts:186`；取值点 `sectionTranspose()` `:210`；应用点 `:298-310` | 半音 |
 | 3 | **SFZ `tune` + `tune_ccN`** | `src/audio/sfz/parse.ts:37/88/320` | 音分 |
 | 4 | **SFZ `pitch_keycenter`** | `src/audio/sfz/parse.ts:318` | 半音（区域根音） |
@@ -150,3 +150,13 @@
 **⇒ 至此"我登记并使用的、可测的来源"共 13 条，13 条绝对音高正确** ✓✓（7 条自校准 ✓ + 拨弦中提琴 48 ✓ + 竖琴 E1 ✓ + 上面三条 ✓），**而全程出现的错误数字，全部来自测量方法**（她的谱峰法 ✗、我的自相关在低音区 ✗、我的 HPS ✗）。
 
 **而这仍然不是"全清单已覆盖"** ✗✓：**13 条是抽样，不是普查** ✓——**要那句话成立，得把 `list_sample_libraries` 报的每个库都跑一遍** ✓。
+
+
+---
+
+## §3 ⚠️ 更正我自己的两处（2026-10-01，两处都是「读一层、对另一层下结论」）
+
+1. **「轨道级 `transpose`」不存在** ✗✓✓：§1.5 第 1 行写成 `SequencerTrack.transpose`，**而两个模型里都没有这个字段**——`TrackV2`（`src/types/arrangementV2.ts`）没有 ✓，`SequencerTrack`（`src/types/genre.ts`）也没有（grep 零命中 ✓）。**两个 `transpose` 都在段落上**：`SectionOverrides.transpose`（`src/types/song.ts:65` 接口、字段 `:90` ✓）与 `SongSection.transpose`（`:186` ✓）。**根因**：读到一句讲鼓的 docstring，就假定它属于「轨道」这个接口 ✗——**今天第四次同样的形状** ✓。**代码已按事实改名**（`trackTranspose` → `overridesTranspose` ✓）：**一个命名了不存在之物的字段，比缺一个字段更糟，因为调用方会信它** ✗✓。
+2. **「鼓不受移调」在模型层是构造性事实，不是缺口** ✓✓：§1.9 记的「通道 10 与鼓没有特判」**对导入器成立** ✓，但 `src/types/song.ts:85-90` 写明「**only a step that carries a pitch (`pitch` or a `pitches` stack) moves, and kick has neither**」——**回放路径上鼓本来就不动** ✓；**缺口只在导入侧** ✓。
+
+**⇒ 这两条都不改变已落的代码结论，只改变它们的名字与归属** ✓——**而名字错了，调用方就会照错的名字去用** ✗✓。
