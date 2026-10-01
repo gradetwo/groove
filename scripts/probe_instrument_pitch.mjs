@@ -11,6 +11,10 @@
  * ratio 算成两倍）都会让它变红 ✗✓。删除测试：把 `startSamplerNote` 的 ratio 乘 2，
  * 本探针必须整体报红 ✓。
  *
+ * ⚠️ **本探针现在预期为红** ✗✓：`render_arrangement` 的采样 lane **在音区内不移调** ✗——59/60 正确，
+ * 而 61/62/63/64 全部冻结在音区根音上（实测 260.9 Hz）✗。**红是缺陷的证据，不是判据的问题** ✗✓——
+ * **不许**靠放宽 `--cents` 或删掉那几条让它变绿 ✗✗。修复落地后它应当整体转绿 ✓，**届时把它当回归判据用** ✓。
+ *
  * 求基频用自相关，不用 `analyze_audio`（它不报基频 ✗），也不用频谱主峰（持续弦乐的第二
  * 谐波常常强于基频 ✓，那正是这份报告踩的坑 ✓）。
  *
@@ -26,11 +30,17 @@ import { readFileSync } from "node:fs";
 
 const TOLERANCE = Number((process.argv.find((v) => v.startsWith("--cents=")) ?? "--cents=25").split("=")[1]);
 const CASES = [
-  ["vsco2ce:ViolinEnsSusVib", 59, "报告指控的那个乐器，低一个半音"],
-  ["vsco2ce:ViolinEnsSusVib", 60, "中央 C——报告在这一条上读到 523.8 Hz"],
-  ["vsco2ce:ViolinEnsSusVib", 62, "高一个全音"],
-  ["vsco2ce:CelloEnsSusVib", 60, "对照：报告说它正确"],
+  ["vsco2ce:ViolinEnsSusVib", 57, "音区边界之下——lane 上会低一个八度 ✗（已知缺陷）"],
+  ["vsco2ce:ViolinEnsSusVib", 59, "音区根音附近：两条路都对 ✓"],
+  ["vsco2ce:ViolinEnsSusVib", 60, "音区根音上：两条路都对 ✓（也是单音测试测不出缺陷的那一条）"],
+  ["vsco2ce:ViolinEnsSusVib", 61, "根音之上一个半音——lane 会冻结在根音 ✗（已知缺陷）"],
+  ["vsco2ce:ViolinEnsSusVib", 62, "根音之上两个半音——lane 会冻结在根音 ✗（已知缺陷）"],
+  ["vsco2ce:ViolinEnsSusVib", 63, "根音之上三个半音——lane 会冻结在根音 ✗（已知缺陷）"],
+  ["vsco2ce:ViolinEnsSusVib", 64, "根音之上四个半音——lane 会冻结在根音 ✗（已知缺陷）"],
+  ["vsco2ce:CelloEnsSusVib", 60, "对照：两条路都对 ✓"],
+  ["vsco2ce:CelloEnsSusVib", 64, "对照：证明缺陷是否只在小提琴（不该是 ✗）"],
 ];
+
 
 function readWav(path) {
   const b = readFileSync(path);
