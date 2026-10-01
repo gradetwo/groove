@@ -303,7 +303,7 @@ browser worklet evidence: limiterKind=worklet
 
 ### 这是产品事实，不只是笔记
 
-同一条规则有一个真实的部署危险：从非 secure origin 打开的页面会静默地失去真峰值限幅与 GS-1。也就是说，用 `http://<局域网 IP>:3000` 或任何非 HTTPS 主机名打开这个应用，`chords`/`lead` 会落到原生引擎、母带会落到 DynamicsCompressor 回退，而界面与导出都不会说。MCP 服务器的渲染不受影响（它用 127.0.0.1），但"这个渲染用了哪个限幅器、GS-1 有没有生效"是调用方有权知道的事实。按业主的划分，把这个事实报给用户是产品侧的事，本文只负责把它测出来并写下来。
+同一条规则有一个真实的部署危险：从非 secure origin 打开的页面会静默地失去真峰值限幅与 GS-1。也就是说，用 `http://<局域网 IP>:3000` 或任何非 HTTPS 主机名打开这个应用，`chords`/`lead` 会落到原生引擎、母带会落到 DynamicsCompressor 回退，而界面**此前说的是另一个故事** ✗：它只在 `limiterKind === "fallback"` 时弹"限幅器未能加载，再导出一次/新标签页" ✓——那对一个**非 secure origin** 是**重试也修不好**的建议 ✗✓。**现已改正** ✓：导出面新增 `workletsUnavailable` 与 i18n `export_wav_no_worklets` ✓，排在 GS-1/limiter 消息**之前** ✓，直接说明是 origin 不安全 ✓✓（判据 `src/test/workletsUnavailable.test.ts` 4 条 ✓；真实浏览器双侧实测见 `scripts/probe_worklet_surfaces.mjs` ✓）。MCP 服务器的渲染不受影响（它用 127.0.0.1），但"这个渲染用了哪个限幅器、GS-1 有没有生效"是调用方有权知道的事实。按业主的划分，把这个事实报给用户是产品侧的事，本文只负责把它测出来并写下来。
 
 ### 一处自我更正
 

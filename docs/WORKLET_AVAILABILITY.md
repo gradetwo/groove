@@ -22,7 +22,7 @@
 
 ## 真正的产品事实（修正后）
 
-**从非 secure origin 打开的页面会静默失去真峰值限幅与 GS-1** ✗✓：用 `http://<局域网 IP>:3000` ✓ 或任何非 HTTPS 主机名打开本应用 ✓，`chords`/`lead` 落到原生引擎 ✓、母带落到 `DynamicsCompressor` 回退 ✓，而**界面与导出都不说** ✗。**MCP 服务器不受影响** ✓（它跑在 `127.0.0.1` ✓）。
+**从非 secure origin 打开的页面会静默失去真峰值限幅与 GS-1** ✗✓：用 `http://<局域网 IP>:3000` ✓ 或任何非 HTTPS 主机名打开本应用 ✓，`chords`/`lead` 落到原生引擎 ✓、母带落到 `DynamicsCompressor` 回退 ✓，而**界面此前说的是另一个故事** ✗✓（"限幅器未能加载，再导出一次" ✓——对非 secure origin **重试无用** ✗）；**现已改正** ✓✓（导出面新增 `workletsUnavailable` ✓ + i18n `export_wav_no_worklets` ✓，排在 GS-1/limiter 之前 ✓）。**MCP 服务器不受影响** ✓（它跑在 `127.0.0.1` ✓）。
 
 **判据（探针自报，不再靠假设）** ✓：每次运行打印服务页面的能力 ✓（`origin` ✓ `secure` ✓ `baseProtoAudioWorklet=present` ✓ `ctx.audioWorklet=object` ✓ `addModule=function` ✓ `AudioWorkletNode=function` ✓）与 `browser worklet evidence: limiterKind=worklet` ✓；并新增两条检查：**两边都必须有 offline AudioWorklet** ✓、**limiter 路径必须一致** ✓；任一条不成立即 FAIL ✓，比较不再成立 ✓。GS-1 在场 guard 在浏览器里实测 **11.04 dB** ✓（没有 host 时"ON"会等于"OFF" ✓，不可能有 11 dB ✓）。
 
