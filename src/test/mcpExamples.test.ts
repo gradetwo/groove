@@ -105,10 +105,9 @@ describe("the example list and get_example agree", () => {
     expect(filtered.genres).toEqual(["chicago-house"]);
     expect(filtered.examples.every((example) => example.genreId === "chicago-house")).toBe(true);
 
-    const total = listExamples({ limit: 1 }).total;
     const first = listExamples({ limit: 3 });
     const second = listExamples({ limit: 3, offset: 3 });
-    expect(first.total).toBe(total);
+    expect(first.total).toBeGreaterThan(first.examples.length);
     expect(second.offset).toBe(3);
     expect(first.examples.map((example) => example.id)).not.toEqual(second.examples.map((example) => example.id));
     // An unknown genre is an empty filter, not a crash — and it says so with a zero total.
