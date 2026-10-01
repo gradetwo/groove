@@ -29,7 +29,12 @@ import { flattenSong } from "../data/songFlatten";
 import type { Song } from "../types/song";
 import { resolveKickDuckShape, scheduleKickDuck } from "./sidechain";
 import { swingOffsetSeconds } from "./swing";
-import { foldLoopTail, resolveRenderTailSec, tailFramesOf } from "./renderTail";
+import {
+  foldLoopTail,
+  resolveRenderTailSec,
+  tailFramesOf,
+  RENDER_PREROLL_MAX_SEC,
+} from "./renderTail";
 import { ensureOfflineGs1Capability } from "./gs1/gs1OfflineCapability";
 import { LOUDNESS_TRIM_MAX_DB, LOUDNESS_TRIM_MIN_DB, getGenreLoudnessTrimDb } from "../data/genreMix";
 import { createSeededNoiseBuffer, noisePositionFor } from "./noise";
@@ -95,6 +100,29 @@ export interface RenderWavOptions {
   bpm?: number;
   swing?: number;
   bars?: number;
+  /**
+   * **Render `bars` bars starting at this bar, instead of the first `bars` bars** — the entry point chunking needs.
+   *
+   * The graph is built from the offset, not rendered whole and cut: the context is only as long as the requested
+   * range plus its tail, so the cost is the chunk's, which is the entire point of chunking. Everything that decides
+   * *what* sounds reads the **absolute** step, so the chunk is the same music the whole render puts at those bars
+   * (probability rolls, per-note variation, swing and the seeded noise read are all keyed on the absolute step
+   * index; see `renderPatternOfflineOnce`).
+   *
+   * **A chunk is not sample-identical to the same bars of a whole render, and cannot be**: the reverb's state at the
+   * boundary is fed by audio before the context starts. `preRollSec` is what closes that gap, and
+   * `renderPatternChunkOffline` is the entry point that says where the boundary is — see
+   * `docs/HEADLESS_CORE_PLAN.md` §②. Omitted or `0` means "start at the top", which is the existing behaviour down
+   * to the float arithmetic.
+   */
+  fromBar?: number;
+  /**
+   * **Seconds of audio before `fromBar` the chunk also renders**, so the reverb (and the limiter's lookahead) are
+   * already doing at the boundary what the whole render had them doing there. Defaults to the same length
+   * `renderTailSec` derives from the genre's FX — i.e. one reverb impulse — and `0` removes it, which is the
+   * deliberate mistake the equivalence criterion exists to catch.
+   */
+  preRollSec?: number;
   sampleRate?: number;
   /** 1 renders a mono analysis pass; the default is the stereo this exporter has always produced. */
   channels?: 1 | 2;
@@ -256,6 +284,16 @@ export interface RenderWavOptions {
  */
 const GS1_HOST_LOAD_ATTEMPTS = 3;
 
+/**
+ * Steps in one bar, for the chunk arithmetic.
+ *
+ * A constant rather than a lookup because that is what the renderer already is: `stepTiming` is called with the
+ * default `stepsPerBar`, a tempo tick is a 16th, and a bar is sixteen of them. `scalePlanToBars` and the MIDI
+ * exporters use the same 16, and a bar offset that disagreed with them would put a chunk boundary somewhere other
+ * than the bar line the arrangement is written on.
+ */
+const STEPS_PER_BAR = 16;
+
 export interface ExportedWav {
   blob: Blob;
   filename: string;
@@ -288,6 +326,15 @@ export interface ExportedWav {
    * export; non-empty means that lane was voiced by the native engine **and the export says so**.
    */
   gs1PatchProblems: string[];
+  /**
+   * **The bar range this file is, when it is a chunk.** Absent for a whole export.
+   *
+   * Named because the file's own name says it too (`…_bars4-8.wav`): a chunk handed back without its range is a file
+   * whose place in the piece a caller has to remember, and a caller that merges the wrong two files has no symptom
+   * until somebody listens to the seam.
+   */
+  fromBar?: number;
+  toBar?: number;
 }
 
 export interface ExportedStem {
@@ -423,11 +470,60 @@ export async function renderPatternOfflineGuarded<B extends ChannelDataBuffer>(
   attempts: number = RENDER_SILENCE_ATTEMPTS,
   getSilenceContext?: () => SilenceContext | null
 ): Promise<B> {
+  return guardRenderAgainstSilence(
+    renderOnce,
+    (buffer) => bufferHasAudio(buffer),
+    (buffer) => `${buffer?.length ?? 0} frames, ${buffer?.numberOfChannels ?? 0} channel(s)`,
+    problems,
+    attempts,
+    getSilenceContext
+  );
+}
+
+/**
+ * The same guard, for a render whose result is not the buffer — the chunk entry point, whose `RenderedChunk` carries
+ * its timeline next to its samples.
+ *
+ * The alternative was to make `RenderedChunk` itself answer `numberOfChannels`/`length`/`getChannelData` so it could
+ * satisfy `ChannelDataBuffer`, and that would have been a lie of a useful kind: a chunk is not a buffer, and hiding
+ * the timeline behind a buffer-shaped proxy is what makes a caller forget the pre-roll is in there.
+ */
+async function renderChunkGuarded(
+  renderOnce: () => Promise<RenderedChunk>,
+  problems: string[] = [],
+  attempts: number = RENDER_SILENCE_ATTEMPTS,
+  getSilenceContext?: () => SilenceContext | null
+): Promise<RenderedChunk> {
+  return guardRenderAgainstSilence(
+    renderOnce,
+    (chunk) => bufferHasAudio(chunk.buffer),
+    (chunk) => `${chunk?.buffer.length ?? 0} frames, ${chunk?.buffer.numberOfChannels ?? 0} channel(s)`,
+    problems,
+    attempts,
+    getSilenceContext
+  );
+}
+
+/**
+ * **The silence guard itself**, once, over whatever a render returns.
+ *
+ * `hasAudio`, `describe` and `getSilenceContext` are the three questions the decision needs, and they are asked in
+ * this order on purpose: a silent render is only re-rendered after the renderer has been given the chance to explain
+ * it, so an unresolvable audio lane is named once instead of rendering the same nothing four times.
+ */
+async function guardRenderAgainstSilence<B>(
+  renderOnce: () => Promise<B>,
+  hasAudio: (buffer: B) => boolean,
+  describe: (buffer: B | null) => string,
+  problems: string[],
+  attempts: number,
+  getSilenceContext?: () => SilenceContext | null
+): Promise<B> {
   const limit = Math.max(1, Math.floor(attempts));
   let buffer: B | null = null;
   for (let attempt = 1; attempt <= limit; attempt += 1) {
     buffer = await renderOnce();
-    if (bufferHasAudio(buffer)) return buffer;
+    if (hasAudio(buffer)) return buffer;
     /**
      * Silence that the render itself explained is the answer, not a failure.
      *
@@ -459,7 +555,7 @@ export async function renderPatternOfflineGuarded<B extends ChannelDataBuffer>(
    */
   throw new Error(
     `the audio host returned a silent render ${limit} time(s) in a row ` +
-      `(${buffer?.length ?? 0} frames, ${buffer?.numberOfChannels ?? 0} channel(s), no samples above ` +
+      `(${describe(buffer)}, no samples above ` +
       `-120 dBFS) — refusing to present it as a successful render; see docs/HEADLESS_CORE_PLAN.md §6`
   );
 }
@@ -497,12 +593,79 @@ export const WORKLETS_UNAVAILABLE_PROBLEM =
   "the render ran without audio worklets: this context has no AudioWorklet, which a browser exposes only in a secure context (https, localhost or 127.0.0.1 — not a plain-HTTP LAN address), so the master limiter was a DynamicsCompressor with no true-peak ceiling or lookahead and GS-1 lanes were voiced by the native engine instead of the synth";
 
 /**
+ * **One chunk of a render, with the timeline that says how to put it back together.**
+ *
+ * The buffer is the **pre-roll plus the requested bars plus the tail**, not the requested bars alone — because the
+ * pre-roll is not part of the piece. It is the audio the graph needed in order to already be in the right state at
+ * the boundary, and the caller's merge is what consumes it: frames `[preRollFrames, chunkEndFrame)` are this chunk's
+ * own audio, and the pre-roll overlaps the previous chunk's tail so the two can be crossfaded.
+ *
+ * Reporting the coordinates rather than trimming them off is deliberate. A caller that is handed a trimmed buffer
+ * cannot crossfade, cannot tell a chunk that used its pre-roll from one that was cut at the boundary, and cannot
+ * verify the alignment it just paid for. `usedPreRoll` is the field the equivalence criterion reads: it is `false`
+ * exactly for the render that dropped the pre-roll, which is the mistake this whole entry point exists to prevent.
+ */
+export interface RenderedChunk {
+  buffer: AudioBuffer;
+  /** The bar the requested range starts at. */
+  fromBar: number;
+  /** The bar it stops **before**. */
+  toBar: number;
+  sampleRate: number;
+  /** Frames of the buffer that precede the requested bar: how much of the buffer is warm-up rather than music. */
+  preRollFrames: number;
+  /**
+   * The requested bar starts here **in the buffer's own frames** — and that is always `preRollFrames`, because the
+   * buffer's first frame is the pre-roll's first frame, not the piece's. It is stated separately from
+   * `preRollFrames` because the two answer different questions (`preRollFrames` is "how much warm-up",
+   * `barStartFrame` is "where the music begins"), and a merge needs the second one by name.
+   */
+  barStartFrame: number;
+  /**
+   * The chunk's own audio stops here, **in the buffer's own frames**: frames after it are the tail.
+   *
+   * An offset, like `preRollFrames` and `barStartFrame`, and deliberately not a length. The first version returned
+   * the requested range's *length*, which reads the same for the first chunk and is off by the pre-roll for every
+   * later one — and it is consumed by `trimChunkFrames(preRollFrames, chunkEndFrame)`, which wants offsets.
+   */
+  chunkEndFrame: number;
+  /** The tail the renderer added after the last step, seconds. */
+  tailSec: number;
+  /** Seconds from the context's start to the requested bar. */
+  barStartSeconds: number;
+  /** True when the caller's pre-roll actually bought audio before `fromBar`. */
+  usedPreRoll: boolean;
+}
+
+/**
  * Synthesizes a pattern offline via OfflineAudioContext
  */
 export async function renderPatternOffline(
   pattern: DrumPattern,
   options: RenderWavOptions = {}
 ): Promise<AudioBuffer> {
+  return (await renderPatternOfflineInternal(pattern, options, false)) as AudioBuffer;
+}
+
+/**
+ * **Renders one bar range as a chunk** — the entry point `RenderWavOptions.fromBar` describes, plus the timeline a
+ * merge needs.
+ *
+ * `renderPatternOffline` is unchanged for every existing caller; this is the same renderer with the window it built
+ * handed back instead of thrown away.
+ */
+export async function renderPatternChunkOffline(
+  pattern: DrumPattern,
+  options: RenderWavOptions = {}
+): Promise<RenderedChunk> {
+  return (await renderPatternOfflineInternal(pattern, options, true)) as RenderedChunk;
+}
+
+async function renderPatternOfflineInternal(
+  pattern: DrumPattern,
+  options: RenderWavOptions = {},
+  wantChunk: boolean
+): Promise<AudioBuffer | RenderedChunk> {
   const problems: string[] = [];
   /**
    * The render's own verdict on whether silence was the expected outcome.
@@ -519,18 +682,40 @@ export async function renderPatternOffline(
    */
   let workletsAvailable: boolean | null = null;
   try {
-    return await renderPatternOfflineGuarded(
+    /**
+     * **Two guards over one renderer, and the duplication is the types', not the logic's.**
+     *
+     * `renderPatternOfflineGuarded` is generic over the buffer shape an `AudioBuffer` satisfies; a chunk is not one,
+     * so the chunk path asks the same shared decision (`guardRenderAgainstSilence`) with the chunk's own "is there
+     * audio" question. Written as two inlined calls rather than one shared `renderOnce` closure because TypeScript
+     * infers that closure's type from its first use, which is what made the second call fail to compile.
+     */
+    if (wantChunk) {
+      return await renderChunkGuarded(
+        () =>
+          renderPatternOfflineOnce(
+            pattern,
+            options,
+            (v) => { verdict = v; },
+            (available) => { workletsAvailable = available; }
+          ),
+        problems,
+        RENDER_SILENCE_ATTEMPTS,
+        () => verdict
+      );
+    }
+    return (await renderPatternOfflineGuarded<ChannelDataBuffer>(
       () =>
         renderPatternOfflineOnce(
           pattern,
           options,
           (v) => { verdict = v; },
           (available) => { workletsAvailable = available; }
-        ),
+        ).then((chunk) => chunk.buffer),
       problems,
       RENDER_SILENCE_ATTEMPTS,
       () => verdict
-    );
+    )) as AudioBuffer;
   } finally {
     /**
      * The origin fact comes first, because it is the reason the file is a different thing rather than a quiet one.
@@ -546,6 +731,87 @@ export async function renderPatternOffline(
   }
 }
 
+/**
+ * **Where one chunk of a piece begins and ends, in steps, seconds and frames** — resolved before a context exists so
+ * the arithmetic is provable without a browser.
+ *
+ * `fromStep` is absolute: it is the step index the whole render would have given the requested bar, so everything the
+ * schedule keys on an absolute step (probability, per-note variation, swing, the seeded noise read) is unchanged.
+ * `barStartSeconds` is what turns those absolute times into the chunk context's local ones.
+ */
+export interface ChunkRenderWindow {
+  /** The absolute step the requested bar starts at (`fromBar * stepsPerBar`), or 0 for a whole render. */
+  fromStep: number;
+  /** Exclusive end: the absolute step the requested range stops at. */
+  toStep: number;
+  /** Seconds from the start of the context to the requested bar — 0 for a whole render. */
+  barStartSeconds: number;
+  /** Frames of audio rendered before `barStartSeconds` (0 for a whole render). */
+  preRollFrames: number;
+  /** `barStartSeconds` in frames; the returned buffer's frame 0. */
+  barStartFrame: number;
+  /** Context frames: the pre-roll, the requested range and the tail. */
+  contextFrames: number;
+  /** `contextFrames / sampleRate`. */
+  contextSeconds: number;
+}
+
+/** The inputs `computeRenderWindow` needs — the ones the renderer has already resolved. */
+export interface RenderWindowInput {
+  fromBar?: number;
+  bars: number;
+  bpm: number;
+  sampleRate: number;
+  stepDur: number;
+  /**
+   * Steps in **one bar**. Deliberately not `patternSteps`: for a flat pattern's own length and steps-per-bar are the
+   * same number, and using the flat length here made a 2-bar chunk of a 4-bar pattern 8 bars long — the whole point of
+   * a `fromBar` that a probe caught before it reached a file.
+   */
+  stepsPerBar: number;
+  tailSec: number;
+  preRollSec?: number;
+  timing: { starts: number[]; total: number } | null;
+}
+
+/**
+ * The chunk window, or `null` when the render starts at bar 0.
+ *
+ * `null` rather than a window with zeros in it, deliberately: the whole-render path then keeps its own expressions
+ * verbatim and byte-identity stays a property of the source rather than of arithmetic that happens to cancel. See the
+ * note in `stepTiming` for the same decision made for the same reason.
+ *
+ * `preRollSec` defaults to the render's own tail — one reverb impulse. That is the length that makes the convolution
+ * at the boundary see the whole history it saw before: the impulse is built to reach −60 dB at `decaySec` and then
+ * stops, so a pre-roll shorter than it loses the loudest part of the tail and a longer one buys silence. The cap is
+ * `RENDER_PREROLL_MAX_SEC`, so a caller's literal number cannot allocate an unbounded context.
+ */
+export function computeRenderWindow(input: RenderWindowInput): ChunkRenderWindow | null {
+  const fromBar = Number.isFinite(input.fromBar) ? Math.max(0, Math.floor(input.fromBar as number)) : 0;
+  if (fromBar <= 0) return null;
+  const barStartStep = fromBar * input.stepsPerBar;
+  const startStep = Math.min(barStartStep, Math.max(0, input.timing ? input.timing.starts.length - 1 : Infinity));
+  const spanSteps = Math.round(input.stepsPerBar * Math.max(1, input.bars));
+  const barStartSeconds = input.timing ? input.timing.starts[startStep]! : barStartStep * input.stepDur;
+  const preRollRequested = Number.isFinite(input.preRollSec) ? Math.max(0, input.preRollSec as number) : input.tailSec;
+  const preRollSec = Math.min(preRollRequested, RENDER_PREROLL_MAX_SEC);
+  const contextSeconds = preRollSec + spanSteps * input.stepDur + input.tailSec;
+  const preRollFrames = Math.ceil(preRollSec * input.sampleRate);
+  return {
+    fromStep: startStep,
+    toStep: startStep + spanSteps,
+    barStartSeconds,
+    preRollFrames,
+    /**
+     * In the **buffer's** frames, which is `preRollFrames` — the buffer starts at the pre-roll, so the music cannot
+     * start anywhere else. Kept as its own field so a caller reads a name rather than repeating the equality.
+     */
+    barStartFrame: preRollFrames,
+    contextFrames: Math.ceil(contextSeconds * input.sampleRate),
+    contextSeconds,
+  };
+}
+
 /** The renderer itself: one context, one graph, one `startRendering()`. Wrapped by `renderPatternOffline`. */
 async function renderPatternOfflineOnce(
   pattern: DrumPattern,
@@ -558,7 +824,7 @@ async function renderPatternOfflineOnce(
    * the problem list and a render that retries must not report the same origin fact once per attempt.
    */
   onWorkletsAvailable?: (available: boolean) => void
-): Promise<AudioBuffer> {
+): Promise<RenderedChunk> {
   const sampleRate = options.sampleRate || 44100;
   // F-10: clamp render parameters — a negative bpm produced a negative
   // `lengthInSamples`, and an unbounded `bars` could allocate gigabytes.
@@ -589,8 +855,35 @@ async function renderPatternOfflineOnce(
   // lines below for the graph; resolve it here first so the render length can depend on it.
   const tailGenreFx = resolveGenreFx(pattern.genre_id);
   const tailSec = resolveRenderTailSec(tailGenreFx, bpm);
-  const timing = tempoAware ? stepTiming({ bpm, tempoTrack: patternTempo }, totalSteps) : null;
+  const timing = tempoAware
+    ? stepTiming(
+        { bpm, tempoTrack: patternTempo },
+        Math.max(totalSteps, (options.fromBar ? Math.floor(options.fromBar) * patternSteps : 0) + patternSteps * bars)
+      )
+    : null;
   const totalDurationSec = (timing ? timing.total : totalSteps * stepDur) + tailSec;
+  /**
+   * **The chunk window** — the one place "from bar N" becomes coordinates, and `null` whenever the render starts at
+   * bar 0. `null` is not a special case of the window; it is the *absence* of one, so the whole-render path below
+   * keeps its expressions verbatim (the same reason `stepTiming` branches instead of generalising).
+   *
+   * The context starts `preRollFrames` before the requested bar, is exactly as long as the requested range plus the
+   * tail, and every scheduled time is shifted by `barStartSeconds`, so the returned buffer's frame 0 is the start of
+   * the **pre-roll** and the requested bar lands at `preRollFrames`. Nothing is rendered and then sliced except that
+   * shift — the cost is the chunk's.
+   */
+  const chunkWindow = computeRenderWindow({
+    fromBar: options.fromBar,
+    bars,
+    bpm,
+    sampleRate,
+    stepDur,
+    stepsPerBar: STEPS_PER_BAR,
+    tailSec,
+    preRollSec: options.preRollSec,
+    timing,
+  });
+  const contextDurationSec = chunkWindow ? chunkWindow.contextSeconds : totalDurationSec;
 
   const OfflineContextClass =
     (typeof window !== "undefined" && (window.OfflineAudioContext || (window as any).webkitOfflineAudioContext)) ||
@@ -600,7 +893,35 @@ async function renderPatternOfflineOnce(
     throw new Error("OfflineAudioContext is not supported in this environment");
   }
 
-  const lengthInSamples = Math.ceil(totalDurationSec * sampleRate);
+  const lengthInSamples = Math.ceil(contextDurationSec * sampleRate);
+  /**
+   * The step range this context actually schedules: the whole pattern for a whole render, and only the requested
+   * bars for a chunk. `scheduleFrom`/`scheduleTo` are absolute every time, so the per-step decisions that index
+   * themselves (probability, variation, noise position, swing) read the same step they read in a whole render.
+   *
+   * Without a window this is `0` and `totalSteps`, which is exactly what the loop used to say.
+   */
+  const scheduleFrom = chunkWindow ? chunkWindow.fromStep : 0;
+  const scheduleTo = chunkWindow ? chunkWindow.toStep : totalSteps;
+  /** The chunk's own scheduled length in steps; the loop and `seamlessLoop` are both shorter without a tail. */
+  const scheduledSteps = scheduleTo - scheduleFrom;
+  /**
+   * The chunk's own length in **seconds**, ignoring the tail — what `seamlessLoop` folds over, and what
+   * `chunkEndFrame` reports.
+   *
+   * Deliberately not `timing.starts[toStep] - barStartSeconds`: that is the chunk's length only in absolute time,
+   * and `barStartSeconds` is the *step* origin too, so the subtraction cancels the bar start and returns one bar
+   * (measured: `chunkEndFrame` 88200 = 2 s where the chunk renders 4 s). The scheduled span in steps times the
+   * step's own length is the context's own arithmetic, from the same `stepLengthAt` the notes are placed with.
+   */
+  const chunkLoopSec = chunkWindow
+    ? Array.from({ length: scheduledSteps }, (_, index) => stepLengthAt(scheduleFrom + index)).reduce(
+        (total, length) => total + length,
+        0
+      )
+    : totalSteps * stepDur;
+  /** What a chunk render shifts every absolute schedule time by; 0 for a whole render. */
+  const timelineOffsetSec = chunkWindow ? chunkWindow.barStartSeconds : 0;
   /**
    * One channel or two, and an **analysis** render may ask for one: the exporter has always produced stereo, and a mono context is a
    * different graph (panning and stereo effects collapse), so this is offered for measurement rather than for delivery. The same
@@ -1002,9 +1323,10 @@ async function renderPatternOfflineOnce(
   let audioLaneProblems: string[] = [];
 
   const scheduleStartedAt = performance.now();
-  // Step scheduling loop
-  for (let step = 0; step < totalSteps; step++) {
-    const unswungTime = stepTimeAt(step);
+  // Step scheduling loop. `step` is **absolute** — the whole render's index for this moment — and only the time it
+  // lands at is shifted into the chunk's context; see `scheduleFrom` above.
+  for (let step = scheduleFrom; step < scheduleTo; step++) {
+    const unswungTime = stepTimeAt(step) - timelineOffsetSec;
 
     pattern.tracks.forEach((track: Track, trackIdx: number) => {
       // Stem mode check: only render requested track if stemTrackIdx is specified
@@ -1389,6 +1711,19 @@ async function renderPatternOfflineOnce(
       bpm,
       ...(patternTempo.length ? { tempoTrack: patternTempo } : {}),
       totalSteps,
+      /**
+       * The same step range and the same shift the synthesised lanes got. Passing the full pattern here would put an
+       * audio lane's note at its absolute second inside a context that starts `barStartSeconds` earlier — a sample
+       * playing two seconds before the bar it was written on. `timeOffsetSec` is subtracted from every planned
+       * event's `atSeconds`, and step 0 of the plan is the chunk's own first step.
+       */
+      ...(chunkWindow
+        ? {
+            stepOffset: chunkWindow.fromStep,
+            stepSpan: scheduledSteps,
+            timeOffsetSec: timelineOffsetSec,
+          }
+        : {}),
       ...(options.stemTrackIdx === undefined ? {} : { stemTrackIdx: options.stemTrackIdx }),
       silencedTrackIndexes,
     });
@@ -1458,7 +1793,16 @@ async function renderPatternOfflineOnce(
     const half = Math.max(1, Math.round((options.boundaryFadeMs / 1000 / 2) * rendered.sampleRate));
     for (const boundary of options.boundaries) {
       if (boundary <= 0) continue;
-      const at = Math.round(boundary * stepSec * rendered.sampleRate);
+      /**
+       * A boundary is an **absolute** step (`flattenSong`'s own numbering), so a chunk only fades the boundaries
+       * inside its own range, and at the frame that step lands on in this context rather than at the frame it would
+       * have landed on from the top of the piece. Fading a boundary outside the range would dent a second of audio
+       * in a chunk that does not contain it, and using the absolute frame would put it in the wrong place.
+       */
+      const boundaryFrames = chunkWindow
+        ? (stepTimeAt(boundary) - timelineOffsetSec) * rendered.sampleRate
+        : boundary * stepSec * rendered.sampleRate;
+      const at = Math.round(boundaryFrames);
       if (at <= 0 || at >= rendered.length) continue;
       for (let channel = 0; channel < rendered.numberOfChannels; channel += 1) {
         const data = rendered.getChannelData(channel);
@@ -1482,7 +1826,15 @@ async function renderPatternOfflineOnce(
    * Only offered for a loop render: a song's tail belongs at its end, and a caller that asks for both gets the tail
    * (the song is the thing that was asked for).
    */
-  const loopFrames = Math.max(1, Math.round(totalSteps * stepDur * rendered.sampleRate));
+  /**
+   * The loop length keeps its original expression for a whole render, deliberately: `chunkLoopSec` is the same number
+   * for a flat pattern and a different one for a tempo-mapped pattern, and `seamlessLoop` is a shipped behaviour that
+   * a chunking change must not move. Only a chunk — where there was no behaviour to keep — reads the new expression.
+   */
+  const loopFrames = Math.max(
+    1,
+    Math.round((chunkWindow ? chunkLoopSec : totalSteps * stepDur) * rendered.sampleRate)
+  );
   const asRequested = <T>(buffer: T): T | AudioBuffer => {
     if (!options.seamlessLoop || loopFrames >= rendered.length) return buffer as unknown as T;
     const source: Float32Array[] = [];
@@ -1536,31 +1888,64 @@ async function renderPatternOfflineOnce(
   if (limiterKind === "worklet") {
     result = asRequested(compensate(rendered, graph.limiter.latencySamples)) as AudioBuffer;
     mark("post:buffers");
-    return finish(result);
+    finish(result);
+  } else {
+    /**
+     * The fallback path has no true-peak ceiling — its own warning says so ("no true-peak ceiling,
+     * no lookahead. Peak limiting is degraded") — and that let a hot arrangement render *above* the
+     * contract: measured on `tropical-house`, **+1.75 dBTP** in one run and −1.30 dBTP in the next,
+     * from the same code, because whether the AudioWorklet could be registered is not something the
+     * caller can rely on. Every export is re-run through the **same kernel the worklet runs**
+     * (`limitBuffers`), so the ceiling is a property of the renderer rather than of the platform's
+     * worklet support. The compressor's own reduction still applies first; this only removes what is
+     * left above the ceiling.
+     */
+    const channels: Float32Array[] = [];
+    for (let c = 0; c < rendered.numberOfChannels; c += 1) channels.push(rendered.getChannelData(c));
+    const guarded = applyOfflineCeiling(channels, rendered.sampleRate);
+    const out = ctx.createBuffer(rendered.numberOfChannels, rendered.length, rendered.sampleRate);
+    for (let c = 0; c < rendered.numberOfChannels; c += 1) out.copyToChannel(guarded.channels[c], c);
+    /**
+     * The guard delays by the same lookahead the worklet does, on purpose — it exists so a guarded render is aligned with a worklet one.
+     * Trimming both by the same amount preserves that alignment and fixes the absolute position, which is the part PDC is about.
+     */
+    result = asRequested(compensate(out, guarded.latencySamples)) as AudioBuffer;
+    mark("post:offlineCeilingFallback");
+    finish(result);
   }
 
   /**
-   * The fallback path has no true-peak ceiling — its own warning says so ("no true-peak ceiling,
-   * no lookahead. Peak limiting is degraded") — and that let a hot arrangement render *above* the
-   * contract: measured on `tropical-house`, **+1.75 dBTP** in one run and −1.30 dBTP in the next,
-   * from the same code, because whether the AudioWorklet could be registered is not something the
-   * caller can rely on. Every export is re-run through the **same kernel the worklet runs**
-   * (`limitBuffers`), so the ceiling is a property of the renderer rather than of the platform's
-   * worklet support. The compressor's own reduction still applies first; this only removes what is
-   * left above the ceiling.
+   * The **chunk timeline**, stated rather than implied.
+   *
+   * `barStartFrame` is where the requested bar landed in this context — the shift the caller has to unpick — and
+   * `chunkEndFrame` is where the requested range stops before the tail begins. A merge takes the chunk's own range
+   * and keeps the last piece's tail; nothing about these numbers is inferred by the caller from frame counts.
+   *
+   * Without a window every field is the whole render's, so a caller of `renderPatternChunkOffline` gets the same
+   * answer for `fromBar: 0` that `renderPatternOffline` gives, and `usedPreRoll: false` says no pre-roll was spent.
    */
-  const channels: Float32Array[] = [];
-  for (let c = 0; c < rendered.numberOfChannels; c += 1) channels.push(rendered.getChannelData(c));
-  const guarded = applyOfflineCeiling(channels, rendered.sampleRate);
-  const out = ctx.createBuffer(rendered.numberOfChannels, rendered.length, rendered.sampleRate);
-  for (let c = 0; c < rendered.numberOfChannels; c += 1) out.copyToChannel(guarded.channels[c], c);
-  /**
-   * The guard delays by the same lookahead the worklet does, on purpose — it exists so a guarded render is aligned with a worklet one.
-   * Trimming both by the same amount preserves that alignment and fixes the absolute position, which is the part PDC is about.
-   */
-  result = asRequested(compensate(out, guarded.latencySamples)) as AudioBuffer;
-  mark("post:offlineCeilingFallback");
-  return finish(result);
+  return {
+    buffer: result,
+    fromBar: chunkWindow ? (options.fromBar as number) : 0,
+    toBar: chunkWindow ? (options.fromBar as number) + bars : bars,
+    sampleRate: result.sampleRate,
+    barStartFrame: chunkWindow ? chunkWindow.barStartFrame : 0,
+    preRollFrames: chunkWindow ? chunkWindow.preRollFrames : 0,
+    /**
+     * Where this chunk's own audio stops, in its own frames — the tail after it belongs to the merge, not to the file.
+     *
+     * A chunk stops where its requested range stops; a **whole** render has no merge waiting and stops at the end of
+     * everything it rendered, tail included. Both were the same expression at first, which trimmed a plain
+     * `{ bars: 2 }` export down to its tail-less length (measured: a 5.75 s buffer reported as `durationSec` 4) —
+     * the kind of defect a chunking change can introduce in the path it is not about.
+     */
+    chunkEndFrame: chunkWindow
+      ? Math.min(result.length, chunkWindow.preRollFrames + Math.round(chunkLoopSec * result.sampleRate))
+      : result.length,
+    tailSec,
+    barStartSeconds: chunkWindow ? chunkWindow.barStartSeconds : 0,
+    usedPreRoll: Boolean(chunkWindow && chunkWindow.preRollFrames > 0),
+  };
 }
 
 /**
@@ -1631,7 +2016,60 @@ export async function renderSongOffline(
   if (!flattened.totalBars || flattened.totalSteps <= 0) {
     throw new Error(`cannot render the song: ${flattened.problems.join("; ") || "no playable bars"}`);
   }
-  return renderPatternOffline(flattened.pattern, { ...options, bars: 1 });
+  /**
+   * A song chunk is a bar range of the flattened pattern, and `fromBar` is a bar of **that** pattern — which is what
+   * `flattenSong` returns precisely so a song and a loop go through one renderer. `bars: 1` is the flattened
+   * pattern's own total, so a chunk asks for `bars` bars of it instead.
+   */
+  return renderPatternOffline(flattened.pattern, {
+    ...options,
+    bars: options.fromBar ? options.bars : 1,
+  });
+}
+
+/**
+ * `renderSongOffline` for one bar range of the arrangement — the song's half of `renderPatternChunkOffline`.
+ *
+ * A long song is the case chunking exists for (the client timeout and the browser process's lifetime are both
+ * functions of the whole render), so the song path needs the window as much as the loop path does, and it is the same
+ * flattened pattern underneath.
+ */
+export async function renderSongChunkOffline(
+  song: Song,
+  options: RenderWavOptions = {}
+): Promise<RenderedChunk> {
+  const flattened = flattenSong(song);
+  if (!flattened.totalBars || flattened.totalSteps <= 0) {
+    throw new Error(`cannot render the song: ${flattened.problems.join("; ") || "no playable bars"}`);
+  }
+  return renderPatternChunkOffline(flattened.pattern, {
+    ...options,
+    bars: options.fromBar ? options.bars : 1,
+  });
+}
+
+/**
+ * **A chunk's audio, with the pre-roll and the tail dropped** — what a file wants, and what a merge wants before it
+ * crosses the seam.
+ *
+ * `from`/`to` are frames of the chunk's own buffer and are clamped, and an all-frame range returns the buffer itself
+ * rather than a copy. That identity matters: a whole render takes this path with `from = 0` and a `to` equal to its
+ * own length, so an existing export hands out the very buffer it always did.
+ */
+export function trimChunkFrames(chunk: RenderedChunk, from: number, to: number): AudioBuffer {
+  const start = Math.max(0, Math.min(chunk.buffer.length, Math.floor(from)));
+  const end = Math.max(start, Math.min(chunk.buffer.length, Math.floor(to)));
+  if (start === 0 && end === chunk.buffer.length) return chunk.buffer;
+  /**
+   * Made through the buffer's own constructor rather than `new AudioBuffer(…)`: the tests' double has no global
+   * `AudioBuffer` class, and a helper that only works in a browser is a helper the offline suite cannot hold to.
+   */
+  const BufferClass = (chunk.buffer as unknown as { constructor: new (channels: number, length: number, sampleRate: number) => AudioBuffer }).constructor;
+  const trimmed = new BufferClass(chunk.buffer.numberOfChannels, end - start, chunk.buffer.sampleRate);
+  for (let channel = 0; channel < chunk.buffer.numberOfChannels; channel += 1) {
+    trimmed.copyToChannel(chunk.buffer.getChannelData(channel).subarray(start, end), channel);
+  }
+  return trimmed;
 }
 
 /**
@@ -1650,7 +2088,7 @@ export async function exportMasterWav(
    * this list when the context had no `audioWorklet` (see `offlineWorkletsAvailable`).
    */
   let workletsUnavailable = false;
-  const audioBuf = await renderPatternOffline(pattern, {
+  const chunk = await renderPatternChunkOffline(pattern, {
     ...options,
     onLimiterKind: (kind) => {
       limiterKind = kind;
@@ -1669,11 +2107,20 @@ export async function exportMasterWav(
       options.onProblems?.(problems);
     },
   });
+  /**
+   * The file is the requested bars, **not** the pre-roll the renderer needed to be correct at the first of them: the
+   * pre-roll is the previous chunk's audio, and a file that began with it would start one reverb-length early. A whole
+   * render has no pre-roll and this is the identity, byte for byte — the same buffer, not a copy.
+   */
+  const audioBuf = trimChunkFrames(chunk, chunk.preRollFrames, chunk.chunkEndFrame);
   const wavArrayBuffer = encodeAudioBufferToWav(audioBuf);
   const blob = new Blob([wavArrayBuffer], { type: "audio/wav" });
   const bpm = options.bpm || pattern.bpm || 120;
   const sanitizedGenre = (genreId || "groove").replace(/[^a-z0-9_-]/gi, "_").toLowerCase();
-  const filename = `${sanitizedGenre}_master_${bpm}bpm.wav`;
+  const filename =
+    options.fromBar && options.fromBar > 0
+      ? `${sanitizedGenre}_master_${bpm}bpm_bars${chunk.fromBar}-${chunk.toBar}.wav`
+      : `${sanitizedGenre}_master_${bpm}bpm.wav`;
 
   return {
     blob,
@@ -1683,6 +2130,9 @@ export async function exportMasterWav(
     gs1HostFailures,
     gs1PatchProblems,
     workletsUnavailable,
+    ...(options.fromBar && options.fromBar > 0
+      ? { fromBar: chunk.fromBar, toBar: chunk.toBar }
+      : {}),
   };
 }
 

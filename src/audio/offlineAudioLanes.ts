@@ -89,9 +89,33 @@ export interface OfflineAudioLanePlan {
 export interface OfflineAudioLanePlanOptions {
   bpm?: number;
   tempoTrack?: readonly TempoPoint[];
+  /**
+   * The step the timeline ends at, used to bound a note's time (`WavExporter` passes the whole pattern's step count).
+   * It is **not** the chunk's length — that is `stepSpan` — so an absolute step at the end of a chunk still reads its
+   * own start time rather than being clamped to the chunk's first.
+   */
   totalSteps?: number;
   /** A stem render plays one track: only the audio lane at this index is planned, so a stem is that stem. */
   stemTrackIdx?: number;
+  /**
+   * How many steps this call's timeline covers, counting from `stepOffset`. Absent means "from step 0 to
+   * `totalSteps`", which is every existing caller.
+   */
+  stepSpan?: number;
+  /**
+   * The **absolute** step the chunk starts at, when the caller is rendering a bar range rather than the top of the
+   * piece. A different window, not a trimming of the plan: a note whose step is outside `[stepOffset, stepOffset +
+   * stepSpan)` is not in this render at all, and a note inside it lands at its own step minus the offset.
+   */
+  stepOffset?: number;
+  /**
+   * Seconds to subtract from every planned `atSeconds` after the range is applied.
+   *
+   * In a chunk context the first sample is at the pre-roll start, so this shifts absolute times onto that local
+   * timeline. It is the same shift the synthesised lanes get, and it is applied after the step filter, so the two
+   * cannot disagree about which note is on a bar.
+   */
+  timeOffsetSec?: number;
   /**
    * The track indexes the renderer has silenced (mute, or soloed out), in the renderer's own numbering.
    *
@@ -153,8 +177,27 @@ export function planOfflineAudioLanes(
     options.totalSteps ??
     pattern.totalSteps ??
     Math.max(16, tracks.reduce((longest, track) => Math.max(longest, track.steps?.length ?? 0), 0));
-  // The tempo map is honoured rather than a second `60 / bpm / 4`, so a note in a movement at another tempo lands where the rest of the engine puts it.
-  const timing = stepTiming({ bpm, tempoTrack: options.tempoTrack ? [...options.tempoTrack] : undefined }, totalSteps);
+  /**
+   * **The window this call covers, in absolute steps.** Without a chunk it is the whole pattern, and the range test
+   * below is then always true — so a caller that never asks for a chunk gets the same plan it always got, note for
+   * note and second for second.
+   */
+  const stepOffset = Math.max(0, Math.floor(options.stepOffset ?? 0));
+  const stepSpan = Math.max(0, Math.floor(options.stepSpan ?? totalSteps));
+  const timeOffsetSec = Number.isFinite(options.timeOffsetSec) ? (options.timeOffsetSec as number) : 0;
+  const inRange = (step: number): boolean => step >= stepOffset && step < stepOffset + stepSpan;
+  /**
+   * The tempo map is honoured rather than a second `60 / bpm / 4`, so a note in a movement at another tempo lands where the rest of the engine puts it.
+   *
+   * The timing is asked for the **absolute** end of the window, so `starts[]` is the same array a whole render would
+   * have had at those steps: a prefix sum was not restarted at the offset, which would have moved every event.
+   */
+  const timing = stepTiming(
+    { bpm, tempoTrack: options.tempoTrack ? [...options.tempoTrack] : undefined },
+    Math.max(totalSteps, stepOffset + stepSpan)
+  );
+  /** Last index `timing.starts` really has — the bound for a note's own start time. */
+  const lastTimedStep = timing.starts.length - 1;
 
   for (let trackIndex = 0; trackIndex < tracks.length; trackIndex += 1) {
     const track = tracks[trackIndex]!;
@@ -205,15 +248,40 @@ export function planOfflineAudioLanes(
         });
         continue;
       }
+      let planned = 0;
       for (const { step, pitch } of notes) {
-        events.push({ ...ref, assetId, pitch, atSeconds: timing.starts[Math.min(step, totalSteps)] ?? 0, gainDb, ...(pan === undefined ? {} : { pan }) });
+        if (!inRange(step)) continue;
+        events.push({
+          ...ref,
+          assetId,
+          pitch,
+          atSeconds: (timing.starts[Math.min(step, lastTimedStep)] ?? 0) - timeOffsetSec,
+          gainDb,
+          ...(pan === undefined ? {} : { pan }),
+        });
+        planned += 1;
       }
+      /**
+       * **A lane with notes but none in this window contributes nothing, and is not a problem.**
+       *
+       * It is the same lane the whole render hears; it simply has no note in these bars. Listing it as rendered would
+       * claim audio that is not in the buffer, and listing it as a problem would name a defect where there is only a
+       * bar range — so it is neither.
+       */
+      if (planned === 0) continue;
       lanes.push(ref);
       continue;
     }
 
-    // A plain sample with no notes: heard once, at the start of the section the flattened pattern is. This is the case that used to be reported as skipped.
-    events.push({ ...ref, assetId, atSeconds: 0, gainDb, ...(pan === undefined ? {} : { pan }) });
+    /**
+     * A plain sample with no notes: heard once, at the start of the section the flattened pattern is. This is the case
+     * that used to be reported as skipped.
+     *
+     * It is step 0 of the timeline, so it belongs to the chunk that contains step 0 and to no other — a sample is not
+     * re-triggered at a bar it does not start on.
+     */
+    if (!inRange(0)) continue;
+    events.push({ ...ref, assetId, atSeconds: 0 - timeOffsetSec, gainDb, ...(pan === undefined ? {} : { pan }) });
     lanes.push(ref);
   }
 
@@ -256,6 +324,10 @@ export interface OfflineAudioLaneScheduleInput {
   bpm?: number;
   tempoTrack?: readonly TempoPoint[];
   totalSteps?: number;
+  /** The chunk window, threaded to the planner unchanged — see `OfflineAudioLanePlanOptions`. */
+  stepSpan?: number;
+  stepOffset?: number;
+  timeOffsetSec?: number;
   stemTrackIdx?: number;
   silencedTrackIndexes?: readonly number[];
 }
@@ -272,6 +344,9 @@ export async function scheduleOfflineAudioLanes(input: OfflineAudioLaneScheduleI
     ...(input.bpm === undefined ? {} : { bpm: input.bpm }),
     ...(input.tempoTrack === undefined ? {} : { tempoTrack: input.tempoTrack }),
     ...(input.totalSteps === undefined ? {} : { totalSteps: input.totalSteps }),
+    ...(input.stepSpan === undefined ? {} : { stepSpan: input.stepSpan }),
+    ...(input.stepOffset === undefined ? {} : { stepOffset: input.stepOffset }),
+    ...(input.timeOffsetSec === undefined ? {} : { timeOffsetSec: input.timeOffsetSec }),
     ...(input.stemTrackIdx === undefined ? {} : { stemTrackIdx: input.stemTrackIdx }),
     ...(input.silencedTrackIndexes === undefined ? {} : { silencedTrackIndexes: input.silencedTrackIndexes }),
   });
