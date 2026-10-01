@@ -491,3 +491,22 @@ browser worklet evidence: limiterKind=worklet
 **⚠️ 而 A 的前提需要重新量** ✗✓：`GlueCompressorFactory.ts:74-81` 说"按位置识别 master trim 与 makeup 增益的结构性判据立刻发现了" ✓，**但今天那条判据读的是 `options.processorOptions?.makeupDb`（`busCompressorWiring.test.ts:104` ✓）——那是**worklet 路径**的字段 ✓，而不是节点在链上的位置** ✓✓。**所以那句否决可能早于这批判据 ✓**；**这也说明**A 也许已经可行，只是没人重测 ✓**。
 
 **⇒ 下一步（按 C 走，并顺手重测 A 的前提）** ✓：**在无头适配器里把 `ctx.createDynamicsCompressor` 换成项目自己的实现** ✓，**然后看八条里那条响度断言走到哪里** ✓✓。
+
+### 8.6 作者那句理由被这件事反转了（2026-10-01）
+
+`GlueCompressorFactory.ts:104-107` 明写着为什么无侧链时用宿主节点：
+
+> **"With no detector there is nothing the worklet could do that the node does not: the detector input would be the programme either way, and swapping in a second implementation would only risk a difference nobody asked for."** ✓
+
+**那句话在浏览器里是对的** ✓：宿主节点是 Chromium 的 ✓，而 worklet 是本项目的 ✓，**用哪个对用户都一样 ✓**。**但在无头宿主里，那份"差异"就是问题本身** ✗✓✓：宿主节点是 `node-web-audio-api` 的实现 ✗，**而它正是 1.28 dB / 1.774 LU 的来源** ✓。
+
+**⇒ 因此结论是** ✓✓：
+
+1. **要对等，两个宿主必须跑同一份实现** ✓；
+2. **宿主那份改不了** ✗（**那等于要 Chromium 改 ✗**）；
+3. **⇒ 所以只能用本项目的 worklet，并且**浏览器路径也必须切过去** ✓**——**不是给无头开一条特殊路径 ✓**；
+4. **而"没人要的差异"这句话现在有答案** ✓✓：**对等要它 ✓**——**§8.5 里那条"作者否决"因此是被新目标取代的，不是被推翻的** ✓。
+
+**代价** ✓：**每个总线压缩器多两个 gain 节点 ✓**（**替换需要稳定两端 ✓，`:74-81` 已说明 ✓**），**以及图结构变化的风险 ✓**——**而 §8.5 已查明"按位置识别增益"那条判据读的是 `processorOptions.makeupDb`（worklet 路径字段 ✓），所以那风险可能已经过期 ✓**。
+
+**机制不需要新写** ✓✓：**`:108-143` 已经完成了整件事** ✓——`addModule` ✓、建 `AudioWorkletNode` 并传全部 `processorOptions` ✓、接侧链到输入 1 ✓、断开旧节点并接上新节点 ✓、失败时保留节点 ✓、并用 `kind()` 报告谁在图上 ✓✓。**所以要改的只是"什么时候走这一支"** ✓，**而不是"怎么走"** ✓✓。
