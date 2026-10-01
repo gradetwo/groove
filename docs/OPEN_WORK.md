@@ -267,3 +267,62 @@ SKIP_LOCAL_GATE=1 npm run push:dev -- "<msg>" # 从这里推，同步的就是�
 2. **整段渲染的 `chunkEndFrame` 由一个表达式推出，而缓冲长度来自另一个** ✗✓ → **朴素 `{ bars: 2 }` 的导出被裁成一个 bar** ✓（**实测：5.75 s 的缓冲被报成 4** ✓）。
 
 **为什么值得单列** ✓✓：这两条都属同一个家族 ✗✓——**"要求的小节数"与"实际产出的音频"不一致** ✓✓，而**这正是我在 MCP 路径上追查过的那一类** ✓（我那时量到"`bars: 8` → 17.18 s 音频" ✗，后来证明**那次是对的** ✓✓：一小节 2.36 s ✓，8 小节 ≈ 18.9 s ✓）。**同一个家族今天在两个不同的层被两个人各撞到一次** ✓✓——**所以它值得一个专门的判据** ✓：**"请求 N 小节 ⇒ 产出 N 小节的音频"** ✓，而这条现在由 `renderBarOffset.test.ts` 钉住 ✓✓。
+
+---
+
+## 十二、📋 开发计划：**导入 Logic Pro 工程**（2026-10-01 业主指派，**先只做导入** ✓）
+
+**业主要求** ✓（原话）："Logic Pro 工程文件 导入导出加入开发计划，**可以先只导入**" ✓。
+**源研究文档** ✓：`/home/crow/music/groove导入Logic工程-设计研究.md`（141 行 ✓，**在仓库之外** ✗✓ → 下面把它自足地抄成计划 ✓，仓库不再依赖那个文件 ✓）。
+
+### 十二.1 结论：**导入先行，导出暂列** ✓
+
+* **Phase 1（本计划要做的）**：**MIDI 导入** ✓——按源文档的估计占 **~80% 价值** ✓；
+* **导出** ✓：**暂不做** ✗（源文档本身也只写到 Phase 3，且导出需要 Logic 的写格式验证 ✓）；
+* **顺序** ✓：**它不在当前目标（①②③ 长曲上限）之内** ✗✓——**登记在册、按序排队** ✓，不挤掉正在跑的目标 ✓。
+
+### 十二.2 我已核过的**复用点**（不是转述，是我自己看的 ✓）
+
+| 事实 | 位置 |
+| --- | --- |
+| `ImportedPart` 中间形状 ✓ | `src/data/musicxmlImport.ts:18` ✓ |
+| **MusicXML 与 MIDI 共用同一条落库路径** ✓✓ | `mcp/arrangement.ts:462`（MusicXML ✓）、`:476`（MIDI ✓）→ 都进 `addImportedParts` ✓（`:511` ✓） |
+| `import_arrangement_midi` 工具在册 ✓ | `mcp/registry.ts:603` ✓ |
+| **`TrackKindV2` 无 audio 轨** ✓✓ | `src/types/arrangementV2.ts:14`：`"drumkit"｜"instrument"｜"sampler"｜"fx"｜"folder"` ✓ |
+
+**⇒ Logic 导入应当是第三个生产者** ✓✓（走 `addImportedParts` ✓，**不另起炉灶** ✗）——**源文档引用的那句"两个导入走两条实现是互相打架的起点"，我没有在代码里找到逐字原句** ✗✓，**但结构本身就是证据** ✓（两条导入确实共用一条路 ✓），所以本计划**建立在结构上，而不是建立在引语上** ✓。
+
+### 十二.3 Phase 1 范围（**只承诺 MIDI** ✓）
+
+**新模块** `src/data/logicToArrangement.ts` ✓：
+
+```ts
+export function fromLogicProject(input: { projectData: Uint8Array; metaData: Uint8Array }): {
+  parts: ImportedPart[]; problems: string[]; tempoBpm?: number; timeSignature?: string;
+}
+```
+
+**解析步骤** ✓：① `MetaData.plist` → tempo/拍号/采样率 ✓；② 扫 `ProjectData` 记录流：`karT` 建轨表 ✓、`qeSM`+`qSvE` 提 MIDI region 与音符 ✓、tick→beats 换算 ✓；③ 插件 XML plist 扫成"用了什么插件"清单 ✓（进 `problems`/报告 ✓，**不建轨** ✗）；④ 音频轨（`gRuA`）记一条 `problems` ✓。
+
+**新工具** `import_logic_project` ✓，`inputSchema` 镜像 `import_arrangement_midi` ✓：`arrangementId` ✓、`projectDataBase64` ✓、`metaDataBase64` ✓、`partIndex?` ✓。
+
+**为什么是两个 base64 而不是整个 `.logicx`** ✓：`.logicx` 是**目录** ✗、MCP 传参是 JSON ✓、`Media/` 里音频可能上 GB ✓ 而 Phase 1 用不上 ✓ → 传两个小文件最可靠 ✓（将来要音频再加 `mediaZipBase64` 可选参数 ✓）。
+
+**两个必须照做的前置** ✓：**alternative 编号不能硬编码** ✗✓（读 `Resources/ProjectInformation.plist` 的 `ActiveVariant` ✓，`004` 很常见 ✓）；**MIDI 音符是 region-relative tick** ✓，要换算成绝对位置 ✓。
+
+### 十二.4 诚实边界（**不许静默丢** ✗✓）
+
+Logic 的**音频轨** ✓、**插件链（AU）** ✓、**自动化（音量/声像包络）** ✓ **groove 目前吃不下** ✗——**Phase 1 只承诺 MIDI 部分** ✓，其余**逐条进 `problems` 说清楚** ✓✓（这正是 groove 导入设计一直坚持的原则 ✓）。Drummer/Session Player 轨**可转**（鼓点是 MIDI ✓），但"**Drummer 是 AI 生成的**"这个语义会丢 ✗ → **要说出来** ✓。
+
+### 十二.5 判据（本项目的规矩：有判据、且能被删除测试证明有区分力 ✓）
+
+1. **一个 `.logicx` 夹具 → 出 `parts`** ✓（音符数、起止、音高与夹具一致 ✓）；
+2. **`problems` 必须点名被丢掉的东西** ✓✓（有音频轨的夹具 → 报告里必须出现"X 条音频轨未导入" ✓；**拿掉那条 problem 即红** ✗✓）；
+3. **alternative 编号非 `000`** ✓（用 `004` 的夹具 ✓，硬编码即红 ✗）；
+4. **tempo/拍号与 `MetaData.plist` 一致** ✓；
+5. **不另起落库路径** ✓：断言走的是 `addImportedParts` ✓（**另写一条即红** ✗✓）。
+**规格来源** ✓：以 `jonkubis/logicproformatwriter`（**MIT** ✓，其 `PROJECTDATA_FORMAT.md` 最全 ✓）的格式文档为 spec ✓，**在 TypeScript 里自己实现** ✓；**GPL 的（`geoffmyers/logicx-analyzer`）只看不抄** ✗✓。
+
+### 十二.6 工作量与**最大风险** ✗✓
+
+约 **1–2 周**（单人 ✓，**有 Mac 验证环境的前提下** ✓）。**最大风险 = 手头没有 Mac/Logic 做 ground truth** ✗✓（本机是 Linux ✓）→ **缓解** ✓：找社区现成 `.logicx` 样本 ✓ + 用 `logicproformatwriter` 生成"已知正确"的文件做对照 ✓✓——**在没有 ground truth 之前，不声称"导入正确"** ✗✓（只能声称"按 spec 解析出这些值" ✓）。
