@@ -103,3 +103,31 @@ WAV: 44100 Hz / 2 ch / 16 bit / 16.60 s          skipped=null ✓
 **处置** ✓（顺序很重要 ✓）：
 1. **断言已撤回** ✓——**不提交红的测试** ✗✓（那会破远程门禁 ✓）；
 2. **发现连同逐字复现记在这里** ✓✓（上面的断言文本与输出 ✓），**下一轮的第一件事**是**修调度器** ✓（给每个声部按音符结束时刻调 `stop` ✓）**然后把这条断言加回去** ✓✓——**届时它就是"拿掉修复即红"的判据** ✓。
+
+## 八、✗✗✓ **根因确定：`seconds` 从未被传给 `startSamplerNote`**（2026-10-01）
+
+**`src/audio/samplerVoice.ts` 第 86–87 行**是决定音符生死的地方 ✓：
+
+```ts
+if (seconds === undefined) source.start(startedAt);        // ← 永不结束 ✗
+else source.start(startedAt, 0, seconds);                  // ← 用 start 的第三参数限时 ✓✓
+```
+
+**而唯一的调用点没传它** ✗✗（`src/audio/WavExporter.ts`，车道的 `sink.start`，约 1378 行 ✓）：
+
+```ts
+startSamplerNote({
+  context: ctx, destination: graph.musicBusInput, buffer, ratio,
+  whenSeconds: Math.max(0, event.atSeconds),     // ← 只有起点 ✗
+  ...(event.gainDb === 0 ? {} : { gainDb: event.gainDb }),
+  ...(event.pan === undefined ? {} : { pan: event.pan }),
+});                                              // ← 没有 seconds ✗✗
+```
+
+⇒ **每一个采样音符都走 `seconds === undefined` 分支** ✗ → **`source.start(when)` 不安排任何结束** ✗✗ → **响到渲染结束** ✓✓。这与两处实测一致 ✓✓：Muse 量到"单个 A4 产出约 13 秒音频、音符间该静音处 −8.7 dBFS" ✗；我量到"一个 0.9 拍（≈0.44 s）的 C4 一路响到 2.4 s" ✗。
+
+**注意：这不是采样 `loop_mode` 的问题** ✗✓（我先前一度怀疑 ✓）——**代码根本没告诉声部什么时候停** ✓✓。
+
+**还差一步才能安全地修** ✗✓：`OfflineAudioLaneEvent`（`src/audio/offlineAudioLanes.ts:61` ✓）**只有 `atSeconds`，没有长度** ✗；事件是**按步**生成的 ✓（`timing.starts[step]` ✓，:209 ✓）。**所以修之前必须先弄清"一个跨多步的音符会产生几个事件、该给多长"** ✓✓——**这是下一轮的第一件事** ✓，而不是照猜打补丁 ✗✓。
+
+**修完立刻恢复判据** ✓✓：**"该轨启动的每个声部都要有结束"** 那条断言 ✓ + **混音器尊重 stop** ✓（两者都已在 `6dc0eb8` 的说明与本节里留档 ✓）——届时**拿掉修复即红** ✓✓。
