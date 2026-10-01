@@ -688,3 +688,17 @@ rootKey: 59
 **⇒ B2 的结论** ✓✓：**她两张表 15 个文件里，11 个已被我确认正确、0 个被证明是错的、4 个仍未解决** ✓✓（`ViolaEns_pizz_C2_v1_rr1` ✓、`BKCtbss_Pizz_B2_v1_rr2` ✓、`BKCtbss_Pizz_E0_v1_rr1` ✓、`KSHarp_F7_f` 很可能是对的 ✓）。**照她的表加 −12 会把 11 个正确的样本调低一个八度** ✗✗✓ → **不做校正** ✓✓。
 
 **下一步（已具体）** ✓✓：**那 4 个要的是一把在"低音区 + 极短音 + 最高音区"上稳的仪器** ✓——**`clarity` 就是现成的判据** ✓（低于某个值即"做不了" ✓，而不是硬给答案 ✓），**候选做法**：更长的窗 ✓、先低通再自相关 ✓、或 **YIN/倒谱** ✓。**本条以"不做 + 第一步 + 理由"结** ✓。
+
+### 十九.1 想核对 SFZ 自己声明的 loop opcode：**三次都没拿到，停手** ✗✓（连同试过什么 ✓）
+
+**试过的** ✓：
+
+1. 从 `list_sample_libraries` 取到**正确的 pin**（`6dd651d55dde97fd4028699be9d4481f26917891` ✓，与审计用的一致 ✓）；
+2. 目录取自 `render_instrument_note` 的 **`resolved.samplePath`**（`Strings/Violin Section/susVib/` ✓）；
+3. 基名按**清单自己的规则**推：`sampleManifest.ts:37-44` 里 `assetId = ${entryId}:${slug(basename(sfz))}` ✓，所以 `vsco2ce:ViolinEnsSusVib` 应对应 `ViolinEnsSusVib.sfz` ✓；
+4. GitHub **contents API** 列该目录 → **没有返回任何 `.sfz`** ✗✓；
+5. 直接抓 `ViolinEnsSusVib.sfz` 与 `VlnEns_susVib.sfz` 两个候选 → **都是 HTTP 404** ✗✓。
+
+**⇒ 停手** ✓✓：**不猜第三次** ✗✓。**而这一步对结论并不必需** ✓✓——**十九节那条代码事实（`loop_mode` 只被用于判断 `one_shot`，`loop_start`/`loop_end` 全项目零引用）已经独立地关掉了前提** ✓，**SFZ 原文只会增添色彩** ✓。
+
+**路途中真正学到的一条（值得留）** ✓✓：**`src/data/sampleManifest.ts` 里没有 `vsco2ce` 这样的字面量** ✗✓——**清单是从远端索引组装出来的** ✓（`withProgramIds` ✓）。**所以"在清单里 grep 资产 id"这个方法本身不成立** ✗✓——**我第一轮就是这么找的、什么都没找到** ✓✓。**要查某个资产的 SFZ，应当走运行时**（`resolved` ✓）**或清单的索引逻辑** ✓，**而不是 grep 源码** ✓。
