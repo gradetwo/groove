@@ -46,3 +46,19 @@ chromium-channel: offlineCtx="function"   audioWorklet="undefined"   addModule �
 **应采取的第一步**（排队 ✓，理由同下）：渲染 worker 在**退出/信号**时关闭浏览器 ✓，并且探针脚本**自带超时** ✓；判据 = 启动一次渲染、杀掉父进程后，**不残留**浏览器进程 ✓（本会话已经证明这条现在是假的 ✗）。
 
 **为什么此刻不改** ✗：`fix-headless-silence` 正在改 `mcp/render/worker.ts` 与 `src/audio/*` ✓；**两个写者同改一个文件**在本项目已经返工过不止一次 ✓✓。**排队，等它落地** ✓。
+
+---
+
+## 交叉含义：这份事实让"只要 GS-1 专用 server"从备选变成**需要的**（2026-10-01）
+
+`docs/RUST_DECISION.md §七` 写过：Rust 路线**继续推后**，它变正确的条件是"**只要 GS-1 专用 server**"或"**决定整引擎移植**" ✓。当时把前者当作**备选** ✓。
+
+**这份笔记的事实把它变成了后者的替代品** ✓：
+
+* 浏览器侧**没有 `audioWorklet`** ✗ → **GS-1 在任何一次 Linux 渲染里都没有装配** ✗（原生引擎顶替 ✓）；
+* `crates/synth-core` **就是 wasm 的同一份源码** ✓（`examples/probe.rs` 能离线渲染、不需要音频设备 ✓，`cargo build --release --frozen` 实测 **8.22 s** ✓）→ 一个**只做 GS-1 的 Rust server** 与浏览器共享**同一份 DSP** ✓✓，满足 §四/§八 的"**共享物唯一**" ✓；
+* 而"**整引擎移植**"这条**不需要**走 ✓——它撞在"Rust 渲染不了整 pattern"✗（`GS1_ROUTED_ROLES` 只有 chords/lead，pattern 有 8 条轨 ✓）上，会迫使我们把 kick/bass/效果/母带**用 Rust 再写一遍** ✗，那正是要避免的 ✓。
+
+**于是"GS-1 专用 server"的形状是** ✓：输入是**一条轨的 patch code + 音符**（不是整 pattern ✓）→ 用 `synth-core` 离线渲染出该轨的音频 ✓ → 由现有渲染器把它当作一条 lane 的元素混入 ✓。**边界窄** ✓（一个 server、一种输入 ✓）、**判据现成** ✓（与浏览器图里 GS-1 应产生的输出**逐样本一致** ✓；若浏览器在这台机器上给不出 GS-1 ✓，则判据改为与 **synth 项目自己的参考渲染**一致 ✓，并把"浏览器早已无法产生 GS-1"这一条同时记录 ✓）。
+
+**排队，不现在做** ✗，理由有二 ✓：① 渲染剖析（`measure-render-profile` ✓）正在给"整图成本"而不是"GS-1 成本"的答案 ✓，它决定该优化的是**节点数**还是这条支路 ✓；② `mcp/render/worker.ts` 正被 `fix-headless-silence` 占用 ✓（同文件不并发 ✓）。
