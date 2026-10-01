@@ -359,7 +359,11 @@ minutes and the call reports no progress while it runs.
 { "op": "swing",        "amount": 35 }
 { "op": "clear_track",  "track": "percussion" }
 { "op": "copy_track",   "from": "kick", "to": "percussion" }
+{ "op": "transform_pattern", "variant": "arp",   "track": "chords", "pattern": "up_down", "octaves": 2 }
+{ "op": "transform_pattern", "variant": "strum", "track": "chords", "direction": "down", "speedMs": 25 }
 ```
+
+`transform_pattern` is the app's own performance engine, not a second one: `arp` calls `buildArpeggioPattern` and `strum` calls `calculateStrumTiming` from `src/utils/arpeggiatorTheory.ts`, the module the chord panel and the live player use, so the note order, register and strum accents match what a person hears. It rewrites the named lane's **held chords** (a sounding step with a note stack in `pitches`), bakes the figure into the steps, and reports how many notes it wrote; `copy_track` first if the arpeggio should land on another lane. The interface's live strum is a sub-step gesture and a step pattern has no sub-step timing, so `strum` quantizes the engine's delay to the pattern's own grid, never below one step; `arp`'s `random` pattern is refused because the pure function cannot reproduce it.
 
 Every op that involves chance takes a **seed**, and the result is deterministic for it: an agent that asks twice
 gets the same groove back, which is what makes a generated pattern worth writing down.
