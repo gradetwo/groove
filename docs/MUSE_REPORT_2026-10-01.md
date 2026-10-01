@@ -280,3 +280,17 @@ pitches[index] = pitches[index] === 0 ? note.pitch : Math.min(pitches[index]!, n
 **⭐ 删除测试教了我两件事** ✗✓✓：
 1. **加偏移必须改对地方** ✓：我先在 `src/audio/samplerVoice.ts` 的 `playbackRate` 上加了 +1 半音 ✗ → **判据仍然全绿** ✗✓——因为 **`render_instrument_note` 根本不走那条路** ✗✓：它的 handler 调的是 **`auditionInstrumentNote`** ✓，实现在 **`mcp/render/worker.ts:1109`** ✓，速率在它的 `page.evaluate` 里设 ✓（≈1148 行 ✓）。**改那处之后，四条全红（96–101 音分）** ✗✓，还原即绿 ✓✓。**若跳过删除测试，我会交出一条"改什么都绿"的判据** ✗✗。
 2. **我读退出码读错了对象** ✗✓：`node probe | tail -2; echo $?` 报的是 **`tail` 的**退出码 ✗✓，不是探针的 ✓。**改成重定向到文件再读 `$?`** ✓✓ 才得到 0 / 1 ✓。**同一天第 N 次"读数测错了对象"** ✗✓。
+
+### P0-3（采样 lane 在 `render_arrangement` 里被 skip）**不复现** ✓✓（2026-10-01，实测）
+
+**做法** ✓：经真实 MCP ✓——`create_arrangement{blankKind:"sampler"}` ✓ → `set_arrangement_track_instrument{trackId:"sampler-1", assetId:"vsco2ce:ViolinEnsSusVib"}` ✓ → `add_arrangement_notes`（C4/E4/G4 各 0.9 拍 ✓）→ `render_arrangement{bars:1}` ✓。
+
+```
+设乐器 OK ✓ · 加音符 OK ✓ · 渲染 OK ✓
+skippedLanes = null            ← 没有被 skip ✓✓
+path = 有 ✓ · durationSec = 16.600022675736962
+```
+
+**结论** ✓：**采样 lane 参与渲染、没有被 skip** ✓✓。这与此前那条 note-off 修复的现场一致 ✓（`skip` 机制今天也变了 ✓：不可安置的音会进 `skippedLanes[].reason` 说清原因 ✓，而不是静默消失 ✓）。
+
+**⚠️ 但这一跑露出一个我解释不了的数** ✗✓：**`render_arrangement` 的 `bars: 1` 产出 16.6 秒** ✗，而 `render_audio` 在同一 bpm 下是 **1.937 秒/小节 + 1.693 秒尾巴**（本文件 §十四 的算术 ✓）✗✓ → **同一个参数名在两条工具上不是同一个量** ✗✓。**未解释，记为开放线索** ✗✓——**不许**用"大概是默认 clip 长度"糊过去 ✗，要量就量排列自己的 clip 长度 ✓。
