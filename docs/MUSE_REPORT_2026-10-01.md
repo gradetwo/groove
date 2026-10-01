@@ -702,3 +702,19 @@ rootKey: 59
 **⇒ 停手** ✓✓：**不猜第三次** ✗✓。**而这一步对结论并不必需** ✓✓——**十九节那条代码事实（`loop_mode` 只被用于判断 `one_shot`，`loop_start`/`loop_end` 全项目零引用）已经独立地关掉了前提** ✓，**SFZ 原文只会增添色彩** ✓。
 
 **路途中真正学到的一条（值得留）** ✓✓：**`src/data/sampleManifest.ts` 里没有 `vsco2ce` 这样的字面量** ✗✓——**清单是从远端索引组装出来的** ✓（`withProgramIds` ✓）。**所以"在清单里 grep 资产 id"这个方法本身不成立** ✗✓——**我第一轮就是这么找的、什么都没找到** ✓✓。**要查某个资产的 SFZ，应当走运行时**（`resolved` ✓）**或清单的索引逻辑** ✓，**而不是 grep 源码** ✓。
+
+### 十九.2 ⚠️ **教训：地址早就有函数在搭，我却手搭了三次** ✗✓✓（2026-10-01）
+
+上一节我"猜了三次 SFZ 路径都失败" ✓。**真正的原因是：`src/data/sampleManifest.ts:260` 早就导出了 `sourceSfzUrl(manifest, entryId, sfz?)`** ✓✓——**它按 `repo` / `pin` / `sfz` 三条运行时数据拼地址** ✓：
+
+```
+return `https://raw.githubusercontent.com/${entry.repo}/${entry.pin}/${program}`;
+```
+
+**我错在哪里** ✗✓✓：**我把 repo 硬写成 `schollz/VSCO-2-CE`** ✗——**而 `repo` 是清单条目的字段** ✓（`list_sample_libraries` 显示的仓库形如 `sfzinstruments/…` ✓）→ **pin 对、repo 错，必然 404** ✗✓，**而 `vsco2ce` 在源码里查不到** ✓，**因为清单是运行时取来的数据** ✓✓。
+
+**而这个函数的注释正好记着同类坑** ✓✓：**`prefix` 只属于镜像布局** ✓；**曾经拼成 `…/<pin>/<prefix><sfz>` → GitHub 回了 14 字节的 `404: Not Found` → "看起来正好像一个没有乐器的库"** ✗✓✓；**结论写得很清楚**：**"Two layouts, two addresses: the source is `repo/pin/sfz`, the mirror is `root/prefix/sfz`."** ✓✓
+
+**⇒ 教训（可推广，值得单独留）** ✗✓✓：**在构造一个地址之前，先找"已经在构造它的那个函数"** ✓。**这个项目里有 `sourceSfzUrl` / `mirrorSfzUrl`** ✓，**我三次手搭全是白费** ✗✓。**这与今天其余几次同源** ✓：**读一层、对另一层下结论** ✗；**差别只是这次的对象是 URL 而不是音频** ✓。
+
+**处置** ✓✓：**不再追这条** ✓——**B3 的结论由十九节的代码事实独立成立** ✓（**`loop_start`/`loop_end` 全项目零引用 ⇒ 无论 SFZ 写什么都不会循环** ✓），**SFZ 原文只算旁证** ✓；**而"取到某个资产的真实 SFZ 地址"这条能力，正确的做法是走 `sourceSfzUrl` 或清单索引** ✓，**不是拼字符串** ✓。
