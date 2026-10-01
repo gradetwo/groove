@@ -34,6 +34,7 @@ function unknownGenre(wanted: string): string {
   );
 }
 import { applyPatternOps, comparePatterns, findTrack, patternStatistics, validatePattern, type PatternOp } from "./pattern";
+import { DEFAULT_NOTE_CONVENTION, describePitch, type NoteConvention } from "../src/data/pitchTruth";
 import { resolveGs1Lane } from "../src/audio/gs1/gs1Tracks";
 import { decodeGs1PatchCode, type Gs1PatchRoute } from "../src/audio/gs1/gs1PatchCode";
 import {
@@ -1423,6 +1424,50 @@ export const TOOLS: ToolDefinition[] = [
    * (`resolveGs1Lane`). A code or an override that cannot be read is **refused here** (and reported
    * by `validate_pattern`), never written to a lane where it would quietly become a different sound.
    */
+  {
+    name: "get_pitch_report",
+    title: "What a note actually is",
+    description:
+      "One note, in every form a caller might have to check it against something else: the **MIDI note number** first, because that is the only field that never changes, then the name, **together with which middle-C convention produced that name**, then the frequency. Names like C4 are a display choice — the same note number is C3 in Yamaha's convention, C4 in scientific pitch notation and C5 in some older software — so a bare name is never returned without the convention beside it. Use this before and after anything that might transpose, and compare the numbers rather than the names. The sound source's own account of the note — which sample file it resolved to, that sample's root key and the ratio it is played at — comes back from `render_instrument_note` as its `resolved` field, and `describePitch` in the app reports both halves in one shape.",
+    readOnly: true,
+    inputSchema: {
+      midi: z
+        .union([z.number().int().min(0).max(127), z.array(z.number().int().min(0).max(127)).min(1).max(128)])
+        .describe("one MIDI note 0-127, or a list of them — note 60 is middle C, note 69 is A4 at 440 Hz"),
+      convention: z
+        .enum(["C4", "C3", "C5"])
+        .optional()
+        .describe("which name goes with which number; defaults to C4 (scientific pitch notation, note 60 is C4)"),
+      cents: z.number().min(-1200).max(1200).optional().describe("micro-tuning for the note, in cents"),
+    },
+    handler: (args) => {
+      const raw = args.midi;
+      // Narrowed rather than cast: the schema allows one number or a list, and a caller's value arrives loose.
+      const wanted: number[] = (Array.isArray(raw) ? raw : [raw]).map((value) => Number(value));
+      const convention = (args.convention ?? DEFAULT_NOTE_CONVENTION) as NoteConvention;
+      const cents = typeof args.cents === "number" ? args.cents : undefined;
+      const report = wanted.map((midi) =>
+        cents === undefined ? describePitch({ midi, convention }) : describePitch({ midi, convention, cents })
+      );
+      return {
+        convention,
+        defaultConvention: DEFAULT_NOTE_CONVENTION,
+        /** The reader's first line: the convention is named here too, not only per note. */
+        note: `names below are ${convention} (note 60 is ${convention}); the numbers are the truth and do not depend on it`,
+        notes: report.map((item) => ({
+          midi: item.midi,
+          name: item.name,
+          frequencyHz: Number(item.frequencyHz.toFixed(6)),
+          ...(item.transposed
+            ? { soundingMidi: item.soundingMidi, soundingFrequencyHz: Number(item.soundingFrequencyHz.toFixed(6)) }
+            : {}),
+          transposed: item.transposed,
+          totalSemitones: item.totalSemitones,
+          transpositions: item.transpositions,
+        })),
+      };
+    },
+  },
   {
     name: "apply_gs1_patch",
     title: "Give a lane a GS-1 patch, and write individual parameters",

@@ -1158,6 +1158,33 @@ try {
     `${(importedLogic.trackIds ?? []).length} track(s), ${importedLogic.notes} note(s), ${importedLogic.tempoBpm} BPM ${importedLogic.timeSignature}, ${logicProblems.length} problem(s)`
   );
 
+  /**
+   * The pitch inspector, and the property the whole pitch-truth module exists for: **a display convention must
+   * not be able to reach a frequency.** Both halves are asserted, not only the working one — the name changes
+   * with the convention and the frequency does not — so wiring a label into the arithmetic turns this red.
+   */
+  const pitchC4 = payload(
+    await client.request("tools/call", { name: "get_pitch_report", arguments: { midi: [60, 69] } })
+  );
+  const pitchC3 = payload(
+    await client.request("tools/call", { name: "get_pitch_report", arguments: { midi: [60], convention: "C3" } })
+  );
+  const c4 = (pitchC4.notes ?? [])[0] ?? {};
+  const a4 = (pitchC4.notes ?? [])[1] ?? {};
+  const c3 = (pitchC3.notes ?? [])[0] ?? {};
+  check(
+    "get_pitch_report names 60 as C4 at 261.6256 Hz and 69 as A4 at 440, and renames without moving the frequency",
+    c4.name === "C4" &&
+      Math.abs(c4.frequencyHz - 261.6255653) < 1e-6 &&
+      a4.name === "A4" &&
+      a4.frequencyHz === 440 &&
+      pitchC4.convention === "C4" &&
+      pitchC3.convention === "C3" &&
+      c3.name === "C3" &&
+      Math.abs(c3.frequencyHz - c4.frequencyHz) < 1e-9,
+    `${c4.name} ${c4.frequencyHz} Hz, ${a4.name} ${a4.frequencyHz} Hz, then ${c3.name} ${c3.frequencyHz} Hz`
+  );
+
   const prompt = await client.request("prompts/get", { name: "compose_groove", arguments: { genre: "chicago-house" } });
   const promptText = prompt?.messages?.[0]?.content?.text ?? "";
   check("prompts/get builds a usable brief", promptText.includes("chicago-house") && promptText.includes("apply_pattern_ops"), `${promptText.length} chars`);
