@@ -1,5 +1,7 @@
 # 编排 v2：Logic Pro 式的轨道界面（设计，2026-09-28）
 
+> ⭐ **先说一句给写旋律的人**（2026-10-01 补）：**这套模型与旧的十六步栅格（`SequencerPattern`／`steps`）不是同一件事，表达力也不同** ✓。**编排的音符是 `NoteEvent {pitch, startBeats, lengthBeats, velocity}`** ✓——**`startBeats` 允许小数（不在栅格上）✓、`lengthBeats` 无上界（跨小节延音可以）✓、歌词直接写在音符上**（`:98`："A lyric is written on the note it is sung on, not in an array beside a grid"）✓✓。**而旧栅格模型的门限上限 `MAX_NOTE_GATE_STEPS = 16`（一小节，`src/types/genre.ts:47`）只属于栅格** ✗——**一份测试意见曾据它得出"只能把歌词切碎塞进 `steps`"，那是可发现性问题，不是能力缺失** ✓✓（见 `docs/DATA_MODEL_AUDIT.md`）。**写有真实时值的旋律、歌词、Pad 铺底，请用音符工具，不要用步进栅格** ✓。
+
 > 业主的决定：**轨道是音频采样器的，就应该能听到**；**呈现像 Logic Pro**；**现有固定轨道编排作为 legacy 界面，只有选这种模式才打开**；**设计与开发新界面**：添加/删除轨道 ✓、多种轨道类型 ✓、轨道可分组收纳 ✓。
 
 ## 一、而这**不是重写** —— 引擎已经在了

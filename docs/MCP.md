@@ -543,6 +543,19 @@ are the places where it is more accurate than the evaluations that came before i
 
 **已知的下一步**：把自定义流派的存储挪到一个 Node 也能实现的接口后面（`customGenreDb` 只依赖 IndexedDB），那样"保存自己的流派"就能有工具。
 
+### ⭐ 写旋律用哪一套：两条模型的分工（2026-10-01）
+
+这里有两套模型，**表达力不同** ✓，而工具清单是平铺的一百多条 ✓——**所以先说清分工**：
+
+| 你要写的东西 | 用哪一套 | 关键差别 |
+| --- | --- | --- |
+| **有真实时值的旋律、歌词、附点、连音、跨小节延音、长 Pad 铺底** | **音符工具：`add_arrangement_note`／`add_arrangement_notes`／`move_arrangement_note`／`set_arrangement_note_length`／`remove_arrangement_note`** | `startBeats` **允许小数**（**不在栅格上** ✓）、`lengthBeats` **无上界** ✓、**歌词写在音符上**（`arrangementV2.ts:98`："A lyric is written on the note it is sung on, not in an array beside a grid"）✓ |
+| 鼓组、琶音、循环式的节奏型 | `set_arrangement_track_steps` | 步进栅格：**每个起点落在格上** ✗，门限上限 **`MAX_NOTE_GATE_STEPS = 16`（一小节）** ✗（`src/types/genre.ts:47` ✓） |
+
+**⚠️ 一份测试意见正是踩在这里** ✗✓：它说"**MCP 下大模型只能把歌词切碎塞进 `steps`**"——**那不是能力缺失，而是**可发现性**问题：从步进工具入手的人，不会被告知另一套模型存在** ✓✓。**`add_arrangement_note` 自己的说明早就写着"not limited to a grid — a note may begin between steps and last across several"** ✓，**但正确工具的说明帮不了正在读错误工具的人** ✗——**所以 `set_arrangement_track_steps` 现在也会指路** ✓，**而这段是本节的补丁** ✓。
+
+**⇒ 一句话** ✓✓：**门限上限是**栅格模型**的属性，不是编排模型的**——**编排里一个音符能持续多久，没有上限 ✓**。
+
 ### MIDI 导入：给编排用的那一条（2026-09-30）
 
 `import_arrangement_midi` 把标准 MIDI 文件读成**编排轨道**，而不是十六步网格。这一条是业主指示的直接结果——"每个功能开发过程中，MCP 要第一时间提供"——也是因为它与既有的 MIDI 导入**不是同一件事**：
