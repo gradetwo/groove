@@ -21,6 +21,13 @@ export interface ExportMidiOptions {
 // Track index to General MIDI mapping
 // Tracks 0-3 are drums (Channel 10 = index 9 in 0-indexed MIDI)
 // Tracks 4-7 are melodic/harmonic instruments (Channels 1, 2, 3, 4 = indices 0, 1, 2, 3)
+/**
+ * The same eight-row track mapping `AbletonExporter.TRACK_MIDI_MAPPINGS` writes, with a GM program where that
+ * one has a default name. **No note names appear here on purpose**: the Ableton table labels its rows in
+ * Ableton's naming (note 60 is C3) because those labels describe what the receiving DAW shows, and a second set
+ * of labels here would be a second place for them to drift. The numbers are the mapping; `baseNote` on the
+ * other table is what becomes an export's pitch offset.
+ */
 const TRACK_MIDI_MAPPINGS = [
   { isDrum: true, channel: 9, baseNote: 36, program: 0 },  // Kick: Acoustic Bass Drum
   { isDrum: true, channel: 9, baseNote: 38, program: 0 },  // Snare: Acoustic Snare

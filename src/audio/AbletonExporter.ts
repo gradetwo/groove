@@ -54,6 +54,20 @@ export const TRACK_COLOR_PALETTES = [
   { track: 151, clip: 11 }, // Violet (FX / Riser)
 ];
 
+/**
+ * ⭐ **The one place this project writes note names in a second convention, and what that means.**
+ *
+ * The names beside these rows are **Ableton's own**: in its naming note 60 is **C3**, so 36/48/60/72 read as
+ * C1/C2/C3/C4. Everywhere else this project defaults to **C4** (`src/data/pitchTruth.ts`, where note 60 is C4).
+ * The two are not a disagreement — they are two readers of the same numbers — and these labels are deliberately
+ * the way the receiving DAW will show them, because that is what makes them useful to whoever opens the file.
+ *
+ * **`baseNote` is load-bearing and must not move for the sake of a label.** It becomes the track's
+ * `pitchOffset` (`defaultMap.baseNote + pitchOffset` further down), so changing 60 to "fix" a name would
+ * transpose the music. A convention is a label; the number is the truth; `ABLETON_NOTE_NAMES` says which label
+ * applies here so nobody has to infer it, and `src/test/pitchConvention.test.ts` pins the pairs.
+ */
+export const ABLETON_NOTE_NAMES: "C3" = "C3";
 // MIDI standard mapping for 8 tracks
 export const TRACK_MIDI_MAPPINGS = [
   { isDrum: true, channel: 9, baseNote: 36, defaultName: "Kick" },        // C1
