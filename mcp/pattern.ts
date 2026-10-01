@@ -506,19 +506,18 @@ function transformLane(
     );
   }
 
-  const length = lane.steps.length;
-  const baseVelocity = holds.map((hold) => hold.velocity);
-  const cleared = lane.steps.filter(Boolean).length;
-  lane.steps = lane.steps.map(() => 0);
-  lane.pitch = (lane.pitch && lane.pitch.length === length ? lane.pitch : lane.steps).map(() => null);
-  lane.pitches = (lane.pitches && lane.pitches.length === length ? lane.pitches : lane.steps).map(() => null);
-  lane.gate = (lane.gate && lane.gate.length === length ? lane.gate : lane.steps).map(() => 1);
-  lane.velocity = (lane.velocity && lane.velocity.length === length ? lane.velocity : lane.steps).map((value) => (typeof value === "number" ? value : 100));
-  /** How far a hold lasts: up to the next held chord, or the end of the lane. */
-  const spanOf = (index: number) => (holds[index + 1]?.at ?? length) - holds[index]!.at;
-
+  /**
+   * Every parameter is checked **before the lane is touched**. A refused op has to leave the pattern exactly as it
+   * found it, and the criteria caught the first version clearing the lane and then returning a refusal — a partial
+   * edit that nothing but a test would have noticed.
+   */
+  const arpPattern = op.pattern ?? "up";
+  const rate = op.rate ?? "1/16";
+  const octaves = op.octaves ?? 2;
+  const gate = op.gate ?? 0.8;
+  const direction = op.direction ?? "down";
+  const speedMs = op.speedMs ?? 25;
   if (op.variant === "arp") {
-    const arpPattern = op.pattern ?? "up";
     if (!ARP_PATTERNS.includes(arpPattern)) {
       return fail(`"${op.pattern}" is not an arpeggio pattern — the patterns are ${ARP_PATTERNS.join(", ")}`);
     }
@@ -533,18 +532,36 @@ function transformLane(
         'the engine\'s "random" arpeggio is chosen at playback time (Math.random) and the pure function returns the ascending pool, so MCP cannot reproduce it — use up, down, up_down or converge, and humanize with a seed for bounded variation'
       );
     }
-    const rate = op.rate ?? "1/16";
     if (!ARP_RATES.includes(rate)) {
       return fail(`"${op.rate}" is not an arp rate — the rates are ${ARP_RATES.join(", ")}`);
     }
-    const octaves = op.octaves ?? 2;
     if (!Number.isInteger(octaves) || octaves < 1 || octaves > 3) {
       return fail(`octaves ${op.octaves} is outside the engine's 1..3`);
     }
-    const gate = op.gate ?? 0.8;
     if (!(gate >= 0.2 && gate <= 1)) {
       return fail(`gate ${op.gate} is outside the engine's 0.2..1`);
     }
+  } else {
+    if (!STRUM_DIRECTIONS.includes(direction)) {
+      return fail(`"${op.direction}" is not a strum direction — the directions are ${STRUM_DIRECTIONS.join(", ")}`);
+    }
+    if (!(speedMs >= 10 && speedMs <= 80)) {
+      return fail(`speedMs ${op.speedMs} is outside the engine's 10..80`);
+    }
+  }
+
+  const length = lane.steps.length;
+  const baseVelocity = holds.map((hold) => hold.velocity);
+  const cleared = lane.steps.filter(Boolean).length;
+  lane.steps = lane.steps.map(() => 0);
+  lane.pitch = (lane.pitch && lane.pitch.length === length ? lane.pitch : lane.steps).map(() => null);
+  lane.pitches = (lane.pitches && lane.pitches.length === length ? lane.pitches : lane.steps).map(() => null);
+  lane.gate = (lane.gate && lane.gate.length === length ? lane.gate : lane.steps).map(() => 1);
+  lane.velocity = (lane.velocity && lane.velocity.length === length ? lane.velocity : lane.steps).map((value) => (typeof value === "number" ? value : 100));
+  /** How far a hold lasts: up to the next held chord, or the end of the lane. */
+  const spanOf = (index: number) => (holds[index + 1]?.at ?? length) - holds[index]!.at;
+
+  if (op.variant === "arp") {
     // The bake's own grid rule: 1/8 spans two 1/16 steps, everything else one.
     const stepInterval = rate === "1/8" ? 2 : 1;
     let written = 0;
@@ -568,14 +585,6 @@ function transformLane(
     };
   }
 
-  const direction = op.direction ?? "down";
-  if (!STRUM_DIRECTIONS.includes(direction)) {
-    return fail(`"${op.direction}" is not a strum direction — the directions are ${STRUM_DIRECTIONS.join(", ")}`);
-  }
-  const speedMs = op.speedMs ?? 25;
-  if (!(speedMs >= 10 && speedMs <= 80)) {
-    return fail(`speedMs ${op.speedMs} is outside the engine's 10..80`);
-  }
   /**
    * The engine's delay is a real time in milliseconds, and a step pattern has no sub-step timing, so the
    * delay is quantized to the pattern's own grid — never below one step, or a strum would collapse back into

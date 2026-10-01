@@ -254,6 +254,55 @@ try {
   );
 
   /**
+   * ⭐ **The last UI-only performance transform, reachable where an agent composes.** The arpeggiator and the
+   * strummer behind the chord panel (`src/utils/arpeggiatorTheory.ts`) were implemented and tested but no tool
+   * could reach them — the gap `docs/Z2_ADJUDICATION.md` §2.7 stages. This asserts the op over the wire, and it
+   * asserts the engine's **own order** rather than "the notes changed": `up` over C major is 60,64,67 cycled
+   * (so `pitches[0]` is the arpeggio, not the original stack), a strum spreads those same notes onto successive
+   * onsets, and a lane that holds nothing is refused with a message rather than quietly doing nothing.
+   */
+  const arpBaked = payload(
+    await client.request("tools/call", {
+      name: "apply_pattern_ops",
+      arguments: {
+        genreId: "chicago-house",
+        ops: [
+          { op: "set_chord_progression", track: "chords", chords: [[60, 64, 67]] },
+          { op: "transform_pattern", variant: "arp", track: "chords", pattern: "up", rate: "1/16", octaves: 1 },
+        ],
+      },
+    })
+  );
+  const strummed = payload(
+    await client.request("tools/call", {
+      name: "apply_pattern_ops",
+      arguments: {
+        genreId: "chicago-house",
+        ops: [
+          { op: "set_chord_progression", track: "chords", chords: [[60, 64, 67]] },
+          { op: "transform_pattern", variant: "strum", track: "chords", direction: "down", speedMs: 25 },
+        ],
+      },
+    })
+  );
+  const refusedTransform = payload(
+    await client.request("tools/call", {
+      name: "apply_pattern_ops",
+      arguments: { genreId: "chicago-house", ops: [{ op: "transform_pattern", variant: "arp", track: "trombone" }] },
+    })
+  );
+  const chordsLaneOf = (result) => (result.pattern?.tracks ?? []).find((track) => track.track_id === "chords") ?? {};
+  check(
+    "transform_pattern arpeggiates a held chord, strums it across steps, and refuses an unknown lane",
+    JSON.stringify(chordsLaneOf(arpBaked).pitch?.slice(0, 3)) === JSON.stringify([60, 64, 67]) &&
+      (chordsLaneOf(arpBaked).pitches ?? [])[0]?.[0] === 60 &&
+      JSON.stringify(chordsLaneOf(strummed).pitch?.slice(0, 3)) === JSON.stringify([60, 64, 67]) &&
+      chordsLaneOf(strummed).steps?.[1] === 1 &&
+      (refusedTransform.applied ?? [])[0]?.ok === false,
+    JSON.stringify((arpBaked.applied ?? [])[1] ?? {}).slice(0, 120)
+  );
+
+  /**
    * Fifth report, P1.2: a composer guessed `"techno"`, was told only "provide either genreId or pattern", and concluded the ids had to be read from the source.
    * `list_genres` is a tool; the error must say so, and should recognise an abbreviation.
    */
