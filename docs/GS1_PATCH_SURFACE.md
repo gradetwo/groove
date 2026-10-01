@@ -90,6 +90,283 @@
 4. **`gs1.2.`（deflate）code 不支持**，并明确报错；工厂补丁码不会用它（只有带整曲的 code 才会）。
 5. **带第二层（`p2`）的 code 被拒绝**：`Gs1Host` 是一个实例，第二层会被静默丢弃，所以拒绝才是诚实的。
 
+## 8. `apply_gs1_patch` 今天到底接受哪些参数（逐条清单，不是概述）
+
+**一句话**：它接受**一个不透明的 `gs1.1.` share code**（或 `null` 清除），**不接受任何单个参数**。所以"逐参数写入未暴露"这条报告**成立**，而且这个缺口是**已被裁定**的（§7「仍然不做的：逐参数编辑器」）；本节把"到底有多少、是哪些"变成清单。
+
+**工具今天接受的东西，就这些**（`mcp/registry.ts:1284-1295`）：
+
+| 入参 | 是什么 | 与音色参数的关系 |
+| --- | --- | --- |
+| `genreId` / `pattern` | 起点（二选一） | 无 |
+| `track` | 轨道（laneId 优先，其次 kind） | 无 |
+| `patch` | `"gs1.1.…"` 字符串，或 `null` | **唯一**的音色入口：整个参数向量 + 路由，装在一个字符串里 |
+
+**一个 code 里能装多少参数**（`src/audio/gs1/gs1PatchCode.ts`）：
+
+| 事实 | 数字 | 位置 |
+| --- | --- | --- |
+| share code 的 `v` 向量按 id 升序覆盖 `DEFAULT_PARAMS` 的**全部**参数 | **224** | `gs1PatchCode.ts:76`（`PARAM_IDS`）、`:143-155`（逐项填入） |
+| 这些参数里有 `PARAM_SPECS` 定义（标签 + 范围 + 默认 + 单位）的 | **84** | `vendor/gs1/src/audio/params.ts:1453` |
+| 只有 `Param` 枚举名与默认值、**没有声明范围**的 | **140** | `vendor/gs1/src/audio/params.ts:1137` 减去上面那 84 |
+| code 自带的调制路由 `r`（`src`/`dst`/`amount`/`enabled`） | 单独一段，只有整码能写 | `gs1PatchCode.ts:157-172` |
+| 读不懂就拒绝的形状 | 前缀非 `gs1.1.`、`gs1.2.`、base64url/JSON 非法、缺 `v`、schema > 4、带第二层 `p2`、值非有限、路由畸形 | `gs1PatchCode.ts:101-141` |
+
+**引擎那一侧本来就有逐参数写入**（所以缺的是"暴露"，不是能力）：
+
+| 层 | 逐参数 API | 位置 |
+| --- | --- | --- |
+| 本仓库的 host 包装 | `setParam(id, value)`、`setPatch(values)`、`setModRoute(index, src, dst, amount, enabled)` | `src/audio/gs1/Gs1Host.ts:184`、`:188`、`:196` |
+| vendored 引擎 | `setParam(id, value, immediate?)`、`setParamsB`、`setRoute(index, route)` | `vendor/gs1/src/audio/engine.ts:496`、`:651`、`:661` |
+| 本仓库的具名预设 | `GS1_PATCHES`，**19** 个名字（`warmPad`…`sampleSurface`） | `src/data/gs1Patches.ts:67`、`:100` |
+| 具名预设怎么到达轨道 | **只能**经乐器名映射 `resolveGs1Patch`，MCP 里没有任何工具按预设名写入 | `src/data/gs1Patches.ts:816` |
+
+**缺口清单（这就是"missing list"）**：
+
+1. **逐参数写入：224 个里 0 个可单独写**，224 个都只能随整码写入。没有任何参数名、参数 id、取值或单条路由是工具入参。
+2. **可命名的只有 84 个**（有标签与声明范围）；另外 **140 个**（开关、波形/类型选择、LFO 目标、`TEMPO`、FX 链序、6 槽 graph 路由、4 槽调制矩阵 `FX_MOD1..4`、过采样覆盖 `FX_OVR*`）在 vendored 表里**只有枚举名与默认值，没有范围**。一个按名字写的工具对这 140 个没有可依据的范围。
+3. **调制路由：0 条可单独写**（只有整码的 `r`）。
+4. **19 个具名预设：0 个可按名写**（只能间接经 `instrument` 名）。
+
+**下面这 224 行是生成的**，命令：
+
+```bash
+npx vite-node scripts/report_gs1_params.ts   # 读 vendor/gs1/src/audio/params.ts，逐条打印
+```
+
+| id | `Param` 枚举名 | PARAM_SPECS | label | min | max | default |
+| ---: | --- | :---: | --- | ---: | ---: | ---: |
+| 0 | `MASTER_VOLUME` | ✅ | VOLUME | 0 | 1 | 0.75 |
+| 1 | `OSC1_ON` | — | | | | 1 |
+| 2 | `OSC1_WAVE` | — | | | | 2 |
+| 3 | `OSC1_PITCH` | ✅ | PITCH | -24 | 24 | 0 |
+| 4 | `OSC1_DETUNE` | ✅ | DETUNE | -50 | 50 | 0 |
+| 5 | `OSC1_LEVEL` | ✅ | LEVEL | 0 | 1 | 0.65 |
+| 6 | `OSC1_PW` | ✅ | PW | 0.05 | 0.95 | 0.5 |
+| 7 | `OSC2_ON` | — | | | | 1 |
+| 8 | `OSC2_WAVE` | — | | | | 2 |
+| 9 | `OSC2_PITCH` | ✅ | PITCH | -24 | 24 | 0 |
+| 10 | `OSC2_DETUNE` | ✅ | DETUNE | -50 | 50 | 0 |
+| 11 | `OSC2_LEVEL` | ✅ | LEVEL | 0 | 1 | 0.55 |
+| 12 | `OSC2_PW` | ✅ | PW | 0.05 | 0.95 | 0.5 |
+| 13 | `FILTER_TYPE` | — | | | | 0 |
+| 14 | `FILTER_CUTOFF` | ✅ | CUTOFF | 40 | 18000 | 9000 |
+| 15 | `FILTER_RES` | ✅ | RES | 0 | 1 | 0.25 |
+| 16 | `FILTER_DRIVE` | ✅ | DRIVE | 0 | 1 | 0.15 |
+| 17 | `FILTER_ENV_AMT` | ✅ | ENV AMT | 0 | 1 | 0.5 |
+| 18 | `FILTER_KBD` | — | | | | 1 |
+| 19 | `ENV_ATTACK` | ✅ | ATTACK | 0.0005 | 8 | 0.003 |
+| 20 | `ENV_DECAY` | ✅ | DECAY | 0.001 | 12 | 0.16 |
+| 21 | `ENV_SUSTAIN` | ✅ | SUSTAIN | 0 | 1 | 0.55 |
+| 22 | `ENV_RELEASE` | ✅ | RELEASE | 0.005 | 16 | 0.28 |
+| 23 | `LFO_ON` | — | | | | 1 |
+| 24 | `LFO_WAVE` | — | | | | 0 |
+| 25 | `LFO_RATE` | ✅ | RATE | 0.02 | 40 | 4.6 |
+| 26 | `LFO_DEPTH` | ✅ | DEPTH | 0 | 1 | 0.32 |
+| 27 | `LFO_TARGET` | — | | | | 0 |
+| 28 | `LFO_SYNC` | — | | | | 0 |
+| 29 | `FX_REVERB_ON` | — | | | | 1 |
+| 30 | `FX_REVERB_SIZE` | ✅ | SIZE | 0 | 1 | 0.45 |
+| 31 | `FX_REVERB_MIX` | ✅ | MIX | 0 | 1 | 0.25 |
+| 32 | `FX_DELAY_ON` | — | | | | 0 |
+| 33 | `FX_DELAY_SYNC` | — | | | | 2 |
+| 34 | `FX_DELAY_FB` | ✅ | FDBK | 0 | 0.9 | 0.35 |
+| 35 | `FX_DELAY_MIX` | ✅ | MIX | 0 | 1 | 0.22 |
+| 36 | `GLIDE` | ✅ | GLIDE | 0 | 1 | 0 |
+| 37 | `TEMPO` | — | | | | 120 |
+| 38 | `PITCH_BEND_RANGE` | — | | | | 2 |
+| 39 | `OSC1_PAN` | ✅ | PAN | -1 | 1 | 0 |
+| 40 | `OSC2_PAN` | ✅ | PAN | -1 | 1 | 0 |
+| 41 | `MASTER_TUNE` | — | | | | 0 |
+| 42 | `VOICE_MODE` | — | | | | 0 |
+| 43 | `FX_CHORUS_ON` | — | | | | 0 |
+| 44 | `FX_CHORUS_DEPTH` | ✅ | DEPTH | 0 | 1 | 0.5 |
+| 45 | `FX_CHORUS_RATE` | ✅ | RATE | 0.02 | 10 | 0.6 |
+| 46 | `FX_CHORUS_MIX` | ✅ | MIX | 0 | 1 | 0.4 |
+| 47 | `FX_FLANGER_ON` | — | | | | 0 |
+| 48 | `FX_FLANGER_RATE` | ✅ | RATE | 0.02 | 10 | 0.3 |
+| 49 | `FX_FLANGER_FB` | ✅ | FDBK | 0 | 0.95 | 0.5 |
+| 50 | `FX_FLANGER_MIX` | ✅ | MIX | 0 | 1 | 0.4 |
+| 51 | `FX_PHASER_ON` | — | | | | 0 |
+| 52 | `FX_PHASER_RATE` | ✅ | RATE | 0.02 | 10 | 0.4 |
+| 53 | `FX_PHASER_FB` | ✅ | FDBK | 0 | 0.95 | 0.6 |
+| 54 | `FX_PHASER_MIX` | ✅ | MIX | 0 | 1 | 0.5 |
+| 55 | `FX_DRIVE_ON` | — | | | | 0 |
+| 56 | `FX_DRIVE_AMT` | ✅ | DRIVE | 0 | 1 | 0.4 |
+| 57 | `FX_DRIVE_MIX` | ✅ | MIX | 0 | 1 | 0.6 |
+| 58 | `FILTER_ENV_ATTACK` | ✅ | ATTACK | 0.0005 | 8 | 0.01 |
+| 59 | `FILTER_ENV_DECAY` | ✅ | DECAY | 0.001 | 12 | 0.3 |
+| 60 | `FILTER_ENV_SUSTAIN` | ✅ | SUSTAIN | 0 | 1 | 0.5 |
+| 61 | `FILTER_ENV_RELEASE` | ✅ | RELEASE | 0.005 | 16 | 0.3 |
+| 62 | `LFO2_ON` | — | | | | 0 |
+| 63 | `LFO2_WAVE` | — | | | | 1 |
+| 64 | `LFO2_RATE` | ✅ | RATE | 0.02 | 40 | 0.5 |
+| 65 | `LFO2_DEPTH` | ✅ | DEPTH | 0 | 1 | 0.3 |
+| 66 | `LFO2_TARGET` | — | | | | 0 |
+| 67 | `FX_REVERB_DAMP` | ✅ | DAMP | 0 | 1 | 0.35 |
+| 68 | `FX_REVERB_WIDTH` | ✅ | WIDTH | 0 | 1 | 0.8 |
+| 69 | `FX_REVERB_PREDELAY` | ✅ | PRE | 0 | 0.1 | 0.012 |
+| 70 | `OSC1_UNISON` | ✅ | UNI | 1 | 7 | 1 |
+| 71 | `OSC1_SPREAD` | ✅ | SPREAD | 0 | 1 | 0.35 |
+| 72 | `OSC2_UNISON` | ✅ | UNI | 1 | 7 | 1 |
+| 73 | `OSC2_SPREAD` | ✅ | SPREAD | 0 | 1 | 0.35 |
+| 74 | `LFO_RETRIG` | — | | | | 0 |
+| 75 | `LFO_ONESHOT` | — | | | | 0 |
+| 76 | `LFO2_RETRIG` | — | | | | 0 |
+| 77 | `LFO2_ONESHOT` | — | | | | 0 |
+| 78 | `PATCH_GAIN` | — | | | | 1 |
+| 79 | `WT_USER` | — | | | | 0 |
+| 80 | `FX_DELAY_DAMP` | ✅ | DAMP | 0 | 1 | 0.35 |
+| 81 | `FX_DELAY_PINGPONG` | — | | | | 0 |
+| 82 | `FX_CHAIN1` | — | | | | 1 |
+| 83 | `FX_CHAIN2` | — | | | | 2 |
+| 84 | `FX_CHAIN3` | — | | | | 3 |
+| 85 | `FX_CHAIN4` | — | | | | 4 |
+| 86 | `FX_CHAIN5` | — | | | | 5 |
+| 87 | `FX_CHAIN6` | — | | | | 6 |
+| 88 | `FX_PARALLEL1` | — | | | | 0 |
+| 89 | `FX_PARALLEL2` | — | | | | 0 |
+| 90 | `FX_PARALLEL3` | — | | | | 0 |
+| 91 | `FX_PARALLEL4` | — | | | | 0 |
+| 92 | `FX_PARALLEL5` | — | | | | 0 |
+| 93 | `FX_PARALLEL6` | — | | | | 0 |
+| 94 | `FX_REVERB_MODE` | — | | | | 0 |
+| 95 | `FX_CONV_TRIM` | ✅ | TRIM | 0 | 4 | 1 |
+| 96 | `SMP_ROOT` | ✅ | ROOT | 0 | 127 | 60 |
+| 97 | `SMP_MODE` | — | | | | 0 |
+| 98 | `SMP_LOOP_START` | ✅ | LOOP A | 0 | 1 | 0 |
+| 99 | `SMP_LOOP_END` | ✅ | LOOP B | 0 | 1 | 1 |
+| 100 | `FX_GRAPH` | — | | | | 0 |
+| 101 | `FX_NODE1_IN1` | — | | | | 1 |
+| 102 | `FX_NODE2_IN1` | — | | | | 2 |
+| 103 | `FX_NODE3_IN1` | — | | | | 3 |
+| 104 | `FX_NODE4_IN1` | — | | | | 4 |
+| 105 | `FX_NODE5_IN1` | — | | | | 5 |
+| 106 | `FX_NODE6_IN1` | — | | | | 6 |
+| 107 | `FX_NODE1_IN1_GAIN` | — | | | | 1 |
+| 108 | `FX_NODE2_IN1_GAIN` | — | | | | 1 |
+| 109 | `FX_NODE3_IN1_GAIN` | — | | | | 1 |
+| 110 | `FX_NODE4_IN1_GAIN` | — | | | | 1 |
+| 111 | `FX_NODE5_IN1_GAIN` | — | | | | 1 |
+| 112 | `FX_NODE6_IN1_GAIN` | — | | | | 1 |
+| 113 | `FX_NODE1_IN2` | — | | | | 0 |
+| 114 | `FX_NODE2_IN2` | — | | | | 0 |
+| 115 | `FX_NODE3_IN2` | — | | | | 0 |
+| 116 | `FX_NODE4_IN2` | — | | | | 0 |
+| 117 | `FX_NODE5_IN2` | — | | | | 0 |
+| 118 | `FX_NODE6_IN2` | — | | | | 0 |
+| 119 | `FX_NODE1_IN2_GAIN` | — | | | | 1 |
+| 120 | `FX_NODE2_IN2_GAIN` | — | | | | 1 |
+| 121 | `FX_NODE3_IN2_GAIN` | — | | | | 1 |
+| 122 | `FX_NODE4_IN2_GAIN` | — | | | | 1 |
+| 123 | `FX_NODE5_IN2_GAIN` | — | | | | 1 |
+| 124 | `FX_NODE6_IN2_GAIN` | — | | | | 1 |
+| 125 | `FX_NODE1_TO_OUT` | — | | | | 0 |
+| 126 | `FX_NODE2_TO_OUT` | — | | | | 0 |
+| 127 | `FX_NODE3_TO_OUT` | — | | | | 0 |
+| 128 | `FX_NODE4_TO_OUT` | — | | | | 0 |
+| 129 | `FX_NODE5_TO_OUT` | — | | | | 0 |
+| 130 | `FX_NODE6_TO_OUT` | — | | | | 1 |
+| 131 | `FX_NODE1_OUT_GAIN` | — | | | | 1 |
+| 132 | `FX_NODE2_OUT_GAIN` | — | | | | 1 |
+| 133 | `FX_NODE3_OUT_GAIN` | — | | | | 1 |
+| 134 | `FX_NODE4_OUT_GAIN` | — | | | | 1 |
+| 135 | `FX_NODE5_OUT_GAIN` | — | | | | 1 |
+| 136 | `FX_NODE6_OUT_GAIN` | — | | | | 1 |
+| 137 | `OSC_FM` | ✅ | FM | 0 | 1 | 0 |
+| 138 | `OSC_RING` | ✅ | RING | 0 | 1 | 0 |
+| 139 | `OSC1_SYNC` | ✅ | SYNC | 0 | 1 | 0 |
+| 140 | `OSC1_SUB` | ✅ | SUB | 0 | 2 | 0 |
+| 141 | `OSC1_SUB_LEVEL` | ✅ | SUB LVL | 0 | 1 | 0.4 |
+| 142 | `OSC2_SUB` | ✅ | SUB | 0 | 2 | 0 |
+| 143 | `OSC2_SUB_LEVEL` | ✅ | SUB LVL | 0 | 1 | 0.4 |
+| 144 | `NOISE_MIX` | ✅ | NOISE | 0 | 1 | 0 |
+| 145 | `FILTER_MORPH` | ✅ | MORPH | 0 | 1 | 0 |
+| 146 | `FILTER_ROUTING` | — | | | | 0 |
+| 147 | `FILTER2_TYPE` | — | | | | 0 |
+| 148 | `FILTER2_CUTOFF` | ✅ | CUTOFF 2 | 40 | 18000 | 9000 |
+| 149 | `FILTER2_RES` | ✅ | RES 2 | 0 | 1 | 0.25 |
+| 150 | `FILTER2_DRIVE` | ✅ | DRIVE 2 | 0 | 1 | 0.15 |
+| 151 | `FILTER_BLEND` | ✅ | BLEND | 0 | 1 | 0.5 |
+| 152 | `FX_CRUSH_ON` | — | | | | 0 |
+| 153 | `FX_CRUSH_BITS` | ✅ | BITS | 4 | 16 | 8 |
+| 154 | `FX_CRUSH_DOWN` | ✅ | DOWN | 1 | 64 | 4 |
+| 155 | `FX_CRUSH_AA` | ✅ | AA | 0 | 1 | 0.5 |
+| 156 | `FX_CRUSH_MIX` | ✅ | MIX | 0 | 1 | 1 |
+| 157 | `FX_EQ_ON` | — | | | | 0 |
+| 158 | `FX_EQ_LOW_GAIN` | ✅ | LOW | -18 | 18 | 0 |
+| 159 | `FX_EQ_LOW_FREQ` | ✅ | LOW F | 40 | 1000 | 200 |
+| 160 | `FX_EQ_MID_GAIN` | ✅ | MID | -18 | 18 | 0 |
+| 161 | `FX_EQ_MID_FREQ` | ✅ | MID F | 200 | 8000 | 1000 |
+| 162 | `FX_EQ_MID_Q` | ✅ | MID Q | 0.3 | 6 | 0.9 |
+| 163 | `FX_EQ_HIGH_GAIN` | ✅ | HIGH | -18 | 18 | 0 |
+| 164 | `FX_EQ_HIGH_FREQ` | ✅ | HIGH F | 1000 | 16000 | 4000 |
+| 165 | `FX_EQ_MIX` | ✅ | MIX | 0 | 1 | 1 |
+| 166 | `OVERSAMPLE` | ✅ | 2× | 0 | 1 | 0 |
+| 167 | `FX_MOD1_SRC` | — | | | | 0 |
+| 168 | `FX_MOD1_DST` | — | | | | 0 |
+| 169 | `FX_MOD1_DEPTH` | — | | | | 0 |
+| 170 | `FX_MOD2_SRC` | — | | | | 0 |
+| 171 | `FX_MOD2_DST` | — | | | | 0 |
+| 172 | `FX_MOD2_DEPTH` | — | | | | 0 |
+| 173 | `FX_MOD3_SRC` | — | | | | 0 |
+| 174 | `FX_MOD3_DST` | — | | | | 0 |
+| 175 | `FX_MOD3_DEPTH` | — | | | | 0 |
+| 176 | `FX_MOD4_SRC` | — | | | | 0 |
+| 177 | `FX_MOD4_DST` | — | | | | 0 |
+| 178 | `FX_MOD4_DEPTH` | — | | | | 0 |
+| 179 | `FX_TRANSIENT_ON` | — | | | | 0 |
+| 180 | `FX_TRANSIENT_ATTACK` | ✅ | ATTACK | -1 | 1 | 0 |
+| 181 | `FX_TRANSIENT_SUSTAIN` | ✅ | SUSTAIN | -1 | 1 | 0 |
+| 182 | `FX_TRANSIENT_MIX` | ✅ | MIX | 0 | 1 | 1 |
+| 183 | `FX_OVR1_1` | — | | | | -2 |
+| 184 | `FX_OVR1_2` | — | | | | -2 |
+| 185 | `FX_OVR1_3` | — | | | | -2 |
+| 186 | `FX_OVR1_4` | — | | | | -2 |
+| 187 | `FX_OVR2_1` | — | | | | -2 |
+| 188 | `FX_OVR2_2` | — | | | | -2 |
+| 189 | `FX_OVR2_3` | — | | | | -2 |
+| 190 | `FX_OVR2_4` | — | | | | -2 |
+| 191 | `FX_OVR3_1` | — | | | | -2 |
+| 192 | `FX_OVR3_2` | — | | | | -2 |
+| 193 | `FX_OVR3_3` | — | | | | -2 |
+| 194 | `FX_OVR3_4` | — | | | | -2 |
+| 195 | `FX_OVR4_1` | — | | | | -2 |
+| 196 | `FX_OVR4_2` | — | | | | -2 |
+| 197 | `FX_OVR4_3` | — | | | | -2 |
+| 198 | `FX_OVR4_4` | — | | | | -2 |
+| 199 | `FX_OVR5_1` | — | | | | -2 |
+| 200 | `FX_OVR5_2` | — | | | | -2 |
+| 201 | `FX_OVR5_3` | — | | | | -2 |
+| 202 | `FX_OVR5_4` | — | | | | -2 |
+| 203 | `FX_OVR6_1` | — | | | | -2 |
+| 204 | `FX_OVR6_2` | — | | | | -2 |
+| 205 | `FX_OVR6_3` | — | | | | -2 |
+| 206 | `FX_OVR6_4` | — | | | | -2 |
+| 207 | `FX_OVR_TARGET1` | — | | | | 0 |
+| 208 | `FX_OVR_TARGET2` | — | | | | 0 |
+| 209 | `FX_OVR_TARGET3` | — | | | | 0 |
+| 210 | `FX_OVR_TARGET4` | — | | | | 0 |
+| 211 | `FX_OVR_TARGET5` | — | | | | 0 |
+| 212 | `FX_OVR_TARGET6` | — | | | | 0 |
+| 213 | `FX_OVR_TARGET7` | — | | | | 0 |
+| 214 | `FX_OVR_TARGET8` | — | | | | 0 |
+| 215 | `FX_OVR_DEPTH1` | — | | | | 0 |
+| 216 | `FX_OVR_DEPTH2` | — | | | | 0 |
+| 217 | `FX_OVR_DEPTH3` | — | | | | 0 |
+| 218 | `FX_OVR_DEPTH4` | — | | | | 0 |
+| 219 | `FX_OVR_DEPTH5` | — | | | | 0 |
+| 220 | `FX_OVR_DEPTH6` | — | | | | 0 |
+| 221 | `FX_OVR_DEPTH7` | — | | | | 0 |
+| 222 | `FX_OVR_DEPTH8` | — | | | | 0 |
+| 223 | `FX_OVR_SRC` | — | | | | 0 |
+
+**为什么本次仍然只记录、不实现（理由，以及第一步）**
+
+* **写侧的第一步不是加工具，是决定编码器归谁。** 唯一诚实的编码器是 synth 自己的 `buildPayload`（`/home/crow/music/synth/src/state/share.ts`），它**没有被 vendored**，而且 import `persist.ts`（`SCHEMA_VERSION`）与 `midi/takes.ts`——§2 记过，把这半棵子树拖进来会破坏"一文件一哈希"的 pin。**在这里手写一个编码器，就是给同一个格式写第二份实现**：本仓库自己的读+写会互相自洽，却可能和 synth 不一致——正是 `gs1PatchPassthrough.test.ts` 用 synth 自己的编码器产物做 fixture 要防的那件事。所以第一步是一次**决定**：(a) 把上游 `share.ts` 的编码器按哈希 pin 进 `vendor/gs1/`，或 (b) 不加编码器，改为在 `SequencerTrack` 上放一个独立的逐参数覆盖字段，并把它并进**唯一**解析缝 `resolveGs1Lane`（`src/audio/gs1/gs1Tracks.ts:324`），同时保证导出、实时、`validate_pattern` 三处读同一个决议。
+* **读侧的第一步可以立刻做，且不需要编码器**：一个 `get_gs1_patch`，把某条轨道 code 里的 224 个值（84 个带标签/范围）与路由读回来。它只用已存在的 `decodeGs1PatchCode`，能让调用者先看见"我的码到底设了什么"，是加写侧之前该有的那半。判据两个方向：对一个已知 code 断言读回的已知值；把解码器对 `v` 的读取去掉即红。
+* **范围校验不能照抄 `PARAM_SPECS`**，理由与测量已在 §4：它只覆盖 84 个，且在重叠处比 worklet 实际服务的范围更窄（`phonk` 的 `osc2Pitch = 31` 会被它拒掉）。逐参数工具必须先决定"按什么校验"，否则就是把一个工厂预设拒之门外。
+
 ## 复现本次结论的命令
 
 ```bash
