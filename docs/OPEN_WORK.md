@@ -147,3 +147,29 @@
 ### 4. 用模板文字做 grep 会假阳性 ✗
 
 **实例**：我统计 CI 失败数时得到 **1** ✗，惊动了一轮排查 ✓——命中的是 `ci:status` 输出**自己的模板尾行** `the step that failed, when one did:` ✓。**规则**：解析结构化输出时**按状态列**统计 ✓（`awk '/^in_progress/{…} /^completed +success/{…}'` ✓），不要全文 grep 关键词 ✗；并且**把"我数到 1"当成待验证的读数** ✓ 而不是结论 ✓。
+
+---
+
+## 九、集成分支树：让合并队列不再被"主树脏了"卡住（2026-10-01）
+
+**问题**（当天发生两次 ✗）：子 agent 误在主 checkout 里编辑 ✓ → ① `git cherry-pick` 要求工作树干净 ✗ → 合并被拒 ✓；② `push_dev.sh` 的同步要求"镜像 == 工作树" ✗ → 推送被拒 ✓。整个队列停摆数轮 ✓，两次都靠"叫它就地提交"来解 ✓。
+
+**关键事实**：`scripts/push_dev.sh` 第 13 行是 `cd "$(dirname "$0")/.."` ✓，第 26 行调 `./scripts/sync_release_mirror.sh` ✓ ——**源目录由"从哪儿运行"决定** ✓，不是写死主 checkout ✓。
+
+**做法**：建一棵专用集成树，所有合并与推送都在那里发生 ✓
+
+```bash
+git worktree add ../groove-int -b int        # 一次
+cd ../groove-int && ln -sfn ../groove/node_modules node_modules
+git cherry-pick <branch-tip>                  # 逐条合入
+npm run typecheck && npx vitest run <定向文件>
+SKIP_LOCAL_GATE=1 npm run push:dev -- "<msg>" # 从这里推，同步的就是这棵树
+```
+
+**效果**：主 checkout 脏不脏**不再影响**合并与推送 ✓；受影响的范围收窄到"往主树写东西的那个人" ✓。
+
+**仍然要守的一条**：**镜像只有一份** ✓ → 无论从哪棵树推，**一次只能有一个推送** ✓（`pgrep -cf "[p]ush_dev"` 必须为 0 ✓）。
+
+**顺带两条纪律**（当天都被违反过 ✗）：
+* 子 agent 的简报里，"在 worktree 里工作"要写成**开工前先 `pwd` 并回报** ✓——只在"提交前"检查太晚 ✗，改动那时已经落进主树了 ✓；
+* 若已经在主树里改了：**就地提交保住工作** ✓（`git add <自己的文件>` + `git commit` ✓），**绝不 stash、绝不 `checkout --`** ✗；随后把 worktree 分支 reset 到该提交再继续 ✓（两次都这样做，零丢失 ✓）。
