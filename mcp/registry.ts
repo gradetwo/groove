@@ -2021,7 +2021,9 @@ export const TOOLS: ToolDefinition[] = [
       genreId: z.string().optional(),
       pattern: patternSchema.optional(),
       format: z.enum(["wav", "mp3"]).default("wav"),
-      bars: z.number().int().min(1).max(64).optional().describe("default 1 (the export default); one of the two things that drives the duration the description quotes"),
+      bars: z.number().int().min(1).max(64).optional().describe(
+        "default 1 (the export default); one of the two things that drives the duration the description quotes. It counts repetitions of the genre's pattern, and every catalogue genre's pattern is sixteen steps — one bar in 4/4 — so for a catalogue render it is the number of bars and the two readings coincide. They stop coinciding on a pattern longer than a bar, which is why this says repetitions rather than bars: asking for 2 of a four-bar pattern renders eight bars."
+      ),
       bitrateKbps: z.number().int().min(32).max(320).optional().describe("MP3 only; default 192"),
       trackPeaks: z
         .boolean()
