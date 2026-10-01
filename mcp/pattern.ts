@@ -12,6 +12,14 @@
  */
 import type { SequencerPattern, SequencerTrack } from "../src/types/genre";
 import { clonePattern } from "./library";
+import {
+  buildArpeggioPattern,
+  calculateStrumTiming,
+  expandArpeggioVoicing,
+  type ArpPatternType,
+  type ArpRate,
+  type StrumDirection,
+} from "../src/utils/arpeggiatorTheory";
 
 /** The names a caller may use for a track; the app's ids plus the aliases it accepts in its own UI. */
 export const TRACK_IDS = ["kick", "snare", "hihat", "percussion", "bass", "chords", "lead", "fx", "audio"] as const;
@@ -127,6 +135,35 @@ export type PatternOp =
    * library the single source of what a named progression is.
    */
   | { op: "set_chord_progression"; track?: string; chords: number[][]; velocity?: number }
+  /**
+   * **The performance transforms that used to exist only in the interface**, baked into the steps:
+   * `arp` arpeggiates each held chord, `strum` spreads its notes across consecutive steps.
+   *
+   * The musical decisions are not re-made here — the melodious register and the octave spread come from
+   * `expandArpeggioVoicing`, the note order from `buildArpeggioPattern`, and the strum order and its
+   * velocity sweep from `calculateStrumTiming`, all from `src/utils/arpeggiatorTheory.ts`, the engine the
+   * chord panel and the live player use. This op decides only **where on the grid** those notes land.
+   *
+   * It rewrites the named lane in place, so the interface's "bake the arpeggio to the lead" flow is
+   * `copy_track` (chords → lead) followed by `transform_pattern` on the copy.
+   */
+  | {
+      op: "transform_pattern";
+      variant: "arp" | "strum";
+      track: string;
+      /** arp only: which order the chord's notes are played in. "random" is refused — see the handler. */
+      pattern?: ArpPatternType;
+      /** arp only: the step interval, `1/8` being two steps. */
+      rate?: ArpRate;
+      /** arp only: 1..3, the same range the panel offers. */
+      octaves?: number;
+      /** arp only: note length as a fraction of a step, 0.2..1. */
+      gate?: number;
+      /** strum only: `down`, `up`, or `alternate` per chord. */
+      direction?: StrumDirection;
+      /** strum only: the delay between notes, 10..80 ms, quantized to the pattern's own step grid. */
+      speedMs?: number;
+    }
   /**
    * Add a second lane of a kind (owner decision 1A, made usable).
    *
@@ -383,6 +420,15 @@ export function applyPatternOps(pattern: SequencerPattern, ops: PatternOp[]): Ap
         });
         break;
       }
+      case "transform_pattern": {
+        const lane = findTrack(next, op.track);
+        if (!lane) {
+          applied.push({ op: op.op, ok: false, detail: `unknown track "${op.track}"` });
+          break;
+        }
+        applied.push(transformLane(lane, op, next));
+        break;
+      }
       default: {
         const unknown = op as { op: string };
         applied.push({ op: unknown.op, ok: false, detail: "unknown operation" });
@@ -390,6 +436,177 @@ export function applyPatternOps(pattern: SequencerPattern, ops: PatternOp[]): Ap
     }
   }
   return { pattern: next, applied };
+}
+
+/** What `transform_pattern` may bake, and the closed sets each half accepts. */
+const TRANSFORM_VARIANTS = ["arp", "strum"] as const;
+const ARP_PATTERNS: ArpPatternType[] = ["up", "down", "up_down", "random", "converge"];
+const ARP_RATES: ArpRate[] = ["1/8", "1/16", "1/8T", "1/16T"];
+const STRUM_DIRECTIONS: StrumDirection[] = ["down", "up", "alternate"];
+
+/**
+ * The steps one beat spans at a pattern's resolution — the grid a strum's millisecond delay is quantized
+ * against. `bakeProgressionToSequencer` reasons in the same grid when it turns a rate into a step interval.
+ */
+function stepsPerBeat(resolution: string | undefined): number {
+  if (resolution === "1/8") return 2;
+  if (resolution === "1/32") return 8;
+  return 4; // 1/16, the pattern default
+}
+
+/**
+ * Every place the lane holds a chord: a sounding step whose note stack (`pitches[i]`, or the root `pitch[i]`
+ * of a monophonic lane) is non-empty.
+ *
+ * The `steps[i]` test is what makes this a **held** chord: `set_chord_progression` zeroes the step array but
+ * leaves older stacks in `pitches`, and reading those would transform chords nobody is holding.
+ */
+function heldChords(track: SequencerTrack): Array<{ at: number; notes: number[]; velocity: number }> {
+  const holds: Array<{ at: number; notes: number[]; velocity: number }> = [];
+  track.steps.forEach((on, at) => {
+    if (!on) return;
+    const stack = track.pitches?.[at];
+    const root = track.pitch?.[at];
+    const notes =
+      Array.isArray(stack) && stack.length > 0
+        ? stack.filter((note) => Number.isFinite(note))
+        : typeof root === "number" && root > 0
+          ? [root]
+          : [];
+    if (notes.length > 0) holds.push({ at, notes, velocity: track.velocity?.[at] ?? 100 });
+  });
+  return holds;
+}
+
+/**
+ * Bake the arpeggio or the strum engine into the lane's own steps.
+ *
+ * The lane is **rewritten**, not overlaid: the original stack is cleared first, because a transform that
+ * left it behind would sound the chord twice. Everything the engine already decides — which order, which
+ * register, which strum accent — is read from it, and only the grid positions are chosen here.
+ */
+function transformLane(
+  lane: SequencerTrack,
+  op: Extract<PatternOp, { op: "transform_pattern" }>,
+  pattern: SequencerPattern
+): OpReport {
+  const fail = (detail: string): OpReport => ({ op: "transform_pattern", ok: false, detail });
+
+  if (!TRANSFORM_VARIANTS.includes(op.variant)) {
+    return fail(
+      `"${op.variant}" is not a transform — the variants are arp (arpeggiate each held chord) and strum (spread each held chord's notes across steps)`
+    );
+  }
+
+  const holds = heldChords(lane);
+  const laneName = lane.laneId ?? lane.track_id;
+  if (holds.length === 0) {
+    return fail(
+      `"${laneName}" holds no chord to transform — a held chord is a sounding step with stacked notes (pitches[i]); write one with set_chord_progression, or copy_track a lane that has one`
+    );
+  }
+
+  const length = lane.steps.length;
+  const baseVelocity = holds.map((hold) => hold.velocity);
+  const cleared = lane.steps.filter(Boolean).length;
+  lane.steps = lane.steps.map(() => 0);
+  lane.pitch = (lane.pitch && lane.pitch.length === length ? lane.pitch : lane.steps).map(() => null);
+  lane.pitches = (lane.pitches && lane.pitches.length === length ? lane.pitches : lane.steps).map(() => null);
+  lane.gate = (lane.gate && lane.gate.length === length ? lane.gate : lane.steps).map(() => 1);
+  lane.velocity = (lane.velocity && lane.velocity.length === length ? lane.velocity : lane.steps).map((value) => (typeof value === "number" ? value : 100));
+  /** How far a hold lasts: up to the next held chord, or the end of the lane. */
+  const spanOf = (index: number) => (holds[index + 1]?.at ?? length) - holds[index]!.at;
+
+  if (op.variant === "arp") {
+    const arpPattern = op.pattern ?? "up";
+    if (!ARP_PATTERNS.includes(arpPattern)) {
+      return fail(`"${op.pattern}" is not an arpeggio pattern — the patterns are ${ARP_PATTERNS.join(", ")}`);
+    }
+    /**
+     * `buildArpeggioPattern`'s "random" case returns the ascending pool; the shuffling lives in the callers
+     * (`bakeProgressionToSequencer`, `ChordAudioEngine`) as `Math.random`. Exposing that here would be the one
+     * operation an agent could not reproduce, which the module's contract forbids, so the honest answer is a
+     * refusal that names the deterministic patterns.
+     */
+    if (arpPattern === "random") {
+      return fail(
+        'the engine\'s "random" arpeggio is chosen at playback time (Math.random) and the pure function returns the ascending pool, so MCP cannot reproduce it — use up, down, up_down or converge, and humanize with a seed for bounded variation'
+      );
+    }
+    const rate = op.rate ?? "1/16";
+    if (!ARP_RATES.includes(rate)) {
+      return fail(`"${op.rate}" is not an arp rate — the rates are ${ARP_RATES.join(", ")}`);
+    }
+    const octaves = op.octaves ?? 2;
+    if (!Number.isInteger(octaves) || octaves < 1 || octaves > 3) {
+      return fail(`octaves ${op.octaves} is outside the engine's 1..3`);
+    }
+    const gate = op.gate ?? 0.8;
+    if (!(gate >= 0.2 && gate <= 1)) {
+      return fail(`gate ${op.gate} is outside the engine's 0.2..1`);
+    }
+    // The bake's own grid rule: 1/8 spans two 1/16 steps, everything else one.
+    const stepInterval = rate === "1/8" ? 2 : 1;
+    let written = 0;
+    holds.forEach((hold, index) => {
+      const sequence = buildArpeggioPattern(expandArpeggioVoicing(hold.notes, octaves), arpPattern);
+      if (sequence.length === 0) return;
+      for (let step = hold.at, i = 0; step < hold.at + spanOf(index); step += stepInterval, i += 1) {
+        const midi = sequence[i % sequence.length]!;
+        lane.steps[step] = 1;
+        lane.pitch![step] = midi;
+        lane.pitches![step] = [midi];
+        lane.gate![step] = gate;
+        lane.velocity![step] = clampVelocity(baseVelocity[index] ?? 100);
+        written += 1;
+      }
+    });
+    return {
+      op: "transform_pattern",
+      ok: true,
+      detail: `arpeggiated ${holds.length} held chord(s) on "${laneName}" as ${arpPattern} (${octaves} octave(s), ${rate}): ${written} note(s), ${cleared} step(s) cleared`,
+    };
+  }
+
+  const direction = op.direction ?? "down";
+  if (!STRUM_DIRECTIONS.includes(direction)) {
+    return fail(`"${op.direction}" is not a strum direction — the directions are ${STRUM_DIRECTIONS.join(", ")}`);
+  }
+  const speedMs = op.speedMs ?? 25;
+  if (!(speedMs >= 10 && speedMs <= 80)) {
+    return fail(`speedMs ${op.speedMs} is outside the engine's 10..80`);
+  }
+  /**
+   * The engine's delay is a real time in milliseconds, and a step pattern has no sub-step timing, so the
+   * delay is quantized to the pattern's own grid — never below one step, or a strum would collapse back into
+   * the stack it started as. `speedMs` is therefore visible in the result exactly when it spans a step.
+   */
+  const stepMs = 60000 / pattern.bpm / stepsPerBeat(pattern.resolution);
+  const stride = Math.max(1, Math.round(speedMs / stepMs));
+  let written = 0;
+  let dropped = 0;
+  holds.forEach((hold, index) => {
+    const timings = calculateStrumTiming(hold.notes, direction, speedMs, index);
+    timings.forEach((timing, i) => {
+      const at = hold.at + i * stride;
+      if (at >= hold.at + spanOf(index) || at >= length) {
+        dropped += 1;
+        return;
+      }
+      lane.steps[at] = 1;
+      lane.pitch![at] = timing.midi;
+      lane.pitches![at] = [timing.midi];
+      lane.gate![at] = 1;
+      // The engine's own accent sweep (1.0 → 0.85 across the strings) rides the velocity.
+      lane.velocity![at] = clampVelocity((baseVelocity[index] ?? 100) * timing.velocityScale);
+      written += 1;
+    });
+  });
+  return {
+    op: "transform_pattern",
+    ok: true,
+    detail: `strummed ${holds.length} held chord(s) on "${laneName}" ${direction} at ${speedMs}ms (${stride} step(s) per note at ${Math.round(stepMs)}ms/step): ${written} onset(s), ${cleared} step(s) cleared${dropped ? `, ${dropped} note(s) did not fit before the next chord` : ""}`,
+  };
 }
 
 function clampVelocity(value: number): number {

@@ -188,6 +188,17 @@ const opSchema = z.discriminatedUnion("op", [
   }),
   z.object({ op: z.literal("clear_track"), track: z.string() }),
   z.object({ op: z.literal("copy_track"), from: z.string(), to: z.string() }),
+  z.object({
+    op: z.literal("transform_pattern"),
+    variant: z.enum(["arp", "strum"]).describe("arp arpeggiates each held chord from the app's own engine; strum spreads its notes across steps"),
+    track: z.string().describe("the lane whose held chords are transformed, by laneId first then by kind"),
+    pattern: z.enum(["up", "down", "up_down", "random", "converge"]).optional().describe("arp only; random is refused because the pure engine cannot reproduce its order"),
+    rate: z.enum(["1/8", "1/16", "1/8T", "1/16T"]).optional().describe("arp only; how many steps each note takes, 1/8 being two"),
+    octaves: z.number().int().min(1).max(3).optional().describe("arp only; the octave spread the panel offers"),
+    gate: z.number().min(0.2).max(1).optional().describe("arp only; note length as a fraction of a step"),
+    direction: z.enum(["down", "up", "alternate"]).optional().describe("strum only; alternate flips direction per held chord"),
+    speedMs: z.number().min(10).max(80).optional().describe("strum only; the delay between notes, quantized to the pattern's own step grid"),
+  }),
 ]);
 
 /** Turn a genre id into a pattern when the caller would rather not paste one in. */
@@ -1187,7 +1198,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "apply_pattern_ops",
     title: "Compose with pattern operations",
     description:
-      "Apply a list of operations (set_step, clear_step, set_velocity, set_pitch, set_gate, transpose, humanize, swing, clear_track, copy_track, set_chord_progression) to a pattern and return the new pattern plus a per-operation report. The input is never mutated; seeded operations are deterministic.",
+      "Apply a list of operations (set_step, clear_step, set_velocity, set_pitch, set_gate, transpose, humanize, swing, clear_track, copy_track, set_chord_progression, transform_pattern) to a pattern and return the new pattern plus a per-operation report. `transform_pattern` bakes the app's arpeggiator or strummer into a lane's held chords (the engine is `src/utils/arpeggiatorTheory.ts`, so the order and register match what the interface plays); copy a lane first to arpeggiate the chords into a lead. The input is never mutated; seeded operations are deterministic.",
     readOnly: true,
     inputSchema: {
       genreId: z.string().optional().describe("start from this genre's pattern"),

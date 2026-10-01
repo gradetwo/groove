@@ -68,6 +68,19 @@ export function expandVoicingAcrossOctaves(baseNotes: number[], octaves = 1): nu
 }
 
 /**
+ * A chord voicing as an arpeggio's note pool: the deep bass root is dropped so the figure sits in the
+ * melodious 48–84 register, then the voicing is repeated across octaves.
+ *
+ * Extracted rather than copied. The live chord player (`ChordAudioEngine.playVoicing`), the sequencer bake
+ * (`bakeProgressionToSequencer`) and the MCP `transform_pattern` op all need "which notes is this chord
+ * arpeggiated from", and three inline copies of `n >= 48` is how three answers to one question drift.
+ */
+export function expandArpeggioVoicing(voicing: number[], octaves = 1): number[] {
+  const upper = voicing.filter((n) => n >= 48);
+  return expandVoicingAcrossOctaves(upper.length > 0 ? upper : voicing, octaves);
+}
+
+/**
  * Builds an arpeggio sequence array from a set of notes according to pattern type
  */
 export function buildArpeggioPattern(notes: number[], pattern: ArpPatternType): number[] {
@@ -201,12 +214,9 @@ export function bakeProgressionToSequencer(options: {
       "piano"
     );
 
-    // Filter out deep bass root if piano voicing added it (keep voicing in melodious 48-84 register)
-    const upperVoicing = rawNotes.filter((n) => n >= 48);
-    const voicing = upperVoicing.length > 0 ? upperVoicing : rawNotes;
-
-    // Expand across octaves
-    const expanded = expandVoicingAcrossOctaves(voicing, config.octaves);
+    // Filter out deep bass root if piano voicing added it, and expand across octaves — one decision,
+    // made in `expandArpeggioVoicing`, so the register and the spread cannot differ from the live player.
+    const expanded = expandArpeggioVoicing(rawNotes, config.octaves);
 
     // Build arpeggio sequence
     const arpSequence = buildArpeggioPattern(expanded, config.pattern);

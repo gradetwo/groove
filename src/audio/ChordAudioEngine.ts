@@ -15,7 +15,7 @@ import {
   StrumConfig,
   DEFAULT_ARP_CONFIG,
   DEFAULT_STRUM_CONFIG,
-  expandVoicingAcrossOctaves,
+  expandArpeggioVoicing,
   buildArpeggioPattern,
   calculateStrumTiming,
 } from "../utils/arpeggiatorTheory";
@@ -468,10 +468,10 @@ export class ChordAudioEngine {
         playNote(item.midi, noteTime, Math.max(0.2, duration - item.delaySec), noteVel);
       });
     } else if (style === "arpeggio") {
-      // Flowing arpeggio steps using smart pattern and octave expansion (P6-03)
-      const upperVoicing = notes.filter((n) => n >= 48);
-      const baseNotes = upperVoicing.length > 0 ? upperVoicing : notes;
-      const expanded = expandVoicingAcrossOctaves(baseNotes, this.arpConfig.octaves);
+      // Flowing arpeggio steps using smart pattern and octave expansion (P6-03).
+      // The register and octave spread come from the shared `expandArpeggioVoicing`, so this live path and
+      // the MCP `transform_pattern` op arpeggiate the same chord from the same notes.
+      const expanded = expandArpeggioVoicing(notes, this.arpConfig.octaves);
       const arpSequence = buildArpeggioPattern(expanded, this.arpConfig.pattern);
 
       let stepRatio = 0.25; // 1/16 default

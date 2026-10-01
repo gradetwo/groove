@@ -48,8 +48,13 @@ const CAPABILITIES: Capability[] = [
   },
   {
     surface: "ChordProgressionsView",
-    feature: "find, hear and export progressions",
-    tools: ["list_chord_progressions", "get_chord_progression", "suggest_progression"],
+    feature: "find, hear and export progressions; arpeggiate or strum them",
+    /**
+     * The panel's arpeggiator and strummer — its patterns, rates, octaves, gates and strum directions — are now baked into the pattern by
+     * `apply_pattern_ops`' `transform_pattern` op, which calls the same engine (`src/utils/arpeggiatorTheory.ts`) the panel plays through. The
+     * audition itself stays a live performance surface, like the console's faders: nothing to store beyond the notes the transform writes.
+     */
+    tools: ["list_chord_progressions", "get_chord_progression", "suggest_progression", "apply_pattern_ops"],
   },
   {
     surface: "CompareView",
