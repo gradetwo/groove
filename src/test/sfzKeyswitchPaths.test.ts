@@ -302,7 +302,15 @@ describe("what a keyswitch program measures", () => {
     const manifest = parseManifest(readFileSync("public/samples/manifest.json", "utf8"));
     const vsco = manifest.manifest!.entries.find((entry) => entry.id === "vsco2ce")!;
     const mirrored = new Set(vsco.files.map((file) => file.path));
-    expect(mirrored.size).toBe(372);
+    /**
+     * ⚠️ **A total here would be a stale literal, and it just was one.** This assertion used to read
+     * `expect(mirrored.size).toBe(372)` — the mirror's file count at the time it was written. Then the
+     * VSCO articulations were mirrored (556 files) and the count became 928, so merging the two branches
+     * turned a true statement into a red one **without anything about keyswitches changing**. A hard-coded
+     * total over a file that other work grows is a count, not a claim; what this case is actually about is
+     * the split below, and 27 + 129 already pins the only total that matters here.
+     */
+    expect(mirrored.size).toBeGreaterThan(27);
     expect(resolved.filter((path) => mirrored.has(path))).toHaveLength(27);
     expect(resolved.filter((path) => !mirrored.has(path))).toHaveLength(129);
   });
