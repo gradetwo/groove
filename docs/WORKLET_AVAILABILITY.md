@@ -44,3 +44,39 @@
 **清理方式也记下来** ✓（因为我的第一版是错的 ✗）：`pgrep -f chromium_headless` **只看到 4 个，实际 50 个** ✗✓；**按 `/proc/*/cwd` 找"指向已删目录"** 才全部找到 ✓，而且**它同时就是安全的过滤器** ✓✓（按名字通配会杀掉正在干活 agent 的浏览器 ✗）。
 
 **两个排队项都不现在做** ✗：`mcp/render/worker.ts` 正被另一条分支占用 ✓（两个写者同改一个文件在本项目已返工多次 ✓）。
+
+---
+
+## 业主动作（已尝试，证据充分，需要你的权限）：给 `groove` 桶加 CORS 策略（2026-10-01）
+
+**这是头号阻塞的真正开关** ✓：镜像 `r2mirror.groove.wangda.today` **返回 200 但不发 `access-control-allow-origin`** ✗，所以**任何浏览器**都拿不到它的对象 ✓（`curl` 能拿到 ✓——这正是"Muse 看到 Failed to fetch 而 curl 200"的全部原因 ✓✓）。GitHub 源同一文件**有** `access-control-allow-origin: *` ✓，所以浏览器只认 GitHub 源 ✓。
+
+**我已尝试用现有凭据直接设置** ✓（纯标准库 SigV4 `PUT /groove?cors` ✓），结果：
+
+```
+PUT ?cors → HTTP 403 AccessDenied
+（不是 SignatureDoesNotMatch —— 即认证通过、授权不足 ✗）
+```
+
+→ **当前 API token 有对象读写权限，但没有桶级 Admin 权限** ✗✓（R2 的 CORS 是桶级设置 ✓）。**我没有别的凭据，也不该去找** ✗，所以停在这里交给你 ✓。
+
+**你要做的（任选其一）** ✓：
+1. **Cloudflare 面板** ✓：R2 → 桶 `groove` → Settings → CORS Policy → 粘贴下面的策略；
+2. **或**给一个 **Admin 权限** 的 R2 token ✓，我用同一条命令设置（命令与验证都已备好 ✓）。
+
+```json
+[{"AllowedOrigins":["*"],"AllowedMethods":["GET","HEAD"],"AllowedHeaders":["*"],"ExposeHeaders":["Content-Length","Content-Type"],"MaxAgeSeconds":86400}]
+```
+
+**判据（必须用这条，不能用"状态码 200"** ✗✓**）**：
+
+```bash
+curl -sI -H "Origin: http://127.0.0.1:3000" \
+  https://r2mirror.groove.wangda.today/vsco2ce/BassoonStac.sfz | grep -i access-control
+```
+
+**必须打出 `access-control-allow-origin`** ✓——`200` 什么也不能证明 ✓✓（本仓库的 `docs/R2_UPLOAD.md` §2 早就要求这个头 ✓，而 §7 只核对了**数量与字节** ✗；**计数查不出"取不到"** ✗✓）。
+
+**为什么风险低且可逆** ✓：只对 `GET`/`HEAD` 开 `*` ✓（对象本来就是公开的 CC0 采样 ✓、无需凭据 ✓），与 GitHub 源当前的行为一致 ✓；要撤销就是删掉该策略 ✓。
+
+**一个把我自己坑了的小坑，记下来免得下一个人重犯** ✗✓：我第一次读 `.env.local` 用的正则是 `[A-Z_]+` ✓——**不含数字** ✗，于是 `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` **全部匹配失败** ✗✓（而 `VITE_SAMPLE_ROOT` 没有数字 ✓ 所以匹配了 ✓）。我的脚本因此打印"**缺少凭据**" ✗——**它指责的是文件，错的却是它自己的正则** ✓✓。改成 `[A-Z0-9_]+` 后凭据立刻就绪 ✓。
