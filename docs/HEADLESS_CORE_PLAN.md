@@ -251,6 +251,37 @@ kick 的默认 insert 就带压缩（`src/data/trackInsert.ts:162-180`：`compEn
 2. 静音渲染的成因。目前只知道：偏爱 GS-1 关、与帧数无关、限幅器报 worklet。
 3. 浏览器侧 GS-1 开启时偶发的顶层频段差异（约 3.9 dB，三次运行里出现）。GS-1 worklet 里唯一读墙上时钟的分支是负载监视器（`OVER_LOAD` / `OVER_BLOCKS`，见 `public/gs1/workletProcessor.js`），它在离线上下文里用 `performance.now()` 估 DSP 成本并可能降声部数；这是最像的解释，但没有证明。
 
+## 7. AudioWorklet 的可用性取决于 origin，不取决于 Chromium 版本
+
+有一条外部结论需要在这里对账：据报告，本机 Chromium（Chrome 153 Linux，`chrome-headless-shell` 与 `channel: chromium` 两个构建）没有 `OfflineAudioContext.audioWorklet`，因此母带限幅器永远走 `DynamicsCompressor` 回退、GS-1 轨永远拿不到 wasm host。如果成立，那么本文件前面所有的"浏览器 vs 无头"比较就是两个不同的图在比，而不是两个宿主在比。
+
+在本机同一批 Playwright Chromium（`chromium-1243`，HeadlessChrome/153.0.8010.12）上实测，用 `ctx.audioWorklet`、`addModule` 与一次真实的 blob worklet 渲染来判断：
+
+| origin | isSecureContext | ctx.audioWorklet | addModule | 真实 worklet 渲染 |
+| --- | --- | --- | --- | --- |
+| `about:blank` | false | undefined | 无 | 不可用 |
+| `http://127.0.0.1:<port>` | true | object | function | ok，渲染 1280 帧 |
+| `http://192.168.100.207:<port>`（同一台服务器，局域网 IP） | false | undefined | 无 | 不可用 |
+
+所以那条结论对 `about:blank` 成立，对渲染器真正驱动的 origin 不成立。原因是 `AudioWorklet` 只在 secure context 暴露：`localhost` 与 `127.0.0.1` 被视为 potentially trustworthy，而纯 HTTP 的局域网 IP 不是。这不是 Chromium 缺功能，是 origin 的属性。`mcp/render/worker.ts` 起的是 `http://127.0.0.1:<free port>`，因此这个服务器至今产出的渲染确实有 worklet。
+
+它对本文件的结论是：前面的二分比较的是两边都有 worklet 的图，这一点现在由探针自己断言，而不是假设。探针每次运行都会打印
+
+```
+browser context: origin=http://127.0.0.1:42153 secure=true baseProtoAudioWorklet=present ctx.audioWorklet=object addModule=function AudioWorkletNode=function
+browser worklet evidence: limiterKind=worklet
+```
+
+并新增两条检查：两边都必须有 `offline context` 上的 AudioWorklet（同图形状），且 limiter 路径必须一致。任何一个不成立，比较就没有意义，探针会以 `FAIL` 说出来。浏览器侧不摆回退的证据是它自己报的 `limiterKind=worklet`（只有模块加载并建成 `AudioWorkletNode` 才可能是 worklet），加上 GS-1 在场 guard 在浏览器里是 11.04 dB（若没有 host，ON 渲染就等于 OFF 渲染，不可能是 11 dB）。
+
+### 这是产品事实，不只是笔记
+
+同一条规则有一个真实的部署危险：从非 secure origin 打开的页面会静默地失去真峰值限幅与 GS-1。也就是说，用 `http://<局域网 IP>:3000` 或任何非 HTTPS 主机名打开这个应用，`chords`/`lead` 会落到原生引擎、母带会落到 DynamicsCompressor 回退，而界面与导出都不会说。MCP 服务器的渲染不受影响（它用 127.0.0.1），但"这个渲染用了哪个限幅器、GS-1 有没有生效"是调用方有权知道的事实。按业主的划分，把这个事实报给用户是产品侧的事，本文只负责把它测出来并写下来。
+
+### 一处自我更正
+
+为了记录"浏览器到底加载了哪些 worklet 模块"，我曾给 `window.OfflineAudioContext` 装了一个构造器包装（记录 `addModule` 调用）。装它的那两次运行里，浏览器的一次 GS-1 关渲染返回整段静音；把它去掉之后的运行都是干净的。我因此撤回报"静音缺陷也出现在浏览器侧"这句话：目前所有干净的观察里，整段静音只出现在 Node 宿主，而且是由没有装任何包装的 `repeat.ts` 测出来的（第 6 节候选 5 的计数）。探针也不再做任何会改动图的插桩，只做只读的探测。
+
 ## 为什么分期而不是现在就做
 
 引擎今天已经能在 Node 里跑，但两个宿主之间测出来的差高于本仓库自己用来判定"两个引擎、同一个声音"的量级。现在切过去，就是原裁定担心的那个"第二个声音"，只是换了条路到达。先把它测小、或者把它指名为一个原语并重新标定容差，再切。

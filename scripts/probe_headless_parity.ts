@@ -335,6 +335,7 @@ async function aFreePort(): Promise<number> {
 async function openBrowser(): Promise<{
   render: (withGs1: boolean, stemTrackIdx?: number | null) => Promise<Measured>;
   close: () => Promise<void>;
+  capability: Record<string, unknown>;
 }> {
   const port = await aFreePort();
   const viteBin = path.join(ROOT, "node_modules", "vite", "bin", "vite.js");
@@ -364,7 +365,50 @@ async function openBrowser(): Promise<{
     });
     browser = await chromium.launch({ args: ["--no-sandbox"] });
     const page = await browser.newPage();
-    await page.goto(`http://127.0.0.1:${port}`, { waitUntil: "domcontentloaded" });
+    /**
+     * Worklet module loads, recorded from the network layer.
+     *
+     * The first version wrapped `window.OfflineAudioContext` to log `addModule` calls, and the renders after that
+     * wrapper existed came back silent twice in two runs, then clean once it was removed. A probe that perturbs the
+     * graph is not a probe, so the wrapper is gone: an AudioWorklet module is fetched over HTTP, so the page's own
+     * request stream shows exactly which modules loaded, without touching a single audio node.
+     */
+    const requestedUrls: string[] = [];
+    page.on("request", (request: { url: () => string }) => requestedUrls.push(request.url()));
+    // A generous budget: under load the dev server has taken over 30 s to answer, and a navigation
+    // timeout is an infrastructure flake, not a measurement.
+    await page.goto(`http://127.0.0.1:${port}`, { waitUntil: "domcontentloaded", timeout: 180000 });
+    /**
+     * What the browser side can actually do, and what it actually loaded.
+     *
+     * `AudioWorklet` is exposed only in a **secure context**, and the renderer drives `http://127.0.0.1` (which is one).
+     * A blank or opaque-origin page is not, so a capability check run there reports "no audioWorklet" — and that is a
+     * property of the page, not of the engine. Measured on the same Playwright Chromium 153: `about:blank` has
+     * `isSecureContext: false` and no `ctx.audioWorklet`; `http://127.0.0.1:<port>` has `isSecureContext: true`,
+     * `ctx.audioWorklet` an object, `addModule` a function, and a blob-URL worklet renders.
+     *
+     * So the probe asks the served origin, wraps the constructor to record every module the render loads, and refuses
+     * to compare if the two hosts do not agree on worklet availability (a different graph is not a parity result).
+     */
+    const browserCapability = (await page.evaluate(`(() => {
+      const cap = {
+        origin: location.origin,
+        secureContext: window.isSecureContext,
+        baseProtoHasAudioWorklet: Object.getOwnPropertyDescriptor(BaseAudioContext.prototype, "audioWorklet") ? "present" : "absent",
+        audioWorkletNode: typeof AudioWorkletNode,
+      };
+      try {
+        const probeCtx = new OfflineAudioContext(2, 128, 44100);
+        cap.ctxAudioWorklet = typeof probeCtx.audioWorklet;
+        cap.ctxAddModule = typeof (probeCtx.audioWorklet && probeCtx.audioWorklet.addModule);
+      } catch (e) {
+        cap.ctxError = String(e);
+      }
+      return cap;
+    })()`)) as Record<string, unknown>;
+    console.log(`browser context: origin=${browserCapability.origin} secure=${browserCapability.secureContext} ` +
+      `baseProtoAudioWorklet=${browserCapability.baseProtoHasAudioWorklet} ctx.audioWorklet=${browserCapability.ctxAudioWorklet} ` +
+      `addModule=${browserCapability.ctxAddModule} AudioWorkletNode=${browserCapability.audioWorkletNode}`);
     /**
      * The page code is a string, not a function literal.
      *
@@ -420,7 +464,7 @@ async function openBrowser(): Promise<{
       }
       return measure(chans, r.sampleRate, r.limiterKind);
     };
-    return { render, close };
+    return { render, close, capability: browserCapability };
   } catch (error) {
     await close();
     throw error;
@@ -447,6 +491,15 @@ try {
 } finally {
   await session.close();
 }
+/**
+ * How we know the browser ran worklets rather than falling back, without touching the graph:
+ * `limiterKind` is reported by `renderPatternOffline` itself and is `worklet` only if the limiter module loaded and an
+ * `AudioWorkletNode` was built; and the GS-1 engagement guard is 11 dB in the browser, which cannot happen if no GS-1
+ * host was built (the ON render would equal the OFF render). A constructor wrapper that logged `addModule` calls was
+ * tried first and removed: with it installed the browser render came back silent twice in two runs, and clean once it
+ * was gone.
+ */
+console.log(`browser worklet evidence: limiterKind=${browserResults.on.limiterKind}`);
 console.log("browser: done. headless: rendering …");
 const headlessOn = await renderHeadless(true);
 const headlessOnRepeat = await renderHeadless(true);
@@ -626,6 +679,26 @@ checks.push([
   `browser ${gs1Browser.toFixed(2)} dB, headless ${gs1Headless.toFixed(2)} dB`,
 ]);
 
+/**
+ * The two hosts must be running the same *shape* of graph before any sample is compared.
+ *
+ * The failure this forbids is concrete and was measured elsewhere: a page without a secure context has no
+ * `OfflineAudioContext.audioWorklet`, so its limiter falls back and its GS-1 lanes get no host. Comparing that graph
+ * with the Node host's is not a parity measurement, whatever the numbers say.
+ */
+const headlessProbeContext = new wa.OfflineAudioContext(1, 128, 44100);
+const headlessHasWorklet = typeof headlessProbeContext.audioWorklet?.addModule === "function";
+const browserHasWorklet = session.capability.ctxAddModule === "function";
+checks.push([
+  "both hosts have AudioWorklet on the offline context (same graph shape)",
+  browserHasWorklet && headlessHasWorklet,
+  `browser secure=${session.capability.secureContext} addModule=${session.capability.ctxAddModule}; headless addModule=${headlessHasWorklet ? "function" : "missing"}`,
+]);
+checks.push([
+  "same limiter path in both hosts",
+  browserResults.on.limiterKind === headlessOn.limiterKind,
+  `browser=${browserResults.on.limiterKind} headless=${headlessOn.limiterKind}`,
+]);
 for (const [label, ok, detail] of checks) console.log(`${ok ? "ok  " : "FAIL"} ${label} — ${detail}`);
 
 if (keep) {
