@@ -1,9 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createCatalogueRuntime } from "../data/sampleCatalogueRuntime";
+import { sampleAssetsFromManifest } from "../data/sampleManifest";
+import { mergeUserLibraries, type UserSoundLibrary } from "../data/userLibraries";
 import {
   USER_LIBRARIES_STORAGE_KEY,
   changeStoredUserLibraries,
   readStoredUserLibraries,
+  recordMeasuredDuration,
   storedUserLibraries,
   type LibraryStorage,
 } from "../data/userLibraryStore";
@@ -141,5 +144,74 @@ describe("the web registry of your own sound libraries", () => {
     const { assets } = await runtime.load();
     // ⭐ The mirror of the case above: without a registration, nothing of the sort appears.
     expect(assets.map((asset) => asset.assetId)).toEqual(["vsco2ce:Vln"]);
+  });
+});
+
+/**
+ * ⭐ **Measuring the duration, which is the way out of the dead end for a library added from a URL.**
+ *
+ * A library with no duration is merged and excluded — visible and visibly not in the catalogue — because the
+ * catalogue refuses an entry without a positive one. Nobody adding a library from a URL knows its total length,
+ * so the app renders one note and times it. These criteria hold both directions: measuring turns a library into
+ * a real catalogue entry, and a measurement that produced nothing is refused rather than stored, so a failed
+ * render cannot pass for a length.
+ */
+describe("measuring a library's duration", () => {
+  /** Merge through the real path, so "is it in the catalogue" is answered by the catalogue and not by a mock. */
+  const catalogueIdsFor = (libraries: UserSoundLibrary[]): string[] => {
+    const merged = mergeUserLibraries(
+      { version: 1, entries: [] },
+      libraries
+    );
+    return sampleAssetsFromManifest(merged.manifest, "https://mirror.invalid").assets.map((asset) => asset.assetId);
+  };
+
+  it("⭐ turns an excluded library into a catalogue entry, and says the number was measured", () => {
+    const registered = changeStoredUserLibraries({ library: library({ durationSeconds: undefined }) }, storage);
+    const before = registered.libraries;
+    // Not in the catalogue yet: the manifest's own reason, and no asset.
+    expect(before[0]!.durationSeconds).toBeUndefined();
+    expect(catalogueIdsFor(before)).toEqual([]);
+
+    const measured = recordMeasuredDuration("my-strings", 3.5, storage);
+    expect(measured.changed).toBe("measured");
+    expect(measured.problems).toEqual([]);
+    expect(measured.libraries[0]).toMatchObject({ durationSeconds: 3.5, durationSource: "measured" });
+    // ⭐ And the catalogue now serves it — which is the whole point of measuring.
+    expect(catalogueIdsFor(measured.libraries)).toEqual(["my-strings:My"]);
+    // It survives a round trip through storage, so a reload does not undo the measurement.
+    expect(readStoredUserLibraries(storage).libraries[0]).toMatchObject({
+      durationSeconds: 3.5,
+      durationSource: "measured",
+    });
+  });
+
+  it("keeps a stated duration distinguishable from a measured one", () => {
+    changeStoredUserLibraries({ library: library({ durationSeconds: 12 }) }, storage);
+    expect(readStoredUserLibraries(storage).libraries[0]!.durationSource).toBe("stated");
+    // A later measurement replaces both the number and its provenance, rather than the two drifting apart.
+    const measured = recordMeasuredDuration("my-strings", 2, storage);
+    expect(measured.libraries[0]).toMatchObject({ durationSeconds: 2, durationSource: "measured" });
+  });
+
+  it("refuses a measurement that produced nothing, and writes nothing", () => {
+    changeStoredUserLibraries({ library: library({ durationSeconds: undefined }) }, storage);
+    const before = JSON.stringify(storage.map.get("groove_sample_libraries_v1"));
+
+    for (const nonsense of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      const refused = recordMeasuredDuration("my-strings", nonsense, storage);
+      expect(refused.changed).toBe("none");
+      expect(refused.problems.join(" ")).toContain("not a length");
+    }
+    // Nothing was written: a failed render must not pass for a length.
+    expect(JSON.stringify(storage.map.get("groove_sample_libraries_v1"))).toBe(before);
+    expect(readStoredUserLibraries(storage).libraries[0]!.durationSeconds).toBeUndefined();
+  });
+
+  it("refuses to measure a library that is not registered, rather than inventing one", () => {
+    const missing = recordMeasuredDuration("nope", 3, storage);
+    expect(missing.changed).toBe("none");
+    expect(missing.problems[0]).toContain("no library with the id");
+    expect(storage.map.size).toBe(0);
   });
 });

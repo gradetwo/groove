@@ -73,11 +73,57 @@ export function storedUserLibraries(storage?: LibraryStorage | null): UserSoundL
   return readStoredUserLibraries(storage).libraries;
 }
 
-/** What adding or removing produced. Mirrors the MCP surface's shape so the two read the same. */
+/** What adding, removing or measuring produced. Mirrors the MCP surface's shape so the two read the same. */
 export interface StoredLibraryChange extends StoredLibrariesRead {
-  changed: "added" | "removed" | "none";
+  changed: "added" | "removed" | "measured" | "none";
   /** Where the list now stands, whether or not the write succeeded. */
   libraries: UserSoundLibrary[];
+}
+
+/**
+ * ⭐ **Record a duration this app measured, marked as measured rather than stated.**
+ *
+ * This is the way out of the dead end a person hits when they add a library from a URL: the catalogue refuses an
+ * entry without a positive duration — *"a duration nobody measured is not a duration"* — and nobody knows their
+ * library's total length offhand. So the app renders one note and times it.
+ *
+ * **That number is a lower bound, not a total**, because one note was played and a library holds many samples.
+ * It is recorded anyway, because a measured lower bound is real where a missing duration blocks the library
+ * entirely, and because `durationSource: "measured"` travels with it so the two kinds of number stay
+ * distinguishable — the same reason the pitch report marks a source's own claim `claimOnly`. What would be
+ * dishonest is a number with no label, not a labelled measurement of limited scope.
+ *
+ * A measurement that produced nothing is refused rather than stored: a zero or a NaN means the render failed, and
+ * writing it would let a failed measurement pass for a length. A refusal writes nothing, as everywhere here.
+ */
+export function recordMeasuredDuration(
+  id: string,
+  seconds: number,
+  storage?: LibraryStorage | null
+): StoredLibraryChange {
+  const before = readStoredUserLibraries(storage);
+  const carried = [...before.problems];
+  const none = (problems: string[]): StoredLibraryChange => ({
+    ...before,
+    changed: "none",
+    problems: [...carried, ...problems],
+  });
+
+  const store = storage === undefined ? defaultStorage() : storage;
+  if (!before.storageAvailable || !store) return none([]);
+
+  const index = before.libraries.findIndex((library) => library.id === id);
+  if (index < 0) return none([`no library with the id "${id}" is registered`]);
+  if (typeof seconds !== "number" || !Number.isFinite(seconds) || !(seconds > 0)) {
+    return none([
+      `the measurement of "${id}" gave ${JSON.stringify(seconds)}, which is not a length — nothing was recorded`,
+    ]);
+  }
+
+  const next = before.libraries.map((library, at) =>
+    at === index ? { ...library, durationSeconds: seconds, durationSource: "measured" as const } : library
+  );
+  return write(store, next, "measured", carried);
 }
 
 /**
@@ -142,7 +188,7 @@ export function changeStoredUserLibraries(
 function write(
   storage: LibraryStorage,
   libraries: UserSoundLibrary[],
-  changed: "added" | "removed",
+  changed: "added" | "removed" | "measured",
   problems: string[]
 ): StoredLibraryChange {
   try {
