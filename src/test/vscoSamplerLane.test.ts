@@ -152,9 +152,21 @@ class MixingOfflineAudioContext extends FakeOfflineAudioContext {
       const edge = source.outgoing[0]?.node;
       const gain = edge instanceof FakeGainNode ? edge.gain.value : 1;
       const data = buffer.getChannelData(0);
+      /**
+       * ⭐ **The mix stops where the scheduler stopped the voice, and that is the whole point of this change.**
+       *
+       * Until this existed the mixer laid down every source for its entire buffer and ignored `stop(when)`, so
+       * the one thing a sampler's lifetime is *about* — a note that ends — could not be observed here at all.
+       * A real render of three 0.9-beat notes on `vsco2co:ViolinEnsSusVib` droned through the whole bar instead
+       * of stopping between them, and this criterion stayed green: it asserted the playback ratio at the point
+       * of resolution and never asserted that anything stopped. The fake recorded `stoppedAt` the whole time.
+       */
+      const explicitStops = source.stopCalls.filter((when): when is number => typeof when === "number");
+      const stopAt = explicitStops.length > 0 ? Math.min(...explicitStops) : Number.POSITIVE_INFINITY;
+      const stopFrame = Number.isFinite(stopAt) ? Math.round(stopAt * this.sampleRate) : Number.POSITIVE_INFINITY;
       for (let channel = 0; channel < out.numberOfChannels; channel += 1) {
         const target = out.getChannelData(channel);
-        const limit = Math.min(target.length, at + Math.ceil(data.length / rate));
+        const limit = Math.min(target.length, at + Math.ceil(data.length / rate), stopFrame);
         for (let i = at; i < limit; i += 1) {
           const src = (i - at) * rate;
           const lo = Math.floor(src);
