@@ -3,7 +3,6 @@ import { readFileSync } from "node:fs";
 import { parseSfz } from "../audio/sfz/parse";
 import { resolveSamplePath } from "../audio/sfz/defaultPath";
 import { resolveInstrumentNote } from "../audio/sfz/instrument";
-import { parseManifest } from "../data/sampleManifest";
 import { createSampleLoader } from "../audio/sampleLoader";
 import type { SampleAsset } from "../data/sampleCatalogue";
 
@@ -296,22 +295,17 @@ describe("what a keyswitch program measures", () => {
     });
 
     /**
-     * And the mirror holds 27 of them, all of them from the sustained section that the already-mirrored `CelloEnsSusVib.sfz` shares. The other 129 are absent, which is why
-     * this program is not in the mirror — a statement about the mirror, measured, rather than about the parser.
+     * ⚠️ **What used to be here, and why it is gone.** This case also asserted how many of the 156 the
+     * mirror held — "27 in, 129 absent" — which was a true and interesting statement about the mirror at
+     * the time. Then the VSCO articulations were mirrored and the mirror held files from the `trem`,
+     * `spic` and `pizzT` directories too, so the same assertion read 79 in without a single keyswitch
+     * fact changing. It was a snapshot of a file that other work grows, sitting inside a criterion about
+     * the parser — the same shape as the tool counts and the doc rows this repository keeps catching.
+     *
+     * The parser claim is complete without it: 156 regions resolve to 156 distinct files whose names the
+     * upstream tree really contains, split across the four directories above. What the mirror holds for an
+     * exposed instrument is a separate invariant and it is checked where it belongs — every orchestral
+     * entry in `src/test/orchestralCoverage.test.ts` must resolve a note to bytes the manifest lists.
      */
-    const manifest = parseManifest(readFileSync("public/samples/manifest.json", "utf8"));
-    const vsco = manifest.manifest!.entries.find((entry) => entry.id === "vsco2ce")!;
-    const mirrored = new Set(vsco.files.map((file) => file.path));
-    /**
-     * ⚠️ **A total here would be a stale literal, and it just was one.** This assertion used to read
-     * `expect(mirrored.size).toBe(372)` — the mirror's file count at the time it was written. Then the
-     * VSCO articulations were mirrored (556 files) and the count became 928, so merging the two branches
-     * turned a true statement into a red one **without anything about keyswitches changing**. A hard-coded
-     * total over a file that other work grows is a count, not a claim; what this case is actually about is
-     * the split below, and 27 + 129 already pins the only total that matters here.
-     */
-    expect(mirrored.size).toBeGreaterThan(27);
-    expect(resolved.filter((path) => mirrored.has(path))).toHaveLength(27);
-    expect(resolved.filter((path) => !mirrored.has(path))).toHaveLength(129);
   });
 });
