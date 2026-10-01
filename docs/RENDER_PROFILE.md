@@ -428,3 +428,28 @@ node scripts/profile_offline_render.mjs --bars=1 --runs=2 --mode=cpu      # 进�
 * **"按信号计费"与"与内容无关"** ✓✓：两句都对，合起来是"**只要有输入就按量子计费，与输入内容无关，与输入时长成正比**" ✓。
 
 **对 headless 方向的影响不变** ✓✓：新核心若保留"默认挂一条全程卷积总线" ✓，那 26% 就跟着搬过去 ✓；`reverbImpulseBuilds = 2` ✓（IR 每次渲染被建两次 ✓）是一处**免费的优化** ✓，与语言无关 ✓。
+
+---
+
+## 附：无头宿主的 parity 差是**确定性**的（2026-10-01，三次重复，逐位相同）
+
+**为什么量** ✓：`docs/HEADLESS_CORE_PLAN.md` 记着"浏览器 vs `node-web-audio-api`"的差（最差频段 1.34 dB、响度 1.89 LU ✗）。若那是**噪声** ✗，放宽容差就是**把仪器校准到 bug 上** ✗✓；只有当它是**确定性、可归因**的差异时 ✓，跨实现给一个更大的容差才站得住 ✓。
+
+**三次独立运行，读数逐位相同** ✓✓：
+
+| 检查 | 三次结果（完全一致 ✓） |
+| --- | --- |
+| same voice（ON vs ON） | 最差 **1.28 dB**（band 6）✗ |
+| same native lanes（OFF vs OFF） | 最差 **1.11 dB**（band 3）✗ |
+| loudness | **Δ 1.774 LU** ✗ |
+| true peak | **Δ 0.000 dB** ✓ |
+| GS-1 engaged in both | 浏览器 **17.98 dB** / 无头 **15.15 dB** ✓ |
+| both hosts have AudioWorklet | `secure=true`、`addModule=function` ✓ |
+| same limiter path | worklet / worklet ✓ |
+| frame count | 165375 = 165375 ✓ |
+
+**结论** ✓：**确定性，不是噪声** ✓✓（三次逐位相同 ✓），且**局部** ✓（band 11–12 只差 0.01–0.48 dB ✓，差异集中在 band 3 与 band 6 ✓——与具名原语 `DynamicsCompressorNode` 为主 ✓、`OscillatorNode` 的 saw/square 带限为次 ✓ 相符 ✓）。
+
+**因此容差可以按"跨实现"重新标定** ✓，但**必须带上两条** ✗✓：① **理由**：旧容差（每段 1.0 dB ✓）取自 **Chromium vs WebKit** ✓（**两个浏览器**的原生轨 ✓），而这里是**浏览器 vs 另一个 Web Audio 实现** ✓；② **不能因此失去区分力** ✓✓——guard 自己的记录是"**失败的 GS-1 host 让 band 6 动 0.71 dB、band 9 动 3.66 dB**" ✓，所以即便每段放到 **1.5 dB** ✓，**band 9 的 3.66 dB 仍会红** ✓，且**按 13 段 L1 之和判的 5 dB guard** ✓（两边实测 17.98 / 15.15 dB ✓）不受影响 ✓✓。
+
+**未做** ✗：**没有**改 `probe_headless_parity.ts` 的容差 ✓（它现在仍按 1.0 dB / 0.5 LU 判、仍 FAIL ✓，这是**如实**的 ✓）；改动要么由我按上面的理由做、要么由无头核心那条线连同 `busComp.ready` 一起做 ✓。**没有**把三次运行以外的任何数字当作证据 ✓。
