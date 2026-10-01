@@ -1,37 +1,38 @@
 #!/usr/bin/env bash
-# Publishing the mirror's branches, and reading back what they contain.
+# Publish `dev` and promote it to `main`, then read back what the remote actually contains.
 #
-# The `remote` step pushed `dev` and only *checked* `main` — it verified main was an ancestor of dev and stopped there, so main never advanced on its own. "main = tag = live" held because main was fast-forwarded by hand after each release,
-# which is the kind of step that works exactly until the person doing it stops paying attention. It is also how v2.34.31's release ended up with a hand-pushed main in the middle of it.
+# **Why this no longer goes through a mirror (2026-10-01).** The release mirror existed because pushing needed a
+# dedicated deploy key and this repository had no remote of its own. Both are in place now, so the mirror had become a
+# second rehearsal of every push — and it got the details wrong in ways that mattered: it committed *its own* working
+# tree, and when it was left checked out on `main`, a push of `dev` landed on the mirror's `main` while `dev` never
+# moved. Both of those printed success. See `docs/OPEN_WORK.md` §十.
 #
-# The mirror is this project's own copy and its main is defined as the released state, so a fast-forward is the intent. If the push is refused as non-fast-forward, the branch is forced — with that fallback said out loud rather than
-# hidden, because a forced main is a claim that dev is what should be published.
+# The push is now direct, but the **criterion is unchanged and is still about content**: after pushing, both branches
+# must report this checkout's `package.json` version when read from the remote. A push that exits zero while the remote
+# still has the old version is exactly the failure this check exists to catch.
 #
-# The criterion is content, not a successful push: both branches must report this version when their `package.json` is read.
+# `main` is defined as the released state, so the promotion fast-forwards whenever it can; the force is kept for the case
+# where `main` has drifted, which is a claim that `dev` is what should be published and is therefore stated in the log
+# rather than hidden.
 set -u
 
 CHECK_ONLY=0
 [ "${1:-}" = "--check-only" ] && CHECK_ONLY=1
 
+cd "$(dirname "$0")/.." || exit 1
 VERSION=$(node -p "require('./package.json').version")
-MIRROR=../release/groove-github
-
-if [ ! -d "$MIRROR/.git" ]; then
-  echo "  ❌ $MIRROR is not a git checkout"
-  exit 1
-fi
 
 if [ "$CHECK_ONLY" = "0" ]; then
-  git -C "$MIRROR" push -q origin dev
-  if ! git -C "$MIRROR" push -q origin dev:main 2>/tmp/mirror_main_push.log; then
-    echo "  (main refused as non-fast-forward; the mirror's main is defined as the released state, so forcing)"
-    git -C "$MIRROR" push -q --force origin dev:main
+  git push -q origin HEAD:dev
+  if ! git push -q origin HEAD:main 2>/tmp/publish_main_push.log; then
+    echo "  (main refused as non-fast-forward; the released state is defined as dev, so main is forced to it)"
+    git push -q --force-with-lease origin HEAD:main
   fi
 fi
 
-git -C "$MIRROR" fetch -q origin
+git fetch -q origin
 for ref in dev main; do
-  GOT=$(git -C "$MIRROR" show "origin/$ref:package.json" | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).version")
+  GOT=$(git show "origin/$ref:package.json" | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).version")
   if [ "$GOT" != "$VERSION" ]; then
     echo "  ❌ origin/$ref has package.json $GOT, expected $VERSION from this checkout"
     exit 1
