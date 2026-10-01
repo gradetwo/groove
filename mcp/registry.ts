@@ -251,8 +251,26 @@ const patternSchema = z
               .describe("per-parameter overrides applied at the one GS-1 resolution seam, beside `gs1Patch`"),
             steps: z.array(z.number()),
             velocity: z.array(z.number()).optional(),
-            pitch: z.array(z.number().nullable()).optional(),
-            pitches: z.array(z.array(z.number()).nullable()).optional(),
+            /**
+             * ⭐ **The two pitch fields, named for the caller, because meeting them unexplained is the whole
+             * complaint.** A test report described the pair as baggage that forces a caller to work out which one
+             * wins, and the audit agreed the pair is the cost even though neither field is dead
+             * (`docs/DATA_MODEL_AUDIT.md` §3). Retiring `pitch` was measured at 734 sites, most of them in the
+             * hand-authored genre library, so the relief is bought here instead: say what each is for, on the
+             * schema a pattern writer actually reads.
+             */
+            pitch: z
+              .array(z.number().nullable())
+              .optional()
+              .describe(
+                "The **root note of each step** — one MIDI number per step, or null where there is none. This is the single line. **A step that also has a `pitches` entry sounds that entry, not this one**; see `pitches` for chords."
+              ),
+            pitches: z
+              .array(z.array(z.number()).nullable())
+              .optional()
+              .describe(
+                "A **chord per step**: an array of MIDI numbers, or null. **When a step has one it is what sounds** — the renderers play it verbatim, so a `pitch` at that step is not what you hear. Use `pitches` for chords and `pitch` for a single line; you do not have to set both."
+              ),
             gate: z.array(z.number()).optional(),
             ratchet: z.array(z.number()).optional(),
             probability: z.array(z.number()).optional(),
