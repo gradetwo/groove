@@ -186,10 +186,14 @@ export function summariseArrangement(arrangementId: string, arrangement: Arrange
      *
      * It read "a step column keeps one pitch … the render plays one note there", which was true while the
      * offline lane read the flattened singular `pitch`: `stepsFromNotes` keeps the lowest, so a chord reached
-     * the lane as one note. The owner's standing instruction is that anything which helps what the music sounds
-     * like is worth doing, so the lane now reads the pattern's own chord stack and starts every note in it —
-     * `arrangementCompile` carries the stack and `pitchedSteps` prefers it. Reporting a column as lost after
-     * that would be a false report, which is its own defect.
+     * the lane as one note. **The model had already promised otherwise** — `SequencerTrack.pitches` is documented
+     * as "every note sounding on a step, as a stack — the chord", with `pitch` kept as the root and "when
+     * `pitches` is present the renderers play it verbatim instead of expanding `pitch` themselves", precisely so
+     * that stored chords are not voiced twice and the piano roll "would [not] disagree with what is heard".
+     * The offline lane was the renderer that did not honour that, so the piano roll drew the chord while the
+     * render played its lowest note. This is a contract the lane now keeps rather than a new decision: it reads
+     * the stack and starts every note in it, and `arrangementCompile` carries the stack it was already given.
+     * Reporting a column as lost after that would be a false report, which is its own defect.
      *
      * The guard moved to where the behaviour lives: `src/test/audioLaneOfflineRender.test.ts` asserts that a
      * column holding three notes starts three voices on the same frame, so reverting the stack turns it red.
