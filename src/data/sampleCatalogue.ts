@@ -12,6 +12,7 @@
  * an edit to one array rather than a change to the rule.
  */
 import { parseManifest, sampleAssetsFromManifest } from "./sampleManifest";
+import { mergeUserLibraries, type UserSoundLibrary } from "./userLibraries";
 
 export interface SampleAsset {
   assetId: string;
@@ -125,11 +126,30 @@ export function sampleReferenceProblem(
  * A manifest that does not parse yields **no catalogue and its errors**, rather than an empty catalogue: those are different facts, and conflating them is how "the library
  * failed to load" becomes "the library has no instruments".
  */
-export function catalogueFromManifestText(text: string, root: string): { assets: SampleAsset[]; problems: string[] } {
+export function catalogueFromManifestText(
+  text: string,
+  root: string,
+  libraries: readonly UserSoundLibrary[] = []
+): { assets: SampleAsset[]; problems: string[] } {
   const parsed = parseManifest(text);
   if (!parsed.ok || !parsed.manifest) {
     return { assets: [], problems: parsed.errors.map((error) => `manifest: ${error}`) };
   }
-  const { assets, problems } = sampleAssetsFromManifest(parsed.manifest, root);
-  return { assets, problems };
+  /**
+   * ⭐ **The one place a creator's own library joins the catalogue, and it is here on purpose.**
+   *
+   * `sampleAssetsFromManifest` is what runs `withProgramIds`, so merging before it means a user library gets its
+   * asset ids from exactly the same function a built-in one does, and `resolveInstrumentNote` stays the only
+   * resolver. Merging afterwards — or loading a user library down a path of its own — is how one SFZ ends up
+   * with two ids, or with a loader that behaves slightly differently from the one the app already trusts.
+   *
+   * A refused library (its id is a built-in's) comes back as a problem beside the assets rather than as silence,
+   * because a library a caller asked for and did not get is something they need to be told about.
+   */
+  const merged =
+    libraries.length === 0
+      ? { manifest: parsed.manifest, problems: [] as string[], added: [] as string[] }
+      : mergeUserLibraries(parsed.manifest, libraries);
+  const { assets, problems } = sampleAssetsFromManifest(merged.manifest, root);
+  return { assets, problems: [...merged.problems, ...problems] };
 }
