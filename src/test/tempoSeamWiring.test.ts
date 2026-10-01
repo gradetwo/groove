@@ -25,11 +25,18 @@ describe("the tempo seam", () => {
     expect(source).toMatch(/const stepLengthAt = \(step: number\): number => \(timing \? timing\.lengthAt\(step\) : stepDur\);/);
     expect(source).toMatch(/const totalDurationSec = \(timing \? timing\.total : totalSteps \* stepDur\) \+ tailSec;/);
     // And the extracted timing is only consulted when there is a map, so the no-map arithmetic is never even computed the other way.
-    expect(source).toMatch(/const timing = tempoAware \? stepTiming\(\{ bpm, tempoTrack: patternTempo \}, totalSteps\) : null;/);
+    // Whitespace-tolerant, and no longer pinned to `totalSteps` as the second argument: a chunk legitimately
+    // needs timing past the pattern's own steps, so that argument is `Math.max(totalSteps, …)` now. What this
+    // guard is for is the branch — the timing is chosen by `tempoAware` through `stepTiming` — so that is what
+    // it asserts. Remove the branch and it goes red; move the call onto another line and it does not.
+    expect(source).toMatch(/const timing = tempoAware\s*\?\s*stepTiming\(/);
+    expect(source).toMatch(/const timing = tempoAware[\s\S]{0,200}?:\s*null;/);
   });
 
   it("uses them at the two sites that were linear in the constant", () => {
-    expect(source).toMatch(/const unswungTime = stepTimeAt\(step\);/);
+    // The offset is subtracted after the tempo-aware time, which is the point: the site no longer uses the
+    // constant. Allowing the trailing shift keeps the guard on the helper rather than on the arithmetic.
+    expect(source).toMatch(/const unswungTime = stepTimeAt\(step\)(\s*-\s*[A-Za-z0-9_.]+)?;/);
     expect(source).toMatch(/const swingOffset = swingOffsetSeconds\(step, effSwing, stepLengthAt\(step\)\);/);
   });
 });

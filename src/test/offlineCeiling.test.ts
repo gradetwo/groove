@@ -186,10 +186,21 @@ describe("renderPatternOffline wiring", () => {
      * original assertion worth writing: the worklet path returns early and never pays for the ceiling kernel, the fallback applies the
      * guard, and both go out through the seamless-loop helper rather than a bare `return`.
      */
-    expect(source).toMatch(/if\s*\(\s*limiterKind\s*===\s*"worklet"\s*\)\s*\{[^}]*?asRequested\(compensate\([^}]*?return\s+finish\(/);
-    expect(source).toMatch(/if\s*\(\s*limiterKind\s*===\s*"worklet"\s*\)\s*\{[\s\S]*?\}[\s\S]*?applyOfflineCeiling\(\s*channels\s*,\s*rendered\.sampleRate\s*\)/);
+    // Anchored to the worklet branch and stopped at its `} else`, because both branches end with
+    // `asRequested(compensate(` — without that boundary the fallback would satisfy an assertion about the
+    // worklet path. The branch's shape changed when the offset work turned the early `return finish`
+    // into an assignment plus `finish(result)`, which is a refactor and not a behaviour change, so the
+    // guard follows the helper rather than the statement form.
+    expect(source).toMatch(/if\s*\(\s*limiterKind\s*===\s*"worklet"\s*\)\s*\{((?!\}\s*else)[\s\S])*?asRequested\(compensate\(/);
+    expect(source).toMatch(/if\s*\(\s*limiterKind\s*===\s*"worklet"\s*\)\s*\{((?!\}\s*else)[\s\S])*?(return\s+)?finish\(/);
+    // `applyOfflineCeiling` appears in the fallback and nowhere else, so the marker itself is the assertion;
+    // the brace-spanning window that used to surround it only made the guard brittle.
+    expect(source).toMatch(/applyOfflineCeiling\(\s*channels\s*,\s*rendered\.sampleRate\s*\)/);
     expect(source).toMatch(/asRequested\(compensate\(out,\s*guarded\.latencySamples\)\)\s+as\s+AudioBuffer;/);
-    expect(source).toMatch(/asRequested\(compensate\(out,\s*guarded\.latencySamples\)\)[\s\S]*?return\s+finish\(/);
+    // Was `return finish(`; the offset work turned both branches into an assignment plus `finish(result)`.
+    // The claim is that the fallback's compensated buffer goes out through the same finish helper, not that
+    // the statement keeps a `return` in front of it.
+    expect(source).toMatch(/asRequested\(compensate\(out,\s*guarded\.latencySamples\)\)[\s\S]{0,400}?(return\s+)?finish\(/);
   });
 });
 
