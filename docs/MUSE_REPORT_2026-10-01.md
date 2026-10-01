@@ -153,3 +153,25 @@ function pitchedSteps(track) {
 * **B ✗**：保留每步一个事件、各自给一步的时长 ✓ → 那等于把持续音改成**断奏** ✗✓，**改变了编排的含义** ✓（不该顺手做 ✓）。
 
 **因此修法定了 A** ✓✓，并且**它动的是共享调度器**（`offlineAudioLanes.ts` ✓，采样 lane 与导出都走它 ✓）→ **要按自己的节奏做** ✓：先改、**再用判据证明两个方向都对** ✓✓——**① 每个声部都有结束** ✓（`6dc0eb8` 已备好 ✓）；**② 一个持续音符只产生一个声部** ✓（新判据 ✓）；**③ 拿掉合并即红** ✗✓。
+
+## 十、✗✓✓ **我的"事实 #3"被证伪，修法 A 作废**（2026-10-01，由修复 agent 实测推翻）
+
+我在 §九 断言"**一个持续音符 = 每步一个条目**" ✗，并据此定了修法 A（**合并连续有音高的步** ✓）。**修复 agent 用文件+行号把它证伪了** ✓✓：
+
+| 它的实测 | 结果 |
+| --- | --- |
+| 一个 **2 拍持续音** | `steps=[1,0,0,…]`、`pitch=[60,0,…]`、`gate=undefined` → **只有一个 step** ✓ |
+| **三个连续 step 各写 C4** | `steps=[1,1,1,…]`、`pitch=[60,60,60,…]` → **三个重复音** ✓ |
+| **Muse 的 0.9 拍单音** | `planOfflineAudioLanes` **只出 1 个 event** ✓ |
+
+**证据链** ✓✓：`src/data/noteEvents.ts:66-77` 的 `stepsFromNotes` **只在起点置 1** ✓；`src/data/arrangementCompile.ts:93-94` 的注释**明写** "its **length is not represented**" ✓✓；**时值在本模型里是 `gate`** ✓（`src/data/noteLayer.ts:60-63` ✓，`WavExporter.ts:1056`、`AudioEngine.ts:1996` 同规则 ✓）；`src/data/noteEvents.ts:4` **自己写明** 16-step 数组**无法表达** "a note held across four of them" ✓✓。
+
+⇒ **在本模型里，连续有音高的步是"重复音"，不是"持续音"** ✓✓ → **我的 A 会把三个重复音并成一个长音** ✗✗，**正是我否掉 B 时说的"改变编排含义"，只是方向相反** ✓✓；而且**数据里没有 tie 标记**，**两种含义无法区分** ✓✓，**任何一条路线都不能凭空造一个** ✓。
+
+**我错在哪（值得单独记）** ✗✓：我读的是**消费端**（`pitchedSteps` ✓，它把 `steps` 转成事件 ✓）就**推断了生产端**（`steps` 是怎么写出来的 ✗✓）——**我只读了"谁在用"，没读"谁在写"** ✓✓。这与今天那次 `grep` 的错误**同源** ✓：**读了一层，就对另一层下结论** ✓✓。
+
+**采纳它的方案** ✓✓（与两条路线无关的那半 ✓）：`OfflineAudioLaneEvent` 加 `seconds` ✓ → 规划器按**作者时值**（`gate` ✓，缺省引擎的 0.8 步 ✓）算秒数 ✓ → `WavExporter` 的 sink 传给 `startSamplerNote` ✓ → **每个声部都有数值结束** ✓✓；plain sample 用 `buffer.duration` ✓；**并在 compile 补 `gate`** ✓（否则 0.9 拍的作者时值在到 lane 之前就已丢失 ✗✓）。
+
+**它的两条旁支发现也记下** ✓✓（下一件，不是现在）：
+* `src/audio/samplerSteps.ts:104-112`：**实时**安排播放那条路**同样不传 `seconds`、且完全忽略 `gate`** ✗ → **浏览器里同一个 drone** ✓✓（**那条更要紧，因为用户用的是浏览器** ✓）；
+* `compileArrangementToLanes` **丢掉 `lengthBeats`** ✗ → 0.9 拍音符到 lane 时长度已不存在 ✓✓。
