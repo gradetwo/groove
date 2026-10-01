@@ -245,36 +245,105 @@ async function ensurePage(): Promise<import("playwright").Page> {
   }
 }
 
-/** Drop the child, the browser and the page, leaving the next call to start a fresh one. */
+/**
+ * Drop the child, the browser and the page, leaving the next call to start a fresh one.
+ *
+ * The same work as `stopRenderer` — a reset *is* a shutdown, and having two near-identical teardown routines was how
+ * the original exit-only path came to differ from the reset path in the first place.
+ */
 async function resetRenderer(): Promise<void> {
-  try {
-    await state.browser?.close();
-  } catch {
-    /* already gone */
-  }
-  try {
-    state.child?.kill("SIGTERM");
-  } catch {
-    /* already gone */
-  }
+  await stopRenderer();
+}
+
+/**
+ * Tear the browser and dev server down; called on the shutdown paths below and by `stopRenderer()`.
+ *
+ * Idempotent on purpose: a signal, a client disconnect and an explicit call can land together, and `close()` on an
+ * already-closed browser is fine but a second `kill` of a dead child is worth avoiding. The state is cleared **before**
+ * the awaits so a re-entrant call sees nothing to do.
+ */
+export async function stopRenderer(): Promise<void> {
+  const browser = state.browser;
+  const child = state.child;
   state.browser = null;
   state.page = null;
   state.child = null;
   state.port = null;
-}
-
-/** Tear the browser and dev server down; called on process exit and by `stopRenderer()`. */
-export async function stopRenderer(): Promise<void> {
   try {
-    await state.browser?.close();
+    await browser?.close();
   } catch {
     /* already gone */
   }
-  state.browser = null;
-  state.page = null;
-  if (state.child && !state.child.killed) state.child.kill("SIGTERM");
-  state.child = null;
+  if (child && !child.killed) child.kill("SIGTERM");
 }
+
+/**
+ * **Nothing was reaping the browser, so finished renders leaked whole Chromium trees.**
+ *
+ * Measured: retiring worktrees left **50 processes** whose `/proc/<pid>/cwd` pointed at a deleted directory, including a
+ * Chromium that had been running **three hours** after its MCP server's agent finished (`docs/WORKLET_AVAILABILITY.md`,
+ * appendix). The server itself was the survivor: an agent ending closes the child's stdin, and this process never
+ * reacted to that — the Vite child and the browser connection kept the event loop alive, so the server, and its browser,
+ * outlived the client. Neither a signal nor the worktree being removed reaps it either, and the running agent had no
+ * reason to notice.
+ *
+ * **What is registered, and why each one:**
+ *
+ *   · **stdin `end`/`close`** — what an agent finishing actually does. This is the one path that was missing entirely,
+ *     and the one the measured three-hour leak went through. Closing the browser here is awaited, which is only possible
+ *     because this is an event callback and not an exit handler;
+ *   · **`SIGINT`/`SIGTERM`** — the polite kill. `browser.close()` is asynchronous, so the handler is `async` and the
+ *     process exits only after the close returns. This is deliberately **not** a `process.on("exit")`-only path: an
+ *     `exit` handler cannot await, so a browser closed there would be killed rather than shut down;
+ *   · **`process.on("exit")`** — a synchronous last resort, and only for the Vite child. The browser connection is
+ *     Playwright's own pipe: when this process dies the pipe closes and the browser exits on its own (measured — a
+ *     `SIGKILL`ed parent left zero Chromium processes), so the exit handler does not try to close the browser. What it
+ *     does do is kill the Vite child, which nothing else would reclaim on a `SIGKILL`.
+ *
+ * Registration is explicit (called from `mcp/server.ts`) rather than a side effect of importing this module, so a test
+ * that imports `aFreePort` does not install signal handlers on the test process.
+ */
+export function installRendererLifecycle(): void {
+  if (lifecycleInstalled) return;
+  lifecycleInstalled = true;
+
+  let shuttingDown = false;
+  const shutdown = (reason: string) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    void (async () => {
+      await stopRenderer();
+      // stderr, never stdout: stdout is the MCP protocol channel. The reason is printed so a person who sees the
+      // server vanish can tell which path closed it.
+      console.error(`groove-lab MCP server shutting down (${reason})`);
+      process.exit(0);
+    })();
+  };
+
+  // An MCP client that exits closes this process's stdin. Before this, only the signals were handled, so the server
+  // kept the browser and the dev server alive indefinitely.
+  process.stdin.on("end", () => shutdown("client closed stdin"));
+  process.stdin.on("close", () => shutdown("client closed stdin"));
+
+  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+
+  /**
+   * The synchronous last resort. `exit` cannot await, so this only does what is synchronous — signal the Vite child.
+   * The browser needs nothing here: Playwright's pipe closes with this process (measured), and the graceful paths above
+   * close it properly before reaching here.
+   */
+  process.on("exit", () => {
+    try {
+      if (state.child && !state.child.killed) state.child.kill("SIGKILL");
+    } catch {
+      /* nothing left to kill */
+    }
+  });
+}
+
+/** One registration per process, however many times `installRendererLifecycle` is called. */
+let lifecycleInstalled = false;
 
 function outputDirectory(options: RenderOptions): string {
   const dir = options.outputDir || process.env.GROOVE_MCP_OUT || mkdtempSync(path.join(os.tmpdir(), "groove-mcp-"));

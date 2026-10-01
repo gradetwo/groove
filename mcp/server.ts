@@ -13,7 +13,7 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { PROMPTS, RESOURCES, TOOLS, failure, json } from "./registry";
-import { stopRenderer } from "./render/worker";
+import { installRendererLifecycle } from "./render/worker";
 
 const VERSION = process.env.GROOVE_MCP_VERSION || "1.0.0";
 
@@ -108,17 +108,20 @@ export function createServer(): McpServer {
 async function main(): Promise<void> {
   const server = createServer();
   const transport = new StdioServerTransport();
+  /**
+   * Close the browser and the dev server on every path this process can leave by — client disconnect, signal, and a
+   * synchronous last resort for the Vite child. The reasoning, and the measurement that made it necessary, are in
+   * `installRendererLifecycle`.
+   *
+   * Installed here rather than at module scope **on purpose**: `createServer` is imported by
+   * `src/test/mcpSchemaPassthrough.test.ts`, and a module-scope `stdin` `end` listener would let a test run's own
+   * stdin closing exit the test process.
+   */
+  installRendererLifecycle();
   await server.connect(transport);
   // Never write to stdout: it is the protocol channel. Diagnostics go to stderr.
   console.error(`groove-lab MCP server ready (${TOOLS.length} tools, ${RESOURCES.length} resources, ${PROMPTS.length} prompts)`);
 }
-
-const shutdown = async () => {
-  await stopRenderer();
-  process.exit(0);
-};
-process.on("SIGINT", shutdown);
-process.on("SIGTERM", shutdown);
 
 const isEntryPoint = process.argv[1] && import.meta.url.endsWith(process.argv[1].split("/").pop() ?? "");
 if (isEntryPoint || process.env.GROOVE_MCP_FORCE_MAIN === "1") {

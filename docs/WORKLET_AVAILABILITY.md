@@ -45,6 +45,27 @@
 
 **两个排队项都不现在做** ✗：`mcp/render/worker.ts` 正被另一条分支占用 ✓（两个写者同改一个文件在本项目已返工多次 ✓）。
 
+## 两个排队项已完工（本次改动，`fix-worker-honesty`）
+
+**1. 渲染器自报"本次没有 worklet"** ✓。检查读的是**渲染真正使用的那个 context** 的 `audioWorklet`（`WavExporter.offlineWorkletsAvailable`），缺它时把 `WORKLETS_UNAVAILABLE_PROBLEM` 放进 `problems` ✓，经 `mcp/render/worker.ts` 已有的 `onProblems` 进入 `RenderResult.problems` ✓；app 的导出（WAV / MP3 / stems）也带出 `workletsUnavailable`，并给出与"模块加载失败"**不同**的提示 ✓（原来的 `limiterKind === "fallback"` 提示会让人重试，而非 secure origin 重试无用 ✓）。**判据是两半，实测** ✓（`node scripts/probe_worklet_surfaces.mjs`）：
+
+```
+127.0.0.1        secure=true  ctx.audioWorklet=object    limiterKind=worklet   problems=[]
+192.168.100.207  secure=false ctx.audioWorklet=undefined limiterKind=fallback  problems=["the render ran without audio worklets: …"]
+```
+
+**2. 浏览器回收** ✓。`installRendererLifecycle()`（`mcp/render/worker.ts`，`mcp/server.ts` 调用）在 **stdin EOF / SIGINT / SIGTERM** 上 `await browser.close()` ✓，`process.on("exit")` 只做同步的那件事——杀 Vite 子进程 ✓（exit 不能 await，浏览器靠 Playwright 管道随进程关闭 ✓）。判据探针 `node scripts/probe_browser_reaping.mjs --mode=stdin|signal|kill` ✓：
+
+```
+stdin : server exited, browser processes left behind: 0 (was 7)
+signal: server exited, browser processes left behind: 0 (was 7)
+kill  : server exited, browser processes left behind: 0 (was 7)
+```
+
+把 `installRendererLifecycle()` 临时注释掉后同一条探针复现原缺陷 ✓：**server 30s 后仍活着、7 个 Chromium 全部留下** ✓——本会话第一次证明这条判据此前是假的 ✓。
+
+**仍欠一条**：`render_arrangement_stems` 的 MCP 回复（`mcp/render/worker.ts` 的 `renderStems`）没有 `problems` 字段，因此这条起源事实只到 app 的 stems 导出，不到 stems 的 MCP 回复 ✗。
+
 ---
 
 ## 业主动作（已尝试，证据充分，需要你的权限）：给 `groove` 桶加 CORS 策略（2026-10-01）

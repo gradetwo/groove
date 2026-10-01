@@ -784,6 +784,14 @@ export const studioMessages = {
     en: "Exported {filename}, but the true-peak limiter could not load — this file is louder and less controlled than the preview. Try exporting once more; if it happens again, open Groove in a new tab.",
     zh: "已导出 {filename}，但真实峰值限幅器未能加载——该文件比试听更响、控制更差。请再导出一次；若仍如此，请在新标签页重新打开 Groove。",
   },
+  /**
+   * A page with no worklets at all — the non-secure-origin case, which `limiterKind` alone cannot distinguish from a
+   * failed module load. The advice has to be different, because retrying cannot help: the origin, not the load, is the cause.
+   */
+  export_wav_no_worklets: {
+    en: "Exported {filename}, but this page has no secure origin, so the browser exposed no audio worklets: the true-peak limiter and the GS-1 synth were both unavailable and their fallbacks rendered the file. Open Groove over https, localhost or 127.0.0.1 to export the real master.",
+    zh: "已导出 {filename}，但本页不是安全来源，浏览器因此没有提供 audio worklet：真实峰值限幅器与 GS-1 合成器都不可用，文件由回退引擎渲染。请改用 https、localhost 或 127.0.0.1 打开 Groove 再导出真正的母带。",
+  },
   export_wav_failed: { en: "WAV export failed: {error}", zh: "WAV 导出失败: {error}" },
   export_stems_rendering: { en: "Rendering 8 stems and packaging ZIP...", zh: "正在逐轨离线渲染 8 轨 Stems 并打包 ZIP..." },
   export_stems_done: { en: "Exported Stems ZIP: {filename} ✓", zh: "分轨打包导出完成: {filename} ✓" },

@@ -52,6 +52,8 @@ import { fileURLToPath } from "node:url";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
+// A whole-probe budget, so a render that never answers cannot leave this probe's browser behind it. See the helper.
+import { installWatchdog } from "./lib/watchdog.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -347,7 +349,16 @@ async function openBrowser(): Promise<{
   });
   const { chromium } = await import("playwright");
   let browser: any = null;
+  /**
+   * The probe's own wall-clock budget, installed once the dev server and the browser exist and disarmed by `close`.
+   *
+   * A render that never answers has no inner timeout, and this probe runs several of them; the measured leak behind
+   * this is a browser that outlived the agent that started it by three hours. `onTimeout` is `close`, so the browser
+   * and the dev server are torn down before the watchdog exits non-zero.
+   */
+  let disarmWatchdog = () => {};
   const close = async () => {
+    disarmWatchdog();
     await browser?.close().catch(() => undefined);
     child.kill("SIGTERM");
   };
@@ -364,6 +375,11 @@ async function openBrowser(): Promise<{
       setTimeout(() => reject(new Error(`vite did not become ready in 60s:\n${output}`)), 60000);
     });
     browser = await chromium.launch({ args: ["--no-sandbox"] });
+    disarmWatchdog = installWatchdog({
+      ms: Number(process.env.GROOVE_PROBE_TIMEOUT_MS) || 30 * 60_000,
+      label: "probe_headless_parity",
+      onTimeout: close,
+    });
     const page = await browser.newPage();
     /**
      * Worklet module loads, recorded from the network layer.

@@ -292,14 +292,16 @@ export function useExportActions({
        * the alternative is a file that quietly is not the thing they auditioned.
        */
       const base =
-        result.gs1HostFailures > 0
-          ? t("export_wav_degraded_gs1", {
-              filename: result.filename,
-              count: result.gs1HostFailures,
-            })
-          : result.limiterKind === "fallback"
-            ? t("export_wav_degraded_limiter", { filename: result.filename })
-            : t("export_wav_done", { filename: result.filename });
+        result.workletsUnavailable
+          ? t("export_wav_no_worklets", { filename: result.filename })
+          : result.gs1HostFailures > 0
+            ? t("export_wav_degraded_gs1", {
+                filename: result.filename,
+                count: result.gs1HostFailures,
+              })
+            : result.limiterKind === "fallback"
+              ? t("export_wav_degraded_limiter", { filename: result.filename })
+              : t("export_wav_done", { filename: result.filename });
       // The audio-lane facts go last, so the lane that did not render is still on screen when the toast is read.
       const lanes = audioLaneNotice(audioLanes);
       showToast(lanes ? `${base} · ${lanes}` : base);
@@ -334,14 +336,16 @@ export function useExportActions({
       });
       triggerWavDownload(result.blob, result.filename);
       const base =
-        result.gs1HostFailures > 0
-          ? t("export_wav_degraded_gs1", {
-              filename: result.filename,
-              count: result.gs1HostFailures,
-            })
-          : result.limiterKind === "fallback"
-            ? t("export_wav_degraded_limiter", { filename: result.filename })
-            : t("export_mp3_done", { filename: result.filename, kbps: result.bitrateKbps });
+        result.workletsUnavailable
+          ? t("export_wav_no_worklets", { filename: result.filename })
+          : result.gs1HostFailures > 0
+            ? t("export_wav_degraded_gs1", {
+                filename: result.filename,
+                count: result.gs1HostFailures,
+              })
+            : result.limiterKind === "fallback"
+              ? t("export_wav_degraded_limiter", { filename: result.filename })
+              : t("export_mp3_done", { filename: result.filename, kbps: result.bitrateKbps });
       const lanes = audioLaneNotice(audioLanes);
       showToast(lanes ? `${base} · ${lanes}` : base);
     } catch (err: any) {
@@ -399,12 +403,14 @@ export function useExportActions({
       // Same honesty rule as the master export: a stem whose GS-1 voice did not load is a valid
       // file that is not what was auditioned, so it is reported rather than passed off as clean.
       const base =
-        result.gs1HostFailures > 0
-          ? t("export_wav_degraded_gs1", {
-              filename: result.filename,
-              count: result.gs1HostFailures,
-            })
-          : t("export_stems_done", { filename: result.filename });
+        result.workletsUnavailable
+          ? t("export_wav_no_worklets", { filename: result.filename })
+          : result.gs1HostFailures > 0
+            ? t("export_wav_degraded_gs1", {
+                filename: result.filename,
+                count: result.gs1HostFailures,
+              })
+            : t("export_stems_done", { filename: result.filename });
       const lanes = audioLaneNotice(audioLanes);
       showToast(lanes ? `${base} · ${lanes}` : base);
     } catch (err: any) {

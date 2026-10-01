@@ -276,6 +276,14 @@ export interface ExportedWav {
    */
   gs1HostFailures: number;
   /**
+   * **True when the page this export ran in had no worklets at all** — the non-secure-origin case, not a failed load.
+   *
+   * `limiterKind === "fallback"` cannot tell the two apart: a secure origin whose worklet module fetch failed also reports
+   * the fallback, and that one *can* be retried. This flag is the origin fact, so the caller can say the true thing:
+   * open the app over https, `localhost` or `127.0.0.1`, and stop suggesting a retry that cannot help.
+   */
+  workletsUnavailable: boolean;
+  /**
    * Lanes whose own GS-1 patch code was refused, each named (`chords: …`). Empty in every normal
    * export; non-empty means that lane was voiced by the native engine **and the export says so**.
    */
@@ -291,6 +299,8 @@ export interface ExportedStem {
   gs1HostFailures: number;
   /** This stem's refused patch codes, each naming the lane. See `ExportedWav`. */
   gs1PatchProblems: string[];
+  /** True when this stem's render had no worklets at all (a non-secure origin). See `ExportedWav`. */
+  workletsUnavailable: boolean;
 }
 
 /**
@@ -455,6 +465,38 @@ export async function renderPatternOfflineGuarded<B extends ChannelDataBuffer>(
 }
 
 /**
+ * **Whether this context can host worklets at all** — so a render can say when it could not, instead of quietly
+ * producing a different master.
+ *
+ * `AudioWorklet` is exposed only in a **secure context** (`docs/WORKLET_AVAILABILITY.md`): `https`, `localhost` and
+ * `127.0.0.1` are potentially trustworthy, a plain-HTTP LAN address is not. Measured on the same Playwright Chromium
+ * this app is driven by: `about:blank` and `http://<LAN-IP>:<port>` have `ctx.audioWorklet === undefined`, while
+ * `http://127.0.0.1:<port>` has it as an object with `addModule`. On the missing side the master limiter silently
+ * falls back to a `DynamicsCompressor` (no true-peak ceiling, no lookahead) and GS-1 lanes are voiced by the native
+ * engine, and the measured cost of the limiter fallback alone is 2.36 dB louder overall and 4.83 dB off in one band
+ * (appendix G.14).
+ *
+ * **This asks the context, not `limiterKind`.** A worklet-capable context whose module fetch fails also renders on
+ * the fallback, and that is a different, transient fact `onLimiterKind` already reports. Keying this warning on
+ * `limiterKind` would make it fire on every module-load flake — a warning that always fires, which this project
+ * treats as noise. Keying it on the context makes it fire exactly when the origin cannot have worklets at all.
+ */
+export function offlineWorkletsAvailable(ctx: BaseAudioContext): boolean {
+  const worklet = (ctx as BaseAudioContext & { audioWorklet?: AudioWorklet }).audioWorklet;
+  return typeof worklet?.addModule === "function";
+}
+
+/**
+ * The problem a render reports when its context had no worklets — one sentence, shared by the MCP reply and the
+ * app's own export, so the two surfaces cannot describe the same render differently.
+ *
+ * It names the cause (the origin, not a failed load), the two things that were substituted, and where to go instead,
+ * because "the true-peak limiter could not load" is the wrong story here: on a non-secure origin retrying cannot help.
+ */
+export const WORKLETS_UNAVAILABLE_PROBLEM =
+  "the render ran without audio worklets: this context has no AudioWorklet, which a browser exposes only in a secure context (https, localhost or 127.0.0.1 — not a plain-HTTP LAN address), so the master limiter was a DynamicsCompressor with no true-peak ceiling or lookahead and GS-1 lanes were voiced by the native engine instead of the synth";
+
+/**
  * Synthesizes a pattern offline via OfflineAudioContext
  */
 export async function renderPatternOffline(
@@ -470,14 +512,31 @@ export async function renderPatternOffline(
    * render came back with no samples — see `SilenceContext`.
    */
   let verdict: SilenceContext | null = null;
+  /**
+   * What the context the render actually built could do, written by `renderPatternOfflineOnce` and read here.
+   *
+   * `null` until a context exists: a render that never got as far as one has no origin fact to report.
+   */
+  let workletsAvailable: boolean | null = null;
   try {
     return await renderPatternOfflineGuarded(
-      () => renderPatternOfflineOnce(pattern, options, (v) => { verdict = v; }),
+      () =>
+        renderPatternOfflineOnce(
+          pattern,
+          options,
+          (v) => { verdict = v; },
+          (available) => { workletsAvailable = available; }
+        ),
       problems,
       RENDER_SILENCE_ATTEMPTS,
       () => verdict
     );
   } finally {
+    /**
+     * The origin fact comes first, because it is the reason the file is a different thing rather than a quiet one.
+     * It is added here — outside the render loop — so a retried silent render cannot repeat it four times.
+     */
+    if (workletsAvailable === false) problems.unshift(WORKLETS_UNAVAILABLE_PROBLEM);
     /**
      * Reported on the way out either way: a recovered retry is a problem the caller should see, and a render that
      * never produced audio is one the caller will see as the thrown error — but the attempts that failed before it
@@ -492,7 +551,13 @@ async function renderPatternOfflineOnce(
   pattern: DrumPattern,
   options: RenderWavOptions = {},
   /** Called with this attempt's silence verdict the moment the lane plan knows it. */
-  onSilenceContext?: (verdict: SilenceContext) => void
+  onSilenceContext?: (verdict: SilenceContext) => void,
+  /**
+   * Called once, as soon as the context exists, with whether it can host worklets. `renderPatternOffline` turns a
+   * `false` into `WORKLETS_UNAVAILABLE_PROBLEM`; this function does not report it itself, because the guard owns
+   * the problem list and a render that retries must not report the same origin fact once per attempt.
+   */
+  onWorkletsAvailable?: (available: boolean) => void
 ): Promise<AudioBuffer> {
   const sampleRate = options.sampleRate || 44100;
   // F-10: clamp render parameters — a negative bpm produced a negative
@@ -560,6 +625,10 @@ async function renderPatternOfflineOnce(
 
   const ctx = new OfflineContextClass(channelCount, lengthInSamples, sampleRate);
   mark("context:create");
+  /**
+   * The origin's own answer, read off the context the render will really use — see `offlineWorkletsAvailable`.
+   */
+  onWorkletsAvailable?.(offlineWorkletsAvailable(ctx as BaseAudioContext));
 
   // Genre loudness-match trim. Applied through the shared graph below so the offline
   // renderer uses the *same* stage, in the same relative position, as playback.
@@ -1576,6 +1645,11 @@ export async function exportMasterWav(
   let limiterKind: MasterLimiterKind = "fallback";
   let gs1HostFailures = 0;
   let gs1PatchProblems: string[] = [];
+  /**
+   * The origin's answer, read from the render rather than re-derived: `WORKLETS_UNAVAILABLE_PROBLEM` is only ever in
+   * this list when the context had no `audioWorklet` (see `offlineWorkletsAvailable`).
+   */
+  let workletsUnavailable = false;
   const audioBuf = await renderPatternOffline(pattern, {
     ...options,
     onLimiterKind: (kind) => {
@@ -1589,6 +1663,10 @@ export async function exportMasterWav(
     onGs1PatchProblems: (problems) => {
       gs1PatchProblems = [...problems];
       options.onGs1PatchProblems?.(problems);
+    },
+    onProblems: (problems) => {
+      workletsUnavailable = problems.includes(WORKLETS_UNAVAILABLE_PROBLEM);
+      options.onProblems?.(problems);
     },
   });
   const wavArrayBuffer = encodeAudioBufferToWav(audioBuf);
@@ -1604,6 +1682,7 @@ export async function exportMasterWav(
     limiterKind,
     gs1HostFailures,
     gs1PatchProblems,
+    workletsUnavailable,
   };
 }
 
@@ -1624,6 +1703,11 @@ export async function exportStemsWav(
     const trackName = (track.track_id || track.name || `track_${i + 1}`).toLowerCase().replace(/[^a-z0-9_-]/gi, "_");
     let stemGs1Failures = 0;
     let stemPatchProblems: string[] = [];
+    /**
+     * The same origin fact as the master export: a stem render is one render per track, so every stem is asked and a
+     * single non-secure origin makes them all say so. `[...problems]` is not needed — only membership is read.
+     */
+    let stemWorkletsUnavailable = false;
     const audioBuf = await renderPatternOffline(pattern, {
       ...options,
       stemTrackIdx: i,
@@ -1632,6 +1716,10 @@ export async function exportStemsWav(
       },
       onGs1PatchProblems: (problems) => {
         stemPatchProblems = [...problems];
+      },
+      onProblems: (problems) => {
+        stemWorkletsUnavailable = problems.includes(WORKLETS_UNAVAILABLE_PROBLEM);
+        options.onProblems?.(problems);
       },
     });
     const wavArrayBuffer = encodeAudioBufferToWav(audioBuf);
@@ -1645,6 +1733,7 @@ export async function exportStemsWav(
       trackIdx: i,
       gs1HostFailures: stemGs1Failures,
       gs1PatchProblems: stemPatchProblems,
+      workletsUnavailable: stemWorkletsUnavailable,
     });
   }
 
@@ -1658,7 +1747,7 @@ export async function exportStemsZip(
   pattern: DrumPattern,
   genreId = "groove",
   options: RenderWavOptions = {}
-): Promise<{ blob: Blob; filename: string; gs1HostFailures: number }> {
+): Promise<{ blob: Blob; filename: string; gs1HostFailures: number; workletsUnavailable: boolean }> {
   const stems = await exportStemsWav(pattern, genreId, options);
   const bpm = options.bpm || pattern.bpm || 120;
   const sanitizedGenre = (genreId || "groove").replace(/[^a-z0-9_-]/gi, "_").toLowerCase();
@@ -1684,6 +1773,8 @@ export async function exportStemsZip(
     filename: zipFilename,
     // Summed across stems: each stem renders independently, so each can lose its own GS-1 host.
     gs1HostFailures: stems.reduce((n, stem) => n + stem.gs1HostFailures, 0),
+    // `some`, not a sum: the origin is one property of the page, so one stem proves it for all of them.
+    workletsUnavailable: stems.some((stem) => stem.workletsUnavailable),
   };
 }
 

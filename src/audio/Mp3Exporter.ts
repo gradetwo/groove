@@ -22,7 +22,7 @@
  * disagreeing with each other would be a bug, not a nuance.
  */
 import { DrumPattern } from "../types/genre";
-import { renderPatternOffline, type RenderWavOptions } from "./WavExporter";
+import { renderPatternOffline, WORKLETS_UNAVAILABLE_PROBLEM, type RenderWavOptions } from "./WavExporter";
 import type { MasterLimiterKind } from "./MasterLimiter";
 
 export interface ExportedMp3 {
@@ -35,6 +35,8 @@ export interface ExportedMp3 {
   gs1HostFailures: number;
   /** Lanes whose own GS-1 patch code was refused, each named. See `ExportedWav`. */
   gs1PatchProblems: string[];
+  /** True when the page had no worklets at all (a non-secure origin), which the WAV export also reports. See `ExportedWav`. */
+  workletsUnavailable: boolean;
   bitrateKbps: number;
   /** `true` when the render rate was not one LAME accepts and had to be resampled. */
   resampled: boolean;
@@ -141,6 +143,7 @@ export async function exportMasterMp3(
   let limiterKind: MasterLimiterKind = "fallback";
   let gs1HostFailures = 0;
   let gs1PatchProblems: string[] = [];
+  let workletsUnavailable = false;
   const audioBuf = await renderPatternOffline(pattern, {
     ...options,
     onLimiterKind: (kind) => {
@@ -154,6 +157,11 @@ export async function exportMasterMp3(
     onGs1PatchProblems: (problems) => {
       gs1PatchProblems = [...problems];
       options.onGs1PatchProblems?.(problems);
+    },
+    onProblems: (problems) => {
+      // The MP3 is the same render as the WAV, so it has to be able to say the same thing about its origin.
+      workletsUnavailable = problems.includes(WORKLETS_UNAVAILABLE_PROBLEM);
+      options.onProblems?.(problems);
     },
   });
   const { blob, resampled, bitrateKbps } = await encodeAudioBufferToMp3(audioBuf, {
@@ -169,6 +177,7 @@ export async function exportMasterMp3(
     limiterKind,
     gs1HostFailures,
     gs1PatchProblems,
+    workletsUnavailable,
     bitrateKbps,
     resampled,
   };

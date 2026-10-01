@@ -39,6 +39,8 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+// A whole-probe budget, so a render that never answers cannot outlive the probe's purpose. See the helper.
+import { installWatchdog } from "./lib/watchdog.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -71,6 +73,17 @@ const rate = Number(arg("--rate", "44100")) || 44100;
 const channels = Number(arg("--channels", "2")) === 1 ? 1 : 2;
 const bars = Math.max(1, Number(arg("--bars", "1")) || 1);
 const withGs1 = arg("--gs1", "0") !== "0";
+
+/**
+ * A whole-probe budget. This one runs on the Node host rather than a browser, so a hang leaks no Chromium — but a
+ * probe that never answers still outlives its purpose, and `count × rounds` concurrent renders is a lot of places for
+ * one to stop making progress. Default 30 minutes, overridable for a long run.
+ */
+installWatchdog({
+  ms: Number(process.env.GROOVE_PROBE_TIMEOUT_MS) || 30 * 60_000,
+  label: "probe_render_repeats",
+  onTimeout: () => {},
+});
 
 /* ------------------------------------------------------------------ the host */
 

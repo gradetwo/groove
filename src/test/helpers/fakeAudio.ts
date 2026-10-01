@@ -386,8 +386,14 @@ export class FakeOfflineAudioContext extends FakeAudioGraph {
    * The offline renderer only reaches for GS-1 when the context can load a worklet module, so a
    * fake without this makes any GS-1 exporter test vacuous: the code path under test would skip
    * itself and the assertions would pass on an empty graph.
+   *
+   * `workletsAvailable` is the switch for the other half: a context with no `audioWorklet` is what a
+   * **non-secure origin** produces (`docs/WORKLET_AVAILABILITY.md`), and the renderer has to say so
+   * rather than hand back a silently degraded master.
    */
-  audioWorklet = { addModule: async (_url: string) => undefined };
+  static workletsAvailable = true;
+  audioWorklet: { addModule: (url: string) => Promise<void> } | undefined =
+    FakeOfflineAudioContext.workletsAvailable ? { addModule: async (_url: string) => undefined } : undefined;
   /** Most recently constructed instance — lets tests inspect the graph after a render. */
   static lastInstance: FakeOfflineAudioContext | null = null;
   /**
@@ -454,11 +460,15 @@ export function installFakeOfflineAudioContext(): () => void {
   }
   // Reset the level too: a test that renders deliberately silent must not leave the rest of the file silent.
   FakeOfflineAudioContext.silenceLevel = 0.5;
+  // And the origin's worklet surface, for the same reason: a test that renders from a "non-secure origin" must not
+  // leave every later test without an `audioWorklet`.
+  FakeOfflineAudioContext.workletsAvailable = true;
   return () => {
     (globalThis as any).OfflineAudioContext = originalGlobal;
     if ((globalThis as any).window) {
       (globalThis as any).window.OfflineAudioContext = originalWindow;
     }
     FakeOfflineAudioContext.silenceLevel = 0.5;
+    FakeOfflineAudioContext.workletsAvailable = true;
   };
 }
