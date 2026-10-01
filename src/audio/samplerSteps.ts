@@ -7,12 +7,14 @@
  *
  * **This is a scheduler, not a second player.** It owns exactly one decision the engine's lane already makes (`steps[index] !== 0` is a note) and one the engine cannot make (which sample that note is). It
  * deliberately reuses `stepsFromNotes`' output — the 0/1 step array and the per-step pitch — so "where does a note land" still has one definition in this codebase, and it places its voices through
- * `startSamplerNote`, so the pitch and the voice's lifetime are the audition's, not a copy. The timing is the engine's own grid: a step is `60 / bpm / STEPS_PER_BEAT` seconds, which is the same arithmetic
- * `AudioEngine.getStepDuration` uses for a 1/16 resolution.
+ * `startSamplerNote`, so the pitch and the voice's shape are shared with the audition rather than copied. The timing is the engine's own grid: a step is `60 / bpm / STEPS_PER_BEAT` seconds, which is the same arithmetic
+ * `AudioEngine.getStepDuration` uses for a 1/16 resolution, and **that one number gives each note both its onset and its end** — the end being the lane's `gate` (`stepDuration`), because a note here is held
+ * for as long as the lane says and not until the user stops the transport.
  *
  * **Every event is scheduled at once, ahead of time.** The browser's audio clock is what plays them, exactly as the engine's lookahead scheduler relies on it, so there is no timer to drift.
  */
 import { STEPS_PER_BEAT } from "../data/noteEvents";
+import { stepDuration } from "../data/noteLayer";
 import { startSamplerNote, type SamplerVoice } from "./samplerVoice";
 import type { SampleLoader } from "./sampleLoader";
 import type { SequencerTrack } from "../types/genre";
@@ -27,6 +29,17 @@ export interface SamplerStepEvent {
   step: number;
   /** MIDI note number, the pitch this step sounds. */
   pitch: number;
+  /**
+   * **How long the note sounds, in steps** — the lane's `gate`, read through the model's one rule (`noteLayer.stepDuration`,
+   * 0.8 when the step states none).
+   *
+   * It travels on the event rather than being looked up again by the scheduler because the scheduler is the only place that
+   * knows a step's length in seconds: it converts this with the same `stepSeconds` it places the onset with, so a note's start
+   * and its end cannot be built from two different readings of the grid. Before this was carried, `startSamplerNote` was called
+   * with a start and no length, and — unlike an offline render, which ends by itself — a browser note then rang until the user
+   * stopped the transport or closed the tab.
+   */
+  gateSteps: number;
   /**
    * The lane's position, −1…1, when it states one.
    *
@@ -79,7 +92,7 @@ export function planSamplerSteps(
        */
       if (typeof pitch !== "number" || pitch <= 0) return;
       const pan = typeof lane.pan === "number" && Number.isFinite(lane.pan) ? Math.max(-1, Math.min(1, lane.pan)) : undefined;
-      events.push({ sourceTrackId, assetId, step, pitch, ...(pan === undefined ? {} : { pan }) });
+      events.push({ sourceTrackId, assetId, step, pitch, gateSteps: stepDuration(lane, step), ...(pan === undefined ? {} : { pan }) });
     });
   }
   return events;
@@ -107,6 +120,8 @@ export async function scheduleSamplerSteps(events: readonly SamplerStepEvent[], 
           buffer: note.buffer,
           ratio: note.ratio,
           whenSeconds: startSeconds + event.step * stepSeconds,
+          // The same `stepSeconds` that places the onset gives the note its end, so a lane's timing is one reading of the grid.
+          seconds: event.gateSteps * stepSeconds,
           ...(input.gainDb === undefined ? {} : { gainDb: input.gainDb }),
           ...(event.pan === undefined ? {} : { pan: event.pan }),
         })

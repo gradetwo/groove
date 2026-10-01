@@ -34,6 +34,7 @@ import { SAMPLE_CATALOGUE, findSampleAsset, sampleReferenceProblem } from "../da
 import type { SampleAsset } from "../data/sampleCatalogue";
 import { stepTiming } from "../data/tempoMap";
 import type { TempoPoint } from "../data/tempoMap";
+import { stepDuration } from "../data/noteLayer";
 import { deriveTrackStates } from "./trackStates";
 import type { SampleLoader } from "./sampleLoader";
 
@@ -66,6 +67,18 @@ export interface OfflineAudioLaneEvent extends OfflineAudioLaneRef {
   pitch?: number;
   /** Where it starts, measured from the render's beginning, in seconds. */
   atSeconds: number;
+  /**
+   * **How long the voice sounds, in seconds** — the note's own end, computed from the lane's `gate` (see `noteSeconds`).
+   *
+   * Absent means **the sample's own length**: the plain-sample lane, where the bytes *are* the whole event and cutting them at a
+   * number the catalogue states would truncate a sample that is longer than its catalogue entry claims. The sink resolves it to
+   * `buffer.duration`, which starts the source for exactly its own bytes — the same sound as omitting a length, but with a
+   * scheduled end rather than none.
+   *
+   * It is present for every **instrument** note, which is the case that needs it: one recording pitched by `ratio` can be far
+   * longer than the note written, and before this was carried the lane's voices were started with no end at all.
+   */
+  seconds?: number;
   /** The lane's level in dB, from its own `volume` — the one gain stage for the lane. */
   gainDb: number;
   /** The lane's position, −1…1, when it states one. The sink pans by it; `0` and absent are both centre. */
@@ -108,6 +121,24 @@ function laneGainDb(track: SequencerTrack): number {
   if (typeof volume !== "number" || !Number.isFinite(volume) || volume <= 0) return 0;
   // The mixer clamps a fader at +6 dB (a linear 2), and this is the same ceiling so a stored value cannot become a louder lane than the console allows.
   return 20 * Math.log10(Math.min(2, volume));
+}
+
+/**
+ * **How long a note sounds, in seconds** — read from the lane, not invented here.
+ *
+ * A note's length in this model is `gate` ("sounding length in steps", `types/genre.ts`), and the rule for reading it lives in
+ * one place: `noteLayer.stepDuration`, which is also what `AudioEngine` and the offline synth dispatch voice a step by. The
+ * offline sampler lane was the one path that read no length at all, so it placed every note with a start and nothing else and
+ * the voice rang until the render stopped.
+ *
+ * **Why a lane's consecutive steps are not one longer note.** A held note is `gate > 1` on one step — the arrangement's
+ * `lengthBeats` is projected onto exactly that field — while consecutive steps with the same pitch are *separate* attacks
+ * (`noteEvents.ts`: a step array "cannot express… a note held across four of them"; `stepsFromNotes` marks only a note's start).
+ * Merging a run of them would turn three repeated sixteenths into one sustained note, which is a change of meaning in the other
+ * direction, and the data carries no tie marker that could tell the two apart.
+ */
+function noteSeconds(track: SequencerTrack, step: number, timing: { lengthAt: (step: number) => number }): number {
+  return stepDuration(track, step) * timing.lengthAt(step);
 }
 
 /** The steps a note actually starts on, with the pitch it carries. A step with no pitch is not a note. */
@@ -206,13 +237,22 @@ export function planOfflineAudioLanes(
         continue;
       }
       for (const { step, pitch } of notes) {
-        events.push({ ...ref, assetId, pitch, atSeconds: timing.starts[Math.min(step, totalSteps)] ?? 0, gainDb, ...(pan === undefined ? {} : { pan }) });
+        events.push({
+          ...ref,
+          assetId,
+          pitch,
+          atSeconds: timing.starts[Math.min(step, totalSteps)] ?? 0,
+          seconds: noteSeconds(track, step, timing),
+          gainDb,
+          ...(pan === undefined ? {} : { pan }),
+        });
       }
       lanes.push(ref);
       continue;
     }
 
     // A plain sample with no notes: heard once, at the start of the section the flattened pattern is. This is the case that used to be reported as skipped.
+    // No `seconds`: the bytes are the whole event, so the sink starts it for its own length rather than a catalogue entry the file may outlast.
     events.push({ ...ref, assetId, atSeconds: 0, gainDb, ...(pan === undefined ? {} : { pan }) });
     lanes.push(ref);
   }
@@ -222,6 +262,14 @@ export function planOfflineAudioLanes(
 
 /** Where a sample is started, with what rate and position. The graph is injected, so this is the whole browser-independent contract. */
 export interface OfflineAudioLaneSink {
+  /**
+   * Start the event's voice.
+   *
+   * **Every voice the sink starts must be given an end.** `event.seconds` is the note's length when the planner could compute
+   * one (every instrument note); when it is absent the sink uses the buffer's own `duration`, which is the same sound but with a
+   * scheduled stop rather than none. A voice started with neither is the defect this contract exists to name: a sampler lane
+   * whose notes rang until the render ended, and whose every retrigger only piled another endless voice onto the mix.
+   */
   start(buffer: AudioBuffer, event: OfflineAudioLaneEvent, ratio: number): void;
 }
 

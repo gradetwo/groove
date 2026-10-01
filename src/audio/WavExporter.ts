@@ -1375,12 +1375,22 @@ async function renderPatternOfflineOnce(
       loader: browserSampleLoader(ctx, audioCatalogue),
       sink: {
         start(buffer, event, ratio) {
+          /**
+           * ⭐ **The note's end reaches the voice, and that is the half that was missing.**
+           *
+           * `startSamplerNote` has always been able to end a note (`source.start(when, 0, seconds)`), and this call site never
+           * passed `seconds`, so every sampled note took its "no end scheduled" branch and rang until the render stopped — the
+           * drone Muse measured, and the reason a held note piled up one overlapping voice per step. `event.seconds` is the
+           * lane's own `gate` in seconds; for the plain-sample lane, whose bytes are the whole event, the buffer's own length is
+           * the end, which is the same recording played for exactly as long as it lasts.
+           */
           startSamplerNote({
             context: ctx,
             destination: graph.musicBusInput,
             buffer,
             ratio,
             whenSeconds: Math.max(0, event.atSeconds),
+            seconds: event.seconds ?? buffer.duration,
             ...(event.gainDb === 0 ? {} : { gainDb: event.gainDb }),
             ...(event.pan === undefined ? {} : { pan: event.pan }),
           });
