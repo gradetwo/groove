@@ -333,5 +333,22 @@ Logic 的**音频轨** ✓、**插件链（AU）** ✓、**自动化（音量/�
 * **[开源混音带（含 Logic 工程）](https://gearspace.com/board/apple-logic-pro/1268888-i-released-open-source-mixtape-github-including-logic-files-_.html)** ✓——**真实工程** ✓，适合**压力测试**（大 ✓、插件多 ✓）；
 * **[LoC：Logic Pro project file（fdd000640）](https://wwws.loc.gov/preservation/digital/formats/fdd/fdd000640.shtml)** ✓ 与 **[archiveteam 的格式页](http://fileformats.archiveteam.org/index.php?title=Logic_Pro_project_file)** ✓——**两份独立于 MIT 那份 spec 的描述** ✓✓，**可用来互校** ✓（若三者对同一字段说法不同 ✓，那就是必须先解决的分歧 ✓✓）。
 
-**⇒ 风险等级下降** ✓✓：**不再是"没有 ground truth"** ✗✓，而是"**ground truth 需要下载并挑出小工程**" ✓——**第一步变得具体且可执行** ✓✓。**仍不变的一条** ✗✓：**在真跑过这些样本之前，不声称"导入正确"** ✓。
+**⇒ 风险等级下降** ✓✓：**不再是"没有 ground truth"** ✗✓，而是"**ground truth 需要下载并挑出小工程**" ✓——**第一步变得具体且可执行** ✓✓。
+
+**已核实到具体清单** ✓✓（2026-10-01，用 GitHub API 读的目录，不是猜 ✓）：该仓库有 **25 个 `.logicx` 目录（`001`–`025`）** ✓✓，**而且命名本身就是一张测试矩阵** ✗✓：
+
+| 样本 | 正好覆盖 |
+| --- | --- |
+| `012_tempo_practice` ✓ | **tempo / 拍号**判据 |
+| `014_drummer_adjustment`、`015_drummer_recorded` ✓ | **Drummer 轨 → instrument**，以及"**Drummer 是 AI 生成的**这个语义会丢、要说出来" |
+| `019_audio_file_editor` ✓ | **"X 条音频轨未导入"** 的 `problems` 判据 |
+| `025_AUPitch` ✓ | **AU 插件清单**判据 |
+| `011_ Piano_quzntized` ✓ | 干净的 **MIDI** 夹具 |
+| `017` / `020` / `021_Blues_C_treble(…)` ✓ | **同一首曲子的不同阶段** → **天然的 ground-truth 阶梯** ✓ |
+
+**三条保留意见，必须与结论一起引用** ✗✓：
+1. API 返回的 `size: 0` 是 **GitHub 对目录的报法** ✓，**不是空工程** ✓（全部 `type: dir` ✓，符合 `.logicx` 形态 ✓）；
+2. ⚠️**这是某本教材（Logic Pro X 10.6）的配套资产，许可证不明** ✗✓ → **本地拿来验证是一回事、把样本提交进仓库是另一回事** ✗✓，**必须分开** ✓（要提交就得先确认许可 ✓）；
+3. **这些是别人做的工程** ✓，**不是 ground truth 的最终形态** ✗✓——它们能证明"解析器不崩、字段落在合理范围" ✓，**要证明"解析正确"，仍需要那本书的文字描述或我们自己用 Logic 导出的对照** ✓。
+**仍不变的一条** ✗✓：**在真跑过这些样本之前，不声称"导入正确"** ✓。
 
