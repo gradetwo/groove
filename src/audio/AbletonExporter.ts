@@ -67,7 +67,7 @@ export const TRACK_COLOR_PALETTES = [
  * transpose the music. A convention is a label; the number is the truth; `ABLETON_NOTE_NAMES` says which label
  * applies here so nobody has to infer it, and `src/test/pitchConvention.test.ts` pins the pairs.
  */
-export const ABLETON_NOTE_NAMES: "C3" = "C3";
+export const ABLETON_NOTE_NAMES = "C3" as const;
 // MIDI standard mapping for 8 tracks
 export const TRACK_MIDI_MAPPINGS = [
   { isDrum: true, channel: 9, baseNote: 36, defaultName: "Kick" },        // C1

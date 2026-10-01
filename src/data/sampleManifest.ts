@@ -215,6 +215,14 @@ export function parseManifest(text: string): ManifestResult {
       licence: (licence ?? "unknown") as SampleLicence,
       attribution: entry.attribution,
       prefix: entry.prefix,
+      /**
+       * ⭐ **Carried through for exactly the reason the comment below gives.** This parser builds entries field
+       * by field, so a field it does not name disappears silently — and `sourceUrl` did, which broke the
+       * criterion that every library requiring attribution also says where to point. Declaring the fields on
+       * `SampleManifestEntry` is not enough; the parser has to pass them along.
+       */
+      sourceUrl: typeof entry.sourceUrl === "string" ? entry.sourceUrl : undefined,
+      mirroredAt: typeof entry.mirroredAt === "string" ? entry.mirroredAt : undefined,
       sfz: entry.sfz,
       category: typeof entry.category === "string" ? entry.category : undefined,
       subcategoryFrom: entry.subcategoryFrom === "path" || entry.subcategoryFrom === "filename" ? entry.subcategoryFrom : undefined,
