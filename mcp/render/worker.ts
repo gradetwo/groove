@@ -786,6 +786,20 @@ export function measure(channels: Float32Array[], sampleRate: number): Record<st
  *
  * **The name is decided here rather than in the page**, which makes it one testable rule instead of two: `songSlug` already sanitises a name for a filename, and the track index keeps two identically-named tracks from overwriting each other.
  */
+/**
+ * The whole-render problems of a stems call, accumulated across stems without repeats.
+ *
+ * A stems render runs the renderer once per track, and a whole-render problem — the host handing back a
+ * silent buffer and the retry recovering it, or the page having no worklets at all — is a fact about the
+ * **call**, not about any one stem. The same sentence repeated once per track is not four facts, so the
+ * order is kept and the repeats are dropped.
+ */
+export function mergeRenderProblems(existing: readonly string[], incoming: readonly string[]): string[] {
+  const merged = [...existing];
+  for (const problem of incoming) if (!merged.includes(problem)) merged.push(problem);
+  return merged;
+}
+
 export interface StemResult {
   path: string;
   filename: string;
@@ -804,7 +818,7 @@ export interface StemResult {
 export async function renderStems(
   pattern: SequencerPattern,
   options: RenderOptions
-): Promise<{ dir: string; stems: StemResult[]; sampleRate: number; bpm: number; audioLanes: OfflineAudioLaneReport }> {
+): Promise<{ dir: string; stems: StemResult[]; sampleRate: number; bpm: number; audioLanes: OfflineAudioLaneReport; problems: string[] }> {
   if (process.env.GROOVE_MCP_NO_BROWSER === "1") {
     throw new Error("audio rendering is disabled (GROOVE_MCP_NO_BROWSER=1); stems are rendered through the same offline engine as everything else");
   }
@@ -818,6 +832,8 @@ export async function renderStems(
   const laneProblems: OfflineAudioLaneReport["problems"] = [];
   let laneEvents = 0;
   let laneCatalogueProblem: string | undefined;
+  /** Whole-render problems, deduplicated across stems: one fact, not one per track. */
+  let renderProblems: string[] = [];
   const catalogueRead = readAudioLaneCatalogue(pattern);
   const sampleRoot = sampleMirrorRoot();
 
@@ -833,6 +849,8 @@ export async function renderStems(
         ]);
         const audioCatalogue = manifest ? catalogue.catalogueFromManifestText(manifest, mirrorRoot).assets : [];
         let audioLanes: OfflineAudioLaneReport = { lanes: [], events: 0, problems: [] };
+        /** What the renderer reported about this stem's render; the same shape `renderAudio` carries out. */
+        const renderProblems: string[] = [];
         const buffer = await wav.renderPatternOffline(patternArg as never, {
           bars: Math.max(1, Math.min(64, bars ?? 1)),
           stemTrackIdx,
@@ -842,6 +860,9 @@ export async function renderStems(
           audioLaneCatalogue: audioCatalogue,
           onAudioLanes: (report: OfflineAudioLaneReport) => {
             audioLanes = report;
+          },
+          onProblems: (list: readonly string[]) => {
+            renderProblems.push(...list);
           },
           ...(catalogueProblem ? { audioLaneCatalogueProblem: catalogueProblem } : {}),
         });
@@ -861,6 +882,7 @@ export async function renderStems(
           channels: buffer.numberOfChannels,
           truePeakDb: loudness.truePeakDbChannels(channelsOut),
           audioLanes,
+          problems: renderProblems,
         };
       },
       {
@@ -884,6 +906,7 @@ export async function renderStems(
     laneProblems.push(...(rendered.audioLanes?.problems ?? []));
     laneEvents += rendered.audioLanes?.events ?? 0;
     laneCatalogueProblem = laneCatalogueProblem ?? rendered.audioLanes?.catalogueProblem;
+    renderProblems = mergeRenderProblems(renderProblems, rendered.problems ?? []);
     stems.push({
       path: target,
       filename,
@@ -905,6 +928,8 @@ export async function renderStems(
     stems,
     sampleRate,
     bpm,
+    /** Whole-render facts (a recovered silent render, a page without worklets), deduplicated across stems. */
+    problems: renderProblems,
     audioLanes: {
       lanes: laneLanes,
       events: laneEvents,
