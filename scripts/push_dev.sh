@@ -1,13 +1,22 @@
 #!/usr/bin/env bash
-# Push `dev` — with the full local gate in front of it, because twice it was not.
+# Push `dev` straight to GitHub. No release mirror in the path.
 #
-# **Why this exists.** Two pushes in a row went red for the same reason: the full unit suite was not run first. One was a change to a shared parse path judged with four related test files; the other was a component that used a literal colour, which the generated desktop-skin sheet
-# has to map, judged without the test that checks that sheet. Neither was subtle, and neither was caught by discipline — which is the point: "remember to run the whole suite" is a rule that fails exactly when a person is in a hurry, so it is a script instead.
+# **Why the mirror is gone (2026-10-01).** The mirror existed because pushing needed a dedicated deploy key and this
+# repository had no remote of its own. Both are now in place (`git remote -v` and `core.sshCommand`), so the mirror
+# became a second rehearsal of the same push — and it failed in three ways in a single day:
 #
-# The order matters: nothing is pushed until the gate passes, so `dev` never carries a commit the local gate has already rejected.
+#   1. it refused to sync when the mirror and the working tree differed, which blocked the queue whenever anyone left an
+#      edit lying around;
+#   2. it committed *its own* working tree, so a push could carry work nobody meant to ship;
+#   3. when it was left checked out on `main`, the script committed there and ran `git push origin dev` — so the commits
+#      landed on the mirror's `main`, `dev` never moved, and the script still printed "✅ pushed". A false success is the
+#      worst of the three, because it is the one that makes you stop looking.
 #
-#   bash scripts/push_dev.sh [commit message for the mirror]
-#   SKIP_LOCAL_GATE=1 bash scripts/push_dev.sh [message]   # push to `dev`; the gate runs on GitHub instead (docs/OPEN_WORK.md §五)
+# A plain `git push` has none of those failure modes: it publishes the branch it names, and it exits non-zero when the
+# remote refuses.
+#
+#   bash scripts/push_dev.sh [commit message, used only if the working tree is dirty]
+#   SKIP_LOCAL_GATE=1 bash scripts/push_dev.sh [message]   # the gate lives on GitHub's `dev` branch (docs/OPEN_WORK.md §五)
 set -eu
 
 cd "$(dirname "$0")/.." || exit 1
@@ -22,31 +31,38 @@ else
   bash scripts/check_local.sh
 fi
 
-echo "2/3  the release mirror"
-./scripts/sync_release_mirror.sh
-
-echo "3/3  cancelling superseded runs, committing the mirror, pushing dev"
-#
-# ⭐ **Cancel the runs this push supersedes.** The owner's point: a queue full of runs for commits nobody will look at again is a queue that delays the one that matters. A run is superseded when it is still going and its commit is **not** the commit about to be
-# pushed — so the newest push keeps its verdict and the older ones stop costing minutes. The check is on the sha rather than on the title, because two pushes can share a title and only one of them is current.
-MESSAGE="${1:-sync}"
-if [ -n "$(git -C ../release/groove-github status --porcelain)" ]; then
-  git -C ../release/groove-github add -A
-  git -C ../release/groove-github commit -q -m "$MESSAGE"
+# ⭐ **Refuse a dirty tree rather than quietly committing it.** The old script committed the mirror's working tree, which
+# meant an editor left open anywhere in the checkout could end up inside a push. Committing is a decision about what
+# belongs together; the push script is the wrong place to make it. Work in progress belongs in a worktree (see
+# docs/OPEN_WORK.md §九), or in its own commit, made on purpose.
+if [ -n "$(git status --porcelain)" ]; then
+  echo "2/3  ✗ the working tree is dirty — commit or move it to a worktree before pushing:"
+  git status --short | sed 's/^/       /'
+  exit 1
 fi
-# The sha is read **after** the mirror commit, so it is the commit this push publishes — reading it earlier found the previous head and cancelled nothing.
-if command -v gh >/dev/null 2>&1 && [ -d ../release/groove-github/.git ]; then
-  # `gh` has no `-C`, and a silently-failing cancel would be worse than none: the subshell makes the repository explicit.
-  NEW_SHA=$(git -C ../release/groove-github rev-parse HEAD)
+echo "2/3  the working tree is clean"
+
+MESSAGE="${1:-sync}"
+echo "3/3  cancelling superseded runs, pushing dev"
+
+# ⭐ **Cancel the runs this push supersedes.** The owner's point: a queue full of runs for commits nobody will look at
+# again is a queue that delays the one that matters. A run is superseded when it is still going and its commit is not the
+# commit about to be pushed — so the newest push keeps its verdict and the older ones stop costing minutes.
+NEW_SHA=$(git rev-parse HEAD)
+if command -v gh >/dev/null 2>&1; then
   SUPERSEDED=$(
-    cd ../release/groove-github || exit 0
     gh run list --workflow=ci.yml --limit 20 --json databaseId,status,headSha \
       --jq "[.[] | select(.status != \"completed\") | select(.headSha != \"$NEW_SHA\") | .databaseId]" 2>/dev/null || true
   )
   for RUN in $SUPERSEDED; do
     echo "     cancelling superseded run $RUN"
-    (cd ../release/groove-github && gh run cancel "$RUN" >/dev/null 2>&1) || true
+    gh run cancel "$RUN" >/dev/null 2>&1 || true
   done
 fi
-git -C ../release/groove-github push origin dev
-echo "✅ pushed — now read what CI says: npm run ci:status"
+
+# ⭐ **`HEAD:dev`, not `dev`.** The working branch here is `next`; `dev` is the branch GitHub gates and the owner
+# promotes from. Pushing `dev` would need a local branch of that name and would silently push whatever it last pointed
+# at; `HEAD:dev` publishes exactly the commit you are looking at, which is what the old mirror script meant by "push the
+# working tree". `set -e` is the point: a rejected push must fail this script, not print a success line.
+git push origin HEAD:dev
+echo "✅ pushed ($(git log --oneline -1 | cut -c1-40)) — now read what CI says: npm run ci:status"
