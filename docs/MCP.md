@@ -137,7 +137,8 @@ Two things this surface states rather than leaves to be discovered:
 | `set_arrangement_note_length` ▣ | `arrangementId`, `trackId`, `pitch`, `startBeats`, `lengthBeats` | how long the note is held, with a floor of one step — shorter than that and it is invisible in the grid |
 | `set_arrangement_track_gain` ▣ | `arrangementId`, `trackId`, `gainDb` | the track's level, 0 at unity, clamped to −60…+12; a muted track keeps its level |
 | `set_arrangement_track_pan` ▣ | `arrangementId`, `trackId`, `pan` | −1 hard left, 0 centre, 1 hard right — the scale the genres already use |
-| `render_arrangement` ▣ | `arrangementId`, `format?`, `bitrateKbps?`, `sampleRate?`, `channels?` | the bounce, through the same offline engine the song tools use. **An arrangement is one bar of sixteen steps**, so this is the loop rather than a piece |
+| `render_arrangement` ▣ | `arrangementId`, `format?`, `bitrateKbps?`, `sampleRate?`, `channels?` | the bounce, through the same offline engine the song tools use. **An arrangement is one bar of sixteen steps**, so this is the loop rather than a piece. Its description carries the same 900 s budget and measured costs as `render_audio`, and it reports a heartbeat when the request carries a `progressToken` |
+| `render_arrangement_stems` ▣ | `arrangementId`, `sampleRate?`, `channels?` | one WAV **per track** in one directory, each with its measured duration, sample rate, channels and true peak, and a stem that rendered silent saying so. Costs one render per track, so unlike the other render tools it reports progress **per track** rather than only a heartbeat; each stem runs under the same 900 s budget |
 | `select_arrangement_take` ▣ | `arrangementId`, `trackId`, `takeId` | which take plays, or cleared with `null` |
 | `assign_arrangement_take_range` ▣ | `arrangementId`, `trackId`, `takeId`, `startBar`, `endBar` | an existing take claimed for a bar range, splitting any range it crosses |
 | `set_arrangement_track_collapsed` ▣ | `arrangementId`, `trackId`, `collapsed` | folded in the interface; display only, and never a change to what is heard |
@@ -185,8 +186,8 @@ is B2's `flattenSong`, so the tool cannot render something the app would not). S
 | `get_song` ▢ | `songId`, `includePatterns?` | the clips (each with its pattern), the sections in order, the shape and the tempo — what makes a composition readable and re-exportable |
 | `export_groove` ▣ | `songId`, `outputDir?` | a **validated** `.groove` package under `GROOVE_MCP_OUT`, carrying the arrangement rather than a flattened copy |
 | `undo_song` ▣ | `songId`, `steps?` | the arrangement as it now stands, one change back by default — every song change is recorded with an `opId`, which `get_song` lists under `history` |
-| `render_preview_clip` ▣ | `songId?`, `sectionId?`, `index?`, `genreId?`, `bars?`, `sampleRate?`, `channels?`, `format?` | a **fast** render of one section for iterating: 8 kHz mono by default (**~1.8 s** measured, against 6–24 s at full rate), labelled `preview: true` and carrying its own wall-clock time. Use it while composing and `render_song`/`render_audio` for anything you deliver |
-| `render_song` ▣ | `songId`, `format?`, `bitrateKbps?`, `maxDurationSec?` | a WAV/MP3 path under `GROOVE_MCP_OUT`, its duration, loudness and true peak — every section, in order |
+| `render_preview_clip` ▣ | `songId?`, `sectionId?`, `index?`, `genreId?`, `bars?`, `sampleRate?`, `channels?`, `format?` | a **fast** render of one section for iterating: 8 kHz mono by default (**~1.8 s** measured, against 6–24 s at full rate), labelled `preview: true` and carrying its own wall-clock time. Use it while composing and `render_song`/`render_audio` for anything you deliver. Its description carries the same 900 s budget and the same measured costs as every other rendering tool |
+| `render_song` ▣ | `songId`, `format?`, `bitrateKbps?`, `maxDurationSec?` | a WAV/MP3 path under `GROOVE_MCP_OUT`, its duration, loudness and true peak — every section, in order. Reports progress as a **heartbeat** (a phase message, then "still working" every 15 s) when the request carries a `progressToken`; see [the two timeouts](#the-two-timeouts-and-which-one-is-ours-2026-10-05) |
 
 The package this writes is specified field by field in [`GROOVE_PACKAGE_FORMAT.md`](GROOVE_PACKAGE_FORMAT.md).
 
@@ -315,9 +316,39 @@ as written Ns · fx lane cleared Ns · fx saturated Ns`) so the number is produc
 | an analysis-only render | ≤ 1 s | **1.8 s at 8 kHz mono** measured | the budget is **not met**: the same song took 24.4 s at 44.1 kHz in the same run, so the lever is worth **13.5×** but 8 kHz mono is not yet under a second. Mono is confirmed — the reply reports `channels: 1` — and this is the first honest measurement: every earlier "0.1 s" was a failed call returning fast (`ReferenceError: options is not defined` inside the page callback) |
 | a full song render | ≤ 20 s | tens of seconds for a *long* arrangement | the render is one `page.evaluate` over an offline context; the super-linear growth with step count is measured in `GROOVE_QUALITY_PLAN.md` |
 | a section render | ≤ 5 s | available today by rendering a one-section song | already possible with `render_song` on a song whose `sections` hold one entry |
+| an **eight-bar full-rate** render | — | **125.56 s of audio in 445.71–511.28 s** measured (`docs/RENDER_PROFILE.md`) | nothing closes this: the cost is super-linear in duration, so the answer is a shorter request or a lower rate, not patience. This is the row that makes the caller's own timeout the binding constraint |
 
 `analyze_audio` is browser-free and reads a file in milliseconds; the budgets above are about **rendering**, which is why the analysis
 tools landed before the render path changed.
+
+### The two timeouts, and which one is ours (2026-10-05)
+
+A caller planning a long render is up against **two** ceilings, and only one of them belongs to this server:
+
+| ceiling | value | whose | where it is stated |
+|---|---|---|---|
+| the render budget | **900 s** | this server's, and it may be the smaller or the larger of the two | `mcp/render/budget.json` → `RENDER_BUDGET_MS`, enforced in `withRenderTimeout` and named in every rendering tool's description |
+| the client's request timeout | whatever the client set | **the caller's**, and this server cannot change it | nowhere here — that is why the tool descriptions say it out loud |
+
+The mismatch is the failure mode the numbers exist to prevent: an eight-bar full-rate render is a **445–511 s** wall clock
+(measured above), so a client that leaves its timeout at 30 s fails the call no matter what this server does, and a client
+that reads only "the server waits 900 s" would not know that. Every rendering tool therefore states both.
+
+**When the budget is exceeded the render is *reported*, not abandoned**: `withRenderTimeout` throws the sentence
+`the render of <what> did not answer within <n>s — the page may be stuck, and the renderer has been reset so the next call
+starts a fresh one`, and the renderer really is reset, so the next call is not poisoned by the stuck page. It wraps **both**
+render paths — `renderAudio` and `renderStems` — because a stems render waits on the same page once per track, and the one
+path that runs N times is the last one that should have no ceiling. For stems the budget is **per stem**, which is what its
+description says.
+
+**Progress, and what it can honestly say.** MCP's `notifications/progress` exists for exactly this, and it is wired: a request
+whose `_meta` carries a `progressToken` gets notifications; a request without one gets **none**, by construction
+(`createRenderProgress` returns no reporter at all). What it reports is a **phase and a heartbeat**, not a bar counter, and
+that is a property of the renderer rather than a shortcut: a render is one `OfflineAudioContext.startRendering()` call that
+holds **96–99.9% of the wall clock** (`docs/RENDER_PROFILE.md`), so there is no per-bar boundary to hook. A client that sees
+a heartbeat every 15 s knows the page is working; a client that sees nothing for eight minutes cannot tell a slow render
+from a hang, which is the state this replaced. `render_arrangement_stems` is the exception that can count: it renders one
+file per track, so it reports per track.
 
 **Loudness needs no analysis tool.** `render_audio` and `render_song` already return gated loudness and true peak for the file they wrote;
 `analyze_audio` adds the discontinuities, correlation, tail, spectral shape and energy curve. An evaluation proposed `analyze_loudness` as
@@ -326,7 +357,8 @@ a separate tool — it would return a number the caller already has.
 **`bars` counts passes, not measures.** A genre's seeded clip is four measures long (64 steps at 16 to the bar), so `bars: 4` is
 sixteen measures; every song summary reports `passBars` (measures per pass) and `secondsEstimate`, which is what to read before
 rendering. `render_song` also takes `maxDurationSec` and refuses before it starts the browser, because long arrangements take
-minutes and the call reports no progress while it runs.
+minutes. It now reports progress while it runs — a heartbeat, not a bar counter, because a song reaches the renderer as **one**
+flattened pattern (see above).
 
 ### Sequencer
 
@@ -383,7 +415,7 @@ caller that sent a vocal pattern got it back with the lyric gone.
 | :--- | :--- | :--- |
 | `export_midi` ▢ | `pattern`, `bpm?`, `filename?` | base64 of a Standard MIDI File (8 tracks, 16th grid) |
 | `share_url` ▢ | `pattern`, `genreId?` | a `groove://`-free https URL that opens the app with the groove loaded |
-| `render_audio` ▣ | `pattern` or `genreId`, `format: "wav" \| "mp3"`, `bars?` | a file path + duration, loudness, true peak, per-track peaks |
+| `render_audio` ▣ | `pattern` or `genreId`, `format: "wav" \| "mp3"`, `bars?` | a file path + duration, loudness, true peak, per-track peaks. `bars` **drives the duration**: the description carries the measured cost (1 bar = 17.18 s of audio in 17.95–24.25 s) and the 900 s server budget, and says the client's own timeout is the other ceiling |
 | `analyze_audio` ▢ | `path` (a WAV this server produced) | LUFS, true peak, pinned samples, discontinuity count, band shape, stereo correlation |
 
 `render_audio` writes into `$GROOVE_MCP_OUT` (default: the OS temp directory, one run per call) and returns the

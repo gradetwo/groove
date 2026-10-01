@@ -12,8 +12,11 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
+import type { ServerNotification, ServerRequest } from "@modelcontextprotocol/sdk/types.js";
 import { PROMPTS, RESOURCES, TOOLS, failure, json } from "./registry";
 import { installRendererLifecycle } from "./render/worker";
+import { createRenderProgress } from "./render/progress";
 
 const VERSION = process.env.GROOVE_MCP_VERSION || "1.0.0";
 
@@ -48,9 +51,39 @@ export function createServer(): McpServer {
           openWorldHint: false,
         },
       },
-      async (args: Record<string, unknown>) => {
+      async (args: Record<string, unknown>, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => {
         try {
-          const result = await tool.handler(args ?? {});
+          /**
+           * **Progress exists only because the caller asked for it.**
+           *
+           * MCP carries the opt-in in the request's `_meta.progressToken` and the SDK hands the handler the whole
+           * `extra` — token, and a `sendNotification` bound to *this* request. `createRenderProgress` is what turns
+           * those two into a reporter, and it returns `undefined` when there is no token, so a handler cannot
+           * accidentally narrate a request nobody asked about. The token is echoed back in every notification, which
+           * is how a client with several calls in flight tells them apart.
+           *
+           * This is not a courtesy: a client that sees `notifications/progress` does not treat a long render as a
+           * hang, and the SDK's own client resets its request timeout on progress when it is configured to
+           * (`resetTimeoutOnProgress`), which is the mechanism that lets a 445-511 s eight-bar render survive a
+           * timeout the caller set for short calls.
+           */
+          const progress = createRenderProgress(extra?._meta?.progressToken, (token, value, total, message) => {
+            void extra
+              .sendNotification({
+                method: "notifications/progress",
+                params: {
+                  progressToken: token,
+                  progress: value,
+                  ...(total !== undefined ? { total } : {}),
+                  message,
+                },
+              })
+              .catch(() => {
+                // A disconnected client is not a failed render: the work still finishes and the result is still written.
+              });
+          });
+          const context = { ...(progress ? { progress } : {}) };
+          const result = await tool.handler(args ?? {}, context);
           // Handlers may return a ready-made MCP result (a failure) or plain data.
           if (result && typeof result === "object" && "content" in (result as Record<string, unknown>)) {
             return result as { content: Array<{ type: "text"; text: string }> };

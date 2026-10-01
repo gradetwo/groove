@@ -22,6 +22,12 @@ import { stemFilename } from "../../src/data/stemNaming";
 import { fingerprintChannels } from "../../src/test/helpers/timbre";
 import type { OfflineAudioLaneReport } from "../../src/audio/offlineAudioLanes";
 import { isAudioLane } from "../../src/audio/offlineAudioLanes";
+/**
+ * The budgets and the measured costs, from `budget.json` — read by the tool descriptions and by
+ * `scripts/check_mcp.mjs` as well as by the timeouts below, so there is one number rather than six.
+ */
+import { NAVIGATION_BUDGET_MS, RENDER_BUDGET_MS } from "./budget";
+import { createRenderProgress, runWithProgress, type ProgressReporter } from "./progress";
 import {
   channelCorrelation,
   clickAnalysis,
@@ -67,9 +73,18 @@ export interface RenderOptions {
   /** Where to write; defaults to `GROOVE_MCP_OUT` or a fresh temp directory. */
   outputDir?: string;
   /**
-   * How long a render may take before the page is declared stuck, in milliseconds. Default 15 minutes, chosen from measurement: a nine-movement piece rendered through this server took three to eight minutes per movement, so anything shorter would kill work that was progressing.
+   * How long a render may take before the page is declared stuck, in milliseconds. Default `RENDER_BUDGET_MS` (15
+   * minutes), chosen from measurement: a nine-movement piece rendered through this server took three to eight
+   * minutes per movement, so anything shorter would kill work that was progressing.
    */
   renderTimeoutMs?: number;
+  /**
+   * Where a render narrates itself — present **only** when the caller sent an MCP `progressToken`.
+   *
+   * It is an argument rather than a module-level reporter so that "a token-less call is silent" is a property of
+   * the call, not of global state a second render could satisfy by accident.
+   */
+  progress?: ProgressReporter;
 }
 
 export interface RenderResult {
@@ -249,9 +264,9 @@ async function ensurePage(): Promise<import("playwright").Page> {
      * than the render it would otherwise lose. This is the startup half of the rule the render budget already follows — a slow page is not a stuck one.
      */
     try {
-      await page.goto(`http://127.0.0.1:${port}`, { waitUntil: "domcontentloaded", timeout: 120_000 });
+      await page.goto(`http://127.0.0.1:${port}`, { waitUntil: "domcontentloaded", timeout: NAVIGATION_BUDGET_MS });
     } catch {
-      await page.goto(`http://127.0.0.1:${port}`, { waitUntil: "domcontentloaded", timeout: 120_000 });
+      await page.goto(`http://127.0.0.1:${port}`, { waitUntil: "domcontentloaded", timeout: NAVIGATION_BUDGET_MS });
     }
     return page;
   } catch (error) {
@@ -420,6 +435,21 @@ export function readAudioLaneCatalogue(pattern: SequencerPattern): AudioLaneCata
   }
 }
 
+/** What the *page* returns for one render: the audio, the measurements, and the renderer's own problem list. */
+export interface RenderAudioPayload {
+  base64: string;
+  durationSec: number;
+  sampleRate: number;
+  channels: number;
+  limiterKind: string;
+  truePeakDb: number;
+  integratedLufs: number;
+  gs1PatchProblems?: string[];
+  trackPeaksDb?: Record<string, number>;
+  audioLanes?: OfflineAudioLaneReport;
+  problems?: string[];
+}
+
 /**
  * Render a pattern (or a genre's default pattern) and measure it in the same pass.
  *
@@ -430,7 +460,15 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
   if (process.env.GROOVE_MCP_NO_BROWSER === "1") {
     throw new Error("audio rendering is disabled (GROOVE_MCP_NO_BROWSER=1); the library, pattern, MIDI and share tools do not need a browser");
   }
-  const page = await ensurePage();
+  const progress = options.progress;
+  /**
+   * ⭐ **A cold start is announced before it is waited on.**
+   *
+   * `ensurePage` can spend the navigation budget twice before any audio exists, and that happens *before* the render
+   * budget below even starts. Without this phase a caller watching for progress sees nothing for the whole startup,
+   * which is the state this work exists to end.
+   */
+  const page = await runWithProgress(progress, "starting the renderer (Vite + Chromium)", ensurePage);
   const what = `${Math.max(1, Math.min(64, options.bars ?? 1))} bar(s) of ${options.genreId ?? pattern.genre_id ?? "a pattern"}`;
   /**
    * The catalogue an audio lane resolves against, read and passed in **before** the page starts.
@@ -440,7 +478,47 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
    */
   const catalogueRead = readAudioLaneCatalogue(pattern);
   const sampleRoot = sampleMirrorRoot();
-  const result = await withRenderTimeout(page.evaluate(
+  /**
+   * The render itself, under the budget, with a heartbeat for the part that cannot report.
+   *
+   * The heartbeat is the *only* honest progress available here: `startRendering()` is 96-99.9% of the wall clock in
+   * one call (measured in `docs/RENDER_PROFILE.md`), so there is no per-bar boundary to hook. What the client gets
+   * is "still working" every `RENDER_PROGRESS_HEARTBEAT_MS`, which is what distinguishes a slow render from a hang.
+   */
+  let result: Awaited<ReturnType<typeof renderAudioInPage>>;
+  try {
+    result = await runWithProgress(progress, `rendering ${what}`, () =>
+      withRenderTimeout(
+        renderAudioInPage(page, pattern, options, catalogueRead, sampleRoot),
+        what,
+        options.renderTimeoutMs ?? RENDER_BUDGET_MS
+      )
+    );
+  } catch (error) {
+    // The last thing the caller hears is why, not silence — including the timeout sentence `withRenderTimeout` built.
+    progress?.report(RENDER_BUDGET_MS, `render failed: ${(error as Error).message}`);
+    throw error;
+  }
+  progress?.report(RENDER_BUDGET_MS, "render finished; writing the file");
+
+  return finishRenderAudio(result, pattern, options, catalogueRead);
+}
+
+/**
+ * **The render, in the page, as a function of its own.**
+ *
+ * It is extracted rather than inlined for one reason: the Node side has to be able to wrap it in the budget *and* the
+ * progress heartbeat (`runWithProgress`), and a `page.evaluate(...)` inlined in an `await` chain cannot be handed to a
+ * timer. The body is unchanged — same evaluate, same arguments — so this is a move, not a second render path.
+ */
+function renderAudioInPage(
+  page: import("playwright").Page,
+  pattern: SequencerPattern,
+  options: RenderOptions,
+  catalogueRead: AudioLaneCatalogueRead,
+  sampleRoot: string
+): Promise<RenderAudioPayload> {
+  return page.evaluate(
     async ({
       pattern: patternArg,
       format,
@@ -624,11 +702,22 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
       sampleRoot,
       catalogueProblem: catalogueRead.problem,
     }
-    ),
-    what,
-    options.renderTimeoutMs ?? 900_000
   );
+}
 
+/**
+ * The Node half of a render: turn the page's answer into a file and a measurement.
+ *
+ * Split out so that `renderAudio` reads as the budget-and-progress story and this reads as the file story. It carries
+ * the same catalogue fallback as before — the Node-side read is attached here as well as in the page, so an unreadable
+ * manifest cannot produce an empty lane report.
+ */
+function finishRenderAudio(
+  result: RenderAudioPayload,
+  pattern: SequencerPattern,
+  options: RenderOptions,
+  catalogueRead: AudioLaneCatalogueRead
+): RenderResult {
   const dir = outputDirectory(options);
   const bpm = pattern.bpm ?? 120;
   /**
@@ -658,7 +747,7 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
     truePeakDb: result.truePeakDb,
     integratedLufs: result.integratedLufs,
     gs1PatchProblems: result.gs1PatchProblems ?? [],
-    trackPeaksDb: result.trackPeaksDb,
+    trackPeaksDb: result.trackPeaksDb ?? {},
     /**
      * Always present, and **the catalogue problem is attached here in Node as well as in the page**.
      *
@@ -670,7 +759,7 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
       catalogueRead.problem && !result.audioLanes?.catalogueProblem
         ? { ...(result.audioLanes ?? { lanes: [], events: 0, problems: [] }), catalogueProblem: catalogueRead.problem }
         : result.audioLanes ?? { lanes: [], events: 0, problems: [] },
-    problems: result.problems,
+    problems: result.problems ?? [],
   };
 }
 
@@ -842,7 +931,7 @@ export async function renderStems(
   if (process.env.GROOVE_MCP_NO_BROWSER === "1") {
     throw new Error("audio rendering is disabled (GROOVE_MCP_NO_BROWSER=1); stems are rendered through the same offline engine as everything else");
   }
-  const page = await ensurePage();
+  const page = await runWithProgress(options.progress, "starting the renderer (Vite + Chromium)", ensurePage);
   const dir = outputDirectory(options);
   const bpm = pattern.bpm || 120;
   const stems: StemResult[] = [];
@@ -857,66 +946,84 @@ export async function renderStems(
   const catalogueRead = readAudioLaneCatalogue(pattern);
   const sampleRoot = sampleMirrorRoot();
 
+  /**
+   * A stems render **can** count tracks where a whole-song render cannot: it is one render per track, so the natural
+   * unit is the track. The `progress` value is a fraction of `RENDER_BUDGET_MS` because that is the budget each stem
+   * runs under (see the timeout below), and the message names the track, which a client can show as real work done.
+   */
+  const totalTracks = Math.max(1, pattern.tracks.length);
   for (let index = 0; index < pattern.tracks.length; index += 1) {
     const track = pattern.tracks[index]!;
-    const rendered = await page.evaluate(
-      async ({ pattern: patternArg, stemTrackIdx, bars, sampleRate: rate, channels: channelCount, manifestText: manifest, sampleRoot: mirrorRoot, catalogueProblem }) => {
-        const specifier = (path: string) => path;
-        const [wav, loudness, catalogue] = await Promise.all([
-          import(/* @vite-ignore */ specifier("/src/audio/WavExporter.ts")),
-          import(/* @vite-ignore */ specifier("/src/test/helpers/loudness.ts")),
-          import(/* @vite-ignore */ specifier("/src/data/sampleCatalogue.ts")),
-        ]);
-        const audioCatalogue = manifest ? catalogue.catalogueFromManifestText(manifest, mirrorRoot).assets : [];
-        let audioLanes: OfflineAudioLaneReport = { lanes: [], events: 0, problems: [] };
-        /** What the renderer reported about this stem's render; the same shape `renderAudio` carries out. */
-        const renderProblems: string[] = [];
-        const buffer = await wav.renderPatternOffline(patternArg as never, {
-          bars: Math.max(1, Math.min(64, bars ?? 1)),
-          stemTrackIdx,
-          ...(rate ? { sampleRate: rate } : {}),
-          ...(channelCount ? { channels: channelCount } : {}),
-          // Unconditional, for the same reason as in `renderAudio`: an unreadable catalogue must not discard the whole lane report.
-          audioLaneCatalogue: audioCatalogue,
-          onAudioLanes: (report: OfflineAudioLaneReport) => {
-            audioLanes = report;
-          },
-          onProblems: (list: readonly string[]) => {
-            renderProblems.push(...list);
-          },
-          ...(catalogueProblem ? { audioLaneCatalogueProblem: catalogueProblem } : {}),
-        });
-        const channelsOut: Float32Array[] = [];
-        for (let c = 0; c < buffer.numberOfChannels; c += 1) channelsOut.push(buffer.getChannelData(c));
-        const bytes = wav.encodeAudioBufferToWav(buffer);
-        let binary = "";
-        const view = new Uint8Array(bytes);
-        const chunk = 0x8000;
-        for (let i = 0; i < view.length; i += chunk) {
-          binary += String.fromCharCode(...view.subarray(i, i + chunk));
+    options.progress?.report(((index + 1) / totalTracks) * RENDER_BUDGET_MS, `rendering stem ${index + 1} of ${totalTracks}: ${track.name || track.track_id || `track_${index + 1}`}`);
+    /**
+     * ⭐ **Every stem is under the same budget as a whole render.**
+     *
+     * The timeout used to wrap only `renderAudio`, so the one render path that runs N times was the one path with no
+     * ceiling at all: a page stuck on the third of eight stems would have hung the call with no message, which is the
+     * failure `withRenderTimeout` exists to name. The budget is per stem, so `RENDER_BUDGET_MS` is a ceiling on each
+     * render rather than on the whole call — that is what the tool description states, and it is what the code does.
+     */
+    const rendered = await withRenderTimeout(
+      page.evaluate(
+        async ({ pattern: patternArg, stemTrackIdx, bars, sampleRate: rate, channels: channelCount, manifestText: manifest, sampleRoot: mirrorRoot, catalogueProblem }) => {
+          const specifier = (path: string) => path;
+          const [wav, loudness, catalogue] = await Promise.all([
+            import(/* @vite-ignore */ specifier("/src/audio/WavExporter.ts")),
+            import(/* @vite-ignore */ specifier("/src/test/helpers/loudness.ts")),
+            import(/* @vite-ignore */ specifier("/src/data/sampleCatalogue.ts")),
+          ]);
+          const audioCatalogue = manifest ? catalogue.catalogueFromManifestText(manifest, mirrorRoot).assets : [];
+          let audioLanes: OfflineAudioLaneReport = { lanes: [], events: 0, problems: [] };
+          /** What the renderer reported about this stem's render; the same shape `renderAudio` carries out. */
+          const renderProblems: string[] = [];
+          const buffer = await wav.renderPatternOffline(patternArg as never, {
+            bars: Math.max(1, Math.min(64, bars ?? 1)),
+            stemTrackIdx,
+            ...(rate ? { sampleRate: rate } : {}),
+            ...(channelCount ? { channels: channelCount } : {}),
+            // Unconditional, for the same reason as in `renderAudio`: an unreadable catalogue must not discard the whole lane report.
+            audioLaneCatalogue: audioCatalogue,
+            onAudioLanes: (report: OfflineAudioLaneReport) => {
+              audioLanes = report;
+            },
+            onProblems: (list: readonly string[]) => {
+              renderProblems.push(...list);
+            },
+            ...(catalogueProblem ? { audioLaneCatalogueProblem: catalogueProblem } : {}),
+          });
+          const channelsOut: Float32Array[] = [];
+          for (let c = 0; c < buffer.numberOfChannels; c += 1) channelsOut.push(buffer.getChannelData(c));
+          const bytes = wav.encodeAudioBufferToWav(buffer);
+          let binary = "";
+          const view = new Uint8Array(bytes);
+          const chunk = 0x8000;
+          for (let i = 0; i < view.length; i += chunk) {
+            binary += String.fromCharCode(...view.subarray(i, i + chunk));
+          }
+          return {
+            base64: btoa(binary),
+            durationSec: buffer.duration,
+            sampleRate: buffer.sampleRate,
+            channels: buffer.numberOfChannels,
+            truePeakDb: loudness.truePeakDbChannels(channelsOut),
+            audioLanes,
+            problems: renderProblems,
+          };
+        },
+        {
+          pattern,
+          stemTrackIdx: index,
+          bars: options.bars,
+          sampleRate: options.sampleRate,
+          channels: options.channels,
+          manifestText: catalogueRead.text,
+          sampleRoot,
+          catalogueProblem: catalogueRead.problem,
         }
-        return {
-          base64: btoa(binary),
-          durationSec: buffer.duration,
-          sampleRate: buffer.sampleRate,
-          channels: buffer.numberOfChannels,
-          truePeakDb: loudness.truePeakDbChannels(channelsOut),
-          audioLanes,
-          problems: renderProblems,
-        };
-      },
-      {
-        pattern,
-        stemTrackIdx: index,
-        bars: options.bars,
-        sampleRate: options.sampleRate,
-        channels: options.channels,
-        manifestText: catalogueRead.text,
-        sampleRoot,
-        catalogueProblem: catalogueRead.problem,
-      }
+      ),
+      `stem ${index + 1} of ${pattern.tracks.length}`,
+      options.renderTimeoutMs ?? RENDER_BUDGET_MS
     );
-
     const bytes = Buffer.from(rendered.base64, "base64");
     const filename = stemFilename(track.name || track.track_id || `track_${index + 1}`, index, bpm);
     const target = path.join(dir, filename);
@@ -943,6 +1050,7 @@ export async function renderStems(
   }
 
   const catalogueProblem = laneCatalogueProblem ?? catalogueRead.problem;
+  options.progress?.report(RENDER_BUDGET_MS, `all ${stems.length} stem(s) rendered`);
   return {
     dir,
     stems,

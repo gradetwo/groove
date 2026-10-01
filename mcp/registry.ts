@@ -85,6 +85,15 @@ import os from "node:os";
 import path from "node:path";
 import { exportAbleton, exportMidi, loudnessReport, shareUrl, toBase64 } from "./exporting";
 import { analyseWavFile, auditionInstrumentNote, renderAudio, renderStems } from "./render/worker";
+/**
+ * The render budget and the measured costs, from the one file that holds them (`mcp/render/budget.json`).
+ *
+ * The descriptions below **interpolate** these sentences rather than repeating their numbers, which is the whole point:
+ * the budget the worker enforces and the budget a caller reads are then one value, and `budgetHonesty.test.ts` asserts
+ * the descriptions carry the derivation rather than a literal.
+ */
+import { renderBudgetSentence, renderCostSentence, PREVIEW_DEFAULT_CLAUSE } from "./render/budget";
+import type { ProgressReporter } from "./render/progress";
 import { getGenreLoudnessTrimDb } from "../src/data/genreMix";
 import { setVocalMelody } from "./vocal";
 import { addMcpSection, createMcpSong, duplicateMcpSection, flattenMcpSong, getMcpSong, importMcpSong, makeUniqueMcpSection, mcpSongHistory, setMcpClip, setMcpLaneSlots, setMcpTempo, summariseSong, undoMcpSong } from "./song";
@@ -231,7 +240,21 @@ export interface ToolDefinition {
   /** Read-only tools are safe for a client to call freely; the rest are annotated as such. */
   readOnly: boolean;
   inputSchema: Record<string, z.ZodTypeAny>;
-  handler: (args: Record<string, unknown>) => Promise<unknown> | unknown;
+  /**
+   * The tool, plus the one thing about a request that is not an argument: whether the caller asked to be kept informed.
+   *
+   * `ctx.progress` is present **only** when the request carried an MCP `progressToken` (`mcp/server.ts` builds it), so a
+   * handler that forwards it to a render cannot emit progress nobody asked for. It is a second parameter rather than a
+   * field on `args` because `args` is the model's input schema: a context object inside it would be a field the caller
+   * is invited to send. Optional, because a unit test calling a handler directly has no request to have a token.
+   */
+  handler: (args: Record<string, unknown>, ctx?: ToolContext) => Promise<unknown> | unknown;
+}
+
+/** What a handler knows about its request beyond the arguments. */
+export interface ToolContext {
+  /** Progress for **this** request; `undefined` when the caller sent no `progressToken`. */
+  progress?: ProgressReporter;
 }
 
 export const TOOLS: ToolDefinition[] = [
@@ -247,16 +270,26 @@ export const TOOLS: ToolDefinition[] = [
     name: "render_arrangement",
     title: "Bounce an arrangement",
     description:
-      "Render an arrangement to audio through the same offline engine the song and pattern tools use. **An arrangement is one bar of sixteen steps**, so this bounces the loop the interface's Play button plays rather than a piece — when the model gains a length, this follows. **Audio lanes are mixed**: a `sampler` track's notes are resolved through the app's own SFZ loader and placed at their own steps, a lane with a sample and no notes is played once at the arrangement's start, and a lane whose bytes cannot be resolved is named in `skippedLanes` with the reason rather than dropped.",
+      "Render an arrangement to audio through the same offline engine the song and pattern tools use. **An arrangement is one bar of sixteen steps**, so this bounces the loop the interface's Play button plays rather than a piece — when the model gains a length, this follows. **Audio lanes are mixed**: a `sampler` track's notes are resolved through the app's own SFZ loader and placed at their own steps, a lane with a sample and no notes is played once at the arrangement's start, and a lane whose bytes cannot be resolved is named in `skippedLanes` with the reason rather than dropped. " +
+      renderCostSentence() +
+      " " +
+      renderBudgetSentence(),
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
       format: z.enum(["wav", "mp3"]).default("wav"),
       bitrateKbps: z.number().int().min(32).max(320).optional().describe("MP3 only; default 192"),
-      sampleRate: z.number().int().min(8000).max(96000).optional().describe("render rate; 8000 makes an analysis pass about a fifth of the work"),
+      bars: z
+        .number()
+        .int()
+        .min(1)
+        .max(64)
+        .optional()
+        .describe("1 is this arrangement (one pass of sixteen steps); raising it repeats the arrangement, and it drives the duration the description quotes"),
+      sampleRate: z.number().int().min(8000).max(96000).optional().describe("render rate; 8000 makes an analysis pass about a fifth of the work — and the rate is one of the two things that drives the duration the description quotes"),
       channels: z.number().int().min(1).max(2).optional().describe("1 for a mono analysis render"),
     },
-    handler: async (args) => {
+    handler: async (args, ctx) => {
       try {
         const { flattened, bars } = flattenMcpArrangement(String(args.arrangementId));
         const result = await renderAudio(flattened.pattern, {
@@ -267,6 +300,7 @@ export const TOOLS: ToolDefinition[] = [
           bars: 1,
           bitrateKbps: args.bitrateKbps as number | undefined,
           genreId: "custom",
+          ...(ctx?.progress ? { progress: ctx?.progress } : {}),
         });
         /**
          * The render's own lane report, not a second derivation: `renderAudio` mixes the lanes and says which ones reached the mix and which could not, and a
@@ -1602,7 +1636,13 @@ export const TOOLS: ToolDefinition[] = [
     name: "render_preview_clip",
     title: "Render one short section quickly, for listening while composing",
     description:
-      "Render a section (or one pattern) at a low sample rate for fast iteration, and report how long it took. Defaults are 8 kHz mono, which measures about 1.8 s against 6-24 s for a full-rate song render, so a composing loop that needs to hear a two-bar change does not have to re-render the whole piece. The reply is labelled `preview: true` — use render_song or render_audio for anything you intend to deliver.",
+      "Render a section (or one pattern) at a low sample rate for fast iteration, and report how long it took. Defaults are 8 kHz mono, which measures about 1.8 s against 6-24 s for a full-rate song render, so a composing loop that needs to hear a two-bar change does not have to re-render the whole piece. " +
+      renderCostSentence() +
+      " " +
+      PREVIEW_DEFAULT_CLAUSE +
+      " " +
+      renderBudgetSentence() +
+      " The reply is labelled `preview: true` — use render_song or render_audio for anything you intend to deliver.",
     readOnly: false,
     inputSchema: {
       songId: z.string().optional().describe("the song to take a section from"),
@@ -1614,7 +1654,7 @@ export const TOOLS: ToolDefinition[] = [
       channels: z.number().int().min(1).max(2).optional().describe("default 1"),
       format: z.enum(["wav", "mp3"]).optional().describe("default wav"),
     },
-    handler: async (args) => {
+    handler: async (args, ctx) => {
       try {
         const bars = (args.bars as number | undefined) ?? 4;
         const sampleRate = (args.sampleRate as number | undefined) ?? 8000;
@@ -1644,7 +1684,7 @@ export const TOOLS: ToolDefinition[] = [
 
         const startedAt = Date.now();
         // `bars: 1` is the flattened pattern *is* the section, the same convention `render_song` documents.
-        const result = await renderAudio(pattern, { format, bars: 1, sampleRate, channels, nameSlug: `${label.replace(/[^a-z0-9]+/gi, "-")}-preview` });
+        const result = await renderAudio(pattern, { format, bars: 1, sampleRate, channels, nameSlug: `${label.replace(/[^a-z0-9]+/gi, "-")}-preview`, ...(ctx?.progress ? { progress: ctx?.progress } : {}) });
         const seconds = Number(((Date.now() - startedAt) / 1000).toFixed(2));
         return {
           preview: true,
@@ -1972,20 +2012,23 @@ export const TOOLS: ToolDefinition[] = [
     name: "render_audio",
     title: "Render audio",
     description:
-      "Render a pattern (or a genre's default) through the app's own offline engine to WAV or MP3, writing a file under GROOVE_MCP_OUT, and return its path, duration, loudness, true peak and per-track peaks. Needs headless Chromium; the first call starts it. A host that returns a buffer with **no samples in it** is a failed render, not a quiet one: the renderer retries and, if the retry succeeds, names that in `problems`; if every attempt is silent it errors instead of writing a file of silence.",
+      "Render a pattern (or a genre's default) through the app's own offline engine to WAV or MP3, writing a file under GROOVE_MCP_OUT, and return its path, duration, loudness, true peak and per-track peaks. Needs headless Chromium; the first call starts it. A host that returns a buffer with **no samples in it** is a failed render, not a quiet one: the renderer retries and, if the retry succeeds, names that in `problems`; if every attempt is silent it errors instead of writing a file of silence. " +
+      renderCostSentence() +
+      " " +
+      renderBudgetSentence(),
     readOnly: false,
     inputSchema: {
       genreId: z.string().optional(),
       pattern: patternSchema.optional(),
       format: z.enum(["wav", "mp3"]).default("wav"),
-      bars: z.number().int().min(1).max(64).optional().describe("default 1 (the export default)"),
+      bars: z.number().int().min(1).max(64).optional().describe("default 1 (the export default); one of the two things that drives the duration the description quotes"),
       bitrateKbps: z.number().int().min(32).max(320).optional().describe("MP3 only; default 192"),
       trackPeaks: z
         .boolean()
         .optional()
         .describe("also render each track alone and report its peak (costs one render per track, but shows the balance)"),
     },
-    handler: async (args) => {
+    handler: async (args, ctx) => {
       const pattern = patternFromArgs(args as { genreId?: string; pattern?: unknown });
       if (!pattern) {
         // `create_song` reaches here when a supplied genreId did not resolve, so this is the message most composers will actually see.
@@ -1998,6 +2041,7 @@ export const TOOLS: ToolDefinition[] = [
         bitrateKbps: args.bitrateKbps as number | undefined,
         trackPeaks: args.trackPeaks as boolean | undefined,
         genreId: args.genreId as string | undefined,
+        ...(ctx?.progress ? { progress: ctx?.progress } : {}),
       });
     },
   },
@@ -2554,14 +2598,17 @@ export const TOOLS: ToolDefinition[] = [
     name: "render_arrangement_stems",
     title: "Render the arrangement as one file per track",
     description:
-      "Bounce every track of an arrangement to **its own WAV**, next to each other in one directory, through the same offline engine as `render_arrangement`. Use it when the question is about a part rather than the mix: an agent that can hear the bass alone can fix a balance problem instead of guessing at one. Each reply entry carries the measured duration, sample rate, channel count and true peak of that stem, and a stem that rendered to silence says so rather than being reported as a file nobody can hear.",
+      "Bounce every track of an arrangement to **its own WAV**, next to each other in one directory, through the same offline engine as `render_arrangement`. Use it when the question is about a part rather than the mix: an agent that can hear the bass alone can fix a balance problem instead of guessing at one. Each reply entry carries the measured duration, sample rate, channel count and true peak of that stem, and a stem that rendered to silence says so rather than being reported as a file nobody can hear. **It costs one render per track**, so a four-track arrangement is four of the measurements quoted here — one of the few render calls that can report progress per track rather than only a heartbeat. " +
+      renderCostSentence() +
+      " " +
+      renderBudgetSentence(),
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
       sampleRate: z.number().int().min(8000).max(96000).optional().describe("default 44100; a lower rate renders faster and is honest about it"),
       channels: z.union([z.literal(1), z.literal(2)]).optional().describe("default 2, the exporter's own stereo"),
     },
-    handler: async (args) => {
+    handler: async (args, ctx) => {
       try {
         const { flattened, bars } = flattenMcpArrangement(String(args.arrangementId));
         const result = await renderStems(flattened.pattern, {
@@ -2570,6 +2617,7 @@ export const TOOLS: ToolDefinition[] = [
           ...(args.channels ? { channels: args.channels as 1 | 2 } : {}),
           bars: 1,
           genreId: "custom",
+          ...(ctx?.progress ? { progress: ctx?.progress } : {}),
         });
         const audioLanes = result.audioLanes;
         return {
@@ -2587,7 +2635,10 @@ export const TOOLS: ToolDefinition[] = [
     name: "render_song",
     title: "Render the arrangement",
     description:
-      "Bounce a song created with create_song: every section, in order, with its repeats, mutes and velocity scale, through the app's own offline engine (WAV or MP3, written under GROOVE_MCP_OUT). Needs headless Chromium. Long arrangements take minutes and the call reports no progress: a song reaches the renderer as **one** flattened pattern and the time goes into the page's `OfflineAudioContext.startRendering()`, which has no callback. So this call cannot report progress, and the two numbers that matter are the ones it gives you **before** it starts — check the song's `secondsEstimate`, and use `maxDurationSec` to refuse rather than hang. For magnitude, the **measured** figure the audio-scope probe has is **14.4 s of audio in 1.45 s — about 6 seconds per minute of audio** (`docs/MCP.md`'s budget table, the section-preview row); a full 48 kHz stereo bounce is heavier and this server has **not** measured it, so treat that as a floor rather than a promise. **If you need progress more than you need one master, render movements separately with `render_audio`**: each file is mastered on its own, which buys N/M visibility, a file per movement and bounded memory — and is **not** the same master as a single bounce of the whole song. That is measured, not assumed: per-section rendering was compared against a whole-song render and the difference runs through the whole chunk (max 1.7, mean 0.14 on a ±1 scale), because reverb tails, the bus compressor and the parallel drum path span the entire piece and a chunk rendered alone never has them.",
+      "Bounce a song created with create_song: every section, in order, with its repeats, mutes and velocity scale, through the app's own offline engine (WAV or MP3, written under GROOVE_MCP_OUT). Needs headless Chromium. A song reaches the renderer as **one** flattened pattern and the time goes into the page's `OfflineAudioContext.startRendering()`, which has no callback — so there is no per-bar figure to report, and this tool is honest about that rather than pretending. " +
+      renderBudgetSentence() +
+      " While it runs, a caller that sent a progressToken gets a heartbeat every 15 s saying the page is still inside `startRendering()`; that is a sign of life and not a completion estimate. The estimate in the reply — the song's `secondsEstimate`, read **before** rendering — is what `maxDurationSec` compares against, and refusing with it is cheaper than hanging: a 2816-step arrangement ran fifteen minutes with no result. The preview's own measured figure (14.4 s of audio in 1.45 s) is for 8 kHz mono, and a full-rate stereo bounce is heavier; this server has **not** measured a whole-song full-rate bounce, so no duration is promised for one. **If you need real per-bar visibility rather than a heartbeat, render movements separately with `render_audio`**: each file is mastered on its own, which buys N/M visibility, a file per movement and bounded memory — and is **not** the same master as a single bounce of the whole song. That is measured, not assumed: per-section rendering was compared against a whole-song render and the difference runs through the whole chunk (max 1.7, mean 0.14 on a ±1 scale), because reverb tails, the bus compressor and the parallel drum path span the entire piece and a chunk rendered alone never has them. " +
+      renderCostSentence(),
     readOnly: false,
     inputSchema: {
       songId: z.string().describe("the id create_song returned"),
@@ -2620,7 +2671,7 @@ export const TOOLS: ToolDefinition[] = [
           "refuse to render a song longer than this. A guard against the unbounded hang a composer hit (2816 steps ran 15 minutes with no result): the estimated duration is checked *before* the browser starts."
         ),
     },
-    handler: async (args) => {
+    handler: async (args, ctx) => {
       try {
         const { song, flattened } = flattenMcpSong(String(args.songId));
         /**
@@ -2650,6 +2701,7 @@ export const TOOLS: ToolDefinition[] = [
           // The caller's own title, whitelisted in the worker — never model prose, and never the whole name in place of the genre
           // and tempo. A song with no name (its genre id) lands on the previous `_master_` form by construction.
           nameSlug: song.name,
+          ...(ctx?.progress ? { progress: ctx?.progress } : {}),
         });
         return {
           ...(result as unknown as Record<string, unknown>),

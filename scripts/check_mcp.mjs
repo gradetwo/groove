@@ -148,6 +148,49 @@ try {
   check("render_audio declares its format enum", JSON.stringify(renderTool?.inputSchema ?? {}).includes('"wav"'));
   check("tools carry a description for the model", (tools?.tools ?? []).every((tool) => (tool.description ?? "").length > 40));
 
+  /**
+   * **The budget a caller reads is the budget the code enforces.**
+   *
+   * This check reads a source file for its expected value on purpose: `mcp/render/budget.json` is what the worker's
+   * timeout is built from, so a description agreeing with a literal typed into this gate would still be free to disagree
+   * with the server. The gate asserts the JSON's own number against the descriptions the built bundle serves.
+   *
+   * It belongs here rather than only in a unit test because `tools/list` is the whole of what an LLM caller sees before
+   * it plans a timeout: a rendering tool whose description omits the budget is a caller that cannot know it must raise
+   * its own, and an eight-bar render measured at 445-511 s cannot survive a client left at 30 s.
+   */
+  {
+    const budget = JSON.parse(fs.readFileSync(path.join(ROOT, "mcp", "render", "budget.json"), "utf8"));
+    const budgetSeconds = Math.round(budget.renderBudgetMs / 1000);
+    const navSeconds = Math.round(budget.navigationBudgetMs / 1000);
+    const RENDER_TOOLS = ["render_audio", "render_song", "render_arrangement", "render_arrangement_stems", "render_preview_clip"];
+    const byName = new Map((tools?.tools ?? []).map((tool) => [tool.name, tool]));
+    for (const name of RENDER_TOOLS) {
+      const description = byName.get(name)?.description ?? "";
+      check(
+        `${name} states the ${budgetSeconds} s render budget`,
+        description.includes(`${budgetSeconds} s`),
+        description ? "the description never names the server's budget" : "not declared"
+      );
+      check(
+        `${name} says the client's timeout is the other ceiling`,
+        description.includes("client timeout must be at least as long"),
+        "a caller that reads only the server's budget can still leave its own at 30 s"
+      );
+      check(
+        `${name} gives page loading its own ${navSeconds} s allowance rather than folding it into the budget`,
+        description.includes(`${navSeconds} s`),
+        "a folded sentence would be shorter than the code's own worst case"
+      );
+    }
+    const [eightBarLow, eightBarHigh] = budget.measured.eightBarWallSec;
+    check(
+      "the tools quote the measured eight-bar cost rather than an invented one",
+      RENDER_TOOLS.filter((name) => (byName.get(name)?.description ?? "").includes(String(budget.measured.eightBarAudioSec))).length >= 4,
+      `expected ${budget.measured.eightBarAudioSec} s of audio in ${eightBarLow}-${eightBarHigh} s (docs/RENDER_PROFILE.md) in the descriptions`
+    );
+  }
+
   const resources = await client.request("resources/list", {});
 
   /**
