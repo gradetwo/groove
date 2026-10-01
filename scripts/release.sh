@@ -51,9 +51,12 @@ step "full CI" bash scripts/ci_full.sh
 step "deploy" npm run deploy:only
 DEPLOYED=1   # ⭐ From here on a failure leaves the site newer than main and the tag, and the failure path says so.
 
-step "mirror" ./scripts/sync_release_mirror.sh
-# ⭐ Committing what the sync copied: without this the mirror keeps the previous commit, and the push below sends it while the fast-forward check passes.
-step "mirror commit" bash scripts/commit_release_mirror.sh
+# ⭐ **The two mirror steps are gone, not reordered (2026-10-01).** `sync_release_mirror.sh` copied this
+# checkout into the mirror and `commit_release_mirror.sh` committed and pushed it; this repository has
+# `origin` and the deploy key now, so `tag_release.sh` tags the released commit and pushes the tag from
+# here, and `publish_mirror_main.sh` pushes `dev` and `main` from here. Keeping the steps would leave the
+# release chain calling retired scripts — and `release.sh` suppresses their output when they succeed, so a
+# step that did nothing would have looked exactly like one that worked. See `docs/OPEN_WORK.md` §十.
 # ⭐ The tag, which this script used to ask for in its final line without making it.
 step "tag" bash scripts/tag_release.sh
 
