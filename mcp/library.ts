@@ -44,6 +44,15 @@ export function findGenre(id: string): Genre | undefined {
   return GENRES_MAP[id];
 }
 
+/**
+ * Every genre id, in library order — the enumeration a listing tool needs when it has to walk the library
+ * rather than a caller-supplied filter. A listing tool that hard-codes a limit would silently stop covering
+ * the library the day it grew past that limit, so the full list is exposed once and reused.
+ */
+export function allGenreIds(): string[] {
+  return ALL_GENRES.map((genre) => genre.id);
+}
+
 /** The compact row the index tools return: enough to choose, small enough to list 159 of them. */
 export interface GenreSummary {
   id: string;
@@ -391,6 +400,6 @@ export function libraryIndex(): Record<string, unknown> {
   return {
     genres: ALL_GENRES.length,
     categories: listCategories(),
-    ids: ALL_GENRES.map((genre) => genre.id),
+    ids: allGenreIds(),
   };
 }
