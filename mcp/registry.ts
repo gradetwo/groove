@@ -407,10 +407,28 @@ export const TOOLS: ToolDefinition[] = [
         .describe("1 is one pass through the whole arrangement; raising it repeats the arrangement, and it drives the duration the description quotes"),
       sampleRate: z.number().int().min(8000).max(96000).optional().describe("render rate; 8000 makes an analysis pass about a fifth of the work — and the rate is one of the two things that drives the duration the description quotes"),
       channels: z.number().int().min(1).max(2).optional().describe("1 for a mono analysis render"),
+      /**
+       * ⭐ **A span of bars, so part of a long arrangement can be heard without rendering all of it.** Both are
+       * needed together: `startBar` alone would mean "from here to the end", which is a different request and not
+       * one anyone has made. The end is **exclusive**, matching a take's `endBar`. A note that began earlier but
+       * is still sounding inside the span is kept and is **not clipped**, so a four-bar pad at bar 1 is audible
+       * when you ask for bar 3 and sounds from where it actually starts.
+       */
+      startBar: z.number().int().min(0).optional().describe("first bar of the span, with `endBar`; 0 is the first bar"),
+      endBar: z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe("exclusive end of the span, with `startBar`; the bar it names is not rendered"),
     },
     handler: async (args, ctx) => {
       try {
-        const { flattened } = flattenMcpArrangement(String(args.arrangementId));
+        const range =
+          typeof args.startBar === "number" && typeof args.endBar === "number"
+            ? { startBar: args.startBar, endBar: args.endBar }
+            : undefined;
+        const { flattened } = flattenMcpArrangement(String(args.arrangementId), range);
         /**
          * ⭐ **`bars` repeats the arrangement, which is what the schema and this description always promised.** The handler
          * used to pass a hardcoded `bars: 1`, so a caller asking for four passes got one, with the requested number

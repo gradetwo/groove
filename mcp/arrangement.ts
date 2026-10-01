@@ -52,6 +52,7 @@ import type { ArrangementV2, NoteEvent, TrackKindV2, TrackV2 } from "../src/type
 import type { PlannedTake } from "../src/data/takePlanning";
 import { compileArrangementToSongInput } from "../src/data/arrangementCompile";
 import { stepsFromNotes, STEPS_PER_BEAT } from "../src/data/noteEvents";
+import { beatsPerBar } from "../src/data/genreExpression";
 import { createSong } from "../src/types/song";
 import { flattenSong, type FlattenedSong } from "../src/data/songFlatten";
 
@@ -851,10 +852,27 @@ export function notesInBarRange(
   return kept;
 }
 
-export function flattenMcpArrangement(arrangementId: string): { flattened: FlattenedSong; bars: number } {
+/**
+ * ⭐ **Flatten an arrangement, optionally covering only a span of bars.**
+ *
+ * `render_arrangement` renders the whole arrangement and its `bars` argument is a pass count, so bars 8 to 16 of
+ * a long piece had no way to be asked for through MCP while the web has a loop range for the same job
+ * (`docs/AUDITION_AUDIT.md` §5–6). The span narrows the **notes** before they are compiled, because
+ * `compileArrangementToSongInput` already builds clips from notes and re-deriving that mapping here is how an
+ * off-by-one-bar gets in. The bar length comes from `beatsPerBar`, the one function that reads a time signature,
+ * rather than a second interpretation of `"3/4"` living in this file.
+ */
+export function flattenMcpArrangement(
+  arrangementId: string,
+  range?: { startBar: number; endBar: number }
+): { flattened: FlattenedSong; bars: number } {
   const arrangement = requireArrangement(arrangementId);
   if (arrangement.tracks.length === 0) throw new Error("this arrangement has no tracks, so there is nothing to render");
-  const songInput = compileArrangementToSongInput(arrangement, arrangement.notesByTrack ?? {});
+  const allNotes = arrangement.notesByTrack ?? {};
+  const notes = range
+    ? notesInBarRange(allNotes, range, beatsPerBar(arrangement.timeSignature))
+    : allNotes;
+  const songInput = compileArrangementToSongInput(arrangement, notes);
   /**
    * The clip needs the fields a `SequencerPattern` requires and nothing more: the compiled lanes, and the four the format insists on. `genre_id` is `"custom"` because an arrangement is not a genre's pattern — saying otherwise would make a render claim a
    * provenance it does not have.

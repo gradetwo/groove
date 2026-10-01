@@ -115,6 +115,11 @@ describe("MCP · the operations written for MCP reach a tool", () => {
       "clearMcpArrangements",
       "edit",
       "flattenMcpArrangement",
+      // ⭐ A helper the flatten is built from: it narrows an arrangement's notes to a bar span, and the tool that
+      // benefits (`render_arrangement`, through `flattenMcpArrangement`) never names it. Exported because the
+      // boundary it decides — an exclusive end, and a note kept when it is still sounding — is worth testing
+      // without rendering anything.
+      "notesInBarRange",
       "summariseArrangement",
       "requireArrangement",
       "arrangementFromArgs",
