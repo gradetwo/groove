@@ -45,7 +45,7 @@ export interface TrackHeaderV2Props {
  * app's own `--d-*` accents, so a skin change reaches them.
  */
 const KIND_COLOR: Record<TrackKindV2, string> = {
-  sampler: "var(--d-accent)",
+  sampler: "rgb(var(--d-accent))",
   instrument: "#5ac8fa",
   drumkit: "#f5b73d",
   fx: "#b07cff",
@@ -108,7 +108,7 @@ export function TrackHeaderV2({
           aria-label={`${track.name} kind`}
           value={track.kind}
           onChange={(event) => onChangeKind(track.id, event.target.value as TrackKindV2)}
-          className="h-7 w-8 shrink-0 rounded border border-[var(--d-line)] bg-transparent text-center text-xs text-text"
+          className="h-7 w-8 shrink-0 rounded border border-[rgb(var(--d-line))] bg-transparent text-center text-xs text-text"
         >
           {(["sampler", "instrument", "drumkit", "fx", "folder"] as const).map((kind) => (
             <option key={kind} value={kind}>
@@ -155,7 +155,7 @@ export function TrackHeaderV2({
             aria-label={t("track_volume_label", { name: track.name })}
             data-testid={`track-gain-${track.id}`}
             onChange={(event) => onChangeGain(track.id, Number(event.target.value))}
-            className="w-14 accent-[var(--d-accent)]"
+            className="w-14 accent-[rgb(var(--d-accent))]"
           />
         )}
         <span data-testid={`track-gain-value-${track.id}`} className="w-10 text-right font-['JetBrains_Mono'] text-[9px] text-text opacity-70">
@@ -178,7 +178,7 @@ export function TrackHeaderV2({
           data-testid={`track-arm-${track.id}`}
           onClick={() => onToggleArm(track.id, !track.armed)}
           className={`arr-head-desktop-only h-5 w-5 shrink-0 rounded-full border text-[9px] leading-none ${
-            track.armed ? "border-danger bg-danger text-[var(--d-on-accent)]" : "border-[var(--d-line)] text-text"
+            track.armed ? "border-danger bg-danger text-[rgb(var(--d-on-accent))]" : "border-[rgb(var(--d-line))] text-text"
           }`}
         >
           ●
@@ -198,7 +198,7 @@ export function TrackHeaderV2({
             data-testid={`track-solo-${track.id}`}
             onClick={() => onToggle(track.id, "soloed", !track.soloed)}
             className={`arr-head-desktop-only h-5 w-5 shrink-0 rounded text-[9px] ${
-              track.soloed ? "bg-[var(--d-accent)] text-[var(--d-accent-ink)]" : "border border-[var(--d-line)] text-text"
+              track.soloed ? "bg-[rgb(var(--d-accent))] text-[rgb(var(--d-accent-ink))]" : "border border-[rgb(var(--d-line))] text-text"
             }`}
           >
             S
@@ -211,7 +211,7 @@ export function TrackHeaderV2({
             data-testid={`track-mute-${track.id}`}
             onClick={() => onToggle(track.id, "muted", !track.muted)}
             className={`arr-head-desktop-only h-5 w-5 shrink-0 rounded text-[9px] ${
-              track.muted ? "bg-[var(--d-accent)] text-[var(--d-accent-ink)]" : "border border-[var(--d-line)] text-text"
+              track.muted ? "bg-[rgb(var(--d-accent))] text-[rgb(var(--d-accent-ink))]" : "border border-[rgb(var(--d-line))] text-text"
             }`}
           >
             M
@@ -231,11 +231,11 @@ export function TrackHeaderV2({
         <details className="arr-head-msr relative shrink-0" data-testid={`track-msr-${track.id}`}>
           <summary
             aria-label={t("track_msr_label", { name: track.name })}
-            className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded border border-[var(--d-line)] text-[10px] text-text"
+            className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded border border-[rgb(var(--d-line))] text-[10px] text-text"
           >
             M/S/R
           </summary>
-          <div className="absolute right-0 top-full z-30 flex flex-col gap-1 rounded border border-[var(--d-line)] bg-[var(--d-panel,rgba(20,20,24,0.98))] p-1">
+          <div className="absolute right-0 top-full z-30 flex flex-col gap-1 rounded border border-[rgb(var(--d-line))] bg-[var(--d-panel,rgba(20,20,24,0.98))] p-1">
             {onToggleArm && (
               <button
                 type="button"
@@ -243,7 +243,7 @@ export function TrackHeaderV2({
                 aria-pressed={Boolean(track.armed)}
                 data-testid={`track-arm-touch-${track.id}`}
                 onClick={() => onToggleArm(track.id, !track.armed)}
-                className={`h-11 w-11 rounded-full border text-[10px] ${track.armed ? "border-danger bg-danger text-[var(--d-on-accent)]" : "text-text"}`}
+                className={`h-11 w-11 rounded-full border text-[10px] ${track.armed ? "border-danger bg-danger text-[rgb(var(--d-on-accent))]" : "text-text"}`}
               >
                 R
               </button>
@@ -254,7 +254,7 @@ export function TrackHeaderV2({
               aria-pressed={Boolean(track.soloed)}
               data-testid={`track-solo-touch-${track.id}`}
               onClick={() => onToggle(track.id, "soloed", !track.soloed)}
-              className={`h-11 w-11 rounded text-[10px] ${track.soloed ? "bg-[var(--d-accent)] text-[var(--d-accent-ink)]" : "text-text"}`}
+              className={`h-11 w-11 rounded text-[10px] ${track.soloed ? "bg-[rgb(var(--d-accent))] text-[rgb(var(--d-accent-ink))]" : "text-text"}`}
             >
               S
             </button>
@@ -264,7 +264,7 @@ export function TrackHeaderV2({
               aria-pressed={Boolean(track.muted)}
               data-testid={`track-mute-touch-${track.id}`}
               onClick={() => onToggle(track.id, "muted", !track.muted)}
-              className={`h-11 w-11 rounded text-[10px] ${track.muted ? "bg-[var(--d-accent)] text-[var(--d-accent-ink)]" : "text-text"}`}
+              className={`h-11 w-11 rounded text-[10px] ${track.muted ? "bg-[rgb(var(--d-accent))] text-[rgb(var(--d-accent-ink))]" : "text-text"}`}
             >
               M
             </button>
@@ -275,7 +275,7 @@ export function TrackHeaderV2({
       {/* 8 — the level meter, last as Bitwig's order has it. It is a **picture**: nothing measures a live level on
           this route, so the bar shows unity and the slot is where real metering will land. aria-hidden, because a
           decorative bar with a number in it would be read as a measurement it is not. */}
-      <span data-control="meter" data-testid={`track-meter-${track.id}`} aria-hidden="true" className="flex h-8 w-1.5 shrink-0 items-end overflow-hidden rounded-sm bg-[var(--d-line)]">
+      <span data-control="meter" data-testid={`track-meter-${track.id}`} aria-hidden="true" className="flex h-8 w-1.5 shrink-0 items-end overflow-hidden rounded-sm bg-[rgb(var(--d-line))]">
         <span className="block w-full" style={{ height: "70%", background: color }} />
       </span>
 

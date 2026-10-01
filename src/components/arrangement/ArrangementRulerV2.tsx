@@ -94,8 +94,8 @@ export function ArrangementRulerV2({ bars, currentBar, onSelectBar, pixelsPerBar
             aria-pressed={bar === currentBar}
             onClick={() => onSelectBar?.(bar)}
             style={{ width }}
-            className={`shrink-0 h-6 border-l border-[var(--d-line)] font-['JetBrains_Mono'] text-[10px] text-left pl-1 ${
-              bar === currentBar ? "bg-[var(--d-accent)] text-black" : "text-text opacity-70"
+            className={`shrink-0 h-6 border-l border-[rgb(var(--d-line))] font-['JetBrains_Mono'] text-[10px] text-left pl-1 ${
+              bar === currentBar ? "bg-[rgb(var(--d-accent))] text-black" : "text-text opacity-70"
             }`}
           >
             {rulerLabelFor(bar, width)}

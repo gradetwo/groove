@@ -38,7 +38,7 @@ export function TakeSelectorV2({ track, bar, availableReferences, onSelect }: Ta
             key={take.id}
             type="button"
             data-testid={`take-${take.id}`}
-            className={`px-3 py-1 rounded border text-sm text-text ${playing?.id === take.id ? "border-[var(--d-accent)] bg-[var(--d-accent-soft)]" : "border-[var(--d-line)]"}`}
+            className={`px-3 py-1 rounded border text-sm text-text ${playing?.id === take.id ? "border-[rgb(var(--d-accent))] bg-[rgb(var(--d-accent-soft))]" : "border-[rgb(var(--d-line))]"}`}
             aria-pressed={playing?.id === take.id}
             data-playing={playing?.id === take.id ? "true" : "false"}
             data-missing={missing ? "true" : "false"}

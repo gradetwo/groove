@@ -100,7 +100,7 @@ export function LoopBraceV2({ loop, pixelsPerBar, bars, onChange }: LoopBraceV2P
       <span
         aria-hidden="true"
         data-testid="loop-brace-span"
-        className="pointer-events-none absolute top-0 h-1.5 rounded-sm border-x-2 border-t-2 border-[var(--d-accent)]"
+        className="pointer-events-none absolute top-0 h-1.5 rounded-sm border-x-2 border-t-2 border-[rgb(var(--d-accent))]"
         style={{ left: x(loop[0]), width }}
       />
       <button
@@ -109,7 +109,7 @@ export function LoopBraceV2({ loop, pixelsPerBar, bars, onChange }: LoopBraceV2P
         aria-label={t("loop_start_label", { from: loop[0] + 1, to: loop[1] })}
         className="absolute top-0 z-20 flex h-11 items-center justify-start"
       >
-        <span aria-hidden="true" className="h-3 w-0.5 bg-[var(--d-accent)]" />
+        <span aria-hidden="true" className="h-3 w-0.5 bg-[rgb(var(--d-accent))]" />
       </button>
       <button
         type="button"
@@ -117,7 +117,7 @@ export function LoopBraceV2({ loop, pixelsPerBar, bars, onChange }: LoopBraceV2P
         aria-label={t("loop_end_label", { from: loop[0] + 1, to: loop[1] })}
         className="absolute top-0 z-20 flex h-11 items-center justify-end"
       >
-        <span aria-hidden="true" className="h-3 w-0.5 bg-[var(--d-accent)]" />
+        <span aria-hidden="true" className="h-3 w-0.5 bg-[rgb(var(--d-accent))]" />
       </button>
       {/*
         The keyboard's way to **move** the whole brace. A drag of the middle is the mouse's version (Bitwig), and a
@@ -140,7 +140,7 @@ export function LoopBraceV2({ loop, pixelsPerBar, bars, onChange }: LoopBraceV2P
           positioned at the brace rather than at the corner of the ruler, where the snap value's own readout lives. */}
       <span
         data-testid="loop-brace-value"
-        className="absolute top-6 whitespace-nowrap font-['JetBrains_Mono'] text-[10px] text-[var(--d-accent)]"
+        className="absolute top-6 whitespace-nowrap font-['JetBrains_Mono'] text-[10px] text-[rgb(var(--d-accent))]"
         style={{ left: x(loop[0]) }}
       >
         {loopLabel(loop)}

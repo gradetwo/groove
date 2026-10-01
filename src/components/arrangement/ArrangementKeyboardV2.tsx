@@ -93,7 +93,7 @@ export function ArrangementKeyboardV2({ baseMidi = 60, onNoteOn, onNoteOff, velo
   }, [baseMidi, press, release]);
 
   return (
-    <div data-testid="arrangement-keyboard" className="flex flex-col gap-2 p-3 rounded border border-[var(--d-line)]">
+    <div data-testid="arrangement-keyboard" className="flex flex-col gap-2 p-3 rounded border border-[rgb(var(--d-line))]">
       <div className="flex items-center justify-between gap-3">
         <span className="text-xs text-text opacity-80">{t("keyboard_hint")}</span>
         <label className="flex items-center gap-2 text-xs text-text opacity-80">
@@ -129,7 +129,7 @@ export function ArrangementKeyboardV2({ baseMidi = 60, onNoteOn, onNoteOff, velo
                 onPointerLeave={() => release(midi)}
                 style={{ flex: "1 0 auto" }}
                 className={`relative flex-1 rounded-b border-r border-[#b0b3ba] text-[9px] font-bold ${
-                  active ? "bg-[var(--d-accent)] text-black" : "bg-gradient-to-b from-white to-[#e0e2e8] text-[#1c1f26]"
+                  active ? "bg-[rgb(var(--d-accent))] text-black" : "bg-gradient-to-b from-white to-[#e0e2e8] text-[#1c1f26]"
                 }`}
               >
                 <span className="font-['JetBrains_Mono']">{midiToNoteName(midi)}</span>
@@ -152,7 +152,7 @@ export function ArrangementKeyboardV2({ baseMidi = 60, onNoteOn, onNoteOff, velo
               onPointerUp={() => release(midi)}
               onPointerLeave={() => release(midi)}
               style={{ left: `${leftPercent}%`, width: `${Math.max(4, 60 / WHITE_KEYS.length)}%` }}
-              className={`absolute top-0 h-[62%] rounded-b ${active ? "bg-[var(--d-accent)]" : "bg-[#1c1f26]"}`}
+              className={`absolute top-0 h-[62%] rounded-b ${active ? "bg-[rgb(var(--d-accent))]" : "bg-[#1c1f26]"}`}
             />
           );
         })}

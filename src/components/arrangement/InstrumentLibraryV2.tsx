@@ -82,14 +82,14 @@ export function InstrumentLibraryV2({ instruments, currentAssetId, onChoose }: I
     .filter((entry) => searching || subcategory === undefined || entry.subcategory === subcategory);
 
   return (
-    <div data-testid="instrument-library" className="flex flex-col gap-2 rounded border border-[var(--d-line)] p-2">
+    <div data-testid="instrument-library" className="flex flex-col gap-2 rounded border border-[rgb(var(--d-line))] p-2">
       <input
         type="search"
         value={query}
         aria-label={t("instrument_search")}
         placeholder={t("instrument_search")}
         onChange={(event) => setQuery(event.target.value)}
-        className="w-full px-2 py-1 rounded text-xs bg-transparent border border-[var(--d-line)] text-text"
+        className="w-full px-2 py-1 rounded text-xs bg-transparent border border-[rgb(var(--d-line))] text-text"
       />
       <div className="flex gap-2 min-h-32">
         {/* The category column. Hidden while searching, because a search ignores it and a column that does nothing is worse than none. */}
@@ -177,5 +177,5 @@ export function InstrumentLibraryV2({ instruments, currentAssetId, onChoose }: I
 }
 
 function rowClass(active: boolean): string {
-  return `w-full text-left px-2 py-1 rounded ${active ? "bg-[var(--d-accent)] text-black" : "hover:bg-[var(--d-panel2,rgba(255,255,255,0.06))] text-text"}`;
+  return `w-full text-left px-2 py-1 rounded ${active ? "bg-[rgb(var(--d-accent))] text-black" : "hover:bg-[var(--d-panel2,rgba(255,255,255,0.06))] text-text"}`;
 }

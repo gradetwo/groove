@@ -60,7 +60,7 @@ export function NewProjectPanelV2({ onCreate }: NewProjectPanelV2Props) {
             type="button"
             aria-pressed={selected === card.id}
             data-testid={`template-${card.id}`}
-            className={`flex flex-col items-start gap-1 p-4 rounded border text-left h-full ${selected === card.id ? "border-[var(--d-accent)] bg-[var(--d-accent-soft)]" : "border-[var(--d-line)] bg-[var(--d-surface,rgba(255,255,255,0.04))]"}`}
+            className={`flex flex-col items-start gap-1 p-4 rounded border text-left h-full ${selected === card.id ? "border-[rgb(var(--d-accent))] bg-[rgb(var(--d-accent-soft))] text-[rgb(var(--d-on-accent))]" : "border-[rgb(var(--d-line))] bg-[var(--d-surface,rgba(255,255,255,0.04))]"}`}
             onClick={() => setSelected(card.id)}
           >
             <strong>{card.name}</strong>
@@ -77,16 +77,16 @@ export function NewProjectPanelV2({ onCreate }: NewProjectPanelV2Props) {
         <div data-testid="new-project-details" className="flex flex-wrap gap-4 items-center text-sm text-text opacity-90">
           {/* Folded away like Logic's: the tempo and key are not what someone is deciding when they start. */}
           <label className="flex items-center gap-2">
-            Tempo <input type="number" className="w-20 px-2 py-1 rounded border border-[var(--d-line)] bg-transparent text-text" defaultValue={120} aria-label="Tempo" />
+            Tempo <input type="number" className="w-20 px-2 py-1 rounded border border-[rgb(var(--d-line))] bg-transparent text-text" defaultValue={120} aria-label="Tempo" />
           </label>
           <label className="flex items-center gap-2">
-            Key <input type="text" className="w-28 px-2 py-1 rounded border border-[var(--d-line)] bg-transparent text-text" defaultValue="C Major" aria-label="Key" />
+            Key <input type="text" className="w-28 px-2 py-1 rounded border border-[rgb(var(--d-line))] bg-transparent text-text" defaultValue="C Major" aria-label="Key" />
           </label>
           {selected === "blank" && (
             <label>
               {/* ⭐ Only the blank card needs this: the templates bring their own tracks. */}
               First track
-              <select className="px-2 py-1 rounded border border-[var(--d-line)] bg-transparent text-text" aria-label="First track kind" value={blankKind} onChange={(event) => setBlankKind(event.target.value as TrackKindV2)}>
+              <select className="px-2 py-1 rounded border border-[rgb(var(--d-line))] bg-transparent text-text" aria-label="First track kind" value={blankKind} onChange={(event) => setBlankKind(event.target.value as TrackKindV2)}>
                 {KIND_LABELS.map(({ kind, en }) => (
                   <option key={kind} value={kind}>
                     {en}
@@ -99,8 +99,13 @@ export function NewProjectPanelV2({ onCreate }: NewProjectPanelV2Props) {
       )}
 
       <footer className="flex justify-end">
-        {/* ⭐ One primary button, and the choice it commits is the one on screen. */}
-        <button type="button" className="px-4 py-2 rounded bg-[var(--d-accent)] text-[var(--d-accent-ink)] font-medium" onClick={() => onCreate(selected === "blank" ? undefined : selected, blankKind)}>
+        {/* ⭐ One primary button, and the choice it commits is the one on screen.
+            The ink is `--d-on-accent`, not `--d-accent-ink`: in the sovietYears skin those two tokens are the
+            same value (`230 199 102`), so an accent-ink label on an accent fill is yellow on yellow and the
+            word Create disappears. `--d-on-accent` is what that token means — the ink that goes on a fill —
+            and it is near-black there. The degenerate pair is a palette problem, recorded rather than guessed
+            at here. */}
+        <button type="button" className="px-4 py-2 rounded bg-[rgb(var(--d-accent))] text-[rgb(var(--d-on-accent))] font-medium" onClick={() => onCreate(selected === "blank" ? undefined : selected, blankKind)}>
           Create
         </button>
       </footer>

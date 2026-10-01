@@ -62,7 +62,7 @@ function Region({
           inside it. `overflow-hidden` is what makes the miniature's clamping read as clamping rather than as a note
           drawn over the next lane.
         */
-        className="relative shrink-0 overflow-hidden rounded border border-[var(--d-line)] bg-[var(--d-surface,rgba(255,255,255,0.04))] text-left"
+        className="relative shrink-0 overflow-hidden rounded border border-[rgb(var(--d-line))] bg-[var(--d-surface,rgba(255,255,255,0.04))] text-left"
         /*
           The region fills its lane row rather than carrying a height of its own. The lane row is `--arr-track-h`,
           which is also the header's height — that equality is what keeps headers and lanes in step, and a literal
@@ -76,7 +76,7 @@ function Region({
           <span
             key={index}
             aria-hidden="true"
-            className="absolute top-0 h-full border-l border-[var(--d-line)]"
+            className="absolute top-0 h-full border-l border-[rgb(var(--d-line))]"
             style={{ left: (index + 1) * pixelsPerBar }}
           />
         ))}
@@ -91,7 +91,7 @@ function Region({
               style={{
                 left: `${miniature.x * 100}%`,
                 width: `${Math.max(0.4, miniature.width * 100)}%`,
-                background: "var(--d-accent)",
+                background: "rgb(var(--d-accent))",
                 opacity: miniature.alpha,
               }}
             />
