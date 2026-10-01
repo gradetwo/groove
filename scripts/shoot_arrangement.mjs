@@ -127,6 +127,58 @@ for (const skin of skins) {
   }
 }
 
+/**
+ * ⭐ **And the Sound-libraries panel, in the same pass, because it is the other surface the owner asked for.**
+ *
+ * The web half of "add your own sound source" lives behind the settings modal's Sound tab, and this is the
+ * evidence that a person can reach it: the header's settings button opens the modal, the tab renders the panel,
+ * and the screenshot shows the form, the licence field and the empty list. No audio gate and no template are
+ * needed for this one, since the header is above both.
+ */
+for (const skin of skins) {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await page.addInitScript(
+    ([onboardingKey, skinKey, value]) => {
+      try {
+        localStorage.setItem(onboardingKey, "1");
+        localStorage.setItem(skinKey, value);
+      } catch {
+        /* storage unavailable: the walk below reports what it cannot reach */
+      }
+    },
+    [ONBOARDING_KEY, SKIN_KEY, skin]
+  );
+  try {
+    await page.goto(`${base}/new`, { waitUntil: "domcontentloaded", timeout: 45000 });
+    await page.waitForTimeout(2000);
+    // The gate is a full-screen overlay; dismissing it is not needed for the modal, but it keeps the screenshot
+    // free of a dimmed backdrop that would misrepresent what the panel looks like.
+    const gate = page.locator('[data-testid="audio-start-button"]').first();
+    if (await gate.count()) await gate.click({ timeout: 6000 }).catch(() => {});
+    await page.waitForTimeout(800);
+
+    await page.locator('[data-testid="header-settings-open"]').first().click({ timeout: 6000 });
+    await page.locator('[data-testid="settings-tab-sound"]').first().click({ timeout: 6000 });
+    await page.waitForSelector('[data-testid="sample-libraries-panel"]', { timeout: 8000 });
+
+    const file = path.join(out, `sound-libraries-${skin}.png`);
+    await page.screenshot({ path: file });
+    const form = await page.evaluate(() => ({
+      panel: Boolean(document.querySelector('[data-testid="sample-libraries-panel"]')),
+      licence: document.querySelector('[data-testid="sample-library-licence"]')?.value ?? null,
+      hasAdd: Boolean(document.querySelector('[data-testid="sample-library-add"]')),
+    }));
+    if (!form.panel || !form.hasAdd) problems.push(`${skin}: the sound-libraries panel did not open`);
+    // The licence field must open on `unknown`: a guessed default would be believed.
+    if (form.licence !== "unknown") problems.push(`${skin}: the licence field opened on "${form.licence}" rather than unknown`);
+    console.log(`  ${skin.padEnd(9)} sound-libraries panel=${form.panel ? "yes" : "NO "} licence=${form.licence} → ${file}`);
+  } catch (error) {
+    problems.push(`${skin}: could not reach the sound-libraries panel — ${String(error).split("\n")[0].slice(0, 120)}`);
+  } finally {
+    await page.close();
+  }
+}
+
 await browser.close();
 
 if (problems.length > 0) {
