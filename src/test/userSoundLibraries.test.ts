@@ -90,6 +90,38 @@ describe("a creator's own sound library", () => {
     expect(assets.assets.map((asset) => asset.assetId)).toEqual(["vsco2ce:VlnEns-susVib-B2-v2"]);
   });
 
+  it("⭐ records where the duration came from, so a lower bound cannot pass for a total", () => {
+    /**
+     * The manifest's own position is that a duration nobody measured is not a duration. A measured one is real but
+     * narrower: it times a single note, so it is a lower bound on a library's audio rather than the total. The two
+     * kinds of number are therefore not interchangeable, and this is where that is kept.
+     */
+    // A number a person typed is "stated" without their having to say so.
+    const stated = parseUserLibraries([library({ durationSeconds: 5 })]);
+    expect(stated.problems).toEqual([]);
+    expect(stated.libraries[0]!.durationSource).toBe("stated");
+
+    // The app's own measurement says so, and survives the merge into a manifest entry.
+    const measured = parseUserLibraries([library({ durationSeconds: 5, durationSource: "measured" })]);
+    expect(measured.libraries[0]!.durationSource).toBe("measured");
+    const merged = mergeUserLibraries(builtIn(), measured.libraries);
+    const entry = merged.manifest.entries.find((row) => row.id === "my-strings");
+    expect(entry?.durationSource).toBe("measured");
+    expect(entry?.durationSeconds).toBe(5);
+
+    /**
+     * A source nobody recognises is refused rather than coerced. Note it has to be written as untyped data to get
+     * here at all: through the typed API the compiler will not let `"guessed"` through, which is the point of the
+     * types — and the guard exists for the other road, JSON out of storage.
+     */
+    const bogus = [{ ...library({ durationSeconds: 5 }), durationSource: "guessed" }];
+    expect(parseUserLibraries(bogus).problems[0]).toContain("durationSource");
+    // And a source with nothing to describe means nothing.
+    expect(parseUserLibraries([library({ durationSeconds: undefined, durationSource: "measured" })]).problems[0]).toContain(
+      "means nothing without one"
+    );
+  });
+
   it("reads a stored list totally: every input yields libraries or a problem, never a throw", () => {
     // Nothing stored is not a problem.
     expect(parseUserLibraries("")).toEqual({ libraries: [], problems: [] });

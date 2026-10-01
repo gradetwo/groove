@@ -70,6 +70,15 @@ export interface SampleManifestEntry {
   sourceUrl?: string;
   /** When the mirror was last refreshed for this entry, as the manifest records it. */
   mirroredAt?: string;
+  /**
+   * ⭐ **Where `durationSeconds` came from: a person who stated it, or this app measuring one note.**
+   *
+   * Carried into the manifest rather than kept beside it because `list_sample_libraries` reports from a merged
+   * manifest, and a caller deciding whether to trust the number needs the label with it. A measured value is a
+   * lower bound from a single note; presenting that as a library's total is exactly the kind of number from
+   * nowhere this project keeps refusing to ship.
+   */
+  durationSource?: "stated" | "measured";
   /** Where this instrument's files live under the mirror, e.g. `vcsl/`. */
   prefix?: string;
   /** The SFZ that defines it, relative to `prefix`. */
@@ -223,6 +232,9 @@ export function parseManifest(text: string): ManifestResult {
        */
       sourceUrl: typeof entry.sourceUrl === "string" ? entry.sourceUrl : undefined,
       mirroredAt: typeof entry.mirroredAt === "string" ? entry.mirroredAt : undefined,
+      // ⭐ Carried for the same reason: this parser builds entries field by field, and one it forgets vanishes.
+      durationSource:
+        entry.durationSource === "stated" || entry.durationSource === "measured" ? entry.durationSource : undefined,
       sfz: entry.sfz,
       category: typeof entry.category === "string" ? entry.category : undefined,
       subcategoryFrom: entry.subcategoryFrom === "path" || entry.subcategoryFrom === "filename" ? entry.subcategoryFrom : undefined,

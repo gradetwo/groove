@@ -57,6 +57,20 @@ export interface UserSoundLibrary {
    * than silently missing. Measuring it in the app is the named first step.
    */
   durationSeconds?: number;
+  /**
+   * ⭐ **Where that number came from, because the two are not the same kind of number.**
+   *
+   * `"stated"` is a person typing what they know. `"measured"` is this app rendering one note of the library and
+   * timing it — which is a **lower bound** on a library's audio rather than its total, since a library holds many
+   * samples and only one was played. The manifest's own position on this is written above the gate that rejects a
+   * missing duration: *"a catalogue entry with an invented duration would be a wrong number where a missing one
+   * is honest."* A measured lower bound is not invented, but presenting it as the total would be, so it travels
+   * with the label saying which it is — the same reason `get_pitch_report` marks a source's own claim
+   * `claimOnly` rather than passing it off as a measurement.
+   *
+   * Absent means nobody said: an older record, or one written before this field existed.
+   */
+  durationSource?: "stated" | "measured";
 }
 
 /** What parsing produced: the libraries a caller can merge, and a problem for everything it could not take. */
@@ -141,6 +155,22 @@ export function parseUserLibraries(value: unknown): UserSoundLibraryParse {
       problems.push(`${at} (${id}): durationSeconds must be a positive number when it is given`);
       return;
     }
+    /**
+     * ⭐ **A duration with no stated source is `"stated"`, because that is what a number a person typed is.**
+     *
+     * Only the app's own measurement should say `"measured"`, and it must say so, since that number is a lower
+     * bound from one note rather than a library's total. An unrecognised value is refused rather than coerced:
+     * guessing here is how a measurement's edge becomes a claim about the whole.
+     */
+    const durationSource = row.durationSource;
+    if (durationSource !== undefined && durationSource !== "stated" && durationSource !== "measured") {
+      problems.push(`${at} (${id}): durationSource must be "stated" or "measured" when it is given`);
+      return;
+    }
+    if (row.durationSeconds === undefined && durationSource !== undefined) {
+      problems.push(`${at} (${id}): durationSource says where durationSeconds came from, so it means nothing without one`);
+      return;
+    }
     seen.add(id);
     libraries.push({
       id,
@@ -155,6 +185,9 @@ export function parseUserLibraries(value: unknown): UserSoundLibraryParse {
       ...(asText(row.prefix) === undefined ? {} : { prefix: asText(row.prefix) }),
       ...(asText(row.sourceUrl) === undefined ? {} : { sourceUrl: asText(row.sourceUrl) }),
       ...(typeof row.durationSeconds === "number" ? { durationSeconds: row.durationSeconds } : {}),
+      ...(typeof row.durationSeconds === "number"
+        ? { durationSource: durationSource === "measured" ? ("measured" as const) : ("stated" as const) }
+        : {}),
     });
   });
 
@@ -177,6 +210,12 @@ function manifestEntryFromLibrary(library: UserSoundLibrary): SampleManifestEntr
     ...(library.sfz === undefined ? {} : { sfz: library.sfz }),
     instruments,
     ...(measured ? { durationSeconds: library.durationSeconds } : {}),
+    /**
+     * ⭐ **The label travels with the number.** A library a person typed a duration for is `"stated"`; one the app
+     * timed from a single note is `"measured"`, and that distinction is the difference between a fact about the
+     * library and a lower bound on it.
+     */
+    ...(measured ? { durationSource: library.durationSource ?? ("stated" as const) } : {}),
     /**
      * ⭐ **A library nobody has measured is excluded rather than admitted with a made-up number.**
      *
