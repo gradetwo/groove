@@ -184,7 +184,27 @@ async function withRenderTimeout<T>(work: Promise<T>, what: string, timeoutMs: n
 }
 
 async function ensurePage(): Promise<import("playwright").Page> {
-  if (state.page) return state.page;
+  /**
+   * ⭐ **A dead page is not a live one, and until this check existed the renderer could not tell.**
+   *
+   * The cached page was returned unconditionally. A browser process runs out of GS-1 budget after
+   * roughly forty to a hundred and twenty renders and disappears — measured, `docs/RENDER_PROFILE.md` —
+   * and when it went, `page.evaluate` failed with *"Target page, context or browser has been closed"*
+   * for **every later render in that session**: no rebuild, no recovery. `scripts/probe_browser_death_recovery.mjs`
+   * is the one-command criterion, and it was red.
+   *
+   * The recovery path already existed (`resetRenderer`, called on other error paths); what was missing
+   * was asking whether the page is still alive before handing it back. A closed page or a disconnected
+   * browser now takes that path, and a healthy one costs a liveness query.
+   */
+  if (state.page) {
+    const alive = !state.page.isClosed() && (state.browser?.isConnected() ?? false);
+    if (alive) return state.page;
+    await resetRenderer();
+  } else if (state.browser && !state.browser.isConnected()) {
+    // The page went with the browser; clear the remainder of the state before rebuilding.
+    await resetRenderer();
+  }
 
   const root = appRoot();
   const port = await aFreePort();
