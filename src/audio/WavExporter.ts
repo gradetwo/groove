@@ -56,7 +56,7 @@ import { gs1VelocityRoute } from "../data/gs1Patches";
 import { capPlanPolyphony, gs1PatchFor, isGs1RoutingEnabled, planGs1Notes, patchNeedsSample } from "./gs1/gs1Tracks";
 import { generateTextureSample } from "./gs1/textureSample";
 import { applyGenreFxToGraph, resolveGenreFx } from "../data/genreFx";
-import { scheduleOfflineAudioLanes, type OfflineAudioLaneReport } from "./offlineAudioLanes";
+import { scheduleOfflineAudioLanes, isAudioLane, type OfflineAudioLaneReport } from "./offlineAudioLanes";
 import { browserSampleLoader } from "./browserSampleGraph";
 import { startSamplerNote } from "./samplerVoice";
 import { SAMPLE_CATALOGUE, type SampleAsset } from "../data/sampleCatalogue";
@@ -140,6 +140,13 @@ export interface RenderWavOptions {
    * honest answer for a caller that has no catalogue, not a silent render. `mcp/render/worker.ts` supplies the manifest-backed one the browser session uses.
    */
   audioLaneCatalogue?: readonly SampleAsset[];
+  /**
+   * **Why the catalogue could not be read at all**, when the caller knows — named with the path it tried.
+   *
+   * Distinct from an empty catalogue: "the manifest is missing at /…/manifest.json" and "the catalogue holds no such sample" send a reader to different places, and
+   * an unreadable manifest that turned into a report-free render is the silent-drop shape this reply exists to prevent.
+   */
+  audioLaneCatalogueProblem?: string;
   /**
    * Called once per render with which audio lanes reached the mix and which could not, each with a reason.
    *
@@ -662,17 +669,22 @@ export async function renderPatternOffline(
       }
 
       /**
-       * **An audio lane is not voiced by this chain.** It has no synthesised voice, and until this returned, `track_id: "audio"` fell through to the
-       * `synthesizePercussion` fallback at the bottom — so every audio lane was given a drum hit *under* the sample it was supposed to play, while the MCP reply
-       * also called it skipped. The lane is mixed from its own bytes by `scheduleOfflineAudioLanes` below instead.
+       * The mixer state is read **before** the audio-lane branch, and that order is the point: the branch used to sit above these two lines, so a muted audio lane
+       * was still mixed and still reported as rendered — audible against the user's instruction and described as played. Silencing is decided once, here and in
+       * `scheduleOfflineAudioLanes`, from the same `mixerStates`.
        */
-      if ((track.track_id || "").toLowerCase() === "audio") {
-        return;
-      }
-
       const state = mixerStates[trackIdx] || { mute: false, solo: false, volume: 0.8, pan: 0 };
       if (state.mute) return;
       if (anySolo && !state.solo) return;
+
+      /**
+       * **An audio lane is not voiced by this chain.** It has no synthesised voice, and until this returned, `track_id: "audio"` fell through to the
+       * `synthesizePercussion` fallback at the bottom — so every audio lane was given a drum hit *under* the sample it was supposed to play, while the MCP reply
+       * also called it skipped. The lane is mixed from its own bytes by `scheduleOfflineAudioLanes` below instead. `isAudioLane` is the one spelling of that test.
+       */
+      if (isAudioLane(track)) {
+        return;
+      }
 
       const trackLen = track.trackLength && track.trackLength > 0 ? track.trackLength : track.steps.length;
       const stepIdx = trackLen > 0 ? step % trackLen : step;
@@ -989,11 +1001,17 @@ export async function renderPatternOffline(
    *
    * The report is handed out rather than swallowed: a lane whose bytes could not be fetched or decoded is a fact the caller has to be able to state.
    */
-  if (pattern.tracks?.some((track) => (track.track_id || "").toLowerCase() === "audio")) {
+  if (pattern.tracks?.some((track) => isAudioLane(track))) {
     const audioCatalogue = options.audioLaneCatalogue ?? SAMPLE_CATALOGUE;
+    /**
+     * The lanes this render has already silenced, taken from the **same** `mixerStates` the synthesised lanes above were filtered by — so a muted audio lane and a
+     * muted synth lane are silenced by one decision, and the lane planner cannot disagree with the render about who is playing.
+     */
+    const silencedTrackIndexes = mixerStates.map((state, index) => (silenced(state) ? index : -1)).filter((index) => index >= 0);
     const report = await scheduleOfflineAudioLanes({
       pattern,
       catalogue: audioCatalogue,
+      ...(options.audioLaneCatalogueProblem ? { catalogueProblem: options.audioLaneCatalogueProblem } : {}),
       loader: browserSampleLoader(ctx, audioCatalogue),
       sink: {
         start(buffer, event, ratio) {
@@ -1004,6 +1022,7 @@ export async function renderPatternOffline(
             ratio,
             whenSeconds: Math.max(0, event.atSeconds),
             ...(event.gainDb === 0 ? {} : { gainDb: event.gainDb }),
+            ...(event.pan === undefined ? {} : { pan: event.pan }),
           });
         },
       },
@@ -1011,6 +1030,7 @@ export async function renderPatternOffline(
       ...(patternTempo.length ? { tempoTrack: patternTempo } : {}),
       totalSteps,
       ...(options.stemTrackIdx === undefined ? {} : { stemTrackIdx: options.stemTrackIdx }),
+      silencedTrackIndexes,
     });
     options.onAudioLanes?.(report);
   }

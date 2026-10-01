@@ -118,9 +118,22 @@ export function compileArrangementToLanes(arrangement: ArrangementV2, notes: Not
          * offline renderer, the stems, the live engine's own mixer — then mixed every part at an unasked-for level and centre, so `set_arrangement_track_gain` was
          * a tool whose value nothing read. They map onto the pattern's existing `volume` (a linear fader) and `pan` (−1…1, the same range) rather than onto new
          * fields, and they are spread conditionally so an arrangement that states neither compiles to exactly the lane it always did.
+         *
+         * ⭐ **Two level conventions meet here, and the difference is deliberate rather than a rounding error.** The model says `gainDb: 0` is unity
+         * (`setTrackGain`'s own words), so it compiles to `volume: 1`. A track that states **no** gain has no `volume` key at all, and the engine's own default
+         * stands (`DEFAULT_TRACK_VOLUME`, a linear 0.8 — −1.94 dB). An explicit 0 dB is therefore 1.94 dB above the default, and that is "0 is unity" taken at its
+         * word rather than remapped onto an unrelated default. `src/test/arrangementLaneLevel.test.ts` pins both ends so the intended behaviour cannot drift into
+         * a bug report.
          */
         ...(typeof track.gainDb === "number" && Number.isFinite(track.gainDb) ? { volume: gainDbToLinear(track.gainDb) } : {}),
         ...(typeof track.pan === "number" && Number.isFinite(track.pan) ? { pan: Math.max(-1, Math.min(1, track.pan)) } : {}),
+        /**
+         * ⭐ **Mute and solo travel too, for the same reason as the level above.** They were dropped by the same omission, so a muted arrangement track was
+         * rendered anyway — and on the audio path in particular the early return used to sit above the renderer's mute check, so a muted lane was mixed *and*
+         * listed as rendered. Spread only when true, so an unmuted lane compiles to exactly the lane it always did.
+         */
+        ...(track.muted ? { mute: true } : {}),
+        ...(track.soloed ? { solo: true } : {}),
       } as SequencerTrack,
     });
   }

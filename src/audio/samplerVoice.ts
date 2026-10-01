@@ -17,6 +17,11 @@ export interface SamplerVoiceInput {
   whenSeconds?: number;
   /** The track's level, so an audition is heard the way the track is mixed rather than dry. */
   gainDb?: number;
+  /**
+   * The track's position, −1…1. Absent or `0` is centre, and the graph is **the same as before in that case**: a stereo panner is created only when a lane
+   * actually states a position, so nothing that did not pan before can start panning because a parameter was added.
+   */
+  pan?: number;
   /** How long to let it ring, in seconds. Absent means the whole sample — a held key on a piano. */
   seconds?: number;
 }
@@ -52,6 +57,7 @@ export function startSamplerNote({
   ratio,
   whenSeconds,
   gainDb = 0,
+  pan = 0,
   seconds,
 }: SamplerVoiceInput): SamplerVoice {
   const source = context.createBufferSource();
@@ -64,7 +70,18 @@ export function startSamplerNote({
   source.playbackRate.value = safeRatio;
   const gain = context.createGain();
   gain.gain.value = Math.pow(10, gainDb / 20);
-  source.connect(gain).connect(destination);
+  /**
+   * A position of exactly zero is **not** wired through a panner: the graph a centred lane builds has to stay the one it built before this parameter existed, so
+   * the only change is for a lane that asked for a side.
+   */
+  const panned = Number.isFinite(pan) && pan !== 0;
+  if (panned) {
+    const panner = context.createStereoPanner();
+    panner.pan.value = Math.max(-1, Math.min(1, pan));
+    source.connect(gain).connect(panner).connect(destination);
+  } else {
+    source.connect(gain).connect(destination);
+  }
   const startedAt = whenSeconds ?? context.currentTime;
   if (seconds === undefined) source.start(startedAt);
   else source.start(startedAt, 0, seconds);
