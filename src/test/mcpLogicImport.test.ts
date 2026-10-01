@@ -106,9 +106,7 @@ describe("MCP · importing a Logic project", () => {
     // One definition plus exactly three producers: MusicXML, MIDI, and Logic.
     expect(calls.length, `addImportedParts is called by exactly the three importers, found ${calls.length - 1}`).toBe(4);
     for (const producer of ["importMcpMusicXml(", "importMcpMidi(", "importMcpLogicProject("]) {
-      const at = source.indexOf(`export function ${producer}`);
-      expect(at, `${producer} is exported`).toBeGreaterThan(0);
-      const body = source.slice(at, source.indexOf("\n}\n", at));
+      const body = functionBody(source, `export function ${producer}`);
       expect(body, `${producer} must reach addImportedParts`).toContain("addImportedParts(");
       // …and must not have grown its own landing: no direct `edit(` and no hand-written `notesByTrack`.
       expect(body, `${producer} must not write notes down its own road`).not.toContain("edit(");
@@ -154,3 +152,58 @@ describe("MCP · importing a Logic project", () => {
     expect(typeof importMcpMidi).toBe("function");
   });
 });
+
+/**
+ * The source text of one exported function, from its `export function` to the brace that closes its body.
+ *
+ * Finding the body's opening brace is the whole difficulty, and a naive scan gets it wrong in a way that **passes while
+ * proving nothing**: `indexOf("\n}\n")` stops at the first `}` in the return type, and `indexOf("{")` stops at the
+ * `{` that *opens* that type — both yield a fragment too short to contain the call being looked for. So the brace is
+ * found from the inside out: the function's first statement is located, and the `{` that contains it is the body.
+ */
+function functionBody(source: string, declaration: string): string {
+  const start = source.indexOf(declaration);
+  if (start < 0) throw new Error(`${declaration} is not in the file`);
+  const openParen = source.indexOf("(", start);
+  if (openParen < 0) throw new Error(`${declaration} has no parameter list`);
+  const afterParams = matchDelimiter(source, openParen, "(", ")");
+  const firstStatement = /\b(?:const|let|var|return|if|for|await|try)\b/.exec(source.slice(afterParams));
+  if (firstStatement === null) throw new Error(`${declaration} has no statement`);
+  const openBrace = source.lastIndexOf("{", afterParams + firstStatement.index);
+  if (openBrace < 0) throw new Error(`${declaration} has no body`);
+  return source.slice(start, matchDelimiter(source, openBrace, "{", "}") + 1);
+}
+
+/** The index of the delimiter that closes the one at `from`, with strings and comments skipped. */
+function matchDelimiter(source: string, from: number, open: string, close: string): number {
+  let depth = 0;
+  let quote: string | null = null;
+  for (let index = from; index < source.length; index += 1) {
+    const character = source[index]!;
+    if (quote !== null) {
+      if (character === "\\") index += 1;
+      else if (character === quote) quote = null;
+      continue;
+    }
+    if (character === '"' || character === "'" || character === "`") {
+      quote = character;
+      continue;
+    }
+    if (character === "/" && source[index + 1] === "/") {
+      const end = source.indexOf("\n", index);
+      index = end < 0 ? source.length : end;
+      continue;
+    }
+    if (character === "/" && source[index + 1] === "*") {
+      const end = source.indexOf("*/", index);
+      index = end < 0 ? source.length : end + 1;
+      continue;
+    }
+    if (character === open) depth += 1;
+    else if (character === close) {
+      depth -= 1;
+      if (depth === 0) return index;
+    }
+  }
+  throw new Error(`the ${open} at ${from} never closes`);
+}

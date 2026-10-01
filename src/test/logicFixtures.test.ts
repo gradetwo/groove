@@ -133,6 +133,29 @@ describe.skipIf(!present)("real Logic projects from a textbook's companion asset
     expect(variant === undefined || typeof variant === "string").toBe(true);
   });
 
+  it("017/020/021: one piece at three stages parses to the same notes every time", () => {
+    /**
+     * The nearest thing to a ground-truth ladder in the set: one song saved three times — first recording, ready for
+     * mixing, simply mastered. `017`'s audio does not match the later two (it has a bounce the others replace), but
+     * **the MIDI does**: 48 drum notes, 90 piano, 51 bass, in every stage. A reader that dropped a region or
+     * mis-sized an event would show up as three different totals for one song.
+     */
+    const stages = [
+      "017_Blues_C_Treble_(first_recording).logicx",
+      "020_Blues_C_treble(ready_4_mixing).logicx",
+      "021_Blues_C_treble(simply_masterd).logicx",
+    ];
+    const totals = stages.map((stage) => {
+      const { projectData, metaData } = readAlternative(stage);
+      const imported = fromLogicProject({ projectData, metaData });
+      const byName = new Map(imported.parts.map((part) => [part.name, part.notes.length]));
+      return { stage, drum: byName.get("Drummer"), piano: byName.get("Yamaha Grand Piano"), bass: byName.get("Upright Studio Bass") };
+    });
+    for (const total of totals) {
+      expect(total, `${total.stage} disagrees`).toMatchObject({ drum: 48, piano: 90, bass: 51 });
+    }
+  });
+
   it("every project parses without throwing, and every one of them says what it dropped", () => {
     // The blunt criterion: a reader meets 25 real files or it meets none of them. A crash on any one of them is a red
     // bar here, and so is a project that quietly produced no problems at all while holding audio or plugins.
