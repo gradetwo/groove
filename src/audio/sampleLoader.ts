@@ -19,6 +19,7 @@ import { expandRemoteIncludes } from "./sfz/remoteIncludes";
 import { sampleAssetForPath } from "./sfz/instrument";
 import { resolveSamplePath } from "./sfz/defaultPath";
 import { readDefaultPath } from "./sfz/parse";
+import { noCorsProbe, transportNote } from "./transportDiagnostic";
 
 /** Decodes one asset. In the browser this wraps `decodeAudioData`; in a test it is a plain function. */
 export type SampleDecoder = (asset: SampleAsset) => Promise<AudioBuffer>;
@@ -86,7 +87,15 @@ export function createSampleLoader(
     const response = await fetch(url);
     if (!response.ok) throw new Error(`SFZ "${url}" could not be fetched (${response.status})`);
     return response.text();
-  }
+  },
+  /**
+   * A second attempt at the same URL, made **only to explain a transport failure** — see `transportNote`.
+   *
+   * It is injected for the same reason the decoder is: a criterion can then prove what the note says without a network. It defaults to a
+   * `no-cors` fetch of the same address, which is the cheapest way to separate "this host does not answer" from "this host answers but does not
+   * admit this origin".
+   */
+  probeTransport: (url: string) => Promise<unknown> = noCorsProbe
 ): SampleLoader {
   const cache = new Map<string, Promise<AudioBuffer>>();
   let decodes = 0;
@@ -157,7 +166,19 @@ export function createSampleLoader(
           sfzText = await fetchSfzText(fallback);
         } catch (fallbackError) {
           const reason = (error: unknown) => (error instanceof Error ? error.message : String(error));
-          throw new Error(`${asset.assetId}: neither address served the SFZ — source ${asset.sfz.url}: ${reason(primaryError)}; mirror ${fallback}: ${reason(fallbackError)}`);
+          /**
+           * ⭐ **A transport failure is explained, because "Failed to fetch" is the one message with no information in it.**
+           *
+           * The SFZ path and the sample-bytes path both end here, and this is where the user's report stopped: two addresses named, both
+           * errors reading *"Failed to fetch"*, and no way to tell a missing object from a host that serves the object and refuses the
+           * origin. `transportNote` turns the second case into a stated cause — measured by re-requesting the same URL in `no-cors` mode —
+           * so the reply distinguishes "this object is not there" from "this host will not serve a page from another origin".
+           */
+          const notes = [await transportNote(asset.sfz.url, probeTransport), await transportNote(fallback, probeTransport)];
+          throw new Error(
+            `${asset.assetId}: neither address served the SFZ — source ${asset.sfz.url}: ${reason(primaryError)}${notes[0] ?? ""}; ` +
+              `mirror ${fallback}: ${reason(fallbackError)}${notes[1] ?? ""}`
+          );
         }
       }
       /**

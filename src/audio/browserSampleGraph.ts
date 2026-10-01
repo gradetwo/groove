@@ -12,9 +12,10 @@ import type { SampleDecoder, SampleLoader } from "./sampleLoader";
 import { createSampleLoader } from "./sampleLoader";
 import type { SampleSink } from "./audioLaneScheduler";
 import type { SampleAsset } from "../data/sampleCatalogue";
+import { transportNote, type TransportProbe } from "./transportDiagnostic";
 
 /** Fetches an asset's bytes and decodes them, refusing an asset that has no bytes to fetch. */
-export function browserSampleDecoder(context: BaseAudioContext): SampleDecoder {
+export function browserSampleDecoder(context: BaseAudioContext, probe?: TransportProbe): SampleDecoder {
   return async (asset: SampleAsset): Promise<AudioBuffer> => {
     if (!asset.url) {
       // The loud failure again: an asset declared without audio is an error, not a silent empty buffer.
@@ -43,8 +44,15 @@ export function browserSampleDecoder(context: BaseAudioContext): SampleDecoder {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return await context.decodeAudioData(await response.arrayBuffer());
     } catch (fallbackError) {
+      /**
+       * The same explanation the SFZ path gives, for the same reason: the bytes half and the program half fail through one browser mechanism, so
+       * a caller who has one of them explained would otherwise conclude the other had a different cause. `transportNote` asks the separating
+       * question — does the address answer at all — and stays silent only when both modes failed, which the message already says.
+       */
+      const notes = [await transportNote(asset.url, probe), await transportNote(asset.fallbackUrl, probe)];
       throw new Error(
-        `sample "${asset.assetId}": neither address served the bytes — source ${asset.url} (${reason(primaryError)}), mirror ${asset.fallbackUrl} (${reason(fallbackError)})`
+        `sample "${asset.assetId}": neither address served the bytes — source ${asset.url} (${reason(primaryError)})${notes[0] ?? ""}, ` +
+          `mirror ${asset.fallbackUrl} (${reason(fallbackError)})${notes[1] ?? ""}`
       );
     }
   };

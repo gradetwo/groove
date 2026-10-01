@@ -199,10 +199,27 @@ async function ensurePage(): Promise<import("playwright").Page> {
 
     const { chromium } = await import("playwright");
     state.browser = await chromium.launch({ args: ["--no-sandbox"] });
-    state.page = await state.browser.newPage();
+    const page = await state.browser.newPage();
+    state.page = page;
     state.port = port;
-    await state.page.goto(`http://127.0.0.1:${port}`, { waitUntil: "domcontentloaded" });
-    return state.page;
+    /**
+     * ⭐ **A page that is still loading is retried, not reported as a failed render.**
+     *
+     * Vite reports itself ready when it *can* serve the app, which is not when the app has finished loading: this is a large application, and under
+     * load it takes tens of seconds before the module graph and `index.html` reach `domcontentloaded`. Playwright's default navigation budget is
+     * **30 s**, so a busy machine produced `page.goto: Timeout 30000ms exceeded` from a renderer whose server was healthy — measured twice in one
+     * session on a host running parallel worktrees at a load average of 11, with Vite answering `200 text/html` to a plain request throughout. The
+     * page had fetched every module; it simply had not finished.
+     *
+     * So the navigation gets a longer budget and **one retry**: a timeout here leaves a page in an unknown state, and a second attempt costs less
+     * than the render it would otherwise lose. This is the startup half of the rule the render budget already follows — a slow page is not a stuck one.
+     */
+    try {
+      await page.goto(`http://127.0.0.1:${port}`, { waitUntil: "domcontentloaded", timeout: 120_000 });
+    } catch {
+      await page.goto(`http://127.0.0.1:${port}`, { waitUntil: "domcontentloaded", timeout: 120_000 });
+    }
+    return page;
   } catch (error) {
     /**
      * ⭐ **A failed start is cleaned up before it is reported.**

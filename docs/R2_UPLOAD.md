@@ -2174,3 +2174,59 @@ tag    FAILED (exit 1)
 ### ⭐ 而"用户自备"这条路，项目里已经有它的形状
 
 ⭐ 一个 CC Sampling Plus 的库，正确的做法是 ✓：**清单里【不】发行它的字节 ✗，而是让用户自己指向本地或自备的地址** ✓ —— ⭐ 而那需要一条"用户提供的库根"的入口 ✗（**现在还没有** ✗）—— ⭐ **所以 VSCO 不是"押后"✗，而是"属于另一条路径"✓** ✓✓。
+
+
+## 69. ⚠️⭐⭐⭐⭐ **实测：R2 镜像缺 CORS 头 —— 于是"源在 GitHub 上"成了唯一能响的地址**（2026-10-01 ✓）
+
+⭐ 起因是一条**独立用户的报告** ✓：她用 VSCO 2 CE 端到端复测，`sampler` 轨始终没出声，报文只说 **"neither address served the SFZ — Failed to fetch"** ✗ —— ⭐ **而两个地址 `curl` 都是 200** ✓✓。"curl 200 但浏览器 fetch 失败"这一对事实**就是全部诊断** ✓，而**报文里没有它** ✗✓。
+
+### 实测（三个各自独立的测量 ✓）
+
+| # | 测量 | 结果 |
+|---|---|---|
+| 1 | `curl -D-` 两个地址 | ⭐ **`raw.githubusercontent.com` 200 + `access-control-allow-origin: *`** ✓✓；⚠️ **`r2mirror` 200 + 【没有任何 `access-control-allow-*` 头】** ✗✓ |
+| 2 | 在**真实 Chromium 页面里** `fetch()` 镜像地址（`scripts/probe_vsco_fetch_failure.mjs` ✓） | ⚠️ **`TypeError: Failed to fetch`** ✗ |
+| 2b | 同一个地址、同一个页面，`fetch(url, { mode: "no-cors" })` | ⭐ **`{ type: "opaque", status: 0 }` —— 请求成功** ✓✓ |
+| 3 | 同一路径的 Playwright `requestfailed` 事件 | ⚠️ **`net::ERR_FAILED`** ✗（不是 404、不是 403 ✓） |
+
+⭐⭐ **2 + 2b 合起来是决定性的** ✓：`no-cors` **跳过 CORS 检查** ✓ —— 它成功说明**主机活着、对象也在发** ✓；而普通 `fetch` 在同一地址上抛错，只可能是**响应缺少 `Access-Control-Allow-Origin`** ✓✓。⭐ 也就是说：**`curl` 的 200 与浏览器的失败并不矛盾** ✓ —— 前者不看那个头，后者必看 ✓。
+
+### 所以第 2 节第 5 行【仍然是待办】，而且它现在是可见的故障
+
+⭐ `docs/R2_UPLOAD.md` §2 第 5 行早就写着这条要求 ✓：**"CORS policy —— 应用用 `fetch()` 取，所以没有 CORS 时无论 URL 多对，浏览器都会拦掉每一个采样"** ✓ —— ⚠️ **当时它是"还需要什么"里的一项 ✗，从未被验过 ✗**，而 §7 只核对过**对象的数量与字节** ✓。⭐ **"清点"发现不了"取不到"** ✓✓（§8 记的就是同一类两件事：漏了 `prefix` 那一层、桶是空的 ✓）。
+
+### ⭐ 下一步：在桶上配 CORS（**这是业主侧的操作，不是代码** ✓）
+
+**Cloudflare 控制台**：R2 → 桶 `groove` → Settings → **CORS policy** → 加一条：
+
+```json
+[
+  {
+    "AllowedOrigins": ["*"],
+    "AllowedMethods": ["GET", "HEAD"],
+    "AllowedHeaders": ["*"],
+    "ExposeHeaders": ["Content-Length", "Content-Type", "ETag"],
+    "MaxAgeSeconds": 86400
+  }
+]
+```
+
+⭐ `AllowedOrigins: ["*"]` 对**公开的采样镜像**是合适且更简单的选择 ✓（§2 就写了这一点 ✓：库里没有私有内容，桶本来就要公开读 ✓）—— ⚠️ **要收紧就写 `https://groove.wangda.today` 与 `http://localhost:*`** ✓，**但开发端口是随机的**（本机并行 worktree 就是这个原因 ✓），用 `*` 才不会又变成"本地好用、部署不好用"✗✓。
+
+**命令行**（`wrangler` ✓）：`wrangler r2 bucket cors put groove --file cors.json`
+
+### 验它（一条命令，读的是**响应头**而不是状态码 ✓）
+
+```
+curl -sI -H "Origin: http://127.0.0.1:3000" https://r2mirror.groove.wangda.today/vsco2ce/BassoonStac.sfz | grep -i access-control
+```
+
+⭐ **要看到 `access-control-allow-origin`** ✓ —— ⚠️ **只看到 `200` 不算数** ✗✓，**这正是报告里那一对事实教会的** ✓✓。
+
+⭐ 再跑一次端到端探针（**它把"镜像能不能被浏览器取"和"取不到时渲染器怎么说"分开测** ✓）：
+
+```
+npx vite-node scripts/probe_vsco_fetch_failure.mjs
+```
+
+⚠️ **在桶配好之前，源码里的诊断已经能把这件事说出来** ✓：报文现在会写 **"the address does not answer cross-origin: the same URL fetched in `no-cors` mode succeeds…"** ✓✓（`src/audio/transportDiagnostic.ts` ✓）—— ⭐ **于是下一次有人看到 "Failed to fetch"，他不必再打开 DevTools** ✓✓。
