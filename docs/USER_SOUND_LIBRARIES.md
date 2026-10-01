@@ -67,3 +67,33 @@
 5. **音高检测必须跟上** ✓✓：用户库**正是最可能标注有问题的** ——**`get_pitch_report`（`assetId` + `midi` ✓）与 `scripts/probe_instrument_pitch.mjs` 已经在了** ✓，**登记后要能直接对它跑** ✓。
 
 **⇒ 之所以这是"较优方案"** ✓✓：**它没有新增任何加载路径、没有新增第二个解析器、没有动 `assetId` 的生成** ✓——**只是在清单进入系统之前，多了一条来自用户的条目** ✓。
+
+---
+
+## §3 两件实测：一处**未能复现**，一处**决定了下一步怎么做** ✓✓（2026-10-01）
+
+### ① "标签高亮不对" —— **未能复现，而且原说法是我的错** ✗✓✓
+
+**我上一轮报告说**：面板内容是对的，但被画成"活动"的标签是 `Audio` ✗。**我没有直接去修，而是先量** ✓——**结论是我看错了那张 PNG** ✗✓。
+
+**测法与结果** ✓✓：用 Playwright 打开设置、点 `settings-tab-sound`，**读六个标签的 `aria-selected`（它绑在真实状态 `tab === id` 上 ✓）以及实际的活动 class** ✓：
+
+```
+打开设置后:  audio selected=true  activeStyle ✓ · sound selected=false plain ✓
+点 Sound 后: audio selected=FALSE plain ✓ · sound selected=TRUE activeStyle ✓
+```
+
+**新截图也一致** ✓（`Sound libraries` 是唯一的强调色胶囊 ✓，面板内容也对 ✓）。
+
+**⇒ 记下来而不是抹掉** ✓：**这是本项目那条规矩的正面例子——先测，测出来不是 bug 就如实说"未能复现 + 试过什么"，而不是去"修"一个不存在的问题** ✓✓。
+
+### ② `durationSeconds` 到底被用来干什么 —— **决定"量一个音"够不够** ✓✓
+
+**查法**：把 `durationSeconds` 与 `asset.seconds` 的所有消费方都读一遍 ✓。**结论** ✓✓：
+
+* **它变成资产的 `seconds`**（`sampleManifest.ts:377` ✓）；
+* **而唯一消费它的地方是 `mcp/instruments.ts:83`，只把它列出来** ✓——**其余所有 `seconds` 都是**音符时长**（`offlineAudioLanes.ts:356`：**"`event.seconds` is the note's length"** ✓）或别的模块的同名参数 ✗✓；
+* **⇒ 唯一的硬要求是"它必须是个正数"**（`sampleManifest.ts:318` ✓）；
+* **⇒ 而清单自己的注释已经写明这个数字的立场** ✓✓：**"A catalogue entry with an invented duration would be a wrong number where a missing one is honest, and this project has spent enough on numbers that came from nowhere."**（`sampleManifest.ts:309` ✓）。
+
+**⇒ 下一步的设计由此确定** ✓✓：**量一个音可以解开"用户库进不了目录"这个死结 ✓，但要把数字的来路写明** ✓——**一个音渲染出来的长度是下界，不是整库时长** ✗✓——**这与 `get_pitch_report` 里 `claimOnly: true` 是同一个做法** ✓✓：**承认测量方法的边界，而不是把下界当总量报出去** ✓。
