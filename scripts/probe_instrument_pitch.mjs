@@ -11,9 +11,14 @@
  * ratio 算成两倍）都会让它变红 ✗✓。删除测试：把 `startSamplerNote` 的 ratio 乘 2，
  * 本探针必须整体报红 ✓。
  *
- * ⚠️ **本探针现在预期为红** ✗✓：`render_arrangement` 的采样 lane **在音区内不移调** ✗——59/60 正确，
- * 而 61/62/63/64 全部冻结在音区根音上（实测 260.9 Hz）✗。**红是缺陷的证据，不是判据的问题** ✗✓——
- * **不许**靠放宽 `--cents` 或删掉那几条让它变绿 ✗✗。修复落地后它应当整体转绿 ✓，**届时把它当回归判据用** ✓。
+ * ⭐ **曾经量到的"音区冻结"不在 lane 里，而在 arrangement → pattern 的投影里** ✓✓：`create_arrangement
+ * {blankKind:"sampler"}` **不是空的** ✗✓——`defaultContentFor("sampler")` 给它四个 C4 音符（`steps(4)`，
+ * 落在第 0/1/2/3 拍）✓，而 `stepsFromNotes` 在**同一列**只保留**最低**的那个音 ✗，于是一条写在 C4 之上的
+ * 音符**在进 lane 之前**就被起手 C4 顶掉了 ✓：实测正是 `min(60, note)`——59/60 看着对（它们 ≤ 60），
+ * 61–64 全部出 260.9 Hz = C4 ✗。**lane 自己的音区解析一直是对的** ✓✓（`resolveInstrumentNote` →
+ * `playbackForNote`，与试听路**共用同一处** ✓），所以本探针必须先给被测 lane **恰好一个音符**：
+ * `set_arrangement_track_steps` 清掉起手内容 ✓。**不许**靠放宽 `--cents` 或删掉那几条让它变绿 ✗✗——
+ * 给 ratio 加任何偏移、或让两条路分叉，它都必须整体变红 ✓。
  *
  * 求基频用自相关，不用 `analyze_audio`（它不报基频 ✗），也不用频谱主峰（持续弦乐的第二
  * 谐波常常强于基频 ✓，那正是这份报告踩的坑 ✓）。
@@ -30,15 +35,15 @@ import { readFileSync } from "node:fs";
 
 const TOLERANCE = Number((process.argv.find((v) => v.startsWith("--cents=")) ?? "--cents=25").split("=")[1]);
 const CASES = [
-  ["vsco2ce:ViolinEnsSusVib", 57, "音区边界之下——lane 上会低一个八度 ✗（已知缺陷）"],
+  ["vsco2ce:ViolinEnsSusVib", 57, "音区边界之下：起手 C4 混在窗口里时曾量到 110.0 Hz（−1200）✗✓，给它一个音符后两条路都是 220.5 ✓"],
   ["vsco2ce:ViolinEnsSusVib", 59, "音区根音附近：两条路都对 ✓"],
   ["vsco2ce:ViolinEnsSusVib", 60, "音区根音上：两条路都对 ✓（也是单音测试测不出缺陷的那一条）"],
-  ["vsco2ce:ViolinEnsSusVib", 61, "根音之上一个半音——lane 会冻结在根音 ✗（已知缺陷）"],
-  ["vsco2ce:ViolinEnsSusVib", 62, "根音之上两个半音——lane 会冻结在根音 ✗（已知缺陷）"],
-  ["vsco2ce:ViolinEnsSusVib", 63, "根音之上三个半音——lane 会冻结在根音 ✗（已知缺陷）"],
-  ["vsco2ce:ViolinEnsSusVib", 64, "根音之上四个半音——lane 会冻结在根音 ✗（已知缺陷）"],
+  ["vsco2ce:ViolinEnsSusVib", 61, "根音之上一个半音：清理前被起手 C4 顶掉（min(60,61)=60）✗✓，现在两条路都是 277.4 ✓"],
+  ["vsco2ce:ViolinEnsSusVib", 62, "根音之上两个半音：清理前冻结在 260.9 Hz ✗✓，现在两条路都是 294.0 ✓"],
+  ["vsco2ce:ViolinEnsSusVib", 63, "根音之上三个半音：清理前冻结在 260.9 Hz ✗✓，现在两条路都是 312.8 ✓"],
+  ["vsco2ce:ViolinEnsSusVib", 64, "根音之上四个半音：清理前冻结在 260.9 Hz ✗✓，现在两条路都是 329.1 ✓"],
   ["vsco2ce:CelloEnsSusVib", 60, "对照：两条路都对 ✓"],
-  ["vsco2ce:CelloEnsSusVib", 64, "对照：证明缺陷是否只在小提琴（不该是 ✗）"],
+  ["vsco2ce:CelloEnsSusVib", 64, "对照：大提琴的同一个半音也一样，缺陷与具体乐器无关 ✓"],
 ];
 
 
@@ -121,6 +126,15 @@ async function viaArrangement(assetId, midi) {
   let tracks = []; try { const j = JSON.parse(gt); tracks = j.arrangement?.tracks ?? j.tracks ?? []; } catch { /* ignore */ }
   const trackId = tracks[0]?.track_id ?? tracks[0]?.id ?? tracks[0]?.trackId;
   if (!trackId) return { error: `读不到轨道 id：${gt.slice(0, 90)}` };
+  /**
+   * ⭐ **先让这条 lane 真正为空** ✓✓：`blankKind:"sampler"` 的"空白"排列**带着四个起手 C4 音符** ✓
+   * （`defaultContentFor("sampler")` 的 `steps(4)`，第 0/1/2/3 拍），它们既会混进 0.3–0.9 秒的分析窗口
+   * （57 因此曾量到 110.0 Hz，−1200 音分 ✗），又会在**同一列**用 `stepsFromNotes` 的"最低音胜出"把
+   * 一条写在 C4 之上的音符顶掉（61–64 因此冻结在 C4 的 260.9 Hz ✗）。**判据要量的是 lane 的音高解析，
+   * 所以给它的必须只有被测的那一个音符** ✓——这不是放宽判据，是把夹具摆成判据自己声称的样子 ✗✓。
+   */
+  const cleared = await request("tools/call", { name: "set_arrangement_track_steps", arguments: { arrangementId: arrId, trackId, steps: new Array(16).fill(0) } });
+  if (cleared?.error || cleared?.result?.isError) return { error: `set_arrangement_track_steps 失败：${String(cleared?.result?.content?.[0]?.text ?? cleared?.error).slice(0, 80)}` };
   const set = await request("tools/call", { name: "set_arrangement_track_instrument", arguments: { arrangementId: arrId, trackId, assetId } });
   if (set?.error || set?.result?.isError) return { error: `set_arrangement_track_instrument 失败：${String(set?.result?.content?.[0]?.text ?? set?.error).slice(0, 80)}` };
   const add = await request("tools/call", { name: "add_arrangement_notes", arguments: { arrangementId: arrId, trackId, notes: [{ pitch: midi, startBeats: 0, lengthBeats: 0.9, velocity: 100 }] } });

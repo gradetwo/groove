@@ -297,7 +297,7 @@ path = 有 ✓ · durationSec = 16.600022675736962
 
 ---
 
-## 十五、⭐⭐⭐ **确认：采样 lane 在音区内不移调——一个音区里每个半音都发同一个音** ✗✗✓✓✓（2026-10-01，我自己的实测）
+## 十五、⭐⭐⭐ **确认：采样 lane 在音区内不移调——一个音区里每个半音都发同一个音** ✗✗✓✓✓（2026-10-01，我自己的实测）**→ 归因已被 §16 证伪 ✗✗；现象是"起手 C4 顶掉了被测音符" ✓**
 
 **怎么发现的** ✓✓：我把音高判据扩成**两条路并测** ✓（`render_instrument_note` 走 `auditionInstrumentNote` ✓；`render_arrangement` 的采样 lane 走 `offlineAudioLanes` ✓）。midi 60 两条路**都正确** ✓✓，但 **midi 62 上两条路分叉** ✗✓（audition 294.0 Hz ✓ vs lane **260.9 Hz** ✗）→ 于是跨音区扫了一遍 ✓。
 
@@ -328,7 +328,28 @@ path = 有 ✓ · durationSec = 16.600022675736962
 
 ---
 
-## 十六、⭐⭐ **`render_arrangement` 完全忽略 `bars`** ✗✗✓✓（2026-10-01，我自己的实测）
+## 十六、✗✗✓✓✓ **§15 的"音区冻结"被证伪：lane 一直在移调，丢音高的是 arrangement → pattern 的投影**（2026-10-01，分支 `fix-lane-keyzone-pitch`，判据 `scripts/probe_instrument_pitch.mjs`）
+
+**现象逐条复现** ✓：57 → 110.0 ✗、61/62/63/64 → 全部 260.9 ✗，而 audition 九条全对 ✓。**但归因错了** ✗✗。
+
+**两条路不是两处解析** ✓✓：`render_instrument_note`（`auditionInstrumentNote` ✓）与 lane（`offlineAudioLanes.ts:420` ✓）**都调 `sampleLoader.loadNote`** ✓，而 `loadNote` 是唯一把"音符 → region + ratio"的地方 ✓（`resolveInstrumentNote` → `playbackForNote`，算术只有一份 ✓；`startSamplerNote` 也照常应用 ratio ✓）。**ratio 里不可能有"冻结"** ✗——**分叉的是喂进去的音符，不是解析** ✓✓。
+
+**真正丢音高的一层** ✓：`stepsFromNotes`（`src/data/noteEvents.ts:74`）在**同一列**多个音时**只留最低的** ✗✓；而 `create_arrangement{blankKind:"sampler"}` **不是空的** ✗✓——`defaultContentFor("sampler")`（`src/data/defaultContent.ts:38`）给它**四个 C4 音符**（`steps(4)`，第 0/1/2/3 拍）✓。判据把被测音符写在 `startBeats:0`，与起手 C4 **同列** ✓，于是实测正是 **`min(60, note)`**：
+
+| 请求 | 编进 lane 的 `pitch[0]` | 清掉起手内容后 |
+| --- | --- | --- |
+| 55 / 57 / 59 / 60 | 55 / 57 / 59 / 60 ✓ | 不变 ✓ |
+| **61 / 62 / 63 / 64** | **全部 60** ✗ | 61 / 62 / 63 / 64 ✓ |
+
+（纯 node、无浏览器：同一序列 `create_arrangement → set_arrangement_track_instrument → add_arrangement_notes → flattenMcpArrangement`，读编出 lane 的 `pitch[0]` ✓。）
+
+**55/57 的"低一个八度/十二度"是同一个夹具** ✓✓：lane 的 WAV 自测——`0.05–0.40 s` 就是 **220.5 Hz**（57 ✓）、`0.50–0.62 s` 是起手 C4 的 **262.5 Hz** ✓，而判据的窗口 `0.30–0.90 s` 跨了两个不同音高，自相关才读出 **110.0 Hz** ✗✓。给 lane 只留一个音符后，57 两条路都是 220.5 ✓✓——**它不是第二个症状，是同一个夹具** ✓。
+
+**修法** ✗✓：判据的夹具先 `set_arrangement_track_steps` 清空（全 0），让被测 lane **恰好只有一个音符** ✓。**容差 ±25 音分不动** ✗、**九条用例不删** ✗。修后九条全绿 ✓✓（小提琴 57/59/60/61/62/63/64 + 大提琴 60/64 ✓，两条路相差 ≤12 音分 ✓）；**把那一步去掉即整体回红** ✗✓（12 项不合格，与修前逐条一致 ✓）；另做删除测试：`startSamplerNote` 的 ratio 乘 `2^(1/12)` → lane 全部 +96…+110 音分 ✗（audition 仍绿 ✓）→ 判据红 ✓✓，所以这次夹具修正**没有**把它变成"怎么都绿" ✗。
+
+**仍然真实、且一般的那条** ✗✓：arrangement 里**同一十六分格上的两个音，只有最低的那个会被听见，而且没有人报告** ✓——这是单音步进网格的已知极限（`noteEvents.ts:73`、`arrangementCompile.ts:160` 都写了 ✓）。本分支**没有**改它 ✗✓：谁该胜出、新 sampler 轨道要不要带起手音，是产品决定，不该为了让一条判据变绿而拍板 ✓。
+
+## 十七、⭐⭐ **`render_arrangement` 完全忽略 `bars`** ✗✗✓✓（2026-10-01，我自己的实测）
 
 **怎么撞上的** ✓：复测 P0-3 时，`render_arrangement{bars:1}` 产出 **16.6 秒** ✗，而 `render_audio` 在同一体系下是 **1.937 秒/小节 + 1.693 秒尾巴** ✓（§十四 的算术 ✓）。于是把 `bars` 扫了一遍 ✓（同一个排列、同一个音符，只改 `bars` ✓）：
 
