@@ -343,12 +343,16 @@ description says.
 
 **Progress, and what it can honestly say.** MCP's `notifications/progress` exists for exactly this, and it is wired: a request
 whose `_meta` carries a `progressToken` gets notifications; a request without one gets **none**, by construction
-(`createRenderProgress` returns no reporter at all). What it reports is a **phase and a heartbeat**, not a bar counter, and
-that is a property of the renderer rather than a shortcut: a render is one `OfflineAudioContext.startRendering()` call that
-holds **96–99.9% of the wall clock** (`docs/RENDER_PROFILE.md`), so there is no per-bar boundary to hook. A client that sees
-a heartbeat every 15 s knows the page is working; a client that sees nothing for eight minutes cannot tell a slow render
-from a hang, which is the state this replaced. `render_arrangement_stems` is the exception that can count: it renders one
-file per track, so it reports per track.
+(`createRenderProgress` returns no reporter at all). The token travels in the **request params** (`{ name, arguments, _meta }`),
+not in transport options — this SDK has no options field for it. One caveat measured while testing the wire: this SDK's client
+resolves a progress notification by `Number(token)`, so an **opaque string token is dropped** ("unknown token") even though the
+spec allows it; a client on this SDK should send a numeric token. The server echoes whatever type it was given.
+
+What it reports is a **phase and a heartbeat**, not a bar counter, and that is a property of the renderer rather than a
+shortcut: a render is one `OfflineAudioContext.startRendering()` call that holds **96–99.9% of the wall clock**
+(`docs/RENDER_PROFILE.md`), so there is no per-bar boundary to hook. A client that sees a heartbeat every 15 s knows the page
+is working; a client that sees nothing for eight minutes cannot tell a slow render from a hang, which is the state this
+replaced. `render_arrangement_stems` is the exception that can count: it renders one file per track, so it reports per track.
 
 **Loudness needs no analysis tool.** `render_audio` and `render_song` already return gated loudness and true peak for the file they wrote;
 `analyze_audio` adds the discontinuities, correlation, tail, spectral shape and energy curve. An evaluation proposed `analyze_loudness` as
