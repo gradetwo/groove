@@ -213,3 +213,21 @@ Muse 的三个 0.9 拍音  → events atSeconds [0,1,2]，seconds 各 0.45
 **它的两条旁支发现也记下** ✓✓（下一件，不是现在）：
 * `src/audio/samplerSteps.ts:104-112`：**实时**安排播放那条路**同样不传 `seconds`、且完全忽略 `gate`** ✗ → **浏览器里同一个 drone** ✓✓（**那条更要紧，因为用户用的是浏览器** ✓）；
 * `compileArrangementToLanes` **丢掉 `lengthBeats`** ✗ → 0.9 拍音符到 lane 时长度已不存在 ✓✓。
+
+## 十二、和弦那条线索的**成因被我看清了**：不是 `Math.min` 的错，是表示法的边界（2026-10-01）
+
+修复 agent 在 §十 末记了一条："同一步上的和弦只剩最低音，两条采样调度器都只读 `pitch`" ✓。我读了 `src/data/noteEvents.ts:66-77` ✓，**现象成立** ✓，**但成因要改口径** ✗✓：
+
+```ts
+steps[index] = 1;
+// The lowest pitch wins a column: a chord cannot be one value, and reporting the first-listed one
+// would make the result depend on insertion order.
+pitches[index] = pitches[index] === 0 ? note.pitch : Math.min(pitches[index]!, note.pitch);
+```
+
+* `Math.min` **是刻意的** ✓，**注释写明了理由** ✓✓：`StepView` **每步只有一个 `pitch`** ✗ → **按结构装不下和弦** ✓；取最低音是为了**不让结果依赖插入顺序** ✓（一个确定性的取舍 ✓，不是疏忽 ✗）；
+* ⇒ **修法不在 `Math.min`** ✗✓。**该问的是"采样这条路为什么读 `steps` 而不是读 `notes`"** ✓✓——**轨道的 `notes` 是能装和弦的** ✓，而 `stepsFromNotes` 是**把音符压平成一步一格的视图** ✓（它的文件头就写着这是有损的 ✓）。
+
+**因此这条线索的正确表述** ✓✓：**"一步一格"的视图不能表达和弦**（**定义如此** ✓）；**采样 lane 经由该视图读音高** → **同时按下的和弦只响最低音** ✗；**修法的位置是数据来源**（改读 `notes` ✓，或给视图加一个多音高的表示 ✓），**不是改那个 `Math.min`** ✗✓。
+
+**为什么这次值得单独写一节** ✓✓：如果照 §十 末的表述去修 ✗，**最省事的改法是去动 `Math.min`** ✗——那会**把"确定性"换成"依赖插入顺序"** ✗✓，**把一条真缺陷换成一条随机的假象** ✓；**而它真正的位置在上一层** ✓✓。这与今天那两次"读了一层就对另一层下结论"**同源** ✓：**现象在上层，成因在下层** ✓。
