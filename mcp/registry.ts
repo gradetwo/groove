@@ -33,7 +33,9 @@ function unknownGenre(wanted: string): string {
     (near.length ? `; closest: ${near.map((id) => `"${id}"`).join(", ")}` : "")
   );
 }
-import { applyPatternOps, comparePatterns, patternStatistics, validatePattern, type PatternOp } from "./pattern";
+import { applyPatternOps, comparePatterns, findTrack, patternStatistics, validatePattern, type PatternOp } from "./pattern";
+import { resolveGs1Lane } from "../src/audio/gs1/gs1Tracks";
+import { DEFAULT_PARAMS } from "../vendor/gs1/src/audio/params";
 import { patternFromGenre } from "../src/data/genreMix";
 import { MAX_BARS } from "../src/data/arrangementEdits";
 import { generateMelody } from "./melody";
@@ -126,6 +128,17 @@ const patternSchema = z
             track_id: z.string(),
             name: z.string().default(""),
             instrument: z.string().default(""),
+            /**
+             * This lane's own GS-1 sound, as the synth project's own **share code**
+             * (`gs1.patch.get` prints one). Typed rather than left to `.passthrough()` so a
+             * non-string is rejected at the protocol edge; the code's *content* is validated where
+             * it is used (`resolveGs1Lane`), which `validate_pattern` reports as a problem naming
+             * the lane. See `apply_gs1_patch`.
+             */
+            gs1Patch: z
+              .string()
+              .optional()
+              .describe('a GS-1 patch share code ("gs1.1.…", from the synth\'s gs1.patch.get) for this lane — overrides the instrument table'),
             steps: z.array(z.number()),
             velocity: z.array(z.number()).optional(),
             pitch: z.array(z.number().nullable()).optional(),
@@ -1214,6 +1227,86 @@ export const TOOLS: ToolDefinition[] = [
       }
       const result = applyPatternOps(base, args.ops as PatternOp[]);
       return { applied: result.applied, pattern: result.pattern, validation: validatePattern(result.pattern) };
+    },
+  },
+  /**
+   * The GS-1 **patch pass-through**, and the one place a caller can put a synth share code on a lane.
+   *
+   * The synth project already defines the format, the encoder, the decoder and the parameter table
+   * (`gs1.patch.get` prints a `gs1.1.` share code; `gs1.patch.set` accepts one). This tool stores
+   * that string on the lane and nothing else — no second model, no parameter editor — and the
+   * renderer, the live engine and `validate_pattern` all read it through `resolveGs1Lane`. A code
+   * that cannot be read is **refused here** (and reported by `validate_pattern`), never written to
+   * a lane where it would quietly become a different instrument.
+   */
+  {
+    name: "apply_gs1_patch",
+    title: "Give a lane a GS-1 patch",
+    description:
+      "Set or clear one lane's own GS-1 sound, as the synth project's own share code (a \"gs1.1.…\" string from gs1.patch.get; gs1.patch.set and gs1.render accept the same string). Overrides the instrument table for that lane only, and reaches the rendered audio and live playback through the same resolution. Returns the new pattern and its validation; a code that cannot be decoded, that carries a second layer, or that sits on a lane GS-1 never plays is refused with the reason, naming the lane. `patch: null` clears the lane back to the instrument table.",
+    readOnly: true,
+    inputSchema: {
+      genreId: z.string().optional().describe("start from this genre's pattern"),
+      pattern: patternSchema.optional().describe("or start from a pattern you already have"),
+      track: z
+        .string()
+        .min(1)
+        .describe('the lane to patch — matched by laneId first, then by kind ("chords", "lead", "fx", "lead-2"…), as everywhere else'),
+      patch: z
+        .string()
+        .nullable()
+        .describe('a GS-1 share code ("gs1.1.…"), or null to clear this lane\'s own patch and go back to the instrument table'),
+    },
+    handler: (args) => {
+      const base = patternFromArgs(args as { genreId?: string; pattern?: unknown });
+      if (!base) {
+        const wanted = (args as { genreId?: string }).genreId;
+        return failure(wanted ? unknownGenre(wanted) : "provide either genreId or pattern");
+      }
+      // `patternFromArgs` hands back the caller's own object when one was supplied; never mutate it.
+      const pattern = clonePattern(base);
+      const track = findTrack(pattern, String(args.track));
+      if (!track) {
+        const lanes = pattern.tracks.map((row) => row.laneId ?? row.track_id).join(", ");
+        return failure(`no lane "${String(args.track)}" in this pattern — the lanes are: ${lanes}`);
+      }
+      const laneKey = track.laneId ?? track.track_id;
+
+      if (args.patch === null || args.patch === undefined) {
+        delete track.gs1Patch;
+        return {
+          pattern,
+          track: laneKey,
+          patch: null,
+          detail: `lane "${laneKey}" is back on the instrument table's patch`,
+          validation: validatePattern(pattern),
+        };
+      }
+
+      const lane = resolveGs1Lane(track.track_id, track.instrument, base.genre_id, String(args.patch));
+      if (lane.kind === "problem") return failure(`lane "${laneKey}": ${lane.problem}`);
+      if (lane.kind === "native") {
+        // Unreachable with a non-empty code (the resolver's `voice`/`problem` arms cover it), and
+        // stated rather than asserted away: a caller must never get a success for a patch that did
+        // not land.
+        return failure(`lane "${laneKey}": the patch code was neither accepted nor refused`);
+      }
+      track.gs1Patch = String(args.patch);
+      const changed = Object.entries(lane.voice.params).filter(
+        ([id, value]) => value !== DEFAULT_PARAMS[Number(id)]
+      ).length;
+      return {
+        pattern,
+        track: laneKey,
+        patch: {
+          shareCode: String(args.patch),
+          /** How far the code is from the synth's own default patch — a real sound, not `INIT`. */
+          parametersChanged: changed,
+          routes: lane.voice.routes?.length ?? 0,
+        },
+        detail: `lane "${laneKey}" now plays its own share code (${changed} parameter${changed === 1 ? "" : "s"} away from the synth's default patch)`,
+        validation: validatePattern(pattern),
+      };
     },
   },
   {

@@ -39,13 +39,14 @@
 import type { MixTrackId } from "../../data/genreMix";
 import { captureRequested } from "../../platform/probeHooks";
 import { createGs1Host, type Gs1Host } from "./Gs1Host";
-import { gs1VelocityRoute } from "../../data/gs1Patches";
 import {
   GS1_POLYPHONY_CEILING,
+  applyGs1VoiceRoutes,
   capPlanPolyphony,
   isGs1RoutingEnabled,
   patchNeedsSample,
   planGs1Notes,
+  resolveGs1Lane,
 } from "./gs1Tracks";
 import { generateTextureSample } from "./textureSample";
 
@@ -77,8 +78,12 @@ interface TrackSlot {
   instrument: string | null | undefined;
   host: Gs1Host | null;
   ready: boolean;
-  /** The patch the host was told to load, so a change does not get silently ignored. */
-  patch: string | null;
+  /**
+   * The patch the host was told to load, **as its identity**: the lane's share code when it carries
+   * one, else the named patch (`Gs1Plan.patchKey`). `patch` alone cannot do this job once two
+   * different codes both resolve to `null`.
+   */
+  patchKey: string | null;
   creating: Promise<void> | null;
   dest: AudioNode | null;
   /**
@@ -97,6 +102,15 @@ export class Gs1VoicePool {
   private readonly createHost: typeof createGs1Host;
   private readonly maxVoices: number;
   private disposed = false;
+  /**
+   * Lanes whose own share code was refused, each named, in `status()`.
+   *
+   * Live playback has no tool reply to carry a problem, so the diagnostic surface is where it is
+   * visible — plus one `console.warn` per distinct lane/code, so a silent typo cannot happen twice
+   * without a word.
+   */
+  private readonly patchProblems: string[] = [];
+  private readonly reportedPatchProblems = new Set<string>();
 
   constructor(private readonly ctx: BaseAudioContext, options: Gs1VoicePoolOptions = {}) {
     this.createHost = options.createHost ?? createGs1Host;
@@ -137,7 +151,7 @@ export class Gs1VoicePool {
       instrument,
       host: null,
       ready: false,
-      patch: null,
+      patchKey: null,
       creating: null,
       sampleLoaded: false,
       dest,
@@ -224,6 +238,15 @@ export class Gs1VoicePool {
     this.genreId = genreId ?? null;
   }
 
+  /** Record one refused patch code once, and say it out loud once. See `patchProblems`. */
+  private reportPatchProblem(trackIdx: number, problem: string): void {
+    const message = `track ${trackIdx}: ${problem}`;
+    if (this.reportedPatchProblems.has(message)) return;
+    this.reportedPatchProblems.add(message);
+    this.patchProblems.push(message);
+    console.warn(`[gs1] refusing a lane's patch code — ${message}`);
+  }
+
   /**
    * What each track's host is doing, for the in-app diagnostic (`?diag=1`).
    *
@@ -237,13 +260,14 @@ export class Gs1VoicePool {
         trackIdx,
         role: slot.role,
         instrument: slot.instrument ?? null,
-        patch: slot.patch,
+        patch: slot.patchKey,
         ready: slot.ready,
         variant: slot.host?.variant ?? null,
         hasHost: Boolean(slot.host),
         analysis: slot.analysis ?? null,
       });
     }
+    if (this.patchProblems.length) out.push({ patchProblems: [...this.patchProblems] });
     return out;
   }
 
@@ -252,7 +276,15 @@ export class Gs1VoicePool {
     role: MixTrackId,
     instrument: string | null | undefined,
     notes: readonly PoolNote[],
-    dest: AudioNode
+    dest: AudioNode,
+    /**
+     * The lane's own GS-1 patch, as a share code (`SequencerTrack.gs1Patch`).
+     *
+     * Optional and last so every existing caller keeps working. It travels here for the same reason
+     * it travels to the exporter: the room and the file must resolve a lane through **one** seam, or
+     * a lane carrying a patch is GS-1 in the render and something else in the room.
+     */
+    patchCode?: string
   ): boolean {
     if (this.disposed || !isGs1RoutingEnabled()) return false;
     const slot = this.slots.get(trackIdx);
@@ -260,32 +292,50 @@ export class Gs1VoicePool {
     // track's output, and a caller asking for a different one (audition → master) must not cost
     // the live host its life.
     if (slot?.ready && slot.host) {
-      const plan = planGs1Notes({
-        role,
-        instrument,
-        notes,
-        sampleRate: this.ctx.sampleRate,
-        latencyFrames: slot.host.scheduledNoteLatencyFrames,
-        // The genre decides how a lane is voiced (`GENRE_GS1_PATCH_OVERRIDES`); the live pool is told it once per
-        // pattern by the engine, so a genre change re-voices without any per-note work.
-        genreId: this.genreId,
-      });
+      /**
+       * The same single seam the offline renderer uses (`resolveGs1Lane`) — resolved here, once,
+       * and handed to `planGs1Notes` as `voice`, so the patch pushed to the host and the patch the
+       * notes were planned under are one object and not two lookups that must agree.
+       */
+      const lane = resolveGs1Lane(role, instrument, this.genreId, patchCode);
+      if (lane.kind === "problem") {
+        // The lane named a patch that cannot be read: say so, play it natively, and never pretend
+        // the request was honoured.
+        slot.instrument = instrument;
+        slot.patchKey = null;
+        this.reportPatchProblem(trackIdx, lane.problem);
+        return false;
+      }
+      const plan =
+        lane.kind === "voice"
+          ? planGs1Notes({
+              role,
+              instrument,
+              voice: lane.voice,
+              notes,
+              sampleRate: this.ctx.sampleRate,
+              latencyFrames: slot.host.scheduledNoteLatencyFrames,
+              // The genre decides how a lane is voiced (`GENRE_GS1_PATCH_OVERRIDES`); the live pool is told it once per
+              // pattern by the engine, so a genre change re-voices without any per-note work.
+              genreId: this.genreId,
+            })
+          : null;
       if (!plan) {
         // No GS-1 patch for this instrument: play it natively, but keep the host alive — the user
         // may switch back, and disposing here would make that switch pay the load again.
         slot.instrument = instrument;
-        slot.patch = null;
+        slot.patchKey = null;
         return false;
       }
-      if (slot.patch !== plan.patch) {
+      if (slot.patchKey !== plan.patchKey) {
         slot.host.setPatch(plan.params);
         /**
-         * …and the velocity response with it, **including when there is none**: a patch swap must clear the previous
-         * route or the next instrument inherits the last one's feel. Slot 0 is the only one used.
+         * …and the routing with it, **including when there is none**: a patch swap must clear the previous route or
+         * the next instrument inherits the last one's feel. A share code carries the synth's own routes, and
+         * `applyGs1VoiceRoutes` writes all eight slots, so two different codes cannot blend.
          */
-        const route = gs1VelocityRoute(plan.velToCutoff);
-        slot.host.setModRoute(0, route?.src ?? 3, route?.dst ?? 0, route?.amount ?? 0, Boolean(route));
-        slot.patch = plan.patch;
+        applyGs1VoiceRoutes(slot.host, plan);
+        slot.patchKey = plan.patchKey;
         /**
          * A sample patch needs its recording (P2.5). Not awaited: this runs inside the scheduler, and the native
          * engine already covers the first notes while the import lands — the same fallback the pool uses while a host

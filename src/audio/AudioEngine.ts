@@ -2618,7 +2618,17 @@ export class AudioEngine {
       // report. The track strip is also where a preview belongs: it is the sound as mixed.
       const gs1Dest = this.getTrackDestination(trackIdx);
       if (
-        this.gs1Pool.tryPlay(trackIdx, "chords", this.pattern?.tracks[trackIdx]?.instrument, gs1Notes, gs1Dest)
+        this.gs1Pool.tryPlay(
+          trackIdx,
+          "chords",
+          this.pattern?.tracks[trackIdx]?.instrument,
+          gs1Notes,
+          gs1Dest,
+          // The lane's own share code, so the room resolves the patch through the same seam the
+          // renderer does (`resolveGs1Lane`); without it a lane carrying a patch is GS-1 in the
+          // file and the instrument table's patch in the room.
+          this.pattern?.tracks[trackIdx]?.gs1Patch
+        )
       ) {
         return;
       }
@@ -2681,7 +2691,9 @@ export class AudioEngine {
           "lead",
           instrument,
           [{ note: midi, time, duration: dur, velocity: vel, ...(leadVariation ? { cents: leadVariation.detuneCents } : {}) }],
-          dest
+          dest,
+          // The lane's own share code — see the chords call above.
+          this.pattern?.tracks[trackIdx]?.gs1Patch
         )
       ) {
         return;
@@ -2731,7 +2743,9 @@ export class AudioEngine {
           "fx",
           this.pattern?.tracks[trackIdx]?.instrument,
           [{ note: midiFallback, time, duration: stepDur * gateVal * 1.5, velocity: vel }],
-          dest
+          dest,
+          // The lane's own share code — see the chords call above.
+          this.pattern?.tracks[trackIdx]?.gs1Patch
         )
       ) {
         return;

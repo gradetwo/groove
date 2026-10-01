@@ -76,6 +76,21 @@ export interface SequencerTrack {
   sample?: { assetId: string };
   name: string;
   instrument: string;
+  /**
+   * This lane's own GS-1 sound, as a **share code** in the synth project's own format
+   * (`gs1.1.<base64url>`, the string `gs1.patch.get` returns and `gs1.patch.set` accepts).
+   *
+   * One opaque string, deliberately: the synth already defines, encodes, decodes and validates the
+   * patch format, and a second structured model here would be a second thing to keep in step with
+   * it. Absent means the instrument table's answer (`resolveGs1Patch`) — every existing track,
+   * project and share link is unchanged.
+   *
+   * The code reaches the audio through `resolveGs1Lane` (`src/audio/gs1/gs1Tracks.ts`), which is
+   * the one place host creation, offline note planning and live playback all read it. An
+   * unreadable code is a reported problem, never a silent fall back to the native engine — see
+   * `validatePattern` and `docs/GS1_PATCH_SURFACE.md`.
+   */
+  gs1Patch?: string;
   steps: number[]; // 1 or 0 (16 or 32 steps)
   velocity?: number[]; // 0 - 127
   pitch?: (number | null)[]; // MIDI note (e.g. 36 for C2, 60 for C4) — the *root* of the step

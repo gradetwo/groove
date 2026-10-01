@@ -130,6 +130,7 @@ try {
     "apply_pattern_ops",
     "validate_pattern",
     "pattern_statistics",
+    "apply_gs1_patch",
     "compare_genres",
     "export_midi",
     "export_ableton",

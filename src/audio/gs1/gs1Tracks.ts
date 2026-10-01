@@ -23,7 +23,10 @@
  * deliberate act with a documented cost (re-measure loudness + timbre, re-fit trims).
  */
 import type { MixTrackId } from "../../data/genreMix";
-import { resolveGs1Patch, type Gs1Patch, type Gs1PatchName } from "../../data/gs1Patches";
+import { gs1VelocityRoute, resolveGs1Patch, type Gs1Patch, type Gs1PatchName } from "../../data/gs1Patches";
+import { MAX_ROUTES } from "../../../vendor/gs1/src/audio/params";
+import { decodeGs1PatchCode, type Gs1PatchRoute } from "./gs1PatchCode";
+import type { Gs1Host } from "./Gs1Host";
 
 /** Voices the E3 measurement says one GS-1 instance can sustain alongside the full 8-track app. */
 export const GS1_POLYPHONY_CEILING = 8;
@@ -90,13 +93,60 @@ export interface Gs1PlannedNote {
   cents?: number;
 }
 
+/**
+ * One lane's resolved GS-1 sound.
+ *
+ * `patch` is the named table patch, or `null` when the lane carries its **own share code** — which
+ * is why `params` cannot be derived from `patch` and every consumer must take the record from here.
+ * This type is the value that crosses the single resolution seam: host creation and note planning
+ * are handed the *same* object, not two lookups that are expected to agree.
+ */
+export interface Gs1Voice {
+  /** The named patch from `GS1_PATCHES`, or `null` for a lane's own share code. */
+  patch: Gs1PatchName | null;
+  params: Gs1Patch;
+  /** The native preset's velocity-to-cutoff response. Unused when `routes` is present. */
+  velToCutoff?: number;
+  /** The lane's own share code, when it carried one. Also the patch's identity for a swap check. */
+  code?: string;
+  /**
+   * The code's own modulation routes, in the core's integer wire form.
+   *
+   * A share code from `gs1.patch.get` carries the synth's routing (up to eight rows); applying the
+   * table patch's velocity response *instead* would render something the synth's own `gs1.render`
+   * would not, which is the same lie as ignoring the code's parameters.
+   */
+  routes?: Gs1PatchRoute[];
+}
+
 export interface Gs1Plan {
-  patch: Gs1PatchName;
+  patch: Gs1PatchName | null;
   params: Gs1Patch;
   /** The native preset's velocity-to-cutoff response, carried so the pool can wire it with the patch. */
   velToCutoff?: number;
+  /** The resolved code's own routes, when the lane carried a share code. */
+  routes?: Gs1PatchRoute[];
+  /**
+   * The patch's identity for a live swap check: the share code when there is one, else the patch
+   * name. `patch` alone cannot distinguish two different share codes, both of which are `null`.
+   */
+  patchKey: string | null;
   notes: Gs1PlannedNote[];
 }
+
+/**
+ * What one lane resolves to — a voice, a deliberate stay on the native engine, or a **reported
+ * problem**.
+ *
+ * The third arm is what makes the corruption visible. `resolveGs1Patch` is total and returns
+ * `null` for an unknown instrument, which is right for a name that was never routed; but a lane
+ * that carries a share code *asked* for a specific sound, so an unreadable code must not be
+ * absorbed into that same `null`.
+ */
+export type LaneGs1Resolution =
+  | { kind: "voice"; voice: Gs1Voice }
+  | { kind: "native" }
+  | { kind: "problem"; code: string; problem: string };
 
 export interface Gs1PlanOptions {
   role: MixTrackId | string | null | undefined;
@@ -126,6 +176,20 @@ export interface Gs1PlanOptions {
    * schedule, which is still frame-accurate relative to its own notes.
    */
   latencyFrames?: number;
+  /**
+   * The lane's own GS-1 patch, as the synth's opaque **share code** (the string `gs1.patch.get`
+   * returns). Optional: absent keeps the instrument-table answer exactly as before.
+   */
+  patchCode?: string;
+  /**
+   * An already-resolved voice, from {@link resolveGs1Lane}.
+   *
+   * Passing it is how the single seam is *enforced* rather than trusted: a caller that resolved the
+   * lane to build its host hands the planner the same object, so the patch the host was given and
+   * the patch the notes were planned under cannot drift apart. Omitting it makes this function
+   * resolve for itself — which is what a caller that only has a role and an instrument wants.
+   */
+  voice?: Gs1Voice;
 }
 
 /**
@@ -147,8 +211,14 @@ export function planGs1Notes(options: Gs1PlanOptions): Gs1Plan | null {
    */
   if (role !== "chords" && role !== "lead" && role !== "texture" && role !== "fx") return null;
 
-  const resolved = resolveRoutedPatch(role, instrument, options.genreId);
-  if (!resolved) return null;
+  /**
+   * The one resolution: either the caller's already-resolved voice, or this module's own answer for
+   * the same inputs. A `problem` (an explicit but unreadable code) returns `null` here — the caller
+   * that collected it from {@link resolveGs1Lane} is the one that reports it, and playing the
+   * native engine silently is exactly what that report exists to prevent.
+   */
+  const voice = options.voice ?? laneVoice(resolveGs1Lane(role, instrument, options.genreId, options.patchCode));
+  if (!voice) return null;
 
   const latency = Math.max(0, Math.round(options.latencyFrames ?? 0));
   const planned: Gs1PlannedNote[] = [];
@@ -172,7 +242,24 @@ export function planGs1Notes(options: Gs1PlanOptions): Gs1Plan | null {
   if (planned.length === 0) return null;
   // Stable order, so live and offline schedule identically for the same input.
   planned.sort((a, b) => a.atFrame - b.atFrame || a.note - b.note);
-  return { patch: resolved.patch, params: resolved.params, velToCutoff: resolved.velToCutoff, notes: planned };
+  return {
+    patch: voice.patch,
+    params: voice.params,
+    velToCutoff: voice.velToCutoff,
+    ...(voice.routes ? { routes: voice.routes } : {}),
+    patchKey: patchKeyOf(voice),
+    notes: planned,
+  };
+}
+
+/** The voice arm of a resolution, or `null` for `native` **and** for `problem`. */
+function laneVoice(resolution: LaneGs1Resolution): Gs1Voice | null {
+  return resolution.kind === "voice" ? resolution.voice : null;
+}
+
+/** A voice's identity for a live swap check: the share code, else the named patch. */
+export function patchKeyOf(voice: Gs1Voice): string | null {
+  return voice.code ?? voice.patch;
 }
 
 /**
@@ -216,7 +303,81 @@ export function gs1PatchFor(
   return resolveRoutedPatch(role, instrument, genreId);
 }
 
+/**
+ * ⭐ **The single resolution seam.** One lane — its role, instrument, genre and optional share
+ * code — becomes one {@link Gs1Voice}, or a reported reason why it cannot.
+ *
+ * Before this function there were two lookups that were *expected* to agree: `WavExporter` resolved
+ * a patch to build the host and `planGs1Notes` resolved one again to plan the notes. That is
+ * harmless while the only input is `(role, instrument, genre)` — both call the same table — and
+ * becomes the repository's "second sound" the moment a lane can carry its own patch, because an
+ * override that reaches one of them and not the other renders a file that disagrees with the patch
+ * that was applied.
+ *
+ * Three answers, and the third is the one that must not be collapsed into the second:
+ *
+ *   * `voice`   — play this;
+ *   * `native`  — this lane was never GS-1's, exactly as `resolveGs1Patch`'s `null` has always meant;
+ *   * `problem` — the lane **named a patch** and it cannot be honoured. Never a silent fall back to
+ *                 the native engine: that is what makes a typo invisible today.
+ */
+export function resolveGs1Lane(
+  role: string | null | undefined,
+  instrument: string | null | undefined,
+  genreId?: string | null,
+  patchCode?: string | null
+): LaneGs1Resolution {
+  if (typeof patchCode === "string" && patchCode.trim() !== "") {
+    const decoded = decodeGs1PatchCode(patchCode);
+    if (!decoded.ok) return { kind: "problem", code: patchCode, problem: decoded.problem };
+    /**
+     * A code on a lane the engine never schedules would be silence, not a sound: the exporter's
+     * drum and bass branches never ask GS-1 for notes. Refusing it is the honest answer.
+     */
+    if (role !== "chords" && role !== "lead" && role !== "fx" && role !== "texture") {
+      return {
+        kind: "problem",
+        code: patchCode,
+        problem: `a "${String(role)}" lane is not voiced by GS-1, so a patch on it would never sound`,
+      };
+    }
+    return {
+      kind: "voice",
+      voice: {
+        patch: null,
+        params: decoded.patch.params,
+        code: patchCode,
+        ...(decoded.patch.routes.length ? { routes: decoded.patch.routes } : {}),
+      },
+    };
+  }
+
+  const resolved = resolveRoutedPatch(role, instrument, genreId);
+  return resolved ? { kind: "voice", voice: { ...resolved } } : { kind: "native" };
+}
+
+/**
+ * Write a resolved voice's modulation into a host — the code's own routes when it carried any, else
+ * the table patch's velocity response on slot 0. One function, so the renderer and the live pool
+ * cannot wire the same patch differently.
+ *
+ * Every slot is written, including the empty ones: a patch swap must clear the previous patch's
+ * routing, or the next instrument inherits the last one's feel.
+ */
+export function applyGs1VoiceRoutes(host: Pick<Gs1Host, "setModRoute">, voice: Pick<Gs1Voice, "routes" | "velToCutoff">): void {
+  if (voice.routes && voice.routes.length > 0) {
+    for (let slot = 0; slot < MAX_ROUTES; slot += 1) {
+      const route = voice.routes[slot];
+      host.setModRoute(slot, route?.src ?? 0, route?.dst ?? 0, route?.amount ?? 0, Boolean(route));
+    }
+    return;
+  }
+  const route = gs1VelocityRoute(voice.velToCutoff);
+  host.setModRoute(0, route?.src ?? 3, route?.dst ?? 0, route?.amount ?? 0, Boolean(route));
+  for (let slot = 1; slot < MAX_ROUTES; slot += 1) host.setModRoute(slot, 0, 0, 0, false);
+}
+
 /** Whether a patch plays an **imported sample**, and therefore cannot sound until one is loaded. */
-export function patchNeedsSample(patch: Gs1PatchName): boolean {
+export function patchNeedsSample(patch: Gs1PatchName | null): boolean {
   return patch === "sampleTexture";
 }
