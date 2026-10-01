@@ -28,7 +28,7 @@
 
 | 命令 | 结果 |
 | --- | --- |
-| `npm run check:mcp` | `surface : 83 tools, 7 resources, 4 prompts`；`🧩 MCP gate: 90 checks passed, 0 failed` |
+| `npm run check:mcp` | `surface : 84 tools, 7 resources, 4 prompts`；`🧩 MCP gate: 91 checks passed, 0 failed` |
 | `node scripts/check_docs.mjs` | `✅ 4 doc baseline claim(s) hold.` |
 | `npx vitest run`（19 个测试文件，见文末清单） | `19 passed` 文件 / `108 passed` 测试 |
 | `node scripts/mcp_call.mjs --script`（一次无浏览器的完整作曲回路：create → export → 读 → 三个写 op → validate → statistics → suggest → melody → prosody） | 三次：**9360 / 8343 / 8707 ms** |
@@ -96,7 +96,7 @@
 | 小节 | 它的要求 | 现状 | 证据 / 决定 |
 | --- | --- | --- | --- |
 | §5.1 核心理念（打磨嘴和耳朵） | 不在"手动操作"上竞争；写工具 + 感知工具 + 嘴的校验器 | ✅ | **耳朵**：`analyze_audio`（响度/真峰值/不连续点及其位置/相关性/尾音/13 段频谱）、`spectral_balance`、`estimate_key`、`get_loudness_report`、`render_audio`/`render_song`/`render_preview_clip`。**嘴的校验器**：`validate_pattern`、`pattern_statistics`、`validate_prosody`。**嘴**：见 §5.3/§5.4。唯一的结构性缺口是"写音色"（§5.4 的 `sound` 命名空间），在那里裁定 |
-| §5.2 三原语布局 | tools / resources / prompts 都要有 | ✅ | 实测 `npm run check:mcp`：**83 tools、7 resources、4 prompts**，`90 checks passed, 0 failed`。资源：`groove://genres`、`groove://genre/{id}`、`groove://loudness`、`groove://examples/{genre}`、`groove://masterclasses`、`groove://docs`（契约本身）、`groove://changelog`。Prompts：`compose_groove`/`explain_genre`/`practice_plan`/`compose_with_examples`。（旧版这份裁定写的是 79 个工具，已按实测更新。） |
+| §5.2 三原语布局 | tools / resources / prompts 都要有 | ✅ | 实测 `npm run check:mcp`：**84 tools、7 resources、4 prompts**，`91 checks passed, 0 failed`。资源：`groove://genres`、`groove://genre/{id}`、`groove://loudness`、`groove://examples/{genre}`、`groove://masterclasses`、`groove://docs`（契约本身）、`groove://changelog`。Prompts：`compose_groove`/`explain_genre`/`practice_plan`/`compose_with_examples`。（旧版这份裁定写的是 79 个工具，已按实测更新。） |
 | §5.2.1 读写不对称铁律 + Few-shot 示例 + 紧凑记谱 | 紧凑记谱供读、结构化参数供写；L1 示例 + L2 引擎级风格迁移 | 🟡 | **铁律的可执行那一半成立**：写工具的输入**没有**任何文本记谱通道，`apply_pattern_ops` 是结构化判别联合（`mcp/registry.ts:165-190`），MCP 的 JSON Schema 就是那道防线——这一半可以 ✅。**示例（L1）成立**：`get_example` + `groove://examples/{genre}` + `compose_with_examples` prompt，且示例是**从曲风库构建的**而不是粘贴的（`mcp/examples.ts:1-8`），`src/test/mcpExamples.test.ts` 要求每个示例都通过 `validatePattern`（与其他任何 pattern 同一道闸门）。**紧凑记谱（那套 ~80 token 的鼓谱）没有实现** —— `grep -rn compact mcp/` 只命中"行内紧凑行"，示例返回的是 JSON pattern。**决定**：⛔ 不做紧凑记谱与它的 `parse_compact` 兜底 —— 读侧省 token 这件事已经由别的形态解决了（`get_song` 的 `includePatterns:false` 摘要、`list_genres` 的紧凑行 + `limit/offset` 分页、示例带的是**配方**即工具调用链而不是要被逐字符模仿的网格），而**为读再造一套记谱就是再造一件要保持为真的东西**；没有写通道，解析器也就没有存在理由。**L2（`style_ref`）没有实现** → 见 §6 M1 #4 |
 | §5.3 面向 Agent 的工具设计八原则 | 八条设计原则 | ✅ | 逐条判在下面（附一条：这是本节唯一一张"逐条都要有说法"的表） |
 | §5.4 完整工具矩阵 v3 | 一张提案的完整工具清单 | 🟡 | **决定**：⛔ 不把"79 项矩阵"当成一次交付——逐命名空间的现状与裁定见下，机制由 `mcpCoverage.test.ts` 兜底：`src/data` 里**每一个改变模型的导出**都必须有工具，或在 `EXCLUDED` 里带理由（"not done yet"不是理由） |
@@ -202,8 +202,8 @@ Muse 的九乐章作品位于 `~/workspace/song_build/devtest-20260930-2/`，**�
 
 ```
 npm run check:mcp
-  → surface : 83 tools, 7 resources, 4 prompts
-  → 🧩 MCP gate: 90 checks passed, 0 failed
+  → surface : 84 tools, 7 resources, 4 prompts
+  → 🧩 MCP gate: 91 checks passed, 0 failed
 
 node scripts/check_docs.mjs
   → ✅ 4 doc baseline claim(s) hold.
