@@ -383,3 +383,18 @@ Logic 的**音频轨** ✓、**插件链（AU）** ✓、**自动化（音量/�
 
 **没有 Mac/Logic ⇒ 没有 ground truth** ✗✓ 仍然成立 ✓：以上证明的是"**按规范解析出了这些值**" ✓，不是"导入正确" ✓。
 
+
+### 十二.8 Logic 导入的判据：**哪一条在 CI 里跑、哪一条只在本机跑** ✗✓（2026-10-01，两个方向都实测过 ✓）
+
+**必须写明，否则后人会以为 CI 拿真实 Logic 工程验过** ✗✓。两类判据：
+
+| 判据 | 靠什么 | CI 里会怎样 |
+| --- | --- | --- |
+| `src/test/logicImport.test.ts`（18 ✓）、`mcpLogicImport.test.ts`（8 ✓） | **按规范自己构造的字节** ✓（不依赖外部文件 ✓） | **每次都跑** ✓✓——**这是 CI 真正执行的证据** ✓ |
+| `src/test/logicFixtures.test.ts`（10 ✓） | **真实 `.logicx`** ✓，从 `GROOVE_LOGIC_FIXTURES` 读 ✓（默认 `/tmp/logic-fixtures` ✓） | **没有夹具 ⇒ 跳过** ✓（**且打印"我去哪儿找了"** ✓✓） |
+
+**两个方向都量过** ✓✓：
+* **有夹具**（本机 `/tmp/logic-fixtures` 里 **21 个** ✓）→ **10 passed** ✓✓——**这是本项目目前对 Logic 导入最硬的证据** ✓（真实工程、Blues 三阶段阶梯 ✓）；
+* **无夹具**（`GROOVE_LOGIC_FIXTURES=/tmp/logic-empty` ✗）→ **`↓ 10 tests | 10 skipped`** ✓✓，**跳过被打印、0 项运行** ✓——**不会"没跑却显示通过"** ✓✓。
+
+**夹具为什么不在仓库里** ✓✓：那是某本教材的配套资产、**许可证不明** ✗✓（见 §十二.6 第 2 条 ✓）→ **本地验证与提交进仓库是两件事** ✓✓。**要复现**：把 `.logicx` 放进一个目录 ✓ 再 `GROOVE_LOGIC_FIXTURES=<目录> npx vitest run src/test/logicFixtures.test.ts` ✓✓。
