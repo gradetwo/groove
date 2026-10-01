@@ -17,6 +17,15 @@
  * **zero** matching violin/viola/cello/contrabass/trumpet/trombone/tuba/horn/flute/oboe/clarinet/bassoon; its `Chordophones` is harps, pianos and harpsichords, not bowed strings.
  * The fourteen are now served by `schollz/VSCO-2-CE` at its `SFZ` branch, which its own `LICENSE` puts under **CC0 1.0 Universal**.
  *
+ * ## The articulation slice
+ *
+ * The mirror has since taken **one articulation program per instrument for twelve of the fourteen** — pizzicato for the bowed strings, staccato for the winds and the
+ * tenor trombone, a mute for the horn and the trumpet — with `Harp` and `Timpani` left at one program each. Every one of the twelve is in the roster's `articulations`
+ * column and is proved by the same case as the sustained programs: fetch the program from its pinned source, parse it, resolve notes across the velocity layers, and
+ * require every resolved sample to be a path the `vsco2ce` entry itself lists. `TimpaniRolls.sfz` is the one program the work order's "no articulation for timpani"
+ * row gets wrong — it exists upstream and its ten samples are already in the mirror from the sustained set's directory take — so the absence is asserted against the
+ * **declared program files**, which is the thing that would actually change.
+ *
  * ## The network, stated honestly
  *
  * The proof needs `raw.githubusercontent.com`, so it is **skipped, not failed, when the network is not there** — the pattern `sfizzAgreement.test.ts` and the other real-library tests
@@ -42,28 +51,44 @@ interface RequestedInstrument {
   name: string;
   /** The exposed ids that serve it. Empty means nothing serves it, and the both-directions check below says so in the strong form. */
   servedBy: string[];
+  /**
+   * The **articulation** program this instrument gained when the mirror took one per instrument, or `[]` for an instrument with none.
+   *
+   * Kept apart from `servedBy` because the two claims are different ones: `servedBy` is the sustained program the mirror has had since the fourteen were taken, and this
+   * is the pizzicato/staccato/muted program added on top. Both are proved the same way below, and the empty lists are asserted rather than left implicit.
+   */
+  articulations: string[];
 }
 
 /**
  * Every entry is served now, and the ids are the `vsco2ce` programs' own ids: the manifest writes `entryId:programSlug`, so `ViolinEnsSusVib.sfz` under the `vsco2ce` entry is
  * `vsco2ce:ViolinEnsSusVib`. Timpani keeps the two VCSL keyswitch ids as well, because that proof existed before this library did and dropping it would silently lose coverage.
+ *
+ * ⭐ **The articulations column is measured, and it corrected the work order on one row.** The order said VSCO has no articulation program for `Harp` *or* `Timpani`; the
+ * pinned tree says otherwise for one of them: it ships `TimpaniRolls.sfz` (a roll/tremolo program, 1,336 bytes) whose ten samples were already mirrored when the whole
+ * `Percussion/Timpani` directory came across with the sustained set (`docs/SAMPLE_LIBRARY_INTEGRATION.md` §⑤). **Harp has no second program at all.** That roll program
+ * file is not mirrored in this slice, so both rows read `[]` — and the absence check below is written against the *program files*, so the day `TimpaniRolls.sfz`
+ * is mirrored this roster goes red and has to claim it rather than letting an unregistered program sit in the mirror.
  */
 const REQUESTED: RequestedInstrument[] = [
-  { name: "violin", servedBy: ["vsco2ce:ViolinEnsSusVib"] },
-  { name: "viola", servedBy: ["vsco2ce:ViolaEnsSusVib"] },
-  { name: "cello", servedBy: ["vsco2ce:CelloEnsSusVib"] },
-  { name: "contrabass", servedBy: ["vsco2ce:ContrabassSusVB"] },
-  { name: "horn", servedBy: ["vsco2ce:FHornSus"] },
-  { name: "trumpet", servedBy: ["vsco2ce:TrumpetSus"] },
-  { name: "trombone", servedBy: ["vsco2ce:TromboneSus"] },
-  { name: "tuba", servedBy: ["vsco2ce:TubaSus"] },
-  { name: "flute", servedBy: ["vsco2ce:FluteSusVib"] },
-  { name: "oboe", servedBy: ["vsco2ce:OboeSusVib"] },
-  { name: "clarinet", servedBy: ["vsco2ce:ClarinetSus"] },
-  { name: "bassoon", servedBy: ["vsco2ce:BassoonSus"] },
-  { name: "harp", servedBy: ["vsco2ce:Harp"] },
-  { name: "timpani", servedBy: ["vsco2ce:Timpani", "vcsl:Timpani-1-Keyswitch", "vcsl:Timpani-2-Keyswitch"] },
+  { name: "violin", servedBy: ["vsco2ce:ViolinEnsSusVib"], articulations: ["vsco2ce:ViolinEnsPizz"] },
+  { name: "viola", servedBy: ["vsco2ce:ViolaEnsSusVib"], articulations: ["vsco2ce:ViolaEnsPizz"] },
+  { name: "cello", servedBy: ["vsco2ce:CelloEnsSusVib"], articulations: ["vsco2ce:CelloEnsPizz"] },
+  { name: "contrabass", servedBy: ["vsco2ce:ContrabassSusVB"], articulations: ["vsco2ce:ContrabassPizz"] },
+  { name: "horn", servedBy: ["vsco2ce:FHornSus"], articulations: ["vsco2ce:FHornMute"] },
+  { name: "trumpet", servedBy: ["vsco2ce:TrumpetSus"], articulations: ["vsco2ce:TrumpetHarmonMuteSus"] },
+  { name: "trombone", servedBy: ["vsco2ce:TromboneSus"], articulations: ["vsco2ce:TromboneStac"] },
+  { name: "tuba", servedBy: ["vsco2ce:TubaSus"], articulations: ["vsco2ce:TubaStac"] },
+  { name: "flute", servedBy: ["vsco2ce:FluteSusVib"], articulations: ["vsco2ce:FluteStac"] },
+  { name: "oboe", servedBy: ["vsco2ce:OboeSusVib"], articulations: ["vsco2ce:OboeStac"] },
+  { name: "clarinet", servedBy: ["vsco2ce:ClarinetSus"], articulations: ["vsco2ce:ClarinetStac"] },
+  { name: "bassoon", servedBy: ["vsco2ce:BassoonSus"], articulations: ["vsco2ce:BassoonStac"] },
+  { name: "harp", servedBy: ["vsco2ce:Harp"], articulations: [] },
+  { name: "timpani", servedBy: ["vsco2ce:Timpani", "vcsl:Timpani-1-Keyswitch", "vcsl:Timpani-2-Keyswitch"], articulations: [] },
 ];
+
+/** Every id the roster claims, both kinds — a sustained program and an articulation are proved by the same fetch-and-resolve case. */
+const CLAIMED = REQUESTED.flatMap((instrument) => [...instrument.servedBy, ...instrument.articulations]);
 
 /** The velocities a note is resolved at, so a layer with no bytes cannot hide behind the one that has them. */
 const VELOCITIES = [1, 32, 64, 96, 127];
@@ -99,10 +124,8 @@ async function expandedProgram(assetId: string): Promise<{ url: string; text: st
   }
 }
 
-/** One fetch per id the roster claims serves something — sixteen today, and none of them is skipped silently. */
-const proofs = await Promise.all(
-  REQUESTED.flatMap((instrument) => instrument.servedBy).map(async (assetId) => ({ assetId, program: await expandedProgram(assetId) }))
-);
+/** One fetch per id the roster claims — 28 today (16 sustained ids plus 12 articulation ids), and none of them is skipped silently. */
+const proofs = await Promise.all(CLAIMED.map(async (assetId) => ({ assetId, program: await expandedProgram(assetId) })));
 /** Nothing fetched at all is a missing network; *something* failing while others succeed is a real failure and is asserted below. */
 const offline = proofs.every((proof) => proof.program === null);
 
@@ -126,10 +149,10 @@ describe("the orchestral instruments a catalogue entry could serve", () => {
     ]);
   });
 
-  it("exposes the ids it claims serve an instrument", () => {
+  it("exposes the ids it claims, for the sustained programs and the articulations alike", () => {
     const exposed = new Set(list.instruments.map((instrument) => instrument.assetId));
     for (const instrument of REQUESTED) {
-      for (const assetId of instrument.servedBy) {
+      for (const assetId of [...instrument.servedBy, ...instrument.articulations]) {
         expect(exposed.has(assetId), `${instrument.name} claims ${assetId}, which is not in the exposed list`).toBe(true);
       }
     }
@@ -161,13 +184,42 @@ describe("the orchestral instruments a catalogue entry could serve", () => {
     expect(REQUESTED.filter((instrument) => instrument.servedBy.length === 0).map((instrument) => instrument.name)).toEqual([]);
   });
 
+  it("keeps harp and timpani at the one program each the mirror took, so a mirrored articulation cannot arrive unclaimed", () => {
+    /**
+     * ⭐ **The deliberate absence, written so that filling it breaks the test rather than passing quietly.**
+     *
+     * The work order said VSCO has no articulation for `Harp` or `Timpani`, and the mirror matches that: this slice took one articulation for each of the other
+     * twelve and none for these two. The upstream tree only *nearly* agrees — it also ships `TimpaniRolls.sfz` (a roll program, 1,336 bytes) whose ten samples
+     * were **already mirrored** when the sustained set took the whole `Percussion/Timpani` directory (`docs/SAMPLE_LIBRARY_INTEGRATION.md` §⑤), while `Harp` has
+     * no second program at all. So the assertion is on the **declared program files**, not on sample bytes: the timpani roll samples are legitimately present,
+     * and what must not happen is a roll/pizzicato/muted `.sfz` appearing in `instruments` without the roster claiming it and proving it resolves a note.
+     */
+    const entry = manifest.entries.find((candidate) => candidate.id === "vsco2ce")!;
+    const programs = (entry.instruments ?? []).map((program) => program.sfz);
+    const only: Record<string, string> = { harp: "Harp.sfz", timpani: "Timpani.sfz" };
+    const problems: string[] = [];
+    for (const [instrument, expected] of Object.entries(only)) {
+      const mine = programs.filter((sfz) => sfz.toLowerCase().includes(instrument));
+      if (mine.length !== 1 || mine[0] !== expected) {
+        problems.push(`${instrument} should be declared by exactly ${expected}, but the entry declares ${mine.join(", ") || "nothing"}`);
+      }
+      const roster = REQUESTED.find((candidate) => candidate.name === instrument)!;
+      if (roster.articulations.length > 0) {
+        problems.push(`${instrument} now carries an articulation (${roster.articulations.join(", ")}) — claim it here and in the document, this test is what noticed`);
+      }
+    }
+    expect(problems, "the deliberate articulation absence for harp/timpani changed; say so everywhere rather than letting it pass").toEqual([]);
+    // The roster's own half of the same claim, so an empty `articulations` cannot become "forgotten" instead of "decided".
+    expect(REQUESTED.filter((instrument) => instrument.articulations.length === 0).map((instrument) => instrument.name)).toEqual(["harp", "timpani"]);
+  });
+
   it("keeps the families visible in the tool's own answer, because that is what a caller reads", () => {
     // The family the previously-missing instruments file under, so a caller sees the coverage it has rather than a bare absence.
     const winds = list.categories.find((category) => category.name === "Winds");
     expect(winds, "the Winds category vanished, so the orchestral coverage is no longer visible in the tool's answer").toBeDefined();
     expect(list.categories.find((category) => category.name === "Percussion")?.subcategories.map((sub) => sub.name)).toContain("Struck Membranophones");
-    // The new library's fourteen, in the category the manifest declares for them.
-    expect(list.categories.find((category) => category.name === "Orchestral")?.count).toBe(14);
+    // The new library's twenty-six programs — fourteen sustained and twelve articulations — in the category the manifest declares for them.
+    expect(list.categories.find((category) => category.name === "Orchestral")?.count).toBe(26);
   });
 
   it("answers what VSCO 2 CE is, where it came from, and under what licence", () => {
@@ -182,7 +234,7 @@ describe("the orchestral instruments a catalogue entry could serve", () => {
     expect(vsco!.repo).toBe("schollz/VSCO-2-CE");
     expect(vsco!.pin).toBe("6dd651d55dde97fd4028699be9d4481f26917891");
     expect(vsco!.sourceUrl).toContain("schollz/VSCO-2-CE");
-    expect(vsco!.instruments).toBe(14);
+    expect(vsco!.instruments).toBe(26);
     expect(vsco!.durationSeconds).toBeGreaterThan(0);
     expect(vsco!.problems).toEqual([]);
   });
@@ -206,6 +258,12 @@ describe.skipIf(offline)("every exposed orchestral instrument proves itself by r
        * samples `VlnEns_susVib_A2_v1.wav`, so a test that skipped this step would resolve to a path one directory too high and "prove" a file that does not exist.
        */
       const defaultPath = readDefaultPath(program!.text);
+      /**
+       * ⭐ **Reading one `default_path` per program is honest only because every mirrored program declares exactly one.** VSCO's `*-KS` keyswitch programs declare
+       * one per section (`Strings\Violin Section\susVib\`, then `…\Trem\`, `…\Spic\`, `…\Pizz\`), and `readDefaultPath` returns the first — deliberately, as a
+       * file-level reader — so pointing this case at a `-KS` program would resolve its tremolo/pizzicato regions into the sustained directory and report files that
+       * do not exist. None of those is mirrored; the day one is, this test and the loader's per-`<control>` resolution are both part of the change.
+       */
       const resolved = new Set<string>();
       for (let note = 0; note <= 127; note += 1) {
         for (const velocity of VELOCITIES) {
