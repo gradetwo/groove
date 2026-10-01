@@ -537,17 +537,30 @@ export interface MasterLimiterHandle {
 
 let warnedAboutFallback = false;
 
+/**
+ * The compressor as a limiter. **Silent on purpose.**
+ *
+ * ⚠️ **This is called on the healthy path too** — as the placeholder that keeps audio ceilinged for the few
+ * milliseconds before the worklet module installs (`let active: AudioNode = createFallbackLimiter(ctx)` below).
+ * The warning used to live here and, because it is a one-shot, it printed *"AudioWorklet unavailable … peak
+ * limiting is degraded"* on runs where the worklet then installed and did the limiting. That is worse than no
+ * warning: it was read as evidence of a fallback — by me, while hunting the silence defect — and pointed at the
+ * wrong primitive entirely. Only the branch that genuinely cannot use a worklet warns now.
+ */
 function createFallbackLimiter(ctx: BaseAudioContext): DynamicsCompressorNode {
   const limiter = ctx.createDynamicsCompressor();
   applyMasterLimiter(limiter, ctx);
-  if (!warnedAboutFallback) {
-    warnedAboutFallback = true;
-    console.warn(
-      "[MasterLimiter] AudioWorklet unavailable — using the DynamicsCompressor fallback " +
-        "(no true-peak ceiling, no lookahead). Peak limiting is degraded."
-    );
-  }
   return limiter;
+}
+
+/** Warned once per process, and only where it is true: the worklet is unavailable for this whole render. */
+function warnWorkletUnavailable(): void {
+  if (warnedAboutFallback) return;
+  warnedAboutFallback = true;
+  console.warn(
+    "[MasterLimiter] AudioWorklet unavailable — using the DynamicsCompressor fallback " +
+      "(no true-peak ceiling, no lookahead). Peak limiting is degraded."
+  );
 }
 
 function audioWorkletAvailable(ctx: BaseAudioContext): boolean {
@@ -574,6 +587,8 @@ export function createMasterLimiter(
     : MASTER_LIMITER_LOOKAHEAD_MS;
 
   if (!audioWorkletAvailable(ctx)) {
+    // ⭐ The one place this is true: no worklet for this render, so the compressor really is the ceiling.
+    warnWorkletUnavailable();
     const compressor = createFallbackLimiter(ctx);
     return {
       input: compressor,
