@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { parseManifest } from "../../data/sampleManifest";
 import {
   changeStoredUserLibraries,
   readStoredUserLibraries,
   type LibraryStorage,
 } from "../../data/userLibraryStore";
 import type { UserSoundLibrary } from "../../data/userLibraries";
+
+/** The manifest the app itself loads by default, so the ids below are the ones the catalogue will really use. */
+const MANIFEST_URL = "/samples/manifest.json";
 
 /**
  * ⭐ **Adding your own sound source, in the app — the web half of `add_sample_library`.**
@@ -49,6 +53,37 @@ export function SampleLibrariesPanel({ reservedIds = [], storage }: SampleLibrar
   const [problems, setProblems] = useState<string[]>([]);
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [message, setMessage] = useState<string | undefined>(undefined);
+  /**
+   * ⭐ **The ids the project already ships, read from the manifest the app itself loads.**
+   *
+   * Without these, a library taking a built-in's id is accepted here — and then dropped at catalogue merge,
+   * which is the failure that looks to a person like it worked. `mergeUserLibraries` refuses it too, and must,
+   * because that is where the catalogue is built; this refusal exists so the message arrives at the moment of
+   * typing rather than as an instrument that never appears.
+   *
+   * Parsed with `parseManifest`, the same parser the catalogue uses, rather than a second reader of the same
+   * file. If the fetch fails the list is empty and the merge's own refusal still holds — the failure mode is a
+   * worse message, not a hole.
+   */
+  const [shippedIds, setShippedIds] = useState<string[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch(MANIFEST_URL);
+        if (!response.ok) return;
+        const parsed = parseManifest(await response.text());
+        if (!cancelled && parsed.ok && parsed.manifest) {
+          setShippedIds(parsed.manifest.entries.map((entry) => entry.id));
+        }
+      } catch {
+        /* No manifest reachable: the merge's own refusal is the backstop, so this is not fatal. */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const refresh = useCallback(() => {
     const read = readStoredUserLibraries(storage);
@@ -58,7 +93,11 @@ export function SampleLibrariesPanel({ reservedIds = [], storage }: SampleLibrar
 
   useEffect(refresh, [refresh]);
 
-  const reserved = useMemo(() => new Set(reservedIds), [reservedIds]);
+  /**
+   * The union of what the caller passed and what the shipped manifest states. A caller that already knows the
+   * catalogue can pass it; one that does not is covered by the fetch above.
+   */
+  const reserved = useMemo(() => new Set([...reservedIds, ...shippedIds]), [reservedIds, shippedIds]);
 
   const submit = () => {
     /**

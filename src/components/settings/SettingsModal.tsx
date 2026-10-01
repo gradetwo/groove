@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Modal } from "../../ui/Modal";
+import { SampleLibrariesPanel } from "./SampleLibrariesPanel";
 import { useLanguage, type Language } from "../../i18n/LanguageContext";
 import { SKINS } from "../../data/skins";
 import { useSkin } from "../../hooks/useSkin";
@@ -7,6 +8,7 @@ import {
   Gauge,
   Info,
   LayoutDashboard,
+  Library,
   Palette,
   SlidersHorizontal,
   Smartphone,
@@ -60,7 +62,7 @@ import { APP_VERSION, BUILD_DATE } from "../../version";
  * (no shadow state), a control that cannot take effect says so, and the About tab reports what
  * is actually stored rather than a fixed blurb.
  */
-export type SettingsTabId = "audio" | "performance" | "interface" | "about";
+export type SettingsTabId = "audio" | "sound" | "performance" | "interface" | "about";
 
 export interface SettingsModalProps {
   isOpen: boolean;
@@ -79,7 +81,7 @@ export interface SettingsModalProps {
   onReplayOnboarding?: () => void;
 }
 
-const TAB_ORDER: SettingsTabId[] = ["audio", "performance", "interface", "about"];
+const TAB_ORDER: SettingsTabId[] = ["audio", "sound", "performance", "interface", "about"];
 
 /** Storage keys this app owns, for the About tab's usage report. */
 const OWNED_STORAGE_PREFIXES = ["groove_"];
@@ -172,6 +174,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     switch (id) {
       case "audio":
         return <Waves className="w-3.5 h-3.5" />;
+      case "sound":
+        return <Library className="w-3.5 h-3.5" />;
       case "performance":
         return <Smartphone className="w-3.5 h-3.5" />;
       case "interface":
@@ -228,6 +232,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           {tab === "audio" && (
             <AudioSettingsTab engine={engine} gs1Enabled={gs1Enabled} onToggleGs1={onToggleGs1} />
           )}
+
+          {/* ⭐ Its own tab rather than a corner of Interface: this is about what you can play, not how it looks,
+              and someone adding an orchestral library will look for it under a word like Sound. */}
+          {tab === "sound" && <SampleLibrariesPanel />}
 
           {tab === "performance" && (
             <div className={sectionClass} data-testid="settings-panel-performance">

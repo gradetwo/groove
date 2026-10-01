@@ -375,6 +375,7 @@ export const studioMessages = {
   settings_title: { en: "Settings", zh: "设置" },
   settings_open: { en: "Settings", zh: "设置" },
   settings_tab_audio: { en: "Audio", zh: "音频" },
+  settings_tab_sound: { en: "Sound libraries", zh: "音源库" },
   settings_tab_performance: { en: "Feel", zh: "演奏" },
   settings_tab_interface: { en: "Interface", zh: "界面" },
   settings_tab_about: { en: "About", zh: "关于" },
