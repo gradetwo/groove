@@ -17,7 +17,7 @@
  */
 import type { SequencerPattern, SequencerTrack } from "../types/genre";
 import type { ArrangementV2, NoteEvent, TrackV2 } from "../types/arrangementV2";
-import { STEPS_PER_BAR, stepsFromNotes, stepCountFor, stepsPerBarFor } from "./noteEvents";
+import { STEPS_PER_BAR, STEP_BEATS, stepsFromNotes, stepCountFor, stepsPerBarFor } from "./noteEvents";
 import { flattenSong } from "./songFlatten";
 import type { Song } from "../types/song";
 
@@ -90,14 +90,17 @@ export function compileArrangementToLanes(arrangement: ArrangementV2, notes: Not
     const trackId = track.fromTrackId ?? ROLE_BY_KIND[track.kind];
     const notesForTrack = notes[track.id] ?? [];
     /**
-     * **The conversion, and its stated limit.** The engine's lanes trigger at sixteenth-note steps, so a note is placed at the step its start rounds to and its pitch rides along in `pitch`; its **length is not represented**, because a lane's step fires a
-     * one-shot rather than holding a note. That is a limit of this playback path rather than of the model: the notes keep their true positions and lengths, so a path that reads beats would need no conversion at all.
+     * **The conversion, and its stated limit.** The engine's lanes trigger at sixteenth-note steps, so a note is placed at the step its start rounds to and its pitch rides along in `pitch`. A lane's step fires a
+     * one-shot rather than holding a note, so the length is not in `steps` — for the sampler lane it travels in `gate` instead ([`samplerGateFromNotes`]), which is the field the model uses for it. That is a limit of this
+     * playback path rather than of the model: the notes keep their true positions and lengths, so a path that reads beats would need no conversion at all.
      *
      * The grid is as long as the arrangement is, and at least as long as its notes — a note written in bar three must not fall off the end of a one-bar array.
      */
     // The arrangement's stated length and the notes' reach, whichever is longer — see `stepCountFor`.
     const stepCount = stepCountFor(notesForTrack, arrangement.bars, stepsPerBarFor(arrangement.timeSignature));
     const { steps, pitches } = stepsFromNotes(notesForTrack, stepCount);
+    // The sampler lane's note lengths travel with it; see `samplerGateFromNotes` for why this is the lane that needs them and a gate-less lane keeps the default.
+    const samplerGate = trackId === "audio" ? samplerGateFromNotes(notesForTrack, stepCount) : null;
     compiled.push({
       sourceTrackId: track.id,
       steps,
@@ -109,6 +112,7 @@ export function compileArrangementToLanes(arrangement: ArrangementV2, notes: Not
         steps,
         // Only written when something has a pitch, so a lane with no notes keeps the shape it had.
         ...(pitches.some((value) => value !== 0) ? { pitch: pitches } : {}),
+        ...(samplerGate ? { gate: samplerGate } : {}),
         ...(track.sample ? { sample: { assetId: track.sample.assetId } } : {}),
         ...(track.fromLaneId ? { laneId: track.fromLaneId } : {}),
         /**
@@ -139,6 +143,32 @@ export function compileArrangementToLanes(arrangement: ArrangementV2, notes: Not
   }
 
   return compiled;
+}
+
+/**
+ * **A note's length, as the lane's own `gate`** — the field a step array uses for "how long this step sounds".
+ *
+ * This is the piece the comment above says is missing, and it is added here rather than left to the renderer because only the
+ * compile still knows the length: `stepsFromNotes` keeps a note's **start**, and `NoteEvent.lengthBeats` has nowhere else to go
+ * afterwards. The sampler lane is the one lane the offline renderer voices as a *note* rather than as a one-shot trigger, so it
+ * is the one that needs it back — without it every sampled note sounded for the engine's default 0.8 steps (`noteLayer`'s own
+ * fallback), so a note the arrangement holds for a beat came out an eighth of that. Only the sampler lane is given a gate, so
+ * an instrument or drum lane's existing timing is untouched.
+ *
+ * A step that several notes share takes the **longest** of them. A step can state one length, and of the two possible losses —
+ * cutting a written note short, or holding a shorter one longer — the first removes sound the arrangement asked for, so it is the
+ * one to avoid. (The grid already keeps only the lowest pitch of such a stack, which is a separate limit of this conversion.)
+ */
+function samplerGateFromNotes(notes: readonly NoteEvent[], stepCount: number): number[] {
+  const gate = new Array<number>(stepCount).fill(0);
+  for (const note of notes) {
+    const step = Math.round(note.startBeats / STEP_BEATS);
+    if (step < 0 || step >= stepCount) continue;
+    const steps = note.lengthBeats / STEP_BEATS;
+    if (!Number.isFinite(steps) || steps <= 0) continue;
+    gate[step] = Math.max(gate[step]!, steps);
+  }
+  return gate;
 }
 
 /** The same compile, as the `clips`/`sections` input the planner takes — one lane per track, all in a single slot. */

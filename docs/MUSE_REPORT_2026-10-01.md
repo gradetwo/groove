@@ -154,7 +154,45 @@ function pitchedSteps(track) {
 
 **因此修法定了 A** ✓✓，并且**它动的是共享调度器**（`offlineAudioLanes.ts` ✓，采样 lane 与导出都走它 ✓）→ **要按自己的节奏做** ✓：先改、**再用判据证明两个方向都对** ✓✓——**① 每个声部都有结束** ✓（`6dc0eb8` 已备好 ✓）；**② 一个持续音符只产生一个声部** ✓（新判据 ✓）；**③ 拿掉合并即红** ✗✓。
 
-## 十、✗✓✓ **我的"事实 #3"被证伪，修法 A 作废**（2026-10-01，由修复 agent 实测推翻）
+## 十、✗✗✓ **§9 的 A 被证伪并撤回：真正的修法是"把作者时值送到声部"**（2026-10-01，分支 `fix-sampler-note-off`，本地未推送）
+
+**§9 的第 3 条事实（"一个持续 3 步的音符会产生 3 个事件"）不成立** ✗✗——**实测**（临时探针，走真代码 `compileArrangementToLanes`，已删除）✓：
+
+```
+2 拍 held note        → steps=[1,0,0,…]      gate=[8,0,0,…]        ← 一个 step
+三个连续 0.25 拍 C4   → steps=[1,1,1,…]      gate=[1,1,1,…]        ← 三个重复音
+Muse 的三个 0.9 拍音  → events atSeconds [0,1,2]，seconds 各 0.45
+```
+
+**文件+行号（三条独立证据，彼此一致）** ✓✓：
+* `src/data/noteEvents.ts:66-77` `stepsFromNotes` **只在起点**置 1；
+* `src/data/arrangementCompile.ts:93-94` 原文：**"its length is not represented"** ✗；
+* `src/data/noteLayer.ts:60-63` 时值在 **`gate`**（"sounding length in steps"），`types/genre.ts:40,118` 同；`src/data/noteEvents.ts:4` 直接写着 16-step 数组**无法表达** "a note held across four of them" ✓✓。
+
+⇒ **连续的有音高的步在本模型里是"重复音"，不是"持续音"** ✓✓；**数据里没有 tie 标记** ✗，任何"合并成一段"的规则都会把**三个重复的十六分音符变成一个长音** ✗✗——这与 §9 否掉 B 的理由（"改变编排含义"）是同一种错，只是方向相反 ✓。**A 撤回** ✗✓。
+
+**已落地的修法（四条，都是加法）** ✓：
+1. `src/audio/offlineAudioLanes.ts`：`OfflineAudioLaneEvent` 加 `seconds` ✓；新 `noteSeconds()`（`offlineAudioLanes.ts:140`）按 **`stepDuration`（lane 的 `gate`，缺省 0.8 步）× 该步秒数** 计算 ✓✓——**时值的读法只有一处定义**（`src/data/noteLayer.ts:60-63`，`AudioEngine`、离线合成调度、现在这两条采样路径共用）✓✓；plain sample 不带 `seconds`（字节就是整个事件）✓。
+2. `src/audio/WavExporter.ts`（lane `sink.start`，`WavExporter.ts:1393`）：`seconds: event.seconds ?? buffer.duration` ✓——**这一行就是 §8 缺的那一步** ✓✓。
+3. `src/data/arrangementCompile.ts`：新 `samplerGateFromNotes()`（`arrangementCompile.ts:162`），把 `NoteEvent.lengthBeats` 投影成 lane 的 `gate`（**只给 `track_id:"audio"`**，其它 lane 的时值不动）✓✓——**否则 0.9 拍音符到 lane 时只剩一个 step，上面第 1 条算出来的还是 0.8 步** ✗✓。同一步多个音取**最长**（宁可长、不可切掉写下的音）✓。
+4. ⭐ **实时路径（浏览器里用户实际听到的那条）同一轮一并修了** ✓✓：`src/audio/samplerSteps.ts:108` 的 `stepSeconds` 原先**只当作起点偏移用**（:122）✗，`startSamplerNote`（:117-126）不传 `seconds` ✗——**离线渲染会自己结束，浏览器不会：那条路上音符一直响到用户按停或关标签页** ✗✗。现在 `SamplerStepEvent` 带 `gateSteps`（`planSamplerSteps` 用同一个 `stepDuration` 读，:95）✓，调度器用**放置起点的那一个 `stepSeconds`** 给出结束（`seconds: event.gateSteps * stepSeconds`，:124）✓✓——**一个音符的头和尾出自同一个网格读数** ✓。
+
+**判据与实测**（命令逐字、输出逐字）✓✓：
+
+| 判据 | 位置 | 修复后 | 拿掉对应那一半 |
+|---|---|---|---|
+| ① 每个已启动声部都有结束 | `src/test/vscoSamplerLane.test.ts`（§7 原文恢复）| 绿 | **红**：`a lane voice was started and never given a stop time, so the note has no end: expected [ [ { when: +0, offset: +0 } ], …(3) ] to deeply equal []`（去掉 sink 的 `seconds`）|
+| ② 音符结束后该静音 | 同上，`windowPeakDb(0.30–0.45 s)` | `MEASURED gapPeak=-Infinity dBFS` | **红**：`peak between the first two notes = -1.82 dBFS`（规划器不算 `seconds`，声部只能响完自己的字节）|
+| ③ 作者时值到达声部 | `src/test/audioLaneOfflineRender.test.ts` | `gate[0]=3.6`、`seconds=[0.45,0.45,0.45]` | **红**：`expected undefined to be close to 3.6`（compile 不投影 `gate`）|
+| ④ 连续步仍是多个声部（护栏）| 同上 | `atSeconds=[0,0.125,0.25]` 三个声部 | **红**：**把 A 的合并加回去** → `expected [ +0, 0.25 ] to deeply equal [ +0, 0.125, 0.25 ]`（前两个重复音被吞成一个）|
+| ⑤ **实时**：声部在浏览器里也有结束 | `src/test/samplerSteps.test.ts` | `started=[{when:0,offset:0,duration:0.5}]`（gate 4 步）| **红**：`expected [ { when: +0, offset: +0 } ] to deeply equal [ { when: +0, offset: +0, …(1) } ]`、`expected [ undefined, undefined, undefined ] to deeply equal [ 0.125, 0.125, 0.125 ]`（调度器不传 `seconds`）|
+
+同一次渲染的其余测量（`npx vitest run src/test/vscoSamplerLane.test.ts`）✓：`laneEnergy=1.3227e+4 lanePeakDb=-2.16 dB controlEnergy=0 L1(lane,control)=1324.841 dB`（控制轨仍**硬零** ✓）。夹具的 `SAMPLE_FRAMES` 从 0.2 s 提到 **1.2 s** ✓——采样短于音符间距时，**没有结束的声部会自己放完**，note-off 在文件里根本不可观测 ✗✓；Muse 报的 29 秒持续音就是这个形态 ✓✓。
+
+**本轮不做的一条**（§11 的下一步）✗✓：
+1. **`compileArrangementToLanes` 过 chord 时只留最低音** ✗（`stepsFromNotes` 的 `pitches[index] = Math.min(...)`，`src/data/noteEvents.ts:74`），采样 lane 的采样器调度器又只读 `pitch`（`offlineAudioLanes.ts` 的 `pitchedSteps`、`samplerSteps.ts` 的 `lane.pitch?.[step]`）✗ → **一个 step 上的和弦只响一个音** ✗✓；本轮未动 ✗。修法要在两处都读 `pitches`（并按每个音高各起一个声部），比本轮的范围大 ✓。
+
+## 十一、✗✓✓ **我的"事实 #3"被证伪，修法 A 作废**（2026-10-01，由修复 agent 实测推翻）
 
 我在 §九 断言"**一个持续音符 = 每步一个条目**" ✗，并据此定了修法 A（**合并连续有音高的步** ✓）。**修复 agent 用文件+行号把它证伪了** ✓✓：
 

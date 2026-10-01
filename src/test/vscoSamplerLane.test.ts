@@ -47,8 +47,15 @@ import type { SampleAsset } from "../data/sampleCatalogue";
 import type { SequencerPattern, SequencerTrack } from "../types/genre";
 
 const SAMPLE_RATE = 44100;
-/** A fifth of a second: long enough for four notes to overlap the render, short enough to stay a unit test. */
-const SAMPLE_FRAMES = Math.round(SAMPLE_RATE * 0.2);
+/**
+ * The lane's decoded sample is **longer than the gap between two notes**, deliberately.
+ *
+ * With a sample shorter than the note spacing, a voice with no scheduled end goes quiet on its own before the next note and the
+ * one thing this file is about — whether a note is *told* to stop — is invisible in the file. Muse's report measured that on a
+ * 29-second sustaining instrument; this makes the same fact observable in a unit test. Four notes are half a second apart, so
+ * 1.2 seconds outlasts every gap between them.
+ */
+const SAMPLE_FRAMES = Math.round(SAMPLE_RATE * 1.2);
 /** The lane's own bytes, at a rate no pitch in the fixture shares, so a wrong `ratio` is visible as a wrong measurement rather than hidden. */
 const SAMPLE_HZ = 220;
 const NOTE_SECONDS = 0.5;
@@ -160,9 +167,19 @@ class MixingOfflineAudioContext extends FakeOfflineAudioContext {
        * A real render of three 0.9-beat notes on `vsco2co:ViolinEnsSusVib` droned through the whole bar instead
        * of stopping between them, and this criterion stayed green: it asserted the playback ratio at the point
        * of resolution and never asserted that anything stopped. The fake recorded `stoppedAt` the whole time.
+       *
+       * **A scheduled duration ends a voice too, and that is the shape the fix uses.** `stop(when)` was read first
+       * because a note-off was expected to take that form; `start(when, offset, duration)` is the same fact to the
+       * platform — it stops the source there — and the lane's notes are given their ends that way. Reading only the
+       * stop calls would leave the note's end invisible in the file the user downloads, which is exactly the layer
+       * this criterion exists to measure.
        */
       const explicitStops = source.stopCalls.filter((when): when is number => typeof when === "number");
-      const stopAt = explicitStops.length > 0 ? Math.min(...explicitStops) : Number.POSITIVE_INFINITY;
+      const scheduled = source.started[0]!.duration;
+      const stopAt = Math.min(
+        explicitStops.length > 0 ? Math.min(...explicitStops) : Number.POSITIVE_INFINITY,
+        scheduled === undefined ? Number.POSITIVE_INFINITY : when + scheduled
+      );
       const stopFrame = Number.isFinite(stopAt) ? Math.round(stopAt * this.sampleRate) : Number.POSITIVE_INFINITY;
       for (let channel = 0; channel < out.numberOfChannels; channel += 1) {
         const target = out.getChannelData(channel);
@@ -211,6 +228,21 @@ function energyOf(samples: Float32Array): number {
   let energy = 0;
   for (const value of samples) energy += value * value;
   return energy;
+}
+
+/**
+ * Peak level, in dBFS, over one window of the render.
+ *
+ * The question "did the note stop" is about a *stretch of time*, not the whole file, so `samplePeakDb` cannot answer it: a
+ * render that is loud at the first note and silent afterwards has the same whole-file peak as one that never stops. `-Infinity`
+ * for a window with no samples in it at all, which is a silence rather than a level.
+ */
+function windowPeakDb(samples: Float32Array, fromSeconds: number, toSeconds: number, sampleRate = SAMPLE_RATE): number {
+  const from = Math.max(0, Math.round(fromSeconds * sampleRate));
+  const to = Math.min(samples.length, Math.round(toSeconds * sampleRate));
+  let peak = 0;
+  for (let i = from; i < to; i += 1) peak = Math.max(peak, Math.abs(samples[i]!));
+  return peak === 0 ? Number.NEGATIVE_INFINITY : 20 * Math.log10(peak);
 }
 
 /** The guard metric `docs/HEADLESS_CORE_PLAN.md` chose: the sum of absolute per-band differences, not the worst band. */
@@ -411,5 +443,40 @@ describe("a VSCO 2 CE sampler lane", () => {
 
     // The wrong sound is gone: the lane has notes on the grid, so a `track_id: "audio"` fallthrough would have built oscillators here.
     expect(laneContext.createdOscillators).toHaveLength(0);
+
+    /**
+     * ⭐ **Criterion ①: every voice the lane started carries an end.** The assertion recorded verbatim in
+     * `docs/MUSE_REPORT_2026-10-01.md` §7, restored now that the scheduler gives a note a length.
+     *
+     * It reads **both** ways a `BufferSource` accepts an end — the third argument of `start`, which is the shape this fix
+     * uses, and a numeric `stop(when)`. A `stop()` with **no** argument is not an end: the specification reads it as "as soon
+     * as possible", so it names no time and cannot be the note's length. Before the fix, all four lane voices were started
+     * with neither, the note rang until the render ended, and the three assertions above were green throughout.
+     */
+    const numbered = (when: number | undefined): when is number => typeof when === "number";
+    const voicesWithoutAnEnd = laneContext.createdBufferSources
+      .filter((source) => source.started.length > 0)
+      .filter((source) => source.started.every((entry) => entry.duration === undefined) && !source.stopCalls.some(numbered))
+      .map((source) => source.started.filter((entry) => entry.duration === undefined));
+    expect(voicesWithoutAnEnd, "a lane voice was started and never given a stop time, so the note has no end").toEqual([]);
+    // Four notes, four voices — the count that makes the assertion above about the lane rather than about one note.
+    expect(laneContext.createdBufferSources.filter((source) => source.started.length > 0)).toHaveLength(4);
+
+    /**
+     * ⭐ **Criterion ②: the note's end reaches the file, not just the call log.**
+     *
+     * The fixture's notes are half a second apart and its sample is 1.2 seconds long, so a voice with no scheduled end is still
+     * sounding through the next three notes — the drone as a listener meets it. The window sits well after the first note's
+     * scheduled end (0.8 steps of 0.125 s = 0.1 s) and well before the second note's onset (0.5 s), so it must be silent.
+     *
+     * The floor is the file's existing audible/inaudible line (−60 dBFS, the one `lanePeakDb` is read against) and the two
+     * measurements are far apart on either side of it: **−Infinity dBFS** (exact digital silence) with the note's end scheduled,
+     * and **−1.82 dBFS** in the same window when the planner states no length and the voice runs to the end of its bytes. The
+     * control's own hard zero is what makes the difference attributable to the lane rather than to another track.
+     */
+    const gapPeakDb = windowPeakDb(laneSamples, 0.3, 0.45);
+    // eslint-disable-next-line no-console
+    console.log(`MEASURED gapPeak(0.30–0.45 s)=${gapPeakDb.toFixed(2)} dBFS`);
+    expect(gapPeakDb, `peak between the first two notes = ${gapPeakDb.toFixed(2)} dBFS`).toBeLessThan(-60);
   });
 });

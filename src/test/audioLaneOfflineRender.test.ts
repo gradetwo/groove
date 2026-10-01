@@ -60,14 +60,14 @@ function fakeLoader(): { loader: SampleLoader; loads: string[]; notes: Array<{ a
  */
 function summingSink(totalFrames: number) {
   const out = new Float32Array(totalFrames);
-  const starts: Array<{ atFrame: number; gainDb: number; ratio: number; assetId: string }> = [];
+  const starts: Array<{ atFrame: number; gainDb: number; ratio: number; assetId: string; seconds?: number }> = [];
   const sink: OfflineAudioLaneSink = {
     start(buffer: AudioBuffer, event: OfflineAudioLaneEvent, ratio: number) {
       const atFrame = Math.round(event.atSeconds * SAMPLE_RATE);
       const gain = Math.pow(10, event.gainDb / 20);
       const data = buffer.getChannelData(0);
       for (let i = 0; i < data.length && atFrame + i < out.length; i += 1) out[atFrame + i] += data[i]! * gain;
-      starts.push({ atFrame, gainDb: event.gainDb, ratio, assetId: event.assetId });
+      starts.push({ atFrame, gainDb: event.gainDb, ratio, assetId: event.assetId, seconds: event.seconds });
     },
   };
   const energy = () => out.reduce((sum, value) => sum + value * value, 0);
@@ -235,6 +235,67 @@ describe("an arrangement's audio lane in the offline render", () => {
     expect(report.problems[0]!.reason).toMatch(/note 20/);
     expect(mix.starts.map((start) => start.atFrame)).toEqual([SAMPLE_RATE]);
     expect(mix.energy()).toBeGreaterThan(0);
+  });
+
+  it("gives every note the length the lane states, so a held note ends where it was written", async () => {
+    /**
+     * ⭐ **The drone, at the layer that caused it.** `startSamplerNote` has always been able to end a note, and the lane's
+     * planner never told it how long the note was, so every sampled voice took the "no end scheduled" branch. The length is
+     * the note's own: `NoteEvent.lengthBeats` becomes the lane's `gate`, and `gate` is a note's sounding length in steps —
+     * the field `noteLayer`/`AudioEngine`/the synth dispatch already read.
+     *
+     * The fixture is the report's own shape: three 0.9-beat notes at beats 0, 2 and 4 of a 120 bpm bar (0, 1 and 2 seconds),
+     * which is what an independent user rendered and measured droning through the whole file.
+     */
+    const arrangement = samplerArrangement("probe-kit");
+    const pattern = compileArrangementToPattern(arrangement, {
+      t1: [
+        { pitch: 60, startBeats: 0, lengthBeats: 0.9, velocity: 100 },
+        { pitch: 64, startBeats: 2, lengthBeats: 0.9, velocity: 100 },
+        { pitch: 67, startBeats: 4, lengthBeats: 0.9, velocity: 100 },
+      ],
+    });
+    // The length survived the compile as the lane's gate — 0.9 beats is 3.6 sixteenth-note steps.
+    expect(pattern.tracks[0]!.gate?.[0]).toBeCloseTo(3.6, 6);
+    expect(pattern.tracks[0]!.gate?.[8]).toBeCloseTo(3.6, 6);
+
+    const plan = planOfflineAudioLanes(pattern, [instrumentAsset]);
+    expect(plan.events.map((event) => event.atSeconds)).toEqual([0, 1, 2]);
+    // 3.6 steps × (60 / 120 / 4) s = 0.45 s. A voice with no number here is a voice with no end.
+    expect(plan.events.map((event) => event.seconds)).toEqual([0.45, 0.45, 0.45]);
+
+    // And the sink is handed it, so the scheduler's answer reaches the node rather than stopping at the plan.
+    const { loader } = fakeLoader();
+    const mix = summingSink(SAMPLE_RATE * 3);
+    await scheduleOfflineAudioLanes({ pattern, catalogue: [instrumentAsset], loader, sink: mix.sink });
+    expect(mix.starts.map((start) => start.seconds)).toEqual([0.45, 0.45, 0.45]);
+  });
+
+  it("keeps notes written on consecutive steps separate, because a step grid cannot tie a note", () => {
+    /**
+     * ⭐ **The other direction, and why a run of steps must not be merged into one note.**
+     *
+     * Three quarters of a beat apart is three notes in this model, and they arrive as three consecutive marked steps with the
+     * same pitch. Merging consecutive pitched steps into one "held" note would silence the second and third attacks and hold
+     * the first through them — the mirror image of turning a sustain into a staccato, and just as much a change of what the
+     * arrangement says. Nothing in the data distinguishes the two: a held note is `gate > 1` on **one** step (`noteEvents.ts`:
+     * a step array "cannot express… a note held across four of them"; `stepsFromNotes` marks only a note's start).
+     */
+    const arrangement = samplerArrangement("probe-kit");
+    const pattern = compileArrangementToPattern(arrangement, {
+      t1: [
+        { pitch: 60, startBeats: 0, lengthBeats: 0.25, velocity: 100 },
+        { pitch: 60, startBeats: 0.25, lengthBeats: 0.25, velocity: 100 },
+        { pitch: 60, startBeats: 0.5, lengthBeats: 0.25, velocity: 100 },
+      ],
+    });
+    expect(pattern.tracks[0]!.steps.slice(0, 3)).toEqual([1, 1, 1]);
+    expect(pattern.tracks[0]!.gate?.slice(0, 3)).toEqual([1, 1, 1]);
+
+    const plan = planOfflineAudioLanes(pattern, [instrumentAsset]);
+    // Three voices at three onsets, each one step long — not one voice held for three steps.
+    expect(plan.events.map((event) => event.atSeconds)).toEqual([0, 0.125, 0.25]);
+    expect(plan.events.map((event) => event.seconds)).toEqual([0.125, 0.125, 0.125]);
   });
 
   it("reports a muted lane and does not sound it", () => {
