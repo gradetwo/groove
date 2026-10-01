@@ -9,7 +9,7 @@
  *
  * The map is deliberately not persisted, exactly as the song map is not: the application owns projects, and this is a scratchpad for one session.
  */
-import { stepCountFor } from "../src/data/noteEvents";
+import { collapsedNoteColumns, stepCountFor, stepsPerBarFor } from "../src/data/noteEvents";
 import { toMusicXml } from "../src/data/musicxml";
 import { fromMusicXml, fromMusicXmlBytes } from "../src/data/musicxmlImport";
 import type { ImportedPart } from "../src/data/musicxmlImport";
@@ -24,6 +24,7 @@ import {
   addTrackNotes,
   assignTakeToRange,
   changeTrackKind,
+  carriesStarterNotes,
   createArrangement,
   createArrangementFromTemplate,
   moveTrackNote,
@@ -156,8 +157,40 @@ export function summariseArrangement(arrangementId: string, arrangement: Arrange
   for (const track of arrangement.tracks) {
     // Stated because it is the mistake an agent makes here: a sampler with no instrument is silent, and silence reads as a bug in the renderer.
     if (track.kind === "sampler" && !track.sample) problems.push(`"${track.name}" is a sampler with no instrument, so it will be silent`);
+    /**
+     * ⭐ **Starter content is reported wherever it is present.** The MCP surface no longer seeds it (`createMcpArrangement`),
+     * but the app's starter experience still does, and a caller reading a reply has no other way to tell notes it wrote from
+     * notes that arrived with the track. Measured reports of exactly this shape are in `docs/MUSE_REPORT_2026-10-01.md`.
+     */
+    if (carriesStarterNotes(track.kind, arrangement.notesByTrack?.[track.id])) {
+      problems.push(
+        `"${track.name}" still holds the ${(arrangement.notesByTrack?.[track.id] ?? []).length} starter note(s) its kind is created with, which the caller did not write — clear or keep them deliberately`
+      );
+    }
     if (track.parentId && !arrangement.tracks.some((candidate) => candidate.id === track.parentId)) {
       problems.push(`"${track.name}" names a folder that is not there`);
+    }
+    /**
+     * ⭐ **A chord in a step column loses notes, and now says so.**
+     *
+     * This model holds notes, so several may start together; the engine's lanes trigger at **one pitch per step**, and
+     * `stepsFromNotes` keeps the lowest (its own comment says why). Making the lane play the whole stack would change
+     * what every existing chord sounds like — a product decision, not taken here. What is taken is the silence: a
+     * creator who writes a chord learns which column lost which pitches, in the same `problems` list that names a
+     * sampler with no instrument. Deletion test: remove this branch and the criterion in
+     * `src/test/mcpArrangement.test.ts` goes red.
+     */
+    const notesForTrack = arrangement.notesByTrack?.[track.id] ?? [];
+    const columns = collapsedNoteColumns(
+      notesForTrack,
+      stepCountFor(notesForTrack, arrangement.bars, stepsPerBarFor(arrangement.timeSignature))
+    );
+    if (columns.length > 0) {
+      const first = columns[0]!;
+      problems.push(
+        `"${track.name}" puts ${first.notes} notes in step ${first.step} and a step column keeps one pitch (keeps ${first.keptPitch}, drops ${first.droppedPitches.join(", ") || "a duplicate"})` +
+          `${columns.length > 1 ? `; ${columns.length} such column(s) in all` : ""} — the render plays one note there`
+      );
     }
   }
   const allNotes = Object.values(arrangement.notesByTrack ?? {}).flatMap((notes) => notes ?? []);
@@ -187,9 +220,20 @@ export function createMcpArrangement(input: CreateMcpArrangementInput = {}): Arr
   if (input.templateId !== undefined && !TEMPLATES.some((template) => template.id === input.templateId)) {
     throw new Error(`unknown templateId "${input.templateId}" — the templates are ${TEMPLATES.map((template) => template.id).join(", ")}, or omit it for a blank arrangement`);
   }
-  const base = input.templateId
+  const seeded = input.templateId
     ? createArrangementFromTemplate(songId, input.templateId, input.blankKind)
     : createArrangement(songId, input.blankKind ?? "instrument");
+  /**
+   * ⭐ **An MCP-created arrangement carries no starter notes.**
+   *
+   * `createArrangement` seeds a kind's default pattern because a silent track looks broken to a **person** starting a
+   * project, and that decision is unchanged. A caller reaching this surface, though, is composing through a tool and
+   * cannot see the screen: two field reports describe receiving four notes at pitch 60 nobody wrote, on a drum-kit
+   * asset, with no line in the reply accounting for them. The starter notes are dropped here and the track's own
+   * `sample` is kept — the asset is identity ("a sampler with no instrument would be silent"), not content. The
+   * detector in `summariseArrangement` names any starter content that still reaches a reply.
+   */
+  const base: ArrangementV2 = { ...seeded, notesByTrack: {} };
   const id = `arrangement-${++idSequence}`;
   arrangements.set(id, base);
   return summariseArrangement(id, base);
@@ -204,7 +248,19 @@ function edit(arrangementId: string, apply: (arrangement: ArrangementV2) => Arra
 }
 
 export function addMcpTrack(arrangementId: string, kind: TrackKindV2, name?: string): ArrangementEditResult {
-  return edit(arrangementId, (arrangement) => addTrack(arrangement, kind, name ?? defaultTrackName(kind)));
+  return edit(arrangementId, (arrangement) => {
+    const added = addTrack(arrangement, kind, name ?? defaultTrackName(kind));
+    /**
+     * ⭐ **The caller gets the track, not the starter notes it was born with** — the same rule as `createMcpArrangement`.
+     * `addTrack` seeds a kind's default pattern for the app's starter experience; here the track arrives empty, and the
+     * caller writes the notes it means. A track that became a sampler still carries its default asset: that is identity,
+     * not content.
+     */
+    const newTrackId = added.tracks[added.tracks.length - 1]!.id;
+    const notesByTrack = { ...(added.notesByTrack ?? {}) };
+    delete notesByTrack[newTrackId];
+    return { ...added, notesByTrack };
+  });
 }
 
 function defaultTrackName(kind: TrackKindV2): string {

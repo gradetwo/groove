@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   addMcpTake,
   addMcpTrack,
+  addMcpTrackNotes,
   assignMcpTakeRange,
   clearMcpArrangements,
   createMcpArrangement,
@@ -30,7 +31,7 @@ import {
   setMcpTrackSteps,
   summariseArrangement,
 } from "../../mcp/arrangement";
-import { resetTrackIdsForTests } from "../data/arrangementEdits";
+import { createArrangement, resetTrackIdsForTests } from "../data/arrangementEdits";
 import { buildMxlZip, toBase64 } from "./fixtures/mxlZip";
 
 beforeEach(() => {
@@ -51,6 +52,84 @@ describe("creating an arrangement", () => {
 
   it("refuses a template that does not exist, naming the ones that do", () => {
     expect(() => createMcpArrangement({ templateId: "not-a-template" })).toThrow(/the templates are/);
+  });
+
+  /**
+   * ⭐ **No content the caller did not write.**
+   *
+   * `createArrangement`/`addTrack` seed a kind's default pattern because a silent track looks broken to a **person**
+   * starting a project, and that is unchanged. An agent reaching the MCP surface cannot see the screen, and two field
+   * reports describe exactly this: four notes at pitch 60 arriving with a new sampler track, on a drum-kit asset, with
+   * nothing in the reply accounting for them. The deletion test is to remove the `notesByTrack: {}` spread in
+   * `createMcpArrangement` (or the `delete` in `addMcpTrack`) — this test then sees four notes per track.
+   */
+  it("hands an MCP caller no notes it did not write, whichever way the arrangement was made", () => {
+    const blank = createMcpArrangement({ blankKind: "sampler" });
+    const fromTemplate = template();
+    const added = addMcpTrack(blank.arrangementId, "drumkit");
+    for (const summary of [blank, fromTemplate, added.summary]) {
+      for (const track of summary.tracks) expect(track.notes).toEqual([]);
+    }
+    // The asset is identity rather than content, so it survives: without it the sampler lane would resolve to nothing.
+    expect(blank.tracks[0]!.sampleAssetId).toBe("virtuosity-drums-basic");
+  });
+
+  /**
+   * ⭐ **Where starter content is still seeded, it is named.** The app path still seeds it, so the detector has to fire
+   * there and stay quiet once a caller edits anything — a report that fired on "any four notes" would be noise, and one
+   * that never fired would be the silence the report was about. Deletion test: remove the `carriesStarterNotes` branch in
+   * `summariseArrangement` and the first assertion goes red.
+   */
+  it("names starter content instead of leaving the caller to find it by ear", () => {
+    const seeded = createArrangement("probe", "sampler");
+    const trackId = seeded.tracks[0]!.id;
+    const notes = seeded.notesByTrack![trackId]!;
+    expect(notes.length).toBeGreaterThan(0);
+    expect(summariseArrangement("probe", seeded).problems.some((problem) => /starter note\(s\)/.test(problem))).toBe(true);
+
+    const edited = {
+      ...seeded,
+      notesByTrack: {
+        ...seeded.notesByTrack,
+        [trackId]: [...notes, { pitch: 67, startBeats: 4, lengthBeats: 0.25, velocity: 100 }],
+      },
+    };
+    expect(summariseArrangement("probe", edited).problems.some((problem) => /starter note\(s\)/.test(problem))).toBe(false);
+  });
+
+  /**
+   * ⭐ **A chord loses notes to the one-pitch-per-step grid, and the reply names the loss.**
+   *
+   * The model holds notes, so three may start together; `stepsFromNotes` keeps the lowest and the renderer plays one
+   * pitch. Making the lane play the stack would change what every existing chord sounds like, which is the owner's
+   * decision and not taken here. What is taken is the silence. Both directions are asserted: a column with three notes
+   * is reported with the kept and dropped pitches, and a column with one is not reported at all.
+   */
+  it("names a step column where a chord loses notes, without changing how the chord renders", () => {
+    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const track = summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).tracks[0]!;
+    addMcpTrackNotes(arrangementId, track.id, [
+      { pitch: 60, startBeats: 0, lengthBeats: 1, velocity: 100 },
+      { pitch: 64, startBeats: 0, lengthBeats: 1, velocity: 100 },
+      { pitch: 67, startBeats: 0, lengthBeats: 1, velocity: 100 },
+    ]);
+    const chord = summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).problems.find((problem) =>
+      /step 0/.test(problem)
+    );
+    expect(chord).toBeTruthy();
+    expect(chord).toContain("keeps 60");
+    expect(chord).toContain("drops 64, 67");
+    // The pitches the model still holds are unchanged: this reports, it does not edit or re-voice the chord.
+    expect(summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).tracks[0]!.notes).toHaveLength(3);
+
+    const single = createMcpArrangement({ blankKind: "instrument" });
+    const singleTrack = summariseArrangement(single.arrangementId, getMcpArrangement(single.arrangementId)!).tracks[0]!;
+    addMcpTrackNotes(single.arrangementId, singleTrack.id, [{ pitch: 60, startBeats: 0, lengthBeats: 1, velocity: 100 }]);
+    expect(
+      summariseArrangement(single.arrangementId, getMcpArrangement(single.arrangementId)!).problems.some((problem) =>
+        /keeps one pitch/.test(problem)
+      )
+    ).toBe(false);
   });
 
   it("reports a sampler track's instrument, which the template already gives it", () => {
@@ -223,12 +302,18 @@ describe("recording onto a track", () => {
      * not, which is the rule the rest of the MCP render surface follows.
      */
     const { arrangementId } = createMcpArrangement({ blankKind: "drumkit" });
+    /**
+     * ⭐ **The caller's own note, because the MCP surface no longer seeds starter content.** A new track arrives empty, so
+     * this asks the chain to carry what was written — not what the track was born with, which is what the previous
+     * version of this test accidentally measured.
+     */
+    const track = summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).tracks[0]!;
+    addMcpTrackNotes(arrangementId, track.id, [{ pitch: 36, startBeats: 0, lengthBeats: 0.25, velocity: 100 }]);
     const { flattened, bars } = flattenMcpArrangement(arrangementId);
     expect(bars).toBeGreaterThan(0);
     expect(flattened.pattern.tracks.length).toBeGreaterThan(0);
-    // The default drum track has every fourth step, so the flattened pattern has steps to play rather than a silent lane.
     expect(flattened.totalSteps).toBeGreaterThan(0);
-    expect(flattened.pattern.tracks.some((track) => (track.steps ?? []).some((step) => step !== 0))).toBe(true);
+    expect(flattened.pattern.tracks.some((row) => (row.steps ?? []).some((step) => step !== 0))).toBe(true);
   });
 
   it("refuses to render an arrangement with no tracks, and says which arrangement to make", () => {

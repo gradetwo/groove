@@ -76,6 +76,53 @@ export function stepsFromNotes(notes: readonly NoteEvent[], stepCount: number): 
   return { steps, pitches };
 }
 
+/** A step column where the model holds more than one note, and the projection above can keep only one pitch. */
+export interface CollapsedNoteColumn {
+  /** The step index, after the same rounding `stepsFromNotes` applies. */
+  step: number;
+  /** The pitch that survives — the lowest, exactly as `stepsFromNotes` decides it. */
+  keptPitch: number;
+  /** The pitches that do not survive, in insertion order. */
+  droppedPitches: number[];
+  /** How many notes the model has in this column. */
+  notes: number;
+}
+
+/**
+ * **Where a chord loses notes to the single-pitch step grid**, as data rather than as an assumption.
+ *
+ * The model holds notes — several may start together, which is a chord — and the engine's lanes trigger at one pitch
+ * per step (`stepsFromNotes` keeps the lowest and says why). Nothing was reporting that loss, so a creator could write
+ * a chord in an arrangement and hear its bottom note with no line anywhere accounting for the rest.
+ *
+ * This is a **report**, deliberately not a change: making the lane play the whole stack is a different sound for every
+ * existing chord and a product decision. It mirrors `stepsFromNotes`' own rounding and `Math.min` so the two cannot
+ * disagree about which pitch was kept — the same "one definition" rule the rest of this module follows. Notes beyond
+ * `stepCount` are ignored here for the same reason the projection ignores them: they are a length problem, not a
+ * collapse.
+ */
+export function collapsedNoteColumns(notes: readonly NoteEvent[], stepCount: number): CollapsedNoteColumn[] {
+  const stacks = new Map<number, number[]>();
+  for (const note of notes) {
+    const index = Math.round(note.startBeats / STEP_BEATS);
+    if (index < 0 || index >= stepCount) continue;
+    const stack = stacks.get(index);
+    if (stack) stack.push(note.pitch);
+    else stacks.set(index, [note.pitch]);
+  }
+
+  const columns: CollapsedNoteColumn[] = [];
+  for (const step of [...stacks.keys()].sort((a, b) => a - b)) {
+    const stack = stacks.get(step)!;
+    if (stack.length < 2) continue;
+    // A loop, not `Math.min(...stack)`: a caller may put thousands of notes on one step and a spread would overflow.
+    let keptPitch = stack[0]!;
+    for (const pitch of stack) if (pitch < keptPitch) keptPitch = pitch;
+    columns.push({ step, keptPitch, droppedPitches: stack.filter((pitch) => pitch !== keptPitch), notes: stack.length });
+  }
+  return columns;
+}
+
 /** A step grid as notes, which is what a drum row's squares mean. */
 export function notesFromSteps(
   steps: readonly number[],

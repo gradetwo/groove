@@ -270,7 +270,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "render_arrangement",
     title: "Bounce an arrangement",
     description:
-      "Render an arrangement to audio through the same offline engine the song and pattern tools use. **An arrangement is one bar of sixteen steps**, so this bounces the loop the interface's Play button plays rather than a piece — when the model gains a length, this follows. **Audio lanes are mixed**: a `sampler` track's notes are resolved through the app's own SFZ loader and placed at their own steps, a lane with a sample and no notes is played once at the arrangement's start, and a lane whose bytes cannot be resolved is named in `skippedLanes` with the reason rather than dropped. " +
+      "Render an arrangement to audio through the same offline engine the song and pattern tools use. **An arrangement has its own length** — its own bars (`set_arrangement_bars`, eight by default) and its own notes — so one pass bounces the whole arrangement rather than a loop; `bars` repeats that pass. Ask for what the arrangement is with `get_arrangement`, which reports `bars` and `steps`. **Audio lanes are mixed**: a `sampler` track's notes are resolved through the app's own SFZ loader and placed at their own steps, a lane with a sample and no notes is played once at the arrangement's start, and a lane whose bytes cannot be resolved is named in `skippedLanes` with the reason rather than dropped. " +
       renderCostSentence() +
       " " +
       renderBudgetSentence(),
@@ -285,19 +285,37 @@ export const TOOLS: ToolDefinition[] = [
         .min(1)
         .max(64)
         .optional()
-        .describe("1 is this arrangement (one pass of sixteen steps); raising it repeats the arrangement, and it drives the duration the description quotes"),
+        .describe("1 is one pass through the whole arrangement; raising it repeats the arrangement, and it drives the duration the description quotes"),
       sampleRate: z.number().int().min(8000).max(96000).optional().describe("render rate; 8000 makes an analysis pass about a fifth of the work — and the rate is one of the two things that drives the duration the description quotes"),
       channels: z.number().int().min(1).max(2).optional().describe("1 for a mono analysis render"),
     },
     handler: async (args, ctx) => {
       try {
-        const { flattened, bars } = flattenMcpArrangement(String(args.arrangementId));
+        const { flattened } = flattenMcpArrangement(String(args.arrangementId));
+        /**
+         * ⭐ **`bars` repeats the arrangement, which is what the schema and this description always promised.** The handler
+         * used to pass a hardcoded `bars: 1`, so a caller asking for four passes got one, with the requested number
+         * nowhere in the reply — the field report's "same parameter name, two meanings" (recorded in
+         * `docs/MUSE_REPORT_2026-10-01.md`). The arrangement's own length is reported beside `passes` so the two numbers
+         * cannot be confused.
+         */
+        const passes = Math.max(1, Math.min(64, (args.bars as number | undefined) ?? 1));
+        /**
+         * ⭐ **The arrangement's own problems travel with the render.** A reply that reported only the render's audio-lane
+         * problems would leave "this track still carries the four starter notes you did not write" visible in
+         * `get_arrangement` and invisible in the one call whose output a caller actually listens to.
+         *
+         * The length comes from the **model's** own summary rather than `flattenMcpArrangement().bars`: the flatten's
+         * song-level `totalBars` drops to 1 for an arrangement with no notes (its `totalSteps` still says 128), which is
+         * exactly the arrangement an MCP caller now starts from.
+         */
+        const summary = summariseArrangement(String(args.arrangementId), getMcpArrangement(String(args.arrangementId))!);
         const result = await renderAudio(flattened.pattern, {
           format: (args.format as "wav" | "mp3") ?? "wav",
           ...(args.sampleRate ? { sampleRate: args.sampleRate as number } : {}),
           ...(args.channels ? { channels: args.channels as 1 | 2 } : {}),
-          // The flattened pattern *is* the arrangement, so one pass plays all of it.
-          bars: 1,
+          // The flattened pattern *is* one arrangement; the pass count repeats it.
+          bars: passes,
           bitrateKbps: args.bitrateKbps as number | undefined,
           genreId: "custom",
           ...(ctx?.progress ? { progress: ctx?.progress } : {}),
@@ -309,8 +327,12 @@ export const TOOLS: ToolDefinition[] = [
         return {
           ...(result as unknown as Record<string, unknown>),
           arrangementId: String(args.arrangementId),
-          bars,
+          /** The arrangement's own length, in bars. */
+          bars: summary.bars ?? Math.round(summary.steps / 16),
+          /** How many times that whole arrangement was rendered, i.e. what `bars` asked for. */
+          passes,
           totalSteps: flattened.pattern.totalSteps,
+          ...(summary.problems.length ? { arrangementProblems: summary.problems } : {}),
           ...audioLaneReplyFields(result.audioLanes),
         };
       } catch (error) {
