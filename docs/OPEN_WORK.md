@@ -213,3 +213,32 @@ SKIP_LOCAL_GATE=1 npm run push:dev -- "<msg>" # 从这里推，同步的就是�
 * 更根本的一条 ✓：**代码与文档要一起长** ✓——文档回退不会被任何测试抓住 ✓，所以它只能靠**人按规矩查** ✓。
 
 **校验方式**（本次用的 ✓，可复用）：`grep -n "🗺" docs/Z2_ADJUDICATION.md` ✓ → 还剩几行 🗺 ✓ → **逐行读全** ✓ → 若某行的 🗺 与代码事实矛盾 ✓，那就是文档回退 ✓。
+||||||| parent of e3b4590 (docs: record where the mirror retirement stands, script by script)
+
+---
+
+## 十.1 镜像退休的落地状态（2026-10-01）
+
+**逐个脚本的现在** ✓（"直推"= 自己 `git push origin …` ✓，不再经过任何 checkout ✓）：
+
+| 脚本 | 现在做什么 |
+| --- | --- |
+| `scripts/push_dev.sh` | 直推 ✓：`git push origin HEAD:dev` ✓，工作树脏就拒绝 ✓；推前取消被顶掉的运行 ✓ |
+| `scripts/publish_mirror_main.sh` | 直推 ✓：`dev` 与 `main`，**判据仍是内容** ✓（读 `origin/<ref>:package.json` ✓）；快进被拒时带说明地强推 `main` ✓ |
+| `scripts/push_branch.sh` | 直推分支 ✓：`--force-with-lease` ✓（rebase 过的分支需要它 ✓） |
+| `scripts/ci_full.sh` | 直推改造 ✓：不再读镜像 ✓，`gh` 从本仓的 remote 解析仓库 ✓；**分支不在 origin 上、或 HEAD 不是 `origin/<branch>` 的祖先时，点名拒绝** ✗（否则会在旧提交上跑全量矩阵却当作对本次的判定 ✗）|
+| `scripts/tag_release.sh` | 直推改造 ✓：标签打在本 checkout 的 `HEAD` 上并从本仓推送 ✓；`--move` 才允许改已发布的标签 ✓，另加 `--dry-run` ✓；推送后**从 origin 读回**标签并核对提交与版本 ✓ |
+| `scripts/watch_ci.sh` | 直读改造 ✓（`npm run ci:status` / `ci:watch`）：不再 `cd` 镜像 ✓，`gh` 从 `origin` 认仓库并把仓库名打印出来 ✓；原来那句 `[ -d "$REPO/.git" ]` 会让**查询 CI 本身**依赖镜像目录存在 ✗——那正是"镜像一移走，检查就说不出话"的形状 ✗ |
+| `scripts/sync_release_mirror.sh` | **已退休** ✓：只打印一行原因并以 **1** 退出 ✓，指向本节 ✓——不再静默成功 ✓ |
+| `scripts/commit_release_mirror.sh` | **已退休** ✓：同上 ✓ |
+| `scripts/release.sh` | 删掉 `mirror` 与 `mirror commit` 两步 ✓；发布链现在是 version → tag → remote ✓，三步都在本 checkout 直推 ✓ |
+
+**`scripts/` 里已无任何脚本写死镜像路径** ✓（`grep -rn "release/groove-github" scripts/` 现在只在两个退休脚本的说明文字里命中 ✓，那是刻意的历史注记 ✓，不带任何可执行依赖 ✓）。**这很重要** ✗：镜像目录可以随时被删掉 ✓，而删除它的那个人不需要先改脚本 ✓。
+
+**别把 `scripts/check_mirror_reachability.mjs` 算进来** ✓：它查的是**采样 CDN**（`VITE_SAMPLE_ROOT`）而不是发布镜像 ✓，
+名字里的 "mirror" 是巧合 ✓。
+
+**镜像目录本身还在** ✓ `/home/crow/music/release/groove-github`（当前检出 `dev` ✓，树干净 ✓）。**本文件不删它** ✗——
+删目录是另一件更大的决定 ✓；在此之前，凡是要"读仓库状态"的脚本都不得再依赖它 ✓（见上表与本段 ✗）。
+
+---
