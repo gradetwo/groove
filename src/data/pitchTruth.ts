@@ -184,3 +184,98 @@ export function describePitch(input: DescribePitchInput): PitchReport {
 
   return report;
 }
+
+/**
+ * ⭐ **The transpositions that live in the GS-1 patch**, with the unit each one is actually in.
+ *
+ * The audit (`docs/PITCH_TRUTH.md` §1.5) found six places a pitch can move and no unified report of them. Four
+ * of the six are reachable without a sound source and are collected below; the SFZ's `tune` and
+ * `pitch_keycenter` need a resolution and are passed in by the caller; the chord register in `genreExpression`
+ * is written into the pitches at composition time and is therefore not a playback transposition at all.
+ *
+ * **The units differ, and writing them down is the point.** `OSC1_PITCH` is semitones and `OSC1_DETUNE` is
+ * cents — treating both as semitones would overstate a detune by a factor of a hundred, which is exactly the
+ * class of quiet mistake this module exists to end. `PITCH_BEND_RANGE` (id 38) is deliberately absent: it is
+ * how far a bend *may* travel, not a transposition, and listing it would inflate a total.
+ */
+export const GS1_PITCH_PARAMETERS: ReadonlyArray<{
+  id: number;
+  name: string;
+  unit: "semitones" | "cents";
+  note: string;
+}> = [
+  { id: 3, name: "OSC1_PITCH", unit: "semitones", note: "oscillator 1, ±24 semitones" },
+  { id: 4, name: "OSC1_DETUNE", unit: "cents", note: "oscillator 1, ±50 cents" },
+  { id: 9, name: "OSC2_PITCH", unit: "semitones", note: "oscillator 2, ±24 semitones" },
+  { id: 10, name: "OSC2_DETUNE", unit: "cents", note: "oscillator 2, ±50 cents" },
+  { id: 41, name: "MASTER_TUNE", unit: "cents", note: "the whole instrument, in the engine's own unit" },
+];
+
+/** What a caller knows about a lane when it asks what is moving its pitch. */
+export interface TranspositionInputs {
+  /** `SequencerTrack.transpose` (`src/types/song.ts:90`), semitones, clamped ±24 by the model. */
+  trackTranspose?: number;
+  /** `SongSection.transpose` (`src/types/song.ts:186`), semitones. */
+  sectionTranspose?: number;
+  /** The lane's GS-1 overrides, keyed by parameter name or numeric id — `gs1PatchOverrides.parameters`. */
+  gs1Parameters?: Record<string, number | string> | undefined;
+  /** What the sound source declares, when a note has been resolved. */
+  sfz?: { tuneCents?: number; rootKey?: number };
+}
+
+/**
+ * ⭐ **Every transposition that can be named, named — rather than summed into a number nobody can trace.**
+ *
+ * The owner's bar is that each one be "显式、可见、**可撤销**", so every entry carries `reversible` and a
+ * `detail` saying where it came from. Nothing here is applied: this reads what the model and the source state
+ * and reports it, which is what makes a total auditable.
+ *
+ * `sfz.rootKey` is reported as the source's **root**, not as a transposition: it is where the sample naturally
+ * sits, and the ratio that carries it to a note is computed from it rather than added to it. Calling it a
+ * transposition would double-count it.
+ */
+export function collectTranspositions(inputs: TranspositionInputs): PitchTransposition[] {
+  const out: PitchTransposition[] = [];
+
+  if (typeof inputs.trackTranspose === "number" && inputs.trackTranspose !== 0) {
+    out.push({
+      source: "track transpose",
+      semitones: inputs.trackTranspose,
+      reversible: true,
+      detail: "SequencerTrack.transpose — set it back to 0 (src/types/song.ts:90)",
+    });
+  }
+  if (typeof inputs.sectionTranspose === "number" && inputs.sectionTranspose !== 0) {
+    out.push({
+      source: "section transpose",
+      semitones: inputs.sectionTranspose,
+      reversible: true,
+      detail: "SongSection.transpose, applied by sectionTranspose (src/types/song.ts:186)",
+    });
+  }
+
+  const parameters = inputs.gs1Parameters ?? {};
+  for (const parameter of GS1_PITCH_PARAMETERS) {
+    const raw = parameters[parameter.name] ?? parameters[String(parameter.id)];
+    const value = typeof raw === "string" ? Number(raw) : raw;
+    if (typeof value !== "number" || !Number.isFinite(value) || value === 0) continue;
+    out.push({
+      source: `GS-1 ${parameter.name}`,
+      // Cents are divided by a hundred; semitones are taken as they are. Getting this wrong is a 100x error.
+      semitones: parameter.unit === "cents" ? value / 100 : value,
+      reversible: true,
+      detail: `${parameter.note}; drop the override to go back to the code's own value (${value} ${parameter.unit})`,
+    });
+  }
+
+  if (typeof inputs.sfz?.tuneCents === "number" && inputs.sfz.tuneCents !== 0) {
+    out.push({
+      source: "SFZ tune",
+      semitones: inputs.sfz.tuneCents / 100,
+      reversible: false,
+      detail: `${inputs.sfz.tuneCents} cents from the library's own SFZ (src/audio/sfz/parse.ts:320) — we do not edit the library, so this one cannot be undone from here`,
+    });
+  }
+
+  return out;
+}
