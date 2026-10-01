@@ -42,7 +42,7 @@ import { parseManifest } from "../data/sampleManifest";
 import { catalogueFromManifestText } from "../data/sampleCatalogue";
 import { listCatalogueInstruments, listSampleLibraries } from "../../mcp/instruments";
 import { expandRemoteIncludes } from "../audio/sfz/remoteIncludes";
-import { parseSfz, readDefaultPath } from "../audio/sfz/parse";
+import { parseSfz } from "../audio/sfz/parse";
 import { resolveSamplePath } from "../audio/sfz/defaultPath";
 import { resolveInstrumentNote } from "../audio/sfz/instrument";
 
@@ -254,22 +254,18 @@ describe.skipIf(offline)("every exposed orchestral instrument proves itself by r
       expect(regions.length, `${assetId} parsed to no regions at all`).toBeGreaterThan(0);
 
       /**
-       * ⭐ `default_path` joins the region's `sample` before it becomes an address, exactly as the loader does it — VSCO 2 CE declares `default_path=Strings\Violin Section\susVib\` and names its
+       * `default_path` joins the region's `sample` before it becomes an address, exactly as the loader does it — VSCO 2 CE declares `default_path=Strings\Violin Section\susVib\` and names its
        * samples `VlnEns_susVib_A2_v1.wav`, so a test that skipped this step would resolve to a path one directory too high and "prove" a file that does not exist.
-       */
-      const defaultPath = readDefaultPath(program!.text);
-      /**
-       * ⭐ **Reading one `default_path` per program is honest only because every mirrored program declares exactly one.** VSCO's `*-KS` keyswitch programs declare
-       * one per section (`Strings\Violin Section\susVib\`, then `…\Trem\`, `…\Spic\`, `…\Pizz\`), and `readDefaultPath` returns the first — deliberately, as a
-       * file-level reader — so pointing this case at a `-KS` program would resolve its tremolo/pizzicato regions into the sustained directory and report files that
-       * do not exist. None of those is mirrored; the day one is, this test and the loader's per-`<control>` resolution are both part of the change.
+       *
+       * The path comes from the **note's own region** rather than from one read of the file: the keyswitch programs of this same library declare 2–5 paths, and a single
+       * file-level value would send most of their regions into a directory their samples are not in.
        */
       const resolved = new Set<string>();
       for (let note = 0; note <= 127; note += 1) {
         for (const velocity of VELOCITIES) {
           const resolution = resolveInstrumentNote({ assetId, sfz: { url: program!.url } }, program!.text, note, { velocity });
           if (!resolution.ok) continue;
-          const sample = resolveSamplePath(resolution.note!.samplePath, defaultPath);
+          const sample = resolveSamplePath(resolution.note!.samplePath, resolution.note!.defaultPath);
           resolved.add(sample);
           /**
            * A region is not enough; the file has to exist. `#` and `?` are escaped because a filename like `VlnEns_susVib_F#3_v1.wav` otherwise becomes a URL fragment — the defect Muse

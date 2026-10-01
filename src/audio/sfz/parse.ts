@@ -1,4 +1,5 @@
 import { applyDefines } from "./defines";
+import { defaultPathFrom } from "./defaultPath";
 
 /**
  * An SFZ subset, parsed by hand — the first half of real-instrument support (owner decision, inside groove, no new repository).
@@ -55,6 +56,28 @@ export interface SfzRegion {
    * has learned to treat as a claim rather than a fact. A real library, whose kick and snare live under different `<group> key=…` blocks, is what exposed it.
    */
   inherited?: Record<string, string>;
+  /**
+   * The `default_path` that applies to **this region**, from the `<control>` block in force where it was written — and absent when the file declares no path at all, which
+   * means the sample is already relative to the program.
+   *
+   * `default_path` is **sequential state, not a file-level constant.** It applies from its declaration onward, and the next `<control>` block replaces it; the `<group>` and
+   * `<global>` blocks that sit between them do not reset it. The pinned upstream files are why this field exists, and they were measured rather than reasoned about
+   * (`schollz/VSCO-2-CE@6dd651d55dde97fd4028699be9d4481f26917891`): its eight `-KS` programs declare 2, 4 or 5 paths each, one per folded articulation, and each path names a
+   * directory the samples exist in. Cello Ensemble declares `susvib`, `trem`, `spic` and `pizzT` in one file; under this region's own path all 156 of its regions name files
+   * that exist, while under the first path 129 of them name files that do not.
+   *
+   * It sits on the region, captured when the region was created, for the same reason `inherited` does: a caller that reads one file-level value afterwards gives every region
+   * the same answer, which is the defect this replaced.
+   */
+  defaultPath?: string;
+  /**
+   * Why this region's `default_path` cannot be known, when the file declares one but the region sits **before** the first `<control>` that carries it.
+   *
+   * SFZ's own answer is that the value applies from its declaration onward, so a region written earlier has no applicable declaration — but the file plainly intends a path,
+   * and choosing either the later one or none at all would be a guess that resolves a sample out of the wrong directory. That is the silent-wrong-data failure this project
+   * treats as the worst kind, so it is carried as a named problem instead.
+   */
+  defaultPathProblem?: string;
 }
 
 const DEFAULTS: Omit<SfzRegion, "sample" | "opcodes" | "unresolved"> = {
@@ -161,6 +184,16 @@ export function parseSfz(text: string): SfzRegion[] {
   let global: Record<string, string> = {};
   let group: Record<string, string> = {};
   let current: Record<string, string> | null = null;
+  /**
+   * The `default_path` in force, and the ones each region saw, captured as the file is read rather than looked up afterwards.
+   *
+   * A second pass that searched the text for "the" `default_path` is what this replaces, and it is the same shape as the `inherited` defect above one level up: reading a
+   * value at the end gives every region the same answer, and here the file itself declares that the answer differs per section.
+   */
+  let controlDefaultPath: string | undefined;
+  const seenDefaultPath: (string | undefined)[] = [];
+  /** That the file declares a path somewhere, even if not before the region being examined — the difference between "no path to apply" and "not knowable here". */
+  let declaresDefaultPath = false;
 
   for (const rawLine of text.split(/\r?\n/)) {
     // Comments run to the end of the line; SFZ uses `//`, and a file that uses it must not be swallowed whole.
@@ -178,7 +211,14 @@ export function parseSfz(text: string): SfzRegion[] {
     if (header) {
       const name = header[1]!.toLowerCase();
       rest = header[2]!;
-      if (name === "global" || name === "master") {
+      /**
+       * A `<control>` block is not inherited state like a group — it is the file talking to the player — but `default_path` inside it **is** forward-applying state, and
+       * it is read here, at its own line, rather than at the end. This is the whole difference the keyswitch programs needed: the value belongs to the section it opens,
+       * and the next `<control>` replaces it. The body lines of the same block are read below, past the `continue`, because a `<control>` block has no opcode map of its own.
+       */
+      if (name === "control") {
+        current = null;
+      } else if (name === "global" || name === "master") {
         /**
          * `<master>` is SFZ v2's other global-scope header, and a real library uses it — its `ampeg_release`, `tune_cc*` and bleed opcodes live there.
          *
@@ -221,8 +261,26 @@ export function parseSfz(text: string): SfzRegion[] {
         current = null;
       }
     }
+    /**
+     * A `default_path` on a `<control>` block's own body line, which is how every upstream keyswitch program writes it: the header is `<control>` and the declaration is
+     * the next line. Read before the `if (!current) continue`, because a `<control>` block has no current opcode map — it is state, not something a region inherits.
+     */
+    if (!header || header[1]!.toLowerCase() === "control") {
+      const declared = defaultPathValue(rest);
+      if (declared !== undefined) {
+        controlDefaultPath = declared;
+        declaresDefaultPath = true;
+      }
+    }
     if (!current) continue;
     scanOpcodes(rest, current);
+    /**
+     * The path this region is written under, taken where it is written and **after** its own opcodes are read: a `default_path` written on the region line itself wins
+     * over the section's, and the region's own value is the one `scanOpcodes` stores in full rather than the one this line would cut out of a line carrying other opcodes.
+     */
+    if (header && header[1]!.toLowerCase() === "region") {
+      seenDefaultPath[regions.length - 1] = applicableDefaultPath(current, { ...global, ...group }, controlDefaultPath);
+    }
   }
 
   /** Every `$NAME` a value still contains, deduplicated — reported rather than silently defaulted. */
@@ -231,8 +289,18 @@ export function parseSfz(text: string): SfzRegion[] {
   ];
 
   // Inheritance is resolved from each region's own snapshot, taken when it was created — the group it is *inside*, not whichever group came last.
-  return regions.map((region) => {
+  return regions.map((region, index) => {
     const merged = { ...(region.inherited ?? {}), ...region.opcodes };
+    /**
+     * The path that applies to this region, in SFZ's order of precedence: its own `default_path`, then one inherited from the `<global>`/`<group>` it sits in (which is how
+     * older files declare it), then the `<control>` block in force where it was written. When none exists the field stays absent, meaning "relative to the program" — unless
+     * the file declares a path somewhere else, and then this region's answer is genuinely unknowable and is reported as a problem rather than filled in with a nearby value.
+     */
+    const applicable = applicableDefaultPath(region.opcodes, region.inherited ?? {}, seenDefaultPath[index]);
+    const problem =
+      applicable === undefined && declaresDefaultPath
+        ? `region ${index + 1} ("${merged.sample ?? ""}") is written before any <control> block declares default_path, so the directory its sample resolves against is unknowable`
+        : undefined;
     return {
       ...DEFAULTS,
       sample: merged.sample ?? "",
@@ -252,10 +320,45 @@ export function parseSfz(text: string): SfzRegion[] {
       tuneCents: num(merged.tune, DEFAULTS.tuneCents) + ccTuneCents(merged, cc),
       seqLength: Math.max(1, num(merged.seq_length, DEFAULTS.seqLength)),
       seqPosition: Math.max(1, num(merged.seq_position, DEFAULTS.seqPosition)),
+      ...(applicable === undefined ? {} : { defaultPath: applicable }),
+      ...(problem === undefined ? {} : { defaultPathProblem: problem }),
       opcodes: merged,
       unresolved: unresolvedIn(merged),
     };
   });
+}
+
+/**
+ * The `default_path` that applies to a region, in SFZ's order of precedence.
+ *
+ * Its own opcode wins, then one inherited from the `<global>`/`<group>` it sits in — older files declare it there, in the merged `global`+`group` snapshot, and dropping
+ * that would regress every one of them — and last the `<control>` block in force where the region was written. One function, so the parser has a single notion of "the
+ * applicable path": the previous code had a second one, `readDefaultPath`, which read the first declaration in the file and gave it to every region.
+ */
+function applicableDefaultPath(
+  own: Readonly<Record<string, string | undefined>>,
+  inherited: Readonly<Record<string, string | undefined>>,
+  fromControl: string | undefined
+): string | undefined {
+  return defaultPathFrom(own) ?? defaultPathFrom(inherited) ?? fromControl;
+}
+
+/**
+ * A `default_path` written on one line, or undefined when the line does not declare one.
+ *
+ * The value runs to the **end of the line**, not to the first whitespace, and that is measured rather than assumed. Every one of the pinned library's 75 programs writes
+ * `default_path=Strings\Violin Section\susVib\` unquoted with spaces in it, and truncating at whitespace yields `Strings/Violin` — which is how a measurement script of
+ * this project's own reported that half of 12 instruments had no samples at all. The upstream files are the fixture this reads.
+ *
+ * Used for a `<control>` block, where the declaration is a line of its own and the rest of the line is nothing. A region or group goes through `scanOpcodes` instead, so
+ * that a line carrying other opcodes cannot leak them into the value.
+ */
+function defaultPathValue(line: string | undefined): string | undefined {
+  if (line === undefined) return undefined;
+  const match = line.replace(/\/\/.*$/, "").match(/(?:^|\s)default_path\s*=\s*(.+)$/);
+  if (!match) return undefined;
+  const value = match[1]!.trim().replace(/^"|"$/g, "");
+  return value === "" ? undefined : value;
 }
 
 /**
@@ -369,22 +472,4 @@ export function unresolvedVariables(regions: readonly SfzRegion[]): { variables:
     variables: [...new Set(regions.flatMap((region) => region.unresolved))],
     regions: regions.filter((region) => region.unresolved.length > 0).length,
   };
-}
-
-
-/**
- * The `default_path` a file declared, read from the same text a caller would parse.
- *
- * Separate from `parseSfz` because it is a property of the **file** rather than of any region — and because a caller resolving sample addresses needs it whether or not the file produced a region this parser understood. It
- * runs the same `#define` layer first, since a declaration may be written in terms of a variable (`default_path=$DIR/`).
- */
-export function readDefaultPath(text: string): string | undefined {
-  const defined = applyDefines(text).text;
-  // The declaration lives in `<control>` in modern files and `<global>` in older ones; both are scanned rather than assumed, because the cost of the wrong guess is a sample resolved one directory too high.
-  for (const line of defined.split(/\r?\n/)) {
-    const clean = line.replace(/\/\/.*$/, "").trim();
-    const match = clean.match(/^default_path\s*=\s*(.+)$/);
-    if (match) return match[1]!.trim().replace(/^"|"$/g, "");
-  }
-  return undefined;
 }

@@ -1290,4 +1290,53 @@ GET https://r2mirror.groove.wangda.today/vsco2ce/Strings/Violin Section/Pizz/Vln
 * **`TimpaniRolls.sfz`**：1 336 字节的程序文件；它的 10 个采样（37.4 MiB）已在镜像里（见 ③）。
 * **其余程序整族仍未入**：上游 75 个 sfz，入库 26 个，**还剩 49 个**——管风琴、立式钢琴（`UprightPiano`、`VSUpright1`）、马林巴、钟琴、木琴、管钟、短笛、`GM-StylePerc`、VSCO 1 打击乐、`Miscellania Raw`、`Solo Violin` 一族。这些不是这次点名的十四件，也没有被任何判据声称服务。
 * **`needs` 新增两项**：表情程序用了 `lorand` / `hirand`（把一层力度随机劈成两半），**解析器不读它们**，因此两个半层里总是第一个被选中——乐器仍然发声，但它不是 VSCO 写这段时的随机行为。已写进 `vsco2ce` 的 `needs`，是"支持到什么程度"那张表的一条新缺口，不是静默通过。
+||||||| parent of 4fcaed4 (fix(sfz): read default_path per <control> section, not per file)
+## `default_path` 属于 `<control>` 段，不属于文件（2026-10-01）
+
+⑤ 里说八个 `*-KS` 程序"不在镜像里"，当时的原因不是成本，而是一个解析器缺陷：**`readDefaultPath` 按文件读一个值，取的是文件里第一条声明**。键位程序把几套奏法折进同一个文件，**每套奏法各自开一个 `<control>` 段并声明自己的 `default_path`**，所以同一个文件指向好几个采样目录，而旧实现给每个 region 都用了第一个。
+
+### 语义：顺序状态，从声明处向后生效
+
+`default_path` 是**顺序状态**：从它所在的那一行起生效，下一个 `<control>` 段替换它，中间夹着的 `<group>`/`<global>` 不会重置它。所以一个 region 适用的路径，是写入它时在生效的那一条。
+
+**这是量出来的，不是从 opcode 名字读出来的**，量法是拿钉住的上游文件本身对账：`schollz/VSCO-2-CE@6dd651d55dde97fd4028699be9d4481f26917891` 的 75 个程序共 3163 个 region，其中八个 `-KS` 程序各声明 2、4 或 5 条路径。按"每段自己的路径"解析，八个程序的 region 无一例外都指向上游确实存在的文件；按"文件第一条路径"解析，每个程序里有 64 到 131 个 region 指向**不存在的文件**：
+
+| 程序 | 路径条数 | region | 各段自己的路径：存在/缺失 | 文件第一条路径：存在/缺失 |
+| --- | ---: | ---: | --- | --- |
+| `CelloEns-KS` | 4（susvib/trem/spic/pizzT） | 156 | 156 / 0 | 27 / **129** |
+| `Contrabass-KS` | 5 | 152 | 152 / 0 | 28 / **124** |
+| `SViolin-KS` | 4 | 161 | 161 / 0 | 30 / **131** |
+| `ViolaEns-KS` | 4 | 144 | 144 / 0 | 26 / **118** |
+| `ViolinEns-KS` | 4 | 131 | 131 / 0 | 22 / **109** |
+| `Clarinet-KS` | 2 | 97 | 97 / 0 | 33 / **64** |
+| `Tuba-KS` | 2 | 87 | 87 / 0 | 23 / **64** |
+| `Flute-KS` | 4 | 94 | 94 / 0 | 19 / **75** |
+
+（八件合计 1022 个 region；"存在/缺失"是拿 `sample=` 按该路径拼出来的字符串，去钉住那棵树的 3273 个 blob 里查。另外 `FHorn-KS.sfz` **不存在**——VSCO 的 75 个程序里带 `-KS` 的就是这八个。）
+
+另有两条旁证：
+
+* 这些 `-KS` 文件**就是**对应单奏法程序的拼接：`Clarinet-KS.sfz` 的 97 个采样名与 `ClarinetSus.sfz` + `ClarinetStac.sfz` 的并集逐个相同，`CelloEns-KS` 与它的四件单奏法程序同理（`SViolin-KS` 对应 `SViolinVib`，不是 `SViolinSusVib`——这个名字不存在）。拼接时唯一被加回去的信息就是每段前面那条 `default_path`：单奏法文件里路径写在程序旁边，折进一个文件后就必须按段声明。
+* **`sfizz_render` 判不了这件事，因为它根本不认 `default_path`。** 实测：令 `<control>` 声明 `default_path=tone/`、把文件只放在 `tone/` 里，渲染峰值是 **1**（静音）；把同一个文件放在程序旁边再渲染，峰值是 **2700**。也就是说参考引擎把 `default_path` 当无效 opcode，采样一律相对程序解析。这一点必须写下来：这些键位程序的作者是 ARIA 一系的引擎，本项目要"贴文件意图"，依据只能是文件本身，不能拿 sfizz 当裁判。
+
+### 改了什么
+
+* `SfzRegion` 新增 `defaultPath`：写入该 region 时适用的那一条，在读到 region 那一行时就捕获（与 `inherited` 同一个理由——事后读一个文件级的值，就是把同一个答案给所有 region）。优先顺序是 region 自己的 opcode、它所在 `<global>`/`<group>` 的（老文件把声明写在这里）、最后是当时生效的 `<control>`。`<control>` 块现在在解析循环里被认作顺序状态，块内每一行都参与，不再被当作"不认识的头"整块跳过。
+* `SfzRegion` 新增 `defaultPathProblem`：文件里确实声明了路径，但某个 region 写在第一条声明**之前**——此时它适用哪条是**不可知**的，既不是后来的那条，也不是没有。这种情况按问题上报（带 region 序号与采样名），不猜；loader 遇到它会拒绝加载而不是解析到一个错的目录。
+* `readDefaultPath` **删除**。它就是这个项目一直在清理的"第二处缓存同一个事实"，而且两处对同一个文件给出的答案不同：一处按段，一处按文件。`src/audio/sampleLoader.ts` 现在用解析结果里 region 自己的 `defaultPath`；`orchestralCoverage.test.ts` 也改成从解析结果取，而不是再读一遍文件。
+* `resolveInstrumentNote` 把 `defaultPath`（以及不可知时的 `defaultPathProblem`）随笔记一起带出来——和 choke group 一样，只有解析器知道是哪个 region 应了这一个音，路径也是那个 region 的属性。**应了这个音的那个 region 若路径不可知，解析本身就返回失败**（带 region 与采样名），`loadNote` 再拒绝一次：两层都挡，因为错了就是解析到一个不存在的目录、静音且无声可查。
+* 判据在 `src/test/sfzKeyswitchPaths.test.ts`：合成文件（两条 `<control>`、两条不同的 `default_path`、采样名用上游真名）逐段解析；单路径文件行为不变（含 `<global>` 声明与写在 region 行上的声明两种老写法）；不可知的那种必须报出 region 与采样名，且 loader 拒绝加载而不是猜一个目录。**对旧实现必然红的那一条**是 `trem` 段的断言：旧实现给它的路径是 `Strings\Cello Section\susvib\`，与期望的 `trem\` 不等。同文件里还有一条对钉住上游的判据：八个 `-KS` 程序的每个音、每层力度都解析一遍，全部必须落在上游树里真有的文件上。
+
+### 现在能测什么，量到什么
+
+能测了。八个 `-KS` 程序的每一个 region 现在都解析到一个上游确实存在的文件。抽 `CelloEns-KS.sfz` 量：
+
+* 156 个 region 解析出 **156 个互不相同的文件**，分在四个目录：`susvib` 27、`trem` 25、`spic` 52、`pizzT` 52。旧实现给全部 156 个都拼 `susvib` 目录，其中 129 个文件不存在。
+* 与**现有镜像**对账：镜像里这个库共 372 个文件，其中 **27 个**正好是 `susvib` 那一段（它和已镜像的 `CelloEnsSusVib.sfz` 共用采样），另外 **129 个不在镜像里**。所以这八个程序现在**测得准、载不动**——不是解析问题，是镜像里没有它们的字节。
+
+### 还不知道什么
+
+* **键位选择本身没实现。** `sw_last`/`sw_lokey`/`sw_hikey`/`sw_default` 只是被当作普通 opcode 保留：`sw_default=c2` 不会让 `c2` 选中"持续音"那一段，`regionsForNote` 也不看它们。所以在同一音区折叠了多套奏法的 `-KS` 文件里，**同一音高会同时命中每套奏法**，实际响的是文件顺序里的第一条。这是下一步的事，且它有自己的测量问题（`sw_default` 与"没送过键位"的关系、`sw_last` 的默认值、`sw_previous`），本轮没有碰；上面的合成判据因此把两段的音区与力度层错开，只测 `default_path`。
+* **不可知那种情况只按"声明在该 region 之后"判定。** 声明若来自 include 进来的文件，判定发生在 `expandRemoteIncludes` 拼好的文本上，与加载看到的一致；但 `<control>` 里的 `default_path` 是否在 include 边界上重置，没有量过——上游 75 个程序都没有这种写法，所以没有实现。
+* **没有镜像任何新东西。** 八个 `-KS` 程序要进镜像，代价是它们引用的全部采样（1022 个 region 指向的文件，含与已镜像 `susvib`/`sus` 段重叠的部分），这与 ⑥ 那份"表情程序 = 162.7 MiB"是**不同的账**（那份只是 12 件各加一个单奏法程序），需要单独量、单独决定。
 

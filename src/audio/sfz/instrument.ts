@@ -44,6 +44,19 @@ export interface ResolvedInstrumentNote {
    * **A linear scale on the note's level**, from `amplitude_onccN` — see the resolver for the measurement. Absent means unchanged, so a file that says nothing about controllers sounds exactly as it did before this existed.
    */
   gainScale?: number;
+  /**
+   * The `default_path` that applies to **the region that answered this note**, which the loader joins to `samplePath` before it becomes an address.
+   *
+   * It travels with the note for the same reason the choke group does: only the resolver knows which region answered, and the path is a property of where in the file that
+   * region was written. The pinned library's eight keyswitch programs each declare 2–5 paths in one file, so a caller reading one value for the file resolves some notes
+   * into directories their samples are not in — a missing file rather than an error.
+   */
+  defaultPath?: string;
+  /**
+   * Why that path is not knowable, when it is not — a region written before the `<control>` block that declares a path. Present means the caller must report it rather than
+   * resolve the sample against a guess.
+   */
+  defaultPathProblem?: string;
 }
 
 export interface InstrumentResolution {
@@ -101,6 +114,13 @@ export function resolveInstrumentNote(
     return Number.isFinite(parsed) ? parsed : undefined;
   };
   const answered = audible.find((region) => region.sample === playback.sample);
+  /**
+   * A region whose applicable `default_path` cannot be known is refused here, before any caller can resolve its sample against a guess. The parser already says so on the
+   * region; this is the point where it becomes an answer. The loader checks the same field again because it is the layer that would otherwise build a wrong address.
+   */
+  if (answered?.defaultPathProblem) {
+    return { ok: false, regions, reason: `instrument "${asset.assetId}": ${answered.defaultPathProblem}` };
+  }
   const group = asInt(answered?.opcodes.group);
   const offBy = asInt(answered?.opcodes.off_by);
   // `loop_mode` takes several values; only `one_shot` means "ignore the key release". Anything else keeps the note-off behaviour this project has always had.
@@ -140,6 +160,9 @@ export function resolveInstrumentNote(
       ...(oneShot ? { oneShot: true } : {}),
       ...(polyphonyCap === undefined ? {} : { notePolyphony: polyphonyCap }),
       ...(gainScale === 1 ? {} : { gainScale }),
+      // The path the answering region answers to, and the reason it has none when that is the truth — never a substitute value.
+      ...(answered?.defaultPath === undefined ? {} : { defaultPath: answered.defaultPath }),
+      ...(answered?.defaultPathProblem === undefined ? {} : { defaultPathProblem: answered.defaultPathProblem }),
     },
   };
 }

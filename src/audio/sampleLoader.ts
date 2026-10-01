@@ -18,7 +18,6 @@ import { resolveInstrumentNote } from "./sfz/instrument";
 import { expandRemoteIncludes } from "./sfz/remoteIncludes";
 import { sampleAssetForPath } from "./sfz/instrument";
 import { resolveSamplePath } from "./sfz/defaultPath";
-import { readDefaultPath } from "./sfz/parse";
 import { noCorsProbe, transportNote } from "./transportDiagnostic";
 
 /** Decodes one asset. In the browser this wraps `decodeAudioData`; in a test it is a plain function. */
@@ -203,11 +202,16 @@ export function createSampleLoader(
        * bundled samples rely on); otherwise the path becomes an address, source-first with the mirror as fallback, and goes through the **same** decode cache.
        */
       /**
-       * ⭐ **`default_path` joins the region's `sample` before anything resolves it.** Salamander declares `default_path=Samples/` and names its samples `harmLA0.flac`, so without this the address is one directory too high — not an
-       * error, a missing file, and an instrument that simply does not sound. It is read from the same expanded text the note was resolved against, which is the only place it exists.
+       * The `default_path` joins the region's `sample` before anything resolves it, and it is **the one the region itself answers to** rather than a file-level first
+       * value. Salamander declares `default_path=Samples/` and names its samples `harmLA0.flac`, so without a join the address is one directory too high — not an error, a
+       * missing file, and an instrument that simply does not sound.
+       *
+       * Reading a single value for the whole file is what the pinned library's keyswitch programs defeat: `CelloEns-KS.sfz` declares four different paths, one per folded
+       * articulation, and only the section's own path names directories its samples exist in. The path now travels with the region from the parser, which is the only place
+       * that saw where in the file the region was written.
        */
-      const defaultPath = readDefaultPath(expanded.text);
-      const samplePath = resolveSamplePath(resolution.note.samplePath, defaultPath);
+      if (resolution.note.defaultPathProblem) throw new Error(`${asset.assetId}: ${resolution.note.defaultPathProblem}`);
+      const samplePath = resolveSamplePath(resolution.note.samplePath, resolution.note.defaultPath);
       const noteInfo = {
         ratio: resolution.note.ratio,
         samplePath,
