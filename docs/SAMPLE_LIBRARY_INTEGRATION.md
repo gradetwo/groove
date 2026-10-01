@@ -1221,3 +1221,86 @@ Strings\Violin Section\susVib\/VlnEns_susVib_A2_v1.wav      ← 左边反斜杠�
 
 **决定**：按既定次序（先让每件乐器都能出声，再谈表现力），表情属于下一阶段，**本轮不下载**。现在有了精确成本，是否推进只取决于业主对"+25% 存储换 pizz/staccato/tremolo/弱音器"的判断。
 
+> ⭐ **业主已决定（2026-10-01）：镜像。** 本节的 162.7 MiB 因此从估算变成实际支出，执行与核对见下一节。
+
+---
+
+## ⭐⭐⭐⭐ VSCO 2 CE 的表情已入库（2026-10-01）：十二件乐器第一次会拨弦、断奏、弱音
+
+业主的决定是**镜像**（"决定 VSCO 表情是否镜像: 镜像"）。§⑥ 量出的是 **162.7 MiB / 12 个程序**，实际搬进镜像的是 **163.0 MiB**，差 **0.3 MiB**，差值有据：清单按**目录前缀**取文件，而 `Brass/Tenor Trombone/stac/` 里有一个 `TromboneStac.sfz` 没引用的文件（276 676 字节），加上 12 个 sfz 正文（63 396 字节）。
+
+### ① 镜像了什么、怎么镜像的：同一条管线，没有手工搬字节
+
+复现（两步都是仓库自带脚本，upload 一步与持续音集 §② 完全相同，未改一行上传逻辑）：
+
+```
+node scripts/build_sample_manifest.mjs vsco2ce --write
+TMPDIR=/var/tmp node scripts/upload_samples.mjs vsco2ce --upload
+```
+
+`paths` 新增 **12 个采样目录 + 12 个 sfz 正文**，`instruments` 新增 **12 条手写名字**（按 §② 里"重新枚举不得静默改掉已声明的名字"那条规则保留：`CelloEnsPizz.sfz` → "Cello Section, pizzicato"，而不是退回文件名）。
+
+| 乐器 | 表情程序 | 解析出的采样 | 引用字节 MiB |
+| --- | --- | ---: | ---: |
+| Cello Section | `CelloEnsPizz` | 52 | 33.2 |
+| Contrabass | `ContrabassPizz` | 40 | 19.8 |
+| F Horn | `FHornMute` | 17 | 19.3 |
+| Trumpet | `TrumpetHarmonMuteSus` | 16 | 17.6 |
+| Viola Section | `ViolaEnsPizz` | 46 | 14.3 |
+| Trombone | `TromboneStac` | 55 | 12.5 |
+| Flute | `FluteStac` | 48 | 9.7 |
+| Tuba | `TubaStac` | 64 | 8.9 |
+| Violin Section | `ViolinEnsPizz` | 44 | 8.6 |
+| Oboe | `OboeStac` | 51 | 6.8 |
+| Clarinet | `ClarinetStac` | 64 | 6.4 |
+| Bassoon | `BassoonStac` | 46 | 5.5 |
+| | | **543** | **162.7** |
+
+⭐ **上表逐行重算过，与 §⑥ 完全一致**（量法：用仓库自己的 `parseSfz` + `readDefaultPath` + `resolveSamplePath`，而不是临时正则；`sample=` 与 `default_path` 的未加引号含空格规则因此不会再被踩第三次）。
+
+清单层面的实际读数（`node scripts/build_sample_manifest.mjs vsco2ce`，只报告）：
+
+```
+vsco2ce @ 6dd651d55dde97fd4028699be9d4481f26917891
+  files 928 · bytes 846035313 (806.8 MB) · .sfz 26 · audio 898
+```
+
+| | 文件 | 字节 |
+| --- | ---: | ---: |
+| 持续音集（§②） | 372 | 675 102 035 |
+| 本次表情 | **556**（544 音频 + 12 sfz） | **170 933 278** |
+| 合计 | 928 | 846 035 313 |
+
+⭐ **+163.0 MiB，是持续音集的 +25.3%**（§⑥ 估的 +25% 由此兑现）。928 个文件全部由 `upload_samples.mjs` 重新量过：**928 个 sha256、898 个 `durationSeconds`**；最长采样仍是 `29.458163 s`（表情采样都比它短，所以条目级时长不变）。
+
+### ② 为什么只取"每件一件"，而不是"这些乐器的全部表情"：量的数字
+
+工单允许"若取全部同样容易，就把代价说出来"。量了：把上面 12 件乐器在 VSCO 里的**全部程序**（含 `*Spic`、`*Trem`、`*Vib`、`*SusNV`、`*-KS` 键位切换）按各自 `default_path` 解析后取并集，是 **1 378 个采样 / 1 178.7 MiB**；比"每件一件"的 543 个文件 / 162.7 MiB **多出 835 个文件 / 1 016.1 MiB**——**是本轮实际搬运的 163.0 MiB 的 6.2 倍**，不是"差不多"，所以按工单的默认选择只取每件一件。
+
+> ⚠️ `*-KS` 程序（`ViolinEns-KS` 等 8 个）**每个文件里有 2–5 个 `default_path`**——键位切换的每一段用一个。仓库的 `readDefaultPath` 只返回**第一个**（它的消费者是加载器，按文件级语义设计的），所以对 `-KS` 直接测量会把 Trem/Spic/Pizz 段的采样解析到 susVib 目录下、全部"找不到"。上面的并集因此**排除了 8 个 `-KS` 程序**（它们引用的正是各自独立程序引用过的同一批采样），这个排除不影响字节数，但**加载器真要支持 `-KS` 键位切换，得先按 `<control>` 分段读 `default_path`** —— 记在这里，是缺口不是结论。
+
+### ③ 一处更正：Timpani 不是"没有表情程序"
+
+§⑥ 的表头写着"`Harp` 与 `Timpani` 在 VSCO 里**没有**表情程序"。**实测对 Harp 成立，对 Timpani 不成立**：钉住的树里还有 `TimpaniRolls.sfz`（1 336 字节，`default_path=Percussion\Timpani\Rolls\`），而它引用的 **10 个滚奏采样（37.4 MiB）早就在镜像里**——§⑤ 说过，`Percussion/Timpani` 整个目录是作为持续音集的前缀被取走的，目录里"没被 `Timpani.sfz` 引用"的那 10 个文件正属于 `TimpaniRolls.sfz`。所以诚实的说法是：**镜像里 timpani 的滚奏字节已经在，缺的只是那个程序文件本身**；本轮按"每件一件"的十二件清单执行，**没有**把 `TimpaniRolls.sfz` 入库，`Harp` 则确实连第二个程序都没有。判据因此写在**声明的程序文件**上（不是采样字节上），哪天有人把 `TimpaniRolls.sfz` 入库，`orchestralCoverage.test.ts` 会红并要求把它登记进 roster。
+
+### ④ R2 核对（与 §② 同法：对象数与总字节，对远程读，不信上传器的自述）
+
+```
+rclone size :s3:groove          --json   →  {"count":7242,"bytes":4984997091,"sizeless":0}
+rclone size :s3:groove/vsco2ce  --json   →  {"count":928,"bytes":846035313,"sizeless":0}
+```
+
+⭐ `vsco2ce` 前缀 **928 个对象 / 846 035 313 字节**，与清单的 928 / 846 035 313 **逐字节闭合**；上传前桶是 4 814 063 813 字节（脚本报的 4.48 GB），本次增量 = **170 933 278 字节**，正是上表的表情集。另取两个**新增**对象的可达性与内容（不是只数数）：
+
+```
+GET https://r2mirror.groove.wangda.today/vsco2ce/ViolinEnsPizz.sfz                          → 200 · 5069 字节 · sha256 与清单相符
+GET https://r2mirror.groove.wangda.today/vsco2ce/Strings/Violin Section/Pizz/VlnEns_Pizz_A2_v1_rr1.wav → 200 · 220926 字节 · 与清单相符
+```
+
+### ⑤ 还没镜像的
+
+* **同一批乐器的其余表情**：上面 ② 的 835 个文件 / 1 016.1 MiB（`*Spic`、`*Trem`、`*Vib`、`*SusNV`、8 个 `*-KS`、`SViolin*`、`ContrabassSusVB-Quiet` 等）。
+* **`TimpaniRolls.sfz`**：1 336 字节的程序文件；它的 10 个采样（37.4 MiB）已在镜像里（见 ③）。
+* **其余程序整族仍未入**：上游 75 个 sfz，入库 26 个，**还剩 49 个**——管风琴、立式钢琴（`UprightPiano`、`VSUpright1`）、马林巴、钟琴、木琴、管钟、短笛、`GM-StylePerc`、VSCO 1 打击乐、`Miscellania Raw`、`Solo Violin` 一族。这些不是这次点名的十四件，也没有被任何判据声称服务。
+* **`needs` 新增两项**：表情程序用了 `lorand` / `hirand`（把一层力度随机劈成两半），**解析器不读它们**，因此两个半层里总是第一个被选中——乐器仍然发声，但它不是 VSCO 写这段时的随机行为。已写进 `vsco2ce` 的 `needs`，是"支持到什么程度"那张表的一条新缺口，不是静默通过。
+
