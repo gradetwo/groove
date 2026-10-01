@@ -450,3 +450,26 @@ browser worklet evidence: limiterKind=worklet
 * **剩下的响度差（≥0.78 LU）只出现在压缩器介入的地方** ✓——**不是"一边多做了事"，而是"两边的同一件事做得不同"** ✓✓。
 
 **⇒ 下一步不是再关节点，而是**按 §5 的第二条**给出"残余差不可闻"的证据，并把上面的三态对照作为它的依据** ✓✓。
+
+### 8.4 下一件的范围与约束（2026-10-01 实测）
+
+**把出问题的节点从"宿主内建"改成"共享物件"** ✓——**这是本项目已经走过的路** ✓✓：`public/` 下**已经有** `limiterWorklet.js` ✓、`glueCompressorWorklet.js` ✓、`gs1/workletProcessor.js` ✓。
+
+**宿主压缩器的全部调用点**（`createDynamicsCompressor`，非测试 ✓）：
+
+| 位置 | 角色 |
+| --- | --- |
+| `src/audio/ChannelStripDsp.ts:188` | 每通道 |
+| **`src/audio/GlueCompressorFactory.ts:88`** | **总线胶合 —— 主路径** ✓ |
+| `src/audio/masterGraph.ts:404 / 412 / 424` | `drumGlue` / `drumParallel` / `musicGlue` |
+| `src/audio/MasterLimiter.ts:551` | 限幅器的回退（**已有 worklet 主路径** ✓） |
+
+**⚠️ 而 `GlueCompressorFactory.ts:74-81` 记着作者对此的明确否决，必须尊重** ✓✓：
+
+> **"The swap needs a fixed input and output to replace the node between, but creating them on the shipped path would add two nodes to every render for nothing: the graph would no longer be the graph it was (**structural tests that identify the master trim and makeup gains by position noticed immediately, and they were right to**)."** ✓✓
+
+**⇒ 所以设计要满足两条** ✓✓：
+1. **两个宿主跑同一份压缩器 DSP** ✓（**把行为搬进 `glueCompressorWorklet.js` ✓**，而 `:82` 的 `audioWorkletAvailable(ctx)` **说明这个工厂已经会做这个判断** ✓）；
+2. **不改已发布路径的图结构** ✓——**否则会撞上那条"按位置识别 master trim 与 makeup 增益"的结构性判据** ✓✓（**而它是对的 ✓**）。
+
+**⇒ 因此这一件的形状是"在保持图同形的前提下让 DSP 共享"** ✓，**不是"多包两个 gain 节点"** ✗✓。
