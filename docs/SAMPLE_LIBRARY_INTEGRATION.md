@@ -1197,3 +1197,27 @@ Strings\Violin Section\susVib\/VlnEns_susVib_A2_v1.wav      ← 左边反斜杠�
 * **VCSL 的 `Chordophones`（竖琴与键盘）仍然没镜像**，现在也不必了：harp 由 VSCO 的 `Strings/Harp` 提供。
 * **timpani 多镜像了 10 个文件（37.4 MiB）**：`Percussion/Timpani` 整个目录里有 `Timpani.sfz` 没引用、但 `TimpaniRolls.sfz` 引用的滚奏采样。目录是天然前缀，留着比精确剔除更不容易错；`TimpaniRolls.sfz` 本身没入。
 
+### ⑥ 表情程序值不值得镜像：量出来的数字（2026-10-01）
+
+**每件乐器加一个表情程序 = 162.7 MiB**（12 件；`Harp` 与 `Timpani` 在 VSCO 里**没有**表情程序）。相对于已镜像的持续音集 **643.8 MiB**，这是 **+25%**，存储量级几乎不变。
+
+| 乐器 | 表情程序 | 采样 | MiB |
+| --- | --- | ---: | ---: |
+| Cello Section | `CelloEnsPizz`（pizzT） | 52 | 33.2 |
+| Contrabass | `ContrabassPizz` | 40 | 19.8 |
+| F Horn | `FHornMute` | 17 | 19.3 |
+| Trumpet | `TrumpetHarmonMuteSus` | 16 | 17.6 |
+| Viola Section | `ViolaEnsPizz` | 46 | 14.3 |
+| Trombone | `TromboneStac` | 55 | 12.5 |
+| Flute / Tuba | `FluteStac` / `TubaStac` | 48 / 64 | 9.7 / 8.9 |
+| Violin Section | `ViolinEnsPizz` | 44 | 8.6 |
+| Oboe / Clarinet / Bassoon | `*Stac` | 51 / 64 / 46 | 6.8 / 6.4 / 5.5 |
+
+**怎么量的**（复现方法，不下载任何音频）：查 GitHub 树元数据拿 3273 个 blob 的体积表 → 75 个 `.sfz` 全在**仓库根目录** → 按同族前缀配对（`CelloEnsSusVib` 已镜像 ⇒ 同族的 `CelloEnsPizz`）→ 取该 sfz 的 `default_path` → 把 `sample=` 引用的每一个采样按 `default_path + 路径` 去体积表里求和。
+
+**⚠️ 一处必须先纠正我自己**：我第一次量的结果是"约 383 MiB"，**那是错的，高估了 2.4 倍**。两个原因都值得记：它累加的是"整个表情**目录**"而不是一个程序；并且它用子串匹配乐器名，把 **`Solo Violin` 与 `Violin Section` 混同**了——在 VSCO 里这是两件不同的乐器。**按程序实际引用的采样求和**才得到上表的 162.7 MiB。
+
+**顺带，同一个坑第三次出现**：测量脚本连错三次，而最后一次的错法与整个项目此前修过的两个缺陷**是同一个**——`default_path` 与 `sample=` 一样，**未加引号且含空格时必须在行尾结束**（`default_path=Strings\Violin Section\Pizz\`）。按空白截断会得到 `Strings/Violin`，于是 12 件里有 6 件的采样全部"找不到"。这条规则在 `src/audio/sfz/parse.ts` 里已经被 sfizz 实测钉过一次（见 ④ 与 `sfzDefaultPath.test.ts`），这里再钉一次的原因是：**它不只出现在解析器里，也出现在每一次临时测量里**。
+
+**决定**：按既定次序（先让每件乐器都能出声，再谈表现力），表情属于下一阶段，**本轮不下载**。现在有了精确成本，是否推进只取决于业主对"+25% 存储换 pizz/staccato/tremolo/弱音器"的判断。
+
