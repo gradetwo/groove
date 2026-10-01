@@ -32,6 +32,16 @@ export const RENDER_TAIL_MAX_SEC = 5;
 /** How far a tail has to fall before the render may stop, in dB (the RT60 convention). */
 export const RENDER_TAIL_FLOOR_DB = 60;
 
+/**
+ * Ceiling on the **pre-roll** a chunked render may ask for, seconds.
+ *
+ * The pre-roll exists so a render that starts at a bar boundary still contains the reverb the music before that bar
+ * was feeding, and the honest length for it is the reverb's own impulse length — which is exactly what
+ * `resolveRenderTailSec` derives and caps at `RENDER_TAIL_MAX_SEC`. This second, larger cap only stops a caller's
+ * literal number from allocating an unbounded context; it is never reached by the derived default.
+ */
+export const RENDER_PREROLL_MAX_SEC = 30;
+
 /** The shape this needs from a genre's FX profile — narrower than `GenreFxProfile`, so tests can pass a stub. */
 export interface RenderTailFx {
   reverb?: Partial<ReverbParams>;

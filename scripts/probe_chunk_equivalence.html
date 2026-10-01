@@ -1,0 +1,45 @@
+<!doctype html>
+<!--
+  **The entry `scripts/probe_chunk_equivalence.mjs` drives — deliberately not `index.html`.**
+
+  Booting the app to measure the renderer costs far more than the measurement: Vite dependency-scans the whole React
+  tree, and when that optimization is stale the first request comes back `504 (Outdated Optimize Dep)` and the page
+  fails while the app's own lazy route is loading.
+
+  ## Why the steps are dispatched here rather than imported from the driver
+
+  A dynamic `import()` written **inside** a `page.evaluate` callback reaches the browser as a Vite-processed expression
+  (`?import&v=…`), and each such import is its own module instance — so `build()` populated one instance's state and
+  `arm()` read another's, and the probe reported "this page has no fixture" while a fixture had just been built. One
+  import here, in a script the browser parses once, keeps every step on the **same** module instance, and a module-level
+  step counter makes that provable rather than assumed: `steps` must be > 1 for every step after `build`.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>chunk equivalence probe</title>
+  </head>
+  <body>
+    <script type="module">
+      let steps = 0;
+      const loaded = import("/scripts/lib/chunkProbePage.mjs");
+
+      /**
+       * The driver's whole API into the page. `step` is `measure` | `collected`; `arg` is that step's argument.
+       *
+       * `measure` is a **composite** — build, render the whole piece, measure one arm — so a step carries everything it
+       * needs and a page reload cannot leave it half-initialised. See the note in `chunkProbePage.mjs`.
+       */
+      window.__chunkProbeStep = async (step, arg) => {
+        const module = await loaded;
+        const fn = module[step];
+        if (typeof fn !== "function") throw new Error(`no such step: ${step}`);
+        steps += 1;
+        const value = await fn(arg);
+        return { steps, value };
+      };
+
+      window.__chunkProbeReady = true;
+    </script>
+  </body>
+</html>
