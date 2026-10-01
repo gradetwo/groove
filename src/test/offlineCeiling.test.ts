@@ -186,9 +186,10 @@ describe("renderPatternOffline wiring", () => {
      * original assertion worth writing: the worklet path returns early and never pays for the ceiling kernel, the fallback applies the
      * guard, and both go out through the seamless-loop helper rather than a bare `return`.
      */
-    expect(source).toMatch(/if\s*\(\s*limiterKind\s*===\s*"worklet"\s*\)\s*\{[\s\S]*?return\s+asRequested\(compensate\(/);
+    expect(source).toMatch(/if\s*\(\s*limiterKind\s*===\s*"worklet"\s*\)\s*\{[^}]*?asRequested\(compensate\([^}]*?return\s+finish\(/);
     expect(source).toMatch(/if\s*\(\s*limiterKind\s*===\s*"worklet"\s*\)\s*\{[\s\S]*?\}[\s\S]*?applyOfflineCeiling\(\s*channels\s*,\s*rendered\.sampleRate\s*\)/);
-    expect(source).toMatch(/return\s+asRequested\(compensate\(out,\s*guarded\.latencySamples\)\)\s+as\s+AudioBuffer;/);
+    expect(source).toMatch(/asRequested\(compensate\(out,\s*guarded\.latencySamples\)\)\s+as\s+AudioBuffer;/);
+    expect(source).toMatch(/asRequested\(compensate\(out,\s*guarded\.latencySamples\)\)[\s\S]*?return\s+finish\(/);
   });
 });
 
