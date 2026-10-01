@@ -787,6 +787,20 @@ export const studioMessages = {
   export_wav_failed: { en: "WAV export failed: {error}", zh: "WAV 导出失败: {error}" },
   export_stems_rendering: { en: "Rendering 8 stems and packaging ZIP...", zh: "正在逐轨离线渲染 8 轨 Stems 并打包 ZIP..." },
   export_stems_done: { en: "Exported Stems ZIP: {filename} ✓", zh: "分轨打包导出完成: {filename} ✓" },
+  /**
+   * The audio-lane half of an export result.
+   *
+   * An audio lane renders only when the export carries the sample catalogue, so an export that got one has to be able to say which lanes reached the file — and one that did not has to
+   * name the lane and why, rather than handing over a silent mix. These two lines are appended to the done/degraded message, because the toast banner replaces rather than stacks.
+   */
+  export_audiolanes_rendered: {
+    en: "audio lanes in the mix: {names}",
+    zh: "已混入音频轨：{names}",
+  },
+  export_audiolanes_problem: {
+    en: "audio lane problems: {detail}",
+    zh: "音频轨问题：{detail}",
+  },
   export_stems_failed: { en: "Stems export failed: {error}", zh: "分轨导出失败: {error}" },
   export_share_too_large: { en: "Pattern is too large for a share link — export a .groove package instead", zh: "工程过大，无法装入分享链接；请改用 .groove 工程包导出" },
   export_share_encode_failed: { en: "Share failed: this pattern cannot be encoded", zh: "分享失败：当前音序器内容无法编码" },

@@ -17,6 +17,12 @@ import { exportMasterMp3 } from "../../../audio/Mp3Exporter";
 import { exportProjectToGrooveFile } from "../projectDb";
 import type { SequencerState } from "../useSequencerStore";
 import { patternForExport } from "../../../data/songFlatten";
+import { appCatalogueRuntime } from "../../../data/sampleCatalogueRuntime";
+import {
+  audioLaneExportFacts,
+  prepareAudioLaneExport,
+  type PreparedAudioLaneExport,
+} from "./audioLaneExport";
 import { useLanguage } from "../../../i18n/LanguageContext";
 
 /**
@@ -110,6 +116,27 @@ export function useExportActions({
     }
     return decision.pattern;
   }, [bpm, currentGenre.id, resolution, showToast, swing, t]);
+
+  /**
+   * The audio-lane half of an export result, as the last line of the export toast.
+   *
+   * Returned rather than toasted here because the toast banner *replaces* rather than stacks: the caller appends this to the done/degraded message so the last thing on screen is the
+   * fact the user must not miss — which lanes reached the file, and why one did not.
+   */
+  const audioLaneNotice = useCallback(
+    (prepared: PreparedAudioLaneExport): string | null => {
+      const facts = audioLaneExportFacts(prepared.report(), prepared.catalogueProblems);
+      const parts: string[] = [];
+      if (facts.rendered.length) {
+        parts.push(t("export_audiolanes_rendered", { names: facts.rendered.join(", ") }));
+      }
+      if (facts.problems.length) {
+        parts.push(t("export_audiolanes_problem", { detail: facts.problems.join("; ") }));
+      }
+      return parts.length ? parts.join(" · ") : null;
+    },
+    [t]
+  );
 
   const handleExportMidi = useCallback(() => {
     downloadMidiFile(
@@ -232,6 +259,7 @@ export function useExportActions({
     try {
       setIsExportingAudio(true);
       showToast(t("export_wav_rendering"));
+      const pattern = exportPattern();
       /**
        * B2: in song mode the bounce is the *arrangement*, not the loop.
        *
@@ -239,10 +267,19 @@ export function useExportActions({
        * the two paths: which pattern the offline engine is handed. Outside song mode nothing changes, and a song
        * whose sections all point at empty clips refuses with a reason instead of emitting a silent file.
        */
-      const result = await exportMasterWav(exportPattern(), currentGenre.id, {
+      /**
+       * ⭐ **The catalogue playback resolves lanes against.**
+       *
+       * Without it the exporter falls back to the shipped-empty catalogue, so an audio lane is mixed as nothing and the export reports nothing — the silent-mix gap this closes. It is
+       * the same `appCatalogueRuntime` the transport loads, so the manifest is fetched once per session and neither path can disagree about which asset ids exist. A pattern with no
+       * audio lane skips the load entirely, exactly as `mcp/render/worker.ts` skips the manifest read.
+       */
+      const audioLanes = await prepareAudioLaneExport(pattern, () => appCatalogueRuntime.load());
+      const result = await exportMasterWav(pattern, currentGenre.id, {
         bpm,
         swing,
         drumKit,
+        ...audioLanes.options,
       });
       triggerWavDownload(result.blob, result.filename);
       /**
@@ -254,20 +291,18 @@ export function useExportActions({
        * measured). The file is handed over either way — it is valid — but the user is told, because
        * the alternative is a file that quietly is not the thing they auditioned.
        */
-      if (result.gs1HostFailures > 0) {
-        showToast(
-          t("export_wav_degraded_gs1", {
-            filename: result.filename,
-            count: result.gs1HostFailures,
-          })
-        );
-      } else {
-        showToast(
-          result.limiterKind === "fallback"
+      const base =
+        result.gs1HostFailures > 0
+          ? t("export_wav_degraded_gs1", {
+              filename: result.filename,
+              count: result.gs1HostFailures,
+            })
+          : result.limiterKind === "fallback"
             ? t("export_wav_degraded_limiter", { filename: result.filename })
-            : t("export_wav_done", { filename: result.filename })
-        );
-      }
+            : t("export_wav_done", { filename: result.filename });
+      // The audio-lane facts go last, so the lane that did not render is still on screen when the toast is read.
+      const lanes = audioLaneNotice(audioLanes);
+      showToast(lanes ? `${base} · ${lanes}` : base);
     } catch (err: any) {
       showToast(
         t("export_wav_failed", { error: describeError(err) })
@@ -275,7 +310,7 @@ export function useExportActions({
     } finally {
       setIsExportingAudio(false);
     }
-  }, [currentGenre.id, bpm, swing, drumKit, t, showToast]);
+  }, [currentGenre.id, bpm, swing, drumKit, exportPattern, audioLaneNotice, t, showToast]);
 
   /**
    * The same master as the WAV, encoded to MP3.
@@ -288,32 +323,33 @@ export function useExportActions({
     try {
       setIsExportingAudio(true);
       showToast(t("export_mp3_rendering"));
-      const result = await exportMasterMp3(exportPattern(), currentGenre.id, {
+      const pattern = exportPattern();
+      // The same master as the WAV, so it needs the same catalogue — see `handleExportWav`.
+      const audioLanes = await prepareAudioLaneExport(pattern, () => appCatalogueRuntime.load());
+      const result = await exportMasterMp3(pattern, currentGenre.id, {
         bpm,
         swing,
         drumKit,
+        ...audioLanes.options,
       });
       triggerWavDownload(result.blob, result.filename);
-      if (result.gs1HostFailures > 0) {
-        showToast(
-          t("export_wav_degraded_gs1", {
-            filename: result.filename,
-            count: result.gs1HostFailures,
-          })
-        );
-      } else {
-        showToast(
-          result.limiterKind === "fallback"
+      const base =
+        result.gs1HostFailures > 0
+          ? t("export_wav_degraded_gs1", {
+              filename: result.filename,
+              count: result.gs1HostFailures,
+            })
+          : result.limiterKind === "fallback"
             ? t("export_wav_degraded_limiter", { filename: result.filename })
-            : t("export_mp3_done", { filename: result.filename, kbps: result.bitrateKbps })
-        );
-      }
+            : t("export_mp3_done", { filename: result.filename, kbps: result.bitrateKbps });
+      const lanes = audioLaneNotice(audioLanes);
+      showToast(lanes ? `${base} · ${lanes}` : base);
     } catch (err: any) {
       showToast(t("export_mp3_failed", { error: describeError(err) }));
     } finally {
       setIsExportingAudio(false);
     }
-  }, [currentGenre.id, bpm, swing, drumKit, exportPattern, t, showToast]);
+  }, [currentGenre.id, bpm, swing, drumKit, exportPattern, audioLaneNotice, t, showToast]);
 
   const handleExportStems = useCallback(async () => {
     try {
@@ -344,25 +380,33 @@ export function useExportActions({
        * is actually playing through, so the export asks it rather than re-deriving.
        */
       const liveStates = getActiveAudioEngine()?.getTrackStates();
-      const result = await exportStemsZip(patternRef.current, currentGenre.id, {
+      const pattern = patternRef.current;
+      /**
+       * A stem render is one render **per track**, so each audio lane is exported in its own stem. The catalogue is the same one the master uses, and `prepareAudioLaneExport`
+       * accumulates the per-stem reports rather than keeping the last — otherwise a lane that failed while an earlier stem rendered would vanish from the notice.
+       */
+      const audioLanes = await prepareAudioLaneExport(pattern, () => appCatalogueRuntime.load());
+      const result = await exportStemsZip(pattern, currentGenre.id, {
         bpm,
         swing,
         drumKit,
-        ...(liveStates && liveStates.length === patternRef.current.tracks.length
+        ...audioLanes.options,
+        ...(liveStates && liveStates.length === pattern.tracks.length
           ? { trackStates: liveStates }
           : {}),
       });
       triggerWavDownload(result.blob, result.filename);
       // Same honesty rule as the master export: a stem whose GS-1 voice did not load is a valid
       // file that is not what was auditioned, so it is reported rather than passed off as clean.
-      showToast(
+      const base =
         result.gs1HostFailures > 0
           ? t("export_wav_degraded_gs1", {
               filename: result.filename,
               count: result.gs1HostFailures,
             })
-          : t("export_stems_done", { filename: result.filename })
-      );
+          : t("export_stems_done", { filename: result.filename });
+      const lanes = audioLaneNotice(audioLanes);
+      showToast(lanes ? `${base} · ${lanes}` : base);
     } catch (err: any) {
       showToast(
         t("export_stems_failed", { error: describeError(err) })
@@ -370,7 +414,7 @@ export function useExportActions({
     } finally {
       setIsExportingAudio(false);
     }
-  }, [currentGenre.id, bpm, swing, drumKit, t, showToast]);
+  }, [currentGenre.id, bpm, swing, drumKit, audioLaneNotice, t, showToast]);
 
   const handleShare = useCallback(() => {
     const result = getShareUrlResult({
