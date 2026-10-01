@@ -52,8 +52,7 @@ import { ChannelStrip } from "./ChannelStripDsp";
 import { resolveTrackInsertForGenre } from "../data/genreInsert";
 import { resolveGroupBus } from "./trackBuses";
 import { createGs1Host, type Gs1Host } from "./gs1/Gs1Host";
-import { gs1VelocityRoute } from "../data/gs1Patches";
-import { capPlanPolyphony, gs1PatchFor, isGs1RoutingEnabled, planGs1Notes, patchNeedsSample } from "./gs1/gs1Tracks";
+import { capPlanPolyphony, applyGs1VoiceRoutes, isGs1RoutingEnabled, planGs1Notes, patchNeedsSample, resolveGs1Lane, type Gs1Voice } from "./gs1/gs1Tracks";
 import { generateTextureSample } from "./gs1/textureSample";
 import { applyGenreFxToGraph, resolveGenreFx } from "../data/genreFx";
 
@@ -162,6 +161,15 @@ export interface RenderWavOptions {
    * ship a silently different file.
    */
   onGs1HostFailures?: (count: number) => void;
+  /**
+   * Called once per render with every lane whose **own GS-1 patch code** could not be used.
+   *
+   * A lane that carries `gs1Patch` asked for a specific sound. If that code is unreadable, the lane
+   * falls back to the native engine **and this says so**, naming the lane: the alternative — the
+   * `null` that `resolveGs1Patch` returns for an unrouted instrument — would make a typo change the
+   * instrument in silence, which is the defect this whole surface exists to close.
+   */
+  onGs1PatchProblems?: (problems: readonly string[]) => void;
 }
 
 /**
@@ -198,6 +206,11 @@ export interface ExportedWav {
    * is audible (0.71-3.66 dB in a band, measured) and must not be reported as a clean export.
    */
   gs1HostFailures: number;
+  /**
+   * Lanes whose own GS-1 patch code was refused, each named (`chords: …`). Empty in every normal
+   * export; non-empty means that lane was voiced by the native engine **and the export says so**.
+   */
+  gs1PatchProblems: string[];
 }
 
 export interface ExportedStem {
@@ -207,6 +220,8 @@ export interface ExportedStem {
   trackIdx: number;
   /** GS-1 hosts that failed to load for this stem's render; `0` normally. See `ExportedWav`. */
   gs1HostFailures: number;
+  /** This stem's refused patch codes, each naming the lane. See `ExportedWav`. */
+  gs1PatchProblems: string[];
 }
 
 /**
@@ -493,6 +508,18 @@ export async function renderPatternOffline(
    * scheduler below runs straight-line and must not await. The patch is pushed once, up front.
    */
   const gs1Hosts = new Map<number, Gs1Host>();
+  /**
+   * ⭐ **The single resolution seam, resolved once per lane.**
+   *
+   * Host creation and note planning both read *this* map. The plan is not allowed to re-derive the
+   * patch from `(role, instrument, genre)` while the host was built from a lane's own share code:
+   * that is how a written file comes to disagree with the patch that was applied — the "second
+   * sound" this repository's parity gates exist to prevent. `planGs1Notes` is handed `voice` below,
+   * so the two consumers share one object by construction.
+   */
+  const gs1Voices = new Map<number, Gs1Voice>();
+  /** Every lane whose own patch code was refused, named; reported to the caller at the end. */
+  const gs1PatchProblems: string[] = [];
   /** See the option of the same name: the whole master graph is skipped for this render. */
   const directOut = options.directOut === true;
   let gs1HostFailures = 0;
@@ -532,10 +559,22 @@ export async function renderPatternOffline(
        */
       if (options.stemTrackIdx !== undefined && options.stemTrackIdx !== t) continue;
       const track = pattern.tracks[t];
-      // The genre decides how a lane is voiced here too, from the pattern's own `genre_id` — the same answer the live
-      // engine gives, which is the parity this function exists to keep.
-      const routed = track ? gs1PatchFor(track.track_id, track.instrument, pattern.genre_id) : null;
-      if (!routed) continue;
+      /**
+       * The genre decides how a lane is voiced here too, from the pattern's own `genre_id` — the same
+       * answer the live engine gives, which is the parity this function exists to keep. A lane's own
+       * `gs1Patch` share code wins over the table, and a code that cannot be read is **reported**
+       * rather than absorbed into the same `null` an unrouted instrument produces.
+       */
+      const lane = track
+        ? resolveGs1Lane(track.track_id, track.instrument, pattern.genre_id, track.gs1Patch)
+        : ({ kind: "native" } as const);
+      if (lane.kind === "problem") {
+        const laneName = track?.laneId ?? track?.track_id ?? `track ${t}`;
+        gs1PatchProblems.push(`${laneName}: ${lane.problem}`);
+        continue;
+      }
+      if (lane.kind === "native") continue;
+      const voice = lane.voice;
       /**
        * Bounded retry, then report — this used to be a silent single attempt.
        *
@@ -588,17 +627,22 @@ export async function renderPatternOffline(
         gs1HostFailures += 1;
         continue;
       }
-      host.setPatch(routed.params);
-      // The same velocity response the live pool wires, so a rendered stem and the room agree (the exporter's own
-      // parity rule).
-      const velocityRoute = gs1VelocityRoute(routed.velToCutoff);
-      host.setModRoute(0, velocityRoute?.src ?? 3, velocityRoute?.dst ?? 0, velocityRoute?.amount ?? 0, Boolean(velocityRoute));
+      /**
+       * The patch, from the seam's own voice — and the routing with it. A share code carries the
+       * synth's own modulation routes, so applying the table patch's velocity response *instead*
+       * would render something `gs1.render` would not for the same code. `applyGs1VoiceRoutes`
+       * writes all eight slots (clearing the unused ones), so two different codes cannot inherit
+       * each other's feel.
+       */
+      host.setPatch(voice.params);
+      applyGs1VoiceRoutes(host, voice);
+      gs1Voices.set(t, voice);
       /**
        * A sample patch needs its recording (P2.5). Imported **before** the host joins the graph, so the first note
        * cannot be silent while the bytes are on their way — and only when the patch actually plays a sample, so a
        * synth patch pays nothing.
        */
-      if (patchNeedsSample(routed.patch)) {
+      if (patchNeedsSample(voice.patch)) {
         await host.importSample(generateTextureSample(ctx.sampleRate), ctx.sampleRate);
       }
       /**
@@ -615,6 +659,10 @@ export async function renderPatternOffline(
     }
   }
   options.onGs1HostFailures?.(gs1HostFailures);
+  options.onGs1PatchProblems?.(gs1PatchProblems);
+  if (gs1PatchProblems.length > 0) {
+    console.warn(`[render] refused GS-1 patch code(s): ${gs1PatchProblems.join(" | ")}`);
+  }
 
   const drumKit: DrumKitType = options.drumKit || "808";
   const exportSeed = patternSeed(pattern as unknown as { genre_id?: string; bpm?: number; totalSteps?: number });
@@ -798,6 +846,12 @@ export async function renderPatternOffline(
             const planned = planGs1Notes({
               role: "chords",
               instrument: track.instrument,
+              /**
+               * The voice this host was **built with** — the same object, not a second lookup. A lane
+               * can carry its own `gs1Patch`, and handing the planner the code again would be a
+               * second resolution that is merely expected to agree with the first.
+               */
+              voice: gs1Voices.get(trackIdx),
               notes: notes.map((note, i) => ({
                 note,
                 time: chordVoiceOnset(subTime, i, treatment),
@@ -859,6 +913,8 @@ export async function renderPatternOffline(
             const planned = planGs1Notes({
               role: "lead",
               instrument: track.instrument,
+              // The voice this host was built with — see the chord block above.
+              voice: gs1Voices.get(trackIdx),
               notes: [{ note: midi, time: subTime, duration: leadDur, velocity: subVel }],
               sampleRate: ctx.sampleRate,
               latencyFrames: leadHost.scheduledNoteLatencyFrames,
@@ -901,6 +957,8 @@ export async function renderPatternOffline(
             const planned = planGs1Notes({
               role: "fx",
               instrument: track.instrument,
+              // The voice this host was built with — see the chord block above.
+              voice: gs1Voices.get(trackIdx),
               notes: [
                 {
                   note: pitchVal > 0 ? pitchVal : 60,
@@ -1140,6 +1198,7 @@ export async function exportMasterWav(
 ): Promise<ExportedWav> {
   let limiterKind: MasterLimiterKind = "fallback";
   let gs1HostFailures = 0;
+  let gs1PatchProblems: string[] = [];
   const audioBuf = await renderPatternOffline(pattern, {
     ...options,
     onLimiterKind: (kind) => {
@@ -1149,6 +1208,10 @@ export async function exportMasterWav(
     onGs1HostFailures: (count) => {
       gs1HostFailures = count;
       options.onGs1HostFailures?.(count);
+    },
+    onGs1PatchProblems: (problems) => {
+      gs1PatchProblems = [...problems];
+      options.onGs1PatchProblems?.(problems);
     },
   });
   const wavArrayBuffer = encodeAudioBufferToWav(audioBuf);
@@ -1163,6 +1226,7 @@ export async function exportMasterWav(
     durationSec: audioBuf.duration,
     limiterKind,
     gs1HostFailures,
+    gs1PatchProblems,
   };
 }
 
@@ -1182,11 +1246,15 @@ export async function exportStemsWav(
     const track = pattern.tracks[i];
     const trackName = (track.track_id || track.name || `track_${i + 1}`).toLowerCase().replace(/[^a-z0-9_-]/gi, "_");
     let stemGs1Failures = 0;
+    let stemPatchProblems: string[] = [];
     const audioBuf = await renderPatternOffline(pattern, {
       ...options,
       stemTrackIdx: i,
       onGs1HostFailures: (count) => {
         stemGs1Failures = count;
+      },
+      onGs1PatchProblems: (problems) => {
+        stemPatchProblems = [...problems];
       },
     });
     const wavArrayBuffer = encodeAudioBufferToWav(audioBuf);
@@ -1199,6 +1267,7 @@ export async function exportStemsWav(
       trackName: track.name,
       trackIdx: i,
       gs1HostFailures: stemGs1Failures,
+      gs1PatchProblems: stemPatchProblems,
     });
   }
 

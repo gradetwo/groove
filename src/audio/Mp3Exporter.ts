@@ -33,6 +33,8 @@ export interface ExportedMp3 {
   limiterKind: MasterLimiterKind;
   /** GS-1 hosts that failed to load for this render; `0` normally. See `ExportedWav`. */
   gs1HostFailures: number;
+  /** Lanes whose own GS-1 patch code was refused, each named. See `ExportedWav`. */
+  gs1PatchProblems: string[];
   bitrateKbps: number;
   /** `true` when the render rate was not one LAME accepts and had to be resampled. */
   resampled: boolean;
@@ -138,6 +140,7 @@ export async function exportMasterMp3(
 ): Promise<ExportedMp3> {
   let limiterKind: MasterLimiterKind = "fallback";
   let gs1HostFailures = 0;
+  let gs1PatchProblems: string[] = [];
   const audioBuf = await renderPatternOffline(pattern, {
     ...options,
     onLimiterKind: (kind) => {
@@ -147,6 +150,10 @@ export async function exportMasterMp3(
     onGs1HostFailures: (count) => {
       gs1HostFailures = count;
       options.onGs1HostFailures?.(count);
+    },
+    onGs1PatchProblems: (problems) => {
+      gs1PatchProblems = [...problems];
+      options.onGs1PatchProblems?.(problems);
     },
   });
   const { blob, resampled, bitrateKbps } = await encodeAudioBufferToMp3(audioBuf, {
@@ -161,6 +168,7 @@ export async function exportMasterMp3(
     durationSec: audioBuf.duration,
     limiterKind,
     gs1HostFailures,
+    gs1PatchProblems,
     bitrateKbps,
     resampled,
   };

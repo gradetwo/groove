@@ -28,7 +28,7 @@
 
 | 命令 | 结果 |
 | --- | --- |
-| `npm run check:mcp` | `surface : 84 tools, 7 resources, 4 prompts`；`🧩 MCP gate: 91 checks passed, 0 failed` |
+| `npm run check:mcp` | `surface : 85 tools, 7 resources, 4 prompts`；`🧩 MCP gate: 93 checks passed, 0 failed` |
 | `node scripts/check_docs.mjs` | `✅ 4 doc baseline claim(s) hold.` |
 | `npx vitest run`（19 个测试文件，见文末清单） | `19 passed` 文件 / `108 passed` 测试 |
 | `node scripts/mcp_call.mjs --script`（一次无浏览器的完整作曲回路：create → export → 读 → 三个写 op → validate → statistics → suggest → melody → prosody） | 三次：**9360 / 8343 / 8707 ms** |
@@ -96,7 +96,7 @@
 | 小节 | 它的要求 | 现状 | 证据 / 决定 |
 | --- | --- | --- | --- |
 | §5.1 核心理念（打磨嘴和耳朵） | 不在"手动操作"上竞争；写工具 + 感知工具 + 嘴的校验器 | ✅ | **耳朵**：`analyze_audio`（响度/真峰值/不连续点及其位置/相关性/尾音/13 段频谱）、`spectral_balance`、`estimate_key`、`get_loudness_report`、`render_audio`/`render_song`/`render_preview_clip`。**嘴的校验器**：`validate_pattern`、`pattern_statistics`、`validate_prosody`。**嘴**：见 §5.3/§5.4。唯一的结构性缺口是"写音色"（§5.4 的 `sound` 命名空间），在那里裁定 |
-| §5.2 三原语布局 | tools / resources / prompts 都要有 | ✅ | 实测 `npm run check:mcp`：**84 tools、7 resources、4 prompts**，`91 checks passed, 0 failed`。资源：`groove://genres`、`groove://genre/{id}`、`groove://loudness`、`groove://examples/{genre}`、`groove://masterclasses`、`groove://docs`（契约本身）、`groove://changelog`。Prompts：`compose_groove`/`explain_genre`/`practice_plan`/`compose_with_examples`。（旧版这份裁定写的是 79 个工具，已按实测更新。） |
+| §5.2 三原语布局 | tools / resources / prompts 都要有 | ✅ | 实测 `npm run check:mcp`：**85 tools、7 resources、4 prompts**，`93 checks passed, 0 failed`。资源：`groove://genres`、`groove://genre/{id}`、`groove://loudness`、`groove://examples/{genre}`、`groove://masterclasses`、`groove://docs`（契约本身）、`groove://changelog`。Prompts：`compose_groove`/`explain_genre`/`practice_plan`/`compose_with_examples`。（旧版这份裁定写的是 79 个工具，已按实测更新；84/91 那一版又被 `apply_gs1_patch` 加一工具、加两条协议检查。） |
 | §5.2.1 读写不对称铁律 + Few-shot 示例 + 紧凑记谱 | 紧凑记谱供读、结构化参数供写；L1 示例 + L2 引擎级风格迁移 | 🟡 | **铁律的可执行那一半成立**：写工具的输入**没有**任何文本记谱通道，`apply_pattern_ops` 是结构化判别联合（`mcp/registry.ts:165-190`），MCP 的 JSON Schema 就是那道防线——这一半可以 ✅。**示例（L1）成立**：`get_example` + `groove://examples/{genre}` + `compose_with_examples` prompt，且示例是**从曲风库构建的**而不是粘贴的（`mcp/examples.ts:1-8`），`src/test/mcpExamples.test.ts` 要求每个示例都通过 `validatePattern`（与其他任何 pattern 同一道闸门）。**紧凑记谱（那套 ~80 token 的鼓谱）没有实现** —— `grep -rn compact mcp/` 只命中"行内紧凑行"，示例返回的是 JSON pattern。**决定**：⛔ 不做紧凑记谱与它的 `parse_compact` 兜底 —— 读侧省 token 这件事已经由别的形态解决了（`get_song` 的 `includePatterns:false` 摘要、`list_genres` 的紧凑行 + `limit/offset` 分页、示例带的是**配方**即工具调用链而不是要被逐字符模仿的网格），而**为读再造一套记谱就是再造一件要保持为真的东西**；没有写通道，解析器也就没有存在理由。**L2（`style_ref`）没有实现** → 见 §6 M1 #4 |
 | §5.3 面向 Agent 的工具设计八原则 | 八条设计原则 | ✅ | 逐条判在下面（附一条：这是本节唯一一张"逐条都要有说法"的表） |
 | §5.4 完整工具矩阵 v3 | 一张提案的完整工具清单 | 🟡 | **决定**：⛔ 不把"79 项矩阵"当成一次交付——逐命名空间的现状与裁定见下，机制由 `mcpCoverage.test.ts` 兜底：`src/data` 里**每一个改变模型的导出**都必须有工具，或在 `EXCLUDED` 里带理由（"not done yet"不是理由） |
@@ -111,7 +111,7 @@
 
 | # | 原则 | 判 | 证据 / 决定 |
 | --- | --- | --- | --- |
-| 1 | 读写对称（感知闭环） | 🟡 | **机制已建，而且比"每类写工具配一个读工具"更强**：`src/test/mcpCoverage.test.ts` 读 `src/data/arrangementEdits.ts` 的源码，找出每一个改变模型的导出，要求它**要么**被某个工具到达（`EXPOSED` 表），**要么**列进 `EXCLUDED` 并给出理由——"还没做"不是理由；`src/test/mcpCapability.test.ts` 再把 `src/views/` 的每个视图映射到工具/资源/prompt 或一条理由（实测输出 19 个能力面）。**缺口**：`sound` 命名空间（`set_synth_params` / `set_track_preset`）完全缺失，混音写侧也缺失。**决定**：🗺 两条都在 §5.4 的 `sound` 行与 §2.5 行给了第一步（`set_track_preset`；`set_track_send`），而不是各加一个只读镜像工具 |
+| 1 | 读写对称（感知闭环） | 🟡 | **机制已建，而且比"每类写工具配一个读工具"更强**：`src/test/mcpCoverage.test.ts` 读 `src/data/arrangementEdits.ts` 的源码，找出每一个改变模型的导出，要求它**要么**被某个工具到达（`EXPOSED` 表），**要么**列进 `EXCLUDED` 并给出理由——"还没做"不是理由；`src/test/mcpCapability.test.ts` 再把 `src/views/` 的每个视图映射到工具/资源/prompt 或一条理由（实测输出 19 个能力面）。**缺口**：`sound` 命名空间（`set_synth_params` / `set_track_preset`）不再是缺口——`apply_gs1_patch` 让一条轨道携带 synth 自己的 patch **share code**，写侧读侧都是它（`docs/GS1_PATCH_SURFACE.md`，判据 `src/test/gs1PatchPassthrough.test.ts`）；混音写侧仍缺失。**决定**：🗺 `set_track_send` 的第一步在 §2.5 行，而不是加一个只读镜像工具 |
 | 2 | 音乐学分层（意图级 vs 外科级） | 🟡 | 外科级齐全（`set_step`/`add_arrangement_note`…）；意图级今天是 **prompts**（`compose_groove`、`compose_with_examples`）加少数高层 op（`set_chord_progression`、`generate_melody`）。**决定**：⛔ 不做 `make_transition` 工具——段落层的 `fill`/`riser` 标志就是它的意图级形态，闸门有判据（"add_section carries a build, a fill and a transposition"）；再造一个工具会让"这段该有过渡"有两种说法 |
 | 3 | 事务与撤销（opId） | 🟡 | **song 层已建**：每次变更记 `{opId, op, before, at}`（`mcp/song.ts:54-61`），`undo_song` 回退并报当前形态，`get_song` 列出 `history`；闸门按 `docs/V4_REVIEW_PLAN.md` 的验收线断言"一串调用能回到起点"（`scripts/check_mcp.mjs:411-422`）。**缺的一半：arrangement 层没有任何历史** —— `mcp/arrangement.ts:197-203` 的 `edit()` 直接把新对象写回 Map，不记录 before。**决定**：🗺 第一步 = 在 `edit()` 里照 `song.ts:54` 的形状记一条 `{opId, op, before}` 并在 `get_arrangement` 里列出；这是**一个函数**，而每个 arrangement 工具都走它 |
 | 4 | 确定性与种子 | 🟡 | 带随机性的生成器都吃 `seed`：`humanize`（`registry.ts:173`）、`generate_melody`（`:1710`，默认 1）、`set_vocal_melody` 透传；曲风 pattern 的种子由 `patternSeed(genre_id, bpm, totalSteps)` 决定（`src/audio/noteEvents.ts:27`），因此同工程同输出。渲染确定性有实测（同页 RMS 一致到 1e-3 dB，跨重载 0.005 dB）。**缺**：`create_song` / `set_clip` 本身不接受 `seed`。**决定**：⛔ 不加 —— 这两个工具的输入**已经是完全显式的**（一个 pattern 就是它自己的种子），给确定性输入再套一层 seed 只会多一个可以与之矛盾的字段 |
@@ -141,7 +141,7 @@
 | harmony | `set_key_scale`/`set_chord_progression`/`suggest_progression`/`transpose_section`/`harmonize` | 🟡 | `suggest_progression` ✅、`apply_chord_progression` ✅、`set_chord_progression` op ✅、段落移调 = `add_section` 的 `transpose` ✅；音阶通过 pattern 的 `scale` 字段（`patternSchema` 允许）但**没有专门的 op**；`harmonize` 没有。**决定**：⛔ 不做 `harmonize`（它的实际内容是"给已有旋律配和声"，而这需要先决定和声规则；`suggest_progression` + `set_chord_progression` 是可解释的替代）；🗺 `set_key_scale` 的第一步 = 一个 `{ op: "set_scale" }`（纯字段写，模型里已有该字段） |
 | melody | `generate_melody`/`motif_ops` | 🟡 | `generate_melody` ✅；`motif_ops` 没有。第一步见 §4.1 |
 | vocal | `validate_prosody` | ✅ | 存在，闸门覆盖"反向报、顺向不报"与"声调真被用上" |
-| sound | `set_synth_params`/`set_track_preset` | 🗺 | **完全没有写音色的 MCP 工具**（83 个里没有）。这是 `mcpCoverage`/`mcpCapability` 两张机制表都抓不到的缺口，因为音色参数不在 `arrangementEdits.ts` 的导出里。**决定**：🗺 第一步 = 一个只读的 `list_arrangement_instruments` 已有的目录之上，加 `set_arrangement_track_instrument`（**已存在**）之外的预设参数读取；写侧的第一步是 `set_track_preset`，因为预设是有限集合而逐个合成器参数不是 |
+| sound | `set_synth_params`/`set_track_preset` | ✅ | **已有写音色的工具**：`apply_gs1_patch` 把一条不透明的 **share code**（synth 自己的 `gs1.patch.get` 产物）放到 pattern 的一条轨道上，离线渲染、实时播放与 `validate_pattern` 都经同一个解析点 `resolveGs1Lane` 读取（`docs/GS1_PATCH_SURFACE.md`；判据 `src/test/gs1PatchPassthrough.test.ts`，含 vendored core 上的实测差异）。**仍然不做逐参数编辑器**（`set_synth_params` 那条路）：synth 里调好、拿码、存到轨道是更短的路径，groove 侧不重复实现参数模型与 UI。**staged**：分享链接的紧凑编解码（`toSharedTrack`）还不携带该字段 |
 | mix | `set_volume`/`set_pan`/`set_send`/`set_fx_param`/`route_sidechain`/`get_fx_latency` | 🟡 | 音量/声像 ✅（`set_arrangement_track_gain`/`set_arrangement_track_pan`）；send / fx 参数 / sidechain / 延迟表 ✗。第一步见 §2.5 与 §2.8.1 |
 | automation | `draw_automation` | ⛔ | 结构性不做，理由与实测见 §2.6 |
 | transition | `make_transition`/`generate_fill`/`generate_riser`/`generate_downlifter` | 🟡 | 段落层的 `fill`/`riser` 标志 ✅（闸门有判据）；`make_transition` ⛔（§5.3 第 2 条）；`generate_downlifter` 没有但 `riser` 的反面可由 `transpose` + `velocityRamp` 表达。**决定**：不再增补 |
@@ -202,8 +202,8 @@ Muse 的九乐章作品位于 `~/workspace/song_build/devtest-20260930-2/`，**�
 
 ```
 npm run check:mcp
-  → surface : 84 tools, 7 resources, 4 prompts
-  → 🧩 MCP gate: 91 checks passed, 0 failed
+  → surface : 85 tools, 7 resources, 4 prompts
+  → 🧩 MCP gate: 93 checks passed, 0 failed
 
 node scripts/check_docs.mjs
   → ✅ 4 doc baseline claim(s) hold.

@@ -1,147 +1,122 @@
-# GS-1 音色设计能不能从 MCP 写？（裁定：**缺口真实，但已被裁定过**）
+# GS-1 音色设计能不能从 MCP 写？（裁定：**已闭合** —— 复用 synth 自己的 share code）
 
-> 一位日常使用 MCP 表面的作曲者报告："GS-1 synth 引擎能力未暴露到 MCP 工具面 —— groove 浏览器端音频引擎内部就是 Web Audio + GS-1 wasm，但 MCP registry 里没有任何 synth 音色设计工具：无 `gs1.patch` / `patch.morph` / 振荡器 / 滤波 / 包络参数。genre 自带的 synth voice 只是固定预设。实测影响：精细音色设计必须切到 synth repo 的 GS-1 MCP 另渲，再用 ffmpeg 外部混入。"
+> 前一份调查（分支 `feat-gs1-assessment`，同一文件）对着代码验过一条作曲者的报告，结论是"缺口真实，但已裁定过"，并给了 §6「不实施」和 §7「第一步」。
+> 随后业主说：**"GS-1 暴露这块，synth 原本库会有 mcp 功能，看看能不能复用或者拿过来改造下"** —— synth 自己有完整的 patch MCP。本次就是回答这句话，并且已经落地。
 >
-> 这份笔记把这条报告逐句对着代码验了一遍。结论是：**报告的机制部分成立，"完全没有"部分不成立，而这条缺口早已在 [`Z2_ADJUDICATION.md`](Z2_ADJUDICATION.md) 里裁定过并给了第一步** —— 这是本项目第三次出现"以为缺失、其实已有决定"的同一类情况（前两次是能量曲线与编排 tempo map，见文末）。
+> **旧结论被取代的部分**：§6 曾列出的两条成本理由——"需要一个新的补丁模型字段"与"需要在我们的模型与 GS-1 参数空间之间做语义映射"——都因为**复用 synth 自己的 share code** 而不存在了。补丁是**一个不透明字符串**（不是我们发明的结构），字段是 `SequencerTrack.gs1Patch`（不是新模型），校验用 synth 自己的可解码性（不是第二套规则）。剩下的一条——**双解析缝**——是真的，也是本次的主要工作，现在已被单一缝取代。
 
 ## 一句话结论
 
-引擎**确实**是一台可打补丁的 GS-1 减法合成器，参数面（408 个 `AudioParam`）也**确实**完全到不了模型与工具面；但能到工具面的是**预设选择**（14 个具名预设，约 30 个乐器名），而且是**经由 `patternSchema` 的 passthrough 意外可达的**。逐参数（振荡器/滤波/包络）的写入需要一个新的补丁模型，不是一个工具 —— 因此本次**只记录，不实施**。
+引擎**确实**是一台可打补丁的 GS-1；补丁现在**可以从调用者一路走到渲染出的音频**：synth 的 `gs1.patch.get` 产出 `gs1.1.…` **share code**，`apply_gs1_patch` 把它存在**轨道**上，`resolveGs1Lane`（唯一解析点）把它变成参数与路由，离线渲染、实时播放、`validate_pattern` 三处**读同一个决议**。读不懂的 code **报错并指名轨道**，绝不静默换音色。
 
-## 1. 现状：引擎能做什么（这一半，报告是对的）
-
-浏览器的引擎**就是** GS-1：MCP 的渲染不是第二个渲染器，而是驱动真的那个。
+## 1. 引擎这一半（与前一份一致，仍然为真）
 
 | 事实 | 证据 |
 | --- | --- |
-| MCP 渲染启动应用自己的 dev server + headless Chromium，import 真的 `renderPatternOffline`；"app 的引擎就是 Web Audio + GS-1 wasm host" | `mcp/render/worker.ts:4`（文件头 1–13 说明了为什么不在 Node 里重写第二个渲染器） |
-| host 的接口里有单参数与整补丁写入 | `src/audio/gs1/Gs1Host.ts:184`（`setParam(id, value)`）、`:188`（`setPatch(values: Record<number, number>)`）、实现在 `:518-524` |
-| 参数面是**声明式**的：每个参数有 id、范围、默认值、曲线、格式 | `vendor/gs1/src/audio/params.ts:1453` 的 `PARAM_SPECS`（`spec(id, name, min, max, default, format, opts)`）；`PARAM_NAMES` 408 项；id 例：`OSC1_ON: 1`、`FILTER_CUTOFF: 14`（`:27`）、`ENV_ATTACK: 19`、`OSC1_PW: 6`、`LFO_DEPTH: 26` |
-| 补丁本身就是"GS-1 自己的预设格式" | `src/data/gs1Patches.ts:41`（`export type Gs1Patch = Record<number, number>`，"exactly GS-1's preset format"） |
+| MCP 渲染驱动的是应用自己的 `renderPatternOffline`，没有第二个渲染器 | `mcp/render/worker.ts:4`、`:274` |
+| host 有单参数与整补丁写入 | `src/audio/gs1/Gs1Host.ts:184`（`setParam`）、`:188`（`setPatch`） |
+| 参数面是声明式的：id、范围、默认值 | `vendor/gs1/src/audio/params.ts:1092`（`DEFAULT_PARAMS`，224 项）、`:1453`（`PARAM_SPECS`，84 项带标签）、worklet 的 `PARAMS`（224 项，**浏览器真正服务的范围**） |
 
-所以报告里"引擎能做工"这句是准确的。**关键差别在参数从哪来。**
-
-## 2. 参数从哪来：一张固定的手写表，按键名查
+## 2. 补丁从哪来（本次改变的地方）
 
 | 事实 | 证据 |
 | --- | --- |
-| 具名预设是一张**手写的固定表** | `src/data/gs1Patches.ts:100`（`GS1_PATCHES: Record<Gs1PatchName, Gs1Patch>`） |
-| 解析补丁 = 用 `role` + `instrument` + `genreId` 查表，`params` 直接取自该表 | `src/data/gs1Patches.ts:816`（`resolveGs1Patch`，末行 `return { patch, params: GS1_PATCHES[patch], … }`） |
-| 唯一的选择层是**按流派换一个预设名**，且是代码级、调用者不可写 | `src/data/gs1Patches.ts:845`（`GENRE_GS1_PATCH_OVERRIDES`，如 `"uk-garage": { m1_organ: "organStab" }`） |
-| 规划器只吃 role / instrument / genreId / notes / sampleRate / latencyFrames —— **没有任何补丁覆盖入口** | `src/audio/gs1/gs1Tracks.ts:101`（`Gs1PlanOptions`）、`:138`（`planGs1Notes`）、`:202`（`resolveRoutedPatch`）、`:210`（`gs1PatchFor`） |
-| 全仓库只有**两处**把参数写进核心，两处都喂自那张固定表 | 离线：`src/audio/WavExporter.ts:591`（`host.setPatch(routed.params)`）；实时：`src/audio/gs1/Gs1VoicePool.ts:281`（`slot.host.setPatch(plan.params)`） |
+| 具名预设仍是一张手写固定表，**默认路径不变** | `src/data/gs1Patches.ts:100`（`GS1_PATCHES`）、`:816`（`resolveGs1Patch`） |
+| **新增**：一条轨道可以带自己的 GS-1 补丁，形式是 synth 的 share code | `src/types/genre.ts`（`SequencerTrack.gs1Patch?: string`） |
+| 调用者用它：`apply_gs1_patch` 存/清，校验后才写入 | `mcp/registry.ts`（工具 `apply_gs1_patch`），`mcp/pattern.ts:validatePattern` |
+| 协议边界把它当**字符串**检查，内容留给解析点 | `mcp/registry.ts`（`patternSchema.tracks[].gs1Patch`） |
 
-**可达预设的实测规模**（按路由表读源统计，与方法同 `scripts/probe_gs1_instrument_voicing.mjs:5` 的注释"~30 instruments"）：
+**为什么是 share code 而不是结构化的补丁对象。** synth 的 `gs1.patch.get` 返回的就是这个字符串（"a share code plus the decoded payload"），`gs1.patch.set` / `gs1.render` 也接受它（`mcp/tools/patch.mjs`、`mcp/tools/patch-set.mjs`）。它的负载是 `gs1.1.` + base64url(JSON `{s, v, r, p2?}`)，`v` 按参数 id 升序逐项存值——**格式是 synth 定义的**。我们做的是**读**它，不是再定义一遍。
 
-| 角色 | 表 | 走 GS-1 的乐器 | 保持原生 | 不同预设名 |
-| --- | --- | --- | --- | --- |
-| chords | `GS1_CHORDS_ROUTING`（`gs1Patches.ts:721`） | 8 | 4 | 8（warmPad, electricPiano, cleanPluck, supersawStack, drivenGuitar, organStack, analogLead, sustainedStrings） |
-| lead | `GS1_LEAD_ROUTING`（`:744`） | 17 | 10 | 11（+squareLead, acidLead, bellMallet, sineLead） |
-| texture | `GS1_TEXTURE_ROUTING`（`:782`） | 5 | 0 | 2（sampleSurface, sampleTexture） |
+**为什么没有直接 vendor `src/state/share.ts`。** 它 import `src/state/persist.ts`（取 `SCHEMA_VERSION`）与 `src/midi/takes.ts`，把它加进 `scripts/sync-gs1.mjs` 的 `VENDORED_FILES` 会把 synth 应用的另外半棵子树拖进 `vendor/gs1/`，并破坏"一文件一哈希"的 pin。可复用的是**格式**，而参数表已经逐字节 vendored（`vendor/gs1/UPSTREAM.json`，`params.ts` 与 synth HEAD 逐字节相同）。所以读取器是 `src/audio/gs1/gs1PatchCode.ts`：它逐条对齐 `share.ts` 的 `parsePayload`。
 
-即：**14 个具名预设、约 30 个乐器名**。`lead` 的 10 个与原生的 4/10 个不路由的原因是**写在表里的**（声学乐器的本体就是它的音色，减法合成没有诚实的对应物）—— 这一层设计是有理由的，不是遗漏。
+## 3. 单点解析缝（本次的核心工作）
 
-## 3. 缺的是什么（报告的这一半也不完全对）
+旧文指出的真问题：导出侧解析**两次**——`WavExporter.ts:537` 建 host 用一次，`planGs1Notes` 内部再解析一次。只到达一处覆盖值时，写出的文件会与 `setPatch` 收到的补丁不一致（"第二个声音"）。
 
-### 3.1 真的没有：逐参数写入
+现在的形状：
 
-| 缺的东西 | 证据 |
+| 位置 | 作用 |
 | --- | --- |
-| 模型里**没有**放补丁的地方 | `src/types/arrangementV2.ts:16`（`TrackV2`：kind/name/color/collapsed/muted/soloed/armed/gainDb/pan/parentId/fromTrackId/fromLaneId/sample/takes/selectedTakeId/takeRegions —— **无 patch / synth params 字段**） |
-| 走 GS-1 的轨道，`instrument` 是 v1 pattern 的一个**字符串名**，不是补丁 | `src/types/genre.ts:78`（`instrument: string`） |
-| 应用**自己没有**编辑补丁的界面 | `GS1_PATCHES` / `Gs1Patch` / `resolveGs1Patch` 只被 `src/audio/**`、`src/data/**` 与测试引用，**零个 `.tsx` 引用**；GS-1 在 UI 上只有一枚只读的"这件乐器由 GS-1 发声"徽章（`src/components/console/InstrumentPicker.tsx:165`、`:189-212`）和一个总开关（`src/views/StudioView.tsx:374`） |
-| MCP 工具面里**一个都没有** | 整个 `mcp/` 树里 `gs1` / `patch` / `synth` 参数**零命中**；只有保留未实现的 `synthesize_vocal`（`mcp/registry.ts:1653`）与一个乐器名字符串（`mcp/progression.ts:98`）。实测 `npm run check:mcp`：**84 tools、7 resources、4 prompts、91 checks passed** |
-| 裁定里点名的两个工具都**只存在于文档里** | `set_track_preset` / `set_synth_params` 全仓库只出现在 `docs/Z2_ADJUDICATION.md:114` 与 `:144` |
-| `list_arrangement_instruments` **不是**预设目录 | `mcp/registry.ts:262-273` 列的是 sampler 的**采样库资产**（`assetId`、library、duration），与"合成器预设"是两条轴 —— 所以裁定里"预设参数读取"那一步也真的还没有 |
+| `src/audio/gs1/gs1Tracks.ts` 的 `resolveGs1Lane(role, instrument, genreId, patchCode)` | **唯一**把"一条轨道 + 可选 share code"变成 `Gs1Voice`（`params` / `routes` / `velToCutoff` / `code`）或 `problem` 的函数 |
+| `planGs1Notes({…, voice})` | 接受**已经解析好的 `Gs1Voice` 对象**；导出器把建 host 用的**同一个对象**交给它（`WavExporter.ts` 的 `gs1Voices` Map），所以两者在构造上不可能分叉 |
+| `Gs1VoicePool.tryPlay(…, patchCode)` | 实时播放也走 `resolveGs1Lane`；`AudioEngine.ts` 三处调用把 `track.gs1Patch` 传进来 |
+| `applyGs1VoiceRoutes(host, voice)` | code 自带的路由（`r`）与表补丁的 velocity 响应，只有一个写入点 |
 
-### 3.2 意外可达：预设**选择**已经能过线
+判据：`src/test/gs1PatchPassthrough.test.ts` ——
 
-这一条是本次新查出来的，也是"完全没有写音色的工具"这句**不准确**的地方：
+* 一条带合法 code 的轨道**渲染**，且**实测**与同一轨道用表补丁的结果不同：把导出器交给 host 的参数喂给**vendored WASM core 本体**，用仓库自己的 13 段 timbre 指纹量。实测 **fingerprint distance 4.78 dB、centroid 869 → 1287 Hz（×1.48）**，阈值取 3 dB / ×1.25；两个参数集都非静音。
+* **第二条**判据（单点缝）：`planned.params` 与 host 用的 `voice.params` 是**同一个对象**（`toBe`，不是 `toEqual`），而**不带 code 的独立解析**会得到 `warmPad` 这个**不同**的 record；同一文件还断言"房间与文件为同一条带 code 的轨道压入**完全相同**的 `setPatch` 负载"。
+* 若哪天导出器只把 code 给了建 host、没把 `voice` 交给 planner，第二条测试就会红——注释里写明了这一点。
 
-* `patternSchema` 暴露了 `tracks[].instrument: z.string()` —— `mcp/registry.ts:128`，且该对象是 `.passthrough()`（`:142`，schema 定义自 `:113`）；
-* `render_audio` 接受整个 `pattern` —— `mcp/registry.ts:1848`（`:1855` 的 `pattern: patternSchema.optional()`）；
-* 渲染器按 `track.instrument` 决定补丁 —— `src/audio/WavExporter.ts:537`（`gs1PatchFor(track.track_id, track.instrument, pattern.genre_id)`）。
+## 4. 校验不撒谎（本次的另一半）
 
-因此：**调用者今天就能通过 `render_audio` 传入一个 track 的 `instrument` 名字，选中 14 个具名预设中的任意一个。** 这是一条**没有人记录过的旁路**，而且它不校验名字 —— `resolveGs1Patch` 是全函数，未知名字**静默回落到原生引擎**（`src/data/gs1Patches.ts:816-843`，注释明说"which is the safe answer"），所以打错一个字母得到的是另一台合成器，而不是报错。
+旧文点名：`resolveGs1Patch` 是全函数，未知乐器名**静默回落到原生引擎**（`gs1Patches.ts:816-843` 的注释还称其为 "the safe answer"），所以打错一个字得到的是另一台合成器。现在：
 
-结论的准确表述是：
+* `decodeGs1PatchCode` 对**读不懂的** code 给出具体原因：前缀不是 `gs1.1.`、base64url 非法、JSON 非法、缺 `v`、schema 比本构建新、**带第二层（`p2`）**。
+* `resolveGs1Lane` 对**带 code 但无法播放**的轨道返回 `problem`：code 读不懂，或该轨道的角色（kick/bass/audio…）根本不被 GS-1 调度——一个"有补丁但永远不会响"的轨道也是问题，不是静音。
+* 三处**都报**：
+  * `validate_pattern` → `problems` 里一条**指名轨道**的条目（`track "chords" carries a GS-1 patch that cannot be played: …`）；
+  * `render_audio` → 结果里的 `gs1PatchProblems`（`mcp/render/worker.ts` 的 `RenderResult`），同时 `console.warn`；
+  * 实时 → `Gs1VoicePool.status()` 的 `patchProblems` 与一次 `console.warn`。
+* `apply_gs1_patch` **拒绝写入**读不懂的 code（`isError`，消息含轨道名），所以坏 code 到不了渲染阶段。
 
-> **预设选择**：可过线，但只经由 schema 的 passthrough，未文档化、未校验、非意图。
-> **逐参数设计**（振荡器 / 滤波 / 包络 / mod matrix）：**真的没有**，且没有任何地方能放它。
+**故意不校验的东西，以及支持这个决定的测量。** 不按 `PARAM_SPECS` 检查取值范围。`PARAM_SPECS` 只覆盖 224 个参数中的 **84** 个，而且在重叠处它比 worklet 实际服务的范围**更窄**。把全部 91 个工厂预设用 synth 自己的 `presetShareCode` 编码再解码后统计：恰好有一个值越界——`phonk` 的 `osc2Pitch = 31`，而 `PARAM_SPECS` 声明 ±24、worklet 实际服务 ±48。也就是说，对着 `PARAM_SPECS` 写范围校验会**拒掉 synth 自己产出的工厂预设**。浏览器 `AudioParam` 的钳制与 synth 内部一致，所以诚实的校验就是 upstream 做的那一种：**这段 code 能不能解码**。
 
-## 4. 这条缺口已经被裁定过了（第三次同类）
+## 5. 旧文 §5 的假声明（仍在，未改）
 
-`docs/Z2_ADJUDICATION.md:144` 的 `sound` 行：
+帮助文案仍声称可以导出 "GS1 patch"（`src/i18n/locales/help.ts:74`、`src/data/tutorialCourses.ts:200`、`src/components/help/HelpCenterModal.tsx:308`），而导出菜单里没有第七项。**本次仍未改**：改为哪种表述是产品决定。现在这句话**更接近可行**了（code 可以在 synth 里生成、在 groove 里落到轨道上），但"从 groove 导出 `.gs1.json` 补丁文件"这个动作仍然不存在。
 
-> | sound | `set_synth_params`/`set_track_preset` | 🗺 | **完全没有写音色的 MCP 工具**（83 个里没有）。这是 `mcpCoverage`/`mcpCapability` 两张机制表都抓不到的缺口，因为音色参数不在 `arrangementEdits.ts` 的导出里。**决定**：🗺 第一步 = 一个只读的 `list_arrangement_instruments` 已有的目录之上，加 `set_arrangement_track_instrument`（**已存在**）之外的预设参数读取；写侧的第一步是 `set_track_preset`，**因为预设是有限集合而逐个合成器参数不是** |
+## 6. 本次的决定
 
-以及 `:114`（§5.3 第 1 条）：
+**实施**（与旧文的「不实施」相反），范围是"**一个不透明的 share code，一个解析缝**"。旧文 §6 的两条理由被取代：
 
-> **决定**：🗺 两条都在 §5.4 的 `sound` 行与 §2.5 行给了第一步（`set_track_preset`；`set_track_send`），**而不是各加一个只读镜像工具**
-
-两点含义：
-
-1. **缺口是真的，报告有价值** —— 但它是**已知且已排期**的，不是新发现。它没进 `mcpCoverage` / `mcpCapability` 两张机制表的原因也已被写明：音色参数不在 `arrangementEdits.ts` 的导出里，也没有对应的视图，所以两张表都扫不到它。
-2. **第一步已经被定死为"有限预设集合"，并明确否掉了逐参数** —— 理由是预设有限、可枚举、已过闸门，而 408 个参数不是。
-
-这与本项目前两次的形态相同（见文末"同类先例"），因此**本次的交付就是把报告对回这条既有裁定，并把新查到的旁路与两个成本理由补上**。
-
-## 5. 顺带查到的一处**假声明**（报告者为什么会以为功能存在）
-
-应用自己的帮助文案声称可以导出 GS-1 补丁，而**不存在任何 GS-1 补丁导出**：
-
-| 位置 | 原文 |
+| 旧理由 | 现在 |
 | --- | --- |
-| `src/i18n/locales/help.ts:74` | en: "… or export directly as a **GS1 patch** or Ableton project." / zh: "…或一键导出为 **GS1 开放协议补丁**及 Ableton Live 工程。" |
-| `src/data/tutorialCourses.ts:200` | `tipEn: "Share lossless compressed URLs or export GS1 patch bundles"` |
-| `src/components/help/HelpCenterModal.tsx:308` | 同一句的两个语言分支 |
+| "需要一个新的补丁模型 + 它住在哪" | 不需要新模型：`SequencerTrack.gs1Patch` 是附加字段，`instrument` 旁边，随现有 JSON 路径走 |
+| "需要语义映射（哪些参数属于哪一族、什么默认值安全）" | 不需要映射：code 是 synth 自己的格式，我们不解释它的语义，只在**一个**地方解码成 `setPatch` 要的 record |
+| "需要一个单点解析缝" | **这条成立，并且是本次的工作** —— 见 §3 |
+| "需要一个应用界面"（tool-only feature 的镜像） | **仍未解决，见 §7** |
+| "持久化（`instrument` 所在的 v1 pattern 是版本化模型）" | 字段是附加的：没有版本号跳变，旧文件照读；新文件里没有该字段就是"用表补丁"。**工程存档（`GrooveProject.patterns`，`projectDb.ts`）存的是完整 pattern，所以补丁随项目保存/复制**；唯一丢字段的是分享链接，见 §7.1 |
+| "参数校验" | 不按 `PARAM_SPECS` 做范围校验，理由与测量见 §4 |
 
-而导出侧的全部动作是 **MIDI / ALS(Ableton) / Groove / WAV / MP3 / Stems**，没有第七项：`src/features/sequencer/hooks/useExportActions.ts:114,124,148,231,287,318`（六个 `handleExport*`）与 `src/components/sequencer/Toolbar.tsx:1716` 的 `ExportMenu`。`mcp/registry.ts` 里同样没有补丁导出工具。
+**仍然不做的**：**逐参数编辑器**。业主现在有一条更短的路径拿到精细音色——在 synth 里用 `gs1.patch.set` 调好、`gs1.patch.get` 拿码、`apply_gs1_patch` 存到轨道。groove 侧不重复实现振荡器/滤波/包络的 UI 或参数模型。
 
-这是一处**一行级的假声明**（三处重复），独立于本缺口，本次只记录不改：改哪一种表述是产品决定（若指上游 synth repo 的能力，则该写明"在 synth 里做"）。但它解释了为什么使用者相信这条能力已经在。
+## 7. 还没有做 / 还需要业主决定的（staged，说清楚）
 
-## 6. 本次的决定：**不实施**，以及为什么第一步不"小"
-
-按任务的判据（"若第一步真的小而安全就实施：例如模型里已经带着补丁对象，缺的只是把它从工具写出去"），这里**不满足**：
-
-| 逐参数写入需要什么 | 现状 |
-| --- | --- |
-| 一个新的补丁模型 + 它住在哪（pattern track / arrangement track / genre） | 都不存在（`src/types/arrangementV2.ts:16`、`src/types/genre.ts:78`） |
-| 一个**单点**解析缝 | 现在导出侧解析**两次**：`WavExporter.ts:537`（建 host 用）与 `planGs1Notes` 内部的 `resolveRoutedPatch`（`:798`/`:859`/`:901`）。覆盖值必须同时到达两处，否则**文件里的声音会与 `setPatch` 收到的不一致** —— 正是这个代码库花闸门避免的"第二个声音" |
-| 实时/离线一致 | 实时侧另有一处 `Gs1VoicePool.ts:263` → `:281`，不一起改则"试听 ≠ 渲染" |
-| 一个应用界面 | 没有（§3.1）：MCP 会写一份**没有任何人能看见或编辑**的状态 —— 跨阶段原则 1 是"No UI-only Features"，这是它的镜像（tool-only feature） |
-| 参数校验 | `PARAM_SPECS`（`:1453`）**已经**给了范围与默认值，这一步反而便宜；但"哪些参数属于哪一族补丁、什么默认值安全"没有——`GS1_PATCHES` 是手写稀疏表，其文件头（`gs1Patches.ts:36-38`）明说**按参数语义写、没有做过听感测试** |
-| 持久化 | `instrument` 所在的 v1 pattern 是版本化模型（`.groove` v2、分享链接都要跟着动） |
-
-**所以逐参数那一步不开始**，理由如上并已记录在案（与 `Z2_ADJUDICATION.md:144` 的裁定一致：预设是有限集合，逐参数不是）。
-
-## 7. 最小的诚实第一步（沿用既有裁定，不另起一套）
-
-既有裁定给的第一步是 `set_track_preset`，落在"有限预设集合"上。对着本次查到的旁路，它有一个**更具体的形态**，而且**不需要新模型字段**：
-
-> **第一步（小，未做，等一个决定）**：把**预设选择**从 schema 旁路变成一等操作 —— 在 `apply_pattern_ops` 增加一个 `{ op: "set_instrument", track, instrument }`（或等价的一个 `set_lane_instrument` 工具），**对名字做校验**，把 `GS1_*_ROUTING` 的可达预设与原生乐器名作为合法集合列出。
->
-> 这样做的三个好处，都对着真实缺陷：① `patternSchema` 的 `instrument` 旁路不再是"意外的能力"而是**有名字、有文档**的操作；② 打错名字**不再静默回落到原生引擎**（今天的行为，`gs1Patches.ts:816-843`）；③ 14 个预设与约 30 个乐器名第一次**可被 agent 枚举**。
-
-* **为什么算小**：`instrument` 已经是真实字段（`src/types/genre.ts:78`）、已经驱动路由（`WavExporter.ts:537`）、路由本身已是全函数。纯字段写 + 一处校验，无新模型、无 UI、无 wasm、无持久化变更 —— 与编排 tempo map 当初"只差一层 pass-through"同形。
-* **为什么本次仍不做**：合法集合的**边界是个产品决定**而不是机械提取 —— `GS1_*_ROUTING` 只有 chords/lead/texture 三张表，而 159 个流派里存在大量不在这三张表内的乐器名；校验集合取小了会**误拒合法名字**，取大了等于不校验。同时 `set_instrument` 在原生轨道上是**无声的空操作**（如 `piano_lead` 本就原生），一个有时什么都不做却报成功的工具需要一句解释。这两件事应当与"补丁住在哪"一起定，而不是由这一份调查替业主定。
-* **成本量级**：`opSchema` 一条 + `mcp/pattern.ts` 一个纯变换 + 一个校验 helper（可复用 `src/data/instrumentCategories.ts:177` 的 `isGs1Instrument`）+ `scripts/check_mcp.mjs` 一条协议检查 + `docs/MCP.md` 一行 + `src/test/mcpTools.test.ts` 一条判据。
-* **它买不到什么**：**逐参数设计**。那一步（振荡器/滤波/包络）留在第 2 步，挡在 §6 的模型决定后面。
-
-## 同类先例（本项目第三次）
-
-| 报告/评估的说法 | 实际 | 位置 |
-| --- | --- | --- |
-| `get_energy_curve` 缺失 | **已有决定**：曲线随渲染指标一起返回，不为它单设工具 | `docs/Z2_ADJUDICATION.md:160`（M1 #3，"这一条被判错过两次"） |
-| 编排侧 tempo map 缺失 | **一处 pass-through**：`ArrangementV2.tempo` → 投影 → `set_arrangement_tempo_map`，已闭合 | `docs/Z2_ADJUDICATION.md:181`（§能力缺口 1） |
-| **`sound` 命名空间（写音色）完全缺失** | **已有裁定与第一步**：`docs/Z2_ADJUDICATION.md:144`；缺口真实，第一步 = 有限预设集合，逐参数明确不做 | 本文件 §4 |
+1. **share link / QR 不携带 `gs1Patch`。** `src/audio/SequencerUrlShare.ts:65` 的 `toSharedTrack` 是显式白名单，`SharedSequencerState.tracks[]` 也没有这个字段；`ProjectHubModal.tsx` 与 `useExportActions.ts` 两个分享入口都经过它。后果：**一条带自定义补丁的轨道分享出去，对方听到的是表补丁**——正是这个仓库最讨厌的那类静默差异。没有顺手加的原因：这是**另一个有损编解码面**，有自己的体积上限、"字段要进紧凑 payload"的规则与 `shareTrackFidelity.test.ts` 的白名单断言；它值得一个独立的小改动（加字段、加编码、加一条"带 code 的轨道往返"判据），而不是塞进本次的解析缝改动里。**决定：记录，不半接。**
+2. **没有 UI 能看到/编辑 `gs1Patch`。** MCP 会写一份界面上不可见的状态，这是跨阶段原则 1（No UI-only Features）的镜像（tool-only feature）。是否值得给轨道加一个只读的 "GS-1 patch" 徽章/输入框，是产品决定。
+3. **`TrackV2`（编排模型）没有补丁字段。** 补丁住在**pattern 的 tracks** 上（`arrangementCompile` 从 clip 的 pattern 编译），所以 `render_audio`、`create_song` 的 clip、`render_song` 的 flatten 都能拿到它；但"在编排轨道列表上直接指定一个补丁"还没有入口。
+4. **`gs1.2.`（deflate）code 不支持**，并明确报错；工厂补丁码不会用它（只有带整曲的 code 才会）。
+5. **带第二层（`p2`）的 code 被拒绝**：`Gs1Host` 是一个实例，第二层会被静默丢弃，所以拒绝才是诚实的。
 
 ## 复现本次结论的命令
 
 ```bash
-node scripts/mcp_call.mjs --list          # 84 tools，其中无一个 synth/patch 参数工具
-npm run check:mcp                         # 91 checks passed；surface: 84 tools, 7 resources, 4 prompts
-grep -rn "gs1\|patch\|synth" mcp/ --include='*.ts'   # 只命中保留未实现的 synthesize_vocal 与一个乐器名
-grep -rn "Gs1Patch\|GS1_PATCHES\|resolveGs1Patch" src/ --include='*.tsx'   # 零命中：应用没有补丁编辑界面
-grep -rn "set_track_preset\|set_synth_params" . --include='*.ts' --include='*.md'   # 只命中 Z2_ADJUDICATION.md:114,144
+# 生成测试用的真实 share code（fixture 的来源，synth 自己的编码器）
+cd /home/crow/music/synth
+node -e "import('./mcp/lib/data.mjs').then(async ({loadData}) => {
+  const d = await loadData();
+  const { presetShareCode } = await import('./mcp/lib/patch.mjs');
+  console.log(presetShareCode(d, 'acid').code);
+})"
+
+# 本次的判据（离线渲染 + vendored WASM core 实测 + 单点缝）
+npx vitest run src/test/gs1PatchPassthrough.test.ts      # 11 passed
+
+# 受影响的既有 GS-1 判据
+npx vitest run src/test/gs1Tracks.test.ts src/test/gs1ExportParity.test.ts \
+  src/test/gs1VoicePool.test.ts src/test/gs1StemHosts.test.ts \
+  src/test/gs1Patches.test.ts src/test/gs1SampleTexture.test.ts src/test/mcpTools.test.ts
+
+npm run typecheck                                        # clean
+npm run check:mcp                                        # 85 tools, 93 checks passed
 ```
+
+## 同类先例（本项目第三次，本次已闭合）
+
+| 报告/评估的说法 | 实际 | 位置 |
+| --- | --- | --- |
+| `get_energy_curve` 缺失 | **已有决定**：曲线随渲染指标一起返回 | `docs/Z2_ADJUDICATION.md:160` |
+| 编排侧 tempo map 缺失 | **一处 pass-through**，已闭合 | `docs/Z2_ADJUDICATION.md:181` |
+| `sound` 命名空间（写音色）完全缺失 | 缺口真实；第一步曾是"有限预设集合"。**本次以"一条不透明 share code + 一个解析缝"闭合了它** | 本文件；`docs/Z2_ADJUDICATION.md:144` |

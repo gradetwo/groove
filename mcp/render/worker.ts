@@ -80,6 +80,14 @@ export interface RenderResult {
   limiterKind: string;
   truePeakDb: number;
   integratedLufs: number;
+  /**
+   * Lanes whose own GS-1 patch code was refused, each naming the lane and the reason.
+   *
+   * Empty in every normal render. Non-empty means that lane was voiced by the native engine — a
+   * different sound — and the reply says so rather than shipping a file that quietly disagrees with
+   * the patch the caller asked for.
+   */
+  gs1PatchProblems: string[];
   /** Per-track peaks, so an agent can see the balance without a second call. */
   trackPeaksDb: Record<string, number>;
 }
@@ -263,6 +271,8 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
       ]);
       const barsArg = Math.max(1, Math.min(64, bars ?? 1));
       let limiterKind = "fallback";
+      /** Lanes whose own GS-1 patch code was refused; see `RenderResult.gs1PatchProblems`. */
+      let gs1PatchProblems: string[] = [];
       const buffer = await wav.renderPatternOffline(patternArg as never, {
         bars: barsArg,
         /**
@@ -277,6 +287,13 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
         ...(Number.isFinite(loudnessTrimDb) ? { loudnessTrimDb } : {}),
         onLimiterKind: (kind: string) => {
           limiterKind = kind;
+        },
+        /**
+         * A lane that named a GS-1 patch which cannot be read is reported, never absorbed into the
+         * same silence as an unrouted instrument.
+         */
+        onGs1PatchProblems: (problems: readonly string[]) => {
+          gs1PatchProblems = [...problems];
         },
       });
       const channels: Float32Array[] = [];
@@ -331,6 +348,7 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
           limiterKind,
           truePeakDb: loudness.truePeakDbChannels(channels),
           integratedLufs: loudness.measureLoudness(channels, buffer.sampleRate).integratedLufs,
+          gs1PatchProblems,
           trackPeaksDb,
         };
       }
@@ -342,6 +360,7 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
         limiterKind,
         truePeakDb: loudness.truePeakDbChannels(channels),
         integratedLufs: loudness.measureLoudness(channels, buffer.sampleRate).integratedLufs,
+        gs1PatchProblems,
         trackPeaksDb,
       };
     },
@@ -388,6 +407,7 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
     limiterKind: result.limiterKind,
     truePeakDb: result.truePeakDb,
     integratedLufs: result.integratedLufs,
+    gs1PatchProblems: result.gs1PatchProblems ?? [],
     trackPeaksDb: result.trackPeaksDb,
   };
 }

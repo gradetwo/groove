@@ -334,7 +334,8 @@ minutes and the call reports no progress while it runs.
 | :--- | :--- | :--- |
 | `get_pattern` ▢ | `genreId` | the genre's default pattern verbatim |
 | `apply_pattern_ops` ▢ | `pattern`, `ops[]` | a **new** pattern with the operations applied (never mutates the library) |
-| `validate_pattern` ▢ | `pattern` | diagnostics: step-count agreement, velocity range, unknown track ids, gate/pitch length mismatches |
+| `apply_gs1_patch` ▢ | `pattern`/`genreId`, `track`, `patch` | a **new** pattern with one lane's own GS-1 sound set from the synth project's own share code (`gs1.1.…` from `gs1.patch.get`), or cleared with `patch: null`. The code is decoded through the same seam the renderer uses, so an unreadable code is **refused naming the lane** and never quietly becomes a different instrument. See `docs/GS1_PATCH_SURFACE.md` |
+| `validate_pattern` ▢ | `pattern` | diagnostics: step-count agreement, velocity range, unknown track ids, gate/pitch length mismatches, and any lane whose `gs1Patch` code cannot be played |
 | `pattern_statistics` ▢ | `pattern` | per-track density, velocity spread, note range, off-beat ratio, recommended swing |
 | `set_vocal_melody` ▣ | `songId?`, `sectionId?`, `index?`, `pattern?`, `track?`, `syllables[]`, `tones[]`, `pitches?`, `seed?`, `tonic?`, `mode?` | binds one syllable per note **at the same index as its pitch**, writes the melody when only a lyric is given, and returns the prosody check on the result. Tones are input and never guessed; it says which slot it edited, and warns when that slot is shared (call `make_unique` first) |
 | `validate_prosody` ▢ | `tones[]`, `pitches[]`, `syllables?`, `threshold?` | the reversals between a lyric's tones and a melody's movement — advisory, never throws, no pinyin guessing, and 3+3 sandhi changes what it expects rather than rewriting your tones |

@@ -11,6 +11,7 @@
  *     reproduce is a groove it cannot refine.
  */
 import type { SequencerPattern, SequencerTrack } from "../src/types/genre";
+import { resolveGs1Lane } from "../src/audio/gs1/gs1Tracks";
 import { clonePattern } from "./library";
 import {
   buildArpeggioPattern,
@@ -663,6 +664,18 @@ export function validatePattern(pattern: SequencerPattern): {
     const highest = track.velocity?.length ? Math.max(...track.velocity) : 0;
     if (highest > 127) problems.push(`track "${track.track_id}" has a velocity above 127 (${highest})`);
     if (track.steps.every((on) => !on)) warnings.push(`track "${track.track_id}" is empty`);
+    /**
+     * A lane's own GS-1 patch is validated through the **same seam the renderer uses**
+     * (`resolveGs1Lane`), not by a second set of rules here. An unreadable code, or a code on a lane
+     * GS-1 never schedules, is a **problem naming the lane** — the whole reason this surface exists
+     * is that `resolveGs1Patch` is total, so a typo used to change the instrument and say nothing.
+     */
+    if (track.gs1Patch !== undefined) {
+      const lane = resolveGs1Lane(track.track_id, track.instrument, undefined, track.gs1Patch);
+      if (lane.kind === "problem") {
+        problems.push(`track "${laneKey}" carries a GS-1 patch that cannot be played: ${lane.problem}`);
+      }
+    }
   }
   if (!pattern.bpm || pattern.bpm < 20 || pattern.bpm > 300) {
     problems.push(`bpm ${pattern.bpm} is outside the renderer's 20..300`);
