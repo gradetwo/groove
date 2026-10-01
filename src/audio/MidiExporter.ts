@@ -164,7 +164,18 @@ export function generateMidiBytes(options: ExportMidiOptions): Uint8Array {
       }
 
       const vel = Math.max(1, Math.min(127, velocities[stepIdx] !== undefined ? velocities[stepIdx] : 100));
-      const gateVal = (gates[stepIdx] !== undefined) ? Math.max(0.1, Math.min(MAX_NOTE_GATE_STEPS, gates[stepIdx])) : 0.8;
+      /**
+       * ⭐ **The floor stays, the ceiling goes.** `MAX_NOTE_GATE_STEPS` is the step grid's own editing limit — a
+       * piano roll resize, a genre library's authored gate — and it has no business capping what an arrangement
+       * exports: the arrangement states `lengthBeats` with no upper bound, the compile now hands that length to
+       * every lane, and the WAV renderer honours it as written (`WavExporter` reads `gate` without clamping). An
+       * exporter that quietly cut a four-bar pad to one bar would disagree with the file the creator just
+       * auditioned, which is the class of failure this project keeps refusing to ship.
+       *
+       * The `0.1` floor is a different thing and stays: a zero or negative gate is a degenerate note, not a long
+       * one.
+       */
+      const gateVal = (gates[stepIdx] !== undefined) ? Math.max(0.1, gates[stepIdx]) : 0.8;
 
       let pitchOffset = (pitches[stepIdx] !== undefined && pitches[stepIdx] !== null) 
         ? pitches[stepIdx]! 

@@ -200,7 +200,12 @@ export function buildAbletonLiveSetXml(options: ExportAlsOptions): string {
       }
 
       const vel = Math.max(1, Math.min(127, velocities[stepIdx] !== undefined ? velocities[stepIdx] : 100));
-      const gateVal = gates[stepIdx] !== undefined ? Math.max(0.1, Math.min(MAX_NOTE_GATE_STEPS, gates[stepIdx])) : 0.8;
+      /**
+       * ⭐ **The floor stays, the ceiling goes** — for the same reason as the MIDI exporter. `MAX_NOTE_GATE_STEPS`
+       * is the step grid's editing limit; an arrangement states `lengthBeats` with no upper bound, and cutting a
+       * four-bar pad to one bar here would export a file that does not match the render.
+       */
+      const gateVal = gates[stepIdx] !== undefined ? Math.max(0.1, gates[stepIdx]) : 0.8;
 
       let pitchOffset =
         pitches[stepIdx] !== undefined && pitches[stepIdx] !== null
