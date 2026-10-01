@@ -461,8 +461,11 @@ export function applyGenreFxToGraph(
   graph.fxRack.setChorus(fx.rack.chorusEnabled, fx.rack.chorusMix, fx.rack.chorusRate);
   graph.fxRack.setBitcrusher(fx.rack.bitcrusherEnabled, fx.rack.bitDepth);
 
-  graph.reverb.setParams(fx.reverb);
-  graph.delay.setParams(delayParamsAtTempo(fx, playingBpm));
+  // The send buses are optional on the graph (`MasterGraphOptions.sends`), so the genre's send
+  // character is applied only when the buses exist. A graph without them is the measurement
+  // seam's, never the shipped one.
+  graph.reverb?.setParams(fx.reverb);
+  graph.delay?.setParams(delayParamsAtTempo(fx, playingBpm));
 }
 
 /** The delay parameters with a tempo-synced time, when the profile asks for one. */

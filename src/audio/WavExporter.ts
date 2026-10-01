@@ -57,6 +57,38 @@ import { capPlanPolyphony, gs1PatchFor, isGs1RoutingEnabled, planGs1Notes, patch
 import { generateTextureSample } from "./gs1/textureSample";
 import { applyGenreFxToGraph, resolveGenreFx } from "../data/genreFx";
 
+/**
+ * Measurement seam: render the same song with named parts of the graph left out.
+ *
+ * ## Why this exists
+ *
+ * The lane curve says what the whole graph costs as a function of lane count; it cannot say
+ * *which* part of the graph the cost is in. Attribution needs the same song rendered twice with
+ * exactly one part removed, so the difference is a measurement rather than a guess. The four parts
+ * are the ones the plan names: the voices (notes and their GS-1/percussion hosts), the per-track
+ * insert chain ("effects"), the reverb and delay send buses ("reverb"), and the master true-peak
+ * limiter.
+ *
+ * ## Why it cannot change what a user hears
+ *
+ * Every field means "include this part" and defaults to true when absent, so a caller that does
+ * not pass `graphSplit` runs the same branches it ran before this existed and gets the same graph —
+ * the test is `split.x !== false`, never `split.x === true`. Nothing in the app passes it: it is
+ * read only by `scripts/probe_arrangement_audio.mjs` for the graph-split measurement, and
+ * `src/test/graphSplit.test.ts` pins both directions (absent means unchanged, present means the
+ * named part is gone).
+ */
+export interface RenderGraphSplit {
+  /** false = build the graph and schedule no notes or voice hosts at all. */
+  voices?: boolean;
+  /** false = leave the per-track insert chain out; voices connect straight to the fader stage. */
+  effects?: boolean;
+  /** false = leave the reverb and delay send buses and the per-track send taps out. */
+  sends?: boolean;
+  /** false = install no master ceiling, in the graph or as the post-render fallback. */
+  limiter?: boolean;
+}
+
 export interface RenderWavOptions {
   bpm?: number;
   swing?: number;
@@ -153,6 +185,13 @@ export interface RenderWavOptions {
   boundaries?: readonly number[];
   /** Diagnostic: the GS-1 host's output goes straight to the destination, bypassing the master graph entirely. */
   directOut?: boolean;
+  /**
+   * Measurement seam: leave named parts of the graph out of this render. See `RenderGraphSplit`.
+   *
+   * Absent means every part is included, which is the shipped render. It is read by the graph-split
+   * probe and by nothing in the app.
+   */
+  graphSplit?: RenderGraphSplit;
   /**
    * Called once per render with how many GS-1 hosts failed to load after their retries.
    *
@@ -352,6 +391,14 @@ export async function renderPatternOffline(
     )
   );
 
+  // The measurement seam, resolved once. Every field means "include this part", so an absent
+  // option (the shipped render) takes the same branch as an explicit true.
+  const split = options.graphSplit ?? {};
+  const voicesOn = split.voices !== false;
+  const effectsOn = split.effects !== false;
+  const sendsOn = split.sends !== false;
+  const limiterOn = split.limiter !== false;
+
   // E-17 / N-16: the bounce now renders through the SAME master graph as playback —
   // fader → FX rack → loudness trim → true-peak limiter — and, crucially, through the same reverb
   // and delay sends. Previously the exporter had neither sends nor an FX rack, so the
@@ -363,6 +410,9 @@ export async function renderPatternOffline(
     loudnessTrimDb,
     // Diagnostic only; see the note in `createMasterGraph`'s chain wiring.
     bypassFxRack: options.bypassFxRack,
+    // Measurement seam only: the shipped render builds both.
+    sends: sendsOn,
+    limiter: limiterOn,
     // The graph owns the detector bus (A2): the worklet compressor's second input, tapped per lane *before* its duck
     // gain so a deliberate dip is not mistaken for a quiet passage. See `busCompDetectorInput` for why it is not
     // created here.
@@ -386,7 +436,7 @@ export async function renderPatternOffline(
   // `default_bpm`). An unknown/custom genre resolves to null and the graph keeps its
   // defaults, exactly as playback does.
   if (tailGenreFx) applyGenreFxToGraph(graph, tailGenreFx, bpm);
-  if (typeof options.reverbSendHighpassHz === "number") {
+  if (typeof options.reverbSendHighpassHz === "number" && graph.reverb) {
     // Last, on purpose: `applyGenreFxToGraph` writes the genre's own reverb profile.
     graph.reverb.setParams({ sendHighpassHz: options.reverbSendHighpassHz });
   }
@@ -395,9 +445,11 @@ export async function renderPatternOffline(
    *
    * The A/B flag (`--reverb-hpf`) exists so the send shaping can be judged rather than asserted, and the first attempt at that
    * measurement produced two byte-identical files — which is only interpretable if the effective value is visible. This is the
-   * same diagnostic pattern as the GS-1 capture flag.
+   * same diagnostic pattern as the GS-1 capture flag. `null` when the seam left the send buses out.
    */
-  (globalThis as unknown as { __reverbHpfEffective?: number }).__reverbHpfEffective = graph.reverb.getParams().sendHighpassHz;
+  (globalThis as unknown as { __reverbHpfEffective?: number | null }).__reverbHpfEffective = graph.reverb
+    ? graph.reverb.getParams().sendHighpassHz
+    : null;
 
   // V-01: the same seeded generator the live engine uses. `Math.random()` here meant an
   // export never matched the audition it was rendered from, which broke the project's
@@ -414,8 +466,14 @@ export async function renderPatternOffline(
     duckGain: GainNode;
     polarity: GainNode;
     pan: StereoPannerNode;
-    /** E-10: the same pre-fader insert chain the live engine builds. */
-    insert: ChannelStrip;
+    /**
+     * Where every voice and GS-1 host connects: the insert chain's input when the chain is
+     * present, and a unity gain when `graphSplit.effects` left the chain out. A single named entry
+     * point keeps the scheduling loop identical in both graphs.
+     */
+    input: AudioNode;
+    /** E-10: the same pre-fader insert chain the live engine builds, or null under `effects: false`. */
+    insert: ChannelStrip | null;
   }> = [];
   const numTracks = pattern.tracks.length;
   // Hoisted above the strip loop because the send taps below need to know whether the
@@ -427,24 +485,40 @@ export async function renderPatternOffline(
 
   for (let t = 0; t < numTracks; t++) {
     const tState = mixerStates[t] || { mute: false, solo: false, volume: 0.8, pan: 0, sendA: 0, sendB: 0 };
-    // E-10: the bounce gets the same channel strip as playback — high-pass, EQ,
-    // compressor and drive — or the export would be missing the very thing that makes a
-    // genre's tracks sit together. A track with no stored chain takes its role default.
-    const tInsert = new ChannelStrip(
-      ctx,
-      pattern.tracks[t]?.insert ??
-        resolveTrackInsertForGenre(pattern.tracks[t]?.track_id, pattern.genre_id)
-    );
+    /**
+     * E-10: the bounce gets the same channel strip as playback — high-pass, EQ,
+     * compressor and drive — or the export would be missing the very thing that makes a
+     * genre's tracks sit together. A track with no stored chain takes its role default.
+     *
+     * `graphSplit.effects: false` leaves the strip out rather than bypassing it, because the
+     * strip's four filters and its compressor are the cost being attributed; a pass-through keeps
+     * the same entry and exit points for the rest of the graph.
+     */
+    let tInsert: ChannelStrip | null = null;
+    let tStripInput: AudioNode;
+    if (effectsOn) {
+      tInsert = new ChannelStrip(
+        ctx,
+        pattern.tracks[t]?.insert ??
+          resolveTrackInsertForGenre(pattern.tracks[t]?.track_id, pattern.genre_id)
+      );
+      tStripInput = tInsert.input;
+    } else {
+      const bypass = ctx.createGain();
+      bypass.gain.setValueAtTime(1, 0);
+      tStripInput = bypass;
+    }
+    const tStripOutput: AudioNode = tInsert ? tInsert.output : tStripInput;
 
     const tDuckGain = ctx.createGain();
     tDuckGain.gain.setValueAtTime(1, 0);
-    tInsert.output.connect(tDuckGain);
+    tStripOutput.connect(tDuckGain);
 
     // …and the pre-duck tap that feeds the compressor's detector. It sits before `tDuckGain` on purpose and carries
     // the lane's volume, so the detector sees the programme as it would be *without* a sidechain, not as it is.
     const tDetectorTap = ctx.createGain();
     tDetectorTap.gain.setValueAtTime(silenced(tState) ? 0 : Math.max(0, Math.min(2, tState.volume)), 0);
-    tInsert.output.connect(tDetectorTap);
+    tStripOutput.connect(tDetectorTap);
     if (graph.duckDetectorInput) tDetectorTap.connect(graph.duckDetectorInput);
 
     const tGain = ctx.createGain();
@@ -467,22 +541,30 @@ export async function renderPatternOffline(
     const bus = resolveGroupBus(pattern.tracks[t]?.track_id, pattern.tracks[t]?.name);
     tPan.connect(bus === "drum" ? graph.drumBusInput : graph.musicBusInput);
 
-    // Exporter parity for the send buses: the live engine taps post-pan into `sendA`
-    // (reverb) and `sendB` (delay), ramped with `setTargetAtTime`. The same tap point and
-    // the same ramps are used here so a genre's curated sends survive the bounce.
-    const sendA = ctx.createGain();
-    sendA.gain.setValueAtTime(0, 0);
-    sendA.gain.setTargetAtTime(silenced(tState) ? 0 : clamp01(tState.sendA), 0, 0.01);
-    tPan.connect(sendA);
-    sendA.connect(graph.reverb.input);
+    /**
+     * Exporter parity for the send buses: the live engine taps post-pan into `sendA`
+     * (reverb) and `sendB` (delay), ramped with `setTargetAtTime`. The same tap point and
+     * the same ramps are used here so a genre's curated sends survive the bounce.
+     *
+     * Under `graphSplit.sends: false` neither the taps nor the buses exist: a send gain that feeds
+     * nothing is still a node in the graph, and the measurement is meant to remove the send path,
+     * not to mute it.
+     */
+    if (sendsOn && graph.reverb && graph.delay) {
+      const sendA = ctx.createGain();
+      sendA.gain.setValueAtTime(0, 0);
+      sendA.gain.setTargetAtTime(silenced(tState) ? 0 : clamp01(tState.sendA), 0, 0.01);
+      tPan.connect(sendA);
+      sendA.connect(graph.reverb.input);
 
-    const sendB = ctx.createGain();
-    sendB.gain.setValueAtTime(0, 0);
-    sendB.gain.setTargetAtTime(silenced(tState) ? 0 : clamp01(tState.sendB), 0, 0.01);
-    tPan.connect(sendB);
-    sendB.connect(graph.delay.input);
+      const sendB = ctx.createGain();
+      sendB.gain.setValueAtTime(0, 0);
+      sendB.gain.setTargetAtTime(silenced(tState) ? 0 : clamp01(tState.sendB), 0, 0.01);
+      tPan.connect(sendB);
+      sendB.connect(graph.delay.input);
+    }
 
-    trackStrips.push({ gain: tGain, duckGain: tDuckGain, polarity: tPolarity, pan: tPan, insert: tInsert });
+    trackStrips.push({ gain: tGain, duckGain: tDuckGain, polarity: tPolarity, pan: tPan, input: tStripInput, insert: tInsert });
   }
 
   /**
@@ -504,15 +586,19 @@ export async function renderPatternOffline(
    * "this track is handled", those lanes were exported as silence. The probe renders one note the same way an export
    * does; a measured silence sends every routed lane to the native engine, which is a different voice but a file
    * with music in it. `unmeasured` leaves everything as it was.
+   *
+   * Under `graphSplit.voices: false` the probe itself is skipped: it renders a throwaway context
+   * to answer a question about voices, and the variant exists to measure a render with none.
    */
-  const gs1Verdict = isGs1RoutingEnabled() ? await ensureOfflineGs1Capability({ sampleRate: ctx.sampleRate }) : "unmeasured";
+  const gs1Verdict =
+    voicesOn && isGs1RoutingEnabled() ? await ensureOfflineGs1Capability({ sampleRate: ctx.sampleRate }) : "unmeasured";
   const gs1Available = isGs1RoutingEnabled() && gs1Verdict !== "silent";
-  if (!gs1Available && isGs1RoutingEnabled()) {
+  if (!gs1Available && isGs1RoutingEnabled() && voicesOn) {
     console.warn(
       "[render] this browser renders the GS-1 voice silent offline (probe verdict: silent) — chords/lead go to the native engine"
     );
   }
-  if (gs1Available && typeof ctx.audioWorklet?.addModule === "function") {
+  if (voicesOn && gs1Available && typeof ctx.audioWorklet?.addModule === "function") {
     for (let t = 0; t < numTracks; t++) {
       /**
        * A stem render only ever plays its own track, so it must not build hosts for the others.
@@ -610,7 +696,7 @@ export async function renderPatternOffline(
        * static nodes that a static node cannot plausibly produce.
        */
       if (directOut) host.output.connect(ctx.destination);
-      else host.output.connect(trackStrips[t].insert.input);
+      else host.output.connect(trackStrips[t].input);
       gs1Hosts.set(t, host);
     }
   }
@@ -633,8 +719,15 @@ export async function renderPatternOffline(
   // Acoustic Enhancement: Track open hi-hat voices for offline choke group
   const openHiHatVoices: Array<{ gains: GainNode[]; stopTime: number; envelope?: DrumVoiceEnvelope }> = [];
 
-  // Step scheduling loop
-  for (let step = 0; step < totalSteps; step++) {
+  /**
+   * Step scheduling loop.
+   *
+   * `graphSplit.voices: false` is the "graph but no notes" variant: the bound is zero, so every
+   * node above is still built and wired but nothing is ever scheduled into it. That is what makes
+   * the full-minus-no-voices difference the voice path (note synthesis and GS-1 hosts) rather than
+   * the graph's own construction cost.
+   */
+  for (let step = 0; voicesOn && step < totalSteps; step++) {
     const unswungTime = stepTimeAt(step);
 
     pattern.tracks.forEach((track: Track, trackIdx: number) => {
@@ -681,7 +774,7 @@ export async function renderPatternOffline(
       const trackDest =
         (globalThis as unknown as { __noStrip?: boolean }).__noStrip === true
           ? trackStrips[trackIdx].gain
-          : trackStrips[trackIdx].insert.input;
+          : trackStrips[trackIdx].input;
       const trackId = (track.track_id || "").toLowerCase();
       const lowerName = track.name.toLowerCase();
       // Exporter parity: resolve the same per-track instrument the live engine does, so a
@@ -954,8 +1047,11 @@ export async function renderPatternOffline(
 
   // Wait for the limiter module before rendering: an OfflineAudioContext renders in
   // one shot, so a worklet that installed after `startRendering()` would silently
-  // leave the whole bounce on the compressor fallback.
-  const limiterKind = await graph.limiter.ready;
+  // leave the whole bounce on the compressor fallback. Under `graphSplit.limiter: false` there is
+  // no handle to await and the renderer reports `"none"`, which is deliberately not `"fallback"`:
+  // a render with no ceiling must not be described as one with a degraded ceiling.
+  const limiter = graph.limiter;
+  const limiterKind = limiter ? await limiter.ready : "none";
   options.onLimiterKind?.(limiterKind);
 
   const rendered = await ctx.startRendering();
@@ -1033,8 +1129,18 @@ export async function renderPatternOffline(
     return compensated;
   };
 
-  if (limiterKind === "worklet") {
-    return asRequested(compensate(rendered, graph.limiter.latencySamples)) as AudioBuffer;
+  /**
+   * No ceiling at all (`graphSplit.limiter: false`): return the render as it stands, without the
+   * latency trim the limiter's lookahead needs and without the post-render ceiling kernel below.
+   * Both halves of "the limiter" have to be skipped or the variant would still pay for the fallback
+   * kernel and the measurement would attribute it to the graph.
+   */
+  if (limiterKind === "none") {
+    return asRequested(rendered) as AudioBuffer;
+  }
+
+  if (limiter && limiterKind === "worklet") {
+    return asRequested(compensate(rendered, limiter.latencySamples)) as AudioBuffer;
   }
 
   /**

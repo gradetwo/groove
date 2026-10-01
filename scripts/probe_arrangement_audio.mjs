@@ -45,6 +45,22 @@ const only = (argv.find((a) => a.startsWith("--only=")) ?? "").split("=")[1] || 
  */
 const laneCounts = (argv.find((a) => a.startsWith("--lanes=")) ?? "").split("=")[1];
 const laneCount = laneCounts ? Number(laneCounts) : undefined;
+/**
+ * **The graph split, one variant per process, for the same reason the curve is chunked.** A render
+ * of this song has killed the browser on its own, so `measure_graph_split.mjs` asks for one variant
+ * per process with `--only=graphSplit --variant=<name>`, and `--variant` alone (without `--only`)
+ * renders every variant.
+ */
+const variant = (argv.find((a) => a.startsWith("--variant=")) ?? "").split("=")[1] || undefined;
+/**
+ * Renders per variant, with one discarded warm-up before them.
+ *
+ * The existing `renderSplit` block needed three samples and a median because a single reading of
+ * this render disagreed with itself by a factor of seven. The browser here does not always survive
+ * that many renders, so the count is a knob: a variant that dies before it reports is reported as
+ * unmeasured rather than retried silently.
+ */
+const samples = Math.max(1, Number((argv.find((a) => a.startsWith("--samples=")) ?? "--samples=3").split("=")[1]) || 1);
 const genreId = (argv.find((a) => a.startsWith("--genre=")) ?? "--genre=chicago-house").split("=")[1];
 const port = Number((argv.find((a) => a.startsWith("--port=")) ?? "--port=3188").split("=")[1]);
 /**
@@ -106,6 +122,44 @@ const fail = async (message) => {
   process.exit(1);
 };
 
+/**
+ * The lane curve and the graph split, printed in one place so an only-run and a full run say the
+ * same thing. The graph-split print shows `full − variant` when the full variant is in the same
+ * result, and leaves it out otherwise: a chunked run has one variant per process and the difference
+ * belongs to `measure_graph_split.mjs`, which is the only place that can see both numbers.
+ */
+function printLaneCurve(laneCurve) {
+  if (!laneCurve || laneCurve.skipped) return;
+  if (laneCurve.error) {
+    console.log(`   lane curve       : could not measure (${laneCurve.error})`);
+    return;
+  }
+  for (const point of laneCurve.points ?? []) {
+    const heap = point.peakHeapMB === undefined ? "heap not measurable here" : `peak heap sampled ${point.peakHeapMB} MB`;
+    console.log(`   lane curve       : ${point.lanes} lane(s) ${point.seconds}s (${point.frames} frames) · ${heap}`);
+  }
+  if (laneCurve.note) console.log(`                      ${laneCurve.note}`);
+}
+
+function printGraphSplit(data) {
+  if (!data || data.skipped) return;
+  if (data.error) {
+    console.log(`   graph split      : could not measure (${data.error})`);
+    return;
+  }
+  const full = (data.points ?? []).find((point) => point.variant === "full");
+  console.log(
+    `   graph split      : ${data.lanes} lane(s) · ${data.genre} · ${data.song} · ${data.samples} sample(s) per variant`
+  );
+  for (const point of data.points ?? []) {
+    const heap = point.peakHeapMB === undefined ? "heap not measurable here" : `peak heap sampled ${point.peakHeapMB} MB`;
+    const delta =
+      full && point.variant !== "full" ? ` · full − ${point.variant} = ${(full.seconds - point.seconds).toFixed(4)}s` : "";
+    console.log(`                     ${point.variant.padEnd(11)} ${point.seconds}s ${JSON.stringify(point.samples)} · ${heap}${delta}`);
+  }
+  if (data.note) console.log(`                     ${data.note}`);
+}
+
 try {
   await waitForServer();
   const page = await browser.newPage();
@@ -130,7 +184,7 @@ try {
   if (process.env.PROBE_NO_HEAP === "1") await page.addInitScript(() => { window.__probeNoHeap = true; });
   await page.goto(`${base}/__arrangement_probe__.html`, { waitUntil: "domcontentloaded", timeout: 60000 });
 
-  const measured = await page.evaluate(async ({ genreId: id, ramp, only, laneCount }) => {
+  const measured = await page.evaluate(async ({ genreId: id, ramp, only, laneCount, variant, samples }) => {
     const [wav, genresModule, mixModule, formsModule, flattenModule, trackUtils, loudness] = await Promise.all([
       import("/src/audio/WavExporter.ts"),
       import("/src/data/genres/index.ts"),
@@ -309,10 +363,104 @@ const memory = typeof performance !== "undefined" && !window.__probeNoHeap ? per
     }
 
     /**
+     * **The graph split: which part of the whole graph the render time is in.**
+     *
+     * The lane curve answers "what does the whole graph cost as the lane count grows" and cannot
+     * say which part carries it. This renders the same song once per variant with exactly one named
+     * part left out (`RenderWavOptions.graphSplit`) and reports wall clock and sampled peak heap
+     * for each, so the attribution is a difference between two renders rather than a guess.
+     *
+     * **One lane count for every variant, reported with the points.** A difference between two
+     * graphs is only interpretable at one graph size; the lane count is part of the result, not an
+     * assumption behind it. 16 is the default because it is the middle of the curve's range and the
+     * per-variant renders are already the thing that kills a browser here.
+     *
+     * **Three samples and a median, because one sample of this render was already measured
+     * worthless**: the existing `renderSplit` block measured the rack at 26% of the render in one
+     * run and 3.8% in the next, and in the second turning the master stage off made the render
+     * 16 s slower. Every sample is returned beside the median for the same reason. The count is
+     * `--samples`, so a variant can be asked for one reading where the browser will not survive
+     * three — and a variant that dies is reported as unmeasured, never silently retried.
+     */
+    const measureGraphSplit = async () => {
+      try {
+        const splitByVariant = {
+          full: undefined,
+          "no-voices": { voices: false },
+          "no-effects": { effects: false },
+          "no-sends": { sends: false },
+          "no-limiter": { limiter: false },
+        };
+        const names = variant ? [variant] : Object.keys(splitByVariant);
+        const unknown = names.filter((name) => !(name in splitByVariant));
+        if (unknown.length > 0) return { error: `unknown variant(s): ${unknown.join(", ")}` };
+
+        const lanes = laneCount === undefined ? 16 : laneCount;
+        const lane = (index) => ({ track_id: "audio", name: `lane-${index}`, sample: { assetId: "probe-impulse" } });
+        const value = {
+          ...song,
+          id: `graph-split-${lanes}`,
+          clips: { A: { ...clip, tracks: Array.from({ length: lanes }, (_, index) => lane(index)) } },
+          sections: [sections[0]],
+        };
+        const memory = typeof performance !== "undefined" && !window.__probeNoHeap ? performance.memory : undefined;
+        const renderOnce = async (extra) => {
+          let peakHeapBytes = memory ? memory.usedJSHeapSize : undefined;
+          const sampler = memory ? setInterval(() => { peakHeapBytes = Math.max(peakHeapBytes, memory.usedJSHeapSize); }, 10) : undefined;
+          const started = performance.now();
+          const { buffer } = await render(value, extra);
+          const seconds = Number(((performance.now() - started) / 1000).toFixed(4));
+          if (sampler !== undefined) clearInterval(sampler);
+          if (memory) peakHeapBytes = Math.max(peakHeapBytes, memory.usedJSHeapSize);
+          return {
+            seconds,
+            frames: buffer.length,
+            ...(peakHeapBytes === undefined ? {} : { peakHeapMB: Number((peakHeapBytes / (1024 * 1024)).toFixed(1)) }),
+          };
+        };
+        const points = [];
+        for (const name of names) {
+          const split = splitByVariant[name];
+          // Forwarded to Node, so which variant was running when the page died is in the log.
+          console.log(`graph split: rendering ${name} (${lanes} lane(s))`);
+          // One discarded pass first: the flatten curve showed what a cold first reading does to a
+          // timing (132 ms against 3.6 ms).
+          await renderOnce({ graphSplit: split });
+          const readings = [];
+          for (let i = 0; i < samples; i += 1) readings.push(await renderOnce({ graphSplit: split }));
+          const sorted = readings.map((reading) => reading.seconds).sort((a, b) => a - b);
+          const heapReadings = readings.map((reading) => reading.peakHeapMB).filter((value) => value !== undefined);
+          points.push({
+            variant: name,
+            graphSplit: split ?? null,
+            seconds: Number(sorted[Math.floor(sorted.length / 2)].toFixed(4)),
+            samples: readings.map((reading) => reading.seconds),
+            frames: readings[0].frames,
+            ...(heapReadings.length === 0 ? {} : { peakHeapMB: Math.max(...heapReadings), peakHeapMBPerSample: heapReadings }),
+          });
+        }
+        return {
+          lanes,
+          genre: id,
+          song: "the probe's two-bar section with the fixture's lanes",
+          samples,
+          points,
+          note:
+            "wall clock inside the browser, median of the samples with every sample beside it; peak heap is sampled every 10ms, a lower bound, Chromium-only and page-wide rather than the render alone. " +
+            "Each variant renders the same song with one part of `graphSplit` set false; 'full' leaves every part in.",
+        };
+      } catch (error) {
+        return { error: error && error.message ? error.message : String(error) };
+      }
+    };
+
+    /**
      * **The early exit.** With `--only=lane` the curve runs here, before anything else renders, and the result is returned immediately — the failure that motivated this happened during those earlier renders, so the curve must not be behind
      * them. The note about what is measured travels with the data rather than being printed, because a `console.log` inside this evaluate does not reach the run's log.
      */
     if (only === "lane") return { only, renderLaneCurve: await measureLaneCurve() };
+    /** The same early exit for the split, for the same reason: one variant per process. */
+    if (only === "graphSplit") return { only, graphSplit: await measureGraphSplit() };
 
     const withFill = await render(song);
     const control = await render(withoutFill);
@@ -1041,7 +1189,38 @@ const memory = typeof performance !== "undefined" && !window.__probeNoHeap ? per
         })),
       },
     };
-  }, { genreId, ramp: rampPair });
+  }, { genreId, ramp: rampPair, only, laneCount, variant, samples });
+
+  /**
+   * **An `--only` run returns just its own block, so it is printed and the run ends here.**
+   *
+   * This branch is also a repair. The `--json` output used to be the arrangement `summary` alone,
+   * which never contained the measured block — so `measure_lane_curve.mjs` parsed a JSON object
+   * with no `renderLaneCurve` in it and reported every lane count as unmeasured, and the human
+   * path crashed on `measured.fillBars` being undefined because an only-run never built it. The
+   * block that was asked for is now what comes back, in both forms.
+   */
+  if (measured.only) {
+    if (asJson) {
+      /**
+       * **Compact, on one line, because the callers parse a line.** `measure_lane_curve.mjs` looks
+       * for the first line that starts with `{` and parses it; pretty-printed JSON made that line
+       * a bare `{`, which threw and was reported as "could not be measured" for every point. The
+       * full-run summary below stays pretty because only a person reads it.
+       */
+      console.log(JSON.stringify(measured));
+    } else {
+      printLaneCurve(measured.renderLaneCurve);
+      printGraphSplit(measured.graphSplit);
+      if (measured.smoke) {
+        console.log(
+          `   smoke            : ${measured.smoke.seconds}s for ${measured.smoke.frames} frames ` +
+            `(${measured.smoke.channels}ch @ ${measured.smoke.sampleRate} Hz)`
+        );
+      }
+    }
+    process.exit(0);
+  }
 
   /**
    * **Printed here, in Node, because a `console.log` inside `page.evaluate` never reaches this log.**
@@ -1049,16 +1228,12 @@ const memory = typeof performance !== "undefined" && !window.__probeNoHeap ? per
    * Every other block in the probe returns its data and is printed out here; the lane curve was the exception — it logged inside the page, so it produced points, printed nothing, and looked
    * exactly like a block that had never run. A round went into that, and what distinguished the two was checking the run's `headSha` and then `git show`-ing the build's own copy of this
    * file: the block was present at line 449 and silent.
+   *
+   * The block lives at `measured.audio.renderLaneCurve` in a full run and at `measured.renderLaneCurve`
+   * in an only-run; the print used to read only the second, so a full run printed nothing either.
    */
-  const laneCurve = measured.renderLaneCurve;
-  if (laneCurve?.error) console.log(`   lane curve       : could not measure (${laneCurve.error})`);
-  else if (laneCurve?.points) {
-    for (const point of laneCurve.points) {
-      const heap = point.peakHeapMB === undefined ? "heap not measurable here" : `peak heap sampled ${point.peakHeapMB} MB`;
-      console.log(`   lane curve       : ${point.lanes} lane(s) ${point.seconds}s (${point.frames} frames) · ${heap}`);
-    }
-    console.log(`                      ${laneCurve.note}`);
-  }
+  printLaneCurve(measured.renderLaneCurve ?? measured.audio?.renderLaneCurve);
+  printGraphSplit(measured.graphSplit ?? measured.audio?.graphSplit);
 
   // ── the assertions ───────────────────────────────────────────────────────────────────────────────
   if (!measured.fillBars.length) await fail(`the ${genreId} club form produced no fill — the generator found no lane`);

@@ -61,3 +61,36 @@ node scripts/probe_arrangement_audio.mjs --only=lane --lanes=16 --json # 底层�
 **仓库早就知道这个形状。** `manual-verify.yml` 自己写着：159 个曲风的响度重录是分进程跑的，因为"单个浏览器进程在约四十次渲染后耗尽 WASM 预算并自行中止（所以它在笔记本上也从未跑完）"。曲线因此照同样的方式测。
 
 **边界**：这台开发机上拿不到曲线数字本身。它属于 CI 的 `audio` 范围，那里有 `Lane cost curve` 这一步。说"没测到"比编一个数好，而这个项目已经收回两个编出来的数了。
+
+## 图的分割：把一次渲染的成本归到图的各部分（2026-09-30）
+
+车道曲线量的是**整张图**随车道数的成本，它回答不了"成本在图里的哪一部分"。归因只能做差：同一首歌渲染两次，第二次只拿掉一个具名的部分，两次之差就是那个部分。
+
+```
+node scripts/measure_graph_split.mjs --genre=chicago-house          # 五个变体，每个一个进程
+node scripts/measure_graph_split.mjs --variants=full,no-sends --json
+node scripts/probe_arrangement_audio.mjs --only=graphSplit --variant=no-limiter --lanes=16 --json
+```
+
+五个变体，以及 `full − 变体` 的含义：
+
+| 变体 | 拿掉什么 | 这个差是什么的成本 |
+| --- | --- | --- |
+| `full` | 什么都不拿 | 基准 |
+| `no-voices` | 音符：不建 GS-1/打击乐声部，也不调度任何事件，图本身照常搭好 | 声部合成与事件调度的成本 |
+| `no-effects` | 每轨的插入链（HPF / EQ / 压缩 / 驱动，即 `ChannelStrip`） | 轨道插入链的成本 |
+| `no-sends` | 两条送出总线（reverb 与 delay）与每轨的送出分路 | 送出总线本身的成本 |
+| `no-limiter` | 主链的真峰值限幅器，以及渲染后那道同核的兜底限幅 | 限幅的成本 |
+
+"拿掉"是**不建**，不是"关掉"。把送出总线的返回级设成 0，它的节点全都还在图里，于是"去掉送出"的测量仍然在付送出的钱；所以 `no-sends` 下 `reverb`/`delay` 是 `null`，`no-limiter` 下主链直接接到输出。判据在 `src/test/graphSplit.test.ts`，它读的是**图**不是数字：不传 `graphSplit` 与全传 `true` 的节点数逐一相等；传了某个部分为 `false` 时那部分确实不在（`no-sends` 下 `createConvolver` 的调用数是 0，`no-effects` 下每轨正好少了四个 `BiquadFilterNode`）。
+
+**怎么读一个差**：
+
+- 差是**同一次运行内** `full` 减变体的墙钟中位数；跨运行比较没有意义。
+- 每个变体渲染三次（`--samples`，另加一次丢弃的预热），中位数旁边打印全部三次。这条来自实测：单次读数曾把同一个效果机架量成渲染的 26% 与 3.8%，第二次运行里"关掉主链"甚至让渲染慢了 16 秒。**差小于旁边那些样本的离散度时，它不是数。**
+- 堆峰值是每 10 ms 采样的**下界**，只在 Chromium 里有，而且是整页的：它读的是"这个变体少分配了多少"，不是"渲染用了多少内存"。
+- 一个变体没跑完就报"未测到"，不重试；只有全部变体都失败才 exit 非零。
+- 谱面也打印在结果里：本次用的曲风、车道数（默认 16）、以及"探针的两小节歌"。不同车道数的差不是同一个量。
+
+**数字在 CI**：`manual-verify.yml` 的 `audio` 范围里 `Graph split` 那一步，有自己的 `timeout-minutes`（每个变体一个浏览器进程，卡住的浏览器不该占住 runner 一小时）。本机拿不到这些数字，理由与曲线相同（见上面的边界）。所以这一节不写任何数——没测过就不写。
+

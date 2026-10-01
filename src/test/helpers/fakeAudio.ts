@@ -278,6 +278,18 @@ export class FakeAudioGraph {
   createdBufferSources: FakeBufferSourceNode[] = [];
   createdChannelSplitters: FakeChannelSplitterNode[] = [];
   createdChannelMergers: FakeChannelMergerNode[] = [];
+  /**
+   * Convolvers, recorded because the reverb send bus is the only thing in this codebase that
+   * creates one (`ReverbBus`), so its presence or absence is a direct reading of "the send buses
+   * are in the graph" rather than a node count that has to be differenced.
+   */
+  createdConvolvers: FakeConvolverNode[] = [];
+  /**
+   * Compressors, recorded because the master ceiling's fallback is exactly one of them. The graph
+   * builds several others (the glue stages, the bus compressor, one per channel strip), so a test
+   * that reads this has to compare two renders and say what the delta is.
+   */
+  createdCompressors: FakeCompressorNode[] = [];
 
   createGain() {
     const node = new FakeGainNode();
@@ -316,7 +328,9 @@ export class FakeAudioGraph {
     return new FakeWaveShaperNode();
   }
   createConvolver() {
-    return new FakeConvolverNode();
+    const node = new FakeConvolverNode();
+    this.createdConvolvers.push(node);
+    return node;
   }
   /** Recorded so tests can read back the scheduled delay time (see DelayBus/N-14). */
   createdDelays: FakeDelayNode[] = [];
@@ -327,7 +341,9 @@ export class FakeAudioGraph {
     return node;
   }
   createDynamicsCompressor() {
-    return new FakeCompressorNode();
+    const node = new FakeCompressorNode();
+    this.createdCompressors.push(node);
+    return node;
   }
   createAnalyser() {
     return new FakeAnalyserNode();

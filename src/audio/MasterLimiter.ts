@@ -47,8 +47,15 @@
 
 import { applyMasterLimiter } from "./voiceRegistry";
 
-/** Which ceiling is actually in the graph. */
-export type MasterLimiterKind = "worklet" | "fallback";
+/**
+ * Which ceiling is actually in the graph.
+ *
+ * `"none"` is the measurement seam's answer (`MasterGraphOptions.limiter: false`): no ceiling was
+ * installed at all, which is different from the compressor fallback that *is* a ceiling. No shipped
+ * render or live engine reaches it, so every UI comparison against `"fallback"` still means what
+ * it meant.
+ */
+export type MasterLimiterKind = "worklet" | "fallback" | "none";
 
 /** Output true-peak ceiling in dBTP. Keeps the historical −1 dB intent. */
 export const MASTER_LIMITER_CEILING_DB = -1.0;

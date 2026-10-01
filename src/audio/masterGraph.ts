@@ -147,6 +147,26 @@ export interface MasterGraphOptions {
   delay?: Partial<DelayParams>;
   /** Initial master FX rack state. */
   fx?: Partial<EffectsRackState>;
+  /**
+   * Set false to leave both send buses (reverb and delay) out of the graph entirely.
+   *
+   * Measurement tooling, and the reason it has to be "not built" rather than "return level 0":
+   * zeroing a bus's return gain leaves every one of its nodes in the graph, so a measurement that
+   * claims to have removed the sends would still be paying for them. When false the graph returns
+   * `reverb: null` and `delay: null` instead of silenced buses. Absent means both are built, exactly
+   * as before this option existed.
+   */
+  sends?: boolean;
+  /**
+   * Set false to install no master ceiling at all.
+   *
+   * Measurement tooling: the true-peak limiter is a worklet (or the compressor fallback) that sits
+   * on the master path of every block, so "the limiter's share of the render" needs a render without
+   * one. With false the chain ends at the bus compressor (or the makeup gain when that is off too),
+   * `limiter` is `null`, and `limiterKind()` reports `"none"`. Absent means the limiter is built,
+   * exactly as before this option existed.
+   */
+  limiter?: boolean;
 }
 
 export interface MasterGraph {
@@ -177,11 +197,20 @@ export interface MasterGraph {
   readonly musicBusInput: GainNode;
   /** Gain reduction (dB, positive = reducing) currently applied by each glue compressor. */
   glueReductionDb(): { drum: number; music: number };
-  readonly reverb: ReverbBus;
-  /** Delay send bus: tracks' `sendB` connects to `.input`, `.output` is already patched. */
-  readonly delay: DelayBus;
-  /** True-peak lookahead ceiling (or the compressor fallback). */
-  readonly limiter: MasterLimiterHandle;
+  /**
+   * The reverb send bus, or `null` when `MasterGraphOptions.sends` asked for no send buses.
+   *
+   * Nullable rather than a silenced bus: a silenced bus is still a bus in the graph, and the seam
+   * exists to remove the nodes, not to mute them. See the option's own note.
+   */
+  readonly reverb: ReverbBus | null;
+  /** Delay send bus: tracks' `sendB` connects to `.input`, `.output` is already patched. `null` under `sends: false`. */
+  readonly delay: DelayBus | null;
+  /**
+   * True-peak lookahead ceiling (or the compressor fallback), or `null` when
+   * `MasterGraphOptions.limiter` asked for no ceiling at all.
+   */
+  readonly limiter: MasterLimiterHandle | null;
   /** Connect this to `ctx.destination`. */
   readonly output: AudioNode;
   /** Present only when `analysers: true`. */
@@ -341,14 +370,22 @@ export function buildMasterGraph(
   });
   const masterBusComp = busComp.input;
 
-  const reverb = new ReverbBus(ctx, options.reverb ?? DEFAULT_REVERB_PARAMS);
-  const delay = new DelayBus(ctx, options.delay ?? DEFAULT_DELAY_PARAMS);
+  /**
+   * The measurement seam, resolved once: every "absent means today" default lives here rather
+   * than in each branch, so a caller that omits the option gets the shipped graph and a caller
+   * that sets it gets a graph with that part missing.
+   */
+  const sendsEnabled = options.sends !== false;
+  const limiterEnabled = options.limiter !== false;
+
+  const reverb = sendsEnabled ? new ReverbBus(ctx, options.reverb ?? DEFAULT_REVERB_PARAMS) : null;
+  const delay = sendsEnabled ? new DelayBus(ctx, options.delay ?? DEFAULT_DELAY_PARAMS) : null;
 
   // The default ceiling is the internal one (the -1.0 dBTP contract minus the detector
   // margin): the module's own detector under-reads the independent BS.1770 meter by up to
   // 0.12 dB, so targeting the contract exactly shipped files that measured *above* it.
   // See MASTER_LIMITER_DETECTOR_MARGIN_DB.
-  const limiter = createMasterLimiter(ctx, {
+  const limiter = limiterEnabled ? createMasterLimiter(ctx, {
     ceilingDb: options.limiterCeilingDb ?? MASTER_LIMITER_INTERNAL_CEILING_DB,
     /**
      * The limiter is **not** given the detector input, and that is a decision made on measurements rather than a
@@ -374,7 +411,7 @@ export function buildMasterGraph(
     detector: null,
     releaseFastMs: options.limiterReleaseFastMs,
     releaseSlowMs: options.limiterReleaseSlowMs,
-  });
+  }) : null;
 
   /**
    * E-11 — group buses with glue compression.
@@ -492,27 +529,32 @@ export function buildMasterGraph(
     fxRack.outputNode.connect(loudnessTrimGain);
   }
   loudnessTrimGain.connect(masterMakeupGain);
-  if (busCompEnabled) {
-    masterMakeupGain.connect(masterBusComp);
-    busComp.output.connect(limiter.input);
-  } else {
-    masterMakeupGain.connect(limiter.input);
-  }
-  limiter.output.connect(analyser ?? ctx.destination);
+  if (busCompEnabled) masterMakeupGain.connect(masterBusComp);
+  /**
+   * Where the master chain ends: the bus compressor when it is on, the makeup gain otherwise, and
+   * then either the ceiling or the output. Both `limiter: false` and `sends: false` are handled by
+   * choosing the tail here rather than by building a node and disconnecting it: the seam's claim is
+   * that the graph does not contain the omitted part, and a built-then-disconnected node is still
+   * in it.
+   */
+  const chainTail: AudioNode = busCompEnabled ? busComp.output : masterMakeupGain;
+  const masterOut: AudioNode = limiter ? limiter.output : chainTail;
+  if (limiter) chainTail.connect(limiter.input);
+  masterOut.connect(analyser ?? ctx.destination);
 
   if (analyser) {
     analyser.connect(ctx.destination);
-    if (masterAnalyser) limiter.output.connect(masterAnalyser);
+    if (masterAnalyser) masterOut.connect(masterAnalyser);
     if (channelSplitter && analyserL && analyserR) {
-      limiter.output.connect(channelSplitter);
+      masterOut.connect(channelSplitter);
       channelSplitter.connect(analyserL, 0);
       channelSplitter.connect(analyserR, 1);
     }
   }
 
   // Bus returns sum into the fader, exactly as the live engine did before this refactor.
-  reverb.output.connect(masterGain);
-  delay.output.connect(masterGain);
+  reverb?.output.connect(masterGain);
+  delay?.output.connect(masterGain);
 
   return {
     input: masterGain,
@@ -558,17 +600,18 @@ export function buildMasterGraph(
     busCompressorKind: () => busComp.kind(),
     duckDetectorInput: detectorBus,
     limiterKind() {
-      return limiter.kind;
+      // `"none"` is the seam's answer, not a fallback: see the option and the kind's own note.
+      return limiter ? limiter.kind : "none";
     },
     limiterLatencySeconds() {
-      return limiter.latencySeconds;
+      return limiter ? limiter.latencySeconds : 0;
     },
     dispose() {
       try {
-        reverb.dispose();
-        delay.dispose();
+        reverb?.dispose();
+        delay?.dispose();
         fxRack.destroy();
-        limiter.dispose();
+        limiter?.dispose();
       } catch {
         /* teardown must never throw */
       }

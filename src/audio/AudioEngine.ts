@@ -703,16 +703,21 @@ export class AudioEngine {
 
       const sendA = this.ctx.createGain();
       sendA.gain.setValueAtTime(0, this.ctx.currentTime);
-      if (this.masterGraph) {
+      // The send buses are optional on the shared graph (`MasterGraphOptions.sends`, measurement
+      // tooling only); the live engine always builds them, so this guard never turns a send off
+      // on a user's behalf — it only keeps the engine honest about the graph it was handed.
+      const reverbBus = this.masterGraph?.reverb;
+      if (reverbBus) {
         sendTap.connect(sendA);
-        sendA.connect(this.masterGraph.reverb.input);
+        sendA.connect(reverbBus.input);
       }
 
       const sendB = this.ctx.createGain();
       sendB.gain.setValueAtTime(0, this.ctx.currentTime);
-      if (this.masterGraph) {
+      const delayBus = this.masterGraph?.delay;
+      if (delayBus) {
         sendTap.connect(sendB);
-        sendB.connect(this.masterGraph.delay.input);
+        sendB.connect(delayBus.input);
       }
 
       this.trackStrips.push({
@@ -1015,7 +1020,7 @@ export class AudioEngine {
     this.bpm = Math.max(30, Math.min(300, bpm));
     // A tempo-synced delay must follow the tempo, or a genre's dotted-eighth throw drifts
     // off the beat the moment the user nudges the BPM.
-    if (this.appliedGenreFx?.delayDivision && this.masterGraph) {
+    if (this.appliedGenreFx?.delayDivision && this.masterGraph?.delay) {
       this.masterGraph.delay.setParams(delayParamsAtTempo(this.appliedGenreFx, this.bpm));
     }
     ecosystemBus.publishClockSync(this.bpm, this.isPlaying, this.currentStep);

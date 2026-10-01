@@ -208,6 +208,20 @@ jobs:
         timeout-minutes: 30
         run: node scripts/measure_lane_curve.mjs --genre=chicago-house
 
+      # The graph split: the lane curve says what the whole graph costs as the lane count grows, and
+      # this says which part of one graph the cost is in. It renders the same song once per variant --
+      # full, without voices, without the per-track insert chains, without the send buses, without the
+      # master limiter -- so the attribution is a difference between two renders rather than a guess.
+      # One variant per fresh browser process, for the same reason the curve is chunked: an offline
+      # render here can kill a browser process on its own.
+      - name: Graph split (voices, effects, sends, limiter; one process each)
+        if: inputs.scope == 'audio' || inputs.scope == 'all'
+        # Its own bound, and longer than the curve's: five variants, each with a discarded warm-up
+        # plus three samples, is more renders than four one-render curve points. A wedged browser must
+        # still not hold the runner for an hour.
+        timeout-minutes: 45
+        run: node scripts/measure_graph_split.mjs --genre=chicago-house
+
 
       # P0.9 — the 159-genre trim re-record. It runs **chunked, across processes**: a single browser process exhausts the
       # WASM budget after roughly forty renders and the run aborts on its own sentinel (which is why it never completed on a
