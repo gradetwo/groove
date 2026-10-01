@@ -549,3 +549,15 @@ are the places where it is more accurate than the evaluations that came before i
 实现走的是探针已经证明可行的那条路：页面里导入应用自己的目录、加载器与图模块，用**应用播放时用的同一个 `loadNote`** 解析，在 `OfflineAudioContext` 里起音并渲染。**没有任何一处重新实现解析。**
 
 一条刻意的报告规则：**渲染成静音是结果而不是失败**，而且它与解析结果一起返回——**有 `samplePath` 的静音是增益问题，没有 `samplePath` 的静音是库根本没解析出来**。把两者报成一样，这个工具对最需要它的那种情况就毫无用处。
+
+### 音色设计：报告、实测与一条已裁定的缺口（2026-10-01）
+
+一位日常使用 MCP 的作曲者报告"GS-1 引擎能力未暴露到工具面，没有 `gs1.patch` / 振荡器 / 滤波 / 包络参数，只能切到 synth repo 另渲"。对着代码逐句验过之后，**结论是缺口真实，但它已经被裁定过**，而且报告里"完全没有写音色的工具"这句不完全准确：
+
+* **引擎**确实是可打补丁的 GS-1（`mcp/render/worker.ts:4`），参数面是声明式的 408 个 `AudioParam`（`vendor/gs1/src/audio/params.ts:1453` 的 `PARAM_SPECS`），host 早就有 `setParam` / `setPatch`（`src/audio/gs1/Gs1Host.ts:184,188`）；
+* 但参数只能来自一张**手写的固定预设表**（`src/data/gs1Patches.ts:100`、`:816`），路由只由 `role` + `instrument` 名 + `genreId` 决定（`src/audio/gs1/gs1Tracks.ts:138`、`WavExporter.ts:537`），**14 个具名预设、约 30 个乐器名**；
+* **逐参数写入真的没有，也没有地方放它**：`TrackV2` 无补丁字段（`src/types/arrangementV2.ts:16`），应用**自己没有**补丁编辑界面（`Gs1Patch` 零个 `.tsx` 引用），整个 `mcp/` 树零命中；
+* 但**预设选择已经能过线**，只经由 `patternSchema` 的 `instrument` 字段与 `.passthrough()`（`mcp/registry.ts:128,142`）+ `render_audio` 的 `pattern` 参数（`:1848`）—— 未文档化、未校验，打错名字会**静默回落到原生引擎**；
+* 帮助文案里那句"或一键导出为 **GS1 开放协议补丁**"（`src/i18n/locales/help.ts:74`）**是假声明**：导出只有 MIDI/ALS/Groove/WAV/MP3/Stems 六项。
+
+`sound` 命名空间（`set_synth_params` / `set_track_preset`）的缺口与第一步早已写在 [`Z2_ADJUDICATION.md`](Z2_ADJUDICATION.md) §5.4（`:144`）与 §5.3 第 1 条（`:114`）：**第一步是有限预设集合，逐参数明确不做**。本次调查补上了意外旁路、假声明与成本理由，全文见 [`GS1_PATCH_SURFACE.md`](GS1_PATCH_SURFACE.md)。**本次只记录，不实施**（逐参数需要新补丁模型；预设选择那一步需要一个合法名字集合的产品决定）。
