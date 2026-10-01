@@ -13,6 +13,7 @@
  */
 import type { SampleAsset } from "./sampleCatalogue";
 import { catalogueFromManifestText } from "./sampleCatalogue";
+import { storedUserLibraries } from "./userLibraryStore";
 
 export interface CatalogueRuntime {
   /** The assets resolved so far — empty until `load` succeeds. */
@@ -59,7 +60,19 @@ export function createCatalogueRuntime(options: CatalogueRuntimeOptions = {}): C
           problems = [`manifest: ${response.status} from ${manifestUrl}`];
           return { assets: [], problems: [...problems] };
         }
-        const parsed = catalogueFromManifestText(await response.text(), root);
+        /**
+         * ⭐ **The creator's own libraries join the catalogue here, and this is the only line that does it.**
+         *
+         * They are read from `localStorage` and handed to the same `catalogueFromManifestText` the MCP surface
+         * uses, which merges them **before** `sampleAssetsFromManifest` runs `withProgramIds`. That position is
+         * what keeps the promise the whole feature rests on: one place makes asset ids, one resolver turns a
+         * note into a region, and a library someone added is subject to both rather than being a second kind of
+         * instrument. Nothing downstream needs to know the library came from a person.
+         *
+         * Read at load rather than cached at module scope, so registering a library takes effect on the next
+         * catalogue build without a reload of the module graph.
+         */
+        const parsed = catalogueFromManifestText(await response.text(), root, storedUserLibraries());
         assets = parsed.assets;
         problems = parsed.problems;
         ready = true;
