@@ -105,7 +105,7 @@ describe("creating an arrangement", () => {
    * decision and not taken here. What is taken is the silence. Both directions are asserted: a column with three notes
    * is reported with the kept and dropped pitches, and a column with one is not reported at all.
    */
-  it("names a step column where a chord loses notes, without changing how the chord renders", () => {
+  it("does not report a chord as lost, because a stack column now reaches the lane", () => {
     const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
     const track = summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).tracks[0]!;
     addMcpTrackNotes(arrangementId, track.id, [
@@ -113,12 +113,12 @@ describe("creating an arrangement", () => {
       { pitch: 64, startBeats: 0, lengthBeats: 1, velocity: 100 },
       { pitch: 67, startBeats: 0, lengthBeats: 1, velocity: 100 },
     ]);
+    // ⭐ The owner's decision took the other half: the lane plays the whole stack, so nothing is dropped and
+    // no problem may say otherwise. This is the mirror of the criterion that used to stand here.
     const chord = summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).problems.find((problem) =>
       /step 0/.test(problem)
     );
-    expect(chord).toBeTruthy();
-    expect(chord).toContain("keeps 60");
-    expect(chord).toContain("drops 64, 67");
+    expect(chord).toBeUndefined();
     // The pitches the model still holds are unchanged: this reports, it does not edit or re-voice the chord.
     expect(summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).tracks[0]!.notes).toHaveLength(3);
 

@@ -17,7 +17,7 @@
  */
 import type { SequencerPattern, SequencerTrack } from "../types/genre";
 import type { ArrangementV2, NoteEvent, TrackV2 } from "../types/arrangementV2";
-import { STEPS_PER_BAR, STEP_BEATS, stepsFromNotes, stepCountFor, stepsPerBarFor } from "./noteEvents";
+import { STEPS_PER_BAR, STEP_BEATS, stepsFromNotes, stackFromNotes, stepCountFor, stepsPerBarFor } from "./noteEvents";
 import { flattenSong } from "./songFlatten";
 import type { Song } from "../types/song";
 
@@ -99,6 +99,16 @@ export function compileArrangementToLanes(arrangement: ArrangementV2, notes: Not
     // The arrangement's stated length and the notes' reach, whichever is longer — see `stepCountFor`.
     const stepCount = stepCountFor(notesForTrack, arrangement.bars, stepsPerBarFor(arrangement.timeSignature));
     const { steps, pitches } = stepsFromNotes(notesForTrack, stepCount);
+    /**
+     * ⭐ **The chord stack travels too, and that is what makes an arrangement's chord audible.**
+     *
+     * `stepsFromNotes` keeps one pitch per column because its `StepView.pitches` is `number[]`. The pattern
+     * model's own `pitches` is a stack, and the offline sample lane reads the flattened `pitch`, so a chord
+     * written into an arrangement reached the lane as its lowest note alone — audible, and reported, but not
+     * the chord. `stackFromNotes` uses the same rounding, so the two cannot disagree about which column a note
+     * belongs to; this is written conditionally so a lane with no chords keeps exactly the shape it had.
+     */
+    const stack = stackFromNotes(notesForTrack, stepCount);
     // The sampler lane's note lengths travel with it; see `samplerGateFromNotes` for why this is the lane that needs them and a gate-less lane keeps the default.
     const samplerGate = trackId === "audio" ? samplerGateFromNotes(notesForTrack, stepCount) : null;
     compiled.push({
@@ -112,6 +122,7 @@ export function compileArrangementToLanes(arrangement: ArrangementV2, notes: Not
         steps,
         // Only written when something has a pitch, so a lane with no notes keeps the shape it had.
         ...(pitches.some((value) => value !== 0) ? { pitch: pitches } : {}),
+        ...(stack.some((column) => column !== null) ? { pitches: stack } : {}),
         ...(samplerGate ? { gate: samplerGate } : {}),
         ...(track.sample ? { sample: { assetId: track.sample.assetId } } : {}),
         ...(track.fromLaneId ? { laneId: track.fromLaneId } : {}),

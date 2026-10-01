@@ -165,11 +165,24 @@ function noteSeconds(track: SequencerTrack, step: number, timing: { lengthAt: (s
   return stepDuration(track, step) * timing.lengthAt(step);
 }
 
-/** The steps a note actually starts on, with the pitch it carries. A step with no pitch is not a note. */
+/**
+ * The steps a note actually starts on, with the pitches they carry. A step with no pitch is not a note.
+ *
+ * ⭐ **A step can carry a chord, and until this read the stack it could not.** The pattern model keeps
+ * `pitches` as an array per step — the shape `AbletonExporter`, `MidiExporter`, `chordVoicing` and `genreMid`
+ * all read — while this lane was reading the flattened singular `pitch`, so a column with three notes started
+ * one voice and the other two were silent. The stack is preferred where it exists and the singular field stays
+ * the fallback, so every pattern written before this keeps starting exactly the voices it did.
+ */
 function pitchedSteps(track: SequencerTrack): Array<{ step: number; pitch: number }> {
   const notes: Array<{ step: number; pitch: number }> = [];
   (track.steps ?? []).forEach((value, step) => {
     if (!value) return;
+    const stack = track.pitches?.[step];
+    if (Array.isArray(stack) && stack.length > 0) {
+      for (const pitch of stack) if (typeof pitch === "number" && pitch > 0) notes.push({ step, pitch });
+      return;
+    }
     const pitch = track.pitch?.[step];
     if (typeof pitch === "number" && pitch > 0) notes.push({ step, pitch });
   });

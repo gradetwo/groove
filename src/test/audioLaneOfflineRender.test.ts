@@ -152,6 +152,40 @@ describe("an arrangement's audio lane in the offline render", () => {
     expect(secondNoteEnergy).toBeGreaterThan(0);
   });
 
+  it("starts one voice per note when a column holds a chord, because the stack reaches the lane", async () => {
+    /**
+     * ⭐ **The chord an arrangement used to lose.** `stepsFromNotes` keeps one pitch per column — its `StepView`
+     * is `number[]` — and the lane read the flattened singular `pitch`, so three notes written on beat 0
+     * started one voice (the lowest) and the other two were silent. This pins the whole chain: the compiled
+     * track carries the stack, and the lane starts every note in it.
+     */
+    const arrangement = samplerArrangement("probe-kit");
+    const pattern = compileArrangementToPattern(arrangement, {
+      t1: [
+        { pitch: 60, startBeats: 0, lengthBeats: 1, velocity: 100 },
+        { pitch: 64, startBeats: 0, lengthBeats: 1, velocity: 100 },
+        { pitch: 67, startBeats: 0, lengthBeats: 1, velocity: 100 },
+      ],
+    });
+
+    // The stack is in the artifact, not only in the planner — every other consumer of a pattern reads `pitches`.
+    expect(pattern.tracks[0]!.pitches?.[0]).toEqual([60, 64, 67]);
+
+    const { loader, notes } = fakeLoader();
+    const mix = summingSink(SAMPLE_RATE * 2);
+    const report = await scheduleOfflineAudioLanes({ pattern, catalogue: [instrumentAsset], loader, sink: mix.sink });
+
+    expect(notes).toEqual([
+      { assetId: "probe-kit", pitch: 60 },
+      { assetId: "probe-kit", pitch: 64 },
+      { assetId: "probe-kit", pitch: 67 },
+    ]);
+    expect(report.events).toBe(3);
+    expect(report.problems).toEqual([]);
+    // A chord is notes that sound **together**, so all three start on the same frame.
+    expect(mix.starts.map((start) => start.atFrame)).toEqual([0, 0, 0]);
+  });
+
   it("applies the lane's own gain from the arrangement model, measurably", async () => {
     const gainDb = -6.0206; // a linear 0.5, so the energy must fall to a quarter of unity
     const arrangement = samplerArrangement("probe-impulse", gainDb);

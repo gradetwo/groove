@@ -101,7 +101,19 @@ export interface CollapsedNoteColumn {
  * `stepCount` are ignored here for the same reason the projection ignores them: they are a length problem, not a
  * collapse.
  */
-export function collapsedNoteColumns(notes: readonly NoteEvent[], stepCount: number): CollapsedNoteColumn[] {
+/**
+ * ⭐ **The chord stack a step grid has been throwing away** — one entry per step, an array of every pitch
+ * written there, or `null` where there is none.
+ *
+ * `stepsFromNotes` keeps **one** pitch per column because `StepView.pitches` is `number[]`; the pattern model's
+ * own `pitches` is `(number[] | null)[]`, a stack, and every other consumer of a pattern reads that
+ * (`AbletonExporter`, `MidiExporter`, `chordVoicing`, `genreMid`). That mismatch is why an arrangement's chord
+ * reached an offline lane as its lowest note.
+ *
+ * The rounding is the **same** `Math.round(startBeats / STEP_BEATS)` `stepsFromNotes` uses, and
+ * `collapsedNoteColumns` now calls this rather than repeating it — one definition, per this module's own rule.
+ */
+export function stackFromNotes(notes: readonly NoteEvent[], stepCount: number): (number[] | null)[] {
   const stacks = new Map<number, number[]>();
   for (const note of notes) {
     const index = Math.round(note.startBeats / STEP_BEATS);
@@ -110,6 +122,17 @@ export function collapsedNoteColumns(notes: readonly NoteEvent[], stepCount: num
     if (stack) stack.push(note.pitch);
     else stacks.set(index, [note.pitch]);
   }
+  return Array.from({ length: stepCount }, (_, step) => {
+    const stack = stacks.get(step);
+    return stack && stack.length > 0 ? stack : null;
+  });
+}
+
+export function collapsedNoteColumns(notes: readonly NoteEvent[], stepCount: number): CollapsedNoteColumn[] {
+  const stacks = new Map<number, number[]>();
+  stackFromNotes(notes, stepCount).forEach((stack, step) => {
+    if (stack && stack.length > 0) stacks.set(step, stack);
+  });
 
   const columns: CollapsedNoteColumn[] = [];
   for (const step of [...stacks.keys()].sort((a, b) => a - b)) {

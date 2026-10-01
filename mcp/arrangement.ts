@@ -9,7 +9,7 @@
  *
  * The map is deliberately not persisted, exactly as the song map is not: the application owns projects, and this is a scratchpad for one session.
  */
-import { collapsedNoteColumns, stepCountFor, stepsPerBarFor } from "../src/data/noteEvents";
+import { stepCountFor, stepsPerBarFor } from "../src/data/noteEvents";
 import { toMusicXml } from "../src/data/musicxml";
 import { fromMusicXml, fromMusicXmlBytes } from "../src/data/musicxmlImport";
 import type { ImportedPart } from "../src/data/musicxmlImport";
@@ -181,18 +181,21 @@ export function summariseArrangement(arrangementId: string, arrangement: Arrange
      * sampler with no instrument. Deletion test: remove this branch and the criterion in
      * `src/test/mcpArrangement.test.ts` goes red.
      */
-    const notesForTrack = arrangement.notesByTrack?.[track.id] ?? [];
-    const columns = collapsedNoteColumns(
-      notesForTrack,
-      stepCountFor(notesForTrack, arrangement.bars, stepsPerBarFor(arrangement.timeSignature))
-    );
-    if (columns.length > 0) {
-      const first = columns[0]!;
-      problems.push(
-        `"${track.name}" puts ${first.notes} notes in step ${first.step} and a step column keeps one pitch (keeps ${first.keptPitch}, drops ${first.droppedPitches.join(", ") || "a duplicate"})` +
-          `${columns.length > 1 ? `; ${columns.length} such column(s) in all` : ""} — the render plays one note there`
-      );
-    }
+    /**
+     * ⭐ **The notice that used to stand here is gone, because the loss it named is gone.**
+     *
+     * It read "a step column keeps one pitch … the render plays one note there", which was true while the
+     * offline lane read the flattened singular `pitch`: `stepsFromNotes` keeps the lowest, so a chord reached
+     * the lane as one note. The owner's standing instruction is that anything which helps what the music sounds
+     * like is worth doing, so the lane now reads the pattern's own chord stack and starts every note in it —
+     * `arrangementCompile` carries the stack and `pitchedSteps` prefers it. Reporting a column as lost after
+     * that would be a false report, which is its own defect.
+     *
+     * The guard moved to where the behaviour lives: `src/test/audioLaneOfflineRender.test.ts` asserts that a
+     * column holding three notes starts three voices on the same frame, so reverting the stack turns it red.
+     * `collapsedNoteColumns` stays in `noteEvents` — its meaning did not change — for whoever needs the
+     * detector again.
+     */
   }
   const allNotes = Object.values(arrangement.notesByTrack ?? {}).flatMap((notes) => notes ?? []);
   return {
