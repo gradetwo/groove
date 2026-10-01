@@ -245,6 +245,33 @@ kick 的默认 insert 就带压缩（`src/data/trackInsert.ts:162-180`：`compEn
 
 这条缺陷是采用无头路径的阻断项，也是判据探针必须先拒绝静音渲染、并且要求每个宿主先复现自己的原因。
 
+#### 候选 5b：复现、计数与成因（追加）
+
+工具：`scripts/probe_render_repeats.ts`（同一进程内重复跑真的 `renderPatternOffline`，给出分母与耗时）。
+
+**触发条件是并发，不是渲染序列。** 同一进程内**串行**渲染 64 次（24 次 44.1 kHz 立体声 + 32 次 8 kHz 单声道 + 8 次），**0 次静音**。把 8 次渲染同时放进一个进程（`Promise.all`）后，48 次里 **2 次静音（2/48，4.2%）**，两次都落在**每个进程的 round 0**，即那个既跑 GS-1 离线能力探针（一个一次性的 0.25 s 渲染）又跑其余 7 个渲染的一轮。另一组 6 路并发 24 次里 1 次静音（1/24），同样是 round 0。结论：**静音与"同时有多少渲染在飞"相关，与采样率、通道数、GS-1 开关无关**——它偏爱 GS-1 关只是因为 GS-1 关时图上仍有 2 个 worklet（limiter + bus comp）而 GS-1 开时多出的 GS-1 worklet 让竞争更慢，不是 GS-1 本身。
+
+**具名到哪里：母带链里那两个异步换装的 worklet。** 用 `AudioWorkletNode` 包装器给每次渲染记下真正用上的限幅器（`onLimiterKind`），静音那次报 `limiter=worklet`，同时 `processorerror` 一次都没有。也就是说：限幅器 worklet **已经装好并自报在位**，音频仍然全零。这与 `createMasterLimiter` / `createBusCompressor` 的换装方式一致——两者都先在 `input`/`output` 之间挂 `DynamicsCompressor`，worklet 模块加载完成后再 `disconnect` 它、把 worklet 接进去，而 `renderPatternOffline` 只 `await graph.limiter.ready`，**从未 await `busComp.ready`**（那条 `ready` 没有被 `MasterGraph` 接口暴露出来）。并发下两条 `addModule`/换装彼此错开，图上就存在一个"信号要经过的那个节点还没被换好"的窗口。
+
+**根因尚未二次确认到单一原语，但不再需要在探针里复现它**：静音是宿主的失败渲染，渲染器自己必须能识别。
+
+**排除（下一个读者不必再试）：**
+
+| 候选 | 实测 |
+| --- | --- |
+| 裸宿主（无项目代码）：1 个振荡器 → gain → destination，60 次 | 0/60 静音，14.3 ms/次 |
+| 同一个真实 `limiterWorklet.js` 挂进裸图（无换装），30 次 | 0/30 静音，3504 ms/次 |
+| 两个上下文同时渲染（裸图 + 真 worklet） | 0/12 静音 |
+| 真 worklet 的 `processorerror` | 静音那次 0 次触发 |
+| 限幅器模块加载失败导致回退 | 静音那次 `limiter=worklet`，不是回退；回退另有一次独立出现，非静音 |
+| 顺序渲染序列（同进程 64 次） | 0/64 静音 |
+
+**产品级处置（本次改动）**：`src/audio/renderSilence.ts` 的 `bufferHasAudio` 按 −120 dBFS 判"整段无声"；`renderPatternOffline` 现在是 `renderPatternOfflineGuarded` 的包装：静音即重试（`RENDER_SILENCE_ATTEMPTS = 4`），重试恢复时把问题写进 `RenderWavOptions.onProblems`；四次都静音就**抛错**而不是把零缓冲当成功交出去。`mcp/render/worker.ts` 把 `problems` 带到 `render_audio` 的回复里。探针的"拒给静音打分/退出码 2"与"自一致性 0.01 dB 闸门"原样保留——那是仪器有效性，这里是产品答复。
+
+**判据是三态，不是二态**（与 `13da133` 的音频 lane 合并时被迫想清楚的）：有声；**有解释的静音**（pattern 里没有任何会发声的东西，或每个音频 lane 都已被具名为不可播放——渲染器自己记下这个判定，理由已经在 `OfflineAudioLaneReport.problems` 里）；**没人解释的静音**（有内容被排入却整段无声，这才是宿主缺陷，才重试并最终抛错）。第三态是这次修复的对象；第二态如果也抛错，就会用一个更差的答案（"宿主返回了静音渲染"）替换掉一个具名的、可行动的理由（`no sample "probe-impulse"`），所以必须分开。判定用的是**渲染器观测到的事实**（是否有任何一条轨在这一步排入了发声），不是对 pattern 的推断。
+
+
+
 ### 仍然没有具名的
 
 1. kick 压缩关掉之后剩下的约 0.495 LU / 约 0.8 dB/段。候选是振荡器带限那一项的贡献、其它轨各自的压缩器、以及母带 glue 与限幅器。

@@ -59,6 +59,7 @@ import { scheduleOfflineAudioLanes, isAudioLane, type OfflineAudioLaneReport } f
 import { browserSampleLoader } from "./browserSampleGraph";
 import { startSamplerNote } from "./samplerVoice";
 import { SAMPLE_CATALOGUE, type SampleAsset } from "../data/sampleCatalogue";
+import { bufferHasAudio, type ChannelDataBuffer } from "./renderSilence";
 
 export interface RenderWavOptions {
   bpm?: number;
@@ -195,6 +196,19 @@ export interface RenderWavOptions {
    * instrument in silence, which is the defect this whole surface exists to close.
    */
   onGs1PatchProblems?: (problems: readonly string[]) => void;
+  /**
+   * Anything about this render the caller has to know, in the same shape `mcp/arrangement.ts` uses for an
+   * unresolvable lane: a plain sentence naming what happened.
+   *
+   * **Two different causes feed this list, and neither replaces the other.** The first is the host: a render can
+   * come back with the correct frame count and **no samples in it**, and this says so when a retry recovered one
+   * (`LUFS = -Infinity` used to travel out as a measurement instead, and the file was written as a successful
+   * render of silence — `docs/HEADLESS_CORE_PLAN.md` §6). The second is the sample mirror: an audio lane whose
+   * fetch failed on a missing CORS header used to surface as a bare "Failed to fetch", and this carries the
+   * transport's own diagnosis of that (`src/audio/transportDiagnostic.ts`). A caller that sees one entry should
+   * read what it says rather than assume which cause it is.
+   */
+  onProblems?: (problems: readonly string[]) => void;
 }
 
 /**
@@ -324,11 +338,131 @@ function midiToFreq(midiNote: number | null | undefined, fallback = 60): number 
 }
 
 /**
+ * How many attempts a render gets before a silent result is treated as the answer.
+ *
+ * The failure this retries is the host's, not the pattern's: on `node-web-audio-api@2.2.0` a render can return a
+ * buffer of the correct length with **nothing in it** (`docs/HEADLESS_CORE_PLAN.md` §6), and other renders in the
+ * same process are fine, so a second attempt is the one most likely to succeed — the same reasoning as
+ * `GS1_HOST_LOAD_ATTEMPTS` above. Four, not two, because the event is rare enough that a single retry leaves a
+ * measurable residue, and a silent render costs nothing but time (there is no audio to keep).
+ */
+export const RENDER_SILENCE_ATTEMPTS = 4;
+
+/**
+ * Whether this render is allowed to produce a silent buffer, and why — the renderer's own verdict on its silence.
+ *
+ * A silence guard that only asked "are there samples?" would be wrong in one reachable case, and it is
+ * `13da133`'s audio-lane work that makes it reachable: a pattern whose only sound is an audio lane, with a sample
+ * that could not be resolved, is **supposed** to render silence — and the lane plan already states which lane and
+ * why (`OfflineAudioLaneReport.problems`). Refusing that buffer would replace a named, actionable reason
+ * ("no sample \"probe-impulse\" in the catalogue") with "the host returned a silent render", which is a worse
+ * answer and the exact opposite of what the lane report exists for.
+ *
+ * So the guard has three outcomes, not two: audio; silence that something has *explained*; and silence nothing
+ * explained, which is the host defect and gets retried and then refused.
+ */
+export interface SilenceContext {
+  /** True when the render had no sound source that could have produced audio at all. */
+  expectSilence: boolean;
+  /** The explanation to carry in the problem text, when `expectSilence` is true. */
+  reason?: string;
+}
+
+/**
+ * A render, with the one failure that cannot be told from a quiet passage by any number: **no samples**.
+ *
+ * `renderPatternOfflineOnce` is the whole renderer; this is the thin seam that asks whether it produced any sound,
+ * retries when it did not, and says so through `problems`. It is separate so the decision is testable with an
+ * injected render function instead of a host that fails at random. `silenceContext` is asked **after** a silent
+ * render only, so a healthy render never pays for the question — and it is a function because the answer (did every
+ * audio lane fail?) is not known until the render has planned its lanes.
+ */
+export async function renderPatternOfflineGuarded<B extends ChannelDataBuffer>(
+  renderOnce: () => Promise<B>,
+  problems: string[] = [],
+  attempts: number = RENDER_SILENCE_ATTEMPTS,
+  getSilenceContext?: () => SilenceContext | null
+): Promise<B> {
+  const limit = Math.max(1, Math.floor(attempts));
+  let buffer: B | null = null;
+  for (let attempt = 1; attempt <= limit; attempt += 1) {
+    buffer = await renderOnce();
+    if (bufferHasAudio(buffer)) return buffer;
+    /**
+     * Silence that the render itself explained is the answer, not a failure.
+     *
+     * Asked on the first silent attempt, before any retry: a host that failed is silent for no stated reason, while
+     * an unresolvable lane is silent *and* named. Retrying the latter would render the same nothing four times.
+     */
+    const verdict = getSilenceContext?.();
+    if (verdict?.expectSilence) {
+      problems.push(
+        `the render is silent because it had no sound source: ${verdict.reason ?? "every lane was reported as not playable"}`
+      );
+      return buffer;
+    }
+    if (attempt < limit) {
+      problems.push(
+        `the audio host returned a silent render on attempt ${attempt} of ${limit} ` +
+          `(correct length, no samples); retrying`
+      );
+    }
+  }
+  /**
+   * Still nothing after every attempt: throw rather than return the buffer.
+   *
+   * This is the product decision, and it is the same one the parity probe makes when it refuses to score a silent
+   * render. A buffer of zeros is not a render that can be handed back as a file — any caller that treats it as one
+   * (a WAV, an MP3, an MCP reply) reports a successful render of something nobody can hear. The message carries the
+   * frame count so the failure is distinguishable from "the pattern was empty": the length is right and the samples
+   * are missing.
+   */
+  throw new Error(
+    `the audio host returned a silent render ${limit} time(s) in a row ` +
+      `(${buffer?.length ?? 0} frames, ${buffer?.numberOfChannels ?? 0} channel(s), no samples above ` +
+      `-120 dBFS) — refusing to present it as a successful render; see docs/HEADLESS_CORE_PLAN.md §6`
+  );
+}
+
+/**
  * Synthesizes a pattern offline via OfflineAudioContext
  */
 export async function renderPatternOffline(
   pattern: DrumPattern,
   options: RenderWavOptions = {}
+): Promise<AudioBuffer> {
+  const problems: string[] = [];
+  /**
+   * The render's own verdict on whether silence was the expected outcome.
+   *
+   * `null` means "no explanation", which is the host-failure reading. It is written by the audio-lane scheduling
+   * inside `renderPatternOfflineOnce` when every lane was named as unplayable, and read by the guard only after a
+   * render came back with no samples — see `SilenceContext`.
+   */
+  let verdict: SilenceContext | null = null;
+  try {
+    return await renderPatternOfflineGuarded(
+      () => renderPatternOfflineOnce(pattern, options, (v) => { verdict = v; }),
+      problems,
+      RENDER_SILENCE_ATTEMPTS,
+      () => verdict
+    );
+  } finally {
+    /**
+     * Reported on the way out either way: a recovered retry is a problem the caller should see, and a render that
+     * never produced audio is one the caller will see as the thrown error — but the attempts that failed before it
+     * are still worth naming, so the message and the problem list agree.
+     */
+    if (problems.length > 0) options.onProblems?.(problems);
+  }
+}
+
+/** The renderer itself: one context, one graph, one `startRendering()`. Wrapped by `renderPatternOffline`. */
+async function renderPatternOfflineOnce(
+  pattern: DrumPattern,
+  options: RenderWavOptions = {},
+  /** Called with this attempt's silence verdict the moment the lane plan knows it. */
+  onSilenceContext?: (verdict: SilenceContext) => void
 ): Promise<AudioBuffer> {
   const sampleRate = options.sampleRate || 44100;
   // F-10: clamp render parameters — a negative bpm produced a negative
@@ -706,6 +840,20 @@ export async function renderPatternOffline(
   // Acoustic Enhancement: Track open hi-hat voices for offline choke group
   const openHiHatVoices: Array<{ gains: GainNode[]; stopTime: number; envelope?: DrumVoiceEnvelope }> = [];
 
+  /**
+   * Did anything in this render get asked to make a sound?
+   *
+   * This exists for the silence verdict, and it has to be a fact the renderer *observed* rather than an inference
+   * from the pattern, because the guard's whole job is to tell "the host returned nothing" from "there was nothing
+   * to return". An audible track with a step above zero dispatches a voice, so that is where it is set; a pattern
+   * with no tracks, every track muted, or every step zero never sets it, and silence is then the correct answer
+   * rather than a host failure. The audio-lane path sets its own half of this below.
+   */
+  let scheduledVoice = false;
+  let plannedAudioLane = false;
+  /** The reasons the lane plan named, for the silence verdict below. */
+  let audioLaneProblems: string[] = [];
+
   // Step scheduling loop
   for (let step = 0; step < totalSteps; step++) {
     const unswungTime = stepTimeAt(step);
@@ -738,6 +886,8 @@ export async function renderPatternOffline(
       const stepIdx = trackLen > 0 ? step % trackLen : step;
       const stepVal = track.steps[stepIdx] || 0;
       if (stepVal <= 0) return;
+      // Past the mute/solo and step gates: this step dispatches a voice on an audible track.
+      scheduledVoice = true;
 
       // F-03/N-04: probability gates offline rendering, but with a DETERMINISTIC roll
       // so re-exporting the same project is reproducible and every exporter agrees.
@@ -1060,6 +1210,7 @@ export async function renderPatternOffline(
    * The report is handed out rather than swallowed: a lane whose bytes could not be fetched or decoded is a fact the caller has to be able to state.
    */
   if (pattern.tracks?.some((track) => isAudioLane(track))) {
+    plannedAudioLane = true;
     const audioCatalogue = options.audioLaneCatalogue ?? SAMPLE_CATALOGUE;
     /**
      * The lanes this render has already silenced, taken from the **same** `mixerStates` the synthesised lanes above were filtered by — so a muted audio lane and a
@@ -1091,6 +1242,37 @@ export async function renderPatternOffline(
       silencedTrackIndexes,
     });
     options.onAudioLanes?.(report);
+    /**
+     * A lane that resolved to a sample is a sound source; if one did, silence is *not* explained and the guard must
+     * treat an empty buffer as the host's failure. See the verdict below, which is stated once for the whole render.
+     */
+    if (report.lanes.length > 0) scheduledVoice = true;
+    audioLaneProblems = report.problems.map((problem) => problem.reason);
+  }
+
+  /**
+   * **The two cases where silence is the correct render**, stated once, after everything that could make a sound
+   * has been scheduled:
+   *
+   *   · **nothing was scheduled at all** — no audible step on any track (no tracks, all muted, or every step zero)
+   *     and no audio lane that resolved. The buffer really is empty and there is nothing to retry;
+   *   · **an audio lane was named as unplayable** — the lane plan already says which lane and why
+   *     (`OfflineAudioLaneReport.problems`), and the reason is far more useful than "the host returned a silent
+   *     render" would be.
+   *
+   * A host that failed while voices *were* scheduled matches neither, and that is the defect the guard exists for.
+   * See `SilenceContext`.
+   */
+  if (!scheduledVoice) {
+    onSilenceContext?.({
+      expectSilence: true,
+      reason:
+        audioLaneProblems.length > 0
+          ? `every audio lane was reported as not playable (${audioLaneProblems[0]})`
+          : plannedAudioLane
+            ? "the render contains only audio lanes and none of them resolved to a sample"
+            : "the pattern has nothing to play: no audible step on any track and no audio lane in it",
+    });
   }
 
   // Wait for the limiter module before rendering: an OfflineAudioContext renders in

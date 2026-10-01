@@ -97,6 +97,20 @@ export interface RenderResult {
    * from "the lane was dropped" (`problems`), which is the distinction the old `skippedLanes` list could not make.
    */
   audioLanes: OfflineAudioLaneReport;
+  /**
+   * What the renderer had to report about this render, in the plain-sentence shape the arrangement tools use for a
+   * lane that could not be resolved.
+   *
+   * **This list and `audioLanes.problems` are two surfaces for two different causes, and neither replaces the
+   * other.** `audioLanes.problems` names an audio *lane* that could not be mixed (including the transport diagnosis
+   * for a sample whose fetch failed on a missing CORS header). This list is about the *render* as a whole, and its
+   * one cause today is the audio host: a render can come back with the correct frame count and no samples in it
+   * (`docs/HEADLESS_CORE_PLAN.md` §6). The renderer **throws** when every attempt is silent
+   * (`src/audio/WavExporter.ts`), so a silent buffer is never a successful render here — what this list carries is
+   * the *recovered* case, where a retry produced the audio and the caller is still told one was needed. That is the
+   * difference between "the server retried and told me" and "the server retried and said nothing".
+   */
+  problems: string[];
 }
 
 interface RendererState {
@@ -370,6 +384,15 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
       let limiterKind = "fallback";
       /** Lanes whose own GS-1 patch code was refused; see `RenderResult.gs1PatchProblems`. */
       let gs1PatchProblems: string[] = [];
+      /**
+       * What the renderer reported about this render as a whole, carried out to the reply.
+       *
+       * `renderPatternOffline` throws when it cannot get audio at all, so a silent buffer never reaches this line.
+       * What can reach it is the recovered case — the host returned silence, the renderer retried and succeeded — and
+       * that has to be visible, because a caller comparing two renders should know one of them needed a second
+       * attempt (see `docs/HEADLESS_CORE_PLAN.md` §6).
+       */
+      const renderProblems: string[] = [];
       const buffer = await wav.renderPatternOffline(patternArg as never, {
         bars: barsArg,
         /**
@@ -403,6 +426,13 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
          */
         onGs1PatchProblems: (problems: readonly string[]) => {
           gs1PatchProblems = [...problems];
+        },
+        /**
+         * The host's own failures, kept separate from the lane list above: these are about the render as a whole
+         * (see `RenderResult.problems`), where the lane problems name a track.
+         */
+        onProblems: (problems: readonly string[]) => {
+          renderProblems.push(...problems);
         },
       });
       const channels: Float32Array[] = [];
@@ -475,6 +505,7 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
           gs1PatchProblems,
           trackPeaksDb,
           audioLanes,
+          problems: renderProblems,
         };
       }
       return {
@@ -488,6 +519,7 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
         gs1PatchProblems,
         trackPeaksDb,
         audioLanes,
+        problems: renderProblems,
       };
     },
     {
@@ -549,6 +581,7 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
       catalogueRead.problem && !result.audioLanes?.catalogueProblem
         ? { ...(result.audioLanes ?? { lanes: [], events: 0, problems: [] }), catalogueProblem: catalogueRead.problem }
         : result.audioLanes ?? { lanes: [], events: 0, problems: [] },
+    problems: result.problems,
   };
 }
 

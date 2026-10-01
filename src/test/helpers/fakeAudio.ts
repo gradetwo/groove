@@ -390,6 +390,16 @@ export class FakeOfflineAudioContext extends FakeAudioGraph {
   audioWorklet = { addModule: async (_url: string) => undefined };
   /** Most recently constructed instance — lets tests inspect the graph after a render. */
   static lastInstance: FakeOfflineAudioContext | null = null;
+  /**
+   * Level the rendered buffer is filled with.
+   *
+   * `renderPatternOffline` refuses to hand back a render with no samples in it (`src/audio/WavExporter.ts`: a host
+   * that returns a correctly-sized silent buffer is a failed render, not a quiet one, and the exporter retries and
+   * then throws). So a double that returned an all-zero buffer would make every export test exercise the failure
+   * path — which is not what those tests are about. The default here is a flat signal, and `FakeOfflineAudioContext
+   * .silent = true` is the switch for the tests that *are* about the failure path.
+   */
+  static silenceLevel = 0.5;
 
   constructor(
     public numberOfChannels: number,
@@ -401,7 +411,11 @@ export class FakeOfflineAudioContext extends FakeAudioGraph {
   }
 
   startRendering() {
-    return Promise.resolve(new FakeAudioBuffer(this.numberOfChannels, this.length, this.sampleRate));
+    const buffer = new FakeAudioBuffer(this.numberOfChannels, this.length, this.sampleRate);
+    if (FakeOfflineAudioContext.silenceLevel > 0) {
+      buffer.getChannelData(0).fill(FakeOfflineAudioContext.silenceLevel);
+    }
+    return Promise.resolve(buffer);
   }
 }
 
@@ -438,10 +452,13 @@ export function installFakeOfflineAudioContext(): () => void {
   if ((globalThis as any).window) {
     (globalThis as any).window.OfflineAudioContext = FakeOfflineAudioContext;
   }
+  // Reset the level too: a test that renders deliberately silent must not leave the rest of the file silent.
+  FakeOfflineAudioContext.silenceLevel = 0.5;
   return () => {
     (globalThis as any).OfflineAudioContext = originalGlobal;
     if ((globalThis as any).window) {
       (globalThis as any).window.OfflineAudioContext = originalWindow;
     }
+    FakeOfflineAudioContext.silenceLevel = 0.5;
   };
 }
