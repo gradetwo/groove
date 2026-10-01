@@ -325,3 +325,25 @@ path = 有 ✓ · durationSec = 16.600022675736962
 **代码位置（已缩小，但最后一层未核实 ✗✓）** ✓：`src/audio/offlineAudioLanes.ts:418-421` ✓ —— **lane 确实调了 `loadNote(event.assetId, event.pitch)` 并用 `note.ratio`** ✓（说明错不在"没传音高" ✗），所以丢 ratio 的一层在**更下面**：候选是 `src/audio/sfz/regionPlayback.ts` 的 `playbackForNote`（lane 用 ✓）与 audition 路径各自的 region→ratio 解析 ✓✓，以及 418 行那个 `ratio = 1` 的分支 ✓。**下一件事就是把这层读穿并钉判据** ✓，**不是**照报告去改采样数据 ✗✓。
 
 **判据（已有雏形 ✓）**：`scripts/probe_instrument_pitch.mjs` ✓ 现在**两条路并测** ✓、跨 59/60/62 ✓——**把 61/63/64 补进去，它就会在 lane 上红** ✗✓✓。
+
+---
+
+## 十六、⭐⭐ **`render_arrangement` 完全忽略 `bars`** ✗✗✓✓（2026-10-01，我自己的实测）
+
+**怎么撞上的** ✓：复测 P0-3 时，`render_arrangement{bars:1}` 产出 **16.6 秒** ✗，而 `render_audio` 在同一体系下是 **1.937 秒/小节 + 1.693 秒尾巴** ✓（§十四 的算术 ✓）。于是把 `bars` 扫了一遍 ✓（同一个排列、同一个音符，只改 `bars` ✓）：
+
+```
+轨道 id=sampler-1 · 默认 clip 步数=16 · 有声步数=4
+bars 1: durationSec=16.600022675736962 · WAV 16.60 s · skipped=null
+bars 2: durationSec=16.600022675736962 · WAV 16.60 s · skipped=null
+bars 4: durationSec=16.600022675736962 · WAV 16.60 s · skipped=null
+```
+
+⇒ **`bars` 1/2/4 的输出逐毫秒相同** ✗✗✓ → **`render_arrangement` 的 `bars` 完全不起作用** ✗✓。
+
+**为什么这条要紧** ✗✓✓：
+1. **与 `render_audio` 直接矛盾** ✗✓：同一个参数名，一个遵守（实测线性 ✓）、一个忽略（实测无变化 ✗✓）；
+2. **与工具描述矛盾** ✗✗：描述说它是"**驱动时长的两件事之一**" ✓——**这对 `render_audio` 为真、对 `render_arrangement` 为假** ✗✓ → **正是 ① 花整轮消灭的"描述承诺了代码不做的事"** ✗✓✓；
+3. **对调用方是静默错误** ✗：要 4 小节、拿到一段固定长度 ✗，**没有任何 `problems` 或警告** ✗✓（`skippedLanes = null` ✓）。
+
+**未解释、且不假装解释** ✗✓：**16.60 秒对应这个排列的什么** ✗——它的默认 clip 是 **16 步、其中 4 步有声** ✓，而 16.6 秒 ≈ 8.6 小节（1.937 s/bar ✓）→ **既不是 1 小节也不是 4 小节** ✗✓。**下一步是把 16.6 秒的来历量清** ✓（排列自身的长度语义 ✓），**不要**用"大概是默认 clip"糊过去 ✗。
