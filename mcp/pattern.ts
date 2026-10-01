@@ -96,11 +96,12 @@ export function findTrack(pattern: SequencerPattern, name: string): SequencerTra
  * the only thing that knows the difference, so the reply is shaped from it and says three things distinctly:
  *
  *   · `renderedAudioLanes` — lanes whose bytes reached the mix;
- *   · `skippedLanes` — lanes that could not be, **each with the reason** (a catalogue miss, an instrument with no note to resolve, a fetch or decode failure);
- *   · neither key when the pattern has no audio lane at all, which is the additive promise for every existing render.
+ *   · `skippedLanes` — lanes that could not be, **each with the reason** (muted, soloed out, a catalogue miss, an instrument with no note to resolve, a fetch or decode failure);
+ *   · `audioLaneCatalogueProblem` — why the catalogue itself could not be read, naming the path, when that is why every lane is unresolvable;
+ *   · no key when the pattern has no audio lane at all, which is the additive promise for every existing render.
  *
- * A lane that started some of its notes and failed others is in **both** lists, because that is what a partly-covered instrument is; a lane that never started
- * anything is only in `skippedLanes`.
+ * A lane that started some of its notes and failed others is in **both** `renderedAudioLanes` and `skippedLanes`, because that is what a partly-covered instrument
+ * is; a lane that never started anything is only in `skippedLanes`.
  */
 export function audioLaneReplyFields(report: OfflineAudioLaneReport | undefined): Record<string, unknown> {
   if (!report) return {};
@@ -120,7 +121,14 @@ export function audioLaneReplyFields(report: OfflineAudioLaneReport | undefined)
       ...(problem.assetId ? { assetId: problem.assetId } : {}),
       reason: problem.reason,
     }));
-    fields.skippedNote = "these lanes are not in the render; each entry names the lane and why it could not be mixed";
+    fields.skippedNote = "these lanes are not in the render; each entry names the lane and why";
+  }
+  /**
+   * **An unreadable catalogue is reported even when it produced no per-lane entry.** An empty reply and a missing manifest must not look the same, and the path in
+   * the message is what tells a caller to fix the manifest rather than the lane.
+   */
+  if (report.catalogueProblem) {
+    fields.audioLaneCatalogueProblem = report.catalogueProblem;
   }
   return fields;
 }

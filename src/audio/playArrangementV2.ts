@@ -13,6 +13,7 @@
  * pattern cannot voice, and the player's whole job is to hand the first to the engine and sound the second per step.
  */
 import { DEFAULT_ARRANGEMENT_BPM, compileArrangementToLanes, compileArrangementToPattern, type NotesByTrack } from "../data/arrangementCompile";
+import { deriveTrackStates } from "./trackStates";
 import type { ArrangementV2 } from "../types/arrangementV2";
 import type { SequencerPattern, SequencerTrack } from "../types/genre";
 
@@ -70,12 +71,27 @@ export async function playArrangementV2(arrangement: ArrangementV2, notes: Notes
    */
   const compiledLanes = compileArrangementToLanes(arrangement, notes);
   /**
+   * **Mute and solo reach the sampler lanes too, by the engine's own rule.**
+   *
+   * The engine's lanes are silenced by `deriveTrackStates` inside `setPattern`, but a sampler note is started **outside** the engine (it has no SFZ loader), so
+   * nothing there can silence it. Without this filter, carrying the arrangement's `muted` flag onto the compiled lane — which is what makes the offline render
+   * honour it — would leave the live path playing a lane the offline path drops, which is the kind of divergence this codebase treats as a defect rather than a
+   * detail. One rule, `deriveTrackStates`, answers for both.
+   */
+  const states = deriveTrackStates({ tracks: compiledLanes.map((entry) => entry.track) });
+  const anySolo = states.some((state) => state.solo);
+  const audible = (index: number): boolean => {
+    const state = states[index];
+    return state !== undefined && !state.mute && !(anySolo && !state.solo);
+  };
+  /**
    * The lanes the engine cannot voice: a sampler lane is recognised by the instrument its track carries, not by `track_id`, because `"audio"` is also a v1 role whose notes are not a sampler's. `sourceTrackId`
    * comes from the same compile that built the lane, so a failure names the right track.
    */
   const samplerLanes = compiledLanes
-    .filter((entry) => Boolean(entry.track.sample?.assetId))
-    .map((entry) => ({ sourceTrackId: entry.sourceTrackId, lane: entry.track }));
+    .map((entry, index) => ({ entry, index }))
+    .filter(({ entry, index }) => Boolean(entry.track.sample?.assetId) && audible(index))
+    .map(({ entry }) => ({ sourceTrackId: entry.sourceTrackId, lane: entry.track }));
 
   const played = await player.play({
     pattern: compileArrangementToPattern(arrangement, compiledLanes),

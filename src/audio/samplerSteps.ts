@@ -27,6 +27,13 @@ export interface SamplerStepEvent {
   step: number;
   /** MIDI note number, the pitch this step sounds. */
   pitch: number;
+  /**
+   * The lane's position, −1…1, when it states one.
+   *
+   * Carried per event rather than looked up by the player, because the player receives a flat list and never sees the lane again — the same reason the choke
+   * group and the one-shot flag travel on the resolved note.
+   */
+  pan?: number;
 }
 
 export interface SamplerStepInput {
@@ -71,7 +78,8 @@ export function planSamplerSteps(
        * and playing an arbitrary note for it would hide that.
        */
       if (typeof pitch !== "number" || pitch <= 0) return;
-      events.push({ sourceTrackId, assetId, step, pitch });
+      const pan = typeof lane.pan === "number" && Number.isFinite(lane.pan) ? Math.max(-1, Math.min(1, lane.pan)) : undefined;
+      events.push({ sourceTrackId, assetId, step, pitch, ...(pan === undefined ? {} : { pan }) });
     });
   }
   return events;
@@ -100,6 +108,7 @@ export async function scheduleSamplerSteps(events: readonly SamplerStepEvent[], 
           ratio: note.ratio,
           whenSeconds: startSeconds + event.step * stepSeconds,
           ...(input.gainDb === undefined ? {} : { gainDb: input.gainDb }),
+          ...(event.pan === undefined ? {} : { pan: event.pan }),
         })
       );
     } catch (error) {

@@ -1,11 +1,10 @@
 /**
  * **Mixing an audio lane's bytes into an offline render** — the half of the ninth kind that only playback had.
  *
- * The browser has played audio lanes since `audioLanePlayback.ts`, and the offline renderer has never touched them: `WavExporter`'s dispatch has no branch for
- * `track_id: "audio"`, so the lane fell through to the bottom of the chain and was sounded as a **synthesised percussion hit** while the MCP reply listed it in
- * `skippedLanes` — a wrong sound *and* a false report. This module is the renderer's half, and it is deliberately shaped like the playback path it has to agree
- * with (`audioLanePlan.ts` → `audioLaneScheduler.ts` → `sampleLoader`), because "what plays" and "what renders" being two separate answers is the failure this
- * codebase spends gates avoiding.
+ * The browser has played audio lanes since `audioLanePlayback.ts`, and the offline renderer had no branch for `track_id: "audio"`: the lane fell through to the
+ * bottom of `WavExporter`'s dispatch and was sounded as a **synthesised percussion hit** while the MCP reply listed it in `skippedLanes` — a wrong sound *and* a
+ * false report. This module is the renderer's half, and it is deliberately shaped like the playback path it has to agree with (`audioLanePlan.ts` →
+ * `audioLaneScheduler.ts` → `sampleLoader`), because "what plays" and "what renders" being two separate answers is the failure this codebase spends gates avoiding.
  *
  * ## What it decides, and what it deliberately does not
  *
@@ -18,23 +17,36 @@
  *   · **A pattern of notes** — an arrangement's `sampler` track compiles to `track_id: "audio"` with an SFZ instrument and pitched steps. A sampler is one
  *     recording at a different rate per note, so each written note is resolved through `loadNote` and started at its own step, which is exactly what the live
  *     arrangement player does (`playerFromEngine.ts` → `scheduleSamplerSteps`).
- *   · **One sample and no notes** — the ninth kind as a v1 pattern declares it: a lane that names a sample and has nothing to schedule. `planAudioLaneEvents` starts
- *     it once, at its section's first bar, and a flattened pattern is one section at bar 0, so that second is zero. This is the case the adjudication called
- *     "silent-but-known": the lane has no notes, and it must still be heard rather than reported as skipped.
+ *   · **One sample and no notes** — the ninth kind as a v1 pattern declares it: a lane that names a sample and has nothing to schedule. It starts once, at the
+ *     start of the section the flattened pattern is, and a flattened pattern is one section at bar 0, so that second is zero. This is the case the adjudication
+ *     called "silent-but-known": the lane has no notes, and it must still be heard rather than reported as skipped.
  *
- * **One failure per lane per attempt, not one note**: a lane's remaining notes are skipped once it has failed, because an instrument whose SFZ cannot be fetched
- * would otherwise report the same missing file once per step and bury the one fact a caller needs. A lane that started **some** notes and failed others appears in
- * both lists, which is what a partly-covered drum kit actually is.
+ * ## Three rules that exist because doing nothing is the worst shape
  *
- * A lane whose bytes cannot be resolved is **never** silence and never a fallback voice: it is a problem naming the lane, which is what `sampleReferenceProblem`
- * already says for a catalogue miss, and what a failed fetch or decode becomes here.
+ *   · **Nothing is dropped in silence.** A lane that is muted or soloed out, one whose `assetId` names nothing, one whose instrument has no note to resolve, and
+ *     one whose bytes fail to fetch or decode are all `problems`, each naming the lane and the reason.
+ *   · **A failure is per note, not per lane.** A kit whose lowest written note is outside its key range still sounds every note that is inside it, so a failed
+ *     note never abandons the rest of the lane; identical reasons are reported once so a broken URL does not produce one entry per step.
+ *   · **`pan` is carried, not assumed.** A lane's position is part of what the model says about it, and the sink applies it.
  */
 import type { SequencerPattern, SequencerTrack } from "../types/genre";
 import { SAMPLE_CATALOGUE, findSampleAsset, sampleReferenceProblem } from "../data/sampleCatalogue";
 import type { SampleAsset } from "../data/sampleCatalogue";
 import { stepTiming } from "../data/tempoMap";
 import type { TempoPoint } from "../data/tempoMap";
+import { deriveTrackStates } from "./trackStates";
 import type { SampleLoader } from "./sampleLoader";
+
+/**
+ * **The one test for "this is an audio lane".**
+ *
+ * `track_id` reaches a render as caller data (`patternSchema` is `.passthrough()`), so `"Audio"` is a spelling a caller can produce. The guard in `WavExporter`,
+ * `hasAudioLane` in the MCP worker and this planner all have to answer the same way: a lane silenced by one, unplanned by another and unreported by a third would
+ * be exactly the "ok while doing nothing" state this feature exists to remove. Normalising here is what makes them agree.
+ */
+export function isAudioLane(track: { track_id?: string } | null | undefined): boolean {
+  return (track?.track_id ?? "").toLowerCase() === "audio";
+}
 
 /** Which lane a report entry is about — the same identity a caller sees (`laneId` when it has one, else the role). */
 export interface OfflineAudioLaneRef {
@@ -56,6 +68,8 @@ export interface OfflineAudioLaneEvent extends OfflineAudioLaneRef {
   atSeconds: number;
   /** The lane's level in dB, from its own `volume` — the one gain stage for the lane. */
   gainDb: number;
+  /** The lane's position, −1…1, when it states one. The sink pans by it; `0` and absent are both centre. */
+  pan?: number;
 }
 
 /** A lane that will not be heard, and why, named so a caller can act on it. */
@@ -78,6 +92,14 @@ export interface OfflineAudioLanePlanOptions {
   totalSteps?: number;
   /** A stem render plays one track: only the audio lane at this index is planned, so a stem is that stem. */
   stemTrackIdx?: number;
+  /**
+   * The track indexes the renderer has silenced (mute, or soloed out), in the renderer's own numbering.
+   *
+   * Passed in rather than derived when the caller already has the mixer state — `WavExporter` derives it from the same `mixerStates` its synthesised lanes use, so
+   * a muted audio lane and a muted synth lane are silenced by one decision rather than two. Absent, the pattern's own `mute`/`solo` flags are read through
+   * `deriveTrackStates`, which is the same rule.
+   */
+  silencedTrackIndexes?: readonly number[];
 }
 
 /** The lane's own level, in dB. Unity when the lane states none, which is what "no gain was asked for" means. */
@@ -99,6 +121,17 @@ function pitchedSteps(track: SequencerTrack): Array<{ step: number; pitch: numbe
   return notes;
 }
 
+/** Which lanes the pattern itself silences, by the one rule the engine uses (`deriveTrackStates`). */
+function silencedFromPattern(tracks: readonly SequencerTrack[]): Set<number> {
+  const states = deriveTrackStates({ tracks: [...tracks] });
+  const anySolo = states.some((state) => state.solo);
+  const silenced = new Set<number>();
+  states.forEach((state, index) => {
+    if (state.mute || (anySolo && !state.solo)) silenced.add(index);
+  });
+  return silenced;
+}
+
 /**
  * Which lanes will sound, where, and what stops the rest.
  *
@@ -113,6 +146,7 @@ export function planOfflineAudioLanes(
   const events: OfflineAudioLaneEvent[] = [];
   const lanes: OfflineAudioLaneRef[] = [];
   const problems: OfflineAudioLaneProblem[] = [];
+  const silenced = options.silencedTrackIndexes ? new Set(options.silencedTrackIndexes) : silencedFromPattern(tracks);
 
   const bpm = options.bpm ?? pattern.bpm ?? 120;
   const totalSteps =
@@ -124,7 +158,7 @@ export function planOfflineAudioLanes(
 
   for (let trackIndex = 0; trackIndex < tracks.length; trackIndex += 1) {
     const track = tracks[trackIndex]!;
-    if (track.track_id !== "audio") continue;
+    if (!isAudioLane(track)) continue;
     if (options.stemTrackIdx !== undefined && options.stemTrackIdx !== trackIndex) continue;
 
     const ref: OfflineAudioLaneRef = {
@@ -133,6 +167,17 @@ export function planOfflineAudioLanes(
       ...(track.laneId ? { laneId: track.laneId } : {}),
       name: track.name,
     };
+
+    /**
+     * **A silenced lane is reported, not rendered.** The old early return sat before the mute/solo test, so a muted audio lane was mixed *and* listed under
+     * `renderedAudioLanes` — audible against the user's instruction and described as played.
+     */
+    if (silenced.has(trackIndex)) {
+      const state = deriveTrackStates({ tracks: [...tracks] })[trackIndex];
+      const why = state?.mute ? "the lane is muted" : "another track is soloed, so this lane is soloed out";
+      problems.push({ ...ref, ...(track.sample?.assetId ? { assetId: track.sample.assetId } : {}), reason: `${why}, so it is not in the render` });
+      continue;
+    }
 
     // The catalogue's own rule, used rather than restated: an audio lane with no sample, or one naming nothing the catalogue holds, is a named problem.
     const problem = sampleReferenceProblem(track, catalogue);
@@ -144,6 +189,7 @@ export function planOfflineAudioLanes(
     const assetId = track.sample!.assetId!;
     const asset = findSampleAsset(assetId, catalogue)!;
     const gainDb = laneGainDb(track);
+    const pan = typeof track.pan === "number" && Number.isFinite(track.pan) ? Math.max(-1, Math.min(1, track.pan)) : undefined;
 
     if (asset.sfz) {
       const notes = pitchedSteps(track);
@@ -160,21 +206,21 @@ export function planOfflineAudioLanes(
         continue;
       }
       for (const { step, pitch } of notes) {
-        events.push({ ...ref, assetId, pitch, atSeconds: timing.starts[Math.min(step, totalSteps)] ?? 0, gainDb });
+        events.push({ ...ref, assetId, pitch, atSeconds: timing.starts[Math.min(step, totalSteps)] ?? 0, gainDb, ...(pan === undefined ? {} : { pan }) });
       }
       lanes.push(ref);
       continue;
     }
 
     // A plain sample with no notes: heard once, at the start of the section the flattened pattern is. This is the case that used to be reported as skipped.
-    events.push({ ...ref, assetId, atSeconds: 0, gainDb });
+    events.push({ ...ref, assetId, atSeconds: 0, gainDb, ...(pan === undefined ? {} : { pan }) });
     lanes.push(ref);
   }
 
   return { events, lanes, problems };
 }
 
-/** Where a sample is started, with what rate. The graph is injected, so this is the whole browser-independent contract. */
+/** Where a sample is started, with what rate and position. The graph is injected, so this is the whole browser-independent contract. */
 export interface OfflineAudioLaneSink {
   start(buffer: AudioBuffer, event: OfflineAudioLaneEvent, ratio: number): void;
 }
@@ -189,8 +235,15 @@ export interface OfflineAudioLaneReport {
   lanes: OfflineAudioLaneRef[];
   /** Samples actually started — one per note for an instrument, one for a plain sample. */
   events: number;
-  /** Problems, including the plan's own, each naming its lane and the note or fetch that failed. */
+  /** Problems, each naming its lane and the reason — a muted lane, a catalogue miss, a note no region covers, a failed fetch. */
   problems: OfflineAudioLaneProblem[];
+  /**
+   * Why the **catalogue itself** could not be read, when that is the reason every lane is unresolvable.
+   *
+   * Named with the path that was tried, because "no sample X" and "the manifest could not be read at /…/manifest.json" send a reader to different places — and an
+   * unreadable manifest must never turn into a silent, report-free render.
+   */
+  catalogueProblem?: string;
 }
 
 export interface OfflineAudioLaneScheduleInput {
@@ -198,17 +251,21 @@ export interface OfflineAudioLaneScheduleInput {
   loader: SampleLoader;
   sink: OfflineAudioLaneSink;
   catalogue?: readonly SampleAsset[];
+  /** Why the catalogue is unavailable, when the caller knows; travels into the report rather than being swallowed. */
+  catalogueProblem?: string;
   bpm?: number;
   tempoTrack?: readonly TempoPoint[];
   totalSteps?: number;
   stemTrackIdx?: number;
+  silencedTrackIndexes?: readonly number[];
 }
 
 /**
  * Plan, load and place every audio lane — the offline twin of `scheduleAudioLaneSamples`.
  *
- * **One failure per lane, not one per note.** An instrument whose SFZ cannot be fetched would otherwise report the same missing file once for every step it has,
- * which buries the one fact a caller needs under the note count; the lane is marked failed and its remaining notes are skipped.
+ * **Every note is attempted.** A lane whose first written note is outside its instrument's key range must still sound the notes that are inside it, so a failure
+ * never short-circuits the lane. Identical reasons are reported once (`trackIndex::reason`), which keeps one dead URL from producing one entry per step without
+ * hiding a second, different failure.
  */
 export async function scheduleOfflineAudioLanes(input: OfflineAudioLaneScheduleInput): Promise<OfflineAudioLaneReport> {
   const plan = planOfflineAudioLanes(input.pattern, input.catalogue ?? SAMPLE_CATALOGUE, {
@@ -216,15 +273,15 @@ export async function scheduleOfflineAudioLanes(input: OfflineAudioLaneScheduleI
     ...(input.tempoTrack === undefined ? {} : { tempoTrack: input.tempoTrack }),
     ...(input.totalSteps === undefined ? {} : { totalSteps: input.totalSteps }),
     ...(input.stemTrackIdx === undefined ? {} : { stemTrackIdx: input.stemTrackIdx }),
+    ...(input.silencedTrackIndexes === undefined ? {} : { silencedTrackIndexes: input.silencedTrackIndexes }),
   });
 
   const problems: OfflineAudioLaneProblem[] = [...plan.problems];
-  const failed = new Set<number>();
+  const reported = new Set(problems.map((problem) => `${problem.trackIndex}::${problem.reason}`));
   const started = new Set<number>();
   let events = 0;
 
   for (const event of plan.events) {
-    if (failed.has(event.trackIndex)) continue;
     try {
       if (event.pitch === undefined) {
         const buffer = await input.loader.load(event.assetId);
@@ -236,14 +293,17 @@ export async function scheduleOfflineAudioLanes(input: OfflineAudioLaneScheduleI
       events += 1;
       started.add(event.trackIndex);
     } catch (error) {
-      failed.add(event.trackIndex);
+      const reason = error instanceof Error ? error.message : String(error);
+      const key = `${event.trackIndex}::${reason}`;
+      if (reported.has(key)) continue;
+      reported.add(key);
       problems.push({
         trackIndex: event.trackIndex,
         track_id: event.track_id,
         ...(event.laneId ? { laneId: event.laneId } : {}),
         name: event.name,
         assetId: event.assetId,
-        reason: error instanceof Error ? error.message : String(error),
+        reason,
       });
     }
   }
@@ -253,5 +313,10 @@ export async function scheduleOfflineAudioLanes(input: OfflineAudioLaneScheduleI
    * reply has to be able to say both. A lane that failed before starting anything is only in `problems`.
    */
   const rendered = plan.lanes.filter((lane) => started.has(lane.trackIndex));
-  return { lanes: rendered, events, problems };
+  return {
+    lanes: rendered,
+    events,
+    problems,
+    ...(input.catalogueProblem ? { catalogueProblem: input.catalogueProblem } : {}),
+  };
 }

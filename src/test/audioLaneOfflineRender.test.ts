@@ -205,6 +205,65 @@ describe("an arrangement's audio lane in the offline render", () => {
     expect((fields.skippedLanes as unknown[]).length).toBe(1);
   });
 
+  it("keeps going after a failed note, so a note outside the kit's range cannot silence the rest", async () => {
+    // The repro the review found: the **lowest-step** note is out of range. Abandoning the lane on the first failure would silence note 40, which the file does cover.
+    const arrangement = samplerArrangement("probe-kit");
+    const pattern = compileArrangementToPattern(arrangement, {
+      t1: [
+        { pitch: 20, startBeats: 0, lengthBeats: 1, velocity: 100 },
+        { pitch: 40, startBeats: 2, lengthBeats: 1, velocity: 100 },
+      ],
+    });
+    const partial = {
+      async load() {
+        throw new Error("unused");
+      },
+      async loadNote(_assetId: string, pitch: number) {
+        if (pitch === 20) throw new Error("note 20 has no playback: the file's regions cover keys 35–59");
+        return { buffer: fakeBuffer(), ratio: 1, samplePath: "kit/40.wav" };
+      },
+      decodes: () => 1,
+    } as unknown as SampleLoader;
+
+    const mix = summingSink(SAMPLE_RATE * 2);
+    const report = await scheduleOfflineAudioLanes({ pattern, catalogue: [instrumentAsset], loader: partial, sink: mix.sink });
+
+    // Both notes were attempted — one started, one failed — and the second is audible at its own step.
+    expect(report.events).toBe(1);
+    expect(report.lanes).toHaveLength(1);
+    expect(report.problems).toHaveLength(1);
+    expect(report.problems[0]!.reason).toMatch(/note 20/);
+    expect(mix.starts.map((start) => start.atFrame)).toEqual([SAMPLE_RATE]);
+    expect(mix.energy()).toBeGreaterThan(0);
+  });
+
+  it("reports a muted lane and does not sound it", () => {
+    // The mute rule is the engine's own (`deriveTrackStates`), so a muted audio lane and a muted synth lane are silenced by one decision.
+    const arrangement: ArrangementV2 = {
+      songId: "song",
+      sourceSlots: [],
+      bars: 1,
+      tracks: [{ id: "t1", kind: "sampler", name: "Drums", sample: { assetId: "probe-impulse" }, muted: true }],
+    };
+    const pattern = compileArrangementToPattern(arrangement, { t1: [] });
+    const plan = planOfflineAudioLanes(pattern, [plainAsset]);
+    expect(plan.events).toEqual([]);
+    expect(plan.lanes).toEqual([]);
+    expect(plan.problems).toHaveLength(1);
+    expect(plan.problems[0]!.reason).toMatch(/muted/);
+    // And the reply says the lane is not in the render, rather than hiding it.
+    expect(audioLaneReplyFields({ lanes: [], events: 0, problems: plan.problems }).skippedLanes).toHaveLength(1);
+  });
+
+  it("plans a lane whose track_id is spelled \"Audio\", because the guard and the planner share one test", () => {
+    const pattern = compileArrangementToPattern(samplerArrangement("probe-impulse"), { t1: [] });
+    pattern.tracks[0]!.track_id = "Audio" as (typeof pattern.tracks)[number]["track_id"];
+    const plan = planOfflineAudioLanes(pattern, [plainAsset]);
+    expect(plan.problems).toEqual([]);
+    expect(plan.lanes).toHaveLength(1);
+    expect(plan.events).toHaveLength(1);
+  });
+
   it("reports a lane whose bytes cannot be resolved, named, rather than passing silently", async () => {
     const arrangement = samplerArrangement("not-in-the-catalogue");
     const pattern = compileArrangementToPattern(arrangement, { t1: [] });

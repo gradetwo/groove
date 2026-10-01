@@ -50,7 +50,7 @@ describe("the audio-lane fields of a render reply", () => {
     expect(skipped[0]).toMatchObject({ track_id: "audio", laneId: "vox", name: "Vox Chop", assetId: "not-in-the-catalogue" });
     // The reason is the point of the entry: without it a caller cannot tell an unresolvable id from a failed fetch.
     expect(String(skipped[0]!.reason)).toMatch(/not-in-the-catalogue/);
-    expect(String(fields.skippedNote)).toMatch(/why it could not be mixed/);
+    expect(String(fields.skippedNote)).toMatch(/each entry names the lane and why/);
   });
 
   it("names the rendered lanes and the dropped ones from the same report, without conflating them", () => {

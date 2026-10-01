@@ -21,6 +21,7 @@ import { songSlug } from "../../src/utils/songSlug";
 import { stemFilename } from "../../src/data/stemNaming";
 import { fingerprintChannels } from "../../src/test/helpers/timbre";
 import type { OfflineAudioLaneReport } from "../../src/audio/offlineAudioLanes";
+import { isAudioLane } from "../../src/audio/offlineAudioLanes";
 import {
   channelCorrelation,
   clickAnalysis,
@@ -266,17 +267,36 @@ export function sampleMirrorRoot(): string {
 
 /** True when a pattern carries an audio lane at all — the gate that keeps a 1.6 MB manifest read off every synthesised render. */
 export function hasAudioLane(pattern: SequencerPattern): boolean {
-  return (pattern.tracks ?? []).some((track) => (track.track_id || "").toLowerCase() === "audio");
+  return (pattern.tracks ?? []).some((track) => isAudioLane(track));
 }
 
-/** The catalogue a render resolves audio lanes against, or empty when nothing has one — so the manifest is read only when it can matter. */
-export function audioLaneCatalogueText(pattern: SequencerPattern): string | null {
-  if (!hasAudioLane(pattern)) return null;
+/** What a render needs to know about the sample catalogue before it starts the browser. */
+export interface AudioLaneCatalogueRead {
+  /** The manifest text, or `null` when there is nothing to read. */
+  text: string | null;
+  /**
+   * Why the manifest could not be read, naming the path — `null` when the pattern has no audio lane (nothing was needed) or the read succeeded.
+   *
+   * **This is the difference between "no lanes" and "lanes dropped".** A render whose catalogue is unreadable still plans every lane as unresolvable, and this
+   * string carries the real reason into the report instead of the render returning `{}` and leaving the lane both silent and unexplained.
+   */
+  problem: string | null;
+}
+
+/**
+ * Read the catalogue a render resolves audio lanes against — **only when a pattern has an audio lane**.
+ *
+ * A failure is a value, not a throw: a caller running outside a checkout has no manifest, and the render should still run and say so. The path is in the message
+ * because "no sample X" and "the manifest is not at /…/manifest.json" are different facts.
+ */
+export function readAudioLaneCatalogue(pattern: SequencerPattern): AudioLaneCatalogueRead {
+  if (!hasAudioLane(pattern)) return { text: null, problem: null };
+  const manifest = sampleManifestPath();
   try {
-    return readFileSync(sampleManifestPath(), "utf8");
-  } catch {
-    // No manifest on disk is a real state (a caller running outside a checkout): the render proceeds and every lane is reported as unresolvable.
-    return null;
+    return { text: readFileSync(manifest, "utf8"), problem: null };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return { text: null, problem: `the sample manifest could not be read at ${manifest} (${reason}), so no audio lane can be resolved` };
   }
 }
 
@@ -298,10 +318,22 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
    * It travels as the manifest text, exactly as the audition path passes it, so the page parses it with the same `catalogueFromManifestText` and the two cannot
    * disagree about an asset id. `null` when the pattern has no audio lane, which keeps a 1.6 MB read off every synthesised render.
    */
-  const manifestText = audioLaneCatalogueText(pattern);
+  const catalogueRead = readAudioLaneCatalogue(pattern);
   const sampleRoot = sampleMirrorRoot();
   const result = await withRenderTimeout(page.evaluate(
-    async ({ pattern: patternArg, format, bars, bitrateKbps, trackPeaks, sampleRate, channels: channelCount, loudnessTrimDb, manifestText: manifest, sampleRoot: mirrorRoot }) => {
+    async ({
+      pattern: patternArg,
+      format,
+      bars,
+      bitrateKbps,
+      trackPeaks,
+      sampleRate,
+      channels: channelCount,
+      loudnessTrimDb,
+      manifestText: manifest,
+      sampleRoot: mirrorRoot,
+      catalogueProblem,
+    }) => {
       /**
        * These specifiers are resolved by the *browser* (the app's dev server), not by Node, so they are built
        * from variables: a literal would send `tsc` looking for `/src/...` on the filesystem and fail.
@@ -333,14 +365,18 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
         ...(sampleRate ? { sampleRate } : {}),
         ...(channelCount ? { channels: channelCount } : {}),
         ...(Number.isFinite(loudnessTrimDb) ? { loudnessTrimDb } : {}),
-        ...(audioCatalogue.length
-          ? {
-              audioLaneCatalogue: audioCatalogue,
-              onAudioLanes: (report: OfflineAudioLaneReport) => {
-                audioLanes = report;
-              },
-            }
-          : {}),
+        /**
+         * ⭐ **The callback is passed unconditionally, catalogue or not.**
+         *
+         * It used to be attached only when the parsed catalogue was non-empty, so an unreadable manifest produced a renderer that planned every lane as
+         * unresolvable, called a callback nobody had passed, and returned `{}` — the lane silent *and* unreported. The catalogue and the callback are therefore
+         * separate arguments: the first may be empty, the second is what stops the answer being lost.
+         */
+        audioLaneCatalogue: audioCatalogue,
+        onAudioLanes: (report: OfflineAudioLaneReport) => {
+          audioLanes = report;
+        },
+        ...(catalogueProblem ? { audioLaneCatalogueProblem: catalogueProblem } : {}),
         onLimiterKind: (kind: string) => {
           limiterKind = kind;
         },
@@ -446,8 +482,9 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
       sampleRate: options.sampleRate,
       channels: options.channels,
       loudnessTrimDb: options.loudnessTrimDb,
-      manifestText,
+      manifestText: catalogueRead.text,
       sampleRoot,
+      catalogueProblem: catalogueRead.problem,
     }
     ),
     what,
@@ -484,8 +521,17 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
     integratedLufs: result.integratedLufs,
     gs1PatchProblems: result.gs1PatchProblems ?? [],
     trackPeaksDb: result.trackPeaksDb,
-    // Always present: a caller has to be able to tell "no audio lanes" from "a lane could not be mixed", and an absent field cannot say either.
-    audioLanes: result.audioLanes ?? { lanes: [], events: 0, problems: [] },
+    /**
+     * Always present, and **the catalogue problem is attached here in Node as well as in the page**.
+     *
+     * Belt and braces on purpose: the page already carries it through `audioLaneCatalogueProblem`, but attaching it from the Node-side read means an unreadable
+     * manifest can never produce an empty reply even if the page's callback were ever lost again. "The lane is silent and nothing says why" is the exact state this
+     * field exists to make impossible.
+     */
+    audioLanes:
+      catalogueRead.problem && !result.audioLanes?.catalogueProblem
+        ? { ...(result.audioLanes ?? { lanes: [], events: 0, problems: [] }), catalogueProblem: catalogueRead.problem }
+        : result.audioLanes ?? { lanes: [], events: 0, problems: [] },
   };
 }
 
@@ -652,13 +698,14 @@ export async function renderStems(
   const laneLanes: OfflineAudioLaneReport["lanes"] = [];
   const laneProblems: OfflineAudioLaneReport["problems"] = [];
   let laneEvents = 0;
-  const manifestText = audioLaneCatalogueText(pattern);
+  let laneCatalogueProblem: string | undefined;
+  const catalogueRead = readAudioLaneCatalogue(pattern);
   const sampleRoot = sampleMirrorRoot();
 
   for (let index = 0; index < pattern.tracks.length; index += 1) {
     const track = pattern.tracks[index]!;
     const rendered = await page.evaluate(
-      async ({ pattern: patternArg, stemTrackIdx, bars, sampleRate: rate, channels: channelCount, manifestText: manifest, sampleRoot: mirrorRoot }) => {
+      async ({ pattern: patternArg, stemTrackIdx, bars, sampleRate: rate, channels: channelCount, manifestText: manifest, sampleRoot: mirrorRoot, catalogueProblem }) => {
         const specifier = (path: string) => path;
         const [wav, loudness, catalogue] = await Promise.all([
           import(/* @vite-ignore */ specifier("/src/audio/WavExporter.ts")),
@@ -672,14 +719,12 @@ export async function renderStems(
           stemTrackIdx,
           ...(rate ? { sampleRate: rate } : {}),
           ...(channelCount ? { channels: channelCount } : {}),
-          ...(audioCatalogue.length
-            ? {
-                audioLaneCatalogue: audioCatalogue,
-                onAudioLanes: (report: OfflineAudioLaneReport) => {
-                  audioLanes = report;
-                },
-              }
-            : {}),
+          // Unconditional, for the same reason as in `renderAudio`: an unreadable catalogue must not discard the whole lane report.
+          audioLaneCatalogue: audioCatalogue,
+          onAudioLanes: (report: OfflineAudioLaneReport) => {
+            audioLanes = report;
+          },
+          ...(catalogueProblem ? { audioLaneCatalogueProblem: catalogueProblem } : {}),
         });
         const channelsOut: Float32Array[] = [];
         for (let c = 0; c < buffer.numberOfChannels; c += 1) channelsOut.push(buffer.getChannelData(c));
@@ -705,8 +750,9 @@ export async function renderStems(
         bars: options.bars,
         sampleRate: options.sampleRate,
         channels: options.channels,
-        manifestText,
+        manifestText: catalogueRead.text,
         sampleRoot,
+        catalogueProblem: catalogueRead.problem,
       }
     );
 
@@ -718,6 +764,7 @@ export async function renderStems(
     laneLanes.push(...(rendered.audioLanes?.lanes ?? []));
     laneProblems.push(...(rendered.audioLanes?.problems ?? []));
     laneEvents += rendered.audioLanes?.events ?? 0;
+    laneCatalogueProblem = laneCatalogueProblem ?? rendered.audioLanes?.catalogueProblem;
     stems.push({
       path: target,
       filename,
@@ -733,7 +780,19 @@ export async function renderStems(
     });
   }
 
-  return { dir, stems, sampleRate, bpm, audioLanes: { lanes: laneLanes, events: laneEvents, problems: laneProblems } };
+  const catalogueProblem = laneCatalogueProblem ?? catalogueRead.problem;
+  return {
+    dir,
+    stems,
+    sampleRate,
+    bpm,
+    audioLanes: {
+      lanes: laneLanes,
+      events: laneEvents,
+      problems: laneProblems,
+      ...(catalogueProblem ? { catalogueProblem } : {}),
+    },
+  };
 }
 
 /**

@@ -14,6 +14,18 @@ import type { SequencerPattern } from "../types/genre";
  */
 const player = () => ({ play: vi.fn(async (input: { pattern: SequencerPattern }) => ({ planned: input.pattern.tracks.length })) });
 
+/** A player that records what it was handed, for the criteria about *which* lanes are scheduled. */
+const capturingPlayer = () => {
+  const calls: Array<{ samplerLanes: Array<{ sourceTrackId: string }> }> = [];
+  return {
+    calls,
+    play: vi.fn(async (input: { pattern: SequencerPattern; samplerLanes: Array<{ sourceTrackId: string }> }) => {
+      calls.push(input);
+      return { planned: input.pattern.tracks.length };
+    }),
+  };
+};
+
 describe("playing a v2 arrangement", () => {
   it("hands the engine a lane for every sounding track, and reports what it planned", async () => {
     const engine = player();
@@ -39,5 +51,37 @@ describe("playing a v2 arrangement", () => {
     // ⭐ Zero is a real answer, and the caller can tell "nothing to play" from "the engine ignored what it got" because the compiled count is reported beside it.
     expect(result.compiledLanes).toBe(0);
     expect(result.planned).toBe(0);
+  });
+
+  it("does not schedule a muted sampler lane, because the engine cannot silence a voice started outside it", async () => {
+    /**
+     * A sampler note is started by the player, not by the engine, so `setPattern`'s mute cannot reach it. Carrying the arrangement's `muted` flag onto the compiled
+     * lane is what makes the **offline** render honour it; this is the live half of the same rule, so the two cannot disagree about whether a lane is playing.
+     */
+    const engine = capturingPlayer();
+    const arrangement: ArrangementV2 = {
+      songId: "s",
+      sourceSlots: [],
+      tracks: [
+        { id: "t1", kind: "sampler", name: "Muted", sample: { assetId: "a" }, muted: true },
+        { id: "t2", kind: "sampler", name: "Playing", sample: { assetId: "b" } },
+      ],
+    };
+    await playArrangementV2(arrangement, {}, engine as never);
+    expect(engine.calls[0]!.samplerLanes.map((lane) => lane.sourceTrackId)).toEqual(["t2"]);
+  });
+
+  it("schedules only the soloed sampler lane when one track is soloed", async () => {
+    const engine = capturingPlayer();
+    const arrangement: ArrangementV2 = {
+      songId: "s",
+      sourceSlots: [],
+      tracks: [
+        { id: "t1", kind: "sampler", name: "Soloed", sample: { assetId: "a" }, soloed: true },
+        { id: "t2", kind: "sampler", name: "Out", sample: { assetId: "b" } },
+      ],
+    };
+    await playArrangementV2(arrangement, {}, engine as never);
+    expect(engine.calls[0]!.samplerLanes.map((lane) => lane.sourceTrackId)).toEqual(["t1"]);
   });
 });
