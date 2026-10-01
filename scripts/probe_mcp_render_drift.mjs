@@ -64,7 +64,7 @@ const request = (method, params) =>
 const callTool = async (name, args) => {
   const reply = await request("tools/call", { name, arguments: args });
   const text = reply?.result?.content?.[0]?.text ?? JSON.stringify(reply?.error ?? reply);
-  return { ok: !reply?.error && !reply?.result?.isError, text: String(text).slice(0, 150) };
+  return { ok: !reply?.error && !reply?.result?.isError, text: String(text) };
 };
 
 try {
@@ -101,11 +101,22 @@ try {
 
   const finite = lufs.filter(Number.isFinite);
   const max = Math.max(...finite), min = Math.min(...finite);
-  console.log(`\n渲染 ${TOTAL} 次：成功 ${finite.length}，失败 ${failures} ✗`);
-  console.log(`LUFS 范围 ${min.toFixed(3)} … ${max.toFixed(3)}，跨度 ${(max - min).toFixed(3)} LU`);
-  console.log(max - min > 0.5
-    ? "⇒ 有漂移 ✗：长会话里渲染结果会变，页面回收（按测量设备用过的量级）是对症的。"
-    : "⇒ 无漂移 ✓：在这段渲染数内页面没有退化，页面回收暂时没有依据。");
+  console.log(`\n渲染 ${TOTAL} 次：解析到 LUFS ${finite.length}，失败 ${failures} ✗`);
+  /**
+   * ⚠️ **An instrument that measured nothing must not report "fine".** The first version of this probe
+   * truncated each reply to 150 characters, which cut `integratedLufs` off before it could be parsed, and
+   * its verdict compared a range built from an empty list — `-Infinity > 0.5` is false — so sixty renders
+   * that produced **zero readings** were reported as "no drift". The count is checked first now, and
+   * anything short of a full set is inconclusive rather than good news.
+   */
+  if (finite.length < TOTAL * 0.9) {
+    console.log(`⇒ 不确定 ✗：只解析到 ${finite.length}/${TOTAL} 次读数，不足以判断漂移——先修仪器，再谈结论。`);
+    process.exitCode = 2;
+  } else if (max - min > 0.5) {
+    console.log(`⇒ 有漂移 ✗：跨度 ${(max - min).toFixed(3)} LU，页面回收（按测量设备用过的量级）是对症的。`);
+  } else {
+    console.log(`⇒ 无漂移 ✓：跨度 ${(max - min).toFixed(3)} LU，在这段渲染数内页面没有退化。`);
+  }
 } finally {
   child.kill("SIGKILL");
 }
