@@ -53,7 +53,7 @@ describe("the audio-lane fields of a render reply", () => {
     expect(String(fields.skippedNote)).toMatch(/why it could not be mixed/);
   });
 
-  it("keeps a lane out of both lists only when it is in neither — the two are complementary", () => {
+  it("names the rendered lanes and the dropped ones from the same report, without conflating them", () => {
     const fields = audioLaneReplyFields(
       report({
         lanes: [{ trackIndex: 0, track_id: "audio", name: "Rendered" }],
@@ -62,5 +62,21 @@ describe("the audio-lane fields of a render reply", () => {
     );
     expect((fields.renderedAudioLanes as unknown[]).length).toBe(1);
     expect((fields.skippedLanes as unknown[]).length).toBe(1);
+    expect((fields.renderedAudioLanes as Array<Record<string, unknown>>)[0]!.name).toBe("Rendered");
+    expect((fields.skippedLanes as Array<Record<string, unknown>>)[0]!.name).toBe("Dropped");
+  });
+
+  it("lists a partly-rendered lane under both, because the rest of it did reach the mix", () => {
+    // A drum kit whose note 60 has no region and whose other notes sound: "skipped" alone would hide the notes that played, "rendered" alone would hide the miss.
+    const fields = audioLaneReplyFields(
+      report({
+        lanes: [{ trackIndex: 0, track_id: "audio", name: "Kit" }],
+        events: 3,
+        problems: [{ trackIndex: 0, track_id: "audio", name: "Kit", assetId: "probe-kit", reason: "note 60 has no playback" }],
+      })
+    );
+    expect((fields.renderedAudioLanes as unknown[]).length).toBe(1);
+    expect((fields.skippedLanes as unknown[]).length).toBe(1);
+    expect(String((fields.skippedLanes as Array<Record<string, unknown>>)[0]!.reason)).toMatch(/note 60/);
   });
 });

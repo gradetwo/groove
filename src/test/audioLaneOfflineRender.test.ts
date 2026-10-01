@@ -172,6 +172,39 @@ describe("an arrangement's audio lane in the offline render", () => {
     expect(quiet.energy() / unity.energy()).toBeCloseTo(expectedGain * expectedGain, 3);
   });
 
+  it("counts a partly-resolved instrument as rendered, and still reports the note that failed", async () => {
+    // A drum kit covering only part of what was written: note 60 answers, note 64 does not. "Skipped" would deny the hit that played; "rendered" alone would deny the miss.
+    const arrangement = samplerArrangement("probe-kit");
+    const pattern = compileArrangementToPattern(arrangement, {
+      t1: [
+        { pitch: 60, startBeats: 0, lengthBeats: 1, velocity: 100 },
+        { pitch: 64, startBeats: 2, lengthBeats: 1, velocity: 100 },
+      ],
+    });
+    const partial = {
+      async load() {
+        throw new Error("unused");
+      },
+      async loadNote(_assetId: string, pitch: number) {
+        if (pitch === 64) throw new Error("note 64 has no playback: the file's regions cover keys 35–59");
+        return { buffer: fakeBuffer(), ratio: 1, samplePath: "kit/60.wav" };
+      },
+      decodes: () => 1,
+    } as unknown as SampleLoader;
+
+    const mix = summingSink(SAMPLE_RATE * 2);
+    const report = await scheduleOfflineAudioLanes({ pattern, catalogue: [instrumentAsset], loader: partial, sink: mix.sink });
+
+    expect(report.events).toBe(1);
+    expect(report.lanes).toHaveLength(1);
+    expect(report.problems).toHaveLength(1);
+    expect(report.problems[0]!.reason).toMatch(/note 64/);
+    expect(mix.energy()).toBeGreaterThan(0);
+    const fields = audioLaneReplyFields(report);
+    expect((fields.renderedAudioLanes as unknown[]).length).toBe(1);
+    expect((fields.skippedLanes as unknown[]).length).toBe(1);
+  });
+
   it("reports a lane whose bytes cannot be resolved, named, rather than passing silently", async () => {
     const arrangement = samplerArrangement("not-in-the-catalogue");
     const pattern = compileArrangementToPattern(arrangement, { t1: [] });
