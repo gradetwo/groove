@@ -36,6 +36,7 @@ function unknownGenre(wanted: string): string {
 import { applyPatternOps, comparePatterns, findTrack, patternStatistics, validatePattern, type PatternOp } from "./pattern";
 import { DEFAULT_NOTE_CONVENTION, collectTranspositions, describePitch, type NoteConvention } from "../src/data/pitchTruth";
 import { fromMidi } from "../src/data/midiToArrangement";
+import { changeUserLibraries } from "./sampleLibraries";
 import { resolveGs1Lane } from "../src/audio/gs1/gs1Tracks";
 import { decodeGs1PatchCode, type Gs1PatchRoute } from "../src/audio/gs1/gs1PatchCode";
 import {
@@ -1561,6 +1562,55 @@ export const TOOLS: ToolDefinition[] = [
           "the chord register in genreExpression, which is written into the pitches at composition time and is not a playback transposition",
         ],
         note: "each entry is what the model states, and reversible says whether the creator can set it back",
+      };
+    },
+  },
+  {
+    name: "add_sample_library",
+    title: "Register your own sound source",
+    description:
+      "**Add a sound library you supply** — the orchestral one you prefer over ours — or remove one you added. Give `library` with an `id` (the namespace its asset ids take), a `name`, a `licence`, and where its files live: a pinned source as `repo` + `pin`, or a mirror as `root` + `prefix`, or both; plus an `sfz` path or an `instruments` list. The library is merged into the catalogue **before** asset ids are made, so it acquires them from the same function the built-in libraries do and its notes resolve through the same resolver — there is no second loading path. **A licence is required and `\"unknown\"` is a real answer**: guessing would be believed, and saying nothing is better than that. Give `durationSeconds` when you know it; without one the library is registered but **excluded from the catalogue with that reason attached**, because a duration nobody measured is not a duration. A refusal writes nothing. Call with neither argument to list what is registered, or with `remove` to undo an addition.",
+    readOnly: false,
+    inputSchema: {
+      library: z
+        .record(z.string(), z.unknown())
+        .optional()
+        .describe(
+          'the library: { id, name, licence, sfz, repo?, pin?, root?, prefix?, instruments?, durationSeconds?, attribution?, sourceUrl? }'
+        ),
+      remove: z.string().optional().describe("the id of a library to remove, undoing an earlier addition"),
+    },
+    handler: (args) => {
+      /**
+       * ⭐ **The ids the project already ships, so a collision is refused here rather than silently dropped
+       * later.** `listSampleLibraries` reads the shipped manifest and lists exactly those; a library that took
+       * one of their ids would be accepted, written, and then excluded from the catalogue at merge time — which
+       * looks to the person like it worked. Found by running this tool, not by reading it.
+       */
+      const reservedIds = listSampleLibraries().libraries.map((library) => library.id);
+      const result = changeUserLibraries({
+        ...(args.library === undefined ? {} : { library: args.library }),
+        ...(args.remove === undefined ? {} : { remove: String(args.remove) }),
+        reservedIds,
+      });
+      return {
+        changed: result.changed,
+        path: result.path,
+        /** ⭐ What is registered now, so a caller sees the effect without a second call. */
+        libraries: result.libraries.map((library) => ({
+          id: library.id,
+          name: library.name,
+          licence: library.licence,
+          ...(library.repo === undefined ? {} : { repo: library.repo }),
+          ...(library.pin === undefined ? {} : { pin: library.pin }),
+          ...(library.durationSeconds === undefined ? {} : { durationSeconds: library.durationSeconds }),
+          ...(library.durationSeconds === undefined ? { excluded: "no duration has been measured for this library" } : {}),
+        })),
+        ...(result.problems.length === 0 ? {} : { problems: result.problems }),
+        note:
+          result.changed === "none"
+            ? "nothing was written"
+            : "the catalogue merges this at load, so the library's instruments and their asset ids appear the next time the catalogue is built — run get_pitch_report against one of them to see whether its labels match what it plays",
       };
     },
   },
