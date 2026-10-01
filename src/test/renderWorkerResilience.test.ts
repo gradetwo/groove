@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from "vitest";
 import net from "node:net";
-import { aFreePort, renderTimeoutMessage } from "../../mcp/render/worker";
+import { aFreePort, renderTimeoutMessage, withRenderTimeout } from "../../mcp/render/worker";
 
 describe("the render worker's port", () => {
   it("asks the system for a port rather than fixing one", async () => {
@@ -49,5 +49,43 @@ describe("the render timeout message", () => {
     expect(message).toContain("64 bar(s) of chicago-house");
     expect(message).toContain("900s");
     expect(message).toContain("reset");
+  });
+});
+
+/**
+ * The budget itself, which the sentence above belongs to.
+ *
+ * `renderTimeoutMessage` could be spelled perfectly while nothing ever produced it: the sentence was pinned and the
+ * **race** was not. A page inside `OfflineAudioContext.startRendering()` is one uninterruptible call with no callback
+ * (`docs/RENDER_PROFILE.md`), so a stuck render is indistinguishable from a slow one except by giving up on it — and
+ * giving up has to be a **rejection**, not a promise that stays pending. That is the whole difference between the
+ * field report's "worker hang" and a loud failure, and it is what these three cases fix:
+ *
+ *   · slow work that finishes **inside** the budget still resolves — the budget must not kill a live render;
+ *   · a render that never settles **rejects**, naming what was being rendered and how long it had;
+ *   · a render that fails on its own keeps its **own** reason — a missing sample must not be relabelled a timeout.
+ */
+describe("the render budget", () => {
+  it("lets slow work that finishes inside the budget resolve", async () => {
+    // Green direction: 25 ms of work against a 1 s budget is the shape of a healthy slow render.
+    const slow = new Promise<string>((resolve) => setTimeout(() => resolve("rendered"), 25));
+    await expect(withRenderTimeout(slow, "8 bar(s) of custom", 1000)).resolves.toBe("rendered");
+  });
+
+  it("rejects a render that stops answering, instead of leaving the caller pending", async () => {
+    /**
+     * ⭐ The silent-stall case. `never` is a page that will not answer again; without the timer in
+     * `withRenderTimeout` this test does not fail an assertion — it **times out**, which is exactly the failure the
+     * field report describes. The deletion test is to replace the race with `return await work;`.
+     */
+    const never = new Promise<never>(() => {});
+    await expect(withRenderTimeout(never, "64 bar(s) of custom", 1000)).rejects.toThrow(
+      /the render of 64 bar\(s\) of custom did not answer within 1s/
+    );
+  });
+
+  it("keeps a render's own failure rather than turning it into a timeout", async () => {
+    const failed = Promise.reject(new Error('no sample "probe-impulse" for lane "audio"'));
+    await expect(withRenderTimeout(failed, "8 bar(s) of custom", 1000)).rejects.toThrow('no sample "probe-impulse"');
   });
 });

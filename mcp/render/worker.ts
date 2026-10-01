@@ -179,8 +179,10 @@ export function renderTimeoutMessage(what: string, seconds: number): string {
  * Muse, rendering a nine-movement piece through this server, described the worst version of this problem: four movements hung with **no CPU progress and no message**, so the only way to tell a stuck page from a slow piece was to give up on it. A page that has stopped answering cannot be asked anything more, and keeping it would make every later render fail the same way — which is what "worked once, then never again" was.
  *
  * The default budget is fifteen minutes: the same agent's nine-movement renders took three to eight minutes each, so a shorter one would have killed work that was progressing normally.
+ *
+ * Exported so the behaviour itself can be judged without a browser (`src/test/renderWorkerResilience.test.ts`): the sentence was already pinned, and the race that produces it was not. A stuck call must **reject** with that sentence rather than stay pending — the difference between a loud failure and the silent stall the report is about.
  */
-async function withRenderTimeout<T>(work: Promise<T>, what: string, timeoutMs: number): Promise<T> {
+export async function withRenderTimeout<T>(work: Promise<T>, what: string, timeoutMs: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([

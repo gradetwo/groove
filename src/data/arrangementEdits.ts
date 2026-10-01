@@ -90,6 +90,40 @@ export function createArrangementFromTemplate(songId: string, templateId: string
 }
 
 /**
+ * The **starter notes** a kind is created with, as notes rather than steps — the same conversion `createArrangement`
+ * performs, exposed so the MCP surface can tell "the caller wrote this" from "the starter content is still here".
+ *
+ * It exists because two field reports describe the same surprise: an agent asks for a new sampler track and receives
+ * four notes at pitch 60 it did not write, with nothing in the reply saying so. The app's starter experience is
+ * deliberately unchanged (§ `createArrangement`); the agent-facing path removes the notes instead, and this is how the
+ * remaining case — an arrangement that still carries them — can be *named* rather than assumed away.
+ */
+export function starterNotesFor(kind: TrackKindV2): NoteEvent[] {
+  return notesFromSteps(defaultContentFor(kind).steps, { velocity: 100 });
+}
+
+/**
+ * True when a track's notes are exactly the untouched starter content for its kind.
+ *
+ * A note-for-note comparison rather than a flag, because there is no field in the model to mark them and adding one
+ * would be a model change for a reporting decision. It is deliberately strict: adding, removing or editing any note
+ * makes it false, so it fires on "nobody has touched this" and not on a coincidence of pitches.
+ */
+export function carriesStarterNotes(kind: TrackKindV2, notes: readonly NoteEvent[] | undefined): boolean {
+  const starter = starterNotesFor(kind);
+  if (starter.length === 0 || !notes || notes.length !== starter.length) return false;
+  return notes.every((note, index) => {
+    const expected = starter[index]!;
+    return (
+      note.pitch === expected.pitch &&
+      note.startBeats === expected.startBeats &&
+      note.lengthBeats === expected.lengthBeats &&
+      note.velocity === expected.velocity
+    );
+  });
+}
+
+/**
  * Changing what a track **is** — which the owner asked for — and therefore deciding what happens to the fields that only made sense for the old kind.
  *
  * The rule is one sentence: **drop what belongs to the route or the sound source, keep what is content.** A `sample` describes which sample this track plays, which means nothing to a synth, so it must not

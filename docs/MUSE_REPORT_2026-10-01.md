@@ -449,3 +449,122 @@ P0-2 那支的阶梯测量顺带给了两个点 ✓（**这是它的测量、我
 **但这只是预测** ✗✓：**两点定不出线性** ✓。**判据很明确** ✓：**16 轨 × 32 节 = 512 lane-bar 那一点** ✓——若落在 `665 + 7.2×512 ≈ 4.4 GB` 附近 ✓，则**线性** ✓、**"内存"就是第四个真上限** ✓✓；若**显著更高** ✗，则**超线性** ✓，**根因要去 PCM 载入与图结构里找** ✓，**而不是加内存** ✗。
 
 **为什么现在记它** ✓✓：先前目标把"内存上限"降级为"已记录、无数字" ✓——**现在它有数字、有模型、有一个待测的判据** ✓✓，**而且做这个分析不需要任何人再跑一次** ✓（只需等那一点 ✓）。
+
+## 附 A（`fix-arrangement-hang`）：`render_arrangement` 大 arrangement 挂起：**在本机未复现**，而"响亮失败"这一半是实测的（分支 `fix-arrangement-hang`）
+
+> 报告的 P0「大 arrangement `render_arrangement` browser worker hang」此前**无人复现**。本次先做的不是修，而是**量**：经**真 MCP**把夹具从 1 轨 1 小节一路推到 **32 轨 128 小节 2144 音符**，看它是完成、是响亮失败、还是静默挂起。
+
+**做法** ✓：新探针 `scripts/probe_arrangement_scale.mjs`，经真 MCP 建夹具（`create_arrangement` → `add_arrangement_track` → `set_arrangement_track_instrument`（字段 `arrangementId`/`trackId`/`assetId`）→ `add_arrangement_notes`（字段恰为 `pitch`/`startBeats`/`lengthBeats`/`velocity`）→ `set_arrangement_bars` → `render_arrangement`），带 `progressToken`，并同时记墙钟、进度通知、回复字段（`renderedAudioLanes` / `skippedLanes[].reason` / `problems`）与**本 server 自己的** Chromium 进程树峰值 RSS。命令与结果逐字：
+
+```bash
+npm run mcp:build
+node scripts/probe_arrangement_scale.mjs --samplers=N --bars=B --notes=K [--watchdog=S] [--killAfterChromium=S] [--rerender=1]
+```
+
+| 夹具（sampler 轨 × 小节 × 每轨音符） | 墙钟 | 音频 | 结果 | Chromium 峰值 RSS |
+| --- | ---: | ---: | --- | ---: |
+| 1 × 1 × 2（当时新轨还带 3 个 starter 音） | 45.7 s | **2.600 s** | 完成 ✓ | 665 MB / 6 进程 |
+| 8 × 8 × 16 | 49.3 s | **16.600 s** | 完成 ✓ | 1123 MB / 7 进程 |
+| 16 × 32 × 32（560 音符） | 79.7 s | **64.600 s** | 完成 ✓ | 961 MB / 7 进程 |
+| **32 × 128 × 64（2144 音符，`MAX_BARS`）** | **394.9 s** | **256.600 s** | **完成 ✓，`renderedAudioLanes=32`、`skippedLanes=none`、`problems=0`** | 1564 MB / 7 进程 |
+
+**音频长度是排列自己的**（`set_arrangement_bars`；默认 8 小节）：`durationSec = 小节 × 2.0 s + 0.6 s`尾巴，120 BPM（`arrangementCompile.ts:256` 的 `DEFAULT_ARRANGEMENT_BPM = 120`、`arrangementEdits.ts:49` 的 `DEFAULT_BARS = 8`）✓✓ → 这**就是**上面那条"16.6 秒解释不了"的答案：**默认 8 小节**（8×2.0+0.6），不是 clip 长度 ✗✓。
+
+**⇒ 结论** ✓✓：**在这四个尺寸上，大 arrangement 都完成了，没有一次静默挂起；最大的那次 395 秒 / 256.6 秒音频，远在 900 秒预算内。** 所以本机**不能**说"挂起已修"，只能说**未复现**（**not reproduced here**）——**约束是墙钟而非内存**（峰值 1.56 GB，机器 15 GB）；也没有撞到进程寿命（同一 server 内每次新起页面，收尾都回到 0 个 Chromium）。
+
+### 15.1 它现在**确实**以响亮失败示人（预算、存活检查）
+
+**预算那一半**（本次新增判据）✓：`src/test/renderWorkerResilience.test.ts` 原本只钉住**句子**（`renderTimeoutMessage`），没有钉住**产生它的 race**。现在 `withRenderTimeout` 被导出，判据三个方向：慢但在预算内的工作仍 resolve ✓、**永不结算的渲染 reject 并指名内容与秒数** ✓、渲染**自己的**失败（`no sample …`）不被改写成超时 ✓。实测 `npx vitest run src/test/renderWorkerResilience.test.ts` → **7 passed**。
+
+**删除测试** ✗✓（逐字）：把 `withRenderTimeout` 的 race 换成 `return await work;` 后，同一条判据**不是断言失败，而是超时**——那正是"静默挂起"的形状：
+
+```
+× the render budget > rejects a render that stops answering, instead of leaving the caller pending 5039ms
+  → Test timed out in 5000ms.
+```
+
+还原后 **7 passed** ✓✓。
+
+**存活那一半**（实测）✓：`--killAfterChromium=8|30` 杀掉**本 server 自己的** 6–7 个 Chromium（按 `/proc/<pid>/stat` 的父子关系找，不用进程名——按名会杀到别的工作树）。两次都得到**可读的失败**而不是挂起：
+
+```
+kill 浏览器出现后 30s（渲染中）：失败  墙钟 32.7 s，进度通知 3 条
+  → page.evaluate: Target page, context or browser has been closed
+kill 浏览器出现后 8s（导航中）：失败  墙钟 9.6 s
+  → page.goto: Target page, context or browser has been closed
+  第二次渲染（--rerender=1）：完成 ✓ 墙钟 66.7 s，durationSec=128.6
+  ⇒ 存活检查重建了浏览器，会话继续 ✓
+```
+
+**⇒ "要么完成、要么带原因失败、绝不静默挂起"**：在本机**四个尺寸 + 三次杀页**上都成立 ✓✓。**没证明的** ✗：这不是"挂起不存在"，而是"**在这台机器、这些尺寸上没复现**"；也**没有**触发过 900 秒预算本身（最大 395 秒），预算只由单元判据与句子钉住，未端到端撞到过 ✗✓。
+
+**`skippedLanes[].reason` 这一半本次没有端到端造出来，原因已量** ✗✓：把 `GROOVE_SAMPLE_ROOT` 指向一个不可达的根（`http://127.0.0.1:9`）重跑，2 条 vsco2ce 采样 lane **照常渲染、`skippedLanes=none`、`durationSec=2.6`**——因为这些资产的地址来自 manifest 自己的 `repo`/`pin` 拼出的**绝对** `raw.githubusercontent` URL（`src/data/sampleManifest.ts:270`），`sampleMirrorRoot()` 管不到它们。所以"lane 为什么没出声"这半的现场证据仍是**已有的判据与报告本身**（`src/test/skippedLanes.test.ts`、`src/test/audioLaneOfflineRender.test.ts`，以及本文件 §十四 里实测到的 `note 60 has no playback…`）✓，而不是本次新造的 ✗。
+
+### 15.2 探针自己犯的两个错（记下来，免得下一个人重犯）
+
+1. **固定延迟的杀页什么也没杀** ✗✓：45 秒的计时器在一个 29 秒就结束的渲染之后才到，`clearTimeout` 先把它取消了——日志里**没有** `✂` 那一行就是证据 ✓。改成 `--killAfterChromium`（等浏览器出现再倒数）后杀到 6/6、7/7 ✓。
+2. **完成的探针不退出** ✗✓：被 SIGKILL 的 MCP server 的 stdout 管道可能被孙进程（Vite）持有，探针的 `data` 监听于是让它一直停在 `epoll_wait`——实测一次 16 轨运行**结束后仍活了 12 分钟**，还得手杀。现在收尾显式 `process.exit()` ✓。
+
+## 附 B（`fix-arrangement-hang`）：`apply_gs1_patch` 今天接受的参数面——**逐条清单**
+
+报告 P1「GS-1 逐参数写入未暴露」**成立**，而且已有裁定（`docs/GS1_PATCH_SURFACE.md` §7「仍然不做的：逐参数编辑器」）。本次把它从"概述"变成**清单**，落在同一文档新增的 **§8**，全文 224 行逐条可查。要点与可复现命令：
+
+* **工具今天的音色入参只有一个** `patch`：一个 `gs1.1.` share code（或 `null` 清除）；`genreId`/`pattern`/`track` 与音色无关（`mcp/registry.ts:1284-1295`）。
+* **一个 code 能装 224 个参数**（`DEFAULT_PARAMS`，`gs1PatchCode.ts:76` 按 id 升序），外加路由 `r`；其中**只有 84 个**在 vendored 表里有标签 + 声明范围（`PARAM_SPECS`），另外 **140 个**只有枚举名与默认值（开关、波形/类型、LFO 目标、`TEMPO`、FX 链序、6 槽 graph、4 槽调制矩阵、过采样覆盖）。
+* **缺口清单**：逐参数写入 **224 个里 0 个可单独写**；调制路由 **0 条可单独写**；**19 个具名预设**（`GS1_PATCHES`）**0 个可按名写**（只能间接经 `instrument` 名映射）。
+* **引擎侧本来就有** `Gs1Host.setParam/setPatch/setModRoute`（`Gs1Host.ts:184/188/196`）→ 缺的是**暴露**，不是能力。
+* **为什么本次仍只记录**：写侧第一步是一次**决定**（把上游 `buildPayload` 编码器按哈希 pin 进 `vendor/gs1/`，还是加一个并入唯一解析缝 `resolveGs1Lane` 的覆盖字段）；在这仓库里手写编码器就是给同一格式写第二份实现，正是 `gs1PatchPassthrough.test.ts` 用 synth 自己的编码器产物做 fixture 要防的。**读侧的第一步不需要编码器**：一个 `get_gs1_patch`，用已有的 `decodeGs1PatchCode` 把某轨 code 的 224 个值与路由读回来。范围校验也不能照抄 `PARAM_SPECS`（§4 的测量：`phonk` 的 `osc2Pitch = 31` 会被它拒掉）。
+
+**复现清单**：`npx vite-node scripts/report_gs1_params.ts`（本次新增，读 vendored 表逐条打印；224 行与 §8 的表逐字一致）。
+
+## 附 C（`fix-arrangement-hang`）：MCP 创建不再播种 starter notes，并在仍在时具名
+
+**已按业主决定实施** ✓：`createMcpArrangement` 与 `addMcpTrack` 不再把 `defaultContentFor` 的 4 个 pitch 60 音符带给调用者（`mcp/arrangement.ts`），但**保留** sampler 轨的默认 asset——那是身份（没有它 lane 解析不到东西），不是内容。app 的 starter 体验不变（`createArrangement` 原样）。
+
+**"仍在播种时要具名"** ✓：`summariseArrangement` 用新 `carriesStarterNotes`（`src/data/arrangementEdits.ts`）逐音符比对"未被碰过的 starter 内容"，命中即进 `problems`；`render_arrangement` 的回复新增 `arrangementProblems`（`mcp/registry.ts`），所以"这条轨道还带着你没写的 4 个 starter 音"在**渲染的回复**里也看得见，而不只在 `get_arrangement` 里。
+
+**实测与判据**（`npx vitest run src/test/mcpArrangement.test.ts` → 29 passed）：
+* 新判据：blank / template / `addMcpTrack` 三条路的每条轨道 `notes` 都是 `[]`，且 sampler 的 `sampleAssetId` 仍是 `virtuosity-drums-basic`；
+* 新判据：`createArrangement` 播下的 starter 内容被 `problems` 具名，**加一个音符后就不再具名**（两个方向）；
+* **删除测试**：把 `createMcpArrangement` 的 `notesByTrack: {}` 还原成 `seeded`，第一条判据**当场变红**（`expected [ { pitch: 60, …(3) } ] to deeply equal []`），还原即绿 ✓✓；
+* 受影响的旧判据已按新行为改正、**不是放宽**："flattens to something the renderer can bounce" 现在**由调用者先写一个音符**再 flatten（旧版测的其实是 starter 内容，正是本次要移除的东西）。
+
+## 附 D（`fix-arrangement-hang`）：一步一格的**和弦列损失**被具名，不改和弦的听感
+
+**业主决定（不把整叠音弹出来）已遵守** ✓：`stepsFromNotes` 的"每列保留最低音"原样不动，`Math.min` 不动。新增的是**报告**：`collapsedNoteColumns`（`src/data/noteEvents.ts`）镜像同一套取整与 `Math.min`，返回每个"两个以上音符起始"的列、保留音高与被丢音高；`summariseArrangement` 把它写进 `problems`（也因此进入 `render_arrangement` 的 `arrangementProblems`）。
+
+**实测与判据**（同上 29 passed）：
+* 三个音（60/64/67）同在第 0 步 → `problems` 出现 `puts 3 notes in step 0 and a step column keeps one pitch (keeps 60, drops 64, 67)`，且该轨 `notes` 仍是 **3** 个（报告不改数据）；
+* 一列一个音 → **不报告**（反方向）；
+* **删除测试**：删掉 `summariseArrangement` 里这一段，第一条断言变红。
+
+**未做且不建议顺手做的**：把整叠音送出（`pitches` 多值）会改变所有既有和弦的听感，是产品决定；本次只把沉默变成一句可读的话。
+
+## 附 E（`fix-arrangement-hang`）：`render_arrangement.bars` 现在是"重复次数"，与描述一致
+
+**已按"两个方向都量过"的做法修掉** ✓：handler 原来写死 `bars: 1`（`mcp/registry.ts`），而 schema 与描述都承诺 "raising it repeats the arrangement … it drives the duration"。现在传 `passes = args.bars ?? 1`，回复里同时给三个数：
+
+* `bars`：排列自己的长度——取自**模型的 summary**，不再取 `flattenMcpArrangement().bars`（后者在**没有音符**的排列上是 1，而它的 `totalSteps` 仍是 128；移除 starter notes 之后，这恰好是 MCP 调用者的起点 ✗✓）；
+* `passes`：这次渲染了几遍（就是 `bars` 问的那个数）；
+* `totalSteps`：一遍的步数（原样）。
+
+判据 `src/test/mcpRenderArrangementBars.test.ts`（mock 掉 `renderAudio`，不花浏览器）：`bars:3` → 渲染器收到 `bars:3`、回复 `passes:3`、`bars:8`；省略 → `bars:1`、`passes:1`；`bars:2` 不改写排列自己的 `bars:8` / `totalSteps:128`。**删除测试**：把 `bars: passes` 还原成 `bars: 1` → 第一条判据 `expected 1 to be 3` 当场变红，还原即绿 ✓✓。工具描述与 `docs/MCP.md` 两处 `render_arrangement` 行已一并改到与代码一致（不再说 "An arrangement is one bar of sixteen steps"）✓。
+
+### ⚠️ **我的"两点线性内存模型"被它的四点数据推翻** ✗✗✓✓（2026-10-01，第六次自我更正）
+
+上一节我用两点推出 **`665 MB + 7.2 MB/lane-bar`** ✓，并外推"34 轨 × 8 节 ≈ 2.6 GB、与现场报告的 3.1 GB 同量级" ✗✓。**P0-2 那支跑齐了四点** ✓：
+
+| 夹具 | lane-bar | 墙钟 | 峰值 RSS |
+| --- | ---: | ---: | ---: |
+| 1 × 1 | 1 | 45.7 s | 665 MB |
+| 8 × 8 | 64 | 49.3 s | **1123 MB** |
+| 16 × 32 | **512** | 79.7 s | **961 MB** ✗ |
+| **32 × 128** | **4096** | **394.9 s** | **1564 MB** ✗ |
+
+**⇒ 我的模型是错的** ✗✗✓，两处：**① 不随 lane-bar 单调** ✗（512 那点比 64 那点**更低** ✓）；**② 4096 lane-bar 也只有 1564 MB** ✗✓——**按我的斜率该是 30 GB** ✗✗。
+
+**而它也不随墙钟走** ✗✓：665/45.7、1123/49.3、961/79.7、1564/394.9 —— **8×8 比 16×32 更短却更高** ✗✓。**所以四个点不拟合任何单一变量** ✓✓：**峰值 RSS 由固定的运行底噪与逐次波动主导** ✓，**不是 lane 数、也不是时长** ✗。
+
+**这条负结果本身就是答案** ✓✓：**在 4096 lane-bar（32 轨 × 128 小节、2144 音符、256.6 秒音频）下峰值只有 1564 MB** ✓✓——**远低于现场报告说的 3.1 GB** ✗✓。**所以那份报告的内存指控在本机也没有复现** ✓✓（**并把"试过什么"写明** ✓：四个规模夹具、逐字命令、峰值与进程数 ✓）。
+
+**我的教训（与今天其余几次同源）** ✗✓：**两点定线、并把外推写成"同量级"的确认** ✗✓——**那正是我在别人报告里挑的毛病** ✗✓✓。**判据要问两个方向，模型要问"第三点在哪"** ✓。
