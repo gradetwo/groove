@@ -100,3 +100,28 @@
 **修法与位置**：`mcp/registry.ts` 里 `create_song` 的 `clips` schema 应为**部分对象**（各槽可选），并补一条判据：**只给 A 槽也能建歌，且返回的段落与槽位正确**。
 
 **为什么现在没修**：三条分支（`feat-audio-lane-render`、`feat-gs1-assessment`、`feat-transform-pattern`）此刻都在改 `mcp/registry.ts`，并发编辑同一文件会互相覆盖。**排队**：等它们落地后再改，一次一个。
+
+---
+
+## 七、CI 分工：分支各自上 GitHub，本地只留轻活（业主 2026-10-01 指令）
+
+**为什么改**：此前六条分支**全部在本地**跑 `tsc`/`vitest` ✓，而 `ci.yml` 的触发条件**本来就是每个分支**（`on.push.branches: ["**"]`），只是没人推分支——所以本地 load 一度到 28 ✓，一次本地门禁被拖到 27 分钟没跑完 ✗。重活应当在 GitHub 上。
+
+**两个必须知道的机关**：
+
+1. **主仓库原本没有 remote**（只有镜像 `/home/crow/music/release/groove-github` 有）。已补：
+   `git remote add origin git@github.com:gradetwo/groove.git`
+2. **推送用的是专用部署密钥**，不是默认 SSH key。镜像里配的是
+   `core.sshCommand = ssh -i ~/.ssh/id_ecdsa_groove -o IdentitiesOnly=yes`
+   主仓库也照配了同一行。少了这一行，`git push` 会以 "correct access rights" 失败——而 `push_dev.sh` 之所以一直能推，是因为它在**镜像**里执行 git（那里有这行）。
+
+**因此的新分工**：
+
+| 谁 | 本地跑什么 | 远程跑什么 |
+| --- | --- | --- |
+| 子 agent（各在自己的 worktree） | 只跑 `npm run typecheck` + **自己那一个测试文件** | **把自己的分支推上去**（`git push origin <branch>`），然后 `npm run ci:status` 看结果 |
+| 主控 | 审 diff、`cherry-pick`、合并 | 推 `dev` 用 `SKIP_LOCAL_GATE=1 npm run push:dev -- "<msg>"`；门禁在 GitHub 的 `dev` 分支上跑 |
+
+**发布路径**：分支 →（推上去，CI 在该分支上跑）→ 合入 `dev` → 推 `dev` → **`dev` 的远程 CI 通过** → 合 `main` → 推 `main`。合到 `main` 之后**平时不必盯 main 的 CI/CD**，发版时再查。
+
+**别再让子 agent 在本地跑整套**：那是本地负载的主要来源，也正是 `ci.yml` 里 `branches: ["**"]` 想要避免的浪费。
