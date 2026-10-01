@@ -73,7 +73,8 @@ try {
 
   const TOTAL = Number((process.argv.find((v) => v.startsWith("--renders=")) ?? "--renders=60").split("=")[1]);
   const genre = (process.argv.find((v) => v.startsWith("--genre=")) ?? "--genre=chicago-house").split("=")[1];
-  const args = { genreId: genre, bars: 1 };
+  const bars = Number((process.argv.find((v) => v.startsWith("--bars=")) ?? "--bars=1").split("=")[1]);
+  const args = { genreId: genre, bars };
   const lufs = [];
   let failures = 0;
 
@@ -101,7 +102,7 @@ try {
 
   const finite = lufs.filter(Number.isFinite);
   const max = Math.max(...finite), min = Math.min(...finite);
-  console.log(`\n渲染 ${TOTAL} 次：解析到 LUFS ${finite.length}，失败 ${failures} ✗`);
+  console.log(`\n渲染 ${TOTAL} 次 × ${bars} 小节：解析到 LUFS ${finite.length}，失败 ${failures} ✗`);
   /**
    * ⚠️ **An instrument that measured nothing must not report "fine".** The first version of this probe
    * truncated each reply to 150 characters, which cut `integratedLufs` off before it could be parsed, and
