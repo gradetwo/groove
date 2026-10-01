@@ -101,3 +101,23 @@ curl -sI -H "Origin: http://127.0.0.1:3000" \
 **为什么风险低且可逆** ✓：只对 `GET`/`HEAD` 开 `*` ✓（对象本来就是公开的 CC0 采样 ✓、无需凭据 ✓），与 GitHub 源当前的行为一致 ✓；要撤销就是删掉该策略 ✓。
 
 **一个把我自己坑了的小坑，记下来免得下一个人重犯** ✗✓：我第一次读 `.env.local` 用的正则是 `[A-Z_]+` ✓——**不含数字** ✗，于是 `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` **全部匹配失败** ✗✓（而 `VITE_SAMPLE_ROOT` 没有数字 ✓ 所以匹配了 ✓）。我的脚本因此打印"**缺少凭据**" ✗——**它指责的是文件，错的却是它自己的正则** ✓✓。改成 `[A-Z0-9_]+` 后凭据立刻就绪 ✓。
+
+---
+
+## 附：对"宿主静音"下一步的修正——总线压缩器的换装**不是**窗口（2026-10-01）
+
+**背景** ✓：Node 宿主会间歇返回整段静音 ✗，已定位到"**两条母带 worklet 异步换装，而渲染只 `await limiter.ready`、从不 await `busComp.ready`**"这个阶段 ✓，文档里写的下一步就是"**把 `busComp.ready` 暴露出来一起 await**" ✓。我已把句柄**暴露**出来 ✓（无行为变化 ✓），但在写那句 `await` 之前**先测了一下那个窗口到底存不存在** ✗✓：
+
+**测法** ✓（不改任何仓库文件 ✓）：用仓库自己的 `buildMasterGraph` ✓ + Node 宿主 ✓ 建图，**只 await `limiter.ready`**（正是渲染器今天做的事 ✓），然后**立刻**读 `busCompressorKind()` ✓：
+
+```
+run 1: limiter.ready=fallback (124 ms) | bus 在 limiter 就绪时=node | bus.ready=node (+0 ms)
+run 2: limiter.ready=fallback ( 92 ms) | bus 在 limiter 就绪时=node | bus.ready=node (+0 ms)
+run 3: limiter.ready=fallback ( 93 ms) | bus 在 limiter 就绪时=node | bus.ready=node (+0 ms)
+```
+
+**结论** ✓✓：**总线压缩器在 `limiter.ready` 返回时已经是 `node`** ✓，`bus.ready` **再花 0 ms** ✓，三次一致 ✓ → **它不构成窗口** ✗✓。因此"await busComp.ready"**很可能不是静音的解** ✗✓——这不是说它错 ✓（它更正确、也更对称 ✓），而是说**别指望它修掉静音** ✗✓。**根因仍在 `node-web-audio-api` 内部** ✓，静音症状已由渲染器**识别/重试/拒绝交零缓冲**兜住 ✓✓。
+
+**我这支探针的局限，必须与上面的数字一起引用** ✗✓：它**没有装宿主 shim** ✓（把 `/limiterWorklet.js` 这类根相对 URL 映射到文件系统 ✓，正是无头计划里那约 60 行 ✓），所以**限幅器每次都回落到 `fallback`** ✗（124/92/93 ms 是它尝试后回落的时间 ✓）→ **本探针无法说明 worklet 限幅器的换装时序** ✗✓。真实探针装了 shim ✓，因此它能报 `limiterKind=worklet` ✓（见 `docs/HEADLESS_CORE_PLAN.md` §7 ✓）。
+
+**顺带复现出库自己的一条宿主限制** ✓✓：`Setting the 'curve' property on 'WaveShaperNode' to 'null' is not supported yet` ✗——**Node 宿主不支持把波形整形曲线清成 null** ✓，而浏览器语义是**直通** ✓✓。另一位 agent 已用计数排除了它是 parity 的成因 ✓（`curve->null = 0` ✓：没有任何节点是"设过曲线再清掉"的 ✓），但它**仍是**一条会咬到"设了曲线又想旁路"的实现的宿主差异 ✓，记在这里备查 ✓。
