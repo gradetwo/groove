@@ -1,35 +1,17 @@
 #!/usr/bin/env bash
-# The step between copying the mirror and tagging it: committing what was copied.
+# RETIRED 2026-10-01 — the release mirror is gone; this script fed it.
 #
-# `sync_release_mirror.sh` copies every tracked file into the mirror's working tree and verifies each one, and it deliberately stops there — its own comment explains that the local side must be committed first. What was missing is that
-# nothing on the mirror side ever committed, so the release's `remote` step pushed the *previous* commit, its fast-forward check passed, and both steps reported ok while the mirror lagged: on v2.34.29 it sat at `341787a` with
-# `package.json` 2.34.28. The seventh step found that by looking for the version **in the content**, which is why its criterion is content.
+# It committed what `sync_release_mirror.sh` had copied into the mirror and pushed the mirror's `dev`,
+# because the mirror was the only checkout that could push. That is the step that made a push carry the
+# mirror's own working tree, and the one that reported success while `dev` never moved when the mirror was
+# left on another branch. This repository pushes its own `dev` and its own tags now.
 #
-# **Idempotent, and it ends by reading content**: a mirror already matching this checkout reports "nothing to commit" rather than failing, and then `origin/dev:package.json` must report this version.
-set -u
-
-VERSION=$(node -p "require('./package.json').version")
-MIRROR=../release/groove-github
-
-if [ ! -d "$MIRROR/.git" ]; then
-  echo "  ❌ $MIRROR is not a git checkout"
-  exit 1
-fi
-
-git -C "$MIRROR" add -A
-if git -C "$MIRROR" diff --cached --quiet; then
-  echo "  (the mirror already matches this checkout; nothing to commit)"
-else
-  git -C "$MIRROR" commit -q -m "release: v$VERSION"
-  echo "  committed release: v$VERSION into the mirror"
-fi
-
-git -C "$MIRROR" push -q origin dev
-
-# ⭐ The criterion: the version on the mirror's `dev`, read from the file rather than inferred from a successful push.
-PUSHED=$(git -C "$MIRROR" show origin/dev:package.json | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).version")
-if [ "$PUSHED" != "$VERSION" ]; then
-  echo "  ❌ the mirror's origin/dev has package.json $PUSHED, expected $VERSION"
-  exit 1
-fi
-echo "  mirror origin/dev: package.json $PUSHED"
+# **It fails rather than exiting 0.** A script that prints nothing and succeeds is the shape this project
+# treats as the worst outcome: the release path would look healthy while the step did nothing at all. If
+# something still calls this, the caller is what needs fixing.
+#
+# See `docs/OPEN_WORK.md` §十 for the retirement and what replaced it.
+echo "❌ scripts/commit_release_mirror.sh is retired: the release mirror is gone (docs/OPEN_WORK.md §十)." >&2
+echo "   It used to commit this checkout's files into ../release/groove-github and push the mirror's dev." >&2
+echo "   Nothing should call it — read §十 and remove that call." >&2
+exit 1
