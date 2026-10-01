@@ -25,7 +25,7 @@
       const loaded = import("/scripts/lib/chunkProbePage.mjs");
 
       /**
-       * The driver's whole API into the page. `step` is `measure` | `collected`; `arg` is that step's argument.
+       * The driver's whole API into the page. `step` is `measure` | `cut` | `collected`; `arg` is its argument.
        *
        * `measure` is a **composite** — build, render the whole piece, measure one arm — so a step carries everything it
        * needs and a page reload cannot leave it half-initialised. See the note in `chunkProbePage.mjs`.

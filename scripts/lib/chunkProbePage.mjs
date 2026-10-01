@@ -217,10 +217,15 @@ const mergeChunks = (chunks) => {
    * file and reported a 1 dB RMS difference from a render whose **peak was identical to 0.00 dB** — a measurement
    * artefact that read exactly like "the chunked path is quieter".
    */
-  let endFrame = 0;
-  for (const chunk of chunks) {
-    endFrame = Math.max(endFrame, pieceStartFrame(chunk) + chunk.chunkEndFrame);
-  }
+  /**
+   * The piece runs to the end of the **last** piece's own audio plus that render's tail — `chunkEndFrame` alone stops
+   * before the tail, so a merge that ended there was 0.69 s short of the whole render and reported a 0.85 dB RMS gap
+   * that belonged to the difference in length, not to the seam.
+   *
+   * The whole render's own length is the independently measured check: a correct merge is exactly `whole.frames`.
+   */
+  const lastPiece = chunks[chunks.length - 1];
+  const endFrame = pieceStartFrame(lastPiece) + lastPiece.chunkEndFrame + Math.ceil(lastPiece.tailSec * sampleRate);
   const merged = [];
   for (let c = 0; c < channels; c += 1) merged.push(new Float32Array(endFrame));
   const seams = [];
@@ -488,6 +493,49 @@ export async function arm(plan) {
   }
   const chunks = [state.chunkA.value, b.value];
   const merged = mergeChunks(chunks);
+  /**
+   * **Where each chunk's own audio sits against the whole render** — the one comparison that separates "the renderer
+   * produced different samples for these bars" from "the merge put them together differently".
+   *
+   * `alignment` compares the chunk's own frames with the whole render's frames for the same bars, length-normalised:
+   * the same music at the same place is ~0 dB, a different take of those bars is not. `splice` compares the merged
+   * result with the whole render over the same span, so the pair says which of the two the total difference comes
+   * from.
+   */
+  const alignment = { chunkA: null, chunkB: null, splice: null };
+  if (state.whole) {
+    const whole = state.whole.channels;
+    const rate = state.whole.sampleRate;
+    const compare = (a, aStart, bChannels, bStart, frames) => {
+      let signal = 0;
+      let error = 0;
+      for (let c = 0; c < Math.min(a.length, bChannels.length); c += 1) {
+        for (let i = 0; i < frames; i += 1) {
+          const x = a[c]?.[aStart + i] ?? 0;
+          const y = bChannels[c]?.[bStart + i] ?? 0;
+          signal += x * x;
+          const d = x - y;
+          error += d * d;
+        }
+      }
+      const signalDb = 10 * Math.log10(Math.max(signal, 1e-30));
+      const errorDb = error > 0 ? 10 * Math.log10(error) : -Infinity;
+      return { signalDb, errorDb, ratioDb: signalDb - errorDb };
+    };
+    const aValue = state.chunkA.value;
+    const bValue = b.value;
+    alignment.chunkA = compare(aValue.buffer ? channelData(aValue.buffer) : [], 0, whole, 0, Math.min(aValue.chunkEndFrame, state.whole.frames));
+    const bStart = Math.round(bValue.barStartSeconds * rate);
+    const bOwn = Math.max(0, bValue.chunkEndFrame - bValue.preRollFrames);
+    alignment.chunkB = compare(channelData(bValue.buffer), bValue.preRollFrames, whole, bStart, Math.min(bOwn, state.whole.frames - bStart));
+    alignment.splice = compare(
+      merged.channels,
+      bStart,
+      whole,
+      bStart,
+      Math.min(merged.frames - bStart, state.whole.frames - bStart)
+    );
+  }
 
   const loud = loudness.measureLoudness(merged.channels, merged.sampleRate);
   const fp = timbre.fingerprintChannels(merged.channels, merged.sampleRate);
@@ -532,6 +580,7 @@ export async function arm(plan) {
     seam: seamStats(merged.channels, merged.seams),
     seamRegion: seamDifference(state.whole.channels, merged.channels, merged.seams, Math.round(0.5 * merged.sampleRate)),
     worstDifference: worstDifference(state.whole.channels, merged.channels, merged.sampleRate, merged.seams),
+    alignment,
   };
   state.arms.push(result);
   return result;
@@ -552,6 +601,75 @@ export async function measure(request) {
   const wholeSummary = request.whole ?? (await whole());
   if (!request.arm) return { fixture, whole: wholeSummary, arm: null };
   return { fixture, whole: wholeSummary, arm: await arm(request.arm) };
+}
+
+/**
+ * **The cut arm — no second render at all.**
+ *
+ * Every number so far compares two *renders* of different bar ranges, so a render difference and a splice difference
+ * are indistinguishable in them. This takes the whole render and does nothing but **slice** it at the split bar, then
+ * compares that slice against the whole render in exactly the two places the chunked path is compared. Slicing cannot
+ * change a sample, so this arm's answer is a property of the *analysis*, not of the renderer: if the cut already
+ * differs from the whole, the difference lives in the comparison; if the cut matches and the splice does not, the
+ * difference was introduced by putting two renders together.
+ *
+ * Nothing is re-rendered and nothing is written: `page.evaluate` gets the answer from the audio already in memory.
+ */
+export async function cut(request) {
+  const [loudness, timbre] = await Promise.all([
+    import("/src/test/helpers/loudness.ts"),
+    import("/src/test/helpers/timbre.ts"),
+  ]);
+  const fixture = requireFixture();
+  const whole = state.whole;
+  if (!whole) throw new Error("the cut arm needs the whole render: call measure({options}) first");
+  if (!state.chunkA || !state.arms.length) {
+    throw new Error("the cut arm needs the chunked arms from a measure({options, arm}) call on this page");
+  }
+  const rate = whole.sampleRate;
+  const splitFrame = Math.round(
+    (state.arms.find((armResult) => armResult.chunkB?.barStartSeconds !== undefined)?.chunkB.barStartSeconds ?? 0) * rate
+  );
+  /** The cut is the whole render's own length: this arm must be a **slice**, so it cannot inherit the merge's frame
+   * count — that would make a short merge look like a difference in the slice. */
+  const frames = whole.frames;
+
+  /** The piece with a knife, not a renderer: frames [0, splitFrame) then [splitFrame, frames) of the *same* buffer. */
+  const cutChannels = whole.channels.map((channel) => {
+    const out = new Float32Array(frames);
+    const head = Math.min(splitFrame, channel.length);
+    out.set(channel.subarray(0, head), 0);
+    const tailLength = Math.min(frames - splitFrame, Math.max(0, channel.length - splitFrame));
+    if (tailLength > 0) out.set(channel.subarray(splitFrame, splitFrame + tailLength), splitFrame);
+    return out;
+  });
+
+  const loud = loudness.measureLoudness(cutChannels, rate);
+  const fp = timbre.fingerprintChannels(cutChannels, rate);
+  return {
+    splitFrame,
+    splitSeconds: splitFrame / rate,
+    frames,
+    wholeFrames: whole.frames,
+    cutWindow: { fromFrame: Math.max(0, splitFrame - 4410), toFrame: Math.min(frames, splitFrame + 4410) },
+    vsWhole: worstDifference(whole.channels, cutChannels, rate, [
+      { at: splitFrame, frames: 0 },
+    ]),
+    bandL1: bandDistance(whole.metrics.bandDb, fp.bandDb),
+    lufsDelta: loud.integratedLufs - whole.metrics.integratedLufs,
+    truePeakDelta: loud.truePeakDb - whole.metrics.truePeakDb,
+    rmsDelta: fp.rmsDb - whole.metrics.rmsDb,
+    arms: state.arms.map((armResult) => ({
+      label: armResult.label,
+      preRollSec: armResult.preRollSec,
+      /** The splice against the whole in the copy the arm itself measured. */
+      worstDifference: armResult.worstDifference,
+      bandL1: armResult.bandL1,
+      lufsDelta: armResult.lufsDelta,
+      rmsDelta: armResult.rmsDelta,
+      alignment: armResult.alignment,
+    })),
+  };
 }
 
 /** Everything measured so far on this page, so a driver can print progress and a verdict at the end. */
