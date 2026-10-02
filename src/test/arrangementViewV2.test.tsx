@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import React from "react";
 import { ArrangementViewV2 } from "../components/arrangement/ArrangementViewV2";
+import { createArrangementFromTemplate } from "../data/arrangementEdits";
 import { LanguageProvider } from "../i18n/LanguageContext";
 
 /**
@@ -85,5 +86,58 @@ describe("the play button and the engine seam", () => {
     // Zero is shown, not hidden: "nothing was planned" is a fact a user should see rather than a silent no-op.
     await screen.findByTestId("arrangement-played");
     expect(screen.getByTestId("arrangement-played").textContent).toMatch(/planned 0/);
+  });
+});
+
+/**
+ * ⭐ **"Nothing is persisted" was the whole finding, so these are the criteria for the two halves of the fix at the
+ * view's own seam**: a stored project opens straight into the arrangement instead of asking again, and every change is
+ * reported to whoever is storing it.
+ *
+ * The view still owns no storage — that is why these can be judged without IndexedDB at all, which is also what keeps
+ * the seam honest: a report that needed a database to observe would be a write, not a report.
+ */
+describe("the arrangement a host hands in, and what the host is told", () => {
+  it("⭐ opens straight into the arrangement when a project is handed in, with no chooser over it", () => {
+    const stored = createArrangementFromTemplate("new", "drums-bass");
+    renderView(<ArrangementViewV2 songId="new" capture={noCapture} initialArrangement={stored} />);
+    // The chooser's Create button is the thing that must not be there: a refresh that asks "what kind of project?"
+    // over work that is being restored is the same loss as dropping it, only with an extra click.
+    expect(screen.queryByRole("button", { name: "Create" })).toBeNull();
+    expect(screen.getByTestId("arrangement-view-v2")).toBeDefined();
+    // The restored tracks are on screen, by name — the count is not the only thing that has to come back.
+    expect(screen.getByTestId("arrangement-track-picker").textContent).toContain("Drums");
+    expect(screen.getByTestId("arrangement-track-picker").textContent).toContain("Bass");
+  });
+
+  it("⭐ reports the arrangement it holds, including the first one, so a restored project is stored again rather than only read", () => {
+    const stored = createArrangementFromTemplate("new", "drums-bass");
+    const onArrangementChange = vi.fn();
+    renderView(<ArrangementViewV2 songId="new" capture={noCapture} initialArrangement={stored} onArrangementChange={onArrangementChange} />);
+    expect(onArrangementChange).toHaveBeenCalledWith(stored);
+
+    // And it reports the next value too — an edit is what the store's debounce exists for.
+    const before = onArrangementChange.mock.calls.length;
+    fireEvent.click(screen.getAllByRole("button", { name: "+ Sampler" })[0]!);
+    expect(onArrangementChange.mock.calls.length).toBeGreaterThan(before);
+    expect(onArrangementChange.mock.calls.at(-1)?.[0].tracks.length).toBe(stored.tracks.length + 1);
+  });
+
+  it("⭐ hands the panel's name to the host at Create, which is the only moment a name and an arrangement exist together", () => {
+    const onCreateProject = vi.fn();
+    renderView(<ArrangementViewV2 songId="new" capture={noCapture} onCreateProject={onCreateProject} />);
+    fireEvent.change(screen.getByLabelText("Project name"), { target: { value: "Evening Tune" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    // ⭐ The arrangement and the name, together: a host that received only the name would have no project to name, and
+    // one that received only the arrangement would have to invent the name it was just told.
+    expect(onCreateProject).toHaveBeenCalledTimes(1);
+    expect(onCreateProject.mock.calls[0]![0]).toBe("Evening Tune");
+    expect(onCreateProject.mock.calls[0]![1].tracks.length).toBeGreaterThan(0);
+  });
+
+  it("⭐ says why an unreadable project is not shown, instead of drawing a chooser in silence over work that still exists", () => {
+    renderView(<ArrangementViewV2 songId="new" capture={noCapture} loadProblem='track "Bass" names kind "instrument", which this build does not have' />);
+    const alert = screen.getByTestId("arrangement-load-problem");
+    expect(alert.textContent).toContain("instrument");
   });
 });

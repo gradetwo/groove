@@ -193,6 +193,16 @@ const MainApp: React.FC = () => {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [gs1Enabled, setGs1Enabled] = useGs1Setting(engineInstance);
   const [isPlaying, setIsPlaying] = useState(false);
+  /**
+   * ⭐ **What the top bar calls the project that is open** — `undefined` when none is, which is the honest state of this
+   * app on a fresh visit: no project is open, so the bar says nothing rather than inventing a name for one.
+   *
+   * It lives here rather than inside the header because the only surface that knows the name is the one that owns the
+   * project (`NewProjectView` → `useArrangementV2Project`), and the header renders outside that route's subtree.
+   * Passing it down is the same shape as `onNewProject` below and for the same reason: the header keeps no context
+   * dependency that a criterion would have to provide.
+   */
+  const [projectName, setProjectName] = useState<string | undefined>(undefined);
 
   // Global hotkey: Cmd+K / Ctrl+K opens search dialog from ANY page (P0-23)
   useEffect(() => {
@@ -295,6 +305,7 @@ const MainApp: React.FC = () => {
         onOpenSettings={() => setSettingsOpen(true)}
         analyser={analyser}
         isPlaying={isPlaying}
+        {...(projectName === undefined ? {} : { projectName })}
       />
 
       {/* Global Search Dialog */}
@@ -329,6 +340,7 @@ const MainApp: React.FC = () => {
             {route.newProject && (
               <React.Suspense fallback={null}>
                 <NewProjectView
+                  onProjectNameChange={setProjectName}
                   capture={async () => {
                     // The store is the browser's own filesystem; if it is unavailable the capture reports that rather than pretending to record.
                     const root = await navigator.storage?.getDirectory?.();

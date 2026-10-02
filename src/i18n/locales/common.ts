@@ -42,6 +42,19 @@ export const commonMessages = {
   // ⭐ A route rather than a tab: it opens the new arrangement, which deliberately has no genre.
   nav_new_project: { en: "New", zh: "新建" },
   nav_new_project_desc: { en: "Start a new arrangement", zh: "开一首全新的编排" },
+  /**
+   * ⭐ **The new project is named where it is created.** The chooser used to carry tempo, key and the first track's
+   * kind and no name at all, so the arrangement this route builds had nothing to be called — which is why the top bar
+   * had no name to show and nothing written here could be found again by name.
+   */
+  new_project_name: { en: "Project name", zh: "工程名" },
+  new_project_name_placeholder: { en: "Enter project name...", zh: "输入工程名…" },
+  new_project_default_name: { en: "Untitled Project", zh: "未命名工程" },
+  /**
+   * ⭐ The sentence over the chooser when a stored arrangement could not be read. The field that could not be read is
+   * appended by the surface, because that is the part a person can act on (`docs/OPEN_WORK.md` §27.2).
+   */
+  arrangement_load_problem: { en: "The saved arrangement could not be read", zh: "已保存的编排读不出来" },
   template_drums_bass_desc: { en: "A drum kit and a bass — the most common pair", zh: "鼓组加贝斯，最常见的两件套" },
   template_drums_bass_chords_desc: { en: "Add chords and it can carry a whole song", zh: "再加一条和声，能撑起整首" },
   template_samplers_desc: { en: "Two sampler tracks — the kind that plays real instruments", zh: "两条采样器轨道——就是能听到真实乐器的那一种" },

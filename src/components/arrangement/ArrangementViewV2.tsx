@@ -65,6 +65,40 @@ export interface ArrangementViewV2Props {
   songId: string;
   /** Starting a capture, injected so the view needs no microphone to be rendered — the same seam the capture itself uses. */
   capture: () => Promise<CaptureOutcome>;
+  /**
+   * ⭐ **The project this view is showing, when one was stored.**
+   *
+   * It is an **initial** value and not a controlled one, on purpose: every edit below is a pure function over the
+   * arrangement in state, and threading the arrangement back out through a prop would mean this view could be rendered
+   * mid-drag from a value a slower writer still believes in. The host replaces the project by **re-keying this
+   * component** (`key={projectId}`) when it loads another one — which is the same mechanism React already uses for
+   * "this is a different thing now", rather than a second one invented here.
+   *
+   * Absent means the host stores nothing, which is how every criterion that renders this view on its own keeps working:
+   * the chooser is shown, and an arrangement created from it lives in this component's state exactly as before.
+   */
+  initialArrangement?: ArrangementV2;
+  /**
+   * ⭐ **Every change to the arrangement, reported so the host can store it** — and the reason this file needed no
+   * rewriting: the view still owns the arrangement while it is open, and this says when it changed.
+   *
+   * ⚠️ **A report, not a write.** Persistence, its debounce and its degradation reporting belong to the storage layer;
+   * a view that wrote to IndexedDB would be a second saver, and the studio's own history says where that ends.
+   */
+  onArrangementChange?: (arrangement: ArrangementV2) => void;
+  /**
+   * ⭐ **The project the chooser just created, and the name the panel decided for it** — the one moment a name exists
+   * and an arrangement exists at the same time.
+   *
+   * Absent for a host that stores nothing, which is why it is optional: the arrangement is then held exactly as it was
+   * before this change, and every existing criterion that renders this view keeps working untouched.
+   */
+  onCreateProject?: (name: string, arrangement: ArrangementV2) => void;
+  /**
+   * ⭐ **Why a stored project could not be read**, when one could not. Shown above the chooser rather than swallowed —
+   * the alternative is a person looking at a New Project screen while their work sits unreadable in storage.
+   */
+  loadProblem?: string;
   /** The bar the transport is on; the take selector marks what would be heard there. */
   bar?: number;
   /**
@@ -93,7 +127,7 @@ export interface ArrangementViewV2Props {
   playheadBar?: number;
 }
 
-export function ArrangementViewV2({ songId, capture, bar = 0, player, instruments, playheadBar }: ArrangementViewV2Props) {
+export function ArrangementViewV2({ songId, capture, bar = 0, player, instruments, playheadBar, initialArrangement, onArrangementChange, onCreateProject, loadProblem }: ArrangementViewV2Props) {
   const { t } = useLanguage();
   /**
    * ⭐ **A new project starts by choosing what it is** — which is Logic's `Choose a Project`, and the owner's "there is no good new-project entry". `undefined` means the choice has not been made, and the panel is
@@ -102,9 +136,13 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
   /**
    * ⭐ **`choosing`, not an optional arrangement** — and the difference is not stylistic. An `ArrangementV2 | undefined` cannot be narrowed inside the hooks, so every callback would need a guard whose absence is a
    * runtime bug rather than a type error. A separate flag keeps the arrangement always valid, so "no arrangement yet" is a thing the component *says* rather than a thing it must remember to check.
+   *
+   * ⭐ **And it starts `false` when a project was handed in**: a stored project has already been chosen, so nothing
+   * should ask again. That single line is what makes "refresh, and the arrangement is still there" true rather than a
+   * chooser drawn over the work that was being restored.
    */
-  const [choosing, setChoosing] = useState(true);
-  const [arrangement, setArrangement] = useState<ArrangementV2>(() => createArrangementFromTemplate(songId, undefined, "synth"));
+  const [choosing, setChoosing] = useState(initialArrangement === undefined);
+  const [arrangement, setArrangement] = useState<ArrangementV2>(() => initialArrangement ?? createArrangementFromTemplate(songId, undefined, "synth"));
   const [selectedTrackId, setSelectedTrackId] = useState<string | undefined>(undefined);
   /**
    * ⭐ **Which bar the strips show, which is not the transport's bar.** `bar` above is where the transport is in the underlying song and is what the take selector marks; this is a view choice — which sixteen squares a row draws. They are separate because an arrangement of eight bars still
@@ -241,6 +279,22 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
      */
   }, [transport, pixelsPerBar, stepsPerBar, choosing, t]);
 
+  /**
+   * ⭐ **Every arrangement this view holds is reported, including the first one.**
+   *
+   * The first one matters as much as the others: a project restored from storage is reported again (the write is
+   * identical, so it is free), and a project created from the chooser is reported the moment it exists — which is
+   * "a new project saves itself" stated as one effect rather than as a special case in the create handler.
+   *
+   * ⚠️ The report is **the arrangement value**, not a "something changed" signal, because the writer needs the value
+   * and asking the writer to read it back is the round trip this avoids.
+   */
+  const reportArrangement = onArrangementChange;
+  useEffect(() => {
+    if (reportArrangement === undefined) return;
+    reportArrangement(arrangement);
+  }, [arrangement, reportArrangement]);
+
   const play = useCallback(async () => {
     if (player === undefined) return;
     // ⭐ The arrangement's own notes, not an empty map: they are content and they live with the tracks.
@@ -282,14 +336,37 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
   // ⭐ The early return sits **after every hook**, because a conditional hook changes their order: the first version of this had it above `useCallback` and produced six type errors, whose real content was a React bug.
   if (choosing) {
     return (
-      <NewProjectPanelV2
-        onCreate={(templateId, blankKind) => {
-          // ⭐ The panel reports the choice; **what an arrangement is made of** is `createArrangementFromTemplate`'s business, including the default track a blank project still gets.
-          setArrangement(createArrangementFromTemplate(songId, templateId, blankKind));
-          setSelectedTrackId(undefined);
-          setChoosing(false);
-        }}
-      />
+      <div className="flex flex-col gap-2">
+        {/**
+         * ⭐ **A stored project this build could not read is said out loud, above the chooser.**
+         *
+         * `docs/OPEN_WORK.md` §27.2 draws the line exactly here: refusing to read an arrangement whose track kind no
+         * longer exists is not a compatibility cost, it is "do not hide a breakage". The sentence names the field
+         * (it comes from the validator), so the alternative — a chooser drawn in silence over work that is still on
+         * disk — is not what a person sees.
+         */}
+        {loadProblem !== undefined && (
+          <p data-testid="arrangement-load-problem" role="alert" className="p-3 text-xs text-text">
+            {`${t("arrangement_load_problem")}: ${loadProblem}`}
+          </p>
+        )}
+        <NewProjectPanelV2
+          onCreate={(templateId, blankKind, name) => {
+            // ⭐ The panel reports the choice; **what an arrangement is made of** is `createArrangementFromTemplate`'s business, including the default track a blank project still gets.
+            const created = createArrangementFromTemplate(songId, templateId, blankKind);
+            setArrangement(created);
+            setSelectedTrackId(undefined);
+            setChoosing(false);
+            /**
+             * ⭐ **The host is told what was created, with the name the panel decided** — and this is the only path that
+             * can name it, because the name exists nowhere else by the time the arrangement is on screen. A host that
+             * stores nothing (`onCreateProject` absent, which is how the arrangement's own criteria render this) simply
+             * does not get the report.
+             */
+            onCreateProject?.(name, created);
+          }}
+        />
+      </div>
     );
   }
 
@@ -653,7 +730,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
               {/* Adding tracks sits at the top of the header column, which is where every DAW's "new track" is. */}
               <div data-testid="track-list-add" className="flex flex-wrap items-center gap-1 border-b border-[rgb(var(--d-line))] p-1">
                 {TRACK_KIND_ORDER.map((kind) => (
-                  <button key={kind} type="button" className="min-h-[44px] rounded border border-[rgb(var(--d-line))] px-1 text-[10px] text-text" onClick={() => onAddTrack(kind, kind)}>
+                  <button key={kind} type="button" data-testid={`track-add-${kind}`} className="min-h-[44px] rounded border border-[rgb(var(--d-line))] px-1 text-[10px] text-text" onClick={() => onAddTrack(kind, kind)}>
                     + {t(KIND_LABEL_KEY[kind])}
                   </button>
                 ))}

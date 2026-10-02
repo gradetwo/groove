@@ -4,6 +4,7 @@ import { GrooveProject } from "../../../types/project";
 import { AudioEngine, DrumKitType, EffectsRackState } from "../../../audio/AudioEngine";
 import { loadGenre } from "../../../data/index/loader";
 import { getActiveProjectId, getProject, migrateLegacyLocalStorage } from "../projectDb";
+import { isStudioEditor } from "../../arrangement/arrangementStore";
 import { saveProjectImmediate } from "../projectStorage";
 import type { SequencerAction } from "../useSequencerStore";
 
@@ -40,7 +41,16 @@ export function useProjectHub({
       try {
         await migrateLegacyLocalStorage();
         const activeId = getActiveProjectId();
-        if (activeId) {
+        /**
+         * ⭐ **The studio only restores its own records.**
+         *
+         * A v2 arrangement project also points at itself through an "active project" id, and it has no `patterns` — so
+         * a boot restore that asked only "is there an active id?" would load one into the step editor and start a
+         * studio session with nothing in it. `isStudioEditor` answers before the load, so this change cannot reach the
+         * studio's behaviour at all: for every studio project the answer is true and the lines below are the lines that
+         * were always here.
+         */
+        if (activeId && isStudioEditor(activeId)) {
           const proj = await getProject(activeId);
           if (proj && isMounted) {
             setActiveProject(proj);

@@ -27,7 +27,7 @@ const DESCRIPTION_KEYS: Record<string, string> = {
 
 export interface NewProjectPanelV2Props {
   /** Creating the project. The panel reports the choice; what an arrangement is made of belongs to the model. */
-  onCreate: (templateId: string | undefined, blankKind: TrackKindV2) => void;
+  onCreate: (templateId: string | undefined, blankKind: TrackKindV2, name: string) => void;
 }
 
 /**
@@ -37,18 +37,71 @@ export interface NewProjectPanelV2Props {
  */
 const KIND_LABELS = TRACK_KIND_ORDER.filter((kind) => kind !== "folder");
 
+/**
+ * ⭐ **What the name box is filled with before anyone touches it.**
+ *
+ * It is filled in rather than empty, and that is the Hub's own precedent: `ProjectHubModal`'s Save As offers
+ * `<genre> Groove` so the primary button is never a press that does nothing — a form whose only required field starts
+ * blank makes "Create" refuse for a reason the user has to discover. The chosen card decides the name, because the card
+ * is the choice that was actually made: "Drums + Bass" is a name someone recognises in a list, and "Untitled" is not.
+ */
+const TEMPLATE_DEFAULT_NAMES: Record<string, string> = {
+  "drums-bass": "Drums and Bass",
+  "drums-bass-chords": "Drums Bass and Chords",
+  samplers: "Samplers",
+  blank: "Untitled",
+};
+
 export function NewProjectPanelV2({ onCreate }: NewProjectPanelV2Props) {
   const { t } = useLanguage();
   const [selected, setSelected] = useState<string>("blank");
   const [blankKind, setBlankKind] = useState<TrackKindV2>("synth");
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [name, setName] = useState<string>(TEMPLATE_DEFAULT_NAMES.blank ?? "Untitled");
+  /**
+   * ⭐ **The name is the one field the panel tracks the card with.**
+   *
+   * A name that stayed at "Untitled" after the card changed to Samplers would contradict the card the Create button is
+   * about to act on, which is the same defect the panel already documents for the highlighted card. **A name the person
+   * typed is never overwritten** — `nameWasEdited` is set on the first keystroke, which is the line between "filled in
+   * for you" and "put back the way we thought it should be".
+   */
+  const [nameWasEdited, setNameWasEdited] = useState(false);
 
   // ⭐ Blank is a card like the others, so the panel has one shape rather than a list plus an exception.
   const cards = [...TEMPLATES.map((template) => ({ id: template.id, name: template.name })), { id: "blank", name: "Blank" }];
 
+  const chooseCard = (id: string) => {
+    setSelected(id);
+    if (!nameWasEdited) setName(TEMPLATE_DEFAULT_NAMES[id] ?? t("new_project_default_name"));
+  };
+
   return (
     <div data-testid="new-project-panel-v2" className="flex flex-col gap-4 p-6 max-w-4xl">
       <h2 className="text-lg font-semibold text-text">New Project</h2>
+
+      {/*
+        ⭐ **The name, where the project begins.**
+        This is the field that did not exist: the panel offered tempo, key and the first track's kind and never asked
+        what the project was called, so nothing this route built had a name to be shown in the top bar or found by. It
+        sits above the cards rather than inside Details because it is the one thing here that cannot be changed later
+        by a click on another card.
+      */}
+      <label className="flex flex-col gap-1 text-sm text-text">
+        <span className="text-xs text-text opacity-80">{t("new_project_name")}</span>
+        <input
+          type="text"
+          data-testid="new-project-name"
+          aria-label={t("new_project_name")}
+          placeholder={t("new_project_name_placeholder")}
+          value={name}
+          onChange={(event) => {
+            setName(event.target.value);
+            setNameWasEdited(true);
+          }}
+          className="w-full max-w-sm px-2 py-1 rounded border border-[rgb(var(--d-line))] bg-transparent text-text"
+        />
+      </label>
 
       {/*
         Equal columns rather than wrapped boxes. `flex flex-wrap` sized each card to its own sentence, so in this container two fitted, the third did not, and the fourth wrapped again — a two-one-one stack whose raggedness reads as
@@ -62,7 +115,7 @@ export function NewProjectPanelV2({ onCreate }: NewProjectPanelV2Props) {
             aria-pressed={selected === card.id}
             data-testid={`template-${card.id}`}
             className={`flex flex-col items-start gap-1 p-4 rounded border text-left h-full ${selected === card.id ? "border-[rgb(var(--d-accent))] bg-[rgb(var(--d-accent-soft))] text-[rgb(var(--d-on-accent))]" : "border-[rgb(var(--d-line))] bg-[var(--d-surface,rgba(255,255,255,0.04))]"}`}
-            onClick={() => setSelected(card.id)}
+            onClick={() => chooseCard(card.id)}
           >
             <strong>{card.name}</strong>
             {/* ⭐ The sentence is on the card, not behind it: "a few templates" only works if they can be read at a glance. */}
@@ -106,7 +159,7 @@ export function NewProjectPanelV2({ onCreate }: NewProjectPanelV2Props) {
             word Create disappears. `--d-on-accent` is what that token means — the ink that goes on a fill —
             and it is near-black there. The degenerate pair is a palette problem, recorded rather than guessed
             at here. */}
-        <button type="button" data-testid="new-project-create" className="px-4 py-2 rounded bg-[rgb(var(--d-accent))] text-[rgb(var(--d-on-accent))] font-medium" onClick={() => onCreate(selected === "blank" ? undefined : selected, blankKind)}>
+        <button type="button" data-testid="new-project-create" className="px-4 py-2 rounded bg-[rgb(var(--d-accent))] text-[rgb(var(--d-on-accent))] font-medium" onClick={() => onCreate(selected === "blank" ? undefined : selected, blankKind, name.trim() || t("new_project_default_name"))}>
           Create
         </button>
       </footer>

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AudioEngine } from "../audio/AudioEngine";
 import { getActiveAudioEngine, setActiveAudioEngine } from "../audio/activeEngine";
 import { createArrangementPlayer } from "../audio/playerFromEngine";
@@ -6,10 +6,19 @@ import { appCatalogueRuntime } from "../data/sampleCatalogueRuntime";
 import { ArrangementViewV2 } from "../components/arrangement/ArrangementViewV2";
 import { libraryOfAsset, type InstrumentChoice } from "../components/arrangement/TrackListV2";
 import { useAudioEngineInstance } from "../features/sequencer/hooks/useAudioEngineInstance";
+import { useArrangementV2Project } from "../features/arrangement/arrangementStore";
 import type { CaptureOutcome } from "../audio/captureTake";
 
 export interface NewProjectViewProps {
   capture: () => Promise<CaptureOutcome>;
+  /**
+   * ⭐ **What the top bar should call this project**, reported by the view that actually owns the name.
+   *
+   * A prop rather than a context or a router field, for the reason `HeaderProps.onNewProject` records: the header is
+   * rendered outside the router's provider in every criterion that addresses it, and a context it cannot see takes
+   * those criteria down. The name travels the same way the route choice does — the caller passes the capability down.
+   */
+  onProjectNameChange?: (name: string | undefined) => void;
 }
 
 /**
@@ -51,9 +60,40 @@ export function useNewProjectEngine(): AudioEngine | null {
   return engine;
 }
 
-export function NewProjectView({ capture }: NewProjectViewProps) {
+export function NewProjectView({ capture, onProjectNameChange }: NewProjectViewProps) {
   const engine = useNewProjectEngine();
   const [instruments, setInstruments] = useState<InstrumentChoice[]>([]);
+  /**
+   * ⭐ **The stored project** — the whole persistence story for this route: it is read once, here, and every change the
+   * arrangement reports is written back through it. `project === null` means "nothing saved yet", which is exactly the
+   * condition Logic's chooser exists for.
+   */
+  const store = useArrangementV2Project();
+  /**
+   * ⭐ **The name is kept in a ref as well as in state, and the effect reads the ref.**
+   *
+   * `onProjectNameChange` is optional and a caller may pass a fresh closure on every render; depending on the prop
+   * would then re-run the effect on every render of this route. Depending on the *name* alone is what the effect is
+   * actually about.
+   */
+  const notifyName = useRef(onProjectNameChange);
+  notifyName.current = onProjectNameChange;
+  const projectName = store.project?.name;
+  useLayoutEffect(() => {
+    // `undefined` before anything is stored, so the top bar says nothing rather than "Untitled" over an empty route.
+    notifyName.current?.(projectName);
+  }, [projectName]);
+  useEffect(
+    () => () => {
+      /**
+       * ⭐ **Leaving the route clears the name**, because the bar names the project that is *open* and this one no longer
+       * is. Without it, going back to the studio would leave the arrangement's name above a project that is not it —
+       * which is a smaller version of the very defect this change is about.
+       */
+      notifyName.current?.(undefined);
+    },
+    []
+  );
 
   /**
    * The instruments the catalogue actually holds, read from the same load the player uses. An instrument is an asset with an SFZ — the catalogue's own definition rather than a name that happens to look like one — and the list is
@@ -90,5 +130,34 @@ export function NewProjectView({ capture }: NewProjectViewProps) {
     [engine]
   );
 
-  return <ArrangementViewV2 songId="new" player={player} capture={capture} instruments={instruments} />;
+  /**
+   * ⭐ **Nothing is drawn until the stored project has been read.**
+   *
+   * The read is asynchronous, and rendering the arrangement before it resolves would draw the chooser for one frame —
+   * over work that is about to arrive. A refresh that flashes "New Project" and then shows the arrangement is the same
+   * defect as a refresh that loses it, only quieter. The engine and the catalogue are still loading behind this, so the
+   * wait is not added to the critical path.
+   */
+  if (store.loading) return null;
+
+  return (
+    <ArrangementViewV2
+      songId="new"
+      player={player}
+      capture={capture}
+      instruments={instruments}
+      {...(store.project === null ? {} : { initialArrangement: store.project.arrangement })}
+      {...(store.loadProblem === null ? {} : { loadProblem: store.loadProblem })}
+      /**
+       * ⭐ **The chooser's Create names the project and stores it before the arrangement is drawn.** The panel decided
+       * the name, so the name is what is stored; what the arrangement is made of stays the panel's other two answers.
+       */
+      onCreateProject={(name, arrangement) => {
+        store.create(name, arrangement);
+        // Immediate, not on the store's next render: the top bar must name the project on the click that made it.
+        notifyName.current?.(name.trim() || undefined);
+      }}
+      onArrangementChange={store.report}
+    />
+  );
 }

@@ -20,7 +20,8 @@ describe("the new-project panel", () => {
     fireEvent.click(screen.getByTestId("template-samplers"));
     fireEvent.click(screen.getByRole("button", { name: "Create" }));
     // The highlighted card is the one created — not a default that ignored the click.
-    expect(onCreate).toHaveBeenCalledWith("samplers", expect.anything());
+    // ⭐ And the name is reported with it: it is the one thing the chooser decides that nothing else can supply.
+    expect(onCreate).toHaveBeenCalledWith("samplers", expect.anything(), expect.any(String));
   });
 
   it("carries the chosen kind into a blank project, and offers it only there", () => {
@@ -32,7 +33,7 @@ describe("the new-project panel", () => {
     fireEvent.change(screen.getByLabelText("First track kind"), { target: { value: "sampler" } });
     fireEvent.click(screen.getByRole("button", { name: "Create" }));
     // A blank project still has a typed track, which is the owner's requirement — and the card promised exactly that.
-    expect(onCreate).toHaveBeenCalledWith(undefined, "sampler");
+    expect(onCreate).toHaveBeenCalledWith(undefined, "sampler", expect.any(String));
   });
 
   it("hides the blank-only choice when a template is selected, because templates bring their own tracks", () => {
@@ -75,5 +76,85 @@ describe("the new-project panel", () => {
     // And the English sentence is different, so the assertion above is about the language rather than about some text existing.
     expect(card.textContent).not.toContain("Two sampler tracks");
     window.localStorage.removeItem("groove_language");
+  });
+});
+
+/**
+ * ⭐ **The field that did not exist.**
+ *
+ * The owner's finding was measured, not guessed: the chooser's `input/select/textarea` count was **0**, so a project
+ * started here could not be named at all — nothing to show in the top bar, nothing to find it by. These criteria judge
+ * the three things a name field has to do: exist, arrive filled in, and go where the caller can store it.
+ */
+/**
+ * ⭐ **The field that did not exist.**
+ *
+ * The owner's finding was measured, not guessed: the chooser's `input/select/textarea` count was **0**, so a project
+ * started here could not be named at all — nothing to show in the top bar, nothing to find it by. These criteria judge
+ * the three things a name field has to do: exist, arrive filled in, and go where the caller can store it.
+ *
+ * ⚠️ They render inside a `LanguageProvider` because the field's **accessible name is a dictionary word**, which is
+ * the point of it being one: a criterion that addressed it by a hardcoded string would pass while the Chinese session
+ * showed English, which is the defect this file's own last case is about.
+ */
+const renderNamed = (onCreate: (templateId: string | undefined, blankKind: string, name: string) => void) => {
+  localStorage.setItem("groove_language", "en");
+  return render(
+    <LanguageProvider>
+      <NewProjectPanelV2 onCreate={onCreate as never} />
+    </LanguageProvider>
+  );
+};
+
+describe("the project name", () => {
+  it("⭐ is on the chooser, not folded into Details, because it is not a detail", () => {
+    renderNamed(vi.fn());
+    // Nothing was clicked first: the field is visible the moment the panel is.
+    expect(screen.getByLabelText("Project name")).toBeDefined();
+    expect(screen.getByPlaceholderText("Enter project name...")).toBeDefined();
+  });
+
+  it("⭐ starts filled in, so Create is never a press that does nothing", () => {
+    const onCreate = vi.fn();
+    renderNamed(onCreate);
+    const field = screen.getByLabelText("Project name") as HTMLInputElement;
+    expect(field.value.trim().length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    expect(onCreate).toHaveBeenCalledWith(undefined, expect.anything(), field.value);
+  });
+
+  it("⭐ follows the card, and a name the person typed is never put back", () => {
+    const onCreate = vi.fn();
+    renderNamed(onCreate);
+    const field = screen.getByLabelText("Project name") as HTMLInputElement;
+    const blankDefault = field.value;
+
+    // Untouched, the name follows the card: someone who picks Samplers is naming a samplers project, not "Untitled".
+    fireEvent.click(screen.getByTestId("template-samplers"));
+    const samplersDefault = field.value;
+    expect(samplersDefault).not.toBe(blankDefault);
+
+    // ⭐ Once typed, the card must not overwrite it — that is the line between "filled in for you" and "put back".
+    fireEvent.change(field, { target: { value: "My Tune" } });
+    fireEvent.click(screen.getByTestId("template-drums-bass"));
+    expect(field.value).toBe("My Tune");
+
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    expect(onCreate).toHaveBeenCalledWith("drums-bass", expect.anything(), "My Tune");
+  });
+
+  it("falls back to the dictionary's default rather than creating an unnamed project from an emptied field", () => {
+    localStorage.setItem("groove_language", "zh");
+    const onCreate = vi.fn();
+    render(
+      <LanguageProvider>
+        <NewProjectPanelV2 onCreate={onCreate} />
+      </LanguageProvider>
+    );
+    // Read from the dictionary, not asserted as an English literal: the fallback has to be a word in the session's own
+    // language, and a name nobody can read in a list is barely better than no name.
+    fireEvent.change(screen.getByLabelText("工程名"), { target: { value: "   " } });
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    expect(onCreate).toHaveBeenCalledWith(undefined, expect.anything(), "未命名工程");
   });
 });

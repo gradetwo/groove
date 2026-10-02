@@ -60,6 +60,18 @@ interface HeaderProps {
    * only wants the link — is unaffected.
    */
   onNewProject?: () => void;
+  /**
+   * ⭐ **The name of the project that is open, or absent when none is.**
+   *
+   * The owner's report was that the bar read `GROOVE LAB | Studio | New | Chords …` no matter what had been saved —
+   * because nothing ever told it. The name now arrives from the surface that owns it (`NewProjectView` reads it from
+   * the project store), which keeps this component free of storage, routing and anything else a criterion for the
+   * header would then have to provide.
+   *
+   * ⚠️ **`undefined` means "say nothing", not "Untitled".** A bar that invents a name for a project that does not exist
+   * is worse than a bar with no name: it claims something is open.
+   */
+  projectName?: string;
   analyser?: AnalyserNode | null;
   isPlaying?: boolean;
 }
@@ -75,6 +87,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenOnboarding,
   onOpenSettings,
   onNewProject,
+  projectName,
   analyser,
   isPlaying = false,
 }) => {
@@ -217,6 +230,23 @@ export const Header: React.FC<HeaderProps> = ({
             GROOVE&nbsp;LAB
           </span>
         </button>
+        {/**
+         * ⭐ **The open project's name, beside the brand and before the navigation.**
+         *
+         * It is a sibling of the brand rather than a new nav item: it names what is open, and it is not somewhere to go.
+         * `truncate` with a bound rather than free width, because a long name must not push the navigation off a narrow
+         * bar — the wrap this header already measures is the alternative, and a header that grows for a name is worse
+         * than a name that ends in an ellipsis. The full name is in `title`, so nothing is lost.
+         */}
+        {projectName !== undefined && projectName.trim() !== "" && (
+          <span
+            data-testid="header-project-name"
+            title={projectName}
+            className="max-w-[10rem] truncate border-l border-line pl-4 text-xs font-medium text-text-sub sm:max-w-[16rem]"
+          >
+            {projectName}
+          </span>
+        )}
       </div>
 
       {/* Navigation Links: Reorganized IA (P1-09) */}

@@ -14,18 +14,86 @@ import {
 } from "../../types/project";
 import { Genre, SequencerPattern } from "../../types/genre";
 import { DEFAULT_FX_STATE } from "../../audio/EffectsRack";
-import { DrumKitType, EffectsRackState } from "../../audio/AudioEngine";
+import { DrumKitType } from "../../audio/AudioEngine";
 import { APP_VERSION } from "../../version";
 import { clonePattern } from "./useSequencerStore";
 import { patternFromGenre } from "../../data/genreMix";
 import type { ClipSlot } from "../../types/song";
+import type { ArrangementV2, NoteEvent, Take, TakeRegion, TrackKindV2, TrackV2 } from "../../types/arrangementV2";
+import { requireTrackKind } from "../../data/arrangementEdits";
 
 export const GROOVE_DB_NAME = "groove_projects_db";
+/**
+ * ⭐ **The database version, and the one number here that had to move.**
+ *
+ * It was the constant `GROOVE_DB_VERSION = 1`, and the v2 arrangement needed a **second object store** (see
+ * `GROOVE_ARRANGEMENT_STORE_NAME` below for why a separate store rather than a field on the project row). IndexedDB
+ * only runs `onupgradeneeded` when the version **increases**, so adding a store without bumping this would create it
+ * on a fresh install and silently never create it for anyone who had already opened the app — the worst shape of bug,
+ * because it works for the person testing it.
+ *
+ * ⚠️ **`GROOVE_DB_VERSION` stays 1 and now means "the version at which the project store appeared".** Nothing reads it
+ * as the live version any more; `openProjectsDb` computes that. It is kept because it is the fact the v1 store was
+ * built at, and a reader that used to see it should still find the number it documented.
+ */
 export const GROOVE_DB_VERSION = 1;
+/**
+ * ⭐ **The version `openProjectsDb` actually opens.** 2 adds the arrangement store and never changes the project store,
+ * so a v1 database is upgraded in place with its records untouched.
+ */
+export const GROOVE_DB_ARRANGEMENT_STORE_VERSION = 2;
 export const GROOVE_STORE_NAME = "projects";
+/**
+ * ⭐ **The v2 arrangements, in their own store — the decision this whole change turns on.**
+ *
+ * A v2 arrangement is **not** a `GrooveProject`. That type is `patterns: { A, B }` by construction, plus effects, kit,
+ * tempo and a song chain that the arrangement model does not have; a v2 arrangement is tracks, per-track notes, tempo,
+ * bars and takes. Writing one into the project store would mean either inventing two patterns to satisfy the type or
+ * weakening it, and either way every studio reader — the Project Hub's list, `getAllProjects`, the boot restore, both
+ * autosave snapshots — would then be reading records that are not projects.
+ *
+ * So they are records of their own in the **same database and the same module**, which is what the brief asked for:
+ * one IndexedDB channel, one place that opens the database, one degradation report. The two never mix, so nothing that
+ * already works can be reached by this change.
+ */
+export const GROOVE_ARRANGEMENT_STORE_NAME = "arrangements_v2";
 export const ACTIVE_PROJECT_STORAGE_KEY = "groove_active_project_id";
+/**
+ * ⭐ **The last arrangement project this build had open**, as `{id, name}` — a *pointer*, not a copy.
+ *
+ * The arrangement itself is written to IndexedDB, which is the storage with room for it. This key is one small,
+ * synchronous read that answers two questions the surfaces need before any transaction has resolved: **which project
+ * should the top bar name**, and **does the new-project route have work to reopen**. Like `ACTIVE_PROJECT_STORAGE_KEY`
+ * beside it, it is a pointer and says so.
+ */
+export const ACTIVE_ARRANGEMENT_STORAGE_KEY = "groove_active_arrangement_v2";
 export const LEGACY_STORAGE_KEY = "groove_project_v1";
 export const LEGACY_MIGRATED_FLAG = "groove_legacy_migrated_v1";
+
+/** The editor a persisted project belongs to — the discriminator, so a record never has to be guessed at. */
+export type GrooveEditorKind = "studio" | "arrangement-v2";
+
+/**
+ * A saved **v2 arrangement**, as it is stored.
+ *
+ * `editor` is not decoration: it is what makes "this is not a studio project" a fact in the data rather than a
+ * convention in a reader, and it is what the artist formerly known as a `kind` field would have said.
+ */
+export interface ArrangementProjectRecord {
+  id: string;
+  name: string;
+  editor: "arrangement-v2";
+  arrangement: ArrangementV2;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** What the top bar needs, read synchronously. */
+export interface ArrangementProjectPointer {
+  id: string;
+  name: string;
+}
+
 
 // In-memory fallback cache in case IndexedDB is restricted or unavailable (e.g. strict sandbox, SSR)
 const memoryStore = new Map<string, GrooveProject>();
@@ -62,16 +130,21 @@ function isIndexedDbUnavailable(err: unknown): boolean {
  * F-07: resolving on `request.onsuccess` reported success before the commit, so a
  * QuotaExceeded abort looked like a successful save and the UI happily dropped the
  * user's work.
+ *
+ * ⭐ **The store is a parameter, and `GROOVE_STORE_NAME` is what every existing caller passes.** The arrangement store
+ * needs the identical commit discipline; a second copy of this function is how the two would drift, and the drift
+ * would be in the half that decides whether a save actually happened.
  */
-function runTx<T>(
+function runStoreTx<T>(
   db: IDBDatabase,
+  storeName: string,
   mode: IDBTransactionMode,
   operation: (store: IDBObjectStore) => IDBRequest<T>
 ): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     let tx: IDBTransaction;
     try {
-      tx = db.transaction(GROOVE_STORE_NAME, mode);
+      tx = db.transaction(storeName, mode);
     } catch (err) {
       reject(err);
       return;
@@ -85,7 +158,7 @@ function runTx<T>(
     tx.onabort = () => reject(tx.error || new Error("IndexedDB transaction aborted"));
 
     try {
-      const req = operation(tx.objectStore(GROOVE_STORE_NAME));
+      const req = operation(tx.objectStore(storeName));
       req.onsuccess = () => {
         result = req.result as T;
       };
@@ -104,6 +177,10 @@ function runTx<T>(
       else reject(err);
     }
   });
+}
+
+function runTx<T>(db: IDBDatabase, mode: IDBTransactionMode, operation: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
+  return runStoreTx(db, GROOVE_STORE_NAME, mode, operation);
 }
 
 /**
@@ -141,6 +218,13 @@ export function calculateSnapshotSummary(patterns: { A: SequencerPattern; B: Seq
 
 /**
  * Opens or upgrades the IndexedDB database instance
+ *
+ * ⭐ **The version is decided by what is already there, so a v1 database is upgraded rather than refused.** A browser
+ * that last opened this app before the arrangement store existed has `groove_projects_db` at version 1 and no such
+ * store. Opening it at version 2 runs `onupgradeneeded`, which notices the project store already exists, leaves it
+ * **and every record in it** alone, and creates only the arrangement store. `indexedDB.databases()` is how "what is
+ * already there" is asked; where a browser does not implement it the answer is the arrangement version, which is what
+ * a browser with no database at all must be given anyway.
  */
 export function openProjectsDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -153,37 +237,63 @@ export function openProjectsDb(): Promise<IDBDatabase> {
       return reject(new Error("window.indexedDB is unavailable"));
     }
 
-    const request = idb.open(GROOVE_DB_NAME, GROOVE_DB_VERSION);
+    const open = (version: number) => {
+      const request = idb.open(GROOVE_DB_NAME, version);
 
-    request.onupgradeneeded = (event) => {
-      const db = (event.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains(GROOVE_STORE_NAME)) {
-        const store = db.createObjectStore(GROOVE_STORE_NAME, { keyPath: "id" });
-        store.createIndex("updatedAt", "updatedAt", { unique: false });
-        store.createIndex("genreId", "genreId", { unique: false });
-        store.createIndex("isFavorite", "isFavorite", { unique: false });
-        store.createIndex("name", "name", { unique: false });
-      }
-    };
-
-    request.onblocked = () => {
-      reject(new Error("IndexedDB upgrade blocked by another open tab"));
-    };
-
-    request.onsuccess = () => {
-      const db = request.result;
-      // Another tab is upgrading the schema: release our connection instead of
-      // hanging every future open request behind it.
-      db.onversionchange = () => {
-        db.close();
-        storageStatus.lastError = "Database closed to allow an upgrade in another tab";
+      request.onupgradeneeded = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result;
+        if (!db.objectStoreNames.contains(GROOVE_STORE_NAME)) {
+          const store = db.createObjectStore(GROOVE_STORE_NAME, { keyPath: "id" });
+          store.createIndex("updatedAt", "updatedAt", { unique: false });
+          store.createIndex("genreId", "genreId", { unique: false });
+          store.createIndex("isFavorite", "isFavorite", { unique: false });
+          store.createIndex("name", "name", { unique: false });
+        }
+        if (!db.objectStoreNames.contains(GROOVE_ARRANGEMENT_STORE_NAME)) {
+          const arrangements = db.createObjectStore(GROOVE_ARRANGEMENT_STORE_NAME, { keyPath: "id" });
+          arrangements.createIndex("updatedAt", "updatedAt", { unique: false });
+          arrangements.createIndex("name", "name", { unique: false });
+        }
       };
-      resolve(db);
+
+      request.onblocked = () => {
+        reject(new Error("IndexedDB upgrade blocked by another open tab"));
+      };
+
+      request.onsuccess = () => {
+        const db = request.result;
+        // Another tab is upgrading the schema: release our connection instead of
+        // hanging every future open request behind it.
+        db.onversionchange = () => {
+          db.close();
+          storageStatus.lastError = "Database closed to allow an upgrade in another tab";
+        };
+        resolve(db);
+      };
+
+      request.onerror = () => {
+        reject(request.error || new Error("Failed to open IndexedDB"));
+      };
     };
 
-    request.onerror = () => {
-      reject(request.error || new Error("Failed to open IndexedDB"));
-    };
+    try {
+      const databases = idb.databases?.bind(idb);
+      if (!databases) {
+        open(GROOVE_DB_ARRANGEMENT_STORE_VERSION);
+        return;
+      }
+      void databases()
+        .then((entries) => {
+          const existing = entries.find((entry) => entry.name === GROOVE_DB_NAME)?.version ?? 0;
+          open(Math.max(GROOVE_DB_ARRANGEMENT_STORE_VERSION, existing));
+        })
+        .catch(() => {
+          // Asking what exists failed, which is not a reason to refuse to open a database.
+          open(GROOVE_DB_ARRANGEMENT_STORE_VERSION);
+        });
+    } catch (err) {
+      reject(err);
+    }
   });
 }
 
@@ -663,5 +773,446 @@ export async function migrateLegacyLocalStorage(): Promise<GrooveProject | null>
   } catch (err) {
     console.warn("[projectDb] Failed to migrate legacy project:", err);
     return null;
+  }
+}
+
+/* =====================================================================================================================
+ * The v2 arrangement channel
+ *
+ * ⭐ **Why this is here and not in a storage module of its own.** The brief's instruction was to reuse this file's
+ * IndexedDB channel rather than build a second store, and the reason holds up: the database has one lifetime, one
+ * `versionchange` story, one memory fallback and one honest degradation report (`getProjectsStorageStatus`). A second
+ * module opening a second database would have its own copy of all four, and the copies would disagree the first time
+ * one of them was fixed.
+ *
+ * **What it deliberately does not touch.** The project store, `.groove` packages, the Project Hub and the studio's
+ * two autosave snapshots are untouched by every line below: an arrangement is a record in the *other* store, and no
+ * function here reads or writes a `GrooveProject`.
+ * ===================================================================================================================*/
+
+/**
+ * The in-memory mirror, for the same reason the project store has one: a sandbox with IndexedDB restricted must still
+ * be able to hold the arrangement for as long as the page lives, and must report that it is doing so.
+ */
+const arrangementMemoryStore = new Map<string, ArrangementProjectRecord>();
+
+/** ⭐ `hasSavedArrangement` must answer before any transaction resolves, so the id of the last save is kept here too. */
+let lastArrangementId: string | null = null;
+
+/** The largest arrangement this build will write. See `saveArrangementProject` for why there is a number at all. */
+export const ARRANGEMENT_SAVE_MAX_BYTES = 8 * 1024 * 1024;
+
+function missingField(what: string): never {
+  throw new Error(`An arrangement project could not be read: ${what}`);
+}
+
+function requirePersistedObject(value: unknown, what: string): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) missingField(`${what} is missing or is not an object`);
+  return value as Record<string, unknown>;
+}
+
+function requirePersistedString(value: unknown, what: string): string {
+  if (typeof value !== "string" || value.length === 0) missingField(`${what} is missing or is not a string`);
+  return value;
+}
+
+function requirePersistedNumber(value: unknown, what: string): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) missingField(`${what} is missing or is not a number`);
+  return value;
+}
+
+function optionalPersistedNumber(value: unknown, what: string): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "number" || !Number.isFinite(value)) missingField(`${what} is not a number`);
+  return value;
+}
+
+function optionalPersistedString(value: unknown, what: string): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string") missingField(`${what} is not a string`);
+  return value;
+}
+
+function optionalPersistedBoolean(value: unknown, what: string): boolean | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "boolean") missingField(`${what} is not a boolean`);
+  return value;
+}
+
+/**
+ * ⭐ **A kind this build does not have is refused out loud here, at the reader** — which is exactly what
+ * `requireTrackKind`'s own comment said had to happen "if a v2 arrangement is ever persisted". That day is this change,
+ * so the check is called from this path and not only from the compile.
+ */
+function readPersistedTrackKind(value: unknown, trackName: string): TrackKindV2 {
+  if (typeof value !== "string") missingField(`the track "${trackName}" has no kind`);
+  return requireTrackKind(value, trackName);
+}
+
+function readPersistedNote(value: unknown, what: string): NoteEvent {
+  const note = requirePersistedObject(value, what);
+  const read: NoteEvent = {
+    pitch: requirePersistedNumber(note.pitch, `${what}'s pitch`),
+    startBeats: requirePersistedNumber(note.startBeats, `${what}'s start`),
+    lengthBeats: requirePersistedNumber(note.lengthBeats, `${what}'s length`),
+    velocity: requirePersistedNumber(note.velocity, `${what}'s velocity`),
+  };
+  const syllable = optionalPersistedString(note.syllable, `${what}'s syllable`);
+  return syllable === undefined ? read : { ...read, syllable };
+}
+
+function readPersistedTake(value: unknown, what: string): Take {
+  const take = requirePersistedObject(value, what);
+  const source = take.source;
+  if (source !== "audio" && source !== "midi") missingField(`${what}'s source is neither audio nor midi`);
+  const read: Take = {
+    id: requirePersistedString(take.id, `${what}'s id`),
+    recordedAt: requirePersistedNumber(take.recordedAt, `${what}'s recordedAt`),
+    source,
+  };
+  const label = optionalPersistedString(take.label, `${what}'s label`);
+  return label === undefined ? read : { ...read, label };
+}
+
+function readPersistedTakeRegion(value: unknown, what: string): TakeRegion {
+  const region = requirePersistedObject(value, what);
+  return {
+    startBar: requirePersistedNumber(region.startBar, `${what}'s start bar`),
+    endBar: requirePersistedNumber(region.endBar, `${what}'s end bar`),
+    takeId: requirePersistedString(region.takeId, `${what}'s take id`),
+  };
+}
+
+function requirePersistedArray(value: unknown, what: string): unknown[] {
+  if (!Array.isArray(value)) missingField(`${what} is missing or is not a list`);
+  return value;
+}
+
+function readPersistedTrack(value: unknown, index: number): TrackV2 {
+  const track = requirePersistedObject(value, `track ${index}`);
+  const name = requirePersistedString(track.name, `track ${index}'s name`);
+  const kind = readPersistedTrackKind(track.kind, name);
+  const read: TrackV2 = {
+    id: requirePersistedString(track.id, `track ${index}'s id`),
+    kind,
+    name,
+  };
+
+  const color = optionalPersistedString(track.color, `track "${name}"'s colour`);
+  if (color !== undefined) read.color = color;
+  const collapsed = optionalPersistedBoolean(track.collapsed, `track "${name}"'s collapsed flag`);
+  if (collapsed !== undefined) read.collapsed = collapsed;
+  const muted = optionalPersistedBoolean(track.muted, `track "${name}"'s mute flag`);
+  if (muted !== undefined) read.muted = muted;
+  const soloed = optionalPersistedBoolean(track.soloed, `track "${name}"'s solo flag`);
+  if (soloed !== undefined) read.soloed = soloed;
+  const armed = optionalPersistedBoolean(track.armed, `track "${name}"'s arm flag`);
+  if (armed !== undefined) read.armed = armed;
+  const gainDb = optionalPersistedNumber(track.gainDb, `track "${name}"'s gain`);
+  if (gainDb !== undefined) read.gainDb = gainDb;
+  const pan = optionalPersistedNumber(track.pan, `track "${name}"'s pan`);
+  if (pan !== undefined) read.pan = pan;
+  const parentId = optionalPersistedString(track.parentId, `track "${name}"'s parent`);
+  if (parentId !== undefined) read.parentId = parentId;
+  const fromTrackId = optionalPersistedString(track.fromTrackId, `track "${name}"'s source track`);
+  if (fromTrackId !== undefined) read.fromTrackId = fromTrackId;
+  const fromLaneId = optionalPersistedString(track.fromLaneId, `track "${name}"'s source lane`);
+  if (fromLaneId !== undefined) read.fromLaneId = fromLaneId;
+  /**
+   * ⭐ **`instrument` is carried, not dropped.** It is the key of the recorded-instrument table, so a track that lost
+   * it would come back as the role's default synthesiser — the exact "it sounded wrong after a reload" defect this
+   * model's own comment names.
+   */
+  const instrument = optionalPersistedString(track.instrument, `track "${name}"'s instrument`);
+  if (instrument !== undefined) read.instrument = instrument;
+
+  if (track.sample !== undefined) {
+    const sample = requirePersistedObject(track.sample, `track "${name}"'s sample`);
+    read.sample = { assetId: requirePersistedString(sample.assetId, `track "${name}"'s sample asset`) };
+  }
+  if (track.takes !== undefined) {
+    read.takes = requirePersistedArray(track.takes, `track "${name}"'s takes`).map((take, at) => readPersistedTake(take, `take ${at} of track "${name}"`));
+  }
+  const selectedTakeId = optionalPersistedString(track.selectedTakeId, `track "${name}"'s selected take`);
+  if (selectedTakeId !== undefined) read.selectedTakeId = selectedTakeId;
+  if (track.takeRegions !== undefined) {
+    read.takeRegions = requirePersistedArray(track.takeRegions, `track "${name}"'s take regions`).map((region, at) =>
+      readPersistedTakeRegion(region, `take region ${at} of track "${name}"`)
+    );
+  }
+
+  return read;
+}
+
+/**
+ * Turns a stored value into an `ArrangementV2` **or says which field it could not read**.
+ *
+ * The second half is the point (the brief's §27.2: a file this build cannot read must fail out loud rather than become
+ * an empty track list). It is written by hand rather than with a schema library because the message is what a person
+ * acts on, and because a permissive parser is exactly the failure mode being avoided: an unknown field is ignored, but
+ * **a known field of the wrong type, or a track kind this build does not have, throws**.
+ */
+export function validateArrangementV2(value: unknown): ArrangementV2 {
+  const source = requirePersistedObject(value, "the arrangement");
+  const tracks = requirePersistedArray(source.tracks, "the track list").map((track, index) => readPersistedTrack(track, index));
+  const notesByTrack: Record<string, NoteEvent[]> = {};
+  const notesSource = requirePersistedObject(source.notesByTrack, "the notes");
+  for (const [trackId, notes] of Object.entries(notesSource)) {
+    notesByTrack[trackId] = requirePersistedArray(notes, `the notes of track "${trackId}"`).map((note, at) => readPersistedNote(note, `note ${at} of track "${trackId}"`));
+  }
+
+  const read: ArrangementV2 = {
+    songId: requirePersistedString(source.songId, "the song id"),
+    tracks,
+    notesByTrack,
+    sourceSlots: requirePersistedArray(source.sourceSlots, "the source slots").map((slot, at) => requirePersistedString(slot, `source slot ${at}`)),
+  };
+
+  const bars = optionalPersistedNumber(source.bars, "the bar count");
+  if (bars !== undefined) read.bars = bars;
+  const bpm = optionalPersistedNumber(source.bpm, "the tempo");
+  if (bpm !== undefined) read.bpm = bpm;
+  const timeSignature = optionalPersistedString(source.timeSignature, "the time signature");
+  if (timeSignature !== undefined) read.timeSignature = timeSignature;
+  if (source.tempoTrack !== undefined) {
+    read.tempoTrack = requirePersistedArray(source.tempoTrack, "the tempo track").map((point, at) => {
+      const readPoint = requirePersistedObject(point, `tempo point ${at}`);
+      const curve = readPoint.curve;
+      if (curve !== undefined && curve !== "jump" && curve !== "linear") missingField(`tempo point ${at}'s curve is neither jump nor linear`);
+      return {
+        atBar: requirePersistedNumber(readPoint.atBar, `tempo point ${at}'s bar`),
+        bpm: requirePersistedNumber(readPoint.bpm, `tempo point ${at}'s tempo`),
+        ...(curve === undefined ? {} : { curve }),
+      };
+    });
+  }
+
+  return read;
+}
+
+/** Validates a record read out of storage: its envelope, then its arrangement. */
+export function validateArrangementProjectRecord(value: unknown): ArrangementProjectRecord {
+  const source = requirePersistedObject(value, "the saved project");
+  if (source.editor !== "arrangement-v2") missingField(`the saved project's editor is not arrangement-v2 (it says ${JSON.stringify(source.editor)})`);
+  const arrangement = validateArrangementV2(source.arrangement);
+  const name = typeof source.name === "string" && source.name.trim().length > 0 ? source.name : "Untitled Project";
+  return {
+    id: requirePersistedString(source.id, "the saved project's id"),
+    name,
+    editor: "arrangement-v2",
+    arrangement,
+    createdAt: requirePersistedNumber(source.createdAt, "the saved project's creation time"),
+    updatedAt: requirePersistedNumber(source.updatedAt, "the saved project's update time"),
+  };
+}
+
+/**
+ * ⭐ **The pointer the surfaces read synchronously**, or `null` when there is nothing saved.
+ *
+ * A malformed value reads as "nothing saved" rather than throwing: this is called during a render to decide what the
+ * top bar says and whether the new-project route has work to reopen, and a stale pointer must not be able to break a
+ * page. The arrangement itself is validated when it is loaded, which is where a refusal can still be acted on.
+ */
+export function getSavedArrangementProject(): ArrangementProjectPointer | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(ACTIVE_ARRANGEMENT_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== "object" || parsed === null) return null;
+    const pointer = parsed as Record<string, unknown>;
+    const id = pointer.id;
+    const name = pointer.name;
+    if (typeof id !== "string" || id.length === 0) return null;
+    if (typeof name !== "string" || name.length === 0) return null;
+    return { id, name };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * ⭐ **The synchronous half of a save: which project is open, and what it is called.**
+ *
+ * It exists so the top bar and the route can answer before IndexedDB has committed — a name that appears only after a
+ * transaction resolves is a name that is missing on the frame the user is looking at. The full record is written
+ * separately; this is a pointer to it, and it is written on every change so a crash cannot leave it naming a project
+ * the arrangement no longer belongs to.
+ */
+export function setSavedArrangementProject(pointer: ArrangementProjectPointer): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(ACTIVE_ARRANGEMENT_STORAGE_KEY, JSON.stringify({ id: pointer.id, name: pointer.name }));
+  } catch {
+    // A refused pointer write is not a refused save: the arrangement itself is still written below.
+  }
+}
+
+/** The pointer, cleared — used by the tests and available to a future "close project". */
+export function clearSavedArrangementProject(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(ACTIVE_ARRANGEMENT_STORAGE_KEY);
+  } catch {
+    /* ignore localStorage errors */
+  }
+}
+
+/**
+ * Writes an arrangement, immediately.
+ *
+ * **There is no explicit "Save" step above this on purpose** — see `docs/OPEN_WORK.md` §28 and the report that
+ * accompanied this change: every surveyed DAW (Logic, Live, Studio One, Cubase) names a new project only through an
+ * explicit Save, because their storage is a file the user must choose a home for. A browser application has no such
+ * dialog and no such constraint: IndexedDB *is* this app's project folder (`.groove` is what it exports to a file), so
+ * making the user press Save to keep work the browser can already keep is a copy of a constraint that does not exist
+ * here. What is copied is the half that matters — **a new project is named before it is stored**, which is Logic's own
+ * "the first time you save a new project, the Save dialog appears".
+ *
+ * ⭐ **A ceiling, because this store is shared with the studio hub.** IndexedDB quota is origin-wide: one arrangement
+ * that grew without bound would fail the *studio's* next project save, which is a way for this change to break a
+ * feature it was told not to. Eight megabytes is far more than any arrangement this model can hold (an eight-bar
+ * arrangement of four tracks is a few kilobytes) and small enough that the failure is this channel's own.
+ */
+export async function saveArrangementProject(input: {
+  id?: string;
+  /**
+   * ⭐ **"This is a new project", not "I could not say which one".** An edit that carries no id means *the project this
+   * pointer names* — which is what the debounced autosave is — while a brand-new project has no predecessor at all.
+   * Folding the two together would make starting a second project silently overwrite the first, and that is a data
+   * loss this channel must not be able to cause by omission.
+   */
+  name: string;
+  arrangement: ArrangementV2;
+  createdAt?: number;
+  /** True only from the chooser's Create: a new id is taken and the pointer's project is not touched. */
+  fresh?: boolean;
+}): Promise<ArrangementProjectRecord> {
+  const now = Date.now();
+  const existingId = input.id ?? (input.fresh === true ? null : getSavedArrangementProject()?.id ?? null);
+  const record: ArrangementProjectRecord = {
+    id: existingId ?? generateProjectId(),
+    name: input.name.trim() || "Untitled Project",
+    editor: "arrangement-v2",
+    arrangement: input.arrangement,
+    createdAt: input.createdAt ?? now,
+    updatedAt: now,
+  };
+
+  const serialised = JSON.stringify(record);
+  if (serialised.length > ARRANGEMENT_SAVE_MAX_BYTES) {
+    throw new Error(
+      `This arrangement is ${Math.round(serialised.length / 1024)} kB, past the ${Math.round(ARRANGEMENT_SAVE_MAX_BYTES / 1024)} kB this build will store; it was not saved.`
+    );
+  }
+
+  lastArrangementId = record.id;
+  setSavedArrangementProject({ id: record.id, name: record.name });
+
+  try {
+    const db = await openProjectsDb();
+    await runStoreTx(db, GROOVE_ARRANGEMENT_STORE_NAME, "readwrite", (store) => store.put(record));
+  } catch (err) {
+    if (!isIndexedDbUnavailable(err)) {
+      // Quota exceeded / aborted transaction: the write did NOT happen, and saying so is the whole point of F-07.
+      markDegraded(err);
+      throw err instanceof Error ? err : new Error(String(err));
+    }
+    markDegraded(err);
+  }
+
+  // The mirror is written either way, so a restricted sandbox still has the arrangement for this page's lifetime.
+  arrangementMemoryStore.set(record.id, record);
+  return record;
+}
+
+/**
+ * Reads one arrangement by id.
+ *
+ * The record is validated on the way out (see `validateArrangementProjectRecord`), so a record this build cannot read
+ * throws **naming the field** instead of arriving as an arrangement with no tracks.
+ */
+export async function getArrangementProject(id: string): Promise<ArrangementProjectRecord | null> {
+  try {
+    const db = await openProjectsDb();
+    const found = await runStoreTx<unknown>(db, GROOVE_ARRANGEMENT_STORE_NAME, "readonly", (store) => store.get(id));
+    if (found === undefined) return null;
+    return validateArrangementProjectRecord(found);
+  } catch (err) {
+    if (!isIndexedDbUnavailable(err)) {
+      markDegraded(err);
+      throw err instanceof Error ? err : new Error(String(err));
+    }
+    markDegraded(err);
+    const mirrored = arrangementMemoryStore.get(id);
+    return mirrored === undefined ? null : validateArrangementProjectRecord(mirrored);
+  }
+}
+
+/** Every saved arrangement, newest first — the list a future chooser of saved arrangements will read. */
+export async function getAllArrangementProjects(): Promise<ArrangementProjectRecord[]> {
+  const fromStore = async (): Promise<unknown[]> => {
+    const db = await openProjectsDb();
+    return await new Promise<unknown[]>((resolve, reject) => {
+      const tx = db.transaction(GROOVE_ARRANGEMENT_STORE_NAME, "readonly");
+      const req = tx.objectStore(GROOVE_ARRANGEMENT_STORE_NAME).getAll();
+      req.onsuccess = () => resolve((req.result as unknown[]) || []);
+      req.onerror = () => reject(req.error);
+    });
+  };
+
+  let records: unknown[];
+  try {
+    records = await fromStore();
+  } catch (err) {
+    if (!isIndexedDbUnavailable(err)) {
+      markDegraded(err);
+      throw err instanceof Error ? err : new Error(String(err));
+    }
+    markDegraded(err);
+    records = Array.from(arrangementMemoryStore.values());
+  }
+
+  return records.map(validateArrangementProjectRecord).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+}
+
+/**
+ * ⭐ **The arrangement to reopen, or `null` if there is none** — the read behind "refresh and the arrangement is still
+ * here".
+ *
+ * It prefers the pointer's project and falls back to the most recently updated one, and it deliberately **does not
+ * swallow a refusal**: a record this build cannot read throws, and `NewProjectView` catches it so the route opens its
+ * chooser and says why, rather than either losing the work silently or showing an empty arrangement.
+ */
+export async function getLastArrangementProject(): Promise<ArrangementProjectRecord | null> {
+  const pointer = getSavedArrangementProject();
+  if (pointer) {
+    const pointed = await getArrangementProject(pointer.id);
+    if (pointed) return pointed;
+  }
+  const all = await getAllArrangementProjects();
+  return all[0] ?? null;
+}
+
+/** The screen-logic question the studio's boot restore asks: **is this id one of ours?** */
+export function isArrangementProjectId(id: string | null): boolean {
+  if (!id) return false;
+  if (lastArrangementId === id) return true;
+  if (arrangementMemoryStore.has(id)) return true;
+  return getSavedArrangementProject()?.id === id;
+}
+
+/** How many arrangements are stored — the mirror when IndexedDB is unavailable, like `getProjectCount` beside it. */
+export async function getArrangementProjectCount(): Promise<number> {
+  try {
+    const db = await openProjectsDb();
+    return await new Promise<number>((resolve, reject) => {
+      const tx = db.transaction(GROOVE_ARRANGEMENT_STORE_NAME, "readonly");
+      const req = tx.objectStore(GROOVE_ARRANGEMENT_STORE_NAME).count();
+      req.onsuccess = () => resolve(req.result || 0);
+      req.onerror = () => reject(req.error);
+    });
+  } catch {
+    return arrangementMemoryStore.size;
   }
 }
