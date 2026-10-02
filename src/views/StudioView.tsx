@@ -533,6 +533,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
     handleTapTempo,
     handleToggleDrumsOnly,
     handleTogglePlay,
+    handleStop,
+    canStop,
     handleUndo,
     handleRedo,
     handleSwitchSlot,
@@ -1038,6 +1040,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
           isConsoleOpen={isConsoleOpen}
           onToggleConsole={handleToggleConsole}
           onTogglePlay={handleTogglePlay}
+          onStop={handleStop}
+          canStop={canStop}
           onChangeBpm={handleChangeBpm}
           onChangeSwing={handleChangeSwing}
           onChangeTimeSignature={handleChangeTimeSignature}

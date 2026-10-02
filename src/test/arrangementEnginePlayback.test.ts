@@ -204,6 +204,11 @@ describe("stopping an arrangement stops both halves", () => {
       }),
       getCurrentStep: () => clock.step,
       getIsPlaying: () => clock.playing,
+      /**
+       * The engine's own answer to "would a stop return somewhere": running, **or** holding a position. `getIsPlaying()`
+       * alone cannot tell those apart, which is the gap that a Stop pressed after a pause found.
+       */
+      canReturnToStart: () => clock.playing || clock.step > 0,
       setOnStep: (cb: (info: { step: number; time: number }) => void) => {
         clock.onStep = cb;
       },
@@ -338,6 +343,11 @@ describe("pausing an arrangement holds the transport's place, and resumes the sa
       }),
       getCurrentStep: () => clock.step,
       getIsPlaying: () => clock.playing,
+      /**
+       * `pause` leaves the step where it was, so "there is something to return from" is `playing || step > 0` — and
+       * this is the double that has to model it, because a stop pressed *after* a pause is what the criterion drives.
+       */
+      canReturnToStart: () => clock.playing || clock.step > 0,
       setOnStep: vi.fn(),
       setOnPlay: vi.fn(),
       setOnStop: vi.fn((cb: () => void) => {

@@ -63,6 +63,10 @@ export interface SequencerPanelProps {
 
   // Toolbar / transport / export handlers
   onTogglePlay: () => void;
+  /** Return the transport to the top — the studio's own Stop, threaded to the toolbar (see `ToolbarProps.onStop`). */
+  onStop: () => void;
+  /** Whether Stop would do anything; the toolbar's Stop is disabled when it would not. */
+  canStop: boolean;
   onChangeBpm: (bpm: number) => void;
   onChangeSwing: (swing: number) => void;
   onChangeTimeSignature: (sig: string) => void;
@@ -225,6 +229,8 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
   isConsoleOpen,
   onToggleConsole,
   onTogglePlay,
+  onStop,
+  canStop,
   onChangeBpm,
   onChangeSwing,
   onChangeTimeSignature,
@@ -451,6 +457,8 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
         effectsRackState={effectsRackState}
         onChangeEffectsRack={onChangeEffectsRack}
         onTogglePlay={onTogglePlay}
+        onStop={onStop}
+        canStop={canStop}
         onChangeBpm={onChangeBpm}
         onChangeSwing={onChangeSwing}
         onChangeTimeSignature={onChangeTimeSignature}

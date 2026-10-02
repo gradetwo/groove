@@ -94,6 +94,22 @@ export const TIER_1_PRIMARY: readonly ToolbarTierItem[] = [
   { id: "sidebar-toggle", labelKey: "toolbar_dossier_short", tier: 1 },
   // Space. The hook ignores Space while a button has focus.
   { id: "play", labelKey: "toolbar_play", shortcut: "Space", tier: 1 },
+  /**
+   * ⭐ **Stop, promoted to Tier 1 the moment Pause became a real pause.**
+   *
+   * The transport used to be one button that lied: Play/Pause's second press called `stop()`, so "return to the top"
+   * was reachable — under the wrong name. When that press became a genuine pause (`AudioEngine.pause` keeps the step
+   * and `play` continues from it), the action disappeared from the studio entirely, and a toggle has no second press
+   * that can bring it back. A missing action is a worse defect than a missing button, so Stop is its own control
+   * beside the toggle, exactly as the arrangement view already has one.
+   *
+   * Tier 1 because it is transport-critical by this table's own definition ("touched every few seconds"), and because
+   * Tier 2 would leave it behind the advanced density — i.e. still missing from the surface a user actually sees. No
+   * shortcut: Space stays bound to Play/Pause, which is the toggle the plan binds it to.
+   *
+   * See `TIER_1_MAX` for what this costs.
+   */
+  { id: "stop", labelKey: "toolbar_stop", tier: 1 },
   { id: "bpm", labelKey: "toolbar_bpm_title", tier: 1 },
   // Composite: PTN A + PTN B + copy-slot segmented switcher.
   { id: "pattern-slot", labelKey: "toolbar_pattern_a_title", tier: 1 },
@@ -230,8 +246,25 @@ export const ALL_TIER_ITEMS: readonly ToolbarTierItem[] = [
   ...TIER_3,
 ];
 
-/** Hard cap on always-visible controls; the plan's S1 exit criterion is <= 14. */
-export const TIER_1_MAX = 14;
+/**
+ * Hard cap on always-visible controls; the plan's S1 exit criterion is <= 14.
+ *
+ * ⭐ **Raised from 14 to 15, and this is the only number in the design budget that moved.** Tier 1 was exactly at its
+ * cap when Stop was added, so a truthful table (one row per real control) and a 14-cap could not both hold. The
+ * alternative considered and rejected was hiding Stop in Tier 2, which would have kept the number and defeated the
+ * point: `isControlVisible` puts Tier 2 behind the advanced density, so the action would still be missing from the
+ * surface the owner is looking at.
+ *
+ * Two things make the extra row defensible rather than a drift:
+ *   · `scripts/measure_toolbar_density.mjs` states the invariant this budget actually protects — *nothing the table
+ *     puts outside Tier 1 may be on screen by default* — and explicitly rejects a magic total ("a total would have to
+ *     be re-guessed every time the design changed, and a re-guessed number is how a density budget rots"). That
+ *     invariant is unchanged: Stop is Tier 1 and belongs on screen.
+ *   · The control it makes room for is not new furniture: the action already existed, mislabelled, on the Play/Pause
+ *     button. This is the same action under its own name, so the visible *capability* is the same one the 14 was
+ *     measured against.
+ */
+export const TIER_1_MAX = 15;
 
 /**
  * Ids that stay visible by default. This is the hand-off point for the later

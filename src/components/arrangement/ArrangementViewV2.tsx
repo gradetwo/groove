@@ -231,6 +231,15 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
    * `playheadBus.ts` records for the studio and the reason `ArrangementTransport` is a subscription rather than a value.
    */
   const [playing, setPlaying] = useState(false);
+  /**
+   * ⭐ **Whether Stop would return the transport somewhere** — the fact its disabled state reports.
+   *
+   * It used to be `!playing`, which was right only while Pause *was* a stop: a real pause leaves the transport at a
+   * position, and a Stop disabled there is the same missing action the studio's Stop exists to restore. "There is
+   * something to return from" is `running || step > 0`, and it is derived from the same report the playhead is drawn
+   * from rather than from a second source that could disagree with it.
+   */
+  const [hasPosition, setHasPosition] = useState(false);
   const playheadRef = useRef<HTMLSpanElement | null>(null);
   const positionRef = useRef<HTMLSpanElement | null>(null);
   /**
@@ -269,6 +278,9 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
       }
       // Guarded, so sixteen calls a second do not become sixteen renders.
       setPlaying((current) => (current === running ? current : running));
+      // The other guarded fact: a stop is meaningful while the transport runs or holds a position it can return from.
+      const returnable = running || step > 0;
+      setHasPosition((current) => (current === returnable ? current : returnable));
     };
     // The first paint reads rather than waits: a playhead that only appears on the next step is a playhead that is missing for as long as the transport is stopped.
     apply(transport.read());
@@ -447,9 +459,11 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
          * voices and never called `AudioEngine.stop()`, so the lane voices kept sounding and no `CLOCK_STOP` was ever
          * published. Both halves are one call now.
          *
-         * ⭐ Its disabled state is the transport's rather than a guess: **when the player can report whether it is
-         * running, this is live exactly while there is something to stop.** A player that cannot report (an
-         * engine-shaped object with `stop` and no `transport`) leaves it enabled, because "unknown" is not "stopped".
+         * ⭐ Its disabled state is the transport's rather than a guess: **when the player can report its position, this is
+         * live exactly while a stop would return the transport somewhere** — running, *or* paused on a position it
+         * holds (see `hasPosition`; a real pause is what made that second case load-bearing). A player that cannot
+         * report (an engine-shaped object with `stop` and no `transport`) leaves it enabled, because "unknown" is not
+         * "stopped".
          */}
         <button
           type="button"
@@ -457,7 +471,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           aria-label={t("arrangement_stop")}
           title={t("arrangement_stop")}
           className={toolButton}
-          disabled={player?.stop === undefined || (liveTransport && !playing)}
+          disabled={player?.stop === undefined || (liveTransport && !hasPosition)}
           onClick={stop}
         >
           {t("arrangement_stop")}

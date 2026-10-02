@@ -225,3 +225,45 @@ describe("controls revealed by the advanced density stay clickable", () => {
     outside.remove();
   });
 });
+
+/**
+ * ⭐ **The studio's Stop, which only exists because Pause became a real pause.**
+ *
+ * The button is asserted in the three registers the owner reads a control in — the word, the accessible name, and
+ * whether it is pressable — because the defect this whole round is about was exactly a label and a behaviour disagreeing.
+ * Its `disabled` state is the one U7 fact: a Stop that would do nothing must not be a live control.
+ */
+describe("the studio toolbar's Stop control", () => {
+  it("renders beside the transport toggle, named STOP, and is disabled while it would do nothing", () => {
+    const onStop = vi.fn();
+    render(<Toolbar {...makeToolbarProps({ onStop, canStop: false })} />);
+
+    const stop = document.querySelector('[data-toolbar-id="stop"]') as HTMLButtonElement;
+    expect(stop).not.toBeNull();
+    /**
+     * The word and the accessible name, asserted against **each other** rather than against a literal: this suite
+     * renders under whichever language the provider defaults to, and the claim that matters is that what a person reads
+     * and what a screen reader announces are the same control.
+     */
+    expect(["STOP", "停止"]).toContain(stop.textContent);
+    expect(stop.getAttribute("aria-label")).toBe(stop.textContent);
+    expect(stop.disabled).toBe(true);
+    fireEvent.click(stop);
+    expect(onStop).not.toHaveBeenCalled();
+  });
+
+  it("is pressable exactly while a stop would return the transport somewhere", () => {
+    const onStop = vi.fn();
+    render(<Toolbar {...makeToolbarProps({ onStop, canStop: true })} />);
+
+    const stop = document.querySelector('[data-toolbar-id="stop"]') as HTMLButtonElement;
+    expect(stop.disabled).toBe(false);
+    fireEvent.click(stop);
+    expect(onStop).toHaveBeenCalledTimes(1);
+  });
+
+  it("is not rendered at all when the host gives no handler, so it cannot be a dead button", () => {
+    render(<Toolbar {...makeToolbarProps()} />);
+    expect(document.querySelector('[data-toolbar-id="stop"]')).toBeNull();
+  });
+});

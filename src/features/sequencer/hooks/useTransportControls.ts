@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import { AudioEngine } from "../../../audio/AudioEngine";
 import type { SequencerAction, SequencerState, StudioHistorySnapshot } from "../useSequencerStore";
 import { triggerHaptic, HapticPatterns } from "../../../utils/haptics";
@@ -41,6 +41,13 @@ export interface UseTransportControlsResult {
   handleTapTempo: () => void;
   handleToggleDrumsOnly: () => void;
   handleTogglePlay: () => void;
+  /**
+   * Return the transport to the top — the control that a real Pause made necessary (see `handleStop`).
+   *
+   * `canStop` is the fact its disabled state reports, so the button is never a live control that does nothing.
+   */
+  handleStop: () => void;
+  canStop: boolean;
   handleUndo: () => void;
   handleRedo: () => void;
   handleSwitchSlot: (slot: ClipSlot) => void;
@@ -77,6 +84,19 @@ export function useTransportControls({
   releasePreviewScope,
 }: UseTransportControlsOptions): UseTransportControlsResult {
   const { t } = useLanguage();
+  /**
+   * ⭐ **Whether the Stop control would do anything**, so it can be disabled rather than be a live button that does
+   * nothing (U7).
+   *
+   * It is state rather than a render-time read of `engineRef` because the fact has to *change a render*: the engine is
+   * the truth, but a ref mutation does not repaint, and pressing Pause or Stop is exactly when this answer flips. It is
+   * refreshed from the engine after every transport action rather than tracked here, so it cannot drift from the
+   * transport it describes.
+   */
+  const [canStop, setCanStop] = useState(false);
+  const refreshCanStop = useCallback(() => {
+    setCanStop(engineRef.current?.canReturnToStart() ?? false);
+  }, [engineRef]);
   // Tap tempo calculator (P3-07)
   const tapTimestampsRef = useRef<number[]>([]);
   const handleTapTempo = useCallback(() => {
@@ -167,6 +187,7 @@ export function useTransportControls({
        */
       engine.pause();
       setIsPlaying(false);
+      refreshCanStop();
       announcer.announce(t("transport_playback_paused"));
       return;
     }
@@ -244,14 +265,38 @@ export function useTransportControls({
       engine.stop();
       setIsPlaying(false);
       clearPlayhead();
+      refreshCanStop();
       showToast(t("transport_audio_blocked"));
       announcer.announce(t("transport_audio_blocked_announce"));
       return;
     }
 
     setIsPlaying(true);
+    refreshCanStop();
     announcer.announce(t("transport_playback_started"));
-  }, [isPlaying, clearPlayhead, engineRef, showToast, t, releasePreviewScope]);
+  }, [isPlaying, clearPlayhead, engineRef, refreshCanStop, showToast, t, releasePreviewScope]);
+
+  /**
+   * ⭐ **Stop: the one control that returns to the top, added because a real Pause removed the only way back.**
+   *
+   * The Pause button used to *be* a stop, so the transport could be rewound from it — by accident, under a label that
+   * promised something else. Once Pause really paused, the studio had no control that returned to bar one at all, and
+   * an action that disappears is worse than a button that is missing: the toolbar's Play/Pause is a toggle, so there
+   * was no second press that could do it. This is that action, beside the toggle and shaped like the arrangement's own
+   * Stop, and it is disabled unless it would do something (`canReturnToStart`).
+   *
+   * The keyboard is deliberately **not** extended: Space stays Play/Pause, which is the toggle the plan binds it to.
+   */
+  const handleStop = useCallback(() => {
+    const engine = engineRef.current;
+    if (!engine) return;
+    triggerHaptic(HapticPatterns.playPause);
+    engine.stop();
+    setIsPlaying(false);
+    clearPlayhead();
+    refreshCanStop();
+    announcer.announce(t("transport_playback_stopped"));
+  }, [clearPlayhead, engineRef, refreshCanStop, t]);
 
   const handleUndo = useCallback(() => {
     const prev = undo();
@@ -360,6 +405,8 @@ export function useTransportControls({
     handleTapTempo,
     handleToggleDrumsOnly,
     handleTogglePlay,
+    handleStop,
+    canStop,
     handleUndo,
     handleRedo,
     handleSwitchSlot,

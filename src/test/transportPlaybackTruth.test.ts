@@ -26,6 +26,11 @@ interface FakeEngine {
    * run reaches `pause` — a double with only `stop` is a double that cannot answer the button a user is looking at.
    */
   pause: ReturnType<typeof vi.fn>;
+  /**
+   * ⭐ **Whether a stop would return the transport somewhere** — the fact the Stop control's disabled state reports.
+   * The hook asks the engine after every transport action, so a double without it throws inside the handler.
+   */
+  canReturnToStart: ReturnType<typeof vi.fn<() => boolean>>;
   isAudioBlocked: ReturnType<typeof vi.fn>;
   /**
    * The transport writes these, so the double has to accept them.
@@ -54,12 +59,27 @@ interface FakeEngine {
  * apart again.
  */
 function makeEngine(over: { blocked?: boolean; rejects?: boolean } = {}): FakeEngine {
+  /**
+   * The three transport facts the double has to keep consistent, because the behaviour under test is exactly their
+   * relationship: `pause` keeps a position, `stop` throws it away, and `canReturnToStart` is the question the Stop
+   * button's enabled state asks.
+   */
+  let running = false;
+  let held = false;
   return {
     play: vi.fn(async () => {
       if (over.rejects) throw new Error("NotAllowedError: play() failed");
+      running = true;
     }),
-    stop: vi.fn(),
-    pause: vi.fn(),
+    stop: vi.fn(() => {
+      running = false;
+      held = false;
+    }),
+    pause: vi.fn(() => {
+      running = false;
+      held = true;
+    }),
+    canReturnToStart: vi.fn(() => running || held),
     isAudioBlocked: vi.fn(() => over.blocked ?? false),
     setBpm: vi.fn(),
     setPattern: vi.fn(),
@@ -375,5 +395,72 @@ describe("AudioEngine.isAudioBlocked", () => {
     } finally {
       restore();
     }
+  });
+});
+
+/**
+ * ⭐ **The control a real Pause made necessary.**
+ *
+ * While Pause was secretly a stop, "return to the top" was reachable from the Play/Pause button — under the wrong name
+ * and with the wrong meaning. Once that press became a genuine pause (it keeps the step, and the next Play continues
+ * from it), the studio had no control that rewound at all: a toggle has no second press that can do it. Stop is that
+ * control, and these are its two obligations — it does the rewind, and it is dead when there is nothing to rewind.
+ */
+describe("the studio's Stop control", () => {
+  it("has nothing to do on a fresh transport, and is live once the transport is running", async () => {
+    const { engine, result } = makeHarness();
+    // A transport at the top with nothing held: a live Stop here is exactly the button U7 forbids.
+    expect(result.current.canStop).toBe(false);
+
+    await act(async () => {
+      await result.current.handleTogglePlay();
+    });
+    expect(engine.play).toHaveBeenCalledTimes(1);
+    // Running: a stop would return to the top, so the control is live.
+    expect(result.current.canStop).toBe(true);
+  });
+
+  it("stays live across a pause — the held position is what it returns from — and goes dead after it stops", async () => {
+    const engine = makeEngine();
+    const setIsPlaying = vi.fn();
+    const clearPlayhead = vi.fn();
+    const wrapper = ({ children }: { children: React.ReactNode }) =>
+      React.createElement(LanguageProvider, null, children);
+    const { result } = renderHook(
+      () =>
+        useTransportControls({
+          engineRef: { current: engine as never },
+          seqStateRef: { current: { isMetronome: false, isCountIn: false } as never },
+          // The transport is running, which is what the second press of the toggle means.
+          isPlaying: true,
+          setIsPlaying,
+          setIsDrumsOnly: vi.fn(),
+          clearPlayhead,
+          commit: vi.fn(),
+          undo: vi.fn(() => null),
+          redo: vi.fn(() => null),
+          isZh: false,
+          showToast: vi.fn(),
+        }),
+      { wrapper }
+    );
+
+    await act(async () => {
+      await result.current.handleTogglePlay();
+    });
+    expect(engine.pause).toHaveBeenCalledTimes(1);
+    expect(engine.stop).not.toHaveBeenCalled();
+    // ⭐ A pause leaves a position behind, so Stop is *still* meaningful — this is the state the reported build could
+    // not express, because its pause was a stop and the transport was already back at the top.
+    expect(result.current.canStop).toBe(true);
+
+    act(() => {
+      result.current.handleStop();
+    });
+    expect(engine.stop).toHaveBeenCalledTimes(1);
+    expect(setIsPlaying).toHaveBeenCalledWith(false);
+    // Clearing the playhead belongs *here* — Stop is the control that rewinds, which is why it was wrong on pause.
+    expect(clearPlayhead).toHaveBeenCalled();
+    expect(result.current.canStop).toBe(false);
   });
 });

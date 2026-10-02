@@ -54,6 +54,12 @@ export interface EngineAudioTap {
    * `pauseTransport`) rather than pretending a position survived.
    */
   pause?: AudioEngine["pause"];
+  /**
+   * ⭐ **Whether a stop would return the transport somewhere** — the question `stopTransport` has to ask, because
+   * "not playing" is also what a paused engine says and a paused engine is exactly what a stop must clear. Optional:
+   * an engine that cannot answer falls back to its playing state (see `stopTransport`).
+   */
+  canReturnToStart?: AudioEngine["canReturnToStart"];
   /** The arrangement's tempo, so a note's beat is the length the arrangement says rather than the studio's last. */
   setBpm?: AudioEngine["setBpm"];
   /**
@@ -273,7 +279,18 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
   const stopTransport = (): number => {
     pausedAtStep = null;
     const stopped = stopScheduled();
-    if (engine.getIsPlaying?.() !== false) engine.stop?.();
+    /**
+     * ⭐ **Asked as "is there anything to stop?", not "is it playing?" — and the difference is a paused transport.**
+     *
+     * This guard exists so a first play does not publish a `CLOCK_STOP` on a transport that never ran, and
+     * `getIsPlaying() !== false` answered that. But `false` is also what a **paused** engine says, and a paused engine
+     * is holding the very position Stop exists to clear: pressing Stop after a pause silenced the sampler and left the
+     * engine where it was, so the playhead stayed put and the button looked broken. The engine's own
+     * `canReturnToStart()` answers both cases (running *or* holding a position), and the old reading is kept as the
+     * fallback for an engine-shaped object that cannot be asked.
+     */
+    const canStop = engine.canReturnToStart?.() ?? (engine.getIsPlaying?.() !== false);
+    if (canStop) engine.stop?.();
     return stopped;
   };
 

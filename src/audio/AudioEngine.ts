@@ -1877,6 +1877,18 @@ export class AudioEngine {
     return this.currentStep;
   }
 
+  /**
+   * Whether a `stop()` would **return the transport somewhere** — i.e. whether the Stop control has anything to do.
+   *
+   * A control that does nothing must say so (U7), and the only thing that can answer this is the transport itself:
+   * while it is playing a stop returns to the top, and after a `pause()` it returns from the position that pause kept.
+   * A UI-side copy of that fact could only ever drift from the engine's, which is why it is asked rather than
+   * remembered.
+   */
+  public canReturnToStart(): boolean {
+    return this.isPlaying || this.resumeStep !== null;
+  }
+
   /** Scheduler health snapshot (F-01/F-02) — used by tests and diagnostics. */
   public getSchedulerHealth(): { droppedSteps: number; schedulingErrors: number; queuedSteps: number } {
     return {

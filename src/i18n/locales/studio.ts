@@ -92,6 +92,12 @@ export const studioMessages = {
   toolbar_dossier_expand_title: { en: "Expand dossier", zh: "展开风格档案" },
   toolbar_dossier_short: { en: "Info", zh: "风格" },
   toolbar_pause: { en: "PAUSE", zh: "暂停" },
+  /**
+   * ⭐ **Stop, beside Play/Pause rather than behind a toggle.** While Pause was secretly a stop the transport could be
+   * rewound from that button; a real pause removed the action, and a toggle has no second press that can perform it.
+   * This is the studio's own word for the control the arrangement view already has (`arrangement_stop`).
+   */
+  toolbar_stop: { en: "STOP", zh: "停止" },
   toolbar_play: { en: "PLAY", zh: "播放" },
   toolbar_bpm_title: { en: "Tempo (40-240 BPM)", zh: "节奏速度 (40-240 BPM)" },
   toolbar_tap_tempo_title: { en: "Tap Tempo (Tap ≥2 times to calculate BPM)", zh: "点击测速 (连续点击2次以上计算 BPM)" },

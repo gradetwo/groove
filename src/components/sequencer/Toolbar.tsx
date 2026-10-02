@@ -28,6 +28,7 @@ import {
   Sliders,
   SlidersHorizontal,
   Sparkles,
+  Square,
   Undo2,
   Upload,
   Wand2,
@@ -121,6 +122,16 @@ export interface ToolbarProps {
   onOpenArrangement?: () => void;
   isArrangementOpen?: boolean;
   onTogglePlay: () => void;
+  /**
+   * Return the transport to the top.
+   *
+   * Optional like the neighbouring handlers so the toolbar still renders in isolation, but it is **rendered whenever the
+   * handler is given**: while Pause was secretly a stop this button's action was reachable by accident, and a real
+   * pause is what makes it a control of its own rather than a duplicate.
+   */
+  onStop?: () => void;
+  /** Whether Stop would do anything — the fact its disabled state reports, so it is never a live no-op (U7). */
+  canStop?: boolean;
   onChangeBpm: (bpm: number) => void;
   onChangeSwing: (swing: number) => void;
   onChangeTimeSignature: (sig: string) => void;
@@ -677,6 +688,8 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
   effectsRackState,
   onChangeEffectsRack,
   onTogglePlay,
+  onStop,
+  canStop,
   onChangeBpm,
   onChangeSwing,
   onChangeTimeSignature,
@@ -914,6 +927,33 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
                 {isPlaying ? (t("toolbar_pause")) : (t("toolbar_play"))}
               </span>
             </button>
+
+            {/**
+             * ⭐ **Stop — the control a real Pause made necessary.**
+             *
+             * The Play/Pause toggle used to stop and rewind, so there was no Stop button to miss: the action existed
+             * under the wrong name. Making Pause pause removed it entirely, and a toggle has no second press that can
+             * return to the top — so the action is restored as its own control, beside the toggle and shaped the way
+             * the arrangement's own Stop is, with the same disabled rule (`canStop`), because a live button that does
+             * nothing is the failure U7 names.
+             *
+             * Styled with the toolbar's own resting idiom (`bg-panel2` / `border-line` / `text-text-sub`) rather than a
+             * colour of its own, so it reads as a peer of the transport and not as a second primary action.
+             */}
+            {onStop !== undefined && (
+              <button
+                data-toolbar-id="stop" data-toolbar-tier="1"
+                type="button"
+                onClick={onStop}
+                disabled={canStop === false}
+                className="h-8 px-2.5 sm:px-3 rounded-lg flex items-center gap-1.5 text-xs font-bold text-text-sub bg-panel2 border border-line transition-colors hover:text-text hover:border-[#3a3e48] disabled:opacity-50 shrink-0"
+                aria-label={t("toolbar_stop")}
+                title={t("toolbar_stop")}
+              >
+                <Square className="w-3 h-3 fill-current" />
+                <span className="font-['JetBrains_Mono'] text-xs">{t("toolbar_stop")}</span>
+              </button>
+            )}
 
             {/* BPM Input + Micro-nudges */}
             <div className="flex items-center h-8 bg-panel2 border border-line rounded-lg px-1 text-xs shrink-0">

@@ -286,8 +286,16 @@ describe("the Pause button pauses — it does not stop and rewind to the top", (
     await followTransport();
 
     const playedStep = readStep();
-    const readings: Record<string, { step: number; playhead: string; position: string | null }> = {
-      "after Play + 1.0s": { step: playedStep, playhead: readPlayhead(), position: readPosition() },
+    type Reading = { step: number; playhead: string; position: string | null; stopDisabled: boolean };
+    /**
+     * ⭐ The three position readings plus the one button fact: **whether Stop is live at that moment**. It is captured
+     * per row rather than asserted at the end because it is a state, not a value — the press itself changes it, and a
+     * check made afterwards would be reading the wrong moment.
+     */
+    const readStop = () => (screen.getByTestId("arrangement-stop") as HTMLButtonElement).disabled;
+    const snapshot = (): Reading => ({ step: readStep(), playhead: readPlayhead(), position: readPosition(), stopDisabled: readStop() });
+    const readings: Record<string, Reading> = {
+      "after Play + 1.0s": { step: playedStep, playhead: readPlayhead(), position: readPosition(), stopDisabled: readStop() },
     };
     // The transport really moved, so the readings below are about a position worth holding rather than about zero.
     expect(playedStep).toBeGreaterThan(0);
@@ -298,7 +306,7 @@ describe("the Pause button pauses — it does not stop and rewind to the top", (
     await act(async () => {
       fireEvent.click(button());
     });
-    readings["after Pause"] = { step: readStep(), playhead: readPlayhead(), position: readPosition() };
+    readings["after Pause"] = snapshot();
     expect(engine.getIsPlaying()).toBe(false);
     expect(button().textContent).toBe("Play");
 
@@ -306,16 +314,22 @@ describe("the Pause button pauses — it does not stop and rewind to the top", (
     await act(async () => {
       fireEvent.click(button());
     });
-    readings["after Play again"] = { step: readStep(), playhead: readPlayhead(), position: readPosition() };
+    readings["after Play again"] = snapshot();
     act(() => advance(engine, ctx, 0.5));
     await followTransport();
-    readings["after Play again + 0.5s"] = { step: readStep(), playhead: readPlayhead(), position: readPosition() };
+    readings["after Play again + 0.5s"] = snapshot();
+
+    // ---- Pause once more, so Stop is pressed from the paused state the report is about. ------
+    await act(async () => {
+      fireEvent.click(button());
+    });
+    readings["after second Pause"] = snapshot();
 
     // ---- Stop is the control that rewinds, and it still does. -------------------------------
     await act(async () => {
       fireEvent.click(screen.getByTestId("arrangement-stop"));
     });
-    readings["after Stop"] = { step: readStep(), playhead: readPlayhead(), position: readPosition() };
+    readings["after Stop"] = snapshot();
 
     unsubscribeTimeline();
     // eslint-disable-next-line no-console -- the readings are the evidence this criterion exists to produce
@@ -330,13 +344,19 @@ describe("the Pause button pauses — it does not stop and rewind to the top", (
      *    because the steps the look-ahead had already scheduled are reported on the frames that follow — it must never
      *    go *back*.)
      * 3. The next Play continues from the held step and keeps moving; it does not restart at the top.
-     * 4. Stop is still the control that returns to the top.
+     * 4. **The way back stays open from the paused state** — Stop's enabled state used to be `!playing`, which was
+     *    only correct while Pause *was* a stop; with a real pause that left the arrangement unable to return to the top
+     *    from the state the user is most likely to be in, which is the same missing action the studio's Stop restores.
+     * 5. Stop is still the control that returns to the top, and it works **from that paused state**.
      */
     const held = readings["after Pause"]!;
     expect(held.step).toBe(playedStep);
     // The picture is *of the held step*, because the pause report carries the engine's own step at that instant.
     expect(held.playhead).toBe(leftForStep(playedStep));
     expect(held.position).not.toBe("1.1");
+    // ⭐ The paused transport has a position, so its Stop is live — and it was dead before the play, at the top.
+    expect(readings["after Play + 1.0s"]!.stopDisabled).toBe(false);
+    expect(held.stopDisabled).toBe(false);
 
     const resumed = readings["after Play again"]!;
     const moved = readings["after Play again + 0.5s"]!;
@@ -348,6 +368,11 @@ describe("the Pause button pauses — it does not stop and rewind to the top", (
     expect(Number.parseFloat(moved.playhead)).toBeGreaterThan(Number.parseFloat(held.playhead));
     expect(moved.position).not.toBe("1.1");
 
-    expect(readings["after Stop"]).toEqual({ step: 0, playhead: "0px", position: "1.1" });
+    // The second pause held a later position, and the Stop after it is the press this criterion's last row records.
+    const repaused = readings["after second Pause"]!;
+    expect(repaused.step).toBe(moved.step);
+    expect(repaused.playhead).not.toBe("0px");
+    // Back at the top, and the control that took it there is dead again — nothing left to return from.
+    expect(readings["after Stop"]).toEqual({ step: 0, playhead: "0px", position: "1.1", stopDisabled: true });
   });
 });
