@@ -129,13 +129,22 @@ export function NewProjectPanelV2({ onCreate }: NewProjectPanelV2Props) {
       </button>
       {detailsOpen && (
         <div data-testid="new-project-details" className="flex flex-wrap gap-4 items-center text-sm text-text opacity-90">
-          {/* Folded away like Logic's: the tempo and key are not what someone is deciding when they start. */}
-          <label className="flex items-center gap-2">
-            Tempo <input type="number" className="w-20 px-2 py-1 rounded border border-[rgb(var(--d-line))] bg-transparent text-text" defaultValue={120} aria-label="Tempo" />
-          </label>
-          <label className="flex items-center gap-2">
-            Key <input type="text" className="w-28 px-2 py-1 rounded border border-[rgb(var(--d-line))] bg-transparent text-text" defaultValue="C Major" aria-label="Key" />
-          </label>
+          {/*
+           * ⭐ **A tempo and a key field were removed here (2026-10-03), because a control that reports nothing is
+           * worse than a missing one.**
+           *
+           * Both were `<input … defaultValue=…>` with **no `onChange`**: typing a tempo or a key changed nothing while
+           * the field looked as though it had taken the value. Neither could simply be wired up:
+           *
+           *   * `onCreate` reports `(templateId, blankKind, name)` — the panel has no way to hand a tempo to the model,
+           *     and the arrangement's tempo is already set where it is edited, so this was a second, dead door to the
+           *     same room;
+           *   * and the model has **no project-level key**: the `key` in `arrangementV2.ts` is the recorded-instrument
+           *     table's dictionary key, so a Key field would have had to invent a concept to store itself in.
+           *
+           * If a project key is ever added to the model, the field comes back **with** the model field and an
+           * `onChange` — never before it. The criterion in `src/test/newProjectPanelControls.test.ts` holds the line.
+           */}
           {selected === "blank" && (
             <label>
               {/* ⭐ Only the blank card needs this: the templates bring their own tracks. */}
