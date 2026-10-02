@@ -1445,3 +1445,22 @@ Part 2 按价值密度：弦乐演奏法 0.50 → VSCO 其余管弦 0.89 → 一
 ### 36.3 仍在途 ✓
 
 **`persist` 的探针修复**（**它自报还要 10–20 分钟 ✓**）｜**`drums` 8 处未提交** ✓｜**`buy` 13 处未提交** ✓｜**scratch 根因修复（`upload_samples.mjs` 的 `os.tmpdir()` ⇒ 落盘 ＋ tmpfs 哨兵 ✓）**。
+
+## 三十七、目标 ① 的里程碑：**13 个缺口已填 11 个**（`87e606b` ✓，待推）＋ 第四个门禁落地（2026-10-02 ✓）
+
+### 37.1 **采购第一段落地** ✓✓（**`87e606b` "feat(samples): fill eleven of the thirteen instrument gaps, and fix …"**）
+
+**规模** ✓：**14 个文件、+20359 行**，其中 **`public/samples/manifest.json` +19737 行**（**新库条目 ✓**）；**⭐ 提交里**一个 `.wav`／`.flac`／`.sfz` 都没有**（音频文件数 **0** ✓✓）⇒ **字节在 R2、仓库里只有清单 —— 正是设计的样子 ✓。**
+**改了哪十四处** ✓：**`scripts/lib/programs.mjs` ＋ **新增 `scripts/scan_sample_opcodes.mjs`**（**我要的 opcode 扫描器 ✓✓**）＋ `scripts/upload_samples.mjs` ＋ **`src/audio/sfz/mirrorPlan.ts`**（**"默认走原始、镜像只是回落"那条实现在这里 ✓✓**）＋ `src/audio/sfz/parse.ts` ＋ **`src/data/libraryLicence.ts`**（**接受集按 MIT／非商业放宽 ✓**）＋ `src/data/sampleManifest.ts` ＋ `src/data/sampledInstruments.ts` ＋ 4 个测试 ＋ `docs/SAMPLE_LIBRARY_INTEGRATION.md`** ✓。 ✗（这个文件只存在于那条**尚未推上 `dev`** 的采购提交里；它一落就把这个标记去掉）
+
+**⇒ 状态** ✓✓：**13 个缺口 ⇒ 已填 11 个** ✓；**剩下的两个**（**`slap_bass` ＝ 明确禁止用途 ✗；另一条见它的回报 ✗**）**按裁定保持缺口** ✓。**⇒ 目标 ① 的"前提"基本达成 ✓✓。**
+
+### 37.2 第四个门禁落地 ✓✓（`7c19bf8`，**CI success ✓**）
+
+**`check:groove` 进 `DISABLED_GATES`（四件齐 ✓）＋ `EXPECTED_DISABLED` 故意加第四个 ✓＋ 步骤保留、脚本自 skip ✓＋ `docs/DISABLED_GATES.md` 移表并新增 §3.4 ✓**；**判据**：`check:disabled-gates` ✓ 列出四个 ＋ **`✅ The disabled set is exactly the ledger, and nothing else was switched off.`** ✓✓；**CI 日志对照 ⇒ `validate` 23 步只关一步 ✓，别的作业一个没少 ✓。**
+**⭐⭐ 而它有一处诚实的报告我必须记** ✗✓：**`DISABLED_GATES_IGNORE=1 npm run check:groove` **跑得动**（guard 放行、Vite ＋ Chromium 起来、analyser 真开始渲染 ✓），**但四次都没跑完** ✗——两次崩在 analyser **自己的**每-genre `reloadPage`（`analyze_export_audio.mjs:1116` ✓）；分片那次 **18 分钟只用了 6 秒 CPU（0.5%）**，而**同机 load average 15–19、有 **14 个 Chromium ＋ 15 个 Vite**（别的 worktree 的）** ⇒ **"是被挤死，不是门禁不动"** ✓✓；**它的原话**："**不许说成 check:groove 是绿的**"** ✓✓✓。
+**⇒ 而这给出一条**环境事实** ✓：**本机并行过多 ⇒ 渲染类门禁会因 CPU 争抢而跑不完 ⇒ 那类门禁的结论**不能靠本机**得到 ✓。**
+
+### 37.3 它顺带发现的一处**文档缺陷** ✗（**留给我修 ✓**）
+
+**`docs/STRING_TECHNIQUES.md` 在 `dev` 上**本来就有两个 `## 7.` 标题**（139 与 141 行 ✓，**弦乐线那次提交造成的、不是 rebase 产物 ✓**）⇒ **⇒ 记成待修 ✓**（**它没动、如实报 ✓**）。
