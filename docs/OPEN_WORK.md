@@ -942,7 +942,9 @@ scripts/test_matrix.js:716  waitForSelector('[data-testid="mobile-genre-detail"]
 
 ## 十八、无头对等收敛：**已推进并写下下一步**，代码留在工作树（2026-10-02 ✓）
 
-**业主裁定** ✓：「G 的 9 个文件还没提交 ✗ 那就先推动其它的事情」——**⇒ 按本 goal 写明的**第二种完成形态**收项 ✓✓：推进 ✓ ＋ 写明下一步是什么 ＋ 为什么现在做不到 ✓。**⇒ 代码仍留在 `/home/crow/music/groove-headless-strip`（分支 `headless-strip`）未提交 ✗，**这一节就是它的记录 ✓**。**
+**业主裁定** ✓：「G 的 9 个文件还没提交 ✗ 那就先推动其它的事情」——**⇒ 按本 goal 写明的**第二种完成形态**收项 ✓✓：推进 ✓ ＋ 写明下一步是什么 ＋ 为什么现在做不到 ✓。**⇒ ⚠️ 2026-10-02 更正：代码**已经落 `dev`** ✓**——它随后提交并推上来了：**`5236c14`**（接线本体 ✓：新增 `src/audio/InsertCompressor.ts` ✓、通道条改用胶合 worklet ✓、worklet 加可选衰减回报 ✓、`WavExporter` 建条前 await 模块并补上**从未 await 过**的 `busCompressorReady()` ✓、`AudioEngine` 加载后重建条 ✓）、**`3c25318`**（注释清理 ✓）、**`76a0dd4`**（修红 ✓，见下 ✓）。**⇒ 本节那句「留在工作树未提交」已作废 ✗✓；而上面那张探针表与因果诊断**仍然准确** ✓。**
+
+> **⚠️ 修红那一笔另有一课** ✓：**它第一次推的 CI **红了**** ✗——`limiterReleaseOptions.test.ts` 原来**按位置**取 worklet 节点（`instances.at(-1)` ✓），**而接线让一次渲染多建**每轨一个**节点** ✓ ⇒ **最后建的是通道条的** ✗ ⇒ `expected undefined to be 250` ✓。**本地复现逐字相同** ✓（`[repro] worklet nodes built: glue, limiter, glue, glue` ✓），**确定性、由该笔继承** ✓；**修法是**按处理器名取节点**** ✓（**`MASTER_LIMITER_PROCESSOR_NAME` ✓**）、**期望值 `250`／`400` **一字未动**** ✓✓；**修完 14 文件／136 条绿** ✓，**`76a0dd4` 远端 run `36969847575` = success** ✓（**439 passed | 5 skipped (444)** ✓）。**⇒ 教训**：**`src/audio/**` 的受影响判据集合 = 所有会**建渲染图**的判据 ✓，**不论文件名里有没有 "insert"** ✓✓（**它把这条写进了 `76a0dd4` 的提交信息 ✓**）。
 
 ### 实测：四条探针（`npm run probe:headless` ✓）
 
