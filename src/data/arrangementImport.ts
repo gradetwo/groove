@@ -45,23 +45,37 @@ export interface ArrangementImportResult {
  * **All parts, not one.** `mcp/arrangement.ts` defaults to part 0 because a tool call names what it wants; a file
  * picker cannot — the person chose a file, and the file's own track list is what they asked for. A part with no
  * notes is therefore not a silent omission either: it is named in `problems`.
+ *
+ * ⭐ **`instruments` is the same optional identity the MCP import takes**, keyed by part index, and it exists here for
+ * the same measured reason: a file usually cannot say what its parts are. The owner's own project has **no
+ * program-change events at all**, so an imported part arrives with a name and notes and nothing else, and without this
+ * every part is an anonymous synthesiser. **The default is unchanged** — absent, a part is exactly the track it was
+ * before — so this adds a way to name identity without deciding anything on a caller's behalf. Reading it off
+ * `part.name` is refused on purpose; see `ImportMcpMusicXmlOptions.instruments`.
+ *
+ * **The file picker still cannot fill this in**, and that is stated rather than implied: `importMidiIntoArrangement`
+ * has no UI that asks a person which instrument each part is, so today only a programmatic caller can name one. The
+ * data layer is no longer the blocker; the entry point is.
  */
 export function arrangementWithImportedParts(
   arrangement: ArrangementV2,
-  imported: { parts: readonly ImportedPart[]; problems?: readonly string[] }
+  imported: { parts: readonly ImportedPart[]; problems?: readonly string[] },
+  options: { instruments?: Record<number, string> } = {}
 ): ArrangementImportResult {
   const problems = [...(imported.problems ?? [])];
-  const withNotes: ImportedPart[] = [];
+  const instruments = options.instruments ?? {};
+  const withNotes: Array<{ part: ImportedPart; index: number }> = [];
   imported.parts.forEach((part, index) => {
-    if (part.notes.length > 0) withNotes.push(part);
+    if (part.notes.length > 0) withNotes.push({ part, index });
     else problems.push(`part ${index + 1} "${part.name}" holds no notes and was not added as a track`);
   });
 
   let next = arrangement;
   const trackIds: string[] = [];
   let notes = 0;
-  for (const part of withNotes) {
-    const withTrack = addTrack(next, "synth", part.name.slice(0, 40) || "Imported");
+  for (const { part, index } of withNotes) {
+    const instrument = instruments[index];
+    const withTrack = addTrack(next, "synth", part.name.slice(0, 40) || "Imported", instrument === undefined ? {} : { instrument });
     const trackId = withTrack.tracks[withTrack.tracks.length - 1]!.id;
     /**
      * The part's notes **replace** the new track's starter content rather than being appended to it — the starter

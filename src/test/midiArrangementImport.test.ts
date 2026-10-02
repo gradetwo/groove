@@ -7,6 +7,9 @@ import { describe, expect, it } from "vitest";
 import { fromMidi, DEFAULT_UNRELEASED_LENGTH_BEATS } from "../data/midiToArrangement";
 import { buildMidiFile, GBK_TRACK_NAME, GBK_TRACK_NAME_BYTES } from "./fixtures/midi_file.mjs";
 import { parseMidiFile } from "../audio/MidiImporter";
+import { clearMcpArrangements, createMcpArrangement, getMcpArrangement, importMcpMidi } from "../../mcp/arrangement";
+import { resetTrackIdsForTests } from "../data/arrangementEdits";
+import { sampledAssetForLane } from "../data/sampledInstruments";
 
 describe("the note lengths the step importer never kept", () => {
   it("pairs a note-off with its note-on and reports the length in ticks", () => {
@@ -197,5 +200,129 @@ describe("a MIDI file imported as arrangement parts", () => {
       tracks: [{ name: "A", notes: [{ note: 60, velocity: 33, startTicks: 0, durationTicks: 120 }, { note: 62, velocity: 120, startTicks: 240, durationTicks: 120 }] }],
     });
     expect(fromMidi(bytes).parts[0]!.notes.map((note) => note.velocity)).toEqual([33, 120]);
+  });
+});
+
+/**
+ * ⭐⭐ **The identity an imported part sounds with — the hole the bridge left open.**
+ *
+ * The bridge (`sampledInstruments.ts` + `TrackV2.instrument`) made a **`kind:"synth"`** track able to play a catalogue
+ * recording: a lane whose instrument is in the table resolves through `sampledAssetForLane` to a real asset. What it
+ * did not do is give an **imported** part an identity, so every part of a MIDI file was still born an anonymous
+ * synthesiser — the owner's original report, one layer down.
+ *
+ * **The file cannot supply the identity, measured.** The owner's own project (`/tmp/groove-fx/fate-echoes.mid`) has
+ * **no program-change events at all** in any of its four `MTrk` chunks, and `ImportedPart` carries only `name` and
+ * `notes` — no channel, no program. So identity arrives from the caller, who knows what they imported, and never from
+ * a guess at the part's name: a substring or dictionary match over `弦乐` would invent a claim about the composer's
+ * music, which this repository treats as worse than a synthesiser.
+ *
+ * The fixture here is built by this repository's own writer, so the criterion needs no external file.
+ */
+describe("naming an imported part's instrument, so it sounds a recording", () => {
+  const twoParts = () =>
+    buildMidiFile({
+      tracks: [
+        { name: "Piano", notes: [{ note: 60, startTicks: 0, durationTicks: 480 }] },
+        { name: "Bass", notes: [{ note: 36, startTicks: 0, durationTicks: 480 }] },
+      ],
+    });
+
+  const importAll = (instruments?: Record<number, string>) => {
+    clearMcpArrangements();
+    resetTrackIdsForTests();
+    const arrangement = createMcpArrangement({ songId: "import-identity" });
+    const result = importMcpMidi(arrangement.arrangementId, Buffer.from(twoParts()).toString("base64"), {
+      partIndex: "all",
+      ...(instruments === undefined ? {} : { instruments }),
+    });
+    return { arrangementId: arrangement.arrangementId, result, tracks: getMcpArrangement(arrangement.arrangementId)!.tracks };
+  };
+
+  it("leaves an unnamed part an anonymous synthesiser, which is what it was before", () => {
+    const { tracks } = importAll();
+    const imported = tracks.filter((track) => track.name === "Piano" || track.name === "Bass");
+    expect(imported).toHaveLength(2);
+    expect(imported.every((track) => track.instrument === undefined)).toBe(true);
+    expect(imported.every((track) => track.kind === "synth")).toBe(true);
+  });
+
+  /**
+   * ⭐ The load-bearing case: the identity is written **at creation**, and it resolves all the way to the catalogue
+   * asset the lane will play — not merely stored as a string nothing reads.
+   */
+  it("writes the name onto the track, and it resolves to the catalogue recording the lane plays", () => {
+    const { tracks } = importAll({ 0: "piano_lead", 1: "walking_upright" });
+    const piano = tracks.find((track) => track.name === "Piano")!;
+    const bass = tracks.find((track) => track.name === "Bass")!;
+    expect(piano.instrument).toBe("piano_lead");
+    expect(bass.instrument).toBe("walking_upright");
+    // The whole point: the name is the key of the recorded-instrument table, so the lane now sounds bytes.
+    expect(sampledAssetForLane({ track_id: "lead", instrument: piano.instrument })).toBe("salamander-grand");
+    expect(sampledAssetForLane({ track_id: "lead", instrument: bass.instrument })).toBe("karoryfer-meatbass:pizz-basic");
+  });
+
+  /**
+   * ⭐ **A name nothing serves is reported and the track keeps its synthesiser.** The failure this prevents is a track
+   * that silently stays an anonymous synth, or — worse — a name written onto the track that every consumer then
+   * resolves to nothing, so the arrangement claims an instrument and plays a preset.
+   */
+  it("reports a name no recording or built-in voice serves, and does not write it", () => {
+    const { result, tracks } = importAll({ 1: "banjo_lead" });
+    const bass = tracks.find((track) => track.name === "Bass")!;
+    expect(bass.instrument).toBeUndefined();
+    expect(result.problems.join(" ")).toContain('part 2 "Bass" was named instrument "banjo_lead"');
+    expect(result.problems.join(" ")).toContain("keeps its built-in voice");
+  });
+
+  /**
+   * ⭐ **A synthesiser name is honoured, not reported as a gap.** `warm_pad` is what that name means, so the correct
+   * answer is the built-in preset — reporting it as a missing recording would put sixty lines of noise in every import
+   * and hide the names that really are gaps.
+   */
+  it("accepts a name that means a synthesiser rather than a missing recording", () => {
+    const { result, tracks } = importAll({ 0: "warm_pad" });
+    expect(tracks.find((track) => track.name === "Piano")!.instrument).toBe("warm_pad");
+    // And it resolves to no recording, which is the correct answer for a pad rather than a failure.
+    expect(sampledAssetForLane({ track_id: "lead", instrument: "warm_pad" })).toBeUndefined();
+    expect(result.problems.join(" ")).not.toContain("warm_pad");
+  });
+
+  /**
+   * **Keyed by part index, and an index that names no part is reported rather than ignored.**
+   *
+   * The hazard is real and was measured while writing this: `fromMidi` **drops** a track chunk that holds no notes, so
+   * the parts list is the file's chunks minus the empty ones — and a caller who counts chunks rather than parts is off
+   * by one. Naming an index that does not exist must say so, because the alternative is a bass that silently keeps its
+   * synthesiser while the reply reports nothing at all.
+   */
+  it("reports an index that names no part instead of silently applying nothing", () => {
+    const { result, tracks } = importAll({ 5: "walking_upright" });
+    expect(result.problems.join(" ")).toContain("an instrument was named for part 6");
+    expect(result.problems.join(" ")).toContain("the file has 2 part(s)");
+    // And nothing was written, because there was no such part to write it on.
+    expect(tracks.filter((track) => track.instrument !== undefined)).toEqual([]);
+  });
+
+  /** An empty track chunk is dropped by the reader, so the parts list is what an index must count. */
+  it("counts parts as the reader reports them, so an empty chunk cannot shift an index", () => {
+    const bytes = buildMidiFile({
+      tracks: [
+        { name: "Empty", notes: [] },
+        { name: "Bass", notes: [{ note: 36, startTicks: 0, durationTicks: 480 }] },
+      ],
+    });
+    // The reader drops the empty chunk, which is the fact the index has to be read against.
+    expect(fromMidi(bytes).parts.map((part) => part.name)).toEqual(["Bass"]);
+    clearMcpArrangements();
+    resetTrackIdsForTests();
+    const arrangement = createMcpArrangement({ songId: "import-identity-skip" });
+    const result = importMcpMidi(arrangement.arrangementId, Buffer.from(bytes).toString("base64"), {
+      partIndex: "all",
+      instruments: { 0: "walking_upright" },
+    });
+    const tracks = getMcpArrangement(arrangement.arrangementId)!.tracks;
+    expect(tracks.find((track) => track.name === "Bass")!.instrument).toBe("walking_upright");
+    expect(result.problems.join(" ")).not.toContain("an instrument was named for part");
   });
 });

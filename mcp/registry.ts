@@ -366,6 +366,28 @@ function patternFromArgs(args: { genreId?: string; pattern?: unknown }): Sequenc
   return null;
 }
 
+/**
+ * ⭐ **The wire shape of `instruments`, turned into the keyed record the importer takes** — or `undefined` when the
+ * caller named nothing.
+ *
+ * The two shapes exist because they answer different questions. On the wire an **array of pairs** is what a schema can
+ * describe and what a caller writes without having to serialise a map with numeric string keys; internally a
+ * **record keyed by part index** is what cannot slide when a part is skipped. A later entry for the same index wins,
+ * which is the same rule the tool layer uses everywhere else for a repeated named value, and `undefined` rather than
+ * `{}` keeps "nobody named an instrument" distinguishable from "named nothing useful" all the way down.
+ */
+function instrumentsByPart(value: unknown): Record<number, string> | undefined {
+  if (!Array.isArray(value) || value.length === 0) return undefined;
+  const byPart: Record<number, string> = {};
+  for (const entry of value as Array<{ partIndex?: unknown; instrument?: unknown }>) {
+    const index = Number(entry?.partIndex);
+    const instrument = typeof entry?.instrument === "string" ? entry.instrument : "";
+    if (!Number.isInteger(index) || index < 0 || instrument.trim() === "") continue;
+    byPart[index] = instrument;
+  }
+  return Object.keys(byPart).length === 0 ? undefined : byPart;
+}
+
 export interface ToolDefinition {
   name: string;
   title: string;
@@ -892,7 +914,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "import_arrangement_midi",
     title: "Import a MIDI file as tracks",
     description:
-      "Read a Standard MIDI File and **add** one track per MIDI track, named from the file. Unlike a step-grid import, the file's own note lengths and positions are kept: this is the arrangement's model, not a sixteen-step pattern. A format-0 file that puts several instruments on one track is split by channel. Use `partIndex` to take one part, or `\"all\"` for every part; the reply names the tempo the file states so the arrangement can be set to it.",
+      "Read a Standard MIDI File and **add** one track per MIDI track, named from the file. Unlike a step-grid import, the file's own note lengths and positions are kept: this is the arrangement's model, not a sixteen-step pattern. A format-0 file that puts several instruments on one track is split by channel. Use `partIndex` to take one part, or `\"all\"` for every part; the reply names the tempo the file states so the arrangement can be set to it. **`instruments` is how a part sounds a real recording instead of a built-in synthesiser** — the file itself usually cannot say (measured: the owner's own project carries no program-change events at all), so name each part's instrument and the created track plays that catalogue recording.",
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
@@ -901,11 +923,18 @@ export const TOOLS: ToolDefinition[] = [
         .union([z.number().int().min(0), z.literal("all")])
         .optional()
         .describe('which part to read; the first unless said otherwise, or "all" for one track per part'),
+      instruments: z
+        .array(z.object({ partIndex: z.number().int().min(0), instrument: z.string() }))
+        .optional()
+        .describe(
+          'the instrument each part is, by part index: `[{partIndex:1, instrument:"strings_lead"}]`. The names are the genre instrument names the recordings are keyed by — strings_lead, piano_lead, walking_upright, flute_lead, trumpet_lead and the rest that list_arrangement_instruments names. A name no recording or built-in voice serves is reported in `problems` and the track keeps its synthesiser'
+        ),
     },
     handler: (args) => {
       try {
         return importMcpMidi(String(args.arrangementId), String(args.bytesBase64), {
           ...(args.partIndex === undefined ? {} : { partIndex: args.partIndex as number | "all" }),
+          ...(instrumentsByPart(args.instruments) === undefined ? {} : { instruments: instrumentsByPart(args.instruments)! }),
         });
       } catch (error) {
         return failure((error as Error).message);

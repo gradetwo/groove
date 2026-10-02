@@ -131,8 +131,17 @@
 | `src/audio/samplerVoice.ts` | 新增 `releaseSeconds` / `MIN_RELEASE_SECONDS` / `DEFAULT_SAMPLER_RELEASE_SECONDS`（**故意未接线**，见 §10.2） |
 | `src/test/samplerVoice.test.ts` | **新增** 3 条判据：释放斜坡的形状、释放比音长时缩释放、已排终点不被 `stop` 硬切 |
 | `src/test/vscoSamplerLane.test.ts` | 该测试自己的混音器原先用 `gain.value` 当**常数**读增益，于是"排了斜坡"读回来是 0（整轨静音）；改成**逐帧**求值调度（`gainAt`），这是 Web Audio 的语义 |
+| `mcp/arrangement.ts` | `ImportMcpMusicXmlOptions.instruments` ＋ `addImportedParts` 建轨时写身份（**见 §11**） |
+| `mcp/registry.ts` | `import_arrangement_midi` 新增 `instruments` 入参 |
+| `src/data/arrangementImport.ts` | 同一个可选 `instruments` 参数（默认行为不变） |
+| `src/test/midiArrangementImport.test.ts` | **新增** 6 条判据：不写身份＝合成器、写了就解析到真采样、服务不了的名字报出且不写、合成器名字被接受、索引指向不存在的 part 要报 |
 
 ## 7. 被桥挡住的那一步（没有动）
+
+## 7. 被桥挡住的那一步（**当时**没有动 —— 已于 §11 补上）
+
+> ⚠️ **本节记录的是当时的状态。桥随后由另一条线落地（`TrackV2.instrument` ＋ `sampledInstruments.ts`），
+> 本线在 §11 补上了导入侧那一步。读本节请连着 §11 一起读。**
 
 **导入 MIDI / MusicXML 时，每个 part 都被建成 `kind:"synth"`、没有 `sample`**，因此上面选出来的
 `assetId` 无处安放：
@@ -287,7 +296,66 @@ Web Audio 规范说播放**就在那一刻结束** —— 波形被从半周期�
 
 ---
 
-## 11. 判不了 / 未核实
+## 11. ⭐⭐ 追加三：桥已通，洞已补——**导入的 part 现在能指定乐器身份**
+
+### 11.1 桥（别人做的）已经落地，`§7` 那条边界不再成立
+
+`dev` 上已有 `TrackV2.instrument`（`src/types/arrangementV2.ts:71`）与 `src/data/sampledInstruments.ts`：
+**一条 `kind:"synth"` 的轨道，只要 `instrument` 是表里的名字，lane 就走 `sampledAssetForLane` 解析到真采样。**
+本线实测（不是读代码）：
+
+```
+kind:"synth" + instrument:"strings_lead"  → role=lead → sampledAssetForLane = vsco2ce:ViolinEnsSusVib
+kind:"synth" + instrument:"piano_lead"    → salamander-grand
+kind:"synth" + instrument:"walking_upright" → karoryfer-meatbass:pizz-basic
+kind:"synth" + instrument:"warm_pad"      → (无采样，保持合成器 ← 这是正确答案)
+```
+
+⇒ **本线原先选出来的 `assetId` 现在有地方安放了。**
+
+### 11.2 ⚠️ 但**文件本身说不出身份**，这是量出来的
+
+* **业主那份工程里 `0` 个 program change 事件**——四个 `MTrk` chunk 全扫过，一个都没有；
+* `ImportedPart` 只有 `name` 与 `notes`（`fromMidi` 实测暴露的字段就是这两个），**没有 channel、没有 program**；
+* `src/audio/MidiImporter.ts:331` 目前**读到 0xc0 program change 直接 `readUint8()` 丢掉**。
+
+⇒ 而且**不许从 part 名字猜**：对 `弦乐` 做子串/词典匹配会"自信地给出错答案"，本仓的规矩是**错的乐器比合成器更糟**
+（那是对作曲者音乐的一个没人做过的断言）。`AI 图片` 里那句"part 名叫 `弦乐` 是名字，不是乐器"就是这个意思。
+
+### 11.3 补的洞：**调用者显式指定**，不猜
+
+| 位置 | 改了什么 |
+| --- | --- |
+| `mcp/arrangement.ts`（`ImportMcpMusicXmlOptions`） | 新增 `instruments?: Record<number, string>`，**按 part 索引**（不是位置数组：空 part 被跳过时数组会整体滑动，"小提琴跑到贝斯上"没人会及时发现） |
+| `mcp/arrangement.ts`（`addImportedParts`） | 建轨时把身份**在创建那一刻**写上（`addTrack(..., { instrument })`），不是在轨存在之后再补一次 |
+| `mcp/registry.ts`（`import_arrangement_midi`） | 新增 `instruments` 入参，线格式是 `[{partIndex, instrument}]`，内部转成按索引的 record |
+| `src/data/arrangementImport.ts` | 同一个可选参数也给了应用侧，**默认行为完全不变** |
+
+两条判据性的行为：
+
+* **名字服务不了 ⇒ 报出来，并且不写**：`banjo_lead` → `problems` 里一句
+  *"part 2 "弦乐" was named instrument "banjo_lead", which no recorded instrument or built-in voice serves … the track keeps its built-in voice"*，轨道**不写**这个名字（否则会变成"轨道声称有乐器、实际放预设"）；
+* **索引指向不存在的 part ⇒ 报出来**（这是写判据时量到的一个真缺陷）：调用者按 chunk 数而不是 part 数写 `{"2": …}` 时，
+  从前会**静默不生效**——贝斯保持合成器而回复一声不吭；现在会说明"文件有 N 个 part，分别是…"。
+
+### 11.4 业主那份真文件上的读数（真代码，无 stub）
+
+| part | 改前 | 改后 |
+| --- | --- | --- |
+| 钢琴（58 音） | `instrument=(none)` → SYNTH | `piano_lead` → **salamander-grand** |
+| **弦乐（60 音）** | `instrument=(none)` → SYNTH | **`strings_lead` → `vsco2ce:ViolinEnsSusVib`** |
+| 贝斯（80 音） | `instrument=(none)` → SYNTH | `walking_upright` → **karoryfer-meatbass:pizz-basic** |
+
+⇒ **业主最初那句抱怨（弦乐 60 个音解析得对、却在内置预设里响）到这里才真正闭合**：一条 MCP 导入调用就能让那 60 个音走 VSCO。
+
+### 11.5 仍然没做的一步，如实说
+
+**应用里的文件选择器没有地方让人指定乐器**（`importMidiIntoArrangement` 是一个 `File` 入口，没有 UI 收集身份）。
+⇒ 数据层不再是障碍，**入口是**；这需要界面，不在本线范围。MCP 那条路今天就能用。
+
+---
+
+## 12. 判不了 / 未核实
 
 
 

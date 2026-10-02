@@ -52,7 +52,7 @@ import type { ArrangementV2, NoteEvent, TrackKindV2, TrackV2 } from "../src/type
 import type { PlannedTake } from "../src/data/takePlanning";
 import { compileArrangementToSongInput, laneInstrumentForTrack, laneRoleForTrack } from "../src/data/arrangementCompile";
 import { resolveInstrumentPresetKey } from "../src/audio/instrumentPresets";
-import { sampledAssetForLane, sampledInstrumentGapReason } from "../src/data/sampledInstruments";
+import { SAMPLED_INSTRUMENT_SYNTHS, sampledAssetForLane, sampledInstrumentFor, sampledInstrumentGapReason } from "../src/data/sampledInstruments";
 import { DEFAULT_SYNTH_PRESETS } from "../src/audio/PolySynth";
 import { stepsFromNotes, STEPS_PER_BEAT } from "../src/data/noteEvents";
 import { beatsPerBar } from "../src/data/genreExpression";
@@ -729,6 +729,30 @@ export type MusicXmlPartSelection = number | "all";
 
 export interface ImportMcpMusicXmlOptions {
   partIndex?: MusicXmlPartSelection;
+  /**
+   * ⭐ **Which instrument each imported part is, so an imported part can sound a recording instead of a synthesiser.**
+   *
+   * Keyed by the part's own index — the same number `partIndex` selects and the same one the problems below name —
+   * rather than a positional array, because an array would silently slide when a part is skipped for holding no
+   * notes, and "the violin ended up on the bass" is not a failure anyone would notice in time.
+   *
+   * **The name is a genre instrument name** (`strings_lead`, `piano_lead`, `walking_upright`, …), which is the key of
+   * `src/data/sampledInstruments.ts`. Naming one that the table maps makes the created track play that catalogue
+   * recording through the ordinary lane resolver; naming one it does not map is **reported as a problem** rather than
+   * silently ignored, and naming a synthesiser name (`warm_pad`) is honoured as the synthesiser it means.
+   *
+   * ## Why this is a parameter and not a guess
+   *
+   * The obvious alternative is to read the identity off the part's **name**, and it is refused deliberately: a
+   * substring or dictionary match would answer "the piano" for `Piano` and "something stringy" for `弦乐`, and this
+   * repository's own rule is that a wrong instrument is worse than a synthesiser because it is a claim about a
+   * composer's music that nobody made. A part named `弦乐` is a name, not an instrument.
+   *
+   * The file itself cannot supply it either, measured: the owner's own project carries **no program-change events at
+   * all** (all four of its `MTrk` chunks), and `ImportedPart` has no channel or program field for a reader to fill.
+   * So identity arrives from the caller — who knows what they imported — or not at all.
+   */
+  instruments?: Record<number, string>;
 }
 
 export function importMcpMusicXml(arrangementId: string, xml: string, options: ImportMcpMusicXmlOptions = {}): ArrangementEditResult & {
@@ -908,10 +932,59 @@ function addImportedParts(
     return false;
   });
 
+  /**
+   * ⭐ **The instrument each part is, resolved before any track is created, so a name that serves nothing is reported
+   * rather than written onto a track and forgotten.**
+   *
+   * The rule is the same one `list_arrangement_instruments` and the genre lanes follow — an **exact match** through
+   * `sampledInstrumentFor` — plus the synthesiser names, which are honoured because a name that means a synthesiser is
+   * an answer rather than a gap (`warm_pad` is not a missing piano). Anything else is named in `problems` with the
+   * nearest thing a caller can do about it, and the track keeps the built-in voice it would have had, which is the
+   * same fallback a mapped-but-unmirrored name gets.
+   */
+  const instruments = options.instruments ?? {};
+  const resolvedInstruments = new Map<number, string>();
+  /**
+   * ⭐ **An index that names no part is a problem, not a no-op.**
+   *
+   * A caller who writes `{"2": "walking_upright"}` believing part 2 is their bass, in a file that has two parts, has
+   * named an instrument that is silently never applied — the bass keeps its synthesiser and the reply says nothing.
+   * That is the "plausible wrong answer" shape this repository treats as the worst kind, and it costs one check.
+   */
+  for (const index of Object.keys(instruments).map(Number)) {
+    if (!Number.isInteger(index) || index < 0 || index >= imported.parts.length) {
+      problems.push(
+        `an instrument was named for part ${Number.isFinite(index) ? index + 1 : "(not a number)"}, and the file has ${imported.parts.length} part(s)` +
+          ` (${imported.parts.map((part, at) => `${at + 1} "${part.name}"`).join(", ") || "none"}), so nothing was given that name`
+      );
+    }
+  }
+  for (const candidate of withNotes) {
+    const named = instruments[candidate.index];
+    if (named === undefined) continue;
+    const wanted = named.trim();
+    const served = sampledInstrumentFor(wanted) !== undefined || SAMPLED_INSTRUMENT_SYNTHS.includes(wanted);
+    if (!served) {
+      const gap = sampledInstrumentGapReason(wanted);
+      problems.push(
+        `part ${candidate.index + 1} "${candidate.part.name}" was named instrument "${wanted}", which no recorded instrument or built-in voice serves` +
+          (gap ? ` — ${gap}` : "") +
+          `; the track keeps its built-in voice, and list_arrangement_instruments names the recordings that exist`
+      );
+      continue;
+    }
+    resolvedInstruments.set(candidate.index, wanted);
+  }
+
   const result = edit(arrangementId, (current: ArrangementV2) => {
     let next = current;
     for (const candidate of withNotes) {
-      const withTrack = addTrack(next, "synth", candidate.part.name.slice(0, 40) || "Imported");
+      const instrument = resolvedInstruments.get(candidate.index);
+      /**
+       * The instrument travels **at creation** rather than through a second edit: the track is born with the identity
+       * its part was named with, so there is no window in which it exists as an anonymous synthesiser.
+       */
+      const withTrack = addTrack(next, "synth", candidate.part.name.slice(0, 40) || "Imported", instrument === undefined ? {} : { instrument });
       const trackId = withTrack.tracks[withTrack.tracks.length - 1]!.id;
       // The notes arrive whole rather than one call each: an imported part is one decision, not two hundred edits.
       next = { ...withTrack, notesByTrack: { ...(withTrack.notesByTrack ?? {}), [trackId]: candidate.part.notes } };
