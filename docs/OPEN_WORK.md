@@ -2445,3 +2445,24 @@ Bass 3 ｜ Guitar 3 ｜ **Orchestral 3** ｜ **Acoustic Piano 2** ｜ **Organ 2*
 
 ### 收口
 **§69 那八步 ⇒ 全过才标 complete** ✓ ｜ **我自验累计：48 文件 667 条全绿** ✓。
+
+## 七十七、⭐ 目录**基线**：为 Part 2 末段落地先立一把尺子（2026-10-03 ✓，**我自跑** ✓）
+
+### 77.1 读数（**落地前** ✓✓）
+
+```
+`check:gs1`：**"renders a note without silence — peak 0.2491 over 40×128 frames"** ＋ **`gs_alloc_violations() === 0`** ✓
+五个判据文件：`sampledInstruments` ＋ `realLibrary` ＋ `realLibraryParse` ＋ `libraryLicence` ＋ `sampleLoader`
+   ⇒ **5 文件 **34/34 全绿**** ✓✓
+```
+
+### 77.2 ⇒ 为什么这就是**基线** ✓✓
+
+**那十二个库落地后，若这五个文件或 `gs1` 变红 ⇒ **是那次落地改的**** ⇒ **⇒ "有没有回归"这个问题**不用猜**** ✓✓
+（**而 §69 第 5 步"跑受影响的定向 vitest"就包含这一组 ✓**。）
+
+### 77.3 ⚠️ 而最可能变红的那一条，处理顺序要先说清 ✓✓
+
+**`sampledInstruments.test.ts` 的 `names a catalogue asset that the shipped manifest actually declares`**
+——**它正是**最可能**因"加了库"而变红的判据** ⇒ **⇒ 若它红，**先查是不是新条目的名字／`instruments` 写错了**，
+**而不是先改判据** ✗✓**（**本仓那条铁律：**绝不放宽判据去换绿**** ✓**）。
