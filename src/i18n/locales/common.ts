@@ -51,6 +51,12 @@ export const commonMessages = {
   // beside the lanes, and a ruler over the lanes only.
   arrangement_toolbar_label: { en: "Arrangement toolbar", zh: "编排工具栏" },
   arrangement_play: { en: "Play", zh: "播放" },
+  /**
+   * ⭐ The play button's other half. The studio's transport has swapped its label between Play and Pause since
+   * `Toolbar.tsx` was written; this is the same control on the arrangement, so it says the same thing — a button whose
+   * word never changes is the button the owner reported as having no state.
+   */
+  arrangement_pause: { en: "Pause", zh: "暂停" },
   arrangement_stop: { en: "Stop", zh: "停止" },
   arrangement_record: { en: "Record", zh: "录音" },
   arrangement_recording: { en: "Recording…", zh: "录音中…" },

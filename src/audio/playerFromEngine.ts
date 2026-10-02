@@ -11,7 +11,7 @@
  * **A catalogue that fails to load is reported, not thrown.** The sampler lane needs it to resolve an instrument; a lane with no instrument is a stated refusal rather than an exception in a click handler,
  * which would show the user nothing at all.
  */
-import type { ArrangementPlayer } from "./playArrangementV2";
+import type { ArrangementPlayer, ArrangementTransport, ArrangementTransportState } from "./playArrangementV2";
 import type { SampleAsset } from "../data/sampleCatalogue";
 import { browserSampleDecoder } from "./browserSampleGraph";
 import { createSampleLoader, type SampleDecoder } from "./sampleLoader";
@@ -46,6 +46,16 @@ export interface EngineAudioTap {
    * extend a sampler lane past the first pass — and `AudioEngine.onLoopWrap` says why that matters.
    */
   onLoopWrap?: (wrapTimeSeconds: number) => void;
+  /**
+   * ⭐ **The observation half of the transport, so the arrangement can draw where playback is and light its buttons.**
+   *
+   * Named as `AudioEngine`'s own methods so the two cannot drift, and optional because an engine-shaped object that only plays still answers the question the play button asks; it just cannot answer the playhead's.
+   */
+  getCurrentStep?: AudioEngine["getCurrentStep"];
+  getIsPlaying?: AudioEngine["getIsPlaying"];
+  setOnStep?: AudioEngine["setOnStep"];
+  setOnPlay?: AudioEngine["setOnPlay"];
+  setOnStop?: AudioEngine["setOnStop"];
 }
 
 export interface PlayerDependencies {
@@ -205,7 +215,8 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
   /**
    * Stop every voice `play` started, and report how many.
    *
-   * Also called at the top of `play`, so pressing play twice replaces the arrangement rather than layering it — the same discipline `AudioEngine.play` shows by returning early when it is already playing.
+   * ⭐ **This is the sampler half only, and it used to be the whole of `stop` — which is why the Stop button was silent while the engine's own lanes kept playing.** The engine's transport is stopped by `stopTransport` below; the two
+   * halves are kept apart because `play` needs the sampler half on its own before the engine starts (see there), and nothing else does.
    */
   const stopScheduled = (): number => {
     // ⭐ The loop handler goes with the voices: a stopped transport must not plan a pass nobody will hear.
@@ -214,6 +225,75 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
     const started = scheduled.splice(0);
     for (const voice of started) voice.stop();
     return started.length;
+  };
+
+  /**
+   * ⭐ **A stop, over both halves of what `play` started.**
+   *
+   * The arrangement is sounded by two things at once: the engine's own sequencer (the compiled pattern's lanes) and this player's sampler voices, which are started on the audio clock because the engine has no SFZ loader. The
+   * first version of `stop` only spliced the voices, so `AudioEngine.stop()` was never called, no `CLOCK_STOP` was ever published, and the lane voices kept sounding — the owner's "the stop button does nothing", measured.
+   *
+   * ⭐ And the transport half is skipped only when the engine **says** it is stopped: "cannot answer" is not "nothing to
+   * stop", and an engine that cannot be asked must still be stopped rather than leaving the original bug in place for
+   * a differently shaped engine. Asking first is what keeps a fresh play from publishing a `CLOCK_STOP` on a
+   * transport that was never running.
+   *
+   * ⭐ It is also what `play` calls first, which is what makes pressing play twice **one** transport rather than two layered ones: `AudioEngine.play()` returns early when it is already playing, so without a stop here a second
+   * press left the engine where it was and re-scheduled every sampler voice over the top of the first pass.
+   */
+  const stopTransport = (): number => {
+    const stopped = stopScheduled();
+    if (engine.getIsPlaying?.() !== false) engine.stop?.();
+    return stopped;
+  };
+
+  /**
+   * ⭐ **A fan-out, because the engine's `setOnStep` is one slot.**
+   *
+   * A subscriber installed straight onto the engine would silently take the place of whoever subscribed before it, and its unsubscribe would take the *next* one's place right back — so the second playhead on a page is the one that
+   * moves and the first is the one that freezes, with nothing to say why. `playheadBus.ts` exists for the studio for the same reason; the listeners live here and the engine is wired once.
+   *
+   * ⭐ The unwire **clears the callbacks rather than restoring captured ones**: `EngineAudioTap` exposes setters and no getters, and the route's engine is built by `useAudioEngineInstance` with no callbacks at all — so there is nothing
+   * to restore, and a no-op is the honest replacement for "this player is gone". Leaving the callbacks pointing at an unmounted view's nodes would be the worse failure.
+   */
+  const transportListeners = new Set<(state: ArrangementTransportState) => void>();
+  let transportWired = false;
+  const reportTransport = (state: ArrangementTransportState): void => {
+    for (const listener of transportListeners) {
+      try {
+        listener(state);
+      } catch {
+        // A listener must never be able to stop the transport's step callback — the same rule `playheadBus` states.
+      }
+    }
+  };
+  const wireTransport = (): void => {
+    if (transportWired) return;
+    transportWired = true;
+    engine.setOnStep?.((info) => reportTransport({ step: info.step, playing: true }));
+    engine.setOnPlay?.(() => reportTransport({ step: engine.getCurrentStep?.() ?? 0, playing: true }));
+    // A stop resets the engine's step to zero, so reading it back here is what returns the playhead to the top.
+    engine.setOnStop?.(() => reportTransport({ step: engine.getCurrentStep?.() ?? 0, playing: false }));
+  };
+  const unwireTransport = (): void => {
+    if (!transportWired) return;
+    transportWired = false;
+    engine.setOnStep?.(() => undefined);
+    engine.setOnPlay?.(() => undefined);
+    engine.setOnStop?.(() => undefined);
+  };
+
+  const transport: ArrangementTransport = {
+    read: () => ({ step: engine.getCurrentStep?.() ?? 0, playing: engine.getIsPlaying?.() ?? false }),
+    subscribe: (listener) => {
+      transportListeners.add(listener);
+      wireTransport();
+      return () => {
+        transportListeners.delete(listener);
+        // Only the last one out unwires: an earlier unsubscribe must not deafen a subscriber that is still mounted.
+        if (transportListeners.size === 0) unwireTransport();
+      };
+    },
   };
 
   return {
@@ -240,8 +320,11 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
       /**
        * Nothing from a previous play survives this one: a scheduled note cannot be unscheduled once it is on the audio clock, so pressing play again silences the old arrangement rather than layering the
        * two. Done **before** the catalogue is awaited, so a second press has already taken effect by the time the first press's load resolves.
+       *
+       * ⭐ **Both halves**, so this is a real restart rather than a re-schedule: the engine's `play()` returns early while it is already playing, so a stop that only spliced the sampler voices left the lanes running from wherever
+       * they were while the sampler started over from the top. One press, one transport.
        */
-      stopScheduled();
+      stopTransport();
 
       /**
        * **The transport starts before the samples are resolved.** `AudioEngine.play` marks the first step a fixed lead ahead of `currentTime`, and every sampler note is placed from `currentTime` afterwards —
@@ -327,7 +410,8 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
       const planned = pattern.tracks.reduce((total, lane) => total + lane.steps.filter((value) => value !== 0).length, 0);
       return problem === undefined ? { planned } : { planned, problem };
     },
-    stop: stopScheduled,
+    stop: stopTransport,
+    transport,
     audition,
     releaseNote({ trackId, midi }) {
       const key = keyFor(trackId, midi);

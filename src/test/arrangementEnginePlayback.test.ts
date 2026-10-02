@@ -171,3 +171,130 @@ describe("a sampler lane's steps", () => {
     expect(player.stop!()).toBe(0);
   });
 });
+
+/**
+ * ⭐ The bug the owner reported: **the Stop button stopped nothing that could be heard.**
+ *
+ * Measured on the site with the site's own `wangda_audio_bus`: `CLOCK_START` and a stream of `TRANSIENT_HIT`s, then a stop press, then more `TRANSIENT_HIT`s and **zero `CLOCK_STOP` for the whole session**. The engine's own transport was never stopped, because
+ * the player's `stop` only spliced the sampler voices. These are the criteria for the two halves of one stop, and for the restart `play` needs so a second press does not layer one pass over another.
+ */
+describe("stopping an arrangement stops both halves", () => {
+  /** An engine that answers the observation half as well, so the transport can be judged without a browser. */
+  function observableEngine(context: FakeAudioContext) {
+    const clock: {
+      step: number;
+      playing: boolean;
+      onStep?: (info: { step: number; time: number }) => void;
+      onPlay?: () => void;
+      onStop?: () => void;
+    } = { step: 0, playing: false };
+    const engine = {
+      audioContext: context as never,
+      musicDestination: context.createGain() as never,
+      setPattern: vi.fn((_pattern: SequencerPattern) => undefined),
+      setBpm: vi.fn((_bpm: number) => undefined),
+      play: vi.fn(async () => {
+        clock.playing = true;
+        clock.onPlay?.();
+      }),
+      stop: vi.fn(() => {
+        clock.playing = false;
+        clock.step = 0;
+        clock.onStop?.();
+      }),
+      getCurrentStep: () => clock.step,
+      getIsPlaying: () => clock.playing,
+      setOnStep: (cb: (info: { step: number; time: number }) => void) => {
+        clock.onStep = cb;
+      },
+      setOnPlay: (cb: () => void) => {
+        clock.onPlay = cb;
+      },
+      setOnStop: (cb: () => void) => {
+        clock.onStop = cb;
+      },
+    };
+    return { engine, clock };
+  }
+
+  it("calls the engine's own stop, which is what publishes CLOCK_STOP", async () => {
+    const context = new FakeAudioContext();
+    const { engine } = observableEngine(context);
+    const player = playerWith(engine as never);
+    const arrangement: ArrangementV2 = { songId: "s", sourceSlots: [], tracks: [{ id: "t1", kind: "instrument", name: "Keys" }] };
+
+    await playArrangementV2(arrangement, { t1: NOTES }, player);
+    expect(engine.stop).not.toHaveBeenCalled();
+    player.stop!();
+    /**
+     * ⭐ The whole of the report: the transport really was stopped. `AudioEngine.stop()` is what runs `publishClockStop`, so this one assertion is the difference between a button that works and the one that was measured doing nothing.
+     */
+    expect(engine.stop).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops the transport before starting it again, so a second play replaces the first rather than layering it", async () => {
+    const context = new FakeAudioContext();
+    const { engine } = observableEngine(context);
+    const player = playerWith(engine as never);
+    const arrangement: ArrangementV2 = { songId: "s", sourceSlots: [], tracks: [{ id: "t1", kind: "instrument", name: "Keys" }] };
+
+    await playArrangementV2(arrangement, { t1: NOTES }, player);
+    await playArrangementV2(arrangement, { t1: NOTES }, player);
+
+    /**
+     * `AudioEngine.play()` returns early while it is already playing, so without the stop the engine's lanes would keep running from wherever they were while the sampler lanes restarted from the top — one press, two transports. The order is the
+     * claim, not just the count.
+     */
+    expect(engine.stop).toHaveBeenCalledTimes(1);
+    expect(engine.stop.mock.invocationCallOrder[0]!).toBeLessThan(engine.play.mock.invocationCallOrder[1]!);
+  });
+
+  it("reports the transport's step and running state, and stops reporting when the view unsubscribes", () => {
+    const context = new FakeAudioContext();
+    const { engine, clock } = observableEngine(context);
+    const player = playerWith(engine as never);
+    const seen: Array<{ step: number; playing: boolean }> = [];
+    const unsubscribe = player.transport!.subscribe((state) => seen.push(state));
+
+    // The state is readable before anything has happened, which is what the first paint uses.
+    expect(player.transport!.read()).toEqual({ step: 0, playing: false });
+
+    clock.step = 5;
+    clock.onStep?.({ step: 5, time: 0 });
+    expect(seen.at(-1)).toEqual({ step: 5, playing: true });
+
+    // A stop reports the reset step, which is how the playhead gets back to bar one rather than freezing where it stopped.
+    clock.step = 0;
+    clock.onStop?.();
+    expect(seen.at(-1)).toEqual({ step: 0, playing: false });
+
+    unsubscribe();
+    clock.step = 9;
+    clock.onStep?.({ step: 9, time: 1 });
+    // ⭐ Nothing may fire at an unmounted view's DOM nodes; a stale callback here is a write to a node React has already removed.
+    expect(seen).toHaveLength(2);
+  });
+
+  it("fans out to every subscriber, so a second playhead does not silently take the first one's place", () => {
+    const context = new FakeAudioContext();
+    const { engine, clock } = observableEngine(context);
+    const player = playerWith(engine as never);
+    const first: number[] = [];
+    const second: number[] = [];
+    const offFirst = player.transport!.subscribe((state) => first.push(state.step));
+    player.transport!.subscribe((state) => second.push(state.step));
+
+    // The engine's `setOnStep` is one slot: wired directly, this step would reach only whichever subscriber installed last.
+    clock.onStep?.({ step: 3, time: 0 });
+    expect(first).toEqual([3]);
+    expect(second).toEqual([3]);
+
+    /**
+     * ⭐ And an early unsubscribe must not deafen a subscriber that is still mounted — the second half of the same bug, where the first view's cleanup restores its own no-op over the second view's callback.
+     */
+    offFirst();
+    clock.onStep?.({ step: 4, time: 1 });
+    expect(first).toEqual([3]);
+    expect(second).toEqual([3, 4]);
+  });
+});

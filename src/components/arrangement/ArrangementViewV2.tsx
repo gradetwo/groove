@@ -28,7 +28,7 @@
  * persisted yet, and neither changes what the engine plays — the loop brace is a ruler-level loop that no audio path
  * reads. That is stated here rather than implied.
  */
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ArrangementV2, TrackKindV2 } from "../../types/arrangementV2";
 import { addTake, addTrack, addTrackNote, changeTrackKind, moveTrackNote, removeTrackNote, setArrangementBars, setArrangementTempo, setTrackGain, setTrackNoteLength, setTrackPan, setTrackSample, toggleStep, createArrangementFromTemplate, removeTrack, setCollapsed, setTrackFlag, selectTrackTake } from "../../data/arrangementEdits";
 import type { CaptureOutcome } from "../../audio/captureTake";
@@ -46,7 +46,9 @@ import { LoopBraceV2 } from "./LoopBraceV2";
 import { loopRangeAt, type LoopRange } from "../../data/arrangementLoop";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { NewProjectPanelV2 } from "./NewProjectPanelV2";
-import { playArrangementV2, type ArrangementPlayer } from "../../audio/playArrangementV2";
+import { playArrangementV2, type ArrangementPlayer, type ArrangementTransportState } from "../../audio/playArrangementV2";
+import { beatsPerBar, stepsPerBarFor, STEPS_PER_BEAT } from "../../data/noteEvents";
+import { announcer } from "../../platform/announcer";
 
 /** The snap values the toolbar offers, coarsest to finest. The **value** is shown, because a toggle's state is not a value. */
 export const SNAP_VALUES = ["1/4", "1/8", "1/16", "1/32"] as const;
@@ -74,12 +76,16 @@ export interface ArrangementViewV2Props {
    */
   instruments?: readonly InstrumentChoice[];
   /**
-   * Where the playhead is, in bars, when the host has a transport that reports one.
+   * Where the playhead is, in bars — **the static position, for a host that has no live transport to follow.**
    *
    * **Separate from `bar` on purpose, and that is the point of the brief's §8 item 4**: Bitwig's manual draws a
    * Global Playhead and a Play Start Marker as two indicators, and folding "where playback is" into "where a play
    * begins" is exactly the conflation that model exists to avoid. Absent means bar 0 — the picture a fresh
    * arrangement should show — not "hide the playhead".
+   *
+   * ⭐ **When `player.transport` exists, the live position supersedes this and the prop is only the first paint.** It has to work that way rather than arriving as a fresh `playheadBar` each step: a step is a sixteenth of a beat, and
+   * re-rendering this route sixteen times a second over a bar number is the main-thread work `playheadBus.ts` says the studio removed. The live path therefore writes the position into the DOM, which is also what makes the prop still
+   * the honest answer for a host that only has a fixed position to show.
    */
   playheadBar?: number;
 }
@@ -161,6 +167,56 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
     setPlayStartBar(next);
   }, []);
 
+  /**
+   * ⭐ **The transport's own state, which the buttons report.**
+   *
+   * Two facts, two costs. Which button is lit changes twice a session, so it is React state. **Where the playhead is changes sixteen times a second, so it is not** — it is written into the two DOM nodes below, which is the rule
+   * `playheadBus.ts` records for the studio and the reason `ArrangementTransport` is a subscription rather than a value.
+   */
+  const [playing, setPlaying] = useState(false);
+  const playheadRef = useRef<HTMLSpanElement | null>(null);
+  const positionRef = useRef<HTMLSpanElement | null>(null);
+  /**
+   * The last bar the transport reported, **kept in a ref and read at render time**.
+   *
+   * That read is the whole point: a re-render for any other reason (the running flag, the zoom) must not put the playhead back where the last React render thought it was. Without it a zoom change would rewind the picture to bar one and the next
+   * step would snap it forward again.
+   */
+  const playheadBarRef = useRef(playheadBar ?? 0);
+
+  const transport = player?.transport;
+  /** A transport we can actually follow. Absent means the prop above is the only position there is, which is how a host with no live transport still draws one. */
+  const liveTransport = transport !== undefined;
+
+  const stepsPerBar = stepsPerBarFor(arrangement.timeSignature);
+  const beatsInBar = Math.max(1, Math.round(beatsPerBar(arrangement.timeSignature)));
+
+  useEffect(() => {
+    if (transport === undefined) return;
+    const apply = ({ step, playing: running }: ArrangementTransportState) => {
+      const bar = step / stepsPerBar;
+      playheadBarRef.current = bar;
+      const line = playheadRef.current;
+      if (line) line.style.left = `${bar * pixelsPerBar}px`;
+      const readout = positionRef.current;
+      if (readout) {
+        const barNumber = Math.floor(bar) + 1;
+        const beatNumber = Math.floor((step % stepsPerBar) / STEPS_PER_BEAT) + 1;
+        readout.textContent = `${barNumber}.${beatNumber}`;
+        readout.title = t("arrangement_position_value", { bar: String(barNumber), beat: String(beatNumber) });
+      }
+      // Guarded, so sixteen calls a second do not become sixteen renders.
+      setPlaying((current) => (current === running ? current : running));
+    };
+    // The first paint reads rather than waits: a playhead that only appears on the next step is a playhead that is missing for as long as the transport is stopped.
+    apply(transport.read());
+    return transport.subscribe(apply);
+    /**
+     * ⭐ `choosing` is a dependency because **the two nodes do not exist until the project panel is dismissed** — the arrangement is behind Logic's "Choose a Project", and an effect that ran only at mount would write to two null refs and never be
+     * given another chance until the first step of a play. That is the difference between a readout that says bar one and a readout that says nothing at all.
+     */
+  }, [transport, pixelsPerBar, stepsPerBar, choosing, t]);
+
   const play = useCallback(async () => {
     if (player === undefined) return;
     // ⭐ The arrangement's own notes, not an empty map: they are content and they live with the tracks.
@@ -172,14 +228,32 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
      * Play button that does nothing for no stated reason, which is the failure this whole workstream keeps removing.
      */
     setPlayProblem(result.reason ?? result.problems?.join("; "));
-  }, [arrangement, player]);
+    // Heard as well as seen: the running flag below is a visual state, and a screen reader gets no pixels from it.
+    if (result.reason === undefined) announcer.announce(t("transport_playback_started"));
+  }, [arrangement, player, t]);
 
   const stop = useCallback(() => {
     player?.stop?.();
     // The report goes with it: once stopped, "planned N lane events" described a play that is over.
     setPlayed(undefined);
     setPlayProblem(undefined);
-  }, [player]);
+    announcer.announce(t("transport_playback_stopped"));
+  }, [player, t]);
+
+  /**
+   * ⭐ **Play is the studio's own Play/Pause toggle**, which is the project's convention for this control rather than an invention: `Toolbar.tsx` labels the same button with `toolbar_play`/`toolbar_pause` and swaps its fill, and
+   * `useTransportControls.handleTogglePlay` stops the transport when it is already playing.
+   *
+   * The running state is read **from the transport, not from React**, so a press that lands while the engine is still awaiting `ctx.resume()` toggles the right way. React state is for the paint; the engine is the truth.
+   */
+  const togglePlay = useCallback(() => {
+    const running = player?.transport?.read().playing ?? playing;
+    if (running) {
+      stop();
+      return;
+    }
+    void play();
+  }, [player, playing, play, stop]);
 
   // ⭐ The early return sits **after every hook**, because a conditional hook changes their order: the first version of this had it above `useCallback` and produced six type errors, whose real content was a React bug.
   if (choosing) {
@@ -197,6 +271,13 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
 
   /** A transport button. 44 px tall like everything else in the bar: the arrangement is a phone surface too. */
   const toolButton = "h-11 shrink-0 rounded border border-[rgb(var(--d-line))] px-2 text-xs text-text disabled:opacity-50";
+  /**
+   * ⭐ The same button while the transport is running, in the project's own active-control idiom: the accent as the
+   * fill and `--d-on-accent` as the ink — exactly the pair the editor tabs and the Loop/Snap switches use, so the
+   * transport lights up the way every other lit control on this surface does rather than in a colour of its own.
+   */
+  const toolButtonActive =
+    "h-11 shrink-0 rounded border border-[rgb(var(--d-accent))] bg-[rgb(var(--d-accent))] px-2 text-xs font-bold text-[rgb(var(--d-on-accent))] disabled:opacity-50";
 
   return (
     <div data-testid="arrangement-view-v2" className="flex flex-col gap-2 p-2 text-text">
@@ -215,15 +296,53 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
         className="flex flex-wrap items-center gap-1"
         style={{ minHeight: "var(--arr-toolbar-h)" }}
       >
-        {/* Transport. Play is disabled without an engine and says so below rather than looking broken. */}
-        <button type="button" data-testid="arrangement-play" className={toolButton} disabled={player === undefined} onClick={() => void play()}>
-          {t("arrangement_play")}
+        {/**
+         * ⭐ **The transport, with the state the owner reported as missing.**
+         *
+         * Play follows the studio's own convention rather than inventing one: `Toolbar.tsx` draws the same control as a
+         * Play/Pause toggle — its word swaps between `toolbar_play` and `toolbar_pause` and its fill swaps with
+         * `isPlaying` — and `useTransportControls.handleTogglePlay` stops the transport when it is already running. So
+         * the word, the fill, `aria-pressed` and the accessible name all change together, and there is no press that
+         * does nothing, which is the rule U7 states: "a control that does nothing must say so."
+         *
+         * ⭐ **The fill is `--d-on-accent` for the ink**, the token that means "the ink that goes on a fill". The
+         * neighbouring Loop and Snap buttons use `--d-accent-ink`, which the editor tabs below record as degenerate:
+         * in five of the six skins it *is* `--d-accent`, so an accent-ink word on an accent fill measures 1:1. A label
+         * nobody can read is the opposite of the indication this change is about.
+         */}
+        <button
+          type="button"
+          data-testid="arrangement-play"
+          aria-pressed={playing}
+          aria-label={playing ? t("arrangement_pause") : t("arrangement_play")}
+          title={playing ? t("arrangement_pause") : t("arrangement_play")}
+          className={playing ? toolButtonActive : toolButton}
+          disabled={player === undefined}
+          onClick={togglePlay}
+        >
+          {playing ? t("arrangement_pause") : t("arrangement_play")}
         </button>
         {/**
          * **Stop, because the sampler's notes are started on the audio clock and the engine's transport cannot reach them.** Without it, pressing play on a piano arrangement and then wanting it to
          * stop left every scheduled note ringing — the arrangement player is the only object that holds those voices, so only this button can silence them.
+         *
+         * ⭐ **And the other half, which was missing** — see `playerFromEngine.stopTransport`: the button spliced those
+         * voices and never called `AudioEngine.stop()`, so the lane voices kept sounding and no `CLOCK_STOP` was ever
+         * published. Both halves are one call now.
+         *
+         * ⭐ Its disabled state is the transport's rather than a guess: **when the player can report whether it is
+         * running, this is live exactly while there is something to stop.** A player that cannot report (an
+         * engine-shaped object with `stop` and no `transport`) leaves it enabled, because "unknown" is not "stopped".
          */}
-        <button type="button" data-testid="arrangement-stop" className={toolButton} disabled={player?.stop === undefined} onClick={stop}>
+        <button
+          type="button"
+          data-testid="arrangement-stop"
+          aria-label={t("arrangement_stop")}
+          title={t("arrangement_stop")}
+          className={toolButton}
+          disabled={player?.stop === undefined || (liveTransport && !playing)}
+          onClick={stop}
+        >
           {t("arrangement_stop")}
         </button>
         {/*
@@ -253,11 +372,24 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
         </span>
         <span className="flex items-center gap-1">
           <span className="text-[10px] text-text opacity-70">{t("arrangement_position")}</span>
+          {/**
+           * ⭐ **The transport's position, not the bar the ruler was clicked on — and with a real beat.**
+           *
+           * It used to be `{stripBar + 1}.1`: the beat was a literal `1` that could never be anything else, and the bar
+           * was the *view's* selected bar rather than the transport's, which is the conflation §8 item 4 exists to
+           * avoid — "where playback is" and "where the view is looking" are two facts, and this readout is named
+           * Position.
+           *
+           * With a live transport the text is written **per step** by the effect above and there is no React child to
+           * fight it. Without one there is no transport position to report, so the selected bar is the honest answer
+           * and a host that injects `playheadBar` still gets a readout that agrees with it.
+           */}
           <span
+            ref={positionRef}
             data-testid="arrangement-position"
             className="rounded border border-[rgb(var(--d-line))] px-1 font-['JetBrains_Mono'] text-xs"
           >
-            {stripBar + 1}.1
+            {liveTransport ? undefined : `${stripBar + 1}.1`}
           </span>
         </span>
 
@@ -522,13 +654,20 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
                 {...(selectedTrackId !== undefined ? { selectedTrackId } : {})}
                 onSelectTrack={setSelectedTrackId}
               />
-              {/* The playhead: the second of the two indicators. A line over the lanes, positioned in bar space. */}
+              {/**
+               * The playhead: the second of the two indicators. A line over the lanes, positioned in bar space.
+               *
+               * ⭐ **`playheadBarRef`, not the prop, when a live transport exists.** The effect moves this node per step without re-rendering — but a re-render for any other reason still passes through here, and React would then
+               * write the prop again and rewind the picture to bar one until the next step. Reading the last reported bar closes that hole, which matters most on a zoom change: the same re-render changes `pixelsPerBar`, so the
+               * line has to be re-placed from the *current* bar at the new scale, not from the starting one.
+               */}
               <span
+                ref={playheadRef}
                 data-testid="arrangement-playhead"
                 aria-label={t("playhead_label")}
                 role="img"
                 className="pointer-events-none absolute inset-y-0 z-20 w-px bg-text"
-                style={{ left: (playheadBar ?? 0) * pixelsPerBar }}
+                style={{ left: (liveTransport ? playheadBarRef.current : (playheadBar ?? 0)) * pixelsPerBar }}
               />
             </div>
           </div>

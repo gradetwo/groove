@@ -17,6 +17,37 @@ import { deriveTrackStates } from "./trackStates";
 import type { ArrangementV2 } from "../types/arrangementV2";
 import type { SequencerPattern, SequencerTrack } from "../types/genre";
 
+/**
+ * Where the transport is, in the **engine's own step grid**, and whether it is running.
+ *
+ * ⭐ The step index is the engine's, deliberately: `playArrangementV2` hands the arrangement to the engine as a `SequencerPattern`, so the engine's step *is* the arrangement's step, and a bar is `stepsPerBarFor(timeSignature)` of
+ * them. A view that wants bars divides; nothing here re-counts the notes.
+ */
+export interface ArrangementTransportState {
+  /** The step the sequencer is on, in the grid the compiled pattern's lanes are indexed in. */
+  step: number;
+  /** Whether the transport is running. */
+  playing: boolean;
+}
+
+/**
+ * The transport as a view can read it without a re-render.
+ *
+ * ⭐ **A subscription rather than a value, because the playhead moves sixteen times a second.** `playheadBus.ts` records the same
+ * decision for the studio: the position is published to whoever wants it and subscribers **move DOM nodes**; nothing re-renders. A host that passed a bar down as a prop each step would re-render this whole route, which is exactly the
+ * main-thread work the responsiveness fixes removed.
+ */
+export interface ArrangementTransport {
+  /** The state right now, so the first paint does not have to wait for the next step. */
+  read(): ArrangementTransportState;
+  /**
+   * Called on every step **and** whenever the transport starts or stops, with the state at that moment.
+   *
+   * The start/stop reports matter as much as the steps: a stop is the only signal that the position has returned to the top, and the running flag is what the transport buttons light up from. Returns its own unsubscribe.
+   */
+  subscribe(listener: (state: ArrangementTransportState) => void): () => void;
+}
+
 /** What playing an arrangement needs from outside — the engine's transport in the application, a fake in a criterion. */
 export interface ArrangementPlayer {
   /**
@@ -45,12 +76,21 @@ export interface ArrangementPlayer {
   /** A key release stops the voices that key started, and reports how many it stopped. */
   releaseNote?(input: { trackId?: string; midi: number }): number;
   /**
-   * Silence what `play` started and report how many voices were stopped.
+   * Silence what `play` started **and stop the engine's transport**, reporting how many voices were stopped.
    *
-   * Needed because the sampler's notes are started on the audio clock **outside** the engine's transport, so `AudioEngine.stop()` cannot reach them: without this, stopping the arrangement left a scheduled
-   * piano ringing over a stopped playhead, which is the kind of thing nobody can un-hear.
+   * The sampler's notes are started on the audio clock **outside** the engine's transport, so `AudioEngine.stop()` cannot reach them: without that half, stopping the arrangement left a scheduled piano ringing over a stopped
+   * playhead, which is the kind of thing nobody can un-hear.
+   *
+   * ⭐ **And the other half was missing, which is the bug this seam now carries a note about**: a stop that only spliced the sampler voices left the engine's own lanes sounding, so the button the owner pressed did nothing audible. A stop
+   * is one operation over both halves — the voices this player started *and* the transport it started them beside.
    */
   stop?(): number;
+  /**
+   * The transport's position and running state, when the engine has one to report.
+   *
+   * Optional like the rest of the seam: a player that cannot report a position still plays, it just cannot draw a moving playhead — and absent is how the view tells "no transport to follow" from "the transport is at bar one".
+   */
+  transport?: ArrangementTransport;
 }
 
 export interface PlayArrangementResult {
