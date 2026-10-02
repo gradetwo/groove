@@ -130,6 +130,55 @@ export function createSampleLoader(
     return pending;
   };
 
+  /**
+   * ⭐ **The expanded program, fetched once per asset rather than once per note.**
+   *
+   * `loadNote` used to fetch the SFZ, follow every `#include` and expand the file **on every call**, so an instrument
+   * was re-downloaded for each note it played. Measured on `render_audio {genreId:"bebop"}` — one bar, sixteen notes,
+   * three instruments — that was **99 of 106 requests** (17 program/include files and 82 library data files) and
+   * **21 of the 26.6 seconds** the render spent waiting on the network; the actual audio was seven `.wav` fetches
+   * totalling 7.67 MB. `karoryfer-meatbass:pizz-basic`'s program alone was fetched four times for four bass notes.
+   *
+   * The decode cache never covered this: it is keyed by **sample**, and a program is not a sample. So this is the
+   * second cache, keyed by **asset**, and it follows the same two rules the decode cache states — single-flight (the
+   * cache holds the *promise*, so two notes asking at once share one fetch) and **a failure is not cached** (a cache
+   * that remembers a transient 502 turns it into a permanent silent instrument).
+   *
+   * What it does not cache is `parseSfz`, which still runs per note on the same text. That is CPU rather than network
+   * and it is not the measured cost; caching parsed instruments would be a third thing, and this one is the one the
+   * number names.
+   */
+  const programs = new Map<string, Promise<{ text: string }>>();
+  const expandedProgram = (asset: SampleAsset & { sfz: NonNullable<SampleAsset["sfz"]> }): Promise<{ text: string }> => {
+    const cached = programs.get(asset.assetId);
+    if (cached) return cached;
+    const pending = (async () => {
+      let sfzText: string;
+      try {
+        sfzText = await fetchSfzText(asset.sfz.url);
+      } catch (primaryError) {
+        const fallback = asset.sfz.fallbackUrl;
+        if (!fallback) throw primaryError;
+        try {
+          sfzText = await fetchSfzText(fallback);
+        } catch (fallbackError) {
+          const reason = (error: unknown) => (error instanceof Error ? error.message : String(error));
+          const notes = [await transportNote(asset.sfz.url, probeTransport), await transportNote(fallback, probeTransport)];
+          throw new Error(
+            `${asset.assetId}: neither address served the SFZ — source ${asset.sfz.url}: ${reason(primaryError)}${notes[0] ?? ""}; ` +
+              `mirror ${fallback}: ${reason(fallbackError)}${notes[1] ?? ""}`
+          );
+        }
+      }
+      const programPath = asset.sfz.path;
+      const baseUrl = programPath ? asset.sfz.url.slice(0, asset.sfz.url.length - programPath.length) : asset.sfz.url;
+      return expandRemoteIncludes(sfzText, { fetchText: fetchSfzText, programUrl: programPath || asset.sfz.url, baseUrl });
+    })();
+    pending.catch(() => programs.delete(asset.assetId));
+    programs.set(asset.assetId, pending);
+    return pending;
+  };
+
   const api: SampleLoader = {
     load(assetId: string): Promise<AudioBuffer> {
       const cached = cache.get(assetId);
@@ -159,52 +208,12 @@ export function createSampleLoader(
       if (!asset.sfz) throw new Error(`sample "${assetId}" is not an instrument (it has no sfz), so a note cannot select a sample from it`);
 
       /**
-       * **The source first, the mirror only if the source does not answer** — the owner's decision, and the reason both addresses are carried in the catalogue.
-       *
-       * The trigger is **any failure**, not a 404: the two hosts fail differently (an upstream reorganisation answers 404, a misrouted mirror answers 403 or times out), and a rule that only
-       * recognised one of those would give up on the address that would have worked. What matters is that the instrument resolves, not which host served it.
-       *
-       * **And both failures are reported when both fail**, naming each address, because "the source is gone and the mirror is misrouted" and "the instrument does not exist anywhere" send a
-       * reader to different places.
+       * ⭐ **The program is fetched and expanded once per asset, through `expandedProgram` above** — this used to be
+       * inline here, which is what made every note re-download its instrument. The two-address rule, the include
+       * expansion and the diagnostics that name both hosts on failure all live there unchanged; what changed is that
+       * the second note of a piano chord no longer pays for them again.
        */
-      let sfzText: string;
-      try {
-        sfzText = await fetchSfzText(asset.sfz.url);
-      } catch (primaryError) {
-        const fallback = asset.sfz.fallbackUrl;
-        if (!fallback) throw primaryError;
-        try {
-          sfzText = await fetchSfzText(fallback);
-        } catch (fallbackError) {
-          const reason = (error: unknown) => (error instanceof Error ? error.message : String(error));
-          /**
-           * ⭐ **A transport failure is explained, because "Failed to fetch" is the one message with no information in it.**
-           *
-           * The SFZ path and the sample-bytes path both end here, and this is where the user's report stopped: two addresses named, both
-           * errors reading *"Failed to fetch"*, and no way to tell a missing object from a host that serves the object and refuses the
-           * origin. `transportNote` turns the second case into a stated cause — measured by re-requesting the same URL in `no-cors` mode —
-           * so the reply distinguishes "this object is not there" from "this host will not serve a page from another origin".
-           */
-          const notes = [await transportNote(asset.sfz.url, probeTransport), await transportNote(fallback, probeTransport)];
-          throw new Error(
-            `${asset.assetId}: neither address served the SFZ — source ${asset.sfz.url}: ${reason(primaryError)}${notes[0] ?? ""}; ` +
-              `mirror ${fallback}: ${reason(fallbackError)}${notes[1] ?? ""}`
-          );
-        }
-      }
-      /**
-       * **The program's includes have to be fetched before it can be parsed**, and this is the step that was missing: the entry file of a real library contains **zero `<region>` occurrences** and
-       * only `#include` directives, so handing its raw text to the resolver produced "defines no regions" — which reads as an empty library rather than an unexpanded one.
-       */
-            // The include paths are relative to the **library root**, which is the program's address with its own path removed — the same base the mirror uses, so both layouts agree.
-      const programPath = asset.sfz.path;
-      const baseUrl = programPath ? asset.sfz.url.slice(0, asset.sfz.url.length - programPath.length) : asset.sfz.url;
-      /**
-       * **The expander is given a plain path, not a URL.** It works by string arithmetic on paths — the directory of the including file, a root fallback — and `https://` contains a `//` that its
-       * arithmetic reads as a separator: passing the full URL produced candidates like `https:/raw.githubusercontent.com/…` with **one** slash, which then 404'd and looked exactly like a missing file.
-       * The address is therefore assembled **only at the moment of fetching**, and every path the expander sees stays plain.
-       */
-      const expanded = await expandRemoteIncludes(sfzText, { fetchText: fetchSfzText, programUrl: programPath || asset.sfz.url, baseUrl });
+      const expanded = await expandedProgram(asset as SampleAsset & { sfz: NonNullable<SampleAsset["sfz"]> });
       const resolution = resolveInstrumentNote(asset, expanded.text, note, options);
       if (!resolution.ok || !resolution.note) throw new Error(resolution.reason ?? `note ${note} could not be resolved for "${assetId}"`);
 
