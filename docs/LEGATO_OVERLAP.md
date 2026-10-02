@@ -338,4 +338,28 @@ at beat 48 = 24 s: 3 attacks before, 1 after
 | **实时那条路也接上 WAV 循环** | ✅ **已做（2026-10-03）**：`browserSampleDecoder` 在 `decodeAudioData` **夺走字节之前**读 `smpl` —— 字节本来就在它手里，所以这一步是**零额外请求**（比离线那条路的 `Range` 读更省）。于是实时两条 **lane** 路（`samplerSteps` 的 `scheduleSamplerSteps`、`audioLaneScheduler` → `browserSampleSink`）都拿到录音循环，判据在 `src/test/liveWaveLoop.test.ts`。⚠️ 还剩一处**不在本轮范围**：键盘**单音试听**（`playerFromEngine.ts` 里那次 `startSamplerNote`）**根本没有透传 `loopMode`** —— 这一条对 SFZ 循环同样成立，是与本改动无关的既有缺口。⚠️ 副作用因此回到全强度：`vsco2ce` 那 6 个 `UR1_*_pp_RR*` 钢琴样本在**实时**也会循环（文件名已钉在 `src/test/liveWaveLoop.test.ts` 的一条判据里） |
 | **`smpl` 之外出现别的循环来源**（如 FLAC 的 APPLICATION 块） | 本轮 7 个 freepats 库里 5 个只有 `.flac`（无 `smpl` 可读），裁定里"录音自带循环"的证据全来自 RIFF `smpl` |
 
+### 11.6 ⚠️ 实时落地后**仍然**存在的缺口：键盘单音试听连 `loopMode` 都不转发
+
+上表第 4 行说的"实时两条 lane 路"是**编曲与播放器**那两条。**在键盘上按一个音**那条路不一样：
+`src/audio/playerFromEngine.ts` 里 `play` 的
+
+```ts
+const voice = startSamplerNote({ context, destination, buffer: note.buffer, ratio: note.ratio, … });
+```
+
+**从头到尾没有传 `note.loopMode`**，也没有 `loopStartFrames`／`loopEndFrames`。
+
+**这条对本改动是"中性"的，而必须写清楚是哪一种中性：**
+
+* **不是本改动引入的** —— 它对 **SFZ 循环同样成立**：`karoryfer-meatbass` 写 `loop_mode=loop_sustain` 的那些 region，
+  在**离线导出**里循环、在**编曲播放**里循环（`samplerSteps.ts` 转发 `loopMode`），而在**单音试听**里不循环。
+  这处缺口在 WAV 循环之前就存在；本改动只是给它多了一种数据来源。
+* **也不是本轮该顺手修的** —— `src/audio/playerFromEngine.ts` **不在本轮改动范围内**（本轮只被划了
+  `src/audio/browserSampleGraph.ts`），而且修它是一个**独立的行为改变**（试听的声音会开始持续），
+  按"一次只解决一件事"应当有自己的一次改动、自己的判据（**松键时循环怎么退出**）和自己的听感裁定。
+
+**⇒ 下一件（可执行）**：在那处 `startSamplerNote` 调用里透传 `note.loopMode`／`loopStartFrames`／`loopEndFrames`，
+并确认 `samplerVoice.stop()` 的 `loop_sustain` 分支（"退出循环、播完尾音"）在**真实按键释放**上生效 ——
+判据要是"**按住的键上循环在走、松开的键上循环退出**"，而**不是**只看 `source.loop` 为真。
+
 ⭐ **一句话**：**循环的是录音，判断的是 voice；规则问"这一音要持续多久"，答案现在从"录音还剩多久"换成了"录音会不会回卷"。**
