@@ -87,7 +87,10 @@ export interface PercussionVoice {
   /**
    * VexFlow's notehead code, as the third `/`-separated piece of a key (`g/5/x2`). `x2` is the **filled x** a
    * cymbal or hat is written with, `X0`–`X3` being VexFlow's own `codeNoteHead` table; absent means an ordinary
-   * solid notehead, which is what a drum is written with.
+   * solid notehead, which is what a drum is written with — and that is exactly what makes a row without a code
+   * (36, 38, and the fallback) the only rows whose head is `U+E0A4` (`Glyphs.noteheadBlack`). So a trailing
+   * `U+E0A4` in a drum bar can only be a **voice-2** note, never a cymbal and never a library-invented filler:
+   * the measured dump and the library sources are in `docs/PERCUSSION_STAFF.md`.
    */
   notehead?: string;
   /** The written pitch under a percussion clef, as the spec's own `<display-step>`/`<display-octave>` pair. */
