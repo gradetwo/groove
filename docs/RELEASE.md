@@ -170,3 +170,19 @@ git log --format=%H -S'"version": "2.34.34"' -- package.json | tail -1
 **⚠️ 2026-10-01 起**：镜像退休，标签改在**本 checkout 的 HEAD** 上打、并从本仓推 `origin`（见 `scripts/release.sh` 的 `tag` 步与 `scripts/tag_release.sh`）。上面这段保留的是当时（2026-09-30）的做法，不是今天的做法。
 
 **留给下一次发布的教训**：发布脚本最后的自检是"标签的 `package.json` 是不是这个版本"——那个检查**通过了**，因为错的那个提交也带着这个版本。**检查"版本对不对"能抓到的只是标签写错版本，抓不到标签写错提交**；要抓后者，得检查标签的树是否包含这次发布的内容（或者像现在这样，直接以发布内容为标签目标）。
+
+## 新 checkout 需要什么才能部署（2026-10-03 补，**由一次真实失败换来** ✗✓）
+
+`deploy` 那一步失败过两次，各是一个原因，**都与代码无关**：
+
+1. **`EALLOWSCRIPTS`**：`npm 12` **禁止在项目级安装里传 `--allow-scripts`**，而 **wrangler 4.146 内部会传它** ⇒
+   **升 `wrangler` 到 4.147+ 即修** ✓（`package.json` 已改；判据：`node scripts/deploy.mjs --dry-run` 不再报该错 ✓）。
+2. **`wrangler.toml` 与凭据是**机器本地**的**：仓库**只追踪 `wrangler.toml.example`**（`.gitignore:63` 忽略真文件），
+   而它自己写着「**真文件写的是**你自己的 worker 名**，每个账号不同**」 ⇒ 新 checkout **必须**：
+   * `cp wrangler.toml.example wrangler.toml` ⇒ 把 `name` 改成**你账号里的 worker 名**；
+   * 认证二选一：**`CLOUDFLARE_API_TOKEN` 放进 `.env.deploy`**，或 `npx wrangler login` ✓。
+   **判据**：`npx wrangler whoami` 不再是 `You are not authenticated` ✓。
+
+**⇒ 而"除 Cloudflare 那一步之外全都对"是可以证明的** ✓✓：`--dry-run` 会先把这三条打出来
+——`dist matches package.json at v<version> ✓`／`covers payload: … artwork file(s), nothing else ✓`／
+`the built app starts: … ✓`——**然后才去碰 Cloudflare** ⇒ 所以 `--dry-run` 是**发布前的安全复现** ✓。

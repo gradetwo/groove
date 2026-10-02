@@ -2812,3 +2812,58 @@ sitar_lead 1 ｜ pluck_string 1 ｜ organ_lead 1 ｜ muted_trumpet 1 ｜ marimba
 
 **A、C 两线均已 commit ＋ rebase 到 `2e8b6ef`，并**按令押后推送**（C 早前一次 `push:dev` 被 non-fast-forward 拒、**没有任何东西落到 `dev`** ✓）；
 **⇒ 发布期间 `dev` 不会被动** ⇒ **`release.sh` 的"HEAD 推成 `dev`／`main`"不会撞车** ✓。
+
+## 九十一、调色板**不改动量的改前基线**（2026-10-03 ✓，**我自跑** ✓）
+
+**尖端上 22 行、涉及 15 个库、指向不存在的资产 ＝ **0 处**** ✓✓ ——**这是我为 C 那条改动量的反向判据基线**
+（**改后必须仍为 0、行数仍 22** ✓）；**C 的改动我另核了两层**：**表**（两行指向如声称）＋
+**引擎的资产解析**（`sampledAssetForLane({track_id,instrument})` 真返回新值 ✓✓），
+而它那条判据的注释正是这个区别的精确表述：**「A row that `sampledInstrumentFor` can find but
+`sampledAssetForLane` does not return is a mapping no lane plays.」** ✓
+
+## 九十二、"谁可达"的精确划分 ＋ ✗✓ **更正 §84.1 漏掉的一条路**（2026-10-03 ✓）
+
+### 92.1 精确划分 ✓
+
+**清单 34 条 ⇒ 由已发布内容可达 **16 条****（**15 条调色板行 ＋ 1 条鼓组常量
+`src/audio/drumRoles.ts:101 DRUM_KIT_ASSET_ID = "virtuosity-drums-basic"`** ✓）、
+**18 条不可达**（**17 个新库 ＋ `freepats-tubular-bells1`**）✓✓；
+**`virtuosity-drums-basic` 与 `freepats-tubular-bells1` 的差别**：**前者有路线（鼓组常量）**，
+**后者只在 `sampledInstruments.ts:178` 的 `because` 散文里被提到** ⇒ **是唯一"只在散文里存在"的条目** ✓。
+
+### 92.2 ✗✓ 而 §84.1 **漏了一条路**，由第四条研究线复核发现 ✓✓
+
+**§84.1 只列了四条路，漏掉了**应用里**本来就有**的资产选择器**：
+* **`src/views/NewProjectView.tsx:102-126`**：`/new` 挂载时 `appCatalogueRuntime.load()`，
+  把**目录里所有带 `sfz` 的资产**（`assets.filter(a => a.sfz)`）映射成 `instruments` 传给编排视图 ✓；
+* **`src/components/arrangement/TrackHeaderV2.tsx:84`**：**任何 `sampler` 轨的轨道头都有乐器 chip**（`canPlayInstrument` ✓）；
+* **`ArrangementViewV2.tsx:957`**：`track-add-${kind}` 遍历 `TRACK_KIND_ORDER`（含 **sampler**）⇒ **人能在 UI 里新建 sampler 轨** ✓；
+* 点开 chip ⇒ **`InstrumentLibraryV2`**（**左栏分类＋计数、中间二级分类、上方搜索框**，列的是**目录资产**）✓；
+* **`sampleAssetsFromManifest` 会产出 **327 个程序级资产 id****（34 条展开后）——**不是组件注释里写的 135** ✗✓。
+**⇒ 于是"不可达"的**准确含义**是：**「调色板／曲风路线不可达」，**不是**「人的 UI 完全不可达」** ✓✓ ——
+**人走 `/new` → 新建 sampler 轨 → 点乐器 chip，就能选到全部 327 个程序级资产** ✓。
+**两个仍然成立的限制** ✓：① **`VITE_SAMPLE_ROOT` 默认为空**（`sampleCatalogueRuntime.ts:123-125`）
+⇒ **不配镜像则列表为空、chip 不出现**；② **只有 `/new` 渲染 `ArrangementViewV2`**（`App.tsx:45-46,346`）
+⇒ **曲风／Studio 路线的轨道没有这个资产选择器**（那里的 picker 走的是**乐器名**，不是目录资产）✓。
+
+## 九十三、发布 2.34.38 的**两次**失败诊断（2026-10-03 ✓）
+
+### 93.1 第一次：`EALLOWSCRIPTS`（**已修** ✓✓）
+
+`npm 12` **禁止项目级安装传 `--allow-scripts`**，而 **wrangler 4.146 内部传它** ⇒ **升 `wrangler` 到 4.147.0** ✓
+（判据：`node scripts/deploy.mjs --dry-run` **不再报该错** ✓✓）。
+
+### 93.2 第二次：**`wrangler.toml` 与凭据是机器本地的**（**只能由业主提供** ✗）
+
+```
+仓库**只追踪 `wrangler.toml.example`**（412 B；`.gitignore:63` 忽略真文件），而它自己写着：
+   「真 `wrangler.toml` 是被 git 忽略的：**它写的是你自己的 worker 名**，每个账号不同」 ✓
+本机**没有** `.env`／`.env.deploy`／`.env.local`，且 **`npx wrangler whoami` ＝ "
+You are not authenticated"** ✗ ⇒ **⇒ 缺的是 **worker 名 ＋ 认证**** ✓
+```
+**⇒ 而"除 Cloudflare 那一步之外全都对"是**可证**的** ✓✓：`--dry-run` 先打印
+**`dist matches package.json at v2.34.38 ✓`**／**`covers payload: 160 artwork file(s), nothing else ✓`**／
+**`the built app starts ✓`**，**然后才碰 Cloudflare**；而 `full CI` **已绿** ✓。
+**⇒ 失败发生在 `deploy` ⇒ **什么都没发布**** ✓✓：**线上仍 2.34.37、`main` 仍 879fd9e、**tag v2.34.38 未打**** ✓
+（**即 `docs/RELEASE.md` 说的"可恢复的那种失败"**——脚本原话：「❌ stopping: nothing has been published as if this step succeeded」✓）。
+**⇒ 已补文档缺口**：`docs/RELEASE.md` 新增"新 checkout 需要什么才能部署"一节 ✓✓（**由这次失败换来**）。
