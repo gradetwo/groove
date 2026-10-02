@@ -3000,3 +3000,30 @@ You are not authenticated"** ✗ ⇒ **⇒ 缺的是 **worker 名 ＋ 认证****
 **⇒ 两套基线**：`d036619` 上 **16 可达／18 不可达**（15 行库 ＋ 鼓组常量）；`c19b416` 之后 **17 可达／17 不可达**（16 行库 ＋ 鼓组常量）✓。
 **⇒ §98 的结论与排序不受影响**（第 1 条仍是"把选择器对所有轨开放"）✓；**而这条更正本身也是它做的**（它对每条数字都留了"怎么复现" ✓）。
 **决定人：它提出、我核实** ✓；**依据**：先量后改 ＋ "同一个量必须写明时点"（§79）✓。
+
+## 一百、deploy preflight 的**次序**修好了：先说已通过什么、再说缺什么（2026-10-03 ✓，**决定人：我** ✓）
+
+### 100.1 事实与裁定 ✓
+
+**我上一轮加的那个 preflight（缺 `wrangler.toml` 就拒绝启动）被放在**全部本地检查之前**** ✗✓ ⇒
+**⇒ 后果**：**在没有配置的机器上，`--dry-run` 只会说"缺文件"，而**不再报那三条本地验证**** ——
+**而我在 `docs/RELEASE.md` 里写的正是"**dry-run 能证明**除 Cloudflare 之外的一切**"** ⇒ **那句话在**恰好最需要它的那种 checkout 上**变成假的** ✗。
+**⇒ 裁定**：**preflight 移到**本地检查之后、wrangler 之前**** ✓✓（**"失败要快"是对的；但"失败得快"不等于"失败时不说已经通过的部分"** ✓）。
+
+### 100.2 读数（**实跑 dryerun，不是论证 ✓**）
+
+```
+现在的 `node scripts/deploy.mjs --dry-run`（本机无配置）依次打印：
+  ✅ dist matches package.json at v2.34.38
+  ✅ covers payload: 160 artwork file(s), nothing else
+  ✅ the built app starts: a mounted root, "GROOVE LAB Studio New Chords Kick Design Explore Compare Cha…"
+  ❌ no wrangler configuration in this checkout — nothing was deployed. （＋ 三种文件名与 `cp` 命令 ✓）
+⇒ **⇒ §93.2 那句"dry-run 可证除 Cloudflare 外一切"重新成立** ✓✓
+```
+
+### 100.3 证红（**两条一起红，因为我写了两处断言、只改了一处** ✗✓）
+
+**把 preflight 挪回旧位置 ⇒ **两条判据红**** ✓✓ ——
+**我上一轮只改了"preflight 的位置"那条，漏了另一条关于**守卫退出位置**的同顺序断言**，
+**而报错恰好出现在那个本该被它保护的检查上** ⇒ **两处现在都写成正确顺序，并各自注明"上一版错在哪"** ✓。
+**依据**：先量后改（真实行为用 dry-run 量 ✓）；**同一件事有两处断言时，必须一起改** ✓。
