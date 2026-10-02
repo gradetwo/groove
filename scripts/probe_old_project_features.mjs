@@ -115,7 +115,9 @@ const openHub = async () => {
    * so a script that assumed the dialog stayed open failed at the next button it looked for. A probe has to reopen it
    * the way a person does.
    */
-  if ((await page.locator('[role="dialog"]').count()) > 0) return;
+  // ⭐ "Is the Hub open?" is asked of the Hub's own heading, not of "is any dialog open" — the app shows other
+  // dialogs and toasts, and treating one of those as the Hub is how this script skipped opening it.
+  if ((await page.locator("#project-hub-title").count()) > 0) return;
   /**
    * ⭐ **Reveal the tier, then press the button** — asked of the button's *visibility* rather than of the toggle's
    * `aria-pressed`, because the toolbar can fold the tier again on its own (loading a project re-renders it) and a
@@ -131,7 +133,7 @@ const openHub = async () => {
   }
   await hubButton.first().click();
   // ⭐ The dialog's own role, not its title text: `text=Project Hub` also matches a hidden `<option>` in the toolbar.
-  await page.waitForSelector('[role="dialog"]', { timeout: 15000 });
+  await page.waitForSelector("#project-hub-title", { timeout: 15000 });
   await page.waitForTimeout(400);
 };
 const closeHub = async () => {
@@ -146,7 +148,7 @@ try {
   await page.goto(`${base}/#/studio?genre=chicago-house`, { waitUntil: "domcontentloaded" });
   await page.waitForSelector('[data-testid="toolbar-advanced-toggle"]', { timeout: 30000 });
   await openHub();
-  await page.click('button[title="New Project"]');
+  await page.locator('button[title="New Project"]').first().click();
   await page.waitForTimeout(900);
   // ⭐ Creating a project closes the Hub, so it is reopened before the next thing a person would do in it.
   await openHub();
