@@ -3041,7 +3041,7 @@ You are not authenticated"** ✗ ⇒ **⇒ 缺的是 **worker 名 ＋ 认证****
 ```
 · `grep -rlE "Creative Commons|c\) by|kinwie@|licensed under" src/test/fixtures/` ⇒ **0 命中** ✓
   ⇒ **⇒ 本仓既有 fixtures 里**没有任何**带第三方版权头的文件**（惯例＝**合成夹具** ✓；
-    例：`src/test/waveSmplFixture.ts` 是**逐字节拼出来**的 WAV ✓）
+    例：`src/test/helpers/waveSmplFixture.ts` 是**逐字节拼出来**的 WAV ✓）
 · 而本仓的许可机制很完整：`src/data/libraryLicence.ts` 的接受集／**`unknown-mirrored`** 通道／条目必须带状态说明 ✓
 · **业主裁定**：NC 可接受；无声明可先镜像（**可随时撤下、原链优先**）；**明确禁止的才是致命** ✓
 ```
