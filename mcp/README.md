@@ -69,8 +69,9 @@ the parity probe has measured no stem. `render_instrument_note` renders one note
 a path with no Node-host implementation at all. Neither is half-supported: there is no flag to send.
 
 ⚠️ **The two hosts are not the same sound yet.** On the parity probe's fixture the Node host differs from the browser
-by 1.28 dB in band 6, 1.11 dB in band 3 and 1.774 LU of loudness; `docs/HEADLESS_CORE_PLAN.md` §8.9/§8.10 records the
-measurements, the named cause and the plan to converge. This entry exists so the path is available and labelled while
+by 1.03 dB in band 3, 1.04 dB in band 7 and 1.612 LU of loudness; `docs/HEADLESS_CORE_PLAN.md` §8.13 and §9.2 record
+the measurements, the cause that remains (the group bus still runs three host compressors, and the two hosts' own host
+nodes differ from each other) and the plan to converge. This entry exists so the path is available and labelled while
 that work is open — not because the gap is closed. The Node path is also outside the render budget and sends no
 progress notifications: both exist to reset and narrate a browser page, and there is none.
 

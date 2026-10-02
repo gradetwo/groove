@@ -14,8 +14,8 @@
  *
  * `options.headless` (see `mcp/render/headless.ts`) runs the *same* `renderPatternOffline`, worklets and GS-1 wasm
  * under `node-web-audio-api` with no browser at all. It is deliberately **off by default and honest about why**: the
- * parity probe measures the two hosts still differing by three sentences (1.28 dB band 6, 1.11 dB band 3, 1.774 LU),
- * recorded in `docs/HEADLESS_CORE_PLAN.md` §8.9. What the flag buys today is an entry — a deployment with no browser
+ * parity probe measures the two hosts still differing by three sentences (1.03 dB band 3, 1.04 dB band 7, 1.612 LU),
+ * recorded in `docs/HEADLESS_CORE_PLAN.md` §8.13. What the flag buys today is an entry — a deployment with no browser
  * can render and the caller is told which host produced the file — and what it is not is a claim that the two sounds
  * have converged. The branch never falls back: if the optional package is missing the call errors and says so.
  */
@@ -98,9 +98,10 @@ export interface RenderOptions {
    * Render on the **Node Web Audio host** instead of Vite + Chromium (`mcp/render/headless.ts`).
    *
    * Opt-in and explicit, because the two hosts are **not yet the same sound**: `scripts/probe_headless_parity.ts`
-   * measures them differing by 1.28 dB in band 6, 1.11 dB in band 3 and 1.774 LU of loudness on its own fixture, and
-   * `docs/HEADLESS_CORE_PLAN.md` §8.9/§8.10 names the kick channel strip's host compressor as the cause. The flag
-   * exists so a caller can *choose* that host — a deployment with no browser, or a cheaper cold start — while the
+   * measures them differing by 1.03 dB in band 3, 1.04 dB in band 7 and 1.612 LU of loudness on its own fixture, and
+   * `docs/HEADLESS_CORE_PLAN.md` §8.13 names the cause that remains: the group bus still runs three host
+   * compressors (`drumGlue`/`drumParallel`/`musicGlue`), and the two hosts' own host nodes differ from each other.
+   * The flag exists so a caller can *choose* that host — a deployment with no browser, or a cheaper cold start — while the
    * divergence is still open, and it is recorded rather than smoothed over.
    *
    * The branch does **not** fall back: a missing `node-web-audio-api` throws the message from

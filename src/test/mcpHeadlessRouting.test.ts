@@ -131,9 +131,9 @@ describe.each(HEADLESS_TOOLS)("%s's two engines", (name) => {
     expect(toolNamed(name).inputSchema.headless, "the parameter has to exist for the flag to be reachable").toBeDefined();
     const described = toolNamed(name).inputSchema.headless?.description ?? "";
     // The divergence is stated where the model reads it, and it points at the document rather than repeating it blindly.
-    expect(described).toContain("1.28 dB in band 6");
-    expect(described).toContain("1.11 dB in band 3");
-    expect(described).toContain("1.774 LU");
+    expect(described).toContain("1.03 dB in band 3");
+    expect(described).toContain("1.04 dB in band 7");
+    expect(described).toContain("1.612 LU");
     expect(described).toContain("docs/HEADLESS_CORE_PLAN.md");
     expect(described).toContain("never falls back");
     // The tool's own description has to mention the engine choice too, or `tools/list` shows a browser-only tool.

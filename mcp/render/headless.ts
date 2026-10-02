@@ -8,8 +8,8 @@
  * that a renderer *rewritten* in Node would be a second sound. That argument is about a rewrite, not about a second
  * **host**: `scripts/probe_headless_parity.ts` runs the app's own `renderPatternOffline` under
  * `node-web-audio-api@2.2.0` and measures the two hosts against each other. What they do **not** yet agree on is
- * recorded in `docs/HEADLESS_CORE_PLAN.md` §8.9/§8.10 — three red sentences, 1.28 dB in band 6, 1.11 dB in band 3 and
- * 1.774 LU of loudness — and this module exists to make that gap *available and labelled*, not to hide it.
+ * recorded in `docs/HEADLESS_CORE_PLAN.md` §8.13/§9.2 — three red sentences, 1.03 dB in band 3, 1.04 dB in band 7 and
+ * 1.612 LU of loudness — and this module exists to make that gap *available and labelled*, not to hide it.
  *
  * ## The one rule this module follows
  *

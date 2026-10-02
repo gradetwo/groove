@@ -117,9 +117,10 @@ export const PREVIEW_DEFAULT_CLAUSE = "Which is why render_preview_clip defaults
  *
  * * **which host, and how to get it** — `node-web-audio-api`, and that it works with the browser forbidden;
  * * **that the two hosts are not the same sound yet** — on the parity probe's own fixture (GS-1 on and off) they
- *   differ by 1.28 dB in band 6, 1.11 dB in band 3 and 1.774 LU of integrated loudness, and the named cause is
- *   `kick`'s channel-strip compressor (`src/audio/ChannelStripDsp.ts:188`), still a host node. A caller choosing an
- *   engine has to be able to read that **before** choosing, at `tools/list`, without opening a document;
+ *   differ by 1.03 dB in band 3, 1.04 dB in band 7 and 1.612 LU of integrated loudness, and the named cause is the
+ *   group bus: `drumGlue`, `drumParallel` and `musicGlue` in `src/audio/masterGraph.ts` are still host
+ *   `createDynamicsCompressor()` nodes, **and** the two hosts' own host nodes differ from each other. A caller
+ *   choosing an engine has to be able to read that **before** choosing, at `tools/list`, without opening a document;
  * * **`engine` in the reply** — so "which host rendered this" is read, never inferred;
  * * **never falls back** — a missing optional package errors and names it; the failure this line keeps meeting is a
  *   render that quietly used the other engine;
@@ -130,8 +131,8 @@ export const PREVIEW_DEFAULT_CLAUSE = "Which is why render_preview_clip defaults
 export function headlessParameterDescription(): string {
   return (
     "render through the **Node Web Audio host** (`node-web-audio-api`) instead of Vite + Chromium — no browser process, and it also works under GROOVE_MCP_NO_BROWSER=1. " +
-    "⚠️ **The two hosts are not identical yet.** On the parity probe's own fixture, measured against the browser render, the worst 13-band difference is **1.28 dB in band 6** (GS-1 on) and **1.11 dB in band 3** (GS-1 off), with a **1.774 LU** integrated-loudness gap; the named cause is the kick channel strip's host compressor (`src/audio/ChannelStripDsp.ts:188`), still a browser `createDynamicsCompressor()`. " +
-    "The numbers, the two substitutions already landed and the plan to converge are in **docs/HEADLESS_CORE_PLAN.md** (§8.9 and §8.10); the reply's `engine` field says which host actually rendered. " +
+    "⚠️ **The two hosts are not identical yet.** On the parity probe's own fixture, measured against the browser render, the worst 13-band difference is **1.03 dB in band 3** (GS-1 on) and **1.04 dB in band 7** (GS-1 off), with a **1.612 LU** integrated-loudness gap; the named cause is now the group bus — `drumGlue`, `drumParallel` and `musicGlue` in `src/audio/masterGraph.ts` are still host `createDynamicsCompressor()` nodes (their static makeup is calibrated at 6.0/18.2/4.9 dB) — **and** the two hosts' own host nodes differ from each other (the same sine at the same settings, 0.67 dB and growing with level), which is why rewiring alone has not converged. " +
+    "The numbers, the substitutions already landed and the plan to converge are in **docs/HEADLESS_CORE_PLAN.md** (§8.13 and §9.2); the reply's `engine` field says which host actually rendered. " +
     "**This never falls back**: if the optional package is missing the call errors and names it, rather than quietly rendering through Chromium. The server's render budget is **not** applied to this path (it resets a stuck page, and an in-process render has no page to reset), so a client that needs a ceiling owns it; this path is also **silent on progress** — a `progressToken` produces no notifications, because there is no page to start or poll."
   );
 }
