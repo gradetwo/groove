@@ -130,13 +130,51 @@ if (declared.length) {
   console.log("");
 }
 
+/**
+ * ⭐ **When a path is missing, say where the file actually is.**
+ *
+ * `docs/OPEN_WORK.md` §十六 records the shape every genuinely stale reference in `docs/` has: the basename is
+ * right and a directory prefix is missing. The check does not have to understand the sentence to be useful there --
+ * if a file with that name exists elsewhere, printing it turns "this does not exist" into a one-line fix, which is
+ * what the coordinator was doing by hand for several rounds.
+ *
+ * Built only when something is already broken, so the happy path walks nothing.
+ */
+const realPathsByBasename = (() => {
+  if (broken.length === 0) return new Map();
+  const index = new Map();
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })) {
+      if (entry.name === "node_modules") continue;
+      const rel = `${dir}/${entry.name}`;
+      if (entry.isDirectory()) walk(rel);
+      else index.set(entry.name, [...(index.get(entry.name) ?? []), rel]);
+    }
+  };
+  for (const top of ["src", "scripts", "public", ".github"]) {
+    try {
+      walk(top);
+    } catch {
+      /* a layout without this directory is not an error */
+    }
+  }
+  return index;
+})();
+
 if (broken.length === 0) {
   console.log("\u2705 Every file the docs claim exists does exist.");
 } else {
   console.log(`\u274C ${broken.length} reference(s) name something that does not exist:`);
   for (const b of broken) {
     const hint = b.looksPlanned ? "  (the line reads as a plan \u2014 declare it in PROPOSED if so)" : "";
-    console.log(`   ${b.doc}:${b.line}  ${b.rel}${hint}`);
+    /**
+     * ⭐ The useful half of the report: a missing path whose filename exists elsewhere almost always lost a
+     * directory prefix, so name the real file rather than leaving the reader to search for it.
+     */
+    const basename = b.rel.split("/").pop() ?? "";
+    const found = basename.includes(".") ? realPathsByBasename.get(basename) ?? [] : [];
+    const where = found.length > 0 ? `  ⭐ the same filename is at ${found.slice(0, 3).join(", ")}` : "";
+    console.log(`   ${b.doc}:${b.line}  ${b.rel}${hint}${where}`);
   }
   console.log(
     "\n   Fix the reference, or \u2014 if the document is describing something not built yet \u2014 add the\n" +
