@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createArrangementPlayer, type EngineAudioTap } from "../audio/playerFromEngine";
 import { compileArrangementToLanes, compileArrangementToPattern } from "../data/arrangementCompile";
+import { FakeAudioContext } from "./helpers/fakeAudio";
 import type { ArrangementV2 } from "../types/arrangementV2";
 import type { SequencerPattern } from "../types/genre";
 
@@ -84,30 +85,46 @@ describe("creating a player from an engine", () => {
  */
 describe("a loop wrap plans the sampler lanes again", () => {
   const withAssets = async () => ({
-    assets: [{ assetId: "virtuosity-drums-basic", name: "Drums", kind: "one-shot", sfz: { url: "sfz/drums.sfz" } } as never],
+    // An **absolute** program URL: a region's `sample=` is resolved against it, and a relative base is refused
+    // ("Invalid base URL"), which would make the voice probe below measure nothing.
+    assets: [{ assetId: "virtuosity-drums-basic", name: "Drums", kind: "one-shot", sfz: { url: "https://example.test/sfz/drums.sfz" } } as never],
   });
   const oneNote = { t1: [{ pitch: 48, startBeats: 0, lengthBeats: 1, velocity: 100 }] };
 
-  it("⭐ registers a transport handler and asks the loader again when it wraps", async () => {
+  it("⭐ registers a transport handler and starts the notes again when it wraps", async () => {
+    /**
+     * ⭐ **The probe is a voice, not a fetch.**
+     *
+     * This used to count `fetchSfzText` calls, on the stated assumption that "`loadNote` always asks for the text
+     * before it can resolve a region". That was true until the loader started caching the **expanded program per
+     * asset** (`sampleLoader.expandedProgram`, measured at 99 of 106 requests on a one-bar bebop render): a second
+     * pass over the same instrument no longer re-downloads it, so the call count would have stopped moving on a
+     * pass that planned and sounded its notes perfectly.
+     *
+     * Counting the buffer sources instead measures the thing the criterion is *about* — "the second pass is not
+     * silent" — and it cannot be satisfied by a fetch that happened for some other reason. `FakeAudioContext`
+     * already records every `createBufferSource()`, and `startSamplerNote` makes exactly one per voice.
+     */
     const tap = engine();
-    // The SFZ fetch is the probe: `loadNote` always asks for the text before it can resolve a region, so a second
-    // pass that never re-plans shows up as a call count that did not move.
+    const context = new FakeAudioContext();
+    (tap as { audioContext: BaseAudioContext }).audioContext = context as unknown as BaseAudioContext;
+    (tap as { musicDestination: AudioNode }).musicDestination = context.destination as unknown as AudioNode;
     const fetchSfzText = vi.fn(async () => "<region> sample=x.wav lokey=0 hikey=127");
-    const player = createArrangementPlayer({ engine: tap, loadCatalogue: withAssets, fetchSfzText });
+    const player = createArrangementPlayer({ engine: tap, loadCatalogue: withAssets, fetchSfzText, decode: async () => context.createBuffer(1, 448, 44100) as unknown as AudioBuffer });
 
     await player.play(playInput(arrangement, oneNote));
 
     expect(tap.onLoopWrap, "the transport was not asked to report its wraps").toBeTypeOf("function");
-    const attemptsAfterFirstPass = fetchSfzText.mock.calls.length;
+    const voicesAfterFirstPass = context.createdBufferSources.length;
 
     // The transport reports the wrap with the time the next pass begins; the player plans from that time.
     tap.onLoopWrap!(4);
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(
-      fetchSfzText.mock.calls.length,
-      "the second pass asked the loader nothing, so its notes would be silent"
-    ).toBeGreaterThan(attemptsAfterFirstPass);
+      context.createdBufferSources.length,
+      "the second pass started no voice, so its notes would be silent"
+    ).toBeGreaterThan(voicesAfterFirstPass);
   });
 
   it("registers nothing when there are no sampler lanes, because nothing needs re-planning", async () => {
