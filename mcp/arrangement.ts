@@ -53,6 +53,7 @@ import type { PlannedTake } from "../src/data/takePlanning";
 import { compileArrangementToSongInput, laneInstrumentForTrack, laneRoleForTrack } from "../src/data/arrangementCompile";
 import { resolveInstrumentPresetKey } from "../src/audio/instrumentPresets";
 import { SAMPLED_INSTRUMENT_SYNTHS, sampledAssetForLane, sampledInstrumentFor, sampledInstrumentGapReason } from "../src/data/sampledInstruments";
+import { placementForPart, placementForTrack, type SituationPlacement, type StringSituationSpec } from "../src/data/stringSituation";
 import { DEFAULT_SYNTH_PRESETS } from "../src/audio/PolySynth";
 import { stepsFromNotes, STEPS_PER_BEAT } from "../src/data/noteEvents";
 import { beatsPerBar } from "../src/data/genreExpression";
@@ -437,11 +438,27 @@ export function addMcpTrack(
    * `add_arrangement_track {kind:"synth", instrument:"piano_lead"}` sounds Salamander. Refused on a kind that is not a
    * synth, in the same spirit as `assetId`: a drum kit and an effect have no recorded identity to declare.
    */
-  instrument?: string
-): ArrangementEditResult {
+  instrument?: string,
+  /**
+   * ⭐ **What the music is doing, so the playing technique is chosen rather than named** — the same rule table the
+   * import uses, on a track that has no notes yet.
+   *
+   * `placementForTrack` resolves it to a `TrackV2.instrument` identity (`violin_section_pizzicato` →
+   * `vsco2ce:ViolinEnsPizz`) and reports which technique was chosen and whether it was a fallback. The register and
+   * length questions need notes, so they are named as still open in the reply rather than answered with a guess.
+   * Refused on a kind that is not a synth, like `instrument`, and the situation wins over a name given at the same
+   * time — with the conflict reported.
+   */
+  situation?: StringSituationSpec
+): ArrangementEditResult & { situation?: SituationPlacement } {
   if (instrument !== undefined && kind !== "synth") {
     throw new Error(
       `instrument was given for a ${kind} track, and only a synth track declares one — a ${kind} track's sound is its own (a sampler names an assetId; a drum kit and an effect have no recorded instrument to declare)`
+    );
+  }
+  if (situation !== undefined && kind !== "synth") {
+    throw new Error(
+      `a situation was given for a ${kind} track, and only a synth track can be named by playing technique — the chosen identity is a track instrument name, which a ${kind} track has not got (a sampler names an assetId directly)`
     );
   }
   if (assetId !== undefined && kind !== "sampler") {
@@ -451,8 +468,24 @@ export function addMcpTrack(
         `; call add_arrangement_track again with kind:"sampler" and this assetId`
     );
   }
-  return edit(arrangementId, (arrangement) => {
-    const added = addTrack(arrangement, kind, name ?? defaultTrackName(kind), instrument === undefined ? {} : { instrument });
+  /**
+   * ⭐ **The situation is resolved before the track exists**, so a request no row can serve is refused with a reason
+   * rather than creating an anonymous synth that claims a technique it is not playing.
+   */
+  const placement = situation === undefined ? undefined : placementForTrack(situation);
+  const problems = [...(placement?.problems ?? [])];
+  if (placement && !placement.instrument) {
+    const refused = placement.refused ?? `no program serves the situation "${situation!.situation}" on ${situation!.instrument}`;
+    throw new Error(`${refused}; nothing was created`);
+  }
+  if (placement?.instrument && instrument !== undefined) {
+    problems.push(
+      `both instrument "${instrument}" and the situation "${situation!.situation}" were given; the situation was applied, so the track is "${placement.instrument}" (${placement.assetId}) and the name was not`
+    );
+  }
+  const chosen = placement?.instrument ?? instrument;
+  const result = edit(arrangementId, (arrangement) => {
+    const added = addTrack(arrangement, kind, name ?? defaultTrackName(kind), chosen === undefined ? {} : { instrument: chosen });
     /**
      * ⭐ **The caller gets the track, not the starter notes it was born with** — the same rule as `createMcpArrangement`.
      * `addTrack` seeds a kind's default pattern for the app's starter experience; here the track arrives empty, and the
@@ -466,6 +499,11 @@ export function addMcpTrack(
     const withAsset = assetId === undefined ? added : setTrackSample(added, newTrackId, assetId);
     return { ...withAsset, notesByTrack };
   });
+  return {
+    ...result,
+    problems: [...result.problems, ...problems],
+    ...(placement ? { situation: placement } : {}),
+  };
 }
 
 function defaultTrackName(kind: TrackKindV2): string {
@@ -753,12 +791,29 @@ export interface ImportMcpMusicXmlOptions {
    * So identity arrives from the caller — who knows what they imported — or not at all.
    */
   instruments?: Record<number, string>;
+  /**
+   * ⭐ **What each imported part is *doing*, so the playing technique is chosen rather than named.**
+   *
+   * Keyed by part index for the same reason `instruments` is. Each entry names the **string instrument** the part is
+   * (`violin`, `viola`, `cello`, `contrabass`, `solo-violin`) and the **musical situation** (`sustained-bed`,
+   * `short-repeating`, `plucked-walking`, `tension-tremolo`, …). `placementForPart` then runs the rule table over the
+   * part's own notes and returns the `TrackV2.instrument` identity that plays the chosen recording — so a caller who
+   * says "this is a plucked walking line" gets `contrabass_solo_pizzicato` → `vsco2ce:ContrabassPizz` without knowing
+   * either name, and a caller who asks for `spiccato` is told that its bytes are not mirrored and that `pizzicato`
+   * played instead.
+   *
+   * A part given **both** a name and a situation: the situation is applied and the name is reported as not applied.
+   * If the situation cannot serve the part (wrong register, no playable technique), the name stands and the refusal is
+   * in `problems`.
+   */
+  situations?: Record<number, StringSituationSpec>;
 }
 
 export function importMcpMusicXml(arrangementId: string, xml: string, options: ImportMcpMusicXmlOptions = {}): ArrangementEditResult & {
   problems?: string[];
   notes?: number;
   trackIds?: string[];
+  situations?: SituationPlacement[];
 } {
   return addImportedParts(arrangementId, fromMusicXml(xml), options);
 }
@@ -769,7 +824,7 @@ export function importMcpMusicXml(arrangementId: string, xml: string, options: I
  * The bytes are decided by their content rather than by a name the caller supplies, and the answer says which it was, so "I imported a zip" and "I imported XML" are different things a caller can see. The decode is base64 because MCP arguments are JSON, and JSON has no bytes.
  */
 export async function importMcpMusicXmlBytes(arrangementId: string, bytesBase64: string, options: ImportMcpMusicXmlOptions = {}): Promise<
-  ArrangementEditResult & { problems?: string[]; notes?: number; trackIds?: string[]; format?: string }
+  ArrangementEditResult & { problems?: string[]; notes?: number; trackIds?: string[]; format?: string; situations?: SituationPlacement[] }
 > {
   const bytes = Buffer.from(bytesBase64, "base64");
   if (bytes.length === 0) throw new Error("the file's bytes are empty — `bytesBase64` must be the base64 of the .mxl (or .musicxml) file itself");
@@ -856,7 +911,7 @@ export function importMcpMidi(
   arrangementId: string,
   bytesBase64: string,
   options: ImportMcpMusicXmlOptions = {}
-): ArrangementEditResult & { problems?: string[]; notes?: number; trackIds?: string[]; tempoBpm?: number; timeSignature?: string; format?: number; pitchPlan?: ReturnType<typeof midiPitchPlan> } {
+): ArrangementEditResult & { problems?: string[]; notes?: number; trackIds?: string[]; tempoBpm?: number; timeSignature?: string; format?: number; pitchPlan?: ReturnType<typeof midiPitchPlan>; situations?: SituationPlacement[] } {
   const bytes = Buffer.from(bytesBase64, "base64");
   if (bytes.length === 0) {
     throw new Error("the file's bytes are empty — `bytesBase64` must be the base64 of the .mid file");
@@ -894,7 +949,7 @@ export function importMcpLogicProject(
   projectDataBase64: string,
   metaDataBase64: string,
   options: ImportMcpMusicXmlOptions = {}
-): ArrangementEditResult & { problems?: string[]; notes?: number; trackIds?: string[]; tempoBpm?: number; timeSignature?: string } {
+): ArrangementEditResult & { problems?: string[]; notes?: number; trackIds?: string[]; tempoBpm?: number; timeSignature?: string; situations?: SituationPlacement[] } {
   const imported = fromLogicProjectBase64({ projectDataBase64, metaDataBase64 });
   return {
     ...addImportedParts(arrangementId, imported, options),
@@ -916,7 +971,7 @@ function addImportedParts(
    */
   imported: { parts: ImportedPart[]; problems: string[] },
   options: ImportMcpMusicXmlOptions
-): ArrangementEditResult & { problems?: string[]; notes?: number; trackIds?: string[] } {
+): ArrangementEditResult & { problems?: string[]; notes?: number; trackIds?: string[]; situations?: SituationPlacement[] } {
   const selection = options.partIndex ?? 0;
   const chosen = selection === "all" ? imported.parts.map((part, index) => ({ part, index })) : imported.parts.map((part, index) => ({ part, index })).filter((candidate) => candidate.index === selection);
   if (chosen.length === 0) {
@@ -976,6 +1031,55 @@ function addImportedParts(
     resolvedInstruments.set(candidate.index, wanted);
   }
 
+  /**
+   * ⭐ **The situations, resolved on the same road and with the same rule: report before writing.**
+   *
+   * A situation is the caller's *musical* statement, so it is resolved against the part's own notes (register, length,
+   * velocity) and its answer — the `TrackV2.instrument` identity that reaches the chosen recording — replaces whatever
+   * name the part had. The reading travels back in `situations` rather than being summarised away, so the caller can
+   * see which technique was chosen, whether it was the first choice, and what a fallback fell from.
+   *
+   * The tempo is the arrangement's own, because the length verdict is a question about seconds: reading it from a
+   * hardcoded 120 would report a verdict the renderer would not produce.
+   */
+  const situations = options.situations ?? {};
+  const placements: SituationPlacement[] = [];
+  for (const index of Object.keys(situations).map(Number)) {
+    const spec = situations[index];
+    if (!spec) continue;
+    if (!Number.isInteger(index) || index < 0 || index >= imported.parts.length) {
+      problems.push(
+        `a situation was given for part ${Number.isFinite(index) ? index + 1 : "(not a number)"}, and the file has ${imported.parts.length} part(s)` +
+          ` (${imported.parts.map((part, at) => `${at + 1} "${part.name}"`).join(", ") || "none"}), so nothing was given that situation`
+      );
+      continue;
+    }
+    const part = imported.parts[index]!;
+    const placement = placementForPart(spec, part.notes, getMcpArrangement(arrangementId)?.bpm ?? 120);
+    placements.push(placement);
+    problems.push(...placement.problems);
+    if (placement.instrument) {
+      /**
+       * ⭐ **The situation wins over a name, and the conflict is said out loud.**
+       *
+       * They are two answers to one question, and the situation is the more specific one — a playing technique on a
+       * stated instrument — so applying the name instead would leave the feature "reachable and never applied", the
+       * shape Muse keeps reporting. Either way the caller is told that one of the two was not used.
+       */
+      if (instruments[index] !== undefined) {
+        problems.push(
+          `part ${index + 1} "${part.name}" was given both the instrument "${instruments[index]}" and the situation "${spec.situation}"; ` +
+            `the situation was applied, so the track is "${placement.instrument}" (${placement.assetId}) and the name was not`
+        );
+      }
+      resolvedInstruments.set(index, placement.instrument);
+    } else if (instruments[index] !== undefined) {
+      problems.push(
+        `part ${index + 1} "${part.name}" was given the situation "${spec.situation}", which could not serve it, so the named instrument "${instruments[index]}" stands`
+      );
+    }
+  }
+
   const result = edit(arrangementId, (current: ArrangementV2) => {
     let next = current;
     for (const candidate of withNotes) {
@@ -993,7 +1097,13 @@ function addImportedParts(
   });
   // Guarded because `slice(-0)` is `slice(0)`, which is the whole list: an import that added no track would otherwise report every track it did not add.
   const trackIds = withNotes.length === 0 ? [] : result.summary.tracks.slice(-withNotes.length).map((track) => track.id);
-  return { ...result, problems, notes: withNotes.reduce((sum, candidate) => sum + candidate.part.notes.length, 0), trackIds };
+  return {
+    ...result,
+    problems,
+    notes: withNotes.reduce((sum, candidate) => sum + candidate.part.notes.length, 0),
+    trackIds,
+    ...(placements.length ? { situations: placements } : {}),
+  };
 }
 
 /** ⭐ The arrangement's tempo in beats per minute. It reached the engine as a hardcoded 120 until this existed. */

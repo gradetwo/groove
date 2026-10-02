@@ -384,7 +384,78 @@ kind:"synth" + instrument:"warm_pad"      → (无采样，保持合成器 ← �
 
 ---
 
-## 12. 判不了 / 未核实
+## 12. ⭐⭐ 追加四：**情形真的决定演奏法，而且落到了真采样轨身份上**（2026-10-03）
+
+> 起因：§7／§11 那条边界。当时选出来的 `assetId` **无处安放**——导入路径停在
+> `addTrack(next, "synth", …)`，每个 part 仍是匿名合成器。桥（`TrackV2.instrument` ＋
+> `src/data/sampledInstruments.ts`）已经落地，这一节把**规则表接到桥上**。
+
+### 12.1 §28：行业怎么做"按音乐情形选演奏法"，照哪条做
+
+| 系统 | 出处 | 机制（原文摘） | 查到？ |
+| --- | --- | --- | --- |
+| **Cubase Expression Maps** | [Groups](https://archive.steinberg.help/cubase_pro/v11/en/cubase_nuendo/topics/expression_maps/expression_maps_groups_c.html) / [Articulations Section](https://archive.steinberg.help/cubase_pro/v11/en/cubase_nuendo/topics/expression_maps/expression_maps_articulations_editing_r.html)（Steinberg 官方手册） | 每个 articulation 的 **Type** 是 *Attribute*（"only single notes are influenced"）或 *Direction*（"valid from its insertion position until the next articulation start"）；同一 **Group** 互斥（"You can place articulations that cannot be combined, such as **arco (bowed) and pizzicato (plucked)** for violin in the same group"），且 **Group 1 优先级最高**——"This is useful if an expression map does not find an exact match for your data and tries to identify the sound which matches most criteria" | ✓ |
+| **Kontakt** | [KONTAKT 8.6 User Guide（官方 PDF，本地 `pdftotext` 读）](https://www.native-instruments.com/fileadmin/ni_media/downloads/manuals/kontakt/Kontakt_8_6_User_Guide_English.pdf) | 演奏法是 **Group Start Options** 的条件，不是播放器自己判的：*Start on Key* = "This condition lets you define keyswitches"；*Start on Controller* = "The Group will come active when Kontakt receives a MIDI controller within a specific range"；*Cycle Round Robin* = "eliminates the dreaded 'machine gun effect'" | ✓ |
+| **Spitfire UACC** | [What is UACC and how do I use it?](https://support.spitfireaudio.com/en/articles/11816123-what-is-uacc-and-how-do-i-use-it)（官方帮助页） | "a standardised way of switching articulations … you can change to a particular articulation by setting **MIDI CC#32** to a corresponding value"，并且它自己写明限制：**"you can only select one articulation at a time so cannot layer articulations"**（要叠层得用 keyswitch 或 UACC KS） | ✓ |
+| **Vienna（Dimension／smart switching）** | — | 官方 `vsl.co.at`／`vsl.info` 手册页正文由 JS 渲染，抓取只得到空壳；搜索只得到第三方页面 | **未找到**权威可引用正文 |
+
+**照哪条做**：照 **Cubase Expression Maps 的 Group 模型**。理由：它是三条里唯一把"**优先级 + 互斥 + 找不到精确匹配时退到最接近的**"写成正式语义的——
+而这正是本仓库已有的形状：`STRING_SITUATION_RULES[].preferred` 就是那个**互斥优先级组**（`sustain` 与 `pizzicato` 不可能同时演一个音），
+`chooseTechnique` 的顺序查找就是"matches most criteria"，而 `rejected` 把**为什么退**记下来。
+UACC 的"一次只能选一个、不能叠层"给这条加了旁证：**回落必须是换一个奏法并说出来，不能偷偷叠两层**。
+Kontakt 那条说明"演奏法的判定在库脚本／上层，不在播放器"——所以判定写在本仓库的 `src/data/stringSituation.ts` 里是对的。
+
+### 12.2 接线：改了什么，落在哪
+
+| 位置 | 改了什么 |
+| --- | --- |
+| `src/data/stringTechniques.ts` | 新增 `instrumentIdentityFor`（`<乐器>_<奏法>`，如 `violin_section_pizzicato`）、`programForIdentity`、`STRING_INSTRUMENT_IDS`；`chooseTechnique` 的 `note` 改为**可选**（没有音就没有音域声明，不猜一个音高） |
+| `src/data/sampledInstruments.ts` | 新增 `SAMPLED_TECHNIQUE_INSTRUMENTS`（**从奏法表派生**，8 行镜像行各一个身份名）、`ALL_SAMPLED_INSTRUMENTS`；`sampledInstrumentFor` 改查合并表 —— 于是身份名走的是**已落地的那条链**，没有第二条 |
+| `src/data/stringSituation.ts` | **新增**。`placementForPart`（有音符：算音域／长度／力度，返回要写的身份名）、`placementForTrack`（没音符：只选奏法，并声明音域／长度"未检查"） |
+| `src/data/arrangementImport.ts` | `arrangementWithImportedParts` 新增可选 `situations?: Record<partIndex, {instrument, situation}>`；建轨前先解析，返回 `situations` 读数 |
+| `mcp/arrangement.ts` | `ImportMcpMusicXmlOptions.situations`；`addImportedParts` 同一条路；`addMcpTrack` 新增 `situation` 入参；四处 import 的返回类型加 `situations` |
+| `mcp/registry.ts` | 四个导入工具（`import_arrangement_midi`／`musicxml`／`musicxml_file`／`import_logic_project`）新增 `situations` 入参（enum 由 `STRING_INSTRUMENT_IDS`／`STRING_SITUATION_IDS` 派生），`add_arrangement_track` 新增 `situation` |
+| `src/test/stringSituation.test.ts` | **新增**判据：四种情形各一次真读回 ＋ 回落说明 ＋ 长度 fits／exceeds ＋ 力度选层 ＋ 两个导入路径 |
+
+**身份举例（真读数）**：`sustained-bed` ＋ violin → `violin_section_sustain` → `vsco2ce:ViolinEnsSusVib`；
+`short-repeating` ＋ violin → `violin_section_pizzicato` → `vsco2ce:ViolinEnsPizz`；
+`plucked-walking` ＋ contrabass → `contrabass_solo_pizzicato` → `vsco2ce:ContrabassPizz`。
+判据不只停在解析器：它把身份名写成一条 `kind:"synth"` 轨，走 `compileArrangementToLanes`，再读**编译后 lane 的 `sample.assetId`** ——
+"轨道声明了、实际还是预设"这种失败过不了。
+
+### 12.3 每种情形的真读回（`placementForPart`，120 bpm）
+
+| 情形 | 乐器／输入 | 选了哪个 | 首选？ | 回落说明 | 身份 → assetId |
+| --- | --- | --- | --- | --- | --- |
+| 持续铺底 `sustained-bed` | violin，20 个和弦 × 3 音、每音 8.5 beats、velocity 50、音高 57–69（业主件形状） | `sustain` | ✓ 首选 | 无 | `violin_section_sustain` → `vsco2ce:ViolinEnsSusVib` |
+| 短促重复 `short-repeating` | violin，16 个 0.25-beat 音、velocity 96 | `pizzicato` | ✗ **回落** | **"spiccato was asked for first and its bytes are not in the mirror"** | `violin_section_pizzicato` → `vsco2ce:ViolinEnsPizz` |
+| 拨弦走动 `plucked-walking` | contrabass，音高 **24–60** | `pizzicato` | ✓ 首选 | 无；`range.situationRange = [24,60]`，`outside = 0` | `contrabass_solo_pizzicato` → `vsco2ce:ContrabassPizz` |
+| 同上（**音域生效的反例**） | viola，音高 55–74 | **不选** | — | "the situation lives in MIDI 24–60, and this part's compass is 55–74 … split the part at the register boundary, or name the instrument directly" | （无） |
+| 震音／紧张 `tension-tremolo` | cello，三个 8-beat 音 | `sustain` | ✗ **回落** | **"tremolo was asked for first and its bytes are not in the mirror"**，且明说这不是紧张 | `cello_section_sustain` → `vsco2ce:CelloEnsSusVib` |
+| 重音 `accent-attack` | violin，一个 velocity 127 的音 | `pizzicato` | ✓ 首选 | 无（velocity 加不出起音，拨弦提供起音） | `violin_section_pizzicato` → `vsco2ce:ViolinEnsPizz` |
+
+⇒ **`spiccato`／`tremolo` 的回落是真回落、真上报**：`rejected` 里是 `{technique, reason:"not-mirrored"}`，
+`problems` 里是一句能直接读给人听的解释（"你要 spiccato，退到了 pizzicato，因为 spiccato 的字节不在镜像里"）。
+
+### 12.4 长度：一个 `fits`、一个 `exceeds`（各带输出）
+
+| | 输入 | 输出 |
+| --- | --- | --- |
+| **fits** | violin `sustained-bed`，一个 8.5-beat 音（120 bpm ＝ **4.25 s**） | `fits`，`headroomSeconds = 4.738`（4.25 s ≤ 8.988 s）；`problems = []`；句："length **fits** — the longest note is 4.25 s, inside the program's shortest sample by 4.738 s" |
+| **exceeds** | cello `tension-tremolo`，一个 30-beat 音（120 bpm ＝ **15 s**） | `exceeds`，`maxSampleSeconds = 12.747`；句："…the note will stop early. **three next steps, each with its cost**: (1) `truncate` … (2) `switch-technique` … (3) `retrigger` …"——三条代价逐条来自 `LENGTH_REMEDIES`，判据逐条断言 |
+
+⚠️ **不承诺无限延音**：VSCO 的 sustained 弦乐是一次性录音、无循环点（§3 已量：75 程序 0 处 `loop`、镜像 `.wav` 0 个 `smpl`），
+所以 `exceeds` 的答案只有"换奏法／截短／错开叠层"三条，没有"让它一直响"这一条。
+
+### 12.5 力度＝选层（不是塑形）
+
+`ViolinEnsSusVib` 两层：velocity `40` 与 `62` 落在**同一层** `[0,62]`（同一份录音、同一增益），`63` 进入 `[63,127]`。
+读数报 `{layers: 2, used: [0,1], atEdge: 2}`，并且**不写、不缩放任何 velocity**：导入路径的判据断言 50／50／50 原样落到轨上。
+⇒ 一条 velocity 渐变在这份素材上只多出**一层**；要更多层次只能换 program（`-Quiet` 那组未镜像）。
+
+---
+
+## 13. 判不了 / 未核实
 
 
 

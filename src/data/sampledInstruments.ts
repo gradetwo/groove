@@ -36,6 +36,7 @@
  *    one instrument at one pitch; {@link SAMPLED_ROLES} says so in code.
  */
 import type { SampleAsset } from "./sampleCatalogue";
+import { instrumentIdentityFor, playableTechniques } from "./stringTechniques";
 
 /**
  * One row: a genre data instrument name, the catalogue asset that serves it, and why.
@@ -119,6 +120,46 @@ export const SAMPLED_INSTRUMENTS: readonly SampledInstrumentChoice[] = [
 ];
 
 /**
+ * ⭐ **The string techniques, as instrument identities** — the rows that let a chosen *playing technique* reach a track.
+ *
+ * ## Why this table is derived rather than hand-written
+ *
+ * `src/data/stringTechniques.ts` is the one place that measures what the pinned string library can play and which
+ * program plays it. The bridge that landed resolves a track's `instrument` name through this file to a catalogue
+ * recording, so a technique selection needs a name **here**; writing those names out by hand would be a second copy
+ * of a mapping that already exists, and the first time a row's `assetId` was corrected the two would disagree — the
+ * "two places, one thing" failure this file's own doc comment refuses.
+ *
+ * So the rows are **derived from the technique table's mirrored rows, in its own order**: eight playable rows today
+ * (sustain and pizzicato on violin, viola, cello and contrabass), named `violin_section_sustain`,
+ * `violin_section_pizzicato`, … , `contrabass_solo_pizzicato`. An unmirrored technique gets no row at all, because a
+ * name that resolves to a recording the mirror does not hold would be a promise this table cannot keep — which is the
+ * same rule the hand-written half follows for a mapped-but-absent asset.
+ *
+ * `strings_lead` above is still the violin section sustained; the derived `violin_section_sustain` is the same
+ * recording under the name a caller reaches by **technique** instead of by genre role.
+ */
+export const SAMPLED_TECHNIQUE_INSTRUMENTS: readonly SampledInstrumentChoice[] = playableTechniques().map((program) => ({
+  instrument: instrumentIdentityFor(program),
+  assetId: program.assetId,
+  because: `the ${program.technique} row of src/data/stringTechniques.ts — ${program.name} (${program.program}), measured there against the pinned library. ${
+    program.note
+  }`,
+}));
+
+/**
+ * **Every name this table resolves** — the hand-written genre names and the derived technique identities.
+ *
+ * The lookup is built from this list rather than from {@link SAMPLED_INSTRUMENTS} alone, so a caller can name a playing
+ * technique (`violin_section_pizzicato`) and a genre role (`strings_lead`) with the same exact-match rule and reach
+ * the recording either way.
+ */
+export const ALL_SAMPLED_INSTRUMENTS: readonly SampledInstrumentChoice[] = [
+  ...SAMPLED_INSTRUMENTS,
+  ...SAMPLED_TECHNIQUE_INSTRUMENTS,
+];
+
+/**
  * **The names a composer would expect a recording for and the catalogue cannot serve** — the gaps, as data.
  *
  * Kept apart from {@link SAMPLED_INSTRUMENT_SYNTHS} on purpose, and the split is the whole point: a *gap* is a real
@@ -187,7 +228,7 @@ export function sampledInstrumentFor(instrument: string | undefined): SampledIns
   if (typeof instrument !== "string") return undefined;
   const wanted = instrument.trim();
   if (!wanted) return undefined;
-  return SAMPLED_INSTRUMENTS.find((choice) => choice.instrument === wanted);
+  return ALL_SAMPLED_INSTRUMENTS.find((choice) => choice.instrument === wanted);
 }
 
 /**

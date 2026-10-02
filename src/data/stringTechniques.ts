@@ -601,6 +601,46 @@ export function playableTechniques(): StringTechniqueProgram[] {
 }
 
 /**
+ * ⭐ **The instrument identity a chosen program is declared by — the name that goes on `TrackV2.instrument`.**
+ *
+ * ## Why a technique needs a name of its own
+ *
+ * The owner's report was that the chosen `assetId` had nowhere to go, and the bridge that landed
+ * (`TrackV2.instrument` + `src/data/sampledInstruments.ts`) resolves a **written instrument name** to a catalogue
+ * recording. So a chosen technique has to *have* a name, and the name has to be one the recorded-instrument table
+ * maps — otherwise the track falls back to the built-in preset and the selection is lost in exactly the silent way
+ * this line exists to prevent.
+ *
+ * The name is **derived** rather than hand-written beside each row, so a new technique row cannot be added without
+ * an identity: `violin` + `pizzicato` → `violin_section_pizzicato`, `contrabass` + `sustain` →
+ * `contrabass_solo_sustain`. The instrument half keeps the word the table's own `name` uses — the violin, viola and
+ * cello rows are **sections**, and the contrabass row is **solo** (upstream has no contrabass section) — so the
+ * identity says the same thing the row does instead of flattening the two.
+ *
+ * `strings_lead` in `sampledInstruments.ts` is unchanged and still means the violin section sustained: this is a
+ * **second** name for the same recording, for a caller that chooses by playing technique rather than by genre role.
+ */
+const IDENTITY_PREFIX: Record<StringInstrument, string> = {
+  violin: "violin_section",
+  viola: "viola_section",
+  cello: "cello_section",
+  contrabass: "contrabass_solo",
+  "solo-violin": "solo_violin",
+};
+
+/** The `TrackV2.instrument` name for a program — `<instrument>_<technique>`, e.g. `violin_section_pizzicato`. */
+export function instrumentIdentityFor(program: Pick<StringTechniqueProgram, "instrument" | "technique">): string {
+  // A hyphen separates words in `non-vibrato`, and an underscore is what the rest of these names use.
+  return `${IDENTITY_PREFIX[program.instrument]}_${program.technique.replace(/-/g, "_")}`;
+}
+
+/** The program a `TrackV2.instrument` identity names, or `undefined` for a name this table does not claim. */
+export function programForIdentity(identity: string): StringTechniqueProgram | undefined {
+  const wanted = identity.trim();
+  return STRING_TECHNIQUES.find((program) => instrumentIdentityFor(program) === wanted);
+}
+
+/**
  * The techniques the pinned library has a program for but the mirror does not ship.
  *
  * Named as a function rather than left implicit, because this list is the answer to "为什么够不到" and it should
@@ -1007,6 +1047,17 @@ export function ruleFor(situation: StringSituation): StringSituationRule | undef
   return STRING_SITUATION_RULES.find((rule) => rule.situation === situation);
 }
 
+/**
+ * ⭐ **Every string instrument the table has a row for, in the table's own order** — the list an input schema's
+ * `enum` is built from.
+ *
+ * Derived rather than restated, for the same reason {@link STRING_SITUATION_IDS} is: a tool that offers these words
+ * cannot drift from the table that answers them. `solo-violin` is here although none of its rows is mirrored — the
+ * caller can still ask, and the answer is a refusal that names the reason rather than a schema error that pretends
+ * the instrument does not exist.
+ */
+export const STRING_INSTRUMENT_IDS: readonly StringInstrument[] = [...new Set(STRING_TECHNIQUES.map((program) => program.instrument))];
+
 /** Why a choice came out the way it did — one entry per preference that was considered, so a fallback is visible. */
 export interface TechniqueRejection {
   technique: StringTechnique;
@@ -1048,8 +1099,14 @@ export interface TechniqueChoice {
 export function chooseTechnique(input: {
   instrument: StringInstrument;
   situation: StringSituation;
-  /** The note's pitch, so range coverage is checked rather than assumed. */
-  note: number;
+  /**
+   * The note's pitch, so range coverage is checked rather than assumed.
+   *
+   * **Omissible**, and the omission is meaningful: a caller that has no note yet (`add_arrangement_track` runs before
+   * anything is written) cannot have coverage checked, so the range test is skipped and the answer is a technique
+   * without a register claim. Passing a guessed pitch would turn "not checked" into a confident wrong answer.
+   */
+  note?: number;
   /** Beats held, for the length verdict. Omit to skip the check. */
   lengthBeats?: number;
   /** Tempo, required for the length verdict to mean anything. */
@@ -1065,7 +1122,7 @@ export function chooseTechnique(input: {
    * about the program. "Walking" is a low line, so a note in the viola's register is not that situation at all, and
    * answering it with a viola pizzicato would be the name-matching this table replaces — one level up.
    */
-  if (rule.range && (input.note < rule.range[0] || input.note > rule.range[1])) {
+  if (rule.range && input.note !== undefined && (input.note < rule.range[0] || input.note > rule.range[1])) {
     return { instrument: input.instrument, situation: input.situation, rejected, firstChoice: false };
   }
   for (let index = 0; index < rule.preferred.length; index += 1) {
@@ -1079,7 +1136,7 @@ export function chooseTechnique(input: {
       rejected.push({ technique, reason: "not-mirrored" });
       continue;
     }
-    if (input.note < program.lowestNote || input.note > program.highestNote) {
+    if (input.note !== undefined && (input.note < program.lowestNote || input.note > program.highestNote)) {
       rejected.push({ technique, reason: "out-of-range" });
       continue;
     }

@@ -20,7 +20,7 @@ import {
   type StringSituation,
   type StringTechnique,
 } from "../src/data/stringTechniques";
-import { SAMPLED_INSTRUMENTS } from "../src/data/sampledInstruments";
+import { ALL_SAMPLED_INSTRUMENTS } from "../src/data/sampledInstruments";
 
 const MANIFEST_PATH = "public/samples/manifest.json";
 
@@ -118,6 +118,12 @@ export interface InstrumentList {
    * It is the same list the renderer and the live engine consult, so a caller can ask for a recording **by name**
    * (`add_arrangement_track {kind:"synth", instrument:"piano_lead"}`) instead of by asset id, and can see the judgement
    * behind each row (`because`) rather than reverse-engineering it.
+   *
+   * ⭐ **It carries the string techniques too.** The eight playable rows of `src/data/stringTechniques.ts` are derived
+   * into this list under their identity names (`violin_section_sustain`, `violin_section_pizzicato`, …,
+   * `contrabass_solo_pizzicato`), so a technique `chooseTechnique` selects has a name that reaches the recording. A
+   * technique whose bytes are not mirrored is deliberately **absent** — naming it would promise a recording the mirror
+   * does not hold.
    */
   mappedInstruments: Array<{ instrument: string; assetId: string; because: string }>;
   /** Where the bytes are served from, empty when no root is configured. */
@@ -246,7 +252,7 @@ export function listCatalogueInstruments({
    * than discovered at render time: the table is a promise about what a name sounds like, and a mirror that cannot keep
    * it should say so where someone is choosing an instrument rather than where they are listening for one.
    */
-  const mappedInstruments = SAMPLED_INSTRUMENTS.map((choice) => ({ ...choice }));
+  const mappedInstruments = ALL_SAMPLED_INSTRUMENTS.map((choice) => ({ ...choice }));
   const knownIds = new Set(all.map((instrument) => instrument.assetId));
   for (const choice of mappedInstruments) {
     if (knownIds.has(choice.assetId)) continue;

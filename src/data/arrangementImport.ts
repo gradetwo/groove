@@ -24,6 +24,7 @@ import type { GrooveProjectPackage } from "../types/project";
 import type { SequencerPattern, SequencerTrack } from "../types/genre";
 import type { ImportedPart } from "./musicxmlImport";
 import { addTrack } from "./arrangementEdits";
+import { placementForPart, type SituationPlacement, type StringSituationSpec } from "./stringSituation";
 import { projectSongToV2 } from "./arrangementProjection";
 import { notesFromLane } from "./noteLayer";
 import { beatsPerBar, sortNotes, STEPS_PER_BEAT } from "./noteEvents";
@@ -37,6 +38,12 @@ export interface ArrangementImportResult {
   notes: number;
   /** Everything the reader could not carry, said rather than dropped in silence. */
   problems: string[];
+  /**
+   * ⭐ **One reading per part that was given a situation** — which technique was chosen, which recording it lands on, and
+   * the length/velocity/register evidence. Present only when a caller asked by situation, so an import that named no
+   * situation has the reply shape it always had.
+   */
+  situations?: SituationPlacement[];
 }
 
 /**
@@ -53,28 +60,75 @@ export interface ArrangementImportResult {
  * before — so this adds a way to name identity without deciding anything on a caller's behalf. Reading it off
  * `part.name` is refused on purpose; see `ImportMcpMusicXmlOptions.instruments`.
  *
- * **The file picker still cannot fill this in**, and that is stated rather than implied: `importMidiIntoArrangement`
+ * ⭐ **`situations` is the other half: the caller says what the music is doing, and the technique is chosen.** For a
+ * part with one, `placementForPart` runs the rule table (`chooseTechnique`) over that part's own notes and returns the
+ * **name to write on the track** — so a "short repeating" part plays `vsco2ce:ViolinEnsPizz` rather than being left a
+ * synthesiser with the chosen `assetId` unused, which was the owner's report. The reading travels back with the
+ * result: the chosen technique, whether it was the first choice, what a fallback fell from, the register, the length
+ * verdict and the velocity layers.
+ *
+ * **When a part is given both a name and a situation**, one has to win and it is said which: the situation is applied
+ * (it is the more specific statement — a playing technique on an instrument), and the name is reported as not applied.
+ * If the situation itself cannot serve the part, the explicit name stands and the refusal is in `problems`.
+ *
+ * **The file picker still cannot fill either in**, and that is stated rather than implied: `importMidiIntoArrangement`
  * has no UI that asks a person which instrument each part is, so today only a programmatic caller can name one. The
  * data layer is no longer the blocker; the entry point is.
  */
 export function arrangementWithImportedParts(
   arrangement: ArrangementV2,
   imported: { parts: readonly ImportedPart[]; problems?: readonly string[] },
-  options: { instruments?: Record<number, string> } = {}
+  options: { instruments?: Record<number, string>; situations?: Record<number, StringSituationSpec> } = {}
 ): ArrangementImportResult {
   const problems = [...(imported.problems ?? [])];
   const instruments = options.instruments ?? {};
+  const situations = options.situations ?? {};
+  const resolved: Record<number, string> = { ...instruments };
+  const readings: SituationPlacement[] = [];
+  const bpm = arrangement.bpm ?? 120;
   const withNotes: Array<{ part: ImportedPart; index: number }> = [];
   imported.parts.forEach((part, index) => {
     if (part.notes.length > 0) withNotes.push({ part, index });
     else problems.push(`part ${index + 1} "${part.name}" holds no notes and was not added as a track`);
   });
 
+  /**
+   * The situations are resolved **before any track is created**, for the same reason the names are: a choice that
+   * cannot be served should be reported rather than written onto a track and forgotten.
+   */
+  for (const index of Object.keys(situations).map(Number)) {
+    const spec = situations[index];
+    const part = imported.parts[index];
+    if (!spec || !Number.isInteger(index) || index < 0 || index >= imported.parts.length) {
+      problems.push(
+        `a situation was given for part ${Number.isFinite(index) ? index + 1 : "(not a number)"}, and the file has ${imported.parts.length} part(s)` +
+          ` (${imported.parts.map((candidate, at) => `${at + 1} "${candidate.name}"`).join(", ") || "none"}), so nothing was given that situation`
+      );
+      continue;
+    }
+    const placement = placementForPart(spec, part.notes, bpm);
+    readings.push(placement);
+    problems.push(...placement.problems);
+    if (placement.instrument) {
+      if (instruments[index] !== undefined) {
+        problems.push(
+          `part ${index + 1} "${part.name}" was given both the instrument "${instruments[index]}" and the situation "${spec.situation}"; ` +
+            `the situation was applied, so the track is "${placement.instrument}" (${placement.assetId}) and the name was not`
+        );
+      }
+      resolved[index] = placement.instrument;
+    } else if (instruments[index] !== undefined) {
+      problems.push(
+        `part ${index + 1} "${part.name}" was given the situation "${spec.situation}", which could not serve it, so the named instrument "${instruments[index]}" stands`
+      );
+    }
+  }
+
   let next = arrangement;
   const trackIds: string[] = [];
   let notes = 0;
   for (const { part, index } of withNotes) {
-    const instrument = instruments[index];
+    const instrument = resolved[index];
     const withTrack = addTrack(next, "synth", part.name.slice(0, 40) || "Imported", instrument === undefined ? {} : { instrument });
     const trackId = withTrack.tracks[withTrack.tracks.length - 1]!.id;
     /**
@@ -87,7 +141,14 @@ export function arrangementWithImportedParts(
     notes += part.notes.length;
   }
 
-  return { arrangement: next, trackIds, tracks: trackIds.length, notes, problems };
+  return {
+    arrangement: next,
+    trackIds,
+    tracks: trackIds.length,
+    notes,
+    problems,
+    ...(readings.length ? { situations: readings } : {}),
+  };
 }
 
 /**

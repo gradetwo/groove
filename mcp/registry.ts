@@ -10,7 +10,14 @@ import { legatoGapNote, legatoGapsFor } from "../src/data/legatoGaps";
  * `list_arrangement_instruments` offers `situation` as an enum, and a hand-written enum beside a hand-written table
  * is two lists to keep in step — the failure this file's own header warns about. So the enum *is* the table's list.
  */
-import { STRING_SITUATION_IDS, chordChangeReattackNote, chordChangeReattacks, type StringSituation } from "../src/data/stringTechniques";
+import {
+  STRING_INSTRUMENT_IDS,
+  STRING_SITUATION_IDS,
+  chordChangeReattackNote,
+  chordChangeReattacks,
+  type StringInstrument,
+  type StringSituation,
+} from "../src/data/stringTechniques";
 /**
  * The MCP surface, declared once.
  *
@@ -388,6 +395,49 @@ function instrumentsByPart(value: unknown): Record<number, string> | undefined {
   return Object.keys(byPart).length === 0 ? undefined : byPart;
 }
 
+/**
+ * ⭐ **The `situations` argument, declared once** — the same wire shape on every import tool, so a caller that learns
+ * it on `import_arrangement_midi` can use it on the MusicXML and Logic tools unchanged.
+ */
+const situationsArgument = z
+  .array(
+    z.object({
+      partIndex: z.number().int().min(0),
+      instrument: z.enum(STRING_INSTRUMENT_IDS).describe("the string instrument this part is"),
+      situation: z.enum(STRING_SITUATION_IDS).describe("what the music is doing — a sustained bed, a legato line, short repeating notes, a plucked walking line, tremolo tension, an accent"),
+    })
+  )
+  .optional()
+  .describe(
+    'the musical situation each part is, by part index: `[{partIndex:2, instrument:"contrabass", situation:"plucked-walking"}]`. The playing technique is then **chosen** by the written rule table and the chosen recording is put on the created track — so a caller does not have to know that a pluck is `Pizz` in one library and `pizz` in another, or that `spiccato` has no mirrored bytes and falls back to `pizzicato`. The reply carries the reading per part under `situations`: the technique, the asset, whether it was the first choice, what a fallback fell from, the register, the note-length verdict and the velocity layers. A part given both this and `instruments` has the situation applied, and the conflict is reported'
+  );
+
+/**
+ * ⭐ **The wire shape of `situations`, turned into the keyed record the importer takes** — the same two shapes and the
+ * same reason as {@link instrumentsByPart}, because it is the same question asked the other way round: `instruments`
+ * says *what the part is*, `situations` says *what it is doing* and lets the rule table pick the technique.
+ *
+ * An entry whose instrument or situation is not one the table names is dropped here rather than carried down; the
+ * schema's own `enum` refuses it first, and a value that still arrives from a client that ignores schemas is better
+ * reported by the importer's own index check than turned into a technique nobody chose.
+ */
+function situationsByPart(
+  value: unknown
+): Record<number, { instrument: StringInstrument; situation: StringSituation }> | undefined {
+  if (!Array.isArray(value) || value.length === 0) return undefined;
+  const byPart: Record<number, { instrument: StringInstrument; situation: StringSituation }> = {};
+  for (const entry of value as Array<{ partIndex?: unknown; instrument?: unknown; situation?: unknown }>) {
+    const index = Number(entry?.partIndex);
+    const instrument = entry?.instrument;
+    const situation = entry?.situation;
+    if (!Number.isInteger(index) || index < 0) continue;
+    if (!STRING_INSTRUMENT_IDS.includes(instrument as StringInstrument)) continue;
+    if (!STRING_SITUATION_IDS.includes(situation as StringSituation)) continue;
+    byPart[index] = { instrument: instrument as StringInstrument, situation: situation as StringSituation };
+  }
+  return Object.keys(byPart).length === 0 ? undefined : byPart;
+}
+
 export interface ToolDefinition {
   name: string;
   title: string;
@@ -659,7 +709,24 @@ export const TOOLS: ToolDefinition[] = [
         .string()
         .optional()
         .describe(
-          'kind:"synth" only — the instrument this track declares, e.g. "piano_lead", "walking_upright", "strings_lead". The names the recorded-instrument table maps are listed by list_arrangement_instruments under `mappedInstruments`; a mapped name plays that catalogue recording, an unmapped one keeps the built-in preset'
+          'kind:"synth" only — the instrument this track declares, e.g. "piano_lead", "walking_upright", "strings_lead". The names the recorded-instrument table maps are listed by list_arrangement_instruments under `mappedInstruments`; a mapped name plays that catalogue recording, an unmapped one keeps the built-in preset. That list now also carries the string techniques as names (`violin_section_pizzicato`, `contrabass_solo_sustain`, …)'
+        ),
+      /**
+       * ⭐ **The musical way to ask for a recording: say what the music is doing, and the technique follows.**
+       *
+       * `src/data/stringTechniques.ts` writes down which playing technique serves which musical situation, and
+       * `placementForTrack` resolves the answer to a `TrackV2.instrument` identity the recorded-instrument table maps.
+       * The register and length questions need the notes, so they are named as still open; a part imported with the
+       * same situation has them answered (see `situations` on the import tools).
+       */
+      situation: z
+        .object({
+          instrument: z.enum(STRING_INSTRUMENT_IDS).describe("the string instrument this track is"),
+          situation: z.enum(STRING_SITUATION_IDS).describe("what the music is doing — a sustained bed, a short repeating figure, a plucked walking line, tremolo tension, an accent"),
+        })
+        .optional()
+        .describe(
+          'kind:"synth" only — the playing technique is chosen from what the music is doing rather than named: `{instrument:"violin", situation:"short-repeating"}` asks for spiccato, gets pizzicato because spiccato\'s bytes are not mirrored, and says so. The registers and note lengths are read when notes exist (the import tools take the same object and answer them)'
         ),
     },
     handler: (args) => {
@@ -669,7 +736,8 @@ export const TOOLS: ToolDefinition[] = [
           args.kind as never,
           args.name as string | undefined,
           args.assetId as string | undefined,
-          args.instrument as string | undefined
+          args.instrument as string | undefined,
+          args.situation as { instrument: StringInstrument; situation: StringSituation } | undefined
         );
       } catch (error) {
         return failure((error as Error).message);
@@ -875,11 +943,13 @@ export const TOOLS: ToolDefinition[] = [
         .union([z.number().int().min(0), z.literal("all")])
         .optional()
         .describe('which part to read; the first unless said otherwise, or "all" for one track per part'),
+      situations: situationsArgument,
     },
     handler: (args) => {
       try {
         return importMcpMusicXml(String(args.arrangementId), String(args.xml), {
           ...(args.partIndex === undefined ? {} : { partIndex: args.partIndex as number | "all" }),
+          ...(situationsByPart(args.situations) === undefined ? {} : { situations: situationsByPart(args.situations)! }),
         });
       } catch (error) {
         return failure((error as Error).message);
@@ -899,11 +969,13 @@ export const TOOLS: ToolDefinition[] = [
         .union([z.number().int().min(0), z.literal("all")])
         .optional()
         .describe('which part to read; the first unless said otherwise, or "all" for one track per part'),
+      situations: situationsArgument,
     },
     handler: async (args) => {
       try {
         return await importMcpMusicXmlBytes(String(args.arrangementId), String(args.bytesBase64), {
           ...(args.partIndex === undefined ? {} : { partIndex: args.partIndex as number | "all" }),
+          ...(situationsByPart(args.situations) === undefined ? {} : { situations: situationsByPart(args.situations)! }),
         });
       } catch (error) {
         return failure((error as Error).message);
@@ -929,12 +1001,14 @@ export const TOOLS: ToolDefinition[] = [
         .describe(
           'the instrument each part is, by part index: `[{partIndex:1, instrument:"strings_lead"}]`. The names are the genre instrument names the recordings are keyed by — strings_lead, piano_lead, walking_upright, flute_lead, trumpet_lead and the rest that list_arrangement_instruments names. A name no recording or built-in voice serves is reported in `problems` and the track keeps its synthesiser'
         ),
+      situations: situationsArgument,
     },
     handler: (args) => {
       try {
         return importMcpMidi(String(args.arrangementId), String(args.bytesBase64), {
           ...(args.partIndex === undefined ? {} : { partIndex: args.partIndex as number | "all" }),
           ...(instrumentsByPart(args.instruments) === undefined ? {} : { instruments: instrumentsByPart(args.instruments)! }),
+          ...(situationsByPart(args.situations) === undefined ? {} : { situations: situationsByPart(args.situations)! }),
         });
       } catch (error) {
         return failure((error as Error).message);
@@ -955,11 +1029,13 @@ export const TOOLS: ToolDefinition[] = [
         .union([z.number().int().min(0), z.literal("all")])
         .optional()
         .describe('which part to read; the first unless said otherwise, or "all" for one track per part'),
+      situations: situationsArgument,
     },
     handler: (args) => {
       try {
         return importMcpLogicProject(String(args.arrangementId), String(args.projectDataBase64), String(args.metaDataBase64), {
           ...(args.partIndex === undefined ? {} : { partIndex: args.partIndex as number | "all" }),
+          ...(situationsByPart(args.situations) === undefined ? {} : { situations: situationsByPart(args.situations)! }),
         });
       } catch (error) {
         return failure((error as Error).message);
