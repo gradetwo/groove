@@ -47,7 +47,31 @@ function reductionDb(levelDb, thresholdDb, kneeDb, ratio) {
 class GlueCompressorProcessor extends AudioWorkletProcessor {
   constructor(options) {
     super();
-    const settings = (options && options.processorOptions) || {};
+    this.samplesProcessed = 0;
+    this.holdUntil = 0;
+    this.reduction = 0;
+    this.applySettings((options && options.processorOptions) || {});
+    /**
+     * ⭐ **Settings can be changed after construction, because a channel strip rebuilds its chain.**
+     *
+     * The bus asks for one setting at construction and never changes it, which is why `processorOptions` alone was
+     * enough. A channel strip does not work that way: it rebuilds its insert chain whenever its parameters change
+     * (`src/audio/ChannelStripDsp.ts`), so a compressor that could only be configured once would go stale the
+     * first time anyone moved a knob. Assigning `onmessage` also starts the port, so no explicit `start()` call is
+     * needed — and a node that is never sent a message behaves exactly as it did before.
+     */
+    this.port.onmessage = (event) => {
+      if (event && event.data) this.applySettings(event.data);
+    };
+  }
+
+  /**
+   * **One definition of what a settings object means** — the constructor and every later message both land here.
+   *
+   * Written as a method rather than repeated in `onmessage` for the reason this file's header already gives about
+   * staying in sync with `GlueCompressor.ts`: two copies of a curve are how the two drift apart.
+   */
+  applySettings(settings) {
     const finite = (value, fallback) => (Number.isFinite(value) ? value : fallback);
     this.thresholdDb = finite(settings.thresholdDb, THRESHOLD_DB);
     this.kneeDb = Math.max(0, finite(settings.kneeDb, KNEE_DB));
@@ -55,14 +79,12 @@ class GlueCompressorProcessor extends AudioWorkletProcessor {
     const attackSec = Math.max(0, finite(settings.attackSec, ATTACK_SEC));
     const releaseSec = Math.max(0, finite(settings.releaseSec, RELEASE_SEC));
     this.makeupGain = Math.pow(10, finite(settings.makeupDb, 0) / 20);
+    // `sampleRate` is the worklet global scope's own rate, so a message that omits it keeps the context's rate.
     this.sampleRateHz = Math.max(1, finite(settings.sampleRate, sampleRate));
     this.attackCoefficient = attackSec <= 0 ? 1 : 1 - Math.exp(-1 / (attackSec * this.sampleRateHz));
     this.releaseCoefficient = releaseSec <= 0 ? 1 : 1 - Math.exp(-1 / (releaseSec * this.sampleRateHz));
     // Release hold, mirrors `GLUE_COMP_HOLD_MS` in `src/audio/GlueCompressor.ts`.
     this.holdSamples = Math.round((Math.max(0, finite(settings.holdMs, HOLD_MS)) / 1000) * this.sampleRateHz);
-    this.samplesProcessed = 0;
-    this.holdUntil = 0;
-    this.reduction = 0;
   }
 
   process(inputs, outputs) {
