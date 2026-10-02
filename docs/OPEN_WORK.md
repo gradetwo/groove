@@ -1519,3 +1519,40 @@ Part 2 按价值密度：弦乐演奏法 0.50 → VSCO 其余管弦 0.89 → 一
 | **① 音源** | **11/13 已落 `dev` 且绿 ✓✓**；**真鼓组已落 ✓**；**Part 2（弦乐演奏法／管弦／世界／鼓组／键盘 ≈2.90 GB）已钉给采购线 ✓**；**剩两条按裁定保持缺口 ✓** |
 | **② 弦乐** | **演奏法表／规则／情形→演奏法→真采样身份 ✓；"重叠≠连奏"钉在 beat 48 ✓；`spiccato`／`tremolo` 的回落如实说明 ✓** |
 | **③ 功能缺口** | **持久化 ✓／命名 ✓／顶栏名 ✓／假 Ctrl+Z ✓／Score 崩溃 ✓／暂停其实是停止 ✓**；**剩：撤销/重做（在写 ✓）、导入导出 UI 入口 ✗、打击乐谱面 ✗、`HelpCenterModal` 那行 ✗** |
+
+## 四十、**Part 1 采购的实账、许可台账、与扫描出来的三个真缺陷**（2026-10-02 ✓）
+
+### 40.1 ⭐ 体积实账：**5 GB 预算的第一次真实读数** ✓✓
+
+```
+Part 1 实际新增：**3189 个文件 / 1 504 008 796 字节 ＝ 1.504 GB（1.40 GiB）** ⇒ **5 GB 用了 30%，剩 3.496 GB** ✓
+清单总量：**10431 文件 / 6 489 005 887 字节 ＝ 6.489 GB**
+⭐ 桶 `rclone size :s3:groove` 读到 `{"count":10431,"bytes":6489005887}` ⇒ **与清单逐字节闭合** ✓✓
+```
+**与计划书 ≈1.93 GB 的差异**（**它逐项说清了 ✓**）：**少买了 `slap_bass`（482 MiB，禁买 ✗）＋ 铜管换成更省的 SSO（154 MB 而非 VPO 整包 603 MB ✓）＋ `pan_flute` 没买到 ＋ rhodes 买了母库（16.8 MB、5 力度层 ✓）** ⇒ **⇒ 1.93 GB 是"全买到"的估价，实际 1.504 GB 更省 ✓**。
+**真读回** ✓：**11 个新库各抽 2 个对象（SFZ ＋ 采样）HEAD 200 且 `content-length` 与清单相符 ✓**；**另对 `sonatina-brass/.../trumpets-sus-e3.wav` 取回 `sha256` 前 16 位与清单相同 ✓✓**。
+
+### 40.2 许可台账（**逐库出处 ＋ 署名 ✓**）与**接受集的放宽** ✓✓
+
+**新增 11 条**：**Freepats 六条全 CC0-1.0 ✓／`discord-gm-sitar` CC0（**SFZ 文件头与 readme 两处一致、无母库冲突 ✓**）／`jlearman-jrhodes3c` **CC BY-NC-SA 4.0**（**"NC: Only noncommercial use" ✓——正是业主裁定的 MIT＋非商业使其可用 ✓**）／`sonatina-brass` **CC Sampling Plus 1.0** ✓／`karoryfer-black-and-blue-basses` CC0-1.0 ✓**。
+**`src/data/libraryLicence.ts` 新增**（**理由写在文件里 ✓**）：`CC-BY-NC-4.0`／`CC-BY-NC-SA-4.0`／`CC-BY-NC-SA-3.0`／**`CC Sampling Plus 1.0`**／`Unlicense`／**`unknown-mirrored`**（**那是**状态而非许可**：条目强制带"未找到声明 ＋ 原始链接 ＋ 即删一句" ✓✓**）；**`requiresAttribution` 扩到"任何 CC-BY* ＋ CC Sampling Plus ＋ unknown-mirrored" ✓**。
+
+### 40.3 ⭐⭐ 扫描（而非假设）查出的**三个真缺陷** ✓✓✓
+
+**工具 `scripts/scan_sample_opcodes.mjs` 用的是本仓自己的 `expandIncludes` ＋ `parseSfz`** ✓（**不是第二套正则 ✓**），**结果逐行进各条目的 `needs`** ✓：
+1. **音名当键位** ✗✓：**`pitch_keycenter=c2`／`lokey=e3` 被读成数字 ⇒ `lokey/hikey` 回落 0–127 ⇒ **每个 region 覆盖每个音、整台琴都响第一个 region** ✗** ⇒ **已实现 `noteNumber()`**（**八度约定**量自 Sonatina 自己的 `e2 = pitch_keycenter=40` ⇒ `c4`=60 ✓✓**）＋ 判据；
+2. **`programsFrom` 从整条路径切" - 奏法"** ✗✓：**Sonatina 的 `Brass - Notation/` 目录名里的 `" - "` 把 **89 个程序塌成 1 个****（**154 MB 的库只暴露 1 件 ✗**）⇒ 已修（**先分目录/文件名再切 ✓**）；**实测只影响 `sonatina-brass`（1→89），其余六个条目程序表**逐个比对完全不变 ✓✓**；
+3. **`mirrorPlan.resolveSamplePath` 不归一化 `\`** ✗：**规划出的文件与加载器取的不是同一个**（**Karoryfer／Sonatina 都写 `..\Samples\` ✓**）⇒ 已修 ＋ 判据。
+（**另一条 `<master>` 作用域**：**`dev` 同时落了更完整的一版（还修了 virtuosity 那 752 个 region 的组残留 ✓）⇒ rebase 时保留 theirs ✓**，它只补了"四块 `<master>` 形状"的判据 ✓。）
+**并逐个核对"引用的每个采样都在清单里"⇒ 去掉 65 个程序** ✓（**Karoryfer 的 `maps|controls` 是 include 不是乐器 ✓；Sonatina solo 程序**上游大小写不匹配**（写 `Samples/horn/` 而目录是 `Samples/Horn` ✓）**）⇒ **去掉后 karoryfer 11/11、sitar 2/2、sonatina 48/48 全部 0 缺失 ✓✓**。
+
+### 40.4 ⚠️ 两个仍缺口的**精确**阻塞（**其中一个要业主 ✓**）
+
+* **`slap_bass`** ✗✓：**唯一像样的库原文禁止本用途**——**"You are not allowed to use this product in a sampling library or in a related product"** ⇒ **那是"禁止我们这种用法"，**不是 NC 条款** ⇒ **非商业放宽救不了它** ✓✓**；且无 CC0／CC-BY 的 slap 贝斯 ✓；
+* **`pan_flute`** ⚠️：**唯一许可干净的来源（Polyphone「Pan Flute」，public domain）在**注册墙后**且是 SF2** ✗（**替它注册账号不是我能做/应做的事 ✓**）；**而 Discord GM 的替代品实测是 `//dummy` ＋ `sample=*sine`、一个采样都没有 ✗** ⇒ **⇒ 这条**要业主**（或找一个不需要注册的干净来源 ✓）**。
+* **`bell_lead`** ✓：**VCSL 的 `Tubular Bells 1` 早就在镜像里 ⇒ **零新字节**，只加一行映射 ✓；`because` 写明"**它是乐团管钟不是合成器铃、音域 C6?（60–77）、且 `ampeg_release=30 s` 未实现**" ✓✓**。
+
+### 40.5 Part 2 与其交接事项 ✓
+
+**Part 2 未开始**（**如实报 ✓**）：**第一件事是 VSCO 弦乐演奏法**（**`ViolinEnsTrem` 33.56／`ViolaEnsTrem` 44.16／`CelloEnsTrem` 50.05／`ContrabassTrem` 20.32／各段 `*Spic`／弱奏组／`SViolin*` 一族 ⇒ 计划书实测合计 **473.39 MiB**，CC0、同一棵已钉的树 ✓**）——**在 `vsco2ce` 条目的 `paths` 上加那批目录＋程序 ⇒ 重跑枚举/测量/上传 ⇒ 并把 `strings_lead` 一线的演奏法接进 `stringTechniques`／映射表 ✓**；**真鼓那条**先与接管 `virtuosity-drums-basic` 的线**比对，只买它没有的** ✓。
+**⚠️ 交接事项** ✓：**它原给 `upload_samples.mjs` 加的"从 sparse checkout 自行枚举树条目 ＋ 解 `.tar.xz`"在与 `dev` 的 scratch-dir 重写冲突时**整体让给了 theirs** ⇒ **该能力目前不在 `dev` 上** ✗（**清单状态不受影响，只影响重跑管线的便利 ✓**）⇒ **下次动那支脚本时值得补回 ✓**。
