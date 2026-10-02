@@ -466,7 +466,7 @@ grep -rn "planAudioLaneEvents|createSampleLoader|scheduleAudioLane|browserSample
 | 需要的东西 | 在哪 | 证据 |
 |---|---|---|
 | ⭐ **song 形状的对象** | `src/views/StudioView.tsx:266` | `const arrangementSong = useMemo(...)` ✓ —— 正是 `clips`/`sections`/`boundaries`/`bpm` 那种形状 ✓ |
-| ⭐ **编排真正开始播放的那一处** | `src/hooks/useTransportControls.ts` | `StudioView:536` 从它解构出 `handleTogglePlay` ✓，并传给它 `engineRef` ✓ 与 `seqStateRef` ✓ |
+| ⭐ **编排真正开始播放的那一处** | `src/features/sequencer/hooks/useTransportControls.ts` | `StudioView:536` 从它解构出 `handleTogglePlay` ✓，并传给它 `engineRef` ✓ 与 `seqStateRef` ✓ |
 
 **所以第 2 刀的形状是** ✓：
 
