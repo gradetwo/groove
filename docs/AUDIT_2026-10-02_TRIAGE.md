@@ -66,3 +66,32 @@
 2. **P0-2 全曲丢数组** ✓✓——**数据损坏 ✓，且`velocity` 例外已经给出改成 per-track 兜底的先例 ✓；
 3. **P0-3 编排持久化** ✓——**工程量最大 ✓（要接 IndexedDB 与工程包 ✓），但它决定"人类能否不丢心血" ✓；
 4. **P1-1 导航** ✓——**先要业主在"改路由"与"接受代价"之间选 ✓**（**见上 ✓**）。
+
+---
+
+## 五、P0-1 的**修法设计**（已读到可以直接动手，尚未实现 ✓）
+
+**为什么这轮只写到设计** ✗✓：**它是一条**多文件的实时音频**改动 ✓**（引擎 ✓ → 播放器 ✓ → 判据 ✓），**而本轮上下文已接近极限 ✓**；**本会话的教训是"做一半比不做更糟"** ✓（**留红树不可接受 ✓**）。**而下面的每一步都有**已量到的出处**，所以下一次不必重新勘探 ✓✓。**
+
+### 已量到的**四个使能事实** ✓✓
+
+1. **`scheduleSamplerSteps` 本来就接受起播时刻** ✓✓：**`samplerSteps.ts:109`** `const startSeconds = input.startSeconds ?? input.context.currentTime;` ✓、**`:122`** `whenSeconds: startSeconds + event.step * stepSeconds` ✓ —— **⇒ "把下一遍排在未来某刻"不需要新能力 ✓，只需要把时刻传进去 ✓**；
+2. **引擎已有回调这套缝** ✓：**`AudioEngine.ts:321`** `private onDroppedStepsCallback?: …` ✓、**`:353`** 由构造选项设 ✓、**`:1884`** 在事件处调 ✓ —— **照它加一个即可 ✓**；
+3. **wrap 发生在调度循环里、且**静默**** ✗✓：**`AudioEngine.ts:1898-1903`** ✓
+   ```ts
+   } else if (this.loopRange) {
+     const [lStart, lEnd] = this.loopRange;
+     if (step < lStart || step >= lEnd) { step = lStart; this.currentStep = lStart; }   // ← 无任何通知 ✗
+   ```
+   **⇒ 这里的 `this.nextStepTime` **就是**下一遍第一步将被排到的时刻 ✓**——**所以它正是要传给采样调度器的 `startSeconds` ✓✓**；
+4. **采样排程只有一次调用** ✓：**`playerFromEngine.ts:249`**（`planSamplerSteps` ✓）与 **`:262`**（`scheduleSamplerSteps` ✓），**都在 `play()` 内 ✓**；**而 `:261` 的 `sampler` loader 是**局部变量** ✗** → **⇒ 要重排，必须把它留到闭包里 ✓**（**它已经在闭包作用域内 ✓，只是出了 `if` 就没人持有 ✓**）。
+
+### 要改的三处（**按依赖顺序** ✓）
+
+1. **`AudioEngine`** ✓：**加 `private onLoopWrapCallback?: (wrapTimeSeconds: number) => void;`** ✓ + **一个公开 setter** ✓（**`playerFromEngine` 拿到的是**已构造的** engine ✗，构造选项到不了它 ✓**）+ **在上面的 wrap 分支里 `this.onLoopWrapCallback?.(this.nextStepTime)`** ✓（**只对 `loopRange` 那条触发 ✓；预览作用域那条是另一个功能 ✓，不动 ✓**）；
+2. **`playerFromEngine`** ✓：**`EngineAudioTap` 加 `setLoopWrapHandler?: (handler: ((t: number) => void) | null) => void;`** ✓（**与 `setPattern?`／`setBpm?` 同为可选 ✓**）；**在 `play()` 里把 `sampler` 与 `samplerSteps` 提到 `if` 之外持有 ✓**，**首遍排完后注册处理器 ✓**：**收到 wrap 时刻就以 `startSeconds: t` 重排一遍 ✓**（**并把新 voices 推进 `scheduled` ✓，`stopScheduled()` 才能一起静音 ✓**）；**`stop` 时把处理器置空 ✓**；
+3. **判据** ✓：**台架已经是干净的 `vi.fn()` 集合** ✓（`playerFromEngine.test.ts:16-21` ✓）——**加 `setLoopWrapHandler: vi.fn()` ✓，从 mock 里取出处理器 ✓，调用它并断言**第二次** `loadNote`／调度发生 ✓，**且用的是传入的那个时刻** ✓**。**反向**：**不注册处理器（或引擎不调它）时，第二遍不得发生 ✓** ✓✓。
+
+### 一条诚实的保留 ✗✓
+
+**引擎在排序时会再加 `swingOffset` 与 `latencyCompensationMs`** ✓（`AudioEngine.ts:1908-1910` ✓），**而第一遍的采样排程**没加**这两项 ✓**（`:109` 只看 `currentTime` ✓）**。**⇒ 所以"采样与合成器在同一格上"这件事，第一遍就已经是**近似**的 ✗**——**本修法**不改变**这个既有近似 ✓，**但也不该假装它不存在 ✓**：**要么下一遍与第一遍保持同一套近似（一致 ✓），要么把两者一起对准（更大的改动 ✓，需单独量 ✓）。**
