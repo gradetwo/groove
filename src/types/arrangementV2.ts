@@ -55,6 +55,20 @@ export interface TrackV2 {
   fromTrackId?: string;
   /** The v1 second name, for songs with two lanes of one kind. */
   fromLaneId?: string;
+  /**
+   * ⭐ **The v1 lane's declared instrument, when this track was projected from one** — `piano_lead`, `walking_upright`,
+   * `rhodes_ep`, `warm_pad`, …
+   *
+   * It is carried because it is the **key of the recorded-instrument table** (`src/data/sampledInstruments.ts`): a genre
+   * says "this lane is a piano" with this name and nothing else, so a projection that dropped it left the arrangement
+   * unable to tell a piano from a pad, and every projected track sounded the role's default synthesiser. Kept beside
+   * `fromTrackId`/`fromLaneId`, which exist for the same reason — the source's own words, preserved rather than
+   * reinterpreted.
+   *
+   * **Absent** for a track created in the new interface: those are `synth` tracks with a built-in voice and no recorded
+   * identity, and `undefined` says exactly that rather than inventing a name.
+   */
+  instrument?: string;
   /** Present on `sampler` tracks: the catalogue asset whose SFZ and samples this track plays. */
   sample?: { assetId: string };
   /**

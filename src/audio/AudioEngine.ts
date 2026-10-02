@@ -31,6 +31,8 @@ import { ratchetVelocityScale, resolveRatchet } from "./noteEvents";
 import { resolveKickDuckShape, scheduleKickDuck } from "./sidechain";
 import { swingMovesStep, swingOffsetSeconds } from "./swing";
 import { TrackState, deriveTrackStates } from "./trackStates";
+import { sampledInstrumentProblems, sampledStandDownIndexes } from "./sampledLanes";
+import type { SampleAsset } from "../data/sampleCatalogue";
 import { createSeededNoiseBuffer, noisePositionFor } from "./noise";
 import {
   chordVoicingForStep,
@@ -313,6 +315,17 @@ export class AudioEngine {
    *     different state than it was found in.
    */
   private previewScope: { trackIdx: number; fromStep: number; toStep: number } | null = null;
+
+  /**
+   * ⭐ **The lanes whose sound is a catalogue recording this session can actually serve**, by their index in
+   * `this.pattern` — the set `scheduleStep` reads to stand the synthesiser down.
+   *
+   * Empty until `prepareSampledLanes` is called, which is deliberate and is the owner's rule taken literally: a lane
+   * whose recording is *not* there keeps its synthesised voice. An engine that guessed "this lane is a piano, so stay
+   * quiet" from the instrument name alone would fall silent on every deployment where the mirror is not configured —
+   * trading a wrong timbre for no sound at all, which is the worse of the two.
+   */
+  private sampledLaneIndexes: Set<number> = new Set();
 
   // Callbacks
   private onStepCallback?: (info: StepCallbackInfo) => void;
@@ -772,6 +785,13 @@ export class AudioEngine {
   public setPattern(pattern: SequencerPattern, resetStates = false): void {
     this.pattern = pattern;
     /**
+     * A pattern arriving means the lanes may have changed, so the stand-down set is **re-derived on the next
+     * `prepareSampledLanes` call rather than kept**: holding indexes across a pattern swap would silence whichever
+     * lane now happens to sit at a piano's old index. Cleared, so the safe state between the two calls is "the
+     * synthesiser plays", which is the same fallback the whole feature uses.
+     */
+    this.sampledLaneIndexes = new Set();
+    /**
      * The pool voices lanes per genre (`GENRE_GS1_PATCH_OVERRIDES`), so it is told the genre here — the one place the
      * pattern itself arrives — rather than at every note.
      */
@@ -846,6 +866,44 @@ export class AudioEngine {
     // N-14: the genre's master FX and bus character, applied at the same moment and from
     // the same `genre_id` as the loudness trim.
     this.applyGenreFxForPattern(pattern);
+  }
+
+  /**
+   * ⭐ **Hand this engine the catalogue, and it stands its own synthesiser down for the lanes that catalogue can
+   * sound from a recording.**
+   *
+   * This is the whole of the engine's part in "a recording by default, a synthesiser when the recording is not
+   * there". The decision needs two facts and the caller has one of them:
+   *
+   *   * which lanes are recorded instruments — the written table, which the engine can read from `this.pattern`;
+   *   * whether the recording **is there** — the catalogue, which is the caller's, because the mirror is configured
+   *     at runtime and the engine has no business fetching a manifest.
+   *
+   * So the caller passes the catalogue and the engine answers with what it did. Called **before** `play()` where the
+   * catalogue is already loaded, and again when a load resolves, so the only window in which a recorded lane can be
+   * doubled is the scheduling lead of a first play with a cold catalogue — stated here rather than hidden.
+   *
+   * A lane the set does *not* contain is the fallback working: it is mapped to a recording this mirror does not
+   * serve, and it keeps its synthesised voice. `problems` names each of those with the executable next step, because
+   * "a synthesiser" is only the right answer when someone has been told it is happening.
+   *
+   * Returns what it did rather than only doing it, so the caller can put the count in a report and a criterion can
+   * read the set without reaching into the engine.
+   */
+  public prepareSampledLanes(catalogue: readonly SampleAsset[]): { stoodDown: number[]; problems: string[] } {
+    const pattern = this.pattern;
+    if (!pattern) {
+      this.sampledLaneIndexes = new Set();
+      return { stoodDown: [], problems: [] };
+    }
+    const stoodDown = sampledStandDownIndexes(pattern, catalogue);
+    this.sampledLaneIndexes = new Set(stoodDown.keys());
+    return { stoodDown: [...stoodDown.keys()], problems: sampledInstrumentProblems(pattern, catalogue) };
+  }
+
+  /** The lanes this engine is currently standing its synthesiser down for — read by a criterion or a diagnostic. */
+  public sampledLanesStoodDown(): number[] {
+    return [...this.sampledLaneIndexes];
   }
 
   /**
@@ -2071,6 +2129,25 @@ export class AudioEngine {
       );
 
       activeTracks.push(trackIdx);
+
+      /**
+       * ⭐ **A lane whose sound is a catalogue recording is not voiced here.**
+       *
+       * The owner's rule is "a recording by default, and a synthesiser only when the recording is not there", and
+       * `prepareSampledLanes` is where this engine is told which of the two this lane is: its set contains exactly the
+       * lanes whose asset **this session's catalogue** can serve, so a mapped `piano_lead` chord track is silent here
+       * and sounded from its own bytes by the audio-lane path, while a mapped instrument no mirror serves is absent
+       * from the set and keeps the synthesiser it has today — the fallback, decided where the catalogue is known.
+       *
+       * The guard sits **after** `activeTracks.push`, because the lane is still playing: its strip, its meter and its
+       * inserts are live, and it is the *voice* that belongs to someone else. It is also after the step, probability
+       * and swing gates, so a lane that was not going to sound anyway costs nothing.
+       *
+       * ⭐ It is here rather than in `triggerInstrument` because that method is also the audition path: pressing a
+       * mapped track's own preview button must still make a sound, and a synthesised preview is better than the
+       * silence that standing the lane down inside the shared voice would produce.
+       */
+      if (this.sampledLaneIndexes.has(trackIdx)) return;
 
       if (ratchet > 1) {
         const subDur = stepDur / ratchet;

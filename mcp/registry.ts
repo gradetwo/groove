@@ -504,7 +504,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "list_arrangement_instruments",
     title: "List playable instruments",
     description:
-      "The catalogue assets a sampler track can play, with the library each came from and the measured duration. A multi-instrument library names each program `<library>:<program>`, e.g. vcsl declares 88 of them. Read this before set_arrangement_track_asset.",
+      "The catalogue assets a sampler track can play, with the library each came from and the measured duration. A multi-instrument library names each program `<library>:<program>`, e.g. vcsl declares 88 of them. Read this before set_arrangement_track_asset. **`mappedInstruments` is the other half**: the written genre instrument names (`piano_lead`, `walking_upright`, `strings_lead`, `sax_lead`, …) that already play a catalogue recording without any asset id being chosen, each with the reason it was mapped — so an instrument can be asked for by name, and a name that is *not* there keeps its built-in preset.",
     readOnly: true,
     inputSchema: {
       library: z.string().optional().describe("narrow to one library id, as listed in `libraries`"),
@@ -593,7 +593,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "add_arrangement_track",
     title: "Add a track",
     description:
-      "Add a track to an arrangement. **Choose the kind by what makes the sound.** `synth` is a **built-in synthesiser**: its timbre is fixed and it **cannot** be pointed at a recorded instrument, which makes it right for an electronic part and wrong for a piano; `sampler` plays a **real recorded instrument** from the catalogue, so **for a piano, strings, bass or any other real instrument use `sampler` and pass `assetId` in this same call** (for example `assetId: \"salamander-grand\"`); `drumkit` is the built-in drum voices; `fx` is an effect; `folder` groups without sounding. A sampler created without an `assetId` starts on the **default catalogue asset, which is a drum kit** — not what a melodic part wants — so name the asset. The kind is called `synth` rather than `gs1` because most roles play the built-in subtractive presets and only some route to GS-1. Asset ids come from `list_arrangement_instruments`. **`assetId` is accepted on `kind:\"sampler\"` only, and is refused — not ignored — for any other kind.** The synthetic instrument the catalogue asset replaces is the reason this tool exists: a `synth` track is a fixed preset, a `sampler` track is a recording.",
+      "Add a track to an arrangement. **Choose the kind by what makes the sound.** `sampler` plays a **real recorded instrument** from the catalogue: pass `assetId` in this same call (for example `assetId: \"salamander-grand\"`), and a sampler created without one starts on the **default catalogue asset, which is a drum kit** — not what a melodic part wants. `synth` is a **built-in synthesiser**, right for an electronic part; **it can still play a recording, but by name rather than by asset id** — pass `instrument:\"piano_lead\"` (or another name from `list_arrangement_instruments`'s `mappedInstruments`) and that lane sounds the catalogue recording the written instrument table maps it to, falling back to the built-in preset when the name is not mapped or the mirror does not serve it. `drumkit` is the built-in drum voices; `fx` is an effect; `folder` groups without sounding. The kind is called `synth` rather than `gs1` because most roles play the built-in subtractive presets and only some route to GS-1. Asset ids come from `list_arrangement_instruments`. **`assetId` is accepted on `kind:\"sampler\"` only and `instrument` on `kind:\"synth\"` only, each refused — not ignored — for any other kind.**",
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
@@ -610,10 +610,31 @@ export const TOOLS: ToolDefinition[] = [
         .describe(
           "kind:\"sampler\" only — the catalogue asset this sampler plays (an id from list_arrangement_instruments, e.g. \"salamander-grand\"). Refused for every other kind rather than ignored, because only a sampler plays a catalogue asset"
         ),
+      /**
+       * ⭐ **The shorter way to ask for a real instrument: name it, and the table finds the recording.**
+       *
+       * `src/data/sampledInstruments.ts` maps the written genre instrument names (`piano_lead`, `walking_upright`,
+       * `strings_lead`, `sax_lead`, …) to catalogue assets, so `kind:"synth", instrument:"piano_lead"` sounds Salamander
+       * without the caller knowing an asset id. `list_arrangement_instruments` returns that table under
+       * `mappedInstruments`, so the names are discoverable rather than guessable — and a name the table does not map
+       * keeps the built-in preset, with the reply saying which of the two it got.
+       */
+      instrument: z
+        .string()
+        .optional()
+        .describe(
+          'kind:"synth" only — the instrument this track declares, e.g. "piano_lead", "walking_upright", "strings_lead". The names the recorded-instrument table maps are listed by list_arrangement_instruments under `mappedInstruments`; a mapped name plays that catalogue recording, an unmapped one keeps the built-in preset'
+        ),
     },
     handler: (args) => {
       try {
-        return addMcpTrack(String(args.arrangementId), args.kind as never, args.name as string | undefined, args.assetId as string | undefined);
+        return addMcpTrack(
+          String(args.arrangementId),
+          args.kind as never,
+          args.name as string | undefined,
+          args.assetId as string | undefined,
+          args.instrument as string | undefined
+        );
       } catch (error) {
         return failure((error as Error).message);
       }
@@ -1107,7 +1128,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "set_arrangement_track_asset",
     title: "Choose a sampler track's asset",
     description:
-      "Point a **sampler** track at a catalogue asset — **this is the call that puts a real recorded instrument on a track** (a piano is `assetId: \"salamander-grand\"`; `list_arrangement_instruments` lists the ids, which include virtuosity-drums-basic, salamander-grand, karoryfer-meatbass (39 instruments), karoryfer-emilyguitar (6) and vcsl (88)). The tool is named for the **asset**, not for the track kind: the kind that used to be called `instrument` is now `synth`, and this call has nothing to do with it. Refused for any other kind of track — **including `synth`, whose timbre is built in and cannot be pointed at an asset**; for a real instrument, add the track as `kind:\"sampler\"` and pass its `assetId` there.",
+      "Point a **sampler** track at a catalogue asset — **this is the call that puts a real recorded instrument on a track by asset id** (a piano is `assetId: \"salamander-grand\"`; `list_arrangement_instruments` lists the ids, which include virtuosity-drums-basic, salamander-grand, karoryfer-meatbass (39 instruments), karoryfer-emilyguitar (6) and vcsl (88)). The tool is named for the **asset**, not for the track kind: the kind that used to be called `instrument` is now `synth`, and this call has nothing to do with it. Refused for any other kind of track, **including `synth`** — a synth track is not pointed at an asset id; to give one a recorded instrument, name the instrument instead (`add_arrangement_track {kind:\"synth\", instrument:\"piano_lead\"}`), and `list_arrangement_instruments`'s `mappedInstruments` lists the names.",
     readOnly: false,
     inputSchema: { arrangementId: z.string(), trackId: z.string(), assetId: z.string().describe("a catalogue asset id") },
     handler: (args) => {

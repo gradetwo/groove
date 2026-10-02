@@ -8,21 +8,31 @@
  * It **derives its input from the planner's own** rather than restating the shape, and it **consumes** the plan and the seconds mapping rather than recomputing
  * either — so "when a sample starts" is still defined in exactly one place in this codebase.
  */
-import { audioLaneEventSeconds, planAudioLaneEvents } from "./audioLanePlan";
+import { audioLaneEventSeconds, audioLaneInstrumentSeconds, planAudioLaneEvents } from "./audioLanePlan";
 import type { AudioLaneEvent, PlanInput } from "./audioLanePlan";
-import type { SampleLoader } from "./sampleLoader";
+import type { LoadedNote, SampleLoader } from "./sampleLoader";
 import { SAMPLE_CATALOGUE } from "../data/sampleCatalogue";
 import type { SampleAsset } from "../data/sampleCatalogue";
 
-/** What the scheduler needs from an audio graph. In the browser this starts an `AudioBufferSourceNode`; in a test it records the call. */
+/**
+ * What the scheduler needs from an audio graph. In the browser this starts an `AudioBufferSourceNode`; in a test it
+ * records the call.
+ *
+ * `note` is the loader's own answer for a pitched event — the playback rate, and the region facts a buffer cannot carry
+ * (its `loop_mode` and the loop's bounds). It is a parameter rather than something the sink re-derives from the event
+ * because the note-to-region resolution lives in the loader, and asking the graph to repeat it would be the second
+ * implementation this file exists to avoid. `null` for a plain sample, which has no SFZ and therefore no region.
+ */
 export interface SampleSink {
-  start(buffer: AudioBuffer, whenSeconds: number, gainDb: number, event: AudioLaneEvent): void;
+  start(buffer: AudioBuffer, whenSeconds: number, gainDb: number, event: AudioLaneEvent, note: LoadedNote | null): void;
 }
 
 /** The planner's input plus what a tempo map needs, derived rather than restated so the two cannot drift. */
 export type ScheduleInput = PlanInput & {
   bpm: number;
   tempoTrack?: Array<{ atBar: number; bpm: number; curve?: "jump" | "linear" }>;
+  /** The flattened pattern's length, so an instrument event's step has a bounded second. Absent means "as far as the events reach". */
+  totalSteps?: number;
 };
 
 export interface AudioLaneScheduleReport {
@@ -47,12 +57,35 @@ export async function scheduleAudioLaneSamples(
   const { events, problems } = planAudioLaneEvents(song, catalogue);
   const seconds: number[] = [];
   let scheduled = 0;
+  const totalSteps = song.totalSteps ?? events.reduce((longest, event) => Math.max(longest, event.atStep + 1), 16);
 
   for (const event of events) {
     try {
-      const buffer = await loader.load(event.assetId);
-      const when = audioLaneEventSeconds(event, song);
-      sink.start(buffer, when, gainDb, event);
+      /**
+       * ⭐ **An instrument event resolves a note; a plain sample takes the bytes as they are.**
+       *
+       * The difference is not cosmetic: `load` decodes one recording and plays it at its own rate, which is what a
+       * one-shot sample means, while `loadNote` picks the region that covers this pitch and returns the playback ratio
+       * for it — the same resolution the keyboard audition and the arrangement sampler use. A lane with a `pitch` is a
+       * lane whose sound is an instrument, so it is the second.
+       */
+      const pitch = typeof event.pitch === "number" && event.pitch > 0 ? event.pitch : undefined;
+      const note = pitch === undefined ? null : await loader.loadNote(event.assetId, pitch);
+      const buffer = note === null ? await loader.load(event.assetId) : note.buffer;
+      /**
+       * An instrument note is placed from its **step**, through the tempo map; a plain sample from its **section's bar**,
+       * as it always was. See `audioLaneInstrumentSeconds` for why the two are not one call.
+       */
+      const timing = pitch === undefined ? null : audioLaneInstrumentSeconds(event.atStep, song, totalSteps);
+      const when = timing === null ? audioLaneEventSeconds(event, song) : timing.atSeconds;
+      /**
+       * The end of an instrument note, in seconds, is the lane's own `gate` times the step's own length — required,
+       * because a browser voice started with no end rings until the transport stops. A plain sample is left without one:
+       * its bytes **are** the event, and cutting them at a stated length would truncate a recording that outlasts its
+       * catalogue entry.
+       */
+      const seconds_ = timing !== null && event.gateSteps !== undefined ? event.gateSteps * timing.stepSeconds : undefined;
+      sink.start(buffer, when, gainDb, seconds_ === undefined ? event : { ...event, seconds: seconds_ }, note);
       seconds.push(when);
       scheduled += 1;
     } catch (error) {

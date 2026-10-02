@@ -35,6 +35,14 @@ export interface EngineAudioTap {
   musicDestination: AudioNode | null;
   /** The pattern the sequencer plays. Absent means "this engine cannot play notes", which `play` reports rather than assumes. */
   setPattern?: (pattern: SequencerPattern, resetStates?: boolean) => void;
+  /**
+   * ⭐ **"Here is the catalogue; stand your synthesiser down for the lanes it can sound from a recording."**
+   *
+   * Optional because an engine-shaped object without it still plays — it simply keeps the built-in voices, which is
+   * the same audible result as a lane whose recording the mirror does not serve. `AudioEngine.prepareSampledLanes` is
+   * the real one.
+   */
+  prepareSampledLanes?: (catalogue: readonly SampleAsset[]) => { stoodDown: number[]; problems: string[] };
   play?: AudioEngine["play"];
   stop?: AudioEngine["stop"];
   /** The arrangement's tempo, so a note's beat is the length the arrangement says rather than the studio's last. */
@@ -358,6 +366,18 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
           console.warn("catalogue unavailable; the arrangement's sampler steps are silent", error);
         }
         if (assets.length > 0) {
+          /**
+           * ⭐ **The engine stands its own synthesiser down for exactly the lanes this catalogue can sound.**
+           *
+           * The pattern reached the engine before the catalogue answered — deliberately, because the transport has to
+           * start on the gesture — so this is where the two facts meet: the engine knows which lanes are recorded
+           * instruments (the written table, read off its own pattern) and the catalogue knows which recordings it
+           * holds. The call is made **before** the steps are scheduled, so the only window in which a lane could be
+           * doubled is the engine's own lookahead rather than a whole pass. A lane whose recording this mirror does
+           * not serve is absent from the set and keeps the synthesiser it has today, and `prepared.problems` says so
+           * with the next step.
+           */
+          const prepared = engine.prepareSampledLanes?.(assets) ?? { stoodDown: [], problems: [] };
           sampler = createSampleLoader(decode ?? browserSampleDecoder(engine.audioContext), assets, fetchSfzText);
           const report = await scheduleSamplerSteps(samplerSteps, {
             context: engine.audioContext,
@@ -368,9 +388,11 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
           scheduled.push(...report.voices);
           /**
            * **Assigned, not appended**: the catalogue warning above was about a load that has now succeeded, and leaving it beside a schedule that worked would report a failure that is no longer true. A
-           * resolution that did fail still reports itself, because `report.problems` is what replaces it.
+           * resolution that did fail still reports itself, because `report.problems` is what replaces it — and the lanes this catalogue could not serve are added to it, because that is a *different* failure with a
+           * different fix.
            */
-          problem = report.problems.length > 0 ? report.problems.join("; ") : undefined;
+          const reasons = [...report.problems, ...prepared.problems];
+          problem = reasons.length > 0 ? reasons.join("; ") : undefined;
         }
       }
 

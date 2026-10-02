@@ -21,13 +21,23 @@ import type {
 } from "../../../audio/offlineAudioLanes";
 import type { RenderWavOptions } from "../../../audio/WavExporter";
 import type { SampleAsset } from "../../../data/sampleCatalogue";
+import { isSampledLane } from "../../../data/sampledInstruments";
 
 /** The two render options every app-side audio export must carry. Both optional, so "no audio lane" is the empty object. */
 export type AudioLaneRenderOptions = Pick<RenderWavOptions, "audioLaneCatalogue" | "onAudioLanes">;
 
-/** True when a pattern carries an audio lane at all — the gate that keeps the manifest fetch off a synthesised export. */
-export function hasAudioLane(pattern: { tracks?: Array<{ track_id?: string }> }): boolean {
-  return (pattern.tracks ?? []).some((track) => (track.track_id || "").toLowerCase() === "audio");
+/**
+ * True when a pattern carries a lane that sounds a catalogue recording — the gate that keeps the manifest fetch off a
+ * purely synthesised export.
+ *
+ * ⭐ **Widened past `track_id === "audio"`, because that stopped being the only shape a recorded lane has.** A genre lane
+ * whose `instrument` the written table maps (`piano_lead`, `walking_upright`, …) is a recording too, and a gate that only
+ * knew the ninth kind would export that lane as its built-in synthesiser while never fetching the catalogue that could
+ * have sounded it. `isSampledLane` is the same predicate the MCP worker's `hasAudioLane` and the lane planners use, so all
+ * four answer together.
+ */
+export function hasAudioLane(pattern: { tracks?: Array<{ track_id?: string; instrument?: string; sample?: { assetId?: string } }> }): boolean {
+  return (pattern.tracks ?? []).some((track) => (track.track_id || "").toLowerCase() === "audio" || isSampledLane(track));
 }
 
 /** The render options an export hands the exporter, built from a catalogue the app already resolved. */

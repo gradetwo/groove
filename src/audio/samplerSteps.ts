@@ -15,6 +15,7 @@
  */
 import { STEPS_PER_BEAT } from "../data/noteEvents";
 import { stepDuration } from "../data/noteLayer";
+import { sampledAssetForLane } from "../data/sampledInstruments";
 import { startSamplerNote, type SamplerVoice } from "./samplerVoice";
 import type { SampleLoader } from "./sampleLoader";
 import type { SequencerTrack } from "../types/genre";
@@ -80,19 +81,46 @@ export function planSamplerSteps(
 ): SamplerStepEvent[] {
   const events: SamplerStepEvent[] = [];
   for (const { sourceTrackId, lane } of lanes) {
-    // A lane with no `sample` is not a sampler lane: there is no instrument to resolve, and inventing one would be the silent default this path exists to avoid.
-    const assetId = lane.sample?.assetId;
+    /**
+     * ⭐ **The one resolver, so a lane the written table maps is a sampler lane here too.**
+     *
+     * A lane with no `sample` of its own used to be skipped, which was right while only a v2 `sampler` track
+     * compiled to `track_id: "audio"`. A **genre lane** whose `instrument` the table maps (`piano_lead`,
+     * `walking_upright`, …) carries no `sample` field and is exactly as much a recorded lane, so "which asset is
+     * this lane's sound" is asked in one place (`sampledAssetForLane`) rather than answered twice.
+     */
+    const assetId = sampledAssetForLane(lane);
     if (!assetId) continue;
     lane.steps.forEach((value, step) => {
       if (!value) return;
-      const pitch = lane.pitch?.[step];
       /**
-       * A step with no pitch is **reported as no event**, not defaulted to middle C. Every note in the model carries a pitch, so a missing one means the lane was built from something other than these notes,
-       * and playing an arbitrary note for it would hide that.
+       * ⭐ **A step can carry a chord, and this read one note of it.**
+       *
+       * The pattern model keeps `pitches` as a stack per step — the shape the offline planner
+       * (`offlineAudioLanes.pitchedSteps`), `AbletonExporter`, `MidiExporter` and `chordVoicing` all read — while
+       * this scheduler read the flattened singular `pitch`, so a piano chord in an arrangement sounded its lowest
+       * note alone. The stack is preferred where it exists and the singular field stays the fallback, so every lane
+       * written before this starts exactly the voices it did.
        */
-      if (typeof pitch !== "number" || pitch <= 0) return;
+      const stack = lane.pitches?.[step];
+      const single = lane.pitch?.[step];
+      const pitches: number[] =
+        Array.isArray(stack) && stack.length > 0
+          ? stack.filter((candidate): candidate is number => typeof candidate === "number" && candidate > 0)
+          : typeof single === "number" && single > 0
+            ? [single]
+            : [];
+      /**
+       * A step with no pitch is **reported as no event**, not defaulted to middle C. Every note in the model carries
+       * a pitch, so a missing one means the lane was built from something other than these notes, and playing an
+       * arbitrary note for it would hide that.
+       */
+      if (pitches.length === 0) return;
       const pan = typeof lane.pan === "number" && Number.isFinite(lane.pan) ? Math.max(-1, Math.min(1, lane.pan)) : undefined;
-      events.push({ sourceTrackId, assetId, step, pitch, gateSteps: stepDuration(lane, step), ...(pan === undefined ? {} : { pan }) });
+      const gateSteps = stepDuration(lane, step);
+      for (const pitch of pitches) {
+        events.push({ sourceTrackId, assetId, step, pitch, gateSteps, ...(pan === undefined ? {} : { pan }) });
+      }
     });
   }
   return events;
@@ -122,6 +150,15 @@ export async function scheduleSamplerSteps(events: readonly SamplerStepEvent[], 
           whenSeconds: startSeconds + event.step * stepSeconds,
           // The same `stepSeconds` that places the onset gives the note its end, so a lane's timing is one reading of the grid.
           seconds: event.gateSteps * stepSeconds,
+          /**
+           * ⭐ **The region's loop declaration, which stopped at this line.** `startSamplerNote` has honoured `loop_mode`
+           * since the sustaining-strings fix, and this scheduler never passed it — so a `loop_sustain` program
+           * (`karoryfer-meatbass` writes it) was cut at the note's gate on the live arrangement path while the offline
+           * render let it hold. One seam, two answers, and the live one was the wrong one.
+           */
+          ...(note.loopMode === undefined ? {} : { loopMode: note.loopMode }),
+          ...(note.loopStartFrames === undefined ? {} : { loopStartFrames: note.loopStartFrames }),
+          ...(note.loopEndFrames === undefined ? {} : { loopEndFrames: note.loopEndFrames }),
           ...(input.gainDb === undefined ? {} : { gainDb: input.gainDb }),
           ...(event.pan === undefined ? {} : { pan: event.pan }),
         })
