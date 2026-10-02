@@ -733,3 +733,29 @@ scripts/check_doc_refs.mjs:31   import { partitionDocRefs } from "../src/utils/d
 **☑ 另两处不是这一类** ✓：`mcpRenderArrangementBars.test.ts:18` 的 `/tmp/probe.wav` 是**输出**路径 ✓；`sfzKeyswitchPaths.test.ts:298` 是注释 ✓。
 
 **⚠️ 而结论要写准** ✓✓：**`process.env.X ?? "/tmp/default"` **本身**是合理的开发便利 ✗**——**bug 只在"默认值被**无保护地读**"时才发生 ✓**。**⇒ 那 3 处要问的是同一个问题 ✓**；**而 SFZ 那处的答案已经从"静静失败"改成了"夹具进仓库 ＋ 网络那部分大声跳过" ✓✓**。
+
+### 十七之五、⭐⭐ 普查又找出**一处更坏的**：判据在谎报覆盖率（2026-10-02 ✓）
+
+**`src/test/audioDuration.test.ts:53-56`** ✓：
+
+```ts
+it("agrees with the real tool on a file that exists, when the tool is available", () => {
+  const path = "/tmp/vd/Samples/kickmic/snare/kickmic_snare_center_vl29.flac";
+  if (!existsSync(path)) return;        // \u2b50\u2b50 文件不在时**静默通过** \u2717
+```
+
+**⇒ 为什么它比 SFZ 那处更坏** ✓✓：
+
+| | SFZ 那处 | **这一处** |
+| --- | --- | --- |
+| 取不到机器本地文件时 | **红 ✗**（ENOENT ✓） | **绿 ✓✓** |
+| 外面看到的是 | **一次失败 ✓**（会被读门禁的人发现 ✓） | **永远的成功 ✓**（**没人会发现 ✓**） |
+| 实质 | **悄悄失败** ✗ | **⭐ 悄悄成功** ✗✓✓ |
+
+**⇒ 即：在 CI 上它**从来没有断言过任何东西** ✗，**而它报告的是绿 ✓**——**这是"判据在谎报覆盖率" ✓，属于本项目最恨的那一类（假绿 ✓✓）**。
+
+**⚠️ 而它的**名字**其实是诚实的** ✓（"…when the tool is available" ✓）——**⇒ 所以这是"一个**没有自我申报的跳过**" ✗**：**作者知道它会跳过 ✓，却写成 `return` ✓，于是输出里显示的是**通过**而不是**跳过**** ✗✓**。
+
+**⇒ 修法极清楚（两行 ✓）** ✓✓：**把 `return` 换成**大声跳过****（**`it(…, (ctx) => { if (!existsSync(path)) ctx.skip(); … })` ✓，或 `describe.skipIf` ✓**）——**它本来就什么都没断言 ✓，让跳过**可见**只会更诚实 ✓**，**而 CI 门禁可以把 skip 数出来 ✓**。
+
+**⚠️ 一并核实** ✓：**主树是干净的** ✓（另一位工作流回报时说看到 `M docs/OPEN_WORK.md` ✗——**那是它读到我提交前的快照 ✓，现在 `git status` 为空 ✓**）。
