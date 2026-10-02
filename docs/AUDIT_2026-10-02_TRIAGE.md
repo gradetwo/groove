@@ -95,3 +95,28 @@
 ### 一条诚实的保留 ✗✓
 
 **引擎在排序时会再加 `swingOffset` 与 `latencyCompensationMs`** ✓（`AudioEngine.ts:1908-1910` ✓），**而第一遍的采样排程**没加**这两项 ✓**（`:109` 只看 `currentTime` ✓）**。**⇒ 所以"采样与合成器在同一格上"这件事，第一遍就已经是**近似**的 ✗**——**本修法**不改变**这个既有近似 ✓，**但也不该假装它不存在 ✓**：**要么下一遍与第一遍保持同一套近似（一致 ✓），要么把两者一起对准（更大的改动 ✓，需单独量 ✓）。**
+
+---
+
+## 六、P1-1 的**实测结论与可行方案**（改动已回退，原因写在下面 ✓）
+
+### 量到的四件事 ✓✓
+
+1. **`useRouter()` **无 Provider 就抛异常**** ✗✓：**`Error: useRouter must be used within a RouterProvider`** ✓——**而 header 的判据只包了 `LanguageProvider`** ✓（`headerNav.test.tsx:10` 的 `renderWithLanguage` ✓）→ **⇒ 在 `Header` 里直接用 `useRouter()` 会让一批 header 判据**在 `LanguageProvider` 处炸掉**** ✗✓✓；
+2. **`App.tsx:75` 本来就有 `const { route, navigate } = useRouter()`** ✓✓——**⇒ 路由能力**在 App 层是现成的**** ✓；
+3. **Provider **监听 `popstate` 与 `hashchange`** ✓（`router.tsx:326-327` ✓）**——**⇒ 存在一条**不需要 hook**的路由切换通路 ✓；
+4. **`projectDb` 是**手动保存**** ✗✓：`saveProject` 的调用者是 `useProjectHub` 与 `useExportActions` ✓，**没有"每次改动自动存"** ✓ —— **⇒ 整页重载**连工作室未保存的改动也会丢**** ✓，**P1-1 的严重性高于报告原文 ✓**。
+
+### 三条可行路线（按我推荐的次序 ✓）
+
+| | 做法 | 利 | 弊 |
+| --- | --- | --- | --- |
+| **A′（推荐）** | **`Header` 加一个可选 prop `onNewProject?: () => void`** ✓；**由 `App` 传入 `() => navigate({ tab: "studio", newProject: true })`** ✓（**`App` 已有 `navigate` ✓**）；**没有 prop 时锚点保持原生行为** ✓ | **组件不依赖 router ✓ → header 判据一行不用改 ✓✓**；**有 prop 时零重载 ✓**；**语义与可测性都干净 ✓** | **要找到 App 里渲染 `<Header>` 的那一处并接线 ✓**（**我未核实它是否直接在 `App.tsx` 里 ✗**） |
+| **A″** | **`Header` 不取 hook ✓，改用 `formatRouteToUrl`（`router.tsx:236` ✓）＋ `history.pushState` ＋ 派发 `popstate`** ✓ | **无需 Provider、无需 prop ✓**；**复用路由自己的 URL 格式化 ✓**；**走的是 Provider 已在监听的那条通路 ✓** | **⚠️ 手写"导航"这一步 ✗**——**与 Provider 内部那套有**两处定义**的风险 ✓**；**`RouteState` 的必填字段要凑齐 ✗** |
+| **A‴** | **保留 `useRouter()`，并把各 header 判据包上 `RouterProvider`** ✓ | **组件写法最直白 ✓**；**判据更贴近真实挂载 ✓** | **要改的不止两个文件 ✗**（**我只核实了 `headerNav` 与 `headerPhoneSurface` ✓，而后者用的是**另一种包裹写法** ✗**）——**⇒ 波及面未知 ✓，而我上一轮就是在"波及面未知"时动手，结果把树弄红了 ✗✓** |
+
+### 我做了什么、没做什么（诚实记录 ✓）
+
+* **我按 A‴ 动了手** ✗：**`Header` 接 `useRouter()` ✓、加拦截 ✓、写判据 ✓、修 `headerNav.test.tsx` 的包裹 ✓**——**而 `headerPhoneSurface.test.tsx` 的包裹写法不同 ✓，`useRouter` 仍在那里抛 ✓**，**树变红 ✗**；
+* **⇒ 我**整体回退了**（`Header.tsx` ✓、`headerNav.test.tsx` ✓、删掉那条判据 ✓）** ✓✓——**理由是本会话那条规矩：留一棵红树不可接受 ✓**；**判据内容已写进本文档 ✓，下次直接取用 ✓**；
+* **⚠️ 而这次失败本身是一条可复用的教训** ✓✓：**"组件新增一个上下文依赖"从来不是一行改动 ✓——它会把**所有**渲染该组件、只包了旧上下文的判据一起拖下水 ✓**；**A′ 之所以是我现在的首选，正是因为它让组件**不新增依赖** ✓✓（**能力从上层注入 ✓，而不是从上下文索取 ✓**）。
