@@ -1,27 +1,27 @@
 {
-  "version": "2.34.35",
+  "version": "2.34.36",
   "releaseDate": "2026-10-02",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.35",
+    "version": "2.34.36",
     "date": "2026-10-02",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "手机版收起来了：一套界面走三端，渲染能跑无头",
-      "en": "The phone version is gone: one interface for every surface, and renders that run headless"
+      "zh": "客户端断线不再杀死服务端；编排的停止键真的会停",
+      "en": "A disconnected client no longer kills the server, and the arrangement's stop really stops"
     },
     "highlights": [
       {
-        "zh": "手机外壳砍除：手机与平板浏览器拿到与桌面相同的一套界面。",
-        "en": "The phone shell is gone, and a phone or tablet browser gets the same interface the desktop does."
+        "zh": "MCP 服务端不再因为客户端关掉管道而崩溃；没送到的回复会在日志里点名，并带上它的文件路径。",
+        "en": "The MCP server survives a client that closes the pipe. Every lost reply is named in the log, with the file it was carrying."
       },
       {
-        "zh": "渲染可在 Node 里跑、不经浏览器；MCP 四个渲染工具多了 headless。",
-        "en": "A render can run in Node without a browser, and the four MCP render tools take a headless option."
+        "zh": "编排的停止键现在真的停：改前点完还在响，改后 48 毫秒内发出停止、之后不再排声部。",
+        "en": "The arrangement's stop stops. It used to keep sounding after the click; now the transport stops within 48 ms and queues nothing further."
       },
       {
-        "zh": "通道条压缩器改用本项目 worklet，两个宿主的差距收窄。",
-        "en": "Every channel strip compressor is the project's own worklet now, which narrows the gap between the two hosts."
+        "zh": "播放键变成播放／暂停，有了按下状态与无障碍名；播放头与时间码跟着真的走。",
+        "en": "Play became play/pause, with a pressed state and an accessible name, and the playhead and position readout now actually move."
       }
     ],
     "truncated": true
