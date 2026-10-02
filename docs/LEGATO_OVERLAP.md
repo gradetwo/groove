@@ -210,6 +210,20 @@ so the note would go silent instead of joining
 | **业主能在 MCP 回复里读到这个读数** | `OfflineAudioLaneReport.legato` 是**报告里的新字段**，而 MCP 那条回复的字段由 `mcp/pattern.ts` 的 `audioLaneReplyFields` 挑选，**今天没有挑它**（`mcp/**` 不在本线范围内） | 在 `audioLaneReplyFields` 里加一个 `legato` 字段（数据已经在 `report` 上，不需要新计算） |
 | **听感结论** | **判不了，也不该由本文判** | 业主听 |
 
+## 7.1 ⚠️ 一处必须记下的**跨文档更正**（`docs/STRING_TECHNIQUES.md` §10.3 的 (2)(3) 条）
+
+`docs/STRING_TECHNIQUES.md` §10.3 当时写着：**"第 (2)(3) 步（`trigger=legato` + `offset`、Kontakt 式的播放位置延续）被那座桥挡住"**。
+**本文不改那份文档**（Part 2 那条线要碰它），但事实已经变了，写在这里免得读的人以为还挡着：
+
+* **桥已经通了**（§11 已记：`TrackV2.instrument` ＋ `src/data/sampledInstruments.ts`），所以"换音时还有别的音在响"这个上下文
+  **在真采样轨上确实存在**——业主那份工程导入时给 `strings_lead` 就落在它上面；
+* **Kontakt 式的"播放位置延续"已经实现了**：`src/audio/samplerVoice.ts` 的 `takeOver()` ＋ `src/audio/legatoVoices.ts` 的 ledger，
+  判据与读数在本文 §4／§5；
+* **仍然挡着的是另一半**：`trigger=legato` ＋ `offset` 那条**没做**，因为这条库里既没有 `trigger=legato` 分区，
+  解析器也不读 `offset`（§7 上表第 3 行）。
+
+⇒ 正确的读法是：**"(3) 已落地；(2) 仍缺，缺的是数据不是桥"**。
+
 ## 8. 判据结果（实跑）
 
 | 门禁 | 命令 | 结果 |
@@ -222,7 +236,14 @@ so the note would go silent instead of joining
 
 ## 9. sha／推送／CI
 
-（本节在推送后填写。）
+| 项 | 值 |
+| --- | --- |
+| 分支／工作树 | `legato` @ `/home/crow/music/groove-legato`（`git worktree add … -b legato origin/dev`，`node_modules` 软链 `groove-int/node_modules`） |
+| 提交 | `5bb7c7bf83279f62e034e9470a8ee2317629c67b`（rebase 到 `d5add2f` 之后） |
+| 推送 | `git push origin HEAD:dev` → `d5add2f..5bb7c7b  HEAD -> dev`（`SKIP_LOCAL_GATE=1 npm run push:dev`，本地门禁按 `docs/OPEN_WORK.md` §五 的约定跳过；**没有被拒，没有强推**） |
+| CI | run `37049851807`（`CI` / `dev` / push）—— **completed / success**，9m37s；`ESLint Code Quality`、`Unit Tests & Coverage`、`Production Build`、`Bundle Budget & Performance Gate`、`Red-Line Gate` 全绿 |
+| 本文自身 | 由紧随其后的 `docs(legato):` 提交带上 `dev`（同一个分支、同一条推送路径） |
+| rebase 后重跑 | `npx tsc --noEmit` ✓；`npm run lint` ✓；**受影响面 54 个测试文件 / 533 条** ✓；`npm run docs:check` ✓；`npm run check:docs:refs` ✓ |
 
 ## 10. 判不了／未核实
 
