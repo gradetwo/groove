@@ -114,6 +114,22 @@ const PROPOSED = new Map([
     "src/mobile/MobileModuleTabBar.tsx",
     "Removed with the phone shell. AUDIT_2026-10-02_TRIAGE.md:192 listed it as phone-only in the audit that led to the cut.",
   ],
+  /**
+   * ⭐ **The phone-era measurement scripts, removed by the same rule and for the same reason.**
+   *
+   * `PRODUCT_PLAN_v2.1.0.md` names them as the tools that produced the redesign's baseline and its criteria, and
+   * those lines are accurate history. The surface they measure is gone — both read the two fixed phone bars, and
+   * neither element exists in `src` any more — so they were deleted rather than left as scripts that cannot
+   * produce a number. Declared here, like the components above, because the lines are the record.
+   */
+  [
+    "scripts/diagnose_mobile_chrome.mjs",
+    "Removed with the phone shell: it read `mobile-tab-bar` and `mobile-transport-bar`, and neither element exists in `src` any more. PRODUCT_PLAN_v2.1.0.md names it as how the landscape-chrome numbers were reproduced — the record, not a claim.",
+  ],
+  [
+    "scripts/measure_phone_surface.mjs",
+    "Removed with the phone shell: its working-area count is defined by the same two deleted bars, and the phone surface it measured (the shell's `?tab=` tabs) is gone. The PRODUCT_PLAN lines name it as the source of the redesign baseline — the record, not a claim.",
+  ],
 ]);
 
 /** Doc files to scan: the repository's own notes and plans. */

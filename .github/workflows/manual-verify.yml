@@ -19,8 +19,10 @@
 # and `skins` are handed one by the explicit Build step above them.
 #
 # ⚠️ `jank` measures the phone shell and has had no subject since the mobile version was cut (2026-10-02,
-# `docs/OPEN_WORK.md` §十三). It is left in the menu rather than removed here because `probe:jank` is not in
-# `verify`; the shell's own removal is what retires it.
+# `docs/OPEN_WORK.md` §十三). `probe:jank` was in the `verify:code` chain all along — this comment used to say
+# it was "not in `verify`", which was true of `verify` and wrong about the chain that actually ran it — so it
+# has been removed from `verify:code` for having no subject. The script itself stays, because this menu is a
+# **human** entry point rather than a gate.
 #
 # `verify` runs the whole gate chain (`npm run verify`), which rebuilds and therefore re-runs the E2E
 # steps itself; `e2e` skips the other gates and goes straight at the browser matrix, which is the common

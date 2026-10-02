@@ -1384,7 +1384,7 @@ async function runTestOnTarget(target, baseUrl) {
 
     // 2.3 The phone surface is a phone surface: few controls, and all of them hittable.
     /**
-     * Measured before this check existed (`scripts/measure_phone_surface.mjs`, 390×664): the header
+     * Measured before this check existed (the phone-surface probe, since removed with the shell, 390×664): the header
      * carried nine controls, seven of them 24–36 px, plus a second navigation menu on top of the tab
      * bar's own; the genre rail's category picker was 36 px tall and its dice 36×36. Everything the
      * header offered is reachable on a phone through bigger targets (the tab bar's "More" sheet for

@@ -34,11 +34,12 @@
  * THE RULES
  * ---------
  *  R1 domain must not import React, logic or ui, and must not touch a *presentation* DOM global.
- *     `src/audio` and `src/i18n` are named exceptions: the Web Audio API, an AudioWorklet and the
- *     platform language preference mean those modules legitimately touch `window`, `document`,
- *     `navigator`, `localStorage` and `requestAnimationFrame`. Exempting them keeps the rule about
- *     the thing that actually matters — a domain module must not reach *up* into logic or UI — while
- *     still catching a `src/utils` helper that starts reaching for the DOM it has no business in.
+ *     `src/audio`, `src/i18n` and `src/data/userLibraryStore.ts` are named exceptions: the Web Audio
+ *     API, an AudioWorklet, the platform language preference and a storage default that has to work
+ *     under Node mean those modules legitimately touch `window`, `document`, `navigator`,
+ *     `localStorage` and `requestAnimationFrame`. Exempting them keeps the rule about the thing that
+ *     actually matters — a domain module must not reach *up* into logic or UI — while still catching
+ *     a `src/utils` helper that starts reaching for the DOM it has no business in.
  *  R2 logic must not import ui (components, views, ui primitives). Types are not exempt: a type
  *     that only exists because a component renders it is a component's type, and importing it
  *     makes the component's shape part of the logic layer's contract.
@@ -52,6 +53,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import ts from "typescript";
 
 const ROOT = process.cwd();
 const SRC = path.join(ROOT, "src");
@@ -182,25 +184,94 @@ for (const file of files) {
 }
 
 // React/DOM in the domain layer is a separate question from the import graph.
-const DOM_GLOBALS = /\b(document|window|navigator|localStorage|requestAnimationFrame)\b/;
+/**
+ * ⭐ **The syntax tree, not the text.**
+ *
+ * This pass used to match five words against the file's text, behind a hand-written comment stripper.
+ * Both halves were wrong, and the failures were measured on `origin/dev`:
+ *
+ *   - the stripper removed comments but not *strings*, so a sentence inside an error message —
+ *     `throw new Error("the document has no root element")` and `` `the document is not well-formed
+ *     XML: …` `` — was reported as `src/data/xml.ts` and `src/data/musicxmlImport.ts` touching a DOM
+ *     global. Both files are prose-clean: neither has a single DOM global in code, and
+ *     `userLibraryStore.ts` has exactly one, a guarded storage default.
+ *   - a text stripper is also a way to go **blind**: a `//` inside a URL or a `/*` inside a string
+ *     deletes the code that follows it, so a real `window` can be removed before it is looked for.
+ *     A false positive is visible; that is not.
+ *
+ * `typescript` is already the project's compiler, so it is asked for the answer: an `Identifier` node
+ * named `window` is code by construction, while a word inside a comment, a string or a regular
+ * expression is not an identifier at all. It is also deliberately the stricter reading of the two —
+ * a property name like `factory.window` is still an identifier and still a finding — because the
+ * failure that matters is a door left open.
+ *
+ * The React half rides along on the same tree: an `ImportDeclaration` whose module specifier is `react`.
+ */
+const DOM_GLOBALS = new Set(["document", "window", "navigator", "localStorage", "requestAnimationFrame"]);
+
+/** The DOM globals and the React import a domain file *names in code*. */
+function domainPurityOf(relPath, source) {
+  const kind = relPath.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
+  // `setParentNodes: false`: this walks one file and never asks a node for its parent, so the tree
+  // stays cheap enough for a gate. `createSourceFile` does not throw on a malformed file either; it
+  // returns a tree with the parts it could read, so a syntax error cannot crash the check.
+  const file = ts.createSourceFile(relPath, source, ts.ScriptTarget.Latest, false, kind);
+  const domGlobals = [];
+  let importsReact = false;
+  const visit = (node) => {
+    if (ts.isIdentifier(node) && DOM_GLOBALS.has(node.text)) {
+      domGlobals.push({ name: node.text, line: file.getLineAndCharacterOfPosition(node.getStart(file)).line + 1 });
+    } else if (
+      ts.isImportDeclaration(node) &&
+      ts.isStringLiteral(node.moduleSpecifier) &&
+      node.moduleSpecifier.text === "react"
+    ) {
+      importsReact = true;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  return { domGlobals, importsReact };
+}
+
+/**
+ * The domain **directories** that may name a DOM global, each with the reason.
+ *
+ * `src/audio` is the Web Audio API and its worklet, and `src/i18n` reads the platform language; both
+ * touch `window`, `document` and friends by nature. The rule that matters for them is still "must not
+ * import logic or ui", which the import-graph pass above enforces.
+ */
+const DOM_GLOBALS_EXEMPT_DIRS = ["src/audio/", "src/i18n/"];
+
+/**
+ * ⭐ **Files exempted one by one — a file entry, not a directory one.**
+ *
+ * This is deliberately a separate list rather than another prefix in the one above: `src/data/` is
+ * **not** exempt, and a reader must not be able to conclude that it is. The only entry is
+ * `src/data/userLibraryStore.ts`, which keeps the creator's own libraries where the app can and takes
+ * the storage as an argument. Its one contact is `defaultStorage()` —
+ * `typeof window === "undefined" ? undefined : window.localStorage` — which is a feature detection
+ * under a guard that gives Node `undefined` instead of a `ReferenceError`, wrapped in a `try` for the
+ * browser that refuses storage, and only ever a **default**: the module is specified to work under
+ * Node against a file, in the same format. That is the platform boundary the rule is about, not
+ * presentation leaking into the domain. Every other file under `src/data/` is checked as before.
+ */
+const DOM_GLOBALS_EXEMPT_FILES = ["src/data/userLibraryStore.ts"];
+
 for (const file of files) {
   if (layerOf(file) !== "domain") continue;
-  /**
-   * `src/audio` is the Web Audio layer and `src/i18n` reads the platform language; both touch DOM
-   * globals by nature. The rule that matters for them is "must not import logic or ui", which the
-   * import-graph pass above already enforces.
-   */
-  const DOM_GLOBALS_EXEMPT = ["src/audio/", "src/i18n/"];
-  if (DOM_GLOBALS_EXEMPT.some((d) => file.startsWith(d))) continue;
-  const source = fs
-    .readFileSync(path.join(ROOT, file), "utf8")
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/\/\/[^\n]*/g, "");
-  if (/from\s+["']react["']/.test(source)) {
+  const exempt =
+    DOM_GLOBALS_EXEMPT_DIRS.some((d) => file.startsWith(d)) || DOM_GLOBALS_EXEMPT_FILES.includes(file);
+  if (exempt) continue;
+  const source = fs.readFileSync(path.join(ROOT, file), "utf8");
+  const { domGlobals, importsReact } = domainPurityOf(file, source);
+  if (importsReact) {
     violations.push({ key: file, rule: "R1", detail: "domain imports react" });
   }
-  if (DOM_GLOBALS.test(source)) {
-    violations.push({ key: file, rule: "R1", detail: "domain touches a DOM global" });
+  if (domGlobals.length) {
+    const named = [...new Set(domGlobals.map((g) => g.name))].join(", ");
+    const lines = [...new Set(domGlobals.map((g) => g.line))].join(", ");
+    violations.push({ key: file, rule: "R1", detail: `domain touches a DOM global (${named}) at line ${lines}` });
   }
 }
 
