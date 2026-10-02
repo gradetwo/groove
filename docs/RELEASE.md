@@ -2,14 +2,16 @@
 
 **动手之前先读 [`WORKING_STANDARDS.md`](WORKING_STANDARDS.md)**：那份文档里的十条都是做法（等的时候开 worktree、推送只走 `npm run push:dev`、发布期间不动主工作树、先验后发），这里只讲发布本身。
 
-`package.json` 的 `version` 是唯一需要手改的地方，改完跑 `npm run version:sync`，然后 `bash scripts/release.sh`。
+`package.json` 的 `version` 是唯一需要手改的地方，改完跑 `npm run version:sync`，然后 `SKIP_LOCAL_GATE=1 bash scripts/release.sh`。
+
+**⚠️ 发版只认远端门禁**（业主裁定，2026-10-02）：`SKIP_LOCAL_GATE=1` 跳过下面的 `local gate` 一步，并把它打印成 `skipped (SKIP_LOCAL_GATE=1 — the remote gate is the authority)`——**判据交给第 6 步 `full CI`**，它在 `dev` 上触发全量矩阵并等结果。开关名与 `push_dev.sh` 用的是同一个（那支脚本的头注释写着同一句话：门禁在 GitHub 的 `dev` 分支上）。**不加这个开关，本地那一关照旧跑**，想跑重的那条路仍然在。
 
 ## 九步
 
 ```
 version:check   版本四处一致
 version:new     这个版本还没有打过标签
-local gate      typecheck / lint / styling / tests
+local gate      typecheck / lint / styling / tests（SKIP_LOCAL_GATE=1 时跳过，判据归下一步 full CI）
 build           vite build
 budget          bundle budget（check:budget）
 full CI         npm run ci:full，并等它出结果
