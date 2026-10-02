@@ -1105,3 +1105,39 @@ scripts/test_matrix.js:716  waitForSelector('[data-testid="mobile-genre-detail"]
 **Batch 2**（**盘查判为最严重 ✗**）：**撤销/重做** ✓ ＋ **命名/保存/持久化** ✓（**新编排建了东西、刷新即回到选择屏 ✗**）。
 **Batch 3**：**顶栏显示工程名** ✓／**编排页里那句骗人的 `Ctrl+Z`** ✗／**Score 页签对鼓轨抛 `IncompleteVoice`** ✗。
 **记账**：**演播室 Count-In 打开时续播仍数 4 拍**（保留、默认关 ✓）／**光束"暂停隐藏、续播在保留位置重现"按构造成立、未单独断言** ✓／**`TIER_1_MAX` 14→15 及其理由** ✓。
+
+## 二十五、⚠️ **更正 §24**：那个手机分支**不是**"音源时代之前分叉的"，**它是 `dev` 的祖先**（2026-10-02 ✓）
+
+**只读盘查 `aa260f1d` 用数据推翻了我 §24 的前提** ✗✓✓——**我记错了，先改台账 ✓。**
+
+### 25.1 事实（`git` 原始输出 ✓）
+
+```
+origin/dev..origin/mobile-preserved = **0 笔**
+origin/mobile-preserved..origin/dev = **101 笔**
+git merge-base origin/dev origin/mobile-preserved = `29e37f6` = **mobile-preserved 自己的尖端**
+```
+**⇒ 分叉点就是它的尖端 ⇒ `dev` 是它的后代 ✓**（**我之前说的"约 287 笔、分叉在音源时代之前"是错的 ✗✓**——**那个数字来自把"可达提交数"当成了分支差距 ✗**）。
+
+**⇒ 于是"把音源迁移到手机分支"这个动作**在数据上不存在**** ✓✓：**音源那一层两边逐字节相同** ✓（**`public/samples/manifest.json` ✓、`src/data/genres/`（159 曲风）✓、`gs1Patches.ts` 的全部路由表 ✓、`genreInsert`／`trackInsert`／`genreFx`／`genreVoicing` ✓、`src/audio/gs1/` ✓、`src/audio/sfz/` ＋ sampler ✓——**全是 IDENTICAL／SAME**** ✓）；**`git diff … -- src/audio src/data` 只有 10 个文件，**没有一个是音源或路由**** ✓✓（**都是砍手机之后才做的：通道条／导出器／编排导入 ✓**）。**⇒ 两边唯一的实质差别是 `src/mobile/` 那 30 个文件（`dev` 上被删 ✓）** ✓。
+
+### 25.2 ⭐⭐ 而"都是电子合成音"**是真的**，根因是**三样都不存在**** ✗✓✓（**与分支无关 ✓**）
+
+**主线的路由链**（全部实测 ✓）：**曲风数据给"乐器名"（61 个 ✓）→ `routingForRole()` 只覆盖 `chords|lead|texture`（`bass`／`fx` 没有表 ⇒ 一律内置合成 ✗）→ 乐器名落到 `instrumentPresets.ts` → `PolySynth.ts` 的 51 个减法合成预设（**这是绝大多数轨的实际发声** ✗）→ 鼓按 category 选 `acoustic|808|909|cyber` 物理模型 ✓**。
+
+**⭐ 而**真实采样库不在这条链上的任何地方**** ✗✓✓：**真实采样字节**只**经"显式 sampler 轨的 `track.sample.assetId`"**到达播放 ✓；**全仓**不存在**"曲风乐器名（`walking_upright`／`acoustic_kick`…）→ 真实库资产"的表** ✓✓；**而 GS-1 那条"采样补丁"也不是真采样** ✗✓——**它录的是**现场生成的滤波器噪声****（`textureSample.ts` 文件头自己写着"the recording is content … the repository does not have" ✓）。
+
+**抽样结论（bebop 为例 ✓）**：**鼓＝物理模型 ✓、`walkingUpright` 贝斯／`pianoLead`／`saxLead`／`hornStab`＝合成预设 ✓、`rhodes_ep`／`guitar_lead`＝GS-1 减法合成 ✓** ⇒ **爵士**没有一轨用真采样**** ✓✓（**而"GS-1 补丁"≠"真实音源"这一点最容易误读 ✓**）。
+
+**⚠️ 还有一道运行时闸门** ✗：**`VITE_SAMPLE_ROOT` 默认空字符串** ✓ ⇒ **不发请求、目录为空 ⇒ 任何 sampler 轨静音** ✗；**该变量不在仓库里** ✓（只在被 gitignore 的 `.env.local`），**CI 三个 workflow 都没有 `VITE_`** ✓。
+
+### 25.3 更正后的判断 ✓✓
+
+* **"迁移音源"= 0 成本 ✓（因为已经迁完 ✓）**；**⇒ 要恢复**外壳**，`git checkout origin/mobile-preserved -- src/mobile` ＋ 那一小撮 `App`／`main`／`platform` 改动即可，**音源一行都不用碰**** ✓✓（**真正的冲突面是 `dev` 独有的那 10 个音频/数据文件 ✗，不是音源资产 ✓**）；
+* **⇒ 而业主要的东西**真正的缺口**是**从零建三样**** ✓✓：**① 映射层**（**曲风乐器 → 真实库 `assetId`；今天没有这张表 ✗——`GS1_*_ROUTING` 是**合成补丁**表，不是**采样**表 ✓✓**）；**② 加载路径**（**实时音序器的 `playChord/playLead/playBass` **不经过** sampler loader ✗；能载真 SFZ 的只有 sampler 轨 ✓；**而 GS-1 的 `importSample` 是单块 arena 的单声道导入 ✗✓（`1 too short · 4 no room in the arena`），**装不下一架 713.8 MB、多力度层的 Salamander** ✗**）；**③ 逐曲风的产品决定**（**哪些轨用采样、哪些留合成 ✓**）；
+* **⇒ 而这三样**与外壳正交**** ✓✓——**⇒ 它应该排在"重建外壳"之前还是之后，是可议的** ✓（**但"先把桥建起来"能立刻让**今天的线上站、在手机上**就发出接近真实曲风的声音 ✓✓**）。
+
+### 25.4 它的诚实边界（照录 ✓✓）
+
+**听感它不判** ✓（**只给"用了什么发声"的事实 ✓，明确不替业主判断"像不像爵士" ✓**）；**采样字节不在 git 里** ✓（**仓库只有 `manifest.json`（1659 个文件的 sha256/bytes/repo pin ✓），字节在 R2/CDN ✓**）；**只做了可达性、没做完整性** ✓（**一个 SFZ → HTTP 200、1205 B 与清单一致 ✓；1659 个文件的 sha256 没逐一核 ✓**）；**线上部署包的取值它静态判不了** ✗（**本机 `dist` 里内联了 R2 域 ✓，但线上是另一次构建 ✓**）；**手机分支的运行时未验证** ✗。
+**⚠️ 另作提醒** ✓：**`.env.local` 有明文 R2 凭据、`.env` 有 Cloudflare token ✓（都被 gitignore、未进 git ✓）。**
