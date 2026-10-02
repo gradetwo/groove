@@ -72,7 +72,9 @@ describe("audioDurationSeconds", () => {
     } catch {
       available = false;
     }
-    if (!available) return;
+    // ⭐ The second silent exit in this test, and the same defect as the first: the tool being missing is a
+    // reason to say so, not to report a pass. `docs/OPEN_WORK.md` §十七之五.
+    if (!available) ctx.skip();
     const measured = audioDurationSeconds(path, { run: (command, args) => execFileSync(command, args, { encoding: "utf8" }) });
     // The tool reports seconds; sample rate and count are no longer part of this module's answer, because the tool it now uses does not need them.
     expect(measured.seconds).toBeCloseTo(1.934, 3);
