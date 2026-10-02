@@ -169,13 +169,45 @@ export function createLegatoVoiceLedger(options: LegatoVoiceLedgerOptions = {}):
         } else {
           const consumed = sounding.consumedSeconds + (request.atSeconds - sounding.sinceSeconds) * sounding.ratio;
           const ratio = shiftedRatio(sounding.ratio, request.pitch - sounding.pitch);
-          /** How much wall time the recording has left at the new rate — the carried voice's own length bound. */
-          const remainingWallSeconds = Math.max(0, (request.recordingSeconds - consumed) / ratio);
+          /**
+           * ⭐⭐ **A voice whose recording loops cannot run out, so the recording-length refusal does not apply to it.**
+           *
+           * ## The ruling, and why it is this side
+           *
+           * `recording-would-run-out` asks *"does the recording still have sound at the instant the carried note ends?"*
+           * For a one-shot recording that is a question about **time**: 4.25 s of note against 1.861 s of bytes left, and
+           * the answer is no. For a **looping** recording it is not a question about time at all — the playhead wraps and
+           * the sounding material is unbounded — so applying the bound anyway would refuse the one case the loop exists
+           * to make possible. The owner's strings are the other case and are unchanged: `VlnEns_susVib_*` declare no loop
+           * and carry no `smpl`, so their 25 refusals are still 25 refusals.
+           *
+           * ## Why the *voice's own* `looping` is the flag, rather than a field on the request
+           *
+           * Because it is the fact itself. `request.recordingSeconds` is the buffer's length; whether that length is a
+           * wall is a property of the node that was started, and `SamplerVoice` already reports it (`voice.looping`,
+           * set from the region's `loop_mode` **or** the recording's `smpl` chunk — see `src/audio/sampleLoader.ts`).
+           * A second copy on the request could disagree with the voice it describes, and "the ledger thinks it loops and
+           * the voice does not" is a note that goes silent after all.
+           *
+           * ## What the industry says (the same sentence the fallback itself rests on)
+           *
+           * `loop_continuous`'s own definition is *"once the player reaches sample loop point, the loop will play until
+           * note expiration"* — a bound that is note expiration, not the recording's end
+           * (<https://sfzformat.com/opcodes/loopmode/>). A handover to a sounding voice is exactly "the note continues";
+           * there is nothing left for the recording to run out of.
+           */
+          const remainingWallSeconds = sounding.voice.looping
+            ? Number.POSITIVE_INFINITY
+            : Math.max(0, (request.recordingSeconds - consumed) / ratio);
           /**
            * **An unstated length means the recording's remaining length**, which is the rule the sink already uses for
-           * a plain sample (its bytes are the whole event). It therefore always fits, and is carried.
+           * a plain sample (its bytes are the whole event). It therefore always fits, and is carried. A looping voice
+           * never reaches this branch with an unstated length in practice — every instrument event carries its `gate` —
+           * and `rawRemaining` is finite even when the bound above is not, so the fallback stays a real number rather
+           * than an infinity the node would refuse.
            */
-          const length = Number.isFinite(request.seconds) ? (request.seconds as number) : remainingWallSeconds;
+          const rawRemaining = Math.max(0, (request.recordingSeconds - consumed) / ratio);
+          const length = Number.isFinite(request.seconds) ? (request.seconds as number) : rawRemaining;
           if (length > remainingWallSeconds + CARRY_EPSILON_SECONDS) {
             refuse(
               request,

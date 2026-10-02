@@ -63,7 +63,9 @@ import { generateTextureSample } from "./gs1/textureSample";
 import { applyGenreFxToGraph, resolveGenreFx } from "../data/genreFx";
 import { scheduleOfflineAudioLanes, isAudioLane, type OfflineAudioLaneReport } from "./offlineAudioLanes";
 import { sampledInstrumentProblems, sampledStandDownIndexes } from "./sampledLanes";
-import { browserSampleLoader } from "./browserSampleGraph";
+import { browserSampleDecoder } from "./browserSampleGraph";
+import { createSampleLoader } from "./sampleLoader";
+import { createWaveLoopReader } from "./wavLoop";
 import { createOfflineSamplerSink } from "./samplerLaneSink";
 import { SAMPLE_CATALOGUE, type SampleAsset } from "../data/sampleCatalogue";
 import { bufferHasAudio, type ChannelDataBuffer } from "./renderSilence";
@@ -1779,7 +1781,19 @@ async function renderPatternOfflineOnce(
       pattern,
       catalogue: audioCatalogue,
       ...(options.audioLaneCatalogueProblem ? { catalogueProblem: options.audioLaneCatalogueProblem } : {}),
-      loader: browserSampleLoader(ctx, audioCatalogue),
+      /**
+       * ⭐ **The loader reads the recording's own loop, when the region declared none.**
+       *
+       * `browserSampleLoader(ctx, catalogue)` is `createSampleLoader(browserSampleDecoder(ctx), catalogue)` — the same
+       * decoder, the same catalogue — with the recording's `smpl` chunk left unread. Measured before this: the
+       * program's regions declare no loop opcode at all and **136 of 136** of its sustained recordings carry one, so a
+       * 12 s note on a 5.2 s recording went silent at 9.2 s and every legato handover was refused
+       * `recording-would-run-out`. `createWaveLoopReader()` reads that chunk with `Range` requests and never downloads
+       * the audio — the chunk sits **after** a 600 KB–1 MB `data` body, so nothing cheaper can see it.
+       *
+       * `sampleLoader` owns the priority (SFZ first, recording second); this line only hands it the reader.
+       */
+      loader: createSampleLoader(browserSampleDecoder(ctx), audioCatalogue, undefined, undefined, createWaveLoopReader()),
       sink,
       bpm,
       ...(patternTempo.length ? { tempoTrack: patternTempo } : {}),

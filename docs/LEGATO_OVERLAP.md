@@ -258,3 +258,84 @@ so the note would go silent instead of joining
 * **Spitfire／VSL 的正文未取得**（§1.5），因此这两家的做法在本文里**不作主张**。
 * **实时两条路今天不享受这条规则**（§7），这一点是**未做**，不是"已排除"。⇒ **后续已做**：实时路的接线、读数与判据见 `docs/LEGATO_LIVE.md`（2026-10-02）。
 * **本文不改** `docs/OPEN_WORK.md`、版本号、`src/mobile/**`、`scripts/**`、`.github/workflows/*`、`docs/STRING_TECHNIQUES.md`。
+
+## 11. ⭐⭐ 那条例外的裁定：**带循环点的录音，不再算"会跑完"**
+
+这是本轮**刻意裁定**的一件事，单独记在这里，因为它是"规则要不要为一种新数据让路"的决定，而不是一处实现细节。
+
+### 11.1 谁决定、决定什么
+
+**决定人**：这条线（`smpl-loops` 工作树）在做到"让采样器读 WAV 的 `smpl` 块"时，必须回答一个问题——
+`recording-would-run-out` 这条拒绝（`src/audio/legatoVoices.ts`）今天只用 `recordingSeconds`（解码后 buffer 的长度，
+`buffer.duration`），**与 `loopMode` 无关**。现在录音会循环了，它还该不该照旧拒绝？
+
+**决定**：**不该。循环的 voice 不参与这条拒绝。** 判据在 `src/test/legatoLoopCarry.test.ts`。
+
+### 11.2 为什么是这一边：依据三条，都不是口味
+
+**① 规范原文（§28）。** `loop_continuous` 的定义就是"到音符结束为止"：
+
+> "**loop_continuous**: once the player reaches sample loop point, the loop will play until note expiration. This includes looping during the release phase."
+> —— <https://sfzformat.com/opcodes/loopmode/>
+
+"note expiration"是音符的终点，不是录音的终点。而"SFZ 不写 `loop_mode` 时按录音自带的循环来"也是同一页的原话：
+
+> "If `loop_mode` is not specified, each sample will play according to its predefined loop mode according to the loop metadata in the audio file. That is, the player will play the sample looped using the first defined loop, if available."
+> 默认值一栏：**"no_loop for samples without a loop defined, loop_continuous for samples with defined loop(s)"**
+
+所以"这条录音会循环"本身就是规范给的答案：它**没有**"用完"这个状态。
+
+**② 改前／改后实测（真 `karoryfer-bigcat-cello` 字节，程序里 0 个 `loop_*`）。** 走生产路径
+（`createSampleLoader` → `scheduleOfflineAudioLanes` → `createOfflineSamplerSink` → `startSamplerNote`），
+一条 6 个和弦、每音 4.25 s、重叠 0.25 s 的 lane，录音 5.220–6.345 s：
+
+| 读数 | 改前 | 改后 |
+| --- | --- | --- |
+| legato 规则要求的交接 | 15 | 15 |
+| **voice 层真的接过去** | **0** | **15** |
+| `recording-would-run-out` 拒绝 | **15** | **0** |
+| 启动的录音数（18 个音） | 18 | 3 |
+| 12 s 长音（5.220 s 录音）最后 100 ms | RMS **0.000000** / peak **0.000000** | RMS **0.482517** / peak **0.999847** |
+| 12 s 长音最后一个非零帧 | 9.220 s（之后 6.78 s 全静音） | 16.000 s（到渲染末尾） |
+
+改前那句被拒的话是量出来的：`carrying this voice to 58 would need 4.25 s of "cello"'s recording and only 1.861 s is left` ——
+而那条录音的 `smpl` 循环是 `1.234…4.725 s`。**"只剩 1.861 s"对一个会回卷的录音是句假话。**
+
+**③ 听感（§26）为什么这一边更对。** 拒绝的后果不是"安静"，而是**重新起音**：在换和弦的那一瞬间，
+演奏层本来是要"弓不停、只换指"，拒绝把它变回"新的一弓压在还在响的和弦上"——这正是
+`docs/LEGATO_OVERLAP.md` §1 与 §4 花了整节在描述的那个"断"。**在能循环的库上拒绝，等于主动把已经能修的那个缺陷留在原地。**
+反过来，接过去之后音色仍是前一条录音变调（§7 第 2 行那条限制**没有变**），但**起音**这一半是真的被修掉了。
+
+### 11.3 实现放在哪，以及为什么不是请求上的一个字段
+
+`src/audio/legatoVoices.ts`：`remainingWallSeconds` 在 `sounding.voice.looping` 为真时取 `Number.POSITIVE_INFINITY`。
+
+**为什么读 voice 自己的 `looping` 而不是在 `LegatoVoiceRequest` 上加一个 `loops` 字段**：因为那**就是事实本身**。
+`request.recordingSeconds` 是 buffer 的长度；"这个长度是不是一堵墙"是**已启动的那个节点**的属性，而
+`SamplerVoice` 已经在报它（`voice.looping`，由 region 的 `loop_mode` **或** 录音的 `smpl` 块设置，见 `src/audio/sampleLoader.ts`）。
+再抄一份到请求上就可能和它描述的那个 voice 不一致——"账本以为在循环、voice 其实不在"就是"接过去之后还是没声"。
+
+### 11.4 反向：业主那份工程一个字没变（同一次修改，同一次实跑）
+
+`src/test/ownerProjectAcceptance.test.ts`，期望值**一条未改**：
+
+```
+弦乐 legato : 19 overlapping chord change(s), 57 note(s) on them, 57 handed over by the rule;
+at the voice: 32 carried, 25 refused (recording-would-run-out); 28 recording(s) started for 60 notes;
+at beat 48 = 24 s: 3 attacks before, 1 after
+```
+
+**为什么不变**：`VlnEns_susVib_*` 不写 `loop_*`，而它们**也真的不带 `smpl`**（本轮实测：`vsco2ce` 1830 个 WAV 里只有 6 个带，
+全是 `Keys/Upright Nr1/UR1_*_pp_RR*.wav`）⇒ `voice.looping` 为假 ⇒ 走的老路，一个字节都没动。
+
+### 11.5 ⚠️ 何时回来重看这一节
+
+| 触发条件 | 为什么它会让这个裁定需要重看 |
+| --- | --- |
+| **业主对"带循环点的库"给出听感结论** | 这条裁定只主张"起音次数变少、末尾不再静音"，**好不好听不由本文判**。业主说不好听，就得回来改这条裁定而不是改判据 |
+| **`loop_sustain` 的 release 语义落地** | `loop_sustain` 在**释放阶段退出循环**（规范原话："During the release phase, there's no looping"）。今天离线这条路上，循环 voice 的终点是 `stop()` 排好的，release 阶段与循环的关系没有被分开实现；一旦分开，"release 阶段还剩多少录音"就重新变成一个真问题 |
+| **解析器能力那条线让 `no_loop` 显式可见** | 现在为分辨"写了 `no_loop`"和"什么都没写"，`sampleLoader` 去读 SFZ 文本里**任何**命名了该采样的 region 的 `loop_*` opcode——这是保守近似（同一采样被两个 region 命名、只有一个写了循环时，两个都不循环）。`ResolvedInstrumentNote` 一旦带上"显式不循环"这个事实，这个近似就该删掉 |
+| **实时那条路也接上 WAV 循环** | 本轮只把离线导出那条路（`WavExporter`）接上了 `createWaveLoopReader()`；实时两条路的入口在 `src/audio/browserSampleGraph.ts`（**不在本轮范围内**）。那两处接上之前，`voice.looping` 在实时路上**只可能**来自 SFZ，本节第 11.2 ② 的读数在实时路上还不成立 |
+| **`smpl` 之外出现别的循环来源**（如 FLAC 的 APPLICATION 块） | 本轮 7 个 freepats 库里 5 个只有 `.flac`（无 `smpl` 可读），裁定里"录音自带循环"的证据全来自 RIFF `smpl` |
+
+⭐ **一句话**：**循环的是录音，判断的是 voice；规则问"这一音要持续多久"，答案现在从"录音还剩多久"换成了"录音会不会回卷"。**

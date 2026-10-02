@@ -17,11 +17,41 @@ import type { SampleAsset } from "../data/sampleCatalogue";
 import { resolveInstrumentNote } from "./sfz/instrument";
 import { expandRemoteIncludes } from "./sfz/remoteIncludes";
 import { sampleAssetForPath } from "./sfz/instrument";
+import { parseSfz } from "./sfz/parse";
 import { resolveSamplePath } from "./sfz/defaultPath";
 import { noCorsProbe, transportNote } from "./transportDiagnostic";
+import { createWaveLoopReader, type WaveLoopPoints } from "./wavLoop";
+
+/**
+ * ⭐ **A decoded asset, and the loop its own bytes carry.**
+ *
+ * The bytes are in the decoder's hands and nowhere else — `decodeAudioData` **detaches** the `ArrayBuffer` it is given —
+ * so a decoder that has them can answer both questions at once, for free. That is the shape a browser adapter wants to
+ * return; a decoder that only ever returns an `AudioBuffer` stays valid, and `createSampleLoader`'s fifth parameter
+ * ({@link SampleWaveLoopReader}) is the seam for a caller whose decoder cannot say.
+ */
+export interface DecodedSample {
+  buffer: AudioBuffer;
+  /** The recording's own embedded sustain loop, when it has one — see `src/audio/wavLoop.ts`. */
+  waveLoop?: WaveLoopPoints;
+}
 
 /** Decodes one asset. In the browser this wraps `decodeAudioData`; in a test it is a plain function. */
-export type SampleDecoder = (asset: SampleAsset) => Promise<AudioBuffer>;
+export type SampleDecoder = (asset: SampleAsset) => Promise<AudioBuffer | DecodedSample>;
+
+/**
+ * ⭐ **How a recording's own loop is obtained when the decoder did not report one.**
+ *
+ * The default is **undefined, deliberately**: a caller that never wired this keeps the behaviour it had, byte for byte,
+ * including a criterion's fake decoder which must not be made to touch a network. `WavExporter` passes
+ * `createWaveLoopReader()`, which reads the `smpl` chunk over HTTP `Range` requests without downloading the audio.
+ */
+export type SampleWaveLoopReader = (asset: SampleAsset) => Promise<WaveLoopPoints | undefined>;
+
+/** Whether a decoder answered with the richer shape. */
+function isDecodedSample(value: AudioBuffer | DecodedSample): value is DecodedSample {
+  return typeof value === "object" && value !== null && "buffer" in value && (value as DecodedSample).buffer !== undefined;
+}
 
 export interface SampleLoader {
   /** Resolves to the decoded buffer, or rejects with a reason a composer can act on. */
@@ -69,17 +99,38 @@ export interface LoadedNote {
    */
   oneShot?: boolean;
   /**
-   * ⭐ **What the region said about looping** — `loop_mode=loop_continuous` or `loop_sustain`, passed through from the
-   * resolver. Absent means "do not loop", which is SFZ's own default and this project's behaviour until now.
+   * ⭐ **What the note's loop is** — `loop_continuous` or `loop_sustain`, from whichever layer declared it.
    *
-   * It travels for the same reason the choke group does: the player holds a decoded buffer, and a buffer does not say
-   * whether the region that named it wanted the recording to repeat. See `samplerVoice` for what is done with it — and
-   * for why it cannot fix `VSCO-2-CE`'s sustained strings, which declare no loop at all.
+   * Two layers can declare a loop and the priority between them is the SFZ specification's own, not this project's
+   * invention (`https://sfzformat.com/opcodes/loopmode/`: *"If `loop_mode` is not specified, each sample will play
+   * according to its predefined loop mode according to the loop metadata in the audio file… the player will play the
+   * sample looped using the first defined loop, if available"*):
+   *
+   *   1. **The region's own `loop_*` opcodes win, always** — `loop_continuous`/`loop_sustain` are carried through
+   *      unchanged, and `loop_start`/`loop_end` alone (with no `loop_mode`) suppress the recording's loop exactly as
+   *      they did before this existed, because SFZ's default for a file that writes neither is `no_loop`.
+   *   2. **An explicit refusal wins too** — `loop_mode=one_shot` (which also arrives as `oneShot`) and `loop_mode=no_loop`
+   *      both mean "do not loop", and neither is overridden by a `smpl` chunk. For `no_loop` this is read off the SFZ
+   *      text rather than the resolver, because the resolver deliberately drops that value into "absent"; see
+   *      `sfzSpeaksAboutLoops` below for the one conservative consequence of that.
+   *   3. **Only when the SFZ says nothing** does the recording's own `smpl` chunk decide, and then the mode is
+   *      **`loop_continuous`** — the specification's stated default for "samples with defined loop(s)".
+   *
+   * Absent still means "do not loop", which is SFZ's own default for a file that declares nothing and a recording that
+   * carries nothing. The player holds a decoded buffer, and a buffer does not say whether the region that named it
+   * wanted the recording to repeat; see `samplerVoice` for what is done with this field.
    */
   loopMode?: "loop_continuous" | "loop_sustain";
-  /** The loop's bounds in **frames of the source sample**, from the region's `loop_start`/`loop_end`. Absent `loopEndFrames` means the sample's last frame. */
+  /** The loop's bounds in **frames of the source sample**. Absent `loopEndFrames` means the sample's last frame. `endFrame` is inclusive, as both SFZ and the `smpl` chunk write it. */
   loopStartFrames?: number;
   loopEndFrames?: number;
+  /**
+   * ⭐ **Which layer declared the loop**, so a report can say where a note's sustain came from rather than implying the
+   * SFZ wrote it. `"sfz"` is a region opcode; `"recording"` is the WAV's own `smpl` chunk. **Present exactly when
+   * `loopMode` is** — a region that writes only `loop_start`/`loop_end` has declared frames without asking for a loop,
+   * and reporting that as a loop's source would name a loop that does not happen.
+   */
+  loopSource?: "sfz" | "recording";
   /** The file's `note_polyphony`: a cap on how many voices of this note may sound at once. Measured — see the resolver, where the numbers are. */
   notePolyphony?: number;
   /** The controller-driven level scale the region asked for (`amplitude_onccN`), applied when the note is started. */
@@ -106,9 +157,16 @@ export function createSampleLoader(
    * `no-cors` fetch of the same address, which is the cheapest way to separate "this host does not answer" from "this host answers but does not
    * admit this origin".
    */
-  probeTransport: (url: string) => Promise<unknown> = noCorsProbe
+  probeTransport: (url: string) => Promise<unknown> = noCorsProbe,
+  /**
+   * ⭐ **The recording's own loop, when the decoder did not report one** — see {@link SampleWaveLoopReader}.
+   *
+   * It is the last parameter and it defaults to nothing, so every existing caller is unchanged down to the network
+   * traffic it causes.
+   */
+  readWaveLoop?: SampleWaveLoopReader
 ): SampleLoader {
-  const cache = new Map<string, Promise<AudioBuffer>>();
+  const cache = new Map<string, Promise<DecodedSample>>();
   let decodes = 0;
 
   /**
@@ -117,17 +175,69 @@ export function createSampleLoader(
    * Extracted so a region's sample can be decoded without a catalogue lookup: the catalogue holds instruments while a region names a file, so the sample path becomes an address
    * (`sampleAssetForPath`) and must still share this cache — a sample used by several notes is decoded once whichever route reached it.
    */
-  const decodeAsset = (asset: SampleAsset): Promise<AudioBuffer> => {
+  const decodeAsset = (asset: SampleAsset): Promise<DecodedSample> => {
     const cached = cache.get(asset.assetId);
     if (cached) return cached;
     decodes += 1;
-    const pending = decode(asset).catch((error: unknown) => {
-      // Rule 2: a failure leaves the cache as it was, so the next caller gets a real attempt rather than yesterday's error.
-      cache.delete(asset.assetId);
-      throw error;
-    });
+    const pending = decode(asset)
+      .then((result) => (isDecodedSample(result) ? result : { buffer: result }))
+      .catch((error: unknown) => {
+        // Rule 2: a failure leaves the cache as it was, so the next caller gets a real attempt rather than yesterday's error.
+        cache.delete(asset.assetId);
+        throw error;
+      });
     cache.set(asset.assetId, pending);
     return pending;
+  };
+
+  /**
+   * ⭐ **One header read per sample, not one per note.**
+   *
+   * A chord of three notes on one recording would otherwise ask for the same `smpl` chunk three times, and a lane of
+   * sixty notes on five recordings thirty times over. The two rules are the decode cache's own, because the reason for
+   * them is the same: the cache holds the **promise** (so two notes asking at once share one read), and a **failure is
+   * not cached** (a transient 502 must not become a permanently one-shot instrument).
+   *
+   * A reader that throws is answered with "no loop" rather than an exception: this is instrument resolution, and a
+   * recording whose header cannot be read is the one-shot it was before this existed.
+   */
+  const waveLoops = new Map<string, Promise<WaveLoopPoints | undefined>>();
+  const waveLoopFor = (asset: SampleAsset): Promise<WaveLoopPoints | undefined> => {
+    if (!readWaveLoop || !asset.url) return Promise.resolve(undefined);
+    const cached = waveLoops.get(asset.assetId);
+    if (cached) return cached;
+    const pending = readWaveLoop(asset).catch(() => {
+      waveLoops.delete(asset.assetId);
+      return undefined;
+    });
+    waveLoops.set(asset.assetId, pending);
+    return pending;
+  };
+
+  /**
+   * ⭐ **Which samples this program speaks about looping** — read from the SFZ text, because the resolver cannot say.
+   *
+   * `no_loop` is the value the resolver drops on purpose (its `loopMode` field only ever carries the two looping
+   * values), so "the region wrote `no_loop`" and "the region wrote nothing" arrive here identically. The difference
+   * matters: the first is an explicit refusal that must beat a `smpl` chunk, the second defers to it. So the text is
+   * consulted, once per program, for **any** `loop_*` opcode on **any** region naming the sample that answered.
+   *
+   * The consequence, stated rather than discovered later: that test is per **sample**, not per region. If two regions
+   * name the same file and only one writes a loop opcode, the recording's own loop is suppressed for both. That is the
+   * conservative direction — it can only ever leave a note playing exactly as it does today — and no library the mirror
+   * serves needs it to be finer (the measured programs either write a loop for every region or for none).
+   */
+  const loopDeclarations = new Map<string, Set<string>>();
+  const declaredSamples = (assetId: string, text: string): Set<string> => {
+    const cached = loopDeclarations.get(assetId);
+    if (cached) return cached;
+    const declared = new Set<string>();
+    for (const region of parseSfz(text)) {
+      if (region.opcodes.loop_mode === undefined && region.opcodes.loop_start === undefined && region.opcodes.loop_end === undefined) continue;
+      declared.add(region.sample);
+    }
+    loopDeclarations.set(assetId, declared);
+    return declared;
   };
 
   /**
@@ -182,7 +292,7 @@ export function createSampleLoader(
   const api: SampleLoader = {
     load(assetId: string): Promise<AudioBuffer> {
       const cached = cache.get(assetId);
-      if (cached) return cached;
+      if (cached) return cached.then((decoded) => decoded.buffer);
 
       const asset = findSampleAsset(assetId, catalogue);
       if (!asset) {
@@ -197,7 +307,7 @@ export function createSampleLoader(
         );
       }
 
-      return decodeAsset(asset);
+      return decodeAsset(asset).then((decoded) => decoded.buffer);
     },
     async loadNote(assetId, note, options = {}) {
       const asset = findSampleAsset(assetId, catalogue);
@@ -233,6 +343,42 @@ export function createSampleLoader(
        */
       if (resolution.note.defaultPathProblem) throw new Error(`${asset.assetId}: ${resolution.note.defaultPathProblem}`);
       const samplePath = resolveSamplePath(resolution.note.samplePath, resolution.note.defaultPath);
+      /**
+       * ⭐ **The sample, as an asset, before either question about it is asked.** The address is resolved once and then
+       * used twice: once to decode the bytes, once to read the `smpl` chunk out of them. Building it twice is how the
+       * two come to disagree (a `default_path` joined in one place and not the other), so it is built once.
+       */
+      const knownAsset = findSampleAsset(samplePath, catalogue);
+      const sampleAsset = knownAsset ?? sampleAssetForPath(samplePath, { programUrl: asset.sfz.url, programFallbackUrl: asset.sfz.fallbackUrl });
+      const decoded = await decodeAsset(sampleAsset);
+      const buffer = decoded.buffer;
+
+      /**
+       * ⭐ **SFZ first, recording second, and that order is the specification's** — see `LoadedNote.loopMode`.
+       *
+       * `sfzSpoke` is true when the resolver carried **any** loop fact (`loop_continuous`, `loop_sustain`,
+       * `loop_start`, `loop_end`, `one_shot`) **or** when the program's own text writes a loop opcode against the
+       * sample that answered. The text half exists for one value the resolver drops on purpose — `loop_mode=no_loop`
+       * — and it is deliberately the conservative test: it can only ever *withhold* the recording's loop, never
+       * invent one, so a file this reading is wrong about still plays exactly as it does today.
+       */
+      const sfzSpokeAboutLoops =
+        resolution.note.loopMode !== undefined ||
+        resolution.note.loopStartFrames !== undefined ||
+        resolution.note.loopEndFrames !== undefined ||
+        resolution.note.oneShot === true ||
+        declaredSamples(asset.assetId, expanded.text).has(resolution.note.samplePath);
+      const recordingLoop = sfzSpokeAboutLoops ? undefined : decoded.waveLoop ?? (await waveLoopFor(sampleAsset));
+      /**
+       * The mode the recording's own loop plays as: **`loop_continuous`**, which is `loop_mode`'s stated default for
+       * *"samples with defined loop(s)"* (<https://sfzformat.com/opcodes/loopmode/>). Nothing here invents a
+       * `loop_sustain` reading the file did not ask for.
+       */
+      const loopMode = sfzSpokeAboutLoops ? resolution.note.loopMode : recordingLoop ? "loop_continuous" : undefined;
+      const loopStartFrames = resolution.note.loopStartFrames ?? recordingLoop?.startFrame;
+      const loopEndFrames = resolution.note.loopEndFrames ?? recordingLoop?.endFrame;
+      const loopSource =
+        loopMode === undefined ? undefined : resolution.note.loopMode !== undefined ? ("sfz" as const) : ("recording" as const);
       const noteInfo = {
         ratio: resolution.note.ratio,
         samplePath,
@@ -242,16 +388,18 @@ export function createSampleLoader(
         ...(resolution.note.offBy === undefined ? {} : { offBy: resolution.note.offBy }),
         // The release behaviour travels with the note for the same reason the choke group does: only the resolver saw the region that answered.
         ...(resolution.note.oneShot === undefined ? {} : { oneShot: resolution.note.oneShot }),
-        // And so does the loop's, for the same reason: a decoded buffer cannot say whether its region wanted to repeat.
-        ...(resolution.note.loopMode === undefined ? {} : { loopMode: resolution.note.loopMode }),
-        ...(resolution.note.loopStartFrames === undefined ? {} : { loopStartFrames: resolution.note.loopStartFrames }),
-        ...(resolution.note.loopEndFrames === undefined ? {} : { loopEndFrames: resolution.note.loopEndFrames }),
+        /**
+         * And so does the loop's — now from **either** layer, with the SFZ's declaration having already won the
+         * argument above. `loopSource` names which one it was, because a report that says "this note loops" without
+         * saying where the loop came from cannot distinguish a file that asked for one from a recording that carries one.
+         */
+        ...(loopMode === undefined ? {} : { loopMode }),
+        ...(loopStartFrames === undefined ? {} : { loopStartFrames }),
+        ...(loopEndFrames === undefined ? {} : { loopEndFrames }),
+        ...(loopSource === undefined ? {} : { loopSource }),
         ...(resolution.note.notePolyphony === undefined ? {} : { notePolyphony: resolution.note.notePolyphony }),
         ...(resolution.note.gainScale === undefined ? {} : { gainScale: resolution.note.gainScale }),
       };
-      const buffer = findSampleAsset(samplePath, catalogue)
-        ? await api.load(samplePath)
-        : await decodeAsset(sampleAssetForPath(samplePath, { programUrl: asset.sfz.url, programFallbackUrl: asset.sfz.fallbackUrl }));
       return { buffer, ...noteInfo };
     },
     decodes: () => decodes,
