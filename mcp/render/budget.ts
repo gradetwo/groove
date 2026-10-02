@@ -12,6 +12,9 @@
  *
  * Everything here is a **measured** figure or a budget. Nothing is a guess, and a number without a measurement
  * behind it does not get added.
+ *
+ * **It also holds the one copy of the `headless` parameter's text** (`headlessParameterDescription()`), for the same
+ * reason: four tools now quote the same three measured host-difference numbers, and four copies would drift.
  */
 import budget from "./budget.json";
 
@@ -101,3 +104,41 @@ export function renderCostSentence(): string {
 
 /** The clause that follows `renderCostSentence()` on the preview tool, where the low-rate default is the point. */
 export const PREVIEW_DEFAULT_CLAUSE = "Which is why render_preview_clip defaults to 8 kHz mono.";
+
+/**
+ * **The `headless` parameter's description, in one place because four tools now carry it.**
+ *
+ * `render_arrangement` was the first tool to expose the Node host (`84638d0`); `render_song`, `render_audio` and
+ * `render_preview_clip` run through the same `renderAudio` and gained the same parameter. Four copies of the three
+ * measured divergence numbers is the drift this file exists to prevent — and the numbers are measurements, which is
+ * this module's own admission rule.
+ *
+ * What the sentence has to carry, and why each part is not decoration:
+ *
+ * * **which host, and how to get it** — `node-web-audio-api`, and that it works with the browser forbidden;
+ * * **that the two hosts are not the same sound yet** — on the parity probe's own fixture (GS-1 on and off) they
+ *   differ by 1.28 dB in band 6, 1.11 dB in band 3 and 1.774 LU of integrated loudness, and the named cause is
+ *   `kick`'s channel-strip compressor (`src/audio/ChannelStripDsp.ts:188`), still a host node. A caller choosing an
+ *   engine has to be able to read that **before** choosing, at `tools/list`, without opening a document;
+ * * **`engine` in the reply** — so "which host rendered this" is read, never inferred;
+ * * **never falls back** — a missing optional package errors and names it; the failure this line keeps meeting is a
+ *   render that quietly used the other engine;
+ * * **the budget does not apply, and neither does progress** — `withRenderTimeout` resets a stuck *page* and the
+ *   heartbeat narrates one, and an in-process render has no page; a caller that needs a ceiling owns it, and a caller
+ *   that sends a `progressToken` on this path gets no notifications.
+ */
+export function headlessParameterDescription(): string {
+  return (
+    "render through the **Node Web Audio host** (`node-web-audio-api`) instead of Vite + Chromium — no browser process, and it also works under GROOVE_MCP_NO_BROWSER=1. " +
+    "⚠️ **The two hosts are not identical yet.** On the parity probe's own fixture, measured against the browser render, the worst 13-band difference is **1.28 dB in band 6** (GS-1 on) and **1.11 dB in band 3** (GS-1 off), with a **1.774 LU** integrated-loudness gap; the named cause is the kick channel strip's host compressor (`src/audio/ChannelStripDsp.ts:188`), still a browser `createDynamicsCompressor()`. " +
+    "The numbers, the two substitutions already landed and the plan to converge are in **docs/HEADLESS_CORE_PLAN.md** (§8.9 and §8.10); the reply's `engine` field says which host actually rendered. " +
+    "**This never falls back**: if the optional package is missing the call errors and names it, rather than quietly rendering through Chromium. The server's render budget is **not** applied to this path (it resets a stuck page, and an in-process render has no page to reset), so a client that needs a ceiling owns it; this path is also **silent on progress** — a `progressToken` produces no notifications, because there is no page to start or poll."
+  );
+}
+
+/**
+ * The one-sentence pointer a tool *description* carries (not the parameter), so `tools/list` shows an engine choice
+ * exists before a model opens the schema. Deliberately short: the measured numbers live in the parameter.
+ */
+export const HEADLESS_POINTER_SENTENCE =
+  " Pass `headless: true` to render through the Node Web Audio host instead of Chromium — the parameter carries the measured differences between the two hosts, which are **not yet zero**.";

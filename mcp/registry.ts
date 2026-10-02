@@ -104,7 +104,13 @@ import { analyseWavFile, auditionInstrumentNote, renderAudio, renderStems } from
  * the budget the worker enforces and the budget a caller reads are then one value, and `budgetHonesty.test.ts` asserts
  * the descriptions carry the derivation rather than a literal.
  */
-import { renderBudgetSentence, renderCostSentence, PREVIEW_DEFAULT_CLAUSE } from "./render/budget";
+import {
+  renderBudgetSentence,
+  renderCostSentence,
+  PREVIEW_DEFAULT_CLAUSE,
+  HEADLESS_POINTER_SENTENCE,
+  headlessParameterDescription,
+} from "./render/budget";
 import type { ProgressReporter } from "./render/progress";
 import { getGenreLoudnessTrimDb } from "../src/data/genreMix";
 import { setVocalMelody } from "./vocal";
@@ -393,7 +399,7 @@ export const TOOLS: ToolDefinition[] = [
       renderCostSentence() +
       " " +
       renderBudgetSentence() +
-      " Pass `headless: true` to render through the Node Web Audio host instead of Chromium — the parameter carries the measured differences between the two hosts, which are **not yet zero**.",
+      HEADLESS_POINTER_SENTENCE,
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
@@ -415,17 +421,10 @@ export const TOOLS: ToolDefinition[] = [
        * but it is **not yet the same sound** as the browser render, and `scripts/probe_headless_parity.ts` measures by how
        * much. A caller choosing it must be able to read that before choosing, so the numbers are here rather than in a
        * document nobody opened. `docs/HEADLESS_CORE_PLAN.md` §8.9/§8.10 is where they come from and where the plan to
-       * close them lives.
+       * close them lives. The text is shared with the three other tools that reach the same host
+       * (`headlessParameterDescription()`), so the four copies cannot drift apart.
        */
-      headless: z
-        .boolean()
-        .optional()
-        .describe(
-          "render through the **Node Web Audio host** (`node-web-audio-api`) instead of Vite + Chromium — no browser process, and it also works under GROOVE_MCP_NO_BROWSER=1. " +
-            "⚠️ **The two hosts are not identical yet.** On the parity probe's own fixture, measured against the browser render, the worst 13-band difference is **1.28 dB in band 6** (GS-1 on) and **1.11 dB in band 3** (GS-1 off), with a **1.774 LU** integrated-loudness gap; the named cause is the kick channel strip's host compressor (`src/audio/ChannelStripDsp.ts:188`), still a browser `createDynamicsCompressor()`. " +
-            "The numbers, the two substitutions already landed and the plan to converge are in **docs/HEADLESS_CORE_PLAN.md** (§8.9 and §8.10); the reply's `engine` field says which host actually rendered. " +
-            "**This never falls back**: if the optional package is missing the call errors and names it, rather than quietly rendering through Chromium. The server's render budget is **not** applied to this path (it resets a stuck page, and an in-process render has no page to reset), so a client that needs a ceiling owns it."
-        ),
+      headless: z.boolean().optional().describe(headlessParameterDescription()),
       /**
        * ⭐ **A span of bars, so part of a long arrangement can be heard without rendering all of it.** Both are
        * needed together: `startBar` alone would mean "from here to the end", which is a different request and not
@@ -2315,6 +2314,8 @@ export const TOOLS: ToolDefinition[] = [
       PREVIEW_DEFAULT_CLAUSE +
       " " +
       renderBudgetSentence() +
+      HEADLESS_POINTER_SENTENCE +
+      " **The measured speed above is the browser path's** — the Node host's cold start for a preview has not been measured here, so `headless` on this tool buys a preview with no browser rather than a faster one." +
       " The reply is labelled `preview: true` — use render_song or render_audio for anything you intend to deliver.",
     readOnly: false,
     inputSchema: {
@@ -2326,6 +2327,7 @@ export const TOOLS: ToolDefinition[] = [
       sampleRate: z.number().int().min(8000).max(96000).optional().describe("default 8000, which is the point of this tool"),
       channels: z.number().int().min(1).max(2).optional().describe("default 1"),
       format: z.enum(["wav", "mp3"]).optional().describe("default wav"),
+      headless: z.boolean().optional().describe(headlessParameterDescription()),
     },
     handler: async (args, ctx) => {
       try {
@@ -2357,7 +2359,16 @@ export const TOOLS: ToolDefinition[] = [
 
         const startedAt = Date.now();
         // `bars: 1` is the flattened pattern *is* the section, the same convention `render_song` documents.
-        const result = await renderAudio(pattern, { format, bars: 1, sampleRate, channels, nameSlug: `${label.replace(/[^a-z0-9]+/gi, "-")}-preview`, ...(ctx?.progress ? { progress: ctx?.progress } : {}) });
+        const result = await renderAudio(pattern, {
+          format,
+          bars: 1,
+          sampleRate,
+          channels,
+          nameSlug: `${label.replace(/[^a-z0-9]+/gi, "-")}-preview`,
+          // Absent when the caller did not ask for it, so "default engine" is a missing key rather than `false`.
+          ...(args.headless === true ? { headless: true } : {}),
+          ...(ctx?.progress ? { progress: ctx?.progress } : {}),
+        });
         const seconds = Number(((Date.now() - startedAt) / 1000).toFixed(2));
         return {
           preview: true,
@@ -2369,6 +2380,10 @@ export const TOOLS: ToolDefinition[] = [
           integratedLufs: result.integratedLufs,
           truePeakDb: result.truePeakDb,
           path: result.path,
+          // Which host produced this file, read rather than inferred — the preview reply is a curated shape rather than a
+          // spread of the render result, so the field has to be named here or it would be dropped and the silence
+          // this line of work keeps meeting would be back.
+          engine: result.engine,
           note:
             `a ${seconds}s preview at ${result.sampleRate} Hz and ${result.channels} channel(s) — for iterating, not for delivery; ` +
             "use render_song or render_audio when the file matters",
@@ -2685,10 +2700,11 @@ export const TOOLS: ToolDefinition[] = [
     name: "render_audio",
     title: "Render audio",
     description:
-      "Render a pattern (or a genre's default) through the app's own offline engine to WAV or MP3, writing a file under GROOVE_MCP_OUT, and return its path, duration, loudness, true peak and per-track peaks. Needs headless Chromium; the first call starts it. A host that returns a buffer with **no samples in it** is a failed render, not a quiet one: the renderer retries and, if the retry succeeds, names that in `problems`; if every attempt is silent it errors instead of writing a file of silence. " +
+      "Render a pattern (or a genre's default) through the app's own offline engine to WAV or MP3, writing a file under GROOVE_MCP_OUT, and return its path, duration, loudness, true peak and per-track peaks. Needs headless Chromium unless `headless: true`, which renders on the Node Web Audio host with no browser at all; the first browser call starts Chromium. A host that returns a buffer with **no samples in it** is a failed render, not a quiet one: the renderer retries and, if the retry succeeds, names that in `problems`; if every attempt is silent it errors instead of writing a file of silence. " +
       renderCostSentence() +
       " " +
-      renderBudgetSentence(),
+      renderBudgetSentence() +
+      HEADLESS_POINTER_SENTENCE,
     readOnly: false,
     inputSchema: {
       genreId: z.string().optional(),
@@ -2702,6 +2718,7 @@ export const TOOLS: ToolDefinition[] = [
         .boolean()
         .optional()
         .describe("also render each track alone and report its peak (costs one render per track, but shows the balance)"),
+      headless: z.boolean().optional().describe(headlessParameterDescription()),
     },
     handler: async (args, ctx) => {
       const pattern = patternFromArgs(args as { genreId?: string; pattern?: unknown });
@@ -2716,6 +2733,8 @@ export const TOOLS: ToolDefinition[] = [
         bitrateKbps: args.bitrateKbps as number | undefined,
         trackPeaks: args.trackPeaks as boolean | undefined,
         genreId: args.genreId as string | undefined,
+        // Absent when the caller did not ask for it, so "default engine" is a missing key rather than `false`.
+        ...(args.headless === true ? { headless: true } : {}),
         ...(ctx?.progress ? { progress: ctx?.progress } : {}),
       });
     },
@@ -3310,10 +3329,11 @@ export const TOOLS: ToolDefinition[] = [
     name: "render_song",
     title: "Render the arrangement",
     description:
-      "Bounce a song created with create_song: every section, in order, with its repeats, mutes and velocity scale, through the app's own offline engine (WAV or MP3, written under GROOVE_MCP_OUT). Needs headless Chromium. A song reaches the renderer as **one** flattened pattern and the time goes into the page's `OfflineAudioContext.startRendering()`, which has no callback — so there is no per-bar figure to report, and this tool is honest about that rather than pretending. " +
+      "Bounce a song created with create_song: every section, in order, with its repeats, mutes and velocity scale, through the app's own offline engine (WAV or MP3, written under GROOVE_MCP_OUT). Needs headless Chromium unless `headless: true`, which renders on the Node Web Audio host with no browser at all. A song reaches the renderer as **one** flattened pattern and the time goes into the page's `OfflineAudioContext.startRendering()`, which has no callback — so there is no per-bar figure to report, and this tool is honest about that rather than pretending. " +
       renderBudgetSentence() +
-      " While it runs, a caller that sent a progressToken gets a heartbeat every 15 s saying the page is still inside `startRendering()`; that is a sign of life and not a completion estimate. The estimate in the reply — the song's `secondsEstimate`, read **before** rendering — is what `maxDurationSec` compares against, and refusing with it is cheaper than hanging: a 2816-step arrangement ran fifteen minutes with no result. The preview's own measured figure (14.4 s of audio in 1.45 s) is for 8 kHz mono, and a full-rate stereo bounce is heavier; this server has **not** measured a whole-song full-rate bounce, so no duration is promised for one. **If you need real per-bar visibility rather than a heartbeat, render movements separately with `render_audio`**: each file is mastered on its own, which buys N/M visibility, a file per movement and bounded memory — and is **not** the same master as a single bounce of the whole song. That is measured, not assumed: per-section rendering was compared against a whole-song render and the difference runs through the whole chunk (max 1.7, mean 0.14 on a ±1 scale), because reverb tails, the bus compressor and the parallel drum path span the entire piece and a chunk rendered alone never has them. " +
-      renderCostSentence(),
+      " While it runs, a caller that sent a progressToken gets a heartbeat every 15 s saying the page is still inside `startRendering()`; that is a sign of life and not a completion estimate — and on the `headless` path there is no page to narrate, so a progressToken produces no heartbeat at all. The estimate in the reply — the song's `secondsEstimate`, read **before** rendering — is what `maxDurationSec` compares against, and refusing with it is cheaper than hanging: a 2816-step arrangement ran fifteen minutes with no result. The preview's own measured figure (14.4 s of audio in 1.45 s) is for 8 kHz mono, and a full-rate stereo bounce is heavier; this server has **not** measured a whole-song full-rate bounce, so no duration is promised for one. **If you need real per-bar visibility rather than a heartbeat, render movements separately with `render_audio`**: each file is mastered on its own, which buys N/M visibility, a file per movement and bounded memory — and is **not** the same master as a single bounce of the whole song. That is measured, not assumed: per-section rendering was compared against a whole-song render and the difference runs through the whole chunk (max 1.7, mean 0.14 on a ±1 scale), because reverb tails, the bus compressor and the parallel drum path span the entire piece and a chunk rendered alone never has them. " +
+      renderCostSentence() +
+      HEADLESS_POINTER_SENTENCE,
     readOnly: false,
     inputSchema: {
       songId: z.string().describe("the id create_song returned"),
@@ -3345,6 +3365,7 @@ export const TOOLS: ToolDefinition[] = [
         .describe(
           "refuse to render a song longer than this. A guard against the unbounded hang a composer hit (2816 steps ran 15 minutes with no result): the estimated duration is checked *before* the browser starts."
         ),
+      headless: z.boolean().optional().describe(headlessParameterDescription()),
     },
     handler: async (args, ctx) => {
       try {
@@ -3376,6 +3397,8 @@ export const TOOLS: ToolDefinition[] = [
           // The caller's own title, whitelisted in the worker — never model prose, and never the whole name in place of the genre
           // and tempo. A song with no name (its genre id) lands on the previous `_master_` form by construction.
           nameSlug: song.name,
+          // Absent when the caller did not ask for it, so "default engine" is a missing key rather than `false`.
+          ...(args.headless === true ? { headless: true } : {}),
           ...(ctx?.progress ? { progress: ctx?.progress } : {}),
         });
         return {

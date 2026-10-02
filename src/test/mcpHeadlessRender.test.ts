@@ -21,6 +21,9 @@ import os from "node:os";
 import path from "node:path";
 import { HEADLESS_PACKAGE } from "../../mcp/render/headless";
 import { renderAudio } from "../../mcp/render/worker";
+import { TOOLS } from "../../mcp/registry";
+import { clearMcpSongs, createMcpSong } from "../../mcp/song";
+import { findGenre } from "../../mcp/library";
 import type { SequencerPattern } from "../types/genre";
 
 /** Whether the optional host is installed; asked synchronously so `describe.skipIf` can decide. */
@@ -132,5 +135,47 @@ describe.skipIf(!headlessInstalled)("render_audio on the Node Web Audio host", (
     expect(Number.isFinite(result.integratedLufs), "silence has no loudness").toBe(true);
     // A whole-bar render of three lanes is not a −60 dBFS whisper; this is the "not silence" assertion.
     expect(result.truePeakDb).toBeGreaterThan(-40);
+  }, 180_000);
+});
+
+/**
+ * **The same Node host, reached through a tool rather than through the worker.**
+ *
+ * The case above proves the engine; this one proves the *song* path into it — `render_song` flattens an arrangement and
+ * hands the single pattern to `renderAudio`, so it is the owner's first-priority entry and the one whose reply shape is
+ * a spread rather than a curated one. `src/test/mcpHeadlessRouting.test.ts` holds the same route with the Node host
+ * mocked; this holds it with the browser forbidden and a real render, which is the only way to see `engine` come back
+ * from a finished file. It skips loudly with the other case when the optional package is absent.
+ */
+describe.skipIf(!headlessInstalled)("render_song on the Node Web Audio host", () => {
+  let out = "";
+
+  beforeEach(() => {
+    clearMcpSongs();
+    out = mkdtempSync(path.join(os.tmpdir(), "groove-headless-song-"));
+    process.env.GROOVE_MCP_NO_BROWSER = "1";
+    process.env.GROOVE_MCP_OUT = out;
+  });
+
+  afterEach(() => {
+    clearMcpSongs();
+    rmSync(out, { recursive: true, force: true });
+    delete process.env.GROOVE_MCP_NO_BROWSER;
+    delete process.env.GROOVE_MCP_OUT;
+  });
+
+  it("bounces a song with the browser forbidden, and names the engine in the tool's own reply", async () => {
+    const { songId } = createMcpSong({ genreId: "chicago-house", genre: findGenre("chicago-house") ?? null });
+    const tool = TOOLS.find((candidate) => candidate.name === "render_song");
+    expect(tool, "render_song is not declared").toBeTruthy();
+
+    const reply = (await tool!.handler({ songId, sampleRate: 8000, channels: 1, headless: true })) as Record<string, unknown>;
+
+    expect(reply.engine).toBe("node-web-audio-api");
+    expect(reply.songId).toBe(songId);
+    expect(statSync(String(reply.path)).size).toBeGreaterThan(1000);
+    expect(readFileSync(String(reply.path)).toString("ascii", 0, 4)).toBe("RIFF");
+    expect(reply.sampleRate).toBe(8000);
+    expect(Number(reply.truePeakDb)).toBeGreaterThan(-40);
   }, 180_000);
 });

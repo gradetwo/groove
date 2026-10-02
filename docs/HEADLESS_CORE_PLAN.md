@@ -648,7 +648,7 @@ HPF → low shelf → peaking → high shelf → [压缩器] → makeup gain →
 
 > **"无头尽快推进（可以先在mcp中提供，有些不一致先搁置，记录后后续修改和完善）"**
 
-**⇒ 这一节记录的就是**提供出来的那一个入口** ✓**、**它已知的不一致** ✓**、**以及为什么选择"先提供"** ✓。
+**⇒ 这一节记录的就是**提供出来的那一个入口** ✓**、**它已知的不一致** ✓**、**以及为什么选择"先提供"** ✓。**（它是**第一版**：只有 `render_arrangement`；§9.6 把它扩到 4 个工具，并列出没进的 3 个与理由 ✓。）**
 
 ### §9.1 提供了什么，以及怎么用
 
@@ -685,7 +685,7 @@ HPF → low shelf → peaking → high shelf → [压缩器] → makeup gain →
 
 **原因指向** ✓✓（**§8.9／§8.10 ✓**）：**二分具名的是 `kick` 轨的通道条压缩器** ✓——**`src/audio/ChannelStripDsp.ts:188` 的 `ctx.createDynamicsCompressor()` 仍在宿主上** ✗；**探针 `--no-kick-comp` 把响度差降到 1.266 LU、让两条频段进容差** ✓。**它最多贡献 0.508 LU** ✓，**所以响度那条至少还有第二个原因，而那个原因还没有量** ✓。
 
-**这三行**写进了 `headless` 的 `.describe()`** ✓✓（`mcp/registry.ts` ✓）：**三个数字、原因所在文件（`ChannelStripDsp.ts:188`）、以及 `docs/HEADLESS_CORE_PLAN.md` 的指向** ✓——**模型在 `tools/list` 里就能读到"这两个宿主还不是同一个声音"** ✓，**不必从回复里猜** ✗。**同一段话也进了 `docs/MCP.md` 的工具表** ✓。
+**这三行**写进了 `headless` 的 `.describe()`** ✓✓（`mcp/render/budget.ts` 的 `headlessParameterDescription()` ✓，**四个工具共用这一份** ✓）：**三个数字、原因所在文件（`ChannelStripDsp.ts:188`）、以及 `docs/HEADLESS_CORE_PLAN.md` 的指向** ✓——**模型在 `tools/list` 里就能读到"这两个宿主还不是同一个声音"** ✓，**不必从回复里猜** ✗。**同一段话也进了 `docs/MCP.md` 的工具表** ✓。
 
 ### §9.3 判据：两个方向，各有反向
 
@@ -728,12 +728,12 @@ divergence note served: true true true
 
 ### §9.4 ⚠️ 这一版**没有**做到的部分（**记录，不假装** ✓）
 
-* **只有 `render_arrangement` 有入口** ✗：`render_audio`／`render_song`／`render_preview_clip`／`render_arrangement_stems` **仍然只有浏览器路径** ✓（**先一个入口，把判据立住** ✓）；
+* **入口从 1 个扩到 4 个** ✓（`headless-more`，见 §9.6 ✓）：`render_arrangement` 之外的 `render_song`／`render_audio`／`render_preview_clip` **现在也走这条路** ✓——**它们与 `render_arrangement` 是同一份接线** ✓（都进 `worker.ts` 的 `renderAudio` ✓）。**仍然没有入口的** ✗：`render_arrangement_stems`（**它有自己的逐轨页调用，带一个无头模块不收的 `stemTrackIdx`** ✗）、`render_instrument_note`（**单音走页里的 SFZ 采样器，无头宿主没有这条路的任何实现** ✗）、`normalize_loudness`（**一次调用跑 2-4 次渲染，判据是一个实测的收敛回路** ✗）——**理由与代价都写在 §9.6 的表里** ✓；
 * **构建产物变大** ✗✓（**实测，不是估计** ✓）：**4739 KB → 5439 KB（+700 KB，+14.8%** ✓，`scripts/build_mcp.mjs` 自己的输出 ✓）——**因为 `worker.ts` 现在动态 `import` 了 `headless.ts`，而后者拖进整个离线引擎图** ✓。**没有任何体积闸门拦它** ✓（`check_mcp_build.mjs` 只比版本字符串 ✓）；**代价换来的正是"没有浏览器也能渲染"** ✓，**而如果这个代价不可接受，出路是让无头路径按源码加载引擎而不是把它打进产物** ✗——**那需要另一个加载器，不在这一版里** ✓；
 * **无头路径不走渲染预算** ✓：`withRenderTimeout` 的用途是**重置卡住的页面** ✓，**进程内渲染没有页面可重置** ✓——**这一点写在参数描述里** ✓，**客户端的超时是这条路上唯一的顶** ✓；
 * **无头路径不发 `progress`** ✗：`render_arrangement` 会把 reporter 传下去 ✓，**而无头分支没有"启动页面"这个阶段可报** ✓——**带 `progressToken` 的调用在这条路上是安静的** ✓（**与浏览器路径不同** ✗，**尚未补** ✓）；
 * **MP3 在无头路径上没有实测** ✗：判据只渲染 WAV ✓；**实现里 MP3 分支存在** ✓，**但没有量过** ✓；
-* **`trackPeaks` 在无头路径上按页面那份逐字照抄** ✓（**包括页面不传采样率的那个形状** ✓），**今天没有 MCP 工具会打开它** ✓——**所以它没有判据** ✓；
+* **`trackPeaks` 在无头路径上按页面那份逐字照抄** ✓（**包括页面不传采样率的那个形状** ✓）；**上一版没有 MCP 工具能打开它** ✓，**而 `render_audio` 现在同时暴露 `headless` 与 `trackPeaks`，所以这个组合**可达**了** ✗✓——**但它仍然没有判据，也没有量过** ✗（**实现是页里那份的照抄，不是新写的一段** ✓）；
 * **探针不进本地闸门** ✓：`probe:headless` 要 Chromium 与几分钟 ✓，**本机不跑** ✓（**全量交 GitHub 的 `dev` 门禁** ✓）。
 
 ### §9.5 为什么"先提供、后收敛" ✓✓
@@ -741,4 +741,60 @@ divergence note served: true true true
 * **卡住的不是入口，是那 1.774 LU 的第二个原因** ✗——**而它需要先在通道条那一件落地之后重新量** ✓（**§8.10 的规矩：先量，再假设** ✓）；
 * **入口本身可以现在就诚实** ✓✓：**回复说清哪个宿主** ✓、**参数说清差多少** ✓、**缺依赖时指名报错而不是回落** ✓——**这三条都不依赖对等转绿** ✓；
 * **⇒ 于是"提供"不制造技术债** ✓，**只制造一条**被标注的**已知差** ✓——**而"搁置"是业主要求的、写下来的搁置** ✓，**不是忘掉** ✓。
+
+### §9.6 扩到 `render_song` 一族：**4 个入口，3 个不进**（2026-10-02，`headless-more`）
+
+**这一轮的第一件事是**量**，不是接线** ✓✓：`render_song` 的 handler 把 `flattenMcpSong` 的整首 pattern 交给 **`renderAudio`** ✓，`render_audio` 与 `render_preview_clip` 同样 ✓——**而 §9.1 的那条分支就在 `renderAudio` 里** ✓。**所以"能不能走通"的答案是**同一份接线已经在了**** ✓✓，**缺的只是每个工具 schema 上的一个布尔与 handler 里的一次透传** ✓；**没有新渲染代码，`mcp/render/headless.ts` 与 `worker.ts` 的分支一行未改** ✓。
+
+| 工具 | 进这条路了吗 | 依据／理由 |
+| --- | --- | --- |
+| `render_song` | **进了** ✓ | 业主第一优先级 ✓；`flattenMcpSong` → `renderAudio` ✓，回复本就是 `...result` 展开，`engine` 随之外露 ✓；**它的描述原本把"每 15 s 一次心跳"当承诺** ✓，**所以这一轮的描述补了一句**：无头路径没有页面可讲故事，**`progressToken` 不产生任何通知** ✓ |
+| `render_audio` | **进了** ✓ | 同一接线 ✓；`trackPeaks` 与 `headless` 现在可同时开 ✓（**这个组合可达，但仍无量、无判据，见 §9.4** ✓） |
+| `render_preview_clip` | **进了** ✓ | 同一接线 ✓；**它的回复是裁剪过的形状**（不是 `...result`）✓，**`engine` 必须显式带出** ✓——**这正是"回复里的 engine"那条判据会抓的漏洞** ✓；**⚠️ 它引用的 ~1.8 s 是**浏览器路径**的实测** ✓，**无头冷启动在预览尺寸上没量过** ✓，**所以描述里写的是"无头买的是'没有浏览器'，不是'更快'"** ✓ |
+| `render_arrangement_stems` | **没进** ✗ | **不是同一份接线** ✗：`renderStems` 自己跑逐轨 `page.evaluate`，带一个 `stemTrackIdx`，**而无头模块不接受这个参数** ✓——**要进就得先写新渲染代码** ✓；**而且探针量的是整混三轨夹具，没有任何**单轨**数字** ✗——**给一个没量过的东西加引擎选择，就是把"未标注的差"换成"看起来已标注的差"** ✗ |
+| `render_instrument_note` | **没进** ✗ | 它走 `auditionInstrumentNote`：**页里 `loadNote` + SFZ 采样器渲染一个音** ✓，**无头宿主**完全**没有这条路的实现** ✗——**那是第二份无头实现，不是一次透传** ✓ |
+| `normalize_loudness` | **没进** ✗ | **它一次调用跑 1-3 个 pass 的渲染**（measure → trim → re-measure ✓），**它的全部承诺是一个实测的收敛回路** ✓；**在这条路上加引擎选择会让宿主差在多次渲染间累积，而那个累积没量过** ✗——**也不在业主这一轮点名的范围里** ✓ |
+
+**四件套，四个入口都有** ✓✓（**同一个 helper，所以四份不会漂** ✓）：`.describe()` 里是实测差 ✓（`mcp/render/budget.ts` 的 `headlessParameterDescription()` ✓，**三个数字＋原因文件＋文档指向＋never falls back＋"不走预算、不发 progress"** ✓）、回复里的 `engine` ✓、缺包时指名报错而不回落 ✓（**分支在 `GROOVE_MCP_NO_BROWSER` 之上并 `return`** ✓，**无头实现没有变** ✗）、**路由判据两个方向** ✓。
+
+**判据**（`src/test/mcpHeadlessRouting.test.ts` ✓，**不依赖可选包** ✓，**16 例 78 ms** ✓）：**每个工具四例** ✓——① schema 面（参数在、三个数字与文档指向在、**工具自己的 description 也提到 headless** ✓）；②**无头方向**（Node 模块被调用一次、`headless` 传到它、**浏览器拒绝语不出现** ✓）；③**默认方向**（Node 模块零调用、落回浏览器 ✓）；④**`engine` 在回复里**（把 mock 切到 `payload` 模式，让 `finishRenderAudio` 真的走完 ✓，**四个工具都断言 `engine === "node-web-audio-api"`** ✓——**`render_preview_clip` 的裁剪回复就是这一例抓的** ✓）。
+
+**反向（实测）** ✓✓：**把 `worker.ts` 里 `if (options.headless === true)` 改成 `if (false && …)`** ✗ →
+
+```
+× render_arrangement  > sends headless: true to the Node host …   × render_arrangement  > names the engine in the reply
+× render_audio        > sends headless: true to the Node host …   × render_audio        > names the engine in the reply
+× render_song         > sends headless: true to the Node host …   × render_song         > names the engine in the reply
+× render_preview_clip > sends headless: true to the Node host …   × render_preview_clip > names the engine in the reply
+Tests  8 failed | 8 passed | 2 skipped (18)
+```
+
+**⇒ 四个工具的**无头方向与 `engine`**全红** ✓✓，**四个 schema 面与四个默认方向保持绿** ✓✓——**这正是要的形状** ✓，**恢复后 16/16 绿** ✓。
+
+**真渲染** ✓：`src/test/mcpHeadlessRender.test.ts` 新增一例**走 `render_song` 工具**（不是直接调 `renderAudio`）✓：`createMcpSong` → 工具 handler（`sampleRate: 8000, channels: 1, headless: true`）→ 断言 `engine`、`songId`、RIFF 与真峰值 ✓。**本机没有可选包** ✓，**所以它与原有一例一起**大声 SKIP**（2 skipped）✓**——**这是预期** ✓（**§9.3 的约定** ✓）；**它是否真的通过，本机判不了** ✗，**判得了的那一半由上面 16 例（不依赖可选包）承担** ✓。
+
+**闸门** ✓：`npm run check:mcp` = **123 项 0 失败** ✓（**schema 改动必跑** ✓）；`npm run lint` ✓、`npx tsc --noEmit` ✓。**产物只大了 +2 KB** ✓（**5656 KB → 5658 KB** ✓，`scripts/build_mcp.mjs` 自己的输出 ✓）——**因为无头模块上一版就已在产物里，这一轮只加了描述文字** ✓；**§9.4 那条 +700 KB 的代价不变，仍是这条路的成本** ✓。
+
+**构建产物级实测** ✓✓（**vitest 看不到这一层** ✓，**本机没有可选包也能做** ✓）——**用一个临时的 SDK 客户端驱动 `dist-mcp/groove-mcp.mjs` 的 `tools/list`** ✓：
+
+```
+render_arrangement         headless=true  numbers=true  descMentions=true
+render_audio               headless=true  numbers=true  descMentions=true
+render_song                headless=true  numbers=true  descMentions=true
+render_preview_clip        headless=true  numbers=true  descMentions=true
+render_arrangement_stems   headless=false numbers=n/a   descMentions=false
+render_instrument_note     headless=false numbers=n/a   descMentions=false
+```
+
+**再用 `scripts/mcp_call.mjs --script` 在同一个 `GROOVE_MCP_NO_BROWSER=1` 进程里跑真调用** ✓（`create_song` → `render_song` ／ `render_audio`，都带 `headless: true` ✓）：
+
+```
+render_song  → headless rendering needs the optional package `node-web-audio-api`, which is not installed here
+               (Cannot find module 'node-web-audio-api' …). … **No browser render was started instead** — see docs/HEADLESS_CORE_PLAN.md.
+render_audio → render_audio failed: … same message …
+```
+
+**⇒ 这条实测同时证明三件事** ✓✓：**schema 收下了 `headless`** ✓、**handler 把它透传到 worker 并进了无头分支** ✓、**而缺包时是**指名报错**，不是回落** ✓——**而且那句"没有启动浏览器渲染"是模块自己说的** ✓，**不是判据推断的** ✓。**没进的那两个在 `tools/list` 里根本没有 `headless`** ✓✓——**"不支持"是**发不出去**的，不是文档里的一句话** ✓。
+
+**⚠️ 这一轮**没有**变的东西** ✓（**写下来，免得被读成已解决** ✗）：**三个数字一个都没动** ✗（**收敛仍卡在通道条压缩器那一件** ✓）；**无头路径仍不走预算、不发 progress** ✓（**现在四个工具的描述都这么写** ✓）；**MP3 在无头路径上仍无量** ✗；**`headless + trackPeaks` 可达但仍无判据** ✗；**无头预览的墙钟仍无量** ✗。
 

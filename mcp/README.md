@@ -43,21 +43,36 @@ On Windows the `command` is `node.exe` and the path uses backslashes.
 | `GROOVE_MCP_OUT` | a fresh temp directory per call | where `render_audio` writes |
 | `GROOVE_MCP_ROOT` | the working directory | the repo root the renderer should serve (set it if you launch from elsewhere) |
 | `GROOVE_MCP_APP_URL` | `https://groove.wangda.today` | the origin `share_url` links to |
-| `GROOVE_MCP_NO_BROWSER` | unset | `1` disables the **browser** render paths (everything else still works). `render_arrangement` with `headless: true` still renders — on the Node Web Audio host instead of Chromium |
+| `GROOVE_MCP_NO_BROWSER` | unset | `1` disables the **browser** render paths (everything else still works). `render_arrangement`, `render_song`, `render_audio` and `render_preview_clip` with `headless: true` still render — on the Node Web Audio host instead of Chromium |
 | `GROOVE_MCP_PORT` | `5399` | the dev-server port the renderer uses |
 
 ### The headless (Node) render host
 
-`render_arrangement` takes `headless: true`, which renders through the app's own `renderPatternOffline` under
+Four tools take `headless: true`, and all four render through the app's own `renderPatternOffline` under
 `node-web-audio-api` with **no browser process** — useful where Chromium is unavailable, and it works under
-`GROOVE_MCP_NO_BROWSER=1`. The optional package is not declared in `package.json` on purpose; install it with
-`npm i -D node-web-audio-api` and the tool will use it. Without it the call **errors and names the package** rather
-than quietly rendering through Chromium, and the reply's `engine` field always says which host produced the file.
+`GROOVE_MCP_NO_BROWSER=1`:
+
+| tool | what it renders |
+| :--- | :--- |
+| `render_arrangement` | a whole arrangement (the first tool to take the flag) |
+| `render_song` | a song's flattened arrangement |
+| `render_audio` | one pattern, or a genre's default |
+| `render_preview_clip` | one section, for iterating |
+
+The optional package is not declared in `package.json` on purpose; install it with `npm i -D node-web-audio-api` and
+the tools will use it. Without it the call **errors and names the package** rather than quietly rendering through
+Chromium, and every one of these replies' `engine` field says which host produced the file.
+
+Two tools deliberately do **not** take it. `render_arrangement_stems` runs its own per-track page call with a
+`stemTrackIdx` the Node module does not accept, so supporting it is new renderer code rather than the same wiring — and
+the parity probe has measured no stem. `render_instrument_note` renders one note through the SFZ sampler in the page,
+a path with no Node-host implementation at all. Neither is half-supported: there is no flag to send.
 
 ⚠️ **The two hosts are not the same sound yet.** On the parity probe's fixture the Node host differs from the browser
 by 1.28 dB in band 6, 1.11 dB in band 3 and 1.774 LU of loudness; `docs/HEADLESS_CORE_PLAN.md` §8.9/§8.10 records the
 measurements, the named cause and the plan to converge. This entry exists so the path is available and labelled while
-that work is open — not because the gap is closed.
+that work is open — not because the gap is closed. The Node path is also outside the render budget and sends no
+progress notifications: both exist to reset and narrate a browser page, and there is none.
 
 ## What an agent can do with it
 
@@ -77,8 +92,9 @@ analyze_audio                         → measure what came out
 
 * **Nothing in the library is editable.** `get_pattern` returns a copy and `apply_pattern_ops` returns a new
   pattern; there is no tool that writes to `src/data/`.
-* **Only `render_audio` needs Chromium.** It starts a Vite dev server and a headless browser on first use (~40 s
-  cold, then a few seconds per render) and keeps them for the session. It renders through
+* **Only the render tools need Chromium.** The first browser render starts a Vite dev server and a headless browser
+  (~40 s cold, then a few seconds per render) and keeps them for the session; `headless: true` on the four tools above
+  skips that entirely. Either way it renders through
   `renderPatternOffline` — the same code the export button uses — so the audio is the app's audio, not a second
   implementation of it.
 * **The bundle is ~4 MB** of JavaScript (the whole genre library, its metadata and the loudness table). It is a
