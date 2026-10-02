@@ -246,3 +246,22 @@ it("keeps an optional lane only when every contributing clip has it", () => {
 **⇒ 这三个是我上一轮用**文件名**筛出来的**误收**** ✗✓✓（`ls | grep -iE "mobile|phone|touch|ios"` ✓）**——**而"误收进删除清单"正是我上一节自己警告过的危险：**删掉一个覆盖两面的判据会静默丢掉桌面侧的覆盖 ✓**。**⇒ 更正：删净的判据是**13 个真正手机命名的** ✓**（`mobileApp` ✓、`mobileBottomControlBar` ✓、`mobileChallenge` ✓、`mobileExplore` ✓、`mobileGenrePicker` ✓、`mobileIndexGuard` ✓、`mobileJam` ✓、`mobileMore` ✓、`mobilePlayerPort` ✓、`mobileSharedBottomRow` ✓、`mobileShell` ✓、`mobileTransportBar` ✓、`headerPhoneSurface` ✓、`iosAudioUnlock` ✓——**共 14 个，其中 `iosAudioUnlock` 需确认它测的是不是仅 iOS 解锁 ✓**），**而 `audioScheduler`／`audioSettings`／`audioStartGate` **留下** ✓✓**。
 
 **⚠️ 而这正是"清单也要被测量"的又一例** ✓：**一条靠名字生成的清单，会**多删**（本节 ✓）也会**少删**（无处可查 ✗）——**⇒ 删之前逐条量引用，而不是逐条看名字 ✓✓**。
+
+### 九之四、清单**定稿**：又是**少删**的两条（2026-10-02 ✓）
+
+**① 那四个音频判据** ✓：**`audioScheduler` ✓、`audioSettings` ✓、`audioStartGate` ✓、`studioSession` ✓**——**逐个**直接 grep 过 `mobile|Mobile` ✓，**四个全为 0 处** ✓✓（**`studioSession.test.tsx` 引的是 `useStudioSession` ✓、`keyboardFabPref` ✓、`trackUtils` ✓——**与手机模块无关 ✓**）。**⇒ 四个都**留下**** ✗✓✓。
+
+**⚠️ 而我上一轮把 `studioSession.test.ts` 当成存在** ✗✓——**它是 `.tsx`** ✓；**我那条命令里硬写了 `.ts` ✓，于是它报了"No such file" ✓**——**再一次说明：清单里的每一条都要**用对扩展名去量**，而不是凭名字或记忆 ✓✓**。
+
+**② ⭐⭐ 而最要紧的一条：`iosAudioUnlock` **不能删**** ✗✓✓
+
+```ts
+src/test/iosAudioUnlock.test.ts:2   import { isIosDevice, IosAudioUnlocker, initIosAudioUnlock, SILENCE_MP3_DATA_URI } from "../audio/iosAudioUnlock";
+:4                                   describe("iOS Hardware Silent Switch Bypass (iosAudioUnlock)", …)
+```
+
+**⇒ 它管的是**平台**（iOS Safari 的硬件静音开关绕过 ✓），**不是**手机外壳**** ✓✓。**而"砍掉手机版本"砍的是**外壳** ✓——**不是"本应用不再支持在手机上打开" ✗**：**一个用手机浏览器进来的人，仍会落到**桌面界面** ✓，**而 iOS 那套解锁**仍然必须存在** ✓✓**（**否则他会**听不到声音**，而且是无声的失败 ✗**）。
+
+**⇒ 因此这次砍法的边界是**"移除手机外壳（`src/mobile/` 与其接线）"** ✓，**而不是"移除移动平台支持"** ✓✓**——**这条边界如果不写明，下一个人很容易顺手把 `iosAudioUnlock` 一起删掉 ✓**（**而全套判据里只有它一个会红 ✗，很像是可以跟着删的 ✓**）。
+
+**⇒ 定稿清单** ✓✓：**删 13 个手机外壳判据 ✓（`mobileApp` ✓、`mobileBottomControlBar` ✓、`mobileChallenge` ✓、`mobileExplore` ✓、`mobileGenrePicker` ✓、`mobileIndexGuard` ✓、`mobileJam` ✓、`mobileMore` ✓、`mobilePlayerPort` ✓、`mobileSharedBottomRow` ✓、`mobileShell` ✓、`mobileTransportBar` ✓、`headerPhoneSurface` ✓）；**保留 `iosAudioUnlock`** ✓✓；**保留四个音频判据** ✓。**
