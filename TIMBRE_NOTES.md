@@ -1,5 +1,7 @@
 # TIMBRE_NOTES — genre 乐器音色接线与策展
 
+> **2026-09-15 的音色策展改动记录**：§5 的分布数字是当时的快照，之后数据又有漂移；现状一律以 `src/data/genres/*.ts` 与 `src/test/genreInstrumentation.test.ts` 为准。
+
 本文件记录两条相互衔接的工作：
 
 1. `feat/genre-timbres`：引擎此前忽略数据里的 `track.instrument`，只按 track **角色**
