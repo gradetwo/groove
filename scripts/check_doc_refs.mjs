@@ -42,6 +42,19 @@ const REPORT_ONLY = process.argv.includes("--report");
  */
 const PROPOSED = new Map([
   /**
+   * ⭐ **The upstream repository's own paths.** `GS1_PATCH_SURFACE.md` explains why it did not vendor
+   * `src/state/share.ts`, and quotes two files that file imports; all of them live in the synth repository, not
+   * here. From this side that is the same claim PROPOSED makes — documented, not built here — and it is not the
+   * cross-mark convention, which would say the paths are wrong, and they are not.
+   */
+  ["src/state/share.ts", "The synth repository's own file, quoted in GS1_PATCH_SURFACE.md and OPEN_WORK.md §十四."],
+  ["src/state/persist.ts", "Imported by the synth repository's src/state/share.ts; not a path in this repository."],
+  ["src/midi/takes.ts", "Imported by the synth repository's src/state/share.ts; not a path in this repository."],
+  [
+    "src/features/arrangement/songTimeline.ts",
+    "Planned in ARRANGEMENT_PLAN.md step B0 as the pure timeline functions; not built. Note the same line also names src/types/song.ts, which does exist.",
+  ],
+  /**
    * ⭐ **Parked, not built here**: these live on `graphsplit-preserved` (2026-10-02).
    *
    * The WIP commit was measured as not merging cleanly -- it conflicts in two files that kept moving afterwards --
@@ -77,10 +90,21 @@ const PROPOSED = new Map([
 ]);
 
 /** Doc files to scan: the repository's own notes and plans. */
-const DOCS = fs
-  .readdirSync(ROOT)
-  .filter((f) => f.endsWith(".md"))
-  .map((f) => f);
+/**
+ * ⭐ **The root notes and `docs/`, which it did not scan until now.**
+ *
+ * The directory holds the plans and the audit records, and every stale reference this stretch found lived there
+ * while the gate reported green on the root alone. Bringing it in needed two capabilities, both now in place: the
+ * failure names the file a missing path probably meant, and a line carrying the cross mark is read as discussing a
+ * path rather than asserting one (`docs/OPEN_WORK.md` §十七).
+ */
+const DOCS = [
+  ...fs.readdirSync(ROOT).filter((f) => f.endsWith(".md")),
+  ...fs
+    .readdirSync(path.join(ROOT, "docs"))
+    .filter((f) => f.endsWith(".md"))
+    .map((f) => `docs/${f}`),
+];
 
 /** `src/foo.ts`, `scripts/bar.mjs`, `public/baz.json` mentioned in backticks. */
 const REF_RE = /`((?:src|scripts|public|\.github)\/[A-Za-z0-9_./-]+\.(?:ts|tsx|mjs|js|json|css|yml|yaml))`/g;

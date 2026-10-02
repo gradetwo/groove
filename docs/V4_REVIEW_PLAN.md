@@ -769,7 +769,7 @@ exist" claim.
 
 ## The fourth report's kick-phase claim: the file is wrong, the API is right, and the criterion is written
 
-The report cites `src/dsp/kickEngine.ts` for a −8 dB phase null at 38 Hz when two sub kicks are stacked. **That file does not exist**, so the number has no
+The report cites `src/dsp/kickEngine.ts` for a −8 dB phase null at 38 Hz when two sub kicks are stacked. **That file does not exist**, so the number has no ✗
 source in this tree. But the pieces needed to test the claim do:
 
 * the presets are real — `KICK_PRESETS` (`src/audio/AnatomyKickEngine.ts:122`), with `berlin-orphic` at `basePitch: 42` (the report says 40 Hz);

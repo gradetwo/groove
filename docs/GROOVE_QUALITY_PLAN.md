@@ -377,7 +377,7 @@ the only genuinely new one.
 
 ## An external AI report, audited claim by claim (2026-09-27)
 
-A Gemini report listed twelve audio defects with file paths and code. **Every path was wrong** — `src/audio/export/AudioExporter.ts`,
+A Gemini report listed twelve audio defects with file paths and code. **Every path was wrong** — `src/audio/export/AudioExporter.ts`, ✗
 `renderTail.ts`, `mixer/TrackChannel.ts`, `synthesis/DrumKitModels.ts`, `effects/ReverbBus.ts`, `synthesis/PolySynth.ts`,
 `effects/DelayBus.ts`, `mixer/MixerBus.ts`, `engine/AudioContextManager.ts` and `synthesis/AnatomyKickEngine.ts` do not exist —
 which is why each claim was checked against the real tree and, where possible, measured, rather than acted on. Nine are false or
