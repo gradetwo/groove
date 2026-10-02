@@ -8,17 +8,59 @@
  * **What this file proves by existing**: it satisfies `SampleDecoder` and `SampleSink` exactly, so `tsc` is the criterion — the same instrument this workstream has
  * learned to distrust for behaviour and to trust for shape.
  */
-import type { SampleDecoder, SampleLoader } from "./sampleLoader";
+import type { DecodedSample, SampleLoader } from "./sampleLoader";
 import { createSampleLoader } from "./sampleLoader";
 import type { SampleSink } from "./audioLaneScheduler";
 import { DEFAULT_SAMPLER_RELEASE_SECONDS, startSamplerNote } from "./samplerVoice";
 import { createLegatoVoiceLedger, type LegatoVoiceLedger } from "./legatoVoices";
 import type { SampleAsset } from "../data/sampleCatalogue";
 import { transportNote, type TransportProbe } from "./transportDiagnostic";
+import { readWaveSustainLoop } from "./wavLoop";
 
-/** Fetches an asset's bytes and decodes them, refusing an asset that has no bytes to fetch. */
-export function browserSampleDecoder(context: BaseAudioContext, probe?: TransportProbe): SampleDecoder {
-  return async (asset: SampleAsset): Promise<AudioBuffer> => {
+/**
+ * ⭐ **The bytes are read for their own loop before `decodeAudioData` takes them away.**
+ *
+ * `decodeAudioData` **detaches** the `ArrayBuffer` it is given, so the one moment at which this adapter can answer
+ * *"does this recording carry a `smpl` loop?"* is between the fetch and the decode — and it costs nothing, because the
+ * bytes are already here. That is the whole reason `DecodedSample` exists as a shape a decoder may return.
+ *
+ * Measured on the libraries the mirror serves: **136 of 136** `karoryfer-bigcat-cello` sustained recordings and
+ * **224 of 224** `karoryfer-string-cyborgs` samples carry a `smpl` chunk, and their programs write no `loop_*` opcode
+ * at all. The offline export path learned to read those chunks in the previous round (`src/audio/wavLoop.ts` +
+ * `WavExporter`); this is the same fact reaching the **live** paths — the arrangement's sampler lanes
+ * (`scheduleSamplerSteps`) and the audio-lane player (`audioLaneScheduler` → `browserSampleSink`).
+ *
+ * ⚠️ **Named rather than discovered — one measured side effect.** `vsco2ce` is not smpl-free either: **6 of its 1 830**
+ * WAVs carry a whole-recording loop, `Keys/Upright Nr1/UR1_{C6,C7,G6,G7}_pp_RR{1,2}.wav`, named by `VSUpright1.sfz`,
+ * which writes no loop opcode. Those six upright-piano takes will therefore now sustain in live playback. That is what
+ * the SFZ specification asks for — `loop_mode`'s stated default is *"loop_continuous for samples with defined
+ * loop(s)"* (<https://sfzformat.com/opcodes/loopmode/>) — and the offline half already behaves this way; it is a
+ * consequence of the wiring, not an accident of it.
+ */
+/**
+ * ⭐ **The return type is narrower than `SampleDecoder` on purpose.** A function that always answers with
+ * {@link DecodedSample} still satisfies `SampleDecoder` (which allows either shape), but saying so precisely means a
+ * caller that wants the loop does not have to cast for it — and the `tsc` criterion this file already leans on then
+ * covers the loop's shape too.
+ */
+export function browserSampleDecoder(context: BaseAudioContext, probe?: TransportProbe): (asset: SampleAsset) => Promise<DecodedSample> {
+  /**
+   * **One address, and the loop its own bytes carry.** Kept in one place so both addresses answer identically: a
+   * recording fetched from the mirror must loop exactly as the same recording fetched from the source host.
+   */
+  const decodeAddress = async (url: string): Promise<DecodedSample> => {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    /**
+     * `decodeAudioData` takes ownership of the ArrayBuffer it is given, which is why a fresh one is passed per call and
+     * the loader caches the *result* — and why the `smpl` chunk is read **before** the decode rather than after.
+     */
+    const bytes = await response.arrayBuffer();
+    const waveLoop = readWaveSustainLoop(new Uint8Array(bytes));
+    const buffer = await context.decodeAudioData(bytes);
+    return waveLoop ? { buffer, waveLoop } : { buffer };
+  };
+  return async (asset: SampleAsset): Promise<DecodedSample> => {
     if (!asset.url) {
       // The loud failure again: an asset declared without audio is an error, not a silent empty buffer.
       throw new Error(`sample "${asset.assetId}" has no url, so there are no bytes to decode`);
@@ -31,10 +73,7 @@ export function browserSampleDecoder(context: BaseAudioContext, probe?: Transpor
     const reason = (error: unknown) => (error instanceof Error ? error.message : String(error));
     let primaryError: unknown;
     try {
-      const response = await fetch(asset.url);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      // `decodeAudioData` takes ownership of the ArrayBuffer it is given, which is why a fresh one is passed per call and the loader caches the *result*.
-      return await context.decodeAudioData(await response.arrayBuffer());
+      return await decodeAddress(asset.url);
     } catch (error) {
       primaryError = error;
     }
@@ -42,9 +81,7 @@ export function browserSampleDecoder(context: BaseAudioContext, probe?: Transpor
       throw new Error(`sample "${asset.assetId}" could not be fetched from ${asset.url} (${reason(primaryError)})`);
     }
     try {
-      const response = await fetch(asset.fallbackUrl);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return await context.decodeAudioData(await response.arrayBuffer());
+      return await decodeAddress(asset.fallbackUrl);
     } catch (fallbackError) {
       /**
        * The same explanation the SFZ path gives, for the same reason: the bytes half and the program half fail through one browser mechanism, so

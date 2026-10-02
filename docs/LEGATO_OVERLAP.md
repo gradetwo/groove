@@ -335,7 +335,7 @@ at beat 48 = 24 s: 3 attacks before, 1 after
 | **业主对"带循环点的库"给出听感结论** | 这条裁定只主张"起音次数变少、末尾不再静音"，**好不好听不由本文判**。业主说不好听，就得回来改这条裁定而不是改判据 |
 | **`loop_sustain` 的 release 语义落地** | `loop_sustain` 在**释放阶段退出循环**（规范原话："During the release phase, there's no looping"）。今天离线这条路上，循环 voice 的终点是 `stop()` 排好的，release 阶段与循环的关系没有被分开实现；一旦分开，"release 阶段还剩多少录音"就重新变成一个真问题 |
 | **解析器能力那条线让 `no_loop` 显式可见** | 现在为分辨"写了 `no_loop`"和"什么都没写"，`sampleLoader` 去读 SFZ 文本里**任何**命名了该采样的 region 的 `loop_*` opcode——这是保守近似（同一采样被两个 region 命名、只有一个写了循环时，两个都不循环）。`ResolvedInstrumentNote` 一旦带上"显式不循环"这个事实，这个近似就该删掉 |
-| **实时那条路也接上 WAV 循环** | 本轮只把离线导出那条路（`WavExporter`）接上了 `createWaveLoopReader()`；实时两条路的入口在 `src/audio/browserSampleGraph.ts`（**不在本轮范围内**）。那两处接上之前，`voice.looping` 在实时路上**只可能**来自 SFZ，本节第 11.2 ② 的读数在实时路上还不成立 |
+| **实时那条路也接上 WAV 循环** | ✅ **已做（2026-10-03）**：`browserSampleDecoder` 在 `decodeAudioData` **夺走字节之前**读 `smpl` —— 字节本来就在它手里，所以这一步是**零额外请求**（比离线那条路的 `Range` 读更省）。于是实时两条 **lane** 路（`samplerSteps` 的 `scheduleSamplerSteps`、`audioLaneScheduler` → `browserSampleSink`）都拿到录音循环，判据在 `src/test/liveWaveLoop.test.ts`。⚠️ 还剩一处**不在本轮范围**：键盘**单音试听**（`playerFromEngine.ts` 里那次 `startSamplerNote`）**根本没有透传 `loopMode`** —— 这一条对 SFZ 循环同样成立，是与本改动无关的既有缺口。⚠️ 副作用因此回到全强度：`vsco2ce` 那 6 个 `UR1_*_pp_RR*` 钢琴样本在**实时**也会循环（文件名已钉在 `src/test/liveWaveLoop.test.ts` 的一条判据里） |
 | **`smpl` 之外出现别的循环来源**（如 FLAC 的 APPLICATION 块） | 本轮 7 个 freepats 库里 5 个只有 `.flac`（无 `smpl` 可读），裁定里"录音自带循环"的证据全来自 RIFF `smpl` |
 
 ⭐ **一句话**：**循环的是录音，判断的是 voice；规则问"这一音要持续多久"，答案现在从"录音还剩多久"换成了"录音会不会回卷"。**

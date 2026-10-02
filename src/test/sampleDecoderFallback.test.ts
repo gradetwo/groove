@@ -51,7 +51,15 @@ describe("the sample decoder", () => {
     });
     const decoded = await browserSampleDecoder(context)(asset());
     expect(asked).toEqual(["https://source.test/kick.wav", "https://mirror.test/kick.wav"]);
-    expect((decoded as unknown as { byteLength: number }).byteLength).toBe(16);
+    /**
+     * ⭐ **The decoder answers with {@link DecodedSample}, so the buffer is one field in.** The assertion is the same
+     * one it always was — the mirror's 16 bytes reached `decodeAudioData` — and its strength is unchanged; what changed
+     * is that the decoder may now also report the loop it read out of those same bytes (`src/audio/wavLoop.ts`), which
+     * is why the answer is an object rather than the buffer alone.
+     */
+    expect((decoded as unknown as { buffer: { byteLength: number } }).buffer.byteLength).toBe(16);
+    // These bytes are not a RIFF file, so there is no loop to report — the shape says "the buffer and nothing else".
+    expect((decoded as unknown as { waveLoop?: unknown }).waveLoop).toBeUndefined();
   });
 
   it("names both addresses when both fail, because the two failures have different causes", async () => {
