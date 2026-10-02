@@ -4,6 +4,8 @@
 
 **结论**：那个字形**是第二声部自己的最后一个音**——鼓族（kick／snare／表外的回落音）的**实音符头**，它**应该在那儿**。所以**没有为了它改动任何绘图代码**。原判"那个位置没有任何音符"是**只看了第一声部（镲族）那一行**得到的：镲族的最后一个音确实在它前面约 26 px。
 
+**⚠️ 但量它的时候，在同一条尾巴上量出了另一件事**（第 4 节）：那个音（以及整个镲／鼓两声部）的**符干方向被库翻反了**——这**已修**，而修的不是那个字形。
+
 本文记录的是**实测**：真 `vexflow/core`（组件里那一条代码路径），同一个音数组，鼓谱按声部分开 dump，有音高谱表作对照。
 
 ## 一、复现（真库、真路径、逐声部）
@@ -81,35 +83,46 @@ pitched : treble 全休止 ｜ bass U+E0A4 ×10（末位 x=420，'d/2'）
 | `traces the byte to the table and to the library, …` | `StaveNote.getGlyphProps("16","n").codeHead === U+E0A4`、`("16","x2") === U+E0A9`（这是库自己的公有入口）；表里带 `x2` 的正是 42／82，不带的正是 36／38；**每个表行的键在真库里画出来就是那一行的 `notehead`**；`GhostNote` 画完页面上字形不变 |
 | `draws the same byte for the same model note on the pitched stave …` | 反向：有音高谱表逐项不变——treble 是全休止，bass 是 10 个音、末位是 38、键 `d/2`、**10 个符头全是 `U+E0A4`** |
 
-## 四、⚠️ 另一处**新查出、本次未改**的缺陷：符干方向被 `Beam.generateBeams` 覆盖
+## 四、⭐ 同一条尾巴上的第二件事：符干方向被 `Beam.generateBeams` 覆盖——**已修**
 
-**这不是那个字形的成因**（符干不产生符头），但它就在同一个尾巴上，而且**是 `f361711` 一并带进来的**，所以记在这里、**不改**（本轮只回答那个字形；一条线一个主张）。
+**这不是那个字形的成因**（符干不产生符头），但它在同一个尾巴上，**也是 `f361711` 一并带进来的**，而且它同时解释了业主看到的那张图。
 
 `ScoreV2.tsx` 的鼓谱这一支给每个音显式设了 `stemDirection`（镲向上 `1`、鼓向下 `-1`，见 `PERCUSSION_VOICE_ORDER`），随后在 `format` 之后调用：
 
 ```
-Beam.generateBeams(beamable)                       // ScoreV2.tsx，鼓谱支
+Beam.generateBeams(beamable)                       // 改前：ScoreV2.tsx，鼓谱支
 ```
 
 而 `Beam.generateBeams(notes, config = {})` 在 **既没有 `maintainStemDirections`、也没有 `config.stemDirection`** 时，会走 `calculateStemDirection(group)`（把组内每个键的 `line - 3` 求和，`>= 0` 就取 **DOWN**），再 `applyStemDirection(...)` → `note.setStemDirection(direction)`——**把我们显式设的声部符干覆盖掉**。
 
-实测（上面那一小节，`Beam.generateBeams` 前后各 dump 一次）：
+### 改前／改后读数（真 `ScoreV2` 组件 ＋ 真 `vexflow/core`，同一小节）
+
+读数取自 `StaveNote.prototype.setStemDirection`：构造时设一次、`Beam.applyStemDirection` 再设一次，格式记为 `加梁前 → 加梁后`。
 
 ```
-之前： voice 1  g/5/x2 @+1 …            voice 2  f/4 @-1 … c/5 @-1      ← 表要求的
-之后： voice 1  g/5/x2 @-1 …            voice 2  f/4 @+1 … c/5 @+1      ← 被库翻成相反方向
+改前（config 拿掉）                 改后（maintainStemDirections: true）
+voice 1 g/5/x2 @x392 [1→-1]        voice 1 g/5/x2 @x392 [1→1]
+voice 2 f/4    @x17  [-1→1]        voice 2 f/4    @x17  [-1→-1]
+        c/5    @x419 [-1→1]                c/5    @x419 [-1→-1]
+末尾那个 x 符头（beat 3.5 的 hat）：1→-1   末尾那个 x 符头：1→1
 ```
 
-⇒ 镲族（写在高音区）被翻成**向下**、鼓族（写在低音区）被翻成**向上**，两声部的符干正好写在对方那一侧——**与 `percussionStaff.ts` 里"镲向上、鼓向下"的声明相反，也正是被报告那张图里末尾那个 x 符头带向下符干、还挂了十六分尾的原因**。
+⇒ 改前：镲族（写在高音区）被翻成**向下**、鼓族（写在低音区）被翻成**向上**，两声部的符干正好写在对方那一侧，**与 `percussionStaff.ts` 里"镲向上、鼓向下"的声明相反**——也正是被报告那张图里末尾那个 x 符头带向下符干、还挂了十六分尾的来源。改后：每个音留下的符干就是表给的那一个。
 
-* 这条路径**只影响鼓谱**：`f361711` 之前这里没有显式符干（有音高谱表靠 Auto），所以同一个调用在旧代码里无害；
-* 现有判据 `percussionStaff.test.ts` 的 "with the stems the table asks for" 只检查**加梁之前**的 `getStemDirection()`，所以它绿着，而画出来的符干是反的；
-* **最小改法（一行，只动鼓谱支）**：`Beam.generateBeams(beamable, { maintainStemDirections: true })`——库会保留每个音当前的符干（即表给的那个方向）；
-* **本轮不做这个改动**，留给业主／主线裁定后再做（它与本轮的问题不是同一件事，且同时有别的线在飞）。
+### 处置
+
+* **改法**（`ScoreV2.tsx`，**只动鼓谱支**）：`Beam.generateBeams(beamable, PERCUSSION_BEAM_OPTIONS)`，其中
+  `export const PERCUSSION_BEAM_OPTIONS = { maintainStemDirections: true } as const`——库于是保留每个音当前的符干（即表给的那个方向）。
+* **有音高谱表一字不动**：那条支仍然调用 `Beam.generateBeams(beamable)`；它的音**没有**显式 `stemDirection`，由库选方向在那里正是想要的。
+* ⭐ **补上盲区判据**（`src/test/percussionStems.test.tsx`，驱动**真组件**＋真库＋真加梁）：
+  1. 鼓谱：用 `setStemDirection` 上的探针读**加梁之后**的末值——每个镲族音必须 `+1`、每个鼓族音必须 `-1`（含 beat 3.5 那个 x 符头）；
+  2. 反向：有音高谱表的音仍由库决定——一个高音加梁组会被库翻成 `-1`；若把鼓谱的选项漏过去，它会停在构造默认的 `+1` ⇒ 变红。
+* **两条判据都验证过"能红"**：`PERCUSSION_BEAM_OPTIONS` 清空 ⇒ 判据 1 红（`g/5/x2: expected -1 to be 1`）；把该选项漏到有音高谱表支 ⇒ 判据 2 红（`c/6: expected 1 to be -1`）。
+* 现有判据 `percussionStaff.test.ts` 的 "with the stems the table asks for" 保留原样：它管的是"表给了什么"（加梁前），新判据管"画出来是什么"（加梁后）。
 
 ## 五、复现方法
 
-* 判据即复现：`npx vitest run src/test/percussionStaffGlyphs.test.ts`（真库，逐声部 dump 在断言里）；
+* 判据即复现：`npx vitest run src/test/percussionStaffGlyphs.test.ts`（字形，真库逐声部 dump）与 `npx vitest run src/test/percussionStems.test.tsx`（符干，驱动真组件；jsdom 缺 `FontFace` 与 `document.fonts`，文件里那对最小替身就是组件 `Font.load` 真正需要的全部）；
 * 浏览器版：一个挂两次 `ScoreV2`（`kind="drumkit"` 与不传）的最小页面，`Font.load` 之后读 `svg text` 的 `x` 与码位；上面的表就是这么量出来的；
 * 老的那张证据页（`evidence-drum-score.html`，未跟踪、已删除）**无法复原**，所以这里用的是**重新推导出的同形小节**：绝对 x 随页面宽度与两条谱表各自的 tickable 数变化，本文件复现的是**形状**（末尾一个 `U+E0A4`，它前面约 26–27 px 是另一声部的最后一个头）与**归属**，不是字面上的 388／414。
 

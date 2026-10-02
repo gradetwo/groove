@@ -61,6 +61,25 @@ export interface ScoreV2Props {
 /** Middle C and above is the treble staff, below it the bass — the split a piano grand staff uses, and the one a reader expects. */
 const SPLIT_PITCH = 60;
 
+/**
+ * ⭐ **The options the drum staff beams with — `maintainStemDirections` is the drum staff's whole point, not a taste.**
+ *
+ * The drum stave sets `stemDirection` on every note from `PERCUSSION_VOICE_ORDER` (cymbals up, drums down), because
+ * that separation is what makes a kit readable on one staff. `Beam.generateBeams(notes)` **without** this flag throws
+ * that away: for each beam group it calls `calculateStemDirection(group)` — the sum of `line - 3` over the group — and
+ * then `note.setStemDirection(...)`, so the library's "nearest to the middle" rule points the cymbal line **down** and
+ * the drum line **up**, i.e. the two voices are drawn into each other. That is what put a down-stemmed x note at the
+ * end of the bar a reader reported (see `docs/PERCUSSION_STAFF.md`).
+ *
+ * The pitched stave deliberately keeps the plain call: its notes are built **without** a `stemDirection`, so the
+ * library's own default and its beaming are free to choose a direction there, and nothing about this decision may
+ * reach it.
+ *
+ * Exported so the criterion that asserts the drawn directions drives **this object**: deleting the flag here turns
+ * `percussionStems.test.tsx` red instead of quietly moving the defect back.
+ */
+export const PERCUSSION_BEAM_OPTIONS = { maintainStemDirections: true } as const;
+
 /** VexFlow's own duration names, from beats. A duration with no exact written value (a triplet, a dotted value) is drawn as the next shorter written note rather than being dropped. */
 export function durationName(lengthBeats: number): { name: string; dots: number } {
   const table: [number, string][] = [
@@ -364,7 +383,8 @@ export function ScoreV2({ notes, bars = 8, width = 900, title, kind, onExportMus
               formatter.joinVoices(built).format(built, staveWidth - 40);
               for (const { tickables, voice } of voices) {
                 const beamable = tickables.filter((entry) => !entry.isRest() && (entry.getDuration() === "8" || entry.getDuration() === "16"));
-                if (beamable.length > 1) Beam.generateBeams(beamable);
+                // ⭐ The one call that differs from the pitched stave: the drum voices keep the stems the table set.
+                if (beamable.length > 1) Beam.generateBeams(beamable, PERCUSSION_BEAM_OPTIONS);
                 voice.draw(context, stave);
               }
             }
