@@ -76,8 +76,9 @@ npm run test:e2e:all # 完整的桌面端 Playwright 矩阵（三个引擎）
 ```
 
 `npm run verify` 会依次检查版本与文档一致性、分层依赖、CSS 用法、类型、lint、数据 schema、
-测试、生产构建、两个实测探针和端到端矩阵。端到端测试需要先装一次浏览器：
-`npx playwright install --with-deps chromium firefox webkit`。
+测试、生产构建、七个实测探针（`probe:boot`、`probe:toolbar`、`probe:grid-gutter`、
+`probe:arrangement`、`probe:live-arrangement`、`probe:continuity`、`probe:skins`）和端到端矩阵。
+端到端测试需要先装一次浏览器：`npx playwright install --with-deps chromium firefox webkit`。
 
 ## 部署
 

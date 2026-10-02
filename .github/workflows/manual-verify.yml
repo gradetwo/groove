@@ -2,10 +2,10 @@
 #
 # WHY THIS EXISTS
 # ---------------
-# Three kinds of check are too slow or too environment-sensitive to run on every push: the seven-target
+# Three kinds of check are too slow or too environment-sensitive to run on every push: the desktop
 # browser matrix (`test:e2e:all`), the coverage run, and the audio measurement gates (timbre, loudness
 # freshness, the GS-1 ABI). `ci.yml`'s nightly job owns them on a schedule, but a *targeted* run — "just
-# the phone legs", "just the timbre gate" — used to mean pushing a commit or editing the schedule.
+# one browser engine", "just the timbre gate" — used to mean pushing a commit or editing the schedule.
 #
 # This workflow is the manual switch: pick a scope in the GitHub UI, run it, and the artifacts are a
 # single directory you can hand over. It writes a summary to the run page as well, because reading a

@@ -82,8 +82,10 @@ npm run test:e2e:all # the full desktop Playwright matrix (three engines)
 ```
 
 `npm run verify` checks version and doc consistency, layering, CSS usage, types, lint, data schemas,
-tests, the production build, two measurement probes and the end-to-end matrix. The end-to-end tests
-need the browsers once: `npx playwright install --with-deps chromium firefox webkit`.
+tests, the production build, seven measurement probes (`probe:boot`, `probe:toolbar`,
+`probe:grid-gutter`, `probe:arrangement`, `probe:live-arrangement`, `probe:continuity`, `probe:skins`)
+and the end-to-end matrix. The end-to-end tests need the browsers once:
+`npx playwright install --with-deps chromium firefox webkit`.
 
 ## Deploy
 

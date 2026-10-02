@@ -9,7 +9,7 @@ on:
     branches: ["**"]
   pull_request:
     branches: [main, next, dev]
-  # The heavy checks live in the `nightly` job: they are slow (the full 7-target browser
+  # The heavy checks live in the `nightly` job: they are slow (the full desktop browser
   # matrix) or environment-sensitive in ways that would report flakiness as a code failure
   # on every pull request. A dedicated nightly slot keeps them running without making every
   # push pay for them; `workflow_dispatch` runs the same set on demand.
@@ -170,16 +170,17 @@ jobs:
     # Skipped on schedule: `nightly` runs the same full matrix plus coverage, the loudness freshness check and the performance gate.
     # ⭐ **The matrix runs where the answer matters and nowhere else**: `main` is what is live, a release asks for it by hand, and a development branch gets the fast checks instead. A pull request is a branch push, so it needs no separate rule.
     if: github.event_name != 'schedule' && (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch')
-    # Three legs instead of one seven-target run.
+    # One desktop leg, where this job used to walk all seven targets in a single runner and then split them
+    # across three legs — the phone and tablet legs went with the mobile version (2026-10-02).
     #
-    # The targets are independent browsers and devices, and the job used to walk all seven in a single runner:
-    # one slow iPad leg delayed every result, a WebKit hang blocked the desktop ones behind it, and the whole
-    # suite had to be re-run to re-check a single engine. `E2E_ONLY` (the filter `manual-verify.yml` already
-    # drives) partitions them, and `fail-fast: false` keeps one engine's failure from cancelling the others —
-    # which is the point of running them apart.
+    # The targets are independent browsers, and one runner meant a WebKit hang blocked the rest and a single
+    # engine could only be re-checked by re-running the whole suite. `E2E_ONLY` (the filter `manual-verify.yml`
+    # already drives) narrows *within* the complete target set, and `fail-fast: false` keeps one engine's
+    # failure from cancelling the others.
     #
-    # Every leg still runs the full-matrix script (`test:e2e:all`); the filter narrows *within* the complete
-    # target set, so no leg can quietly become the desktop-only profile (`ciWorkflows.test.ts` asserts that).
+    # The leg still runs the full-matrix script (`test:e2e:all`); the filter narrows *within* the complete
+    # target set, so it cannot quietly become the shorter desktop-only profile (`ciWorkflows.test.ts` asserts
+    # that).
     strategy:
       fail-fast: false
       matrix:
@@ -356,7 +357,7 @@ jobs:
   # `CI / nightly`: everything that is too slow or too environment-sensitive to gate a push.
   #
   # What it adds over `validate` + `e2e`:
-  #  - `test:e2e:all` — the full 7-target matrix, which the push-time gate now also runs
+  #  - `test:e2e:all` — the full desktop browser matrix, which the push-time gate now also runs
   #    (kept here as well so a scheduled run is complete on its own);
   #  - `test:coverage` — the coverage thresholds, which are stricter than the plain test run;
   #  - `check:loudness:fresh` — re-renders sampled genres in a fresh page and compares against
@@ -374,7 +375,7 @@ jobs:
     runs-on: ubuntu-latest
     # Runs on the schedule, or when a dispatch explicitly asks for it — see the `nightly` input above.
     if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.nightly)
-    # This job already carried a 90-minute bound (the full seven-target matrix plus coverage plus the loudness
+    # This job already carried a 90-minute bound (the full desktop browser matrix plus coverage plus the loudness
     # re-render legitimately takes over an hour), so it needs no change: the hang backstop was only missing from the
     # E2E legs, and a second `timeout-minutes` key is not a bigger bound — it is an invalid workflow file, which
     # GitHub rejects before running a single job. Learned the direct way.
