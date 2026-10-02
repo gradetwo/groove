@@ -128,6 +128,9 @@
 | `src/test/stringTechniques.test.ts` | **新增** 6 条判据，把"表里的奏法"与"列表报出来的奏法"两端扣住 |
 | `src/test/ownerProjectAcceptance.test.ts` | **新增** 1 条：把业主的"断"定位到 **beat 48 = 24.0000 s**，并同条断言 `legatoGapsFor` 对弦乐报空（见 §9） |
 | `docs/STRING_TECHNIQUES.md` | **新增**：本文，量法与全部读数 |
+| `src/audio/samplerVoice.ts` | 新增 `releaseSeconds` / `MIN_RELEASE_SECONDS` / `DEFAULT_SAMPLER_RELEASE_SECONDS`（**故意未接线**，见 §10.2） |
+| `src/test/samplerVoice.test.ts` | **新增** 3 条判据：释放斜坡的形状、释放比音长时缩释放、已排终点不被 `stop` 硬切 |
+| `src/test/vscoSamplerLane.test.ts` | 该测试自己的混音器原先用 `gain.value` 当**常数**读增益，于是"排了斜坡"读回来是 0（整轨静音）；改成**逐帧**求值调度（`gainAt`），这是 Web Audio 的语义 |
 
 ## 7. 被桥挡住的那一步（没有动）
 
@@ -229,7 +232,63 @@
 
 ---
 
-## 10. 判不了 / 未核实
+## 10. ⭐⭐ 追加二：成熟做法调研的三条结论，落进本线的状态
+
+调研文档：`docs/research/string-sustain-and-legato-in-mature-samplers.md`（另一条线产出，已随 `dev` 入库）。
+
+### 10.1 缺陷 A 的机制，**SFZ 规范自己写着**（本线原先的说法要收窄）
+
+规范在 `sustain_note_basics` 里对"被抢占的音"的说法是：只用 `group`/`off_by` 而**不带** `off_mode` ＋ `ampeg_release` 时，
+被抢占的音 *"drops off extremely quickly, which will probably leave an **audible drop in levels during the transition**"*。
+⇒ **这就是那个"断"，规范里有名字。** §9.2 写的机制（新起音落在还在响的旧音上）方向对，但要收窄成：
+**交接处缺的是"旧音的淡出 × 新音的淡入"这条交叉淡化，而不只是新音有 attack。**
+
+### 10.2 ⭐ 第 (1) 步已实现：`releaseSeconds`（**机制已就位，故意未接线**）
+
+`src/audio/samplerVoice.ts` 新增 `releaseSeconds`：今天 `seconds` 走的是 `source.start(when, 0, seconds)`，
+Web Audio 规范说播放**就在那一刻结束** —— 波形被从半周期切断，是一个阶跃，而阶跃就是咔哒声。给了 `releaseSeconds` 之后，
+改用"**不给长度、给一个终点**"：`source.start(when)` ＋ 增益在音符结束前 `releaseWindow` 内线性降到 0，
+**在同一个秒数到达静音**，并在斜坡之后一点点才 `stop()`。同时 `stop()` 对"已经排好终点"的音**不再硬切**
+（否则会在斜坡内部切一刀，正是要移除的那个咔哒）。
+
+**实测（真字节，`VlnEns_susVib_D3_v1.wav`，4.25 s 的音，用忠实的调度求值，不是 fake）：**
+
+| | 音符末尾 60 ms 内最大相邻样本差分 | 相对该信号自身的中位差分 |
+| --- | --- | --- |
+| 今天（硬切） | `1.779e-2` | **3.4×** |
+| `releaseSeconds = 0.25` | `3.631e-3` | **0.7×** |
+
+而且**音符长度不变**（都在 4.25 s 结束），末尾 100 ms 的 RMS 两种都是 0。
+
+⚠️ **但它故意没有接到导出路径上**（`WavExporter` 的 sampler sink 不传这个参数）。理由是一个**读数**，不是判断：
+一传，**每一个导出的采样音轨响度都会变**，而业主把这一类改动留给了自己。在仓库自己的 `vscoSamplerLane` fixture 上
+（三个 0.125 s 的音），只改这一件事：
+
+| | `laneEnergy` | `lanePeakDb` |
+| --- | --- | --- |
+| 不传 | `1.3227e+4` | `-2.16 dB` |
+| 传 0.25 s | `5.9296e+3` | `-1.30 dB` |
+
+⇒ **「哪个乐器该拿这条释放」是要业主定的决定**，不是本线顺手打开的开关。机制＋判据已经在了
+（`src/test/samplerVoice.test.ts` 新增 3 条：斜坡形状、释放比音长时缩释放而不缩音、已排终点不被 `stop` 硬切），接线是一行。
+
+### 10.3 三条**不许夸大**的边界（调研写得很准，照录）
+
+* **`loop_crossfade` 救不了业主工程里的 VSCO 持续音程序。** 它作用于**已经存在的循环**，而 VSCO 的弦乐字节里
+  **没有循环点**（§3 已量：75 个程序 0 处 `loop`、镜像 `.wav` 0 个 `smpl`）。⇒ 它只能让"已经有循环点的库"
+  （例如已镜像的 `karoryfer-meatbass`）更顺。**对业主那条弦乐，唯一的答案仍然是内容/作曲层的长度约束** —— 与
+  Orchestral Tools 自己的提醒同向。⇒ **B 若要做，必须先把这句话说清楚**，不能让业主以为它会治好那条弦乐。
+* **第 (2)(3) 步（`trigger=legato` + `offset`、Kontakt 式的播放位置延续）被那座桥挡住。** 它们要求"换音时还有别的音在响"
+  这个上下文，而曲风角色今天走的是合成/物理模型，真采样只经"显式 sampler 轨的 `assetId`"到达播放。⇒ 停在边界，不动桥。
+* **`legatoGaps` 只报写作层的缝，测不到播放层的重新起音** —— 这正是缺陷 A 能躲过它的原因；补上的播放层判据见 §9.3 与 §9.4。
+
+⚠️ **一条必须说清的前提**：业主截图的音频里，弦乐轨走的是**内置预设**（导入把每个 part 建成 `kind:"synth"`、`sample=null`），
+**不是** VSCO 采样。所以 §10.2 的采样释放对他今天听到的那一轨**还不生效**：它要等那座桥，或等他显式用一条 sampler 轨。
+
+---
+
+## 11. 判不了 / 未核实
+
 
 
 * **「sustain 与 pizzicato 哪个好听」判不了**，也不该由本文判。本文只给奏法、字节、时长与命中区域。

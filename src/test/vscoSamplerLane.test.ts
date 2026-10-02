@@ -39,7 +39,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { exportMasterWav } from "../audio/WavExporter";
 import { createSampleLoader } from "../audio/sampleLoader";
 import { browserSampleDecoder } from "../audio/browserSampleGraph";
-import { FakeAudioBuffer, FakeGainNode, FakeOfflineAudioContext } from "./helpers/fakeAudio";
+import { FakeAudioBuffer, FakeAudioParam, FakeGainNode, FakeOfflineAudioContext } from "./helpers/fakeAudio";
 import { fingerprintChannels } from "./helpers/timbre";
 import { resetGs1OfflineCapability, setGs1OfflineCapability } from "../audio/gs1/gs1OfflineCapability";
 import { samplePeakDb } from "./helpers/audioMetrics";
@@ -157,7 +157,7 @@ class MixingOfflineAudioContext extends FakeOfflineAudioContext {
       const at = Math.max(0, Math.round(when * this.sampleRate));
       const rate = source.playbackRate.value > 0 ? source.playbackRate.value : 1;
       const edge = source.outgoing[0]?.node;
-      const gain = edge instanceof FakeGainNode ? edge.gain.value : 1;
+      const gainParam = edge instanceof FakeGainNode ? edge.gain : undefined;
       const data = buffer.getChannelData(0);
       /**
        * ⭐ **The mix stops where the scheduler stopped the voice, and that is the whole point of this change.**
@@ -189,6 +189,8 @@ class MixingOfflineAudioContext extends FakeOfflineAudioContext {
           const lo = Math.floor(src);
           const hi = Math.min(data.length - 1, lo + 1);
           const frac = src - lo;
+          // The gain is read **per frame**, because a voice may be fading out across this window.
+          const gain = gainParam ? gainAt(gainParam, i / this.sampleRate) : 1;
           target[i] += (data[lo]! * (1 - frac) + data[hi]! * frac) * gain;
         }
       }
@@ -222,6 +224,35 @@ function decodeWavBytes(bytes: Uint8Array): Float32Array {
     offset = body + size + (size % 2);
   }
   throw new Error("the encoded WAV has no data chunk");
+}
+
+/**
+ * ⭐ **The gain a node is at, at a given time** — the piece of Web Audio this mixer used to leave out.
+ *
+ * It read `source.outgoing[0].node.gain.value`, which is a **constant**: `FakeAudioParam` sets `.value` to the ramp's
+ * target the instant the ramp is scheduled, so a schedule of "level, then ramp to 0 over 250 ms" read back as *zero
+ * for the whole note*. That was invisible while every voice was scheduled with `start(when, offset, duration)` and no
+ * gain automation at all — the first thing to schedule a release made a correct voice render as silence, and the
+ * renderer's own silence guard caught it.
+ *
+ * A ramp is a ramp, so this evaluates the schedule the way the platform does: `setValueAtTime` pins a value from its
+ * time onward, and a ramp interpolates towards its target from the previous event's time. With no events it returns
+ * the parameter's own value, which is what every existing assertion on this render was written against.
+ */
+function gainAt(param: FakeAudioParam, t: number): number {
+  const events = [...param.events].sort((a, b) => a.time - b.time);
+  let previous = { value: param.value, time: 0, ramp: false };
+  for (const event of events) {
+    if (event.time <= t) {
+      previous = { value: event.value, time: event.time, ramp: event.type !== "setValueAtTime" };
+      continue;
+    }
+    if (!previous.ramp) return previous.value;
+    const span = event.time - previous.time;
+    if (span <= 0) return event.value;
+    return previous.value + (event.value - previous.value) * ((t - previous.time) / span);
+  }
+  return previous.value;
 }
 
 function energyOf(samples: Float32Array): number {

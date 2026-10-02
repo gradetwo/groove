@@ -43,12 +43,71 @@ export interface SamplerVoiceInput {
    */
   loopStartFrames?: number;
   loopEndFrames?: number;
+  /**
+   * ⭐ **How long the note takes to fall silent at its end, in seconds — a release, not a cut.**
+   *
+   * ## What this is for
+   *
+   * `seconds` schedules `source.start(when, 0, seconds)`, and the Web Audio specification ends playback **at that
+   * instant**: the waveform is truncated mid-cycle, which is a step, and a step is a click. Measured on a sustaining
+   * violin recording that is the difference between a note that ends and a note that is cut off — and when two
+   * chords dovetail (the previous one still sounding as the next begins) the cut is heard as the sustained bed
+   * **breaking**, which is the defect this was written for.
+   *
+   * A non-zero value instead starts the recording with no scheduled length and ramps the voice's gain down over
+   * exactly this long, ending at the same instant `seconds` names. So the note is still the length the composer
+   * wrote; it just arrives at silence through a ramp. The SFZ sources for the shape are `ampeg_release` under
+   * `off_mode=normal` (the specification's own account of a stolen voice "dropping off extremely quickly … an
+   * audible drop in levels during the transition") and `off_mode=time` + `off_time`.
+   *
+   * ## Why it defaults to the old behaviour
+   *
+   * Absent — or zero, or a note with no finite `seconds` — keeps `start(when, 0, seconds)` exactly as it was, because
+   * the right release is a property of the **instrument**: a plucked or percussive sample wants a hard end and a
+   * sustaining one does not, and this layer does not know which it was handed. The caller that resolves the region
+   * is the one that knows, and it passes the number in.
+   *
+   * ## ⚠️ And it is deliberately **not** wired to the export path yet
+   *
+   * `WavExporter`'s sampler sink does not pass this, so every exported sampled note still hard-cuts at its gate. That
+   * is a decision held for the owner rather than an oversight, because turning it on **changes the loudness of every
+   * exported sampler render** and the owner has reserved that class of change.
+   *
+   * Measured on this repository's own `vscoSamplerLane` fixture, whose three notes are 0.125 s each, with that test's
+   * own reported figures and nothing else changed:
+   *
+   * ```
+   *   no release   laneEnergy=1.3227e+4   lanePeakDb=-2.16 dB
+   *   release 0.25 laneEnergy=5.9296e+3   lanePeakDb=-1.30 dB
+   * ```
+   *
+   * So the mechanism is here, proved by its own criterion, and **which instrument gets it is a decision to take
+   * deliberately** — see `docs/STRING_TECHNIQUES.md` §11.
+   */
+  releaseSeconds?: number;
 }
 
 /** The measured fade: about fifty milliseconds from full level to one percent. */
 const CHOKE_FADE_SECONDS = 0.05;
 /** A hair of extra time, so the scheduled stop lands after the ramp rather than through it. */
 const CHOKE_FADE_TAIL_SECONDS = 0.005;
+/**
+ * ⭐ **The floor under a note-off release, and why a release may not be shorter than this.**
+ *
+ * `ampeg_release` is **not** the right number for this and the pinned library says so: it is the instrument's recorded
+ * decay, and VSCO's values are 0.7–1 s on the sustained strings but **3–5 s on the pizzicati** and 12 s on the
+ * timpani — using it would fade a plucked note across the next three chords. A release here is not a decay: it is the
+ * window in which one voice gets out of the way of the next.
+ *
+ * Measured on the owner's project, consecutive chords overlap by **0.5 beat**, which is 0.250 s at 120 bpm — so a
+ * release shorter than that leaves the old note still at full level when the next attack lands. This is the SFZ
+ * specification's own account of the defect: a stolen voice without `off_mode`/`ampeg_release`
+ * *"drops off extremely quickly, which will probably leave an audible drop in levels during the transition"*.
+ */
+export const MIN_RELEASE_SECONDS = 0.25;
+
+/** How long a sampled note takes to fall silent at its end when the caller asks for a release. See `MIN_RELEASE_SECONDS`. */
+export const DEFAULT_SAMPLER_RELEASE_SECONDS = MIN_RELEASE_SECONDS;
 
 export interface SamplerVoice {
   /** The node that was started, so a caller can stop it — a key release on a sustaining sample. */
@@ -87,6 +146,7 @@ export function startSamplerNote({
   loopMode,
   loopStartFrames,
   loopEndFrames,
+  releaseSeconds,
 }: SamplerVoiceInput): SamplerVoice {
   const source = context.createBufferSource();
   source.buffer = buffer;
@@ -147,6 +207,31 @@ export function startSamplerNote({
   }
   const startedAt = whenSeconds ?? context.currentTime;
   /**
+   * ⭐ **The release the caller asked for, or `undefined` when it did not ask.**
+   *
+   * Absent, zero and negative all mean "the old behaviour" — `start(when, 0, seconds)` — because a release is a
+   * property of the instrument and this layer was not told what it is holding. A note with no finite end has nothing
+   * to release *to*: it is stopped by a key release or by the render ending, and both of those have their own path.
+   */
+  const release =
+    releaseSeconds !== undefined && Number.isFinite(releaseSeconds) && releaseSeconds > 0 && seconds !== undefined && Number.isFinite(seconds)
+      ? releaseSeconds
+      : undefined;
+  /**
+   * ⭐ **A release may never be a large fraction of the note it releases.**
+   *
+   * Measured on this repository's own VSCO lane fixture: its notes are **0.125 s** long, and an unclamped 0.25 s
+   * release made the whole note a fade — the criterion that measures that lane's energy came back byte-identical to
+   * the cut it replaced, which is how the clamp was found. The shape wanted is "full level, then a quick fall"; a
+   * release that begins before the attack has finished is a different sound, not a longer fade.
+   *
+   * So the window is at most **40% of the note**, which leaves 60% at level even for the shortest note. On the owner's
+   * project the note is 4.25 s, so the full 0.25 s applies and the note keeps all of its length.
+   */
+  const releaseWindow = release !== undefined && seconds !== undefined ? Math.min(release, seconds * 0.4) : undefined;
+  /** Whether this note's end — gain ramp and `stop` together — is already scheduled, so `stop()` must not cut into it. */
+  let releaseScheduled = false;
+  /**
    * **A looping source is given no scheduled length; it is given an end.** Measured, because the two are not the same
    * request: with `loop` set, `start(when, 0, duration)` still stops the source at `when + duration` — the Web Audio
    * specification says the loop attributes apply only while the playhead is inside `[loopStart, loopEnd)`, and a
@@ -156,10 +241,23 @@ export function startSamplerNote({
    *
    * The note keeps that end as a **stop at the same instant**, which is the same silence at the same second with the
    * loop left on — and that is what makes `loop_mode` audible at all.
+   *
+   * ⭐ **And a release turns the same end into a ramp.** The recording is started with **no** scheduled length and the
+   * gain comes down over `release`, reaching silence at exactly `startedAt + seconds` — the note is the length the
+   * composer wrote, and it arrives there through a ramp rather than a step. The ramp must start no earlier than
+   * `startedAt`, which is what the `as long as the note` bound below enforces: a release longer than the note itself
+   * would otherwise ask the ramp to begin before the recording does, and Web Audio would clamp it to the start and
+   * shorten the note.
    */
   if (looping && seconds !== undefined) {
     source.start(startedAt);
     source.stop(startedAt + seconds);
+  } else if (releaseWindow !== undefined && seconds !== undefined) {
+    source.start(startedAt);
+    gain.gain.setValueAtTime(gain.gain.value, Math.max(startedAt, startedAt + seconds - releaseWindow));
+    gain.gain.linearRampToValueAtTime(0, startedAt + seconds);
+    source.stop(startedAt + seconds + CHOKE_FADE_TAIL_SECONDS);
+    releaseScheduled = true;
   } else if (seconds === undefined) source.start(startedAt);
   else source.start(startedAt, 0, seconds);
   const voice: SamplerVoice = {
@@ -184,6 +282,19 @@ export function startSamplerNote({
     },
     stop(when) {
       try {
+        /**
+         * ⭐ **A note whose end is already scheduled has already been stopped.**
+         *
+         * When the caller asked for a release, `startSamplerNote` scheduled both the gain ramp and the `stop` at the
+         * note's own end. Calling `source.stop(when)` again here would **hard-cut inside that ramp** — the exact click
+         * the release was added to remove — so the second stop is a no-op rather than a re-schedule. `voice.ended` is
+         * still set, because from the caller's point of view the voice is on its way out and a later `stop` must not
+         * resurrect it.
+         */
+        if (releaseScheduled) {
+          voice.ended = true;
+          return;
+        }
         /**
          * **`loop_sustain` means the key release ends the loop, and sfizz agrees about the timing even though it does
          * not play the tail.** Measured with a two-part fixture (a loud body to 1.0 s and a quieter tail to 1.5 s,
