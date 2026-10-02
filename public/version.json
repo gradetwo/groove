@@ -12,16 +12,16 @@
     },
     "highlights": [
       {
-        "zh": "手机外壳砍除：`/m/…` 路由空间、手机标签栏与抽屉式面板一并移除，手机与平板浏览器渲染的是与桌面相同的一套界面。",
-        "en": "The phone shell is gone: the /m/… route space, the phone tab bar and the sheet panels went with it, and a phone or tablet browser renders the same interface the desktop does."
+        "zh": "手机外壳砍除：手机与平板浏览器拿到与桌面相同的一套界面。",
+        "en": "The phone shell is gone, and a phone or tablet browser gets the same interface the desktop does."
       },
       {
-        "zh": "渲染可以不经浏览器：同一个引擎在 Node 里渲染，MCP 的四个渲染工具多了 `headless` 选项。",
-        "en": "A render no longer needs a browser: the same engine renders in Node, and the four MCP render tools take a headless option."
+        "zh": "渲染可在 Node 里跑、不经浏览器；MCP 四个渲染工具多了 headless。",
+        "en": "A render can run in Node without a browser, and the four MCP render tools take a headless option."
       },
       {
-        "zh": "每个通道条的压缩器都换成了项目自己的 worklet，两个宿主的听感差距从 1.28 / 1.11 dB 与 1.774 LU 收到 1.03 / 1.04 dB 与 1.612 LU。",
-        "en": "Every channel strip's compressor is the project's own worklet now, which narrows the gap between the two hosts from 1.28 dB, 1.11 dB and 1.774 LU to 1.03, 1.04 and 1.612."
+        "zh": "通道条压缩器改用本项目 worklet，两个宿主的差距收窄。",
+        "en": "Every channel strip compressor is the project's own worklet now, which narrows the gap between the two hosts."
       }
     ],
     "truncated": true
