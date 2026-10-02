@@ -185,8 +185,18 @@ function soundForTrack(track: TrackV2): ArrangementTrackSound {
     return {
       source: "catalogue-asset",
       assetId: sampledAsset,
-      selectable: true,
-      detail: `plays the catalogue recording "${sampledAsset}" through the sampled path, resolved from the instrument "${laneInstrument}" — a configured sample mirror must serve it, or the lane falls back to the built-in preset`,
+      /**
+       * ⭐ **`false`, and the difference from a sampler's `true` is the whole point of the field.**
+       *
+       * `selectable` answers "can a tool change where this sound comes from" — a sampler's asset can
+       * (`set_arrangement_track_asset`), and a **synth track's recorded instrument cannot**: the asset is derived from
+       * the instrument name, no tool sets a synth track's instrument after it is created, and `set_arrangement_track_asset`
+       * refuses a `synth` track out loud. Reporting `true` here would send a caller to a call that errors, which is the
+       * "an answer that looks right" failure this report exists to remove.
+       */
+      selectable: false,
+      detail: `plays the catalogue recording "${sampledAsset}" through the sampled path, resolved from the instrument "${laneInstrument}" — a configured sample mirror must serve it, or the lane falls back to the built-in preset. The instrument is chosen when the track is added (add_arrangement_track {kind:"synth", instrument:"…"}); nothing changes it afterwards`,
+      guidance: `to change what this lane sounds, add the track again with a different instrument from list_arrangement_instruments's mappedInstruments, or use kind:"sampler" and point set_arrangement_track_asset at a catalogue asset`,
     };
   }
   if (track.kind === "drumkit") {
