@@ -67,21 +67,20 @@ function desktopToken(skin: string, token: string): [number, number, number] | n
   return channels ? [Number(channels[1]), Number(channels[2]), Number(channels[3])] : toRgb(value[1]);
 }
 
-/** `--m-x` from the phone: the base shell sheet, or one skin's own block. */
+/**
+ * `--m-x` from a skin's palette source.
+ *
+ * These files were the phone shell's stylesheets (`src/mobile/skins/<id>.css`, plus `mobile.css` for the
+ * default skin). The shell is cut (`docs/OPEN_WORK.md` §十三) and the palettes moved to
+ * `src/styles/skinPalettes/`; the `default` skin has no source of its own because it is the desktop's base
+ * palette, which the desktop half above already reads.
+ */
 function phoneToken(skin: string, token: string): [number, number, number] | null {
-  const file =
-    skin === "default"
-      ? join(ROOT, "src", "mobile", "mobile.css")
-      : join(ROOT, "src", "mobile", "skins", `${skin}.css`);
+  const file = join(ROOT, "src", "styles", "skinPalettes", `${skin}.css`);
   const css = readFileSync(file, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
-  const wanted =
-    skin === "default"
-      ? new RegExp(`${token}\\s*:\\s*([^;]+);`)
-      : new RegExp(`:root\\[data-skin="${skin}"\\]\\s*\\.mobile-root\\s*\\{([^}]*)\\}`);
-  const block = skin === "default" ? css : wanted.exec(css);
+  const block = new RegExp(`:root\\[data-skin="${skin}"\\]\\s*\\{([^}]*)\\}`).exec(css);
   if (!block) return null;
-  const body = skin === "default" ? css : block[1];
-  const value = new RegExp(`${token}\\s*:\\s*([^;]+);`).exec(body);
+  const value = new RegExp(`${token}\\s*:\\s*([^;]+);`).exec(block[1]);
   return value ? toRgb(value[1]) : null;
 }
 

@@ -172,23 +172,23 @@ const RUN_ONE = process.argv.includes("--one");
  * Which *group* of targets the release gate runs.
  *
  *   E2E_PROFILE=pc      the three desktop browsers       (default in `npm run verify`)
- *   E2E_PROFILE=mobile  the four phone/tablet targets
  *   E2E_PROFILE=all     everything — the full matrix, `npm run test:e2e:all`
  *
- * `pc` is still the default for a *local* fast pass (a single-target iteration is usually a desktop
- * one), but it is no longer the gate: the phone and tablet surfaces have shipped and have been green
- * in `verify` for several releases, so **CI runs `test:e2e:all` on every push and pull request** and
- * `verify` runs the desktop profile followed by the mobile one. The old reduction existed because the
+ * The two profiles are the same set now: the phone and tablet targets are cut with the mobile version
+ * (owner's decision, 2026-10-02 — `docs/OPEN_WORK.md` §十三), so what is left is the desktop matrix.
+ * `pc` stays because `npm run test:e2e` names it and a local fast pass reads better as "the desktop
+ * profile" than as "all of a one-group matrix".
+ *
+ * **CI runs `test:e2e:all` on every push and pull request**. The old reduction existed because the
  * phone UI was mid-redesign and its assertions would have been invalidated by it; that reason is gone,
- * and a gate that skips two thirds of the targets is how an iPad-only regression reaches production.
+ * and a gate that skips part of the matrix is how a targeted regression reaches production.
  *
  * `ARCHITECTURE_SURFACES.md` §6 records the same change.
  */
 const TARGET_PROFILE = (process.env.E2E_PROFILE || "all").toLowerCase();
 const PROFILE_MATCHERS = {
   all: () => true,
-  pc: (t) => !t.isMobile && !t.isTablet,
-  mobile: (t) => Boolean(t.isMobile || t.isTablet),
+  pc: () => true,
 };
 
 const ALL_TARGETS = [
@@ -214,32 +214,24 @@ const ALL_TARGETS = [
       viewport: { width: 1280, height: 800 },
     },
   },
-
-  // 2. Mobile & Tablet Devices (WebKit / iOS)
   /**
-   * ⭐ **The iPhone targets are off (owner's decision, 2026-09-30): iPhone support is frozen.**
+   * ⭐ **The phone and tablet targets are gone (2026-10-02): the mobile version is cut.**
    *
-   * They were two of the seven targets and the two that failed most recently, on a worker fetch and a 44 px touch minimum. Neither is fixed — deliberately: the device is not being shipped to, and a frozen device's failures should not
-   * hold up the one that is. To bring them back, restore the two objects below and uncomment the `iPhone 14` leg in `.github/workflows/ci.yml`.
+   * There were four, and they went in the order they were decided. The two iPhone targets were frozen
+   * on 2026-09-30 — "与iphone有关的各种CI/CD都可以先关掉" — after failing on a worker fetch and a 44 px
+   * touch minimum, neither of which was fixed on purpose, because a frozen device's failures should not
+   * hold up the one we ship to. The `iPad Pro 11` portrait and landscape legs then lost the leg they
+   * ran in, and finally the phone shell they drove.
+   *
+   * They are recorded rather than reconstructed here because re-enabling is a decision, not a repair:
+   * the shell they exercised lives on `mobile-preserved`, and the two commented objects below are the
+   * iPhone pair exactly as they stood.
    *
    * ```
    * { name: "iPhone 14 (竖屏 Portrait)", browserType: "webkit", device: "iPhone 14", isMobile: true },
    * { name: "iPhone 14 (横屏 Landscape)", browserType: "webkit", device: "iPhone 14 landscape", isMobile: true },
    * ```
    */
-  // The block above is the whole of what was removed: the two objects, kept as text so re-enabling is a copy rather than a reconstruction.
-  {
-    name: "iPad Pro 11 (竖屏 Portrait)",
-    browserType: "webkit",
-    device: "iPad Pro 11",
-    isTablet: true,
-  },
-  {
-    name: "iPad Pro 11 (横屏 Landscape)",
-    browserType: "webkit",
-    device: "iPad Pro 11 landscape",
-    isTablet: true,
-  },
 ];
 
 if (!PROFILE_MATCHERS[TARGET_PROFILE]) {

@@ -27,10 +27,6 @@ import {
 } from "./components/help/NewUserOnboardingModal";
 import { InteractiveTutorialCoach } from "./components/help/InteractiveTutorialCoach";
 import { useAppShortcuts } from "./hooks/useAppShortcuts";
-import { useDeviceCapabilities } from "./hooks/useDeviceCapabilities";
-import { MobileTabBar } from "./components/MobileTabBar";
-import { MobileMoreSheet } from "./components/MobileMoreSheet";
-import type { MobileSheetAction } from "./components/MobileTabBar";
 import { ToastContainer, Skeleton, AriaLiveRegion, announcer } from "./ui";
 import { RouterProvider, useRouter } from "./app/router";
 
@@ -59,31 +55,12 @@ const KickAnatomyView = React.lazy(() => import("./views/KickAnatomyView").then(
 const MasterclassView = React.lazy(() => import("./views/MasterclassView").then((m) => ({ default: m.MasterclassView })));
 const AnalyzerView = React.lazy(() => import("./views/AnalyzerView").then((m) => ({ default: m.AnalyzerView })));
 const CustomGenreMakerView = React.lazy(() => import("./views/CustomGenreMakerView").then((m) => ({ default: m.CustomGenreMakerView })));
-/**
- * The phone shell (M-series). Lazy for the same reason every view is: it pulls the genre database,
- * which must not be in the first paint (redline R8).
- */
-const MobileApp = React.lazy(() => import("./mobile/MobileApp").then((m) => ({ default: m.MobileApp })));
-// The cutover rule lives with the module vocabulary, where it can be tested without App.
-import { shouldEnterPhoneShell, type MobileModule } from "./mobile/mobileModules";
-// The phone's four 更多 panels are siblings of the shell, so their skin lives in its own scoped sheet.
 const HardwareConsoleView = React.lazy(() => import("./views/HardwareConsoleView").then((m) => ({ default: m.HardwareConsoleView })));
 const HelpCenterModal = React.lazy(() => import("./components/help/HelpCenterModal").then((m) => ({ default: m.HelpCenterModal })));
 
 const MainApp: React.FC = () => {
   const { t, isZh } = useLanguage();
   const { route, navigate } = useRouter();
-
-  /**
-   * Phone shell. `isMobile` is capability-based (see `useDeviceCapabilities`), not a width test,
-   * so a landscape phone gets the phone UI instead of the desktop editor squeezed into 390 px of
-   * height.
-   *
-   * Declared here rather than next to the cutover effect because the studio's genre load asks the
-   * same question ("is this a phone?") on its first render, and a hook cannot be called from below
-   * the code that needs it.
-   */
-  const { isMobile, isShortLandscape } = useDeviceCapabilities();
 
   const currentTab = route.tab;
 
@@ -92,32 +69,11 @@ const MainApp: React.FC = () => {
   const [selectedGenre, setSelectedGenre] = useState<Genre | null>(null);
 
   /**
-   * The default studio genre, resolved on demand — **except on a phone route**.
+   * The default studio genre, resolved on demand.
    *
-   * `route.genreId || "chicago-house"` means every route without a genre resolves the studio's default,
-   * and the studio is not rendered at all when the phone shell owns the screen. That cost the phone
-   * profile one category chunk on its first paint (a genre it will never show), which the performance
-   * gate counts: the shell's own data path is index-based precisely so that landing in `/m/…` downloads
-   * no library chunks, and this was the last one.
+   * `route.genreId || "chicago-house"` means every route without a genre resolves the studio's default.
    */
   useEffect(() => {
-    /**
-     * On a phone the studio never renders, and on a *bare* route the cutover below has not run yet, so
-     * `route.mobile` alone is not enough to know that: the first render of `/` still looks like the
-     * desktop. Asking the same question the cutover asks — `shouldEnterPhoneShell` — is what makes this
-     * correct on that first render, and it is why the phone profile downloads **zero** library chunks
-     * before the shell appears (it used to fetch the studio's default genre, and the performance gate
-     * counted it).
-     */
-    /**
-     * `shellIsTheSurface`, not `shouldEnterPhoneShell`: see that constant's comment — by the time this
-     * effect runs on a phone the URL already names a module, so the cutover rule answers "no" while the
-     * shell is exactly what is on screen.
-     */
-    if (shellIsTheSurface) {
-      setSelectedGenre(null);
-      return;
-    }
     let isMounted = true;
     loadGenre(targetGenreId).then((g) => {
       if (isMounted && g) {
@@ -127,7 +83,7 @@ const MainApp: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [isMobile, route.mobile, targetGenreId]);
+  }, [targetGenreId]);
 
   const [comparePool, setComparePool] = useState<Genre[]>([]);
 
@@ -219,61 +175,6 @@ const MainApp: React.FC = () => {
     isZh,
   });
 
-  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
-
-  /**
-   * Whether the phone's navigation bar is currently a fixed bottom bar.
-   *
-   * Published as `data-bottom-bar="tab"` on the document element because CSS needs it and a width
-   * media query cannot answer it: in a landscape studio the bar is merged into the row *inside* the
-   * view, and in a landscape non-studio view it is fixed at the bottom, yet both are 844 px wide.
-   * Everything that has to clear the bar (the track inspector's `bottom`) reads the variable this
-   * drives. See the rule's comment in `index.css` for the measured defect it fixes.
-   */
-  const hasFixedTabBar = isMobile && !(isShortLandscape && currentTab === "studio");
-  useEffect(() => {
-    const root = document.documentElement;
-    if (hasFixedTabBar) root.setAttribute("data-bottom-bar", "tab");
-    else root.removeAttribute("data-bottom-bar");
-  }, [hasFixedTabBar]);
-
-  /**
-   * The phone navigation bar, built once and placed in one of two containers.
-   *
-   * Portrait (and every tall viewport): rendered fixed at the bottom, as it always was. Short
-   * landscape studio: handed to `StudioView`, which puts it on the same row as the transport so the
-   * two bars stop costing 102 px of a 390 px-tall viewport. Built here rather than in the view so
-   * that `App` remains the only thing that knows how navigation works.
-   */
-  const mobileTabBar = (
-    <MobileTabBar
-      activeTab={currentTab}
-      onSelectTab={handleSelectTab}
-      onOpenSheet={() => setMobileSheetOpen(true)}
-    />
-  );
-
-  /** The same bar, in flow, for the shared bottom row. See `MobileTabBar`'s `embedded` prop. */
-  const embeddedMobileTabBar = (
-    <MobileTabBar
-      activeTab={currentTab}
-      onSelectTab={handleSelectTab}
-      onOpenSheet={() => setMobileSheetOpen(true)}
-      embedded
-    />
-  );
-
-  const handleMobileSheetAction = useCallback(
-    (action: MobileSheetAction["id"]) => {
-      setMobileSheetOpen(false);
-      if (action === "search") setSearchOpen(true);
-      else if (action === "settings") setSettingsOpen(true);
-      else if (action === "help") setHelpOpen(true);
-      else if (action === "updates") setUpdatesOpen(true);
-    },
-    []
-  );
-
   // Audio analyser for Header live spectrum visualizer
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const [engineInstance, setEngineInstance] = useState<AudioEngine | null>(null);
@@ -350,179 +251,14 @@ const MainApp: React.FC = () => {
     };
   };
 
-  /**
-   * The cutover, decided **during render**, not only in the effect below.
-   *
-   * `shouldEnterPhoneShell` says "this is a phone, and it asked for nothing in particular" — bare `/`
-   * on a touch device. The effect below reacts to it by naming the home module in the URL, but an
-   * effect runs *after* a render, so the desktop composition used to mount for one frame first: the
-   * studio's own hooks then resolved a genre, and the phone paid for a category chunk it would never
-   * show (the performance gate counts genre chunks fetched on first paint, and this was the last one —
-   * the shell's own data path is index-based on purpose).
-   *
-   * Reading it here makes the shell the phone's *first* render as well as its destination: no flash of
-   * the desktop toolbar, and no chunk for a surface the user will never see.
-   */
-  const bareRouteWantsShell =
-    typeof window !== "undefined" &&
-    shouldEnterPhoneShell({
-      isMobile,
-      mobileRoute: route.mobile,
-      pathname: window.location.pathname,
-      search: window.location.search,
-    });
-
-  /**
-   * Is the phone shell the surface on screen?
-   *
-   * Two ways to be true, and the difference is the whole point: a named module route (`/m/jam`) *is* the
-   * shell, while a **bare route on a phone** only asks to become one. The router rewrites `/` to
-   * `/m/home` during the first commit, so by the time an effect runs the URL already names a module and
-   * `shouldEnterPhoneShell` answers `false` — asking only that question let the studio's genre effect
-   * through and the phone downloaded a category chunk for a surface it never shows. The shell is on
-   * screen in **both** cases, so this is what the render branch and the studio's load guard ask.
-   */
-  const shellIsTheSurface = route.mobile !== undefined || bareRouteWantsShell;
-
-  /**
-   * A phone that opens the app bare lands in the new shell.
-   *
-   * This is the cutover, staged: the shell is the phone's *default entry*, while `?tab=...` and
-   * `?genre=...` links keep rendering what they name (an old bookmark or a desktop-oriented test must
-   * not be silently rewritten). `shouldEnterPhoneShell` is the rule, unit-tested on its own.
-   */
-  useEffect(() => {
-    if (!bareRouteWantsShell) return;
-    navigate({ tab: "studio", mobile: "home" }, { replace: true });
-  }, [bareRouteWantsShell, navigate]);
-
-  /**
-   * The phone shell owns its own route space (`/m/<module>`). When one is requested, the desktop
-   * composition is not rendered at all — that is what makes the two surfaces independently
-   * replaceable while the phone UI is rebuilt module by module.
-   *
-   * This sits after every hook call (the shell is a different tree, but React still requires the hook
-   * order in *this* component to be unconditional).
-   */
-  if (shellIsTheSurface) {
-    return (
-      <React.Suspense fallback={null}>
-        <MobileApp
-          /* A bare route on a phone: the effect above is about to name the home module, and until it
-             does the shell still needs one. */
-          module={route.mobile ?? "home"}
-          mobilePlayer={route.mobilePlayer}
-          genreId={route.genreId}
-          onSelectModule={(module) =>
-            navigate({ tab: "studio", mobile: module, mobilePlayer: false, genreId: undefined })
-          }
-          onOpenGenre={(genreId) =>
-            navigate({ tab: "studio", mobile: "home", genreId, mobilePlayer: false })
-          }
-          /* `undefined` clears the genre: the shell reads `?genre=` as "show that genre's detail". */
-          onCloseGenre={() => navigate({ tab: "studio", mobile: "home", genreId: undefined })}
-          onOpenJam={(genreId) =>
-            navigate({ tab: "studio", mobile: "jam", genreId, mobilePlayer: false })
-          }
-          /* The bar and the player are two forms of one thing: the flag decides which. */
-          onOpenPlayer={(genreId) =>
-            navigate({ tab: "studio", mobile: "home", genreId, mobilePlayer: true })
-          }
-          /* Collapsing returns to the list (the bar, when something is playing, sits above it)
-             rather than to the genre's page, so the chevron is always "back to browsing". */
-          onOpenSettings={() => setSettingsOpen(true)}
-          onOpenUpdates={() => setUpdatesOpen(true)}
-          onOpenHelp={() => setHelpOpen(true)}
-          onOpenSearch={() => setSearchOpen(true)}
-          onCollapsePlayer={() =>
-            navigate({ tab: "studio", mobile: "home", genreId: undefined, mobilePlayer: false })
-          }
-        />
-
-        {/*
-          The phone's panels — the same components the desktop renders.
-
-          They used to be mounted *only* in the desktop branch below, so every row in 更多 set state that
-          nothing rendered: 设置, 更新记录, 手册 and 搜索 were all empty on the phone. Reusing the panels
-          rather than writing phone copies is the decision the 更多 screen already documents (those panels
-          are responsive, and a second copy is how a phone and a desktop come to disagree about what a
-          setting means).
-
-          The one thing that cannot simply be reused is navigation *out* of a panel: `handleSelectTab`
-          moves the desktop route space, which on a phone would drop the user into the desktop UI. So a
-          link out of the help centre goes to the phone's own module instead.
-        */}
-        {/*
-          `m-panels` is the phone's scope for these four desktop panels.
-          
-          They are siblings of the shell rather than children of it (the shell renders its own root), so
-          they cannot be reached by `.mobile-root …` selectors — and `data-skin` alone is too wide a net,
-          because it is on `<html>` for the whole app. One explicit wrapper gives the panels a scope the
-          skins can address without touching the same dialogs when the desktop opens them.
-        */}
-        <div className="m-panels">
-        <UpdatesModal isOpen={updatesOpen} onClose={() => setUpdatesOpen(false)} />
-        <React.Suspense fallback={null}>
-          <SettingsModal
-            isOpen={settingsOpen}
-          onClose={() => setSettingsOpen(false)}
-          engine={engineInstance}
-          gs1Enabled={gs1Enabled}
-          onToggleGs1={() => setGs1Enabled(!gs1Enabled)}
-          onReplayOnboarding={() => {
-            try {
-              localStorage.removeItem(ONBOARDING_COMPLETED_KEY);
-            } catch {
-              // A storage that refuses to forget is not a reason to refuse the replay.
-            }
-            setSettingsOpen(false);
-          }}
-            onOpenUpdates={() => {
-              setSettingsOpen(false);
-              setUpdatesOpen(true);
-            }}
-          />
-        </React.Suspense>
-        <GlobalSearch
-          isOpen={searchOpen}
-          onClose={() => setSearchOpen(false)}
-          /* A result opens that genre in the phone shell, not in the desktop studio. */
-          onSelectGenre={(genre) => {
-            setSearchOpen(false);
-            navigate({ tab: "studio", mobile: "home", genreId: genre.id, mobilePlayer: false });
-          }}
-        />
-        {helpOpen && (
-          <React.Suspense fallback={null}>
-            <HelpCenterModal
-              isOpen={helpOpen}
-              initialCategory={helpCategory}
-              onClose={() => {
-                setHelpOpen(false);
-                setHelpCategory(undefined);
-              }}
-              /* The theory tools this help centre links to now live in 探索; everything else is 首页. */
-              onSelectTab={(tab) => {
-                setHelpOpen(false);
-                const module: MobileModule = tab === "chords" || tab === "kick" || tab === "masterclass" ? "explore" : "home";
-                navigate({ tab: "studio", mobile: module, genreId: undefined, mobilePlayer: false });
-              }}
-            />
-          </React.Suspense>
-        )}
-        </div>
-      </React.Suspense>
-    );
-  }
-
   return (
     /*
-      `data-surface` names which of the two apps this is.
-      
-      The phone shell and the desktop render from the same components but they are separate surfaces, and a
-      skin's *character* (a texture, a font, a cut corner) is written for one of them: the desktop's
-      character sheets are scoped to `[data-surface="desktop"]` so they cannot leak into the phone shell,
-      whose own sheets are scoped to `.mobile-root` and were tuned separately.
+      `data-surface` names which surface this is.
+
+      The phone shell was the other one, and the two rendered from the same components but were separate
+      surfaces: a skin's *character* (a texture, a font, a cut corner) is written for one of them. The
+      phone shell is cut (see `docs/OPEN_WORK.md` §十三), so this is the only surface left, and the
+      attribute stays because the skin sheets are scoped to it.
     */
     <div
       data-surface="desktop"
@@ -547,8 +283,6 @@ const MainApp: React.FC = () => {
         onOpenHelp={() => setHelpOpen(true)}
         onOpenOnboarding={() => setOnboardingOpen(true)}
         onOpenSettings={() => setSettingsOpen(true)}
-        /* The phone header's entry point: the sections sheet the tab bar also opens. */
-        onOpenMore={() => setMobileSheetOpen(true)}
         analyser={analyser}
         isPlaying={isPlaying}
       />
@@ -563,16 +297,6 @@ const MainApp: React.FC = () => {
       {/* Main Viewport with Suspense fallback for async chunks */}
       <main
         className="flex-1 w-full pb-12"
-        /**
-         * On a phone the tab bar is fixed over the bottom of the viewport, so the document needs
-         * enough padding to scroll its last row above it. `env(safe-area-inset-bottom)` is added
-         * because on a notched/dock-less phone the bar itself grows by the safe-area inset.
-         */
-        style={
-          isMobile
-            ? { paddingBottom: "calc(4.25rem + env(safe-area-inset-bottom, 0px))" }
-            : undefined
-        }
       >
         <React.Suspense
           fallback={
@@ -615,10 +339,6 @@ const MainApp: React.FC = () => {
                     selectedGenre={selectedGenre}
                     onSelectGenre={handleSelectStudioGenre}
                     onViewDetail={handleSelectDetailGenre}
-                    onOpenChords={() => handleSelectTab("chords")}
-                    mobileBottomBar={
-                      isShortLandscape && isMobile ? embeddedMobileTabBar : undefined
-                    }
                     onAddToCompare={handleAddToCompare}
                     onAudioEngineReady={handleEngineReady}
                     onOpenSettings={() => setSettingsOpen(true)}
@@ -861,33 +581,6 @@ const MainApp: React.FC = () => {
             )}
         </React.Suspense>
       </main>
-
-      {/**
-       * Phone shell. The tab bar is a sibling of `main` rather than inside it so it is unaffected
-       * by any view's own layout, and `main` gets matching bottom padding so the bar never covers
-       * the last row of a view — the classic fixed-bar bug.
-       */}
-      {isMobile && (
-        <>
-          {/*
-            In a short landscape viewport the studio puts this bar on the *same* bottom row as its
-            transport (via `mobileBottomBar`), so rendering it fixed here too would show two copies.
-            Every other view keeps it fixed.
-          */}
-          {!(isShortLandscape && currentTab === "studio") && mobileTabBar}
-          <MobileMoreSheet
-            open={mobileSheetOpen}
-            onClose={() => setMobileSheetOpen(false)}
-            /* ⭐ The same in-app routing the header gets, so the phone's own "new project" row stops reloading. */
-            onNavigate={navigate}
-            onSelectTab={(tab) => {
-              setMobileSheetOpen(false);
-              handleSelectTab(tab);
-            }}
-            onAction={handleMobileSheetAction}
-          />
-        </>
-      )}
 
       {/* Persistent Footer */}
       <footer className="w-full bg-bg border-t border-line py-6 px-4">

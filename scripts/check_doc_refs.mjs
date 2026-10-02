@@ -87,6 +87,29 @@ const PROPOSED = new Map([
     "src/components/console/StudioConsoleFloat.tsx",
     "Planned draggable console float (STUDIO_REFACTOR_PLAN X-02/X-03). The console exists as ConsoleOverlay/TrackInspector instead.",
   ],
+  /**
+   * ⭐ **Removed, not planned.** The phone shell was cut on 2026-10-02 (`docs/OPEN_WORK.md` §十三) and these
+   * three documents record *why* and *what it consisted of*, so their lines name files that deliberately no
+   * longer exist. They are declared rather than edited because the lines are accurate about the past, and
+   * because two of the three documents are owned by another writer who is correcting them in the same round
+   * (the cross-mark convention §十七 says "this path is wrong", which is not what these lines mean).
+   */
+  [
+    "src/components/MobileTabBar.tsx",
+    "Removed with the phone shell. OPEN_WORK.md §十三 names the component each deleted criterion used to test; this path is the record, not a claim.",
+  ],
+  [
+    "src/components/MobileMoreSheet.tsx",
+    "Removed with the phone shell. Same line in OPEN_WORK.md §十三 as MobileTabBar; the record of what `mobileShell.test.tsx` covered.",
+  ],
+  [
+    "src/components/sequencer/MobileTransportBar.tsx",
+    "Removed with the phone shell. OPEN_WORK.md §十三 records which criteria (`mobileTransportBar`, `mobileSharedBottomRow`) tested it.",
+  ],
+  [
+    "src/mobile/MobileModuleTabBar.tsx",
+    "Removed with the phone shell. AUDIT_2026-10-02_TRIAGE.md:192 listed it as phone-only in the audit that led to the cut.",
+  ],
 ]);
 
 /** Doc files to scan: the repository's own notes and plans. */

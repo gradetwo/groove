@@ -4453,13 +4453,19 @@ GS-1 上游（降低每个实例的 WASM 预留），要么在宿主（一个可
 
 ## M.6 进度：M1 外壳 + M2 首页（v2.1.15）
 
-已落地（`src/mobile/`，路由 `/m/<module>`）：
+> ⚠️ **历史记录（2026-10-02 更新）**：下面这一节描述的手机外壳**已被砍除**（业主指令，
+> `docs/OPEN_WORK.md` §十三）。`src/mobile/` 一整棵、`MobileTabBar`／`MobileMoreSheet`／
+> `MobileTransportBar`／`MobileStudioSheet`、`/m/<module>` 路由空间与配套判据都不在了；手机浏览器
+> 现在渲染桌面界面。唯一保留手机版的分支是 `mobile-preserved`。本节保留的是「当时做了什么、为什么」，
+> 不是现状。
+
+当时已落地（`src/mobile/`，路由 `/m/<module>`）：
 
 - `mobileModules.ts` 五模块词汇（`home | jam | challenge | explore | more`）+ 未知值回落；`mobile.css`
   设计令牌（作用域 `.mobile-root`，不动桌面）；`MobileModuleTabBar`（五格、每格 ≥56 px、可见文字标签、
   `aria-current`）；`MobileApp` 外壳（金色顶部光晕、安全区、内容预留固定栏高度、lazy 加载以不进首屏）；
   `screens/MobileHomeScreen.tsx` 曲风库（分类胶囊、搜索、色块即试听按钮、行内展开摘要）；i18n
-  `src/i18n/locales/mobile.ts`。
+  手机文案模块（`src/i18n/locales/` 下的 `mobile.ts`，已随外壳删除）。
 - 路由：`/m/<module>`（含 `?genre=`）解析与格式化，**先于** genre 路径解析，避免 `/m/home` 被误判；未知模块
   回落 `home`；不污染桌面路由。
 - `App.tsx`：`route.mobile` 存在时整棵树换成手机外壳（lazy + Suspense），桌面与旧手机界面完全不变。

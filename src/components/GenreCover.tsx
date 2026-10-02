@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { genreCoverCandidates, genreCoverThumbCandidates, genreCoverUrl } from "../mobile/genreArt";
+import { genreCoverCandidates, genreCoverThumbCandidates, genreCoverUrl } from "../utils/genreArt";
 import { useSkin } from "../hooks/useSkin";
 
 /**

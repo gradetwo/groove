@@ -160,13 +160,16 @@ function useTransportControls({ announceScope }: { announceScope: "full" | "mini
 同时修正了一处既有缺陷：跑部分目标时汇总信息原本**硬编码**「ALL 7 ... PASSED」，
 也就是只跑了 3 个却宣称 7 个全过。现在按实际跑的数目报，并提示全量命令。
 
-## 7. 手机端相关代码的临时状态
+## 7. 手机端相关代码：**已砍除**（2026-10-02）
 
-手机端将由你重新设计，因此**现有手机相关代码保持能用、但不再是架构上的约束**：
+手机版由业主下令砍除（`docs/OPEN_WORK.md` §十三）：`src/mobile/` 一整棵、`MobileTabBar`、
+`MobileMoreSheet`、`MobileTransportBar`、`MobileStudioSheet`、手机版 `Header` 变体、`/m/<module>`
+路由空间与 13 条手机外壳判据都不在了，手机浏览器现在渲染桌面界面。唯一保留手机版的分支是
+`mobile-preserved`。**这一节以下的内容是砍除前的过渡状态记录**，不是现状。
 
-- 平台判断集中在 `useDeviceCapabilities`（`isPhone` / `isMobile` / `isShortLandscape`）；
-- 手机专属组件在 `components/MobileTabBar.tsx`、`components/MobileMoreSheet.tsx`、
+- 平台判断集中在 `useDeviceCapabilities`（`isPhone` / `isMobile` / `isShortLandscape`）——**这一条仍然成立**，
+  它属于**平台**（触屏、设备分类、缩放手势护栏）而不是外壳；
+- 手机专属组件曾经在 `components/MobileTabBar.tsx`、`components/MobileMoreSheet.tsx`、
   `components/sequencer/MobileTransportBar.tsx`、`components/sequencer/MobileStudioSheet.tsx`；
-- `SequencerPanel` 目前仍带 `isPhone` / `isShortLandscape` 两个 prop 来切换排布。
-  这是**过渡状态**：新手机界面落地时，应当由 `src/App.tsx` 在更高层选择渲染哪个 sequencer 外壳，
-  而不是让 `SequencerPanel` 继续长条件分支。
+- `SequencerPanel` 曾带 `isPhone` / `isShortLandscape` 两个 prop 来切换排布；现在它只有一个排布，
+  桌面工具栏在所有设备上渲染。

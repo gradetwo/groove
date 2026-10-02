@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import type { NavTab } from "./navigation";
-import { normaliseMobileModule, type MobileModule } from "../mobile/mobileModules";
 
 export interface RouteState {
   tab: NavTab;
@@ -12,16 +11,6 @@ export interface RouteState {
    * precedent set for `/console`.
    */
   newProject?: boolean;
-  /**
-   * Phone-shell module (`/m/<module>`), when the phone UI is what should render.
-   *
-   * The phone redesign is a separate surface during the rebuild (see `src/mobile/MobileApp.tsx`), so
-   * it gets its own route rather than a new `NavTab`: the desktop vocabulary stays thirteen entries
-   * and the phone's five modules stay out of it.
-   */
-  mobile?: MobileModule;
-  /** Full-screen phone player (`/m/home?player=1&genre=`), versus the list or a detail page. */
-  mobilePlayer?: boolean;
   genreId?: string;
   compareIds?: string[];
   difficulty?: "easy" | "medium" | "hard";
@@ -53,19 +42,6 @@ export function parseUrlToRoute(pathname: string, search: string, hash: string =
   }
   if (params.get("groove")) {
     return { tab: "studio", sequencerPayload: params.get("groove")! };
-  }
-
-  // Phone shell: /m/<module>, or ?m=<module>. Parsed first so `/m/home` cannot be mistaken for a
-  // genre path, and so the shell is reachable by URL on any device (that is how it is tested).
-  const mobileMatch = cleanPath.match(/^\/m(?:\/([a-z-]+))?$/);
-  const mobileParam = mobileMatch ? mobileMatch[1] ?? "" : params.get("m");
-  if (mobileMatch || params.has("m")) {
-    return {
-      tab: "studio",
-      mobile: normaliseMobileModule(mobileParam),
-      mobilePlayer: params.get("player") === "1",
-      genreId: params.get("genre") || undefined,
-    };
   }
 
   // Check genre detail: /genre/:id or ?tab=detail&genre=:id
@@ -234,14 +210,6 @@ export function parseUrlToRoute(pathname: string, search: string, hash: string =
 }
 
 export function formatRouteToUrl(route: RouteState): string {
-  // The phone shell owns its own path space; nothing else may render at `/m/...`.
-  if (route.mobile) {
-    const params = new URLSearchParams();
-    if (route.genreId) params.set("genre", route.genreId);
-    if (route.mobilePlayer) params.set("player", "1");
-    const q = params.toString();
-    return `/m/${route.mobile}${q ? `?${q}` : ""}`;
-  }
   // Use clean paths where possible, with fallback query params
   switch (route.tab) {
     case "detail":

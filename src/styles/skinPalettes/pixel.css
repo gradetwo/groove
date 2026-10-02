@@ -1,0 +1,38 @@
+/**
+ * Skin palette source: "pixel" — 8-bit / 像素 (8-bit pixel art).
+ *
+ * **A source, not a stylesheet.** Nothing imports this file, so no selector here ever ships to a
+ * browser: it is the one place the skin's values are written, and `scripts/desktop_skins.mjs` reads
+ * it (`npm run skins:gen` writes, `npm run check:skins` verifies) to derive the desktop's `--d-*`
+ * palette. See `minimal.css` for why the palette moved out of the deleted phone shell.
+ *
+ * One of the two dark skins. The accent is a mint that reads on the indigo ground and carries the
+ * near-black `--m-on-gold`; antialiasing is deliberately off (`font-smooth: never`) so the pixel
+ * faces stay crisp.
+ */
+:root[data-skin="pixel"] {
+  --m-bg: #10121c;
+  --m-card: #1a1d2e;
+  --m-card-2: #262a44;
+  --m-line: #8a8fb0;
+  --m-line-2: #e8e8f0;
+  --m-ink: #e8e8f0;
+  --m-ink-2: #8a8fb0;
+  --m-ink-3: #7e84a8;
+  --m-on-gold: #10121c;
+  --m-font-display: "Press Start 2P", "JetBrains Mono", monospace;
+  --m-font-mono: "VT323", "JetBrains Mono", monospace;
+  --m-teal: #5bc8ff;
+  --m-red: #ff6b97;
+  --m-green: #4ce0b3;
+  --m-violet: #b06bff;
+  --m-gold: #4ce0b3;
+  --m-gold-hi: #e8e8f0;
+  --m-warning: #ffd166;
+  --m-gold-rgb: 76 224 179;
+  background: var(--m-bg);
+  color: var(--m-ink);
+  font-family: "VT323", "JetBrains Mono", monospace;
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+}

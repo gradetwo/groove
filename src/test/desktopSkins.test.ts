@@ -75,9 +75,9 @@ function sourceLiterals(): Map<string, Set<string>> {
 }
 
 describe("desktop skins · the generated sheet", () => {
-  it("is up to date with the phone palettes it is derived from", () => {
-    // `--check` regenerates in memory and compares, so an edit to a phone skin that is not carried over
-    // fails here rather than shipping two surfaces with different colours.
+  it("is up to date with the palette sources it is derived from", () => {
+    // `--check` regenerates in memory and compares, so an edit to a palette source that is not carried over
+    // fails here rather than shipping a desktop skin whose colours are not the ones written down.
     const output = execFileSync("node", ["scripts/desktop_skins.mjs", "--check"], {
       cwd: ROOT,
       encoding: "utf8",

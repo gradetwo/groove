@@ -6,7 +6,7 @@
  * get the same tile), built from the aurora hues the reference uses, and syntactically valid CSS.
  */
 import { describe, it, expect } from "vitest";
-import { genreArtBackground, genreCoverCandidates, genreCoverUrl, hashGenreId } from "../mobile/genreArt";
+import { genreArtBackground, genreCoverCandidates, genreCoverUrl, hashGenreId } from "../utils/genreArt";
 
 describe("genre art", () => {
   it("is deterministic for a genre and different between genres", () => {

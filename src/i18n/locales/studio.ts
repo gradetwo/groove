@@ -638,14 +638,9 @@ export const studioMessages = {
   roll_preview_range: { en: "Range", zh: "范围" },
   roll_preview_range_all: { en: "Whole lane", zh: "全轨" },
   roll_preview_range_bar: { en: "Bar {bar}", zh: "第 {bar} 小节" },
-  roll_mobile_unavailable_title: { en: "The piano roll is a desktop tool", zh: "钢琴卷帘是桌面端工具" },
-  roll_mobile_unavailable_body: {
-    en: "It needs a pitch grid, a scroller and a 50-button toolbar at once — on a phone that is 1095px of drawer with 2304px of grid and no way to pan it. Edit notes on the step grid instead: tap a cell, long-press for its parameters, and use the Chords view for progressions.",
-    zh: "它同时需要音高网格、滚动容器和 50 多个按钮的工具栏——在手机上会变成 1095px 高的抽屉与 2304px 宽的网格，且无法拖动平移。请改用步进网格编辑音符：点按格子、长按调出参数，和弦走向请用「和弦」视图。",
-  },
-  roll_mobile_unavailable_cta: { en: "Open the Chords view", zh: "打开和弦视图" },
-  mobile_note_editing_label: { en: "Editing notes", zh: "编辑音符" },
-  mobile_note_editing_desc: { en: "Why the piano roll is desktop-only, and what to use instead", zh: "为什么钢琴卷帘只在桌面端，以及该用什么代替" },
+  // `roll_mobile_unavailable_*` and `mobile_note_editing_*` explained why the piano roll was withheld on a
+  // phone and what to use instead. The phone shell is cut (`docs/OPEN_WORK.md` §十三), the piano roll is
+  // offered on every surface now, and the notice that showed them went with it.
   roll_preview_unavailable: {
     en: "Preview unavailable for this track.",
     zh: "本轨暂时无法单独试听。",

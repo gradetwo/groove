@@ -6,8 +6,9 @@
  * borders with weight, no shadows or gradients at all, one typeface (Inter), tight tracking on headings, and
  * the accent spent on one thing at a time.
  *
- * Read `src/mobile/skins/minimal.css` for the phone's version of the same argument; this is the desktop
- * translation of it. Two traps carry over:
+ * Read `src/styles/skinPalettes/minimal.css` for the same argument written from the palette's side — that
+ * file is the skin's values, and the phone shell they were originally written for is cut
+ * (`docs/OPEN_WORK.md` §十三). This is the desktop translation of it. Two traps carry over:
  *
  *  - the desktop paints a soft page wash and many gradient panels, so "no gradients" has to be said
  *    explicitly (`background-image: none`) rather than assumed;

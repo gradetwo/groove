@@ -175,14 +175,16 @@ describe("first-run prompt · its label is not the transport's", () => {
 });
 
 describe("first-run prompt · wiring", () => {
-  it("is rendered by the studio, desktop only, on the transport's own play", () => {
+  it("is rendered by the studio on the transport's own play, with a `visible` prop", () => {
     // Wiring rather than behaviour: the hook and the strip are covered above, and a correct prompt
-    // rendered nowhere (or on the phone layout being redesigned) is the failure this pins.
+    // rendered nowhere (or as a conditional sibling that remounts the panel) is the failure this pins.
+    // It used to read `!isPhone && …`, because the phone layout replaced the toolbar it points at; the
+    // phone shell is cut (`docs/OPEN_WORK.md` §十三), so every surface renders it the same way now.
     const view = read("views/StudioView.tsx");
     expect(view).toContain("useFirstRunPrompt({ isPlaying })");
     // Rendered unconditionally with a `visible` prop — see the component's note on remounting.
-    expect(view).toContain("visible={!isPhone && firstRunPrompt.visible}");
-    expect(view).not.toMatch(/\{!isPhone && firstRunPrompt\.visible && \(/);
+    expect(view).toContain("visible={firstRunPrompt.visible}");
+    expect(view).not.toMatch(/\{firstRunPrompt\.visible && \(/);
     expect(view).toContain("void handleTogglePlay()");
   });
 });

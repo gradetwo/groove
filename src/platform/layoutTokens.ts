@@ -11,9 +11,11 @@
  *   - `PHONE_MAX_HEIGHT_PX` — the JS short-landscape check and the `@media (max-height: …)` block.
  *     These were 480 and 500 for a while: a 490 px-tall landscape viewport got the compressed
  *     stylesheet while JS still called it a tall phone, so one rule sized a control and another
- *     positioned it;
- *   - `TRANSPORT_ROW_WIDTH_PX` — the width the phone transport claims when it shares the bottom row
- *     with the tab bar, used by JS and by the `--mobile-transport-row-w` custom property.
+ *     positioned it.
+ *
+ * A third, `TRANSPORT_ROW_WIDTH_PX`, went with the phone shell (`docs/OPEN_WORK.md` §十三): it was the
+ * width the phone transport claimed when it shared the bottom row with the navigation bar, and both of
+ * those bars are cut.
  *
  * A unit test pinned each pair, which is how they were kept equal — but a test that asserts "copy A
  * equals copy B" has to be written again for every new pair, and it never notices a *third* copy.
@@ -50,11 +52,3 @@ export const PHONE_MAX_WIDTH_PX = 639;
  */
 export const PHONE_MAX_HEIGHT_PX = 500;
 
-/**
- * Width the phone transport claims when it shares the bottom row with the navigation bar.
- *
- * The panel sizes the slot with `min(var(--mobile-transport-row-w), 55vw)`, and the bar itself
- * renders its own width; if the two disagree the transport is clipped or leaves a gap. Must stay
- * wide enough for its five 44 px controls plus four 4 px gaps and 12 px of container padding.
- */
-export const TRANSPORT_ROW_WIDTH_PX = 320;

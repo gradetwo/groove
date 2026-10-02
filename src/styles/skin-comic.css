@@ -1,10 +1,10 @@
 /*
  * The comic skin, on the desktop and the iPad.
  *
- * The palette is already the phone's (see `desktopSkins.css`, generated); this file is the skin's
- * *character* — the things a palette cannot express: type, edges, texture, the way a panel is cut. It is
- * scoped to `[data-skin="comic"]` and it may only use the `--d-*` tokens, so it works on any surface the
- * desktop renders.
+ * The palette comes from `src/styles/skinPalettes/comic.css` (see `desktopSkins.css`, generated); this file
+ * is the skin's *character* — the things a palette cannot express: type, edges, texture, the way a panel is
+ * cut. It is scoped to `[data-skin="comic"]` and it may only use the `--d-*` tokens, so it works on any
+ * surface the desktop renders.
  *
  * Owned by the comic character pass; the contract it must satisfy is in
  * `src/test/desktopCharacters.test.ts`.
@@ -13,18 +13,19 @@
  * What the desktop's comic character is
  * =============================================================================================
  *
- * The phone shell (`.mobile-root`, `src/mobile/skins/comic.css`) turns a screen into a four-colour
- * press sheet: newsprint, ink outlines, Ben-Day dots, flat spot plates, cyan and magenta a hair out of
- * register. The desktop is the same press run, printed on the *chrome*: a denser sheet, more panels,
- * and an instrument readout that must stay an instrument readout. The language is taken straight from
- * the phone sheet — ink keylines, hard zero-blur shadows, dot screens, two-plate misregistration, a
+ * The sheet this language was first written for was the phone shell's
+ * (`src/styles/skinPalettes/comic.css` holds its palette today; the shell itself is cut,
+ * `docs/OPEN_WORK.md` §十三): newsprint, ink outlines, Ben-Day dots, flat spot plates, cyan and magenta a
+ * hair out of register. The desktop is the same press run, printed on the *chrome*: a denser sheet, more
+ * panels, and an instrument readout that must stay an instrument readout. The language is taken straight
+ * from that sheet — ink keylines, hard zero-blur shadows, dot screens, two-plate misregistration, a
  * solid accent plate for "this is the one you are on" — and translated to what the desktop actually
  * has.
  *
- * ONE HONEST DIFFERENCE FROM THE PHONE, stated up front because it is a deliberate choice and not an
+ * ONE HONEST DIFFERENCE FROM THAT SHEET, stated up front because it is a deliberate choice and not an
  * oversight. The brief's electric cyan and magenta plates are *not* in the desktop palette:
- * `desktopSkins.css` (generated, not editable here) derives every `--d-*` token from the phone's
- * **ink** tokens, and the comic skin's ink accent is the deep process-cyan the phone sheet reserves
+ * `desktopSkins.css` (generated, not editable here) derives every `--d-*` token from the palette's
+ * **ink** tokens, and the comic skin's ink accent is the deep process-cyan the palette reserves
  * for type. A character sheet may not invent a colour (the gate enforces it), so the misregistration
  * is built out of what the palette *does* have:
  *

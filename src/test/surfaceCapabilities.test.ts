@@ -1,14 +1,11 @@
 /**
- * The surface contract: the phone is a **subset**, and the phone shell must not reach past it.
+ * The surface declaration: one table, held to its own rules, plus the module map that names what implements each
+ * capability.
  *
- * The product decision this pins: the phone gets its own UI and interaction layer (which the codebase already
- * separates as `src/mobile/**`) and a *subset* of the features — the multi-track arrangement surface, the
- * piano-roll inspector, the hardware console and multi-clip projects are iPad/PC only.
- *
- * The failure this prevents is not hypothetical: without a check, the next desktop feature is imported into the
- * phone shell by autocomplete, and the phone quietly becomes a second, unmaintained copy of the app. The rule is
- * one-directional and cheap to satisfy — the phone may import the shared model, logic and utilities, and not the
- * desktop-only module paths.
+ * The decision it recorded — **the phone shell was a subset with its own UI** — is retired: the shell is cut
+ * (`docs/OPEN_WORK.md` §十三) and a phone browser now renders the `desktop` UI, so there is no second surface
+ * left to leak into. What survives here is the *table's* consistency (every declared capability names a real
+ * surface, every withheld one gives a reason) and the link between a capability and its module.
  */
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
@@ -26,18 +23,6 @@ import {
 
 // Two levels up: this file is `src/test/…`, and the paths below are repo-relative (`src/…`).
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
-
-function filesUnder(dir: string): string[] {
-  const absolute = path.join(ROOT, dir);
-  if (!fs.existsSync(absolute)) return [];
-  const out: string[] = [];
-  for (const entry of fs.readdirSync(absolute, { withFileTypes: true })) {
-    const child = path.join(dir, entry.name);
-    if (entry.isDirectory()) out.push(...filesUnder(child));
-    else if (/\.tsx?$/.test(entry.name)) out.push(child);
-  }
-  return out;
-}
 
 describe("surface capabilities", () => {
   it("declares every capability for at least one surface", () => {
@@ -77,28 +62,31 @@ describe("surface capabilities", () => {
     );
   });
 
-  it("never lets the phone shell reach a desktop-only module", () => {
-    const phoneFiles = filesUnder("src/mobile");
-    expect(phoneFiles.length, "the phone shell should still exist").toBeGreaterThan(0);
-    const forbidden = desktopOnly().flatMap((id) => CAPABILITY_MODULES[id] ?? []);
-    expect(forbidden.length, "at least one desktop-only capability should name its module").toBeGreaterThan(0);
-
-    const leaks: string[] = [];
-    for (const file of phoneFiles) {
-      const source = fs.readFileSync(path.join(ROOT, file), "utf8");
-      for (const modulePath of forbidden) {
-        // Any import that resolves to the forbidden path — relative or aliased.
-        const needle = modulePath.replace(/^src\//, "");
-        if (new RegExp(`from\\s+["'][^"']*${needle}`).test(source) || source.includes(`"@/${needle}`)) {
-          leaks.push(`${file} → ${modulePath}`);
-        }
+  it("names a real module for the capabilities that have one", () => {
+    /**
+     * The leak check this replaces (`nothing under src/mobile/** may import a desktop-only module`) has no
+     * subject left: the shell is cut, so there is no phone tree to scan and no forbidden import to catch. What is
+     * still checkable — and worth checking, because the map is the only link between a capability and the code
+     * that implements it — is that every entry names a path that exists.
+     */
+    const entries = Object.entries(CAPABILITY_MODULES);
+    expect(entries.length, "at least one capability should name its module").toBeGreaterThan(0);
+    for (const [id, modules] of entries) {
+      expect(CAPABILITIES.some((row) => row.id === id), `${id} is not a declared capability`).toBe(true);
+      for (const modulePath of modules ?? []) {
+        // The map stores a module prefix without its extension (`src/components/console`, `…/ArrangementPanel`),
+        // so a directory, a `.ts` and a `.tsx` are all a match.
+        const candidates = [modulePath, `${modulePath}.ts`, `${modulePath}.tsx`];
+        expect(
+          candidates.some((candidate) => fs.existsSync(path.join(ROOT, candidate))),
+          `${id} names a missing module: ${modulePath}`
+        ).toBe(true);
       }
     }
-    expect(leaks, `the phone shell imports a desktop-only module:\n${leaks.join("\n")}`).toEqual([]);
   });
 
-  it("keeps the shared model available to both surfaces", () => {
-    // The song model is shared data, not a desktop feature: the phone may read it (and later, edit one clip of it).
+  it("keeps the shared model free of a surface", () => {
+    // The song model is shared data, not a surface feature.
     for (const file of ["src/types/song.ts", "src/platform/surfaceCapabilities.ts"]) {
       expect(fs.existsSync(path.join(ROOT, file)), file).toBe(true);
     }

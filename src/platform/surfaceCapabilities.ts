@@ -1,20 +1,20 @@
 /**
- * Surface capabilities: what the phone has, and what only the big surfaces have.
+ * Surface capabilities: what the retired phone shell had, and what every surface has now.
  *
- * The product decision (recorded here because it is a decision, not an accident): **the phone is a functional
- * subset of the iPad and PC version, with its own UI and interaction layer** — the phone shell stays, keeps its own
- * screens and skins, and simply does not carry the multi-track surface. Professional multi-track work — the
- * arrangement/timeline surface, the piano roll's inspector, the hardware console — simply does not exist on the
- * phone; the phone is a groove player and a quick editor, and it is better at that for not carrying them.
+ * ⚠️ **The `phone` column is historical.** The product decision it recorded was that the phone was a functional
+ * subset with its own UI and interaction layer — the phone shell stayed, kept its own screens and skins, and
+ * simply did not carry the multi-track surface. That shell is **cut** (`docs/OPEN_WORK.md` §十三, preserved on
+ * the `mobile-preserved` branch), and a phone browser now renders the `desktop` UI, so nothing is withheld from
+ * it any more. The `phone` ids are kept, with the reason each one was withheld, because the *reasons* are still
+ * true statements about the layout (`ARRANGEMENT_PLAN.md` and `TRACK_ARRANGEMENT_PLAN.md` cite this table), and
+ * because deleting a declaration leaves the next reader unable to tell a decision from an oversight.
  *
- * That is a *contract*, not a comment: `surfaceCapabilities.test.ts` asserts both directions — every declared
- * capability is reachable on at least one surface, and nothing under `src/mobile/**` references a capability the
- * phone does not have. Without it, the next feature added to the desktop shell leaks into the phone by default,
- * and the phone stops being a subset and becomes a second, unmaintained copy of the app.
+ * What is **not** historical is `CAPABILITY_MODULES`: it maps a capability to the module that implements it,
+ * which is the piece `surfaceCapabilities.test.ts` uses to check the declaration against the tree.
  */
 export type SurfaceId = "phone" | "desktop";
 
-/** The surfaces the product targets. `desktop` means the shared iPad + PC layout. */
+/** The surfaces the product targets. `desktop` means the shared iPad + PC layout, which a phone also gets. */
 export const SURFACES: readonly SurfaceId[] = ["phone", "desktop"];
 
 export type CapabilityId =
@@ -124,18 +124,23 @@ export function capabilitiesFor(surface: SurfaceId): CapabilityId[] {
   return CAPABILITIES.filter((entry) => entry.surfaces.includes(surface)).map((entry) => entry.id);
 }
 
-/** The capabilities that are desktop-only, i.e. the ones `src/mobile/**` must never reach for. */
+/**
+ * The capabilities the **retired phone shell** did not reach for.
+ *
+ * Historical, like the `phone` column itself: the shell that enforced it is cut, so nothing consumes this at
+ * runtime. It is kept as the record of the subset boundary and as the vocabulary a future second surface would
+ * start from.
+ */
 export function desktopOnly(): CapabilityId[] {
   return CAPABILITIES.filter((entry) => !entry.surfaces.includes("phone")).map((entry) => entry.id);
 }
 
 /**
- * Where each capability lives, as a module prefix — what the test uses to check the phone shell.
+ * Where each capability lives, as a module prefix — what the test uses to check the declaration.
  *
  * A capability with no module yet simply has no entry; the test then only asserts the declaration, and adding the
  * module later is what activates the leak check. `arrangement` was in exactly that state until B3 built the view:
- * its entry used to name a planned path, and now names the component that really renders it — which is the moment
- * the phone-side leak check starts being able to fail.
+ * its entry used to name a planned path, and now names the component that really renders it.
  */
 export const CAPABILITY_MODULES: Partial<Record<CapabilityId, readonly string[]>> = {
   arrangement: ["src/components/arrangement/ArrangementPanel"],

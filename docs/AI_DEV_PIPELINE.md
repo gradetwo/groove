@@ -27,7 +27,7 @@ groove 目前有 **160 个曲风**、**7 套皮肤**、PWA 图标族、`docs/scr
 | 位置 | 现状 | 与 AI 生产线的接口 |
 | --- | --- | --- |
 | `public/covers/*.jpg` | 160 张爬来的实拍图 + `CREDITS.md` | 直接替换；`genreCoverUrl()` 是唯一解析点 |
-| `src/mobile/genreArt.ts` | `genreCoverUrl(id)` **只有曲风维度、没有皮肤维度** | 需要加 `<skin>/<genre>.jpg` 一层 + 回退 + 单测 |
+| `src/utils/genreArt.ts` | `genreCoverUrl(id)` **只有曲风维度、没有皮肤维度** | 需要加 `<skin>/<genre>.jpg` 一层 + 回退 + 单测 |
 | `src/data/skins.ts` | 7 套皮肤，每套有 ground/ink/accent | 皮肤调色板 = 每个皮肤的生图风格锚点 |
 | `src/skins/*.css`（注释指向） | 皮肤样式与 CSS 变量 | 提取真实色值写进 prompt / 后期校色 |
 | `public/icons/*` | PWA 192/512/maskable + svg | 图标建议"生成母版 → 手工/矢量化"，不要直接出图标 |

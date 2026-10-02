@@ -10,7 +10,7 @@
  * with a test, a *new* pair of copies is invisible until somebody remembers to write the test (the
  * 480/500 short-landscape bug was found by hand, not by a test).
  *
- * So `scripts/layout_tokens.mjs` uses the functions below to rewrite the three places, and
+ * So `scripts/layout_tokens.mjs` uses the functions below to rewrite the two places, and
  * `npm run check:layout` (inside `verify`) fails when the stylesheet disagrees with
  * `layoutTokens.ts`. The matching patterns are deliberately anchored to the rule syntax — an
  * ordinary `\d+` search would happily rewrite the number inside a comment that talks *about* the
@@ -21,7 +21,6 @@
 import {
   PHONE_MAX_HEIGHT_PX,
   PHONE_MAX_WIDTH_PX,
-  TRANSPORT_ROW_WIDTH_PX,
 } from "./layoutTokens";
 
 export interface ManagedCssValue {
@@ -47,12 +46,6 @@ export const MANAGED_CSS_VALUES: ManagedCssValue[] = [
     pattern: /^@media \(max-height: (\d+)px\) and \(orientation: landscape\) \{/m,
     px: PHONE_MAX_HEIGHT_PX,
     source: "PHONE_MAX_HEIGHT_PX",
-  },
-  {
-    label: "--mobile-transport-row-w",
-    pattern: /^(\s*--mobile-transport-row-w:\s*)(\d+)px;/m,
-    px: TRANSPORT_ROW_WIDTH_PX,
-    source: "TRANSPORT_ROW_WIDTH_PX",
   },
 ];
 

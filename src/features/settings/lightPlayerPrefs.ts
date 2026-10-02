@@ -47,9 +47,17 @@ export function saveLightPlayer(enabled: boolean): void {
 }
 
 /**
- * The CSS class the shell carries while the preference is on.
+ * The CSS class the preference toggles on `<html>`.
  *
- * A class rather than a hundred inline checks: the decorative animations are declared in `mobile.css`, so switching them
- * off is a stylesheet rule and the React tree does not re-render because of a preference.
+ * A class rather than a hundred inline checks: the decorative animations it silenced were declared in
+ * the phone shell's `mobile.css`, so switching them off was a stylesheet rule and the React tree did
+ * not re-render because of a preference.
+ *
+ * ⚠️ The shell is cut (`docs/OPEN_WORK.md` §十三) and **no stylesheet defines `.m-lite` any more**, so
+ * the preference is inert: `applyStoredLightPlayer` still toggles the class at boot, and nothing
+ * answers it. It was already inert on the desktop (the class only ever had phone rules); the change is
+ * that it is now inert everywhere. Kept — rather than deleted with the shell — because it is a
+ * *preference* with a stored value on real installs, and retiring a user setting is a product decision
+ * with a migration, not a cleanup. Recorded here so the next reader does not assume it works.
  */
 export const LIGHT_PLAYER_CLASS = "m-lite";

@@ -90,15 +90,14 @@ step "styling" node scripts/check_component_styling.mjs
 step "skins" npm run check:skin-roles
 # The unit suite is the long one, and it is the one that caught assertions left behind by a behaviour change.
 #
-# **Two files are excluded, and the reason is measured rather than assumed.** `mobileApp.test.tsx` and `mobileExplore.test.tsx` are timing-sensitive and fail under the load of a full parallel run — four
-# consecutive re-runs of both together reported **zero** failures, while the full suite reported five. A gate that fails on scheduling noise is a gate people learn to bypass, which is exactly what happened
-# to the jank budget: it was red, absent from CI, and I routed around it. So CI judges those two, and this gate stays a statement about the code.
-#
-# The exclusion is **named here rather than silent**, and it is two files, not a pattern: a growing list would mean the gate had stopped meaning anything.
+# **It used to exclude two files, and they are gone.** `mobileApp.test.tsx` and `mobileExplore.test.tsx` were
+# timing-sensitive under the load of a full parallel run, so CI judged them and this gate skipped them. The
+# phone shell is cut (`docs/OPEN_WORK.md` §十三) and both files went with it, so there is nothing to exclude
+# and the gate runs the suite as it stands.
 #
 # ⭐ And the machine is asked to be quiet first: with worktrees running suites in parallel, a third timing-sensitive file (`CompareViewLoudness`) went red at 75 times its normal flatten cost and passes alone. **A false red teaches people to re-run until green**, which is the same disease the exclusion above was written to cure.
 wait_for_a_quiet_machine
-step "tests" npx vitest run --exclude '**/mobileApp.test.tsx' --exclude '**/mobileExplore.test.tsx'
+step "tests" npx vitest run
 
 if [ "$failed" -ne 0 ]; then
   echo "❌ the local gate failed — do not commit"

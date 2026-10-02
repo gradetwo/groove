@@ -9,13 +9,17 @@
  * values across `src/`. The user asked for the six phone skins on the big surfaces too, "保证每套皮肤在
  * 应用内配色一致性" — the same palette inside one skin, on every surface.
  *
- * ## How it keeps the two surfaces consistent
+ * ## How it keeps the palette in one place
  *
- * The desktop palette is **derived from the phone's own tokens**, which are read out of
- * \`src/mobile/skins/<id>.css\` rather than being typed again here. Ground, card, lines, ink and accent come
+ * The desktop palette is **derived from the skin palettes**, which are read out of
+ * \`src/styles/skinPalettes/<id>.css\` rather than being typed again here. Ground, card, lines, ink and accent come
  * straight across; the derived steps (a hover accent, a subtle line, an accent glow) are computed from the
- * same values by luminance, not chosen by eye. A phone-side palette change therefore moves the desktop
+ * same values by luminance, not chosen by eye. A palette change therefore moves the desktop
  * with it, and `check:skins` fails if this file is stale.
+ *
+ * Those palette files were \`src/mobile/skins/<id>.css\` until the phone shell was cut
+ * (`docs/OPEN_WORK.md` §十三). They are plain token sources — nothing imports them — and the desktop
+ * skins are their only consumer now, which is why they moved rather than going with the shell.
  *
  * ## The two halves of the output
  *
@@ -318,18 +322,18 @@ const step = (hex, amount) => {
 const alpha = (hex, a) => `rgb(${hexToRgb(hex).join(" ")} / ${a})`;
 
 /* ---------------------------------------------------------------------------------------------
- * The phone's palettes, read from the skin sheets themselves
+ * The skin palettes, read from the palette sources themselves
  * ------------------------------------------------------------------------------------------- */
 
 /**
- * Every phone skin writes its palette on `:root[data-skin="…"] .mobile-root`, so this reads the same file
- * the phone renders from. A missing token is a hard error: silently inventing one here is how the two
- * surfaces would drift apart.
+ * Every palette source writes its skin's value block on `:root[data-skin="…"]`, so this reads the
+ * same file the palette is maintained in. A missing token is a hard error: silently inventing one
+ * here is how the palette and the desktop would drift apart.
  */
-function phonePalette(skin) {
-  const file = path.join(ROOT, "src", "mobile", "skins", `${skin}.css`);
+function skinPalette(skin) {
+  const file = path.join(ROOT, "src", "styles", "skinPalettes", `${skin}.css`);
   const css = fs.readFileSync(file, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
-  const block = new RegExp(`:root\\[data-skin="${skin}"\\]\\s*\\.mobile-root\\s*\\{([^}]*)\\}`).exec(css);
+  const block = new RegExp(`:root\\[data-skin="${skin}"\\]\\s*\\{([^}]*)\\}`).exec(css);
   if (!block) throw new Error(`${skin}.css: no base token block`);
   const read = (token) => {
     const m = new RegExp(`${token}\\s*:\\s*([^;]+);`).exec(block[1]);
@@ -525,7 +529,7 @@ function palette(skin) {
     );
     return { ...DEFAULT_SKIN, trackOn, hue: DEFAULT_SKIN };
   }
-  const p = phonePalette(skin);
+  const p = skinPalette(skin);
   const light = isLight(p.bg);
   return {
     bg: p.bg,
@@ -1114,16 +1118,16 @@ function header(eager) {
  *
  * ${eager ? "This half is EAGER: the default palette, which is what a page that never sets `data-skin`\n * renders with. It is tiny and it is the app's original colours, unchanged." : "This half is LAZY: the five non-default palettes and the literal map, loaded by\n * `useSkin.ts` when one of those skins is applied. The default skin never downloads it."}
  *
- * The phone has six skins; this is what makes the desktop (and the iPad, which renders the desktop UI)
- * wear the same six. \`check:skins\` fails if this file is out of date, and every value is derived from
- * the phone's own tokens in \`src/mobile/skins/<id>.css\` — ground, card, lines, ink and accent come
- * straight across, so a phone palette change moves the desktop with it.
+ * The app has six skins; this is what makes the desktop (and the iPad, which renders the desktop UI)
+ * wear them. \`check:skins\` fails if this file is out of date, and every value is derived from
+ * the skin's own tokens in \`src/styles/skinPalettes/<id>.css\` — ground, card, lines, ink and accent come
+ * straight across, so a palette change moves the desktop with it.
  *
  * Values are **space-separated channels** (\`18 19 23\`), not hex, because \`tailwind.config.js\` builds
  * its names as \`rgb(var(--d-panel) / <alpha-value>)\`: that is what keeps Tailwind's opacity utilities
  * (\`bg-panel/60\`) working while a skin swaps the palette underneath.
  *
- * \`default\` is the app's existing palette, unchanged. The other five are the phone's.
+ * \`default\` is the app's existing palette, unchanged. The other five come from \`src/styles/skinPalettes/\`.
  */
 `;
 }
@@ -1146,7 +1150,7 @@ function generate() {
   for (const skin of SKINS.filter((s) => s !== "default")) {
     const record = tokenRecord(skin);
     parts.push(
-      `\n/* ${skin} — the phone's palette, derived from \`src/mobile/skins/${skin}.css\` */\n` +
+      `\n/* ${skin} — the palette, derived from \`src/styles/skinPalettes/${skin}.css\` */\n` +
         `:root[data-skin="${skin}"] {\n` +
         Object.entries(record).map(([k, v]) => `  ${k}: ${v};`).join("\n") +
         "\n}\n"

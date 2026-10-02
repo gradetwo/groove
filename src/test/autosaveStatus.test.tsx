@@ -194,9 +194,11 @@ describe("save indicator · wiring", () => {
   it("is mounted by the studio, positionally stable, next to the first-run hint", () => {
     // Wiring, not behaviour: the status and the component are covered above, and an indicator
     // rendered nowhere (or as a conditional sibling that remounts the panel) is the failure here.
+    // It used to read `visible={!isPhone}`; the phone shell is cut (`docs/OPEN_WORK.md` §十三), so
+    // there is no second layout to hide it on and the `visible` prop is the only switch.
     const view = read("views/StudioView.tsx");
     expect(view).toContain("useAutosaveStatus()");
-    expect(view).toContain("<SaveIndicator visible={!isPhone} status={autosave} />");
-    expect(view).not.toMatch(/\{!isPhone && \(\s*<div className="flex justify-end/);
+    expect(view).toContain("<SaveIndicator visible status={autosave} />");
+    expect(view).not.toMatch(/\{visible && \(\s*<SaveIndicator/);
   });
 });

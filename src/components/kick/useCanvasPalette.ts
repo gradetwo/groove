@@ -98,9 +98,15 @@ function readPalette(
 /**
  * The palette, as a ref the rAF loop can read.
  *
- * `canvasRef` is the canvas the component already paints on: the hook finds the nearest
- * `.mobile-root` from it, exactly as `VinylCanvas` does, and with no such ancestor — the desktop app
- * — every role stays on its fallback, so the desktop is pixel-identical.
+ * `canvasRef` is the canvas the component already paints on: the hook finds the nearest element that
+ * carries the skin's own tokens and reads them off it. That element used to be the phone shell's root
+ * (`.mobile-root`), which is cut (`docs/OPEN_WORK.md` §十三) — so on today's single surface the lookup
+ * finds nothing and every role stays on the caller's fallback, which is exactly what the desktop did
+ * before the phone existed and is why the desktop is pixel-identical either way.
+ *
+ * The mechanism is kept rather than deleted because it is *platform*, not shell: a surface that
+ * declares `--m-*` on an ancestor gets a skinned canvas with no change here. Removing it would also
+ * remove the fallback guarantee this file's criteria exist to hold.
  */
 export function useCanvasPalette(
   canvasRef: RefObject<HTMLCanvasElement | null>,

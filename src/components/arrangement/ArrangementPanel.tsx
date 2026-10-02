@@ -13,8 +13,8 @@
  *   * **it never edits `sections` itself**. Every gesture ends in `onChange`, and the host commits it as one undo
  *     entry (`SET_SECTIONS`), exactly like every other edit in the studio.
  *
- * Desktop/iPad only, by the surface contract (`surfaceCapabilities.ts`): the phone has no arrangement surface, and
- * nothing under `src/mobile/**` may import this module.
+ * Declared desktop/iPad work in the surface table (`surfaceCapabilities.ts`, `arrangement`): the retired phone
+ * shell was not given a timeline, because its layout could not host one without becoming a different product.
  */
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLanguage } from "../../i18n/LanguageContext";

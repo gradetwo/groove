@@ -22,17 +22,14 @@ import {
 import {
   PHONE_MAX_HEIGHT_PX,
   PHONE_MAX_WIDTH_PX,
-  TRANSPORT_ROW_WIDTH_PX,
 } from "../platform/layoutTokens";
 
 const SRC_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const realCss = readFileSync(path.join(SRC_DIR, "index.css"), "utf8");
 
-/** A stylesheet with the three managed rules, so each case can break exactly one of them. */
-const stylesheet = (phoneW = PHONE_MAX_WIDTH_PX, shortH = PHONE_MAX_HEIGHT_PX, rowW = TRANSPORT_ROW_WIDTH_PX) => `
+/** A stylesheet with the two managed rules, so each case can break exactly one of them. */
+const stylesheet = (phoneW = PHONE_MAX_WIDTH_PX, shortH = PHONE_MAX_HEIGHT_PX) => `
 :root {
-  --mobile-tab-bar-h: 0px;
-  --mobile-transport-row-w: ${rowW}px;
   --trk-head-w: 142px;
 }
 
@@ -53,12 +50,6 @@ describe("layout tokens · the values themselves", () => {
     expect(PHONE_MAX_WIDTH_PX).toBeLessThan(768);
     expect(PHONE_MAX_HEIGHT_PX).toBeLessThan(PHONE_MAX_WIDTH_PX);
   });
-
-  it("keeps the shared row wide enough for the transport's own controls", () => {
-    // Five 44 px controls, four 4 px gaps and the 12 px container padding.
-    const needed = 5 * 44 + 4 * 4 + 12;
-    expect(TRANSPORT_ROW_WIDTH_PX).toBeGreaterThanOrEqual(needed);
-  });
 });
 
 describe("layout css · drift is reported, not tolerated", () => {
@@ -67,14 +58,13 @@ describe("layout css · drift is reported, not tolerated", () => {
   });
 
   it("names every place a hand-edited number disagrees", () => {
-    const drift = findLayoutCssDrift(stylesheet(640, 480, 300));
+    const drift = findLayoutCssDrift(stylesheet(640, 480));
     expect(drift.map((d) => d.label)).toEqual([
       "the phone portrait media query",
       "the short-landscape media query",
-      "--mobile-transport-row-w",
     ]);
-    expect(drift.map((d) => d.found)).toEqual([640, 480, 300]);
-    expect(drift.every((d) => d.expected === PHONE_MAX_WIDTH_PX || d.expected === PHONE_MAX_HEIGHT_PX || d.expected === TRANSPORT_ROW_WIDTH_PX)).toBe(true);
+    expect(drift.map((d) => d.found)).toEqual([640, 480]);
+    expect(drift.every((d) => d.expected === PHONE_MAX_WIDTH_PX || d.expected === PHONE_MAX_HEIGHT_PX)).toBe(true);
   });
 
   it("reports a deleted rule instead of passing because there is nothing left to compare", () => {
@@ -98,12 +88,11 @@ describe("layout css · drift is reported, not tolerated", () => {
 
 describe("layout css · the rewrite is surgical", () => {
   it("writes the token value into every drifted rule and nothing else", () => {
-    const before = stylesheet(640, 480, 300);
+    const before = stylesheet(640, 480);
     const { css: after, changed } = syncLayoutCss(before);
-    expect(changed).toHaveLength(3);
+    expect(changed).toHaveLength(2);
     expect(after).toContain(`@media (max-width: ${PHONE_MAX_WIDTH_PX}px) {`);
     expect(after).toContain(`@media (max-height: ${PHONE_MAX_HEIGHT_PX}px) and (orientation: landscape) {`);
-    expect(after).toContain(`--mobile-transport-row-w: ${TRANSPORT_ROW_WIDTH_PX}px;`);
     // The untouched values stay untouched, byte for byte.
     expect(after).toContain("--trk-head-w: 142px;");
     expect(after).toContain(".trk-head-desktop-only { display: none !important; }");
@@ -114,7 +103,7 @@ describe("layout css · the rewrite is surgical", () => {
 
 describe("layout css · the shipped stylesheet", () => {
   it("has every managed rule, so the gate is not comparing an empty set", () => {
-    expect(MANAGED_CSS_VALUES).toHaveLength(3);
+    expect(MANAGED_CSS_VALUES).toHaveLength(2);
     for (const value of MANAGED_CSS_VALUES) {
       expect(value.pattern.test(realCss), `${value.label} is missing from index.css`).toBe(true);
     }

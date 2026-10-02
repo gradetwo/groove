@@ -9,7 +9,6 @@ import { projectsMessages } from "./projects";
 import { makerMessages } from "./maker";
 import { hapticsMessages } from "./haptics";
 import { helpMessages } from "./help";
-import { mobileMessages } from "./mobile";
 
 export const DICTIONARY = {
   ...commonMessages,
@@ -23,7 +22,6 @@ export const DICTIONARY = {
   ...makerMessages,
   ...hapticsMessages,
   ...helpMessages,
-  ...mobileMessages,
 } as const;
 
 export type MessageKey = keyof typeof DICTIONARY;

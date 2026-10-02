@@ -4,21 +4,21 @@
  * This half is LAZY: the five non-default palettes and the literal map, loaded by
  * `useSkin.ts` when one of those skins is applied. The default skin never downloads it.
  *
- * The phone has six skins; this is what makes the desktop (and the iPad, which renders the desktop UI)
- * wear the same six. `check:skins` fails if this file is out of date, and every value is derived from
- * the phone's own tokens in `src/mobile/skins/<id>.css` — ground, card, lines, ink and accent come
- * straight across, so a phone palette change moves the desktop with it.
+ * The app has six skins; this is what makes the desktop (and the iPad, which renders the desktop UI)
+ * wear them. `check:skins` fails if this file is out of date, and every value is derived from
+ * the skin's own tokens in `src/styles/skinPalettes/<id>.css` — ground, card, lines, ink and accent come
+ * straight across, so a palette change moves the desktop with it.
  *
  * Values are **space-separated channels** (`18 19 23`), not hex, because `tailwind.config.js` builds
  * its names as `rgb(var(--d-panel) / <alpha-value>)`: that is what keeps Tailwind's opacity utilities
  * (`bg-panel/60`) working while a skin swaps the palette underneath.
  *
- * `default` is the app's existing palette, unchanged. The other five are the phone's.
+ * `default` is the app's existing palette, unchanged. The other five come from `src/styles/skinPalettes/`.
  */
 
 
 
-/* minimal — the phone's palette, derived from `src/mobile/skins/minimal.css` */
+/* minimal — the palette, derived from `src/styles/skinPalettes/minimal.css` */
 :root[data-skin="minimal"] {
   --d-bg: 250 250 250;
   --d-panel: 255 255 255;
@@ -76,7 +76,7 @@
 }
 
 
-/* comic — the phone's palette, derived from `src/mobile/skins/comic.css` */
+/* comic — the palette, derived from `src/styles/skinPalettes/comic.css` */
 :root[data-skin="comic"] {
   --d-bg: 244 233 210;
   --d-panel: 251 244 226;
@@ -134,7 +134,7 @@
 }
 
 
-/* soviet — the phone's palette, derived from `src/mobile/skins/soviet.css` */
+/* soviet — the palette, derived from `src/styles/skinPalettes/soviet.css` */
 :root[data-skin="soviet"] {
   --d-bg: 27 30 33;
   --d-panel: 34 38 42;
@@ -192,7 +192,7 @@
 }
 
 
-/* sovietYears — the phone's palette, derived from `src/mobile/skins/sovietYears.css` */
+/* sovietYears — the palette, derived from `src/styles/skinPalettes/sovietYears.css` */
 :root[data-skin="sovietYears"] {
   --d-bg: 244 241 225;
   --d-panel: 236 231 214;
@@ -250,7 +250,7 @@
 }
 
 
-/* pixel — the phone's palette, derived from `src/mobile/skins/pixel.css` */
+/* pixel — the palette, derived from `src/styles/skinPalettes/pixel.css` */
 :root[data-skin="pixel"] {
   --d-bg: 16 18 28;
   --d-panel: 26 29 46;

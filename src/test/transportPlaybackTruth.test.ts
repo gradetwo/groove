@@ -26,8 +26,9 @@ interface FakeEngine {
    * The transport writes these, so the double has to accept them.
    *
    * A missing one throws *inside* a handler, which reads as a failing assertion about the thing
-   * under test rather than about the fake — the same shape of confusion the missing
-   * `isAudioBlocked` caused (see the note in `mobileBottomControlBar.test.tsx`).
+   * under test rather than about the fake — the same shape of confusion a missing `isAudioBlocked`
+   * caused (it was found while porting the phone's bottom control bar, whose criterion went with the
+   * phone shell).
    */
   setBpm: ReturnType<typeof vi.fn>;
   setPattern: ReturnType<typeof vi.fn>;
@@ -42,9 +43,10 @@ interface FakeEngine {
  *
  * Every method the transport writes has to exist here. A missing one throws *inside* a handler,
  * which surfaces as a failing assertion about the code under test rather than about the double —
- * the same shape of confusion the missing `isAudioBlocked` caused originally and the missing
- * `setPreviewScope` caused in `mobileBottomControlBar.test.tsx`. Three harnesses in this file used
- * to build their own partial object; they now share this one so they cannot drift apart again.
+ * the same shape of confusion a missing `isAudioBlocked` caused originally and a missing
+ * `setPreviewScope` caused in the phone's bottom control bar before it was cut. Three harnesses in
+ * this file used to build their own partial object; they now share this one so they cannot drift
+ * apart again.
  */
 function makeEngine(over: { blocked?: boolean; rejects?: boolean } = {}): FakeEngine {
   return {

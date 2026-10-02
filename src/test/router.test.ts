@@ -118,52 +118,35 @@ describe("Router & Deep Linking (P1-08)", () => {
     });
   });
 
-  describe("phone shell routes (/m/<module>)", () => {
+  describe("the retired phone route (/m/<module>)", () => {
     /**
-     * The phone redesign lives on its own path space (M-series). It is parsed before the genre paths
-     * so `/m/home` can never be mistaken for a genre, and it is reachable on any device by URL —
-     * which is how the shell is tested and how it can be opened on a phone before it replaces the
-     * old phone UI.
+     * `/m/<module>` was the phone shell's own path space. The shell is cut (`docs/OPEN_WORK.md`
+     * §十三), so the path is retired: it must not name a route of its own any more, and it must
+     * still land somewhere sensible rather than 404 — an old bookmark is a user, not an error.
+     *
+     * Both directions matter: the route object no longer has the property at all, and every `/m/…`
+     * shape falls through to the studio instead of being interpreted.
      */
-    it("parses /m/<module>", () => {
-      expect(parseUrlToRoute("/m/home", "").mobile).toBe("home");
-      expect(parseUrlToRoute("/m/jam", "").mobile).toBe("jam");
-      expect(parseUrlToRoute("/m/challenge", "").mobile).toBe("challenge");
-      expect(parseUrlToRoute("/m/explore", "").mobile).toBe("explore");
-      expect(parseUrlToRoute("/m/more", "").mobile).toBe("more");
+    it("no longer parses /m/<module> into a route of its own", () => {
+      const route = parseUrlToRoute("/m/home", "");
+      expect(route).toEqual({ tab: "studio" });
+      expect("mobile" in route).toBe(false);
     });
 
-    it("carries a genre into a module route", () => {
-      const route = parseUrlToRoute("/m/home", "?genre=deep-house");
-      expect(route.mobile).toBe("home");
-      expect(route.genreId).toBe("deep-house");
+    it("still lands every old /m/... shape on the studio", () => {
+      for (const [path, search] of [
+        ["/m/jam", ""],
+        ["/m/", ""],
+        ["/m/not-a-module", ""],
+        ["/", "?m=explore"],
+      ] as const) {
+        expect(parseUrlToRoute(path, search).tab, `${path}${search}`).toBe("studio");
+      }
     });
 
-    it("accepts ?m=<module> and falls back to home for an unknown module", () => {
-      expect(parseUrlToRoute("/", "?m=explore").mobile).toBe("explore");
-      expect(parseUrlToRoute("/m/not-a-module", "").mobile).toBe("home");
-      expect(parseUrlToRoute("/m/", "").mobile).toBe("home");
-    });
-
-    it("formats a module route back to its own path", () => {
-      expect(formatRouteToUrl({ tab: "studio", mobile: "more" })).toBe("/m/more");
-      expect(formatRouteToUrl({ tab: "studio", mobile: "home", genreId: "ambient" })).toBe(
-        "/m/home?genre=ambient"
-      );
-    });
-
-    it("round-trips a module route", () => {
-      const url = formatRouteToUrl({ tab: "studio", mobile: "challenge", genreId: "trap-rap" });
-      const [path, search] = url.split("?");
-      const route = parseUrlToRoute(path, search ? `?${search}` : "");
-      expect(route.mobile).toBe("challenge");
-      expect(route.genreId).toBe("trap-rap");
-    });
-
-    it("does not leak the module into a desktop route", () => {
-      // A desktop destination must format exactly as before: the phone route is a separate space.
+    it("does not put a module path back into a desktop route", () => {
       expect(formatRouteToUrl({ tab: "detail", genreId: "ambient" })).toBe("/genre/ambient");
-      expect(parseUrlToRoute("/genre/ambient", "").mobile).toBeUndefined();
+      expect(formatRouteToUrl({ tab: "studio" })).toBe("/");
     });
   });
 });

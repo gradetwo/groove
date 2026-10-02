@@ -186,16 +186,29 @@ check(
 );
 
 /**
- * R6c — the E2E gate runs the PC profile while the phone/tablet surfaces are being redesigned, so
- * the *full* matrix must stay declared and one command away. Without this, "PC only for now" quietly
- * becomes "mobile coverage was deleted", and nobody notices until a redesign ships untested.
+ * R6c — the E2E gate must not silently lose a target.
+ *
+ * It used to require the *full* seven-target matrix to stay declared while the push gate ran the PC
+ * profile: "PC only for now" quietly becoming "mobile coverage was deleted" was exactly the failure, and
+ * nobody would notice until a redesign shipped untested.
+ *
+ * The phone and tablet targets are **gone by the owner's decision of 2026-10-02** (`docs/OPEN_WORK.md`
+ * §十三) — the shell they drove is cut and preserved on `mobile-preserved` — so the same rule now applies
+ * to what is left: all three desktop browsers stay declared, no phone or tablet target may reappear
+ * half-added, and the full matrix stays one command away.
  */
 const matrixSource = read("scripts/test_matrix.js");
-const declaredMobileTargets = (matrixSource.match(/isMobile: true/g) || []).length;
-const declaredTabletTargets = (matrixSource.match(/isTablet: true/g) || []).length;
+/** Comments are stripped: the iPhone targets are recorded there as text, and that is deliberate. */
+const matrixCode = matrixSource.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^[ \t]*\/\/.*$/gm, "");
+const declaredDesktopTargets = [...matrixCode.matchAll(/browserType: "(chromium|firefox|webkit)"/g)].length;
 check(
-  "R6c the E2E matrix still declares every phone and tablet target",
-  declaredMobileTargets === 2 && declaredTabletTargets === 2
+  "R6c the E2E matrix still declares all three desktop browsers",
+  declaredDesktopTargets === 3,
+  `${declaredDesktopTargets} target(s)`
+);
+check(
+  "R6c no phone or tablet target is left in the matrix",
+  !/\bis(?:Mobile|Tablet):\s*true/.test(matrixCode)
 );
 check(
   "R6c the full matrix is still one command away",
@@ -406,9 +419,13 @@ check(
 /**
  * R12a — the literal→role table is the single source for what a hardcoded hex means.
  *
- * The desktop generator and the phone's two sheets both decide that, and they were written independently: a hex
+ * The desktop generator decides that, and it was once written independently of the phone's two sheets: a hex
  * could be a surface on one and an ink on the other, and the same element would flip from a paper plate to dark
- * type depending on which shell drew it. The table plus `check_skin_roles.mjs` is the fix, so both have to stay.
+ * type depending on which shell drew it. The table plus `check_skin_roles.mjs` is the fix, so it has to stay.
+ *
+ * `deviations` is the escape hatch the phone sheets used. Both are cut with the phone shell
+ * (`docs/OPEN_WORK.md` §十三), so the list must be empty: a non-empty one would name a sheet that no longer
+ * exists, which is the dead reference this check now catches.
  */
 const roleTablePath = path.join(ROOT, "src", "data", "skinLiteralRoles.json");
 check("R12a the shared literal→role table exists", fs.existsSync(roleTablePath));
@@ -421,8 +438,8 @@ if (fs.existsSync(roleTablePath)) {
     `${Object.keys(roleTable.literals ?? {}).length} literals`
   );
   check(
-    "R12a every deviation carries a reason",
-    deviations.length > 0 && deviations.every((entry) => (entry.reason ?? "").length > 40),
+    "R12a no deviations are recorded — the sheets they existed for are cut",
+    deviations.length === 0,
     `${deviations.length} documented deviation(s)`
   );
 }

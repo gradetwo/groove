@@ -1,0 +1,45 @@
+/**
+ * Skin palette source: "minimal" — 现代极简主义 (modern minimalism).
+ *
+ * **A source, not a stylesheet.** Nothing imports this file, so no selector here ever ships to a
+ * browser: it is the one place the skin's values are written, and `scripts/desktop_skins.mjs` reads
+ * it (`npm run skins:gen` writes, `npm run check:skins` verifies) to derive the desktop's `--d-*`
+ * palette in `src/styles/desktopTokens.css` and `src/styles/desktopSkins.css`.
+ *
+ * It used to be `src/mobile/skins/minimal.css`, where this block sat above ~800 lines of phone-shell
+ * overrides. The phone shell is cut (`docs/OPEN_WORK.md` §十三) and those overrides went with it; the
+ * palette moved here because the **desktop** still wears this skin and the generator must keep
+ * reading it from one place. The move changed no value — `check:skins` fails if the generated files
+ * drift by a byte.
+ *
+ * The palette, and why each value is the one it is: paper white ground (not `#FFF`, so a white card
+ * still reads as a card), near-black ink at 17.6:1, and one blue accent chosen to clear 4.5:1 both as
+ * text on paper and as a fill carrying `--m-on-gold`.
+ */
+:root[data-skin="minimal"] {
+  --m-bg: #fafafa;
+  --m-card: #ffffff;
+  --m-card-2: #f4f4f6;
+  --m-line: rgba(20, 20, 20, 0.1);
+  --m-line-2: rgba(20, 20, 20, 0.22);
+  --m-ink: #141414;
+  --m-ink-2: #5f5f68;
+  --m-ink-3: #63636d;
+  --m-on-gold: #fafafa;
+  --m-teal: #0f766e;
+  --m-red: #c5303f;
+  --m-green: #157f3d;
+  --m-violet: #5b46d6;
+  --m-font-display: "Inter", "Space Grotesk", system-ui, sans-serif;
+  --m-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --m-gold: #2358e6;
+  --m-gold-hi: #1d49bd;
+  --m-warning: #b03a0b;
+  --m-gold-rgb: 35 88 230;
+  background: var(--m-bg);
+  color: var(--m-ink);
+  font-family: "Inter", "Space Grotesk", system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", "HarmonyOS Sans", "Noto Sans SC", sans-serif;
+  color-scheme: light;
+  font-optical-sizing: auto;
+  text-rendering: optimizeLegibility;
+}

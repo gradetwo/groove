@@ -8,7 +8,6 @@ import {
   usePlaybackSettings,
 } from "../features/sequencer/hooks/useStudioSession";
 import { useLanguage } from "../i18n/LanguageContext";
-import { useDeviceCapabilities } from "../hooks/useDeviceCapabilities";
 import { useDensityPreference } from "../hooks/useDensityPreference";
 import { usePanelVisibility } from "../features/sequencer/hooks/usePanelVisibility";
 import { MobileEditMode } from "../components/sequencer/Toolbar";
@@ -76,22 +75,9 @@ interface StudioViewProps {
   onSelectGenre: (genre: Genre) => void;
   onViewDetail: (genre: Genre) => void;
   onAddToCompare?: (genre: Genre) => void;
-  /**
-   * Navigates to the Chords view. Used by the phone's "the piano roll is a desktop tool" notice,
-   * which offers progressions as the alternative rather than leaving a dead end.
-   */
-  onOpenChords?: () => void;
   onAudioEngineReady?: (engine: AudioEngine) => (() => void) | void;
   /** Opens the global settings panel, which App owns (item ⑤). */
   onOpenSettings?: () => void;
-  /**
-   * The phone navigation bar, supplied by `App` so the studio can place it on the same bottom row
-   * as the transport instead of stacking two full-width bars on a 390 px-tall viewport.
-   *
-   * `App` keeps ownership — it renders the element either way — and this only decides where the row
-   * goes. See `PRODUCT_PLAN_v2.1.0.md` §G.5 and the recipe above §G.6.
-   */
-  mobileBottomBar?: React.ReactNode;
   onOpenGenreMaker?: () => void;
   onOpenHelp?: (chapterId?: string) => void;
   initialChords?: ChordDefinition[] | null;
@@ -115,11 +101,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
   onSelectGenre,
   onViewDetail,
   onAddToCompare,
-  onOpenChords,
   onAudioEngineReady,
   onOpenGenreMaker,
   onOpenSettings,
-  mobileBottomBar,
   onOpenHelp,
   initialChords,
   onClearInitialChords,
@@ -670,12 +654,6 @@ export const StudioView: React.FC<StudioViewProps> = ({
     scrollByPixels,
   } = useMatrixScroll({ matrixContainerRef, stepsPerBar, setViewedBar, commit });
 
-  /**
-   * Phone layout switch. Capability-based rather than a width test, so a landscape phone gets the
-   * compact transport instead of the desktop toolbar on a 390 px-tall screen.
-   */
-  const { isMobile: isPhone, isShortLandscape } = useDeviceCapabilities();
-
   // Grid input layer: drag-paint, long-press P-Locks, mobile tap modes (A-02)
   const {
     isTouchDevice,
@@ -994,7 +972,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
           {/* Unconditional on purpose: a conditional sibling here would change the panel's position
               when the hint hides, which remounts the whole sequencer (see `FirstRunPrompt`). */}
           <FirstRunPrompt
-            visible={!isPhone && firstRunPrompt.visible}
+            visible={firstRunPrompt.visible}
             onPlay={() => {
               firstRunPrompt.started();
               void handleTogglePlay();
@@ -1002,13 +980,9 @@ export const StudioView: React.FC<StudioViewProps> = ({
             onDismiss={firstRunPrompt.dismiss}
           />
           {/* Unconditional, like the hint above it: a conditional sibling here would remount the
-              sequencer panel whenever `isPhone` flips (a resize, a rotation). */}
-          <SaveIndicator visible={!isPhone} status={autosave} />
+              sequencer panel. The indicator takes a `visible` prop for its own visibility. */}
+          <SaveIndicator visible status={autosave} />
         <SequencerPanel
-          isPhone={isPhone}
-          isShortLandscape={isShortLandscape}
-          bottomBar={mobileBottomBar}
-          onOpenChords={onOpenChords}
           pattern={pattern}
           seqState={seqState}
           isPlaying={isPlaying}
@@ -1111,12 +1085,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
           onSwitchSlot={handleSwitchSlot}
           onCopySlot={handleCopySlot}
           onToggleSongMode={handleToggleSongMode}
-          /**
-           * B3, and the whole of the phone contract at this call site: the phone is not given a way to open a
-           * surface it does not have (`surfaceCapabilities`), so the entry does not exist there. No branch inside
-           * the toolbar decides this.
-           */
-          onOpenArrangement={isPhone ? undefined : handleOpenArrangement}
+          onOpenArrangement={handleOpenArrangement}
           isArrangementOpen={isArrangementOpen}
           onToggleBlindCompare={handleToggleBlindCompare}
           onToggleMetronome={handleToggleMetronome}
@@ -1305,9 +1274,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
         onClose={() => setIsConsoleOpen(false)}
       />
 
-      {/* B3: the arrangement view. Desktop/iPad only — the entry that opens it is not rendered on the phone, and
-          the panel itself reads the same `sections` the renderer and the exporters use. */}
-      {isArrangementOpen && !isPhone && (
+      {/* B3: the arrangement view. The panel reads the same `sections` the renderer and the exporters use. */}
+      {isArrangementOpen && (
         <ArrangementPanel
           song={arrangementSong}
           selectedId={selectedSectionId}

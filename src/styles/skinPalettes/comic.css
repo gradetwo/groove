@@ -1,0 +1,35 @@
+/**
+ * Skin palette source: "comic" — 复古漫画 / 四色胶印 (retro comic book, four-colour offset print).
+ *
+ * **A source, not a stylesheet.** Nothing imports this file, so no selector here ever ships to a
+ * browser: it is the one place the skin's values are written, and `scripts/desktop_skins.mjs` reads
+ * it (`npm run skins:gen` writes, `npm run check:skins` verifies) to derive the desktop's `--d-*`
+ * palette. See `minimal.css` for why the palette moved out of the deleted phone shell.
+ *
+ * The five module accents are *process* inks — dark enough to be read as type on newsprint
+ * (5.4–8.8:1) — because components use `--m-gold` as a **text** colour in a dozen places. The
+ * electric primaries are reserved for what a press uses a saturated plate for: halftone dots,
+ * misregistration fringes and the emphasis blocks. Body ink is 17:1 on the newsprint ground.
+ */
+:root[data-skin="comic"] {
+  --m-bg: #f4e9d2;
+  --m-card: #fbf4e2;
+  --m-card-2: #f2e3c0;
+  --m-line: #111014;
+  --m-line-2: #111014;
+  --m-ink: #111014;
+  --m-ink-2: #3a3440;
+  --m-ink-3: #4e4750;
+  --m-on-gold: #fff6df;
+  --m-teal: #00707a;
+  --m-red: #c50034;
+  --m-green: #00702f;
+  --m-violet: #5b2a9e;
+  --m-gold: #0b6e7f;
+  --m-gold-hi: #063c46;
+  --m-warning: #7a4a00;
+  --m-gold-rgb: 11 110 127;
+  --m-font-display: "Permanent Marker", "Bangers", "Space Grotesk", sans-serif;
+  --m-font-mono: "JetBrains Mono", ui-monospace, monospace;
+  font-family: "Patrick Hand", "Comic Neue", "Space Grotesk", system-ui, sans-serif;
+}

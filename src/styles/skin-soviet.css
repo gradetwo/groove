@@ -1,12 +1,14 @@
 /*
  * The heavy-industry skin, on the desktop and the iPad — its *character*.
  *
- * The palette is the phone's (`src/styles/desktopSkins.css`: gunmetal grounds, bone ink, a brass accent).
+ * The palette comes straight from `src/styles/skinPalettes/soviet.css` (see `desktopSkins.css`, generated):
+ * gunmetal grounds, bone ink, a brass accent.
  * What is missing is the *machinery*: a stamped-steel panel has square corners, a 2px edge, an inset
  * bevel that reads as pressed metal, wide stencilled capital letters, and controls that physically
- * depress. Read `src/mobile/skins/soviet.css` — this is the same language on the desktop's chrome.
+ * depress. This is the same language on the desktop's chrome — the sheet it was first written for was the
+ * phone shell's, which is cut (`docs/OPEN_WORK.md` §十三).
  *
- * Two lessons from the phone sheet, both earned by getting them wrong:
+ * Two lessons from that sheet, both earned by getting them wrong:
  *
  *  - **A bevel is an inset shadow, and an inset shadow is a `box-shadow`.** Switching the desktop's soft
  *    drop shadows off wholesale (as the minimal skin does) would take the bevel with it, so this skin

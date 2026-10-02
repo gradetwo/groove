@@ -188,11 +188,10 @@ jobs:
             only: Desktop
           # ⭐ **This matrix is desktop-only, by the owner's decision of 2026-10-02: the mobile version is cut.**
           #
-          # The phone shell, its criteria and its gates all go, and `mobile-preserved` keeps the phone build for
-          # maintenance. Before that the iPhone legs were already off — the owner froze iPhone support on
-          # 2026-09-30 ("与iphone有关的各种CI/CD都可以先关掉"), and the iPad leg followed here. The matrix targets
-          # behind both legs are still in `scripts/test_matrix.js` until the round that removes the shell, so this
-          # comment is the record rather than the whole removal.
+          # The phone shell, its criteria, its gates and the phone/tablet targets in `scripts/test_matrix.js` are
+          # gone; `mobile-preserved` keeps the phone build for maintenance. Before that the iPhone legs were
+          # already off — the owner froze iPhone support on 2026-09-30 ("与iphone有关的各种CI/CD都可以先关掉"), and
+          # the iPad leg followed here.
           #
           # The iPhone freeze was a decision and not a workaround for a flake: its last two legs failed on a worker
           # fetch and a 44 px touch target, and both were left unfixed on purpose, because a frozen device's

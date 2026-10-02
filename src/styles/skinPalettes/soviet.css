@@ -1,0 +1,35 @@
+/**
+ * Skin palette source: "soviet" — 苏联构成主义 (Soviet constructivism).
+ *
+ * **A source, not a stylesheet.** Nothing imports this file, so no selector here ever ships to a
+ * browser: it is the one place the skin's values are written, and `scripts/desktop_skins.mjs` reads
+ * it (`npm run skins:gen` writes, `npm run check:skins` verifies) to derive the desktop's `--d-*`
+ * palette. See `minimal.css` for why the palette moved out of the deleted phone shell.
+ *
+ * Ink on a graphite ground: the cream at 10.5:1, the gold accent at 9.1:1 as text on the ground and
+ * dark enough that `--m-on-gold` (near-black) clears 4.5:1 on a filled chip.
+ */
+:root[data-skin="soviet"] {
+  --m-bg: #1b1e21;
+  --m-card: #22262a;
+  --m-card-2: #2b3034;
+  --m-line: rgba(237, 228, 204, 0.11);
+  --m-line-2: rgba(237, 228, 204, 0.24);
+  --m-ink: #ede4cc;
+  --m-ink-2: #c0b9a3;
+  --m-ink-3: #98927f;
+  --m-on-gold: #16181a;
+  --m-font-display: "Russo One", "Space Grotesk", system-ui, sans-serif;
+  --m-font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --m-teal: #8fb3ac;
+  --m-red: #e2703a;
+  --m-green: #7c9b82;
+  --m-violet: #8e93b8;
+  --m-gold: #e6c766;
+  --m-gold-hi: #f2e3a6;
+  --m-warning: #e6c766;
+  --m-gold-rgb: 230 199 102;
+  background-color: var(--m-bg);
+  color: var(--m-ink);
+  font-family: "PT Sans Narrow", "Space Grotesk", system-ui, sans-serif;
+}

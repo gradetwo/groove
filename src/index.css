@@ -323,18 +323,7 @@ input[type=range]::-moz-range-thumb {
   -webkit-overflow-scrolling: touch;
 }
 
-/**
- * Height of the phone tab bar, as a variable every bottom-anchored overlay can subtract.
- *
- * `0px` by default because the bar only exists below the `md` breakpoint (the header nav is hidden
- * there and the tab bar replaces it). The media query at the end of this file raises it to the real
- * height plus the safe-area inset, so a sheet that must sit above the bar is correct by
- * construction rather than by a per-component guess. The track inspector needed exactly this: the
- * bar was covering its last ~52 px, which on a landscape phone is the entire EQ canvas, and the
- * measured symptom was a band handle whose hit test resolved to a tab-bar button.
- */
 :root {
-  --mobile-tab-bar-h: 0px;
   /**
    * Height of the sticky app header — the band a `sticky top-…` element has to leave alone.
    *
@@ -357,15 +346,6 @@ input[type=range]::-moz-range-thumb {
      ruler used `sm:gap-3` while the rows used `gap-2 sm:gap-3`, which shifted the
      step badges 4 px away from the cells they label on phones. */
   --trk-head-gap: 0.75rem;
-  /**
-   * Width the phone transport claims when it shares the bottom row with the navigation bar.
-   *
-   * **Written by `npm run layout:sync`.** The number lives in `src/platform/layoutTokens.ts`
-   * (`TRANSPORT_ROW_WIDTH_PX`), so the panel that sizes the slot and the bar that has to fit in it
-   * are measured against one value; `npm run check:layout` (inside `verify`) fails if this line and
-   * the token disagree. Editing the number here by hand is how the two used to drift apart.
-   */
-  --mobile-transport-row-w: 320px;
   /*
    * Density, resolved in two steps.
    *
@@ -470,24 +450,6 @@ input[type=range]::-moz-range-thumb {
   .arr-head-msr {
     display: none !important;
   }
-}
-
-/**
- * How much of the bottom of the viewport is occupied by the phone's navigation bar.
- *
- * Keyed off a DOM attribute rather than a width media query, because width is the wrong question.
- * The tab bar exists wherever `isMobile` is true, which includes a landscape phone — 844 px wide
- * and therefore above every phone breakpoint — while the old `max-width: 767px` query left the
- * variable at `0px` there. The consequence was concrete and was measured: in landscape the track
- * inspector ran to the bottom of the viewport with 53 px of itself underneath the bottom chrome, and
- * an element-at-point probe at that overlap returned a transport button, not the panel.
- *
- * `App` sets the attribute from the same state that decides whether the bar is fixed, so the two
- * cannot disagree.
- */
-:root[data-bottom-bar="tab"],
-:root:has([data-bottom-chrome="fixed"]) {
-  --mobile-tab-bar-h: calc(53px + env(safe-area-inset-bottom, 0px));
 }
 
 .overscroll-x-contain {
