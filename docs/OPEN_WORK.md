@@ -2290,3 +2290,23 @@ Bass 3 ｜ Guitar 3 ｜ **Orchestral 3** ｜ **Acoustic Piano 2** ｜ **Organ 2*
 8. **⇒ 全过才标 complete** ✓；**并把"谁决定、依据、何时回来"记进台账 ✓**。
 
 **⚠️ 而写入前请记得**：**`docs/OPEN_WORK.md` 是**一写者**文件（只有主协调者写 ✓）**；**别在别的线上顺手改它 ✗**。
+
+## 七十、实时连奏的判据**实质**（2026-10-02 ✓，**我读过 ✓**）
+
+### 70.1 六条要点 ✓✓
+
+1. **`carries 32 and refuses 25, so 25 attacks land on a sounding chord where 57 did`** ✓✓ ——**实时路径**复现了离线那个结果（**57 → 25 ✓**）；
+2. **`the MCP reply carries the reading: 19 changes, 57 notes, 57 requested, 0 silent`** ✓✓ ——**工具字段被**点名断言、且带数字****；
+3. **`marks the second note as a handover and starts one recording instead of two`** ✓ ——实时核心行为；
+4. ⭐ **最新那笔补的是**反面那一半**** ✓✓：**`gives a note nobody will be handed the scheduled end it always had, **not a ramp**`**
+   ——其注释说明：**离线 sink 会给"书写终点早于录音"的每个音一条**释放斜坡**** ⇒ **而这条判据钉住：
+   **拿不到交接的音**保留它原有的**排定终点**、**不**被加斜坡**** ⇒ **⇒ 于是这次实时改动**只落在交接那一支**、没有渗进普通情形 ✓✓**；
+5. **`leaves a repeated pitch and a lane with no recording alone, so the boundary cases do not move`** ✓ ——边界情形不动；
+6. ⭐ **`one rule, three callers`**：**`gives the same answer, word for word, from the offline planner, the audio-lane plan and the sampler steps`**
+   ＋ **`refuses the same pairs for the same reasons, so a repeated pitch is a new stroke on every path`**
+   ⇒ **⇒ 这正是简报里"**一处规则、每一个调用点都用它**"** ✓✓（**而不是三处各写一份判断 ✗**）。
+
+### 70.2 ⇒ 于是目标 ② 的实时那半，**不是"绿了"而已** ✓✓
+
+**它被钉在**要求本身**的层面** ✓：**结果与离线一致（57→25）／工具读数点名可查（19／57／57／0）／
+**反面那一半**（不该加斜坡的音不加）／**边界情形不动**／以及**一条规则三处同一答案** ✓✓。
