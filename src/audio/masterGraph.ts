@@ -207,6 +207,16 @@ export interface MasterGraph {
   /** Which bus compressor is live (`node` unless a detector was supplied and the worklet loaded). */
   busCompressorKind(): BusCompressorKind;
   /**
+   * ⭐ **The kind once the worklet swap has settled, for anyone who needs the final answer rather than the
+   * current one.**
+   *
+   * `busCompressorKind()` is synchronous and reads a live value, which is right for a meter and wrong for a
+   * report: the swap is asynchronous, so a caller that reads immediately after building the graph sees `"node"`
+   * even when the worklet installs a moment later. That is indistinguishable from a real fallback, and it is
+   * exactly what made a criterion look like a failure while the swap was working.
+   */
+  busCompressorReady(): Promise<BusCompressorKind>;
+  /**
    * The pre-duck bus the strips should tap (A2), or null when this graph has no detector.
    *
    * Created **by the graph**, after the fader and the trim. The first version had every caller create it before
@@ -565,6 +575,7 @@ export function buildMasterGraph(
       return appliedTrimDb;
     },
     busCompressorKind: () => busComp.kind(),
+    busCompressorReady: () => busComp.ready,
     busComp,
     duckDetectorInput: detectorBus,
     limiterKind() {

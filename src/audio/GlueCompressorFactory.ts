@@ -79,7 +79,7 @@ export function createBusCompressor(
    * identify the master trim and makeup gains by position noticed immediately, and they were right to). So the
    * wrappers exist only where the worklet can: with a detector, on a context that has the API.
    */
-  const wrappersNeeded = Boolean(options.detector) && audioWorkletAvailable(ctx);
+  const wrappersNeeded = audioWorkletAvailable(ctx);
   const input = wrappersNeeded ? ctx.createGain() : null;
   const output = wrappersNeeded ? ctx.createGain() : null;
   if (input) input.gain.value = 1;
@@ -106,12 +106,26 @@ export function createBusCompressor(
    * programme either way, and swapping in a second implementation would only risk a difference nobody asked for.
    */
   const ready: Promise<BusCompressorKind> =
-    wrappersNeeded && detector
+    wrappersNeeded
       ? (async () => {
           try {
             const worklet = (ctx as BaseAudioContext & { audioWorklet: AudioWorklet }).audioWorklet;
             await worklet.addModule(GLUE_COMPRESSOR_WORKLET_URL);
-            if (disposed) return kind;
+            /**
+             * ⭐ **A silent early return here hid the second half of the same story as the bare catch.**
+             *
+             * `dispose()` can run while the module is still loading — a graph rebuilt, a render torn down — and
+             * the swap then correctly gives up rather than wiring a node into a graph that no longer exists. But
+             * it gave up without saying so, and that is indistinguishable from the failure the catch reports: an
+             * attempt to prefer the worklet on every context came back with `kind` = `"node"`, nothing thrown, and
+             * nothing logged. Reported now, and the behaviour is unchanged.
+             */
+            if (disposed) {
+              console.warn(
+                "[GlueCompressor] the handle was disposed before the worklet module loaded, so the bus keeps the node compressor"
+              );
+              return kind;
+            }
             const created = new AudioWorkletNode(ctx, GLUE_COMPRESSOR_PROCESSOR_NAME, {
               numberOfInputs: 2,
               numberOfOutputs: 1,
@@ -129,7 +143,7 @@ export function createBusCompressor(
                 sampleRate: ctx.sampleRate,
               },
             });
-            detector.connect(created, 0, 1);
+            if (detector) detector.connect(created, 0, 1);
             input!.disconnect(node);
             node.disconnect(output!);
             input!.connect(created);

@@ -105,14 +105,41 @@ describe("the bus compressor's detector reaches the compressor", () => {
     expect(into.some((c) => c.target === node && c.input === 1), "the detector feeds input 1").toBe(true);
   });
 
-  it("keeps the shipped node when there is no detector", async () => {
+  it("⭐ prefers the shared worklet whenever the context has one, because the host node is what differed", async () => {
+    /**
+     * This used to assert the opposite, and its reason was that "the shipped path must be byte-for-byte what it
+     * was". That was right while the host node cost nothing: in a browser it is Chromium's compressor and the
+     * worklet is ours, so either is the same to a listener. It stopped being right when the headless host was
+     * measured — there the host node is `node-web-audio-api`'s implementation, and it is where the 1.28 dB and
+     * 1.774 LU of host difference come from. Parity needs one implementation on both hosts, the host's cannot be
+     * changed without asking Chromium to change, so the shared one is ours and the browser path moves with it.
+     * See `docs/HEADLESS_CORE_PLAN.md` §8.6.
+     *
+     * Two diagnostics were added while this was being worked out and both stayed: the factory's `catch` reports
+     * why a swap failed, and the early return reports a handle disposed before the module loaded. Neither fires
+     * for this case, which is the evidence that the swap succeeds rather than falling back.
+     */
     restore = withFakeWorklet();
+    const ctx = context();
+    const graph = buildMasterGraph(ctx as unknown as BaseAudioContext, {});
+    // ⭐ Await the swap, not the live read: `busCompressorKind()` is synchronous and returns `"node"` until the
+    // module has loaded, which is indistinguishable from a fallback and is what made this look broken.
+    const kind = await (graph as unknown as { busCompressorReady: () => Promise<string> }).busCompressorReady();
+    expect(kind).toBe("worklet");
+    expect(
+      FakeAudioWorkletNode.instances.filter((n) => n.name === "groove-glue-compressor-processor").length
+    ).toBeGreaterThan(0);
+  });
+
+  it("keeps a node when the context has no worklet at all, because compression must never be absent", async () => {
+    // The other half, kept from the criterion above when it was flipped: a non-secure origin has no
+    // `audioWorklet`, and the bus still has to be compressed — `kind` is what says which one it got.
+    restore = withFakeWorklet();
+    FakeOfflineAudioContext.workletsAvailable = false;
     const ctx = context();
     const graph = buildMasterGraph(ctx as unknown as BaseAudioContext, {});
     const kind = await (graph as unknown as { busCompressorKind: () => Promise<string> }).busCompressorKind();
     expect(kind).toBe("node");
-    // No *glue* worklet node: the shipped path must be byte-for-byte what it was (the ceiling's own worklet is
-    // expected on any path, which is why this looks for the one processor by name).
     expect(
       FakeAudioWorkletNode.instances.filter((n) => n.name === "groove-glue-compressor-processor")
     ).toHaveLength(0);
