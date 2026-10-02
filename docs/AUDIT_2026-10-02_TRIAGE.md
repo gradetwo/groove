@@ -187,7 +187,7 @@ it("keeps an optional lane only when every contributing clip has it", () => {
 
 ### 待做：**砍法要先定，因为它不是删一个目录 ✗**
 
-**手机专属的文件（初判 ✓）**：`src/components/MobileTabBar.tsx` ✓、`src/components/MobileMoreSheet.tsx` ✓、`src/components/MobileModuleTabBar.tsx` ✓（**另有 `MobileJamScreen` 待确认 ✓**）。
+**手机专属的文件（初判 ✓）**：`src/components/MobileTabBar.tsx` ✓、`src/components/MobileMoreSheet.tsx` ✓、`src/mobile/MobileModuleTabBar.tsx` ✓（**另有 `MobileJamScreen` 待确认 ✓**）。
 
 **而它是**横切**的（这是难处 ✓）**：
 
