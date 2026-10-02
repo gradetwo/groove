@@ -11,7 +11,7 @@
 | 谱面显示 | **VexFlow 5**，懒加载，字体自托管 | 唯一一个**能从我们自己的模型直接画**的库（`StaveNote`／`Voice`／`Beam`），不必为了显示而绕一圈 MusicXML。MIT。core 单独打包 **89 KB gzip**，在 150 KB 单块上限之内 |
 | 字体 | 把 Bravura 的 woff2 **自托管**并设 `Font.HOST_URL` | 默认从 CDN 取字体（源码注释里就标了 GDPR 相关的顾虑），而且内嵌 base64 会把块从 89 KB 撑到 378 KB。体积门只量 `.js`／`.wasm`，字体资产不占预算 |
 | MusicXML 写 | **自己写**（`src/data/musicxml.ts`，已完成） | 导出是产品的关键路径，而且它只是 XML 生成：规范清楚、判据能独立验证。少一个 0.x、单人维护的依赖 |
-| MusicXML 读 | 自己写，基于 **`fast-xml-parser`**（MIT，活跃） | 同理。边界保持薄、可替换，将来若保真度要求变高再换实现 |
+| MusicXML 读 | 自己写，基于 **`saxes`**（ISC，活跃） | 同理。边界保持薄、可替换，将来若保真度要求变高再换实现 |
 | 不采用 | Verovio、OSMD、alphaTab、`musicxml-interfaces` | 见下 |
 
 ## 明确不选的理由

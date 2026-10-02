@@ -393,6 +393,8 @@ ArrangementViewV2:97   playArrangementV2(arrangement, {}, player)
                                         ⭐ 空音符表 ✗ —— 没有地方放音符
 ```
 
+**⇒ 这个缺口已合上** ✓✓：按下面的 A 落地后，`ArrangementViewV2.tsx:167` 传的是 `arrangement.notesByTrack ?? {}`（`playArrangementV2(arrangement, arrangement.notesByTrack ?? {}, player)` ✓），所以"音符住在轨道上"不再需要调用点临时拼表。
+
 ### ⭐ 而我早先的设计笔记说过音符在哪
 
 > ⭐ **"音符留在 pattern 里 ✓，轨道持有身份与路由"** ✓✓（**那是 v1 的 pattern ✓**）
@@ -588,7 +590,7 @@ ArrangementViewV2:97   playArrangementV2(arrangement, {}, player)
 
 第 4 条没有配测试。布局在 jsdom 里判不了，它没有排版引擎；断言类名等于验证改动本身而不是结果。
 
-至此 TRACK A 的界面一侧不再是骨架：能选模板、能加删轨道、能改类型、能选乐器、能看能改步进、能录、能播。剩下的是 TRACK B 的成本曲线，以及移动端那条入口。
+至此 TRACK A 的界面一侧不再是骨架：能选模板、能加删轨道、能改类型、能选乐器、能看能改步进、能录、能播。剩下的是 TRACK B 的成本曲线，以及移动端那条入口 ✗——**那条入口（手机外壳）已在 `4dffdf0` 砍掉** ✓（手机浏览器现在拿到的是桌面 UI，`docs/OPEN_WORK.md` §十三），所以今天只剩 TRACK B。
 
 
 ## 怎么听采样器：键盘与音符模型（2026-09-30）
@@ -659,7 +661,7 @@ ArrangementViewV2:97   playArrangementV2(arrangement, {}, player)
 
 顺带照出两件事：轨道行里的步数换算是**同一换算的第二份实现**（标准里明说不要这样），而且它不认识 `bars`——现在只有一份。`toggleStep` 的上界本来是把**音符个数**除以四，一个范畴错误，只是因为一小节的 pattern 两种读法都得到十六才活了下来。
 
-MCP：`set_arrangement_bars`（**65 个工具**），汇总里同时报 `bars` 与 `steps`——"多长"是小节问题，"能写到哪"是步的问题。
+MCP：`set_arrangement_bars`（**91 个工具** ✗✓，`mcp/registry.ts` 的 `TOOLS` 实测；本节写于 65 个工具的当时），汇总里同时报 `bars` 与 `steps`——"多长"是小节问题，"能写到哪"是步的问题。
 
 
 ## 谱面（2026-09-30）

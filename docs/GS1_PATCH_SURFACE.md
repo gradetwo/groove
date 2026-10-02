@@ -14,9 +14,9 @@
 
 | 事实 | 证据 |
 | --- | --- |
-| MCP 渲染驱动的是应用自己的 `renderPatternOffline`，没有第二个渲染器 | `mcp/render/worker.ts:4`、`:274` |
+| MCP 渲染驱动的是应用自己的 `renderPatternOffline`，没有第二个渲染器 | `mcp/render/worker.ts:4`、`:614` |
 | host 有单参数与整补丁写入 | `src/audio/gs1/Gs1Host.ts:184`（`setParam`）、`:188`（`setPatch`） |
-| 参数面是声明式的：id、范围、默认值 | `vendor/gs1/src/audio/params.ts:1092`（`DEFAULT_PARAMS`，224 项）、`:1453`（`PARAM_SPECS`，84 项带标签）、worklet 的 `PARAMS`（224 项，**浏览器真正服务的范围**） |
+| 参数面是声明式的：id、范围、默认值 | `vendor/gs1/src/audio/params.ts:1137`（`DEFAULT_PARAMS`，224 项）、`:1453`（`PARAM_SPECS`，84 项带标签）、worklet 的 `PARAMS`（224 项，**浏览器真正服务的范围**） |
 
 ## 2. 补丁从哪来（本次改变的地方）
 
@@ -64,9 +64,9 @@
 
 **故意不校验的东西，以及支持这个决定的测量。** 不按 `PARAM_SPECS` 检查取值范围。`PARAM_SPECS` 只覆盖 224 个参数中的 **84** 个，而且在重叠处它比 worklet 实际服务的范围**更窄**。把全部 91 个工厂预设用 synth 自己的 `presetShareCode` 编码再解码后统计：恰好有一个值越界——`phonk` 的 `osc2Pitch = 31`，而 `PARAM_SPECS` 声明 ±24、worklet 实际服务 ±48。也就是说，对着 `PARAM_SPECS` 写范围校验会**拒掉 synth 自己产出的工厂预设**。浏览器 `AudioParam` 的钳制与 synth 内部一致，所以诚实的校验就是 upstream 做的那一种：**这段 code 能不能解码**。
 
-## 5. 旧文 §5 的假声明（仍在，未改）
+## 5. 旧文 §5 的假声明（**已由 `e5809af` 修掉** ✓✓）
 
-帮助文案仍声称可以导出 "GS1 patch"（`src/i18n/locales/help.ts:74`、`src/data/tutorialCourses.ts:200`、`src/components/help/HelpCenterModal.tsx:308`），而导出菜单里没有第七项。**本次仍未改**：改为哪种表述是产品决定。现在这句话**更接近可行**了（code 可以在 synth 里生成、在 groove 里落到轨道上），但"从 groove 导出 `.gs1.json` 补丁文件"这个动作仍然不存在。
+帮助文案曾声称可以导出 "GS1 patch"（`src/i18n/locales/help.ts:74`、`src/data/tutorialCourses.ts:200`、`src/components/help/HelpCenterModal.tsx:308`），而导出菜单里没有第七项。**该声明已被 `e5809af` 删除** ✓✓：三处文案改成"导出 Ableton 工程"，并补上"一条轨道可以携带合成器自己的 GS-1 音色补丁"这半句真话；判据 `src/test/gs1ExportClaim.test.ts` 两个方向都钉住——两种旧措辞与中文的"导出为 GS1"都不许回来，同时断言保留下来的 Ableton 那半句仍在。**而"从 groove 导出 `.gs1.json` 补丁文件"这个动作仍然不存在** ✗——文案不再许诺它了。
 
 ## 6. 本次的决定
 
@@ -93,9 +93,9 @@
 
 ## 8. `apply_gs1_patch` 今天到底接受哪些参数（逐条清单，不是概述）
 
-**一句话**：它接受**一个不透明的 `gs1.1.` share code**（或 `null` 清除），**不接受任何单个参数**。所以"逐参数写入未暴露"这条报告**成立**，而且这个缺口是**已被裁定**的（§7「仍然不做的：逐参数编辑器」）；本节把"到底有多少、是哪些"变成清单。
+**一句话（写于覆盖层落地之前）**：它接受**一个不透明的 `gs1.1.` share code**（或 `null` 清除），**当时不接受任何单个参数** ✗✓。**这条已被 §10 取代** ✓✓：`apply_gs1_patch` 现在另有 `parameters` 与 `routes`（存在 `SequencerTrack.gs1PatchOverrides` 上，见 §10），所以"逐参数写入未暴露"这条报告**已关闭**；本节把"当时到底有多少、是哪些"变成清单，保留为**当时的**逐条记录。
 
-**工具今天接受的东西，就这些**（`mcp/registry.ts:1284-1295`）：
+**当时的入参就这些**（今天这个工具在 `mcp/registry.ts:1784-1817` ✓；`parameters`／`routes` 是 §10 加的）：
 
 | 入参 | 是什么 | 与音色参数的关系 |
 | --- | --- | --- |
@@ -364,7 +364,7 @@ npx vite-node scripts/report_gs1_params.ts   # 读 vendor/gs1/src/audio/params.t
 
 **为什么本次仍然只记录、不实现（理由，以及第一步）** —— **已被 §10 取代：路线 ②（覆盖层）已实施，本节保留为决策记录。**
 
-* **写侧的第一步不是加工具，是决定编码器归谁。** 唯一诚实的编码器是 synth 自己的 `buildPayload`（`/home/crow/music/synth/src/state/share.ts`），它**没有被 vendored**，而且 import `persist.ts`（`SCHEMA_VERSION`）与 `midi/takes.ts`——§2 记过，把这半棵子树拖进来会破坏"一文件一哈希"的 pin。**在这里手写一个编码器，就是给同一个格式写第二份实现**：本仓库自己的读+写会互相自洽，却可能和 synth 不一致——正是 `gs1PatchPassthrough.test.ts` 用 synth 自己的编码器产物做 fixture 要防的那件事。所以第一步是一次**决定**：(a) 把上游 `share.ts` 的编码器按哈希 pin 进 `vendor/gs1/`，或 (b) 不加编码器，改为在 `SequencerTrack` 上放一个独立的逐参数覆盖字段，并把它并进**唯一**解析缝 `resolveGs1Lane`（`src/audio/gs1/gs1Tracks.ts:324`），同时保证导出、实时、`validate_pattern` 三处读同一个决议。
+* **写侧的第一步不是加工具，是决定编码器归谁。** 唯一诚实的编码器是 synth 自己的 `buildPayload`（`/home/crow/music/synth/src/state/share.ts`），它**没有被 vendored**，而且 import `persist.ts`（`SCHEMA_VERSION`）与 `midi/takes.ts`——§2 记过，把这半棵子树拖进来会破坏"一文件一哈希"的 pin。**在这里手写一个编码器，就是给同一个格式写第二份实现**：本仓库自己的读+写会互相自洽，却可能和 synth 不一致——正是 `gs1PatchPassthrough.test.ts` 用 synth 自己的编码器产物做 fixture 要防的那件事。所以第一步是一次**决定**：(a) 把上游 `share.ts` 的编码器按哈希 pin 进 `vendor/gs1/`，或 (b) 不加编码器，改为在 `SequencerTrack` 上放一个独立的逐参数覆盖字段，并把它并进**唯一**解析缝 `resolveGs1Lane`（`src/audio/gs1/gs1Tracks.ts:368`），同时保证导出、实时、`validate_pattern` 三处读同一个决议。
 * **读侧的第一步可以立刻做，且不需要编码器**：一个 `get_gs1_patch`，把某条轨道 code 里的 224 个值（84 个带标签/范围）与路由读回来。它只用已存在的 `decodeGs1PatchCode`，能让调用者先看见"我的码到底设了什么"，是加写侧之前该有的那半。判据两个方向：对一个已知 code 断言读回的已知值；把解码器对 `v` 的读取去掉即红。
 * **范围校验不能照抄 `PARAM_SPECS`**，理由与测量已在 §4：它只覆盖 84 个，且在重叠处比 worklet 实际服务的范围更窄（`phonk` 的 `osc2Pitch = 31` 会被它拒掉）。逐参数工具必须先决定"按什么校验"，否则就是把一个工厂预设拒之门外。
 

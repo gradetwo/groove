@@ -1,7 +1,7 @@
 # GROOVE LAB 改进任务清单（BACKLOG）
 
 > 配套文档：`CODE_REVIEW_AND_PLAN_v1.16.0.md`（历史审阅与 N-xx 登记）、`PRODUCT_PLAN_v2.1.0.md`（当前规划）
-> 当前基线：**v2.34.34**（`package.json` / `public/version.json` 实测；基线 commit `d480684`）
+> 当前基线：**v2.34.34**（`package.json` / `public/version.json` 实测；基线 commit `8fa3d38`，即 v2.34.34 的 release commit）
 > 优先级：**P0** 正确性/安全 ｜ **P1** 体验/性能/可维护 ｜ **P2** 增强
 > 工时单位：人·天（含自测）
 > 使用方式：每个任务一条 PR；`ID` 可直接用于 commit message，如 `fix(P0-01): correct Bjorklund euclidean generator`
@@ -414,7 +414,7 @@
 | **E-14** | 体积门禁纳入首屏总量 + 曲风分包红线 | v1.16.2 | `node scripts/redlines.mjs` |
 | **A-01** | 打断曲风数据静态导入（首屏 JS -51%） | v1.16.2 | `git log --oneline --grep=A-01` |
 | **A-08** | `version.json` 拆分 + 变更日志按需加载 | v1.16.2 | `node scripts/redlines.mjs`（R7a/R7b/R7c） |
-| **U-11** | i18n 债务：迁移内联双语三元至词表 | v1.16.2 | `node scripts/analyze_ternaries.js` |
+| **U-11** | i18n 债务：迁移内联双语三元至词表 | v1.16.2 | `node scripts/analyze_ternaries.js` ✗ 一次性审计脚本，已在 `79ec972` 删除，无替代门禁 |
 | **E-04** | CI 加固（覆盖 next + e2e + 覆盖率门槛） | v1.16.2 | `grep -c next .github/workflows/ci.yml`（应为 2） |
 | **E-08** | 可观测性落地（移除无出口埋点 API） | v1.16.2 | `npx vitest run src/test/telemetry.test.ts` |
 | **E-12** | 仓库卫生（.gitignore / 清理本地产物） | v1.16.2 | `git ls-files '*.pyc'`（应为空） |
@@ -427,7 +427,7 @@
 | **P7-05** | 走带绝对同步与卡顿根除（IPC 震动移除 + 布局重排缓存） | v2.0.45 | `npm run test` |
 | **P1-19** | 桌面端虚拟键盘 100% 全宽与人机工学双八度设计 | v2.0.45 | `npx vitest run src/test/musicalTyping.test.tsx` |
 | **P8-04** | 移动端防选中与触控锁（全域 CSS 触控保护与交互隔离） | v2.0.45 | `npm run test` |
-| **P1-20** | 移动端工作区净化与四组功能胶囊单行流线优化 | v2.0.45 | `npx vitest run src/test/mobileBottomControlBar.test.tsx` |
+| **P1-20** | 移动端工作区净化与四组功能胶囊单行流线优化 ✗（手机外壳已在 `4dffdf0` 砍掉） | v2.0.45 | `npx vitest run src/test/mobileBottomControlBar.test.tsx` ✗ 该测试随手机外壳一起删除，无替代 |
 | **U-12** | 全界面 49 项功能按键与图标深度图解词典与实操要领 | v2.0.45 | `npx vitest run src/test/helpCenterModal.test.tsx` |
 
 > 本批次的已知回归：`src/test/CompareViewPresets.test.tsx` 的 2 条用例计时超时（5000ms），在 v1.16.3 基线上即为红色（见 E-03 之后并入的 compare 用例）；`npx vitest run` 当前为 **407 passed / 2 failed（共 409）**。

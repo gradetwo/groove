@@ -12,12 +12,12 @@ own metrics, and as a **source of candidates** — findings to go and measure pr
 ## Rendering a file to listen to
 
 ```bash
-node scratch/render_genre_to_wav.mjs --genre=disco --form=loop --out=/tmp/disco-loop.wav
-node scratch/render_genre_to_wav.mjs --genre=ambient --form=club --out=/tmp/ambient-club.wav
+node scripts/render_genre_wav.mjs --genre=disco --bars=2 --out=/tmp/disco-loop.wav
+node scripts/render_genre_wav.mjs --genre=ambient --bars=2 --seamless-loop --out=/tmp/ambient-loop.wav
 ```
 
-`--form=loop` renders the genre's pattern; `--form=club|song` renders the arrangement the exporters write (B2), which
-is what a phone track is (`auditionArrangementFor`). The render is the **same offline path** the exporters and the
+The script renders the genre's own pattern through the app's offline path for `--bars` bars (two by default), and
+`--seamless-loop` folds the tail so the file loops. The render is the **same offline path** the exporters and the
 analysers use, with the genre's own trim applied, so what you hear is what the file contains.
 
 Two practical limits, both learned the hard way:

@@ -104,7 +104,7 @@ fx saturated    : -12.829229 LUFS      ← 0.2 LU
 → a saturated lane moves the mix: the genres' fx note data is what is quiet
 ```
 
-The previous run's "0.00009 LU" was not a measurement of anything: the probe sent `trackId` where `mcp/pattern.ts:86` declares `track`,
+The previous run's "0.00009 LU" was not a measurement of anything: the probe sent `trackId` where `mcp/pattern.ts:202` declares `track`,
 so `clear_track` **cleared nothing**, reported `ok: false`, and the "cleared" render was the same audio as "as written" — which is
 what a difference of nine hundred-thousandths of a LU looks like. The tool said so at the time; the probe was not printing the op's
 report, so nothing read it. **A no-op that looks like a result is the worst failure a measurement can have**, and this one produced a
@@ -138,7 +138,7 @@ mix".
 
 **And the first guess about that edit — "the lane's level is too low" — is already eliminated.** Reading where the lane's level
 comes from: the genre mixes set `fx` to **0.68, 0.56, 0.3, 0.48, 0.52 …** (`src/data/genreMix.ts:94-138`) — healthy values, not a
-muted lane — and the engine wires the voice properly: `AudioEngine.ts:2248` and `WavExporter.ts:870` both branch on `trackId === "fx"`,
+muted lane — and the engine wires the voice properly: `AudioEngine.ts:2342` and `WavExporter.ts:1636` both branch on `trackId === "fx"`,
 `instrumentPresets.ts:227` maps it to `noiseSweep`, and `trackBuses.ts:42-58` routes it to the **music** bus like any other musical
 lane.
 
@@ -242,8 +242,8 @@ The survey said the arrangement already declares a riser. Measuring it says more
   ramp, which starts at 0.25 velocity;
 * the decisive check is therefore not the band comparison but a **search for a reader**. `riser` appears in `arrangementForm.ts`
   ~~it is **never read** as a step override~~ — **this line was wrong.** The search used `grep … | head`, the pipe
-  broke, and I stopped reading, so the code that reads it was cut off. Traced properly: `songFlatten.ts:96-104` builds the timeline a `riserLanesFor(slot)` resolver from `textureLanes(clip.tracks)` (`:35-46`, which finds the
-  clip's texture role by name — `fx`, `riser`, `texture`, `sweep`, `noise`) and `:176` reads the ramp per step. **The
+  broke, and I stopped reading, so the code that reads it was cut off. Traced properly: `songFlatten.ts:102-108` builds the timeline a `riserLanesFor(slot)` resolver from `textureLanes(clip.tracks)` (`:52-63`, which finds the
+  clip's texture role by name — `fx`, `riser`, `texture`, `sweep`, `noise`) and `:208-211` reads the ramp per step. **The
   texture lane is implemented**; A4 is a measurement of existing behaviour, not the implementation of a missing one.
 
 So the texture lane does not exist yet: the data says "the texture lane arrives over its last pass", and nothing acts on it. That
@@ -385,9 +385,9 @@ already solved; two were real and are fixed.
 
 | Claim | Verdict |
 |---|---|
-| Export tail truncated, no reverb/delay release window | **False.** `resolveRenderTailSec(genreFx, bpm)` derives the tail from the genre's own FX and `totalDurationSec = totalSteps * stepDur + tailSec` (`WavExporter.ts:282-286`), with `foldLoopTail` for seamless loops (`:92`). |
-| Fader/Cutoff written with `=` or raw `setValueAtTime`, causing pops | **False.** The master fader carries the **Q11** note describing exactly that zipper artefact and smooths with `setTargetAtTime` (15 ms; `AudioEngine.ts:1208-1228`), the track fader 5 ms (`:925`), 22 `setTargetAtTime` sites in `src/audio`. |
-| No hi-hat choke group | **False.** `openHiHatVoices` with "Acoustic Choke Group: Closed hi-hat cuts ringing open hi-hat" (`AudioEngine.ts:2411-2413`, cleared `:592`, `:1494`). |
+| Export tail truncated, no reverb/delay release window | **False.** `resolveRenderTailSec(genreFx, bpm)` derives the tail from the genre's own FX and `totalDurationSec = totalSteps * stepDur + tailSec` (`WavExporter.ts:858-865`), with `foldLoopTail` for seamless loops (`:1901`). |
+| Fader/Cutoff written with `=` or raw `setValueAtTime`, causing pops | **False.** The master fader carries the **Q11** note describing exactly that zipper artefact and smooths with `setTargetAtTime` (15 ms; `AudioEngine.ts:1241-1249`), the track fader 5 ms (`:948`), 22 `setTargetAtTime` sites in `src/audio`. |
+| No hi-hat choke group | **False.** `openHiHatVoices` with "Acoustic Choke Group: Closed hi-hat cuts ringing open hi-hat" (`AudioEngine.ts:2496-2498`, cleared `:614`, `:1516`). |
 | Kick sub accumulation, "350-500 ms, no stealing, no adaptive release" | **Partly.** Overlap is real and there is no kick choke (only the hi-hat group; kick sidechains *bass*), but the decays are 0.65 s (808, `DrumKitModels.ts:591`) and 0.695 s (Anatomy, `AnatomyKickEngine.ts:41`), a pitch envelope exists, and the global 128-source cap steals the voice nearest to finishing (`voiceRegistry.ts:156-167`). Left alone: the current behaviour is bounded and measured, and changing it would invalidate every baseline for a non-defect. |
 | Snare machine-gun, identical every hit | **Mostly false.** `hitVariation(noisePosition)` gives ±6 cents, ±4 % decay and level (`noise.ts:178-219`), and each hit reads a different noise slice (`DrumKitModels.ts:840`). The **band-pass centre is velocity-only** (`:830`) — the one grain of truth. |
 | Mobile lock-screen resume missing | **Partly — fixed.** A `visibilitychange`/`focus` handler existed, but it returned early on non-iOS and only resumed on `"suspended"`, never on Safari's `"interrupted"`. See the fix above. |
@@ -396,7 +396,7 @@ already solved; two were real and are fixed.
 | Clap lacks a multi-pulse cluster | **False.** Three pre-delay bursts at 0/11/22 ms, each 12 ms and reading a different noise slice, plus a 30 ms-onset body (`DrumKitModels.ts:1387-1437`). |
 | Delay feedback without damping | **False.** The feedback loop is `delay -> damp(lowpass) -> fb -> delay` in both ping-pong legs (`DelayBus.ts:30-40`), with the reasoning that produced it in the header. |
 | Master headroom / limiter pumping | **Was real, already reworked.** `MIX_LOUDNESS_NOTES.md:153-156` records 121/159 genres peaking over 0 dBFS as defect **N-15** under the old 3 ms compressor; `:234-236` records the current result — **0/159 over ceiling, worst −1.027 dBTP** — with the limiter at −1.0 dBTP, 3 ms lookahead and 80/400 ms program-dependent release (`MasterLimiter.ts:54-117`). |
-| Audio node leak, `stop()` without `disconnect()` | **False.** `voiceRegistry.ts:34-58` disconnects the source **and** its gain from an `onended` handler, armed on every registration (`:178-180`) and on prune (`:200-211`); every drum voice registers (`AudioEngine.ts:2369-2480`). |
+| Audio node leak, `stop()` without `disconnect()` | **False.** `voiceRegistry.ts:34-58` disconnects the source **and** its gain from an `onended` handler, armed on every registration (`:178-180`) and on prune (`:200-211`); every drum voice registers (`AudioEngine.ts:2451-2562`). |
 
 The lesson is the one this file keeps relearning: a report is a **list of hypotheses**, and the file paths being wrong is a
 signal about the rest. Fourteen claims, eleven checks, two fixes — and both fixes were measurable, which is what made them
@@ -416,11 +416,11 @@ properties that make it work: inside the root, and no external resource.
 
 **Images were fetched only when their element appeared** — "涉及到图片加载的地方，没有合适的预加载，每次都是触发才下载". That is
 not something `loading="lazy"` can fix: lazy decides *when to start*, not whether the bitmap is ready when the element paints.
-So `genreArt.ts` gained `preloadGenreCover` / `preloadGenreCovers`, which fetch and then `await image.decode()` — the step that
-actually makes the first paint instant — and the shells warm what they are about to draw: the phone home screen warms the
-first screenful of thumbnails (eight, keyed by skin, three at a time so warming never competes with the transport), and the
-shell warms both sizes of the bar's genre, because the vinyl label bakes its picture from the **original** file that nothing
-has fetched at that point.
+So `src/utils/genreArt.ts` gained `preloadGenreCover` / `preloadGenreCovers`, which fetch and then `await image.decode()` — the step that
+actually makes the first paint instant — and the views warm what they are about to draw: `useCoverWarmup` (`src/hooks/useCoverWarmup.ts` ✓)
+warms the ids a list, hero or player is about to draw (keyed by skin as well as id, three at a time so warming never competes with the
+transport), and `useCoverWarmupBothSizes` warms both sizes of the bar's genre, because the vinyl label bakes its picture from the
+**original** file that nothing has fetched at that point. (The phone shell's home-screen warmer is gone with that shell — `4dffdf0` ✓.)
 
 ## The loudness drift's root cause, measured (2026-09-27)
 
@@ -589,7 +589,8 @@ means one change per *category* rather than 159 hand-edits, and they can be meas
   `arrangedTruePeakDb` **+6.36, +4.16, +6.79, +8.15 dBTP** against the previous report's −1.30. The limiter was not
   limiting. With `detector: null` the same genre renders at **−1.30 dBTP**, exactly the contract. The DSP is not at
   fault — the worklet and the kernel both measure **−1.00 dBTP with *and* without a detector** in isolation
-  (`scratch/limiter_detector_probe.mjs`) — so what is left is why the bus reads as silent in the render path, and the
+  (`scratch/limiter_detector_probe.mjs` — ✗✓ **that probe was a local one-off that was never committed**, so this reading is not
+  reproducible from the repository) — so what is left is why the bus reads as silent in the render path, and the
   isolation probe is where the next session starts. The wiring is off and the capability stays, tested, because a
   silent detector means "no limiting" and a file at +6 dBTP is not a trade this project makes.
 * **…and the duck's "0" was an artefact of that bug, which changes the reading.** With the ceiling working again,
@@ -884,7 +885,8 @@ offline/async interaction around the node swap rather than the DSP, the graph or
 **The original bug**: the ceiling's own pre-duck detector — implemented,
 kernel-tested, worklet-mirrored — **stops the ceiling limiting in the render path** (chicago-house at +1.36 dBTP
 against a −1 dBTP contract; a re-record that followed asked 49 genres for a −9 dB cut). With `detector: null` the same
-render is −1.30 dBTP. The DSP is cleared by an isolation probe (`scratch/limiter_detector_probe.mjs`: −1.00 dBTP with
+render is −1.30 dBTP. The DSP is cleared by an isolation probe (`scratch/limiter_detector_probe.mjs` — ✗✓ **a local one-off never
+committed, so the reading is not reproducible from the repository** — −1.00 dBTP with
 and without a detector, both implementations), so what remains is *why the bus reads as silent in the render path*
 when its taps are connected before rendering. The wiring is off and the capability stays.
 
@@ -1041,7 +1043,7 @@ GS-1 off when it comes back silent) rather than trusting a realtime probe, which
 The owner's rule, after the UK-garage lead was finally audible: **the lead timbre should follow each genre's own habit,
 and the other lanes the same** — one patch per instrument is the wrong shape.
 
-The instrument table (`INSTRUMENT_TO_GS1`) says what an instrument *is*; it cannot say what a genre does with it.
+The instrument table (`INSTRUMENT_TO_GS1` — **that name never existed in the code** ✗✓; the table today is `GS1_CHORDS_ROUTING` / `GS1_LEAD_ROUTING` / `GS1_TEXTURE_ROUTING` (`src/data/gs1Patches.ts:721` / `:744` / `:782`), picked by `routingForRole()` (`:796`)) says what an instrument *is*; it cannot say what a genre does with it.
 `m1_organ` under a UK-garage lead is a short wet stab; the same instrument under a Latin montuno is a warm pad. So the
 resolver now consults a **per-genre override first**, keyed by instrument name (so a lane keeps its voice through an
 instrument swap), and a genre that says nothing keeps the table's answer byte-for-byte.
