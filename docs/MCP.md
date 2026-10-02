@@ -335,6 +335,16 @@ The mismatch is the failure mode the numbers exist to prevent: an eight-bar full
 (measured above), so a client that leaves its timeout at 30 s fails the call no matter what this server does, and a client
 that reads only "the server waits 900 s" would not know that. Every rendering tool therefore states both.
 
+**A client that closes the pipe is reported, not fatal.** A client that gives up on a long render can close its side of
+the pipe while the render is still running, and the reply write then raises `EPIPE`; on a stream with no `error` listener
+that is an uncaught exception, so the whole server used to die with `Error: write EPIPE at afterWriteDispatched
+(node:internal/stream_base_commons:159:15)` — the render existed on disk and nothing had said so. The transport now writes
+through `mcp/stdioChannel.ts`, which installs that listener, keeps the process alive so it can finish what it started, and
+names on stderr every reply it could not deliver **including the file the render did write** (`the reply to request 3 (its
+file is at …) was not delivered: the client disconnected (EPIPE)`). Progress notifications are sent through the same
+`send()`, so a heartbeat cannot kill the server either, and `process.stderr` gets the same listener because a broken
+diagnostic channel has nowhere left to complain and must not crash for it.
+
 **When the budget is exceeded the render is *reported*, not abandoned**: `withRenderTimeout` throws the sentence
 `the render of <what> did not answer within <n>s — the page may be stuck, and the renderer has been reset so the next call
 starts a fresh one`, and the renderer really is reset, so the next call is not poisoned by the stuck page. It wraps **both**
@@ -498,6 +508,7 @@ run remotely (rendering certainly may not), and none of that should be invented 
 | :--- | :--- |
 | `npm run check:mcp` | the bundle builds and the server answers `tools/list` plus two real calls over stdio |
 | `src/test/mcpTools.test.ts` | every pure handler: schemas, determinism, error messages, no library mutation |
+| `src/test/mcpStdioDisconnect.test.ts` | a client that closes the pipe cannot kill the server: the transport's `send()` still resolves and every undelivered reply is named, with its file |
 | `npm run redlines` (R7a) | the tool/resource/prompt sets are still declared in full, and nothing under `src/` imports `mcp/` |
 | `npm run check:budget` | unchanged by construction (the server is outside the web build) |
 

@@ -17,6 +17,7 @@ import type { ServerNotification, ServerRequest } from "@modelcontextprotocol/sd
 import { PROMPTS, RESOURCES, TOOLS, failure, json } from "./registry";
 import { installRendererLifecycle } from "./render/worker";
 import { createRenderProgress } from "./render/progress";
+import { installStdioGuards } from "./stdioChannel";
 
 const VERSION = process.env.GROOVE_MCP_VERSION || "1.0.0";
 
@@ -140,7 +141,20 @@ export function createServer(): McpServer {
 
 async function main(): Promise<void> {
   const server = createServer();
-  const transport = new StdioServerTransport();
+  /**
+   * **The protocol channel is guarded before the transport can write a byte of it.**
+   *
+   * A client that gives up on a long render can close its side of the pipe while the render is still running; the
+   * reply then fails with `EPIPE`, which an unguarded `process.stdout` turns into an uncaught exception and a dead
+   * server. `installStdioGuards` returns the writer the transport must use: it installs the missing `error`
+   * listener, refuses to die, and names every reply it could not deliver (with the render's own file path) on
+   * stderr. The full reasoning is in `mcp/stdioChannel.ts`.
+   *
+   * Installed here rather than at module scope for the same reason as the lifecycle below: a test imports
+   * `createServer`, and a module-scope listener on the test process's stdout would outlive the test.
+   */
+  const protocol = installStdioGuards();
+  const transport = new StdioServerTransport(process.stdin, protocol);
   /**
    * Close the browser and the dev server on every path this process can leave by — client disconnect, signal, and a
    * synchronous last resort for the Vite child. The reasoning, and the measurement that made it necessary, are in
