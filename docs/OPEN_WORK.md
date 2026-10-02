@@ -2906,3 +2906,28 @@ You are not authenticated"** ✗ ⇒ **⇒ 缺的是 **worker 名 ＋ 认证****
   ⇒ **而它的裁定（循环参与连奏长度判断）已由 §90.1 记录** ✓；**实时那半**它已开工（路线：`browserSampleDecoder`
   本来握着完整字节 ⇒ **零额外请求** ⇒ **三条实时入口一起拿到循环**；并**把 `vsco2ce` 那 6 个 `UR1_*_pp_RR*` 的副作用具名钉住**）✓✓
 * **我这一轮另落的**：新编排器两个撒谎控件已删（§94）＋ 它的 4 条判据 ✓（`20664ac`）。
+
+## 九十六、"编排层有没有片段操作"：**范围与成本我都改准了**（2026-10-03 ✓，**我自跑** ✓）
+
+### 96.1 读数（**先定"哪一份实现是现在渲染的那份"** ✓）
+
+```
+**新编排器渲染的是 `ArrangementLaneV2`**（`ArrangementViewV2.tsx:65` import、`:1016` 使用）
+   ⇒ **它的 region 确实只有 `onClick={onSelect}`** ⇒ **⇒ 调研那条结论**对新编辑器成立**** ✓
+**而 `ArrangementPanel`（**Studio 视图在用**，`src/views/StudioView.tsx`）**已经有**按小节量化的拖动**** ✓✓：
+   `beginDrag(event, region, "move")`（:374）／`(event, region, "resize")`（:432）＋
+   `continueDrag`（:163）里 **`Math.round((event.clientX - drag.startX) / ARRANGEMENT_BAR_WIDTH)`**（:166）✓
+**`LoopBraceV2`（:69-70）本来就按小节量化**：注释原话「**Bars, rounded: the model is in bars, and a loop at
+   bar 2.5 is not something the ruler can show**」＋ `Math.round((event.clientX - current.x) / pixelsPerBar)` ✓
+```
+**⇒ 所以"编排层什么都没有"太强** ✓：**循环括号会吸附、Studio 编辑器会吸附、**只有新编辑器不会**** ✓。
+
+### 96.2 ⇒ 裁定（**决定人：我** ✓；依据：先量后改）
+
+1. **能做的不是"从零做拖动"，而是把 Studio 编辑器的 move／resize 拖动**移植**到新编辑器** ✓✓
+   ⇒ **成本从 M 降到 S–M**（**本仓已有这条交互，可参照、可复用** ✓）；
+2. **顺序**上**先移植拖动、再让吸附生效** ✓ —— **否则会出现"加了吸附却没有东西可吸"** ✗；
+3. **`snap` 开关要么真正决定量化单位、要么删掉** ✓：**它今天只是传给刻度尺的一个标签**
+   （`snapLabel={snapOn ? snap : undefined}`，`ArrangementViewV2.tsx:930`）⇒ **与 `20664ac` 同一类问题（控件不许骗人）** ✓。
+
+**⇒ 已把该更正要求发给第四份调研线，折进它**同一次推送**（连同 Postscript）** ✓。
