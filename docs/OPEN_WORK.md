@@ -1902,3 +1902,37 @@ Part 2 Priority 2 计划 ≈0.89 GB
 **`808_snare`／`clap`／`rimshot`／`reggae_rim`／`closed_hat`／`rim_shaker`**——**都是**声学鼓名**** ⇒ **正印证它自己的注释**：**"它们在这里保有一行，是因为这张表**分类的是名字**，而 `acoustic_kick` 这种名字**自己说不出是哪件鼓** ⇒ **由 lane 的 role 决定**"** ✓✓。
 
 **⚠️ 方法（该文件七个表、四种形状 ⇒ 各用各的数法 ✓）**：**对象数组数"条目"✓；行内 `string[]` 解括号 ✓；多行 `string[]` **数引号串（不是数行 ✗）**✓；展开联合体**无字面条目**✓**——**⇒ 而形状不识别就**不发布数字**** ✓✓。
+
+## 五十五、**新鼓轨起始内容** ＋ **Part 2 的 Priority 2 买完**（2026-10-02 ✓，**两笔我都自验：5 文件 87/87 绿 ✓✓**）
+
+### 55.1 ✅ 新鼓轨不再"四个 60"（`58b5ee6` ✓，CI `37051947558` success ✓）
+
+```
+改前基线在 detached worktree `33a84aa` 上**实测**（不是推断 ✓）：
+  新鼓轨：**`0:60 1:60 2:60 3:60` → `0:36 0.5:42 1:38 1.5:42 2:36 2.5:42 3:38 3.5:42`**（kick 36／snare 38／hat 42 ✓✓）
+  谱面说明：**1 条"note 60 未在表里" → `[]`** ✓✓
+  v1 投影普查（159 个带鼓 genre、2825 个鼓音）：**`0×2825`（全 pitch 0 ＋ 1 条说明）→ `36×530／38×340／42×1548／82×407`，说明 `[]`** ✓✓
+```
+* **⭐ 它更正了上一笔的猜测** ✓✓：**`Math.max(1,…)` 是**velocity** 地板、不是 pitch ⇒ **pitch 实测落 **0****（**本会话第三次更正一个猜测 ✓**）；
+* **`noteForRole()` 拿不到号就 **throw**、不静默回 60** ✓✓；**四条创建路径（`createArrangement`／模板／`starterNotesFor`／`addTrack`）共用一个 `starterNotes()`** ✓；**`projectedDrumPitch()` 对无号 role 返回**一句话**而不是 0** ✓；
+* **判据可红的证明** ✓✓：**换回 `steps(4)`、去掉 import fallback ⇒ 4 条判据**立刻红**，复原后全绿**；
+* **反向** ✓✓：**`synth`／`sampler` 的起始内容严格 `toEqual` 原来那四个音**；
+* **§28** ✓✓：**Ableton 的新 MIDI clip 是**空的**（"Insert Empty MIDI Clip(s)"）／FL 的 16 步默认**全关**、"Generate steps" 是**主动触发****；**Logic 的 Drummer 页只证存在、正文未抓到 ⇒ 写"具体句子未核实"** ✓；**取舍有据**：**两家有逐字出处的 DAW 只给"空"或"一段真型"，而本仓既定决策是"空轨像坏引擎" ⇒ 取后者精神，用 kit 自己的 GM 词汇写一段可编辑真鼓型** ✓✓。
+
+### 55.2 ✅ Part 2 的 **Priority 2 买完**（`0e59407` ✓，CI `37052483629` success ✓）
+
+```
+本段 **+519 文件 / 889 816 864 B（848.60 MiB）** ⇒ **5 GB 累计 **2.743 GB（54.86%）**、剩 **2.257 GB**** ✓✓（桶与清单逐字节相符 ✓）
+`vsco2ce`：**1378 → 1897 文件、43 → 60 程序** ✓
+```
+* **⭐ 两条省钱的量化** ✓✓：**`GM-StylePerc`／`TubularBells` 的采样在 `Percussion/` **根下**，而该目录 329 文件／305.67 MiB 里 **79 个（49.49 MiB，含 `temp/`）无任何被买程序引用** ⇒ **`paths` 只列那 188 个根级文件各自一条、把 `temp/` 挡在外面**；**而 `TimpaniRolls` **零新字节**（Part 1 已随目录上传 ✓）**；
+* **⭐⭐ 而一条判据按自己的预言变红** ✓✓：**`orchestralCoverage.test.ts` 原话 "the day `TimpaniRolls.sfz` is mirrored this roster goes red and has to claim it"** ⇒ **它真红了 ⇒ 补上 `vsco2ce:TimpaniRolls`，`Orchestral` 91 → **108**，`Harp` 成为唯一还没有 articulation 的行** ✓✓；
+* **唯一的映射改动，且边界写明** ✓✓：**`non-vibrato` 终于有行了**（`contrabass_solo_non_vibrato` → `vsco2ce:ContrabassSusNV`，28 region、24–60、两层、**最长 **18.195 s** ＝ 全镜像最长持续弦乐采样**）——**⚠️ 而它是**低音提琴专属**、规则在同音域先取 sustain/quiet ⇒ **靠名字到达，`chooseTechnique` 不会选中**，这句写进了行 `note` 与规则 `why`** ✓✓；
+* **其余 14 个程序**不加按名字映射**，理由好 ✓：**钢琴／管风琴／马林巴／钟琴／鼓轨各自已有"就是那件乐器"的录音 ⇒ 价值在**目录广度**** ✓；
+* **opcode 沿用** ✓：**60/60 程序、1935 region，未实现仍是**同样 7 条**、无 "used but not in needs"**；**真读回 31/31 HEAD 200 ＋ content-length 相符 ＋ 7/7 sha256**（**含 2.2 MB 钢琴／7.4 MB 管钟／低音提琴 SusNV** ✓✓）；**`check:mcp` 123/0 ＋ `check:gs1` ＋ 受影响 vitest 全绿（rebase 后重跑 ✓）**。
+
+### 55.3 ⭐ 我那条采购判据**被它自己核实了** ✓✓
+
+**它自己量的（不是信我 ✓）**：**60/60 个 VSCO 程序无 `loop_mode`／`loop_start`／`loop_end`**；**又按组抽查 12 个新 WAV 逐个搜 `smpl` 块 —— 全部没有** ⇒ **"接不上是**数据所限**、不改代码"** ✓；
+**⭐ 而下一批有一个**有转接** ✓✓：**`sfzinstruments/karoryfer-bigcat.cello`（CC0-1.0，计划书列 138.7 MiB）的 `Programs/vc_arco_sus_legato_map.sfz` 里有 **17 处 `trigger=legato`**——**那是"接过去换成新音高自己音色"的那一档**；**⚠️ 而本仓解析器**不读 `trigger`**（`freepats-button-accordion-hn` 的 `needs` 里已记着它）⇒ **若买，它会把"解析器要读 `trigger=legato`"写进条目 `needs` ＋ 回报，并说明那是**另一格的活**，不在这条采购线里顺手做** ✓✓；
+**⇒ 判据已采纳** ✓：**同类里把"有无循环点／转接采样"与字节、许可、真伪**并列**；**Priority 2 顺序不变（已买完 ✓）**。
