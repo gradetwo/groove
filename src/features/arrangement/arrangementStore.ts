@@ -233,7 +233,18 @@ export function useArrangementV2Project(): UseArrangementV2ProjectResult {
     if (timerRef.current !== null) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       timerRef.current = null;
-      writeRef.current(next);
+      /**
+       * ⭐ **The write reads the project as it is when the timer fires, not as it was when the report was made.**
+       *
+       * A debounce that closes over the value it was scheduled with can, when two reports arrive within the window and
+       * the timers interleave with a cancel, end up storing the older arrangement — the same class of defect the write
+       * queue in `projectDb` records, and the one a real browser run measured as "two added tracks on screen, one track
+       * in storage". Reading the newest value here makes the last write the newest by construction, whichever timer
+       * happens to run.
+       */
+      const latest = projectRef.current;
+      if (latest === null) return;
+      writeRef.current(latest);
     }, AUTOSAVE_DEBOUNCE_MS);
   }, []);
 

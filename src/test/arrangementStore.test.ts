@@ -168,4 +168,32 @@ describe("the v2 arrangement's own store", () => {
     expect(isArrangementProjectId(null)).toBe(false);
     expect(isArrangementProjectId(createBlankProject(sampleGenre, "Anything").id)).toBe(false);
   });
+
+  /**
+   * ⭐ **The last save is the one that is stored, even when two are in flight at once.**
+   *
+   * This is the criterion for a defect a real browser found: `saveArrangementProject` awaits opening the database
+   * before it can write, and on a fresh profile that open *creates* the database, so two calls made milliseconds apart
+   * can reach the store in the opposite order and the older arrangement lands last. The measurement was two added
+   * tracks disappearing behind the one-track project that was created first. A promise chain fixes it, and this is the
+   * invariant that chain exists for — asserted without awaiting the first call, which is the shape that raced.
+   */
+  it("⭐ keeps the last write when two saves are in flight together", async () => {
+    const created = await saveArrangementProject({ fresh: true, name: "Racing", arrangement: sampleArrangement() });
+    const older = saveArrangementProject({ id: created.id, name: "Racing", arrangement: { ...sampleArrangement(), bars: 1 } });
+    const newer = saveArrangementProject({ id: created.id, name: "Racing", arrangement: { ...sampleArrangement(), bars: 99 } });
+    await Promise.all([older, newer]);
+
+    const read = await getArrangementProject(created.id);
+    expect(read?.arrangement.bars).toBe(99);
+  });
+
+  it("gives a brand-new project its own id rather than taking over the pointer's", async () => {
+    const first = await saveArrangementProject({ fresh: true, name: "One", arrangement: sampleArrangement() });
+    const second = await saveArrangementProject({ fresh: true, name: "Two", arrangement: sampleArrangement() });
+    // ⭐ "New" has to be new: reusing the pointer's id would make starting a second project silently overwrite the first.
+    expect(second.id).not.toBe(first.id);
+    expect(await getArrangementProject(first.id)).not.toBeNull();
+    expect(getSavedArrangementProject()?.id).toBe(second.id);
+  });
 });

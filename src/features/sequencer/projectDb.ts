@@ -799,6 +799,13 @@ const arrangementMemoryStore = new Map<string, ArrangementProjectRecord>();
 /** ⭐ `hasSavedArrangement` must answer before any transaction resolves, so the id of the last save is kept here too. */
 let lastArrangementId: string | null = null;
 
+/**
+ * ⭐ **The queue every arrangement write goes through** — one link per call, in call order, so a later save can never be
+ * overwritten by an earlier one that merely finished later. See `saveArrangementProject` for the measurement that
+ * required it.
+ */
+let arrangementWriteChain: Promise<void> = Promise.resolve();
+
 /** The largest arrangement this build will write. See `saveArrangementProject` for why there is a number at all. */
 export const ARRANGEMENT_SAVE_MAX_BYTES = 8 * 1024 * 1024;
 
@@ -1109,17 +1116,38 @@ export async function saveArrangementProject(input: {
   lastArrangementId = record.id;
   setSavedArrangementProject({ id: record.id, name: record.name });
 
-  try {
-    const db = await openProjectsDb();
-    await runStoreTx(db, GROOVE_ARRANGEMENT_STORE_NAME, "readwrite", (store) => store.put(record));
-  } catch (err) {
-    if (!isIndexedDbUnavailable(err)) {
-      // Quota exceeded / aborted transaction: the write did NOT happen, and saying so is the whole point of F-07.
+  /**
+   * ⭐ **Writes are queued, so the last call to this function is the last write.**
+   *
+   * This is not tidiness; it is a measured defect. `saveArrangementProject` awaits `openProjectsDb()` before it can
+   * start its transaction, and on a fresh profile that open *creates the database* — a slow operation that everything
+   * else queues behind. Two calls arriving close together (the chooser's Create and the first debounced report, or a
+   * report and a `pagehide` flush) can therefore reach `store.put` in the **opposite order to the one they were made
+   * in**, and the older arrangement lands last: a real browser run added two tracks, waited for them to be stored,
+   * looked again and found the one-track project back.
+   *
+   * A promise chain makes "later call wins" true by construction rather than by hoping the two paths resolve in order.
+   * The pointer above is still written synchronously, so the top bar and the route are never waiting on this queue.
+   */
+  const write = arrangementWriteChain.then(async () => {
+    try {
+      const db = await openProjectsDb();
+      await runStoreTx(db, GROOVE_ARRANGEMENT_STORE_NAME, "readwrite", (store) => store.put(record));
+    } catch (err) {
+      if (!isIndexedDbUnavailable(err)) {
+        // Quota exceeded / aborted transaction: the write did NOT happen, and saying so is the whole point of F-07.
+        markDegraded(err);
+        throw err instanceof Error ? err : new Error(String(err));
+      }
       markDegraded(err);
-      throw err instanceof Error ? err : new Error(String(err));
     }
-    markDegraded(err);
-  }
+  });
+  // The chain must not carry a failure forward, or one refused write would block every later one for the page's life.
+  arrangementWriteChain = write.then(
+    () => undefined,
+    () => undefined
+  );
+  await write;
 
   // The mirror is written either way, so a restricted sandbox still has the arrangement for this page's lifetime.
   arrangementMemoryStore.set(record.id, record);
