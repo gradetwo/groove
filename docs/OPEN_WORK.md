@@ -2655,3 +2655,24 @@ Bass 3 ｜ Guitar 3 ｜ **Orchestral 3** ｜ **Acoustic Piano 2** ｜ **Organ 2*
 **⇒ 这量化了"目录广度"今天买到的东西**：**代理能用、人不能**；**也说明 §83.3 那 4 处替换是**今天唯一
 能让这 17 个库进入**人的 UI** 的动作**** ✓✓。
 **决定人：我** ；**依据**：先量后改 ✓；**何时回来**：**§83.4 那条线落地后复核**（**它改的就是"人能看到什么"** ✓）。
+
+## 八十五、✗✓ **更正 §83.3 的候选短名单**：我错了一半（2026-10-03 ✓，**由读改前 `because` 得到**）
+
+**我先把那几行的**改前原文**读出来**，结果**推翻了自己一半的候选** ✓✓：
+
+| 名字 | 那一行的**原话** | 我原先的判断 | ⇒ 正确判断 |
+| --- | --- | --- | --- |
+| `rhodes_ep` | 「`rhodes_ep` is a **Fender Rhodes** electric piano, and `jRhodes3c` is a **recorded 1977 Rhodes Mark I Stage 73**」 | 换 `gregsullivan-e-pianos` | ❌ **不换**：**CP80 ≠ Rhodes** ⇒ **换它是错答案** |
+| `finger_bass` | 「a **fingerstyle electric bass**」 | 换 `dsmolken-double-bass` | ❌ **不换**：**低音提琴 ≠ 电贝司** |
+| `pick_bass` | 「an **electric bass** played with a **pick**」 | 同上 | ❌ **不换**：同上 |
+| `flute_lead` | 「a concert flute, **sustained**; … **with the vibrato a lead line wants**」 | 换 `ixox-flute` | ⚠️ **只在它真提供那件事时才换**，否则保持 |
+| `sax_lead` | 「tenor saxophone is the horn that line is **normally written for**」（并提到该库另有 Soprano 变体"会是更小更亮的答案"） | 换 `mtg-solo-sax` | ⚠️ **只在新库提供 **tenor** 时才换** |
+| `walking_upright` | 「a walking line is **plucked**: Meatbass's `pizz` … (`arco` would be bowed)」 | 换 `dsmolken-double-bass` | ⚠️ **只在低音提琴真有 **pizz** 时才换** |
+| `strings_lead` | 「the string ensemble … a **violin section** sustained with vibrato」 | 不换 | ✅ 不换（**独奏大提琴 ≠ 弦乐群**）|
+| `vibraphone`／`marimba_lead` | 「**The name is the instrument.**」 | 不换 | ✅ 不换 |
+| `bell_lead` | ⚠️「**A judgement about a neighbour, said out loud.** `bell_lead` means a **synthesiser bell patch**; VCSL's Tubular Bells 1 is a real orchestral instrument … **not that patch**」 | 不换 | ✅ 不换（**钢鼓更不是**）——**而这一行是本仓**诚实写法的样板**** ✓✓ |
+
+**⇒ 教训（重）** ✓✓：**提"换"之前，必须先读那一行的 `because`** ⇒ **否则就会拿**不同乐器**去顶替，
+而那正是这张表的既定纪律要防的错** ——「**a wrong instrument is worse than a synthesiser: it is a claim about a
+composer's music that nobody made.**」✓✓
+**⇒ 已把该更正发给第三条线** ✓；**并把"通用规则"写进它的要求**：**新库若与名字不是同一件乐器，就不是候选** ✓。
