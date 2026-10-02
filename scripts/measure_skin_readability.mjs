@@ -26,7 +26,7 @@
  * ## Running it
  *
  *   node scripts/measure_skin_readability.mjs              # sampled: 3 skins × 5 views (the gate)
- *   node scripts/measure_skin_readability.mjs --full       # all 6 skins × 12 views (manual CI)
+ *   node scripts/measure_skin_readability.mjs --full       # all 6 skins × 14 views (manual CI)
  *   node scripts/measure_skin_readability.mjs --dist <dir> # measure a specific build
  *   node scripts/measure_skin_readability.mjs --json
  *
@@ -52,7 +52,7 @@ const FULL = flag("--full");
 /**
  * `--report` prints the same table and never fails.
  *
- * The full sweep (6 skins x 12 views) is a *diagnostic*, not a push gate: it is where the work items come from
+ * The full sweep (6 skins x 14 views) is a *diagnostic*, not a push gate: it is where the work items come from
  * — its first run showed the pixel skin with 227 low-contrast elements on the compare view alone, which is a
  * character sheet to fix rather than a regression to block a merge on. The gate is the sampled sweep inside
  * `verify`, whose budgets are a ratchet that can only go down.
@@ -61,7 +61,7 @@ const REPORT_ONLY = flag("--report");
 /**
  * `--only=<view>` and `--skins=<a,b>` narrow the sweep, which is what iterating on one page needs.
  *
- * The full sweep is thirteen views across six skins and takes a quarter of an hour. The arrangement was added to it, and the first thing worth doing with a newly covered view is measuring **it**, repeatedly, while fixing it — a tool that can only run as a whole is a tool that gets run once.
+ * The full sweep is fourteen views across six skins and takes a quarter of an hour. The arrangement was added to it, and the first thing worth doing with a newly covered view is measuring **it**, repeatedly, while fixing it — a tool that can only run as a whole is a tool that gets run once.
  */
 const ONLY_VIEW = argValue("--only", "");
 const ONLY_SKINS = argValue("--skins", "");
@@ -117,6 +117,29 @@ const DESKTOP_VIEWS = [
    * It shipped as its own page (`/new`) and the audit's view list still held the six old studio tabs, so "a sheet of white in the light skins" — the owner's words, with a screenshot — could not have been caught by anything here. The view list is the coverage, and a page that is not in it is a page nobody measured.
    */
   { name: "arrangement", url: "/new", waitFor: "[data-testid='track-list-add']" },
+  /**
+   * ⭐ **The editor the `arrangement` view never reached.**
+   *
+   * `/new` is the *picker*: `ArrangementViewV2` returns `NewProjectPanelV2` until a template is committed, so the
+   * view above measures four cards and a Create button — 32 text elements — and stops one click short of the
+   * arrangement. Every painted surface the owner reported as wrong (the piano keyboard's bed, the roll, the ruler,
+   * the region strips, the track headers) lives on this side of that click, so "the arrangement reads in the light
+   * skins" was an unfalsifiable claim: nothing here had ever been on screen.
+   *
+   * The steps are deliberately *user* steps — the blank card, Create, then `+ sampler` — because the audit's job
+   * is to measure what a person sees after doing what a person does. `+ sampler` both adds and selects the track
+   * (see `onAddTrack`), which is what mounts the keyboard and the roll.
+   */
+  {
+    name: "arrangement-editor",
+    url: "/new",
+    steps: [
+      { click: "[data-testid='template-blank']" },
+      { click: "[data-testid='new-project-create']" },
+      { click: "[data-testid='track-list-add'] button:nth-child(1)" },
+    ],
+    waitFor: "[data-testid='arrangement-keyboard']",
+  },
 ];
 const PHONE_VIEWS = [
   { name: "phone-home", url: "/m/home", waitFor: "[data-testid^='mobile-genre-row-']" },
@@ -413,6 +436,18 @@ async function main() {
 
         try {
           await page.goto(`${base}${view.url}`, { waitUntil: "domcontentloaded" });
+          /**
+           * ⭐ **A view can name the clicks that get it on screen, and one has to.**
+           *
+           * `waitFor` alone can only describe a page that is already there when the URL loads. The arrangement
+           * editor is three interactions in, so without this the view list can only ever hold entry screens — and
+           * an entry screen is where a surface's bugs are *not*, which is exactly how the light-skin arrangement
+           * went unmeasured. A step that cannot be clicked throws and is reported as this view's console error,
+           * rather than silently measuring the page before it.
+           */
+          for (const step of view.steps ?? []) {
+            await page.click(step.click, { timeout: 15000 });
+          }
           await page.waitForSelector(view.waitFor, { timeout: 30000 }).catch(() => {});
           await page.waitForTimeout(1400);
           const audit = await page.evaluate(AUDIT);
@@ -420,7 +455,20 @@ async function main() {
         } catch (error) {
           results.push({ skin, view: view.name, errors: [...consoleErrors, String(error).slice(0, 160)], failures: [], checked: 0, clipped: [] });
         }
-        await context.close();
+        /**
+         * ⭐ **Every view's context is torn down inside a guard of its own, so one dead browser is one red row.**
+         *
+         * `context.close()` sat outside the `try`, so a chromium that had already died threw out of `main` and took
+         * the *whole* sweep with it: a full run (six skins × fourteen views, a quarter of an hour) printed no table
+         * and no count, which is indistinguishable from "everything passed" to anyone reading a log — and a
+         * diagnostic that can silently produce nothing is one that stops being run. The teardown failure is
+         * recorded against its own view instead, which is what the view's console-error column is for.
+         */
+        try {
+          await context.close();
+        } catch (error) {
+          results.push({ skin, view: view.name, errors: [...consoleErrors, `teardown: ${String(error).slice(0, 140)}`], failures: [], checked: 0, clipped: [] });
+        }
       }
     }
   }

@@ -245,6 +245,13 @@ export const ArrangementPanel: React.FC<ArrangementPanelProps> = ({
       aria-label={t("arrangement_title")}
       tabIndex={-1}
       onKeyDown={onPanelKeyDown}
+      /**
+       * The backdrop stays a literal black: a scrim's job is to darken whatever is behind the dialog, so it must
+       * not follow the skin to the point of becoming a light plate. The two *chips inside* the panel used to be
+       * `bg-black/30` and `bg-black/20` for the same reason and were wrong — they sit on a themed plate, and on
+       * the light skins they were grey smudges under dark ink. They are `--d-panel2` now, which is the plate's own
+       * darker step.
+       */
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fadeIn focus:outline-none"
     >
       <div className="flex h-full w-full max-w-6xl flex-col overflow-hidden rounded-xl border border-line bg-panel shadow-2xl">
@@ -389,7 +396,7 @@ export const ArrangementPanel: React.FC<ArrangementPanelProps> = ({
                         <span className="truncate font-['JetBrains_Mono'] text-[11px] font-bold">
                           {regionName(region)}
                         </span>
-                        <span className="shrink-0 rounded bg-black/30 px-1 font-['JetBrains_Mono'] text-[10px]">
+                        <span className="shrink-0 rounded bg-panel2/60 px-1 font-['JetBrains_Mono'] text-[10px]">
                           {region.section.slot}
                         </span>
                         <span className="shrink-0 font-['JetBrains_Mono'] text-[10px] text-text-dim">
@@ -427,7 +434,7 @@ export const ArrangementPanel: React.FC<ArrangementPanelProps> = ({
                         onPointerUp={endDrag}
                         onPointerCancel={endDrag}
                         style={{ height: ARRANGEMENT_RESIZE_BAND_HEIGHT }}
-                        className="flex shrink-0 cursor-ew-resize touch-none items-center justify-center gap-0.5 border-t border-line/60 bg-black/20"
+                        className="flex shrink-0 cursor-ew-resize touch-none items-center justify-center gap-0.5 border-t border-line/60 bg-panel2/40"
                       >
                         <span className="h-3 w-0.5 rounded bg-text-dim" />
                         <span className="h-3 w-0.5 rounded bg-text-dim" />

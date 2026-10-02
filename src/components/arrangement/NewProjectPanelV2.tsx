@@ -105,7 +105,7 @@ export function NewProjectPanelV2({ onCreate }: NewProjectPanelV2Props) {
             word Create disappears. `--d-on-accent` is what that token means — the ink that goes on a fill —
             and it is near-black there. The degenerate pair is a palette problem, recorded rather than guessed
             at here. */}
-        <button type="button" className="px-4 py-2 rounded bg-[rgb(var(--d-accent))] text-[rgb(var(--d-on-accent))] font-medium" onClick={() => onCreate(selected === "blank" ? undefined : selected, blankKind)}>
+        <button type="button" data-testid="new-project-create" className="px-4 py-2 rounded bg-[rgb(var(--d-accent))] text-[rgb(var(--d-on-accent))] font-medium" onClick={() => onCreate(selected === "blank" ? undefined : selected, blankKind)}>
           Create
         </button>
       </footer>

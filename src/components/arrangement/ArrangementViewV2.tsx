@@ -368,7 +368,16 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
                 data-testid={`arrangement-editor-${value}`}
                 aria-selected={editor === value}
                 onClick={() => setEditor(value)}
-                className={`h-11 rounded px-3 text-xs ${editor === value ? "bg-[rgb(var(--d-accent))] text-[rgb(var(--d-accent-ink))]" : "text-text opacity-70"}`}
+                /**
+                 * ⭐ **The selected tab's ink is `--d-on-accent`, not `--d-accent-ink`.**
+                 *
+                 * The same degenerate palette pair `NewProjectPanelV2`'s Create button already documents: in five of
+                 * the six skins `--d-accent-ink` *is* `--d-accent`, so an accent-ink label on an accent fill measured
+                 * **1:1** — the word "Piano Roll" was invisible on default, soviet and pixel and 1.17:1 on minimal.
+                 * `--d-on-accent` is the token that means "the ink that goes on a fill", and it clears 4.5:1 against
+                 * the accent on every skin (5.57 minimal, 5.67 comic, 11.92 soviet, 5.64 sovietYears, 11.82 pixel).
+                 */
+                className={`h-11 rounded px-3 text-xs ${editor === value ? "bg-[rgb(var(--d-accent))] text-[rgb(var(--d-on-accent))]" : "text-text opacity-70"}`}
               >
                 {value === "roll" ? t("view_piano_roll") : t("view_score")}
               </button>

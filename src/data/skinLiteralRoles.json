@@ -12,7 +12,14 @@
     "as solid ink, because on newsprint a dark plate *is* ink). Both sheets are cut with the phone shell",
     "(`docs/OPEN_WORK.md` §十三), so nothing can deviate any more and the list is empty. The reasons they carried",
     "are in the `mobile-preserved` branch and in the commits that removed them; an empty list here is the honest",
-    "state, not a lost decision."
+    "state, not a lost decision.",
+    "",
+    "`#e0e2e8` is written down as a surface rather than left to the generator's nearest-role tiebreak. It is the",
+    "bottom stop of the *white piano key* (`bg-gradient-to-b from-white to-[#e0e2e8]`, in the arrangement's keyboard",
+    "and in `MusicalTypingModal`), so its job is 'the pale plate a key is', and the tiebreak had called it",
+    "`trackFx` — a signal colour. On the comic skin that put the key's near-black glyph on",
+    "`rgb(107 98 92)` at **3.4:1**, measured by `probe:skins:full`; as `surfacePale2` the same glyph reads at",
+    "9.6–20.3:1 on all six skins. A key is an object, not a track's colour."
   ],
   "roles": [
     "bg",
@@ -71,6 +78,7 @@
     "#8e93a0": "ink3",
     "#f3f1eb": "surfacePale",
     "#e2dfd5": "surfacePale2",
+    "#e0e2e8": "surfacePale2",
     "#f5b73d": "accent",
     "#d8b988": "accentSoft",
     "#f59e0b": "warning",

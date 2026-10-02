@@ -113,6 +113,17 @@ export function ArrangementKeyboardV2({ baseMidi = 60, onNoteOn, onNoteOff, velo
         </label>
       </div>
       <div className="relative h-20 select-none rounded bg-[#0c0e12]" style={{ width: "100%" }}>
+        {/*
+          The white keys are white in every skin — a piano key is the object, not a theme surface — so the two
+          gradient literals below are deliberate, and both are mapped by the generated literal table rather than
+          removed. **The key's ink is not**, and this is the bit that was wrong: it named a literal grey ink, and
+          the generated map sends that hex to a colour chosen for *accent floods* (the on-accent token), which is
+          near-white on the three light skins. Black-on-black was the old dark skin's reading; on paper it was
+          #f0f0f0 on #ffffff, **1.14:1**, measured by `probe:skins:full` on minimal, comic and sovietYears.
+          `--d-ink-on-pale` is the token that means "ink on a light plate", which is exactly what a white key is:
+          it is 6 6 6 on every skin and 21:1 here. The pressed key keeps the on-accent token, because a pressed key
+          *is* an accent flood.
+        */}
         <div className="relative flex h-full w-full">
           {WHITE_KEYS.map(({ key, offset }) => {
             const midi = baseMidi + offset;
@@ -129,7 +140,7 @@ export function ArrangementKeyboardV2({ baseMidi = 60, onNoteOn, onNoteOff, velo
                 onPointerLeave={() => release(midi)}
                 style={{ flex: "1 0 auto" }}
                 className={`relative flex-1 rounded-b border-r border-[#b0b3ba] text-[9px] font-bold ${
-                  active ? "bg-[rgb(var(--d-accent))] text-black" : "bg-gradient-to-b from-white to-[#e0e2e8] text-[#1c1f26]"
+                  active ? "bg-[rgb(var(--d-accent))] text-[rgb(var(--d-on-accent))]" : "bg-gradient-to-b from-white to-[#e0e2e8] text-[rgb(var(--d-ink-on-pale))]"
                 }`}
               >
                 <span className="font-['JetBrains_Mono']">{midiToNoteName(midi)}</span>

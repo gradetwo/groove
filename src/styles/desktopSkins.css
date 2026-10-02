@@ -704,6 +704,7 @@
 [class~="text-[#8e93a0]"] { color: rgb(var(--d-ink-3)); }
 [class~="bg-[#f3f1eb]"] { background-color: rgb(var(--d-surface-pale)); }
 [class~="bg-[#e2dfd5]"] { background-color: rgb(var(--d-surface-pale-2)); }
+[class~="to-[#e0e2e8]"] { --tw-gradient-to: rgb(var(--d-surface-pale-2)); }
 [class~="focus-visible:ring-[#f5b73d]/50"]:focus-visible { --tw-ring-color: rgb(var(--d-accent) / 0.50); }
 [class~="focus:border-[#f5b73d]"]:focus { border-color: rgb(var(--d-accent)); }
 .group:hover [class~="group-hover:text-[#f5b73d]"] { color: rgb(var(--d-accent-ink)); }
@@ -847,7 +848,6 @@
 [class~="to-[#0a0c12]"] { --tw-gradient-to: rgb(var(--d-panel2)); }
 [class~="bg-[#0c0e12]"] { background-color: rgb(var(--d-panel2)); }
 [class~="border-[#b0b3ba]"] { border-color: rgb(var(--d-track-fx)); }
-[class~="to-[#e0e2e8]"] { --tw-gradient-to: rgb(var(--d-track-fx)); }
 [class~="bg-[#0e1117]"] { background-color: rgb(var(--d-panel)); }
 [class~="bg-[#e5a93c]"] { background-color: rgb(var(--d-accent)); }
 [class~="hover:bg-[#e84855]"]:hover { background-color: rgb(var(--d-danger)); }

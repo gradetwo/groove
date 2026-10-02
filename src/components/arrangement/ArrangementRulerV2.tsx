@@ -108,7 +108,16 @@ export function ArrangementRulerV2({ bars, currentBar, onSelectBar, pixelsPerBar
         <span
           data-testid="arrangement-ruler-snap-value"
           className="pointer-events-none sticky right-1 ml-auto shrink-0 self-start rounded px-1 font-['JetBrains_Mono'] text-[10px] text-text opacity-80"
-          style={{ background: "var(--d-surface, rgba(0,0,0,0.5))" }}
+          /**
+           * ⭐ **A dark literal under a token, which is a dark surface whenever the fallback is the value.**
+           *
+           * This chip floats over the ruler, so it needs a plate of its own; it read
+           * `var(--d-surface, rgba(0,0,0,0.5))`, and a fallback is only a fallback while the token is defined —
+           * every skin defines `--d-surface`, so the alpha was either dead weight or, the day a skin dropped the
+           * token, half-transparent black on paper. It now names the plate directly, which is the same colour that
+           * was actually painted and no literal at all.
+           */
+          style={{ backgroundColor: "var(--d-panel2)" }}
         >
           {snapLabel}
         </span>
