@@ -3456,7 +3456,7 @@ iPad 两个目标**都通过**。所以这是一个**基于坐标拖拽的偶发
 预算棘轮、页眉/sheet 的交互断言都在手机档里），但我一直是**手工**跑 `E2E_PROFILE=mobile`。这一轮把它接进 `verify`：
 
 ```
-verify = … && npm run test:e2e && npm run test:e2e:mobile
+verify = … && npm run test:e2e   # 手机目标已于 2026-10-02 砍除，`test:e2e:mobile` 不再存在
 ```
 
 于是每次发版都跑 **3 个桌面引擎 + 4 个手机/平板目标**（iPhone 竖/横、iPad 竖/横）：实测 `verify` 从约 5.5 min

@@ -146,9 +146,8 @@ function useTransportControls({ announceScope }: { announceScope: "full" | "mini
 | 命令 | 跑什么 |
 |---|---|
 | `npm run test:e2e`（`verify` 用的就是这个） | **PC 三个浏览器**（Chromium / Firefox / WebKit） |
-| `npm run test:e2e:all` | 全部 7 个目标（含手机 2 + iPad 2） |
-| `npm run test:e2e:mobile` | 仅手机与 iPad 4 个目标 |
-| `E2E_ONLY=iPhone npm run test:e2e:all` | 单个目标，便于迭代 |
+| `npm run test:e2e:all` | **PC 三个浏览器**（**手机与 iPad 目标已于 2026-10-02 砍除 ✓，见 `docs/OPEN_WORK.md` §十二 ✓**） |
+| `E2E_ONLY=Desktop npm run test:e2e:all` | 单个目标，便于迭代 |
 
 **这不是把手机测试删掉**，而是换一个 profile 跑：矩阵定义（7 个目标与各自断言）**完整保留**，
 并且由红线 **R6c** 守住——一旦有人删掉手机/iPad 目标、或把 `test:e2e:all` 改掉，红线条即失败。
