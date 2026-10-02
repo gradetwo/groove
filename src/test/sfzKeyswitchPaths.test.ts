@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { parseSfz } from "../audio/sfz/parse";
 import { resolveSamplePath } from "../audio/sfz/defaultPath";
 import { resolveInstrumentNote } from "../audio/sfz/instrument";
@@ -24,6 +26,16 @@ import type { SampleAsset } from "../data/sampleCatalogue";
 
 const VSCO_PIN = "6dd651d55dde97fd4028699be9d4481f26917891";
 const VSCO_RAW = `https://raw.githubusercontent.com/schollz/VSCO-2-CE/${VSCO_PIN}/`;
+
+/**
+ * The pinned `CelloEns-KS.sfz`, vendored so the program criterion below needs neither the network nor this machine.
+ *
+ * Resolved from this file's own URL rather than from the process working directory: the criterion this replaces was environment-dependent precisely because it named a path
+ * outside the checkout, and a fixture that only resolves when the suite is started from the project root would be the same defect in a quieter form. The URL is taken apart
+ * by hand rather than with `new URL("./fixtures/…", import.meta.url)`, which Vite rewrites as an *asset* reference and hands back as a dev-server URL — `fileURLToPath` then
+ * refuses it with `The URL must be of scheme file`, which is how this line failed before it was written this way.
+ */
+const CELLO_KS_FIXTURE = join(dirname(fileURLToPath(import.meta.url)), "fixtures", "sfz", "vsco2ce", "CelloEns-KS.sfz");
 
 /**
  * The shape of the upstream keyswitch files, with their real declarations and sample names: the backslashes, the spaces and the missing quotes are what the library writes,
@@ -256,17 +268,45 @@ describe.skipIf(upstream === null)("the upstream keyswitch programs, held agains
       expect(resolved, `${name} resolved no note at all`).toBeGreaterThan(0);
     }
   }, 60_000);
+
+  /**
+   * The vendored copy is only an authority on the pinned library if it **is** the pinned blob, and this is the one place the two can be held against each other. It sits in
+   * the network-gated block on purpose: when the tree cannot be reached the identity cannot be checked, and a check that reports success because it could not look is the
+   * exact defect this file just removed. Offline, the copy is still the fixture — that is what makes the criterion above deterministic — but its provenance is unverified
+   * rather than asserted.
+   */
+  it("holds the vendored CelloEns-KS copy identical to the pinned blob", () => {
+    expect(readFileSync(CELLO_KS_FIXTURE, "utf8")).toBe(upstream!.programs.get("CelloEns-KS.sfz"));
+  });
 });
 
 /**
  * What one keyswitch program measures now: can it be measured at all, and how much of it is already mirrored.
  *
- * The manifest is read from the repository, so this part needs no network. Nothing is downloaded and nothing is mirrored — the question is only whether the program can be
- * resolved and what the answer says about the mirror as it stands.
+ * The program is read from a **copy of the pinned upstream file that lives in this repository** — `src/test/fixtures/sfz/vsco2ce/CelloEns-KS.sfz`, 17250 bytes, sha256
+ * `4baba1fb28016b380fc9136d46df79299963a8077a594766028dd2c7aa42fcce`, byte-identical to the blob at `VSCO_PIN` — so this part needs no network and no file that only some
+ * machines have. The network-gated case above asserts that identity whenever it can reach the pinned tree, so the copy cannot drift from the pin unnoticed.
+ *
+ * **Redistributing it is permitted, and that was measured rather than assumed.** VSCO 2 CE is **CC0 1.0 Universal**: at the pin its own `LICENSE` opens `CC0 1.0 Universal`
+ * and carries the full legal text (6555 bytes, sha256 `36ffd9dc085d529a7e60e1276d73ae5a030b020313e6c5408593a6ae2af39673`), and GitHub's licence detection reports
+ * `CC0-1.0` for the repository. The project's `README.md` records the same two readings in its sample-library table, which is why this file is vendored rather than merely
+ * cited. The **whole** file is vendored rather than a trimmed excerpt because this criterion counts its regions per directory (27/25/52/52 of 156) and asserts 156 distinct
+ * sample names: an excerpt or a hand-written stand-in would be a program the library does not ship, which is the failure mode the fixture at the top of this file exists to
+ * avoid.
+ *
+ * **The defect this replaces, because its shape is the point.** The line here used to be
+ * `upstream?.programs.get("CelloEns-KS.sfz") ?? readFileSync("/tmp/vsco/sfz/CelloEns-KS.sfz", "utf8")`: prefer the fetched program, and **fall back to a path that exists
+ * only on the machine that wrote it**. On the GitHub runner `upstream` was `null`, so `??` took the local path and the criterion died with
+ * `ENOENT: no such file or directory, open '/tmp/vsco/sfz/CelloEns-KS.sfz'` (CI run `36958044302`, commit `2896771`: this file reported 9 tests, 1 failed, 2 skipped — the two
+ * network cases skipped, which is what proves `upstream` was `null` there). **Why** it was `null` is not recoverable from the run: the IIFE returns `null` for a non-ok
+ * response and for a thrown fetch alike, and keeps no record of which, so an unauthenticated `api.github.com` call being rate-limited from a shared runner IP and the runner
+ * having no egress are indistinguishable — the standing candidate is the first, and the swallowed reason is its own smaller defect, left alone here because guessing between
+ * them changes nothing about the fix. What is certain is that the same commit was green on this machine: **not a deterministic red, but a criterion whose colour depended on
+ * which runner it landed on**, and a criterion that reads a file the repository does not hold says nothing about the repository.
  */
 describe("what a keyswitch program measures", () => {
-  it("resolves CelloEns-KS's 156 regions into its own four directories, and finds none of them in the mirror", () => {
-    const source = upstream?.programs.get("CelloEns-KS.sfz") ?? readFileSync("/tmp/vsco/sfz/CelloEns-KS.sfz", "utf8");
+  it("resolves the vendored CelloEns-KS's 156 regions into its own four directories", () => {
+    const source = readFileSync(CELLO_KS_FIXTURE, "utf8");
     const regions = parseSfz(source);
     expect(regions).toHaveLength(156);
     expect(new Set(regions.map((region) => region.defaultPath))).toEqual(
