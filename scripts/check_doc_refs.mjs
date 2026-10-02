@@ -84,10 +84,45 @@ for (const doc of DOCS) {
   for (const ref of result.broken) broken.push({ doc, ...ref });
 }
 
+/**
+ * ⭐ **A document must not name an `npm run` script that does not exist either.**
+ *
+ * This gate verified file paths only, so a document could promise a command that had been deleted while the gate
+ * stayed green — which is what happened when `test:e2e:mobile` was removed and two documents and two script chains
+ * still named it. The chains broke loudly; the documents did not.
+ *
+ * Three exemptions, each measured rather than guessed (`docs/OPEN_WORK.md` §十四):
+ *   · upstream commands — the synth repository's own scripts, quoted into documents about it;
+ *   · historical mentions — prose about what used to exist;
+ *   · placeholders — `npm run X`, because prose about this gate has to be able to write that.
+ */
+const SCRIPTS = new Set(
+  Object.keys(JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8")).scripts ?? {})
+);
+const SCRIPT_REF_RE = /npm run[ \t]+([A-Za-z0-9:_-]+)/g;
+const SCRIPT_EXEMPT = new Map([
+  ["build:wasm", "the synth repository's own script, quoted from what scripts/sync-gs1.mjs prints"],
+  ["test:wasm", "the synth repository's own script, quoted in the upstream plan"],
+  ["verify:worklet-protocol", "the synth repository's own script, quoted in the upstream plan"],
+  ["X", "a placeholder: prose about this gate has to be able to write `npm run X`"],
+]);
+let scriptsChecked = 0;
+for (const doc of DOCS) {
+  const source = fs.readFileSync(path.join(ROOT, doc), "utf8");
+  source.split("\n").forEach((line, index) => {
+    for (const match of line.matchAll(SCRIPT_REF_RE)) {
+      scriptsChecked += 1;
+      const name = match[1];
+      if (SCRIPTS.has(name) || SCRIPT_EXEMPT.has(name)) continue;
+      broken.push({ doc, line: index + 1, rel: `npm run ${name} (not a script in package.json)`, looksPlanned: false });
+    }
+  });
+}
+
 console.log("===============================================================");
 console.log("  \u{1F4C4} DOC REFERENCES \u2014 a claim about a file must be true");
 console.log("===============================================================");
-console.log(`${DOCS.length} document(s), ${checked} file reference(s) checked\n`);
+console.log(`${DOCS.length} document(s), ${checked} file reference(s) and ${scriptsChecked} npm-run reference(s) checked\n`);
 
 if (declared.length) {
   console.log(`\u2139\uFE0F  ${declared.length} reference(s) declared unbuilt in PROPOSED \u2014 not failures:`);
@@ -98,7 +133,7 @@ if (declared.length) {
 if (broken.length === 0) {
   console.log("\u2705 Every file the docs claim exists does exist.");
 } else {
-  console.log(`\u274C ${broken.length} reference(s) name a file that does not exist:`);
+  console.log(`\u274C ${broken.length} reference(s) name something that does not exist:`);
   for (const b of broken) {
     const hint = b.looksPlanned ? "  (the line reads as a plan \u2014 declare it in PROPOSED if so)" : "";
     console.log(`   ${b.doc}:${b.line}  ${b.rel}${hint}`);
