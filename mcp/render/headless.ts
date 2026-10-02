@@ -7,9 +7,11 @@
  * `mcp/render/worker.ts` opens with the argument that audio rendering here is genuinely a browser capability, and
  * that a renderer *rewritten* in Node would be a second sound. That argument is about a rewrite, not about a second
  * **host**: `scripts/probe_headless_parity.ts` runs the app's own `renderPatternOffline` under
- * `node-web-audio-api@2.2.0` and measures the two hosts against each other. What they do **not** yet agree on is
- * recorded in `docs/HEADLESS_CORE_PLAN.md` §8.13/§9.2 — three red sentences, 1.03 dB in band 3, 1.04 dB in band 7 and
- * 1.612 LU of loudness — and this module exists to make that gap *available and labelled*, not to hide it.
+ * `node-web-audio-api@2.2.0` and measures the two hosts against each other. This project's own DSP is the same on both;
+ * what remains is each host's **own** nodes, recorded in `docs/HEADLESS_CORE_PLAN.md` §8.13/§9.2 as readings
+ * (1.03 dB in band 3, 1.04 dB in band 7, 1.612 LU of loudness) with each bound set at the ceiling of its reading, the
+ * residual's two halves named, and the plan to remove the half this project owns. This module exists to make that
+ * residual *available and labelled*, not to hide it.
  *
  * ## The one rule this module follows
  *
@@ -31,6 +33,7 @@
 import path from "node:path";
 import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
+import { createFrameProgress } from "./progress";
 import type { SequencerPattern } from "../../src/types/genre";
 import type { OfflineAudioLaneReport } from "../../src/audio/offlineAudioLanes";
 // Types only: `worker.ts` loads this module dynamically, so a value import back would be a cycle.
@@ -201,6 +204,26 @@ export async function renderPatternHeadless(
   const audioCatalogue = catalogueRead.text ? catalogue.catalogueFromManifestText(catalogueRead.text, context.sampleRoot).assets : [];
   const bars = Math.max(1, Math.min(64, options.bars ?? 1));
 
+  /**
+   * **The headless path narrates itself now, in frames rather than in budget milliseconds.**
+   *
+   * It was silent on progress because the reasoning belonged to the page: "there is no page to start or poll". That is
+   * still true — and it is no longer the whole story, because `OfflineAudioContext.suspend` is a real seam inside the
+   * one `startRendering()` call and this host supports it. So the cold start is announced before it is waited on, and
+   * `WavExporter` calls back at each 10% of the render; `createFrameProgress` throttles those to the same
+   * `RENDER_PROGRESS_HEARTBEAT_MS` cadence the page heartbeat uses. `progress` is present only when the caller sent a
+   * `progressToken` (`createRenderProgress` returns nothing otherwise), so a token-less call stays silent by the same
+   * construction as the browser path. The unit is frames and the total is the render's own length: this path is **not**
+   * under `RENDER_BUDGET_MS`, so a budget-denominated progress bar would be a number that means nothing.
+   */
+  const progress = options.progress;
+  const what = `${bars} bar(s) of ${pattern.genre_id ?? "a pattern"}`;
+  progress?.reportOf(0, undefined, `starting the Node Web Audio host — ${what}`);
+  const reportRenderedFrames = createFrameProgress(
+    progress,
+    (frames, total) => `rendering ${what}: ${Math.round((frames / total) * 100)}% (${frames} of ${total} frames rendered)`
+  );
+
   /** The lane report, filled by the renderer rather than re-derived here — the same rule as the page's. */
   let audioLanes: OfflineAudioLaneReport = { lanes: [], events: 0, problems: [] };
   let limiterKind = "fallback";
@@ -235,7 +258,11 @@ export async function renderPatternHeadless(
       renderProblems.push(...problems);
     },
     ...(catalogueRead.problem ? { audioLaneCatalogueProblem: catalogueRead.problem } : {}),
+    // Only the main render reports frames: the per-track solo renders below are separate renders, and their frame
+    // counts would make the progress stream look like it restarted.
+    ...(progress ? { onRenderProgress: reportRenderedFrames } : {}),
   });
+  progress?.reportOf(buffer.length, buffer.length, "render finished; writing the file");
 
   const channels: Float32Array[] = [];
   for (let index = 0; index < buffer.numberOfChannels; index += 1) channels.push(buffer.getChannelData(index));

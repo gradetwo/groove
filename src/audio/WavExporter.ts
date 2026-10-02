@@ -214,6 +214,21 @@ export interface RenderWavOptions {
    */
   onAudioLanes?: (report: OfflineAudioLaneReport) => void;
   /**
+   * **Sample-counted progress, for a host that can be asked where it is inside the render.**
+   *
+   * `startRendering()` is one uninterruptible call — 96-99.9% of a render's wall clock (`docs/RENDER_PROFILE.md`) — so
+   * the page path can only send a heartbeat. `OfflineAudioContext.suspend(t)` is a real seam inside that call, and
+   * `node-web-audio-api` supports it (measured; Chromium does too). With this set, the renderer schedules a suspension
+   * at each 10% of the render and calls back with the frame it reached, which `mcp/render/headless.ts` turns into
+   * `notifications/progress` at the same cadence the page's heartbeat uses.
+   *
+   * Opt-in and off by default, because it is not free: each suspension stops and restarts the render loop. The criterion
+   * beside it is that the samples are **bit-identical** with and without it, and that the wall-clock cost is not visible
+   * (`src/test/mcpHeadlessRender.test.ts`, "progress on the Node Web Audio host"). A host with no `suspend` simply never
+   * calls back — this option cannot change what the render produces.
+   */
+  onRenderProgress?: (renderedFrames: number, totalFrames: number) => void;
+  /**
    * Override the reverb **send** high-pass for this render, in Hz (0 disables it).
    *
    * Diagnostic: the send's low-end shaping is a global choice, so the only honest way to judge it is to render the same genre
@@ -1829,6 +1844,33 @@ async function renderPatternOfflineOnce(
   const busCompressorKind = await graph.busCompressorReady();
   if (timings) timings.meta = { ...(timings.meta ?? {}), busCompressorKind };
   mark("busCompressor:ready");
+
+  /**
+   * **The suspension points, if a caller asked to be told where the render is** (`RenderWavOptions.onRenderProgress`).
+   *
+   * Ten percent apart, coarse on purpose: a suspension is a stop-and-restart of the render loop, and the consumer
+   * throttles the notifications to `RENDER_PROGRESS_HEARTBEAT_MS` anyway. `suspend` resolves when the render reaches
+   * that frame and `resume` continues it. A host that cannot suspend, or a suspension whose render finished first, must
+   * not affect the audio — every failure is swallowed, and the render's own promise still decides the result.
+   */
+  if (options.onRenderProgress && typeof (ctx as { suspend?: unknown }).suspend === "function") {
+    const onProgress = options.onRenderProgress;
+    const suspendable = ctx as { suspend(at: number): Promise<void>; resume(): Promise<void> };
+    for (let point = 1; point <= 9; point += 1) {
+      const frame = Math.floor((lengthInSamples * point) / 10);
+      try {
+        void suspendable
+          .suspend(frame / sampleRate)
+          .then(() => {
+            onProgress(frame, lengthInSamples);
+            return suspendable.resume();
+          })
+          .catch(() => undefined);
+      } catch {
+        // A host that throws on `suspend` has no progress to give; the render still has to run.
+      }
+    }
+  }
 
   timings?.onPhase?.("phase:enter", 0, performance.now() - renderStartedAt);
   const renderWallStart = performance.now();

@@ -20,7 +20,8 @@ import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { HEADLESS_PACKAGE } from "../../mcp/render/headless";
-import { renderAudio } from "../../mcp/render/worker";
+import { renderAudio, renderStems } from "../../mcp/render/worker";
+import { createRenderProgress } from "../../mcp/render/progress";
 import { TOOLS } from "../../mcp/registry";
 import { addMcpNote, addMcpTrack, clearMcpArrangements, createMcpArrangement } from "../../mcp/arrangement";
 import { clearMcpSongs, createMcpSong } from "../../mcp/song";
@@ -360,5 +361,101 @@ describe.skipIf(!headlessInstalled)("render_arrangement_stems on the Node Web Au
       expect(Number.isFinite(Number(stem.truePeakDb))).toBe(true);
       expect(stem.silent).toBe(false);
     }
+  }, 180_000);
+});
+
+/**
+ * **The headless path narrates itself now, and the narration must not change the audio.**
+ *
+ * It was silent on progress because the page-based reason ("there is no page to start or poll") was applied to a host
+ * that does not need a page: `OfflineAudioContext.suspend` is a real seam inside the one `startRendering()` call, and
+ * `node-web-audio-api` supports it. What this holds is the pair of facts that make the change honest — the channel
+ * really speaks in the render's own frames, and **the samples are byte-identical with it on and off**, because a
+ * suspension point stops and restarts the render loop and must not be audible. The cost is printed rather than
+ * asserted from a ratio nobody measured.
+ */
+describe.skipIf(!headlessInstalled)("progress on the Node Web Audio host", () => {
+  let out = "";
+
+  beforeEach(() => {
+    out = mkdtempSync(path.join(os.tmpdir(), "groove-headless-progress-"));
+    process.env.GROOVE_MCP_NO_BROWSER = "1";
+    process.env.GROOVE_MCP_OUT = out;
+  });
+
+  afterEach(() => {
+    rmSync(out, { recursive: true, force: true });
+    delete process.env.GROOVE_MCP_NO_BROWSER;
+    delete process.env.GROOVE_MCP_OUT;
+  });
+
+  it("reports rendered frames at the heartbeat cadence, and renders the same bytes with the channel on", async () => {
+    const sent: Array<{ progress: number; total: number | undefined; message: string }> = [];
+    const reporter = createRenderProgress("tok-frames", (_token, progress, total, message) => {
+      sent.push({ progress, total, message });
+    });
+    expect(reporter, "a token was sent, so a reporter exists").toBeDefined();
+    const base = { format: "wav" as const, bars: 1, sampleRate: 8000, channels: 1 as const, genreId: "headless-progress" };
+
+    const narratedStart = performance.now();
+    const narrated = await renderAudio(pattern, { ...base, headless: true, progress: reporter });
+    const narratedMs = performance.now() - narratedStart;
+
+    const silentStart = performance.now();
+    const silent = await renderAudio(pattern, { ...base, headless: true });
+    const silentMs = performance.now() - silentStart;
+
+    // The channel speaks: a cold-start phase with no total yet, at least one frame count against the render's own
+    // length, then 100% when the samples exist and the file is being written.
+    expect(sent.length, "a token-carrying headless render must not be silent").toBeGreaterThanOrEqual(2);
+    expect(sent[0]?.total, "the cold start does not know the render's length yet").toBeUndefined();
+    const framed = sent.filter((entry) => entry.total !== undefined);
+    expect(framed.length, "the render must report at least one frame count").toBeGreaterThanOrEqual(1);
+    expect(framed.map((entry) => entry.progress)).toEqual([...framed.map((entry) => entry.progress)].sort((a, b) => a - b));
+    expect(sent.at(-1)?.progress, "progress ends at the render's own total, in frames").toBe(sent.at(-1)?.total);
+    expect(sent.at(-1)?.message).toContain("render finished");
+
+    // ⭐ The criterion that makes the suspension points safe to ship.
+    expect(readFileSync(narrated.path).equals(readFileSync(silent.path)), "the progress channel must not change the audio").toBe(true);
+
+    // The cost reading, printed so it is reproducible rather than a ratio nobody measured.
+    console.log(
+      `headless progress cost (1 bar, 8 kHz mono): with channel ${narratedMs.toFixed(0)} ms, without ${silentMs.toFixed(0)} ms`
+    );
+  }, 180_000);
+
+  /**
+   * **A stems call is N renders in one request, and its progress must not restart.**
+   *
+   * The frame counter is monotone **per request**, so a stem that reported its own frames from zero would have every
+   * frame after the first stem silently dropped by the guard — the stream would freeze while the call kept working.
+   * The combined shape is "frames, offset by the frames already rendered, with the track named": this holds the
+   * monotonicity, the per-track label, and the unit (frame totals, not `RENDER_BUDGET_MS`, which this path has no
+   * budget to measure against).
+   */
+  it("counts every stem's frames on one upward stream, with the track named", async () => {
+    const sent: Array<{ progress: number; total: number | undefined; message: string }> = [];
+    const reporter = createRenderProgress("tok-stems", (_token, progress, total, message) => sent.push({ progress, total, message }));
+
+    const result = await renderStems(pattern, {
+      format: "wav",
+      bars: 1,
+      sampleRate: 8000,
+      channels: 1,
+      genreId: "headless-progress",
+      headless: true,
+      progress: reporter,
+    });
+
+    expect(result.engine).toBe("node-web-audio-api");
+    expect(result.stems.length).toBe(pattern.tracks.length);
+    // ⭐ The assertion that fails if the per-stem offset is removed: the second stem's frames would all be dropped.
+    expect(sent.length, "every stem has to speak").toBeGreaterThanOrEqual(pattern.tracks.length);
+    expect(sent.map((entry) => entry.progress)).toEqual([...sent.map((entry) => entry.progress)].sort((a, b) => a - b));
+    // ⭐ The assertion that fails if the label is removed from the wrapper: a client could not tell the stems apart.
+    const tracks = new Set(sent.map((entry) => /track (\d+)\/(\d+)/.exec(entry.message)?.[1]).filter(Boolean));
+    expect(tracks.size, "each stem is named").toBe(pattern.tracks.length);
+    expect(sent.at(-1)?.message).toContain(`track ${pattern.tracks.length}/${pattern.tracks.length}`);
+    expect(sent.every((entry) => entry.total === undefined || entry.total < 1_000_000), "frames, not budget milliseconds").toBe(true);
   }, 180_000);
 });

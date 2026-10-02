@@ -17,12 +17,13 @@ import { TOOLS } from "../../mcp/registry";
 import {
   RENDER_BUDGET_MS,
   NAVIGATION_BUDGET_MS,
+  RENDER_PROGRESS_HEARTBEAT_MS,
   RENDER_BUDGET_TEMPLATE,
   CLIENT_TIMEOUT_CLAUSE,
   renderBudgetSentence,
   renderCostSentence,
 } from "../../mcp/render/budget";
-import { createRenderProgress, runWithProgress } from "../../mcp/render/progress";
+import { createFrameProgress, createRenderProgress, runWithProgress } from "../../mcp/render/progress";
 
 /**
  * A render is a browser, and this file has none.
@@ -339,5 +340,57 @@ describe("the server turns a request's progressToken into notifications", () => 
     } finally {
       renderStub.emit = undefined;
     }
+  });
+});
+
+/**
+ * **The headless host's progress is frames, and it keeps the page's cadence.**
+ *
+ * The Node host can suspend inside the one `startRendering()` call, so unlike the page it has a real unit: frames
+ * rendered out of the render's own frame count. Two things have to hold and both are held here rather than in prose:
+ * the channel cannot run without a token, and it may not be denser than the 15 s heartbeat the browser path already
+ * uses. The clock is injected, so the cadence is judged rather than timed.
+ */
+describe("the frame-counted progress channel the headless host uses", () => {
+  it("emits the first frame, then never faster than the heartbeat, and nothing without a token", () => {
+    const { sent, notify } = recordNotifications();
+    const reporter = createRenderProgress("tok-frames", notify);
+    expect(reporter).toBeDefined();
+    let clock = 1_000;
+    const report = createFrameProgress(reporter, (frames, total) => `rendering ${frames} of ${total} frames`, () => clock);
+
+    report(1_000, 10_000);
+    // One millisecond short of the interval: a second notification here would be the density the page path refuses.
+    clock += RENDER_PROGRESS_HEARTBEAT_MS - 1;
+    report(2_000, 10_000);
+    clock += 1;
+    report(3_000, 10_000);
+
+    expect(sent.map((entry) => entry.progress)).toEqual([1_000, 3_000]);
+    expect(sent.every((entry) => entry.total === 10_000)).toBe(true);
+
+    // The same channel with no token: `createRenderProgress` returned nothing, so there is no reporter to reach.
+    const silent = createFrameProgress(undefined, () => "never sent", () => clock);
+    silent(10_000, 10_000);
+    expect(sent).toHaveLength(2);
+  });
+
+  it("counts frames rather than budget milliseconds, and never sends a total below its progress", () => {
+    const { sent, notify } = recordNotifications();
+    const reporter = createRenderProgress("tok-unit", notify)!;
+
+    // A cold start: the render's length is not known yet, so `total` is omitted rather than faked.
+    reporter.reportOf(0, undefined, "starting the Node Web Audio host");
+    reporter.reportOf(8_000, 8_000, "render finished; writing the file");
+    expect(sent[0]).toEqual({ token: "tok-unit", progress: 0, total: undefined, message: "starting the Node Web Audio host" });
+    expect(sent[1]).toEqual({ token: "tok-unit", progress: 8_000, total: 8_000, message: "render finished; writing the file" });
+
+    // The budget counter is a separate number: the browser path's `report` still measures against RENDER_BUDGET_MS.
+    reporter.report(250, "phase");
+    expect(sent[2]?.total).toBe(RENDER_BUDGET_MS);
+
+    // A total below the progress already reported is an arithmetic error, not a notification MCP would accept.
+    reporter.reportOf(9_000, 8_000, "impossible");
+    expect(sent).toHaveLength(3);
   });
 });

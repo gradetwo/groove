@@ -80,12 +80,17 @@ already runs on this host. `normalize_loudness` was said to be a convergence loo
 unmeasurable — it is one `renderAudio` per pass, so the loop runs on one host and the reply names it. None of the three
 needed a second renderer.
 
-⚠️ **The two hosts are not the same sound yet.** On the parity probe's fixture the Node host differs from the browser
-by 1.03 dB in band 3, 1.04 dB in band 7 and 1.612 LU of loudness; `docs/HEADLESS_CORE_PLAN.md` §8.13 and §9.2 record
-the measurements, the cause that remains (the group bus still runs three host compressors, and the two hosts' own host
-nodes differ from each other) and the plan to converge. This entry exists so the path is available and labelled while
-that work is open — not because the gap is closed. The Node path is also outside the render budget and sends no
-progress notifications: both exist to reset and narrate a browser page, and there is none.
+⚠️ **The two hosts are not the same engine, and the residual is measured rather than hidden.** This project's own DSP is
+the same on both — its limiter, master bus compressor and track-strip compressors are its own worklets on both, and the
+fixture's biquads agree to −0.00 dB. What remains belongs to each host's **own** nodes: on the parity probe's fixture the
+residual is 1.03 dB in band 3, 1.04 dB in band 7 and 1.612 LU of loudness, and each bound is the **ceiling of its own
+reading** rather than a tolerance. `docs/HEADLESS_CORE_PLAN.md` §8.13 and §9.2 record the measurements, the residual's two
+halves (the group bus still runs three host compressors — the removable half; the two hosts' own nodes differ from each
+other — the half no bound can align) and the plan to converge. The Node path is outside the render budget, and on the
+tools that render one file it **does** send progress: the host can suspend inside `startRendering()`, so a `progressToken`
+gets frames rendered out of the render's own frame count, at the same 15 s cadence the page heartbeat uses.
+`render_arrangement_stems` reports the same way **per stem** (`track i/N` in the message, the count never restarting),
+and `normalize_loudness` and `render_instrument_note` send none — a frame is not a budget millisecond.
 
 ## What an agent can do with it
 

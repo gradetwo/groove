@@ -13,7 +13,8 @@
  *    `if (reporter)`, so "no token" and "no notifications" are the same code path rather than a promise.
  * 2. **Progress is monotonic, and the unit is milliseconds of the budget.** `progress` is checked by clients for
  *    non-decreasing values in practice, so the counter is shared between the phase events and the heartbeats and
- *    `notify` ignores an out-of-order call instead of emitting one.
+ *    `notify` ignores an out-of-order call instead of emitting one. The headless host is the one path whose unit is not
+ *    the budget — it counts rendered frames — so `reportOf` carries its own counter and never mixes with `report`.
  */
 import { RENDER_BUDGET_MS, RENDER_PROGRESS_HEARTBEAT_MS } from "./budget";
 
@@ -21,6 +22,16 @@ import { RENDER_BUDGET_MS, RENDER_PROGRESS_HEARTBEAT_MS } from "./budget";
 export interface ProgressReporter {
   /** Announce a phase. `progressMs` is elapsed budget, so a client can draw a bar against `RENDER_BUDGET_MS`. */
   report(progressMs: number, message: string): void;
+  /**
+   * Progress against a **total this render owns**, for the one path the server's budget does not govern.
+   *
+   * The headless host counts the frames it has rendered (`OfflineAudioContext.suspend` in `src/audio/WavExporter.ts`),
+   * so its natural unit is samples and its natural total is the render's own length; reporting those against
+   * `RENDER_BUDGET_MS` would be a number that means nothing. `total` is omitted when the length is not known yet — a
+   * cold start, before a context exists — which MCP allows. It keeps its own monotonic counter, because mixing two
+   * units inside one request would make progress appear to run backwards to a client that checks.
+   */
+  reportOf(progress: number, total: number | undefined, message: string): void;
 }
 
 /**
@@ -41,18 +52,56 @@ export type ProgressSink = (token: string | number, progress: number, total: num
 export function createRenderProgress(token: string | number | undefined, notify: ProgressSink): ProgressReporter | undefined {
   if (token === undefined) return undefined;
   let last = -1;
+  let lastOwn = -1;
+  const send = (progress: number, total: number | undefined, message: string): void => {
+    try {
+      notify(token, progress, total, message);
+    } catch {
+      // The client hung up or the transport is gone; a render must not fail because it could not narrate itself.
+    }
+  };
   return {
     report(progressMs, message) {
       // A decreasing value would be a client's reason to discard the stream; skipping it is cheaper than a guarantee
       // that every caller remembers to count upward.
       if (!Number.isFinite(progressMs) || progressMs <= last) return;
       last = progressMs;
-      try {
-        notify(token, Math.round(progressMs), RENDER_BUDGET_MS, message);
-      } catch {
-        // The client hung up or the transport is gone; a render must not fail because it could not narrate itself.
-      }
+      send(Math.round(progressMs), RENDER_BUDGET_MS, message);
     },
+    reportOf(progress, total, message) {
+      if (!Number.isFinite(progress) || progress <= lastOwn) return;
+      // A total below the progress already reported is a caller's arithmetic error, not a number to send; MCP requires
+      // `total` to be an upper bound on `progress`.
+      if (total !== undefined && (!Number.isFinite(total) || total < progress)) return;
+      lastOwn = progress;
+      send(progress, total, message);
+    },
+  };
+}
+
+/**
+ * **The frame-counted channel, at the same cadence as the page's heartbeat.**
+ *
+ * The headless host has progress the browser path does not: it can suspend at known frames, so it reports *frames
+ * rendered* rather than only "still working". The cadence is still `RENDER_PROGRESS_HEARTBEAT_MS`, because a caller must
+ * not receive one density from one engine and another from the other — and a notification per suspension point would be
+ * reporting the renderer's speed as if it were the client's news. `now` is injected so the cadence is a criterion rather
+ * than a comment (`src/test/budgetHonesty.test.ts`).
+ */
+export function createFrameProgress(
+  reporter: ProgressReporter | undefined,
+  message: (frames: number, total: number) => string,
+  now: () => number = Date.now
+): (frames: number, total: number) => void {
+  let lastAt = Number.NEGATIVE_INFINITY;
+  return (frames, total) => {
+    if (!reporter) return;
+    if (!Number.isFinite(frames) || !Number.isFinite(total) || total <= 0) return;
+    const at = now();
+    if (at - lastAt < RENDER_PROGRESS_HEARTBEAT_MS) return;
+    lastAt = at;
+    const bounded = Math.max(0, Math.min(frames, total));
+    reporter.reportOf(bounded, total, message(bounded, total));
   };
 }
 

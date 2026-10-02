@@ -14,8 +14,8 @@
  * behind it does not get added.
  *
  * **It also holds the one copy of the `headless` parameter's text** (`headlessParameterDescription()`), for the same
- * reason: every render tool that offers the choice now quotes the same three measured host-difference numbers, and a
- * copy per tool would drift.
+ * reason: every render tool that offers the choice now quotes the same three measured host-node residual numbers and the
+ * bound each one sets, and a copy per tool would drift.
  */
 import budget from "./budget.json";
 
@@ -113,23 +113,32 @@ export const PREVIEW_DEFAULT_CLAUSE = "Which is why render_preview_clip defaults
  * `render_preview_clip` run through the same `renderAudio` and gained the same parameter. `normalize_loudness`,
  * `render_instrument_note` and `render_arrangement_stems` followed through the same host — the first through
  * `renderAudio` once per pass, the second through the same loader the Node renderer already builds, the third through
- * the same `stemTrackIdx` argument the page path passes. A copy of the three measured divergence numbers per tool is
- * the drift this file exists to prevent — and the numbers are measurements, which is this module's own admission rule.
+ * the same `stemTrackIdx` argument the page path passes. A copy of the three measured host-node residual readings and the
+ * bound each one sets, per tool, is the drift this file exists to prevent — and the numbers are measurements, which is
+ * this module's own admission rule.
  *
  * What the sentence has to carry, and why each part is not decoration:
  *
  * * **which host, and how to get it** — `node-web-audio-api`, and that it works with the browser forbidden;
- * * **that the two hosts are not the same sound yet** — on the parity probe's own fixture (GS-1 on and off) they
- *   differ by 1.03 dB in band 3, 1.04 dB in band 7 and 1.612 LU of integrated loudness, and the named cause is the
- *   group bus: `drumGlue`, `drumParallel` and `musicGlue` in `src/audio/masterGraph.ts` are still host
- *   `createDynamicsCompressor()` nodes, **and** the two hosts' own host nodes differ from each other. A caller
- *   choosing an engine has to be able to read that **before** choosing, at `tools/list`, without opening a document;
+ * * **what is the same and what is not** — this project's own DSP is the same on both hosts (its limiter, master bus
+ *   compressor and track-strip compressors are its own worklets on both, and the fixture's biquads agree to −0.00 dB),
+ *   while each host's **own** nodes are a different implementation. On the parity probe's own fixture the residual is
+ *   1.03 dB in band 3, 1.04 dB in band 7 and 1.612 LU of integrated loudness; the probe's bounds are the **ceiling of
+ *   those readings** (1.1 dB / 1.7 LU), so a regression fails. The document names the residual's two halves: the three
+ *   group-bus `createDynamicsCompressor()` nodes `src/audio/masterGraph.ts` still carries (`drumGlue`,
+ *   `drumParallel`, `musicGlue`; makeup 6.0/18.2/4.9 dB) are removable, and the hosts' own nodes differing from each
+ *   other (0.67 dB on one sine, level-dependent) are not. A caller choosing an engine has to be able to read that
+ *   **before** choosing, at `tools/list`, without opening a document;
  * * **`engine` in the reply** — so "which host rendered this" is read, never inferred;
  * * **never falls back** — a missing optional package errors and names it; the failure this line keeps meeting is a
  *   render that quietly used the other engine;
- * * **the budget does not apply, and neither does progress** — `withRenderTimeout` resets a stuck *page* and the
- *   heartbeat narrates one, and an in-process render has no page; a caller that needs a ceiling owns it, and a caller
- *   that sends a `progressToken` on this path gets no notifications.
+ * * **the budget does not apply, but progress does** — `withRenderTimeout` resets a stuck *page*, and an in-process
+ *   render has no page, so a caller that needs a ceiling owns it. Progress is no longer silent here: the Node host can
+ *   suspend inside the one `startRendering()` call, so a `progressToken` gets **frames rendered out of the render's own
+ *   frame count**, at the same 15 s cadence as the page's heartbeat. That is the unit on every tool that renders one
+ *   file, and on `render_arrangement_stems` per stem with `track i/N` in the message; `normalize_loudness` and
+ *   `render_instrument_note` send none on either host. In particular a stem's frames are **not** budget milliseconds —
+ *   this path has no budget to measure against.
  *
  * **One tool deliberately does not use this text.** `get_pitch_report` takes the same flag on a path that resolves a
  * note's source and renders nothing (`resolveOnly`), so quoting a band/loudness gap there would be a true sentence
@@ -139,9 +148,9 @@ export const PREVIEW_DEFAULT_CLAUSE = "Which is why render_preview_clip defaults
 export function headlessParameterDescription(): string {
   return (
     "render through the **Node Web Audio host** (`node-web-audio-api`) instead of Vite + Chromium — no browser process, and it also works under GROOVE_MCP_NO_BROWSER=1. " +
-    "⚠️ **The two hosts are not identical yet.** On the parity probe's own fixture, measured against the browser render, the worst 13-band difference is **1.03 dB in band 3** (GS-1 on) and **1.04 dB in band 7** (GS-1 off), with a **1.612 LU** integrated-loudness gap; the named cause is now the group bus — `drumGlue`, `drumParallel` and `musicGlue` in `src/audio/masterGraph.ts` are still host `createDynamicsCompressor()` nodes (their static makeup is calibrated at 6.0/18.2/4.9 dB) — **and** the two hosts' own host nodes differ from each other (the same sine at the same settings, 0.67 dB and growing with level), which is why rewiring alone has not converged. " +
+    "**What is the same, and what is not.** This project's own DSP is the same on both hosts: the limiter, the master bus compressor and every track strip's compressor are its own worklets on both, and the biquad filters the fixture builds agree to −0.00 dB over 11 filters × 12 points. The two hosts' **own** nodes are different implementations, so a residual remains and it belongs to them. On the parity probe's own fixture, measured against the browser render, it is **1.03 dB in band 3** (GS-1 on) and **1.04 dB in band 7** (GS-1 off) in the 13-band fingerprint, with a **1.612 LU** integrated-loudness gap; the probe's bounds are the ceiling of those readings (**1.1 dB / 1.7 LU**), so a regression fails rather than a tolerance being stretched. Two halves are named in the document: the three group-bus `createDynamicsCompressor()` nodes still in `src/audio/masterGraph.ts` (`drumGlue`, `drumParallel`, `musicGlue`; static makeup calibrated at 6.0/18.2/4.9 dB) are the **removable** half, and the two hosts' own nodes differing from each other (the same sine at the same settings, 0.67 dB and growing with level) are the half no bound can align. " +
     "The numbers, the substitutions already landed and the plan to converge are in **docs/HEADLESS_CORE_PLAN.md** (§8.13 and §9.2); the reply's `engine` field says which host actually rendered. " +
-    "**This never falls back**: if the optional package is missing the call errors and names it, rather than quietly rendering through Chromium. The server's render budget is **not** applied to this path (it resets a stuck page, and an in-process render has no page to reset), so a client that needs a ceiling owns it; this path is also **silent on progress** — a `progressToken` produces no notifications, because there is no page to start or poll."
+    "**This never falls back**: if the optional package is missing the call errors and names it, rather than quietly rendering through Chromium. The server's render budget is **not** applied to this path (it resets a stuck page, and an in-process render has no page to reset), so a client that needs a ceiling owns it. **Progress works here too, in frames**: the Node host suspends inside the one `startRendering()` call, so on the tools that render one file a `progressToken` receives the frames rendered out of the render's own frame count — at the same 15 s cadence as the browser heartbeat, ending at 100%. `render_arrangement_stems` reports the same way **per stem**, with `track i/N` in the message, so the count never restarts; `normalize_loudness` and `render_instrument_note` send no progress on either host. A frame is not a budget millisecond: this path has no budget to measure against."
   );
 }
 
@@ -150,4 +159,4 @@ export function headlessParameterDescription(): string {
  * exists before a model opens the schema. Deliberately short: the measured numbers live in the parameter.
  */
 export const HEADLESS_POINTER_SENTENCE =
-  " Pass `headless: true` to render through the Node Web Audio host instead of Chromium — the parameter carries the measured differences between the two hosts, which are **not yet zero**.";
+  " Pass `headless: true` to render through the Node Web Audio host instead of Chromium — the parameter carries the measured host-node residual and the measurement each bound is taken from.";

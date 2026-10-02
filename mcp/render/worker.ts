@@ -97,16 +97,20 @@ export interface RenderOptions {
   /**
    * Render on the **Node Web Audio host** instead of Vite + Chromium (`mcp/render/headless.ts`).
    *
-   * Opt-in and explicit, because the two hosts are **not yet the same sound**: `scripts/probe_headless_parity.ts`
-   * measures them differing by 1.03 dB in band 3, 1.04 dB in band 7 and 1.612 LU of loudness on its own fixture, and
-   * `docs/HEADLESS_CORE_PLAN.md` §8.13 names the cause that remains: the group bus still runs three host
-   * compressors (`drumGlue`/`drumParallel`/`musicGlue`), and the two hosts' own host nodes differ from each other.
-   * The flag exists so a caller can *choose* that host — a deployment with no browser, or a cheaper cold start — while the
-   * divergence is still open, and it is recorded rather than smoothed over.
+   * Opt-in and explicit, because the residual between the two hosts is real and is bounded rather than hidden:
+   * `scripts/probe_headless_parity.ts` measures 1.03 dB in band 3, 1.04 dB in band 7 and 1.612 LU of loudness on its own
+   * fixture, sets each bound at the ceiling of those readings, and prints the measurement behind every bound.
+   * `docs/HEADLESS_CORE_PLAN.md` §8.13 names the residual's two halves: this project's own DSP is the same on both hosts
+   * (its limiter, bus and strip compressors are its own worklets), while each host's **own** nodes differ — the group bus
+   * still runs three host compressors (`drumGlue`/`drumParallel`/`musicGlue`, the removable half) and the two hosts'
+   * implementations differ from each other (the half no bound can align). The flag exists so a caller can *choose* that
+   * host — a deployment with no browser, or a cheaper cold start — with the residual recorded rather than smoothed over.
    *
    * The branch does **not** fall back: a missing `node-web-audio-api` throws the message from
    * `headlessUnavailableMessage()` and no browser render is started. It is also deliberately **not** wrapped in
-   * `withRenderTimeout`: that budget resets a stuck *page*, and an in-process render has no page to reset.
+   * `withRenderTimeout`: that budget resets a stuck *page*, and an in-process render has no page to reset. It **does**
+   * narrate itself now: `options.progress` reaches `renderPatternHeadless`, which reports frames rendered out of the
+   * render's own frame count at the same cadence the page heartbeat uses.
    */
   headless?: boolean;
   /**
@@ -1144,13 +1148,46 @@ export async function renderStems(
 
   /**
    * A stems render **can** count tracks where a whole-song render cannot: it is one render per track, so the natural
-   * unit is the track. The `progress` value is a fraction of `RENDER_BUDGET_MS` because that is the budget each stem
-   * runs under (see the timeout below), and the message names the track, which a client can show as real work done.
+   * unit is the track. **The unit is the host's**: the browser path is under `RENDER_BUDGET_MS` per stem, so it reports
+   * a fraction of that budget; the Node path has no budget to measure against, so it reports **frames** — a budget
+   * denominator there would be a number shaped like a lie. Both carry the track in the message.
    */
   const totalTracks = Math.max(1, pattern.tracks.length);
+  /**
+   * Frames already reported in this request. The Node renderer's own counter is **per request**, so a stem that
+   * restarted it at zero would have every frame after the first stem silently dropped; offsetting each stem by the
+   * frames before it keeps the stream monotone and each stem's percentage honest.
+   */
+  let framesRendered = 0;
+  /**
+   * One stem's view of the request's reporter, in frames and with the track named.
+   *
+   * It forwards `report` unchanged (the browser path's unit) and translates `reportOf` upward: `framesBefore + frames`
+   * is the request's cumulative count, and `framesBefore + total` is the upper bound that belongs with it, so the
+   * monotone guard sees one upward stream rather than a reset per track.
+   */
+  const stemProgress = (index: number, framesBefore: number): ProgressReporter | undefined => {
+    const outer = options.progress;
+    if (!outer) return undefined;
+    return {
+      report: (progressMs, message) => outer.report(progressMs, message),
+      reportOf: (frames, total, message) =>
+        outer.reportOf(
+          framesBefore + frames,
+          total === undefined ? undefined : framesBefore + total,
+          `track ${index + 1}/${totalTracks}: ${message}`
+        ),
+    };
+  };
   for (let index = 0; index < pattern.tracks.length; index += 1) {
     const track = pattern.tracks[index]!;
-    options.progress?.report(((index + 1) / totalTracks) * RENDER_BUDGET_MS, `rendering stem ${index + 1} of ${totalTracks}: ${track.name || track.track_id || `track_${index + 1}`}`);
+    const trackName = track.name || track.track_id || `track_${index + 1}`;
+    if (headless) {
+      // Announced before the host's own cold start, in the unit this path uses.
+      options.progress?.reportOf(framesRendered, undefined, `rendering stem ${index + 1} of ${totalTracks}: ${trackName}`);
+    } else {
+      options.progress?.report(((index + 1) / totalTracks) * RENDER_BUDGET_MS, `rendering stem ${index + 1} of ${totalTracks}: ${trackName}`);
+    }
     /**
      * ⭐ **Every stem is under the same budget as a whole render.**
      *
@@ -1165,8 +1202,15 @@ export async function renderStems(
      * stays a difference of *host* and never of *arguments*.
      */
     const rendered = headless
-      ? await renderPatternHeadless!(pattern, { ...options, bars: options.bars ?? 1, stemTrackIdx: index }, catalogueRead, headlessContext)
+      ? await renderPatternHeadless!(
+          pattern,
+          { ...options, bars: options.bars ?? 1, stemTrackIdx: index, progress: stemProgress(index, framesRendered) },
+          catalogueRead,
+          headlessContext
+        )
       : await renderStemInPage(page!, pattern, options, index, catalogueRead, sampleRoot);
+    // The stem's own length, so the next stem's frames continue this request's count instead of restarting it.
+    framesRendered += Math.round(rendered.durationSec * rendered.sampleRate);
     const bytes = Buffer.from(rendered.base64, "base64");
     const filename = stemFilename(track.name || track.track_id || `track_${index + 1}`, index, bpm);
     const target = path.join(dir, filename);
@@ -1193,7 +1237,12 @@ export async function renderStems(
   }
 
   const catalogueProblem = laneCatalogueProblem ?? catalogueRead.problem;
-  options.progress?.report(RENDER_BUDGET_MS, `all ${stems.length} stem(s) rendered`);
+  /**
+   * The browser path's closing message. On the Node host the last stem's own report already reaches the request's
+   * cumulative frame count, and a message at that same value would be dropped by the monotone guard — so there the
+   * per-stem `track N/N: render finished` is the closing message.
+   */
+  if (!headless) options.progress?.report(RENDER_BUDGET_MS, `all ${stems.length} stem(s) rendered`);
   return {
     dir,
     stems,
