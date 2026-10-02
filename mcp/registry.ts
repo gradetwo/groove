@@ -5,6 +5,13 @@ const clipSlotSchema = z.enum([...CLIP_SLOTS] as [string, ...string[]]);
 import { audioLaneReplyFields } from "./pattern";
 import { legatoGapNote, legatoGapsFor } from "../src/data/legatoGaps";
 /**
+ * ⭐ **The string situations, taken from the rule table rather than restated.**
+ *
+ * `list_arrangement_instruments` offers `situation` as an enum, and a hand-written enum beside a hand-written table
+ * is two lists to keep in step — the failure this file's own header warns about. So the enum *is* the table's list.
+ */
+import { STRING_SITUATION_IDS, chordChangeReattackNote, chordChangeReattacks, type StringSituation } from "../src/data/stringTechniques";
+/**
  * The MCP surface, declared once.
  *
  * Every tool, resource and prompt lives here so that three things cannot drift apart: what the server answers,
@@ -504,12 +511,18 @@ export const TOOLS: ToolDefinition[] = [
     name: "list_arrangement_instruments",
     title: "List playable instruments",
     description:
-      "The catalogue assets a sampler track can play, with the library each came from and the measured duration. A multi-instrument library names each program `<library>:<program>`, e.g. vcsl declares 88 of them. Read this before set_arrangement_track_asset.",
+      "The catalogue assets a sampler track can play, with the library each came from and the measured duration. A multi-instrument library names each program `<library>:<program>`, e.g. vcsl declares 88 of them. Read this before set_arrangement_track_asset. **String programs also carry what the player is doing** (`technique`), the situations that technique serves (`situations`), how many recorded dynamic layers velocity selects between (`dynamicLayers`), and how many seconds a note may be held before the one-shot recording runs out (`maxHeldSeconds`) — the pinned strings do not loop, so a longer note stops early.",
     readOnly: true,
     inputSchema: {
       library: z.string().optional().describe("narrow to one library id, as listed in `libraries`"),
       category: z.string().optional().describe('narrow to one kind of instrument, as listed in `categories` — "Bass", "Winds", "Acoustic Drums"'),
       subcategory: z.string().optional().describe('narrow further, within a category — "arco", "Struck Idiophones"; each category lists its own'),
+      situation: z
+        .enum(STRING_SITUATION_IDS)
+        .optional()
+        .describe(
+          "narrow to what the music is doing rather than what the instrument is called: a sustained bed, a legato line, short repeating notes, a plucked walking line, tremolo tension, or an accent. Only the string libraries declare techniques today"
+        ),
       query: z.string().optional().describe("free text; matches the display name, the id and the program's path, ignoring case and separators"),
       limit: z.number().int().min(1).max(500).optional().describe("how many to return, for a library with dozens of programs"),
     },
@@ -519,6 +532,7 @@ export const TOOLS: ToolDefinition[] = [
           library: args.library as string | undefined,
           category: args.category as string | undefined,
           subcategory: args.subcategory as string | undefined,
+          situation: args.situation as StringSituation | undefined,
           query: args.query as string | undefined,
           limit: args.limit as number | undefined,
         });
@@ -3389,6 +3403,18 @@ export const TOOLS: ToolDefinition[] = [
         const arrangement = getMcpArrangement(String(args.arrangementId))!;
         const legatoGaps = legatoGapsFor(arrangement);
         const legatoNote = legatoGapNote(legatoGaps);
+        /**
+         * ⭐ **And the other half of a sustained part's join: where it overlaps and still re-attacks.**
+         *
+         * `legatoGaps` reports the chords that fail to reach the next one. The owner's own project reports **nothing**
+         * there — its chords are held 8.5 beats and are 8 beats apart, so every one is still sounding when the next
+         * begins — and the owner still heard the strings break, at an instant that measures to a chord change. The
+         * distinction the ear was making is that **overlap is not legato**: a note that starts its own attack re-strikes
+         * however much it overlaps. This travels beside `legatoGaps` for the same reason it does: it is a diagnostic
+         * about the composer's notes, and it changes nothing.
+         */
+        const reattacks = chordChangeReattacks(arrangement, arrangement.bpm ?? 120);
+        const reattackNote = chordChangeReattackNote(reattacks);
         return {
           ...result,
           arrangementId: String(args.arrangementId),
@@ -3396,6 +3422,8 @@ export const TOOLS: ToolDefinition[] = [
           ...(summary.problems.length ? { arrangementProblems: summary.problems } : {}),
           ...(legatoGaps.length ? { legatoGaps } : {}),
           ...(legatoNote ? { legatoNote } : {}),
+          ...(reattacks.length ? { chordChangeReattacks: reattacks } : {}),
+          ...(reattackNote ? { chordChangeReattackNote: reattackNote } : {}),
           ...audioLaneReplyFields(audioLanes),
         };
       } catch (error) {

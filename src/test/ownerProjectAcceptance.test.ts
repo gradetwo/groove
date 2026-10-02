@@ -64,6 +64,8 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { fromMidi } from "../data/midiToArrangement";
 import { resolveInstrumentNote } from "../audio/sfz/instrument";
+import { legatoGapsFor } from "../data/legatoGaps";
+import { chordChangeReattacks } from "../data/stringTechniques";
 import type { SampleAsset } from "../data/sampleCatalogue";
 import type { NoteEvent } from "../types/arrangementV2";
 
@@ -206,5 +208,65 @@ describe.skipIf(!present)("the owner's project (宿命回响)", () => {
     expect(seconds).toBeCloseTo(RECORDING_SECONDS, 1);
     // 11.70 s of recording, a 4.25 s note: the note stops first, and no loop mode can change that.
     expect(seconds).toBeGreaterThan(4.25);
+  });
+
+  /**
+   * ⭐⭐ **The owner's ear, located to the sample — and the correction it forced on this file.**
+   *
+   * The criteria above establish that the recording cannot be what ends these notes: the note is 4.25 s and the
+   * recording is 11.70 s. That is true, and it was read as "so the writing is already legato and there is nothing
+   * here". The owner then said **where** the break is — one instant, at 23.98 s on the ruler — and the owner was
+   * right, which the arithmetic below shows to within a rendering buffer:
+   *
+   * ```
+   *   the strings' chords start at beats 32, 40, 48, 56, … (16.00 s, 20.00 s, 24.00 s, 28.00 s, …)
+   *   the owner's cursor                                       23.98 s
+   *   ⇒ the nearest event is the chord at beat 48 = 24.0000 s, by 0.0200 s
+   * ```
+   *
+   * **The distinction the earlier reading missed is that overlap is not legato.** These chords *dovetail* — each is
+   * held 8.5 beats against an 8-beat spacing — but a dovetail is not a bow that never stopped: the new chord's notes
+   * are new voices, each starting its own attack (`noteEnvelope` schedules every note's gain from −80 dBFS), so at
+   * every change a fresh onset lands on top of a sounding chord. Twenty chords give **nineteen** such instants, and
+   * the one the owner pointed at is among them.
+   *
+   * So the correction is: **the recording-length finding stands, and "the writing is already legato" does not.** This
+   * criterion pins the second fact so the two cannot be conflated again.
+   */
+  it("⭐ locates the owner's break at a chord change: beat 48 = 24.00 s, 0.02 s from the cursor", () => {
+    const strings = stringsPart();
+    const bpm = 120;
+    const seconds = (beats: number) => (beats * 60) / bpm;
+    const onsets = [...new Set(strings.map((note) => note.startBeats))].sort((a, b) => a - b);
+    // The first chord is at beat 32 = 16 s, and the chords run every 8 beats from there.
+    expect(onsets[0]).toBe(32);
+    expect(seconds(onsets[0]!)).toBe(16);
+    // Beat 48 is a chord, and it is 24.0000 s exactly.
+    expect(onsets).toContain(48);
+    expect(seconds(48)).toBe(24);
+    expect(Math.abs(seconds(48) - 23.98)).toBeLessThan(0.05);
+    /**
+     * And the overlap at that change, measured: the chord at beat 40 ends at beat 48.5, so when the chord at beat 48
+     * begins there are **0.5 beats = 0.25 s** of the previous chord still sounding. That is the dovetail, and the
+     * next assertion is that there are nineteen of them.
+     */
+    const chordsAt = (beat: number) => strings.filter((note) => note.startBeats === beat);
+    const previousEnd = Math.max(...chordsAt(40).map((note) => note.startBeats + note.lengthBeats));
+    expect(previousEnd - 48).toBeCloseTo(0.5, 6);
+
+    const reports = chordChangeReattacks({ tracks: [{ id: "strings", name: "弦乐" }], notesByTrack: { strings } }, bpm);
+    expect(reports).toHaveLength(1);
+    expect(reports[0]!.changesTotal).toBe(19);
+    const at48 = reports[0]!.changes.find((change) => change.atBeats === 48)!;
+    expect(at48.atSeconds).toBe(24);
+    expect(at48.overlapSeconds).toBe(0.25);
+    expect(at48.attacks).toBe(3);
+    /**
+     * **The two detectors answer different questions and only one of them sees this.** `legatoGapsFor` asks whether a
+     * chord fails to reach the next; here every chord reaches it, so it reports nothing about the strings — which is
+     * exactly how a real break went unnoticed by a check that looked like it covered this.
+     */
+    const gaps = legatoGapsFor({ tracks: [{ id: "strings", name: "弦乐" }], notesByTrack: { strings } } as never);
+    expect(gaps.filter((gap) => gap.trackName === "弦乐")).toEqual([]);
   });
 });

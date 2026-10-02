@@ -13,8 +13,55 @@ import { parseManifest } from "../src/data/sampleManifest";
 import { mergeUserLibraries } from "../src/data/userLibraries";
 import { readUserLibraries } from "./sampleLibraries";
 import { filterInstruments } from "../src/data/instrumentSearch";
+import {
+  playableTechniques,
+  STRING_SITUATION_RULES,
+  type StringInstrument,
+  type StringSituation,
+  type StringTechnique,
+} from "../src/data/stringTechniques";
 
 const MANIFEST_PATH = "public/samples/manifest.json";
+
+/**
+ * ⭐ **The situations a technique serves**, read from the rules rather than restated here.
+ *
+ * `technique → situations` is derived by walking `STRING_SITUATION_RULES` in preference order, which keeps the
+ * listing and the rule table from drifting: a rule that stops preferring pizzicato stops advertising it here too.
+ */
+function situationsFor(technique: StringTechnique): StringSituation[] {
+  return STRING_SITUATION_RULES.filter((rule) => rule.preferred.includes(technique)).map((rule) => rule.situation);
+}
+
+/**
+ * ⭐ **Whether a program actually serves a situation, register included.**
+ *
+ * A rule with a `range` ("walking" is a low line) applies only to a program whose **whole compass** sits inside it,
+ * not merely to one that overlaps. Measured on this table: overlap lets the viola's pizzicato through for
+ * `plucked-walking` (it reaches down to MIDI 48, which is inside the register, while reaching up to 86, which is
+ * not) — and a walking line answered by a viola is the same name-matching this table replaces, one level up.
+ * Containment is what makes `plucked-walking` return the contrabass alone.
+ */
+function servesSituation(
+  program: { lowestNote: number; highestNote: number; technique: StringTechnique },
+  situation: StringSituation
+): boolean {
+  const rule = STRING_SITUATION_RULES.find((candidate) => candidate.situation === situation);
+  if (!rule || !rule.preferred.includes(program.technique)) return false;
+  if (!rule.range) return true;
+  const [low, high] = rule.range;
+  return program.lowestNote >= low && program.highestNote <= high;
+}
+
+/**
+ * ⭐ **The playing techniques, by catalogue asset id.**
+ *
+ * The string table (`src/data/stringTechniques.ts`) is the one place a technique is claimed, and this keys it by the
+ * id the catalogue actually uses so the listing can say what an asset *plays* rather than only what it is called.
+ * Only the **playable** rows are indexed: an unmirrored technique has no asset id in the catalogue, and offering it
+ * here would name an instrument a caller cannot choose.
+ */
+const TECHNIQUE_BY_ASSET = new Map(playableTechniques().map((program) => [program.assetId, program]));
 
 export interface CatalogueInstrument {
   assetId: string;
@@ -29,6 +76,28 @@ export interface CatalogueInstrument {
   subcategory?: string;
   /** The SFZ program this instrument is, when it is one. */
   program?: string;
+  /** The string instrument this program is, when the technique table knows it: "violin", "viola", "cello", "contrabass", "solo-violin". */
+  stringInstrument?: StringInstrument;
+  /**
+   * ⭐ **What the player is doing** — "sustain", "pizzicato". Absent for every instrument the technique table does not cover, which today is every non-string library.
+   *
+   * A separate field from `name` because the name is prose and this is a choice: `list_arrangement_instruments` can be
+   * narrowed by `situation`, and `situation: "plucked-walking"` finds the contrabass pizzicato without a caller having
+   * to guess that a pluck is spelled `Pizz` in one library and `pizz` in another.
+   */
+  technique?: StringTechnique;
+  /** The situations this technique serves, so a caller can search by what the music is doing rather than by the word for the playing. */
+  situations?: StringSituation[];
+  /**
+   * ⭐ **How long a note may be written on this asset before the one-shot recording runs out**, in seconds — the
+   * `11.697 s` lesson, carried to the surface that chooses the asset.
+   *
+   * Present only where it was measured (the string table's mirrored rows). A caller writing a long sustained bed can
+   * read this before writing it instead of discovering the truncation by ear.
+   */
+  maxHeldSeconds?: number;
+  /** How many distinct recorded dynamic layers velocity selects between, when the number was measured. */
+  dynamicLayers?: number;
 }
 
 export interface InstrumentList {
@@ -54,12 +123,21 @@ export function listCatalogueInstruments({
   library,
   category,
   subcategory,
+  situation,
   query,
   limit,
 }: {
   library?: string;
   category?: string;
   subcategory?: string;
+  /**
+   * ⭐ **Narrow to what the music is doing, not to what the instrument is called.**
+   *
+   * `situation: "plucked-walking"` is the request a composer actually has, and answering it needs the rule table
+   * rather than a name match. Only the situations the string rules name are accepted, which is checked against the
+   * table itself so a typo is a problem stated rather than an empty list that looks like "nothing available".
+   */
+  situation?: StringSituation;
   /** Free text, matched the same way the library panel matches it — one rule, so an agent and a person find the same instruments with the same words. */
   query?: string;
   limit?: number;
@@ -77,6 +155,7 @@ export function listCatalogueInstruments({
     .map((asset) => {
       // A multi-instrument library names its programs `entry:program`, which is where the library part of the id ends.
       const separator = asset.assetId.indexOf(":");
+      const technique = TECHNIQUE_BY_ASSET.get(asset.assetId);
       return {
         assetId: asset.assetId,
         name: asset.name,
@@ -85,6 +164,29 @@ export function listCatalogueInstruments({
         ...(asset.category ? { category: asset.category } : {}),
         ...(asset.subcategory ? { subcategory: asset.subcategory } : {}),
         ...(asset.sfz ? { program: asset.sfz.path } : {}),
+        /**
+         * ⭐ **What it plays, not just what it is called.** Filled from the technique table by asset id, so the
+         * mapping lives in the table rather than being re-derived here from a program's name — the guess this
+         * feature exists to replace.
+         */
+        ...(technique
+          ? {
+              stringInstrument: technique.instrument,
+              technique: technique.technique,
+              /**
+               * **The situations this exact program serves**, register included — so `plucked-walking` appears on the
+               * contrabass pizzicato and not on the viola's, which is the difference between a rule and a synonym.
+               */
+              situations: situationsFor(technique.technique).filter((situation) =>
+                servesSituation(
+                  { lowestNote: technique.lowestNote, highestNote: technique.highestNote, technique: technique.technique },
+                  situation
+                )
+              ),
+              maxHeldSeconds: technique.maxSampleSeconds,
+              dynamicLayers: technique.velocityLayers.length,
+            }
+          : {}),
       };
     })
     .sort((a, b) => a.library.localeCompare(b.library) || a.name.localeCompare(b.name));
@@ -96,7 +198,16 @@ export function listCatalogueInstruments({
   const narrowed = filterInstruments(all, query ?? "")
     .filter((instrument) => library === undefined || instrument.library === library)
     .filter((instrument) => category === undefined || instrument.category === category)
-    .filter((instrument) => subcategory === undefined || instrument.subcategory === subcategory);
+    .filter((instrument) => subcategory === undefined || instrument.subcategory === subcategory)
+    /**
+     * ⭐ **The situation filter, which is the query a composer actually has.**
+     *
+     * `situation: "plucked-walking"` must find the contrabass pizzicato without the caller knowing that a pluck is
+     * spelled `Pizz` in one program and `pizz` in another. The register travels with the rule — "walking" is a low
+     * line — so this filters on `servesSituation`, the same function that fills each instrument's own `situations`,
+     * rather than on the raw preference list.
+     */
+    .filter((instrument) => situation === undefined || (instrument.situations ?? []).includes(situation));
 
   /**
    * The tree, built from the instruments rather than from the manifest: a category with nothing in it is not shown as empty, and a count is the number of things a click would actually reveal.
