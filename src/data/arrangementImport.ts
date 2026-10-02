@@ -71,9 +71,11 @@ export interface ArrangementImportResult {
  * (it is the more specific statement — a playing technique on an instrument), and the name is reported as not applied.
  * If the situation itself cannot serve the part, the explicit name stands and the refusal is in `problems`.
  *
- * **The file picker still cannot fill either in**, and that is stated rather than implied: `importMidiIntoArrangement`
- * has no UI that asks a person which instrument each part is, so today only a programmatic caller can name one. The
- * data layer is no longer the blocker; the entry point is.
+ * **The file picker now fills the instruments in; the situations it still cannot.** A multi-part `.mid` opens the
+ * mapping dialog (`src/components/arrangement/ImportInstrumentMappingV2.tsx`) before anything is placed, so a person
+ * — never a guess at a part's name — decides what each part is, and a caller that names nothing gets exactly the
+ * track it got before this option existed. A single-part file places straight away: one part is not a table. Naming
+ * a **playing technique** still has no picker, so that half remains a programmatic caller's.
  */
 export function arrangementWithImportedParts(
   arrangement: ArrangementV2,
