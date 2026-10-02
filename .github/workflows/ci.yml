@@ -78,12 +78,12 @@ jobs:
 
       # ⭐ **The disabled-gates ledger, checked on every push.**
       #
-      # Three measurement gates are temporarily switched off by the owner's decision of 2026-10-02
+      # Four measurement gates are temporarily switched off by the owner's decision of 2026-10-02
       # (`scripts/disabledGates.mjs` is the list; `docs/DISABLED_GATES.md` is the long form): they
-      # render, or check a baseline recorded, without passing `audioLaneCatalogue` into the render,
+      # render — or check a baseline recorded from a render — without passing `audioLaneCatalogue`,
       # so they fall back to the synthesiser and cannot see the sampling path at all. The gates
-      # themselves are untouched — their steps below and in the manual workflow stay, print why they
-      # are off and exit 0.
+      # themselves are untouched — their steps below, in the nightly groove jobs and in the manual
+      # workflow stay, print why they are off and exit 0.
       #
       # This step is what stops "temporarily" becoming "quietly": it fails if a listed gate still
       # runs, if a gate is switched off without a ledger entry, or if a never-disable gate
@@ -333,7 +333,12 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Groove gate shard ${{ matrix.shard }}/4
+      # ⏸ **Switched off on 2026-10-02 by the owner's decision ("check:groove 一起禁"), and the step
+      # stays so that is visible.** `analyze_export_audio.mjs` renders without `audioLaneCatalogue`, so
+      # the render-derived claims (hollow mids, near-mono, a cut tail) are numbers about a mix that
+      # never contained a sampled lane. `scripts/disabledGates.mjs` carries the why / when / who; the
+      # step prints that notice and exits 0, and the aggregate below does the same.
+      - name: Groove gate shard ${{ matrix.shard }}/4 [disabled — see scripts/disabledGates.mjs]
         run: npm run check:groove -- --shard=${{ matrix.shard }}/4 --rows-out=groove-rows/rows-${{ matrix.shard }}.json
 
       # Uploaded even when the shard failed: partial rows are how the aggregate explains what is missing.
@@ -372,8 +377,8 @@ jobs:
           path: groove-rows
 
       # Deliberately no `npm ci`: this step runs even when the shards failed, and `check_groove.mjs --merge-dir`
-      # needs nothing but Node.
-      - name: Judge the union of the shards
+      # needs nothing but Node. ⏸ Disabled with the shards above (owner, 2026-10-02): it judges the same budgets.
+      - name: Judge the union of the shards [disabled — see scripts/disabledGates.mjs]
         run: npm run check:groove -- --merge-dir=groove-rows
 
   # `CI / nightly`: everything that is too slow or too environment-sensitive to gate a push.

@@ -5,15 +5,15 @@ import path from "node:path";
  * ⭐ **THE DISABLED-GATES LEDGER — the one place that says which gates are off, why, when they come
  * back, and who decided.**
  *
- * ## Why this file exists rather than three deleted steps
+ * ## Why this file exists rather than four deleted steps
  *
- * Three measurement gates hold numbers that were recorded from a render that **cannot see the
- * sampling path**: they render (or check a baseline recorded) through `renderPatternOffline`
- * **without** `RenderWavOptions.audioLaneCatalogue`, so every lane the written table
- * (`src/data/sampledInstruments.ts`) maps to a recording falls back to the built-in synthesiser.
- * They are not wrong about what they measure; they are blind to a whole class of sound, and a green
- * light from them is therefore a claim about a rendering the application no longer produces for a
- * user who has a library.
+ * Four measurement gates hold numbers that were recorded from a render that **cannot see the
+ * sampling path**: they render (or check a baseline recorded) through `renderPatternOffline` /
+ * `analyze_export_audio.mjs` **without** `RenderWavOptions.audioLaneCatalogue`, so every lane the
+ * written table (`src/data/sampledInstruments.ts`) maps to a recording falls back to the built-in
+ * synthesiser. They are not wrong about what they measure; they are blind to a whole class of sound,
+ * and a green light from them is therefore a claim about a rendering the application no longer
+ * produces for a user who has a library.
  *
  * That is harmless while nothing samples. It stopped being harmless with the owner's decision of
  * **2026-10-02**, in two parts:
@@ -25,7 +25,9 @@ import path from "node:path";
  *      passed into the render and the baselines are re-recorded.
  *
  * The owner's words are the ruling this file implements: *"暂时禁用这些门禁，等版本稳定后传
- * catalogue 并重录基线"* (rider 2, 2026-10-02).
+ * catalogue 并重录基线"* (rider 2, 2026-10-02). The fourth entry — the musical ratchet
+ * (`check:groove`) — was ruled in by the owner's follow-up of the same day:
+ * *"check:groove 一起禁"*.
  *
  * ## What "disabled" means here, exactly
  *
@@ -91,6 +93,22 @@ export const DISABLED_GATES = [
     todayRed: "No — green today, and blind to the sampling path for the same reason as `check:loudness`.",
     returnsWhen: "The version is stable: pass the catalogue into the render and re-record scripts/timbre.baseline.json.",
     decidedBy: "the owner, 2026-10-02 (rider 2: 暂时禁用这些门禁，等版本稳定后传 catalogue 并重录基线)",
+  },
+  {
+    id: "check:groove",
+    entry: "scripts/check_groove.mjs",
+    what:
+      "The musical ratchet: renders twelve genres through scripts/analyze_export_audio.mjs and judges six claims per genre " +
+      "(flat velocities, an inaudible sidechain, a near-mono file, hollow mids, static harmony, a cut tail) against budgets that are today's numbers.",
+    why:
+      "`analyze_export_audio.mjs` renders through `renderPatternOffline` with no `audioLaneCatalogue`, so every lane mapped to a recording is voiced by the built-in synthesiser — " +
+      "the same blindness as the loudness and timbre gates. Of its twelve structural claims, the render-derived ones (the mid-band share behind `thinMids`, the stereo spread behind " +
+      "`narrowStereo`, and the tail behind `cutTail`) are numbers about a mix, and those numbers move the moment a catalogue reaches the render.",
+    todayRed:
+      "Not measured on origin/dev: it runs only in the nightly sweep (`groove-shards` + `groove-gate`), not on a push. Reported as \"not judged here\", not as green.",
+    returnsWhen:
+      "The version is stable: pass the catalogue into the render and re-record the ratchet's budgets (docs/GROOVE_QUALITY_PLAN.md's numbers are today's measurements).",
+    decidedBy: "the owner, 2026-10-02 (rider 2, then the follow-up that names this gate: check:groove 一起禁)",
   },
 ];
 

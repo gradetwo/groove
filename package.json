@@ -65,7 +65,7 @@
     "mcp:build": "node scripts/build_mcp.mjs",
     "mcp": "node scripts/build_mcp.mjs && node dist-mcp/groove-mcp.mjs",
     "check:mcp": "node scripts/build_mcp.mjs && node scripts/check_mcp.mjs",
-    "check:groove": "node scripts/check_groove.mjs",
+    "check:groove": "node scripts/disabled_gate_guard.mjs check:groove -- node scripts/check_groove.mjs",
     "check:skin-roles": "node scripts/check_skin_roles.mjs",
     "probe:live-arrangement": "node scripts/probe_live_arrangement.mjs",
     "check:covers": "node scripts/check_covers_payload.mjs",

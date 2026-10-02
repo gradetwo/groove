@@ -1,17 +1,22 @@
 /**
  * ⭐ **The criterion that keeps "temporarily disabled" from becoming "quietly disabled".**
  *
- * `docs/DISABLED_GATES.md` and `scripts/disabledGates.mjs` say three measurement gates are switched
- * off by the owner's decision of 2026-10-02, because they hold baselines recorded from a render that
- * is never given `audioLaneCatalogue` and therefore cannot see the sampling path at all. That
+ * `docs/DISABLED_GATES.md` and `scripts/disabledGates.mjs` say four measurement gates are switched
+ * off by the owner's decision of 2026-10-02, because they render — or hold a baseline recorded from
+ * a render — without `audioLaneCatalogue`, and therefore cannot see the sampling path at all. That
  * decision is only safe while it stays exactly that size, so this file locks it from two directions:
  *
  *   · the **wiring** must equal the ledger (`auditDisabledGates`, the same function
  *     `npm run check:disabled-gates` runs in CI) — a gate switched off without a ledger entry fails,
  *     and a ledger entry that still runs fails;
- *   · the **ledger itself** must still be the three gates, written out here by hand — so a fourth
+ *   · the **ledger itself** must still be those four gates, written out here by hand — so a fifth
  *     entry, however well wired, cannot be added without a human editing this expectation and
  *     reading why.
+ *
+ * ⭐ **That is exactly how the fourth got here.** The owner ruled the musical ratchet in on
+ * 2026-10-02, after the first three: *"check:groove 一起禁"*. The edit to `EXPECTED_DISABLED` below
+ * is that decision being written down where a person has to read it — the mechanism working, not
+ * being worked around.
  *
  * The behaviour is checked by running the guard, not by reading it: the disabled command must not
  * run, the override must run it, and an unlisted id must run it (fail-safe), because a gate that
@@ -25,8 +30,13 @@ import { DISABLED_GATES, NEVER_DISABLED, auditDisabledGates } from "../../script
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
-/** These three, and nothing else — see the file comment for why this list is written out twice. */
-const EXPECTED_DISABLED = ["check:loudness:fresh", "check:loudness", "check:timbre"];
+/**
+ * These four, and nothing else — see the file comment for why this list is written out twice.
+ *
+ * The fourth (`check:groove`) was added by the owner's ruling of 2026-10-02 ("check:groove 一起禁"),
+ * not by a developer deciding it was convenient.
+ */
+const EXPECTED_DISABLED = ["check:loudness:fresh", "check:loudness", "check:timbre", "check:groove"];
 
 function guard(gateId: string, command: string[], env: Record<string, string> = {}) {
   return spawnSync(process.execPath, ["scripts/disabled_gate_guard.mjs", gateId, "--", ...command], {
@@ -43,7 +53,7 @@ describe("the disabled-gates ledger", () => {
     expect(oks.length).toBeGreaterThan(0);
   });
 
-  it("holds exactly the three gates the owner's rider names, each with why / when / who", () => {
+  it("holds exactly the four gates the owner ruled out, each with why / when / who", () => {
     expect(DISABLED_GATES.map((gate) => gate.id).sort()).toEqual([...EXPECTED_DISABLED].sort());
     for (const gate of DISABLED_GATES) {
       expect(gate.why, `${gate.id} must say why`).toMatch(/catalogue/i);
