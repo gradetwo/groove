@@ -3382,7 +3382,7 @@ export const TOOLS: ToolDefinition[] = [
           const estimate = summariseSong(song).secondsEstimate;
           if (estimate > budget) {
             return failure(
-              `this song is about ${estimate}s and maxDurationSec is ${budget}s — shorten the arrangement, raise the limit, or render one section with render_audio`
+              `this song is about ${estimate}s and maxDurationSec is ${budget}s — shorten the arrangement, raise the limit, or render one section with render_audio; a lower sampleRate or fewer channels makes the render itself cheaper, but neither changes this estimate`
             );
           }
         }

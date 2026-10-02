@@ -232,6 +232,50 @@ export async function withRenderTimeout<T>(work: Promise<T>, what: string, timeo
   }
 }
 
+/**
+ * ⭐ **A dev server that never started is an answer, not an uncaught exception.**
+ *
+ * `spawn` reports a failure to *start* — a binary that is not there, a working directory that has gone, ENOENT, a
+ * resource limit that refuses the fork — as an `error` **event** on the child rather than through `exit`. An `error`
+ * on an emitter with no listener is an uncaught exception: the same mechanism that let a closed stdio pipe kill the
+ * server (`mcp/stdioChannel.ts`), except here it killed the render worker *and the process with it* before any
+ * promise could reject, so a caller got a dead server instead of a failed render.
+ *
+ * The listener turns it into the rejection this promise already carries out: `ensurePage`'s catch calls
+ * `resetRenderer()`, the tool returns `failure(...)` naming the cause, and the next render starts a fresh dev
+ * server. The `existsSync` check above lowers the chance of this and cannot remove it — it cannot cover the window
+ * between the check and the spawn, a cwd that disappears in between, or the fork being refused.
+ *
+ * Extracted and exported so the criterion can drive it (`src/test/renderWorkerSpawnError.test.ts`) with a binary
+ * that does not exist, which is the only way to produce a real spawn `error` without breaking a checkout. It also
+ * clears its timer on the first settle, which the inline version did not: a resolved start used to leave a 60 s
+ * timer behind that could only ever reject an already-settled promise.
+ */
+export function awaitRendererStart(child: ChildProcess, timeoutMs = 60_000): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    let output = "";
+    let settled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const finish = (error?: Error) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      if (error) reject(error);
+      else resolve();
+    };
+    const onData = (chunk: Buffer) => {
+      output += chunk.toString();
+      if (/Local:\s+http/.test(output) || /ready in/.test(output)) finish();
+    };
+    child.stdout?.on("data", onData);
+    child.stderr?.on("data", onData);
+    child.on("exit", (code) => finish(new Error(`vite exited early (${code}):\n${output}`)));
+    // The listener whose absence was the crash: a start failure is reported, never thrown.
+    child.on("error", (error) => finish(new Error(`could not start the dev server: ${(error as Error).message}\n${output}`)));
+    timer = setTimeout(() => finish(new Error(`vite did not become ready in ${Math.round(timeoutMs / 1000)}s:\n${output}`)), timeoutMs);
+  });
+}
+
 async function ensurePage(): Promise<import("playwright").Page> {
   /**
    * ⭐ **A dead page is not a live one, and until this check existed the renderer could not tell.**
@@ -262,23 +306,14 @@ async function ensurePage(): Promise<import("playwright").Page> {
     throw new Error(`cannot render: ${viteBin} not found. Run the server from the repository root, or set GROOVE_MCP_ROOT.`);
   }
 
-  state.child = spawn(process.execPath, [viteBin, "--port", String(port), "--strictPort"], {
+  const child = spawn(process.execPath, [viteBin, "--port", String(port), "--strictPort"], {
     cwd: root,
     env: { ...process.env, PORT: String(port) },
     stdio: ["ignore", "pipe", "pipe"],
   });
+  state.child = child;
   try {
-    await new Promise<void>((resolve, reject) => {
-      let output = "";
-      const onData = (chunk: Buffer) => {
-        output += chunk.toString();
-        if (/Local:\s+http/.test(output) || /ready in/.test(output)) resolve();
-      };
-      state.child?.stdout?.on("data", onData);
-      state.child?.stderr?.on("data", onData);
-      state.child?.on("exit", (code) => reject(new Error(`vite exited early (${code}):\n${output}`)));
-      setTimeout(() => reject(new Error(`vite did not become ready in 60s:\n${output}`)), 60000);
-    });
+    await awaitRendererStart(child);
 
     const { chromium } = await import("playwright");
     state.browser = await chromium.launch({ args: ["--no-sandbox"] });

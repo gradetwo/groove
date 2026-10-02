@@ -343,7 +343,9 @@ through `mcp/stdioChannel.ts`, which installs that listener, keeps the process a
 names on stderr every reply it could not deliver **including the file the render did write** (`the reply to request 3 (its
 file is at …) was not delivered: the client disconnected (EPIPE)`). Progress notifications are sent through the same
 `send()`, so a heartbeat cannot kill the server either, and `process.stderr` gets the same listener because a broken
-diagnostic channel has nowhere left to complain and must not crash for it.
+diagnostic channel has nowhere left to complain and must not crash for it. The same listener is attached to the
+dev-server child (`awaitRendererStart` in `mcp/render/worker.ts`): a failed `spawn` is reported as a failed render, and a
+checkout where Vite cannot be started no longer takes the process with it.
 
 **When the budget is exceeded the render is *reported*, not abandoned**: `withRenderTimeout` throws the sentence
 `the render of <what> did not answer within <n>s — the page may be stuck, and the renderer has been reset so the next call
@@ -509,6 +511,8 @@ run remotely (rendering certainly may not), and none of that should be invented 
 | `npm run check:mcp` | the bundle builds and the server answers `tools/list` plus two real calls over stdio |
 | `src/test/mcpTools.test.ts` | every pure handler: schemas, determinism, error messages, no library mutation |
 | `src/test/mcpStdioDisconnect.test.ts` | a client that closes the pipe cannot kill the server: the transport's `send()` still resolves and every undelivered reply is named, with its file |
+| `src/test/renderWorkerSpawnError.test.ts` | a dev server that cannot be started fails the render, not the process (a real `spawn` `error`, with the listener that is the difference) |
+| `src/test/renderSongBudgetGuard.test.ts` | `maxDurationSec` refuses in one shape at every magnitude, names the numbers, and names the levers |
 | `npm run redlines` (R7a) | the tool/resource/prompt sets are still declared in full, and nothing under `src/` imports `mcp/` |
 | `npm run check:budget` | unchanged by construction (the server is outside the web build) |
 
