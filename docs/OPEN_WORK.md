@@ -2558,3 +2558,17 @@ Bass 3 ｜ Guitar 3 ｜ **Orchestral 3** ｜ **Acoustic Piano 2** ｜ **Organ 2*
 **两线各自落地（推上 `dev`）＋ 我**rebase 到尖端后自验判据**＋ 远端门禁绿 ＋ 两处裁定写明**：
 1. **循环点是否参与连奏的"录音够不够"判断**（**这决定离线 57→25 能否再降** ✓）；
 2. **离线无实时按键时 `sw_*` 的确定默认规则**（**须有 §28 出处支持** ✓）。
+
+## 八十一、⭐ 反向判据的**改前基线**（2026-10-03 ✓，**我自跑** ✓）
+
+**尖端 `ac99d53` 上，14 个文件 **153 条**全绿** ✓：
+
+```
+**A 侧（音频／连奏）**：`ownerProjectAcceptance`／`legatoJoin`／`legatoVoices`／`legatoLiveJoin`／`audioLanePlan`／`audioLaneOfflineRender`
+**B 侧（解析／目录）**：`realLibraryParse`／`sfzParse`／`sampleManifest`／`sampleManifestFields`／`shippedManifest`／
+                        `sampledInstruments`／`mcpSampleLibraries`／`drumRoles`
+```
+**⇒ 用途** ✓✓：**两线落地后我重跑**同一条命令**；**条数与结果必须一致**** ⇒
+**若不一致 ⇒ 先判"是改动错了、还是判据过严"**，**绝不放宽判据去换绿** ✗✓（**目标的原话 ✓**）。
+**而要逐项不变的关键数字**：**离线 57→25**／**24 s 处 3→1**／**录音 60→28**；以及 **VSCO／freepats 的解析结果** ✓。
+**决定人：我** ；**依据**：目标要求反向判据，而"不变"必须由**我**核、不由两条线声称 ✓。
