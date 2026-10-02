@@ -1983,8 +1983,8 @@ Part 2 Priority 2 计划 ≈0.89 GB
 
 ```
 `legatoJoin` ＋ `legatoVoices` ＋ `ownerProjectAcceptance`          ⇒ **28/28 绿** ✓
-**实时那条路**：`legatoLiveJoin` ＋ `audioLanePlan` ＋ `audioLaneOfflineRender` ⇒ **27/27 绿** ✓✓
-⇒ 合计 **55 条**；**而 `check:mcp` ＝ **123 checks passed, 0 failed**（91 tools／7 resources／4 prompts ✓✓）**
+**实时那条路**：`legatoLiveJoin` ＋ `audioLanePlan` ＋ `audioLaneOfflineRender` ⇒ **28/28 绿** ✓✓
+⇒ 合计 **56 条**；**而 `check:mcp` ＝ **123 checks passed, 0 failed**（91 tools／7 resources／4 prompts ✓✓）**
 ```
 **⇒ 于是目标 ② 的三层都在**同一份判据下**绿** ✓✓：**离线（渲染/导出）／实时（应用里听的那条路）／MCP 读数**。
 
