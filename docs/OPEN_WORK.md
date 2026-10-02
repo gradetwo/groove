@@ -2708,3 +2708,52 @@ written for the **tenor****"、并已提到 Soprano 是"**更小更亮的答案*
 ### 86.5 ⇒ 于是"该换"的最多是**两条** ✓
 
 **而"不该换／已出局／核不出来就不换"三类同样要判据化** ✓（**"核不出来 ⇒ 不换"比"猜它更好"强** ✓）。
+
+## 八十七、✗✓ **更正我的一个前提**：SFZ 的 sample 路径按**根程序目录 ＋ `default_path`** 解析（2026-10-03 ✓，**由第二条线**实测**得出** ✓）
+
+### 87.1 实测（**现场跑夹具 ＋ 引源码行，不是读文档** ✓）
+
+**夹具**：`/var/tmp/…/sfizzprobe/`：`Samples/tone.wav` 存在；`Programs/root.sfz` 只 `<control>` ＋ `#include "sub/art.sfz"`；`Programs/sub/art.sfz` 写 `sample=..\Samples\tone.wav`。用 **sfizz_render 1.2** 渲染 note 60：
+
+```
+root 作入口          peak=0.0604   ← 有声：`..\Samples\` 按【根程序所在目录 Programs/】解析 ⇒ .. → 仓库根 → Samples/ ✓
+sub/art.sfz 作入口   peak=0.00003  ← 无声
+同一文件改成 Samples\tone.wav 作入口  peak=0.00003 ← 无声
+```
+**源码对得上**：`Synth::Impl::buildRegion` 只把 `defaultPath_`（`<control>` 的 `default_path`，全局顺序状态）交给 Layer；`Region::parseOpcode` 里 `filename = defaultPath + replace(sample,"\\","/")`；`FilePool` 一律 `rootDirectory / fileId.filename()`。
+
+### 87.2 ⇒ 我错在哪 ✓✓
+
+**我在 §65／§83 写"子程序的 `..\Samples\` 应按子程序自身解析，而非按根程序 URL"——**这个前提是反的**** ✗✓：
+* **war-tuba 的 6 个根程序里 `..\Samples\` 是**对的****（**基目录 `Programs/`**）⇒ **根程序作入口时悬空 = 0** ✓；
+* **"3850／4387 悬空"只出现在把 `Programs/<sub>/*.sfz` **当入口**时** ⇒ **那是**另一种用法**，不是根程序坏了** ✓；
+* **若按我原话实现 ⇒ `Programs/legato/staccato_dyn.sfz` 的 `..\Samples\` 会解析成 `Samples/`（从 `Programs/legato/` 上溯）⇒ **子程序能单用了，而**根程序（真正该用的入口）反而全悬空**** ✗，**且与 sfizz 行为相反** ✓。
+
+### 87.3 裁决（**决定人：我** ✓）：选 **A**
+
+1. **默认解析基目录**一字不改**（与 sfizz 一致）** ✗✓ ⇒ **根程序这条路保持 0 悬空**，**对 VSCO／freepats 是 no-op ⇒ 反向判据天然过** ✓；
+2. **把"声明它的那个文件"作为**元数据**暴露**（如 `SfzRegion.sourcePath`）✓；
+3. **并提供**显式**的"按声明文件解析"能力**（`sampleAssetForPath(samplePath, {programUrl, declaredIn})` 或 resolver 显式开关）⇒ **用它驱动判据**让 3850 条在"子程序作入口"那一路不再悬空 ✓；
+4. **⚠️ 文档与回报必须写明**：**"按声明文件解析"与 sfizz **不同**，是本仓的**显式选择**** ✓（**§27：不许静默**）；
+5. **判据（都要能红）**：① 根程序作入口 ⇒ **0 悬空**（改成按声明文件 ⇒ 必须红 ✗）；② 显式开关下 `sub/art.sfz` 作入口 ⇒ **不再悬空**（去掉开关 ⇒ 红）；③ VSCO／freepats 解析结果**一字不变** ✓。
+
+### 87.4 `sw_*` 与那条判据冲突的裁决 ✓
+
+**规范原句**（sfzformat.com `sw_last`）：**"an instrument which uses sw_last to select articulations will not have a default articulation preselected, meaning when loaded, it will play no sound until one of the keyswitches is pressed"** ⇒
+**⇒ 那么 `sfzKeyswitchPaths.test.ts:107`（无 `sw_default` 的 KEYSWITCH 夹具断言 `ok===true`）编码的是**未实现 `sw_*` 时的旧行为**、不是不变量** ⇒ **⇒ 我批准改它**，**三件一起做**：① diff 里说明它**原断言的是未实现行为**；② 带**该规范 URL ＋ 原句**；③ **新增**能红判据：**有 `sw_default` ⇒ 选中那个奏法；无 `sw_default` 且无开关 ⇒ **一个区域都不答**** ✓✓。
+**⚠️ 这不是"为换绿放宽断言"，恰恰相反**：**行为变严**，而那条判据在记录旧的错行为** ✓ ⇒ **除此一条外，既有期望值一个字都不许改** ✗✓。
+**⇒ 真正要修的那件必须可证**：**WAR-TUBA 根程序有 `sw_default=25` ⇒ 逐音探针要从 `*_ss_*`（staccatissimo）变成 `*_s_*`（staccato）** ✓✓。
+
+### 87.5 另外两条收下的更正 ✓
+
+* **`expandIncludes` **认**行首 `#define`** ⇒ **250/250 的成因是**行内**那一族**（**恰好 10 处**，全是 `<group> #define $POS <1..5> seq_position=$POS`，第 59/86/113/140/167/201/228/255/282/309 行；另有 30 处行首 `#define` 是能认的）✓；
+* **`sw_previous`／`sw_down`／`sw_up` 等未实现者，逐条写进对应库的 `needs` ＋ 回报** ✓（**§27：不许静默降级**）。
+
+## 八十八、`dev` 与**线上**的差（2026-10-03 ✓，**线上版本由站点自己核实** ✓）
+
+**线上 `https://groove.wangda.today/version.json` ⇒ `version: 2.34.37`，`releaseDate: 2026-10-02`** ✓ ——
+**而 `dev` 的 `package.json` **也停在 `2.34.37`**（**版本号自上次发布后未再动**）⇒ **`v2.34.37` 是 `dev` 的祖先** ✓ ⇒
+**差集 ＝ `v2.34.37..dev`：117 笔提交／178 文件（+117 418 / −3 387）**；**按类型**：`docs` 76／`feat` 23／`fix` 11／`test` 5／`refactor` 1／`perf` 1 ⇒
+**⇒ 行为改动是那 **23＋11＋5**；76 笔 `docs` 是台账、调研与出处，不改行为** ✓。
+**⇒ 结论**：**这些都在 `dev` 上、线上还没有**；**要上线是一次发布**（`scripts/release.sh` 九步、`SKIP_LOCAL_GATE=1` 走远端门禁）⇒ **按既定规矩：发布只在业主说的时候做** ✓。
+**⚠️ 唯一已经上线的是**采样镜像**：那 17 个库的 2.25 GB 已在 R2 上，只是**线上那份应用代码还不引用它们**** ✓。
