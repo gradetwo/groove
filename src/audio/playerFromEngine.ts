@@ -39,6 +39,13 @@ export interface EngineAudioTap {
   stop?: AudioEngine["stop"];
   /** The arrangement's tempo, so a note's beat is the length the arrangement says rather than the studio's last. */
   setBpm?: AudioEngine["setBpm"];
+  /**
+   * ⭐ **Where the transport reports a loop wrap, so the sampler lanes can be planned for the next pass.**
+   *
+   * Optional like the rest of the transport surface: a player that cannot reach it still plays, it just cannot
+   * extend a sampler lane past the first pass — and `AudioEngine.onLoopWrap` says why that matters.
+   */
+  onLoopWrap?: (wrapTimeSeconds: number) => void;
 }
 
 export interface PlayerDependencies {
@@ -201,6 +208,8 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
    * Also called at the top of `play`, so pressing play twice replaces the arrangement rather than layering it — the same discipline `AudioEngine.play` shows by returning early when it is already playing.
    */
   const stopScheduled = (): number => {
+    // ⭐ The loop handler goes with the voices: a stopped transport must not plan a pass nobody will hear.
+    if (engine.onLoopWrap) engine.onLoopWrap = undefined;
     // Drained first: `stop` is a voice's own method, so nothing in this loop can re-enter the list it is walking.
     const started = scheduled.splice(0);
     for (const voice of started) voice.stop();
@@ -247,6 +256,14 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
        */
       let problem: string | undefined;
       const samplerSteps = planSamplerSteps(samplerLanes);
+      /**
+       * ⭐ **Retained past the first pass, because the transport loops.**
+       *
+       * `scheduleSamplerSteps` puts one pass on the audio clock and returns; nothing steps these lanes afterwards,
+       * so a loader that went out of scope with that call would leave every later pass of a loop silent while the
+       * engine's own lanes kept sounding. It used to be a `const` inside the block below.
+       */
+      let sampler: ReturnType<typeof createSampleLoader> | null = null;
       if (samplerSteps.length > 0) {
         let assets: readonly SampleAsset[] = [];
         try {
@@ -258,7 +275,7 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
           console.warn("catalogue unavailable; the arrangement's sampler steps are silent", error);
         }
         if (assets.length > 0) {
-          const sampler = createSampleLoader(decode ?? browserSampleDecoder(engine.audioContext), assets, fetchSfzText);
+          sampler = createSampleLoader(decode ?? browserSampleDecoder(engine.audioContext), assets, fetchSfzText);
           const report = await scheduleSamplerSteps(samplerSteps, {
             context: engine.audioContext,
             destination: engine.musicDestination,
@@ -272,6 +289,38 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
            */
           problem = report.problems.length > 0 ? report.problems.join("; ") : undefined;
         }
+      }
+
+      /**
+       * ⭐ **The sampler lanes get planned again on every loop wrap, or they only ever play once.**
+       *
+       * `scheduleSamplerSteps` placed one pass; the engine's own lanes wrap by themselves and keep sounding, so
+       * without this the two halves of a looping arrangement diverge on the second pass. The wrap time comes from
+       * the transport rather than from this side's clock, because the transport schedules ahead and only it knows
+       * when the new pass actually begins.
+       *
+       * Failures are not re-reported: the first pass's report is what the caller was answered with, and a problem
+       * on pass seven is not a reason to change what pass one said. The voices are pushed onto `scheduled` so a
+       * stop silences them with everything else.
+       */
+      if (sampler !== null && samplerSteps.length > 0) {
+        const loader = sampler;
+        engine.onLoopWrap = (wrapTimeSeconds: number): void => {
+          if (engine.audioContext === null || engine.musicDestination === null) return;
+          void scheduleSamplerSteps(samplerSteps, {
+            context: engine.audioContext,
+            destination: engine.musicDestination,
+            loader,
+            bpm,
+            startSeconds: wrapTimeSeconds,
+          })
+            .then((again) => {
+              scheduled.push(...again.voices);
+            })
+            .catch(() => {
+              /* a later pass that cannot be planned must not become an unhandled rejection */
+            });
+        };
       }
 
       // What was planned is the steps the engine was handed: the pattern is the arrangement, and zero is the honest answer when every lane is empty.

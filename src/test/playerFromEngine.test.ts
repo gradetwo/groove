@@ -68,3 +68,71 @@ describe("creating a player from an engine", () => {
     expect(loadCatalogue).toHaveBeenCalledTimes(1);
   });
 });
+
+/**
+ * ⭐ **A looping arrangement must not lose its sampler lanes on the second pass.**
+ *
+ * `scheduleSamplerSteps` places one pass on the audio clock and returns; the engine's own lanes wrap inside the
+ * transport and keep sounding. So a sampler lane used to play once and then be silent while the synth lanes went
+ * on — which an external audit of `1b535ec` reported as the one defect that makes no sound, and which
+ * `docs/AUDIT_2026-10-02_TRIAGE.md` located at the single call site in `play`.
+ *
+ * The transport now reports the wrap and the player plans the next pass at the reported time, through the
+ * `startSeconds` parameter `scheduleSamplerSteps` already had. The criterion checks the hand-off rather than the
+ * audio: that a handler is registered when there is something to re-plan, that it asks the loader again, and that
+ * a play with no sampler lanes registers nothing at all.
+ */
+describe("a loop wrap plans the sampler lanes again", () => {
+  const withAssets = async () => ({
+    assets: [{ assetId: "virtuosity-drums-basic", name: "Drums", kind: "one-shot", sfz: { url: "sfz/drums.sfz" } } as never],
+  });
+  const oneNote = { t1: [{ pitch: 48, startBeats: 0, lengthBeats: 1, velocity: 100 }] };
+
+  it("⭐ registers a transport handler and asks the loader again when it wraps", async () => {
+    const tap = engine();
+    // The SFZ fetch is the probe: `loadNote` always asks for the text before it can resolve a region, so a second
+    // pass that never re-plans shows up as a call count that did not move.
+    const fetchSfzText = vi.fn(async () => "<region> sample=x.wav lokey=0 hikey=127");
+    const player = createArrangementPlayer({ engine: tap, loadCatalogue: withAssets, fetchSfzText });
+
+    await player.play(playInput(arrangement, oneNote));
+
+    expect(tap.onLoopWrap, "the transport was not asked to report its wraps").toBeTypeOf("function");
+    const attemptsAfterFirstPass = fetchSfzText.mock.calls.length;
+
+    // The transport reports the wrap with the time the next pass begins; the player plans from that time.
+    tap.onLoopWrap!(4);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(
+      fetchSfzText.mock.calls.length,
+      "the second pass asked the loader nothing, so its notes would be silent"
+    ).toBeGreaterThan(attemptsAfterFirstPass);
+  });
+
+  it("registers nothing when there are no sampler lanes, because nothing needs re-planning", async () => {
+    // A synth-only arrangement wraps on its own; a handler here would be work with no object.
+    const tap = engine();
+    const synthOnly: ArrangementV2 = {
+      songId: "s",
+      sourceSlots: [],
+      tracks: [{ id: "t2", kind: "instrument", name: "Keys" }],
+    };
+    const player = createArrangementPlayer({ engine: tap, loadCatalogue: async () => ({ assets: [] }) });
+    await player.play(playInput(synthOnly, { t2: [{ pitch: 60, startBeats: 0, lengthBeats: 1, velocity: 100 }] }));
+    expect(tap.onLoopWrap).toBeUndefined();
+  });
+
+  it("drops the handler on stop, so a stopped transport plans no pass nobody will hear", async () => {
+    const tap = engine();
+    // The SFZ fetch is the probe: `loadNote` always asks for the text before it can resolve a region, so a second
+    // pass that never re-plans shows up as a call count that did not move.
+    const fetchSfzText = vi.fn(async () => "<region> sample=x.wav lokey=0 hikey=127");
+    const player = createArrangementPlayer({ engine: tap, loadCatalogue: withAssets, fetchSfzText });
+    await player.play(playInput(arrangement, oneNote));
+    expect(tap.onLoopWrap).toBeTypeOf("function");
+
+    player.stop?.();
+    expect(tap.onLoopWrap).toBeUndefined();
+  });
+});

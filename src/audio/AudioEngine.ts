@@ -320,6 +320,17 @@ export class AudioEngine {
   private onStopCallback?: () => void;
   private onDroppedStepsCallback?: (droppedSteps: number) => void;
 
+  /**
+   * ⭐ **Called when the transport's own loop wraps, with the time the next pass's first step is scheduled for.**
+   *
+   * A public optional property rather than a constructor option, because the arrangement player is handed an engine
+   * that has already been constructed (`playerFromEngine.ts`) and so cannot reach the options bag. It exists
+   * because the loop is the only moment a caller can put anything **besides the engine's own lanes** on the next
+   * pass: the sampler lanes are scheduled ahead of time, not stepped by this scheduler, so without this they sound
+   * once and are silent for every later pass.
+   */
+  onLoopWrap?: (wrapTimeSeconds: number) => void;
+
   // Noise buffers cache
   private noiseBuffer: AudioBuffer | null = null;
 
@@ -1900,6 +1911,14 @@ export class AudioEngine {
         if (step < lStart || step >= lEnd) {
           step = lStart;
           this.currentStep = lStart;
+          /**
+           * ⭐ **Reported, because this is where a pass ends and the only place a caller can plan the next one.**
+           *
+           * `nextStepTime` is the time this step is being scheduled for, so it is exactly the moment the new pass
+           * begins — which is what the sampler scheduler needs as its start time. Deliberately not fired for the
+           * preview scope above: that is the piano roll's lane loop, a different feature with a different owner.
+           */
+          this.onLoopWrap?.(this.nextStepTime);
         }
       }
 
