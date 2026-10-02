@@ -41,6 +41,23 @@ const REPORT_ONLY = process.argv.includes("--report");
  * intentionally documented before it is built and cannot be marked inline.
  */
 const PROPOSED = new Map([
+  /**
+   * ⭐ **Parked, not built here**: these live on `graphsplit-preserved` (2026-10-02).
+   *
+   * The WIP commit was measured as not merging cleanly -- it conflicts in two files that kept moving afterwards --
+   * so it was preserved on a branch rather than merged or discarded, and the inventory that records that fact names
+   * the two files it adds. From this repository's side that is exactly "documented but not built", which is what
+   * this map is for. Compare the cross-mark convention (`OPEN_WORK.md` §十七): that one says "this path is
+   * wrong", which would be false about these.
+   */
+  [
+    "scripts/measure_graph_split.mjs",
+    "Added by the parked WIP on graphsplit-preserved; not merged, because the cherry-pick conflicts. See OPEN_WORK.md §十五.",
+  ],
+  [
+    "src/test/graphSplit.test.ts",
+    "Added by the parked WIP on graphsplit-preserved; not merged, because the cherry-pick conflicts. See OPEN_WORK.md §十五.",
+  ],
   [
     "src/components/sequencer/AudioSettingsModal.tsx",
     "Named in AUDIO_QUALITY_AND_SYNTH_PLAN.md as a planned extraction of the four audio settings; not built. The settings themselves live in the existing settings panel.",
