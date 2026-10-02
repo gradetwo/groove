@@ -1556,3 +1556,31 @@ Part 1 实际新增：**3189 个文件 / 1 504 008 796 字节 ＝ 1.504 GB（1.4
 
 **Part 2 未开始**（**如实报 ✓**）：**第一件事是 VSCO 弦乐演奏法**（**`ViolinEnsTrem` 33.56／`ViolaEnsTrem` 44.16／`CelloEnsTrem` 50.05／`ContrabassTrem` 20.32／各段 `*Spic`／弱奏组／`SViolin*` 一族 ⇒ 计划书实测合计 **473.39 MiB**，CC0、同一棵已钉的树 ✓**）——**在 `vsco2ce` 条目的 `paths` 上加那批目录＋程序 ⇒ 重跑枚举/测量/上传 ⇒ 并把 `strings_lead` 一线的演奏法接进 `stringTechniques`／映射表 ✓**；**真鼓那条**先与接管 `virtuosity-drums-basic` 的线**比对，只买它没有的** ✓。
 **⚠️ 交接事项** ✓：**它原给 `upload_samples.mjs` 加的"从 sparse checkout 自行枚举树条目 ＋ 解 `.tar.xz`"在与 `dev` 的 scratch-dir 重写冲突时**整体让给了 theirs** ⇒ **该能力目前不在 `dev` 上** ✗（**清单状态不受影响，只影响重跑管线的便利 ✓**）⇒ **下次动那支脚本时值得补回 ✓**。
+
+## 四十一、**目标 ③ 收口前的两条载重事实**（2026-10-02 ✓）
+
+### 41.1 ✅ **"Score 页签对鼓轨抛 `IncompleteVoice`"——已满足，如实记** ✓✓
+
+**修复来自 `9206134`（不是我这一轮）** ✓：**抛点在 VexFlow 的 tick 校验**（`ScoreV2.tsx:300` 那个 STRICT `new Voice({numBeats:4,beatValue:4})` ＋ 起始内容只有 1 拍 ✓）；**现在 `:301` `if (!plan.complete) voice.setStrict(false)`，且 `planMeasure`／`restsFor` 把缺口写成**休止符**⇒ 小节加得起来 ⇒ 严格声部也不再抛 ✓✓**。
+**判据（用真 VexFlow ✓）**：`src/test/scoreRhythm.test.ts:125-134`（**红：旧写法抛，逐字断言 `/IncompleteVoice/` ✓**）＋ `:136-143`（**绿：补休止后 `not.toThrow()` ✓**）。
+**⇒ 记法** ✓✓：**这一条**不再列在"待做"里**；**而**不**把它说成"仍会抛"、也**不**把它记成新修的 ✗**。
+
+**⭐ 而**真正剩下**的是另一件事** ✗✓：**鼓轨现在画在**有音高**的谱表上**——**`ScoreV2.tsx:170` 按 `note.pitch >= SPLIT_PITCH` 把鼓的音高劈成高/低两个谱表 ✓；`:288` 只 `addClef(treble ? "treble" : "bass")`、没有**打击乐谱号** ✓；`:263-267` 用**音名**而不是 `<unpitched>` 语义 ✓**——**而 `:14`／`:16` 的 TODO 自己就写着 "a drum part is drawn from its own MIDI pitches on the pitched stave" ✓✓** ⇒ **⇒ 已派一条线做**打击乐谱面**（`78f4196b` ✓），并裁决 **`ScoreV2` 加可选 `kind` prop ＋ `ArrangementViewV2.tsx` **只加一行** `kind={selected.kind}`** ✓（**通向"显式表"的唯一通路；纯加法；且那文件的 TODO 自己点名要这条 plumbing ✓**）。**
+
+### 41.2 ⭐ **"导入 MIDI 指定乐器"的关键测量：文件里没有身份** ✓✓
+
+**对业主那份 `宿命回响` `.mid`（本仓自己的解析器 ＋ 独立原始字节扫描 ✓）**：
+```
+format 1, division 480, bpm 120, 4/4 ｜ **trackNames(0x03) = ["Conductor","钢琴","弦乐","贝斯"]** ✓
+每轨音符：0 ／ 58 ／ 60 ／ 80（共 198 ✓）⇒ 过滤后是 **3 个 part** ✓
+**原始字节扫描：Program Change(0xC0) **0** 个 ｜ Instrument Name meta(0x04) **0** 个 ｜ Text meta(0x01) **0** 个** ✗
+```
+**而 `src/audio/MidiImporter.ts` 自己**：`0x03` 存进 `trackNames`（`:268-272` ✓）；**`0x04` 读成文本后丢弃**（`:291-293` ✓）；**`0xc0` 读到就丢**（`:331` ✓）。
+**⇒ 结论** ✓✓：**文件里**没有任何身份可读**——那四个名字只是名字 ✓✓** ⇒ **⇒ 因此那个入口的默认必须是**每行"留作合成器"**，且要有一条判据钉死**"名叫 `钢琴` 的 part **不得**自动选上钢琴"** ✓✓（**这正是"错的乐器比合成器更糟，因为那是对作曲者音乐的、没人做过的断言"那条裁定的落地 ✓**）。
+
+### 41.3 §28（导入侧）✓
+
+* **Cubase**（Prefs → MIDI → MIDI File → Import Options ✓）：**`Destination`——"Select Instrument Tracks to create instrument tracks for each MIDI channel in the MIDI file and let the program automatically load appropriate presets"** ✓；**`Auto Dissolve Format 0`——"For each embedded MIDI channel in the file, a separate track will be inserted"** ✓；**`Extract First Patch`——"the first Program Change and Bank Select events for each track are converted to Inspector settings"** ✓✓ ⇒ **身份来自**逐通道的显式映射**；文件自带的身份只有 program change ✓**；
+* **Ableton**：**导入**不弹映射对话框**，且 "MIDI file data is incorporated into the Live Set, and the resulting MIDI clips **lose all reference to the original file**"** ✓ ⇒ **⇒ "不弹、也不按名字猜"在行业里是一条真实存在的路 ✓**；
+* **Logic**：**官方页多次抓取只得到 JS 空壳／octet-stream ⇒ **如实写"未找到权威出处"，不编** ✓✓**。
+**⇒ 照 Cubase 那条模型做**（**逐 part 显式指定 ＋ 默认不猜 ✓**），因为它正是"有逐 part 指定这一格"的那一家 ✓。
