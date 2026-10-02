@@ -218,8 +218,14 @@ describe("the orchestral instruments a catalogue entry could serve", () => {
     const winds = list.categories.find((category) => category.name === "Winds");
     expect(winds, "the Winds category vanished, so the orchestral coverage is no longer visible in the tool's answer").toBeDefined();
     expect(list.categories.find((category) => category.name === "Percussion")?.subcategories.map((sub) => sub.name)).toContain("Struck Membranophones");
-    // The new library's twenty-six programs — fourteen sustained and twelve articulations — in the category the manifest declares for them.
-    expect(list.categories.find((category) => category.name === "Orchestral")?.count).toBe(26);
+    /**
+     * ⭐ **The count grew on 2026-10-02, and the number is the point of the assertion rather than an inconvenience.**
+     *
+     * `Orchestral` held 26 — VSCO 2 CE's fourteen sustained programs and twelve articulations. The Sonatina brass library mirrored that day declares the same category (it is the same
+     * kind of library: an orchestra sampled instrument by instrument), and adds **48** programs, so a caller now reads 74. Asserting 26 would have made this test fail for the right
+     * reason and been "fixed" by deleting the new library from the category; asserting the sum says what the tool answers and why it changed.
+     */
+    expect(list.categories.find((category) => category.name === "Orchestral")?.count).toBe(26 + 48);
   });
 
   it("answers what VSCO 2 CE is, where it came from, and under what licence", () => {
