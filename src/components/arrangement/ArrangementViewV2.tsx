@@ -1065,6 +1065,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
               <ScoreV2
                 notes={arrangement.notesByTrack?.[selected.id] ?? []}
                 bars={bars}
+                kind={selected.kind}
                 title={`${selected.name} — ${t("view_score")}`}
                 onExportMusicXml={files.exportMusicXml}
                 onImportMusicXml={files.importMusicXml}

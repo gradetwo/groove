@@ -11,14 +11,15 @@
  *
  * What this version does not do, stated rather than implied: no key signature other than C, no tuplets, no slurs, no dynamics from velocity, one voice per staff, and the notes are split treble/bass at middle C. Those are the same limits the exporter states, because they are limits of the notation layer rather than of either surface.
  *
- * Two more limits, added when a bar that did not add up turned out to be a crash rather than a drawing: a note held across a barline is **not** split and tied (the MusicXML writer does that; this stave does not yet), and a drum part is drawn from its own MIDI pitches on the pitched stave — the correct percussion notation needs the track's *kind*, which this component is not given. Both are stated here because the alternative is a reader believing the stave says something it does not.
+ * Two more limits, added when a bar that did not add up turned out to be a crash rather than a drawing: a note held across a barline is **not** split and tied (the MusicXML writer does that; this stave does not yet), and a **drum part is drawn on a percussion staff** — its vertical position is *which instrument*, from the explicit table in `percussionStaff.ts`, not a pitch. The score is told the track's kind (`kind: "drumkit"`); it never infers one, for the reason the MusicXML page states: reading "is this a drum part?" off the note numbers is exactly the inference that turns a repeated hi-hat pitch into a repeated F-sharp. A drum part whose instrument is not in that table still draws — at a stated fallback, with a sentence saying which row to add — rather than dropping the note.
  *
- * TODO(defense): **percussion staves.** A drum part's vertical position is *which instrument*, not a pitch: MusicXML says using `<pitch>` for it "would be misleading", and the correct spelling is a `percussion` clef with `<unpitched>`/`display-step` plus a notehead shape per instrument (W3C, *MusicXML 4.0 — Percussion*). Taking that on needs `trackKind` threaded from `ArrangementViewV2.tsx` into this component, and this batch is forbidden to touch that file (another workstream owns it). Guessing "this is a drum track" from the MIDI numbers would be the exact inference that page warns against, so this component does not guess.
+ * What is left of the older limit, stated rather than quietly kept: a note held across a barline is still not split and tied. And the drum staff is **five lines with two voices** — the cymbal family up, the drum family down — so a kit's roles are written the way a kit is written; a part that needs a third independent line at once is not spelled yet, and neither is a percussion staff with a different number of lines (MusicXML's `<staff-lines>`).
  */
 import { useEffect, useRef, useState } from "react";
 import { useLanguage } from "../../i18n/LanguageContext";
-import type { NoteEvent } from "../../types/arrangementV2";
+import type { NoteEvent, TrackKindV2 } from "../../types/arrangementV2";
 import { STEP_BEATS } from "../../data/noteEvents";
+import { percussionPlanNotices, planPercussionMeasure } from "./percussionStaff";
 
 export interface ScoreV2Props {
   notes: readonly NoteEvent[];
@@ -28,6 +29,19 @@ export interface ScoreV2Props {
   width?: number;
   /** The name a reader shows beside the first system. */
   title?: string;
+  /**
+   * ⭐ **What the track *is*, so a drum part is written as a drum part.**
+   *
+   * The one fact this component cannot read off the notes without guessing: a drum part's vertical axis is *which
+   * instrument*, and MusicXML says spelling that with `<pitch>` "would be misleading" — "an analysis program
+   * looking for a series of repeated F-sharps, based on the General MIDI pitch for a closed hi-hat" is the failure
+   * it names (W3C, *MusicXML 4.0 — Percussion*). So the caller says `"drumkit"` and `percussionStaff.ts` says where
+   * each instrument goes; nothing here infers it from the numbers.
+   *
+   * Optional so the component keeps working for every existing caller, and `undefined` means "a pitched stave",
+   * which is what this component drew before the prop existed.
+   */
+  kind?: TrackKindV2;
   /**
    * ⭐ **The score leaving the building, from the one place a score is read.**
    *
@@ -48,7 +62,7 @@ export interface ScoreV2Props {
 const SPLIT_PITCH = 60;
 
 /** VexFlow's own duration names, from beats. A duration with no exact written value (a triplet, a dotted value) is drawn as the next shorter written note rather than being dropped. */
-function durationName(lengthBeats: number): { name: string; dots: number } {
+export function durationName(lengthBeats: number): { name: string; dots: number } {
   const table: [number, string][] = [
     [4, "w"],
     [3, "h"],
@@ -79,7 +93,7 @@ function keyFor(pitch: number): string {
 const WRITTEN_BEATS: Record<string, number> = { w: 4, h: 2, q: 1, "8": 0.5, "16": 0.25 };
 
 /** What a written name is worth: the name's value, and a dot adds half of it. */
-function writtenBeats(name: string, dots: number): number {
+export function writtenBeats(name: string, dots: number): number {
   return (WRITTEN_BEATS[name] ?? STEP_BEATS) * (dots > 0 ? 1.5 : 1);
 }
 
@@ -215,11 +229,16 @@ export function planMeasure(
   return { entries, complete: true };
 }
 
-export function ScoreV2({ notes, bars = 8, width = 900, title, onExportMusicXml, onImportMusicXml, musicXmlBusy = false }: ScoreV2Props) {
+export function ScoreV2({ notes, bars = 8, width = 900, title, kind, onExportMusicXml, onImportMusicXml, musicXmlBusy = false }: ScoreV2Props) {
   const { t } = useLanguage();
   const hostRef = useRef<HTMLDivElement | null>(null);
   const musicXmlInputRef = useRef<HTMLInputElement | null>(null);
   const [problem, setProblem] = useState<string | undefined>(undefined);
+  /**
+   * What a drum part could not place — computed here rather than inside the drawing, because it is a fact about the
+   * notes and the table and not about the renderer: an empty array means every instrument is a row of the table.
+   */
+  const percussionNotices = kind === "drumkit" ? percussionPlanNotices(notes) : [];
 
   useEffect(() => {
     let cancelled = false;
@@ -248,8 +267,8 @@ export function ScoreV2({ notes, bars = 8, width = 900, title, onExportMusicXml,
 
         /**
          * **One bar of one stave, as VexFlow tickables.** The rhythm — which chords, which rests, and whether
-         * the bar adds up — is decided by `planMeasure`, which is pure and has its own criteria; this only
-         * translates names to `StaveNote`s.
+         * the bar adds up — is decided by `planMeasure` (pitched) or `planPercussionMeasure` (a drum part), both of
+         * which are pure and have their own criteria; this only translates names to `StaveNote`s.
          */
         const staffEntries = (measureIndex: number, treble: boolean) => {
           const plan = planMeasure(notes, measureIndex, treble);
@@ -271,7 +290,89 @@ export function ScoreV2({ notes, bars = 8, width = 900, title, onExportMusicXml,
           return { plan, tickables };
         };
 
+        /**
+         * ⭐ **The drum staff: a percussion clef, two voices, and `planPercussionMeasure`'s keys.**
+         *
+         * Three things differ from `staffEntries` and nothing else. The **key is the table's position**, not a pitch
+         * name — so a kick is written where the bass drum goes instead of where note 36 sits; **each note carries its
+         * own voice's stem direction**, because a kit's vertical axis is an instrument and Auto would flip a
+         * kick-and-hat bar's stems on every hit; and the bar is **two voices**, which is the arithmetic rather than a
+         * flourish: a `StaveNote` has one stem, so a kick and a hat on one beat cannot be one note written
+         * correctly (see `percussionStaff.ts`). The rest of the translation — dots on the constructor, the rest's own
+         * position — is the same code path as the pitched stave, so the two cannot disagree about a bar's arithmetic.
+         */
+        const percussionVoices = (measureIndex: number, staveWidth: number) => {
+          const plans = planPercussionMeasure(notes, measureIndex, 4, { durationName, writtenBeats, restsFor });
+          return plans.map((plan) => {
+            const tickables = plan.entries.map((entry) => {
+              const built = new StaveNote({
+                // A rest needs a position on the stave like any other note; `b/4` is the middle line, which is where
+                // a rest is written on a percussion staff as much as on a treble one.
+                keys: entry.kind === "rest" ? ["b/4"] : entry.keys,
+                duration: entry.duration,
+                dots: entry.dots,
+                // `Stem.UP` is 1 and `Stem.DOWN` is -1; the literals are used because `Stem` is not destructured here.
+                stemDirection: plan.stems === "up" ? 1 : -1,
+              });
+              if (entry.dots > 0) Dot.buildAndAttach([built], { all: true });
+              return built;
+            });
+            /**
+             * **Each voice keeps its own strictness.** A voice whose entries add up stays STRICT (so VexFlow's own
+             * tick check remains a live assertion about this stave), and the one that cannot — overlapping hits one
+             * line cannot spell — goes SOFT so its notes stay on the page instead of becoming an error message.
+             */
+            const voice = new Voice({ numBeats: 4, beatValue: 4 });
+            if (!plan.complete) voice.setStrict(false);
+            voice.addTickables(tickables);
+            return { plan, tickables, voice };
+          });
+        };
+
         const systemsPerRow = 2;
+        /**
+         * **Two staves for a pitched part, one for a drum part.** This is the whole of the difference in layout: a
+         * grand staff exists because a keyboard's two hands are written apart, and a drum kit is one player on one
+         * instrument, so a drum part on two staves would be a vertical axis that means nothing. The drum stave sits
+         * where the treble one does inside its system's band, so the systems land on the same rows either way.
+         */
+        if (kind === "drumkit") {
+          for (let system = 0; system < systems; system += 1) {
+            const x = (system % systemsPerRow) * (width / systemsPerRow);
+            const y = Math.floor(system / systemsPerRow) * 220 + 20;
+            const measuresInSystem = Math.min(4, bars - system * 4);
+
+            for (let measure = 0; measure < measuresInSystem; measure += 1) {
+              const measureIndex = system * 4 + measure;
+              const staveWidth = width / systemsPerRow / measuresInSystem;
+              const stave = new Stave(x + measure * staveWidth, y, staveWidth);
+              if (measure === 0) {
+                stave.addClef("percussion");
+                if (system === 0) stave.addTimeSignature("4/4");
+              }
+              if (measure === measuresInSystem - 1) stave.setEndBarType(Barline.type.END);
+              stave.setContext(context).draw();
+
+              const voices = percussionVoices(measureIndex, staveWidth);
+              /**
+               * **Both voices are formatted together**, which is what makes them one staff: `joinVoices` is where
+               * VexFlow resolves the two lines against each other, and formatting them separately would let them
+               * overlap. The width left for the notes is the stave minus the same margin the pitched staves use.
+               */
+              const formatter = new Formatter();
+              const built = voices.map(({ voice }) => voice);
+              formatter.joinVoices(built).format(built, staveWidth - 40);
+              for (const { tickables, voice } of voices) {
+                const beamable = tickables.filter((entry) => !entry.isRest() && (entry.getDuration() === "8" || entry.getDuration() === "16"));
+                if (beamable.length > 1) Beam.generateBeams(beamable);
+                voice.draw(context, stave);
+              }
+            }
+          }
+          setProblem(undefined);
+          return;
+        }
+
         for (let system = 0; system < systems; system += 1) {
           const x = (system % systemsPerRow) * (width / systemsPerRow);
           const y = Math.floor(system / systemsPerRow) * 220 + 20;
@@ -318,7 +419,7 @@ export function ScoreV2({ notes, bars = 8, width = 900, title, onExportMusicXml,
     return () => {
       cancelled = true;
     };
-  }, [notes, bars, width]);
+  }, [notes, bars, width, kind]);
 
   return (
     <div data-testid="score-v2" className="flex flex-col gap-2 rounded border border-[rgb(var(--d-line))] p-3">
@@ -373,6 +474,23 @@ export function ScoreV2({ notes, bars = 8, width = 900, title, onExportMusicXml,
         )}
       </div>
       {problem ? <span data-testid="score-problem" className="text-xs text-[rgb(var(--d-danger))]">{problem}</span> : null}
+      {/**
+       * ⭐ **An instrument the table does not place is said out loud, on the score.**
+       *
+       * The note is still drawn — at `percussionStaff.ts`'s stated fallback, never dropped — but a drum part that
+       * quietly wrote its shaker where the snare goes would be the exact defect this project keeps naming: a reading
+       * that looks like an answer. So the fallback is stated, with the file and the row to add, which is what makes
+       * it a next step rather than an apology.
+       */}
+      {percussionNotices.length > 0 ? (
+        <ul data-testid="score-percussion-notices" className="flex flex-col gap-1 text-xs text-text opacity-80">
+          {percussionNotices.map((notice) => (
+            <li key={notice} data-testid="score-percussion-notice">
+              {notice}
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {/* VexFlow draws into this element; React must not also manage its children, which is why it is empty and ref-driven. */}
       <div ref={hostRef} data-testid="score-canvas" className="overflow-x-auto" />
     </div>
