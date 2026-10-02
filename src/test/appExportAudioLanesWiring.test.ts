@@ -53,7 +53,10 @@ const audioPattern: SequencerPattern = {
 
 const synthPattern: SequencerPattern = {
   ...audioPattern,
-  tracks: [{ track_id: "kick", name: "Kick", instrument: "kick", steps: [1, 0, 0, 0] }],
+  // A lane that stays on the synthesised side, so `hasAudioLane` is false and the manifest fetch really is
+  // skipped. A bare role word no longer qualifies: the drum table maps it, so naming a synth lane "kick"
+  // made this fixture carry a recorded lane without meaning to.
+  tracks: [{ track_id: "chords", name: "Warm Pad", instrument: "warm_pad", steps: [1, 0, 0, 0] }],
 };
 
 const exportResult = { blob: new Blob(["x"]), filename: "custom_master_120bpm.wav", durationSec: 1, limiterKind: "worklet", gs1HostFailures: 0 };
