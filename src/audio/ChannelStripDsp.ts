@@ -112,13 +112,6 @@ export const STEREO_WIDTH_MAX = 1;
 export { STEREO_WIDTH_MAX_DELAY_SEC };
 
 /**
- * Compressor knee, dB — see `InsertCompressor.ts`, which is now its definition and the compressor's home. The value
- * is unchanged (6 dB: a gentle, musical knee, well below the browser default of 30, which would start compressing
- * ~15 dB under the threshold and make `compThresholdDb` stop meaning what it says); it is re-exported from here
- * because this module's importers — the insert-curve views and their test — already look for it here.
- */
-
-/**
  * Points in the drive transfer table. 2048 matches the master rack's saturation curve, so
  * a strip's drive and the master rack's DRIVE sound like the same transfer function, and
  * the table resolves `x = 0` exactly (an even sample count puts a sample at the centre).
