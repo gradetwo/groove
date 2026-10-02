@@ -1,8 +1,11 @@
 /**
- * 4-Voice Polyphonic Synthesizer with Dual Oscillators & ADSR Envelope Generator (P5-03)
+ * Polyphonic Synthesizer with Dual Oscillators & ADSR Envelope Generator (P5-03)
  *
  * Capabilities:
- * - 4-Voice dynamic polyphony with oldest-voice stealing
+ * - **One voice per note, with no polyphony cap of its own.** `playPolySynthNote` builds its nodes per call, so a
+ *   chord sounds every note; the only ceiling is the global source registry (`voiceRegistry.ts`, 128 nodes, and it
+ *   steals the lightest rather than a root). The "4-Voice with oldest-voice stealing" this line used to claim was
+ *   never true -- an external audit measured it and overturned it (`docs/AUDIT_2026-10-02_PART2.md`, item 7).
  * - Dual Oscillators with waveform blending and cent-level detuning
  * - Standard 4-stage ADSR (Attack, Decay, Sustain, Release) envelope
  * - De-clicked exponential audio curve transitions
@@ -1484,7 +1487,7 @@ function sharedNoiseBuffer(ctx: BaseAudioContext): AudioBuffer {
 }
 
 /**
- * Synthesizes a note on the 4-Voice Polyphonic Synth
+ * Synthesizes a note on a fresh voice; the synth imposes no polyphony limit of its own
  */
 export function playPolySynthNote(
   ctx: BaseAudioContext,

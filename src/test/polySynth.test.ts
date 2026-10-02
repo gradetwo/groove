@@ -55,7 +55,7 @@ function createMockAudioContext() {
   return { ctx, createdNodes };
 }
 
-describe("4-Voice Polyphonic Synthesizer (P5-03)", () => {
+describe("Polyphonic Synthesizer (P5-03) -- no voice cap of its own", () => {
   describe("Pitch & Frequency Math", () => {
     it("converts MIDI note numbers to standard concert pitch frequencies accurately", () => {
       // A4 = 69 = 440 Hz
