@@ -19,7 +19,7 @@ import { AudioStartGate } from "./components/AudioStartGate";
 import { ChordDefinition } from "./utils/chordTheory";
 import { BakedArpeggioResult } from "./utils/arpeggiatorTheory";
 import { UpdatesModal, CURRENT_CLIENT_VERSION } from "./components/UpdatesModal";
-import { ShortcutsModal } from "./components/ShortcutsModal";
+import { ShortcutsModal, type ShortcutScope } from "./components/ShortcutsModal";
 import type { HelpCategory } from "./components/help/HelpCenterModal";
 import {
   NewUserOnboardingModal,
@@ -68,11 +68,17 @@ const MainApp: React.FC = () => {
    * ⭐ **Which shortcut list the `?` popup is allowed to promise.**
    *
    * The studio's sequencer keys are handled by `useTransportShortcuts`, which only `StudioView` mounts — the
-   * same condition that renders it below. The popup is global, so it has to be told: advertising Ctrl+Z on
-   * `/new` (a route with no listener and no undo history) is a shortcut reference making a promise the view
-   * does not keep. Derived from the render condition rather than from the URL, so the two cannot drift.
+   * same condition that renders it below; the arrangement's undo/redo are handled by the listener
+   * `ArrangementViewV2` mounts, which only the `/new` route renders. The popup is global, so it has to be told:
+   * advertising Ctrl+Z on a route with no listener and no history is a shortcut reference making a promise the
+   * view does not keep. Derived from the render conditions rather than from the URL, so the three cannot drift.
+   *
+   * ⭐ **`"arrangement"` is new, and it is the half that used to be a deliberate omission.** Ctrl+Z was kept off
+   * the arrangement route *because it genuinely did nothing there*; now that the arrangement has a history and a
+   * key listener, the row comes back — the invariant is "every key shown is really available", not "show fewer
+   * keys".
    */
-  const shortcutScope = currentTab === "studio" && !route.newProject ? "studio" : "global";
+  const shortcutScope: ShortcutScope = route.newProject ? "arrangement" : currentTab === "studio" ? "studio" : "global";
 
   // On-demand asynchronous genre loading (P1-13)
   const targetGenreId = route.genreId || "chicago-house";

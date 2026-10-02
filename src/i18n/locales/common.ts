@@ -291,6 +291,19 @@ export const commonMessages = {
     en: "Sequencer keys (Space, undo/redo, grid navigation) are active on the Studio route only.",
     zh: "音序器键位（空格、撤销 / 重做、网格漫游）只在工作台（Studio）路由上有效。",
   },
+  /**
+   * The arrangement's own section. It exists because the new-project route now has a history and a listener of its
+   * own — Ctrl+Z was previously hidden there *because it truly did nothing*, and a reference that keeps printing
+   * nothing after the key starts working is the same defect from the other side.
+   */
+  shortcut_section_arrangement: { en: "Arrangement Editor Shortcuts", zh: "新编排编辑器快捷键" },
+  shortcut_arrangement_undo: { en: "Undo arrangement edit", zh: "撤销编排修改" },
+  shortcut_arrangement_redo: { en: "Redo arrangement edit", zh: "重做编排修改" },
+  shortcut_arrangement_redo_alias: { en: "Redo arrangement edit (alias)", zh: "重做编排修改（同义键）" },
+  shortcut_arrangement_scope_note: {
+    en: "Arrangement keys (undo/redo of arrangement edits) are active on the New Project route only.",
+    zh: "编排键位（撤销 / 重做编排修改）只在新编排（New Project）路由上有效。",
+  },
 
   // Challenge Certificate Modal (shared global modal)
   cert_share_text: { en: "🎧 My Groove Ear Training Rank is [{tier}] ({elo} ELO)!\n🎯 Accuracy: {accuracy}% | ⚡ Best Streak: {streak} | 🧠 Mastered Genres: {mastered}\nChallenge your acoustic perception at: https://groove.wangda.today", zh: "🎧 我的 Groove 音乐盲听听力天梯已达到【{tier}】({elo} ELO)！\n🎯 正确率: {accuracy}% | ⚡ 最高连胜: {streak} 局 | 🧠 攻克曲风: {mastered} 种\n快来挑战你的声学辨识力：https://groove.wangda.today" },

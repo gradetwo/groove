@@ -213,6 +213,43 @@ export function removeTrack(arrangement: ArrangementV2, trackId: string): Arrang
   return { ...arrangement, tracks: arrangement.tracks.filter((track) => !doomed.has(track.id)), notesByTrack: notes };
 }
 
+/**
+ * ⭐ **Put a track back — the inverse of `removeTrack`, and the reason it lives here rather than in the history layer.**
+ *
+ * `removeTrack` is destructive twice over: it takes the track **and everything grouped under it**, and it takes their
+ * notes with them. Undo therefore cannot be "add a track again": `addTrack` mints a **new** identity and appends at the
+ * end, so the restored track would be a different track in a different place, and every later reference to the old id —
+ * a selection, a region, another entry on the undo stack — would name something that no longer exists. That is the same
+ * "an index-as-id" mistake this file's header refuses, one level up.
+ *
+ * So the identity and the position are **given**, not derived: `index` is where the track sat, `notes` is what it held.
+ * A track already carrying this id is replaced rather than duplicated, which keeps the function idempotent — an undo
+ * applied twice must not produce two tracks.
+ */
+export function insertTrack(arrangement: ArrangementV2, track: TrackV2, notes: readonly NoteEvent[], index: number): ArrangementV2 {
+  const existing = arrangement.tracks.findIndex((candidate) => candidate.id === track.id);
+  const withoutTrack = existing === -1 ? arrangement.tracks : arrangement.tracks.filter((candidate) => candidate.id !== track.id);
+  const tracks = [...withoutTrack];
+  // The index is read against the array the track was taken from, so an earlier re-insert shifts nothing: every restore clamps to the list it is joining.
+  tracks.splice(Math.max(0, Math.min(index, tracks.length)), 0, track);
+  return { ...arrangement, tracks, notesByTrack: { ...(arrangement.notesByTrack ?? {}), [track.id]: [...notes] } };
+}
+
+/**
+ * ⭐ **Replace a track with a previous version of itself**, which is what an edit that changed more than one field needs
+ * in order to be undoable.
+ *
+ * Two edits are like that and neither has a field-level inverse: `changeTrackKind` **drops the `sample`** when a track
+ * stops being a sampler, and `addTake` moves `selectedTakeId` and rewrites `takeRegions` (splitting the regions it
+ * crosses). A `setTrackKind(a, id, previousKind)` would restore the kind and leave the sample gone; this restores what
+ * the track *was*. A track that is no longer in the arrangement is left alone rather than re-added — this function is a
+ * replacement, and `insertTrack` is the one that restores a position.
+ */
+export function replaceTrack(arrangement: ArrangementV2, track: TrackV2): ArrangementV2 {
+  if (!arrangement.tracks.some((candidate) => candidate.id === track.id)) return arrangement;
+  return { ...arrangement, tracks: arrangement.tracks.map((candidate) => (candidate.id === track.id ? track : candidate)) };
+}
+
 /** Move a track into a folder, or out of one with `parentId: undefined`. Refuses a folder into itself, which would make the tree unrenderable. */
 export function setTrackParent(arrangement: ArrangementV2, trackId: string, parentId: string | undefined): ArrangementV2 {
   if (parentId === trackId) return arrangement;

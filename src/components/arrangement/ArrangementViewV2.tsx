@@ -29,8 +29,30 @@
  * reads. That is stated here rather than implied.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Redo2, Undo2 } from "lucide-react";
 import type { ArrangementV2, TrackKindV2 } from "../../types/arrangementV2";
-import { addTake, addTrack, addTrackNote, changeTrackKind, moveTrackNote, removeTrackNote, setArrangementBars, setArrangementTempo, setTrackGain, setTrackNoteLength, setTrackPan, setTrackSample, toggleStep, createArrangementFromTemplate, removeTrack, setCollapsed, setTrackFlag, selectTrackTake } from "../../data/arrangementEdits";
+import { createArrangementFromTemplate } from "../../data/arrangementEdits";
+import {
+  addTakeCommand,
+  addTrackCommand,
+  addTrackNoteCommand,
+  changeTrackKindCommand,
+  moveTrackNoteCommand,
+  removeTrackCommand,
+  removeTrackNoteCommand,
+  selectTrackTakeCommand,
+  setArrangementBarsCommand,
+  setArrangementTempoCommand,
+  setCollapsedCommand,
+  setTrackFlagCommand,
+  setTrackGainCommand,
+  setTrackNoteLengthCommand,
+  setTrackPanCommand,
+  setTrackSampleCommand,
+  toggleStepCommand,
+} from "../../data/arrangementHistory";
+import { useArrangementHistory } from "../../features/arrangement/useArrangementHistory";
+import { DEFAULT_SAMPLER_ASSET } from "../../data/defaultContent";
 import type { CaptureOutcome } from "../../audio/captureTake";
 import { DEFAULT_PX_PER_BAR, MAX_PX_PER_BAR, MIN_PX_PER_BAR } from "./ArrangementRulerV2";
 import { TrackListV2, type InstrumentChoice } from "./TrackListV2";
@@ -143,6 +165,22 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
    */
   const [choosing, setChoosing] = useState(initialArrangement === undefined);
   const [arrangement, setArrangement] = useState<ArrangementV2>(() => initialArrangement ?? createArrangementFromTemplate(songId, undefined, "synth"));
+  /**
+   * ⭐ **The arrangement's history, sitting between every edit and the state it edits.**
+   *
+   * `src/data/arrangementHistory.ts` holds the model and the reason for it (an action stack built out of this project's
+   * pure edits, with §28's citations); `useArrangementHistory` is the React binding. **What matters here is that no
+   * call site below writes the arrangement directly**: each one builds the command for what it is about to do and hands
+   * it to `commit`, which is what makes "every edit in this view is undoable" a property of the wiring rather than a
+   * promise each handler has to keep.
+   *
+   * ⚠️ **The two exceptions are deliberate and named**, because a rule with silent exceptions is not a rule: the
+   * chooser's `Create` and the file entries' import both **replace the arrangement wholesale**, and both are the "first
+   * action" every product in §28 treats as un-undoable — Ableton says it outright: "Creating or opening a Set is
+   * treated as the first action in the Undo History and therefore cannot be undone". They still go through
+   * `setArrangement`, so the persistence effect sees them exactly as it sees everything else.
+   */
+  const { commit, undo: undoEdit, redo: redoEdit, canUndo, canRedo, undoAction, redoAction } = useArrangementHistory(arrangement, setArrangement);
   const [selectedTrackId, setSelectedTrackId] = useState<string | undefined>(undefined);
   /**
    * ⭐ **Which bar the strips show, which is not the transport's bar.** `bar` above is where the transport is in the underlying song and is what the take selector marks; this is a view choice — which sixteen squares a row draws. They are separate because an arrangement of eight bars still
@@ -180,14 +218,33 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
   const headerBars = arrangement.tracks.length === 0 ? 0 : bars;
   const laneWidth = Math.max(1, headerBars) * pixelsPerBar;
 
-  const onAddTrack = useCallback((kind: TrackKindV2, name: string) => {
-    setArrangement((current) => {
-      const next = addTrack(current, kind, name);
-      // The new track becomes the selected one: a track you just created is the track you meant to act on.
-      setSelectedTrackId(next.tracks[next.tracks.length - 1]?.id);
-      return next;
-    });
-  }, []);
+  /**
+   * ⭐ **The two readings the inverses need.**
+   *
+   * An action stack is only as good as what it knows about the value an edit displaced: undoing a gain change needs the
+   * gain that was there, undoing a note removal needs the note. Both are read **from the arrangement on screen** rather
+   * than from a copy kept alongside it — which is the arrangement this whole change is built on, and the reason there is
+   * still exactly one place the arrangement lives.
+   */
+  const trackFor = (trackId: string) => arrangement.tracks.find((candidate) => candidate.id === trackId);
+  const noteFor = (trackId: string, at: { pitch: number; startBeats: number }) =>
+    (arrangement.notesByTrack?.[trackId] ?? []).find((note) => note.pitch === at.pitch && note.startBeats === at.startBeats);
+
+  const onAddTrack = useCallback(
+    (kind: TrackKindV2, name: string) => {
+      const command = addTrackCommand(kind, name);
+      commit(command);
+      /**
+       * The new track becomes the selected one: a track you just created is the track you meant to act on.
+       *
+       * ⭐ **Read off the command, not off a re-render.** The id is minted inside the edit, and a `useEffect` that
+       * waited for the next arrangement would select the track one frame after the person pressed — which is long
+       * enough for a second press to land on the wrong one.
+       */
+      setSelectedTrackId(command.addedTrackId);
+    },
+    [commit]
+  );
 
   const selected = useMemo(() => arrangement.tracks.find((track) => track.id === selectedTrackId), [arrangement, selectedTrackId]);
 
@@ -307,6 +364,84 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
     reportArrangement(arrangement);
   }, [arrangement, reportArrangement]);
 
+  /**
+   * ⭐ **Undo and redo, once, for both the buttons and the keys.**
+   *
+   * A second copy of "call the stack and say what happened" behind the keyboard is how a button and its shortcut start
+   * disagreeing. The announcement matters for the same reason it does in the studio: the buttons' `disabled` state is a
+   * *visual* answer, and a screen reader gets no pixels from it — so an empty history says so out loud rather than
+   * looking like a key that does not work, which is the defect this repository's U7 names.
+   */
+  const handleUndo = useCallback(() => {
+    announcer.announce(t(undoEdit() ? "transport_undo_done" : "transport_nothing_to_undo"));
+  }, [undoEdit, t]);
+
+  const handleRedo = useCallback(() => {
+    announcer.announce(t(redoEdit() ? "transport_redo_done" : "transport_nothing_to_redo"));
+  }, [redoEdit, t]);
+
+  /**
+   * ⭐ **`Ctrl/Cmd+Z` and `Ctrl/Cmd+Shift+Z`, on the arrangement route only — because this component is only mounted
+   * there.** The same reasoning `App.tsx` uses for the `?` popup's scope: a key that is advertised on a route where
+   * nothing listens is a promise the route cannot keep, and mounting the listener with the surface is what makes the
+   * advertisement true rather than merely intended. The studio's `useTransportShortcuts` is not extended for the same
+   * reason — the two surfaces have two functions with two histories, exactly as Cubase keeps a MixConsole history
+   * apart from the project's (`Alt/Opt+Z` vs `Ctrl+Z`).
+   *
+   * **Two guards, and each is a defect this repository already paid for:**
+   *
+   * 1. **A text-entry control keeps its own keys.** The project-name field is a browser input with its own undo stack;
+   *    stealing `Ctrl+Z` inside it would make the app's edit history move while the cursor is in a name, which is both
+   *    surprising and, in the studio's own words for this guard, "a focused control swallows transport keys only when
+   *    it is a text-entry control". The shape is copied from `useTransportShortcuts.isTextEntryTarget`, including the
+   *    `range` exemption, so the two surfaces cannot disagree about what a text field is.
+   * 2. **An open modal dialog wins.** `Esc`-dismissable dialogs own the keyboard while they are up (U-09), and undoing
+   *    an arrangement behind a modal would change a document the person cannot see.
+   *
+   * **Both Ctrl and Cmd are accepted on every platform** rather than the studio's `isMac ? meta : ctrl`, because the
+   * binding this fulfils is literally "Ctrl/Cmd+Z" and a web surface that ignores the other modifier is a key that
+   * works for some people and not others. `Ctrl/Cmd+Y` is accepted as well, which is the alias the studio's toolbar
+   * table already declares for redo.
+   */
+  useEffect(() => {
+    const isTextEntryTarget = (el: HTMLElement | null): boolean => {
+      /**
+       * ⚠️ **The target is not always an element.** A synthetic `keydown` dispatched on `window` (a criterion, or any
+       * caller that wants to drive the handler directly) arrives with `window` as its target, and `window` has no
+       * `closest` — so the studio's version of this guard, which the rest of it is copied from, throws there. A guard
+       * against stealing a keystroke must never be the thing that breaks the keystroke.
+       */
+      if (!el || typeof el.closest !== "function") return false;
+      if (el.isContentEditable) return true;
+      const editableHost = el.closest<HTMLElement>("[contenteditable]");
+      if (editableHost && editableHost.isContentEditable) return true;
+      const control = el.closest<HTMLElement>("input, textarea, select");
+      if (!control) return false;
+      if (control.tagName === "TEXTAREA" || control.tagName === "SELECT") return true;
+      const type = (control as HTMLInputElement).type?.toLowerCase() || "text";
+      return type !== "range";
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
+      if (typeof document !== "undefined" && document.querySelector('[role="dialog"][aria-modal="true"]') !== null) return;
+      if (isTextEntryTarget(event.target as HTMLElement | null)) return;
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+      const key = event.key.toLowerCase();
+      if (key === "z") {
+        event.preventDefault();
+        if (event.shiftKey) handleRedo();
+        else handleUndo();
+      } else if (key === "y") {
+        event.preventDefault();
+        handleRedo();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleUndo, handleRedo]);
+
   const play = useCallback(async () => {
     if (player === undefined) return;
     // ⭐ The arrangement's own notes, not an empty map: they are content and they live with the tracks.
@@ -407,6 +542,14 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
    */
   const toolButtonActive =
     "h-11 shrink-0 rounded border border-[rgb(var(--d-accent))] bg-[rgb(var(--d-accent))] px-2 text-xs font-bold text-[rgb(var(--d-on-accent))] disabled:opacity-50";
+  /**
+   * Undo and Redo carry a glyph rather than a word, so they get their own square from the same tokens as `toolButton`:
+   * 44 px like everything else in this bar, and **the same `disabled:opacity-50` the other controls here use** rather
+   * than a colour of its own. No new palette value is introduced, which is also why the skin gates have nothing new to
+   * measure.
+   */
+  const toolButtonIcon =
+    "flex h-11 w-11 shrink-0 items-center justify-center rounded border border-[rgb(var(--d-line))] text-text disabled:opacity-50";
 
   return (
     <div data-testid="arrangement-view-v2" className="flex flex-col gap-2 p-2 text-text">
@@ -484,7 +627,13 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
         <RecordButtonV2
           capture={capture}
           disabled={selected === undefined}
-          onTake={(planned) => selected !== undefined && setArrangement((current) => addTake(current, selected.id, planned))}
+          /**
+           * ⭐ **A recording is an action like any other** — Ableton's history lists "Record" beside every other edit —
+           * so it goes through the stack. `addTake` is the one edit whose inverse is the **previous track**, because a
+           * take changes three things at once (`takes`, `selectedTakeId`, and `takeRegions`, which `assignTakeToRange`
+           * splits); the reason is written on `addTakeCommand` rather than here.
+           */
+          onTake={(planned) => selected !== undefined && commit(addTakeCommand(selected, planned))}
         />
 
         {/**
@@ -524,6 +673,50 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           </span>
         </span>
 
+        {/**
+         * ⭐ **Undo and Redo, in the toolbar, disabled when there is nothing to do.**
+         *
+         * The shape is the studio toolbar's own undo/redo pair (`Toolbar.tsx`, `data-toolbar-id="undo"`): the same two
+         * `lucide` glyphs, the same accessible names from the same dictionary keys (`toolbar_undo_title`,
+         * `toolbar_redo_title`), and the same rule that the control is **disabled rather than inert** when its stack is
+         * empty. Two surfaces teaching two vocabularies for one action is the thing this avoids.
+         *
+         * ⭐ **The `disabled` state is the stack's, not a guess**: `canUndo`/`canRedo` are React state inside
+         * `useArrangementHistory` (the studio's history records what happens when they are read off refs during render —
+         * the button silently never updates), so "nothing to undo" is a control that cannot be pressed rather than one
+         * that is pressed and does nothing. Logic's list and Ableton's are the same statement in their own words.
+         *
+         * `data-undo-action` publishes what the press would undo, which is how the readout "2. Change note length" in
+         * Logic's Undo History window is available here at all — and it makes the action-stack model checkable from the
+         * DOM rather than only from the words in a tooltip.
+         */}
+        <span className="ml-2 flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            data-testid="arrangement-undo"
+            data-undo-action={undoAction ?? ""}
+            aria-label={t("toolbar_undo_title")}
+            title={t("toolbar_undo_title")}
+            disabled={!canUndo}
+            onClick={handleUndo}
+            className={toolButtonIcon}
+          >
+            <Undo2 className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            data-testid="arrangement-redo"
+            data-redo-action={redoAction ?? ""}
+            aria-label={t("toolbar_redo_title")}
+            title={t("toolbar_redo_title")}
+            disabled={!canRedo}
+            onClick={handleRedo}
+            className={toolButtonIcon}
+          >
+            <Redo2 className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        </span>
+
         {/* Tempo and bars: the arrangement's own declared length and speed, editable where the transport is. */}
         <label className="flex items-center gap-1 text-[10px] text-text opacity-80">
           {t("arrangement_tempo")}
@@ -534,7 +727,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             aria-label={t("arrangement_tempo_bpm")}
             data-testid="arrangement-tempo"
             value={arrangement.bpm ?? 120}
-            onChange={(event) => setArrangement((current) => setArrangementTempo(current, Number(event.target.value)))}
+            onChange={(event) => commit(setArrangementTempoCommand(arrangement.bpm ?? 120, Number(event.target.value)))}
             className="h-6 w-14 rounded border border-[rgb(var(--d-line))] bg-transparent px-1 font-['JetBrains_Mono'] text-xs text-text"
           />
         </label>
@@ -547,7 +740,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             aria-label={t("arrangement_bars")}
             data-testid="arrangement-bars"
             value={bars}
-            onChange={(event) => setArrangement((current) => setArrangementBars(current, Number(event.target.value)))}
+            onChange={(event) => commit(setArrangementBarsCommand(bars, Number(event.target.value)))}
             className="h-6 w-12 rounded border border-[rgb(var(--d-line))] bg-transparent px-1 font-['JetBrains_Mono'] text-xs text-text"
           />
         </label>
@@ -779,14 +972,27 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
                     libraryOpen={openLibraryFor === track.id}
                     onLibraryOpenChange={(trackId, open) => setOpenLibraryFor(open ? trackId : undefined)}
                     instruments={instruments}
-                    {...(instruments !== undefined ? { onChangeInstrument: (trackId, assetId) => setArrangement((current) => setTrackSample(current, trackId, assetId)) } : {})}
-                    onToggle={(trackId, flag, value) => setArrangement((current) => setTrackFlag(current, trackId, flag, value))}
-                    onToggleArm={(trackId, armed) => setArrangement((current) => setTrackFlag(current, trackId, "armed", armed))}
-                    onChangeGain={(trackId, gainDb) => setArrangement((current) => setTrackGain(current, trackId, gainDb))}
-                    onChangeKind={(trackId, kind) => setArrangement((current) => changeTrackKind(current, trackId, kind))}
-                    onToggleCollapse={(trackId, collapsed) => setArrangement((current) => setCollapsed(current, trackId, collapsed))}
+                    {...(instruments !== undefined
+                      ? {
+                          onChangeInstrument: (trackId, assetId) =>
+                            commit(setTrackSampleCommand(trackId, trackFor(trackId)?.sample?.assetId ?? DEFAULT_SAMPLER_ASSET, assetId)),
+                        }
+                      : {})}
+                    onToggle={(trackId, flag, value) => commit(setTrackFlagCommand(trackId, flag, value))}
+                    onToggleArm={(trackId, armed) => commit(setTrackFlagCommand(trackId, "armed", armed))}
+                    onChangeGain={(trackId, gainDb) => commit(setTrackGainCommand(trackId, trackFor(trackId)?.gainDb ?? 0, gainDb))}
+                    onChangeKind={(trackId, kind) => {
+                      /**
+                       * ⭐ **The previous track travels with the command**, because a kind change is the one edit whose
+                       * inverse is not a setter: leaving `sampler` drops the sample on purpose, so
+                       * `setTrackKind(a, id, previousKind)` would restore the kind and leave the instrument gone.
+                       */
+                      const previous = trackFor(trackId);
+                      if (previous !== undefined) commit(changeTrackKindCommand(previous, kind));
+                    }}
+                    onToggleCollapse={(trackId, collapsed) => commit(setCollapsedCommand(trackId, collapsed))}
                     onRemoveTrack={(trackId) => {
-                      setArrangement((current) => removeTrack(current, trackId));
+                      commit(removeTrackCommand(arrangement, trackId));
                       // A removed track must not stay selected: the take selector would then describe something that is gone.
                       setSelectedTrackId((current) => (current === trackId ? undefined : current));
                     }}
@@ -843,7 +1049,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           <p>Select a track to see its takes.</p>
         ) : (
           <>
-            <TakeSelectorV2 track={selected} bar={bar} onSelect={(takeId) => setArrangement((current) => selectTrackTake(current, selected.id, takeId))} />
+            <TakeSelectorV2 track={selected} bar={bar} onSelect={(takeId) => commit(selectTrackTakeCommand(selected.id, selected.selectedTakeId, takeId))} />
             {/**
              * **The roll, for a track that plays pitches.** It is here rather than in a separate editor because the owner's complaint was having to leave the arrangement to enter notes; the keyboard below plays, this writes, and both act on the selected track.
              */}
@@ -869,11 +1075,16 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
                 notes={arrangement.notesByTrack?.[selected.id] ?? []}
                 // The roll shows the whole arrangement, so its length and the transport's are the same number.
                 beats={bars * 4}
-                onSetBars={(next) => setArrangement((current) => setArrangementBars(current, next))}
-                onAddNote={(note) => setArrangement((current) => addTrackNote(current, selected.id, note))}
-                onRemoveNote={(at) => setArrangement((current) => removeTrackNote(current, selected.id, at))}
-                onMoveNote={(from, to) => setArrangement((current) => moveTrackNote(current, selected.id, from, to))}
-                onResizeNote={(at, lengthBeats) => setArrangement((current) => setTrackNoteLength(current, selected.id, at, lengthBeats))}
+                onSetBars={(next) => commit(setArrangementBarsCommand(bars, next))}
+                onAddNote={(note) => commit(addTrackNoteCommand(selected.id, note))}
+                /**
+                 * ⭐ **Removing a note keeps the note**, because that is the only thing that can put it back. It is read
+                 * from the arrangement on screen rather than from the roll's own props: the roll is a reading of
+                 * `notesByTrack`, so a second copy of the note here would be the copy that goes stale.
+                 */
+                onRemoveNote={(at) => commit(removeTrackNoteCommand(selected.id, at, noteFor(selected.id, at)))}
+                onMoveNote={(from, to) => commit(moveTrackNoteCommand(selected.id, from, to))}
+                onResizeNote={(at, lengthBeats) => commit(setTrackNoteLengthCommand(selected.id, at, noteFor(selected.id, at)?.lengthBeats, lengthBeats))}
               />
             )}
             {selected.kind === "sampler" && selected.sample ? (
@@ -920,18 +1131,21 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
         arrangement={arrangement}
         onAddTrack={onAddTrack}
         onRemoveTrack={(trackId) => {
-          setArrangement((current) => removeTrack(current, trackId));
+          commit(removeTrackCommand(arrangement, trackId));
           setSelectedTrackId((current) => (current === trackId ? undefined : current));
         }}
-        onToggle={(trackId, flag, value) => setArrangement((current) => setTrackFlag(current, trackId, flag, value))}
-        onToggleCollapse={(trackId, collapsed) => setArrangement((current) => setCollapsed(current, trackId, collapsed))}
-        onChangeKind={(trackId, kind) => setArrangement((current) => changeTrackKind(current, trackId, kind))}
+        onToggle={(trackId, flag, value) => commit(setTrackFlagCommand(trackId, flag, value))}
+        onToggleCollapse={(trackId, collapsed) => commit(setCollapsedCommand(trackId, collapsed))}
+        onChangeKind={(trackId, kind) => {
+          const previous = trackFor(trackId);
+          if (previous !== undefined) commit(changeTrackKindCommand(previous, kind));
+        }}
         instruments={instruments}
-        onChangeInstrument={(trackId, assetId) => setArrangement((current) => setTrackSample(current, trackId, assetId))}
-        onToggleStep={(trackId, index) => setArrangement((current) => toggleStep(current, trackId, index))}
+        onChangeInstrument={(trackId, assetId) => commit(setTrackSampleCommand(trackId, trackFor(trackId)?.sample?.assetId ?? DEFAULT_SAMPLER_ASSET, assetId))}
+        onToggleStep={(trackId, index) => commit(toggleStepCommand(trackId, index))}
         bar={stripBar}
-        onChangeGain={(trackId, gainDb) => setArrangement((current) => setTrackGain(current, trackId, gainDb))}
-        onChangePan={(trackId, pan) => setArrangement((current) => setTrackPan(current, trackId, pan))}
+        onChangeGain={(trackId, gainDb) => commit(setTrackGainCommand(trackId, trackFor(trackId)?.gainDb ?? 0, gainDb))}
+        onChangePan={(trackId, pan) => commit(setTrackPanCommand(trackId, trackFor(trackId)?.pan ?? 0, pan))}
       />
     </div>
   );

@@ -88,3 +88,6 @@ public/covers/pixel/
 tools/covers/__pycache__/
 tools/covers/_batch_scratch/
 public/covers/_*
+
+# Probe artefacts: a screenshot whose bytes change every run must not dirty the tree `push_dev.sh` refuses.
+tmp/

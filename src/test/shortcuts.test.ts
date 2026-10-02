@@ -103,6 +103,44 @@ describe("Keyboard Shortcuts & Modal (P2-20)", () => {
     expect(screen.queryByTestId("shortcut-studio-scope-note")).toBeNull();
   });
 
+  /**
+   * ⭐ **The other half of the same rule, and the row that used to be missing on purpose.**
+   *
+   * Hiding Ctrl+Z on the arrangement route was correct while that route had no history — it was the "do not lie"
+   * half. Now `ArrangementViewV2` mounts a listener and owns a stack, so the reference has to say so, or the modal
+   * becomes the opposite defect: silent about a key that works.
+   */
+  it("⭐ shows the arrangement's undo/redo where that listener is mounted, and nowhere else", () => {
+    const { unmount } = render(
+      React.createElement(
+        LanguageProvider,
+        null,
+        React.createElement(ShortcutsModal, { isOpen: true, onClose: () => {}, scope: "arrangement" })
+      )
+    );
+    // The arrangement's own rows, with the keys its listener really binds. Both redo spellings are printed because
+    // both are bound on every platform, so the canonical one is asserted by name and the alias alongside it.
+    expect(screen.queryByText(/撤销编排修改|Undo arrangement edit/)).toBeTruthy();
+    expect(screen.queryByText(/^重做编排修改$|^Redo arrangement edit$/)).toBeTruthy();
+    expect(screen.queryByText(/同义键|\(alias\)/)).toBeTruthy();
+    expect(screen.queryByTestId("shortcut-arrangement-scope-note")).toBeNull();
+    // And the sequencer's rows are still absent here, because that listener is not mounted on this route either.
+    expect(screen.queryByText(/撤销步进修改|Undo pattern change/)).toBeNull();
+    expect(screen.getByTestId("shortcut-studio-scope-note")).toBeTruthy();
+    unmount();
+
+    // Anywhere else, the arrangement's rows must not be advertised — the invariant is unchanged, only its reach grew.
+    render(
+      React.createElement(
+        LanguageProvider,
+        null,
+        React.createElement(ShortcutsModal, { isOpen: true, onClose: () => {} })
+      )
+    );
+    expect(screen.queryByText(/撤销编排修改|Undo arrangement edit/)).toBeNull();
+    expect(screen.getByTestId("shortcut-arrangement-scope-note")).toBeTruthy();
+  });
+
   it("handles g followed by s/c/g/t/v/m/q for fast navigation", () => {
     const handleNavigate = vi.fn();
     render(
