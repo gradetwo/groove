@@ -110,6 +110,8 @@ let scriptsChecked = 0;
 for (const doc of DOCS) {
   const source = fs.readFileSync(path.join(ROOT, doc), "utf8");
   source.split("\n").forEach((line, index) => {
+    // ⭐ Same exemption as the path scan (docs/OPEN_WORK.md §十七): a line with the cross mark discusses.
+    if (line.includes("\u2717")) return;
     for (const match of line.matchAll(SCRIPT_REF_RE)) {
       scriptsChecked += 1;
       const name = match[1];

@@ -59,6 +59,19 @@ export function referencesInDocument(
   const out: Array<{ rel: string; line: number; looksPlanned: boolean }> = [];
   source.split("\n").forEach((line, idx) => {
     const looksPlanned = looksLikePlanLine(line);
+    /**
+     * ⭐ **A line carrying the cross mark is discussing a path, not asserting one** — `docs/OPEN_WORK.md` §十七.
+     *
+     * Five of the broken references in `docs/` are deliberate: a document that prints a wrong path beside the right
+     * one, or says of a report that every path was wrong, contains paths that must not exist. They look real, so no
+     * list of names separates them from a typo; the marker does, and this project already writes it for "this is
+     * wrong" in exactly those tables, so the rule records a habit rather than adding syntax.
+     *
+     * The failure mode is a miss rather than a false positive, which is the direction section fourteen settled as
+     * the acceptable one: a skipped broken line costs a report, while a false positive sends a reader to correct a
+     * document that was already right.
+     */
+    if (line.includes("\u2717")) return;
     for (const match of line.matchAll(DOC_REF_RE)) {
       out.push({ rel: match[1], line: idx + 1, looksPlanned });
     }
