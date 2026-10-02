@@ -119,9 +119,9 @@ export interface InstrumentList {
    * (`add_arrangement_track {kind:"synth", instrument:"piano_lead"}`) instead of by asset id, and can see the judgement
    * behind each row (`because`) rather than reverse-engineering it.
    *
-   * ⭐ **It carries the string techniques too.** The eight playable rows of `src/data/stringTechniques.ts` are derived
-   * into this list under their identity names (`violin_section_sustain`, `violin_section_pizzicato`, …,
-   * `contrabass_solo_pizzicato`), so a technique `chooseTechnique` selects has a name that reaches the recording. A
+   * ⭐ **It carries the string techniques too.** The 25 mirrored rows of `src/data/stringTechniques.ts` are derived
+   * into this list under their identity names (`violin_section_sustain`, `violin_section_spiccato`, …,
+   * `solo_violin_tremolo`), so a technique `chooseTechnique` selects has a name that reaches the recording. A
    * technique whose bytes are not mirrored is deliberately **absent** — naming it would promise a recording the mirror
    * does not hold.
    */

@@ -12,8 +12,10 @@
  * Four things are pinned per situation, because each can rot in a different direction:
  *
  *   · **which technique was chosen**, and the recording behind it;
- *   · **whether it was the first choice**, and — when it was not — the reason, named (spiccato and tremolo are real
- *     upstream techniques whose **bytes are not mirrored**, so their rules *must* fall back and *must* say so);
+ *   · **whether it was the first choice**, and — when it was not — the reason, named. The 2026-10-02 round mirrored
+ *     the spiccato and tremolo programs, so those two rules now reach their first choice and the tests assert the
+ *     *absence* of a fallback sentence; the fallback machinery is still pinned by the cases that genuinely fall back
+ *     (`refuses the walking register`, and a note outside a program's compass);
  *   · **the register**, because "walking" is a low line and a viola pizzicato is not one;
  *   · **the length verdict and the velocity layers**, the two measured facts the whole table exists for.
  *
@@ -93,19 +95,18 @@ describe("every musical situation, read back", () => {
     expect(placement.length!.counts).toEqual({ fits: notes.length, risky: 0, exceeds: 0 });
   });
 
-  it("short and repeating: spiccato is asked for first, is unmirrored, and the pluck is reported as the fallback it is", () => {
+  it("short and repeating: the bouncing bow is asked for first and is mirrored, so the part really is a spiccato", () => {
     const notes = repeatedShortNotes();
     const placement = placementForPart({ instrument: "violin", situation: "short-repeating" }, notes, 120);
-    expect(placement.technique).toBe("pizzicato");
-    expect(placement.assetId).toBe("vsco2ce:ViolinEnsPizz");
-    expect(placement.instrument).toBe("violin_section_pizzicato");
-    expect(placement.firstChoice).toBe(false);
-    expect(placement.rejected).toEqual([{ technique: "spiccato", reason: "not-mirrored" }]);
-    // ⭐ The fallback is said, not implied: the sentence names spiccato and the reason its bytes are absent.
-    expect(placement.problems.join(" | ")).toMatch(/spiccato was asked for first and its bytes are not in the mirror/);
-    expect(placement.problems.join(" | ")).toMatch(/vsco2ce:ViolinEnsPizz/);
-    expect(placement.note).toMatch(/a fallback/);
-    expect(laneSampleFor(notes, placement.instrument!)).toBe("vsco2ce:ViolinEnsPizz");
+    expect(placement.technique).toBe("spiccato");
+    expect(placement.assetId).toBe("vsco2ce:ViolinEnsSpic");
+    expect(placement.instrument).toBe("violin_section_spiccato");
+    expect(placement.firstChoice).toBe(true);
+    expect(placement.rejected).toEqual([]);
+    // ⭐ No fallback sentence is printed when there was no fallback — the 2026-10-02 mirror is what changed this.
+    expect(placement.problems).toEqual([]);
+    expect(placement.note).not.toMatch(/a fallback/);
+    expect(laneSampleFor(notes, placement.instrument!)).toBe("vsco2ce:ViolinEnsSpic");
   });
 
   it("a plucked walking line: the contrabass pizzicato, with the rule's 24–60 register in force", () => {
@@ -132,16 +133,15 @@ describe("every musical situation, read back", () => {
     expect(placement.refused).toMatch(/split the part at the register boundary, or name the instrument directly/);
   });
 
-  it("tension: tremolo is asked for first, is unmirrored, and the sustain it falls back to is not passed off as tension", () => {
+  it("tension: the rapid repeated bow is asked for first and is now mirrored, so the cello really plays a tremolo", () => {
     const notes = [note(48, 8, 100), note(55, 8, 100, 8), note(60, 8, 100, 16)];
     const placement = placementForPart({ instrument: "cello", situation: "tension-tremolo" }, notes, 120);
-    expect(placement.technique).toBe("sustain");
-    expect(placement.assetId).toBe("vsco2ce:CelloEnsSusVib");
-    expect(placement.instrument).toBe("cello_section_sustain");
-    expect(placement.firstChoice).toBe(false);
-    expect(placement.rejected).toEqual([{ technique: "tremolo", reason: "not-mirrored" }]);
-    expect(placement.problems.join(" | ")).toMatch(/tremolo was asked for first and its bytes are not in the mirror/);
-    expect(laneSampleFor(notes, placement.instrument!)).toBe("vsco2ce:CelloEnsSusVib");
+    expect(placement.technique).toBe("tremolo");
+    expect(placement.assetId).toBe("vsco2ce:CelloEnsTrem");
+    expect(placement.instrument).toBe("cello_section_tremolo");
+    expect(placement.firstChoice).toBe(true);
+    expect(placement.rejected).toEqual([]);
+    expect(laneSampleFor(notes, placement.instrument!)).toBe("vsco2ce:CelloEnsTrem");
   });
 
   it("an accent: a pluck supplies the attack, and it is the rule's first choice", () => {
@@ -162,11 +162,12 @@ describe("the length constraint, on the material's own numbers", () => {
     expect(placement.note).toMatch(/length fits — the longest note is 4.25 s/);
   });
 
-  it("exceeds: a 15 s note against the cello sustain's 12.747 s longest sample, with three priced next steps", () => {
-    // 30 beats at 120 bpm is 15 s; the cello's longest sustained sample is 12.747 s and it does not loop.
+  it("exceeds: a 15 s note against the cello tremolo's 11.183 s longest sample, with three priced next steps", () => {
+    // 30 beats at 120 bpm is 15 s; the cello's longest tremolo sample is 11.183 s and it does not loop. The rule now
+    // reaches the tremolo itself (it used to fall back to the 12.747 s sustain), so the bound moved down with it.
     const placement = placementForPart({ instrument: "cello", situation: "tension-tremolo" }, [note(48, 30, 100)], 120);
     const length = placement.length!;
-    expect(length.verdict).toMatchObject({ kind: "exceeds", maxSampleSeconds: 12.747 });
+    expect(length.verdict).toMatchObject({ kind: "exceeds", maxSampleSeconds: 11.183 });
     expect(length.seconds).toBe(15);
     expect(length.remedies.map((remedy) => remedy.remedy)).toEqual(["truncate", "switch-technique", "retrigger"]);
     /**
@@ -194,20 +195,24 @@ describe("the length constraint, on the material's own numbers", () => {
 describe("the technique identities are real, resolvable instrument names", () => {
   it("resolves every playable row's identity to that row's own recording, through the recorded-instrument table", () => {
     const playable = playableTechniques();
-    expect(playable).toHaveLength(8);
+    expect(playable).toHaveLength(25);
     for (const program of playable) {
       const identity = instrumentIdentityFor(program);
       expect(sampledInstrumentFor(identity)?.assetId, `${identity} must reach ${program.assetId}`).toBe(program.assetId);
     }
   });
 
-  it("offers an identity for every mirrored row and none for an unmirrored one", () => {
+  it("offers an identity for every mirrored row, and the three techniques with no row are still absent", () => {
     const names = new Set(ALL_SAMPLED_INSTRUMENTS.map((choice) => choice.instrument));
     for (const program of playableTechniques()) expect(names.has(instrumentIdentityFor(program))).toBe(true);
-    // The techniques the table refuses today must not be offered as if they played something.
-    expect(names.has("violin_section_spiccato")).toBe(false);
-    expect(names.has("cello_section_tremolo")).toBe(false);
-    expect(names.has("solo_violin_sustain")).toBe(false);
+    // ⭐ The rows the 2026-10-02 round mirrored are offered now — they used to be the negative cases here.
+    expect(names.has("violin_section_spiccato")).toBe(true);
+    expect(names.has("cello_section_tremolo")).toBe(true);
+    expect(names.has("solo_violin_sustain")).toBe(true);
+    // The techniques the library has no program for at all remain unnameable, so a caller cannot be promised one.
+    for (const absent of ["violin_section_non_vibrato", "violin_section_col_legno", "violin_section_harmonics"]) {
+      expect(names.has(absent)).toBe(false);
+    }
   });
 });
 
@@ -215,14 +220,16 @@ describe("a track added by situation", () => {
   it("writes the chosen identity on the track and reports the choice — and says the register is not checked yet", () => {
     const created = createProbe();
     const result = addMcpTrack(created, "synth", "Vln", undefined, undefined, { instrument: "violin", situation: "short-repeating" });
-    expect(result.situation!.technique).toBe("pizzicato");
-    expect(result.situation!.instrument).toBe("violin_section_pizzicato");
-    expect(result.problems.join(" | ")).toMatch(/spiccato was asked for first/);
+    // The rule's first choice is the mirrored spiccato since 2026-10-02, so no fallback sentence is printed.
+    expect(result.situation!.technique).toBe("spiccato");
+    expect(result.situation!.instrument).toBe("violin_section_spiccato");
+    expect(result.situation!.assetId).toBe("vsco2ce:ViolinEnsSpic");
+    expect(result.problems.join(" | ")).not.toMatch(/spiccato was asked for first/);
     expect(result.situation!.note).toMatch(/not checked yet, because no notes exist/);
     // `createMcpArrangement` gives a blank arrangement one starter track, so the new one is the last.
     const tracks = getMcpArrangement(created)!.tracks;
     expect(tracks.at(-1)!.name).toBe("Vln");
-    expect(tracks.at(-1)!.instrument).toBe("violin_section_pizzicato");
+    expect(tracks.at(-1)!.instrument).toBe("violin_section_spiccato");
   });
 
   it("refuses a situation whose register the instrument cannot hold, rather than creating a track that claims it", () => {
@@ -279,7 +286,7 @@ describe("a MIDI import given situations", () => {
     });
     expect(result.problems.join(" | ")).toMatch(/both the instrument "piano_lead" and the situation "short-repeating"/);
     expect(result.problems.join(" | ")).toMatch(/the situation was applied/);
-    expect(getMcpArrangement(created)!.tracks.find((candidate) => candidate.name === "Strings")!.instrument).toBe("violin_section_pizzicato");
+    expect(getMcpArrangement(created)!.tracks.find((candidate) => candidate.name === "Strings")!.instrument).toBe("violin_section_spiccato");
   });
 });
 

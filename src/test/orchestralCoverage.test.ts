@@ -219,13 +219,14 @@ describe("the orchestral instruments a catalogue entry could serve", () => {
     expect(winds, "the Winds category vanished, so the orchestral coverage is no longer visible in the tool's answer").toBeDefined();
     expect(list.categories.find((category) => category.name === "Percussion")?.subcategories.map((sub) => sub.name)).toContain("Struck Membranophones");
     /**
-     * ⭐ **The count grew on 2026-10-02, and the number is the point of the assertion rather than an inconvenience.**
+     * ⭐ **The count grew twice, and the number is the point of the assertion rather than an inconvenience.**
      *
      * `Orchestral` held 26 — VSCO 2 CE's fourteen sustained programs and twelve articulations. The Sonatina brass library mirrored that day declares the same category (it is the same
-     * kind of library: an orchestra sampled instrument by instrument), and adds **48** programs, so a caller now reads 74. Asserting 26 would have made this test fail for the right
-     * reason and been "fixed" by deleting the new library from the category; asserting the sum says what the tool answers and why it changed.
+     * kind of library: an orchestra sampled instrument by instrument), and adds **48** programs, so a caller read 74. The 2026-10-02 string-articulation round added VSCO's four section
+     * tremolos, four section spiccatos, four section `-Quiet` takes and five solo-violin programs — **17 more** — so the category now answers 91. Asserting a literal would have made this
+     * test fail for the right reason and been "fixed" by deleting a library from the category; asserting the sum says what the tool answers and why it changed.
      */
-    expect(list.categories.find((category) => category.name === "Orchestral")?.count).toBe(26 + 48);
+    expect(list.categories.find((category) => category.name === "Orchestral")?.count).toBe(26 + 48 + 17);
   });
 
   it("answers what VSCO 2 CE is, where it came from, and under what licence", () => {
@@ -240,7 +241,7 @@ describe("the orchestral instruments a catalogue entry could serve", () => {
     expect(vsco!.repo).toBe("schollz/VSCO-2-CE");
     expect(vsco!.pin).toBe("6dd651d55dde97fd4028699be9d4481f26917891");
     expect(vsco!.sourceUrl).toContain("schollz/VSCO-2-CE");
-    expect(vsco!.instruments).toBe(26);
+    expect(vsco!.instruments).toBe(43);
     expect(vsco!.durationSeconds).toBeGreaterThan(0);
     expect(vsco!.problems).toEqual([]);
   });

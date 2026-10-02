@@ -268,6 +268,21 @@ The repository has already established that these are unmirrored. These exact by
 | Solo violin | SViolinVib 70.91, SViolinVib-Quiet 37.15, SViolinTrem 32.39, SViolinPizz 13.08, SViolinSpic 12.81 | 166.34 |
 | **Total** | | **473.39** |
 
+⚠️ **Correction, added 2026-10-02 after the purchase was actually made** (the per-program figures above are right, the
+total is not). The four `-Quiet` programs are **not separate recordings**: every one of their regions names the
+**main program's `_v1` soft-layer samples**, with `lovel/hivel` widened from `0–62` to `0–127`. The earlier round
+mirrored those directories whole, so those bytes were **already in the bucket** — the quiet group's true new cost is
+**0**, and what was missing was only the mapping. Likewise `SViolinVib-Quiet` (37.15 MiB) is a strict subset of
+`SViolinVib` (70.91 MiB), so the solo-violin family's real new cost is the union of its four directories,
+**129.19 MiB**, not 166.34. Measured new bytes for all four groups: **349 224 766 B = 333.05 MiB** (433 sample files),
+not 473.39 MiB. The account and its per-program figures are in `docs/SAMPLE_LIBRARY_INTEGRATION.md` §8 and
+`docs/STRING_TECHNIQUES.md` §14.1.
+
+⚠️ **And the `-KS` programs cannot be used as the paragraph below assumes.** Their articulations are selected with
+`sw_lokey`/`sw_hikey`/`sw_last`/`sw_default`, which the loader does **not** implement — so including one whole file
+would answer a note with every folded articulation at once (or, in practice, whichever region the file lists first).
+They were deliberately left out; implementing `sw_*` is a prerequisite, not a download.
+
 The `*-KS` key-switch programs (`SViolin-KS` 129.19 MiB, `ViolinEns-KS` 94.83 MiB, etc.) reference the union of the
 individual articulations, so once the individual programs are mirrored the key-switch program adds only its
 program text. The loader already reads `default_path` per `<control>` section, so these are usable. Unlocks: every

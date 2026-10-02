@@ -190,11 +190,13 @@ export const SAMPLED_INSTRUMENTS: readonly SampledInstrumentChoice[] = [
  * of a mapping that already exists, and the first time a row's `assetId` was corrected the two would disagree — the
  * "two places, one thing" failure this file's own doc comment refuses.
  *
- * So the rows are **derived from the technique table's mirrored rows, in its own order**: eight playable rows today
- * (sustain and pizzicato on violin, viola, cello and contrabass), named `violin_section_sustain`,
- * `violin_section_pizzicato`, … , `contrabass_solo_pizzicato`. An unmirrored technique gets no row at all, because a
- * name that resolves to a recording the mirror does not hold would be a promise this table cannot keep — which is the
- * same rule the hand-written half follows for a mapped-but-absent asset.
+ * So the rows are **derived from the technique table's mirrored rows, in its own order**: **all 25 rows today** —
+ * sustain, quiet, pizzicato, spiccato and tremolo on the violin, viola, cello and contrabass sections plus the solo
+ * violin — named `violin_section_sustain`, `violin_section_pizzicato`, … , `solo_violin_tremolo`. Until the
+ * 2026-10-02 round only eight of them were mirrored (sustain and pizzicato on the four sections); the tremolo,
+ * spiccato, quiet and solo-violin rows joined when their bytes were mirrored. An unmirrored technique still gets no
+ * row, because a name that resolves to a recording the mirror does not hold would be a promise this table cannot
+ * keep — which is the same rule the hand-written half follows for a mapped-but-absent asset.
  *
  * `strings_lead` above is still the violin section sustained; the derived `violin_section_sustain` is the same
  * recording under the name a caller reaches by **technique** instead of by genre role.

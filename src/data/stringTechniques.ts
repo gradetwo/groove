@@ -26,10 +26,16 @@
  * shortest is **8.988 s**. That is the "弦乐长音会停" limit, and it is a property of the material rather than of
  * any player. `maxSampleSeconds` below carries it so a caller can be told *before* writing a 40-second pad.
  *
- * **2 — The mirror holds three of the eight string techniques that exist upstream.** Sustained, non-vibrato and
- * pizzicato have bytes; spiccato, tremolo, the solo-violin family and the `-KS` keyswitch programs do not. The
- * distinction is kept in the data (`mirrored`) rather than hidden, because "this technique exists in the library
- * but its bytes are not in the mirror" is a different statement from "this library cannot play it".
+ * **2 — The mirror now holds every string technique the pinned library has a program for.** The 2026-10-02 round
+ * added the four section tremolos, the four section spiccatos, the four section `-Quiet` takes and the whole
+ * solo-violin family, so **all 25 rows below are mirrored**. Of the eight technique words this file names, only
+ * `col-legno` and `harmonics` have **no program upstream at all**, and `non-vibrato` is a **contrabass-only**
+ * program (`ContrabassSusNV`, measured at 50.35 MiB / 28 files) that is not mirrored yet and has no row — a stated
+ * next step rather than a hidden fallback. The library's `-KS` keyswitch programs stay out on purpose: they fold
+ * several articulations into one file behind `sw_*` opcodes this loader does not implement, so including one would
+ * answer a request for a technique with whichever regions matched instead of with the articulation asked for. The
+ * `mirrored` flag is kept in the data rather than hidden, because "this technique exists in the library but its
+ * bytes are not in the mirror" is a different statement from "this library cannot play it".
  *
  * ## The shape of the table: one row per (instrument, technique)
  *
@@ -43,11 +49,11 @@ import type { NoteEvent } from "../types/arrangementV2";
 /**
  * The playing techniques **bowed and plucked strings** have, in the words a player uses.
  *
- * `sustain` is the bowed, vibrating long tone; `non-vibrato` and `quiet` are the same bow without the vibrato
- * and at a lower dynamic. `pizzicato` is plucked, `spiccato` is the short bouncing bow, `tremolo` is the rapid
- * repeated bow. `col-legno` and `harmonics` are named here **although the pinned library has neither** — an
- * absent technique is worth having a word for, so a request for it can be refused by name instead of falling
- * through to a sustain and sounding merely wrong.
+ * `sustain` is the bowed, vibrating long tone; `quiet` is the same program's soft take at a lower dynamic, and
+ * `non-vibrato` is the bow without the vibrato. `pizzicato` is plucked, `spiccato` is the short bouncing bow,
+ * `tremolo` is the rapid repeated bow. `col-legno` and `harmonics` are named here **although the pinned library has
+ * neither** — an absent technique is worth having a word for, so a request for it can be refused by name instead of
+ * falling through to a sustain and sounding merely wrong.
  */
 export type StringTechnique =
   | "sustain"
@@ -113,8 +119,9 @@ export interface StringTechniqueProgram {
 /**
  * ⭐ **The table.**
  *
- * Eighteen rows: five instruments, and the techniques each one actually has a program for. Read it as the answer
- * to "can we play a tremolo cello, and what do we call it" — `CelloEnsTrem`, `mirrored: false`.
+ * Twenty-five rows: five instruments, and the techniques each one actually has a program for. Read it as the answer
+ * to "can we play a tremolo cello, and what do we call it" — `CelloEnsTrem`, `mirrored: true` since the
+ * 2026-10-02 round, with the measured 11.183 s longest / 6.605 s shortest samples in its own row.
  *
  * The `maxSampleSeconds` and `safeSeconds` values are the measured longest and shortest samples of each program
  * (a program's samples are spread across pitch, which is why the two differ by several seconds). They are
@@ -148,14 +155,14 @@ export const STRING_TECHNIQUES: readonly StringTechniqueProgram[] = [
     assetId: "vsco2ce:ViolinEnsSusVib-Quiet",
     program: "ViolinEnsSusVib-Quiet.sfz",
     name: "Violin Section, sustained (quiet)",
-    mirrored: false,
+    mirrored: true,
     lowestNote: 55,
     highestNote: 86,
     velocityLayers: [[0, 127]],
-    maxSampleSeconds: 0,
-    safeSeconds: 0,
+    maxSampleSeconds: 13.275,
+    safeSeconds: 8.988,
     roundRobin: 1,
-    note: "A separate soft take, one single layer rather than the main program's two — so it is the right choice for a bed that must sit under everything, not a way to get pp from a low velocity. **Upstream only**: the mirror took the vibrato, pizzicato and spiccato families' main programs and left the `-Quiet` takes behind, so the id below is not in the catalogue and this row cannot sound today.",
+    note: "The soft take of the violin section's sustained program, and **not a separate recording**: all 11 of its regions name the `_v1` samples the main program already uses for its 0–62 layer, remapped across 0–127. So the 2026-10-02 round cost no new bytes for it — the samples were uploaded with the main program — and it is one single layer, for a whole part that must sit soft rather than for shaping one note.",
   },
   {
     instrument: "violin",
@@ -181,17 +188,17 @@ export const STRING_TECHNIQUES: readonly StringTechniqueProgram[] = [
     assetId: "vsco2ce:ViolinEnsSpic",
     program: "ViolinEnsSpic.sfz",
     name: "Violin Section, spiccato",
-    mirrored: false,
+    mirrored: true,
     lowestNote: 55,
     highestNote: 86,
     velocityLayers: [
       [0, 62],
       [63, 127],
     ],
-    maxSampleSeconds: 0,
-    safeSeconds: 0,
+    maxSampleSeconds: 3.208,
+    safeSeconds: 0.497,
     roundRobin: 2,
-    note: "The bouncing short bow, sequenced as a round robin of 2 so a repeated note alternates samples. Upstream only — no bytes in the mirror, so the length columns are zero rather than invented.",
+    note: "The bouncing short bow, 44 samples with a round robin of 2 so a repeated note alternates takes. Longest 3.208 s and shortest 0.497 s — a spiccato is for short notes, which is why `short-repeating` preferred pizzicato until these bytes were mirrored and now reaches its first choice.",
   },
   {
     instrument: "violin",
@@ -199,7 +206,7 @@ export const STRING_TECHNIQUES: readonly StringTechniqueProgram[] = [
     assetId: "vsco2ce:ViolinEnsTrem",
     program: "ViolinEnsTrem.sfz",
     name: "Violin Section, tremolo",
-    mirrored: false,
+    mirrored: true,
     lowestNote: 55,
     highestNote: 86,
     velocityLayers: [
@@ -207,10 +214,10 @@ export const STRING_TECHNIQUES: readonly StringTechniqueProgram[] = [
       [0, 127],
       [63, 127],
     ],
-    maxSampleSeconds: 0,
-    safeSeconds: 0,
+    maxSampleSeconds: 13.13,
+    safeSeconds: 7.565,
     roundRobin: 1,
-    note: "Rapid repeated bowing, recorded as a continuous texture. Upstream only — no bytes in the mirror. This is the technique for tension that a sustained note cannot reach, and it is not available today.",
+    note: "Rapid repeated bowing, recorded as a continuous texture — the one gesture that says tension rather than warmth. Mirrored in the 2026-10-02 round: 21 samples, three velocity ranges (soft 0–62, loud 63–127, and one top-of-range F#3 region written 0–127 because upstream has no take pair for it), longest sample 13.130 s and shortest 7.565 s. `tension-tremolo` therefore now reaches its first choice.",
   },
 
   /* ----------------------------------------------------------------- viola -- */
@@ -238,14 +245,14 @@ export const STRING_TECHNIQUES: readonly StringTechniqueProgram[] = [
     assetId: "vsco2ce:ViolaEnsSusVib-Quiet",
     program: "ViolaEnsSusVib-Quiet.sfz",
     name: "Viola Section, sustained (quiet)",
-    mirrored: false,
+    mirrored: true,
     lowestNote: 48,
     highestNote: 86,
     velocityLayers: [[0, 127]],
-    maxSampleSeconds: 0,
-    safeSeconds: 0,
+    maxSampleSeconds: 10.814,
+    safeSeconds: 7.565,
     roundRobin: 1,
-    note: "A separate soft take with one layer, same as the violin's quiet program. **Upstream only** — not in the mirror, not in the catalogue.",
+    note: "The soft take of the viola section's sustained program: the same 13 `_v1` samples as the main program's soft layer, remapped across 0–127, so no new bytes and one layer. Longest sample 10.814 s.",
   },
   {
     instrument: "viola",
@@ -272,17 +279,17 @@ export const STRING_TECHNIQUES: readonly StringTechniqueProgram[] = [
     assetId: "vsco2ce:ViolaEnsSpic",
     program: "ViolaEnsSpic.sfz",
     name: "Viola Section, spiccato",
-    mirrored: false,
+    mirrored: true,
     lowestNote: 48,
     highestNote: 86,
     velocityLayers: [
       [0, 62],
       [63, 127],
     ],
-    maxSampleSeconds: 0,
-    safeSeconds: 0,
+    maxSampleSeconds: 3.102,
+    safeSeconds: 0.56,
     roundRobin: 2,
-    note: "Upstream only; no bytes in the mirror.",
+    note: "Viola section spiccato, 48 samples, round robin of 2. Longest sample 3.102 s. Mirrored in the 2026-10-02 round.",
   },
   {
     instrument: "viola",
@@ -290,17 +297,17 @@ export const STRING_TECHNIQUES: readonly StringTechniqueProgram[] = [
     assetId: "vsco2ce:ViolaEnsTrem",
     program: "ViolaEnsTrem.sfz",
     name: "Viola Section, tremolo",
-    mirrored: false,
+    mirrored: true,
     lowestNote: 48,
     highestNote: 86,
     velocityLayers: [
       [0, 62],
       [63, 127],
     ],
-    maxSampleSeconds: 0,
-    safeSeconds: 0,
+    maxSampleSeconds: 15.572,
+    safeSeconds: 7.371,
     roundRobin: 1,
-    note: "Upstream only; no bytes in the mirror.",
+    note: "The viola section's rapid repeated bow, 24 samples in two layers. Longest sample 15.572 s — the longest tremolo in the library — and shortest 7.371 s. Mirrored in the 2026-10-02 round.",
   },
 
   /* ----------------------------------------------------------------- cello -- */
@@ -330,7 +337,7 @@ export const STRING_TECHNIQUES: readonly StringTechniqueProgram[] = [
     assetId: "vsco2ce:CelloEnsSusVib-Quiet",
     program: "CelloEnsSusVib-Quiet.sfz",
     name: "Cello Section, sustained (quiet)",
-    mirrored: false,
+    mirrored: true,
     lowestNote: 36,
     highestNote: 77,
     velocityLayers: [
@@ -338,10 +345,10 @@ export const STRING_TECHNIQUES: readonly StringTechniqueProgram[] = [
       [0, 127],
       [42, 127],
     ],
-    maxSampleSeconds: 0,
-    safeSeconds: 0,
+    maxSampleSeconds: 9.641,
+    safeSeconds: 6.387,
     roundRobin: 1,
-    note: "Separate soft take. **Upstream only** — like the other `-Quiet` takes it is not in the mirror and not in the catalogue, so the one-layer soft bed it would give is not reachable today.",
+    note: "The soft take of the cello section's sustained program: 14 of the main program's `_v1` samples across 0–127, no new bytes, one layer plus the file's own 0–41 / 42–127 split. Longest 9.641 s.",
   },
   {
     instrument: "cello",
@@ -367,17 +374,17 @@ export const STRING_TECHNIQUES: readonly StringTechniqueProgram[] = [
     assetId: "vsco2ce:CelloEnsSpic",
     program: "CelloEnsSpic.sfz",
     name: "Cello Section, spiccato",
-    mirrored: false,
+    mirrored: true,
     lowestNote: 36,
     highestNote: 77,
     velocityLayers: [
       [0, 62],
       [63, 127],
     ],
-    maxSampleSeconds: 0,
-    safeSeconds: 0,
+    maxSampleSeconds: 3.502,
+    safeSeconds: 0.773,
     roundRobin: 2,
-    note: "Upstream only; no bytes in the mirror.",
+    note: "Cello section spiccato, 52 samples, round robin of 2. Its 3.502 s longest sample is the longest of the five spiccati, which is what a low short bow needs.",
   },
   {
     instrument: "cello",
@@ -385,7 +392,7 @@ export const STRING_TECHNIQUES: readonly StringTechniqueProgram[] = [
     assetId: "vsco2ce:CelloEnsTrem",
     program: "CelloEnsTrem.sfz",
     name: "Cello Section, tremolo",
-    mirrored: false,
+    mirrored: true,
     lowestNote: 36,
     highestNote: 77,
     velocityLayers: [
@@ -393,10 +400,10 @@ export const STRING_TECHNIQUES: readonly StringTechniqueProgram[] = [
       [0, 127],
       [63, 127],
     ],
-    maxSampleSeconds: 0,
-    safeSeconds: 0,
+    maxSampleSeconds: 11.183,
+    safeSeconds: 6.605,
     roundRobin: 1,
-    note: "Upstream only; no bytes in the mirror.",
+    note: "The cello section's rapid repeated bow, 25 samples. Its longest sample, 11.183 s, is shorter than the same section's sustained 12.747 s, so a tremolo note runs out sooner than a bowed one of the same length.",
   },
 
   /* ------------------------------------------------------------ contrabass -- */
@@ -427,14 +434,14 @@ export const STRING_TECHNIQUES: readonly StringTechniqueProgram[] = [
     assetId: "vsco2ce:ContrabassSusVB-Quiet",
     program: "ContrabassSusVB-Quiet.sfz",
     name: "Solo Contrabass, sustained (quiet)",
-    mirrored: false,
+    mirrored: true,
     lowestNote: 24,
     highestNote: 60,
     velocityLayers: [[0, 127]],
-    maxSampleSeconds: 0,
-    safeSeconds: 0,
+    maxSampleSeconds: 17.332,
+    safeSeconds: 6.539,
     roundRobin: 1,
-    note: "Separate soft take, one layer. **Upstream only** — not in the mirror, not in the catalogue.",
+    note: "The soft take of the solo contrabass's sustained program: the same 13 `_v1` samples remapped across 0–127, so no new bytes and one layer. Its longest sample, 17.332 s, is the same recording that makes the main program the longest sustained string in the mirror.",
   },
   {
     instrument: "contrabass",
@@ -461,7 +468,7 @@ export const STRING_TECHNIQUES: readonly StringTechniqueProgram[] = [
     assetId: "vsco2ce:ContrabassSpic",
     program: "ContrabassSpic.sfz",
     name: "Solo Contrabass, spiccato",
-    mirrored: false,
+    mirrored: true,
     lowestNote: 24,
     highestNote: 60,
     velocityLayers: [
@@ -469,10 +476,10 @@ export const STRING_TECHNIQUES: readonly StringTechniqueProgram[] = [
       [0, 127],
       [63, 127],
     ],
-    maxSampleSeconds: 0,
-    safeSeconds: 0,
+    maxSampleSeconds: 3.283,
+    safeSeconds: 1.103,
     roundRobin: 1,
-    note: "Upstream only; no bytes in the mirror.",
+    note: "Solo contrabass spiccato, 42 samples. ⚠️ The two takes are named `_rr1`/`_rr2` in the file names but the program declares **no** `seq_length`/`seq_position`, so `roundRobin` is 1 and the loader always answers with the first take: the round robin is in the file names rather than in the opcodes, and only one of the two is reachable. Shortest sample 1.103 s, the most material under a short note of the five.",
   },
   {
     instrument: "contrabass",
@@ -480,17 +487,17 @@ export const STRING_TECHNIQUES: readonly StringTechniqueProgram[] = [
     assetId: "vsco2ce:ContrabassTrem",
     program: "ContrabassTrem.sfz",
     name: "Solo Contrabass, tremolo",
-    mirrored: false,
+    mirrored: true,
     lowestNote: 24,
     highestNote: 60,
     velocityLayers: [
       [0, 62],
       [63, 127],
     ],
-    maxSampleSeconds: 0,
-    safeSeconds: 0,
+    maxSampleSeconds: 10.639,
+    safeSeconds: 6.11,
     roundRobin: 1,
-    note: "Upstream only; no bytes in the mirror.",
+    note: "Solo contrabass tremolo — upstream has no contrabass section, so this is one player, like the pizzicato and sustained programs beside it. 16 samples in two layers; longest 10.639 s.",
   },
 
   /* ------------------------------------------------------------ solo violin -- */
@@ -500,17 +507,17 @@ export const STRING_TECHNIQUES: readonly StringTechniqueProgram[] = [
     assetId: "vsco2ce:SViolinVib",
     program: "SViolinVib.sfz",
     name: "Solo Violin, sustained",
-    mirrored: false,
+    mirrored: true,
     lowestNote: 55,
     highestNote: 96,
     velocityLayers: [
       [0, 62],
       [63, 127],
     ],
-    maxSampleSeconds: 0,
-    safeSeconds: 0,
+    maxSampleSeconds: 17.554,
+    safeSeconds: 11.263,
     roundRobin: 1,
-    note: "A solo violin is a different instrument from the section, with its own higher range (to MIDI 96) and its own programs. Upstream only; no bytes in the mirror, so nothing in the shipped catalogue plays a solo violin today.",
+    note: "A **solo violin**, a different instrument from the section: its own 55–96 compass, 30 samples in two layers, and the longest sustained string sample in the mirror at 17.554 s (the shortest is 11.263 s). Before this row nothing in the shipped catalogue played a solo violin.",
   },
   {
     instrument: "solo-violin",
@@ -518,14 +525,14 @@ export const STRING_TECHNIQUES: readonly StringTechniqueProgram[] = [
     assetId: "vsco2ce:SViolinVib-Quiet",
     program: "SViolinVib-Quiet.sfz",
     name: "Solo Violin, sustained (quiet)",
-    mirrored: false,
+    mirrored: true,
     lowestNote: 55,
     highestNote: 96,
     velocityLayers: [[0, 127]],
-    maxSampleSeconds: 0,
-    safeSeconds: 0,
+    maxSampleSeconds: 17.554,
+    safeSeconds: 12.895,
     roundRobin: 1,
-    note: "Upstream only; no bytes in the mirror.",
+    note: "The soft take of the solo violin's sustained program: 15 of the same 30 samples — the `_p` (piano) half — remapped across 0–127, so it shares the 17.554 s longest sample but its shortest is 12.895 s rather than 11.263 s. One layer.",
   },
   {
     instrument: "solo-violin",
@@ -533,7 +540,7 @@ export const STRING_TECHNIQUES: readonly StringTechniqueProgram[] = [
     assetId: "vsco2ce:SViolinPizz",
     program: "SViolinPizz.sfz",
     name: "Solo Violin, pizzicato",
-    mirrored: false,
+    mirrored: true,
     lowestNote: 55,
     highestNote: 96,
     velocityLayers: [
@@ -541,10 +548,10 @@ export const STRING_TECHNIQUES: readonly StringTechniqueProgram[] = [
       [0, 127],
       [63, 127],
     ],
-    maxSampleSeconds: 0,
-    safeSeconds: 0,
+    maxSampleSeconds: 4.839,
+    safeSeconds: 0.751,
     roundRobin: 1,
-    note: "Upstream only; no bytes in the mirror.",
+    note: "Solo violin pizzicato, 44 samples. ⚠️ Like the contrabass spiccato, its two takes are named `_RR1`/`_RR2` while the program declares no `seq_length`, so `roundRobin` is 1 and only the first take is reachable. Longest 4.839 s — a plucked solo violin rings longer than the section's 3.016 s.",
   },
   {
     instrument: "solo-violin",
@@ -552,17 +559,17 @@ export const STRING_TECHNIQUES: readonly StringTechniqueProgram[] = [
     assetId: "vsco2ce:SViolinSpic",
     program: "SViolinSpic.sfz",
     name: "Solo Violin, spiccato",
-    mirrored: false,
+    mirrored: true,
     lowestNote: 55,
     highestNote: 96,
     velocityLayers: [
       [0, 62],
       [63, 127],
     ],
-    maxSampleSeconds: 0,
-    safeSeconds: 0,
+    maxSampleSeconds: 2.221,
+    safeSeconds: 0.81,
     roundRobin: 2,
-    note: "Upstream only; no bytes in the mirror.",
+    note: "Solo violin spiccato, 60 samples with a round robin of 2. Longest 2.221 s and shortest 0.810 s — the shortest-bowed of the spiccati, so it is the one to reach for on the fastest figures.",
   },
   {
     instrument: "solo-violin",
@@ -570,7 +577,7 @@ export const STRING_TECHNIQUES: readonly StringTechniqueProgram[] = [
     assetId: "vsco2ce:SViolinTrem",
     program: "SViolinTrem.sfz",
     name: "Solo Violin, tremolo",
-    mirrored: false,
+    mirrored: true,
     lowestNote: 55,
     highestNote: 96,
     velocityLayers: [
@@ -578,10 +585,10 @@ export const STRING_TECHNIQUES: readonly StringTechniqueProgram[] = [
       [0, 127],
       [63, 127],
     ],
-    maxSampleSeconds: 0,
-    safeSeconds: 0,
+    maxSampleSeconds: 9.447,
+    safeSeconds: 5.606,
     roundRobin: 1,
-    note: "Upstream only; no bytes in the mirror.",
+    note: "The solo violin's rapid repeated bow, 27 samples over the same 55–96 compass as its sustained program. Longest sample 9.447 s, shortest 5.606 s.",
   },
 ];
 
@@ -643,8 +650,12 @@ export function programForIdentity(identity: string): StringTechniqueProgram | u
 /**
  * The techniques the pinned library has a program for but the mirror does not ship.
  *
- * Named as a function rather than left implicit, because this list is the answer to "为什么够不到" and it should
- * be readable from the code rather than reconstructed from a `false` flag scattered down the table.
+ * ⭐ **Empty since the 2026-10-02 round, and that is the point of keeping it.** All 25 rows are mirrored now; the
+ * rows that used to be listed here (`ViolinEnsTrem`, `CelloEnsSpic`, the `-Quiet` takes, the solo-violin family)
+ * are playable, and the three techniques this library genuinely cannot play are the ones with **no row at all**
+ * (`col-legno`, `harmonics`, and the contrabass-only `non-vibrato`). A caller that wants "what is still out of
+ * reach" should read this function **and** {@link STRING_SITUATION_RULES}'s preferences, because a preference with
+ * no row is a different shape of gap from a row with no bytes.
  */
 export function unmirroredTechniques(): StringTechniqueProgram[] {
   return STRING_TECHNIQUES.filter((program) => !program.mirrored);
@@ -983,8 +994,11 @@ export const STRING_SITUATION_RULES: readonly StringSituationRule[] = [
     situation: "sustained-bed",
     // Sustained vibrato first because the section's vibrato is recorded in and a held chord wants it; the quiet
     // take second, because a bed that must sit under everything is a different request rather than a lower velocity.
+    // ⭐ The quiet take is mirrored since 2026-10-02 (it always was, in bytes — see the row's own note), so the
+    // second preference is now reachable; `non-vibrato` still has no row, because the only program upstream is the
+    // contrabass's `ContrabassSusNV` and its 50.35 MiB are not mirrored yet.
     preferred: ["sustain", "quiet", "non-vibrato"],
-    why: "长和弦铺底: the section's recorded vibrato is the warm default, and the quiet take is the answer when the bed has to sit under everything. Non-vibrato is the fallback for a bed that should sound plain rather than warm.",
+    why: "长和弦铺底: the section's recorded vibrato is the warm default, and the quiet take is the answer when the bed has to sit under everything — one recorded layer at the file's own `volume=20`, for a whole part that must sit soft rather than for shaping one note. Non-vibrato has no row: it exists upstream only as the contrabass's `ContrabassSusNV` (measured 50.35 MiB, 28 files) and is not mirrored, so a request that reaches it falls through and says so.",
     recognisedBy: "several notes starting together, each with lengthBeats reaching the next chord's start (what `legatoGapsFor` reads), or a part whose mean length is a beat or more",
   },
   {
@@ -1004,10 +1018,11 @@ export const STRING_SITUATION_RULES: readonly StringSituationRule[] = [
   },
   {
     situation: "short-repeating",
-    // Spiccato is upstream-only, so today this rule lands on pizzicato — and that is the honest outcome rather
-    // than a reason to omit spiccato from the list. The moment the bytes are mirrored, the rule needs no edit.
+    // ⭐ Spiccato was upstream-only when this rule was written and the comment said "the moment the bytes are
+    // mirrored, the rule needs no edit". That moment was 2026-10-02: the four section spiccatos and the solo
+    // violin's are in the mirror, so this lands on the bow and pizzicato is now the fallback rather than the answer.
     preferred: ["spiccato", "pizzicato"],
-    why: "短促/重复(跳音、节奏型): spiccato is the bouncing short bow and is what a repeated staccato figure is, with a round robin of 2 so the repeats do not machine-gun one sample. Its bytes are not mirrored, so today this resolves to pizzicato — a pluck rather than a bow, which is a different sound and is reported as such rather than passed off as spiccato.",
+    why: "短促/重复(跳音、节奏型): spiccato is the bouncing short bow and is what a repeated staccato figure is, with a round robin of 2 so the repeats do not machine-gun one sample. ⭐ Its bytes are mirrored since 2026-10-02, so this resolves to the bow (measured: the violin's longest spiccato sample is 3.208 s, the cello's 3.502 s, the contrabass's 3.283 s), and pizzicato is the fallback for an instrument whose spiccato is out of range rather than the everyday answer it used to be.",
     recognisedBy: "many notes of the same pitch in a run, or notes whose lengthBeats is a fraction of the gap to the next onset",
   },
   {
@@ -1021,7 +1036,7 @@ export const STRING_SITUATION_RULES: readonly StringSituationRule[] = [
   {
     situation: "tension-tremolo",
     preferred: ["tremolo", "sustain"],
-    why: "震音/紧张: tremolo is the rapid repeated bow, and it is the one texture that says tension rather than warmth. **Its bytes are not mirrored**, so today this resolves to `sustain` and the tension is not reachable — a gap to report, not to paper over with a sustained note that will sound merely warm.",
+    why: "震音/紧张: tremolo is the rapid repeated bow, and it is the one texture that says tension rather than warmth. ⭐ Its bytes are mirrored since 2026-10-02 (four section programs plus the solo violin's), so this now reaches the tremolo itself — measured longest samples 13.130 s violin, 15.572 s viola, 11.183 s cello, 10.639 s contrabass, 9.447 s solo violin — and `sustain` is the fallback for a note outside the five programs' 24–96 compass rather than the everyday answer it used to be.",
     recognisedBy: "a note written much longer than its neighbours with no change of pitch, or an explicit tremolo marking",
   },
   {

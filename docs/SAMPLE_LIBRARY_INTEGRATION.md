@@ -1440,3 +1440,59 @@ npx vite-node scripts/scan_sample_opcodes.mjs --root /var/tmp/groove-mirror-<ent
 * **`pan_flute` 仍缺口**，卡在注册墙（不是许可、不是体积）。
 * **`slap_bass` 仍缺口**，卡在原文禁止。
 * **桶上没有独立核对**：目标是 `:s3:groove`，本轮用 `rclone size` 对账（见回报），但没有像 VSCO 那两轮一样逐条 `GET` 每个新前缀的对象；新增资产的**真读回**是按条目抽查的。
+
+### ⑧ ⭐⭐ Part 2 第一段：VSCO 2 CE 的弦乐演奏法（2026-10-02）
+
+计划书 `docs/research/library-costs-for-the-instrument-gaps.md` §6「Priority 1」列的正是这一项。**同一棵树、同一个 pin**
+（`6dd651d55dde97fd4028699be9d4481f26917891`）、**同一个 CC0**，所以没有新库、没有新许可决定；条目里的
+`licence`/`repo`/`pin`/`sourceUrl` **一个字未改**。
+
+**先量后买，得到的清单与实际字节：**
+
+| 组 | 程序（新增文件数 / 新增字节） | 小计 |
+| --- | --- | ---: |
+| 震音（四个声部） | `ViolinEnsTrem` 21 / 35 192 432；`ViolaEnsTrem` 24 / 46 300 628；`CelloEnsTrem` 25 / 52 485 638；`ContrabassTrem` 16 / 21 307 608 | **155 286 306 B（148.09 MiB）** |
+| 跳弓（四个声部） | `ViolinEnsSpic` 44 / 9 265 696；`ViolaEnsSpic` 48 / 10 078 728；`CelloEnsSpic` 52 / 26 160 320；`ContrabassSpic` 42 / 12 966 552 | **58 471 296 B（55.77 MiB）** |
+| 弱奏 `-Quiet`（四个声部） | `ViolinEnsSusVib-Quiet` 0；`ViolaEnsSusVib-Quiet` 0；`CelloEnsSusVib-Quiet` 0；`ContrabassSusVB-Quiet` 0（**全部已随主程序目录在镜像里**） | **0** |
+| 独奏小提琴（五个程序的**并集**） | `SViolinVib` 30 / 74 355 212（`SViolinVib-Quiet` 的 15 个是它的子集，0 新）；`SViolinTrem` 27 / 33 959 580；`SViolinPizz` 44 / 13 717 932；`SViolinSpic` 60 / 13 434 440 | **135 467 164 B（129.19 MiB）** |
+| **合计** | **433 个采样文件 ＋ 17 个 `.sfz` ＝ 450 个文件** | **349 224 766 B（333.05 MiB）** |
+
+⚠️ 分组是**去重后**的：`SViolinTrem`／`SViolinSpic` 同时属于"震音/跳弓"与"独奏小提琴"两组，
+上表把它们只算进独奏小提琴那一行（去重前的逐程序相加是 396 608 786 B，不是实际新增）。
+
+⭐ **两条把账面改小的实测**（计划书按"逐程序相加"记 473.39 MiB）：
+
+1. **`-Quiet` 不是另一份录音。** 四个 `-Quiet.sfz` 的 region 全部指向**主程序的 `_v1`（软层）**采样，
+   只是 `lovel/hivel` 从 `0–62` 放宽到 `0–127`。Part 1 是**按目录**镜像的，这些 `_v1` 文件随目录一起上传过，
+   所以这四组的**新增字节是 0**，缺的只是映射（103.19 MiB 的"新增"是计划书把已上传字节重复计了一次）。
+2. **`SViolinVib-Quiet` 的 15 个文件是 `SViolinVib` 30 个的子集**，所以独奏小提琴一族的实际新增是四个目录的
+   去重和 **129.19 MiB**，不是逐程序相加的 166.34 MiB（`SViolin-KS` 引用的 161 个采样恰好也是这 129.19 MiB，
+   见下）。
+
+**没买、并说明为什么的两项：**
+
+* **`ContrabassSusNV`（非揉弦长音，28 文件 / 50.35 MiB）**：上游只有低音提琴一条，未镜像；`non-vibrato` 因此仍无行，
+  这是"要买的下一项"而不是"库里没有"。
+* **8 个 `-KS` 键位程序**：它们的 region 用 `sw_lokey`/`sw_hikey`/`sw_last`/`sw_default` 折叠 2–5 套奏法，
+  **本加载器没有实现 `sw_*`**。整文件收进来会让一个音同时命中折叠的多套 region、实际响文件顺序里那一条——
+  这正是 Sonatina brass 已记录的同一条限制。所以不是"字节不够"，是**收了会答错**。
+
+**opcode 扫描（`scripts/scan_sample_opcodes.mjs`，43/43 程序、1387 个 region）：未实现的 7 条
+（`ampeg_attack`/`ampeg_dynamic`/`ampeg_release`/`group_label`/`hirand`/`lorand`/`volume`）全部照旧留在 `needs` 里，
+没有实现任何一条。** ⚠️ 其中 `ampeg_*` 是**已入库的 VSCO 程序一直在用**的、且有"听感证据不足"的记录，
+所以本轮**只记录、不动加载器**（与 ③b 的处置同一条理由）。`hirand`/`lorand` 是"同音高多份取一"，
+不实现时取第一份：影响"重复音是否略有变化"，不影响响不响。
+
+**入桶实测**（`rclone size :s3:groove --json`，上传前后各一次）：
+
+| | 文件 | 字节 |
+| --- | ---: | ---: |
+| 上传前 | 10 431 | 6 489 005 887 |
+| 上传后 | 10 881 | 6 838 287 866 |
+| **本段新增** | **+450** | **+349 281 979** |
+
+⇒ `vsco2ce` 条目：**928 → 1378 文件**、**846 035 313 → 1 195 317 292 字节**、**26 → 43 个程序**。
+5 GB 新预算的占用从 1.504 GB 到 **1.853 GB（37.1%）**，剩 **3.147 GB**。
+
+**接线与判据**：见 `docs/STRING_TECHNIQUES.md` §14（25 行全部有声、两条情形规则落到首选、
+17 行 `mirrored` 与实测时长、`src/test/stringSituation.test.ts` 从身份名到编译后 lane 的真读回）。

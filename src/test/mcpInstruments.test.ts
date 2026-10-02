@@ -99,31 +99,43 @@ describe("string techniques on the instrument list", () => {
    */
   it("narrows by musical situation rather than by program name", () => {
     const bed = listCatalogueInstruments({ situation: "sustained-bed" });
-    // Four sustained section or solo programs, and nothing else.
+    // ⭐ Ten programs since 2026-10-02: the five sustained rows and the five `-Quiet` soft takes, because the rule's
+    // preference list is ["sustain","quiet","non-vibrato"] and "a bed that must sit under everything" is exactly the
+    // quiet take's request. `non-vibrato` contributes nothing (no row; the contrabass-only `ContrabassSusNV` is not
+    // mirrored), and no pizzicato or spiccato appears, because those are different gestures.
     expect(bed.instruments.map((instrument) => instrument.assetId).sort()).toEqual([
       "vsco2ce:CelloEnsSusVib",
+      "vsco2ce:CelloEnsSusVib-Quiet",
       "vsco2ce:ContrabassSusVB",
+      "vsco2ce:ContrabassSusVB-Quiet",
+      "vsco2ce:SViolinVib",
+      "vsco2ce:SViolinVib-Quiet",
       "vsco2ce:ViolaEnsSusVib",
+      "vsco2ce:ViolaEnsSusVib-Quiet",
       "vsco2ce:ViolinEnsSusVib",
+      "vsco2ce:ViolinEnsSusVib-Quiet",
     ]);
-    // Every one of them really is a sustain, so the filter cannot be passing a name through.
-    expect(bed.instruments.every((instrument) => instrument.technique === "sustain")).toBe(true);
+    // Every one of them really is a sustain or a quiet take, so the filter cannot be passing a name through.
+    expect(bed.instruments.every((instrument) => instrument.technique === "sustain" || instrument.technique === "quiet")).toBe(true);
   });
 
   /**
    * ⭐ **A rule's preferences are what the filter returns, first choice or documented fallback.**
    *
-   * `tension-tremolo` prefers tremolo and falls back to sustain. The real tremolo is unmirrored, so what this
-   * situation can offer is **the four sustains** — and it must not offer the pizzicati, which are a different
-   * gesture. Being explicit about that is the point: the listing shows what is available for the request, and
-   * `chooseTechnique` is where "the first choice was not available" is reported.
+   * `tension-tremolo` prefers tremolo and falls back to sustain. Until 2026-10-02 the real tremolo was unmirrored, so
+   * this situation could offer only **the four sustains**; the string-articulation round mirrored the five tremolos,
+   * so the listing now answers with **five tremolos and five sustains** — the tremolo first in the rule's own order,
+   * the sustain as the documented fallback for a note outside the tremolo programs' compass. It must not offer the
+   * pizzicati, which are a different gesture. `chooseTechnique` is where "the first choice was not available" is
+   * reported, and these criteria state what the listing offers for the request.
    */
-  it("returns a rule's fallback techniques for a situation whose first choice is not mirrored, and nothing else", () => {
+  it("returns a rule's own preferences for a situation, first choice and documented fallback alike", () => {
     const tension = listCatalogueInstruments({ situation: "tension-tremolo" }).instruments;
-    expect(tension.every((instrument) => instrument.technique === "sustain")).toBe(true);
-    expect(tension).toHaveLength(4);
-    // The real tremolo is a stated gap, not a silently omitted row: it exists in the table and is not in the catalogue.
-    expect(listCatalogueInstruments().instruments.some((instrument) => instrument.technique === "tremolo")).toBe(false);
+    expect(tension.every((instrument) => instrument.technique === "tremolo" || instrument.technique === "sustain")).toBe(true);
+    expect(tension.filter((instrument) => instrument.technique === "tremolo")).toHaveLength(5);
+    expect(tension.filter((instrument) => instrument.technique === "sustain")).toHaveLength(5);
+    // The real tremolo is in the catalogue and annotated now — it used to be the negative case here.
+    expect(listCatalogueInstruments().instruments.some((instrument) => instrument.technique === "tremolo")).toBe(true);
   });
 
   /**
@@ -136,8 +148,8 @@ describe("string techniques on the instrument list", () => {
   it("honours a situation's register, so a walking line is not answered by a viola", () => {
     const walking = listCatalogueInstruments({ situation: "plucked-walking" }).instruments;
     expect(walking.map((instrument) => instrument.assetId)).toEqual(["vsco2ce:ContrabassPizz"]);
-    // The pizzicato technique itself is still listed as four programs — the narrowing is the situation's, not the listing's.
-    expect(strings().filter((instrument) => instrument.technique === "pizzicato")).toHaveLength(4);
+    // The pizzicato technique itself is still listed as five programs — the narrowing is the situation's, not the listing's.
+    expect(strings().filter((instrument) => instrument.technique === "pizzicato")).toHaveLength(5);
   });
 
   it("leaves non-string instruments without a technique, rather than guessing one from a name", () => {
@@ -149,8 +161,8 @@ describe("string techniques on the instrument list", () => {
   /** Every technique the listing reports must be one the table declares, and every mirrored string row must be annotated. */
   it("reports only techniques the table declares, and reports one for every mirrored string row", () => {
     const reported = new Set(strings().map((instrument) => instrument.technique).filter((value) => value !== undefined));
-    expect([...reported].sort()).toEqual(["pizzicato", "sustain"]);
-    // The eight playable rows are exactly the eight assets the listing annotates.
-    expect(strings().filter((instrument) => instrument.technique !== undefined)).toHaveLength(8);
+    expect([...reported].sort()).toEqual(["pizzicato", "quiet", "spiccato", "sustain", "tremolo"]);
+    // The twenty-five playable rows are exactly the twenty-five assets the listing annotates.
+    expect(strings().filter((instrument) => instrument.technique !== undefined)).toHaveLength(25);
   });
 });

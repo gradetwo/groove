@@ -6,19 +6,22 @@
 
 ## 0. 一句话结论
 
-**今天能拿到的弦乐演奏法有 2 种：`sustain`（持续，含录音里的揉弦）与 `pizzicato`（拨弦）；
-够不到的有 3 种：`spiccato`（跳弓）、`tremolo`（震音）、以及 `-Quiet` 那一组单独的弱奏录音。**
+**2026-10-02 的弦乐演奏法一轮之后，这张表里 25 行全部有声：`sustain`、`quiet`（弱奏）、`pizzicato`、
+`spiccato`（跳弓）、`tremolo`（震音）在四个声部与 solo violin 上都拿得到真采样。**
+新增字节 **433 个文件 / 349,224,766 字节 ＝ 333.05 MiB**（其中 `-Quiet` 那四组 **0 新字节**——它们本来
+就是主程序软层的同一批 `_v1` 采样，Part 1 随目录一起上传过，这次只是把它们映射出来）。
 
-按程序数：**25 行里 8 行有声，17 行只有文件、没有镜像字节**；其中 **solo violin 五种演奏法一行都不可用**。
-另外 `col legno` 与 `harmonics`（泛音）**在上游库里根本没有程序**——表里有词、库里无物，请求它们会被按名字拒绝，
-而不是悄悄落回一个 sustain。
+够不到的不再是"有文件没镜像"，而是**上游根本没有程序**：`col legno`、`harmonics`（泛音），
+以及**只有低音提琴一条**的 `non-vibrato`（`ContrabassSusNV`，实测 50.35 MiB / 28 文件，未镜像、无行）。
+请求它们仍会被按名字拒绝，而不是悄悄落回一个 sustain；`-KS` 键位程序**故意不收**：它们的 `sw_*` 本加载器
+没有实现，整文件收进来会让每个音同时命中多套奏法。
 
 ## 1. 量法（可复核，不需要下载任何音频以外的推理）
 
 | 对象 | 来源 |
 | --- | --- |
 | 75 个上游程序的正文 | `schollz/VSCO-2-CE` 钉住 `6dd651d55dde97fd4028699be9d4481f26917891`，`SFZ` 分支 |
-| 镜像里 26 个程序的 WAV 字节 | `public/samples/manifest.json` 列出的文件，本地镜像树 |
+| 镜像里 43 个程序的 WAV 字节 | `public/samples/manifest.json` 列出的文件，本地镜像树 |
 | 解析 | 仓库自己的 `parseSfz`（`src/audio/sfz/parse.ts`），`sample=` 按该 region 自己的 `default_path` 解析 |
 | 时长 / 峰值 / `smpl` | 直接读 RIFF，不是 `ffprobe` 的转述 |
 
@@ -34,29 +37,29 @@
 | --- | --- | --- | --- | --- | ---: | --- | --- | --- |
 | Violin Section | `ViolinEnsSusVib.sfz` | 持续（录音带揉弦） | 0–62 / 63–127 | 55–86 | 22 | 8.988–15.200 s | 无 | ✓ |
 | Violin Section | `ViolinEnsPizz.sfz` | 拨弦 | 0–62 / 63–127 | 55–86 | 44 | 0.440–3.016 s | 无 | ✓ |
-| Violin Section | `ViolinEnsSpic.sfz` | 跳弓（`seq_length=2` 轮替） | 0–62 / 63–127 | 55–86 | 44 | 未镜像 | 无 | ✗ |
-| Violin Section | `ViolinEnsTrem.sfz` | 震音 | 0–62 / 0–127 / 63–127 | 55–86 | 21 | 未镜像 | 无 | ✗ |
-| Violin Section | `ViolinEnsSusVib-Quiet.sfz` | 持续·单独弱奏 | 0–127（单层） | 55–86 | 11 | 未镜像 | 无 | ✗ |
+| Violin Section | `ViolinEnsSpic.sfz` | 跳弓（`seq_length=2` 轮替） | 0–62 / 63–127 | 55–86 | 44 | 0.497–3.208 s | 无 | ✓ |
+| Violin Section | `ViolinEnsTrem.sfz` | 震音 | 0–62 / 0–127 / 63–127 | 55–86 | 21 | 7.565–13.130 s | 无 | ✓ |
+| Violin Section | `ViolinEnsSusVib-Quiet.sfz` | 持续·单独弱奏 | 0–127（单层） | 55–86 | 11 | 8.988–13.275 s | 无 | ✓ |
 | Viola Section | `ViolaEnsSusVib.sfz` | 持续 | 0–62 / 63–127 | 48–86 | 26 | 7.565–13.746 s | 无 | ✓ |
 | Viola Section | `ViolaEnsPizz.sfz` | 拨弦 | 0–62 / 0–127 / 63–127 | 48–86 | 46 | 0.282–3.366 s | 无 | ✓ |
-| Viola Section | `ViolaEnsSpic.sfz` | 跳弓 | 0–62 / 63–127 | 48–86 | 48 | 未镜像 | 无 | ✗ |
-| Viola Section | `ViolaEnsTrem.sfz` | 震音 | 0–62 / 63–127 | 48–86 | 24 | 未镜像 | 无 | ✗ |
-| Viola Section | `ViolaEnsSusVib-Quiet.sfz` | 持续·单独弱奏 | 0–127 | 48–86 | 13 | 未镜像 | 无 | ✗ |
+| Viola Section | `ViolaEnsSpic.sfz` | 跳弓 | 0–62 / 63–127 | 48–86 | 48 | 0.560–3.102 s | 无 | ✓ |
+| Viola Section | `ViolaEnsTrem.sfz` | 震音 | 0–62 / 63–127 | 48–86 | 24 | 7.371–15.572 s | 无 | ✓ |
+| Viola Section | `ViolaEnsSusVib-Quiet.sfz` | 持续·单独弱奏 | 0–127 | 48–86 | 13 | 7.565–10.814 s | 无 | ✓ |
 | Cello Section | `CelloEnsSusVib.sfz` | 持续 | 0–41 / 0–62 / 42–62 / 63–127 | 36–77 | 27 | 6.387–12.747 s | 无 | ✓ |
 | Cello Section | `CelloEnsPizz.sfz` | 拨弦（`seq_length=2`） | 0–62 / 63–127 | 36–77 | 52 | 0.873–3.999 s | 无 | ✓ |
-| Cello Section | `CelloEnsSpic.sfz` | 跳弓 | 0–62 / 63–127 | 36–77 | 52 | 未镜像 | 无 | ✗ |
-| Cello Section | `CelloEnsTrem.sfz` | 震音 | 0–62 / 0–127 / 63–127 | 36–77 | 25 | 未镜像 | 无 | ✗ |
-| Cello Section | `CelloEnsSusVib-Quiet.sfz` | 持续·单独弱奏 | 0–41 / 0–127 / 42–127 | 36–77 | 14 | 未镜像 | 无 | ✗ |
+| Cello Section | `CelloEnsSpic.sfz` | 跳弓 | 0–62 / 63–127 | 36–77 | 52 | 0.773–3.502 s | 无 | ✓ |
+| Cello Section | `CelloEnsTrem.sfz` | 震音 | 0–62 / 0–127 / 63–127 | 36–77 | 25 | 6.605–11.183 s | 无 | ✓ |
+| Cello Section | `CelloEnsSusVib-Quiet.sfz` | 持续·单独弱奏 | 0–41 / 0–127 / 42–127 | 36–77 | 14 | 6.387–9.641 s | 无 | ✓ |
 | Solo Contrabass | `ContrabassSusVB.sfz` | 持续（注意拼写是 `SusVB`） | 0–62 / 63–127 | 24–60 | 26 | 6.539–17.332 s | 无 | ✓ |
 | Solo Contrabass | `ContrabassPizz.sfz` | 拨弦 | 0–62 / 0–127 / 63–127 | 24–60 | 40 | 0.961–6.024 s | 无 | ✓ |
-| Solo Contrabass | `ContrabassSpic.sfz` | 跳弓 | 0–62 / 0–127 / 63–127 | 24–60 | 42 | 未镜像 | 无 | ✗ |
-| Solo Contrabass | `ContrabassTrem.sfz` | 震音 | 0–62 / 63–127 | 24–60 | 16 | 未镜像 | 无 | ✗ |
-| Solo Contrabass | `ContrabassSusVB-Quiet.sfz` | 持续·单独弱奏 | 0–127 | 24–60 | 13 | 未镜像 | 无 | ✗ |
-| Solo Violin | `SViolinVib.sfz` | 持续 | 0–62 / 63–127 | 55–96 | 30 | 未镜像 | 无 | ✗ |
-| Solo Violin | `SViolinPizz.sfz` | 拨弦 | 0–62 / 0–127 / 63–127 | 55–96 | 44 | 未镜像 | 无 | ✗ |
-| Solo Violin | `SViolinSpic.sfz` | 跳弓 | 0–62 / 63–127 | 55–96 | 60 | 未镜像 | 无 | ✗ |
-| Solo Violin | `SViolinTrem.sfz` | 震音 | 0–62 / 0–127 / 63–127 | 55–96 | 27 | 未镜像 | 无 | ✗ |
-| Solo Violin | `SViolinVib-Quiet.sfz` | 持续·单独弱奏 | 0–127 | 55–96 | 15 | 未镜像 | 无 | ✗ |
+| Solo Contrabass | `ContrabassSpic.sfz` | 跳弓 | 0–62 / 0–127 / 63–127 | 24–60 | 42 | 1.103–3.283 s | 无 | ✓ |
+| Solo Contrabass | `ContrabassTrem.sfz` | 震音 | 0–62 / 63–127 | 24–60 | 16 | 6.110–10.639 s | 无 | ✓ |
+| Solo Contrabass | `ContrabassSusVB-Quiet.sfz` | 持续·单独弱奏 | 0–127 | 24–60 | 13 | 6.539–17.332 s | 无 | ✓ |
+| Solo Violin | `SViolinVib.sfz` | 持续 | 0–62 / 63–127 | 55–96 | 30 | 11.263–17.554 s | 无 | ✓ |
+| Solo Violin | `SViolinPizz.sfz` | 拨弦 | 0–62 / 0–127 / 63–127 | 55–96 | 44 | 0.751–4.839 s | 无 | ✓ |
+| Solo Violin | `SViolinSpic.sfz` | 跳弓 | 0–62 / 63–127 | 55–96 | 60 | 0.810–2.221 s | 无 | ✓ |
+| Solo Violin | `SViolinTrem.sfz` | 震音 | 0–62 / 0–127 / 63–127 | 55–96 | 27 | 5.606–9.447 s | 无 | ✓ |
+| Solo Violin | `SViolinVib-Quiet.sfz` | 持续·单独弱奏 | 0–127 | 55–96 | 15 | 12.895–17.554 s | 无 | ✓ |
 
 上游另有 8 个 `-KS` 键位切换程序（`ViolinEns-KS`、`CelloEns-KS`、`SViolin-KS` …），每个文件把 2–5 套奏法
 折进一个文件、**每套各自开一个 `<control>` 段声明自己的 `default_path`**（`CelloEns-KS` 的 156 个 region 分别指向
@@ -68,12 +71,14 @@
 | --- | --- | --- |
 | `col legno`（弓杆击弦） | **没有** | 整个库里不存在；请求它必须被按名字拒绝 |
 | `harmonics`（泛音） | **没有** | 同上 |
-| `non-vibrato`（不揉弦长音） | **没有独立程序** | 只有 `*-Quiet` 是另一种录音；`susVib` 的揉弦是录进去的，去不掉 |
+| `non-vibrato`（不揉弦长音） | **有，但只有低音提琴一条** | `ContrabassSusNV.sfz`，实测 **50.35 MiB / 28 文件**、音域 24–60、两层。**未镜像**，所以表里没有行——这是要买的下一项，不是"库里没有"。弦乐声部的 `susVib` 揉弦是录进去的，去不掉 |
 | `sordino`（弱音器弦乐） | **没有** | 弱音器只给了 F Horn 与 Trumpet |
 
 ## 3. 长度约束：这是硬约束，不是播放器的问题
 
-**75 个程序里声明 `loop` 的：0 个。镜像的 36 个程序对应的 `.wav` 里带 `smpl` chunk 的：0 个。**
+**75 个程序里声明 `loop` 的：0 个。镜像的 43 个程序对应的 `.wav` 里带 `smpl` chunk 的：0 个。**
+（2026-10-02 新增的 17 个程序同样没有循环点：`ampeg_*` 与 `volume` 之外，它们的 region 只有
+`sample`/`lokey`/`hikey`/`pitch_keycenter`/`lovel`/`hivel`/`seq_length`/`seq_position`/`tune`。）
 ⇒ 弦乐的持续音是**一次性录音**，录到哪停到哪，任何 player 语义都改不了这一点。
 
 每个 program 因此有两个数（都在 `src/data/stringTechniques.ts` 的 `maxSampleSeconds` / `safeSeconds`）：
@@ -101,7 +106,8 @@
 **这张表就是全部。** 写一条 velocity 渐变（40→50→60）在这四个持续音 program 上**只得到一层**，因为 40 与 62 是
 **同一份录音、同一个增益**；而 62→63 是**两份不同的录音**，一步跨过几个 dB。
 文件自己用 `volume=` 补偿了这个落差（软层 `volume=20`、响层 `volume=7`），所以响度差是**录音的属性**，不是播放器做的。
-⇒ 想要更多层次，**只能靠换 program**（`-Quiet` 那组），而它们**没有被镜像**。
+⇒ 想要更多层次，**只能靠换 program**（`-Quiet` 那组）：它们自 2026-10-02 起**已在镜像里且可映射**，
+但仍是**单层**——所以那是"整首要弱"，不是"写个低力度"。
 
 ## 5. 规则：什么音乐情形该用什么演奏法
 
@@ -110,11 +116,11 @@
 
 | 情形 | 首选（按序） | 为什么 | 模型里怎么认出来 |
 | --- | --- | --- | --- |
-| **持续铺底**（长和弦） | `sustain` → `quiet` → `non-vibrato` | 录音里的揉弦是暖的默认；要垫在everything底下时才用单独弱奏那一版；不揉弦是备选，但库里没有独立程序 | 多个音同时起音、`lengthBeats` 够到下一个和弦（`src/data/legatoGaps.ts` 读的就是这件事） |
+| **持续铺底**（长和弦） | `sustain` → `quiet` → `non-vibrato` | 录音里的揉弦是暖的默认；要垫在 everything 底下时才用单独弱奏那一版（自 2026-10-02 可映射，**单层**）；不揉弦只有低音提琴一条程序且未镜像，落到它时如实说明 | 多个音同时起音、`lengthBeats` 够到下一个和弦（`src/data/legatoGaps.ts` 读的就是这件事） |
 | **连奏** | `sustain` → `quiet` | 要连的音是**写法**问题：每个音的 release 必须压过下一个的起音。奏法和铺底一样，差别在 `legatoGaps` 报的那个 seam | 单声部、相邻音相接、平均长度不到一小节 |
-| **短促/重复**（跳音、节奏型） | `spiccato` → `pizzicato` | 跳弓才是"重复的短弓"，而且 `seq_length=2` 让重复音轮替采样、不会机关枪一样一个音。**它的字节没镜像，所以今天落在拨弦上**——那是另一种声音（拨 vs 弓），如实上报 | 一串同音高，或音长只是到下一个起音间距的一小部分 |
+| **短促/重复**（跳音、节奏型） | `spiccato` → `pizzicato` | 跳弓才是"重复的短弓"，而且 `seq_length=2` 让重复音轮替采样、不会机关枪一样一个音。**自 2026-10-02 字节已在镜像里**，所以这条现在**真的落在弓上**（最长采样 3.208 / 3.502 / 3.283 s）；`pizzicato` 退成音域不覆盖时的备选 | 一串同音高，或音长只是到下一个起音间距的一小部分 |
 | **拨弦/低音走动** | `pizzicato`（**限 24–60**） | 低音提琴的拨弦就是 walking bass，它 6.024 s 的最长采样是低音线条"成线不成点"的原因。**"走动"是低音区**，所以这条规则带音域：中提琴的拨弦是拨弦，但不是 walking bass | 低音区（24–60）、短而分明的音 |
-| **震音/紧张** | `tremolo` → `sustain` | 震音是唯一说"紧张"而不说"温暖"的织体。**字节没镜像**，今天落回 sustain，紧张感拿不到——这是要报的缺口，不是拿一个持续音假装 | 一个音写得比邻居长很多且音高不变 |
+| **震音/紧张** | `tremolo` → `sustain` | 震音是唯一说"紧张"而不说"温暖"的织体。**自 2026-10-02 字节已在镜像里**（四个声部＋独奏小提琴，最长采样 13.130 / 15.572 / 11.183 / 10.639 / 9.447 s），所以这条现在**真的拿到紧张感**；`sustain` 只在音高超出 24–96 时兜底 | 一个音写得比邻居长很多且音高不变 |
 | **重音/突强** | `pizzicato` → `spiccato` | sforzando 要的是**起音**，而软起音的持续弓没有起音——**没有任何 velocity 能加上它**，因为 velocity 是选层不是塑形。拨弦提供起音；若这个音还得拖住，诚实的回答是这个库做不到两头兼顾 | 某个音的 velocity 远高于同声部的中位数 |
 
 ## 6. 竖片：改了什么
@@ -423,24 +429,28 @@ Kontakt 那条说明"演奏法的判定在库脚本／上层，不在播放器"�
 
 ### 12.3 每种情形的真读回（`placementForPart`，120 bpm）
 
+> ⚠️ **这一小节记录的是 2026-10-02 镜像之前的状态，已被 §14 取代。** 下表里 `spiccato`／`tremolo` 的"回落"
+> 当时是真的（字节不在镜像里）；§14 之后这两条都落到首选，判据相应改成断言"没有回落"。
+
 | 情形 | 乐器／输入 | 选了哪个 | 首选？ | 回落说明 | 身份 → assetId |
 | --- | --- | --- | --- | --- | --- |
 | 持续铺底 `sustained-bed` | violin，20 个和弦 × 3 音、每音 8.5 beats、velocity 50、音高 57–69（业主件形状） | `sustain` | ✓ 首选 | 无 | `violin_section_sustain` → `vsco2ce:ViolinEnsSusVib` |
-| 短促重复 `short-repeating` | violin，16 个 0.25-beat 音、velocity 96 | `pizzicato` | ✗ **回落** | **"spiccato was asked for first and its bytes are not in the mirror"** | `violin_section_pizzicato` → `vsco2ce:ViolinEnsPizz` |
+| 短促重复 `short-repeating` | violin，16 个 0.25-beat 音、velocity 96 | `pizzicato`（**现为 `spiccato`，见 §14**） | ✗ **回落**（现为首选） | **"spiccato was asked for first and its bytes are not in the mirror"** | `violin_section_pizzicato` → `vsco2ce:ViolinEnsPizz` |
 | 拨弦走动 `plucked-walking` | contrabass，音高 **24–60** | `pizzicato` | ✓ 首选 | 无；`range.situationRange = [24,60]`，`outside = 0` | `contrabass_solo_pizzicato` → `vsco2ce:ContrabassPizz` |
 | 同上（**音域生效的反例**） | viola，音高 55–74 | **不选** | — | "the situation lives in MIDI 24–60, and this part's compass is 55–74 … split the part at the register boundary, or name the instrument directly" | （无） |
-| 震音／紧张 `tension-tremolo` | cello，三个 8-beat 音 | `sustain` | ✗ **回落** | **"tremolo was asked for first and its bytes are not in the mirror"**，且明说这不是紧张 | `cello_section_sustain` → `vsco2ce:CelloEnsSusVib` |
+| 震音／紧张 `tension-tremolo` | cello，三个 8-beat 音 | `sustain`（**现为 `tremolo`，见 §14**） | ✗ **回落**（现为首选） | **"tremolo was asked for first and its bytes are not in the mirror"**，且明说这不是紧张 | `cello_section_sustain` → `vsco2ce:CelloEnsSusVib` |
 | 重音 `accent-attack` | violin，一个 velocity 127 的音 | `pizzicato` | ✓ 首选 | 无（velocity 加不出起音，拨弦提供起音） | `violin_section_pizzicato` → `vsco2ce:ViolinEnsPizz` |
 
-⇒ **`spiccato`／`tremolo` 的回落是真回落、真上报**：`rejected` 里是 `{technique, reason:"not-mirrored"}`，
+⇒ **`spiccato`／`tremolo` 当年的回落是真回落、真上报**：`rejected` 里是 `{technique, reason:"not-mirrored"}`，
 `problems` 里是一句能直接读给人听的解释（"你要 spiccato，退到了 pizzicato，因为 spiccato 的字节不在镜像里"）。
+§14 之后回落机制仍在，只是**这两条不再触发它**——触发它的是音域与长度。
 
 ### 12.4 长度：一个 `fits`、一个 `exceeds`（各带输出）
 
 | | 输入 | 输出 |
 | --- | --- | --- |
 | **fits** | violin `sustained-bed`，一个 8.5-beat 音（120 bpm ＝ **4.25 s**） | `fits`，`headroomSeconds = 4.738`（4.25 s ≤ 8.988 s）；`problems = []`；句："length **fits** — the longest note is 4.25 s, inside the program's shortest sample by 4.738 s" |
-| **exceeds** | cello `tension-tremolo`，一个 30-beat 音（120 bpm ＝ **15 s**） | `exceeds`，`maxSampleSeconds = 12.747`；句："…the note will stop early. **three next steps, each with its cost**: (1) `truncate` … (2) `switch-technique` … (3) `retrigger` …"——三条代价逐条来自 `LENGTH_REMEDIES`，判据逐条断言 |
+| **exceeds** | cello `tension-tremolo`，一个 30-beat 音（120 bpm ＝ **15 s**） | `exceeds`，`maxSampleSeconds = 11.183`（§14 之前是 12.747，因为当时落回 sustain）；句："…the note will stop early. **three next steps, each with its cost**: (1) `truncate` … (2) `switch-technique` … (3) `retrigger` …"——三条代价逐条来自 `LENGTH_REMEDIES`，判据逐条断言 |
 
 ⚠️ **不承诺无限延音**：VSCO 的 sustained 弦乐是一次性录音、无循环点（§3 已量：75 程序 0 处 `loop`、镜像 `.wav` 0 个 `smpl`），
 所以 `exceeds` 的答案只有"换奏法／截短／错开叠层"三条，没有"让它一直响"这一条。
@@ -449,7 +459,8 @@ Kontakt 那条说明"演奏法的判定在库脚本／上层，不在播放器"�
 
 `ViolinEnsSusVib` 两层：velocity `40` 与 `62` 落在**同一层** `[0,62]`（同一份录音、同一增益），`63` 进入 `[63,127]`。
 读数报 `{layers: 2, used: [0,1], atEdge: 2}`，并且**不写、不缩放任何 velocity**：导入路径的判据断言 50／50／50 原样落到轨上。
-⇒ 一条 velocity 渐变在这份素材上只多出**一层**；要更多层次只能换 program（`-Quiet` 那组未镜像）。
+⇒ 一条 velocity 渐变在这份素材上只多出**一层**；要更多层次只能换 program（`-Quiet` 那组自 2026-10-02 可映射，
+但仍是单层：那是"整首弱奏"，不是"多一层"）。
 
 ---
 
@@ -458,9 +469,118 @@ Kontakt 那条说明"演奏法的判定在库脚本／上层，不在播放器"�
 
 
 * **「sustain 与 pizzicato 哪个好听」判不了**，也不该由本文判。本文只给奏法、字节、时长与命中区域。
-* **`-Quiet` 那三组的听感没量**：字节不在镜像里，只有上游文件，所以上表里它们是"未镜像"而不是"不好"。
+* **新增 17 个程序的听感没量**：本文给的是字节数、region 数、力度层、音域与采样时长（`ffprobe`／RIFF），
+  以及它们能把哪条情形规则变成首选。**没有做任何试听判断。**
+* **`-KS` 键位程序仍未收**：`sw_*` 本加载器没有实现，所以这不是"字节不够"而是"收了会答错"；要收必须先实现
+  `sw_lokey`/`sw_hikey`/`sw_last`/`sw_default` 的切换语义（Sonatina brass 的 `needs` 里已有同样的记录）。
 * **未渲染整轨音频**：验收件在真机上的渲染会走 mirror 的网络地址；本文的读数是**离线**的字节读数。
   渲染级别的判据是 `src/test/vscoSamplerLane.test.ts` 那条路，它自己带本地 HTTP 镜像。
   **业主那份导出的弦乐轨本地没有**，所以 §9.5 的不连续性检测器没有跑在它上面——这是"未核实"，不是"已排除"。
-* **`spiccato` / `tremolo` 的实际时长未量**：字节不在镜像里，所以表里它们的长度是 `0`（"没量过"）而不是编一个数。
+* ⚠️ **两个跳弓/拨弦程序的 round robin 只在文件名里**：`ContrabassSpic.sfz` 与 `SViolinPizz.sfz` 的
+  `_rr1`/`_rr2`（`_RR1`/`_RR2`）两套采样**没有** `seq_length`/`seq_position` opcode，所以表里
+  `roundRobin = 1`、加载器每次都取第一套；第二套字节已上传但**今天到不了**。这是上游文件的事实，不是本次遗漏。
 * **本文不改版本号、不碰 `docs/OPEN_WORK.md`、不碰 `src/mobile/**`。**
+
+---
+
+## 14. ⭐⭐ 追加五：弦乐演奏法**已入库并接线**（2026-10-02，Part 2 第一段）
+
+> 目标与量法见 `docs/research/library-costs-for-the-instrument-gaps.md` §6「Priority 1」。这一节记录**真做了**的那一步：
+> 先量后买、真读回、映射、判据。
+
+### 14.1 先量后买：要下的清单与实际字节
+
+对钉住的树（`6dd651d55dde97fd4028699be9d4481f26917891`）逐个程序解析 `sample=`、按该 region 的
+`default_path` 解析成路径，再按路径求和 blob 字节；并与**已在清单里的路径**逐条相减，得到"真新字节"。
+
+| 组 | program | region | 该程序引用字节 | 已在镜像 | **新增** | 新增文件 |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| 震音 | `ViolinEnsTrem` | 21 | 33.56 MiB | 0 | **33.56 MiB** | 21 |
+| 震音 | `ViolaEnsTrem` | 24 | 44.16 MiB | 0 | **44.16 MiB** | 24 |
+| 震音 | `CelloEnsTrem` | 25 | 50.05 MiB | 0 | **50.05 MiB** | 25 |
+| 震音 | `ContrabassTrem` | 16 | 20.32 MiB | 0 | **20.32 MiB** | 16 |
+| 震音 | `SViolinTrem` | 27 | 32.39 MiB | 0 | **32.39 MiB** | 27 |
+| 跳弓 | `ViolinEnsSpic` | 44 | 8.84 MiB | 0 | **8.84 MiB** | 44 |
+| 跳弓 | `ViolaEnsSpic` | 48 | 9.61 MiB | 0 | **9.61 MiB** | 48 |
+| 跳弓 | `CelloEnsSpic` | 52 | 24.95 MiB | 0 | **24.95 MiB** | 52 |
+| 跳弓 | `ContrabassSpic` | 42 | 12.37 MiB | 0 | **12.37 MiB** | 42 |
+| 跳弓 | `SViolinSpic` | 60 | 12.81 MiB | 0 | **12.81 MiB** | 60 |
+| **弱奏** | `ViolinEnsSusVib-Quiet` | 11 | 21.99 MiB | **21.99** | **0** | 0 |
+| **弱奏** | `ViolaEnsSusVib-Quiet` | 13 | 29.87 MiB | **29.87** | **0** | 0 |
+| **弱奏** | `CelloEnsSusVib-Quiet` | 14 | 30.48 MiB | **30.48** | **0** | 0 |
+| **弱奏** | `ContrabassSusVB-Quiet` | 13 | 20.85 MiB | **20.85** | **0** | 0 |
+| 独奏小提琴 | `SViolinVib` | 30 | 70.91 MiB | 0 | **70.91 MiB** | 30 |
+| 独奏小提琴 | `SViolinVib-Quiet` | 15 | 37.15 MiB | 0 | **37.15 MiB** | 15 |
+| 独奏小提琴 | `SViolinPizz` | 44 | 13.08 MiB | 0 | **13.08 MiB** | 44 |
+| **合计（四组，去重）** | | | | | **333.05 MiB** | **433** |
+
+⭐ **两个反直觉的实测结论，都改变了账面**：
+
+1. **四组"单独弱奏"不是另一份录音。** `*-Quiet.sfz` 的 region 全部指向主程序的 `_v1`（软层）采样，
+   只是把 `lovel/hivel` 从 `0–62` 改成 `0–127`。Part 1 按**目录**镜像，整目录（含这些 `_v1` 文件）已经上传，
+   所以这四组的**新增字节是 0**：清单里早有这批路径，只差映射。计划书 §6 把 103.19 MiB 记为新增，这一点是**实测修正掉的**。
+2. **`SViolinVib-Quiet` 的 15 个文件是 `SViolinVib` 那 30 个的子集**，所以"独奏小提琴一族"的实际新增是
+   `Arco Vib`/`Trem`/`spic`/`Pizz` 四个目录的去重和 **129.19 MiB**，不是逐程序相加的 166.34 MiB。
+
+⇒ 上桶实测：**+450 文件（433 采样 ＋ 17 个 .sfz）／+349,281,979 字节**；清单条目从 928 文件 / 846,035,313 B
+变成 **1378 文件 / 1,195,317,292 B**；桶总量从 `{"count":10431,"bytes":6489005887}` 变成
+`{"count":10881,"bytes":6838287866}` —— **差值与清单逐字节相符**。
+
+### 14.2 许可
+
+同一个库、同一个 pin，**CC0-1.0，无署名要求**。条目里已有的 `licence: "CC0"`、`repo: "schollz/VSCO-2-CE"`、
+`pin: "6dd651d5…"`、`sourceUrl` 未变；`src/data/libraryLicence.ts` 的检查对 CC0 不要求 attribution，
+所以**该文件未改**（本次没有引入任何新库）。收到的 LICENSE 文本随条目上传（`LICENSE` 在清单里）。
+
+### 14.3 opcode 扫描与处置
+
+`npx vite-node scripts/scan_sample_opcodes.mjs --root <checkout> vsco2ce`（本仓自己的 `expandIncludes` ＋ `parseSfz`）：
+
+```
+### vsco2ce — 43/43 program(s) read · 1387 region(s)
+  implemented (9): hikey×1387, hivel×1387, lokey×1387, lovel×1387, pitch_keycenter×1387,
+                  sample×1387, seq_length×460, seq_position×460, tune×3
+  NOT implemented (7): ampeg_attack×1387, ampeg_dynamic×1387, ampeg_release×1387,
+                       group_label×1027, hirand×481, lorand×481, volume×1387
+```
+
+**处置：逐条照旧留在 `needs` 里，一个都不"顺手实现"。** 七条都已在条目的 `needs` 数组中
+（`ampeg_attack`/`ampeg_dynamic`/`ampeg_release`/`group_label`/`hirand`/`lorand`/`volume`），扫描没有报
+"used but not in the entry's needs"。⚠️ **`ampeg_*` 一族是 Part 1 已记录的、已入库程序也在用的**，
+且有"听感证据不足"的问题——所以本轮**只记录、不改加载器**。`hirand`/`lorand` 是采样随机选择
+（同一音高多份取一），不实现时取第一份：它影响的是"重复音是否略有变化"，不是"响不响"。
+
+### 14.4 接进映射：改动逐处
+
+| 文件 | 改了什么 |
+| --- | --- |
+| `public/samples/manifest.json` | `vsco2ce.paths` 56 → 85（＋12 个采样目录、＋17 个根 `.sfz`）；`instruments` 26 → **43**；`files` 928 → **1378**（每个带 `sha256`，1331 个音频带 `durationSeconds`）；新增 17 个程序的中文可读名 |
+| `src/data/stringTechniques.ts` | 17 行 `mirrored: false → true`，并把 `maxSampleSeconds`/`safeSeconds` 从占位 `0` 换成**量出来的数**；`note` 逐行改写；`STRING_TECHNIQUES` 头部"三条事实"与表头注释同步；`unmirroredTechniques()` 现在为空；两条情形规则的 `why` 改成"已镜像" |
+| `src/data/sampledInstruments.ts` | 派生表注释：8 行 → **25 行**（行本身是派生的，无需手写） |
+| `mcp/instruments.ts` | 文档注释同步（"八行" → 25 行） |
+| `src/test/stringTechniques.test.ts` | 覆盖判据改为"每件乐器五种奏法全可达"、"25 行 25 有声"；两条回落判据反转为"首选、无回落" |
+| `src/test/stringSituation.test.ts` | 短促重复 → `violin_section_spiccato` → `vsco2ce:ViolinEnsSpic`；紧张 → `cello_section_tremolo` → `vsco2ce:CelloEnsTrem`；长度 `exceeds` 的界改为 11.183 s；身份判据 8 → 25 |
+| `src/test/mcpInstruments.test.ts` | `sustained-bed` 现在答 10（5 sustain＋5 quiet）；`tension-tremolo` 答 5 tremolo＋5 sustain；注解总数 25 |
+| `src/test/orchestralCoverage.test.ts` | `Orchestral` 计数 74 → **91**（26＋48＋17）；`vsco2ce` 程序数 26 → 43 |
+
+### 14.5 真读回证据
+
+* 上传用的就是仓库自己的 `scripts/upload_samples.mjs`：sparse checkout 钉住的 pin → 逐文件 `sha256` →
+  `ffprobe` 时长 → `rclone copy` **只复制清单列出的路径**（`--files-from`）。
+* 桶读数在**上传前后**各取一次：`10431 / 6489005887` → `10881 / 6838287866`，差 **+450 / +349281979**。
+* 新映射的 CDN 读回（`https://r2mirror.groove.wangda.today/vsco2ce/…`）与 `sha256` 抽查见回报与
+  `scripts/check_mirror_reachability.mjs` 的跑法。
+
+### 14.6 情形 → 演奏法 的判据结果
+
+| 情形 | 乐器 | 首选？ | 身份 → assetId |
+| --- | --- | --- | --- |
+| `sustained-bed` | violin | ✓ | `violin_section_sustain` → `vsco2ce:ViolinEnsSusVib` |
+| `sustained-bed`（弱奏） | violin | ✓（第二顺位） | `violin_section_quiet` → `vsco2ce:ViolinEnsSusVib-Quiet` |
+| `short-repeating` | violin | ✓ | `violin_section_spiccato` → `vsco2ce:ViolinEnsSpic` |
+| `tension-tremolo` | cello | ✓ | `cello_section_tremolo` → `vsco2ce:CelloEnsTrem` |
+| `plucked-walking` | contrabass | ✓ | `contrabass_solo_pizzicato` → `vsco2ce:ContrabassPizz` |
+| `sustained-bed` | solo-violin | ✓ | `solo_violin_sustain` → `vsco2ce:SViolinVib` |
+
+判据不只停在这一层：`src/test/stringSituation.test.ts` 把身份名写成一条 `kind:"synth"` 轨、走
+`compileArrangementToLanes`，再读**编译后 lane 的 `sample.assetId`**。

@@ -93,9 +93,11 @@ describe("the technique table and the shipped catalogue agree", () => {
   /**
    * ⭐ **An unmirrored row must not be in the catalogue.**
    *
-   * This is the claim that keeps "够不到" honest: `ViolinEnsTrem` is a real upstream technique whose bytes were not
-   * mirrored, so its id must be absent from the catalogue. If a later mirror takes it, this goes red and the row
-   * has to be flipped deliberately rather than left saying a technique is unavailable when it is not.
+   * This is the claim that keeps "够不到" honest: when `ViolinEnsTrem` was a real upstream technique whose bytes were
+   * not mirrored, its id had to be absent from the catalogue — and if a later mirror took it, this went red so the
+   * row had to be flipped deliberately rather than left saying a technique is unavailable when it is not. The
+   * 2026-10-02 round flipped every row, so the list is empty and this holds **vacuously**: it is kept because the
+   * mechanism is what caught the change, and a future unmirrored row would be caught again.
    */
   it("does not claim an unmirrored technique is absent when the catalogue actually has it", () => {
     const wrong = unmirroredTechniques().filter((program) => catalogueIds.has(program.assetId));
@@ -169,52 +171,63 @@ describe("the table is internally consistent", () => {
   });
 
   /**
-   * ⭐ **The measured shape of the gap, stated as a criterion.**
+   * ⭐ **The measured shape of the coverage, stated as a criterion.**
    *
-   * Exactly two techniques are reachable today — sustained and pizzicato — and the *unreachable* set is not simply
-   * "spiccato and tremolo". A technique is unreachable **for a given instrument**, and the solo violin is the row
-   * where that bites hardest: all five of its techniques are upstream-only. So the assertion is per instrument
-   * rather than a flat list of technique names.
+   * Until 2026-10-02 exactly two techniques were reachable — sustained and pizzicato — and the *unreachable* set was
+   * not simply "spiccato and tremolo": a technique is unreachable **for a given instrument**, and all five of the
+   * solo violin's rows were upstream-only. The string-articulation round mirrored the four section tremolos, the
+   * four section spiccatos, the four `-Quiet` takes and the solo-violin family, so every technique the library has a
+   * program for now sounds. The assertion stays per instrument, because that is the shape the gap had.
    */
-  it("measures exactly which techniques are reachable today, per instrument", () => {
+  it("reaches every technique the pinned library has a program for, on every instrument", () => {
     const playable = new Set(playableTechniques().map((program) => program.technique));
-    expect([...playable].sort()).toEqual(["pizzicato", "sustain"]);
-    for (const instrument of ["violin", "viola", "cello", "contrabass"] as const) {
+    expect([...playable].sort()).toEqual(["pizzicato", "quiet", "spiccato", "sustain", "tremolo"]);
+    for (const instrument of ["violin", "viola", "cello", "contrabass", "solo-violin"] as const) {
       const reachable = new Set(
         playableTechniques()
           .filter((program) => program.instrument === instrument)
           .map((program) => program.technique)
       );
-      expect([...reachable].sort(), `${instrument} reachable techniques`).toEqual(["pizzicato", "sustain"]);
+      expect([...reachable].sort(), `${instrument} reachable techniques`).toEqual([
+        "pizzicato",
+        "quiet",
+        "spiccato",
+        "sustain",
+        "tremolo",
+      ]);
     }
   });
 
   /**
    * ⭐ **The count of reachable programs, which is the number the report quotes.**
    *
-   * Four instruments × (sustained + pizzicato) = **8 playable string programs**, out of 25 rows. The solo violin has
-   * a row for all five techniques and **none** of them is playable, which is why it contributes nothing.
+   * Five instruments × five techniques = **25 playable string programs**, and the table now has no unmirrored row.
+   * The three technique words the library genuinely cannot play are the ones with **no row at all** — `col-legno`,
+   * `harmonics` and the contrabass-only `non-vibrato` — which the criterion below pins, so "zero unmirrored rows"
+   * cannot be misread as "everything a string can do is here".
    */
-  it("counts eight playable string programs out of twenty-five rows", () => {
-    expect(playableTechniques()).toHaveLength(8);
+  it("counts twenty-five playable string programs out of twenty-five rows", () => {
+    expect(playableTechniques()).toHaveLength(25);
     expect(STRING_TECHNIQUES).toHaveLength(25);
-    expect(unmirroredTechniques()).toHaveLength(17);
-    // The four section instruments are the ones with bytes; the solo violin is upstream-only in every technique.
+    expect(unmirroredTechniques()).toHaveLength(0);
     expect([...new Set(playableTechniques().map((program) => program.instrument))].sort()).toEqual([
       "cello",
       "contrabass",
+      "solo-violin",
       "viola",
       "violin",
     ]);
-    expect(playableTechniques().filter((program) => program.instrument === "solo-violin")).toEqual([]);
-    // Every technique the solo violin has a row for, and not one of them sounds.
-    expect(techniquesFor("solo-violin").every((program) => !program.mirrored)).toBe(true);
+    // The solo violin's whole family, which used to be the row where "upstream only" bit hardest.
+    expect(techniquesFor("solo-violin").every((program) => program.mirrored)).toBe(true);
+    expect(playableTechniques().filter((program) => program.instrument === "solo-violin")).toHaveLength(5);
   });
 
   /**
-   * The techniques the table has a word for but the pinned library has **no program for at all**. Asserted so that
-   * a reader cannot mistake "col legno is missing from the table" for an oversight: it is named and absent, and a
-   * request for it must be refused by name rather than fall through to a sustain.
+   * The technique words the table names but has **no row for**. Asserted so that a reader cannot mistake "col legno
+   * is missing from the table" for an oversight: `col-legno` and `harmonics` have no program upstream at all, and
+   * `non-vibrato` exists upstream only as the solo contrabass's `ContrabassSusNV`, whose 50.35 MiB / 28 files are
+   * **not** mirrored and which therefore has no row — a measured next step, not a silent fallback. A request for any
+   * of the three must be refused by name rather than fall through to a sustain.
    */
   it("names the techniques the library has no program for, rather than omitting them", () => {
     const withRows = new Set(STRING_TECHNIQUES.map((program) => program.technique));
@@ -335,23 +348,28 @@ describe("a musical situation chooses a technique", () => {
   });
 
   /**
-   * ⭐ **A fallback is reported, not hidden.** A short repeated figure prefers spiccato; its bytes are not mirrored,
-   * so the choice lands on pizzicato — and the rejection list says `spiccato: not-mirrored`, which is the difference
-   * between "we chose a pluck" and "we asked for a bow and silently got a pluck".
+   * ⭐ **A first choice that is now reachable, and the fallback machinery still pinned where it applies.**
+   *
+   * This pair of criteria used to pin a fallback: spiccato and tremolo were real upstream techniques whose bytes were
+   * not mirrored, so each rule had to fall back and say why. The 2026-10-02 round mirrored them, so the assertions are
+   * inverted — the rule reaches its first choice and the rejection list is empty. The *reporting* half is still pinned
+   * by the out-of-range case below, which is a fallback that genuinely happens.
    */
-  it("falls back from spiccato to pizzicato and says why", () => {
+  it("reaches spiccato for a short repeated figure, with no fallback to report", () => {
     const choice = chooseTechnique({ instrument: "violin", situation: "short-repeating", note: 67 });
-    expect(choice.program!.technique).toBe("pizzicato");
-    expect(choice.firstChoice).toBe(false);
-    expect(choice.rejected).toEqual([{ technique: "spiccato", reason: "not-mirrored" }]);
+    expect(choice.program!.technique).toBe("spiccato");
+    expect(choice.assetId).toBe("vsco2ce:ViolinEnsSpic");
+    expect(choice.firstChoice).toBe(true);
+    expect(choice.rejected).toEqual([]);
   });
 
-  /** The same shape for the one the owner named as tension: tremolo is unreachable, and the sustain is a fallback. */
-  it("falls back from tremolo to sustain and says why", () => {
+  /** The same shape for the one the owner named as tension: the rapid repeated bow is the choice now. */
+  it("reaches tremolo for a tension note, with no fallback to report", () => {
     const choice = chooseTechnique({ instrument: "cello", situation: "tension-tremolo", note: 48 });
-    expect(choice.program!.technique).toBe("sustain");
-    expect(choice.firstChoice).toBe(false);
-    expect(choice.rejected).toEqual([{ technique: "tremolo", reason: "not-mirrored" }]);
+    expect(choice.program!.technique).toBe("tremolo");
+    expect(choice.assetId).toBe("vsco2ce:CelloEnsTrem");
+    expect(choice.firstChoice).toBe(true);
+    expect(choice.rejected).toEqual([]);
   });
 
   /**
