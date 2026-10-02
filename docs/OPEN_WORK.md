@@ -819,3 +819,27 @@ desktopSkins.css    值部分差异 0 行  ✅
 **⇒ 正确的判据是** ✓✓：**"**值**必须一模一样 ✓；**命名源路径的那行注释必须跟着走** ✓"**——**而这次搬家**两条都满足 ✓✓**。
 
 **⚠️ 而这又是一次"判据没分清**本质与附带**"** ✓✓（**与本会话早前那几条同类：**判据要能区分"它必须做到什么"与"它恰好长什么样"** ✓**）。**⇒ 教训** ✓：**写判据时，先问"这一条里哪部分是**要求**、哪部分是**当前实现的样子**"** ✓✓。
+
+### 十七之八、✅ 手机砍除 `c2f81be` 的**完整证据链**（2026-10-02 ✓）
+
+**提交** ✓：**`refactor(mobile): the phone version is cut, and the platform it ran on is not`** ✓——**104 文件、+732 / −23897** ✓。**⚠️ 尚未推送 ✗**（**推完读回远端结论即闭环 ✓**）。
+
+**本地可验的三条轴，全绿** ✓✓：
+
+| 轴 | 命令 | 结果 |
+| --- | --- | --- |
+| **能编译** | `npm run typecheck`（**工作树内 ✓**） | **0 个错误** ✓✓（**−23897 行后无悬空 import ✓**） |
+| **能过 lint** | `npm run lint` | **0 个错误** ✓ |
+| **⭐ 皮肤生成物** | `npm run check:skins` | **`✅ desktop skins up to date (6 palettes, 1694 lines)`** ✓✓ |
+
+**边界与判据分割，逐条核过** ✓✓：
+
+* **必须留的五个全部仍在** ✓✓：**`iosAudioUnlock`** ✓、`audioScheduler` ✓、`audioSettings` ✓、`audioStartGate` ✓、`studioSession` ✓；
+* **删掉的手机判据** ✓：`mobileGenrePicker` ✓、`mobileIndexGuard` ✓、`mobileJam` ✓、`mobileMore` ✓、`mobilePlayerPort` ✓、`mobileSharedBottomRow` ✓、`mobileShell` ✓、`mobileTransportBar` ✓（**正是那 8 个 ✓**）＋ `newProjectNavigation`（**手机那一半随外壳走 ✓**）等 ✓；
+* **⭐ 新增 `src/test/phoneShellCut.test.ts`（+130 ✓）** ✓✓——**一条**断言外壳已被砍掉**的判据 ✓**——**⇒ 这就是我要求的"证明删除有**区分力**"那一项 ✓✓**；
+* **⭐⭐ 改写的 9 个** ✓：`rankColours` ✓、`router` ✓、`skinRoleTable` ✓、`skinSystem` ✓、`surfaceCapabilities` ✓、`trackInspector` ✓、`transportPlaybackTruth` ✓…——**⇒ 提过手机面的判据是**改写**而不是删掉 ✓✓**，**正是清单里那条"共用覆盖必须改写"✓**。
+
+**⚠️ 而核的过程中我自己量错两次，记下来** ✗✓✓：
+
+1. **"判据文件 454 → 446"** ✗——**那两次都是 `ls src/test/` 的**顶层条目数**** ✓，**不是树里的文件数** ✓（**树里是 464 → 463 ✓**）；**⇒ 两个数说的不是一件事 ✓**；
+2. **`git diff --name-status origin/dev HEAD -- src/test/` 返回空** ✗——**我拿它跟一个**已经移动过的 `HEAD`** 比 ✓**；**⇒ 判据的分割要看**提交自己的 stat****（`git show --stat c2f81be -- src/test/` ✓），**那才是无歧义的 ✓✓**。

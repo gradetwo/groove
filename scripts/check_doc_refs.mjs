@@ -41,6 +41,10 @@ const REPORT_ONLY = process.argv.includes("--report");
  * intentionally documented before it is built and cannot be marked inline.
  */
 const PROPOSED = new Map([
+  [
+    "src/test/phoneShellCut.test.ts",
+    "Added by the mobile cut on the mobile-cut branch; not merged into dev yet. It asserts the phone shell is gone, and once that lands this entry should be removed because the file will exist.",
+  ],
   /**
    * ⭐ **The upstream repository's own paths.** `GS1_PATCH_SURFACE.md` explains why it did not vendor
    * `src/state/share.ts`, and quotes two files that file imports; all of them live in the synth repository, not
