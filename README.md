@@ -145,16 +145,13 @@ them. Confusing the two is how a licence obligation quietly goes unmet while the
 |---|---|---|
 | **Salamander Grand Piano** (`salamander-grand`) | **CC BY** | **Chisato Yamauchi**, for the re-mastering, and **Alexander Holm**, for the original Salamander Grand Piano — both names are required by the licence |
 | **VSCO 2 CE** — Versilian Studios Chamber Orchestra: Community Edition (`vsco2ce`) | **CC0** | none required; **Sam Gossner / Versilian Studios** and **Simon Dalzell / Ivy Audio** are credited as a courtesy, as the library's own `Readme.txt` asks |
-| **MTG Solo Saxophones** (`mtg-solo-sax`) | **CC BY 4.0** | MTG Solo Saxophones — samples by the Music Technology Group (Universitat Pompeu Fabra) from their Freesound packs 20239/20247/20251/20253; SFZ mapping by kinwie; licensed CC BY 4.0 |
-| **Greg Sullivan's E-Pianos** (`gregsullivan-e-pianos`) | **CC BY 3.0** | Greg Sullivan's E-Pianos — recordings by Greg Sullivan; SFZ mapping by kinwie; licensed CC BY 3.0 |
-| **Ixox Flute** (`ixox-flute`) | **CC BY 4.0** | Ixox Flute — by Xavier Hosxe; SFZ conversion by the sfzinstruments project; licensed CC BY 4.0 |
+| **MTG Solo Saxophones** (`mtg-solo-sax`) | **CC BY** | Saxophone samples by the Music Technology Group (Universitat Pompeu Fabra, Barcelona), from the Freesound packs at https://freesound.org/people/MTG/packs/20239/ , 20247, 20251 and 20253; SFZ mapping by kinwie. Licensed CC BY 4.0 — https://github.com/sfzinstruments/MTG.SoloSax/blob/master/LICENSE |
+| **Greg Sullivan's E-Pianos** (`gregsullivan-e-pianos`) | **CC BY** | Recordings by Greg Sullivan (http://www.sullivang.net/), SFZ mapping by kinwie. Licensed CC BY 3.0 Unported — https://github.com/sfzinstruments/GregSullivan.E-Pianos/blob/master/LICENSE |
+| **Ixox Flute** (`ixox-flute`) | **CC BY** | Ixox Flute by Xavier Hosxe (http://xhosxe.free.fr/ixoxflute.html), SFZ conversion by Lars Ekman / the sfzinstruments project. Licensed CC BY 4.0 — https://github.com/sfzinstruments/Ixox.Flute/blob/master/LICENSE |
 
 The 2026-10-03 round added fourteen further libraries — thirteen under **CC0** and one under the **Unlicense** — none of which
 requires attribution; the three rows above are the round's only CC BY entries.
 
-| **MTG Solo Saxophones** (`mtg-solo-sax`) | **CC BY** | Saxophone samples by the Music Technology Group (Universitat Pompeu Fabra, Barcelona), from the Freesound packs at https://freesound.org/people/MTG/packs/20239/ , 20247, 20251 and 20253; SFZ mapping by kinwie. Licensed CC BY 4.0 — https://github.com/sfzinstruments/MTG.SoloSax/blob/master/LICENSE |
-| **Greg Sullivan's E-Pianos** (`gregsullivan-e-pianos`) | **CC BY** | Recordings by Greg Sullivan (http://www.sullivang.net/), SFZ mapping by kinwie. Licensed CC BY 3.0 Unported — https://github.com/sfzinstruments/GregSullivan.E-Pianos/blob/master/LICENSE |
-| **Ixox Flute** (`ixox-flute`) | **CC BY** | Ixox Flute by Xavier Hosxe (http://xhosxe.free.fr/ixoxflute.html), SFZ conversion by Lars Ekman / the sfzinstruments project. Licensed CC BY 4.0 — https://github.com/sfzinstruments/Ixox.Flute/blob/master/LICENSE |
 It was planned before it was mirrored; the two lists exist so that the credit does not stay behind in the plan once the bytes go up. **Every name in the row is required, not merely the library's name** — for CC BY the licence names
 the authors.
 
