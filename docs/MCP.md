@@ -106,28 +106,32 @@ sampler at one of the mirrored libraries, write the steps it plays, or file a re
 Every operation here calls `src/data/arrangementEdits` — the same code a track row's button calls — so an agent's edit and a person's edit cannot become two behaviours. What is added is the id: MCP calls are stateless, so `create_arrangement`
 returns an `arrangementId` that every other tool in this group takes. The arrangements live in the server process and are not persisted, exactly as the songs are not.
 
+**The kind decides what makes the sound, and the reply says which one it is.** `synth` is a **built-in synthesiser** — its timbre is fixed and it *cannot* be pointed at a recorded instrument; `sampler` plays a **real recorded instrument** from the catalogue; `drumkit` is the built-in drum voices; `fx` is an effect; `folder` groups without sounding. The kind was called `instrument`, and **the word was the defect**: a caller who wanted a piano read it, chose it, and got a fixed synth — so the value was renamed and `instrument` is **not accepted anywhere** (the schema refuses it and lists the values that exist; no alias, no read-time migration, per the owner's "old callers and old data may be dropped"). For a piano, strings or bass, add `kind:"sampler"` with an `assetId` in the same call.
+
 Two things this surface states rather than leaves to be discovered:
 
+* **What each track actually sounds through.** Every track carries a `sound` object: a sampler's catalogue `assetId`, or the built-in preset's `presetKey`/`presetName`, resolved through the path the renderer itself uses (`laneRoleForTrack`/`laneInstrumentForTrack` → `resolveInstrumentPresetKey`). `describe_arrangement` prints it on the track's own line, so a synth preset cannot be mistaken for a recorded instrument.
+* **A synth track is told so, with the call that would replace it.** `problems` names the built-in preset a `synth` track sounds through **and the one call that would sound a recorded instrument instead** (`add_arrangement_track {kind:"sampler", assetId:"…"}`); the notice reaches `get_arrangement` and the render replies' `arrangementProblems`, so a track whose source nobody chose does not render in silence about it.
 * **A sampler track always has an instrument.** A new one is created with the default catalogue asset, and changing a track's kind to `sampler` gives it one too — so the same kind of track sounds regardless of how it came to exist. A summary reports the
   asset, and warns when a sampler somehow has none, because a silent sampler reads as a broken renderer.
-* **Choosing an instrument has two halves and both are here.** `list_arrangement_instruments` says what exists and `set_arrangement_track_instrument` puts one on a track; the id the first returns is the id the second accepts, which a criterion holds together. The list is read from the manifest in the repository rather than from the network, so "what can I play" answers the same offline as online.
+* **Choosing an instrument has two halves and both are here.** `list_arrangement_instruments` says what exists, `set_arrangement_track_instrument` puts one on a sampler track, and `add_arrangement_track` takes the `assetId` as the track is created — so the track and its instrument are one call rather than two. The id the first returns is the id the others accept, which a criterion holds together. The list is read from the manifest in the repository rather than from the network, so "what can I play" answers the same offline as online.
 
 * **A request that cannot be carried out is refused out loud.** The data layer returns the arrangement unchanged when an instrument is pointed at a non-sampler track, which is right for a button and useless for a caller that cannot see the screen. The tool
-  raises instead, and an unknown `trackId` is answered with the ids that do exist.
+  raises instead, an `assetId` given to any kind but `sampler` is refused rather than ignored, and an unknown `trackId` is answered with the ids that do exist. A track kind this build does not have is refused by name (`requireTrackKind`) rather than compiled as nothing.
 
 | Tool | Arguments | Returns |
 | :--- | :--- | :--- |
 | `list_arrangement_instruments` ▢ | `library?`, `limit?` | the catalogue assets a sampler track can play, each with its library and measured duration; `vcsl` alone declares 88 |
-| `create_arrangement` ▣ | `templateId?`, `blankKind?`, `songId?` | the new `arrangementId`, its tracks, the template ids it would accept, and any problem |
-| `get_arrangement` ▢ | `arrangementId` | every track's kind, name, flags, `sampleAssetId`, `steps` with `stepsOn`, and takes |
-| `describe_arrangement` ▢ | `arrangementId` | one line per track, for reading rather than parsing |
-| `add_arrangement_track` ▣ | `arrangementId`, `kind`, `name?` | the arrangement with the track added |
+| `create_arrangement` ▣ | `templateId?`, `blankKind?` (`synth`\|`sampler`\|`drumkit`\|`fx`\|`folder`), `songId?` | the new `arrangementId`, its tracks, the template ids it would accept, and any problem |
+| `get_arrangement` ▢ | `arrangementId` | every track's kind, name, flags, **`sound`** (the catalogue asset or the built-in preset that is actually playing), `sampleAssetId`, `steps` with `stepsOn`, and takes |
+| `describe_arrangement` ▢ | `arrangementId` | one line per track — including what each one sounds with — for reading rather than parsing |
+| `add_arrangement_track` ▣ | `arrangementId`, `kind`, `name?`, `assetId?` | the arrangement with the track added; on `kind:"sampler"` the `assetId` points it at its instrument **in the same call**, and `assetId` on any other kind is refused rather than ignored |
 | `remove_arrangement_track` ▣ | `arrangementId`, `trackId` | the arrangement without it; a folder's children detach rather than disappear |
 | `set_arrangement_track_kind` ▣ | `arrangementId`, `trackId`, `kind` | the kind changed, with the instrument rule above |
 | `rename_arrangement_track` ▣ | `arrangementId`, `trackId`, `name` | the renamed track |
 | `set_arrangement_track_flag` ▣ | `arrangementId`, `trackId`, `flag`, `value` | muted or soloed |
 | `set_arrangement_track_parent` ▣ | `arrangementId`, `trackId`, `parentId` | attached to a folder, or detached with `null` |
-| `set_arrangement_track_instrument` ▣ | `arrangementId`, `trackId`, `assetId` | the sampler track pointed at a catalogue asset; refused for any other kind |
+| `set_arrangement_track_instrument` ▣ | `arrangementId`, `trackId`, `assetId` | the sampler track pointed at a catalogue asset; refused for any other kind, **including `synth`**, whose timbre is built in |
 | `set_arrangement_track_steps` ▣ | `arrangementId`, `trackId`, `steps` | the pattern written whole; a step is on when non-zero, and the length is the caller's |
 | `add_arrangement_take` ▣ | `arrangementId`, `trackId`, `source`, `label?`, `recordedAt?`, `startBar?`, `endBar?` | the take filed and selected; a bar range is claimed when one is given |
 | `render_arrangement` ▣ | `arrangementId`, `bars?`, `format?`, `bitrateKbps?`, `sampleRate?`, `channels?`, `headless?` | the bounce, through the same offline engine the song and pattern tools use. **An arrangement has its own length** (`set_arrangement_bars`, eight bars by default), so one pass is the whole arrangement and `bars` repeats it; the reply reports the arrangement's `bars` beside the `passes` rendered. `headless: true` renders on the **Node Web Audio host** instead of Chromium — no browser process, and it still works under `GROOVE_MCP_NO_BROWSER=1`. This project's own DSP is the same on both hosts (its limiter, bus and strip compressors are its own worklets, and the fixture's biquads agree to −0.00 dB); the residual belongs to each host's **own** nodes, and the parameter states the measured readings (1.03 dB band 3, 1.04 dB band 7, 1.612 LU) beside the bound each one sets (1.1 dB / 1.7 LU — the ceiling of those readings) and points at `docs/HEADLESS_CORE_PLAN.md` §8.13. The reply's `engine` field says which host answered. That path is **not under the render budget** — it resets and narrates a *page*, and there is none — but it **does report progress**: the Node host suspends inside `startRendering()`, so a `progressToken` gets frames rendered out of the render's own frame count, at the same 15 s cadence as the heartbeat |
@@ -149,11 +153,25 @@ A minimal call, as it looks over stdio:
 ```
 create_arrangement        { "templateId": "samplers" }        → arrangement-1, two sampler tracks, each with virtuosity-drums-basic
 add_arrangement_track     { "arrangementId": "arrangement-1", "kind": "drumkit", "name": "Kit" }
+add_arrangement_track     { "arrangementId": "arrangement-1", "kind": "sampler", "name": "Piano", "assetId": "salamander-grand" }
 describe_arrangement      { "arrangementId": "arrangement-1" }
-  arrangement-1 (3 track(s))
-    sampler-1  Sampler 1 (sampler) · plays virtuosity-drums-basic · 4/16 steps
-    sampler-2  Sampler 2 (sampler) · plays virtuosity-drums-basic · 4/16 steps
-    drumkit-3  Kit (drumkit) · 4/16 steps
+  arrangement-1 (4 track(s))
+    sampler-1  Sampler 1 (sampler) · plays catalogue asset "virtuosity-drums-basic" · 4/16 steps
+    sampler-2  Sampler 2 (sampler) · plays catalogue asset "virtuosity-drums-basic" · 4/16 steps
+    drumkit-3  Kit (drumkit) · the built-in drum voices (kick/snare/hat synthesis), not a sampled kit · 4/16 steps
+    sampler-4  Piano (sampler) · plays catalogue asset "salamander-grand" · 0/16 steps
+```
+
+A `synth` track's line names the preset it is fixed to, and `problems` carries the call that would replace it:
+
+```
+add_arrangement_track     { "arrangementId": "arrangement-1", "kind": "synth", "name": "钢琴" }
+get_arrangement           { "arrangementId": "arrangement-1" }
+  tracks[1].sound  = { "source": "builtin-synth", "presetKey": "analogLead", "presetName": "Analog Lead", "selectable": false, … }
+  problems         = [ "…"钢琴" is a synth track and sounds through the built-in preset "Analog Lead" (analogLead): a synth's timbre
+                        cannot be pointed at a recorded instrument. For a real piano, strings or bass, add a track with
+                        kind:"sampler" and give it an asset — add_arrangement_track {kind:"sampler", assetId:"<id>"}, with the ids
+                        from list_arrangement_instruments" ]
 ```
 
 ### Song (arrangement)
@@ -617,7 +635,7 @@ are the places where it is more accurate than the evaluations that came before i
 * **速度**：`gnoS` 的 `+0x3a6`（有 tempo map 时规范点名的那个槽；`+0x92` 在有 map 时可能是播放头相关值），`uint32 = bpm × 10000`。拍号取签名 `qSvE` 的 80 字节头（`+0x0b` 分母指数、`+0x0c` 分子）。
 * **alternative 不能硬编码**：`Resources/ProjectInformation.plist` 的 `ActiveVariant`（可能不是 `000`），plist 的**二进制与 XML 两种写法都读**。一个真实发现：这套 10.0 时代夹具的 `ProjectInformation.plist` **根本没有 `ActiveVariant`**，只有一个按 `"0"` 索引的 `VariantNames` 表——表不等于当前项，所以不拿它当答案，返回 `undefined` 让调用方决定。**文件不存在时读 `undefined`，绝不假装是 `000`**。
 
-**诚实边界（每条都进 `problems`，按名字说，不静默丢）**：`TrackKindV2` 只有 `drumkit|instrument|sampler|fx|folder`，**没有 audio 轨**，所以音频 region 只能报告；AU 插件链、自动化包络同样没有对应物；Drummer/Session Player 轨的音符**能转**，但"这是模型生成的"这个语义转不过去，也要说出来。
+**诚实边界（每条都进 `problems`，按名字说，不静默丢）**：`TrackKindV2` 只有 `synth|sampler|drumkit|fx|folder`（`synth` 原名 `instrument`，已改名且旧值不再接受），**没有 audio 轨**，所以音频 region 只能报告；AU 插件链、自动化包络同样没有对应物；Drummer/Session Player 轨的音符**能转**，但"这是模型生成的"这个语义转不过去，也要说出来。
 
 **最大的一条保留，必须和结论一起读**：本机**没有 Mac、没有 Logic**，也就**没有 ground truth**——所有判据证明的是"**按规范解析出了这些值**"，**不是"导入是正确的"**。规范取 `jonkubis/logicproformatwriter` 的 `PROJECTDATA_FORMAT.md`（MIT，解析器在 TypeScript 里自己写）；GPL 的分析器只看不抄。真实夹具是某本教材的配套资产（`github.com/wikibook/logicprox-106`，**许可不明**）→ 只放在仓库外的目录里本地验证（`GROOVE_LOGIC_FIXTURES`，默认 `/tmp/logic-fixtures`，不在就**响亮地跳过**），**不提交进仓库**；CI 读的是 `src/test/fixtures/logic_project.mjs` 按规范逐字节写出的工程。
 

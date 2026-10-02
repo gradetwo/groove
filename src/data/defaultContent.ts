@@ -31,7 +31,7 @@ export function defaultContentFor(kind: TrackKindV2): DefaultContent {
     case "drumkit":
       return { steps: steps(4) };
     // ⭐ Every beat rather than every bar: something that sounds deliberate, and that a person can hear is theirs to change.
-    case "instrument":
+    case "synth":
       return { steps: steps(4) };
     case "sampler":
       // ⭐ The asset matters as much as the notes: without it the lane compiles and the planner resolves it to nothing.

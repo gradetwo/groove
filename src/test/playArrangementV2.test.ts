@@ -34,7 +34,7 @@ describe("playing a v2 arrangement", () => {
       sourceSlots: [],
       tracks: [
         { id: "t1", kind: "sampler", name: "Drums", sample: { assetId: "virtuosity-drums-basic" } },
-        { id: "t2", kind: "instrument", name: "Bass" },
+        { id: "t2", kind: "synth", name: "Bass" },
       ],
     };
     const result = await playArrangementV2(arrangement, { t1: [{ pitch: 36, startBeats: 0, lengthBeats: 0.25, velocity: 100 }] }, engine as never);

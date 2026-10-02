@@ -154,7 +154,7 @@ describe("grouping the instrument list by library", () => {
 describe("a track's level and pan in the row", () => {
   it("reports a level change with the track it belongs to", () => {
     resetTrackIdsForTests();
-    const withTrack = addTrack(base(), "instrument", "Keys");
+    const withTrack = addTrack(base(), "synth", "Keys");
     const id = withTrack.tracks[0]!.id;
     const onChangeGain = vi.fn();
     renderList(withTrack, { onChangeGain });
@@ -165,7 +165,7 @@ describe("a track's level and pan in the row", () => {
   it("shows the level as a number, so a slider's position is not the only way to read it", () => {
     // A slider says "a bit quieter"; the number says how much. Logic's header shows both for that reason.
     resetTrackIdsForTests();
-    const withTrack = addTrack(base(), "instrument", "Keys");
+    const withTrack = addTrack(base(), "synth", "Keys");
     const id = withTrack.tracks[0]!.id;
     renderList({ ...withTrack, tracks: [{ ...withTrack.tracks[0]!, gainDb: -3.5 }] });
     expect(screen.getByTestId(`track-gain-value-${id}`).textContent).toContain("-3.5");
@@ -173,7 +173,7 @@ describe("a track's level and pan in the row", () => {
 
   it("reports a pan change, and defaults to centre when the track says nothing", () => {
     resetTrackIdsForTests();
-    const withTrack = addTrack(base(), "instrument", "Keys");
+    const withTrack = addTrack(base(), "synth", "Keys");
     const id = withTrack.tracks[0]!.id;
     const onChangePan = vi.fn();
     renderList(withTrack, { onChangePan });

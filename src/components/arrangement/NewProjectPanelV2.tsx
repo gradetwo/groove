@@ -12,6 +12,7 @@ import { useState } from "react";
 import { TEMPLATES } from "../../data/arrangementEdits";
 import type { TrackKindV2 } from "../../types/arrangementV2";
 import { useLanguage } from "../../i18n/LanguageContext";
+import { KIND_LABEL_KEY, TRACK_KIND_ORDER } from "./kindLabels";
 
 /**
  * **The key each card's sentence lives under, not the sentence itself.** These were an English/Chinese pair in this file, and the card rendered `?.en` unconditionally — so the chooser read English in a Chinese session while every other surface followed the
@@ -29,17 +30,17 @@ export interface NewProjectPanelV2Props {
   onCreate: (templateId: string | undefined, blankKind: TrackKindV2) => void;
 }
 
-const KIND_LABELS: Array<{ kind: TrackKindV2; zh: string; en: string }> = [
-  { kind: "sampler", zh: "采样器", en: "Sampler" },
-  { kind: "instrument", zh: "乐器", en: "Instrument" },
-  { kind: "drumkit", zh: "鼓组", en: "Drum kit" },
-  { kind: "fx", zh: "效果", en: "FX" },
-];
+/**
+ * The kinds the blank card offers — the shared table, so the panel, the add-track menu and the track list cannot
+ * disagree about what a kind is called. It used to carry its own `{zh, en}` pair and render `en` unconditionally,
+ * which is the same defect the card sentences had (see `DESCRIPTION_KEYS`).
+ */
+const KIND_LABELS = TRACK_KIND_ORDER.filter((kind) => kind !== "folder");
 
 export function NewProjectPanelV2({ onCreate }: NewProjectPanelV2Props) {
   const { t } = useLanguage();
   const [selected, setSelected] = useState<string>("blank");
-  const [blankKind, setBlankKind] = useState<TrackKindV2>("instrument");
+  const [blankKind, setBlankKind] = useState<TrackKindV2>("synth");
   const [detailsOpen, setDetailsOpen] = useState(false);
 
   // ⭐ Blank is a card like the others, so the panel has one shape rather than a list plus an exception.
@@ -87,9 +88,9 @@ export function NewProjectPanelV2({ onCreate }: NewProjectPanelV2Props) {
               {/* ⭐ Only the blank card needs this: the templates bring their own tracks. */}
               First track
               <select className="px-2 py-1 rounded border border-[rgb(var(--d-line))] bg-transparent text-text" aria-label="First track kind" value={blankKind} onChange={(event) => setBlankKind(event.target.value as TrackKindV2)}>
-                {KIND_LABELS.map(({ kind, en }) => (
+                {KIND_LABELS.map((kind) => (
                   <option key={kind} value={kind}>
-                    {en}
+                    {t(KIND_LABEL_KEY[kind])}
                   </option>
                 ))}
               </select>

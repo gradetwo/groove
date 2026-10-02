@@ -93,7 +93,7 @@ const twoTrackMidi = () => {
     bars: 2,
     bpm: 128,
     tracks: [
-      { id: "a", kind: "instrument", name: "Imported Lead" },
+      { id: "a", kind: "synth", name: "Imported Lead" },
       { id: "b", kind: "drumkit", name: "Imported Drums" },
     ],
     notesByTrack: {

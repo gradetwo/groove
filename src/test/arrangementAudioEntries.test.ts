@@ -51,7 +51,7 @@ const arrangement = (): ArrangementV2 => ({
   bpm: 128,
   timeSignature: "4/4",
   tracks: [
-    { id: "t-lead", kind: "instrument", name: "Lead" },
+    { id: "t-lead", kind: "synth", name: "Lead" },
     { id: "t-drums", kind: "drumkit", name: "Drums" },
   ],
   notesByTrack: {

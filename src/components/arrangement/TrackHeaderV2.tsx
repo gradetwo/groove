@@ -19,6 +19,7 @@ import { InstrumentBrowserV2 } from "./InstrumentBrowserV2";
 import type { InstrumentChoice } from "./TrackListV2";
 import { useLanguage } from "../../i18n/LanguageContext";
 import type { TrackKindV2, TrackV2 } from "../../types/arrangementV2";
+import { KIND_LABEL_KEY, TRACK_KIND_ORDER } from "./kindLabels";
 
 export interface TrackHeaderV2Props {
   track: TrackV2;
@@ -46,7 +47,7 @@ export interface TrackHeaderV2Props {
  */
 const KIND_COLOR: Record<TrackKindV2, string> = {
   sampler: "rgb(var(--d-accent))",
-  instrument: "#5ac8fa",
+  synth: "#5ac8fa",
   drumkit: "#f5b73d",
   fx: "#b07cff",
   folder: "#8a8f98",
@@ -55,7 +56,7 @@ const KIND_COLOR: Record<TrackKindV2, string> = {
 /** The kind icon. Text rather than an SVG: this component is on the entry route's import graph. */
 const KIND_ICON: Record<TrackKindV2, string> = {
   sampler: "♪",
-  instrument: "𝄞",
+  synth: "𝄞",
   drumkit: "▦",
   fx: "≈",
   folder: "▸",
@@ -110,8 +111,8 @@ export function TrackHeaderV2({
           onChange={(event) => onChangeKind(track.id, event.target.value as TrackKindV2)}
           className="h-7 w-8 shrink-0 rounded border border-[rgb(var(--d-line))] bg-transparent text-center text-xs text-text"
         >
-          {(["sampler", "instrument", "drumkit", "fx", "folder"] as const).map((kind) => (
-            <option key={kind} value={kind}>
+          {TRACK_KIND_ORDER.map((kind) => (
+            <option key={kind} value={kind} label={t(KIND_LABEL_KEY[kind])}>
               {KIND_ICON[kind]}
             </option>
           ))}

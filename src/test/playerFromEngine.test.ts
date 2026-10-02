@@ -116,7 +116,7 @@ describe("a loop wrap plans the sampler lanes again", () => {
     const synthOnly: ArrangementV2 = {
       songId: "s",
       sourceSlots: [],
-      tracks: [{ id: "t2", kind: "instrument", name: "Keys" }],
+      tracks: [{ id: "t2", kind: "synth", name: "Keys" }],
     };
     const player = createArrangementPlayer({ engine: tap, loadCatalogue: async () => ({ assets: [] }) });
     await player.play(playInput(synthOnly, { t2: [{ pitch: 60, startBeats: 0, lengthBeats: 1, velocity: 100 }] }));

@@ -44,7 +44,7 @@ function logicArgs(overrides: { audio?: boolean } = {}) {
 
 describe("MCP · importing a Logic project", () => {
   it("adds a track per region, with the notes attached to the tracks it named", () => {
-    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
     const result = importMcpLogicProject(arrangementId, logicArgs().projectDataBase64, logicArgs().metaDataBase64, { partIndex: "all" });
     expect(result.trackIds).toHaveLength(2);
     expect(result.notes).toBe(3);
@@ -58,7 +58,7 @@ describe("MCP · importing a Logic project", () => {
   });
 
   it("takes one part by default and refuses a part that is not there, naming how many there are", () => {
-    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
     const args = logicArgs();
     const first = importMcpLogicProject(arrangementId, args.projectDataBase64, args.metaDataBase64);
     expect(first.trackIds).toHaveLength(1);
@@ -69,7 +69,7 @@ describe("MCP · importing a Logic project", () => {
   it("carries the problems through to the caller, audio tracks and all", () => {
     // ⭐ **Criterion 2 at the tool boundary.** An agent that never reads `problems` has still been told, and one that
     // does read them can act; what must not happen is an import that reports success and silently loses the audio.
-    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
     const args = logicArgs({ audio: true });
     const result = importMcpLogicProject(arrangementId, args.projectDataBase64, args.metaDataBase64, { partIndex: "all" });
     const audio = (result.problems ?? []).find((problem) => problem.includes("audio region reference"));
@@ -79,7 +79,7 @@ describe("MCP · importing a Logic project", () => {
   });
 
   it("refuses empty base64 with a sentence rather than importing nothing", () => {
-    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
     expect(() => importMcpLogicProject(arrangementId, "", logicArgs().metaDataBase64)).toThrow(/projectDataBase64/);
   });
 
@@ -117,20 +117,20 @@ describe("MCP · importing a Logic project", () => {
   it("shares the empty-part rule with the other imports rather than inventing one", () => {
     // The rule lives in `addImportedParts`: a part with no notes is one more row to delete, so it is left out and
     // said out loud. An importer with its own landing would have had to write this rule a second time.
-    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
     const args = logicArgs();
     const result = importMcpLogicProject(arrangementId, args.projectDataBase64, args.metaDataBase64, { partIndex: "all" });
     expect(result.trackIds).toHaveLength(2);
     // A new arrangement arrives with one track of its own, so three here means the two the import added are the two
     // the reply named — and not four, which is what a same-name-but-own-landing importer would produce.
     expect(result.summary.tracks).toHaveLength(3);
-    expect(result.summary.tracks.map((track) => track.name)).toEqual(["Instrument", "Piano", "Bass"]);
+    expect(result.summary.tracks.map((track) => track.name)).toEqual(["Synth", "Piano", "Bass"]);
   });
 
   it("takes the same `partIndex` union the MusicXML and MIDI tools take", () => {
     // The schema mirrors `import_arrangement_midi`'s: a number, or `"all"` — a union rather than a number plus an
     // `allParts` flag, so "part three, or every part" stays unrepresentable.
-    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
     const args = logicArgs();
     expect(importMcpLogicProject(arrangementId, args.projectDataBase64, args.metaDataBase64, { partIndex: 0 }).trackIds).toHaveLength(1);
     const all = importMcpLogicProject(arrangementId, args.projectDataBase64, args.metaDataBase64, { partIndex: "all" });
@@ -140,7 +140,7 @@ describe("MCP · importing a Logic project", () => {
   it("sits beside the other two imports without disturbing them", () => {
     // A cheap cross-check that the new producer did not move the road under the other two: MIDI still lands, and
     // MusicXML still lands, in the same arrangement as the Logic import.
-    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
     const args = logicArgs();
     importMcpLogicProject(arrangementId, args.projectDataBase64, args.metaDataBase64, { partIndex: "all" });
     const xml = `<?xml version="1.0"?><score-partwise version="4.0">

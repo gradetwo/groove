@@ -229,6 +229,39 @@ function trackRolePresetKey(trackId: string | undefined): string | undefined {
 }
 
 /**
+ * ⭐ The **key** of the preset a track resolves to — the same walk as `resolveInstrumentPreset`, and the one that
+ * function now calls.
+ *
+ * It exists because a caller has to be able to **name what a track actually sounds through**: the arrangement surface
+ * reports each track's sound source, and "built-in synth preset `analogLead`" is a fact a composer can act on while
+ * "a synth track" is not. That report must be the renderer's own answer rather than a second guess, so the resolution
+ * lives here once and both the engine and the report read it. The key travels beside the preset object because the
+ * object carries a display `name` and not its identity.
+ *
+ * @param instrument the track's declared instrument name (`track.instrument`); may be
+ *                   undefined or empty — both fall back to the role default.
+ * @param trackId    the track's `track_id` (kick/snare/hihat/percussion/bass/chords/lead/fx).
+ */
+export function resolveInstrumentPresetKey(instrument: string | undefined, trackId: string): string {
+  const raw = (instrument || "").trim();
+
+  const exact = raw ? exactPresetKey(raw) : undefined;
+  if (exact) return exact;
+
+  const aliasKey = INSTRUMENT_PRESET_ALIASES[normalizeInstrumentName(raw)];
+  if (aliasKey && DEFAULT_SYNTH_PRESETS[aliasKey]) {
+    return aliasKey;
+  }
+
+  const roleKey = trackRolePresetKey(trackId);
+  if (roleKey && DEFAULT_SYNTH_PRESETS[roleKey]) {
+    return roleKey;
+  }
+
+  return GLOBAL_DEFAULT_PRESET_KEY;
+}
+
+/**
  * Resolves the preset a track should sound with.
  *
  * @param instrument the track's declared instrument name (`track.instrument`); may be
@@ -239,20 +272,5 @@ export function resolveInstrumentPreset(
   instrument: string | undefined,
   trackId: string
 ): SynthPreset {
-  const raw = (instrument || "").trim();
-
-  const exact = raw ? exactPresetKey(raw) : undefined;
-  if (exact) return DEFAULT_SYNTH_PRESETS[exact];
-
-  const aliasKey = INSTRUMENT_PRESET_ALIASES[normalizeInstrumentName(raw)];
-  if (aliasKey && DEFAULT_SYNTH_PRESETS[aliasKey]) {
-    return DEFAULT_SYNTH_PRESETS[aliasKey];
-  }
-
-  const roleKey = trackRolePresetKey(trackId);
-  if (roleKey && DEFAULT_SYNTH_PRESETS[roleKey]) {
-    return DEFAULT_SYNTH_PRESETS[roleKey];
-  }
-
-  return DEFAULT_SYNTH_PRESETS[GLOBAL_DEFAULT_PRESET_KEY];
+  return DEFAULT_SYNTH_PRESETS[resolveInstrumentPresetKey(instrument, trackId)];
 }

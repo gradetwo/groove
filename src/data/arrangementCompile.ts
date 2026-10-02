@@ -18,6 +18,7 @@
 import type { SequencerPattern, SequencerTrack } from "../types/genre";
 import type { ArrangementV2, NoteEvent, TrackV2 } from "../types/arrangementV2";
 import { STEPS_PER_BAR, STEP_BEATS, stepsFromNotes, stackFromNotes, stepCountFor, stepsPerBarFor } from "./noteEvents";
+import { requireTrackKind } from "./arrangementEdits";
 import { flattenSong } from "./songFlatten";
 import type { Song } from "../types/song";
 
@@ -32,10 +33,35 @@ export type NotesByTrack = Record<string, NoteEvent[] | undefined>;
 /** The kinds that reach the engine, with the v1 role each one compiles to. Folders are absent on purpose. */
 const ROLE_BY_KIND: Record<Exclude<TrackV2["kind"], "folder">, SequencerTrack["track_id"]> = {
   drumkit: "kick",
-  instrument: "lead",
+  synth: "lead",
   sampler: "audio",
   fx: "fx",
 };
+
+/**
+ * ⭐ **The role a v2 track compiles to, as a function, because two callers have to agree on it.**
+ *
+ * The compile uses it to build the lane, and `mcp/arrangement.ts` uses it to report which built-in preset a track
+ * actually sounds through — the second caller exists because a report that re-derived "a synth track is a lead lane"
+ * would be a second implementation of this mapping, and the two would drift the first time a role changes.
+ *
+ * **`folder` returns `undefined`**, which is the compile's own skip test: a folder makes no sound, and saying so with a
+ * missing role is better than a sentinel string a later reader has to know about.
+ */
+export function laneRoleForTrack(track: TrackV2): SequencerTrack["track_id"] | undefined {
+  // `requireTrackKind` rather than a plain lookup: a value this build does not have must be named, not answer `undefined`.
+  const kind = requireTrackKind(track.kind as string, track.name);
+  if (kind === "folder") return undefined;
+  return (track.fromTrackId ?? ROLE_BY_KIND[kind]) as SequencerTrack["track_id"];
+}
+
+/**
+ * The `instrument` string the compiled lane carries — the same expression the compile uses, so a report of "this track
+ * is a built-in synth" is reading the lane rather than guessing at it.
+ */
+export function laneInstrumentForTrack(track: TrackV2): string {
+  return requireTrackKind(track.kind as string, track.name) === "sampler" ? "sampler" : "synth";
+}
 
 /**
  * A track's level in dB as the pattern's linear fader.
@@ -84,10 +110,12 @@ export function compileArrangementToLanes(arrangement: ArrangementV2, notes: Not
   const compiled: CompiledLane[] = [];
 
   for (const track of arrangement.tracks) {
-    // ⭐ A folder groups without sounding: no lane, and that is the definition rather than an omission.
-    if (track.kind === "folder") continue;
+    // ⭐ A folder groups without sounding: no lane, and that is the definition rather than an omission. The role function
+    // answers `undefined` for it, and refuses a kind this build does not know rather than compiling it as nothing.
+    const role = laneRoleForTrack(track);
+    if (role === undefined) continue;
 
-    const trackId = track.fromTrackId ?? ROLE_BY_KIND[track.kind];
+    const trackId = role;
     const notesForTrack = notes[track.id] ?? [];
     /**
      * **The conversion, and its stated limit.** The engine's lanes trigger at sixteenth-note steps, so a note is placed at the step its start rounds to and its pitch rides along in `pitch`. A lane's step fires a
@@ -132,7 +160,7 @@ export function compileArrangementToLanes(arrangement: ArrangementV2, notes: Not
       track: {
         track_id: trackId,
         name: track.name,
-        instrument: track.kind === "sampler" ? "sampler" : "synth",
+        instrument: laneInstrumentForTrack(track),
         steps,
         // Only written when something has a pitch, so a lane with no notes keeps the shape it had.
         ...(pitches.some((value) => value !== 0) ? { pitch: pitches } : {}),

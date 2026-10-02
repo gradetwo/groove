@@ -15,7 +15,7 @@ describe("default content for a new track", () => {
     expect(kit.steps.some((step) => step === 1)).toBe(true);
     // ⭐ The asset is the half that is easy to forget, and the half that makes a sampler track silent without saying so.
     expect(defaultContentFor("sampler").sample).toEqual({ assetId: DEFAULT_SAMPLER_ASSET });
-    expect(defaultContentFor("instrument").sample).toBeUndefined();
+    expect(defaultContentFor("synth").sample).toBeUndefined();
   });
 
   it("gives a folder and an effect rack nothing, because neither sounds", () => {

@@ -46,6 +46,7 @@ import { LoopBraceV2 } from "./LoopBraceV2";
 import { loopRangeAt, type LoopRange } from "../../data/arrangementLoop";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { NewProjectPanelV2 } from "./NewProjectPanelV2";
+import { KIND_LABEL_KEY, TRACK_KIND_ORDER } from "./kindLabels";
 import { ArrangementFileEntriesV2 } from "./ArrangementFileEntriesV2";
 import { useArrangementFileActions } from "../../features/arrangement/useArrangementFileActions";
 import { playArrangementV2, type ArrangementPlayer, type ArrangementTransportState } from "../../audio/playArrangementV2";
@@ -103,7 +104,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
    * runtime bug rather than a type error. A separate flag keeps the arrangement always valid, so "no arrangement yet" is a thing the component *says* rather than a thing it must remember to check.
    */
   const [choosing, setChoosing] = useState(true);
-  const [arrangement, setArrangement] = useState<ArrangementV2>(() => createArrangementFromTemplate(songId, undefined, "instrument"));
+  const [arrangement, setArrangement] = useState<ArrangementV2>(() => createArrangementFromTemplate(songId, undefined, "synth"));
   const [selectedTrackId, setSelectedTrackId] = useState<string | undefined>(undefined);
   /**
    * ⭐ **Which bar the strips show, which is not the transport's bar.** `bar` above is where the transport is in the underlying song and is what the take selector marks; this is a view choice — which sixteen squares a row draws. They are separate because an arrangement of eight bars still
@@ -651,9 +652,9 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             <div className="sticky left-0 z-10 shrink-0 border-r border-[rgb(var(--d-line))]" style={{ width: "var(--arr-head-w)" }}>
               {/* Adding tracks sits at the top of the header column, which is where every DAW's "new track" is. */}
               <div data-testid="track-list-add" className="flex flex-wrap items-center gap-1 border-b border-[rgb(var(--d-line))] p-1">
-                {(["sampler", "instrument", "drumkit", "fx", "folder"] as const).map((kind) => (
+                {TRACK_KIND_ORDER.map((kind) => (
                   <button key={kind} type="button" className="min-h-[44px] rounded border border-[rgb(var(--d-line))] px-1 text-[10px] text-text" onClick={() => onAddTrack(kind, kind)}>
-                    + {kind}
+                    + {t(KIND_LABEL_KEY[kind])}
                   </button>
                 ))}
               </div>

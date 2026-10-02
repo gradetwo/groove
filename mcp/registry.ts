@@ -538,9 +538,11 @@ export const TOOLS: ToolDefinition[] = [
         .optional()
         .describe("a template id: drums-bass, drums-bass-chords or samplers — any summary lists them; omit for a blank arrangement"),
       blankKind: z
-        .enum(["instrument", "drumkit", "sampler", "fx", "folder"])
+        .enum(["synth", "sampler", "drumkit", "fx", "folder"])
         .optional()
-        .describe("the kind the blank arrangement's single track gets; ignored when templateId is given"),
+        .describe(
+          "the kind the blank arrangement's single track gets, `synth` unless you say otherwise; a piano/strings/bass part wants `sampler` and an `assetId` from list_arrangement_instruments. Ignored when templateId is given"
+        ),
       songId: z.string().optional().describe("the v1 song this is an arrangement of; defaults to a scratch id"),
     },
     handler: (args) => {
@@ -558,7 +560,8 @@ export const TOOLS: ToolDefinition[] = [
   {
     name: "get_arrangement",
     title: "Read an arrangement",
-    description: "The arrangement's tracks, each one's kind, instrument, steps and takes, plus anything that would stop it being heard.",
+    description:
+      "The arrangement's tracks: each one's kind, **the sound it actually plays (`sound` — a catalogue asset id for a sampler, or the built-in synth preset by name and key)**, its level, pan and flags, its steps and takes, plus `problems` — anything that would stop it being heard, and for a `synth` track the entry that names the preset it sounds through and the sampler call that would sound a recorded instrument instead.",
     readOnly: true,
     inputSchema: { arrangementId: z.string() },
     handler: (args) => {
@@ -574,7 +577,7 @@ export const TOOLS: ToolDefinition[] = [
   {
     name: "describe_arrangement",
     title: "Describe an arrangement",
-    description: "One line per track, for reading rather than parsing.",
+    description: "One line per track, for reading rather than parsing — including what each track sounds with, so a synth preset is not mistaken for a recorded instrument.",
     readOnly: true,
     inputSchema: { arrangementId: z.string() },
     handler: (args) => {
@@ -588,16 +591,28 @@ export const TOOLS: ToolDefinition[] = [
   {
     name: "add_arrangement_track",
     title: "Add a track",
-    description: "Add a track to an arrangement. A sampler track starts with the default instrument already set, because a sampler that cannot sound is the mistake this model names.",
+    description:
+      "Add a track to an arrangement. **Choose the kind by what makes the sound.** `synth` is a **built-in synthesiser**: its timbre is fixed and it **cannot** be pointed at a recorded instrument, which makes it right for an electronic part and wrong for a piano; `sampler` plays a **real recorded instrument** from the catalogue, so **for a piano, strings, bass or any other real instrument use `sampler` and pass `assetId` in this same call** (for example `assetId: \"salamander-grand\"`); `drumkit` is the built-in drum voices; `fx` is an effect; `folder` groups without sounding. A sampler created without an `assetId` starts on the **default catalogue asset, which is a drum kit** — not what a melodic part wants — so name the asset. The kind is called `synth` rather than `gs1` because most roles play the built-in subtractive presets and only some route to GS-1. Asset ids come from `list_arrangement_instruments`. **`assetId` is accepted on `kind:\"sampler\"` only, and is refused — not ignored — for any other kind.** The synthetic instrument the catalogue asset replaces is the reason this tool exists: a `synth` track is a fixed preset, a `sampler` track is a recording.",
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
-      kind: z.enum(["instrument", "drumkit", "sampler", "fx", "folder"]),
+      kind: z.enum(["synth", "sampler", "drumkit", "fx", "folder"]),
       name: z.string().max(40).optional(),
+      /**
+       * ⭐ **The one-step form.** The report's reproduction was two calls where an agent made one — create a track,
+       * then point it at an instrument — and the second call never happened, so the track kept the default asset. The
+       * parameter is on this tool so "the track and its instrument" is one request.
+       */
+      assetId: z
+        .string()
+        .optional()
+        .describe(
+          "kind:\"sampler\" only — the catalogue asset this sampler plays (an id from list_arrangement_instruments, e.g. \"salamander-grand\"). Refused for every other kind rather than ignored, because only a sampler plays a catalogue asset"
+        ),
     },
     handler: (args) => {
       try {
-        return addMcpTrack(String(args.arrangementId), args.kind as never, args.name as string | undefined);
+        return addMcpTrack(String(args.arrangementId), args.kind as never, args.name as string | undefined, args.assetId as string | undefined);
       } catch (error) {
         return failure((error as Error).message);
       }
@@ -621,12 +636,12 @@ export const TOOLS: ToolDefinition[] = [
     name: "set_arrangement_track_kind",
     title: "Set a track's kind",
     description:
-      "Change what a track is. Becoming a sampler gives it the default instrument, keeping one it already had; leaving a sampler drops the instrument, since a drum or effect track does not play a catalogue asset.",
+      "Change what a track is. **The kinds, by what makes the sound:** `synth` is the built-in synthesiser (a fixed timbre that cannot be pointed at a catalogue asset), `sampler` plays a real recorded instrument, `drumkit` the built-in drum voices, `fx` an effect, `folder` a group that does not sound. Becoming a sampler gives it the default catalogue asset, keeping one it already had; leaving a sampler drops the asset, since a synth, drum or effect track does not play a catalogue asset. The kind was spelled `instrument` before and that value is no longer accepted.",
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
       trackId: z.string(),
-      kind: z.enum(["instrument", "drumkit", "sampler", "fx", "folder"]),
+      kind: z.enum(["synth", "sampler", "drumkit", "fx", "folder"]),
     },
     handler: (args) => {
       try {
@@ -1091,7 +1106,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "set_arrangement_track_instrument",
     title: "Choose a sampler track's instrument",
     description:
-      "Point a sampler track at a catalogue asset — the mirrored libraries include virtuosity-drums-basic, salamander-grand, karoryfer-meatbass (39 instruments), karoryfer-emilyguitar (6) and vcsl (88). Refused for any other kind of track.",
+      "Point a **sampler** track at a catalogue asset — **this is the call that puts a real recorded instrument on a track** (a piano is `assetId: \"salamander-grand\"`; `list_arrangement_instruments` lists the ids, which include virtuosity-drums-basic, salamander-grand, karoryfer-meatbass (39 instruments), karoryfer-emilyguitar (6) and vcsl (88)). Refused for any other kind of track — **including `synth`, whose timbre is built in and cannot be pointed at an asset**; for a real instrument, add the track as `kind:\"sampler\"` and pass its `assetId` there.",
     readOnly: false,
     inputSchema: { arrangementId: z.string(), trackId: z.string(), assetId: z.string().describe("a catalogue asset id") },
     handler: (args) => {
@@ -3355,10 +3370,18 @@ export const TOOLS: ToolDefinition[] = [
           ...(ctx?.progress ? { progress: ctx?.progress } : {}),
         });
         const audioLanes = result.audioLanes;
+        /**
+         * ⭐ **The arrangement's own problems travel with the stems too.** `render_arrangement` has carried them as
+         * `arrangementProblems` since the starter-content report; the stems reply did not, so "this track sounds through
+         * the built-in synth preset, and here is the sampler call that would sound a real instrument" was visible in the
+         * mix reply and invisible in the per-track one — exactly the asymmetry the arrangement problems exist to remove.
+         */
+        const summary = summariseArrangement(String(args.arrangementId), getMcpArrangement(String(args.arrangementId))!);
         return {
           ...result,
           arrangementId: String(args.arrangementId),
           bars,
+          ...(summary.problems.length ? { arrangementProblems: summary.problems } : {}),
           ...audioLaneReplyFields(audioLanes),
         };
       } catch (error) {

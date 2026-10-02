@@ -16,7 +16,7 @@ function arrangementWith(track: Partial<TrackV2>): ArrangementV2 {
     songId: "song",
     sourceSlots: [],
     bars: 1,
-    tracks: [{ id: "t1", kind: "instrument", name: "Keys", ...track }],
+    tracks: [{ id: "t1", kind: "synth", name: "Keys", ...track }],
   };
 }
 

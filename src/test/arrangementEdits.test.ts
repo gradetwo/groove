@@ -18,7 +18,7 @@ describe("editing an arrangement", () => {
   it("gives each track an id of its own, and never reuses one after a deletion", () => {
     let arr = emptyArrangement();
     arr = addTrack(arr, "sampler", "Drums");
-    arr = addTrack(arr, "instrument", "Lead");
+    arr = addTrack(arr, "synth", "Lead");
     const [first, second] = arr.tracks;
     expect(first!.id).not.toBe(second!.id);
 
@@ -35,7 +35,7 @@ describe("editing an arrangement", () => {
     const folder = arr.tracks[0]!;
     arr = addTrack(arr, "sampler", "Kick", { parentId: folder.id });
     arr = addTrack(arr, "sampler", "Snare", { parentId: folder.id });
-    arr = addTrack(arr, "instrument", "Bass");
+    arr = addTrack(arr, "synth", "Bass");
 
     const after = removeTrack(arr, folder.id);
     // Only the ungrouped track remains; orphaned children would still compile into lanes with nothing on screen to explain them.
@@ -79,7 +79,7 @@ describe("mute, solo, rename and fold", () => {
   it("refuses a blank rename rather than leaving a nameless row", async () => {
     const { renameTrack } = await import("../data/arrangementEdits");
     let arr = emptyArrangement();
-    arr = addTrack(arr, "instrument", "Lead");
+    arr = addTrack(arr, "synth", "Lead");
     const id = arr.tracks[0]!.id;
     expect(renameTrack(arr, id, "   ").tracks[0]!.name).toBe("Lead");
     expect(renameTrack(arr, id, "  Pad  ").tracks[0]!.name).toBe("Pad");
@@ -171,7 +171,7 @@ describe("new projects, templates, and changing a track's kind", () => {
     const id = arr.tracks[0]!.id;
     arr = { ...arr, tracks: arr.tracks.map((t) => ({ ...t, takes: [{ id: "t1", recordedAt: 1, source: "audio" as const }], selectedTakeId: "t1" })) };
 
-    const changed = changeTrackKind(arr, id, "instrument");
+    const changed = changeTrackKind(arr, id, "synth");
     // `sample` belongs to the sound source, and means nothing to a synth: keeping it is a state the shape allows and the semantics do not have.
     expect(changed.tracks[0]!.sample).toBeUndefined();
     // ⭐ But takes are **content, not identity** — changing what a track is does not un-record what was played onto it.
@@ -183,7 +183,7 @@ describe("new projects, templates, and changing a track's kind", () => {
     const { addTrack, changeTrackKind } = await import("../data/arrangementEdits");
     let arr = addTrack(createArrangement("s"), "sampler", "Drums", { sample: { assetId: "kit" } });
     const id = arr.tracks[0]!.id;
-    arr = changeTrackKind(arr, id, "instrument");
+    arr = changeTrackKind(arr, id, "synth");
     const back = changeTrackKind(arr, id, "sampler");
     /**
      * **The original choice is not resurrected, and the track is playable anyway.** It was dropped on the way out, so a round trip cannot bring back "kit" — that is still honest. What changed is that becoming a sampler now supplies the default
@@ -210,7 +210,7 @@ describe("a v2 arrangement's own notes", () => {
   it("takes a deleted track's notes with it, so no orphan can fire under a reused id", async () => {
     const { addTrack, createArrangement, removeTrack } = await import("../data/arrangementEdits");
     let arr = createArrangement("s");
-    arr = addTrack(arr, "instrument", "Lead");
+    arr = addTrack(arr, "synth", "Lead");
     const id = arr.tracks[1]!.id;
     expect(arr.notesByTrack?.[id]).toBeDefined();
 
@@ -339,7 +339,7 @@ describe("filing a finished capture onto a track", () => {
 
   it("accepts a take on any kind, because recording is an input form rather than a track type", () => {
     // The owner corrected an earlier design that treated audio as its own track type; what differs is `Take.source`, not the kind.
-    for (const kind of ["drumkit", "instrument", "sampler"] as const) {
+    for (const kind of ["drumkit", "synth", "sampler"] as const) {
       const withTrack = addTrack(emptyArrangement(), kind, kind);
       const id = withTrack.tracks[0]!.id;
       const filed = addTake(withTrack, id, { take: { id: "take-1", recordedAt: 1, source: "midi" } });
@@ -389,7 +389,7 @@ describe("writing notes directly, which is what a piano roll does", () => {
   const note = (pitch: number, startBeats: number, lengthBeats = 1) => ({ pitch, startBeats, lengthBeats, velocity: 100 });
 
   it("adds a note with its own position, length and pitch", () => {
-    const withTrack = addTrack(emptyArrangement(), "instrument", "Keys");
+    const withTrack = addTrack(emptyArrangement(), "synth", "Keys");
     const id = withTrack.tracks[0]!.id;
     const edited = addTrackNote({ ...withTrack, notesByTrack: { [id]: [] } }, id, note(64, 1.5, 2));
     expect(edited.notesByTrack![id]).toEqual([{ pitch: 64, startBeats: 1.5, lengthBeats: 2, velocity: 100 }]);
@@ -397,7 +397,7 @@ describe("writing notes directly, which is what a piano roll does", () => {
 
   it("replaces a note at the same cell rather than stacking a second voice on it", () => {
     // Two notes at one pitch and position are one note with a doubled voice: unremovable with a second click, and heard as a mistake.
-    const withTrack = addTrack(emptyArrangement(), "instrument", "Keys");
+    const withTrack = addTrack(emptyArrangement(), "synth", "Keys");
     const id = withTrack.tracks[0]!.id;
     const once = addTrackNote({ ...withTrack, notesByTrack: { [id]: [] } }, id, note(64, 1, 1));
     const twice = addTrackNote(once, id, { ...note(64, 1, 2), velocity: 80 });
@@ -406,7 +406,7 @@ describe("writing notes directly, which is what a piano roll does", () => {
   });
 
   it("moves a note in time and pitch, and refuses a destination that is occupied", () => {
-    const withTrack = addTrack(emptyArrangement(), "instrument", "Keys");
+    const withTrack = addTrack(emptyArrangement(), "synth", "Keys");
     const id = withTrack.tracks[0]!.id;
     const two = addTrackNote(addTrackNote({ ...withTrack, notesByTrack: { [id]: [] } }, id, note(64, 0)), id, note(67, 1));
     const moved = moveTrackNote(two, id, { pitch: 64, startBeats: 0 }, { pitch: 65, startBeats: 2 });
@@ -417,7 +417,7 @@ describe("writing notes directly, which is what a piano roll does", () => {
   });
 
   it("changes a note's length, with a floor of one step", () => {
-    const withTrack = addTrack(emptyArrangement(), "instrument", "Keys");
+    const withTrack = addTrack(emptyArrangement(), "synth", "Keys");
     const id = withTrack.tracks[0]!.id;
     const one = addTrackNote({ ...withTrack, notesByTrack: { [id]: [] } }, id, note(60, 0, 1));
     expect(setTrackNoteLength(one, id, { pitch: 60, startBeats: 0 }, 4).notesByTrack![id]![0]!.lengthBeats).toBe(4);
@@ -426,7 +426,7 @@ describe("writing notes directly, which is what a piano roll does", () => {
   });
 
   it("removes a note by position, and refuses the silent kinds", () => {
-    const withTrack = addTrack(emptyArrangement(), "instrument", "Keys");
+    const withTrack = addTrack(emptyArrangement(), "synth", "Keys");
     const id = withTrack.tracks[0]!.id;
     const one = addTrackNote({ ...withTrack, notesByTrack: { [id]: [] } }, id, note(60, 0));
     expect(removeTrackNote(one, id, { pitch: 60, startBeats: 0 }).notesByTrack![id]).toHaveLength(0);
@@ -443,7 +443,7 @@ describe("changing a track's kind", () => {
      * The inconsistency this closes: `defaultContentFor` gives every new sampler track an asset, and a kind change did not — so the same kind of track sounded or not depending on how it had been created. A sampler track that cannot sound is
      * the one thing this model calls out as a mistake.
      */
-    const withTrack = addTrack(emptyArrangement(), "instrument", "Lead");
+    const withTrack = addTrack(emptyArrangement(), "synth", "Lead");
     const id = withTrack.tracks[0]!.id;
     const asSampler = changeTrackKind(withTrack, id, "sampler");
     expect(asSampler.tracks[0]!.sample).toEqual({ assetId: DEFAULT_SAMPLER_ASSET });
@@ -471,7 +471,7 @@ describe("changing a track's kind", () => {
 
 describe("a track's level and its place in the stereo field", () => {
   it("sets a level in dB and a pan between the channels", () => {
-    const withTrack = addTrack(emptyArrangement(), "instrument", "Keys");
+    const withTrack = addTrack(emptyArrangement(), "synth", "Keys");
     const id = withTrack.tracks[0]!.id;
     expect(setTrackGain(withTrack, id, -6).tracks[0]!.gainDb).toBe(-6);
     expect(setTrackPan(withTrack, id, -0.5).tracks[0]!.pan).toBe(-0.5);
@@ -479,7 +479,7 @@ describe("a track's level and its place in the stereo field", () => {
 
   it("clamps rather than storing a value nothing can honour", () => {
     // ±60 dB is inaudible at both ends, and a pan past hard left is not a pan; a slider cannot send these, but an imported file or an agent can.
-    const withTrack = addTrack(emptyArrangement(), "instrument", "Keys");
+    const withTrack = addTrack(emptyArrangement(), "synth", "Keys");
     const id = withTrack.tracks[0]!.id;
     expect(setTrackGain(withTrack, id, 999).tracks[0]!.gainDb).toBe(12);
     expect(setTrackGain(withTrack, id, -999).tracks[0]!.gainDb).toBe(-60);
@@ -491,7 +491,7 @@ describe("a track's level and its place in the stereo field", () => {
     /**
      * Mute and level are separate decisions, which is why they are separate edits: Logic's track header has both, and a mute that reset the fader would be a mixer that forgets.
      */
-    const withTrack = addTrack(emptyArrangement(), "instrument", "Keys");
+    const withTrack = addTrack(emptyArrangement(), "synth", "Keys");
     const id = withTrack.tracks[0]!.id;
     const quiet = setTrackGain(withTrack, id, -12);
     const muted = setTrackFlag(quiet, id, "muted", true);
@@ -501,7 +501,7 @@ describe("a track's level and its place in the stereo field", () => {
   });
 
   it("leaves every other track alone", () => {
-    const two = addTrack(addTrack(emptyArrangement(), "instrument", "Keys"), "instrument", "Bass");
+    const two = addTrack(addTrack(emptyArrangement(), "synth", "Keys"), "synth", "Bass");
     const edited = setTrackGain(two, two.tracks[0]!.id, -3);
     expect(edited.tracks[1]).toBe(two.tracks[1]);
   });
@@ -523,7 +523,7 @@ describe("adding a batch of notes", () => {
   }));
 
   it("produces exactly the arrangement that adding the same notes one at a time produces", () => {
-    const withTrack = addTrack(emptyArrangement(), "instrument", "Keys");
+    const withTrack = addTrack(emptyArrangement(), "synth", "Keys");
     const id = withTrack.tracks[0]!.id;
     const start = { ...withTrack, notesByTrack: { [id]: [] } };
 

@@ -45,6 +45,18 @@ export const commonMessages = {
   template_drums_bass_desc: { en: "A drum kit and a bass — the most common pair", zh: "鼓组加贝斯，最常见的两件套" },
   template_drums_bass_chords_desc: { en: "Add chords and it can carry a whole song", zh: "再加一条和声，能撑起整首" },
   template_samplers_desc: { en: "Two sampler tracks — the kind that plays real instruments", zh: "两条采样器轨道——就是能听到真实乐器的那一种" },
+  /**
+   * ⭐ **The arrangement's track kinds, named by what makes the sound.**
+   *
+   * The kind called `instrument` was renamed `synth` because the word made a person who wanted a piano choose a
+   * **built-in synthesiser whose timbre cannot be changed** — the report's "build an instrument track and hear
+   * something muddy". The menu now says Synth/合成器 and a sampled instrument says Sampler/采样器.
+   */
+  kind_synth: { en: "Synth", zh: "合成器" },
+  kind_sampler: { en: "Sampler", zh: "采样器" },
+  kind_drumkit: { en: "Drum kit", zh: "鼓组" },
+  kind_fx: { en: "FX", zh: "效果" },
+  kind_folder: { en: "Folder", zh: "文件夹" },
   ruler_label: { en: "Arrangement ruler", zh: "编排标尺" },
   ruler_bar: { en: "Go to bar {bar}", zh: "跳到第 {bar} 小节" },
   // The arrangement's grid layout (see `docs/ARRANGEMENT_UI_DESIGN.md`). One toolbar, a fixed 240 px header column

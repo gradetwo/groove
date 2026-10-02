@@ -50,7 +50,9 @@ import {
 } from "../src/data/arrangementEdits";
 import type { ArrangementV2, NoteEvent, TrackKindV2, TrackV2 } from "../src/types/arrangementV2";
 import type { PlannedTake } from "../src/data/takePlanning";
-import { compileArrangementToSongInput } from "../src/data/arrangementCompile";
+import { compileArrangementToSongInput, laneInstrumentForTrack, laneRoleForTrack } from "../src/data/arrangementCompile";
+import { resolveInstrumentPresetKey } from "../src/audio/instrumentPresets";
+import { DEFAULT_SYNTH_PRESETS } from "../src/audio/PolySynth";
 import { stepsFromNotes, STEPS_PER_BEAT } from "../src/data/noteEvents";
 import { beatsPerBar } from "../src/data/genreExpression";
 import { createSong } from "../src/types/song";
@@ -81,6 +83,13 @@ export interface ArrangementTrackSummary {
   muted: boolean;
   soloed: boolean;
   collapsed: boolean;
+  /**
+   * ⭐ **What this track actually sounds with today** — the first line the report asked for, because a source nobody can
+   * see is a source nobody can change. It is resolved through the renderer's own path (the compile's lane role, the
+   * engine's preset resolver) rather than inferred from the kind, so `instrument: "Analog Lead"` on the reply and the
+   * preset the renderer reaches are the same answer by construction.
+   */
+  sound: ArrangementTrackSound;
   /** Level in dB, absent meaning unity — the value the row's slider shows. */
   gainDb?: number;
   /** −1 to 1, absent meaning centre. */
@@ -97,6 +106,89 @@ export interface ArrangementTrackSummary {
   /** Take ids in recorded order, and which one plays. */
   takes: string[];
   selectedTakeId?: string;
+}
+
+/**
+ * ⭐ **The sound source a track reaches, in the renderer's own terms.**
+ *
+ * `source` is the class of voice; `assetId` or `presetKey`/`presetName` is the identity of it. A caller can act on
+ * either: `set_arrangement_track_instrument` changes a `catalogue-asset`, and a `builtin-synth` is exactly the source
+ * that **cannot** be changed, which is why `guidance` says what to do instead.
+ */
+export interface ArrangementTrackSound {
+  /** Where the sound comes from. `silent` is the absent case, named rather than omitted. */
+  source: "catalogue-asset" | "builtin-synth" | "builtin-drums" | "silent";
+  /** `catalogue-asset` only: the asset the sampler plays. */
+  assetId?: string;
+  /** `builtin-synth` only: the resolved preset's key, as `resolveInstrumentPresetKey` returns it. */
+  presetKey?: string;
+  /** `builtin-synth` only: the preset's display name, the string the engine's own preset object carries. */
+  presetName?: string;
+  /** Whether a tool can change this source: a sampler's asset can, a built-in synth's timbre cannot. */
+  selectable: boolean;
+  /** One line for `describe_arrangement` and for a log. */
+  detail: string;
+  /** The **executable** next step when this is probably not what was wanted; absent when nothing needs doing. */
+  guidance?: string;
+}
+
+/**
+ * ⭐ **The sound source, read off the two places that actually decide it.**
+ *
+ * The report's root cause was that nothing in a reply said which of these a track was, so an agent that meant a piano
+ * could not tell it had asked for a fixed synthesiser. Both halves are read rather than guessed:
+ *
+ *   * **what voice** comes from the compile — `laneRoleForTrack` (the v1 role the lane is built with) and
+ *     `laneInstrumentForTrack` (the `instrument` string on that lane);
+ *   * **which preset** comes from `resolveInstrumentPresetKey`, the same walk the live engine and the offline exporter
+ *     perform (`AudioEngine`/`WavExporter` both call `resolveInstrumentPreset`).
+ *
+ * A drum kit is named as the built-in drum voices rather than by a preset: its lane resolves a preset like every other,
+ * but the engine's drum dispatch never consults it (`instrumentPresets.ts` says so), so reporting the preset there would
+ * be a true answer to the wrong question.
+ */
+function soundForTrack(track: TrackV2): ArrangementTrackSound {
+  const role = laneRoleForTrack(track);
+  if (role === undefined) {
+    return { source: "silent", selectable: false, detail: "a folder groups without sounding" };
+  }
+  if (track.kind === "sampler") {
+    if (!track.sample) {
+      return {
+        source: "silent",
+        selectable: true,
+        detail: "a sampler with no catalogue asset, so it is silent",
+        guidance: "give it one with set_arrangement_track_instrument, or re-create it with add_arrangement_track {kind:\"sampler\", assetId:\"…\"}",
+      };
+    }
+    return {
+      source: "catalogue-asset",
+      assetId: track.sample.assetId,
+      selectable: true,
+      detail: `plays catalogue asset "${track.sample.assetId}"`,
+    };
+  }
+  const presetKey = resolveInstrumentPresetKey(laneInstrumentForTrack(track), role);
+  const presetName = DEFAULT_SYNTH_PRESETS[presetKey]?.name ?? presetKey;
+  if (track.kind === "drumkit") {
+    return {
+      source: "builtin-drums",
+      selectable: false,
+      detail: "the built-in drum voices (kick/snare/hat synthesis), not a sampled kit",
+    };
+  }
+  if (track.kind === "fx") {
+    return { source: "builtin-synth", presetKey, presetName, selectable: false, detail: `built-in synth preset "${presetName}" (${presetKey})` };
+  }
+  return {
+    source: "builtin-synth",
+    presetKey,
+    presetName,
+    selectable: false,
+    detail: `built-in synth preset "${presetName}" (${presetKey}) — fixed, and not a sampled instrument`,
+    guidance:
+      "a synth track's timbre cannot be pointed at a recorded instrument; for a real piano, strings or bass add a track with kind:\"sampler\" and give it an asset (add_arrangement_track {kind:\"sampler\", assetId:\"…\"}; list_arrangement_instruments lists the ids)",
+  };
 }
 
 export interface ArrangementSummary {
@@ -143,6 +235,7 @@ function summariseTrack(track: TrackV2, arrangement: ArrangementV2): Arrangement
     ...(track.pan === undefined ? {} : { pan: track.pan }),
     ...(track.parentId ? { parentId: track.parentId } : {}),
     ...(track.sample ? { sampleAssetId: track.sample.assetId } : {}),
+    sound: soundForTrack(track),
     steps,
     stepsOn: steps.filter((value) => value !== 0).length,
     notes: notes.map((note) => ({ pitch: note.pitch, startBeats: note.startBeats, lengthBeats: note.lengthBeats, velocity: note.velocity })),
@@ -161,6 +254,24 @@ export function summariseArrangement(arrangementId: string, arrangement: Arrange
   for (const track of arrangement.tracks) {
     // Stated because it is the mistake an agent makes here: a sampler with no instrument is silent, and silence reads as a bug in the renderer.
     if (track.kind === "sampler" && !track.sample) problems.push(`"${track.name}" is a sampler with no instrument, so it will be silent`);
+    /**
+     * ⭐ **A synth track says so, and says what to do instead — this is the report's own reproduction.**
+     *
+     * An agent that meant a piano built a track with the kind then called `instrument`, wrote 198 notes and heard a
+     * muddy fixed synthesiser: the word it chose was the trap, and nothing in the reply named the source, so there was
+     * nothing to notice and nothing to correct. The entry below is not "no instrument was specified" — that is not a
+     * next step. It names **which preset is sounding** and the **one call that would sound a recorded instrument**.
+     *
+     * It is here rather than in the render tools so that it reaches every reply a caller reads, including
+     * `get_arrangement` and the render replies' `arrangementProblems`. Deletion test: remove this branch and the
+     * criterion in `src/test/mcpArrangement.test.ts` that reproduces the report's path goes red.
+     */
+    const sound = soundForTrack(track);
+    if (track.kind === "synth") {
+      problems.push(
+        `"${track.name}" is a synth track and sounds through the built-in preset "${sound.presetName}" (${sound.presetKey}): a synth's timbre cannot be pointed at a recorded instrument. For a real piano, strings or bass, add a track with kind:"sampler" and give it an asset — add_arrangement_track {kind:"sampler", assetId:"<id>"}, with the ids from list_arrangement_instruments`
+      );
+    }
     /**
      * ⭐ **Starter content is reported wherever it is present.** The MCP surface no longer seeds it (`createMcpArrangement`),
      * but the app's starter experience still does, and a caller reading a reply has no other way to tell notes it wrote from
@@ -233,7 +344,7 @@ export function createMcpArrangement(input: CreateMcpArrangementInput = {}): Arr
   }
   const seeded = input.templateId
     ? createArrangementFromTemplate(songId, input.templateId, input.blankKind)
-    : createArrangement(songId, input.blankKind ?? "instrument");
+    : createArrangement(songId, input.blankKind ?? "synth");
   /**
    * ⭐ **An MCP-created arrangement carries no starter notes.**
    *
@@ -258,7 +369,23 @@ function edit(arrangementId: string, apply: (arrangement: ArrangementV2) => Arra
   return { summary, problems: summary.problems };
 }
 
-export function addMcpTrack(arrangementId: string, kind: TrackKindV2, name?: string): ArrangementEditResult {
+/**
+ * Add a track, and — for a sampler — point it at its instrument **in the same call**.
+ *
+ * ⭐ **`assetId` is the one-step form the report needed.** Choosing a real instrument used to be two round trips (create
+ * a sampler track, then `set_arrangement_track_instrument`), and an agent that stopped after the first got the default
+ * catalogue asset. It is read only on `kind:"sampler"`, and **every other kind is refused rather than ignored**: a
+ * caller that hands `assetId` to a synth has said what it wants and must be told that this kind cannot give it, not
+ * left with a track that quietly sounds like a synth anyway.
+ */
+export function addMcpTrack(arrangementId: string, kind: TrackKindV2, name?: string, assetId?: string): ArrangementEditResult {
+  if (assetId !== undefined && kind !== "sampler") {
+    throw new Error(
+      `assetId was given for a ${kind} track, and only a sampler track plays a catalogue asset — a ${kind} track cannot be pointed at one` +
+        (kind === "synth" ? ` (a synth is a built-in instrument with a fixed timbre; for a recorded piano, strings or bass use kind:"sampler")` : "") +
+        `; call add_arrangement_track again with kind:"sampler" and this assetId`
+    );
+  }
   return edit(arrangementId, (arrangement) => {
     const added = addTrack(arrangement, kind, name ?? defaultTrackName(kind));
     /**
@@ -270,12 +397,14 @@ export function addMcpTrack(arrangementId: string, kind: TrackKindV2, name?: str
     const newTrackId = added.tracks[added.tracks.length - 1]!.id;
     const notesByTrack = { ...(added.notesByTrack ?? {}) };
     delete notesByTrack[newTrackId];
-    return { ...added, notesByTrack };
+    // ⭐ One call, not two: the asset the caller named replaces the default one `addTrack` supplied.
+    const withAsset = assetId === undefined ? added : setTrackSample(added, newTrackId, assetId);
+    return { ...withAsset, notesByTrack };
   });
 }
 
 function defaultTrackName(kind: TrackKindV2): string {
-  const names: Record<TrackKindV2, string> = { instrument: "Instrument", drumkit: "Drums", sampler: "Sampler", fx: "Effect", folder: "Folder" };
+  const names: Record<TrackKindV2, string> = { synth: "Synth", drumkit: "Drums", sampler: "Sampler", fx: "Effect", folder: "Folder" };
   return names[kind];
 }
 
@@ -709,7 +838,7 @@ function addImportedParts(
   const result = edit(arrangementId, (current: ArrangementV2) => {
     let next = current;
     for (const candidate of withNotes) {
-      const withTrack = addTrack(next, "instrument", candidate.part.name.slice(0, 40) || "Imported");
+      const withTrack = addTrack(next, "synth", candidate.part.name.slice(0, 40) || "Imported");
       const trackId = withTrack.tracks[withTrack.tracks.length - 1]!.id;
       // The notes arrive whole rather than one call each: an imported part is one decision, not two hundred edits.
       next = { ...withTrack, notesByTrack: { ...(withTrack.notesByTrack ?? {}), [trackId]: candidate.part.notes } };
@@ -903,7 +1032,11 @@ export function describeMcpArrangement(arrangementId: string): string {
   const summary = summariseArrangement(arrangementId, arrangement);
   const lines = summary.tracks.map((track) => {
     const parts = [`${track.id}  ${track.name} (${track.kind})`];
-    if (track.sampleAssetId) parts.push(`plays ${track.sampleAssetId}`);
+    /**
+     * ⭐ **Every line says what the track sounds with**, not only a sampler's line. A reader can now tell a real piano
+     * from the built-in preset without asking a second tool — which is the whole point of the field.
+     */
+    parts.push(track.sound.detail);
     if (track.steps.length > 0) parts.push(`${track.stepsOn}/${track.steps.length} steps`);
     if (track.takes.length > 0) parts.push(`${track.takes.length} take(s)${track.selectedTakeId ? `, ${track.selectedTakeId} playing` : ""}`);
     if (track.muted) parts.push("muted");

@@ -995,7 +995,7 @@ try {
    *
    * **What this covers of the environment-dependent surface, and how.** The render tools are asserted as declared with their schemas and deliberately never called, because calling one starts Chromium: that is `render_audio`, `render_song`, `render_preview_clip` and `analyze_audio`, and the existing checks above already cover the first and the last. `export_groove` and `import_groove` are called for real earlier in this session, which covers the file system. The zip is covered here. **Every other tool runs on arguments alone**, so this session's calls to the library, pattern, song, harmony, melody, vocal and exporting tools are the pass over that part of the surface.
    */
-  const xmlArrangement = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "instrument" } }));
+  const xmlArrangement = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "synth" } }));
   const exportedScore = payload(
     await client.request("tools/call", {
       name: "export_arrangement_musicxml",
@@ -1065,7 +1065,7 @@ try {
     `${(libraries.libraries ?? []).length} library(ies), ${attribution.length} requiring attribution`
   );
 
-  const midiArrangement = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "instrument" } }));
+  const midiArrangement = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "synth" } }));
   const importedMidiBytes = buildMidiFile({
     division: 480,
     tracks: [
@@ -1126,7 +1126,7 @@ try {
    * here rather than in the handler: that the tool takes **two base64 files**, and that what this model cannot hold
    * (an audio track, which this fixture writes) **comes back in `problems`** instead of vanishing.
    */
-  const logicArrangement = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "instrument" } }));
+  const logicArrangement = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "synth" } }));
   const logicBytes = buildLogicProjectData({
     bpm: 128,
     timeSignature: { numerator: 4, denominator: 4 },
@@ -1217,7 +1217,7 @@ try {
    * a comparison against the file rather than a promise about it.
    */
   const exportArrangement = payload(
-    await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "instrument" } })
+    await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "synth" } })
   );
   const exportArrangementId = exportArrangement.arrangementId ?? exportArrangement.id;
   const exportTracks = payload(

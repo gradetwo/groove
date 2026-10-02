@@ -74,7 +74,7 @@ describe("the track header's controls", () => {
   it("keeps the eight in that order for an instrument track with no instrument slot", () => {
     // A track that plays no catalogue asset still gets the whole convention: the slot is the only thing that is
     // conditional on the kind, and it is conditional because there is nothing for it to say.
-    const { container } = renderHeader({ track: track({ kind: "instrument", sample: undefined }) });
+    const { container } = renderHeader({ track: track({ kind: "synth", sample: undefined }) });
     expect(controlOrder(container)).toEqual(["color", "kind", "name", "volume", "arm", "solo", "mute", "meter", "remove"]);
   });
 

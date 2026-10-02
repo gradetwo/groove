@@ -207,7 +207,7 @@ describe("the fixed header column beside the lanes", () => {
 describe("a region block per track, with a non-editable miniature", () => {
   it("draws one region per track, spanning the arrangement's own bars", () => {
     renderView();
-    fireEvent.click(screen.getAllByRole("button", { name: "+ sampler" })[0]!);
+    fireEvent.click(screen.getAllByRole("button", { name: "+ Sampler" })[0]!);
     const regions = screen.getAllByTestId(/^arrangement-region-/);
     // A new arrangement already has a default track, and the added sampler is the second.
     expect(regions).toHaveLength(2);
@@ -226,7 +226,7 @@ describe("a region block per track, with a non-editable miniature", () => {
     renderView();
     // The sampler the header column adds arrives with a drum pattern (`defaultContentFor`), so this region has notes
     // without the criterion having to write any: the miniature is drawn from the track's own `NoteEvent[]`.
-    fireEvent.click(screen.getAllByRole("button", { name: "+ sampler" })[0]!);
+    fireEvent.click(screen.getAllByRole("button", { name: "+ Sampler" })[0]!);
     // The added sampler, found by its id rather than by its position: a criterion that depends on which order the
     // add buttons drew in would break the day the header column is reordered.
     const samplerRegion = screen.getAllByTestId(/^arrangement-region-/).find((element) => element.dataset.testid!.includes("arrangement-region-sampler-"))!;
@@ -261,7 +261,7 @@ describe("a region block per track, with a non-editable miniature", () => {
      * events: none`; and the block itself is a focusable button, so the keyboard has a way in.
      */
     renderView();
-    fireEvent.click(screen.getAllByRole("button", { name: "+ sampler" })[0]!);
+    fireEvent.click(screen.getAllByRole("button", { name: "+ Sampler" })[0]!);
     const samplerId = screen
       .getAllByTestId(/^arrangement-region-/)
       .find((element) => element.dataset.testid!.includes("arrangement-region-sampler-"))!
@@ -290,7 +290,7 @@ describe("a region block per track, with a non-editable miniature", () => {
 
   it("says a region has no notes rather than drawing an empty box", () => {
     renderView();
-    fireEvent.click(screen.getAllByRole("button", { name: "+ fx" })[0]!);
+    fireEvent.click(screen.getAllByRole("button", { name: "+ FX" })[0]!);
     const empty = screen.getByTestId(/^arrangement-region-fx-/);
     expect(empty.textContent).toMatch(/no notes|没有音符/);
   });
@@ -409,7 +409,7 @@ describe("the phone layout does not shrink M/S/R", () => {
      * brief's own wording — **one control, at 44 px** — not "there are three more buttons somewhere".
      */
     renderView();
-    fireEvent.click(screen.getAllByRole("button", { name: "+ sampler" })[0]!);
+    fireEvent.click(screen.getAllByRole("button", { name: "+ Sampler" })[0]!);
     const samplerId = screen
       .getAllByTestId(/^arrangement-region-/)
       .find((element) => element.dataset.testid!.includes("arrangement-region-sampler-"))!

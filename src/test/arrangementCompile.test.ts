@@ -41,7 +41,7 @@ describe("compiling a v2 arrangement into engine lanes", () => {
   });
 
   it("emits an empty lane for a track with no notes, rather than dropping it", () => {
-    const input = compileArrangementToSongInput(arr({ id: "t", kind: "instrument", name: "Lead" }));
+    const input = compileArrangementToSongInput(arr({ id: "t", kind: "synth", name: "Lead" }));
     // Silence is the honest result of "a track with nothing on it"; omitting the lane would make the track disappear on reload.
     expect(input.clips.A.tracks).toHaveLength(1);
     expect(input.clips.A.tracks[0]!.steps.every((step) => step === 0)).toBe(true);

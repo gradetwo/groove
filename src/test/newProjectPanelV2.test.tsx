@@ -43,6 +43,22 @@ describe("the new-project panel", () => {
   });
 
   /**
+   * ⭐ **The first track's kind is offered as 合成器, not 乐器.** The old word made a person who wanted a piano choose a
+   * fixed built-in synthesiser; the value changed with it, so `instrument` is not among the options at all.
+   */
+  it("offers Synth as the blank track's kind, and no longer offers the misleading word", () => {
+    render(<NewProjectPanelV2 onCreate={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Details" }));
+    const select = screen.getByLabelText("First track kind") as HTMLSelectElement;
+    const labels = [...select.options].map((option) => option.textContent);
+    const values = [...select.options].map((option) => option.value);
+    expect(labels).toContain("合成器");
+    expect(labels).not.toContain("乐器");
+    expect(values).toContain("synth");
+    expect(values).not.toContain("instrument");
+  });
+
+  /**
    * **The card's sentence follows the language toggle.** It did not: the descriptions were an `{en, zh}` pair inside the component and the card rendered `?.en` unconditionally, so a Chinese session read English here while every other surface switched. The assertion
    * is against the dictionary's own value rather than against a sentence written here, so it cannot pass by both sides being hardcoded the same way.
    */

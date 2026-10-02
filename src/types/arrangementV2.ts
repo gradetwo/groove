@@ -10,8 +10,24 @@
  * carries — name, kind, colour, mute, solo, gain, pan, grouping — and the notes remain where every existing consumer already reads them.
  */
 
-/** The sounding kinds, plus `folder`, which groups without making a sound. A discriminated union rather than a pile of optional fields: "a track that is both a drum kit and a sampler" is a shape the fields would permit and the semantics do not have. */
-export type TrackKindV2 = "drumkit" | "instrument" | "sampler" | "fx" | "folder";
+/**
+ * The sounding kinds, plus `folder`, which groups without making a sound. A discriminated union rather than a pile of optional fields: "a track that is both a drum kit and a sampler" is a shape the fields would permit and the semantics do not have.
+ *
+ * ⭐ **`synth`, not `instrument`.** The kind was called `instrument` and that name was the defect: a person or an agent
+ * who wants a piano reads "instrument", picks it, and gets a **built-in synthesiser whose timbre cannot be pointed at a
+ * recorded piano** — the report's "build an instrument track, write 198 notes, hear something muddy" is that choice
+ * being made for them by a word. `synth` says what the kind actually is, and the sampled instruments live on `sampler`
+ * (`set_arrangement_track_instrument`).
+ *
+ * **Why not `gs1`:** the name has to cover both synthesis roads this kind takes. Most roles resolve through the built-in
+ * subtractive presets (`src/audio/instrumentPresets.ts` → `PolySynth.ts`); only `chords`/`lead`/`texture` route to GS-1
+ * (`GS1_*_ROUTING`). `gs1` would be **narrower than the kind** and would mislabel the larger half.
+ *
+ * **The old spelling is not accepted, anywhere.** `"instrument"` is not an input alias and is not normalised on read:
+ * callers get the schema's own error, and a value carrying the old literal is refused out loud by `requireTrackKind`
+ * rather than falling into a lookup that would answer `undefined`.
+ */
+export type TrackKindV2 = "drumkit" | "synth" | "sampler" | "fx" | "folder";
 
 export interface TrackV2 {
   /** Stable identity. **Not an array index**, because deleting a track must not rename the others. */

@@ -36,7 +36,7 @@ import {
 /** A note written the way the model holds it. */
 const note = (pitch: number, startBeats: number, lengthBeats = 1, velocity = 100): NoteEvent => ({ pitch, startBeats, lengthBeats, velocity });
 
-const track = (id: string, name: string, kind: TrackKindV2 = "instrument"): TrackV2 => ({ id, kind, name });
+const track = (id: string, name: string, kind: TrackKindV2 = "synth"): TrackV2 => ({ id, kind, name });
 
 /**
  * A whole arrangement as a literal rather than through the edit layer, because the criteria are about the writer's

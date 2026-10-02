@@ -24,12 +24,37 @@ function freshId(kind: TrackKindV2): string {
 }
 
 /**
+ * The kinds this build has, in one array so "what is a valid kind" has one answer.
+ *
+ * It is runtime data rather than only the type because a value that arrives from outside the type system — an old file,
+ * a hand-edited project — has to be checked against it, and a check written against a second copy of the list is the
+ * copy that goes stale.
+ */
+export const TRACK_KINDS: readonly TrackKindV2[] = ["synth", "sampler", "drumkit", "fx", "folder"];
+
+/**
+ * ⭐ **A kind this build does not have is refused out loud, never guessed at.**
+ *
+ * The kind was renamed `instrument` → `synth` and **no compatibility is kept**: a caller that still sends the old word
+ * is refused by the schema, which names the values that exist. This function is the same rule for a **value** rather
+ * than a request. An arrangement that still carries `"instrument"` must fail with a sentence naming the value, rather
+ * than fall through a lookup into `undefined` and become a lane with no role, a track with no name or a render with a
+ * part silently missing. "This could not be read" is a result a caller can act on; "read as nothing" is the defect.
+ */
+export function requireTrackKind(kind: string, trackName?: string): TrackKindV2 {
+  if ((TRACK_KINDS as readonly string[]).includes(kind)) return kind as TrackKindV2;
+  throw new Error(
+    `${trackName ? `track "${trackName}"` : "a track"} names kind "${kind}", which this build does not have — the kinds are ${TRACK_KINDS.join(", ")}; the kind once spelled "instrument" is now "synth", so an old arrangement that still says "instrument" has to be re-created rather than read as a synth`
+  );
+}
+
+/**
  * A new arrangement **with one track of the chosen kind** — because an empty list is a question and one track is a place to start.
  *
  * The owner asked for a new-project entry where a template may be chosen *or* blank, and even blank has a default track typed by that choice. The reason is concrete: the record button needs a track to point
  * at, and an empty list has none.
  */
-export function createArrangement(songId: string, kind: TrackKindV2 = "instrument"): ArrangementV2 {
+export function createArrangement(songId: string, kind: TrackKindV2 = "synth"): ArrangementV2 {
   const id = freshId(kind);
   const content = defaultContentFor(kind);
   // ⭐ Content arrives with the track: an empty track is silent, and a silent track looks like a broken engine.
@@ -53,7 +78,7 @@ export const MAX_BARS = 128;
 
 const DEFAULT_NAME: Record<TrackKindV2, string> = {
   drumkit: "Drums",
-  instrument: "Instrument",
+  synth: "Synth",
   sampler: "Sampler",
   fx: "FX",
   folder: "Folder",
@@ -67,14 +92,14 @@ export interface Template {
 }
 
 export const TEMPLATES: readonly Template[] = [
-  { id: "drums-bass", name: "Drums + Bass", kinds: [{ kind: "drumkit", name: "Drums" }, { kind: "instrument", name: "Bass" }] },
-  { id: "drums-bass-chords", name: "Drums + Bass + Chords", kinds: [{ kind: "drumkit", name: "Drums" }, { kind: "instrument", name: "Bass" }, { kind: "instrument", name: "Chords" }] },
+  { id: "drums-bass", name: "Drums + Bass", kinds: [{ kind: "drumkit", name: "Drums" }, { kind: "synth", name: "Bass" }] },
+  { id: "drums-bass-chords", name: "Drums + Bass + Chords", kinds: [{ kind: "drumkit", name: "Drums" }, { kind: "synth", name: "Bass" }, { kind: "synth", name: "Chords" }] },
   // ⭐ The template that can be heard: sampler tracks are the kind the whole real-instrument path exists for.
   { id: "samplers", name: "Samplers", kinds: [{ kind: "sampler", name: "Sampler 1" }, { kind: "sampler", name: "Sampler 2" }] },
 ];
 
 /** An arrangement from a template — **never empty**: every template has at least one track, and so does the blank case. */
-export function createArrangementFromTemplate(songId: string, templateId: string | undefined, blankKind: TrackKindV2 = "instrument"): ArrangementV2 {
+export function createArrangementFromTemplate(songId: string, templateId: string | undefined, blankKind: TrackKindV2 = "synth"): ArrangementV2 {
   const template = TEMPLATES.find((candidate) => candidate.id === templateId);
   if (!template) return createArrangement(songId, blankKind);
 

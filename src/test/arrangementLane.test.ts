@@ -31,7 +31,7 @@ const note = (pitch: number, startBeats: number, lengthBeats = 0.5, velocity = 1
 const arrangement = (overrides: Partial<ArrangementV2> = {}): ArrangementV2 => ({
   songId: "s",
   tracks: [
-    { id: "bass", kind: "instrument", name: "Bass" },
+    { id: "bass", kind: "synth", name: "Bass" },
     { id: "keys", kind: "sampler", name: "Keys" },
   ],
   notesByTrack: { bass: [note(40, 0), note(45, 2)], keys: [note(60, 1)] },

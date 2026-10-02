@@ -42,7 +42,7 @@ describe("an arrangement note's length reaching the compiled lanes", () => {
       arrangementWith(
         [
           { id: "samplerTrack", kind: "sampler" },
-          { id: "synthTrack", kind: "instrument" },
+          { id: "synthTrack", kind: "synth" },
         ],
         { samplerTrack: [long], synthTrack: [long] }
       ),
@@ -61,7 +61,7 @@ describe("an arrangement note's length reaching the compiled lanes", () => {
   it("does not shorten the note to a bar, which is what the sequencer's own cap would do", () => {
     const long = pad(0, BARS * BEATS_PER_BAR);
     const { clips } = compileArrangementToSongInput(
-      arrangementWith([{ id: "synthTrack", kind: "instrument" }], { synthTrack: [long] }),
+      arrangementWith([{ id: "synthTrack", kind: "synth" }], { synthTrack: [long] }),
       { synthTrack: [long] }
     );
     // The compile must hand over the real length; any clamp belongs to the renderer's own rules, not here.
@@ -71,7 +71,7 @@ describe("an arrangement note's length reaching the compiled lanes", () => {
   it("still places a short note where it belongs, so the change is not a blunt one", () => {
     const short = pad(4, 1);
     const { clips } = compileArrangementToSongInput(
-      arrangementWith([{ id: "synthTrack", kind: "instrument" }], { synthTrack: [short] }),
+      arrangementWith([{ id: "synthTrack", kind: "synth" }], { synthTrack: [short] }),
       { synthTrack: [short] }
     );
     const gate = clips.A.tracks[0]!.gate ?? [];

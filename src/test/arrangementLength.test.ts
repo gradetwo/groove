@@ -36,7 +36,7 @@ describe("an arrangement's length", () => {
   });
 
   it("compiles a grid as long as the arrangement, not a fixed sixteen steps", () => {
-    const withTrack = addTrack(createArrangement("song"), "instrument", "Keys");
+    const withTrack = addTrack(createArrangement("song"), "synth", "Keys");
     const id = withTrack.tracks[0]!.id;
     const fourBars = setArrangementBars(withTrack, 4);
     const lanes = compileArrangementToLanes(fourBars, { [id]: [] });
@@ -45,7 +45,7 @@ describe("an arrangement's length", () => {
 
   it("keeps a note written past a short arrangement rather than truncating it", () => {
     // The audible form of "the length must not delete": the note is in bar three and the arrangement says one bar.
-    const withTrack = addTrack(createArrangement("song"), "instrument", "Keys");
+    const withTrack = addTrack(createArrangement("song"), "synth", "Keys");
     const id = withTrack.tracks[0]!.id;
     const written = addTrackNote(setArrangementBars(withTrack, 1), id, { pitch: 64, startBeats: 8, lengthBeats: 1, velocity: 100 });
     const lanes = compileArrangementToLanes(written, written.notesByTrack);

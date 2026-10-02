@@ -269,7 +269,7 @@ describe("the two formats together", () => {
      */
     const arrangement: ArrangementV2 = {
       songId: "s",
-      tracks: [{ id: "t1", kind: "instrument", name: "Voice" }],
+      tracks: [{ id: "t1", kind: "synth", name: "Voice" }],
       notesByTrack: {
         t1: [
           { pitch: 60, startBeats: 0, lengthBeats: 1, velocity: 100, syllable: "能" },

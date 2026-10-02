@@ -16,9 +16,9 @@ const KIND_BY_TRACK_ID: Record<SequencerTrack["track_id"], TrackKindV2> = {
   snare: "drumkit",
   hihat: "drumkit",
   percussion: "drumkit",
-  bass: "instrument",
-  chords: "instrument",
-  lead: "instrument",
+  bass: "synth",
+  chords: "synth",
+  lead: "synth",
   fx: "fx",
   // ⭐ The owner's ninth kind, and the one that can be heard: an audio sampler.
   audio: "sampler",

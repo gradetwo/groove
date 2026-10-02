@@ -12,6 +12,7 @@ import { stepsFromNotes, stepCountFor } from "../../data/noteEvents";
 import { InstrumentBrowserV2 } from "./InstrumentBrowserV2";
 import { useLanguage } from "../../i18n/LanguageContext";
 import type { ArrangementV2, TrackKindV2, TrackV2 } from "../../types/arrangementV2";
+import { KIND_LABEL_KEY, TRACK_KIND_ORDER } from "./kindLabels";
 
 export interface TrackListV2Props {
   arrangement: ArrangementV2;
@@ -92,7 +93,8 @@ function depthOf(track: TrackV2, all: readonly TrackV2[], seen = new Set<string>
   return parent ? 1 + depthOf(parent, all, seen) : 0;
 }
 
-const ADDABLE: TrackKindV2[] = ["sampler", "instrument", "drumkit", "fx", "folder"];
+/** The kinds the add menu offers — one table, shared with the new-project panel and the kind chooser. */
+const ADDABLE = TRACK_KIND_ORDER;
 
 export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, onToggleCollapse, onChangeKind, instruments = [], onChangeInstrument, onToggleStep, bar = 0, onChangeGain, onChangePan }: TrackListV2Props) {
   const { t } = useLanguage();
@@ -111,7 +113,7 @@ export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, 
       <div data-testid="track-list-add" className="flex flex-wrap gap-2">
         {ADDABLE.map((kind) => (
           <button key={kind} type="button" className="px-3 py-1 rounded border border-[rgb(var(--d-line))] text-sm text-text" onClick={() => onAddTrack(kind, kind)}>
-            + {kind}
+            + {t(KIND_LABEL_KEY[kind])}
           </button>
         ))}
       </div>
@@ -130,7 +132,7 @@ export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, 
               >
                 {ADDABLE.map((kind) => (
                   <option key={kind} value={kind}>
-                    {kind}
+                    {t(KIND_LABEL_KEY[kind])}
                   </option>
                 ))}
               </select>

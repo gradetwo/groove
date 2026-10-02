@@ -33,7 +33,7 @@ describe("ArrangementViewV2", () => {
     // Two add buttons now share the name: the header column's and the step list's. The library this criterion is
     // about is reached from either, so the added track — and what both readings of the arrangement show — is the
     // same either way.
-    fireEvent.click(screen.getAllByRole("button", { name: "+ sampler" })[0]!);
+    fireEvent.click(screen.getAllByRole("button", { name: "+ Sampler" })[0]!);
     // One arrangement behind both: if the blocks held their own copies, the picker would still be empty here.
     expect(screen.getByTestId("arrangement-track-picker").textContent).toContain("sampler");
   });
@@ -53,7 +53,7 @@ describe("ArrangementViewV2", () => {
     // Two add buttons now share the name: the header column's and the step list's. The library this criterion is
     // about is reached from either, so the added track — and what both readings of the arrangement show — is the
     // same either way.
-    fireEvent.click(screen.getAllByRole("button", { name: "+ sampler" })[0]!);
+    fireEvent.click(screen.getAllByRole("button", { name: "+ Sampler" })[0]!);
     // Adding selects the new track, so the take selector is showing — and removing *it* must clear the selection, leaving the default track behind.
     expect(screen.getByTestId("take-selector-v2")).toBeDefined();
     // ⭐ The **last** one: a new arrangement now starts with a default track (the owner's requirement), so the added track is not the first row. Removing the first would test removing the default instead.

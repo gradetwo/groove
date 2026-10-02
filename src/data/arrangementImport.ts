@@ -61,7 +61,7 @@ export function arrangementWithImportedParts(
   const trackIds: string[] = [];
   let notes = 0;
   for (const part of withNotes) {
-    const withTrack = addTrack(next, "instrument", part.name.slice(0, 40) || "Imported");
+    const withTrack = addTrack(next, "synth", part.name.slice(0, 40) || "Imported");
     const trackId = withTrack.tracks[withTrack.tracks.length - 1]!.id;
     /**
      * The part's notes **replace** the new track's starter content rather than being appended to it — the starter

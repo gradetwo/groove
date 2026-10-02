@@ -58,7 +58,7 @@ describe("playing a v2 arrangement through the engine's sequencer", () => {
     const arrangement: ArrangementV2 = {
       songId: "s",
       sourceSlots: [],
-      tracks: [{ id: "t1", kind: "instrument", name: "Keys" }],
+      tracks: [{ id: "t1", kind: "synth", name: "Keys" }],
     };
     await playArrangementV2(arrangement, { t1: NOTES }, playerWith(engine));
 
@@ -106,7 +106,7 @@ describe("playing a v2 arrangement through the engine's sequencer", () => {
     const arrangement: ArrangementV2 = {
       songId: "s",
       sourceSlots: [],
-      tracks: [{ id: "t1", kind: "instrument", name: "Keys" }],
+      tracks: [{ id: "t1", kind: "synth", name: "Keys" }],
     };
     // The audio-lane path already reported rather than threw, and the engine path must not regress that.
     const result = await playArrangementV2(arrangement, { t1: NOTES }, cold);
@@ -221,7 +221,7 @@ describe("stopping an arrangement stops both halves", () => {
     const context = new FakeAudioContext();
     const { engine } = observableEngine(context);
     const player = playerWith(engine as never);
-    const arrangement: ArrangementV2 = { songId: "s", sourceSlots: [], tracks: [{ id: "t1", kind: "instrument", name: "Keys" }] };
+    const arrangement: ArrangementV2 = { songId: "s", sourceSlots: [], tracks: [{ id: "t1", kind: "synth", name: "Keys" }] };
 
     await playArrangementV2(arrangement, { t1: NOTES }, player);
     expect(engine.stop).not.toHaveBeenCalled();
@@ -236,7 +236,7 @@ describe("stopping an arrangement stops both halves", () => {
     const context = new FakeAudioContext();
     const { engine } = observableEngine(context);
     const player = playerWith(engine as never);
-    const arrangement: ArrangementV2 = { songId: "s", sourceSlots: [], tracks: [{ id: "t1", kind: "instrument", name: "Keys" }] };
+    const arrangement: ArrangementV2 = { songId: "s", sourceSlots: [], tracks: [{ id: "t1", kind: "synth", name: "Keys" }] };
 
     await playArrangementV2(arrangement, { t1: NOTES }, player);
     await playArrangementV2(arrangement, { t1: NOTES }, player);

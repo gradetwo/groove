@@ -32,7 +32,7 @@ function midiFile(notes: number[]): string {
 
 describe("the pitch plan an import reports", () => {
   it("reports the range as numbers and as names, under a stated convention", () => {
-    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
     const result = importMcpMidi(arrangementId, midiFile([60]));
 
     expect(result.pitchPlan?.notes).toBe(1);
@@ -42,7 +42,7 @@ describe("the pitch plan an import reports", () => {
   });
 
   it("spans an octave when the file does, so the range is computed rather than assumed", () => {
-    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
     const result = importMcpMidi(arrangementId, midiFile([60, 72, 55]));
 
     expect(result.pitchPlan?.notes).toBe(3);
@@ -50,7 +50,7 @@ describe("the pitch plan an import reports", () => {
   });
 
   it("states that nothing transposed the notes on the way in", () => {
-    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
     const result = importMcpMidi(arrangementId, midiFile([60, 72]));
 
     /**
@@ -64,7 +64,7 @@ describe("the pitch plan an import reports", () => {
   });
 
   it("names the drum-channel question it cannot answer yet, instead of omitting it", () => {
-    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
     const result = importMcpMidi(arrangementId, midiFile([60]));
 
     const notRead = (result.pitchPlan?.notRead ?? []).join(" ");
@@ -78,7 +78,7 @@ describe("the pitch plan an import reports", () => {
   });
 
   it("lands the file's own numbers in the arrangement, which is the claim that can actually go red", () => {
-    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
     const result = importMcpMidi(arrangementId, midiFile([60, 72]));
 
     /**

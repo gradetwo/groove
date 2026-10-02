@@ -32,12 +32,25 @@ import {
   summariseArrangement,
 } from "../../mcp/arrangement";
 import { createArrangement, resetTrackIdsForTests } from "../data/arrangementEdits";
+import { compileArrangementToLanes } from "../data/arrangementCompile";
+import { resolveInstrumentPresetKey } from "../audio/instrumentPresets";
+import type { ArrangementV2 } from "../types/arrangementV2";
 import { buildMxlZip, toBase64 } from "./fixtures/mxlZip";
 
 beforeEach(() => {
   clearMcpArrangements();
   resetTrackIdsForTests();
 });
+
+/**
+ * The reply's problems **without the synth-source notice**, which every `synth` track now carries on purpose.
+ *
+ * The criteria below whose subject is something else — an edit landing, a take range splitting — use this so they keep
+ * asserting "nothing else went wrong" rather than being rewritten around a line that is not about them. The notice
+ * itself has its own criteria, which assert it is present rather than filtering it away.
+ */
+const withoutSynthNotice = (problems: readonly string[]): string[] =>
+  problems.filter((problem) => !problem.includes("is a synth track and sounds through the built-in preset"));
 
 const template = () => createMcpArrangement({ templateId: "samplers", songId: "s" });
 
@@ -106,7 +119,7 @@ describe("creating an arrangement", () => {
    * is reported with the kept and dropped pitches, and a column with one is not reported at all.
    */
   it("does not report a chord as lost, because a stack column now reaches the lane", () => {
-    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
     const track = summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).tracks[0]!;
     addMcpTrackNotes(arrangementId, track.id, [
       { pitch: 60, startBeats: 0, lengthBeats: 1, velocity: 100 },
@@ -122,7 +135,7 @@ describe("creating an arrangement", () => {
     // The pitches the model still holds are unchanged: this reports, it does not edit or re-voice the chord.
     expect(summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).tracks[0]!.notes).toHaveLength(3);
 
-    const single = createMcpArrangement({ blankKind: "instrument" });
+    const single = createMcpArrangement({ blankKind: "synth" });
     const singleTrack = summariseArrangement(single.arrangementId, getMcpArrangement(single.arrangementId)!).tracks[0]!;
     addMcpTrackNotes(single.arrangementId, singleTrack.id, [{ pitch: 60, startBeats: 0, lengthBeats: 1, velocity: 100 }]);
     expect(
@@ -147,7 +160,7 @@ describe("creating an arrangement", () => {
      * Measured while writing this, and it changed the model: a kind change used to leave the sample unset, so a sampler track sounded or not depending on whether it had been created or converted. `changeTrackKind` now supplies the default
      * asset that a new sampler track gets, and the warning below stays as the guard for any state that still reaches it.
      */
-    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
     const track = summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).tracks[0]!;
     const asSampler = setMcpTrackKind(arrangementId, track.id, "sampler");
     expect(asSampler.summary.tracks[0]!.sampleAssetId).toBe("virtuosity-drums-basic");
@@ -166,10 +179,10 @@ describe("creating an arrangement", () => {
 describe("editing an arrangement", () => {
   it("adds and removes a track through the same code the interface calls", () => {
     const { arrangementId } = createMcpArrangement({ blankKind: "drumkit" });
-    const added = addMcpTrack(arrangementId, "instrument", "Bass");
-    expect(added.problems).toEqual([]);
+    const added = addMcpTrack(arrangementId, "synth", "Bass");
+    expect(withoutSynthNotice(added.problems)).toEqual([]);
     const bass = added.summary.tracks.find((track) => track.name === "Bass")!;
-    expect(bass.kind).toBe("instrument");
+    expect(bass.kind).toBe("synth");
     const removed = removeMcpTrack(arrangementId, bass.id);
     expect(removed.summary.tracks.some((track) => track.id === bass.id)).toBe(false);
   });
@@ -199,7 +212,7 @@ describe("editing an arrangement", () => {
   });
 
   it("sets a kind, a name, a flag and a folder", () => {
-    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
     const first = summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).tracks[0]!;
     const asSampler = setMcpTrackKind(arrangementId, first.id, "sampler");
     expect(asSampler.summary.tracks[0]!.kind).toBe("sampler");
@@ -213,13 +226,13 @@ describe("editing an arrangement", () => {
   });
 
   it("refuses a track id that is not there, naming the ones that are", () => {
-    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
     expect(() => renameMcpTrack(arrangementId, "track-nope", "x")).toThrow(/its tracks are/);
     expect(() => removeMcpTrack(arrangementId, "track-nope")).toThrow(/no track/);
   });
 
   it("refuses an unknown arrangement id with the tool that creates one", () => {
-    expect(() => addMcpTrack("arrangement-nope", "instrument")).toThrow(/create_arrangement/);
+    expect(() => addMcpTrack("arrangement-nope", "synth")).toThrow(/create_arrangement/);
   });
 });
 
@@ -233,7 +246,7 @@ describe("recording onto a track", () => {
   });
 
   it("claims the bar range when the capture covered one", () => {
-    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
     const track = summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).tracks[0]!;
     addMcpTake(arrangementId, { trackId: track.id, source: "midi", startBar: 2, endBar: 4, recordedAt: 1 });
     const regions = getMcpArrangement(arrangementId)!.tracks[0]!.takeRegions;
@@ -241,7 +254,7 @@ describe("recording onto a track", () => {
   });
 
   it("refuses a take id that is not on the track", () => {
-    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
     const track = summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).tracks[0]!;
     expect(() => selectMcpTake(arrangementId, track.id, "take-9")).toThrow(/has no take/);
     // Clearing is allowed and is not the same request as choosing one that does not exist.
@@ -264,12 +277,12 @@ describe("recording onto a track", () => {
      * The comping path, as opposed to filing a recording: `add_arrangement_take` claims a range when the recording covered one, and this claims a range for a take that already exists. Ranges stay disjoint, which is the rule `assignTakeToRange`
      * implements and this reuses rather than restating.
      */
-    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
     const track = summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).tracks[0]!;
     addMcpTake(arrangementId, { trackId: track.id, source: "midi", recordedAt: 1 });
     addMcpTake(arrangementId, { trackId: track.id, source: "midi", recordedAt: 2 });
     const claimed = assignMcpTakeRange(arrangementId, track.id, "take-1", 0, 4);
-    expect(claimed.summary.problems).toEqual([]);
+    expect(withoutSynthNotice(claimed.summary.problems)).toEqual([]);
     expect(getMcpArrangement(arrangementId)!.tracks[0]!.takeRegions).toEqual([{ startBar: 0, endBar: 4, takeId: "take-1" }]);
     // A second range splits the first rather than overlapping it.
     assignMcpTakeRange(arrangementId, track.id, "take-2", 2, 6);
@@ -280,7 +293,7 @@ describe("recording onto a track", () => {
   });
 
   it("refuses a range that ends where it starts, and a take that is not there", () => {
-    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
     const track = summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).tracks[0]!;
     addMcpTake(arrangementId, { trackId: track.id, source: "midi", recordedAt: 1 });
     expect(() => assignMcpTakeRange(arrangementId, track.id, "take-1", 4, 4)).toThrow(/must end after it starts/);
@@ -350,7 +363,7 @@ describe("importing a score onto the arrangement", () => {
   </score-partwise>`;
 
   it("adds the first part by default, named after the part", () => {
-    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
     const result = importMcpMusicXml(arrangementId, twoPartXml);
     expect(result.trackIds).toHaveLength(1);
     const track = result.summary.tracks.find((candidate) => candidate.id === result.trackIds![0])!;
@@ -364,7 +377,7 @@ describe("importing a score onto the arrangement", () => {
     /**
      * The reason the field is a union rather than a separate `allParts` flag: "part 3, or all parts" is a state with no meaning, and the type makes it unrepresentable instead of leaving the reader of a call to work out which one the handler honoured.
      */
-    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
     const result = importMcpMusicXml(arrangementId, twoPartXml, { partIndex: "all" });
     expect(result.trackIds).toHaveLength(2);
     const [right, left] = result.trackIds!.map((id) => result.summary.tracks.find((candidate) => candidate.id === id)!);
@@ -378,7 +391,7 @@ describe("importing a score onto the arrangement", () => {
   });
 
   it("reads a compressed .mxl from its bytes, and says that is what it read", async () => {
-    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
     const result = await importMcpMusicXmlBytes(arrangementId, toBase64(buildMxlZip([["score.musicxml", twoPartXml]])), { partIndex: "all" });
     expect(result.format).toBe("mxl");
     expect(result.summary.tracks.map((track) => track.name)).toContain("Left Hand");
@@ -387,7 +400,7 @@ describe("importing a score onto the arrangement", () => {
   });
 
   it("refuses a part index that is not in the file, naming how many there are", () => {
-    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
     expect(() => importMcpMusicXml(arrangementId, twoPartXml, { partIndex: 7 })).toThrow(/2 part\(s\), so there is no part 7/);
   });
 
@@ -396,9 +409,96 @@ describe("importing a score onto the arrangement", () => {
       <part-list><score-part id="P1"><part-name>Silent</part-name></score-part></part-list>
       <part id="P1"><measure number="1"><attributes><divisions>1</divisions></attributes><note><rest/><duration>4</duration></note></measure></part>
     </score-partwise>`;
-    const { arrangementId } = createMcpArrangement({ blankKind: "instrument" });
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
     const result = importMcpMusicXml(arrangementId, xml, { partIndex: "all" });
     expect(result.trackIds).toEqual([]);
     expect(result.problems.join(" ")).toMatch(/"Silent" holds no notes/);
+  });
+});
+
+/**
+ * ⭐ **The sound source is visible, and a synth track says what to do instead.**
+ *
+ * The report's reproduction: an agent named a track "钢琴", built it as the kind whose name sounded right, wrote 198
+ * notes and heard a fixed synthesiser — the mix was muddy and nothing in any reply said which voice was sounding or
+ * that a real piano was one call away. These criteria reproduce that path and pin both halves of the answer: the list
+ * shows the **built-in preset by name and key**, and `problems` carries the **executable next step**.
+ */
+describe("what a track actually sounds through", () => {
+  it("names the built-in preset on the track, read from the same resolution the renderer performs", () => {
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
+    const added = addMcpTrack(arrangementId, "synth", "钢琴");
+    const piano = added.summary.tracks.find((entry) => entry.name === "钢琴")!;
+
+    expect(piano.kind).toBe("synth");
+    expect(piano.sound.source).toBe("builtin-synth");
+    expect(piano.sound.presetKey).toBe("analogLead");
+    expect(piano.sound.presetName).toBe("Analog Lead");
+    // Not selectable: this is the fact the old surface hid — a synth's timbre cannot be pointed at an asset.
+    expect(piano.sound.selectable).toBe(false);
+    expect(piano.sound.guidance).toMatch(/kind:"sampler"/);
+
+    /**
+     * **The report is the renderer's own answer, not a second guess.** The lane the compile builds for this track is
+     * asked for its `instrument` and role, and the preset that resolves from those two must be the one reported.
+     */
+    const lane = compileArrangementToLanes(getMcpArrangement(arrangementId)!).find((entry) => entry.sourceTrackId === piano.id)!;
+    expect(piano.sound.presetKey).toBe(resolveInstrumentPresetKey(lane.track.instrument, lane.track.track_id));
+    expect(lane.track.track_id).toBe("lead");
+    expect(lane.track.instrument).toBe("synth");
+  });
+
+  it("puts the explanation and the next step in problems, not a bare 'no instrument'", () => {
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
+    const added = addMcpTrack(arrangementId, "synth", "钢琴");
+    const notice = added.problems.find((problem) => problem.includes("钢琴"));
+    expect(notice).toBeDefined();
+    // Which track, which preset, and what to call instead — each of the three things the report asked for.
+    expect(notice).toMatch(/built-in preset "Analog Lead" \(analogLead\)/);
+    expect(notice).toMatch(/kind:"sampler"/);
+    expect(notice).toMatch(/add_arrangement_track/);
+    expect(notice).toMatch(/list_arrangement_instruments/);
+    // It is in the summary too, which is what `get_arrangement` and the render replies' `arrangementProblems` carry.
+    const reread = summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!);
+    expect(reread.problems.some((problem) => problem.includes("Analog Lead"))).toBe(true);
+  });
+
+  it("writes the source on describe_arrangement's own line, so a log says what will be heard", () => {
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
+    const line = describeMcpArrangement(arrangementId);
+    expect(line).toContain('built-in synth preset "Analog Lead" (analogLead)');
+  });
+
+  it("takes an assetId in the same call that creates a sampler track — one step, not two", () => {
+    // A drum-kit arrangement, so the only problem that could appear is one this criterion is about.
+    const { arrangementId } = createMcpArrangement({ blankKind: "drumkit" });
+    const created = addMcpTrack(arrangementId, "sampler", "Piano", "salamander-grand");
+    const piano = created.summary.tracks.find((entry) => entry.name === "Piano")!;
+    expect(piano.sampleAssetId).toBe("salamander-grand");
+    expect(piano.sound).toMatchObject({ source: "catalogue-asset", assetId: "salamander-grand", selectable: true });
+    // A later read agrees: the one call put it on the track rather than only in its own reply.
+    const reread = summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!);
+    expect(reread.tracks.find((entry) => entry.id === piano.id)!.sampleAssetId).toBe("salamander-grand");
+    expect(reread.problems).toEqual([]);
+  });
+
+  it("refuses an assetId on a synth track rather than ignoring it, and adds nothing", () => {
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
+    expect(() => addMcpTrack(arrangementId, "synth", "Piano", "salamander-grand")).toThrow(/only a sampler track/);
+    expect(getMcpArrangement(arrangementId)!.tracks).toHaveLength(1);
+  });
+
+  it("refuses a track kind this build does not have, naming it, rather than compiling it as nothing", () => {
+    /**
+     * The old literal is not read, aliased or migrated — the owner's rule is that old data may be dropped. What is not
+     * allowed is the silent reading: a lookup that answered `undefined` would give a lane with no role, and the caller
+     * would hear a part missing rather than learn that the arrangement could not be read.
+     */
+    const legacy = {
+      ...createArrangement("s", "synth"),
+      tracks: [{ id: "t1", kind: "instrument", name: "钢琴" }],
+    } as unknown as ArrangementV2;
+    expect(() => compileArrangementToLanes(legacy)).toThrow(/kind "instrument"/);
+    expect(() => compileArrangementToLanes(legacy)).toThrow(/synth/);
   });
 });

@@ -51,7 +51,7 @@ describe("the compile's own output, which a cast could hide", () => {
     const arrangement = {
       songId: "s",
       sourceSlots: [] as string[],
-      tracks: [{ id: "t1", kind: "instrument" as const, name: "Keys" }],
+      tracks: [{ id: "t1", kind: "synth" as const, name: "Keys" }],
     };
     const lanes = compileArrangementToLanes(arrangement as never, {
       t1: [
