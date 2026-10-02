@@ -968,3 +968,16 @@ scripts/test_matrix.js:716  waitForSelector('[data-testid="mobile-genre-detail"]
 * **`src/test/insertCompressorWiring.test.ts`** ✓：**6/6 绿** ✓✓；**把 `insertCompressorWorkletReady` 置假 → 其中 4 条立刻红** ✓（**判据不空 ✓**）；`tsc --noEmit` 0 ✓、`lint` 0 ✓、另 105 个受影响判据全绿 ✓；
 * **接线改了什么** ✓：新增 `src/audio/InsertCompressor.ts` ✓；`ChannelStripDsp` 在模块就绪时用胶合 worklet（否则仍宿主节点 ✓）；worklet 加可选增益衰减回报 ✓；`WavExporter` 建条前 await 模块 ✓；`AudioEngine` 加载后重建条 ✓；
 * **⇒ 下一件（已写进 `docs/HEADLESS_CORE_PLAN.md` §8.13 ✓）** ✓✓：**把群组总线那三个仍留在图里的宿主级压缩器搬走 ✓**——**静态 makeup 已标定：`drumGlue` 6.0 dB ✓、`drumParallel` 18.2 dB ✓、`musicGlue` 4.9 dB ✓**；**⚠️ 而"两宿主的宿主节点互差 0.67 dB"这一条意味着：即便全部搬完，**残余仍可能不为零** ✗**——**⇒ 那正是需要重新定义"对等"容差的地方 ✓，**而不是继续放宽容差来换绿 ✗**。
+
+## 十九、⚠️ **§五 与 §九 描述的是"镜像退休之前"的世界**（2026-10-02 补记 ✓）
+
+**只读审计（`172053fa` ✓）核出**：**§五 与 §九 里仍有把**已退休的镜像**当成现行推送路径的句子** ✗——**例如"推送发生在镜像 checkout…"、"主仓库原本没有 remote"、"`push_dev.sh` 第 26 行调 `sync_release_mirror.sh`"、"镜像只有一份 ⇒ 一次只能有一个推送"** ✓。**⇒ 而事实是** ✓✓：
+
+* **镜像已于 2026-10-01 退休** ✓（**见 §十 ✓**，那一节就是它的退休记录与"一次性历史归一" ✓）；
+* **`scripts/push_dev.sh` 现在的第 2 行写着 "No release mirror in the path"** ✓，**推送就是 `git push origin HEAD:dev`** ✓；
+* **`scripts/sync_release_mirror.sh` 已不再参与推送** ✓（**它自己会打印原因并退出 1 ✓**）。
+
+**⇒ 于是处置是**加这条归位说明，而不是删那两节** ✓✓**：
+
+* **§五／§九 是**镜像退休之前**的队列规则记录 ✓**——**它们的价值在于解释"镜像为什么存在、它当时解决了什么"** ✓，**而 §十 的"一次性历史归一"正引这一点 ✓**；**⇒ 删掉它们会让 §十 失去前提 ✗**；
+* **⚠️ 但"今天要靠它们来推送"是**错的**** ✗✓——**⇒ 要推送，看 `scripts/push_dev.sh` 与 §十 ✓**；**§九 里那条"一次只能有一个推送"的**规则**仍然成立 ✓**（**并发推送会撞车 ✓，本会话撞过多次 ✓**），**只是它的**理由**（"镜像只有一份"）已随镜像消失 ✗✓**——**⇒ 规则留 ✓、理由换成"`dev` 是一条被多人共用的分支" ✓。**
