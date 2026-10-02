@@ -47,7 +47,7 @@ import { loopRangeAt, type LoopRange } from "../../data/arrangementLoop";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { NewProjectPanelV2 } from "./NewProjectPanelV2";
 import { playArrangementV2, type ArrangementPlayer, type ArrangementTransportState } from "../../audio/playArrangementV2";
-import { beatsPerBar, stepsPerBarFor, STEPS_PER_BEAT } from "../../data/noteEvents";
+import { stepsPerBarFor, STEPS_PER_BEAT } from "../../data/noteEvents";
 import { announcer } from "../../platform/announcer";
 
 /** The snap values the toolbar offers, coarsest to finest. The **value** is shown, because a toggle's state is not a value. */
@@ -188,8 +188,13 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
   /** A transport we can actually follow. Absent means the prop above is the only position there is, which is how a host with no live transport still draws one. */
   const liveTransport = transport !== undefined;
 
+  /**
+   * ⭐ **How many of the engine's steps a bar holds**, read from the arrangement's own time signature rather than
+   * assumed to be sixteen: `stepsPerBarFor` is the function the compile already divides by, so the step the transport
+   * reports and the bar the ruler draws cannot disagree — which is the same reason the ruler and the lanes share one
+   * `pixelsPerBar`.
+   */
   const stepsPerBar = stepsPerBarFor(arrangement.timeSignature);
-  const beatsInBar = Math.max(1, Math.round(beatsPerBar(arrangement.timeSignature)));
 
   useEffect(() => {
     if (transport === undefined) return;
