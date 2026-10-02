@@ -103,7 +103,7 @@ Workers with `npm run deploy`; see [DEPLOY.md](DEPLOY.md).
 | `scripts/` | Gates, measurement probes and the end-to-end matrix |
 
 The design notes behind the code are kept in the repository, in Chinese: `PRODUCT_PLAN_v2.1.0.md`
-(current plan and technical appendices), `ROADMAP_V2.md`, `BACKLOG.md` and
+(current plan and technical appendices), `BACKLOG.md`, `docs/OPEN_WORK.md` (the handover ledger) and
 `ARCHITECTURE_SURFACES.md`.
 
 ## Known limitations

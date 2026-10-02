@@ -21,7 +21,7 @@
  * equals copy B" has to be written again for every new pair, and it never notices a *third* copy.
  * So the number lives here once, and `scripts/layout_tokens.mjs` writes it into `src/index.css`
  * (`npm run layout:sync`), with `npm run check:layout` in `verify` failing on any drift — the same
- * arrangement as the version header in `ROADMAP_V2.md`.
+ * arrangement as the version header in `BACKLOG.md`.
  *
  * ## What belongs here
  *

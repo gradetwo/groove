@@ -96,7 +96,7 @@ Workers，步骤见 [DEPLOY.md](DEPLOY.md)。
 | `scripts/` | 门禁、实测探针与端到端矩阵 |
 
 代码背后的设计记录也留在仓库里（中文）：`PRODUCT_PLAN_v2.1.0.md`（当前计划与技术附录）、
-`ROADMAP_V2.md`、`BACKLOG.md`、`ARCHITECTURE_SURFACES.md`。
+`BACKLOG.md`、`docs/OPEN_WORK.md`（交接台账）、`ARCHITECTURE_SURFACES.md`。
 
 ## MCP 服务（给其它 LLM 与 agent 用）
 

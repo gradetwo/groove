@@ -243,7 +243,7 @@ Deployed silent-river-9229
 
 1. ⭐ **改 `package.json#version`** ✓ —— 工具自己的文档说得很清楚：**这是唯一一处"人要改"的地方** ✓；
 2. ⭐ **往 `public/changelog.json` 加一条** ✓（双语 ✓，形状照抄现有条目 ✓）；
-3. `npm run version:sync` ✓ → **派生文件重写**（`src/version.ts` ✓ `public/version.json` ✓ `public/sw.js` ✓ `ROADMAP_V2.md` ✓ `BACKLOG.md` ✓）→ `npm run version:check` ✅；
+3. `npm run version:sync` ✓ → **派生文件重写**（`src/version.ts` ✓ `public/version.json` ✓ `public/sw.js` ✓ `BACKLOG.md` ✓）→ `npm run version:check` ✅；
 4. **构建 + 生产部署** ✓（`npx vite build` ✓ + `npm run deploy:only` ✓ —— ⚠️ **不接管道** ✓，**管道的退出码是 `tail` 的** ✓）；
 5. ⭐ **同步到 `main`** ✓：`git push origin dev:main` ✓ —— ⚠️ **先确认是快进** ✓（`git merge-base --is-ancestor origin/main origin/dev` ✓），**不是快进就不强推** ✓；
 6. ⭐ **打附注 tag** ✓：`git tag -a v<version> -m "…"` ✓ + `git push origin v<version>` ✓；

@@ -7,7 +7,7 @@
  *
  * Asserts:
  *   1. every planning doc states the version in `package.json` in its header;
- *   2. ROADMAP_V2.md and BACKLOG.md mention that version in their header/status block.
+ *   2. BACKLOG.md mentions that version in its header/status block.
  *
  * A third assertion — the src file/line counts in the old `IMPROVEMENT_PLAN.md` header — went with
  * that document when the repository was prepared for open source: the counts described a tree that
@@ -23,11 +23,10 @@ import { execFileSync } from "node:child_process";
 const ROOT = process.cwd();
 const HEADER_LINES = 15; // "header / status section" for version mentions
 
-const PLANNING_DOCS = ["ROADMAP_V2.md", "BACKLOG.md"];
+const PLANNING_DOCS = ["BACKLOG.md"];
 // Per-doc "this is our baseline version" claim. Explicit patterns avoid matching
 // version numbers that appear inside filenames (e.g. CODE_REVIEW_AND_PLAN_v1.16.0.md).
 const VERSION_CLAIM = {
-  "ROADMAP_V2.md": /当前基线\*\*：v(\d+\.\d+\.\d+)/,
   "BACKLOG.md": /当前基线：\*\*v(\d+\.\d+\.\d+)\*\*/,
 };
 const stripFilenames = (text) => text.replace(/[\w./-]*v\d+\.\d+\.\d+\.md/g, "");
@@ -51,8 +50,8 @@ for (const doc of PLANNING_DOCS) {
   }
 }
 
-/* 2) ROADMAP/BACKLOG status block must mention the current version -------- */
-for (const doc of ["ROADMAP_V2.md", "BACKLOG.md"]) {
+/* 2) BACKLOG status block must mention the current version --------------- */
+for (const doc of ["BACKLOG.md"]) {
   if (stripFilenames(headerOf(read(doc))).includes(`v${version}`)) {
     oks.push(`${doc} status block mentions v${version}`);
   } else {

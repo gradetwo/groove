@@ -144,9 +144,9 @@ const currentChangelog = fs.existsSync(changelogJsonPath) ? fs.readFileSync(chan
 const split = splitVersionFiles(currentJson, currentChangelog);
 
 /**
- * E-09: the planning documents state the current version in their headers, and
- * `scripts/check_docs.mjs` fails when they drift. Rather than hand-editing them on every release,
- * `sync` rewrites those specific header claims.
+ * E-09: the planning document states the current version in its header, and
+ * `scripts/check_docs.mjs` fails when it drifts. Rather than hand-editing it on every release,
+ * `sync` rewrites that specific header claim.
  *
  * The old `IMPROVEMENT_PLAN.md` header also carried a src file/line count, and a `measureSourceSize()`
  * kept it fresh. Both went with the document when the repository was prepared for open source: the
@@ -155,7 +155,6 @@ const split = splitVersionFiles(currentJson, currentChangelog);
  */
 
 const DOC_VERSION_PATTERNS = [
-  { file: "ROADMAP_V2.md", re: /\*\*当前基线\*\*：v\d+\.\d+\.\d+/, replacement: () => `**当前基线**：v${version}` },
   { file: "BACKLOG.md", re: /当前基线：\*\*v\d+\.\d+\.\d+\*\*/, replacement: () => `当前基线：**v${version}**` },
 ];
 

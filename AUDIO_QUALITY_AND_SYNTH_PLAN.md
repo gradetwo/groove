@@ -639,7 +639,7 @@ budget / 四个证据门禁（响度、音色、GS-1 预算、GS-1 时序）全�
 
 **需求 11 待改**：`vendor/gs1/*`（新增）、`scripts/sync-gs1.mjs`（新增）、`scripts/check-gs1.mjs`（新增）、`scripts/check_budgets.js`、`scripts/version.mjs`、`src/audio/instrumentPresets.ts:224`
 
-**既有设计记录**：`MIX_LOUDNESS_NOTES.md`（N-13 混音与响度）、`TIMBRE_NOTES.md`（预设策展）、`ROADMAP_V2.md`（Phase 5–8）、`BACKLOG.md`、`CODE_REVIEW_AND_PLAN_v1.16.0.md`（N-13…N-16 原始登记）
+**既有设计记录**：`MIX_LOUDNESS_NOTES.md`（N-13 混音与响度）、`TIMBRE_NOTES.md`（预设策展）、`BACKLOG.md`、`docs/OPEN_WORK.md`（交接台账）、`CODE_REVIEW_AND_PLAN_v1.16.0.md`（N-13…N-16 原始登记）
 
 ---
 
