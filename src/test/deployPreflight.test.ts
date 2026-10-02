@@ -49,19 +49,34 @@ describe("the deploy preflight for the machine-local wrangler configuration", ()
     const exit = source.indexOf("process.exit(1)", guarded);
     expect(guarded, "the guard is present").toBeGreaterThan(-1);
     expect(exit, "and it exits non-zero").toBeGreaterThan(guarded);
-    expect(exit, "before the build check, so the operator is told early").toBeLessThan(
+    /**
+     * ⚠️ This assertion used to require the exit to come **before** the build check, which is the same mistake the
+     * test below carries a note about: it made a dry run on a configuration-less machine report the missing file and
+     * suppress the three verdicts that were still available. Two assertions about one order have to agree, and this
+     * one now states the order that reports the most: after the local checks, and before wrangler.
+     */
+    expect(exit, "after the local checks, so their verdicts are printed first").toBeGreaterThan(
       source.indexOf('dist", "index.html"')
     );
+    expect(exit, "and before wrangler runs").toBeLessThan(source.indexOf('spawnSync("npx"'));
   });
 
-  it("runs before the build is read and before wrangler is spawned, because order is the point", () => {
+  it("runs after the local checks and before wrangler, which is the order that tells the operator the most", () => {
+    /**
+     * ⚠️ **The first version asserted the opposite**, and the reason is worth keeping: it required the preflight to
+     * come *before* the build check, on the theory that failing fast is the whole point. But on a machine with no
+     * configuration a dry run then printed the missing file and **nothing else**, so the three things that were
+     * verifiable — the version match, the covers payload and the boot probe — went unreported, and the release
+     * document's claim that a dry run proves everything up to Cloudflare stopped being true on exactly the checkout
+     * that needed it most. Failing fast is right; failing fast *instead of* reporting what already passed is not.
+     */
     const preflight = source.indexOf(MARKER);
     const distCheck = source.indexOf('dist", "index.html"');
     const spawn = source.indexOf('spawnSync("npx"');
     expect(preflight, "the preflight is present").toBeGreaterThan(-1);
     expect(distCheck, "the dist check is present").toBeGreaterThan(-1);
     expect(spawn, "the wrangler spawn is present").toBeGreaterThan(-1);
-    expect(preflight, "before the build check").toBeLessThan(distCheck);
+    expect(preflight, "after the local checks, so their verdicts are printed first").toBeGreaterThan(distCheck);
     expect(preflight, "and before wrangler runs").toBeLessThan(spawn);
   });
 });
