@@ -2676,3 +2676,35 @@ Bass 3 ｜ Guitar 3 ｜ **Orchestral 3** ｜ **Acoustic Piano 2** ｜ **Organ 2*
 而那正是这张表的既定纪律要防的错** ——「**a wrong instrument is worse than a synthesiser: it is a claim about a
 composer's music that nobody made.**」✓✓
 **⇒ 已把该更正发给第三条线** ✓；**并把"通用规则"写进它的要求**：**新库若与名字不是同一件乐器，就不是候选** ✓。
+
+## 八十六、⭐ 两个候选的**决定性证据**，`rhodes_ep` 被库自己的程序表证实出局，与一个**陷阱**（2026-10-03 ✓，**我从清单读程序名** ✓）
+
+### 86.1 读数 ✓✓
+
+```
+`mtg-solo-sax`：**Soprano／Alto／**Tenor**／Baritone ＋ 各自 "(no legato)" ⇒ 8 个程序** ✓
+`dsmolken-double-bass`：**"Double bass, arco"／"Double bass, **pizzicato**"** ✓（CC0）
+`gregsullivan-e-pianos`：**Yamaha CP80 electric grand／Hohner Pianet T／Wurlitzer EP200** ⇒ **没有一个是 Rhodes** ✓
+`ixox-flute`：**无 `instruments` 列表**（单程序库，由 `sfz` 命名）⇒ 是否"持续＋有 lead 要的颤音"待判 ✓
+```
+
+### 86.2 ⇒ 两个真候选（**都靠**延续那一行已有的理由**，不是"换个更好的库"** ✓✓）
+
+* **`sax_lead` ⇒ `mtg-solo-sax` 的 **Tenor saxophone****：**那一行的理由正是"这条线通常写给 **tenor**"，而**这个库真有 tenor**** ✓；
+* **`walking_upright` ⇒ `dsmolken-double-bass` 的 **pizzicato** 程序**：**那一行要的就是**拨奏**，而**这个库真有 pizz**** ✓。
+
+### 86.3 ❌ 与 §85 一致：**已出局**（**并被库自己的程序表证实** ✓✓）
+
+**`rhodes_ep`**：`gregsullivan-e-pianos` 是 **CP80／Pianet T／Wurlitzer** ⇒ **没有一个是 Rhodes** ⇒ **不换** ✓；
+**`finger_bass`／`pick_bass`**：低音提琴 ≠ **电贝司** ⇒ **不换** ✓。
+
+### 86.4 ⚠️ **陷阱**（**若中招，会得到"静默错答案"** ✗✓）
+
+**`mtg-solo-sax` 的默认 `sfz` 是 **Soprano**：`MTG Solo Saxophones/MTG Soprano Sax.sfz`** ⇒
+**⇒ 若把 `sax_lead` 换成这个库**却不点名程序**，落到的是**高音萨克斯**，而那一行明写"**line is normally
+written for the **tenor****"、并已提到 Soprano 是"**更小更亮的答案**"** ⇒ **⇒ 那就是**与理由相反的静默替换**** ✗✓
+⇒ **⇒ 必须**点名程序**（assetId 指到 tenor 那一行）＋ 在 `because` 里写明这一点** ✓。**已把该陷阱与上述证据发给第三条线** ✓。
+
+### 86.5 ⇒ 于是"该换"的最多是**两条** ✓
+
+**而"不该换／已出局／核不出来就不换"三类同样要判据化** ✓（**"核不出来 ⇒ 不换"比"猜它更好"强** ✓）。
