@@ -136,8 +136,6 @@
 | `src/data/arrangementImport.ts` | 同一个可选 `instruments` 参数（默认行为不变） |
 | `src/test/midiArrangementImport.test.ts` | **新增** 6 条判据：不写身份＝合成器、写了就解析到真采样、服务不了的名字报出且不写、合成器名字被接受、索引指向不存在的 part 要报 |
 
-## 7. 被桥挡住的那一步（没有动）
-
 ## 7. 被桥挡住的那一步（**当时**没有动 —— 已于 §11 补上）
 
 > ⚠️ **本节记录的是当时的状态。桥随后由另一条线落地（`TrackV2.instrument` ＋ `sampledInstruments.ts`），
