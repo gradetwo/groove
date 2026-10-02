@@ -908,3 +908,33 @@ scripts/check_b7_pair.mjs
 **⇒ 所以** ✓✓：**B7 的**可听证明**从未成立 ✓**；`check_b7_pair.mjs` 是量它的仪器 ✓；**它红**不是因为代码坏了 ✗，**而是因为那条主张未证实 ✓**。**⇒ 而"文档写着未解 ＋ 手工门禁报 failure"这两件事**从来没被连起来过**** ✗✓——**同一条教训：门禁在人读过的地方之外 ✓**。
 
 **⚠️ 而关掉它需要**一个决定**，不是一次修 ✗** ✓✓：**那颗"2×"是**起步选择**（脚本原话 ✓）**——**⇒ 要么 ① 给 B7 的可听主张一个**真实目标**＋一件**能听它的探针** ✓；要么 ② **退役这条判据** ✓（**承认它量不出东西 ✓**）。**⇒ 这不是"修 bug"，是"这条主张还算不算要求" ✓——**⇒ 归业主 ✓。**
+
+### 十七之十二、⚠️⚠️ **手机砍除把**发版路径**上的浏览器矩阵弄红了**（2026-10-02 实测 ✓）
+
+**这是本程**最有后果**的一个发现 ✗✓——因为那个 job 的名字就是 `Release Test Matrix`** ✓✓。
+
+**怎么发现的** ✓：那条工作流自己标了一句 **"the `test_matrix.js` changes are validated only by `node --check`, R6c and `ciWorkflows.test.ts` — **not by running a browser**"** ✓——**⇒ 我把这句"未验证"变成"真跑一次"** ✓：**手工派发 `manual-verify.yml`**（**run `36966368592`** ✓，`scope=e2e`／`profile=pc`／`--ref dev` ✓，跑的是 `dev` 顶端 `8dc3224` ✓，**而手机砍除 `4dffdf0` 是它的祖先** ✓）。
+
+**⇒ 结论是红** ✗✓：
+
+```
+⭐ 手工 E2E 36966368592: failure
+   page.waitForSelector: Timeout 45000ms exceeded.   ×5
+❌ Release Test Matrix FAILED: One or more browser/device targets failed.
+```
+
+**⇒ 根因精确到行** ✓✓（**手机外壳在 `4dffdf0` 删掉 ✓，所以这些选择器**永远不出现** ✓ ⇒ 每次都等满 45 秒再失败 ✓**）：
+
+```js
+scripts/test_matrix.js:622  waitForSelector('[data-testid="mobile-shell"]',        { timeout: 45000 })   ✗
+scripts/test_matrix.js:623  waitForSelector('[data-testid^="mobile-genre-row-"]', { timeout: 45000 })   ✗
+scripts/test_matrix.js:716  waitForSelector('[data-testid="mobile-genre-detail"]',  { timeout: 45000 })   ✗
+```
+
+**⚠️ 而那位工作流当时把这些判为**超出任务范围**** ✓，**理由是它们"guarded by `if (await page.$(...))`"** ✓——**⇒ 而这几处**没有守卫**** ✗✓✓。
+
+**⇒ 为什么它一直看不见** ✓✓：**E2E **不在 push 上跑**** ✗（`ci.yml:172` 只在 `main`／手工 ✓）⇒ **`dev` 的 push 门禁一直绿，而**发版路径是断的**** ✗**。**⇒ 按业主流程"合到 `main` 后发版时检查" ✓，**它会在**发版那一刻**才炸 ✓。**
+
+**⇒ 已交给 `scripts/test_matrix.js` 的唯一写入者 ✓** ✓✓，要求：**① 找出**每一处**指向外壳的选择器（不只那三行 ✓）② 外壳专属且无守卫的**删掉**，确需"有则测无则跳"的用**能申报的跳过**③ ⚠️ **判据不该用**超时**表达"这个东西不存在"**（**要表达不存在就用存在性断言 ✓**）④ ⭐ **改完**重派一次手工 E2E，必须变绿**（**若只在它分支上绿而 `dev` 仍红，如实报 ✓**）。**
+
+**⭐ 而这一程的教训可以一句话说完** ✓✓：**"未验证"这四个字，本程**五次**都变成了真缺陷** ✓（`/tmp` 夹具 ✓、静默通过的断言 ✓、B7 的可听证明 ✓、`check:layers` 的假阳性 ✓、**`test_matrix.js` 的发版矩阵 ✓**）——**⇒ 凡是有人写下"我没跑这个"，那里就有一个待爆的东西 ✓。**
