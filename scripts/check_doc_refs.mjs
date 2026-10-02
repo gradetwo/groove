@@ -93,10 +93,10 @@ const PROPOSED = new Map([
   ],
   /**
    * ⭐ **Removed, not planned.** The phone shell was cut on 2026-10-02 (`docs/OPEN_WORK.md` §十三) and these
-   * three documents record *why* and *what it consisted of*, so their lines name files that deliberately no
-   * longer exist. They are declared rather than edited because the lines are accurate about the past, and
-   * because two of the three documents are owned by another writer who is correcting them in the same round
-   * (the cross-mark convention §十七 says "this path is wrong", which is not what these lines mean).
+   * two documents record *why* and *what it consisted of*, so their lines name files that deliberately no
+   * longer exist. They are declared rather than edited because the lines are accurate -- the paths were real when written, and the files were then removed with the phone shell. That is also why the cross-mark
+   * convention is not used: §十七 says "this path is wrong", and these were not wrong.
+   * The owner decided to leave the historical lines alone, so these declarations are the permanent record rather than a placeholder awaiting an edit, and removing them would mean editing the history they preserve.
    */
   [
     "src/components/MobileTabBar.tsx",
