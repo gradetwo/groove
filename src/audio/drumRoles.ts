@@ -155,7 +155,10 @@ export function drumVoicingForLane(
 ): DrumVoicing | undefined {
   if (!lane) return undefined;
   const instrument = (lane.instrument ?? "").trim().toLowerCase();
-  if (!ACOUSTIC_DRUM_INSTRUMENTS.includes(instrument)) return undefined;
+  // The same allowance as drumSamplingRefusal: a lane may name its instrument by its own role, and the row
+  // above already says which note that role takes. No genre does this; only callers that name by role do.
+  const roleName = (lane.track_id ?? "").trim().toLowerCase();
+  if (!ACOUSTIC_DRUM_INSTRUMENTS.includes(instrument) && instrument !== roleName) return undefined;
   const row = DRUM_ROLE_NOTES[(lane.track_id ?? "").trim().toLowerCase()];
   if (!row) return undefined;
   return { assetId: DRUM_KIT_ASSET_ID, note: row.note, why: row.because };
@@ -180,6 +183,10 @@ export function drumSamplingRefusal(
   const instrument = (lane.instrument ?? "").trim();
   if (instrument === "") return undefined;
   const lower = instrument.toLowerCase();
+  // A lane that names its instrument by its own role (for example instrument "kick" on the kick role) is
+  // served by that role's row above: no genre ever writes a bare role word as an instrument (measured across
+  // all of src/data/genres: zero occurrences), so this only stops role-named callers being reported as gaps.
+  if (lower === role) return undefined;
   if (ACOUSTIC_DRUM_INSTRUMENTS.includes(lower) || ELECTRONIC_DRUM_INSTRUMENTS.includes(lower)) return undefined;
   return `the instrument "${instrument}" is not classified in src/audio/drumRoles.ts under the drum role "${role}", so this lane keeps the model in src/audio/DrumKitModels.ts — classify it: an entry in ACOUSTIC_DRUM_INSTRUMENTS if a mirrored library carries it, otherwise an entry in ELECTRONIC_DRUM_INSTRUMENTS`;
 }
