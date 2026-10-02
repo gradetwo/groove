@@ -1,27 +1,27 @@
 {
-  "version": "2.34.34",
-  "releaseDate": "2026-09-30",
+  "version": "2.34.35",
+  "releaseDate": "2026-10-02",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.34",
-    "date": "2026-09-30",
+    "version": "2.34.35",
+    "date": "2026-10-02",
     "category": "feature",
     "title": {
-      "zh": "编排像 DAW，谱面与 MIDI 互通",
-      "en": "An arrangement that reads like a DAW, and notation that interoperates"
+      "zh": "手机版收起来了：一套界面走三端，渲染能跑无头",
+      "en": "The phone version is gone: one interface for every surface, and renders that run headless"
     },
     "highlights": [
       {
-        "zh": "编排界面按业界惯例重做：工具栏、轨道头列、标尺、播放头与循环区间。",
-        "en": "The arrangement is rebuilt on the conventions: a toolbar, a track-header column, a ruler, a playhead and a loop brace."
+        "zh": "手机外壳砍除：`/m/…` 路由空间、手机标签栏与抽屉式面板一并移除，手机与平板浏览器渲染的是与桌面相同的一套界面。",
+        "en": "The phone shell is gone: the /m/… route space, the phone tab bar and the sheet panels went with it, and a phone or tablet browser renders the same interface the desktop does."
       },
       {
-        "zh": "按播放真的出声：编排走引擎音序器，采样轨逐步触发。",
-        "en": "Play actually sounds now: the arrangement drives the engine's sequencer, and a sampler lane triggers step by step."
+        "zh": "渲染可以不经浏览器：同一个引擎在 Node 里渲染，MCP 的四个渲染工具多了 `headless` 选项。",
+        "en": "A render no longer needs a browser: the same engine renders in Node, and the four MCP render tools take a headless option."
       },
       {
-        "zh": "谱面页签，以及 MusicXML 的导入导出。",
-        "en": "A score tab, and MusicXML in both directions."
+        "zh": "每个通道条的压缩器都换成了项目自己的 worklet，两个宿主的听感差距从 1.28 / 1.11 dB 与 1.774 LU 收到 1.03 / 1.04 dB 与 1.612 LU。",
+        "en": "Every channel strip's compressor is the project's own worklet now, which narrows the gap between the two hosts from 1.28 dB, 1.11 dB and 1.774 LU to 1.03, 1.04 and 1.612."
       }
     ],
     "truncated": true
