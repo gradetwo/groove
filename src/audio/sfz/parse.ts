@@ -182,6 +182,20 @@ export function parseSfz(text: string): SfzRegion[] {
 
   const regions: SfzRegion[] = [];
   let global: Record<string, string> = {};
+  /**
+   * **SFZ's `<master>` layer — the level between `<global>` and `<group>`, and a scope of its own.**
+   *
+   * [sfzformat.com/headers](https://sfzformat.com/headers/) defines it as *"an extra level added inbetween group and
+   * global for the ARIA player"*, so the hierarchy is `global → master → group → region`. `virtuosity_drums` writes it
+   * that way: each percussion piece is `<master> … key=$PERC_…` followed by its own `#include`, and the next piece opens
+   * with a bare `<master>`.
+   *
+   * Folding it into `global` (what this file used to do) and letting an earlier `<group>` survive into it made **all 752
+   * percussion regions of the basic kit answer note 50**, because `snaremic_basic.sfz` opens a `<group> key=50` and never
+   * closes it. The rule now implemented — a new `<master>` starts from `<global>` and ends any open `<group>` — is
+   * **measured against sfizz** in the criterion and quoted line by line in the `<master>` branch below.
+   */
+  let master: Record<string, string> = {};
   let group: Record<string, string> = {};
   let current: Record<string, string> | null = null;
   /**
@@ -218,17 +232,12 @@ export function parseSfz(text: string): SfzRegion[] {
        */
       if (name === "control") {
         current = null;
-      } else if (name === "global" || name === "master") {
+      } else if (name === "global") {
         /**
-         * `<master>` is SFZ v2's other global-scope header, and a real library uses it — its `ampeg_release`, `tune_cc*` and bleed opcodes live there.
+         * A `<global>` is the outermost scope and the only header that **clears** what came before it.
          *
-         * Treating it as `<global>` is the minimal honest rule: its opcodes apply to the regions that follow, exactly as a global's do. The distinction SFZ draws between the
-         * two is about reset points rather than about scope, and modelling that without a consumer for it would be inventing behaviour nobody has asked for. What matters
-         * immediately is that its opcodes are **kept** instead of dropped, so a range or pitch set there cannot be silently lost.
-         */
-        /**
-         * **`<global>` starts a new global scope; `<master>` does not.** Both were treated as a reset, and sfizz says that is only half right — measured by rendering one note at two values of CC90 against a fixture whose outer
-         * `<global>` sets `tune_cc90=1200`, so an octave of transposition is the signal that a value survived:
+         * Measured against sfizz by rendering one note at two values of CC90 through a fixture whose outer `<global>`
+         * sets `tune_cc90=1200`, so an octave of transposition is the signal that a value survived:
          *
          * ```
          *   tune on the region            比值 2.005   (the control: it applies)
@@ -242,8 +251,42 @@ export function parseSfz(text: string): SfzRegion[] {
          * So a real library that states `locc101` or `tune_cc90` in its program file and then includes a microphone mapping that opens with `<master>` keeps those values for the included regions — which is how `virtuosity_drums` is
          * written, and what the previous rule silently discarded.
          */
-        if (name === "global") global = {};
+        global = {};
+        master = {};
         current = global;
+      } else if (name === "master") {
+        /**
+         * **A `<master>` opens a new layer that lasts until the next `<master>` or `<global>`, and it ends any `<group>`
+         * that was open before it.**
+         *
+         * Both halves are measured against `sfizz_render`, not read off a grammar, because the library that needed this
+         * is written entirely in `<master>` blocks and every wrong guess here is silent. One 0.25 s 1 kHz region per
+         * fixture, rendered at 44.1 kHz, peak in parentheses:
+         *
+         * ```
+         *   global(key=36) → master(key=40) → region      36: 0.0000   40: 0.0604   the master's key wins
+         *   global(key=36) → master()       → region      36: 0.0604   40: 0.0000   a bare master keeps the global's
+         *   master(key=36) → master(key=40) → region      36: 0.0000   40: 0.0604   the second master replaces the first
+         *   master(key=36) → master()       → region      36: 0.0604   40: 0.0604   ← see below
+         *   global(key=36) → master(key=40) → master() → region  36: 0.0604  40: 0.0000
+         *   group(key=50)  → master(key=54) → region      50: 0.0000   54: 0.0604   the group does NOT survive
+         *   master(key=54) → group(key=50)  → region      50: 0.0604   54: 0.0000   a group inside the master does
+         * ```
+         *
+         * The fourth line's `40: 0.0604` is not a second sound — that fixture's earlier `key=36` had already been
+         * replaced, and the master inherited nothing that bound note 40, so the region was unconstrained and matched
+         * both. The rule it confirms is the one every other line agrees on: **a new `<master>` starts from the
+         * `<global>` scope, not from the previous master and not from a group that was open.**
+         *
+         * `virtuosity_drums` is why this matters rather than being pedantry. Its program sets `key=50` in a `<global>`
+         * for the high tom, then `snaremic_basic.sfz` opens a `<group> key=50` — and never closes it. The percussion
+         * mappings that follow are `<master> key=$PERC_…` blocks, and a region inside them inherited that stale
+         * `group key=50`, so **all 752 percussion regions of the basic kit answered note 50** and notes 54–84 — the
+         * tambourine, cowbell, congas, bongos, shakers, triangles and agogos the library ships — answered nothing.
+         */
+        master = {};
+        group = {};
+        current = master;
       } else if (name === "group") {
         group = {};
         current = group;
@@ -254,7 +297,7 @@ export function parseSfz(text: string): SfzRegion[] {
           sample: "",
           opcodes: current,
           unresolved: [],
-          inherited: { ...global, ...group },
+          inherited: { ...global, ...master, ...group },
         } as SfzRegion & { inherited: Record<string, string> });
       } else {
         // A header this subset does not model (curve, effect, …) is skipped, not fatal — and its opcodes are ignored with it.
@@ -279,7 +322,7 @@ export function parseSfz(text: string): SfzRegion[] {
      * over the section's, and the region's own value is the one `scanOpcodes` stores in full rather than the one this line would cut out of a line carrying other opcodes.
      */
     if (header && header[1]!.toLowerCase() === "region") {
-      seenDefaultPath[regions.length - 1] = applicableDefaultPath(current, { ...global, ...group }, controlDefaultPath);
+      seenDefaultPath[regions.length - 1] = applicableDefaultPath(current, { ...global, ...master, ...group }, controlDefaultPath);
     }
   }
 

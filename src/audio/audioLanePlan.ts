@@ -18,7 +18,7 @@ import { stepDuration } from "../data/noteLayer";
 import { STEPS_PER_BAR } from "../data/noteEvents";
 import { stepTiming, totalSeconds } from "../data/tempoMap";
 import type { SampleAsset } from "../data/sampleCatalogue";
-import { sampledAssetForLane } from "../data/sampledInstruments";
+import { sampledAssetForLane, sampledDrumVoicingForLane } from "../data/sampledInstruments";
 import type { SequencerTrack } from "../types/genre";
 import type { TempoPoint } from "../data/tempoMap";
 
@@ -120,7 +120,14 @@ export function planAudioLaneEvents(song: PlanInput, catalogue: readonly SampleA
        * cannot disagree about which note a column is.
        */
       if (asset?.sfz) {
-        const notes = pitchedLaneSteps(track);
+        /**
+         * ⭐ **The same fallback `offlineAudioLanes` applies, for the same reason.** A drum lane carries no `pitch`
+         * column, so its note comes from its role through `src/audio/drumRoles.ts`; a melodic lane gets `undefined` and
+         * is unchanged. Live and offline have to answer this identically or a bebop chart would play its kick in the
+         * studio and render silence — the parity this repository gates on.
+         */
+        const drumNote = sampledDrumVoicingForLane(track)?.note;
+        const notes = pitchedLaneSteps(track, drumNote);
         if (notes.length === 0) {
           problems.push(
             `section ${section.id ?? index + 1} · ${label}: "${assetId}" is an instrument, and the lane has no pitched steps, so there is no note to resolve from it`
@@ -200,7 +207,7 @@ export function audioLaneInstrumentSeconds(
  * `pitches` as a stack per step and `pitch` as its flattened root, so a step is a chord where the stack exists and a
  * single note otherwise. A step with no pitch is not a note.
  */
-function pitchedLaneSteps(track: SequencerTrack): Array<{ step: number; pitch: number }> {
+function pitchedLaneSteps(track: SequencerTrack, fallbackPitch?: number): Array<{ step: number; pitch: number }> {
   const notes: Array<{ step: number; pitch: number }> = [];
   (track.steps ?? []).forEach((value, step) => {
     if (!value) return;
@@ -211,6 +218,8 @@ function pitchedLaneSteps(track: SequencerTrack): Array<{ step: number; pitch: n
     }
     const pitch = track.pitch?.[step];
     if (typeof pitch === "number" && pitch > 0) notes.push({ step, pitch });
+    // A drum lane's step is an attack with no pitch of its own; the role supplies the pad. See `offlineAudioLanes.pitchedSteps`.
+    else if (fallbackPitch !== undefined) notes.push({ step, pitch: fallbackPitch });
   });
   return notes;
 }

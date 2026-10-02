@@ -32,7 +32,7 @@
 import type { SequencerPattern, SequencerTrack } from "../types/genre";
 import { SAMPLE_CATALOGUE, findSampleAsset, sampleReferenceProblem } from "../data/sampleCatalogue";
 import type { SampleAsset } from "../data/sampleCatalogue";
-import { isSampledLane, sampledAssetForLane } from "../data/sampledInstruments";
+import { isSampledLane, sampledAssetForLane, sampledDrumVoicingForLane } from "../data/sampledInstruments";
 import { stepTiming } from "../data/tempoMap";
 import type { TempoPoint } from "../data/tempoMap";
 import { stepDuration } from "../data/noteLayer";
@@ -175,7 +175,7 @@ function noteSeconds(track: SequencerTrack, step: number, timing: { lengthAt: (s
  * one voice and the other two were silent. The stack is preferred where it exists and the singular field stays
  * the fallback, so every pattern written before this keeps starting exactly the voices it did.
  */
-function pitchedSteps(track: SequencerTrack): Array<{ step: number; pitch: number }> {
+function pitchedSteps(track: SequencerTrack, fallbackPitch?: number): Array<{ step: number; pitch: number }> {
   const notes: Array<{ step: number; pitch: number }> = [];
   (track.steps ?? []).forEach((value, step) => {
     if (!value) return;
@@ -186,6 +186,20 @@ function pitchedSteps(track: SequencerTrack): Array<{ step: number; pitch: numbe
     }
     const pitch = track.pitch?.[step];
     if (typeof pitch === "number" && pitch > 0) notes.push({ step, pitch });
+    /**
+     * ⭐ **A drum lane's step carries no pitch — its role supplies one.**
+     *
+     * `kick`, `snare`, `hihat` and `percussion` are one instrument each, so the genre data writes `steps` and `velocity`
+     * and no `pitch` column at all. The note comes from `src/audio/drumRoles.ts` (General MIDI Percussion, the map the
+     * library itself is written in), and the caller passes it here once it has resolved the lane to a kit. Without it
+     * this function returns nothing for a drum lane and the planner reports "an instrument, and the lane has no pitched
+     * steps" — a true sentence about a lane that is not missing anything, which is how the drum half of the catalogue
+     * stayed unreachable while the melodic half played.
+     *
+     * A lane that *does* write a `pitch` keeps it: the fallback is a **fallback**, so a pattern that deliberately
+     * places a hit on another pad still plays that pad.
+     */
+    else if (fallbackPitch !== undefined) notes.push({ step, pitch: fallbackPitch });
   });
   return notes;
 }
@@ -295,7 +309,15 @@ export function planOfflineAudioLanes(
     const pan = typeof track.pan === "number" && Number.isFinite(track.pan) ? Math.max(-1, Math.min(1, track.pan)) : undefined;
 
     if (asset.sfz) {
-      const notes = pitchedSteps(track);
+      /**
+       * ⭐ **A drum lane's notes come from its role, and a melodic lane's from the pattern.**
+       *
+       * `sampledDrumVoicingForLane` is the same function `sampledAssetForLane` used to choose this asset, so the note
+       * and the kit that answers it cannot come from two different decisions — which is the defect this whole module is
+       * shaped to avoid. A lane that is not a drum lane gets `undefined` and behaves exactly as before.
+       */
+      const drumNote = sampledDrumVoicingForLane(track)?.note;
+      const notes = pitchedSteps(track, drumNote);
       if (notes.length === 0) {
         /**
          * An instrument with nothing to resolve is reported rather than guessed at. Playing its root note would invent a pitch the model does not carry, and

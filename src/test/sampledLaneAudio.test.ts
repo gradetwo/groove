@@ -65,7 +65,7 @@ function patternWith(track: SequencerTrack): SequencerPattern {
 describe("a recorded instrument reaches a genre lane", () => {
   it("resolves the lane to its asset, and only the lanes the table applies to", () => {
     expect(sampledLaneRefs(patternWith(pianoChordsLane()))).toEqual([{ trackIndex: 0, assetId: "salamander-grand", name: "Chords" }]);
-    expect(sampledLaneRefs(patternWith({ ...pianoChordsLane(), track_id: "kick" }))).toEqual([]);
+    expect(sampledLaneRefs(patternWith({ ...pianoChordsLane(), track_id: "fx" }))).toEqual([]);
     expect(sampledLaneRefs(patternWith({ ...pianoChordsLane(), instrument: "warm_pad" }))).toEqual([]);
   });
 

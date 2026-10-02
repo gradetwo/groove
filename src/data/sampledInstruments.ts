@@ -32,11 +32,13 @@
  *  * **It is not complete.** There is no electric piano, no electric bass, no distorted guitar, no accordion, no
  *    sitar and no section brass in the mirrored libraries — {@link sampledInstrumentGap} names those so a report
  *    can say "no recording serves this" instead of silently keeping the synthesiser.
- *  * **It is not a drum-kit mapping.** Drum lanes are physical models (`playKick`/`playSnare`/…) and a kit is not
- *    one instrument at one pitch; {@link SAMPLED_ROLES} says so in code.
+ *  * **Its drum half is a second list, not rows here.** A drum lane is decided by its **role** plus the note map in
+ *    `src/audio/drumRoles.ts` (General MIDI Percussion), because a kit is one instrument at many pitches and a single
+ *    `assetId` cannot describe it; {@link SAMPLED_DRUM_ROLES} says so in code.
  */
 import type { SampleAsset } from "./sampleCatalogue";
 import { instrumentIdentityFor, playableTechniques } from "./stringTechniques";
+import { DRUM_KIT_ASSET_ID, drumSamplingRefusal, drumVoicingForLane } from "../audio/drumRoles";
 
 /**
  * One row: a genre data instrument name, the catalogue asset that serves it, and why.
@@ -207,21 +209,55 @@ export const SAMPLED_INSTRUMENT_SYNTHS: readonly string[] = [
   // Effects and textures.
   "noise_sweep", "noise_rise", "sweep_down", "sub_drop", "laser_zap", "tape_stop", "reverse_cymbal",
   "vinyl_crackle", "horn_stab",
-  // Drum lanes: a physical model, and a kit is many instruments at many pitches rather than one at one.
+  // The **acoustic** drum names, which are no longer a physical model. They keep a row here because this table
+  // classifies a name, and the name does not say which drum it is: `acoustic_kick` on a `kick` lane now sounds the
+  // catalogue kit (see `src/audio/drumRoles.ts`), while the same name on a lane whose role is not a drum role has no
+  // note to play and falls to the model. The list also keeps the old classification's promise — that no name is
+  // silently unmapped — and the criterion that asserts these three lists are disjoint and total still holds.
   "acoustic_kick", "punchy_kick", "sub_kick", "808_kick", "acoustic_snare", "tight_snare", "808_snare",
   "clap", "rimshot", "reggae_rim", "closed_hat", "rim_shaker",
 ];
 
 /**
- * The v1 roles this table applies to — **`bass`, `chords` and `lead`, and nothing else**.
+ * The v1 roles this table applies to **by instrument name** — `bass`, `chords` and `lead`, and nothing else.
  *
- * A drum role is a physical model in the engine's own dispatch (`playKick`/`playSnare`/`playHiHat`/`playPercussion`),
- * and a kit is many instruments at many pitches rather than one instrument at one pitch, so a single `assetId` could
- * not describe it: `virtuosity-drums-basic` would need a note map per role, which is a different feature. `fx` is a
- * synthesiser effect by construction. Restricting here rather than in each caller means the boundary is stated once,
- * and a future row for a drum name cannot silently become a melodic sample.
+ * The name table is for a lane whose sound is decided by what the composer called it. A drum lane is decided instead by
+ * the **role** it is (`track_id`) plus the note map in `src/audio/drumRoles.ts`, which is why that half is a second list
+ * ({@link SAMPLED_DRUM_ROLES}) rather than rows in {@link SAMPLED_INSTRUMENTS}: a drum role is many notes on one kit,
+ * and a single `assetId` cannot describe it without a note. `fx` is a synthesiser effect by construction. Restricting
+ * here rather than in each caller means the boundary is stated once, and a future row for a drum *name* cannot silently
+ * become a melodic sample.
  */
 export const SAMPLED_ROLES: readonly string[] = ["bass", "chords", "lead"];
+
+/**
+ * **The v2 roles that sound a catalogue recording too — and they are a different shape, so they are a different list.**
+ *
+ * `src/audio/drumRoles.ts` is why this can exist at all: a drum lane carries no pitches, so it needed a **role → note**
+ * map before a single `assetId` could describe it, and that map is now written data with the General MIDI standard as
+ * its reason. The drum half is therefore resolved by the same entry point and reported by the same reporters as the
+ * melodic half — one place decides what a lane sounds — but it is kept as a separate list because the two ask different
+ * questions: a melodic role has **one** asset and no note (the pattern's own `pitch` supplies that), while a drum role
+ * has one asset and **one note per role**.
+ *
+ * The names here are the drum `track_id`s the engine routes by (`SequencerTrack.track_id`), not instrument names: the
+ * instrument `distorted_kick` appears on a **bass** lane in `src/data/genres/**`, so a name is not evidence of a drum.
+ */
+export const SAMPLED_DRUM_ROLES: readonly string[] = ["kick", "snare", "hihat", "percussion"];
+
+/**
+ * The catalogue asset and note for a **drum** lane, or `undefined` when it keeps its physical model.
+ *
+ * This is the drum arm of the same decision {@link sampledInstrumentFor} makes for a melodic name, and it lives beside it
+ * so a caller cannot find one and miss the other: `sampledAssetForLane` below is the one entry point, and it consults
+ * this before the name table.
+ */
+export function sampledDrumVoicingForLane(
+  lane: { track_id?: string; instrument?: string } | null | undefined
+): { assetId: string; note: number } | undefined {
+  const voicing = drumVoicingForLane(lane);
+  return voicing ? { assetId: voicing.assetId, note: voicing.note } : undefined;
+}
 
 /** The row for an instrument name, by **exact** match on the trimmed name — no normalisation, no prefix, no synonyms. */
 export function sampledInstrumentFor(instrument: string | undefined): SampledInstrumentChoice | undefined {
@@ -234,11 +270,14 @@ export function sampledInstrumentFor(instrument: string | undefined): SampledIns
 /**
  * The catalogue asset a **lane** sounds, or `undefined` when it is not a recorded instrument.
  *
- * Two sources, in order, and the order matters:
+ * Three sources, in order, and the order matters:
  *
  *  1. **the lane's own `sample.assetId`** — a lane that says which recording it plays is believed, whether it is a
  *     v1 `audio` lane or a v2 `sampler` track that compiled to one. The lane is more specific than its name.
- *  2. **this table, keyed by the lane's `instrument`** — and only for a melodic role ({@link SAMPLED_ROLES}), so a
+ *  2. **the drum table** (`src/audio/drumRoles.ts`), keyed by the lane's **role** — a drum lane carries no pitches, so
+ *     its role is what says which pad it plays, and the note comes with the asset. Asked before the name table because
+ *     a drum role is decided by `track_id`, not by `instrument`: `distorted_kick` is a *bass* lane elsewhere in the data.
+ *  3. **the name table**, keyed by the lane's `instrument` — and only for a melodic role ({@link SAMPLED_ROLES}), so a
  *     drum or an effect name that later appears in the table cannot turn a kit lane into one piano note.
  *
  * It is one function because three separate callers have to agree about it — the offline planner, the live
@@ -263,6 +302,18 @@ export function sampledAssetForLane(
      */
     return role === "audio" || SAMPLED_ROLES.includes(role) ? own : undefined;
   }
+  const drum = sampledDrumVoicingForLane(lane);
+  if (drum) return drum.assetId;
+  /**
+   * ⭐ **A drum role that resolves to nothing resolves to nothing because of the drum table, not because the name is
+   * unclassified** — and the distinction has to be made here or every caller downstream draws the wrong conclusion.
+   *
+   * Without this line, `{ track_id: "kick", instrument: "808_kick" }` falls through to the melodic name table, which does
+   * not hold `808_kick` either, so it is `undefined` by accident — and a caller cannot tell "the drum table refused this
+   * as a drum machine" from "nobody thought about this name", which is exactly the conflation the three lists exist to
+   * prevent. Returning `undefined` here is the same answer, reached on purpose.
+   */
+  if (SAMPLED_DRUM_ROLES.includes(role)) return undefined;
   if (!SAMPLED_ROLES.includes(role)) return undefined;
   return sampledInstrumentFor(lane.instrument)?.assetId;
 }
@@ -310,9 +361,42 @@ export function sampledInstrumentGap(
     // A local membership test rather than `findSampleAsset`: this module is imported *by* `sampleCatalogue` (the
     // reference check has to know which lanes may carry a sample), so importing back would be a cycle.
     if (catalogue.some((asset) => asset.assetId === assetId)) return undefined;
-    return `this lane is mapped to the catalogue recording "${assetId}", which no configured sample mirror serves — configure VITE_SAMPLE_ROOT (or point the lane at an asset from list_arrangement_instruments) and it plays the recording`;
+    /**
+     * ⭐ **The lane keeps whatever voice it has today, and the sentence names it** — a synthesiser for a melodic lane, a
+     * **physical model** for a drum lane. Both are the stated fallback, and both are the same *situation* (a mirror that
+     * does not serve the recording) with the same fix, so they share one sentence rather than growing a second report that
+     * would then have to be kept in step with this one.
+     */
+    const laneRole = (lane.track_id ?? "").trim().toLowerCase();
+    const kept = SAMPLED_DRUM_ROLES.includes(laneRole)
+      ? "this lane keeps its physical model in src/audio/DrumKitModels.ts"
+      : "this lane keeps its built-in synthesised voice";
+    return `this lane is mapped to the catalogue recording "${assetId}", which no configured sample mirror serves — ${kept} until one does: configure VITE_SAMPLE_ROOT (or point the lane at an asset from list_arrangement_instruments)`;
   }
   const role = (lane.track_id ?? "").trim().toLowerCase();
+  /**
+   * **A drum lane gets its sentence before the melodic half gives up on it.** `SAMPLED_ROLES` does not hold a drum role,
+   * so without this a kick lane whose kit the mirror does not serve would report *nothing* — and "the recording is
+   * missing" and "this is a drum machine" would look identical in a render's report. The refusal explains the second
+   * case, and `undefined` here is the honest answer for it.
+   */
+  if (SAMPLED_DRUM_ROLES.includes(role)) {
+    /**
+     * `drumSamplingRefusal` and not `drumSamplingDecision`: this function is the **problem** report, and a drum machine
+     * is what the genre asked for rather than a defect — naming it in every render would put the same sixty lines of
+     * noise over the real gaps that `SAMPLED_INSTRUMENT_SYNTHS` exists to keep out. The decision is available for a
+     * caller that wants to state it (`drumSamplingDecision`), and the test asserts both forms.
+     */
+    const refusal = drumSamplingRefusal(lane);
+    if (refusal) return refusal;
+    /**
+     * Reached only for an **acoustic** role — a drum machine has already returned `undefined` from
+     * `sampledAssetForLane`, so it never arrives here. This is the "the kit is real and the mirror is not configured"
+     * case, which is actionable and therefore reported.
+     */
+    if (sampledAssetForLane(lane) === undefined) return undefined;
+    return `this drum lane keeps its physical model (src/audio/DrumKitModels.ts): the role "${role}" is mapped to the catalogue kit "${DRUM_KIT_ASSET_ID}" in src/audio/drumRoles.ts, and the fix is to configure the mirror that serves it (VITE_SAMPLE_ROOT), not to edit the genre`;
+  }
   if (!SAMPLED_ROLES.includes(role)) return undefined;
   const instrument = (lane.instrument ?? "").trim();
   if (!instrument) return undefined;

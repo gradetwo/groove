@@ -263,11 +263,45 @@ describe("group inheritance is per region", () => {
 });
 
 /**
- * `<master>` — SFZ v2's other global-scope header, which a real library uses for its `ampeg_release` and `tune_cc*` opcodes.
+ * `<master>` — the intermediate header in SFZ's hierarchy, which a real library uses for its `ampeg_release`,
+ * `tune_cc*`, `key=` and bleed opcodes.
  *
- * Before this, `<master>` was an *unknown* header, so `current` was set to null and **every opcode in it was dropped** — including, in principle, a key range. The rule is the
- * minimal honest one: it applies to the regions that follow, as a global does. What SFZ distinguishes between the two is reset points, and modelling that with no consumer
- * for it would be inventing behaviour nobody asked for.
+ * ## The hierarchy, in the format's own words
+ *
+ * [sfzformat.com's headers page](https://sfzformat.com/headers/) states it as a definition rather than a note:
+ * *"The global header (one per file) contains opcodes which apply to all regions in the file. The master header is an
+ * extra level added inbetween group and global for the ARIA player. So, the **global/group/region or
+ * global/master/group/region hierarchy** contains the opcodes which define which samples are played…"* — and its
+ * [`‹master›` page](https://sfzformat.com/headers/master/) gives the worked example, a bass then a tenor whose
+ * **`key=` sits on the `<master>` header itself**.
+ *
+ * ## What each scope does, **measured against sfizz** rather than read off the grammar
+ *
+ * `sfizz_render` is the reference engine this project already settles SFZ semantics with, and this header was where a
+ * plausible reading was wrong. One 0.25 s 1 kHz region per fixture, rendered at 44.1 kHz, **peak in parentheses**:
+ *
+ * ```
+ *   global(key=36) → master(key=40) → region        36: 0.0000   40: 0.0604   the master's key wins
+ *   global(key=36) → master()       → region        36: 0.0604   40: 0.0000   a bare master keeps the global's
+ *   master(key=36) → master(key=40) → region        36: 0.0000   40: 0.0604   the second master replaces the first
+ *   master(key=36) → master()       → region        36: 0.0604   40: 0.0604   unconstrained: see below
+ *   global(key=36) → master(key=40) → master() → region  36: 0.0604  40: 0.0000
+ *   group(key=50)  → master(key=54) → region        50: 0.0000   54: 0.0604   the group does NOT survive
+ *   master(key=54) → group(key=50)  → region        50: 0.0604   54: 0.0000   a group inside the master does
+ * ```
+ *
+ * The fourth line is not a second sound: that fixture's earlier `key=36` had already been replaced, the master
+ * inherited nothing that bound note 40, so the region was unconstrained and matched both. Every other line agrees on
+ * the rule the parser now implements — **a new `<master>` starts from the `<global>` scope, and it ends any `<group>`
+ * that was open before it.**
+ *
+ * ## Why this was worth a real library
+ *
+ * `virtuosity_drums` is written entirely this way: its program sets `key=50` in a `<global>` for the high tom,
+ * `snaremic_basic.sfz` opens a `<group> key=50` and never closes it, and the percussion mappings that follow are
+ * `<master> key=$PERC_…` blocks. With `<master>` folded into the global scope and `<group>` surviving into it,
+ * **all 752 percussion regions of the basic kit answered note 50** and notes 54–84 — the tambourine, cowbell, congas,
+ * bongos, shakers, triangles and agogos the library ships — answered nothing.
  */
 describe("the master header", () => {
   it("applies to the regions that follow, like a global", () => {
@@ -282,6 +316,73 @@ describe("the master header", () => {
     const plain = parseSfz("<region> sample=a.wav key=40");
     expect(plain[0]).toMatchObject({ lokey: 40, hikey: 40 });
     expect(plain[0]!.opcodes.master).toBeUndefined();
+  });
+
+  /**
+   * sfizz line 2 of the table above: a `<master>` that states no `key` **keeps the global's**, which is the half of the
+   * old rule that was right and is what makes the perc mappings' shared `loop_mode`/`tune_cc*` reach their regions.
+   */
+  it("inherits from the global scope, so a bare master keeps the file's own settings", () => {
+    const regions = parseSfz("<global> key=36 tune_cc90=1200\n<master> ampeg_release=0.5\n<region> sample=tom.wav");
+    expect(regions[0]).toMatchObject({ sample: "tom.wav", lokey: 36, hikey: 36 });
+  });
+
+  /** sfizz line 3: `<master>` replaces `<master>`, so a second piece cannot inherit the first piece's key. */
+  it("starts a new layer rather than extending the previous one", () => {
+    const regions = parseSfz("<master> key=36\n<region> sample=kick.wav\n<master> key=40\n<region> sample=snare.wav");
+    expect(regions).toHaveLength(2);
+    expect(regions[0]).toMatchObject({ sample: "kick.wav", lokey: 36, hikey: 36 });
+    expect(regions[1]).toMatchObject({ sample: "snare.wav", lokey: 40, hikey: 40 });
+  });
+
+  /**
+   * sfizz lines 4 and 5: the master's earlier value is gone, so a **bare** master after a keyed one binds nothing —
+   * which is the observable difference between "replaced" and "cleared to the global scope".
+   */
+  it("clears the previous master's key, so a bare master binds no note of its own", () => {
+    const regions = parseSfz("<master> key=36\n<master> key=40\n<master>\n<region> sample=x.wav");
+    expect(regions[0]).toMatchObject({ sample: "x.wav", lokey: 0, hikey: 127 });
+  });
+
+  /** sfizz line 6: `<group>` does not survive a `<master>` — the measured cause of the 752-wrong-regions defect. */
+  it("ends a group that was open before it, so the master's key is the one that applies", () => {
+    const regions = parseSfz("<group> key=50\n<master> key=54\n<region> sample=tamb.wav");
+    expect(regions[0]).toMatchObject({ sample: "tamb.wav", lokey: 54, hikey: 54 });
+  });
+
+  /** sfizz line 7, the other direction: a `<group>` *inside* the master still wins, which is the normal nesting. */
+  it("still lets a group inside it override the master", () => {
+    const regions = parseSfz("<master> key=54\n<group> key=50\n<region> sample=x.wav");
+    expect(regions[0]).toMatchObject({ sample: "x.wav", lokey: 50, hikey: 50 });
+  });
+
+  /**
+   * ⭐ **The library's own shape, as a criterion** — the defect was invisible in a one-master fixture, so the fixture has
+   * two, a stale group, and an include-free copy of the percussion layout. The tambourine must answer 54 and **not** 50.
+   */
+  it("keeps a second percussion piece on its own pad when a group was left open before it", () => {
+    const regions = parseSfz(
+      [
+        "<global>",
+        "key=50",
+        "<group>",
+        "key=50",
+        "<region> sample=htom_offcenter.wav",
+        "<master>",
+        "key=54",
+        "ampeg_release=0.8",
+        "<region> sample=tambourine.wav",
+        "<master>",
+        "key=56",
+        "ampeg_release=0.6",
+        "<region> sample=cowbell.wav",
+      ].join("\n")
+    );
+    const keysOf = (sample: string) => regions.filter((r) => r.sample === sample).map((r) => `${r.lokey}-${r.hikey}`);
+    expect(keysOf("tambourine.wav")).toEqual(["54-54"]);
+    expect(keysOf("cowbell.wav")).toEqual(["56-56"]);
+    // And the region that was already inside the group keeps the group's key: nothing above moved it.
+    expect(keysOf("htom_offcenter.wav")).toEqual(["50-50"]);
   });
 });
 
