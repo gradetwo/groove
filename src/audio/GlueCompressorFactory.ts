@@ -136,8 +136,20 @@ export function createBusCompressor(
             created.connect(output!);
             workletNode = created;
             kind = "worklet";
-          } catch {
-            // Keep the node: a failed module load must not leave the bus uncompressed, and `kind()` says so.
+          } catch (error) {
+            /**
+             * ⭐ **A bare `catch` hid why the worklet swap failed, and that cost a round.**
+             *
+             * Keeping the node is right — a failed module load must not leave the bus uncompressed, and `kind()`
+             * reports which one ended up in the graph. Saying nothing about the failure is not: an attempt to
+             * prefer the worklet on every context came back with `kind` = `"node"` and no way to tell whether the
+             * module failed to load, the node failed to construct, or something after it threw. The error is
+             * reported now and the behaviour is unchanged — the fallback still happens, exactly as before.
+             */
+            console.warn(
+              "[GlueCompressor] the worklet could not be installed, so the bus keeps the node compressor:",
+              error instanceof Error ? `${error.name}: ${error.message}` : String(error)
+            );
             kind = "node";
           }
           return kind;

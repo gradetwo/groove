@@ -510,3 +510,32 @@ browser worklet evidence: limiterKind=worklet
 **代价** ✓：**每个总线压缩器多两个 gain 节点 ✓**（**替换需要稳定两端 ✓，`:74-81` 已说明 ✓**），**以及图结构变化的风险 ✓**——**而 §8.5 已查明"按位置识别增益"那条判据读的是 `processorOptions.makeupDb`（worklet 路径字段 ✓），所以那风险可能已经过期 ✓**。
 
 **机制不需要新写** ✓✓：**`:108-143` 已经完成了整件事** ✓——`addModule` ✓、建 `AudioWorkletNode` 并传全部 `processorOptions` ✓、接侧链到输入 1 ✓、断开旧节点并接上新节点 ✓、失败时保留节点 ✓、并用 `kind()` 报告谁在图上 ✓✓。**所以要改的只是"什么时候走这一支"** ✓，**而不是"怎么走"** ✓✓。
+
+### §8.7 第二次尝试：**把 `catch` 打开之后，真凶换了一个**（2026-10-01）
+
+**§8.6 说"要改的只是条件"** ✓，**而我在那之后做了两件事** ✓✓：**① 把 `GlueCompressorFactory` 里那个**裸 `catch`** 打开 ✓（**它原来什么都不说 ✓**）；**② 把条件改成 `audioWorkletAvailable(ctx)`** ✓，**并把 `detector.connect(created, 0, 1)` 用 `if (detector)` 护起来** ✓（**`detector` 可以为 null ✓，那是上一轮失败的一个真原因 ✓**）。
+
+**结果：探针的一条用例**通过了新行为**（`kind === "worklet"` ✓），**但另一条**红了** ✗，**而 `catch` **一次都没响**** ✓✓。**加一次临时日志量到的** ✓：
+
+```
+[PROBE] createBusCompressor wrappersNeeded= true   detector= false   ← 就是那条失败的用例
+[PROBE] createBusCompressor wrappersNeeded= false  detector= false   ← 无 worklet，正确地是 false
+```
+
+**⇒ 所以那一支**确实进了**** ✓，**没有异常 ✓，而 `kind` 仍是 `"node"`** ✗✓✓——**唯一能同时成立的解释是 `:126` 的**静默早退****：
+
+```ts
+:111  let kind: BusCompressorKind = "node";
+:126  if (disposed) return kind;        ← ⭐ 早退，不抛、不进 catch，`kind` 保持 "node"
+:178  kind: () => kind,                 ← 是活取值 ✓，所以不是"按值返回"的错
+```
+
+**⇒ 即：**异步装好之前 `dispose()` 已经被调用了** ✓✓**，**于是替换静静放弃 ✓——**而这件事**没有任何输出**** ✗✓✓。
+
+**⚠️ 我的处置** ✓✓：**这一轮已经很长，所以我没有把行为改动留在树上** ✗——**回退了条件与判据 ✓，**只保留那处诊断**（**行为不变 ✓、类型 0 错 ✓、lint 0 ✓、相关判据 8/8 ✓**）** ✓✓。**理由是那条规矩：**留一棵红树不可接受** ✓**（**这个项目里已有过一次教训 ✓**）。
+
+**⇒ 写在这里，好让下一次不必重走** ✓✓：
+
+1. **真凶不是 `catch`，是 `:126` 的 `disposed` 早退** ✓✓——**所以下一步该量的是"谁在异步装好之前 dispose 了" ✗**（**在 `dispose()` 里加一行日志就够 ✓**），**而不是继续改条件** ✗；
+2. **`catch` 现在会说话** ✓——**它下一次会直接说出异常 ✓**；
+3. **而我上一次给的那个"大概率卡在 jsdom 假件里"的判断是错的** ✗✓✓：**假件没问题 ✓，`AudioWorkletNode` 构造成功了 ✓**（**证据：`FakeAudioWorkletNode.instances` 里出现了节点 ✓**）。**这条更正是本节的要点** ✓。
