@@ -10,10 +10,15 @@
  * VexFlow defaults to a CDN, which is a third party learning that a person is looking at a score, and a request that fails offline.
  *
  * What this version does not do, stated rather than implied: no key signature other than C, no tuplets, no slurs, no dynamics from velocity, one voice per staff, and the notes are split treble/bass at middle C. Those are the same limits the exporter states, because they are limits of the notation layer rather than of either surface.
+ *
+ * Two more limits, added when a bar that did not add up turned out to be a crash rather than a drawing: a note held across a barline is **not** split and tied (the MusicXML writer does that; this stave does not yet), and a drum part is drawn from its own MIDI pitches on the pitched stave — the correct percussion notation needs the track's *kind*, which this component is not given. Both are stated here because the alternative is a reader believing the stave says something it does not.
+ *
+ * TODO(defense): **percussion staves.** A drum part's vertical position is *which instrument*, not a pitch: MusicXML says using `<pitch>` for it "would be misleading", and the correct spelling is a `percussion` clef with `<unpitched>`/`display-step` plus a notehead shape per instrument (W3C, *MusicXML 4.0 — Percussion*). Taking that on needs `trackKind` threaded from `ArrangementViewV2.tsx` into this component, and this batch is forbidden to touch that file (another workstream owns it). Guessing "this is a drum track" from the MIDI numbers would be the exact inference that page warns against, so this component does not guess.
  */
 import { useEffect, useRef, useState } from "react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import type { NoteEvent } from "../../types/arrangementV2";
+import { STEP_BEATS } from "../../data/noteEvents";
 
 export interface ScoreV2Props {
   notes: readonly NoteEvent[];
@@ -70,6 +75,146 @@ function keyFor(pitch: number): string {
   return `${names[pitch % 12]}/${Math.floor(pitch / 12) - 1}`;
 }
 
+/** The written value of every name `durationName` can return, in beats. */
+const WRITTEN_BEATS: Record<string, number> = { w: 4, h: 2, q: 1, "8": 0.5, "16": 0.25 };
+
+/** What a written name is worth: the name's value, and a dot adds half of it. */
+function writtenBeats(name: string, dots: number): number {
+  return (WRITTEN_BEATS[name] ?? STEP_BEATS) * (dots > 0 ? 1.5 : 1);
+}
+
+/**
+ * ⭐ **The rests that fill a gap, written from the beat down so the bar stays countable.**
+ *
+ * The rule this replaces ("a voice with four beats, or an error") came from the library rather than from music:
+ * VexFlow's `Formatter` refuses a STRICT voice whose tickables do not add up to the time signature, and the
+ * starter content of every new track — four sixteenths, one per beat — adds up to one beat. So the third
+ * reading of the model was the only one that showed the user a runtime error instead of their notes.
+ *
+ * **How notation software answers the same question, and why this is the answer taken.** *MuseScore Studio*
+ * models such a bar as a **non-metered measure**: "a measure which is less or greater in duration than the
+ * indicated time signature", normally reserved for a **pickup/anacrusis at the beginning of a score or
+ * section**, and otherwise flagged with a small `+`/`−` above the bar
+ * (<https://handbook.musescore.org/notation/rhythm-meter-and-measures/pickup-and-non-metered-measures.md>,
+ * <https://handbook.musescore.org/notation/rhythm-meter-and-measures/measure-properties.md>). Our bars are not
+ * pickups — the content can be short in any of the eight bars — and this project's **own** MusicXML writer
+ * already decided the general rule for the same model: "空隙写成休止符——记谱里没有'洞'，小节缺的部分就是
+ * 休止符" (`docs/SCORE_AND_MUSICXML.md`, decision 2). The score and the exported document are two readings of
+ * one array, so they must not disagree about whether the silence exists.
+ *
+ * A dotted rest is used only for the 0.75-beat remainder, where no plain written rest exists.
+ */
+export function restsFor(beats: number): Array<{ duration: string; dots: number }> {
+  const rests: Array<{ duration: string; dots: number }> = [];
+  // Snapped to the sixteenth grid first: everything else in this file works on that grid, and a rest of
+  // 0.249999 beats is a rest VexFlow would place by ticks and no reader would ask for.
+  let left = Math.round(beats / STEP_BEATS) * STEP_BEATS;
+  while (left >= 1 - 1e-9) {
+    rests.push({ duration: "qr", dots: 0 });
+    left -= 1;
+  }
+  if (left > 0.5 + 1e-9) rests.push({ duration: "8r", dots: 1 });
+  else if (left > 0.25 + 1e-9) rests.push({ duration: "8r", dots: 0 });
+  else if (left > 1e-9) rests.push({ duration: "16r", dots: 0 });
+  return rests;
+}
+
+/** One thing written in a bar: a chord (`pitches` non-empty) or a rest. */
+export interface ScoreMeasureEntry {
+  kind: "note" | "rest";
+  /** A VexFlow duration name: `w`, `h`, `q`, `8`, `16` — and a rest's name carries its own `r` (`wr`, `qr`, `8r`, `16r`). */
+  duration: string;
+  dots: number;
+  /** The chord's pitches, in the model's order; empty for a rest. */
+  pitches: number[];
+}
+
+export interface ScoreMeasurePlan {
+  entries: ScoreMeasureEntry[];
+  /**
+   * True when the entries add up to exactly one bar and the voice may stay STRICT. False when the notes
+   * overlap more than one voice per staff can write: the entries are then drawn SOFT so that **no note is
+   * dropped** — see `planMeasure`.
+   */
+  complete: boolean;
+}
+
+/**
+ * **What one bar of one stave reads as**, as pure data, so the arithmetic can be judged without an engraver.
+ *
+ * Three decisions are made here and nowhere else:
+ *
+ * 1. **Chords.** Notes that begin together are one entry with several pitches, which is how a stave writes them.
+ * 2. **Notes are never dropped.** A note whose written value would run past the barline is not removed and not
+ *    quietly shortened — the plan stops being "complete" instead, and the caller engraves it SOFT. That is the
+ *    one case where this bar is a *non-metered* measure in MuseScore's sense; a strict voice would throw
+ *    `IncompleteVoice`/`Too many ticks` and take the whole score, not just the bar, with it.
+ * 3. **Silence is written.** Gaps and the rest of the bar are rests of exactly the missing length, so a bar
+ *    that is short on content still adds up — see `restsFor` for the sources behind that choice.
+ *
+ * Positions are snapped to the sixteenth grid (`STEP_BEATS`) and never placed before the previous entry: the
+ * model can hold a note between grid lines, and the stave has one voice per staff. The snapping is the same
+ * rounding the roll's step view applies, and it is stated rather than hidden.
+ */
+export function planMeasure(
+  notes: readonly NoteEvent[],
+  measureIndex: number,
+  treble: boolean,
+  beatsPerBar = 4
+): ScoreMeasurePlan {
+  const measureStart = measureIndex * beatsPerBar;
+  const measureEnd = measureStart + beatsPerBar;
+
+  const groups = new Map<number, { pitches: number[]; lengthBeats: number }>();
+  for (const note of notes) {
+    if ((note.pitch >= SPLIT_PITCH) !== treble) continue;
+    if (note.startBeats < measureStart || note.startBeats >= measureEnd) continue;
+    const group = groups.get(note.startBeats);
+    if (group) group.pitches.push(note.pitch);
+    // The group's written length is its first note's, which is what this score has always used for a chord.
+    else groups.set(note.startBeats, { pitches: [note.pitch], lengthBeats: note.lengthBeats });
+  }
+
+  /** A bar with nothing in it is a whole rest, which is what a musician reads as "nothing here". */
+  if (groups.size === 0) {
+    return { entries: [{ kind: "rest", duration: "wr", dots: 0, pitches: [] }], complete: true };
+  }
+
+  const scored = [...groups.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([start, group]) => {
+      const { name, dots } = durationName(group.lengthBeats);
+      return { start, name, dots, pitches: group.pitches };
+    });
+
+  const written: Array<{ at: number; name: string; dots: number; pitches: number[] }> = [];
+  let cursor = measureStart;
+  for (const chord of scored) {
+    const snapped = Math.round(chord.start / STEP_BEATS) * STEP_BEATS;
+    const at = Math.max(cursor, Math.min(snapped, measureEnd - STEP_BEATS));
+    written.push({ at, name: chord.name, dots: chord.dots, pitches: chord.pitches });
+    cursor = at + writtenBeats(chord.name, chord.dots);
+  }
+
+  if (cursor > measureEnd + 1e-9) {
+    /** Overlapping notes this one-voice stave cannot spell: keep every note and let the voice be SOFT. */
+    return {
+      entries: written.map(({ name, dots, pitches }) => ({ kind: "note" as const, duration: name, dots, pitches })),
+      complete: false,
+    };
+  }
+
+  const entries: ScoreMeasureEntry[] = [];
+  let at = measureStart;
+  for (const chord of written) {
+    for (const rest of restsFor(chord.at - at)) entries.push({ kind: "rest", ...rest, pitches: [] });
+    entries.push({ kind: "note", duration: chord.name, dots: chord.dots, pitches: chord.pitches });
+    at = chord.at + writtenBeats(chord.name, chord.dots);
+  }
+  for (const rest of restsFor(measureEnd - at)) entries.push({ kind: "rest", ...rest, pitches: [] });
+  return { entries, complete: true };
+}
+
 export function ScoreV2({ notes, bars = 8, width = 900, title, onExportMusicXml, onImportMusicXml, musicXmlBusy = false }: ScoreV2Props) {
   const { t } = useLanguage();
   const hostRef = useRef<HTMLDivElement | null>(null);
@@ -101,25 +246,29 @@ export function ScoreV2({ notes, bars = 8, width = 900, title, onExportMusicXml,
         renderer.resize(width, height);
         const context = renderer.getContext();
 
-        /** The notes of one staff, in VexFlow's own terms. Chords — notes at the same instant — become one StaveNote with several keys, which is how a stave writes them. */
-        const staffNotes = (measureIndex: number, treble: boolean) => {
-          const measureStart = measureIndex * 4;
-          const byStart = new Map<number, NoteEvent[]>();
-          for (const note of notes) {
-            if ((note.pitch >= SPLIT_PITCH) !== treble) continue;
-            if (note.startBeats < measureStart || note.startBeats >= measureStart + 4) continue;
-            const list = byStart.get(note.startBeats) ?? [];
-            list.push(note);
-            byStart.set(note.startBeats, list);
-          }
-          return [...byStart.entries()]
-            .sort(([a], [b]) => a - b)
-            .map(([, chord]) => {
-              const { name, dots } = durationName(chord[0]!.lengthBeats);
-              const built = new StaveNote({ keys: chord.map((entry) => keyFor(entry.pitch)), duration: name });
-              if (dots > 0) Dot.buildAndAttach([built], { all: true });
-              return built;
+        /**
+         * **One bar of one stave, as VexFlow tickables.** The rhythm — which chords, which rests, and whether
+         * the bar adds up — is decided by `planMeasure`, which is pure and has its own criteria; this only
+         * translates names to `StaveNote`s.
+         */
+        const staffEntries = (measureIndex: number, treble: boolean) => {
+          const plan = planMeasure(notes, measureIndex, treble);
+          const tickables = plan.entries.map((entry) => {
+            /**
+             * ⭐ **`dots` is passed to the constructor as well as drawn.** In VexFlow the option on the note is
+             * what changes its **tick value** (`Note.parseNoteStruct` adds half again per dot), while
+             * `Dot.buildAndAttach` only attaches the glyph. The old code drew the dot without telling the note
+             * about it, so a dotted quarter counted as one beat — a second way for a bar to stop adding up.
+             */
+            const built = new StaveNote({
+              keys: entry.kind === "rest" ? [treble ? "b/4" : "d/3"] : entry.pitches.map((pitch) => keyFor(pitch)),
+              duration: entry.duration,
+              dots: entry.dots,
             });
+            if (entry.dots > 0) Dot.buildAndAttach([built], { all: true });
+            return built;
+          });
+          return { plan, tickables };
         };
 
         const systemsPerRow = 2;
@@ -142,14 +291,18 @@ export function ScoreV2({ notes, bars = 8, width = 900, title, onExportMusicXml,
               if (measure === measuresInSystem - 1) stave.setEndBarType(Barline.type.END);
               stave.setContext(context).draw();
 
-              const entries = staffNotes(measureIndex, treble);
+              const { plan, tickables } = staffEntries(measureIndex, treble);
               /**
-               * **A measure with nothing in it is a whole rest, which is what a musician reads as "nothing here".** An empty stave with no rest in it looks like a mistake rather than like silence.
+               * **The bar is complete by construction, so the voice stays STRICT** — and a bar that genuinely
+               * cannot add up (overlapping notes, which one voice per staff cannot spell) is the only one drawn
+               * SOFT, so that its notes stay on the page instead of becoming an error message.
                */
-              const voice = entries.length > 0 ? new Voice({ numBeats: 4, beatValue: 4 }).addTickables(entries) : new Voice({ numBeats: 4, beatValue: 4 }).setStrict(false).addTickables([new StaveNote({ keys: [treble ? "b/4" : "d/3"], duration: "wr" })]);
+              const voice = new Voice({ numBeats: 4, beatValue: 4 });
+              if (!plan.complete) voice.setStrict(false);
+              voice.addTickables(tickables);
               new Formatter().joinVoices([voice]).format([voice], staveWidth - 40);
-              // Beams are grouped where the notes are eighths or shorter; VexFlow decides the grouping, which is the policy a reader expects from a score.
-              const beamable = entries.filter((entry) => entry.getDuration() === "8" || entry.getDuration() === "16");
+              // Beams are grouped where the notes are eighths or shorter; VexFlow decides the grouping, which is the policy a reader expects from a score. Rests are never beamed.
+              const beamable = tickables.filter((entry) => !entry.isRest() && (entry.getDuration() === "8" || entry.getDuration() === "16"));
               if (beamable.length > 1) Beam.generateBeams(beamable);
               voice.draw(context, stave);
             }

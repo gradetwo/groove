@@ -12,20 +12,27 @@ import { LanguageProvider } from "../i18n/LanguageContext";
 /**
  * VexFlow draws into a real SVG canvas, and jsdom has no layout: the library's own renderer is stubbed so that **what is being tested is our translation** — which notes go on which stave, at which position — rather than VexFlow's engraving, which is VexFlow's job and its own test suite's.
  */
-const drawn: { notes: string[]; clefs: string[] } = { notes: [], clefs: [] };
+const drawn: { notes: string[]; clefs: string[]; dotCounts: number[] } = { notes: [], clefs: [], dotCounts: [] };
 /** Set by one criterion to make the renderer throw; the mock reads it when a Renderer is constructed. */
 const failNextRender = { value: false };
 vi.mock("vexflow/core", () => {
   class StaveNote {
     keys: string[];
     duration: string;
-    constructor(options: { keys: string[]; duration: string }) {
+    constructor(options: { keys: string[]; duration: string; dots?: number }) {
       this.keys = options.keys;
       this.duration = options.duration;
       drawn.notes.push(`${options.keys.join("+")}:${options.duration}`);
+      // The constructor's `dots` is the tick value; `Dot.buildAndAttach` is only the glyph. Recorded
+      // separately so a criterion can tell the two apart.
+      drawn.dotCounts.push(options.dots ?? 0);
     }
     getDuration() {
       return this.duration;
+    }
+    /** Real `StaveNote`s answer this, and the beaming filter asks: a rest is never beamed. */
+    isRest() {
+      return this.duration.endsWith("r");
     }
   }
   class Stave {
@@ -118,6 +125,7 @@ describe("the score", () => {
   beforeEach(() => {
     drawn.notes = [];
     drawn.clefs = [];
+    drawn.dotCounts = [];
   });
 
   it("writes a note above middle C on the treble stave and one below it on the bass", () => {
@@ -163,6 +171,31 @@ describe("the score", () => {
     renderScore([], 1);
     return waitFor(() => {
       expect(drawn.notes.some((entry) => entry.endsWith(":wr"))).toBe(true);
+    });
+  });
+
+  it("completes a one-beat bar with rests, and still draws every note that is in it", () => {
+    /**
+     * The field report this criterion comes from: the starter content of every new track is one sixteenth per
+     * beat — one beat in a 4/4 bar — and the score wrote it into a STRICT four-beat voice, so VexFlow answered
+     * `IncompleteVoice` and the person who opened the Score tab got a runtime error instead of their notes.
+     * The silence is written now, and **no note is lost in the process**: four in, four drawn.
+     */
+    renderScore([note(60, 0, 0.25), note(60, 1, 0.25), note(60, 2, 0.25), note(60, 3, 0.25)], 1);
+    return waitFor(() => {
+      expect(drawn.notes.filter((entry) => entry === "c/4:16")).toHaveLength(4);
+      // 0.75 beats of rest after each sixteenth is what makes the bar add up.
+      expect(drawn.notes.some((entry) => entry.endsWith(":8r"))).toBe(true);
+      expect(screen.queryByTestId("score-problem")).toBeNull();
+    });
+  });
+
+  it("tells the note about its dot, because the dots option is the duration and the glyph is not", () => {
+    // A dotted quarter drawn with the glyph alone counts as one beat in VexFlow — a bar that stops adding up.
+    renderScore([note(60, 0, 1.5)], 1);
+    return waitFor(() => {
+      expect(drawn.notes.some((entry) => entry.endsWith(":q"))).toBe(true);
+      expect(drawn.dotCounts).toContain(1);
     });
   });
 

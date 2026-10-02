@@ -66,6 +66,43 @@ describe("Keyboard Shortcuts & Modal (P2-20)", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  /**
+   * ⭐ **The popup is global; the sequencer's keys are not.**
+   *
+   * `?` opens this modal on every route, but the keys under "Studio Sequencer Shortcuts" are handled by
+   * `useTransportShortcuts`, which only `StudioView` mounts — on `/new` there is no listener and no undo
+   * history. The owner opened `?` there and read "Undo pattern change Ctrl+Z" for a route that has no undo, so
+   * the list must say only what the current view can keep.
+   */
+  it("does not advertise the sequencer's keys outside the studio (U: scoped shortcut help)", () => {
+    render(
+      React.createElement(
+        LanguageProvider,
+        null,
+        React.createElement(ShortcutsModal, { isOpen: true, onClose: () => {} })
+      )
+    );
+    // The global rows are still there — they work on every route.
+    expect(screen.queryByText("跳转至 工作台") || screen.queryByText("Go to Studio")).toBeTruthy();
+    // The sequencer rows are not, and the modal says where they do apply.
+    expect(screen.queryByText(/撤销步进修改|Undo pattern change/)).toBeNull();
+    expect(screen.queryByText(/重做步进修改|Redo pattern change/)).toBeNull();
+    expect(screen.getByTestId("shortcut-studio-scope-note")).toBeTruthy();
+  });
+
+  it("shows the sequencer's keys where that listener is mounted, undo and redo included", () => {
+    render(
+      React.createElement(
+        LanguageProvider,
+        null,
+        React.createElement(ShortcutsModal, { isOpen: true, onClose: () => {}, scope: "studio" })
+      )
+    );
+    expect(screen.queryByText(/撤销步进修改|Undo pattern change/)).toBeTruthy();
+    expect(screen.queryByText(/重做步进修改|Redo pattern change/)).toBeTruthy();
+    expect(screen.queryByTestId("shortcut-studio-scope-note")).toBeNull();
+  });
+
   it("handles g followed by s/c/g/t/v/m/q for fast navigation", () => {
     const handleNavigate = vi.fn();
     render(

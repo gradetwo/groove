@@ -64,6 +64,16 @@ const MainApp: React.FC = () => {
 
   const currentTab = route.tab;
 
+  /**
+   * ⭐ **Which shortcut list the `?` popup is allowed to promise.**
+   *
+   * The studio's sequencer keys are handled by `useTransportShortcuts`, which only `StudioView` mounts — the
+   * same condition that renders it below. The popup is global, so it has to be told: advertising Ctrl+Z on
+   * `/new` (a route with no listener and no undo history) is a shortcut reference making a promise the view
+   * does not keep. Derived from the render condition rather than from the URL, so the two cannot drift.
+   */
+  const shortcutScope = currentTab === "studio" && !route.newProject ? "studio" : "global";
+
   // On-demand asynchronous genre loading (P1-13)
   const targetGenreId = route.genreId || "chicago-house";
   const [selectedGenre, setSelectedGenre] = useState<Genre | null>(null);
@@ -659,6 +669,7 @@ const MainApp: React.FC = () => {
       <ShortcutsModal
         isOpen={shortcutsOpen}
         onClose={() => setShortcutsOpen(false)}
+        scope={shortcutScope}
         onOpenHelp={() => {
           setShortcutsOpen(false);
           handleOpenHelp("shortcuts");

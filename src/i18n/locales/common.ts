@@ -270,6 +270,14 @@ export const commonMessages = {
   shortcut_modal_title: { en: "Keyboard Shortcuts Guide", zh: "键盘快捷键指南" },
   shortcut_section_navigation: { en: "Global Navigation (Press g followed by key)", zh: "全局导航快捷键 (按 g 后快速按字母)" },
   shortcut_section_studio: { en: "Studio Sequencer Shortcuts", zh: "工作台音序器快捷键" },
+  /**
+   * Shown where the sequencer's key listener is not mounted. It says where the keys do work and **names none of
+   * them**, because naming one here is exactly the promise the old list could not keep.
+   */
+  shortcut_studio_scope_note: {
+    en: "Sequencer keys (Space, undo/redo, grid navigation) are active on the Studio route only.",
+    zh: "音序器键位（空格、撤销 / 重做、网格漫游）只在工作台（Studio）路由上有效。",
+  },
 
   // Challenge Certificate Modal (shared global modal)
   cert_share_text: { en: "🎧 My Groove Ear Training Rank is [{tier}] ({elo} ELO)!\n🎯 Accuracy: {accuracy}% | ⚡ Best Streak: {streak} | 🧠 Mastered Genres: {mastered}\nChallenge your acoustic perception at: https://groove.wangda.today", zh: "🎧 我的 Groove 音乐盲听听力天梯已达到【{tier}】({elo} ELO)！\n🎯 正确率: {accuracy}% | ⚡ 最高连胜: {streak} 局 | 🧠 攻克曲风: {mastered} 种\n快来挑战你的声学辨识力：https://groove.wangda.today" },
