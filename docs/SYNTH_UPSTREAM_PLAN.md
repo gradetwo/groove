@@ -1,5 +1,7 @@
 # Upstream synth changes — plan
 
+> **Historical record (investigation closed 2026-09-26), plus a live upstream queue — §2–§4 only.** §1's GS-1 note-event pop was fixed at its source in `d0237a7` (release v2.34.0): the worklet's split-block copy in `public/gs1/workletProcessor.js` ('Copy each chunk to its own offset'), outliers 181.6×/153.6×/134.5× → none. §1's "next experiment" bisection and its `organStab` release 1.3→0.6 s note are dead — the shipped release is still 1.3 s (`src/data/gs1Patches.ts:483`). §2, §3 (done, ABI 9) and §4 remain the correct upstream queue.
+
 Groove vendors `gs1` from the sibling `synth` project (`vendor/gs1` + `public/gs1/*.wasm`, pinned by
 `scripts/sync-gs1.mjs` and checked by `node scripts/check-gs1.mjs`). This file is the **queue of changes that belong
 upstream**, with the measurement that asked for each one. The rule from the owner: if something needs an upstream change,

@@ -1,5 +1,7 @@
 # Uploading the mirror to R2 — what is needed, and what happens next
 
+> ⚠️ **本文是 2026-09-28 至 2026-10-01 的工作日志（当时 v2.34.18–v2.34.29），不是当前状态的说明。** 其中的「下一步」多数已落地或被本文自己更正（§56 §59 §68）；仍可照做的只有 §1–§3 的凭据/CORS 设置、§5 的 `VITE_SAMPLE_ROOT` 规则、§45 的清单条目模板与 §69 的 CORS 待办。清单与音色库的现状见 `docs/SAMPLE_LIBRARY_INTEGRATION.md`。
+
 The bucket `groove` exists. This file lists **exactly** what else the upload needs, why each item is needed, and what is done with it — so the answer to
 "还需要什么凭据" is in the repository rather than in a conversation.
 

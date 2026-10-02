@@ -1,5 +1,7 @@
 # `audioWorklet` 与 **secure context**：一份更正（2026-10-01）
 
+> 本文件是 2026-10-01 的实测与更正记录，不是现行指引。其中「业主动作：R2 CORS」（已于 2026-10-02 生效）、「render_arrangement_stems 回复缺 problems」（见 5a7d0a6）与「ensurePage 存活检查」（见 a376712）均已完工；保留本文是为了 secure-context 结论与探针清单，引用前先重跑探针。
+
 ## 更正先行：我此前写进本文档的结论是**错的** ✗
 
 我在 2026-10-01 写下过"这台 Linux 的 Chromium 没有 `OfflineAudioContext.audioWorklet`，因此**每一次 Linux 渲染都没有 GS-1、限幅器一直走回退**"✗。**这条不成立** ✗✓。

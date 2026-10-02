@@ -1,5 +1,7 @@
 # 曲风混音与响度匹配（feat/genre-mix-loudness）实施记录
 
+> 历史文档（实施记录）：本文正文 §1–§6 记录的是 2026-09-16 重配平**之前**的状态（母带链路为 masterGain→trim→fxRack→limiter、全库中位数目标 −15.80 LUFS、trim 上限 +6、限幅余量 0.15 dB）；这些已被 §7.2 与当前代码（src/audio/masterGraph.ts、MasterLimiter.ts）取代。§7 之后的实测数字也已由 2026-09-26 的 scripts/loudness.baseline.json（按分类目标）刷新。复现命令与设计取舍仍然有效。
+
 用户需求：①每个曲风默认的各轨道音量/声相/混音按该曲风特色编排；②不同曲风
 切换时总响度尽量一致；③曲风比对视图里响度也差不多。
 

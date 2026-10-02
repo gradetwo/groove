@@ -1,5 +1,7 @@
 # Audio tracks, and an SVS interface that says it is empty — scoping (owner decision 4)
 
+> 历史文档（2026-09-28 的 owner decision 4 scoping）。第九种 kind 的决策与判据仍有效；但 §1c/§1d 的"播放半边尚未建、导出路径不改、跳过并说明"已被后续提交取代（调度器 ab2059c、浏览器适配 fe1a08e、播放路径 b06c03f、离线混音 c0eead2；延迟表见 `docs/MCP.md`，音频车道 = 0 ms）。
+
 The owner's decision was: **scope audio tracks, and for singing synthesis reserve the interface and leave it empty.** This is the scope, and the stub is
 deliberately reachable so the absence is discoverable.
 

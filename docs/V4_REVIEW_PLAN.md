@@ -1,5 +1,7 @@
 # Plan from the v4 evaluation (`z2.md`)
 
+> **Historical plan (2026-09-27 – 2026-09-28).** The roadmap below was built from the `z2.md` evaluation and was superseded by `docs/Z2_ADJUDICATION.md`, which adjudicates every row of the same report; live status is in `docs/OPEN_WORK.md`. Kept for its measurements and for the report claims it corrects — several of its own workstream items were closed or decided against within days.
+
 An anonymous "v4 merged" evaluation of Groove Lab, dated against **v2.34.3**, covering the MCP server, the web app, the audio engine,
 the data model and the docs. It is the most substantial of the external reports so far: 43 claimed problems, 25 recommendations, and a
 Phase 0–4 refactor proposal. This file is the plan built from it — **after** checking its claims against the code, because a roadmap

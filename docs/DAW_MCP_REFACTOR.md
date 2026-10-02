@@ -1,5 +1,7 @@
 # The DAW/MCP refactor — what conflicts, and in what order to change it
 
+> **Status: dated refactor plan (written 2026-09-28; last touched 2026-10-02).** Stages 1–3 and 5 have landed and this document itself retires the C2/stage-4 premise; C1 is closed by `GROOVE_PACKAGE_FORMAT.md`. Read it as the record of why the model changed, not as the current work list — its line anchors and its `ClipSlot = A–D` statements are pre-change.
+
 The PC version is positioned as a **professional DAW**, and it has to let an **AI agent compose a complete song through MCP**. This
 document is the conflict inventory between that positioning and the structures the code actually has, with the evidence for each,
 and the order to change them in. It exists because the conflicts are structural — a data model or an algorithm, not a missing

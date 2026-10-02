@@ -7,6 +7,9 @@
 > 工具：`colabgen`（本机 CLI，租 Colab GPU 跑 Qwen-Image-2.1 / Qwen3-TTS / Qwen3-ASR /
 > YuE2 等；用法见 `~/skills/colabgen/SKILL.md`）。相关：`docs/COLAB.md`。
 
+> **历史文档（2026-09-25 基线的开发资产计划）**：§0/§1 的盘点数字当时是 160 曲风 / 7 皮肤，现为 **159 / 6**；`src/skins/*.css` 已移到 `src/styles/skinPalettes/`，`e2e-out/` 是 gitignore 的产物目录。
+> **P0 与 P0-a（皮肤维度封面）已落地** —— `genreCoverCandidates(id, skin)` + `genreCovers.test.ts` + `check:covers`（`ed975e9`）；尚未做的只有 §2.2–§4 的图标、语音/字幕与 fixture 清单，仍可参考。
+
 ---
 
 ## 0. 一句话结论

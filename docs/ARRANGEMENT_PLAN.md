@@ -1,5 +1,8 @@
 # Song and arrangement plan — real tracks, a step sequencer as the editor
 
+> **Historical document (plan landed, recorded 2026-09-28).** B0–B7 were delivered as written here and are superseded by later documents: the arrangement model by `docs/ARRANGEMENT_V2.md` (fixed-track arrangement is now the legacy mode), and the per-track next step by `docs/TRACK_ARRANGEMENT_PLAN.md`.
+> **⚠️ The section "The phone is a subset" is void**: `src/mobile/**` was cut in `4dffdf0` (2026-10-02) — see `docs/OPEN_WORK.md` §十三; `surfaceCapabilities.ts`'s `phone` column is marked historical. The B4 row (exporters) has in fact landed (`src/test/songRender.test.ts`).
+
 The question this answers: should the Logic-Pro-style *track/arrangement* concept be pulled forward, with the step
 sequencer demoted to "the fast way to edit a drum pattern", and should the product target **iPad and PC only**?
 

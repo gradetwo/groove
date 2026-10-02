@@ -1,5 +1,8 @@
 # Where the two workstreams stand (2026-09-28, live v2.34.18)
 
+> **Historical status snapshot** — this records the state as of 2026-09-28/29, when the live version was v2.34.18 (package.json is now 2.34.34). The measurements are kept as the project's record.
+> Two sections are superseded: the lane-cost-curve conclusion (`docs/RENDER_PROFILE.md`, 2026-09-30 — the probe has run in the `audio` scope since 2026-09-27) and the `scripts/sync_release_mirror.sh` note (retired 2026-10-01, `docs/OPEN_WORK.md` §十). The audio-lane latency has since been added to PDC's table (`docs/MCP.md`). Read status and 'next round' lines as dated.
+
 ## Where to start reading
 
 This workstream's record is spread across several documents, each of which answers one question. Read in this order:
