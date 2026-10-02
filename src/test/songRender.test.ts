@@ -139,7 +139,7 @@ describe("B2 · the arrangement flattens into one pattern", () => {
     ]);
   });
 
-  it("keeps an optional lane only when every contributing clip has it", () => {
+  it("⭐ keeps a lane any contributing clip provides, and invents nothing for the bar that wrote none", () => {
     const withRatchet = clip(4, 4);
     (withRatchet.tracks[0] as { ratchet: number[] }).ratchet = [2, 1, 1, 1];
     const withoutRatchet = clip(4, 4);
@@ -152,8 +152,25 @@ describe("B2 · the arrangement flattens into one pattern", () => {
         { A: withRatchet, B: withoutRatchet }
       )
     );
-    // A lane that only one clip defines would otherwise render the other clip's bar with invented ratchets.
-    expect(mixed.pattern.tracks[0].ratchet).toBeUndefined();
+    /**
+     * ⭐ **This criterion used to assert the opposite, and its reason is kept rather than discarded.**
+     *
+     * It was called "keeps an optional lane only when every contributing clip has it", and the comment on the old
+     * assertion was the real point: "A lane that only one clip defines would otherwise render the other clip's bar
+     * with **invented ratchets**." That concern is right, and it is what the new shape preserves — a bar whose clip
+     * wrote nothing gets `undefined`, which the renderer reads as its own default, so nothing is invented. What has
+     * changed is only that the bar which *did* write values is no longer silenced along with it.
+     *
+     * `docs/AUDIT_2026-10-02_TRIAGE.md` sections 7 and 8 record the measurement and the decision: `undefined`, not
+     * `0`, is what a missing bar contributes (`WavExporter` reads only a non-null value as written), and the
+     * criterion was flipped deliberately rather than weakened, because the old shape dropped written data for the
+     * whole song whenever one clip omitted a field.
+     */
+    expect(mixed.pattern.tracks[0].ratchet, "the lane's written values must survive the other bar").toBeDefined();
+    // The bar that wrote ratchets keeps them, exactly as written.
+    expect(mixed.pattern.tracks[0].ratchet?.slice(0, 4)).toEqual([2, 1, 1, 1]);
+    // ⭐ And the bar that wrote none gets no invented value — the old comment's own concern, still honoured.
+    expect(mixed.pattern.tracks[0].ratchet?.slice(4, 8)).toEqual([undefined, undefined, undefined, undefined]);
 
     const uniform = flattenSong(song([{ id: "s1", slot: "A", bars: 2 }], { A: withRatchet }));
     expect(uniform.pattern.tracks[0].ratchet).toEqual([2, 1, 1, 1, 2, 1, 1, 1]);

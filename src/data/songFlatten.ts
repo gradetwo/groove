@@ -173,7 +173,7 @@ export function flattenSong(song: Song): FlattenedSong {
     const filled = playable.some((bar) => bar.fill && fillTargets(bar.fill, baseTrack));
     const arrays = OPTIONAL_STEP_ARRAYS.filter(
       (name) =>
-        playable.every((bar) => {
+        playable.some((bar) => {
           const source = laneSourceFor(song, bar, trackIdx, baseTrack);
           const track = source?.clip?.tracks?.[source.trackIdx];
           return Array.isArray(track?.[name as OptionalStepArray]);
