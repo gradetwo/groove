@@ -76,6 +76,22 @@ jobs:
       - name: Actions Runtime Gate
         run: npm run check:actions
 
+      # ⭐ **The disabled-gates ledger, checked on every push.**
+      #
+      # Three measurement gates are temporarily switched off by the owner's decision of 2026-10-02
+      # (`scripts/disabledGates.mjs` is the list; `docs/DISABLED_GATES.md` is the long form): they
+      # render, or check a baseline recorded, without passing `audioLaneCatalogue` into the render,
+      # so they fall back to the synthesiser and cannot see the sampling path at all. The gates
+      # themselves are untouched — their steps below and in the manual workflow stay, print why they
+      # are off and exit 0.
+      #
+      # This step is what stops "temporarily" becoming "quietly": it fails if a listed gate still
+      # runs, if a gate is switched off without a ledger entry, or if a never-disable gate
+      # (typecheck, lint, tests, build, budget, red lines, schema, docs, the genre audit) was turned
+      # off, deleted, or dropped out of the verify chain.
+      - name: Disabled Gates Ledger
+        run: npm run check:disabled-gates
+
       - name: Version Single-Source Check
         run: npm run version:check
 
@@ -124,7 +140,13 @@ jobs:
       # The report-to-table half of the loudness gate: it reads two files, needs no browser and takes about a second,
       # so there is no reason for it to live only in `verify` and `manual-verify scope=audio` — which is exactly why
       # it went red unnoticed for a day (23 of 159 genres were invisible to it; see `loudnessTrimWiring.test.ts`).
-      - name: Loudness Trim Gate (report vs table)
+      #
+      # ⏸ **Switched off on 2026-10-02 by the owner's decision, and the step stays here so that is visible.** It is
+      # the reading half of a render that never receives `audioLaneCatalogue`: the baseline it checks was recorded
+      # with every mapped lane on the synthesiser, so it cannot see the sampling path. `scripts/disabledGates.mjs`
+      # says why, when it comes back (catalogue into the render + re-recorded baseline) and who decided; the step
+      # prints that notice and exits 0. `npm run check:disabled-gates` fails if that list and this wiring disagree.
+      - name: Loudness Trim Gate (report vs table) [disabled — see scripts/disabledGates.mjs]
         run: npm run check:loudness
 
       - name: Production Build

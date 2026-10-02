@@ -128,7 +128,7 @@
 | `src/test/stringTechniques.test.ts` | **新增** 6 条判据，把"表里的奏法"与"列表报出来的奏法"两端扣住 |
 | `src/test/ownerProjectAcceptance.test.ts` | **新增** 1 条：把业主的"断"定位到 **beat 48 = 24.0000 s**，并同条断言 `legatoGapsFor` 对弦乐报空（见 §9） |
 | `docs/STRING_TECHNIQUES.md` | **新增**：本文，量法与全部读数 |
-| `src/audio/samplerVoice.ts` | 新增 `releaseSeconds` / `MIN_RELEASE_SECONDS` / `DEFAULT_SAMPLER_RELEASE_SECONDS`（**故意未接线**，见 §10.2） |
+| `src/audio/samplerVoice.ts` | 新增 `releaseSeconds` / `MIN_RELEASE_SECONDS` / `DEFAULT_SAMPLER_RELEASE_SECONDS`（**已接线**到 `WavExporter` 的 sampler sink，见 §10.2） |
 | `src/test/samplerVoice.test.ts` | **新增** 3 条判据：释放斜坡的形状、释放比音长时缩释放、已排终点不被 `stop` 硬切 |
 | `src/test/vscoSamplerLane.test.ts` | 该测试自己的混音器原先用 `gain.value` 当**常数**读增益，于是"排了斜坡"读回来是 0（整轨静音）；改成**逐帧**求值调度（`gainAt`），这是 Web Audio 的语义 |
 | `mcp/arrangement.ts` | `ImportMcpMusicXmlOptions.instruments` ＋ `addImportedParts` 建轨时写身份（**见 §11**） |
@@ -252,7 +252,7 @@
 ⇒ **这就是那个"断"，规范里有名字。** §9.2 写的机制（新起音落在还在响的旧音上）方向对，但要收窄成：
 **交接处缺的是"旧音的淡出 × 新音的淡入"这条交叉淡化，而不只是新音有 attack。**
 
-### 10.2 ⭐ 第 (1) 步已实现：`releaseSeconds`（**机制已就位，故意未接线**）
+### 10.2 ⭐ 第 (1) 步已实现并**已接线**：`releaseSeconds`（导出路径，业主 2026-10-02 裁定）
 
 `src/audio/samplerVoice.ts` 新增 `releaseSeconds`：今天 `seconds` 走的是 `source.start(when, 0, seconds)`，
 Web Audio 规范说播放**就在那一刻结束** —— 波形被从半周期切断，是一个阶跃，而阶跃就是咔哒声。给了 `releaseSeconds` 之后，
@@ -264,22 +264,49 @@ Web Audio 规范说播放**就在那一刻结束** —— 波形被从半周期�
 
 | | 音符末尾 60 ms 内最大相邻样本差分 | 相对该信号自身的中位差分 |
 | --- | --- | --- |
-| 今天（硬切） | `1.779e-2` | **3.4×** |
+| 硬切 | `1.779e-2` | **3.4×** |
 | `releaseSeconds = 0.25` | `3.631e-3` | **0.7×** |
 
 而且**音符长度不变**（都在 4.25 s 结束），末尾 100 ms 的 RMS 两种都是 0。
 
-⚠️ **但它故意没有接到导出路径上**（`WavExporter` 的 sampler sink 不传这个参数）。理由是一个**读数**，不是判断：
-一传，**每一个导出的采样音轨响度都会变**，而业主把这一类改动留给了自己。在仓库自己的 `vscoSamplerLane` fixture 上
-（三个 0.125 s 的音），只改这一件事：
+#### 10.2.1 ⭐ 业主裁定 ①：接线（2026-10-02）
 
-| | `laneEnergy` | `lanePeakDb` |
-| --- | --- | --- |
-| 不传 | `1.3227e+4` | `-2.16 dB` |
-| 传 0.25 s | `5.9296e+3` | `-1.30 dB` |
+> **「1. 采样的"给终点而不是硬切"」**
 
-⇒ **「哪个乐器该拿这条释放」是要业主定的决定**，不是本线顺手打开的开关。机制＋判据已经在了
-（`src/test/samplerVoice.test.ts` 新增 3 条：斜坡形状、释放比音长时缩释放而不缩音、已排终点不被 `stop` 硬切），接线是一行。
+`WavExporter` 的 sampler sink 现在传它，**条件是一个读数而不是口味**：
+`recordingSeconds = buffer.duration / ratio` 是这条录音按本音速率播放的时长，所以
+**`seconds < recordingSeconds` 就是"这条音在录音还有声音时被切断了"** —— 释放正是为这一种情形给的。
+录音自己先结束的打击音**不动**（它的衰减就是它的收尾）；plain-sample 轨的
+`seconds === buffer.duration`，按构造就走老路。循环音也拿不到斜坡：`samplerVoice` 的分支顺序先处理循环
+（机制与钳位仍在 `samplerVoice.ts`，注释里写着为什么它默认保持旧行为）。
+
+**改前／改后（真实 Chromium 导出，业主的形状：`vsco2ce:ViolinEnsSusVib`，每 8 beats 一个三音和弦、
+每音 4.25 s、重叠 0.5 beat，走完整的 master bus ＋ loudness trim ＋ true-peak limiter）：**
+
+| | 改前 | 改后 | Δ |
+| --- | --- | --- | --- |
+| lane energy | `38609.47` | `34069.43` | **−0.54 dB** |
+| lane peak | `−1.3000 dB` | `−1.3000 dB` | 0.00 |
+| integrated LUFS | `−12.7039` | `−12.9245` | **−0.22 dB** |
+| true peak | `−1.299999 dBTP` | `−1.299999 dBTP` | 0.00 |
+| 限幅器 | `worklet`，介入 | `worklet`，介入 | 同 |
+| 换和弦点（4.19–4.31 s）最大相邻差分 ÷ 该信号自身中位 | `1.3995×` | `0.5952×` | **2.35× 更小** |
+
+**限幅器接得住**：导出的真峰值被钉在内部天花板 `−1.30 dBTP`（≤ 0 dBFS），把天花板抬高 6 dB 做对照，
+自然峰值是 `+0.5249 dBTP` ⇒ 限幅器在两种状态下**都减少 1.825 dB**（改前＝改后）。
+⇒ 这次接线**不抬高真峰值**：峰值在起音处，释放只动尾巴；响度**降低** 0.22 dB。**无需**任何增益硬凑。
+
+⚠️ **与 `vscoSamplerLane` fixture 那组预览的差别，如实说**：预览（jsdom 假混音器，限幅器走
+`DynamicsCompressor` 回落）里峰值是 `-2.16 → -1.30 dB`（升高），因为释放让能量变少、压缩器少压一点；
+真实 Chromium 导出走 worklet 真峰值天花板，峰值本来就钉在天花板上，所以不动。两组读数都在这，
+不是二选一。接线后该 fixture 的实测是 `laneEnergy=5.9296e+3 lanePeakDb=-1.30 dB` ——
+与预览里"传 0.25 s"那一行**逐位一致**。
+
+机制＋判据（`src/test/samplerVoice.test.ts` 3 条：斜坡形状、释放比音长时缩释放而不缩音、已排终点不被 `stop` 硬切）＋
+**接线本身的判据**（`src/test/vscoSamplerLane.test.ts` 新增 1 条：正例——录音比音长的音拿到"无长度＋斜坡＋斜坡后的 stop"；
+反例——gate 比录音还长的音**不被淡出**，仍走 `start(when, 0, seconds)`）＋
+`src/audio/WavExporter.ts` 的 sink 注释；`docs/DISABLED_GATES.md` 记录随之被暂时关掉的门禁。
+复现脚本：`/tmp/release-end-measure/measure_release.mjs`（scratch，不入库）。
 
 ### 10.3 三条**不许夸大**的边界（调研写得很准，照录）
 
@@ -291,8 +318,10 @@ Web Audio 规范说播放**就在那一刻结束** —— 波形被从半周期�
   这个上下文，而曲风角色今天走的是合成/物理模型，真采样只经"显式 sampler 轨的 `assetId`"到达播放。⇒ 停在边界，不动桥。
 * **`legatoGaps` 只报写作层的缝，测不到播放层的重新起音** —— 这正是缺陷 A 能躲过它的原因；补上的播放层判据见 §9.3 与 §9.4。
 
-⚠️ **一条必须说清的前提**：业主截图的音频里，弦乐轨走的是**内置预设**（导入把每个 part 建成 `kind:"synth"`、`sample=null`），
-**不是** VSCO 采样。所以 §10.2 的采样释放对他今天听到的那一轨**还不生效**：它要等那座桥，或等他显式用一条 sampler 轨。
+⚠️ **一条必须说清的前提（接线之后仍然成立）**：业主截图的音频里，弦乐轨走的是**内置预设**
+（导入把每个 part 建成 `kind:"synth"`、`sample=null`），**不是** VSCO 采样。所以 §10.2 的采样释放
+**对他今天听到的那一轨不生效** —— 它只对"真的解析到了一条采样轨"的导出生效，要等那座桥，或等他显式用一条
+sampler 轨。**不要说成"业主的弦乐被修好了"。**
 
 ---
 

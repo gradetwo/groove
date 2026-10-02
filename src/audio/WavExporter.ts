@@ -64,7 +64,7 @@ import { applyGenreFxToGraph, resolveGenreFx } from "../data/genreFx";
 import { scheduleOfflineAudioLanes, isAudioLane, type OfflineAudioLaneReport } from "./offlineAudioLanes";
 import { sampledInstrumentProblems, sampledStandDownIndexes } from "./sampledLanes";
 import { browserSampleLoader } from "./browserSampleGraph";
-import { startSamplerNote } from "./samplerVoice";
+import { DEFAULT_SAMPLER_RELEASE_SECONDS, startSamplerNote } from "./samplerVoice";
 import { SAMPLE_CATALOGUE, type SampleAsset } from "../data/sampleCatalogue";
 import { bufferHasAudio, type ChannelDataBuffer } from "./renderSilence";
 
@@ -1788,14 +1788,35 @@ async function renderPatternOfflineOnce(
            * between the lane planner and the voice, so an opcode that stops at this line does not exist as far as the render is
            * concerned — which is exactly what had happened to `loop_mode`. `note` is absent for a plain-sample lane, which has no
            * SFZ and therefore nothing that could declare a loop.
+           *
+           * ⭐ **And so does the release: a note the recording outlasts is given an end, not a cut.**
+           *
+           * `start(when, 0, seconds)` ends playback **at that instant** — the waveform is truncated mid-cycle, which is a step,
+           * and a step is a click. On the owner's own material that step is the sustained string bed *breaking* at every chord
+           * change (measured on `VlnEns_susVib_D3_v1.wav`: the largest sample-to-sample step in the note's last 60 ms falls from
+           * **3.4× the signal's own median step to 0.7×** once the voice is given a ramp instead, with the note's length
+           * unchanged). So a voice whose written length stops **before the recording would** is started with no scheduled length
+           * and ramped to silence over `DEFAULT_SAMPLER_RELEASE_SECONDS`, arriving at the same second through a ramp rather than
+           * a step (`samplerVoice` owns the shape, the clamp and the reason it defaults to the old behaviour).
+           *
+           * **The condition is the measurement, not a taste.** `recordingSeconds = buffer.duration / ratio` is how long the
+           * sample lasts at the rate this note plays it, so `seconds < recordingSeconds` is exactly "this voice is cut off while
+           * the recording still had sound in it" — the case a release is for. A percussive hit whose bytes end before the written
+           * gate is **left alone**: its own decay is its ending, and fading it would shorten a sound nobody truncated. A plain
+           * sample lane has `seconds === buffer.duration`, so it takes the old path by construction. A looping voice is given a
+           * ramp by nobody: `samplerVoice` schedules the loop's own end first, and the release is ignored there — see the branch
+           * order in that function rather than a second copy of the rule here.
            */
+          const seconds = event.seconds ?? buffer.duration;
+          const recordingSeconds = buffer.duration / (Number.isFinite(ratio) && ratio > 0 ? ratio : 1);
           startSamplerNote({
             context: ctx,
             destination: graph.musicBusInput,
             buffer,
             ratio,
             whenSeconds: Math.max(0, event.atSeconds),
-            seconds: event.seconds ?? buffer.duration,
+            seconds,
+            ...(seconds < recordingSeconds ? { releaseSeconds: DEFAULT_SAMPLER_RELEASE_SECONDS } : {}),
             ...(note?.loopMode === undefined ? {} : { loopMode: note.loopMode }),
             ...(note?.loopStartFrames === undefined ? {} : { loopStartFrames: note.loopStartFrames }),
             ...(note?.loopEndFrames === undefined ? {} : { loopEndFrames: note.loopEndFrames }),

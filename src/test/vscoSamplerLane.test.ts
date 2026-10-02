@@ -498,7 +498,7 @@ describe("a VSCO 2 CE sampler lane", () => {
      *
      * The fixture's notes are half a second apart and its sample is 1.2 seconds long, so a voice with no scheduled end is still
      * sounding through the next three notes — the drone as a listener meets it. The window sits well after the first note's
-     * scheduled end (0.8 steps of 0.125 s = 0.1 s) and well before the second note's onset (0.5 s), so it must be silent.
+     * scheduled end (one 1/16 step of 0.125 s) and well before the second note's onset (0.5 s), so it must be silent.
      *
      * The floor is the file's existing audible/inaudible line (−60 dBFS, the one `lanePeakDb` is read against) and the two
      * measurements are far apart on either side of it: **−Infinity dBFS** (exact digital silence) with the note's end scheduled,
@@ -509,5 +509,65 @@ describe("a VSCO 2 CE sampler lane", () => {
     // eslint-disable-next-line no-console
     console.log(`MEASURED gapPeak(0.30–0.45 s)=${gapPeakDb.toFixed(2)} dBFS`);
     expect(gapPeakDb, `peak between the first two notes = ${gapPeakDb.toFixed(2)} dBFS`).toBeLessThan(-60);
+  });
+
+  it("gives a note the recording outlasts an end through a ramp, and leaves a note whose own bytes outlast it alone", async () => {
+    /**
+     * ⭐ **The owner's rider ①, at the seam where it was wired: `WavExporter`'s sampler sink.**
+     *
+     * The mechanism (`releaseSeconds`) has its own criteria in `samplerVoice.test.ts`; what neither they
+     * nor the plan can see is **whether the export path asks for it**. It asks on a measured condition —
+     * `seconds < buffer.duration / ratio`, i.e. "this voice is cut off while the recording still had sound
+     * in it" — so this test drives the real export twice: once with the fixture's own 0.1 s notes against a
+     * 1.2 s recording (cut short → a ramp), and once with a gate longer than any recording the fixture can
+     * resolve (nothing is cut → the old `start(when, 0, seconds)`).
+     *
+     * Why the second half matters as much as the first: a percussive hit whose bytes end before the written
+     * gate *is not truncated by anybody*, and fading it would shorten a sound nobody cut. A one-line
+     * unconditional wiring would pass the first half and quietly change every drum export.
+     */
+    const assets = [vscoAsset(mirror.root)];
+
+    const renderAndCapture = async (pattern: SequencerPattern) => {
+      await exportMasterWav(pattern, "custom", { audioLaneCatalogue: assets });
+      const context = MixingOfflineAudioContext.lastInstance as MixingOfflineAudioContext;
+      return context.createdBufferSources.filter((source) => source.started.length > 0);
+    };
+
+    const cut = await renderAndCapture(vscoPattern());
+    expect(cut, "the fixture's four notes are four voices").toHaveLength(4);
+    for (const source of cut) {
+      const start = source.started[0]!;
+      const gain = (source.outgoing[0]?.node as FakeGainNode).gain;
+      // No scheduled length: the recording is started whole and the *gain* carries the end.
+      expect(start.duration, "a cut-short note is given an end, not a length").toBeUndefined();
+      const ramp = gain.events.find((event) => event.type === "linearRampToValueAtTime");
+      expect(ramp, "the voice is ramped rather than cut").toBeTruthy();
+      expect(ramp!.value, "the ramp reaches silence").toBe(0);
+      // The note's end is the same second it always was (one step of 0.125 s), reached through a ramp.
+      expect(ramp!.time).toBeCloseTo(start.when + 0.125, 6);
+      // And the scheduled `stop` lands *after* the ramp, so it cannot cut through the fade it exists for.
+      const stop = source.stopCalls.filter((when): when is number => typeof when === "number");
+      expect(stop).toHaveLength(1);
+      expect(stop[0]!).toBeGreaterThan(ramp!.time);
+    }
+
+    /**
+     * The negative control: the same lane with a gate longer than the whole 1.2-second recording at every
+     * ratio the fixture resolves (the largest is 1.2 / 0.5 = 2.4 s, and 40 steps of 1/16 at 120 bpm is 5 s).
+     */
+    const long = vscoPattern();
+    for (const track of long.tracks) track.gate = new Array(16).fill(40);
+    const whole = await renderAndCapture(long);
+    expect(whole, "the control still starts four voices").toHaveLength(4);
+    for (const source of whole) {
+      const start = source.started[0]!;
+      const gain = (source.outgoing[0]?.node as FakeGainNode).gain;
+      expect(start.duration, "a note the recording does not reach keeps its scheduled length").toBeCloseTo(5, 6);
+      expect(
+        gain.events.filter((event) => event.type === "linearRampToValueAtTime"),
+        "nothing is faded that nobody truncated"
+      ).toEqual([]);
+    }
   });
 });

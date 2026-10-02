@@ -67,22 +67,26 @@ export interface SamplerVoiceInput {
    * sustaining one does not, and this layer does not know which it was handed. The caller that resolves the region
    * is the one that knows, and it passes the number in.
    *
-   * ## ⚠️ And it is deliberately **not** wired to the export path yet
+   * ## ⭐ It is wired to the export path — since 2026-10-02, by the owner's decision
    *
-   * `WavExporter`'s sampler sink does not pass this, so every exported sampled note still hard-cuts at its gate. That
-   * is a decision held for the owner rather than an oversight, because turning it on **changes the loudness of every
-   * exported sampler render** and the owner has reserved that class of change.
+   * `WavExporter`'s sampler sink passes it for exactly one case, measured rather than chosen:
+   * **a voice whose written length stops before the recording would**. `recordingSeconds =
+   * buffer.duration / ratio`, so `seconds < recordingSeconds` is "this note is cut off while the
+   * recording still had sound in it", and that note is started with no scheduled length and ramped to
+   * silence over `DEFAULT_SAMPLER_RELEASE_SECONDS`. A percussive hit whose own bytes end before the
+   * written gate is left alone — its decay is its ending — and a plain sample lane has
+   * `seconds === buffer.duration`, so it takes the old path by construction.
    *
-   * Measured on this repository's own `vscoSamplerLane` fixture, whose three notes are 0.125 s each, with that test's
-   * own reported figures and nothing else changed:
-   *
-   * ```
-   *   no release   laneEnergy=1.3227e+4   lanePeakDb=-2.16 dB
-   *   release 0.25 laneEnergy=5.9296e+3   lanePeakDb=-1.30 dB
-   * ```
-   *
-   * So the mechanism is here, proved by its own criterion, and **which instrument gets it is a decision to take
-   * deliberately** — see `docs/STRING_TECHNIQUES.md` §11.
+   * The owner's ruling is the reason it is on at all: *"采样的'给终点而不是硬切'"* (rider 1,
+   * 2026-10-02), after this mechanism's own measurement on the owner's material (the largest
+   * sample-to-sample step in a note's last 60 ms fell from **3.4× the signal's own median step to
+   * 0.7×**, with the note's length unchanged). Wiring it changes what every exported sampled tail
+   * sounds like — measured on a real Chromium export of the owner's shape (`VlnEns_susVib`, three-note
+   * chords every 8 beats, 4.25 s each): lane energy **−0.54 dB**, integrated loudness **−0.22 dB**,
+   * true peak **unchanged at −1.30 dBTP** (the limiter holds the ceiling, reducing 1.83 dB either
+   * way), and the seam discontinuity at the chord change **1.40× → 0.60×** the signal's own median
+   * step. `docs/STRING_TECHNIQUES.md` §10.2 carries the table and `docs/DISABLED_GATES.md` the
+   * gates that were switched off beside it.
    */
   releaseSeconds?: number;
 }

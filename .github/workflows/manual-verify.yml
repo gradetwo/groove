@@ -111,6 +111,13 @@ jobs:
         if: inputs.scope == 'audio' || inputs.scope == 'all'
         run: |
           npm run check:gs1
+          # ⏸ `check:timbre` and `check:loudness:fresh` are switched off by the owner's decision of
+          # 2026-10-02: both hold baselines recorded from a render that is never given
+          # `audioLaneCatalogue`, so every lane mapped to a recording falls back to the synthesiser and
+          # neither gate can see the sampling path. They still run here, print why they are off and exit
+          # 0; `scripts/disabledGates.mjs` is the list (with the return condition),
+          # `docs/DISABLED_GATES.md` is the long form, and `npm run check:disabled-gates` fails if this
+          # wiring and that list disagree.
           npm run check:timbre
           npm run check:loudness:fresh
 

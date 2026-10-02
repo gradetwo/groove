@@ -171,8 +171,26 @@ run("Real-browser performance gate", "node", ["scripts/measure_live_perf.mjs", "
 runRedlinesIfPresent();
 // Reads the committed loudness baseline only (no browser), so the fast track stays
 // browser-free; the measurement itself is `node scripts/measure_genre_loudness.mjs`.
-run("Genre loudness spread gate", "node", ["scripts/check_loudness_spread.mjs"]);
-run("Genre timbre spread gate", "node", ["scripts/check_timbre_spread.mjs"]);
+//
+// ⭐ **Both of these are disabled while the sampling path settles, and the switch is the same one the
+// npm scripts use** — `scripts/disabled_gates.mjs` is the ledger, `disabled_gate_guard.mjs` prints
+// its reason and exits 0. The gate files and their logic are untouched; the notice names why, when
+// they come back and who decided. `npm run check:disabled-gates` fails if this wiring and the ledger
+// ever disagree.
+run("Genre loudness spread gate", "node", [
+  "scripts/disabled_gate_guard.mjs",
+  "check:loudness",
+  "--",
+  "node",
+  "scripts/check_loudness_spread.mjs",
+]);
+run("Genre timbre spread gate", "node", [
+  "scripts/disabled_gate_guard.mjs",
+  "check:timbre",
+  "--",
+  "node",
+  "scripts/check_timbre_spread.mjs",
+]);
 run("GS-1 budget evidence gate", "node", ["scripts/check_gs1_load.mjs"]);
 run("GS-1 live timing jitter gate", "node", ["scripts/check_gs1_jitter.mjs"]);
 console.log("\n\ud83c\udf89 SLOW TRACK PASSED");
