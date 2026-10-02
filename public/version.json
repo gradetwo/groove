@@ -1,27 +1,27 @@
 {
-  "version": "2.34.37",
+  "version": "2.34.38",
   "releaseDate": "2026-10-02",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.37",
-    "date": "2026-10-02",
+    "version": "2.34.38",
+    "date": "2026-10-03",
     "category": "feature",
     "title": {
-      "zh": "无头渲染补齐：七个工具、按帧进度、界限按实测",
-      "en": "Headless rendering filled in: seven tools, frame progress, and bounds measured rather than assumed"
+      "zh": "音色盘大补：十一个缺口、弦乐连奏、编排器的六处缺口",
+      "en": "The palette refilled: eleven gaps, string legato, and the editor's six missing pieces"
     },
     "highlights": [
       {
-        "zh": "三个此前不支持无头的工具现在支持：响度归一、单音试听、分轨导出。",
-        "en": "Three tools that could not render headless now can: loudness normalisation, single-note audition, and per-track stems."
+        "zh": "十三个乐器缺口填上十一个（另两个按独立依据排除）；弦乐四类演奏法入库；新预算用满到 99.78%——两条候选是量过之后不买的。",
+        "en": "Eleven of thirteen instrument gaps are filled, the last two excluded on stated grounds; the four string techniques land; and the new budget reaches ninety-nine point eight percent, with two candidates declined after measurement."
       },
       {
-        "zh": "无头渲染会报进度：单文件按帧报，分轨逐轨按帧报且跨轨不重启计数。",
-        "en": "A headless render reports progress: frames for one file, frames per track for stems, counted across tracks rather than restarting."
+        "zh": "「弓没停过的重叠」现在是连奏：落在还在响的和弦上的起音 57 → 25，同一条规则也接到实时两条路与工具回复。",
+        "en": "An overlap the bow never stopped is now a legato, taking attacks on a sounding chord from fifty-seven to twenty-five, and the same rule now reaches both live paths and the tool reply."
       },
       {
-        "zh": "客户端传 headless 不再被静默丢掉——此前它会收到一句“渲染被禁用”。",
-        "en": "Sending headless is no longer silently dropped, which used to answer with a disabled-rendering error instead."
+        "zh": "新编排器补齐：撤销/重做、工程命名与持久化、导出菜单与导入入口、导入 MIDI 时指定乐器、顶栏工程名。",
+        "en": "The new editor gains undo and redo, project naming and persistence, its export menu and import entry, an instrument choice on MIDI import, and the project name in the header."
       }
     ],
     "truncated": true
