@@ -186,15 +186,17 @@ jobs:
         include:
           - leg: Desktop browsers
             only: Desktop
-          # ⭐ **iPhone legs are off, by the owner's decision (2026-09-30): iPhone support is frozen for now.**
+          # ⭐ **This matrix is desktop-only, by the owner's decision of 2026-10-02: the mobile version is cut.**
           #
-          # "最近我们iphone都是不更新冻结，所以与iphone有关的各种CI/CD都可以先关掉，以后需要时候我再让你开" — so the leg is commented out rather than deleted, and the matrix targets it filtered to are still in
-          # `scripts/test_matrix.js`. To bring it back: uncomment these two lines, and the matrix script on this machine runs the same legs the job would (the `e2e` profile, not the desktop-only one).
+          # The phone shell, its criteria and its gates all go, and `mobile-preserved` keeps the phone build for
+          # maintenance. Before that the iPhone legs were already off — the owner froze iPhone support on
+          # 2026-09-30 ("与iphone有关的各种CI/CD都可以先关掉"), and the iPad leg followed here. The matrix targets
+          # behind both legs are still in `scripts/test_matrix.js` until the round that removes the shell, so this
+          # comment is the record rather than the whole removal.
           #
-          # It is a decision and not a workaround for a flake: the last two iPhone legs failed on a worker fetch and a 44 px touch target, and **both were left unfixed on purpose** — fixing them costs time for a device
-          # nobody is shipping to, and a frozen device's failures should not block the device we are shipping to.
-          # ⭐ **The iPad leg is gone too, by the owner's decision of 2026-10-02: the mobile version is cut** —
-          # the shell, its criteria and its gates all go, and a branch keeps the phone build for maintenance.
+          # The iPhone freeze was a decision and not a workaround for a flake: its last two legs failed on a worker
+          # fetch and a 44 px touch target, and both were left unfixed on purpose, because a frozen device's
+          # failures should not block the device we are shipping to.
 
     steps:
       - name: Checkout repository
@@ -221,14 +223,15 @@ jobs:
       - name: Production Build
         run: npm run build
 
-      # The **full** seven-target matrix on every push and pull request: three desktop browsers and the four
-      # phone/tablet targets. It used to run the desktop profile only, on the grounds that the phone and tablet
-      # surfaces were being rebuilt and would report failures the redesign would invalidate — that redesign has
-      # shipped, the mobile targets have been green in `verify` for several releases, and a gate that skips two
-      # thirds of the targets is how an iPad-only regression survives to production.
+      # ⭐ **The desktop matrix on every push and pull request: three browsers.**
+      #
+      # It used to be seven targets, three desktop and four phone or tablet, and the comment here argued that a
+      # gate skipping two thirds of them is how an iPad-only regression survives. That argument was sound while the
+      # phone surface shipped; the owner has since cut the mobile version altogether, so the targets it was about no
+      # longer exist and the matrix is the desktop one. `docs/OPEN_WORK.md` §十三 has the decision and the branch.
       - name: Cross-Browser & Cross-Device Test Matrix (${{ matrix.leg }})
         env:
-          # Read by `scripts/test_matrix.js`: this leg's slice of the seven targets.
+          # Read by `scripts/test_matrix.js`: this leg's slice of the desktop targets.
           E2E_ONLY: ${{ matrix.only }}
         run: npm run test:e2e:all
 
