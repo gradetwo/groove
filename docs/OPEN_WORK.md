@@ -1400,3 +1400,31 @@ Part 2 按价值密度：弦乐演奏法 0.50 → VSCO 其余管弦 0.89 → 一
 ### 34.4 落到哪些库 ✓
 
 **先前"查不到授权声明"的那批** ✓：`OvationGuitar`／`DamiensFunkyGuitar`／`Terkelsen.Marimba`／`EthanWiner.Soundfonts`／`Kastendieck.SteelDrum`／`Clavecin` ✓——**逐个按质量判**：**好的 ⇒ 镜像 ＋ 记原始链接 ＋ 记"未找到声明"✓；差的 ⇒ 不要 ✓**（**§26 听感优先 ✓**）。
+
+## 三十五、目标 ②③ 的两笔落地 ＋ **我替工作流判的三件后续**（2026-10-02 ✓）
+
+### 35.1 落了什么 ✓✓
+
+* **`9206134` "the score writes its silence, and the shortcuts admit their scope"** ✓✓——**① 编排页那句骗人的 Ctrl+Z 没了** ✓（**`/new` 上 before `advertises Undo: true` → after `false` ✓），而**工作台上仍然显示、且 Ctrl+Z **真的有效****（点格子翻转、Ctrl+Z 翻回 ✓✓）——**"不撒谎"没有变成第二种谎 ✓✓**；**② Score 的 `IncompleteVoice` 修了**（**`score-problem` 由 `[RuntimeError] …` 变 `null` ✓，**23 组符头照画**，**音符一个不丢** ✓✓）；
+* **`11340d8` "a musical situation now chooses the technique"** ✓✓——**弦乐那条**被桥挡住**的竖片接上了 ✓**（**含 `spiccato`／`tremolo` 的**回落说明**✓**）。
+
+### 35.2 而它顺手挖出**第二个同族 bug** ✓✓
+
+**附点时值只画了附点字形、没把 `dots` 传给 `StaveNote`** ✗✓ ⇒ **附点四分被当成一拍**（**它的原话**："**那个选项是 tick 值；`Dot.buildAndAttach` 只是字形**" ✓✓）。**⇒ 又是**靠量**挖出来的，不是靠读 ✗。**
+
+### 35.3 我替它判的三件后续 ✓✓
+
+| # | 后续 | 裁定 |
+| --- | --- | --- |
+| 1 | **`HelpCenterModal` 那份手册仍无条件列 Ctrl+Z** ✗ | **同一类误导 ⇒ 也要按视图作用域 ✓，排队 ✓** |
+| 2 | **打击乐谱面未实现** ✗（**要 `trackKind` ⇒ 得动 `ArrangementViewV2.tsx`**） | **被 `persist` 压着 ⇒ 排队 ✓**（**它留的 `TODO(defense)` ＋ 组件头说明是对的 ✓**） |
+| 3 | **跨小节音符不切开、不加连音线** ✗ | **本仓 MusicXML 写出侧会拆 ✓；过满退 SOFT 声部 ⇒ **不丢音** ✓——接受 ✓** |
+
+### 35.4 ⚠️ 两条**流程教训**（**我自己的错，记下 ✓**）
+
+* **"红"要先分清是不是**超时**** ✗✓——**我给 `typecheck`／`lint` 各 300 秒，cold run 跑不完 ⇒ 超时返回非零 ⇒ 我读成失败 ✗**；**直接跑 `tsc --noEmit` 与 `eslint . --quiet`，两条都干净 ✓✓**（**六条轻门禁实为全绿 ✓**）。**⇒ 规矩：报红之前先确认那是失败、不是超时 ✓**；
+* **`/tmp` 是 tmpfs（7.8G 内存盘）** ✗✓——**被别的树的镜像目录塞满后，**进程根本起不来**（连 `true` 都 `ENOSPC` ✗），四条工作流同时卡死 ✓**；**而 `/home` 有 135G ✓**。**⇒ 规矩：GB 级一律 `/var/tmp` ＋ `TMPDIR=/var/tmp` ✓**（**已传到各条 ✓**）。
+
+### 35.5 而我要认一处**指令错** ✓
+
+**我要求"贴控制台原文"，前提是错的** ✗——**浏览器控制台**从来没有 `IncompleteVoice`**：**是 `ScoreV2` 抓住它、渲染进 `score-problem`** ✓；**工作流如实指出并给了两边原文 ✓✓**（**改前 `score-problem` 有、console 只有 3 条无关 AudioWorklet 警告；改后 `null`、匹配行数 0 ✓**）。
