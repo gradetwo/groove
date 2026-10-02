@@ -2596,3 +2596,42 @@ Bass 3 ｜ Guitar 3 ｜ **Orchestral 3** ｜ **Acoustic Piano 2** ｜ **Organ 2*
 ⇒ **⇒ 把新库接进去**只能是**替换**某个名字的映射**（换成新库里**更贴**的录音），**不是机械新增** ✓。
 **何时回来** ✓：**下一轮先把那张表的**真实键名与分区**读准**（不再猜），**然后列一张"可替换候选"表**
 （名字 → 现在的库 → 新库里更贴的库 ＋ 理由），**交业主；业主不在时按"较优方案"逐条决定并留痕** ✓。
+
+## 八十三、调色板的**真实形状与分区**（＋ 更正我自己上一轮的一处算术）＋ 新库的**可替换候选**（2026-10-03 ✓）
+
+### 83.1 形状 ✓
+
+**行的键是 `instrument`，资产键是 `assetId`** ✓；**`SAMPLED_INSTRUMENT_SYNTHS` 是**纯字符串数组**、没有键** ⇒
+**⇒ 上一轮我按 `name:` 数得 0，是**我猜错键名**（**而两次搜 id 的探针本来就搜对了 ✓**）。
+
+### 83.2 分区 ✓✓（**并更正一处**）
+
+```
+**22** 已采样（`SAMPLED_INSTRUMENTS`）＋ **37** 按定义合成（`SAMPLED_INSTRUMENT_SYNTHS`）＋ **2** 缺口 ＝ **61** 个 distinct 名字 ✓
+   （与文件自己的注释"sixty-one distinct names across fifteen families"一致 ✓）
+**`ALL_SAMPLED_INSTRUMENTS` ＝ 22 ＋ 3（`SAMPLED_TECHNIQUE_INSTRUMENTS` 是 `playableTechniques().map` 的**派生行**）＝ 25 行**
+⚠️ **更正** ✗✓：**我上一轮脚本打印的"22＋3＋2＋37 ＝ 64"是把**行数当名字数**了** ⇒ **行 ≠ 名字**：
+   **3 条技术演奏法行服务的是**已在 22 里的名字**（同一名字的另一种奏法）** ⇒ **distinct 名字仍是 61** ✓。
+```
+**⇒ 名字清单（22 已采样）**：`accordion_lead, bell_lead, brass_section, distorted_guitar, finger_bass, flute_lead, guitar_lead, harmonica_lead, m1_organ, marimba_lead, muted_trumpet, organ_lead, piano_lead, pick_bass, pluck_string, rhodes_ep, sax_lead, sitar_lead, strings_lead, trumpet_lead, vibraphone, walking_upright` ✓
+
+### 83.3 ⭐ 新库的**可替换候选**（**这一步的目标：让"目录广度"真的到"音色盘" ✓**）
+
+| 名字 | 现在指向 | 新库里更贴的 | 为什么算候选 |
+| --- | --- | --- | --- |
+| `sax_lead` | `vcsl:Tenor-Saxophone-Keyswitch` | **`mtg-solo-sax`** | **专录独奏萨克斯（CC-BY，多支萨克斯）** ⇒ 对"jazz 独奏萨克斯"这个判断更专 |
+| `rhodes_ep` | 待读（很可能是 `jlearman-jrhodes3c`） | **`gregsullivan-e-pianos`** | **专录电钢（CP80 等，CC-BY）** |
+| `flute_lead` | 待读 | **`ixox-flute`** | **专录长笛** |
+| `walking_upright`／`finger_bass`／`pick_bass` | `karoryfer-meatbass`／`black-and-blue-basses` | **`dsmolken-double-bass`** | **275 MiB 的低音提琴专库** |
+| **鼓类**（`acoustic_kick` 等**在 SYNTHS 里是有意的**） | 走 **`SAMPLED_DRUM_ROLES`** 那条路 | **`big-rusty-drums`／`body-percussion`** | **那条路的候选，不是调色板行** |
+
+⚠️ **而"明确**不换**"同等重要** ✓✓：`strings_lead` 是**弦乐群**，`karoryfer-bigcat-cello` 是**独奏大提琴** ⇒ **换成它是**错答案**** ✗；
+`bell_lead`／`vibraphone`／`marimba_lead` 与**钢鼓**（`jlearman-steel-drum`）**不是同一件乐器** ⇒ 不换 ✗；
+**`cithara-barbarica`／`hungarian-zither`／`ganjo`／`aliexpress-erhu`／`cowsynth`／`squidpipes`／`272-merry-orks`／`karoryfer-bear-sax` 与那 22 个名字里没有一件同一乐器** ⇒ **这批的价值只能靠"有人显式选 asset"或"将来加到曲风名里"** ✓。
+
+### 83.4 ⇒ 处置（**决定人：我 ✓**；依据：先量后改 ＋ 目标①原话）
+
+**开第三条线**（**只动 `src/data/`，与 A／B 不撞 ✓**）：**逐名判"换不换"，每行必须写 `because`**，
+**且必须加**反向判据**：上面那几条"**明确不换**"的行**保持不动**** ✓✓；
+**⇒ 而**听感我判不了**（本会话从不做听感判断 ✓）⇒ **决定只能建立在可核事实上**：**库是什么、怎么录的、许可、程序名、音域**，
+**不许写任何"听起来更好"** ✗✓。
