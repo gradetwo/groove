@@ -58,7 +58,7 @@ beat 48 = 24.0000 s 从 **3 → 1**、实际启动的录音从 **60 → 28** —
 | `src/audio/playerFromEngine.ts` | `planSamplerSteps(samplerLanes, { bpm })`:445 —— 把编曲自己的速度交给计划器（规则按秒量，没速度就没法量） |
 | `src/audio/offlineAudioLanes.ts` | `OfflineAudioLaneEvent.handedOn?: boolean` **新增声明**（规则在**每个**计划器的事件上写这个字段，形状要说得出来）。离线 sink **不看它**——它按自己的量法给每个被切短的音配可移动终点；**离线行为一个数字都没动** |
 | `mcp/pattern.ts` | `audioLaneReplyFields` 挑出 `report.legato`：`audioLaneLegato`:155 与 `audioLaneLegatoNote`:175 **新增**（§6） |
-| `src/test/legatoLiveJoin.test.ts` | **新增** 6 条：业主那份文件的实时读数（32 接／25 拒／28 录音／beat 48 由 3 变 1）；MCP 回复带同一读数；路 A 由 2 个录音变 1 个；同音重复与无速度**不动**；**一处规则三处调用**（三边对同一输入给出同一句 `because`，见 §5） |
+| `src/test/legatoLiveJoin.test.ts` | **新增** 7 条：业主那份文件的实时读数（32 接／25 拒／28 录音／beat 48 由 3 变 1）；MCP 回复带同一读数；路 A 由 2 个录音变 1 个；同音重复与无速度**不动**；**一处规则三处调用**（三边对同一输入给出同一句 `because`，见 §5） |
 | `src/test/skippedLanes.test.ts` | **新增** 3 条：`audioLaneLegato` 的读数分开、原因计数、以及"没有声部层读数时全部算起音"的地板；没有重叠的回复**不长新键**（加法承诺） |
 | `docs/LEGATO_LIVE.md` | **新增**：本文 |
 | `docs/LEGATO_OVERLAP.md` | §7 表下与 §10 各加**一行**指向本文（**原表与原文一字未删**） |
@@ -189,9 +189,9 @@ at beat 48 = 24 s: 3 attacks before, 1 after
 | 类型 | `npm run typecheck` | ✓ 0 错 |
 | 静态 | `npm run lint`（改动文件定向 `--quiet`） | ✓ 0 错 |
 | **MCP**（碰了 `mcp/**` ⇒ 必跑） | `npm run check:mcp` | ✓ **123 checks passed, 0 failed**；surface 91 tools / 7 resources / 4 prompts |
-| 新增定向 | `npx vitest run src/test/legatoLiveJoin.test.ts src/test/skippedLanes.test.ts` | ✓ 14 条（6＋8） |
+| 新增定向 | `npx vitest run src/test/legatoLiveJoin.test.ts src/test/skippedLanes.test.ts` | ✓ 15 条（7＋8） |
 | 反向（离线不变） | `npx vitest run src/test/ownerProjectAcceptance.test.ts src/test/legatoJoin.test.ts src/test/legatoVoices.test.ts` | ✓ 全绿，期望值一条未改，打印 57/32/25/28 不变 |
-| **受影响面**（凡 import 到改动模块或 `mcp/**` 的测试） | `npx vitest run <85 个文件>` | ✓ **85 文件 / 718 条全绿** |
+| **受影响面**（凡 import 到改动模块或 `mcp/**` 的测试） | `npx vitest run <85 个文件>` | ✓ **85 文件 / 719 条全绿** |
 | 文档 | `npm run docs:check`、`npm run check:docs:refs` | ✓（§8） |
 
 ## 8. sha／推送／CI

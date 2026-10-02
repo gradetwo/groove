@@ -277,12 +277,31 @@ describe("⭐ the audio-lane playback plan and the browser sink", () => {
     /** The measurement that is the point: one recording for two notes, where two attacks used to land. */
     expect(context.createdBufferSources).toHaveLength(1);
     /**
-     * ⭐ **And a note nobody will be handed keeps the ending it had.** The release ramp is given only to a voice the
-     * rule names as a handover source; every other live note still ends with the scheduled length it always had, so the
-     * rule changes the overlap and nothing else.
+     * ⭐ **And that one voice was started with a movable end**, because the rule named it as handed on: no scheduled
+     * duration, so `takeOver()` can move where the note ends. The criterion right after this one is the negative
+     * half — a note nobody will be handed keeps the scheduled length it always had.
      */
     expect(context.createdBufferSources[0]!.started[0]!.duration).toBeUndefined();
-    expect(second.gateSteps).toBe(24);
+  });
+
+  /**
+   * ⭐ **The negative half of the release ramp, and the reason the live change is "only this branch".**
+   *
+   * The offline sink gives every note whose written end arrives before its recording a release ramp
+   * (`5bb7c7b`'s owner decision). The live sinks give it to exactly the voices the rule names as `handedOn`, so a
+   * single note with nothing after it still ends with `start(when, 0, seconds)` — the length it had before any of this
+   * existed. That is what keeps `src/test/samplerSteps.test.ts`'s three criteria green unchanged.
+   */
+  it("gives a note nobody will be handed the scheduled end it always had, not a ramp", async () => {
+    const lane = laneOf([{ step: 0, pitch: 57, gate: 24 }]);
+    const catalogue = [SUSTAIN_ASSET];
+    const context = new FakeAudioContext();
+    const report = await scheduleAudioLaneSamples(songOf(lane), vscoLoader(), browserSampleSink(context as never, context.createGain() as never), 0, catalogue);
+    expect(report.problems).toEqual([]);
+    expect(report.scheduled).toBe(1);
+    // One note, one recording, and its own three seconds written into the node rather than a release ramp.
+    expect(context.createdBufferSources).toHaveLength(1);
+    expect(context.createdBufferSources[0]!.started[0]!.duration).toBe(3);
   });
 
   it("leaves a repeated pitch and a lane with no recording alone, so the boundary cases do not move", () => {
