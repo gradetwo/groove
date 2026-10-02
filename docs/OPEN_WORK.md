@@ -2357,3 +2357,31 @@ Bass 3 ｜ Guitar 3 ｜ **Orchestral 3** ｜ **Acoustic Piano 2** ｜ **Organ 2*
 
 **轮 206 的关键词检查**太粗、成不了结论** ✗；**轮 207 的**读**在一个文件里就答完了** ✓✓ ——
 **与轮 173／176 同源：**先读真实形状，再判****；**而这一次，被纠正的是**我自己的审计结论**** ✓。
+
+## 七十三、⭐ 四条常驻规矩**各自有没有判据**：逐条读出来的结果（2026-10-02 ✓）
+
+### 73.1 §27（现阶段不做兼容）✅ **有判据** ✓✓
+
+**`src/test/addLaneOp.test.ts:79`**：
+> **`refuses an id or a name that already exists, and an unknown kind`**
+
+⇒ **拒绝未知 `kind`、而不把它强扭成别的 ⇒ **无别名、无向后兼容**** ✓✓。
+
+### 73.2 许可／出处（属 §26 那一侧）✅ **有判据** ✓✓
+
+**`src/test/libraryLicence.test.ts` 六条** ✓：**`refuses a CC-BY library that carries no attribution`**／**`accepts a CC0 library without attribution, because that licence asks for none`**／**`refuses an unknown licence, so a new library cannot slip in unlabelled`**／**`requires a source for every library, because without one the licence claim is trust rather than a check`**／**`reports every bad library rather than stopping at the first`**／**而最后一条把规则**跑在本仓清单上**** ✓✓。
+
+### 73.3 音色测量（**§26 的地基**）✅ **有判据** ✓✓
+
+**`src/test/timbreFingerprint.test.ts` 十一条** ✓：**13 个 2/3 倍频程频带中心（自 31.5 Hz）／电平无关性／100 Hz 与 5 kHz 的区分度／质心随频率排序／低高频滚降／声道相关性／逐带线性能量／退化缓冲的有限性（含写明的下限）／**逐字节确定性**／**Nyquist 处置**** ✓
+⇒ **⇒ 于是"bands ≤ 1.1 dB／loudness ≤ 1.7 LU／true peak ≤ 0.1 dB"这些界限**不是感觉，而是判据覆盖的仪器算出来的**** ✓✓。
+
+### 73.4 §28（先看行业做法）⚠️ **未核到专属判据**（**但不含糊过去 ✓**）
+
+**它的载体是**文档门禁**（`check:docs`／`check:docs:refs` 一直在跑 ✓）＋ **每条线给出的逐字出处** ⇒ **⇒ 写成"**未核到专属判据、但载体在跑**"** ✓✓。
+
+### 73.5 ⚠️ 方法（**同一个问题的三次不同查法 ✓**）
+
+**轮 206 的关键词扫描**太粗（**点错两个文件** ✗）⇒ **轮 207／209／210 的**读**逐个答完** ✓ ⇒
+**而 §27 那根钉**在轮 210 是靠**搜行为**（`refuses…unknown kind`）而不是**搜词**找到的** ✓✓
+⇒ **⇒ 查代码**做什么**，别查散文**说什么**** ✓。
