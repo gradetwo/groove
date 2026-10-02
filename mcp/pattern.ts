@@ -102,6 +102,12 @@ export function findTrack(pattern: SequencerPattern, name: string): SequencerTra
  *
  * A lane that started some of its notes and failed others is in **both** `renderedAudioLanes` and `skippedLanes`, because that is what a partly-covered instrument
  * is; a lane that never started anything is only in `skippedLanes`.
+ *
+ * ⭐ **And `audioLaneLegato`, when the notes overlap at all** — the reading the owner asked for, which until now existed on
+ * the report and reached no caller. A model composing a sustained part can now see what the overlap rule decided: how many
+ * notes landed on a chord that had not released, how many of them the rule handed to the voice already sounding, how many
+ * the sampler could actually carry, and therefore how many still begin their own attack. The counters are named facts
+ * rather than one score, so "the rule refused it" and "the recording could not reach it" cannot be read as each other.
  */
 export function audioLaneReplyFields(report: OfflineAudioLaneReport | undefined): Record<string, unknown> {
   if (!report) return {};
@@ -129,6 +135,47 @@ export function audioLaneReplyFields(report: OfflineAudioLaneReport | undefined)
    */
   if (report.catalogueProblem) {
     fields.audioLaneCatalogueProblem = report.catalogueProblem;
+  }
+  /**
+   * ⭐ **The overlap rule's two readings, kept apart the way the report keeps them.**
+   *
+   * `planned` is what the rule decided from the notes alone, with no audio: how many onsets landed on a chord that had not
+   * released, how many notes those were, how many the rule handed over and how many it refused. `voices` is what the
+   * sampler could do with the handovers, present only when the sink performs them — the one refusal the rule cannot see is
+   * whether the voice's **recording** reaches the end of the note it is being handed.
+   *
+   * `attacksOnSoundingChords` is the headline and is deliberately derived rather than a third counter: the rule's own
+   * refusals plus the handovers the voice layer could not make. **With no voice reading every handed-over note is an
+   * attack**, because nothing performed the handover — so the number cannot quietly look like the good case.
+   */
+  if (report.legato) {
+    const { planned, voices } = report.legato;
+    const refusedReasons: Record<string, number> = {};
+    for (const refusal of voices?.refusals ?? []) refusedReasons[refusal.reason] = (refusedReasons[refusal.reason] ?? 0) + 1;
+    fields.audioLaneLegato = {
+      overlappingChordChanges: planned.overlappingOnsets,
+      notesOnThem: planned.notesAtOverlaps,
+      handedOverByTheRule: planned.joins,
+      refusedByTheRule: planned.reattacks,
+      ...(voices ? { carriedByTheVoice: voices.joins, refusedByTheVoice: voices.refusals.length } : {}),
+      ...(Object.keys(refusedReasons).length > 0 ? { refusedBecause: refusedReasons } : {}),
+      attacksOnSoundingChords: planned.reattacks + (voices ? voices.refusals.length : planned.joins),
+      lanes: planned.lanes.map((lane) => ({
+        track_index: lane.trackIndex,
+        name: lane.name,
+        assetId: lane.assetId,
+        ...(lane.technique ? { technique: lane.technique } : {}),
+        legatoCapable: lane.legatoCapable,
+        overlappingChordChanges: lane.overlappingOnsets,
+        notesOnThem: lane.notesAtOverlaps,
+        handedOver: lane.joins,
+        refused: lane.reattacks,
+      })),
+    };
+    fields.audioLaneLegatoNote =
+      "an overlap the bow never stopped is a legato: `handedOverByTheRule` notes are carried by the voice already sounding instead of starting their own attack, " +
+      "`attacksOnSoundingChords` is how many still do, and no handover is dropped in silence — each refusal is either the rule's (a repeated pitch, a non-sustained " +
+      "technique) or the voice layer's, with the reason counted in `refusedBecause`";
   }
   return fields;
 }

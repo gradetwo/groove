@@ -46,7 +46,6 @@
  */
 import type { StringTechnique } from "../data/stringTechniques";
 import { STRING_TECHNIQUES } from "../data/stringTechniques";
-import type { OfflineAudioLaneEvent } from "./offlineAudioLanes";
 
 /**
  * ⭐ **The techniques that are a bow which does not stop, and the ones that are a new stroke by definition.**
@@ -181,6 +180,40 @@ export interface LegatoJoinMark {
   because: string;
 }
 
+/**
+ * ⭐ **The event shape the rule reads** — everything `planLegatoJoins` needs, and nothing about which path produced it.
+ *
+ * It is a named interface because the rule now runs over **three** planners, each with its own event type: the offline
+ * renderer (`offlineAudioLanes`), the audio-lane playback plan (`audioLanePlan`) and the arrangement player's sampler
+ * steps (`samplerSteps`). Every one of them satisfies this shape, so "should this be a legato join?" has **one**
+ * implementation and three callers, and the fields it writes (`voiceRank`, `legato`, and `handedOn` on the voice being
+ * carried from) mean the same thing everywhere.
+ *
+ * `trackIndex` is the lane's identity and is never crossed: two lanes' notes may overlap in time without being one
+ * decision (`no-voice-to-continue` does not reach across them either).
+ */
+export interface LegatoJoinCandidate {
+  trackIndex: number;
+  name: string;
+  assetId: string;
+  pitch?: number;
+  atSeconds: number;
+  seconds?: number;
+  voiceRank?: number;
+  legato?: LegatoJoinMark;
+  /**
+   * ⭐ **Whether a later note is planned to be handed this very voice** — set by `planLegatoJoins` on the note a join
+   * carries *from*, as opposed to {@link LegatoJoinMark}, which is set on the note carried *to*.
+   *
+   * It exists because the voice layer has to be told **before** the join, not at it: a browser voice started with
+   * `start(when, 0, seconds)` has its end inside the node, which a later `stop()` cannot move, so `takeOver()` refuses
+   * it — the handover is possible only if the voice was started extendable in the first place. The offline sink makes
+   * every cut-short voice extendable; the live sinks make extendable exactly the voices the rule names here, so no
+   * note that is not part of a handover changes. A `false`/absent value is "nothing will be handed this voice".
+   */
+  handedOn?: boolean;
+}
+
 /** One overlap at which a note still begins its own attack, with the reason the rule gave. */
 export interface LegatoJoinRefusal {
   trackIndex: number;
@@ -227,9 +260,9 @@ export interface LegatoJoinReading {
   lanes: LegatoJoinLaneReport[];
 }
 
-export interface LegatoJoinPass {
+export interface LegatoJoinPass<T extends LegatoJoinCandidate = LegatoJoinCandidate> {
   /** The same events, in the same order, with `voiceRank` and `legato` written where the rule decided. */
-  events: OfflineAudioLaneEvent[];
+  events: T[];
   reading: LegatoJoinReading;
 }
 
@@ -251,9 +284,13 @@ function onsetKey(atSeconds: number): number {
  * into onsets by their own `atSeconds`; each onset's notes are ranked by ascending pitch; consecutive onsets are
  * paired rank by rank. A pair joins only when every question in `decideLegatoJoin` answers legato **and** the two
  * events name the same recording — a program change mid-part is a new instrument, not a carried bow.
+ *
+ * ⭐ **It is generic over the event type, and that is what makes "one rule, three callers" true rather than stated.**
+ * The offline renderer, the audio-lane playback plan and the arrangement player's sampler steps each hand in their own
+ * events and get the same events back with the same two fields written; none of them re-implements a single question.
  */
-export function planLegatoJoins(events: readonly OfflineAudioLaneEvent[]): LegatoJoinPass {
-  const out: OfflineAudioLaneEvent[] = events.map((event) => ({ ...event }));
+export function planLegatoJoins<T extends LegatoJoinCandidate>(events: readonly T[]): LegatoJoinPass<T> {
+  const out: T[] = events.map((event) => ({ ...event }));
   const reading: LegatoJoinReading = { overlappingOnsets: 0, notesAtOverlaps: 0, joins: 0, reattacks: 0, lanes: [] };
 
   /** Lanes in the order they first appear, and the indexes of their pitched events, so one lane's rule cannot read another's. */
@@ -406,6 +443,12 @@ export function planLegatoJoins(events: readonly OfflineAudioLaneEvent[]): Legat
           overlapSeconds: previousEnd - event.atSeconds,
           because: decision.because,
         };
+        /**
+         * ⭐ **And the voice being handed on is named too, because the voice layer must be told before the join.**
+         * `handedOn` is what lets a sink start this voice with a movable end (`takeOver` refuses one whose end is
+         * bound inside the node); see `LegatoJoinCandidate.handedOn`.
+         */
+        out[predecessorIndex]!.handedOn = true;
         report.joins += 1;
         reading.joins += 1;
       });

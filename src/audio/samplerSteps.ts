@@ -12,16 +12,29 @@
  * for as long as the lane says and not until the user stops the transport.
  *
  * **Every event is scheduled at once, ahead of time.** The browser's audio clock is what plays them, exactly as the engine's lookahead scheduler relies on it, so there is no timer to drift.
+ *
+ * ⭐ **And it is where the overlap rule reaches the arrangement the owner plays** (`planSamplerSteps`), with the same
+ * `createLegatoVoiceLedger` the offline sink uses carrying the voices (`scheduleSamplerSteps`). The rule itself is
+ * `src/audio/legatoJoin.ts`'s and is not restated here — this file only feeds it the plan's own events.
  */
 import { STEPS_PER_BEAT } from "../data/noteEvents";
 import { stepDuration } from "../data/noteLayer";
 import { sampledAssetForLane } from "../data/sampledInstruments";
-import { startSamplerNote, type SamplerVoice } from "./samplerVoice";
+import { DEFAULT_SAMPLER_RELEASE_SECONDS, startSamplerNote, type SamplerVoice } from "./samplerVoice";
+import { planLegatoJoins, type LegatoJoinCandidate, type LegatoJoinMark } from "./legatoJoin";
+import { createLegatoVoiceLedger, type LegatoVoiceReading } from "./legatoVoices";
 import type { SampleLoader } from "./sampleLoader";
 import type { SequencerTrack } from "../types/genre";
 
 /** One step of one sampler lane that has a note on it: where it starts and what pitch it is. */
 export interface SamplerStepEvent {
+  /**
+   * ⭐ **Which lane this event belongs to**, as an ordinal over the lanes handed to `planSamplerSteps`.
+   *
+   * It is the identity the overlap rule groups by and the voice ledger keys on, so a note is only ever handed a voice
+   * from **its own lane**: two lanes playing the same pitch at the same step are two decisions, not one.
+   */
+  trackIndex: number;
   /** The v2 track the lane came from, so a failure or a stop can name a track a user sees. */
   sourceTrackId: string;
   /** The catalogue asset this lane's instrument is. */
@@ -48,6 +61,32 @@ export interface SamplerStepEvent {
    * group and the one-shot flag travel on the resolved note.
    */
   pan?: number;
+  /**
+   * ⭐ **Which voice of its onset this note is** — the notes of one onset ranked by ascending pitch, lowest first,
+   * written by `planLegatoJoins` (`src/audio/legatoJoin.ts`) for every note of every lane the rule examined.
+   *
+   * The ledger keeps one sounding voice per lane and rank, so a later note can be handed the right one at the voice
+   * layer — the same field, from the same rule, the offline renderer's events carry.
+   */
+  voiceRank?: number;
+  /**
+   * ⭐ **A handover instead of a new attack**, when the overlap rule says the join is legato.
+   *
+   * Present means the scheduler must not start this note's own recording from its start but carry the voice already
+   * sounding on this lane and rank, moving its pitch and keeping its playback position — the live half of what
+   * `createOfflineSamplerSink` has done since `5bb7c7b`. The ledger may still refuse, and it says why rather than
+   * going silent (`src/audio/legatoVoices.ts` owns that measurement).
+   */
+  legato?: LegatoJoinMark;
+  /**
+   * ⭐ **Whether a later note is planned to be handed this very voice** — written by `planLegatoJoins`, beside
+   * `legato` on the notes the rule carries *to*.
+   *
+   * The scheduler uses it for one thing: a voice that will be carried must be started with a movable end, because
+   * `takeOver()` refuses a voice whose end is bound inside its node. Nothing else about such a note changes, and a
+   * note that is not handed on keeps exactly the shape it had before this field existed.
+   */
+  handedOn?: boolean;
 }
 
 export interface SamplerStepInput {
@@ -82,18 +121,45 @@ export interface SamplerStepReport {
   voices: SamplerVoice[];
   /** Notes that could not be resolved or decoded, each with the track and step that failed. Silence with a reason is the standard this path is held to. */
   problems: string[];
+  /**
+   * ⭐ **What the voice layer did with the plan's handovers** — the live path's own reading, from the same
+   * `createLegatoVoiceLedger` the offline sink uses: how many notes carried the sounding voice instead of starting a
+   * recording, and every handover that was refused with the reason. Present so "the rule asked and the voice layer
+   * could not" is readable here rather than inferred from the recording count.
+   */
+  legato: LegatoVoiceReading;
+}
+
+/** The tempo a step is measured at when the caller states none — the same 120 `scheduleSamplerSteps` falls back to. */
+const DEFAULT_STEP_BPM = 120;
+
+export interface SamplerStepPlanOptions {
+  /**
+   * ⭐ **The tempo, so the rule can measure an overlap at all.**
+   *
+   * Every question the overlap rule asks is in seconds — "was the previous voice still sounding when this note
+   * began?" — and a step is only seconds once a tempo says so. Absent means 120, which is what the scheduler assumes
+   * for an unstated bpm; the player always passes the arrangement's own tempo.
+   */
+  bpm?: number;
 }
 
 /**
  * The steps of every sampler lane that carry a note.
  *
  * Pure, and separate from the playing, because "which steps sound and at what pitch" is the part that goes wrong quietly and the part a criterion can judge without an `AudioContext`.
+ *
+ * ⭐ **And it is where the overlap rule runs on the live arrangement path**, exactly as `planOfflineAudioLanes` runs it
+ * for a render: after the events are built, `planLegatoJoins` ranks each onset's notes into voices and marks the ones
+ * the bow carries instead of re-attacking. The rule is not re-implemented here — the same function the offline
+ * planner calls is called with this planner's own events, and the two fields it writes mean the same thing.
  */
 export function planSamplerSteps(
-  lanes: readonly { sourceTrackId: string; lane: SequencerTrack }[]
+  lanes: readonly { sourceTrackId: string; lane: SequencerTrack }[],
+  options: SamplerStepPlanOptions = {}
 ): SamplerStepEvent[] {
   const events: SamplerStepEvent[] = [];
-  for (const { sourceTrackId, lane } of lanes) {
+  lanes.forEach(({ sourceTrackId, lane }, trackIndex) => {
     /**
      * ⭐ **The one resolver, so a lane the written table maps is a sampler lane here too.**
      *
@@ -103,7 +169,7 @@ export function planSamplerSteps(
      * this lane's sound" is asked in one place (`sampledAssetForLane`) rather than answered twice.
      */
     const assetId = sampledAssetForLane(lane);
-    if (!assetId) continue;
+    if (!assetId) return;
     lane.steps.forEach((value, step) => {
       if (!value) return;
       /**
@@ -132,10 +198,37 @@ export function planSamplerSteps(
       const pan = typeof lane.pan === "number" && Number.isFinite(lane.pan) ? Math.max(-1, Math.min(1, lane.pan)) : undefined;
       const gateSteps = stepDuration(lane, step);
       for (const pitch of pitches) {
-        events.push({ sourceTrackId, assetId, step, pitch, gateSteps, ...(pan === undefined ? {} : { pan }) });
+        events.push({ trackIndex, sourceTrackId, assetId, step, pitch, gateSteps, ...(pan === undefined ? {} : { pan }) });
       }
     });
-  }
+  });
+
+  /**
+   * ⭐ **The overlap rule, over this planner's own events — the same call `planOfflineAudioLanes` makes.**
+   *
+   * The plan's own seconds are `step × stepSeconds`, which is the arithmetic `scheduleSamplerSteps` places the onset
+   * with; only their differences matter to the rule, so the transport's later `startSeconds` shift cannot change a
+   * decision. The two fields are written back onto the events the scheduler will walk, and nothing else about them
+   * moves.
+   */
+  const bpm = options.bpm && options.bpm > 0 ? options.bpm : DEFAULT_STEP_BPM;
+  const stepSeconds = 60 / bpm / STEPS_PER_BEAT;
+  const joined = planLegatoJoins<LegatoJoinCandidate>(
+    events.map((event) => ({
+      trackIndex: event.trackIndex,
+      name: event.sourceTrackId,
+      assetId: event.assetId,
+      pitch: event.pitch,
+      atSeconds: event.step * stepSeconds,
+      seconds: event.gateSteps * stepSeconds,
+    }))
+  );
+  joined.events.forEach((marked, index) => {
+    const event = events[index]!;
+    event.voiceRank = marked.voiceRank;
+    event.legato = marked.legato;
+    event.handedOn = marked.handedOn;
+  });
   return events;
 }
 
@@ -146,7 +239,13 @@ export function planSamplerSteps(
  * failure list expects.
  */
 export async function scheduleSamplerSteps(events: readonly SamplerStepEvent[], input: SamplerStepInput): Promise<SamplerStepReport> {
-  const stepSeconds = 60 / (input.bpm && input.bpm > 0 ? input.bpm : 120) / STEPS_PER_BEAT;
+  const stepSeconds = 60 / (input.bpm && input.bpm > 0 ? input.bpm : DEFAULT_STEP_BPM) / STEPS_PER_BEAT;
+  /**
+   * ⭐ **One ledger for this pass** — the same `createLegatoVoiceLedger` the offline sampler sink builds. It is created
+   * here rather than inside the voice because it is a fact about a performance: which lane's which voice is still
+   * sounding, and how much of its recording it has spent. One pass is one performance, so one ledger.
+   */
+  const ledger = createLegatoVoiceLedger();
   /**
    * ⭐ **The grid's origin, which is the top of the pattern or the step a resume continued from.**
    *
@@ -163,15 +262,31 @@ export async function scheduleSamplerSteps(events: readonly SamplerStepEvent[], 
     if (event.step < fromStep) continue;
     try {
       const note = await input.loader.loadNote(event.assetId, event.pitch);
-      voices.push(
+      const whenSeconds = startSeconds + event.step * stepSeconds;
+      // The same `stepSeconds` that places the onset gives the note its end, so a lane's timing is one reading of the grid.
+      const seconds = event.gateSteps * stepSeconds;
+      const ratio = Number.isFinite(note.ratio) && note.ratio > 0 ? note.ratio : 1;
+      /**
+       * ⭐ **A voice that will be handed on is started with a movable end, and only such a voice.**
+       *
+       * A voice started with `start(when, 0, seconds)` has its end **inside the node**, which a later `stop()` cannot
+       * move (W3C: `duration` is "the duration of sound to be played", not a stop time) — so `takeOver()` refuses it
+       * and the ledger would report `voice-cannot-be-extended` for a handover the rule allowed. The offline sink gives
+       * every cut-short note a release ramp; the live path gives it to exactly the notes the rule names as `handedOn`,
+       * under the offline sink's own measurement (`seconds < buffer.duration / ratio`, i.e. "this note is cut off
+       * while the recording still had sound in it"). A note nobody will be handed — the overwhelming majority — keeps
+       * the scheduled length it has today, byte for byte.
+       */
+      const recordingSeconds = note.buffer.duration / ratio;
+      const startVoice = (): SamplerVoice =>
         startSamplerNote({
           context: input.context,
           destination: input.destination,
           buffer: note.buffer,
           ratio: note.ratio,
-          whenSeconds: startSeconds + event.step * stepSeconds,
-          // The same `stepSeconds` that places the onset gives the note its end, so a lane's timing is one reading of the grid.
-          seconds: event.gateSteps * stepSeconds,
+          whenSeconds,
+          seconds,
+          ...(event.handedOn === true && seconds < recordingSeconds ? { releaseSeconds: DEFAULT_SAMPLER_RELEASE_SECONDS } : {}),
           /**
            * ⭐ **The region's loop declaration, which stopped at this line.** `startSamplerNote` has honoured `loop_mode`
            * since the sustaining-strings fix, and this scheduler never passed it — so a `loop_sustain` program
@@ -183,6 +298,24 @@ export async function scheduleSamplerSteps(events: readonly SamplerStepEvent[], 
           ...(note.loopEndFrames === undefined ? {} : { loopEndFrames: note.loopEndFrames }),
           ...(input.gainDb === undefined ? {} : { gainDb: input.gainDb }),
           ...(event.pan === undefined ? {} : { pan: event.pan }),
+        });
+      /**
+       * ⭐ **The plan's handover is performed by the ledger, not by a second copy of the rule.** `event.legato` is
+       * `planLegatoJoins`' answer and `event.voiceRank` is the line of the chord it names; the ledger either carries
+       * the sounding voice (`takeOver`) or refuses by name and starts a fresh attack, and either way the note sounds.
+       */
+      voices.push(
+        ledger.play({
+          trackIndex: event.trackIndex,
+          name: event.sourceTrackId,
+          rank: event.voiceRank ?? 0,
+          pitch: event.pitch,
+          atSeconds: whenSeconds,
+          seconds,
+          ratio: note.ratio,
+          recordingSeconds: note.buffer.duration,
+          ...(event.legato === undefined ? {} : { join: event.legato }),
+          start: startVoice,
         })
       );
     } catch (error) {
@@ -191,5 +324,5 @@ export async function scheduleSamplerSteps(events: readonly SamplerStepEvent[], 
     }
   }
 
-  return { started: voices.length, voices, problems };
+  return { started: voices.length, voices, problems, legato: ledger.reading() };
 }

@@ -105,6 +105,16 @@ export interface OfflineAudioLaneEvent extends OfflineAudioLaneRef {
    * (`src/audio/legatoVoices.ts` owns that measurement).
    */
   legato?: LegatoJoinMark;
+  /**
+   * ⭐ **Whether a later note is planned to be handed this very voice** — written by `planLegatoJoins` on the note a
+   * join carries *from*, as opposed to `legato`, which is set on the note carried *to* (`src/audio/legatoJoin.ts`).
+   *
+   * The offline sink does not consult it: `createOfflineSamplerSink` gives **every** note whose written end arrives
+   * before its recording a movable end (`releaseSeconds`), so a handover is possible whatever the rule names. It is
+   * declared here because the rule writes it on every planner's own events, and the live sinks — which make movable
+   * only the voices named here — are the callers that need it.
+   */
+  handedOn?: boolean;
 }
 
 /** A lane that will not be heard, and why, named so a caller can act on it. */

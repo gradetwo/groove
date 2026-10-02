@@ -8,7 +8,7 @@
  * It **derives its input from the planner's own** rather than restating the shape, and it **consumes** the plan and the seconds mapping rather than recomputing
  * either — so "when a sample starts" is still defined in exactly one place in this codebase.
  */
-import { audioLaneEventSeconds, audioLaneInstrumentSeconds, planAudioLaneEvents } from "./audioLanePlan";
+import { audioLaneEventSeconds, audioLaneInstrumentSeconds, audioLaneTotalSteps, planAudioLaneEvents } from "./audioLanePlan";
 import type { AudioLaneEvent, PlanInput } from "./audioLanePlan";
 import type { LoadedNote, SampleLoader } from "./sampleLoader";
 import { SAMPLE_CATALOGUE } from "../data/sampleCatalogue";
@@ -57,7 +57,7 @@ export async function scheduleAudioLaneSamples(
   const { events, problems } = planAudioLaneEvents(song, catalogue);
   const seconds: number[] = [];
   let scheduled = 0;
-  const totalSteps = song.totalSteps ?? events.reduce((longest, event) => Math.max(longest, event.atStep + 1), 16);
+  const totalSteps = audioLaneTotalSteps(events, song.totalSteps);
 
   for (const event of events) {
     try {
@@ -73,18 +73,29 @@ export async function scheduleAudioLaneSamples(
       const note = pitch === undefined ? null : await loader.loadNote(event.assetId, pitch);
       const buffer = note === null ? await loader.load(event.assetId) : note.buffer;
       /**
+       * ⭐ **The planner's own second and length are consumed, not recomputed.**
+       *
+       * Since the overlap rule needs "when does this note start and how long does it sound" *before* the scheduler runs,
+       * `planAudioLaneEvents` answers it once — through `audioLaneInstrumentSeconds`, the same reading of the grid — and
+       * writes both onto the event. Recomputing them here would be the second implementation of one thing this codebase
+       * spends gates avoiding; the arithmetic is still called, from the fallback branch, for a plan built before the
+       * tempo was known (or by a caller that handed in its own events).
+       */
+      const untimed = pitch !== undefined && (event.atSeconds === undefined || event.seconds === undefined);
+      const timing = untimed ? audioLaneInstrumentSeconds(event.atStep, song, totalSteps) : null;
+      /**
        * An instrument note is placed from its **step**, through the tempo map; a plain sample from its **section's bar**,
        * as it always was. See `audioLaneInstrumentSeconds` for why the two are not one call.
        */
-      const timing = pitch === undefined ? null : audioLaneInstrumentSeconds(event.atStep, song, totalSteps);
-      const when = timing === null ? audioLaneEventSeconds(event, song) : timing.atSeconds;
+      const when = event.atSeconds ?? (timing === null ? audioLaneEventSeconds(event, song) : timing.atSeconds);
       /**
        * The end of an instrument note, in seconds, is the lane's own `gate` times the step's own length — required,
        * because a browser voice started with no end rings until the transport stops. A plain sample is left without one:
        * its bytes **are** the event, and cutting them at a stated length would truncate a recording that outlasts its
        * catalogue entry.
        */
-      const seconds_ = timing !== null && event.gateSteps !== undefined ? event.gateSteps * timing.stepSeconds : undefined;
+      const seconds_ =
+        event.seconds ?? (timing !== null && event.gateSteps !== undefined ? event.gateSteps * timing.stepSeconds : undefined);
       sink.start(buffer, when, gainDb, seconds_ === undefined ? event : { ...event, seconds: seconds_ }, note);
       seconds.push(when);
       scheduled += 1;

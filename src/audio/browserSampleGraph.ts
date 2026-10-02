@@ -11,7 +11,8 @@
 import type { SampleDecoder, SampleLoader } from "./sampleLoader";
 import { createSampleLoader } from "./sampleLoader";
 import type { SampleSink } from "./audioLaneScheduler";
-import { startSamplerNote } from "./samplerVoice";
+import { DEFAULT_SAMPLER_RELEASE_SECONDS, startSamplerNote } from "./samplerVoice";
+import { createLegatoVoiceLedger, type LegatoVoiceLedger } from "./legatoVoices";
 import type { SampleAsset } from "../data/sampleCatalogue";
 import { transportNote, type TransportProbe } from "./transportDiagnostic";
 
@@ -59,8 +60,18 @@ export function browserSampleDecoder(context: BaseAudioContext, probe?: Transpor
   };
 }
 
-/** Starts a buffer source at the given second, through its own gain so a caller can place a sample quietly. */
-export function browserSampleSink(context: BaseAudioContext, destination: AudioNode): SampleSink {
+/**
+ * Starts a buffer source at the given second, through its own gain so a caller can place a sample quietly.
+ *
+ * ⭐ **The third parameter is the legato ledger, and it is the same one the offline sink uses.** `planAudioLaneEvents`
+ * now marks an overlap the bow never stopped with `voiceRank` / `legato` (`src/audio/legatoJoin.ts`), so this sink does
+ * what `createOfflineSamplerSink` does with those two fields: it asks `createLegatoVoiceLedger` to carry the voice that
+ * is already sounding instead of starting this note's own recording. The ledger is a parameter rather than an internal
+ * so a caller (a criterion, or a player that already holds one) can read what was carried and what was refused; the
+ * default is one ledger per sink, which is one per playback.
+ */
+export function browserSampleSink(context: BaseAudioContext, destination: AudioNode, ledger?: LegatoVoiceLedger): SampleSink {
+  const laneLedger = ledger ?? createLegatoVoiceLedger();
   return {
     start(buffer: AudioBuffer, whenSeconds: number, gainDb: number, event, note): void {
       /**
@@ -73,24 +84,60 @@ export function browserSampleSink(context: BaseAudioContext, destination: AudioN
        * arrangement's and the renderer's.
        */
       if (typeof event.pitch === "number" && event.pitch > 0) {
-        startSamplerNote({
-          context,
-          destination,
-          buffer,
-          ratio: note?.ratio ?? 1,
-          whenSeconds,
-          ...(event.seconds === undefined ? {} : { seconds: event.seconds }),
-          /**
-           * ⭐ **The region's loop declaration crosses here too.** A buffer does not say whether the region that named it
-           * wanted the recording to repeat, so a `loop_sustain` program (`karoryfer-meatbass` writes it) would be cut at
-           * the note's gate instead of holding — the same defect the offline sink had, on the other side of the seam.
-           * Absent is SFZ's own default and this project's behaviour, so a plain sample is unchanged.
-           */
-          ...(note?.loopMode === undefined ? {} : { loopMode: note.loopMode }),
-          ...(note?.loopStartFrames === undefined ? {} : { loopStartFrames: note.loopStartFrames }),
-          ...(note?.loopEndFrames === undefined ? {} : { loopEndFrames: note.loopEndFrames }),
-          ...(gainDb === 0 ? {} : { gainDb }),
-          ...(event.pan === undefined ? {} : { pan: event.pan }),
+        const ratio = note?.ratio ?? 1;
+        const seconds = event.seconds;
+        /**
+         * ⭐ **A voice that will be handed on is started with a movable end, and only such a voice.**
+         *
+         * A voice started with `start(when, 0, seconds)` has its end **inside the node**, which a later `stop()` cannot
+         * move (W3C: `duration` is "the duration of sound to be played", not a stop time) — so `takeOver()` refuses it
+         * and the ledger would report `voice-cannot-be-extended` for a handover the rule allowed. The offline sink gives
+         * every cut-short note a release ramp; this sink gives it to exactly the notes the rule names as `handedOn`,
+         * under the offline sink's own measurement (`seconds < buffer.duration / ratio`, i.e. "this note is cut off
+         * while the recording still had sound in it"). A note nobody will be handed keeps the scheduled length it has
+         * today, byte for byte.
+         */
+        const recordingSeconds = buffer.duration / (Number.isFinite(ratio) && ratio > 0 ? ratio : 1);
+        const startVoice = () =>
+          startSamplerNote({
+            context,
+            destination,
+            buffer,
+            ratio,
+            whenSeconds,
+            ...(seconds === undefined ? {} : { seconds }),
+            ...(event.handedOn === true && seconds !== undefined && seconds < recordingSeconds
+              ? { releaseSeconds: DEFAULT_SAMPLER_RELEASE_SECONDS }
+              : {}),
+            /**
+             * ⭐ **The region's loop declaration crosses here too.** A buffer does not say whether the region that named it
+             * wanted the recording to repeat, so a `loop_sustain` program (`karoryfer-meatbass` writes it) would be cut at
+             * the note's gate instead of holding — the same defect the offline sink had, on the other side of the seam.
+             * Absent is SFZ's own default and this project's behaviour, so a plain sample is unchanged.
+             */
+            ...(note?.loopMode === undefined ? {} : { loopMode: note.loopMode }),
+            ...(note?.loopStartFrames === undefined ? {} : { loopStartFrames: note.loopStartFrames }),
+            ...(note?.loopEndFrames === undefined ? {} : { loopEndFrames: note.loopEndFrames }),
+            ...(gainDb === 0 ? {} : { gainDb }),
+            ...(event.pan === undefined ? {} : { pan: event.pan }),
+          });
+        /**
+         * **The handover is the plan's, and the ledger decides whether the recording can reach it.** `event.legato` is
+         * absent on a note the rule refused (a repeated pitch, a non-sustained technique, no voice to continue) and on a
+         * lane the rule never examined, and the ledger starts a fresh attack for every such note — the behaviour this
+         * sink had before, now with the one case the rule allows performed rather than requested.
+         */
+        laneLedger.play({
+          trackIndex: event.trackIndex ?? 0,
+          name: event.name,
+          rank: event.voiceRank ?? 0,
+          pitch: event.pitch,
+          atSeconds: whenSeconds,
+          ...(seconds === undefined ? {} : { seconds }),
+          ratio,
+          recordingSeconds: buffer.duration,
+          ...(event.legato === undefined ? {} : { join: event.legato }),
+          start: startVoice,
         });
         return;
       }

@@ -435,7 +435,14 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
        * audition uses, per step, and started on the audio clock. A lane whose instrument cannot be resolved is reported in the result rather than left as silence with no explanation.
        */
       let problem: string | undefined;
-      const samplerSteps = planSamplerSteps(samplerLanes);
+      /**
+       * ⭐ **The arrangement's own tempo goes into the plan, because the overlap rule measures in seconds.**
+       *
+       * "Was the previous voice still sounding when this note began?" is a question about seconds, and a step is only
+       * seconds once a tempo says so — so `planSamplerSteps` is handed the same `bpm` the steps are placed with, and it
+       * marks the handovers exactly as `planOfflineAudioLanes` does for a render (`src/audio/legatoJoin.ts`).
+       */
+      const samplerSteps = planSamplerSteps(samplerLanes, { bpm });
       /**
        * ⭐ **Retained past the first pass, because the transport loops.**
        *

@@ -11,6 +11,11 @@
  *
  * A section's audio lane starts **at the section's first bar**, because a sample is not a sequencer pattern: it has its own length and no steps to place. Where it
  * lands inside that bar, and how a long sample crosses into the next section, is the playback path's business — and it will be measured, not assumed.
+ *
+ * ⭐ **It is also where the overlap rule reaches the audio-lane playback path.** When the song states a tempo,
+ * `planAudioLaneEvents` measures each instrument note in seconds and runs `planLegatoJoins` over the plan's own events
+ * (`src/audio/legatoJoin.ts`), writing `voiceRank`／`legato`／`handedOn` so `browserSampleSink` can carry the voice that
+ * is already sounding — the live half of what the offline renderer has done since `5bb7c7b`.
  */
 import { SAMPLE_CATALOGUE, findSampleAsset, sampleReferenceProblem } from "../data/sampleCatalogue";
 import { isAudioLane } from "./offlineAudioLanes";
@@ -19,10 +24,20 @@ import { STEPS_PER_BAR } from "../data/noteEvents";
 import { stepTiming, totalSeconds } from "../data/tempoMap";
 import type { SampleAsset } from "../data/sampleCatalogue";
 import { sampledAssetForLane, sampledDrumVoicingForLane } from "../data/sampledInstruments";
+import { planLegatoJoins, type LegatoJoinCandidate, type LegatoJoinMark } from "./legatoJoin";
 import type { SequencerTrack } from "../types/genre";
 import type { TempoPoint } from "../data/tempoMap";
 
 export interface AudioLaneEvent {
+  /**
+   * ⭐ **Which lane this event belongs to**, as an ordinal over the lanes the song plans — one number per
+   * `slot × track` pair, so the same lane in two sections is one lane and two lanes in one clip are two.
+   *
+   * It is the identity the overlap rule groups by and the voice ledger keys on (`src/audio/legatoJoin.ts`,
+   * `src/audio/legatoVoices.ts`): a note is only ever handed a voice from its own lane. Present on an **instrument**
+   * event, which is the only kind that has a voice to carry; a plain sample keeps the shape it has always had.
+   */
+  trackIndex?: number;
   /** The lane's own name when it has one, so two audio lanes can be told apart. */
   laneId?: string;
   name: string;
@@ -41,12 +56,44 @@ export interface AudioLaneEvent {
   /** How long the note sounds, in steps — the lane's own `gate`, converted to seconds by the scheduler. Instrument events only. */
   gateSteps?: number;
   /**
-   * How long the voice sounds, in **seconds** — written by the scheduler from `gateSteps` and that step's own length, and
-   * read by the browser sink so a note has a scheduled end. Absent on a plain sample, whose bytes are the whole event.
+   * How long the voice sounds, in **seconds**.
+   *
+   * ⭐ **Written here, by the planner, since the overlap rule needs it** — the rule's whole question is "was the previous
+   * voice still sounding when this note began?", which is a question about seconds. The scheduler places the note from
+   * the same second rather than computing its own (see `scheduleAudioLaneSamples`), so "when does this note sound and
+   * how long is it" has one answer per event. Absent on a plain sample, whose bytes are the whole event.
    */
   seconds?: number;
+  /**
+   * ⭐ **When this note starts, in seconds** — `stepTiming`'s own answer for this event's step, the same arithmetic the
+   * scheduler places the note with. Present on an instrument event beside `seconds`, for the reason above.
+   */
+  atSeconds?: number;
   /** The lane's position, −1…1, when it states one. Carried per event because the scheduler never sees the lane again. */
   pan?: number;
+  /**
+   * ⭐ **Which voice of its onset this note is** — the notes of one onset ranked by ascending pitch, lowest first,
+   * written by `planLegatoJoins` for every note of every lane the rule examined. The live sink keys its sounding
+   * voices by it, exactly as the offline sink does.
+   */
+  voiceRank?: number;
+  /**
+   * ⭐ **A handover instead of a new attack**, when the overlap rule says the join is legato.
+   *
+   * Present means: do not start this note's own recording from its start, but carry the voice already sounding on
+   * this lane and rank. `browserSampleSink` performs it through the same `createLegatoVoiceLedger` the offline
+   * sampler sink uses, and refuses by name rather than going silent when the recording cannot reach the note's end.
+   */
+  legato?: LegatoJoinMark;
+  /**
+   * ⭐ **Whether a later note is planned to be handed this very voice** — written by `planLegatoJoins`, beside `legato`
+   * on the notes the rule carries *to*.
+   *
+   * `browserSampleSink` uses it for one thing: a voice that will be carried must be started with a movable end, because
+   * `takeOver()` refuses one whose end is bound inside its node. Nothing else about such a note changes, and a note that
+   * is not handed on keeps exactly the shape it had before this field existed.
+   */
+  handedOn?: boolean;
 }
 
 export interface AudioLanePlan {
@@ -61,6 +108,30 @@ export interface PlanInput {
   sections: Array<{ id?: string; slot?: string; bars?: number }>;
   /** Where each section begins, in bars — the flatten's own `boundaries`, so the two cannot disagree. */
   boundaries?: number[];
+  /**
+   * ⭐ **The tempo, when the caller has it — and the overlap rule needs it.**
+   *
+   * Whether a note still sounds when the next begins is a question in seconds, and a step is only seconds once a tempo
+   * says so. The scheduler already hands the song in with `bpm` (its own `ScheduleInput` requires it), so this costs no
+   * caller anything; a caller that plans without a tempo gets no legato marks, which is the honest answer rather than a
+   * guess at 120 for a song that states another tempo.
+   */
+  bpm?: number;
+  /** The tempo map, when the song has one, so a note in a movement lands where the music does. */
+  tempoTrack?: TempoPoint[];
+  /** The flattened pattern's length, so an instrument event's step has a bounded second. Absent means "as far as the events reach". */
+  totalSteps?: number;
+}
+
+/**
+ * ⭐ **How long the plan's timeline is, in steps** — one rule, read by the planner and by the scheduler.
+ *
+ * The scheduler used to derive this itself from the events, and the planner needs the identical number to place a note
+ * in seconds before the scheduler sees it; two derivations of it would be the oldest defect in this codebase. It is
+ * exported rather than inlined twice for that reason.
+ */
+export function audioLaneTotalSteps(events: readonly Pick<AudioLaneEvent, "atStep">[], stated?: number): number {
+  return stated ?? events.reduce((longest, event) => Math.max(longest, event.atStep + 1), 16);
 }
 
 /**
@@ -71,13 +142,24 @@ export function planAudioLaneEvents(song: PlanInput, catalogue: readonly SampleA
   const events: AudioLaneEvent[] = [];
   const problems: string[] = [];
   const sections = song.sections ?? [];
+  /**
+   * ⭐ **One lane ordinal per `slot × track`**, handed out the first time a lane is met.
+   *
+   * The offline planner's events carry their position in the pattern; this planner's events come from a **clip per
+   * section**, so a position inside a clip is not an identity — the same clip played by three sections is one lane,
+   * and two clips' first tracks are two. The ordinal is what makes "one lane" mean one lane here, and it is the number
+   * the sink keys its sounding voices by.
+   */
+  const lanes = new Map<string, number>();
 
   // Walk the sections the way a render does, so "section i starts at bar X" has exactly one definition in this codebase.
   let bar = 0;
   sections.forEach((section, index) => {
     const startBar = song.boundaries?.[index] ?? bar;
     const clip = section.slot ? song.clips?.[section.slot] : undefined;
-    for (const track of clip?.tracks ?? []) {
+    const tracks = clip?.tracks ?? [];
+    for (let trackInClip = 0; trackInClip < tracks.length; trackInClip += 1) {
+      const track = tracks[trackInClip]!;
       /**
        * ⭐ **A lane is an audio lane when it sounds a catalogue recording — not only when its `track_id` is `"audio"`.**
        *
@@ -135,9 +217,17 @@ export function planAudioLaneEvents(song: PlanInput, catalogue: readonly SampleA
           continue;
         }
         const pan = typeof track.pan === "number" && Number.isFinite(track.pan) ? Math.max(-1, Math.min(1, track.pan)) : undefined;
+        /** The lane's identity, allocated once however many sections play this clip. */
+        const laneKey = `${section.slot ?? ""}#${trackInClip}`;
+        let trackIndex = lanes.get(laneKey);
+        if (trackIndex === undefined) {
+          trackIndex = lanes.size;
+          lanes.set(laneKey, trackIndex);
+        }
         for (let offset = 0; offset < sectionBars; offset += 1) {
           for (const { step, pitch } of notes) {
             events.push({
+              trackIndex,
               ...(track.laneId ? { laneId: track.laneId } : {}),
               name: track.name,
               assetId,
@@ -161,6 +251,45 @@ export function planAudioLaneEvents(song: PlanInput, catalogue: readonly SampleA
     }
     bar = startBar + Math.max(1, Math.floor(section.bars ?? 1));
   });
+
+  /**
+   * ⭐ **The overlap rule, over this planner's own events — the same `planLegatoJoins` the offline renderer calls.**
+   *
+   * It runs only when the song states a tempo, because every question the rule asks is in seconds and a step is only
+   * seconds once a tempo says so. The note's own second and length are written onto the event here (through
+   * `audioLaneInstrumentSeconds`, the one reading of the grid the scheduler consumes too) so the rule and the
+   * scheduler cannot disagree about where a note is or how long it lasts.
+   */
+  if (song.bpm !== undefined) {
+    const totalSteps = audioLaneTotalSteps(events, song.totalSteps);
+    const tempo = { bpm: song.bpm, ...(song.tempoTrack === undefined ? {} : { tempoTrack: [...song.tempoTrack] }) };
+    /** The indexed notes, in the plan's own order, so the rule's answer can be written back onto the events it came from. */
+    const notes: Array<{ event: AudioLaneEvent; seconds: number | undefined; atSeconds: number }> = [];
+    for (const event of events) {
+      if (event.pitch === undefined) continue;
+      const timing = audioLaneInstrumentSeconds(event.atStep, tempo, totalSteps);
+      const seconds = event.gateSteps === undefined ? undefined : event.gateSteps * timing.stepSeconds;
+      event.atSeconds = timing.atSeconds;
+      event.seconds = seconds;
+      notes.push({ event, seconds, atSeconds: timing.atSeconds });
+    }
+    const joined = planLegatoJoins<LegatoJoinCandidate>(
+      notes.map(({ event, seconds, atSeconds }) => ({
+        trackIndex: event.trackIndex ?? 0,
+        name: event.name,
+        assetId: event.assetId,
+        pitch: event.pitch!,
+        atSeconds,
+        ...(seconds === undefined ? {} : { seconds }),
+      }))
+    );
+    joined.events.forEach((marked, position) => {
+      const event = notes[position]!.event;
+      event.voiceRank = marked.voiceRank;
+      event.legato = marked.legato;
+      event.handedOn = marked.handedOn;
+    });
+  }
 
   return { events, problems };
 }
