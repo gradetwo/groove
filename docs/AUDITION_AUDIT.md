@@ -29,7 +29,7 @@
 
 | 能力 | **MCP** | **WEB** |
 | --- | --- | --- |
-| **某一节／某几小节** | **`render_preview_clip`** ✓（`sectionId` ＋ `bars` ✓） | **loop range** ✓：`src/data/arrangementLoop.ts` ✓、`ArrangementViewV2.tsx:122` ✓、`LoopBraceV2` 画在时间线上（`:441` ✓） |
+| **某一节／某几小节** | **`render_preview_clip`** ✓（`sectionId` ＋ `bars` ✓） | **⚠️ 见下：循环框**不接音频**** ✗——`src/data/arrangementLoop.ts` ✓ 与 `LoopBraceV2`（`:441` ✓）只有**模型与 UI** ✓，**`ArrangementViewV2.tsx:25-29` 自己写着 "the loop brace is a ruler-level loop that **no audio path reads**"** ✓✓ |
 | **单轨／多轨** | **`render_arrangement_stems`**（`:3234` ✓，分轨导出 ✓） | **每轨 solo／mute** ✓：`track-solo-${id}`／`track-mute-${id}`（`TrackHeaderV2.tsx:198`／`:211` ✓），**而它的注释写着"solo overrides mute, and it is not cosmetic"** ✓ |
 | **低采样率快速版** | ✓ `sampleRate: 8000` ✓（`render_arrangement:408` ✓、stems ✓） | —（**实时播放，不需要渲染** ✓） |
 | **arrangement 的任意小节区间** | **✗ 没有**——`render_arrangement`（`:389` ✓）只有 `arrangementId`／`format`／`bitrateKbps`／重复次数／`sampleRate`／`channels` ✓ | **✓ 有**（loop range ✓） |
@@ -42,7 +42,9 @@
 
 ## §4 一处值得记下的**不对称** ✓✓
 
-**WEB 有 loop range，而 MCP 的编排渲染没有范围** ✗；**MCP 有分轨导出，而 WEB 的分轨是**交互式**的（能 solo 听，不能"导出这三轨"✗）** ✓。**两边各缺一半，而且缺的不是同一半 ✓✓**——**所以"有没有方便的试听"这个问题，答案取决于你在哪一侧创作 ✓**。
+**⚠️ 更正（2026-10-02）**：这里原本写"**WEB 有 loop range，而 MCP 的编排渲染没有范围**" ✗——**前半句是错的** ✓。**`ArrangementViewV2.tsx:25-29` 明写循环框 "**no audio path reads**"** ✓✓：**Web 有的是**循环区间这个模型与标尺 UI** ✓，**不是"能循环听那一段"** ✗。**而 MCP 一侧的"某一段"是**真的**：`render_preview_clip` 按 `sectionId` ＋ `bars` 出音频 ✓✓**（**编排渲染的小节范围后来也补上了 ✓，见 §6 ✓**）。
+
+**⇒ 因此真正的对比是** ✓✓：**MCP 能按段**渲染出音频** ✓，而 Web 的编排界面**连循环都还没接上音频** ✗**——**这与本文下面那句"MCP 有分轨导出、WEB 的分轨是交互式的"合起来看，结论反而更清楚 ✓：**两侧缺的都不是同一半 ✓，而 Web 一侧缺得更多 ✓✓**。
 
 ## §5 下一步（按"影响 × 可判定"排）
 
