@@ -70,8 +70,8 @@ export const SAMPLED_INSTRUMENTS: readonly SampledInstrumentChoice[] = [
   },
   {
     instrument: "walking_upright",
-    assetId: "karoryfer-meatbass:pizz-basic",
-    because: "`walking_upright` is a double bass, and a walking line is **plucked**: Meatbass's `pizz` programs are the plucked half of the same instrument the name describes (`arco` would be bowed).",
+    assetId: "dsmolken-double-bass:d-smolken-rubner-bass-pizz",
+    because: "`walking_upright` is a double bass, and a walking line is **plucked**. This is the *same instrument and the same player* as the row it replaces, taken from the pizzicato program instead: the pinned readmes both say so — `dsmolken-double-bass` is \"1958 Otto Rubner double bass played and mapped by D. Smolken … Fifths tuning (CGDA), Thomastik-Infeld Spirocore strings\", and `karoryfer-meatbass` (the previous answer) is \"samples of a 1958 Otto Rubner double bass played and mapped by Drogomir Smolken … Fifths tuning (CGDA), Thomastik-Infeld Spirocore strings\". What changes is the opcode the four round robins are built on: this program takes them from `seq_length`/`seq_position`, which `src/audio/sfz/parse.ts` implements, while Meatbass's `pizz_basic.sfz` takes them from `lorand`/`hirand`, which that parser does not read — so Meatbass answers every repeat with its first take. The printed range is stated rather than assumed: the file's own header says \"Sampled notes range from C1 through A3 for pizz\". CC0, so no attribution. ⚠️ `amp_velcurve_*` and `bend_up`/`bend_down` are not implemented either (they are in the entry's `needs`), so velocity follows the app's own curve.",
   },
   {
     instrument: "strings_lead",
@@ -80,8 +80,8 @@ export const SAMPLED_INSTRUMENTS: readonly SampledInstrumentChoice[] = [
   },
   {
     instrument: "sax_lead",
-    assetId: "vcsl:Tenor-Saxophone-Keyswitch",
-    because: "`sax_lead` is the jazz lead saxophone; VCSL's tenor saxophone is the horn that line is normally written for (the library also carries a Saxello — a soprano variant — which would be the smaller, brighter answer).",
+    assetId: "mtg-solo-sax:MTG-Tenor-Sax",
+    because: "`sax_lead` is the jazz lead saxophone, and the horn that line is normally written for is the **tenor**. This is that horn, named as a program: MTG Solo Saxophones' program table carries \"Tenor saxophone\" (`MTG Solo Saxophones/MTG Tenor Sax.sfz`), inside what its README calls \"A complete set of Soprano, Alto, Tenor and Baritone solo saxophones built from MTG free samples pack\", recorded by the Music Technology Group (Universitat Pompeu Fabra) and mapped by kinwie at \"24 bit, 48 kHz, Mono\" with \"3 round-robins\" and \"2 velocity layers\". It replaces `vcsl:Tenor-Saxophone-Keyswitch` — the same instrument, but behind a **keyswitch wrapper**: its Vibrato, Non-Vibrato and Staccato articulations are selected by `sw_*` opcodes `src/audio/sfz/parse.ts` does not read, so which take answers a key is decided by region geometry rather than by the switch (the Vibrato group's `F#2` region spans keys 54–56 while the Staccato group writes a `G#2` region with `lokey=56 hikey=56`, so note 56 answers with the staccato take). `src/data/stringTechniques.ts` refuses this library's `-KS` programs for the same reason. ⚠️ Two differences are stated rather than hidden: this row is **CC BY 4.0 and requires the attribution the manifest carries**, and MTG's vibrato and legato are MIDI-CC modulations (`pitchlfo_depth_oncc1`, `locc64`, `trigger=legato`) this loader does not implement, so it plays the app's own envelope and the modwheel adds nothing.",
   },
   {
     instrument: "trumpet_lead",

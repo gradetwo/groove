@@ -71,7 +71,9 @@ describe("the recorded-instrument table", () => {
   it("matches the whole name exactly, and never a prefix, a case variant or a synonym", () => {
     // The owner's examples, by their names in the genre data.
     expect(sampledInstrumentFor("piano_lead")?.assetId).toBe("salamander-grand");
-    expect(sampledInstrumentFor("walking_upright")?.assetId).toBe("karoryfer-meatbass:pizz-basic");
+    // Updated 2026-10-03: the row now names the pizzicato program of dsmolken-double-bass, which is the same
+    // 1958 Otto Rubner double bass as Meatbass but whose round robins use the `seq_length` opcode this loader reads.
+    expect(sampledInstrumentFor("walking_upright")?.assetId).toBe("dsmolken-double-bass:d-smolken-rubner-bass-pizz");
     expect(sampledInstrumentFor("strings_lead")?.assetId).toBe("vsco2ce:ViolinEnsSusVib");
     // And the answers a guessing matcher would give, which must be `undefined`.
     expect(sampledInstrumentFor("piano")).toBeUndefined();
@@ -89,7 +91,7 @@ describe("the recorded-instrument table", () => {
     expect(SAMPLED_ROLES).toEqual(["bass", "chords", "lead"]);
     expect(sampledAssetForLane({ track_id: "chords", instrument: "piano_lead" })).toBe("salamander-grand");
     expect(sampledAssetForLane({ track_id: "lead", instrument: "strings_lead" })).toBe("vsco2ce:ViolinEnsSusVib");
-    expect(sampledAssetForLane({ track_id: "bass", instrument: "walking_upright" })).toBe("karoryfer-meatbass:pizz-basic");
+    expect(sampledAssetForLane({ track_id: "bass", instrument: "walking_upright" })).toBe("dsmolken-double-bass:d-smolken-rubner-bass-pizz");
     expect(sampledAssetForLane({ track_id: "kick", instrument: "piano_lead" })).toBeUndefined();
     expect(sampledAssetForLane({ track_id: "fx", instrument: "piano_lead" })).toBeUndefined();
   });

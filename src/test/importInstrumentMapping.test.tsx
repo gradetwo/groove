@@ -40,10 +40,10 @@ describe("the instruments a part may be named as", () => {
     const piano = options.find((option) => option.instrument === "piano_lead")!;
     const bass = options.find((option) => option.instrument === "walking_upright")!;
     expect(piano.assetId).toBe("salamander-grand");
-    expect(bass.assetId).toBe("karoryfer-meatbass:pizz-basic");
+    expect(bass.assetId).toBe("dsmolken-double-bass:d-smolken-rubner-bass-pizz");
     // The library is the part of the id before the colon, which is also the group heading.
     expect(piano.library).toBe("salamander-grand");
-    expect(bass.library).toBe("karoryfer-meatbass");
+    expect(bass.library).toBe("dsmolken-double-bass");
     // The judgement travels with the row rather than being re-derived here.
     expect(piano.because).toContain("Acoustic Piano");
   });
@@ -96,7 +96,7 @@ describe("placing a read MIDI file into an arrangement", () => {
     const bass = placed.arrangement.tracks.find((track) => track.name === "贝斯")!;
     expect(bass.instrument).toBe("walking_upright");
     expect(piano.instrument).toBeUndefined();
-    expect(sampledAssetForLane({ track_id: "lead", instrument: bass.instrument })).toBe("karoryfer-meatbass:pizz-basic");
+    expect(sampledAssetForLane({ track_id: "lead", instrument: bass.instrument })).toBe("dsmolken-double-bass:d-smolken-rubner-bass-pizz");
   });
 
   /**

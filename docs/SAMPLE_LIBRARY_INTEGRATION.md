@@ -1715,3 +1715,178 @@ roster 于是补上 `vsco2ce:TimpaniRolls`，`Orchestral` 计数 91 → **108**�
 * `bigcat.cello` 的 `smpl` 循环点今天用不上（要加载器读 `smpl`）——**素材已到位**，代码那一格未动。
 * 桶上没有逐条对象核对（与上一轮同）：本轮用的是 `rclone size` 前后对账 ＋ 逐条抽查，**不是** 10 108 个文件
   逐个核对。
+
+## ⭐⭐⭐⭐ 调色板接线（2026-10-03）：十七个新库里，两个真的进了"曲风会播到"的位置
+
+`docs/OPEN_WORK.md` §八十二／八十三量到：后 17 个库在 `src/`＋`mcp/` 里**零引用**，所以曲风永远播不到它们。
+这一节是那件事的**处置**：逐名判"换不换"，每个 `because` 只写**可核事实**（库是什么、程序名、音域、怎么录的、
+许可、加载器读不读那个 opcode），**不写听感** —— 本会话不做听感判断。
+
+### ① 复核读数（自己量的，不照抄）
+
+* **零引用**：对 17 个新库的 id 逐个在 `src/`＋`mcp/` 里搜，**17/17 命中 0 次**；它们只出现在
+  `public/samples/manifest.json`、`README.md` 的署名表、和 `docs/` 里。调色板 48 行里出现的库 id 共 **15 个**，
+  无一在这 17 个里。
+* **分区**：`ALL_GENRES` 的 distinct 名字 **61**；`SAMPLED_INSTRUMENTS` **22**；`SAMPLED_INSTRUMENT_SYNTHS` **37**；
+  `SAMPLED_INSTRUMENT_GAPS` **2**；22＋37＋2＝61，未分类 **0**。
+* ⚠️ **一处更正**：`docs/OPEN_WORK.md` §83.2 与工单都写 `ALL_SAMPLED_INSTRUMENTS ＝ 22 ＋ 3 ＝ 25 行`。
+  **实测是 26 行派生行**（`playableTechniques()` 26 条：四声部的 sustain／quiet／pizzicato／spiccato／tremolo，
+  加 solo-violin 族与低音提琴的 `non-vibrato`），所以 **`ALL_SAMPLED_INSTRUMENTS` ＝ 22＋26 ＝ 48 行**。
+  那 26 行服务的是**演奏法身份**（`violin_section_pizzicato`、`contrabass_solo_non_vibrato` …），不是那 61 个名字，
+  所以 **distinct 名字仍是 61**；`src/data/sampledInstruments.ts` 自己的注释也写的是 "all 26 rows today"。
+  新判据只断言 `ALL ＝ SAMPLED ＋ TECHNIQUE` 这个**关系**，所以派生半边的增减不会被误读成分区变化。
+
+### ② 逐名判据表（依据＝可核事实；URL 指到 pinned 提交）
+
+| 名字 | 改前 | 处置 | 依据 |
+| --- | --- | --- | --- |
+| `sax_lead` | `vcsl:Tenor-Saxophone-Keyswitch` | **换** → `mtg-solo-sax:MTG-Tenor-Sax` | ②.1 |
+| `walking_upright` | `karoryfer-meatbass:pizz-basic` | **换** → `dsmolken-double-bass:d-smolken-rubner-bass-pizz` | ②.2 |
+| `rhodes_ep` | `jlearman-jrhodes3c:jRhodes-both-looped` | **不换** | ②.3 |
+| `finger_bass`／`pick_bass` | `karoryfer-black-and-blue-basses:05-darkblack-pluck`／`freepats-electric-bass-yr:PickedBassYR-20190930` | **不换** | ②.3 |
+| `flute_lead` | `vsco2ce:FluteSusVib` | **不换** | ②.4 |
+| `strings_lead` | `vsco2ce:ViolinEnsSusVib` | **不换**（独奏大提琴 ≠ 弦乐群） | ②.5 |
+| `bell_lead`／`vibraphone`／`marimba_lead` | `vcsl:Tubular-Bells-1`／`vcsl:Vibraphone-Keyswitch`／`vcsl:Marimba` | **不换**（钢鼓不是这三件乐器） | ②.5 |
+| 其余 8 个库 | — | **不许硬塞** | ②.6 |
+
+#### ②.1 `sax_lead` → MTG Solo Saxophones 的 **Tenor saxophone**
+
+**那一行原本的理由**：`sax_lead` 是 jazz 主奏萨克斯，而"这条线通常为 **tenor** 写"（原 `because` 原话：
+"VCSL's tenor saxophone is the horn that line is normally written for"）。
+
+**新库的可核事实**（`https://github.com/sfzinstruments/MTG.SoloSax`，pin `b494d256…`；程序表在
+`public/samples/manifest.json` 的 `mtg-solo-sax` 条目里，8 个程序）：
+
+* 程序名里**就有 "Tenor saxophone"**：`MTG Solo Saxophones/MTG Tenor Sax.sfz` ⇒ assetId
+  **`mtg-solo-sax:MTG-Tenor-Sax`**；另有 Alto／Soprano／Baritone 及各自 "(no legato)" 版本。
+* README 原句：**"A complete set of Soprano, Alto, Tenor and Baritone solo saxophones built from MTG free samples pack"**；
+  **"Sample quality: 24 bit, 48 kHz, Mono"**；**"The notes range has 3 round-robins using neighbour keys."**；
+  **"Mapped to 2 velocity layers, except the Baritone has 3 velocity layers."**；许可 **CC BY 4.0**
+  （署名原文在条目 `attribution` 里）。
+* 音域：p 层的 `Data/ten_p_rr1.txt` 逐 region 写 `key=44` … `key=76`（G#2–E5，tenor 的记谱常用域）。
+
+**为什么这比原行更贴**（可核、非听感）：两个都是 tenor，但原资产是**按键切换（Keyswitch）包装**——
+`Aerophones/Reed Aerophones/Tenor Saxophone - Keyswitch.sfz`（`sgossner/VCSL`，pin `dfcf4a49…`）用
+`sw_default=36 / sw_lokey=36 / sw_hikey=39` 把 Vibrato／Non-Vibrato／Staccato 三段折在一个文件里；本仓
+`src/audio/sfz/parse.ts` 的子集**不实现 `sw_*`**，选中的是"**键域最窄、文件里最先**"的那一段
+（`regionsForNote`／`roundRobinPick`），于是**哪一段响由 region 几何决定**：Vibrato 的 `F#2` 覆盖 54–56，
+而 Staccato 的 `G#2` 写 `lokey=56 hikey=56`，所以 **note 56 答的是 staccato**。
+`src/data/stringTechniques.ts` 已经为同一理由**明确拒绝**这个库的 `-KS` 程序
+（"they fold several articulations into one file behind `sw_*` opcodes this loader does not implement"）。
+MTG 的 tenor 是逐乐器程序、无 `sw_*`，三条 round robin 走 `seq_length`（实现）。
+⚠️ 两处差异**写出来而不是藏起来**：这一行是 **CC BY 4.0 需要署名**（清单已带）；MTG 的颤音与连奏是
+MIDI CC 调制（`pitchlfo_depth_oncc1`／`locc64`／`trigger=legato`），本加载器不实现，所以它按 app 自己的包络响、
+modwheel 不产生效果。
+
+#### ②.2 `walking_upright` → D. Smolken Rübner double bass 的 **pizzicato** 程序
+
+**那一行原本的理由**：`walking_upright` 是 double bass，walking 线是**拨奏**。
+
+**新库的可核事实**（`https://github.com/sfzinstruments/dsmolken.double-bass`，pin `c2985eb6…`）：
+
+* `readme.txt` 原句：**"1958 Otto Rubner double bass played and mapped by D. Smolken."**、
+  **"Arco and pizzicato with SFZ mappings, miscellaneous noises also included with each file."**、
+  **"Fifths tuning (CGDA), Thomastik-Infeld Spirocore strings. F.G. Pfretzchner bow, Pops' rosin."**、
+  **"Royalty-free for all commercial and non-commercial use."**；许可 **CC0**（无需署名）。
+* 程序表两个：`Double bass, arco` 与 **`Double bass, pizzicato`**（`d_smolken_rubner_bass_pizz.sfz`）⇒ 换的是后者
+  **`dsmolken-double-bass:d-smolken-rubner-bass-pizz`**。
+* 该 SFZ 自己的头注：**"Sampled notes range from C1 through A3 for pizz."**；round robin 走
+  `seq_length`／`seq_position`（四取一，实现）。
+
+**为什么这比原行更贴**（可核、非听感）：**是同一件乐器、同一个人**——
+`https://github.com/sfzinstruments/karoryfer.meatbass`（pin `ac9e8595…`）的 `readme.txt` 原句：
+**"samples of a 1958 Otto Rubner double bass played and mapped by Drogomir Smolken, recorded by Ludwik Zamenhof."**、
+**"Fifths tuning (CGDA), Thomastik-Infeld Spirocore strings."** —— 同琴、同弦、同弓、同松香、同一演奏者；
+差别在**四条 round robin 建在哪个 opcode 上**：candidate 用 `seq_length`／`seq_position`（实现），
+而 Meatbass 的 `Programs/pizz_basic.sfz` 用 `lorand`／`hirand`（`parse.ts` 不读），
+于是 Meatbass 的每一次重复都答 `_rr1`。
+⚠️ `amp_velcurve_*` 与 `bend_up`／`bend_down` 同样未实现（在条目 `needs` 里），力度走 app 自己的曲线。
+
+#### ②.3 `rhodes_ep` 与两个电贝司：**不换**（新库是**别的乐器**）
+
+* `https://github.com/sfzinstruments/GregSullivan.E-Pianos`（pin `8c3e581a…`）README 原句列的是
+  **"Yamaha CP80 Electric Grand Piano"**、**"Hohner Pianet T (type 2)"**、**"Wurlitzer EP200 Electric Piano"**——
+  **没有一件是 Rhodes**；而 `rhodes_ep` 的 `because` 明写那是 **Fender Rhodes**、`jRhodes3c` 是被录下来的
+  **1977 Rhodes Mark I Stage 73**。换它就是把"Rhodes"答成 CP80／Pianet／Wurlitzer。
+* `dsmolken-double-bass` 是**低音提琴（upright）**；`finger_bass`／`pick_bass` 的 `because` 与名字都写明是
+  **电贝司**（"a fingerstyle electric bass"／"an electric bass played with a pick"）。⇒ 两个名字都不是它的候选。
+
+#### ②.4 `flute_lead`：**不换**（新库提供不了那一行要的"持续＋颤音"）
+
+* 那一行要的是 "a concert flute, **sustained** … that instrument **with the vibrato a lead line wants**"；
+  现资产 `vsco2ce:FluteSusVib` 的采样名是 `LDFlute_susvib_*`（**录下来的** sus+vib）。
+* `https://github.com/sfzinstruments/Ixox.Flute`（pin `0cc54468…`）README 原句：**"Flute 1 has articulations
+  control: 0% : Normal / 50% : Staccato / 100% : Percussive"** 与 **"Vibrato : Add vibrato using modwheel (CC1),
+  up to 50 cents"**；其 SFZ 里颤音是 `pitchlfo_depth_oncc1`／`pitchlfo_freq` 的调制，**加载器不实现**，
+  所以它会**在没有那一行要的颤音的情况下**应答。⇒ **"核不出来就不换"** 的更强形式：**核出来了它给不了**。
+
+#### ②.5 弦乐群与三件打击乐器：**不换**（换＝错答案）
+
+* `karoryfer-bigcat-cello`（`https://github.com/sfzinstruments/karoryfer-bigcat.cello`，pin `6fd75fbf…`）的程序名是
+  **"Cello, bowed (velocity layers)"**、**"Cello, bowed (mod wheel)"**、**"Cello, plucked"** —— **独奏大提琴**；
+  `strings_lead` 是**弦乐群**（`vsco2ce:ViolinEnsSusVib` 是 violin section 的持续＋颤音）。一把琴不是一群。
+* `jlearman-steel-drum`（`https://github.com/sfzinstruments/jlearman.SteelDrum`，pin `dc15a36a…`）的程序名是
+  **"Steel drum, velocity crossfades"**／**"Steel drum, no crossfades"** —— 钢鼓；它不是
+  `bell_lead`（那一行自己就写着它是**合成器铃音**，管钟只是邻居）、不是 `vibraphone`、也不是 `marimba_lead`。
+
+#### ②.6 与那 22 个名字没有同一乐器的库：**一个都不许硬塞**
+
+`cithara-barbarica`／`hungarian-zither`／`ganjo`／`aliexpress-erhu`／`karoryfer-cowsynth`／`karoryfer-squidpipes`／
+`karoryfer-272-merry-orks`／`karoryfer-bear-sax`（＋两个鼓库 `karoryfer-big-rusty-drums`／`body-percussion`）在这 61 个
+名字里**没有一件同一乐器**，所以它们的价值只能靠"有人显式选 asset"或"将来把名字加进曲风数据"。判据断言
+**这些库不出现在任何一行**。
+
+### ③ 落点（文件:行）
+
+* `src/data/sampledInstruments.ts`：`walking_upright` 行、`sax_lead` 行（assetId ＋ `because` 重写）。
+* `src/test/sampledInstruments.test.ts`：两处**编码的是数据**的期望（"某名字→某库"）随行更新
+  （`sampledInstrumentFor("walking_upright")` 与 `sampledAssetForLane({track_id:"bass",…})`）；
+  "整名精确匹配"那条**不变量**判据**一个字没动**。
+* `src/test/importInstrumentMapping.test.tsx`、`src/test/midiArrangementImport.test.ts`：三处
+  `karoryfer-meatbass:pizz-basic` → 新 assetId（它们断言的是"名字解析到的目录录音"，是数据不是不变量）。
+* **新增** `src/test/sampledInstrumentPaletteWiring.test.ts`：本轮的正面／反面判据。
+
+### ④ 鼓那条路：**本轮只测，不改** `src/audio/drumRoles.ts`
+
+那条路的形状是**一个 kit 常量** `DRUM_KIT_ASSET_ID = "virtuosity-drums-basic"` 服务四个 role（`kick`/`snare`/`hihat`/
+`percussion` → GM 36／38／42／82），见 `docs/DRUM_KIT_MAPPING.md`。两个新库的实测：
+
+* **`karoryfer-big-rusty-drums`**（CC0，674.1 MiB，4 814 文件，`Programs/02-basic.sfz`）：它的
+  `Programs/keymap/keymap.sfz` **与 GM 对齐** —— `$kickkey 36`、`$sncenterkey 38`、`$htclstkey 42` ⇒ 三个 role 有键；
+  **但 `percussion` 的 GM 82 没有定义**（keymap 里 78–80 是 18" tom 的 stir、81 是 brush dig、83–96 是
+  percussive clicks）。要它服务那四个 role，需要：**把 82 换掉**（破坏 GM 判据）、或**把"一个 kit"改成"每 role 一个 kit"**
+  （`DRUM_ROLE_NOTES`／`DrumVoicing` 要带 kit，是一处数据模型改动）、或**让 percussion 留在 virtuosity**（两 kit 并存）。
+  受影响判据：`src/test/drumRoles.test.ts` 的 `DRUM_KIT_ASSET_ID` 断言（多数是符号引用，改常量即可过）、
+  GM note 断言（改 82 就会红）、`known.has(DRUM_KIT_ASSET_ID)`（会过，因为清单里有），以及
+  `docs/DRUM_KIT_MAPPING.md` §3 的表（会过期）。**风险**：672 MiB 的整包下载（现在是 422.5 MiB 的 virtuosity），
+  且 percussion 那条要么破 GM 要么加一层"每 role kit"。
+* **`body-percussion`**（CC0，58.9 MiB，`Programs/body.sfz`）：它的 `Programs/modules/body_keymap.sfz` 把 **36–61**
+  映射成**身体声音** —— `36/37` 是 heel、`38/39` 是 half-stomp、`40/41` 是 stomp、`42–45` 是 body slap、`56–61` 是
+  snap／clap；**82 完全没有**。也就是说它**不是鼓组**：`kick`(36) 会响成脚跟、`snare`(38) 会响成半跺脚、
+  `hihat`(42) 会响成拍身、`percussion`(82) 无键。⇒ 它**不该**服务那四个 role；它需要新的名字（曲风数据里没有）。
+* **结论**：两个都不适合在"一个 kit 常量"的现状下接入；`big-rusty-drums` 是**唯一**有可能的，且要求先决定
+  percussion role 的处置。**本轮未改任何鼓文件。**
+
+### ⑤ 判据（"能红"是实跑出来的）
+
+`src/test/sampledInstrumentPaletteWiring.test.ts` 六条，红／绿都实跑过：
+
+| 反向实验 | 结果 |
+| --- | --- |
+| `sax_lead` 改回 `vcsl:Tenor-Saxophone-Keyswitch` | **2 条红**（"must name mtg-solo-sax:MTG-Tenor-Sax"／入口函数那条） |
+| `walking_upright` 改回 `karoryfer-meatbass:pizz-basic` | **2 条红**（同上形状） |
+| `strings_lead` 换成 `karoryfer-bigcat-cello:01-Bowed-velocity-layer`（独奏大提琴） | **2 条红**（"must stay on vsco2ce:ViolinEnsSusVib"／"approximate a written name"） |
+| `bell_lead` 换成 `jlearman-steel-drum:jSteelDrum`（钢鼓） | **2 条红**（同上形状） |
+
+既有反向判据：`src/test/sampledInstruments.test.ts`（7 tests）与 `src/test/drumRoles.test.ts`（15 tests）在本轮
+**改动前**全绿；改动后除上面那两处**数据**期望外未动，仍全绿。加载器 opcode 的读法是读代码得出的
+（`src/audio/sfz/parse.ts`、`regionPlayback.ts`、`ccGate.ts`），**不是听出来的**。
+
+### ⑥ 判不了／未核实
+
+* **`sax_lead` 换掉的那条 recorded-vibrato 段**是 VCSL Keyswitch 文件里**第一段**（Vibrato）；换到 MTG 后，
+  tenor 的颤音要靠 `pitchlfo_depth_oncc1`（未实现）。所以"更贴"的论据是**乐器身份＋程序名＋可用的 round robin**，
+  **不是**"颤音更好"——这一条判不了，如实列出。
+* `karoryfer-big-rusty-drums` 的 percussion(82) 是否在别的 mapping 文件里被覆盖，只查了 keymap 与
+  `mappings/tom_18_map_basic.sfz`（都无 82），**没有逐文件穷举 4 814 个 region**。
+* 17 个库里 `karoryfer-string-cyborgs` 是否与 `strings_lead` 同一件乐器**未判**（本轮不换 `strings_lead`）。

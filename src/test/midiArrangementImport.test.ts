@@ -259,7 +259,7 @@ describe("naming an imported part's instrument, so it sounds a recording", () =>
     expect(bass.instrument).toBe("walking_upright");
     // The whole point: the name is the key of the recorded-instrument table, so the lane now sounds bytes.
     expect(sampledAssetForLane({ track_id: "lead", instrument: piano.instrument })).toBe("salamander-grand");
-    expect(sampledAssetForLane({ track_id: "lead", instrument: bass.instrument })).toBe("karoryfer-meatbass:pizz-basic");
+    expect(sampledAssetForLane({ track_id: "lead", instrument: bass.instrument })).toBe("dsmolken-double-bass:d-smolken-rubner-bass-pizz");
   });
 
   /**
