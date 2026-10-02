@@ -421,8 +421,9 @@ export const TOOLS: ToolDefinition[] = [
        * but it is **not yet the same sound** as the browser render, and `scripts/probe_headless_parity.ts` measures by how
        * much. A caller choosing it must be able to read that before choosing, so the numbers are here rather than in a
        * document nobody opened. `docs/HEADLESS_CORE_PLAN.md` §8.9/§8.10 is where they come from and where the plan to
-       * close them lives. The text is shared with the three other tools that reach the same host
-       * (`headlessParameterDescription()`), so the four copies cannot drift apart.
+       * close them lives. The text is shared with the six other render tools that reach the same host
+       * (`headlessParameterDescription()`), so the seven copies cannot drift apart; `get_pitch_report`'s resolution-only
+       * path states its own, because no audio exists there for a sound difference to describe.
        */
       headless: z.boolean().optional().describe(headlessParameterDescription()),
       /**
@@ -1674,7 +1675,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "get_pitch_report",
     title: "What a note actually is",
     description:
-      "One note, in every form a caller might have to check it against something else: the **MIDI note number** first, because that is the only field that never changes, then the name, **together with which middle-C convention produced that name**, then the frequency. Names like C4 are a display choice — the same note number is C3 in Yamaha's convention, C4 in scientific pitch notation and C5 in some older software — so a bare name is never returned without the convention beside it. Use this before and after anything that might transpose, and compare the numbers rather than the names. The sound source's own account of the note — which sample file it resolved to, that sample's root key and the ratio it is played at — comes back from `render_instrument_note` as its `resolved` field, and `describePitch` in the app reports both halves in one shape.",
+      "One note, in every form a caller might have to check it against something else: the **MIDI note number** first, because that is the only field that never changes, then the name, **together with which middle-C convention produced that name**, then the frequency. Names like C4 are a display choice — the same note number is C3 in Yamaha's convention, C4 in scientific pitch notation and C5 in some older software — so a bare name is never returned without the convention beside it. Use this before and after anything that might transpose, and compare the numbers rather than the names. The sound source's own account of the note — which sample file it resolved to, that sample's root key and the ratio it is played at — comes back from `render_instrument_note` as its `resolved` field, and `describePitch` in the app reports both halves in one shape. With an `assetId`, the arithmetic half needs no engine at all and the source half can resolve on either host: `headless: true` resolves it on the Node Web Audio host, and the reply's `engine` says which host answered.",
     readOnly: true,
     inputSchema: {
       midi: z
@@ -1690,6 +1691,20 @@ export const TOOLS: ToolDefinition[] = [
         .optional()
         .describe(
           "a catalogue asset to resolve the notes against, e.g. \"vsco2ce:ViolinEnsSusVib\" — adds which sample file each note lands on, that file's declared root key, the ratio it is played at, and what the root sounds at. This is what the source **claims**, not a measurement of it: only a render and a measurement can say whether the claim is true."
+        ),
+      /**
+       * ⭐ **The shared `headlessParameterDescription()` is deliberately not used here.**
+       *
+       * That text is about *rendering*, and quotes the two hosts' measured sound difference; this tool renders nothing
+       * on this path — it resolves the note's source and returns the claim. Quoting a band/loudness gap for a call that
+       * produces no audio would be a true sentence about the wrong thing, so this parameter says what it actually buys:
+       * the same `loadNote` and loader, without a page.
+       */
+      headless: z
+        .boolean()
+        .optional()
+        .describe(
+          "resolve the note's source on the **Node Web Audio host** (`node-web-audio-api`) instead of the Vite + Chromium page — no browser process, and it also works under GROOVE_MCP_NO_BROWSER=1. The same `loadNote` and the same sample loader answer either way, and **no audio is rendered on this path**, so the two hosts' sound difference does not apply here; the reply's `engine` names which host resolved the sample. Only meaningful with `assetId`. **This never falls back**: a missing optional package errors rather than quietly resolving through the page."
         ),
     },
     handler: async (args) => {
@@ -1709,19 +1724,27 @@ export const TOOLS: ToolDefinition[] = [
        * whose audio is an octave away from its label produces a wrong frequency here exactly as it does in a
        * render. That is what the census measures by rendering, and this tool will not imply otherwise.
        *
-       * A browser is needed to resolve, so a failure is reported per note rather than thrown: the number-and-name
-       * half above is pure arithmetic and stays correct either way.
+       * Resolving needs an engine — a page, or the Node Web Audio host with `headless: true` — so a failure is
+       * reported per note rather than thrown: the number-and-name half above is pure arithmetic and stays correct
+       * either way, and an unreachable mirror costs the source half of one note rather than the whole reply.
        */
       const sources = new Map<number, { samplePath: string; rootKey: number; ratio: number }>();
       const sourceProblems: string[] = [];
+      /** Which host resolved the samples; absent when no `assetId` was given, because then no engine ran at all. */
+      let resolveEngine: "browser" | "node-web-audio-api" | undefined;
       if (assetId) {
         for (const midi of wanted) {
           try {
-            const resolved = await auditionInstrumentNote(assetId, midi, { format: "wav", resolveOnly: true });
+            const resolved = await auditionInstrumentNote(assetId, midi, {
+              format: "wav",
+              resolveOnly: true,
+              ...(args.headless === true ? { headless: true } : {}),
+            });
             if (!("resolved" in resolved)) {
               sourceProblems.push(`note ${midi}: the source returned audio rather than a resolution`);
               continue;
             }
+            resolveEngine = resolved.engine;
             const rootKey = resolved.resolved.rootKey;
             if (typeof rootKey !== "number") {
               sourceProblems.push(
@@ -1749,6 +1772,8 @@ export const TOOLS: ToolDefinition[] = [
         convention,
         defaultConvention: DEFAULT_NOTE_CONVENTION,
         ...(assetId === undefined ? {} : { assetId }),
+        /** The host that resolved the source half, named rather than inferred — absent when there was no source half. */
+        ...(resolveEngine === undefined ? {} : { engine: resolveEngine }),
         ...(sourceProblems.length === 0 ? {} : { sourceProblems }),
         /** The reader's first line: the convention is named here too, not only per note. */
         note: `names below are ${convention} (note 60 is ${convention}); the numbers are the truth and do not depend on it`,

@@ -62,6 +62,11 @@ Every render tool that has an engine choice takes `headless: true`, and all of t
 | `render_instrument_note` | one note, resolved and rendered through the same `loadNote` and loader as the browser path |
 | `render_arrangement_stems` | one file per track, through the same `stemTrackIdx` argument the browser path passes |
 
+`get_pitch_report` takes the same flag, and it is the one entry that is **not** a render: with an `assetId` it resolves
+each note's source through the same `loadNote` and loader, on either host, and produces no audio at all. Its parameter
+therefore states no band/loudness gap — that would be a true sentence about a path this call never takes — and its
+reply's `engine` names the host that resolved the sample.
+
 The optional package is not declared in `package.json` on purpose; install it with `npm i -D node-web-audio-api` and
 the tools will use it. Without it the call **errors and names the package** rather than quietly rendering through
 Chromium, and every one of these replies' `engine` field says which host produced the file.

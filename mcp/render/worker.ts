@@ -1237,6 +1237,12 @@ export async function renderStems(
 export interface InstrumentNoteResolution {
   assetId: string;
   midi: number;
+  /**
+   * Which Web Audio host resolved the note — `browser` or `node-web-audio-api`, the same two values as
+   * `RenderResult.engine`. It is here for the same reason: a caller reading `samplePath` and `ratio` should not have
+   * to infer which loader answered, and `get_pitch_report` surfaces this field when an `assetId` was given.
+   */
+  engine: "browser" | "node-web-audio-api";
   resolved: AuditionResult["resolved"];
 }
 
@@ -1313,7 +1319,7 @@ export async function auditionInstrumentNote(
     // A refusal from the loader is the answer to the question, so it is thrown as the message the page path throws.
     if ("error" in payload) throw new Error(payload.error);
     // Resolve-only returns before a byte of audio exists, exactly as the page path does.
-    if ("resolvedOnly" in payload) return { assetId, midi, resolved: payload.resolved };
+    if ("resolvedOnly" in payload) return { assetId, midi, resolved: payload.resolved, engine: "node-web-audio-api" };
     const bytes = Buffer.from(payload.base64, "base64");
     const filename = auditionFilename(assetId, midi);
     const target = path.join(dir, filename);
@@ -1408,7 +1414,7 @@ export async function auditionInstrumentNote(
   // ⭐ Resolve-only returns here, before a single byte of audio is produced. The page has already done the work
   // that matters — `loadNote` is the same call the app plays with — so this costs a page call, not a render.
   if ("resolvedOnly" in rendered) {
-    return { assetId, midi, resolved: rendered.resolved };
+    return { assetId, midi, resolved: rendered.resolved, engine: "browser" };
   }
   const bytes = Buffer.from(rendered.base64, "base64");
   const filename = auditionFilename(assetId, midi);

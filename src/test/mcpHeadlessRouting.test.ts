@@ -72,7 +72,14 @@ vi.mock(new URL("../../mcp/render/headless.ts", import.meta.url).pathname, () =>
    */
   renderInstrumentNoteHeadless: async (_assetId: string, _midi: number, options: Record<string, unknown>) => {
     headlessCalls.push(options);
-    if (mockBehavior.mode === "payload") return { ...MOCK_NOTE_PAYLOAD };
+    /**
+     * `get_pitch_report` asks for the resolution only, and the Node entry answers with the same union the page does —
+     * so the mock has to as well, or the routing assertion would be reading a branch the caller never takes.
+     */
+    if (mockBehavior.mode === "payload") {
+      if (options.resolveOnly === true) return { resolved: MOCK_NOTE_PAYLOAD.resolved, resolvedOnly: true };
+      return { ...MOCK_NOTE_PAYLOAD };
+    }
     throw new Error("HEADLESS-REACHED");
   },
   headlessUnavailableMessage: (reason: unknown) => `stub unavailable: ${String(reason)}`,
@@ -219,5 +226,69 @@ describe.each(HEADLESS_TOOLS)("%s's two engines", (name) => {
     // shape rather than a spread, so this is the assertion that catches the field being dropped on the way out.
     expect(headlessCalls, "the Node host must have been reached").toHaveLength(1);
     expect(reply.engine, `${name} must name the host that rendered`).toBe("node-web-audio-api");
+  });
+});
+
+/**
+ * **`get_pitch_report`'s source half, which is a resolution and not a render.**
+ *
+ * It is not in `HEADLESS_TOOLS` on purpose: that list's contract is "renders through `renderAudio`'s two engines", and
+ * this tool's flag changes *who resolves a sample*, with no audio produced at all. So the parameter deliberately does
+ * **not** quote the two hosts' measured sound difference — a band/loudness gap is a true sentence about a path this
+ * call never takes — and the assertions below hold that distinction rather than flattening it.
+ */
+describe("get_pitch_report's source half has two hosts", () => {
+  it("declares headless, and says what it buys without quoting the render divergence", () => {
+    const tool = toolNamed("get_pitch_report");
+    expect(tool.inputSchema.headless, "the parameter has to exist for the flag to be reachable").toBeDefined();
+    const described = tool.inputSchema.headless?.description ?? "";
+    expect(described).toContain("Node Web Audio host");
+    expect(described, "never falls back, like every other entry").toContain("never falls back");
+    expect(described, "no audio is rendered here, so the sound gap is not this tool's business").toContain(
+      "no audio is rendered on this path"
+    );
+    expect(described, "the render tools' parity numbers would be a claim about the wrong thing").not.toContain("1.612 LU");
+    expect(tool.description).toContain("headless");
+  });
+
+  it("resolves on the Node host when asked, with the browser forbidden", async () => {
+    mockBehavior.mode = "payload";
+    const reply = (await toolNamed("get_pitch_report").handler({
+      midi: [60],
+      assetId: "vsco2ce:ViolinEnsSusVib",
+      headless: true,
+    })) as Record<string, unknown>;
+
+    expect(headlessCalls, "the Node host must have been reached").toHaveLength(1);
+    expect(headlessCalls[0]?.headless).toBe(true);
+    expect(headlessCalls[0]?.resolveOnly, "this path must not pay for a render").toBe(true);
+    expect(reply.engine).toBe("node-web-audio-api");
+    const notes = reply.notes as Array<Record<string, unknown>>;
+    const source = notes[0]?.source as Record<string, unknown>;
+    expect(source?.samplePath).toBe("Strings/Violin Section/susVib/VlnEns_susVib_B2_v2.wav");
+    expect(source?.rootKey).toBe(59);
+  });
+
+  it("leaves a call with no flag on the page, and reports that per note rather than hiding the arithmetic", async () => {
+    const reply = (await toolNamed("get_pitch_report").handler({
+      midi: [60],
+      assetId: "vsco2ce:ViolinEnsSusVib",
+    })) as Record<string, unknown>;
+
+    expect(headlessCalls, "the default must not touch the Node host").toHaveLength(0);
+    expect(reply.engine, "nothing resolved, so there is no host to name").toBeUndefined();
+    const problems = (reply.sourceProblems as string[]) ?? [];
+    expect(problems.join("\n")).toContain("GROOVE_MCP_NO_BROWSER");
+    // The arithmetic half survives the source half failing — that is the shape the tool promises.
+    expect((reply.notes as Array<Record<string, unknown>>)[0]?.frequencyHz).toBeCloseTo(261.625565, 4);
+  });
+
+  it("runs no engine at all without an assetId, so there is no engine to report", async () => {
+    const reply = (await toolNamed("get_pitch_report").handler({ midi: [69] })) as Record<string, unknown>;
+
+    expect(headlessCalls).toHaveLength(0);
+    expect(reply.engine).toBeUndefined();
+    expect(reply.sourceProblems).toBeUndefined();
+    expect((reply.notes as Array<Record<string, unknown>>)[0]?.frequencyHz).toBeCloseTo(440, 6);
   });
 });

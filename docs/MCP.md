@@ -655,7 +655,9 @@ are the places where it is more accurate than the evaluations that came before i
 
 **补齐后**：七个渲染工具都收 `headless`，回复都带 `engine`（`normalize_loudness` 与 `render_arrangement_stems` 是本轮新加的字段，`render_instrument_note` 的 `engine` 同理）。**判据**：`src/test/mcpHeadlessRouting.test.ts` 由 4 个工具 ×4 例扩到 7×4=28 例（不依赖可选包）；`src/test/mcpHeadlessRender.test.ts` 的五例真实渲染在 `GROOVE_MCP_NO_BROWSER=1` 下跑通。
 
-**仍未变的**：三个数字（1.03 dB band 3／1.04 dB band 7／1.612 LU）一个都没动；**单轨与单音的宿主差没有量过** ✗——所以描述里写的是"unknown rather than zero"，而不是把整混夹具的数字挪用过来；无头路径仍**不走渲染预算、不发 progress**（那是页面机器）。
+**另外补上的一个同形状缺口**：`get_pitch_report` 在给 `assetId` 时走 `auditionInstrumentNote(..., { resolveOnly: true })` 逐音解析音源，而这条路径**一个采样都不渲染**。它现在也收 `headless`（Node 宿主解析，回复带 `engine`），但**故意不复用** `headlessParameterDescription()`——那段文字引用的 1.03 dB／1.04 dB／1.612 LU 是两宿主的**声音**差，对一条不产出音频的调用是把对的事实用在错的对象上。判据在 `src/test/mcpHeadlessRouting.test.ts` 单列一组（4 例，其中一条**断言参数文字里不出现 `1.612 LU`**），真解析一例（506 ms，不渲染）进 `src/test/mcpHeadlessRender.test.ts`。
+
+**仍未变的**：三个数字（1.03 dB band 3／1.04 dB band 7／1.612 LU）一个都没动；**单轨与单音的宿主差没有量过** ✗——所以描述里写的是"unknown rather than zero"（另有一次同夹具真峰值点测：单轨 Δ0.08 dB、单音 Δ0.32 dB，明确标为 spot check），而不是把整混夹具的数字挪用过来；无头路径仍**不走渲染预算、不发 progress**（那是页面机器）。
 
 ### 音色设计：报告、实测与一条已裁定的缺口（2026-10-01）
 

@@ -130,6 +130,11 @@ export const PREVIEW_DEFAULT_CLAUSE = "Which is why render_preview_clip defaults
  * * **the budget does not apply, and neither does progress** — `withRenderTimeout` resets a stuck *page* and the
  *   heartbeat narrates one, and an in-process render has no page; a caller that needs a ceiling owns it, and a caller
  *   that sends a `progressToken` on this path gets no notifications.
+ *
+ * **One tool deliberately does not use this text.** `get_pitch_report` takes the same flag on a path that resolves a
+ * note's source and renders nothing (`resolveOnly`), so quoting a band/loudness gap there would be a true sentence
+ * about work the call never does; that tool's parameter says what it buys instead. The count above is the number of
+ * tools that quote *this* text.
  */
 export function headlessParameterDescription(): string {
   return (

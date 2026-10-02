@@ -276,6 +276,51 @@ describe.skipIf(!headlessInstalled)("render_instrument_note on the Node Web Audi
   }, 180_000);
 });
 
+/**
+ * **`get_pitch_report`'s source half on the Node host.**
+ *
+ * It goes through the same `auditionInstrumentNote` entry with `resolveOnly`, so it is the same loader on the same host
+ * with the render skipped: the `engine` here names the resolver, and no audio exists. The mirror is the only external
+ * dependency, so this skips on the same condition the note case does rather than turning an outage into a red criterion.
+ */
+describe.skipIf(!headlessInstalled)("get_pitch_report's source half on the Node Web Audio host", () => {
+  let out = "";
+
+  beforeEach(() => {
+    out = mkdtempSync(path.join(os.tmpdir(), "groove-headless-pitch-"));
+    process.env.GROOVE_MCP_NO_BROWSER = "1";
+    process.env.GROOVE_MCP_OUT = out;
+  });
+
+  afterEach(() => {
+    rmSync(out, { recursive: true, force: true });
+    delete process.env.GROOVE_MCP_NO_BROWSER;
+    delete process.env.GROOVE_MCP_OUT;
+  });
+
+  it("resolves the source on the Node host with the browser forbidden, and renders nothing", async (context) => {
+    const tool = TOOLS.find((candidate) => candidate.name === "get_pitch_report");
+    expect(tool, "get_pitch_report is not declared").toBeTruthy();
+
+    const reply = (await tool!.handler({ midi: [60], assetId: "vsco2ce:ViolinEnsSusVib", headless: true })) as Record<string, unknown>;
+    const problems = (reply.sourceProblems as string[] | undefined) ?? [];
+    if (problems.some((problem) => /fetch|network|ENOTFOUND|ECONNREFUSED|HTTP \d|neither address/i.test(problem))) {
+      console.warn(`SKIP  get_pitch_report real resolution: sample mirror unreachable — ${problems.join(" | ")}`);
+      context.skip();
+      return;
+    }
+
+    expect(problems, "the mirror answered, so nothing should have failed").toHaveLength(0);
+    expect(reply.engine).toBe("node-web-audio-api");
+    const notes = reply.notes as Array<Record<string, unknown>>;
+    const source = notes[0]?.source as Record<string, unknown>;
+    expect(String(source?.samplePath)).toContain("VlnEns_susVib_B2_v2.wav");
+    expect(Number(source?.rootKey)).toBe(59);
+    // The arithmetic half is unchanged by which host resolved the other half.
+    expect(Number(notes[0]?.frequencyHz)).toBeCloseTo(261.625565, 4);
+  }, 180_000);
+});
+
 describe.skipIf(!headlessInstalled)("render_arrangement_stems on the Node Web Audio host", () => {
   let out = "";
 
