@@ -231,3 +231,18 @@ it("keeps an optional lane only when every contributing clip has it", () => {
 **⇒ 执行顺序（下一次照做 ✓）**：**① 删 `src/mobile/` ✓ → ② 拆 `App.tsx` 的分支与状态 ✓ → ③ 处理三个引用了 `mobile/` 的**非手机**文件 ✓（**共用逻辑上移 ✓**）→ ④ 逐个判据：手机专属删 ✓、共用的改写 ✓ → ⑤ `npm run typecheck` ＋ `lint` ＋ 全套门禁 ✓ → ⑥ 提交 ✓**。
 
 **⚠️ 而本轮**没有动手** ✗✓**：**这是一棵目录树 ＋ 八个接线点 ＋ 十七个判据 ✓，而本轮上下文已尽 ✓**；**"半个删除"必然留下**编译不过**的树 ✗——比不做更糟 ✓。**清单已量到可直接执行 ✓✓。**
+
+### 九之三、⚠️ **更正上一节的判据清单**（我上一轮把它列宽了 ✗✓✓）
+
+**上一节写"以及需逐条判断的 `audioScheduler`／`audioSettings`／`audioStartGate`／`studioSession`"** ✓——**逐一量过之后** ✓：
+
+| 判据 | 对 `mobile` 的引用 | 结论 |
+| --- | --- | --- |
+| **`audioScheduler`** | **0** ✓ | **不得删** ✗✓——**它不是手机的 ✓** |
+| **`audioSettings`** | **0** ✓ | **不得删** ✗✓ |
+| **`audioStartGate`** | **0** ✓ | **不得删** ✗✓ |
+| **`studioSession`** | **1**（待细看 ✓） | **需看那一处是不是手机专属 ✓** |
+
+**⇒ 这三个是我上一轮用**文件名**筛出来的**误收**** ✗✓✓（`ls | grep -iE "mobile|phone|touch|ios"` ✓）**——**而"误收进删除清单"正是我上一节自己警告过的危险：**删掉一个覆盖两面的判据会静默丢掉桌面侧的覆盖 ✓**。**⇒ 更正：删净的判据是**13 个真正手机命名的** ✓**（`mobileApp` ✓、`mobileBottomControlBar` ✓、`mobileChallenge` ✓、`mobileExplore` ✓、`mobileGenrePicker` ✓、`mobileIndexGuard` ✓、`mobileJam` ✓、`mobileMore` ✓、`mobilePlayerPort` ✓、`mobileSharedBottomRow` ✓、`mobileShell` ✓、`mobileTransportBar` ✓、`headerPhoneSurface` ✓、`iosAudioUnlock` ✓——**共 14 个，其中 `iosAudioUnlock` 需确认它测的是不是仅 iOS 解锁 ✓**），**而 `audioScheduler`／`audioSettings`／`audioStartGate` **留下** ✓✓**。
+
+**⚠️ 而这正是"清单也要被测量"的又一例** ✓：**一条靠名字生成的清单，会**多删**（本节 ✓）也会**少删**（无处可查 ✗）——**⇒ 删之前逐条量引用，而不是逐条看名字 ✓✓**。
