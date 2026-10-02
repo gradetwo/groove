@@ -209,3 +209,25 @@ it("keeps an optional lane only when every contributing clip has it", () => {
 ### ⚠️ **"其它库"这句我没有执行** ✗✓✓——**我按猜的做会毁掉别人的工作 ✓**
 
 **同级目录** ✓：`groove/` ✓、`groove-wt25/` ✓、`groove-wt44/` ✓、`groove-wt45/` ✓、`groove-wt46/` ✓、`groove-wt47/` ✓、`synth/`（**GS-1 自己的库 ✓**）、`midi-corpus/` ✓、`void/` ✓、`release/` ✓。**它们各自有独立历史与可能未合并的工作 ✓** ⇒ **"直接砍掉"在这句里指的是**哪几个**、**是否也要先各建保全分支** ✗，**我没有凭猜执行 ✓**；**这一步需要一句明确的范围 ✓✓**。
+
+### 九之二、**删净手机的精确清单**（量到可直接执行 ✓）
+
+**关键发现** ✓✓：**手机版本有自己的家 —— `src/mobile/`** ✓，**入口是**懒加载**的** ✓（`App.tsx:66` `React.lazy(() => import("./mobile/MobileApp"))` ✓）**——所以它不是散落的 ✓，而是一棵树 ＋ 若干接线点 ✓✓**。
+
+**要删的树** ✓：`src/mobile/`（**`MobileApp.tsx` ✓、`MobileModuleTabBar.tsx` ✓、`MobileGenrePicker.tsx` ✓、`MobilePlayerBar.tsx` ✓、`LightPlayerToggle.tsx` ✓、`screens/` ✓、`mobileModules.ts` ✓、`genreArt.ts` ✓、`genreQuery.ts` ✓、`mobileGenreData.ts` ✓、`mobile.css` ✓、`legacyViews.css` ✓、`SkinPic…` ✓**）。
+
+**要拆的接线点** ✓（**每条都有行号 ✓**）：
+
+| 文件 | 位置 | 处理 |
+| --- | --- | --- |
+| **`src/App.tsx`** | `:31-33` 三个 import ✓、`:66` 懒加载 MobileApp ✓、`:68` `shouldEnterPhoneShell` ✓、`:86` `isMobile/isShortLandscape` ✓、`:130` 依赖 ✓、`:222` `mobileSheetOpen` ✓、`:233` `hasFixedTabBar` ✓、`:248` `mobileTabBar` ✓ | **删分支与状态 ✓，保留桌面路径 ✓** |
+| **`src/app/router.tsx`** | **引用了 `mobile/`** ✓（**`route.mobile` ✓**） | **决定 `route.mobile` 是留还是删 ✗（`shouldEnterPhoneShell` 的输入 ✓）** |
+| **`src/components/GenreCover.tsx`** | **引用了 `mobile/genreArt` 等** ✓ | **把共用部分上移或保留 ✓——⚠️ 它不是手机专属 ✗** |
+| **`src/components/arrangement/ArrangementPanel.tsx`** | 同上 ✓ | ⚠️ **同样不是手机专属 ✗** |
+| **`src/platform/surf…`** | **引用了 `mobile/`** ✓ | **与"面"有关 ✓——**⚠️ 但 `ARCHITECTURE_SURFACES.md` 里**没有**手机字样 ✓**，**所以以代码为准 ✓** |
+
+**要删的判据** ✓（**17 个 ✓**）：`mobileApp` ✓、`mobileBottomControlBar` ✓、`mobileChallenge` ✓、`mobileExplore` ✓、`mobileGenrePicker` ✓、`mobileIndexGuard` ✓、`mobileJam` ✓、`mobileMore` ✓、`mobilePlayerPort` ✓、`mobileSharedBottomRow` ✓、`mobileShell` ✓、`mobileTransportBar` ✓、`headerPhoneSurface` ✓、`iosAudioUnlock` ✓、**以及需逐条判断的 `audioScheduler` ✓、`audioSettings` ✓、`audioStartGate` ✓、`studioSession` ✓**（**⚠️ 后四个名字里没有手机，可能同时覆盖桌面 ✗——**删之前必须逐个看它测的是不是手机独有的东西 ✓**）。
+
+**⇒ 执行顺序（下一次照做 ✓）**：**① 删 `src/mobile/` ✓ → ② 拆 `App.tsx` 的分支与状态 ✓ → ③ 处理三个引用了 `mobile/` 的**非手机**文件 ✓（**共用逻辑上移 ✓**）→ ④ 逐个判据：手机专属删 ✓、共用的改写 ✓ → ⑤ `npm run typecheck` ＋ `lint` ＋ 全套门禁 ✓ → ⑥ 提交 ✓**。
+
+**⚠️ 而本轮**没有动手** ✗✓**：**这是一棵目录树 ＋ 八个接线点 ＋ 十七个判据 ✓，而本轮上下文已尽 ✓**；**"半个删除"必然留下**编译不过**的树 ✗——比不做更糟 ✓。**清单已量到可直接执行 ✓✓。**
