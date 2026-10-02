@@ -298,3 +298,143 @@ describe("stopping an arrangement stops both halves", () => {
     expect(second).toEqual([3, 4]);
   });
 });
+
+/**
+ * ⭐ **The owner's report on the arrangement's own Play/Pause button: "the button says Pause and it goes back to the top."**
+ *
+ * The arrangement is sounded by two things at once, and a pause has to hold both: the engine's sequencer — which
+ * `AudioEngine.pause()` holds and `stop()` rewinds — and the sampler voices this player starts on the audio clock
+ * itself, which cannot be un-scheduled and so must be silenced and then *re-planned from the held step*.
+ *
+ * That second half is the one with a wrong-sounding failure mode rather than a wrong-looking one: leaving it out makes
+ * the engine's lanes continue from step *N* while the sampler starts over from step 0, which is a different
+ * arrangement rather than a different sound.
+ */
+describe("pausing an arrangement holds the transport's place, and resumes the sampler lanes from it", () => {
+  /**
+   * An engine whose `stop` and `pause` do what the real `AudioEngine`'s do — `stop` returns the step to zero and
+   * `pause` does not. It is the distinction under test, so it is modelled rather than assumed.
+   */
+  function pausableEngine(context: FakeAudioContext) {
+    const clock = {
+      step: 0,
+      playing: false,
+      onStop: undefined as (() => void) | undefined,
+    };
+    const engine = {
+      audioContext: context as never,
+      musicDestination: context.createGain() as never,
+      setPattern: vi.fn((_pattern: SequencerPattern) => undefined),
+      setBpm: vi.fn((_bpm: number) => undefined),
+      play: vi.fn(async () => {
+        clock.playing = true;
+      }),
+      stop: vi.fn(() => {
+        clock.playing = false;
+        clock.step = 0;
+      }),
+      pause: vi.fn(() => {
+        clock.playing = false;
+      }),
+      getCurrentStep: () => clock.step,
+      getIsPlaying: () => clock.playing,
+      setOnStep: vi.fn(),
+      setOnPlay: vi.fn(),
+      setOnStop: vi.fn((cb: () => void) => {
+        clock.onStop = cb;
+      }),
+    };
+    return { engine, clock };
+  }
+
+  it("pauses rather than stops, and places the rest of the pass from the held step", async () => {
+    const context = new FakeAudioContext();
+    const { engine, clock } = pausableEngine(context);
+    const player = playerWith(engine as never);
+    const arrangement: ArrangementV2 = {
+      songId: "s",
+      sourceSlots: [],
+      tracks: [{ id: "t1", kind: "sampler", name: "Piano", sample: { assetId: "piano" } }],
+      bpm: 120,
+    };
+    // Two notes: step 0 (already heard when the transport is paused at step 4) and step 4 (still to come).
+    const notes = {
+      t1: [
+        { pitch: 40, startBeats: 0, lengthBeats: 0.25, velocity: 100 },
+        { pitch: 40, startBeats: 1, lengthBeats: 0.25, velocity: 100 },
+      ],
+    };
+
+    // The view subscribes, which is what wires the player's transport callbacks — a player nobody is watching reports nothing.
+    player.transport!.subscribe(() => undefined);
+
+    await playArrangementV2(arrangement, notes, player);
+    // One source per step, both of them in the first pass.
+    expect(context.createdBufferSources).toHaveLength(2);
+
+    // The transport is mid-pass when the user presses the button labelled Pause.
+    clock.step = 4;
+    const silenced = player.pause();
+
+    // ⭐ The sampler half: the notes on the audio clock really were silenced, and the count says so.
+    expect(silenced).toBe(2);
+    for (const source of context.createdBufferSources) expect(source.stopCalls.length).toBeGreaterThan(0);
+
+    // ⭐ The transport half: `pause`, never `stop` — a stop here is the rewind the report is about.
+    expect(engine.pause).toHaveBeenCalledTimes(1);
+    expect(engine.stop).not.toHaveBeenCalled();
+    expect(clock.step).toBe(4);
+    expect(clock.onStop).toBeDefined();
+
+    // ---- And the next Play continues the pass rather than starting it. ----------------------
+    const sourcesBeforeResume = context.createdBufferSources.length;
+    await playArrangementV2(arrangement, notes, player);
+
+    expect(engine.stop).not.toHaveBeenCalled();
+    expect(engine.play).toHaveBeenCalledTimes(2);
+    // Step 0's note is behind the transport and is not played again: the resume adds **one** voice, not two.
+    expect(context.createdBufferSources).toHaveLength(sourcesBeforeResume + 1);
+    /**
+     * ⭐ **And it lands on the resumed step's own time**, which is the claim that the two halves rejoin one grid: the
+     * fake clock is at zero, so a step-4 event placed from a step-4 origin sounds at `0` — the same instant a first
+     * pass's step 0 would, which is exactly "continue from here" rather than "continue four steps late".
+     */
+    expect(context.createdBufferSources[sourcesBeforeResume]!.started[0]!.when).toBeCloseTo(0, 6);
+  });
+
+  it("is the stop, not the pause, that clears the held position", async () => {
+    const context = new FakeAudioContext();
+    const { engine, clock } = pausableEngine(context);
+    const player = playerWith(engine as never);
+    const arrangement: ArrangementV2 = {
+      songId: "s",
+      sourceSlots: [],
+      tracks: [{ id: "t1", kind: "sampler", name: "Piano", sample: { assetId: "piano" } }],
+      bpm: 120,
+    };
+    const notes = {
+      t1: [
+        { pitch: 40, startBeats: 0, lengthBeats: 0.25, velocity: 100 },
+        { pitch: 40, startBeats: 1, lengthBeats: 0.25, velocity: 100 },
+      ],
+    };
+
+    await playArrangementV2(arrangement, notes, player);
+    clock.step = 4;
+    player.pause();
+    /**
+     * A stop after a pause **throws the held position away**, so the play that follows is a restart rather than a
+     * resume. The engine says it is not playing (the pause did that), so `stopTransport` does not call `engine.stop`
+     * again — the observable difference is in what the next play schedules.
+     */
+    player.stop!();
+
+    const before = context.createdBufferSources.length;
+    await playArrangementV2(arrangement, notes, player);
+    /**
+     * ⭐ **The whole pass again**: both steps, because there is no held step left to continue from. A stale resume
+     * would have placed only step 4 — one voice — and this is the assertion that says the stop cleared it.
+     */
+    expect(context.createdBufferSources).toHaveLength(before + 2);
+  });
+});

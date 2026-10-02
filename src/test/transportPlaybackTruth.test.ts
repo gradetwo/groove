@@ -21,6 +21,11 @@ import React from "react";
 interface FakeEngine {
   play: ReturnType<typeof vi.fn>;
   stop: ReturnType<typeof vi.fn>;
+  /**
+   * ⭐ **The transport's other half.** The Play/Pause button is painted Pause while it runs, so the press that ends a
+   * run reaches `pause` — a double with only `stop` is a double that cannot answer the button a user is looking at.
+   */
+  pause: ReturnType<typeof vi.fn>;
   isAudioBlocked: ReturnType<typeof vi.fn>;
   /**
    * The transport writes these, so the double has to accept them.
@@ -54,6 +59,7 @@ function makeEngine(over: { blocked?: boolean; rejects?: boolean } = {}): FakeEn
       if (over.rejects) throw new Error("NotAllowedError: play() failed");
     }),
     stop: vi.fn(),
+    pause: vi.fn(),
     isAudioBlocked: vi.fn(() => over.blocked ?? false),
     setBpm: vi.fn(),
     setPattern: vi.fn(),
@@ -161,7 +167,15 @@ describe("transport playback truthfulness", () => {
     expect(clearPlayhead).toHaveBeenCalled();
   });
 
-  it("still stops cleanly when toggled off", async () => {
+  /**
+   * ⭐ **The owner's report, at the hook that acts on the press.**
+   *
+   * The button is labelled Pause while the transport runs. This press used to call `engine.stop()` and
+   * `clearPlayhead()`, so the transport went back to bar one under a button that had promised a pause — reported as
+   * "it becomes Pause while playing, but pressing Pause is a stop and the playhead returns to the top". It reaches
+   * `pause` now, and the playhead is deliberately **not** cleared: it is the picture of the position being kept.
+   */
+  it("pauses cleanly when toggled off, and holds the playhead", async () => {
     const engine = makeEngine();
     const setIsPlaying = vi.fn();
     const clearPlayhead = vi.fn();
@@ -187,10 +201,12 @@ describe("transport playback truthfulness", () => {
     await act(async () => {
       await result.current.handleTogglePlay();
     });
-    expect(engine.stop).toHaveBeenCalledTimes(1);
+    expect(engine.pause).toHaveBeenCalledTimes(1);
+    expect(engine.stop).not.toHaveBeenCalled();
     expect(engine.play).not.toHaveBeenCalled();
     expect(setIsPlaying).toHaveBeenCalledWith(false);
-    expect(clearPlayhead).toHaveBeenCalled();
+    // The position is the thing a pause keeps, so nothing may rewind it.
+    expect(clearPlayhead).not.toHaveBeenCalled();
   });
 
   it("says the engine is not ready instead of staying silent", async () => {

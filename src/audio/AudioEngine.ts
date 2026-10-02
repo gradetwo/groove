@@ -274,6 +274,18 @@ export class AudioEngine {
   private bpm: number = 120;
   private swing: number = 0; // 0 to 0.75
   private currentStep: number = 0;
+  /**
+   * The step `pause()` left the transport on, for the next `play()` to continue from.
+   *
+   * `pause()` has always kept `currentStep` — that is the whole difference between it and `stop()` — but
+   * `play()` then overwrote it, so a pause was only ever a stop with a different name, which is what the owner
+   * reported: "the button says Pause and the playhead goes back to the top". The position has to survive the gap
+   * between the two calls, so it is held here and consumed exactly once by `play()`.
+   *
+   * `null` is "there is nothing to continue from": a fresh engine, and every `stop()`, which is the control that
+   * means "back to the top".
+   */
+  private resumeStep: number | null = null;
   private nextStepTime: number = 0;
   private scheduleTimerId: any = null;
   private stepQueue: Array<{ step: number; time: number; activeTracks: number[] }> = [];
@@ -1681,11 +1693,30 @@ export class AudioEngine {
     ecosystemBus.publishClockStart(this.bpm);
     // `scoped`, not `this.previewScope`: a full play cleared the property just above, and a scoped
     // run has already had its scope read into this local.
-    this.currentStep = scoped
-      ? scoped.fromStep
-      : this.loopRange && this.loopRange[0] >= 0
+    /**
+     * ⭐ **Where this run starts: a resume if there is one, and otherwise the top.**
+     *
+     * `resumeStep` is what `pause()` left behind, consumed here and cleared so it cannot leak into a later play — a
+     * transport that resumed from a stale position after a stop would be the same class of bug as the one this
+     * fixes, only harder to reproduce. Everything the scheduler needs below is rebuilt from scratch on every play
+     * (`nextStepTime`, `stepQueue`, `lastReportedStep`, the gain ramp), so the only thing a resume has to carry is
+     * the index itself.
+     *
+     * A scoped preview still always starts at its own `fromStep`: it is a lane loop, not the transport, and it has
+     * no pause of its own.
+     */
+    const resumeFrom = scoped ? scoped.fromStep : this.resumeStep;
+    this.resumeStep = null;
+    this.currentStep = resumeFrom === null
+      ? this.loopRange && this.loopRange[0] >= 0
         ? this.loopRange[0]
-        : 0;
+        : 0
+      : /**
+         * Clamped, because the pattern can change while the transport is paused (an edit, an undo, a slot switch)
+         * and a step past the end would schedule one out-of-range step before the grid wrapped it back. The
+         * scheduler's own wrapping already survives that, so this is about not firing a step nobody asked for.
+         */
+        Math.max(0, Math.min(resumeFrom, Math.max(0, this.totalSteps - 1)));
     const now = this.ctx ? this.ctx.currentTime : 0;
     /**
      * PDC, realtime: schedule **earlier** by the master bus's latency.
@@ -1737,7 +1768,15 @@ export class AudioEngine {
     this.startPlayheadSync();
   }
 
+  /**
+   * Silence the transport **and keep its place**, so the next `play()` continues from here.
+   *
+   * The voices are released (`panic`) rather than left ringing: a pause nobody can hear is the point, and the
+   * registry's release is a 5 ms ramp on the existing nodes, so the very next play resumes without rebuilding
+   * anything — which is the property `panic`'s own comment records.
+   */
   public pause(): void {
+    this.resumeStep = this.currentStep;
     this.isPlaying = false;
     ecosystemBus.publishClockStop();
     this.stopScheduler();
@@ -1748,7 +1787,9 @@ export class AudioEngine {
     }
   }
 
+  /** Silence the transport and **return to the top** — the control that means "start over". */
   public stop(): void {
+    this.resumeStep = null;
     this.isPlaying = false;
     ecosystemBus.publishClockStop();
     this.stopScheduler();

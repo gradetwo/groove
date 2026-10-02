@@ -80,7 +80,11 @@ describe("the play button and the engine seam", () => {
 
   it("hands the arrangement to the injected engine and reports what it planned, including zero", async () => {
     const play = vi.fn(async () => ({ planned: 0 }));
-    renderView(<ArrangementViewV2 songId="s" capture={noCapture} player={{ play }} />);
+    /**
+     * ⭐ `pause` is part of the seam rather than an extra: the button is labelled Pause while the transport runs, so a
+     * player that could not pause is a player that would have to lie about that press.
+     */
+    renderView(<ArrangementViewV2 songId="s" capture={noCapture} player={{ play, pause: vi.fn(() => 0) }} />);
     fireEvent.click(screen.getByRole("button", { name: "Create" }));
     fireEvent.click(screen.getByRole("button", { name: /Play/ }));
     // Zero is shown, not hidden: "nothing was planned" is a fact a user should see rather than a silent no-op.

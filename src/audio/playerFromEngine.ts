@@ -45,6 +45,15 @@ export interface EngineAudioTap {
   prepareSampledLanes?: (catalogue: readonly SampleAsset[]) => { stoodDown: number[]; problems: string[] };
   play?: AudioEngine["play"];
   stop?: AudioEngine["stop"];
+  /**
+   * ⭐ **The other half of the transport toggle, and the one the owner's report is about.**
+   *
+   * `stop` returns to the top and `pause` holds the place; the arrangement's Play button is labelled Pause while it is
+   * running, so it is `pause` it has to reach. Optional like the rest of the transport half, because an engine-shaped
+   * object can still play and stop without one — and the player says what it does when the answer is "stop" (see
+   * `pauseTransport`) rather than pretending a position survived.
+   */
+  pause?: AudioEngine["pause"];
   /** The arrangement's tempo, so a note's beat is the length the arrangement says rather than the studio's last. */
   setBpm?: AudioEngine["setBpm"];
   /**
@@ -94,6 +103,14 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
    * The sampler steps `play` scheduled, separately from `voices`, because a transport stop is not a key release: it silences everything the arrangement started, whereas `releaseNote` names one key.
    */
   const scheduled: SamplerVoice[] = [];
+
+  /**
+   * The step a `pause` left the transport on, so the next `play` continues instead of restarting.
+   *
+   * `null` is "there is no position to continue from" — nothing has been paused, or a stop has happened since (see
+   * `stopTransport`). It is read and cleared by `play`, so one pause can only ever produce one resume.
+   */
+  let pausedAtStep: number | null = null;
 
   /**
    * ⭐ **The voices that are sounding, with the choke group each belongs to.**
@@ -248,10 +265,38 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
    *
    * ⭐ It is also what `play` calls first, which is what makes pressing play twice **one** transport rather than two layered ones: `AudioEngine.play()` returns early when it is already playing, so without a stop here a second
    * press left the engine where it was and re-scheduled every sampler voice over the top of the first pass.
+   *
+   * ⭐ **And a stop is the end of the position as well as of the sound**, so any resume this player was holding is
+   * dropped here. `stopScheduled` below silences the voices; this is the other half, and keeping them together is what
+   * stops a later `play` from resuming a pass the user has since stopped.
    */
   const stopTransport = (): number => {
+    pausedAtStep = null;
     const stopped = stopScheduled();
     if (engine.getIsPlaying?.() !== false) engine.stop?.();
+    return stopped;
+  };
+
+  /**
+   * ⭐ **A pause: silence what `play` started and hold the transport's place.**
+   *
+   * The engine's own `pause()` keeps its step and the next `play()` continues from it; that pair is the whole of the
+   * behaviour the button promises. The sampler voices this player scheduled are stopped, because a note already on the
+   * audio clock cannot be un-scheduled — and they are *re-planned from the held step* on resume (see `play`).
+   *
+   * ⭐ **An engine with no `pause` gets the honest fallback rather than a fake one.** A stop is the only silence such
+   * an object has, and `pausedAtStep` stays `null` so the next `play` does not claim to resume from a position nothing
+   * kept. The real `AudioEngine` has `pause`, so this is the path for a hand-built double, not for the app.
+   */
+  const pauseTransport = (): number => {
+    const stopped = stopScheduled();
+    if (engine.pause) {
+      pausedAtStep = engine.getCurrentStep?.() ?? 0;
+      engine.pause();
+    } else {
+      pausedAtStep = null;
+      if (engine.getIsPlaying?.() !== false) engine.stop?.();
+    }
     return stopped;
   };
 
@@ -280,7 +325,12 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
     transportWired = true;
     engine.setOnStep?.((info) => reportTransport({ step: info.step, playing: true }));
     engine.setOnPlay?.(() => reportTransport({ step: engine.getCurrentStep?.() ?? 0, playing: true }));
-    // A stop resets the engine's step to zero, so reading it back here is what returns the playhead to the top.
+    /**
+     * ⭐ **Read back rather than assumed to be zero.** `stop()` resets the engine's step, so this is what returns the
+     * playhead to the top — and `pause()` keeps it, so the same line is also what *holds* the playhead where it was.
+     * The report is the engine's own answer either way, which is why the view's picture and its buttons cannot
+     * disagree with the transport about which of the two just happened.
+     */
     engine.setOnStop?.(() => reportTransport({ step: engine.getCurrentStep?.() ?? 0, playing: false }));
   };
   const unwireTransport = (): void => {
@@ -326,13 +376,35 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
       engine.setPattern(pattern);
 
       /**
-       * Nothing from a previous play survives this one: a scheduled note cannot be unscheduled once it is on the audio clock, so pressing play again silences the old arrangement rather than layering the
-       * two. Done **before** the catalogue is awaited, so a second press has already taken effect by the time the first press's load resolves.
+       * ⭐ **A resume is not a restart, and the difference is one flag.**
        *
-       * ⭐ **Both halves**, so this is a real restart rather than a re-schedule: the engine's `play()` returns early while it is already playing, so a stop that only spliced the sampler voices left the lanes running from wherever
-       * they were while the sampler started over from the top. One press, one transport.
+       * `pausedAtStep` is what this player was told to hold by `pause()`. When it is set, the press is a *continue*:
+       * the sampler voices left over from the paused pass are silenced (they are already on the audio clock and cannot
+       * be un-scheduled), but the engine is **not** stopped — `AudioEngine.play()` picks up the step its own `pause()`
+       * kept, and the sampler lanes are re-planned from that same step a few lines below.
+       *
+       * Without this branch every press went through `stopTransport`, which resets the engine's step to zero: that is
+       * the owner's report, "the button says Pause and it goes back to the top", at the seam where it happened.
        */
-      stopTransport();
+      const resumeFrom = pausedAtStep;
+      pausedAtStep = null;
+      if (resumeFrom === null) {
+        /**
+         * Nothing from a previous play survives this one: a scheduled note cannot be unscheduled once it is on the
+         * audio clock, so pressing play again silences the old arrangement rather than layering the two. Done
+         * **before** the catalogue is awaited, so a second press has already taken effect by the time the first
+         * press's load resolves.
+         *
+         * ⭐ **Both halves**, so this is a real restart rather than a re-schedule: the engine's `play()` returns early
+         * while it is already playing, so a stop that only spliced the sampler voices left the lanes running from
+         * wherever they were while the sampler started over from the top. One press, one transport.
+         */
+        stopTransport();
+      } else {
+        // The silenced half only. The engine's own voices are released by its `pause()` already, and stopping it here
+        // is exactly the rewind this change removes.
+        stopScheduled();
+      }
 
       /**
        * **The transport starts before the samples are resolved.** `AudioEngine.play` marks the first step a fixed lead ahead of `currentTime`, and every sampler note is placed from `currentTime` afterwards —
@@ -384,6 +456,13 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
             destination: engine.musicDestination,
             loader: sampler,
             bpm,
+            /**
+             * ⭐ **On a resume, the lanes rejoin the engine's grid at the step the engine resumed on.** The events
+             * before it belong to the part of the pass that was already played and are skipped, and the grid offset
+             * puts the resumed step at now — so the held position sounds like one pass with a gap in it rather than
+             * like a second pass laid over the first.
+             */
+            ...(resumeFrom === null ? {} : { fromStep: resumeFrom }),
           });
           scheduled.push(...report.voices);
           /**
@@ -433,6 +512,7 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
       return problem === undefined ? { planned } : { planned, problem };
     },
     stop: stopTransport,
+    pause: pauseTransport,
     transport,
     audition,
     releaseNote({ trackId, midi }) {

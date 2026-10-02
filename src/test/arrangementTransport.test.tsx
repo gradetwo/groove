@@ -13,10 +13,14 @@
  *   3. the timecode's beat was the literal `1`, so the readout could only ever say `N.1`.
  */
 import React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { ArrangementViewV2 } from "../components/arrangement/ArrangementViewV2";
 import { LanguageProvider } from "../i18n/LanguageContext";
+import { createArrangementPlayer } from "../audio/playerFromEngine";
+import { AudioEngine } from "../audio/AudioEngine";
+import { ecosystemBus } from "../audio/ecosystemBus";
+import { FakeAudioContext, installFakeAudioContext } from "./helpers/fakeAudio";
 import type { ArrangementPlayer, ArrangementTransport, ArrangementTransportState } from "../audio/playArrangementV2";
 
 const noCapture = () => new Promise<never>(() => undefined);
@@ -51,11 +55,19 @@ function makeTransport() {
   };
 }
 
-function renderTransportView(player: ArrangementPlayer) {
+/**
+ * A player for the view's criteria.
+ *
+ * ⭐ `pause` is a **required** part of the seam and defaults to a double here: the button is labelled Pause while the
+ * transport runs, so a player that cannot pause is a player that would have to lie about that press. A criterion that
+ * wants to watch the pause itself passes its own.
+ */
+function renderTransportView(player: Omit<ArrangementPlayer, "pause"> & { pause?: ArrangementPlayer["pause"] }) {
   localStorage.setItem("groove_language", "en");
+  const withPause: ArrangementPlayer = { pause: vi.fn(() => 0), ...player };
   const rendered = render(
     <LanguageProvider>
-      <ArrangementViewV2 songId="s" capture={noCapture} player={player} />
+      <ArrangementViewV2 songId="s" capture={noCapture} player={withPause} />
     </LanguageProvider>
   );
   fireEvent.click(screen.getByRole("button", { name: "Create" }));
@@ -153,24 +165,30 @@ describe("the transport's state, on the buttons that own it", () => {
     zoomed.toBe(`${3 * 96}px`);
   });
 
-  it("toggles: a press while the transport is running stops it rather than compiling the arrangement again", () => {
+  it("toggles: a press while the transport is running pauses it rather than compiling the arrangement again", () => {
     const { transport, emit } = makeTransport();
     const play = vi.fn(async () => ({ planned: 1 }));
     const stop = vi.fn(() => 0);
-    renderTransportView({ play, stop, transport });
+    const pause = vi.fn(() => 0);
+    renderTransportView({ play, stop, transport, pause });
 
     act(() => emit({ step: 8, playing: true }));
     fireEvent.click(screen.getByTestId("arrangement-play"));
 
-    // ⭐ One press, one effect: the second press of this button is a stop, which is what the studio's own Play/Pause
-    // control does and what makes "pressing play twice" one transport instead of a re-compile over a running one.
+    /**
+     * ⭐ **The press the owner reported.** The button says Pause while the transport runs, so this press must reach
+     * `pause` — the control that holds the position — and not `stop`, which is the rewind. One press, one effect, and
+     * no re-compile over a running transport.
+     */
     expect(play).toHaveBeenCalledTimes(0);
-    expect(stop).toHaveBeenCalledTimes(1);
+    expect(pause).toHaveBeenCalledTimes(1);
+    expect(stop).toHaveBeenCalledTimes(0);
 
-    // And Stop itself goes through the same one call.
+    // And Stop itself goes through the other one, which is still the only control that goes back to the top.
     act(() => emit({ step: 8, playing: true }));
     fireEvent.click(screen.getByTestId("arrangement-stop"));
-    expect(stop).toHaveBeenCalledTimes(2);
+    expect(stop).toHaveBeenCalledTimes(1);
+    expect(pause).toHaveBeenCalledTimes(1);
   });
 
   it("stops writing to the playhead once the view is gone", () => {
@@ -181,5 +199,155 @@ describe("the transport's state, on the buttons that own it", () => {
     // A callback still holding the removed node is how "the playhead moves" becomes a write nobody can see.
     expect(listeners()).toBe(0);
     expect(() => emit({ step: 4, playing: true })).not.toThrow();
+  });
+});
+
+/**
+ * ⭐ **The owner's report, as a criterion: "the button says Pause and behaves like Stop — the playhead jumps back to the top."**
+ *
+ * The whole chain is real here — the rendered `ArrangementViewV2`, `createArrangementPlayer`, and an `AudioEngine` driven on the
+ * strict fake `AudioContext` (`audioScheduler.test.ts` records why that harness exists). Nothing is faked between the press and the
+ * reading, so the two readings below are the answer to *"does the button a user presses actually pause?"* and not a restatement of
+ * the code.
+ *
+ * The readings are exactly the two the report is about: `arrangement-playhead`'s `left` (the picture) and `arrangement-position`'s
+ * text (the `1.x` timecode). The step is the engine's own `getCurrentStep()`, which is where both of them come from.
+ *
+ * **Falsifiable by the reading, not by the intent**: on the build that was reported, the pause press takes the step from 8 to 0
+ * and the playhead from `32px` to `0px`; the assertion after it is the criterion.
+ */
+describe("the Pause button pauses — it does not stop and rewind to the top", () => {
+  let restore: (() => void) | null = null;
+
+  beforeEach(() => {
+    restore = installFakeAudioContext();
+  });
+
+  afterEach(() => {
+    restore?.();
+    restore = null;
+    vi.restoreAllMocks();
+  });
+
+  /** Drives the real look-ahead loop forward without a real audio clock — the same helper `audioScheduler.test.ts` uses. */
+  function advance(engine: AudioEngine, ctx: FakeAudioContext, seconds: number, tickSeconds = 0.025) {
+    const ticks = Math.max(1, Math.round(seconds / tickSeconds));
+    const scheduler = engine as unknown as { schedulerLoop: () => void };
+    for (let i = 0; i < ticks; i++) {
+      ctx.currentTime += tickSeconds;
+      scheduler.schedulerLoop();
+    }
+  }
+
+  it("holds the step, the playhead and the timecode, and continues from there on the next Play", async () => {
+    const engine = new AudioEngine();
+    engine.setBpm(120);
+    const ctx = engine.getAudioContext() as unknown as FakeAudioContext;
+
+    /**
+     * The timeline the app publishes to other windows (`wangda_audio_bus`), read through the bus's own local fan-out.
+     *
+     * ⭐ **`CLOCK_SYNC` carries the step**, and `play` publishes one through `setBpm` before the transport starts — so the
+     * timeline itself says which step each start began from, which is the evidence a press either rewound or did not.
+     */
+    const timeline: Array<{ type: string; step?: number }> = [];
+    const unsubscribeTimeline = ecosystemBus.subscribe((message) =>
+      timeline.push({ type: message.type, ...(message.type === "CLOCK_SYNC" ? { step: message.currentStep } : {}) })
+    );
+
+    const player = createArrangementPlayer({ engine, loadCatalogue: async () => ({ assets: [] }) });
+    renderTransportView(player);
+
+    const button = () => screen.getByTestId("arrangement-play") as HTMLButtonElement;
+    const readStep = () => engine.getCurrentStep();
+    const readPlayhead = () => (screen.getByTestId("arrangement-playhead") as HTMLElement).style.left;
+    const readPosition = () => screen.getByTestId("arrangement-position").textContent;
+    /**
+     * The view's own mapping from a step to a picture: a bar is `stepsPerBarFor("4/4")` = 16 steps and the default zoom is
+     * 64 px per bar, which `arrangementTransport.test.tsx`'s playhead criterion already pins.
+     */
+    const leftForStep = (step: number) => `${(step / 16) * 64}px`;
+
+    /** One animation frame, so the engine's own `startPlayheadSync` reports the step the view draws from. */
+    const followTransport = async () => {
+      await act(async () => {
+        await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+      });
+    };
+
+    // ---- Play, and let it run. --------------------------------------------------------------
+    await act(async () => {
+      fireEvent.click(button());
+    });
+    expect(engine.getIsPlaying()).toBe(true);
+    expect(button().textContent).toBe("Pause");
+
+    act(() => advance(engine, ctx, 1.0));
+    await followTransport();
+
+    const playedStep = readStep();
+    const readings: Record<string, { step: number; playhead: string; position: string | null }> = {
+      "after Play + 1.0s": { step: playedStep, playhead: readPlayhead(), position: readPosition() },
+    };
+    // The transport really moved, so the readings below are about a position worth holding rather than about zero.
+    expect(playedStep).toBeGreaterThan(0);
+    expect(readings["after Play + 1.0s"]!.playhead).not.toBe("0px");
+    expect(readings["after Play + 1.0s"]!.position).not.toBe("1.1");
+
+    // ---- The reported press: Pause. ---------------------------------------------------------
+    await act(async () => {
+      fireEvent.click(button());
+    });
+    readings["after Pause"] = { step: readStep(), playhead: readPlayhead(), position: readPosition() };
+    expect(engine.getIsPlaying()).toBe(false);
+    expect(button().textContent).toBe("Play");
+
+    // ---- Play again: it must continue, not restart. -----------------------------------------
+    await act(async () => {
+      fireEvent.click(button());
+    });
+    readings["after Play again"] = { step: readStep(), playhead: readPlayhead(), position: readPosition() };
+    act(() => advance(engine, ctx, 0.5));
+    await followTransport();
+    readings["after Play again + 0.5s"] = { step: readStep(), playhead: readPlayhead(), position: readPosition() };
+
+    // ---- Stop is the control that rewinds, and it still does. -------------------------------
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("arrangement-stop"));
+    });
+    readings["after Stop"] = { step: readStep(), playhead: readPlayhead(), position: readPosition() };
+
+    unsubscribeTimeline();
+    // eslint-disable-next-line no-console -- the readings are the evidence this criterion exists to produce
+    console.log("PAUSE_RESUME_READINGS", JSON.stringify({ readings, timeline }));
+
+    /**
+     * ⭐ **The claim, in the order the report states it.**
+     *
+     * 1. Pause **holds the step exactly** — this is the assertion the reported build failed, with 10 against 0;
+     * 2. and the picture is *of that held step* rather than of the top: the playhead and the timecode agree with the
+     *    transport instead of being rewound to `0px` / `1.1`. (The playhead may legitimately catch up across the press,
+     *    because the steps the look-ahead had already scheduled are reported on the frames that follow — it must never
+     *    go *back*.)
+     * 3. The next Play continues from the held step and keeps moving; it does not restart at the top.
+     * 4. Stop is still the control that returns to the top.
+     */
+    const held = readings["after Pause"]!;
+    expect(held.step).toBe(playedStep);
+    // The picture is *of the held step*, because the pause report carries the engine's own step at that instant.
+    expect(held.playhead).toBe(leftForStep(playedStep));
+    expect(held.position).not.toBe("1.1");
+
+    const resumed = readings["after Play again"]!;
+    const moved = readings["after Play again + 0.5s"]!;
+    expect(resumed.step).toBeGreaterThanOrEqual(playedStep);
+    expect(resumed.playhead).not.toBe("0px");
+    expect(resumed.position).not.toBe("1.1");
+    // And it keeps going *forward* from where it was held, rather than starting over at the top.
+    expect(moved.step).toBeGreaterThan(playedStep);
+    expect(Number.parseFloat(moved.playhead)).toBeGreaterThan(Number.parseFloat(held.playhead));
+    expect(moved.position).not.toBe("1.1");
+
+    expect(readings["after Stop"]).toEqual({ step: 0, playhead: "0px", position: "1.1" });
   });
 });

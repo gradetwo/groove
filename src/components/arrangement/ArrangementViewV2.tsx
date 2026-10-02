@@ -319,19 +319,35 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
   }, [player, t]);
 
   /**
+   * ⭐ **The second half of the toggle, which used to be `stop`.**
+   *
+   * The button above is labelled `arrangement_pause` and titled Pause while the transport runs, and it called `stop()` —
+   * so the label promised a pause and the press returned the playhead to the top, which is the owner's report
+   * ("the button says Pause and it jumps back to the top"). `pause()` holds the step, the playhead and the timecode, and
+   * the next play continues from them; **Stop** below is the control that means "back to the top", and it still does.
+   *
+   * The "planned N lane events" report is deliberately *not* cleared: that pass is not over, it is held, and the next
+   * press finishes it.
+   */
+  const pause = useCallback(() => {
+    player?.pause();
+    announcer.announce(t("transport_playback_paused"));
+  }, [player, t]);
+
+  /**
    * ⭐ **Play is the studio's own Play/Pause toggle**, which is the project's convention for this control rather than an invention: `Toolbar.tsx` labels the same button with `toolbar_play`/`toolbar_pause` and swaps its fill, and
-   * `useTransportControls.handleTogglePlay` stops the transport when it is already playing.
+   * `useTransportControls.handleTogglePlay` pauses the transport when it is already playing.
    *
    * The running state is read **from the transport, not from React**, so a press that lands while the engine is still awaiting `ctx.resume()` toggles the right way. React state is for the paint; the engine is the truth.
    */
   const togglePlay = useCallback(() => {
     const running = player?.transport?.read().playing ?? playing;
     if (running) {
-      stop();
+      pause();
       return;
     }
     void play();
-  }, [player, playing, play, stop]);
+  }, [player, playing, play, pause]);
 
   // ⭐ The early return sits **after every hook**, because a conditional hook changes their order: the first version of this had it above `useCallback` and produced six type errors, whose real content was a React bug.
   if (choosing) {
@@ -402,7 +418,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
          *
          * Play follows the studio's own convention rather than inventing one: `Toolbar.tsx` draws the same control as a
          * Play/Pause toggle — its word swaps between `toolbar_play` and `toolbar_pause` and its fill swaps with
-         * `isPlaying` — and `useTransportControls.handleTogglePlay` stops the transport when it is already running. So
+         * `isPlaying` — and `useTransportControls.handleTogglePlay` pauses the transport when it is already running. So
          * the word, the fill, `aria-pressed` and the accessible name all change together, and there is no press that
          * does nothing, which is the rule U7 states: "a control that does nothing must say so."
          *

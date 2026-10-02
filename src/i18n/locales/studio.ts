@@ -818,6 +818,12 @@ export const studioMessages = {
   transport_announce_drums_only_on: { en: "Drums only mode enabled", zh: "已开启只听鼓组" },
   transport_announce_drums_only_off: { en: "Drums only mode disabled", zh: "已关闭只听鼓组" },
   transport_playback_stopped: { en: "Playback stopped", zh: "已停止播放" },
+  /**
+   * ⭐ **Said separately from "stopped", because it is a different thing.** Pause holds the transport where it is and
+   * the next Play continues from there; one word for both is how the label and the behaviour drifted apart in the
+   * first place, and a screen-reader user has no pixels with which to notice the difference.
+   */
+  transport_playback_paused: { en: "Playback paused", zh: "已暂停播放" },
   transport_playback_started: { en: "Playback started", zh: "开始播放" },
   /**
    * Shown when the audio context will not run — the iOS silent switch, or a browser that wants a

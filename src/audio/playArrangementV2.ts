@@ -87,6 +87,17 @@ export interface ArrangementPlayer {
    */
   stop?(): number;
   /**
+   * ⭐ **Hold the transport's place, so the next `play` continues from there — what the Pause button promises.**
+   *
+   * Required rather than optional, and deliberately: the arrangement's Play button is painted with the word *Pause*
+   * while the transport is running, so a player that cannot pause has no honest way to answer that press. Making it
+   * part of the seam means such a player cannot be written, instead of being written and then lying about it.
+   *
+   * It reports how many sampler voices it silenced, like `stop`: a note already on the audio clock cannot be
+   * un-scheduled, so a pause stops it and the rest of the pass is placed again from the held step on resume.
+   */
+  pause(): number;
+  /**
    * The transport's position and running state, when the engine has one to report.
    *
    * Optional like the rest of the seam: a player that cannot report a position still plays, it just cannot draw a moving playhead — and absent is how the view tells "no transport to follow" from "the transport is at bar one".

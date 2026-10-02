@@ -57,6 +57,19 @@ export interface SamplerStepInput {
   loader: SampleLoader;
   /** When the pattern starts, in context time. Defaults to the context's now, which is what pressing play means. */
   startSeconds?: number;
+  /**
+   * ⭐ **Resume at this step instead of at the top.**
+   *
+   * The transport can be paused and continued from where it stopped, and these lanes are placed on the audio clock
+   * outside the engine — so without this the engine's own lanes would continue from step *N* while the sampler's
+   * started over from step 0, which is a wrong arrangement rather than a wrong sound. Events before this step belong
+   * to the part of the pass that was already played and are skipped, and the grid is shifted so this step lands at
+   * `startSeconds` (or now). The arithmetic lives here, next to the one place that converts a step to seconds, so the
+   * resumed grid and the first pass cannot be built from two different readings of it.
+   *
+   * Absent (or 0) is the first pass, untouched.
+   */
+  fromStep?: number;
   /** The lane's level, so a scheduled note is mixed like a played one. */
   gainDb?: number;
   bpm?: number;
@@ -134,11 +147,20 @@ export function planSamplerSteps(
  */
 export async function scheduleSamplerSteps(events: readonly SamplerStepEvent[], input: SamplerStepInput): Promise<SamplerStepReport> {
   const stepSeconds = 60 / (input.bpm && input.bpm > 0 ? input.bpm : 120) / STEPS_PER_BEAT;
-  const startSeconds = input.startSeconds ?? input.context.currentTime;
+  /**
+   * ⭐ **The grid's origin, which is the top of the pattern or the step a resume continued from.**
+   *
+   * Shifting the origin back by `fromStep` is what makes `startSeconds + event.step * stepSeconds` place the resumed
+   * step at `startSeconds` rather than `fromStep` steps later. The skipped events are not "dropped": their part of the
+   * pass has already been heard, and scheduling them in the past would fire them all at once as a burst.
+   */
+  const fromStep = Math.max(0, input.fromStep ?? 0);
+  const startSeconds = input.startSeconds ?? input.context.currentTime - fromStep * stepSeconds;
   const voices: SamplerVoice[] = [];
   const problems: string[] = [];
 
   for (const event of events) {
+    if (event.step < fromStep) continue;
     try {
       const note = await input.loader.loadNote(event.assetId, event.pitch);
       voices.push(

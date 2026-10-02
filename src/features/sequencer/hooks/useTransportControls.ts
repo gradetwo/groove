@@ -153,10 +153,21 @@ export function useTransportControls({
     }
     triggerHaptic(HapticPatterns.playPause);
     if (isPlaying) {
-      engine.stop();
+      /**
+       * ⭐ **This is a pause, and it has to behave like one.**
+       *
+       * The button is painted with the word Pause (`Toolbar.tsx` swaps `toolbar_play`/`toolbar_pause` on the same
+       * `isPlaying` flag) and this branch used to call `engine.stop()` and `clearPlayhead()` — so the label promised
+       * a pause and the transport returned to bar one. The owner reported exactly that: "it becomes Pause while
+       * playing, but pressing Pause is a stop and the playhead goes back to the top."
+       *
+       * `pause()` keeps the step, so the next Play continues from here (`AudioEngine.play` consumes the position
+       * `pause` preserved). The playhead is deliberately **not** cleared: it is the picture of the position that was
+       * just kept, and clearing it would be the same rewind drawn somewhere else.
+       */
+      engine.pause();
       setIsPlaying(false);
-      clearPlayhead();
-      announcer.announce(t("transport_playback_stopped"));
+      announcer.announce(t("transport_playback_paused"));
       return;
     }
 

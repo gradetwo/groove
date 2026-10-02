@@ -6,6 +6,7 @@ import { chordVoicingForStep } from "../audio/chordVoicing";
 import { resolveVoicingStyle } from "../data/genreVoicing";
 import { NOTE_VARIATION_MAX_CUTOFF_SCALE, NOTE_VARIATION_MAX_DETUNE_CENTS } from "../audio/noteVariation";
 import type { SequencerPattern } from "../types/genre";
+import { ecosystemBus } from "../audio/ecosystemBus";
 import { FakeAudioContext, installFakeAudioContext } from "./helpers/fakeAudio";
 
 /**
@@ -518,6 +519,128 @@ describe("M11 · per-track swing and the latency offset", () => {
     for (const when of onsets) expect(when).toBeCloseTo(grid - 0.008, 9);
     // The global grid (what the other tracks get) is a full swing term away.
     expect(onsets[0]).not.toBeCloseTo(grid + 0.5 * 0.5 * stepDur - 0.008, 6);
+
+    engine.destroy();
+  });
+});
+
+/**
+ * ⭐ **The owner's report at the engine itself: "pressing Pause is a stop — the playhead goes back to the top."**
+ *
+ * `pause()` had always kept `currentStep` and `play()` had always overwritten it, so the pair meant "stop with a
+ * different name". The two readings that matter are exactly those two calls, and each is asserted against the number
+ * the reported build produced in the table below:
+ *
+ *   · **before the fix** — 1.0 s of playing reached step 10, `pause()` read back **0**, the next `play()` restarted at
+ *     step 2 and its `CLOCK_SYNC` carried **0**;
+ *   · **after** — the same run pauses at 10, the next `play()` is at 12 (the look-ahead has scheduled on from the held
+ *     step, it did not restart), and its `CLOCK_SYNC` — the message other windows read the position from — carries
+ *     **10**, the step that was held.
+ *
+ * `stop()` is the control that means "back to the top", and it is asserted here too, because a pause that could not be
+ * told apart from a stop was the whole complaint.
+ */
+describe("E-03b · pause holds the step, and play continues from it", () => {
+  let restore: (() => void) | null = null;
+
+  beforeEach(() => {
+    restore = installFakeAudioContext();
+  });
+
+  afterEach(() => {
+    restore?.();
+    restore = null;
+    vi.restoreAllMocks();
+  });
+
+  /**
+   * The `wangda_audio_bus` timeline, through the bus's own local fan-out.
+   *
+   * ⭐ `CLOCK_SYNC` is the one that carries a position (`setBpm` publishes it, and every play sets the tempo first),
+   * so the timeline says which step a start began from without any access to the engine's internals.
+   */
+  function recordTimeline() {
+    const timeline: Array<{ type: string; step?: number }> = [];
+    const unsubscribe = ecosystemBus.subscribe((message) =>
+      timeline.push({ type: message.type, ...(message.type === "CLOCK_SYNC" ? { step: message.currentStep } : {}) })
+    );
+    return { timeline, unsubscribe };
+  }
+
+  it("keeps the step across pause(), continues from it on play(), and only stop() returns to zero", async () => {
+    const engine = new AudioEngine();
+    engine.setPattern(makePattern({ steps: 16 }));
+    const ctx = engine.getAudioContext() as unknown as FakeAudioContext;
+    const { timeline, unsubscribe } = recordTimeline();
+
+    // The tempo first, as every caller's play path does (the arrangement player sets it immediately before `play`), so
+    // the timeline carries a position for each start.
+    engine.setBpm(120);
+    await engine.play();
+    advanceTransport(engine, ctx, 1.0);
+    const heldStep = engine.getCurrentStep();
+    // The run has to be worth holding: a criterion that paused at zero could not tell a pause from a stop.
+    expect(heldStep).toBeGreaterThan(4);
+
+    engine.pause();
+    const stepAtPause = engine.getCurrentStep();
+    expect(engine.getIsPlaying()).toBe(false);
+
+    // ⭐ **the reported failure**: the build returned 0 here and the picture went back to bar one.
+    expect(stepAtPause).toBe(heldStep);
+
+    engine.setBpm(120);
+    await engine.play();
+    const stepAfterResume = engine.getCurrentStep();
+    expect(engine.getIsPlaying()).toBe(true);
+    // ⭐ **and the second half**: the look-ahead schedules *on* from the held step; a restart would be back near zero.
+    expect(stepAfterResume).toBeGreaterThanOrEqual(heldStep);
+    expect(stepAfterResume).toBeLessThan(heldStep + 16);
+
+    // It keeps moving from there rather than re-running the opening.
+    advanceTransport(engine, ctx, 0.5);
+    expect(engine.getCurrentStep()).not.toBe(stepAtPause);
+
+    // ⭐ **Stop is the control that means "start over"**, and it takes the held position with it.
+    engine.stop();
+    expect(engine.getCurrentStep()).toBe(0);
+    engine.setBpm(120);
+    await engine.play();
+    expect(engine.getCurrentStep()).toBeLessThan(heldStep);
+
+    /**
+     * The press sequence, read **before** `destroy()` (which stops the transport itself), which is the same either way
+     * — both `pause` and `stop` publish `CLOCK_STOP` — **and the step each start carried**, which is not: the resume's
+     * `CLOCK_SYNC` says the held step where a restart's says 0.
+     */
+    // eslint-disable-next-line no-console -- the timeline is the evidence this criterion exists to produce
+    console.log("ENGINE_PAUSE_TIMELINE", JSON.stringify({ heldStep, stepAtPause, stepAfterResume, timeline }));
+    expect(timeline.filter((entry) => entry.type === "CLOCK_STOP")).toHaveLength(2);
+    expect(timeline.filter((entry) => entry.type === "CLOCK_SYNC").map((entry) => entry.step)).toEqual([
+      0, // the first play's tempo, before anything has run
+      heldStep, // ⭐ the resume's, which is where the position survived
+      0, // and the restart after stop, which is the control that goes back to the top
+    ]);
+
+    engine.destroy();
+    unsubscribe();
+  });
+
+  it("clamps a held step that the pattern no longer reaches, instead of firing one step past the end", async () => {
+    const engine = new AudioEngine();
+    engine.setPattern(makePattern({ steps: 16 }));
+    const ctx = engine.getAudioContext() as unknown as FakeAudioContext;
+
+    await engine.play();
+    advanceTransport(engine, ctx, 1.5);
+    engine.pause();
+    const heldStep = engine.getCurrentStep();
+    expect(heldStep).toBeGreaterThan(0);
+
+    // The pattern shrinks while the transport is paused — an edit, an undo, a slot switch.
+    engine.setPattern(makePattern({ steps: 4 }));
+    await engine.play();
+    expect(engine.getCurrentStep()).toBeLessThan(4);
 
     engine.destroy();
   });
