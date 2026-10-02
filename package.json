@@ -39,7 +39,6 @@
     "check:gs1": "node scripts/check-gs1.mjs",
     "check:layers": "node scripts/check_layers.mjs",
     "test:e2e:all": "E2E_PROFILE=all node scripts/test_matrix.js",
-    "test:e2e:mobile": "E2E_PROFILE=mobile node scripts/test_matrix.js",
     "probe:scroll": "node scripts/serve_probe.mjs",
     "check:css": "vite-node scripts/check_css_usage.mjs",
     "check:docs:refs": "vite-node scripts/check_doc_refs.mjs",

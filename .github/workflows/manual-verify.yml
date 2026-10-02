@@ -11,7 +11,7 @@
 # single directory you can hand over. It writes a summary to the run page as well, because reading a
 # result should not require downloading a zip.
 #
-#   profile  all | pc | mobile   which Playwright targets to run
+#   profile  all | pc           which Playwright targets to run (no mobile: the shell is cut, 2026-10-02)
 #   only     a target-name substring (e.g. "iPhone 14 (竖屏"), empty means all of the profile
 #   scope    e2e | verify | audio | jank | skins | sfizz | mirror | all
 #

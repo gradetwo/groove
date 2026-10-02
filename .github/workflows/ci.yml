@@ -193,8 +193,8 @@ jobs:
           #
           # It is a decision and not a workaround for a flake: the last two iPhone legs failed on a worker fetch and a 44 px touch target, and **both were left unfixed on purpose** — fixing them costs time for a device
           # nobody is shipping to, and a frozen device's failures should not block the device we are shipping to.
-          - leg: iPad Pro 11
-            only: iPad Pro 11
+          # ⭐ **The iPad leg is gone too, by the owner's decision of 2026-10-02: the mobile version is cut** —
+          # the shell, its criteria and its gates all go, and a branch keeps the phone build for maintenance.
 
     steps:
       - name: Checkout repository
