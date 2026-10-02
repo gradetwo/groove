@@ -12,7 +12,7 @@
  * shipped behaviour.
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { createMasterLimiter } from "../audio/MasterLimiter";
+import { createMasterLimiter, MASTER_LIMITER_PROCESSOR_NAME } from "../audio/MasterLimiter";
 import { buildMasterGraph } from "../audio/masterGraph";
 import { renderPatternOffline } from "../audio/WavExporter";
 import { installFakeOfflineAudioContext, FakeOfflineAudioContext } from "./helpers/fakeAudio";
@@ -49,6 +49,22 @@ const withFakeWorklet = () => {
     g.AudioWorkletNode = original;
     restore();
   };
+};
+
+/**
+ * The limiter's node, **by its processor name** — never by position.
+ *
+ * `instances.at(-1)` used to be the limiter because it was the only worklet node a render built. It is not any more:
+ * every channel strip's compressor is the project's own worklet now (`src/audio/InsertCompressor.ts`, and
+ * `docs/HEADLESS_CORE_PLAN.md` §8.13), so a render builds one limiter node, the bus compressor, **and a node per
+ * track** — and the last one built is a strip's, whose options are the strip's. Picking by name says which stage is
+ * meant, which is what the assertion is about. This is the same correction the `DynamicsCompressor` case below already
+ * carries, for the same reason, one node type over.
+ */
+const limiterNode = () => {
+  const nodes = FakeAudioWorkletNode.instances.filter((n) => n.name === MASTER_LIMITER_PROCESSOR_NAME);
+  expect(nodes.length, "the render must have built a limiter worklet node").toBeGreaterThan(0);
+  return nodes.at(-1)!;
 };
 
 describe("the master limiter's release options reach the worklet", () => {
@@ -102,12 +118,12 @@ describe("…and a render can ask for them", () => {
     // knob that stops at the graph's own options is a knob no probe can reach.
     restore = withFakeWorklet();
     await renderPatternOffline(PATTERN, { bars: 1, limiterReleaseFastMs: 250, limiterReleaseSlowMs: 400 });
-    const node = FakeAudioWorkletNode.instances.at(-1)!;
+    const node = limiterNode();
     expect(node.options.processorOptions?.releaseFastMs).toBe(250);
     expect(node.options.processorOptions?.releaseSlowMs).toBe(400);
 
     await renderPatternOffline(PATTERN, { bars: 1 });
-    const plain = FakeAudioWorkletNode.instances.at(-1)!;
+    const plain = limiterNode();
     expect(plain.options.processorOptions?.releaseFastMs).toBeUndefined();
   });
 });
