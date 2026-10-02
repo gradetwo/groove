@@ -715,3 +715,21 @@ scripts/check_doc_refs.mjs:31   import { partitionDocRefs } from "../src/utils/d
 **⭐⭐ 而最值钱的一条结论** ✓✓：**"含 `✗` 就跳过"这条约定**已经在 1422 行上生效**** ✓——**⇒ 它不是新发明的语法 ✓，而是**记录了这个项目本来就在做的事**** ✓✓（**与占位符那条同一个道理：门禁要读懂"这句话在干什么" ✓**）。
 
 **⇒ 剩下的次序（机械 ✓）**：**① 先把上表里属于"我自己的文字"的三处补上记号 ✓（一个字符 ✓）→ ② 把丢前缀的三处改成真路径 ✓ → ③ 把搁置/未建与上游的按机制声明 ✓ → ④ 才动 `DOCS` ✓ → ⑤ 跑一次，实测应为 0 ✓ → ⑥ 反向：把一条**不带记号**的真错引用写进去 → 必须红 ✓✓。**
+
+### 十七之四、✅ SFZ 那一类的**普查结果**（2026-10-02 ✓）
+
+**SFZ 判据失败的类是"判据把机器本地路径当作真相来源"** ✗✓（`sfzKeyswitchPaths.test.ts` 曾回落到 `readFileSync("/tmp/vsco/…")` ✓，`/tmp/vsco` 只在某些机器上 ✓，CI 上 ENOENT ✗——**而它**不是确定性红** ✓：`gh run list` 当时是 25 成功 / 1 失败 ✓，**同一提交在不同 runner 上会绿会红** ✗✓）。**⇒ 修好之后**全仓普查一遍 ✓**：
+
+**① 精确的那一类** ✓：**只剩一处**注释**** ✓✓（`sfzKeyswitchPaths.test.ts:298` ✓——**它在说明旧 bug 与那次 CI 失败 ✓，不是代码 ✓**）⇒ **这一类已清干净 ✓**。
+
+**② 放宽到"判据里出现绝对 `/tmp` 路径"** ✓：**6 处，其中 3 处是**同型候选**（各需回答"取不到时大声跳过，还是静静失败？"）** ✗**：
+
+| 处 | 形态 |
+| --- | --- |
+| **`audioDuration.test.ts:55`** | `/tmp/vd/Samples/…flac` ✓ |
+| **`logicFixtures.test.ts:22`** | `process.env.GROOVE_LOGIC_FIXTURES ?? "/tmp/logic-fixtures"` ✓ |
+| **`mirrorRun.test.ts:25-26`** | `process.env.SFZ_MIRROR_ROOT ?? "/tmp/vd"` ✓ |
+
+**☑ 另两处不是这一类** ✓：`mcpRenderArrangementBars.test.ts:18` 的 `/tmp/probe.wav` 是**输出**路径 ✓；`sfzKeyswitchPaths.test.ts:298` 是注释 ✓。
+
+**⚠️ 而结论要写准** ✓✓：**`process.env.X ?? "/tmp/default"` **本身**是合理的开发便利 ✗**——**bug 只在"默认值被**无保护地读**"时才发生 ✓**。**⇒ 那 3 处要问的是同一个问题 ✓**；**而 SFZ 那处的答案已经从"静静失败"改成了"夹具进仓库 ＋ 网络那部分大声跳过" ✓✓**。
