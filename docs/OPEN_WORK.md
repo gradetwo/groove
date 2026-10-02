@@ -2054,3 +2054,30 @@ Part 2 Priority 2 计划 ≈0.89 GB
 ### 59.3 ⚠️ 方法与纪律 ✓✓
 
 **这三轮审计（`licence`／署名／出处＋`needs`）**全部是我自己跑的**** ✓，**而且都**先打印真实字段、再逐条判**** ✓ ——**这是本段**第八次**同源纪律（读真实形状再判），**也是它第一次**连续产出两个**没人报过的发现**（四条缺出处 ＋ 同一对缺 `needs`）✓✓**。
+
+## 六十、`instruments` 面审计：**干净**，而它示范了那条纪律的**另一半**（2026-10-02 ✓，**我自跑** ✓）
+
+### 60.1 读数 ✓✓
+
+```
+**十条有乐器列表**：`vcsl` **88** ｜ **`vsco2ce` **60**** ← **与 Part 2 自报的"43 → 60 程序"**独立吻合**** ✓✓
+                 ｜ `sonatina-brass` **48** ｜ `karoryfer-meatbass` **39** ｜ `karoryfer-black-and-blue-basses` **11**
+                 ｜ `karoryfer-emilyguitar` **6** ｜ `jlearman-jrhodes3c` **3** ｜ 三个各 **2**
+⚠️ **七条无 `instruments`**：`virtuosity-drums-basic`／`salamander-grand`／`freepats-button-accordion-hn`／
+   `freepats-fsbs-dist2`／`freepats-spanish-classical-guitar`／`freepats-drawbar-organ`／`freepats-percussive-organ`
+```
+
+### 60.2 ⭐ 我先把它记成**问题**、而不是缺口 —— 然后核掉了 ✓✓
+
+**核法** ✓：**读那七条的 `sfz` 字段** ⇒ **七条**各自恰好命名一个程序****（`Programs/01-basic-kit.sfz` ✓／`Salamander Grand Piano V3.sfz` ✓／`PRESET Button Accordion HN tuned.sfz` ✓／`EGuitarFSBS-dist2 bridge 20220911.sfz` ✓／`SpanishClassicalGuitar-20190618.sfz` ✓／`DrawbarOrganEmulation-…` ✓／`PercussiveOrganEmulation-…` ✓）
+⇒ **⇒ 没有 `instruments` 列表的原因是：**单程序库用 `sfz` 命名它**** ✓✓ ⇒ **⇒ **不是缺口** ✓**。
+
+### 60.3 ⚠️ 一处留作**读法**、不当事实 ✓
+
+**那七条的 `files` 里 `.sfz` 路径计数**全为 0**** ⇒ **读起来是"`files` 放采样、`sfz` 指程序"**——**而我**还没核这个读法**⇒ **就把它写成读法 ✓✓**（**同一种克制的下一次应用 ✓**）。
+
+### 60.4 ⇒ 这一面的结论 ＋ 它示范的东西 ✓✓
+
+**`instruments` 面**干净**** ✓：**有列表的是多程序库（**且 `vsco2ce` 的 60 被另一条线独立印证**✓✓**）；**无列表的**恰好都是单程序库**** ✓。
+**⚠️ 而它示范的是那条纪律的**另一半**** ✓✓：**"读真实形状再判"**不仅用于**发现缺口****（前两轮查出四条缺出处 ＋ 同一对缺 `needs`），**也用于**避免误报****——**这一轮我拒绝把候选判成缺口，而它**被证明无罪**** ✓✓。
+**⇒ 而前面五次错数都是"没读就判"，方向相反、**病因相同**** ✓（**⇒ 两端都靠同一条解药 ✓**）。
