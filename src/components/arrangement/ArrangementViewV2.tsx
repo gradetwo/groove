@@ -46,6 +46,8 @@ import { LoopBraceV2 } from "./LoopBraceV2";
 import { loopRangeAt, type LoopRange } from "../../data/arrangementLoop";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { NewProjectPanelV2 } from "./NewProjectPanelV2";
+import { ArrangementFileEntriesV2 } from "./ArrangementFileEntriesV2";
+import { useArrangementFileActions } from "../../features/arrangement/useArrangementFileActions";
 import { playArrangementV2, type ArrangementPlayer, type ArrangementTransportState } from "../../audio/playArrangementV2";
 import { stepsPerBarFor, STEPS_PER_BEAT } from "../../data/noteEvents";
 import { announcer } from "../../platform/announcer";
@@ -149,6 +151,22 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
   }, []);
 
   const selected = useMemo(() => arrangement.tracks.find((track) => track.id === selectedTrackId), [arrangement, selectedTrackId]);
+
+  /**
+   * ⭐ **The arrangement's way in and out** — the door this route shipped without.
+   *
+   * `scoreNotes` is what the Score tab is *reading* (the one `NoteEvent[]` the roll and the stave both draw), so the
+   * MusicXML export writes the notes on screen rather than a second reading of the model. The hook owns the sentences
+   * and the busy flag; the toolbar and the score's header own the buttons.
+   */
+  const scoreNotes = useMemo(() => (selected ? (arrangement.notesByTrack?.[selected.id] ?? []) : []), [arrangement, selected]);
+  const files = useArrangementFileActions({
+    arrangement,
+    onArrangement: setArrangement,
+    scoreNotes,
+    scoreBars: bars,
+    ...(selected ? { scoreTitle: selected.name } : {}),
+  });
 
   /**
    * The toolbar's Loop button.
@@ -521,7 +539,34 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             ))}
           </div>
         )}
+
+        {/**
+         * ⭐ **The file entries, at the right end of the toolbar and after Zoom** — the position the brief names, and
+         * the one place on this route where a person looks for "get this out of here" or "bring that in". Same six
+         * export words as the workbench toolbar, so the two surfaces do not teach two vocabularies.
+         */}
+        <ArrangementFileEntriesV2
+          busy={files.busy}
+          onExportMidi={files.exportMidi}
+          onExportAls={files.exportAls}
+          onExportGroove={files.exportGroove}
+          onExportWav={files.exportWav}
+          onExportMp3={files.exportMp3}
+          onExportStems={files.exportStems}
+          onImportFile={files.importFile}
+        />
       </div>
+
+      {/**
+       * What the last file entry did — an export's own report and an import's refusal alike. Shown rather than
+       * swallowed, which is the half of the owner's report that was about silence: a button that fails quietly is worse
+       * than one that is not there.
+       */}
+      {files.report !== undefined && (
+        <p data-testid="arrangement-file-report" className="text-[10px] text-text opacity-80">
+          {files.report}
+        </p>
+      )}
 
       {/**
        * The track picker: a row of names, one press each, for the times the header column is scrolled away or a
@@ -697,8 +742,19 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             {selected.kind !== "fx" && selected.kind !== "folder" && editor === "score" && (
               /**
                * **The score and the roll show the same notes.** That is the whole claim of having both, and it is why neither owns the data: they are two readings of one `NoteEvent[]`.
+               *
+               * ⭐ **And the score is where MusicXML leaves and arrives.** The same tab that draws the notes is the one
+               * that reads them from, and writes them to, the format every notation program understands — the handlers
+               * `await import` the two modules, so a route that never opens the score never loads a notation parser.
                */
-              <ScoreV2 notes={arrangement.notesByTrack?.[selected.id] ?? []} bars={bars} title={`${selected.name} — ${t("view_score")}`} />
+              <ScoreV2
+                notes={arrangement.notesByTrack?.[selected.id] ?? []}
+                bars={bars}
+                title={`${selected.name} — ${t("view_score")}`}
+                onExportMusicXml={files.exportMusicXml}
+                onImportMusicXml={files.importMusicXml}
+                musicXmlBusy={files.busy}
+              />
             )}
             {selected.kind !== "fx" && selected.kind !== "folder" && editor === "roll" && (
               <PianoRollV2

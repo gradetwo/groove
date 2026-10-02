@@ -71,6 +71,33 @@ export const commonMessages = {
   arrangement_loop: { en: "Loop", zh: "循环" },
   arrangement_zoom_in: { en: "Zoom in", zh: "放大" },
   arrangement_zoom_out: { en: "Zoom out", zh: "缩小" },
+  /**
+   * ⭐ **The arrangement's own way in and out.**
+   *
+   * The menu items reuse the workbench's `toolbar_export_*` words, because they are the same six exports; what is new
+   * here is the import entry, the per-item hints (the workbench's name a track count this route does not have), and the
+   * sentences that say what happened. Every one of them is shown in the toolbar rather than swallowed, which is the
+   * half of the owner's report that was about silence ("有些是功能有了，页面没做入口" and, behind it, no way to tell).
+   */
+  arrangement_import_label: { en: "Import", zh: "导入" },
+  arrangement_import_title: { en: "Import a MIDI file (.mid) or a .groove project", zh: "导入 MIDI 文件（.mid）或 .groove 工程" },
+  arrangement_import_done: { en: "Imported {filename} — {tracks} track(s), {notes} note(s)", zh: "已导入 {filename}——{tracks} 条轨道、{notes} 个音符" },
+  arrangement_import_failed: { en: "Import failed: {error}", zh: "导入失败：{error}" },
+  arrangement_export_summary: { en: "{tracks} track(s), {notes} note(s)", zh: "{tracks} 条轨道、{notes} 个音符" },
+  arrangement_export_failed: { en: "Export failed: {error}", zh: "导出失败：{error}" },
+  /** One tail used by both directions: a writer's lost precision and a reader's unreadable measure are the same promise. */
+  arrangement_file_problems: { en: "{count} thing(s) could not be carried exactly: {detail}", zh: "有 {count} 处无法精确携带：{detail}" },
+  arrangement_export_hint_midi: { en: ".mid, one track per lane (format 1)", zh: ".mid，每轨一个 MIDI 轨道（format 1）" },
+  arrangement_export_hint_als: { en: ".als, an Ableton Live Set", zh: ".als，Ableton Live 工程" },
+  arrangement_export_hint_groove: { en: ".groove, the whole project", zh: ".groove，整个工程包" },
+  arrangement_export_hint_wav: { en: "16-bit 44.1kHz PCM (.wav)", zh: "16-bit 44.1kHz PCM（.wav）" },
+  arrangement_export_hint_mp3: { en: "192kbps CBR (.mp3)", zh: "192kbps CBR（.mp3）" },
+  arrangement_export_hint_stems: { en: "one WAV per track (.zip)", zh: "每轨一个 WAV（.zip）" },
+  /** The score's own interchange, in the Score tab's header — the one place a score leaves this building. */
+  arrangement_musicxml_export: { en: "Export MusicXML", zh: "导出 MusicXML" },
+  arrangement_musicxml_import: { en: "Import MusicXML", zh: "导入 MusicXML" },
+  arrangement_musicxml_export_done: { en: "Exported {filename} — {notes} note(s)", zh: "已导出 {filename}——{notes} 个音符" },
+  arrangement_musicxml_empty: { en: "This track holds no notes, so there is no score to write", zh: "这条轨道没有音符，写不出乐谱" },
   arrangement_hscroll: { en: "Scroll the arrangement sideways", zh: "横向滚动编排" },
   arrangement_tracks_label: { en: "Arrangement tracks", zh: "编排轨道" },
   arrangement_lanes_label: { en: "Arrangement lanes", zh: "编排通道" },

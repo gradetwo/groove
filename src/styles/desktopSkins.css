@@ -846,6 +846,11 @@
 [class~="bg-[#0c0e14]"] { background-color: rgb(var(--d-panel2)); }
 [class~="bg-[#0a0c12]"] { background-color: rgb(var(--d-panel2)); }
 [class~="to-[#0a0c12]"] { --tw-gradient-to: rgb(var(--d-panel2)); }
+[class~="hover:bg-[#1a1d26]"]:hover { background-color: rgb(var(--d-surface)); }
+[class~="hover:text-[#fbbf24]"]:hover { color: rgb(var(--d-accent-ink)); }
+[class~="hover:text-[#fbbf24]/80"]:hover { color: rgb(var(--d-accent-ink) / 0.80); }
+[class~="bg-[#fbbf24]"] { background-color: rgb(var(--d-accent)); }
+[class~="text-[#fbbf24]"] { color: rgb(var(--d-accent-ink)); }
 [class~="bg-[#0c0e12]"] { background-color: rgb(var(--d-panel2)); }
 [class~="border-[#b0b3ba]"] { border-color: rgb(var(--d-track-fx)); }
 [class~="bg-[#0e1117]"] { background-color: rgb(var(--d-panel)); }
@@ -1074,10 +1079,6 @@
 [class~="bg-[#0e1017]/40"] { background-color: rgb(var(--d-panel) / 0.40); }
 [class~="bg-[#0e1017]/90"] { background-color: rgb(var(--d-panel) / 0.90); }
 [class~="hover:bg-[#232838]"]:hover { background-color: rgb(var(--d-surface)); }
-[class~="hover:text-[#fbbf24]"]:hover { color: rgb(var(--d-accent-ink)); }
-[class~="hover:text-[#fbbf24]/80"]:hover { color: rgb(var(--d-accent-ink) / 0.80); }
-[class~="bg-[#fbbf24]"] { background-color: rgb(var(--d-accent)); }
-[class~="text-[#fbbf24]"] { color: rgb(var(--d-accent-ink)); }
 [class~="bg-[#08090d]"] { background-color: rgb(var(--d-bg)); }
 [class~="bg-[#11161d]"] { background-color: rgb(var(--d-panel)); }
 [class~="bg-[#191e2b]"] { background-color: rgb(var(--d-surface)); }
@@ -1101,7 +1102,6 @@
 [class~="bg-[#a855f7]/20"] { background-color: rgb(var(--d-track-chord) / 0.20); }
 [class~="border-[#a855f7]"] { border-color: rgb(var(--d-track-chord)); }
 [class~="text-[#c084fc]"] { color: rgb(var(--d-cat-jazz)); }
-[class~="hover:bg-[#1a1d26]"]:hover { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#1f232b]"] { background-color: rgb(var(--d-surface)); }
 [class~="text-[#f87171]"] { color: rgb(var(--d-danger)); }
 [class~="bg-[#161822]"] { background-color: rgb(var(--d-surface)); }

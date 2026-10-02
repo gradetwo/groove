@@ -23,6 +23,20 @@ export interface ScoreV2Props {
   width?: number;
   /** The name a reader shows beside the first system. */
   title?: string;
+  /**
+   * ⭐ **The score leaving the building, from the one place a score is read.**
+   *
+   * `toMusicXml`/`fromMusicXml` are the interchange with every notation program, and they were complete and unreachable:
+   * nothing in the application imported either module, so the shipped bundle did not contain them at all. The header is
+   * where they belong — a person looking at a stave is the person who wants a `.musicxml`, and the person with one in
+   * hand is looking at this tab — and both are `await import`ed by the caller's handlers so neither is paid for by a
+   * route that only plays music.
+   */
+  onExportMusicXml?: () => void;
+  /** Read a MusicXML document (or a compressed `.mxl`) in as arrangement tracks. */
+  onImportMusicXml?: (file: File) => void;
+  /** True while a read or a write is in flight, so the header says it is working. */
+  musicXmlBusy?: boolean;
 }
 
 /** Middle C and above is the treble staff, below it the bass — the split a piano grand staff uses, and the one a reader expects. */
@@ -56,9 +70,10 @@ function keyFor(pitch: number): string {
   return `${names[pitch % 12]}/${Math.floor(pitch / 12) - 1}`;
 }
 
-export function ScoreV2({ notes, bars = 8, width = 900, title }: ScoreV2Props) {
+export function ScoreV2({ notes, bars = 8, width = 900, title, onExportMusicXml, onImportMusicXml, musicXmlBusy = false }: ScoreV2Props) {
   const { t } = useLanguage();
   const hostRef = useRef<HTMLDivElement | null>(null);
+  const musicXmlInputRef = useRef<HTMLInputElement | null>(null);
   const [problem, setProblem] = useState<string | undefined>(undefined);
 
   useEffect(() => {
@@ -153,8 +168,57 @@ export function ScoreV2({ notes, bars = 8, width = 900, title }: ScoreV2Props) {
   }, [notes, bars, width]);
 
   return (
-    <div data-testid="score-v2" className="flex flex-col gap-2 p-3 rounded border border-[rgb(var(--d-line))]">
-      <span className="text-xs text-text opacity-80">{title ?? t("score_hint")}</span>
+    <div data-testid="score-v2" className="flex flex-col gap-2 rounded border border-[rgb(var(--d-line))] p-3">
+      {/*
+        The header, which is now the score's own interchange: the stave's title on the left, and MusicXML out and in on
+        the right. 44 px, like every other target on this surface, and the hidden input is cleared after every pick so a
+        second read of the same file still fires.
+      */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs text-text opacity-80">{title ?? t("score_hint")}</span>
+        {(onExportMusicXml || onImportMusicXml) && (
+          <span className="ml-auto flex items-center gap-1">
+            {onExportMusicXml && (
+              <button
+                type="button"
+                data-testid="score-export-musicxml"
+                onClick={onExportMusicXml}
+                disabled={musicXmlBusy}
+                className="h-11 shrink-0 rounded border border-[rgb(var(--d-line))] px-2 text-xs text-text disabled:opacity-50"
+                title={t("arrangement_musicxml_export")}
+              >
+                {t("arrangement_musicxml_export")}
+              </button>
+            )}
+            {onImportMusicXml && (
+              <>
+                <input
+                  ref={musicXmlInputRef}
+                  data-testid="score-import-musicxml-input"
+                  type="file"
+                  accept=".musicxml,.xml,.mxl"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) onImportMusicXml(file);
+                    event.target.value = "";
+                  }}
+                />
+                <button
+                  type="button"
+                  data-testid="score-import-musicxml"
+                  onClick={() => musicXmlInputRef.current?.click()}
+                  disabled={musicXmlBusy}
+                  className="h-11 shrink-0 rounded border border-[rgb(var(--d-line))] px-2 text-xs text-text disabled:opacity-50"
+                  title={t("arrangement_musicxml_import")}
+                >
+                  {t("arrangement_musicxml_import")}
+                </button>
+              </>
+            )}
+          </span>
+        )}
+      </div>
       {problem ? <span data-testid="score-problem" className="text-xs text-[rgb(var(--d-danger))]">{problem}</span> : null}
       {/* VexFlow draws into this element; React must not also manage its children, which is why it is empty and ref-driven. */}
       <div ref={hostRef} data-testid="score-canvas" className="overflow-x-auto" />

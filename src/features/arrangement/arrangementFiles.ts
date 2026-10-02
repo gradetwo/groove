@@ -1,0 +1,426 @@
+/**
+ * The arrangement's **way in and out**: the files it can write and the files it can read.
+ *
+ * The new editor shipped with a working engine behind it and no door in front of it. `arrangementToMidi` was written
+ * to hand an arrangement to a DAW and nothing on the new route called it; `fromMidi` and `fromMusicXml` could read a
+ * real file and only the MCP server could reach them; `toMusicXml`/`fromMusicXml` were not in the browser bundle at
+ * all. The owner's report is that shape — *"有些是功能有了，页面没做入口"*.
+ *
+ * **Produce first, download second — and that split is the point.** Every producer here returns a `ProducedFile`
+ * (`{ filename, blob }`) and writes nothing: `downloadProducedFile` is the one place that touches the document. So a
+ * criterion can read the very bytes an entry would hand the browser back through the importer, which is the only
+ * evidence that "export MIDI" produced a MIDI file rather than a file with `.mid` on it.
+ *
+ * **The heavy half is imported when it is asked for.** The WAV/MP3/stems renderers, the Ableton writer, the project
+ * package writer and the MusicXML reader/writer are all `await import(...)`ed inside their own producer. This route
+ * is a lazy chunk and a first-paint budget exists; a person who opens the arrangement and exports nothing must not
+ * pay for an offline renderer or for a notation parser.
+ */
+import type { ArrangementV2, NoteEvent } from "../../types/arrangementV2";
+import type { GrooveProject, GrooveProjectArrangement } from "../../types/project";
+import { arrangementToMidi } from "../../data/arrangementToMidi";
+import { arrangementWithImportedParts, arrangementFromGroovePackage, type ArrangementImportResult } from "../../data/arrangementImport";
+import { compileArrangementToPattern } from "../../data/arrangementCompile";
+import { DEFAULT_FX_STATE } from "../../audio/EffectsRack";
+
+/**
+ * The genre id an arrangement's exports are named under.
+ *
+ * An arrangement has no genre — that is what the `/new` route is — but the file names, the `.groove` package's own
+ * validator and the exporter's sanitising all want a word, so it is one word rather than a guess at a genre.
+ */
+export const ARRANGEMENT_FILE_STEM = "arrangement";
+
+/** What an entry produced, before anything hands it to a browser. */
+export interface ProducedFile {
+  filename: string;
+  blob: Blob;
+}
+
+/** A file production that carries the facts the interface has to report rather than only the bytes. */
+export interface ProducedMidi extends ProducedFile {
+  kind: "midi";
+  tracks: number;
+  notes: number;
+  /** Anything the arrangement asked for that a MIDI file cannot carry. Said, not dropped. */
+  problems: string[];
+}
+
+export interface ProducedGroove extends ProducedFile {
+  kind: "groove";
+  name: string;
+}
+
+export interface ProducedAls extends ProducedFile {
+  kind: "als";
+}
+
+/** A rendered audio file, with the two degradation flags every audio export in this app reports. */
+export interface ProducedAudio extends ProducedFile {
+  kind: "wav" | "mp3" | "stems";
+  workletsUnavailable: boolean;
+  gs1HostFailures: number;
+  limiterKind: string;
+  bitrateKbps?: number;
+}
+
+export interface ProducedMusicXml extends ProducedFile {
+  kind: "musicxml";
+  notes: number;
+}
+
+/** `{tracks, notes, problems}` — shared by the MIDI export and the two imports. */
+export interface ImportCounts {
+  tracks: number;
+  notes: number;
+  problems: string[];
+}
+
+/** An import's outcome: the arrangement to install, or the refusal to show. Both are results, never an exception to swallow. */
+export type ArrangementImportOutcome =
+  | ({ ok: true; filename: string } & ImportCounts & { arrangement: ArrangementV2; format: string })
+  | { ok: false; filename: string; reason: string };
+
+/** Only the characters a file name may carry, and not so many of them that a filesystem refuses the name. */
+function safeFileStem(name: string): string {
+  return (
+    name
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_\-\u4e00-\u9fa5]/gi, "_")
+      .replace(/_+/g, "_")
+      .substring(0, 40) || ARRANGEMENT_FILE_STEM
+  );
+}
+
+/** A number the user can act on: the time signature the arrangement states, or four-four. */
+function parseTimeSignature(signature: string | undefined): { beatsPerMeasure: number; beatType: number } {
+  const match = /^(\d+)\s*\/\s*(\d+)$/.exec((signature ?? "").trim());
+  const beatsPerMeasure = match ? Number(match[1]) : 4;
+  const beatType = match ? Number(match[2]) : 4;
+  if (!Number.isFinite(beatsPerMeasure) || !Number.isFinite(beatType) || beatsPerMeasure <= 0 || beatType <= 0) {
+    return { beatsPerMeasure: 4, beatType: 4 };
+  }
+  return { beatsPerMeasure, beatType };
+}
+
+/**
+ * The arrangement's notes as a Standard MIDI File.
+ *
+ * `arrangementToMidi` says in its own header that "writing the file is the MCP tool's job" — it returns bytes and
+ * nothing else. This is the browser's half of that sentence: the same bytes, given a name and a MIME type.
+ */
+export function midiFileFor(arrangement: ArrangementV2, stem = ARRANGEMENT_FILE_STEM): ProducedMidi {
+  const file = arrangementToMidi(arrangement);
+  return {
+    kind: "midi",
+    filename: `${safeFileStem(stem)}.mid`,
+    // The `Blob` constructor copies the bytes, so the view the writer returned is not handed on.
+    blob: new Blob([file.bytes as unknown as BlobPart], { type: "audio/midi" }),
+    tracks: file.tracks.length,
+    notes: file.notes,
+    problems: file.problems,
+  };
+}
+
+/**
+ * The arrangement compiled into the v1 pattern shape the package writer takes.
+ *
+ * ⭐ **The notes are passed explicitly, and that is not a detail.** `compileArrangementToPattern`'s second parameter is
+ * "the notes to compile, or a compile the caller already has" and it defaults to *empty* — the arrangement's own
+ * `notesByTrack` is content that lives with the tracks, not a field the compile reaches into. The player passes it
+ * (`playArrangementV2(arrangement, arrangement.notesByTrack, …)`); every exporter here has to do the same, or an export
+ * writes a pattern whose lanes are all silence. The first version of this file forgot, and the round-trip criterion
+ * caught it as "0 notes".
+ */
+function compiledPatternFor(arrangement: ArrangementV2) {
+  return compileArrangementToPattern(arrangement, arrangement.notesByTrack ?? {});
+}
+
+/**
+ * The project half of a `.groove` package, built from an arrangement.
+ *
+ * The arrangement has no genre and no name, which is what `/new` means, so the package says exactly that:
+ * `genreId: "arrangement"`. It cannot be empty — `validateGroovePackage` refuses a package without a genre id, and a
+ * package the app's own validator refuses is not an export.
+ */
+export function grooveProjectFor(arrangement: ArrangementV2): GrooveProject {
+  const pattern = compiledPatternFor(arrangement);
+  const now = Date.now();
+  return {
+    id: `arrangement_${now}`,
+    name: "Arrangement",
+    genreId: ARRANGEMENT_FILE_STEM,
+    genreName: "Arrangement",
+    bpm: arrangement.bpm ?? 120,
+    swing: 0,
+    timeSignature: arrangement.timeSignature ?? "4/4",
+    resolution: "1/16",
+    stepCount: pattern.totalSteps ?? pattern.tracks[0]?.steps?.length ?? 16,
+    patterns: { A: pattern, B: { ...pattern, tracks: [] } },
+    activeSlot: "A",
+    songMode: false,
+    songChain: ["A"],
+    loopRange: null,
+    effectsRack: { ...DEFAULT_FX_STATE },
+    drumKit: "808",
+    isMetronome: false,
+    isCountIn: false,
+    tags: ["Arrangement"],
+    isFavorite: false,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+/**
+ * The arrangement as a `.groove` package.
+ *
+ * **The same writer the workbench's own export uses** (`exportProjectPackage`, the function `exportProjectToGrooveFile`
+ * is a two-line download around), called with the package's **v2 `arrangement` half filled in**. That field exists
+ * precisely because "exporting a song was lossy: the arrangement was dropped and there was nowhere to drop it into" —
+ * and an arrangement is exactly what this route has. So the file carries both halves: the v1 two-pattern project every
+ * older reader understands, and the clips that make re-opening it faithful.
+ */
+export async function grooveFileFor(arrangement: ArrangementV2): Promise<ProducedGroove> {
+  const { exportProjectPackage, validateGroovePackage } = await import("../sequencer/projectDb");
+  const pattern = compiledPatternFor(arrangement);
+  const project = grooveProjectFor(arrangement);
+  const carried: GrooveProjectArrangement = { clips: { A: pattern }, sections: [] };
+  const pkg = exportProjectPackage(project, undefined, carried);
+  // The app's own validator is the gate on the way out too: a package this refuses must never reach a person's disk.
+  validateGroovePackage(pkg);
+  return {
+    kind: "groove",
+    filename: `${safeFileStem(project.name)}.groove`,
+    blob: new Blob([JSON.stringify(pkg, null, 2)], { type: "application/json" }),
+    name: project.name,
+  };
+}
+
+/** The arrangement as an Ableton Live Set, through the workbench's own writer. */
+export async function alsFileFor(arrangement: ArrangementV2, name = "Arrangement"): Promise<ProducedAls> {
+  const { exportAbletonLiveSet } = await import("../../audio/AbletonExporter");
+  const result = await exportAbletonLiveSet({
+    bpm: arrangement.bpm ?? 120,
+    pattern: compiledPatternFor(arrangement),
+    genreName: name,
+    scaleName: "chromatic",
+  });
+  return { kind: "als", filename: result.filename, blob: result.blob };
+}
+
+/** The audio-lane options an app-side render needs, so a sampler lane is mixed rather than silently empty. */
+async function audioLaneOptions(pattern: ReturnType<typeof compileArrangementToPattern>) {
+  const [{ prepareAudioLaneExport }, { appCatalogueRuntime }] = await Promise.all([
+    import("../sequencer/hooks/audioLaneExport"),
+    import("../../data/sampleCatalogueRuntime"),
+  ]);
+  return prepareAudioLaneExport(pattern, () => appCatalogueRuntime.load());
+}
+
+/** The common options every audio export is handed, so the three cannot disagree about the performance. */
+function renderOptionsFor(arrangement: ArrangementV2) {
+  return { bpm: arrangement.bpm ?? 120, swing: 0, drumKit: "808" as const };
+}
+
+/** The arrangement's master, rendered offline to a 16-bit WAV. */
+export async function wavFileFor(arrangement: ArrangementV2): Promise<ProducedAudio> {
+  const { exportMasterWav } = await import("../../audio/WavExporter");
+  const pattern = compiledPatternFor(arrangement);
+  const lanes = await audioLaneOptions(pattern);
+  const result = await exportMasterWav(pattern, ARRANGEMENT_FILE_STEM, { ...renderOptionsFor(arrangement), ...lanes.options });
+  return {
+    kind: "wav",
+    filename: result.filename,
+    blob: result.blob,
+    workletsUnavailable: result.workletsUnavailable,
+    gs1HostFailures: result.gs1HostFailures,
+    limiterKind: result.limiterKind,
+  };
+}
+
+/** The same master, encoded to MP3. The encoder is fetched on this click, exactly as the workbench does it. */
+export async function mp3FileFor(arrangement: ArrangementV2): Promise<ProducedAudio> {
+  const { exportMasterMp3 } = await import("../../audio/Mp3Exporter");
+  const pattern = compiledPatternFor(arrangement);
+  const lanes = await audioLaneOptions(pattern);
+  const result = await exportMasterMp3(pattern, ARRANGEMENT_FILE_STEM, { ...renderOptionsFor(arrangement), ...lanes.options });
+  return {
+    kind: "mp3",
+    filename: result.filename,
+    blob: result.blob,
+    workletsUnavailable: result.workletsUnavailable,
+    gs1HostFailures: result.gs1HostFailures,
+    limiterKind: result.limiterKind,
+    bitrateKbps: result.bitrateKbps,
+  };
+}
+
+/** One WAV per track, packed into a zip. */
+export async function stemsFileFor(arrangement: ArrangementV2): Promise<ProducedAudio> {
+  const { exportStemsZip } = await import("../../audio/WavExporter");
+  const pattern = compiledPatternFor(arrangement);
+  const lanes = await audioLaneOptions(pattern);
+  const result = await exportStemsZip(pattern, ARRANGEMENT_FILE_STEM, { ...renderOptionsFor(arrangement), ...lanes.options });
+  return {
+    kind: "stems",
+    filename: result.filename,
+    blob: result.blob,
+    workletsUnavailable: result.workletsUnavailable,
+    gs1HostFailures: result.gs1HostFailures,
+    limiterKind: "rendered",
+  };
+}
+
+/**
+ * A track's notes as MusicXML — **the score leaving the building**.
+ *
+ * `toMusicXml` and `fromMusicXml` were complete and unreachable: nothing in the application imported either module,
+ * so `musicxml` did not appear once in the shipped web bundle. They are `await import`ed here, which is what puts
+ * them in the browser as their **own** chunk rather than in the first paint — the same treatment `ScoreV2` gives
+ * VexFlow and for the same reason.
+ */
+export async function musicXmlFileFor(
+  notes: readonly NoteEvent[],
+  bars: number,
+  options: { title?: string; timeSignature?: string; tempoBpm?: number } = {}
+): Promise<ProducedMusicXml> {
+  const { toMusicXml } = await import("../../data/musicxml");
+  const { beatsPerMeasure, beatType } = parseTimeSignature(options.timeSignature);
+  const title = options.title?.trim() || "Score";
+  const xml = toMusicXml(notes, bars, {
+    title,
+    // The part name is the track's own, so a file read back names the track it came from rather than "Part 1".
+    partName: title,
+    beatsPerMeasure,
+    beatType,
+    ...(options.tempoBpm === undefined ? {} : { tempoBpm: options.tempoBpm }),
+  });
+  return {
+    kind: "musicxml",
+    filename: `${safeFileStem(title)}.musicxml`,
+    blob: new Blob([xml], { type: "application/vnd.recordare.musicxml+xml" }),
+    notes: notes.length,
+  };
+}
+
+/** Hand a produced file to the browser. The **one** place in this module that touches the document. */
+export function downloadProducedFile(file: ProducedFile): void {
+  if (typeof document === "undefined" || typeof URL === "undefined") return;
+  const url = URL.createObjectURL(file.blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = file.filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/** Which reader a chosen file belongs to, from its own name. Extension-first because a file picker gives no more. */
+export type ArrangementFileKind = "midi" | "groove" | "musicxml" | "unsupported";
+
+export function arrangementFileKind(filename: string): ArrangementFileKind {
+  const lower = filename.trim().toLowerCase();
+  if (lower.endsWith(".mid") || lower.endsWith(".midi")) return "midi";
+  if (lower.endsWith(".groove")) return "groove";
+  if (lower.endsWith(".musicxml") || lower.endsWith(".mxl") || lower.endsWith(".xml")) return "musicxml";
+  return "unsupported";
+}
+
+/** A `File` read as bytes, through its own `arrayBuffer` — the one call that works for binary and text alike. */
+async function bytesOf(file: File): Promise<Uint8Array> {
+  return new Uint8Array(await file.arrayBuffer());
+}
+
+/**
+ * A MIDI file as tracks in the arrangement.
+ *
+ * The parts the reader produced are **added** to what is on screen, and the file's own tempo and meter are applied
+ * when it states them — said in the reply rather than silently kept at 120, which is the same rule `fromMidi`
+ * records for itself.
+ */
+export async function importMidiIntoArrangement(arrangement: ArrangementV2, file: File): Promise<ArrangementImportOutcome> {
+  try {
+    const { fromMidi } = await import("../../data/midiToArrangement");
+    const imported = fromMidi(await bytesOf(file));
+    const placed = arrangementWithImportedParts(arrangement, imported);
+    const next: ArrangementV2 = {
+      ...placed.arrangement,
+      ...(imported.tempoBpm === undefined ? {} : { bpm: imported.tempoBpm }),
+      ...(imported.timeSignature === undefined ? {} : { timeSignature: imported.timeSignature }),
+    };
+    return { ok: true, filename: file.name, format: "midi", tracks: placed.tracks, notes: placed.notes, problems: placed.problems, arrangement: next };
+  } catch (error) {
+    return { ok: false, filename: file.name, reason: describeError(error) };
+  }
+}
+
+/**
+ * A `.groove` package as **the** arrangement — a whole project, so it replaces rather than accumulates.
+ *
+ * The package is read through `validateGroovePackage`, which is the app's own gate and the very function the Project
+ * Hub's own Import calls: a file the hub would refuse is refused here with the same sentence, and a file the hub
+ * accepts opens here. Nothing is written to the project store, because importing an arrangement is not a request to
+ * file a new project in a hub this route does not show.
+ */
+export async function importGrooveIntoArrangement(arrangement: ArrangementV2, file: File): Promise<ArrangementImportOutcome> {
+  try {
+    const { validateGroovePackage } = await import("../sequencer/projectDb");
+    const pkg = validateGroovePackage(JSON.parse(await file.text()));
+    const imported: ArrangementImportResult = arrangementFromGroovePackage(pkg, arrangement.songId);
+    return { ok: true, filename: file.name, format: "groove", tracks: imported.tracks, notes: imported.notes, problems: imported.problems, arrangement: imported.arrangement };
+  } catch (error) {
+    return { ok: false, filename: file.name, reason: describeError(error) };
+  }
+}
+
+/**
+ * A MusicXML document (or a compressed `.mxl`) as tracks in the arrangement.
+ *
+ * `fromMusicXmlBytes` decides between the two by the bytes rather than by the name, and reports which it read, so a
+ * `.xml` that is really a zip is read rather than refused.
+ */
+export async function importMusicXmlIntoArrangement(arrangement: ArrangementV2, file: File): Promise<ArrangementImportOutcome> {
+  try {
+    const { fromMusicXmlBytes } = await import("../../data/musicxmlImport");
+    const imported = await fromMusicXmlBytes(await bytesOf(file));
+    const placed = arrangementWithImportedParts(arrangement, imported);
+    const beatType = imported.beatType;
+    const beatsPerMeasure = imported.beatsPerMeasure;
+    const next: ArrangementV2 = {
+      ...placed.arrangement,
+      ...(imported.tempoBpm === undefined ? {} : { bpm: imported.tempoBpm }),
+      ...(beatsPerMeasure === undefined || beatType === undefined ? {} : { timeSignature: `${beatsPerMeasure}/${beatType}` }),
+    };
+    return { ok: true, filename: file.name, format: imported.format, tracks: placed.tracks, notes: placed.notes, problems: placed.problems, arrangement: next };
+  } catch (error) {
+    return { ok: false, filename: file.name, reason: describeError(error) };
+  }
+}
+
+/** Dispatch a chosen file to its reader. An unknown extension is a refusal with the reason, never a no-op. */
+export async function importArrangementFile(arrangement: ArrangementV2, file: File): Promise<ArrangementImportOutcome> {
+  switch (arrangementFileKind(file.name)) {
+    case "midi":
+      return importMidiIntoArrangement(arrangement, file);
+    case "groove":
+      return importGrooveIntoArrangement(arrangement, file);
+    case "musicxml":
+      return importMusicXmlIntoArrangement(arrangement, file);
+    default:
+      return { ok: false, filename: file.name, reason: `"${file.name}" is not a file this route reads (.mid, .midi, .groove, .musicxml, .mxl)` };
+  }
+}
+
+/** Anything thrown, as a sentence. An `undefined` interpolated into a message leaves a literal `{error}` on screen. */
+export function describeError(error: unknown): string {
+  if (error instanceof Error) return error.message || error.name;
+  if (typeof error === "string") return error;
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+}
