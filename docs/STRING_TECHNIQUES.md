@@ -614,3 +614,57 @@ Kontakt 那条说明"演奏法的判定在库脚本／上层，不在播放器"�
 拉杆风琴**那个意思）、`marimba_lead`→VCSL Marimba、`bell_lead`→VCSL Tubular Bells 1、鼓轨→Virtuosity 套鼓。
 第二轮的价值在**目录广度**（`list_arrangement_instruments` 的 60 个程序可按 `assetId` 直接选），
 **不改任何按名字的映射**——这是判断，不是遗漏。
+
+---
+
+## 16. ⭐⭐ 追加七：Part 2b——**循环点／转接采样**两条判据的实测，与买到的弦乐库（2026-10-03）
+
+> 判据由业主在上一段交接里给定：**① 持续弦乐优先选带循环点的**（**WAV 有 `smpl` 块，或 SFZ 有 `loop_mode`／
+> `loop_start`／`loop_end`**）；**② 有 `trigger=legato`／`sw_previous` 的算高一档**（"接过去那一下能换成新音高
+> 自己的音色"）。本节只记**实测**与**买到之后能用到什么程度**，在这条采购线里**不改** `src/audio/**`。
+
+### 16.1 量法
+
+对每个候选的**拟镜像程序**（就是条目 `instruments` 里那几行，不是全部 `.sfz`）用本仓自己的
+`expandIncludes`＋`parseSfz` 展开并逐 region 读；再对每个 `sample=` 指向的 WAV 走一遍 RIFF chunk 找 `smpl`
+（读 `numSampleLoops` 与每条 loop 的 `start`／`end`）；FLAC 不查（该容器没有此块）。SFZ 一侧数
+`loop_mode|loop_start|loop_end` 与 `trigger=legato|sw_previous`。
+
+### 16.2 读数表
+
+| 候选 | 程序 | SFZ 的 `loop_*` | 带 `smpl` 的 WAV | `trigger=legato` | `sw_previous` | 买了吗 |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| `karoryfer-bigcat.cello` | 3（＋36 个 map／include 随附） | **0** | **136/136**（`Samples/sus`，82.2 MiB；例 `A1_f_d.wav` start 54405 / end 208385） | **2708 region**（11 个 legato map，各 17 处） | 0 | **✓ 买了** |
+| `karoryfer.string-cyborgs` | 3（＋32 个） | **24/35 个文件有**（每程序 1–3 处） | **224/224**（四个采样目录全覆盖） | 0 | 0 | **✓ 买了** |
+| `karoryfer.war-tuba` | 10（曾拟买） | **0** | 87/1443 | 极多（单文件 1–300 处） | 0 | **✗ 未买**（根程序是 `sw_*` 包装，实测每个音答成 `*_ss_*`；见 `SAMPLE_LIBRARY_INTEGRATION.md` §⑩） |
+| `aliexpress-erhu` | 4 | **0** | 0/170 | 3 处/程序（`02`、`05`） | 0 | ✓ 买了（价值是世界乐器，与判据无关） |
+| `hungarian_zither` | 2 | **3**（主程序） | 0/210（FLAC） | 0 | 0 | ✓ 买了 |
+| `cithara-barbarica` | 6 | **0** | 0/275 | 0 | 0 | ✓ 买了 |
+| `dsmolken-double-bass` | 2 | 0 | 4/401（`arco/extra` 的 subloops） | 0 | 0 | ✓ 买了 |
+
+### 16.3 判据结果
+
+1. **两条同时命中的是两个**：`bigcat.cello`（转接层＋WAV 循环点）与 `string-cyborgs`（**SFZ 声明循环，WAV 也
+   带循环点**——这一批里唯一"两处都有"的）。
+2. **`sw_previous` 一处都没有** ⇒ "真正录下来的转接采样"那一档**在这一批里不存在**；`trigger=legato` 是另一件
+   事（同库、同音色的 legato 层），而本仓解析器**不读 `trigger`**（`freepats-button-accordion-hn` 的 `needs`
+   里已记着它）。⇒ 这两件要真正吃到"转接那一档"，前提是**解析器读 `trigger=legato`＋驱动 CC107**，那是**另一格**。
+3. `bigcat.cello` 的 `trigger=legato` 层**在本仓里是惰性的，且这是实测**：那些 region 同时带 `locc107=16`／
+   `hicc107=24`，而 39 个程序里**没有一处 `set_cc107`** ⇒ 默认 CC107=0 ⇒ `ccGate` 把它们全部挡下。所以今天
+   答音的是 `vc_arco_sus_map` 那一层，**legato 层不会抢答**（逐音探针：note 24–117 全部落在 `sus/`、`pizzcato/`、
+   `staccato/` 与 `noises/`，没有一个落在 legato 层）。
+4. **两条代码层边界，照实说（不是买家的错）**：
+   * `samplerVoice` 只在 **SFZ 写了 `loop_*`** 时才起循环（`loopModeOf`／`loopStartFrames`／`loopEndFrames`）；
+     **没有任何代码读 WAV 的 `smpl` 块** ⇒ `string-cyborgs` 的循环**今天就能用**，`bigcat.cello` 的循环点
+     **在素材里、今天还用不上**（要读 `smpl`，那是另一格）。
+   * `legatoVoices` 判"录音还够不够"用的是 `recordingSeconds = buffer.duration`（`src/audio/samplerLaneSink.ts:84`），
+     **与 `loopMode` 无关** ⇒ **循环点不会抬高 `recording-would-run-out` 那条拒绝**：它改变的是"长音按住会不会
+     消失"，**不是**"能不能接过去"。写在这里，是为了不让人把"买了带循环点的库"读成"连奏到 0"。
+
+### 16.4 接线：这张表**一行未改**
+
+`stringTechniques.ts` 的每一行都标着它是从**钉住的 VSCO 树**量出来的；往里塞第二个库的行会破坏它"一个来源"
+的承诺。两件新库以 `assetId` 出现在目录里（`karoryfer-bigcat-cello:01-Bowed-velocity-layer`、
+`karoryfer-string-cyborgs:Blackheart` 等），按**名字**可选；`karoryfer.war-tuba` 未进清单。
+`src/test/orchestralCoverage.test.ts` 的 `Orchestral` 计数 108 → **116**（＋bigcat 3＋cyborgs 3＋double bass 2）
+是本轮唯一被这两件改动的判据。

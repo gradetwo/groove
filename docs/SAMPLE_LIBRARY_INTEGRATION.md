@@ -1549,3 +1549,169 @@ npx vite-node scripts/scan_sample_opcodes.mjs --root /var/tmp/groove-mirror-<ent
 "the day `TimpaniRolls.sfz` is mirrored this roster goes red and has to claim it" —— 本轮镜像了它，
 roster 于是补上 `vsco2ce:TimpaniRolls`，`Orchestral` 计数 91 → **108**，`vsco2ce` 程序数 43 → 60。
 `Harp` 是唯一还剩空 `articulations` 的行（上游确实没有第二个程序）。
+
+### ⑩ ⭐⭐ Part 2b：独奏弦乐＋世界乐器、萨克斯＋电钢、真鼓与补足（2026-10-03）
+
+计划书 `docs/research/library-costs-for-the-instrument-gaps.md` §6 的 Priority 3／4／5，加上 §7.2 那批"剩余
+干净候选"里按价值密度取的几件。**先量后买**：每个候选先在本地 checkout 上逐程序解析、量出**要买的程序引用
+到的字节**，再决定 `paths`，最后才下。**本段 17 个条目、10 108 个文件、2 245 816 574 B（2 141.8 MiB）。**
+
+#### 要下清单与实际字节（17 条，全部上桶）
+
+| 条目 | 计划书 | 类别 | 文件 | 字节 | MiB | 程序 | 许可 | pin |
+| --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- |
+| `karoryfer-bigcat-cello` | P4 | Orchestral | 520 | 141 812 275 | 135.2 | 3 | CC0 | `6fd75fbf…` |
+| `karoryfer-string-cyborgs` | P4 | Orchestral | 304 | 74 501 792 | 71.1 | 3 | CC0 | `f2238b3e…` |
+| `aliexpress-erhu` | P4 | World | 191 | 92 826 029 | 88.5 | 4 | CC0 | `6615047b…` |
+| `hungarian-zither` | P4 | World | 219 | 178 322 902 | 170.1 | 2 | CC0 | `973d9445…` |
+| `cithara-barbarica` | P4 | World | 275 | 239 034 087 | 228.0 | 6 | CC0 | `a47c10dc…` |
+| `mtg-solo-sax` | P5 | Winds | 784 | 110 931 713 | 105.8 | 8 | **CC-BY 4.0** | `b494d256…` |
+| `gregsullivan-e-pianos` | P5 | Acoustic Piano | 177 | 21 484 144 | 20.5 | 3 | **CC-BY 3.0** | `8c3e581a…` |
+| `karoryfer-big-rusty-drums` | P3 | Acoustic Drums | 4 814 | 706 838 139 | 674.1 | 8 | CC0 | `f07ce00d…` |
+| `dsmolken-double-bass` | §7.2 | Orchestral | 406 | 288 893 197 | 275.5 | 2 | CC0 | `c2985eb6…` |
+| `karoryfer-bear-sax` | §7.2 | Winds | 814 | 143 854 044 | 137.2 | 4 | CC0 | `7abb3c65…` |
+| `body-percussion` | §7.2 | Acoustic Drums | 233 | 61 733 852 | 58.9 | 1 | CC0 | `4ac9d896…` |
+| `karoryfer-squidpipes` | §7.2 | Winds | 437 | 51 873 578 | 49.5 | 3 | CC0 | `b258528c…` |
+| `karoryfer-272-merry-orks` | §7.2 | **Vocals** | 277 | 45 627 769 | 43.5 | 3 | CC0 | `a437e2c0…` |
+| `jlearman-steel-drum` | §7.3 复活 | Mallets & Bells | 372 | 38 541 639 | 36.8 | 2 | **Unlicense** | `dc15a36a…` |
+| `ganjo` | §7.2 | Guitar | 65 | 24 493 786 | 23.4 | 1 | CC0 | `ccff5cd5…` |
+| `ixox-flute` | §7.2 | Winds | 161 | 10 215 135 | 9.7 | 1 | **CC-BY 4.0** | `0cc54468…` |
+| `karoryfer-cowsynth` | §7.2 | Winds | 59 | 14 832 493 | 14.1 | 5 | CC0 | `5a5b5afc…` |
+| **合计** | | | **10 108** | **2 245 816 574** | **2 141.8** | **59** | | |
+
+`paths` 一律**点名需要的目录／文件**，不是整仓：`GUI/`、`.png/.psd/.pdf/.nki/.nkr/.nkc/.bank.xml` 全部不进；
+`jlearman-steel-drum` 起初把 `zynthian-package/` 整目录列进 `paths`，量出里面有一张 **1.9 MB 的 `steel drum.jpg`**
+（发布图，不是乐器）⇒ 去掉，条目从 40 480 000 降到 **38 541 639 B**。这正是"先量后买"要拦的东西。
+
+#### 许可台账（逐库：许可名＋原文出处＋署名要求）
+
+* **CC0 1.0（13 条，无署名要求）**：`karoryfer-bigcat-cello`／`string-cyborgs`／`big-rusty-drums`／`bear-sax`／
+  `squidpipes`／`272-merry-orks`／`cowsynth`、`aliexpress-erhu`、`hungarian-zither`、`cithara-barbarica`、
+  `dsmolken-double-bass`、`body-percussion`、`ganjo` —— 每条的 `LICENSE` 文件本身是 **CC0 1.0 Universal 法律文本**，
+  且随条目一起上桶；`sourceUrl` 是各自的仓库页。
+* **Unlicense（1 条）**：`jlearman-steel-drum` —— 仓库 `LICENSE` 是 Unlicense，SFZ 自己的头两行也写着
+  `// CC0 / Unlicence - free to use as you wish; no warranty`（**两处独立声明**），无署名要求。
+* **CC-BY 4.0（2 条，署名必填）**：`mtg-solo-sax`（`LICENSE` 是 CC BY 4.0 全文；条目 `attribution` 写明
+  **MTG／Universitat Pompeu Fabra 的 Freesound 采样包 20239／20247／20251／20253 ＋ 映射者 kinwie**）、
+  `ixox-flute`（`LICENSE` 是 CC BY 4.0 全文；`attribution` 写明 **Xavier Hosxe（作者页）＋ sfzinstruments 的转换**）。
+* **CC-BY 3.0（1 条，署名必填）**：`gregsullivan-e-pianos` —— `LICENSE` 是 **Attribution 3.0 Unported** 全文；
+  README 自己写 "with the author permission with the request for attribution"；`attribution` 写明
+  **录音 Greg Sullivan ＋ 映射 kinwie**。⚠️ 清单的 `licence` 词汇表只有 `CC-BY`（`sampleManifest.ts` 的
+  `SampleLicence`），所以条目写 `CC-BY`、版本 3.0 写在 `attribution` 正文里——这是**如实**而不是含糊。
+* **出局**：`FlameStudios.Kay5StringBanjo`（`LICENSE.txt` 是 **GNU GPL v3**，不在本仓接受集里）⇒ 不买；
+  `kinwie.dim-cabasa`（CC-BY 4.0，许可干净）因**技术原因**不买，见下。
+
+#### 逐条自检（`licence`／`repo`／`pin`／署名／`needs`）
+
+17 条**全部** `licence` ＋ `repo` ＋ `pin` ＋ `sourceUrl` 齐备；3 条 CC-BY 各有 `attribution` 正文；
+17 条**全部有 `needs`**（从 7 项到 242 项）；17 条**每个文件都有 `sha256` 与 `bytes`**（运行判据核过）。
+
+**⭐ 顺带补上的两处历史缺口（业主指出，本轮顺手补，不改采购范围）：**
+
+* `karoryfer-meatbass`／`karoryfer-emilyguitar` 是 **release 资产**条目（`archive.tag=v1.001`），当初没写 `pin`。
+  本轮用 `gh api repos/…/git/ref/tags/v1.001` 解出 **tag 指向的 commit**：`ac9e859564bda286ab5ec672d00ff1aa2fef2895`
+  与 `b4920dc662fd9cad6dcaccdeecffdd91c8725d8c`，写进 `pin`；两条 `needs` 也补扫（**重新下载两个 release zip**、
+  字节与 `archive.bytes` 逐一相符，再解包扫）：**`karoryfer-meatbass` 39/39 程序、26 872 region、83 个 opcode、
+  未实现 68 条**；**`karoryfer-emilyguitar` 6/6、4 497 region、25 个 opcode、未实现 17 条** ⇒ 两条都有真实的
+  未实现项，所以是"记进 `needs`"，**不是**"扫过无需记"那一支。两条 `archive.sha256` 也一并写下
+  （`bc053061…`／`ffef3b28…`）。
+* `freepats-drawbar-organ`／`freepats-percussive-organ` **既无 `repo` 也无 `pin`**：查了 **freepats GitHub org 的
+  全部 46 个仓库，没有这两个管风琴包**（它们是出版商网站上的 **版本化 tar.xz 发布包**）。⇒ **不编造 commit**：
+  原始地址仍以 `sourceUrl`（出版商页，CC0 声明就在这一页）＋ `archive.url` 记；另外**把 tarball 的真 sha256
+  记进 `archive.sha256`**（两个包都重新 GET、字节与 `archive.bytes` 相符：6 042 972／12 423 412 ⇒
+  `e2da18b0a4d13be7020037e18e4a719387433357e7603d0773990e794dcf5d0f`、
+  `c4841f2e7f352692cf14a85a96bd1f40a9ea7a9e2a9ce3512606885d000978c8`）。**"可联系即删"**两页都写着 CC0
+  （即已放弃权利）＋出版商页可联系，这是可执行的下一步而不是一句空话。
+
+#### opcode 扫描与处置（本仓自己的 `expandIncludes`＋`parseSfz`）
+
+**一个加载器 opcode 都没有实现，`needs` 全部由扫描写出**（这是沿用，不是遗漏——理由与 ③b／§15 同：`ampeg_*`
+是已入库 VSCO 程序一直在用、且听感证据不足的一族）。17 条的读数：
+
+| 条目 | 程序 | region | 已实现 opcode | **未实现 opcode** | 家族数 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `karoryfer-bigcat-cello` | 3/3 | 4 897 | 18 | **63** | 55 |
+| `karoryfer-string-cyborgs` | 3/3 | 2 864 | 20 | **68** | 60 |
+| `aliexpress-erhu` | 4/4 | 1 920 | 19 | **69** | 64 |
+| `hungarian-zither` | 2/2 | 421 | 12 | **45** | 44 |
+| `cithara-barbarica` | 6/6 | 2 682 | 20 | **25** | 25 |
+| `mtg-solo-sax` | 8/8 | 4 478 | 18 | **41** | 37 |
+| `gregsullivan-e-pianos` | 3/3 | 178 | 11 | **22** | 22 |
+| `karoryfer-big-rusty-drums` | 8/8 | 18 172 | 92 | **154** | 36 |
+| `dsmolken-double-bass` | 2/2 | 391 | 10 | **9** | 4 |
+| `karoryfer-bear-sax` | 4/4 | 4 463 | 23 | **130** | 101 |
+| `body-percussion` | 1/1 | 356 | 11 | **3** | 3 |
+| `karoryfer-squidpipes` | 3/3 | 2 101 | 15 | **75** | 68 |
+| `karoryfer-272-merry-orks` | 3/3 | 592 | 7 | **11** | 11 |
+| `jlearman-steel-drum` | 2/2 | 804 | 8 | **9** | 9 |
+| `ganjo` | 1/1 | 58 | 6 | **1** | 1 |
+| `ixox-flute` | 1/1 | 3 113 | 27 | **45** | 37 |
+| `karoryfer-cowsynth` | 5/5 | 91 | 8 | **31** | 31 |
+
+未实现的**家族**集中在：`ampeg_*`／`eg*`／`lfo*`／`eq*`／`fil*`／`pan*`／`volume`／`bend_*`／`offset*`／`width*`／
+`amp_velcurve_*`／`amp_veltrack`／`transpose`／`note_selfmask`／`polyphony`／`hirand`／`lorand`／`sw_*`／`trigger`／
+`group_label` 等。**扫描器对 17 条都没有报 "used but not in the entry's needs"**（一条报过：`karoryfer-bear-sax`
+在**程序表被改小之后**没重扫，重扫后 `needs` 78 → **150**，警告消失——这是本段自己抓到的一处返工）。
+**逐音探针**（`playbackForNote`，note 0–127、vel 100）另证：17 条里**没有一个引用落空**（`default_path` 参与解析后
+0 个 missing sample）。
+
+#### ⭐ 买前的三道实测：哪些候选**没买**，以及为什么
+
+1. **`karoryfer.war-tuba`（计划书 P4，132.1 MiB）——未买。** 它的 6 个 acoustic 根程序（`1-solo-legato` … `6-trio-poly`）
+   都是 **`sw_*` 键位包装**：本仓不读 `sw_*` ⇒ 逐音探针显示**每个音都答成 `*_ss_*`（staccatissimo）**，不是文件自己的
+   `sw_default=25`。而真正逐奏法的文件写在 `Programs/legato/` 等子目录里，它们的 `sample=..\Samples\…` 会按
+   **根程序 URL** 解析（`sampleAssetForPath` 的语义）⇒ 拿子程序当条目入口会解析到 `Programs/Samples/…`，
+   **4 387 个 region 里 3 850 个引用悬空**。⇒ **要它先得实现 `sw_*`（或路径溯源），本轮不买、0 字节。**
+2. **键位包装一律不进 `instruments`**（与 VSCO 当年排除 `-KS` 同一条规矩）：`aliexpress-erhu` 的
+   `01-erhu_keyswitch`、`cithara-barbarica` 的 `01-…_keyswitch`、`dsmolken-double-bass` 的
+   `…_switched` 都不列；列出的是**单一奏法**的程序（`02-erhu_long`、`02-cithara_barbarica_finger`、`…_arco`）。
+   `karoryfer-bear-sax` 的 `1-solo-mono`／`2-solo-poly` 是包装，但逐音探针显示它们**答的是 sustain**（`*_looped_f/p`）
+   ——这是可用的默认，于是留下并写明"键位选不出 staccato/subtone/growl"；`5-bearcussion`／`6-bearborg` 直接可用。
+3. **`kinwie.dim-cabasa`（CC-BY 4.0，11.2 MiB）——未买，技术原因。** 它的 250 个 region **全部**带未解析变量
+   （`$POS` 等），因为定义写在 `<group> #define $POS 1 …` 这种**行内**形式里，而 `expandIncludes` 的 `#define`
+   只认行首 ⇒ `unresolvedVariables` 报 **250/250** ⇒ 本仓解析下**一个音都不发**。⇒ 需要先支持行内 `#define`。
+4. **体量对不上的**（不是许可问题）：`Karoryfer.HorsePulse`（182.6 MiB，bass tagelharpa）、
+   `karoryfer.gogodze-phu-vol-ii`（461.6 MiB，1973 风格套鼓）、`SamsSonor`（34.8 MiB，Sonor 套鼓）——最后剩
+   11.1 MiB 时都放不下；**没有为花完预算而硬凑**。
+5. **许可不干净的**：`FlameStudios.Kay5StringBanjo`（GPL v3）出局；`Terkelsen.Mandolin`（22.1 MiB）、
+   `PickedLapharp`（3.7）、`Starbirth.KuduShofar`（7.2）**查不到许可声明**——业主的 `unknown-mirrored` 通道允许
+   镜像，但**不需要**它们来填满，遂不买（若将来要，走该通道：原始地址 ＋ 即删一句）。
+6. **`pan_flute`／`slap_bass` 两个缺口不变**：前者仍是注册墙＋SF2（§44.3 的裁定继续成立），后者仍是原文禁止。
+
+#### ⭐ 两条弦乐判据的用法
+
+见 `docs/STRING_TECHNIQUES.md` §16（**逐候选的 `loop_*`／`smpl`／`trigger=legato`／`sw_previous` 读数表**）：
+`bigcat.cello` 与 `string-cyborgs` 两条判据都命中，所以优先、并且买了；两条代码层边界也写在那里
+（**`smpl` 没人读**；**`loopMode` 不抬高 `legatoVoices` 的长度拒绝**）。
+
+#### 字节实账与真读回
+
+| | 文件 | 字节 |
+| --- | ---: | ---: |
+| 上传前（`rclone size :s3:groove --json`） | 11 400 | 7 728 104 730 |
+| 上传后 | 21 508 | 9 973 921 304 |
+| **本段新增** | **+10 108** | **+2 245 816 574** |
+
+⇒ 与清单**逐字节相符**：17 条 `files[].bytes` 之和 = **2 245 816 574 B**。
+**5 GB 新预算：2.743 GB → 4.9889 GB（99.78%），剩 11 075 787 B（0.2215%）** ✓ 未越线；桶上限 12 GB
+（现用 9.97 GB，83.1%）未越。
+
+**真读回**：
+* `scripts/check_mirror_reachability.mjs --root=https://r2mirror.groove.wangda.today` ⇒ **全部条目的 `sfz`、
+  最小文件、一条 include 都是 200**（29 条，逐条打行）；
+* 另对 17 条**逐条抽 6 个对象 HEAD**（`content-length` 与清单 `bytes` 相符）＋**抽 2 个对象 GET 后 sha256**：
+  **136/136 全过**。抽查覆盖两侧：程序文件、最大采样、1/3 与 2/3 处的采样、最小与最大文件、`LICENSE`。
+  ⚠️ **两次如实记录的干扰**：① `ganjo` 的文件名里有 `#`（`Banjo_Common - D#5.wav`），我第一次的 read-back 用
+  `encodeURI` 没转义 `#` ⇒ 三处假 404；按本仓 `sampleAssetForPath` 的规则（`#`→`%23`、`?`→`%3F`）重取，**3/3 是 200**。
+  ⇒ 顺带证明**那个转义是产品必需的**，不是洁癖。② `karoryfer-bigcat-cello/Samples/noises/g1_harmonics.wav` 的
+  GET 曾两次在 ~192 KiB 处被对端断开（`UND_ERR_SOCKET`／HTTP/1.1 `end of response … missing`）；**第三次成功、
+  2 151 250 B、sha256 与清单相符**，且 `rclone copy` 从桶里取回同一文件字节与 sha256 也相符 ⇒ **对象是好的，
+  那两次是 CDN 瞬时断流**。这条写在这里，因为"真读回"必须包括"读失败时怎么判"。
+
+#### 还没做到的
+
+* `slap_bass`／`pan_flute` 两个缺口不变（原因同上）。
+* `karoryfer.war-tuba` 未买（需 `sw_*`）；`kinwie.dim-cabasa` 未买（需行内 `#define`）。
+* `bigcat.cello` 的 `smpl` 循环点今天用不上（要加载器读 `smpl`）——**素材已到位**，代码那一格未动。
+* 桶上没有逐条对象核对（与上一轮同）：本轮用的是 `rclone size` 前后对账 ＋ 逐条抽查，**不是** 10 108 个文件
+  逐个核对。

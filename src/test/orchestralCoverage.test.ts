@@ -218,15 +218,18 @@ describe("the orchestral instruments a catalogue entry could serve", () => {
     expect(winds, "the Winds category vanished, so the orchestral coverage is no longer visible in the tool's answer").toBeDefined();
     expect(list.categories.find((category) => category.name === "Percussion")?.subcategories.map((sub) => sub.name)).toContain("Struck Membranophones");
     /**
-     * ⭐ **The count grew three times, and the number is the point of the assertion rather than an inconvenience.**
+     * ⭐ **The count grew four times, and the number is the point of the assertion rather than an inconvenience.**
      *
      * `Orchestral` held 26 — VSCO 2 CE's fourteen sustained programs and twelve articulations. The Sonatina brass library mirrored that day declares the same category (it is the same
      * kind of library: an orchestra sampled instrument by instrument), and adds **48** programs, so a caller read 74. The 2026-10-02 string-articulation round added VSCO's four section
      * tremolos, four section spiccatos, four section `-Quiet` takes and five solo-violin programs — **17 more** — so the category read 91. The Part 2 round added the pianos,
-     * percussion, mallets, piccolo, pipe-organ registrations, the three non-vibrato sustains and the timpani roll — **17 more** — so it now answers 108. Asserting a literal would
-     * have made this test fail for the right reason and been "fixed" by deleting a library from the category; asserting the sum says what the tool answers and why it changed.
+     * percussion, mallets, piccolo, pipe-organ registrations, the three non-vibrato sustains and the timpani roll — **17 more** — so it read 108. The Part 2b round added the Rübner
+     * double bass (**2** programs), the Karoryfer × bigcat solo cello (**3**) and String Cyborgs (**3**) — **8 more** — so it now answers 116. (That round also measured
+     * `karoryfer.war-tuba` and **declined it**: its six root programs are `sw_*` keyswitch wrappers this loader does not read, and each answers every note with its first-included
+     * articulation — measured as `*_ss_*`, staccatissimo. A library that cannot answer with the articulation it names is not in the manifest, so it is not counted here.)
+     * Asserting a literal would have made this test fail for the right reason and been "fixed" by deleting a library from the category; asserting the sum says what the tool answers and why it changed.
      */
-    expect(list.categories.find((category) => category.name === "Orchestral")?.count).toBe(26 + 48 + 17 + 17);
+    expect(list.categories.find((category) => category.name === "Orchestral")?.count).toBe(26 + 48 + 17 + 17 + 8);
   });
 
   it("answers what VSCO 2 CE is, where it came from, and under what licence", () => {
