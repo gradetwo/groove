@@ -197,7 +197,7 @@ export const TUTORIAL_COURSES: TutorialCourseDef[] = [
       {
         labelKey: "tut_maker_s3",
         tipZh: "生成包含完整参数的无损压缩 URL 链接分享",
-        tipEn: "Share lossless compressed URLs or export GS1 patch bundles",
+        tipEn: "Share lossless compressed URLs or export an Ableton project",
         targetTab: "maker",
       },
     ],

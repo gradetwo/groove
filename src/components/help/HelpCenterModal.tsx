@@ -305,7 +305,7 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
       steps: [
         { label: t("tut_maker_s1"), tip: isZh ? "可自由分叉 159 种曲风或从零构建全新流派" : "Fork existing genres or craft hybrid musical styles" },
         { label: t("tut_maker_s2"), tip: isZh ? "定制 BPM、摇摆律动、合成器参数与打击乐" : "Customize tempo, swing, synth timbres, and step patterns" },
-        { label: t("tut_maker_s3"), tip: isZh ? "生成包含完整参数的无损压缩 URL 链接分享" : "Share lossless compressed URLs or export GS1 patch bundles" },
+        { label: t("tut_maker_s3"), tip: isZh ? "生成包含完整参数的无损压缩 URL 链接分享" : "Share lossless compressed URLs or export an Ableton project" },
       ],
     },
     {
