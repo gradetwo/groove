@@ -4,6 +4,8 @@
 
 调研报告在 [`research/staff-notation-and-musicxml-survey.md`](research/staff-notation-and-musicxml-survey.md)：里面每一行**都是本机实测**（esbuild 打包后 gzip），许可证是从仓库的 `LICENSE`／`package.json` 里读的，不是凭记忆写的。
 
+**这份报告的维护方式（业主裁定）：** 它**随本文件一同维护** —— 本文件的决定改了，它就按本文件的节奏一起更新，而不是另有一套更新计划。它**不在**引用门禁（`scripts/check_doc_refs.mjs`，即 `npm run check:docs:refs`）的扫描范围内：门禁只收仓库根的 `*.md` 与 `docs/*.md`，不收 `docs/research/`。所以它的新鲜度由上面这条约定负责，而不是由门禁负责 —— 审计问的"它会不会悄悄烂掉"，答案就是这一句。
+
 ## 决定
 
 | 事项 | 选择 | 为什么 |

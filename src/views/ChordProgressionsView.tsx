@@ -92,7 +92,7 @@ export interface ChordProgressionsViewProps {
    * Open with the chord builder collapsed.
    *
    * The phone reuses this view as-is inside 探索, where it is the single most expensive mount in the app:
-   * ~1 000 elements and a ~1 350 ms block on a 4×-throttled phone (`scripts/measure_phone_jank.mjs`), most
+   * ~1 000 elements and a ~1 350 ms block on a 4×-throttled phone (measured before the phone shell was cut), most
    * of it the builder's note grids, style lists and arpeggiator controls. The builder already has a
    * collapse toggle and a one-line summary of the current progression, so the phone opens it collapsed
    * and the user expands it with one tap — the desktop keeps its default (`false`) and is unchanged.

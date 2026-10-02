@@ -91,7 +91,7 @@ git fetch origin && git diff --stat origin/dev HEAD
   and the serial run cannot disagree. It runs with `if: always()` and no `npm ci` (the merge path imports nothing but
   Node), so a dead shard produces "no shard measured: …" instead of silence.
 
-`manual-verify.yml` is the on-demand switch (`scope: e2e | verify | audio | trim | jank | skins | sfizz | mirror | all`,
+`manual-verify.yml` is the on-demand switch (`scope: e2e | verify | audio | trim | skins | sfizz | mirror | all`,
 plus `profile`/`only`) and is the right tool for "just one browser engine" (via `only`), "just the timbre gate", or
 the 159-genre loudness trim re-record (`trim`, which uploads the report as an artifact and never commits a baseline).
 

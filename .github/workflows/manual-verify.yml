@@ -13,16 +13,10 @@
 #
 #   profile  all | pc           which Playwright targets to run (no mobile: the shell is cut, 2026-10-02)
 #   only     a target-name substring (e.g. "Firefox"), empty means all of the profile
-#   scope    e2e | verify | audio | jank | skins | sfizz | mirror | all
+#   scope    e2e | verify | audio | skins | sfizz | mirror | all
 #
-# Every scope except `audio` needs a production build: `e2e` and `verify` build in their own step, and `jank`
-# and `skins` are handed one by the explicit Build step above them.
-#
-# ⚠️ `jank` measures the phone shell and has had no subject since the mobile version was cut (2026-10-02,
-# `docs/OPEN_WORK.md` §十三). `probe:jank` was in the `verify:code` chain all along — this comment used to say
-# it was "not in `verify`", which was true of `verify` and wrong about the chain that actually ran it — so it
-# has been removed from `verify:code` for having no subject. The script itself stays, because this menu is a
-# **human** entry point rather than a gate.
+# Every scope except `audio` needs a production build: `e2e` and `verify` build in their own step, and `skins`
+# is handed one by the explicit Build step above it.
 #
 # `verify` runs the whole gate chain (`npm run verify`), which rebuilds and therefore re-runs the E2E
 # steps itself; `e2e` skips the other gates and goes straight at the browser matrix, which is the common
@@ -41,7 +35,6 @@ on:
           - verify
           - audio
           - trim
-          - jank
           - skins
           - sfizz
           - mirror
@@ -100,21 +93,11 @@ jobs:
         if: inputs.scope == 'e2e' || inputs.scope == 'verify' || inputs.scope == 'all'
         run: npx playwright install --with-deps firefox webkit
 
-      # ⚠️ This step has no subject today: the phone shell it measured was cut in `4dffdf0` (2026-10-02,
-      # `docs/OPEN_WORK.md` §十三), so `probe:jank` measures nothing. It stays wired because this menu is a
-      # **human** entry point rather than a gate (see the note at the top of this file), and the script itself
-      # stays with it. Needs no browsers beyond Chromium.
-      # `probe:jank` and `probe:skins` measure a *built* application: they serve `dist/` themselves. Without
-      # this step the `jank` scope failed with "dist/index.html is missing — build first", which is exactly
-      # what a manual run reported. `verify` builds on its own (and runs both probes after its own build);
-      # `audio` never needs one.
+      # `probe:skins` measures a *built* application: it serves `dist/` itself, so this step hands it one.
+      # `verify` builds on its own (and runs the probe after its own build); `audio` never needs one.
       - name: Build
-        if: inputs.scope == 'jank' || inputs.scope == 'skins' || inputs.scope == 'all'
+        if: inputs.scope == 'skins' || inputs.scope == 'all'
         run: npm run build
-
-      - name: Phone jank audit
-        if: inputs.scope == 'jank' || inputs.scope == 'all'
-        run: npm run probe:jank
 
       # Every skin × every main view: the full sweep (the gate in `verify` samples three skins and five
       # views to stay quick).

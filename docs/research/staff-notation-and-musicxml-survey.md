@@ -6,6 +6,11 @@
 (b) import/export MusicXML. Editing is a later, optional stage.
 **Date of research:** measurements taken against the packages named in each row; all
 registry/GitHub figures read on 2026-09-30.
+**Maintenance:** this report is kept alongside [`../SCORE_AND_MUSICXML.md`](../SCORE_AND_MUSICXML.md) — that
+file carries the decisions and the reasons, and when they change this report is updated on that file's
+schedule. It is deliberately **not** in the doc-reference gate's scan scope: `scripts/check_doc_refs.mjs`
+collects only the repository root's `*.md` and `docs/*.md`, never `docs/research/`. Staying current is this
+line's job, not the gate's.
 
 ---
 

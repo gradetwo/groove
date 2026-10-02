@@ -174,17 +174,14 @@ describe("CI · the manual verify workflow is wired, not decorative", () => {
     expect(manual).toContain("E2E_ONLY:");
   });
 
-  it("builds before the probes that read dist/", () => {
+  it("builds before the probe that reads dist/", () => {
     /**
-     * The `jank` scope failed with "dist/index.html is missing — build first": `probe:jank` serves `dist/`
-     * itself and the workflow only built for the `e2e` scope. A manual switch that cannot run its own scope is
-     * worse than no switch, so this asserts the order, not just the presence of a build step.
+     * `probe:skins` serves `dist/` itself, so the workflow has to build before it. A manual switch that cannot
+     * run its own scope is worse than no switch, so this asserts the order, not just the presence of a build step.
      */
-    const build = manual.indexOf("- name: Build\n        if: inputs.scope == 'jank'");
-    expect(build, "a build step for the probe scopes").toBeGreaterThan(-1);
-    const jank = manual.indexOf("npm run probe:jank");
+    const build = manual.indexOf("- name: Build\n        if: inputs.scope == 'skins'");
+    expect(build, "a build step for the probe scope").toBeGreaterThan(-1);
     const skins = manual.indexOf("npm run probe:skins:full");
-    expect(build, "the build must come before probe:jank").toBeLessThan(jank);
     expect(build, "the build must come before probe:skins").toBeLessThan(skins);
   });
 
