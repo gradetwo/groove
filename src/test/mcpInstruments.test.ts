@@ -1,12 +1,12 @@
 /**
  * Discovering what can be played.
  *
- * The choosing half of the instrument feature existed and the discovering half did not: `set_arrangement_track_instrument` took an `assetId` and nothing listed the ids, which for a client that cannot read the repository makes the feature unusable. These
+ * The choosing half of the instrument feature existed and the discovering half did not: `set_arrangement_track_asset` took an `assetId` and nothing listed the ids, which for a client that cannot read the repository makes the feature unusable. These
  * criteria hold the two ends together — the list is what the setter accepts, and what the list offers is what the manifest actually declares.
  */
 import { describe, expect, it } from "vitest";
 import { listCatalogueInstruments } from "../../mcp/instruments";
-import { addMcpTrack, clearMcpArrangements, createMcpArrangement, getMcpArrangement, setMcpTrackInstrument, summariseArrangement } from "../../mcp/arrangement";
+import { addMcpTrack, clearMcpArrangements, createMcpArrangement, getMcpArrangement, setMcpTrackAsset, summariseArrangement } from "../../mcp/arrangement";
 import { resetTrackIdsForTests } from "../data/arrangementEdits";
 import { readFileSync } from "node:fs";
 
@@ -45,18 +45,18 @@ describe("listing the instruments a sampler track can play", () => {
   });
 
   it("takes an id from the list and puts it on a sampler track, which is the whole point", () => {
-    // The two ends held together: what this lists is what `set_arrangement_track_instrument` accepts, and the track reports it back.
+    // The two ends held together: what this lists is what `set_arrangement_track_asset` accepts, and the track reports it back.
     clearMcpArrangements();
     resetTrackIdsForTests();
     const chosen = listCatalogueInstruments({ library: "salamander-grand" }).instruments[0]!;
     const created = createMcpArrangement({ blankKind: "sampler" });
     const track = created.tracks[0]!;
-    const result = setMcpTrackInstrument(created.arrangementId, track.id, chosen.assetId);
+    const result = setMcpTrackAsset(created.arrangementId, track.id, chosen.assetId);
     expect(result.problems).toEqual([]);
     expect(summariseArrangement(created.arrangementId, getMcpArrangement(created.arrangementId)!).tracks[0]!.sampleAssetId).toBe(chosen.assetId);
     // And a track added by the tool can take one too, rather than only the template's first track.
     const added = addMcpTrack(created.arrangementId, "sampler", "Second").summary.tracks.find((entry) => entry.name === "Second")!;
-    expect(setMcpTrackInstrument(created.arrangementId, added.id, chosen.assetId).summary.tracks.find((entry) => entry.id === added.id)!.sampleAssetId).toBe(chosen.assetId);
+    expect(setMcpTrackAsset(created.arrangementId, added.id, chosen.assetId).summary.tracks.find((entry) => entry.id === added.id)!.sampleAssetId).toBe(chosen.assetId);
   });
 
   it("reports the mirror root it resolved, and leaves it empty rather than inventing one", () => {

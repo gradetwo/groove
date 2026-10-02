@@ -1,7 +1,7 @@
 /**
  * Which instruments an agent may choose.
  *
- * `set_arrangement_track_instrument` takes an `assetId`, and nothing listed the ids that exist — so the choosing half of the feature was reachable and the discovering half was not, which for a client that cannot read the repository means the feature is
+ * `set_arrangement_track_asset` takes an `assetId`, and nothing listed the ids that exist — so the choosing half of the feature was reachable and the discovering half was not, which for a client that cannot read the repository means the feature is
  * unusable in practice. This module answers it from the same manifest the application loads.
  *
  * **It reads `public/samples/manifest.json` from disk rather than from the network.** The id list is a property of the repository at the version being run, and an agent asking "what can I play" should get the same answer offline as online; only the

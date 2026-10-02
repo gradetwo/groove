@@ -135,8 +135,8 @@ async function viaArrangement(assetId, midi) {
    */
   const cleared = await request("tools/call", { name: "set_arrangement_track_steps", arguments: { arrangementId: arrId, trackId, steps: new Array(16).fill(0) } });
   if (cleared?.error || cleared?.result?.isError) return { error: `set_arrangement_track_steps 失败：${String(cleared?.result?.content?.[0]?.text ?? cleared?.error).slice(0, 80)}` };
-  const set = await request("tools/call", { name: "set_arrangement_track_instrument", arguments: { arrangementId: arrId, trackId, assetId } });
-  if (set?.error || set?.result?.isError) return { error: `set_arrangement_track_instrument 失败：${String(set?.result?.content?.[0]?.text ?? set?.error).slice(0, 80)}` };
+  const set = await request("tools/call", { name: "set_arrangement_track_asset", arguments: { arrangementId: arrId, trackId, assetId } });
+  if (set?.error || set?.result?.isError) return { error: `set_arrangement_track_asset 失败：${String(set?.result?.content?.[0]?.text ?? set?.error).slice(0, 80)}` };
   const add = await request("tools/call", { name: "add_arrangement_notes", arguments: { arrangementId: arrId, trackId, notes: [{ pitch: midi, startBeats: 0, lengthBeats: 0.9, velocity: 100 }] } });
   if (add?.error || add?.result?.isError) return { error: `add_arrangement_notes 失败：${String(add?.result?.content?.[0]?.text ?? add?.error).slice(0, 80)}` };
   const rend = await request("tools/call", { name: "render_arrangement", arguments: { arrangementId: arrId, bars: 1 } });

@@ -29,7 +29,7 @@ const EXPOSED: Record<string, string> = {
   setTrackFlag: "set_arrangement_track_flag",
   setTrackParent: "set_arrangement_track_parent",
   setCollapsed: "set_arrangement_track_collapsed",
-  setTrackSample: "set_arrangement_track_instrument",
+  setTrackSample: "set_arrangement_track_asset",
   setTrackSteps: "set_arrangement_track_steps",
   addTrackNote: "add_arrangement_note",
   addTrackNotes: "add_arrangement_notes",

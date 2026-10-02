@@ -25,7 +25,7 @@ import {
   selectMcpTake,
   setMcpTrackCollapsed,
   setMcpTrackFlag,
-  setMcpTrackInstrument,
+  setMcpTrackAsset,
   setMcpTrackKind,
   setMcpTrackParent,
   setMcpTrackSteps,
@@ -190,7 +190,7 @@ describe("editing an arrangement", () => {
   it("points a sampler track at an instrument and reports it back", () => {
     const { arrangementId } = createMcpArrangement({ blankKind: "sampler" });
     const track = summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).tracks[0]!;
-    const result = setMcpTrackInstrument(arrangementId, track.id, "salamander-grand");
+    const result = setMcpTrackAsset(arrangementId, track.id, "salamander-grand");
     expect(result.summary.tracks[0]!.sampleAssetId).toBe("salamander-grand");
     // The warning about a silent sampler goes away once it has one, which is what makes it worth reading.
     expect(result.problems).toEqual([]);
@@ -200,7 +200,7 @@ describe("editing an arrangement", () => {
     // The data layer returns the arrangement unchanged for a non-sampler; a caller that cannot see the screen has to be told instead.
     const { arrangementId } = createMcpArrangement({ blankKind: "drumkit" });
     const track = summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).tracks[0]!;
-    expect(() => setMcpTrackInstrument(arrangementId, track.id, "salamander-grand")).toThrow(/only a sampler track/);
+    expect(() => setMcpTrackAsset(arrangementId, track.id, "salamander-grand")).toThrow(/only a sampler track/);
   });
 
   it("writes a whole step pattern and reads back how many are on", () => {
@@ -264,7 +264,7 @@ describe("recording onto a track", () => {
   it("reads one line per track, so a caller can log what it built", () => {
     const { arrangementId } = createMcpArrangement({ blankKind: "sampler" });
     const track = summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).tracks[0]!;
-    setMcpTrackInstrument(arrangementId, track.id, "salamander-grand");
+    setMcpTrackAsset(arrangementId, track.id, "salamander-grand");
     addMcpTake(arrangementId, { trackId: track.id, source: "audio", recordedAt: 4 });
     const line = describeMcpArrangement(arrangementId);
     expect(line).toContain("salamander-grand");

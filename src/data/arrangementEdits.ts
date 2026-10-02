@@ -40,6 +40,14 @@ export const TRACK_KINDS: readonly TrackKindV2[] = ["synth", "sampler", "drumkit
  * than a request. An arrangement that still carries `"instrument"` must fail with a sentence naming the value, rather
  * than fall through a lookup into `undefined` and become a lane with no role, a track with no name or a render with a
  * part silently missing. "This could not be read" is a result a caller can act on; "read as nothing" is the defect.
+ *
+ * **Where this is reached today, and what that leaves open.** No v2 arrangement's track list is persisted anywhere yet:
+ * `ArrangementViewV2` holds it in `useState` (its own comment says "neither is persisted yet"), a `.groove` package
+ * carries only the v1 `patterns`/`sections` that `projectSongToV2` re-derives from, and the MCP arrangements are a
+ * process-local map. So the only way an old literal can arrive is as a **value handed to the model**, and this function
+ * is called where such a value is compiled. **If a v2 arrangement is ever persisted, this check belongs at that
+ * reader too** — the criterion in `src/test/mcpArrangement.test.ts` (which feeds a synthetic legacy value through the
+ * compile) will not cover a file reader that never calls the compile, so it has to be re-verified there.
  */
 export function requireTrackKind(kind: string, trackName?: string): TrackKindV2 {
   if ((TRACK_KINDS as readonly string[]).includes(kind)) return kind as TrackKindV2;

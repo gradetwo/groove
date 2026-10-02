@@ -86,7 +86,7 @@ export interface ArrangementTrackSummary {
   /**
    * ⭐ **What this track actually sounds with today** — the first line the report asked for, because a source nobody can
    * see is a source nobody can change. It is resolved through the renderer's own path (the compile's lane role, the
-   * engine's preset resolver) rather than inferred from the kind, so `instrument: "Analog Lead"` on the reply and the
+   * engine's preset resolver) rather than inferred from the kind, so `sound.presetName` on the reply and the
    * preset the renderer reaches are the same answer by construction.
    */
   sound: ArrangementTrackSound;
@@ -112,7 +112,7 @@ export interface ArrangementTrackSummary {
  * ⭐ **The sound source a track reaches, in the renderer's own terms.**
  *
  * `source` is the class of voice; `assetId` or `presetKey`/`presetName` is the identity of it. A caller can act on
- * either: `set_arrangement_track_instrument` changes a `catalogue-asset`, and a `builtin-synth` is exactly the source
+ * either: `set_arrangement_track_asset` changes a `catalogue-asset`, and a `builtin-synth` is exactly the source
  * that **cannot** be changed, which is why `guidance` says what to do instead.
  */
 export interface ArrangementTrackSound {
@@ -158,7 +158,7 @@ function soundForTrack(track: TrackV2): ArrangementTrackSound {
         source: "silent",
         selectable: true,
         detail: "a sampler with no catalogue asset, so it is silent",
-        guidance: "give it one with set_arrangement_track_instrument, or re-create it with add_arrangement_track {kind:\"sampler\", assetId:\"…\"}",
+        guidance: "give it one with set_arrangement_track_asset, or re-create it with add_arrangement_track {kind:\"sampler\", assetId:\"…\"}",
       };
     }
     return {
@@ -207,7 +207,7 @@ export interface ArrangementSummary {
    * is a bar question.
    */
   steps: number;
-  /** Anything that would stop it being heard: an empty arrangement, a sampler with no instrument. */
+  /** Anything that would stop it being heard: an empty arrangement, a sampler with no catalogue asset. */
   problems: string[];
 }
 
@@ -252,8 +252,8 @@ export function summariseArrangement(arrangementId: string, arrangement: Arrange
   const problems: string[] = [];
   if (arrangement.tracks.length === 0) problems.push("the arrangement has no tracks, so it would render nothing");
   for (const track of arrangement.tracks) {
-    // Stated because it is the mistake an agent makes here: a sampler with no instrument is silent, and silence reads as a bug in the renderer.
-    if (track.kind === "sampler" && !track.sample) problems.push(`"${track.name}" is a sampler with no instrument, so it will be silent`);
+    // Stated because it is the mistake an agent makes here: a sampler with no catalogue asset is silent, and silence reads as a bug in the renderer.
+    if (track.kind === "sampler" && !track.sample) problems.push(`"${track.name}" is a sampler with no catalogue asset, so it will be silent`);
     /**
      * ⭐ **A synth track says so, and says what to do instead — this is the report's own reproduction.**
      *
@@ -373,7 +373,7 @@ function edit(arrangementId: string, apply: (arrangement: ArrangementV2) => Arra
  * Add a track, and — for a sampler — point it at its instrument **in the same call**.
  *
  * ⭐ **`assetId` is the one-step form the report needed.** Choosing a real instrument used to be two round trips (create
- * a sampler track, then `set_arrangement_track_instrument`), and an agent that stopped after the first got the default
+ * a sampler track, then `set_arrangement_track_asset`), and an agent that stopped after the first got the default
  * catalogue asset. It is read only on `kind:"sampler"`, and **every other kind is refused rather than ignored**: a
  * caller that hands `assetId` to a synth has said what it wants and must be told that this kind cannot give it, not
  * left with a track that quietly sounds like a synth anyway.
@@ -431,15 +431,23 @@ export function setMcpTrackParent(arrangementId: string, trackId: string, parent
   );
 }
 
-export function setMcpTrackInstrument(arrangementId: string, trackId: string, assetId: string): ArrangementEditResult {
+/**
+ * Put a catalogue asset on a sampler track.
+ *
+ * **Named for the asset, not for a track kind.** It was `setMcpTrackInstrument`, and when the kind that is now `synth`
+ * was itself called `instrument`, two different things wore one word: the kind of the track, and the recorded asset a
+ * sampler plays. The kind was renamed and this followed — a caller reading `set_arrangement_track_asset` cannot mistake
+ * it for "make this track an instrument".
+ */
+export function setMcpTrackAsset(arrangementId: string, trackId: string, assetId: string): ArrangementEditResult {
   return edit(arrangementId, (arrangement) => {
     const track = arrangement.tracks.find((candidate) => candidate.id === trackId);
     if (!track) throw new Error(unknownTrack(arrangement, trackId));
     /**
-     * The data layer refuses a non-sampler by returning the arrangement unchanged, which is right for a button and wrong for a caller that cannot see the screen: an agent that points an instrument at a drum track must be told, not left to notice
+     * The data layer refuses a non-sampler by returning the arrangement unchanged, which is right for a button and wrong for a caller that cannot see the screen: an agent that points an asset at a drum track must be told, not left to notice
      * that nothing changed.
      */
-    if (track.kind !== "sampler") throw new Error(`"${track.name}" is a ${track.kind} track, and only a sampler track plays a catalogue instrument`);
+    if (track.kind !== "sampler") throw new Error(`"${track.name}" is a ${track.kind} track, and only a sampler track plays a catalogue asset`);
     return setTrackSample(arrangement, trackId, assetId);
   });
 }

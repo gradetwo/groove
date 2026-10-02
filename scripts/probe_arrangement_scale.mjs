@@ -15,7 +15,7 @@
  * "Silently" is the whole test, so the probe watches three things at once: the wall clock of the one `tools/call`, the
  * `notifications/progress` the server emits while it runs, and how the reply reads when it arrives. It builds the
  * fixture **through the real MCP tools** (`create_arrangement`, `add_arrangement_track`,
- * `set_arrangement_track_instrument`, `add_arrangement_notes`, `set_arrangement_bars`) rather than by importing the
+ * `set_arrangement_track_asset`, `add_arrangement_notes`, `set_arrangement_bars`) rather than by importing the
  * engine, because the report is about the tool a caller can actually reach.
  *
  * A watchdog longer than the server's own 900 s budget is deliberate: a hang is "no answer **after** the budget and no
@@ -273,12 +273,12 @@ try {
   }
 
   for (let i = 0; i < samplerTracks.length; i += 1) {
-    const set = await callTool("set_arrangement_track_instrument", {
+    const set = await callTool("set_arrangement_track_asset", {
       arrangementId,
       trackId: samplerTracks[i].id,
       assetId: ASSETS[i % ASSETS.length],
     });
-    if (!set.ok) throw new Error(`set_arrangement_track_instrument failed: ${set.text}`);
+    if (!set.ok) throw new Error(`set_arrangement_track_asset failed: ${set.text}`);
   }
 
   /** Notes spread over the whole stated length, so a length increase is audible work rather than empty bars. */

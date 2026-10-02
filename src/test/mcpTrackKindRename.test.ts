@@ -2,7 +2,7 @@
  * ⭐ **The track kind is `synth`, and `instrument` is refused everywhere.**
  *
  * The kind was called `instrument`, and the word was the defect: a caller who wanted a piano read it, chose it, and got
- * a fixed built-in synthesiser (`mcp/registry.ts`'s description of `set_arrangement_track_instrument` had said all along
+ * a fixed built-in synthesiser (`mcp/registry.ts`'s description of `set_arrangement_track_asset` had said all along
  * that only a sampler plays a catalogue asset). The rename is a **clean break** — no input alias, no read-time
  * normalisation (the owner's rule: old callers and old data may simply be dropped) — so this file pins the two halves
  * that a clean break needs: the old value **fails loudly with the values that do exist** rather than being accepted,

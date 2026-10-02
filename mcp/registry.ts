@@ -82,7 +82,7 @@ import {
   setMcpArrangementTimeSignature,
   setMcpNoteLength,
   setMcpTrackGain,
-  setMcpTrackInstrument,
+  setMcpTrackAsset,
   setMcpTrackKind,
   setMcpTrackPan,
   setMcpTrackParent,
@@ -503,7 +503,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "list_arrangement_instruments",
     title: "List playable instruments",
     description:
-      "The catalogue assets a sampler track can play, with the library each came from and the measured duration. A multi-instrument library names each program `<library>:<program>`, e.g. vcsl declares 88 of them. Read this before set_arrangement_track_instrument.",
+      "The catalogue assets a sampler track can play, with the library each came from and the measured duration. A multi-instrument library names each program `<library>:<program>`, e.g. vcsl declares 88 of them. Read this before set_arrangement_track_asset.",
     readOnly: true,
     inputSchema: {
       library: z.string().optional().describe("narrow to one library id, as listed in `libraries`"),
@@ -1103,15 +1103,15 @@ export const TOOLS: ToolDefinition[] = [
     },
   },
   {
-    name: "set_arrangement_track_instrument",
-    title: "Choose a sampler track's instrument",
+    name: "set_arrangement_track_asset",
+    title: "Choose a sampler track's asset",
     description:
-      "Point a **sampler** track at a catalogue asset — **this is the call that puts a real recorded instrument on a track** (a piano is `assetId: \"salamander-grand\"`; `list_arrangement_instruments` lists the ids, which include virtuosity-drums-basic, salamander-grand, karoryfer-meatbass (39 instruments), karoryfer-emilyguitar (6) and vcsl (88)). Refused for any other kind of track — **including `synth`, whose timbre is built in and cannot be pointed at an asset**; for a real instrument, add the track as `kind:\"sampler\"` and pass its `assetId` there.",
+      "Point a **sampler** track at a catalogue asset — **this is the call that puts a real recorded instrument on a track** (a piano is `assetId: \"salamander-grand\"`; `list_arrangement_instruments` lists the ids, which include virtuosity-drums-basic, salamander-grand, karoryfer-meatbass (39 instruments), karoryfer-emilyguitar (6) and vcsl (88)). The tool is named for the **asset**, not for the track kind: the kind that used to be called `instrument` is now `synth`, and this call has nothing to do with it. Refused for any other kind of track — **including `synth`, whose timbre is built in and cannot be pointed at an asset**; for a real instrument, add the track as `kind:\"sampler\"` and pass its `assetId` there.",
     readOnly: false,
     inputSchema: { arrangementId: z.string(), trackId: z.string(), assetId: z.string().describe("a catalogue asset id") },
     handler: (args) => {
       try {
-        return setMcpTrackInstrument(String(args.arrangementId), String(args.trackId), String(args.assetId));
+        return setMcpTrackAsset(String(args.arrangementId), String(args.trackId), String(args.assetId));
       } catch (error) {
         return failure((error as Error).message);
       }

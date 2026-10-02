@@ -137,7 +137,7 @@ const CAPABILITIES: Capability[] = [
       "set_arrangement_bars",
       "set_arrangement_track_gain",
       "set_arrangement_track_pan",
-      "set_arrangement_track_instrument",
+      "set_arrangement_track_asset",
       "list_arrangement_instruments",
       "render_arrangement",
     ],

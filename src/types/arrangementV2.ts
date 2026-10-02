@@ -17,7 +17,7 @@
  * who wants a piano reads "instrument", picks it, and gets a **built-in synthesiser whose timbre cannot be pointed at a
  * recorded piano** — the report's "build an instrument track, write 198 notes, hear something muddy" is that choice
  * being made for them by a word. `synth` says what the kind actually is, and the sampled instruments live on `sampler`
- * (`set_arrangement_track_instrument`).
+ * (`set_arrangement_track_asset`).
  *
  * **Why not `gs1`:** the name has to cover both synthesis roads this kind takes. Most roles resolve through the built-in
  * subtractive presets (`src/audio/instrumentPresets.ts` → `PolySynth.ts`); only `chords`/`lead`/`texture` route to GS-1
