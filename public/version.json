@@ -1,27 +1,27 @@
 {
-  "version": "2.34.36",
+  "version": "2.34.37",
   "releaseDate": "2026-10-02",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.36",
+    "version": "2.34.37",
     "date": "2026-10-02",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "客户端断线不再杀死服务端；编排的停止键真的会停",
-      "en": "A disconnected client no longer kills the server, and the arrangement's stop really stops"
+      "zh": "无头渲染补齐：七个工具、按帧进度、界限按实测",
+      "en": "Headless rendering filled in: seven tools, frame progress, and bounds measured rather than assumed"
     },
     "highlights": [
       {
-        "zh": "MCP 服务端不再因为客户端关掉管道而崩溃；没送到的回复会在日志里点名，并带上它的文件路径。",
-        "en": "The MCP server survives a client that closes the pipe. Every lost reply is named in the log, with the file it was carrying."
+        "zh": "三个此前不支持无头的工具现在支持：响度归一、单音试听、分轨导出。",
+        "en": "Three tools that could not render headless now can: loudness normalisation, single-note audition, and per-track stems."
       },
       {
-        "zh": "编排的停止键现在真的停：改前点完还在响，改后 48 毫秒内发出停止、之后不再排声部。",
-        "en": "The arrangement's stop stops. It used to keep sounding after the click; now the transport stops within 48 ms and queues nothing further."
+        "zh": "无头渲染会报进度：单文件按帧报，分轨逐轨按帧报且跨轨不重启计数。",
+        "en": "A headless render reports progress: frames for one file, frames per track for stems, counted across tracks rather than restarting."
       },
       {
-        "zh": "播放键变成播放／暂停，有了按下状态与无障碍名；播放头与时间码跟着真的走。",
-        "en": "Play became play/pause, with a pressed state and an accessible name, and the playhead and position readout now actually move."
+        "zh": "客户端传 headless 不再被静默丢掉——此前它会收到一句“渲染被禁用”。",
+        "en": "Sending headless is no longer silently dropped, which used to answer with a disabled-rendering error instead."
       }
     ],
     "truncated": true
