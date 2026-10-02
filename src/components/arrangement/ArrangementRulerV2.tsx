@@ -114,10 +114,11 @@ export function ArrangementRulerV2({ bars, currentBar, onSelectBar, pixelsPerBar
            * This chip floats over the ruler, so it needs a plate of its own; it read
            * `var(--d-surface, rgba(0,0,0,0.5))`, and a fallback is only a fallback while the token is defined —
            * every skin defines `--d-surface`, so the alpha was either dead weight or, the day a skin dropped the
-           * token, half-transparent black on paper. It now names the plate directly, which is the same colour that
-           * was actually painted and no literal at all.
+           * token, half-transparent black on paper. It now names the plate directly, and the triple is wrapped in
+           * `rgb()` because a palette triple is not a colour: `arrangementColours.test.ts` is the guard, and the
+           * unwrapped form is a declaration the browser silently drops.
            */
-          style={{ backgroundColor: "var(--d-panel2)" }}
+          style={{ backgroundColor: "rgb(var(--d-panel2))" }}
         >
           {snapLabel}
         </span>
