@@ -25,8 +25,16 @@ export interface PlannedFile {
  */
 export function resolveSamplePath(programPath: string, samplePath: string): string {
   if (samplePath.startsWith("/") || /^[a-zA-Z]+:/.test(samplePath)) return samplePath;
+  /**
+   * ⭐ **SFZ writes its separator either way, and this resolver only understood `/`.**
+   *
+   * The fact the playback resolver learned from VSCO 2 CE applies here one layer over: the libraries this project mirrors write `..\Samples\darkblack\reg\x.wav` (Karoryfer) and
+   * `..\Samples\Horns\x.wav` (Sonatina). Split only on `/`, such a path is a **single** component, so `..` never popped anything and the plan named a file that does not exist — while the
+   * loader, which normalises, fetched the real one. A mirror tool that disagrees with the loader about which bytes an instrument needs is the one disagreement this module exists to prevent.
+   */
+  const normalised = samplePath.replace(/\\/g, "/");
   const directory = programPath.includes("/") ? programPath.slice(0, programPath.lastIndexOf("/")) : "";
-  const parts = `${directory}/${samplePath}`.split("/");
+  const parts = `${directory}/${normalised}`.split("/");
   const out: string[] = [];
   for (const part of parts) {
     if (part === "" || part === ".") continue;

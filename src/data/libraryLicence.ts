@@ -22,8 +22,37 @@ export interface LicenceCheck {
   problems: string[];
 }
 
-/** Licences whose obligations we know how to satisfy. **An unknown licence is a problem rather than a shrug**: a new library must not slip in unlabelled. */
-const LICENCES = ["CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0", "CC-BY-3.0", "CC-BY-SA-3.0", "public-domain"] as const;
+/**
+ * Licences whose obligations we know how to satisfy. **An unknown licence is a problem rather than a shrug**: a new library must not slip in unlabelled.
+ *
+ * ⭐ **Widened on 2026-10-02, and the reason is a fact about this project rather than a mood.** The owner's ruling: *"我们是开源 MIT 协议，而且非商业非盈利，所以涉及协议如果要放宽可以考虑这点"*. That changes which obligations can be met:
+ *
+ *  * **`NC` (non-commercial) is satisfiable here.** The condition is that use is non-commercial, and this project is MIT-licensed and neither commercial nor for profit. So the `CC-BY-NC*` variants join the set — **with the attribution they oblige and with the licence text kept beside the entry** (`attribution`, `sourceUrl`).
+ *  * **`CC Sampling Plus 1.0` is the licence written for exactly this.** Its subject matter *is* sampling and it permits commercial use with attribution; redistribution of samples is what it grants, which is what a mirror does.
+ *  * **`Unlicense` is a public-domain dedication**, which asks for nothing and is therefore satisfiable by doing nothing.
+ *
+ * ⚠️ **What is still refused, and the distinction that matters:** a licence whose own text **forbids this use** is not an NC question and does not become acceptable because we are non-commercial. `Project16Rickenbacker4001` says *"You are not allowed to use this product in a sampling library or in a related product"* — that is a prohibition of the mirror itself, and it stays out. So does any library whose terms forbid redistributing the raw samples (`Pianobook`), and any library that is not samples at all (`Spitfire LABS`, plugin-locked Kontakt) — that last one is a loader limit, not a licence one.
+ */
+const LICENCES = [
+  "CC0-1.0",
+  "CC-BY-4.0",
+  "CC-BY-SA-4.0",
+  "CC-BY-3.0",
+  "CC-BY-SA-3.0",
+  // Non-commercial variants, accepted because this project is non-commercial. See the note above.
+  "CC-BY-NC-4.0",
+  "CC-BY-NC-SA-4.0",
+  "CC-BY-NC-SA-3.0",
+  // The sampling licence, which is about this use by construction.
+  "CC Sampling Plus 1.0",
+  // A public-domain dedication: nothing is asked, so nothing can be unmet.
+  "Unlicense",
+  "public-domain",
+  /**
+   * ⭐ **"No declaration found" as an explicit, reviewable status rather than a hole.** The owner's ruling (2026-10-02): a library whose quality is good may be mirrored even when no licence declaration could be found, on three conditions — the **pinned source stays the primary address** and the mirror is only a fallback, the entry **records the original address**, and the mirror is **removal-on-request**. That is why this is an accepted value here and `unknown` is not: `unknown` means "nobody has decided", and this means "the decision is recorded, with the address and the takedown notice". See `SampleLicence` in `sampleManifest.ts`, where the same distinction is drawn.
+   */
+  "unknown-mirrored",
+] as const;
 
 /**
  * **SPDX is the canonical spelling and the manifest's short forms are synonyms.**
@@ -37,15 +66,24 @@ const LICENCE_SYNONYMS: Record<string, string> = {
   "CC-BY-SA": "CC-BY-SA-4.0",
   "CC-BY-3": "CC-BY-3.0",
   "CC-BY-SA-3": "CC-BY-SA-3.0",
+  // The manifest's short forms for the NC family and for the sampling licence, so one canonical vocabulary still holds after the set was widened.
+  "CC-BY-NC": "CC-BY-NC-4.0",
+  "CC-BY-NC-SA": "CC-BY-NC-SA-4.0",
+  "CC-BY-NC-SA-3": "CC-BY-NC-SA-3.0",
+  "CC-Sampling-Plus": "CC Sampling Plus 1.0",
 };
 
 export function canonicalLicence(licence: string): string {
   return LICENCE_SYNONYMS[licence] ?? licence;
 }
 
-/** The ones that oblige a credit. Kept as a rule rather than a list of exceptions: anything starting `CC-BY` owes attribution. */
+/**
+ * The ones that oblige a credit. Kept as a rule rather than a list of exceptions: anything starting `CC-BY` owes attribution, and `CC Sampling Plus` owes it by its own terms ("You must give the original author credit").
+ *
+ * ⭐ **`unknown-mirrored` is in the list as an obligation to *state the status*, not to name an author.** There is no author to name, which is exactly why silence is not allowed: the entry has to carry the address the bytes came from and the removal-on-request sentence, and this function is what makes the checker demand it.
+ */
 export function requiresAttribution(licence: string): boolean {
-  return licence.startsWith("CC-BY");
+  return licence.startsWith("CC-BY") || licence === "CC Sampling Plus 1.0" || licence === "unknown-mirrored";
 }
 
 export function checkLibraryLicence(entry: LibraryLicence): LicenceCheck {

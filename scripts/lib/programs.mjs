@@ -10,7 +10,19 @@
 export function programsFrom(sfzPaths) {
   const groups = new Map();
   for (const path of sfzPaths) {
-    const base = path.replace(/\.sfz$/i, "").replace(/\s+-\s+.*$/, "");
+    /**
+     * ⚠️ **The articulation suffix is stripped from the file name, not from the whole path.**
+     *
+     * `replace(/\s+-\s+.*$/, "")` was applied to the path, so the `" - "` in a **directory** name cut there instead of at the file. Sonatina Symphonic Orchestra files its 66 brass
+     * programs under `Brass - Notation/`, so every one of them collapsed to the single base `Sonatina Symphonic Orchestra/Brass` and a 154 MB library was offered as **one**
+     * instrument — a library that had just been mirrored in full, reduced to an entry point. The suffix rule is about the file (`Bell Tree - Keyswitch.sfz`, `Tubular Bells 3 - Legacy.sfz`),
+     * which is what the directories of every other mirrored library look like: none of them has `" - "` in a directory, which is why this went unnoticed until one did.
+     */
+    const withoutExtension = path.replace(/\.sfz$/i, "");
+    const slash = withoutExtension.lastIndexOf("/");
+    const directory = slash === -1 ? "" : withoutExtension.slice(0, slash + 1);
+    const file = (slash === -1 ? withoutExtension : withoutExtension.slice(slash + 1)).replace(/\s+-\s+.*$/, "");
+    const base = `${directory}${file}`;
     if (!groups.has(base)) groups.set(base, []);
     groups.get(base).push(path);
   }

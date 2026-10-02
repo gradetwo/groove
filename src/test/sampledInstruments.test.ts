@@ -103,10 +103,29 @@ describe("the recorded-instrument table", () => {
 
   it("says why a lane keeps its synthesiser, and stays quiet about a synthesiser by definition", () => {
     const catalogue = shippedCatalogue();
-    // A stated gap: a real instrument the mirrored libraries do not carry.
-    expect(sampledInstrumentGapReason("rhodes_ep")).toMatch(/electric piano/);
-    expect(sampledInstrumentGap({ track_id: "chords", instrument: "rhodes_ep" }, catalogue)).toMatch(/no catalogue recording is mapped/);
-    expect(sampledInstrumentGap({ track_id: "bass", instrument: "finger_bass" }, catalogue)).toMatch(/electric bass/);
+    // A stated gap: a real instrument the mirrored libraries do not carry — the two left after the 2026-10-03 round.
+    expect(sampledInstrumentGapReason("pan_flute")).toMatch(/pan flute/);
+    expect(sampledInstrumentGap({ track_id: "chords", instrument: "pan_flute" }, catalogue)).toMatch(/no catalogue recording is mapped/);
+    expect(sampledInstrumentGap({ track_id: "bass", instrument: "slap_bass" }, catalogue)).toMatch(/electric bass/);
+    // ⭐ The names this round filled: each was a gap and now resolves to the recording that was mirrored for it. Asserted one by one because a mapping row is the
+    // judgement this whole file exists to record, and "a gap quietly became a row" and "a row quietly became a gap" look the same in a diff of two lists.
+    for (const [instrument, assetId] of [
+      ["rhodes_ep", "jlearman-jrhodes3c:jRhodes-both-looped"],
+      ["m1_organ", "freepats-drawbar-organ"],
+      ["organ_lead", "freepats-percussive-organ"],
+      ["pick_bass", "freepats-electric-bass-yr:PickedBassYR-20190930"],
+      ["finger_bass", "karoryfer-black-and-blue-basses:05-darkblack-pluck"],
+      ["distorted_guitar", "freepats-fsbs-dist2"],
+      ["pluck_string", "freepats-spanish-classical-guitar"],
+      ["brass_section", "sonatina-brass:All-Brass-Sustain"],
+      ["accordion_lead", "freepats-button-accordion-hn"],
+      ["sitar_lead", "discord-gm-sitar:105-Sitar"],
+      ["bell_lead", "vcsl:Tubular-Bells-1"],
+    ] as const) {
+      expect(sampledInstrumentGapReason(instrument), `${instrument} must no longer be a stated gap`).toBeUndefined();
+      expect(sampledInstrumentGap({ track_id: "lead", instrument }, catalogue), `${instrument} must be served by ${assetId}`).toBeUndefined();
+      expect(sampledInstrumentFor(instrument)?.assetId, `${instrument} must map to ${assetId}`).toBe(assetId);
+    }
     // A synthesiser: not a gap, and reporting it would drown the real gaps in noise.
     expect(sampledInstrumentGapReason("warm_pad")).toBeUndefined();
     expect(sampledInstrumentGap({ track_id: "chords", instrument: "warm_pad" }, catalogue)).toBeUndefined();

@@ -69,7 +69,10 @@ describe("parseManifest", () => {
     const parsed = parseManifest(
       manifest([
         { id: "vcsl", name: "VCSL", licence: "CC0", prefix: "vcsl", sfz: "piano.sfz", files: [] },
-        { id: "vsco2", name: "VSCO 2 CE", licence: "CC-Sampling-Plus", files: [], excludedReason: "the licence terms are vague, so this project does not redistribute it" },
+        /**
+         * ⭐ `CC-Sampling-Plus` owes attribution by its own terms, so this fixture carries one — an entry with a credit-owing licence and no credit is refused by the parser now, which is the rule and not an accident of the fixture.
+         */
+        { id: "vsco2", name: "VSCO 2 CE", licence: "CC-Sampling-Plus", attribution: "Sonatina Symphonic Orchestra (Mattias Westlund), CC Sampling Plus 1.0", files: [], excludedReason: "this project chose not to redistribute this one (fixture)" },
         { id: "samples-only", name: "Just samples", licence: "CC0", files: [] },
       ])
     ).manifest!;
@@ -111,7 +114,8 @@ describe("sampleAssetsFromManifest", () => {
     const { sampleAssetsFromManifest } = await import("../data/sampleManifest");
     const parsed = parseManifest(
       manifest([
-        { id: "vsco2", name: "VSCO 2 CE", licence: "CC-Sampling-Plus", files: [], excludedReason: "vague terms, not redistributed" },
+        // Same rule as above: `CC-Sampling-Plus` requires a credit, and the fixture supplies one rather than tripping the validator.
+        { id: "vsco2", name: "VSCO 2 CE", licence: "CC-Sampling-Plus", attribution: "Sonatina Symphonic Orchestra (Mattias Westlund), CC Sampling Plus 1.0", files: [], excludedReason: "excluded here, so its missing duration does not matter" },
         { id: "unmeasured", name: "Not measured yet", licence: "CC0", files: [] },
       ])
     ).manifest!;

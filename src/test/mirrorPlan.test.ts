@@ -24,6 +24,20 @@ describe("resolveSamplePath", () => {
     // An absolute path is left alone, which is the one case where the SFZ author meant exactly what they wrote.
     expect(resolveSamplePath("Programs/x.sfz", "/opt/samples/c.wav")).toBe("/opt/samples/c.wav");
   });
+
+  it("reads a backslash separator the way the loader does, so the plan and the fetch agree", () => {
+    /**
+     * ⭐ **Measured on two of the libraries this round mirrored.** Karoryfer writes `..\Samples\darkblack\reg\x.wav` and Sonatina writes `..\Samples\Horns\x.wav`; while this resolver
+     * split only on `/`, such a path was one component, `..` never popped, and the plan named `Programs/mirror/Samples/…` — a file that is not there — for the samples of both libraries.
+     * The playback resolver had normalised `\` since the VSCO 2 CE round, so the two halves of the loader disagreed about which bytes an instrument needs.
+     */
+    expect(resolveSamplePath("Programs/05-darkblack_pluck.sfz", "..\\Samples\\darkblack\\reg\\darkblack_e2_f_rr1.wav")).toBe(
+      "Samples/darkblack/reg/darkblack_e2_f_rr1.wav"
+    );
+    expect(resolveSamplePath("Brass - Notation/All Brass Sustain.sfz", "..\\Samples\\Horns\\horns-stc-rr1-e3.wav")).toBe("Samples/Horns/horns-stc-rr1-e3.wav");
+    // A mixed file means the same thing under either separator.
+    expect(resolveSamplePath("Programs/x.sfz", "..\\Samples/a/b.wav")).toBe("Samples/a/b.wav");
+  });
 });
 
 describe("samplePathsFor", () => {

@@ -1342,3 +1342,101 @@ GET https://r2mirror.groove.wangda.today/vsco2ce/Strings/Violin Section/Pizz/Vln
 * **不可知那种情况只按"声明在该 region 之后"判定。** 声明若来自 include 进来的文件，判定发生在 `expandRemoteIncludes` 拼好的文本上，与加载看到的一致；但 `<control>` 里的 `default_path` 是否在 include 边界上重置，没有量过——上游 75 个程序都没有这种写法，所以没有实现。
 * **没有镜像任何新东西。** 八个 `-KS` 程序要进镜像，代价是它们引用的全部采样（1022 个 region 指向的文件，含与已镜像 `susvib`/`sus` 段重叠的部分），这与 ⑥ 那份"表情程序 = 162.7 MiB"是**不同的账**（那份只是 12 件各加一个单奏法程序），需要单独量、单独决定。
 
+
+---
+
+## ⭐⭐⭐ 十一个缺口入库 ＋ 许可集放宽（2026-10-02）
+
+业主的裁定：**「前提把 13 个补齐」＋「5G 尽量用满」＋「是你还有 5G 可以用，不算之前上传的」**，随后又两次放宽授权口径（本项目 **MIT ＋ 非商业非盈利** ⇒ `NC` 条件满足；查不到声明的库若质量好可先镜像、**默认仍走原始链接**、可联系即删）。本节是这一轮的实测记录。
+
+### ① 接受集放宽了什么，以及**没有**放宽什么
+
+`src/data/libraryLicence.ts` 的接受集新增：`CC-BY-NC-4.0`、`CC-BY-NC-SA-4.0`、`CC-BY-NC-SA-3.0`、`CC Sampling Plus 1.0`、`Unlicense`、`unknown-mirrored`。理由写在文件里：NC 的条件是"非商业使用"，本项目满足；`CC Sampling Plus 1.0` 的标的物就是采样本身；`Unlicense` 是公有领域奉献；`unknown-mirrored` 是**状态而不是许可**（下详）。`requiresAttribution` 相应扩到"任何 `CC-BY*` ＋ `CC Sampling Plus` ＋ `unknown-mirrored`"。
+
+⚠️ **明确禁止本用途的仍然出局**，这不是 NC 问题：`Project16Rickenbacker4001` 原文写着 *"You are not allowed to use this product in a sampling library or in a related product"* ⇒ `slap_bass` 保持缺口；`Pianobook` 同理；`Spitfire LABS`／免费 Kontakt 是**插件锁、加载器载不了**，不是许可问题。
+
+### ② 这一轮下了什么
+
+复现（两步都是仓库自带脚本，未改一行上传语义；`TMPDIR` 指到 `/var/tmp` 而不是 `/tmp`）：
+
+```
+TMPDIR=/var/tmp node scripts/upload_samples.mjs <entry-id> --upload
+```
+
+| 条目 | 库 | 许可（原文出处） | 文件 | 字节 | 格式 |
+|---|---|---|---:|---:|---|
+| `freepats-electric-bass-yr` | FreePats Bass Guitar YR | CC0（仓库自带 `LICENSE.txt`） | 29 | 6 277 261 | SFZ + FLAC |
+| `freepats-button-accordion-hn` | FreePats Button Accordion HN | CC0（`LICENSE.txt`） | 37 | 4 470 533 | SFZ + FLAC |
+| `freepats-fsbs-dist2` | FreePats FSBS Distorted #2 | CC0（`LICENSE.txt`） | 125 | 136 921 363 | SFZ + FLAC |
+| `freepats-spanish-classical-guitar` | FreePats Spanish classical guitar | CC0（`LICENSE`） | 51 | 5 298 000 | SFZ + FLAC |
+| `freepats-tubular-bells1` | FreePats Tubular Bells | CC0（`LICENSE.txt`） | 33 | 16 551 617 | SFZ + FLAC |
+| `discord-gm-sitar` | Discord SFZ GM Bank `105-Sitar` | CC0（文件头 `// License: CC0, Dr. Narayan Bhagawan Raikar` ＋ `readme.md` 同一句） | 49 | 10 149 165 | SFZ + FLAC |
+| `freepats-drawbar-organ` | FreePats Drawbar organ emulation | CC0（归档内 `readme.txt` 的 CC0 原文） | 18 | 6 505 808 | SFZ + WAV（`.tar.xz`） |
+| `freepats-percussive-organ` | FreePats Percussive organ emulation | CC0（SFZ 文件头） | 34 | 14 548 534 | SFZ + WAV（`.tar.xz`） |
+| `jlearman-jrhodes3c` | jRhodes3c（1977 Rhodes Mark I Stage 73） | CC BY-NC-SA 4.0（仓库 `LICENSE`；NC 放宽后接受，署名已记） | 136 | 17 566 470 | SFZ + FLAC |
+| `sonatina-brass` | Sonatina Symphonic Orchestra — Brass | CC Sampling Plus 1.0（上游 `LICENSE`） | 403 | 161 561 879 | SFZ + WAV |
+| `karoryfer-black-and-blue-basses` | Karoryfer Black And Blue Basses | CC0（仓库 `license`） | 2274 | 1 124 158 166 | SFZ + FLAC |
+
+**新增合计 1 504 008 796 字节（1.504 GB，3189 个文件）；清单总量 6 489 005 887 字节（6.489 GB，10431 个文件）**（新增预算 5 GB，未越；桶上限 12 GB，未越）。
+
+`bell_lead` **没有花一个字节**：VCSL 的 `Idiophones/Struck Idiophones/Tubular Bells 1.sfz` 早就随 `vcsl` 条目在镜像里，缺的只是 `src/data/sampledInstruments.ts` 里的一行映射。
+
+### ③ ⭐ opcode 扫描：每个库用了什么、哪些没实现、怎么处置
+
+工具是新加的 `scripts/scan_sample_opcodes.mjs`（`npx vite-node` 运行），它用**本仓自己的** `expandIncludes` ＋ `parseSfz`，不是第二套正则读取器：
+
+```
+npx vite-node scripts/scan_sample_opcodes.mjs --root /var/tmp/groove-mirror-<entry>-XXXX
+```
+
+| 条目 | 未实现的操作码（原文名） | 处置 |
+|---|---|---|
+| `freepats-electric-bass-yr` | `ampeg_decay`、`ampeg_release` | 记 `needs`；包络由应用自己给 |
+| `freepats-button-accordion-hn` | `amp_veltrack`、`amp_random`、`offset`、`offset_random`、`offset_cc131`、`ampeg_attack/decay/sustain/release`、`trigger`、`volume` | 记 `needs`。**实测过 `trigger=release` 那一组不会被选中**（`regionsForNote` ＋ 文件顺序先命中的是持续音组），所以它只是不发声的发布样本 |
+| `freepats-fsbs-dist2` | `ampeg_release`、`lorand`/`hirand`、`width` | 记 `needs`；两层力度仍可选，只是随机变体总取第一个 |
+| `freepats-spanish-classical-guitar` | `ampeg_release` | 记 `needs` |
+| `freepats-tubular-bells1` | `ampeg_release`、`lorand`/`hirand` | 记 `needs` |
+| `discord-gm-sitar` | `ampeg_*`、`cutoff`、`fileg_*`、`eg06_*`、`volume`、`off_mode`、`trigger` | 记 `needs`；`group`/`off_by` **已实现**，所以每音掐前一音的 sitar 行为是对的 |
+| `freepats-drawbar-organ` | `ampeg_release` | 记 `needs` |
+| `freepats-percussive-organ` | `ampeg_attack`、`ampeg_release`、`pan` | 记 `needs` |
+| `jlearman-jrhodes3c` | `ampeg_decay/hold/sustain/release`、`hiprog`/`loprog` | 记 `needs` |
+| `sonatina-brass` | `ampeg_*`、`cutoff`/`fil_*`、`amplfo_*`、`volume`、`pan`、`offset`、`transpose`、`sw_*`、`xf*`、`master_volume`、`group_volume`、`gain_cc1` | 记 `needs`。`sw_*` 未实现 ⇒ 键位程序会同时命中折叠进来的每套奏法、实际响文件顺序里的第一条；这与 VCSL 的 `-Keyswitch` 是**同一条已知限制**，不是新增 |
+
+### ③b ⭐ 每个暴露出来的程序，它引用的每个采样都必须在清单里
+
+`scripts/scan_sample_opcodes.mjs` 之外还有一条判据，是这一轮新加的一次性核对（`npx vite-node`，用 `expandIncludes` ＋ `parseSfz` ＋ `samplePathsFor`）：把条目里**每个**程序的 `sample=` 全部解析出来，逐个要求它出现在该条目自己的 `files` 里。不满足的程序**从暴露列表里去掉**——因为它是一个必然 404 的资产，而 404 是静音，静音和"这一轨坏了"分不出来。
+
+去掉了 65 个程序，三类，每类都是实测出来的：
+
+| 库 | 去掉 | 原因 |
+|---|---:|---|
+| `karoryfer-black-and-blue-basses` | 53 | `Programs/maps/*` 与 `Programs/controls/*` **是 include，不是乐器**；其中 maps 的 `..\Samples\` 是按**程序**写的，单独当资产时解析到 `Programs/Samples/…`（不存在），controls 则**一个采样都不命名**（加载出来没有 region） |
+| `sonatina-brass` | 18 | 上游自己的**大小写不匹配**：solo 程序写 `Samples/horn/…`、`Samples/trumpet/…`、`Samples/tenor trombone/…`，而仓库里的目录是 `Samples/Horn`、`Samples/Trumpet`、`Samples/Tenor Trombone`。在大小写不敏感的文件系统上没事，在我们的镜像（以及 R2）上 404 |
+| `discord-gm-sitar` | 1 | `SitarSliding.sfz` 写 `IndianStrings/Sitar/Ssld01.flac`，而上游仓库里**根本没有 `IndianStrings` 目录**，那 19 个文件就在程序旁边 |
+
+去掉之后重跑：**`karoryfer` 11/11、`discord-gm-sitar` 2/2、`sonatina-brass` 48/48 程序的每一个采样都在清单里**（其余八条本来就 0 缺失）。`sonatina-brass` 的入口点因此定在 `All Brass Sustain.sfz`（它自己完好），`brass_section` 映射到的就是它。
+
+**没有实现任何新操作码**，理由写在每一条 `needs` 上而不是含糊过去：`ampeg_*` 是**已入库的 VSCO 2 CE 也在用**的操作码（它的 `needs` 里一直有 `ampeg_attack`/`ampeg_release`），在没有听感证据的前提下动它，等于把**已经发布的库**的声音一起改掉——这与"先量后改"相反。真正会让人弹错音的那一类（下面 ④）都实现了。
+
+### ④ ⭐ 扫描扫出的两个**真缺陷**，都改了
+
+1. **键位可以写成音名，而读成数字是"一个像样的错答案"而不是"没有答案"。** `Discord GM/Melodic/105-Sitar.sfz` 写 `pitch_keycenter=c2 lokey=c0`，Sonatina 的铜管写 `lokey=e3`；`num()` 对它们回落到 `lokey/hikey` 的默认 0–127 ⇒ **每个 region 覆盖每个音**、narrowest 规则无从收窄、整台琴在所有音高上都响文件里第一个 region 的采样。修法在 `src/audio/sfz/parse.ts` 新增 `noteNumber()`：八度约定是**量出来的**，不是假设的——`horns-sus-mp-e2-PB-loop.wav` 在同一个 region 里被声明成 `pitch_keycenter=40`，所以本族里 `e2` = 40，即 `12 × (八度 + 1) + 半音`（中央 C 是 `c4` = 60）。判据在 `src/test/sfzParse.test.ts`。修好之后 `105-Sitar` 的 60 号音解析到 `Str15.flac`（keycenter 60）。
+2. **`programsFrom` 把" - 奏法后缀"从整条路径上切掉，而不是从文件名上切。** Sonatina 的目录叫 `Brass - Notation/`，那个 `" - "` 被当成奏法分隔符 ⇒ 66 个铜管程序塌成一个 base，**154 MB 的库只暴露出 1 件乐器**。修法在 `scripts/lib/programs.mjs`：先分开目录与文件名，再对文件名去后缀。实测这条修改**只影响 `sonatina-brass`（1 → 89 个程序）**，其余六个已入库条目的程序表逐个比对**完全不变**（`/var/tmp/check-programs.mjs` 的一次性比对，规则见该文件的 diff）。
+
+### ⑤ 接入：映射行、移除的缺口、保留的缺口
+
+`src/data/sampledInstruments.ts` 新增 **11 行**映射（每行都有 `because`，精确整名匹配）：`rhodes_ep` → `jlearman-jrhodes3c:jRhodes-both-looped`；`m1_organ` → `freepats-drawbar-organ`；`organ_lead` → `freepats-percussive-organ`；`pick_bass` → `freepats-electric-bass-yr:PickedBassYR-20190930`；`finger_bass` → `karoryfer-black-and-blue-basses:05-darkblack-pluck`；`distorted_guitar` → `freepats-fsbs-dist2`；`pluck_string` → `freepats-spanish-classical-guitar`；`brass_section` → `sonatina-brass:All-Brass-Sustain`；`accordion_lead` → `freepats-button-accordion-hn`；`sitar_lead` → `discord-gm-sitar:105-Sitar`；`bell_lead` → `vcsl:Tubular-Bells-1`。
+
+其中 **两行的乐器不是名字字面上的那件**，所以在 `because` 里点名：`m1_organ` 拿的是**拉杆/音轮风琴模拟**（不是 Korg M1，也不是真 Hammond 录音），`bell_lead` 拿的是**管钟**（乐团乐器，不是合成器铃；该程序音域 C4–F#5 = MIDI 60–77，且 `ampeg_release=30 s` 未实现）。
+
+`SAMPLED_INSTRUMENT_GAPS` 从 13 条减到 **2 条**：`slap_bass`（唯一好库原文禁止用于采样库 ⇒ NC 放宽救不了）与 `pan_flute`（唯一许可干净的来源在**注册墙**后面且是 SF2；Discord GM 的 `076-Pan Flute` 实测是 `//dummy` ＋ `sample=*sine`，**一个采样都没有**）。"61 个名字三分、一个不漏"那条判据仍由表推导，数字未动。
+
+### ⑥ 顺带补上的许可状态：`unknown-mirrored`
+
+业主裁定"查不到声明但质量好的可以先镜像"，工程上落成：`SampleLicence` 与 `libraryLicence.ts` 的接受集里多一个 **`unknown-mirrored`**，它**强制要求**条目带一句状态说明（`attribution` 字段承载"未找到声明 ＋ 原始链接 ＋ 版权方要求即删"），因此"忘了写声明"会红。**运行时行为没有新增代码**：`sampleAssetsFromManifest` 早已把 `url` 设为**钉住的原始地址**、`fallbackUrl` 设为镜像，采样一侧 `sampleAssetForPath` 同样先原始后镜像；判据是既有的 `src/test/sampleLoaderFallback.test.ts`（6 条）与 `src/test/sampleDecoderFallback.test.ts`（7 条），两条都过。这一轮**没有**用到这个值：唯一候选里质量过关的 `jlearman.SteelDrum` 其实自带 `Unlicense`（公有领域），其余（`OvationGuitar` 1 层、`Clavecin` 1 层、`DamiensFunkyGuitar` 2 层、`Kastendieck.SteelDrum` 3 层、`EthanWiner.Soundfonts` 结构不明、`Terkelsen.Marimba` 3 层但与已映射的 VCSL Marimba 重复）按质量/重复判为不加，逐条理由见本轮回报。
+
+### ⑦ 还没做到的
+
+* **`pan_flute` 仍缺口**，卡在注册墙（不是许可、不是体积）。
+* **`slap_bass` 仍缺口**，卡在原文禁止。
+* **桶上没有独立核对**：目标是 `:s3:groove`，本轮用 `rclone size` 对账（见回报），但没有像 VSCO 那两轮一样逐条 `GET` 每个新前缀的对象；新增资产的**真读回**是按条目抽查的。

@@ -29,13 +29,12 @@
  *  * **It is not "everything a real instrument".** `warm_pad`, `supersaw`, `acid_303`, `sub_bass`, `808_bass`,
  *    `saw_lead`, `noise_sweep` and their neighbours are **synthesisers by definition**; a recording of a piano
  *    would be the wrong answer for them, so they are deliberately absent rather than missing.
- *  * **It is not complete.** There is no electric piano, no electric bass, no distorted guitar, no accordion, no
- *    sitar and no section brass in the mirrored libraries — {@link sampledInstrumentGap} names those so a report
- *    can say "no recording serves this" instead of silently keeping the synthesiser.
+ *  * **It is not complete.** As of 2026-10-02 eleven of the thirteen names that had no recording do have one (see the rows below); {@link sampledInstrumentGap} still names
+ *    the two that do not — `slap_bass`, which cannot be mirrored because the only good library forbids this use, and `pan_flute`, whose only clean source is behind a
+ *    registration wall — so a report can say "no recording serves this" instead of silently keeping the synthesiser.
  *  * **Its drum half is a second list, not rows here.** A drum lane is decided by its **role** plus the note map in
  *    `src/audio/drumRoles.ts` (General MIDI Percussion), because a kit is one instrument at many pitches and a single
- *    `assetId` cannot describe it; {@link SAMPLED_DRUM_ROLES} says so in code.
- */
+ *    `assetId` cannot describe it; {@link SAMPLED_DRUM_ROLES} says so in code. */
 import type { SampleAsset } from "./sampleCatalogue";
 import { instrumentIdentityFor, playableTechniques } from "./stringTechniques";
 import { DRUM_KIT_ASSET_ID, drumSamplingRefusal, drumVoicingForLane } from "../audio/drumRoles";
@@ -119,6 +118,65 @@ export const SAMPLED_INSTRUMENTS: readonly SampledInstrumentChoice[] = [
     assetId: "karoryfer-emilyguitar:emily-clean",
     because: "`guitar_lead` is a guitar — in `traditional-jazz` it comps, in the rock families it leads — and Emilyguitar's `emily clean` is the clean single-note program. It is an **electric** guitar where `bossa-nova`'s chords mean a nylon-strung one; the name does not say which, and this row is the one that was chosen.",
   },
+  /**
+   * ⭐ **The rows added on 2026-10-02, when the libraries the plan costed were mirrored.** Every one names the recording that *is* the instrument the genre name means, and the
+   * two that are a judgement about a neighbouring instrument (`m1_organ`, `bell_lead`) say so in their own `because` rather than being left to look exact.
+   */
+  {
+    instrument: "rhodes_ep",
+    assetId: "jlearman-jrhodes3c:jRhodes-both-looped",
+    because: "`rhodes_ep` is a Fender Rhodes electric piano, and `jRhodes3c` is a **recorded 1977 Rhodes Mark I Stage 73** — both pickups, five velocity layers, looped. It replaces the synthesiser that used to stand in for this name. The licence is CC BY-NC-SA 4.0, accepted because this project is non-commercial (see `src/data/libraryLicence.ts`).",
+  },
+  {
+    instrument: "m1_organ",
+    assetId: "freepats-drawbar-organ",
+    because: "⚠️ **A judgement about a neighbour, said out loud.** `m1_organ` is the Korg M1's organ patch — a digital instrument — and no Korg M1 is mirrored. What is mirrored is FreePats' **drawbar/tonewheel organ emulation**, recorded from setBfree: the tonewheel family that patch imitates, and the closest real instrument the catalogue has. It is an **emulation of a Hammond, not a recording of one**, which is a real difference and is why this is the one row here whose instrument is not literally the name.",
+  },
+  {
+    instrument: "organ_lead",
+    assetId: "freepats-percussive-organ",
+    because: "`organ_lead` is a Hammond-style lead organ; FreePats' percussive registration is the same tonewheel emulation with the percussion stop engaged, which is the colour a jazz lead line is written for. Same caveat as `m1_organ`: a setBfree emulation, not a recorded Hammond.",
+  },
+  {
+    instrument: "pick_bass",
+    assetId: "freepats-electric-bass-yr:PickedBassYR-20190930",
+    because: "`pick_bass` is an electric bass played **with a pick**; FreePats' Bass Guitar YR `pick` variation is a Yamaha RBX recorded one sample per semitone, and the pick is the difference the name states. It is the other half of the same instrument as `finger_bass`.",
+  },
+  {
+    instrument: "finger_bass",
+    assetId: "karoryfer-black-and-blue-basses:05-darkblack-pluck",
+    because: "`finger_bass` is a fingerstyle electric bass; Karoryfer's `darkblack` is a fingerstyle bass with **four velocity layers and four round robins** (the plan measured `lovel`/`hivel` 31/63/95/127 and `seq_length=4`), which is the quality-first choice over the 3 MiB FreePats finger variation that is also in the catalogue as `freepats-electric-bass-yr:FingerBassYR-20190930`.",
+  },
+  {
+    instrument: "distorted_guitar",
+    assetId: "freepats-fsbs-dist2",
+    because: "`distorted_guitar` names an amplified, distorted electric guitar; FreePats' FSBS **Distorted #2** is a Fender sampled through an amplifier and effects rack — distortion is the recording, not a plug-in. The `#1` flavour exists upstream at about twice the size and was not mirrored.",
+  },
+  {
+    instrument: "pluck_string",
+    assetId: "freepats-spanish-classical-guitar",
+    because: "`pluck_string` is a plucked nylon-strung guitar; this is a **Spanish classical guitar**, one sample per semitone across E1–C6, which is the instrument this name means rather than the electric guitar that used to be the nearest thing.",
+  },
+  {
+    instrument: "brass_section",
+    assetId: "sonatina-brass:All-Brass-Sustain",
+    because: "`brass_section` is trumpets, horns, trombones and tuba playing together; Sonatina's `All Brass Sustain` is literally that — it includes the trumpet, horn, trombone, bass-trombone and tuba sustain programs in one patch — which is the ensemble the name means. It is a **looped synthetic-hall** recording and the crossfade layers (`xf_*`) and `sw_*` keyswitching are not implemented, so the inner layers and the switch articulations are the file's own; the sustain program itself resolves every note to a mirrored sample.",
+  },
+  {
+    instrument: "accordion_lead",
+    assetId: "freepats-button-accordion-hn",
+    because: "`accordion_lead` is an accordion; this is a Hohner button accordion recorded by Jeff Stauffer, one velocity layer, looped (`loop_start`/`loop_end`, `loop_continuous` — both implemented). ⚠️ Its `amp_veltrack`, `offset`, `amp_random` and `ampeg_*` are **not implemented**, so it plays with the app's own envelope and a flat velocity response; that is recorded in the entry's `needs`.",
+  },
+  {
+    instrument: "sitar_lead",
+    assetId: "discord-gm-sitar:105-Sitar",
+    because: "`sitar_lead` is a sitar, and this is a real sitar recording (78 regions, one sample per semitone, C0–C7) contributed to the Discord SFZ GM Bank by Dr. Narayan Bhagawan Raikar under CC0. Its own file says it was \"created for testing purpose only for indian instruments\" — a thin map over real recordings, stated rather than hidden.",
+  },
+  {
+    instrument: "bell_lead",
+    assetId: "vcsl:Tubular-Bells-1",
+    because: "⚠️ **A judgement about a neighbour, said out loud.** `bell_lead` means a synthesiser bell patch; VCSL's **Tubular Bells 1** is a real orchestral instrument — struck brass tubes — not that patch. It is the row the mirror can afford for free (the bytes were already mirrored), and the two differences are real: a tubular bell is an orchestra's bell rather than a synth bell, and this program's range is **C4–F#5 (MIDI 60–77)** because that is what it was recorded for, so notes outside it are stretched. `ampeg_release=30 s` is also outside the implemented set, so the note ends by the app's own release rather than the file's. An alternative with a wider range is now in the catalogue too: `freepats-tubular-bells1:TubularBells-20241130` (A3–C6, two velocity layers, `lorand`/`hirand` round-robin).",
+  },
 ];
 
 /**
@@ -170,23 +228,15 @@ export const ALL_SAMPLED_INSTRUMENTS: readonly SampledInstrumentChoice[] = [
  * a fallback. Reporting both would put sixty lines of noise in every render and hide the four that matter.
  *
  * A row is here only when the name is a **real acoustic or electric instrument**. "Close enough" neighbours are not
- * gaps and are not rows either: `pan_flute` is a gap because a concert flute is a different instrument, while
- * `pluck_string` is one because an electric guitar is.
+ * gaps and are not rows either: `pan_flute` is a gap because a concert flute is a different instrument, and it stayed one
+ * after the 2026-10-02 round because no pan flute could be fetched at all — while `pluck_string` **left** this list the
+ * same day, when a nylon-strung classical guitar was mirrored and a row was written for it.
  */
 export const SAMPLED_INSTRUMENT_GAPS: Readonly<Record<string, string>> = {
-  rhodes_ep: "the catalogue holds no electric piano (VCSL's TX81Z is an FM synth module, not a Rhodes)",
-  m1_organ: "the catalogue's organs are pipe and renaissance organs (VCSL `Pipe Organ`, `Renaissance Organ`), not the Korg M1 organ this name means",
-  organ_lead: "the same gap as `m1_organ` — a Hammond drawbar organ is not a pipe organ",
-  pick_bass: "the catalogue holds no electric bass; Meatbass is a double bass, and mapping a picked electric line to it would rename the instrument",
-  finger_bass: "the same gap as `pick_bass` — a fingerstyle electric bass is not a double bass",
-  slap_bass: "the same gap as `pick_bass`",
-  distorted_guitar: "the catalogue holds no amplified or distorted guitar; Emilyguitar is clean",
-  pluck_string: "`pluck_string` is a nylon-strung guitar; Emilyguitar is electric and VCSL has no guitar",
-  brass_section: "VSCO 2 CE carries solo brass (trumpet, trombone, horn, tuba) and string **sections**, but no brass section",
-  accordion_lead: "no accordion is mirrored",
-  sitar_lead: "no sitar is mirrored",
-  pan_flute: "no pan flute is mirrored; VSCO 2 CE's flute is a concert flute",
-  bell_lead: "VCSL's Tubular Bells are an orchestral instrument, not the synthesiser bell patch this name means",
+  slap_bass:
+    "the catalogue holds no slap electric bass, and the best one found cannot be mirrored: Project16's Rickenbacker 4001 is CC BY-NC-SA 3.0 **and** its own text says \"You are not allowed to use this product in a sampling library or in a related product\". That is a prohibition of this use rather than a non-commercial restriction, so the project's non-commercial status does not reach it (the same reason `Pianobook` is out). No CC0 or CC-BY slap bass was found",
+  pan_flute:
+    "no pan flute is mirrored and none could be fetched: the only cleanly-licensed one found (Polyphone's \"Pan Flute\", public domain) sits behind a registration wall and ships as SF2 rather than SFZ, and the Discord GM Bank's `076-Pan Flute` is a `sample=*sine` stub — it declares no samples at all, so there is nothing to download",
 };
 
 /**

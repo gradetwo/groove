@@ -98,6 +98,34 @@ const num = (value: string | undefined, fallback: number): number => {
 };
 
 /**
+ * ⭐ **A key opcode may be written as a note name, and reading one as a number is a wrong answer rather than a missing one.**
+ *
+ * SFZ allows `c4`, `c#4` and `db4` wherever a MIDI number is allowed (`key`, `lokey`, `hikey`, `pitch_keycenter`). `num()` returns its fallback for those,
+ * and the fallback for `lokey`/`hikey` is **0–127** — so every region of the file matches every note, the narrowest-range rule has nothing to narrow between, and
+ * the instrument plays its *first* region for the whole keyboard. That is not silence, which would be noticed; it is a plausible wrong answer, which is the failure
+ * this workstream keeps having to hunt down. Two real libraries in this round do exactly that: `Discord GM/Melodic/105-Sitar.sfz` (`pitch_keycenter=c2`, `lokey=c0`)
+ * and Sonatina's brass (`lokey=e3`, `pitch_keycenter=e3`).
+ *
+ * **The octave convention is measured, not assumed.** `horns-sus-mp-e2-PB-loop.wav` is declared `pitch_keycenter=40` in the same region that names it `e2`, so in this
+ * family `e2` is MIDI 40 — that is scientific pitch notation with middle C `c4` = 60, i.e. `12 × (octave + 1) + semitone`. The alternative convention (`c4` = 48) would
+ * put `e2` at 28 and detune every named region by an octave, which no listening test could have told apart from a badly recorded library.
+ */
+const NOTE_SEMITONES: Record<string, number> = { c: 0, d: 2, e: 4, f: 5, g: 7, a: 9, b: 11 };
+
+export function noteNumber(value: string | undefined): number | undefined {
+  if (value === undefined) return undefined;
+  const text = value.trim().toLowerCase();
+  if (text === "") return undefined;
+  // A plain number is a MIDI note, and stays exactly as written — including the fractional values some files use.
+  const asNumber = Number(text);
+  if (Number.isFinite(asNumber)) return asNumber;
+  const match = /^([a-g])([#b]?)(-?\d+)$/.exec(text);
+  if (!match) return undefined;
+  const semitone = NOTE_SEMITONES[match[1]!]! + (match[2] === "#" ? 1 : match[2] === "b" ? -1 : 0);
+  return (Number(match[3]) + 1) * 12 + semitone;
+}
+
+/**
  * `set_ccN=value` from a file's `<control>` blocks, later declarations winning.
  *
  * It lives here rather than beside the gate that consumes it, because the parser needs the same numbers: `tune_ccN` is a **tuning at the controller's current value**, so a region's cents cannot be computed without them. One reader, one answer — a
@@ -193,8 +221,7 @@ export function parseSfz(text: string): SfzRegion[] {
    * Folding it into `global` (what this file used to do) and letting an earlier `<group>` survive into it made **all 752
    * percussion regions of the basic kit answer note 50**, because `snaremic_basic.sfz` opens a `<group> key=50` and never
    * closes it. The rule now implemented — a new `<master>` starts from `<global>` and ends any open `<group>` — is
-   * **measured against sfizz** in the criterion and quoted line by line in the `<master>` branch below.
-   */
+   * **measured against sfizz** in the criterion and quoted line by line in the `<master>` branch below.   */
   let master: Record<string, string> = {};
   let group: Record<string, string> = {};
   let current: Record<string, string> | null = null;
@@ -237,8 +264,7 @@ export function parseSfz(text: string): SfzRegion[] {
          * A `<global>` is the outermost scope and the only header that **clears** what came before it.
          *
          * Measured against sfizz by rendering one note at two values of CC90 through a fixture whose outer `<global>`
-         * sets `tune_cc90=1200`, so an octave of transposition is the signal that a value survived:
-         *
+         * sets `tune_cc90=1200`, so an octave of transposition is the signal that a value survived:         *
          * ```
          *   tune on the region            比值 2.005   (the control: it applies)
          *   global(tune) → master → region 1.988   ← survives the master
@@ -250,6 +276,8 @@ export function parseSfz(text: string): SfzRegion[] {
          *
          * So a real library that states `locc101` or `tune_cc90` in its program file and then includes a microphone mapping that opens with `<master>` keeps those values for the included regions — which is how `virtuosity_drums` is
          * written, and what the previous rule silently discarded.
+         *
+         * ⭐ **What that measurement did not cover is `<master>` → `<master>`, and the second half of the rule is there:** the two scopes are stored separately, so a new `<master>` clears master values while the `<global>` values survive it (and a new `<global>` clears global values while master values survive). Karoryfer's programs are four `<master>` blocks in a row and only work under that reading — see the note on `master` above.
          */
         global = {};
         master = {};
@@ -286,8 +314,7 @@ export function parseSfz(text: string): SfzRegion[] {
          */
         master = {};
         group = {};
-        current = master;
-      } else if (name === "group") {
+        current = master;      } else if (name === "group") {
         group = {};
         current = group;
       } else if (name === "region") {
@@ -353,12 +380,12 @@ export function parseSfz(text: string): SfzRegion[] {
        * Measured: the real kit writes `key=$KICK_SNRIGHT_KEY`, which now resolves to 36 — and note 38 still matched that kick, while sfizz triggered no voice for 38 at
        * all. The reason was here: only `lokey`/`hikey` were read, so `key=36` was ignored and the range stayed 0–127. The explicit opcodes win when both are present.
        */
-      lokey: num(merged.lokey, num(merged.key, DEFAULTS.lokey)),
-      hikey: num(merged.hikey, num(merged.key, DEFAULTS.hikey)),
+      lokey: noteNumber(merged.lokey) ?? noteNumber(merged.key) ?? DEFAULTS.lokey,
+      hikey: noteNumber(merged.hikey) ?? noteNumber(merged.key) ?? DEFAULTS.hikey,
       lovel: num(merged.lovel, DEFAULTS.lovel),
       hivel: num(merged.hivel, DEFAULTS.hivel),
       // Left undefined when absent, because "no transposition" is the real behaviour and 60 is only a value a file may choose.
-      pitchKeycenter: merged.pitch_keycenter === undefined ? undefined : num(merged.pitch_keycenter, 0),
+      pitchKeycenter: merged.pitch_keycenter === undefined ? undefined : noteNumber(merged.pitch_keycenter) ?? num(merged.pitch_keycenter, 0),
       // `tune` plus whatever the controller-driven tuning adds at rest, so a region's cents are the cents it will play.
       tuneCents: num(merged.tune, DEFAULTS.tuneCents) + ccTuneCents(merged, cc),
       seqLength: Math.max(1, num(merged.seq_length, DEFAULTS.seqLength)),

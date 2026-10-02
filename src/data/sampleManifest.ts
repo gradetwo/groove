@@ -15,7 +15,12 @@
  */
 import type { SampleAsset } from "./sampleCatalogue";
 
-export type SampleLicence = "CC0" | "CC-BY" | "CC-BY-SA" | "CC-Sampling-Plus" | "unknown";
+/**
+ * The licence vocabularies the manifest may use. **Widened on 2026-10-02 with `libraryLicence.ts`, and for the same reason**: this project is MIT and non-commercial, so the `NC` variants' condition is met, and `CC Sampling Plus 1.0` is the licence written for sampling itself. The two files must agree, which is why the reason is recorded in both.
+ *
+ * ⭐ **`unknown-mirrored` is a licence *status*, not a licence, and it is here because the owner ruled that a good library with no declaration found may still be mirrored** — the mirror is a fallback, the pinned source stays the primary address, and the entry records where it came from so a rights holder can ask for removal. It is a distinct value rather than `unknown` on purpose: `unknown` means "somebody must decide before this is mirrored", and this means "the decision was made, the terms were not found, and here is the address to complain to".
+ */
+export type SampleLicence = "CC0" | "CC-BY" | "CC-BY-SA" | "CC-BY-NC-SA" | "CC-Sampling-Plus" | "Unlicense" | "unknown-mirrored" | "unknown";
 
 export interface SampleManifestFile {
   /** Path as written by the SFZ, relative to the instrument's directory. */
@@ -137,9 +142,13 @@ export interface SampleManifest {
   entries: SampleManifestEntry[];
 }
 
-const LICENCES: readonly SampleLicence[] = ["CC0", "CC-BY", "CC-BY-SA", "CC-Sampling-Plus", "unknown"];
-/** Licences that require the attribution to be present and shown. */
-const REQUIRES_ATTRIBUTION: readonly SampleLicence[] = ["CC-BY", "CC-BY-SA"];
+const LICENCES: readonly SampleLicence[] = ["CC0", "CC-BY", "CC-BY-SA", "CC-BY-NC-SA", "CC-Sampling-Plus", "Unlicense", "unknown-mirrored", "unknown"];
+/**
+ * Licences that require the attribution to be present and shown. `CC-Sampling-Plus` owes a credit by its own terms, and `CC-BY-NC-SA` is a `CC-BY` variant — a licence check that demanded a credit for the commercial variants but not the non-commercial one would be reading the NC clause and missing the BY clause in the same name.
+ *
+ * ⭐ **`unknown-mirrored` is here too, for a different reason: the entry must say what its status is.** There is no author to credit and that must not be silence — the field carries the address the bytes came from and a sentence saying a rights holder can ask for removal. Requiring it is how a mirrored-without-terms library cannot be added without the takedown notice that justifies it.
+ */
+const REQUIRES_ATTRIBUTION: readonly SampleLicence[] = ["CC-BY", "CC-BY-SA", "CC-BY-NC-SA", "CC-Sampling-Plus", "unknown-mirrored"];
 
 export interface ManifestResult {
   ok: boolean;

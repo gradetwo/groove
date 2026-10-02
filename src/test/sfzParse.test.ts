@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseSfz, regionsForNote, roundRobinPick, unresolvedVariables } from "../audio/sfz/parse";
+import { noteNumber, parseSfz, regionsForNote, roundRobinPick, unresolvedVariables } from "../audio/sfz/parse";
 import { playbackForNote } from "../audio/sfz/regionPlayback";
 
 /**
@@ -382,8 +382,7 @@ describe("the master header", () => {
     expect(keysOf("tambourine.wav")).toEqual(["54-54"]);
     expect(keysOf("cowbell.wav")).toEqual(["56-56"]);
     // And the region that was already inside the group keeps the group's key: nothing above moved it.
-    expect(keysOf("htom_offcenter.wav")).toEqual(["50-50"]);
-  });
+    expect(keysOf("htom_offcenter.wav")).toEqual(["50-50"]);  });
 });
 
 /**
@@ -437,5 +436,81 @@ hikey=44
     const regions = parseSfz("<region> sample=tone.wav lovel= hivel=63");
     expect(regions[0]!.opcodes.hivel).toBe("63");
     expect(regions[0]!.sample).toBe("tone.wav");
+  });
+  /**
+   * ⭐ **A key opcode written as a note name, which is not a nicety: reading one as a number makes every region match every note.**
+   *
+   * `num()` falls back to `lokey`/`hikey` = 0–127 for a value it cannot read, and a file whose *every* region is 0–127 has no narrowest match, so `regionsForNote`
+   * returns all of them and `roundRobinPick` answers with the **first region in the file** for the whole keyboard. Two libraries in this round are written that way —
+   * the Discord GM `105-Sitar` (`pitch_keycenter=c2`, `lokey=c0`) and Sonatina's brass (`lokey=e3`) — so the instrument is not silent, it is confidently wrong.
+   */
+  it("reads SFZ note names as MIDI notes, with c4 = 60 as the octave convention", () => {
+    // The convention is pinned by the library's own evidence: `horns-sus-mp-e2-PB-loop.wav` is declared `pitch_keycenter=40` in the same region that names it `e2`.
+    expect(noteNumber("60")).toBe(60);
+    expect(noteNumber("c4")).toBe(60);
+    expect(noteNumber("e2")).toBe(40);
+    expect(noteNumber("e1")).toBe(28);
+    expect(noteNumber("c0")).toBe(12);
+    expect(noteNumber("c7")).toBe(96);
+    expect(noteNumber("c#4")).toBe(61);
+    expect(noteNumber("db4")).toBe(61);
+    expect(noteNumber("C4")).toBe(60);
+    expect(noteNumber("c-1")).toBe(0);
+    expect(noteNumber("not-a-note")).toBeUndefined();
+    expect(noteNumber(undefined)).toBeUndefined();
+  });
+
+  it("places a named key range and key centre as numbers, so a named library answers with the right region", () => {
+    // The shape of `105-Sitar.sfz`, whose first two regions are named, and whose last region reaches `hikey=c7`.
+    const regions = parseSfz(`
+<region> pitch_keycenter=c2 lokey=c0 hikey=c#2 sample=Str01.flac
+<region> pitch_keycenter=d2 lokey=d2 hikey=d#2 sample=Str02.flac
+<region> pitch_keycenter=g5 lokey=g5 hikey=c7 sample=Str26.flac
+`);
+    // `c0` is 12 and `c#2` is 37, so the first region owns the notes below the second region's `d2` = 38 — which is what makes the map contiguous rather than empty.
+    expect(regions.map((region) => [region.lokey, region.hikey, region.pitchKeycenter])).toEqual([
+      [12, 37, 36],
+      [38, 39, 38],
+      [79, 96, 79],
+    ]);
+    const playback = playbackForNote(regions, 38, { velocity: 100 });
+    expect(playback?.sample).toBe("Str02.flac");
+    expect(playback?.rootKey).toBe(38);
+    // And a note between two named centres picks the region that covers it, instead of every region matching everything.
+    expect(playbackForNote(regions, 80, { velocity: 100 })?.sample).toBe("Str26.flac");
+  });
+
+  /**
+   * ⭐ **The four-`<master>` shape a real bass library is written in, and the velocity that used to fall through it.**
+   *
+   * `karoryfer.black-and-blue-basses` writes four `<master>` blocks in a row — `hivel=31`, `lovel=32 hivel=63`, `lovel=64 hivel=95`, and then `lovel=96` **with no `hivel`**, relying on the
+   * default 127. Before the `<master>` layer was a scope of its own, that fourth block inherited `hivel=95`, its range was the empty `96–95`, and a note at the app's **default velocity of 100**
+   * resolved to **no region at all**: silence rather than a wrong sample, which is the harder kind to notice. The assertions that bite are the range table's last row and `regionsForNote` at 100.
+   */
+  it("keeps the loudest layer of a four-master program reachable at the default velocity", () => {
+    const regions = parseSfz(
+      [
+        "<global> tune=7",
+        "<master> hivel=31",
+        "<region> sample=p.wav key=40",
+        "<master> lovel=32 hivel=63",
+        "<region> sample=mp.wav key=40",
+        "<master> lovel=64 hivel=95",
+        "<region> sample=mf.wav key=40",
+        "<master> lovel=96",
+        "<region> sample=f.wav key=40",
+      ].join("\n")
+    );
+    expect(regions.map((region) => [region.lovel, region.hivel])).toEqual([
+      [0, 31],
+      [32, 63],
+      [64, 95],
+      // The default `hivel` is 127, not the previous master's 95 — this is the row the empty range broke.
+      [96, 127],
+    ]);
+    // Velocity 100 is the app's default, and it must find the loudest layer rather than nothing.
+    expect(regionsForNote(regions, 40, 100).map((region) => region.sample)).toEqual(["f.wav"]);
+    // A `<master>` does not clear the program's `<global>`: every region above still carries `tune=7`.
+    for (const region of regions) expect(region.tuneCents).toBe(7);
   });
 });
