@@ -1,12 +1,18 @@
-# 三端架构约定（PC / iPad / 手机）
+# 界面架构约定（今天只有一套：PC、iPad 与手机共用的桌面界面）
 
-> **背景**：手机端 UI、交互与功能设计将重做，底层功能复用 PC 与 iPad 版本。
-> 三端将来会有**不同的 UI、不同的交互、甚至不同的功能集合**（PC 功能最全）。
-> 因此需要一条明确的分界线：**功能逻辑不得依赖任何一种界面的形状**。
+> **背景（2026-10-02 更正）**：手机版**已被砍除**——`src/mobile/` 一整棵、手机外壳 chrome
+> （`MobileTabBar`／`MobileMoreSheet`／`MobileTransportBar`／`MobileStudioSheet`）、
+> `/m/<module>` 路由空间与 13 条手机外壳判据都不在了（`4dffdf0`）；业主裁定开发分支上的手机版支持
+> 连同测试、门禁、CI/CD 一并砍掉，只留 `mobile-preserved`（`docs/OPEN_WORK.md` §十三／§十四）。
+> **今天只有一套界面（`desktop`）**：PC、iPad 与手机浏览器渲染的都是它——
+> 「三端将来会有**不同的 UI、不同的交互、甚至不同的功能集合**」这个前提已随之取消。
 >
-> **现状（已实测）**：`src/features/` 与 `src/hooks/` 里**已经没有任何文件 import React 组件**
-> （除下面登记的一处债务）。这不是目标，是已经成立的事实——本文把它固定下来，
-> 并给出新增代码该怎么写。
+> 但下面这条分界线照旧是**现行规范**：**功能逻辑不得依赖任何一种界面的形状**——
+> 正因为它还在，"再加一套界面"才不必把每个功能重写一遍。
+>
+> **现状（已实测）**：`src/features/` 与 `src/hooks/` 里**已经没有任何文件 import React 组件**，
+> 本文所描述的边界**今天没有登记在案的例外**（§5）。这不是目标，是已经成立的事实——
+> 本文把它固定下来，并给出新增代码该怎么写。
 
 ---
 
@@ -16,12 +22,17 @@
 |---|---|---|---|
 | **domain** | `src/audio` `src/data` `src/types` `src/i18n` | 纯行为与数据。`src/audio` 是 Web Audio 层，`src/i18n` 读平台语言，**天然接触 DOM 全局** | 不得 import logic / ui |
 | **util** | `src/utils` | 浏览器 API 的薄包装（触感、PWA、遥测） | 不得 import ui |
-| **platform** | `src/platform` | 回答「我在哪种界面上」的**唯一**地方，以及平台服务（`announcer`） | — |
+| **platform** | `src/platform` | 平台服务与平台声明（`announcer`、`audioCapture`、`diagnostics`、`layoutTokens`、`surfaceCapabilities`） | — |
 | **logic** | `src/features` `src/hooks` `src/app` | 应用行为与状态。可以用 React（hook）、可以按设计写 DOM 样式（播放头就是这么做） | **不得 import 组件**；**不得自己判断设备类型**——要作为参数传入 |
-| **ui** | `src/components` `src/views` `src/ui` `src/App.tsx` | 布局、样式、按端组合。三端的差异**只**应该在这里 | — |
+| **ui** | `src/components` `src/views` `src/ui` `src/App.tsx` | 布局、样式、按界面组合。**界面的差异只应该在这里** | — |
 
 依赖方向单向向下：`ui → logic → platform → domain`。
 `ui` 可以 import 下面任何一层；下面任何一层都不许 import `ui`。
+
+**规定的能力入口是 `src/hooks/useDeviceCapabilities.ts`**（`isTouch` / `isPhone` / `isMobile` /
+`isShortLandscape` / `prefersReducedMotion`）——它逻辑上属于**平台**（§7），只是文件住在 `src/hooks` 下；
+门禁把它当**能力模块**，**logic 里 import 它就是 R3 违规**，读它的地方应该是 UI 层，且只用来决定
+长什么样（§3.1）。R3 判的是 import 图，所以它管的是"有没有走这个入口"，不是"文件里有没有出现 `matchMedia`"。
 
 ## 2. 门禁
 
@@ -37,15 +48,15 @@ node scripts/check_layers.mjs --report   # 只报告，永远退出 0
    `document / window / navigator / localStorage / requestAnimationFrame`。
 
 **为什么要有门禁而不是靠自觉**：这条边界一旦破一点就会迅速破完——
-一个 hook import 了组件，那个组件就成了 hook 的一部分，改界面就会改行为，
-三端就退化成一个程序加三套皮肤，每个功能都要写三遍。
+一个 hook import 了组件，那个组件就成了 hook 的一部分，改界面就会改行为；
+**每一处这样的耦合，都让"多一套界面"变成"多写一遍每个功能"**。
 
 **容错设计**：`ALLOW` 表登记**已存在**的违规并写明原因，门禁只对**新增**违规失败。
-目前表里只有 1 条（见 §5）。表只应缩短。
+**目前表是空的**（见 §5），红线 **R6f** 要求它保持空。表只应缩短——还清了就删掉，不留到下一轮。
 
 ## 3. 新增代码该怎么写
 
-### 3.1 想知道「这是手机还是 PC」怎么办
+### 3.1 logic 想知道「界面长什么样」怎么办
 
 **不要**在 logic 层读：
 
@@ -59,21 +70,21 @@ if (isPhone) { /* 行为不同 */ }
 **要**由 UI 层决定，把结果作为参数传下来：
 
 ```ts
-// ✅ UI 层（src/views/**）决定渲染什么
-const { isPhone } = useDeviceCapabilities();
-return isPhone ? <PhoneSequencer ... /> : <DesktopSequencer ... />;
+// ✅ UI 层（src/components/**）读能力，只用来决定长什么样——TrackRow 就是这么做的
+const { isMobile } = useDeviceCapabilities();
+className={`... ${isMobile ? "min-h-11" : ""}`}   // 触屏上的 44 px 命中区
 
-// ✅ logic 层只接受已经决定好的事实
-function useTransportControls({ announceScope }: { announceScope: "full" | "minimal" }) { ... }
+// ✅ logic 层只接受已经决定好的事实：界面决定 inspector 显示哪条轨，hook 收下这个事实
+function useAuditionPreview({ inspectorTrackIdx }: { inspectorTrackIdx: number | null }) { ... }
 ```
 
-判断的理由：**「在手机上该少一个按钮」是产品决策，属于界面**；
+判断的理由：**「触屏上按钮要有 44 px 命中区」是界面决策**（`TrackRow` 里 `isMobile` 只改样式、不改行为）；
 「按播放要先解锁音频」是行为，属于 logic 且与设备无关。
-把前者放进 logic，等于让手机的产品决策污染 PC 的行为。
+把前者放进 logic，等于让界面的呈现决策污染行为。
 
 **注意 `announcer` 不是能力判断**，它是平台**服务**：logic 层**应当**向它发布播报
 （这也是它从 `src/ui/AriaLiveRegion.tsx` 移到 `src/platform/announcer.ts` 的原因——
-原先 logic 为了播报一句话要 import 一个 `.tsx`，三端就无法各自决定怎么显示播报了）。
+原先 logic 为了播报一句话要 import 一个 `.tsx`，界面就无法自己决定怎么显示播报了）。
 
 ### 3.2 需要一个「只属于某个组件」的类型怎么办
 
@@ -99,16 +110,16 @@ function useTransportControls({ announceScope }: { announceScope: "full" | "mini
 一条经验判据：**如果删掉某一端的整个目录，`src/features` 与 `src/audio` 应该仍然能编译通过。**
 目前这条判据已经成立（`verify` 里的 `typecheck` 覆盖不到「删除后」，但分层门禁覆盖了它的实质）。
 
-## 4. 三端功能的默认取向
+## 4. 功能的归属：界面决定可见性，logic 决定存在
 
-| | PC | iPad | 手机 |
-|---|---|---|---|
-| 功能完整度 | 最全（基准） | 接近 PC，按触摸调整命中区 | 最少，**做不好用的功能直接不提供** |
-| 交互 | 鼠标键盘 + 快捷键 | 触摸 + 键盘（可选） | 纯触摸、手势优先 |
-| 布局 | 多栏并置 | 折中 | 单栏、底部导航 |
+原来那张按 PC / iPad / 手机三列分功能完整度与交互的表（PC 最全、手机最少、做不好用的直接不提供），
+**随手机壳一起作废**（`4dffdf0`，2026-10-02）：今天只有一套界面，没有任何功能被哪套界面扣下。
+`src/platform/surfaceCapabilities.ts` 里 `phone` 那一列留的是**砍除前那次取舍的记录**
+（每个能力当时为什么被扣下），不是今天的取向——那个文件的头部也是这么写的。
 
-「手机上不提供」不等于「logic 里不存在」——功能仍然在 `src/features` 里，
-只是手机端的界面不渲染它的入口，并且在需要时**明确告知省略**而不是静默消失。
+留下的规则与设备无关：**「这个界面不提供」不等于「logic 里不存在」**——
+功能仍然在 `src/features` 里，界面只是不渲染它的入口，并且在需要时**明确告知省略**而不是静默消失。
+今天没有界面在扣功能，但这条规则留着：将来哪套界面要扣，也不许静默消失。
 
 ## 4b. 功能层已有的可复用基元
 
@@ -130,39 +141,47 @@ function useTransportControls({ announceScope }: { announceScope: "full" | "mini
 （依赖播放路径自身的惰性解锁）。改成复用单实例会改变它的音频行为，因此保留原样并在此登记，
 而不是为了「统一」去动它。
 
-## 5. 已知债务（门禁登记在案，只应减少）
+## 5. 已知债务：**无**（`ALLOW` 为空，R6f 要求保持为空）
 
-| 违规 | 原因 | 正确修法 |
+`check_layers.mjs` 的 `ALLOW` 一条也没有，红线 **R6f** 要求它保持空。
+这张表是"真的还不上、且写明了修法"的停车位，不是违规的墓地——还清了就删掉，不留到下一轮。
+
+`ALLOW` 表最后的两条都已经还清：
+
+| 曾经的违规 | 原因 | 修法（已落地） |
 |---|---|---|
-| `data/index/loader.ts → features/customGenre/customGenreDb` | domain 的曲风加载器要解析自定义曲风，而自定义曲风由 features 存储 | **反转依赖**：loader 接受一个 resolver 参数，由 `src/app` 注入；这样 `src/data` 不再指名任何 feature |
+| `data/index/loader.ts → features/customGenre/customGenreDb` | domain 的曲风加载器要解析自定义曲风，而自定义曲风由 features 存储 | **反转依赖**：loader 接受一个 resolver 参数，由 `src/app/installCustomGenreResolver.ts` 注入；这样 `src/data` 不再指名任何 feature |
+| `useAppShortcuts.ts` → `components/Header` 的 `NavTab` | 一个 hook 用了组件的 props 类型 | 类型移到 `src/app/navigation.ts`，hook 从那里 import |
 
-已还清：`data/tutorialCourses.ts` 曾从 `components/Header` import `NavTab`（一行改动）；
+更早还清：`data/tutorialCourses.ts` 曾从 `components/Header` import `NavTab`（一行改动）；
 `useTransportControls` / `useAppShortcuts` / `useGenreAudition` 曾从 `src/ui` import `announcer`。
 
-## 6. 门禁与测试的临时范围（**重要，且是刻意缩小**）
+## 6. 门禁与测试的范围（**E2E 全量在跑**）
 
-手机与 iPad 界面即将重做，因此它们的 E2E 目标暂时不在门禁里跑：
+手机与 iPad 目标随手机版一起砍除（`4dffdf0`，2026-10-02，见 `docs/OPEN_WORK.md` §十三），
+矩阵里只剩桌面三个浏览器——`scripts/test_matrix.js` 里两个 profile 现在是同一个集合：
 
 | 命令 | 跑什么 |
 |---|---|
-| `npm run test:e2e`（`verify` 用的就是这个） | **PC 三个浏览器**（Chromium / Firefox / WebKit） |
-| `npm run test:e2e:all` | **PC 三个浏览器**（**手机与 iPad 目标已于 2026-10-02 砍除 ✓，见 `docs/OPEN_WORK.md` §十二 ✓**） |
-| `E2E_ONLY=Desktop npm run test:e2e:all` | 单个目标，便于迭代 |
+| `npm run test:e2e`（`verify` 用的就是这个） | **桌面三个浏览器**（Chromium / Firefox / WebKit） |
+| `npm run test:e2e:all`（CI 每次 push / PR 跑的就是这个） | **同一组三目标**（`pc` 与 `all` 已是同一个集合） |
+| `E2E_ONLY=<名字片段> npm run test:e2e:all` | 只跑名字匹配的目标，便于迭代（如 `E2E_ONLY=Firefox`） |
 
-**这不是把手机测试删掉**，而是换一个 profile 跑：矩阵定义（7 个目标与各自断言）**完整保留**，
-并且由红线 **R6c** 守住——一旦有人删掉手机/iPad 目标、或把 `test:e2e:all` 改掉，红线条即失败。
+**红线 R6c 守的是"门禁不许静默少一个目标"**：三个桌面浏览器必须都还在矩阵里、
+不许有手机或平板目标半途重新出现、`test:e2e:all` 必须仍然是"一条命令跑全量"。
+它原来的对象（手机/iPad 目标必须还在）正是 `4dffdf0` 砍掉的东西，所以规定跟着换了对象，而没有消失。
 
-**（已恢复全量）** 新界面早已落地、手机/平板目标在 `verify` 里连续多个版本全绿，所以现在：
-**CI 每次 push / PR 跑 `npm run test:e2e:all`（7/7）**，`verify` 依次跑桌面档与移动档（合起来也是 7/7）；
-`test:e2e`（`E2E_PROFILE=pc`）只留作本机快速迭代用。当初缩减门禁的理由是"手机界面正在重做、
-断言会被重做作废"——这个理由已经不存在，而**跳过三分之二目标的门禁，正是 iPad 专属回归能活到线上**的原因。
+**这条红线为什么值得留**：当初缩减门禁的理由是"手机界面正在重做、断言会被重做作废"——
+`pc` 档因此跳过三分之二目标，而**iPad 专属回归只会在被跳过的那一档里现形——跳过目标的门禁，正是它活到线上的原因**。
+那个理由今天不存在了，但"少一个目标"仍是最容易发生的静默退化。
 
-同时修正了一处既有缺陷：跑部分目标时汇总信息原本**硬编码**「ALL 7 ... PASSED」，
+同时保留了当初修的一处缺陷：跑部分目标时汇总信息原本**硬编码**「ALL 7 ... PASSED」，
 也就是只跑了 3 个却宣称 7 个全过。现在按实际跑的数目报，并提示全量命令。
 
 ## 7. 手机端相关代码：**已砍除**（2026-10-02）
 
-手机版由业主下令砍除（`docs/OPEN_WORK.md` §十三）：`src/mobile/` 一整棵、`MobileTabBar`、
+手机版由业主裁定砍除（`4dffdf0`，2026-10-02）：业主的原话是"其它分支都可以砍掉原来这个手机版支持，
+包括测试和门禁也都是，CI/CD 也同理"（`docs/OPEN_WORK.md` §十三／§十四）。`src/mobile/` 一整棵、`MobileTabBar`、
 `MobileMoreSheet`、`MobileTransportBar`、`MobileStudioSheet`、手机版 `Header` 变体、`/m/<module>`
 路由空间与 13 条手机外壳判据都不在了，手机浏览器现在渲染桌面界面。唯一保留手机版的分支是
 `mobile-preserved`。**这一节以下的内容是砍除前的过渡状态记录**，不是现状。
