@@ -29,11 +29,16 @@ interface CallOutcome {
 }
 
 /** A whole MCP session in one process, as `mcpSchemaPassthrough.test.ts` does for its own subject. */
-async function withMcp<T>(run: (call: (name: string, args: Record<string, unknown>) => Promise<CallOutcome>) => Promise<T>): Promise<T> {
+async function withMcp<T>(
+  run: (call: (name: string, args: Record<string, unknown>) => Promise<CallOutcome>, tools: string[]) => Promise<T>
+): Promise<T> {
   const server = createServer();
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: "groove-kind-rename", version: "1.0.0" });
   await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+  /** The declared surface, so a criterion can pin a tool's **absence** as well as its behaviour. */
+  const listed = await client.listTools();
+  const tools = (listed?.tools ?? []).map((tool) => tool.name);
   const call = async (name: string, args: Record<string, unknown>): Promise<CallOutcome> => {
     try {
       const result = (await client.callTool({ name, arguments: args })) as ToolResult;
@@ -51,7 +56,7 @@ async function withMcp<T>(run: (call: (name: string, args: Record<string, unknow
     }
   };
   try {
-    return await run(call);
+    return await run(call, tools);
   } finally {
     await client.close();
     await server.close();
@@ -142,6 +147,23 @@ describe("the arrangement track kind is `synth`", () => {
       });
       expect(refused.ok).toBe(false);
       expect(refused.text).toMatch(/only a sampler track/);
+    });
+  });
+
+  /**
+   * ⭐ **The asset tool is named for the asset and the old name is gone, not aliased.**
+   *
+   * `set_arrangement_track_instrument` set a catalogue asset while the kind now called `synth` was also called
+   * `instrument` — one word for two things. The owner's rule is "no alias", so this pins the declared surface in both
+   * directions: the new name is there, the old one is not, and calling it is refused rather than quietly honoured.
+   */
+  it("declares set_arrangement_track_asset, drops set_arrangement_track_instrument, and refuses the old name", async () => {
+    await withMcp(async (call, tools) => {
+      expect(tools).toContain("set_arrangement_track_asset");
+      expect(tools).not.toContain("set_arrangement_track_instrument");
+      const old = await call("set_arrangement_track_instrument", { arrangementId: "arrangement-1", trackId: "sampler-1", assetId: "salamander-grand" });
+      expect(old.ok).toBe(false);
+      expect(old.text).toMatch(/not found/);
     });
   });
 });
