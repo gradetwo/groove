@@ -98,9 +98,9 @@
 
 **读法上的三个要点**（都由实测得出）：
 
-1. **"领先 N 提交" ≠ "有 N 笔要合并"**。26 条领先分支里，`git cherry` 说有**补丁真的不在 dev** 的有 **12 条**；其中 **8 条**在 dev 上有**同题提交**（见 §1.1），只有 **4 条**既无同题提交也无等价补丁，所以真正的"新内容"还要再少。
+1. **"领先 N 提交" ≠ "有 N 笔要合并"**。26 条领先分支里（快照值），`git cherry` 说有**补丁真的不在 dev** 的有 **12 条**；其中 **8 条**在 dev 上有**同题提交**（见 §1.1），只有 **4 条**既无同题提交也无等价补丁。⚠️ **按 `87de3eb` 重核，`audit-verify` 已落地，这 4 条降为 3 条**。
 2. **`feat-sfz-loop` 与 `main` 是"已推·分歧"**：本地 SHA ≠ `origin/<同名>`，而两者的 tip 都是 `origin/dev` 的祖先（内容在 dev 里）。`main` 本地 `9d930b9` 比 `origin/main` 旧得多（落后 dev **1878**），是一个陈旧的本地引用。
-3. **21 条分支从未推送**（`origin` 上根本没有同名分支），其中**只有 4 条**的内容不在 `dev` 里（§0 那张表）。
+3. **21 条分支从未推送**（`origin` 上根本没有同名分支），其中**只有 4 条**的内容不在快照时刻的 `dev` 里（§0 那张表；按 `87de3eb` 重核为 **3 条**）。
 
 ### 1.1 内容核实：`git cherry` 说有补丁不在 dev，而 dev 上有同题提交
 
@@ -135,9 +135,9 @@
 | `next` | 2 | 0 | — | — |
 | `probe-headless-core` | 5 | 0 | — | — |
 
-**只有 4 条既没有同题提交、也没有补丁等价**：`audit-verify`、`feat-criteria`、`feat-graph-split`、`feat/genre-mix-loudness`（下一节逐条定性）。
+**快照时刻只有 4 条既没有同题提交、也没有补丁等价**：`audit-verify`、`feat-criteria`、`feat-graph-split`、`feat/genre-mix-loudness`（下一节逐条定性）。⚠️ **按 `87de3eb` 重核，`audit-verify` 已落地 → 现在只剩 3 条。**
 
-### 1.2 那 4 条的逐条定性
+### 1.2 那 4 条的逐条定性（快照；`audit-verify` 已落地）
 
 **`feat-criteria`（`b227230`，1 提交）——一半已落地、一半被取代。**
 - `src/data/arrangementEdits.ts` 与 `src/test/arrangementEdits.test.ts`：`b227230` **新增的 13 行 / 120 行全部能在 dev 的同名文件里逐字找到**（`not_in_dev=0`）→ 这一半已以 dev `8b3f018`（同题改写："pin the batch add and the tempo-map validation, and re-measure the spaced sample path"）落地。
@@ -151,7 +151,7 @@
 - 新增的 `src/test/graphSplit.test.ts`（220 行）、`scripts/measure_graph_split.mjs`（162 行）**在 dev 里不存在**；`src/audio/masterGraph.ts` 在 dev 里存在，但 `git grep -E 'GraphSplit|graphSplit|splitGraph'` 命中 **0**。
 - 提交主题自述是 `wip(graph-split): preserve an uncommitted workstream before its worktree is retired` → **它的目的是"保住"，不是"交付"**。⇒ 需要业主/主控一句"合并还是丢弃"。
 
-**`audit-verify`（`593b253`，1 提交）——活文档，正在被写。**
+**`audit-verify`（快照时 `593b253`，1 提交）——活文档，正在被写。** ✅ **本轮期间已落地：`origin/dev` 现在是 `87de3eb`（"docs(audit): P1-2/3/4 hold, but later commits overturn three report claims"），`docs/AUDIT_2026-10-02_PART2.md` 已存在于 `dev`，`git rev-list --count audit-verify ^origin/dev` = 0。**
 - 新增 `docs/AUDIT_2026-10-02_PART2.md`，dev 里没有。
 - 它的 head 在**本轮盘点期间变了三次**（`34e56b7` → `811f1e0` → `593b253`），工作树在某一刻还出现过 `?? docs/AUDIT_2026-10-02_PART2.md`，之后被提交 → **这是并发会话正在推进的活分支**，不是历史遗留。
 
@@ -206,7 +206,7 @@
 逐棵说明：
 
 * **`/home/crow/music/groove`（`next`）** — **主检出，但分支是陈旧的**：领先 dev 2 提交、**落后 230**。那 2 提交（`ee5cb9c` 等）`git cherry` 判定**补丁等价于 dev**（dev 上有同题 `ee5cb9c`/`2949d5d` 的对应物）⇒ **没有东西要合并；分支该退场**。⚠️ **它落后得足以让"在这里做手机砍除"变成在旧基线上砍** —— 砍除应当在 `int`（= `origin/dev`）上做。
-* **`/home/crow/music/groove-audit`（`audit-verify`）** — 干净，**领先 1**（`docs/AUDIT_2026-10-02_PART2.md`）。**这是 8 棵树里唯一还有未合并内容的**，而且正在被写。
+* **`/home/crow/music/groove-audit`（`audit-verify`）** — 干净，**快照时领先 1**（`docs/AUDIT_2026-10-02_PART2.md`），是当时 8 棵树里唯一还有未合并内容的，而且正在被写。✅ **按 `87de3eb` 重核：已落地，现在领先 0。**
 * **`/home/crow/music/groove-headless`（`headless-mcp`）** — **不在简报的清单里**，实测存在。落后 4（即 tip 曾是 dev 的祖先），**工作树脏：`M mcp/registry.ts`、`M mcp/render/worker.ts`、`?? mcp/render/headless.ts` 等 5 处** ⇒ 有**未提交**的无头工作，**但它在分支上没有任何未合并的提交**。
 * **`/home/crow/music/groove-int`（`int`）** — **集成分支树，`int` = `origin/dev`（领先 0 / 落后 0）**。⚠️ **快照时工作树脏（1 处改动）**。
 * **`groove-wt44/45/46/47`** — 四棵工作树的分支**都已是 `origin/dev` 的祖先（领先 0）**，工作树**都干净**：`feat-logic-import`（落后 116）、`fix-arrangement-hang`（112）、`fix-lane-keyzone-pitch`（112）、`feat-gs1-param-writes`（93）。⇒ **这四条都已合并，没有待合并内容。**
@@ -223,7 +223,7 @@
 | 目录 | 是 git 仓库？ | 分支 | 未提交改动 | 未合并提交 |
 | --- | --- | --- | --- | --- |
 | `groove/` | ✅ 同一仓库的**主检出** | `next`（`ee5cb9c`） | 无 | 2 提交领先，但**补丁等价于 dev** |
-| `groove-audit/` | ✅ **worktree** | `audit-verify`（`593b253`） | 无 | **1 提交真未合并**（`docs/AUDIT_2026-10-02_PART2.md`） |
+| `groove-audit/` | ✅ **worktree** | `audit-verify`（快照 `593b253`） | 无 | 快照时 1 提交未合并（`docs/AUDIT_2026-10-02_PART2.md`）；✅ **`87de3eb` 已落地** |
 | `groove-headless/` | ✅ **worktree** | `headless-mcp`（`34e56b7`） | **5 处**（`mcp/registry.ts`、`mcp/render/worker.ts`、`mcp/render/headless.ts`…） | 0 |
 | `groove-int/` | ✅ **worktree**（集成树） | `int`（`9b4910a`） | **1 处**（快照时） | 0（= `origin/dev`） |
 | `groove-wt25/` | ❌ **不是仓库** | — | — | — |
@@ -271,7 +271,7 @@
 
 **"未推送"的分支共 21 条**（`origin` 上无同名分支且领先 dev）：`audit-verify`、`backup-fa44717`、`build-retire-mirror`、`docs-adjudication`、`feat-criteria`、`feat-graph-split`、`feat-gs1-assessment`、`feat-list-examples`、`feat-midi-export`、`feat-orchestral`、`feat-vsco-articulations`、`feat-vsco2ce`、`feat/genre-mix-loudness`、`fix-headless-silence`、`fix-long-render-timeouts`、`fix-sfz-keyswitch-paths`、`fix-vsco-fetch`、`fix-worker-honesty`、`measure-render-profile`、`next`、`probe-headless-core`。
 
-其中**内容确实还没回到 `dev` 的只有 4 条**：`audit-verify`（活文档）、`feat-graph-split`（WIP 实现）、`feat-criteria`（被取代）、`feat/genre-mix-loudness`（被取代）。**其余 17 条的内容都已在 dev 里**（补丁等价或同题提交）。
+其中**内容确实还没回到 `dev` 的，快照时刻只有 4 条**：`audit-verify`（活文档）、`feat-graph-split`（WIP 实现）、`feat-criteria`（被取代）、`feat/genre-mix-loudness`（被取代）。**其余 17 条的内容都已在 dev 里**（补丁等价或同题提交）。⚠️ **按 `87de3eb` 重核：`audit-verify` 已落地 ⇒ 只剩 3 条。**
 
 ---
 
@@ -283,14 +283,14 @@
 
 | # | 分支 | 领先提交数 | 内容 | 建议动作 |
 | ---: | --- | ---: | --- | --- |
-| 1 | **`audit-verify`** | **1** | `docs/AUDIT_2026-10-02_PART2.md`（dev 无）；**正在被写** | **落地**（把活文档推上 dev，或并入 `int` 一起推） |
-| 2 | **`feat-graph-split`** | **1** | `5df017b` WIP；`src/test/graphSplit.test.ts`、`scripts/measure_graph_split.mjs` **dev 无** | **合并或明确丢弃**——这是唯一还有未合并实现的开发分支 |
-| 3 | **`feat-criteria`** | **1** | 一半已在 dev（`8b3f018`）；SFZ 半边**被 dev 取代** | **不要照原样合并**；决定丢弃或按"读出带空格路径"的新语义重写 |
-| 4 | **`feat/genre-mix-loudness`** | **1** | 被 dev 更新的 `GENRE_MIX_RESOLVED` 断言取代 | **丢弃** |
+| ~~1~~ | ~~`audit-verify`~~ | ~~1~~ → **0** | ~~`docs/AUDIT_2026-10-02_PART2.md`（dev 无）；正在被写~~ | ✅ **本轮期间已落地（`87de3eb`）——不再是待合并项** |
+| **1** | **`feat-graph-split`** | **1** | `5df017b` WIP；`src/test/graphSplit.test.ts`、`scripts/measure_graph_split.mjs` **dev 无** | **合并或明确丢弃**——这是唯一还有未合并实现的开发分支 |
+| **2** | **`feat-criteria`** | **1** | 一半已在 dev（`8b3f018`）；SFZ 半边**被 dev 取代** | **不要照原样合并**；决定丢弃或按"读出带空格路径"的新语义重写 |
+| **3** | **`feat/genre-mix-loudness`** | **1** | 被 dev 更新的 `GENRE_MIX_RESOLVED` 断言取代 | **丢弃** |
 | — | `next` | 2 | 补丁等价于 dev | **不合并**；分支应退场（它落后 230，合并会带回旧版本） |
 | — | 其余 21 条领先分支 | 1–7 | 补丁等价 / dev 有同题提交 | **不合并**；应**删除**而不是合并 |
 
-**⇒ 一句话**：**真正"卡住手机砍除"的只有 `feat-graph-split` 一条**（加上业主对它的取舍）；`audit-verify` 是并发会话在写的活文档，会自己落地；`feat-criteria` 与 `feat/genre-mix-loudness` 需要的是**"丢弃"这个决定**，而不是一次合并。**没有任何工作树分支（`wt44/45/46/47`、`headless-mcp`、`next`）还有未合并内容。**
+**⇒ 一句话**：**真正"卡住手机砍除"的只有 `feat-graph-split` 一条**（加上业主对它的取舍——合并还是丢弃）；`feat-criteria` 与 `feat/genre-mix-loudness` 需要的是**"丢弃"这个决定**，而不是一次合并；`audit-verify` 已经自己落地了（`87de3eb`）。**没有任何工作树分支（`wt44/45/46/47`、`headless-mcp`、`next`）还有未合并内容。**
 
 ### 6.2 手机砍除本身的状态（实测，供判断"能否开工"）
 
@@ -318,7 +318,7 @@
 | 6 | **`release/groove-github` 何时/是否删除** | §十.1 明说"删目录是另一件更大的决定"。我只量到它已脱节（`ed7c6330` 不在 groove 对象库、其 `origin/dev` = `37a7873`），**不判断它是否该删**。 |
 | 7 | **`synth/p141`（领先 `master` 4 提交）要不要合** | `synth` **没有 remote**，"未合并"只能相对 `master` 定义；它是**另一个产品的仓库**，不在"groove 的开发分支"范围内（§十四.1）。 |
 | 8 | **`1b535ec…_report/` 里的审计结论** | 不是 git 仓库，且 §十三.1 已明记"第 03/04 份的 DSP 与性能结论仍未核"——本盘点不重复审计。 |
-| 9 | **本快照的稳定性** | ⚠️ **`origin/dev` 在本轮里移动了三次，`int`/`audit-verify` 的 head 也都在动**（并发会话在推提交）。**§1–§3 的数字是 `9b4910a` 那一刻的值**；结论（§0/§6）只依赖内容归属，不随那三次提交改变。 |
+| 9 | **本快照的稳定性** | ⚠️ **`origin/dev` 在本轮里被推了 6 次**（`34e56b7`→`148af6e`→`7861983`→`6163f81`→`9b4910a`→`2f1ec50`→`87de3eb`），`int`／`audit-verify` 的 head 也都在动（并发会话在推提交）。**§1–§4 的数字是 `9b4910a` 那一刻的值**；结论（§0/§6）已在 `87de3eb` 上重核。**这 6 笔全是 docs／CI／文档门禁，`src/mobile/` 在 `87de3eb` 上仍是 30 个文件 ⇒ 与手机砍除无关。** |
 
 ---
 
