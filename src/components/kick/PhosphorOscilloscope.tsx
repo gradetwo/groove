@@ -13,8 +13,12 @@ import {
  *
  * `signal` is the amber beam and the reticle flash, `peak` the white overdrive on a hit, `grid` the
  * graticule and corner read-outs (always drawn at a low alpha, which is why the literal here is
- * opaque white), and `ground` the near-black the phosphor decays back onto. With no `.mobile-root`
- * ancestor every one of them is what the code used literally before, so the desktop is unchanged.
+ * opaque white), and `ground` the near-black the phosphor decays back onto.
+ *
+ * These are also what is painted *today*: the hook's skin lookup cannot hit on this app's single
+ * surface (no element renders the class it looks for, and no shipped stylesheet declares the tokens
+ * it reads — see `useCanvasPalette.ts`), so every role stays on the literal it replaced and the
+ * desktop render is unchanged.
  */
 const PALETTE_FALLBACKS: CanvasPaletteFallbacks = {
   ...DESKTOP_CANVAS_FALLBACKS,
@@ -41,7 +45,7 @@ export const PhosphorOscilloscope: React.FC<PhosphorOscilloscopeProps> = ({
   /** Phone surface: measured at 390×664 the mode toggle was 57×33. */
   const { isMobile } = useDeviceCapabilities();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  /** The skin's colours for the beam, resolved off `.mobile-root`; the desktop falls back to the literals above. */
+  /** The beam's colours: an ancestor's tokens when one declares them, otherwise the literals above — today always the literals. */
   const paletteRef = useCanvasPalette(canvasRef, PALETTE_FALLBACKS);
   const [internalMode, setInternalMode] = useState<"time" | "lissajous">(mode);
   const shockRef = useRef(0);

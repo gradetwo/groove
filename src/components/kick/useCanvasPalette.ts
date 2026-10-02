@@ -27,7 +27,10 @@
  *
  * Resolution happens on mount, on a `data-skin` change and on a window resize — never per frame. The
  * rAF loops only read `palette.current`, so a skin switch mid-animation lands on the next frame
- * without a re-render and without a per-frame `getComputedStyle`.
+ * without a re-render and without a per-frame `getComputedStyle`. (⚠️ The observer is *inert in the
+ * app today* for the same reason the lookup is: re-resolving cannot change a palette that already
+ * resolves to the fallbacks. It is kept with the lookup, and the criteria that exercise it are the
+ * reason both stay — see the `useCanvasPalette` note below.)
  */
 import { useEffect, useRef, type MutableRefObject, type RefObject } from "react";
 import { resolveCanvasColor, type CanvasColor } from "../../utils/canvasPalette";
@@ -53,7 +56,16 @@ export type CanvasPaletteRole = keyof CanvasPalette;
 /** The desktop literals a visualiser painted with before a skin could reach its canvas. */
 export type CanvasPaletteFallbacks = Record<CanvasPaletteRole, string>;
 
-/** role -> the custom property that carries it. Every skin defines all six on `.mobile-root`. */
+/**
+ * role -> the custom property that carries it.
+ *
+ * ⚠️ **No stylesheet this app ships declares any of these tokens.** The `--m-*` values live only in
+ * `src/styles/skinPalettes/<id>.css`, and nothing imports those: they are *sources* that
+ * `scripts/desktop_skins.mjs` reads to derive the desktop's `--d-*` palette. The phone shell's root
+ * (`.mobile-root`) was the element that used to carry them live, and it went with the shell
+ * (`docs/OPEN_WORK.md` §十三). The map stays because the resolution path below is still exercised —
+ * see the hook's own note for the measurement of what it does today.
+ */
 const ROLE_TOKENS: Record<CanvasPaletteRole, string> = {
   signal: "--m-gold",
   signalLow: "--m-gold",
@@ -100,13 +112,30 @@ function readPalette(
  *
  * `canvasRef` is the canvas the component already paints on: the hook finds the nearest element that
  * carries the skin's own tokens and reads them off it. That element used to be the phone shell's root
- * (`.mobile-root`), which is cut (`docs/OPEN_WORK.md` §十三) — so on today's single surface the lookup
- * finds nothing and every role stays on the caller's fallback, which is exactly what the desktop did
- * before the phone existed and is why the desktop is pixel-identical either way.
+ * (`.mobile-root`), which is cut (`docs/OPEN_WORK.md` §十三).
  *
- * The mechanism is kept rather than deleted because it is *platform*, not shell: a surface that
- * declares `--m-*` on an ancestor gets a skinned canvas with no change here. Removing it would also
- * remove the fallback guarantee this file's criteria exist to hold.
+ * ⚠️ **In this app the lookup cannot hit, for two independent reasons** — both measured, not
+ * inferred:
+ *
+ *  1. **Nothing renders the class.** No `className` in `src/` contains `mobile-root` (the remaining
+ *     occurrences are comments and the criteria's own fixture), and no stylesheet declares it.
+ *  2. **Nothing declares the tokens either.** `getComputedStyle` on `<html>` with the shipped
+ *     stylesheets loaded returns `""` for `--m-gold`, and the whole shipped CSS text (260 KB, the
+ *     eight sheets `main.tsx`/`useSkin.ts` import) contains neither `--m-gold` nor `.mobile-root`.
+ *     So even an ancestor that carried the class would resolve every role to `""` and keep the
+ *     caller's literal.
+ *
+ * Measured end to end: a `.mobile-root` element with no inline tokens leaves the signal at the
+ * desktop `rgba(245, 183, 61, 1)`, the same value the no-ancestor case paints. Every role therefore
+ * stays on the caller's fallback, which is exactly what the desktop did before the phone existed and
+ * is why the desktop is pixel-identical either way.
+ *
+ * **Why it is kept rather than deleted.** The mechanism is *platform*, not shell: a surface that
+ * declares the tokens on an ancestor gets a skinned canvas with no change here — and that is not
+ * hypothetical, it is what `src/test/canvasPalette.test.tsx` mounts. Measured: replacing this lookup
+ * with `null` turns three of that file's criteria red (3 failed / 9 passed). Removing it would retire
+ * a live, criteria-holding mechanism, which is an owner decision and not a cleanup; deleting the
+ * criteria to make the deletion legal is that same decision by another route.
  */
 export function useCanvasPalette(
   canvasRef: RefObject<HTMLCanvasElement | null>,
@@ -136,7 +165,8 @@ export function useCanvasPalette(
      * A skin switch writes `data-skin` on `<html>` (`main.tsx` applies the stored skin before the
      * first paint), and that attribute is the only signal a skin changed. Re-resolving there is the
      * whole reason this is an observer rather than a one-shot read; `resize` covers a rotation or a
-     * window change that re-lays the canvas out under the same palette.
+     * window change that re-lays the canvas out under the same palette. Inert in the app today (see
+     * the note above), live under the criteria that mount a token-bearing ancestor.
      */
     const skinObserver =
       typeof MutationObserver === "undefined" ? null : new MutationObserver(resolve);

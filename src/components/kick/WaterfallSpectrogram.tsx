@@ -13,8 +13,12 @@ import {
  * The magnitude ramp has three anchors and the code below interpolates between them exactly as it
  * did with the numbers inline: `signalLow` is the faint bronze shadow, `signal` the bright gold, and
  * `peak` the incandescent top; `grid` is the neutral band marker and its labels, and `ground` is the
- * near-black the history is cleared onto. With no `.mobile-root` ancestor each resolves to the value
- * it replaced, so the desktop render is unchanged.
+ * near-black the history is cleared onto.
+ *
+ * These are also what is painted *today*: the hook's skin lookup cannot hit on this app's single
+ * surface (no element renders the class it looks for, and no shipped stylesheet declares the tokens
+ * it reads — see `useCanvasPalette.ts`), so each role resolves to the value it replaced and the
+ * desktop render is unchanged.
  */
 const PALETTE_FALLBACKS: CanvasPaletteFallbacks = {
   ...DESKTOP_CANVAS_FALLBACKS,
@@ -34,7 +38,7 @@ export const WaterfallSpectrogram: React.FC<WaterfallSpectrogramProps> = ({
   className = "",
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  /** The skin's colours for the ramp and its guides, read off `.mobile-root`; desktop keeps the literals. */
+  /** The ramp's colours: an ancestor's tokens when one declares them, otherwise the literals above — today always the literals. */
   const paletteRef = useCanvasPalette(canvasRef, PALETTE_FALLBACKS);
   const historyRef = useRef<Uint8Array[]>([]);
   const maxHistory = 60;

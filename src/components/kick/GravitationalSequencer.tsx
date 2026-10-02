@@ -74,7 +74,7 @@ export const GravitationalSequencer: React.FC<GravitationalSequencerProps> = ({
 
   const [selectedStepIdx, setSelectedStepIdx] = useState<number | null>(0);
   const rippleCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  /** The skin's colours for the rings, read off `.mobile-root`; the desktop keeps the literals. */
+  /** The rings' colours: an ancestor's tokens when one declares them, otherwise the literals above — today always the literals. */
   const paletteRef = useCanvasPalette(rippleCanvasRef, PALETTE_FALLBACKS);
   const ripplesRef = useRef<{ x: number; y: number; radius: number; maxRadius: number; alpha: number; color: string }[]>([]);
 

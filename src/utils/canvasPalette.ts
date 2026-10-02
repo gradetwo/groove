@@ -11,9 +11,9 @@
  * not each grow their own copy.
  *
  * They are pure on purpose, which is also why they live in `src/utils` (the util layer) rather than
- * next to their callers: no React, no DOM, no knowledge that `.mobile-root` or a skin exists. That
- * also makes the parsing and the fallback rule testable without a browser. Reading the skin is the
- * hook's job — `src/components/kick/useCanvasPalette.ts`.
+ * next to their callers: no React, no DOM, no knowledge that a skin — or the `--m-*` tokens one
+ * carries — exists. That also makes the parsing and the fallback rule testable without a browser.
+ * Reading the skin is the hook's job — `src/components/kick/useCanvasPalette.ts`.
  */
 
 /** An sRGB colour with alpha, in the shape the 2D context wants: channels 0-255, alpha 0-1. */

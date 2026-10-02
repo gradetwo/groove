@@ -39,7 +39,13 @@ import { initIosAudioUnlock } from "./audio/iosAudioUnlock";
  */
 (window as unknown as { __grooveLaunchSearch?: string }).__grooveLaunchSearch = window.location.search;
 applyStoredSkin();
-// Before the first paint, so a phone with the preference on never shows a spinning record first.
+/**
+ * The *lighter player* preference, applied before the first paint for the same reason as the skin.
+ *
+ * ⚠️ It is inert today: it toggles `m-lite` on `<html>`, and the rules that answered that class went with the phone
+ * shell (`4dffdf0`, `docs/OPEN_WORK.md` §十三). The read stays on purpose — it is a *user preference* with a stored
+ * value, and retiring one is a product decision, not a cleanup — see `src/features/settings/lightPlayerPrefs.ts`.
+ */
 applyStoredLightPlayer();
 
 // Initialize PWA Service Worker & App Shell offline caching (P4-07)
