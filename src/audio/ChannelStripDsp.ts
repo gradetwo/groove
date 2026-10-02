@@ -19,8 +19,18 @@
  * react to rumble the track does not use, the EQ carves before the dynamics stage, and
  * the drive sits last so it shapes the already-balanced signal rather than the raw voice.
  * The makeup gain is its own node (not the compressor) so `compMakeupDb` is auditable
- * independently of the browser's compressor curve — `DynamicsCompressorNode` has no
- * makeup control at all, so "makeup" could otherwise only be an implicit fudge.
+ * independently of the compressor curve — `DynamicsCompressorNode` has no makeup control at
+ * all, so "makeup" could otherwise only be an implicit fudge.
+ *
+ * ## The compressor is the project's own worklet, when the context has it
+ *
+ * The dynamics stage used to be one node, `ctx.createDynamicsCompressor()`. It is now that node **or**
+ * `public/glueCompressorWorklet.js` — the same kernel the master bus uses — chosen by whether this context's worklet
+ * module has loaded (`src/audio/InsertCompressor.ts`). The reason is host parity, not taste: a `DynamicsCompressorNode`
+ * is the *host's* implementation and two hosts do not agree on it, which is the whole of the headless renderer's band
+ * error; the worklet is the same code everywhere. Nothing else about the strip moves — the chain order, the separate
+ * makeup node, the bypass re-route and the parameters are all unchanged, and a context without the module keeps
+ * exactly the node it had before.
  *
  * ## True bypass, per stage
  *
@@ -75,6 +85,18 @@ import {
   type TrackInsertParams,
 } from "../data/trackInsert";
 import { makeSaturationCurve } from "./EffectsRack";
+import {
+  asInsertCompressorReduction,
+  createInsertCompressorNode,
+  INSERT_COMP_KNEE_DB,
+  sendInsertCompressorSettings,
+} from "./InsertCompressor";
+
+/**
+ * Re-exported from the compressor's new home (`InsertCompressor.ts`), which is where its definition lives now. The
+ * local import above is what this module's own node path still writes to `DynamicsCompressorNode.knee`.
+ */
+export { INSERT_COMP_KNEE_DB };
 
 /**
  * High-pass Q. `1/sqrt(2)` is the Butterworth (maximally flat) value: the high-pass is
@@ -90,12 +112,11 @@ export const STEREO_WIDTH_MAX = 1;
 export { STEREO_WIDTH_MAX_DELAY_SEC };
 
 /**
- * Compressor knee, dB. `trackInsert.ts` deliberately does not expose a knee — the
- * published contract is threshold/ratio/attack/release — so the DSP fixes one. 6 dB is
- * a gentle, musical knee: below the browser default of 30 (which would start compressing
- * ~15 dB under the threshold and make `compThresholdDb` stop meaning what it says).
+ * Compressor knee, dB — see `InsertCompressor.ts`, which is now its definition and the compressor's home. The value
+ * is unchanged (6 dB: a gentle, musical knee, well below the browser default of 30, which would start compressing
+ * ~15 dB under the threshold and make `compThresholdDb` stop meaning what it says); it is re-exported from here
+ * because this module's importers — the insert-curve views and their test — already look for it here.
  */
-export const INSERT_COMP_KNEE_DB = 6;
 
 /**
  * Points in the drive transfer table. 2048 matches the master rack's saturation curve, so
@@ -151,7 +172,20 @@ export class ChannelStrip {
   private readonly lowShelf: BiquadFilterNode;
   private readonly peaking: BiquadFilterNode;
   private readonly highShelf: BiquadFilterNode;
-  private readonly compressor: DynamicsCompressorNode;
+  /**
+   * The compressor stage. **The project's own worklet when the context has its module in, the host's
+   * `DynamicsCompressorNode` otherwise** — see `InsertCompressor.ts` for why, and for what "has its module in" means
+   * precisely. Everything else about the strip is unchanged; only this one node's implementation differs.
+   */
+  private readonly compressor: DynamicsCompressorNode | AudioWorkletNode;
+  /** True when `compressor` is the shared worklet, so parameters travel by message rather than by `AudioParam`. */
+  private readonly compressorIsWorklet: boolean;
+  /**
+   * Gain reduction the worklet last reported, dB ≤ 0 — the worklet path's answer to `DynamicsCompressorNode.reduction`.
+   *
+   * Kept as the node's own sign so the two getters below do not have to know which implementation is live.
+   */
+  private workletReductionDb = 0;
   private readonly makeup: GainNode;
   private readonly driveIn: GainNode;
   private readonly shaper: WaveShaperNode;
@@ -176,6 +210,19 @@ export class ChannelStrip {
   constructor(ctx: BaseAudioContext, params?: Partial<TrackInsertParams>) {
     this.ctx = ctx;
 
+    /**
+     * Resolved **first**, because the compressor node is built from it.
+     *
+     * The worklet cannot be configured later the way a `DynamicsCompressorNode` can: its settings exist from the
+     * moment it is constructed, so a strip that built the node before knowing its parameters would open with the
+     * worklet's own defaults for one block. The resolution is pure arithmetic on `params` and `ctx.sampleRate` and
+     * reads no node, so moving it above the node creation changes nothing else.
+     *
+     * No params means "no processing": a neutral straight wire is the only safe default for a per-track insert.
+     * Callers that want a role's chain pass `resolveTrackInsert`.
+     */
+    this.params = sanitizeParams(mergeParams(bypassTrackInsert(), params ?? {}), ctx.sampleRate);
+
     this.input = ctx.createGain();
     this.output = ctx.createGain();
     this.input.gain.value = 1;
@@ -185,7 +232,27 @@ export class ChannelStrip {
     this.lowShelf = ctx.createBiquadFilter();
     this.peaking = ctx.createBiquadFilter();
     this.highShelf = ctx.createBiquadFilter();
-    this.compressor = ctx.createDynamicsCompressor();
+    /**
+     * ⭐ **The one substitution this module makes.** `createInsertCompressorNode` returns a node only when this
+     * context's worklet module has already loaded (it is what `ensureInsertCompressorWorklet` establishes), because
+     * constructing an `AudioWorkletNode` for an unregistered processor throws. Otherwise — a jsdom test double, a
+     * non-secure origin, a module that failed to load, or a caller that never asked — the strip keeps exactly the
+     * host node it has always used.
+     */
+    const workletCompressor = createInsertCompressorNode(ctx, this.params);
+    this.compressorIsWorklet = workletCompressor !== null;
+    this.compressor = workletCompressor ?? ctx.createDynamicsCompressor();
+    if (workletCompressor) {
+      /**
+       * Assigning `onmessage` is also what starts the port's inbound side (the worklet's own note), so the meter has
+       * a source from the first block. The report is edge-gated inside the processor (0.05 dB), so a quiet strip
+       * posts nothing at all.
+       */
+      workletCompressor.port.onmessage = (event: MessageEvent) => {
+        const report = asInsertCompressorReduction(event?.data);
+        if (report) this.workletReductionDb = Math.min(0, report.reductionDb);
+      };
+    }
     this.makeup = ctx.createGain();
     this.driveIn = ctx.createGain();
     this.shaper = ctx.createWaveShaper();
@@ -215,10 +282,17 @@ export class ChannelStrip {
       this.driveWet,
     ];
 
-    // No params means "no processing": a neutral straight wire is the only safe default
-    // for a per-track insert. Callers that want a role's chain pass `resolveTrackInsert`.
-    this.params = sanitizeParams(mergeParams(bypassTrackInsert(), params ?? {}), ctx.sampleRate);
     this.applyParams();
+  }
+
+  /**
+   * Which compressor implementation this strip is running.
+   *
+   * Exposed for the same reason `BusCompressorHandle.kind()` is: a swap that cannot be observed is indistinguishable
+   * from a swap that silently did not happen, and this one is the whole of the headless parity fix.
+   */
+  compressorKind(): "node" | "worklet" {
+    return this.compressorIsWorklet ? "worklet" : "node";
   }
 
   /** Merges `patch` over the current params, clamps every field to the INSERT_* bounds. */
@@ -231,11 +305,15 @@ export class ChannelStrip {
   /**
    * Live gain reduction of this strip's compressor, in dB (≤ 0).
    *
-   * `DynamicsCompressorNode.reduction` is the browser's own measurement, so the meter shows what
-   * the compressor is doing rather than a re-derivation of it. A strip whose compressor is bypassed
-   * is *unwired*, so this reads 0 there — which is the honest reading.
+   * Whichever implementation is live answers with its own measurement: `DynamicsCompressorNode.reduction` for the host
+   * node, the processor's own reported reduction for the worklet (see `public/glueCompressorWorklet.js`). Neither is a
+   * re-derivation from the parameters, so the meter shows what the compressor is doing. A strip whose compressor is
+   * bypassed is *unwired*, so this reads 0 there — which is the honest reading, and on the worklet path it is also
+   * the necessary one: an unwired node receives no blocks, so its last report would be a stale number rather than a
+   * live one.
    */
   getCompressorReductionDb(): number {
+    if (this.compressorIsWorklet) return this.params.compEnabled ? this.workletReductionDb : 0;
     const reduction = (this.compressor as DynamicsCompressorNode & { reduction?: number }).reduction;
     return typeof reduction === "number" && Number.isFinite(reduction) ? reduction : 0;
   }
@@ -260,12 +338,13 @@ export class ChannelStrip {
    * (0 when the compressor stage is bypassed, or when the context does not report it).
    * `DynamicsCompressorNode.reduction` is a non-positive dB value; this returns its
    * magnitude so a meter can show "6.0 dB of reduction".
+   *
+   * Implementation-agnostic on purpose: it reads `getCompressorReductionDb`, which is the one place that knows whether
+   * the answer comes from the host node or from the worklet's own report.
    */
   getGainReductionDb(): number {
     if (!this.params.compEnabled) return 0;
-    const reduction = this.compressor.reduction;
-    if (typeof reduction !== "number" || !Number.isFinite(reduction)) return 0;
-    return Math.max(0, -reduction);
+    return Math.max(0, -this.getCompressorReductionDb());
   }
 
   /** Idempotent teardown. After it, no node owned by this strip has an outgoing edge. */
@@ -309,11 +388,7 @@ export class ChannelStrip {
     this.writeParam(this.highShelf.gain, p.high.gainDb, now);
     this.writeParam(this.highShelf.Q, p.high.q, now);
 
-    this.writeParam(this.compressor.threshold, p.compThresholdDb, now);
-    this.writeParam(this.compressor.ratio, p.compRatio, now);
-    this.writeParam(this.compressor.attack, p.compAttackSec, now);
-    this.writeParam(this.compressor.release, p.compReleaseSec, now);
-    this.writeParam(this.compressor.knee, INSERT_COMP_KNEE_DB, now);
+    this.writeCompressorParams(p, now);
 
     // The makeup node receives the requested gain only while the compressor stage is in
     // the path; when it is bypassed the node is held at unity and disconnected, so a
@@ -397,6 +472,28 @@ export class ChannelStrip {
       // directly. With every stage off — and no width — this is a straight wire.
       prev.connect(tail);
     }
+  }
+
+  /**
+   * The compressor's parameters, written the way the live implementation reads them.
+   *
+   * The two are not interchangeable and the difference is the whole reason this branch exists: a `DynamicsCompressorNode`
+   * has `threshold`/`knee`/`ratio`/`attack`/`release` **AudioParams** that can be stepped at any time, while the worklet
+   * has no params at all and takes a settings object over its port (the road §8.12 added, and the reason a strip can
+   * still be reconfigured after construction). The mapping from `TrackInsertParams` to the worklet's fields lives in
+   * `InsertCompressor.ts`, once, where both the constructor and this call reach it.
+   */
+  private writeCompressorParams(p: TrackInsertParams, now: number): void {
+    if (this.compressorIsWorklet) {
+      sendInsertCompressorSettings(this.compressor as AudioWorkletNode, p);
+      return;
+    }
+    const node = this.compressor as DynamicsCompressorNode;
+    this.writeParam(node.threshold, p.compThresholdDb, now);
+    this.writeParam(node.ratio, p.compRatio, now);
+    this.writeParam(node.attack, p.compAttackSec, now);
+    this.writeParam(node.release, p.compReleaseSec, now);
+    this.writeParam(node.knee, INSERT_COMP_KNEE_DB, now);
   }
 
   /**

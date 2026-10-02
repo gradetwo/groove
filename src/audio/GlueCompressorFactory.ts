@@ -52,8 +52,14 @@ export interface BusCompressorHandle {
   dispose: () => void;
 }
 
-/** Whether this context can host an `AudioWorkletNode` at all (the jsdom double cannot). */
-const audioWorkletAvailable = (ctx: BaseAudioContext): boolean =>
+/**
+ * Whether this context can host an `AudioWorkletNode` at all (the jsdom double cannot).
+ *
+ * Exported because the channel strip's compressor asks the same question of the same worklet module
+ * (`src/audio/InsertCompressor.ts`); a second copy of this predicate is how the two paths come to disagree about what
+ * "worklets are available" means.
+ */
+export const audioWorkletAvailable = (ctx: BaseAudioContext): boolean =>
   typeof (ctx as BaseAudioContext & { audioWorklet?: AudioWorklet }).audioWorklet?.addModule === "function" &&
   typeof (globalThis as { AudioWorkletNode?: unknown }).AudioWorkletNode === "function";
 

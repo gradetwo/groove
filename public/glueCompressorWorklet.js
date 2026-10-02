@@ -85,6 +85,40 @@ class GlueCompressorProcessor extends AudioWorkletProcessor {
     this.releaseCoefficient = releaseSec <= 0 ? 1 : 1 - Math.exp(-1 / (releaseSec * this.sampleRateHz));
     // Release hold, mirrors `GLUE_COMP_HOLD_MS` in `src/audio/GlueCompressor.ts`.
     this.holdSamples = Math.round((Math.max(0, finite(settings.holdMs, HOLD_MS)) / 1000) * this.sampleRateHz);
+    /**
+     * ⭐ **Gain-reduction reporting, off unless a caller asks for it.**
+     *
+     * A channel strip's meter reads the reduction, and it used to read it from the host node it no longer uses, so the
+     * worklet has to be able to answer. The bus never asks: it is not a node with a meter, and a stage that posted a
+     * message every process quantum for nobody would be paying for a reader that does not exist — so the field
+     * defaults to **false**, and this is another way a node that is never sent a message behaves exactly as before.
+     *
+     * `lastReportedReductionDb` is what turns the report into an *edge* rather than a stream: see `process`.
+     */
+    this.reportReduction = settings.reportReduction === true;
+    this.lastReportedReductionDb = undefined;
+    /** dB the reported value must move by before another message is sent. 0.05 dB is below what a meter can show. */
+    this.reductionReportStepDb = 0.05;
+  }
+
+  /**
+   * Posts the current gain reduction, at most once per change of `reductionReportStepDb`.
+   *
+   * Change-gated on purpose. A per-quantum post is 344 messages a second of audio — tens of thousands across an
+   * offline render — and every one of them would carry the same number through a quiet passage or a steady note. The
+   * gate makes a silent strip cost nothing and a working one cost a few messages a second.
+   *
+   * The sign matches `DynamicsCompressorNode.reduction`: **≤ 0**, so a consumer that already understood the node's
+   * meter does not have to learn a second convention.
+   */
+  reportReductionIfChanged() {
+    const reductionDb = -this.reduction;
+    if (this.lastReportedReductionDb !== undefined &&
+        Math.abs(reductionDb - this.lastReportedReductionDb) < this.reductionReportStepDb) {
+      return;
+    }
+    this.lastReportedReductionDb = reductionDb;
+    this.port.postMessage({ type: "reduction", reductionDb });
   }
 
   process(inputs, outputs) {
@@ -122,6 +156,8 @@ class GlueCompressorProcessor extends AudioWorkletProcessor {
         channel[i] = (input ? input[i] : 0) * gain;
       }
     }
+    // Once per block, not once per frame: see `reportReductionIfChanged` for why this is edge-gated.
+    if (this.reportReduction) this.reportReductionIfChanged();
     return true;
   }
 }

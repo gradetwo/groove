@@ -47,6 +47,7 @@ import {
 } from "./chordVoicing";
 import { resolveChordTreatment } from "../data/genreVoicing";
 import { buildMasterGraph } from "./masterGraph";
+import { ensureInsertCompressorWorklet } from "./InsertCompressor";
 import { stepTiming, type TempoPoint } from "../data/tempoMap";
 import {
   limitBuffers,
@@ -1049,6 +1050,26 @@ async function renderPatternOfflineOnce(
   const noiseBuf = createSeededNoiseBuffer(ctx, 2);
   mark("noise:seedBuffer");
 
+  /**
+   * ⭐ **The channel strip's compressor module, in before a single strip exists.**
+   *
+   * The strip's dynamics stage is the project's own worklet (`src/audio/InsertCompressor.ts`), and the worklet is what
+   * makes the two hosts the same sound: a `DynamicsCompressorNode` is the *host's* compressor and Chromium and
+   * `node-web-audio-api` do not agree on it. Two facts force the await to be here rather than inside the strip:
+   *
+   *  · a strip builds its chain **synchronously** from its constructor, and constructing an `AudioWorkletNode` for a
+   *    processor that is not registered yet **throws** — so the strip can only consult a synchronous fact, and this is
+   *    what makes that fact true;
+   *  · an `OfflineAudioContext` renders in one shot, so a module that arrived after `startRendering()` would leave
+   *    every strip on the host node and the file silently different from the audition — the same argument the limiter
+   *    await below is written for.
+   *
+   * A failure is not fatal and is not silent: the strips keep the host node (the render still has music in it) and
+   * `ensureInsertCompressorWorklet` says so once, on the console, exactly like `GlueCompressorFactory`'s own swap.
+   */
+  await ensureInsertCompressorWorklet(ctx);
+  mark("insertCompressor:module");
+
   // Pre-configure track channel strips (Gain + Stereo Panner).
   // F-03: when the caller does not supply mixer state we derive it from the pattern
   // itself (same helper the live engine uses), so a rendered master honours
@@ -1789,6 +1810,25 @@ async function renderPatternOfflineOnce(
   if (timings) timings.meta = { ...(timings.meta ?? {}), limiterKind };
   mark("limiter:ready");
   options.onLimiterKind?.(limiterKind);
+
+  /**
+   * ⭐ **And the bus compressor's swap, for exactly the same reason — this one was missing.**
+   *
+   * `createBusCompressor` keeps a `DynamicsCompressorNode` holding the stage until its worklet module is in, and
+   * `busComp.ready` is the promise that says which one won. The limiter's was awaited; this one was not, so the
+   * master bus compressor was a **race**: whichever of `addModule` and `startRendering` got there first decided
+   * whether the file was mastered by the project's own compressor or by the host's. `masterGraph` has exposed
+   * `busCompressorReady()` since §8.8 recorded precisely this "a synchronous `kind()` reads too early" gap, and the
+   * offline renderer never used it.
+   *
+   * It matters beyond tidiness: a `DynamicsCompressorNode` is the host's implementation — measured against Chromium at
+   * the bus's own settings, this one host's node and `node-web-audio-api`'s differ by up to **0.67 dB** (level
+   * dependent, `docs/HEADLESS_CORE_PLAN.md` §8.13) — so a race here is a race between the two hosts being the same
+   * sound, which is the property this renderer exists to hold.
+   */
+  const busCompressorKind = await graph.busCompressorReady();
+  if (timings) timings.meta = { ...(timings.meta ?? {}), busCompressorKind };
+  mark("busCompressor:ready");
 
   timings?.onPhase?.("phase:enter", 0, performance.now() - renderStartedAt);
   const renderWallStart = performance.now();

@@ -49,6 +49,7 @@ import { buildMasterGraph, dbToGain, type MasterGraph } from "./masterGraph";
 import { polyVoiceVariation, variationSeedFrom } from "./noteVariation";
 import { patternSeed } from "./noteEvents";
 import { ChannelStrip } from "./ChannelStripDsp";
+import { ensureInsertCompressorWorklet } from "./InsertCompressor";
 import { resolveTrackInsertForGenre } from "../data/genreInsert";
 import { resolveGroupBus } from "./trackBuses";
 import { Gs1VoicePool } from "./gs1/Gs1VoicePool";
@@ -414,6 +415,27 @@ export class AudioEngine {
           this.analyserR = graph.analyserR;
           this.createNoiseBuffer();
           this.setupTrackStrips(16);
+
+          /**
+           * ⭐ **The strips prefer the project's own compressor worklet, so ask for its module and rebuild once.**
+           *
+           * `setupTrackStrips` above runs synchronously inside a synchronous `initAudioContext()`, and
+           * `AudioWorkletNode` cannot be constructed before the processor is registered (it throws) — so the strips
+           * built here take the host `DynamicsCompressorNode`, exactly as they always did, and the worklet arrives a
+           * moment later. Without this the export would use the worklet and playback the host node, which is the
+           * "second sound" the exporter-parity work exists to prevent.
+           *
+           * The rebuild is the same one `setSpatialMode`/`enableTrackAnalysers` already perform, with the same
+           * documented cost: a voice sounding at that instant is cut. Nothing is playing yet in practice — this runs
+           * from the constructor — and the alternative (a strip that changes its mind mid-note) is worse.
+           */
+          ensureInsertCompressorWorklet(this.ctx)
+            .then((loaded) => {
+              if (!loaded || !this.ctx || !this.masterGraph) return;
+              this.releaseTrackStrips();
+              this.setupTrackStrips(Math.max(16, this.pattern?.tracks?.length || 0));
+            })
+            .catch(() => {});
 
           // Async init AudioWorklet clock (P5-01)
           this.workletClock.init(this.ctx).catch(() => {});

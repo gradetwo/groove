@@ -17,7 +17,7 @@ const WORKLET_SOURCE = fs.readFileSync(
 );
 
 /** The served file's processor class, built in a sandbox with the two globals a worklet scope provides. */
-const loadProcessor = (): new (options: { processorOptions?: Record<string, unknown> }) => {
+const loadProcessor = (sink?: unknown[]): new (options: { processorOptions?: Record<string, unknown> }) => {
   reduction: number;
   process(inputs: Float32Array[][], outputs: Float32Array[][]): boolean;
 } => {
@@ -34,7 +34,11 @@ const loadProcessor = (): new (options: { processorOptions?: Record<string, unkn
   ) => void;
 
   class Base {
-    port = { postMessage: () => {} };
+    /**
+     * `sink` is how a test reads what the processor posted. Optional so every existing case is unchanged, and a port
+     * is always present because the processor assigns `onmessage` in its constructor (the §8.12 road).
+     */
+    port = { postMessage: (message: unknown) => sink?.push(message) };
   }
   factory(Base, (name, ctor) => {
     registered[name] = ctor;
@@ -154,5 +158,61 @@ describe("the glue-compressor worklet accepts settings after construction", () =
     expect(processor.thresholdDb).toBe(-18);
     expect(processor.kneeDb).toBe(6);
     expect(processor.ratio).toBe(3);
+  });
+});
+
+/**
+ * ⭐ **The gain reduction comes back, but only when a channel strip asks for it.**
+ *
+ * A strip's meter used to read `DynamicsCompressorNode.reduction`; it now reads the processor's own report, so the
+ * worklet has to be able to answer — and the bus must not start posting messages on behalf of a reader that does not
+ * exist. The report is edge-gated inside the processor, so a quiet or steady strip costs nothing.
+ */
+describe("the glue-compressor worklet reports gain reduction only when asked", () => {
+  const block = (value: number, frames = 128) => new Float32Array(frames).fill(value);
+
+  const drive = (
+    processor: { process(inputs: Float32Array[][], outputs: Float32Array[][]): boolean },
+    level: number
+  ): void => {
+    processor.process([[block(level), block(level)]], [[new Float32Array(128), new Float32Array(128)]]);
+  };
+
+  it("posts nothing at all when the caller did not ask — the bus path is unchanged", () => {
+    const sink: unknown[] = [];
+    const Processor = loadProcessor(sink);
+    const processor = new Processor({ processorOptions: { thresholdDb: -24, ratio: 8 } });
+    for (let i = 0; i < 20; i += 1) drive(processor, i % 2 === 0 ? 0.9 : 0.02);
+    expect(sink).toEqual([]);
+  });
+
+  it("⭐ posts a non-positive reduction, gated on change rather than once per block", () => {
+    const sink: { type?: string; reductionDb?: number }[] = [];
+    const Processor = loadProcessor(sink);
+    const processor = new Processor({
+      processorOptions: { thresholdDb: -24, ratio: 8, attackSec: 0, releaseSec: 0, reportReduction: true },
+    });
+
+    // A hard hit: reduction appears, and the message carries the same sign `DynamicsCompressorNode.reduction` does.
+    drive(processor, 0.9);
+    expect(sink.length).toBeGreaterThan(0);
+    expect(sink[0].type).toBe("reduction");
+    expect(sink[0].reductionDb!).toBeLessThanOrEqual(0);
+    const afterHit = sink.length;
+
+    // The same level again: the value cannot move, so the gate stops the stream.
+    for (let i = 0; i < 10; i += 1) drive(processor, 0.9);
+    expect(sink.length, "a steady note is not a message per block").toBe(afterHit);
+
+    // A quiet passage releases the gain, which is a real change and therefore a real report.
+    for (let i = 0; i < 200; i += 1) drive(processor, 0.001);
+    expect(sink.length).toBeGreaterThan(afterHit);
+    expect(sink.at(-1)!.reductionDb!).toBeLessThanOrEqual(0);
+
+    /** Nothing the processor posts is a number a meter should not trust. */
+    for (const message of sink) {
+      expect(message.type).toBe("reduction");
+      expect(Number.isFinite(message.reductionDb!)).toBe(true);
+    }
   });
 });
