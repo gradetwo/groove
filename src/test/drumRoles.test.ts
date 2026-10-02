@@ -41,6 +41,7 @@ import { planAudioLaneEvents } from "../audio/audioLanePlan";
 import { sampledInstrumentProblems, sampledStandDownIndexes } from "../audio/sampledLanes";
 import { catalogueFromManifestText, sampleReferenceProblem } from "../data/sampleCatalogue";
 import { ALL_GENRES } from "../data/genres/index";
+import { MASTERCLASSES } from "../data/masterclasses";
 import type { SampleAsset } from "../data/sampleCatalogue";
 import type { SequencerPattern, SequencerTrack } from "../types/genre";
 
@@ -124,6 +125,43 @@ describe("the drum role → note map", () => {
     expect(sampledAssetForLane({ track_id: "kick", instrument: "piano_lead" })).toBeUndefined();
     // And the same role with an unclassified-name-but-real drum is a reported gap rather than a silent model.
     expect(drumSamplingRefusal({ track_id: "kick", instrument: "brush_kick" })).toContain("not classified");
+  });
+
+  /**
+   * ⭐ **The two shapes that name a drum lane by a *role word* rather than by an instrument, as shipped content.**
+   *
+   * `src/audio/MidiImporter.ts` writes `{ track_id: "kick", instrument: "kick" }` and the same for the other three roles
+   * — an imported MIDI file carries no instrument vocabulary. `src/data/masterclasses.ts` writes
+   * `instrument: "percussion"` on a **kick** lane ("Kick Pulse (Ratio 4)") and a **snare** lane ("Downbeat Marker"),
+   * where the word means "this is a drum part".
+   *
+   * Both were reported as unclassified **instruments** — the second shape by **48 reports across the 16 shipped
+   * masterclass patterns**, measured by generating every one of them. The role is the classification, so neither is a
+   * gap; and the raw role words occur **0** times in `src/data/genres/**`, so this changes no genre. The count is
+   * asserted here rather than described, because the number is the whole argument.
+   */
+  it("serves a lane named by a role word, and reports no such lane of shipped content as a gap", () => {
+    for (const [role, instrument] of [
+      ["kick", "kick"],
+      ["snare", "snare"],
+      ["hihat", "hihat"],
+      ["percussion", "percussion"],
+      ["kick", "percussion"],
+      ["snare", "percussion"],
+    ] as const) {
+      expect(sampledAssetForLane({ track_id: role, instrument }), `${role}/${instrument} should sound the kit`).toBe(DRUM_KIT_ASSET_ID);
+      expect(sampledDrumVoicingForLane({ track_id: role, instrument })?.note).toBe(DRUM_ROLE_NOTES[role]!.note);
+      expect(drumSamplingRefusal({ track_id: role, instrument }), `${role}/${instrument} is classified by its role`).toBeUndefined();
+    }
+    // The count that motivated the rule: no shipped masterclass pattern reports a lane as an unclassified instrument.
+    let falseGaps = 0;
+    for (const lesson of MASTERCLASSES) {
+      for (const preset of lesson.presets) {
+        const problems = sampledInstrumentProblems(lesson.generateStudioPattern(preset.id) as never, []);
+        falseGaps += problems.filter((problem) => /not classified/.test(problem)).length;
+      }
+    }
+    expect(falseGaps, "a lane named by a role word is not a gap in the drum table").toBe(0);
   });
 
   it("uses the General MIDI Percussion numbers, checked against the standard's own anchors", () => {

@@ -91,6 +91,13 @@ export const DRUM_ROLE_NOTES: Readonly<Record<string, { note: number; piece: str
  * at it would replace the sound the genre asked for with the wrong instrument — the failure this table exists to avoid,
  * in the other direction.
  */
+/**
+ * **The role names this table classifies** — declared above its first use because
+ * {@link ROLE_NAMED_DRUM_INSTRUMENTS} is derived from it, and a `const` read before its initialiser is a
+ * `ReferenceError` rather than `undefined`.
+ */
+export const DRUM_ROLE_IDS: readonly string[] = Object.keys(DRUM_ROLE_NOTES);
+
 export const DRUM_KIT_ASSET_ID = "virtuosity-drums-basic";
 
 /**
@@ -137,15 +144,40 @@ export const ACOUSTIC_DRUM_INSTRUMENTS: readonly string[] = [
 ];
 
 /**
- * The catalogue voicing for a lane — **the role says which pad, and the instrument has to be an acoustic drum name for
- * there to be a pad at all.**
+ * **The other words this repository puts on a drum lane, which name the role rather than the instrument.**
  *
- * Both halves are needed, and the second one is a correction the existing melodic criterion made: a `kick` lane whose
- * `instrument` is `piano_lead` is not a drum, and neither is any other role/instrument pair the data does not write. An
- * earlier version of this function asked only "is the role a drum role", which quietly promised a kick for a lane that
- * names a piano. Requiring membership of {@link ACOUSTIC_DRUM_INSTRUMENTS} keeps the answer reversible — a lane is a drum
- * only if the *data* says it is one — and the electronic list matches nothing here, so it drops out by construction
- * rather than by being consulted second.
+ * The promotion of the earlier `instrument === roleName` check to a named list is **measured**, not tidier for its own
+ * sake. Named-by-role is one shape; there is a second, and the narrower check missed it:
+ *
+ *   * `src/audio/MidiImporter.ts` writes `{ track_id: "kick", instrument: "kick" }` and the same for the other three
+ *     roles — an imported MIDI file carries no instrument vocabulary, so the role is the only word there is;
+ *   * `src/data/masterclasses.ts` writes `instrument: "percussion"` on a **`kick`** lane ("Kick Pulse (Ratio 4)") and a
+ *     **`snare`** lane ("Downbeat Marker"), because there the word means "this is a drum part" rather than "this is a
+ *     percussion instrument".
+ *
+ * Under `instrument === roleName` alone the second shape was still reported as an unclassified instrument: **48 reports
+ * across the 16 shipped masterclass patterns**, measured by generating every one of them and counting. The same count
+ * over all 159 genres is **0**, and the raw role words occur **0** times in `src/data/genres/**`, so this list changes
+ * nothing about genre content — it removes a false alarm from content the app ships.
+ */
+export const ROLE_NAMED_DRUM_INSTRUMENTS: readonly string[] = [...DRUM_ROLE_IDS];
+
+/**
+ * The catalogue voicing for a lane — **the role says which pad; the instrument name only has to be recognisable as a
+ * drum.**
+ *
+ * Three clauses, and the third is the one that took two attempts:
+ *
+ *   * the `track_id` must be a role {@link DRUM_ROLE_NOTES} has a note for;
+ *   * the `instrument` must not name a drum machine ({@link ELECTRONIC_DRUM_INSTRUMENTS});
+ *   * the `instrument` must be recognisable as a drum at all — a descriptive name ({@link ACOUSTIC_DRUM_INSTRUMENTS})
+ *     **or** one of the roles' own words ({@link ROLE_NAMED_DRUM_INSTRUMENTS}), which is the vocabulary this repository
+ *     actually writes.
+ *
+ * The third clause keeps a `kick` lane that names `piano_lead` out — an existing criterion asserts exactly that, and it
+ * is right: a lane whose name says piano must not become a drum kit. It was first written as `instrument === roleName`,
+ * which let the MIDI-import shape through and still reported `masterclasses`' `instrument: "percussion"` on a kick lane as
+ * a gap — 48 times across the 16 shipped masterclass patterns. The list is what closed that.
  *
  * The match is on the **whole trimmed name**: no prefix, no substring, no synonyms, for the reason the melodic table
  * states (`punchy_kick` is served, `distorted_kick` is not, and no substring rule separates them honestly).
@@ -155,10 +187,9 @@ export function drumVoicingForLane(
 ): DrumVoicing | undefined {
   if (!lane) return undefined;
   const instrument = (lane.instrument ?? "").trim().toLowerCase();
-  // The same allowance as drumSamplingRefusal: a lane may name its instrument by its own role, and the row
-  // above already says which note that role takes. No genre does this; only callers that name by role do.
-  const roleName = (lane.track_id ?? "").trim().toLowerCase();
-  if (!ACOUSTIC_DRUM_INSTRUMENTS.includes(instrument) && instrument !== roleName) return undefined;
+  if (ELECTRONIC_DRUM_INSTRUMENTS.includes(instrument)) return undefined;
+  const namedAsDrum = ACOUSTIC_DRUM_INSTRUMENTS.includes(instrument) || ROLE_NAMED_DRUM_INSTRUMENTS.includes(instrument);
+  if (!namedAsDrum) return undefined;
   const row = DRUM_ROLE_NOTES[(lane.track_id ?? "").trim().toLowerCase()];
   if (!row) return undefined;
   return { assetId: DRUM_KIT_ASSET_ID, note: row.note, why: row.because };
@@ -183,12 +214,15 @@ export function drumSamplingRefusal(
   const instrument = (lane.instrument ?? "").trim();
   if (instrument === "") return undefined;
   const lower = instrument.toLowerCase();
-  // A lane that names its instrument by its own role (for example instrument "kick" on the kick role) is
-  // served by that role's row above: no genre ever writes a bare role word as an instrument (measured across
-  // all of src/data/genres: zero occurrences), so this only stops role-named callers being reported as gaps.
-  if (lower === role) return undefined;
-  if (ACOUSTIC_DRUM_INSTRUMENTS.includes(lower) || ELECTRONIC_DRUM_INSTRUMENTS.includes(lower)) return undefined;
-  return `the instrument "${instrument}" is not classified in src/audio/drumRoles.ts under the drum role "${role}", so this lane keeps the model in src/audio/DrumKitModels.ts — classify it: an entry in ACOUSTIC_DRUM_INSTRUMENTS if a mirrored library carries it, otherwise an entry in ELECTRONIC_DRUM_INSTRUMENTS`;
+  /**
+   * A lane that names its instrument by a role word — its own (`instrument: "kick"` on the kick role, what
+   * `MidiImporter` writes) or the generic `percussion` marker (`masterclasses` writes it on kick *and* snare lanes) — is
+   * served by that role's row above. Measured: those words occur **0** times in `src/data/genres/**` and on **48** lanes
+   * of the 16 shipped masterclass patterns, so this removes a false alarm from shipped content and changes no genre.
+   */
+  if (ACOUSTIC_DRUM_INSTRUMENTS.includes(lower) || ROLE_NAMED_DRUM_INSTRUMENTS.includes(lower)) return undefined;
+  if (ELECTRONIC_DRUM_INSTRUMENTS.includes(lower)) return undefined;
+  return `the instrument "${instrument}" is not classified in src/audio/drumRoles.ts under the drum role "${role}", so this lane keeps the model in src/audio/DrumKitModels.ts — classify it: an entry in ACOUSTIC_DRUM_INSTRUMENTS (or ROLE_NAMED_DRUM_INSTRUMENTS if the word is generic) if a mirrored library carries it, otherwise an entry in ELECTRONIC_DRUM_INSTRUMENTS`;
 }
 
 /**
@@ -204,7 +238,7 @@ export function drumSamplingDecision(
   if (!DRUM_ROLE_NOTES[role]) return undefined;
   const instrument = (lane.instrument ?? "").trim();
   const lower = instrument.toLowerCase();
-  if (ACOUSTIC_DRUM_INSTRUMENTS.includes(lower)) return undefined;
+  if (ACOUSTIC_DRUM_INSTRUMENTS.includes(lower) || ROLE_NAMED_DRUM_INSTRUMENTS.includes(lower)) return undefined;
   if (ELECTRONIC_DRUM_INSTRUMENTS.includes(lower)) {
     return `"${instrument}" is a drum machine or a one-shot effect, not an acoustic kit, so this lane keeps its physical model in src/audio/DrumKitModels.ts — a recording of an acoustic drum would be the wrong instrument, not a better one`;
   }
@@ -221,4 +255,4 @@ export function drumNoteForRole(trackId: string | undefined): number | undefined
  * **The role names this table classifies** — so a criterion can assert it covers every drum `track_id` the genre data
  * writes, which is what keeps "we never mapped it" from looking identical to "it is a synthesiser".
  */
-export const DRUM_ROLE_IDS: readonly string[] = Object.keys(DRUM_ROLE_NOTES);
+

@@ -124,6 +124,43 @@ reason beside each, and `ACOUSTIC_DRUM_INSTRUMENTS` lists the other half, so a c
 `$PERC_SHAKER_KEY 82`. My first version of the refusal list contained it, and the read-back below is what caught it:
 the percussion lane resolved to no asset at all.
 
+### 1.3 The names are not always descriptive — measured, and it took two attempts
+
+A drum lane's `instrument` is not a controlled vocabulary, and **two places in this repository write a role word instead
+of an instrument**:
+
+| where | what it writes | why |
+| --- | --- | --- |
+| `src/data/genres/**` (all 159 genres) | `closed_hat` 159, `rim_shaker` 159, `punchy_kick` 55, `tight_snare` 50, `acoustic_kick` 44, `acoustic_snare` 41, `clap` 25, `distorted_kick` 22, … | descriptive names, one per part — **zero** bare role words |
+| `src/audio/MidiImporter.ts` | `{ track_id: "kick", instrument: "kick" }`, and the same for `snare`/`hihat`/`percussion` | an imported MIDI file carries no instrument vocabulary, so the **role** is the only word there is |
+| `src/data/masterclasses.ts` | `instrument: "percussion"` on a **`kick`** lane ("Kick Pulse (Ratio 4)") and a **`snare`** lane ("Downbeat Marker") | there the word means "this is a drum part", not "this is a percussion instrument" |
+
+`drumVoicingForLane` first required a **descriptive** name, which reported both generic shapes as unclassified
+instruments and turned `src/test/renderSilence.test.ts` red in CI. The correction was `instrument === roleName`, which
+fixed the MIDI-import shape and **still missed the third row**: measured by generating all 16 shipped masterclass
+patterns, `instrument: "percussion"` on a kick or snare lane produced **48 false "not classified" reports**.
+
+The rule now is that the **role** is the classification and the instrument name only has to (a) not name a drum machine
+and (b) be recognisable as a drum at all — a descriptive name (`ACOUSTIC_DRUM_INSTRUMENTS`) **or** a role word
+(`ROLE_NAMED_DRUM_INSTRUMENTS`, which is `DRUM_ROLE_IDS`). After it, the same measurement gives **0** false reports on
+masterclasses and **0** over all 159 genres, and a criterion asserts both counts.
+
+### 1.4 What a drum lane reports when the kit is not there
+
+**Nothing is suppressed.** A drum lane mapped to the kit whose catalogue cannot serve it carries the *same* sentence every
+mapped lane carries — `this lane is mapped to the catalogue recording "virtuosity-drums-basic", which no configured
+sample mirror serves — this lane keeps its physical model in src/audio/DrumKitModels.ts` — and for the same reason: "the
+lane is mapped and this catalogue does not have it" is a fact about the **lane and the catalogue**, identical for a kick
+and for a piano, and it is the only signal that separates *a mirror that is configured and does not carry this kit*
+(worth acting on) from *no mirror at all* (the shipped default).
+
+The consequence is deliberate and owned: in an environment with no mirror — CI, and every unit test — each mapped drum
+lane adds one such line to a render's `problems`, exactly as each mapped melodic lane already does. That is why
+`src/test/renderSilence.test.ts`'s attached assertion states the property it is about (**no problem of the render's own**:
+every entry must be that catalogue sentence) rather than the bare absence of entries; that test is about the silence
+guard, not about mirrors. Removing the sentence from the code was the one option rejected — it would have hidden the case
+that matters.
+
 ---
 
 ## 2. The standard, and where it says so
