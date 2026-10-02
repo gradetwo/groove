@@ -210,6 +210,10 @@ so the note would go silent instead of joining
 | **业主能在 MCP 回复里读到这个读数** | `OfflineAudioLaneReport.legato` 是**报告里的新字段**，而 MCP 那条回复的字段由 `mcp/pattern.ts` 的 `audioLaneReplyFields` 挑选，**今天没有挑它**（`mcp/**` 不在本线范围内） | 在 `audioLaneReplyFields` 里加一个 `legato` 字段（数据已经在 `report` 上，不需要新计算） |
 | **听感结论** | **判不了，也不该由本文判** | 业主听 |
 
+⭐ **上表第 4、5 行「实时两条路」与「MCP 回复」已经落地**（2026-10-02）：规则改为泛型后由三个计划器共用，实时 sink 复用同一个
+`createLegatoVoiceLedger`，`audioLaneReplyFields` 挑出 `report.legato`。**业主那份文件上实时路的读数与离线逐项相同**（57 → 25、beat 48 的 3 → 1、录音 60 → 28），
+而**本文上面的离线数字一条未变**。落点、逐处改动、判据与"只改这一支"的机制细节写在 `docs/LEGATO_LIVE.md`。
+
 ## 7.1 ⚠️ 一处必须记下的**跨文档更正**（`docs/STRING_TECHNIQUES.md` §10.3 的 (2)(3) 条）
 
 `docs/STRING_TECHNIQUES.md` §10.3 当时写着：**"第 (2)(3) 步（`trigger=legato` + `offset`、Kontakt 式的播放位置延续）被那座桥挡住"**。
@@ -252,5 +256,5 @@ so the note would go silent instead of joining
 * **`refusals` 里的秒数是解析器的算术**，不是听出来的：`(recordingSeconds − consumed) / ratio`。
 * **复数位置的"复音 legato 按声部配对"**：**没有厂商手册依据**（Kontakt 手册无 poly legato 专节；Orchestral Tools 的 legato 是单音）。这是本仓库的决定，写在 §2 与 `src/audio/legatoJoin.ts` 的注释里，**不冒充行业做法**。
 * **Spitfire／VSL 的正文未取得**（§1.5），因此这两家的做法在本文里**不作主张**。
-* **实时两条路今天不享受这条规则**（§7），这一点是**未做**，不是"已排除"。
+* **实时两条路今天不享受这条规则**（§7），这一点是**未做**，不是"已排除"。⇒ **后续已做**：实时路的接线、读数与判据见 `docs/LEGATO_LIVE.md`（2026-10-02）。
 * **本文不改** `docs/OPEN_WORK.md`、版本号、`src/mobile/**`、`scripts/**`、`.github/workflows/*`、`docs/STRING_TECHNIQUES.md`。
