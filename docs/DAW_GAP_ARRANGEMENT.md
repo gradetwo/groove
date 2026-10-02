@@ -47,7 +47,7 @@
 ### 1.5 对仓库旧结论的**作废声明**（"取不到"是有保质期的）
 
 - ⚠️ **作废**：`docs/ARRANGEMENT_UI_DESIGN.md` §9 记「**Studio One**：一手手册没取到（DNS/404/403 都遇到）」。**该结论自本次取证起作废**，原因是**站点 301 重定向**：`https://s1manual.presonus.com/` → `https://fenderstudiopromanual.fender.com/en/Studio-Pro-User-Manual.htm`（本报告 2026-10-02 实测的 `curl -L` 有效 URL 正是后者），且产品线在手册上以 **Fender Studio Pro** 呈现。⇒ 读旧文档的人应当把那条当作**当时**的事实，而不是现状；本次已据此在 §② F 补上四条正文证据（Comping／Arrange View Mouse Tools／Timestretching／Patterns）。
-- ⚠️ **自纠**：本报告 v1 稿的"编排命令表 21 个"是错的，正确的数法与数字见 §3.6（**17 个面向用户的命令工厂**，另有 3 个基础设施函数）。
+- ⚠️ **自纠（两处）**：① 本报告 v1 稿的"编排命令表 21 个"是错的，正确的数法与数字见 §3.6（**17 个面向用户的命令工厂**，另有 3 个基础设施函数）；② v2 稿把"片段不可拖"说成了全仓范围，**太强**——`ArrangementPanel`（Studio 编辑器）已有按小节量化的 move／resize 拖动，更正与由此下调的成本见 **§6.2**。
 
 ---
 
@@ -275,7 +275,7 @@
 |---|---|---|---|---|
 | 编辑工具集与切换 | Bitwig `[1]`/`[2]`＋按住临时用（B1）；Cubase 1–9/0＋F9/F10（G2）；FL 单键 9 个工具（E2）；Fender `[1]–[6]`（F2）；Logic 工具清单（C1） | **✗ 没有（有意）** | `ArrangementViewV2.tsx` 无 tool 状态；`docs/ARRANGEMENT_UI_DESIGN.md` §5 明写"模态工具面板…五个隐藏模式"为有意不抄 | ——（本仓走的是无模态路线：见下两行的"半有"） |
 | 吸附值与开关可见 | Live 把网格间距画在标尺角（A1）；Bitwig 状态在编辑器右下角（B1） | **✓ 有**（显示与开关） | `ArrangementViewV2.tsx:80`（`SNAP_VALUES` 1/4–1/32）、`:202-203`（`snap`/`snapOn` 两个状态）、`:755-774`（循环值与开关两个按钮）、`ArrangementRulerV2.tsx:109`（标尺上画当前值） | 看得见才敢信 |
-| **吸附真正作用于编辑** | Live `Ctrl 4`／`Alt` 临时旁路（A1）；Bitwig `SHIFT` 反转（B1）；FL `Alt` 临时设 none（E1）；Cubase Snap 限制移动/复制/绘制/裁剪（G1） | **✗ 没有** | 全仓检索：`snapOn` 只被工具栏与标尺读取，**没有任何编辑路径消费它**；`PianoRollV2.tsx` 的落点是 `step * STEP_BEATS` 固定格，无旁路分支 | 少一次"画完再对齐"；吸附能真的关掉 |
+| **吸附真正作用于编辑** | Live `Ctrl 4`／`Alt` 临时旁路（A1）；Bitwig `SHIFT` 反转（B1）；FL `Alt` 临时设 none（E1）；Cubase Snap 限制移动/复制/绘制/裁剪（G1） | **✗ 没有** | `snapOn`／`snap` 的**唯一去处是刻度尺上的一行字**：`ArrangementViewV2.tsx:930` `snapLabel={snapOn ? snap : undefined}`（定义 `:80`／状态 `:202-203`／工具栏 `:755-774`）。**没有任何编辑路径消费它**；`PianoRollV2.tsx` 的落点是 `step * STEP_BEATS` 固定格，无旁路分支。⚠️ **这与 `20664ac` 是同一类问题**：要么让它真正决定量化单位，要么删掉它 | 少一次"画完再对齐"；吸附能真的关掉 |
 | 修饰键语义（拖拽时） | Live `Ctrl Shift`（滑内容）/`Ctrl Alt Shift`（旁路）（A1）；Bitwig `SHIFT` 反转（B1）；Cubase 工具修饰键偏好页＋`Alt/Opt-Shift-1`（G2）；REAPER 整张鼠标修饰键表（H2） | **✗ 没有** | `grep altKey/shiftKey` 在 `src/components/arrangement/` 只命中 `ArrangementViewV2.tsx:430,434`（撤销）与 `LoopBraceV2.tsx:49`（循环键盘微调），**没有任何拖拽语义** | 少一次"用菜单完成本该用修饰键完成的事" |
 | 缩放层级／导航 | Bitwig 标尺上下拖＋`+/-`＋捏合，标签随缩放细分（B1、`docs/ARRANGEMENT_UI_DESIGN.md` §3）；Live `+/-`、`Ctrl+wheel`（§3 已引） | **⚠️ 半有** | `ArrangementViewV2.tsx:200`（`pixelsPerBar`）、`:789-811`（−/＋，步进 1.5）、`ArrangementRulerV2.tsx:45`（`rulerLabelFor` 随缩放从"小节"变"小节.拍"）；**没有**缩放到选区（Z/X）、没有键盘滚动、没有"适配全部" | 少一大段看不到自己刚写的那两小节 |
 | 片段增益与淡入淡出 | Live 片段首尾可调音量淡变、相邻片段可交叉淡变、有 Fade Curve 手柄（A1）；Cubase 事件式交叉淡变（G1） | **✗ 没有**（轨道增益有，片段增益/淡变没有） | 只有轨道级：`setTrackGainCommand`（`arrangementHistory.ts:254`）＋`TrackHeaderV2.tsx:156` 增益、`TrackListV2.tsx:191` 声像；`ArrangementLaneV2.tsx` 无淡变手柄，全仓无 fade 命令 | 少一次"为了一个渐弱去开混音器画自动化" |
@@ -295,7 +295,7 @@
 | 快捷键密度 | FL 手册有整页 Playlist 快捷键表（E2）；Cubase 有 Key Commands 对话框与 Default Key Commands 类目（G2）；REAPER 有 Action List（H2） | **⚠️ 半有** | 全仓 27 条：`ShortcutsModal.tsx:45-59`（导航 13）＋`:61-73`（Studio 11）＋`:88-92`（编排 3）；编排实际监听器只有 Ctrl/Cmd+Z、Shift+Z、Y（`ArrangementViewV2.tsx:407-444`），**其余 24 条在 `/new` 上不承诺**（`ShortcutsModal.tsx:30` 的 `scope` 机制） | 少一次"键盘在这儿失灵"的不信任 |
 | 快捷键可自定义 | Cubase 键命令对话框（G2）；Bitwig 明说"自定义后手册可能失效"（B2） | **✗ 没有** | `ShortcutsModal.tsx` 是静态数组，无需用户映射层 | 少一次"换台机器肌肉记忆作废" |
 | 右键／上下文菜单 | Cubase 右键工具箱（G2）；FL 右键=删除工具、双击右键=静音工具（E2）；Fender 右键列工具（F2）；Live 断点右键 Edit Value（A2） | **✗ 没有** | `grep onContextMenu` 在 `src/components/arrangement/*.tsx` **零命中** | 少一次"跑到顶部工具栏找那个动作" |
-| 拖放的落点语义 | Live 片段拖到轨道/时间线有明确吸附对象（A1）；Bitwig 拖放"落到什么上吸什么"（B1） | **⚠️ 半有**（只有钢琴卷的指针拖拽） | `PianoRollV2.tsx:161-200`（指针落到格子即移动，"落点是看的地方"）＋`:213-256`（4 px 右侧手柄改时值）；编排层**没有任何拖放**（无 `onDrop`/`draggable`） | 少一次"把音符拖到看不见的地方就丢" |
+| 拖放的落点语义 | Live 片段拖到轨道/时间线有明确吸附对象（A1）；Bitwig 拖放"落到什么上吸什么"（B1） | **⚠️ 半有**（钢琴卷有；**Studio 编辑器有；只有新编辑器没有**） | 钢琴卷：`PianoRollV2.tsx:161-200`（指针落到格子即移动）＋`:213-256`（4 px 右侧手柄改时值）。**Studio 编辑器（`ArrangementPanel`，`/studio` 渲染，`StudioView.tsx:1283`）已有按小节量化的 move／resize 拖动**：`beginDrag(…,"move")` `ArrangementPanel.tsx:374`／`(…,"resize")` `:432`＋`continueDrag` `:163` 里 `const barsMoved = Math.round((event.clientX - drag.startX) / ARRANGEMENT_BAR_WIDTH)` `:166`。**新编辑器（`ArrangementLaneV2`，`/new` 渲染，`ArrangementViewV2.tsx:65,1016`）的 region 只有 `onClick`**（`:52`），且两处都没有 HTML 拖放（无 `onDrop`/`draggable`） | 少一次"把音符拖到看不见的地方就丢" |
 | 落点不许骗人（键盘可达） | 无明显条文 | **✓ 有** | `LoopBraceV2.tsx:48-64`（循环括号可键盘移动/改长，满足 WCAG 2.5.7）、`ArrangementRulerV2.tsx`（标尺按栏可点）、`ArrangementViewV2.tsx:377`（undo 结果用 announcer 播报） | 少一次"只能用鼠标" |
 
 ### 3.3 撤销与历史
@@ -336,7 +336,7 @@
 | 改速度 | Live：Tempo 在 Control Bar，但素材是否跟随由 Leader/Follower 决定（A5）；Fender：Timestretch 非破坏可撤，Follow/Don't Follow 可随时切（F1）；Cubase：Tempo Track（G5 条目级）；GarageBand：`Set the tempo` 话题（D5） | **✓ 有（但只是数值）** | `ArrangementViewV2.tsx:722-734`（tempo number input，`commit(setArrangementTempoCommand(...))`，20–300） | 少一次"改完 BPM 发现某条素材对不上却不知道该怪谁" |
 | 改调性 | Logic：工程级 key，Loop 浏览器自动跟调（C5） | **⚠️ 半有（只有新建面板的输入框）** | `NewProjectPanelV2.tsx:137`：`Key` 是 `defaultValue="C Major"`，**不受控、不写模型**；编排模型里**没有 key/scale 字段**（`types/arrangementV2.ts` 无） | 少一次"填了 C 大调，之后找不到它在哪" |
 | 换乐器 | Live：装置 A/B＋hot-swap（A3、A1）；本仓设计文档记 FL 的 Track Mode 绑定乐器（§2） | **✓ 有** | 轨道头乐器 chip（`TrackHeaderV2`）、`InstrumentLibraryV2.tsx:85-163`（搜索框 `:89`、分类 `:97`、子类 `:126`、选项 `:163`）、`setTrackSampleCommand`（`arrangementHistory.ts:262`）、`InstrumentBrowserV2.tsx` | 少一次"换乐器要重建轨道" |
-| 换片段 | Fender：Select Layer Content / Select Take 两条独立入口（F1）；Live：take lanes 拼 comp（A1） | **⚠️ 半有** | take 可换：`TakeSelectorV2.tsx:40`、`selectTrackTakeCommand`（`arrangementHistory.ts:343`）；**片段本身不可拖、不可切、不可复制**（`ArrangementLaneV2.tsx:52` 的 region 只有 `onClick`；命令表无 split/duplicate） | 少一次"想把这 4 小节挪到后面，只能重写" |
+| 换片段 | Fender：Select Layer Content / Select Take 两条独立入口（F1）；Live：take lanes 拼 comp（A1） | **⚠️ 半有** | take 可换：`TakeSelectorV2.tsx:40`、`selectTrackTakeCommand`（`arrangementHistory.ts:343`）。**片段操作按编辑器分**：**新编辑器**（`ArrangementLaneV2`，`/new`）的 region **只有 `onClick`**（`:52`）⇒ 不可拖、不可切、不可复制；**Studio 编辑器**（`ArrangementPanel`，`/studio`）**已有按小节量化的 move／resize 拖动**（`:374`／`:432`／`continueDrag` `:163`，量化在 `:166`）。两处命令表都没有 split/duplicate | 少一次"想把这 4 小节挪到后面，只能重写" |
 | 试不同的 take | Bitwig comp regions（B1）；Fender 悬停 Range 刷（F1）；GarageBand 从 take folder 下拉选（D1） | **⚠️ 半有** | 有 take 选择（`TakeSelectorV2`）、有录制入栈（`ArrangementViewV2.tsx:637` `commit(addTakeCommand(...))`）；**没有跨 take 逐段拼合** | 少一次"两个 take 各有一半好，只能二选一" |
 
 ---
@@ -357,7 +357,7 @@
 - 数 `action: "…"` 的**双引号字面量**会得到 **9**（漏掉 8 个经 `setterCommand` 传入的标签）；
 - 数 `undo:` 会得到 **12**（有些命令显式写 `redo`/`undo`，有些由 `setterCommand` 生成，**不是**命令条数）。
 
-**本报告此后一律用"17 个面向用户的命令工厂"这个数**，并在 §3.1／§3.3 两处注明了数法。结论不受影响：这 17 个里没有 split／duplicate／move-region／fade／clip-gain／automation／bounce，所以那几行仍然是 **✗**。
+**本报告此后一律用"17 个面向用户的命令工厂"这个数**，并在 §3.1／§3.3 两处注明了数法。结论不受影响：这 17 个里没有 split／duplicate／move-region／fade／clip-gain／automation／bounce，所以那几行仍然是 **✗**。⚠️ **但"没有命令"不等于"没有交互"**：`ArrangementPanel`（Studio 编辑器）的 move／resize 拖动**不经这套命令表**（它走 `sections` 与 `onChange({gesture, continuous})`），所以"新编辑器缺拖动"是一条**独立的、范围更窄**的差距——见 §3.2 与 §④ 第 3 条。
 
 ---
 
@@ -367,9 +367,9 @@
 
 | # | 优先级 | 为什么排这里（依据） | 一句话：创作者少做什么 | 成本 |
 |---|---|---|---|---|
-| 1 | **让吸附真的生效 + 加旁路修饰键** | 吸附值已可见（`ArrangementViewV2.tsx:80,755-774`）却无一处消费；业界是四家共有事实（A1/B1/E1/G1） | 少一次"画完再手动对齐"，也少一次"我想临时不吸，只能先关掉再打开" | **S**（在 `PianoRollV2.tsx` 落点处套一个纯函数；旁路＝读 `event.altKey`） |
+| 1 | **先让吸附有东西可吸：把拖动移植过来，再让吸附生效** | ⚠️ **顺序依赖**：今天唯一"可拖"的是钢琴卷；新编辑器的 region 连 `onClick` 之外的交互都没有（`ArrangementLaneV2.tsx:52`）⇒ **先加吸附会出现"加了吸附却没有东西可吸"**。吸附值已可见却无一处消费（`ArrangementViewV2.tsx:80,930,755-774`）；业界是四家共有事实（A1/B1/E1/G1） | 少一次"画完再手动对齐"，也少一次"我想临时不吸，只能先关掉再打开" | **S–M**（先移植 Studio 编辑器的拖动，再把量化单位接到 `snap`／旁路读 `event.altKey`） |
 | 2 | **撤销面板：列出历史并可跳转** | 历史栈与"下一个动作名"已经在（`arrangementHistory.ts`＋`ArrangementViewV2.tsx:698,710`），缺的只是列表 UI；业界五家都有（A3/C3/E3/G3/H3） | 少一次"撤过头了只能靠记忆重做" | **S–M**（`past` 数组已带 `action` 名，渲染列表＋点击裁栈） |
-| 3 | **片段（region）可拖、可切、可复制** | 今天 region 只有 `onClick`（`ArrangementLaneV2.tsx:52`），命令表无 split/duplicate；这是"编排"最低门槛（`docs/ARRANGEMENT_UI_DESIGN.md` §8 第 10 项自己列为底线） | 少一次"想把一段挪走/复制，只能改模型之外的东西" | **M**（新增 3 个纯命令 + 指针拖拽；无音频依赖） |
+| 3 | **把 Studio 编辑器的 region 拖动移植到新编辑器；再补切／复制** | **范围要说准**：`ArrangementPanel`（Studio）**已有按小节量化的 move／resize 拖动**（`:374`／`:432`／`continueDrag` `:163`，量化 `:166`），**新编辑器**（`ArrangementLaneV2`）的 region 只有 `onClick`（`:52`）；split/duplicate 两处都没有，且这是"编排"最低门槛（`docs/ARRANGEMENT_UI_DESIGN.md` §8 第 10 项自列为底线） | 少一次"想把一段挪走/复制，只能改模型之外的东西" | **S–M**（**不是从零做拖动**：本仓已有这条交互可参照、可复用；新增的只是切/复制两个纯命令与把拖动接到 `ArrangementLaneV2`） |
 | 4 | **自动化车道（先做"一条轨一个参数"的连续包络）** | `docs/V4_REVIEW_PLAN.md:492` 自述为真缺口；五家有车道/曲线（A1/G1/E1/B5）；本仓已有"每轨扁平事件列表"的形状可借用 `notesByTrack` | 少一次"渐强只能靠分段或不做" | **M–L**（新 event 类型＋车道渲染＋编译期展开；`types/arrangementV2.ts:148` 的 `notesByTrack` 是形状先例） |
 | 5 | **take lanes 与逐段 comping（把 TakeSelector 升级成通道）** | take 数据模型已经在（`types/arrangementV2.ts:88,100`、`addTakeCommand`），只缺 lane 视图与"划一段换一条"；四家有（A1/B1/G1/H1/F1） | 少一次"为了第二小节那个音重录整条" | **M–L**（复用 `takeRegions` 的分裂规则；`ArrangementLaneV2.tsx` 之上加行） |
 | 6 | **片段增益与淡入淡出（含交叉淡变）** | 完全空白（3.1 表）；两家明确（A1/G1）且成本低于自动化（不需要时间轴事件，只需片段头尾两个数） | 少一次"为了一个渐弱去开混音器画自动化" | **M**（片段级 `gainDb`＋`fadeIn/Out` 三字段＋两个手柄；播放路径已有轨道增益可参照 `arrangementCompile.ts:211`） |
@@ -403,6 +403,47 @@
 
 ---
 
+---
+
 ## 附：本报告引用的本仓文件清单（便于复核）
 
-`src/components/arrangement/ArrangementViewV2.tsx`（167、178-182、184、200、202-203、279-283、377、407-444、449、501-535、628-638、637、694-719、722-747、755-774、789-811、850-859、878-891、913、920-948、1029-1036、1053、1070-1073、1075-1091、1101、1177-1182）、`ArrangementLaneV2.tsx`（1-16、52、84、107）、`PianoRollV2.tsx`（60、144-256）、`ArrangementRulerV2.tsx`（45、71、109）、`LoopBraceV2.tsx`（38、48-64、97-142）、`TakeSelectorV2.tsx`（23、40）、`RecordButtonV2.tsx`（33）、`NewProjectPanelV2.tsx`（8、55、72、80-168、110-131、134、137）、`TrackHeaderV2.tsx`（65、102、108、121、135、142、156、177）、`TrackListV2.tsx`（99、124、172-191）、`ArrangementKeyboardV2.tsx`（13、32-93）、`ScoreV2.tsx`、`InstrumentLibraryV2.tsx`（40、85-163）、`InstrumentBrowserV2.tsx`、`ArrangementFileEntriesV2.tsx`（66-129、147-159）、`ImportInstrumentMappingV2.tsx`、`ArrangementPanel.tsx`（200）、`percussionStaff.ts`、`kindLabels.ts`、`TrackRows.tsx`；`src/components/ShortcutsModal.tsx`（30、45-59、61-73、88-92）；`src/types/arrangementV2.ts`（30、53、88、100、148）；`src/data/arrangementHistory.ts`（80、169-356）；`src/data/arrangementEdits.ts`（238-280、426、548）；`src/data/arrangementCompile.ts`（211）；`src/data/logicToArrangement.ts`（27-28）；`src/features/arrangement/useArrangementHistory.ts`；`src/features/arrangement/arrangementStore.ts`（37）；`docs/ARRANGEMENT_UI_DESIGN.md`（§3、§4、§5、§7、§8、§9）；`docs/ARRANGEMENT_V2.md`（57）；`docs/V4_REVIEW_PLAN.md`（43、492、505、971）；`docs/PRO_EDITOR_PLAN.md`。
+`src/components/arrangement/ArrangementViewV2.tsx`（65、167、178-182、184、200、202-203、279-283、377、407-444、449、501-535、518、628-638、637、694-719、722-747、755-774、789-811、850-859、878-891、913、920-948、930、1016、1029-1036、1053、1070-1073、1075-1091、1101、1177-1182）、`ArrangementLaneV2.tsx`（1-16、52、84、107）、`ArrangementPanel.tsx`（163、166、200、374、432）、`PianoRollV2.tsx`（60、144-256）、`ArrangementRulerV2.tsx`（45、71、109）、`LoopBraceV2.tsx`（38、48-64、66-70、97-142）、`TakeSelectorV2.tsx`（23、40）、`RecordButtonV2.tsx`（33）、`NewProjectPanelV2.tsx`（8、30、55、72、80-168、110-131、133-146、171）、`TrackHeaderV2.tsx`（65、102、108、121、135、142、156、177）、`TrackListV2.tsx`（99、124、172-191）、`ArrangementKeyboardV2.tsx`（13、32-93）、`ScoreV2.tsx`、`InstrumentLibraryV2.tsx`（40、85-163）、`InstrumentBrowserV2.tsx`、`ArrangementFileEntriesV2.tsx`（66-129、147-159）、`ImportInstrumentMappingV2.tsx`、`percussionStaff.ts`、`kindLabels.ts`、`TrackRows.tsx`；`src/views/StudioView.tsx`（1283）；`src/components/ShortcutsModal.tsx`（30、45-59、61-73、88-92）；`src/types/arrangementV2.ts`（30、53、59-66、88、100、148）；`src/data/arrangementHistory.ts`（80、169-356）；`src/data/arrangementEdits.ts`（238-280、426、548）；`src/data/arrangementCompile.ts`（211）；`src/data/logicToArrangement.ts`（27-28）；`src/features/arrangement/useArrangementHistory.ts`；`src/features/arrangement/arrangementStore.ts`（37）；`src/test/newProjectPanelControls.test.ts`（45、49、54、60）；`docs/ARRANGEMENT_UI_DESIGN.md`（§3、§4、§5、§7、§8、§9）；`docs/ARRANGEMENT_V2.md`（57）；`docs/V4_REVIEW_PLAN.md`（43、492、505、971）；`docs/PRO_EDITOR_PLAN.md`。
+
+---
+
+## ⑥ Postscript（两条处置／更正记录）
+
+写这一节的理由：**读者照着一句已经过时的判断去查，会查到一个不存在的问题**。下面两条都写明"当时怎么写、现在是什么、依据在哪"。
+
+### 6.1 新项目面板的两个控件（`20664ac`，删掉而非接上）
+
+§3.5「改调性」行与 §④ 第 8 条报的那两个控件（Tempo／Key 的 `defaultValue` 无 `onChange`）已经处理 —— **是删掉，不是接上**（短 sha `20664ac`「arrangement: the new-project panel stops showing two controls that reported nothing」）。
+
+**为什么不能接上（两条各自独立，都要成立）**
+1. **面板没有把速度交给模型的通道**：它的创建回调契约是 `(templateId, blankKind, name)`——`NewProjectPanelV2.tsx:30`（调用点 `:171`，宿主接收点 `ArrangementViewV2.tsx:518`）；而**编排的速度已经在它被编辑的地方设置**：`ArrangementViewV2.tsx:722-734` 的速度输入框（`commit(setArrangementTempoCommand(...))`）。再接一个就是**同一间屋子的第二扇死门**。
+2. **模型里没有工程级调性**：`arrangementV2.ts:59-66` 的 `key` 是**录乐器表的字典键**（"the **key of the recorded-instrument table** (`src/data/sampledInstruments.ts`)"），不是乐理调号 ⇒ Key 字段要存在，得**先发明一个概念来存它**。
+
+**现在有判据拦着（可核）**：`src/test/newProjectPanelControls.test.ts`（78 行）4 条 —— `:45` 至少得有一个控件（避免"没有东西可查"也算过）；`:49` **不许** `defaultValue`／`defaultChecked`（"撒谎控件的机制"）；`:54` 每个 `input`／`select` **必须**带 `onChange`；`:60` **删掉的理由要留在原地**（不许被无声加回）。⇒ 按判据条文，插回一个带 `defaultValue` 且无 `onChange` 的控件会让 **第 2、3 条同时红**（`:50` 与 `:56`）；处置提交自己也记了这是"putting one in and taking it out again"实跑过的。**本报告 2026-10-03 实跑**：`npx vitest run src/test/newProjectPanelControls.test.ts` → `4 passed (4)`（22 ms）。
+
+### 6.2 "新编辑器没有片段拖动"——范围与成本的更正
+
+本报告 v2 稿把"片段不可拖"说成全仓范围，**太强**。按"哪一份实现是现在渲染的那份"复核后更正如下（三处都可核）：
+
+| 实现 | 由谁渲染 | region 拖动 | 依据 |
+|---|---|---|---|
+| **新编辑器** `ArrangementLaneV2` | `/new`（`ArrangementViewV2.tsx:65` import、`:1016` 使用） | **只有 `onClick={onSelect}`** ⇒ 没有拖动 | `ArrangementLaneV2.tsx:52` |
+| **Studio 编辑器** `ArrangementPanel` | `/studio`（`StudioView.tsx:1283`） | **已有按小节量化的 move／resize 拖动** | `beginDrag(…,"move")` `:374`／`(…,"resize")` `:432`＋`continueDrag` `:163`，量化式 `const barsMoved = Math.round((event.clientX - drag.startX) / ARRANGEMENT_BAR_WIDTH)` `:166` |
+| **循环括号** `LoopBraceV2` | 新编辑器标尺内 | **本来就按小节量化**（注释：`"Bars, rounded: the model is in bars, and a loop at bar 2.5 is not something the ruler can show."`） | `LoopBraceV2.tsx:66-70`（`Math.round((event.clientX - current.x) / pixelsPerBar)`） |
+
+⇒ **因此"编排层什么都没有"不成立**：循环括号会吸附、Studio 编辑器会吸附，**只有新编辑器不会**。相应地：
+
+- **§3.2「拖放的落点语义」与 §3.5「换片段」已改成按编辑器分区的说法**（并补了三处 `文件:行`）。
+- **§④ 第 3 条的成本从 M 改为 S–M**：**不是"从零做拖动"，而是"把 Studio 编辑器的拖动移植到新编辑器"**——本仓已有这条交互，可参照、可复用；新增的只是切／复制两个纯命令，以及把拖动接到 `ArrangementLaneV2`。
+- **§④ 第 1 条（吸附）补了顺序依赖**：`snap` 今天**只是传给刻度尺的标签**（`ArrangementViewV2.tsx:930` `snapLabel={snapOn ? snap : undefined}`）⇒ 顺序应当是**先把拖动移植过来，再让吸附生效**；否则会出现"加了吸附却没有东西可吸"。并与 `20664ac` 同类：**要么让它真正决定量化单位，要么删掉它**（本仓原则：控件不许骗人）。
+
+### 6.3 对本报告两张表的现状更正
+
+- §3.5「改调性」：当时记 **⚠️ 半有**（只有面板上一个不受控输入框）。**现状应按 ✗ 没有读**——面板上已无 Key 字段，模型里也没有工程级调性。**这比原来好，但仍是缺口**（原行的"创作者少做什么"不变）。
+- §3.5「改速度」：**仍是 ✓ 有**，速度输入框在编排工具栏上（`ArrangementViewV2.tsx:722-734`），与这次删除无关。
+- §4 第 8 条（"接上或删掉"）：**已按"删掉"结案**，不再需要排期；将来模型若有了工程级调性，字段应当**带着模型字段和 `onChange` 一起回来**，而不是先回来。
+- 其余 6 条优先级与 §③ 的全部 ✗／⚠️ 结论**不受影响**（第 3 条的成本估计已按 6.2 下调）。
