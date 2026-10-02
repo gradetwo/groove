@@ -3,11 +3,17 @@ import { ChevronRight, X } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
 import { MOBILE_SHEET_GROUPS, type MobileSheetAction } from "./MobileTabBar";
 import type { NavTab } from "./Header";
+import type { RouteState } from "../app/router";
 
 export interface MobileMoreSheetProps {
   open: boolean;
   onClose: () => void;
   onSelectTab: (tab: NavTab) => void;
+  /**
+   * ⭐ **How a row that declares a `route` gets there without reloading the document.** Optional, like the
+   * header's own `onNewProject`: a caller that cannot route leaves the anchor's native behaviour alone.
+   */
+  onNavigate?: (route: Partial<RouteState>) => void;
   onAction: (action: MobileSheetAction["id"]) => void;
 }
 
@@ -26,6 +32,7 @@ export const MobileMoreSheet: React.FC<MobileMoreSheetProps> = ({
   open,
   onClose,
   onSelectTab,
+  onNavigate,
   onAction,
 }) => {
   const { t } = useLanguage();
@@ -129,6 +136,19 @@ export const MobileMoreSheet: React.FC<MobileMoreSheetProps> = ({
                       <a
                         href={item.href}
                         data-testid={`mobile-sheet-link-${item.id}`}
+                        /**
+                         * ⭐ **A declared route is taken in-app, on a plain click only** — the same rule the header
+                         * follows, so a modified or middle click still opens a real tab.
+                         */
+                        {...(item.route !== undefined && onNavigate !== undefined
+                          ? {
+                              onClick: (event: React.MouseEvent) => {
+                                if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+                                event.preventDefault();
+                                onNavigate(item.route!);
+                              },
+                            }
+                          : {})}
                         onPointerUp={() => onClose()}
                         className={rowClass}
                       >

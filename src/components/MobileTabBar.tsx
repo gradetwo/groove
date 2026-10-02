@@ -2,6 +2,7 @@ import React from "react";
 import { Music2, Compass, GraduationCap, SlidersHorizontal, User } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
 import type { NavTab } from "./Header";
+import type { RouteState } from "../app/router";
 
 /**
  * Phone navigation: five destinations in a thumb-reachable bottom bar, plus one sheet.
@@ -53,6 +54,14 @@ export interface MobileSheetLink {
   kind: "link";
   id: string;
   href: string;
+  /**
+   * ⭐ **Where this row goes, when the app can route — declared by the row rather than decided by the sheet.**
+   *
+   * The renderer must not have to know that the row called `new-project` is special; it routes whatever a row
+   * declares. Without this the row is a native navigation, which is a full document load and destroys the
+   * `AudioContext` (`docs/AUDIT_2026-10-02_TRIAGE.md` section 6).
+   */
+  route?: Partial<RouteState>;
   labelKey: string;
   descKey: string;
 }
@@ -104,7 +113,7 @@ export const MOBILE_SHEET_GROUPS: ReadonlyArray<{
     titleKey: "mobile_more_create",
     items: [
       // The owner asked for the new-project route on the phone too, and "create" is where it belongs: it is the thing you do before anything else in this group.
-      { kind: "link", id: "new-project", href: "/new", labelKey: "nav_new_project", descKey: "nav_new_project_desc" },
+      { kind: "link", id: "new-project", href: "/new", route: { tab: "studio", newProject: true }, labelKey: "nav_new_project", descKey: "nav_new_project_desc" },
       { kind: "tab", tab: "chords", labelKey: "nav_chords", descKey: "nav_chords_desc" },
       { kind: "tab", tab: "kick", labelKey: "nav_kick", descKey: "nav_kick_desc" },
       { kind: "tab", tab: "maker", labelKey: "nav_maker", descKey: "nav_maker_desc" },

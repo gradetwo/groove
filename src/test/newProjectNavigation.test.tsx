@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
 import { Header } from "../components/Header";
+import { MobileMoreSheet } from "../components/MobileMoreSheet";
 import { LanguageProvider } from "../i18n/LanguageContext";
 
 /**
@@ -69,5 +70,62 @@ describe("the header's New Project link", () => {
     // No handler was installed, so the browser is free to follow the href exactly as before.
     expect(event.defaultPrevented).toBe(false);
     expect(screen.getByRole("link", { name: /./ })).toBeTruthy();
+  });
+});
+
+/**
+ * ⭐ **The phone's own "new project" row has the same defect and the same fix.**
+ *
+ * It is a data entry in `MOBILE_SHEET_GROUPS`, rendered by `MobileMoreSheet` as an anchor — so on a phone the
+ * click is a native navigation and destroys the `AudioContext` exactly as it did in the header. The row now
+ * declares its `route` and the sheet routes whatever a row declares, rather than the renderer having to know that
+ * the row called `new-project` is special.
+ */
+function renderSheet(onNavigate?: (route: unknown) => void) {
+  return render(
+    <LanguageProvider>
+      <MobileMoreSheet
+        open
+        onClose={vi.fn()}
+        onSelectTab={vi.fn()}
+        onAction={vi.fn()}
+        {...(onNavigate === undefined ? {} : { onNavigate: onNavigate as never })}
+      />
+    </LanguageProvider>
+  );
+}
+
+const sheetLink = (): HTMLElement => screen.getByTestId("mobile-sheet-link-new-project");
+
+describe("the phone sheet's New Project row", () => {
+  it("⭐ declares its route as data, so the renderer does not special-case an id", () => {
+    renderSheet();
+    const link = sheetLink();
+    // The href stays: the row is still a link, and a long-press or a new tab must keep working.
+    expect(link.getAttribute("href")).toBe("/new");
+  });
+
+  it("⭐ routes in-app on a plain click, and leaves a modified one to the browser", () => {
+    const onNavigate = vi.fn();
+    renderSheet(onNavigate);
+
+    const plain = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 });
+    sheetLink().dispatchEvent(plain);
+    expect(onNavigate, "the plain click must be routed").toHaveBeenCalledTimes(1);
+    expect(plain.defaultPrevented).toBe(true);
+
+    for (const init of [{ ctrlKey: true }, { metaKey: true }, { button: 1 }]) {
+      const modified = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0, ...init });
+      sheetLink().dispatchEvent(modified);
+      expect(modified.defaultPrevented, `${JSON.stringify(init)} must not be intercepted`).toBe(false);
+    }
+    expect(onNavigate).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the native link when the sheet cannot route, so nothing is lost by not wiring it", () => {
+    renderSheet();
+    const event = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 });
+    sheetLink().dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
   });
 });

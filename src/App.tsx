@@ -878,6 +878,8 @@ const MainApp: React.FC = () => {
           <MobileMoreSheet
             open={mobileSheetOpen}
             onClose={() => setMobileSheetOpen(false)}
+            /* ⭐ The same in-app routing the header gets, so the phone's own "new project" row stops reloading. */
+            onNavigate={navigate}
             onSelectTab={(tab) => {
               setMobileSheetOpen(false);
               handleSelectTab(tab);
