@@ -154,7 +154,8 @@
 
 **问题**（当天发生两次 ✗）：子 agent 误在主 checkout 里编辑 ✓ → ① `git cherry-pick` 要求工作树干净 ✗ → 合并被拒 ✓；② `push_dev.sh` 的同步要求"镜像 == 工作树" ✗ → 推送被拒 ✓。整个队列停摆数轮 ✓，两次都靠"叫它就地提交"来解 ✓。
 
-**关键事实**：`scripts/push_dev.sh` 第 13 行是 `cd "$(dirname "$0")/.."` ✓，第 26 行调 `./scripts/sync_release_mirror.sh` ✓ ——**源目录由"从哪儿运行"决定** ✓，不是写死主 checkout ✓。
+**关键事实**：`scripts/push_dev.sh` 第 13 行是 `cd "$(dirname "$0")/.."` ✓ ——**源目录由"从哪儿运行"决定** ✓，不是写死主 checkout ✓。
+> **⚠️ 2026-10-02 更正**：本节原还写着"第 26 行调 `./scripts/sync_release_mirror.sh`" ✗——**那句现在不成立** ✓：**镜像已于 2026-10-01 退休**（见 §十 ✓），`scripts/push_dev.sh` 现为 `git push origin HEAD:dev`（脚本第 2 行写着 **"No release mirror in the path"** ✓），`scripts/sync_release_mirror.sh` 已不再参与推送 ✓。**⇒ 本节其余内容描述的是**镜像退休之前**的队列规则 ✓，历史价值在 §十 的"一次性历史归一"✓；**今天要靠它来推送，看脚本与 §十 ✓。**
 
 **做法**：建一棵专用集成树，所有合并与推送都在那里发生 ✓
 
