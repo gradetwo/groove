@@ -38,7 +38,17 @@ echo "release:"
 step "version:check" npm run version:check
 # ⭐ A version is published once: content that changed must carry a new version, or the tag stops describing what is live.
 step "version:new" bash scripts/check_version_is_new.sh
-step "local gate" bash scripts/check_local.sh
+# ⭐ **The owner's release policy (2026-10-02): the gate lives on GitHub's `dev` branch.** A release therefore asks the remote
+# for the full check — step "full CI" below, which dispatches the browser matrix and waits — instead of running the same
+# suite on this machine first. `SKIP_LOCAL_GATE=1` is the switch, the same one `push_dev.sh` honours, so the two paths agree
+# on the name. Skipping is never silent: the step prints that it was skipped and why, because a step that says "ok" while
+# doing nothing is the failure this script exists to prevent (see the note about retired mirror steps at the bottom).
+if [ "${SKIP_LOCAL_GATE:-0}" = "1" ]; then
+  printf '  %-16s ' "local gate"
+  echo "skipped (SKIP_LOCAL_GATE=1 — the remote gate is the authority)"
+else
+  step "local gate" bash scripts/check_local.sh
+fi
 step "build" npx vite build
 # ⭐ The bundle budget, **before** anything is published. It lived only in CI, where it had been failing on every push for forty runs without stopping a release — an advisory check on a site that deploys anyway is an annotation, not a gate. Here it
 # refuses to publish an over-budget bundle.
