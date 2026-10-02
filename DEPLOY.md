@@ -118,21 +118,13 @@ Vercel / Netlify / Cloudflare Pages：Build Command `npm run build`，Output Dir
 npm ci
 npx playwright install --with-deps chromium firefox webkit
 npm run test:e2e        # 三个桌面引擎（PC 档）
-npm run test:e2e:all    # 7 端：桌面 + iPhone 竖/横 + iPad 竖/横
+npm run test:e2e:all    # 同样是三个桌面引擎：all 与 pc 现为同一套
 ```
 
 `scripts/test_matrix.js` 的静态服务器用内核临时端口（`listen(0)`），多实例并行不会抢端口。
 
-## 6. 发布流程（本仓库的约定）
+## 6. 发布流程
 
-```bash
-npm test && npm run verify      # 门禁全绿
-# 提升 package.json 的版本号
-# 在 public/changelog.json 头部加入该版本的条目（中英双语）
-npm run version:sync            # 同步 src/version.ts / public/version.json / public/sw.js 与规划文档的版本头
-npm run build
-npm run deploy
-```
-
-`npm run verify` 是会拦住改动的门禁：版本与文档一致性、分层依赖、CSS 用法、类型、lint、数据
-schema、测试、生产构建、两个实测探针和端到端矩阵。
+发布流程的现行说明在 [docs/RELEASE.md](docs/RELEASE.md)：`bash scripts/release.sh` 按顺序执行版本检查、
+新版本检查、本地门禁、构建、体积、全量 CI、部署、打标签、推远端，任一步失败即停。这里不再重复维护一份
+可能过期的流程。

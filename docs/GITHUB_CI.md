@@ -42,17 +42,17 @@ one — and the old cherry-pick sequence below is kept only to explain what the 
 git push origin HEAD:dev
 
 # ⚠️ Obsolete, and doing it again would rebuild the parallel history:
-# git fetch apple2011            # the remote named apple2011 pointed at ../../groove
+# git fetch apple2011            # that remote no longer exists — `git remote -v` lists only `origin`
 # git cherry-pick <sha>          # one commit at a time — the old normal flow
 # git push origin dev
 ```
 
 The very first sync was a single squashed commit ("sync(dev): bring dev to the local tree's state") because there
-was no shared history to cherry-pick onto. From then on it is per-commit. Verify a sync landed by diffing the two
-trees, which must be empty:
+was no shared history to cherry-pick onto. From then on it is per-commit. Verify a sync landed by diffing what was
+pushed against the remote, which must be empty:
 
 ```bash
-git diff --stat apple2011/next HEAD
+git fetch origin && git diff --stat origin/dev HEAD
 ```
 
 ## What CI runs
@@ -74,13 +74,13 @@ git diff --stat apple2011/next HEAD
 * **validate** (every push/PR): actions-runtime gate, `version:check`, `docs:check`, typecheck, lint, red lines,
   unit tests + coverage, genre schema lint/audit, **the loudness report-vs-table gate** (two file reads, ~1 s — it was
   `verify`-only and spent a day red without anyone seeing it), production build, bundle budget.
-* **e2e** — **three parallel legs** (`Desktop browsers`, `iPhone 14`, `iPad Pro 11`) over the same seven targets,
-  partitioned by the `E2E_ONLY` filter, with `fail-fast: false` so one engine cannot block the others. Every leg
+* **e2e** — **one desktop leg** (`Desktop browsers`) over the three desktop targets (Chromium, Firefox, WebKit),
+  partitioned by the `E2E_ONLY` filter, with `fail-fast: false` so one engine cannot block the others. The leg
   still runs the complete-matrix script (the workflow test asserts it, because "one leg quietly becomes the
-  desktop-only profile" is how two thirds of the targets stopped being checked once). The desktop leg then runs the
+  desktop-only profile" is how two thirds of the targets stopped being checked once). That leg then runs the
   **studio DOM probes** (`probe:toolbar`, `probe:grid-gutter`, `probe:arrangement`) against the same build — they
-  serve `dist/` themselves, so that leg has everything they need and no other leg needs a copy — and the
-  performance gate (the number belongs to the build, not to the engine).
+  serve `dist/` themselves, so the leg has everything they need — and the performance gate (the number belongs to
+  the build, not to the engine).
 * **nightly** (schedule / dispatch): coverage, build, `check:loudness:fresh`, the full matrix, the performance
   gate, and the artifacts. The musical ratchet is **not** in this job any more — see below.
 * **groove-shards** (schedule / dispatch): four runners, one slice of the twelve-genre sample each
@@ -91,9 +91,9 @@ git diff --stat apple2011/next HEAD
   and the serial run cannot disagree. It runs with `if: always()` and no `npm ci` (the merge path imports nothing but
   Node), so a dead shard produces "no shard measured: …" instead of silence.
 
-`manual-verify.yml` is the on-demand switch (`scope: e2e | verify | audio | trim | jank | skins | all`, plus
-`profile`/`only`) and is the right tool for "just the phone legs", "just the timbre gate", or the 159-genre loudness
-trim re-record (`trim`, which uploads the report as an artifact and never commits a baseline).
+`manual-verify.yml` is the on-demand switch (`scope: e2e | verify | audio | trim | jank | skins | sfizz | mirror | all`,
+plus `profile`/`only`) and is the right tool for "just one browser engine" (via `only`), "just the timbre gate", or
+the 159-genre loudness trim re-record (`trim`, which uploads the report as an artifact and never commits a baseline).
 
 ### Gating policy
 
@@ -131,10 +131,11 @@ Two conclusions came out of those numbers, and both are load-bearing:
 
 ## Operating notes (each one cost time to learn)
 
-* **`gh` needs `-R gradetwo/groove`** — the local tree has no git remote, so `gh` cannot infer the repository.
-  `gh run list/view -R gradetwo/groove --branch dev` is the way; SSH push already works.
+* **`gh` can infer the repository now** — the tree has its own `origin` (`git@github.com:gradetwo/groove.git`), so
+  `gh run list --branch dev` works without naming it. `-R gradetwo/groove` still does, and is the explicit form;
+  SSH push works either way.
 * **The PAT cannot dispatch a workflow** (`HTTP 403: Resource not accessible by personal access token`): it has
-  `repo` + `actions:read` but not `workflow`. Pushes work, so the push-time jobs (`validate`, the three `e2e` legs)
+  `repo` + `actions:read` but not `workflow`. Pushes work, so the push-time jobs (`validate`, the `e2e` leg)
   run by themselves; the **schedule/dispatch-only** jobs (`nightly`, `groove-shards`, `groove-gate`) need either a
   PAT with the `workflow` scope or a click on *Run workflow* in the Actions tab.
 * **Long CI work is unreadable without a token? No longer** — `gh` is authenticated on this machine (account
@@ -157,8 +158,8 @@ Two conclusions came out of those numbers, and both are load-bearing:
    no auto-committed baselines).
 3. The product work the plans still own: **B5** (fills/variation as arrangement data, unblocked now that B3's
    timeline view edits `sections`), **P1** (content design through a generator), **P2** (per-note timbre,
-   saturation depth, top-end texture), the phone's multi-level genre picker, and **P0.8 → P0.9** (the render
-   nondeterminism and the loudness re-record that is waiting on it).
+   saturation depth, top-end texture), and **P0.8 → P0.9** (the render nondeterminism and the loudness re-record
+   that is waiting on it).
 
 ## What the laptop still owes
 
