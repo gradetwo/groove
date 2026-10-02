@@ -9,7 +9,7 @@
 import type { ArrangementV2, NoteEvent, TakeRegion, TrackKindV2, TrackV2 } from "../types/arrangementV2";
 import { stepCountFor, stepsPerBarFor } from "./noteEvents";
 import type { PlannedTake } from "./takePlanning";
-import { DEFAULT_SAMPLER_ASSET, defaultContentFor } from "./defaultContent";
+import { DEFAULT_SAMPLER_ASSET, defaultContentFor, type DefaultContent } from "./defaultContent";
 import { addNote, moveNote, notesFromSteps, removeNote, setNoteLength, stepsFromNotes, STEPS_PER_BEAT } from "./noteEvents";
 
 let nextId = 1;
@@ -57,6 +57,18 @@ export function requireTrackKind(kind: string, trackName?: string): TrackKindV2 
 }
 
 /**
+ * The starter content as notes — **one expression**, so `createArrangement`, the template, `addTrack` and
+ * `starterNotesFor` cannot disagree about what a new track holds.
+ *
+ * `pitches` is spread only when the kind has one. Handing every kind an array of 60s would be this file stating a pitch
+ * the model already has a default for, and it would hide whether a kind's pattern is melodic (one pitch) or a kit part
+ * (the role's own GM numbers).
+ */
+function starterNotes(content: DefaultContent): NoteEvent[] {
+  return notesFromSteps(content.steps, { velocity: 100, ...(content.pitches ? { pitches: content.pitches } : {}) });
+}
+
+/**
  * A new arrangement **with one track of the chosen kind** — because an empty list is a question and one track is a place to start.
  *
  * The owner asked for a new-project entry where a template may be chosen *or* blank, and even blank has a default track typed by that choice. The reason is concrete: the record button needs a track to point
@@ -69,7 +81,7 @@ export function createArrangement(songId: string, kind: TrackKindV2 = "synth"): 
   return {
     songId,
     tracks: [{ id, kind, name: DEFAULT_NAME[kind], ...(content.sample ? { sample: content.sample } : {}) }],
-    notesByTrack: { [id]: notesFromSteps(content.steps, { velocity: 100 }) },
+    notesByTrack: { [id]: starterNotes(content) },
     // ⭐ Eight bars to start with, because an arrangement exists to hold more than one thing and one bar is where a pattern lives. The templates were written as one-bar patterns, so a new arrangement is long enough for them and short enough to see whole.
     bars: DEFAULT_BARS,
     sourceSlots: [],
@@ -117,7 +129,7 @@ export function createArrangementFromTemplate(songId: string, templateId: string
     const id = freshId(kind);
     const content = defaultContentFor(kind);
     tracks.push({ id, kind, name, ...(content.sample ? { sample: content.sample } : {}) });
-    notesByTrack[id] = notesFromSteps(content.steps, { velocity: 100 });
+    notesByTrack[id] = starterNotes(content);
   }
   return { songId, tracks, notesByTrack, sourceSlots: [] };
 }
@@ -132,7 +144,7 @@ export function createArrangementFromTemplate(songId: string, templateId: string
  * remaining case — an arrangement that still carries them — can be *named* rather than assumed away.
  */
 export function starterNotesFor(kind: TrackKindV2): NoteEvent[] {
-  return notesFromSteps(defaultContentFor(kind).steps, { velocity: 100 });
+  return starterNotes(defaultContentFor(kind));
 }
 
 /**
@@ -185,7 +197,7 @@ export function addTrack(arrangement: ArrangementV2, kind: TrackKindV2, name: st
   return {
     ...arrangement,
     tracks: [...arrangement.tracks, { id, kind, name, ...(content.sample ? { sample: content.sample } : {}), ...extra }],
-    notesByTrack: { ...(arrangement.notesByTrack ?? {}), [id]: notesFromSteps(content.steps, { velocity: 100 }) },
+    notesByTrack: { ...(arrangement.notesByTrack ?? {}), [id]: starterNotes(content) },
   };
 }
 

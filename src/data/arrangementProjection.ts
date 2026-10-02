@@ -29,6 +29,18 @@ function keyOf(track: SequencerTrack): string {
   return track.laneId ? `${track.track_id}::${track.laneId}` : track.track_id;
 }
 
+/**
+ * The v2 kind a v1 `track_id` projects to, or `undefined` for a role this build does not have.
+ *
+ * Exported because `arrangementImport` has to ask the **same** question — "is this projected lane a drum?" — when it
+ * decides whether a pitch-less step takes its role's General MIDI number. A second list of drum roles beside this map
+ * is the two-places-one-thing failure this file's own key-by-`laneId` rule exists to avoid, and the two would disagree
+ * the day a fifth drum role arrives.
+ */
+export function v1KindForTrackId(trackId: string): TrackKindV2 | undefined {
+  return KIND_BY_TRACK_ID[trackId as SequencerTrack["track_id"]];
+}
+
 export interface ProjectionInput {
   id: string;
   clips: Record<string, SequencerPattern | undefined>;

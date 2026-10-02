@@ -8,6 +8,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import { ScoreV2 } from "../components/arrangement/ScoreV2";
 import { LanguageProvider } from "../i18n/LanguageContext";
+import { starterNotesFor } from "../data/arrangementEdits";
 
 /**
  * VexFlow draws into a real SVG canvas, and jsdom has no layout: the library's own renderer is stubbed so that **what is being tested is our translation** — which notes go on which stave, at which position — rather than VexFlow's engraving, which is VexFlow's job and its own test suite's.
@@ -283,6 +284,22 @@ describe("the score", () => {
       expect(drawn.clefs).not.toContain("treble");
       expect(drawn.clefs).not.toContain("bass");
     });
+  });
+
+  it("draws a brand-new drum track on three instrument lines and raises no unlisted-note notice", async () => {
+    /**
+     * ⭐ **The end of the chain, read off the real component.** The defect this closes is not "the numbers look
+     * plausible" — it is what a person sees: a new drum track used to draw four noteheads on the snare line and a
+     * sentence saying GM 60 is not in the table. So the criterion renders `defaultContentFor`'s own content (through
+     * `starterNotesFor`, the same function the model uses) and checks both halves at once: the three lines exist, and
+     * `score-percussion-notice` does not.
+     */
+    renderDrums(starterNotesFor("drumkit"), 1);
+    await waitFor(() => {
+      const keys = drawn.notes.flatMap((entry) => keysIn(entry));
+      expect(keys).toEqual(expect.arrayContaining(["f/4", "c/5", "g/5/x2"]));
+    });
+    expect(screen.queryByTestId("score-percussion-notice")).toBeNull();
   });
 
   it("puts the kick, the snare, the hat and the shaker where the table says, and never on their own pitches", () => {

@@ -24,7 +24,7 @@ const note = (pitch: number, startBeats: number, lengthBeats = 0.25): NoteEvent 
   velocity: 100,
 });
 
-/** The starter content of every new track: `defaultContentFor`'s `steps(4)`, one sixteenth on each beat. */
+/** A new **melodic** track's starter content: `defaultContentFor`'s `steps(4)`, one sixteenth on each beat. A drum track starts on kick/snare/hat numbers instead (see `defaultContent.test.ts`). */
 const starter = () => [note(60, 0), note(60, 1), note(60, 2), note(60, 3)];
 
 describe("the rests that fill a bar", () => {

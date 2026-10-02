@@ -82,12 +82,13 @@ describe("the instrument chooser in a track row", () => {
 describe("a track's own steps in the row", () => {
   it("shows one control per step, and marks the ones that are on", () => {
     resetTrackIdsForTests();
-    // `defaultContentFor` gives a drum track every fourth step, so the row must show 16 controls with 4 of them pressed.
+    // `defaultContentFor` gives a drum track a kick/snare/hat pattern: 16 controls, 8 on (kick on 1 and 3, snare on 2
+    // and 4, closed hat on the offbeats).
     const withTrack = addTrack(base(), "drumkit", "Drums");
     renderList(withTrack);
     const steps = screen.getAllByLabelText(/^Drums bar 1 step \d+$/);
     expect(steps).toHaveLength(16);
-    expect(steps.filter((step) => step.getAttribute("aria-pressed") === "true")).toHaveLength(4);
+    expect(steps.filter((step) => step.getAttribute("aria-pressed") === "true")).toHaveLength(8);
   });
 
   it("reports which track and which step were clicked", () => {

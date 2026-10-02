@@ -25,8 +25,9 @@ import type { SequencerPattern, SequencerTrack } from "../types/genre";
 import type { ImportedPart } from "./musicxmlImport";
 import { addTrack } from "./arrangementEdits";
 import { placementForPart, type SituationPlacement, type StringSituationSpec } from "./stringSituation";
-import { projectSongToV2 } from "./arrangementProjection";
+import { projectSongToV2, v1KindForTrackId } from "./arrangementProjection";
 import { notesFromLane } from "./noteLayer";
+import { drumNoteForRole } from "../audio/drumRoles";
 import { beatsPerBar, sortNotes, STEPS_PER_BEAT } from "./noteEvents";
 
 /** What an import did, in the terms a caller can check: which tracks appeared, how many notes, and what was dropped. */
@@ -182,7 +183,7 @@ export function arrangementFromGroovePackage(pkg: GrooveProjectPackage, songId: 
       notesByTrack[track.id] = [];
       continue;
     }
-    const expanded = notesForTrack(source, clipSteps(clips, track.fromTrackId, track.fromLaneId));
+    const expanded = notesForTrack(source, clipSteps(clips, track.fromTrackId, track.fromLaneId), problems);
     notesByTrack[track.id] = expanded;
     notes += expanded.length;
   }
@@ -244,23 +245,59 @@ function clipSteps(clips: Record<string, SequencerPattern | undefined>, fromTrac
 }
 
 /**
+ * **The pitch a projected drum lane's pitch-less step is written at, or the sentence saying why it cannot be.**
+ *
+ * A value rather than a throw, and exported, for the reason this codebase gives everywhere else: the branch this
+ * guards is **unreachable with today's four drum roles** (all of them are rows of `DRUM_ROLE_NOTES`), and an
+ * unreachable branch whose answer nobody can call is a hope rather than a guard. A criterion feeds it a role the table
+ * does not hold and reads the sentence back.
+ */
+export function projectedDrumPitch(trackId: string): { pitch: number; problem?: undefined } | { pitch?: undefined; problem: string } {
+  const note = drumNoteForRole(trackId);
+  if (note === undefined) {
+    return {
+      problem: `the drum lane "${trackId}" has no note in DRUM_ROLE_NOTES (src/audio/drumRoles.ts), so its hits were imported at pitch 0 — add the role's General MIDI number there to place them`,
+    };
+  }
+  return { pitch: note };
+}
+
+/**
  * A v1 lane as arrangement notes.
  *
  * `notesFromLane` gives steps and a 0–1 velocity; the arrangement counts **beats** and 1–127. The syllable the file
  * wrote on a step travels onto every note that step produced, which is the same rule the MIDI and MusicXML writers
  * follow for a lyric: it belongs to the note it is sung on.
+ *
+ * ⭐ **A drum lane's step carries no pitch, so the arrangement is given its role's General MIDI number.** Every one of
+ * the **636** drum lanes in the shipped genre data writes `steps` and no `pitch` column at all (measured: 0 of 636
+ * carry `pitch`, 0 carry `pitches`), and `notesFromLane` expands such a step at pitch 0 — the engine's own "a drum has
+ * no key" convention. That is right for the engine and wrong for the arrangement, whose vocabulary for a drum hit is
+ * the GM percussion number: imported at 0, the percussion staff drew every projected drum lane on its fallback row and
+ * reported "GM percussion note 0 is not in the table", and the MIDI writer would have exported pitch 0. The number
+ * comes from {@link projectedDrumPitch} (→ `DRUM_ROLE_NOTES`), so the imported lane and the lane that sounds cannot
+ * name different pads. A step that **does** carry a pitch keeps it: this is a fallback, not a reinterpretation (a
+ * `.groove` v2 package's compiled drum lane holds 36/38/42 and round-trips unchanged).
+ *
+ * "Is this a drum lane" is asked of the **projection's own map** (`v1KindForTrackId`), not of a second list here.
  */
-function notesForTrack(track: SequencerTrack, patternSteps: number): NoteEvent[] {
+function notesForTrack(track: SequencerTrack, patternSteps: number, problems: string[]): NoteEvent[] {
+  const lane = notesFromLane(track, patternSteps);
+  const drum = v1KindForTrackId(track.track_id) === "drumkit";
+  const unpitched = drum ? lane.filter((note) => note.pitch <= 0).length : 0;
+  const decision = unpitched > 0 ? projectedDrumPitch(track.track_id) : undefined;
+  if (decision?.problem) problems.push(decision.problem);
+  const roleNote = decision?.pitch;
   const notes: NoteEvent[] = [];
-  for (const lane of notesFromLane(track, patternSteps)) {
-    const step = Math.round(lane.startStep);
-    const syllable = track.syllables?.[step]?.trim();
+  for (const step of lane) {
+    const at = Math.round(step.startStep);
+    const syllable = track.syllables?.[at]?.trim();
     notes.push({
-      pitch: lane.pitch,
-      startBeats: lane.startStep / STEPS_PER_BEAT,
+      pitch: step.pitch > 0 ? step.pitch : roleNote ?? step.pitch,
+      startBeats: step.startStep / STEPS_PER_BEAT,
       // A note with no length is not a note; the same floor the arrangement's own edits use.
-      lengthBeats: Math.max(1 / STEPS_PER_BEAT, lane.durationSteps / STEPS_PER_BEAT),
-      velocity: Math.max(1, Math.min(127, Math.round(lane.velocity * 127))),
+      lengthBeats: Math.max(1 / STEPS_PER_BEAT, step.durationSteps / STEPS_PER_BEAT),
+      velocity: Math.max(1, Math.min(127, Math.round(step.velocity * 127))),
       ...(syllable ? { syllable } : {}),
     });
   }
