@@ -165,7 +165,7 @@ DAW needs one. A survey of the consumers says where the seam is and, usefully, t
 | `src/features/sequencer/useSequencerStore.ts` | **the document lives here** — this is the one that has to move |
 | `src/data/songFlatten.ts` | the **converter**: `sessionSong(...)` builds a `Song` from the editor's state and `flattenSong` renders it |
 | `src/features/sequencer/{projectDb,projectStorage,useProjectHub}.ts` | persistence of the project shape |
-| `src/features/sequencer/useExportActions.ts` | the exporters, which already go through the flatten |
+| `src/features/sequencer/hooks/useExportActions.ts` | the exporters, which already go through the flatten |
 | `src/views/StudioView.tsx`, `src/components/sequencer/*` | the UI, which edits two slots |
 | `src/hooks/useGenreAudition.ts` | audition, same two slots |
 

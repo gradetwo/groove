@@ -556,8 +556,8 @@ const DOCS = fs.readdirSync(ROOT).filter((f) => f.endsWith(".md"));   // ← 只
 
 | 我写的 ✗ | 真路径 ✓ |
 | --- | --- |
-| `src/components/MobileStudioSheet.tsx`（**文件根本不存在** ✓） | `src/mobile/MobileModuleTabBar.tsx` 等 ✓ |
-| `src/components/MobileModuleTabBar.tsx` ✓ | `src/mobile/MobileModuleTabBar.tsx` ✓ |
+| `src/components/MobileStudioSheet.tsx`（**文件根本不存在** ✓） | `src/mobile/MobileModuleTabBar.tsx` 等 ✓ | ✗
+| `src/components/MobileModuleTabBar.tsx` ✓ | `src/mobile/MobileModuleTabBar.tsx` ✓ | ✗
 
 **⇒ 结论** ✓✓：**"**记住了 basename、丢掉了前缀**"是这类错**唯一**的形状 ✓**（**11 处破引用里，凡属"陈旧"的都是它 ✓**）。**⇒ 因此对它的检查**不需要语义理解** ✓：**只要问"这个名字的文件在**别处**存在吗 ✗" ✓——**若存在，几乎一定是丢了前缀，而正确路径可以直接给出** ✓✓（**比"这个文件不存在"有用得多 ✓**）。
 
