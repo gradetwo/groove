@@ -437,6 +437,8 @@ node scripts/profile_offline_render.mjs --bars=1 --runs=2 --mode=cpu      # 进�
 
 **三次独立运行，读数逐位相同** ✓✓：
 
+**⚠️ 这些是**通道条接线落地之前**（改前 `origin/dev`）的值** ✓；**改后的当前值是 **1.03 dB（band 3）／1.04 dB（band 7）／1.612 LU** ✓，见 `docs/HEADLESS_CORE_PLAN.md` §8.13 与 §9.2 ✓**——**表中数字是那次测定的记录，一个不动 ✓。**
+
 | 检查 | 三次结果（完全一致 ✓） |
 | --- | --- |
 | same voice（ON vs ON） | 最差 **1.28 dB**（band 6）✗ |
