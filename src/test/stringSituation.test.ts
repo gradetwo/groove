@@ -195,20 +195,23 @@ describe("the length constraint, on the material's own numbers", () => {
 describe("the technique identities are real, resolvable instrument names", () => {
   it("resolves every playable row's identity to that row's own recording, through the recorded-instrument table", () => {
     const playable = playableTechniques();
-    expect(playable).toHaveLength(25);
+    expect(playable).toHaveLength(26);
     for (const program of playable) {
       const identity = instrumentIdentityFor(program);
       expect(sampledInstrumentFor(identity)?.assetId, `${identity} must reach ${program.assetId}`).toBe(program.assetId);
     }
   });
 
-  it("offers an identity for every mirrored row, and the three techniques with no row are still absent", () => {
+  it("offers an identity for every mirrored row, and the techniques with no row are still absent", () => {
     const names = new Set(ALL_SAMPLED_INSTRUMENTS.map((choice) => choice.instrument));
     for (const program of playableTechniques()) expect(names.has(instrumentIdentityFor(program))).toBe(true);
-    // ⭐ The rows the 2026-10-02 round mirrored are offered now — they used to be the negative cases here.
+    // ⭐ The rows the 2026-10-02 rounds mirrored are offered now — they used to be the negative cases here.
     expect(names.has("violin_section_spiccato")).toBe(true);
     expect(names.has("cello_section_tremolo")).toBe(true);
     expect(names.has("solo_violin_sustain")).toBe(true);
+    // ⭐ `non-vibrato` is a real identity on the one instrument that has the program — and only there, because the
+    // library's `ContrabassSusNV` is the only `SusNV` upstream (Part 2, 2026-10-02).
+    expect(sampledInstrumentFor("contrabass_solo_non_vibrato")?.assetId).toBe("vsco2ce:ContrabassSusNV");
     // The techniques the library has no program for at all remain unnameable, so a caller cannot be promised one.
     for (const absent of ["violin_section_non_vibrato", "violin_section_col_legno", "violin_section_harmonics"]) {
       expect(names.has(absent)).toBe(false);

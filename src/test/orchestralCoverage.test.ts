@@ -64,11 +64,9 @@ interface RequestedInstrument {
  * Every entry is served now, and the ids are the `vsco2ce` programs' own ids: the manifest writes `entryId:programSlug`, so `ViolinEnsSusVib.sfz` under the `vsco2ce` entry is
  * `vsco2ce:ViolinEnsSusVib`. Timpani keeps the two VCSL keyswitch ids as well, because that proof existed before this library did and dropping it would silently lose coverage.
  *
- * ⭐ **The articulations column is measured, and it corrected the work order on one row.** The order said VSCO has no articulation program for `Harp` *or* `Timpani`; the
+ * ⭐ **The articulations column is measured, and it corrected the work order on one row — then filled it.** The order said VSCO has no articulation program for `Harp` *or* `Timpani`; the
  * pinned tree says otherwise for one of them: it ships `TimpaniRolls.sfz` (a roll/tremolo program, 1,336 bytes) whose ten samples were already mirrored when the whole
- * `Percussion/Timpani` directory came across with the sustained set (`docs/SAMPLE_LIBRARY_INTEGRATION.md` §⑤). **Harp has no second program at all.** That roll program
- * file is not mirrored in this slice, so both rows read `[]` — and the absence check below is written against the *program files*, so the day `TimpaniRolls.sfz`
- * is mirrored this roster goes red and has to claim it rather than letting an unregistered program sit in the mirror.
+ * `Percussion/Timpani` directory came across with the sustained set (`docs/SAMPLE_LIBRARY_INTEGRATION.md` §⑤). **Harp has no second program at all.** This comment used to say that the roll program was not mirrored, and that "the day `TimpaniRolls.sfz` is mirrored this roster goes red and has to claim it" — the 2026-10-02 Part 2 round mirrored it, the test went red exactly as designed, and the roster now claims `vsco2ce:TimpaniRolls`. Harp is the only row left with an empty `articulations`.
  */
 const REQUESTED: RequestedInstrument[] = [
   { name: "violin", servedBy: ["vsco2ce:ViolinEnsSusVib"], articulations: ["vsco2ce:ViolinEnsPizz"] },
@@ -84,7 +82,7 @@ const REQUESTED: RequestedInstrument[] = [
   { name: "clarinet", servedBy: ["vsco2ce:ClarinetSus"], articulations: ["vsco2ce:ClarinetStac"] },
   { name: "bassoon", servedBy: ["vsco2ce:BassoonSus"], articulations: ["vsco2ce:BassoonStac"] },
   { name: "harp", servedBy: ["vsco2ce:Harp"], articulations: [] },
-  { name: "timpani", servedBy: ["vsco2ce:Timpani", "vcsl:Timpani-1-Keyswitch", "vcsl:Timpani-2-Keyswitch"], articulations: [] },
+  { name: "timpani", servedBy: ["vsco2ce:Timpani", "vcsl:Timpani-1-Keyswitch", "vcsl:Timpani-2-Keyswitch"], articulations: ["vsco2ce:TimpaniRolls"] },
 ];
 
 /** Every id the roster claims, both kinds — a sustained program and an articulation are proved by the same fetch-and-resolve case. */
@@ -124,7 +122,7 @@ async function expandedProgram(assetId: string): Promise<{ url: string; text: st
   }
 }
 
-/** One fetch per id the roster claims — 28 today (16 sustained ids plus 12 articulation ids), and none of them is skipped silently. */
+/** One fetch per id the roster claims — 29 today (16 sustained ids plus 13 articulation ids, the 13th being the timpani roll claimed in the Part 2 round), and none of them is skipped silently. */
 const proofs = await Promise.all(CLAIMED.map(async (assetId) => ({ assetId, program: await expandedProgram(assetId) })));
 /** Nothing fetched at all is a missing network; *something* failing while others succeed is a real failure and is asserted below. */
 const offline = proofs.every((proof) => proof.program === null);
@@ -184,33 +182,34 @@ describe("the orchestral instruments a catalogue entry could serve", () => {
     expect(REQUESTED.filter((instrument) => instrument.servedBy.length === 0).map((instrument) => instrument.name)).toEqual([]);
   });
 
-  it("keeps harp and timpani at the one program each the mirror took, so a mirrored articulation cannot arrive unclaimed", () => {
+  it("claims every program the mirror took for harp and timpani, so a mirrored articulation cannot arrive unclaimed", () => {
     /**
-     * ⭐ **The deliberate absence, written so that filling it breaks the test rather than passing quietly.**
-     *
-     * The work order said VSCO has no articulation for `Harp` or `Timpani`, and the mirror matches that: this slice took one articulation for each of the other
-     * twelve and none for these two. The upstream tree only *nearly* agrees — it also ships `TimpaniRolls.sfz` (a roll program, 1,336 bytes) whose ten samples
-     * were **already mirrored** when the sustained set took the whole `Percussion/Timpani` directory (`docs/SAMPLE_LIBRARY_INTEGRATION.md` §⑤), while `Harp` has
-     * no second program at all. So the assertion is on the **declared program files**, not on sample bytes: the timpani roll samples are legitimately present,
-     * and what must not happen is a roll/pizzicato/muted `.sfz` appearing in `instruments` without the roster claiming it and proving it resolves a note.
+     * ⭐ **The deliberate absence, written so that filling it breaks the test rather than passing quietly — and it
+     * did.** The work order said VSCO has no articulation for `Harp` or `Timpani`, and the first version of this
+     * test asserted that both rows read `[]` while saying in its own comment that the day `TimpaniRolls.sfz` is
+     * mirrored "this roster goes red and has to claim it". The 2026-10-02 Part 2 round mirrored it, the test went
+     * red exactly as designed, and the roster now claims `vsco2ce:TimpaniRolls` — which is the mechanism working,
+     * not an inconvenience. The assertion stays on the **declared program files**, because the roll's ten sample
+     * bytes were legitimately present long before its program was (`docs/SAMPLE_LIBRARY_INTEGRATION.md` §⑤).
      */
     const entry = manifest.entries.find((candidate) => candidate.id === "vsco2ce")!;
     const programs = (entry.instruments ?? []).map((program) => program.sfz);
-    const only: Record<string, string> = { harp: "Harp.sfz", timpani: "Timpani.sfz" };
+    const expected: Record<string, string[]> = { harp: ["Harp.sfz"], timpani: ["Timpani.sfz", "TimpaniRolls.sfz"] };
     const problems: string[] = [];
-    for (const [instrument, expected] of Object.entries(only)) {
+    for (const [instrument, want] of Object.entries(expected)) {
       const mine = programs.filter((sfz) => sfz.toLowerCase().includes(instrument));
-      if (mine.length !== 1 || mine[0] !== expected) {
-        problems.push(`${instrument} should be declared by exactly ${expected}, but the entry declares ${mine.join(", ") || "nothing"}`);
+      if ([...mine].sort().join(", ") !== [...want].sort().join(", ")) {
+        problems.push(`${instrument} should be declared by exactly ${want.join(" + ")}, but the entry declares ${mine.join(", ") || "nothing"}`);
       }
       const roster = REQUESTED.find((candidate) => candidate.name === instrument)!;
-      if (roster.articulations.length > 0) {
-        problems.push(`${instrument} now carries an articulation (${roster.articulations.join(", ")}) — claim it here and in the document, this test is what noticed`);
+      const claimed = roster.articulations.filter((id) => id.startsWith("vsco2ce:"));
+      if (claimed.length !== want.length - 1) {
+        problems.push(`${instrument} declares ${want.length - 1} VSCO articulation(s) and the roster claims ${claimed.length} (${roster.articulations.join(", ") || "none"}) — claim it here and in the document, this test is what noticed`);
       }
     }
-    expect(problems, "the deliberate articulation absence for harp/timpani changed; say so everywhere rather than letting it pass").toEqual([]);
-    // The roster's own half of the same claim, so an empty `articulations` cannot become "forgotten" instead of "decided".
-    expect(REQUESTED.filter((instrument) => instrument.articulations.length === 0).map((instrument) => instrument.name)).toEqual(["harp", "timpani"]);
+    expect(problems, "the harp/timpani program set changed; say so everywhere rather than letting it pass").toEqual([]);
+    // The roster's own half of the same claim, so a missing `articulations` entry cannot become "forgotten" instead of "decided".
+    expect(REQUESTED.filter((instrument) => instrument.articulations.length === 0).map((instrument) => instrument.name)).toEqual(["harp"]);
   });
 
   it("keeps the families visible in the tool's own answer, because that is what a caller reads", () => {
@@ -219,14 +218,15 @@ describe("the orchestral instruments a catalogue entry could serve", () => {
     expect(winds, "the Winds category vanished, so the orchestral coverage is no longer visible in the tool's answer").toBeDefined();
     expect(list.categories.find((category) => category.name === "Percussion")?.subcategories.map((sub) => sub.name)).toContain("Struck Membranophones");
     /**
-     * ⭐ **The count grew twice, and the number is the point of the assertion rather than an inconvenience.**
+     * ⭐ **The count grew three times, and the number is the point of the assertion rather than an inconvenience.**
      *
      * `Orchestral` held 26 — VSCO 2 CE's fourteen sustained programs and twelve articulations. The Sonatina brass library mirrored that day declares the same category (it is the same
      * kind of library: an orchestra sampled instrument by instrument), and adds **48** programs, so a caller read 74. The 2026-10-02 string-articulation round added VSCO's four section
-     * tremolos, four section spiccatos, four section `-Quiet` takes and five solo-violin programs — **17 more** — so the category now answers 91. Asserting a literal would have made this
-     * test fail for the right reason and been "fixed" by deleting a library from the category; asserting the sum says what the tool answers and why it changed.
+     * tremolos, four section spiccatos, four section `-Quiet` takes and five solo-violin programs — **17 more** — so the category read 91. The Part 2 round added the pianos,
+     * percussion, mallets, piccolo, pipe-organ registrations, the three non-vibrato sustains and the timpani roll — **17 more** — so it now answers 108. Asserting a literal would
+     * have made this test fail for the right reason and been "fixed" by deleting a library from the category; asserting the sum says what the tool answers and why it changed.
      */
-    expect(list.categories.find((category) => category.name === "Orchestral")?.count).toBe(26 + 48 + 17);
+    expect(list.categories.find((category) => category.name === "Orchestral")?.count).toBe(26 + 48 + 17 + 17);
   });
 
   it("answers what VSCO 2 CE is, where it came from, and under what licence", () => {
@@ -241,7 +241,7 @@ describe("the orchestral instruments a catalogue entry could serve", () => {
     expect(vsco!.repo).toBe("schollz/VSCO-2-CE");
     expect(vsco!.pin).toBe("6dd651d55dde97fd4028699be9d4481f26917891");
     expect(vsco!.sourceUrl).toContain("schollz/VSCO-2-CE");
-    expect(vsco!.instruments).toBe(43);
+    expect(vsco!.instruments).toBe(60);
     expect(vsco!.durationSeconds).toBeGreaterThan(0);
     expect(vsco!.problems).toEqual([]);
   });

@@ -292,6 +292,16 @@ a solo voice, in the same CC0 library and the same upload pipeline.
 **Priority 2 — the rest of the pinned orchestra's palette (VSCO 2 CE, CC0): about 848 MiB for the whole table, or
 about 586 MiB for the pianos, percussion and mallets alone.**
 
+> ⚠️ **Bought on 2026-10-02, and the estimate held to the megabyte: 889 816 864 bytes = 848.60 MiB** (the table
+> below sums to 848.53 MiB of samples; the four extra tenths are the program and note text). The one correction is
+> that **`TimpaniRolls` cost 0 new bytes** — its ten samples came across with the `Percussion/Timpani` directory in
+> Part 1, so only the program and its roster row were missing. One purchase trick is worth recording: `GM-StylePerc`
+> and `TubularBells` sample into the *root* of `Percussion/`, and that directory is 305.67 MiB / 329 files, of which
+> 79 (49.49 MiB, `Percussion/temp/` among them) no bought program references — so the entry lists those **188
+> individual files** in its `paths` instead of the directory. The account is in
+> `docs/SAMPLE_LIBRARY_INTEGRATION.md` §⑨; the one mapping change (`non-vibrato`, a contrabass-only row) is in
+> `docs/STRING_TECHNIQUES.md` §15.
+
 | What | Programs (MiB) | Subtotal |
 |---|---|---|
 | Two upright pianos | UprightPiano 241.89, VSUpright1 147.89 | 389.78 |

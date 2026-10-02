@@ -99,13 +99,13 @@ describe("string techniques on the instrument list", () => {
    */
   it("narrows by musical situation rather than by program name", () => {
     const bed = listCatalogueInstruments({ situation: "sustained-bed" });
-    // ⭐ Ten programs since 2026-10-02: the five sustained rows and the five `-Quiet` soft takes, because the rule's
-    // preference list is ["sustain","quiet","non-vibrato"] and "a bed that must sit under everything" is exactly the
-    // quiet take's request. `non-vibrato` contributes nothing (no row; the contrabass-only `ContrabassSusNV` is not
-    // mirrored), and no pizzicato or spiccato appears, because those are different gestures.
+    // ⭐ Eleven programs since the 2026-10-02 rounds: the five sustained rows, the five `-Quiet` soft takes and the
+    // contrabass's one `non-vibrato` take, because the rule's preference list is ["sustain","quiet","non-vibrato"].
+    // No pizzicato or spiccato appears, because those are different gestures.
     expect(bed.instruments.map((instrument) => instrument.assetId).sort()).toEqual([
       "vsco2ce:CelloEnsSusVib",
       "vsco2ce:CelloEnsSusVib-Quiet",
+      "vsco2ce:ContrabassSusNV",
       "vsco2ce:ContrabassSusVB",
       "vsco2ce:ContrabassSusVB-Quiet",
       "vsco2ce:SViolinVib",
@@ -115,8 +115,12 @@ describe("string techniques on the instrument list", () => {
       "vsco2ce:ViolinEnsSusVib",
       "vsco2ce:ViolinEnsSusVib-Quiet",
     ]);
-    // Every one of them really is a sustain or a quiet take, so the filter cannot be passing a name through.
-    expect(bed.instruments.every((instrument) => instrument.technique === "sustain" || instrument.technique === "quiet")).toBe(true);
+    // Every one of them really is one of the rule's own three techniques, so the filter cannot be passing a name through.
+    expect(
+      bed.instruments.every((instrument) =>
+        ["sustain", "quiet", "non-vibrato"].includes(instrument.technique ?? "")
+      )
+    ).toBe(true);
   });
 
   /**
@@ -161,8 +165,8 @@ describe("string techniques on the instrument list", () => {
   /** Every technique the listing reports must be one the table declares, and every mirrored string row must be annotated. */
   it("reports only techniques the table declares, and reports one for every mirrored string row", () => {
     const reported = new Set(strings().map((instrument) => instrument.technique).filter((value) => value !== undefined));
-    expect([...reported].sort()).toEqual(["pizzicato", "quiet", "spiccato", "sustain", "tremolo"]);
-    // The twenty-five playable rows are exactly the twenty-five assets the listing annotates.
-    expect(strings().filter((instrument) => instrument.technique !== undefined)).toHaveLength(25);
+    expect([...reported].sort()).toEqual(["non-vibrato", "pizzicato", "quiet", "spiccato", "sustain", "tremolo"]);
+    // The twenty-six playable rows are exactly the twenty-six assets the listing annotates.
+    expect(strings().filter((instrument) => instrument.technique !== undefined)).toHaveLength(26);
   });
 });

@@ -28,14 +28,14 @@
  *
  * **2 — The mirror now holds every string technique the pinned library has a program for.** The 2026-10-02 round
  * added the four section tremolos, the four section spiccatos, the four section `-Quiet` takes and the whole
- * solo-violin family, so **all 25 rows below are mirrored**. Of the eight technique words this file names, only
- * `col-legno` and `harmonics` have **no program upstream at all**, and `non-vibrato` is a **contrabass-only**
- * program (`ContrabassSusNV`, measured at 50.35 MiB / 28 files) that is not mirrored yet and has no row — a stated
- * next step rather than a hidden fallback. The library's `-KS` keyswitch programs stay out on purpose: they fold
- * several articulations into one file behind `sw_*` opcodes this loader does not implement, so including one would
- * answer a request for a technique with whichever regions matched instead of with the articulation asked for. The
- * `mirrored` flag is kept in the data rather than hidden, because "this technique exists in the library but its
- * bytes are not in the mirror" is a different statement from "this library cannot play it".
+ * solo-violin family, and its Part 2 added the library's only `non-vibrato` program (the contrabass's
+ * `ContrabassSusNV`), so **all 26 rows below are mirrored**. Of the eight technique words this file names, only
+ * `col-legno` and `harmonics` have **no program upstream at all** — those two are the whole of the gap now, and
+ * `non-vibrato` is a real row on the one instrument that has it. The library's `-KS` keyswitch programs stay out on
+ * purpose: they fold several articulations into one file behind `sw_*` opcodes this loader does not implement, so
+ * including one would answer a request for a technique with whichever regions matched instead of with the
+ * articulation asked for. The `mirrored` flag is kept in the data rather than hidden, because "this technique exists
+ * in the library but its bytes are not in the mirror" is a different statement from "this library cannot play it".
  *
  * ## The shape of the table: one row per (instrument, technique)
  *
@@ -119,15 +119,15 @@ export interface StringTechniqueProgram {
 /**
  * ⭐ **The table.**
  *
- * Twenty-five rows: five instruments, and the techniques each one actually has a program for. Read it as the answer
+ * Twenty-six rows: five instruments, and the techniques each one actually has a program for. Read it as the answer
  * to "can we play a tremolo cello, and what do we call it" — `CelloEnsTrem`, `mirrored: true` since the
  * 2026-10-02 round, with the measured 11.183 s longest / 6.605 s shortest samples in its own row.
  *
  * The `maxSampleSeconds` and `safeSeconds` values are the measured longest and shortest samples of each program
  * (a program's samples are spread across pitch, which is why the two differ by several seconds). They are
  * carried per row rather than derived from the manifest's single `durationSeconds`, because that field is the
- * longest sample across the *whole library* — 29.458 s, a timpani roll — and using it here would promise a
- * violin eight seconds it does not have.
+ * longest sample across the *whole library* — 42.175 s, a bowed cymbal, after the Part 2 round added the
+ * percussion and organ programs — and using it here would promise a violin forty seconds it does not have.
  */
 export const STRING_TECHNIQUES: readonly StringTechniqueProgram[] = [
   /* ---------------------------------------------------------------- violin -- */
@@ -445,6 +445,24 @@ export const STRING_TECHNIQUES: readonly StringTechniqueProgram[] = [
   },
   {
     instrument: "contrabass",
+    technique: "non-vibrato",
+    assetId: "vsco2ce:ContrabassSusNV",
+    program: "ContrabassSusNV.sfz",
+    name: "Solo Contrabass, sustained (non-vibrato)",
+    mirrored: true,
+    lowestNote: 24,
+    highestNote: 60,
+    velocityLayers: [
+      [0, 62],
+      [63, 127],
+    ],
+    maxSampleSeconds: 18.195,
+    safeSeconds: 6.591,
+    roundRobin: 1,
+    note: "The library's **only** `non-vibrato` program, and its longest sample, 18.195 s, is the longest sustained string sample in the whole mirror — half a second longer than the vibrato contrabass's 17.332 s. Two layers over the same 24–60 compass; 28 samples. Mirrored in the 2026-10-02 Part 2 round. ⚠️ No other instrument upstream has a `SusNV`: the violin, viola and cello sections have none, so `non-vibrato` is a **contrabass-only** row, and even here the `sustained-bed` rule reaches `sustain` and `quiet` first over the same compass — this row is reachable by name (and by {@link programForIdentity}) rather than by falling through to it.",
+  },
+  {
+    instrument: "contrabass",
     technique: "pizzicato",
     assetId: "vsco2ce:ContrabassPizz",
     program: "ContrabassPizz.sfz",
@@ -650,10 +668,10 @@ export function programForIdentity(identity: string): StringTechniqueProgram | u
 /**
  * The techniques the pinned library has a program for but the mirror does not ship.
  *
- * ⭐ **Empty since the 2026-10-02 round, and that is the point of keeping it.** All 25 rows are mirrored now; the
- * rows that used to be listed here (`ViolinEnsTrem`, `CelloEnsSpic`, the `-Quiet` takes, the solo-violin family)
- * are playable, and the three techniques this library genuinely cannot play are the ones with **no row at all**
- * (`col-legno`, `harmonics`, and the contrabass-only `non-vibrato`). A caller that wants "what is still out of
+ * ⭐ **Empty since the 2026-10-02 round, and that is the point of keeping it.** All 26 rows are mirrored now — the
+ * Part 1 rows that used to be listed here (`ViolinEnsTrem`, `CelloEnsSpic`, the `-Quiet` takes, the solo-violin
+ * family) and the Part 2 `non-vibrato` row are playable — and the only two techniques this library genuinely cannot
+ * play are the ones with **no row at all** (`col-legno`, `harmonics`). A caller that wants "what is still out of
  * reach" should read this function **and** {@link STRING_SITUATION_RULES}'s preferences, because a preference with
  * no row is a different shape of gap from a row with no bytes.
  */
@@ -994,11 +1012,12 @@ export const STRING_SITUATION_RULES: readonly StringSituationRule[] = [
     situation: "sustained-bed",
     // Sustained vibrato first because the section's vibrato is recorded in and a held chord wants it; the quiet
     // take second, because a bed that must sit under everything is a different request rather than a lower velocity.
-    // ⭐ The quiet take is mirrored since 2026-10-02 (it always was, in bytes — see the row's own note), so the
-    // second preference is now reachable; `non-vibrato` still has no row, because the only program upstream is the
-    // contrabass's `ContrabassSusNV` and its 50.35 MiB are not mirrored yet.
+    // ⭐ Both are mirrored since 2026-10-02, and Part 2 added the third preference's only program — the contrabass's
+    // `ContrabassSusNV`. It is a **contrabass-only** row: no other instrument upstream has a `SusNV`, and on the
+    // contrabass `sustain` and `quiet` cover the same 24–60 compass and come first, so this preference is reachable
+    // by name rather than by falling through to it. That is stated rather than hidden.
     preferred: ["sustain", "quiet", "non-vibrato"],
-    why: "长和弦铺底: the section's recorded vibrato is the warm default, and the quiet take is the answer when the bed has to sit under everything — one recorded layer at the file's own `volume=20`, for a whole part that must sit soft rather than for shaping one note. Non-vibrato has no row: it exists upstream only as the contrabass's `ContrabassSusNV` (measured 50.35 MiB, 28 files) and is not mirrored, so a request that reaches it falls through and says so.",
+    why: "长和弦铺底: the section's recorded vibrato is the warm default, and the quiet take is the answer when the bed has to sit under everything — one recorded layer at the file's own `volume=20`, for a whole part that must sit soft rather than for shaping one note. Non-vibrato is the third preference and has exactly one program upstream, the contrabass's `ContrabassSusNV` (mirrored in the 2026-10-02 Part 2 round; 18.195 s longest sample, the longest sustained string in the mirror), so on every other instrument that preference has no row and the choice falls through to sustain.",
     recognisedBy: "several notes starting together, each with lengthBeats reaching the next chord's start (what `legatoGapsFor` reads), or a part whose mean length is a beat or more",
   },
   {

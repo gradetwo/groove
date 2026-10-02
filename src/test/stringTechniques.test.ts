@@ -181,8 +181,8 @@ describe("the table is internally consistent", () => {
    */
   it("reaches every technique the pinned library has a program for, on every instrument", () => {
     const playable = new Set(playableTechniques().map((program) => program.technique));
-    expect([...playable].sort()).toEqual(["pizzicato", "quiet", "spiccato", "sustain", "tremolo"]);
-    for (const instrument of ["violin", "viola", "cello", "contrabass", "solo-violin"] as const) {
+    expect([...playable].sort()).toEqual(["non-vibrato", "pizzicato", "quiet", "spiccato", "sustain", "tremolo"]);
+    for (const instrument of ["violin", "viola", "cello", "solo-violin"] as const) {
       const reachable = new Set(
         playableTechniques()
           .filter((program) => program.instrument === instrument)
@@ -196,19 +196,24 @@ describe("the table is internally consistent", () => {
         "tremolo",
       ]);
     }
+    // ⭐ The one instrument with a sixth technique, and the one whose absence from the others is the fact:
+    // `ContrabassSusNV` is the library's **only** `non-vibrato` program (Part 2, 2026-10-02).
+    expect(
+      [...new Set(playableTechniques().filter((p) => p.instrument === "contrabass").map((p) => p.technique))].sort()
+    ).toEqual(["non-vibrato", "pizzicato", "quiet", "spiccato", "sustain", "tremolo"]);
   });
 
   /**
    * ⭐ **The count of reachable programs, which is the number the report quotes.**
    *
-   * Five instruments × five techniques = **25 playable string programs**, and the table now has no unmirrored row.
-   * The three technique words the library genuinely cannot play are the ones with **no row at all** — `col-legno`,
-   * `harmonics` and the contrabass-only `non-vibrato` — which the criterion below pins, so "zero unmirrored rows"
-   * cannot be misread as "everything a string can do is here".
+   * Five instruments × five techniques = 25, **plus** the contrabass's `non-vibrato` = **26 playable string
+   * programs**, and the table has no unmirrored row. The two technique words the library genuinely cannot play are
+   * the ones with **no row at all** — `col-legno` and `harmonics` — which the criterion below pins, so "zero
+   * unmirrored rows" cannot be misread as "everything a string can do is here".
    */
-  it("counts twenty-five playable string programs out of twenty-five rows", () => {
-    expect(playableTechniques()).toHaveLength(25);
-    expect(STRING_TECHNIQUES).toHaveLength(25);
+  it("counts twenty-six playable string programs out of twenty-six rows", () => {
+    expect(playableTechniques()).toHaveLength(26);
+    expect(STRING_TECHNIQUES).toHaveLength(26);
     expect(unmirroredTechniques()).toHaveLength(0);
     expect([...new Set(playableTechniques().map((program) => program.instrument))].sort()).toEqual([
       "cello",
@@ -224,17 +229,18 @@ describe("the table is internally consistent", () => {
 
   /**
    * The technique words the table names but has **no row for**. Asserted so that a reader cannot mistake "col legno
-   * is missing from the table" for an oversight: `col-legno` and `harmonics` have no program upstream at all, and
-   * `non-vibrato` exists upstream only as the solo contrabass's `ContrabassSusNV`, whose 50.35 MiB / 28 files are
-   * **not** mirrored and which therefore has no row — a measured next step, not a silent fallback. A request for any
-   * of the three must be refused by name rather than fall through to a sustain.
+   * is missing from the table" for an oversight: `col-legno` and `harmonics` have no program upstream at all — those
+   * two are the whole of the remaining gap, since the Part 2 round mirrored the contrabass's `ContrabassSusNV` and
+   * gave `non-vibrato` a row. A request for either must be refused by name rather than fall through to a sustain.
    */
   it("names the techniques the library has no program for, rather than omitting them", () => {
     const withRows = new Set(STRING_TECHNIQUES.map((program) => program.technique));
-    const namedButAbsent: StringTechnique[] = ["col-legno", "harmonics", "non-vibrato"];
+    const namedButAbsent: StringTechnique[] = ["col-legno", "harmonics"];
     for (const technique of namedButAbsent) {
       expect(withRows.has(technique), `${technique} unexpectedly has a row`).toBe(false);
     }
+    // And the one that now has a row really does have one, so this list cannot silently grow back.
+    expect(withRows.has("non-vibrato")).toBe(true);
   });
 });
 

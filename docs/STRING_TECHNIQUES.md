@@ -6,22 +6,22 @@
 
 ## 0. 一句话结论
 
-**2026-10-02 的弦乐演奏法一轮之后，这张表里 25 行全部有声：`sustain`、`quiet`（弱奏）、`pizzicato`、
-`spiccato`（跳弓）、`tremolo`（震音）在四个声部与 solo violin 上都拿得到真采样。**
-新增字节 **433 个文件 / 349,224,766 字节 ＝ 333.05 MiB**（其中 `-Quiet` 那四组 **0 新字节**——它们本来
-就是主程序软层的同一批 `_v1` 采样，Part 1 随目录一起上传过，这次只是把它们映射出来）。
+**2026-10-02 的两轮之后，这张表里 26 行全部有声：`sustain`、`quiet`（弱奏）、`pizzicato`、`spiccato`（跳弓）、
+`tremolo`（震音）在四个声部与 solo violin 上都拿得到真采样，`non-vibrato` 在**唯一有该程序**的低音提琴上也有。**
+第一轮（弦乐演奏法）新增 **433 文件 / 349,224,766 字节 ＝ 333.05 MiB**，其中 `-Quiet` 那四组 **0 新字节**
+（它们本来就是主程序软层的同一批 `_v1` 采样，Part 1 随目录一起上传过，缺的只是映射）；第二轮（VSCO 其余管弦）
+新增 **499 采样 ＋ 17 程序 ＝ 889,816,864 字节 ＝ 848.60 MiB**。
 
-够不到的不再是"有文件没镜像"，而是**上游根本没有程序**：`col legno`、`harmonics`（泛音），
-以及**只有低音提琴一条**的 `non-vibrato`（`ContrabassSusNV`，实测 50.35 MiB / 28 文件，未镜像、无行）。
-请求它们仍会被按名字拒绝，而不是悄悄落回一个 sustain；`-KS` 键位程序**故意不收**：它们的 `sw_*` 本加载器
-没有实现，整文件收进来会让每个音同时命中多套奏法。
+够不到的不再是"有文件没镜像"，也不再是"有程序没镜像"，而是**上游根本没有程序**：只剩
+`col legno` 与 `harmonics`（泛音）两个词。请求它们会被按名字拒绝，而不是悄悄落回一个 sustain；
+`-KS` 键位程序**故意不收**：它们的 `sw_*` 本加载器没有实现，整文件收进来会让每个音同时命中多套奏法。
 
 ## 1. 量法（可复核，不需要下载任何音频以外的推理）
 
 | 对象 | 来源 |
 | --- | --- |
 | 75 个上游程序的正文 | `schollz/VSCO-2-CE` 钉住 `6dd651d55dde97fd4028699be9d4481f26917891`，`SFZ` 分支 |
-| 镜像里 43 个程序的 WAV 字节 | `public/samples/manifest.json` 列出的文件，本地镜像树 |
+| 镜像里 60 个程序的 WAV 字节 | `public/samples/manifest.json` 列出的文件，本地镜像树 |
 | 解析 | 仓库自己的 `parseSfz`（`src/audio/sfz/parse.ts`），`sample=` 按该 region 自己的 `default_path` 解析 |
 | 时长 / 峰值 / `smpl` | 直接读 RIFF，不是 `ffprobe` 的转述 |
 
@@ -51,6 +51,7 @@
 | Cello Section | `CelloEnsTrem.sfz` | 震音 | 0–62 / 0–127 / 63–127 | 36–77 | 25 | 6.605–11.183 s | 无 | ✓ |
 | Cello Section | `CelloEnsSusVib-Quiet.sfz` | 持续·单独弱奏 | 0–41 / 0–127 / 42–127 | 36–77 | 14 | 6.387–9.641 s | 无 | ✓ |
 | Solo Contrabass | `ContrabassSusVB.sfz` | 持续（注意拼写是 `SusVB`） | 0–62 / 63–127 | 24–60 | 26 | 6.539–17.332 s | 无 | ✓ |
+| Solo Contrabass | `ContrabassSusNV.sfz` | **不揉弦长音**（全库唯一） | 0–62 / 63–127 | 24–60 | 28 | 6.591–18.195 s | 无 | ✓ |
 | Solo Contrabass | `ContrabassPizz.sfz` | 拨弦 | 0–62 / 0–127 / 63–127 | 24–60 | 40 | 0.961–6.024 s | 无 | ✓ |
 | Solo Contrabass | `ContrabassSpic.sfz` | 跳弓 | 0–62 / 0–127 / 63–127 | 24–60 | 42 | 1.103–3.283 s | 无 | ✓ |
 | Solo Contrabass | `ContrabassTrem.sfz` | 震音 | 0–62 / 63–127 | 24–60 | 16 | 6.110–10.639 s | 无 | ✓ |
@@ -71,13 +72,13 @@
 | --- | --- | --- |
 | `col legno`（弓杆击弦） | **没有** | 整个库里不存在；请求它必须被按名字拒绝 |
 | `harmonics`（泛音） | **没有** | 同上 |
-| `non-vibrato`（不揉弦长音） | **有，但只有低音提琴一条** | `ContrabassSusNV.sfz`，实测 **50.35 MiB / 28 文件**、音域 24–60、两层。**未镜像**，所以表里没有行——这是要买的下一项，不是"库里没有"。弦乐声部的 `susVib` 揉弦是录进去的，去不掉 |
+| `non-vibrato`（不揉弦长音） | **有，且已在镜像里** | `ContrabassSusNV.sfz`，实测 **50.35 MiB / 28 文件**、音域 24–60、两层、最长采样 18.195 s（**全镜像最长的持续弦乐采样**）。2026-10-02 第二轮买进并给了行；⚠️ 全库只有低音提琴这一条 `SusNV`，所以它是**低音提琴专属**的行，`sustained-bed` 规则在 24–60 上仍先取 `sustain`／`quiet`，这一行靠**名字**（`contrabass_solo_non_vibrato`）而不是靠回落到达 |
 | `sordino`（弱音器弦乐） | **没有** | 弱音器只给了 F Horn 与 Trumpet |
 
 ## 3. 长度约束：这是硬约束，不是播放器的问题
 
-**75 个程序里声明 `loop` 的：0 个。镜像的 43 个程序对应的 `.wav` 里带 `smpl` chunk 的：0 个。**
-（2026-10-02 新增的 17 个程序同样没有循环点：`ampeg_*` 与 `volume` 之外，它们的 region 只有
+**75 个程序里声明 `loop` 的：0 个。镜像的 60 个程序对应的 `.wav` 里带 `smpl` chunk 的：0 个。**
+（2026-10-02 两轮新增的 34 个程序同样没有循环点：`ampeg_*` 与 `volume` 之外，它们的 region 只有
 `sample`/`lokey`/`hikey`/`pitch_keycenter`/`lovel`/`hivel`/`seq_length`/`seq_position`/`tune`。）
 ⇒ 弦乐的持续音是**一次性录音**，录到哪停到哪，任何 player 语义都改不了这一点。
 
@@ -584,3 +585,32 @@ Kontakt 那条说明"演奏法的判定在库脚本／上层，不在播放器"�
 
 判据不只停在这一层：`src/test/stringSituation.test.ts` 把身份名写成一条 `kind:"synth"` 轨、走
 `compileArrangementToLanes`，再读**编译后 lane 的 `sample.assetId`**。
+
+---
+
+## 15. ⭐⭐ 追加六：Part 2 第二轮——`non-vibrato` 有了行（2026-10-02）
+
+同一天的第二轮买了计划书 Priority 2 的十五个程序（两架立式钢琴、`GM-StylePerc`、木琴/马林巴/钟琴/钟管/短笛、
+四套管风琴音色、三个非揉弦长音）＋ 一个**零新字节**的 `TimpaniRolls`。对这张弦乐表而言，只有一件变化：
+
+| | 第一轮之后 | 第二轮之后 |
+| --- | --- | --- |
+| `STRING_TECHNIQUES` 行数 | 25 | **26** |
+| 有行的演奏法 | sustain / quiet / pizzicato / spiccato / tremolo | 上面五种 ＋ **`non-vibrato`（低音提琴专属）** |
+| 无行的演奏法 | `col-legno`、`harmonics`、`non-vibrato` | **只剩 `col-legno`、`harmonics`** |
+| `playableTechniques()` | 25 | **26** |
+| `unmirroredTechniques()` | 0 | 0 |
+
+新行：`contrabass_solo_non_vibrato` → `vsco2ce:ContrabassSusNV`（28 region、24–60、两层 0–62/63–127、
+最长 **18.195 s** ＝ 全镜像最长的持续弦乐采样、最短 6.591 s、`seq_length` 1）。**它是全库唯一的 `SusNV`**，
+所以：
+* `sustained-bed` 的第三条偏好 `non-vibrato` 只在低音提琴上有一行，其他四件乐器仍然没有；
+* 即便在低音提琴上，`sustain`（17.332 s）与 `quiet` 覆盖同一 24–60 音域且排在前面 ⇒ **这条偏好不会被
+  `chooseTechnique` 选中**，这一行靠**名字**到达。这一点写在行自己的 `note` 与规则的 `why` 里，
+  而不是让一个永远不触发的偏好看起来像被用上了。
+
+⚠️ **其余十四个程序一个 `sampledInstruments.ts` 映射都没加**，因为它们服务的名字已经有"就是那件乐器"的录音：
+`piano_lead`→Salamander 大三角、`m1_organ`/`organ_lead`→FreePats 音轮模拟（计划书自己写明**立式管风琴不是
+拉杆风琴**那个意思）、`marimba_lead`→VCSL Marimba、`bell_lead`→VCSL Tubular Bells 1、鼓轨→Virtuosity 套鼓。
+第二轮的价值在**目录广度**（`list_arrangement_instruments` 的 60 个程序可按 `assetId` 直接选），
+**不改任何按名字的映射**——这是判断，不是遗漏。

@@ -1496,3 +1496,56 @@ npx vite-node scripts/scan_sample_opcodes.mjs --root /var/tmp/groove-mirror-<ent
 
 **接线与判据**：见 `docs/STRING_TECHNIQUES.md` §14（25 行全部有声、两条情形规则落到首选、
 17 行 `mirrored` 与实测时长、`src/test/stringSituation.test.ts` 从身份名到编译后 lane 的真读回）。
+
+### ⑨ ⭐⭐ Part 2 第二轮：VSCO 其余管弦（Priority 2，2026-10-02）
+
+计划书 `docs/research/library-costs-for-the-instrument-gaps.md` §6「Priority 2」的十五个程序，加上一个
+**零新字节**的 `TimpaniRolls`。同一棵树、同一个 pin、CC0 ⇒ 条目里的 `licence`/`repo`/`pin`/`sourceUrl`
+仍然一个字未改，`libraryLicence.ts` 仍未动。
+
+**先量后买，逐程序的真新字节**（每个都按"解析 `sample=` → 与清单已有路径相减"算：
+
+| 组 | 程序（新文件数 / 新字节） | 小计 |
+| --- | --- | ---: |
+| 打击乐 | `GM-StylePerc` 184 / 154 678 582 | **147.51 MiB** |
+| 木管/钟琴/短笛 | `Marimba` 10 / 11 774 066；`TubularBells` 4 / 16 027 084；`Glockenspiel` 6 / 6 376 184；`Xylophone` 8 / 4 539 030；`PiccoloSus` 5 / 11 866 078；`PiccoloStac` 5 / 610 066 | **48.82 MiB** |
+| 两架立式钢琴 | `UprightPiano` 69 / 253 636 638；`VSUpright1` 79 / 155 073 798 | **389.78 MiB** |
+| 管风琴音色 | `OrganLoud` 21 / 45 490 690；`OrganQuiet` 21 / 44 867 298；`OrganLoudPedal` 11 / 24 870 078；`OrganQuietPedal` 11 / 23 291 046 | **132.10 MiB** |
+| 非揉弦长音 | `ContrabassSusNV` 28 / 52 793 500；`FluteSusNV` 19 / 49 000 614；`OboeSusNV` 18 / 34 857 760 | **130.32 MiB** |
+| 定音鼓滚奏 | `TimpaniRolls` **0 新字节**（它的 10 个采样早在 Part 1 随 `Percussion/Timpani` 目录上传过；缺的只是程序与名分） | **0** |
+| **合计** | **499 采样 ＋ 17 `.sfz` ＋ 3 个说明 txt ＝ 519 文件** | **889 816 864 B（848.60 MiB）** |
+
+**入桶实测**（`rclone size :s3:groove --json`，前后各一次）：
+
+| | 文件 | 字节 |
+| --- | ---: | ---: |
+| 上传前 | 10 881 | 6 838 287 866 |
+| 上传后 | 11 400 | 7 728 104 730 |
+| **本段新增** | **+519** | **+889 816 864** |
+
+⇒ `vsco2ce` 条目：**1378 → 1897 文件**、**1 195 317 292 → 2 085 134 156 字节**、**43 → 60 个程序**。
+**5 GB 新预算：累计 2.743 GB（54.86%），剩 2.257 GB** ✓ 未越线。
+
+⭐ **一条购买判断值得单独写下来：`Percussion` 目录不能整目录列进 `paths`。** `GM-StylePerc` 与 `TubularBells`
+的采样直接躺在 `Percussion/` 根下，而该目录共 **329 个文件 / 305.67 MiB**，其中 **79 个（49.49 MiB，含
+`Percussion/temp/` 的 47 个）没有任何被买程序引用**。所以 `paths` 里列的是**这 188 个根级文件各自一条**
+（外加 `Percussion/Glock`、`Marimba`、`Xylo` 三个子目录），`build_sample_manifest.mjs` 的
+`path === prefix` 精确匹配把它们纳入、把 `temp/` 挡在外面。只多带了 3 个零头说明文件（`Info.txt`、
+`MappingChart.txt`、`Notes.txt`，共 647 字节）——这是"先量后买"避免整目录浪费的一次实际应用。
+
+**opcode 扫描**（`scripts/scan_sample_opcodes.mjs`，**60/60 程序、1935 个 region**）：未实现的仍是**同样 7 条**
+（`ampeg_attack`/`ampeg_dynamic`/`ampeg_release`/`volume`/`group_label`/`hirand`/`lorand`），
+**扫描器没有报 "used but not in the entry's needs"** ⇒ **沿用同一份 `needs`，不新增**。新程序里也没有任何一条
+超出原 `needs` 的 opcode（17 个新程序逐个扫过：实现 9 项、未实现 7 项，家族完全相同）。一条都没实现，
+理由与 ③b 相同：`ampeg_*` 是已入库 VSCO 程序一直在用、且听感证据不足的一族。
+
+**接线**：只有 **`non-vibrato` 一行**进了 `src/data/stringTechniques.ts`（`contrabass_solo_non_vibrato` →
+`vsco2ce:ContrabassSusNV`），使该表 25 → **26 行**、`non-vibrato` 从"无行"变为"低音提琴专属行"；
+`docs/STRING_TECHNIQUES.md` §15 记了这件事与"它不会被规则选中、靠名字到达"的边界。其余十四个程序
+**不加任何按名字的映射**（`piano_lead`/`m1_organ`/`organ_lead`/`marimba_lead`/`bell_lead`/鼓轨各自已有
+"就是那件乐器"的录音），价值在目录广度。
+
+**⭐ `orchestralCoverage.test.ts` 按它自己写下的预言红了，这是机制在起作用。** 那条判据的原话是
+"the day `TimpaniRolls.sfz` is mirrored this roster goes red and has to claim it" —— 本轮镜像了它，
+roster 于是补上 `vsco2ce:TimpaniRolls`，`Orchestral` 计数 91 → **108**，`vsco2ce` 程序数 43 → 60。
+`Harp` 是唯一还剩空 `articulations` 的行（上游确实没有第二个程序）。
