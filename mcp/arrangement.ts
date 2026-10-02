@@ -52,6 +52,7 @@ import type { ArrangementV2, NoteEvent, TrackKindV2, TrackV2 } from "../src/type
 import type { PlannedTake } from "../src/data/takePlanning";
 import { compileArrangementToSongInput, laneInstrumentForTrack, laneRoleForTrack } from "../src/data/arrangementCompile";
 import { resolveInstrumentPresetKey } from "../src/audio/instrumentPresets";
+import { sampledAssetForLane, sampledInstrumentGapReason } from "../src/data/sampledInstruments";
 import { DEFAULT_SYNTH_PRESETS } from "../src/audio/PolySynth";
 import { stepsFromNotes, STEPS_PER_BEAT } from "../src/data/noteEvents";
 import { beatsPerBar } from "../src/data/genreExpression";
@@ -168,8 +169,26 @@ function soundForTrack(track: TrackV2): ArrangementTrackSound {
       detail: `plays catalogue asset "${track.sample.assetId}"`,
     };
   }
-  const presetKey = resolveInstrumentPresetKey(laneInstrumentForTrack(track), role);
+  const laneInstrument = laneInstrumentForTrack(track);
+  const presetKey = resolveInstrumentPresetKey(laneInstrument, role);
   const presetName = DEFAULT_SYNTH_PRESETS[presetKey]?.name ?? presetKey;
+  /**
+   * ⭐ **The recorded instrument this lane sounds, read through the one table the renderer reads.**
+   *
+   * A track the projection built from a v1 lane carries that lane's instrument name, and the written table
+   * (`src/data/sampledInstruments.ts`) says which recording that name is — so this report cannot disagree with the
+   * renderer, because both ask `sampledAssetForLane`. A `synth` track with no declared instrument, and a drum or effect
+   * lane, answer `undefined` and are reported as the built-in voices they are.
+   */
+  const sampledAsset = sampledAssetForLane({ track_id: role, instrument: laneInstrument, sample: track.sample });
+  if (sampledAsset) {
+    return {
+      source: "catalogue-asset",
+      assetId: sampledAsset,
+      selectable: true,
+      detail: `plays the catalogue recording "${sampledAsset}" through the sampled path, resolved from the instrument "${laneInstrument}" — a configured sample mirror must serve it, or the lane falls back to the built-in preset`,
+    };
+  }
   if (track.kind === "drumkit") {
     return {
       source: "builtin-drums",
@@ -177,6 +196,14 @@ function soundForTrack(track: TrackV2): ArrangementTrackSound {
       detail: "the built-in drum voices (kick/snare/hat synthesis), not a sampled kit",
     };
   }
+  /**
+   * ⭐ **A name a composer would expect a recording for, and the catalogue does not carry — named, with the next step.**
+   *
+   * `rhodes_ep`, `finger_bass`, `distorted_guitar` and the rest are real instruments the mirrored libraries do not hold;
+   * saying "built-in synth preset" for them is true and useless. The reason and the fix come from the same table the
+   * renderer consults, so the reply and the render's own problem list say the same thing.
+   */
+  const gapReason = sampledInstrumentGapReason(laneInstrument);
   if (track.kind === "fx") {
     return { source: "builtin-synth", presetKey, presetName, selectable: false, detail: `built-in synth preset "${presetName}" (${presetKey})` };
   }
@@ -186,8 +213,9 @@ function soundForTrack(track: TrackV2): ArrangementTrackSound {
     presetName,
     selectable: false,
     detail: `built-in synth preset "${presetName}" (${presetKey}) — fixed, and not a sampled instrument`,
-    guidance:
-      "a synth track's timbre cannot be pointed at a recorded instrument; for a real piano, strings or bass add a track with kind:\"sampler\" and give it an asset (add_arrangement_track {kind:\"sampler\", assetId:\"…\"}; list_arrangement_instruments lists the ids)",
+    guidance: gapReason
+      ? `no catalogue recording is mapped for the instrument "${laneInstrument}" (${gapReason}), so this lane already has the best voice available — mirror a library that carries one and add a row to src/data/sampledInstruments.ts, or use kind:"sampler" with an asset from list_arrangement_instruments`
+      : `a synth track's timbre cannot be pointed at a recorded instrument; for a real piano, strings or bass add a track with kind:"sampler" and give it an asset (add_arrangement_track {kind:"sampler", assetId:"…"}; list_arrangement_instruments lists the ids)`,
   };
 }
 
@@ -267,7 +295,15 @@ export function summariseArrangement(arrangementId: string, arrangement: Arrange
      * criterion in `src/test/mcpArrangement.test.ts` that reproduces the report's path goes red.
      */
     const sound = soundForTrack(track);
-    if (track.kind === "synth") {
+    /**
+     * ⭐ **And a synth track that *is* a recording says nothing**, because there is nothing to correct.
+     *
+     * The branch below exists to name a trap: a caller who meant a piano chose `synth` and heard a fixed synthesiser.
+     * A synth track declaring a mapped instrument (`piano_lead`) is not that mistake — it is the answer to it — so the
+     * report would be **false** as well as noisy. The source decides, and `soundForTrack` is the same answer the reply's
+     * `sound` field carries, so the two cannot disagree.
+     */
+    if (track.kind === "synth" && sound.source !== "catalogue-asset") {
       problems.push(
         `"${track.name}" is a synth track and sounds through the built-in preset "${sound.presetName}" (${sound.presetKey}): a synth's timbre cannot be pointed at a recorded instrument. For a real piano, strings or bass, add a track with kind:"sampler" and give it an asset — add_arrangement_track {kind:"sampler", assetId:"<id>"}, with the ids from list_arrangement_instruments`
       );
@@ -378,7 +414,26 @@ function edit(arrangementId: string, apply: (arrangement: ArrangementV2) => Arra
  * caller that hands `assetId` to a synth has said what it wants and must be told that this kind cannot give it, not
  * left with a track that quietly sounds like a synth anyway.
  */
-export function addMcpTrack(arrangementId: string, kind: TrackKindV2, name?: string, assetId?: string): ArrangementEditResult {
+export function addMcpTrack(
+  arrangementId: string,
+  kind: TrackKindV2,
+  name?: string,
+  assetId?: string,
+  /**
+   * ⭐ **The v1 instrument name a synth track declares** — `piano_lead`, `walking_upright`, `strings_lead`, …
+   *
+   * It is what the recorded-instrument table (`src/data/sampledInstruments.ts`) is keyed by, so a `synth` track that
+   * declares a mapped name is a **recording** and this call is the shortest way to ask for one without a catalogue id:
+   * `add_arrangement_track {kind:"synth", instrument:"piano_lead"}` sounds Salamander. Refused on a kind that is not a
+   * synth, in the same spirit as `assetId`: a drum kit and an effect have no recorded identity to declare.
+   */
+  instrument?: string
+): ArrangementEditResult {
+  if (instrument !== undefined && kind !== "synth") {
+    throw new Error(
+      `instrument was given for a ${kind} track, and only a synth track declares one — a ${kind} track's sound is its own (a sampler names an assetId; a drum kit and an effect have no recorded instrument to declare)`
+    );
+  }
   if (assetId !== undefined && kind !== "sampler") {
     throw new Error(
       `assetId was given for a ${kind} track, and only a sampler track plays a catalogue asset — a ${kind} track cannot be pointed at one` +
@@ -387,7 +442,7 @@ export function addMcpTrack(arrangementId: string, kind: TrackKindV2, name?: str
     );
   }
   return edit(arrangementId, (arrangement) => {
-    const added = addTrack(arrangement, kind, name ?? defaultTrackName(kind));
+    const added = addTrack(arrangement, kind, name ?? defaultTrackName(kind), instrument === undefined ? {} : { instrument });
     /**
      * ⭐ **The caller gets the track, not the starter notes it was born with** — the same rule as `createMcpArrangement`.
      * `addTrack` seeds a kind's default pattern for the app's starter experience; here the track arrives empty, and the

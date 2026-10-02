@@ -19,6 +19,7 @@ import type { SequencerPattern, SequencerTrack } from "../types/genre";
 import type { ArrangementV2, NoteEvent, TrackV2 } from "../types/arrangementV2";
 import { STEPS_PER_BAR, STEP_BEATS, stepsFromNotes, stackFromNotes, stepCountFor, stepsPerBarFor } from "./noteEvents";
 import { requireTrackKind } from "./arrangementEdits";
+import { sampledAssetForLane } from "./sampledInstruments";
 import { flattenSong } from "./songFlatten";
 import type { Song } from "../types/song";
 
@@ -58,9 +59,18 @@ export function laneRoleForTrack(track: TrackV2): SequencerTrack["track_id"] | u
 /**
  * The `instrument` string the compiled lane carries — the same expression the compile uses, so a report of "this track
  * is a built-in synth" is reading the lane rather than guessing at it.
+ *
+ * ⭐ **A projected track hands over the v1 instrument it came from, and that is what makes a recording reachable.** A
+ * track created in the new interface declares no instrument and gets `"synth"`, which is exactly what it is. A track the
+ * projection built from a v1 lane carries that lane's own name (`piano_lead`, `walking_upright`, …), and that name is the
+ * key of the written table in `sampledInstruments.ts` — so a lane can be asked "is your sound a catalogue recording" and
+ * answered from the data rather than from a guess about the track's display name.
+ *
+ * It is also simply more correct for a lane that is *not* mapped: before this, every projected track resolved to its
+ * role's default preset (`bass` → `acidBass`), so a v1 song projected into an arrangement lost its genre timbre.
  */
 export function laneInstrumentForTrack(track: TrackV2): string {
-  return requireTrackKind(track.kind as string, track.name) === "sampler" ? "sampler" : "synth";
+  return requireTrackKind(track.kind as string, track.name) === "sampler" ? "sampler" : track.instrument ?? "synth";
 }
 
 /**
@@ -168,7 +178,18 @@ export function compileArrangementToLanes(arrangement: ArrangementV2, notes: Not
         // Written only when something is held, so a lane with no notes keeps the shape it had — the same rule the
         // `pitch` and `pitches` lines above follow.
         ...(laneGate.some((steps) => steps > 0) ? { gate: laneGate } : {}),
-        ...(track.sample ? { sample: { assetId: track.sample.assetId } } : {}),
+        /**
+         * ⭐ **The lane's recording, resolved once, here.**
+         *
+         * Two sources and one field: a sampler track's own `sample.assetId`, or the written table's answer for a track
+         * whose v1 instrument names a recorded instrument (`piano_lead` → Salamander, `walking_upright` → Meatbass, …).
+         * Writing the resolved id onto the lane means every consumer downstream — the two sampler planners, the live
+         * engine's stand-down, the offline renderer, the `sound` report — reads **one field** rather than each running the
+         * table for itself, which is how a lane ends up a piano in one place and a synthesiser in another.
+         */
+        ...(sampledAssetForLane({ track_id: trackId, instrument: laneInstrumentForTrack(track), sample: track.sample })
+          ? { sample: { assetId: sampledAssetForLane({ track_id: trackId, instrument: laneInstrumentForTrack(track), sample: track.sample })! } }
+          : {}),
         ...(track.fromLaneId ? { laneId: track.fromLaneId } : {}),
         /**
          * ⭐ **The track's own level and position travel with the lane, or a render cannot honour them.**

@@ -55,6 +55,13 @@ export function projectSongToV2(song: ProjectionInput): ArrangementV2 {
         ...(track.sample ? { sample: { assetId: track.sample.assetId } } : {}),
         fromTrackId: track.track_id,
         ...(track.laneId ? { fromLaneId: track.laneId } : {}),
+        /**
+         * ⭐ **The source lane's instrument travels, because it is the key of the recorded-instrument table.** Without it a
+         * projected `piano_lead` chord track is indistinguishable from a `warm_pad` one, so the arrangement cannot reach
+         * Salamander and reports "a built-in synthesiser" for both. An empty name is left absent, so a lane that declared
+         * nothing keeps `undefined` rather than an empty string that would look like a name.
+         */
+        ...(track.instrument ? { instrument: track.instrument } : {}),
       });
     }
   }

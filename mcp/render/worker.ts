@@ -31,6 +31,7 @@ import { stemFilename } from "../../src/data/stemNaming";
 import { fingerprintChannels } from "../../src/test/helpers/timbre";
 import type { OfflineAudioLaneReport } from "../../src/audio/offlineAudioLanes";
 import { isAudioLane } from "../../src/audio/offlineAudioLanes";
+import { isSampledLane } from "../../src/data/sampledInstruments";
 /**
  * The budgets and the measured costs, from `budget.json` — read by the tool descriptions and by
  * `scripts/check_mcp.mjs` as well as by the timeouts below, so there is one number rather than six.
@@ -485,7 +486,16 @@ export function sampleMirrorRoot(): string {
 
 /** True when a pattern carries an audio lane at all — the gate that keeps a 1.6 MB manifest read off every synthesised render. */
 export function hasAudioLane(pattern: SequencerPattern): boolean {
-  return (pattern.tracks ?? []).some((track) => isAudioLane(track));
+  /**
+   * ⭐ **Widened: a lane whose instrument names a recorded instrument needs the catalogue too.**
+   *
+   * The gate exists so a synthesised render does not read a 1.6 MB manifest. It keyed on `track_id === "audio"`, which
+   * was the only shape a recorded lane had — and once the written table made a genre's `piano_lead` chords lane a
+   * Salamander lane, a pattern of nothing but mapped genre lanes read **no catalogue at all**, so every mapped lane fell
+   * back to its synthesiser while the table and the report both said it was a recording. The predicate is the same
+   * question `sampledStandDownIndexes` asks, so the two cannot disagree about which patterns need a manifest.
+   */
+  return (pattern.tracks ?? []).some((track) => isAudioLane(track) || isSampledLane(track));
 }
 
 /** What a render needs to know about the sample catalogue before it starts the browser. */

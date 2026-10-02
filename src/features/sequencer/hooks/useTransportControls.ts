@@ -163,6 +163,22 @@ export function useTransportControls({
     // Asking for the arrangement releases any leftover lane scope before the transport starts.
     releasePreviewScope?.();
     try {
+      /**
+       * ⭐ **The engine is told which lanes it must not voice, before it is asked to play.**
+       *
+       * A genre lane whose `instrument` the written table maps (`piano_lead`, `walking_upright`, `strings_lead`, …) is a
+       * **recording**, and the engine's own sequencer would otherwise play the built-in preset underneath it — the piano
+       * doubled by a pad. `prepareSampledLanes` is the one call that decides it, and the decision needs the catalogue:
+       * a lane whose recording this session cannot serve keeps the synthesiser (the owner's stated fallback) and is
+       * named in the returned problems.
+       *
+       * Called with **whatever the runtime already holds** and again when the load resolves below, so a session that has
+       * played once — or that loaded the catalogue for any other reason — stands every recorded lane down *before* the
+       * first step. On a cold first play the stand-down lands one catalogue fetch late, which is stated rather than
+       * hidden: the alternative is making the play button wait on a network round trip before it starts.
+       */
+      const alreadyLoaded = appCatalogueRuntime.assets;
+      if (alreadyLoaded.length > 0) engine.prepareSampledLanes(alreadyLoaded);
       await engine.play();
 
       /**
@@ -188,7 +204,16 @@ export function useTransportControls({
          */
         void appCatalogueRuntime
           .load()
-          .then(({ assets }) => playAudioLanes({ song: song as never, context, destination, catalogue: assets }))
+          .then(({ assets }) => {
+            /**
+             * ⭐ **The stand-down lands here on a cold first play**, once the catalogue has actually answered — and this is
+             * also where a lane whose recording this mirror does not serve is named, so "a synthesiser, and here is what to
+             * do about it" reaches the console instead of being silent.
+             */
+            const prepared = engine.prepareSampledLanes(assets);
+            for (const problem of prepared.problems) console.warn(`[sampled-instrument] ${problem}`);
+            return playAudioLanes({ song: song as never, context, destination, catalogue: assets });
+          })
           .then((result) => {
             for (const problem of result.problems) console.warn(`[audio-lane] ${problem}`);
           })

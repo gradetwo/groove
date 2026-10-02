@@ -62,6 +62,7 @@ import { capPlanPolyphony, applyGs1Voice, isGs1RoutingEnabled, planGs1Notes, pat
 import { generateTextureSample } from "./gs1/textureSample";
 import { applyGenreFxToGraph, resolveGenreFx } from "../data/genreFx";
 import { scheduleOfflineAudioLanes, isAudioLane, type OfflineAudioLaneReport } from "./offlineAudioLanes";
+import { sampledInstrumentProblems, sampledStandDownIndexes } from "./sampledLanes";
 import { browserSampleLoader } from "./browserSampleGraph";
 import { startSamplerNote } from "./samplerVoice";
 import { SAMPLE_CATALOGUE, type SampleAsset } from "../data/sampleCatalogue";
@@ -684,6 +685,18 @@ async function renderPatternOfflineInternal(
 ): Promise<AudioBuffer | RenderedChunk> {
   const problems: string[] = [];
   /**
+   * ⭐ **The lanes this render leaves to the synthesiser, and why — stated before anything is scheduled.**
+   *
+   * The owner's rule is "a recording by default, and a synthesiser only when the recording is not there". *There* is a
+   * property of the catalogue this render was handed, so the lanes for which a recording **was** expected and could not
+   * be reached are named here: a mapped instrument this mirror does not serve, or a real instrument the mirrored
+   * libraries simply do not carry. A lane whose name is a synthesiser is not listed — `sampledInstrumentGap` draws that
+   * line — so the list is the actual gaps rather than a paragraph about every track.
+   *
+   * Pushed before the guard runs so a silent render's explanation and the reply's problem list cannot disagree.
+   */
+  problems.push(...sampledInstrumentProblems(pattern, options.audioLaneCatalogue ?? SAMPLE_CATALOGUE));
+  /**
    * The render's own verdict on whether silence was the expected outcome.
    *
    * `null` means "no explanation", which is the host-failure reading. It is written by the audio-lane scheduling
@@ -1103,6 +1116,21 @@ async function renderPatternOfflineOnce(
   // track is silenced — the live engine zeroes a muted/soloed-out track's sends too.
   const anySolo = mixerStates.some((s) => s.solo);
   const silenced = (state: TrackState): boolean => Boolean(state.mute) || (anySolo && !state.solo);
+  /**
+   * ⭐ **The lanes whose sound is a catalogue recording, resolved against the catalogue this render was given.**
+   *
+   * Computed once, here, and read by the per-step dispatch below — because the decision has to be one decision. A
+   * lane in this set is **not voiced by the synthesiser**: the owner's rule is "a recording by default, and a
+   * synthesiser when the recording is not there", and *there* is a property of this render's catalogue. A lane the
+   * table maps but this mirror cannot serve is absent from the set, keeps its synth voice, and is named in
+   * `sampledInstrumentProblems` below so the reply says which recording is missing and what to configure.
+   *
+   * The set is built before the scheduling loop and before `scheduleOfflineAudioLanes`, so the two halves of the
+   * render — the lanes the synthesiser voices and the lanes mixed from their own bytes — read one answer.
+   */
+  const offlineCatalogue: readonly SampleAsset[] = options.audioLaneCatalogue ?? SAMPLE_CATALOGUE;
+  const sampledLaneIndexes = sampledStandDownIndexes(pattern, offlineCatalogue);
+
   const clamp01 = (value: unknown): number =>
     Number.isFinite(value) ? Math.max(0, Math.min(1, value as number)) : 0;
 
@@ -1392,8 +1420,13 @@ async function renderPatternOfflineOnce(
        * **An audio lane is not voiced by this chain.** It has no synthesised voice, and until this returned, `track_id: "audio"` fell through to the
        * `synthesizePercussion` fallback at the bottom — so every audio lane was given a drum hit *under* the sample it was supposed to play, while the MCP reply
        * also called it skipped. The lane is mixed from its own bytes by `scheduleOfflineAudioLanes` below instead. `isAudioLane` is the one spelling of that test.
+       *
+       * ⭐ **And a genre lane whose instrument the recorded-instrument table maps is now the same case.** `sampledLaneIndexes` is `isAudioLane`'s superset plus
+       * exactly the lanes `scheduleOfflineAudioLanes` will mix, so a mapped `piano_lead` chord track is a piano and not a piano *under* a pad — the doubling
+       * this return exists to prevent. A mapped lane this render's catalogue cannot serve is **not** in the set and keeps the synthesiser, which is the stated
+       * fallback rather than a silent lane.
        */
-      if (isAudioLane(track)) {
+      if (isAudioLane(track) || sampledLaneIndexes.has(trackIdx)) {
         return;
       }
 
@@ -1727,9 +1760,9 @@ async function renderPatternOfflineOnce(
   mark("schedule:voices");
   timings && (timings.phases["meta:scheduleWall"] = (timings.phases["meta:scheduleWall"] ?? 0) + (performance.now() - scheduleStartedAt));
 
-  if (pattern.tracks?.some((track) => isAudioLane(track))) {
+  if (sampledLaneIndexes.size > 0 || pattern.tracks?.some((track) => isAudioLane(track))) {
     plannedAudioLane = true;
-    const audioCatalogue = options.audioLaneCatalogue ?? SAMPLE_CATALOGUE;
+    const audioCatalogue = offlineCatalogue;
     /**
      * The lanes this render has already silenced, taken from the **same** `mixerStates` the synthesised lanes above were filtered by — so a muted audio lane and a
      * muted synth lane are silenced by one decision, and the lane planner cannot disagree with the render about who is playing.

@@ -13,6 +13,7 @@
  */
 import { parseManifest, sampleAssetsFromManifest } from "./sampleManifest";
 import { mergeUserLibraries, type UserSoundLibrary } from "./userLibraries";
+import { sampledAssetForLane } from "./sampledInstruments";
 
 export interface SampleAsset {
   assetId: string;
@@ -89,21 +90,28 @@ export function sampleAssetIds(catalogue: readonly SampleAsset[] = SAMPLE_CATALO
 /**
  * Why a lane's sample reference cannot be used, or `null` when it can.
  *
- * Both halves matter and they are different failures: an audio lane **without** a sample would be silent by construction, and a sample on a lane of another kind is
- * a contradiction — the same rule the share guard enforces on a payload. Returns a reason rather than a boolean, because the caller has to tell a composer what to
- * do next.
+ * **Widened, because the set of lanes that can play a recording is no longer "the audio kind".** A `bass`, `chords`
+ * or `lead` lane whose `instrument` the written table (`sampledInstruments.ts`) maps to a catalogue asset sounds
+ * that recording, so a sample on such a lane is not a contradiction — it is the mapping. A sample on a **drum or
+ * effect** lane still is one, and so is a `sample` id the table does not back: the original message survives,
+ * narrowed to the case it was actually about.
+ *
+ * Both halves still matter and they are still different failures: an audio lane **without** a sample would be
+ * silent by construction, and a sample the lane's own role cannot play is a contradiction. Returns a reason rather
+ * than a boolean, because the caller has to tell a composer what to do next.
  */
 export function sampleReferenceProblem(
-  track: { track_id?: string; sample?: { assetId?: string } },
+  track: { track_id?: string; instrument?: string; sample?: { assetId?: string } },
   catalogue: readonly SampleAsset[] = SAMPLE_CATALOGUE
 ): string | null {
   const kind = (track.track_id ?? "").toLowerCase();
-  const assetId = track.sample?.assetId;
+  const declared = track.sample?.assetId;
+  const assetId = sampledAssetForLane(track);
 
-  if (assetId && kind !== "audio") {
-    return `lane "${track.track_id}" carries a sample id, but only an audio lane can play one`;
+  if (declared && assetId === undefined) {
+    return `lane "${track.track_id}" carries a sample id, but a "${track.track_id}" lane cannot play one — only an audio lane, or a bass/chords/lead lane whose instrument is mapped in src/data/sampledInstruments.ts, sounds a catalogue recording`;
   }
-  if (kind !== "audio") return null;
+  if (kind !== "audio" && assetId === undefined) return null;
   if (!assetId) {
     return "an audio lane must name a sample — without one it would play nothing, which is indistinguishable from a broken lane";
   }

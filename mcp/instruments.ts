@@ -20,6 +20,7 @@ import {
   type StringSituation,
   type StringTechnique,
 } from "../src/data/stringTechniques";
+import { SAMPLED_INSTRUMENTS } from "../src/data/sampledInstruments";
 
 const MANIFEST_PATH = "public/samples/manifest.json";
 
@@ -110,6 +111,15 @@ export interface InstrumentList {
   categories: Array<{ name: string; count: number; subcategories: Array<{ name: string; count: number }> }>;
   /** Why a declared library is not in the list: no measured duration, or a licence that forbids redistribution. */
   problems: string[];
+  /**
+   * ⭐ **Which written instrument name plays which catalogue asset** — the table at `src/data/sampledInstruments.ts`,
+   * surfaced because it is otherwise a fact only the source code knows.
+   *
+   * It is the same list the renderer and the live engine consult, so a caller can ask for a recording **by name**
+   * (`add_arrangement_track {kind:"synth", instrument:"piano_lead"}`) instead of by asset id, and can see the judgement
+   * behind each row (`because`) rather than reverse-engineering it.
+   */
+  mappedInstruments: Array<{ instrument: string; assetId: string; because: string }>;
   /** Where the bytes are served from, empty when no root is configured. */
   root: string;
 }
@@ -231,11 +241,26 @@ export function listCatalogueInstruments({
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
+  /**
+   * ⭐ **A mapped row whose asset this manifest does not declare is itself a problem**, and it is reported here rather
+   * than discovered at render time: the table is a promise about what a name sounds like, and a mirror that cannot keep
+   * it should say so where someone is choosing an instrument rather than where they are listening for one.
+   */
+  const mappedInstruments = SAMPLED_INSTRUMENTS.map((choice) => ({ ...choice }));
+  const knownIds = new Set(all.map((instrument) => instrument.assetId));
+  for (const choice of mappedInstruments) {
+    if (knownIds.has(choice.assetId)) continue;
+    problems.push(
+      `the recorded-instrument table maps "${choice.instrument}" to "${choice.assetId}", which public/samples/manifest.json does not declare — that lane falls back to its built-in preset`
+    );
+  }
+
   return {
     instruments: limit !== undefined && limit >= 0 ? narrowed.slice(0, limit) : narrowed,
     libraries,
     categories,
     problems,
+    mappedInstruments,
     root,
   };
 }

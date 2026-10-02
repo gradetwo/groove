@@ -32,6 +32,7 @@
 import type { SequencerPattern, SequencerTrack } from "../types/genre";
 import { SAMPLE_CATALOGUE, findSampleAsset, sampleReferenceProblem } from "../data/sampleCatalogue";
 import type { SampleAsset } from "../data/sampleCatalogue";
+import { isSampledLane, sampledAssetForLane } from "../data/sampledInstruments";
 import { stepTiming } from "../data/tempoMap";
 import type { TempoPoint } from "../data/tempoMap";
 import { stepDuration } from "../data/noteLayer";
@@ -245,7 +246,17 @@ export function planOfflineAudioLanes(
 
   for (let trackIndex = 0; trackIndex < tracks.length; trackIndex += 1) {
     const track = tracks[trackIndex]!;
-    if (!isAudioLane(track)) continue;
+    /**
+     * ⭐ **A lane is an audio lane when it sounds a catalogue recording — not only when its `track_id` is `"audio"`.**
+     *
+     * The ninth kind is one shape a recorded lane takes; the other is a **genre lane** whose `instrument` the
+     * written table (`src/data/sampledInstruments.ts`) maps to a catalogue asset (`piano_lead`, `walking_upright`,
+     * `strings_lead`, …). Those lanes carry notes rather than one sample, and this planner already voices an
+     * instrument lane correctly: one `loadNote` per written pitch, the `pitches` stack read so a chord is a chord,
+     * the lane's `gate` as the note's end, its `volume` as the gain and its `pan` as the position. Widening the
+     * predicate is the whole of the change here — nothing below had to learn a new shape.
+     */
+    if (!isAudioLane(track) && !isSampledLane(track)) continue;
     if (options.stemTrackIdx !== undefined && options.stemTrackIdx !== trackIndex) continue;
 
     const ref: OfflineAudioLaneRef = {
@@ -266,14 +277,19 @@ export function planOfflineAudioLanes(
       continue;
     }
 
-    // The catalogue's own rule, used rather than restated: an audio lane with no sample, or one naming nothing the catalogue holds, is a named problem.
+    /**
+     * The catalogue's own rule, used rather than restated: a lane with no recording, or one naming nothing the
+     * catalogue holds, is a named problem. The `assetId` for the report comes from the same resolver the rest of
+     * this planner uses, so a lane the *table* maps is reported with **its** asset rather than with whatever
+     * `sample` field it happens to carry (a mapped lane carries none).
+     */
     const problem = sampleReferenceProblem(track, catalogue);
     if (problem) {
-      problems.push({ ...ref, ...(track.sample?.assetId ? { assetId: track.sample.assetId } : {}), reason: problem });
+      problems.push({ ...ref, ...(sampledAssetForLane(track) ? { assetId: sampledAssetForLane(track)! } : {}), reason: problem });
       continue;
     }
 
-    const assetId = track.sample!.assetId!;
+    const assetId = sampledAssetForLane(track)!;
     const asset = findSampleAsset(assetId, catalogue)!;
     const gainDb = laneGainDb(track);
     const pan = typeof track.pan === "number" && Number.isFinite(track.pan) ? Math.max(-1, Math.min(1, track.pan)) : undefined;

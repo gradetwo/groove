@@ -13,6 +13,7 @@
  * pattern cannot voice, and the player's whole job is to hand the first to the engine and sound the second per step.
  */
 import { DEFAULT_ARRANGEMENT_BPM, compileArrangementToLanes, compileArrangementToPattern, type NotesByTrack } from "../data/arrangementCompile";
+import { sampledAssetForLane } from "../data/sampledInstruments";
 import { deriveTrackStates } from "./trackStates";
 import type { ArrangementV2 } from "../types/arrangementV2";
 import type { SequencerPattern, SequencerTrack } from "../types/genre";
@@ -125,12 +126,14 @@ export async function playArrangementV2(arrangement: ArrangementV2, notes: Notes
     return state !== undefined && !state.mute && !(anySolo && !state.solo);
   };
   /**
-   * The lanes the engine cannot voice: a sampler lane is recognised by the instrument its track carries, not by `track_id`, because `"audio"` is also a v1 role whose notes are not a sampler's. `sourceTrackId`
-   * comes from the same compile that built the lane, so a failure names the right track.
+   * The lanes the engine cannot voice — recognised by **the recording a lane sounds**, read through the one resolver
+   * (`sampledAssetForLane`) rather than by `track_id`: `"audio"` is also a v1 role whose notes are not a sampler's, and
+   * a `bass`/`chords`/`lead` lane whose instrument the written table maps is a recorded lane too. `sourceTrackId` comes
+   * from the same compile that built the lane, so a failure names the right track.
    */
   const samplerLanes = compiledLanes
     .map((entry, index) => ({ entry, index }))
-    .filter(({ entry, index }) => Boolean(entry.track.sample?.assetId) && audible(index))
+    .filter(({ entry, index }) => sampledAssetForLane(entry.track) !== undefined && audible(index))
     .map(({ entry }) => ({ sourceTrackId: entry.sourceTrackId, lane: entry.track }));
 
   const played = await player.play({

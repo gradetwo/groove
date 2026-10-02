@@ -11,6 +11,7 @@
 import type { SampleDecoder, SampleLoader } from "./sampleLoader";
 import { createSampleLoader } from "./sampleLoader";
 import type { SampleSink } from "./audioLaneScheduler";
+import { startSamplerNote } from "./samplerVoice";
 import type { SampleAsset } from "../data/sampleCatalogue";
 import { transportNote, type TransportProbe } from "./transportDiagnostic";
 
@@ -61,7 +62,38 @@ export function browserSampleDecoder(context: BaseAudioContext, probe?: Transpor
 /** Starts a buffer source at the given second, through its own gain so a caller can place a sample quietly. */
 export function browserSampleSink(context: BaseAudioContext, destination: AudioNode): SampleSink {
   return {
-    start(buffer: AudioBuffer, whenSeconds: number, gainDb: number): void {
+    start(buffer: AudioBuffer, whenSeconds: number, gainDb: number, event, note): void {
+      /**
+       * ⭐ **Two shapes, and the difference is whether the bytes are an instrument or a sample.**
+       *
+       * A plain sample (no `pitch`) is its own whole event, so the adapter starts it at its own rate for its own length —
+       * exactly what it did before. An **instrument** event carries a note, the ratio the loader resolved and the lane's
+       * `gate` in seconds, and it goes through `startSamplerNote` — the same voice the keyboard audition and the
+       * arrangement player use — so a genre's live piano has the same attack and the same scheduled end as the
+       * arrangement's and the renderer's.
+       */
+      if (typeof event.pitch === "number" && event.pitch > 0) {
+        startSamplerNote({
+          context,
+          destination,
+          buffer,
+          ratio: note?.ratio ?? 1,
+          whenSeconds,
+          ...(event.seconds === undefined ? {} : { seconds: event.seconds }),
+          /**
+           * ⭐ **The region's loop declaration crosses here too.** A buffer does not say whether the region that named it
+           * wanted the recording to repeat, so a `loop_sustain` program (`karoryfer-meatbass` writes it) would be cut at
+           * the note's gate instead of holding — the same defect the offline sink had, on the other side of the seam.
+           * Absent is SFZ's own default and this project's behaviour, so a plain sample is unchanged.
+           */
+          ...(note?.loopMode === undefined ? {} : { loopMode: note.loopMode }),
+          ...(note?.loopStartFrames === undefined ? {} : { loopStartFrames: note.loopStartFrames }),
+          ...(note?.loopEndFrames === undefined ? {} : { loopEndFrames: note.loopEndFrames }),
+          ...(gainDb === 0 ? {} : { gainDb }),
+          ...(event.pan === undefined ? {} : { pan: event.pan }),
+        });
+        return;
+      }
       const source = context.createBufferSource();
       source.buffer = buffer;
       const gain = context.createGain();
