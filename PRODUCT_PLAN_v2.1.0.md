@@ -2401,7 +2401,7 @@ G.16 立的判据是「没有引用才能删」。这一轮**先在代码与文�
 ### 保留了什么，为什么
 
 `PRODUCT_PLAN_v2.1.0.md`（当前计划 + 全部附录）、`ROADMAP_V2.md` / `BACKLOG.md`（当前基线，
-`version:sync` 写它们的版本头、`docs:check` 校验）、`ARCHITECTURE_SURFACES.md`（三端解耦的现行约定）、
+`version:sync` 写它们的版本头、`docs:check` 校验）、`ARCHITECTURE_SURFACES.md`（界面解耦的现行约定——2026-10-02 起，手机外壳已砍除，今天只有一套界面）、
 `prd.md`（最初的需求；`vendor/gs1` 与审计链上溯到它）、`AUDIO_QUALITY_AND_SYNTH_PLAN.md` 与
 `CODE_REVIEW_AND_PLAN_v1.16.0.md`（代码注释里 `E-xx` / `V-xx` / `N-xx` 编号的登记表）、
 `TIMBRE_NOTES.md` / `MIX_LOUDNESS_NOTES.md`（音色与母带/响度的实测记录，门禁基线以它们为据）。
