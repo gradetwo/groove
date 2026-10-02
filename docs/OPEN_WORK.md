@@ -885,3 +885,26 @@ run 36706409472   Manual verify (audio / all)   failure   触发: workflow_dispa
 **⚠️ 而关键的一点** ✓✓：**这两件都**不在 push 门禁的路径上**** ✗——`manual-verify.yml` 只在 `workflow_dispatch`／`main` 上跑 ✓，**⇒ 它们从 2026-09-30 起红着，而 `dev` 的 push 门禁一直是绿的 ✓**。**⇒ 与那次 SFZ 的教训完全同型：**门禁在人看过的地方之外 ✗✓**。**
 
 **⇒ 待办（**下一步** ✓）**：**① 读到 B7 那句原话 ＋ 那个 0.97× 的比较对象，判它红得对不对 ✓；② 镜像那 115 次失败——**先把原因留下来**（**别让它再被 `catch { return null }` 吞掉 ✗**）**，再判是限流还是出口 ✓。**⚠️ 而"手工 workflow 里的红"这件事本身值得一个机制** ✓：**至少让它的结论有人在看 ✓**。
+
+### 十七之十一、✅ 那笔手工门禁的红**定性完毕**：是**已知未解问题**，不是回归（2026-10-02 ✓）
+
+**追下去的结果** ✓✓（**`§十七之十` 里那条 B7 断言 ✓**）：
+
+```js
+scripts/check_b7_pair.mjs
+  :3   B7's paired criterion: the arrangement must differ from itself by more than the **control** does.
+  :17  /** The starting choice, stated as one: 2× the control's own self-difference. */    ← ⚠️ 它自称"起步选择" ✗
+  :82  `   the arrangement's self-difference is ${paired.toFixed(2)}× the control's; B7's claim ("…")`
+```
+
+**⇒ 判据 = "编曲与自身的差异 ≥ 控制组的 **2 倍**" ✓，而那次实测 **0.97×** ✗**——**即段落变化**淹没在逐次运行的噪声里** ✓。
+
+**⇒ 而 `docs/ARRANGEMENT_PLAN.md` 早就把这件事写在明处** ✓✓：
+
+* `:218` ✓ **"What remains of B7 is its *listening* proof, and it needs something the app does not have yet."** ✓
+* `:263` ✓ **"B7 is neither confirmed nor refuted by any run"** ✓
+* `:276` ✓ **"B7 has **never been heard by its check**"** ✓✓
+
+**⇒ 所以** ✓✓：**B7 的**可听证明**从未成立 ✓**；`check_b7_pair.mjs` 是量它的仪器 ✓；**它红**不是因为代码坏了 ✗，**而是因为那条主张未证实 ✓**。**⇒ 而"文档写着未解 ＋ 手工门禁报 failure"这两件事**从来没被连起来过**** ✗✓——**同一条教训：门禁在人读过的地方之外 ✓**。
+
+**⚠️ 而关掉它需要**一个决定**，不是一次修 ✗** ✓✓：**那颗"2×"是**起步选择**（脚本原话 ✓）**——**⇒ 要么 ① 给 B7 的可听主张一个**真实目标**＋一件**能听它的探针** ✓；要么 ② **退役这条判据** ✓（**承认它量不出东西 ✓**）。**⇒ 这不是"修 bug"，是"这条主张还算不算要求" ✓——**⇒ 归业主 ✓。**
