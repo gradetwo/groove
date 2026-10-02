@@ -2134,9 +2134,20 @@ export class AudioEngine {
     // sequence of notes. The duration is expressed in the caller's seconds (the piano roll uses
     // its own step length) so the audition matches the bar length it is previewing.
     const stepDur = this.getStepDuration();
+    /**
+     * ⭐ **The floor stays, the ceiling goes** — the same change the two exporters needed, and for the same
+     * reason. `MAX_NOTE_GATE_STEPS` is the step grid's own editing limit; an arrangement states `lengthBeats`
+     * with no upper bound, the compile hands that length to every lane, and the offline renderer reads `gate`
+     * without clamping (`WavExporter.ts:1387`). An audition must not disagree with what plays: this is the sound
+     * a creator hears when they click, so a four-bar pad capped to one bar here would be the piano roll telling
+     * them something the renderer does not.
+     *
+     * The `0.05` floor is a different thing and stays — a zero-length gate is a degenerate note rather than a
+     * long one.
+     */
     const gateVal =
       durationSeconds !== undefined && stepDur > 0
-        ? Math.max(0.05, Math.min(MAX_NOTE_GATE_STEPS, durationSeconds / stepDur))
+        ? Math.max(0.05, durationSeconds / stepDur)
         : 0.9;
 
     const track = this.pattern?.tracks?.[trackIdx];

@@ -355,3 +355,31 @@ describe("the scope release is wired from the roll's hook into the transport", (
     );
   });
 });
+
+/**
+ * ⭐ **The audition's length is the arrangement's, not the grid's.**
+ *
+ * `previewChord` capped its gate at `MAX_NOTE_GATE_STEPS`, the step grid's own editing limit, so a piano-roll
+ * audition of a four-bar pad sounded for one bar — the roll telling the creator something the renderer does not
+ * do, since `WavExporter.ts:1387` reads `gate` without clamping. The two exporters had the same ceiling and it
+ * was removed for the same reason. Owner's instruction: everything follows the arrangement view now.
+ *
+ * **Nothing in this file covered the gate at all**, which is why the ceiling survived: the duration test above
+ * checks `previewProgressionNotes`, the model, and never the engine's own arithmetic. Written as a positive
+ * assertion so it bites in both directions — the ceiling coming back fails it, and dropping the floor fails it
+ * too.
+ */
+describe("the audition's gate length", () => {
+  it("⭐ computes it from the requested duration with a floor and no ceiling", () => {
+    expect(read("audio/AudioEngine.ts")).toMatch(
+      /Math\.max\(0\.05, durationSeconds \/ stepDur\)/
+    );
+  });
+
+  it("no longer clamps it to the step grid's editing limit", () => {
+    // The exact expression that used to be there, asserted absent rather than assumed gone.
+    expect(read("audio/AudioEngine.ts")).not.toMatch(
+      /Math\.min\(MAX_NOTE_GATE_STEPS, durationSeconds \/ stepDur\)/
+    );
+  });
+});
