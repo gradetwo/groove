@@ -28,6 +28,7 @@
 | `docs/AUDIO_TRACKS_AND_SVS_PLAN.md` | 第九种 kind `audio` 的格式半边已完成、播放半边未建；采样目录**发布为空** | 说明"素材工作流"这一栏为什么整体偏空 |
 | `docs/GROOVE_QUALITY_PLAN.md` | 音色／响度那一批工作的总计划 | 只在需要时引用，不重复它的听感结论 |
 | `docs/OPEN_WORK.md` §82–§90（**只读，未改**） | 调色板的分区、17 个新库零引用、四条可达路径、用量读数、"错的乐器比合成器更糟"的纪律 | ⭐ 音色发现一栏的**本仓基线**；本文对它的**一处更正**见 §3.3 |
+| `docs/DAW_GAP_ARRANGEMENT.md`（**是姊妹文档，但不在我的基线上**） | 另一条工作线在**同一基线 `d036619`** 上做的**编排／编辑／交互**调研（时间线交互、键盘工效、撤销、从零到有声、改一个已有想法的成本） | ⚠️ 它**在我 fetch 之后**才落到 `origin/dev`（`2e6de71`／`04c47a9`），所以**我写 §1–§5 时没有读到它**；**边界与那一处重叠见 §6.3** |
 
 ### 1.3 本仓有**两条**创作动线，必须分开说
 
@@ -901,7 +902,7 @@
 | 预设与工程的一致性 | **Logic**：`Enable Patch Merging` 决定换 patch 时**哪些设置允许被替换**，没勾的保持已编辑；**Live**：新预设默认存进当前 Project，可从 `Current Project` 标签拖进浏览器；**FL**：只**部分**有据（自动 time-stretch／pitch-shift 是**按工程**的、不随采样存盘）；**Studio One**：Track Presets 保存／召回轨与通道配置；**GarageBand**：一条轨**全工程只能有一个 patch**，且只能选与轨类型匹配的；**Reason**：间接——patch 引用磁盘上的采样，文件被移走会弹 **Missing Sounds**；**Cubase**：Previewer 的 `Link to Project Tempo`（自动为导入事件打开 Musical Mode）。**Bitwig／REAPER／Maschine 我都没找到**对等机制（REAPER 的 VST 预设是**按插件**存成 `.ini`，**不是按工程**） | **没有 ✗**（没有等价机制） | 工程持久化在 `src/features/arrangement/`（`useArrangementV2Project`）；但"换音色时哪些设置被替换"这件事在 `src/` 与 `mcp/` 里 grep `patch merging`／`patchMerging` **0 命中** |
 | 拖预设／素材到轨道上会发生什么 | **Live**：拖到轨道标题栏或设备链即加载到该轨；拖到 Drum Rack 的 pad 上自动映到该 pad 的音并建链；拖内容到轨道区空白处即**新建轨并放入**；**Bitwig**：拖设备或预设到**已有设备上**即替换它；**Studio One**：拖乐器到已有乐器轨会弹 **Replace／Combine／Keep the old instrument** 三选一；**Reason**：拖浏览器条目到机架／音序器即**建目标设备**（不同格式的 patch 直接**替换**正在浏览的设备）；**Maschine**：拖 Sound 到槽位即载入并**替换原内容**；**Cubase**：拖 **track preset** 到轨列表下方＝新建轨并载入；**GarageBand**：拖 **loop** 到轨下方空白区＝**自动建对应类型的轨**并放入；**REAPER**：拖 **FX 链**到轨道／混音台／条目上（**但我没找到拖"裸的插件预设"到轨道上的记载**） | **没有 ✗**（只有点选） | `InstrumentLibraryV2.tsx:159-171` 每个选项只有 `onClick` → `onChoose(assetId)`；`InstrumentBrowserV2.tsx:62-66` 选完即关面板。`src/components/arrangement`／`console`／`sequencer` 下 grep `draggable`／`onDragStart`／`onDrop` 只命中 **2 个文件、都不是音色／素材拖放**：`insertCurveViews.tsx:187`（EQ 曲线段的拖动把手）与 `ProjectHubModal.tsx:407`（**工程文件**拖入） |
 | ⭐ **人能不能挑到任意资产**（对任务书原文的一处更正） | — | **半有 ⚠️**（**不是"没有"**） | **能**：`src/views/NewProjectView.tsx:102-126` 在 `/new` 挂载时把运行时目录里**所有带 `sfz` 的资产**喂给浏览器；`src/components/arrangement/InstrumentLibraryV2.tsx` 就是分类＋二级分类＋搜索的浏览器；入口在轨道头的乐器 chip，门控是 `src/components/arrangement/TrackHeaderV2.tsx:84`（`track.kind === "sampler" && onChangeInstrument !== undefined && instruments.length > 0`），而 `kind="sampler"` 的轨人**能自己建**（`ArrangementViewV2.tsx:957` 的 `track-add-${kind}` 按钮遍历 `src/components/arrangement/kindLabels.ts:29` 的 `TRACK_KIND_ORDER`＝synth／**sampler**／drumkit／fx／folder）。**不能**：① 只有 `/new` 渲染编排视图（`src/App.tsx:45-46,346`），**曲风／Studio 路线的轨道没有这个资产选择器**——那里的 `src/components/console/InstrumentPicker.tsx` 走的是**乐器名**（内建合成预设／GS-1 音色），不是目录资产；② `src/data/sampleCatalogueRuntime.ts:123-125` 的 `VITE_SAMPLE_ROOT` **默认为空**，不配镜像则目录为空 ⇒ `instruments.length === 0` ⇒ chip 根本不出现 |
-| 调色板（写出的乐器名 → 资产）的可达性 | — | **16 / 34** | 我自跑：`SAMPLED_INSTRUMENTS` **22 行** → **15 个不同库**；再加 `DRUM_KIT_ASSET_ID`（`virtuosity-drums-basic`）＝ **16**；`public/samples/manifest.json` 共 **34 条** ⇒ **18 条**不经调色板／鼓组常量。其中 **17 条在 `src/`＋`mcp/` 里 0 引用**，第 18 条 `freepats-tubular-bells1` 只在 `src/data/sampledInstruments.ts:178` 的**散文**里被提到一次（不是映射）。程序级算，目录共 **327 个资产 id**（按 `sampleManifest.ts:385-417` 的展开规则跑 manifest 得出） |
+| 调色板（写出的乐器名 → 资产）的可达性 | — | **16 / 34（我这条基线）→ 17 / 34（当前 `origin/dev`）**，两套数都写在下面 | ⚠️ **数字随基线变，必须写明基线**。**我在基线 `d036619` 上自跑**：`SAMPLED_INSTRUMENTS` **22 行** → **15 个不同库**；加 `DRUM_KIT_ASSET_ID`（`virtuosity-drums-basic`）＝ **16**；`public/samples/manifest.json` 共 **34 条** ⇒ **18 条**不经调色板／鼓组常量，其中 **17 条在 `src/`＋`mcp/` 里 0 引用**（⚠️ 这是我当时的**弱代理**，在 `04c47a9` 上已失效，见 §5.4 ② 与 §6.4），第 18 条 `freepats-tubular-bells1` 只在 `src/data/sampledInstruments.ts:178` 的**散文**里被提到一次（不是映射）。**⚠️ 在我写完之后 `origin/dev` 前进了 10 个提交，`c19b416` 把那两处替换落地了** ⇒ 我在新基线上重跑：**22 行 → 16 个不同库**，可达 **17 / 34**，够不到 **17 条**（`sax_lead` 现在指 `mtg-solo-sax:MTG-Tenor-Sax`、`walking_upright` 指 `dsmolken-double-bass:d-smolken-rubner-bass-pizz`，而 `karoryfer-meatbass` 因此掉出可达集）。**详见 §⑥**。程序级算，目录共 **327 个资产 id**（按 `sampleManifest.ts:385-417` 的展开规则跑 manifest 得出，两套基线上都是 327） |
 
 > ⚠️ **对 `docs/OPEN_WORK.md` §84.1 的一处更正**：那一节列了四条路结论是"代理可达、**人的 UI 不可达**"，
 > 四条路是 MCP 工具、UI 导入对话框、UI `SampleLibrariesPanel`、代码／工程文件——**漏掉了第三条动线：
@@ -951,7 +952,7 @@
 
 | # | 要做的 | 收益 | 成本 | 依据（§③ 哪一行） | 创作者会因此**少做什么** |
 | --- | --- | --- | --- | --- | --- |
-| 1 | **让资产选择器对所有轨开放**（至少让曲风／Studio 的旋律轨也能挑目录资产），并让那 18 条目录真正被人用到 | 高 | S–M | §3.3 "人能不能挑到任意资产"／"调色板可达性" | **少做**："为了用一个新买的库，只能新建一条 sampler 轨绕过去"——直接在正在编的那条轨上换。 |
+| 1 | **让资产选择器对所有轨开放**（至少让曲风／Studio 的旋律轨也能挑目录资产），并让剩下那 **17 条**（我这条基线上是 18 条，见 §⑥）目录真正被人用到 | 高 | S–M | §3.3 "人能不能挑到任意资产"／"调色板可达性" | **少做**："为了用一个新买的库，只能新建一条 sampler 轨绕过去"——直接在正在编的那条轨上换。 |
 | 2 | **浏览器内试听不打断播放**（预览落在下一小节／与工程合播，而不是替代整段） | 高 | M | §3.3 "试听不打断播放" | **少做**："每试一个音色就停一次正在放的段落，听完再回去对位置"。 |
 | 3 | **按属性／用途／标签检索音色，并给音色加收藏**（工程侧已有收藏＋标签的先例可搬） | 高 | L | §3.3 "浏览器按类型／标签／厂商／收藏组织" | **少做**："在 327 个程序级资产里靠记名字翻"——用"要一个暗一点的贝斯"这种说法去找。 |
 | 4 | **鼓的 choke 组可指派**（引擎已经有 choke 的锚点与单测，缺的是界面） | 中 | S | §3.2 "Choke 组" | **少做**："为了让开镲被闭镲掐断，去裁短音符或画静音"。 |
@@ -1021,7 +1022,7 @@
 
 > 全部在工作树 `/home/crow/music/groove-dawcre` 的根目录下跑，基线 `d036619`。**只读，不改任何文件。**
 
-**① 调色板：22 行手写映射 → 15 个不同库 → 加上鼓组常量＝16 / 34 可达**
+**① 调色板：22 行手写映射 → 15 个不同库 → 加上鼓组常量＝16 / 34 可达（基线 `d036619`）**
 
 ```bash
 python3 - <<'PY'
@@ -1040,7 +1041,7 @@ PY
 ⇒ 输出：`hand rows: 22 distinct libs: 15`／`manifest entries: 34 reachable: 16`／`unreachable: 18 条`。
 **注**：这里的 22 是**手写**映射的行数；`ALL_SAMPLED_INSTRUMENTS` 是 **48 行**（22 ＋ 26 条派生行，见 §5.3）——两个数不是一回事。
 
-**② 那 17 个新库"在 `src/`＋`mcp/` 里零引用"**
+**② 那 17 个新库"在 `src/`＋`mcp/` 里零引用"（⚠️ 这是一个**弱探针**，见下）**
 
 ```bash
 for id in $(python3 -c "import json;print(' '.join(e['id'] for e in json.load(open('public/samples/manifest.json'))['entries']))"); do
@@ -1048,7 +1049,17 @@ for id in $(python3 -c "import json;print(' '.join(e['id'] for e in json.load(op
 done | sort -n
 ```
 
-⇒ 输出里 **17 条为 0**；第 18 条 `freepats-tubular-bells1` 为 **1**，那一处是 `src/data/sampledInstruments.ts:178` 里 `bell_lead` 的**散文**（提到它是更宽音域的备选），**不是映射**。⇒ "18 条够不到"＝17 条零引用 ＋ 1 条只在散文里被提到。
+⇒ **在基线 `d036619` 上**：输出里 **17 条为 0**；第 18 条 `freepats-tubular-bells1` 为 **1**，那一处是 `src/data/sampledInstruments.ts:178` 里 `bell_lead` 的**散文**（提到它是更宽音域的备选），**不是映射**。⇒ "18 条够不到"＝17 条零引用 ＋ 1 条只在散文里被提到。
+
+⚠️ **但这个探针有一个必须写出来的弱点，而且它在下一版就发作了**：**"文本里没出现"只是"调色板没映射它"的一个代理**，一旦有人把库名写进**散文或测试**，代理就失效。**它在 `04c47a9` 上确实失效了**：
+
+```bash
+# 在当前 origin/dev 上（不切换工作树，直接查那棵树）
+git grep -l <library-id> origin/dev -- src mcp
+```
+
+⇒ 34 条里**只剩 `ixox-flute` 一条零引用**，其余 **33 条**都有文本命中。**原因不是"33 条都接上了调色板"**，而是新提交 `c19b416` 带来了 `src/test/sampledInstrumentPaletteWiring.test.ts`，里面有一张 **`FOREIGN_LIBRARIES`** 清单（12 条：`karoryfer-bigcat-cello`、`jlearman-steel-drum`、`cithara-barbarica`、`hungarian-zither`、`ganjo`、`aliexpress-erhu`、`karoryfer-cowsynth`、`karoryfer-squidpipes`、`karoryfer-272-merry-orks`、`karoryfer-bear-sax`、`karoryfer-big-rusty-drums`、`body-percussion`），并**断言这些库不出现在任何调色板行里**——也就是说，**它把这些库名写进了仓库，正是为了证明它们没被接上**。
+⇒ **所以正确的探针只有一个**：**从调色板行里抽 `assetId` 的库前缀**（就是 ① 那段脚本），而不是数文本出现次数。**① 给出 16 个库 / 17 条可达**；`FOREIGN_LIBRARIES` 是新基线上把"不许坐进来"这件事**写成数据**的那一半。
 
 **③ 目录的程序级资产数（327）**
 
@@ -1085,3 +1096,49 @@ grep -rln "A/B" src mcp                                        # → 21 个文�
 ⚠️ **`A/B` 这一条是我自己搜错、又自己抓出来的**：`grep "A/B" src mcp` 返回 **21 个文件**，本仓**真的有** A/B——但它是**盲听 A/B 评估模式**（`Toolbar.tsx:114` 的 `blindCompare`）、**两个曲风的 A/B 同步试听**（`explore.ts:171,266`）、**pattern 的 A／B 两个槽**（`useSequencerStore.ts:37,248,256`）。**缺的是另一种 A/B**：把一台设备或一条通道条的**当前参数**存成两态来回切。**我第一版把这一行写成"0 命中 ⇒ 没有 A/B 对比"，是错的**，已在 §3.5 与 §5.2 更正。⇒ 这就是为什么"grep 0 命中"必须连**搜的是什么词**一起写出来。
 
 **⑤ 线上是否配了镜像**：我**没有**做这项核实（所以它在 §5.3 里）。可复核的接口是线上 `version.json` 与构建时的 `VITE_SAMPLE_ROOT`（`docs/R2_UPLOAD.md:157` 说明它必须在**构建那一刻**的环境里）。
+
+---
+
+## ⑥ Postscript：基线漂移、与姊妹文档的边界、以及我对自己初稿的**三处**更正
+
+### 6.1 ⚠️ 我这条基线，与它写完之后 `origin/dev` 前进的 10 个提交
+
+* **我的基线**：`origin/dev` @ **`d036619`**（按任务要求：`git fetch` 之后 `git worktree add … origin/dev`）。**全文所有"本仓"结论都是这个提交下的**。
+* **写完之后**：`origin/dev` **前进了 10 个提交，到 `04c47a9`**（worktree 共享同一份 refs，所以我的 `origin/dev` 也跟着走了）。**我的提交 `0deb3c4` 没有推、也不在任何远端分支上**（`git branch -r --contains 0deb3c4` 为空）。
+* **那 10 个提交里有 3 个改了本仓行为/文档，值得读者知道**（我逐条看了标题与差异）：
+  1. `c19b416 feat(samples): two of the seventeen new libraries reach the palette, and the rows that must not move are pinned` —— **§85／§86 那两处替换落地了**：`sax_lead → mtg-solo-sax:MTG-Tenor-Sax`（点名 tenor，避开默认的 Soprano）、`walking_upright → dsmolken-double-bass:d-smolken-rubner-bass-pizz`。⇒ **§3.3 的可达性数字因此变了**，见 6.2。
+  2. `6a5a8ed feat(sampler): loop the recording's own smpl chunk when the region declares none` —— 采样循环面的一条行为改动；**§3.4 里"循环点解析并生效、只是没有编辑器"这个判断不变**，但那一条的细节基准变了。
+  3. `2e6de71 docs: the arrangement gap survey …` 与 `04c47a9 docs: the first half of the creator-facing gap list …` —— **另一条工作线已经产出了 `docs/DAW_GAP_ARRANGEMENT.md`**，见 6.3。
+
+### 6.2 可达性数字：两套基线都写出来（不覆盖旧数，也不让旧数冒充新数）
+
+| 基线 | 手写映射行 | 不同库 | 可达目录条目 | 够不到 | `sax_lead` 指向 | `walking_upright` 指向 |
+| --- | --- | --- | --- | --- | --- | --- |
+| **`d036619`**（本文的基线） | 22 | **15** | **16 / 34** | **18** | `vcsl:Tenor-Saxophone-Keyswitch` | `karoryfer-meatbass:pizz-basic` |
+| **`04c47a9`**（当前 `origin/dev`） | 22 | **16** | **17 / 34** | **17** | `mtg-solo-sax:MTG-Tenor-Sax` | `dsmolken-double-bass:d-smolken-rubner-bass-pizz` |
+
+* 净变化：**+2 个库进可达集**（`mtg-solo-sax`、`dsmolken-double-bass`）、**−1 个库掉出**（`karoryfer-meatbass`，它原来靠 `walking_upright` 进来，替换后就没了别的行指它）⇒ 15 → 16 个库、16 → 17 条可达。
+* ⚠️ **不要用"文本零引用"来数"调色板够不到"**——那是个代理，而且它已经废了：新基线上 `git grep` 只剩 `ixox-flute` 一条零引用，因为 `c19b416` 新增的 `src/test/sampledInstrumentPaletteWiring.test.ts` 里有 `FOREIGN_LIBRARIES` 清单，**故意把这些库名写进仓库来断言它们不在任何行里**。**唯一正确的探针是从调色板行抽 `assetId` 的库前缀**（§5.4 ①）。展开见 §6.4 第 3 条。
+* **327 个程序级资产 id 两套基线上都是 327**（34 条目录一条都没被跳过）。
+* ⇒ **教训（与本文 §5 同一条）**：**报一个"16 / 34"而不写基线，等于报了一个会过期却看不出来的数**。读者要核的时候，先 `git rev-parse HEAD`。
+
+### 6.3 与姊妹文档 `docs/DAW_GAP_ARRANGEMENT.md` 的边界（它已经覆盖了什么）
+
+`origin/dev` 上已有另一份同样体例的调研：**`docs/DAW_GAP_ARRANGEMENT.md`**（工作树 `groove-dawarr`、分支 `daw-arrangement`、**同样基线 `d036619`**）。它的六节是：时间线交互／键盘与鼠标工效／撤销与历史／**从零到有声**／改一个已有想法的成本／"命令表有多少条"。
+
+**⇒ 边界要说清楚，否则两份文档在同一个问题上各说各话**：
+
+* **它管"编排与编辑交互"**（时间线上怎么拖、键盘怎么用、撤销、命令表）；**本文管"创作面"**（音色发现、MIDI／鼓编程、采样素材、混音面、以及"从零到一个想法"里的**素材与生成**）。
+* ⚠️ **一处真实重叠**：**"从零到有声"两边都有**。它在 §3.4，本文在 §3.6。**本文的写法有意与它不同**：它数的是**从空工程到第一个音的步数**（含"1 步 = 一次用户动作"的定义与"手册明文／推算"的标注）；本文数的是**素材从哪来**（模板／和弦进行／loop／生成式工具）+ **本仓默认路由本身就是一条完整曲风（1 步）**。⇒ **两者不矛盾，但如果只读一份，会漏掉另一半**；合并时应把"步数"归它、"素材来源"归本文。
+* **重叠的第二处**：它 §3.4 与本文 §3.6 都会提到"从零到有声"的**步数**。**本文不重新定义步数**，只引用它已经定好的口径。
+* 两份文档的**三态与优先级表是各自独立的**，所以出现同一个能力在两份里各排一次是正常的；**合并时要去重**。
+
+### 6.4 我对自己初稿的三处更正（都被我自己的复核推翻）
+
+按本仓的既有做法（`docs/OPEN_WORK.md` §85／§87 都有"更正我自己"的条目），我把自己初稿里**写错又自己抓出来**的两条记在这里，因为**错法本身有信息量**：
+
+1. **"全仓 grep `A/B` → 0 命中 ⇒ 本仓没有 A/B 对比"** —— **错的**。实际 `grep "A/B" src mcp` 返回 **21 个文件**；本仓**真的有** A/B（盲听 A/B 评估模式 `Toolbar.tsx:114`、两个曲风 A/B 同步试听 `explore.ts:171,266`、pattern 的 A／B 两个槽 `useSequencerStore.ts:37`）。**缺的是另一种**：把设备／通道条的**当前参数**存成两态来回切。⇒ **错因**：我第一遍只在一个**窄目录范围**里搜过，却把结论写成了"全仓"。**教训：搜过的范围必须和结论的范围一致**，这一点现在写进了 §5.2 的表头。
+2. **"`draggable`／`onDragStart`／`onDrop` 在三个组件目录下 0 命中"** —— **错的**，实际 **2 个文件**：`insertCurveViews.tsx:187`（EQ 曲线段的拖动把手）与 `ProjectHubModal.tsx:407`（工程文件拖入）。结论本身不变（**都不是音色／素材拖放**），**但"0 命中"这个数字是错的**。⇒ **错因**：我把"全仓 `onDrop` 只有一处"这个较早的观察，直接套成了那个组合 grep 的结果，**没有重跑**。
+3. ⭐ **"17 个新库在 `src/`＋`mcp/` 里零引用"是一个弱探针，而它在新基线上已经失效** —— 数字**在我那条基线上是对的**（我跑过），但**"文本零引用"只是"调色板没映射它"的代理**，一旦有人把库名写进散文或测试，代理就不再等价。**它在 `04c47a9` 上真的失效了**：`git grep` 只剩 `ixox-flute` 一条零引用，因为 `c19b416` 新增的 `src/test/sampledInstrumentPaletteWiring.test.ts` 里有一张 **`FOREIGN_LIBRARIES`** 清单，**把 12 个库名写进仓库，正是为了断言它们不出现在任何调色板行里**。⇒ **"数文本出现次数"与"调色板有没有映射它"是两件事**；唯一正确的探针是从调色板行抽 `assetId` 库前缀（§5.4 ①）。**我没有把旧的 17 覆盖掉**，而是在 §5.4 ② 与 §6.2 里写明它是什么、什么时候失效的。
+
+⇒ **三条错法的共同点**：**我报的是我"记得搜过／以为等价"的结果，而不是我"刚刚跑过、且形状对得上"的结果**。这与本文 §1.5 第 3 条（结果要落盘、别靠一次返回）是同一个毛病的不同面。**结论**：**任何"0 命中"都必须连"搜了什么词、在哪个范围、以及在哪个基线上"一起写出来**——本文 §5.2 的表头已经按这条改了。
