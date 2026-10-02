@@ -605,3 +605,44 @@ const DOCS = fs.readdirSync(ROOT).filter((f) => f.endsWith(".md"));   // ← 只
 | **`feat/genre-mix-loudness` @ `010ddb8`** | **只有两个判据文件** ✓（+8/−5 ✓）——**一行产品代码都没有** ✗ | ⭐ **不合并** ✓——**已被 dev 更晚的 `GENRE_MIX_RESOLVED` 断言取代** ✓ |
 
 **⇒ 而这两条**都不需要删分支**** ✓✓：**"不合并"是一个判断 ✓，"删分支"是一个不可逆动作 ✗**——**后者我不在无人明确要求时做 ✓**。**⇒ 于是每条分支都有了明确归宿** ✓：**已合 ✓／已显式保全并搁置 ✓（`feat-graph-split` ✓）／判定不合并 ✓（本节两条 ✓）**——**没有一条处于"未合并且状态不明" ✓✓**。
+
+## 十六、⚠️ **§十三 的手机砍除清单有两处错**（2026-10-02，由手机砍除工作流实测指出 ✓）
+
+**它动手前先量了边界，于是抓到两处** ✓✓——**而两处都会导致**错删**** ✗：
+
+### 错一：**"手机面"比 `src/mobile/` 宽** ✗✓
+
+**§十三 说"13 个手机外壳判据删" ✓，而其中几个测的组件**不在 `src/mobile/` 里**** ✓：
+
+| 判据 | 它测的组件 |
+| --- | --- |
+| **`mobileShell`** | `src/components/MobileTabBar.tsx` ✓、`src/components/MobileMoreSheet.tsx` ✓ |
+| **`mobileTransportBar`**／**`mobileSharedBottomRow`** | `src/components/sequencer/MobileTransportBar.tsx` ✓、`MobileStudioSheet.tsx` ✓ |
+| **`headerPhoneSurface`** | **`Header.tsx` 的手机变体** ✓ |
+
+**⚠️ 而 §十三 自己也**自相矛盾**** ✗✓✓：**它把 `App.tsx:31-33` 列为"要拆的接线" ✓——**而那两行正是 `MobileTabBar`／`MobileMoreSheet` 的 import ✓**——**同时又把这两个**组件**列进了"要留" ✗**。**⇒ 照 §十三 做，会得到"删了判据却留着组件（死代码无人测 ✗）"或"拆了 import 却留着组件（孤儿 ✗）" ✓。**
+
+**⇒ 正确的边界** ✓✓：**砍**整个手机面（外壳 ＋ chrome）** ✓——`src/mobile/**` ✓ ＋ `MobileTabBar` ✓／`MobileMoreSheet` ✓／`MobileTransportBar` ✓／`MobileStudioSheet` ✓ ＋ `Header` 的手机变体 ✓；**留**平台** ✓——`useDeviceCapabilities` ✓、**`iosAudioUnlock`** ✓✓、触觉反馈 ✓、iOS 缩放／手势护栏 ✓、**响应式桌面 CSS** ✓。**
+
+### 错二：**漏了一处"要搬家、不是删"——而它会让**桌面皮肤断源**** ✗✓✓
+
+```
+scripts/desktop_skins.mjs:330    读 src/mobile/skins/<id>.css
+                                 → 正则提取调色板
+                                 → 生成 src/styles/desktopTokens.css ＋ src/styles/desktopSkins.css
+                                 （npm run check:skins 在 verify 里 ✓）
+```
+
+**⇒ `src/mobile/skins/` 下那五个 styled 调色板（minimal ✓／comic ✓／soviet ✓／sovietYears ✓／pixel ✓）是**桌面皮肤的源**** ✓✓——**§十三 把它当成"手机的东西" ✗，**删掉就会弄坏一个桌面功能** ✗**。**只有 phone-only 的 sheet（`legacySkin.css` ✓、`panelSkin.css` ✓）才删 ✓。**
+
+**⇒ 而这次搬家有一条**比"能生成"更强的判据**** ✓✓：**搬家前后，生成的 `desktopTokens.css` 与 `desktopSkins.css` 必须**逐字节相同**** ✓——**只改源的位置 ✓，不许改变产物 ✓**（**搬前存一份 → 搬完 `diff` 必须为空 ✓ → `check:skins` 绿 ✓**）。
+
+### ⭐ 而这是这一程**第三次**由独立检查抓到我的清单的错 ✗✓✓
+
+| 第几次 | 谁抓到 | 错在哪 |
+| --- | --- | --- |
+| 1 | **分支盘点 agent** | **`groove-wt25` 不是 worktree** ✗、**简报漏了两棵树** ✗ |
+| 2 | **审计核实 agent** | **`PolySynth` 的假注释骗了我（以及我引用的那份外部报告）** ✗ |
+| 3 | **手机砍除工作流（本节 ✓）** | **范围错（会弄坏桌面皮肤源 ✗、且清单自相矛盾 ✗）** |
+
+**⇒ 三次同源** ✓✓：**我的清单是**凭名字和记忆**拼的 ✓，而它们各自做了独立测量 ✓**——**这正是"多 agent ＋ 独立工作树"（业主第 5 条）真正的价值：**它不只并行，它还**互为检查**** ✓✓。
