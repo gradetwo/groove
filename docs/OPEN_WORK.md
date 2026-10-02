@@ -2136,3 +2136,27 @@ Bass 3 ｜ Guitar 3 ｜ **Orchestral 3** ｜ **Acoustic Piano 2** ｜ **Organ 2*
 * **`karoryfer-meatbass`：39/39 程序、26872 region、83 个 opcode、未实现 **68** 条**；
 * **`karoryfer-emilyguitar`：6/6 程序、4497 region、25 个 opcode、未实现 **17** 条**；
 **⇒ `needs` 已写入**（**不是"扫过无需记"那一支 ✓**），**且 0 个采样悬空 ✓✓**。
+
+## 六十三、✅ 鼓谱符干修复落地（`d21f61c` ✓，**我自验 5 文件 56/56 绿 ✓✓**，2026-10-02 ✓）
+
+### 63.1 改动：**只动鼓谱支** ✓✓
+
+**`ScoreV2.tsx` 鼓谱支：`Beam.generateBeams(beamable, PERCUSSION_BEAM_OPTIONS)`**，**常量 `export const PERCUSSION_BEAM_OPTIONS = { maintainStemDirections: true } as const`** ✓ ——**有音高谱表那条支**一字未动**** ✓。
+
+### 63.2 ⭐ 而判据**双向都证过会红** ✓✓
+
+* **清空 config ⇒ 红**（`g/5/x2: expected -1 to be 1`）✓；
+* **把选项漏进有音高支 ⇒ **反向判据红**（`c/6: expected 1 to be -1`）** ✓✓；
+**⇒ 这正是 §56.2 里我要求的"**先证明它能红**" ✓**。
+
+### 63.3 读数 ✓✓
+
+```
+**改前** voice1 `[1→-1]`／voice2 `[-1→1]` ⇒ **改后** voice1 `[1→1]`／voice2 `[-1→-1]` ✓
+**末尾 x 符头**：改前 `1→-1` ⇒ **改后 `1→1`** ✓✓ ⇒ **⇒ 正是被报告那张图里"向下符干"的来源 ✓**
+```
+**我自验** ✓✓：**在与尖端齐平的树上**，`percussionStems`（**新**）＋ `percussionStaffGlyphs` ＋ `percussionStaff` ＋ `scoreV2` ＋ `scoreRhythm` ⇒ **5 文件 56/56 全绿** ✓。
+
+### 63.4 ⚠️ 而我的**树状态**教训（**写进结论之前被拦住 ✓**）
+
+**我的工作树落后一笔** ⇒ **grep 自己的树说"没落"** ✗，**而 `git grep origin/dev` 说**在**** ✓✓ ⇒ **⇒ "`git fetch` ≠ 拥有尖端"那条（轮 112）的**第二次现身**，而这次是**双向检查**在写任何结论之前拦住的 ✓**。
