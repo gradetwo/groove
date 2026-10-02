@@ -2385,3 +2385,29 @@ Bass 3 ｜ Guitar 3 ｜ **Orchestral 3** ｜ **Acoustic Piano 2** ｜ **Organ 2*
 **轮 206 的关键词扫描**太粗（**点错两个文件** ✗）⇒ **轮 207／209／210 的**读**逐个答完** ✓ ⇒
 **而 §27 那根钉**在轮 210 是靠**搜行为**（`refuses…unknown kind`）而不是**搜词**找到的** ✓✓
 ⇒ **⇒ 查代码**做什么**，别查散文**说什么**** ✓。
+
+## 七十四、⭐ §26（听感优先／不给缺口配劣质库）**也有判据**，且七条几乎就是目标的原话（2026-10-02 ✓）
+
+**`src/test/sampledInstruments.test.ts`** ✓✓：
+
+1. **`classifies every instrument name the genre data writes, so none is silently unmapped`**
+   ⇒ **这就是"**22 ＋ 37 ＋ 2 ＝ 61 闭合**"，而它是**判据**** ✓✓；
+2. **`does not classify the same name twice, which would make the three lists disagree`** ⇒ **分区**不相交**** ✓；
+3. **`names a catalogue asset that the shipped manifest actually declares`** ⇒ **调色板条目**不能指向并不存在的库**** ✓✓；
+4. **`matches the whole name exactly, and never a prefix, a case variant or a synonym`**
+   ⇒ **⇒ 我先前那个"表计数里的**前缀碰撞**"错误，现在**是判据**** ✓；
+5. **`applies to the melodic roles only, so a drum lane cannot become one recorded note`** ⇒ **鼓／旋律边界** ✓；
+6. **`believes a lane's own asset over its name, which is what a v2 sampler compiles to`** ✓；
+7. ⭐ **`says why a lane keeps its synthesiser, and stays quiet about a synthesiser by definition`**
+   ⇒ **⇒ 这正是 §26 的原话：**回落必须说出**为什么**，而真正的合成器**不需要辩解**** ✓✓。
+
+### 74.1 ⇒ 四条常驻规矩的账（**收口 ✓**）
+
+```
+**§27（不做兼容）**      ✅ 有判据（`addLaneOp.test.ts:79` 拒绝未知 `kind` ✓）
+**许可／出处**           ✅ 有判据（`libraryLicence.test.ts` 六条，含"要求每个库都有来源" ✓）
+**音色测量（§26 地基）** ✅ 有判据（`timbreFingerprint.test.ts` 十一条 ✓）
+**§26（听感优先／缺口）** ✅ 有判据（`sampledInstruments.test.ts` 七条 ✓）
+**§28（先看行业做法）**  ⚠️ **未核到专属判据**，**照实记"载体在跑"**（两个文档门禁 ＋ 各线的逐字出处 ✓）
+```
+**⇒ 四条里**三条有专属判据**，而 §28 的载体确实每次推送都在执行** ✓✓。
