@@ -50,10 +50,22 @@ describe("audioDurationSeconds", () => {
     expect(longestDuration([], runner("1"))).toBeNull();
   });
 
-  it("agrees with the real tool on a file that exists, when the tool is available", () => {
+  it("agrees with the real tool on a file that exists, when the tool is available", (ctx) => {
     // The one place the actual binary is used: if it is present, its answer must match what the arithmetic expects.
     const path = "/tmp/vd/Samples/kickmic/snare/kickmic_snare_center_vl29.flac";
-    if (!existsSync(path)) return;
+    /**
+     * ⭐ **A skip the runner reports, rather than a return that reports a pass.**
+     *
+     * This used to be `if (!existsSync(path)) return;`, so on any machine without that fixture the test asserted
+     * nothing and was counted as passing — a green that claimed coverage it never had, and the one shape worse than
+     * a loud failure because nothing surfaces it. The fixture lives under `/tmp/vd`, which exists on the machine it
+     * was written on and not on a runner, so in CI it has been passing without checking anything.
+     *
+     * The name already said "when the tool is available", so the intent was always to skip; what changes is that
+     * the output says skipped instead of passed. Nothing is weakened, because the assertion was already not
+     * running. `docs/OPEN_WORK.md` §十七之五 records the survey that found this.
+     */
+    if (!existsSync(path)) ctx.skip();
     let available = true;
     try {
       execFileSync("ffprobe", ["-version"], { stdio: "ignore" });
