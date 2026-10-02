@@ -14,7 +14,8 @@
  * behind it does not get added.
  *
  * **It also holds the one copy of the `headless` parameter's text** (`headlessParameterDescription()`), for the same
- * reason: four tools now quote the same three measured host-difference numbers, and four copies would drift.
+ * reason: every render tool that offers the choice now quotes the same three measured host-difference numbers, and a
+ * copy per tool would drift.
  */
 import budget from "./budget.json";
 
@@ -106,12 +107,14 @@ export function renderCostSentence(): string {
 export const PREVIEW_DEFAULT_CLAUSE = "Which is why render_preview_clip defaults to 8 kHz mono.";
 
 /**
- * **The `headless` parameter's description, in one place because four tools now carry it.**
+ * **The `headless` parameter's description, in one place because seven tools now carry it.**
  *
  * `render_arrangement` was the first tool to expose the Node host (`84638d0`); `render_song`, `render_audio` and
- * `render_preview_clip` run through the same `renderAudio` and gained the same parameter. Four copies of the three
- * measured divergence numbers is the drift this file exists to prevent — and the numbers are measurements, which is
- * this module's own admission rule.
+ * `render_preview_clip` run through the same `renderAudio` and gained the same parameter. `normalize_loudness`,
+ * `render_instrument_note` and `render_arrangement_stems` followed through the same host — the first through
+ * `renderAudio` once per pass, the second through the same loader the Node renderer already builds, the third through
+ * the same `stemTrackIdx` argument the page path passes. A copy of the three measured divergence numbers per tool is
+ * the drift this file exists to prevent — and the numbers are measurements, which is this module's own admission rule.
  *
  * What the sentence has to carry, and why each part is not decoration:
  *

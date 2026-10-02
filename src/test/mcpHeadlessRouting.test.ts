@@ -46,10 +46,33 @@ const MOCK_PAYLOAD = {
   problems: [],
 };
 
+/**
+ * The smallest payload the audition's Node entry can return: the page's union with the audio half, a resolved sample
+ * path and the ratio that turns a claim into a render. `worker.ts` writes the base64 and reports the same fields it
+ * reports on the browser path, so this is what makes the reply's `engine` judgeable without an optional package.
+ */
+const MOCK_NOTE_PAYLOAD = {
+  base64: "UklGRg==",
+  durationSec: 0.5,
+  sampleRate: 8000,
+  channels: 1,
+  truePeakDb: -29,
+  resolved: { samplePath: "Strings/Violin Section/susVib/VlnEns_susVib_B2_v2.wav", ratio: 1.0594630943592953, rootKey: 59 },
+};
+
 vi.mock(new URL("../../mcp/render/headless.ts", import.meta.url).pathname, () => ({
   renderPatternHeadless: async (_pattern: unknown, options: Record<string, unknown>) => {
     headlessCalls.push(options);
     if (mockBehavior.mode === "payload") return { ...MOCK_PAYLOAD };
+    throw new Error("HEADLESS-REACHED");
+  },
+  /**
+   * The audition's Node entry, mocked in the same two modes and captured in the same list — the routing question is
+   * identical ("did the flag reach the Node module"), so the assertion is too.
+   */
+  renderInstrumentNoteHeadless: async (_assetId: string, _midi: number, options: Record<string, unknown>) => {
+    headlessCalls.push(options);
+    if (mockBehavior.mode === "payload") return { ...MOCK_NOTE_PAYLOAD };
     throw new Error("HEADLESS-REACHED");
   },
   headlessUnavailableMessage: (reason: unknown) => `stub unavailable: ${String(reason)}`,
@@ -57,12 +80,24 @@ vi.mock(new URL("../../mcp/render/headless.ts", import.meta.url).pathname, () =>
 }));
 
 import { TOOLS } from "../../mcp/registry";
-import { clearMcpArrangements, createMcpArrangement } from "../../mcp/arrangement";
+import { clearMcpArrangements, createMcpArrangement, addMcpNote } from "../../mcp/arrangement";
 import { clearMcpSongs, createMcpSong } from "../../mcp/song";
 import { findGenre } from "../../mcp/library";
 
-/** The four tools that call `renderAudio`, and therefore the four with two engines. */
-const HEADLESS_TOOLS = ["render_arrangement", "render_audio", "render_song", "render_preview_clip"] as const;
+/**
+ * Every tool with two engines: the four that call `renderAudio`, the loudness loop that calls it once per pass, the
+ * audition that reaches the same loader through `auditionInstrumentNote`, and the stems tool that renders one track per
+ * call. "Two engines" is the claim under test for all seven, so the list is the surface rather than the wiring.
+ */
+const HEADLESS_TOOLS = [
+  "render_arrangement",
+  "render_audio",
+  "render_song",
+  "render_preview_clip",
+  "normalize_loudness",
+  "render_instrument_note",
+  "render_arrangement_stems",
+] as const;
 
 const toolNamed = (name: string) => {
   const tool = TOOLS.find((candidate) => candidate.name === name);
@@ -104,6 +139,21 @@ function renderArgs(name: string, headless: boolean): Record<string, unknown> {
     }
     case "render_preview_clip":
       return { genreId: "chicago-house", ...flag };
+    case "normalize_loudness": {
+      const { songId } = createMcpSong({ genreId: "chicago-house", genre: findGenre("chicago-house") ?? null });
+      // `passes: 1` keeps the routing assertion a count of one; the multi-pass case is the real-render criterion's.
+      return { songId, passes: 1, sampleRate: 8000, channels: 1, ...flag };
+    }
+    case "render_instrument_note":
+      // The id is never fetched under the mock; it only has to be a string the handler forwards.
+      return { assetId: "vsco2ce:ViolinEnsSusVib", midi: 60, seconds: 0.5, sampleRate: 8000, ...flag };
+    case "render_arrangement_stems": {
+      // One track with one note, so "the Node module was reached" stays a count of one — the per-track loop is the
+      // real-render criterion's job, not this one's.
+      const { arrangementId, tracks } = createMcpArrangement({ blankKind: "drumkit", songId: "route-probe" });
+      addMcpNote(arrangementId, { trackId: tracks[0]!.id, pitch: 36, startBeats: 0, lengthBeats: 0.5, velocity: 100 });
+      return { arrangementId, sampleRate: 8000, channels: 1, ...flag };
+    }
     default:
       throw new Error(`no render arguments are defined for ${name}`);
   }

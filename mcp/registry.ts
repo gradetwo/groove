@@ -2175,7 +2175,9 @@ export const TOOLS: ToolDefinition[] = [
     name: "normalize_loudness",
     title: "Render a song to a target loudness",
     description:
-      "Render a song, measure it, compute the master trim that would reach a target integrated loudness, render again with it, and report both readings plus which bound decided the trim. The gain is capped by a true-peak ceiling, so the answer distinguishes reaching the target from reaching the ceiling. Returns the path of the normalized file.",
+      "Render a song, measure it, compute the master trim that would reach a target integrated loudness, render again with it, and report both readings plus which bound decided the trim. The gain is capped by a true-peak ceiling, so the answer distinguishes reaching the target from reaching the ceiling. Returns the path of the normalized file. " +
+      HEADLESS_POINTER_SENTENCE +
+      " **Every pass of the loop runs on the host you chose, and the reply's `engine` names it**: with `passes: 1` (the default) this is one render and the choice is the same one `render_song` offers; with more passes the loop is still the same host each time, so the trim is corrected against that host's own readings rather than mixing two engines. The measured host gap (1.03 dB band 3, 1.04 dB band 7, 1.612 LU) applies to the final file exactly as it does to a single render — what is *not* measured is a multi-pass loop whose rounds used different hosts, which this does not do.",
     readOnly: false,
     inputSchema: {
       songId: z.string().describe("the song to normalize"),
@@ -2193,6 +2195,7 @@ export const TOOLS: ToolDefinition[] = [
         .describe(
           "how many measure-and-correct rounds to run inside this call; **default 1**, because each round is a full render and a client's 30-second RPC timeout is real. A second call continues from the trim this one reports"
         ),
+      headless: z.boolean().optional().describe(headlessParameterDescription()),
     },
     handler: async (args) => {
       try {
@@ -2207,6 +2210,8 @@ export const TOOLS: ToolDefinition[] = [
           nameSlug: song.name,
           ...(args.sampleRate ? { sampleRate: args.sampleRate as number } : {}),
           ...(args.channels ? { channels: args.channels as 1 | 2 } : {}),
+          // ⭐ Every pass carries the engine choice, so one call cannot render its rounds on two hosts.
+          ...(args.headless === true ? { headless: true } : {}),
         };
         const baseTrimSeed = () => Number(getGenreLoudnessTrimDb(flattened.pattern.genre_id).toFixed(3));
         const render = (trimDb?: number) =>
@@ -2269,6 +2274,8 @@ export const TOOLS: ToolDefinition[] = [
           songId: song.id,
           targetLufs: target,
           truePeakCeilingDb: ceiling,
+          /** Which host rendered every pass — read, not inferred, the same rule as the single-render tools. */
+          engine: after.engine,
           before: reading(before),
           gainDb: Number((target - before.integratedLufs).toFixed(3)),
           baseTrimDb: Number(baseTrimDb.toFixed(3)),
@@ -3266,7 +3273,9 @@ export const TOOLS: ToolDefinition[] = [
     name: "render_instrument_note",
     title: "Sound one instrument note and say which sample answered",
     description:
-      "Render **one note** of one instrument through the app's own sampler, and report what the library did with it: which sample file answered, at what playback ratio, its root key, its choke group, whether the file calls it a one-shot, and its note-polyphony cap. Use it to answer the question a whole-mix render cannot — *does this library resolve, and does it do what its file says?* A note that renders silent is reported as a result with its resolved sample path, because a silent note with a sample path is a gain problem and a silent note without one is a library that did not resolve.",
+      "Render **one note** of one instrument through the app's own sampler, and report what the library did with it: which sample file answered, at what playback ratio, its root key, its choke group, whether the file calls it a one-shot, and its note-polyphony cap. Use it to answer the question a whole-mix render cannot — *does this library resolve, and does it do what its file says?* A note that renders silent is reported as a result with its resolved sample path, because a silent note with a sample path is a gain problem and a silent note without one is a library that did not resolve. " +
+      HEADLESS_POINTER_SENTENCE +
+      " The note is resolved and rendered through the **same `loadNote` and the same loader** on either host — `createSampleLoader` over `browserSampleDecoder`, which is the loader `renderPatternOffline` already builds on the Node host — so what `headless` changes is the engine and not the resolution, and the reply's `engine` says which one answered.",
     readOnly: false,
     inputSchema: {
       assetId: z.string().describe("an instrument from `list_arrangement_instruments`"),
@@ -3274,6 +3283,7 @@ export const TOOLS: ToolDefinition[] = [
       seconds: z.number().min(0.1).max(10).optional().describe("how much to render; default 2"),
       gainDb: z.number().min(-60).max(12).optional().describe("a trim for listening; the file's own controller gain is applied regardless"),
       sampleRate: z.number().int().min(8000).max(96000).optional().describe("default 44100"),
+      headless: z.boolean().optional().describe(headlessParameterDescription()),
     },
     handler: async (args) => {
       try {
@@ -3282,6 +3292,7 @@ export const TOOLS: ToolDefinition[] = [
           seconds: args.seconds as number | undefined,
           gainDb: args.gainDb as number | undefined,
           ...(args.sampleRate ? { sampleRate: args.sampleRate as number } : {}),
+          ...(args.headless === true ? { headless: true } : {}),
         });
       } catch (error) {
         return failure((error as Error).message);
@@ -3295,12 +3306,15 @@ export const TOOLS: ToolDefinition[] = [
       "Bounce every track of an arrangement to **its own WAV**, next to each other in one directory, through the same offline engine as `render_arrangement`. Use it when the question is about a part rather than the mix: an agent that can hear the bass alone can fix a balance problem instead of guessing at one. Each reply entry carries the measured duration, sample rate, channel count and true peak of that stem, and a stem that rendered to silence says so rather than being reported as a file nobody can hear. **It costs one render per track**, so a four-track arrangement is four of the measurements quoted here — one of the few render calls that can report progress per track rather than only a heartbeat. " +
       renderCostSentence() +
       " " +
-      renderBudgetSentence(),
+      renderBudgetSentence() +
+      HEADLESS_POINTER_SENTENCE +
+      " `headless: true` renders each stem on the Node Web Audio host, one track per render, through the **same `stemTrackIdx` argument the browser path passes** — so it is the same per-track render on a different engine, not a second definition of a stem. The reply's `engine` names the host, and each stem's own true peak and duration are measured from that host's buffer. Two things it does **not** inherit on that path: the render budget and the per-track progress above are page machinery, so on the Node host there is no budget and a `progressToken` produces no notifications; and the measured 1.03 dB / 1.04 dB / 1.612 LU host gap above is a **whole-mix** fixture — the parity probe has measured no stem, so that band-and-loudness comparison is unknown for a stem rather than zero. (A spot check on one drumkit stem found its true peak 0.08 dB apart between the hosts; one true-peak reading is not that comparison.)",
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
       sampleRate: z.number().int().min(8000).max(96000).optional().describe("default 44100; a lower rate renders faster and is honest about it"),
       channels: z.union([z.literal(1), z.literal(2)]).optional().describe("default 2, the exporter's own stereo"),
+      headless: z.boolean().optional().describe(headlessParameterDescription()),
     },
     handler: async (args, ctx) => {
       try {
@@ -3311,6 +3325,7 @@ export const TOOLS: ToolDefinition[] = [
           ...(args.channels ? { channels: args.channels as 1 | 2 } : {}),
           bars: 1,
           genreId: "custom",
+          ...(args.headless === true ? { headless: true } : {}),
           ...(ctx?.progress ? { progress: ctx?.progress } : {}),
         });
         const audioLanes = result.audioLanes;

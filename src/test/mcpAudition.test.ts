@@ -1,9 +1,9 @@
 /**
  * Auditioning one note: the question the whole SFZ layer exists to answer.
  *
- * The agent surface could render a whole arrangement and not a single drum hit, so "which sample does this library use for this note, at what rate, and does the file call it a one-shot?" was answerable only by a CI probe. The rendering needs a browser — like every other audio tool here — so the criterion holds the parts that do not: the filename rule and the declarations.
+ * The agent surface could render a whole arrangement and not a single drum hit, so "which sample does this library use for this note, at what rate, and does the file call it a one-shot?" was answerable only by a CI probe. The rendering originally needed a browser; it now also runs on the Node Web Audio host (`headless: true`, held for real in `src/test/mcpHeadlessRender.test.ts`), so this criterion holds the parts that need no engine at all: the filename rule and the declarations.
  *
- * The resolved fields are the reason this tool is worth its browser: a **silent** render with a `samplePath` is a gain problem, and a silent render without one is a library that never resolved. Reporting the two the same way would make the tool useless for exactly the case it was added for.
+ * The resolved fields are the reason this tool is worth its render: a **silent** render with a `samplePath` is a gain problem, and a silent render without one is a library that never resolved. Reporting the two the same way would make the tool useless for exactly the case it was added for.
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";

@@ -860,3 +860,27 @@ render_audio → render_audio failed: … same message …
 
 **⚠️ 这一轮**没有**变的东西** ✓（**写下来，免得被读成已解决** ✗）：**三个数字一个都没动** ✗（**收敛仍卡在通道条压缩器那一件** ✓）；**无头路径仍不走预算、不发 progress** ✓（**现在四个工具的描述都这么写** ✓）；**MP3 在无头路径上仍无量** ✗；**`headless + trackPeaks` 可达但仍无判据** ✗；**无头预览的墙钟仍无量** ✗。
 
+### §9.7 §9.6 里"没进"的三个：**前两条理由是错的，第三条只有一半对**（2026-10-02，`headless3`）
+
+**这一轮把 §9.6 表里"仍然没有入口"的三个全部接上** ✓✓。**复核的第一件事不是接线，是把每条理由拆成"架构主张"和"测量主张"两半** ✓：**架构那半逐条验代码，测量那半照旧保留** ✓✓。
+
+| 工具（§9.6 的原文理由 ✗） | 架构主张成立吗 | 据什么判 |
+| --- | --- | --- |
+| `render_arrangement_stems`——"`renderStems` 自己跑逐轨 `page.evaluate`，带一个**无头模块不收的** `stemTrackIdx`，**要进就得先写新渲染代码**" ✗ | **不成立** ✗✓ | `renderPatternOffline` **自始接受** `stemTrackIdx` ✓（`src/audio/WavExporter.ts:131` ✓，在 `:1212` 与 `:1362` 应用 ✓，并经 `src/audio/offlineAudioLanes.ts:249` 传给音频 lane 规划器 ✓）。**"无头模块不收"是**没转发**，不是**收不了**** ✓——`RenderOptions` 上补一个字段、`renderPatternHeadless` 里加一行透传即可 ✓✓ |
+| `render_instrument_note`——"页里 `loadNote` + SFZ 采样器渲染一个音，**无头宿主完全没有这条路的实现**，那是**第二份无头实现**" ✗ | **不成立** ✗✓ | 页里那段就是 `createSampleLoader(browserSampleDecoder(ctx)) → loadNote → createBufferSource → render` ✓，而**同一组模块**正是 `renderPatternOffline` 在 Node 宿主上早就在跑的那组 ✓（`src/audio/WavExporter.ts:1727` 用的就是 `browserSampleLoader(ctx, audioCatalogue)` ✓）。**这是复用，不是第二份实现** ✓✓ |
+| `normalize_loudness`——"一次调用跑 1–3 个 pass，**宿主差会在多次渲染间累积**，而那个累积没量过" ✗ | **一半成立** ✓✗ | 循环的状态在 Node 侧 ✓，**但每一轮仍是同一个 `renderAudio`** ✓，所以把 `headless` 透传给**每一轮**就使一轮调用只用一个宿主 ✓✓——**"跨宿主的累积"没有发生，因为没有跨宿主** ✓；**它仍然是**未测量的**，只是不再是**本实现的性质**** ✓ |
+
+**⇒ 一并做的三件事** ✓✓：① `.describe()` 的共享文本仍是一份（`mcp/render/budget.ts` 的 `headlessParameterDescription()` ✓），**七个工具引用它而不是各抄三个数字** ✓；② **三个工具的回复都带 `engine`** ✓（`normalize_loudness` 与 `render_arrangement_stems` 的 `engine` 是本轮**新加的字段** ✓，`render_instrument_note` 的 `AuditionResult.engine` 同理 ✓）；③ **描述改成事实** ✓——**stems 描述写明**单轨宿主差"unknown rather than zero" ✓，**normalize 描述写明**每一轮同一宿主、跨宿主的累积没有发生 ✓，**note 描述写明**两条路共用同一个 `loadNote` 与同一个加载器 ✓。
+
+**判据（都在本机跑过 ✓✓）**：
+
+* `src/test/mcpHeadlessRouting.test.ts`：`HEADLESS_TOOLS` **4 → 7** ✓，**每个工具四例** ✓，**28 例 108 ms 全绿** ✓（不依赖可选包 ✓）；**改前／改后对照**用同一支一次性探针在 `GROOVE_MCP_NO_BROWSER=1` 下量 ✓✓：**改前**三个工具的参数被 schema **静默剥掉**（`z.object(inputSchema)` 后 `headless=undefined` ✓）**并落回**"audio rendering is disabled (GROOVE_MCP_NO_BROWSER=1)" ✗；**改后**同一调用分别出**真文件** ✓✓——`render_instrument_note`：8044 B／0.5 s／−29.27 dBTP／`engine: node-web-audio-api` ✓；`render_arrangement_stems`：1 轨 265644 B／16.6 s／−1.10 dBTP／`engine: node-web-audio-api` ✓；`normalize_loudness`：`engine: node-web-audio-api` 且 `before` 有真读数 −12.742 LUFS ✓；
+* **反向**（把无头分支改成不转发 ⇒ 无头方向与 `engine` 全红）：**§9.6 已经用 4 个工具量过** ✓，**本轮没有对新增的三个再跑一次** ✗——**新增三个的反向由上面那支探针的"改前"一半承担** ✓（**同一形状：剥掉参数就落回浏览器拒绝** ✓）；
+* `src/test/mcpHeadlessRender.test.ts`：**五例真实渲染在 `GROOVE_MCP_NO_BROWSER=1` 下全绿** ✓✓（原两例 + `normalize_loudness` ／ `render_instrument_note` ／ `render_arrangement_stems` 三例 ✓，**本机装了可选包，所以不是 SKIP** ✓）：`render_instrument_note` 解析出 `VlnEns_susVib_B2_v2.wav` ／ `rootKey 59` ／ `ratio 1.0594630943592953` ✓（**与 `docs/PITCH_TRUTH.md:23` 的浏览器路径记录一致 ✓**）、`render_arrangement_stems` 两轨各出一个 RIFF ✓。
+
+**⚠️ 本轮**没有**变的东西** ✓（**写下来，免得被读成已解决** ✗）：**三个数字一个都没动** ✗；**单轨与单音的那组**波段／响度**数字**没有量** ✗——**§9.6 的测量主张成立 ✓，所以描述把"unknown"限定在**那个比较**上 ✓，而不是把整混夹具的数字挪用过来** ✗（**本轮**确实**做了一次同夹具点测 ✓**：同一条 one-bar drumkit 分轨在两宿主上真峰值相差 **0.08 dB** ✓（browser −1.24／node −1.16 ✓），同一个 violin 音相差 **0.32 dB** ✓（−29.59／−29.27 ✓）且 `resolved` 三点全同 ✓——**但真峰值读数不是那组 13 段／LUFS 比较，所以写进文档时明确标为 spot check** ✓）；**无头路径仍不走预算、不发 progress** ✓（**页面机器 ✓**）；**MP3 在无头路径上仍无量** ✗；**`headless + trackPeaks` 仍无判据** ✗；**`describe_pitch` 的 `resolveOnly` 那一路仍要浏览器** ✗（**`auditionInstrumentNote` 现在收 `headless` ✓，但那个工具自己的 schema 没有这个参数 ✗**——**同样的"没转发"，本轮按业主点名的三个工具划界，没有顺手扩** ✓）。
+
+**⚠️ 一条本机判不了的** ✗：**`vite-node` 跑不了浏览器的 `page.evaluate`** ✓——`import(...)` 会被 Vite 转成 `__vite_ssr_dynamic_import__` ✓，页里没有这个符号 ✓（**探针实测：三条浏览器路径全部 `ReferenceError`** ✗）。**所以浏览器路径只能用构建产物验** ✓：`GROOVE_MCP_NO_BROWSER` 不设、`node scripts/mcp_call.mjs --script`（**它 spawn `dist-mcp/groove-mcp.mjs`** ✓）跑同六步 ✓——**三条浏览器路径都出文件、都报 `engine: "browser"`** ✓✓（**stems 265644 B／16.6 s ✓、note 8044 B／0.5 s ✓、normalize 出 WAV ✓**）。**这一条是重构后浏览器分支的回归证据** ✓（**`renderStemInPage` 的抽取没有改变页里的调用 ✓**）。
+
+
+

@@ -109,6 +109,16 @@ export interface RenderOptions {
    * `withRenderTimeout`: that budget resets a stuck *page*, and an in-process render has no page to reset.
    */
   headless?: boolean;
+  /**
+   * Render **one track** of the pattern, not the mix — the argument `render_arrangement_stems` has always used.
+   *
+   * It is not a headless-only switch: it is carried here because the browser path built it inline inside its own
+   * `page.evaluate`, and the Node host had no way to be told the same thing. `renderPatternOffline` has accepted
+   * `stemTrackIdx` all along (`src/audio/WavExporter.ts:131`, applied at `:1212` and `:1362`, and threaded to the
+   * audio-lane planner at `src/audio/offlineAudioLanes.ts:249`), so passing it through is a forwarded argument rather
+   * than a second renderer. `undefined` renders the whole pattern, which is what every other tool wants.
+   */
+  stemTrackIdx?: number;
 }
 
 export interface RenderResult {
@@ -1013,14 +1023,104 @@ export interface StemResult {
   silent: boolean;
 }
 
+/**
+ * **The page's half of a stem render, as a function of its own.**
+ *
+ * Extracted for the same reason `renderAudioInPage` is extracted from `renderAudio`: the Node branch has to be
+ * able to skip the page, and a `page.evaluate` inlined in a ternary cannot be skipped. The body is unchanged —
+ * same evaluate, same arguments, same per-stem budget — so this is a move, not a second render path.
+ */
+function renderStemInPage(
+  page: import("playwright").Page,
+  pattern: SequencerPattern,
+  options: RenderOptions,
+  index: number,
+  catalogueRead: AudioLaneCatalogueRead,
+  sampleRoot: string
+) {
+  return withRenderTimeout(
+    page.evaluate(
+      async ({ pattern: patternArg, stemTrackIdx, bars, sampleRate: rate, channels: channelCount, manifestText: manifest, sampleRoot: mirrorRoot, catalogueProblem }) => {
+        const specifier = (path: string) => path;
+        const [wav, loudness, catalogue] = await Promise.all([
+          import(/* @vite-ignore */ specifier("/src/audio/WavExporter.ts")),
+          import(/* @vite-ignore */ specifier("/src/test/helpers/loudness.ts")),
+          import(/* @vite-ignore */ specifier("/src/data/sampleCatalogue.ts")),
+        ]);
+        const audioCatalogue = manifest ? catalogue.catalogueFromManifestText(manifest, mirrorRoot).assets : [];
+        let audioLanes: OfflineAudioLaneReport = { lanes: [], events: 0, problems: [] };
+        /** What the renderer reported about this stem's render; the same shape `renderAudio` carries out. */
+        const renderProblems: string[] = [];
+        const buffer = await wav.renderPatternOffline(patternArg as never, {
+          bars: Math.max(1, Math.min(64, bars ?? 1)),
+          stemTrackIdx,
+          ...(rate ? { sampleRate: rate } : {}),
+          ...(channelCount ? { channels: channelCount } : {}),
+          // Unconditional, for the same reason as in `renderAudio`: an unreadable catalogue must not discard the whole lane report.
+          audioLaneCatalogue: audioCatalogue,
+          onAudioLanes: (report: OfflineAudioLaneReport) => {
+            audioLanes = report;
+          },
+          onProblems: (list: readonly string[]) => {
+            renderProblems.push(...list);
+          },
+          ...(catalogueProblem ? { audioLaneCatalogueProblem: catalogueProblem } : {}),
+        });
+        const channelsOut: Float32Array[] = [];
+        for (let c = 0; c < buffer.numberOfChannels; c += 1) channelsOut.push(buffer.getChannelData(c));
+        const bytes = wav.encodeAudioBufferToWav(buffer);
+        let binary = "";
+        const view = new Uint8Array(bytes);
+        const chunk = 0x8000;
+        for (let i = 0; i < view.length; i += chunk) {
+          binary += String.fromCharCode(...view.subarray(i, i + chunk));
+        }
+        return {
+          base64: btoa(binary),
+          durationSec: buffer.duration,
+          sampleRate: buffer.sampleRate,
+          channels: buffer.numberOfChannels,
+          truePeakDb: loudness.truePeakDbChannels(channelsOut),
+          audioLanes,
+          problems: renderProblems,
+        };
+      },
+      {
+        pattern,
+        stemTrackIdx: index,
+        bars: options.bars,
+        sampleRate: options.sampleRate,
+        channels: options.channels,
+        manifestText: catalogueRead.text,
+        sampleRoot,
+        catalogueProblem: catalogueRead.problem,
+      }
+    ),
+    `stem ${index + 1} of ${pattern.tracks.length}`,
+    options.renderTimeoutMs ?? RENDER_BUDGET_MS
+  );
+}
+
 export async function renderStems(
   pattern: SequencerPattern,
   options: RenderOptions
-): Promise<{ dir: string; stems: StemResult[]; sampleRate: number; bpm: number; audioLanes: OfflineAudioLaneReport; problems: string[] }> {
-  if (process.env.GROOVE_MCP_NO_BROWSER === "1") {
-    throw new Error("audio rendering is disabled (GROOVE_MCP_NO_BROWSER=1); stems are rendered through the same offline engine as everything else");
+): Promise<{ dir: string; stems: StemResult[]; sampleRate: number; bpm: number; audioLanes: OfflineAudioLaneReport; problems: string[]; engine: "browser" | "node-web-audio-api" }> {
+  /**
+   * ⭐ **The Node host branch is decided before the browser is considered**, the same order `renderAudio` uses: the
+   * guard below would otherwise refuse a stems call that needs no browser at all.
+   *
+   * The claim that this needed *new renderer code* was wrong: `renderPatternOffline` has taken `stemTrackIdx` from the
+   * start (`src/audio/WavExporter.ts:131`), so this is the same wiring with one more forwarded argument. What the Node
+   * module genuinely did not accept was the argument, not the render — `RenderOptions.stemTrackIdx` is that gap.
+   */
+  const headless = options.headless === true;
+  if (!headless && process.env.GROOVE_MCP_NO_BROWSER === "1") {
+    throw new Error(
+      "audio rendering is disabled (GROOVE_MCP_NO_BROWSER=1); stems are rendered through the same offline engine as everything else, or ask for `headless: true` to render on the Node Web Audio host"
+    );
   }
-  const page = await runWithProgress(options.progress, "starting the renderer (Vite + Chromium)", ensurePage);
+  /** A page exists only on the browser path; starting one for a Node render is the silent fallback this branch prevents. */
+  const page = headless ? null : await runWithProgress(options.progress, "starting the renderer (Vite + Chromium)", ensurePage);
   const dir = outputDirectory(options);
   const bpm = pattern.bpm || 120;
   const stems: StemResult[] = [];
@@ -1034,6 +1134,13 @@ export async function renderStems(
   let renderProblems: string[] = [];
   const catalogueRead = readAudioLaneCatalogue(pattern);
   const sampleRoot = sampleMirrorRoot();
+  /**
+   * The Node host, loaded only when asked for — dynamically, like every other entry in this file, so the bundle still
+   * builds on a checkout without the optional native addon. The context is the same one `renderAudio` builds, so
+   * `publicRoot` and `sampleRoot` keep their single definitions.
+   */
+  const renderPatternHeadless = headless ? (await import("./headless")).renderPatternHeadless : null;
+  const headlessContext = { publicRoot: path.join(appRoot(), "public"), sampleRoot };
 
   /**
    * A stems render **can** count tracks where a whole-song render cannot: it is one render per track, so the natural
@@ -1051,68 +1158,15 @@ export async function renderStems(
      * ceiling at all: a page stuck on the third of eight stems would have hung the call with no message, which is the
      * failure `withRenderTimeout` exists to name. The budget is per stem, so `RENDER_BUDGET_MS` is a ceiling on each
      * render rather than on the whole call — that is what the tool description states, and it is what the code does.
+     *
+     * ⭐ **One track per call, on whichever host was asked for.** The Node branch is **not** wrapped in that budget,
+     * exactly as `renderAudio` documents — the budget resets a stuck *page* and an in-process render has no page to
+     * reset. The arguments are otherwise the same set, `stemTrackIdx` included, so a difference between the engines
+     * stays a difference of *host* and never of *arguments*.
      */
-    const rendered = await withRenderTimeout(
-      page.evaluate(
-        async ({ pattern: patternArg, stemTrackIdx, bars, sampleRate: rate, channels: channelCount, manifestText: manifest, sampleRoot: mirrorRoot, catalogueProblem }) => {
-          const specifier = (path: string) => path;
-          const [wav, loudness, catalogue] = await Promise.all([
-            import(/* @vite-ignore */ specifier("/src/audio/WavExporter.ts")),
-            import(/* @vite-ignore */ specifier("/src/test/helpers/loudness.ts")),
-            import(/* @vite-ignore */ specifier("/src/data/sampleCatalogue.ts")),
-          ]);
-          const audioCatalogue = manifest ? catalogue.catalogueFromManifestText(manifest, mirrorRoot).assets : [];
-          let audioLanes: OfflineAudioLaneReport = { lanes: [], events: 0, problems: [] };
-          /** What the renderer reported about this stem's render; the same shape `renderAudio` carries out. */
-          const renderProblems: string[] = [];
-          const buffer = await wav.renderPatternOffline(patternArg as never, {
-            bars: Math.max(1, Math.min(64, bars ?? 1)),
-            stemTrackIdx,
-            ...(rate ? { sampleRate: rate } : {}),
-            ...(channelCount ? { channels: channelCount } : {}),
-            // Unconditional, for the same reason as in `renderAudio`: an unreadable catalogue must not discard the whole lane report.
-            audioLaneCatalogue: audioCatalogue,
-            onAudioLanes: (report: OfflineAudioLaneReport) => {
-              audioLanes = report;
-            },
-            onProblems: (list: readonly string[]) => {
-              renderProblems.push(...list);
-            },
-            ...(catalogueProblem ? { audioLaneCatalogueProblem: catalogueProblem } : {}),
-          });
-          const channelsOut: Float32Array[] = [];
-          for (let c = 0; c < buffer.numberOfChannels; c += 1) channelsOut.push(buffer.getChannelData(c));
-          const bytes = wav.encodeAudioBufferToWav(buffer);
-          let binary = "";
-          const view = new Uint8Array(bytes);
-          const chunk = 0x8000;
-          for (let i = 0; i < view.length; i += chunk) {
-            binary += String.fromCharCode(...view.subarray(i, i + chunk));
-          }
-          return {
-            base64: btoa(binary),
-            durationSec: buffer.duration,
-            sampleRate: buffer.sampleRate,
-            channels: buffer.numberOfChannels,
-            truePeakDb: loudness.truePeakDbChannels(channelsOut),
-            audioLanes,
-            problems: renderProblems,
-          };
-        },
-        {
-          pattern,
-          stemTrackIdx: index,
-          bars: options.bars,
-          sampleRate: options.sampleRate,
-          channels: options.channels,
-          manifestText: catalogueRead.text,
-          sampleRoot,
-          catalogueProblem: catalogueRead.problem,
-        }
-      ),
-      `stem ${index + 1} of ${pattern.tracks.length}`,
-      options.renderTimeoutMs ?? RENDER_BUDGET_MS
-    );
+    const rendered = headless
+      ? await renderPatternHeadless!(pattern, { ...options, bars: options.bars ?? 1, stemTrackIdx: index }, catalogueRead, headlessContext)
+      : await renderStemInPage(page!, pattern, options, index, catalogueRead, sampleRoot);
     const bytes = Buffer.from(rendered.base64, "base64");
     const filename = stemFilename(track.name || track.track_id || `track_${index + 1}`, index, bpm);
     const target = path.join(dir, filename);
@@ -1153,6 +1207,8 @@ export async function renderStems(
       problems: laneProblems,
       ...(catalogueProblem ? { catalogueProblem } : {}),
     },
+    /** Same rule as every other render reply: the host that produced these files is read, never inferred. */
+    engine: headless ? "node-web-audio-api" : "browser",
   };
 }
 
@@ -1196,6 +1252,12 @@ export interface AuditionResult {
   truePeakDb: number;
   /** True when the render carries no signal at all, which is a result rather than a failure. */
   silent: boolean;
+  /**
+   * Which Web Audio host produced the file — `browser` or `node-web-audio-api`, the same rule and the same two values
+   * as `RenderResult.engine`. A note render that cannot say which engine answered is the silent-fallback shape this
+   * line of work keeps meeting, and it is answerable here for one field.
+   */
+  engine: "browser" | "node-web-audio-api";
   resolved: {
     samplePath: string;
     ratio: number;
@@ -1219,14 +1281,60 @@ export async function auditionInstrumentNote(
   midi: number,
   options: RenderOptions & { seconds?: number; gainDb?: number; resolveOnly?: boolean } = { format: "wav" }
 ): Promise<AuditionResult | InstrumentNoteResolution> {
-  if (process.env.GROOVE_MCP_NO_BROWSER === "1") {
-    throw new Error("audio rendering is disabled (GROOVE_MCP_NO_BROWSER=1); auditioning renders through the same offline engine as the other audio tools");
+  /**
+   * ⭐ **The Node host branch is first and it does not fall through**, the same order and the same reason as
+   * `renderAudio`: the environment's browser refusal sits below it, so a call that asked for the Node host either gets
+   * it or gets the missing-package error — never a Chromium render it did not ask for.
+   *
+   * The claim that "the Node host has no implementation of this path at all" was wrong in the part that matters: the
+   * page's whole body is `createSampleLoader(browserSampleDecoder(context)) → loadNote → createBufferSource → render`,
+   * and every one of those modules already runs under `node-web-audio-api` — it is the same `browserSampleLoader` that
+   * `renderPatternOffline` uses on this host (`src/audio/WavExporter.ts:1727`). What was missing was the wiring, not
+   * an engine.
+   */
+  const headless = options.headless === true;
+  if (!headless && process.env.GROOVE_MCP_NO_BROWSER === "1") {
+    throw new Error(
+      "audio rendering is disabled (GROOVE_MCP_NO_BROWSER=1); auditioning renders through the same offline engine as the other audio tools, or ask for `headless: true` to render on the Node Web Audio host"
+    );
   }
-  const page = await ensurePage();
   const dir = outputDirectory(options);
   const manifestText = readFileSync(sampleManifestPath(), "utf8");
   const root = sampleMirrorRoot();
   const seconds = Math.min(10, Math.max(0.1, options.seconds ?? 2));
+
+  if (headless) {
+    const { renderInstrumentNoteHeadless } = await import("./headless");
+    const payload = await renderInstrumentNoteHeadless(assetId, midi, { ...options, seconds }, {
+      publicRoot: path.join(appRoot(), "public"),
+      sampleRoot: root,
+      manifestText,
+    });
+    // A refusal from the loader is the answer to the question, so it is thrown as the message the page path throws.
+    if ("error" in payload) throw new Error(payload.error);
+    // Resolve-only returns before a byte of audio exists, exactly as the page path does.
+    if ("resolvedOnly" in payload) return { assetId, midi, resolved: payload.resolved };
+    const bytes = Buffer.from(payload.base64, "base64");
+    const filename = auditionFilename(assetId, midi);
+    const target = path.join(dir, filename);
+    writeFileSync(target, bytes);
+    return {
+      path: target,
+      filename,
+      assetId,
+      midi,
+      bytes: bytes.length,
+      durationSec: Number(payload.durationSec.toFixed(3)),
+      sampleRate: payload.sampleRate,
+      channels: payload.channels,
+      truePeakDb: Number(payload.truePeakDb.toFixed(2)),
+      silent: payload.truePeakDb <= -120,
+      engine: "node-web-audio-api",
+      resolved: payload.resolved,
+    };
+  }
+
+  const page = await ensurePage();
 
   const rendered = await page.evaluate(
     async ({ manifestText: text, root: sampleRoot, assetId: id, midi: note, seconds: length, sampleRate: rate, gainDb, resolveOnly }) => {
@@ -1317,6 +1425,7 @@ export async function auditionInstrumentNote(
     channels: rendered.channels,
     truePeakDb: Number(rendered.truePeakDb.toFixed(2)),
     silent: rendered.truePeakDb <= -120,
+    engine: "browser",
     resolved: rendered.resolved,
   };
 }

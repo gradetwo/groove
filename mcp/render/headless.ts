@@ -68,6 +68,45 @@ export interface HeadlessRenderContext {
   sampleRoot: string;
 }
 
+/**
+ * What an audition additionally needs: the manifest **text**, read by `worker.ts` from `sampleManifestPath()`.
+ *
+ * It is passed rather than re-read here so the manifest path and the mirror root keep their one definition each; the
+ * audition is the only path that needs it unconditionally, which is why it is not on `HeadlessRenderContext`.
+ */
+export interface HeadlessAuditionContext extends HeadlessRenderContext {
+  manifestText: string;
+}
+
+/** The claim side of a note, in the same shape `worker.ts` returns from either path. */
+export interface HeadlessNoteResolution {
+  samplePath: string;
+  ratio: number;
+  rootKey?: number;
+  group?: number;
+  offBy?: number;
+  oneShot?: boolean;
+  notePolyphony?: number;
+}
+
+/**
+ * What the Node audition returns: the page's own union, so `worker.ts` reads it with the same three branches.
+ *
+ * `error` is a **result**, not a thrown failure: a library that cannot resolve the note is the answer to the question
+ * the tool asks, and the page path has always reported it that way.
+ */
+export type HeadlessAuditionPayload =
+  | { error: string }
+  | { resolved: HeadlessNoteResolution; resolvedOnly: true }
+  | {
+      base64: string;
+      durationSec: number;
+      sampleRate: number;
+      channels: number;
+      truePeakDb: number;
+      resolved: HeadlessNoteResolution;
+    };
+
 /** Whether the host's globals have been installed. The audio stack does not change between renders. */
 let hostInstalled = false;
 
@@ -170,6 +209,15 @@ export async function renderPatternHeadless(
 
   const buffer = await wav.renderPatternOffline(pattern, {
     bars,
+    /**
+     * ⭐ **The stems argument, forwarded rather than re-implemented.**
+     *
+     * `renderPatternOffline` has accepted `stemTrackIdx` from the start (`src/audio/WavExporter.ts:131`, applied at
+     * `:1212` and `:1362`) and threads it into the audio-lane planner (`src/audio/offlineAudioLanes.ts:249`). The
+     * browser path passes it; this host now passes the same value, so "which track" is an argument and not a
+     * difference between the engines.
+     */
+    ...(options.stemTrackIdx === undefined ? {} : { stemTrackIdx: options.stemTrackIdx }),
     ...(options.sampleRate ? { sampleRate: options.sampleRate } : {}),
     ...(options.channels ? { channels: options.channels } : {}),
     ...(Number.isFinite(options.loudnessTrimDb) ? { loudnessTrimDb: options.loudnessTrimDb } : {}),
@@ -248,5 +296,89 @@ export async function renderPatternHeadless(
     trackPeaksDb,
     audioLanes,
     problems: renderProblems,
+  };
+}
+
+/** The `OfflineAudioContext` the app itself would pick, so the audition asks the same question on either host. */
+function offlineContextClass(): new (channels: number, frames: number, sampleRate: number) => OfflineAudioContext {
+  const fromWindow =
+    typeof window !== "undefined"
+      ? ((window as unknown as { OfflineAudioContext?: unknown; webkitOfflineAudioContext?: unknown }).OfflineAudioContext ??
+        (window as unknown as { webkitOfflineAudioContext?: unknown }).webkitOfflineAudioContext)
+      : undefined;
+  const resolved = fromWindow ?? (globalThis as unknown as { OfflineAudioContext?: unknown }).OfflineAudioContext;
+  if (typeof resolved !== "function") throw new Error("OfflineAudioContext is not supported in this environment");
+  return resolved as new (channels: number, frames: number, sampleRate: number) => OfflineAudioContext;
+}
+
+/**
+ * **One instrument note on the Node host** — the same four steps the page performs, with no page.
+ *
+ * The page's audition body is short and this is deliberately the same body: parse the catalogue, build the app's own
+ * loader over the host's `decodeAudioData`, resolve the note through `loadNote` (the one place a note becomes a sample
+ * plus a ratio), start it at that ratio in an offline context, render and measure. Nothing here re-implements
+ * resolution, and the modules it imports are the ones `renderPatternOffline` already drives on this host
+ * (`src/audio/WavExporter.ts:1727` builds `browserSampleLoader(ctx, audioCatalogue)` from the same two modules).
+ *
+ * `resolveOnly` returns before any audio exists, so the pitch inspector's source half costs a manifest parse rather
+ * than a render — the same shortcut the page path takes.
+ */
+export async function renderInstrumentNoteHeadless(
+  assetId: string,
+  midi: number,
+  options: RenderOptions & { seconds?: number; gainDb?: number; resolveOnly?: boolean },
+  context: HeadlessAuditionContext
+): Promise<HeadlessAuditionPayload> {
+  loadHeadlessHost(context.publicRoot);
+
+  const [catalogue, loaderModule, graph, loudness, exporter] = await Promise.all([
+    import("../../src/data/sampleCatalogue"),
+    import("../../src/audio/sampleLoader"),
+    import("../../src/audio/browserSampleGraph"),
+    import("../../src/test/helpers/loudness"),
+    import("../../src/audio/WavExporter"),
+  ]);
+  const { assets } = catalogue.catalogueFromManifestText(context.manifestText, context.sampleRoot);
+  const sampleRateValue = options.sampleRate ?? 44100;
+  const seconds = Math.min(10, Math.max(0.1, options.seconds ?? 2));
+  const frames = Math.ceil(sampleRateValue * seconds);
+  const OfflineContext = offlineContextClass();
+  const hostContext = new OfflineContext(1, frames, sampleRateValue);
+  const loader = loaderModule.createSampleLoader(graph.browserSampleDecoder(hostContext), assets);
+
+  let loaded: Awaited<ReturnType<typeof loader.loadNote>>;
+  try {
+    loaded = await loader.loadNote(assetId, midi);
+  } catch (error) {
+    // A refusal from the loader is the answer to the question, so it is returned rather than thrown — as in the page.
+    return { error: error instanceof Error ? error.message : String(error) };
+  }
+  const resolved: HeadlessNoteResolution = {
+    samplePath: loaded.samplePath,
+    ratio: loaded.ratio,
+    ...(loaded.rootKey === undefined ? {} : { rootKey: loaded.rootKey }),
+    ...(loaded.group === undefined ? {} : { group: loaded.group }),
+    ...(loaded.offBy === undefined ? {} : { offBy: loaded.offBy }),
+    ...(loaded.oneShot === undefined ? {} : { oneShot: loaded.oneShot }),
+    ...(loaded.notePolyphony === undefined ? {} : { notePolyphony: loaded.notePolyphony }),
+  };
+  if (options.resolveOnly === true) return { resolved, resolvedOnly: true };
+
+  const source = hostContext.createBufferSource();
+  source.buffer = loaded.buffer;
+  source.playbackRate.value = loaded.ratio;
+  const gain = hostContext.createGain();
+  gain.gain.value = Math.pow(10, (options.gainDb ?? 0) / 20);
+  source.connect(gain).connect(hostContext.destination);
+  source.start(0);
+  const buffer = await hostContext.startRendering();
+  const channel = buffer.getChannelData(0);
+  return {
+    base64: Buffer.from(new Uint8Array(exporter.encodeAudioBufferToWav(buffer))).toString("base64"),
+    durationSec: buffer.duration,
+    sampleRate: buffer.sampleRate,
+    channels: buffer.numberOfChannels,
+    truePeakDb: loudness.truePeakDbChannels([channel]),
+    resolved,
   };
 }

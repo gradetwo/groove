@@ -3,7 +3,7 @@
  *
  * The app has exported stems from the sequencer's menu for a while, and the MCP surface could only render the whole mix — so the one thing an agent most needs to *fix* a balance ("let me hear the bass alone") was the one thing it could not ask for.
  *
- * The rendering itself needs a browser, exactly like every other audio tool here, so the criterion holds the half that does not: **the naming rule**, which is decided in Node so that it is one testable rule rather than two. Two tracks with the same name must stay two files, and a name with slashes or spaces must not become a path.
+ * The rendering itself runs on either host — Chromium, or the Node Web Audio host with `headless: true` (held for real in `src/test/mcpHeadlessRender.test.ts`) — so this criterion holds the half that needs neither engine: **the naming rule**, which is decided in Node so that it is one testable rule rather than two. Two tracks with the same name must stay two files, and a name with slashes or spaces must not become a path.
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";

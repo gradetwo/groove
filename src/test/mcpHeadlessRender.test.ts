@@ -22,6 +22,7 @@ import path from "node:path";
 import { HEADLESS_PACKAGE } from "../../mcp/render/headless";
 import { renderAudio } from "../../mcp/render/worker";
 import { TOOLS } from "../../mcp/registry";
+import { addMcpNote, addMcpTrack, clearMcpArrangements, createMcpArrangement } from "../../mcp/arrangement";
 import { clearMcpSongs, createMcpSong } from "../../mcp/song";
 import { findGenre } from "../../mcp/library";
 import type { SequencerPattern } from "../types/genre";
@@ -177,5 +178,142 @@ describe.skipIf(!headlessInstalled)("render_song on the Node Web Audio host", ()
     expect(readFileSync(String(reply.path)).toString("ascii", 0, 4)).toBe("RIFF");
     expect(reply.sampleRate).toBe(8000);
     expect(Number(reply.truePeakDb)).toBeGreaterThan(-40);
+  }, 180_000);
+});
+
+/**
+ * **The three tools that used to answer "no Node path".**
+ *
+ * `docs/HEADLESS_CORE_PLAN.md` §9.6 recorded three exclusions: `normalize_loudness` because it renders more than once,
+ * `render_instrument_note` because its page body was called a path with no Node implementation, and
+ * `render_arrangement_stems` because its per-track page call carried a `stemTrackIdx` the Node module did not accept.
+ * Each of those was an argument about *wiring*; these cases hold the wiring, with the browser forbidden so a fallback
+ * would be an error rather than a slower render.
+ */
+describe.skipIf(!headlessInstalled)("normalize_loudness on the Node Web Audio host", () => {
+  let out = "";
+
+  beforeEach(() => {
+    clearMcpSongs();
+    out = mkdtempSync(path.join(os.tmpdir(), "groove-headless-normalize-"));
+    process.env.GROOVE_MCP_NO_BROWSER = "1";
+    process.env.GROOVE_MCP_OUT = out;
+  });
+
+  afterEach(() => {
+    clearMcpSongs();
+    rmSync(out, { recursive: true, force: true });
+    delete process.env.GROOVE_MCP_NO_BROWSER;
+    delete process.env.GROOVE_MCP_OUT;
+  });
+
+  it("measures and renders on the Node host, and says so in the reply", async () => {
+    const { songId } = createMcpSong({ genreId: "chicago-house", genre: findGenre("chicago-house") ?? null });
+    const tool = TOOLS.find((candidate) => candidate.name === "normalize_loudness");
+    expect(tool, "normalize_loudness is not declared").toBeTruthy();
+
+    // The default `passes: 1` is the measured path: one render, its reading, and the trim the loop would apply next.
+    const reply = (await tool!.handler({ songId, targetLufs: -14, passes: 1, sampleRate: 8000, channels: 1, headless: true })) as Record<string, unknown>;
+
+    expect(reply.engine, "the loudness loop must name the host every pass used").toBe("node-web-audio-api");
+    const before = reply.before as Record<string, unknown>;
+    expect(statSync(String(before.path)).size).toBeGreaterThan(1000);
+    expect(readFileSync(String(before.path)).toString("ascii", 0, 4)).toBe("RIFF");
+    expect(Number(before.integratedLufs), "a real reading, not a placeholder").toBeLessThan(0);
+    expect(Number.isFinite(Number(before.truePeakDb))).toBe(true);
+    expect(reply.passes).toBe(1);
+  }, 180_000);
+});
+
+describe.skipIf(!headlessInstalled)("render_instrument_note on the Node Web Audio host", () => {
+  let out = "";
+
+  beforeEach(() => {
+    out = mkdtempSync(path.join(os.tmpdir(), "groove-headless-note-"));
+    process.env.GROOVE_MCP_NO_BROWSER = "1";
+    process.env.GROOVE_MCP_OUT = out;
+  });
+
+  afterEach(() => {
+    rmSync(out, { recursive: true, force: true });
+    delete process.env.GROOVE_MCP_NO_BROWSER;
+    delete process.env.GROOVE_MCP_OUT;
+  });
+
+  it("resolves and renders one note with the browser forbidden, through the same loader", async (context) => {
+    const tool = TOOLS.find((candidate) => candidate.name === "render_instrument_note");
+    expect(tool, "render_instrument_note is not declared").toBeTruthy();
+
+    let reply: Record<string, unknown>;
+    try {
+      reply = (await tool!.handler({ assetId: "vsco2ce:ViolinEnsSusVib", midi: 60, seconds: 0.5, sampleRate: 8000, headless: true })) as Record<string, unknown>;
+    } catch (error) {
+      /**
+       * The one external dependency of this case is the sample mirror, not the engine. An unreachable mirror makes the
+       * loader refuse the note, which is a *result* on this tool and not a failed engine — so the case skips loudly
+       * rather than turning a network outage into a red criterion. The engine half is held by the mocked routing
+       * criterion and by the other two real renders here, neither of which needs the network.
+       */
+      if (/fetch|network|ENOTFOUND|ECONNREFUSED|HTTP \d|neither address/i.test((error as Error).message)) {
+        console.warn(`SKIP  render_instrument_note real render: sample mirror unreachable — ${(error as Error).message}`);
+        context.skip();
+        return;
+      }
+      throw error;
+    }
+
+    expect(reply.engine).toBe("node-web-audio-api");
+    expect(reply.assetId).toBe("vsco2ce:ViolinEnsSusVib");
+    // The resolved half is the whole point of the tool, and it is the same `loadNote` the browser path uses.
+    const resolved = reply.resolved as Record<string, unknown>;
+    expect(String(resolved.samplePath), "the same sample the browser path resolves to").toContain("VlnEns_susVib_B2_v2.wav");
+    expect(Number(resolved.rootKey)).toBe(59);
+    // 2^(1/12): the ratio this sample is played at for midi 60, which is the claim `docs/PITCH_TRUTH.md` publishes.
+    expect(Number(resolved.ratio)).toBeCloseTo(1.0594630943592953, 10);
+    expect(statSync(String(reply.path)).size).toBeGreaterThan(1000);
+    expect(readFileSync(String(reply.path)).toString("ascii", 0, 4)).toBe("RIFF");
+    expect(reply.silent).toBe(false);
+  }, 180_000);
+});
+
+describe.skipIf(!headlessInstalled)("render_arrangement_stems on the Node Web Audio host", () => {
+  let out = "";
+
+  beforeEach(() => {
+    clearMcpArrangements();
+    out = mkdtempSync(path.join(os.tmpdir(), "groove-headless-stems-"));
+    process.env.GROOVE_MCP_NO_BROWSER = "1";
+    process.env.GROOVE_MCP_OUT = out;
+  });
+
+  afterEach(() => {
+    clearMcpArrangements();
+    rmSync(out, { recursive: true, force: true });
+    delete process.env.GROOVE_MCP_NO_BROWSER;
+    delete process.env.GROOVE_MCP_OUT;
+  });
+
+  it("writes one file per track on the Node host, each measured from its own buffer", async () => {
+    const { arrangementId, tracks } = createMcpArrangement({ blankKind: "drumkit", songId: "stem-probe" });
+    addMcpNote(arrangementId, { trackId: tracks[0]!.id, pitch: 36, startBeats: 0, lengthBeats: 0.5, velocity: 110 });
+    const second = addMcpTrack(arrangementId, tracks[0]!.kind, "Second");
+    const secondId = second.summary.tracks[second.summary.tracks.length - 1]!.id;
+    addMcpNote(arrangementId, { trackId: secondId, pitch: 38, startBeats: 1, lengthBeats: 0.5, velocity: 90 });
+
+    const tool = TOOLS.find((candidate) => candidate.name === "render_arrangement_stems");
+    expect(tool, "render_arrangement_stems is not declared").toBeTruthy();
+
+    const reply = (await tool!.handler({ arrangementId, sampleRate: 8000, channels: 1, headless: true })) as Record<string, unknown>;
+
+    expect(reply.engine).toBe("node-web-audio-api");
+    const stems = reply.stems as Array<Record<string, unknown>>;
+    expect(stems, "one file per track, not one for the mix").toHaveLength(2);
+    for (const stem of stems) {
+      expect(statSync(String(stem.path)).size).toBeGreaterThan(1000);
+      expect(readFileSync(String(stem.path)).toString("ascii", 0, 4)).toBe("RIFF");
+      expect(Number(stem.durationSec)).toBeGreaterThan(0);
+      expect(Number.isFinite(Number(stem.truePeakDb))).toBe(true);
+      expect(stem.silent).toBe(false);
+    }
   }, 180_000);
 });

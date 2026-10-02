@@ -138,7 +138,7 @@ Two things this surface states rather than leaves to be discovered:
 | `set_arrangement_track_gain` ▣ | `arrangementId`, `trackId`, `gainDb` | the track's level, 0 at unity, clamped to −60…+12; a muted track keeps its level |
 | `set_arrangement_track_pan` ▣ | `arrangementId`, `trackId`, `pan` | −1 hard left, 0 centre, 1 hard right — the scale the genres already use |
 | `render_arrangement` ▣ | `arrangementId`, `bars?`, `format?`, `bitrateKbps?`, `sampleRate?`, `channels?`, `headless?` | the bounce, through the same offline engine the song tools use. **An arrangement has its own length** (`set_arrangement_bars`) and `bars` repeats it, reported as `passes`. Its description carries the same 900 s budget and measured costs as `render_audio`, and it reports a heartbeat when the request carries a `progressToken`. `headless: true` swaps the engine for the Node Web Audio host (`node-web-audio-api`) and states the measured differences from the browser render in the parameter's own description — **the same parameter, and the same shared text, as `render_song`, `render_audio` and `render_preview_clip`**, which reach the same `renderAudio`; on that path a `progressToken` produces no notifications and the render budget does not apply |
-| `render_arrangement_stems` ▣ | `arrangementId`, `sampleRate?`, `channels?` | one WAV **per track** in one directory, each with its measured duration, sample rate, channels and true peak, and a stem that rendered silent saying so. Costs one render per track, so unlike the other render tools it reports progress **per track** rather than only a heartbeat; each stem runs under the same 900 s budget. **It deliberately has no `headless` parameter**: it runs its own per-track page call carrying a `stemTrackIdx` the Node module does not accept, so supporting it means new renderer code rather than the same wiring, and the parity probe has measured no stem — the 1.03 dB / 1.04 dB / 1.612 LU figures are a whole-mix fixture |
+| `render_arrangement_stems` ▣ | `arrangementId`, `sampleRate?`, `channels?`, `headless?` | one WAV **per track** in one directory, each with its measured duration, sample rate, channels and true peak, and a stem that rendered silent saying so. Costs one render per track, so unlike the other render tools it reports progress **per track** rather than only a heartbeat; each stem runs under the same 900 s budget **on the browser path**. `headless: true` renders one track per render on the **Node Web Audio host**, through the same `stemTrackIdx` argument the browser path passes, and the reply's `engine` names the host. The budget and the per-track progress are page machinery, so neither applies on the Node path; and the 1.03 dB / 1.04 dB / 1.612 LU figures are a **whole-mix** fixture — the parity probe has measured no stem, so that band-and-loudness comparison is unknown for a stem rather than zero (a spot check on one drumkit stem put its true peak 0.08 dB apart between the hosts; one true-peak reading is not that comparison) |
 | `select_arrangement_take` ▣ | `arrangementId`, `trackId`, `takeId` | which take plays, or cleared with `null` |
 | `assign_arrangement_take_range` ▣ | `arrangementId`, `trackId`, `takeId`, `startBar`, `endBar` | an existing take claimed for a bar range, splitting any range it crosses |
 | `set_arrangement_track_collapsed` ▣ | `arrangementId`, `trackId`, `collapsed` | folded in the interface; display only, and never a change to what is heard |
@@ -642,6 +642,20 @@ are the places where it is more accurate than the evaluations that came before i
 实现走的是探针已经证明可行的那条路：页面里导入应用自己的目录、加载器与图模块，用**应用播放时用的同一个 `loadNote`** 解析，在 `OfflineAudioContext` 里起音并渲染。**没有任何一处重新实现解析。**
 
 一条刻意的报告规则：**渲染成静音是结果而不是失败**，而且它与解析结果一起返回——**有 `samplePath` 的静音是增益问题，没有 `samplePath` 的静音是库根本没解析出来**。把两者报成一样，这个工具对最需要它的那种情况就毫无用处。
+
+### 无头宿主补齐到剩余三个渲染工具（2026-10-02）
+
+`docs/HEADLESS_CORE_PLAN.md` §9.6 记下三个"没进"无头入口的工具与理由。逐条复核后，三条理由里属于**架构**的那半都不成立，属于**测量**的那半成立——于是入口补齐，未测量的部分写进描述而不是省略：
+
+| 工具 | 当时记下的理由 | 复核结论 |
+| :--- | :--- | :--- |
+| `render_arrangement_stems` | "`renderStems` 自己跑逐轨 `page.evaluate`，带一个无头模块不收的 `stemTrackIdx`，要进就得先写新渲染代码" | **不成立** ✗：`renderPatternOffline` 自始接受 `stemTrackIdx`（`src/audio/WavExporter.ts:131`，在 `:1212`／`:1362` 应用，并经 `src/audio/offlineAudioLanes.ts:249` 传给音频 lane 规划器）。缺的是 `RenderOptions` 上的转发，不是渲染器。现在每条分轨在 Node 宿主上单独渲染、写盘、实测，回复带 `engine` |
+| `render_instrument_note` | "它走 `auditionInstrumentNote`：页里 `loadNote` + SFZ 采样器渲染一个音，无头宿主完全没有这条路的实现" | **不成立** ✗：页里那段就是 `createSampleLoader(browserSampleDecoder(ctx)) → loadNote → createBufferSource → render`，而**同一组模块**正是 `renderPatternOffline` 在 Node 宿主上已经在跑的那组（`src/audio/WavExporter.ts:1727` 用同一个 `browserSampleLoader`）。复核用的就是同一个 `loadNote`：本机实测 `vsco2ce:ViolinEnsSusVib` midi 60 解析出 `Strings/Violin Section/susVib/VlnEns_susVib_B2_v2.wav`、`rootKey 59`、`ratio = 2^(1/12)`，与浏览器路径记录的数字一致（`docs/PITCH_TRUTH.md:23`） |
+| `normalize_loudness` | "一次调用跑 1–3 个 pass，宿主差会在多次渲染间累积，而那个累积没量过" | **一半成立** ✓：循环的状态在 Node 侧，但每一轮仍是同一个 `renderAudio`，所以把 `headless` 透传给**每一轮**，一轮调用就只用一个宿主，回复的 `engine` 说明是哪个。**没有发生跨宿主**，所以"跨宿主的累积"不是本实现的性质，而是没有被造成 |
+
+**补齐后**：七个渲染工具都收 `headless`，回复都带 `engine`（`normalize_loudness` 与 `render_arrangement_stems` 是本轮新加的字段，`render_instrument_note` 的 `engine` 同理）。**判据**：`src/test/mcpHeadlessRouting.test.ts` 由 4 个工具 ×4 例扩到 7×4=28 例（不依赖可选包）；`src/test/mcpHeadlessRender.test.ts` 的五例真实渲染在 `GROOVE_MCP_NO_BROWSER=1` 下跑通。
+
+**仍未变的**：三个数字（1.03 dB band 3／1.04 dB band 7／1.612 LU）一个都没动；**单轨与单音的宿主差没有量过** ✗——所以描述里写的是"unknown rather than zero"，而不是把整混夹具的数字挪用过来；无头路径仍**不走渲染预算、不发 progress**（那是页面机器）。
 
 ### 音色设计：报告、实测与一条已裁定的缺口（2026-10-01）
 

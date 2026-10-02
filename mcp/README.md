@@ -43,14 +43,14 @@ On Windows the `command` is `node.exe` and the path uses backslashes.
 | `GROOVE_MCP_OUT` | a fresh temp directory per call | where `render_audio` writes |
 | `GROOVE_MCP_ROOT` | the working directory | the repo root the renderer should serve (set it if you launch from elsewhere) |
 | `GROOVE_MCP_APP_URL` | `https://groove.wangda.today` | the origin `share_url` links to |
-| `GROOVE_MCP_NO_BROWSER` | unset | `1` disables the **browser** render paths (everything else still works). `render_arrangement`, `render_song`, `render_audio` and `render_preview_clip` with `headless: true` still render — on the Node Web Audio host instead of Chromium |
+| `GROOVE_MCP_NO_BROWSER` | unset | `1` disables the **browser** render paths (everything else still works). Every render tool with `headless: true` still renders — on the Node Web Audio host instead of Chromium |
 | `GROOVE_MCP_PORT` | `5399` | the dev-server port the renderer uses |
 
 ### The headless (Node) render host
 
-Four tools take `headless: true`, and all four render through the app's own `renderPatternOffline` under
-`node-web-audio-api` with **no browser process** — useful where Chromium is unavailable, and it works under
-`GROOVE_MCP_NO_BROWSER=1`:
+Every render tool that has an engine choice takes `headless: true`, and all of them render through the app's own
+`renderPatternOffline` (or, for one note, the same sample loader that renderer builds) under `node-web-audio-api` with
+**no browser process** — useful where Chromium is unavailable, and it works under `GROOVE_MCP_NO_BROWSER=1`:
 
 | tool | what it renders |
 | :--- | :--- |
@@ -58,15 +58,22 @@ Four tools take `headless: true`, and all four render through the app's own `ren
 | `render_song` | a song's flattened arrangement |
 | `render_audio` | one pattern, or a genre's default |
 | `render_preview_clip` | one section, for iterating |
+| `normalize_loudness` | the loudness loop — every pass on the host you chose, named in the reply's `engine` |
+| `render_instrument_note` | one note, resolved and rendered through the same `loadNote` and loader as the browser path |
+| `render_arrangement_stems` | one file per track, through the same `stemTrackIdx` argument the browser path passes |
 
 The optional package is not declared in `package.json` on purpose; install it with `npm i -D node-web-audio-api` and
 the tools will use it. Without it the call **errors and names the package** rather than quietly rendering through
 Chromium, and every one of these replies' `engine` field says which host produced the file.
 
-Two tools deliberately do **not** take it. `render_arrangement_stems` runs its own per-track page call with a
-`stemTrackIdx` the Node module does not accept, so supporting it is new renderer code rather than the same wiring — and
-the parity probe has measured no stem. `render_instrument_note` renders one note through the SFZ sampler in the page,
-a path with no Node-host implementation at all. Neither is half-supported: there is no flag to send.
+Three of those seven arrived later than the first four, and the reasons recorded for leaving them out were wrong in
+the part that mattered. `render_arrangement_stems` was said to need "new renderer code" because of a `stemTrackIdx`
+the Node module did not accept — the module accepts it (`src/audio/WavExporter.ts:131`), it simply was not forwarded.
+`render_instrument_note` was said to have "no Node implementation at all" — its whole body is
+`createSampleLoader(browserSampleDecoder(ctx)) → loadNote → render`, which is exactly what `renderPatternOffline`
+already runs on this host. `normalize_loudness` was said to be a convergence loop that a second engine would make
+unmeasurable — it is one `renderAudio` per pass, so the loop runs on one host and the reply names it. None of the three
+needed a second renderer.
 
 ⚠️ **The two hosts are not the same sound yet.** On the parity probe's fixture the Node host differs from the browser
 by 1.03 dB in band 3, 1.04 dB in band 7 and 1.612 LU of loudness; `docs/HEADLESS_CORE_PLAN.md` §8.13 and §9.2 record
@@ -93,11 +100,17 @@ analyze_audio                         → measure what came out
 
 * **Nothing in the library is editable.** `get_pattern` returns a copy and `apply_pattern_ops` returns a new
   pattern; there is no tool that writes to `src/data/`.
-* **Only the render tools need Chromium.** The first browser render starts a Vite dev server and a headless browser
-  (~40 s cold, then a few seconds per render) and keeps them for the session; `headless: true` on the four tools above
-  skips that entirely. Either way it renders through
-  `renderPatternOffline` — the same code the export button uses — so the audio is the app's audio, not a second
-  implementation of it.
+* **Only the browser render path needs Chromium.** The first browser render starts a Vite dev server and a headless
+  browser (~40 s cold, then a few seconds per render) and keeps them for the session; `headless: true` on any tool in
+  the table above skips that entirely. Either way the audio comes from
+  `renderPatternOffline` — the same code the export button uses — so it is the app's audio, not a second
+  implementation of it. One tool's Node path, `render_instrument_note`, goes through the sample loader that renderer
+  builds rather than through `renderPatternOffline` itself, which is the same loader and the same `loadNote`.
+  The one thing the Node path does **not** have is a measurement per tool: the parity probe's fixture is a whole mix
+  and three lanes, so a per-stem or per-note **band/loudness** gap is unmeasured. A spot check of the same one-bar
+  drumkit stem and the same violin note on both hosts put the stem's true peak 0.08 dB apart and the note's 0.32 dB
+  apart, with the note resolving to the same sample path, ratio and root key — smaller than the whole-mix figures, but
+  one true-peak reading each is not the parity probe's comparison.
 * **The bundle is ~4 MB** of JavaScript (the whole genre library, its metadata and the loudness table). It is a
   local Node artifact and never reaches the web bundle; `npm run check:budget` is unaffected by construction.
 * **`npm run check:mcp`** is the gate: it boots this server over stdio, lists tools/resources/prompts and calls
