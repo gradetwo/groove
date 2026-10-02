@@ -1703,3 +1703,26 @@ format 1, division 480, bpm 120, 4/4 ｜ **trackNames(0x03) = ["Conductor","钢�
 ### 46.4 ⚠️ 一条**做法**教训（本轮踩到并纠正 ✓）
 
 **`git fetch` ＋ 读 `origin/dev` ≠ **已经拥有尖端**** ✗✓：**本轮我因此在旧树上找不到 `0715aa1` 新增的判据文件，**差点把"判据不存在"当成事实写下来**✗** ⇒ **⇒ 规矩** ✓✓：**复核必须在**已 rebase 到尖端**的树上做，**或直接从 `origin/dev` 读那个文件** ✓**（**与"判活要问主源、判卡要读 run 记录、判数要读桶回读"是同一条 ✓**）。
+
+## 四十七、Part 2 第一段落地：**弦乐演奏法真的落到真采样身份**（`45c1a1f` ✓，2026-10-02 ✓）
+
+### 47.1 它改了什么（**我读的，不是转述 ✓**）
+
+```
+`public/samples/manifest.json` **+3100** ｜ `src/data/sampledInstruments.ts` **+12**
+`src/data/stringTechniques.ts` **+187** ｜ `src/test/stringTechniques.test.ts` **+90** ✓
+✅ `src/data/libraryLicence.ts` **正确地没有被改动** ✓（**VSCO 是 CC0、Part 1 已记 ✓**）
+```
+**它自己的注释写明规则** ✓✓：**此前只有**八行**已镜像（四个声部的 `sustain` 与 `pizzicato` ✓）；**`tremolo`／`spiccato`／`quiet`／`solo violin` 这几行是**字节镜像进来时才加入**的**；**而未镜像的演奏法**拿不到资产**** ✓（**诚实回落 ✓**）。
+
+### 47.2 ⭐ 判据的形状（**我读过，且那 79 条是我自己跑的 ✓**）
+
+* **`reaches every technique the pinned library has a program for, on every instrument`** ✓——**用清单自己的 `assetId` 集合筛"可演奏的演奏法"，断言 `missing` 为空** ✓✓；
+* **`counts twenty-five playable string programs out of twenty-five rows`** ✓（**全面性 ✓**）；
+* **端到端两条** ✓✓：**`reaches spiccato for a short repeated figure, with no fallback to report`** ＋ **`reaches tremolo for a tension note, with no fallback to report`** ⇒ **⇒ 情形→演奏法→真镜像资产，且**无需回落**✓**；
+* ⭐ **而这条比我要求的更强** ✓✓：**`does not claim an unmirrored technique is absent when the catalogue actually has it`**——**把"未镜像清单"与"清单里真有的 id"**互相交叉核对**，其注释原话："**if a later mirror took it, this went red**"** ⇒ **⇒ 本轮那些字节被镜像时，**正是它变红、逼着那几行被更新**✓✓** ⇒ **⇒ 诚实回落**不会悄悄腐烂**** ✓✓。
+
+### 47.3 ⚠️ 一条**未核实**（**我已向 `part2` 要，不替它说 ✓**）
+
+**目标要求**：**"opcode 先扫 ⇒ 未实现的要么实现、要么写明降级 ＋ 记 `needs`"** ✓。
+**而这份 diff 里**没有新增 `needs` 行**** ✗✓——**由于这是 Part 1 已经扫过的**同一棵 VSCO 树**，**"沿用同一份 `needs`"是合理的** ✓；**但我从 diff 无法确认** ⇒ **⇒ 已请它明确给出：新镜像行的扫描结果 ／ 每项未实现的处置 ／ 以及"沿用"这个**决定本身**的一句话 ✓✓**。
