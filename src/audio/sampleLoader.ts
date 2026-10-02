@@ -68,6 +68,18 @@ export interface LoadedNote {
    * Measured with sfizz rather than inferred from the opcode's name: the same 0.1-second note on a one-second sample renders **2.091 s** with `one_shot` and **0.341 s** without, and the energy 0.2–0.6 s after the note-off is nonzero only in the first case.
    */
   oneShot?: boolean;
+  /**
+   * ⭐ **What the region said about looping** — `loop_mode=loop_continuous` or `loop_sustain`, passed through from the
+   * resolver. Absent means "do not loop", which is SFZ's own default and this project's behaviour until now.
+   *
+   * It travels for the same reason the choke group does: the player holds a decoded buffer, and a buffer does not say
+   * whether the region that named it wanted the recording to repeat. See `samplerVoice` for what is done with it — and
+   * for why it cannot fix `VSCO-2-CE`'s sustained strings, which declare no loop at all.
+   */
+  loopMode?: "loop_continuous" | "loop_sustain";
+  /** The loop's bounds in **frames of the source sample**, from the region's `loop_start`/`loop_end`. Absent `loopEndFrames` means the sample's last frame. */
+  loopStartFrames?: number;
+  loopEndFrames?: number;
   /** The file's `note_polyphony`: a cap on how many voices of this note may sound at once. Measured — see the resolver, where the numbers are. */
   notePolyphony?: number;
   /** The controller-driven level scale the region asked for (`amplitude_onccN`), applied when the note is started. */
@@ -221,6 +233,10 @@ export function createSampleLoader(
         ...(resolution.note.offBy === undefined ? {} : { offBy: resolution.note.offBy }),
         // The release behaviour travels with the note for the same reason the choke group does: only the resolver saw the region that answered.
         ...(resolution.note.oneShot === undefined ? {} : { oneShot: resolution.note.oneShot }),
+        // And so does the loop's, for the same reason: a decoded buffer cannot say whether its region wanted to repeat.
+        ...(resolution.note.loopMode === undefined ? {} : { loopMode: resolution.note.loopMode }),
+        ...(resolution.note.loopStartFrames === undefined ? {} : { loopStartFrames: resolution.note.loopStartFrames }),
+        ...(resolution.note.loopEndFrames === undefined ? {} : { loopEndFrames: resolution.note.loopEndFrames }),
         ...(resolution.note.notePolyphony === undefined ? {} : { notePolyphony: resolution.note.notePolyphony }),
         ...(resolution.note.gainScale === undefined ? {} : { gainScale: resolution.note.gainScale }),
       };

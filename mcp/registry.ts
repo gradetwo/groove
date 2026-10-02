@@ -3,6 +3,7 @@ import { CLIP_SLOTS } from "../src/types/song";
 /** The slot enum, derived from the one array so a tool cannot refuse a slot the model allows. */
 const clipSlotSchema = z.enum([...CLIP_SLOTS] as [string, ...string[]]);
 import { audioLaneReplyFields } from "./pattern";
+import { legatoGapNote, legatoGapsFor } from "../src/data/legatoGaps";
 /**
  * The MCP surface, declared once.
  *
@@ -1000,7 +1001,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "add_arrangement_notes",
     title: "Add many notes to an arrangement track in one call",
     description:
-      "A whole part at once. Muse measured the alternative: 4176 notes through `add_arrangement_note` meant **4176 tool calls**, a `MaxListenersExceededWarning`, and hours of wall clock for one movement — the loop sat on the caller's side of the wire, where every iteration costs a round trip. The reply carries `requested` beside the arrangement's own `summary`, because a lane of kind `fx` or `folder` **declines notes silently**: comparing what was asked for with the track's note count afterwards is how that mistake is seen rather than assumed away.",
+      "A whole part at once. Muse measured the alternative: 4176 notes through `add_arrangement_note` meant **4176 tool calls**, a `MaxListenersExceededWarning`, and hours of wall clock for one movement — the loop sat on the caller's side of the wire, where every iteration costs a round trip. The reply carries `requested` beside the arrangement's own `summary`, because a lane of kind `fx` or `folder` **declines notes silently**: comparing what was asked for with the track's note count afterwards is how that mistake is seen rather than assumed away. **For sustained strings and pads, write legato**: a chord bed reads as connected when each note's `lengthBeats` is a little longer than the gap to the next chord, so the releases overlap rather than leaving a seam of silence between two chords — a note that ends exactly where the next begins sounds detached, which is rarely what a string part is for.",
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
@@ -3377,11 +3378,24 @@ export const TOOLS: ToolDefinition[] = [
          * mix reply and invisible in the per-track one — exactly the asymmetry the arrangement problems exist to remove.
          */
         const summary = summariseArrangement(String(args.arrangementId), getMcpArrangement(String(args.arrangementId))!);
+        /**
+         * ⭐ **The seams in a sustained part are reported with the stems, which is where a part is judged on its own.**
+         *
+         * A string bed whose notes end exactly where the next chord begins sounds detached, and the three numbers that
+         * decide it — `startBeats`, `lengthBeats` and the next `startBeats` — were already in the arrangement. This says
+         * so once, in the reply that exists for listening to one part at a time, and **changes nothing**: the notes are
+         * the composer's, and a diagnostic that edited them would be deciding the music.
+         */
+        const arrangement = getMcpArrangement(String(args.arrangementId))!;
+        const legatoGaps = legatoGapsFor(arrangement);
+        const legatoNote = legatoGapNote(legatoGaps);
         return {
           ...result,
           arrangementId: String(args.arrangementId),
           bars,
           ...(summary.problems.length ? { arrangementProblems: summary.problems } : {}),
+          ...(legatoGaps.length ? { legatoGaps } : {}),
+          ...(legatoNote ? { legatoNote } : {}),
           ...audioLaneReplyFields(audioLanes),
         };
       } catch (error) {

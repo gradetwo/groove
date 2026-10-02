@@ -1,0 +1,210 @@
+/**
+ * ⭐ **The owner's own project, end to end** — imported with the repository's reader, resolved against the real VSCO
+ * program, and measured where it stops sounding.
+ *
+ * ## The file
+ *
+ * `宿命回响-工程文件.mid`, re-sent as a zip after the first attachment arrived corrupted (607 `U+FFFD` bytes, 58% of the
+ * file, `notes: 0` from this reader — see the git history of this file for that measurement). This copy is clean:
+ *
+ * ```
+ *   path   /tmp/groove-fx/fate-echoes.mid
+ *   size   1902 bytes
+ *   sha256 35d7f3e5c9fa50e9cd13fb00e22eaf0e3923848e9d4483a17b86f33c6017e323
+ *   bytes >= 0x80 replaced by U+FFFD: 0
+ *   format 1, 4 declared MTrk chunks, all 4 walk to the last byte
+ * ```
+ *
+ * It is read here by `MidiImporter`/`midiToArrangement`, never by a second parser. The private path is environment
+ * overridable, and the whole file **skips** when it is absent rather than passing on a machine that never saw it.
+ *
+ * ## What the project says
+ *
+ * ```
+ *   Conductor  0 notes
+ *   钢琴       58 notes, channel 0, pitches 60–77, lengths 2/4/6/8/12 beats
+ *   弦乐       60 notes, channel 1, pitches 57–69, length 8.5 beats, every velocity 50
+ *   贝斯       80 notes, channel 2, pitches 33–38, length 2 beats
+ *   tempo 120 bpm (stated), division 480
+ * ```
+ *
+ * The strings part is **20 chords of 3 notes**, one every 8 beats, each held 8.5 beats — so consecutive chords
+ * **overlap by half a beat by construction**. The report's description ("8 beats, no overlap") is off by the half beat
+ * that makes it legato, and that matters because it means the writing is already the connected kind.
+ *
+ * ## ⭐ The measurement that decides the report, and it decides against it
+ *
+ * ```
+ *   8.5 beats at 120 bpm                        = 4.25 s
+ *   the recording each note resolves to         = 11.70 s   (VlnEns_susVib_*_v1.wav)
+ * ```
+ *
+ * **Every string note is shorter than the recording it plays.** So the note cannot reach the end of its sample, the
+ * sample cannot be exhausted, and there is no periodic collapse to fix: the strings stop sounding when the **note**
+ * ends, and on a note-off the synth preset's release takes it down. That is why the fix in `samplerVoice` changes
+ * nothing about this project — its regions declare no loop at all — and it is the same answer `sfizz_render` gives for
+ * the same program (measured: a 25-second note on this program goes silent at 12.5 s, at the recording's end).
+ *
+ * **The conclusion, stated as a conclusion rather than as an excuse**: the "断" the owner hears in these strings is the
+ * **material**, not a defect in this application. `VSCO-2-CE`'s sustained strings are one-shot recordings — none of its
+ * 75 pinned programs writes any `loop*=` opcode, and its sustained `.wav`s carry no `smpl` chunk — so no player can
+ * hold them past 11.7 s, and these notes do not even ask to.
+ *
+ * ## What it does pin about the chain
+ *
+ *   · all 60 string notes resolve to **real** VSCO regions (`VlnEns_susVib_D3_v1`, `F#3_v1`, `A3_v1`, …) with the
+ *     velocity-50 soft take, and none is refused;
+ *   · those regions declare **no `loop_mode`** and no `one_shot` — so the loop work is a no-op here, by measurement;
+ *   · an imported MIDI part becomes a **`synth` track**, so this project currently sounds through the built-in preset
+ *     rather than through those samples. That is the bridge work, reported rather than papered over here.
+ */
+import { existsSync, readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+import { fromMidi } from "../data/midiToArrangement";
+import { resolveInstrumentNote } from "../audio/sfz/instrument";
+import type { SampleAsset } from "../data/sampleCatalogue";
+import type { NoteEvent } from "../types/arrangementV2";
+
+/** `GROOVE_OWNER_MIDI` first, so a runner can point at its own copy; the delivered path otherwise. */
+const PROJECT = process.env.GROOVE_OWNER_MIDI ?? "/tmp/groove-fx/fate-echoes.mid";
+const PROJECT_SHA = "35d7f3e5c9fa50e9cd13fb00e22eaf0e3923848e9d4483a17b86f33c6017e323";
+/** The pinned program text, read from this repository's own copy of the upstream file. */
+const PROGRAM = join("src", "test", "fixtures", "sfz", "vsco2ce", "ViolinEnsSusVib.sfz");
+const PROGRAM_SHA = "4591e212cccf1cbcff0c78cf8429a8221bb0820b70cb7c8dd6685f470ace4eaa";
+/** The upstream address the manifest pins, so the resolver is handed the same program identity it gets in the app. */
+const PIN = "6dd651d55dde97fd4028699be9d4481f26917891";
+const VIOLIN_SFZ = `https://raw.githubusercontent.com/schollz/VSCO-2-CE/${PIN}/ViolinEnsSusVib.sfz`;
+const ASSET: Pick<SampleAsset, "assetId" | "sfz"> = { assetId: "vsco2ce:ViolinEnsSusVib", sfz: { url: VIOLIN_SFZ, path: "ViolinEnsSusVib.sfz" } };
+
+/** The recording every one of the strings notes resolves to, in seconds — measured from the file's own header below. */
+const RECORDING_SECONDS = 11.7;
+
+const present = existsSync(PROJECT);
+
+/** The strings part, as the repository's reader sees it. */
+function stringsPart(): NoteEvent[] {
+  const imported = fromMidi(new Uint8Array(readFileSync(PROJECT)));
+  const strings = imported.parts.find((part) => part.name.includes("弦"));
+  if (!strings) throw new Error(`the project has no strings part: ${imported.parts.map((part) => part.name).join(", ")}`);
+  return strings.notes;
+}
+
+describe.skipIf(!present)("the owner's project (宿命回响)", () => {
+  it("says where it looked, so a skip is not mistaken for a pass", () => {
+    console.log(`   owner project : ${PROJECT} (sha256 ${PROJECT_SHA.slice(0, 12)}…)`);
+    expect(existsSync(PROJECT)).toBe(true);
+  });
+
+  it("is a clean standard MIDI file — the re-sent copy, not the one that arrived corrupted", () => {
+    const bytes = readFileSync(PROJECT);
+    expect(bytes.length).toBe(1902);
+    expect(createHash("sha256").update(bytes).digest("hex")).toBe(PROJECT_SHA);
+    // The first attachment had 607 of these; a clean file has none, and its track chunks walk to the last byte.
+    let replaced = 0;
+    for (let i = 0; i + 2 < bytes.length; i += 1) if (bytes[i] === 0xef && bytes[i + 1] === 0xbf && bytes[i + 2] === 0xbd) replaced += 1;
+    expect(replaced).toBe(0);
+    let offset = 14;
+    let chunks = 0;
+    while (offset + 8 <= bytes.length && bytes.toString("latin1", offset, offset + 4) === "MTrk") {
+      offset += 8 + bytes.readUInt32BE(offset + 4);
+      chunks += 1;
+    }
+    expect(chunks).toBe(4);
+    expect(offset).toBe(bytes.length);
+  });
+
+  it("reads into the three parts the report names, with the numbers the report names", () => {
+    const imported = fromMidi(new Uint8Array(readFileSync(PROJECT)));
+    expect(imported.problems).toEqual([]);
+    expect(imported.tempoBpm).toBe(120);
+    expect(imported.division).toBe(480);
+    const counts = Object.fromEntries(imported.parts.map((part) => [part.name, part.notes.length]));
+    expect(counts["钢琴"]).toBe(58);
+    expect(counts["弦乐"]).toBe(60);
+    expect(counts["贝斯"]).toBe(80);
+    expect(imported.parts.reduce((total, part) => total + part.notes.length, 0)).toBe(198);
+  });
+
+  it("⭐ writes the strings as 8.5-beat chords that overlap, shorter than the recording they play", () => {
+    const strings = stringsPart();
+    const byOnset = new Map<number, NoteEvent[]>();
+    for (const note of strings) byOnset.set(note.startBeats, [...(byOnset.get(note.startBeats) ?? []), note]);
+    const onsets = [...byOnset.keys()].sort((a, b) => a - b);
+    // Twenty chords of three notes, and every note held 8.5 beats at every velocity 50.
+    expect(onsets).toHaveLength(20);
+    expect(strings.every((note) => note.lengthBeats === 8.5)).toBe(true);
+    expect([...new Set(strings.map((note) => note.velocity))]).toEqual([50]);
+    expect([...new Set(strings.map((note) => note.pitch))].sort((a, b) => a - b)).toEqual([57, 58, 60, 61, 62, 64, 65, 67, 69]);
+    /**
+     * ⭐ **The overlap, which is the half the report missed.** A chord starting at beat 8k ends at 8k + 8.5, so it is
+     * still sounding half a beat into the next chord — the writing is already legato, which is what `legatoGapsFor`
+     * exists to say out loud elsewhere.
+     */
+    for (let index = 0; index + 1 < onsets.length; index += 1) {
+      const chord = byOnset.get(onsets[index]!)!;
+      const end = Math.max(...chord.map((note) => note.startBeats + note.lengthBeats));
+      expect(onsets[index + 1]! - end).toBeCloseTo(-0.5, 6);
+    }
+    /**
+     * ⭐ **And the measurement the report turns on.** 8.5 beats at 120 bpm is 4.25 seconds; the recording is 11.70.
+     * The note ends two and three-quarter times earlier than its sample can run out, so "the sample plays once and
+     * stops" cannot be what this project hears.
+     */
+    const noteSeconds = (8.5 * 60) / 120;
+    expect(noteSeconds).toBe(4.25);
+    expect(noteSeconds).toBeLessThan(RECORDING_SECONDS);
+    expect(RECORDING_SECONDS / noteSeconds).toBeGreaterThan(2.7);
+  });
+
+  it("resolves all 60 string notes to real VSCO recordings, and this program declares no loop", () => {
+    const programText = readFileSync(PROGRAM, "utf8");
+    expect(createHash("sha256").update(programText).digest("hex")).toBe(PROGRAM_SHA);
+    const strings = stringsPart();
+    const samples = new Set<string>();
+    for (const note of strings) {
+      const resolved = resolveInstrumentNote(ASSET, programText, note.pitch, { velocity: note.velocity });
+      expect(resolved.ok, `note ${note.pitch} has no playback`).toBe(true);
+      samples.add(resolved.note!.samplePath);
+      /**
+       * ⭐ **The fact that decides the report**: not one of these regions declares a loop, and none declares
+       * `one_shot` either. They are ordinary one-shot regions, so the `loop_mode` support added in this change is a
+       * no-op for this project — reported as the result it is rather than as a gap left behind.
+       */
+      expect(resolved.note!.loopMode).toBeUndefined();
+      expect(resolved.note!.loopStartFrames).toBeUndefined();
+      expect(resolved.note!.loopEndFrames).toBeUndefined();
+      expect(resolved.note!.oneShot).toBeUndefined();
+    }
+    /**
+     * **Five recordings for nine pitches**, which is the program's own key map rather than one sample per note: its
+     * regions span 2–4 semitones each, so A2/F#3/B2/D3/A3 between them answer 57, 58, 60, 61, 62, 64, 65, 67 and 69.
+     * Every one is the velocity-50 soft take, because the part's own velocity is 50 and the takes split at 63.
+     */
+    expect([...samples].sort()).toEqual([
+      "VlnEns_susVib_A2_v1.wav",
+      "VlnEns_susVib_A3_v1.wav",
+      "VlnEns_susVib_B2_v1.wav",
+      "VlnEns_susVib_D3_v1.wav",
+      "VlnEns_susVib_F#3_v1.wav",
+    ]);
+  });
+
+  it("has a recording longer than the note, measured from the delivered bytes when they are here", () => {
+    /**
+     * The premise of the paragraph above, checked against the actual recording when this machine has it. Absent means
+     * the assertion does not run — the same rule the rest of this repository uses for a large local asset.
+     */
+    let seconds: number;
+    try {
+      const wav = readFileSync(join(process.env.GROOVE_VSCO_DIR ?? "/tmp/vsco", "strings", "VlnEns_susVib_D3_v1.wav"));
+      seconds = wav.readUInt32LE(40) / (wav.readUInt16LE(22) * (wav.readUInt16LE(34) / 8)) / wav.readUInt32LE(24);
+    } catch {
+      return;
+    }
+    expect(seconds).toBeCloseTo(RECORDING_SECONDS, 1);
+    // 11.70 s of recording, a 4.25 s note: the note stops first, and no loop mode can change that.
+    expect(seconds).toBeGreaterThan(4.25);
+  });
+});

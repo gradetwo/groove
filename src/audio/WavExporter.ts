@@ -1741,7 +1741,7 @@ async function renderPatternOfflineOnce(
       ...(options.audioLaneCatalogueProblem ? { catalogueProblem: options.audioLaneCatalogueProblem } : {}),
       loader: browserSampleLoader(ctx, audioCatalogue),
       sink: {
-        start(buffer, event, ratio) {
+        start(buffer, event, ratio, note) {
           /**
            * ⭐ **The note's end reaches the voice, and that is the half that was missing.**
            *
@@ -1750,6 +1750,11 @@ async function renderPatternOfflineOnce(
            * drone Muse measured, and the reason a held note piled up one overlapping voice per step. `event.seconds` is the
            * lane's own `gate` in seconds; for the plain-sample lane, whose bytes are the whole event, the buffer's own length is
            * the end, which is the same recording played for exactly as long as it lasts.
+           *
+           * ⭐ **And the region's loop declaration crosses here too**, which it did not before. This sink is the only bridge
+           * between the lane planner and the voice, so an opcode that stops at this line does not exist as far as the render is
+           * concerned — which is exactly what had happened to `loop_mode`. `note` is absent for a plain-sample lane, which has no
+           * SFZ and therefore nothing that could declare a loop.
            */
           startSamplerNote({
             context: ctx,
@@ -1758,6 +1763,9 @@ async function renderPatternOfflineOnce(
             ratio,
             whenSeconds: Math.max(0, event.atSeconds),
             seconds: event.seconds ?? buffer.duration,
+            ...(note?.loopMode === undefined ? {} : { loopMode: note.loopMode }),
+            ...(note?.loopStartFrames === undefined ? {} : { loopStartFrames: note.loopStartFrames }),
+            ...(note?.loopEndFrames === undefined ? {} : { loopEndFrames: note.loopEndFrames }),
             ...(event.gainDb === 0 ? {} : { gainDb: event.gainDb }),
             ...(event.pan === undefined ? {} : { pan: event.pan }),
           });

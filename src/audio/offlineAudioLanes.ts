@@ -36,7 +36,7 @@ import { stepTiming } from "../data/tempoMap";
 import type { TempoPoint } from "../data/tempoMap";
 import { stepDuration } from "../data/noteLayer";
 import { deriveTrackStates } from "./trackStates";
-import type { SampleLoader } from "./sampleLoader";
+import type { SampleLoader, LoadedNote } from "./sampleLoader";
 
 /**
  * **The one test for "this is an audio lane".**
@@ -357,8 +357,13 @@ export interface OfflineAudioLaneSink {
    * one (every instrument note); when it is absent the sink uses the buffer's own `duration`, which is the same sound but with a
    * scheduled stop rather than none. A voice started with neither is the defect this contract exists to name: a sampler lane
    * whose notes rang until the render ended, and whose every retrigger only piled another endless voice onto the mix.
+   *
+   * ⭐ **`note` carries what a buffer cannot say**, for an instrument event: SFZ's `loop_mode` and `loop_start`/`loop_end`,
+   * alongside the choke group, `one_shot` and `note_polyphony` that already travelled on `LoadedNote`. Without it the loop
+   * opcodes reached the resolver, were read correctly, and were dropped **at this boundary** — the sink signature was the
+   * last place they could be lost, and it was where they were lost.
    */
-  start(buffer: AudioBuffer, event: OfflineAudioLaneEvent, ratio: number): void;
+  start(buffer: AudioBuffer, event: OfflineAudioLaneEvent, ratio: number, note?: LoadedNote): void;
 }
 
 export interface OfflineAudioLaneReport {
@@ -431,7 +436,7 @@ export async function scheduleOfflineAudioLanes(input: OfflineAudioLaneScheduleI
         input.sink.start(buffer, event, 1);
       } else {
         const note = await input.loader.loadNote(event.assetId, event.pitch);
-        input.sink.start(note.buffer, event, note.ratio);
+        input.sink.start(note.buffer, event, note.ratio, note);
       }
       events += 1;
       started.add(event.trackIndex);

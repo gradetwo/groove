@@ -24,6 +24,25 @@ export interface SamplerVoiceInput {
   pan?: number;
   /** How long to let it ring, in seconds. Absent means the whole sample — a held key on a piano. */
   seconds?: number;
+  /**
+   * ⭐ **What SFZ said about looping**, from the region that answered the note.
+   *
+   * Absent means what this project has always done: the recording plays once and stops at its own end. `loop_continuous`
+   * and `loop_sustain` are the two values SFZ writes to ask for the recording to repeat, and they differ only at the key
+   * release — see `SamplerVoice.stop` below.
+   */
+  loopMode?: "loop_continuous" | "loop_sustain";
+  /**
+   * The loop's bounds **in frames of the source sample**, exactly as SFZ's `loop_start`/`loop_end` write them.
+   *
+   * They are frames here and seconds on the node, and the conversion needs the buffer, which is why it happens inside
+   * this function rather than in the resolver: `loopStart`/`loopEnd` are read in the **buffer's** time, so dividing by
+   * the buffer's own sample rate is what makes them agree. A decoded buffer's rate is not always the context's — the
+   * libraries this project mirrors are 44.1 kHz and the graphs are too, but nothing enforces that, and a loop that is
+   * silently half a bar out is worse than no loop.
+   */
+  loopStartFrames?: number;
+  loopEndFrames?: number;
 }
 
 /** The measured fade: about fifty milliseconds from full level to one percent. */
@@ -43,6 +62,12 @@ export interface SamplerVoice {
   /** The rate it was started at, reported back so a criterion can check the pitch rather than the code path. */
   ratio: number;
   /**
+   * **Whether the sample was in fact repeating.** Reported rather than assumed, because it is the difference between
+   * "the file asked for a loop" and "the loop the file asked for was usable": a `loop_end` that is not beyond the
+   * `loop_start` is not a span, and this voice plays the recording straight through instead of going silent.
+   */
+  looping: boolean;
+  /**
    * **Whether this voice has finished sounding.**
    *
    * `note_polyphony` is a cap on *sounding* voices, so counting them means knowing when one has ended — and a one-short drum hit ends by itself, long before anyone releases a key. The node says so through `onended`; without this, a caller counting voices would count hits that finished a minute ago and start refusing new ones.
@@ -59,6 +84,9 @@ export function startSamplerNote({
   gainDb = 0,
   pan = 0,
   seconds,
+  loopMode,
+  loopStartFrames,
+  loopEndFrames,
 }: SamplerVoiceInput): SamplerVoice {
   const source = context.createBufferSource();
   source.buffer = buffer;
@@ -68,6 +96,41 @@ export function startSamplerNote({
    */
   const safeRatio = Number.isFinite(ratio) && ratio > 0 ? ratio : 1;
   source.playbackRate.value = safeRatio;
+  /**
+   * ⭐ **The loop the region declared, applied here because this is the only layer that can.**
+   *
+   * `AudioBufferSourceNode` had `loop`/`loopStart`/`loopEnd` from the start and this function set none of them, so every
+   * region's `loop_mode` reached the resolver, was read, and then stopped: the recording played once and ended. That is
+   * invisible on a hit and fatal on a sustain, which is how `karoryfer-meatbass`'s `loop_mode=loop_sustain` regions came
+   * to play like one-shots.
+   *
+   * Three deliberate refusals, each with the measurement behind it:
+   *
+   *   · **A loop end that is not past its start is not a loop.** sfizz renders `loop_start=0 loop_end=0` as **silence**
+   *     (measured: RMS 0.000 for the whole render), which is clearly not what the file's author asked for. This voice
+   *     plays the recording through instead — the behaviour that existed before any of this — because a wrong-but-audible
+   *     note is recoverable and a silent one reads as a broken instrument.
+   *   · **An absent `loop_end` means the last frame**, which is SFZ's own default and is resolved here rather than in the
+   *     resolver because it takes the decoded buffer to know. Measured to agree with sfizz: `loop_mode=loop_continuous`
+   *     with no `loop_start`/`loop_end` at all loops the whole recording (RMS flat at 0.057 for a 5-second render of a
+   *     0.6-second sample).
+   *   · **A region that declares no loop is not looped.** `no_loop` is SFZ's default and the pinned `VSCO-2-CE` relies on
+   *     it: none of its 75 programs writes any loop opcode, and its sustained strings are 11.7-second recordings that
+   *     simply end. This field cannot make them sustain, and a player that looped every sample would turn each of those
+   *     strings into a stutter.
+   */
+  const loopStartSeconds = Math.max(0, (loopStartFrames ?? 0) / buffer.sampleRate);
+  const loopEndSeconds = Math.max(0, (loopEndFrames ?? buffer.length) / buffer.sampleRate);
+  const looping =
+    (loopMode === "loop_continuous" || loopMode === "loop_sustain") &&
+    Number.isFinite(loopStartSeconds) &&
+    Number.isFinite(loopEndSeconds) &&
+    loopEndSeconds > loopStartSeconds;
+  if (looping) {
+    source.loop = true;
+    source.loopStart = loopStartSeconds;
+    source.loopEnd = loopEndSeconds;
+  }
   const gain = context.createGain();
   gain.gain.value = Math.pow(10, gainDb / 20);
   /**
@@ -83,10 +146,25 @@ export function startSamplerNote({
     source.connect(gain).connect(destination);
   }
   const startedAt = whenSeconds ?? context.currentTime;
-  if (seconds === undefined) source.start(startedAt);
+  /**
+   * **A looping source is given no scheduled length; it is given an end.** Measured, because the two are not the same
+   * request: with `loop` set, `start(when, 0, duration)` still stops the source at `when + duration` — the Web Audio
+   * specification says the loop attributes apply only while the playhead is inside `[loopStart, loopEnd)`, and a
+   * scheduled stop ends playback regardless. So passing the lane's duration to a looped note would cut the loop at
+   * exactly the second the loop was supposed to save, and the fix would be a no-op on the one path that has a note end
+   * to pass (`WavExporter` schedules every sampled note with one).
+   *
+   * The note keeps that end as a **stop at the same instant**, which is the same silence at the same second with the
+   * loop left on — and that is what makes `loop_mode` audible at all.
+   */
+  if (looping && seconds !== undefined) {
+    source.start(startedAt);
+    source.stop(startedAt + seconds);
+  } else if (seconds === undefined) source.start(startedAt);
   else source.start(startedAt, 0, seconds);
   const voice: SamplerVoice = {
     ratio: safeRatio,
+    looping,
     ended: false,
     /**
      * The fade a choke uses, and why it exists rather than just calling `stop`: a hard stop on a sounding voice is a step in the waveform, and a step is a click. The measurement above says sfizz spends about fifty milliseconds getting to one percent, so the ramp ends there and `stop` is scheduled a hair after it — scheduling the stop **before** the ramp finishes would cut off the very fade it was asked for.
@@ -106,6 +184,15 @@ export function startSamplerNote({
     },
     stop(when) {
       try {
+        /**
+         * **`loop_sustain` means the key release ends the loop, and sfizz agrees about the timing even though it does
+         * not play the tail.** Measured with a two-part fixture (a loud body to 1.0 s and a quieter tail to 1.5 s,
+         * `loop_mode=loop_sustain` over the body, note-off at 1.0 s): sfizz renders **1.115 s** — the release envelope
+         * comes down and the render ends there — so the audible difference between exiting the loop and just stopping is
+         * inside the release ramp. Exiting is the behaviour the specification describes and it costs one assignment, so
+         * that is what happens; nothing is claimed about a tail that neither engine can hear.
+         */
+        if (looping && loopMode === "loop_sustain") source.loop = false;
         source.stop(when);
         voice.ended = true;
       } catch {

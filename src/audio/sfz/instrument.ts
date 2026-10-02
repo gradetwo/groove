@@ -30,6 +30,42 @@ export interface ResolvedInstrumentNote {
   group?: number;
   offBy?: number;
   /**
+   * ⭐ **What the region says about looping** — SFZ's `loop_mode`, carried for the **player**, because only a
+   * `AudioBufferSourceNode` can act on it and only the resolver sees the file.
+   *
+   * **The owner's report read the cause upside down, and the measurements are why this field exists at all.** The
+   * report was that a sustaining instrument collapses because `ViolinEnsSusVib` declares a loop the player ignores.
+   * Measured: that program declares **no** loop opcode — nor does any of the pinned `VSCO-2-CE@6dd651d`'s 75 programs,
+   * and its sustained `.wav`s carry no `smpl` chunk — and `/usr/bin/sfizz_render` plays the note once and goes silent
+   * at 12.5 s, exactly as this project does. So the VSCO strings are one-shot recordings and no loop semantics can
+   * change that. **This field is not for them.** It is for the files that *do* declare one: `karoryfer-meatbass`
+   * writes `loop_mode=loop_sustain` in a `<global>` block, and before this existed those regions looped nowhere.
+   *
+   * The values, all measured through sfizz rather than read off the opcode's name (`loop_mode` takes several, and a
+   * bare `continuous` is **not** one of them — sfizz answers `Unknown loop mode: continuous` and plays once):
+   *
+   * ```
+   *   absent / no_loop      plays once and stops at the sample's end            (the default this project always had)
+   *   one_shot              plays once, and a key release does not stop it      (the `oneShot` field above)
+   *   loop_continuous       loops while the note sounds; the release does not end the loop
+   *   loop_sustain          loops while the note is held; the release exits the loop and plays to the sample's end
+   * ```
+   *
+   * A value this subset does not model stays **absent** rather than becoming a guess, and the note then plays exactly
+   * as it did before this field existed.
+   */
+  loopMode?: "loop_continuous" | "loop_sustain";
+  /**
+   * The loop's **start and end in frames of the sample**, straight from SFZ's `loop_start`/`loop_end`, which are
+   * sample frames and not seconds.
+   *
+   * `loopEndFrames` absent means SFZ's own default — the sample's last frame — and the **player** resolves that against
+   * the decoded buffer, because a frame count is not comparable to a duration until the buffer is in hand. See
+   * `samplerVoice` for the conversion and for why it is not done here.
+   */
+  loopStartFrames?: number;
+  loopEndFrames?: number;
+  /**
    * ⭐ **Whether the sample plays through a key release**, which SFZ spells `loop_mode=one_shot`.
    *
    * Measured with sfizz rather than inferred from the opcode's name: the same 0.1-second note on a one-second sample renders **2.091 s** with `loop_mode=one_shot` and **0.341 s** without it, and the energy 0.2–0.6 s after the note-off is nonzero only in the first. So a drum kit that says `one_shot` means "this hit rings out
@@ -66,6 +102,54 @@ export interface InstrumentResolution {
   reason?: string;
   /** The regions the file actually defines, so a caller can report rather than guess when something is wrong. */
   regions: SfzRegion[];
+}
+
+/**
+ * SFZ's `loop_mode` as one of four behaviours, or `undefined` when the file names none this subset models.
+ *
+ * **Exported, and used for `oneShot` too, because the two readers were about to disagree.** The old code compared the
+ * raw opcode to the literal `"one_shot"`, which is right for every file ever seen and silently wrong for
+ * `loop_mode=ONE_SHOT` — and now that a second reader exists, "one reader, one answer" is the rule the rest of this
+ * file already follows.
+ *
+ * The names are what sfizz actually accepts, measured: a file that writes the bare `continuous`/`sustain` gets
+ * `Unknown loop mode: …` on stderr and plays once, so those spellings are **deliberately not** mapped to looping. The
+ * same measurement refuses `loop_until_release` and `loop_continuous_release`, and neither is mapped either — guessing
+ * at one would be inventing a behaviour from the opcode's name, which is the mistake this workstream keeps removing.
+ */
+export function loopModeOf(value: string | undefined): "loop_continuous" | "loop_sustain" | "one_shot" | "no_loop" | undefined {
+  if (value === undefined) return undefined;
+  switch (value.trim().toLowerCase()) {
+    case "loop_continuous":
+      return "loop_continuous";
+    case "loop_sustain":
+      return "loop_sustain";
+    case "one_shot":
+      return "one_shot";
+    case "no_loop":
+      return "no_loop";
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * One of SFZ's frame-valued loop opcodes as a frame count, or `undefined` when it is absent or not a usable frame.
+ *
+ * A count that is not a whole number, or is negative, is **not a loop point**: SFZ writes frames, and a file that writes
+ * `loop_start=-1` or `loop_end=1.5` has said something the format does not allow. Returning `undefined` leaves the
+ * player on SFZ's own default rather than on a manufactured frame.
+ */
+function loopFrameOf(value: string | undefined): number | undefined {
+  const trimmed = value?.trim();
+  /**
+   * A **whole non-negative number and nothing else**. `Number.parseInt("1.5")` is 1 and `Number.parseInt("12abc")` is
+   * 12, and both would turn a value the format does not allow into a loop point that looks deliberate — the class of
+   * silent-wrong-answer this workstream keeps removing. A file that writes either is not asking for a loop here.
+   */
+  if (trimmed === undefined || !/^\d+$/.test(trimmed)) return undefined;
+  const parsed = Number.parseInt(trimmed, 10);
+  return Number.isSafeInteger(parsed) ? parsed : undefined;
 }
 
 /**
@@ -124,7 +208,15 @@ export function resolveInstrumentNote(
   const group = asInt(answered?.opcodes.group);
   const offBy = asInt(answered?.opcodes.off_by);
   // `loop_mode` takes several values; only `one_shot` means "ignore the key release". Anything else keeps the note-off behaviour this project has always had.
-  const oneShot = answered?.opcodes.loop_mode === "one_shot";
+  const oneShot = loopModeOf(answered?.opcodes.loop_mode) === "one_shot";
+  /**
+   * The two looping values, and the frames they loop between. Read from the region that answered, for the same reason
+   * the choke group is: one instrument holds a staccato and a sustained articulation, and the file decides which one a
+   * note reached.
+   */
+  const loopMode = loopModeOf(answered?.opcodes.loop_mode);
+  const loopStartFrames = loopFrameOf(answered?.opcodes.loop_start);
+  const loopEndFrames = loopFrameOf(answered?.opcodes.loop_end);
   // A value that is not a positive integer is **no cap**, not a cap of zero: `note_polyphony=0` would otherwise silence a note the file plainly intends to sound.
   const notePolyphony = asInt(answered?.opcodes.note_polyphony);
   const polyphonyCap = notePolyphony !== undefined && notePolyphony > 0 ? notePolyphony : undefined;
@@ -158,6 +250,10 @@ export function resolveInstrumentNote(
       ...(group === undefined ? {} : { group }),
       ...(offBy === undefined ? {} : { offBy }),
       ...(oneShot ? { oneShot: true } : {}),
+      // Only the two looping values travel: `no_loop` and `one_shot` mean "do not loop", and an absent field says that already.
+      ...(loopMode === "loop_continuous" || loopMode === "loop_sustain" ? { loopMode } : {}),
+      ...(loopStartFrames === undefined ? {} : { loopStartFrames }),
+      ...(loopEndFrames === undefined ? {} : { loopEndFrames }),
       ...(polyphonyCap === undefined ? {} : { notePolyphony: polyphonyCap }),
       ...(gainScale === 1 ? {} : { gainScale }),
       // The path the answering region answers to, and the reason it has none when that is the truth — never a substitute value.

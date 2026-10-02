@@ -143,7 +143,16 @@ export class FakeFilterNode extends FakeNode {
 export class FakeBufferSourceNode extends FakeNode {
   buffer: unknown = null;
   playbackRate = new FakeAudioParam();
+  /**
+   * The loop surface, which the real node has always had and this double did not.
+   *
+   * Its absence was not neutral: `startSamplerNote` had nothing to set, so no criterion could tell "the region asked
+   * for a loop and the player applied it" from "the region asked and the player ignored it" — and the latter is what
+   * every sampled note did. The three fields are recorded here for the same reason `started` and `stopCalls` are.
+   */
   loop = false;
+  loopStart = 0;
+  loopEnd = 0;
   /**
    * Recorded `start(when, offset, duration)` calls. The offset is what E-06 varies per hit so repeated drum hits are not bit-identical, and the duration is what a sampler voice needs to judge: a held key plays the whole sample while a
    * length-limited one stops early.
