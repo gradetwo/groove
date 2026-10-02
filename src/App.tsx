@@ -532,6 +532,14 @@ const MainApp: React.FC = () => {
       <Header
         currentTab={currentTab}
         onSelectTab={handleSelectTab}
+        /**
+         * ⭐ **The header routes through here instead of letting the browser load `/new` as a document.**
+         *
+         * `navigate` is already in scope, so the capability costs nothing to hand down; the header keeps its anchor
+         * for bookmarks and new tabs. See `HeaderProps.onNewProject` for why it is a prop and not a `useRouter`
+         * call inside the header.
+         */
+        onNewProject={() => navigate({ tab: "studio", newProject: true })}
         onOpenSearch={() => setSearchOpen(true)}
         onRandomGenre={handleOpenStudioWithGenre}
         onOpenUpdates={() => setUpdatesOpen(true)}

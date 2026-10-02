@@ -58,6 +58,19 @@ interface HeaderProps {
    * reserved by the design freeze, so the FAB overlap itself is recorded rather than moved.
    */
   onOpenMore?: () => void;
+  /**
+   * ⭐ **Where "New Project" goes when the caller can route, which is how it stops reloading the document.**
+   *
+   * The link is an anchor because "new project" is a route of its own, and an anchor click is a native navigation:
+   * a full document load that destroys the `AudioContext`, stops whatever is playing, and on iOS leaves the fresh
+   * context suspended until another gesture. `docs/AUDIT_2026-10-02_TRIAGE.md` section 6 measured that and records
+   * why the capability arrives as a prop rather than from `useRouter` here — the header criteria render this
+   * component with only a `LanguageProvider`, and a second context would take them all down with it.
+   *
+   * When it is absent the anchor keeps its native behaviour, so a caller that cannot route — or a criterion that
+   * only wants the link — is unaffected.
+   */
+  onNewProject?: () => void;
   analyser?: AnalyserNode | null;
   isPlaying?: boolean;
 }
@@ -73,6 +86,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenOnboarding,
   onOpenSettings,
   onOpenMore,
+  onNewProject,
   analyser,
   isPlaying = false,
 }) => {
@@ -245,9 +259,19 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="truncate max-w-[84px] whitespace-nowrap select-none">{t("nav_studio")}</span>
         </button>
 
-        {/* ⭐ New Project — an **anchor**, not a tab button: "new project" is a route of its own (`/new`), and `onSelectTab` can only express a tab. Its own route rather than a fourteenth nav word follows the precedent set for `/console`. */}
+        {/* ⭐ New Project — an **anchor**, not a tab button: "new project" is a route of its own (`/new`), and `onSelectTab` can only express a tab. Its own route rather than a fourteenth nav word follows the precedent set for `/console`.
+            ⚠️ **A plain left click is intercepted when the caller can route**, because the native navigation is a full document load and that destroys the `AudioContext`. A modified or middle click is deliberately left to the browser, so "open in a new tab" still works — an unconditional handler would take that away. */}
         <a
           href="/new"
+          onClick={
+            onNewProject === undefined
+              ? undefined
+              : (event) => {
+                  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+                  event.preventDefault();
+                  onNewProject();
+                }
+          }
           title={t("nav_new_project")}
           className="flex items-center gap-1.5 text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-lg border transition-all shrink-0 border-line text-text-sub hover:text-text hover:border-line-strong bg-panel2"
         >
