@@ -1062,3 +1062,19 @@ scripts/test_matrix.js:716  waitForSelector('[data-testid="mobile-genre-detail"]
 ### 22.4 剩下两处提及它的地方：**是本文件的**决策记录**，故意留着** ✓✓
 
 **`§20.2` 与本节提到那份被删文档，是**记录业主怎么裁的** ✓**——**本文件的这两处是**唯一**残留 ✓**（**`git grep ROADMAP_V2 3dd030b` → 命中 2 处，全在本文件 ✓✓**）。**⇒ 按引用门禁的"讨论中"约定，这两行都带 `✗` ✓✓（**带 `✗` 的行，它反引号里的路径不参与存在性检查 ✓**），所以门禁不会把它们当成悬空引用 ✓。**
+
+## 二十三、业主四条裁定（2026-10-02 ✓）——其中一条把"随删移除的提案"这笔账收了口 ✓✓
+
+**业主逐条裁** ✓：**① 两份名字带 `mobile`、实际查桌面的休眠诊断（`scripts/diagnose_mobile_eq.mjs` ✗、`scripts/diagnose_mobile_inspector.mjs` ✗）⇒ 删 ✓**；**② `docs/research/staff-notation-and-musicxml-survey.md` ⇒ 它随 `docs/SCORE_AND_MUSICXML.md` 一同维护 ✓**（**⇒ 不纳入引用门禁的扫描范围 ✗✓，而是把这个决定记在引用它的地方，把审计当初"它会不会悄悄烂掉"那个问题回答掉 ✓**）；**③ `jank` 那一步（手机运行时手感）⇒ 退掉 ✓**（**手机外壳已在 `4dffdf0` 砍除 ⇒ 它今天没有 subject ✗✓**）；**④ P7-04 局域网 WebRTC 锁相合奏 ✗ 与 §5.6 Phase 4 的 AI 导演模式 ✗ ⇒ 删除 ✓**（**即：**不**重新立案** ✓）。
+
+**①②③ 由工作流落** ✓（**删脚本要连带处理 `package.json`／文档／`check_doc_refs.mjs` 的 `PROPOSED` 声明 ✓；退 `jank` 要连带 `manual-verify.yml` 的 step 与 scope 选项 ＋ `ciWorkflows.test.ts` 的断言 ＋ `docs/GITHUB_CI.md` 的 scope 列表 ✓——而**那一次允许改 workflow 的键值** ✓，因为业主明确要退掉这一步 ✓**）。
+
+### 23.1 ⭐ 第④条把"随删移除的提案"这笔账收了口 ✓✓
+
+**§22.3 记过**：那份路线图（**已删 ✗**）里还压着一串**未建／未决**的条目 ✓（**P7-04** ✓、**§5.6 Phase 4** ✓、**§5.8 两处未核对** ✓、**§5.1–§5.5／§5.7 的一串** ✓），**而 `BACKLOG.md` 对它 0 引用** ✗ ⇒ **除了 git 历史没有第二处记录** ✓。
+
+**⇒ 业主审过那份清单后，只点名了**两条**：P7-04 ✗ 与 Phase 4 的 AI 导演模式 ✗ ⇒ **删除、不重新立案 ✓✓**。**
+
+**⚠️ 而这意味着**其余那些没有被点名**** ✗✓——**§5.1 M1 的 `get_contract_version`／`redo`／`snapshot`／`restore`／`get_energy_curve` 的 SLO／`style_ref` ✓、§5.2 Phase 0 的 headless core／Project Schema v2／RenderTarget／golden render epsilon／共享 Undo ✓、§5.3 Phase 1 的 Chord Track／Signature／Region／Timeline Arrange／Folder Track／Automation Lanes／`region.*`／`track.*`／`automation.*` ✓、§5.4 Phase 2 的 Audio Track（进行中）／WASM 时间拉伸／Mixer View／Sidechain／录音 Comping／`mix.*`／`route_sidechain`／`get_fx_latency` ✓、§5.5 Phase 3 的 `motif_ops`／人声路径 A／SVS 桥（接口预留、实现留空）／多段压缩／`export_lufs_target`／Web MIDI／以及 §5.5.1 的三个前置缺口（**拍号不在模型里** ✓、**导入 lane 映射未决** ✓、**MusicXML 无损往返不可达** ✓）✓、§5.7 的 opId 共享／跨运行时 epsilon ✓**——**它们**既没被删、也没被留** ✗✓：**今天只存在于** `git show acbbc8f:ROADMAP_V2.md` ✗**（**243 行 ✓**）与 `3dd030b` 的提交信息 ✓。
+
+**⇒ 这是本节最该被下次读到的一句** ✓✓：**那批缺口**没有归宿** ✗——**要么逐条立案（进 `BACKLOG.md` ✓）、要么也判"不做" ✓；**在两者之间，它们只活在 git 历史里 ✓**。**（**其中"拍号不在模型里"与"MusicXML 无损往返不可达"这两条**设计缺口**最像**会真的挡路**的那类 ✓——它们不是"没做"，是"**做不到**"✓。）**
