@@ -48,7 +48,7 @@ describe("CI · every target runs on every push", () => {
    */
   const e2e = jobBlock("e2e");
 
-  it("runs the full seven-target matrix, not the desktop profile", () => {
+  it("runs the full three-engine desktop matrix, not the shorter profile", () => {
     expect(e2e, "the CI e2e job should run every target").toContain("npm run test:e2e:all");
     expect(e2e, "the CI e2e job must not fall back to the desktop-only profile").not.toMatch(/npm run test:e2e(?!:)/);
   });

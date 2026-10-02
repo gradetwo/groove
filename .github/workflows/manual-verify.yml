@@ -100,8 +100,10 @@ jobs:
         if: inputs.scope == 'e2e' || inputs.scope == 'verify' || inputs.scope == 'all'
         run: npx playwright install --with-deps firefox webkit
 
-      # The phone's runtime feel: per-step long tasks and frame deltas on a throttled profile, which is
-      # what "it stutters" actually is. Needs no browsers beyond Chromium.
+      # ⚠️ This step has no subject today: the phone shell it measured was cut in `4dffdf0` (2026-10-02,
+      # `docs/OPEN_WORK.md` §十三), so `probe:jank` measures nothing. It stays wired because this menu is a
+      # **human** entry point rather than a gate (see the note at the top of this file), and the script itself
+      # stays with it. Needs no browsers beyond Chromium.
       # `probe:jank` and `probe:skins` measure a *built* application: they serve `dist/` themselves. Without
       # this step the `jank` scope failed with "dist/index.html is missing — build first", which is exactly
       # what a manual run reported. `verify` builds on its own (and runs both probes after its own build);
