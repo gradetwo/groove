@@ -16,6 +16,7 @@ import { useLanguage } from "../../i18n/LanguageContext";
 import { announcer } from "../../platform/announcer";
 import {
   alsFileFor,
+  arrangementFileKind,
   describeError,
   downloadProducedFile,
   grooveFileFor,
@@ -24,10 +25,13 @@ import {
   midiFileFor,
   mp3FileFor,
   musicXmlFileFor,
+  placeMidiIntoArrangement,
+  readMidiForImport,
   stemsFileFor,
   wavFileFor,
   type ArrangementImportOutcome,
   type ProducedAudio,
+  type ReadMidiImport,
 } from "./arrangementFiles";
 
 export interface UseArrangementFileActionsOptions {
@@ -56,6 +60,36 @@ export interface UseArrangementFileActionsResult {
   importFile: (file: File) => void;
   /** A chosen MusicXML document, which the toolbar's own input deliberately does not accept. */
   importMusicXml: (file: File) => void;
+  /**
+   * ⭐ **A MIDI file with more than one part, read and waiting for the person to name its parts.** Absent unless the
+   * mapping dialog should be up; the view renders it from this value, which is what keeps "a dialog is open" and
+   * "these are the parts being imported" one fact rather than two.
+   */
+  pendingMapping?: PendingMidiMapping;
+  /** The person's per-part instrument names, then the import — the same placement the no-answer path uses. */
+  confirmMapping: (instruments: Record<number, string>) => void;
+  /** Import with nothing named. An action, said out loud, rather than a dismissal that leaves no trace. */
+  skipMapping: () => void;
+}
+
+/** What the mapping dialog is drawn for: the file's own name, and each part as the reader reported it. */
+export interface PendingMidiMapping {
+  filename: string;
+  /** The part names **verbatim** and the note counts the reader measured — the two facts the row shows. */
+  parts: Array<{ name: string; notes: number }>;
+}
+
+/**
+ * The parts that will become tracks and were left unnamed — the list the report names out loud.
+ *
+ * It reads the **part list the dialog was drawn from**, so the sentence about what is still a synthesizer is about
+ * the very parts that were placed, and it counts only parts with notes because that is what `arrangementWithImportedParts`
+ * turns into tracks.
+ */
+function unnamedParts(read: ReadMidiImport, instruments?: Record<number, string>): string[] {
+  return read.imported.parts
+    .filter((part, index) => part.notes.length > 0 && (instruments?.[index] ?? "") === "")
+    .map((part) => part.name);
 }
 
 export function useArrangementFileActions({
@@ -68,6 +102,8 @@ export function useArrangementFileActions({
   const { t } = useLanguage();
   const [report, setReport] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
+  /** The MIDI file waiting for the person to name its parts, if the mapping dialog should be up. */
+  const [pending, setPending] = useState<ReadMidiImport | undefined>(undefined);
 
   /** One place that publishes, so what is on screen and what a screen reader hears cannot diverge. */
   const say = useCallback((message: string) => {
@@ -95,15 +131,28 @@ export function useArrangementFileActions({
     [t]
   );
 
-  /** An import's outcome as the sentence the toolbar shows; a refusal carries the reader's own reason. */
+  /**
+   * An import's outcome as the sentence the toolbar shows; a refusal carries the reader's own reason.
+   *
+   * ⭐ **`unnamed` is the tail the mapping dialog made possible and necessary**: an import that named no instrument
+   * for a part leaves that track a built-in synthesizer, and a person who skipped the dialog must be able to read
+   * that back — with the next step attached, because "these tracks have no instrument" on its own is not something
+   * anyone can act on. It is empty for a non-MIDI import and for an import that named every part.
+   */
   const reportImport = useCallback(
-    (outcome: ArrangementImportOutcome) => {
+    (outcome: ArrangementImportOutcome, unnamed: readonly string[] = []) => {
       if (!outcome.ok) {
         say(t("arrangement_import_failed", { error: outcome.reason }));
         return;
       }
       onArrangement(outcome.arrangement);
-      say(`${t("arrangement_import_done", { filename: outcome.filename, tracks: outcome.tracks, notes: outcome.notes })}${problemsTail(outcome.problems)}`);
+      const unassigned =
+        unnamed.length === 0
+          ? ""
+          : ` · ${t("arrangement_import_unassigned", { count: unnamed.length, names: unnamed.slice(0, 3).join(", ") })}`;
+      say(
+        `${t("arrangement_import_done", { filename: outcome.filename, tracks: outcome.tracks, notes: outcome.notes })}${problemsTail(outcome.problems)}${unassigned}`
+      );
     },
     [onArrangement, problemsTail, say, t]
   );
@@ -191,6 +240,36 @@ export function useArrangementFileActions({
 
   const importFile = useCallback(
     (file: File) => {
+      /**
+       * ⭐ **A MIDI file is read first and placed second**, because a `.mid` with more than one part is the one import
+       * whose parts arrive anonymous and whose identity only a person knows. The read is the same `fromMidi` the
+       * single-part path uses, so the dialog describes exactly the parts that will be placed — not a second parse
+       * that could disagree.
+       *
+       * A **single-part** file places straight away: one part is not a table, and a dialog with one row would be a
+       * press that changes nothing. That is also the path that keeps the pre-dialog behaviour for such files.
+       */
+      if (arrangementFileKind(file.name) === "midi") {
+        void (async () => {
+          setBusy(true);
+          try {
+            const read = await readMidiForImport(file);
+            if (!read.ok) {
+              say(t("arrangement_import_failed", { error: read.reason }));
+              return;
+            }
+            const withNotes = read.read.imported.parts.filter((part) => part.notes.length > 0).length;
+            if (withNotes > 1) {
+              setPending(read.read);
+              return;
+            }
+            reportImport(placeMidiIntoArrangement(arrangement, read.read), unnamedParts(read.read));
+          } finally {
+            setBusy(false);
+          }
+        })();
+        return;
+      }
       void (async () => {
         setBusy(true);
         try {
@@ -200,8 +279,30 @@ export function useArrangementFileActions({
         }
       })();
     },
-    [arrangement, reportImport]
+    [arrangement, reportImport, say, t]
   );
+
+  /**
+   * The person's answer: place the read file with the names keyed by part index — the very shape
+   * `arrangementWithImportedParts` takes, so nothing here re-keys or reorders it.
+   */
+  const confirmMapping = useCallback(
+    (instruments: Record<number, string>) => {
+      const read = pending;
+      if (!read) return;
+      setPending(undefined);
+      reportImport(placeMidiIntoArrangement(arrangement, read, instruments), unnamedParts(read, instruments));
+    },
+    [arrangement, pending, reportImport]
+  );
+
+  /** Skipping places the same read file with no names at all — today's result, reached by a press. */
+  const skipMapping = useCallback(() => {
+    const read = pending;
+    if (!read) return;
+    setPending(undefined);
+    reportImport(placeMidiIntoArrangement(arrangement, read), unnamedParts(read));
+  }, [arrangement, pending, reportImport]);
 
   const importMusicXml = useCallback(
     (file: File) => {
@@ -217,5 +318,29 @@ export function useArrangementFileActions({
     [arrangement, reportImport]
   );
 
-  return { report, busy, exportMidi, exportAls, exportGroove, exportWav, exportMp3, exportStems, exportMusicXml, importFile, importMusicXml };
+  /**
+   * The dialog's own value: the file's name and its parts as rows. Derived from the read rather than stored twice, so
+   * "the dialog is open" and "these parts will be placed" cannot disagree.
+   */
+  const pendingMapping: PendingMidiMapping | undefined =
+    pending === undefined
+      ? undefined
+      : { filename: pending.filename, parts: pending.imported.parts.map((part) => ({ name: part.name, notes: part.notes.length })) };
+
+  return {
+    report,
+    busy,
+    exportMidi,
+    exportAls,
+    exportGroove,
+    exportWav,
+    exportMp3,
+    exportStems,
+    exportMusicXml,
+    importFile,
+    importMusicXml,
+    ...(pendingMapping === undefined ? {} : { pendingMapping }),
+    confirmMapping,
+    skipMapping,
+  };
 }

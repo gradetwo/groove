@@ -108,6 +108,26 @@ export const commonMessages = {
   arrangement_import_title: { en: "Import a MIDI file (.mid) or a .groove project", zh: "导入 MIDI 文件（.mid）或 .groove 工程" },
   arrangement_import_done: { en: "Imported {filename} — {tracks} track(s), {notes} note(s)", zh: "已导入 {filename}——{tracks} 条轨道、{notes} 个音符" },
   arrangement_import_failed: { en: "Import failed: {error}", zh: "导入失败：{error}" },
+  /**
+   * ⭐ **The per-part instrument mapping**, the entry the import path shipped without. The part's own name is shown
+   * verbatim and never passes through a translation; these are the words *around* it. `import_mapping_hint` says why
+   * the dialog is asking rather than silently choosing — a MIDI file's track name is a name, not an identity.
+   */
+  import_mapping_title: { en: "Name the instruments", zh: "指定乐器" },
+  import_mapping_hint: {
+    en: "{filename} holds {parts} part(s). A MIDI file's part names are only names — unless it carries program changes, it says nothing about what each part is. Leave any part a synthesizer, or choose the instrument you know it is.",
+    zh: "{filename} 里有 {parts} 个 part。MIDI 文件里的 part 名只是名字——除非它带 program change，否则它说不出每个 part 是什么。可以留作合成器，也可以指定你知道的乐器。",
+  },
+  import_mapping_notes: { en: "{count} note(s)", zh: "{count} 个音符" },
+  import_mapping_keep_synth: { en: "Leave as synthesizer", zh: "留作合成器" },
+  import_mapping_select_label: { en: "Instrument for the part named {part}", zh: "名为 {part} 的 part 用哪个乐器" },
+  import_mapping_confirm: { en: "Import ({count} named)", zh: "导入（已指定 {count} 个）" },
+  import_mapping_skip: { en: "Skip — keep synthesizers", zh: "跳过——留作合成器" },
+  /** The executable next step after an import that named nothing (or only some parts): the tracks are said out loud. */
+  arrangement_import_unassigned: {
+    en: "{count} imported track(s) still play built-in synthesizers because no instrument was named: {names} — re-import the file and choose an instrument in this dialog, or add a sampler track and give it an asset",
+    zh: "有 {count} 条导入的轨道因为没指定乐器，仍在用内置合成器：{names}——重新导入这个文件并在对话框里选乐器，或新建一条采样轨并指定资产",
+  },
   arrangement_export_summary: { en: "{tracks} track(s), {notes} note(s)", zh: "{tracks} 条轨道、{notes} 个音符" },
   arrangement_export_failed: { en: "Export failed: {error}", zh: "导出失败：{error}" },
   /** One tail used by both directions: a writer's lost precision and a reader's unreadable measure are the same promise. */

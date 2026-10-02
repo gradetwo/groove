@@ -18,6 +18,7 @@
  */
 import type { ArrangementV2, NoteEvent } from "../../types/arrangementV2";
 import type { GrooveProject, GrooveProjectArrangement } from "../../types/project";
+import type { MidiArrangementImport } from "../../data/midiToArrangement";
 import { arrangementToMidi } from "../../data/arrangementToMidi";
 import { arrangementWithImportedParts, arrangementFromGroovePackage, type ArrangementImportResult } from "../../data/arrangementImport";
 import { compileArrangementToPattern } from "../../data/arrangementCompile";
@@ -335,26 +336,78 @@ async function bytesOf(file: File): Promise<Uint8Array> {
 }
 
 /**
+ * A MIDI file **read but not yet placed** — the shape the mapping dialog needs and the shape the placement then uses.
+ *
+ * The split exists because identity is a decision a person makes, and the decision needs the file's own part list in
+ * front of it. `fromMidi` already produces that list (each part's name verbatim and its notes), so the read is the
+ * same one the no-dialog path performs; keeping the result rather than re-reading the `File` is what makes the two
+ * paths one parse and guarantees the dialog is describing exactly the parts that will be placed.
+ */
+export interface ReadMidiImport {
+  filename: string;
+  imported: MidiArrangementImport;
+}
+
+/** A MIDI read as a result rather than an exception: either the parts, or the reader's own sentence. */
+export type MidiImportRead = { ok: true; read: ReadMidiImport } | { ok: false; filename: string; reason: string };
+
+/**
  * A MIDI file as tracks in the arrangement.
  *
  * The parts the reader produced are **added** to what is on screen, and the file's own tempo and meter are applied
  * when it states them — said in the reply rather than silently kept at 120, which is the same rule `fromMidi`
  * records for itself.
+ *
+ * ⭐ **`instruments` is the person's answer, keyed by part index**, and it is threaded to the one place that knows
+ * what to do with it (`arrangementWithImportedParts`). Keyed rather than positional because `fromMidi` drops a track
+ * chunk that holds no notes, so an array would slide: "the violin ended up on the bass" is not a failure anyone
+ * would notice in time. **Absent, every part is exactly the track it was before this parameter existed** — the
+ * default is unchanged, and that is the property the criterion on this path asserts.
  */
-export async function importMidiIntoArrangement(arrangement: ArrangementV2, file: File): Promise<ArrangementImportOutcome> {
+export async function importMidiIntoArrangement(
+  arrangement: ArrangementV2,
+  file: File,
+  instruments?: Record<number, string>
+): Promise<ArrangementImportOutcome> {
+  const read = await readMidiForImport(file);
+  if (!read.ok) return { ok: false, filename: read.filename, reason: read.reason };
+  return placeMidiIntoArrangement(arrangement, read.read, instruments);
+}
+
+/**
+ * Read a `.mid` into parts, without placing anything — what the mapping dialog is shown from.
+ *
+ * The heavy reader is still `await import`ed here rather than at module load, so the first paint does not pay for
+ * the MIDI parser merely because the route can import one.
+ */
+export async function readMidiForImport(file: File): Promise<MidiImportRead> {
   try {
     const { fromMidi } = await import("../../data/midiToArrangement");
-    const imported = fromMidi(await bytesOf(file));
-    const placed = arrangementWithImportedParts(arrangement, imported);
-    const next: ArrangementV2 = {
-      ...placed.arrangement,
-      ...(imported.tempoBpm === undefined ? {} : { bpm: imported.tempoBpm }),
-      ...(imported.timeSignature === undefined ? {} : { timeSignature: imported.timeSignature }),
-    };
-    return { ok: true, filename: file.name, format: "midi", tracks: placed.tracks, notes: placed.notes, problems: placed.problems, arrangement: next };
+    return { ok: true, read: { filename: file.name, imported: fromMidi(await bytesOf(file)) } };
   } catch (error) {
     return { ok: false, filename: file.name, reason: describeError(error) };
   }
+}
+
+/**
+ * Place an **already read** MIDI file into the arrangement, with the instruments a person named.
+ *
+ * Separate from the read so the interface can show the file's parts before deciding, and so the decision is applied
+ * to the very parse the dialog described rather than to a second one that could differ.
+ */
+export function placeMidiIntoArrangement(
+  arrangement: ArrangementV2,
+  read: ReadMidiImport,
+  instruments?: Record<number, string>
+): ArrangementImportOutcome {
+  const { imported, filename } = read;
+  const placed = arrangementWithImportedParts(arrangement, imported, instruments === undefined ? {} : { instruments });
+  const next: ArrangementV2 = {
+    ...placed.arrangement,
+    ...(imported.tempoBpm === undefined ? {} : { bpm: imported.tempoBpm }),
+    ...(imported.timeSignature === undefined ? {} : { timeSignature: imported.timeSignature }),
+  };
+  return { ok: true, filename, format: "midi", tracks: placed.tracks, notes: placed.notes, problems: placed.problems, arrangement: next };
 }
 
 /**

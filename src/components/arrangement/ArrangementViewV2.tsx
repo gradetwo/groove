@@ -70,6 +70,7 @@ import { useLanguage } from "../../i18n/LanguageContext";
 import { NewProjectPanelV2 } from "./NewProjectPanelV2";
 import { KIND_LABEL_KEY, TRACK_KIND_ORDER } from "./kindLabels";
 import { ArrangementFileEntriesV2 } from "./ArrangementFileEntriesV2";
+import { ImportInstrumentMappingV2 } from "./ImportInstrumentMappingV2";
 import { useArrangementFileActions } from "../../features/arrangement/useArrangementFileActions";
 import { playArrangementV2, type ArrangementPlayer, type ArrangementTransportState } from "../../audio/playArrangementV2";
 import { stepsPerBarFor, STEPS_PER_BEAT } from "../../data/noteEvents";
@@ -1147,6 +1148,26 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
         onChangeGain={(trackId, gainDb) => commit(setTrackGainCommand(trackId, trackFor(trackId)?.gainDb ?? 0, gainDb))}
         onChangePan={(trackId, pan) => commit(setTrackPanCommand(trackId, trackFor(trackId)?.pan ?? 0, pan))}
       />
+
+      {/**
+       * ⭐ **The per-part instrument mapping, when a multi-part MIDI file was chosen.**
+       *
+       * The data layer could already take `{ instruments }` keyed by part index and nothing asked for one, which is
+       * the whole of the owner's report one layer up ("有些是功能有了，页面没做入口"). The hook owns *whether* the
+       * question is open and what the answer does; this only draws it, with the catalogue this session loaded so an
+       * option can be labelled with the instrument's real name rather than only the table's key.
+       *
+       * It is the last thing in the view so it draws over everything, exactly like the arrangement panel's own modal.
+       */}
+      {files.pendingMapping !== undefined && (
+        <ImportInstrumentMappingV2
+          filename={files.pendingMapping.filename}
+          parts={files.pendingMapping.parts}
+          catalogue={instruments}
+          onConfirm={files.confirmMapping}
+          onSkip={files.skipMapping}
+        />
+      )}
     </div>
   );
 }
