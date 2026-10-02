@@ -142,3 +142,155 @@ describe("the release a note can be given", () => {
     expect(voice.ended).toBe(true);
   });
 });
+
+/**
+ * ⭐⭐ **Carrying a sounding voice into the next note — the mechanism behind "overlap is not legato".**
+ *
+ * The owner heard the strings break at chord changes and located it to one instant
+ * (`docs/STRING_TECHNIQUES.md` §9): the previous chord is still sounding, and every new note starts **its own
+ * attack**. A player does not do that when the bow has not stopped — the pitch moves and the bow carries on — and
+ * this is the node-level shape of that: the recording is not restarted, only its rate and its end move.
+ *
+ * The criteria below are the three ways it could be wrong: starting a second recording anyway (which is exactly the
+ * defect), moving the pitch by rebuilding the voice (a new attack by another name), or jumping the gain (a click).
+ */
+describe("carrying a voice into the next note", () => {
+  /** The level a parameter is at, at an instant — a linear ramp evaluated the way Web Audio evaluates it. */
+  function valueAt(param: { events: Array<{ type: string; value: number; time: number }> }, time: number): number {
+    let value = 0;
+    let last: { value: number; time: number } | undefined;
+    for (const event of param.events) {
+      if (event.type === "linearRampToValueAtTime") {
+        if (!last) value = event.value;
+        else if (time >= event.time) value = event.value;
+        else if (time <= last.time) value = last.value;
+        else value = last.value + ((event.value - last.value) * (time - last.time)) / (event.time - last.time);
+        last = { value: event.value, time: event.time };
+        continue;
+      }
+      if (event.time > time) break;
+      value = event.value;
+      last = { value: event.value, time: event.time };
+    }
+    return value;
+  }
+
+  it("keeps the recording playing and moves its rate and its end, instead of starting a second one", () => {
+    const context = new FakeAudioContext();
+    const voice = startSamplerNote({
+      context: context as never,
+      destination: context.createGain() as never,
+      buffer,
+      ratio: 1,
+      whenSeconds: 0,
+      seconds: 4.25,
+      releaseSeconds: 0.25,
+    });
+    const source = context.createdBufferSources[0]!;
+    // The note it was started as: a ramp in its last quarter second, ending at 4.25 s.
+    expect(source.stopCalls).toEqual([4.255]);
+
+    const carried = voice.takeOver({ ratio: 1.1224620483, atSeconds: 4, endsAtSeconds: 8.25, releaseSeconds: 0.25 });
+    expect(carried).toBe(true);
+    /**
+     * **One recording, one `start`.** The whole point: a second `AudioBufferSourceNode` here would be the attack the
+     * owner heard, whatever else was done to it.
+     */
+    expect(context.createdBufferSources).toHaveLength(1);
+    expect(source.started).toEqual([{ when: 0, offset: 0 }]);
+    // The rate is held at what it was and then moved — two events at the same instant, the later one winning.
+    expect(source.playbackRate.events).toEqual([
+      { type: "setValueAtTime", value: 1, time: 4 },
+      { type: "setValueAtTime", value: 1.1224620483, time: 4 },
+    ]);
+    expect(voice.ratio).toBe(1);
+    expect(voice.currentRatio).toBe(1.1224620483);
+    // The end moved from the old note's to the carried note's, by the specification's own rule that the last `stop` wins.
+    expect(source.stopCalls).toEqual([4.255, 8.255]);
+  });
+
+  /**
+   * ⭐ **The gain does not jump, and the reason is arithmetic rather than luck.**
+   *
+   * At the join the voice is at its own level, and that is also exactly where the previous note's release ramp
+   * begins: the measured chord overlap is 0.25 s and `MIN_RELEASE_SECONDS` was set from that same measurement. So the
+   * scheduled ramp is cancelled and the level is restored to what it had reached — the same number on both sides of
+   * the instant, which is what "no click" means here.
+   */
+  it("does not jump the level at the join, even when a release ramp is already in flight", () => {
+    const context = new FakeAudioContext();
+    const voice = startSamplerNote({
+      context: context as never,
+      destination: context.createGain() as never,
+      buffer,
+      ratio: 1,
+      whenSeconds: 0,
+      seconds: 4.25,
+      releaseSeconds: 0.25,
+    });
+    const gain = context.createdGains.at(-1)!;
+    /** The ramp begins at 4.0 s and reaches zero at 4.25 s, so at 4.2 s it is a fifth of the way down. */
+    const before = valueAt(gain.gain, 4.2);
+    expect(before).toBeCloseTo(0.2, 6);
+    voice.takeOver({ ratio: 1, atSeconds: 4.2, endsAtSeconds: 8.25, releaseSeconds: 0.25 });
+    const after = valueAt(gain.gain, 4.2);
+    // The value written at the join is where the ramp had reached — 0.2, not the voice's full level and not zero.
+    expect(after).toBeCloseTo(before, 6);
+    // And the ramp the take-over scheduled reaches zero at the carried note's own end.
+    expect(gain.gain.events.at(-1)).toEqual({ type: "linearRampToValueAtTime", value: 0, time: 8.25 });
+  });
+
+  /**
+   * ⭐ **A voice whose end is fixed inside the node is refused, not half-moved.**
+   *
+   * A note started with `start(when, 0, seconds)` has its length in the node: the specification's `duration` is the
+   * seconds of buffer content to output, so a later `stop()` cannot pass it. Refusing is the only honest answer, and
+   * it is what keeps a "join" from shortening the note it was supposed to carry.
+   */
+  it("refuses to carry a voice whose length was scheduled inside the node", () => {
+    const context = new FakeAudioContext();
+    const voice = startSamplerNote({
+      context: context as never,
+      destination: context.createGain() as never,
+      buffer,
+      ratio: 1,
+      whenSeconds: 0,
+      seconds: 4.25,
+    });
+    expect(context.createdBufferSources[0]!.started).toEqual([{ when: 0, offset: 0, duration: 4.25 }]);
+    expect(voice.takeOver({ ratio: 2, atSeconds: 4, endsAtSeconds: 8.25 })).toBe(false);
+    // Nothing was changed: no second `stop`, and the rate is where it was.
+    expect(context.createdBufferSources[0]!.stopCalls).toEqual([]);
+    expect(context.createdBufferSources[0]!.playbackRate.events).toEqual([]);
+    expect(voice.currentRatio).toBe(1);
+  });
+
+  /** A voice that has already been choked or has run out is not carried: its recording is not sounding, so there is nothing to continue. */
+  it("refuses to carry a voice that is no longer sounding", () => {
+    const context = new FakeAudioContext();
+    const voice = startSamplerNote({ context: context as never, destination: context.createGain() as never, buffer, ratio: 1, whenSeconds: 0 });
+    voice.fadeOut(0.05);
+    expect(voice.ended).toBe(true);
+    expect(voice.takeOver({ ratio: 2, atSeconds: 0.1, endsAtSeconds: 4 })).toBe(false);
+  });
+
+  /** A caller that wants a portamento can ask for one; the default is a step, because a finger change is not a slide. */
+  it("slides to the new rate only when the caller asks for a glide", () => {
+    const context = new FakeAudioContext();
+    const voice = startSamplerNote({
+      context: context as never,
+      destination: context.createGain() as never,
+      buffer,
+      ratio: 1,
+      whenSeconds: 0,
+      seconds: 4.25,
+      releaseSeconds: 0.25,
+    });
+    voice.takeOver({ ratio: 2, atSeconds: 4, endsAtSeconds: 8.25, glideSeconds: 0.05 });
+    expect(context.createdBufferSources[0]!.playbackRate.events.at(-1)).toEqual({
+      type: "linearRampToValueAtTime",
+      value: 2,
+      time: 4.05,
+    });
+  });
+});

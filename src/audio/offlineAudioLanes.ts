@@ -38,6 +38,8 @@ import type { TempoPoint } from "../data/tempoMap";
 import { stepDuration } from "../data/noteLayer";
 import { deriveTrackStates } from "./trackStates";
 import type { SampleLoader, LoadedNote } from "./sampleLoader";
+import { planLegatoJoins, type LegatoJoinMark, type LegatoJoinReading } from "./legatoJoin";
+import type { LegatoVoiceReading } from "./legatoVoices";
 
 /**
  * **The one test for "this is an audio lane".**
@@ -84,6 +86,25 @@ export interface OfflineAudioLaneEvent extends OfflineAudioLaneRef {
   gainDb: number;
   /** The lane's position, −1…1, when it states one. The sink pans by it; `0` and absent are both centre. */
   pan?: number;
+  /**
+   * ⭐ **Which voice of its onset this note is** — the notes of one onset ranked by ascending pitch, lowest first.
+   *
+   * Written by `planLegatoJoins` for every pitched event of every lane it examined, so the voice layer can keep one
+   * sounding voice per rank and a later note can be handed the right one. Absent on a plain-sample event, which has
+   * no pitch and therefore no voice.
+   */
+  voiceRank?: number;
+  /**
+   * ⭐ **A handover instead of a new attack**, when the overlap rule says the join is legato (`src/audio/legatoJoin.ts`).
+   *
+   * Present means: **do not start this note's own recording from its start**. Continue the voice that is already
+   * sounding on this rank and move its pitch, carrying its playback position — the shape Kontakt's Time Machine
+   * Legato describes ("carry its current playback position over to each following note, rather than playing each
+   * Sample from the beginning"). The sink may still refuse, and it must **say so** rather than go silent: the one
+   * refusal the plan cannot see is whether the recording has enough left in it
+   * (`src/audio/legatoVoices.ts` owns that measurement).
+   */
+  legato?: LegatoJoinMark;
 }
 
 /** A lane that will not be heard, and why, named so a caller can act on it. */
@@ -98,6 +119,13 @@ export interface OfflineAudioLanePlan {
   lanes: OfflineAudioLaneRef[];
   /** One entry per lane that cannot, each carrying a reason. Nothing is dropped in silence. */
   problems: OfflineAudioLaneProblem[];
+  /**
+   * ⭐ **What the overlap rule decided**, computed here because it is a fact about the notes rather than about the
+   * audio: how many onsets landed on a chord that had not released, how many notes those were, and how many of
+   * them are handed over to the voice already sounding instead of starting their own attack
+   * (`src/audio/legatoJoin.ts`). Empty when no lane overlaps anything.
+   */
+  legato?: LegatoJoinReading;
 }
 
 export interface OfflineAudioLanePlanOptions {
@@ -383,7 +411,21 @@ export function planOfflineAudioLanes(
     lanes.push(ref);
   }
 
-  return { events, lanes, problems };
+  /**
+   * ⭐ **The overlap rule runs over the finished event list, here, as a pass with no audio in it.**
+   *
+   * It is applied at the end rather than while the events are being built because it is a fact about the plan as a
+   * whole — an onset is a chord only once every note of it has been placed, and whether a voice is still sounding
+   * is a question about seconds, which only exist after `stepTiming` has answered. Being a pass also means the rule
+   * can be judged on its own (`planLegatoJoins`) without a loader, a context or a catalogue.
+   */
+  const joined = planLegatoJoins(events);
+  return {
+    events: joined.events,
+    lanes,
+    problems,
+    ...(joined.reading.lanes.length > 0 ? { legato: joined.reading } : {}),
+  };
 }
 
 /** Where a sample is started, with what rate and position. The graph is injected, so this is the whole browser-independent contract. */
@@ -402,6 +444,18 @@ export interface OfflineAudioLaneSink {
    * last place they could be lost, and it was where they were lost.
    */
   start(buffer: AudioBuffer, event: OfflineAudioLaneEvent, ratio: number, note?: LoadedNote): void;
+  /**
+   * ⭐ **What the voice layer did with the plan's handovers, when it can say.**
+   *
+   * `event.legato` is a *request*: the plan can see that the previous voice has not released and that the pitch
+   * moves, and it cannot see whether that voice's **recording** has enough left in it to reach the end of the note
+   * it is being handed — that needs the decoded buffer, which only the sink has. So the sink may refuse a handover,
+   * and when it does it must start a fresh attack rather than go silent. This is where it reports how many it
+   * performed and why it refused the rest, so "the join was asked for and not made" cannot be mistaken for "the
+   * join was made". Absent means the sink does not perform handovers at all, which is the browser adapter's state
+   * before this existed and remains a valid one for a fake.
+   */
+  legatoReading?(): LegatoVoiceReading;
 }
 
 export interface OfflineAudioLaneReport {
@@ -423,6 +477,16 @@ export interface OfflineAudioLaneReport {
    * unreadable manifest must never turn into a silent, report-free render.
    */
   catalogueProblem?: string;
+  /**
+   * ⭐ **What the overlap rule decided, and what the voice layer could do with it.**
+   *
+   * `planned` is `planOfflineAudioLanes`' own reading — a fact about the notes, computed with no audio at all.
+   * `voices` is the sink's, present only when the sink performs handovers: how many of those requests became a
+   * carried voice and which ones it refused, with the reason. The two are kept apart because they answer different
+   * questions — "should this be legato?" and "could this recording be carried that far?" — and a single number
+   * would hide the second.
+   */
+  legato?: { planned: LegatoJoinReading; voices?: LegatoVoiceReading };
 }
 
 export interface OfflineAudioLaneScheduleInput {
@@ -499,10 +563,17 @@ export async function scheduleOfflineAudioLanes(input: OfflineAudioLaneScheduleI
    * reply has to be able to say both. A lane that failed before starting anything is only in `problems`.
    */
   const rendered = plan.lanes.filter((lane) => started.has(lane.trackIndex));
+  /**
+   * ⭐ **The sink is asked what it did with the handovers, after every note has been placed** — the one moment at
+   * which its reading is complete, and the one place where "the rule asked for 57 joins and the voice layer made 21
+   * of them, refusing 36 because the recording would have run out" can be reported as the two facts it is.
+   */
+  const voices = input.sink.legatoReading?.();
   return {
     lanes: rendered,
     events,
     problems,
+    ...(plan.legato ? { legato: { planned: plan.legato, ...(voices ? { voices } : {}) } } : {}),
     ...(input.catalogueProblem ? { catalogueProblem: input.catalogueProblem } : {}),
   };
 }

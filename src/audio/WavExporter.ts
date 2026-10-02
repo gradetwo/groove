@@ -64,7 +64,7 @@ import { applyGenreFxToGraph, resolveGenreFx } from "../data/genreFx";
 import { scheduleOfflineAudioLanes, isAudioLane, type OfflineAudioLaneReport } from "./offlineAudioLanes";
 import { sampledInstrumentProblems, sampledStandDownIndexes } from "./sampledLanes";
 import { browserSampleLoader } from "./browserSampleGraph";
-import { DEFAULT_SAMPLER_RELEASE_SECONDS, startSamplerNote } from "./samplerVoice";
+import { createOfflineSamplerSink } from "./samplerLaneSink";
 import { SAMPLE_CATALOGUE, type SampleAsset } from "../data/sampleCatalogue";
 import { bufferHasAudio, type ChannelDataBuffer } from "./renderSilence";
 
@@ -1768,63 +1768,19 @@ async function renderPatternOfflineOnce(
      * muted synth lane are silenced by one decision, and the lane planner cannot disagree with the render about who is playing.
      */
     const silencedTrackIndexes = mixerStates.map((state, index) => (silenced(state) ? index : -1)).filter((index) => index >= 0);
+    /**
+     * ⭐ **The lane's voices, and the ledger that carries one into the next note when the overlap rule says the join
+     * is legato** (`src/audio/samplerLaneSink.ts` owns the sink's rules, including the release and the loop
+     * declaration, and `src/audio/legatoVoices.ts` the carry). One ledger per render: what is sounding is a fact
+     * about this performance rather than about the pattern.
+     */
+    const sink = createOfflineSamplerSink({ context: ctx, destination: graph.musicBusInput });
     const report = await scheduleOfflineAudioLanes({
       pattern,
       catalogue: audioCatalogue,
       ...(options.audioLaneCatalogueProblem ? { catalogueProblem: options.audioLaneCatalogueProblem } : {}),
       loader: browserSampleLoader(ctx, audioCatalogue),
-      sink: {
-        start(buffer, event, ratio, note) {
-          /**
-           * ⭐ **The note's end reaches the voice, and that is the half that was missing.**
-           *
-           * `startSamplerNote` has always been able to end a note (`source.start(when, 0, seconds)`), and this call site never
-           * passed `seconds`, so every sampled note took its "no end scheduled" branch and rang until the render stopped — the
-           * drone Muse measured, and the reason a held note piled up one overlapping voice per step. `event.seconds` is the
-           * lane's own `gate` in seconds; for the plain-sample lane, whose bytes are the whole event, the buffer's own length is
-           * the end, which is the same recording played for exactly as long as it lasts.
-           *
-           * ⭐ **And the region's loop declaration crosses here too**, which it did not before. This sink is the only bridge
-           * between the lane planner and the voice, so an opcode that stops at this line does not exist as far as the render is
-           * concerned — which is exactly what had happened to `loop_mode`. `note` is absent for a plain-sample lane, which has no
-           * SFZ and therefore nothing that could declare a loop.
-           *
-           * ⭐ **And so does the release: a note the recording outlasts is given an end, not a cut.**
-           *
-           * `start(when, 0, seconds)` ends playback **at that instant** — the waveform is truncated mid-cycle, which is a step,
-           * and a step is a click. On the owner's own material that step is the sustained string bed *breaking* at every chord
-           * change (measured on `VlnEns_susVib_D3_v1.wav`: the largest sample-to-sample step in the note's last 60 ms falls from
-           * **3.4× the signal's own median step to 0.7×** once the voice is given a ramp instead, with the note's length
-           * unchanged). So a voice whose written length stops **before the recording would** is started with no scheduled length
-           * and ramped to silence over `DEFAULT_SAMPLER_RELEASE_SECONDS`, arriving at the same second through a ramp rather than
-           * a step (`samplerVoice` owns the shape, the clamp and the reason it defaults to the old behaviour).
-           *
-           * **The condition is the measurement, not a taste.** `recordingSeconds = buffer.duration / ratio` is how long the
-           * sample lasts at the rate this note plays it, so `seconds < recordingSeconds` is exactly "this voice is cut off while
-           * the recording still had sound in it" — the case a release is for. A percussive hit whose bytes end before the written
-           * gate is **left alone**: its own decay is its ending, and fading it would shorten a sound nobody truncated. A plain
-           * sample lane has `seconds === buffer.duration`, so it takes the old path by construction. A looping voice is given a
-           * ramp by nobody: `samplerVoice` schedules the loop's own end first, and the release is ignored there — see the branch
-           * order in that function rather than a second copy of the rule here.
-           */
-          const seconds = event.seconds ?? buffer.duration;
-          const recordingSeconds = buffer.duration / (Number.isFinite(ratio) && ratio > 0 ? ratio : 1);
-          startSamplerNote({
-            context: ctx,
-            destination: graph.musicBusInput,
-            buffer,
-            ratio,
-            whenSeconds: Math.max(0, event.atSeconds),
-            seconds,
-            ...(seconds < recordingSeconds ? { releaseSeconds: DEFAULT_SAMPLER_RELEASE_SECONDS } : {}),
-            ...(note?.loopMode === undefined ? {} : { loopMode: note.loopMode }),
-            ...(note?.loopStartFrames === undefined ? {} : { loopStartFrames: note.loopStartFrames }),
-            ...(note?.loopEndFrames === undefined ? {} : { loopEndFrames: note.loopEndFrames }),
-            ...(event.gainDb === 0 ? {} : { gainDb: event.gainDb }),
-            ...(event.pan === undefined ? {} : { pan: event.pan }),
-          });
-        },
-      },
+      sink,
       bpm,
       ...(patternTempo.length ? { tempoTrack: patternTempo } : {}),
       totalSteps,

@@ -63,6 +63,19 @@ export function playbackForNote(
 }
 
 /**
+ * **A playback ratio moved by an interval** — the same exponential as above, for a voice that is already playing.
+ *
+ * A legato join does not re-resolve a region: the recording that is sounding keeps playing and its rate moves to the
+ * next note (`src/audio/legatoVoices.ts`). That rate is `ratio × 2^(semitones/12)` — the region's own tuning and the
+ * buffer's own rate are unchanged, so the interval is the whole of the difference. It lives here beside the formula
+ * it is derived from, rather than being written out again at the call site, for the same reason the comment at the
+ * top of this file gives.
+ */
+export function shiftedRatio(ratio: number, semitones: number): number {
+  return ratio * Math.pow(2, semitones / 12);
+}
+
+/**
  * Why a note has no playback — for the reply a composer reads, which should name the range rather than say "nothing".
  *
  * This exists because "null" is not an error message. The nearest regions are reported so the answer to "why is there no sound on this key" is in the message.

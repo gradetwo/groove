@@ -117,6 +117,47 @@ export interface SamplerVoice {
   /** The node that was started, so a caller can stop it — a key release on a sustaining sample. */
   stop(whenSeconds?: number): void;
   /**
+   * ⭐ **Carry this voice on to the next note instead of starting that note's own recording.**
+   *
+   * ## What it is for, and where the shape comes from
+   *
+   * This is the voice half of "overlap is not legato" (`src/audio/legatoJoin.ts` decides *when*; this decides
+   * *what*). When a sustained chord is still sounding and the next chord's note is the same voice a finger's width
+   * away, a player does not draw a new attack — the bow keeps going and the pitch changes. Kontakt's own manual
+   * describes the mechanism in the same terms: with Time Machine **Legato** on, "Kontakt will carry its current
+   * playback position over to each following note, rather than playing each Sample from the beginning", and the
+   * Melody engine's version is explicit about the alternative — "if a previous sample is still playing the playback
+   * will not start from the sample's start marker, but instead it will follow the play position of the previous
+   * sample. If no other sample is playing, the playback will start as usual from the sample's start marker."
+   *
+   * So the recording **keeps playing** (the playback position is carried, nothing restarts) and the playback rate
+   * moves to the new note. The recording's own attack — the part the owner heard as the strings breaking — already
+   * happened, once, when this voice began, and it does not happen again.
+   *
+   * ## The three things it must not get wrong
+   *
+   *   · **A voice that cannot be extended is refused, not half-changed.** A note started with
+   *     `start(when, 0, seconds)` has its end *inside* the node: the specification's `duration` is "the duration of
+   *     sound to be played, expressed as seconds of total buffer content", so a later `stop()` cannot move it (the
+   *     specification's own rule is that the last `stop()` wins, "stop times set by previous calls will not be
+   *     applied" — but a `duration` bound is not a `stop()` time). Refusing is what keeps a "join" from shortening
+   *     a voice it was supposed to carry.
+   *   · **The gain must not jump.** The voice is at its own level when the join happens — which is also exactly
+   *     where the *previous* note's release ramp begins, because the measured overlap and the release window are
+   *     the same 0.25 s (`MIN_RELEASE_SECONDS`). The scheduled release is cancelled and the level is restored to
+   *     what the ramp had actually reached, which is the voice's own level again — zero jump in the measured case
+   *     and a continuous value in every other.
+   *   · **The pitch is a step, not a slide.** `glideSeconds` defaults to 0: SFZ's legato tutorial's own account of
+   *     a pitch glide is that "with the portamento time at zero, this is effectively the same as non-portamento
+   *     legato" (<https://sfzformat.com/tutorials/legato/>), and a finger change is not a slide. A caller that
+   *     wants the portamento can ask for one.
+   *
+   * Returns **whether the voice was carried**: `false` means nothing was changed and the caller must start the note
+   * as a fresh attack. The one case this layer cannot judge is whether the recording has enough left in it to reach
+   * `endsAtSeconds`; `src/audio/legatoVoices.ts` measures that before asking.
+   */
+  takeOver(input: SamplerVoiceTakeOverInput): boolean;
+  /**
    * **A choke is a fade, not a cut.** Measured with sfizz: when a hi-hat is choked by a note in the group its `off_by` names, the level goes 0.0500 → 0.0088 → 0.0038 → 0.0022 → 0.0007 over the fifty milliseconds after the choke — about a twentieth of a second to fall to one percent, and **not** an instantaneous stop. Stopping a voice dead is what makes a choked open hat click.
    *
    * `off_mode` was measured too, and made **no difference at all** in this build: `fast`, `normal` and absent produced identical readings in all eight windows, so there is nothing to implement for it beyond this one shape.
@@ -124,6 +165,12 @@ export interface SamplerVoice {
   fadeOut(seconds?: number): void;
   /** The rate it was started at, reported back so a criterion can check the pitch rather than the code path. */
   ratio: number;
+  /**
+   * **The rate it is playing at now** — the rate it was started at, until a take-over moves it. Reported separately
+   * from `ratio` so "which sample is this" and "what pitch is it at" stay two answers; a criterion that only read
+   * `ratio` would see a carried voice still claiming the pitch it began on.
+   */
+  currentRatio: number;
   /**
    * **Whether the sample was in fact repeating.** Reported rather than assumed, because it is the difference between
    * "the file asked for a loop" and "the loop the file asked for was usable": a `loop_end` that is not beyond the
@@ -136,6 +183,20 @@ export interface SamplerVoice {
    * `note_polyphony` is a cap on *sounding* voices, so counting them means knowing when one has ended — and a one-short drum hit ends by itself, long before anyone releases a key. The node says so through `onended`; without this, a caller counting voices would count hits that finished a minute ago and start refusing new ones.
    */
   ended: boolean;
+}
+
+/** What a take-over needs: the new pitch's rate, the instant it moves, and where the carried note now ends. */
+export interface SamplerVoiceTakeOverInput {
+  /** The playback rate for the note being moved to, on **this** voice's recording. */
+  ratio: number;
+  /** When the pitch moves, in context time. */
+  atSeconds: number;
+  /** When the carried note ends, in context time — the new note's own written end. */
+  endsAtSeconds: number;
+  /** A release for the new end, in seconds, when the recording still has sound at that end. Absent means the recording itself ends first. */
+  releaseSeconds?: number;
+  /** How long the pitch takes to move. Defaults to 0 — a step, not a slide (see `takeOver`). */
+  glideSeconds?: number;
 }
 
 export function startSamplerNote({
@@ -196,7 +257,8 @@ export function startSamplerNote({
     source.loopEnd = loopEndSeconds;
   }
   const gain = context.createGain();
-  gain.gain.value = Math.pow(10, gainDb / 20);
+  const levelGain = Math.pow(10, gainDb / 20);
+  gain.gain.value = levelGain;
   /**
    * A position of exactly zero is **not** wired through a panner: the graph a centred lane builds has to stay the one it built before this parameter existed, so
    * the only change is for a lane that asked for a side.
@@ -236,6 +298,19 @@ export function startSamplerNote({
   /** Whether this note's end — gain ramp and `stop` together — is already scheduled, so `stop()` must not cut into it. */
   let releaseScheduled = false;
   /**
+   * ⭐ **The release ramp this voice is on, so a take-over can put the level exactly where the ramp had reached.**
+   *
+   * `cancelScheduledValues` removes the ramp but cannot say what value it had got to, and `gain.gain.value` answers
+   * "the value now" rather than "the value at the join" — which are different questions the moment a ramp is in
+   * flight. A linear ramp is arithmetic, so the value at any instant inside it is written here instead of guessed:
+   * `level` at `start`, falling straight to 0 at `end`.
+   */
+  let releaseShape: { start: number; end: number; level: number } | undefined;
+  /** The rate the voice is playing at now — the starting rate until a take-over moves it. */
+  let currentRatio = safeRatio;
+  /** **Whether this voice's end can still be moved.** A length scheduled inside the node is a bound a later `stop()` cannot pass. */
+  const extendable = looping || releaseWindow !== undefined || seconds === undefined;
+  /**
    * **A looping source is given no scheduled length; it is given an end.** Measured, because the two are not the same
    * request: with `loop` set, `start(when, 0, duration)` still stops the source at `when + duration` — the Web Audio
    * specification says the loop attributes apply only while the playhead is inside `[loopStart, loopEnd)`, and a
@@ -258,16 +333,82 @@ export function startSamplerNote({
     source.stop(startedAt + seconds);
   } else if (releaseWindow !== undefined && seconds !== undefined) {
     source.start(startedAt);
-    gain.gain.setValueAtTime(gain.gain.value, Math.max(startedAt, startedAt + seconds - releaseWindow));
+    const rampStart = Math.max(startedAt, startedAt + seconds - releaseWindow);
+    gain.gain.setValueAtTime(levelGain, rampStart);
     gain.gain.linearRampToValueAtTime(0, startedAt + seconds);
     source.stop(startedAt + seconds + CHOKE_FADE_TAIL_SECONDS);
+    releaseShape = { start: rampStart, end: startedAt + seconds, level: levelGain };
     releaseScheduled = true;
   } else if (seconds === undefined) source.start(startedAt);
   else source.start(startedAt, 0, seconds);
+  /**
+   * **The level this voice is at, at a given instant** — its own level, or the point a release ramp had reached.
+   *
+   * Written as arithmetic rather than read from the parameter because the two questions are different: the parameter
+   * answers "what is the value now", and a join asks "what will it be at the instant the next note begins", which for
+   * a ramp in flight is somewhere between the level and silence.
+   */
+  const levelAt = (time: number): number => {
+    const shape = releaseShape;
+    if (!shape || time <= shape.start) return levelGain;
+    if (time >= shape.end) return 0;
+    return shape.level * ((shape.end - time) / (shape.end - shape.start));
+  };
   const voice: SamplerVoice = {
     ratio: safeRatio,
+    get currentRatio() {
+      return currentRatio;
+    },
     looping,
     ended: false,
+    /**
+     * ⭐ **The join: the recording stays where it is and the rate moves to the new note.**
+     *
+     * Written in the order the three mistakes would happen: refuse first (nothing may be half-changed), then move the
+     * rate, then put the level where the ramp had reached, then move the end — and only then claim the end was
+     * scheduled, so a caller's `stop()` still cannot cut inside the new ramp.
+     */
+    takeOver({ ratio: nextRatio, atSeconds, endsAtSeconds, releaseSeconds: takeOverRelease, glideSeconds = 0 }): boolean {
+      if (!extendable || voice.ended) return false;
+      if (!Number.isFinite(atSeconds) || !Number.isFinite(endsAtSeconds) || endsAtSeconds <= atSeconds) return false;
+      const at = Math.max(0, atSeconds);
+      try {
+        const safe = Number.isFinite(nextRatio) && nextRatio > 0 ? nextRatio : currentRatio;
+        /**
+         * **The rate is held at what it is, then moved.** `cancelScheduledValues(at)` removes a ramp still in flight
+         * (there is none today, and holding it costs one event), and a rate that is written twice at the same instant
+         * is the later write — so this is "the rate it had" followed by "the rate it now has".
+         */
+        source.playbackRate.cancelScheduledValues(at);
+        source.playbackRate.setValueAtTime(currentRatio, at);
+        if (glideSeconds > 0) source.playbackRate.linearRampToValueAtTime(safe, at + glideSeconds);
+        else source.playbackRate.setValueAtTime(safe, at);
+        currentRatio = safe;
+        /** **The level is restored, not reset**: see `releaseShape` for why the ramped value is arithmetic rather than a read. */
+        const held = levelAt(at);
+        gain.gain.cancelScheduledValues(at);
+        gain.gain.setValueAtTime(held, at);
+        releaseShape = undefined;
+        releaseScheduled = false;
+        if (takeOverRelease !== undefined && Number.isFinite(takeOverRelease) && takeOverRelease > 0) {
+          const window = Math.min(takeOverRelease, (endsAtSeconds - at) * 0.4);
+          if (window > 0) {
+            const rampStart = Math.max(at, endsAtSeconds - window);
+            gain.gain.setValueAtTime(held, rampStart);
+            gain.gain.linearRampToValueAtTime(0, endsAtSeconds);
+            releaseShape = { start: rampStart, end: endsAtSeconds, level: held };
+            releaseScheduled = true;
+          }
+        }
+        /** The last `stop()` wins (Web Audio specification, `AudioScheduledSourceNode.stop`), so this moves the end rather than adding a second one. */
+        source.stop(endsAtSeconds + CHOKE_FADE_TAIL_SECONDS);
+        voice.ended = false;
+        return true;
+      } catch {
+        /** A closed context, or a voice that never started: refusing is the only safe answer, and the caller starts the note as a fresh attack. */
+        return false;
+      }
+    },
     /**
      * The fade a choke uses, and why it exists rather than just calling `stop`: a hard stop on a sounding voice is a step in the waveform, and a step is a click. The measurement above says sfizz spends about fifty milliseconds getting to one percent, so the ramp ends there and `stop` is scheduled a hair after it — scheduling the stop **before** the ramp finishes would cut off the very fade it was asked for.
      */
