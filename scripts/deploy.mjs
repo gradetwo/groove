@@ -86,6 +86,37 @@ if (!env.CLOUDFLARE_API_TOKEN) {
   );
 }
 
+/**
+ * ⭐ **The worker configuration is machine-local on purpose, and this is the gate that says so.**
+ *
+ * `.gitignore` keeps `wrangler.toml` out of the repository, so only `wrangler.toml.example` is tracked, and the
+ * example's own first line says the real file "names *your* worker". A checkout that has never deployed therefore
+ * has no configuration at all — and wrangler's own error for that (`Missing entry-point to Worker script or to
+ * assets directory`) arrives *after* everything this script checks, says nothing about which file to create, and
+ * is indistinguishable from a repository that lost its build. That happened on 2.34.38, which is why this check
+ * exists, why it runs before the build is touched, and why it names the exact command.
+ */
+const WRANGLER_CONFIG_FILES = ["wrangler.toml", "wrangler.json", "wrangler.jsonc"];
+const wranglerConfigPath = WRANGLER_CONFIG_FILES.map((file) => path.join(ROOT, file)).find((candidate) =>
+  fs.existsSync(candidate)
+);
+if (!wranglerConfigPath) {
+  console.error(
+    [
+      "\u274c no wrangler configuration in this checkout \u2014 nothing has been deployed.",
+      `   Looked for: ${WRANGLER_CONFIG_FILES.join(", ")}`,
+      "   The real file is git-ignored because it names *your* worker, so a fresh checkout must create it:",
+      "     cp wrangler.toml.example wrangler.toml",
+      "   and set `name` to the worker name in your own Cloudflare account.",
+      "   Then check the credentials this script also needs:",
+      "     npx wrangler whoami     # must not answer \"You are not authenticated\"",
+      "   or put CLOUDFLARE_API_TOKEN in ./.env.deploy (see .env.deploy.example).",
+      "",
+    ].join("\n")
+  );
+  process.exit(1);
+}
+
 if (!fs.existsSync(path.join(ROOT, "dist", "index.html"))) {
   console.error("\u274c dist/index.html not found \u2014 run `npm run build` first.");
   process.exit(1);
