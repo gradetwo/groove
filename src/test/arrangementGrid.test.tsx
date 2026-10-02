@@ -315,8 +315,10 @@ describe("the playhead and the play-start are two indicators", () => {
 
   it("moves the play-start when the ruler is clicked, and not the playhead", () => {
     /**
-     * Bitwig's "single click in the upper ruler sets the play start". The playhead follows the transport, which this
-     * route's audio path does not report — so a ruler click moving the playhead would be a picture of a guess.
+     * Bitwig's "single click in the upper ruler sets the play start". ⭐ The playhead follows the **transport** and this
+     * render injects none — no `player`, so no transport to follow and the line holds the `playheadBar` it was given —
+     * which is why a ruler click moving it would be a picture of a guess. The live path is judged in
+     * `arrangementTransport.test.tsx`, where a transport is driven step by step.
      */
     renderView({ playheadBar: 2 });
     fireEvent.click(screen.getByTestId("ruler-bar-4"));
