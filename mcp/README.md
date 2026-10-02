@@ -43,8 +43,21 @@ On Windows the `command` is `node.exe` and the path uses backslashes.
 | `GROOVE_MCP_OUT` | a fresh temp directory per call | where `render_audio` writes |
 | `GROOVE_MCP_ROOT` | the working directory | the repo root the renderer should serve (set it if you launch from elsewhere) |
 | `GROOVE_MCP_APP_URL` | `https://groove.wangda.today` | the origin `share_url` links to |
-| `GROOVE_MCP_NO_BROWSER` | unset | `1` disables `render_audio` (everything else still works) |
+| `GROOVE_MCP_NO_BROWSER` | unset | `1` disables the **browser** render paths (everything else still works). `render_arrangement` with `headless: true` still renders — on the Node Web Audio host instead of Chromium |
 | `GROOVE_MCP_PORT` | `5399` | the dev-server port the renderer uses |
+
+### The headless (Node) render host
+
+`render_arrangement` takes `headless: true`, which renders through the app's own `renderPatternOffline` under
+`node-web-audio-api` with **no browser process** — useful where Chromium is unavailable, and it works under
+`GROOVE_MCP_NO_BROWSER=1`. The optional package is not declared in `package.json` on purpose; install it with
+`npm i -D node-web-audio-api` and the tool will use it. Without it the call **errors and names the package** rather
+than quietly rendering through Chromium, and the reply's `engine` field always says which host produced the file.
+
+⚠️ **The two hosts are not the same sound yet.** On the parity probe's fixture the Node host differs from the browser
+by 1.28 dB in band 6, 1.11 dB in band 3 and 1.774 LU of loudness; `docs/HEADLESS_CORE_PLAN.md` §8.9/§8.10 records the
+measurements, the named cause and the plan to converge. This entry exists so the path is available and labelled while
+that work is open — not because the gap is closed.
 
 ## What an agent can do with it
 

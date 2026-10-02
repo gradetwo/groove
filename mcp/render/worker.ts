@@ -9,6 +9,15 @@
  *
  * The cost is a browser process, so it is started **lazily** — only the two audio tools need it — and torn down
  * when the server exits. `GROOVE_MCP_NO_BROWSER=1` refuses instead, which is what a locked-down deployment wants.
+ *
+ * ## And, opt-in, the same renderer under a Node host
+ *
+ * `options.headless` (see `mcp/render/headless.ts`) runs the *same* `renderPatternOffline`, worklets and GS-1 wasm
+ * under `node-web-audio-api` with no browser at all. It is deliberately **off by default and honest about why**: the
+ * parity probe measures the two hosts still differing by three sentences (1.28 dB band 6, 1.11 dB band 3, 1.774 LU),
+ * recorded in `docs/HEADLESS_CORE_PLAN.md` §8.9. What the flag buys today is an entry — a deployment with no browser
+ * can render and the caller is told which host produced the file — and what it is not is a claim that the two sounds
+ * have converged. The branch never falls back: if the optional package is missing the call errors and says so.
  */
 import os from "node:os";
 import path from "node:path";
@@ -85,6 +94,20 @@ export interface RenderOptions {
    * the call, not of global state a second render could satisfy by accident.
    */
   progress?: ProgressReporter;
+  /**
+   * Render on the **Node Web Audio host** instead of Vite + Chromium (`mcp/render/headless.ts`).
+   *
+   * Opt-in and explicit, because the two hosts are **not yet the same sound**: `scripts/probe_headless_parity.ts`
+   * measures them differing by 1.28 dB in band 6, 1.11 dB in band 3 and 1.774 LU of loudness on its own fixture, and
+   * `docs/HEADLESS_CORE_PLAN.md` §8.9/§8.10 names the kick channel strip's host compressor as the cause. The flag
+   * exists so a caller can *choose* that host — a deployment with no browser, or a cheaper cold start — while the
+   * divergence is still open, and it is recorded rather than smoothed over.
+   *
+   * The branch does **not** fall back: a missing `node-web-audio-api` throws the message from
+   * `headlessUnavailableMessage()` and no browser render is started. It is also deliberately **not** wrapped in
+   * `withRenderTimeout`: that budget resets a stuck *page*, and an in-process render has no page to reset.
+   */
+  headless?: boolean;
 }
 
 export interface RenderResult {
@@ -126,6 +149,14 @@ export interface RenderResult {
    * difference between "the server retried and told me" and "the server retried and said nothing".
    */
   problems: string[];
+  /**
+   * **Which Web Audio host produced this file**, so "headless" is never something a caller has to infer.
+   *
+   * `browser` is the Vite + Chromium page every render has always used; `node-web-audio-api` is the opt-in headless
+   * host. The field is in every reply on purpose: the failure this line of work keeps meeting is a *silent* fallback,
+   * and a reply that names its own engine cannot be one.
+   */
+  engine: "browser" | "node-web-audio-api";
 }
 
 interface RendererState {
@@ -459,6 +490,23 @@ export interface RenderAudioPayload {
  * agent than "here is a 4-bar WAV, 8.1 s, -1.3 dBTP, -14.2 LUFS, and the hi-hat is 12 dB above the chords".
  */
 export async function renderAudio(pattern: SequencerPattern, options: RenderOptions): Promise<RenderResult> {
+  /**
+   * ⭐ **The headless branch is first, it is explicit, and it does not fall through.**
+   *
+   * The order matters: it sits **above** the `GROOVE_MCP_NO_BROWSER` refusal because the Node host needs no browser, and
+   * it `return`s rather than assigning a variable, so there is no path from here into `ensurePage` — a caller that asked
+   * for the Node host either gets it or gets an error naming the missing package. That is the whole point of the
+   * criterion in `src/test/mcpHeadlessRender.test.ts`.
+   */
+  if (options.headless === true) {
+    const catalogueRead = readAudioLaneCatalogue(pattern);
+    const { renderPatternHeadless } = await import("./headless");
+    const payload = await renderPatternHeadless(pattern, options, catalogueRead, {
+      publicRoot: path.join(appRoot(), "public"),
+      sampleRoot: sampleMirrorRoot(),
+    });
+    return finishRenderAudio(payload, pattern, options, catalogueRead, "node-web-audio-api");
+  }
   if (process.env.GROOVE_MCP_NO_BROWSER === "1") {
     throw new Error("audio rendering is disabled (GROOVE_MCP_NO_BROWSER=1); the library, pattern, MIDI and share tools do not need a browser");
   }
@@ -503,7 +551,7 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
   }
   progress?.report(RENDER_BUDGET_MS, "render finished; writing the file");
 
-  return finishRenderAudio(result, pattern, options, catalogueRead);
+  return finishRenderAudio(result, pattern, options, catalogueRead, "browser");
 }
 
 /**
@@ -718,7 +766,9 @@ function finishRenderAudio(
   result: RenderAudioPayload,
   pattern: SequencerPattern,
   options: RenderOptions,
-  catalogueRead: AudioLaneCatalogueRead
+  catalogueRead: AudioLaneCatalogueRead,
+  /** Which host produced `result`; carried into the reply so a caller can never be told the wrong engine. */
+  engine: RenderResult["engine"]
 ): RenderResult {
   const dir = outputDirectory(options);
   const bpm = pattern.bpm ?? 120;
@@ -762,6 +812,7 @@ function finishRenderAudio(
         ? { ...(result.audioLanes ?? { lanes: [], events: 0, problems: [] }), catalogueProblem: catalogueRead.problem }
         : result.audioLanes ?? { lanes: [], events: 0, problems: [] },
     problems: result.problems ?? [],
+    engine,
   };
 }
 

@@ -641,3 +641,104 @@ HPF → low shelf → peaking → high shelf → [压缩器] → makeup gain →
 **判据（真行为，不是读源码）** ✓✓：**既有台架本来就在 Node 里构造那个 processor** ✓（`glueCompressorWorklet.test.ts:30-45` ✓）——**所以三条用例直接驱动消息这条路** ✓：**每个字段都跟着消息变 ✓、省略速率回落到作用域 ✓、构造路径原样不变（总线不受影响 ✓）** ✓✓。**反向：把消息入口关掉，两条立刻红** ✓（**`expected undefined to be type of 'function'` ✓**）。
 
 **⇒ 剩下的那一半（下一件）** ✓✓：**在 `ChannelStripDsp` 里把它接上** ✓——**按需创建一个 worklet 节点、每次重建时把 `comp*` 发过去 ✓**，**判据仍是探针那两条频段断言** ✓（**响度预期仍红，它最多贡献 0.508 LU** ✓）。
+
+## 9. 无头渲染的 MCP 入口：**先提供、后收敛**（2026-10-02，`headless-mcp`）
+
+**业主要求（逐字）** ✓✓：
+
+> **"无头尽快推进（可以先在mcp中提供，有些不一致先搁置，记录后后续修改和完善）"**
+
+**⇒ 这一节记录的就是**提供出来的那一个入口** ✓**、**它已知的不一致** ✓**、**以及为什么选择"先提供"** ✓。
+
+### §9.1 提供了什么，以及怎么用
+
+**`render_arrangement` 新增一个可选布尔参数 `headless`** ✓：
+
+| 调用 | 走哪条路 |
+| --- | --- |
+| `render_arrangement { arrangementId, … }`（**不带 `headless`**） | **不变** ✓——Vite + Chromium 页面（`mcp/render/worker.ts` 的 `ensurePage` ✓） |
+| `render_arrangement { arrangementId, headless: true }` | **Node Web Audio 宿主** ✓（`mcp/render/headless.ts` ✓，`node-web-audio-api` ✓） |
+
+**可直接复制的一例** ✓✓（**MCP 的 `tools/call`** ✓）：
+
+```json
+{ "name": "render_arrangement",
+  "arguments": { "arrangementId": "arr_xxx", "headless": true, "sampleRate": 8000, "channels": 1, "bars": 1 } }
+```
+
+**回复新增 `engine` 字段** ✓✓：`"browser"` 或 `"node-web-audio-api"` ✓——**它是"没有静默回落"的可判据形式** ✓：**一个会骗人的回落必须同时在回复里说谎** ✓。
+
+**⚠️ 无头路径需要可选依赖** ✓：`npm i -D node-web-audio-api` ✓（**仍然**故意不写进 `package.json`** ✓，理由见本文件前面的成本条 ✓**）。**缺它时**报错并指名** ✓✓，**绝不用 Chromium 顶替** ✗。
+
+**为什么是"给一个现有工具加布尔参数"，不是"新开一个工具"** ✓✓（**量过之后的选择** ✓）：
+
+* **判据需要的是一处可判定的引擎选择，不是第六个渲染工具** ✓——新工具要付：一份新 schema、**两份** `RENDER_TOOLS` 名单（`scripts/check_mcp.mjs:169` ✓ 与 `src/test/budgetHonesty.test.ts:74` ✓）、一条新预算句、一行新 `docs/MCP.md` ✓；**加参数只动一处** ✓；
+* **选 `render_arrangement` 而不是 `render_audio`** ✓✓：**无头路径的收益是"没有浏览器进程"** ✓，而 `render_arrangement` 是这套表面里**项目级**的导出 ✓，**并且是唯一同时带 `sampleRate` 与 `channels` 的渲染工具** ✓✓——**那正好让"真渲染"的判据跑在 8 kHz 单声道上** ✓：**实测 3.9 s** ✓，而不是 44.1 kHz 立体声那 18-24 s ✓（`mcp/render/budget.json` 的 `oneBarWallSec` ✓）。
+
+### §9.2 已知不一致：**搁置，但记录在工具描述里** ✓✓
+
+| 量 | 浏览器 | 无头 | 差 | 容差 | 状态 |
+| --- | --- | --- | --- | --- | --- |
+| 最差 13 段（GS-1 ON） | — | — | **1.28 dB（band 6）** | 1.0 dB | ✗ |
+| 最差 13 段（GS-1 OFF） | — | — | **1.11 dB（band 3）** | 1.0 dB | ✗ |
+| 积分响度（GS-1 ON） | **−13.63 LUFS** | **−15.41 LUFS** | **1.774 LU** | 0.5 LU | ✗ |
+
+**原因指向** ✓✓（**§8.9／§8.10 ✓**）：**二分具名的是 `kick` 轨的通道条压缩器** ✓——**`src/audio/ChannelStripDsp.ts:188` 的 `ctx.createDynamicsCompressor()` 仍在宿主上** ✗；**探针 `--no-kick-comp` 把响度差降到 1.266 LU、让两条频段进容差** ✓。**它最多贡献 0.508 LU** ✓，**所以响度那条至少还有第二个原因，而那个原因还没有量** ✓。
+
+**这三行**写进了 `headless` 的 `.describe()`** ✓✓（`mcp/registry.ts` ✓）：**三个数字、原因所在文件（`ChannelStripDsp.ts:188`）、以及 `docs/HEADLESS_CORE_PLAN.md` 的指向** ✓——**模型在 `tools/list` 里就能读到"这两个宿主还不是同一个声音"** ✓，**不必从回复里猜** ✗。**同一段话也进了 `docs/MCP.md` 的工具表** ✓。
+
+### §9.3 判据：两个方向，各有反向
+
+**入口本身**（`src/test/mcpHeadlessRouting.test.ts` ✓，**不依赖可选包** ✓，**15 ms** ✓）——**把 `GROOVE_MCP_NO_BROWSER=1` 当成"浏览器被禁止"的裁判** ✓✓：
+
+1. **①无头方向** ✓：`headless: true` 时，**Node 宿主模块被调用** ✓、**`headless` 一路传到它** ✓（schema → handler → worker → 模块 ✓）、**而浏览器那句拒绝语**不出现**** ✓——**"静默回落"正好会产出那句话** ✓；
+2. **②默认方向** ✓：**不带 `headless`** 时 Node 宿主**零调用** ✓、**判定落在浏览器路径** ✓；
+3. **schema 面** ✓：参数真的声明了 ✓，**且三个数字与文档指向都在它的 `.describe()` 里** ✓。
+
+**真渲染**（`src/test/mcpHeadlessRender.test.ts` ✓，**可选包缺失时**大声 SKIP** ✓**，本机 **3.9 s** ✓）：**在 `GROOVE_MCP_NO_BROWSER=1` 下** ✓（**浏览器不是"没被选"，而是不可用** ✓✓）**渲染夹具** ✓（**探针同一份三轨、含一条 GS-1 轨** ✓），**断言** ✓：`engine === "node-web-audio-api"` ✓、**文件是 RIFF 且 >1000 字节** ✓、**真峰值与积分响度都是有限值**（**静音没有真峰值** ✓）、**真峰值 > −40 dBFS** ✓。
+
+**反向（实测，不是推断）** ✓✓：**把 `worker.ts` 里 `if (options.headless === true)` 那条分支拿掉** ✗ → **`npx vitest run` 两个文件** ✓：
+
+```
+× render_audio on the Node Web Audio host > writes a real WAV with the browser forbidden
+  → audio rendering is disabled (GROOVE_MCP_NO_BROWSER=1); …
+× render_arrangement's two engines > sends headless: true to the Node host
+  → the Node host must have been reached: expected [] to have a length of 1 but got +0
+Tests  2 failed | 2 passed (4)
+```
+
+**⇒ 两条 ① 全红，而两条 ②（默认路径）保持绿** ✓✓——**这正是要的形状** ✓。**恢复分支后 3/3 + 1/1 全绿** ✓。
+
+**协议自检** ✓：`npm run check:mcp` ✓（**改 schema 的必跑项** ✓）——**构建 + 真 JSON-RPC 客户端列出工具** ✓，**123 项 0 失败** ✓。
+
+**构建产物（bundle）级实测** ✓✓——**vitest 看不到这一层** ✓：**`createRequire` 在 5.4 MB 的 ESM 产物里能不能解析到原生 addon、`appRoot()` 在产物里能不能找到 `public/`** ✓。**用一个临时的 stdio 客户端驱动 `dist-mcp/groove-mcp.mjs`** ✓（`GROOVE_MCP_NO_BROWSER=1` ✓）：
+
+```
+engine: node-web-audio-api
+truePeakDb: -1.299920873432343    integratedLufs: -15.909876505390999
+limiterKind: worklet              problems: []
+default path: audio rendering is disabled (GROOVE_MCP_NO_BROWSER=1); …
+tools/list headless param: …,channels,headless,startBar,endBar
+divergence note served: true true true
+```
+
+**⇒ 同一个进程里三件事同时成立** ✓✓：**`headless: true` 出真音频**（**−1.30 dBTP／−15.91 LUFS，`limiterKind: "worklet"`＝worklet 真的加载了 ✓**）、**不带它就落回浏览器那句拒绝** ✓、**schema 与那三个数字真的发给了客户端** ✓。
+
+**⚠️ 顺带一条**真实的**教训** ✓✓：**第一次跑这个产物探针时 `problems` 说"这次渲染是静音的：整个 pattern 没有任何可发声的步进"** ✓——**`create_arrangement { templateId }` 只建轨道、不写音符** ✓，**而渲染器**没有**把静音当成功** ✗✓✓（**`truePeakDb` 是 `null`／−∞ ✓**）。**判据夹具必须自己写音符** ✓，**否则量到的是空工程** ✓。
+
+### §9.4 ⚠️ 这一版**没有**做到的部分（**记录，不假装** ✓）
+
+* **只有 `render_arrangement` 有入口** ✗：`render_audio`／`render_song`／`render_preview_clip`／`render_arrangement_stems` **仍然只有浏览器路径** ✓（**先一个入口，把判据立住** ✓）；
+* **构建产物变大** ✗✓（**实测，不是估计** ✓）：**4739 KB → 5439 KB（+700 KB，+14.8%** ✓，`scripts/build_mcp.mjs` 自己的输出 ✓）——**因为 `worker.ts` 现在动态 `import` 了 `headless.ts`，而后者拖进整个离线引擎图** ✓。**没有任何体积闸门拦它** ✓（`check_mcp_build.mjs` 只比版本字符串 ✓）；**代价换来的正是"没有浏览器也能渲染"** ✓，**而如果这个代价不可接受，出路是让无头路径按源码加载引擎而不是把它打进产物** ✗——**那需要另一个加载器，不在这一版里** ✓；
+* **无头路径不走渲染预算** ✓：`withRenderTimeout` 的用途是**重置卡住的页面** ✓，**进程内渲染没有页面可重置** ✓——**这一点写在参数描述里** ✓，**客户端的超时是这条路上唯一的顶** ✓；
+* **无头路径不发 `progress`** ✗：`render_arrangement` 会把 reporter 传下去 ✓，**而无头分支没有"启动页面"这个阶段可报** ✓——**带 `progressToken` 的调用在这条路上是安静的** ✓（**与浏览器路径不同** ✗，**尚未补** ✓）；
+* **MP3 在无头路径上没有实测** ✗：判据只渲染 WAV ✓；**实现里 MP3 分支存在** ✓，**但没有量过** ✓；
+* **`trackPeaks` 在无头路径上按页面那份逐字照抄** ✓（**包括页面不传采样率的那个形状** ✓），**今天没有 MCP 工具会打开它** ✓——**所以它没有判据** ✓；
+* **探针不进本地闸门** ✓：`probe:headless` 要 Chromium 与几分钟 ✓，**本机不跑** ✓（**全量交 GitHub 的 `dev` 门禁** ✓）。
+
+### §9.5 为什么"先提供、后收敛" ✓✓
+
+* **卡住的不是入口，是那 1.774 LU 的第二个原因** ✗——**而它需要先在通道条那一件落地之后重新量** ✓（**§8.10 的规矩：先量，再假设** ✓）；
+* **入口本身可以现在就诚实** ✓✓：**回复说清哪个宿主** ✓、**参数说清差多少** ✓、**缺依赖时指名报错而不是回落** ✓——**这三条都不依赖对等转绿** ✓；
+* **⇒ 于是"提供"不制造技术债** ✓，**只制造一条**被标注的**已知差** ✓——**而"搁置"是业主要求的、写下来的搁置** ✓，**不是忘掉** ✓。
+

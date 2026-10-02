@@ -392,7 +392,8 @@ export const TOOLS: ToolDefinition[] = [
       "Render an arrangement to audio through the same offline engine the song and pattern tools use. **An arrangement has its own length** — its own bars (`set_arrangement_bars`, eight by default) and its own notes — so one pass bounces the whole arrangement rather than a loop; `bars` repeats that pass. Ask for what the arrangement is with `get_arrangement`, which reports `bars` and `steps`. **Audio lanes are mixed**: a `sampler` track's notes are resolved through the app's own SFZ loader and placed at their own steps, a lane with a sample and no notes is played once at the arrangement's start, and a lane whose bytes cannot be resolved is named in `skippedLanes` with the reason rather than dropped. " +
       renderCostSentence() +
       " " +
-      renderBudgetSentence(),
+      renderBudgetSentence() +
+      " Pass `headless: true` to render through the Node Web Audio host instead of Chromium — the parameter carries the measured differences between the two hosts, which are **not yet zero**.",
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
@@ -407,6 +408,24 @@ export const TOOLS: ToolDefinition[] = [
         .describe("1 is one pass through the whole arrangement; raising it repeats the arrangement, and it drives the duration the description quotes"),
       sampleRate: z.number().int().min(8000).max(96000).optional().describe("render rate; 8000 makes an analysis pass about a fifth of the work — and the rate is one of the two things that drives the duration the description quotes"),
       channels: z.number().int().min(1).max(2).optional().describe("1 for a mono analysis render"),
+      /**
+       * ⭐ **The one explicit engine choice on the MCP surface, and the reason it is explicit.**
+       *
+       * `mcp/render/headless.ts` runs the app's own renderer under `node-web-audio-api`, which needs no browser at all —
+       * but it is **not yet the same sound** as the browser render, and `scripts/probe_headless_parity.ts` measures by how
+       * much. A caller choosing it must be able to read that before choosing, so the numbers are here rather than in a
+       * document nobody opened. `docs/HEADLESS_CORE_PLAN.md` §8.9/§8.10 is where they come from and where the plan to
+       * close them lives.
+       */
+      headless: z
+        .boolean()
+        .optional()
+        .describe(
+          "render through the **Node Web Audio host** (`node-web-audio-api`) instead of Vite + Chromium — no browser process, and it also works under GROOVE_MCP_NO_BROWSER=1. " +
+            "⚠️ **The two hosts are not identical yet.** On the parity probe's own fixture, measured against the browser render, the worst 13-band difference is **1.28 dB in band 6** (GS-1 on) and **1.11 dB in band 3** (GS-1 off), with a **1.774 LU** integrated-loudness gap; the named cause is the kick channel strip's host compressor (`src/audio/ChannelStripDsp.ts:188`), still a browser `createDynamicsCompressor()`. " +
+            "The numbers, the two substitutions already landed and the plan to converge are in **docs/HEADLESS_CORE_PLAN.md** (§8.9 and §8.10); the reply's `engine` field says which host actually rendered. " +
+            "**This never falls back**: if the optional package is missing the call errors and names it, rather than quietly rendering through Chromium. The server's render budget is **not** applied to this path (it resets a stuck page, and an in-process render has no page to reset), so a client that needs a ceiling owns it."
+        ),
       /**
        * ⭐ **A span of bars, so part of a long arrangement can be heard without rendering all of it.** Both are
        * needed together: `startBar` alone would mean "from here to the end", which is a different request and not
@@ -455,6 +474,8 @@ export const TOOLS: ToolDefinition[] = [
           bars: passes,
           bitrateKbps: args.bitrateKbps as number | undefined,
           genreId: "custom",
+          // Absent when the caller did not ask for it, so "default engine" is a missing key rather than `false`.
+          ...(args.headless === true ? { headless: true } : {}),
           ...(ctx?.progress ? { progress: ctx?.progress } : {}),
         });
         /**
