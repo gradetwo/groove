@@ -2785,3 +2785,30 @@ sitar_lead 1 ｜ pluck_string 1 ｜ organ_lead 1 ｜ muted_trumpet 1 ｜ marimba
 **且不需要任何"更贴"的判断**（**用户显式选择 ≠ 本仓对某首曲子做声明** ⇒ **与"错的乐器比合成器更糟"那条纪律不冲突** ✓）。
 **⚠️ 而排期上排在 A／B／C **之后** ✓：**三条线已在占 CI（长套件每笔重跑全量）⇒ 不加第四条** ✓。
 **何时回来**：**A／B／C 落地并绿之后开线**；**开线时先出一份**设计**（放哪、什么形态、判据化什么：选择器只许列出**清单里真的存在**的资产；选中后 lane 的 `assetId` 可核；**不许**改任何调色板行**）✓。
+
+## 九十、两条线的关键更正与裁定（2026-10-03 ✓，**均已 push 前押后，待发布窗口关闭** ✓）
+
+### 90.1 第一条线（读 WAV `smpl`）✓✓
+
+* **⚠️ 任务的"预期 0"是错的、并被实测推翻** ✓：**`vsco2ce` 1830 个 WAV 里 **6 个带 `smpl`****（`Keys/Upright Nr1/UR1_{C6,C7,G6,G7}_pp_RR{1,2}.wav`，其 SFZ 不写 loop）⇒ **这 6 条会开始循环** ⇒ **真实副作用，登记为待业主听感裁定** ✓；
+  **`freepats-percussive-organ` 32/32 也带 `smpl`**，**但它自己的 SFZ 写了 `loop_mode=loop_continuous`＋loop_start/end ⇒ SFZ 胜出、行为不变** ✓；**bigcat 136/136（82.2 MiB）、cyborgs 224/224** 已独立复核 ✓；
+  **⚠️ 且 bigcat 的 `smpl` 块在 `data` **之后**** ⇒ **只读文件头找不到**（它用 Range 逐块跳读，不下载音频体 ✓）。
+* **§28 有决定性出处** ✓：sfzformat `loop_mode` 原文「**the player will play the sample looped using the first defined loop**」＋默认值栏「**no_loop** for samples without a loop defined, **loop_continuous** for samples with defined loop(s)」；`loop_start`/`loop_end` 重复同义；**`one_shot` 条明写 "the loop points are disregarded"** ⇒ **"显式不循环胜过 WAV"就是规范原文** ✓；sfizz issue #202 佐证 ✓；**Kontakt 一手原句**未找到****（按规矩写"未找到" ✓）。
+* **裁定（它做、我批准）** ✓✓：**循环参与连奏的"录音够不够"判断** —— 改前 **15 拒** ⇒ 改后 **15 接**；**12 s 长音末尾 RMS 0.000000 → 0.482517**、最后非零帧 **9.220 → 16.000 s**；依据＝规范（`loop_continuous` 是 "until note expiration"）＋ 实测 ＋ **§26**（拒绝的后果**不是静音而是重新起音**，在能循环的库上那正是要修的"断" ✓）。
+* **反向判据保住** ✓：`ownerProjectAcceptance` **期望值一字未改**，实跑仍 **57→25／3→1／60→28**；并加一条**真文件**反向判据（业主工程实际播的 `VlnEns_susVib_D3_v1.wav` **无 `smpl`** ⇒ no-op ✓）。
+* **⚠️ 一处**越界未做**（如实 ✓）**：只接了**离线导出**（`WavExporter`）；**实时两条路的入口 `browserSampleGraph.ts` 不在它地盘** ⇒ **实时今天仍只有 SFZ 循环** ⇒ **未做、不是已排除** ✓。
+
+### 90.2 第三条线（调色板接线）✓✓
+
+* **✗✓ 更正我的数**：**`ALL_SAMPLED_INSTRUMENTS` 是 **48 行**（22 ＋ **26** 条 `playableTechniques()` 派生行）**，**不是 25** ⇒ **我 §83.2 写的 25 错了**（**文件第 196 行注释也写 "all 26 rows today"** ✓）；**distinct 名字仍是 61** ✓。
+* **两处替换（都靠"延续那一行已有的理由" ✓）**：
+  * **`sax_lead` ⇒ `mtg-solo-sax:MTG-Tenor-Sax`** —— **点名 tenor，避开默认的 Soprano** ✓（**正是我提醒的那个陷阱 ✓**）；
+  * **`walking_upright` ⇒ `dsmolken-double-bass:…pizz`** —— **依据很硬** ✓✓：**同一把琴同一人**（**两个 readme 都写 1958 Otto Rubner／D. Smolken／CGDA／Spirocore**），**而真正的差别在 round robin 的 opcode**：**新库用 `seq_length`/`seq_position`（本仓实现）**，**Meatbass 用 `lorand`/`hirand`（不读）** ⇒ **Meatbass 每次都答 `_rr1`** ✓✓。
+* **"不换"的都有据且判据化** ✓✓：`rhodes_ep`／`finger_bass`／`pick_bass`（**不同乐器**）；**`flute_lead`**——**Ixox 的颤音是 modwheel LFO（`pitchlfo_depth_oncc1`，不实现），而现资产是**录下来的**颤音**，那一行原话要的正是 "recorded vibrato" ✓✓；`strings_lead`／`bell_lead`／`vibraphone`／`marimba_lead`；**8 个世界/合成库不许硬塞** ✓。
+* **鼓那条路：测了不改** ✓：`big-rusty-drums` keymap 与 GM 对齐**但 82 无定义**（78–80 tom stir／81 brush dig／83–96 clicks）；**`body-percussion` **不是鼓组****（36–61 映成 heel/stomp/slap/snap）⇒ **要服务四 role 须改单 kit 常量或改成"每 role 一 kit"** ✓。
+* **它改了 3 处**编码数据**的期望**（"某名字→某库"），**不变量一字未动**，并**新增 6 条判据（4 处反转变红已实跑）** ✓。
+
+### 90.3 发布窗口 ✓
+
+**A、C 两线均已 commit ＋ rebase 到 `2e8b6ef`，并**按令押后推送**（C 早前一次 `push:dev` 被 non-fast-forward 拒、**没有任何东西落到 `dev`** ✓）；
+**⇒ 发布期间 `dev` 不会被动** ⇒ **`release.sh` 的"HEAD 推成 `dev`／`main`"不会撞车** ✓。
