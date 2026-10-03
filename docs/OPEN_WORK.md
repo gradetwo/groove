@@ -6661,3 +6661,16 @@ problems: **[]** ✓
   `logicProjectBundle(parts, arrangement.bpm)` ⇒ `zipSync` ⇒ `Blob`（名 `<stem>.logicx.zip` ✓）＋ 与兄弟同形的计数 ✓
 ⚠️ 待核（下一步，不猜 ✗）：`tracks` 的字段名（`id`／`name` ✓）与 `notesByTrack` 的键 ✓ —— 从 `arrangementToMidi.ts` 的逐轨循环照抄最稳 ✓
 ```
+
+## 二百六十七、✅ **已确认的绿：P4 三件套（`2b90bc0`）＋ 台账（`2bd279f`）＋ 类型修复（`46bd10c`）**（2026-10-04 01:4x ✓）
+
+```
+✅ `2b90bc0`（`logicProjectBundle`：**三件套 ＋ zip**）= **success** ✓｜判据 **5/5** ✓
+   （三件套路径齐全 ✓／`ActiveVariant` 与目录名一致 ✓／**包内**读回音符与 tempo ✓／zip 条目＝文件表 ✓／每件非空 ✓）
+✅ `2bd279f`（台账）= **success** ✓｜✅ `46bd10c`（类型修复 = 4 连红闭环）= **success** ✓
+⏳ 在跑：`85dffd6`（**`logicFileFor` 生产者** ✓）／`108d8bd`（`<type>` 标签修复 ✓）／`a1397e5`／`864271e`（台账）
+✗ `0d14cc8` 历史 failure（已被 `46bd10c` 覆盖 ✓，保留在历史上**不删不改** ✓）
+⇒ ⭐ **② Logic 导出**：立项 ✓／P1 ✓／P2' ✓／P3 ✓／**P4 三件套 ＋ zip ✓（判决已绿）**／生产者 ✓ ⇒
+   ⚠️ **唯一剩的仍是"接界面"** ✗（**等业主一句话** ✓，我不擅自动界面 ✗）
+⚠️ 本条**只本地提交** ✓（CI 队列仍 4 笔在跑 ✗ ⇒ 不推 ✓）
+```
