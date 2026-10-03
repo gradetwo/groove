@@ -3217,3 +3217,47 @@ You are not authenticated"** ✗ ⇒ **⇒ 缺的是 **worker 名 ＋ 认证****
 * ⭐ **"哪条界面在播采样"这一类结构性棘手问题**：**行业形状是**唯一运输/播放层拥有播放**，视图（页面）从不自己排采样** ✓
   ⇒ **⇒ 这直接支持我先前那条"让忘记变得不可能"**：**不是再补 4 处接线，而是把"排采样声部"并进唯一入口/引擎** ✓
   （已交由 `remaudio` 那条线按此方向做：**合并两份逻辑为一份** ＋ 三处"同病/不受影响"逐条给依据 ✓）。
+
+## 一百零七、外部审查（`~/work/agy/`，7 份，基准 `aa89b7b5`）——**我逐条核过：14 真／3 假／5 处报告自身不准** ✓
+
+**背景**：业主给来 7 份审查（合计 986 行）。合并清单已抽成 **`~/work/agy/MERGED_REVIEW_LIST.md`**（177 行：29 条 ＋ 优先级分布 ＋ 9 条待复核 ＋ 29 句核验方法 ＋ 33 条外部事实 ＋ 7 处自相矛盾 ✓）。
+**纪律**：**审查的"证据链"合法**（提交号在同一远端存在 —— 我最初在**我的克隆**里搜不到，那是**我的假阴性** ✗：我的 fetch refspec 缺 ref；
+`~/work/agy/groove` 那份副本 HEAD 正是 `aa89b7b5`，里面全都有 ✓）—— 但**结论不能照单执行** ✓。
+
+### 107.1 ❌ **核实为假的 3 条（同一根因：只审一个文件 ＋ 只搜字面量 ✗）**
+
+| 报告主张 | 我的判定与依据 |
+|---|---|
+| **C03** V2 无保存/导出、刷新全丢 | ❌ **假**：`ArrangementViewV2.tsx:75` import ＋ `:297` 调用 `useArrangementFileActions` ＋ `:906-911`／`:1136` **7 个导出入口**；`projectDb.ts:1097 saveArrangementProject`（自己的对象存储 ✓ 体积上限 ✓ 迟到写守卫 ✓）；有判据 `arrangementPersistence.test.tsx` ✓；文件都在 `origin/dev` ✓ |
+| **C06** V2 无 Undo/Redo | ❌ **假**：`ArrangementViewV2.tsx:32`（`Undo2/Redo2`）＋ `:55` import `useArrangementHistory`（`features/arrangement/useArrangementHistory.ts:52` ✓） |
+| **C10** 无导出通路、`arrangementToMidi` 仅测试引用 | ❌ **假**：导出入口 **7 处** ✓；`arrangementToMidi` 在非测试文件 **3 处** ✓ |
+
+### 107.2 ⚠️ **报告自身不准的 5 处**（影响其可信度 ✓）
+
+```
+① "全仓 12 个组件规范使用 setPointerCapture" ⇒ 实测 **5 个** ✗
+② `PianoRollLane.tsx` 行数 3200（00）vs 3240（02）⇒ 实测 **3240** ✓
+③ "`0e16c0bd` 已清理陈旧注释" ⇒ **`PolySynth.ts` 的 '4-Voice' 陈旧注释仍在**（1 处）✗
+④ "`createMemoryRecordingStore` 仅在单元测试中引用" ⇒ 生产代码 **1 处引用** ✗
+⑤ "`mcp/exporting.ts:75` 的 `share_url`" ⇒ 该文件 `share_url` **0 命中**（**文件:行指错**）✗
+```
+
+### 107.3 ✅ **核实为真、按"创作者立刻能感觉到"排序的 5 项（＝本目标 1–5 ✓）**
+
+| # | 问题 | 依据（我跑的 grep） |
+|---|---|---|
+| ⭐1 | `PianoRollV2` **编辑完全静音**、无 Space 播放、无 Delete | `audition\|audio\|player` **0**、`keydown` **0** ✓（⚠️ 但视图导入了 `ArrangementKeyboardV2`（`ArrangementViewV2.tsx:62` ✓）⇒ **线必须先量清"键盘在视图层有没有覆盖到卷帘"** ✓） |
+| ⭐2 | `PianoRollV2` 无 `setPointerCapture`／window `pointerup` ⇒ 拖拽状态滞留 | `setPointerCapture` **0** ✓ |
+| ⭐3 | `LoopBraceV2` 是纯 UI：引擎**有** `AudioEngine.setLoopRange`（`:1468` ✓）且走带读它（`:1711`／`:2022` ✓），**但视图与播放路径 0 处调用** | `setLoopRange` 在 `ArrangementViewV2.tsx`／`playerFromEngine.ts` 命中 **0** ✓ |
+| ⭐4 | `songFlatten` 轨道数不等 ⇒ **跳过整小节** | `songFlatten.ts:136` ＋ `"the bar was skipped"` ✓ |
+| ⭐5 | **200ms lookahead** ⇒ mute/推子对已排期音符无效 | `lookaheadMs = 20`（`:302`）＋ `scheduleAheadSec = 0.20` ✓ |
+
+### 107.4 其余（**真但按 P2／路线图排队** ✓）
+
+C13（`share_url` 溢出清空 pitch/gate ✓ 真）／C14（MCP 编排无撤销：`mcp/arrangement.ts` 0 命中 vs `mcp/song.ts` `rememberSong` 10 ✓ 真）／C15 已列 ⭐5／
+C17（`ROLE_BY_KIND` ＋ `fromTrackId ??` ✓ 真）／C18（`MidiImporter` 取模 ✓ 真）／C19（无 voice pool，注释在 ✓ 真）／
+C20（iPad 命中区 ⏳未核）／C11（分享 URL：**报告指错文件** ⇒ 待重新定位 ⏳）／C16（`create_song` clips ⏳未定）／C07（DOM 4 736 系**可推导**而非"实测" ✗）／
+C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
+
+**⇒ 教训（写下来防后人照抄 ✗）**：**"这个文件里没有" ≠ "这个功能没有"** —— 审查与我都该顺着**真实调用链**（谁渲染谁、谁 import 谁）走 ✓；
+以及**搜不到 ≠ 不存在**（我这次就栽在自己的克隆缺 ref 上 ✗）。
