@@ -37,6 +37,9 @@ const EXPOSED: Record<string, string> = {
   moveTrackNote: "move_arrangement_note",
   setTrackNoteLength: "set_arrangement_note_length",
   setTrackGain: "set_arrangement_track_gain",
+  // ⭐ The region drag's model edit, exposed as an operation: the guard below is what made this a tool rather than an
+  // exclusion, which is exactly what its own message asks for ("add one, or add them to EXCLUDED with a reason").
+  setTrackRegion: "set_arrangement_region",
   setArrangementBars: "set_arrangement_bars",
   setArrangementTempo: "set_arrangement_tempo",
   setArrangementTempoMap: "set_arrangement_tempo_map",

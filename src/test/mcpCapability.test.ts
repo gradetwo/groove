@@ -134,6 +134,7 @@ const CAPABILITIES: Capability[] = [
       "move_arrangement_note",
       "remove_arrangement_note",
       "set_arrangement_note_length",
+      "set_arrangement_region",
       "set_arrangement_bars",
       "set_arrangement_track_gain",
       "set_arrangement_track_pan",

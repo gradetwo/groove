@@ -28,6 +28,7 @@ import {
   setMcpTrackAsset,
   setMcpTrackKind,
   setMcpTrackParent,
+  setMcpTrackRegion,
   setMcpTrackSteps,
   summariseArrangement,
 } from "../../mcp/arrangement";
@@ -229,6 +230,33 @@ describe("editing an arrangement", () => {
     const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
     expect(() => renameMcpTrack(arrangementId, "track-nope", "x")).toThrow(/its tracks are/);
     expect(() => removeMcpTrack(arrangementId, "track-nope")).toThrow(/no track/);
+  });
+
+  it("⭐ places a track's region where the interface's drag would, and reads it back", () => {
+    /**
+     * The drag's model edit, reachable by an agent — the guard in `mcpCoverage.test.ts` asks for exactly this rather
+     * than an exclusion, and the two callers end in the same `setTrackRegion`.
+     */
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
+    const first = summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).tracks[0]!;
+    // An arrangement starts with no region, which **means** the whole arrangement — eight bars by default.
+    expect(getMcpArrangement(arrangementId)!.tracks[0]!.region).toBeUndefined();
+
+    setMcpTrackRegion(arrangementId, first.id, 2, 5);
+    expect(getMcpArrangement(arrangementId)!.tracks[0]!.region).toEqual({ startBar: 2, endBar: 5 });
+    // Clamped by the same `setTrackRegion` the pointer and the arrow keys call: never shorter than a bar.
+    setMcpTrackRegion(arrangementId, first.id, 2, 2);
+    expect(getMcpArrangement(arrangementId)!.tracks[0]!.region).toEqual({ startBar: 2, endBar: 3 });
+    // `null` for both restores the whole-arrangement region, which the model stores as the field being absent.
+    setMcpTrackRegion(arrangementId, first.id, null, null);
+    expect(getMcpArrangement(arrangementId)!.tracks[0]!.region).toBeUndefined();
+  });
+
+  it("refuses half a range, and a track that is not there — an assumption must not look like a reading", () => {
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
+    const first = summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).tracks[0]!;
+    expect(() => setMcpTrackRegion(arrangementId, first.id, 2, null)).toThrow(/both startBar and endBar/);
+    expect(() => setMcpTrackRegion(arrangementId, "track-nope", 1, 2)).toThrow(/its tracks are/);
   });
 
   it("refuses an unknown arrangement id with the tool that creates one", () => {

@@ -45,6 +45,7 @@ import {
   setTrackNoteLength,
   setTrackPan,
   setTrackParent,
+  setTrackRegion,
   setTrackSample,
   setTrackSteps,
 } from "../src/data/arrangementEdits";
@@ -1171,6 +1172,25 @@ export function setMcpTrackPan(arrangementId: string, trackId: string, pan: numb
 /** Folding a folder. Display only, which the tool's own description repeats because a client reads that and not this. */
 export function setMcpTrackCollapsed(arrangementId: string, trackId: string, collapsed: boolean): ArrangementEditResult {
   return edit(arrangementId, (arrangement) => refuseUnknownTrack(arrangement, trackId, () => setCollapsed(arrangement, trackId, collapsed)));
+}
+
+/**
+ * ⭐ **Where a track's region sits**, in bars — the drag the interface gained, as an operation an agent can call.
+ *
+ * Both bounds are **required together or absent together**: `null` for both means "the whole arrangement", which is the
+ * model's own default and is stored as the field being absent. One `null` and one number is not a range the model has a
+ * reading for, so it is refused out loud rather than guessed at — the rule that an assumption must not look like a
+ * reading (see `setArrangementTimeSignature`).
+ *
+ * The clamping the model does (never before bar 1, never shorter than a bar, never past the arrangement's end) is
+ * `setTrackRegion`'s, not this wrapper's: the same function the pointer and the arrow keys call.
+ */
+export function setMcpTrackRegion(arrangementId: string, trackId: string, startBar: number | null, endBar: number | null): ArrangementEditResult {
+  if ((startBar === null) !== (endBar === null)) {
+    throw new Error("give both startBar and endBar, or neither (null clears the region back to the whole arrangement)");
+  }
+  const region = startBar === null || endBar === null ? undefined : { startBar, endBar };
+  return edit(arrangementId, (arrangement) => refuseUnknownTrack(arrangement, trackId, () => setTrackRegion(arrangement, trackId, region)));
 }
 
 function unknownTrack(arrangement: ArrangementV2, trackId: string): string {

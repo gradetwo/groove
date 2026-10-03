@@ -101,6 +101,7 @@ import {
   setMcpTrackKind,
   setMcpTrackPan,
   setMcpTrackParent,
+  setMcpTrackRegion,
   setMcpTrackSteps,
   summariseArrangement,
   getMcpArrangement,
@@ -1224,6 +1225,31 @@ export const TOOLS: ToolDefinition[] = [
     handler: (args) => {
       try {
         return setMcpTrackPan(String(args.arrangementId), String(args.trackId), Number(args.pan));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "set_arrangement_region",
+    title: "Place a track's region, or change its length",
+    description:
+      "Where a track's region sits on the timeline, in bars — the same range the interface's drag writes, clamped to the arrangement (never before bar 1, never past its end, never shorter than a bar). Absent, a region covers the whole arrangement; pass null for both bounds to put it back there.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      trackId: z.string(),
+      startBar: z.number().min(0).nullable().describe("zero-based, inclusive; null with endBar restores the whole-arrangement region"),
+      endBar: z.number().min(0).nullable().describe("zero-based, exclusive; must be greater than startBar"),
+    },
+    handler: (args) => {
+      try {
+        return setMcpTrackRegion(
+          String(args.arrangementId),
+          String(args.trackId),
+          args.startBar === null ? null : Number(args.startBar),
+          args.endBar === null ? null : Number(args.endBar)
+        );
       } catch (error) {
         return failure((error as Error).message);
       }

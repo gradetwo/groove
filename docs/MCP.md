@@ -146,6 +146,7 @@ Two things this surface states rather than leaves to be discovered:
 | `select_arrangement_take` ▣ | `arrangementId`, `trackId`, `takeId` | which take plays, or cleared with `null` |
 | `assign_arrangement_take_range` ▣ | `arrangementId`, `trackId`, `takeId`, `startBar`, `endBar` | an existing take claimed for a bar range, splitting any range it crosses |
 | `set_arrangement_track_collapsed` ▣ | `arrangementId`, `trackId`, `collapsed` | folded in the interface; display only, and never a change to what is heard |
+| `set_arrangement_region` ▣ | `arrangementId`, `trackId`, `startBar`, `endBar` (both nullable) | where a track's region sits, in bars — the range the interface's drag writes, clamped by the model (never before bar 1, never past the arrangement's end, never shorter than a bar). A region with none covers the whole arrangement, so passing `null` for both restores that |
 | `import_logic_project` ▣ | `arrangementId`, `projectDataBase64`, `metaDataBase64`, `partIndex?` | one track per MIDI region of a Logic Pro project, named from the region, plus the project's tempo and meter and every problem that says what could not come over — **Phase 1 is MIDI only**, and audio tracks, plugin chains and automation are named in `problems` rather than dropped quietly. `partIndex` is a number or `"all"`, as in the other two imports |
 
 A minimal call, as it looks over stdio:
