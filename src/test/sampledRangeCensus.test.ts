@@ -440,10 +440,16 @@ const catalogue = catalogueFromManifestText(manifestText, process.env.GROOVE_SAM
 const shaByEntry = new Map(manifest.entries.map((entry) => [entry.id, new Map(entry.files.map((file) => [file.path, file.sha256]))]));
 
 /**
- * The mirror root, from the environment or `.env.local` (which is gitignored). Without it the three assets the mirror
- * is the **only** address for cannot be proved — `freepats-drawbar-organ` and `freepats-percussive-organ` declare a
- * mirror-relative path with no repository, and `karoryfer-emilyguitar`'s pinned source has moved and 404s while its
- * mirror copy still answers. That is a fact about those three, stated here rather than hidden by a green run.
+ * The mirror root, from the environment or `.env.local` (which is gitignored). Without it the two assets the mirror
+ * is the **only** address for cannot be proved: `freepats-drawbar-organ` and `freepats-percussive-organ` declare a
+ * mirror-relative path with no repository at all, so they have no pinned source to try. That is a fact about those
+ * two, stated here rather than hidden by a green run.
+ *
+ * ⭐ **`karoryfer-emilyguitar` was a third name on this list until 2026-10-03, and it did not belong there.** The
+ * reading was *"its pinned source has moved and 404s while its mirror copy still answers"* — the source had not
+ * moved; the address asked for the release zip's `Emilyguitar/` directory, which the repository does not have.
+ * `a522f1e` removed that layer from the source address, so the guitar's program fetches **from the pin** and this
+ * criterion proves it like any other. A name left here would make a working library look mirror-only.
  */
 const mirrorRoot =
   process.env.GROOVE_SAMPLE_ROOT ??
@@ -456,7 +462,8 @@ const mirrorRoot =
       })()
     : "");
 
-const MIRROR_ONLY = ["karoryfer-emilyguitar:emily-clean", "freepats-drawbar-organ", "freepats-percussive-organ"];
+/** The assets with **no pinned source address at all** — no `repo`/`pin`, only a mirror-relative path. */
+const MIRROR_ONLY = ["freepats-drawbar-organ", "freepats-percussive-organ"];
 
 const absolute = (url: string): string | undefined => {
   if (/^[a-z][a-z0-9+.-]*:\/\//i.test(url)) return url;
@@ -509,7 +516,7 @@ async function fetchProgram(assetId: string): Promise<FetchedProgram | null> {
 
 const programs = await Promise.all(MEASURED_COVERAGE.map((row) => fetchProgram(row.assetId)));
 const offline = programs.every((program) => program === null);
-/** With no mirror root the three MIRROR_ONLY assets are expected to be unreachable; with one, nothing is. */
+/** With no mirror root the MIRROR_ONLY assets are expected to be unreachable; with one, nothing is. */
 const expectedUnreachable = mirrorRoot ? [] : MIRROR_ONLY;
 
 describe.skipIf(offline)("the measurement still holds at the pins", () => {
