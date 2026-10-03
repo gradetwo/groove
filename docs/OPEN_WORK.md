@@ -4381,3 +4381,43 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
    ④ 读数与裁定写进本台账 ✓；**反向必须验五个数**（57→25／3→1／60→28 ✓）
 **业主待决**：**2.34.45 发不发** ✓（现已有 **5 件**实质内容 ✓；三条一落地就更实 ✓）
 ```
+
+## 一百三十、✅ **替收一笔（`140810a`）＋ 我撤回一条审计结论 ＋ seek 裁定**（2026-10-03 21:0x ✓）
+
+### 130.1 ✅ (丙) 首批（`uxfix` 那条线一度不可用 ⇒ **我替它推** ✓）
+
+```
+它留下的提交 `ed95c7e`（agent 不可用 ✓）⇒ 我 rebase 成 **`140810a`** ✓ 并核过：
+   `tsc` **0** ✓ ｜ 它新加的判据 `transportPreparationFeedback` **4 passed／退出码 0** ✓ ｜
+   反向量 `ownerProjectAcceptance` **退出码 0**、五个数逐字 ✓ ⇒ 推 **`afa7dc2..140810a  HEAD -> dev`** ✓（**已确认是祖先** ✓）
+**它这笔的内容**：③ **按下同帧就显示等待** ✓（`data-preparation="preparing"`，在**第一个 await 前** setState ✓）
+   ＋ 失败态可见且**同键重试** ✓；④ **进度画在导出按钮内** ✓（`role=progressbar` ＋ `aria-valuenow`）＋ **`export-cancel`** ✓
+**它复现的基线（线上 2.34.44，load 16.6 ✓）**：Play 首次可见等待 **3204 ms** ✓、`clickToRunning` **12524 ms** ✗、期间按钮仍写「播放」✓；
+   导出 **214522 ms**（3.6 分钟 ✗）才下载、`[role=progressbar]` **0** ✓、取消 **0** ✓ ⇒ **与我的审计读数一致** ✓
+```
+
+### 130.2 ⚠️ **我撤回 §121 的一条：studio 静音 `aria-pressed` 并非陈旧** ✗✓
+
+```
+✗ **我的错法（第 10 次以上同类）**：我用**旧 `aria-label`（「静音」）**去重查按钮 ✓ ——
+   而按下后标签变成「取消静音」✓（`TrackRow.tsx:445` ✓）⇒ **我命中的是下一条轨的按钮** ✓（它未静音 ⇒ 读到 false ✓）
+✅ 对方按**身份**持有同一元素实测：`aria-pressed` **false→true** ✓、标签变「取消静音」✓、引擎 `trackStates[0].mute` **false→true** ✓；
+   我那套重查落到 **button 索引 112**（原按钮 **99** ✓）⇒ **正是我报的那个数** ✓✓
+⭐ 它**没有为了让数字好看去改产品** ✗✓ ⇒ 改为**加一条判据把两半钉住** ✓（去掉 `aria-pressed={isMute}` ⇒ `expected null to be 'false'` 红 ✓）
+⇒ **教训（第 10 次记下 ✓）**：**"按标签重查"是间接信号 ✗；要按元素身份持有后再读** ✓
+```
+
+### 130.3 ⭐ **裁定：放行 `AudioEngine.seek(step)`**（(丙) 第 1 条"假标尺"的诚实修法 ✓）
+
+```
+**它停手待裁 ✓**：位置是私有的（`currentStep:276`／`resumeStep:288` ✓），公开入口只有 `play/pause/stop/playScoped/setLoopRange` ✓，
+   而 `play()` 的起点只有 `resumeStep`／`loopRange[0]`／0 ✓ ⇒ **缺的就是引擎那个公开方法** ✓
+⭐ **它拒绝的做法（正确 ✓）**：拿 `playScoped`（单轨试听 ✓）＋ 事后清 `previewScope` 去**伪装** seek ✗ ⇒ **它没做** ✓
+✅ **我裁：准 ✓** —— **只允许在 `src/audio/AudioEngine.ts` 新增一个公开 `seek(step)`** ✓
+   ＋ 它所需的**视图侧**接线（`ArrangementViewV2Props`／`NewProjectView.tsx`／`ArrangementRulerV2.tsx` ✓，这些不在 `src/audio/**` ✓）
+   ⛔ **其余 `src/audio/**` 一律不动** ✗；若必须再动别处 ⇒ **再停手问我** ✓
+   **按它的设计**：clamp `[0, totalSteps-1]` ✓；写 `currentStep`／`resumeStep`（停止时置 resumeStep ⇒ `canReturnToStart()` 真、Stop 亮 ✓）；
+   ⭐ **并通知 player** ✓ —— 否则录音轨 `playback.play(bpm,{fromStep})` **会从 0 起排** ✓
+   ⇒ 那正是 **§26「定位后前几拍缺音」** ✗ ⇒ **这条必须实测**（定位到第 N 小节 ⇒ 第 N 小节第一个音就响 ✓），**不许只靠读代码** ✓
+   **判据**：① 定位后**从该步起播**（不再从 1.1 ✓）② **定位后第一拍有声**（§26 ✓）③ 反向五个数逐字 ✓；**去掉 seek 的写入 ⇒ 必须红** ✓
+```
