@@ -6633,3 +6633,20 @@ problems: **[]** ✓
 📌 **纪律已生效** ✓：其后每一笔（`2b90bc0` P4 三件套／`108d8bd` 标签修复）我都**先跑 `npx tsc --noEmit`（=0）再推** ✓
 ⏳ 仍待：`2b90bc0`／`108d8bd` 的判决 ✓（在跑 ✓）
 ```
+
+## 二百六十六、📐 **P4 余项（"交给用户"）方案已量清，等业主一句话** ✗（2026-10-04 01:4x ✓）
+
+```
+**量到的既有结构** ✓（grep 实证 ✓）：
+   · `src/features/arrangement/arrangementFiles.ts` ✓ —— ⭐ **生产与下载分离** ✓：生产者返回 `ProducedFile { filename, blob }` ✓，
+     **只有 `downloadProducedFile` 一处碰文档** ✓；`:122 midiFileFor(arrangement, stem)` ✓，`musicXmlFileFor` 同处 ✓
+   · 界面接线 ✓：`ArrangementViewV2.tsx:1098 onExportMidi={files.exportMidi}` ✓、`:1328 onExportMusicXml={files.exportMusicXml}` ✓
+⇒ ⭐ **要加的就是"第三位兄弟"** ✓（改动小且位置明确 ✓）：
+   ① `arrangementFiles.ts` 加 `logicFileFor(arrangement, stem)` ✓（走 `logicProjectBundle` ⇒ `zipSync` ✓）
+   ② `ArrangementViewV2` 接一处 `onExportLogic` ✓
+   ③ 判据：文件名、blob 非空、zip 条目 ＝ 三件套 ✓（**漏一件即红** ✓）
+⚠️ **命名要说实话** ✗：`.logicx` 是**目录** ✓ ⇒ 浏览器只能给 **zip** ✓ ⇒ 我打算叫 **`<stem>.logicx.zip`** ✓
+   （**不叫** `.logicx` ✗ —— 那会让人以为拿到的是目录 ✓；若你觉得该叫 `.logicx` 也行，但那是**要说明的约定** ✗）
+⚠️ **我没动界面** ✗（**等你确认要不要这个按钮** ✓）；接口与判据已就绪 ✓
+⚠️ 本条**只本地提交** ✓（CI 队列仍 4 笔 ✗ ⇒ 不推 ✓）
+```
