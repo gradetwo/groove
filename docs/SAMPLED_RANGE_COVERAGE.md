@@ -744,8 +744,8 @@ AssertionError: expected [ 70, 73, 74, 77, 79 ] to deeply equal [ 82, 85, 86, 89
 
 | # | 读数 | 证据 |
 | --- | --- | --- |
-| 1 | **加载器持有的是"展开后的程序文本"，不是 regions。** 它把 `Promise<{text}>` 按 assetId 缓存；regions 是 `resolveInstrumentNote` **每次调用现解析**出来的 | `src/audio/sampleLoader.ts:274`（`programs: Map<string, Promise<{ text: string }>>`）、`:275-299`（`expandedProgram`：源→镜像、`expandRemoteIncludes`）、`src/audio/sfz/instrument.ts:210`（`parseSfz(sfzText, …)`）；`src/audio/sfz/keyswitch.ts:193` 的注释也直说 "re-parses the program on every note" |
-| 2 | **没有任何 UI 可达的口子能拿到那段文本或 regions。** `SampleLoader` 只暴露 `load` / `loadNote` / `decodes` | `src/audio/sampleLoader.ts:57-83`。`loadNote` 内部确实调 `resolveInstrumentNote`（`:340`），但它随后就 `decodeAsset`（`:345` 起）——用它扫 0–127 等于把整台琴的采样 decode 一遍，只为回答一个映射问题 |
+| 1 | **加载器持有的是"展开后的程序文本"，不是 regions。** 它把 `Promise<{text}>` 按 assetId 缓存；regions 是 `resolveInstrumentNote` **每次调用现解析**出来的 | `src/audio/sampleLoader.ts:274`（`programs: Map<string, Promise<{ text: string }>>`）、`:275-302`（`expandedProgram`：源→镜像、`expandRemoteIncludes`）、`src/audio/sfz/instrument.ts:210`（`parseSfz(sfzText, …)`）；`src/audio/sfz/keyswitch.ts:193` 的注释也直说 "re-parses the program on every note" |
+| 2 | **没有任何 UI 可达的口子能拿到那段文本或 regions。** `SampleLoader` 只暴露 `load` / `loadNote` / `decodes` | `src/audio/sampleLoader.ts:57-83`。`loadNote` 内部确实调 `resolveInstrumentNote`（`:340`），但它随后就 `decodeAsset`（`:366`）——用它扫 0–127 等于把整台琴的采样 decode 一遍，只为回答一个映射问题 |
 | 3 | **UI 侧唯一"从引擎算"的入口**是纯函数 `resolveInstrumentNote`，加引擎自己的 `#include` 展开器 `expandRemoteIncludes` | `src/audio/sfz/instrument.ts:178`、`src/audio/sfz/remoteIncludes.ts:51` |
 | 4 | ⇒ 本轮做法：**取一次程序文本，问引擎 128 次**。`sampledCoverage/programText.ts` 按 `sampleLoader.ts:279-298` 的**同一地址规则**（源先、镜像后；include base = 从源 url 减去 program path）取一次文本并用 `cachedProgramText` 做单飞缓存；`sampledKeyCoverage` 再对 0–127 每键调 `resolveInstrumentNote`（与 §1.3 同一判据，不新增第二份表） | `src/features/sampledCoverage/programText.ts`、`src/features/sampledCoverage/sampledKeyCoverage.ts` |
 | 5 | **未加载时怎么显示：说"尚未加载"，绝不猜数字。** `coverageOf()` 在引擎回答前返回 `undefined`，只有 `ready` 才可能给出范围；`ready` 且 `null`（引擎一个键都不答）说的是"这段录音一个键都发不出"，与"尚未加载"是两句不同的话 | `src/hooks/useSampledCoverage.ts:70`（`statusOf`/`coverageOf`）、`src/components/arrangement/coverageLabel.ts`（`describeCoverage`） |
@@ -756,9 +756,9 @@ AssertionError: expected [ 70, 73, 74, 77, 79 ] to deeply equal [ 82, 85, 86, 89
 
 | 位置 | 显示什么 | 文件:行 |
 | --- | --- | --- |
-| **挑选器**（inspector 的录音挑选器） | 该录音"可发 A–B（缺 …）"；未加载＝"尚未加载" | `src/components/arrangement/CatalogueRecordingPicker.tsx:235`（`data-testid="lane-recording-coverage"`） |
-| **这条轨**（同一挑选器内） | 本轨写出的音 min–max（`本轨写出 82–91（5 个音高，共 44 个音）`） | `CatalogueRecordingPicker.tsx:248`（`lane-written-range`） |
-| **超范围报告** | `这条轨有 N 个音超出该录音的音域：可发 A–B（缺 …）`，`role="status"` | `CatalogueRecordingPicker.tsx:255`（`lane-range-report`） |
+| **挑选器**（inspector 的录音挑选器） | 该录音"可发 A–B（缺 …）"；未加载＝"尚未加载" | `src/components/arrangement/CatalogueRecordingPicker.tsx:237`（`data-testid="lane-recording-coverage"`） |
+| **这条轨**（同一挑选器内） | 本轨写出的音 min–max（`本轨写出 82–91（5 个音高，共 44 个音）`） | `CatalogueRecordingPicker.tsx:250`（`lane-written-range`） |
+| **超范围报告** | `这条轨有 N 个音超出该录音的音域：可发 A–B（缺 …）`，`role="status"` | `CatalogueRecordingPicker.tsx:257`（`lane-range-report`） |
 | **挑选器列表的每一行** | 指向/聚焦该行时读它的覆盖；未读完显示"尚未加载"，从未请求则不显示数字 | `src/components/arrangement/InstrumentLibraryV2.tsx:181-182`（`onMouseEnter`/`onFocus` → `request`）、`:189`（`instrument-coverage-<assetId>`） |
 | 轨道→挑选器的接线 | 访问目录的**资产数组**（地址簿）与 inspector 的**那条 lane** | `src/views/StudioView.tsx:942`、`:1352`（`assets`）、`:1353`（`lane`） |
 
