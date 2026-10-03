@@ -1282,14 +1282,27 @@ export function notesInBarRange(
  */
 export function flattenMcpArrangement(
   arrangementId: string,
-  range?: { startBar: number; endBar: number }
+  range?: { startBar: number; endBar: number },
+  trackIds?: readonly string[]
 ): { flattened: FlattenedSong; bars: number } {
   const arrangement = requireArrangement(arrangementId);
   if (arrangement.tracks.length === 0) throw new Error("this arrangement has no tracks, so there is nothing to render");
   const allNotes = arrangement.notesByTrack ?? {};
-  const notes = range
-    ? notesInBarRange(allNotes, range, beatsPerBar(arrangement.timeSignature))
+  /**
+   * Two filters, applied in one place so both the range and the track scope travel the same road.
+   *
+   * `trackIds` is the arrangement-level version of the `trackId` the export tools already take: an agent previewing a
+   * change wants the part it changed, not the whole mix. It is optional and its absence is not a default set of tracks
+   * -- omitting it keeps every lane exactly as before, which is what makes this addition invisible to existing callers.
+   * An unknown id contributes nothing rather than silently rendering everything: a filter that quietly did nothing
+   * would answer a question nobody asked.
+   */
+  const scoped = trackIds
+    ? Object.fromEntries(Object.entries(allNotes).filter(([trackId]) => trackIds.includes(trackId)))
     : allNotes;
+  const notes = range
+    ? notesInBarRange(scoped, range, beatsPerBar(arrangement.timeSignature))
+    : scoped;
   const songInput = compileArrangementToSongInput(arrangement, notes);
   /**
    * The clip needs the fields a `SequencerPattern` requires and nothing more: the compiled lanes, and the four the format insists on. `genre_id` is `"custom"` because an arrangement is not a genre's pattern — saying otherwise would make a render claim a
