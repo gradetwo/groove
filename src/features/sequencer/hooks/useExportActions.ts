@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Genre, SequencerPattern } from "../../../types/genre";
 import { GrooveProject } from "../../../types/project";
 import { DrumKitType, EffectsRackState } from "../../../audio/AudioEngine";
@@ -56,8 +56,38 @@ export interface UseExportActionsOptions {
   showToast: (msg: string) => void;
 }
 
+/**
+ * ⭐ **Where a running audio export has got to, in the shape the export button draws.**
+ *
+ * `percent` is whole numbers, 0–100, and it is the number the button prints and the number its
+ * `role="progressbar"` carries — one reading rather than a bar and a label that can disagree.
+ */
+export interface ExportProgress {
+  /** Which exporter is running, so the cancel path and the label name the same thing. */
+  kind: "wav" | "mp3" | "stems";
+  percent: number;
+}
+
 export interface UseExportActionsResult {
   isExportingAudio: boolean;
+  /**
+   * ⭐ **The progress the button shows while `isExportingAudio` is true.**
+   *
+   * `null` when nothing is running. It is non-null from the first frame of the export rather than
+   * from the first render callback, so the button has something to draw during the graph build and
+   * the catalogue wait as well as during the render itself.
+   */
+  exportProgress: ExportProgress | null;
+  /**
+   * ⭐ **Give up on the export that is running, and do not hand the file over.**
+   *
+   * ⚠️ **This abandons the result; it cannot abort the render.** `exportMasterWav` finishes inside
+   * one `OfflineAudioContext.startRendering()`, which has no cancellation primitive, and
+   * `src/audio/**` is read-only for this change — so the honest promise is the one the download
+   * event can be measured against: after a cancel, no file is produced. The busy state ends
+   * immediately, which is the part the person waiting on the button actually feels.
+   */
+  cancelExport: () => void;
   handleExportMidi: () => void;
   handleExportAls: () => Promise<void>;
   handleExportGroove: () => void;
@@ -88,6 +118,81 @@ export function useExportActions({
 }: UseExportActionsOptions): UseExportActionsResult {
   const { t } = useLanguage();
   const [isExportingAudio, setIsExportingAudio] = useState(false);
+  const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
+
+  /**
+   * ⭐ **Which run is the live one, and the whole of what "cancel" means here.**
+   *
+   * Every audio export takes a ticket before it awaits anything and compares its ticket after every
+   * `await`; `cancelExport` moves the counter on, so the run that was in flight finds itself stale
+   * at its next checkpoint and returns without calling `triggerWavDownload`. That is deliberately a
+   * **checkpoint after the render** rather than a flag *inside* it: the renderer is read-only here
+   * (`src/audio/**`, see the plan), and `OfflineAudioContext.startRendering()` has no abort, so the
+   * only honest guarantee is about the file — measured as "a cancel produces no download event",
+   * which is exactly the reading a criterion can take.
+   *
+   * It is also what keeps a cancel followed by a **new** export from being clobbered: the stale run
+   * skips its `finally` cleanup (see `finishExport`), so it cannot clear the new run's busy state.
+   */
+  const exportRunRef = useRef(0);
+
+  /**
+   * ⭐ **The progress channel the renderer already has, turned into a number a button can draw.**
+   *
+   * `RenderWavOptions.onRenderProgress` is `WavExporter`'s own seam: it schedules one
+   * `OfflineAudioContext.suspend()` at each tenth of the render and calls back with the frame it
+   * reached (`WavExporter.ts`, "the suspension points"). Nothing in `src/audio/**` changes — the
+   * callback was always there and nothing in the app ever asked for it.
+   *
+   * ⚠️ **`stems` is one render per track, so a raw frame fraction would jump 0→100 once per stem.**
+   * The track count turns each stem into its own slice of the whole, and a fraction that goes
+   * *down* is the next stem starting — the one signal the renderer gives about which track a
+   * callback belongs to, since it is handed the same `onRenderProgress` for every stem.
+   */
+  const progressFor = useCallback(
+    (run: number, kind: ExportProgress["kind"], slices = 1) => {
+      const perSlice = Math.max(1, slices);
+      let slice = 0;
+      let lastFraction = 0;
+      return (renderedFrames: number, totalFrames: number): void => {
+        if (exportRunRef.current !== run) return;
+        const fraction = totalFrames > 0 ? Math.min(1, Math.max(0, renderedFrames / totalFrames)) : 0;
+        if (fraction + 0.001 < lastFraction && slice + 1 < perSlice) slice += 1;
+        lastFraction = fraction;
+        const percent = Math.min(100, Math.max(0, Math.round(((slice + fraction) / perSlice) * 100)));
+        setExportProgress({ kind, percent });
+      };
+    },
+    []
+  );
+
+  /** Open a run: its ticket, the busy state and the progress the button draws from the first frame — not from the first render callback. */
+  const beginExport = useCallback((kind: ExportProgress["kind"]) => {
+    const run = exportRunRef.current + 1;
+    exportRunRef.current = run;
+    setExportProgress({ kind, percent: 0 });
+    setIsExportingAudio(true);
+    return run;
+  }, []);
+
+  /**
+   * Close a run, **only if it is still the live one**.
+   *
+   * A cancelled run's `finally` must not clear the busy state of the export that replaced it, which
+   * is the same ticket the cancellation checkpoints use.
+   */
+  const finishExport = useCallback((run: number) => {
+    if (exportRunRef.current !== run) return;
+    setExportProgress(null);
+    setIsExportingAudio(false);
+  }, []);
+
+  const cancelExport = useCallback(() => {
+    exportRunRef.current += 1;
+    setExportProgress(null);
+    setIsExportingAudio(false);
+    showToast(t("export_cancelled"));
+  }, [showToast, t]);
 
   /**
    * B4 — the one place that decides what an exporter writes.
@@ -256,8 +361,8 @@ export function useExportActions({
   ]);
 
   const handleExportWav = useCallback(async () => {
+    const run = beginExport("wav");
     try {
-      setIsExportingAudio(true);
       showToast(t("export_wav_rendering"));
       const pattern = exportPattern();
       /**
@@ -275,12 +380,20 @@ export function useExportActions({
        * audio lane skips the load entirely, exactly as `mcp/render/worker.ts` skips the manifest read.
        */
       const audioLanes = await prepareAudioLaneExport(pattern, () => appCatalogueRuntime.load());
+      /**
+       * A checkpoint before the render starts: a cancel during the catalogue wait must not spend the
+       * render, and it must not hand over a file either.
+       */
+      if (exportRunRef.current !== run) return;
       const result = await exportMasterWav(pattern, currentGenre.id, {
         bpm,
         swing,
         drumKit,
         ...audioLanes.options,
+        onRenderProgress: progressFor(run, "wav"),
       });
+      // The checkpoint that is the whole of the cancel promise: a stale run stops here.
+      if (exportRunRef.current !== run) return;
       triggerWavDownload(result.blob, result.filename);
       /**
        * Report a degraded master rather than a clean one.
@@ -310,9 +423,9 @@ export function useExportActions({
         t("export_wav_failed", { error: describeError(err) })
       );
     } finally {
-      setIsExportingAudio(false);
+      finishExport(run);
     }
-  }, [currentGenre.id, bpm, swing, drumKit, exportPattern, audioLaneNotice, t, showToast]);
+  }, [currentGenre.id, bpm, swing, drumKit, exportPattern, audioLaneNotice, t, showToast, beginExport, finishExport, progressFor]);
 
   /**
    * The same master as the WAV, encoded to MP3.
@@ -322,18 +435,22 @@ export function useExportActions({
    * handler is the only thing in the app that touches it.
    */
   const handleExportMp3 = useCallback(async () => {
+    const run = beginExport("mp3");
     try {
-      setIsExportingAudio(true);
       showToast(t("export_mp3_rendering"));
       const pattern = exportPattern();
       // The same master as the WAV, so it needs the same catalogue — see `handleExportWav`.
       const audioLanes = await prepareAudioLaneExport(pattern, () => appCatalogueRuntime.load());
+      if (exportRunRef.current !== run) return;
       const result = await exportMasterMp3(pattern, currentGenre.id, {
         bpm,
         swing,
         drumKit,
         ...audioLanes.options,
+        // The MP3 is the same render plus an encode, so the same seam reports it — see `progressFor`.
+        onRenderProgress: progressFor(run, "mp3"),
       });
+      if (exportRunRef.current !== run) return;
       triggerWavDownload(result.blob, result.filename);
       const base =
         result.workletsUnavailable
@@ -351,13 +468,13 @@ export function useExportActions({
     } catch (err: any) {
       showToast(t("export_mp3_failed", { error: describeError(err) }));
     } finally {
-      setIsExportingAudio(false);
+      finishExport(run);
     }
-  }, [currentGenre.id, bpm, swing, drumKit, exportPattern, audioLaneNotice, t, showToast]);
+  }, [currentGenre.id, bpm, swing, drumKit, exportPattern, audioLaneNotice, t, showToast, beginExport, finishExport, progressFor]);
 
   const handleExportStems = useCallback(async () => {
+    const run = beginExport("stems");
     try {
-      setIsExportingAudio(true);
       /**
        * Say the size **before** rendering, because WebKit does not raise an error when it runs out of memory — it
        * restarts the page, which is the crash the owner reported after exporting stems in Safari. The estimate is
@@ -390,6 +507,7 @@ export function useExportActions({
        * accumulates the per-stem reports rather than keeping the last — otherwise a lane that failed while an earlier stem rendered would vanish from the notice.
        */
       const audioLanes = await prepareAudioLaneExport(pattern, () => appCatalogueRuntime.load());
+      if (exportRunRef.current !== run) return;
       const result = await exportStemsZip(pattern, currentGenre.id, {
         bpm,
         swing,
@@ -398,7 +516,10 @@ export function useExportActions({
         ...(liveStates && liveStates.length === pattern.tracks.length
           ? { trackStates: liveStates }
           : {}),
+        // One render per track: `progressFor`'s `slices` is what turns those into one bar rather than eight.
+        onRenderProgress: progressFor(run, "stems", pattern.tracks.length),
       });
+      if (exportRunRef.current !== run) return;
       triggerWavDownload(result.blob, result.filename);
       // Same honesty rule as the master export: a stem whose GS-1 voice did not load is a valid
       // file that is not what was auditioned, so it is reported rather than passed off as clean.
@@ -418,9 +539,9 @@ export function useExportActions({
         t("export_stems_failed", { error: describeError(err) })
       );
     } finally {
-      setIsExportingAudio(false);
+      finishExport(run);
     }
-  }, [currentGenre.id, bpm, swing, drumKit, audioLaneNotice, t, showToast]);
+  }, [currentGenre.id, bpm, swing, drumKit, audioLaneNotice, t, showToast, beginExport, finishExport, progressFor]);
 
   const handleShare = useCallback(() => {
     const result = getShareUrlResult({
@@ -453,6 +574,8 @@ export function useExportActions({
 
   return {
     isExportingAudio,
+    exportProgress,
+    cancelExport,
     handleExportMidi,
     handleExportAls,
     handleExportGroove,

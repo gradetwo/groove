@@ -84,6 +84,17 @@ export interface UseTransportControlsOptions {
   recordedLanes?: TransportRecordedLanes;
 }
 
+/**
+ * ⭐ **What the Play button is doing between the press and the transport.**
+ *
+ * `preparing` and `failed` are the two states this hook used to keep to itself, which is the whole
+ * defect: pressing Play on `/studio` started a 3.2–13.3 second wait during which the button still
+ * read 「播放」, Stop was greyed out, and `getIsPlaying()` was false — no visible state at all, on a
+ * control the owner had already accepted as "ready, then start". `failed` is a **retryable** state
+ * rather than an ending: the same button is the way to try again, and the button says so.
+ */
+export type TransportPreparationPhase = "idle" | "preparing" | "failed";
+
 export interface UseTransportControlsResult {
   handleTapTempo: () => void;
   handleToggleDrumsOnly: () => void;
@@ -108,6 +119,15 @@ export interface UseTransportControlsResult {
    * recorded lanes are stood down. `null` whenever there is nothing to wait for, including `total: 0`.
    */
   samplerPreparation: SamplerLaneProgress | null;
+  /**
+   * ⭐ **Whether a press is being waited on, and whether the last one failed.**
+   *
+   * The button draws this so the wait is visible from the press rather than from the first
+   * `onProgress` callback — which is one manifest round trip later
+   * (`appCatalogueRuntime.load()` is awaited before `prepareSamplerLanes` ever runs). `failed` is
+   * returned to `idle` by the next press, which is what makes the same button a retry.
+   */
+  transportPreparation: TransportPreparationPhase;
   /**
    * One sentence per recorded lane this session's catalogue could not serve, in `reportSampledLaneProblems`' own
    * `[sampled-instrument] …` shape — the same sentences the genre page and the engine-owning hooks render. Never silent:
@@ -152,6 +172,22 @@ export function useTransportControls({
    */
   const [samplerPreparation, setSamplerPreparation] = useState<SamplerLaneProgress | null>(null);
   const [samplerProblems, setSamplerProblems] = useState<string[]>([]);
+  /**
+   * ⭐ **The wait the press itself raises** — see {@link TransportPreparationPhase}.
+   *
+   * State rather than a ref for the same reason `samplerPreparation` is: the frame after the press
+   * has to *repaint*, and that repaint is the entire feature.
+   */
+  const [transportPreparation, setTransportPreparation] = useState<TransportPreparationPhase>("idle");
+  /**
+   * ⭐ **Which press owns the wait, so a second one is a restart rather than a race.**
+   *
+   * Two presses currently start two `prepareRecordings` calls and the *first* one to resolve calls
+   * `engine.play()` — so a user who pressed again while stuck could get a transport started by the
+   * run they had given up on. Every press takes a ticket; a run whose ticket is stale checks out at
+   * its next checkpoint and starts nothing.
+   */
+  const preparationTicketRef = useRef(0);
   /**
    * Read through a ref, like `useRecordedLanes` reads its own `loaderFor`: every call site writes an inline arrow, and a
    * fresh identity here would re-create `handleTogglePlay` on every render for no behavioural reason.
@@ -436,10 +472,39 @@ export function useTransportControls({
      * start a transport at all: it reports why, which is the difference between a slow start and a silent one.
      */
     const pattern = patternForSlot(seqStateRef.current, seqStateRef.current.activeSlot);
+    /**
+     * ⭐ **The press takes a ticket, and the ticket is raised before the first `await`.**
+     *
+     * `setTransportPreparation("preparing")` here rather than inside `prepareRecordings` is the whole
+     * difference between "the button says 准备中 the frame you press it" and "the button says nothing
+     * for one manifest round trip" — measured on the live build at load 16.6: the first visible wait
+     * state arrived **3 204 ms** after the click, and `clickToRunning` was **12 524 ms**. React
+     * flushes this update when the handler yields at the `await` below, i.e. before the next paint,
+     * so the state is on screen for the entire wait it describes.
+     */
+    const ticket = preparationTicketRef.current + 1;
+    preparationTicketRef.current = ticket;
     if (recordedLanesRef.current !== undefined && pattern !== undefined) {
+      setTransportPreparation("preparing");
+      announcer.announce(t("transport_preparing_announce"));
       const canStart = await prepareRecordings(engine, pattern);
+      /**
+       * A later press owns the wait now, so this run starts nothing. That is what makes "press again"
+       * a **retry** rather than a second transport: the abandoned run cannot call `engine.play()`.
+       */
+      if (preparationTicketRef.current !== ticket) return;
       if (!canStart) {
+        /**
+         * ⭐ **A failure is a state with a way out, not silence.**
+         *
+         * The reasons are already on the page (`sampler-problems`, raised by `prepareRecordings`); what
+         * was missing is that the *button* says what happened and that pressing it again is a retry.
+         */
+        setTransportPreparation("failed");
         setIsPlaying(false);
+        refreshCanStop();
+        showToast(t("transport_preparation_failed"));
+        announcer.announce(t("transport_preparation_failed"));
         return;
       }
     }
@@ -469,6 +534,15 @@ export function useTransportControls({
         if (alreadyLoaded.length > 0) engine.prepareSampledLanes(alreadyLoaded);
       }
       await engine.play();
+
+      /**
+       * ⭐ **The wait ends the moment there is a transport to wait for, and only for the press that owns it.**
+       *
+       * A stale run leaves the state alone: the press that replaced it is still waiting, and clearing
+       * the wait from an abandoned run would be the button going quiet in the middle of the thing it
+       * is describing.
+       */
+      if (preparationTicketRef.current === ticket) setTransportPreparation("idle");
 
       /**
        * ⭐ **The recorded lanes are placed once the transport is running, from the bytes the wait above already fetched.**
@@ -523,6 +597,8 @@ export function useTransportControls({
     } catch (error) {
       // A rejected resume is a real failure worth reporting, not a reason to claim playback.
       console.warn("[transport] playback could not start", error);
+      // And the button stops claiming to wait: a wait that will never end is the state this change exists to remove.
+      if (preparationTicketRef.current === ticket) setTransportPreparation("idle");
     }
 
     if (engine.isAudioBlocked()) {
@@ -693,5 +769,6 @@ export function useTransportControls({
     handleToggleCountIn,
     samplerPreparation,
     samplerProblems,
+    transportPreparation,
   };
 }

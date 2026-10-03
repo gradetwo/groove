@@ -16,6 +16,7 @@ import { MasterAnalyzerSuite } from "../analyzer/MasterAnalyzerSuite";
 import { DEMO_TRACKS_CONFIG } from "./trackConfig";
 import { APP_VERSION } from "../../version";
 import type { ClipSlot } from "../../types/song";
+import type { ExportProgress } from "../../features/sequencer/hooks/useExportActions";
 
 export interface SequencerPanelProps {
   pattern: SequencerPattern;
@@ -43,6 +44,13 @@ export interface SequencerPanelProps {
   drumKit: DrumKitType;
   effectsRackState: EffectsRackState;
   isExportingAudio: boolean;
+  /** ⭐ Where a running audio export has got to, and the way to give up on it — drawn by the toolbar's export button. */
+  exportProgress?: ExportProgress | null;
+  cancelExport?: () => void;
+  /** ⭐ What the Play button is doing between the press and the transport (see `useTransportControls`). */
+  transportPreparation?: "idle" | "preparing" | "failed";
+  /** The count the Play button prints while it waits. */
+  samplerPreparation?: { loaded: number; total: number } | null;
   isKeyboardMode: boolean;
   midiDeviceCount: number;
   mobileEditMode: MobileEditMode;
@@ -212,6 +220,10 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
   drumKit,
   effectsRackState,
   isExportingAudio,
+  exportProgress = null,
+  cancelExport,
+  transportPreparation = "idle",
+  samplerPreparation = null,
   isKeyboardMode,
   midiDeviceCount,
   mobileEditMode,
@@ -484,6 +496,10 @@ export const SequencerPanel: React.FC<SequencerPanelProps> = ({
         onExportMp3={onExportMp3}
         onExportStems={onExportStems}
         isExportingAudio={isExportingAudio}
+        exportProgress={exportProgress}
+        cancelExport={cancelExport}
+        transportPreparation={transportPreparation}
+        samplerPreparation={samplerPreparation}
         onImportMidi={onImportMidi}
         onInspireMe={onInspireMe}
         isKeyboardMode={isKeyboardMode}

@@ -515,6 +515,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
   // Export / share actions: MIDI, ALS, .groove, WAV, stems, share URL (A-02)
   const {
     isExportingAudio,
+    exportProgress,
+    cancelExport,
     handleExportMidi,
     handleExportAls,
     handleExportGroove,
@@ -586,6 +588,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
     handleToggleCountIn,
     samplerPreparation,
     samplerProblems,
+    transportPreparation,
   } = useTransportControls({
     engineRef,
     /**
@@ -1125,6 +1128,10 @@ export const StudioView: React.FC<StudioViewProps> = ({
           drumKit={drumKit}
           effectsRackState={effectsRackState}
           isExportingAudio={isExportingAudio}
+          exportProgress={exportProgress}
+          cancelExport={cancelExport}
+          transportPreparation={transportPreparation}
+          samplerPreparation={samplerPreparation}
           isKeyboardMode={isKeyboardMode}
           midiDeviceCount={midiDevices.length}
           mobileEditMode={mobileEditMode}

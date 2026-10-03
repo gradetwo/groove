@@ -795,6 +795,17 @@ export const studioMessages = {
     zh: "已导出 {filename}，但本页不是安全来源，浏览器因此没有提供 audio worklet：真实峰值限幅器与 GS-1 合成器都不可用，文件由回退引擎渲染。请改用 https、localhost 或 127.0.0.1 打开 Groove 再导出真正的母带。",
   },
   export_wav_failed: { en: "WAV export failed: {error}", zh: "WAV 导出失败: {error}" },
+  /**
+   * ⭐ **The two facts a 2–114 second render owed the person waiting on it**: where it is, and how to
+   * stop waiting. Measured before this landed (`/var/tmp/uxaudit/export2.json`, load 19.4): 113 862 ms
+   * with 0 downloads, 0 `[role=progressbar]` and no cancel — one spinner.
+   */
+  export_cancelled: { en: "Export cancelled — no file was produced", zh: "已取消导出——没有生成文件" },
+  toolbar_export_cancel: { en: "Cancel export", zh: "取消导出" },
+  toolbar_export_cancel_title: { en: "Stop waiting for this export; no file will be produced", zh: "不再等这次导出；不会生成文件" },
+  /** `{percent}` is the number `role="progressbar"`'s `aria-valuenow` carries too, so the label and the bar cannot disagree. */
+  toolbar_export_progress: { en: "Exporting {percent}%", zh: "导出中 {percent}%" },
+  toolbar_export_progress_label: { en: "Master export progress", zh: "母带导出进度" },
   export_stems_rendering: { en: "Rendering 8 stems and packaging ZIP...", zh: "正在逐轨离线渲染 8 轨 Stems 并打包 ZIP..." },
   export_stems_done: { en: "Exported Stems ZIP: {filename} ✓", zh: "分轨打包导出完成: {filename} ✓" },
   /**
@@ -846,6 +857,30 @@ export const studioMessages = {
   },
   transport_undo_done: { en: "Undone ✓", zh: "已撤销 (Undo) ✓" },
   transport_redo_done: { en: "Redone ✓", zh: "已重做 (Redo) ✓" },
+  /**
+   * ⭐ **The three sentences the Play button needed for the 3.2–13.3 second wait between the press and
+   * the transport.** Measured before this landed (`/var/tmp/uxfix/base-live.json`, load 16.6): the first
+   * visible wait state was **3 204 ms** after the click and `clickToRunning` was **12 524 ms**, during
+   * which the button still read 「播放」 and Stop was disabled.
+   *
+   * `transport_preparing` carries the same `loaded/total` count `SamplerLaneStatus` prints, so the
+   * button and the panel below cannot tell two different stories about one download.
+   */
+  transport_preparing: { en: "Preparing {loaded}/{total}", zh: "准备中 {loaded}/{total}" },
+  transport_preparing_short: { en: "Preparing…", zh: "正在准备…" },
+  transport_preparing_announce: {
+    en: "Preparing the recordings before playback starts.",
+    zh: "正在准备录音音源，就绪后开始播放。",
+  },
+  /** The wait has a way out, and the button is it: a failed preparation is retried by pressing the same button again. */
+  transport_preparation_failed: {
+    en: "Preparation failed — press Play again to retry.",
+    zh: "准备失败——再按一次播放可重试。",
+  },
+  transport_prepare_retry_title: {
+    en: "Waiting for recordings; press again to start the wait over",
+    zh: "正在等待音源；再按一次可重新开始等待",
+  },
   /**
    * U7: the transport's honest "nothing happened" messages, plus the state readout every mode
    * toggle now gives. A control that changes state silently is indistinguishable from a broken one.

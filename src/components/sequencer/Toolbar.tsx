@@ -32,8 +32,10 @@ import {
   Undo2,
   Upload,
   Wand2,
+  X,
 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
+import type { ExportProgress } from "../../features/sequencer/hooks/useExportActions";
 import { isControlVisible } from "./toolbarTiers";
 import { DrumKitType, EffectsRackState } from "../../audio/AudioEngine";
 import { CustomKickPreset, loadCustomKickPresets } from "../../audio/AnatomyKickEngine";
@@ -170,6 +172,20 @@ export interface ToolbarProps {
   isKeyboardMode?: boolean;
   onToggleKeyboardMode?: () => void;
   midiDeviceCount?: number;
+  /**
+   * ⭐ **What the Play button is doing between the press and the transport.**
+   *
+   * `useTransportControls` owns the state; this component only draws it. Absent means `idle`, which is
+   * how every surface that has no sampler preparation (the phone shell, the criteria that render the
+   * toolbar alone) keeps exactly the button it always had.
+   */
+  transportPreparation?: "idle" | "preparing" | "failed";
+  /** The count the Play button prints while it waits — the same `loaded/total` `SamplerLaneStatus` shows. */
+  samplerPreparation?: { loaded: number; total: number } | null;
+  /** ⭐ Where a running audio export has got to; drawn inside the export button. */
+  exportProgress?: ExportProgress | null;
+  /** ⭐ Give up on the running export. */
+  cancelExport?: () => void;
   onShare: () => void;
   onAddSteps: (count: number) => void;
   onRemoveSteps: (count: number) => void;
@@ -484,6 +500,17 @@ const PatternSlotControls = memo<PatternSlotControlsProps>(function PatternSlotC
 
 interface ExportMenuProps {
   isExportingAudio?: boolean;
+  /**
+   * ⭐ **Where the running render has got to** — `null` when nothing is running.
+   *
+   * The owner's ruling on placement was "进度放在按钮内" (no modal, least interruption), so this is
+   * drawn **inside the export button itself** and nowhere else. Measured before it existed
+   * (`/var/tmp/uxaudit/export2.json`, load 19.4): 113 862 ms, 0 downloads, 0 `[role=progressbar]`,
+   * no cancel — one spinner.
+   */
+  exportProgress?: ExportProgress | null;
+  /** ⭐ Give up on the running export — the control a 113-second wait did not have. */
+  cancelExport?: () => void;
   onExportMidi: () => void;
   onExportAls?: () => void;
   onExportGroove?: () => void;
@@ -499,6 +526,8 @@ interface ExportMenuProps {
  */
 const ExportMenu = memo<ExportMenuProps>(function ExportMenu({
   isExportingAudio = false,
+  exportProgress = null,
+  cancelExport,
   onExportMidi,
   onExportAls,
   onExportGroove,
@@ -509,6 +538,12 @@ const ExportMenu = memo<ExportMenuProps>(function ExportMenu({
   const { t } = useLanguage();
   const [exportOpen, setExportOpen] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement | null>(null);
+  /**
+   * ⭐ **The number the bar, the label and `aria-valuenow` all carry** — one reading, so a bar that
+   * says 40% beside a label that says 40% cannot come from two different places. The export being
+   * **cancellable** is what makes the cancel button appear in the same breath as the first percent.
+   */
+  const exportPercent = exportProgress?.percent ?? 0;
 
   useEffect(() => {
     if (!exportOpen) return;
@@ -522,29 +557,76 @@ const ExportMenu = memo<ExportMenuProps>(function ExportMenu({
   }, [exportOpen]);
 
   return (
-    <div className="relative shrink-0" ref={exportMenuRef}>
+    <div className="relative shrink-0 flex items-center gap-1" ref={exportMenuRef}>
       <button
         data-toolbar-id="export"
         data-toolbar-tier="1"
         onClick={() => setExportOpen((prev) => !prev)}
         disabled={isExportingAudio}
-        className="h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs text-text-sub hover:text-text hover:border-[#3a3e48] border border-line rounded-lg transition-colors bg-panel2 shrink-0 font-['JetBrains_Mono'] disabled:opacity-50"
+        aria-busy={isExportingAudio ? "true" : undefined}
+        className="relative overflow-hidden h-8 px-2 sm:px-2.5 flex items-center gap-1 text-xs text-text-sub hover:text-text hover:border-[#3a3e48] border border-line rounded-lg transition-colors bg-panel2 shrink-0 font-['JetBrains_Mono'] disabled:opacity-50"
         /* Its own label: `export` is the key for "MIDI" in this app, so the menu was titled after one of its
-           five items. */
-        title={t("toolbar_export_menu")}
-        aria-label={t("toolbar_export_menu")}
+           five items. While a render is running it names the wait instead, and the button's own label is the
+           only place that sentence is needed. */
+        title={isExportingAudio ? t("toolbar_export_progress", { percent: String(exportPercent) }) : t("toolbar_export_menu")}
+        aria-label={isExportingAudio ? t("toolbar_export_progress", { percent: String(exportPercent) }) : t("toolbar_export_menu")}
         aria-haspopup="true"
         aria-expanded={exportOpen}
       >
-        {isExportingAudio ? (
-          <Loader2 className="w-3.5 h-3.5 animate-spin text-accent" />
-        ) : (
-          <Download className="w-3.5 h-3.5" />
+        {/**
+         * ⭐ **The progress, inside the button that started it.**
+         *
+         * Its own `role="progressbar"` rather than a decorative div, because "there is a visible
+         * percentage" and "a reader can ask where the render is" are the same fact and this app has
+         * one of them elsewhere already (`SamplerLaneStatus`). `data-percent` is the same number for a
+         * probe that would rather not parse `aria-valuenow`.
+         */}
+        {isExportingAudio && (
+          <span
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={exportPercent}
+            aria-label={t("toolbar_export_progress_label")}
+            data-testid="export-progress"
+            data-percent={exportPercent}
+            className="pointer-events-none absolute inset-y-0 left-0 bg-accent/30 transition-[width] duration-200"
+            style={{ width: `${exportPercent}%` }}
+          />
         )}
-        {/* The word, from tablet width up: an unlabelled icon among twenty is not a discoverable action. */}
-        <span className="hidden sm:inline">{t("toolbar_export_menu")}</span>
-        <ChevronDown className={`w-3 h-3 transition-transform ${exportOpen ? "rotate-180" : ""}`} />
+        <span className="relative flex items-center gap-1">
+          {isExportingAudio ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-accent" />
+          ) : (
+            <Download className="w-3.5 h-3.5" />
+          )}
+          {/* The word, from tablet width up: an unlabelled icon among twenty is not a discoverable action.
+              While exporting the same slot carries the number, which is the whole of the visible progress. */}
+          <span className="hidden sm:inline">
+            {isExportingAudio ? t("toolbar_export_progress", { percent: String(exportPercent) }) : t("toolbar_export_menu")}
+          </span>
+          <ChevronDown className={`w-3 h-3 transition-transform ${exportOpen ? "rotate-180" : ""}`} />
+        </span>
       </button>
+
+      {/**
+       * ⭐ **The way out, beside the wait it belongs to.**
+       *
+       * `aria-label` as well as the icon, because an ✕ among twenty controls is not a name; and its own
+       * `data-testid` so the criterion reads the control rather than a label that may be translated.
+       */}
+      {isExportingAudio && cancelExport !== undefined && (
+        <button
+          type="button"
+          data-testid="export-cancel"
+          onClick={cancelExport}
+          title={t("toolbar_export_cancel_title")}
+          aria-label={t("toolbar_export_cancel")}
+          className="h-8 w-8 flex items-center justify-center rounded-lg border border-[#ff5964]/60 bg-[#ff5964]/10 text-[#ff5964] hover:bg-[#ff5964]/20 transition-colors shrink-0"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      )}
 
       {exportOpen && (
         <div className="absolute right-0 top-full mt-1.5 w-52 py-1 bg-[#0f1118] border border-line-strong rounded-xl shadow-[0_16px_36px_rgba(0,0,0,0.9)] z-50 text-xs font-['JetBrains_Mono'] divide-y divide-line/40">
@@ -717,6 +799,20 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
   onOpenProjectHub,
   onOpenGenreMaker,
   isExportingAudio = false,
+  /**
+   * ⭐ **What the Play button is doing between the press and the transport.**
+   *
+   * `useTransportControls` owns the state; this component only draws it. `idle` is the default, which
+   * is how every surface with no sampler preparation (the phone shell, a criterion that renders the
+   * toolbar alone) keeps exactly the button it always had.
+   */
+  transportPreparation = "idle",
+  /** The count the Play button prints while it waits — the same `loaded/total` `SamplerLaneStatus` shows. */
+  samplerPreparation = null,
+  /** ⭐ Where a running audio export has got to; drawn inside the export button. */
+  exportProgress = null,
+  /** ⭐ Give up on the running export. */
+  cancelExport,
   onImportMidi,
   onInspireMe,
   isKeyboardMode = false,
@@ -910,21 +1006,60 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
             <button
               data-toolbar-id="play" data-toolbar-tier="1"
               onClick={onTogglePlay}
+              /**
+               * ⭐ **The wait lives on this button, in the state the press raises.**
+               *
+               * `data-preparation` is the same fact the label draws, spelled for a machine: a probe (or a
+               * criterion) can read `preparing`/`failed` without matching translated text. `aria-busy` is the
+               * same fact for a screen reader.
+               *
+               * ⚠️ **Deliberately not `disabled`.** The audit's own draft suggested a disabled button, but the
+               * defect it reports is "用户对此状态无任何可操作项" — a control that cannot be pressed is that
+               * defect, not the fix for it. The button is the retry: pressing it during the wait or after a
+               * failure starts the wait over (the hook gives each press a ticket, so the abandoned run cannot
+               * start a transport of its own).
+               */
+              data-preparation={transportPreparation}
+              aria-busy={transportPreparation === "preparing" ? "true" : undefined}
               className={`h-8 px-2.5 sm:px-3 rounded-lg flex items-center gap-1.5 text-xs font-bold transition-all hover:brightness-110 shrink-0 ${
                 isPlaying
                   ? "bg-[#ff5964] text-white shadow-[0_0_12px_rgba(255,89,100,0.35)] animate-pulse-play"
-                  : "bg-accent text-[#0a0b0d] shadow-[0_0_12px_rgba(245,183,61,0.25)]"
+                  : transportPreparation === "failed"
+                    ? "bg-[#ff5964]/20 text-[#ff5964] border border-[#ff5964]/60"
+                    : transportPreparation === "preparing"
+                      ? "bg-accent/70 text-[#0a0b0d] shadow-[0_0_12px_rgba(245,183,61,0.25)]"
+                      : "bg-accent text-[#0a0b0d] shadow-[0_0_12px_rgba(245,183,61,0.25)]"
               }`}
               aria-label="Play / Pause"
-              title={isPlaying ? "Space: Pause" : "Space: Play"}
+              title={
+                isPlaying
+                  ? "Space: Pause"
+                  : transportPreparation === "preparing"
+                    ? t("transport_prepare_retry_title")
+                    : transportPreparation === "failed"
+                      ? t("transport_preparation_failed")
+                      : "Space: Play"
+              }
             >
               {isPlaying ? (
                 <div className="w-2.5 h-2.5 rounded-xs bg-current" />
+              ) : transportPreparation === "preparing" ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
                 <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
               )}
               <span className="font-['JetBrains_Mono'] text-xs">
-                {isPlaying ? (t("toolbar_pause")) : (t("toolbar_play"))}
+                {isPlaying
+                  ? t("toolbar_pause")
+                  : transportPreparation === "preparing"
+                    ? /* The count when the render knows it, the bare word until then — the press itself
+                         raises this, so there is always something to read. */
+                      samplerPreparation !== null && samplerPreparation !== undefined && samplerPreparation.total > 0
+                      ? t("transport_preparing", { loaded: String(samplerPreparation.loaded), total: String(samplerPreparation.total) })
+                      : t("transport_preparing_short")
+                    : transportPreparation === "failed"
+                      ? t("transport_preparation_failed")
+                      : t("toolbar_play")}
               </span>
             </button>
 
@@ -1755,6 +1890,8 @@ export const Toolbar = memo<ToolbarProps>(function Toolbar({
             {shows("export") && (
               <ExportMenu
                 isExportingAudio={isExportingAudio}
+                exportProgress={exportProgress}
+                cancelExport={cancelExport}
                 onExportMidi={onExportMidi}
                 onExportAls={onExportAls}
                 onExportGroove={onExportGroove}
