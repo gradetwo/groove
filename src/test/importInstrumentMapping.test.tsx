@@ -18,11 +18,48 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
 import { LanguageProvider } from "../i18n/LanguageContext";
 import { ImportInstrumentMappingV2, importInstrumentOptions } from "../components/arrangement/ImportInstrumentMappingV2";
-import { placeMidiIntoArrangement, type ReadMidiImport } from "../features/arrangement/arrangementFiles";
+import {
+  importMusicXmlIntoArrangement,
+  placeMidiIntoArrangement,
+  placeMusicXmlIntoArrangement,
+  readMusicXmlForImport,
+  type ReadMidiImport,
+  type ReadMusicXmlImport,
+} from "../features/arrangement/arrangementFiles";
 import { fromMidi } from "../data/midiToArrangement";
+import { fromMusicXml } from "../data/musicxmlImport";
 import { sampledAssetForLane } from "../data/sampledInstruments";
 import { buildMidiFile } from "./fixtures/midi_file.mjs";
+import { buildMxlZip } from "./fixtures/mxlZip";
 import type { ArrangementV2 } from "../types/arrangementV2";
+
+/**
+ * A **hand-written two-part score**, in the shape the corpus's own files arrive in: one `<part>` per voice of the
+ * arrangement, a name from `<part-name>`, and one sounding note each. It is written here rather than taken from a
+ * file so the criterion has no dependency on a corpus that lives on one machine.
+ */
+const twoPartsMusicXml = `<?xml version="1.0" encoding="UTF-8"?>
+<score-partwise version="4.0">
+  <work><work-title>Two voices</work-title></work>
+  <part-list>
+    <score-part id="P1"><part-name>钢琴</part-name></score-part>
+    <score-part id="P2"><part-name>贝斯</part-name></score-part>
+  </part-list>
+  <part id="P1"><measure number="1">
+    <attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>
+    <note><pitch><step>C</step><octave>4</octave></pitch><duration>4</duration></note>
+  </measure></part>
+  <part id="P2"><measure number="1">
+    <attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>
+    <note><pitch><step>C</step><octave>3</octave></pitch><duration>4</duration></note>
+  </measure></part>
+</score-partwise>`;
+
+/** A part that holds no notes, which is the shape that shifts a positional mapping by one. */
+const emptySecondPartMusicXml = twoPartsMusicXml.replace(
+  '<note><pitch><step>C</step><octave>3</octave></pitch><duration>4</duration></note>',
+  '<note><rest/><duration>4</duration></note>'
+);
 
 /** The repository's own byte-by-byte MIDI writer, so every criterion here is about bytes this repo chose. */
 type MidiFixtureOptions = NonNullable<Parameters<typeof buildMidiFile>[0]>;
@@ -125,6 +162,133 @@ describe("placing a read MIDI file into an arrangement", () => {
     expect(placed.ok).toBe(true);
     if (!placed.ok) return;
     expect(placed.arrangement.tracks.find((track) => track.name === "钢琴")!.instrument).toBeUndefined();
+  });
+});
+
+/**
+ * ⭐⭐ **The same question asked of a MusicXML file — the half this entry point could not answer at all.**
+ *
+ * `importMusicXmlIntoArrangement` had no `instruments` parameter, so a MusicXML file's parts arrived as anonymous
+ * `synth` tracks however well the file named them, and the mapping dialog the MIDI path opens had no counterpart.
+ * These are the claims the fix stands on, at the layer where it can actually fail:
+ *
+ *   1. **nobody answered ⇒ byte-for-byte the old result** — same tracks, same notes, no instrument, still `synth`;
+ *   2. **a name lands on exactly the part it was chosen for, and the track becomes `sampler`** pointed at the asset
+ *      `sampledAssetForLane` resolves that name to — the model fact, not a string;
+ *   3. **`problems` reach the outcome**, so a shape the reader cannot hold is said rather than dropped;
+ *   4. **an unsupported document is refused with the reader's own sentence** rather than importing nothing quietly.
+ */
+describe("placing a read MusicXML file into an arrangement", () => {
+  /** A read as the dialog is drawn from, without a `File` round trip — the reader's own output plus the format tag. */
+  const readXml = (xml: string, filename = "duet.musicxml"): ReadMusicXmlImport => ({
+    filename,
+    imported: { format: "xml", ...fromMusicXml(xml) },
+  });
+
+  it("is unchanged when nobody named anything: same tracks, same notes, still synthesizers", () => {
+    const placed = placeMusicXmlIntoArrangement(blank(), readXml(twoPartsMusicXml));
+    expect(placed.ok).toBe(true);
+    if (!placed.ok) return;
+    expect(placed.format).toBe("xml");
+    expect(placed.tracks).toBe(2);
+    expect(placed.notes).toBe(2);
+    expect(placed.arrangement.tracks.map((track) => track.name)).toEqual(["钢琴", "贝斯"]);
+    expect(placed.arrangement.tracks.every((track) => track.instrument === undefined)).toBe(true);
+    expect(placed.arrangement.tracks.every((track) => track.kind === "synth")).toBe(true);
+    // The notes are really there, not merely counted.
+    expect(Object.values(placed.arrangement.notesByTrack ?? {}).flat().length).toBe(2);
+  });
+
+  /**
+   * ⭐ **The measured gap itself: a named MusicXML part becomes a `sampler` track.**
+   *
+   * Without `instruments` reaching `placeMusicXmlIntoArrangement` — which hands it to
+   * `arrangementWithImportedParts`, the one place that derives a track's kind from the name — this arrangement comes
+   * back all `synth` with `instrument === undefined`, which is exactly what the criterion below pins as the
+   * *no-answer* result, so the two cannot pass at once by accident.
+   */
+  it("turns a named part into a sampler track pointed at the recording, and leaves the others alone", () => {
+    const placed = placeMusicXmlIntoArrangement(blank(), readXml(twoPartsMusicXml), { 1: "walking_upright" });
+    expect(placed.ok).toBe(true);
+    if (!placed.ok) return;
+    expect(placed.mapped).toBe(1);
+    const piano = placed.arrangement.tracks.find((track) => track.name === "钢琴")!;
+    const bass = placed.arrangement.tracks.find((track) => track.name === "贝斯")!;
+    // Keyed by part index: the second part was named, the first was not.
+    expect(bass.instrument).toBe("walking_upright");
+    expect(piano.instrument).toBeUndefined();
+    // ⭐ And the kind is what makes the instrument slot render at all: a name on a `synth` track is invisible.
+    expect(bass.kind).toBe("sampler");
+    expect(bass.sample?.assetId).toBe("dsmolken-double-bass:d-smolken-rubner-bass-pizz");
+    expect(piano.kind).toBe("synth");
+    // The same resolution the renderer performs, so this asserts "the track sounds bytes" rather than "a string was stored".
+    expect(sampledAssetForLane({ track_id: "bass", instrument: bass.instrument })).toBe(bass.sample?.assetId);
+  });
+
+  it("says out loud when a name cannot become a sampler, rather than silently keeping the synthesizer", () => {
+    const placed = placeMusicXmlIntoArrangement(blank(), readXml(twoPartsMusicXml), { 0: "warm_pad" });
+    expect(placed.ok).toBe(true);
+    if (!placed.ok) return;
+    expect(placed.mapped).toBeUndefined();
+    expect(placed.arrangement.tracks.find((track) => track.name === "钢琴")!.kind).toBe("synth");
+    expect(placed.problems.join(" ")).toMatch(/warm_pad.*not one of the recorded instruments/);
+  });
+
+  /** Keyed by part index, the lesson already paid for once: a part with no notes never becomes a track. */
+  it("counts parts as the reader reports them, so an empty part cannot shift an index", () => {
+    const placed = placeMusicXmlIntoArrangement(blank(), readXml(emptySecondPartMusicXml), { 1: "walking_upright" });
+    expect(placed.ok).toBe(true);
+    if (!placed.ok) return;
+    expect(placed.arrangement.tracks.map((track) => track.name)).toEqual(["钢琴"]);
+    // Part 2 held no notes, so the name given to it landed on nothing — and the piano is untouched.
+    expect(placed.arrangement.tracks[0]!.instrument).toBeUndefined();
+    expect(placed.problems.join(" ")).toMatch(/holds no notes and was not added as a track/);
+  });
+
+  /**
+   * ⭐ **What the reader could not hold is carried into the outcome**, so the toolbar's sentence can say it. A shape
+   * this model has no room for is a `problem`, never a silent half-import — the rule the whole importer is written to.
+   */
+  it("carries the reader's problems into the outcome, which is how an unsupported shape is said rather than dropped", () => {
+    const withGrace = twoPartsMusicXml.replace('<note><pitch><step>C</step><octave>4</octave></pitch>', '<note><grace/><pitch><step>C</step><octave>4</octave></pitch>');
+    const placed = placeMusicXmlIntoArrangement(blank(), readXml(withGrace));
+    expect(placed.ok).toBe(true);
+    if (!placed.ok) return;
+    expect(placed.problems.join(" ")).toMatch(/grace note/);
+    // The note itself still arrives: a problem is a statement about fidelity, not a refusal.
+    expect(placed.notes).toBe(2);
+  });
+
+  /**
+   * ⚠️ **The end of the line, pinned honestly.** A `score-timewise` document is one this reader does not implement,
+   * and the correct outcome is the reader's own sentence — not an empty arrangement presented as a success.
+   */
+  it("refuses a document the reader does not implement, with the reader's own sentence", async () => {
+    const file = () => new File([new TextEncoder().encode("<score-timewise/>")], "timewise.musicxml");
+    const read = await readMusicXmlForImport(file());
+    expect(read.ok).toBe(false);
+    if (read.ok) return;
+    expect(read.reason).toMatch(/score-partwise/);
+    // And the entry point the Score tab calls reports the same refusal rather than an empty success.
+    const outcome = await importMusicXmlIntoArrangement(blank(), file());
+    expect(outcome.ok).toBe(false);
+    if (outcome.ok) return;
+    expect(outcome.reason).toMatch(/score-partwise/);
+  });
+
+  it("reads a compressed .mxl through the same placement as a plain document", async () => {
+    const bytes = buildMxlZip([["score.musicxml", twoPartsMusicXml]]);
+    // The `ArrayBuffer` is sliced to the view's own range, which is what `BlobPart` requires.
+    const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+    const read = await readMusicXmlForImport(new File([buffer], "duet.mxl"));
+    expect(read.ok).toBe(true);
+    if (!read.ok) return;
+    const placed = placeMusicXmlIntoArrangement(blank(), read.read, { 0: "piano_lead" });
+    expect(placed.ok).toBe(true);
+    if (!placed.ok) return;
+    expect(placed.format).toBe("mxl");
+    expect(placed.arrangement.tracks.find((track) => track.name === "钢琴")!.kind).toBe("sampler");
+    expect(placed.arrangement.tracks.find((track) => track.name === "钢琴")!.sample?.assetId).toBe("salamander-grand");
   });
 });
 

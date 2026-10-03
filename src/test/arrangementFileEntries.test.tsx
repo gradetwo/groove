@@ -16,6 +16,7 @@ import { LanguageProvider } from "../i18n/LanguageContext";
 import { ArrangementViewV2 } from "../components/arrangement/ArrangementViewV2";
 import { midiFileFor, musicXmlFileFor } from "../features/arrangement/arrangementFiles";
 import { sampledAssetForLane } from "../data/sampledInstruments";
+import { buildMxlZip } from "./fixtures/mxlZip";
 import type { ArrangementV2 } from "../types/arrangementV2";
 
 vi.mock("vexflow/core", () => ({
@@ -132,6 +133,39 @@ const midiNamed = (names: readonly string[], filename = "parts.mid") => {
 };
 
 const pickInto = (input: HTMLElement, file: File) => fireEvent.change(input, { target: { files: [file] } });
+
+/**
+ * ⭐ **A hand-written two-part score**, which is the shape the mapping question exists for: one `<part>` per voice of
+ * the arrangement, each with its own `<part-name>` and one sounding note. Written as a string here rather than taken
+ * from a file, so the criterion depends on nothing outside this repository.
+ */
+const twoPartMusicXml = (): string => `<?xml version="1.0" encoding="UTF-8"?>
+<score-partwise version="4.0">
+  <work><work-title>Two voices</work-title></work>
+  <part-list>
+    <score-part id="P1"><part-name>钢琴</part-name></score-part>
+    <score-part id="P2"><part-name>贝斯</part-name></score-part>
+  </part-list>
+  <part id="P1"><measure number="1">
+    <attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>
+    <note><pitch><step>C</step><octave>4</octave></pitch><duration>4</duration></note>
+  </measure></part>
+  <part id="P2"><measure number="1">
+    <attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>
+    <note><pitch><step>C</step><octave>3</octave></pitch><duration>4</duration></note>
+  </measure></part>
+</score-partwise>`;
+
+/** The same score as a file, and — when asked — as the very `.mxl` zip the corpus's compressed half arrives in. */
+const twoPartMusicXmlFile = (name: string, options: { zipped?: boolean } = {}): File => {
+  const xml = twoPartMusicXml();
+  if (options.zipped) return bytesFile(buildMxlZip([["score.musicxml", xml]]), name, "application/vnd.recordare.musicxml");
+  return new File([xml], name, { type: "application/vnd.recordare.musicxml+xml" });
+};
+
+/** A `File` from bytes: the `ArrayBuffer` is sliced to the view's own range, which is what `BlobPart` requires. */
+const bytesFile = (bytes: Uint8Array, name: string, type: string): File =>
+  new File([bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer], name, { type });
 
 /** The dialog's rows, as a person reads them: the file's own part name and the note count beside it. */
 const mappingRows = () =>
@@ -387,5 +421,143 @@ describe("the Score tab's MusicXML entries", () => {
     expect(picker.textContent).toContain("Flute");
     expect(picker.querySelectorAll("button").length).toBe(before + 1);
     expect(screen.getByTestId("arrangement-file-report").textContent).toContain("1 note(s)");
+  });
+
+  /**
+   * ⭐⭐ **The measured gap, closed — a MusicXML part can be mapped to a sampler.**
+   *
+   * The whole finding was that `importMusicXmlIntoArrangement` took no `instruments`, so MusicXML's voices could not be
+   * named while MIDI's could. This drives the person's own route: pick a two-part score in the Score tab, answer the
+   * shared mapping dialog with a recorded instrument, and read back both the arrangement the view reports **and** the
+   * track-kind control the DOM draws — the second reading is what makes this "the track is a sampler" rather than
+   * "a string was written".
+   */
+  it("asks which instrument each MusicXML part is, and turns the named part into a sampler track", async () => {
+    openScore();
+    pickInto(screen.getByTestId("score-import-musicxml-input"), twoPartMusicXmlFile("duet.musicxml"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("import-instrument-mapping")).toBeDefined();
+    });
+    // The file's own names, verbatim and untranslated, with the note counts the reader measured.
+    const rows = mappingRows();
+    expect(rows.map((row) => row.name)).toEqual(["钢琴", "贝斯"]);
+    expect(rows.map((row) => row.notes)).toEqual(["1 note(s)", "1 note(s)"]);
+    // Nothing is guessed: every row starts at "leave as synthesizer", so Confirm is unusable.
+    expect(rows.map((row) => row.value)).toEqual(["", ""]);
+    expect((screen.getByTestId("import-mapping-confirm") as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.change(screen.getByTestId("import-mapping-select-0"), { target: { value: "piano_lead" } });
+    expect(screen.getByTestId("import-mapping-target-0").textContent).toContain("salamander-grand");
+    fireEvent.click(screen.getByTestId("import-mapping-confirm"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("arrangement-file-report").textContent).toContain("Imported duet.musicxml");
+    });
+    const piano = (reported?.tracks ?? []).find((track) => track.name === "钢琴")!;
+    const bass = (reported?.tracks ?? []).find((track) => track.name === "贝斯")!;
+    expect(piano.instrument).toBe("piano_lead");
+    // ⭐ The kind and the asset, not only the name: a name on a `synth` track never renders an instrument slot.
+    expect(piano.kind).toBe("sampler");
+    expect(piano.sample?.assetId).toBe("salamander-grand");
+    expect(sampledAssetForLane({ track_id: "lead", instrument: piano.instrument })).toBe("salamander-grand");
+    // ⭐ The renderer's own first source is the lane's asset id, which the sampler upgrade is what put there.
+    expect(sampledAssetForLane({ track_id: "lead", instrument: piano.instrument, sample: piano.sample })).toBe("salamander-grand");
+    // ⭐ Keyed by part index: the second part was never named and is untouched.
+    expect(bass.instrument).toBeUndefined();
+    expect(bass.kind).toBe("synth");
+    // The DOM agrees: the header's own kind control for the piano reads "sampler".
+    expect((screen.getByTestId(`track-kind-${piano.id}`) as HTMLSelectElement).value).toBe("sampler");
+    expect((screen.getByTestId(`track-kind-${bass.id}`) as HTMLSelectElement).value).toBe("synth");
+    // And the report says the mapping landed, and names the track left a synthesizer with the next step attached.
+    const report = screen.getByTestId("arrangement-file-report").textContent ?? "";
+    expect(report).toContain("1 imported track(s) are now sampler tracks playing the recording you chose");
+    expect(report).toContain("1 imported track(s) still play built-in synthesizers");
+    expect(report).toContain("贝斯");
+  });
+
+  /**
+   * ⭐ **The same question of a compressed `.mxl`**, which is the same document in a zip. The corpus is half `.mxl`,
+   * so a mapping path that only worked for the uncompressed spelling would be a mapping path for half the files.
+   */
+  it("asks the same question of a compressed .mxl, which is the same score in a zip", async () => {
+    openScore();
+    pickInto(screen.getByTestId("score-import-musicxml-input"), twoPartMusicXmlFile("duet.mxl", { zipped: true }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("import-instrument-mapping")).toBeDefined();
+    });
+    expect(mappingRows().map((row) => row.name)).toEqual(["钢琴", "贝斯"]);
+
+    fireEvent.change(screen.getByTestId("import-mapping-select-1"), { target: { value: "walking_upright" } });
+    fireEvent.click(screen.getByTestId("import-mapping-confirm"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("arrangement-file-report").textContent).toContain("Imported duet.mxl");
+    });
+    const bass = (reported?.tracks ?? []).find((track) => track.name === "贝斯")!;
+    expect(bass.kind).toBe("sampler");
+    expect(bass.sample?.assetId).toBe("dsmolken-double-bass:d-smolken-rubner-bass-pizz");
+  });
+
+  /** One part is not a table, exactly as the MIDI path already decided — and the synthesizer left behind is said. */
+  it("keeps a single-part MusicXML placing straight away, and says the track is still a synthesizer", async () => {
+    openScore();
+    const exported = await musicXmlFileFor([{ pitch: 67, startBeats: 0, lengthBeats: 1, velocity: 100 }], 1, { title: "Flute" });
+    pickInto(screen.getByTestId("score-import-musicxml-input"), new File([exported.blob], "flute.musicxml", { type: "application/xml" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("arrangement-file-report").textContent).toContain("Imported flute.musicxml");
+    });
+    expect(screen.queryByTestId("import-instrument-mapping")).toBeNull();
+    expect(screen.getByTestId("arrangement-file-report").textContent).toContain("1 imported track(s) still play built-in synthesizers");
+    expect((reported?.tracks ?? []).find((track) => track.name === "Flute")!.kind).toBe("synth");
+  });
+
+  /**
+   * ⭐ **A shape this model cannot hold is said, not dropped** — the `problems` the reader collects travel all the way
+   * to the sentence a person reads, which is the half of "no silent degradation" that only a rendered view can prove.
+   */
+  it("says what a MusicXML document could not carry, rather than importing it in silence", async () => {
+    openScore();
+    // One part, so the mapping question does not open first and the sentence under test is the only outcome.
+    const graceDocument = `<?xml version="1.0" encoding="UTF-8"?>
+<score-partwise version="4.0">
+  <part-list><score-part id="P1"><part-name>Flute</part-name></score-part></part-list>
+  <part id="P1"><measure number="1">
+    <attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>
+    <note><grace/><pitch><step>D</step><octave>4</octave></pitch><duration>1</duration></note>
+    <note><pitch><step>C</step><octave>4</octave></pitch><duration>4</duration></note>
+  </measure></part>
+</score-partwise>`;
+    pickInto(screen.getByTestId("score-import-musicxml-input"), new File([graceDocument], "grace.musicxml", { type: "application/xml" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("arrangement-file-report").textContent).toContain("Imported grace.musicxml");
+    });
+    const report = screen.getByTestId("arrangement-file-report").textContent ?? "";
+    expect(report).toContain("could not be carried exactly");
+    expect(report).toContain("grace note");
+  });
+
+  /**
+   * ⚠️ **The end of the line, pinned as honesty rather than as success.** `score-timewise` is a spelling this reader
+   * deliberately does not implement, so the criterion asserts the *refusal* — with the reader's own sentence — rather
+   * than pretending the file imported.
+   */
+  it("refuses a MusicXML shape the reader does not implement, with the reader's own sentence", async () => {
+    openScore();
+    pickInto(
+      screen.getByTestId("score-import-musicxml-input"),
+      new File(['<?xml version="1.0"?><score-timewise version="4.0"></score-timewise>'], "timewise.musicxml", { type: "application/xml" })
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId("arrangement-file-report").textContent).toContain("Import failed");
+    });
+    const report = screen.getByTestId("arrangement-file-report").textContent ?? "";
+    expect(report).toContain("unsupported MusicXML root");
+    expect(report).toContain("score-partwise");
+    // Nothing was added: a refusal is not a half-import.
+    expect(screen.queryByTestId("import-instrument-mapping")).toBeNull();
   });
 });

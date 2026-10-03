@@ -225,8 +225,19 @@ function readPart(part: XmlElement, problems: string[], metadata: PartMetadata):
       }
 
       if (!parsed.isRest && parsed.midi !== undefined) {
-        /** The resolution of the model's own grid: a position between sixteenths could not be drawn in the roll or written back out. */
-        const resolution = 1 / 2;
+        /**
+         * **The resolution of the model's own grid: a position between sixteenths could not be drawn in the roll or
+         * written back out.**
+         *
+         * ⭐ **One sixteenth of a beat — `1 / 4`, not `1 / 2`.** The comment above has always said *sixteenths*, and the
+         * unit was an eighth: a sixteenth position was rounded onto the half-beat grid (`0.25 → 0.5`, `0.75 → 1`) and a
+         * sixteenth length was raised to half a beat (`0.25 → 0.5`), so a bar of sixteenths came back as a different
+         * rhythm from the one that went out. The document itself was always correct — `<duration>1</duration>` with
+         * `<type>sixteenth</type>` at `divisions` 4 — so this was a read-side fidelity loss, and the grid it was
+         * measured against is the one the rest of the model uses: `ScoreV2`'s `WRITTEN_BEATS["16"] = 0.25`, the roll's
+         * `STEP_BEATS`, and `PianoRollV2`'s pixels-per-sixteenth.
+         */
+        const resolution = 1 / 4;
         const endsAt = startBeats + lengthBeats;
         const tieBeginning = open.get(parsed.midi);
         if (tieBeginning && parsed.tieStop) {

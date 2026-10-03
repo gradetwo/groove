@@ -22,6 +22,7 @@ import type { MidiArrangementImport } from "../../data/midiToArrangement";
 import { arrangementToMidi } from "../../data/arrangementToMidi";
 import { arrangementWithImportedParts, arrangementFromGroovePackage, type ArrangementImportResult } from "../../data/arrangementImport";
 import { compileArrangementToPattern } from "../../data/arrangementCompile";
+import type { MusicXmlBytesImport } from "../../data/musicxmlImport";
 import { DEFAULT_FX_STATE } from "../../audio/EffectsRack";
 
 /**
@@ -453,27 +454,95 @@ export async function importGrooveIntoArrangement(arrangement: ArrangementV2, fi
 }
 
 /**
+ * ⭐ **A MusicXML document read but not yet placed** — the same shape the MIDI path keeps for its mapping dialog, and
+ * for the same reason.
+ *
+ * The measured gap this closes: `importMusicXmlIntoArrangement` had **no `instruments` parameter at all**, so a
+ * MusicXML file's parts became `synth` tracks with their names written on them and no way for the person to say
+ * "this part is a recording" — while the MIDI path one screen up could. The reader already produces the part list the
+ * dialog needs (`{name, notes}`, exactly `ImportedPart`), so keeping the read rather than re-reading the `File` is
+ * what makes the dialog describe the very parts that will be placed.
+ */
+export interface ReadMusicXmlImport {
+  filename: string;
+  imported: MusicXmlBytesImport;
+}
+
+/** A MusicXML read as a result rather than an exception: either the parts, or the reader's own sentence. */
+export type MusicXmlImportRead = { ok: true; read: ReadMusicXmlImport } | { ok: false; filename: string; reason: string };
+
+/**
+ * Read a MusicXML document **into parts, without placing anything** — what the mapping dialog is shown from.
+ *
+ * The heavy reader stays `await import`ed, so the first paint does not pay for a notation parser merely because the
+ * route can import one.
+ */
+export async function readMusicXmlForImport(file: File): Promise<MusicXmlImportRead> {
+  try {
+    const { fromMusicXmlBytes } = await import("../../data/musicxmlImport");
+    return { ok: true, read: { filename: file.name, imported: await fromMusicXmlBytes(await bytesOf(file)) } };
+  } catch (error) {
+    return { ok: false, filename: file.name, reason: describeError(error) };
+  }
+}
+
+/**
+ * Place an **already read** MusicXML file into the arrangement, with the instruments a person named.
+ *
+ * Separate from the read for the same reason `placeMidiIntoArrangement` is: so the interface can show the file's
+ * parts before deciding, and so the decision is applied to the very parse the dialog described. The file's own tempo
+ * and meter are applied when it states them; `format` is the reader's own answer (`xml` or `mxl`), not the extension.
+ *
+ * ⭐ **`instruments` is handed to the one place that decides identity, exactly as the MIDI path hands it over.**
+ * `arrangementWithImportedParts` writes the chosen name onto the track's instrument slot, derives the track's *kind*
+ * from it (`importedPartVoice`), and counts what became a sampler as `placed.mapped` — so this function derives
+ * nothing a second time. The names are keyed by **part index**, so a part that holds no notes — which never becomes a
+ * track — cannot slide the names onto the wrong tracks.
+ */
+export function placeMusicXmlIntoArrangement(
+  arrangement: ArrangementV2,
+  read: ReadMusicXmlImport,
+  instruments?: Record<number, string>
+): ArrangementImportOutcome {
+  const { imported, filename } = read;
+  const placed = arrangementWithImportedParts(arrangement, imported, instruments === undefined ? {} : { instruments });
+  const beatType = imported.beatType;
+  const beatsPerMeasure = imported.beatsPerMeasure;
+  const next: ArrangementV2 = {
+    ...placed.arrangement,
+    ...(imported.tempoBpm === undefined ? {} : { bpm: imported.tempoBpm }),
+    ...(beatsPerMeasure === undefined || beatType === undefined ? {} : { timeSignature: `${beatsPerMeasure}/${beatType}` }),
+  };
+  return {
+    ok: true,
+    filename,
+    format: imported.format,
+    tracks: placed.tracks,
+    notes: placed.notes,
+    problems: placed.problems,
+    ...(placed.mapped === undefined ? {} : { mapped: placed.mapped }),
+    arrangement: next,
+  };
+}
+
+/**
  * A MusicXML document (or a compressed `.mxl`) as tracks in the arrangement.
  *
  * `fromMusicXmlBytes` decides between the two by the bytes rather than by the name, and reports which it read, so a
  * `.xml` that is really a zip is read rather than refused.
+ *
+ * ⭐ **`instruments` is the person's answer, keyed by part index** — the parameter this entry point was missing, and
+ * the whole of the "MusicXML has no mapping dialog" gap. Absent, every part is exactly the track it was before this
+ * parameter existed, which is the property the criterion on the no-dialog path asserts.
  */
-export async function importMusicXmlIntoArrangement(arrangement: ArrangementV2, file: File): Promise<ArrangementImportOutcome> {
-  try {
-    const { fromMusicXmlBytes } = await import("../../data/musicxmlImport");
-    const imported = await fromMusicXmlBytes(await bytesOf(file));
-    const placed = arrangementWithImportedParts(arrangement, imported);
-    const beatType = imported.beatType;
-    const beatsPerMeasure = imported.beatsPerMeasure;
-    const next: ArrangementV2 = {
-      ...placed.arrangement,
-      ...(imported.tempoBpm === undefined ? {} : { bpm: imported.tempoBpm }),
-      ...(beatsPerMeasure === undefined || beatType === undefined ? {} : { timeSignature: `${beatsPerMeasure}/${beatType}` }),
-    };
-    return { ok: true, filename: file.name, format: imported.format, tracks: placed.tracks, notes: placed.notes, problems: placed.problems, arrangement: next };
-  } catch (error) {
-    return { ok: false, filename: file.name, reason: describeError(error) };
-  }
+export async function importMusicXmlIntoArrangement(
+  arrangement: ArrangementV2,
+  file: File,
+  instruments?: Record<number, string>
+): Promise<ArrangementImportOutcome> {
+  const read = await readMusicXmlForImport(file);
+  if (!read.ok) return { ok: false, filename: read.filename, reason: read.reason };
+  return placeMusicXmlIntoArrangement(arrangement, read.read, instruments);
 }
 
 /** Dispatch a chosen file to its reader. An unknown extension is a refusal with the reason, never a no-op. */

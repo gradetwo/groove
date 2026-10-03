@@ -21,17 +21,19 @@ import {
   downloadProducedFile,
   grooveFileFor,
   importArrangementFile,
-  importMusicXmlIntoArrangement,
   midiFileFor,
   mp3FileFor,
   musicXmlFileFor,
   placeMidiIntoArrangement,
+  placeMusicXmlIntoArrangement,
   readMidiForImport,
+  readMusicXmlForImport,
   stemsFileFor,
   wavFileFor,
   type ArrangementImportOutcome,
   type ProducedAudio,
   type ReadMidiImport,
+  type ReadMusicXmlImport,
 } from "./arrangementFiles";
 
 export interface UseArrangementFileActionsOptions {
@@ -61,11 +63,11 @@ export interface UseArrangementFileActionsResult {
   /** A chosen MusicXML document, which the toolbar's own input deliberately does not accept. */
   importMusicXml: (file: File) => void;
   /**
-   * ⭐ **A MIDI file with more than one part, read and waiting for the person to name its parts.** Absent unless the
+   * ⭐ **A file with more than one part, read and waiting for the person to name its parts.** Absent unless the
    * mapping dialog should be up; the view renders it from this value, which is what keeps "a dialog is open" and
    * "these are the parts being imported" one fact rather than two.
    */
-  pendingMapping?: PendingMidiMapping;
+  pendingMapping?: PendingImportMapping;
   /** The person's per-part instrument names, then the import — the same placement the no-answer path uses. */
   confirmMapping: (instruments: Record<number, string>) => void;
   /** Import with nothing named. An action, said out loud, rather than a dismissal that leaves no trace. */
@@ -73,11 +75,24 @@ export interface UseArrangementFileActionsResult {
 }
 
 /** What the mapping dialog is drawn for: the file's own name, and each part as the reader reported it. */
-export interface PendingMidiMapping {
+export interface PendingImportMapping {
   filename: string;
   /** The part names **verbatim** and the note counts the reader measured — the two facts the row shows. */
   parts: Array<{ name: string; notes: number }>;
 }
+
+/**
+ * ⭐ **A read file waiting for the person to name its parts, and which reader produced it.**
+ *
+ * The dialog asks one question of both formats — "what is each of these parts?" — and the answer is applied by the
+ * placement that belongs to the reader that produced the parts. Carrying the kind rather than two separate pending
+ * slots is what keeps "a dialog is open" one fact: two slots could both be filled, and then the view would have to
+ * decide which one it is showing.
+ *
+ * MusicXML was the format that had no entry here at all and no `instruments` parameter to reach this point — see
+ * `placeMusicXmlIntoArrangement`.
+ */
+type PendingImport = { kind: "midi"; read: ReadMidiImport } | { kind: "musicxml"; read: ReadMusicXmlImport };
 
 /**
  * The parts that will become tracks and were left unnamed — the list the report names out loud.
@@ -86,10 +101,8 @@ export interface PendingMidiMapping {
  * the very parts that were placed, and it counts only parts with notes because that is what `arrangementWithImportedParts`
  * turns into tracks.
  */
-function unnamedParts(read: ReadMidiImport, instruments?: Record<number, string>): string[] {
-  return read.imported.parts
-    .filter((part, index) => part.notes.length > 0 && (instruments?.[index] ?? "") === "")
-    .map((part) => part.name);
+function unnamedParts(parts: ReadonlyArray<{ name: string; notes: readonly unknown[] }>, instruments?: Record<number, string>): string[] {
+  return parts.filter((part, index) => part.notes.length > 0 && (instruments?.[index] ?? "") === "").map((part) => part.name);
 }
 
 export function useArrangementFileActions({
@@ -102,8 +115,8 @@ export function useArrangementFileActions({
   const { t } = useLanguage();
   const [report, setReport] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
-  /** The MIDI file waiting for the person to name its parts, if the mapping dialog should be up. */
-  const [pending, setPending] = useState<ReadMidiImport | undefined>(undefined);
+  /** The file waiting for the person to name its parts, if the mapping dialog should be up. */
+  const [pending, setPending] = useState<PendingImport | undefined>(undefined);
 
   /** One place that publishes, so what is on screen and what a screen reader hears cannot diverge. */
   const say = useCallback((message: string) => {
@@ -267,10 +280,10 @@ export function useArrangementFileActions({
             }
             const withNotes = read.read.imported.parts.filter((part) => part.notes.length > 0).length;
             if (withNotes > 1) {
-              setPending(read.read);
+              setPending({ kind: "midi", read: read.read });
               return;
             }
-            reportImport(placeMidiIntoArrangement(arrangement, read.read), unnamedParts(read.read));
+            reportImport(placeMidiIntoArrangement(arrangement, read.read), unnamedParts(read.read.imported.parts));
           } finally {
             setBusy(false);
           }
@@ -290,6 +303,21 @@ export function useArrangementFileActions({
   );
 
   /**
+   * ⭐ **The read file placed by the reader that produced it, with the names a person gave.**
+   *
+   * One dispatch for both formats, because the dialog is one dialog and the answer is one answer: the only thing the
+   * kind decides is which `place…IntoArrangement` applies it. Both take `(arrangement, read, instruments)` keyed by
+   * part index, so nothing here re-keys or reorders anything.
+   */
+  const placePending = useCallback(
+    (read: PendingImport, instruments?: Record<number, string>): ArrangementImportOutcome =>
+      read.kind === "midi"
+        ? placeMidiIntoArrangement(arrangement, read.read, instruments)
+        : placeMusicXmlIntoArrangement(arrangement, read.read, instruments),
+    [arrangement]
+  );
+
+  /**
    * The person's answer: place the read file with the names keyed by part index — the very shape
    * `arrangementWithImportedParts` takes, so nothing here re-keys or reorders it.
    */
@@ -298,9 +326,9 @@ export function useArrangementFileActions({
       const read = pending;
       if (!read) return;
       setPending(undefined);
-      reportImport(placeMidiIntoArrangement(arrangement, read, instruments), unnamedParts(read, instruments));
+      reportImport(placePending(read, instruments), unnamedParts(read.read.imported.parts, instruments));
     },
-    [arrangement, pending, reportImport]
+    [pending, placePending, reportImport]
   );
 
   /** Skipping places the same read file with no names at all — today's result, reached by a press. */
@@ -308,31 +336,55 @@ export function useArrangementFileActions({
     const read = pending;
     if (!read) return;
     setPending(undefined);
-    reportImport(placeMidiIntoArrangement(arrangement, read), unnamedParts(read));
-  }, [arrangement, pending, reportImport]);
+    reportImport(placePending(read), unnamedParts(read.read.imported.parts));
+  }, [pending, placePending, reportImport]);
 
+  /**
+   * ⭐ **A MusicXML document, read first and placed second — the same two-step the MIDI entry above takes.**
+   *
+   * This is the half of the mapping gap that was missing: the reader always returned every part, and the entry point
+   * the Score tab calls had no way to ask what those parts are. A file with more than one part that holds notes opens
+   * the mapping dialog (the shared `ImportInstrumentMappingV2`); a single-part file places straight away, exactly as
+   * the MIDI path already decided for the same reason — one part is not a table.
+   *
+   * **The refusal is said with the reader's own sentence**, and the single-part path still reports the parts it left
+   * unnamed, so "these tracks play a built-in synthesizer" is readable for a file the dialog never opened for.
+   */
   const importMusicXml = useCallback(
     (file: File) => {
       void (async () => {
         setBusy(true);
         try {
-          reportImport(await importMusicXmlIntoArrangement(arrangement, file));
+          const read = await readMusicXmlForImport(file);
+          if (!read.ok) {
+            say(t("arrangement_import_failed", { error: read.reason }));
+            return;
+          }
+          const withNotes = read.read.imported.parts.filter((part) => part.notes.length > 0).length;
+          if (withNotes > 1) {
+            setPending({ kind: "musicxml", read: read.read });
+            return;
+          }
+          reportImport(placeMusicXmlIntoArrangement(arrangement, read.read), unnamedParts(read.read.imported.parts));
         } finally {
           setBusy(false);
         }
       })();
     },
-    [arrangement, reportImport]
+    [arrangement, reportImport, say, t]
   );
 
   /**
    * The dialog's own value: the file's name and its parts as rows. Derived from the read rather than stored twice, so
    * "the dialog is open" and "these parts will be placed" cannot disagree.
    */
-  const pendingMapping: PendingMidiMapping | undefined =
+  const pendingMapping: PendingImportMapping | undefined =
     pending === undefined
       ? undefined
-      : { filename: pending.filename, parts: pending.imported.parts.map((part) => ({ name: part.name, notes: part.notes.length })) };
+      : {
+          filename: pending.read.filename,
+          parts: pending.read.imported.parts.map((part) => ({ name: part.name, notes: part.notes.length })),
+        };
 
   return {
     report,
