@@ -4165,3 +4165,42 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
 **⇒ 我对审计请裁 4 处的裁定** ✓：① 进度**放按钮内** ✓（不开模态 ✗）② 诊断入口**写进帮助中心** ✓（不加主菜单 ✗）
    ③ **`V`/`O` 的广告不许说谎** ✗ ⇒ **补实现，或删广告并把缺口写进 (乙) 台账** ✓（按实测成本定 ✓）
    ④ **预取/架构 ⇒ 写进 `needs`，不假装有** ✓（采样缓存已覆盖其中一部分 ✓）
+
+## 一百二十二、🎹 **业主给的 8 个官方 Logic Pro 工程**（2026-10-03 20:0x 时点 ✓）—— 补上读取器自陈缺的那一半
+
+**业主原话**：「`/home/crow/music/midi-corpus/LogicPro` 下是几个 **logic pro 的官方工程文件**」✓
+**我量的**（只读 ✓）：**8 个 `.logicx`，合计 3.1 GB** ✓ —— `Colors`(624M)／`Manzana`(326M)／`Manzana - Spatial Audio`(207M)／
+`MONTERO`(347M)／`MONTERO - Spatial Audio`(357M)／`ocean eyes`(321M)／`Spatial Audio Demo Grid`(306M)／`Swing!`(654M) ✓
+**内容以音频为主** ✗：**877 `.m4a`** ＋ 473 `.ovw` ＋ 376 `.mamd` ＋ 306 `.aif` ＋ 106 `.wav` ＋ 32 `.plist` ＋ 20 `.exs` ✓；
+**`.mid` 命中 0** ✓（⇒ **不能当 MIDI 语料** ✗）｜契约三件套都在 ✓：`ProjectData`（**2.7–16 MB** ✓）＋ `MetaData.plist` ✓
+＋ `ProjectInformation.plist` ✓
+
+### 122.1 ⭐⭐ **实测命中读取器头注释点名的坑：活动版本大多不是 `000`** ✓
+
+```
+`Colors` = **000** ✓ ｜ `Manzana` = **003** ✓ ｜ `MONTERO` = **002** ✓ ｜ `MONTERO - Spatial Audio` = **001** ✓
+   ｜ `ocean eyes` = **001** ✓ ｜ `Swing!` = **004** ✓（另两个名字带空格，我的列名解析切歪 ⇒ **标未定** ✗✓）
+⇒ ⭐ **8 个里至少 5 个的活动版本不是 `000`** ✓✓ ⇒ **默认读 `000` 会读错版本** ✓
+   而 `logicToArrangement.ts` 头注释**正好写了**「`Resources/ProjectInformation.plist` which alternative `NNN` is the
+   active one — **not** always `000`」✓ ⇒ **这条警告在这份语料上是真的** ✓✓
+⭐ 而该 plist 是**二进制 plist**（`bplist00` ✓），键为 `VariantNames`／`ActiveVariant`／`LastSavedFrom`／
+   `HasProjectFolder`／`BundleVersion` ✓ ⇒ **必须靠 plist 解码器读** ✓；我用 grep **无法**把 `ActiveVariant=0` 映射到 `003` ✗
+   ⇒ **我不下结论** ✗✓（留给实现去读 ✓）
+```
+
+### 122.2 ⭐ 读取器自陈的缺口，正好由这份语料补上
+
+```
+`src/data/logicToArrangement.ts`（**773 行** ✓）头注释逐字：
+   「There is **no Mac and no Logic on this machine**, so there is **no ground truth**」✓
+   ⇒ 它只证明"**按字节级规范解析**"（规范＝`jonkubis/logicproformatwriter` 的 `PROJECTDATA_FORMAT.md`，**MIT** ✓；
+     GPL 的 `geoffmyers/logicx-analyzer` **没有抄** ✓），并明写「"the import is correct" is **not** [claimed]」✓
+⇒ ⭐ **业主这 8 个官方工程正是它缺的"真实世界对照"** ✓✓
+**⇒ 我已备好一条线（但并发上限 8 已满，暂未派出 ✗）**，要点：
+   ① 只取**契约那三个小文件**（`ProjectData`／`MetaData.plist`／`ProjectInformation.plist` ✓），**不拷 3.1 GB** ✗
+   ② **先读 `ProjectInformation.plist` 定 NNN** ✓，**不许默认 `000`** ✗
+   ③ 逐工程量：解析耗时／成功或**逐字抛错**／轨区音符数／tempo 拍号／`problems` **逐字照抄** ✓
+   ④ 解析成功就**播放它**（帧率／长任务／丢步／首次出声 ✓ —— 与 (甲)"导入后卡"直接相关 ✓）
+   ⑤ **官方工程不许提交、不许当判据夹具** ✗（夹具要自造最小 `ProjectData` ✓）
+   ⑥ ⚠️ **`logicToArrangement.ts` 本身在 `src/data/**` 里** ⇒ 若需改它 ⇒ **先停手告我** ✓
+```
