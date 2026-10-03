@@ -217,6 +217,79 @@ const PRE_FOLD_CENSUS_DIGEST = "7b9d4bc4caadb7b888fb868e37c48a96f247f59567a16b80
 const PICK_BASS_AFTER = "karoryfer-pastabass";
 const PICK_BASS_BEFORE = "freepats-electric-bass-yr:PickedBassYR-20190930";
 
+/**
+ * ⭐ **The census on the tree the second fold starts from** — `origin/dev` after the `pick_bass` swap, i.e. `sha256`
+ * of every lane's `summary(...)` line, sorted, for the 202 lanes of that commit (`{181, 17, 0, 4}`). It is the "before"
+ * state for the eleven lanes folded below: the criterion puts those eleven rows back to this text and requires the
+ * hash to return, which is how "only the lanes that were out of range moved" is stated as a comparison rather than as
+ * a promise. The swap itself is undone separately by the first-fold criterion below, so this digest is the *whole*
+ * census of that commit rather than a reconstruction of an older one.
+ */
+const PRE_SECOND_FOLD_CENSUS_DIGEST = "98255c57816012d6dc9f5a0aceaa17fc66f02d3c0f0bb4efa7b2d2558e1218f4";
+
+/** One lane folded back into its instrument's range by whole octaves — the shape both fold criteria assert over. */
+interface FoldedLine {
+  genre: string;
+  lane: string;
+  instrument: string;
+  assetId: string;
+  /** The whole-line shift: every note moved by `octaves * 12`. */
+  octaves: number;
+  /** The written pitches before the fold. */
+  before: readonly number[];
+  /** The written pitches after it — `before` shifted by exactly `octaves * 12`. */
+  after: readonly number[];
+  /** Notes in the lane **before** the fold — kept because the renderer's mid-range fill can change the count. */
+  notesBefore: number;
+  /** Notes in the lane after it. */
+  notesAfter: number;
+  /** The lowest key the *instrument* can play: the fold must not leave the line below it either. */
+  floor: number;
+  /** The highest key the *instrument* can play: the fold exists to bring the whole line under it. */
+  ceiling: number;
+}
+
+/**
+ * ⭐ **The eleven lanes folded in the second round** (`docs/SAMPLED_RANGE_COVERAGE.md` §9) — the "partial" lanes whose
+ * top notes are not merely above the recording the palette picked, but above the *instrument itself*. Each row states
+ * the whole-line shift and the written pitches on both sides of it. The three instrument ranges, verbatim:
+ *
+ *   * ⭐ **electric guitar, 24 frets: E2–E6 = 40–88.** `de.wikipedia.org/wiki/Gitarre` §Tonumfang und Stimmung —
+ *     *"Der Tonumfang beträgt bei sechssaitigen Gitarren in Standardstimmung in der Regel zwischen dreieinhalb (von E
+ *     bis h″ bei 19 Bünden) und vier Oktaven (von E bis e‴ bei E-Gitarren-Modellen mit 24 Bünden)."* ("the range of a
+ *     six-string guitar in standard tuning is usually between three and a half octaves — from E to b″ at 19 frets —
+ *     and four octaves — from E to e‴ on electric-guitar models with 24 frets"). e‴ is E6, so the top is key 88; the
+ *     same paragraph gives a 22-fret electric guitar's top as D6 = 86. **This is the citation the first round could
+ *     not find**, which is why these six lines were left as "未核实" in §8.5 and are folded only now.
+ *   * ⭐ **tubular bells C4–F5 = 60–77, G5 = 79 on a few professional sets.** `en.wikipedia.org/wiki/Tubular_bells` —
+ *     *"The written range of chimes is usually seen as C4 to F5, though some professional models reach G5."* The four
+ *     bell lines are written up to 84, above the professional ceiling by five semitones.
+ *   * ⭐ **a 61-key organ manual tops out at C7 = 96.** `en.wikipedia.org/wiki/Manual_(music)` — *"A typical, full-size
+ *     organ manual consists of five octaves, or 61 keys."* — and `en.wikipedia.org/wiki/Electric_organ` gives the
+ *     manual's top note directly: *"the upper manual (typically 44 notes, F3–C7 in scientific pitch notation)"*. The
+ *     `m1_organ` line is written 100/103.
+ *
+ * The recordings are not at fault: `karoryfer-emilyguitar:emily-clean` measures 33–96, `vcsl:Tubular-Bells-1` 60–77
+ * and `freepats-drawbar-organ` 33–98, and every one of them is asked about **per note** below. Two of these lines are
+ * on the **chords** lane, so the fold also feeds the renderer's existing mid-range fill (`src/data/genreMid.ts`: a
+ * chord stack whose top sits below C5 gains its own top note an octave up) — that is why `notesBefore !== notesAfter`
+ * for `gypsy-jazz`, `samba`, `bachata` and `shoe-gaze`. The doubling adds a pitch class the line already had, so the
+ * pitch-class assertion below still holds; the count is pinned rather than assumed.
+ */
+const SECOND_FOLDS: readonly FoldedLine[] = [
+  { genre: "sambass", lane: "chords", instrument: "guitar_lead", assetId: "karoryfer-emilyguitar:emily-clean", octaves: -1, before: [74, 78, 81, 85, 86, 90, 93, 97], after: [62, 66, 69, 73, 74, 78, 81, 85], notesBefore: 48, notesAfter: 48, floor: 40, ceiling: 88 },
+  { genre: "funk", lane: "chords", instrument: "guitar_lead", assetId: "karoryfer-emilyguitar:emily-clean", octaves: -1, before: [76, 79, 83, 86, 88, 91, 95, 98], after: [64, 67, 71, 74, 76, 79, 83, 86], notesBefore: 32, notesAfter: 32, floor: 40, ceiling: 88 },
+  { genre: "gypsy-jazz", lane: "chords", instrument: "guitar_lead", assetId: "karoryfer-emilyguitar:emily-clean", octaves: -2, before: [79, 83, 86, 90, 91, 95, 98, 102], after: [55, 59, 62, 66, 67, 71, 74, 78], notesBefore: 64, notesAfter: 72, floor: 40, ceiling: 88 },
+  { genre: "samba", lane: "chords", instrument: "guitar_lead", assetId: "karoryfer-emilyguitar:emily-clean", octaves: -2, before: [79, 83, 86, 90, 91, 95, 98, 102], after: [55, 59, 62, 66, 67, 71, 74, 78], notesBefore: 24, notesAfter: 26, floor: 40, ceiling: 88 },
+  { genre: "bachata", lane: "chords", instrument: "guitar_lead", assetId: "karoryfer-emilyguitar:emily-clean", octaves: -2, before: [81, 84, 88, 91, 93, 96, 100, 103], after: [57, 60, 64, 67, 69, 72, 76, 79], notesBefore: 64, notesAfter: 72, floor: 40, ceiling: 88 },
+  { genre: "shoe-gaze", lane: "chords", instrument: "guitar_lead", assetId: "karoryfer-emilyguitar:emily-clean", octaves: -2, before: [81, 85, 88, 92, 93, 97, 100, 104], after: [57, 61, 64, 68, 69, 73, 76, 80], notesBefore: 32, notesAfter: 36, floor: 40, ceiling: 88 },
+  { genre: "brooklyn-drill", lane: "lead", instrument: "bell_lead", assetId: "vcsl:Tubular-Bells-1", octaves: -1, before: [77, 79, 80], after: [65, 67, 68], notesBefore: 12, notesAfter: 12, floor: 60, ceiling: 79 },
+  { genre: "kawaii-future-bass", lane: "lead", instrument: "bell_lead", assetId: "vcsl:Tubular-Bells-1", octaves: -1, before: [72, 76, 79, 83, 84], after: [60, 64, 67, 71, 72], notesBefore: 20, notesAfter: 20, floor: 60, ceiling: 79 },
+  { genre: "idm", lane: "lead", instrument: "bell_lead", assetId: "vcsl:Tubular-Bells-1", octaves: -1, before: [74, 77, 79, 81], after: [62, 65, 67, 69], notesBefore: 16, notesAfter: 16, floor: 60, ceiling: 79 },
+  { genre: "trap-rap", lane: "lead", instrument: "bell_lead", assetId: "vcsl:Tubular-Bells-1", octaves: -1, before: [77, 80], after: [65, 68], notesBefore: 4, notesAfter: 4, floor: 60, ceiling: 79 },
+  { genre: "nu-disco-house", lane: "chords", instrument: "m1_organ", assetId: "freepats-drawbar-organ", octaves: -1, before: [81, 84, 88, 91, 93, 96, 100, 103], after: [69, 72, 76, 79, 81, 84, 88, 91], notesBefore: 32, notesAfter: 32, floor: 36, ceiling: 96 },
+];
+
 describe("the written pitch range of every palette-mapped lane, against what its recording sounds", () => {
   it("measures 202 palette-mapped lanes across 96 genres and leaves the other 63 genres with none", () => {
     /**
@@ -230,7 +303,7 @@ describe("the written pitch range of every palette-mapped lane, against what its
     expect(new Set(CENSUS.map((lane) => lane.assetId)).size).toBe(22);
   });
 
-  it("⭐ pins the three counts: 181 sounding, 17 partial, 0 silent (and 4 lanes the genre leaves empty)", () => {
+  it("⭐ pins the three counts: 192 sounding, 6 partial, 0 silent (and 4 lanes the genre leaves empty)", () => {
     /**
      * ⭐ **These four numbers are the criterion.** They move when a genre's written notes move, when the palette's
      * asset assignment moves, or when the measured coverage table moves — which is exactly the set of edits that can
@@ -238,26 +311,39 @@ describe("the written pitch range of every palette-mapped lane, against what its
      * the genre writes nothing on has no notes to lose, and counting it as healthy would hide a lane that a future
      * genre round fills with an out-of-range line.
      *
-     * ⭐ **`{168, 25, 5, 4}` → `{172, 25, 1, 4}`, and why: four written lines were outside their instrument's own
-     * playing range, not merely outside the recording the palette picked for them, so the genre content was folded
-     * back into range by whole octaves (the reasoning and the sources are in `docs/SAMPLED_RANGE_COVERAGE.md` §7).
-     * The four were `bebop`/`free-jazz`/`smooth-jazz` lead (`sax_lead` → a tenor saxophone, a concert instrument
-     * whose range is A♭2–E5 = keys 44–76, against lines written 77–91) and `chicago-drill` lead (`bell_lead` →
-     * tubular bells, whose written range is C4–F5 = keys 60–77, up to G5 = 79 on a few professional sets, against a
-     * line written 79/82/84). Folding moved them from `silent` to `sounding`: 168 + 4 = 172, 5 − 4 = 1.
+     * ⭐ **`{168, 25, 5, 4}` → `{172, 25, 1, 4}` (first fold), and why: four written lines were outside their
+     * instrument's own playing range**, not merely outside the recording the palette picked for them, so the genre
+     * content was folded back into range by whole octaves (the reasoning and the sources are in
+     * `docs/SAMPLED_RANGE_COVERAGE.md` §8). The four were `bebop`/`free-jazz`/`smooth-jazz` lead (`sax_lead` → a tenor
+     * saxophone, a concert instrument whose range is A♭2–E5 = keys 44–76, against lines written 77–91) and
+     * `chicago-drill` lead (`bell_lead` → tubular bells, whose written range is C4–F5 = keys 60–77, up to G5 = 79 on
+     * a few professional sets, against a line written 79/82/84). Folding moved them from `silent` to `sounding`:
+     * 168 + 4 = 172, 5 − 4 = 1.
      *
-     * ⭐ **`{172, 25, 1, 4}` → `{181, 17, 0, 4}`, and why: the `pick_bass` row moved onto a wider recording.** The one
-     * remaining silent lane was `post-punk` bass (written 50/53/55 — D3, F3, G3) and the 25 partial lanes included
+     * ⭐ **`{172, 25, 1, 4}` → `{181, 17, 0, 4}` (the `pick_bass` swap), and why: a recording, not the content.** The
+     * one remaining silent lane was `post-punk` bass (written 50/53/55 — D3, F3, G3) and the 25 partial lanes included
      * **eight more** `pick_bass` lanes that lost their top notes; both were the same fact about the recording, which
-     * `resolveInstrumentNote` measures at **26–46** (A♯2). The row now names `karoryfer-pastabass`, whose `linguine`
+     * `resolveInstrumentNote` measured at **26–46** (A♯2). The row now names `karoryfer-pastabass`, whose `linguine`
      * program the same sweep measures at **33–101 with no holes**, so every one of those nine lanes sounds all of its
      * written notes: nine lanes leave `silent`/`partial` for `sounding`, i.e. 172 + 9 = 181, 25 − 8 = 17, 1 − 1 = 0.
      * ⚠️ **The genre data was not touched** — that is the point of the swap: the notes were always ordinary electric
      * bass notes and it was the library that was narrow (see `docs/SAMPLED_RANGE_COVERAGE.md` §8.5(b) and §8.6).
+     *
+     * ⭐ **`{181, 17, 0, 4}` → `{192, 6, 0, 4}` (second fold, this change), and why: the same instrument-range question
+     * applied to the remaining partial lanes.** Eleven of those seventeen had the *instrument* refusing their top
+     * notes, not the recording: six `guitar_lead` chords lines written 97–104 (any electric guitar tops out at
+     * E6 = 88 on a 24-fret model, D6 = 86 on a 22-fret one — `de.wikipedia.org/wiki/Gitarre`, quoted in
+     * `SECOND_FOLDS`), four `bell_lead` lines written 80–84 (above the G5 = 79 only some professional chime sets
+     * reach), and `nu-disco-house` chords written 100/103 (above a 61-key organ manual's C7 = 96). Each was folded by
+     * whole octaves like the first four, so they left `partial` for `sounding`: 181 + 11 = 192, 17 − 11 = 6. The six
+     * that remain are **not** genre errors and are pinned by name below — `black-metal` chords (88 = E6 is exactly the
+     * 24-fret ceiling and the recording stops at 86), `hard-bop` lead (one semitone), `j-pop` strings (at the violin
+     * ensemble's own top), `microhouse` bass and `modal-jazz` bass (a hole in the sample table at 61–71), and
+     * `microhouse` chords (a vibraphone's low end).
      */
     expect({ sounding: countOf("sounding"), partial: countOf("partial"), silent: countOf("silent"), "no-notes": countOf("no-notes") }).toEqual({
-      sounding: 181,
-      partial: 17,
+      sounding: 192,
+      partial: 6,
       silent: 0,
       "no-notes": 4,
     });
@@ -301,23 +387,24 @@ describe("the written pitch range of every palette-mapped lane, against what its
     for (const pitch of lane.distinct) expect(pitch).toBeLessThanOrEqual(entry.last);
   });
 
-  it("⭐ the four folded lanes sound now, keep their pitch classes, and are the only lanes whose written notes moved", () => {
+  it("⭐ the four first-round folded lanes sound now, keep their pitch classes, and are the only lanes whose written notes moved", () => {
     /**
-     * ⭐ **The criterion for the fix.** Four lanes were written outside the playing range of the instrument the palette
-     * maps them to, so their pitches were folded by whole octaves (`folded` below states each lane's before → after).
-     * Three things are asserted, and each of them is a way the fix could have gone wrong:
+     * ⭐ **The criterion for the first fix.** Four lanes were written outside the playing range of the instrument the
+     * palette maps them to, so their pitches were folded by whole octaves (`folded` below states each lane's before →
+     * after). Three things are asserted, and each of them is a way the fix could have gone wrong:
      *
      * 1. **Every note of the four lanes now resolves** — the lane moved from `silent` to `sounding`. The census
      *    predicate is per note against a measured key set, so this is not a min/max comparison.
      * 2. **Pitch classes are unchanged** — a fold may only move a note by whole octaves, so the written pitch set
      *    modulo 12 must be exactly what it was. (This is also what keeps the harmony: the fold cannot introduce a
      *    note that was not already there.)
-     * 3. **Nothing else moved** — the whole census, with those four rows put back, hashes to the census taken before
-     *    the fold. That is the "only the lanes that were out of range changed" criterion, stated as a comparison
-     *    between the before and after states rather than as a promise.
+     * 3. **Nothing else moved** — the whole census, with **every** folded row put back (these four **and** the eleven
+     *    of the second round, `SECOND_FOLDS`), hashes to the census taken before the first fold. That is the "only
+     *    the lanes that were out of range changed" criterion, stated as a comparison between the before and after
+     *    states rather than as a promise; the count of differing rows is asserted, not implied.
      *
      * The four are named with both the instrument-range evidence and the recording each is mapped to:
-     * tenor saxophone A♭2–E5 (`docs/SAMPLED_RANGE_COVERAGE.md` §7.1) and tubular bells C4–F5/G5 (§7.2).
+     * tenor saxophone A♭2–E5 (`docs/SAMPLED_RANGE_COVERAGE.md` §8.1) and tubular bells C4–F5/G5 (§8.1).
      */
     const folded = [
       { genre: "bebop", lane: "lead", instrument: "sax_lead", assetId: "mtg-solo-sax:MTG-Tenor-Sax", octaves: -2, before: [82, 85, 86, 89, 91], after: [58, 61, 62, 65, 67] },
@@ -347,66 +434,126 @@ describe("the written pitch range of every palette-mapped lane, against what its
     /**
      * 3. **Nothing else moved.** The digest is over `genre/lane#index:instrument→asset(count notes, written …)` for
      *    every one of the 202 lanes, sorted, so it is insensitive to file order. The pre-fold text is reconstructed by
-     *    undoing **both** edits this table has seen since: the four folded rows go back to their before-notes, and the
-     *    sixteen `pick_bass` lanes go back to `PICK_BASS_BEFORE` — the recording the row named when the fold was made,
-     *    measured 26–46. Neither edit changed a written pitch, so restoring both must equal the digest this file would
-     *    have produced on the commit before the fold (`docs/SAMPLED_RANGE_COVERAGE.md` §7.4 records the same digest).
+     *    undoing **every** edit this table has seen since: the fifteen folded rows go back to their before-notes, and
+     *    the sixteen `pick_bass` lanes go back to `PICK_BASS_BEFORE` — the recording the row named when the fold was
+     *    made, measured 26–46. Restoring all of them must equal the digest this file would have produced on the commit
+     *    before the first fold (`docs/SAMPLED_RANGE_COVERAGE.md` §8.4 records the same digest).
      */
     const line = (lane: LaneCensus) => summary(lane);
     const undoPickBassSwap = (row: string) => row.replace(`→${PICK_BASS_AFTER}(`, `→${PICK_BASS_BEFORE}(`);
     const laneOf = (genreId: string, trackId: string) => CENSUS.find((lane) => lane.genreId === genreId && lane.trackId === trackId)!;
-    const beforeLines = new Map(
-      folded.map((expected) => {
-        const lane = laneOf(expected.genre, expected.lane);
-        return [
-          `${expected.genre}/${expected.lane}`,
-          `${expected.genre}/${expected.lane}:${expected.instrument}→${expected.assetId}(${lane.noteCount} notes, written ${expected.before.join(",")})`,
-        ];
-      }),
-    );
+    const beforeLines = new Map<string, string>();
+    for (const expected of folded) {
+      const lane = laneOf(expected.genre, expected.lane);
+      beforeLines.set(
+        `${expected.genre}/${expected.lane}`,
+        `${expected.genre}/${expected.lane}:${expected.instrument}→${expected.assetId}(${lane.noteCount} notes, written ${expected.before.join(",")})`,
+      );
+    }
+    for (const expected of SECOND_FOLDS) {
+      beforeLines.set(
+        `${expected.genre}/${expected.lane}`,
+        `${expected.genre}/${expected.lane}:${expected.instrument}→${expected.assetId}(${expected.notesBefore} notes, written ${expected.before.join(",")})`,
+      );
+    }
     const restored = CENSUS.map((lane) => beforeLines.get(`${lane.genreId}/${lane.trackId}`) ?? undoPickBassSwap(line(lane)));
     const digest = (rows: readonly string[]) => createHash("sha256").update([...rows].sort().join("\n")).digest("hex");
     expect(digest(restored)).toBe(PRE_FOLD_CENSUS_DIGEST);
     // and the after-state is a different census, so the assertion above is not vacuous
     expect(digest(CENSUS.map(line))).not.toBe(PRE_FOLD_CENSUS_DIGEST);
-    // Twenty rows differ: the four written ranges the fold moved, plus the sixteen `pick_bass` lanes the swap moved
-    // onto a different recording. Nothing else in the census has changed since the pre-fold baseline.
-    expect(restored.filter((row, index) => row !== line(CENSUS[index]))).toHaveLength(20);
+    // Thirty-one rows differ: the sixteen `pick_bass` lanes the swap moved onto a different recording, the four
+    // written ranges the first fold moved, and the eleven the second fold moved. Nothing else has changed.
+    expect(restored.filter((row, index) => row !== line(CENSUS[index]))).toHaveLength(20 + SECOND_FOLDS.length);
   });
 
-  it("⭐ pins the 17 partial lanes — the ones that lose some notes and keep the rest", () => {
+  it("⭐ the eleven second-round folded lanes sound now, keep their pitch classes, and are the only lanes that moved since the `pick_bass` swap", () => {
+    /**
+     * ⭐ **The criterion for the second fix, and the reason it is a separate case from the first.** The first round
+     * asked the question of the five **silent** lanes; this one asked it of the seventeen **partial** lanes left after
+     * the `pick_bass` swap and found eleven more that were the same kind of error at their top end — the instrument
+     * cannot play the notes, not merely the recording. Each is folded by whole octaves, one `k` for the whole line
+     * (`SECOND_FOLDS` names the before → after pair and the instrument's ceiling):
+     *
+     * 1. **Every note of the eleven now resolves** — per note against the measured key set, so this is not a min/max
+     *    comparison, and the lane moved from `partial` to `sounding`.
+     * 2. **Pitch classes are unchanged and the shift is exactly `k` whole octaves** — `after = before − 12k`, so the
+     *    chord is the same chord an octave (or two) lower and every interval inside the line survives. Four of the
+     *    guitar lines are on the `chords` lane, where the renderer's mid-range fill then doubles a stack that has
+     *    dropped below C5; the note count is pinned (`notesBefore`/`notesAfter`) rather than assumed, and the
+     *    doubling adds a pitch class the line already had.
+     * 3. **The fold is what the instrument forced** — the line's top was above the instrument's ceiling before it and
+     *    no note is after it; every note after it is also at or above the instrument's floor.
+     * 4. **Only these eleven rows moved since the `pick_bass` swap** — the whole census with these eleven rows put
+     *    back to their pre-fold text hashes to `PRE_SECOND_FOLD_CENSUS_DIGEST`, the digest of the 202 lanes on the
+     *    commit this change starts from; exactly eleven rows differ.
+     */
+    for (const expected of SECOND_FOLDS) {
+      const lane = CENSUS.find((candidate) => candidate.genreId === expected.genre && candidate.trackId === expected.lane);
+      expect(lane, `${expected.genre}/${expected.lane} is not in the census`).toBeDefined();
+      expect(lane!.instrument).toBe(expected.instrument);
+      expect(lane!.assetId).toBe(expected.assetId);
+      // 1. the fix worked: nothing about the lane is left partial
+      expect(lane!.verdict, `${expected.genre}/${expected.lane} should sound every note`).toBe("sounding");
+      // 2. the written pitches are exactly the stated line, and exactly one whole-octave shift of the old one
+      expect(lane!.distinct).toEqual(expected.after);
+      expect(lane!.noteCount).toBe(expected.notesAfter);
+      expect(expected.after.map((pitch) => pitch % 12).sort((a, b) => a - b)).toEqual(
+        expected.before.map((pitch) => pitch % 12).sort((a, b) => a - b),
+      );
+      expect(expected.after.map((pitch) => pitch - expected.octaves * 12)).toEqual(expected.before);
+      // 3. ...and the shift is what the instrument's own range forced, at both ends
+      expect(Math.max(...expected.before)).toBeGreaterThan(expected.ceiling);
+      for (const pitch of lane!.distinct) expect(pitch).toBeLessThanOrEqual(expected.ceiling);
+      for (const pitch of lane!.distinct) expect(pitch).toBeGreaterThanOrEqual(expected.floor);
+      // ...and every note is inside the recording's measured span, which is what `sounding` above means per note
+      const entry = coverageOf(lane!.assetId);
+      for (const pitch of lane!.distinct) expect(pitch).toBeGreaterThanOrEqual(entry.first);
+      for (const pitch of lane!.distinct) expect(pitch).toBeLessThanOrEqual(entry.last);
+    }
+
+    /**
+     * 4. **Only the eleven moved.** The digest is over the same `summary(...)` lines as the first criterion, so the
+     *    two digests are directly comparable: restoring **these** eleven rows (and nothing else) must reproduce the
+     *    census of `origin/dev`, which is the state before this change.
+     */
+    const line = (lane: LaneCensus) => summary(lane);
+    const beforeLines = new Map(
+      SECOND_FOLDS.map((expected) => [
+        `${expected.genre}/${expected.lane}`,
+        `${expected.genre}/${expected.lane}:${expected.instrument}→${expected.assetId}(${expected.notesBefore} notes, written ${expected.before.join(",")})`,
+      ]),
+    );
+    const restored = CENSUS.map((lane) => beforeLines.get(`${lane.genreId}/${lane.trackId}`) ?? line(lane));
+    const digest = (rows: readonly string[]) => createHash("sha256").update([...rows].sort().join("\n")).digest("hex");
+    expect(digest(restored)).toBe(PRE_SECOND_FOLD_CENSUS_DIGEST);
+    // and the after-state is a different census, so the assertion above is not vacuous
+    expect(digest(CENSUS.map(line))).not.toBe(PRE_SECOND_FOLD_CENSUS_DIGEST);
+    // exactly the eleven rows differ, so a lane outside this change moving would be a red here
+    expect(restored.filter((row, index) => row !== line(CENSUS[index]))).toHaveLength(SECOND_FOLDS.length);
+  });
+
+  it("⭐ pins the 6 partial lanes — the ones that lose some notes and keep the rest", () => {
     /**
      * A partial lane is the dangerous middle: something is heard, so nothing looks broken, and the notes that vanish
      * are the top of a line. Pinned by name and by the count of written notes each loses, because "partial" alone
      * cannot tell a lane that loses one note from one that loses five.
      *
-     * ⭐ **Eight lines left this list with the `pick_bass` swap and no other line changed.** The eight were
-     * `alternative-rock`/`blues-rock`/`doom-metal`/`grunge`/`hard-rock`/`heavy-metal`/`math-rock`/`shoe-gaze` bass,
-     * each losing the top of its line to the same 26–46 recording; the one this row now names sounds 33–101, so all
-     * eight moved to `sounding`. The remaining seventeen are the *other* narrow cases, which this change does not
-     * touch — an instrument written above its own range (guitars, tubular bells, a 61-key organ) or a hole in a
-     * recording's key map (`dsmolken-double-bass` 61–71, `microhouse`'s finger bass from 35) — and each is pinned
-     * here, verbatim, so that "eight left" cannot quietly become nine.
+     * ⭐ **This list has been 25 → 17 → 6, and each move is accounted for.** The `pick_bass` swap moved nine lanes out
+     * (one silent, eight partial) because the *recording* was narrow; the second fold moved eleven out because the
+     * *instrument* was (six guitar lines, four chime lines, one organ line — `SECOND_FOLDS` above). What is left is
+     * exactly the set neither of those causes explains, and none of their written pitches moved: `black-metal` chords
+     * (88 = E6 is exactly the 24-fret ceiling and the recording stops at 86), `hard-bop` lead (one semitone above the
+     * tenor's top), `j-pop` strings (at the violin ensemble's own top), `microhouse` bass and `modal-jazz` bass (a hole
+     * in a recording's key map — 61–71 for the double bass), and `microhouse` chords (a vibraphone's low end).
      */
     const partial = inKeyOrder("partial");
     expect(partial.map((lane) => `${summary(lane)} loses ${lane.noteCount - lane.soundingCount}`)).toEqual([
-      "bachata/chords:guitar_lead→karoryfer-emilyguitar:emily-clean(64 notes, written 81,84,88,91,93,96,100,103) loses 16",
       "black-metal/chords:distorted_guitar→freepats-fsbs-dist2(96 notes, written 64,71,76,83,88) loses 12",
-      "brooklyn-drill/lead:bell_lead→vcsl:Tubular-Bells-1(12 notes, written 77,79,80) loses 8",
-      "funk/chords:guitar_lead→karoryfer-emilyguitar:emily-clean(32 notes, written 76,79,83,86,88,91,95,98) loses 4",
-      "gypsy-jazz/chords:guitar_lead→karoryfer-emilyguitar:emily-clean(64 notes, written 79,83,86,90,91,95,98,102) loses 16",
       "hard-bop/lead:sax_lead→mtg-solo-sax:MTG-Tenor-Sax(16 notes, written 72,75,77) loses 4",
-      "idm/lead:bell_lead→vcsl:Tubular-Bells-1(16 notes, written 74,77,79,81) loses 8",
       "j-pop/chords:strings_lead→vsco2ce:ViolinEnsSusVib(32 notes, written 77,81,84,88,89,93,96,100) loses 20",
-      "kawaii-future-bass/lead:bell_lead→vcsl:Tubular-Bells-1(20 notes, written 72,76,79,83,84) loses 12",
       "microhouse/bass:finger_bass→karoryfer-black-and-blue-basses:05-darkblack-pluck(8 notes, written 34,36,39,44) loses 2",
       "microhouse/chords:vibraphone→vcsl:Vibraphone-Keyswitch(40 notes, written 48,51,55,56,58,60,62,63,65,67,68,70,74,79,80) loses 12",
       "modal-jazz/bass:walking_upright→dsmolken-double-bass:d-smolken-rubner-bass-pizz(16 notes, written 33,38,40,45,47,50,52,57,62) loses 1",
-      "nu-disco-house/chords:m1_organ→freepats-drawbar-organ(32 notes, written 81,84,88,91,93,96,100,103) loses 8",
-      "samba/chords:guitar_lead→karoryfer-emilyguitar:emily-clean(24 notes, written 79,83,86,90,91,95,98,102) loses 8",
-      "sambass/chords:guitar_lead→karoryfer-emilyguitar:emily-clean(48 notes, written 74,78,81,85,86,90,93,97) loses 8",
-      "shoe-gaze/chords:guitar_lead→karoryfer-emilyguitar:emily-clean(32 notes, written 81,85,88,92,93,97,100,104) loses 12",
-      "trap-rap/lead:bell_lead→vcsl:Tubular-Bells-1(4 notes, written 77,80) loses 2",
     ]);
   });
 
@@ -641,5 +788,42 @@ describe.skipIf(offline)("the measurement still holds at the pins", () => {
     }
     // 250 is the number of written notes the sixteen lanes carry; zero of them are refused.
     expect({ checked, refused }).toEqual({ checked: 250, refused: 0 });
+  });
+
+  it("⭐ every written note of the eleven second-round folded lanes resolves in the engine at the lane's own velocity", { timeout: 180_000 }, () => {
+    /**
+     * ⭐ **The "folded" claim executed, not summarised.** The offline criterion compares each note against the
+     * measured key set; this one asks the engine's own `resolveInstrumentNote` per note at the lane's own velocity —
+     * the same call `createSampleLoader.loadNote` makes — for all eleven lanes of `SECOND_FOLDS`, so the claim is
+     * "the engine answers a region for every written note now", not "the numbers line up".
+     *
+     * One of the three assets (`freepats-drawbar-organ`) has **no pinned source address at all** — it is one of the
+     * two `MIRROR_ONLY` names — so without a mirror root its proof genuinely cannot be taken. That is asserted to be
+     * the *only* missing one rather than skipped quietly: `proved` must equal eleven minus however many of the
+     * eleven use a mirror-only asset (one, when the mirror is absent; zero when it is not).
+     */
+    const mirrorOnlyFolds = SECOND_FOLDS.filter((fold) => MIRROR_ONLY.includes(fold.assetId)).length;
+    const unprovable = mirrorRoot ? 0 : mirrorOnlyFolds;
+    let proved = 0;
+    for (const expected of SECOND_FOLDS) {
+      const lane = CENSUS.find((candidate) => candidate.genreId === expected.genre && candidate.trackId === expected.lane)!;
+      const index = MEASURED_COVERAGE.findIndex((row) => row.assetId === lane.assetId);
+      const program = programs[index];
+      if (program === null || program === undefined) {
+        expect(MIRROR_ONLY, `${lane.assetId} did not fetch and it is not a mirror-only asset`).toContain(lane.assetId);
+        continue;
+      }
+      const asset = catalogue.assets.find((candidate) => candidate.assetId === lane.assetId)!;
+      const genre = ALL_GENRES.find((candidate) => candidate.id === lane.genreId)!;
+      const track = patternFromGenre(genre).tracks[lane.trackIndex];
+      const notes = writtenNotes(track);
+      expect(notes.length, `${expected.genre}/${expected.lane} note count`).toBe(expected.notesAfter);
+      const answers = notes.map((note) => resolveInstrumentNote(asset, program.expanded, note.pitch, { velocity: note.velocity }));
+      expect(answers.map((answer) => (answer.ok ? "ok" : answer.reason)), `${expected.genre}/${expected.lane} still refuses notes`).toEqual(
+        answers.map(() => "ok"),
+      );
+      proved += 1;
+    }
+    expect(proved).toBe(SECOND_FOLDS.length - unprovable);
   });
 });

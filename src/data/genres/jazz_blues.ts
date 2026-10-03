@@ -6700,19 +6700,19 @@ export const JAZZ_BLUES_GENRES: Genre[] = [
             0
           ],
           "pitch": [
-            67,
+            43,
             null,
             null,
             null,
-            71,
+            47,
             null,
             null,
             null,
-            67,
+            43,
             null,
             null,
             null,
-            74,
+            50,
             null,
             null,
             null

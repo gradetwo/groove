@@ -8144,7 +8144,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
             0
           ],
           "pitch": [
-            69,
+            45,
             null,
             null,
             null,
@@ -8152,7 +8152,7 @@ export const ROCK_METAL_GENRES: Genre[] = [
             null,
             null,
             null,
-            73,
+            49,
             null,
             null,
             null,

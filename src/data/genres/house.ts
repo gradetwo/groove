@@ -6695,7 +6695,7 @@ export const HOUSE_GENRES: Genre[] = [
           "pitch": [
             null,
             null,
-            69,
+            57,
             null,
             null,
             null,
@@ -6703,7 +6703,7 @@ export const HOUSE_GENRES: Genre[] = [
             null,
             null,
             null,
-            72,
+            60,
             null,
             null,
             null,

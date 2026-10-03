@@ -2336,7 +2336,7 @@ export const POP_RNB_GENRES: Genre[] = [
           "pitch": [
             null,
             null,
-            64,
+            52,
             null,
             null,
             null,
@@ -2344,7 +2344,7 @@ export const POP_RNB_GENRES: Genre[] = [
             null,
             null,
             null,
-            67,
+            55,
             null,
             null,
             null,
