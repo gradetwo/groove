@@ -632,6 +632,7 @@ const ExportMenu = memo<ExportMenuProps>(function ExportMenu({
         <div className="absolute right-0 top-full mt-1.5 w-52 py-1 bg-[#0f1118] border border-line-strong rounded-xl shadow-[0_16px_36px_rgba(0,0,0,0.9)] z-50 text-xs font-['JetBrains_Mono'] divide-y divide-line/40">
           <div className="p-1 space-y-0.5">
             <button
+              data-testid="export-midi"
               onClick={() => {
                 onExportMidi();
                 setExportOpen(false);
@@ -646,6 +647,7 @@ const ExportMenu = memo<ExportMenuProps>(function ExportMenu({
             </button>
 
             <button
+              data-testid="export-als"
               onClick={() => {
                 onExportAls?.();
                 setExportOpen(false);
@@ -660,6 +662,7 @@ const ExportMenu = memo<ExportMenuProps>(function ExportMenu({
             </button>
 
             <button
+              data-testid="export-groove"
               onClick={() => {
                 onExportGroove?.();
                 setExportOpen(false);
@@ -707,6 +710,7 @@ const ExportMenu = memo<ExportMenuProps>(function ExportMenu({
             </button>
 
             <button
+              data-testid="export-stems"
               onClick={() => {
                 onExportStems?.();
                 setExportOpen(false);

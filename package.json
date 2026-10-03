@@ -123,7 +123,7 @@
     "vitest": "^2.1.8",
     "wrangler": "^4.147.0"
   },
-  "description": "Browser-based groove workstation and music-genre library: 159 genres, an 8-track step sequencer, a piano roll, Web Audio synthesis, and WAV/MIDI/Ableton export.",
+  "description": "Browser-based groove workstation and music-genre library: 159 genres, an 8-track step sequencer, a piano roll, Web Audio synthesis, and export to MIDI, Ableton Live Set (.als), .groove project, WAV, MP3, per-track stems and MusicXML.",
   "license": "MIT",
   "keywords": [
     "music",
