@@ -284,18 +284,19 @@ const offline = live.every((library) => library.files.length === 0 && library.fa
 describe.skipIf(offline)("the whole-corpus trigger census", () => {
   it("read every corpus file it is about to make a claim over, and names the ones that are genuinely absent", () => {
     /**
-     * 48 of the 1 714 declared text files are 404 at their pinned address — 40 in `karoryfer-meatbass` and 7 in `karoryfer-emilyguitar` (the two libraries the audit
-     * could not measure either), plus one empty text file in `vcsl`. Those are **named and counted**, not waved through: a failure anywhere else is a test failure, and
-     * the two libraries the census has no claim about are the two the manifest names as unreadable.
+     * ⚠️ **This used to license an absence, and the absence was this project's own mistake.** 47 files — 40 in `karoryfer-meatbass`, 7 in `karoryfer-emilyguitar` — were recorded as
+     * "404 at the pinned commit" and waved through. They were not: the addresses carried the release **zip's** top-level directory (`Meatbass/`, `Emilyguitar/`), which the upstream
+     * repositories do not have, so the census had **no claim at all** about two libraries the audit could not measure either. Once the source address stopped repeating that layer all
+     * 47 fetched. The reading is therefore asserted in the stronger direction: **nothing fails**, and the map of absences — kept, so the history is visible — is empty.
      */
     const failures = live.flatMap((library) => library.failures.map((failure) => `${library.entryId} :: ${failure}`));
     const byLibrary = new Map<string, number>();
     for (const library of live) byLibrary.set(library.entryId, library.failures.length);
     expect(
       Object.fromEntries([...byLibrary].filter(([, count]) => count > 0)),
-      "these files did not fetch; the census says only karoryfer-meatbass and karoryfer-emilyguitar are absent, so anything else is a real failure rather than a missing network"
+      "a declared text file did not fetch — before 2026-10-03 this was absorbed as `karoryfer-meatbass`/`karoryfer-emilyguitar`, and that was the address bug rather than an upstream one"
     ).toEqual(TRIGGER_CENSUS_UNREADABLE);
-    expect(failures.filter((failure) => /meatbass|emilyguitar/.test(failure)).length).toBe(failures.length);
+    expect(failures).toEqual([]);
   });
 
   it("matches the pinned census value for value, library for library — a new `trigger` cannot arrive unnoticed", () => {
@@ -360,20 +361,33 @@ describe.skipIf(offline)("the whole-corpus trigger census", () => {
 
   it("names every library that uses the release family, which is what a key-release noise would come from", () => {
     /**
-     * The audit's sample was one library; this is the full corpus, and it finds **five** libraries writing `trigger=release` and one writing `trigger=release_key`:
-     * `salamander-grand`, `vcsl`, `karoryfer-bear-sax`, `karoryfer-black-and-blue-basses` and `freepats-button-accordion-hn` (release), and
+     * The audit's sample was one library; this is the full corpus, and it finds **six** libraries writing `trigger=release` and one writing `trigger=release_key`:
+     * `salamander-grand`, `vcsl`, `karoryfer-bear-sax`, `karoryfer-black-and-blue-basses`, `freepats-button-accordion-hn` and `karoryfer-emilyguitar` (release), and
      * `virtuosity-drums-basic` (release_key). Only Salamander resolved a note-on to one of them — the others' release regions lose the narrowest-range comparison to a
      * note region — which is why the audit's spot-check of 35 libraries found one audible defect and this census is the stronger claim.
+     *
+     * ⭐ **The sixth name is new on 2026-10-03, and it arrived because the library became readable rather than because it changed.** `karoryfer-emilyguitar`'s 18 `trigger=release`
+     * assignments in `emily_basic.sfz` were always there; the address that should have fetched that file carried the release zip's directory and 404'd, so the census had no row
+     * for it. The guitar's finger/fret noise is what those regions are, and they lose the comparison exactly as the other five libraries' do.
      */
     const releaseLibraries = Object.entries(TRIGGER_CENSUS_ROWS)
       .filter(([, row]) => (row.textual.release ?? 0) > 0 || (row.textual.release_key ?? 0) > 0)
       .map(([id]) => id)
       .sort();
-    expect(releaseLibraries).toEqual(["freepats-button-accordion-hn", "karoryfer-bear-sax", "karoryfer-black-and-blue-basses", "salamander-grand", "vcsl", "virtuosity-drums-basic"]);
+    expect(releaseLibraries).toEqual([
+      "freepats-button-accordion-hn",
+      "karoryfer-bear-sax",
+      "karoryfer-black-and-blue-basses",
+      "karoryfer-emilyguitar",
+      "salamander-grand",
+      "vcsl",
+      "virtuosity-drums-basic",
+    ]);
     const legatoLibraries = Object.entries(TRIGGER_CENSUS_ROWS)
       .filter(([, row]) => (row.textual.legato ?? 0) > 0)
       .map(([id]) => id)
       .sort();
+    // ⭐ `karoryfer-meatbass` is the other name that became readable on 2026-10-03: its 1 045 `trigger=legato` assignments live in seventeen `*_legato_map.sfz` files that 404'd at the wrong address.
     expect(legatoLibraries).toEqual([
       "aliexpress-erhu",
       "discord-gm-sitar",
@@ -381,6 +395,7 @@ describe.skipIf(offline)("the whole-corpus trigger census", () => {
       "karoryfer-272-merry-orks",
       "karoryfer-bear-sax",
       "karoryfer-bigcat-cello",
+      "karoryfer-meatbass",
       "karoryfer-squidpipes",
       "mtg-solo-sax",
       "sonatina-brass",

@@ -16083,6 +16083,7 @@
       "repo": "sfzinstruments/karoryfer.meatbass",
       "sourceUrl": "https://github.com/sfzinstruments/karoryfer.meatbass",
       "prefix": "karoryfer-meatbass",
+      "sourcePrefix": "Meatbass",
       "files": [
         {
           "path": "Meatbass/GUI/01_arco_modwheel.xml",
@@ -19820,6 +19821,7 @@
       "repo": "sfzinstruments/karoryfer.emilyguitar",
       "sourceUrl": "https://github.com/sfzinstruments/karoryfer.emilyguitar",
       "prefix": "karoryfer-emilyguitar",
+      "sourcePrefix": "Emilyguitar",
       "files": [
         {
           "path": "Emilyguitar/LICENSE",

@@ -86,6 +86,19 @@ export interface SampleManifestEntry {
   durationSource?: "stated" | "measured";
   /** Where this instrument's files live under the mirror, e.g. `vcsl/`. */
   prefix?: string;
+  /**
+   * ⭐ **The leading directory a *mirrored* path has and the *source repository* does not** — `Emilyguitar/`, `Meatbass/`.
+   *
+   * The two halves above are addresses on two hosts with two layouts, and this field is what lets one entry describe both honestly. A **tree** entry is mirrored by preserving the
+   * repository's own paths, so `files[].path` and `sfz` are already repository-relative and this field is absent. A **release-archive** entry is unpacked from a zip whose top-level
+   * directory is the library's name, so every recorded path carries that layer — measured, not assumed: **331 of 331** `karoryfer-emilyguitar` files and **587 of 587** `karoryfer-meatbass`
+   * files begin with it, and the two objects are the only archive entries that also carry a `repo`/`pin`.
+   *
+   * It is used in exactly one place — {@link sourceSfzUrl}, which is the only builder allowed to touch it — and it is **never** applied to {@link mirrorSfzUrl}. The mirror's rule stays
+   * `root/prefix/path` because the mirror's objects really are keyed that way; rewriting `files[].path` instead would have pointed the reachability check and the byte accounting at
+   * objects that do not exist. **No fallback chain and no guessing**: a path is either declared with this prefix or it is not.
+   */
+  sourcePrefix?: string;
   /** The SFZ that defines it, relative to `prefix`. */
   sfz?: string;
   /**
@@ -246,6 +259,11 @@ export function parseManifest(text: string): ManifestResult {
       attribution: entry.attribution,
       prefix: entry.prefix,
       /**
+       * ⭐ **Carried through like every other field, and for the reason the parser's own history keeps teaching**: the parser builds each entry field by field, so a field it does
+       * not name disappears silently. A `sourcePrefix` dropped here would make the source address wrong again with nothing to report it.
+       */
+      sourcePrefix: typeof entry.sourcePrefix === "string" ? entry.sourcePrefix : undefined,
+      /**
        * ⭐ **Carried through for exactly the reason the comment below gives.** This parser builds entries field
        * by field, so a field it does not name disappears silently — and `sourceUrl` did, which broke the
        * criterion that every library requiring attribution also says where to point. Declaring the fields on
@@ -298,6 +316,22 @@ export function shippableEntries(manifest: SampleManifest): SampleManifestEntry[
   return manifest.entries.filter((entry) => !entry.excludedReason);
 }
 
+/**
+ * **A recorded path turned into a path inside the source repository, by removing the one layer that is the mirror's and not the repository's.**
+ *
+ * `Emilyguitar/notes/c6_mf_rr1.wav` is a real record of the mirror — the release zip really has that top-level directory, and the uploaded object really is keyed that way — while
+ * the pinned repository has `notes/c6_mf_rr1.wav` one level higher. `sourcePrefix` is that difference, declared per entry, and this is the only function that applies it.
+ *
+ * **Nothing is guessed here.** A path that carries the declared prefix loses it; a path that does not is returned as written rather than searched for a shorter suffix that might
+ * exist — "try the longer path, then the shorter one" is the fallback chain this project has already ruled out once, and a 404 answered by a second request is not a fix.
+ */
+export function sourceRelativePath(path: string, sourcePrefix: string | undefined): string {
+  if (sourcePrefix === undefined || sourcePrefix === "") return path;
+  const layer = sourcePrefix.replace(/^\/+/, "").replace(/\/+$/, "");
+  if (layer === "") return path;
+  return path.startsWith(`${layer}/`) ? path.slice(layer.length + 1) : path;
+}
+
 /** Where an entry's SFZ can be fetched from, given the mirror root. Undefined when the entry is not an instrument. */
 /**
  * Where an instrument's SFZ lives **at its source**, derived from the pin the manifest already carries.
@@ -320,7 +354,13 @@ export function sourceSfzUrl(manifest: SampleManifest, entryId: string, sfz?: st
    *
    * Two layouts, two addresses: the source is `repo/pin/sfz`, the mirror is `root/prefix/sfz`.
    */
-  return `https://raw.githubusercontent.com/${entry.repo}/${entry.pin}/${program}`;
+  /**
+   * ⭐ **And `sourcePrefix` is the other half of the same distinction, one layer down.** `prefix` is the whole library directory the **mirror** adds; `sourcePrefix` is a directory
+   * the **archive** itself contains — the zip's top-level folder — which the pinned repository does not have. Applying it here and nowhere else is what makes the two libraries whose
+   * bytes came from release zips (*karoryfer-emilyguitar*, *karoryfer-meatbass*) ask the source for `…/<pin>/notes/c6_mf_rr1.wav` while the mirror is still asked for
+   * `…/<prefix>/Emilyguitar/notes/c6_mf_rr1.wav`. Measured before the change: **two of thirty** source programs answered anything other than 404, and both were these.
+   */
+  return `https://raw.githubusercontent.com/${entry.repo}/${entry.pin}/${sourceRelativePath(program, entry.sourcePrefix)}`;
 }
 
 export function mirrorSfzUrl(manifest: SampleManifest, entryId: string, root: string, sfz?: string): string | undefined {

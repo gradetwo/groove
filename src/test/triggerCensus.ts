@@ -13,7 +13,7 @@
  * ```
  *   corpus      the manifest entries with a repo + pin; their declared .sfz／.txt／.ariax files
  *   address     https://raw.githubusercontent.com/<repo>/<pin>/<path>   (sourceSfzUrl's own address, no mirror)
- *   files read  1 666 of 1 714 — the 48 that are absent are named in TRIGGER_CENSUS_UNREADABLE
+ *   files read  every declared text file of every census library — the map of absences below is now empty
  *   counting    /(?<![\w$])trigger\s*=\s*([^\s]+)/g, lower-cased, counted per file and per entry
  * ```
  *
@@ -24,12 +24,17 @@
  *
  * ## The reading, in one paragraph
  *
- * **2 177 assignments over 14 libraries and five values.** `first` (1 236) and `legato` (794) dominate; `release` is 99 and `release_key` 20; `attack` is written
+ * **4 286 assignments over the sixteen rows below, in five values.** `first` (2 282) and `legato` (1 839) dominate; `release` is 117 and `release_key` 20; `attack` is written
  * explicitly 28 times, all in `vcsl`. **`last` never appears** — and it is not on <https://sfzformat.com/opcodes/trigger/>, whose table is *"attack, release, first,
  * legato"* for SFZ v1 with `release_key` added under SFZ v2, so its absence is the specification's absence rather than a gap in the crawl. `trigger=release` is written
- * by **five** libraries — `salamander-grand`, `vcsl`, `karoryfer-bear-sax`, `karoryfer-black-and-blue-basses` and `freepats-button-accordion-hn` — and `release_key` by
- * a sixth, `virtuosity-drums-basic`. Only Salamander resolved a note-on to one of them, because only there is a release region *narrower* than the note region it
- * competes with; the others' release regions lose the narrowest-range comparison. **The census is the stronger claim, and it is what makes the next one visible.**
+ * by **six** libraries — `salamander-grand`, `vcsl`, `karoryfer-bear-sax`, `karoryfer-black-and-blue-basses`, `freepats-button-accordion-hn` and `karoryfer-emilyguitar`
+ * — and `release_key` by a seventh, `virtuosity-drums-basic`. Only Salamander ever resolved a note-on to one of them, because only there is a release region *narrower* than
+ * the note region it competes with; the others' release regions lose the narrowest-range comparison. **The census is the stronger claim, and it is what makes the next one
+ * visible.**
+ *
+ * ⭐ **Two of those sixteen rows were unmeasurable until 2026-10-03, and both are now full rows** — `karoryfer-meatbass` and `karoryfer-emilyguitar`, whose declared files
+ * were fetched from a directory the upstream repositories do not have. The totals above therefore moved by their contribution (**2 109 assignments, 19 425 regions**); the
+ * paragraphs in each row record what was measured and why the earlier "no claim is made" was an artefact of the address rather than a fact about the library.
  */
 import type { SfzRegion } from "../audio/sfz/parse";
 
@@ -59,12 +64,16 @@ export interface TriggerCensusRow {
 }
 
 /**
- * The **47 declared files that could not be read**, so the census's coverage is stated rather than implied: **40 in `karoryfer-meatbass`** and **7 in
- * `karoryfer-emilyguitar`**, all 404 at their pinned commit — the same two libraries the audit could not measure, and for the same reason. A further `vcsl` text file
- * (`Idiophones/Struck Idiophones/Tubular Glockenspiel/Non-standard pitch (please transpose).txt`) **fetches and is empty**, so it reads as 0 assignments rather than as
- * a failure. None of the absent files is claimed below, and the live criterion re-reads the corpus so the coverage cannot quietly change.
+ * The **previously unreadable files, now none** — and the history matters more than the empty map.
+ *
+ * ⚠️ **This map used to say `{ "karoryfer-meatbass": 40, "karoryfer-emilyguitar": 7 }`, and the reason it recorded was wrong.** Those 47 files were not "404 at the pinned commit" because the
+ * upstream repository had moved them; the addresses asked for a `Meatbass/`／`Emilyguitar/` directory the repository has never had — the release **zip's** top level — because the manifest's
+ * recorded paths describe the **mirror**. Once `sourceSfzUrl` stopped repeating that layer, all 47 files fetched, both census rows above became measurable, and this map is empty.
+ *
+ * It is kept rather than deleted so the reading is still checkable: the live criterion asserts that **no declared text file fails to fetch**, which is a stronger claim than the one this map
+ * used to license, and a future absence of any kind fails there instead of being absorbed here.
  */
-export const TRIGGER_CENSUS_UNREADABLE: Readonly<Record<string, number>> = { "karoryfer-meatbass": 40, "karoryfer-emilyguitar": 7 };
+export const TRIGGER_CENSUS_UNREADABLE: Readonly<Record<string, number>> = {};
 
 export const TRIGGER_CENSUS = {
   "salamander-grand": {
@@ -249,18 +258,48 @@ export const TRIGGER_CENSUS = {
     regions: { sfzFiles: 0, total: 0, byTrigger: {} },
     note: "The only library writing `release_key` — SFZ v2's *\"Region will play on note-off. Ignores sustain pedal.\"* — twice per microphone mapping. No note-on answer moves.",
   },
-  /** The two libraries whose pinned source is 404: named so the guard knows they were looked at rather than forgotten. */
+  /**
+   * ⭐ **Measured, not absent — this row used to say the opposite.**
+   *
+   * Until the source address was corrected this library's 39 programs were fetched from `…/<pin>/Meatbass/Programs/…`, a path the repository does not have, so **all 40 of its declared
+   * text files 404'd** and the census could make no claim about it. The `Meatbass/` layer is the release archive's own top-level directory — the mirror really has it, the repository does not —
+   * and once the source address stopped carrying it the whole library became readable. Measured through `expandRemoteIncludes` + `parseSfz` at the pinned commit: **39 programs, 14 928 regions**,
+   * every one of them `attack`, `first` or `legato`. The `legato` half of each pair is unreachable from a note-on on this project's path, which is the same reading every other library's pairs get.
+   */
   "karoryfer-meatbass": {
-    textual: {},
-    files: [],
-    regions: { sfzFiles: 0, total: 0, byTrigger: {} },
-    note: "39 declared `.sfz` and 1 readme are 404 at the pinned commit `ac9e8595…` — the audit could not measure this library either. **No `trigger=` claim is made about it.**",
+    textual: { first: 1046, legato: 1045 },
+    files: [
+      "Meatbass/Programs/arco_basic_legato_map.sfz",
+      "Meatbass/Programs/arco_looped_basic_legato_map.sfz",
+      "Meatbass/Programs/arco_looped_six_legato_first_map.sfz",
+      "Meatbass/Programs/arco_looped_six_legato_map.sfz",
+      "Meatbass/Programs/arco_looped_three_legato_map.sfz",
+      "Meatbass/Programs/arco_mw_basic_legato_map.sfz",
+      "Meatbass/Programs/arco_mw_six_legato_first_map.sfz",
+      "Meatbass/Programs/arco_mw_six_legato_map.sfz",
+      "Meatbass/Programs/arco_mw_three_legato_map.sfz",
+      "Meatbass/Programs/arco_six_legato_first_map.sfz",
+      "Meatbass/Programs/arco_six_legato_map.sfz",
+      "Meatbass/Programs/arco_three_legato_map.sfz",
+      "Meatbass/Programs/pizz_basic_legato_map.sfz",
+      "Meatbass/Programs/pizz_six_legato_first_map.sfz",
+      "Meatbass/Programs/pizz_six_legato_map.sfz",
+      "Meatbass/Programs/pizz_three_legato_first_map.sfz",
+      "Meatbass/Programs/pizz_three_legato_map.sfz",
+    ],
+    regions: { sfzFiles: 39, total: 14928, byTrigger: { attack: 6992, first: 3968, legato: 3968 } },
+    note: "`first`/`legato` in pairs across seventeen mapping files — the sampled-legato pattern — with **no `trigger=release` anywhere**, so nothing in this library can answer a note-on with a release noise.",
   },
+  /**
+   * ⭐ **The library the audit could not measure, and the one the owner heard the defect in.** Its 7 declared text files were 404 at `…/<pin>/Emilyguitar/…` for the same reason as `meatbass`
+   * above; with the archive's layer gone from the source address all 6 programs parse: **4 497 regions, 72 of them `trigger=release`** — the guitar's fingering and fret noise, written in
+   * `emily_basic.sfz` itself. They lose the narrowest-range comparison to a note region on the exposed programs, which is why the instrument sounds as a guitar rather than as noise.
+   */
   "karoryfer-emilyguitar": {
-    textual: {},
-    files: [],
-    regions: { sfzFiles: 0, total: 0, byTrigger: {} },
-    note: "6 declared `.sfz` and 1 readme are 404 at the pinned commit `b4920dc6…`, the same situation as meatbass. **No `trigger=` claim is made about it.**",
+    textual: { release: 18 },
+    files: ["Emilyguitar/emily_basic.sfz"],
+    regions: { sfzFiles: 6, total: 4497, byTrigger: { attack: 4425, release: 72 } },
+    note: "Its 72 release regions are the fingering/fret noise, declared in `emily_basic.sfz`; the six exposed programs are all `emily_*` and every one of them sounds from the source pin after the address fix.",
   },
 } as const satisfies Record<string, TriggerCensusRow>;
 
