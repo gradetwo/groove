@@ -161,6 +161,6 @@ export const helpMessages = {
   onboarding_s6_tip: { en: "Click 'Bake to Sequencer' to translate any harmonic progression into active track steps.", zh: "轻点「烘焙至工作台」即可将选定和弦走向自动转化为真实步进。" },
 
   onboarding_s7_title: { en: "7. You're All Set! Start Creating", zh: "7. 一切就绪！开始您的音乐创作" },
-  onboarding_s7_desc: { en: "Press '?' anytime for keyboard shortcuts, export lossless WAV/MIDI/ALS projects with one click, or jump into interactive hands-on lessons now.", zh: "随时按「?」查看快捷键，一键无损导出 WAV/MIDI/Ableton 工程，或者立即开启交互式实操教学！" },
+  onboarding_s7_desc: { en: "Press '?' anytime for keyboard shortcuts, export your project as MIDI, Ableton, .groove, WAV, MP3, stems or MusicXML with one click, or jump into interactive hands-on lessons now.", zh: "随时按「?」查看快捷键，一键将工程导出为 MIDI、Ableton、.groove、WAV、MP3、分轨或 MusicXML，或者立即开启交互式实操教学！" },
   onboarding_s7_tip: { en: "Choose an option below to begin your hands-on journey or dive straight into the studio.", zh: "选择下方入口开始实操教学或直接进入工作台。" },
 } as const;
