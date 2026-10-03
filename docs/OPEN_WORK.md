@@ -6827,3 +6827,13 @@ problems: **[]** ✓
    ＋ `tsc`=0 ✓、改动文件 eslint 0 error ✓、`skins:gen` 零 diff ＋ `check:skins`=0 ✓、
      **两份真实语料（MusicXML 语料 ✓／Logic P3 三个真实工程 ✓）都在现行代码上复验逐值相等** ✓
 ```
+
+**二百七十七·五补 —— 引导/coach 族补跑（25 用例 ✓），本地证据累计 186**：
+```
+**动机** ✓：我改的文件是 `NewUserOnboardingModal.tsx`（新手引导）✓ ⇒ 按"反查"规则找**与引导相关**的判据 ✓
+**读数** ✓：`NewUserOnboardingModal.test.tsx` **6** ✓（⭐ 我改的那个组件自己的判据 ✓）｜`tutorialCoachAnchor` **6** ✓｜
+  `InteractiveTutorialCoach` **6** ✓｜`tutorialAudition` **7** ✓ ⇒ **4 文件 / 25 用例全绿** ✓
+⇒ ⭐ **本地证据累计 186 用例** ✓（musicxml 51 ＋ 导出菜单 82 ＋ i18n 20 ＋ 反向量 8 ＋ 引导/coach 25 ✓）
+   —— 每一族都是按"**问这个改动会影响谁**"反查出来的 ✓，不是凭记忆列的 ✗
+⚠️ 本条**只本地提交** ✓（单测判决仍在跑 ✗）
+```
