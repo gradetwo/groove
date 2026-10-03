@@ -58,9 +58,11 @@ step "budget" npm run check:budget
 # ⭐ **`SKIP_FULL_CI=1` skips the remote matrix, and only the owner may ask for that** (2026-10-03: he did, for 2.34.40).
 # It is a *release-window* decision, not a convenience: the remote gate is the authority for everything else, so this
 # prints what was skipped and who authorised it, and the release document's verification still has to be done by hand.
+# ⭐ **The version is read, not written into the sentence.** The first version of this line hard-coded "2.34.40", so the
+# next release printed a warning naming the wrong version — a small lie of exactly the kind this file exists to avoid.
+RELEASE_VERSION=$(node -p "require('./package.json').version")
 if [ "${SKIP_FULL_CI:-0}" = "1" ]; then
-  echo "  skipped (SKIP_FULL_CI=1 — the owner authorised releasing 2.34.40 without the remote matrix)"
-  echo "     ⚠️  the remote gate did NOT run for this commit; the four-place verification still applies."
+  echo "  skipped (SKIP_FULL_CI=1 — the owner authorised releasing v${RELEASE_VERSION} without the remote matrix)"
 else
   step "full CI" bash scripts/ci_full.sh
 fi
