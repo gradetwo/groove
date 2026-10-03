@@ -108,7 +108,28 @@ function songRecord(bpm: number): Uint8Array {
 }
 
 /** An XML plist, which the reader parses as readily as a binary one. */
-export function logicMetaDataPlist(bpm: number, beatsPerMeasure = 4, beatType = 4): Uint8Array {
+export function logicMetaDataPlist(bpm: number, beatsPerMeasure = 4, beatType = 4, trackCount = 0): Uint8Array {
+  /**
+   * The keys the projects this writer imitates actually carry — measured, not guessed (docs/OPEN_WORK.md 298).
+   *
+   * Three of the owner's real projects (`Colors`, `ocean eyes`, `MONTERO`) were read with `plistlib`: their key sets
+   * **differ by Logic version** (nineteen keys in one, twenty-four in the union), so "nineteen" was never the target.
+   * What is here is the union, with each key in one of three honest classes:
+   *
+   *   * **from the arrangement** — `BeatsPerMinute`, the two signature keys, `NumberOfTracks`;
+   *   * **constant in all three** — `SampleRate 44100`, `FrameRateIndex 1`, `SurroundFormatIndex 5`, `Version 3`,
+   *     `isTimeCodeBased false`, and the empty `PlaybackFiles`/`UnusedAudioFiles`;
+   *   * **empty because we have none** — the asset lists (`AudioFiles`, `AlchemyFiles`, `QuicksamplerFiles`,
+   *     `UltrabeatFiles`, `SamplerInstrumentsFiles`, `ImpulsResponsesFiles`, `VideoFiles`): an arrangement of notes
+   *     carries no audio, no sampler instruments and no video, so an empty list is the truth rather than a gap.
+   *
+   * Deliberately **absent**: `SongKey`, `SongGenderKey`, `SignatureKey`. The real projects state a key ("C"/"major"/7),
+   * and an arrangement here has no field that says one, so writing "C major" would put a claim in the user's mouth that
+   * the user never made. Recorded in `needs` instead (docs/OPEN_WORK.md 298).
+   */
+  const empty = (key: string) => `\t<key>${key}</key><array/>\n`;
+  const integer = (key: string, value: number) => `\t<key>${key}</key><integer>${value}</integer>\n`;
+  const bool = (key: string, value: boolean) => `\t<key>${key}</key><${value ? "true" : "false"}/>\n`;
   const xml =
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
     `<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n` +
@@ -116,10 +137,81 @@ export function logicMetaDataPlist(bpm: number, beatsPerMeasure = 4, beatType = 
     `\t<key>BeatsPerMinute</key><real>${bpm}</real>\n` +
     `\t<key>SongSignatureNumerator</key><integer>${beatsPerMeasure}</integer>\n` +
     `\t<key>SongSignatureDenominator</key><integer>${beatType}</integer>\n` +
+    integer("NumberOfTracks", trackCount) +
+    integer("SampleRate", 44100) +
+    integer("FrameRateIndex", 1) +
+    integer("SurroundFormatIndex", 5) +
+    integer("Version", 3) +
+    bool("isTimeCodeBased", false) +
+    bool("HasARAPlugins", false) +
+    bool("HasGrid", false) +
+    empty("PlaybackFiles") +
+    empty("UnusedAudioFiles") +
+    empty("AudioFiles") +
+    empty("AlchemyFiles") +
+    empty("QuicksamplerFiles") +
+    empty("UltrabeatFiles") +
+    empty("SamplerInstrumentsFiles") +
+    empty("ImpulsResponsesFiles") +
+    empty("VideoFiles") +
     `</dict></plist>\n`;
   return new TextEncoder().encode(xml);
 }
 
+/**
+ * `Resources/ProjectInformation.plist`, to the shape the real projects use (docs/OPEN_WORK.md 298).
+ *
+ * **`ActiveVariant` is an integer here, not a string**, because that is what all three measured projects carry (their
+ * folder is `000` and the plist says `0`); `activeVariant` pads a run of digits back to the folder's three digits, so
+ * both spellings name the same alternative. `VariantNames`/`VariantNamesV2` are tables keyed by the variant index as a
+ * string (`{"0": "Demo Song"}` measured), which is the list of variants rather than a statement of which is open.
+ *
+ * Deliberately **absent**: `LastSavedFrom` (it names the application that saved the file — writing "Logic Pro X …"
+ * would claim to be something this is not), `projectAssetFlags` (an integer whose meaning is unknown), and
+ * `ExternalRecordPath` (a binary bookmark into the original owner's disk). All three are recorded in `needs`.
+ */
+export function logicProjectInformationPlist(alternativeIndex: number, variantName: string): Uint8Array {
+  const names = `\t<key>VariantNames</key><dict><key>${alternativeIndex}</key><string>${escapeXml(variantName)}</string></dict>\n`;
+  const xml =
+    `<?xml version="1.0" encoding="UTF-8"?>\n` +
+    `<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n` +
+    `<plist version="1.0"><dict>\n` +
+    `\t<key>ActiveVariant</key><integer>${alternativeIndex}</integer>\n` +
+    `\t<key>BundleVersion</key><real>2.0</real>\n` +
+    `\t<key>HasProjectFolder</key><false/>\n` +
+    names +
+    names.replace("VariantNames", "VariantNamesV2") +
+    `</dict></plist>\n`;
+  return new TextEncoder().encode(xml);
+}
+
+/**
+ * `Alternatives/<alt>/DisplayState.plist`, the third of the five files a real project keeps per alternative.
+ *
+ * Its five keys were read from `Colors.logicx`: `displayDataVersion`, `docPreferences`, `screenVisibleFrames`,
+ * `screensetCurrSlot`, `screensetDictArray` — window and screenset state. The values here are the empty shape: this
+ * writer has no screen to describe, and inventing window frames would be a lie about a UI that never existed. The
+ * remaining two files (`WindowImage.jpg`, a 1.6 MB thumbnail, and `DisplayStateArchive`, a 35 KB opaque archive) are
+ * **not** written, and that is recorded in `needs` rather than faked.
+ */
+export function logicDisplayStatePlist(): Uint8Array {
+  const xml =
+    `<?xml version="1.0" encoding="UTF-8"?>\n` +
+    `<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n` +
+    `<plist version="1.0"><dict>\n` +
+    `\t<key>displayDataVersion</key><integer>1</integer>\n` +
+    `\t<key>docPreferences</key><dict/>\n` +
+    `\t<key>screenVisibleFrames</key><array/>\n` +
+    `\t<key>screensetCurrSlot</key><integer>0</integer>\n` +
+    `\t<key>screensetDictArray</key><array/>\n` +
+    `</dict></plist>\n`;
+  return new TextEncoder().encode(xml);
+}
+
+/** XML text for a plist string; the writer's names can contain `&` and `<`. */
+function escapeXml(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
 /**
  * A region record. **The reader builds one part per `qeSM` record**, taking the note sequences whose `cluster` equals
  * this record's — so a sequence without a region record is invisible — and it reads the region's name from a named
@@ -166,6 +258,7 @@ function tempoRecord(): Uint8Array {
 }
 
 /** The two files of a minimal project. Note sequences are written as one `qSvE` record per part. */
+
 export function arrangementToLogicFiles(parts: readonly ImportedPart[], bpm = 120): LogicWrittenFiles {
   const records: Uint8Array[] = [meterRecord(4, 4), tempoRecord(), songRecord(bpm)];
   parts.forEach((part, index) => {
@@ -184,7 +277,7 @@ export function arrangementToLogicFiles(parts: readonly ImportedPart[], bpm = 12
     projectData.set(r, at);
     at += r.length;
   }
-  return { projectData, metaData: logicMetaDataPlist(bpm) };
+  return { projectData, metaData: logicMetaDataPlist(bpm, 4, 4, parts.length) };
 }
 
 /** The three files a `.logicx` must carry for this reader to open it, as a directory map. */
@@ -203,18 +296,25 @@ export interface LogicProjectBundle {
  *
  * What this does **not** claim: that real Logic opens it, or which versions accept it. Those stay needs (237).
  */
-export function logicProjectBundle(parts: readonly ImportedPart[], bpm = 120, alternative = "000"): LogicProjectBundle {
-  const { projectData, metaData } = arrangementToLogicFiles(parts, bpm);
-  const projectInformation = new TextEncoder().encode(
-    `<?xml version="1.0" encoding="UTF-8"?>\n` +
-      `<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n` +
-      `<plist version="1.0"><dict>\n\t<key>ActiveVariant</key><string>${alternative}</string>\n</dict></plist>\n`
-  );
+export function logicProjectBundle(
+  parts: readonly ImportedPart[],
+  bpm = 120,
+  alternative = "000",
+  variantName = "Arrangement"
+): LogicProjectBundle {
+  const { projectData } = arrangementToLogicFiles(parts, bpm);
+  const parsed = Number.parseInt(alternative, 10);
+  const alternativeIndex = Number.isFinite(parsed) ? parsed : 0;
+  /**
+   * Four files, where a real project keeps five per alternative (docs/OPEN_WORK.md 298): the fifth and sixth are the
+   * thumbnail and the opaque display archive, which this writer does not fake.
+   */
   return {
     files: {
       [`Alternatives/${alternative}/ProjectData`]: projectData,
-      [`Alternatives/${alternative}/MetaData.plist`]: metaData,
-      "Resources/ProjectInformation.plist": projectInformation,
+      [`Alternatives/${alternative}/MetaData.plist`]: logicMetaDataPlist(bpm, 4, 4, parts.length),
+      [`Alternatives/${alternative}/DisplayState.plist`]: logicDisplayStatePlist(),
+      "Resources/ProjectInformation.plist": logicProjectInformationPlist(alternativeIndex, variantName),
     },
   };
 }

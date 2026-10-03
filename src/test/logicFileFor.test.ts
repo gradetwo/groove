@@ -46,6 +46,7 @@ describe("a logicx for the browser to download", () => {
     const bytes = new Uint8Array(await file.blob.arrayBuffer());
     const files = unzipSync(bytes);
     expect(Object.keys(files).sort()).toEqual([
+      "Alternatives/000/DisplayState.plist",
       "Alternatives/000/MetaData.plist",
       "Alternatives/000/ProjectData",
       "Resources/ProjectInformation.plist",

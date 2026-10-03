@@ -19,6 +19,7 @@ const parts: ImportedPart[] = [{ name: "Piano, Track0", notes: [N(60, 0, 1), N(6
 describe("the package a logicx is", () => {
   it("carries the three files the fixture test reads", () => {
     expect(Object.keys(logicProjectBundle(parts, 120).files).sort()).toEqual([
+      "Alternatives/000/DisplayState.plist",
       "Alternatives/000/MetaData.plist",
       "Alternatives/000/ProjectData",
       "Resources/ProjectInformation.plist",
@@ -61,5 +62,53 @@ describe("the package a logicx is", () => {
       expect(files[path], path).toBeDefined();
       expect(files[path]!.length, path).toBeGreaterThan(0);
     }
+  });
+});
+
+/**
+ * ⭐ **The plists are held to the shapes the owner's real projects have** (docs/OPEN_WORK.md 298), because the
+ * measurable half of "will Logic open it" is "does it look like a project Logic wrote". Three real projects were read
+ * with `plistlib`: their `MetaData.plist` carries a union of twenty-four keys (the count varies by Logic version, so
+ * "nineteen" was never the target) and their `ProjectInformation.plist` pairs an **integer** `ActiveVariant` with a
+ * three-digit folder, plus a `VariantNames` table keyed by the variant index.
+ *
+ * Every assertion here fails if the corresponding key is dropped, which is what makes them criteria rather than notes.
+ */
+describe("the plists match the shapes the real projects use", () => {
+  const files = logicProjectBundle(parts, 139, "000", "Demo").files;
+  const text = (path: string) => new TextDecoder().decode(files[path]!);
+
+  it("⭐ carries every MetaData key the real projects agree on, and says nothing about a song key", () => {
+    const md = text("Alternatives/000/MetaData.plist");
+    for (const key of [
+      "BeatsPerMinute", "SongSignatureNumerator", "SongSignatureDenominator", "NumberOfTracks",
+      "SampleRate", "FrameRateIndex", "SurroundFormatIndex", "Version", "isTimeCodeBased",
+      "HasARAPlugins", "HasGrid", "PlaybackFiles", "UnusedAudioFiles", "AudioFiles", "AlchemyFiles",
+      "QuicksamplerFiles", "UltrabeatFiles", "SamplerInstrumentsFiles", "ImpulsResponsesFiles", "VideoFiles",
+    ]) expect(md, `missing ${key}`).toContain(`<key>${key}</key>`);
+    expect(md).toContain("<real>139</real>", "the tempo is the arrangement's");
+    // ⚠️ The three key fields are deliberately absent: an arrangement here has no field stating a key, and writing
+    // "C major" would put a claim in the user's mouth. Recorded in needs; asserted so nobody adds one silently.
+    for (const absent of ["SongKey", "SongGenderKey", "SignatureKey"])
+      expect(md, `${absent} must not be invented`).not.toContain(`<key>${absent}</key>`);
+  });
+
+  it("⭐ numbers the alternative rather than spelling it, and names it in both tables", () => {
+    const pi = text("Resources/ProjectInformation.plist");
+    expect(pi).toContain("<key>ActiveVariant</key><integer>0</integer>");
+    expect(pi).toContain("<key>BundleVersion</key><real>2.0</real>");
+    expect(pi).toContain("<key>VariantNames</key><dict><key>0</key><string>Demo</string></dict>");
+    expect(pi).toContain("<key>VariantNamesV2</key><dict><key>0</key><string>Demo</string></dict>");
+    // ⚠️ `LastSavedFrom` names the application that saved the file; we will not claim to be Logic.
+    expect(pi).not.toContain("LastSavedFrom");
+    expect(activeVariant(files["Resources/ProjectInformation.plist"]!)).toBe("000");
+  });
+
+  it("writes the display state's measured keys and no fabricated thumbnail", () => {
+    const ds = text("Alternatives/000/DisplayState.plist");
+    for (const key of ["displayDataVersion", "docPreferences", "screenVisibleFrames", "screensetCurrSlot", "screensetDictArray"])
+      expect(ds, `missing ${key}`).toContain(`<key>${key}</key>`);
+    expect(Object.keys(files)).not.toContain("Alternatives/000/WindowImage.jpg");
+    expect(Object.keys(files)).not.toContain("Alternatives/000/DisplayStateArchive");
   });
 });

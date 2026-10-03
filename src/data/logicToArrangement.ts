@@ -317,7 +317,14 @@ export function activeVariant(projectInformation: Uint8Array): string | undefine
   const direct = record["ActiveVariant"];
   if (direct === undefined) return undefined;
   const text = String(direct).trim();
-  return text === "" ? undefined : text;
+  if (text === "") return undefined;
+  /**
+   * ⭐ **A run of digits is the alternative's index, and its folder is three digits wide.** The measured real projects
+   * pair `ActiveVariant` `0` with `Alternatives/000` (docs/OPEN_WORK.md 298), so padding here makes the integer the
+   * real projects write and the padded string this writer used to write name the same directory — while a name that is
+   * not a number is returned untouched.
+   */
+  return /^\d+$/.test(text) ? text.padStart(3, "0") : text;
 }
 
 /* ------------------------------------------------------------------ *
