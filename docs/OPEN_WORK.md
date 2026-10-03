@@ -4558,3 +4558,52 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
    （它**不在该线的可改清单内** ⇒ **它停手并如实上报** ✓ —— 做法正确 ✓）
 ⇒ **下一件事：派专线按"先量后改"修 R2** ✓（判据必须能红：在 debounce 窗口内触发页面卸载 ⇒ 改动必须已落库 ✓），并顺带核 R1 是否一并处理 ✓
 ```
+
+## 一百三十六、⭐⭐ **§106 根因：`qSvE` 载荷是 16 字节"行/原子"序列，事件长度可变**（三个独立开源项目互证 ＋ 真语料验证 ✓）
+
+### 136.1 外部权威依据（逐字 ＋ URL，均为调研线所引 ✓）
+
+```
+· **`loov/logicx`**（Go，**GPL-3.0-or-later** ✗ 只读）`event.go:5-9`：atomSize is the granularity of an event sequence.
+  Every EvSq payload is a whole number of these. **const atomSize = 16** ✓
+  `event.go:34-37`：Records are variable-length and the length carries meaning: a 48-byte meter event has no beat grouping
+  while a 64-byte one does, and **a note event grows by one atom per attached score symbol** ✓
+· **`Evilander/logic2ableton`**（Python，**MIT** ✓ 可借鉴）`logic_project_data.py:11-12`：Each record begins with a u32 status
+  and a u32 tick; the low status byte selects the record type and size, **status bit 0x4000 means a 32-byte extension record
+  trails the event** ✓｜`:79-80` `_EXTENSION_FLAG = 0x4000`、`_EXTENSION_SIZE = 32` ✓｜
+  `scripts/fixture_builders.py:213` `variant: int = 0x40` ✓ ← **正是 `90 40 00 00` 里的 `0x40`** ✓
+· **`phierceweb/logicxkit`**（Python，**Apache-2.0** ✓ 可借鉴，**需 NOTICE 署名** ✓）`logic/services/events.py:1-7`：
+  The payload is 16-byte lines. A line whose byte 7 has its top bit clear starts an event… A line whose byte 7 has the top
+  bit set continues the event before it ✓｜`midi.py:20-21` 一个音符 ＝ 一条 `0x9c` 行 ＋ 一条 `0x89` 行 ✓｜
+  `midi_write.py:68` `ext[0], ext[7] = 0x40, NOTE_EXT` ✓
+⭐ 旧的 32 字节规范（`jonkubis/logicproformatwriter`，**MIT** ✓）**与这个模型不矛盾** ✓ —— 它每次只写 **N=1** ✓
+```
+
+### 136.2 ⭐⭐ **关键结论：本仓的"48 字节"与"80/64 步距"是同一个 bug 的两种表现，不是两种形态** ✗✓
+
+```
+**音符 ＝ 头行**（`90 40 00 00`，位置 +0x04／vel +0x0b／pitch +0x0c ✓）**＋ N 条 16 字节续行**（第一条是 `…89…`，长度在它的 +12 ✓）
+   ⇒ **N=1 → 32 字节**（规范那种 ✓）｜**N=2 → 48** ✓｜N=3 → 64 ✓｜N=4 → 80 ✓｜N=5 → 96 ✓
+⚠️ ⇒ 本仓现在那条"48 字节"路径**只接住 N=2 的那部分** ✗（`Swing!` **596/2903 ≈ 21%** ✓），**N≠2 的序列仍被丢弃** ✗
+⚠️ 且 `90 40 00 00` **不是尺寸选择器** ✗ —— `0x40` 是**音符常量**（Evilander 的默认 `variant=0x40` ✓）；
+   **有没有续行由续行自己的 byte7 bit7 决定** ✓，不由头部字节决定 ✓
+⭐ **真语料验证（本机 8 份官方工程 ✓，与 §132 读数逐字吻合 ✓）**：
+   采用 16 字节行模型后 ⇒ `Swing!` 581 → **2903** ✓｜`Manzana`×2 92 → **1137** ✓｜`Colors` 1557 → **2868** ✗（会变 ✓）｜
+   `ocean eyes` 1240 → **1729** ✗（会变 ✓）｜`MONTERO` 7 = 7 ✓｜`Grid` 0 = 0 ✓
+   实测续行分布：`Swing!` {2条:596, 3条:738, 4条:1569} ✓｜`Manzana` {5条:836, 4条:197, 2条:65, 1条:34, 3条:5} ✓｜
+   `Colors`／`ocean eyes` 多为 1 条（**所以这两份在 §132 里"一字不动"** ✓）
+```
+
+### 136.3 ⇒ **下一步（已改计划 ✓）**
+
+```
+⭐ **应把读取器重建在 16 字节行模型上** ✓（而不是继续给"48 字节"打补丁 ✗）⇒ 一次性修好 N=2/3/4/5 与"80/64 步距" ✓
+   **借用规则**：`logic2ableton`（MIT ✓）与 `logicxkit`（Apache-2.0 ✓ 需 NOTICE 署名 ✓）**可借鉴**；
+   `loov/logicx`（GPL ✗）**只许阅读理解、绝不抄代码** ✗ ⇒ 引用其**结论性描述**并注明出处 ✓
+   **期望读数（验收目标 ✓）**：`Swing!` **2903** ✓｜`Manzana`×2 **1137** ✓｜`MONTERO` **7** ✓｜`Grid` **0** ✓
+   ⚠️ **`Colors`（2868）与 `ocean eyes`（1729）会变** ✗ ⇒ 这**不是回归**，是**读到了更多** ✓ ⇒
+     必须**显式更新**基线并写明理由 ✓（`logicFixtures` 里被钉的 21 个真实工程读数也要一并复核更新 ✓，**不许悄悄改数** ✗）
+   **判据**：自造 16 字节行夹具（N=1/2/3/4/5 各一 ✓）＋ 真语料测量（只作测量 ✓，官方工程**不进仓库** ✗）；
+     **反面**：把行模型的续行处理去掉 ⇒ **必须红** ✓；反向量（五数等）**不许改** ✗
+⚠️ 本轮调研线**未改任何产品代码** ✓（正确 ✓）；完整报告（A 表／B 三问／C 许可证逐字／D 依据逐字／E 建议）随后到 ✓
+```
