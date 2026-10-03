@@ -4800,3 +4800,23 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
 **⇒ 落地要求（很小 ✓）**：把这条**写成文档里的诚实边界** ✓（`docs/` 与帮助中心口径 ✓：**不列 Logic 导出** ✗，
    也不暗示"很快有" ✗）；**若业主后来要** ⇒ 先定"交付形态（zip／分文件）"＋"ground truth 对照策略"两项 ✓，再谈实现 ✓
 **记录在案**：这**不是**"做不到" ✗，而是"**本阶段按 §27 不做、且不假装**" ✓；一旦业主给形态与验收方式，可随时立项 ✓
+
+## 一百四十四、✅ **MIDI 源头 `kind` ＋ MCP 对齐已落地（`7219e3d`）** —— 我核过判据；并记一次"假红"教训 ✗（2026-10-03 23:1x ✓）
+
+```
+✅ **落地**：`dev` 顶部含 **`7219e3d fix(arrangement): the name→kind decision lives w…`** ✓
+   改动 5 个文件：`src/data/arrangementImport.ts`（**源头** ✓）｜`mcp/arrangement.ts`（**MCP 对齐** ✓）｜
+   `src/features/arrangement/arrangementFiles.ts` ✓｜**两条新判据** `src/test/arrangementImportSamplerKind.test.ts` ✓、
+   `src/test/mcpImportSamplerKind.test.ts` ✓
+✅ **我核过的（rebase 我的树到该 sha 之后 ✓）**：
+   · 两条新判据 ⇒ **`Test Files 2 passed (2)`、`Tests 6 passed (6)`、退出码 0** ✓
+   · `npm run check:mcp` ⇒ **123 checks passed, 0 failed** ✓（MCP 侧专属门禁 ✓）
+   · 反向量 `ownerProjectAcceptance` ⇒ 退出码 0、**五数逐字**（`19 overlapping…, 57 note(s)…, 57 handed over…` ✓）
+   ⏳ **CI 判决仍 in_progress** ✗ ⇒ 按规矩**判决前不写最终验收** ✓
+⚠️⚠️ **一次"假红"教训（我犯的 ✗，值得记）**：我一度报"它的两条判据红了（退出码 1）" ✗ ——
+   根因是**我读的是 `origin/dev` 的 sha，却在自己的工作树里跑判据** ✗，而我的树**落后于 `dev`** ✓
+   ⇒ 日志逐字 **`No test files found, exiting with code 1`** ✓ ⇒ **纯属我的操作错误** ✗，**不是它的缺陷** ✓
+   ⇒ 我已**发消息撤回** ✓（并请它别追这个鬼 ✓）；它唯一还欠我的是 ⭐ **"判据能红"的反面原文** ✓（去掉源头 kind 决策 ⇒ 必须红 ✓）
+⇒ **教训**：**"sha 在 dev 顶端" ≠ "我的工作树在那个 sha"** ✗ ⇒ 判据必须在**已 rebase 的树**上跑 ✓
+   （与今天另一次同类：拿 rebase 前的**旧 sha** 判"有没有落地" ✗ —— 两次都是"**用间接信号代替直接读数**" ✓）
+```
