@@ -476,7 +476,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "render_arrangement_preview",
     title: "Preview a span of an arrangement",
     description:
-      "Hear one span of an arrangement cheaply: 8 kHz mono unless told otherwise, optionally only the tracks that changed. It renders the span once, where render_arrangement renders the whole thing and can repeat it. This returns a file and measured levels; playing it is up to the caller.",
+      "Hear one span of an arrangement cheaply: 8 kHz mono unless told otherwise, optionally only the tracks that changed. It renders the span once, where render_arrangement renders the whole thing and can repeat it. This returns a file and measured levels; playing it is up to the caller. **For an A/B, call it twice on the same span — before against after, or one track against another — and compare the two replies: each names its own file, span, tracks and levels, so the pair is self-describing and nothing has to be mixed together here.**",
     readOnly: true,
     inputSchema: {
       arrangementId: z.string(),

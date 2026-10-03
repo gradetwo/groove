@@ -41,6 +41,15 @@ describe("the arrangement preview tool", () => {
     expect(schema.channels?.description ?? "").toContain("1");
     // The span's end is exclusive, which is the detail a caller gets wrong when it is not said.
     expect(schema.endBar?.description ?? "").toContain("exclusive");
+    /**
+     * ⭐ The A/B recipe belongs in the description, because the comparison is not a tool: two calls on one span are the
+     * comparison, and what makes them comparable is that each reply names its own file, span, tracks and levels. The
+     * sentence also says the honest limit — nothing is mixed together here.
+     */
+    const described = (preview as unknown as { description: string }).description;
+    expect(described).toContain("A/B");
+    expect(described.toLowerCase()).toContain("call it twice");
+    expect(described).toContain("self-describing");
   });
 });
 
