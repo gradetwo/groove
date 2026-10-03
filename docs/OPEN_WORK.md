@@ -4332,3 +4332,21 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
    **判断"有没有落地"只认祖先关系**（`git merge-base --is-ancestor` ✓）—— 这是我自己反复要求各线做的检查，却在自己身上漏了 ✗
 ⇒ ⭐ **对业主的意义**：「**导入 ⇒ 把轨道设为 sampler ⇒ 播放**」这条路**已经修好并在 `dev` 上** ✓
 ```
+
+## 一百二十八、📌 **sampler 修复留下的四条缺口（它自己点名、未修 ✓）**（2026-10-03 20:5x ✓）
+
+```
+**背景**：`2320b8b` 的修复做在**调用方** `src/features/arrangement/arrangementFiles.ts`（新增 `withMappedPartsAsSamplers` ✓），
+   而**病根那一行没动** ✗ —— 因为它当时在禁改区 ✓
+✗ **① 病根仍在**：`src/data/arrangementImport.ts:135` `addTrack(next, "synth", …)` **kind 硬编码 `"synth"`** ✓，
+   只写 `TrackV2.instrument`、**从不写 `sample`** ⇒ 任何**别的调用方**都会继承同一缺陷 ✗ ⇒ **应改在源头** ✓
+✗ **② MCP 侧的孪生缺陷**（⭐ 最值得做）：`mcp/arrangement.ts:1092 addImportedParts` **同一行、同一缺陷** ✓ ⇒
+   **走 MCP、带 `instruments` 的 agent 仍然拿到 synth 轨** ✗ ⇒ **Web 与 MCP 不对等** ✓ ⇒ 进队列，优先做 ✓
+✗ **③ MusicXML 没有映射对话框**：`arrangementFiles.ts:522` 不传 `instruments` ✓ ⇒ **本来就无法映射** ✓（行为未变 ✓）⇒ 进队列 ✓
+⚠️ **④ 手工补救的陷阱**（它实测 ✓）：把这种映射轨**手工**改成 sampler ⇒ `changeTrackKind` 会把
+   `sample.assetId` 设成 `"virtuosity-drums-basic"`（**默认鼓组** ✗）⇒ **手工补救会把选中的钢琴换成鼓** ✓✓
+   （而它作为 synth 时编译期名字表反而解析到 salamander-grand ✓ ⇒ 缺陷是**模型/UI 身份**，手工改 kind 会**真把声音改坏** ✓）
+   ⇒ **值得修**：手工切 kind 时应**沿用当前 instrument 已解析的资产**，而不是回落到默认 ✓
+⭐ **它的方法论也值得记**（同源老毛病 ✓）：慢判据在**并发高负载**下默认 5 s 会**误报 timeout** ✗ ⇒ 它显式加 **60 s** ✓
+   （与我在别处"40 s 把慢误报成坏"是同一类 ✓）
+```
