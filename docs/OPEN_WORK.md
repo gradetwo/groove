@@ -5474,3 +5474,31 @@ problems: **[]** ✓
 ⚠️ **Logic 导出**：按 `§143` 记**边界** ✓（**不做也不假装** ✗；要立项先定"交付形态 ＋ ground truth 策略" ✓）
 🔄 **在飞两条（都是新挖出的缺陷类）**：`8ab0fbdb`（`?genre=` 二次派发**覆盖用户编排** ✗ —— 与 R2 同级 ✓）｜`lossless`（三处"无损"措辞 ✗）
 ```
+
+## 一百八十九、✅✅ **`np` 完整回报：探针自身写错（真丢失不成立 ✓）＋ 一条可复用的读数纪律** ✓（`cd15b86`，CI `37135383471` success ✓）
+
+```
+✅ **性质判定（逐字证据 ✓）**：**探针自身的问题** ✗ —— **不是真丢失** ✗、**也不是"新工程本不该落库"** ✓
+⭐ **它把每一次指针事件都记下来了** ✓：
+   `pointerdown roll-cell-84-0` → `pointerenter roll-cell-75-0` → **`scroll y=326 @12395`**（**滚动发生在手势中间** ✗）→ `pointerup roll-cell-75-0`
+   ＋ **`DOM roll notes immediately after gesture: 4 → after 1500ms: 4`** ✗ ⇒ ⭐ **写入根本没发生——连屏幕上都没有** ✗✓
+   机制：卷帘在**第一次按下**时自我聚焦并滚动（`PianoRollV2.tsx:279-283` ✓）⇒ **"第一次按下"就是那次滚动的按**（147 px ✓）
+   ⇒ 按下与抬起落在**两个不同格子**（84 → 75 ✓）⇒ 卷帘**正确地当成拖动** ✓ ⇒ **什么都没写** ✓ ⇒ ⚠️ **探针把账算到存储头上** ✗✓
+✅⭐ **证明"不是真丢失"** ✓：**同一份 dist** 上，**稳定后的第二次手势**写进去了 ✓（`second gesture at (88,303) → DOM roll notes 4 → 5` ✓；
+   **`STORED total 16 → 17`** ✓）；修好的探针整跑还显示**刷新后仍在** ✓（`"written":{rollNotesBefore:0, rollNotesAfter:1, notesBefore:16, notesAfter:17}`、`"ok":true` ✓）
+✅ **它的修法（只改探针 ✓，`scripts/probe_new_project_persistence.mjs`，+55／−6 ✓；产品代码零改动 ✗）**：
+   ① 测量前先 `focus({preventScroll:true})` ✓（把"手势自己引起的那次滚动"移出测量窗口 ✓）；
+   ② 目标格坐标改为**滚动之后用 locator 的 `boundingBox()` 现读** ✓；
+   ⭐ ③ **屏幕先行断言** ✓：`rollNotesAfter <= rollNotesBefore` ⇒ `❌ the pointer gesture wrote no note, so there is nothing to look for in storage` ✓
+      ⇒ ⭐ **把"手势没写"与"写了没落库"两种事实分开** ✓✓ —— **旧版正是把前者说成了后者** ✗
+✅ **红→绿 ＋ 两个反向量（逐字 ✓）**：旧探针 ⇒ 红 ✓（在**旧 dist 与 rebase 后自建 dist 都一样** ✓）；
+   修后 ⇒ 绿 ✓（**三份 build 上都绿** ✓）；**真丢失必须红** ⇒ 落在**正好第 4 步** ✓；**手势没写必须红** ⇒ 落在新那道门上 ✓（**没说成存储问题** ✓）
+✅ **反向量** ✓：相关 4 文件 **31 passed** ✓；`ownerProjectAcceptance` **8 passed**、**五数逐字** ✓
+✅ **CI**：`37135383471` = **success**（10m49s ✓，**全部步骤绿**：Version Single-Source／Documentation Baseline／Typecheck／ESLint／Red-Line／
+   Unit Tests & Coverage／Genre DB Schema／Genre Audit／Production Build／The built app starts／No step at the note events／Bundle Budget ✓）
+⚠️ **它如实标未核实** ✓：`--legacy` 负控制没验成（最近的"改动前"提交 `480761b` **已含名字字段** ✗ ⇒ 要退到 `1b0a0d9` 之前再建 ✓）；
+   它的改动对 legacy 路径**全程 `if (!LEGACY)` 门控**、**逐字未改** ✓
+⭐⭐ **可复用的读数纪律（今天同类第三次 ✓，我写进铁律清单 ✓）**：
+   **探针必须先断言"屏幕上发生了"，再问"存储里有没有"** ✓ —— **不许把"手势没生效"与"写入没落库"混成一句** ✗
+   （今天三次同类：① `/new` 的 `droppedSteps 0` 是空读数 ✗ ② "同机 idle fps 当应用代价" ✗ ③ 本条"手势没写当存储丢失" ✗）
+⇒ ⚠️ `§175`／`§185` 里"`np` 完整回报仍欠"的标注**由本条取代** ✓
