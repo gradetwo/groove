@@ -4463,3 +4463,36 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
    `Swing!` 其余序列是 **80/64 步距** ✗ ⇒ **不强行解释、没夸大"读全了"** ✓；`unreadableNoteForms` 分支在本语料**计数 0**（防御性 ✓）
 ⚠️ **未改（先量后改 ✓，不顺手放宽）**：`isTempoSequence`/`isMeterSequence` 仍**整 dword 相等** ✓（真工程里恰好都是 `60…`/`30…` ⇒ 未暴露缺口 ✓）
 ```
+
+## 一百三十三、🚀 **发布 2.34.45（2026-10-03 22:23–22:25 ✓）＋ 线上核实 ＋ 一处必须如实记的事**
+
+```
+**发布**：`SKIP_LOCAL_GATE=1 SKIP_FULL_CI=1 bash scripts/release.sh` ⇒
+   `version:check ok` ✓｜`version:new ok` ✓｜`local gate skipped`（业主 2026-10-03 明令：**本地一律不跑门禁，门禁都在 GitHub** ✓）
+   ｜`build ok` ✓｜`budget ok` ✓｜**`skipped (SKIP_FULL_CI=1 — the owner authorised releasing v2.34.45 without the remote matrix)`** ✗←**必须如实记** ✓
+   ｜`deploy ok` ✓｜`tag ok` ✓｜`remote ok` ✓ ⇒ **deployed and published** ✓
+⚠️ **跳过远端矩阵时的真实状态（不许含糊 ✗）**：那一刻 `dev` 的 `E2E Desktop browsers` ⇒ step
+   **`Studio DOM Probes (toolbar density, grid gutter, arrangement)`** 正在红 ✗，
+   原因是 **G3（`46892b7`）有意让 1 个 Tier-2 控件（`arrangement`）默认可见** ✓，而 `scripts/measure_toolbar_density.mjs`
+   的契约还是旧的「默认屏上不得出现 Tier 1 以下控件」✗ ⇒ **判据前提过期，不是功能坏** ✓
+   ⇒ **其修复已由专线推上 `dev`（`2b6e512` ✓）** ⇒ 矩阵应随之回绿 ✓（判决见 133.2 ✓）
+**线上核实（发布脚本要求的那一步 ✓）**：
+   `https://groove.wangda.today/version.json` ⇒ `"version": "2.34.45"` ✓（`releaseDate 2026-10-03` ✓）
+   入口 JS `/assets/index-B3hl65Is.js` 内版本 = **2.34.45** ✓ ｜ tag **`v2.34.45` → `902644d`** ✓ ｜ `main` = **`902644d`** ✓
+   ｜已发布那笔 CI（`902644d`）= **success** ✓ ｜上一条 `dd81278`（seek＋模板）也 success ✓
+⚠️ **核出的小缺口（已派线补 ✓ `12f6b6cb`）**：`version.json` 的 `latest` 仍是 **2.34.44** ✗ —— **2.34.45 没有自己的 changelog 条目** ✓
+   ⇒ app 的"最新更新"面板显示旧条目（"说了不做／看不见反馈"类 ✗）⇒ 该条线补写（内容只用**真落地**的那些 ✓；
+   并已交代：**生成器有中文长度断言**（2.34.44 时 228 字被中止 ✗）⇒ 照上限写 ✓；**不许再 bump 版本** ✗；**不必再跑 release.sh** ✓ —— 条目会随**下一次部署**生效 ✓）
+```
+
+### 133.2 判决与队列
+
+```
+✅ `902644d`（已发布）CI **success** ✓｜`dd81278`（seek＋模板 8 小节）**success** ✓
+⏳ `2b6e512`（密度探针契约更新）⇒ 见本轮读数 ✓（绿了就是"发布＋矩阵全绿"收尾 ✓）
+🔄 `12f6b6cb` 在写 2.34.45 的更新条目 ✓
+**⇒ 下一步（不让位、不空转 ✓）**：② 核 `12f6b6cb` 的生成器校验＋CI＋入册 ✓；
+   ④ 回清单 —— `(乙)` 里 **G2（刷新丢编排，`router.tsx` 那条）** 与 **G4–G9 剩余** ✓；
+   `(丙)` 里 **MusicXML／`.mxl` 从未跑过**（实现存在：`src/data/musicxmlImport.ts:316 fromMusicXml` ✓，入口 `ScoreV2.tsx:471-473` ✓ 需先选中轨道 ✓）
+   与 **线上复测 seek／导出／Play 三条**（本地 prod 已测 ✓，线上未测 ✓）✓
+```
