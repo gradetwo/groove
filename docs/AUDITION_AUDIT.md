@@ -29,7 +29,7 @@
 
 | 能力 | **MCP** | **WEB** |
 | --- | --- | --- |
-| **某一节／某几小节** | **`render_preview_clip`** ✓（`sectionId` ＋ `bars` ✓） | **⚠️ 见下：循环框**不接音频**** ✗——`src/data/arrangementLoop.ts` ✓ 与 `LoopBraceV2`（`:441` ✓）只有**模型与 UI** ✓，**`ArrangementViewV2.tsx:25-29` 自己写着 "the loop brace is a ruler-level loop that **no audio path reads**"** ✓✓ |
+| **某一节／某几小节** | **`render_preview_clip`** ✓（`sectionId` ＋ `bars` ✓） | **⚠️ 这一格已过时（更正 2026-10-03，见 §4）** ✓：循环框**当时**不接音频 ✗——`src/data/arrangementLoop.ts` ✓ 与 `LoopBraceV2`（`:441` ✓）只有**模型与 UI** ✓，**`ArrangementViewV2.tsx:25-29` 当时自己写着 "the loop brace is a ruler-level loop that **no audio path reads**"** ✓✓；**现在**视图把区间按 **步**交给 `AudioEngine.setLoopRange` ✓（`ArrangementViewV2.tsx` 的 `transportLoopRange` ＋ `play()` ✓，换算在 `features/arrangement/loopSteps.ts` ✓），**走带确实在框内 wrap** ✓ |
 | **单轨／多轨** | **`render_arrangement_stems`**（`:3234` ✓，分轨导出 ✓） | **每轨 solo／mute** ✓：`track-solo-${id}`／`track-mute-${id}`（`TrackHeaderV2.tsx:198`／`:211` ✓），**而它的注释写着"solo overrides mute, and it is not cosmetic"** ✓ |
 | **低采样率快速版** | ✓ `sampleRate: 8000` ✓（`render_arrangement:408` ✓、stems ✓） | —（**实时播放，不需要渲染** ✓） |
 | **arrangement 的任意小节区间** | **✓ 有** ✓✓ —— `render_arrangement`（`mcp/registry.ts:395` ✓）现在带 **`startBar`／`endBar`**（`:435-441` ✓），切点在 `flattenMcpArrangement(id, range?)`（`mcp/arrangement.ts:865` ✓），`c07a6d8`／`e8074ac` ✓（**原先只有** `arrangementId`／`format`／`bitrateKbps`／重复次数／`sampleRate`／`channels` ✗） | **✓ 有**（loop range ✓） |
@@ -45,6 +45,8 @@
 **⚠️ 更正（2026-10-02）**：这里原本写"**WEB 有 loop range，而 MCP 的编排渲染没有范围**" ✗——**前半句是错的** ✓。**`ArrangementViewV2.tsx:25-29` 明写循环框 "**no audio path reads**"** ✓✓：**Web 有的是**循环区间这个模型与标尺 UI** ✓，**不是"能循环听那一段"** ✗。**而 MCP 一侧的"某一段"是**真的**：`render_preview_clip` 按 `sectionId` ＋ `bars` 出音频 ✓✓**（**编排渲染的小节范围后来也补上了 ✓，见 §6 ✓**）。
 
 **⇒ 因此真正的对比是** ✓✓：**MCP 能按段**渲染出音频** ✓，而 Web 的编排界面**连循环都还没接上音频** ✗**——**这与本文下面那句"MCP 有分轨导出、WEB 的分轨是交互式的"合起来看，结论反而更清楚 ✓：**两侧缺的都不是同一半 ✓，而 Web 一侧缺得更多 ✓✓**。
+
+**⚠️ 更正（2026-10-03）**：上两段的**后半句已经不成立** ✓。**循环框接上了** ✓✓：`ArrangementViewV2` 在**框变化时**与**每次播放前**把区间交给 `setTransportLoopRange` ✓、**关掉时交 `null`** ✓，**换算按编译自己的比例**（`features/arrangement/loopSteps.ts` ✓：**小节 → 步**，4/4 是 16 ✓、3/4 是 12 ✓，**不是常量 16** ✗）；`NewProjectView` 是提供引擎的那一头 ✓。**判据**（**红→绿都跑过** ✓）：`src/test/arrangementLoopEngine.test.tsx` ✓——**接线拿掉 ⇒ 3 条红** ✓，**单位错按 4/4 常量 ⇒ 3/4 那条红** ✓。**MCP 与 WEB 在这个能力上不再不对称 ✓**：**两侧都能"只走某一段"** ✓——MCP 是**渲染**出来 ✓，Web 是**实时循环** ✓。**因此"Web 一侧缺得更多"这句也要收回** ✗✓（**A/B 那一条仍然两边都没有 ✓**）。
 
 ## §5 下一步（按"影响 × 可判定"排）
 

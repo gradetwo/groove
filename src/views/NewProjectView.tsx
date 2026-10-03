@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AudioEngine } from "../audio/AudioEngine";
 import { getActiveAudioEngine, setActiveAudioEngine } from "../audio/activeEngine";
 import { createArrangementPlayer } from "../audio/playerFromEngine";
@@ -124,6 +124,23 @@ export function NewProjectView({ capture, onProjectNameChange }: NewProjectViewP
   );
 
   /**
+   * ⭐ **The route is what joins the arrangement's loop brace to the engine's transport.**
+   *
+   * The brace is stored in bars and the engine's `setLoopRange` takes steps; the conversion belongs to the view that
+   * draws the ruler (`features/arrangement/loopSteps.ts`), and this route supplies the one thing the view cannot have
+   * — the live `AudioEngine`. It is a **bound call rather than the method itself**: `AudioEngine.setLoopRange` reads
+   * `this.loopRange`, so a method handed over unbound would throw on the first brace move, which is exactly the class
+   * of breakage a prop named `setTransportLoopRange` is easy to introduce.
+   *
+   * `undefined` while the engine is still being constructed rather than a no-op: the view's own prop being absent is
+   * how it says "no transport to loop", and an empty function would claim one that does nothing.
+   */
+  const setTransportLoopRange = useCallback(
+    (range: [number, number] | null) => engine?.setLoopRange(range),
+    [engine]
+  );
+
+  /**
    * ⭐ **Nothing is drawn until the stored project has been read.**
    *
    * The read is asynchronous, and rendering the arrangement before it resolves would draw the chooser for one frame —
@@ -139,6 +156,7 @@ export function NewProjectView({ capture, onProjectNameChange }: NewProjectViewP
       player={player}
       capture={capture}
       instruments={instruments}
+      {...(engine === null ? {} : { setTransportLoopRange })}
       {...(store.project === null ? {} : { initialArrangement: store.project.arrangement })}
       {...(store.loadProblem === null ? {} : { loadProblem: store.loadProblem })}
       /**

@@ -24,9 +24,13 @@
  *
  * Two pieces of view state are **the model's** rather than this file's, which is worth saying because it looks like
  * an inconsistency: the loop range and the record-arm flag live on `arrangement` (arm) or in `loopRange` (loop) so
- * that "what will repeat" and "which track is armed" survive a re-render for reasons other than a click. Neither is
- * persisted yet, and neither changes what the engine plays — the loop brace is a ruler-level loop that no audio path
- * reads. That is stated here rather than implied.
+ * that "what will repeat" and "which track is armed" survive a re-render for reasons other than a click.
+ *
+ * ⭐ **The loop brace used to be a picture, and this file said so** — "a ruler-level loop that no audio path reads".
+ * That was true: `AudioEngine.setLoopRange` existed and the transport read it, but nothing on this route ever called
+ * it. The brace is now handed to the transport through {@link ArrangementViewV2Props.setTransportLoopRange}, in the
+ * steps the engine counts rather than the bars the ruler draws (`features/arrangement/loopSteps.ts` holds the
+ * conversion and the reason it is not a constant). The record-arm flag is still not persisted.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Redo2, Undo2 } from "lucide-react";
@@ -67,6 +71,8 @@ import { ArrangementLaneV2 } from "./ArrangementLaneV2";
 import { TrackHeaderV2 } from "./TrackHeaderV2";
 import { LoopBraceV2 } from "./LoopBraceV2";
 import { loopRangeAt, type LoopRange } from "../../data/arrangementLoop";
+import { compileArrangementToPattern } from "../../data/arrangementCompile";
+import { loopStepsFor } from "../../features/arrangement/loopSteps";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { NewProjectPanelV2 } from "./NewProjectPanelV2";
 import { KIND_LABEL_KEY, TRACK_KIND_ORDER } from "./kindLabels";
@@ -74,7 +80,7 @@ import { ArrangementFileEntriesV2 } from "./ArrangementFileEntriesV2";
 import { ImportInstrumentMappingV2 } from "./ImportInstrumentMappingV2";
 import { useArrangementFileActions } from "../../features/arrangement/useArrangementFileActions";
 import { playArrangementV2, type ArrangementPlayer, type ArrangementTransportState } from "../../audio/playArrangementV2";
-import { stepsPerBarFor, STEPS_PER_BEAT } from "../../data/noteEvents";
+import { stepsPerBarFor, STEPS_PER_BAR, STEPS_PER_BEAT } from "../../data/noteEvents";
 import { announcer } from "../../platform/announcer";
 
 /**
@@ -185,9 +191,25 @@ export interface ArrangementViewV2Props {
    * the honest answer for a host that only has a fixed position to show.
    */
   playheadBar?: number;
+  /**
+   * ⭐ **Where the loop brace goes, in the transport's own unit — steps, half-open `[start, end)`.**
+   *
+   * A function rather than the engine itself, for the reason `player` is a seam: this view can be rendered and judged
+   * with no audio at all, and a host that has no transport simply does not pass one — every existing criterion
+   * therefore keeps the behaviour it had (the brace moves, nothing is called), and the prop being absent is the same
+   * fact as "there is no engine to loop".
+   *
+   * ⚠️ **Not bars.** The brace is stored in bars (`data/arrangementLoop`), the engine counts steps
+   * (`AudioEngine.setLoopRange` is compared against the scheduler's own step index), and the conversion between them
+   * is `features/arrangement/loopSteps.ts`'s whole job. The name says the unit because that is the one thing a caller
+   * cannot see from the type: `[number, number]` looks the same in both.
+   *
+   * `null` means "no loop", which is also how the transport is told that the brace was switched off.
+   */
+  setTransportLoopRange?: (range: [number, number] | null) => void;
 }
 
-export function ArrangementViewV2({ songId, capture, bar = 0, player, instruments, playheadBar, initialArrangement, onArrangementChange, onCreateProject, loadProblem }: ArrangementViewV2Props) {
+export function ArrangementViewV2({ songId, capture, bar = 0, player, instruments, playheadBar, initialArrangement, onArrangementChange, onCreateProject, loadProblem, setTransportLoopRange }: ArrangementViewV2Props) {
   const { t } = useLanguage();
   /**
    * ⭐ **A new project starts by choosing what it is** — which is Logic's `Choose a Project`, and the owner's "there is no good new-project entry". `undefined` means the choice has not been made, and the panel is
@@ -374,6 +396,50 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
    */
   const stepsPerBar = stepsPerBarFor(arrangement.timeSignature);
 
+  /**
+   * ⭐ **The brace, in the transport's unit — converted once, here, and stated in the one place both units meet.**
+   *
+   * The compile is asked for the length it will give the transport rather than the length the ruler draws, because
+   * the two answers differ for a file that states no `bars`: the ruler falls back to eight (`DEFAULT_REGION_BARS`) and
+   * the compile to one. `loopStepsFor` clamps to the compile's answer, so a brace past the end of the pattern cannot
+   * hand the scheduler a window it will sit in silently. The whole reading, unit included, is in
+   * `features/arrangement/loopSteps.ts`.
+   *
+   * Skipped entirely when there is no brace or no engine to tell: a view rendered without a transport must not pay for
+   * a compile it cannot use, and — more importantly — must not hand anyone a range.
+   */
+  const transportLoopRange = useMemo(() => {
+    if (setTransportLoopRange === undefined || loopRange === undefined) return null;
+    const compiled = compileArrangementToPattern(arrangement, arrangement.notesByTrack ?? {});
+    /**
+     * The compile always states the length, and the fallback below is only here because `SequencerPattern.totalSteps`
+     * is optional in the type: it is **the engine's own fallback, read off `setPattern`**, so the number this clamp
+     * uses and the number the transport will hold cannot be two different readings of "how long is the pattern".
+     */
+    const patternSteps = compiled.totalSteps ?? compiled.tracks[0]?.steps.length ?? STEPS_PER_BAR;
+    return loopStepsFor(loopRange, stepsPerBar, patternSteps);
+  }, [setTransportLoopRange, loopRange, stepsPerBar, arrangement]);
+
+  /**
+   * ⭐ **The brace changing is the transport being told, immediately — including when it changes to nothing.**
+   *
+   * An effect rather than a call inside `onChange`, because there are two ways the brace moves (the toolbar's toggle
+   * and `LoopBraceV2`'s own drag/keyboard, which both write `loopRange`) and a third way for it to become stale (the
+   * arrangement is edited underneath it). One effect on the converted value covers all of them, and an edit that
+   * shortens the pattern re-converts rather than leaving the transport looping a window that no longer exists.
+   *
+   * The transport applies it to the **running** scheduler, not only to the next play: `schedulerLoop` reads
+   * `this.loopRange` on every pass of its look-ahead loop, so a brace dragged during playback is in force within the
+   * look-ahead rather than needing a stop — and if the brace has moved past the playhead, the very next pass pulls it
+   * back into the window. That a loop region can be adjusted while the transport runs is the mainstream reading rather
+   * than an invention: Live's manual says of a clip's loop region that "it is possible to adjust the looping region
+   * during playback" (§10.7.3), and REAPER ships a preference for whether changing loop points also seeks playback. It
+   * is also what makes the brace a control rather than a label.
+   */
+  useEffect(() => {
+    setTransportLoopRange?.(transportLoopRange);
+  }, [setTransportLoopRange, transportLoopRange]);
+
   useEffect(() => {
     if (transport === undefined) return;
     const apply = ({ step, playing: running }: ArrangementTransportState) => {
@@ -499,6 +565,17 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
 
   const play = useCallback(async () => {
     if (player === undefined) return;
+    /**
+     * ⭐ **The window is re-stated on the press, not merely left where the effect put it.**
+     *
+     * Pressing Play is the moment the transport reads it: `AudioEngine.play` resumes the pattern at `loopRange[0]`
+     * and `schedulerLoop` wraps inside it. The effect above already keeps it current, so this is deliberately
+     * **idempotent** — it is here because the press is the one point where a caller can see the two facts together
+     * ("this arrangement, from this bar") and because the engine's pattern is replaced on every play
+     * (`playerFromEngine.play` calls `setPattern`), which is exactly when a window measured against the old pattern
+     * would be wrong. It is sent **before** the player starts the transport, never after.
+     */
+    setTransportLoopRange?.(transportLoopRange);
     // ⭐ The arrangement's own notes, not an empty map: they are content and they live with the tracks.
     const result = await playArrangementV2(arrangement, arrangement.notesByTrack ?? {}, player);
     setPlayed(result.planned);
@@ -510,7 +587,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
     setPlayProblem(result.reason ?? result.problems?.join("; "));
     // Heard as well as seen: the running flag below is a visual state, and a screen reader gets no pixels from it.
     if (result.reason === undefined) announcer.announce(t("transport_playback_started"));
-  }, [arrangement, player, t]);
+  }, [arrangement, player, t, setTransportLoopRange, transportLoopRange]);
 
   const stop = useCallback(() => {
     player?.stop?.();

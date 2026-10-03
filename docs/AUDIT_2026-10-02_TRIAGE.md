@@ -50,6 +50,8 @@
 
 **⇒ 而我在本会话的试听审计里写过** ✗：**"web 有 loop range（`arrangementLoop.ts`／`ArrangementViewV2.tsx:122/441`／`LoopBraceV2`）"** ✓，**并据此说"MCP 缺某一段、而 web 有" ✗✓✓**——**那句话把**引擎具备 loopRange 的能力**与**编排界面的循环框已接线**混为一谈 ✗**。**事实：循环框不接任何音频路径 ✓；引擎的 `loopRange` 是另一条线 ✓。**⇒ **`docs/AUDITION_AUDIT.md` §2 的那一格需要更正 ✓**。
 
+**⚠️ 更正（2026-10-03）：这条已经修好，上面这段是当时的记录** ✓✓。**循环框现在接了** ✓：`ArrangementViewV2` 在**框变化**与**每次播放前**把区间交给 `setTransportLoopRange` ✓、**关掉交 `null`** ✓；**单位在边界换算**（`features/arrangement/loopSteps.ts` ✓，**小节 → 步**，比例取自编译用的 `stepsPerBarFor(timeSignature)` ✓，**4/4 = 16、3/4 = 12** ✓）；**`NewProjectView` 提供引擎** ✓。**因此上面"循环框不接任何音频路径"这句只在 2026-10-02 成立** ✗✓。**判据**：`src/test/arrangementLoopEngine.test.tsx` ✓（**拿掉接线 3 条红** ✓、**单位按常量 16 ⇒ 3/4 红** ✓、**关掉框 ⇒ `getLoopRange()` 为 `null`** ✓）。**`ArrangementViewV2` 头部那段"no audio path reads"的自述也一并改掉了** ✓——**本仓的规矩是不让界面说谎，注释也算界面的一部分** ✓。
+
 ---
 
 ## 三、尚未核定（**明说，不假装** ✗✓）
