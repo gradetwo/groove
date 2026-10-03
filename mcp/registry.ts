@@ -629,7 +629,7 @@ export const TOOLS: ToolDefinition[] = [
         .enum(["synth", "sampler", "drumkit", "fx", "folder"])
         .optional()
         .describe(
-          "the kind the blank arrangement's single track gets, `synth` unless you say otherwise; a piano/strings/bass part wants `sampler` and an `assetId` from list_arrangement_instruments. Ignored when templateId is given"
+          "a piano/strings/bass part wants `sampler` with an `assetId` from list_arrangement_instruments, so that fact comes first: a client that truncates this text still shows it. Otherwise the blank arrangement's single track gets `synth`. Ignored when templateId is given"
         ),
       songId: z.string().optional().describe("the v1 song this is an arrangement of; defaults to a scratch id"),
     },
