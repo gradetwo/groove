@@ -4126,3 +4126,42 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
    ⇒ 若为真 ⇒ **一条独立发现** ✓，且与普查 **G2**（点 New ⇒ URL 变 `/` ⇒ **刷新丢编排** ✓）**同源** ✓
    ⇒ 已要求性能线**分辨是脚本状态污染还是真 bug** ✓（**不许当脚本问题丢掉** ✗）
 ```
+
+## 一百二十一、(丙) **既有功能质量审计：8 条**（2026-10-03 19:5x 时点 ✓，全文 324 行在 `/var/tmp/uxaudit/REPORT.md` ✓）
+
+**方法**：真 Chromium（Playwright 1.63 ✓）＋ `?probe=1` 引擎缝（`src/platform/probeHooks.ts:102` ✓）＋ `?diag=1` ✓；
+被测：**线上 2.34.44** 为主 ＋ **本地 prod** 对照 ✓；**load 全程 14.19–23.98，逐条旁记** ✓；
+原始证据 18 个探针 JSON ＋ 截图在 `/var/tmp/uxaudit/` ✓；**未改任何产品代码** ✓（`git status` 干净 ✓）。
+
+| # | 操作 | 一句话 | 分类 |
+|---|---|---|---|
+| 1 | **编排 seek** | 标尺按钮写着「跳到第 4 小节」、`cursor:pointer`，点了**只移动一个装饰性标记，播放仍从 1.1 开始** | **真 bug** |
+| 2 | 走带 Play | 按下后 **3.7–10.6 秒**才出声，按钮全程「播放」、无进度、无禁用；**2/6 次 25 秒内从未启动**；toast 往往第二次点击才出现 | 能做但没做 |
+| 3 | 导出母带 WAV | **113.9 秒内 0 次下载、0 个 `progressbar`、0 个取消**，只有一个转圈 | 能做但没做 |
+| 4 | 混音台 | 只在 `/console`，**studio 里 0 个入口**（`aria-label` 搜「控制台/混音/mixer」＝空） | 能做但没做 |
+| 5 | **studio 静音按钮** | 引擎 `mute:true` 了，但同按钮 **`aria-pressed` 仍 `false`**（`/console` 的同名按钮是对的） | **真 bug** |
+| 6 | 快捷键 | 面板广告 **44** 条，但 studio 上 **`V`（力度）／`O`（示波器）毫无反应**（`E`／`Alt+K` 正常） | 说了不做 |
+| 7 | 采样就绪 | 冷访问（清 localStorage）到听见声音：**3 次点击 ＋ 24.6 秒** | 能做但没做 |
+| 8 | `?diag=1` | **真能用**、读数真实（peak/rms/clipped/voices/latency/ctx）—— 只是**只能手输 URL** | 正常 ✓（缺可发现性） |
+
+**⭐ 两条真 bug 的关键读数**：
+```
+① **seek**：`ArrangementRulerV2.tsx:93-95`（画成 button ＋ aria-label ✓）／`ArrangementViewV2.tsx:338-342`（`onRulerSelect`
+   **只 `setStripBar`／`setPlayStartBar`** ✗，**没有一处交给 engine** ✓）；实测点 `ruler-bar-6` ⇒
+   `arrangement-play-start` x 245→629 ✓ 但 `arrangement-position` **仍 1.1** ✗，**随后 Play 的 16 个采样全从 1.1** ✓✓
+   ⇒ Ableton 逐字「You can click anywhere within a track to move the insert marker and set a new play position.」✓
+   ⇒ **1 步 vs 本仓 ∞ 步**，且界面主动邀请点击 ⇒ **比"没这功能"更差** ✓
+② **Play 等待**：`useTransportControls.ts:438-445` 在 `engine.play()` **之前** `await prepareRecordings()` ✓；
+   线上 `clickToRunning` = 3664／3713／10624／3664 ms（**2/6 未启动** ✗）｜本地 prod = 9266／3909／2495／13269 ms ✓
+   **一次 Play ＝ 34 个请求**（r2mirror 8 ＋ raw.githubusercontent 24 ✓）｜单 wav 486–1270 ms ✓
+   ⚠️ 但那是**业主已接受**的"先取齐再播"形状 ✓ ⇒ **不许删等待** ✗，**要让它可见 ＋ 可重试** ✓
+③ **导出**：`WavExporter.ts:91,256` **已有 `onPhase`／`onProgress` 通道** ✓ ⇒ **接线即可** ✓（UI 没冻：evaluate 往返 6–27 ms ✓）
+✅ **顺带证实**：循环框那个修复**没有退化** ✓（`aria-pressed` 切换 ＋ 位置 1.1↔1.4 真回绕 ✓）
+```
+
+**⇒ 我已派首批修复（`66e34400` ✓，每条要"能红"✓）**：① **seek → 引擎**（用**步**、换算照既有 `loopSteps.ts` ✓）
+   ② **静音 `aria-pressed` 跟随真相** ✓ ③ **Play 等待可见 ＋ 可重试**（**保留等待** ✗）✓
+   ④ **导出进度（**放按钮内** ✓）＋ 取消** ✓（**`src/audio/**` 只读** ✗ ⇒ 只接线；必须改它 ⇒ 停手告我 ✓）
+**⇒ 我对审计请裁 4 处的裁定** ✓：① 进度**放按钮内** ✓（不开模态 ✗）② 诊断入口**写进帮助中心** ✓（不加主菜单 ✗）
+   ③ **`V`/`O` 的广告不许说谎** ✗ ⇒ **补实现，或删广告并把缺口写进 (乙) 台账** ✓（按实测成本定 ✓）
+   ④ **预取/架构 ⇒ 写进 `needs`，不假装有** ✓（采样缓存已覆盖其中一部分 ✓）
