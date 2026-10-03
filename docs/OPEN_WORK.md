@@ -3399,3 +3399,22 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
 ⚠️ **仍然缺的那半（后续项 ✓）**：**浏览器（Web）侧没有落盘缓存** ✗ ⇒ 每次会话仍重下（要靠 IndexedDB／CacheStorage ✓）；
    而"下载时看得见"那半由 Studio 加载提示 ＋ `diag=1` 那条线在做 ✓
 ```
+
+### 一百一十、✅ **验收：目标 ⭐1＋⭐2（`PianoRollV2` 会响、指针不再滞留）** —— `df33bd5` 已进 dev，**CI success** ✓
+
+```
+**交付**：`ArrangementViewV2.tsx`(+30)｜`PianoRollV2.tsx`(+135)｜两个新判据（`pianoRollAudition.test.tsx` 14 条／
+   `arrangementRollAudition.test.tsx` 3 条 ✓）⇒ **4 文件 ＋454/-6** ✓
+**读数**：⭐ 写音符走视图已有的 `player.audition` ✓（**不新建合成** ✓，卷帘保持纯展示 ✓，"The roll writes, the view sounds" ✓）；
+   ⭐ 且**只改时间、不改音高时不再响** ✓（防骚扰，它自己加的 ✓）；
+   ⭐ Space／Delete 在**卷帘自己的焦点作用域**里 ✓（`isContentEditable`／`TEXTAREA`／`SELECT` 守卫 ✓），
+     **没有第二个全局 keydown** ✓（我实测：全局 `keydown` 命中 **0** ✓）；
+   ⭐ 指针滞留用 **window 级 `pointerup` ＋ `pointercancel` ＋ `blur`** 兜底 ✓（我实测 `pointerup` 1／`pointercancel` 3 ✓）
+**我的复核（看退出码 ✓）**：`pianoRollAudition` **14 passed / exit 0** ✓ ｜ `arrangementRollAudition` **3 passed / exit 0** ✓
+   ｜ `ownerProjectAcceptance` **exit 0**、五个数逐字未变 ✓ ｜ 它那笔 **CI success** ✓
+⭐ **对我任务书的一处实测反驳（我接受 ✓）**：我要求 `setPointerCapture` ✗ —— 它在 Chromium 量到 **capture 会打掉拖拽目的地** ✗
+   （`capture ON ⇒ ["down:note","up:note","enter:5"]`，**`enter:4` 消失** ✓；依据 W3C："the capturing target will substitute
+   the normal hit testing result as if the pointer is always over the capturing target" ✓）
+   ⇒ 改用 window 兜底，**同一保证、零行为变更** ✓ ⇒ **我的任务书是假设，它的量测是判据 ⇒ 以判据为准** ✓
+⚠️ 推送前**被拒两次**（别的线在落地 ✓）⇒ `fetch→rebase→重推` ✓ **从未强推** ✓；rebase 后 `tsc` 退出码 **0** ✓
+⚠️ **本轮我自己的错**：把 heredoc 嵌进 `if` 里 ⇒ 脚本语法错、验收没写成也没推 ✓（已在下一轮用非嵌套写法重做 ✓）
