@@ -4948,3 +4948,9 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
 ⇒ ⭐ **意义**：导入的 `kind` 决策现在**在源头一处** ✓（`src/data/arrangementImport.ts` ✓），
    **界面与 MCP 同语义** ✓（此前 MCP 侧仍给 synth 轨 ✗ ⇒ 两侧不对等 ✗ 已消除 ✓）
 ```
+
+**⚠️ 该判决的诚实边界（对方主动标注 ✓）**：`7219e3d` 那次 run 里 **`Groove shard ×4`／`Nightly`／`Groove gate`（聚合 budget）／`E2E (Playwright)` 四个 job 是 `skipped`** ✗
+（workflow 自身条件 ✓，**不是失败** ✓）⇒ ⭐ **分片矩阵／夜间全覆盖／聚合 gate／E2E 在该判决中未被执行的** ✓
+⇒ 本次验收的 CI 证据**只覆盖主 job**（Typecheck/Lint/Red-Line/Unit+Coverage/Genre lint/Build/boot 探针/budget ✓，11m56s ✓）
+**⭐ 另一件好事**：源头修好后，对方**删掉了调用方补丁** `withMappedPartsAsSamplers`（原 401–460 行 ✓）＋两处多余 import ✓
+⇒ `importSamplerMapping`（3 tests ✓）与 `importInstrumentMapping`（11 tests ✓）**仍全绿** ✓ ⇒ **一个决定点、无 shim** ✓（正是我要求的"改在源头" ✓）
