@@ -178,7 +178,10 @@ export function notesToMeasures(notes: readonly NoteEvent[], bars: number, optio
       let voice = -1;
       for (let candidate = 0; candidate < voiceEnds.length; candidate += 1) {
         // A voice carrying a tie into this measure is not free until that tie ends, whatever else has finished.
-        if (heldByContinuation.get(candidate) === index) continue;
+        // A tie holds its voice from the measure it starts in **until its last continuation ends**, which may be
+        // several measures later: asking whether it ends exactly here let a group whose tie ran on be mistaken for a
+        // free voice, and the overlapping note then shared the voice and was written late (docs/OPEN_WORK.md 253).
+        if ((heldByContinuation.get(candidate) ?? -1) >= index) continue;
         const end = voiceEnds[candidate] ?? 0;
         const endsAtABarline = Math.abs(end / beatsPerMeasure - Math.floor(end / beatsPerMeasure)) < 1e-9;
         const reusable = endsAtABarline ? end <= piece.startBeats + 1e-9 : Math.floor(end / beatsPerMeasure) < index && end <= piece.startBeats + 1e-9;
@@ -197,7 +200,11 @@ export function notesToMeasures(notes: readonly NoteEvent[], bars: number, optio
         if (later.voice !== -1 || later.group !== piece.group) continue;
         later.voice = voice;
         // Every piece of this group that begins in a later measure holds its voice there, which is what keeps another group from claiming it in between.
-        if (later.tiedFrom) heldByContinuation.set(voice, later.measureIndex);
+        if (later.tiedFrom) {
+          // The **last** measure this tie is still sounding in: what the check above needs is whether it has ended,
+          // so a later continuation must extend the record rather than overwrite it with a later measure.
+          heldByContinuation.set(voice, Math.max(heldByContinuation.get(voice) ?? -1, later.measureIndex));
+        }
       }
     }
 
