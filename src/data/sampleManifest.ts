@@ -20,7 +20,7 @@ import type { SampleAsset } from "./sampleCatalogue";
  *
  * ⭐ **`unknown-mirrored` is a licence *status*, not a licence, and it is here because the owner ruled that a good library with no declaration found may still be mirrored** — the mirror is a fallback, the pinned source stays the primary address, and the entry records where it came from so a rights holder can ask for removal. It is a distinct value rather than `unknown` on purpose: `unknown` means "somebody must decide before this is mirrored", and this means "the decision was made, the terms were not found, and here is the address to complain to".
  */
-export type SampleLicence = "CC0" | "CC-BY" | "CC-BY-SA" | "CC-BY-NC-SA" | "CC-Sampling-Plus" | "Unlicense" | "unknown-mirrored" | "unknown";
+export type SampleLicence = "CC0" | "CC-BY" | "CC-BY-SA" | "CC-BY-NC-SA" | "CC-Sampling-Plus" | "Unlicense" | "public-domain" | "unknown-mirrored" | "unknown";
 
 export interface SampleManifestFile {
   /** Path as written by the SFZ, relative to the instrument's directory. */
@@ -142,7 +142,19 @@ export interface SampleManifest {
   entries: SampleManifestEntry[];
 }
 
-const LICENCES: readonly SampleLicence[] = ["CC0", "CC-BY", "CC-BY-SA", "CC-BY-NC-SA", "CC-Sampling-Plus", "Unlicense", "unknown-mirrored", "unknown"];
+/**
+ * ⭐ **Exported so the bridge to `libraryLicence.ts` can be asserted rather than trusted.**
+ *
+ * The two files spell licences differently on purpose: this one is the **manifest spelling** (`CC0`, `CC-BY`), and
+ * `libraryLicence.ts` holds the **canonical** one (`CC0-1.0`, `CC-BY-4.0`) with `LICENCE_SYNONYMS` as the bridge.
+ * That is what "the two files must agree" means — agree **through the synonym map**, not by having identical text.
+ *
+ * ⚠️ **`public-domain` was missing here until 2026-10-03, and the gap had a direction** ✗: `libraryLicence.ts` accepted
+ * it, so a public-domain library passed the licence check, and this vocabulary could not express it — meaning the
+ * library could be cleared and still not declared in the manifest. A criterion now walks every value in this list
+ * through `checkLibraryLicence`, so a value added on one side alone fails instead of sitting there.
+ */
+export const LICENCES: readonly SampleLicence[] = ["CC0", "CC-BY", "CC-BY-SA", "CC-BY-NC-SA", "CC-Sampling-Plus", "Unlicense", "public-domain", "unknown-mirrored", "unknown"];
 /**
  * Licences that require the attribution to be present and shown. `CC-Sampling-Plus` owes a credit by its own terms, and `CC-BY-NC-SA` is a `CC-BY` variant — a licence check that demanded a credit for the commercial variants but not the non-commercial one would be reading the NC clause and missing the BY clause in the same name.
  *
