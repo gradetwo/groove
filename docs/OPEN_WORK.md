@@ -6555,3 +6555,18 @@ problems: **[]** ✓
     ✅ 安静-周杰伦原版-周杰伦-Piano,_Track0: 源 1431 ⇒ 读回 1431
     ✅ MIDI 导入的音符 → MusicXML 往返: 源 1431 ⇒ 读回 1431
 ```
+
+## 二百五十七、🔎 **P3／P4 的靶子到手：两套真实语料都在，且包结构就是我要写的那三个文件** ✓（2026-10-04 01:3x ✓）
+
+```
+**读到** ✓（`src/test/logicFixtures.test.ts:22,27–31` ✓）：
+   `const DIR = process.env.GROOVE_LOGIC_FIXTURES ?? "/tmp/logic-fixtures"` ✓（环境变量**未设** ✓ ⇒ 用默认 ✓）
+   测试读的正是 ⭐ **`Alternatives/<alt>/ProjectData`** ＋ **`…/MetaData.plist`** ＋ **`Resources/ProjectInformation.plist`** ✓
+   ⇒ 与我在 `§237` 立的**交付形态**完全一致 ✓（目录 ＋ 这三个文件 ✓）
+**语料（都在 ✓）**：
+   · `/tmp/logic-fixtures` ⇒ **10 个工程** ✓（含 `021_Blues_C_treble(simply_masterd).logicx`／`025_AUPitch.logicx` … ✓）
+   · ⭐ `/home/crow/music/midi-corpus/LogicPro/` ⇒ **业主自己的** ✓：`Colors.logicx`／`Manzana.logicx`／`Manzana - Spatial Audio.logicx`／
+     `MONTERO.logicx`／`MONTERO - Spatial Audio.logicx`／`ocean eyes.logicx` ✓ —— **正是导入验收读数那几首** ✓
+**P3 的做法（下一步 ✓，不猜 ✗）**：把真实工程**读出来的音符**再交给写入端写出一个包 ⇒ **用同一个读取器读回** ⇒
+   与**读原工程**的结果**逐值对照** ✓ ⇒ 差异**逐项命名** ✓（预期：变体命名／`Media/`／区域摆放／`<type>` 等 ✓）
+⚠️ 本轮**未动代码** ✗；台账本地提交 ✓（CI 队列仍慢 ✓，`46bd10c` 还在跑 ✗）
