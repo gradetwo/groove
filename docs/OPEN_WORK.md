@@ -6816,3 +6816,14 @@ problems: **[]** ✓
   ⚠️ 唯一 problem 仍是读取器自己那条"**区域摆放位置读不出**" ✓（已在 `needs` ✓）
 ⇒ ⭐ 后续改动**没有**影响 Logic 侧 ✓；音数 **2007／1415／7** **又一次被独立复现** ✓
 ```
+
+**二百七十七·四补 —— musicxml 全族补跑（51 用例 ✓），本地证据现覆盖 161 用例**：
+```
+**动机** ✓：我这次的三处写入端改动（divisions 按容差推导 ✓／tie 占位改 `max`＋`>=` ✓／`<type>` 随 divisions ✓）**都在 `music.xml` 这一族里**，
+  而我先前只单跑过其中几条 ✗ ⇒ 应把**整族**跑掉 ✓（这与 `§289·再补` 的教训同源：**触及集要反查** ✓）
+**读数** ✓：`musicXmlExport` **13** ✓｜`musicXmlImport` **25** ✓｜`musicXmlSixteenthGrid` **4** ✓｜
+  `musicXmlPreciseDivisions` **4** ✓｜`musicXmlOverlapVoices` **2** ✓｜`musicXmlVoiceTie` **3** ✓ ⇒ **6 文件 / 51 用例全绿** ✓
+⇒ ⭐ **本地证据总覆盖**：musicxml 族 51 ＋ 导出菜单族 82 ＋ i18n 族 20 ＋ 反向量 8 ＝ **161 用例** ✓
+   ＋ `tsc`=0 ✓、改动文件 eslint 0 error ✓、`skins:gen` 零 diff ＋ `check:skins`=0 ✓、
+     **两份真实语料（MusicXML 语料 ✓／Logic P3 三个真实工程 ✓）都在现行代码上复验逐值相等** ✓
+```
