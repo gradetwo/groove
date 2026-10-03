@@ -14,9 +14,23 @@ export interface UseUrlShareLoadOptions {
 }
 
 /**
- * A-02: the `?groove=` / `?genre=` boot effect, extracted verbatim from
- * `StudioView`. It runs once on mount and therefore intentionally keeps an empty
- * dependency list, closing over the first render's inputs exactly as before.
+ * A-02: the `?groove=` boot effect, extracted verbatim from `StudioView`. It runs
+ * once on mount and therefore intentionally keeps an empty dependency list, closing
+ * over the first render's inputs exactly as before.
+ *
+ * ⭐ **A `?genre=` in the URL is deliberately *not* handled here — it used to be, and that was
+ * the bug.** This effect re-dispatched `SET_GENRE` for the URL's genre after the studio had
+ * already mounted, and `SET_GENRE` replaces **both** pattern slots with `patternFromGenre`.
+ * The studio's genre is decided one level up: `App.tsx` resolves `route.genreId` (the router
+ * parses `?genre=` into it) and hands it to `StudioView`, whose `useSequencerStore` seeds
+ * `createInitialSequencerState(genre)` — and that initializer is the thing that **restores the
+ * user's matching snapshot**. So reopening `/studio?genre=<the genre you were working in>`
+ * restored the work and then had it overwritten by the genre's defaults about a second later:
+ * a share link's `genre=` decided the initial genre, which is all it was ever asked to do.
+ * With this branch gone, the genre still takes effect as the initial genre — through the route
+ * and the store's initializer, the one place that knows the difference between "no snapshot"
+ * and "the user's snapshot". `?groove=` is unaffected: that payload genuinely replaces the
+ * pattern, and it is handled below.
  */
 export function useUrlShareLoad({
   commit,
@@ -29,7 +43,6 @@ export function useUrlShareLoad({
     if (typeof window === "undefined") return;
     const urlParams = new URLSearchParams(window.location.search);
     const sharedCode = urlParams.get("groove");
-    const genreParam = urlParams.get("genre");
 
     if (sharedCode) {
       const decoded = decodeSharedSequencer(sharedCode);
@@ -93,16 +106,6 @@ export function useUrlShareLoad({
         };
       }
       return;
-    }
-
-    if (genreParam) {
-      let cancelled = false;
-      void loadGenre(genreParam).then((loaded) => {
-        if (!cancelled && loaded) commit({ type: "SET_GENRE", genre: loaded });
-      });
-      return () => {
-        cancelled = true;
-      };
     }
   }, []);
 }
