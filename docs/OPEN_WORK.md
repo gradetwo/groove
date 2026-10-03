@@ -5326,3 +5326,24 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
    ⇒ ⭐ **进队列** ✓（同类"说了不实" ✗ ⇒ 值得另开一条微任务 ✓；⚠️ 判它是否真的"无损"要先量 ✓ —— 例如 MP3/压缩路径存在即矛盾 ✓）
 ⚠️ 它另如实标注：该 worktree 的本地分支**被外部进程 rebase 过**（reflog 有一条非它发起的 `rebase (start)` ✓）⇒ 不影响已交付提交 ✓（已核实 `origin/dev` 里第 164 行就是修好的句子 ✓）
 ```
+
+## 一百八十三、✅✅ **MusicXML 导入：最终完整回报（`a92207f`，CI SUCCESS ✓）＋ 一条目标与仓库的落差**（2026-10-04 00:1x ✓）
+
+```
+✅ **判决** ✓：run `37134738976` = **SUCCESS** ✓（它自己的 commit ✓；`git merge-base --is-ancestor a92207f origin/dev` 成立 ✓，
+   未被强推覆盖 ✓）；它拿不到自己的 `HEAD -> dev` 行 ✗ 是**因为我代推** ✓（`§161` ✓）——脚本报 `nothing to push` 是**正确行为、无假成功** ✓
+✅ **12 份表（正式版 ✓，比 `§166` 多了"轨/区"列 ✓）**：**12/12 导入成功** ✓、**`problems` 逐字全 `[]`** ✓、**0 pageerror（12/12）** ✓、
+   `droppedSteps` 0–2 ✓、UI 耗时 2.2–7.3 s ✓；⭐ **`.musicxml`／`.mxl` 成对音符数逐值相同** ✓（198/198、60/60、80/80、58/58、1433/1433×2 ✓）
+   ＋ ⚠️ 它**明确不作性能结论** ✓（负载 10–14、**无空载基线** ⇒ 只当"能播"读 ✓ —— 正是我要的纪律 ✓）
+   ＋ ⭐ 报告尾句（修复后 ✓）逐字：`… · 3 imported track(s) still play built-in synthesizers because no instrument was named:
+     Piano, 钢琴, Piano, 弦乐, Piano, 贝斯 — re-import the file and choose an instrument in this dialog, or add a sampler track and give it an asset` ✓✓
+✅ **真缺陷 ＋ 8 文件修复** ✓（`§166.1` ✓）；⭐ **rebase 撞 `7219e3d` 时按新接口落地、没把旧补丁加回来** ✓（正是我交代的 ✓）；
+   ⭐ **复用同一个 `ImportInstrumentMappingV2`** ✓（未新造对话框 ✓），规则与 MIDI 一致（>1 有声 part 才问 ✓；1 part 直落并报未命名 ✓）
+✅ **四组反面（原文 ✓）**：(A) 十六分 **4 failed** ✓（`expected { pitch: 60, lengthBeats: 0.5 } to deeply equal { … 0.25 }` ✓）；(B) 映射通路 **5 failed | 30 passed** ✓（MIDI 一侧保持绿 ✓）；(C) 入口/对话框 ✓；(D) ⭐ **上游不支持的形态 ⇒ 判据钉"如实报缺口"** ✓（`Import failed: unsupported MusicXML root "score-timewise" — only score-partwise is read` ✓）
+✅ **反向量** ✓：`ownerProjectAcceptance` **8/8** ✓ 未改 ✓；既有 `musicXmlImport` 25 ✓／`musicXmlExport` 13 ✓／`lyricExport` 12 ✓／`mcpArrangement` 37 ✓ **一个数字未改** ✓；三套 sampler 判据 3/3 ✓
+✅ 它**结掉一条悬案** ✓：`/new` 同一会话再走 ⇒ 重载后**重开上次编排** ✓（`NewProjectView` 既定语义 ✓，`check_new_route_revisit.mjs` 实测 ✓）⇒ **不是缺陷** ✓
+ℹ️⚠️ **目标与仓库的落差（要记 ✓）**：目标写"无法实现的写进该库 **`needs`**" ✓ —— ⭐ **本仓库没有 `needs` 字段** ✗
+   （`ArrangementImportOutcome` 只有 `problems`／`mapped` ✓）⇒ 它把"无法支持的形态"写进 **`problems`** ＋ 报告尾句（`arrangement_import_unassigned` ✓）
+   ⇒ ⭐ **我裁：这就是本仓库既有的唯一通道，且确实"不静默降级"** ✓ ⇒ **不改代码去造 `needs` 字段** ✗
+     （若业主要真正的 `needs` 通道 ⇒ 那是**新功能**，另立 ✓）
+ℹ️ 它另报：**单 part 文件不开对话框是设计** ✓（"一个 part 不是一张表" ✓，与 MIDI 一致 ✓）⇒ 用户仍可在轨头 `track-kind-*` 改成 sampler ✓；语料里 **10/12** 属这一类 ✓
