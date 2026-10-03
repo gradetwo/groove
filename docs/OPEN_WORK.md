@@ -6452,3 +6452,18 @@ problems: **[]** ✓
 ⇒ ⚠️ 两条都是**候选** ✗，**不是结论** ✓；修之前仍须**先量**（读 `notesToMeasures` 的相关段 ✓）
 ⇒ ⚠️ 另：两处损失**读取器的 `problems` 都不提** ✗ ⇒ **沉默的** ✓ ⇒ 修好后应各配**能红**的判据 ✓（改回旧行为即红 ✓）
 ```
+
+## 二百四十九、⭐⭐ **损失 ① 的位置与修法（读到 ✓）：`divisionsPerBeat` 是变量，取整发生在 `:211`**（2026-10-04 01:2x ✓）
+
+```
+**读到的代码** ✓（`musicxml.ts:204–242` ✓）：
+   · `:209` 起点：`startDivision = Math.round(piece.startBeats * divisionsPerBeat)` ✓（圆整起点 ✓）
+   · `:211` ⭐ **音长**：`duration = Math.max(1, Math.round(piece.lengthBeats * divisionsPerBeat))` ✗ ⇒ **四舍五入到整数 divisions** ✓
+   · `:236` 写出 `<divisions>${divisionsPerBeat}</divisions>` ✓ ⇒ ⭐ **`divisionsPerBeat` 是变量** ✓（不是写死的 4 ✓）
+⇒ ⭐ **损失 ① 的成因**：`divisionsPerBeat = 4` 时 1 division ＝ 0.25 拍 ⇒ 2.167 拍**不可能**是整数 divisions ✗ ⇒ 被取整 ✓
+⇒ ⭐ **修法（有据 ✓）**：**由内容推导 `divisionsPerBeat`** ✓ —— 取能让**每个** `startBeats` 与 `lengthBeats` 乘完都是整数的**最小**值 ✓
+   （例：2.167 拍 ＝ 2 ＋ 1/6 ⇒ 需 divisions 为 6 的倍数 ✓，如 **24** ✓ ⇒ 2.167×24 ＝ **52** ✓ 整数 ✓）；设上限 ✓（可用本仓自己的 **960 ticks/quarter** 作上限 ✓）
+   ＋ ⚠️ **兜底不许沉默** ✗（§27 ✓）：若在上限内仍无法精确 ⇒ **把该处写进报告** ✓（而不是默默取整 ✗）
+   ＋ ✅ **读取端能精确读回** ✓（它按 divisions 换算 ✓）⇒ 这条损失**可以真正修掉** ✓
+⚠️ 本轮**未动代码** ✗（先量后改 ✓ 已完成 ✓）；台账 **6 笔本地未推** ✓；`a17a67c` 判决仍在跑 ✗
+```
