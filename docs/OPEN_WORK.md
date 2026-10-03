@@ -6952,3 +6952,21 @@ problems: **[]** ✓
 ⚠️ **我的重复失误** ✗：python heredoc 里**把双引号嵌进双引号字符串**，两次 ✗ ⇒ 一次补丁**没生效**（我却差点当成生效 ✗）
    📌 规矩：heredoc 里**只用单引号** ✓、**打印信息纯 ASCII** ✓、改完**必须回读该行确认**（`grep` 落点 ✓）
 ```
+
+## 三百零一、🔬 **业主问的"便捷预览/AB"——专项测量（据 `mcp/registry.ts` 逐键读出 ✓）**（2026-10-04 07:4x ✓）
+
+```
+**问**：MCP 现在能不能让 agent 方便地"听某段修改效果"（全部轨/某轨 ＋ 范围 ✓）、有没有"调整前后 A/B 预览" ✓
+**读数** ✓（方法：读各工具的 `inputSchema` 键 ✓；命令与行号在下 ✓）：
+   · **`render_arrangement`**（`:476` ✓）键为 `arrangementId/format/bitrateKbps/bars/sampleRate/channels/headless/**startBar**/**endBar**` ✓
+     ⇒ ⭐ **范围已有** ✓（`:518` "first bar of the span, with `endBar`" ✓）；可 `sampleRate: 8000`（`:496` "about a fifth of the work" ✓）＋`channels: 1`（`:497` "mono analysis render" ✓）变**廉价分析渲染** ✓
+     ⚠️ **没有 `trackId`** ✗ ⇒ arrangement 渲染**不能只渲一条轨** ✗
+   · **`render_arrangement_stems`**（`:3559` ✓）⇒ 分轨输出 ✓（但它有无范围参数**未量** ✗）
+   · **`render_preview_clip`**（`:2571` ✓）＝**专门的廉价试听** ✓（`:2590` 默认 `sampleRate: 8000` "which is the point of this tool" ✓；`bars` 1–16 默认 4 ✓）
+     ⚠️ 但它面向 **song/section**（`:2585–2587` ✓）或**裸 genre**（`:2588` ✓）⇒ **不收 `arrangementId`** ✗
+   · **A/B**：只有 **`compare_genres`**（`:2309` ✓），其报告含 `before:`／`after:`（`:2535`／`:2543` ✓）＝**数字对照** ✓ ⇒ **没有音频 A/B** ✗
+**⇒ 缺口（目标 ⑧，按现有形状补 ✓ 不自创 ✗）**：
+   `render_arrangement_preview`：收 `arrangementId` ＋ **可选 `trackId`/`trackIds`** ＋ **`startBar`/`endBar`** ✓，默认 `sampleRate: 8000`/`channels: 1` ✓，返回形态同现有渲染 ✓
+   A/B 诚实版：**同一段两次 cheap render 各自返回文件 ＋ 关键读数**（峰值/RMS/LUFS ✓）—— ⚠️ **不是**把两段混在一起播 ✗（播放是客户端的事 ✓）
+**判据口径（能红 ✓）**：传 `trackId` ⇒ 渲染里**只出现该轨** ✓；`startBar/endBar` 外的音符**不进渲染** ✓；默认 `sampleRate` 为 8000 ✓
+```
