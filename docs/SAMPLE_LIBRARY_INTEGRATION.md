@@ -1394,7 +1394,7 @@ npx vite-node scripts/scan_sample_opcodes.mjs --root /var/tmp/groove-mirror-<ent
 | 条目 | 未实现的操作码（原文名） | 处置 |
 |---|---|---|
 | `freepats-electric-bass-yr` | `ampeg_decay`、`ampeg_release` | 记 `needs`；包络由应用自己给 |
-| `freepats-button-accordion-hn` | `amp_veltrack`、`amp_random`、`offset`、`offset_random`、`offset_cc131`、`ampeg_attack/decay/sustain/release`、`trigger`、`volume` | 记 `needs`。**实测过 `trigger=release` 那一组不会被选中**（`regionsForNote` ＋ 文件顺序先命中的是持续音组），所以它只是不发声的发布样本 |
+| `freepats-button-accordion-hn` | `amp_veltrack`、`amp_random`、`offset`、`offset_random`、`offset_cc131`、`ampeg_attack/decay/sustain/release`、`trigger`、`volume` | 记 `needs`。⚠️ **本条更正过**：旧文写"实测过 `trigger=release` 那一组不会被选中（文件顺序先命中的是持续音组）"——那是对的、也是当时解析器**根本没读 `trigger`** 的副作用。现在 `trigger` 已读且只在 note-on 选 `attack`/`first`，该库的 `trigger=release`（键/钮噪声）按规范只在 note-off 响，而**本仓没有 note-off 触发通道** ⇒ 该 region **永不发声**；理由与全库读数见 `docs/KEYSWITCH.md` §6（§6.5 未实现、§6.7 普查）与 `src/test/triggerCensus.ts` |
 | `freepats-fsbs-dist2` | `ampeg_release`、`lorand`/`hirand`、`width` | 记 `needs`；两层力度仍可选，只是随机变体总取第一个 |
 | `freepats-spanish-classical-guitar` | `ampeg_release` | 记 `needs` |
 | `freepats-tubular-bells1` | `ampeg_release`、`lorand`/`hirand` | 记 `needs` |

@@ -151,6 +151,28 @@ export interface SfzRegion {
    */
   swVelPrevious?: boolean;
   /**
+   * ⭐ **SFZ's `trigger` — *"Sets the trigger which will be used for the sample to play"* (<https://sfzformat.com/opcodes/trigger/>) — as one of the five values the
+   * specification and the reference engine agree on.**
+   *
+   * The page's own list: *"**attack** : (Default): Region will play on note-on. **release**: Region will play on note-off or sustain pedal off. … **first**: Region
+   * will play on note-on, but if there's no other note going on (commonly used for or first note in a legato phrase). **legato**: Region will play on note-on, but
+   * only if there's a note going on (notes after first note in a legato phrase). **release_key**: Region will play on note-off. Ignores sustain pedal."* The same table
+   * makes `release_key` the one **SFZ v2** addition and gives the opcode the default `attack`. sfizz's set is identical — `enum class Trigger { attack = 0, release,
+   * release_key, first, legato };` (`src/sfizz/Defaults.h:42`) with `ESpec<Trigger> trigger { Trigger::attack, {Trigger::attack, Trigger::release_key}, 0 };`
+   * (`Defaults.cpp:207`).
+   *
+   * **`last` is not one of them.** The work order names it as a possible value and the page does not carry it — this is written down as *not found* rather than
+   * mapped to something that sounds similar. A file that does write `trigger=last` therefore has an **unknown** value, which is why the type has a third arm: the
+   * parser keeps the raw spelling in `opcodes.trigger` either way, and `noteOnTrigger` refuses to let a value it does not know sound on note-on.
+   *
+   * ⭐ **Absent means "the opcode was never written", which is `attack` by the specification's own default** — the same distinction `swLast` draws for `-1`. The
+   * `parse.ts` reader folds the default in (a region's `trigger` is the `attack` the format specifies), so a caller never has to re-implement the default; the raw
+   * opcode stays in `opcodes` so a caller that wants "declared or defaulted" can still see it.
+   */
+  trigger?: "attack" | "release" | "release_key" | "first" | "legato" | "unknown";
+  /** The spelling of an unrecognised `trigger=`, kept so a report can name it instead of guessing. Undefined for every known value. */
+  triggerUnknown?: string;
+  /**
    * ⭐ **The file that wrote this region** — the `#include`d file it sits in, or the program itself. Absent when the caller did not supply the expansion's
    * `sources` map (a hand-written string, a fixture), because "declared in the program" and "provenance not recorded" are different facts and this field must not
    * confuse them.
@@ -212,6 +234,71 @@ export function noteNumber(value: string | undefined): number | undefined {
   if (!match) return undefined;
   const semitone = NOTE_SEMITONES[match[1]!]! + (match[2] === "#" ? 1 : match[2] === "b" ? -1 : 0);
   return (Number(match[3]) + 1) * 12 + semitone;
+}
+
+/**
+ * ⭐ **SFZ's `trigger` as one of the five values the specification lists, with the format's default folded in and an unrecognised spelling named rather than
+ * swallowed.**
+ *
+ * The values and the default are the specification's own table (<https://sfzformat.com/opcodes/trigger/>): *"trigger | SFZ v1 | string | attack | attack, release,
+ * first, legato"*, with `release_key` added under SFZ v2. sfizz's set is the same five — `enum class Trigger { attack = 0, release, release_key, first, legato };`
+ * (`src/sfizz/Defaults.h:42`), default `Trigger::attack` (`Defaults.cpp:207`).
+ *
+ * **A value that is not one of the five becomes `unknown`, and that is deliberate.** This parser ignores opcodes it does not model, and for most of them that costs
+ * nothing; here it would mean playing a region on note-on whose trigger the file used to say *"not on note-on"*. `noteOnTrigger` refuses an unknown value, and
+ * `triggerUnknown` keeps the spelling so a report can name the file's word instead of inventing one.
+ */
+export function triggerOf(value: string | undefined): Pick<SfzRegion, "trigger" | "triggerUnknown"> {
+  const text = value?.trim().toLowerCase();
+  // Absent or empty is the specification's default, and it is folded in here so no caller has to re-implement it.
+  if (text === undefined || text === "") return { trigger: "attack" };
+  /**
+   * `release_key` is SFZ v2 and some files write it without the underscore. Both spellings are read as the one value, because they are the same behaviour and a
+   * file that writes the other one is not asking for something else — this is a spelling tolerance, not a sixth trigger.
+   */
+  const normalised = text === "releasekey" ? "release_key" : text;
+  if (normalised === "attack" || normalised === "release" || normalised === "release_key" || normalised === "first" || normalised === "legato") {
+    return { trigger: normalised };
+  }
+  /**
+   * `trigger=off` is the spelling several real libraries use for "this region is silent on purpose"; it is **not** in the specification's list, and it is not
+   * treated as `attack` — `noteOnTrigger` refuses it, so a silent region stays silent. `last` is here for the same reason: the work order names it, the
+   * specification's table does not carry it, so it is recorded as unknown rather than guessed at.
+   */
+  return { trigger: "unknown", triggerUnknown: text };
+}
+
+/**
+ * ⭐ **Whether a region may sound on a note-on** — the one rule the `trigger` opcode needs on a path that has no note-off.
+ *
+ * The specification's own words decide it (<https://sfzformat.com/opcodes/trigger/>):
+ *
+ * ```
+ *   attack       "Region will play on note-on."                                          → yes
+ *   first        "Region will play on note-on, but if there's no other note going on"     → yes, with the divergence below
+ *   legato       "Region will play on note-on, but only if there's a note going on"       → no: this path has no other note
+ *   release      "Region will play on note-off or sustain pedal off."                     → no
+ *   release_key  "Region will play on note-off. Ignores sustain pedal."                   → no
+ * ```
+ *
+ * The reference engine agrees, and it is the reason `first` and `legato` are not treated as one thing: `Layer::registerNoteOn` returns
+ * `keyOk && velOk && randOk && (attackTrigger || firstLegatoNote || notFirstLegatoNote)` where `firstLegatoNote` is
+ * `region.trigger == Trigger::first && midiState_.getActiveNotes() == 1` and `notFirstLegatoNote` is
+ * `region.trigger == Trigger::legato && midiState_.getActiveNotes() > 1` (`src/sfizz/Layer.cpp:78-82`, pinned `f5c6e29f23b8057867c08e88f5f6ac6738baa30b`).
+ * So `legato` **requires** another note to be sounding, which a note-on with no held key never has — and this project's offline lane schedulers emit note-ons only, so
+ * nothing is ever "going on". `first` is a note-on trigger and is kept.
+ *
+ * ⚠️ **The divergence, said out loud rather than hidden:** sfizz admits a `first` region only when exactly one note is active, so it sounds the *first* note of a
+ * phrase and not the ones after it. Nothing on this path can count active notes (a note-off is never delivered), so a `first` region is admitted here for **any**
+ * note-on — a superset that includes sfizz's case. It is the same reading the `sw_down`／`sw_up`／`sw_previous` note records for opcodes that need a live keyboard:
+ * the honest choice is the one that cannot be right by accident, and a note-on sound for a note-on trigger is not a wrong sound the way a key-release noise is.
+ * `docs/KEYSWITCH.md` §6 carries the full census and this divergence.
+ *
+ * A region whose `trigger` is `unknown` is refused: a value this project cannot read is not evidence for "plays on note-on", and the failure the rule exists to
+ * remove — a key-release noise answering a key press — is exactly what guessing would put back.
+ */
+export function noteOnTrigger(region: SfzRegion): boolean {
+  return region.trigger === "attack" || region.trigger === "first";
 }
 
 /**
@@ -520,6 +607,14 @@ export function parseSfz(text: string, options: { sources?: ReadonlyArray<{ from
       ...(noteNumber(merged.sw_up) === undefined ? {} : { swUp: noteNumber(merged.sw_up) }),
       ...(noteNumber(merged.sw_previous) === undefined ? {} : { swPrevious: noteNumber(merged.sw_previous) }),
       ...(merged.sw_vel?.trim().toLowerCase() === "previous" ? { swVelPrevious: true } : {}),
+      /**
+       * ⭐ **`trigger`, read with the format's own default folded in and an unknown spelling kept rather than dropped.**
+       *
+       * The value is what the region needs to answer "am I a note-on sound?" — see `noteOnTrigger`. The default is `attack` from the specification's table, so a
+       * region that never writes the opcode reads `attack` here; `opcodes.trigger` still holds only what the file actually wrote, which is what makes "declared"
+       * and "defaulted" separable for a report.
+       */
+      ...triggerOf(merged.trigger),
       // `tune` plus whatever the controller-driven tuning adds at rest, so a region's cents are the cents it will play.
       tuneCents: num(merged.tune, DEFAULTS.tuneCents) + ccTuneCents(merged, cc),
       seqLength: Math.max(1, num(merged.seq_length, DEFAULTS.seqLength)),
@@ -749,6 +844,20 @@ export function regionsForNote(
   const keyswitch = options.switch ?? options.switchDefault;
   const covering = regions.filter(
     (region) =>
+      /**
+       * ⭐ **A region whose `trigger` is not a note-on trigger does not answer a note-on** — the defect this filter exists for.
+       *
+       * Measured on the shipped `salamander-grand` at pin `3382bf9496bba2486f5ab0de55a264d1dfc38404`: MIDI 60, any velocity, resolved through this repository's own
+       * `parseSfz` ＋ `regionsForNote` to **`rel40.flac`** — a *hammer-release noise*, because the file's second `<global>` says `trigger=release` and every included
+       * `Data/hammer.txt` region inherits it. The release region also writes `key=40`, so its span is **one key wide** while the piano notes' regions are three keys
+       * wide (`lokey=59 hikey=61 pitch_keycenter=60`), and the narrowest-covering-region rule below therefore preferred the key-release noise over the note itself.
+       * Ignoring the opcode was not a missing feature in a corner: it made the piano play a noise on every note-on.
+       *
+       * The rule itself, and why `first` is admitted while `legato` is not, is `noteOnTrigger`'s own note. This is a **preference** filter placed here — where the
+       * note-on question is asked — and not a deletion from the parsed regions, so `resolveInstrumentNote` can still report a file whose only regions are release
+       * samples rather than pretending they do not exist.
+       */
+      noteOnTrigger(region) &&
       /**
        * A region holding unresolved variables is **not selectable**, and this is a defect fix rather than caution.
        *

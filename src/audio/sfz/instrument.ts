@@ -7,7 +7,7 @@
  *
  * Fetching the SFZ text is deliberately **not** done here: I/O is not pure, and this stays pure so its criteria need no browser and no network.
  */
-import { parseSfz, readControlDefaults, declaredSwitchDefault } from "./parse";
+import { parseSfz, readControlDefaults, declaredSwitchDefault, noteOnTrigger } from "./parse";
 import { regionsAtCc } from "./ccGate";
 import { playbackForNote, playbackGap } from "./regionPlayback";
 import { techniqueSwitchFor, type KeyswitchState } from "./keyswitch";
@@ -256,7 +256,26 @@ export function resolveInstrumentNote(
     if (!learned.ok) return { ok: false, regions, reason: `instrument "${asset.assetId}": ${learned.reason}` };
     gate = options.keyswitch.gate();
   }
-  const playback = playbackForNote(audible, note, {
+  /**
+   * ⭐ **Only the regions whose `trigger` is a note-on trigger can answer a note-on** — the resolution half of the filter in `regionsForNote`.
+   *
+   * `regionsForNote` already refuses the others, so this changes no note it answers; what it changes is the **answer when there is none**. Without it,
+   * `playbackGap(audible, …)` described the whole file's key range, and a caller asking why `salamander-grand` played nothing at a note would have been told *"the
+   * file's regions cover keys 21–108"* — true of the file and useless as an explanation, because the note is covered and it is the **trigger** that is not satisfied.
+   * Measuring against the note-on regions instead means the honesty this project asks for reaches the reason string as well as the sample choice.
+   *
+   * A file whose only regions are release samples therefore reports the format's own situation — *"no region of this file sounds on a note-on"* — rather than a
+   * range that looks like a wrong note. The true note-off behaviour is **not** implemented and is recorded in `docs/KEYSWITCH.md` §6.
+   */
+  const playable = audible.filter(noteOnTrigger);
+  if (playable.length === 0) {
+    return {
+      ok: false,
+      regions,
+      reason: `instrument "${asset.assetId}": every region is gated or triggered away from note-on, so no note can sound; ${audible.length} region(s) read, ${audible.filter((region) => region.trigger === "unknown").length} with a \`trigger\` this project does not know`,
+    };
+  }
+  const playback = playbackForNote(playable, note, {
     ...options,
     ...(gate ?? {}),
     ...(chosen === undefined ? {} : { switch: chosen.switch }),
@@ -264,7 +283,7 @@ export function resolveInstrumentNote(
     ...(gate === undefined ? { switchDefault } : {}),
   });
   if (!playback) {
-    return { ok: false, regions, reason: playbackGap(audible, note) };
+    return { ok: false, regions, reason: playbackGap(playable, note) };
   }
 
   /**
