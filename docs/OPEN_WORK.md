@@ -6076,3 +6076,33 @@ problems: **[]** ✓
    ⇒ `fromMusicXml` 读回 **4** 个音 ✗（`60@3.5+0.25`、`62@3.75+0.25` ✗、`62@7.75+0.25` ✗、`62@8+1` ✗）
 ⚠️ **本条不含"已定责任端"的结论** ✗；下一步：用**尊重 `<backup>`／`<voice>` 的游标**打出写出文件里那两个音的 **tie 与 voice 编号** ✓ ⇒ 才能定 ✓
 ```
+
+```
+## 二百三十、⭐⭐ **决定性读数：tie 的 start 与 stop 落在不同声部（假设成立 ✓）**（2026-10-04 01:0x ✓）
+
+**方法** ✓：写出的最小集 XML 用**尊重 `<backup>`／`<forward>` 的游标**逐事件读 ✓（脚本自写文件，原样贴 ✓）：
+    divisions=4（1 division = 0.25 拍）
+    --- measure 1（事件 6 个） ---
+      m1 游标0 voice=1 REST 长3.5 无type tie=-
+      m1 游标3.5 voice=1 C4 长0.25 sixteenth tie=-
+      m1 游标3.75 voice=1 REST 长0.25 sixteenth tie=-
+      <backup> 长4 ⇒ 游标回到 0
+      m1 游标0 voice=2 REST 长3.75 无type tie=-
+      m1 游标3.75 voice=2 D4 长0.25 sixteenth tie=start
+    --- measure 2（事件 5 个） ---
+      m2 游标0 voice=1 REST 长3.75 无type tie=-
+      m2 游标3.75 voice=1 D4 长0.25 sixteenth tie=start
+      <backup> 长4 ⇒ 游标回到 0
+      m2 游标0 voice=2 D4 长1 quarter tie=stop
+      m2 游标1 voice=2 REST 长3 无type tie=-
+    --- measure 3（事件 2 个） ---
+      m3 游标0 voice=1 D4 长1 quarter tie=stop
+      m3 游标1 voice=1 REST 长3 无type tie=-
+    --- measure 4（事件 1 个） ---
+      m4 游标0 voice=1 REST 长4 whole tie=-
+  
+    === 按 (voice, 音名) 归并 tie 序列（检验"tie 落不同声部"假设 ✓） ===
+      2/D4: start@m1游标3.75 → stop@m2游标0
+      1/D4: start@m2游标3.75 → stop@m3游标0
+⇒ ⭐ 结论：**写入端把跨小节音的 `tie=start` 与 `tie=stop` 分到了不同 `<voice>`** ✗ ⇒ 读取端按声部配对**必然合不上** ✓
+```
