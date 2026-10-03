@@ -3312,3 +3312,62 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
    CI：`8f3fed5` **success** ✓、`a947019` **success** ✓
 ⚠️ **而这是我犯过错的同一条线**（§107.5）：**它仍 running 时我删了它的工作树** ✗ —— 提交安全，但那是运气 ✓
 ```
+
+## 一百零八、⭐ 目标 1–5（外部审查中核实为真的五项）——**在飞读数与裁定**（2026-10-03 17:0x 时点 ✓）
+
+### 108.1 ⭐4 `songFlatten` 跳过整小节 —— **普查证明缺陷是活的**（不是假设 ✓）
+
+```
+方法：那条线在 `flattenSong` 里临时插桩（`FLATTEN_CALL`／`FLATTEN_SKIP|slot=…|n=…|base=…|bars=…` ✓），
+     跑**整套**判据（日志 `/var/tmp/census-full.log` ✓，866 KB ✓）⇒ 我读日志得：
+     **278 次 flatten 调用 ⇒ 4 次真的跳过小节** ✓✗
+     四处逐字：`slot=B|n=1|base=8|bars=4` ｜ `slot=B|n=1|base=2|bars=2` ｜ `slot=B|n=3|base=4|bars=2` ｜ `slot=A|n=4|base=3|bars=2` ✓
+     例：**4 小节的歌，B 段某小节只有 1 条轨而首段有 8 条 ⇒ 整小节被丢** ✗（歌少了四分之一 ✓）
+⚠️ **⇒ 我给它的原判据"既有内容逐字节相同"是错的** ✗✗（我在不知道有没有中招时写过严的判据 ✓）⇒ **已改为**：
+   **既有内容只在"原本被跳过的那 4 处"变化，其余逐字节相同** ✓（做法：先记基线 ⇒ 修后只这 4 处由"缺失"变"有内容（缺轨处静音）" ✓）
+✅ 并已核：**全仓没有任何既有判据把"跳过小节"当正确行为钉住** ✓（`"the bar was skipped"` 只命中本台账 ✓）
+   ⇒ 改动不会撞"守护旧行为"的判据 ✓（这是我们流程最容易翻车处之一 ✓）
+```
+
+### 108.2 ⭐3 `LoopBraceV2` 接走带 —— **单位换算与"夹紧"是本批工程质量最高的一处** ✓✓
+
+```
+新增 `src/features/arrangement/loopSteps.ts`（`loopStepsFor(loop, stepsPerBar, patternSteps)` ✓），头注释逐条给了依据：
+① **单位确实不同**：循环框存**小节**（`data/arrangementLoop.ts` 全是小节算术 ✓），
+   `AudioEngine.setLoopRange` 吃**步**的 `[start, end)` ✓（消费点 `:2042`／`:2088`／`schedulerMath.ts:52`／`:1711` ✓）
+   —— 原话：「**把 bars 直接交给它，两小节的循环会变成步 0–2，即十六分之一拍**」✓（正是我点名的翻车点 ✓）
+② **每小节步数用 `stepsPerBarFor(timeSignature)`，不是常量 16** ✓（4/4＝16 ✓、**3/4＝12** ✓）
+   —— 且与视图的播放头**用同一个函数**换算 ⇒ 两者不可能对"第 3 小节在哪"产生分歧 ✓✓
+③ ⭐⭐ **避开一个真陷阱**：`arrangement.bars` 可选 ⇒ compile 可能只产**1 小节** pattern，而标尺画 **8 小节** ⇒
+   不夹紧就会把 `[64,128)` 交给 16 步的 pattern ⇒ **调度器停在步 64、一个音都不发** ⇒ **一开循环就把正在播的编排变静音** ✗✗
+④ 完全夹没了的区间返回 **`null`**（不是倒置区间 ✓ —— 引擎对 `range[0] < range[1]` 不成立即清空 ✓）
+```
+
+### 108.3 ⭐1／⭐2 `PianoRollV2` —— 形状已对，且**有一处超出我的任务书** ✓
+
+```
+✅ 试听：`onAudition` 由视图提供（「**The roll writes, the view sounds**」✓），调**引擎自己的** `audition({assetId,midi,trackId})` ✓；
+   失败「**Reported rather than discarded**」✓（可见 ✓）
+✅ 指针：不只 `pointerup` 兜底 ✓，还处理 **`pointercancel`** ✓（原话：那是"浏览器撤销指针流"的同一事实 ✓，per Pointer Events 规范 ✓）
+⭐ **没有新增第二个全局 `keydown`** ✓（我实测 0 ✓）—— 走的是把**既有键盘组件**的作用域扩到卷帘 ✓（"the keys are this editor's" ✓）
+```
+
+### 108.4 ⭐5 `AudioEngine` 的 200ms lookahead —— 状态与待核
+
+```
+在读（脏 3）：它**改了测试用的 fake 音频助手** ✓（`src/test/helpers/fakeAudio.ts`）＋ 新判据 `lookaheadMuteWindow.test.ts` ✓
+   ⇒ 正在"先量"：**静音/推子之后，已排期音符还会响多久／按旧音量响多久** ✓
+⚠️ 待它交付时我核三件：① 形状是否与 §106 一致（**已排期音符立即受控** vs 单纯缩短窗口 ✓）；
+   ② **必须有短斜坡**（不许硬切 ✗ —— §26 听感优先 ＋ 不许爆音 ✓）；③ 调度稳定性读数**逐字不变** ✓
+```
+
+### 108.5 卫生观察（提交前要清，我已逐个提醒 ✓）
+
+```
+⚠️ `flatten`：生产代码里的 `console.log` 插桩 ✗ ＋ `src/test/zz-flatten-scratch.test.ts` ✗（已发信 ✓；它已清掉 genrefix 那个同类问题 ✓）
+⚠️ `lookahead`：`src/test/__dbg.test.ts` ✗（临时物 ⇒ 交付前核 ✓）
+✅ `rollfix`：判据名规范（`pianoRollAudition.test.tsx`／`arrangementRollAudition.test.tsx` ✓），**没有** `zz-` 类名字 ✓
+```
+
+**⚠️ 方法纪律（本轮我自己的教训）**：我这几轮**每写一次台账就推一次** ⇒ 每次起一个 ~12 分钟 CI run ✗ ⇒ **改为攒批** ✓；
+但**读数一拿到就入册**（防上下文丢失 ✓）——两者以"**读数攒到有实质内容就写，推送合并**"为界 ✓。
