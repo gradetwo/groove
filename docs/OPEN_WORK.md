@@ -3123,3 +3123,32 @@ You are not authenticated"** ✗ ⇒ **⇒ 缺的是 **worker 名 ＋ 认证****
 **⇒ 结论（与 B 一致、与最初的说法一致）**：**不是"88% 悬空"，而是"0 或全部，取决于拿谁当入口"** ✓；
 **而那个"3 850／4 387"**既不是这两个数、也无从复现** ⇒ **作废** ✓（**我先前引用它时没有自己量过 —— 这正是"报数必须带方法与时点"要防的** ✗✓）。
 **⇒ 已按 §87 裁决（默认基目录不改、`sourcePath` 作元数据、显式读法可选）保持不变** ✓：**产品上"子程序作条目入口"仍不通**，属已记录的能力缺口 ✓。
+
+## 一百零四、🎉 **2.34.38 已发布**：四处一致（2026-10-03 ✓）
+
+### 104.1 四处核对（**发布唯一算数的验收 ✓**）
+
+```
+① 线上 `https://groove.wangda.today/version.json` : **2.34.38**（releaseDate 2026-10-02）✓
+② `origin/dev`  `package.json`                    : **2.34.38** ✓
+③ `origin/main` `package.json`                    : **2.34.38** ✓（main 已快进 ✓）
+④ `tag v2.34.38^{}:package.json`                  : **2.34.38** ✓
+⇒ **dev ＝ main ＝ tag ＝ `f4b302d`**（同一个 commit ✓）；线上 `changelog.json` 最新是 **2.34.38 / 2026-10-03 / feature** ✓
+```
+**`release.sh` 九步全过**：`version:check ok`／`version:new ok`／`local gate skipped (SKIP_LOCAL_GATE=1)`／`build ok`／`budget ok`／
+**`full CI ok`**（`workflow_dispatch` run `37087687230`，约 30 分钟含排队）／**`deploy ok`／`tag ok`／`remote ok`** ✓
+
+### 104.2 ✗✓ **卡了多轮的"部署缺凭据"，根因是我**量错了地方****
+
+**业主说"wrangler 配置是好的"** ✓ —— **是对的** ✓：`wrangler.toml` 与 `.env`（含 `CLOUDFLARE_API_TOKEN`）**都在主 checkout**
+`/home/crow/music/groove/` 里 ✓，而**两者都被 gitignore** ⇒ **每个新建的工作树天生没有它们** ✗✓。
+**我此前只在 `groove-int` 这一棵树里找** ⇒ 得出"本机没有凭据"的结论 ✗✓ —— **错在**测量范围**，不在事实** ✓。
+**修法（不打印任何密钥 ✓）**：`cp -p` 那两个文件进 `groove-int` ＋ `chmod 600 .env.deploy` ✓；
+**复制前先 `git check-ignore -v` 三个都命中**（`.gitignore:43 .env`／`:44 .env.*`／`:63 wrangler.toml` ✓）⇒ **树仍干净、密钥不会进仓库 ✓**。
+**⇒ 这条教训入册**：**"本机有没有某文件"这种问题，必须写明**在哪些目录下找过**** ✓（与 §99／§103 的"报数要带方法与时点"同一族 ✓）。
+
+### 104.3 ⭐ 而那次失败换来的东西，这次真的用上了 ✓✓
+
+**我加的 deploy preflight** 在 dry-run 里**先打印三条本地判决、再指名要建哪个文件** ✓；
+**而 `--dry-run` 现在不过 Cloudflare ⇒ 它成了发布前的安全复现** ✓（§93／§100 ✓）。
+**另外**：`ci_full.sh` 的分支定位取自"**它所在的 checkout**"并在 detached HEAD 时**明确拒绝** ✓（§55 核过）⇒ 这次它正确地在 `dev` 上派发了矩阵 ✓。
