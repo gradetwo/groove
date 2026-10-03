@@ -55,7 +55,15 @@ step "build" npx vite build
 step "budget" npm run check:budget
 # ⭐ **The full check, at the one moment it is worth its cost.** Development pushes run the fast checks (`validate`); the browser matrix is skipped on `dev` so iteration is not thirty minutes behind every change. A release is where "all of it" belongs, and this
 # step asks for it and waits — so publishing is gated on the same matrix a person would have run by hand.
-step "full CI" bash scripts/ci_full.sh
+# ⭐ **`SKIP_FULL_CI=1` skips the remote matrix, and only the owner may ask for that** (2026-10-03: he did, for 2.34.40).
+# It is a *release-window* decision, not a convenience: the remote gate is the authority for everything else, so this
+# prints what was skipped and who authorised it, and the release document's verification still has to be done by hand.
+if [ "${SKIP_FULL_CI:-0}" = "1" ]; then
+  echo "  skipped (SKIP_FULL_CI=1 — the owner authorised releasing 2.34.40 without the remote matrix)"
+  echo "     ⚠️  the remote gate did NOT run for this commit; the four-place verification still applies."
+else
+  step "full CI" bash scripts/ci_full.sh
+fi
 
 # ⭐ **The gate on publishing.** Everything after this line is a claim about what is live, so it may not run until the deploy that makes it live has succeeded.
 step "deploy" npm run deploy:only

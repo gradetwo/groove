@@ -1,23 +1,23 @@
 {
-  "version": "2.34.39",
+  "version": "2.34.40",
   "releaseDate": "2026-10-03",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.39",
+    "version": "2.34.40",
     "date": "2026-10-03",
     "category": "fix",
     "title": {
-      "zh": "修：线上采样根丢失",
-      "en": "Fix: the live build lost its sample root"
+      "zh": "修：曲风试听现在真的取录音",
+      "en": "Fix: genre audition now asks for its recordings"
     },
     "highlights": [
       {
-        "zh": "上次发布的工作树缺 .env.local，构建时没读到镜像根，线上目录因此为空、采样取不到。",
-        "en": "The release tree lacked the local env file, so the build carried no mirror root and the live catalogue came up empty."
+        "zh": "曲风详情页与随机试听此前从不排采样播放，只把声部从合成器撤下，于是既不合成也不取录音、一个请求都不发；现已接上引擎自己的采样调度（含循环与停止）。",
+        "en": "The genre pages never scheduled sample playback, so lanes were muted from the synth and no recording was fetched; they now use the engine's own sampler scheduling, with looping and stopping."
       },
       {
-        "zh": "重建后已用产物本身验证（产物的采样根字符串从 0 处变为 1 处）。",
-        "en": "Verified against the artifact itself: the root string went from zero hits to one."
+        "zh": "两个未在用的音源库下架（清单 34→32），线上字节已删除并有活对照验证。",
+        "en": "Two unused libraries were retired (manifest 34 to 32), with the bytes removed and verified against a live control."
       }
     ],
     "truncated": false
