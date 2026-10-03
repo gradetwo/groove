@@ -5567,3 +5567,12 @@ problems: **[]** ✓
 实际是 **`src/features/sequencer/useSequencerStore.ts`** ✓；这是 `check:docs:refs` **精确抓出来的** ✓
 （它甚至点名"同一文件名在 `src/features/sequencer/useSequencerStore.ts`" ✓）。⭐ **教训**：**别从"光秃秃的文件名"推路径** ✗ ——
 `exp3` 的报告里只写了 `useSequencerStore.ts:345-350` ✓，**目录是我自己补的** ✗，于是补错了 ✓。
+
+## 一百九十五、✅ **完整验收：三处"无损"措辞（`31878f7`，CI success ✓）**（2026-10-04 00:2x ✓）
+
+```
+✅ 判据 **8 passed** ✓（我跑过 ✓）＋ 反向量五数 ✓ ＋ **CI = success** ✓ ⇒ 该笔闭环
+   （三条实测与判据范本见 `§191` ✓）
+⚠️ 仍欠它的**完整报告** ✗（逐条判定表 ＋ `skins:gen`／`check:skins` 退出码与是否零 diff ✓）
+⏳ 余下三处同类"无损"由 `6d3b8442` 处理中 ✓（已见它改 `HelpCenterModal.tsx`／`NewUserOnboardingModal.tsx` ✓）
+```
