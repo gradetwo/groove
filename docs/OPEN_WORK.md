@@ -6915,3 +6915,23 @@ problems: **[]** ✓
    · `WindowImage.jpg`（缩略图 ✗）与 `DisplayStateArchive`（35 KB **不透明归档** ✗）⇒ `needs` ✓（不伪造 ✗）
 **⚠️ 判据口径（能红 ✓）**：以"**键集与真实工程一致**"为断言 ✓（删一个键即红 ✗）；文件数断言 **3/5** ✓；`needs` 断言"我们**不写** `LastSavedFrom`" ✓（若有人偷偷写上 ⇒ 红 ✓）
 ```
+
+## 二百九十九、✅ **P5.1–P5.3 落地（包结构对齐真实工程）＋ 我两个错** ✗（2026-10-04 07:2x ✓）
+
+```
+**落地** ✓（`e5157bb` ＋ 类型修复 `69fd07e` ✓）：
+   · `MetaData.plist`：写到**实测并集**（20 键 ✓）—— bpm／拍号／`NumberOfTracks` **来自编排** ✓；三工程**一致**的常量照写 ✓；
+     资产列表**写空** ✓（编排无音频/采样器/视频 ✓ ⇒ 空是实话 ✗ 不是漏 ✓）
+     ⚠️ `SongKey`／`SongGenderKey`／`SignatureKey` **故意不写** ✗（编排无调性字段 ⇒ 编一个就是替用户声明 ✗）⇒ `needs` ✓＋**判据断言它们不许出现** ✓
+   · `ProjectInformation.plist`：`ActiveVariant` = **整数** ✓（实测真实＝"目录 000 ＋ 值 0" ✓）；`BundleVersion 2.0` ✓；`HasProjectFolder false` ✓；
+     `VariantNames`／`VariantNamesV2` 按实测形状 ✓；⚠️ **不写 `LastSavedFrom`** ✗（声明"由谁保存" ⇒ 写 Logic 就是冒充 ✗）⇒ **判据断言不许出现** ✓
+   · `DisplayState.plist`：实测 **5 键** ✓、值为空形状 ✓ ⇒ 每变体文件 **2 → 3 / 5** ✓；`WindowImage.jpg`／`DisplayStateArchive` **不伪造** ✗ ⇒ `needs` ✓
+   · 读取器：`activeVariant` 把数字**补零成目录名** ✓（`0 → "000"` ✓；与旧字符串写法指向同一目录 ✓）
+**验证** ✓：**红证成立**（删 `SampleRate` ⇒ 键集判据红 ✓；去补零 ⇒ 两条红含既有那条 ✓ ⇒ 补零吃劲 ✓）；
+   `logicFixtures`（**读业主真实工程** ✓）仍绿 ✓ ⇒ 补零未弄坏读真实工程 ✓；6 文件 **46 用例**绿 ✓；eslint 0 error ✓
+⚠️ **我的错 ①** ✗：**我跑了 `tsc` 却没拿它当闸** ✗ ⇒ 把**类型错**的 `e5157bb` 推了出去 ✗（`toContain(值, 消息)` 这 API 不收消息 ✗）⇒ `69fd07e` 修 ✓
+   📌 **规矩收紧**：`tsc` 的**退出码必须闸住提交** ✓（不只打印 ✓）—— 与"门的退出码被 `| tail` 掩盖"同一类错 ✗
+⚠️ **我的错 ②** ✗：P5 第一个补丁**切得太宽** ✗，连带删掉 `regionRecord`／`meterRecord`／`tempoRecord` ✗ ⇒ `tsc` 抓住 ✓，从提交取回 ✓
+📌 **`needs` 细化（都有实测支撑 ✓）**：`Media/` 是**工程自己的录音素材**（**322／299／462** 个文件 ✓）⇒ 是**内容**不是结构 ✗；
+   `SongKey` 系（无来源 ✓）／`LastSavedFrom`（不冒充 ✓）／`projectAssetFlags`（含义未知 ✓）／`ExternalRecordPath`（他人磁盘书签 ✓）⇒ 均不写 ✓
+```
