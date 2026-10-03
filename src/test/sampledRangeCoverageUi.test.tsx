@@ -8,8 +8,12 @@
  *   1. the range a row shows **follows the fixture's regions** — the same asset with a different program shows a
  *      different range, so a hardcoded table cannot pass;
  *   2. before the engine answers, the slot says **尚未加载** and contains **no digit** — a guessed range is red;
- *   3. `bebop`'s lead (writes 82–91) against a fixture of `mtg-solo-sax:MTG-Tenor-Sax` (sounds 39–76, no 41–43) reports
- *      **超出 44 个**; deleting the report is red;
+ *   3. `hard-bop`'s lead (writes 72–77) against a fixture of `mtg-solo-sax:MTG-Tenor-Sax` (sounds 39–76, no 41–43)
+ *      reports **超出 4 个**; deleting the report is red. ⭐ This case used to use `bebop`'s lead (44 notes written
+ *      82–91) — that line was written **above the tenor saxophone's own range**, so
+ *      `docs/SAMPLED_RANGE_COVERAGE.md` §8 folded it back into range and it now reports nothing. `hard-bop`'s lead is
+ *      a real lane that is **still** outside its recording for the honest reason (77 is just above the recording's
+ *      76), so the criterion keeps a subject rather than an empty assertion;
  *   4. a lane written **41–43** — inside the printed 39–76 span and inside its hole — reports **超出 3 个**; a min/max
  *      comparison is red.
  */
@@ -140,18 +144,18 @@ describe("the recording picker's coverage display", () => {
     expect(screen.getByTestId(`instrument-coverage-${OTHER}`).textContent).toBe("");
   });
 
-  it("⭐ reports the 44 notes of bebop's lead that fall outside its tenor", async () => {
-    const genre = ALL_GENRES.find((candidate) => candidate.id === "bebop");
-    expect(genre, "the bebop genre must exist for this criterion to mean anything").toBeDefined();
+  it("⭐ reports the 4 notes of hard-bop's lead that fall outside its tenor", async () => {
+    const genre = ALL_GENRES.find((candidate) => candidate.id === "hard-bop");
+    expect(genre, "the hard-bop genre must exist for this criterion to mean anything").toBeDefined();
     const lane = patternFromGenre(genre!).tracks.find((track) => track.track_id === "lead");
-    expect(lane, "bebop must still have a lead lane").toBeDefined();
+    expect(lane, "hard-bop must still have a lead lane").toBeDefined();
 
     render(picker({ assetId: MTG, lane, assets: [TENOR_ASSET], programText: async () => TENOR }));
     const report = await screen.findByTestId("lane-range-report");
-    expect(report.textContent).toContain("有 44 个音超出");
+    expect(report.textContent).toContain("有 4 个音超出");
     expect(report.textContent).toContain("可发 39–76（缺 41–43）");
     // The lane's own written range is shown beside it, which is the pairing the census found missing everywhere.
-    expect(screen.getByTestId("lane-written-range").textContent).toContain("本轨写出 82–91");
+    expect(screen.getByTestId("lane-written-range").textContent).toContain("本轨写出 72–77");
   });
 
   it("⭐ counts a note written into the recording's hole as outside, not as inside the span", async () => {

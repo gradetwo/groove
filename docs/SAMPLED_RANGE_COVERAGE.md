@@ -2,7 +2,12 @@
 
 **普查日期**：2026-10-03 ｜ **基线**：`origin/dev` @ `44321b8`（`fix(samples): one base for #include, ready-then-play, and one loader per session`）
 **样本清单**：`public/samples/manifest.json`（32 条库，程序级 322 个资产）
-**判据**：`src/test/sampledRangeCensus.test.ts`（33 例：离线 8 例 ＋ 联网 pin 25 例）
+**判据**：`src/test/sampledRangeCensus.test.ts`（34 例：离线 9 例 ＋ 联网 pin 25 例）
+
+> ⚠️ **§2–§6 记录的是"修复前"这一次普查（2026-10-03）。** 普查之后，业主授权把**实测越出乐器本身音域**的曲风写得音修回域内：
+> 5 条静音声部里有 **4 条**属于这一类（3 条 `sax_lead` ＋ 1 条 `bell_lead`），已按**整条八度折回（保音级）**修好；
+> 剩 **1 条**（`post-punk` 的 bass）判为**库窄而非曲风错**，**故意的没改**。
+> ⇒ **本节之后所有"168／25／5"的数都是修复前的数**；**修复后的数、逐条定性依据与"库窄"声部的替代音源调查，全部在 §8**（§8.4 给出新的三类计数与判据）。
 
 ---
 
@@ -692,6 +697,9 @@
 | 测量可达 | 每个被映射的资产都在测量表里；每条 sha256 是 64 位十六进制；**unmeasured 必须为空**（调色板换到一个没量过的资产会具名变红） |
 | 联网复核 | 22 个程序逐个从 pin 取原文、核 manifest sha256、展开、**用 `resolveInstrumentNote` 重扫 0–127**，与测量表逐键比对；5 条静音声部的**每一个写出音**在**本声部自己的力度**下被引擎拒绝（`no playback`） |
 
+> ⚠️ **本表是修复前的版本（`{168,25,5,4}` / 5 个静音曲风 / 5 条静音声部 / bebop 写 `[82,85,86,89,91]`）。**
+> 修复后的判据（`{172,25,1,4}`、只剩 `post-punk`、bebop 写 `[58,61,62,65,67]`）与新增的"只有这 4 条 lane 变了"判据见 **§8.4**。
+
 ### 5.2 证红实跑（两次突变，跑完立刻还原，`git diff` 为空）
 
 **突变 A — 只改调色板一行**：`src/data/sampledInstruments.ts` 第 83 行 `mtg-solo-sax:MTG-Tenor-Sax` → `mtg-solo-sax:MTG-Soprano-Sax`：
@@ -824,3 +832,173 @@ AssertionError: expected [ 70, 73, 74, 77, 79 ] to deeply equal [ 82, 85, 86, 89
 
 **未改动**：`src/audio/**`、`mcp/**`、`src/data/genres/**`、`src/data/sampledInstruments.ts`、`public/samples/manifest.json`、`docs/OPEN_WORK.md`、`src/mobile/**`、版本号、`.github/**`、`scripts/push_dev.sh`、任何 `.env*`／`wrangler.toml`。
 
+
+> ⚠️ **与 §7 的关系**：§7 说的是「把覆盖**显示**出来、不自动改内容」（那条线的 UI 工作，`src/data/genres/**` 当时**未改动**）；
+> 本节说的是**之后**业主授权的那一次**内容修复**——它**改了 4 条曲风线的音高**，因此 §7.6 里「三类计数仍是 `{168,25,5,4}`」、
+>「`src/data/genres/**` 未改动」这两句**在本节之后已不再成立**：新计数是 `{172,25,1,4}`（§8.4）。§7 本身描述的功能与判据没有变。
+
+## §8 修复：把"曲风写超出乐器本身音域"的音修回域内（2026-10-03，业主授权改曲风）
+
+### 8.0 摘要
+
+普查把 5 条"一个音都不发"的声部摆出来之后，问题被拆成两类，**只有第一类改了曲风**：
+
+| 类别 | 判据 | 条数 | 处理 |
+| --- | --- | --- | --- |
+| **曲风越界** | 写出的音高**超出该乐器本身的可奏音域**（与录音无关） | **4** | ✅ **把整条线按八度折回域内**（保音级、保音程、保旋律形状） |
+| **库窄** | 写出的音高**在乐器域内**，只是**那个录音**没录到那么高 | **1** | ❌ **不改曲风**（改了就"内容让位于库"），改的是**音源**——见 §8.6 的提案 |
+| 映射错 | 这条 lane 该用别的乐器名 | **0** | — |
+
+**三类计数（修复前 → 修复后）**：
+
+```
+能发 168 → 172      （+4：4 条折回域内的 lane 整条开始发声）
+部分 25 → 25        （不变）
+静音 5  → 1         （−4：只剩 post-punk 的 bass，判为库窄，故意不改）
+无声部内容 4 → 4    （不变）
+合计 202 → 202      ✓
+静音曲风 {bebop, chicago-drill, free-jazz, post-punk, smooth-jazz} → {post-punk}
+```
+
+### 8.1 §106：有据的乐器音域（每条给逐字原句 ＋ URL）
+
+| 乐器 | 断言 | 音名（MIDI） | 逐字原句（本次抓取） | URL |
+| --- | --- | --- | --- | --- |
+| **次中音萨克斯**（tenor saxophone） | 发声（concert）音域 | **A♭2–E5 = 44–76** | "The tenor saxophone in B♭ sounds an octave and a major second lower than written. Many models have a high F♯ key, and higher pitches are possible using altissimo fingerings." ／ **"Modern tenor saxophones that have a high F♯ key have a range from A♭2 to E5 (concert) and are therefore pitched one octave below the soprano saxophone."** | <https://en.wikipedia.org/wiki/Tenor_saxophone> |
+| **次中音萨克斯** | 写谱音域（对照用；本仓的 MIDI 是**发声**音高） | 写谱 B♭3–F♯6 | 同上一行："sounds an octave and a major second lower than written"（⇒ 写谱音域 = 44–76 上行大九度 = 58–90） | 同上 |
+| **管钟**（tubular bells / chimes） | 写谱音域 | **C4–F5 = 60–77**（个别专业型号到 G5 = 79） | **"The written range of chimes is usually seen as C4 to F5, though some professional models reach G5."** ／ "Standard tubular bells have a range of either 1.5 or 1.6 octaves. Specialty sets of chimes, such as bass chimes, may extend higher or lower." | <https://en.wikipedia.org/wiki/Tubular_bells> |
+| **电贝斯**（4 弦 picked electric bass） | **定弦** | 空弦 **E1–A1–D2–G2 = 28/33/38/43** | New Grove（经 Wikipedia 转引）：**"Electric bass guitar, usually with four heavy strings tuned E1'–A1'–D2–G2."** ／ "The electric bass guitar is usually tuned the same as the double bass, corresponding to pitches one octave lower than the four lowest-pitched strings of a guitar, typically E, A, D, and G (5-string models typically add a low B, and 6-string models typically add a high C)." ／ 信息框图注："Range of a standard tuned 4-string bass guitar (brackets: 5-string)" | <https://en.wikipedia.org/wiki/Bass_guitar> |
+| **电贝斯** | **最高音**（一个可引的数字） | **未找到** | 本次抓到的页面（Wikipedia／VSL `https://www.vsl.co.at/en/Plucked_Strings/Electric_Bass`——该页为 JS 渲染，**返回空**）**都没有**给出"4 弦电贝斯最高到哪个音"的逐字句 | **未找到** |
+
+**由 §106 得出的算术**（不是引用，是本报告自己算的，方法写明）：
+
+* 次中音萨克斯发声域 **44–76**。`bebop` lead 写 82–91、`free-jazz` 写 81–90、`smooth-jazz` 写 77–82 ⇒ **全部（或除 76 以外全部）在 76 之上**。**注意库这一侧是对的**：`mtg-solo-sax:MTG-Tenor-Sax` 实测 **39–76**，其**上界 76 恰好等于乐器本身的 E5**——它不缺件，它是准的。
+* 管钟 C4–F5（60–77），专业型号到 G5（79）。`chicago-drill` lead 写 **79/82/84** ⇒ **82（B♭5）与 84（C6）超出任何型号**；79（G5）只落在"个别专业型号"的顶边上。库这一侧同样是准的：`vcsl:Tubular-Bells-1` 实测 **60–77**，同族 `Tubular-Bells-2` **60–79**、`Tubular-Bells-3` **60–78**——**这一族没有任何程序能发 82/84**。
+* 电贝斯空弦 28/33/38/43。`post-punk` bass 写 **50 (D3) / 53 (F3) / 55 (G3)** ⇒ 分别是 D 弦第 12 品、D 弦第 15 品、G 弦第 12 品。**这是电贝斯最普通的音区**（常见 4 弦贝斯 20–24 品，G 弦 20 品即到 D♯4 = 63）。⇒ **不是曲风越界**。
+
+### 8.2 逐条定性（5 条静音声部）
+
+| 曲风／声部 | 乐器 → 资产（实测覆盖） | 写出音高 | **定性** | 依据 |
+| --- | --- | --- | --- | --- |
+| `smooth-jazz` lead | `sax_lead` → `mtg-solo-sax:MTG-Tenor-Sax`（39–76） | 77, 81, 82 | **曲风越界** | 次中音萨克斯发声域 44–76（§8.1 逐字）；77–82 全在其上 ⇒ 与录音无关 |
+| `bebop` lead | 同上 | 82, 85, 86, 89, 91 | **曲风越界** | 同上；最高 91 = G6，比乐器上界高 15 个半音 |
+| `free-jazz` lead | 同上 | 81, 82, 84, 85, 87, 88, 90 | **曲风越界** | 同上 |
+| `chicago-drill` lead | `bell_lead` → `vcsl:Tubular-Bells-1`（60–77） | 79, 82, 84 | **曲风越界** | 管钟写谱域 C4–F5，专业型号到 G5（§8.1 逐字）；82/84 超出所有型号 |
+| `post-punk` bass | `pick_bass` → `freepats-electric-bass-yr:PickedBassYR-20190930`（26–46） | 50, 53, 55 | **库窄**（**不是**曲风错；**不是**映射错） | 50/53/55 是电贝斯最普通的音区（§8.1）；该录音**录到的最高音就是 E2 = 40**（SFZ 原文：`lokey=40 hikey=46 pitch_keycenter=40 sample=samples/pick/E2.flac`——40–46 是拿 E2 那一个采样往上拉了 6 个半音），一个更宽的 picked 源见 §8.6 |
+
+**没有一条是"映射错"**：三条 `sax_lead` 映射到 tenor sax 是对的（`sax_lead` 在这三条曲风里就是爵士萨克斯 lead）；`bell_lead` → 管钟是对的；`pick_bass` → picked 电贝斯也是对的。错的是**写出来的音高**（前 4 条）与**那个录音的覆盖**（第 5 条）。
+
+### 8.3 改了什么、为什么这样改
+
+**选用的折法：整条线按"最小整八度"折回**（`pitch − 12k`，取能把这**一条线全文**放回域内的最小 `k`）。
+
+三种候选与取舍：
+
+| 方案 | 结果 | 为什么不用 |
+| --- | --- | --- |
+| **整体移调** | 会改调性 | 除非"本来就差一个八度"，否则改调性 ✗ |
+| **逐音最小八度折回** | 每个越界音各自降最少的八度 | **会重塑旋律**：`bebop` 的 89/91 要降两个八度、82/85/86 只降一个 ⇒ 原先行进的顶点（89、91）变成全曲最低音，乐句形状被破坏 ✗ |
+| ⭐ **整条线最小整八度折回** | 一条线用**同一个** `k` | ✅ **保留音级、保留全部音程、保留旋律形状**（整条线原样移低），是"最保守"的一种；代价是 `bebop`/`free-jazz` 要降两个八度（因为 91 必须 ≤ 76） |
+
+**逐处改动（before → after，音级不变）**：
+
+| # | 文件:行 | 曲风／声部 | 折 | 写出音高 before | after | 依据 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | `src/data/genres/jazz_blues.ts:2864-2881` | `bebop` lead | **−24** | 82, 85, 86, 89, 91（B♭5,C♯6,D6,F6,G6） | **58, 61, 62, 65, 67**（B♭3,C♯4,D4,F4,G4） | 91 − 12 = 79 > 76 ⇒ 最少要两个八度；折后 58–67 全在 39–76 内（且避开缺键 41–43） |
+| 2 | `src/data/genres/jazz_blues.ts:4803-4820` | `free-jazz` lead | **−24** | 81, 82, 84, 85, 87, 88, 90 | **57, 58, 60, 61, 63, 64, 66** | 90 − 12 = 78 > 76 ⇒ 两个八度 |
+| 3 | `src/data/genres/jazz_blues.ts:5775-5792` | `smooth-jazz` lead | **−12** | 77, 81, 82 | **65, 69, 70** | 82 − 12 = 70 ≤ 76 ⇒ 一个八度够 |
+| 4 | `src/data/genres/trap_drill.ts:2379-2396` | `chicago-drill` lead | **−12** | 79, 82, 84（G5,B♭5,C6） | **67, 70, 72**（G4,B♭4,C5） | 82/84 超出乐器；79 也在专业型号顶边。整条降一个八度 ⇒ 67–72 落在 **C4–F5 的正中间**，且形状不变 |
+
+**没有改的东西（逐字相同）**：其余 **155 个曲风**的所有 lane；这 **4 个曲风**的**其它 lane**（`bebop` 的 bass/chords、`free-jazz` 的 bass/chords、`smooth-jazz` 的 bass/chords、`chicago-drill` 的 chords/drums）；`src/data/sampledInstruments.ts`（调色板）；`public/samples/manifest.json`；`src/audio/**`；`mcp/**`；`docs/OPEN_WORK.md`；`src/mobile/**`；版本号；`.github/**`；`scripts/push_dev.sh`；任何 `.env*`／`wrangler.toml`。
+
+### 8.4 判据与新的数（`src/test/sampledRangeCensus.test.ts`，34 例全绿）
+
+改动都写在判据文件自己的注释里（"因为修了 4 条曲风越界"），**数字没有被悄悄改**：
+
+1. **三类计数** `{能发:168, 部分:25, 静音:5, 无声部内容:4}` → **`{172, 25, 1, 4}`**，注释写明这 4 条的来龙去脉。
+2. **静音曲风的 map** `{bebop:1, chicago-drill:1, free-jazz:1, post-punk:1, smooth-jazz:1}` → **`{post-punk:1}`**。它仍然是**按名字钉的 map**，所以**将来任何一条新静音 lane 依旧红**——守卫作用保留（不是"总数一样就算过"）。
+3. **新增** ⭐ "这 4 条折回的 lane 现在发声、音级不变、且**只有它们动了**"：
+   * 每条 lane 的 `verdict === "sounding"`（**逐音**对着测量键集判，不是 min/max）；
+   * `after.map(%12)` 与 `before.map(%12)` 逐字相同，且 `after = before + (−12k)`（**改了音级 ⇒ 红**）；
+   * ⭐ **"只动了该动的"**：把 202 条 lane 的 `summary(...)` 行拼起来取 `sha256`，先把这 4 行**换回修复前的文本**，结果必须等于**修复前那棵树上的同一个 sha256**：
+     `7b9d4bc4caadb7b888fb868e37c48a96f247f59567a16b8064fba7a86ccba761`
+     （该值由同一个 `summary` 在同一基线的未修版本上独立算出，方法：`vitest` 跑一个临时脚本打印 `sha256(sorted(rows))`；修复后同一脚本给出 `93bad8889db5cd2a3e54889b0dd63752acb31327065eccfc35b5e949180a1d8d`。判据里两个值都在，且断言"换回 4 行后 = 修复前"、"当前 ≠ 修复前"、"恰好 4 行不同"。）
+4. **其余既有判据一字未动**：`/genre/bebop` 具名判据保留（资产、44 条 note、实测 39–76 缺 41–43、每个折前音 > 76、折后音 ≤ 76），在线 half 仍逐个从 pin 复核 22 个程序（本次 22/22 通过，包含 `karoryfer-black-and-blue-basses:05-darkblack-pluck` 实测 **35–76**，是 §8.6 的独立复核）。
+5. **反向判据**不变：`ownerProjectAcceptance` 的 57→25／3→1／60→28、调色板 22 行／0 处不存在、`sampledInstruments` 判据。
+6. ⚠️ **一处必须跟着改的「别人的判据」**：`src/test/sampledRangeCoverageUi.test.tsx`（§7 那条线的 UI 判据）的第 3 条**原来拿 `bebop` 的 lead 当夹具**（断言「超出 44 个」、写出 82–91）。这次把 `bebop` 折回域内之后，那条 lane 不再有任何音超出，该断言的前提消失了。改法：**把夹具换成 `hard-bop` 的 lead**（写 72–77，其中 77 比录音的 76 高一个半音 ⇒ **仍超出 4 个**），**判据本身（超范围报告必须出现、且由引擎逐音判）一字未改**，只换了主体并在文件头注释里写明为什么换。
+
+### 8.5 25 条"部分静音"的定性（**本次只报结论，不改**）
+
+同法定性（写出的音高 vs **乐器本身**的音域，§8.1）。⚠️ **本节用到的「电吉他 24 品最高 E6 = 88」「61 键风琴上界 C7 = 96」「颤音琴标准下界 F3 = 53」「小提琴合奏上界约 E7 = 100」是常见规格，本次没有逐条找引用** ⇒ 按**未核实**读（见 §8.7#5）；只有 §8.1 表里那三条（次中音萨克斯／管钟／电贝斯定弦）是逐字引用。**结论：25 条里有"曲风越界"的**，但它们与这次修的 4 条不同——它们是**同一条线里只有几个顶端音越界**，所以现状是"部分能发"而不是"全静音"。**本次一条都没改**（业主指示）。分三类：
+
+**（a）明确的曲风越界**（写出的音高超出乐器上界）：
+
+| 乐器 | 条数 | 曲风／声部 | 越界的音（MIDI → 音名） |
+| --- | --- | --- | --- |
+| 电吉他（24 品最高 E6 = 88） | 6 | `sambass` chords (97)、`funk` chords (98)、`gypsy-jazz` chords (98,102)、`samba` chords (98,102)、`bachata` chords (100,103)、`shoe-gaze` chords (97,100,104) | 97 = C7、98 = D7、100 = E7、102 = F♯7、103 = G7、104 = G♯7 —— **比 24 品最高音高一个九度以上** |
+| 管钟（C4–F5 = 60–77；专业型号到 G5 = 79） | 4 | `brooklyn-drill` lead (79,80)、`kawaii-future-bass` lead (79,83,84)、`idm` lead (79,81)、`trap-rap` lead (80) | 79 = G5（专业型号顶边）、80 = G♯5、81 = A5、83 = B5、84 = C6 —— **80 以上超出任何型号** |
+| 61 键风琴（上界 C7 = 96） | 1 | `nu-disco-house` chords `m1_organ` (100,103) | 100 = E7、103 = G7 |
+
+**（b）库窄**（音高在乐器域内，只是那个录音没录到／有洞）：
+
+| 条数 | 曲风／声部 | 说明 |
+| --- | --- | --- |
+| 8 | `alternative-rock`/`blues-rock`/`doom-metal`/`grunge`/`hard-rock`/`heavy-metal`/`math-rock`/`shoe-gaze` 的 `pick_bass` (47,48,49,50,52) | **与 `post-punk` 同一个根因**：`PickedBassYR` 录音只到 E2(40)、程序拉到 46。电贝斯上这些音完全正常 ⇒ §8.6 的提案一次覆盖 |
+| 1 | `microhouse` bass `finger_bass` (34) | 录音从 35 起 |
+| 1 | `modal-jazz` bass `walking_upright` (62) | **不是越界，是采样表 61–71 整段有洞**（低音提琴发 62 毫无问题） |
+| 1 | `black-metal` chords `distorted_guitar` (88) | 88 = E6 正好是 24 品吉他上界，录音到 86 |
+
+**（c）边界／需人耳定**（不做结论，留档）：
+
+* `hard-bop` lead (77)：超次中音上界 **1 个半音**（76 = E5，77 = F5）；
+* `j-pop` chords `strings_lead` (88,89,93,96,100)：小提琴合奏上界约 E7 = 100，100 是边界、88–96 偏高但可奏；
+* `microhouse` chords `vibraphone` (48,51,55,56)：颤音琴标准下界 F3 = 53（3 个八度的琴可到 C3 = 48）；
+* 上表 (a) 之外、`guitar_lead` 里 91–96 的几个音：在 24 品上界之上、但在录音覆盖（96）之内。
+
+### 8.6 "库窄"声部的替代音源调查（只出提案；**调色板与 manifest 均未动**）
+
+#### 8.6.1 先在**已有目录**里找："picked 电贝斯没有更宽的"——**复核结论**
+
+方法：从 `public/samples/manifest.json` 枚举**全部 322 个 SFZ 程序**（程序名／资产名／条目名匹配 `pick|plectr` 判"是不是 picked"），并列出 `category = "Bass"` 的**全部程序**。
+
+| 检查 | 结果 |
+| --- | --- |
+| 全目录 322 个程序里，名字含 `pick`／`plectrum` 的 | **2 个**：`freepats-electric-bass-yr :: PickedBassYR 20190930.sfz`（就是现在这条）＋ **一个假阳性** `jlearman-jrhodes3c` 的程序名 "Rhodes Mark I — both **pick**ups"（电钢琴，非贝斯） |
+| `category = "Bass"` 的条目 | **3 条 / 52 个程序**：`karoryfer-meatbass`（39 个，**低音提琴** arco/pizz）、`freepats-electric-bass-yr`（2 个：`FingerBassYR` **26–45**、`PickedBassYR` **26–46**）、`karoryfer-black-and-blue-basses`（11 个，**电贝斯吉他**，实测 **35–76**） |
+| `karoryfer-black-and-blue-basses` 是 picked 吗？ | **不是**。它的全部技法由 `Programs/01-darkblack_keysw.sfz` 自己的 `sw_label` 写死：**`Pluck` / `Ghost` / `Staccato` / `Behind the bridge` / `Behind the bridge open`**——**没有任何一个叫 pick / plectrum**。（库文档里它的采样名是 `darkblack_<音名>_<力度>_rr<n>.wav`，也不区分拨片／手指。） |
+
+⇒ **"目录里没有更宽的 picked 电贝斯"这条普查结论，在目录范围内成立** ✓（目录里唯一的 picked 程序就是 `PickedBassYR` 26–46；更宽的 `35–76` 那族不是 picked）。
+
+#### 8.6.2 再看**外部**：确实存在更宽的 picked 电贝斯 ⇒ **目录级的结论被"生态级"的事实推翻**
+
+| # | 候选（来源 URL） | 是不是 picked | **实测覆盖**（方法见下） | 许可（逐字） | 大小 |
+| --- | --- | --- | --- | --- | --- |
+| ⭐ **A** | `sfzinstruments/Project16Rickenbacker4001` → `Fingered and Picked/Picked1.sfz`（同 `Picked2.sfz`）<br><https://github.com/sfzinstruments/Project16Rickenbacker4001> | ✅ **名字就是 Picked**（目录里并列 `Fingered1/2`、`Picked1/2`、`Slapped`、`Muted`） | **24–63（40 键，无洞）**，**覆盖 50/53/55 ✓** | README 逐字：<br>"License: Attribution-NonCommercial-ShareAlike 3.0 Unported (CC BY-NC-SA 3.0), **modified**"<br>"You may use this sound in a commercial music production for free! **You are not allowed to use this product in a sampling library or in a related product (like sampling CD's) !**"<br>另有 "Permission to share from the author: June 2020 via e-mail correspondence"<br>⇒ **CC-BY-NC 家族，符合业主"CC-BY-NC 可接受"，但那句 "modified" 限制与"镜像进我们的采样库"有张力 ⇒ 需业主裁定** | Picked1 用到的 **105 个 wav = 74.6 MiB**（整个 `Fingered and Picked/Samples` 421 文件 304.6 MiB） |
+| ⭐ **B** | `sfzinstruments/karoryfer.pastabass` → `linguine.sfz`（**picked**, flatwound, bridge）／`tagliatelle.sfz`（**picked**, muted）<br><https://github.com/sfzinstruments/karoryfer.pastabass> | ✅ readme 逐字："linguine - flatwound strings, **picked**, bridge pickup" ／ "tagliatelle - flatwound strings, **picked**, muted, pickup combo" | **33–101（69 键，无洞）**，**覆盖 50/53/55 ✓**；⚠️ 录到的最高采样是 **key 85（D♭6）**，84–101 是把 D♭6 往上拉（`lokey=84 hikey=101 pitch_keycenter=85`） | readme 逐字：**"Free download, open source and royalty-free for all commercial and non-commercial use, including conversion into other sampler formats and redistribution as part of larger sample libraries."** ＋ 仓库 LICENSE = **CC0-1.0** ⇒ **许可最干净** | `linguine` **204 文件 = 120.1 MiB**；`tagliatelle` **153 文件 = 53.5 MiB** |
+| C | `sfzinstruments/Discord-SFZ-GM-Bank` → `Discord GM/Melodic/035-Electric Bass (pick).sfz`<br><https://github.com/sfzinstruments/Discord-SFZ-GM-Bank> | 名字是 pick | **不能用**：该文件全文 30 字节 —— `//dummy` ＋ 一个 `sample=*sine` 的占位 region ⇒ **GM 的"pick bass"在这个库里是空壳** | （该库其余条目在本仓已用：`discord-gm-sitar`） | 30 B |
+| D | `karoryfer.growlybass`（Squier Jazz Bass，EADG 定弦） | ❓ readme 只写"pick **scrapes**"（拨片刮弦音效），**没写音符是 picked 还是 fingered** | 未测（未列入提案：不能确认是 picked） | CC0-1.0 | — |
+| E | `karoryfer.swagbass`（Ibanez BTB，五度定弦 CGDA）／`karoryfer.fashionbass`（KBS，五度定弦） | ❌ 五度定弦、readme 无 pick 字样 | 未测 | CC0-1.0 | — |
+| F | `karoryfer.ergo`（电**立式**低音提琴） | ❌ 不是电贝斯吉他 | 未测 | CC0-1.0 | — |
+
+**实测覆盖的方法（可核）**：把候选程序的 SFZ 原文取到本地，**用本仓引擎自己的 `resolveInstrumentNote(asset, text, note)` 对 `note = 0…127` 逐个问一遍**，取 `ok` 的键集合（与普查 §1.3、判据文件完全同一个函数、同一条路径）。本报告对 A 的两个程序、B 的两个程序各问了一遍 128 个音，得到上表的区间与"无洞"。
+
+**格式**：A、B **都是 SFZ ＋ WAV**，符合"格式优先 SFZ＋WAV"，**不需要"自产 SFZ"通道**。⇒ **`.sf2`／soundfont 那条待决事项本次没有新候选**（FreePats 的 `BassYR` 同时发布 SFZ 与 SF2，但 SF2 那一份的覆盖与 SFZ 相同、不解决问题；其余外部候选未见更宽的 picked SF2）。
+
+#### 8.6.3 提案（**给业主决定，本报告没有改调色板、没有改 manifest、没有下载任何音频**）
+
+* **提案 1（许可最干净）**：把 `pick_bass` 的映射从 `freepats-electric-bass-yr:PickedBassYR-20190930`（26–46）换到 **`karoryfer.pastabass:tagliatelle`**（picked、muted、**33–101**、**CC0**、53.5 MiB）或 `linguine`（picked、120.1 MiB）。
+  改哪一行：`src/data/sampledInstruments.ts` 里 `pick_bass` 那一行（**本次未动**）。
+  ⇒ 一次覆盖 `post-punk`（50/53/55）＋ §8.5 里 8 条 `pick_bass` 部分静音 lane 里所有 ≤ 101 的音（47/48/49/50/52/55…）。
+  ⚠️ 代价：`tagliatelle` 是 **muted**（闷音）性格，`linguine` 是 bridge pickup；两者都比现在的 `PickedBassYR` 更"闷/更冲"，需要试听确认。
+* **提案 2（音色最"picked"）**：换到 **Rickenbacker 4001 `Fingered and Picked/Picked1`**（**24–63**、74.6 MiB）。
+  ⚠️ **两个待决点**：① 许可是 **CC BY-NC-SA 3.0 "modified"**，且 README 明确"**不得用在采样库里**"——按本仓"明确禁止的排除"这条规矩，**需要业主先裁定**；② 它的 `sample=` 用 Windows 反斜杠路径（`Samples\Picked1#E1_1.wav`）且文件名带 `#`，**本仓解析路径可能需要先规范化**（本次未验）。
+* **不提案**：改曲风把 `post-punk` 的 50/53/55 写低（那正是"内容让位于库"，与本次修复的判据相反）。
+
+### 8.7 §8 新增的"判不了／未核实"
+
+1. **电贝斯的"最高音"没有一个可引的逐字数字**（§8.1 末行，**未找到**）：本报告用的是"空弦定弦 ＋ 品位数"的算术，不是引用。若业主需要引用级的依据，需要另找（VSL 的电贝斯页本次返回空）。
+2. **Rickenbacker 4001 的许可**（CC BY-NC-SA 3.0 **modified** 里的"不得用于采样库"那句）**是否允许本仓镜像**，**未裁定**（见 §8.6.2 A 与提案 2）。
+3. **`Fingered and Picked/Picked1.sfz` 在本仓解析器下能否直接播**（反斜杠路径 ＋ 文件名里的 `#`）**未验**。
+4. **§8.5 的定性是按 §8.1 的音域做的静态度量**，**没有**逐条在浏览器里试听；其中 `hard-bop` lead 的 77（超上界 1 个半音）与 `j-pop` strings 的 100（约在小提琴上界）属**边界**，需要人耳／业主定。
+5. **§8.5 用到的电吉他／风琴／颤音琴／小提琴的域界没有逐字引用**（24 品 E6 = 88、61 键 C7 = 96、颤音琴 F3–F6、小提琴 E7 = 100 都是常见规格，本次未找源） ⇒ §8.5 的 (a) 类里，**吉他 97–104、管钟 80–84、风琴 100–103 是稳的**（远超任何常见规格），其余按未核实读。**§8.5 全程没有试听、也没有逐条跑引擎**（只比了写出的音高与这些域界）。
+6. **§8.6 的候选只在"覆盖"这一个维度上比过**（能不能发 50/53/55）；**音色、动态、与现有 `pick_bass` 的性格差异没有试听**，也没有核 manifest 级的 sha256／字节数（只核了文件大小）。

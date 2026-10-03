@@ -195,6 +195,14 @@ const summary = (lane: LaneCensus) => `${lane.genreId}/${lane.trackId}:${lane.in
 /** The census in a stable order (genre, then lane), so a comparison is a set comparison and not a file-order one. */
 const inKeyOrder = (verdict: Verdict) => CENSUS.filter((lane) => lane.verdict === verdict).sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
 
+/**
+ * ⭐ **The census before the four genre lines were folded into their instrument's range** — `sha256` of every lane's
+ * `summary(...)` line, sorted, taken on the commit this fix starts from (`docs/SAMPLED_RANGE_COVERAGE.md` §7.4 states
+ * the same value and how it was taken: `vitest` on the unfixed tree, over this same `summary`). It is used by the
+ * "nothing else moved" criterion: the current census with the four folded rows put back must hash to this.
+ */
+const PRE_FOLD_CENSUS_DIGEST = "7b9d4bc4caadb7b888fb868e37c48a96f247f59567a16b8064fba7a86ccba761";
+
 describe("the written pitch range of every palette-mapped lane, against what its recording sounds", () => {
   it("measures 202 palette-mapped lanes across 96 genres and leaves the other 63 genres with none", () => {
     /**
@@ -208,60 +216,132 @@ describe("the written pitch range of every palette-mapped lane, against what its
     expect(new Set(CENSUS.map((lane) => lane.assetId)).size).toBe(22);
   });
 
-  it("⭐ pins the three counts: 168 sounding, 25 partial, 5 silent (and 4 lanes the genre leaves empty)", () => {
+  it("⭐ pins the three counts: 172 sounding, 25 partial, 1 silent (and 4 lanes the genre leaves empty)", () => {
     /**
      * ⭐ **These four numbers are the criterion.** They move when a genre's written notes move, when the palette's
      * asset assignment moves, or when the measured coverage table moves — which is exactly the set of edits that can
      * create or remove a silent lane. `no-notes` is kept as its own class rather than folded into "sounding": a lane
      * the genre writes nothing on has no notes to lose, and counting it as healthy would hide a lane that a future
      * genre round fills with an out-of-range line.
+     *
+     * ⭐ **`{168, 25, 5, 4}` → `{172, 25, 1, 4}`, and why: four written lines were outside their instrument's own
+     * playing range, not merely outside the recording the palette picked for them, so the genre content was folded
+     * back into range by whole octaves (the reasoning and the sources are in `docs/SAMPLED_RANGE_COVERAGE.md` §7).
+     * The four were `bebop`/`free-jazz`/`smooth-jazz` lead (`sax_lead` → a tenor saxophone, a concert instrument
+     * whose range is A♭2–E5 = keys 44–76, against lines written 77–91) and `chicago-drill` lead (`bell_lead` →
+     * tubular bells, whose written range is C4–F5 = keys 60–77, up to G5 = 79 on a few professional sets, against a
+     * line written 79/82/84). Folding moved them from `silent` to `sounding`: 168 + 4 = 172, 5 − 4 = 1.
+     *
+     * ⭐ **The one remaining silent lane is left silent on purpose.** `post-punk` bass writes 50, 53 and 55 — D3, F3
+     * and G3, ordinary notes for a 4-string electric bass — against `PickedBassYR`, whose **recordings** stop at A♯2
+     * (46). That is a **narrow library**, not a genre error, so the fix belongs in the palette (a proposal, see the
+     * report) and not in the genre's notes. It is still counted and still named below: this file's guard is that a
+     * **new** silent lane turns it red, which the pinned map does.
      */
     expect({ sounding: countOf("sounding"), partial: countOf("partial"), silent: countOf("silent"), "no-notes": countOf("no-notes") }).toEqual({
-      sounding: 168,
+      sounding: 172,
       partial: 25,
-      silent: 5,
+      silent: 1,
       "no-notes": 4,
     });
     // And the sounding/partial/silent counts are over lanes that have notes, so the four classes partition the 202.
     expect(countOf("sounding") + countOf("partial") + countOf("silent") + countOf("no-notes")).toBe(CENSUS.length);
   });
 
-  it("⭐ names the five genres with a lane that should have a recording and sounds nothing", () => {
+  it("⭐ names the one genre still left with a lane that should have a recording and sounds nothing", () => {
     /**
-     * The creator-facing number: one silent lane each in `bebop`, `chicago-drill`, `free-jazz`, `post-punk` and
-     * `smooth-jazz`. Pinned as a **map**, not a total, so moving the silence from one genre to another cannot pass as
-     * "still five".
+     * The creator-facing number: one silent lane, in `post-punk` alone. Pinned as a **map**, not a total, so moving the
+     * silence from one genre to another cannot pass as "still one" — and so that a **new** silent lane, in any of the
+     * 155 genres this fix did not touch, is a red.
      */
     const byGenre = Object.fromEntries(silentGenres.map((genre) => [genre, CENSUS.filter((lane) => lane.verdict === "silent" && lane.genreId === genre).length]));
-    expect(byGenre).toEqual({ bebop: 1, "chicago-drill": 1, "free-jazz": 1, "post-punk": 1, "smooth-jazz": 1 });
-    expect(silentGenres).toHaveLength(5);
+    expect(byGenre).toEqual({ "post-punk": 1 });
+    expect(silentGenres).toHaveLength(1);
   });
 
-  it("⭐ names the five silent lanes, with the asset, the written notes and the measured keys that refuse them", () => {
+  it("⭐ names the one silent lane, with the asset, the written notes and the measured keys that refuse them", () => {
     const silent = inKeyOrder("silent");
     expect(silent.map(summary)).toEqual([
-      "bebop/lead:sax_lead→mtg-solo-sax:MTG-Tenor-Sax(44 notes, written 82,85,86,89,91)",
-      "chicago-drill/lead:bell_lead→vcsl:Tubular-Bells-1(32 notes, written 79,82,84)",
-      "free-jazz/lead:sax_lead→mtg-solo-sax:MTG-Tenor-Sax(32 notes, written 81,82,84,85,87,88,90)",
       "post-punk/bass:pick_bass→freepats-electric-bass-yr:PickedBassYR-20190930(12 notes, written 50,53,55)",
-      "smooth-jazz/lead:sax_lead→mtg-solo-sax:MTG-Tenor-Sax(12 notes, written 77,81,82)",
     ]);
     /**
-     * Every one of the five is silent because its written notes sit **above or below** the recording's measured span —
-     * not because the asset is missing, not because of a loader failure. The span is stated for each so the reason is
-     * in the test rather than inferred:
+     * It is silent because its written notes sit **above** the recording's measured span — not because the asset is
+     * missing, not because of a loader failure. The span is stated so the reason is in the test rather than inferred:
      */
     const spans = Object.fromEntries(silent.map((lane) => {
       const entry = coverageOf(lane.assetId);
       return [lane.key, `${entry.first}–${entry.last}`];
     }));
-    expect(spans).toEqual({
-      "bebop/lead#6": "39–76",
-      "chicago-drill/lead#6": "60–77",
-      "free-jazz/lead#6": "39–76",
-      "post-punk/bass#4": "26–46",
-      "smooth-jazz/lead#6": "39–76",
-    });
+    expect(spans).toEqual({ "post-punk/bass#4": "26–46" });
+  });
+
+  it("⭐ the four folded lanes sound now, keep their pitch classes, and are the only lanes whose written notes moved", () => {
+    /**
+     * ⭐ **The criterion for the fix.** Four lanes were written outside the playing range of the instrument the palette
+     * maps them to, so their pitches were folded by whole octaves (`folded` below states each lane's before → after).
+     * Three things are asserted, and each of them is a way the fix could have gone wrong:
+     *
+     * 1. **Every note of the four lanes now resolves** — the lane moved from `silent` to `sounding`. The census
+     *    predicate is per note against a measured key set, so this is not a min/max comparison.
+     * 2. **Pitch classes are unchanged** — a fold may only move a note by whole octaves, so the written pitch set
+     *    modulo 12 must be exactly what it was. (This is also what keeps the harmony: the fold cannot introduce a
+     *    note that was not already there.)
+     * 3. **Nothing else moved** — the whole census, with those four rows put back, hashes to the census taken before
+     *    the fold. That is the "only the lanes that were out of range changed" criterion, stated as a comparison
+     *    between the before and after states rather than as a promise.
+     *
+     * The four are named with both the instrument-range evidence and the recording each is mapped to:
+     * tenor saxophone A♭2–E5 (`docs/SAMPLED_RANGE_COVERAGE.md` §7.1) and tubular bells C4–F5/G5 (§7.2).
+     */
+    const folded = [
+      { genre: "bebop", lane: "lead", instrument: "sax_lead", assetId: "mtg-solo-sax:MTG-Tenor-Sax", octaves: -2, before: [82, 85, 86, 89, 91], after: [58, 61, 62, 65, 67] },
+      { genre: "free-jazz", lane: "lead", instrument: "sax_lead", assetId: "mtg-solo-sax:MTG-Tenor-Sax", octaves: -2, before: [81, 82, 84, 85, 87, 88, 90], after: [57, 58, 60, 61, 63, 64, 66] },
+      { genre: "smooth-jazz", lane: "lead", instrument: "sax_lead", assetId: "mtg-solo-sax:MTG-Tenor-Sax", octaves: -1, before: [77, 81, 82], after: [65, 69, 70] },
+      { genre: "chicago-drill", lane: "lead", instrument: "bell_lead", assetId: "vcsl:Tubular-Bells-1", octaves: -1, before: [79, 82, 84], after: [67, 70, 72] },
+    ];
+    for (const expected of folded) {
+      const lane = CENSUS.find((candidate) => candidate.genreId === expected.genre && candidate.trackId === expected.lane);
+      expect(lane, `${expected.genre}/${expected.lane} is not in the census`).toBeDefined();
+      expect(lane!.instrument).toBe(expected.instrument);
+      expect(lane!.assetId).toBe(expected.assetId);
+      // 1. the fix worked: nothing about the lane is left silent or partial
+      expect(lane!.verdict, `${expected.genre}/${expected.lane} should sound every note`).toBe("sounding");
+      // 2. the fold kept the pitch classes, and is exactly the stated whole-octave shift
+      expect(lane!.distinct).toEqual(expected.after);
+      expect(expected.after.map((pitch) => pitch % 12).sort((a, b) => a - b)).toEqual(
+        expected.before.map((pitch) => pitch % 12).sort((a, b) => a - b),
+      );
+      expect(lane!.distinct.map((pitch) => pitch - expected.octaves * 12)).toEqual(expected.before);
+      // ...and the whole octave shift is what the instrument's own range forced
+      const entry = coverageOf(lane!.assetId);
+      for (const pitch of expected.before) expect(pitch).toBeGreaterThan(entry.last);
+      for (const pitch of lane!.distinct) expect(pitch).toBeLessThanOrEqual(entry.last);
+    }
+
+    /**
+     * 3. **Nothing else moved.** The digest is over `genre/lane#index:instrument→asset(count notes, written …)` for
+     *    every one of the 202 lanes, sorted, so it is insensitive to file order. The four rows are swapped back to
+     *    their pre-fold text first; the result must equal the digest this file would have produced on the commit
+     *    before the fold (`docs/SAMPLED_RANGE_COVERAGE.md` §7.4 records the same digest and how it was taken).
+     */
+    const line = (lane: LaneCensus) => summary(lane);
+    const laneOf = (genreId: string, trackId: string) => CENSUS.find((lane) => lane.genreId === genreId && lane.trackId === trackId)!;
+    const beforeLines = new Map(
+      folded.map((expected) => {
+        const lane = laneOf(expected.genre, expected.lane);
+        return [
+          `${expected.genre}/${expected.lane}`,
+          `${expected.genre}/${expected.lane}:${expected.instrument}→${expected.assetId}(${lane.noteCount} notes, written ${expected.before.join(",")})`,
+        ];
+      }),
+    );
+    const restored = CENSUS.map((lane) => beforeLines.get(`${lane.genreId}/${lane.trackId}`) ?? line(lane));
+    const digest = (rows: readonly string[]) => createHash("sha256").update([...rows].sort().join("\n")).digest("hex");
+    expect(digest(restored)).toBe(PRE_FOLD_CENSUS_DIGEST);
+    // and the after-state is a different census, so the assertion above is not vacuous
+    expect(digest(CENSUS.map(line))).not.toBe(PRE_FOLD_CENSUS_DIGEST);
+    // the four rows really were among the census rows that changed
+    expect(restored.filter((row, index) => row !== line(CENSUS[index]))).toHaveLength(4);
   });
 
   it("⭐ pins the 25 partial lanes — the ones that lose some notes and keep the rest", () => {
@@ -309,27 +389,33 @@ describe("the written pitch range of every palette-mapped lane, against what its
     ]);
   });
 
-  it("⭐ /genre/bebop's lead is the named case: 44 notes written 82–91, and the mapping's recording stops at 76", () => {
+  it("⭐ /genre/bebop's lead is the named case: 44 notes, written 82–91 before the fold and 58–67 after it", () => {
     /**
      * ⭐ **The case the report was opened on, pinned as a fact rather than a symptom.** The lead lane's instrument is
-     * `sax_lead`; `sampledAssetForLane` maps it to the tenor saxophone program; the lane writes five distinct pitches,
-     * all above the program's measured top key; and **all 44 written notes** are refused. This is the criterion that
-     * must go red the day either the mapping or the bebop line moves.
+     * `sax_lead`; `sampledAssetForLane` maps it to the tenor saxophone program; the recording's measured top key is 76
+     * — which is exactly the instrument's own concert top, E5 — and the lane was written 82–91, above it, so all 44
+     * written notes were refused. The line was folded by two octaves and now sounds; this case keeps the *reason* (the
+     * mapping, the asset, the recording's span, the instrument's ceiling) pinned, so that a future edit which moves
+     * the lane back above 76, or moves the mapping, is a red rather than a rediscovery.
      */
     const lead = CENSUS.find((lane) => lane.genreId === "bebop" && lane.trackId === "lead");
     expect(lead).toBeDefined();
     expect(lead!.instrument).toBe("sax_lead");
     expect(lead!.assetId).toBe("mtg-solo-sax:MTG-Tenor-Sax");
     expect(lead!.noteCount).toBe(44);
-    expect(lead!.distinct).toEqual([82, 85, 86, 89, 91]);
-    expect(lead!.soundingCount).toBe(0);
-    expect(lead!.verdict).toBe("silent");
+    expect(lead!.distinct).toEqual([58, 61, 62, 65, 67]);
+    expect(lead!.soundingCount).toBe(lead!.noteCount);
+    expect(lead!.verdict).toBe("sounding");
     // The mapping is the palette's own decision, asked through the engine's one entry point rather than restated.
     expect(sampledAssetForLane({ track_id: "lead", instrument: "sax_lead" })).toBe("mtg-solo-sax:MTG-Tenor-Sax");
-    // And the recording's measured span is below every written note, with its own gaps named.
+    // The recording's measured span is stated, with its own gaps, and the folded line sits inside it.
     const entry = coverageOf(lead!.assetId);
     expect([entry.first, entry.last, entry.holes]).toEqual([39, 76, [41, 42, 43]]);
-    for (const pitch of lead!.distinct) expect(pitch).toBeGreaterThan(entry.last);
+    for (const pitch of lead!.distinct) expect(pitch).toBeLessThanOrEqual(entry.last);
+    // The notes as they were written are recorded here too, so the two-octave fold is visible rather than inferred.
+    const before = [82, 85, 86, 89, 91];
+    for (const pitch of before) expect(pitch).toBeGreaterThan(entry.last);
+    expect(lead!.distinct.map((pitch) => pitch + 24)).toEqual(before);
   });
 
   it("leaves the measurement reachable: every asset in the census has a coverage row, and every row names its sha256", () => {
@@ -461,14 +547,15 @@ describe.skipIf(offline)("the measurement still holds at the pins", () => {
     });
   }
 
-  it("⭐ every written note of the five silent lanes is refused by the engine at the velocity the lane writes", { timeout: 180_000 }, () => {
+  it("⭐ every written note of the one remaining silent lane is refused by the engine at the velocity the lane writes", { timeout: 180_000 }, () => {
     /**
      * The offline census compares against a measured key set; this case asks the engine directly, per note, at the
-     * lane's own velocity — the same call `createSampleLoader.loadNote` makes. It is the "44 notes, no playback" claim
-     * of the bebop report executed rather than summarised, and it covers the other four silent lanes with it.
+     * lane's own velocity — the same call `createSampleLoader.loadNote` makes. It is the "12 notes, no playback" claim
+     * for `post-punk`'s bass executed rather than summarised. The other four lanes that used to be silent are now
+     * covered by the fold criterion above, and their own notes are asserted to resolve there.
      */
     const silent = CENSUS.filter((lane) => lane.verdict === "silent");
-    expect(silent).toHaveLength(5);
+    expect(silent).toHaveLength(1);
     for (const lane of silent) {
       const index = MEASURED_COVERAGE.findIndex((row) => row.assetId === lane.assetId);
       const program = programs[index];
