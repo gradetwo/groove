@@ -1,23 +1,23 @@
 {
-  "version": "2.34.40",
+  "version": "2.34.41",
   "releaseDate": "2026-10-03",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.40",
+    "version": "2.34.41",
     "date": "2026-10-03",
     "category": "fix",
     "title": {
-      "zh": "修：曲风试听现在真的取录音",
-      "en": "Fix: genre audition now asks for its recordings"
+      "zh": "修：离键噪音不再被当按键音",
+      "en": "Fix: key-release noise is no longer played as the note"
     },
     "highlights": [
       {
-        "zh": "曲风详情页与随机试听此前从不排采样播放，只把声部从合成器撤下，于是既不合成也不取录音、一个请求都不发；现已接上引擎自己的采样调度（含循环与停止）。",
-        "en": "The genre pages never scheduled sample playback, so lanes were muted from the synth and no recording was fetched; they now use the engine's own sampler scheduling, with looping and stopping."
+        "zh": "钢琴等库用 trigger=release 标记离键噪音采样，此前被当成按键音（Salamander 三角钢琴因此只剩榔头声）；现在按键只采 attack 与 first。",
+        "en": "Libraries mark release noise with trigger=release, which was played on key press; note-on now takes attack and first only."
       },
       {
-        "zh": "两个未在用的音源库下架（清单 34→32），线上字节已删除并有活对照验证。",
-        "en": "Two unused libraries were retired (manifest 34 to 32), with the bytes removed and verified against a live control."
+        "zh": "全库普查：14 个库共 2177 处 trigger=，其中 6 个库写 release 家族；修复后 322 件乐器×128 音×5 力度的按键结果零变化。",
+        "en": "Census across 14 libraries and 2177 assignments; after the fix, none of 322 instruments changed a note-on answer."
       }
     ],
     "truncated": false
