@@ -4988,3 +4988,28 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
 ⚠️ **小提醒的成效**：`jank` 树里我先前看到的 **`dist-nomin/`（构建产物 ✗）已从脏列表消失** ✓ ⇒ 我的提醒生效 ✓
 ⚠️ `mxl` 仍处 **`UU`×1** ✗（**冲突标记 0** ✓、提交 0 ✓）⇒ 正在解 ✓，**最坏情况未发生** ✓
 ⏳ 仍待判决：`f8beec6`（写穿 ✓）｜`95f459f`（Logic 行模型 ✓）⇒ 一出绿即补最终验收 ✓
+
+## 一百五十四、✗✓ **更正：MusicXML 导出浏览器里也有**（实测浏览器导出面＝**7 项** ✓）＋ 新发现的同类口径缺口（2026-10-03 23:2x ✓）
+
+```
+✗✓ **我错**：我在 `§139`／`§141` 说"编排菜单 **6 项**，MusicXML **另有 MCP 导出**" ✗ ——
+   ⭐ **浏览器里也有** ✓：`src/components/arrangement/ScoreV2.tsx:562` ⇒ `data-testid="score-export-musicxml"` ✓
+   （可见文案 `t("arrangement_musicxml_export")` ＝ "Export MusicXML" ✓，位于 `common.ts:151` ✓；接线 `ArrangementViewV2.tsx:1328` ✓；
+    且 `arrangementFileEntries.test.tsx` 里**已有三条 MusicXML 用例** ✓）
+   ⇒ ⭐ **实测的浏览器导出面 ＝ 7 项** ✓（编排菜单 6 项 ＋ **Score 页的 MusicXML** ✓），不是"6 ＋ MCP 才有" ✗
+   ＋ MCP 侧也覆盖这 7 项 ✓（`render_arrangement:476`／`export_arrangement_musicxml:815`／`export_arrangement_midi:839`／
+     `export_midi:2327`／`export_ableton:2344`／`render_audio:2963`(wav|mp3)／`export_groove:3299`／
+     `render_arrangement_stems:3559`／`render_song:3635` ✓）
+   ⇒ 因此两处文案**都能照实写上 MusicXML** ✓（不必缩在"仅 MCP"的口径里 ✓）
+⚠️ **它另发现同类口径缺口（越出可改清单 ⇒ 它没碰 ✓，做法正确 ✓）**：
+   `src/i18n/locales/help.ts:164` 仍写 "export lossless WAV/MIDI/ALS projects" ✗（同一类"只提三种" ✓）
+   ⇒ 属 **UI 文案** ✓（要动就得 `skins:gen` 一起走 ✓）⇒ **进队列，待裁定** ✓（这是"说了不实"类 ✗，值得修 ✓）
+✅ **它的判据质量很高** ✓（两条新判据 4＋4 ✓；三条反面原文 ✓）：
+   · 删 `export-groove` ⇒ `Unable to find an element by: [data-testid="export-groove"]` ✓（2 failed ✓）
+   · 把 Stems 误接到 `onExportWav` ⇒ `clicking export-stems … did not run onExportStems` ✓（2 failed ✓，证明"接线"那半不是摆设 ✓）
+   · 把 meta 改回旧句 ⇒ `no longer names .groove` ＋ `still advertises the old three-format surface` ✓（2 failed ✓）
+   ⭐ 且**它自己的首版正则漏了 `mp3`，被它"从组件推导清单"的判据当场抓住** ✓✓ ⇒ 证明判据测的是**实测清单**，不是复述我的话 ✓
+✅ 门禁全 0 ✓（含 `skins:gen` **零 diff** ✓ —— 它改的是属性不是界面文案 ✓，跑了以证明这一点 ✓）；反向量相关既有判据 **120/120** ✓ ＋ 五数逐字 ✓
+✅ **CI `94a982e` = success** ✓（run `37132704997` ✓）｜推送行 `1e2c0ce..94a982e HEAD -> dev` ✓（fast-forward，未强推 ✓）
+⚠️ 它如实标未核实：**未做构建后的 SEO 呈现验证** ✗（不本地 build ✓，`dist/` 里那份旧 meta 要等 GitHub 构建产物才算更新 ✓）
+```
