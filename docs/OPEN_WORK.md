@@ -3559,3 +3559,36 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
 **判据**：M1／**M1b 斜坡而非阶跃**／M2／**M3 unmute 在窗口内**／M3b／**M3c 重排在未来** ✓✓
 ⭐ 任务书前提被实测更正（"mute 与推子都无效" ✗ 只对一半 ✓）⇒ §113 ✓
 ```
+
+## 一百一十五、✅✅ **五项目标全部落地并入册**（2026-10-03 18:13 时点 ✓）＋ **2.34.43 已上线**
+
+### 115.1 五项各自的落地 sha 与我的复核
+
+| 项 | sha | 我亲手跑的判据（退出码 ✓） | 反向 | CI 判决 |
+|---|---|---|---|---|
+| ⭐1＋⭐2 | `df33bd5` | `pianoRollAudition` **14/0** ✓ ｜ `arrangementRollAudition` **3/0** ✓ | 五个数逐字 ✓ | **success** ✓ |
+| ⭐3 | `897281b` | `arrangementLoopEngine` **6/0** ✓（含**夹紧 ⇒ `null`** 与**端到端"不变静音"** ✓） | 五个数 ✓ | in_progress ✓ |
+| ⭐4 | `a4c3d73` | `songFlattenTrackCount` **10/0** ✓ ｜（被改过的那条）`songRender` **17/0** ✓ | 五个数 ✓ | in_progress ✓ |
+| ⭐5 | `b808980` | `lookaheadMuteWindow` **8/0（1 具名 skip）** ✓ | 五个数 ✓ | **success** ✓ |
+| （相邻）曲风音域 | `cd8ac53` | `sampledRangeCensus` **34/0** ✓（33→34 ✓）｜ `sampledRangeCoverageUi` **8/0** ✓ | 五个数 ✓ | in_progress ✓ |
+
+**⭐4 的证据链**（那条线给的 ＋ 我复核 ✓）：**278 次 flatten 调用 ⇒ 4 次真跳过** ✓，其中 **2 次是本仓既有夹具** ✓；
+改前/改后 dump 逐字节对照：**100 个不同结果里 98 个逐字节相同** ✓，只变 2 个（`totalBars 3→4`／`1→2`，文案 `skipped → padded with silence` ✓）；
+它途中还**发现并修掉自己的一处非预期改动**（`sectionLaneSlots` 的 percussion 多出一个 `velocity` 数组 ✓）⇒ 才是 98/100 ✓。
+⚠️ **它请我裁决的一点**（我裁：**改那一条是对的** ✓）：`songRender.test.ts` 里 `expect(totalBars).toBe(1)` 断言**正是那条缺陷本身** ✗ ⇒
+   与"不再丢小节"不可兼得 ✓ ⇒ 改它、**并加注释与红绿证据** ✓（其余判据一字未动 ✓）。
+
+### 115.2 **2.34.43 已上线**（`12d9370`，**CI 跳过＝业主批准** ✓）
+
+```
+**五项核对**：① 线上 version.json = **2.34.43** ✓ ｜ ② dev ✓ ｜ ③ main ✓ ｜ ④ tag v2.34.43 ✓
+   ⑤ ⭐ 线上采样根：**扫主 chunk 引用的全部 67 个 chunk** ⇒ `browserSampleGraph-DGkBxeF2.js` 命中 `r2mirror` 1 ✓✓
+   线上 changelog = **2.34.43 ｜ fix ｜「编曲卷帘会响、录音会被下载、越界音折回」** ✓
+**发布日志**（`/var/tmp/rel243.log` ✓）：`version:check ok → version:new ok → local gate skipped → build ok → budget ok
+   → skipped (SKIP_FULL_CI=1 — the owner authorised releasing v2.34.43 without the remote matrix) → deploy ok → tag ok → remote ok` ✓
+   ⇒ **跳过了什么、谁批准的**印在日志里 ✓；且那句**正确读出版本号** ✓（我先前把它硬编码成 2.34.40 的错已修 ✓）
+**这一版装进去的六件**（都是创作者能感觉到的 ✓）：卷帘会响 ＋ 键归卷帘 ＋ 拖拽不再误改 ✓；
+   录音下载并持久化 ＋ 渲染前取齐 ✓；挑选器显示能发哪些键 ＋ 越界出声报告 ✓；
+   缺轨小节补静音而非丢掉 ✓；静音即刻 ＋ **取消静音在窗口内生效**（斜坡不硬切 ✓）；曲风越界音折回（**168/25/5 → 172/25/1** ✓）
+**没赶上这一版**（仍待：⭐3 已在 dev **但晚于**发布提交 ✗、源站地址、Studio 加载）⇒ **2.34.44 候选** ✓
+```
