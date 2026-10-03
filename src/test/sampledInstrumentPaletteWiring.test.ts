@@ -86,8 +86,8 @@ const MOVED_ROWS = [
  *    section, and the section's recording is the one the row's own reason names.
  *  * `bell_lead` / `vibraphone` / `marimba_lead` are three different instruments, and `jlearman-steel-drum` is a
  *    fourth. A steel drum is not a bell patch, a vibraphone or a marimba.
- *  * `rhodes_ep` means a **Fender Rhodes** and `gregsullivan-e-pianos` holds a Yamaha CP80, a Hohner Pianet T and a
- *    Wurlitzer EP200 — none is a Rhodes; `finger_bass` and `pick_bass` are **electric** basses and
+ *  * `rhodes_ep` means a **Fender Rhodes**; the candidate this round weighed and refused held a Yamaha CP80, a Hohner
+ *    Pianet T and a Wurlitzer EP200 — none is a Rhodes, and **the judgement outlives the library** (it has since left the mirror); `finger_bass` and `pick_bass` are **electric** basses and
  *    `dsmolken-double-bass` is an upright double bass; `flute_lead`'s reason asks for a sustained flute *with the
  *    vibrato a lead line wants*, and Ixox Flute's vibrato is a modwheel LFO (`pitchlfo_depth_oncc1`) this loader does
  *    not implement, so it would answer without the vibrato the recorded `FluteSusVib` program has.

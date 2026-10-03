@@ -904,6 +904,8 @@
 | ⭐ **人能不能挑到任意资产**（对任务书原文的一处更正） | — | **半有 ⚠️**（**不是"没有"**） | **能**：`src/views/NewProjectView.tsx:102-126` 在 `/new` 挂载时把运行时目录里**所有带 `sfz` 的资产**喂给浏览器；`src/components/arrangement/InstrumentLibraryV2.tsx` 就是分类＋二级分类＋搜索的浏览器；入口在轨道头的乐器 chip，门控是 `src/components/arrangement/TrackHeaderV2.tsx:84`（`track.kind === "sampler" && onChangeInstrument !== undefined && instruments.length > 0`），而 `kind="sampler"` 的轨人**能自己建**（`ArrangementViewV2.tsx:957` 的 `track-add-${kind}` 按钮遍历 `src/components/arrangement/kindLabels.ts:29` 的 `TRACK_KIND_ORDER`＝synth／**sampler**／drumkit／fx／folder）。**不能**：① 只有 `/new` 渲染编排视图（`src/App.tsx:45-46,346`），**曲风／Studio 路线的轨道没有这个资产选择器**——那里的 `src/components/console/InstrumentPicker.tsx` 走的是**乐器名**（内建合成预设／GS-1 音色），不是目录资产；② `src/data/sampleCatalogueRuntime.ts:123-125` 的 `VITE_SAMPLE_ROOT` **默认为空**，不配镜像则目录为空 ⇒ `instruments.length === 0` ⇒ chip 根本不出现 |
 | 调色板（写出的乐器名 → 资产）的可达性 | — | **16 / 34（我这条基线）→ 17 / 34（当前 `origin/dev`）**，两套数都写在下面 | ⚠️ **数字随基线变，必须写明基线**。**我在基线 `d036619` 上自跑**：`SAMPLED_INSTRUMENTS` **22 行** → **15 个不同库**；加 `DRUM_KIT_ASSET_ID`（`virtuosity-drums-basic`）＝ **16**；`public/samples/manifest.json` 共 **34 条** ⇒ **18 条**不经调色板／鼓组常量，其中 **17 条在 `src/`＋`mcp/` 里 0 引用**（⚠️ 这是我当时的**弱代理**，在 `04c47a9` 上已失效，见 §5.4 ② 与 §6.4），第 18 条 `freepats-tubular-bells1` 只在 `src/data/sampledInstruments.ts:178` 的**散文**里被提到一次（不是映射）。**⚠️ 在我写完之后 `origin/dev` 前进了 10 个提交，`c19b416` 把那两处替换落地了** ⇒ 我在新基线上重跑：**22 行 → 16 个不同库**，可达 **17 / 34**，够不到 **17 条**（`sax_lead` 现在指 `mtg-solo-sax:MTG-Tenor-Sax`、`walking_upright` 指 `dsmolken-double-bass:d-smolken-rubner-bass-pizz`，而 `karoryfer-meatbass` 因此掉出可达集）。**详见 §⑥**。程序级算，目录共 **327 个资产 id**（按 `sampleManifest.ts:385-417` 的展开规则跑 manifest 得出，两套基线上都是 327） |
 
+> ⚠️ **2026-10-03 追加（不改成上面的数）**：上面那套 **34 条／327 个资产 id** 是**当时的读数**，保留不动。同一天业主指示把两条库从清单与 R2 删除 —— `freepats-tubular-bells1`（本行点名的第 18 条，33 文件 / 16 551 617 B）与 `gregsullivan-e-pianos`（177 文件 / 21 484 144 B）⇒ **当前是 32 条／322 个资产 id**。本行点名的"唯一只在散文里存在"这个性质因此消失：`src/data/sampledInstruments.ts:178` 的散文已改成不依赖该库的说法（行号不变），而**那 4 条"不许删"的库一条未动**（它们是调色板 `m1_organ`／`organ_lead`／`distorted_guitar`／`accordion_lead` 四行的录音来源）。删除脚本 `scripts/remove_samples.mjs`、公开侧 404 核对 `scripts/check_removed_samples.mjs`、离线判据 `src/test/removedSampleLibraries.test.ts`。
+
 > ⚠️ **对 `docs/OPEN_WORK.md` §84.1 的一处更正**：那一节列了四条路结论是"代理可达、**人的 UI 不可达**"，
 > 四条路是 MCP 工具、UI 导入对话框、UI `SampleLibrariesPanel`、代码／工程文件——**漏掉了第三条动线：
 > 编排视图里 sampler 轨的乐器浏览器**（`InstrumentBrowserV2` → `InstrumentLibraryV2`）。
@@ -1050,6 +1052,8 @@ done | sort -n
 ```
 
 ⇒ **在基线 `d036619` 上**：输出里 **17 条为 0**；第 18 条 `freepats-tubular-bells1` 为 **1**，那一处是 `src/data/sampledInstruments.ts:178` 里 `bell_lead` 的**散文**（提到它是更宽音域的备选），**不是映射**。⇒ "18 条够不到"＝17 条零引用 ＋ 1 条只在散文里被提到。
+
+> ⚠️ **2026-10-03 追加（保留上面的读数）**：这条探针的结论此后**无法复现，因为被测的那一条库已经不在了** —— 业主在同一天指示删除 `freepats-tubular-bells1` 与 `gregsullivan-e-pianos`，`src/data/sampledInstruments.ts:178` 的散文也改成不依赖该库的说法（行号不变）。所以上面这句"第 18 条为 1"是**历史读数**，当前的清单是 32 条、`grep` 也再查不到这两个 id。判据见 `src/test/removedSampleLibraries.test.ts`。
 
 ⚠️ **但这个探针有一个必须写出来的弱点，而且它在下一版就发作了**：**"文本里没出现"只是"调色板没映射它"的一个代理**，一旦有人把库名写进**散文或测试**，代理就失效。**它在 `04c47a9` 上确实失效了**：
 

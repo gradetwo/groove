@@ -7,7 +7,7 @@
  * arrangement hands the assets to `InstrumentLibraryV2`. A genre lane could not. Its timbre picker goes by
  * **instrument name**, and a name reaches a recording only through a hand-written row in
  * `src/data/sampledInstruments.ts` — twenty-two of the sixty-one names the genre data writes. Measured on the shipped
- * manifest: **327 program-level assets, of which 279 are named by no row**, so a composer in a genre could not choose
+ * manifest: **322 program-level assets, of which 274 are named by no row**, so a composer in a genre could not choose
  * most of the recordings the repository already ships.
  *
  * The engine had the mechanism the whole time. `sampledAssetForLane`'s **first** source is the lane's own
@@ -158,12 +158,13 @@ describe("the list a genre lane chooses from", () => {
     const assets = shippedAssets();
     const choices = instrumentChoicesFromAssets(assets);
 
-    // 34 entries expanded to 327 program-level assets, every one of them an SFZ program (the catalogue's own
+    // 32 entries expanded to 322 program-level assets, every one of them an SFZ program (the catalogue's own
     // definition of "an instrument"). The numbers are asserted because a list that silently shrank would make the
-    // two criteria below pass over a catalogue that no longer reaches the mirror.
-    expect(assets).toHaveLength(327);
+    // two criteria below pass over a catalogue that no longer reaches the mirror. It was 34 → 327 until
+    // 2026-10-03, when `freepats-tubular-bells1` (2 programs) and `gregsullivan-e-pianos` (3) left the mirror.
+    expect(assets).toHaveLength(322);
     expect(assets.every((asset) => asset.sfz)).toBe(true);
-    expect(choices).toHaveLength(327);
+    expect(choices).toHaveLength(322);
 
     // Same ids in the same order, and the library read out of the id rather than looked up a second time.
     expect(choices.map((choice) => choice.assetId)).toEqual(assets.map((asset) => asset.assetId));
@@ -309,7 +310,7 @@ describe("the chip in the panel", () => {
         role="chords"
         {...(assetId === undefined ? {} : { assetId })}
         instruments={instrumentChoicesFromAssets(shippedAssets())}
-        status={describeCatalogueStatus({ configured: true, loading: false, ready: true, problems: [], assetCount: 327 })}
+        status={describeCatalogueStatus({ configured: true, loading: false, ready: true, problems: [], assetCount: 322 })}
         onChoose={onChoose}
       />
     );

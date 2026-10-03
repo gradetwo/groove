@@ -1363,6 +1363,8 @@ GET https://r2mirror.groove.wangda.today/vsco2ce/Strings/Violin Section/Pizz/Vln
 TMPDIR=/var/tmp node scripts/upload_samples.mjs <entry-id> --upload
 ```
 
+> ⚠️ **2026-10-03 更正，写在表前：下表是那一轮的记录，不是当前清单。**业主指示删掉其中两条 —— `freepats-tubular-bells1`（33 文件 / 16 551 617 B）与 `gregsullivan-e-pianos`（177 文件 / 21 484 144 B，本表在下一节）—— 两条已从 `public/samples/manifest.json` 与 R2 镜像中删除，清单由 **34 条变 32 条**（程序级资产 **327 → 322**）。**下表原文一字未改**：它是当时逐库量出的字节记录，改它就把证据改成了结论。删除脚本是新加的 `scripts/remove_samples.mjs`（默认 dry-run），公开侧的 404 核对是 `scripts/check_removed_samples.mjs`。同表另外四条 `freepats-*` 是**保留项**（`freepats-button-accordion-hn`／`freepats-fsbs-dist2`／`freepats-drawbar-organ`／`freepats-percussive-organ`），分别是调色板 `accordion_lead`／`distorted_guitar`／`m1_organ`／`organ_lead` 四行的录音来源（`src/data/sampledInstruments.ts:167/152/132/137`），**不在删除范围**。
+
 | 条目 | 库 | 许可（原文出处） | 文件 | 字节 | 格式 |
 |---|---|---|---:|---:|---|
 | `freepats-electric-bass-yr` | FreePats Bass Guitar YR | CC0（仓库自带 `LICENSE.txt`） | 29 | 6 277 261 | SFZ + FLAC |
@@ -1558,6 +1560,8 @@ roster 于是补上 `vsco2ce:TimpaniRolls`，`Orchestral` 计数 91 → **108**�
 
 #### 要下清单与实际字节（17 条，全部上桶）
 
+> ⚠️ **2026-10-03 更正，写在表前**：这 17 条里 **`gregsullivan-e-pianos` 已被业主指示删除**（177 文件 / 21 484 144 B），清单与 R2 镜像都没有它了；本节以下三张表（字节表、许可台账、opcode 扫描表）都**保留原文**，因为它们是那一轮**下之前量的数**，不是当前清单。**其余 16 条一条未动。** 该库的 CC-BY 3.0 署名行（许可台账第四节）因此成为历史记录；当前清单 32 条见上一条更正。
+
 | 条目 | 计划书 | 类别 | 文件 | 字节 | MiB | 程序 | 许可 | pin |
 | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- |
 | `karoryfer-bigcat-cello` | P4 | Orchestral | 520 | 141 812 275 | 135.2 | 3 | CC0 | `6fd75fbf…` |
@@ -1626,7 +1630,7 @@ roster 于是补上 `vsco2ce:TimpaniRolls`，`Orchestral` 计数 91 → **108**�
 #### opcode 扫描与处置（本仓自己的 `expandIncludes`＋`parseSfz`）
 
 **一个加载器 opcode 都没有实现，`needs` 全部由扫描写出**（这是沿用，不是遗漏——理由与 ③b／§15 同：`ampeg_*`
-是已入库 VSCO 程序一直在用、且听感证据不足的一族）。17 条的读数：
+是已入库 VSCO 程序一直在用、且听感证据不足的一族）。17 条的读数（⚠️ **含已删的 `gregsullivan-e-pianos` 一行；见本节开头的 2026-10-03 更正，表不改**）：
 
 | 条目 | 程序 | region | 已实现 opcode | **未实现 opcode** | 家族数 |
 | --- | ---: | ---: | ---: | ---: | ---: |
