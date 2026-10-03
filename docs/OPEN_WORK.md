@@ -6260,3 +6260,26 @@ problems: **[]** ✓
   src/test/mcpDocNoteForm.test.ts:34:import { fromLogicProject, LOGIC_TICKS_PER_QUARTER } from "../data/logicToArrangement";
 ⚠️ 仅结构侦察 ✓，**无结论** ✗ ⇒ 下一步据此定写入端的最小可自洽目标 ✓
 ```
+
+## 二百三十七、📐 **② Logic 导出：立项（交付形态／ground truth／许可／分阶段 ＋ 每步能红的判据）**（2026-10-04 01:1x ✓）
+
+```
+**先量到的靶子** ✓（`§236` 原样留档 ✓）：`.logicx` ＝ **目录**，音乐只在这两个文件里 ✓
+   · `Alternatives/NNN/**ProjectData**` ＝ **24 字节根头**（magic `23 47 C0 AB` ✓）＋ **36 字节记录头**的记录流 ✓（`qSvE` 记录里是 **16 字节行** ✓）
+   · `Alternatives/NNN/**MetaData.plist**` ✓；另有 `Resources/**ProjectInformation.plist**` **指明哪个 NNN 是激活变体** ✓（**不一定是 `000`** ✓）
+   · 读取器入口**只吃这些文件的字节** ✓（不吃整包 ✓ —— 因为 `Media/` 可能有几个 GB ✓）；`**960 ticks/quarter**` ✓
+   · 参考实现与许可**读取器已注明** ✓：`logicxkit` **Apache-2.0** ✓、`logic2ableton` **MIT** ✓、`loov/logicx` **GPL-3.0-or-later（只引一句 ✓）**、`geoffmyers/logicx-analyzer` **GPL（未抄 ✓）**
+**决定（我裁 ✓，业主可改 ✓）**：**交付形态＝`.logicx` 目录 ＋ 可选 zip** ✓（与读取器"只吃字节"一致 ✓；zip 只是为了好下载 ✓）
+   ⇒ ⚠️ 真正的"Logic 能不能打开"**本机无法验证** ✗ ⇒ **ground truth 写进 `needs`** ✓，**只宣称自洽** ✗，**绝不说"Logic 可用"** ✗
+**分阶段（每步都必须有能红的判据 ✓）**：
+   **P1 最小可读包** ✓：写出 `ProjectData`（24B 根头 ＋ 记录）＋ `MetaData.plist` ＋ `Resources/ProjectInformation.plist`
+      ⇒ 判据：**自家 `fromLogicProject` 读回 ⇒ 音符逐值相等** ✓（能红：动 magic／记录头／行偏移即红 ✓）
+   **P2 真实特征** ✓：多轨／多 region／速度／拍号／**变体编号 ≠ `000`**（`ProjectInformation.plist` 说哪个是激活 ✓）
+      ⇒ 判据：`activeVariant` 选中正确 ＋ 轨名与音数逐值 ✓（能红：把激活变体写错即红 ✓）
+   **P3 与真实语料对照** ✓：拿**读取器读过的真实 `.logicx` 语料**，比较"我们写出的包"与"原始包"在**读取器眼里**的结构差异 ✓
+      ⇒ 判据：逐项命名差异（**不许藏** ✗）；能红的反面：把某个结构字段写错 ⇒ 差异表变红 ✓
+   **P4 交付** ✓：目录 ＋ zip（`fflate` 已有 ✓）；判据：解包后**结构逐项存在** ＋ 读取器可读 ✓（能红：漏一个文件即红 ✓）
+   **P5 `needs`** ✓：**真 Logic 打开**（本机无 Mac／无 Logic ✗）＋ **`.logicx` 版本/兼容性**（未测 ✗）⇒ 写进 `needs` ✓，**不假装** ✗
+**许可纪律** ✓：借 MIT／Apache 参考 ⇒ **署名 ＋ 标许可** ✓；**GPL 只读、只引短句** ✗（读取器已是这个尺度 ✓，写入端照办 ✓）
+⚠️ 本条是**计划** ✓，**尚未动一行代码** ✗；本轮台账**只本地提交**（队列 6 笔我的 run ✗ ⇒ 不推 ✓）
+```
