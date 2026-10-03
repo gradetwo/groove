@@ -1,29 +1,25 @@
 {
-  "version": "2.34.38",
-  "releaseDate": "2026-10-02",
+  "version": "2.34.39",
+  "releaseDate": "2026-10-03",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.38",
+    "version": "2.34.39",
     "date": "2026-10-03",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "音色盘大补：十一个缺口、弦乐连奏、编排器六处缺口",
-      "en": "The palette refilled: eleven gaps, string legato, and the editor's six missing pieces"
+      "zh": "修：线上采样根丢失",
+      "en": "Fix: the live build lost its sample root"
     },
     "highlights": [
       {
-        "zh": "十三个乐器缺口填上十一个；弦乐四类演奏法入库；新预算用满到 99.78%。",
-        "en": "Eleven of thirteen instrument gaps filled, the four string techniques mirrored, and the new budget taken to ninety-nine point eight percent."
+        "zh": "上次发布的工作树缺 .env.local，构建时没读到镜像根，线上目录因此为空、采样取不到。",
+        "en": "The release tree lacked the local env file, so the build carried no mirror root and the live catalogue came up empty."
       },
       {
-        "zh": "「弓没停过的重叠」现在是连奏：落在响和弦上的起音 57 → 25，并接到实时两条路。",
-        "en": "An overlap the bow never stopped is now a legato: attacks on a sounding chord fall from fifty-seven to twenty-five, and the rule reaches both live paths."
-      },
-      {
-        "zh": "新编排器补齐撤销/重做、命名与持久化、导入导出入口、导入时指定乐器。",
-        "en": "The new editor gains undo and redo, naming and persistence, export and import entries, and an instrument choice on import."
+        "zh": "重建后已用产物本身验证（产物的采样根字符串从 0 处变为 1 处）。",
+        "en": "Verified against the artifact itself: the root string went from zero hits to one."
       }
     ],
-    "truncated": true
+    "truncated": false
   }
 }
