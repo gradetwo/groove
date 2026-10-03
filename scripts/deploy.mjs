@@ -19,6 +19,7 @@
  * because a preview that is not the build you are looking at is worse than no preview.
  */
 import { spawnSync } from "node:child_process";
+import { sampleRootVerdict } from "./lib/sampleRoot.mjs";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -221,6 +222,44 @@ if (!wranglerConfigPath) {
       "   Then check the credentials this script also needs:",
       "     npx wrangler whoami     # must not answer \"You are not authenticated\"",
       "   or put CLOUDFLARE_API_TOKEN in ./.env.deploy (see .env.deploy.example).",
+      "",
+    ].join("\n")
+  );
+  process.exit(1);
+}
+
+/**
+ * ⭐ **The last check before anything is uploaded: can the built app reach its samples?**
+ *
+ * The 2.34.38 release passed every other step and shipped a bundle with no catalogue root, so the site could read its
+ * manifest and fetch no recording at all. Every check above is about the build being *coherent*; this one is about it
+ * being *complete*, and it is the only one that would have caught that release. The reasoning, and why it reads every
+ * built file rather than the scripts the entry point names, is in `scripts/lib/sampleRoot.mjs`.
+ */
+const configuredSampleRoot = (() => {
+  const fromEnv = (process.env.VITE_SAMPLE_ROOT ?? "").trim();
+  if (fromEnv !== "") return fromEnv;
+  // The build reads this file (gitignored, so a fresh worktree never has one) — read the same place the build did.
+  const localEnv = path.join(ROOT, ".env.local");
+  if (!fs.existsSync(localEnv)) return "";
+  const line = fs
+    .readFileSync(localEnv, "utf8")
+    .split("\n")
+    .find((candidate) => candidate.startsWith("VITE_SAMPLE_ROOT="));
+  return line ? line.slice("VITE_SAMPLE_ROOT=".length).trim() : "";
+})();
+const shippedManifestPath = path.join(ROOT, "public", "samples", "manifest.json");
+const sampleRootCheck = sampleRootVerdict({
+  distDir: path.join(ROOT, "dist"),
+  envRoot: configuredSampleRoot,
+  manifestText: fs.existsSync(shippedManifestPath) ? fs.readFileSync(shippedManifestPath, "utf8") : ""
+});
+if (!sampleRootCheck.ok) {
+  console.error(
+    [
+      "\u274c the built app cannot reach its samples \u2014 nothing has been deployed.",
+      `   ${sampleRootCheck.reason}`,
+      `   Read ${sampleRootCheck.scriptsRead ?? 0} built script(s) under dist/, including lazy chunks.`,
       "",
     ].join("\n")
   );
