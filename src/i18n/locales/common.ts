@@ -344,4 +344,19 @@ export const commonMessages = {
   cert_copied: { en: "Copied to clipboard!", zh: "已复制战报到剪贴板！" },
   cert_copy: { en: "Copy Shareable Text", zh: "复制段位证书战报" },
   cert_close: { en: "Close", zh: "关闭" },
+
+  // ---------------------------------------------------------------------------
+  // The audio start gate (G9, `src/components/AudioStartGate.tsx`).
+  //
+  // App-wide rather than studio-level: it is the first screen **every** route passes
+  // through, which is exactly why the four hard-coded Chinese literals there were the
+  // most visible untranslated text in the product — an English reader's first screen said
+  // "启动音频引擎" while the nav above it said "New". The dialog's own name goes through
+  // `aria-label`, so it needs a key of its own rather than the button's. The retry button
+  // reuses `retry` above instead of growing a second spelling of it.
+  // ---------------------------------------------------------------------------
+  audio_gate_label: { en: "Audio start", zh: "开始" },
+  audio_gate_start: { en: "Start audio engine", zh: "启动音频引擎" },
+  audio_gate_starting: { en: "Starting…", zh: "正在启动…" },
+  audio_gate_failed: { en: "Startup failed", zh: "启动失败" },
 } as const;

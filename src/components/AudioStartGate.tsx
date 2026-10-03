@@ -1,6 +1,7 @@
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { initIosAudioUnlock } from "../audio/iosAudioUnlock";
 import { getActiveAudioEngine } from "../audio/activeEngine";
+import { useLanguage } from "../i18n/LanguageContext";
 import { APP_VERSION } from "../version";
 
 /**
@@ -17,6 +18,24 @@ import { APP_VERSION } from "../version";
  * the offline one, whose verdict decides whether exports fall back to the native engine. It shows once
  * (`localStorage`), and it never blocks anything: the button is the only thing on the screen, and a second tap
  * immediately proceeds if a probe is slow.
+ *
+ * ⭐ **Two things this screen used to get wrong, both of them about the person rather than the audio** (defect G9,
+ * measured in the census):
+ *
+ *  1. **It was the last hard-coded Chinese surface in the tree.** Its four literals — the dialog's `aria-label`,
+ *     the button, the failure heading and the retry — meant an **English** first screen whose one instruction was
+ *     "启动音频引擎". They now go through the same `useLanguage()` / `t()` path as the rest of the interface, with
+ *     the keys in `src/i18n/locales/common.ts`; the retry reuses the existing `retry` key rather than a second
+ *     spelling of it.
+ *  2. **It was a modal dialog that did not behave like one.** The ARIA APG Dialog (Modal) Pattern asks for three
+ *     things literally, and this file had none of them: *"When a dialog opens, focus moves to an element inside the
+ *     dialog."*, *"Escape: Closes the dialog."*, and *"The dialog container element has `aria-modal` set to
+ *     `true`."* A keyboard user landed outside the overlay and, measured, could not leave it with Escape at all.
+ *
+ * ⚠️ **The gate itself is not the defect** and is not going away: Chrome's autoplay policy needs a user gesture
+ * before `resume()`, which is the whole reason this screen exists. Escape **dismisses without starting** — it
+ * deliberately does not write `AUDIO_STARTED_KEY`, because a dismissal is not the gesture the gate is asking for,
+ * and the app's own first-play unlock still covers the session.
  */
 export const AUDIO_STARTED_KEY = "groove_audio_started";
 
@@ -36,11 +55,37 @@ export interface AudioStartGateProps {
 }
 
 export function AudioStartGate({ children, onStart }: AudioStartGateProps) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(() => !audioGateCompleted());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   /** Read inside `finally` to decide whether the gate may close: state updates are not visible in the same tick. */
   const errorRef = useRef<string | null>(null);
+  /** The one control the gate is asking for; also where focus lands when the dialog opens (APG, modal dialog). */
+  const startButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  /**
+   * ⭐ **The modal contract, in the two places it can be kept** (the third, `aria-modal`, is on the container below).
+   *
+   * *Focus*: the gate is the first and only thing on the screen, so moving focus to its button is what makes the
+   * dialog reachable by keyboard and announced by a screen reader instead of leaving the reader on `document.body`.
+   *
+   * *Escape*: dismisses. It follows the APG requirement literally — *"Escape: Closes the dialog."* — and, just as
+   * deliberately, it is **not** a start: `AUDIO_STARTED_KEY` is not written, so nothing claims the browser was
+   * unlocked by a dismissal. The app's own first-play unlock (`initIosAudioUnlock`) still covers that session, which
+   * is why a dismissal is safe rather than a trap. A dismissal while a start is in flight is allowed too — the probe
+   * still finishes, and on success it writes the key the same way a completed tap would.
+   */
+  useEffect(() => {
+    if (!open) return;
+    startButtonRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [open]);
 
   const start = useCallback(async () => {
     setBusy(true);
@@ -124,7 +169,7 @@ export function AudioStartGate({ children, onStart }: AudioStartGateProps) {
   return (
     <>
       {children}
-      <div data-testid="audio-start-gate" role="dialog" aria-label="开始" className="gate-overlay">
+      <div data-testid="audio-start-gate" role="dialog" aria-modal="true" aria-label={t("audio_gate_label")} className="gate-overlay">
         <div className="gate-card">
           <div className="gate-brand">
             <svg className="gate-logo" width="46" height="46" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -143,16 +188,17 @@ export function AudioStartGate({ children, onStart }: AudioStartGateProps) {
           </div>
           <button
             type="button"
+            ref={startButtonRef}
             data-testid="audio-start-button"
             onClick={() => void start()}
             disabled={busy}
             className="gate-btn"
           >
-            {busy ? "正在启动…" : "启动音频引擎"}
+            {busy ? t("audio_gate_starting") : t("audio_gate_start")}
           </button>
           {error ? (
             <div className="gate-error" data-testid="audio-start-error" role="alert">
-              <b>启动失败 / Startup failed</b>
+              <b>{t("audio_gate_failed")}</b>
               <p>{error}</p>
               <button
                 type="button"
@@ -161,7 +207,7 @@ export function AudioStartGate({ children, onStart }: AudioStartGateProps) {
                 onClick={() => void start()}
                 disabled={busy}
               >
-                重试 / Retry
+                {t("retry")}
               </button>
             </div>
           ) : null}
