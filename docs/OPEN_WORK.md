@@ -3684,3 +3684,42 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
    **正在污染我们要量的性能** ✓ ⇒ 只杀 cwd 已被删除者 ✓，主树与活跃线的服务器**一个没动** ✓）
 ⚠️ **这一组只是"(甲) 六组里的一组的自量版"** ✓ —— 浏览器侧的 LCP/INP/长任务/音频 underrun 由性能线给 ✓，不重复 ✗
 ```
+
+### 116.5 (甲⑥) **包体与首屏：线上真实读数**（2026-10-03 19:05–19:10 时点 ✓，load 5.2→16.0 ✗ 但网络体积不受负载影响 ✓）
+
+```
+**方法**（写在前面，因为方法错过两次 ✗）：① 主 chunk 里正则取出**它引用的全部 chunk** 再逐个下载累加 ✓
+   （**不能按"记得的名字"grep** ✗ —— 我这样得到过假阴性 ✓）；② **必须带 `Accept-Encoding: gzip, br`** ✓
+   （我第一遍没带 ⇒ 头里"编码"为空 ⇒ 差点误判"服务器不压缩" ✗✓）；③ 首屏集合＝**HTML 里的 `modulepreload`** ✓
+**读数**：`index.html` **3,525 B（br）** ✓ ｜ 主 chunk 原始 **431,553 B** ⇒ **传输 133,426 B ≈ 130 KB** ✓
+   ⭐ **冷启动合计 ≈ 320 KB**（HTML ＋ 主 chunk ＋ 预载 3 个 = 328,058 B ✓）
+   ⭐ **全部 68 个 chunk 传输合计 918,296 B ≈ 896 KB**（原始 3.2 MB ⇒ **brotli 压到 27%** ✓）
+   缓存头 `public, max-age=31536000, immutable` ✓（哈希资产正确 ✓）
+   最大（传输）：`vendor-three` 124 KB ✓ ｜ `StudioView` **101 KB** ✗ ｜ `AudioEngine` **86 KB** ✓
+              ｜ `vendor-react` 45 KB ✓ ｜ `HelpCenterModal` **31 KB** ✗ ｜ `NewProjectView` 31 KB ｜ `GalaxyView` 26 KB
+⭐ **首屏预载恰是 3 条，且是"该预载的"** ✓：入口 ＋ **`vendor-icons`（11 KB ✓，主 chunk 静态引用 2 次 ✓）
+   ＋ `vendor-react`（45 KB ✓，静态引用 2 次 ✓）** ⇒ **没有路由 chunk 被预载** ✗✓、**最重的 `three` 也没被预载** ✓
+   ⇒ 其余 **65 个全是按需**（名字即路由 ✓：AbletonExporter／AnalyzerView／ChallengeView／CompareView／
+     CustomGenreMakerView／GalaxyView／MasterclassView／HelpCenterModal／arrangementStore／AudioEngine … ✓）
+**主 chunk 构成**：`tone` ×18 ✓ ｜ `midi` ×24 ✓ ｜ `audioWorklet` ×2 ✓ ｜ **没有 `three`** ✓（它独占 vendor chunk ⇒ 分包正确 ✓）｜
+   最长连续 base64 段 = **0 B** ⇒ **没有往 JS 里塞字体/音频大 blob** ✓
+⚠️ **构建没有 manifest** ✗（`dist/.vite/manifest.json` 不存在 ✓）⇒ 要精确拆"谁占了多少"，给构建加 `--manifest` ✓
+   （**只是构建参数、不改产品代码** ✓ —— 这条交给性能线 ✓）
+```
+
+### 116.6 ⭐ **一条否证（很有价值）＋ 两条"会被感觉到"的假设（标明未验证 ✗✓）**
+
+```
+✗ **"首屏太重"被读数否掉** ✓：320 KB 冷启动、896 KB 全量、brotli 27%、immutable 缓存、
+   预载集合最小且正确、路由懒加载到位、无内嵌大资源 ⇒ **包体与启动路径不是元凶** ✓
+   （我先前报过"3.2 MB"✗ —— 那是**原始未压缩**，已两次更正 ✓）
+⇒ **⇒ 性能问题更可能在运行期与交互**（掉帧／长任务／音频 underrun／首次懒加载的等待 ✓）
+⭐ **两条假设（未验证 ✓，交给性能线量）**：
+   ① **`AudioEngine` 是懒加载的（86 KB 传输）** ⇒ **第一次播放之前**才去下它 ✗
+      ⇒ 用户感到的"卡一下"很可能在 **首次出声之前** ✓ ⇒ 该量 **time-to-first-sound**（不是包体总量 ✗）
+   ② **各视图/`arrangementStore` chunk 懒加载** ⇒ **首次切到编排或某视图**时有一次额外下载 ✗
+      ⇒ 该量 **首次交互的等待**（点击 → 有反应 ✓）
+**方法卫生（也是本轮做的事 ✓）**：清掉 **5 个指向已删除工作树的僵尸开发服务器** ✗
+   （`groove-honesty` 存活 **19 小时**、`groove-perc-staff` **16 小时**）⇒ 它们占端口与 CPU、**污染性能测量** ✓
+   ⇒ **只杀 cwd 已删除者** ✓，主树与活跃线一个没动 ✓ ⇒ **load 10–22 ⇒ 5.2** ✓（性能线得以在干净窗口量 ✓）
+```
