@@ -3296,3 +3296,19 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
 ⚠️ **我自己在本会话第三次栽在同一类错上**（**字面量搜索 ⇒ 假阴性** ✗）：
 ① 在**我的克隆**里搜提交号（缺 ref ✗）；② 只搜 `saveArrangement` 而功能叫 `useArrangementFileActions` ✗；③ 只搜 `share_url` 而函数叫 `shareUrl` ✗。
 **⇒ 规矩（写下来）**：**核验"某功能是否存在"时，必须搜**语义**（动词/名词的各种拼写与命名风格 ✓），并**顺着调用链**读一处真实使用点 ✓ —— 只搜一个字符串不算核过** ✓✓
+
+### 107.8 ✅ **验收：覆盖 UI（方案 A）已进 dev 并核过**（`8f3fed5` ＋ 文档补正 `a947019`，**两笔 CI 均 success** ✓）
+
+```
+**它交付的**（10 文件 ＋1115 ✓）：`src/features/sampledCoverage/sampledKeyCoverage.ts`／`useSampledCoverage.ts`／
+   `src/components/arrangement/coverageLabel.ts`／`CatalogueRecordingPicker.tsx`／`InstrumentLibraryV2.tsx`／`StudioView.tsx` ✓
+**读数（它自报 ＋ 我复核 ✓）**：
+   ⭐ **范围＝引擎自己的答案**：对**展开后的程序**在 **0–127** 上跑 `resolveInstrumentNote`，按**该音符自己的力度**问 ✓
+      ⇒ **没有第二份手写表** ✓（判据里 "shows the range the engine reads from the regions" 正是我要求的形状 ✓）
+   ⭐ **空洞算超范围**（`dsmolken` 12–120 缺 61–71/90–95；MTG 39–76 缺 41–43 ✓ ⇒ 只比 min/max 的写法会被判红 ✓）
+   ⭐ **未加载 ⇒ 显示"尚未加载"且不给数字** ✓（不许猜 ✓）；⭐ **轨级超范围会出声报告** ✓（失败要可见 ✓）
+**我复核**：`sampledKeyCoverage.test.ts` ＋ `sampledRangeCoverageUi.test.tsx` ⇒ **2 文件 16 条全绿** ✓；
+   反向 `sampledRangeCensus` **33/33 {168,25,5,4}** ✓（内容一字未动 ✓）、`ownerProjectAcceptance` **8/8** ✓；
+   CI：`8f3fed5` **success** ✓、`a947019` **success** ✓
+⚠️ **而这是我犯过错的同一条线**（§107.5）：**它仍 running 时我删了它的工作树** ✗ —— 提交安全，但那是运气 ✓
+```
