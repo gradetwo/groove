@@ -4954,3 +4954,25 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
 ⇒ 本次验收的 CI 证据**只覆盖主 job**（Typecheck/Lint/Red-Line/Unit+Coverage/Genre lint/Build/boot 探针/budget ✓，11m56s ✓）
 **⭐ 另一件好事**：源头修好后，对方**删掉了调用方补丁** `withMappedPartsAsSamplers`（原 401–460 行 ✓）＋两处多余 import ✓
 ⇒ `importSamplerMapping`（3 tests ✓）与 `importInstrumentMapping`（11 tests ✓）**仍全绿** ✓ ⇒ **一个决定点、无 shim** ✓（正是我要求的"改在源头" ✓）
+
+## 一百五十二、⭐⭐ **R2（自动保存丢失）落地 `f8beec6` ＋ 它证明"我建议的方向不够"** ✗✓（2026-10-03 23:2x ✓）
+
+```
+✅ **推送**：`95f459f..f8beec6 HEAD -> dev` ✓（4 文件 ✓、**未 bump 版本** ✗）
+⚠️⭐ **它先照我的建议实测，然后证明不够** ✗✓：我建议"**缓存 `idb` 句柄 ＋ 在调用方自己的 task 里开事务**" ✓ ——
+   实测**确实让 put 发出去了** ✓（`puts during window: [bpm=127, bpm=127]` ✓）**但改动仍然丢** ✗：
+   ⭐ **Chromium 在文档死亡时会中止在飞的 IndexedDB 事务** ✓✓ ⇒ reload 后 `storedBpm=null` ✓
+   ⇒ ⭐ **结论（机制级 ✓）：卸载路径**无论怎么缓存句柄都救不了 ✓ —— **写必须在页面死之前提交** ✓
+✅ **它真正的修法（两颗 ✓）**：
+   ① `projectDb` **保持连接** ✓（按 `IDBFactory` 键控 ✓、拒绝已关闭的句柄 ✓），`saveArrangementProject` **在调用方的 task 里开事务** ✓；
+   ② ⭐ **去掉 600 ms debounce** ✓ —— 改动一上报就**开始写** ✓，突发用"**同时只允许一写在飞 ＋ 最新状态放单槽队列**"合并 ✓
+      ＝"**debounce 原本要的合并效果，但没有那个窗口**" ✓✓（这是我见过的最干净的解法 ✓）
+✅ **读数**：**100／500／900 ms 全绿** ✓，并补测 **0／5／20／60 ms** ✓ ⇒ **丢失窗口关闭** ✓
+   （改前：100／500 ms 丢 ✗、900 ms 保住 ✓（阳性对照 ✓）；`beforeunload`／`pagehide`／`visibilitychange` 都触发 ✓，
+    `idb.open` 在濒死文档里被调两次 ✓、**`ObjectStore.put` 零次** ✗ ＝ 与业主先前的读数一致 ✓）
+✅ **判据**：`src/test/arrangementWriteThrough.test.ts` ✓（**改前 2/2 红** ✓、改后绿 ✓）—— 我已独立跑过：**2 passed／退出码 0** ✓
+   ＋ 反向量五数逐字 ✓（我核过 ✓）
+⚠️ **R1 未做**（如实 ✓）：安全路径需要 `App.tsx`（**在禁区** ✗）传一个 navigate 回调 ✓，或在 `NewProjectView` 里写路由
+   **并**在"反向量钉住的 store"里加一个守卫（防"Create 后立刻编辑被 load effect 覆盖" ✓）⇒ ⭐ **不是"很小"的改动** ✓ ⇒ 它**停手** ✓（做法正确 ✓）
+⇒ ⏳ CI 判决（`f8beec6`）仍 in_progress ✗ ⇒ 判决前不写最终验收 ✓
+```
