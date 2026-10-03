@@ -6510,3 +6510,18 @@ problems: **[]** ✓
 ⇒ ⚠️ **矛盾**：我对二者之一的阅读**不完整** ✗ ⇒ **不下结论** ✓
 ⇒ **下一步**：对该 2 音用例**插桩**，打印每个 piece 实际分到的 `voice` 与 `voiceEnds`／`heldByContinuation` 的值 ✓（先量后改 ✓）
 ```
+
+## 二百五十二、⭐⭐ **原始文本定论：损失 ② 在写入端（两个音同一 `<voice>`、无 `<backup>` ⇒ 语义上就是顺延）** ✗（2026-10-04 01:2x ✓）
+
+```
+**方法** ✓：直接打印写出文件 measure 31–33 的**原始 XML**（不经我的正则解析 ✓ —— 因为 `§251·补` 出现了"代码读法与文件不符"的矛盾 ✓）
+**原始文本关键行** ✓：
+   measure 31：`<pitch>E4</pitch><duration>16</duration><tie type="start"/><voice>1</voice><type>whole</type>` ✓
+   measure 32：`<pitch>E4</pitch><duration>16</duration><tie type="start"/><tie type="stop"/><voice>1</voice><type>whole</type>` ✓
+               ⭐ 紧接着 `<pitch>A1</pitch><duration>8</duration><voice>1</voice><type>half</type>` ✗ —— **同一声部、中间无 `<backup>`** ✗
+   measure 33：`<pitch>E4</pitch><duration>2</duration><tie type="stop"/><voice>1</voice><type>eighth</type>` ✓
+⇒ ⭐ **MusicXML 语义**：同一 `<voice>` 内音符**依次相接** ⇒ A1 **必然从 beat 128 起** ✓ ⇒ 读取端读回 128 **是忠实的** ✓
+⇒ ⭐ **损失 ② 在写入端** ✓（**原始文本为证 ✓，不依赖我的解析 ✓**）；它**没有给重叠音开新声部** ✗，也**没有 `<backup>`** ✗
+⚠️ **仍未解** ✗：**为何声部规则没生效**（`§251·补` 的矛盾 ✓）⇒ 下一步必须**插桩**打印实际分配 ✓（不再靠读代码推断 ✗）
+⚠️ 本轮**未动代码** ✗；台账 **10 笔本地未推** ✓
+```
