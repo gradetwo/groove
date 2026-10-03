@@ -733,3 +733,94 @@ AssertionError: expected [ 70, 73, 74, 77, 79 ] to deeply equal [ 82, 85, 86, 89
 6. **鼓声部（458 条调色板声部）不在本普查里**：鼓没有音高，音域问题不适用；它们的映射由 `src/audio/drumRoles.ts` 的角色→GM 音符表决定。
 7. **`SAMPLED_TECHNIQUE_INSTRUMENTS`（26 行弦乐技法名）在曲风数据里 0 次出现**：本普查 202 条声部的 `instrument` 全是名字表那 22 行覆盖的名字，所以那 26 行没有被本判据覆盖到（它们由 `src/test/stringTechniques.test.ts` 等管）。
 8. **`/genre/bebop` 的 lead 是"44 条 note 全 no playback"**：本报告在引擎上复现了这一点（§5.1），但**没有**在浏览器里跑一遍 `/genre/bebop` 听感确认（离线/在线判定已覆盖同一函数路径）。
+
+---
+
+## §7 把覆盖显式化：运行时读数、显示位置、超范围判定（本轮改动）
+
+§4.1 的结论是"**暴露覆盖范围，不自动改内容**"；本节记录这句话是怎么落地的：覆盖在**运行时**从哪里取、显示在**哪两个界面**、超范围由**哪条引擎路径**判。曲风内容、调色板、manifest **仍然一字未改**。
+
+### 7.1 覆盖在运行时从哪来（读数，逐条给文件:行）
+
+| # | 读数 | 证据 |
+| --- | --- | --- |
+| 1 | **加载器持有的是"展开后的程序文本"，不是 regions。** 它把 `Promise<{text}>` 按 assetId 缓存；regions 是 `resolveInstrumentNote` **每次调用现解析**出来的 | `src/audio/sampleLoader.ts:274`（`programs: Map<string, Promise<{ text: string }>>`）、`:275-299`（`expandedProgram`：源→镜像、`expandRemoteIncludes`）、`src/audio/sfz/instrument.ts:210`（`parseSfz(sfzText, …)`）；`src/audio/sfz/keyswitch.ts:193` 的注释也直说 "re-parses the program on every note" |
+| 2 | **没有任何 UI 可达的口子能拿到那段文本或 regions。** `SampleLoader` 只暴露 `load` / `loadNote` / `decodes` | `src/audio/sampleLoader.ts:57-83`。`loadNote` 内部确实调 `resolveInstrumentNote`（`:340`），但它随后就 `decodeAsset`（`:345` 起）——用它扫 0–127 等于把整台琴的采样 decode 一遍，只为回答一个映射问题 |
+| 3 | **UI 侧唯一"从引擎算"的入口**是纯函数 `resolveInstrumentNote`，加引擎自己的 `#include` 展开器 `expandRemoteIncludes` | `src/audio/sfz/instrument.ts:178`、`src/audio/sfz/remoteIncludes.ts:51` |
+| 4 | ⇒ 本轮做法：**取一次程序文本，问引擎 128 次**。`sampledCoverage/programText.ts` 按 `sampleLoader.ts:279-298` 的**同一地址规则**（源先、镜像后；include base = 从源 url 减去 program path）取一次文本并用 `cachedProgramText` 做单飞缓存；`sampledKeyCoverage` 再对 0–127 每键调 `resolveInstrumentNote`（与 §1.3 同一判据，不新增第二份表） | `src/features/sampledCoverage/programText.ts`、`src/features/sampledCoverage/sampledKeyCoverage.ts` |
+| 5 | **未加载时怎么显示：说"尚未加载"，绝不猜数字。** `coverageOf()` 在引擎回答前返回 `undefined`，只有 `ready` 才可能给出范围；`ready` 且 `null`（引擎一个键都不答）说的是"这段录音一个键都发不出"，与"尚未加载"是两句不同的话 | `src/hooks/useSampledCoverage.ts:70`（`statusOf`/`coverageOf`）、`src/components/arrangement/coverageLabel.ts`（`describeCoverage`） |
+
+⚠️ **记录在案的代价**：若该 lane 已经播放过，`sampleLoader` 自己也持有同一段展开文本，本轮会**再读一次**程序（UI 拿不到 loader 的私有缓存）。修法是给 `SampleLoader` 加一个文本/regions 取用口，属于 `src/audio/**`——本轮明令只许读，故不在本次改动内。
+
+### 7.2 显示在哪（文件:行）
+
+| 位置 | 显示什么 | 文件:行 |
+| --- | --- | --- |
+| **挑选器**（inspector 的录音挑选器） | 该录音"可发 A–B（缺 …）"；未加载＝"尚未加载" | `src/components/arrangement/CatalogueRecordingPicker.tsx:235`（`data-testid="lane-recording-coverage"`） |
+| **这条轨**（同一挑选器内） | 本轨写出的音 min–max（`本轨写出 82–91（5 个音高，共 44 个音）`） | `CatalogueRecordingPicker.tsx:248`（`lane-written-range`） |
+| **超范围报告** | `这条轨有 N 个音超出该录音的音域：可发 A–B（缺 …）`，`role="status"` | `CatalogueRecordingPicker.tsx:255`（`lane-range-report`） |
+| **挑选器列表的每一行** | 指向/聚焦该行时读它的覆盖；未读完显示"尚未加载"，从未请求则不显示数字 | `src/components/arrangement/InstrumentLibraryV2.tsx:181-182`（`onMouseEnter`/`onFocus` → `request`）、`:189`（`instrument-coverage-<assetId>`） |
+| 轨道→挑选器的接线 | 访问目录的**资产数组**（地址簿）与 inspector 的**那条 lane** | `src/views/StudioView.tsx:942`、`:1352`（`assets`）、`:1353`（`lane`） |
+
+**为什么列表行按需读而不是打开就全读**：目录里有 ~300 个程序资产，每个都要抓文件＋展开 `#include`；打开列表就全读是一次踩踏，不是功能。所以"意图"（hover/focus）才是触发，没请求过的行**不显示数字**（"或等加载完再显示"）。
+
+### 7.3 超范围判定用哪条引擎路径
+
+* **逐音问引擎**：`notesOutsideCoverage(asset, text, notes)` 对每个写出音调 `resolveInstrumentNote(asset, text, pitch, { velocity })`，力度取**该步自己的**力度（`stepVelocity`，`src/data/noteLayer.ts:54`）。所以"某键只在某力度层出声"也算得对。
+* **中间被挖空也算超范围**：`sampledKeyCoverage` 的 `holes` 是引擎逐键拒答的差集；`notesOutsideCoverage` **不看 min/max**，只看引擎答不答。MTG 的 41–43 写进去照样报超出（证红 C 证明：换成 min/max 即红，见 §7.5）。
+* **跨度只用于标签**：`first`/`last`/`holes` 只喂 `coverageLabel.ts` 的文字，没有任何判定读它们。
+
+### 7.4 §106 补两条（普查表之外，逐字＋URL）
+
+**问一：有没有产品在浏览器里显示采样的按键范围？**
+
+| 产品／工具 | URL（本次抓取） | 逐字原句 | 判定 |
+| --- | --- | --- | --- |
+| Kontakt 8.6 Browser | <https://www.native-instruments.com/fileadmin/ni_media/downloads/manuals/kontakt/Kontakt_8_6_User_Guide_English.pdf>（§4 已引） | Browser 的过滤是 Sound Type tags／Character tags／文本 Search／"User Content"／Preset types；Zone grid "displays and lets you change the key range" | **浏览器内显示范围：未找到**（范围画在 Zone grid，即 mapping 视图） |
+| Ableton Live 12 Browser | <https://www.ableton.com/en/live-manual/12/instrument-drum-and-effect-racks/> | Browser 章节目录为 Content Pane／Search Bar／Filters and Tags／Collections／Library／Places；Key Zone Editor "illustrating how each chain maps to the full MIDI note range" | **浏览器内显示范围：未找到**（范围画在 Key Zone Editor） |
+| HALion 6.4 | <https://archive.steinberg.help/halion/v6/en/halion/topics/mapping_zones/mapping_editor_key_range_and_velocity_range_setting_t.html> | "To set the key range, move the mouse to one of the borders of a zone and drag to the left or the right, or enter the values manually in the **Low Key** and **High Key** value fields." | **浏览器内：未找到**；范围在 Mapping Editor 里可读可改 |
+| sfizz（SFZ 播放器 UI，一手 issue） | <https://github.com/sfztools/sfizz/issues/900> | 标题 "max keyranges not showing color on the keyboard"；正文 "not showing the color range on the keyboard ui" ／ "Change it to : lokey=1 hikey=127 … does shown the color range" | **有产品把 region 覆盖画在键盘 UI 上**（mapping 视图，不是浏览器列表）；sfizz-ui 没有音色浏览器 |
+| UVI Workstation／Omnisphere 2／VSL Synchron Player／Steinberg MediaBay | 抓到的都是 `application/pdf`，本次工具不支持解析；VSL 手册页跨域跳转未跟随 | —— | **未核实／未找到** |
+
+**问二：有没有产品会警告"这段 MIDI 超出该乐器音域"？**
+
+| 产品 | URL（本次抓取） | 逐字原句 | 判定 |
+| --- | --- | --- | --- |
+| Dorico（Elements 3.0 手册） | <https://archive.steinberg.help/dorico_elements/v3/ru/dorico/topics/notation_reference/notation_reference_notes_out_of_range_colors_showing_t.html> | "You can show colors for notes that are considered out of range, such as **notes too high/low for the instrument to play** or the voice type to sing…" ／ "**Notes out of range appear red** when a tick appears beside Notes Out Of Range in the menu, and black when no tick appears." | **是（可视警告，可开关）** |
+| Finale（官方手册） | <https://usermanuals.finalemusic.com/FinaleMac/Content/Finale/Ranges.htm> | "Finale **can identify pitches that are out of range for any instrument**…" ／ "Finale automatically analyzes all pitches and **identifies notes that are out of range by displaying them with onscreen-only orange or yellow noteheads**." | **是（可视警告）** |
+| Logic Pro Key Limit | （§4.1 已引） | "any notes outside this range are **not played**." | **否：只是限制/过滤，不警告** |
+| Ableton Live Key Zone | （§4.1 已引） | "if it does not, then we already know that **the note will not be passed**" | **否：静默不通过** |
+| MuseScore | 只找到社区帖（<https://musescore.org/en/node/362035>、<https://musescore.org/en/node/388194>），官方手册（handbook.musescore.org）本次未定位到"out of range"的逐字页 | —— | **未找到** |
+| Sibelius／Cubase／FL Studio／Studio One／Reaper／Bitwig／Pro Tools | 本次未取到逐字 | —— | **未找到** |
+
+**两条问题的小结**：①"浏览器列表里显示按键范围"在本轮查到的官方文档里**未找到**；显示覆盖的产品都把它画在 **mapping／keyboard／zone 视图**里（Kontakt Zone grid、Ableton Key Zone Editor、HALion Mapping Editor、sfizz 键盘）。②**记谱软件会警告**（Dorico 红音头、Finale 橙/黄音头），**DAW 只做过滤**（Logic "not played"、Ableton "not passed"）——没有查到 DAW 对"MIDI 超出乐器音域"给出警告的先例。所以本节采纳的界面形状是**并排显示覆盖与写出范围 ＋ 越界出声报告**，这两件事各自有先例（前者＝mapping 视图的显示，后者＝记谱软件的警告；见 §4.1）。
+
+### 7.5 新增判据与证红实跑
+
+**判据文件（新增，不改既有判据）**：
+
+| 文件 | 钉住的内容 |
+| --- | --- |
+| `src/test/sampledKeyCoverage.test.ts`（8 例） | 同一 assetId ＋ 两份夹具 regions ⇒ 两个答案（硬编码表即红）；MTG 夹具 39–76 缺 41–43、dsmolken 夹具 12–120 缺 61–71/90–95；`notesOutsideCoverage` 逐音（含"洞里的音"与"只在某力度层出声的音"）；`writtenNotesOf` 按模型的读法取堆叠与力度 |
+| `src/test/sampledRangeCoverageUi.test.tsx`（8 例） | 挑选器/列表的显示来自引擎且跟着夹具变；未加载＝"尚未加载"且**无数字**；`bebop` lead（写 82–91）⇒"有 44 个音超出…可发 39–76（缺 41–43）"；写 41–43 ⇒"有 3 个音超出"；全部覆盖时**不**报告；没有目录时**不显示**任何覆盖；**目录晚到时"不在本目录"不是永久失败**（同一 reader、只换地址簿，仍能读出范围） |
+
+**证红实跑（四次突变，跑完立刻还原，`diff` 为空）**：
+
+| 突变 | 改哪 | 读数 |
+| --- | --- | --- |
+| A 硬编码表 | `sampledKeyCoverage` 对 `mtg-solo-sax:MTG-Tenor-Sax` 直接返回 `39–76 缺 41–43` | `sampledRangeCoverageUi`「跟着夹具变」**红**：换夹具后仍是 39–76，`可发 20–30` 永不到达（1 failed / 6 skipped） |
+| B 去掉报告 | 把 `lane-range-report` 的渲染条件置为 `false` | 「44 notes of bebop」**红**：`findByTestId("lane-range-report")` 超时（1 failed / 6 skipped） |
+| C min/max 比较 | `notesOutsideCoverage` 改成"取 min/max 后比跨度" | 「written into the recording's hole」**红**：41–43 落在 39–76 内 ⇒ 不报告（1 failed / 6 skipped） |
+| D 未加载给假数字 | `describeCoverage` 的 loading 分支返回 `可发 0–127` | 「shows no number before the engine has answered」**红**：`textContent` 不含"尚未加载"（1 failed / 6 skipped） |
+
+读数为绿（还原后）：`sampledKeyCoverage` 8/8、`sampledRangeCoverageUi` 8/8。
+
+### 7.6 反向（未改动的既有判据）
+
+* `src/test/sampledRangeCensus.test.ts`：**33/33 绿**（含联网复核 22 个 pin 的 sha256），三类计数仍是 `{能发:168, 部分:25, 静音:5, 无声部内容:4}`；
+* `src/test/ownerProjectAcceptance.test.ts`：**8/8 绿**，五个数（57→25、3→1、60→28）未变；
+* `src/test/sampledInstruments.test.ts` 7/7、`src/test/sampledInstrumentPaletteWiring.test.ts` 6/6：调色板 22 行、0 处不存在，未动；
+* 既有 `src/test/catalogueRecordingPicker.test.tsx` 14/14、`src/test/instrumentLibrary.test.tsx` 7/7、`src/test/instrumentCategories.test.ts` 6/6、`src/test/i18nKeys.test.ts` 4/4：**绿**（没有 `assets` 的调用方行为与改动前一致）。
+
+**未改动**：`src/audio/**`、`mcp/**`、`src/data/genres/**`、`src/data/sampledInstruments.ts`、`public/samples/manifest.json`、`docs/OPEN_WORK.md`、`src/mobile/**`、版本号、`.github/**`、`scripts/push_dev.sh`、任何 `.env*`／`wrangler.toml`。
+

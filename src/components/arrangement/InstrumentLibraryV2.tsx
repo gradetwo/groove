@@ -15,6 +15,8 @@
 import { useMemo, useState } from "react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import type { InstrumentChoice } from "./TrackListV2";
+import { describeCoverage } from "./coverageLabel";
+import type { SampledCoverageLookup } from "../../hooks/useSampledCoverage";
 
 export interface InstrumentLibraryV2Props {
   instruments: readonly InstrumentChoice[];
@@ -22,6 +24,15 @@ export interface InstrumentLibraryV2Props {
   currentAssetId?: string;
   /** Choosing one. The panel reports the choice; assigning it belongs to the caller. */
   onChoose: (assetId: string) => void;
+  /**
+   * ⭐ **What each instrument can sound, when the caller has an engine reading to offer.**
+   *
+   * Absent by default, and that default matters: a surface with no catalogue behind it (the track row's own browser)
+   * shows no range at all rather than a guess. When it *is* given, a row asks for its reading the moment a person
+   * points at or focuses it — a few hundred instruments must not each fetch a program merely because the list opened —
+   * and shows **"尚未加载"** until the engine answers. It never shows a number the reading did not produce.
+   */
+  coverage?: SampledCoverageLookup;
 }
 
 interface Entry {
@@ -37,8 +48,8 @@ interface Entry {
  */
 import { instrumentMatches } from "../../data/instrumentSearch";
 
-export function InstrumentLibraryV2({ instruments, currentAssetId, onChoose }: InstrumentLibraryV2Props) {
-  const { t } = useLanguage();
+export function InstrumentLibraryV2({ instruments, currentAssetId, onChoose, coverage }: InstrumentLibraryV2Props) {
+  const { t, isZh } = useLanguage();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | undefined>(undefined);
   const [subcategory, setSubcategory] = useState<string | undefined>(undefined);
@@ -162,10 +173,33 @@ export function InstrumentLibraryV2({ instruments, currentAssetId, onChoose }: I
                   type="button"
                   data-testid={`instrument-option-${entry.assetId}`}
                   aria-pressed={entry.assetId === currentAssetId}
+                  /**
+                   * Pointing at or focusing a row is the **intent to look at it**, and it is what starts the read. It is
+                   * not done for every row on open: the catalogue holds hundreds of programs, and expanding every
+                   * `#include` in all of them to draw a list nobody has looked at yet is a stampede, not a feature.
+                   */
+                  onMouseEnter={() => coverage?.request(entry.assetId)}
+                  onFocus={() => coverage?.request(entry.assetId)}
                   onClick={() => onChoose(entry.assetId)}
                   className={rowClass(entry.assetId === currentAssetId)}
                 >
                   {entry.name}
+                  {coverage && (
+                    <span
+                      data-testid={`instrument-coverage-${entry.assetId}`}
+                      data-coverage-status={coverage.statusOf(entry.assetId)}
+                      className="ml-2 opacity-60"
+                    >
+                      {/**
+                       * `idle` renders **nothing**: "等加载完再显示" is one of the two shapes the work order allows, and
+                       * a row nobody has pointed at has nothing to say. Once a read has started the state is named
+                       * (`loading` → 尚未加载), so the panel is never a number that came from nowhere.
+                       */}
+                      {coverage.statusOf(entry.assetId) === "idle"
+                        ? ""
+                        : describeCoverage(coverage.statusOf(entry.assetId), coverage.coverageOf(entry.assetId), isZh)}
+                    </span>
+                  )}
                 </button>
               </li>
             ))

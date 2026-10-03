@@ -32,6 +32,7 @@ import {
   instrumentChoicesFromAssets,
 } from "../components/arrangement/CatalogueRecordingPicker";
 import type { InstrumentChoice } from "../components/arrangement/TrackListV2";
+import type { SampleAsset } from "../data/sampleCatalogue";
 import { appCatalogueRuntime } from "../data/sampleCatalogueRuntime";
 import {
   describeCatalogueStatus,
@@ -933,6 +934,12 @@ export const StudioView: React.FC<StudioViewProps> = ({
    * the shipped default.
    */
   const [catalogueInstruments, setCatalogueInstruments] = useState<InstrumentChoice[]>([]);
+  /**
+   * ⭐ **The catalogue's assets, kept beside the choices**, because a key-coverage reading needs an instrument's program
+   * address and an `InstrumentChoice` is only a name and an id. The same `load()` that feeds the list feeds this, so
+   * the address book and the list cannot describe two different catalogues.
+   */
+  const [catalogueAssets, setCatalogueAssets] = useState<readonly SampleAsset[]>([]);
   const [catalogueStatus, setCatalogueStatus] = useState<CatalogueStatus>(() =>
     // Before any load has been asked for: "loading" when there is a mirror to ask, and the runtime's own words when
     // there is not (calling it "loading" forever would be a promise nothing is working on).
@@ -948,6 +955,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
       .then(({ assets }) => {
         if (cancelled) return;
         setCatalogueInstruments(instrumentChoicesFromAssets(assets));
+        setCatalogueAssets(assets);
         setCatalogueStatus(describeRuntimeStatus(appCatalogueRuntime));
       })
       .catch(() => undefined);
@@ -1339,6 +1347,10 @@ export const StudioView: React.FC<StudioViewProps> = ({
             : {})}
           instruments={catalogueInstruments}
           status={catalogueStatus}
+          // The address book a coverage reading needs, and the lane whose written notes are measured against it. Both
+          // come from the same inspector track this panel already names, so the report cannot describe another lane.
+          assets={catalogueAssets}
+          lane={pattern.tracks[inspectorTrackIdx]}
           // One command, one undo entry: the lane's own recording, which `sampledAssetForLane` reads first.
           onChoose={(assetId) => commit({ type: "SET_TRACK_SAMPLE", trackIdx: inspectorTrackIdx, assetId })}
         />

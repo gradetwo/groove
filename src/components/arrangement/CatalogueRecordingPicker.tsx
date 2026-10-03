@@ -33,13 +33,22 @@
  *     an empty browser is the defect `trackInstrumentChooser.test.tsx` exists to prevent — so the reason is drawn
  *     instead, in `src/data/sampleCatalogueStatus.ts`'s own words.
  */
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { InstrumentLibraryV2 } from "./InstrumentLibraryV2";
 import { libraryOfAsset, type InstrumentChoice } from "./TrackListV2";
-import { SAMPLED_ROLES } from "../../data/sampledInstruments";
+import { SAMPLED_ROLES, sampledAssetForLane } from "../../data/sampledInstruments";
 import type { SampleAsset } from "../../data/sampleCatalogue";
 import type { CatalogueStatus } from "../../data/sampleCatalogueStatus";
+import { useSampledCoverage } from "../../hooks/useSampledCoverage";
+import {
+  notesOutsideCoverage,
+  writtenNotesOf,
+  writtenRange,
+} from "../../features/sampledCoverage/sampledKeyCoverage";
+import type { ProgramTextSource } from "../../features/sampledCoverage/programText";
+import { describeCoverage, outsideRangeText, writtenRangeText } from "./coverageLabel";
 import { useLanguage } from "../../i18n/LanguageContext";
+import type { SequencerTrack } from "../../types/genre";
 
 /**
  * The catalogue's assets as the chooser's list — **the one mapping**, used by this picker and by `/new`.
@@ -91,6 +100,24 @@ export interface CatalogueRecordingPickerProps {
   status: CatalogueStatus;
   /** The choice, or `null` to put the lane back on the name table / its synthesised voice. */
   onChoose: (assetId: string | null) => void;
+  /**
+   * ⭐ **The catalogue the list came from**, so a coverage reading can find each asset's program address.
+   *
+   * Absent means **no coverage is shown at all** — the panel then behaves exactly as it did before this prop existed,
+   * which is what keeps every existing caller and criterion unchanged. Present, it is the address book only: which
+   * keys an asset sounds still comes from the engine, through {@link useSampledCoverage}.
+   */
+  assets?: readonly SampleAsset[];
+  /** Injected program text, for a criterion. Default: the catalogue's own fetch through the engine's include expander. */
+  programText?: ProgramTextSource;
+  /**
+   * ⭐ **The lane this panel belongs to**, so its written notes can be measured against the recording.
+   *
+   * The asset is resolved through `sampledAssetForLane`, not read off the `assetId` prop: a genre lane carries no
+   * `sample.assetId` and still plays a recording through the palette, and reporting a lane whose written line falls
+   * outside that recording is the whole reason this block exists.
+   */
+  lane?: SequencerTrack;
 }
 
 export function CatalogueRecordingPicker({
@@ -100,9 +127,42 @@ export function CatalogueRecordingPicker({
   instruments,
   status,
   onChoose,
+  assets,
+  programText,
+  lane,
 }: CatalogueRecordingPickerProps) {
   const { isZh } = useLanguage();
   const [open, setOpen] = useState(false);
+
+  /**
+   * ⭐ **The engine reading, requested for the lane's own recording.**
+   *
+   * Called before the role guard below, because a hook cannot be skipped on a render path; the guard's own answer is
+   * read again from the same predicate, so a lane the engine would ignore still renders nothing.
+   */
+  const coverageLookup = useSampledCoverage(assets ?? [], { ...(programText === undefined ? {} : { programText }) });
+  const laneAssetId = lane ? sampledAssetForLane(lane) : undefined;
+  /** The recording that will actually sound: the lane's own if it names one, otherwise the palette's. */
+  const reportAssetId = laneAssetId ?? assetId;
+  const written = useMemo(() => (lane ? writtenNotesOf(lane) : []), [lane]);
+  const range = useMemo(() => writtenRange(written), [written]);
+  const distinctPitches = useMemo(() => new Set(written.map((note) => note.pitch)).size, [written]);
+  const reportAsset = assets?.find((candidate) => candidate.assetId === reportAssetId);
+  const program = coverageLookup.programOf(reportAssetId);
+  /**
+   * The engine's per-note refusals — **not** a comparison against `range`. A hole inside the printed span (MTG 39–76
+   * with no 41–43) is exactly the case a min/max test would miss, so each written note is asked about at its own
+   * velocity (`notesOutsideCoverage`).
+   */
+  const outside = useMemo(
+    () => (reportAsset?.sfz && program !== undefined ? notesOutsideCoverage(reportAsset, program, written) : undefined),
+    [reportAsset, program, written]
+  );
+  useEffect(() => {
+    coverageLookup.request(reportAssetId);
+    // `assets` is a dependency because the catalogue arrives asynchronously: a request answered "not in this catalogue"
+    // while it was still loading must be asked again once it is here, or the panel would stay failed for the session.
+  }, [coverageLookup, reportAssetId, assets]);
 
   // A lane the engine would ignore gets nothing: see `laneAcceptsCatalogueRecording`.
   if (!laneAcceptsCatalogueRecording(role)) return null;
@@ -163,6 +223,44 @@ export function CatalogueRecordingPicker({
         )}
       </div>
 
+      {/**
+        * ⭐ **What the recording can sound, and what this lane writes — side by side, which is the one thing the census
+        * found missing everywhere (成熟产品把覆盖显示在 mapping／zone 视图里，没有一个把"这条线写到哪"并排显示).**
+        *
+        * The reading is the engine's; before it answers the slot says **"尚未加载"**, never a number. Only rendered when
+        * the caller handed in the catalogue (`assets`) — the address book a reading needs — so a surface without one
+        * shows nothing rather than a guess.
+        */}
+      {assets !== undefined && reportAssetId !== undefined && (
+        <div className="mt-1 space-y-0.5">
+          <p
+            data-testid="lane-recording-coverage"
+            data-coverage-status={coverageLookup.statusOf(reportAssetId)}
+            title={coverageLookup.reasonOf(reportAssetId)}
+            className="text-[10px] text-text-dim"
+          >
+            {isZh ? "该录音：" : "Recording: "}
+            {describeCoverage(
+              coverageLookup.statusOf(reportAssetId),
+              coverageLookup.coverageOf(reportAssetId),
+              isZh
+            )}
+          </p>
+          {range && (
+            <p data-testid="lane-written-range" className="text-[10px] text-text-dim">
+              {writtenRangeText(range.first, range.last, written.length, distinctPitches, isZh)}
+            </p>
+          )}
+          {outside !== undefined && outside.length > 0 && (
+            // A `role="status"` rather than a silent colour: the report is the deliverable, and it must be reachable
+            // without seeing the pixels.
+            <p data-testid="lane-range-report" role="status" className="text-[10px] text-[rgb(var(--d-warn,245,183,61))]">
+              {outsideRangeText(outside.length, coverageLookup.coverageOf(reportAssetId), isZh)}
+            </p>
+          )}
+        </div>
+      )}
+
       {!offered && status.detail.length > 0 && (
         <ul data-testid="lane-recording-detail" className="mt-1 list-disc pl-4 text-[10px] text-text-dim">
           {status.detail.map((problem) => (
@@ -200,6 +298,9 @@ export function CatalogueRecordingPicker({
           <InstrumentLibraryV2
             instruments={instruments}
             {...(assetId === undefined ? {} : { currentAssetId: assetId })}
+            // The rows show the same engine reading the lane report uses; `undefined` here is what keeps a caller with
+            // no catalogue showing no ranges at all.
+            {...(assets === undefined ? {} : { coverage: coverageLookup })}
             onChoose={(chosen) => {
               onChoose(chosen);
               // A person who picked one is done: the list closes behind the choice, as it does in the track row.
