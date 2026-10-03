@@ -4496,3 +4496,23 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
    `(丙)` 里 **MusicXML／`.mxl` 从未跑过**（实现存在：`src/data/musicxmlImport.ts:316 fromMusicXml` ✓，入口 `ScoreV2.tsx:471-473` ✓ 需先选中轨道 ✓）
    与 **线上复测 seek／导出／Play 三条**（本地 prod 已测 ✓，线上未测 ✓）✓
 ```
+
+## 一百三十四、✅ **2.34.45 的更新条目（`950903f`）＋ 密度探针契约（`2b6e512`）入册**（2026-10-03 22:3x ✓）
+
+```
+✅ **更新条目**：`950903f`（只改 `public/changelog.json` ＋ `public/version.json` ✓，**未 bump 版本** ✗、**未跑 release.sh** ✗）
+   CI run `37129740242` = **success** ✓；推送 `2b6e512..950903f HEAD -> dev` ✓（无强推 ✓）
+   **中文 195/200** ✓（标题 19 ＋ 31/35/46/39/25 ✓，英文 741 ✓），覆盖 ①–⑨ 九件事实，且**逐条核过所点名提交都是 `v2.34.45`（`902644d`）的祖先** ✓
+   ⭐ **生成器的真实约束（更正我的记忆 ✓）**：200 字上限**不在** `scripts/version.mjs`，而在 **`src/test/changelogSize.test.ts`**
+     （`MAX_ENTRY_ZH_CHARS = 200` ✓，计 `title.zh.length + Σ highlight.zh.length` ✓）；生成器侧是 `CHANGELOG_KEEP = 10` ✓、
+     `LATEST_MAX_HIGHLIGHTS = 3` / `LATEST_MAX_CHARS = 480` ✓。线上 2.34.44 那条实测 **177** ✓（与我记得的吻合 ✓）
+   ⚠️ **如实记的偏离**：`public/version.json` **也在改动里** ✓ —— 它是生成器的派生产物 ✓；不重写它 ⇒ `version:check`（CI 一步）会红 ✗、
+     且 `latest` 仍指向 2.34.44 ✓ ⇒ 是**生成器写的、不是手改** ✓（接受 ✓）
+   ⚠️ **未生效（重要 ✓）**：我核过线上 `latest.version` 仍是 **2.34.44** ✓ ⇒ **面板此刻仍显示旧条目** ✓，
+     要**下一次部署**才生效 ✓（不需要再发版、不需要 bump 版本 ✓）
+⚠️ 「280 ms」「214 s」两个数来自审计产物（**仓库外** ✓）⇒ 无法在仓库里复测 ✓；而"改前"的 **3204 ms / 214 522 ms** 有仓库出处 ✓（`140810a` 的判据文件头 ✓）
+✅ **密度探针契约**：`2b6e512` ✓ —— 修法＝**不再复述口径** ✗、直接 **动态 import `toolbarTiers.ts` 用它的 `isControlVisible(id,false)`** ✓（与 Toolbar 渲染同源 ✓）；
+   例外**钉死** `["arrangement"]` ✓（日期与 G3 理由写进注释 ✓）；⭐ **两条反面实跑都红** ✓（去掉 `showByDefault` ⇒ EXIT 1 ✓；给 `tap-tempo` 加第二个 ⇒ EXIT 1 ✓）
+   ⭐⭐ **它查出一件我们都没注意的事**：那道 step 在 **`probe:toolbar` 处就 exit 1 中止** ✓ ⇒ **后面三条探针在那个 run 里根本没跑过** ✓
+     ⇒ 所以它**没有当成绿** ✗✓，而是 `gh workflow run ci.yml --ref dev` 去取**真判决** ✓（`37129489502` ✓，见下一轮读数 ✓）
+```
