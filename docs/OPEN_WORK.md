@@ -4820,3 +4820,39 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
 ⇒ **教训**：**"sha 在 dev 顶端" ≠ "我的工作树在那个 sha"** ✗ ⇒ 判据必须在**已 rebase 的树**上跑 ✓
    （与今天另一次同类：拿 rebase 前的**旧 sha** 判"有没有落地" ✗ —— 两次都是"**用间接信号代替直接读数**" ✓）
 ```
+
+## 一百四十五、🔥 **卡顿归因到具名函数（`sfz/parse.ts`）＋ 我两个假读数被当场抓出** ✗✓（2026-10-03 23:1x ✓）
+
+### 145.1 ⭐⭐ 归因（真语料 ＋ 对照 ＋ 函数级，**无 snapshots** ✓）
+
+```
+**复现**：`/new`→`template-blank`→Create→导入 `/home/crow/music/midi-corpus/midi/敢当.mid`（20,458 B ✓、2 声部 ✓、
+   **2,371 个 note-on** ✓、≈101 小节 ✓）→ 映射对话框 → 播放 ✓
+   组别对照：**空白模板**（未导入）⇒ 丢步 **0** ✓；**导入＋sampler 轨**（映射真生效 ✓ `synth,sampler,sampler` ✓）⇒
+   帧 max **7,683 ms** ✗、长任务 **12 条／15,112 ms／最坏 7,676 ms** ✗、**`droppedSteps` 41** ✗
+⭐ **函数级**：`samplerLanePlayback` chunk 占 **58.54%** ✓，逐条：`scanOpcodes` **9.61%** ✓、匿名 `parse:299` 9.30% ✓、
+   `ccTuneCents` 6.87% ✓、`regionSoundsAtCc` 6.10% ✓、`parseSfz` 5.40% ✓、`noteNumber` 5.09% ✓、`unresolvedIn` 3.88% ✓、
+   `readControlDefaults` 2.51% ✓、`resolveInstrumentNote` 1.99% ✓（均为 `src/audio/sfz/*` ✓）
+⭐ **机制**：`sampleLoader.loadNote()`（`:353` ✓）**逐音符**调 `resolveInstrumentNote` ✓，而它（`sfz/instrument.ts:210` ✓）
+   **每次 `parseSfz(sfzText)`** ✗ ⇒ Salamander 展开 ~24 KB／600+ region 被解析 **2,371 次** ✗ ⇒
+   await 多为已缓存微任务 ⇒ **不让出主线程** ✗ ⇒ **单个 7.7 秒长任务** ⇒ `setInterval(40ms)` 调度器饿死 ⇒ **41 丢步** ✓✓
+⚠️ 且 `sampleLoader.ts:302-310` 的注释写着 "it is not the measured cost" ✗ ⇒ **实测它就是全部代价** ✓（同"说了做不到"类 ✗）
+✅ **裁定 (A)**：准在 **`src/audio/sfz/instrument.ts` 新增一个以 asset 为键的 `WeakMap` 缓存** ✓
+   （缓存与音符无关的那半 ✓；**签名与行为不变** ✗；~6 行 ✓；要再动别的文件 ⇒ 停手问 ✓）
+   判据：计数 spy ⇒ **60 个 `loadNote` ⇒ `parseSfz` ≤ 2** ✓（今天 60+ ✓）；反面去掉缓存必红 ✓；**不同 asset 不共享**一条 ✓；
+   ⭐ **§26**：同批音改前改后 `chosen` 路径与 `ratio` **逐值相同** ✓
+```
+
+### 145.2 ✗✓ **它抓出我两个假读数（都记下，防再犯 ✓）**
+
+```
+✗ **假读数一（我先前写的"`/new` 上 `droppedSteps 0`"）**：那是**空读数** ✓ ——
+   `/new` **从不安装 probe 钩子** ✓（只有 `useAudioEngineLifecycle`／`useGenreAudio` 装 ✓）⇒ `__health()` 全 `undefined`
+   ⇒ `0-0=0` ✓ ⇒ **不是"没丢步"，是"读不到"** ✗✓（性能线早就警告过编曲路由的 `drop=0` 是**假零** ✓，我又踩了一次 ✗）
+   它按**同一把 `?probe=1` 门**在 `NewProjectView.tsx:63` 补上（无 flag 一行不执行 ✓）⇒ 这才读得到真数 ✓（做法正确 ✓）
+✗ **假读数二（我引用的"33 fps"当应用代价）**：⭐ **同机 idle 本身就是 30.25 fps** ✓（主线程 92% `(idle)` ✓）
+   ⇒ 空白模板也只有 33.4 fps ✓ ⇒ **"33 fps"不是应用代价** ✗ ⇒ 真信号是**7.7 秒单帧与 41 丢步** ✓
+   ⇒ 也说明**我一直没拿到它这份更狠的读数**的原因是**机器被我别的线压住** ✓（3 个 chrome-headless ＋ 2 个 vitest ✓）
+⇒ **教训（第 N 次同类 ✓）**：**"读数为 0"必须先问"这个读数取得到吗"** ✗；
+   **"帧率低"必须先取"同机空载基线"** ✗ ⇒ 两者都是**用间接信号代替直接读数** ✓
+```
