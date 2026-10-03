@@ -305,7 +305,7 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
       steps: [
         { label: t("tut_maker_s1"), tip: isZh ? "可自由分叉 159 种曲风或从零构建全新流派" : "Fork existing genres or craft hybrid musical styles" },
         { label: t("tut_maker_s2"), tip: isZh ? "定制 BPM、摇摆律动、合成器参数与打击乐" : "Customize tempo, swing, synth timbres, and step patterns" },
-        { label: t("tut_maker_s3"), tip: isZh ? "生成包含完整参数的无损压缩 URL 链接分享" : "Share lossless compressed URLs or export an Ableton project" },
+        { label: t("tut_maker_s3"), tip: isZh ? "生成压缩链接分享，或导出 Ableton 工程" : "Share a compressed link or export an Ableton project" },
       ],
     },
     {
@@ -573,7 +573,7 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
                       </h3>
                       <p className="text-xs text-text-sub leading-relaxed">
                         {isZh
-                          ? "Groove 是一款基于 W3C Web Audio API 深度打造的全合成、零采样库依赖的专业音频工作站与音乐学探索系统。无论是经典模拟鼓机、FM 合成器还是爵士钢琴和弦，皆在您的浏览器本地由纯正 DSP 振荡器与滤波器实时渲染，提供母带级低延迟无损音质。"
+                          ? "Groove 是一款基于 W3C Web Audio API 深度打造的全合成、零采样库依赖的专业音频工作站与音乐学探索系统。无论是经典模拟鼓机、FM 合成器还是爵士钢琴和弦，皆在您的浏览器本地由纯正 DSP 振荡器与滤波器实时渲染，提供母带级低延迟音质。"
                           : "Groove is a zero-sample, zero-latency DAW and musicology workstation built entirely on W3C Web Audio DSP algorithms. From analog drum machines and FM synths to complex jazz voicings, all audio is synthesized purely in real-time within your browser."}
                       </p>
                       <div className="pt-2 flex flex-wrap gap-2">
@@ -1534,8 +1534,8 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
                         <div className="text-xs font-bold text-accent">WAV (Audio)</div>
                         <p className="text-xs text-text-sub leading-relaxed">
                           {isZh
-                            ? "基于 OfflineAudioContext 高速离线精确渲染，输出 48kHz / 24-bit 无损立体声母带音频，无底噪与爆音。"
-                            : "Rendered via OfflineAudioContext at 48kHz / 24-bit studio quality with limiter protection."}
+                            ? "基于 OfflineAudioContext 高速离线精确渲染，输出 44.1kHz / 16-bit 无损立体声母带音频，无底噪与爆音。"
+                            : "Rendered via OfflineAudioContext at 44.1kHz / 16-bit studio quality with limiter protection."}
                         </p>
                       </div>
 

@@ -196,8 +196,8 @@ export const TUTORIAL_COURSES: TutorialCourseDef[] = [
       },
       {
         labelKey: "tut_maker_s3",
-        tipZh: "生成包含完整参数的无损压缩 URL 链接分享",
-        tipEn: "Share lossless compressed URLs or export an Ableton project",
+        tipZh: "生成压缩链接分享，或导出 Ableton 工程",
+        tipEn: "Share a compressed link or export an Ableton project",
         targetTab: "maker",
       },
     ],
