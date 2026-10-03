@@ -5250,3 +5250,21 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
    否则该说"读数在某处" ✓（＝又一次"**用间接信号当直接读数**"的变体 ✓）
 ✅ 被停的 `mxlq` 线还报了另一句：**"Source md5 identical → 5387 is safe"** ✓（它在校语料源未被改动 ✓，做法正确 ✓）
 ```
+
+## 一百六十九、✅ **`docs/MCP.md` 过期音符口径已修（`278b3a2`）＋ 判据的"能红"机制我核过了** ✓（2026-10-03 23:5x ✓）
+
+```
+✅ **落地**：`278b3a2 docs(mcp): the Logic note form is sixteen by…` ✓ —— 只改 **`docs/MCP.md`** ✓ ＋ **新判据 `src/test/mcpDocNoteForm.test.ts`** ✓
+   ⇒ **`Test Files 1 passed`、`Tests 3 passed`、退出码 0** ✓（我跑的 ✓）
+⭐ **文档现在写对了** ✓：`region 的 qSvE 载荷不是定长事件，而是 16 字节行的序列：行的 byte7 的 bit7 = 1 表示"继续前一个事件"，
+   所以一个事件是头行 ＋ N 条续行` ✓ ＋ 机器可读契约 `<!-- logic-note-form -->`
+   `line=16; sizes=16,32,48,64,80,96; note-status=0x90..0x9f; head-line-not-note=0xb0,0xc0,0xe0` ✓
+✅⭐ **我核了它的判据是不是"从实现取数"**（否则"改了实现但没改契约"不会红 ✗）⇒ **是** ✓：
+   · `import { fromLogicProject, LOGIC_TICKS_PER_QUARTER } from "../data/logicToArrangement"` ✓（**直接读侧实现** ✓）
+   · 自己造**真字节载荷** ✓（`buildNoteEvent`／`eventSize`／`NOTE_FORM` ✓）
+   · **尺寸取自模型本身** ✓：`expect(size).toBe(NOTE_FORM.lineSize * (n + 1))` ＋ `expect(NOTE_FORM.lineSize).toBe(16)` ✓
+   · ⭐⭐ **状态范围是"量"出来的** ✓：`Array.from({length:256},(_,s)=>s).filter(readsOneNote)` ✓
+     ⇒ 断言结果 **16 个** ✓、首 **`0x90`** ✓、末 **`0x9f`** ✓ ⇒ **实现的状态规则一变即红** ✓✓
+   ⇒ 结论：这是"**文档口径＝实现口径**"的**正确钉法** ✓（与 `census-current` 同一思路 ✓）
+⚠️ 仍欠：它的 **CI 判决**（待出 ✓）｜ 其线的**逐字回报**（它推完就停了 ✓ ⇒ 记为"报告欠" ✗）
+```
