@@ -6,7 +6,8 @@
  *
  * Every function returns a **new arrangement**, because a track list is state that an interface re-renders from; mutating in place is how a UI ends up showing something the model does not say.
  */
-import type { ArrangementV2, NoteEvent, TakeRegion, TrackKindV2, TrackV2 } from "../types/arrangementV2";
+import type { ArrangementV2, NoteEvent, TakeRegion, TrackKindV2, TrackV2, TrackRegion } from "../types/arrangementV2";
+import { normaliseTrackRegion, regionBars, sameTrackRegion } from "./arrangementLanes";
 import { stepCountFor, stepsPerBarFor } from "./noteEvents";
 import type { PlannedTake } from "./takePlanning";
 import { DEFAULT_SAMPLER_ASSET, defaultContentFor, type DefaultContent } from "./defaultContent";
@@ -416,6 +417,38 @@ export function setTrackPan(arrangement: ArrangementV2, trackId: string, pan: nu
 
 export function setCollapsed(arrangement: ArrangementV2, trackId: string, collapsed: boolean): ArrangementV2 {
   return { ...arrangement, tracks: arrangement.tracks.map((track) => (track.id === trackId ? { ...track, collapsed } : track)) };
+}
+
+/**
+ * ⭐ **Where a track's region sits** — the one edit the arrangement lane's drag makes.
+ *
+ * It goes through `normaliseTrackRegion` rather than storing what the view computed, for two reasons that are both
+ * already rules of this file: **the model's limits belong to the model** (a drag cannot express a region before bar 1
+ * or shorter than a bar, and neither can an imported file), and **a region put back is identical to one that was never
+ * moved** — the default span is stored as *absence*, exactly as an emptied `label`, `mute` or `transpose` is dropped.
+ *
+ * An unknown track, a non-finite range, and a range that normalises to what the track already declares all return
+ * **the arrangement itself** (`next === arrangement`), which is the signal every caller in this code base uses to mean
+ * "no edit happened" — and the reason a drag that lands where it started records no undo entry.
+ */
+export function setTrackRegion(arrangement: ArrangementV2, trackId: string, region: TrackRegion | undefined): ArrangementV2 {
+  const track = arrangement.tracks.find((candidate) => candidate.id === trackId);
+  if (track === undefined) return arrangement;
+  const bars = regionBars(arrangement);
+  const next = normaliseTrackRegion(region, bars);
+  if (sameTrackRegion(normaliseTrackRegion(track.region, bars), next)) return arrangement;
+  return {
+    ...arrangement,
+    tracks: arrangement.tracks.map((candidate) => {
+      if (candidate.id !== trackId) return candidate;
+      if (next === undefined) {
+        // Drop the field rather than storing the default span, so "never moved" and "moved back" are the same bytes.
+        const { region: _defaulted, ...rest } = candidate;
+        return rest;
+      }
+      return { ...candidate, region: next };
+    }),
+  };
 }
 
 /**

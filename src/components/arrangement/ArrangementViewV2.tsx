@@ -30,7 +30,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Redo2, Undo2 } from "lucide-react";
-import type { ArrangementV2, TrackKindV2 } from "../../types/arrangementV2";
+import type { ArrangementV2, TrackKindV2, TrackRegion } from "../../types/arrangementV2";
 import { createArrangementFromTemplate } from "../../data/arrangementEdits";
 import {
   addTakeCommand,
@@ -48,6 +48,7 @@ import {
   setTrackGainCommand,
   setTrackNoteLengthCommand,
   setTrackPanCommand,
+  setTrackRegionCommand,
   setTrackSampleCommand,
   toggleStepCommand,
 } from "../../data/arrangementHistory";
@@ -76,10 +77,46 @@ import { playArrangementV2, type ArrangementPlayer, type ArrangementTransportSta
 import { stepsPerBarFor, STEPS_PER_BEAT } from "../../data/noteEvents";
 import { announcer } from "../../platform/announcer";
 
-/** The snap values the toolbar offers, coarsest to finest. The **value** is shown, because a toggle's state is not a value. */
-export const SNAP_VALUES = ["1/4", "1/8", "1/16", "1/32"] as const;
+/**
+ * The snap values the toolbar offers, coarsest to finest. The **value** is shown, because a toggle's state is not a value.
+ *
+ * ⭐ **The ladder starts at a whole note, and that is the change the drag forced.** Until the region could be dragged the
+ * value was a label with one consumer (the ruler's corner readout), so the four finest steps were enough to *say*; now
+ * that it decides where an edit lands, the coarsest step has to be the unit the surface actually has — **one bar**,
+ * which is what the ruler's cells are, what the lane's gridlines are, and what the ported Studio editor gesture and the
+ * loop brace both round to. Values are named as note values, which in 4/4 *are* fractions of a bar (a whole note is a
+ * bar, a quarter note is a beat, a sixteenth is a sixteenth of a bar) — see `SNAP_BARS`.
+ */
+export const SNAP_VALUES = ["1/1", "1/2", "1/4", "1/8", "1/16", "1/32"] as const;
 export type SnapValue = (typeof SNAP_VALUES)[number];
-const DEFAULT_SNAP: SnapValue = "1/16";
+/**
+ * ⭐ **The default is a bar**, not the sixteenth the label carried while it did nothing.
+ *
+ * A bar is the unit the region drag was ported with (`ArrangementPanel` rounds every move to `ARRANGEMENT_BAR_WIDTH`)
+ * and the only unit this surface can *show*: the ruler has one cell per bar and the lane one gridline per bar, which is
+ * the reason `LoopBraceV2` refuses a loop at bar 2.5 in its own comment. A finer default would mean the ported gesture
+ * arrived behaving differently from the one it was ported from.
+ */
+const DEFAULT_SNAP: SnapValue = "1/1";
+
+/**
+ * ⭐ **A snap value in bars** — the number `ArrangementLaneV2` quantises a drag to.
+ *
+ * The note value *is* the fraction of a bar only in 4/4 (1/1 = 4 beats = 1 bar, 1/4 = 1 beat, 1/16 = a sixteenth of a
+ * bar), and that is the assumption `arrangementLanes.ts` already makes with its `BEATS_PER_BAR = 4`: the lane derives
+ * every beat position from it. So the table below is the note value read as a bar fraction, and nothing here invents a
+ * second reading of "how long is a bar".
+ *
+ * All six are exact binary fractions, so a quantised position is exact too — no drift accumulates over a drag.
+ */
+export const SNAP_BARS: Record<SnapValue, number> = {
+  "1/1": 1,
+  "1/2": 0.5,
+  "1/4": 0.25,
+  "1/8": 0.125,
+  "1/16": 0.0625,
+  "1/32": 0.03125,
+};
 
 /** The zoom step, applied on every press of − and +. The ends are the ruler's own exported bounds. */
 const ZOOM_FACTOR = 1.5;
@@ -281,6 +318,23 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
     // The ruler click sets where a play will begin, which is Bitwig's gesture and why the play-start marker is here.
     setPlayStartBar(next);
   }, []);
+
+  /**
+   * ⭐ **A finished region gesture, as one undo entry.**
+   *
+   * The lane reports the range a gesture displaced and the range it landed on, **once**, when the pointer comes up
+   * (`ArrangementLaneV2` holds the in-flight range itself). That is what makes a drag one press of ⌘Z: this stack has
+   * no coalescing, so an edit per pointer move would put forty entries under one gesture. `setTrackRegionCommand`
+   * carries both ranges, so the inverse is the same setter with the range that was there — and `setTrackRegion`
+   * returns the arrangement itself when the two normalise the same, which is how a drag that lands where it started
+   * records nothing at all.
+   */
+  const onRegionChange = useCallback(
+    (trackId: string, before: TrackRegion, after: TrackRegion) => {
+      commit(setTrackRegionCommand(trackId, before, after));
+    },
+    [commit]
+  );
 
   /**
    * ⭐ **The transport's own state, which the buttons report.**
@@ -927,6 +981,10 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
                   currentBar={stripBar}
                   onSelectBar={onRulerSelect}
                   pixelsPerBar={pixelsPerBar}
+                  /**
+                   * The same value the lane quantises to, drawn where Live draws it — so the readout is a statement
+                   * about what an edit will do rather than a label beside a control that does nothing.
+                   */
                   snapLabel={snapOn ? snap : undefined}
                 />
                 {/* The loop brace lives in the ruler, which is where Live and Bitwig draw it. */}
@@ -1018,6 +1076,14 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
                 pixelsPerBar={pixelsPerBar}
                 {...(selectedTrackId !== undefined ? { selectedTrackId } : {})}
                 onSelectTrack={setSelectedTrackId}
+                /**
+                 * ⭐ **The snap value reaches the lane here, and this is the line that makes the toolbar's grid real.**
+                 * `undefined` is the toggle being off — the same meaning the bypass modifier has inside the lane — and
+                 * the value is the visible one, so what the ruler's corner says and what an edit rounds to are one
+                 * number rather than two that agree today.
+                 */
+                {...(snapOn ? { snapBars: SNAP_BARS[snap] } : {})}
+                onRegionChange={onRegionChange}
               />
               {/**
                * The playhead: the second of the two indicators. A line over the lanes, positioned in bar space.

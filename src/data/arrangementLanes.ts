@@ -7,7 +7,9 @@
  * - **Which regions exist.** Option (a) in the brief: the model has no general region type — `notesByTrack` is one
  *   flat `NoteEvent[]` per track and the only range type is `TakeRegion` — so a track's region is **derived** from
  *   the arrangement's declared length. That is deliberately the honest summary instead of a new model, and it is why
- *   nothing here writes to the arrangement.
+ *   nothing here writes to the arrangement. ⭐ Since the region drag landed, a track may also **declare** its range
+ *   (`TrackV2.region`, the brief's option (b) in its smallest form); absent still means the derived whole-length
+ *   region, so this reading and the drag's write go through the same `normaliseTrackRegion`.
  * - **Where a note sits inside it.** x = `startBeats`, y = pitch normalised to **that track's own range**, width =
  *   `lengthBeats`, alpha = velocity. Per track, because a bass part and a two-octave piano part share one lane
  *   height: normalising across tracks would flatten the bass into a line.
@@ -16,10 +18,45 @@
  * clip bar can be dragged, never its waveform or MIDI display, and the brief adopts that boundary. This module
  * therefore has no notion of a gesture — it produces positions.
  */
-import type { ArrangementV2, NoteEvent } from "../types/arrangementV2";
+import type { ArrangementV2, NoteEvent, TrackRegion } from "../types/arrangementV2";
 
 /** The length a region falls back to when the arrangement does not declare one — the same default the editor uses. */
 export const DEFAULT_REGION_BARS = 8;
+
+/**
+ * The shortest a region may be, in bars.
+ *
+ * One bar, because that is the finest thing this surface can *show*: the ruler's cells are bars, the lane's gridlines
+ * are bars, and the loop brace rounds to bars for exactly the same reason. A half-bar region would be a block with no
+ * bar line to sit on, and `docs/ARRANGEMENT_UI_DESIGN.md` §4 keeps the region readable against the ruler.
+ */
+export const MIN_REGION_BARS = 1;
+
+/**
+ * A region range as the model can hold it, or `undefined` when it is the default span.
+ *
+ * **`undefined` for `0..bars` is the point, not a convenience**: absent already means "covers the whole arrangement"
+ * (option (a) of `docs/ARRANGEMENT_UI_DESIGN.md` §4), so normalising the default span back to absence is what keeps
+ * "dragged back to where it started" byte-identical to "never dragged" — the rule `setSectionLabel` and
+ * `toggleSectionMute` follow one layer over. Clamped rather than rejected, like every other position in this model:
+ * a stale value from a file or a drag past the end has to land somewhere legal.
+ */
+export function normaliseTrackRegion(region: TrackRegion | undefined, bars: number): TrackRegion | undefined {
+  if (region === undefined) return undefined;
+  if (!Number.isFinite(region.startBar) || !Number.isFinite(region.endBar)) return undefined;
+  const total = Math.max(MIN_REGION_BARS, bars);
+  const start = Math.max(0, Math.min(total - MIN_REGION_BARS, region.startBar));
+  const end = Math.max(start + MIN_REGION_BARS, Math.min(total, region.endBar));
+  // The default span is expressed by **absence**, so a region put back drops the field instead of storing 0..bars.
+  if (start === 0 && end === total) return undefined;
+  return { startBar: start, endBar: end };
+}
+
+/** Value equality for two ranges, with `undefined` meaning "the default span" on both sides. */
+export function sameTrackRegion(a: TrackRegion | undefined, b: TrackRegion | undefined): boolean {
+  if (a === undefined || b === undefined) return a === b;
+  return a.startBar === b.startBar && a.endBar === b.endBar;
+}
 
 /**
  * One note, positioned **relative to its region**.
@@ -107,24 +144,26 @@ export function deriveNoteMiniatures(notes: readonly NoteEvent[], startBeats: nu
 }
 
 /**
- * One region per track, each spanning the arrangement's own declared bars.
+ * One region per track: the range the track declares, or the arrangement's own declared bars when it declares none.
  *
  * Groups, folders and effect tracks get one too: the region is a place where content would go, and a lane that
  * vanished for an empty track would make the track look removed rather than silent.
  */
 export function deriveArrangementRegions(arrangement: ArrangementV2): ArrangementRegion[] {
   const bars = regionBars(arrangement);
-  const startBar = 0;
-  const endBar = bars;
-  const startBeats = startBar * BEATS_PER_BAR;
-  const endBeats = endBar * BEATS_PER_BAR;
+  const fallback: TrackRegion = { startBar: 0, endBar: bars };
 
   return arrangement.tracks.map((track) => {
+    // A declared range is read through the same normaliser the edit path writes through, so a value that arrived from
+    // an old file and a value the drag just made cannot be clamped two different ways.
+    const range = normaliseTrackRegion(track.region, bars) ?? fallback;
+    const startBeats = range.startBar * BEATS_PER_BAR;
+    const endBeats = range.endBar * BEATS_PER_BAR;
     const notes = arrangement.notesByTrack?.[track.id] ?? [];
     return {
       trackId: track.id,
-      startBar,
-      endBar,
+      startBar: range.startBar,
+      endBar: range.endBar,
       startBeats,
       endBeats,
       notes,
@@ -136,5 +175,11 @@ export function deriveArrangementRegions(arrangement: ArrangementV2): Arrangemen
 /** One track's miniatures, for a caller that has a track id rather than the whole arrangement. */
 export function miniaturesFor(arrangement: ArrangementV2, trackId: string): NoteMiniature[] {
   const notes = arrangement.notesByTrack?.[trackId] ?? [];
-  return deriveNoteMiniatures(notes, 0, regionBars(arrangement) * BEATS_PER_BAR);
+  // The track's own range when it has one, so this reading and the lane's cannot draw the same region differently.
+  const bars = regionBars(arrangement);
+  const range = normaliseTrackRegion(arrangement.tracks.find((track) => track.id === trackId)?.region, bars) ?? {
+    startBar: 0,
+    endBar: bars,
+  };
+  return deriveNoteMiniatures(notes, range.startBar * BEATS_PER_BAR, range.endBar * BEATS_PER_BAR);
 }

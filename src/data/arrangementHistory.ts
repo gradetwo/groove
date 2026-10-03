@@ -36,7 +36,7 @@
  * are applied to is whatever the editor holds when the button is pressed — see `undoArrangement` below, where the entry
  * is applied to the caller's live value rather than to a stored one.
  */
-import type { ArrangementV2, NoteEvent, TrackKindV2, TrackV2 } from "../types/arrangementV2";
+import type { ArrangementV2, NoteEvent, TrackKindV2, TrackRegion, TrackV2 } from "../types/arrangementV2";
 import {
   addTake,
   addTrack,
@@ -55,6 +55,7 @@ import {
   setTrackGain,
   setTrackNoteLength,
   setTrackPan,
+  setTrackRegion,
   setTrackSample,
   toggleStep,
 } from "./arrangementEdits";
@@ -257,6 +258,21 @@ export function setTrackGainCommand(trackId: string, before: number, after: numb
 
 export function setTrackPanCommand(trackId: string, before: number, after: number): ArrangementCommand {
   return setterCommand("pan", (arrangement, next: number) => setTrackPan(arrangement, trackId, next), before, after);
+}
+
+/**
+ * ⭐ **Moving or resizing a region is one action, whichever end of it a gesture turned.**
+ *
+ * The setter shape is `setTrackRegion`'s, so the inverse is the same call with the range the gesture displaced — no
+ * second implementation of "put it back". **One command per gesture, not per pointer move**: the lane holds the
+ * in-flight range itself and commits here on pointer up (see `ArrangementLaneV2`), because this stack has no
+ * coalescing and a command per move would make one undo step one pixel of one drag.
+ *
+ * `before`/`after` are the ranges as the lane read them, including `undefined` for the default span; normalisation
+ * (clamping, and dropping the field when the range is the whole arrangement) is `setTrackRegion`'s, not the view's.
+ */
+export function setTrackRegionCommand(trackId: string, before: TrackRegion | undefined, after: TrackRegion | undefined): ArrangementCommand {
+  return setterCommand("region", (arrangement, next: TrackRegion | undefined) => setTrackRegion(arrangement, trackId, next), before, after);
 }
 
 export function setTrackSampleCommand(trackId: string, before: string, after: string): ArrangementCommand {

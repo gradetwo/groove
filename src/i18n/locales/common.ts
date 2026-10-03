@@ -156,7 +156,13 @@ export const commonMessages = {
   track_remove_label: { en: "Remove {name}", zh: "删除 {name}" },
   track_msr_label: { en: "Mute, solo and record-arm for {name}", zh: "{name} 的静音、独奏与待录" },
   track_add_label: { en: "Add a track", zh: "添加轨道" },
-  region_label: { en: "{name}, {bars} bars", zh: "{name}，{bars} 小节" },
+  /*
+    The region's name carries its **bar range**, not only its length — the same shape `loop_start_label` uses, and for
+    the same reason: the arrow keys change where the region sits, and an accessible name that did not say so would make
+    the keyboard alternative (WCAG 2.5.7) invisible to the person using it.
+  */
+  region_label: { en: "{name}, bars {from} to {to}", zh: "{name}，第 {from} 到 {to} 小节" },
+  region_resize_label: { en: "Change how long {name} is", zh: "改变 {name} 的长度" },
   region_empty: { en: "no notes", zh: "没有音符" },
   // The playhead and the play-start are two indicators, which is Bitwig's documented model: a moving line for where
   // playback is, and a triangle for where a play will begin.

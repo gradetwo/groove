@@ -86,6 +86,34 @@ export interface TrackV2 {
    * Ranges and a whole-track selection are **one mechanism with two uses**, not two features: comping is what you get by choosing per range, and swapping the whole performance is what you get by choosing once.
    */
   takeRegions?: TakeRegion[];
+  /**
+   * ⭐ **Where this track's region sits, when it has been moved or shortened.**
+   *
+   * `docs/ARRANGEMENT_UI_DESIGN.md` §4 recorded two roads and chose (a) first: *"每轨派生一个覆盖
+   * `1..arrangement.bars` 的区域（如实的摘要，模型零改动）"*, with (b) waiting until arranging in sections was real:
+   * *"把 `TakeRegion` 的 `{startBar,endBar}` 提升为通用的区域模型"*. **The drag is that "real"**: a region whose bar
+   * is a fact the user set cannot be a pure derivation, because there is nowhere in the model to put "this bar".
+   * So this is (b), in its smallest form — the same half-open `{startBar, endBar}` convention `TakeRegion` already
+   * uses, one region per track (which is what the lane draws), not a new list of clips.
+   *
+   * **Absent means the region covers the whole arrangement** — bars `0..(arrangement.bars ?? DEFAULT_REGION_BARS)` —
+   * which is option (a) exactly. So every arrangement written before this field reads unchanged, and a region dragged
+   * back to its default span drops the field again (`setTrackRegion`), which is the same "a thing put back is
+   * identical to a thing that never was" rule a label, a mute and a transpose already follow.
+   *
+   * **Bars, and fractional**: the unit the ruler and the loop brace are already in, so a dragged edge is a position
+   * the model's own range types can express. The lane converts to beats with the same `BEATS_PER_BAR` it always has.
+   */
+  region?: TrackRegion;
+}
+
+/**
+ * A track's region over the arrangement's bars, half-open (`startBar` inclusive, `endBar` exclusive) — deliberately
+ * the same shape as `TakeRegion` minus the take, so the two can be compared without a translation nobody wrote down.
+ */
+export interface TrackRegion {
+  startBar: number;
+  endBar: number;
 }
 
 export interface Take {

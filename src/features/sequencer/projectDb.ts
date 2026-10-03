@@ -947,6 +947,19 @@ function readPersistedTrack(value: unknown, index: number): TrackV2 {
       readPersistedTakeRegion(region, `take region ${at} of track "${name}"`)
     );
   }
+  /**
+   * ⭐ **Where the region was dragged to.** Read here because this validator is hand-written and an unknown field is
+   * dropped — without this the region would come back covering the whole arrangement after a reload, which is the
+   * "it looked right until you reopened it" defect this function's own documentation exists to prevent. Optional, like
+   * every other field: an arrangement stored before the drag existed simply has no region.
+   */
+  if (track.region !== undefined) {
+    const region = requirePersistedObject(track.region, `track "${name}"'s region`);
+    read.region = {
+      startBar: requirePersistedNumber(region.startBar, `track "${name}"'s region start`),
+      endBar: requirePersistedNumber(region.endBar, `track "${name}"'s region end`),
+    };
+  }
 
   return read;
 }
