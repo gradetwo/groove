@@ -21,6 +21,7 @@ vi.mock("../audio/AudioEngine", () => ({
     const engine = {
       setPattern: vi.fn(),
       setBpm: vi.fn(),
+      getBpm: vi.fn(() => 120),
       setSwing: vi.fn(),
       setTimeSignature: vi.fn(),
       setResolution: vi.fn(),
@@ -30,6 +31,10 @@ vi.mock("../audio/AudioEngine", () => ({
       setTrackState: vi.fn(),
       setLoudnessTrimDb: vi.fn(),
       getAnalyser: vi.fn(() => null),
+      // ⭐ The recorded-lane half (see CompareViewPresets.test.tsx).
+      prepareSampledLanes: vi.fn(() => ({ stoodDown: [], problems: [] })),
+      getTrackState: vi.fn(() => undefined),
+      getTrackStates: vi.fn(() => []),
       play: vi.fn().mockResolvedValue(undefined),
       stop: vi.fn(),
       destroy: vi.fn(),

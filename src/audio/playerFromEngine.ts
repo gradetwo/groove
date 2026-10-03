@@ -17,33 +17,28 @@ import { browserSampleDecoder } from "./browserSampleGraph";
 import { createSampleLoader, type SampleDecoder } from "./sampleLoader";
 import { startSamplerNote, type SamplerVoice } from "./samplerVoice";
 import { KeyswitchState } from "./sfz/keyswitch";
-import { planSamplerSteps, scheduleSamplerSteps } from "./samplerSteps";
+import {
+  createSamplerLanePlayback,
+  type SamplerLaneEngine,
+  type SamplerLanePlayback,
+} from "./samplerLanePlayback";
 import type { AudioEngine } from "./AudioEngine";
 import type { SequencerPattern } from "../types/genre";
 
 /**
  * What an engine has to offer — the getters `AudioEngine` already exposes, named so a fake is honest rather than a reimplementation.
  *
+ * ⭐ **It extends {@link SamplerLaneEngine}**, because the arrangement's sampler lanes are sounded by
+ * `createSamplerLanePlayback` — the one entry point — and the merge is only honest if both surfaces are still describing
+ * the same engine. The extra fields below are what is genuinely the *player's* half: the tempo, the transport, and the
+ * observation callbacks.
+ *
  * `setPattern`/`play`/`stop`/`setBpm` are **optional**, because an engine-shaped object without them still supports the audition, and a caller that hands one over should hear why the transport half does not
  * work rather than see a `TypeError`. The signatures are `AudioEngine`'s own, so the two cannot drift.
  */
-export interface EngineAudioTap {
-  /**
-   * ⭐ **Nullable, because the engine exists before its audio does** — an `AudioEngine` can be constructed and not yet have a context, and the type error that revealed this was telling the truth rather than
-   * being an inconvenience. `useTransportControls` already says why it matters: a press before the engine exists is indistinguishable from a broken button, so the state has to be sayable.
-   */
-  audioContext: BaseAudioContext | null;
-  musicDestination: AudioNode | null;
+export interface EngineAudioTap extends SamplerLaneEngine {
   /** The pattern the sequencer plays. Absent means "this engine cannot play notes", which `play` reports rather than assumes. */
   setPattern?: (pattern: SequencerPattern, resetStates?: boolean) => void;
-  /**
-   * ⭐ **"Here is the catalogue; stand your synthesiser down for the lanes it can sound from a recording."**
-   *
-   * Optional because an engine-shaped object without it still plays — it simply keeps the built-in voices, which is
-   * the same audible result as a lane whose recording the mirror does not serve. `AudioEngine.prepareSampledLanes` is
-   * the real one.
-   */
-  prepareSampledLanes?: (catalogue: readonly SampleAsset[]) => { stoodDown: number[]; problems: string[] };
   play?: AudioEngine["play"];
   stop?: AudioEngine["stop"];
   /**
@@ -63,13 +58,6 @@ export interface EngineAudioTap {
   canReturnToStart?: AudioEngine["canReturnToStart"];
   /** The arrangement's tempo, so a note's beat is the length the arrangement says rather than the studio's last. */
   setBpm?: AudioEngine["setBpm"];
-  /**
-   * ⭐ **Where the transport reports a loop wrap, so the sampler lanes can be planned for the next pass.**
-   *
-   * Optional like the rest of the transport surface: a player that cannot reach it still plays, it just cannot
-   * extend a sampler lane past the first pass — and `AudioEngine.onLoopWrap` says why that matters.
-   */
-  onLoopWrap?: (wrapTimeSeconds: number) => void;
   /**
    * ⭐ **The observation half of the transport, so the arrangement can draw where playback is and light its buttons.**
    *
@@ -137,9 +125,15 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
     return created;
   };
   /**
-   * The sampler steps `play` scheduled, separately from `voices`, because a transport stop is not a key release: it silences everything the arrangement started, whereas `releaseNote` names one key.
+   * ⭐ **The recorded lanes' notes, owned by the one controller that places them.**
+   *
+   * This used to be a local `scheduled: SamplerVoice[]` plus a local `engine.onLoopWrap` handler and a local
+   * `planSamplerSteps` call — the same three pieces `src/audio/samplerLanePlayback.ts` owns, written twice. The player
+   * now hands that controller the three facts only it has (the catalogue's lanes, its own loader seams, and the
+   * stand-down call) and stops owning the voices itself; `stopScheduled` is the whole of "silence the sampler half"
+   * again, and it is the controller's `stop` rather than a second list that could fall out of step with it.
    */
-  const scheduled: SamplerVoice[] = [];
+  let recorded: SamplerLanePlayback | null = null;
 
   /**
    * The step a `pause` left the transport on, so the next `play` continues instead of restarting.
@@ -193,10 +187,19 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
     const keyswitch = keyswitchFor(trackId, assetId);
     keyswitchByVoiceKey.set(keyFor(trackId, midi), keyswitch);
     keyswitch.noteOn(midi, DEFAULT_AUDITION_VELOCITY);
-    if (engine.audioContext === null || engine.musicDestination === null) {
+    if (engine.audioContext === null || engine.musicDestination == null) {
       // Reported rather than thrown, the same way `play` reports a missing engine: a key press that throws is worse than one that is silent for a stated reason.
       return { ok: false as const, reason: "audio engine is not ready" };
     }
+    /**
+     * ⭐ **Held in a local, because the seam's destination is optional and an `await` below resets the narrowing.**
+     *
+     * `EngineAudioTap` extends `SamplerLaneEngine`, whose `musicDestination` is `AudioNode | null | undefined` (the
+     * controller tolerates an engine-shaped double that has no destination yet). Narrowing the *property* survives until
+     * the first `await`; a `const` does not have that problem, and this is also the value the voice is actually started
+     * on, so the two cannot disagree.
+     */
+    const destination = engine.musicDestination;
     /**
      * ⭐ **A key press is a gesture, so it is where a suspended context has to be resumed — and this path never did.**
      *
@@ -265,7 +268,7 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
       const startGainDb = (gainDb ?? 0) + controllerGainDb;
       const voice = startSamplerNote({
         context: engine.audioContext,
-        destination: engine.musicDestination,
+        destination,
         buffer: note.buffer,
         ratio: note.ratio,
         ...(startGainDb === 0 ? {} : { gainDb: startGainDb }),
@@ -292,18 +295,20 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
   };
 
   /**
-   * Stop every voice `play` started, and report how many.
+   * Stop every sampler voice `play` started, and report how many.
    *
    * ⭐ **This is the sampler half only, and it used to be the whole of `stop` — which is why the Stop button was silent while the engine's own lanes kept playing.** The engine's transport is stopped by `stopTransport` below; the two
    * halves are kept apart because `play` needs the sampler half on its own before the engine starts (see there), and nothing else does.
+   *
+   * ⭐ **The loop handler leaves with the voices**, and that is the controller's own guarantee now rather than a line
+   * here: `createSamplerLanePlayback` installs the handler, restores whatever owned it before on `stop`, and drops
+   * every voice it placed. A stopped transport therefore cannot plan a pass nobody will hear, and this function cannot
+   * forget to do it.
    */
   const stopScheduled = (): number => {
-    // ⭐ The loop handler goes with the voices: a stopped transport must not plan a pass nobody will hear.
-    if (engine.onLoopWrap) engine.onLoopWrap = undefined;
-    // Drained first: `stop` is a voice's own method, so nothing in this loop can re-enter the list it is walking.
-    const started = scheduled.splice(0);
-    for (const voice of started) voice.stop();
-    return started.length;
+    const stopped = recorded?.stop() ?? 0;
+    recorded = null;
+    return stopped;
   };
 
   /**
@@ -479,27 +484,27 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
       await engine.play();
 
       /**
-       * The sampler lanes' notes are **not** what the engine was just handed. Its sequencer voices a step by `track_id` and has no SFZ loader, so a sampler step is resolved here through the same loader the
-       * audition uses, per step, and started on the audio clock. A lane whose instrument cannot be resolved is reported in the result rather than left as silence with no explanation.
+       * What the caller is told about the sampler half: `problem` is the answer this press returns, and `servedProblem`
+       * is the lanes the catalogue could not serve, held apart from the schedule's own failures because the two have
+       * different fixes and are joined only once both are known.
        */
       let problem: string | undefined;
+      let servedProblem: string | undefined;
+
       /**
-       * ⭐ **The arrangement's own tempo goes into the plan, because the overlap rule measures in seconds.**
+       * ⭐ **The recorded lanes are sounded by the one controller that owns them.**
        *
-       * "Was the previous voice still sounding when this note began?" is a question about seconds, and a step is only
-       * seconds once a tempo says so — so `planSamplerSteps` is handed the same `bpm` the steps are placed with, and it
-       * marks the handovers exactly as `planOfflineAudioLanes` does for a render (`src/audio/legatoJoin.ts`).
-       */
-      const samplerSteps = planSamplerSteps(samplerLanes, { bpm });
-      /**
-       * ⭐ **Retained past the first pass, because the transport loops.**
+       * This block used to hold its own copy of `planSamplerSteps` + `scheduleSamplerSteps` + a wrap handler + a voice
+       * list — the same three decisions `src/audio/samplerLanePlayback.ts` owns, and the copy that had to be fixed twice
+       * (the resume offset, the retained loader). What is genuinely the player's is handed over instead: the lanes
+       * `playArrangementV2` already resolved and filtered, a loader built from this player's own decode/fetch seams, and
+       * the stand-down call, which must run **before** the first note is placed so a recorded lane is never doubled.
        *
-       * `scheduleSamplerSteps` puts one pass on the audio clock and returns; nothing steps these lanes afterwards,
-       * so a loader that went out of scope with that call would leave every later pass of a loop silent while the
-       * engine's own lanes kept sounding. It used to be a `const` inside the block below.
+       * The tempo goes into the plan because the overlap rule measures in seconds: "was the previous voice still
+       * sounding when this note began?" is a question about seconds, and a step is only seconds once a tempo says so —
+       * the same call `planOfflineAudioLanes` makes for a render (`src/audio/legatoJoin.ts`).
        */
-      let sampler: ReturnType<typeof createSampleLoader> | null = null;
-      if (samplerSteps.length > 0) {
+      if (samplerLanes.length > 0) {
         let assets: readonly SampleAsset[] = [];
         try {
           assets = (await loadCatalogue()).assets;
@@ -510,73 +515,66 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
           console.warn("catalogue unavailable; the arrangement's sampler steps are silent", error);
         }
         if (assets.length > 0) {
-          /**
-           * ⭐ **The engine stands its own synthesiser down for exactly the lanes this catalogue can sound.**
-           *
-           * The pattern reached the engine before the catalogue answered — deliberately, because the transport has to
-           * start on the gesture — so this is where the two facts meet: the engine knows which lanes are recorded
-           * instruments (the written table, read off its own pattern) and the catalogue knows which recordings it
-           * holds. The call is made **before** the steps are scheduled, so the only window in which a lane could be
-           * doubled is the engine's own lookahead rather than a whole pass. A lane whose recording this mirror does
-           * not serve is absent from the set and keeps the synthesiser it has today, and `prepared.problems` says so
-           * with the next step.
-           */
-          const prepared = engine.prepareSampledLanes?.(assets) ?? { stoodDown: [], problems: [] };
-          sampler = createSampleLoader(decode ?? browserSampleDecoder(engine.audioContext), assets, fetchSfzText);
-          const report = await scheduleSamplerSteps(samplerSteps, {
-            context: engine.audioContext,
-            destination: engine.musicDestination,
-            loader: sampler,
+          const playback = createSamplerLanePlayback({
+            engine,
+            pattern,
+            catalogue: assets,
             bpm,
             /**
-             * ⭐ **On a resume, the lanes rejoin the engine's grid at the step the engine resumed on.** The events
-             * before it belong to the part of the pass that was already played and are skipped, and the grid offset
-             * puts the resumed step at now — so the held position sounds like one pass with a gap in it rather than
-             * like a second pass laid over the first.
+             * ⭐ **The lanes the arrangement already chose, not a second resolution of them.** `playArrangementV2`
+             * applied `deriveTrackStates`' audibility rule to the *compiled* arrangement, whose lane order is the
+             * engine pattern's — asking the engine's own track states here would answer about a different pattern, and
+             * re-running the resolver would be the second mapping this module exists to prevent.
              */
-            ...(resumeFrom === null ? {} : { fromStep: resumeFrom }),
+            lanes: samplerLanes,
+            /**
+             * This player's own decode/fetch seams, so a criterion judges the note rather than the browser; built once
+             * and reused by every wrap, because a loader that went out of scope with the first pass is exactly how a
+             * looping lane goes silent on the second.
+             */
+            loaderFor: (catalogue, context) =>
+              createSampleLoader(decode ?? browserSampleDecoder(context), catalogue, fetchSfzText),
+            /**
+             * ⭐ **The engine stands its own synthesiser down for exactly the lanes this catalogue can sound.**
+             *
+             * The pattern reached the engine before the catalogue answered — deliberately, because the transport has to
+             * start on the gesture — so this is where the two facts meet: the engine knows which lanes are recorded
+             * instruments (the written table, read off its own pattern) and the catalogue knows which recordings it
+             * holds. The call is made **before** the steps are scheduled, so the only window in which a lane could be
+             * doubled is the engine's own lookahead rather than a whole pass. A lane whose recording this mirror does
+             * not serve is absent from the set and keeps the synthesiser it has today, and its sentence is composed into
+             * this play's report below.
+             */
+            speak: (catalogue) => {
+              const prepared = engine.prepareSampledLanes?.(catalogue) ?? { stoodDown: [], problems: [] };
+              servedProblem = prepared.problems.length > 0 ? prepared.problems.join("; ") : undefined;
+            },
+            /**
+             * **The first pass's report is what the caller is answered with.** A resolution that failed names itself, and
+             * the lanes this catalogue could not serve are added to it — a different failure with a different fix. Later
+             * passes are not reported: a problem on pass seven must not change what pass one said.
+             */
+            onFirstPassProblems: (problems) => {
+              // Assigned, not appended: a catalogue warning from an earlier attempt is no longer true once a load has succeeded and a pass has been placed.
+              const reasons = [...problems, ...(servedProblem === undefined ? [] : [servedProblem])];
+              problem = reasons.length > 0 ? reasons.join("; ") : undefined;
+            },
+            warn: (message) => {
+              // eslint-disable-next-line no-console -- the same prefix and shape `useTransportActions` reports sampler problems with
+              console.warn(message);
+            },
           });
-          scheduled.push(...report.voices);
+          recorded = playback;
           /**
-           * **Assigned, not appended**: the catalogue warning above was about a load that has now succeeded, and leaving it beside a schedule that worked would report a failure that is no longer true. A
-           * resolution that did fail still reports itself, because `report.problems` is what replaces it — and the lanes this catalogue could not serve are added to it, because that is a *different* failure with a
-           * different fix.
+           * ⭐ **On a resume, the lanes rejoin the engine's grid at the step the engine resumed on.** The events before
+           * it belong to the part of the pass that was already played and are skipped, and the grid offset puts the
+           * resumed step at now — so the held position sounds like one pass with a gap in it rather than like a second
+           * pass laid over the first.
            */
-          const reasons = [...report.problems, ...prepared.problems];
-          problem = reasons.length > 0 ? reasons.join("; ") : undefined;
+          await playback.play(bpm, resumeFrom === null ? {} : { fromStep: resumeFrom });
+          // A stop that landed while the catalogue resolved owns the lane now, not this pass.
+          if (recorded !== playback) playback.stop();
         }
-      }
-
-      /**
-       * ⭐ **The sampler lanes get planned again on every loop wrap, or they only ever play once.**
-       *
-       * `scheduleSamplerSteps` placed one pass; the engine's own lanes wrap by themselves and keep sounding, so
-       * without this the two halves of a looping arrangement diverge on the second pass. The wrap time comes from
-       * the transport rather than from this side's clock, because the transport schedules ahead and only it knows
-       * when the new pass actually begins.
-       *
-       * Failures are not re-reported: the first pass's report is what the caller was answered with, and a problem
-       * on pass seven is not a reason to change what pass one said. The voices are pushed onto `scheduled` so a
-       * stop silences them with everything else.
-       */
-      if (sampler !== null && samplerSteps.length > 0) {
-        const loader = sampler;
-        engine.onLoopWrap = (wrapTimeSeconds: number): void => {
-          if (engine.audioContext === null || engine.musicDestination === null) return;
-          void scheduleSamplerSteps(samplerSteps, {
-            context: engine.audioContext,
-            destination: engine.musicDestination,
-            loader,
-            bpm,
-            startSeconds: wrapTimeSeconds,
-          })
-            .then((again) => {
-              scheduled.push(...again.voices);
-            })
-            .catch(() => {
-              /* a later pass that cannot be planned must not become an unhandled rejection */
-            });
-        };
       }
 
       // What was planned is the steps the engine was handed: the pattern is the arrangement, and zero is the honest answer when every lane is empty.

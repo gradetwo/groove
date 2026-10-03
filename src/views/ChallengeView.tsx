@@ -21,6 +21,7 @@ import { Genre } from "../types/genre";
 import { ALL_GENRES } from "../data/genres";
 import { AudioEngine } from "../audio/AudioEngine";
 import { patternFromGenre } from "../data/genreMix";
+import { useRecordedLanes } from "../hooks/useRecordedLanes";
 import { useLanguage } from "../i18n/LanguageContext";
 import { useDeviceCapabilities } from "../hooks/useDeviceCapabilities";
 import { announcer } from "../ui";
@@ -143,6 +144,16 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
   const [isCertificateOpen, setIsCertificateOpen] = useState(false);
 
   const engineRef = useRef<AudioEngine | null>(null);
+  /**
+   * ⭐ **The recorded lanes of the genre being guessed, sounded from their own bytes.**
+   *
+   * The quiz plays `patternFromGenre(q.correctGenre)` — the same arranged pattern the genre's own page auditions — and
+   * an ear-training round whose "jazz" answer plays a synthesised sax is teaching the wrong instrument. This view owns
+   * its engine (a fresh one per question, so a previous round's transport and voices cannot survive into the next
+   * question), so it hands the shared seam a **getter** rather than a captured engine: the engine it reads changes
+   * between questions and the seam must follow it.
+   */
+  const { startRecordedLanes, stopRecordedLanes } = useRecordedLanes(() => engineRef.current);
 
   const persistStats = (updated: Partial<StoredStatsV2>) => {
     try {
@@ -194,6 +205,9 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
 
   // Start new round
   const startNewQuestion = (diff = difficulty, autoPlay = hasStarted) => {
+    // ⭐ The previous round's recorded voices are on the audio clock, which `destroy()` does not reach: silence them
+    // **before** the engine that was placed on goes away, so a new question cannot inherit a sounding sampler lane.
+    stopRecordedLanes();
     if (engineRef.current) {
       engineRef.current.stop();
       engineRef.current.destroy();
@@ -210,12 +224,19 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
     const engine = new AudioEngine({
       onStop: () => setIsPlaying(false),
     });
-    engine.setPattern(patternFromGenre(q.correctGenre));
+    const pattern = patternFromGenre(q.correctGenre);
+    engine.setPattern(pattern);
     engine.setBpm(q.correctGenre.default_bpm || 120);
     engineRef.current = engine;
 
     if (autoPlay) {
-      engine.play();
+      void engine.play();
+      /**
+       * ⭐ **The transport first, then the recorded lanes**, the same order the genre audition uses: the engine's own
+       * grid is what the sampler places its notes on, and the scheduling is not awaited so the round does not wait on
+       * the catalogue.
+       */
+      void startRecordedLanes(pattern);
       setIsPlaying(true);
     } else {
       setIsPlaying(false);
@@ -226,6 +247,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
   useEffect(() => {
     startNewQuestion(difficulty, false);
     return () => {
+      stopRecordedLanes();
       if (engineRef.current) {
         engineRef.current.stop();
         engineRef.current.destroy();
@@ -236,17 +258,24 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
 
   const handleTogglePlay = () => {
     if (!engineRef.current || !question) return;
+    const pattern = patternFromGenre(question.correctGenre);
     if (!hasStarted) {
       setHasStarted(true);
-      engineRef.current.play();
+      void engineRef.current.play();
+      void startRecordedLanes(pattern);
       setIsPlaying(true);
       return;
     }
     if (isPlaying) {
       engineRef.current.pause();
+      // A pause stops the sampler half too: a recorded note is already on the audio clock and cannot be un-scheduled.
+      stopRecordedLanes();
       setIsPlaying(false);
     } else {
-      engineRef.current.play();
+      void engineRef.current.play();
+      // ⭐ The engine's `play()` continues from the step its `pause()` kept, and the recorded lanes rejoin that grid —
+      // without the step, the second half of the pattern would be heard under the first half of the sampler's.
+      void startRecordedLanes(pattern);
       setIsPlaying(true);
     }
   };

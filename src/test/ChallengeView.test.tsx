@@ -10,6 +10,12 @@ vi.mock("../audio/AudioEngine", () => {
     AudioEngine: vi.fn().mockImplementation(() => ({
       setPattern: vi.fn(),
       setBpm: vi.fn(),
+      getBpm: vi.fn(() => 120),
+      // ⭐ The recorded-lane half: the view reads the palette for a mapped lane, so a double that cannot answer
+      // those three questions would make the quiz's silence a property of the double rather than of the view.
+      prepareSampledLanes: vi.fn(() => ({ stoodDown: [], problems: [] })),
+      getTrackState: vi.fn(() => undefined),
+      getTrackStates: vi.fn(() => []),
       play: vi.fn(),
       pause: vi.fn(),
       stop: vi.fn(),

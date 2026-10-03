@@ -5,6 +5,7 @@ import { Genre, GenreRadarMetrics, SequencerTrack, SequencerPattern } from "../t
 import { ALL_GENRES, GENRES_MAP } from "../data/genres";
 import { AudioEngine } from "../audio/AudioEngine";
 import { patternFromGenre, getGenreLoudnessTrimDb } from "../data/genreMix";
+import { useRecordedLanes } from "../hooks/useRecordedLanes";
 import { getBpmOverlap } from "../utils/bpm";
 import { useLanguage } from "../i18n/LanguageContext";
 import { EmptyState } from "../ui/EmptyState";
@@ -135,6 +136,17 @@ export const CompareView: React.FC<CompareViewProps> = ({
   });
   const syncEngineRef = useRef<AudioEngine | null>(null);
 
+  /**
+   * ⭐ **The recorded lanes of whichever engine this view is playing through.**
+   *
+   * The A/B comparison has two engines — one for a single genre's audition, one for the synchronous composite — and both
+   * are created here rather than by `useAudioEngineInstance`, so the shared seam is handed a getter that prefers the
+   * composite while it is the one sounding. `patternFromGenre` carries the genre data's own instrument names, so a
+   * comparison of two jazz styles played a synthesised sax on both sides and requested **not one** recording; that is
+   * the same defect the genre page had, at the surface whose whole point is hearing the difference.
+   */
+  const { startRecordedLanes, stopRecordedLanes } = useRecordedLanes(() => syncEngineRef.current ?? engineRef.current);
+
   // Update default sync BPM when genre pair changes
   useEffect(() => {
     if (genres.length >= 2) {
@@ -164,6 +176,14 @@ export const CompareView: React.FC<CompareViewProps> = ({
     if (syncEngineRef.current) {
       syncEngineRef.current.stop();
     }
+    /**
+     * ⭐ **The recorded lanes are stopped by name, because the engine's `stop()` cannot reach them.**
+     *
+     * A lane the palette maps is sounded by a scheduler on the audio clock, outside the transport: without this, "Stop"
+     * left the comparison's recorded sax and bass ringing over a stopped grid — the same half-a-stop the arrangement's
+     * own Stop button had, at a second surface.
+     */
+    stopRecordedLanes();
     setPlayingId(null);
     setIsSyncPlaying(false);
   };
@@ -293,6 +313,15 @@ export const CompareView: React.FC<CompareViewProps> = ({
       applySyncMutesToEngine(engine, syncMode, genres, columnMutes, columnSolos);
 
       await engine.play();
+      /**
+       * ⭐ **The composite's recorded lanes are sounded too, and they are the *point* of a comparison.**
+       *
+       * Each member contributed its own arranged mix (`patternFromGenre(g).tracks`), so a comparison of two jazz styles
+       * is mostly recorded lanes: `sax_lead`, `walking_upright`, a `piano_lead`. The transport first, then the
+       * scheduling — the same order as the single-genre path beside this one — and the engine's mute/solo state has
+       * already been written, so `audibleSamplerLanesOf` leaves a muted column out of the plan.
+       */
+      void startRecordedLanes(compositePattern);
       setIsSyncPlaying(true);
       setPlayingId(null);
     } finally {
@@ -351,6 +380,8 @@ export const CompareView: React.FC<CompareViewProps> = ({
       if (engineRef.current) {
         engineRef.current.stop();
       }
+      // The recorded lanes are outside the transport, so stop alone would leave them ringing.
+      stopRecordedLanes();
       setPlayingId(null);
       return;
     }
@@ -359,6 +390,14 @@ export const CompareView: React.FC<CompareViewProps> = ({
     if (playingId === genre.id && engineRef.current) {
       setPlayingMode(mode);
       applyAudioMutes(engineRef.current, mode, genre);
+      /**
+       * ⭐ **A mode switch re-plans the recorded lanes, because the mutes just changed.**
+       *
+       * "Drums Only" mutes the non-drum lanes on the engine, and a recorded lane is placed by a scheduler the engine's
+       * mute state cannot reach — so without this the recorded bass and piano would keep sounding over a mode whose
+       * whole promise is that they are silent. This is the same re-plan `GenreDetailView` makes for its own two modes.
+       */
+      void startRecordedLanes(patternFromGenre(genre));
       return;
     }
 
@@ -373,15 +412,20 @@ export const CompareView: React.FC<CompareViewProps> = ({
         engineRef.current = engine;
       } else {
         engine.stop();
+        // …and the previous genre's recorded voices with it, before this pattern replaces theirs.
+        stopRecordedLanes();
       }
 
       // Clear any explicit override left by a previous sync composite on a shared
       // engine, then let `setPattern` match this genre's own measured trim.
       engine.setLoudnessTrimDb(null);
-      engine.setPattern(patternFromGenre(genre), true);
+      const pattern = patternFromGenre(genre);
+      engine.setPattern(pattern, true);
       engine.setBpm(genre.default_bpm || 120);
       applyAudioMutes(engine, mode, genre);
       await engine.play();
+      // ⭐ The transport first, then the recorded lanes — the same order the genre page's audition uses.
+      void startRecordedLanes(pattern);
       setPlayingId(genre.id);
       setPlayingMode(mode);
     } finally {
@@ -393,6 +437,8 @@ export const CompareView: React.FC<CompareViewProps> = ({
     if (genres.length <= 2) return;
     if (playingId === id && engineRef.current) {
       engineRef.current.stop();
+      // The recorded lanes of the removed genre are on the audio clock, outside that stop.
+      stopRecordedLanes();
       setPlayingId(null);
     }
     setGenres((prev) => prev.filter((g) => g.id !== id));

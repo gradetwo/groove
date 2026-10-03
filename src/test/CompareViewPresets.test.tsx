@@ -11,11 +11,17 @@ vi.mock("../audio/AudioEngine", () => ({
   AudioEngine: vi.fn().mockImplementation(() => ({
     setPattern: vi.fn(),
     setBpm: vi.fn(),
+    getBpm: vi.fn(() => 120),
     setSwing: vi.fn(),
     setTimeSignature: vi.fn(),
     setResolution: vi.fn(),
     setTrackState: vi.fn(),
     getAnalyser: vi.fn(() => null),
+    // ⭐ The recorded-lane half: the comparison plays the genres' own arranged patterns, so its double has to be
+    // able to answer the same questions the genre page's engine answers.
+    prepareSampledLanes: vi.fn(() => ({ stoodDown: [], problems: [] })),
+    getTrackState: vi.fn(() => undefined),
+    getTrackStates: vi.fn(() => []),
     play: vi.fn().mockResolvedValue(undefined),
     stop: vi.fn(),
     destroy: vi.fn(),

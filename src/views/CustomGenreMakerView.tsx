@@ -118,7 +118,7 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
    * without rebuilding the engine, so the closures over `setCurrentStep` / `setIsPlaying` can change
    * freely.
    */
-  const { engineRef } = useAudioEngineInstance({
+  const { engineRef, startRecordedLanes, stopRecordedLanes } = useAudioEngineInstance({
     onStep: ({ step }) => setCurrentStep(step),
     onStop: () => {
       setIsPlaying(false);
@@ -191,12 +191,29 @@ export const CustomGenreMakerView: React.FC<CustomGenreMakerViewProps> = ({
     if (!engineRef.current || !activeGenre) return;
     if (isPlaying) {
       engineRef.current.stop();
+      /**
+       * ⭐ **The recorded lanes are silenced too, or the preview keeps playing after the button says stop.**
+       *
+       * A lane the palette maps is sounded by a scheduler **outside** the engine's transport (`AudioEngine.stop()`
+       * cannot reach a voice already on the audio clock), so `stop()` alone left those voices ringing. The same two
+       * calls are what the genre detail page's audition makes, and they are the reason this view's preview of a forked
+       * jazz or soul genre sounds its recordings at all.
+       */
+      stopRecordedLanes();
       setIsPlaying(false);
       setCurrentStep(0);
     } else {
-      engineRef.current.setPattern(patternFromGenre(activeGenre));
+      const pattern = patternFromGenre(activeGenre);
+      engineRef.current.setPattern(pattern);
       engineRef.current.setBpm(activeGenre.default_bpm);
-      engineRef.current.play();
+      /**
+       * ⭐ **The transport first, then the recorded lanes** — the same order the genre audition uses, and for the same
+       * reason: `play()` starts the engine's own grid and resumes the context, and the sampler places its notes on that
+       * clock. The scheduling is deliberately **not awaited**: the catalogue fetch and the decode happen behind a play
+       * button that must not wait on the network.
+       */
+      void engineRef.current.play();
+      void startRecordedLanes(pattern);
       setIsPlaying(true);
     }
   };
