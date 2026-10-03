@@ -4934,3 +4934,17 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
 ✅ 另：**`midi` 线回报** ✓ —— 判据 **6/6** ✓（默认 5 s 超时够用 ✓，实测 21–40 ms ✓，**不是 timeout** ✓）；
    ⭐ **两条反面原文**（去掉源头 kind ⇒ `expected 'synth' to be 'sampler'` ✓；MCP 不对齐 ⇒ 2 failed ✓），跑完已还原、树与 `7219e3d` 逐字一致 ✓
    ⇒ 其 CM 判决仍 in_progress ✗（我先前"一条一推"的欠账 ✓）
+
+## 一百五十一、✅ **完整验收：MIDI 源头 `kind` ＋ MCP 对齐（`7219e3d`）**（2026-10-03 23:2x ✓）
+
+```
+✅ **四件齐**（本目标"每一项都要三步收"的完整形态 ✓）：
+   ① **判据**：`arrangementImportSamplerKind.test.ts` ✓ ＋ `mcpImportSamplerKind.test.ts` ✓ ⇒ **6 passed／退出码 0** ✓
+      （对方在我撤回假红后**在当前 content 上重跑并贴了原文** ✓；默认 5 s 超时够用 ✓，实测 21–40 ms ✓，**不是 timeout** ✓）
+   ② **反面能红**（两条原文 ✓）：去掉**源头** kind 决策 ⇒ `expected 'synth' to be 'sampler'`（2 failed ✓）；
+      改成 **MCP 侧不对齐** ⇒ 2 failed ✓；两次跑完均还原、树与 `7219e3d` 逐字一致 ✓
+   ③ **反向量**：`ownerProjectAcceptance` ⇒ 退出码 0、**五数逐字** ✓；`check:mcp` ⇒ **123 checks passed, 0 failed** ✓
+   ④ **CI 判决**：**success** ✓（run 由对方以 `gh run watch` 挂等 ✓，我刚复核 ✓）
+⇒ ⭐ **意义**：导入的 `kind` 决策现在**在源头一处** ✓（`src/data/arrangementImport.ts` ✓），
+   **界面与 MCP 同语义** ✓（此前 MCP 侧仍给 synth 轨 ✗ ⇒ 两侧不对等 ✗ 已消除 ✓）
+```
