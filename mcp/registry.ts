@@ -473,6 +473,58 @@ export const TOOLS: ToolDefinition[] = [
    * The kind list is repeated in the schemas rather than shared through a constant, because a `z.enum` is what a client reads for its own validation — and one source of truth for it is `TrackKindV2`, which the compiler checks these against.
    */
   {
+    name: "render_arrangement_preview",
+    title: "Preview a span of an arrangement",
+    description:
+      "Hear one span of an arrangement cheaply: 8 kHz mono unless told otherwise, optionally only the tracks that changed. It renders the span once, where render_arrangement renders the whole thing and can repeat it. This returns a file and measured levels; playing it is up to the caller.",
+    readOnly: true,
+    inputSchema: {
+      arrangementId: z.string(),
+      trackId: z.string().optional().describe("hear only this track; omit for every lane, as render_arrangement does"),
+      trackIds: z.array(z.string()).optional().describe("or several: only these lanes reach the mix"),
+      startBar: z.number().int().min(0).optional().describe("first bar of the span, with endBar; omit both for the whole arrangement"),
+      endBar: z.number().int().min(0).optional().describe("exclusive end of the span, with startBar; the bar it names is not rendered"),
+      format: z.enum(["wav", "mp3"]).default("wav"),
+      sampleRate: z.number().int().min(8000).max(96000).optional().describe("default 8000, which is the point of this tool"),
+      channels: z.number().int().min(1).max(2).optional().describe("default 1, a mono analysis render"),
+      headless: z.boolean().optional().describe(headlessParameterDescription()),
+    },
+    handler: async (args, ctx) => {
+      try {
+        const range =
+          args.startBar !== undefined && args.endBar !== undefined
+            ? { startBar: args.startBar as number, endBar: args.endBar as number }
+            : undefined;
+        const trackIds = (args.trackIds as string[] | undefined) ?? (args.trackId ? [String(args.trackId)] : undefined);
+        const { flattened } = flattenMcpArrangement(String(args.arrangementId), range, trackIds);
+        const summary = summariseArrangement(String(args.arrangementId), getMcpArrangement(String(args.arrangementId))!);
+        const result = await renderAudio(flattened.pattern, {
+          format: (args.format as "wav" | "mp3") ?? "wav",
+          sampleRate: (args.sampleRate as number | undefined) ?? 8000,
+          channels: (args.channels as 1 | 2 | undefined) ?? 1,
+          bars: 1,
+          bitrateKbps: args.bitrateKbps as number | undefined,
+          genreId: "custom",
+          ...(args.headless === true ? { headless: true } : {}),
+          ...(ctx?.progress ? { progress: ctx?.progress } : {}),
+        });
+        return {
+          ...(result as unknown as Record<string, unknown>),
+          arrangementId: String(args.arrangementId),
+          bars: summary.bars ?? Math.round(summary.steps / 16),
+          passes: 1,
+          ...(range ? { span: range } : {}),
+          ...(trackIds ? { tracks: trackIds } : {}),
+          totalSteps: flattened.pattern.totalSteps,
+          ...(summary.problems.length ? { arrangementProblems: summary.problems } : {}),
+          ...audioLaneReplyFields(result.audioLanes),
+        };
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
     name: "render_arrangement",
     title: "Bounce an arrangement",
     description:
