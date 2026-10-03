@@ -6303,3 +6303,21 @@ problems: **[]** ✓
    · 换算：`startBeats = startTicks / 960` ✓、`lengthBeats = lengthTicks / 960` ✓（:803–806 ✓）
 ⇒ ⭐ **P1 只差"落笔"** ✓（下一步写 `ProjectData` ＋ `MetaData.plist` ＋ 判据 ✓）；⚠️ 本轮**未动一行代码** ✗，台账**只本地提交**（队列 8 笔我的 run ✗ ⇒ 不推 ✓）
 ```
+
+## 二百三十九、⚠️ **P1 第一次落笔：判据红了（正是它该做的）⇒ 最小包还缺三样** ✗（2026-10-04 01:1x ✓）
+
+```
+**已写** ✓（新文件，**未提交** ✗）：`src/data/arrangementToLogic.ts`（586 行内 ✓ 含许可与"不宣称什么"的头注 ✓）＋ 判据 `src/test/logicExportRoundTrip.test.ts`（4 例 ✓）
+**判据读数** ✓：**4 例中 3 例过** ✓（含两条**验红**：改坏声明长度 ⇒ 报 "declares" ✓；改坏 magic ⇒ 报 "magic" ✓）
+   ⇒ ⚠️ **主例失败** ✗：`problems` 有 **3 条**（我断言空 ✗）—— ⭐ **判据正在做它该做的事** ✓
+**读取器逐字报的三条** ✓（原样 ✓）：
+   ① `the project states no tempo this reader can find; the arrangement's own tempo applies` ✗
+   ② `the project states no time signature this reader can find; 4/4 applies` ✗
+   ③ ⚠️ `region start positions could not be read reliably from this ProjectData version, so every part is imported from beat 0 with its
+      internal note timing preserved — the notes are correct, their position on the timeline is not yet` ✗
+**另有硬读数** ✓：`parts = 0` ✗（⚠️ **读取器连 part 都没建出来** ⇒ 我的 `qSvE` 记录**不足以构成一个 region** ✗）、`tempoBpm = undefined` ✗
+⇒ ⭐ **P1 还缺三样** ✓：**拍号记录**（`qSvE` 正文 ≥80B、首 u32 = `0x30`、`+0x0b` = log2(分母)、`+0x0c` = 分子 ✓）、
+   **速度记录**（`qSvE` 首 u32 = `0x60`，或 `gnoS` 的**命名**记录形态 ✓）、⭐ **region 记录**（决定 part 是否被建出来 ✓ —— **这是当前最大缺口** ✗）
+⇒ **下一步**：grep 读取器里"**由哪些记录 tag 建 part**"（照抄 ✓，不猜 ✗）⇒ 补齐三样 ⇒ 判据转绿 ✓
+⚠️ 本轮**未提交代码** ✗（判据仍红 ⇒ 不提交半成品 ✓）；台账继续**只本地**（队列 8 笔我的 run ✗）
+```
