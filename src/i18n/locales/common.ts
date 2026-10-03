@@ -128,6 +128,15 @@ export const commonMessages = {
     en: "{count} imported track(s) still play built-in synthesizers because no instrument was named: {names} — re-import the file and choose an instrument in this dialog, or add a sampler track and give it an asset",
     zh: "有 {count} 条导入的轨道因为没指定乐器，仍在用内置合成器：{names}——重新导入这个文件并在对话框里选乐器，或新建一条采样轨并指定资产",
   },
+  /**
+   * ⭐ **The other half of the same sentence**: the parts that were named really became sampler tracks pointed at the
+   * recording the person chose, so the mapping is a fact they can read rather than one they have to inspect eight
+   * kind selects to believe.
+   */
+  arrangement_import_mapped: {
+    en: "{count} imported track(s) are now sampler tracks playing the recording you chose",
+    zh: "有 {count} 条导入的轨道现在是采样轨，播放你选的录音",
+  },
   arrangement_export_summary: { en: "{tracks} track(s), {notes} note(s)", zh: "{tracks} 条轨道、{notes} 个音符" },
   arrangement_export_failed: { en: "Export failed: {error}", zh: "导出失败：{error}" },
   /** One tail used by both directions: a writer's lost precision and a reader's unreadable measure are the same promise. */

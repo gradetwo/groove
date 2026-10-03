@@ -150,8 +150,15 @@ export function useArrangementFileActions({
         unnamed.length === 0
           ? ""
           : ` · ${t("arrangement_import_unassigned", { count: unnamed.length, names: unnamed.slice(0, 3).join(", ") })}`;
+      /**
+       * ⭐ **The mapping that landed is said out loud, not left to be inferred from eight kind selects.** The owner's
+       * acceptance path is *import, map, play*, and a person who just named every part has to be able to read back
+       * that the names took: the sentence names the count, and the sampler-only instrument slot beside each track is
+       * the second, independent way to see it.
+       */
+      const mapped = outcome.mapped === undefined ? "" : ` · ${t("arrangement_import_mapped", { count: outcome.mapped })}`;
       say(
-        `${t("arrangement_import_done", { filename: outcome.filename, tracks: outcome.tracks, notes: outcome.notes })}${problemsTail(outcome.problems)}${unassigned}`
+        `${t("arrangement_import_done", { filename: outcome.filename, tracks: outcome.tracks, notes: outcome.notes })}${problemsTail(outcome.problems)}${mapped}${unassigned}`
       );
     },
     [onArrangement, problemsTail, say, t]

@@ -22,6 +22,8 @@ import type { MidiArrangementImport } from "../../data/midiToArrangement";
 import { arrangementToMidi } from "../../data/arrangementToMidi";
 import { arrangementWithImportedParts, arrangementFromGroovePackage, type ArrangementImportResult } from "../../data/arrangementImport";
 import { compileArrangementToPattern } from "../../data/arrangementCompile";
+import { sampledInstrumentFor } from "../../data/sampledInstruments";
+import type { ImportedPart } from "../../data/musicxmlImport";
 import { DEFAULT_FX_STATE } from "../../audio/EffectsRack";
 
 /**
@@ -77,9 +79,16 @@ export interface ImportCounts {
   problems: string[];
 }
 
-/** An import's outcome: the arrangement to install, or the refusal to show. Both are results, never an exception to swallow. */
+/**
+ * An import's outcome: the arrangement to install, or the refusal to show. Both are results, never an exception to swallow.
+ *
+ * ⭐ **`mapped` is the one fact the interface cannot recompute from the arrangement.** A part a person named became a
+ * `sampler` track, and the report says so; a part they left alone did not, and the report says that too. Counting it
+ * here rather than in the view keeps "what the import did" one value instead of a number a presenter re-derives from a
+ * list it does not own.
+ */
 export type ArrangementImportOutcome =
-  | ({ ok: true; filename: string } & ImportCounts & { arrangement: ArrangementV2; format: string })
+  | ({ ok: true; filename: string } & ImportCounts & { arrangement: ArrangementV2; format: string; mapped?: number })
   | { ok: false; filename: string; reason: string };
 
 /** Only the characters a file name may carry, and not so many of them that a filesystem refuses the name. */
@@ -390,6 +399,67 @@ export async function readMidiForImport(file: File): Promise<MidiImportRead> {
 }
 
 /**
+ * ⭐ **The person's mapping made real: the tracks a named part became are `sampler` tracks, pointed at the recording.**
+ *
+ * `arrangementWithImportedParts` writes the name a person chose onto `TrackV2.instrument` and creates every track as
+ * `"synth"`; it has no way to say "this part is a recording", so `sampledAssetForLane` resolves the name only through
+ * the melodic role's name table and the arrangement's own list still reports a **synthesizer**. The owner's acceptance
+ * path — *import a MIDI file, map its parts to an instrument, play* — then lands on tracks whose kind select says
+ * `synth`, whose sampler-only instrument slot never renders, and whose chosen recording is invisible. This is where
+ * that is fixed: the very parse the dialog described is upgraded, track by track, using **the same resolution the
+ * renderer performs** (`sampledInstrumentFor`), so the kind, the asset and the sound cannot disagree.
+ *
+ * **Keyed by part index, exactly as the placement is.** `arrangementWithImportedParts` skips a part that holds no
+ * notes, so `trackIds` is the file's part list minus its empty chunks — zipping a positional array against it is the
+ * slide this repository already paid for once, and the two orders are therefore derived from the same list here.
+ *
+ * **Nothing is invented.** A part nobody named is untouched, a name the recorded table does not hold leaves the track
+ * the synthesizer it was *and is said out loud*, and the name already written on the track is kept rather than
+ * replaced: the sampler's own `sample.assetId` is the field the compile reads first, and dropping the name would make
+ * an existing criterion — and a later report of what the person chose — lose the fact.
+ */
+function withMappedPartsAsSamplers(
+  arrangement: ArrangementV2,
+  trackIds: readonly string[],
+  parts: readonly ImportedPart[],
+  instruments: Record<number, string> | undefined
+): { arrangement: ArrangementV2; problems: string[]; mapped: number } {
+  if (instruments === undefined) return { arrangement, problems: [], mapped: 0 };
+  const problems: string[] = [];
+  /** The order `arrangementWithImportedParts` added tracks in: the parts that hold notes, in the file's own order. */
+  const placedPartIndexes: number[] = [];
+  parts.forEach((part, index) => {
+    if (part.notes.length > 0) placedPartIndexes.push(index);
+  });
+  const assetByTrack = new Map<string, string>();
+  placedPartIndexes.forEach((partIndex, position) => {
+    const trackId = trackIds[position];
+    const name = instruments[partIndex];
+    if (trackId === undefined || name === undefined || name === "") return;
+    const choice = sampledInstrumentFor(name);
+    if (choice === undefined) {
+      problems.push(
+        `part ${partIndex + 1} "${parts[partIndex]!.name}" was named "${name}", which is not one of the recorded instruments, so the track keeps its built-in synthesizer`
+      );
+      return;
+    }
+    assetByTrack.set(trackId, choice.assetId);
+  });
+  if (assetByTrack.size === 0) return { arrangement, problems, mapped: 0 };
+  return {
+    arrangement: {
+      ...arrangement,
+      tracks: arrangement.tracks.map((track) => {
+        const assetId = assetByTrack.get(track.id);
+        return assetId === undefined ? track : { ...track, kind: "sampler" as const, sample: { assetId } };
+      }),
+    },
+    problems,
+    mapped: assetByTrack.size,
+  };
+}
+
+/**
  * Place an **already read** MIDI file into the arrangement, with the instruments a person named.
  *
  * Separate from the read so the interface can show the file's parts before deciding, and so the decision is applied
@@ -402,12 +472,22 @@ export function placeMidiIntoArrangement(
 ): ArrangementImportOutcome {
   const { imported, filename } = read;
   const placed = arrangementWithImportedParts(arrangement, imported, instruments === undefined ? {} : { instruments });
+  const mapped = withMappedPartsAsSamplers(placed.arrangement, placed.trackIds, imported.parts, instruments);
   const next: ArrangementV2 = {
-    ...placed.arrangement,
+    ...mapped.arrangement,
     ...(imported.tempoBpm === undefined ? {} : { bpm: imported.tempoBpm }),
     ...(imported.timeSignature === undefined ? {} : { timeSignature: imported.timeSignature }),
   };
-  return { ok: true, filename, format: "midi", tracks: placed.tracks, notes: placed.notes, problems: placed.problems, arrangement: next };
+  return {
+    ok: true,
+    filename,
+    format: "midi",
+    tracks: placed.tracks,
+    notes: placed.notes,
+    problems: [...placed.problems, ...mapped.problems],
+    ...(mapped.mapped === 0 ? {} : { mapped: mapped.mapped }),
+    arrangement: next,
+  };
 }
 
 /**
