@@ -126,13 +126,6 @@ function readUint(bytes: Uint8Array, offset: number, size: number): number {
   return value;
 }
 
-function readInt64(bytes: Uint8Array, offset: number): number {
-  const view = new DataView(bytes.buffer, bytes.byteOffset + offset, 8);
-  const high = view.getInt32(0, false);
-  const low = view.getUint32(4, false);
-  return high * 4294967296 + low;
-}
-
 function parseBinaryPlist(bytes: Uint8Array): PlistValue {
   const trailer = bytes.length - 32;
   const offsetIntSize = bytes[trailer + 6]!;
@@ -174,8 +167,21 @@ function readBinaryObject(reader: BinaryPlistReader, index: number): PlistValue 
       return readUint(bytes, body, size);
     }
     case 0x2: {
+      /**
+       * A **real**, which is an IEEE-754 float and not an integer — `0x22` is a 4-byte big-endian float, `0x23` an
+       * 8-byte one.
+       *
+       * Reading these as unsigned integers produces a plausible, wrong number, which is the worst kind: a real
+       * `MetaData.plist` says `BeatsPerMinute = 120.0`, whose bytes read as the integer `1123024896`. That number
+       * then reaches the caller as the project's tempo and, worse, makes the "MetaData and ProjectData disagree"
+       * check fire on **every** project while never catching a real disagreement.
+       *
+       * A width that is neither 4 nor 8 is not a float this format defines; the big-endian read is kept as the
+       * fallback so the shape still parses rather than returning a wrong kind of value.
+       */
       const size = 1 << info;
-      if (size === 8) return readInt64(bytes, body);
+      if (size === 4) return new DataView(bytes.buffer, bytes.byteOffset + body, 4).getFloat32(0, false);
+      if (size === 8) return new DataView(bytes.buffer, bytes.byteOffset + body, 8).getFloat64(0, false);
       return readUint(bytes, body, size);
     }
     case 0x3: {
@@ -410,14 +416,127 @@ const EMPTY_SEQUENCE_MARKER = 0xf1;
 const TEMPO_MARKER = 0x60;
 const METER_MARKER = 0x30;
 
+/** The 16-byte terminator every `qSvE` event run ends with, so a run's length is known before it is read. */
+const SEQUENCE_TAIL = [0xf1, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0x3f];
+const SEQUENCE_TAIL_SIZE = 16;
+
+/**
+ * The two event sizes a note run is written in.
+ *
+ * **Both exist in real projects, and the size is the second byte of the marker dword rather than a field
+ * anywhere.** The specification's own writer emits the 32-byte form (`90 00 00 00`), and that is what the fixtures
+ * here were built from. Opening the owner's eight official projects shows the other form as well: the run is
+ * `90 40 00 00` and each event is 48 bytes, with the same pitch/velocity/length offsets moved by nothing at all —
+ * only the stride changes. A reader that assumed the 32-byte stride on one of those runs walks into the middle of
+ * an event and reports zero notes, which is exactly what the measurement in `docs/OPEN_WORK.md` §123 found.
+ */
+const NOTE_EVENT_SIZE_32 = 32;
+const NOTE_EVENT_SIZE_48 = 48;
+
 function firstPayloadWord(record: LogicRecord): number | undefined {
   return record.payload.length >= RECORD_HEADER + 4 ? u32(record.payload, RECORD_HEADER) : undefined;
+}
+
+/** The marker dword of a note event, with the flag byte that carries the event size cleared. */
+function noteMarker(record: LogicRecord): number | undefined {
+  const word = firstPayloadWord(record);
+  return word === undefined ? undefined : word & 0xff;
+}
+
+/**
+ * Whether a payload ends with the terminator that closes an event run of `size`-byte events.
+ *
+ * `headered` says whether the bytes still carry the 36-byte record header, because the caller that decides *what a
+ * record is* holds the whole record while the caller that reads its notes holds the payload alone.
+ */
+function hasSequenceTail(payload: Uint8Array, size: number, headered: boolean): boolean {
+  const body = payload.length - (headered ? RECORD_HEADER : 0) - SEQUENCE_TAIL_SIZE;
+  if (body < 0 || body % size !== 0) return false;
+  const tail = payload.length - SEQUENCE_TAIL_SIZE;
+  return SEQUENCE_TAIL.every((byte, index) => payload[tail + index] === byte);
+}
+
+/** One note event's own start, kept as an offset so `readNotes` reads the fields from the bytes it was given. */
+interface NoteEventAt {
+  at: number;
+}
+
+/** A run of note events at one stride, as the reader found it. */
+interface NoteRun {
+  /** The event stride the run is written at: 32 or 48 bytes. */
+  stride: number;
+  events: NoteEventAt[];
+}
+
+/**
+ * The 32-byte run, read the way the specification and the reference implementation read it: the marker dword is
+ * `90 00 00 00` **exactly**, and an event is one 32-byte slot.
+ *
+ * This is deliberately the strictest form. It is the one the byte-level specification defines, the one its writer
+ * emits, and the one the committed fixtures are written in — so it is also the reading an existing measurement is
+ * pinned to, and widening *this* test would silently move those numbers.
+ */
+function exact32Run(payload: Uint8Array): NoteRun {
+  const events: NoteEventAt[] = [];
+  for (let at = 0; at + NOTE_EVENT_SIZE_32 <= payload.length; at += NOTE_EVENT_SIZE_32) {
+    if (u32(payload, at) === NOTE_MARKER) events.push({ at });
+  }
+  return { stride: NOTE_EVENT_SIZE_32, events };
+}
+
+/**
+ * The 48-byte run, which the specification does **not** describe and which real projects nevertheless contain.
+ *
+ * It is admitted only when the payload's own length and terminator say the run is 48-byte framed **and** the framing
+ * spans more than one event: the body must close on the terminator, and the marker is tested by its status byte
+ * alone because the bytes beside it carry flags (`90 40 00 00`). The single-event minimum is not cosmetic — a short
+ * payload can satisfy a terminator by coincidence, and a one-event 48-byte reading of a 32-byte run would move
+ * numbers the 32-byte reading is pinned to.
+ */
+function framed48Run(payload: Uint8Array): NoteRun | undefined {
+  if (!hasSequenceTail(payload, NOTE_EVENT_SIZE_48, false)) return undefined;
+  const events: NoteEventAt[] = [];
+  for (let at = 0; at + NOTE_EVENT_SIZE_48 <= payload.length; at += NOTE_EVENT_SIZE_48) {
+    if ((u32(payload, at) & 0xff) !== NOTE_MARKER) break;
+    events.push({ at });
+  }
+  return events.length < 2 ? undefined : { stride: NOTE_EVENT_SIZE_48, events };
+}
+
+/**
+ * The notes a region's payload holds.
+ *
+ * Two framings exist in real files and the order they are tried in matters: the 48-byte framing is checked **first**
+ * and only claims a payload its terminator closes, and everything else falls to the 32-byte exact reading. That
+ * ordering is what makes this addition additive — a payload the old reader read, it still reads, byte for byte.
+ */
+function noteRun(payload: Uint8Array): NoteRun | undefined {
+  return framed48Run(payload) ?? exact32Run(payload);
+}
+
+/**
+ * Whether a note sequence with no readable notes is **empty** rather than in a form this reader does not know.
+ *
+ * The two cases reach `readNotes` the same way and mean opposite things to a person: an empty region is a region
+ * with nothing in it, while an unrecognised form is a reader gap that has to be said out loud. A sequence holding
+ * nothing but its terminator is the empty one; anything else that produced no notes is the reader's problem.
+ */
+function isCheckableEmpty(payload: Uint8Array): boolean {
+  return payload.length <= SEQUENCE_TAIL_SIZE;
 }
 
 function isNoteSequence(record: LogicRecord): boolean {
   if (record.tag !== "qSvE" || record.payload.length < RECORD_HEADER + 16) return false;
   const marker = firstPayloadWord(record);
-  return marker === NOTE_MARKER || marker === EMPTY_SEQUENCE_MARKER;
+  if (marker === EMPTY_SEQUENCE_MARKER) return true;
+  if (marker === NOTE_MARKER) return true;
+  /**
+   * A marker that is `0x90` in its **low byte** with flags beside it is the 48-byte form, and is admitted only when
+   * the payload really is 48-byte framed. Testing the low byte alone would make every payload that happens to begin
+   * with `90` a note region.
+   */
+  if (noteMarker(record) !== NOTE_MARKER) return false;
+  return framed48Run(record.payload.subarray(RECORD_HEADER)) !== undefined;
 }
 
 function isTempoSequence(record: LogicRecord): boolean {
@@ -499,29 +618,32 @@ interface NoteReading {
 /**
  * The notes of one region.
  *
- * A note is a **32-byte event** in the region's own `qSvE`, and the five fields the specification names are all that
- * is read here: the position (`38400 + region-relative tick`), the fine and coarse velocity bytes, the pitch, and
- * the length in ticks. Logic 10.x and 11.x agree on this layout; the region's *own* placement has a different
- * record shape between those versions and is deliberately not used.
+ * A note event's fields are the five the specification names and they sit at the same offsets in **both** the
+ * 32-byte and the 48-byte form: the position (`38400 + region-relative tick`), the fine and coarse velocity bytes,
+ * the pitch, and the length in ticks. What changes between the forms is only the stride, which `noteRun` settles
+ * from the bytes.
+ *
+ * The 48-byte form is the one the specification does not describe and real projects do contain: its marker carries
+ * flags beside the status byte (`90 40 00 00`), and reading it is what turns a project that reported **no notes at
+ * all** into one that reports the notes it holds.
  *
  * Every note is `>= 1` tick long: a zero-length note is a note that cannot sound, and one is reported.
  */
 function readNotes(payload: Uint8Array): { notes: NoteReading[]; zeroLength: number } {
   const notes: NoteReading[] = [];
-  const count = Math.floor(payload.length / 32);
   let zeroLength = 0;
-  for (let index = 0; index < count; index += 1) {
-    const at = index * 32;
-    if (u32(payload, at) !== 0x90) continue;
-    const lengthTicks = u32(payload, at + 0x1c);
-    const pitch = payload[at + 0x0c]!;
+  const run = noteRun(payload);
+  if (run === undefined) return { notes, zeroLength };
+  for (const event of run.events) {
+    const lengthTicks = u32(payload, event.at + 0x1c);
+    const pitch = payload[event.at + 0x0c]!;
     if (pitch === 0 || pitch > 127) continue;
     if (lengthTicks === 0) zeroLength += 1;
     notes.push({
-      startTicks: u32(payload, at + 4) - NOTE_ORIGIN_TICKS,
+      startTicks: u32(payload, event.at + 4) - NOTE_ORIGIN_TICKS,
       lengthTicks,
       pitch,
-      velocity: payload[at + 0x0b]!,
+      velocity: payload[event.at + 0x0b]!,
     });
   }
   return { notes, zeroLength };
@@ -645,6 +767,7 @@ export function fromLogicProject(input: LogicProjectInput): LogicProjectImport {
   let zeroLengthNotes = 0;
   let regionsWithoutNotes = 0;
   let unreadableNames = 0;
+  let unreadableNoteForms = 0;
   const seenClusters = new Set<number>();
   for (const record of records) {
     if (record.tag !== "qeSM") continue;
@@ -660,6 +783,12 @@ export function fromLogicProject(input: LogicProjectInput): LogicProjectImport {
     for (const payload of payloads) {
       const reading = readNotes(payload);
       regionZeroLength += reading.zeroLength;
+      /**
+       * A payload that yields nothing is not evidence that the region is empty — it is evidence that this reader
+       * could not read it. The two are counted apart so the sentence below can say which one happened, because the
+       * original wording asserted the notes were correct on projects where **not one note was read at all**.
+       */
+      if (reading.notes.length === 0 && !isCheckableEmpty(payload)) unreadableNoteForms += 1;
       for (const note of reading.notes) {
         notes.push({
           // Logic's tick resolution is 960 per quarter note; this model counts beats.
@@ -697,9 +826,16 @@ export function fromLogicProject(input: LogicProjectInput): LogicProjectImport {
    * (a plain `uint32` after the variable-length name), and in the 10.x fixtures used here those bytes decode to a
    * value that **contradicts** the note positions they are supposed to bound — which is why it is not applied. The
    * consequence a caller can see is that every part is imported from beat 0 with its internal timing intact.
+   *
+   * ⚠️ **The tail of this sentence is conditional, and it has to be.** It used to end "the notes are correct" on
+   * every project, including the ones where the reader had produced **no notes at all** — a claim about its own
+   * output that it had no basis for. When a note sequence's form is not one this reader knows, that is now said
+   * instead of being covered by the sentence about positions.
    */
   problems.push(
-    "region start positions could not be read reliably from this ProjectData version, so every part is imported from beat 0 with its internal note timing preserved — the notes are correct, their position on the timeline is not yet"
+    unreadableNoteForms === 0
+      ? "region start positions could not be read reliably from this ProjectData version, so every part is imported from beat 0 with its internal note timing preserved — the notes are correct, their position on the timeline is not yet"
+      : `region start positions could not be read reliably from this ProjectData version, so every part is imported from beat 0 with its internal note timing preserved — and on top of that, ${unreadableNoteForms} note sequence(s) are in an event form this reader does not recognise, so the notes they hold were not imported at all`
   );
 
   /**
