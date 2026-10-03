@@ -4317,3 +4317,18 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
    **34 是判据条数，不是它断言的计数** ✓✓（实际期望值已是 `{181,17,0,4}` ✓；对方逻辑：若仍旧值那条会红不会绿 ✓）
    ⇒ **教训：看判据"断言了什么"，不看"通过了几条"** ✓（这是我第 8 次同类：以间接信号代替直接读数 ✗）
 ```
+
+## 一百二十七、✅ **验收：sampler 映射不再静默（`2320b8b`）**（2026-10-03 20:48 ✓，**CI success** ✓）
+
+```
+**问题（它挡住了业主自己的复现路径）**：把 8 个声部命名成采样音源 ⇒ 按确认 ⇒ 界面显示 "Import (8 named)"、对话框关闭 ——
+   **轨道仍是合成器** ✗（四重独立读数 ＋ 第二重 `instrumentSlots`／`samplerChips` ＝ 0 ✓）
+**修法**：`src/features/arrangement/useArrangementFileActions.ts` ＋ `arrangementFiles.ts` 让映射**真的落成** `kind:"sampler"` ✓
+   ＋ `src/i18n/locales/common.ts` 文案 ✓（**未动** `src/audio/**`／`mcp/**`／其余 `src/data/**` ✓）
+**我核过（三步收 ✓）**：① `2320b8b` **是 `origin/dev` 的祖先** ✓（reflog：`a55fe25` amend → rebase → `2320b8b` ✓）
+   ② 判据 `src/test/importSamplerMapping.test.tsx` **3 passed／退出码 0** ✓；反向量 `ownerProjectAcceptance` **退出码 0**、五个数逐字 ✓
+   ③ CI run **success** ✓
+⚠️ **我的误报（记下）**：我只看 `dev` 顶端与"0 笔领先"就以为它被丢了 ✗ ⇒
+   **判断"有没有落地"只认祖先关系**（`git merge-base --is-ancestor` ✓）—— 这是我自己反复要求各线做的检查，却在自己身上漏了 ✗
+⇒ ⭐ **对业主的意义**：「**导入 ⇒ 把轨道设为 sampler ⇒ 播放**」这条路**已经修好并在 `dev` 上** ✓
+```
