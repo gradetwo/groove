@@ -661,7 +661,9 @@ are the places where it is more accurate than the evaluations that came before i
 已实现并各有判据的：
 
 * **记录流**：根帧 magic `23 47 C0 AB` + 逐条记录（4 字节 tag、`+8` 簇号、`+0x1c` 负载长度）。**按长度走，不扫 tag**——负载里可以是任何字节，扫 tag 会扫出不是记录的东西。
-* **音符**：region 的 `qSvE` 里每个音符是 **32 字节事件**，`+0x04` 位置（`38400 + region 内 tick`）、`+0x0b` 力度、`+0x0c` 音高、`+0x1c` 长度；960 PPQ。region 名在 `qeSM` 的 `+0x34`，按 **UTF-8** 解码（真实夹具里有韩文名，逐字节读会变乱码）。
+* **音符**：region 的 `qSvE` 载荷不是定长事件，而是 **16 字节行**（line／atom）的序列：行的 **byte7 的 bit7 ＝ 1 表示"继续前一个事件"**，所以一个事件是**头行 ＋ N 条续行 ＝ `16 × (N + 1)` 字节**（N=0→16、N=1→32、N=2→48、N=3→64、N=4→80、N=5→96），**头行自身不选长度**（它的 byte 1..3 是标志位，`90 40 00 00` 与 `90 00 51 9d` 都是音符，长度由续行说了算）。字段在**头行**：`+0x04` 位置（`38400 + region 内 tick`）、`+0x0b` 力度、`+0x0c` 音高；**长度在第一条续行的 `+12`**（也就是事件的 `+0x1c`），而且**只在存在续行时才读**——没有续行的事件没有长度字段，按 0 读并把这件事作为一条 problem 说出来，而不是拿下一个事件的开头当长度。960 PPQ。**头行 ≠ 音符**：`0x90`..`0x9F` 才是音符（每个 MIDI 通道一个状态），`0xB0` 是 controller、`0xC0` 是 program change、`0xE0` 是 pitch bend——它们同样是头行，但读成音符就会把延音踏板的值当成音高（实测 `Colors` 有 **861** 条 `0xE0` 头行、其音符 **2007**；`ocean eyes` **314** 条 `0xB0`、其音符 **1415**；`Manzana` 的 **1137** 条头行只算"首事件在通道 0"，真音符 **1369**）。**N≥2 的续行语义未核实**：来源把它们叫音符的 *score symbols*，但**没有任何项目说它们对位置、长度或力度做什么**，所以读取器随事件一起消费、**不解释**——这是真实的限制，不是"那里什么都没有"。⚠️ **这套行模型不是那份规范给的**：那份 `jonkubis/logicproformatwriter` 规范只写 **32 字节（N=1）**一种长度；行模型出自三个独立项目对同一个字节机制的记述（`logicxkit`／`logic2ableton`／`logicx`），读取器照它重写，**不声称"已按规范验证"**（见 `src/data/logicToArrangement.ts` 的 `lineRun` 注释）。region 名在 `qeSM` 的 `+0x34`，按 **UTF-8** 解码（真实夹具里有韩文名，逐字节读会变乱码）。
+  <!-- logic-note-form -->
+  > `line=16; sizes=16,32,48,64,80,96; note-status=0x90..0x9f; head-line-not-note=0xb0,0xc0,0xe0`
 * **速度**：`gnoS` 的 `+0x3a6`（有 tempo map 时规范点名的那个槽；`+0x92` 在有 map 时可能是播放头相关值），`uint32 = bpm × 10000`。拍号取签名 `qSvE` 的 80 字节头（`+0x0b` 分母指数、`+0x0c` 分子）。
 * **alternative 不能硬编码**：`Resources/ProjectInformation.plist` 的 `ActiveVariant`（可能不是 `000`），plist 的**二进制与 XML 两种写法都读**。一个真实发现：这套 10.0 时代夹具的 `ProjectInformation.plist` **根本没有 `ActiveVariant`**，只有一个按 `"0"` 索引的 `VariantNames` 表——表不等于当前项，所以不拿它当答案，返回 `undefined` 让调用方决定。**文件不存在时读 `undefined`，绝不假装是 `000`**。
 
