@@ -38,6 +38,29 @@ const CHARACTER_SHEETS: Partial<Record<SkinId, () => Promise<unknown>>> = {
 };
 
 /**
+ * ⭐ **The five non-default palettes, as a promise a painter can wait for.**
+ *
+ * `data-skin` is the whole mechanism for a *stylesheet*, and a stylesheet cannot be too early. But a
+ * **painter that reads a role at draw time** cannot use an attribute: it asks `getComputedStyle` for a
+ * `--d-*` value, and until this sheet is parsed no `:root[data-skin="…"]` rule matches, so the answer is
+ * the *default* skin's colour even though the attribute already names another skin. A drawing that bakes
+ * that answer keeps the previous skin's ink for good — light ink on white paper is what that looks like on
+ * the score, and the wait below is what closes it (`src/test/scoreInk.test.tsx`, criterion 3).
+ *
+ * Created once and cached by the module system, so awaiting it costs nothing after the first switch. A
+ * failure resolves rather than rejects: a missing palette is a cosmetic loss, never a reason to stop
+ * drawing — the same rule `loadCharacterSheet` states below.
+ */
+let paletteSheet: Promise<void> | undefined;
+export function loadSkinPalettes(): Promise<void> {
+  paletteSheet ??= import("../styles/desktopSkins.css").then(
+    () => undefined,
+    () => undefined
+  );
+  return paletteSheet;
+}
+
+/**
  * Bring in a skin's character, once.
  *
  * Awaited by nobody: the palette is already applied, so the skin is *correct* the moment the attribute is
@@ -47,7 +70,7 @@ const CHARACTER_SHEETS: Partial<Record<SkinId, () => Promise<unknown>>> = {
 export function loadCharacterSheet(id: SkinId): void {
   if (id === "default") return;
   // The extra palettes and the literal map first (everything else assumes they exist), then the character.
-  void import("../styles/desktopSkins.css").catch(() => {});
+  void loadSkinPalettes();
   void CHARACTER_SHEETS[id]?.().catch(() => {
     /* A missing character sheet is a cosmetic loss, never a reason to break the app. */
   });
