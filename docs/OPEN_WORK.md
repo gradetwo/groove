@@ -5416,3 +5416,48 @@ problems: **[]** ✓
 ✅ ③ **`expectedSha256` 之谜已解** ✓（`§250`）：**状态相同 ⇒ 哈希相同** ✓（新一次 `sha256 = expectedSha256 = 193c3448…` ✓）
    ⇒ **工作台导出可复现** ✓；两次字节数不同（2,556 → **308** ✓）是**因为 studio 状态不同** ✓（`totalSteps` 128→32 ✓、`swing` 15→0 ✓）
 ```
+
+## 一百八十七、⭐⭐⭐ **导出阶段实测收官：三条导出逐值全等 ＋ 它挖出一条"吃掉用户工作"的真缺陷** ✗（2026-10-04 00:1x ✓）
+
+```
+✅ **结论（它一句话 ✓）**：编排面 MIDI（format 1）、工作台 MIDI（format 0）、MusicXML **三条导出在真 Chromium 里真的下载、
+   用产品自己的读回路径读回后逐值全等** ✓；**未发现导出侧缺陷** ✓（`problems` 全 `[]` ✓）；**十六分 0.25 回来还是 0.25** ✓
+
+| 入口 | 文件 | 字节 | 点击→落盘 | 读回 | problems |
+|---|---|---|---|---|---|
+| 编排面 `arrangement-export-menu`→`-midi` | `arrangement.mid` | **492** | 87 ms | format1／4 chunk／**3 part／43 音** | `[]` ✓ |
+| Score 页 `score-export-musicxml` | `lead.musicxml` | **13,675** | 79 ms | 1 part／**34 音** | `[]` ✓ |
+| 工作台 `[data-toolbar-id=export]`→`export-midi` | `Chicago House.mid` | **308** | 140 ms | format0／1 chunk／**2 part／32 音** | `[]` ✓ |
+
+⭐ **它自己把"下载基线"的口径讲清了** ✓（`control blob 20 ms` ✓，但**产品的行含 `page.click` 可点性检查** ⇒ **口径不同** ✓，
+   所以它另给**更硬**的成本 ✓）：页内 `midiFileFor` **2.8 ms** ✓／`musicXmlFileFor` **9.3 ms** ✓；
+   同机 Node 各 20 次均值 **`arrangementToMidi` 0.993 ms** ✓／**`toMusicXml` 1.217 ms** ✓
+⭐⭐ **字节级交叉验证** ✓：浏览器下的 `arrangement.mid` 与 Node 调 `arrangementToMidi` **逐字节相同（492=492）** ✓；
+   `studio.mid` 与 Node 调 `generateMidiBytes` **逐字节相同（308=308，sha256 双方 `193c3448…`）** ✓
+⭐⭐ **逐音** ✓：编排 MIDI **43/43**（含 velocity ✓）、逐 part 34/34／5/5／4/4 ✓；MusicXML **34/34**（pitch／start／length ✓，
+   ⚠️ **velocity 不参与断言** ✓ —— MusicXML 不带力度、读侧一律 100 ✓，`musicxmlImport.ts:265` ✓）；工作台 **32/32** ✓（kick 8/8＋bass 24/24 ✓）
+⭐⭐ **十六分专项** ✓：`<divisions>4</divisions>` ✓；⭐ **全部 33 个 `<type>sixteenth</type>` 都配 `<duration>1</duration>`** ✓（＝0.25 拍 ✓，**成对取值** ✓）；
+   ⭐ 跨小节那条 71@3.75 len 0.50 被写成**两段 tie**（`tie=start`／`tie=stop` ✓）⇒ 读回**合并成 0.25+0.25 = 0.50** ✓（`musicxmlImport.ts:243-248` ✓）；
+   编排 MIDI 十六分 = 480/4 = **120 tick = 0.25 拍** ✓；工作台 `ticksPerStep = 120` ✓，**gate 0.8 → 0.20** ✓（gate 语义 ✓，非截断 ✓）
+⚠️ **两实现的实测不对称（它明确不称缺陷 ✓，我同意 ✓）**：**format 1** 写 `FF 03` 轨名 ⇒ 读回 4 part（`["Conductor","Lead","Bass","Drums"]` ✓）；
+   **format 0** 不写 `FF 03` ⇒ 读回**按声道拆**（`Track 1 (channel 10)`／`Track 1 (channel 1)` ✓），四条鼓 lane（都 ch9 ✓）**读回合流成 1 个 part** ✓
+   ⇒ ⭐ 这是 **format 0 单 chunk 的固有限制** ✓ ⇒ **记为不对称事实，不是缺陷** ✓
+
+### 187.1 ⚠️⚠️ **它挖出一条非导出侧、但会吃掉用户工作的真缺陷** ✗（**未修** ✗，仅报 ✓，**由我裁** ✓）
+
+```
+✗ **现象（实测 ✓）**：把快照恢复成功后（boot 时 `totalSteps 32 / swing 0` ✓），访问 **`/studio?genre=chicago-house`** ⇒
+   **约 2 秒内 localStorage 变成流派默认**（`totalSteps 128 / swing 15` ✗）⇒ 用户刚恢复的编排**被覆盖** ✗
+⭐ **根因（file:line ✓）**：`src/hooks/useUrlShareLoad.ts:97-101` 对 URL 的 `genre=` 参数**在挂载时无条件**
+   `commit({type:"SET_GENRE"})` ✓，而 `src/state/useSequencerStore.ts:345-350` 的 `SET_GENRE`
+   会用 `patternFromGenre(genre)` **覆盖 A/B 两个槽** ✗
+⚠️ 而 `App.tsx:84,92-99` **已经**用 `route.genreId||"chicago-house"` 选好流派并挂给 `StudioView` ✓
+   ⇒ 这次二次派发**看起来是多余且破坏性的** ✓
+⇒ ⭐ **我裁：这是缺陷** ✓（**"丢用户的活"类** ✗ ⇒ 与 R2 同级 ✓）⇒ **进队列并派人修** ✓（下一轮派线 ✓）
+   （⚠️ 它为此把工作台测量改走 `/`（不带 `?genre=`）✓ —— 处理正确 ✓，但**缺陷本身仍在** ✗）
+⚠️ **它未覆盖的（如实 ✓）**：和弦／和弦上的音节／跨小节之外的长音／**`.mxl` 读入**／`tempoTrack`／非 4/4／`bars` 缺省／鼓轨 MusicXML／
+   ⭐ **swing≠0 的工作台步网格**（它**故意**设 `swing:0` 让网格精确 ✓；`MidiExporter.ts:161-164` 奇数步偏移
+   `round(effSwing×0.5×ticksPerStep)`，默认 swing 15 ⇒ **9 tick = 0.01875 拍** ✓，**未实测** ✗）
+⚠️ 且它跑在 **vite dev（源码）**，不是 `dist` 构建产物 ⇒ "发布包同样如此"**未核实** ✓（同一份源码／同一 writer-reader 路径 ✓）
+✅ **纪律** ✓：**未改产品代码／未加判据／未提交** ✗；`git status` **空** ✓；产物全在 `/var/tmp/exp3/` ✓；dev server 已 kill ✓、无残留 Chromium ✓
+```
