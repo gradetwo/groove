@@ -3332,7 +3332,7 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
 ### 108.2 ⭐3 `LoopBraceV2` 接走带 —— **单位换算与"夹紧"是本批工程质量最高的一处** ✓✓
 
 ```
-新增 `src/features/arrangement/loopSteps.ts`（`loopStepsFor(loop, stepsPerBar, patternSteps)` ✓），头注释逐条给了依据：
+新增一个单位换算助手（`loopStepsFor(loop, stepsPerBar, patternSteps)` ✓，**尚未进 dev** ✓），头注释逐条给了依据：
 ① **单位确实不同**：循环框存**小节**（`data/arrangementLoop.ts` 全是小节算术 ✓），
    `AudioEngine.setLoopRange` 吃**步**的 `[start, end)` ✓（消费点 `:2042`／`:2088`／`schedulerMath.ts:52`／`:1711` ✓）
    —— 原话：「**把 bars 直接交给它，两小节的循环会变成步 0–2，即十六分之一拍**」✓（正是我点名的翻车点 ✓）
@@ -3355,7 +3355,7 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
 ### 108.4 ⭐5 `AudioEngine` 的 200ms lookahead —— 状态与待核
 
 ```
-在读（脏 3）：它**改了测试用的 fake 音频助手** ✓（`src/test/helpers/fakeAudio.ts`）＋ 新判据 `lookaheadMuteWindow.test.ts` ✓
+在读（脏 3）：它**改了测试用的 fake 音频助手** ✓（`src/test/helpers/fakeAudio.ts`）＋ 新判据（`lookaheadMuteWindow` 那条 ✓，**尚未进 dev** ✓）
    ⇒ 正在"先量"：**静音/推子之后，已排期音符还会响多久／按旧音量响多久** ✓
 ⚠️ 待它交付时我核三件：① 形状是否与 §106 一致（**已排期音符立即受控** vs 单纯缩短窗口 ✓）；
    ② **必须有短斜坡**（不许硬切 ✗ —— §26 听感优先 ＋ 不许爆音 ✓）；③ 调度稳定性读数**逐字不变** ✓
@@ -3364,10 +3364,15 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
 ### 108.5 卫生观察（提交前要清，我已逐个提醒 ✓）
 
 ```
-⚠️ `flatten`：生产代码里的 `console.log` 插桩 ✗ ＋ `src/test/zz-flatten-scratch.test.ts` ✗（已发信 ✓；它已清掉 genrefix 那个同类问题 ✓）
-⚠️ `lookahead`：`src/test/__dbg.test.ts` ✗（临时物 ⇒ 交付前核 ✓）
+⚠️ `flatten`：生产代码里的 `console.log` 插桩 ✗ ＋ 一个 `zz-` 开头的临时判据文件 ✗（已发信 ✓；它已清掉 genrefix 那个同类问题 ✓）
+⚠️ `lookahead`：还有一个 `__dbg` 临时判据文件 ✗（交付前核 ✓）
 ✅ `rollfix`：判据名规范（`pianoRollAudition.test.tsx`／`arrangementRollAudition.test.tsx` ✓），**没有** `zz-` 类名字 ✓
 ```
 
 **⚠️ 方法纪律（本轮我自己的教训）**：我这几轮**每写一次台账就推一次** ⇒ 每次起一个 ~12 分钟 CI run ✗ ⇒ **改为攒批** ✓；
 但**读数一拿到就入册**（防上下文丢失 ✓）——两者以"**读数攒到有实质内容就写，推送合并**"为界 ✓。
+
+**⚠️ 同一轮我犯的错（记下 ✓）**：§108 我写了**尚未进 dev 的文件路径**（那几条工作树里的新文件 ✗）⇒ **`check:docs:refs` 失败** ✗；
+   而我**打印了它的输出却没看退出码** ✗ ⇒ 直到下一轮才发现 ✓。
+   **规矩**：**凡跑门禁，必须看**退出码**（不是看输出像不像成功 ✓）**；而且**文档里不许把"工作树里的新文件"写成"存在的文件"** ✓
+   （本节已改为不构成路径引用的写法 ✓，`check:docs:refs` 退出码 0 ✓）
