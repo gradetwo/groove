@@ -1090,6 +1090,7 @@
 [class~="bg-[#141014]"] { background-color: rgb(var(--d-panel)); }
 [class~="bg-[#101115]"] { background-color: rgb(var(--d-panel)); }
 [class~="border-[#1c1d22]"] { border-color: rgb(var(--d-surface)); }
+[class~="bg-[#0c0d11]"] { background-color: rgb(var(--d-panel2)); }
 [class~="bg-[#0f111a]"] { background-color: rgb(var(--d-panel)); }
 [class~="border-[#1a1c28]"] { border-color: rgb(var(--d-surface)); }
 [class~="bg-[#181c2c]"] { background-color: rgb(var(--d-surface)); }
@@ -1216,7 +1217,6 @@
 [class~="hover:bg-[#161820]"]:hover { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#161820]"] { background-color: rgb(var(--d-surface)); }
 [class~="hover:bg-[#20232c]"]:hover { background-color: rgb(var(--d-surface)); }
-[class~="bg-[#0c0d11]"] { background-color: rgb(var(--d-panel2)); }
 [class~="bg-[#14161e]"] { background-color: rgb(var(--d-panel)); }
 [class~="border-[#282c38]"] { border-color: rgb(var(--d-line)); }
 [class~="text-[#06b6d4]"] { color: rgb(var(--d-cat-electronic)); }

@@ -209,12 +209,26 @@ describe("the sampler ledger, read the way the panel reads it", () => {
     expect(preparation.total).toBeGreaterThan(0);
 
     const emily = view.assets.find((asset) => asset.assetId === "karoryfer-emilyguitar:emily-clean");
+    /**
+     * ⭐ **The owner's second question, answered by the two addresses themselves** — and this is the asset he named.
+     *
+     * `karoryfer-emilyguitar`'s bytes came from a release zip whose top level is the library's own name, so the **mirror**
+     * carries that layer (`…/karoryfer-emilyguitar/Emilyguitar/…`) while the **source repository is flat** at its root.
+     * The source address used to copy the archive's layer and 404'd at its pin; `a522f1e` declared the difference
+     * (`sourcePrefix`) and strips exactly that layer. So the two addresses are asserted **apart, and for what makes them
+     * differ** — a panel that printed the same path twice would be the bug, not the fix.
+     */
     expect(emily?.sourceUrl).toBe(
-      "https://raw.githubusercontent.com/sfzinstruments/karoryfer.emilyguitar/b4920dc662fd9cad6dcaccdeecffdd91c8725d8c/Emilyguitar/emily_clean.sfz"
+      "https://raw.githubusercontent.com/sfzinstruments/karoryfer.emilyguitar/b4920dc662fd9cad6dcaccdeecffdd91c8725d8c/emily_clean.sfz"
     );
     expect(emily?.mirrorUrl).toBe(
       "https://r2mirror.groove.wangda.today/karoryfer-emilyguitar/Emilyguitar/emily_clean.sfz"
     );
+    expect(emily!.sourceUrl, "the source address carries the mirror's archive layer, which is the reported 404").not.toContain(
+      "/Emilyguitar/"
+    );
+    expect(emily!.mirrorUrl, "the mirror address lost the layer it needs").toContain("/Emilyguitar/");
+    expect(emily!.mirrorUrl!.endsWith("emily_clean.sfz") && emily!.sourceUrl!.endsWith("emily_clean.sfz")).toBe(true);
     // ⭐ Both addresses are on the panel, which is the whole "多一层目录" question.
     expect(text).toContain(emily!.sourceUrl!);
     expect(text).toContain(emily!.mirrorUrl!);

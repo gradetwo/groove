@@ -1,6 +1,6 @@
 # `/studio` 的采样声部：点播放既不等待、也不发声（以及 `?diag=1` 怎么看它）
 
-**日期**：2026-10-03 ｜ **基线**：`origin/dev` ｜ **v2.34.42**（量到这组读数时）→ rebase 后 **v2.34.43**（结论不变）
+**日期**：2026-10-03 ｜ **基线**：`origin/dev` ｜ 读数量于 **v2.34.42**，改动随 **v2.34.44** 发布到 `dev` 与 `main`
 
 ---
 
@@ -119,6 +119,12 @@ detail_sampling_*    (src/i18n/locales/explore.ts:123-125)    ← 曲风页已�
 | 有采样声部的 lane 清单（lane → 乐器名 → assetId） | `ledgerLanesOf` ＝ `standDownSamplerLanes` ＋ `stepPitches`/`stepVelocity` |
 | 每个资产的**源站 URL 与镜像 URL 并排** | 资产自己的 `sfz.url` / `sfz.fallbackUrl` |
 | 实际请求结果（200／404）＋ 是否回退到镜像 | ⚠️ **成功路径 loader 不报告是哪个主机答的** ⇒ 面板如实说"未知"，并提供一个**面板自己的**探测按钮（`探测地址`，按需、不随刷新发请求） |
+
+⭐ **这两行并排就是业主那条"源站地址多一层目录"的答案，而且现在能看出修好了**：`karoryfer-emilyguitar` 的字节来自一个顶层是库名的 release zip，
+所以**镜像**带那一层（`…/karoryfer-emilyguitar/Emilyguitar/emily_clean.sfz`）而**源站仓库根部是平的**。
+源站地址原先照抄了归档的那一层，在自己的 pin 上 404；`a522f1e`（另一条线）让条目声明 `sourcePrefix` 并**只**剥掉这一层
+⇒ 面板上两个地址现在**故意不同**：源站不含 `/Emilyguitar/`，镜像含。判据断言的正是这个差异
+（`src/test/samplerDiagnostics.test.tsx`："the source address carries the mirror's archive layer, which is the reported 404"）。
 | 准备进度 `loaded/total`、`ready`、`problems` | `prepareSamplerLanes` 的返回 |
 | 缓存：loader 构建次数／本次解码次数 | `sharedSamplerLoaderBuilds()`、`loader.decodes()` 的前后差 |
 | 覆盖：可发按键范围 ＋ 该轨写出范围／超出几个音 | `sampledKeyCoverage` ＋ `notesOutsideCoverage`（引擎逐音判定，不另写一张表） |
