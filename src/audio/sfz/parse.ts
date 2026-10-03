@@ -531,8 +531,19 @@ function defaultPathValue(line: string | undefined): string | undefined {
  * could not sound. So a sample's value runs to the end of the line, or up to the next `name=value` pair when the
  * same line carries more opcodes after it (`sample=space dir/tone.wav pitch_keycenter=60`); every other value keeps
  * the grammar's rule, quoted or up to the next whitespace.
+ *
+ * ⭐ **And `sw_label` is the second such value, measured the same way.** Every one of the pinned library's `-KS`
+ * programs writes an articulation's name unquoted and with spaces — `sw_label=C2 Sustain Vibrato`,
+ * `sw_label=D#2 Pizzicato`, `sw_label=C#2 Tremolo` — and under the whitespace rule they arrived as `C2`, `D#2` and
+ * `C#2`, i.e. as bare note names, which is exactly the information that says *which* articulation a switch selects.
+ * The reference engine reads the whole name: `src/sfizz/parser/Parser.cpp` extracts the value to end of line and
+ * cuts only before a token shaped like `name=`, so `sw_label=Sine lokey=41` is `Sine` while
+ * `sw_label=C2 Sustain Vibrato` is the whole name, and `Region.cpp` stores it with
+ * `case hash("sw_label"): keyswitchLabel = opcode.value;`. `keyswitch.ts` is what needs it.
  */
 function scanOpcodes(line: string, into: Record<string, string>): void {
+  /** The opcodes whose value is a name or a path that may contain spaces unquoted (see the note above). */
+  const SPACE_BEARING = new Set(["sample", "sw_label"]);
   let index = 0;
   while (index < line.length) {
     const opener = /([a-zA-Z0-9_]+)\s*=\s*/.exec(line.slice(index));
@@ -550,10 +561,10 @@ function scanOpcodes(line: string, into: Record<string, string>): void {
       continue;
     }
 
-    if (name === "sample") {
+    if (SPACE_BEARING.has(name)) {
       const following = /\s+[a-zA-Z0-9_]+\s*=/.exec(line.slice(valueStart));
       const end = following ? valueStart + following.index : line.length;
-      into.sample = line.slice(valueStart, end).trim().replace(/^"|"$/g, "");
+      into[name] = line.slice(valueStart, end).trim().replace(/^"|"$/g, "");
       index = following ? end : line.length;
       continue;
     }
@@ -587,9 +598,31 @@ function scanOpcodes(line: string, into: Record<string, string>): void {
  *
  * The price is stated rather than hidden: the eight pinned VSCO `-KS` programs are exactly this shape, and under this rule they answer nothing until a switch is
  * supplied — which is what sfizz does with them, and what `sfzSwKeyswitch.test.ts` pins so the choice is on the record instead of discovered later.
+ *
+ * ## ⭐ Which declaration wins when a file writes more than one: **the last**, and that is the reference engine's rule
+ *
+ * sfizz's `Synth::Impl::buildRegion` ends with
+ *
+ * ```cpp
+ * if (lastRegion->defaultSwitch)
+ *     setCurrentSwitch(*lastRegion->defaultSwitch);
+ * ```
+ *
+ * and `buildRegion` runs **once per `<region>`, in file order** (`Synth::Impl::onParseEvent`, `case hash("region"): buildRegion(members); break;` —
+ * <https://github.com/sfztools/sfizz/blob/f5c6e29f23b8057867c08e88f5f6ac6738baa30b/src/sfizz/Synth.cpp#L128> and `#L213-L214`). So the value left in
+ * `currentSwitch_` is the one from the **last region built whose effective `sw_default` is defined** — the last declaration, not the first. This function
+ * used to return the first, which is a different answer for any file whose defaults disagree, and the difference is "which articulation you hear when the
+ * patch loads".
+ *
+ * Measured cost on the pinned `-KS` programs: **none** — every one of them that repeats a `sw_default` repeats a single value (`CelloEns-KS.sfz` writes
+ * `c6` in all six of its groups), so first and last agree on all eight files. It is still the reference engine's rule rather than ours, and a file with two
+ * different defaults is the case that tells them apart; `sfzKeyswitchTechnique.test.ts` holds that case.
  */
 export function declaredSwitchDefault(regions: readonly SfzRegion[]): number | undefined {
-  for (const region of regions) if (region.swDefault !== undefined) return region.swDefault;
+  for (let index = regions.length - 1; index >= 0; index -= 1) {
+    const value = regions[index]!.swDefault;
+    if (value !== undefined) return value;
+  }
   return undefined;
 }
 

@@ -72,7 +72,7 @@ export interface SampleLoader {
    * It used to return the buffer alone, and the ratio `resolveInstrumentNote` had just computed was discarded — so the sampler path had no pitch at all and nothing in the application called this method. Returning both is what makes a
    * sampler play the note rather than the recording.
    */
-  loadNote(assetId: string, note: number, options?: { velocity?: number; nth?: number }): Promise<LoadedNote>;
+  loadNote(assetId: string, note: number, options?: { velocity?: number; nth?: number; technique?: string }): Promise<LoadedNote>;
   /** How many decodes have actually run — for a test, and for a probe that wants to prove rule 1 rather than trust it. */
   decodes(): number;
 }

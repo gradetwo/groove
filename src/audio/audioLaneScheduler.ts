@@ -70,7 +70,12 @@ export async function scheduleAudioLaneSamples(
        * lane whose sound is an instrument, so it is the second.
        */
       const pitch = typeof event.pitch === "number" && event.pitch > 0 ? event.pitch : undefined;
-      const note = pitch === undefined ? null : await loader.loadNote(event.assetId, pitch);
+      /**
+       * ⭐ **The lane's chosen articulation travels with the note** — see `AudioLaneEvent.technique`. The scheduler does not
+       * interpret it; it hands the name to the loader, which is the layer that can see the file's own `sw_label`s. A lane
+       * that names none passes no option, which is exactly the old call.
+       */
+      const note = pitch === undefined ? null : await loader.loadNote(event.assetId, pitch, event.technique === undefined ? undefined : { technique: event.technique });
       const buffer = note === null ? await loader.load(event.assetId) : note.buffer;
       /**
        * ⭐ **The planner's own second and length are consumed, not recomputed.**

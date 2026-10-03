@@ -20,6 +20,8 @@
 import { STEPS_PER_BEAT } from "../data/noteEvents";
 import { stepDuration } from "../data/noteLayer";
 import { sampledAssetForLane } from "../data/sampledInstruments";
+import { programForIdentity } from "../data/stringTechniques";
+import type { StringTechnique } from "../data/stringTechniques";
 import { DEFAULT_SAMPLER_RELEASE_SECONDS, startSamplerNote, type SamplerVoice } from "./samplerVoice";
 import { planLegatoJoins, type LegatoJoinCandidate, type LegatoJoinMark } from "./legatoJoin";
 import { createLegatoVoiceLedger, type LegatoVoiceReading } from "./legatoVoices";
@@ -54,6 +56,15 @@ export interface SamplerStepEvent {
    * stopped the transport or closed the tab.
    */
   gateSteps: number;
+  /**
+   * ⭐ **The articulation the lane's chosen instrument names**, or absent when it names none.
+   *
+   * The same field `AudioLaneEvent.technique` carries and for the same reason: `violin_section_spiccato` is a caller
+   * saying which articulation they want, and a `-KS` program — several articulations folded into one file behind
+   * `sw_last` — has to be told, because six of the eight pinned ones declare no `sw_default` for the articulation being
+   * asked for and are otherwise silent. The loader turns the name into a switch value through the file's own `sw_label`.
+   */
+  technique?: StringTechnique;
   /**
    * The lane's position, −1…1, when it states one.
    *
@@ -197,8 +208,18 @@ export function planSamplerSteps(
       if (pitches.length === 0) return;
       const pan = typeof lane.pan === "number" && Number.isFinite(lane.pan) ? Math.max(-1, Math.min(1, lane.pan)) : undefined;
       const gateSteps = stepDuration(lane, step);
+      const technique = programForIdentity(lane.instrument ?? "")?.technique;
       for (const pitch of pitches) {
-        events.push({ trackIndex, sourceTrackId, assetId, step, pitch, gateSteps, ...(pan === undefined ? {} : { pan }) });
+        events.push({
+          trackIndex,
+          sourceTrackId,
+          assetId,
+          step,
+          pitch,
+          gateSteps,
+          ...(pan === undefined ? {} : { pan }),
+          ...(technique === undefined ? {} : { technique }),
+        });
       }
     });
   });
@@ -261,7 +282,7 @@ export async function scheduleSamplerSteps(events: readonly SamplerStepEvent[], 
   for (const event of events) {
     if (event.step < fromStep) continue;
     try {
-      const note = await input.loader.loadNote(event.assetId, event.pitch);
+      const note = await input.loader.loadNote(event.assetId, event.pitch, event.technique === undefined ? undefined : { technique: event.technique });
       const whenSeconds = startSeconds + event.step * stepSeconds;
       // The same `stepSeconds` that places the onset gives the note its end, so a lane's timing is one reading of the grid.
       const seconds = event.gateSteps * stepSeconds;

@@ -33,6 +33,8 @@ import type { SequencerPattern, SequencerTrack } from "../types/genre";
 import { SAMPLE_CATALOGUE, findSampleAsset, sampleReferenceProblem } from "../data/sampleCatalogue";
 import type { SampleAsset } from "../data/sampleCatalogue";
 import { isSampledLane, sampledAssetForLane, sampledDrumVoicingForLane } from "../data/sampledInstruments";
+import { programForIdentity } from "../data/stringTechniques";
+import type { StringTechnique } from "../data/stringTechniques";
 import { stepTiming } from "../data/tempoMap";
 import type { TempoPoint } from "../data/tempoMap";
 import { stepDuration } from "../data/noteLayer";
@@ -86,6 +88,17 @@ export interface OfflineAudioLaneEvent extends OfflineAudioLaneRef {
   gainDb: number;
   /** The lane's position, −1…1, when it states one. The sink pans by it; `0` and absent are both centre. */
   pan?: number;
+  /**
+   * ⭐ **The articulation the lane's chosen instrument names** — the same field `AudioLaneEvent.technique` carries, so the
+   * live scheduler and the offline renderer ask the loader the same question about the same file.
+   *
+   * `violin_section_spiccato` is a caller saying which articulation they want; a `-KS` keyswitch program has to be told,
+   * because six of the eight pinned ones declare no `sw_default` for the articulation being asked for and are otherwise
+   * silent. The loader turns the name into a switch value through the file's own `sw_label`
+   * (`src/audio/sfz/keyswitch.ts`), and refuses a name the file does not carry rather than guessing. Absent means the
+   * file's own `sw_default` decides, exactly as before.
+   */
+  technique?: StringTechnique;
   /**
    * ⭐ **Which voice of its onset this note is** — the notes of one onset ranked by ascending pitch, lowest first.
    *
@@ -345,6 +358,8 @@ export function planOfflineAudioLanes(
     const asset = findSampleAsset(assetId, catalogue)!;
     const gainDb = laneGainDb(track);
     const pan = typeof track.pan === "number" && Number.isFinite(track.pan) ? Math.max(-1, Math.min(1, track.pan)) : undefined;
+    /** The lane's chosen articulation, read where the lane is still visible — see `OfflineAudioLaneEvent.technique`. */
+    const technique = programForIdentity(track.instrument ?? "")?.technique;
 
     if (asset.sfz) {
       /**
@@ -384,6 +399,7 @@ export function planOfflineAudioLanes(
           seconds: noteSeconds(track, step, timing),
           gainDb,
           ...(pan === undefined ? {} : { pan }),
+          ...(technique === undefined ? {} : { technique }),
         });
         /**
          * Counted, because a lane whose every note fell outside this window is not in this render: listing it as
@@ -547,7 +563,7 @@ export async function scheduleOfflineAudioLanes(input: OfflineAudioLaneScheduleI
         const buffer = await input.loader.load(event.assetId);
         input.sink.start(buffer, event, 1);
       } else {
-        const note = await input.loader.loadNote(event.assetId, event.pitch);
+        const note = await input.loader.loadNote(event.assetId, event.pitch, event.technique === undefined ? undefined : { technique: event.technique });
         input.sink.start(note.buffer, event, note.ratio, note);
       }
       events += 1;

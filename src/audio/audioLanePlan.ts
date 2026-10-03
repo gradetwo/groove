@@ -24,6 +24,8 @@ import { STEPS_PER_BAR } from "../data/noteEvents";
 import { stepTiming, totalSeconds } from "../data/tempoMap";
 import type { SampleAsset } from "../data/sampleCatalogue";
 import { sampledAssetForLane, sampledDrumVoicingForLane } from "../data/sampledInstruments";
+import { programForIdentity } from "../data/stringTechniques";
+import type { StringTechnique } from "../data/stringTechniques";
 import { planLegatoJoins, type LegatoJoinCandidate, type LegatoJoinMark } from "./legatoJoin";
 import type { SequencerTrack } from "../types/genre";
 import type { TempoPoint } from "../data/tempoMap";
@@ -94,6 +96,20 @@ export interface AudioLaneEvent {
    * is not handed on keeps exactly the shape it had before this field existed.
    */
   handedOn?: boolean;
+  /**
+   * ⭐ **The articulation the lane's chosen instrument names** — `"spiccato"`, `"pizzicato"`, `"tremolo"` — or absent when
+   * the instrument does not name one.
+   *
+   * It is on the event because the scheduler never sees the lane again, and it is *the track's own choice* rather than
+   * anything derived from the asset: `violin_section_spiccato` is a caller saying which articulation they want, and a
+   * `-KS` program (a keyswitch wrapper folding several articulations into one file) has to be told, because six of the
+   * eight pinned ones declare no `sw_default` for the articulation being asked for and are otherwise silent. The
+   * resolver turns the name into a switch value through the file's own `sw_label` (`src/audio/sfz/keyswitch.ts`), and a
+   * name the file does not carry is refused with the labels it does carry rather than guessed at.
+   *
+   * Absent means "the file's own `sw_default` decides", which is exactly the behaviour this path had before.
+   */
+  technique?: StringTechnique;
 }
 
 export interface AudioLanePlan {
@@ -217,6 +233,11 @@ export function planAudioLaneEvents(song: PlanInput, catalogue: readonly SampleA
           continue;
         }
         const pan = typeof track.pan === "number" && Number.isFinite(track.pan) ? Math.max(-1, Math.min(1, track.pan)) : undefined;
+        /**
+         * ⭐ **The lane's chosen articulation, when its instrument name states one** — see `AudioLaneEvent.technique`. It is
+         * read here, once, because this is the last place the lane itself is visible; the scheduler only has events.
+         */
+        const technique = programForIdentity(track.instrument ?? "")?.technique;
         /** The lane's identity, allocated once however many sections play this clip. */
         const laneKey = `${section.slot ?? ""}#${trackInClip}`;
         let trackIndex = lanes.get(laneKey);
@@ -236,6 +257,7 @@ export function planAudioLaneEvents(song: PlanInput, catalogue: readonly SampleA
               pitch,
               gateSteps: stepDuration(track, step),
               ...(pan === undefined ? {} : { pan }),
+              ...(technique === undefined ? {} : { technique }),
             });
           }
         }

@@ -10,6 +10,7 @@
 import { parseSfz, readControlDefaults, declaredSwitchDefault } from "./parse";
 import { regionsAtCc } from "./ccGate";
 import { playbackForNote, playbackGap } from "./regionPlayback";
+import { techniqueSwitchFor } from "./keyswitch";
 import { isAbsolutePath, samplePathRelativeToProgram } from "./defaultPath";
 import type { SfzRegion } from "./parse";
 import type { SampleAsset } from "../../data/sampleCatalogue";
@@ -181,8 +182,18 @@ export function resolveInstrumentNote(
   /**
    * `sources` is the expansion's line map, when the caller has one (`expandIncludes(...).sources`). Supplying it makes every region carry the file that declared it,
    * which the note then reports as `sourcePath`; omitting it is exactly the old behaviour and leaves the field absent.
+   *
+   * ⭐ `technique` is **the articulation the caller chose**, in the words a player uses ("spiccato", "pizzicato", "tremolo"). `techniqueSwitchFor` turns it into a
+   * keyswitch value through the file's own `sw_label`, and it wins over the file's `sw_default` — which is the whole point, since six of the eight pinned `-KS`
+   * programs declare no `sw_default` for the articulation being asked for and are silent without it. A name the file's own labels do not carry is **refused with
+   * those labels named** rather than guessed at, and a file with no keyswitches at all is untouched by the option.
    */
-  options: { velocity?: number; nth?: number; sources?: ReadonlyArray<{ from: number; to: number; file: string }> } = {}
+  options: {
+    velocity?: number;
+    nth?: number;
+    sources?: ReadonlyArray<{ from: number; to: number; file: string }>;
+    technique?: string;
+  } = {}
 ): InstrumentResolution {
   if (!asset.sfz) {
     return { ok: false, regions: [], reason: `sample "${asset.assetId}" is not an instrument (it has no sfz)` };
@@ -215,7 +226,22 @@ export function resolveInstrumentNote(
    * A file with no `sw_default` gets `undefined`, which is exactly the old behaviour — see `declaredSwitchDefault` for why that rule is chosen and what it costs.
    */
   const switchDefault = declaredSwitchDefault(audible);
-  const playback = playbackForNote(audible, note, { ...options, switchDefault });
+  /**
+   * ⭐ **The chosen articulation, when the caller named one** — and the file's own `sw_label` is what turns a name into a switch value.
+   *
+   * `techniqueSwitchFor` returns `undefined` for a file with no `sw_last` regions at all, which is not a keyswitch question: a dedicated `ViolinEnsSpic.sfz`
+   * asked for `spiccato` must still play, and it does, through the ordinary path. A name the file's labels do **not** carry is refused here, with the labels the
+   * file does declare, rather than falling back to a default the caller did not ask for.
+   */
+  const chosen = options.technique === undefined ? undefined : techniqueSwitchFor(audible, options.technique);
+  if (chosen !== undefined && !chosen.ok) {
+    return { ok: false, regions, reason: `instrument "${asset.assetId}": ${chosen.reason}` };
+  }
+  const playback = playbackForNote(audible, note, {
+    ...options,
+    ...(chosen === undefined ? {} : { switch: chosen.switch }),
+    switchDefault,
+  });
   if (!playback) {
     return { ok: false, regions, reason: playbackGap(audible, note) };
   }
