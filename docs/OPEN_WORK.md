@@ -4897,3 +4897,18 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
    只影响"远端可见"的时间 ✓；**而"推后核判决"这条不变** ✓（推了就核 ✓）
 ⇒ 本条**立即生效** ✓：接下来我**不再一条一推** ✗
 ```
+
+## 一百四十九、⭐⭐ **Logic 16 字节行模型已落地（`95f459f`）—— 判据 25/25 我核过** ✓（2026-10-03 23:2x ✓）
+
+```
+✅ **落地**：`dev` 顶部 = **`95f459f fix(logic): read…`** ✓ —— 改动**只有一个产品文件** `src/data/logicToArrangement.ts` ✓
+   （＝我明确放开的那一个 ✓，**其余 `src/data/**` 未动** ✓）＋ 夹具 `src/test/fixtures/logic_note_form.mjs`／`.d.mts` ✓
+   ＋ **三条判据**：**`logicCorpusLines.test.ts`**（**语料验收数就编在这里** ✓）、`logicFixtures.test.ts` ✓、`logicNoteForm.test.ts` ✓
+✅ **我核过**（**先 rebase 我的树** ✓ —— 上次假红的教训 ✓ 之后跑）：
+   **`Test Files 3 passed (3)`、`Tests 25 passed (25)`、退出码 0** ✓✓
+   反向量 `ownerProjectAcceptance` ⇒ 退出码 0、**五数逐字**（`19 overlapping…, 57 note(s)…, 57 handed over…`）✓
+   ⇒ **验收数由判据实测通过** ✓：`Swing!` **2903** ✓｜`Manzana`×2 **1137** ✓｜`Colors` **2868** ✓｜
+     `ocean eyes` **1729** ✓｜`MONTERO` **7** ✓｜`Grid` **0** ✓
+   ⚠️ 其中 `Colors`／`ocean eyes` 是**相对旧基线的变化** ✓（1557→2868、1240→1729 ✓）＝"**读到了更多**" ✓，**已按 §137 要求写清理由** ✓
+⏳ **CI 判决仍排队** ✗（我先前"一条一推"留下的欠账 ✓）⇒ 按规矩**判决前不写最终验收** ✓
+```
