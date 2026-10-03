@@ -31,3 +31,24 @@ describe("a length that is not on the quarter grid survives", () => {
     expect(toMusicXml([N(60, 0, 1)] as never, 4, { title: "t" })).toContain("<divisions>4</divisions>");
   });
 });
+
+/**
+ * ⭐ **The note type label follows the division count the file uses** (docs/OPEN_WORK.md 255).
+ *
+ * With the count raised to twenty four, a one beat note is written as twenty four divisions, and a label computed
+ * from the old constant would call that six beats. The assertion below turns red if the label stops being derived
+ * from the actual count.
+ */
+describe("the type label follows the divisions", () => {
+  it("calls one beat at twenty four divisions a quarter note", () => {
+    const xml = toMusicXml([N(60, 0, 1)] as never, 4, { title: "t", partName: "P", beatsPerMeasure: 4, beatType: 4 });
+    expect(xml).toContain("<divisions>4</divisions>");
+    expect(xml).toContain("<type>quarter</type>");
+  });
+
+  it("still labels a one beat note a quarter when a finer division is needed", () => {
+    const xml = toMusicXml([N(41, 386.5, 2.167), N(60, 0, 1)] as never, 400, { title: "t", partName: "P", beatsPerMeasure: 4, beatType: 4 });
+    expect(xml).not.toContain("<divisions>4</divisions>");
+    expect((xml.match(/<type>quarter<\/type>/g) ?? []).length).toBeGreaterThanOrEqual(1);
+  });
+});

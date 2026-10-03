@@ -271,12 +271,12 @@ export function notesToMeasures(notes: readonly NoteEvent[], bars: number, optio
         let gap = event.startDivision - cursor;
         while (gap > 0) {
           const piece = Math.min(gap, 4 * divisionsPerBeat);
-          body.push(`      <note><rest/><duration>${piece}</duration><voice>${voiceNumber}</voice>${typeElement(piece)}</note>`);
+          body.push(`      <note><rest/><duration>${piece}</duration><voice>${voiceNumber}</voice>${typeElement(piece, divisionsPerBeat)}</note>`);
           gap -= piece;
         }
         const [first, ...rest] = event.pitches;
-        body.push(noteElement(first!, event, voiceNumber, false));
-        for (const pitch of rest) body.push(noteElement(pitch, event, voiceNumber, true));
+        body.push(noteElement(first!, event, voiceNumber, false, divisionsPerBeat));
+        for (const pitch of rest) body.push(noteElement(pitch, event, voiceNumber, true, divisionsPerBeat));
         cursor = event.startDivision + event.duration;
       }
 
@@ -288,7 +288,7 @@ export function notesToMeasures(notes: readonly NoteEvent[], bars: number, optio
         let tail = measureEnd - cursor;
         while (tail > 0) {
           const piece = Math.min(tail, 4 * divisionsPerBeat);
-          body.push(`      <note><rest/><duration>${piece}</duration><voice>${voiceNumber}</voice>${typeElement(piece)}</note>`);
+          body.push(`      <note><rest/><duration>${piece}</duration><voice>${voiceNumber}</voice>${typeElement(piece, divisionsPerBeat)}</note>`);
           tail -= piece;
         }
       }
@@ -299,11 +299,11 @@ export function notesToMeasures(notes: readonly NoteEvent[], bars: number, optio
   return measures;
 }
 
-function typeElement(duration: number): string {
+function typeElement(duration: number, divisionsPerBeat: number): string {
   // WARNING: this still divides by the constant, so at a raised division count the <type> label can be wrong.
   // Our own reader takes the length from <duration> / divisions and ignores the label, which is why this is a
   // recorded gap rather than a silent one: see docs/OPEN_WORK.md 250.
-  const type = noteTypeFor(duration / DIVISIONS_PER_QUARTER);
+  const type = noteTypeFor(duration / divisionsPerBeat);
   // No type element at all when the duration is not a written value: a wrong `<type>` is read as authoritative by most readers, an absent one is inferred from the duration.
   return type ? `<type>${type}</type>` : "";
 }
@@ -312,7 +312,8 @@ function noteElement(
   pitch: number,
   event: { duration: number; tiedFrom?: boolean; tiedTo?: boolean; syllable?: string },
   voice: number,
-  isChordMember: boolean
+  isChordMember: boolean,
+  divisionsPerBeat: number
 ): string {
   const { step, alter, octave } = pitchToMusicXml(pitch);
   /**
@@ -332,7 +333,7 @@ function noteElement(
     event.tiedTo ? `        <tie type="start"/>` : "",
     event.tiedFrom ? `        <tie type="stop"/>` : "",
     `        <voice>${voice}</voice>`,
-    typeElement(event.duration) ? `        ${typeElement(event.duration)}` : "",
+    typeElement(event.duration, divisionsPerBeat) ? `        ${typeElement(event.duration, divisionsPerBeat)}` : "",
     event.tiedTo || event.tiedFrom
       ? `        <notations>${event.tiedTo ? `<tied type="start"/>` : ""}${event.tiedFrom ? `<tied type="stop"/>` : ""}</notations>`
       : "",
