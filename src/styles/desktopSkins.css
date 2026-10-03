@@ -645,7 +645,7 @@
 /*
  * The literal map: the desktop's hardcoded hexes, by role.
  *
- * 600 rules, generated from the literals the source actually uses. Because each rule names a
+ * 604 rules, generated from the literals the source actually uses. Because each rule names a
  * **token**, the same rules serve all six skins — the skin decides what the token resolves to. The few
  * near-duplicate grounds and inks in the default theme therefore converge onto one value each, which is
  * what "the same palette on both surfaces" means in practice.
@@ -744,16 +744,19 @@
 [class~="text-[#d8b988]/80"] { color: rgb(var(--d-accent-soft) / 0.80); }
 [class~="bg-[#f59e0b]/20"] { background-color: rgb(var(--d-warning) / 0.20); }
 [class~="text-[#f59e0b]"] { color: rgb(var(--d-warning)); }
+[class~="hover:bg-[#ff5964]/20"]:hover { background-color: rgb(var(--d-danger) / 0.20); }
 [class~="hover:bg-[#ff5964]/90"]:hover { background-color: rgb(var(--d-danger) / 0.90); }
 [class~="hover:border-[#ff5964]/40"]:hover { border-color: rgb(var(--d-danger) / 0.40); }
 [class~="hover:border-[#ff5964]/50"]:hover { border-color: rgb(var(--d-danger) / 0.50); }
 [class~="hover:text-[#ff5964]"]:hover { color: rgb(var(--d-danger)); }
 [class~="bg-[#ff5964]"] { background-color: rgb(var(--d-danger)); }
+[class~="bg-[#ff5964]/10"] { background-color: rgb(var(--d-danger) / 0.10); }
 [class~="bg-[#ff5964]/15"] { background-color: rgb(var(--d-danger) / 0.15); }
 [class~="bg-[#ff5964]/20"] { background-color: rgb(var(--d-danger) / 0.20); }
 [class~="bg-[#ff5964]/25"] { background-color: rgb(var(--d-danger) / 0.25); }
 [class~="border-[#ff5964]"] { border-color: rgb(var(--d-danger)); }
 [class~="border-[#ff5964]/40"] { border-color: rgb(var(--d-danger) / 0.40); }
+[class~="border-[#ff5964]/60"] { border-color: rgb(var(--d-danger) / 0.60); }
 [class~="border-[#ff5964]/70"] { border-color: rgb(var(--d-danger) / 0.70); }
 [class~="from-[#ff5964]"] { --tw-gradient-from: rgb(var(--d-danger)); }
 [class~="text-[#ff5964]"] { color: rgb(var(--d-danger)); }
@@ -1081,10 +1084,12 @@
 [class~="bg-[#0e1017]/90"] { background-color: rgb(var(--d-panel) / 0.90); }
 [class~="hover:bg-[#232838]"]:hover { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#08090d]"] { background-color: rgb(var(--d-bg)); }
-[class~="bg-[#11161d]"] { background-color: rgb(var(--d-panel)); }
 [class~="bg-[#191e2b]"] { background-color: rgb(var(--d-surface)); }
+[class~="border-[#c084fc]/30"] { border-color: rgb(var(--d-cat-jazz) / 0.30); }
+[class~="text-[#c084fc]"] { color: rgb(var(--d-cat-jazz)); }
 [class~="bg-[#151824]/60"] { background-color: rgb(var(--d-surface) / 0.60); }
 [class~="hover:bg-[#2a1315]"]:hover { background-color: rgb(var(--d-panel)); }
+[class~="bg-[#11161d]"] { background-color: rgb(var(--d-panel)); }
 [class~="bg-[#181d2a]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#e9e7e0]"] { background-color: rgb(var(--d-track-fx)); }
 [class~="bg-[#141014]"] { background-color: rgb(var(--d-panel)); }
@@ -1103,7 +1108,6 @@
 [class~="bg-[#14151a]"] { background-color: rgb(var(--d-panel)); }
 [class~="bg-[#a855f7]/20"] { background-color: rgb(var(--d-track-chord) / 0.20); }
 [class~="border-[#a855f7]"] { border-color: rgb(var(--d-track-chord)); }
-[class~="text-[#c084fc]"] { color: rgb(var(--d-cat-jazz)); }
 [class~="bg-[#1f232b]"] { background-color: rgb(var(--d-surface)); }
 [class~="text-[#f87171]"] { color: rgb(var(--d-danger)); }
 [class~="bg-[#161822]"] { background-color: rgb(var(--d-surface)); }
@@ -1283,6 +1287,7 @@
 [class~="bg-[#f5b73d]/20"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#f5b73d]/5"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#ff5964]"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="bg-[#ff5964]/10"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#ff5964]/15"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#ff5964]/20"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#ff5964]/25"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
@@ -1455,6 +1460,7 @@
 [class~="bg-[#f5b73d]/5"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#fbbf24]"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#ff5964]"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
+[class~="bg-[#ff5964]/10"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#ff5964]/15"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#ff5964]/20"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#ff5964]/25"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
