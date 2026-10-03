@@ -35,7 +35,7 @@
  * The catalogue is *not* re-fetched per call: `catalogueRef` is the session's assets, and a view whose engine is
  * replaced only has to hand over the new one.
  */
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { appCatalogueRuntime } from "../data/sampleCatalogueRuntime";
 import {
   createSamplerLanePlayback,
@@ -43,6 +43,7 @@ import {
   type SamplerLanePlayback,
 } from "../audio/samplerLanePlayback";
 import { reportSampledLaneProblems } from "../audio/sampledLanes";
+import type { SampleLoader } from "../audio/sampleLoader";
 import type { SampleAsset } from "../data/sampleCatalogue";
 import type { SequencerPattern } from "../types/genre";
 
@@ -69,13 +70,59 @@ export interface UseRecordedLanesResult {
   startRecordedLanes: (pattern: SequencerPattern) => Promise<SamplerLanePlayback | null>;
   /** Silence whatever {@link startRecordedLanes} started, and how many voices that stopped. */
   stopRecordedLanes: () => number;
+  /**
+   * ⭐ **The catalogue this session resolved**, or `null` while it is still being fetched.
+   *
+   * Exposed so a view that wants to show **"the recordings are still downloading"** before the transport starts can warm exactly the
+   * assets this hook will sound, through the same loader — see {@link UseRecordedLanesOptions.loaderFor}. It is the hook's own ref rather
+   * than a second `appCatalogueRuntime.load()` in the view, so "the catalogue the lanes were resolved against" cannot become two facts.
+   */
+  catalogue: readonly SampleAsset[] | null;
+  /**
+   * ⭐ **The loader `startRecordedLanes` will sound through** — the session's shared one when the caller asked for it.
+   *
+   * `null` before an engine exists. Handing this same loader to `prepareSamplerLanes` (`src/audio/samplerLanePrepare.ts`) and then letting
+   * this hook schedule is what makes the warm-up a cache hit instead of a second download of the program, its `#include` files and every
+   * sample. A caller that never warms anything gets the default loader and today's behaviour, byte for byte.
+   */
+  loaderFor: ((catalogue: readonly SampleAsset[], context: BaseAudioContext) => SampleLoader) | null;
 }
 
-export function useRecordedLanes(getEngine: () => RecordedLaneEngine | null): UseRecordedLanesResult {
+export interface UseRecordedLanesOptions {
+  /**
+   * ⭐ **How the controller's loader is built, when the caller wants the session's shared one.**
+   *
+   * Omitted, the controller builds its own loader and this hook behaves exactly as it did before this option existed. A caller that passes
+   * `(catalogue, context) => sharedSamplerLoader(context, catalogue)` gets the session's decode cache and expanded-program cache, which is
+   * what stops a second play of the same genre re-downloading the instrument and every `#include` under it — see
+   * `src/audio/sharedSamplerLoader.ts` for the measurement and for why the cache is keyed by `AudioContext`.
+   */
+  loaderFor?: (catalogue: readonly SampleAsset[], context: BaseAudioContext) => SampleLoader;
+}
+
+export function useRecordedLanes(
+  getEngine: () => RecordedLaneEngine | null,
+  options: UseRecordedLanesOptions = {}
+): UseRecordedLanesResult {
   /** The catalogue this session resolved, kept so a lane set later is resolved against it without a second fetch. */
   const catalogueRef = useRef<readonly SampleAsset[] | null>(null);
+  /**
+   * ⭐ **The same catalogue as state, because the ref alone is not observable.**
+   *
+   * A view that wants to warm the recordings before pressing play has to see the catalogue **arrive**: a ref written inside an effect does not
+   * re-render, so a view reading only the ref would still be holding `null` when the button is pressed and would skip the wait entirely —
+   * which is the defect this hook's `catalogue` field exists to prevent, wearing a subtler face. The ref stays for the `useCallback` body
+   * (where a state dependency would re-create `startRecordedLanes` and every view's handler with it).
+   */
+  const [catalogue, setCatalogue] = useState<readonly SampleAsset[] | null>(null);
   /** The recorded lanes currently scheduled, so a stop can silence them and a second start can replace them. */
   const lanesRef = useRef<SamplerLanePlayback | null>(null);
+  /**
+   * The caller's loader factory, read through a ref so that an inline `loaderFor` closure — which is what every call site writes — does not
+   * give `startRecordedLanes` a new identity on every render and re-create the callback the views hold.
+   */
+  const loaderForRef = useRef(options.loaderFor);
+  loaderForRef.current = options.loaderFor;
 
   /**
    * The catalogue is fetched whether or not anything is playing: it is one request per session (`appCatalogueRuntime` is
@@ -90,6 +137,7 @@ export function useRecordedLanes(getEngine: () => RecordedLaneEngine | null): Us
       .then(({ assets }) => {
         if (cancelled) return;
         catalogueRef.current = assets;
+        setCatalogue(assets);
       })
       .catch((error: unknown) => {
         // eslint-disable-next-line no-console -- a catalogue that cannot be read leaves every recorded lane on its synthesiser, and that must not be silent
@@ -149,6 +197,19 @@ export function useRecordedLanes(getEngine: () => RecordedLaneEngine | null): Us
         catalogue,
         bpm: engine.getBpm(),
         /**
+         * ⭐ **The session's loader, when the caller asked for one.** This is the only line the option adds: with no `loaderFor` the
+         * controller builds its own loader exactly as before, and with the shared one the warm-up a caller did through
+         * `prepareSamplerLanes` is a cache hit rather than 45 files downloaded a second time. The loader is built per `play`, which is what
+         * makes a stop-and-restart reuse the cache rather than leak it — `sharedSamplerLoader` is what carries it between plays.
+         *
+         * The context test is `typeof … === "object"` rather than `!== null` because a criterion's engine double is engine-shaped rather than
+         * complete, and an absent `audioContext` must fall to the default loader — a `WeakMap` cannot be keyed by `undefined`, and the
+         * loader's own cache key is the context.
+         */
+        ...(loaderForRef.current === undefined || typeof engine.audioContext !== "object" || engine.audioContext === null
+          ? {}
+          : { loaderFor: loaderForRef.current }),
+        /**
          * **Deliberately not a second `reportSampledLaneProblems`.** The controller asks this on the first pass, before
          * any note is placed, so an engine whose stand-down has not run yet (a catalogue that answered between the two
          * calls above) still never doubles a lane. Reporting it twice would print every unserved-lane sentence twice,
@@ -180,5 +241,12 @@ export function useRecordedLanes(getEngine: () => RecordedLaneEngine | null): Us
     [getEngine, stopRecordedLanes]
   );
 
-  return { startRecordedLanes, stopRecordedLanes };
+  return {
+    startRecordedLanes,
+    stopRecordedLanes,
+    /** The catalogue as state, so a view that warms the recordings sees it arrive rather than reading `null` forever. */
+    catalogue,
+    /** The loader factory the caller handed in, or `null` when this hook keeps the default one. */
+    loaderFor: options.loaderFor ?? null,
+  };
 }

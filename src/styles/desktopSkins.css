@@ -349,7 +349,7 @@
 /*
  * Tailwind's own palette names, by meaning: a green is a success, an indigo is a call to action, a
  * shade is decoration. They compile to Tailwind's colours, so without this a skinned page keeps them —
- * which is how a newsprint theme ended up with an indigo speaker key. 131 rules.
+ * which is how a newsprint theme ended up with an indigo speaker key. 132 rules.
  */
 [class~="hover:bg-indigo-500"],
 [class~="hover:bg-indigo-600"]:hover { background-color: rgb(var(--d-accent)); }
@@ -605,6 +605,7 @@
 [class~="text-rose-400"] { color: rgb(var(--d-danger)); }
 [class~="text-red-400/80"],
 [class~="text-rose-300/80"] { color: rgb(var(--d-danger) / 0.80); }
+[class~="text-red-200/90"] { color: rgb(var(--d-danger) / 0.90); }
 [class~="text-emerald-200"],
 [class~="text-emerald-300"],
 [class~="text-emerald-400"],
@@ -1294,6 +1295,7 @@
 [class~="bg-accent/40"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-accent/5"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-accent/50"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
+[class~="bg-accent/60"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-accent/70"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-accent/90"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-amber-300/90"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
@@ -1465,6 +1467,7 @@
 [class~="bg-accent/40"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-accent/5"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-accent/50"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
+[class~="bg-accent/60"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-accent/70"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-accent/90"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-amber-300/90"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }

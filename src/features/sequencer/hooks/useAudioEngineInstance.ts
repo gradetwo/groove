@@ -30,6 +30,8 @@ import { useEffect, useRef } from "react";
 import { AudioEngine } from "../../../audio/AudioEngine";
 import type { StepCallbackInfo } from "../../../audio/AudioEngine";
 import type { SamplerLanePlayback } from "../../../audio/samplerLanePlayback";
+import type { SampleLoader } from "../../../audio/sampleLoader";
+import type { SampleAsset } from "../../../data/sampleCatalogue";
 import { useRecordedLanes } from "../../../hooks/useRecordedLanes";
 import type { SequencerPattern } from "../../../types/genre";
 
@@ -70,9 +72,27 @@ export interface UseAudioEngineInstanceResult {
   startRecordedLanes: (pattern: SequencerPattern) => Promise<SamplerLanePlayback | null>;
   /** Silence whatever {@link startRecordedLanes} started, and how many voices that stopped. */
   stopRecordedLanes: () => number;
+  /** The session's catalogue, or `null` while it is still being fetched — see `useRecordedLanes`. */
+  catalogue: readonly SampleAsset[] | null;
+  /** The loader factory the caller handed in, or `null` when the default one is kept — see {@link UseAudioEngineInstanceOptions}. */
+  loaderFor: ((catalogue: readonly SampleAsset[], context: BaseAudioContext) => SampleLoader) | null;
 }
 
-export function useAudioEngineInstance(callbacks: AudioEngineCallbacks = {}): UseAudioEngineInstanceResult {
+export interface UseAudioEngineInstanceOptions {
+  /**
+   * ⭐ **The session's shared sample loader, for a view that wants to warm the recordings before the transport starts.**
+   *
+   * Passed straight through to `useRecordedLanes`; omitted, every view keeps the loader it always built. A view that passes
+   * `(catalogue, context) => sharedSamplerLoader(context, catalogue)` can then `await prepareSamplerLanes(...)` on the same loader and
+   * `startRecordedLanes` will sound from the warm cache — see `src/audio/samplerLanePrepare.ts` for why the order matters.
+   */
+  loaderFor?: (catalogue: readonly SampleAsset[], context: BaseAudioContext) => SampleLoader;
+}
+
+export function useAudioEngineInstance(
+  callbacks: AudioEngineCallbacks = {},
+  options: UseAudioEngineInstanceOptions = {}
+): UseAudioEngineInstanceResult {
   const engineRef = useRef<AudioEngine | null>(null);
 
   /**
@@ -112,7 +132,10 @@ export function useAudioEngineInstance(callbacks: AudioEngineCallbacks = {}): Us
    * on unmount (`createSamplerLanePlayback` records them, and `useRecordedLanes` stops them by name), so the teardown
    * above only has the engine's own transport left to silence.
    */
-  const { startRecordedLanes, stopRecordedLanes } = useRecordedLanes(() => engineRef.current);
+  const { startRecordedLanes, stopRecordedLanes, catalogue, loaderFor } = useRecordedLanes(
+    () => engineRef.current,
+    options
+  );
 
   /**
    * Re-published every render so that a caller which reads `engineRef.current` imperatively always
@@ -128,5 +151,5 @@ export function useAudioEngineInstance(callbacks: AudioEngineCallbacks = {}): Us
     return engine;
   };
 
-  return { engineRef, getEngine, startRecordedLanes, stopRecordedLanes };
+  return { engineRef, getEngine, startRecordedLanes, stopRecordedLanes, catalogue, loaderFor };
 }

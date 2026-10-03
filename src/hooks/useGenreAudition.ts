@@ -9,6 +9,8 @@ import { createVinylScrub, type VinylScrub } from "../audio/VinylScrub";
 import { patternFromGenre } from "../data/genreMix";
 import { appCatalogueRuntime } from "../data/sampleCatalogueRuntime";
 import { createSamplerLanePlayback, type SamplerLanePlayback } from "../audio/samplerLanePlayback";
+import { prepareSamplerLanes, standDownSamplerLanes, type SamplerLaneProgress } from "../audio/samplerLanePrepare";
+import { sharedSamplerLoader } from "../audio/sharedSamplerLoader";
 import { reportSampledLaneProblems } from "../audio/sampledLanes";
 import type { SampleAsset } from "../data/sampleCatalogue";
 import { arrangementSections, type ArrangementFormId } from "../data/arrangementForm";
@@ -75,6 +77,14 @@ export interface UseGenreAuditionReturn {
   setMetronome: (enabled: boolean) => void;
   /** The metronome flag (false before an engine exists). */
   readMetronome: () => boolean;
+  /**
+   * ⭐ **"The recordings this audition needs are still downloading" — `null` when nothing is being fetched.**
+   *
+   * `{loaded,total}` with `total` known before the first request: the determinate shape a progress display needs, and the state a surface must
+   * show instead of claiming to be playing. A press that could not get its recordings **does not start the transport** and announces why, so
+   * this never sits at `loaded: 0` forever on a failure — see `src/audio/samplerLanePrepare.ts`.
+   */
+  samplerPreparation: SamplerLaneProgress | null;
 }
 
 /**
@@ -154,6 +164,14 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
    * held so a stop can silence voices that are already on the audio clock, which `engine.stop()` cannot reach.
    */
   const samplerLanesRef = useRef<SamplerLanePlayback | null>(null);
+
+  /**
+   * ⭐ **The visible wait between the press and the transport.**
+   *
+   * Raised while `prepareSamplerLanes` is fetching this pass's recordings, and `null` when there is nothing to wait for. A surface that
+   * rendered "auditioning" during this window would be a control that lies: nothing has been scheduled and the recorded lanes are stood down.
+   */
+  const [samplerPreparation, setSamplerPreparation] = useState<SamplerLaneProgress | null>(null);
 
   /**
    * The catalogue this session resolved, so a lane can be resolved against it without a second fetch.
@@ -334,11 +352,25 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
        */
       const tempo = genre.default_bpm ?? 120;
       const previousLanes = samplerLanesRef.current;
+      const catalogueNow = catalogueRef.current ?? [];
+      /**
+       * ⭐ **The session's shared loader, so the wait and the sound are the same download.**
+       *
+       * `prepareSamplerLanes` fills this loader's caches and the controller below sounds through it — see
+       * `src/audio/sharedSamplerLoader.ts`. Without the sharing, "prepare then play" would fetch everything twice.
+       *
+       * `?? null` because a criterion's engine double is engine-shaped rather than complete: `audioContext` can be absent, and an absent
+       * context means "there is no graph to place a voice on", which is exactly the `null` case — and a `WeakMap` cannot be keyed by
+       * `undefined`, so a missing field must not be handed to the loader's cache.
+       */
+      const context: BaseAudioContext | null = engine.audioContext ?? null;
+      const loader = context === null ? null : sharedSamplerLoader(context, catalogueNow);
       const playback = createSamplerLanePlayback({
         engine,
         pattern,
-        catalogue: catalogueRef.current ?? [],
+        catalogue: catalogueNow,
         bpm: tempo,
+        ...(loader === null ? {} : { loader }),
         warn: (message) => {
           // eslint-disable-next-line no-console -- the same prefix and shape `useTransportControls` reports lane problems with
           console.warn(message);
@@ -350,10 +382,41 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
        * criterion's partial engine double is engine-shaped and must not be handed a method it never claimed.
        */
       const capable = engine as AudioEngine & {
-        prepareSampledLanes?: (catalogue: readonly SampleAsset[]) => { problems: readonly string[] };
+        prepareSampledLanes?: (catalogue: readonly SampleAsset[]) => { stoodDown: number[]; problems: readonly string[] };
       };
       if (typeof capable.prepareSampledLanes === "function") {
-        reportSampledLaneProblems(capable.prepareSampledLanes(catalogueRef.current ?? []).problems);
+        reportSampledLaneProblems(capable.prepareSampledLanes(catalogueNow).problems);
+      }
+      /**
+       * ⭐ **Ready first, then the transport — the order that decides whether the recorded lanes are heard at all.**
+       *
+       * `scheduleSamplerSteps` awaits a fetch and a decode per note, and the engine's own lanes start on `play()`. Starting the transport first
+       * therefore opens the pass with the recorded lanes silent and, worse, places every onset whose time has passed as an immediate burst.
+       * Warming the recordings through the loader the controller will use makes the placement that follows a cache hit, so the notes land on
+       * the grid instead of after it.
+       *
+       * ⚠️ **Nothing waits on a failure and nothing is swallowed**: if nothing could be prepared while the engine had stood something down, the
+       * audition does NOT start and the sentences are reported; a partial failure reports the missing lanes and plays the rest.
+       */
+      let refusedToStart = false;
+      if (loader !== null) {
+        const warm = standDownSamplerLanes(pattern, catalogueNow);
+        setSamplerPreparation(null);
+        const preparation = await prepareSamplerLanes({
+          pattern,
+          catalogue: catalogueNow,
+          loader,
+          bpm: tempo,
+          lanes: warm,
+          onProgress: (progress) => setSamplerPreparation(progress.total > 0 ? progress : null),
+        });
+        setSamplerPreparation(null);
+        if (preparation.problems.length > 0) reportSampledLaneProblems(preparation.problems);
+        refusedToStart = !preparation.ready && !preparation.empty;
+      }
+      if (refusedToStart) {
+        announcer.announce("音源未能就绪，试听未开始 / The recordings could not be loaded, so the audition did not start");
+        return;
       }
       /**
        * The pattern's own length, and a cleared observation, so the first step of *this* pattern is never read as
@@ -477,5 +540,6 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
     readTempo,
     setMetronome,
     readMetronome,
+    samplerPreparation,
   };
 }

@@ -18,11 +18,20 @@ describe("expandIncludes", () => {
     expect(result.text).toBe("a\n<region> sample=kick.wav\nb");
   });
 
-  it("resolves a nested include relative to the file that asked for it", () => {
-    const result = expandIncludes('#include "keymaps/basic.sfz"', files({ "keymaps/basic.sfz": '#include "deep/more.sfz"', "keymaps/deep/more.sfz": "<region> sample=snare.wav" }));
+  it("resolves a nested include against the main program, which is what the format states", () => {
+    /**
+     * ⭐ **The main file's directory is the base, at every depth** — sfzformat.com's `#include` page, verbatim: *"If the #included files are in another folder, the SFZ is
+     * interpreted as if it was in the main SFZ file's path, not the path where the #included files are."* sfizz implements exactly that (`Parser.cpp`: `_originalDirectory`
+     * is set once, from the first file opened), and this fixture is written the way the real libraries write it — `Data/group_ten.txt` includes `Data/ten_f_rr2.txt`, both
+     * relative to the program.
+     *
+     * The previous fixture put the deep file under `keymaps/` and claimed the file-relative reading was "the path a real library relies on". No real library in the
+     * manifest needs it, and the reading itself is what produced the doubled `Data/Data/…` 404s — see the criterion below.
+     */
+    const result = expandIncludes('#include "keymaps/basic.sfz"', files({ "keymaps/basic.sfz": '#include "deep/more.sfz"', "deep/more.sfz": "<region> sample=snare.wav" }));
     expect(result.problems).toEqual([]);
-    // Relative to `keymaps/`, not to the root — the path a real library relies on.
-    expect(result.included).toEqual(["keymaps/basic.sfz", "keymaps/deep/more.sfz"]);
+    // Relative to the main program (the root here), not to `keymaps/`.
+    expect(result.included).toEqual(["keymaps/basic.sfz", "deep/more.sfz"]);
     expect(result.text).toBe("<region> sample=snare.wav");
   });
 
@@ -52,22 +61,18 @@ describe("expandIncludes", () => {
 });
 
 /**
- * The fallback that a **real** library forced.
+ * The base a real library needs, stated by the format and implemented by the reference engine.
  *
- * `Programs/mappings/kickmic_basic.sfz` (pinned commit `9f04cf9a7345`) includes `mappings/kick_dampen.sfz`, and that file sits at `Programs/mappings/kick_dampen.sfz` — so
- * resolving only from the including file produced `…/mappings/mappings/…` and found nothing 119 times over. Both bases are now tried, including-file first so the
- * documented behaviour is unchanged for files that follow it. A synthetic fixture could never have found this, which is why the criterion below is written in the shape of
- * the real case rather than the shape I would have invented.
+ * `Programs/mappings/kickmic_basic.sfz` (pinned commit `9f04cf9a7345`) includes `mappings/kick_dampen.sfz`, and that file sits at `Programs/mappings/kick_dampen.sfz`. That is
+ * **`_originalDirectory / path`** — the main program's own directory — which is the one rule both primary sources state, so this library is the *rule's* evidence, not a
+ * fallback's. A synthetic fixture could never have found this, which is why the criterion below is written in the shape of the real case rather than the shape I would have
+ * invented.
  */
 describe("expandIncludes — the real library's resolution rule", () => {
-  it("falls back to the root when the including file's directory does not hold the path", () => {
+  it("reads the include from the main program's directory, which is where the real library put it", () => {
     const files = (map: Record<string, string>) => (path: string) => map[path];
     /**
      * The chain is written as the real one is **nested**, and that nesting is the whole point: the root is the first file of the chain, not the file being expanded.
-     *
-     * The first version of this test called the two-level-deep file **as the top level**, where the root and the including file are the same directory — so both candidates
-     * were identical, the fallback could never engage, and the test failed for a reason that had nothing to do with the code. Writing the fixture as the real chain is not
-     * decoration; it is what makes the criterion able to fail.
      */
     const result = expandIncludes('#include "keymaps/kickmic_basic.sfz"', files({
       "Programs/keymaps/kickmic_basic.sfz": '#include "mappings/kick_dampen.sfz"',
@@ -79,13 +84,26 @@ describe("expandIncludes — the real library's resolution rule", () => {
     expect(result.text).toContain("sample=kick.wav");
   });
 
-  it("still prefers the including file's own directory when both could match", () => {
+  it("does not enter the including file's own directory, even when a file sits there", () => {
     const files = (map: Record<string, string>) => (path: string) => map[path];
-    const result = expandIncludes('#include "shared.sfz"', files({ "Programs/keymaps/shared.sfz": "<region> sample=local.wav", "Programs/shared.sfz": "<region> sample=root.wav" }), {
-      path: "Programs/keymaps/keymap.sfz",
-    });
-    // SFZ's documented rule wins when it can be satisfied, so the fallback only ever rescues a case the rule cannot.
-    expect(result.included).toEqual(["Programs/keymaps/shared.sfz"]);
+    const asked: string[] = [];
+    const recording = (map: Record<string, string>) => (path: string) => {
+      asked.push(path);
+      return map[path];
+    };
+    const result = expandIncludes('#include "keymaps/keymap.sfz"', recording({
+      "Programs/keymaps/keymap.sfz": '#include "shared.sfz"',
+      "Programs/keymaps/shared.sfz": "<region> sample=local.wav",
+      "Programs/shared.sfz": "<region> sample=root.wav",
+    }), { path: "Programs/01-basic-kit.sfz" });
+    /**
+     * ⭐ **SFZ's one rule wins, and the other reading is not even asked about.** The old version preferred the including file's directory here, which is the reading that
+     * produces `Data/Data/…`: sfzformat.com says the include *"is interpreted as if it was in the main SFZ file's path, not the path where the #included files are"*, and
+     * sfizz never builds the file-relative path at all.
+     */
+    expect(result.included).toEqual(["Programs/keymaps/keymap.sfz", "Programs/shared.sfz"]);
+    expect(result.text).toContain("sample=root.wav");
+    expect(asked, "the file-relative reading must not be probed").not.toContain("Programs/keymaps/shared.sfz");
   });
 });
 
@@ -229,52 +247,61 @@ describe("missing paths propagate out of nested includes", () => {
 });
 
 /**
- * The order of the two candidates, which is what decides how many 404s a real library costs.
+ * ⭐ **The doubled path is never asked for — not by the reader, and not by the asynchronous fetch loop.**
  *
- * The owner's report: fetching `virtuosity_drums` threw a wall of 404s, among them
- * `Programs/mappings/mappings/oh/kick_snon_map.sfz`, and then fetched `Programs/mappings/oh/kick_snon_map.sfz` and got a 200. The doubled request was ours — the documented file-relative rule tried first, then the root fallback — and it is not a resolution *failure*, only a wasted round trip repeated across hundreds of includes.
+ * The owner's measurement on `/genre/bebop` (v2.34.40): the browser requested
+ * `…/MTG%20Solo%20Saxophones/Data/Data/ten_f_rr2.txt` (**404**) and then `…/Data/ten_f_rr2.txt` (**200**) — the same shape for all six
+ * `Data/ten_{p,f}_rrN.txt` and all sixteen `Data/vel_NN.txt` of Salamander Grand Piano, **22 of the 68 requests in one pass**. Both requests were
+ * ours, and the second one came from `missing`: the expander reported **both** readings as "missing", and `remoteIncludes.ts` fetches every entry.
  *
- * What makes it avoidable is that the doubled spelling is **visibly** doubled: a file in `mappings/` including `mappings/…` would mean entering `mappings` twice. So the reading that cannot be intended is asked for last, without refusing it.
+ * The two primary sources state one base, so there is nothing to choose between and nothing to try twice. These criteria are written so that
+ * reintroducing a second candidate — in the reader *or* in the `missing` list — fails them.
  */
-describe("expandIncludes — the doubled candidate is asked for last", () => {
+describe("expandIncludes — one base, so no doubled path is ever asked for", () => {
   const files = (map: Record<string, string>) => (path: string) => map[path];
 
-  it("prefers the root reading when the file-relative one would repeat a directory", () => {
-    // ⭐ The exact case from the report, with the file that produced it.
+  it("asks for the MTG-shaped path once, and never for the doubled spelling", () => {
+    // ⭐ The real nesting, with the real file names: the program is at the library root, the include is written from the program's directory, and the file that writes it sits one level down in `Data/`.
     const asked: string[] = [];
     const recording = (map: Record<string, string>) => (path: string) => {
       asked.push(path);
       return map[path];
     };
-    /**
-     * The chain is written **as the real one is nested**, and that is what makes this criterion able to fail: when the two-level file is called as the top level, the root and its own directory are the same path, there is nothing to order, and the criterion would pass against the broken code.
-     */
-    const result = expandIncludes('#include "mappings/kickmic_basic.sfz"', recording({
-      "Programs/mappings/kickmic_basic.sfz": '#include "mappings/oh/kick_snon_map.sfz"',
-      "Programs/mappings/oh/kick_snon_map.sfz": "<region> sample=kick.wav",
-    }), { path: "Programs/01-basic-kit.sfz" });
-    expect(result.included).toEqual(["Programs/mappings/kickmic_basic.sfz", "Programs/mappings/oh/kick_snon_map.sfz"]);
-    // The doubled spelling is never *read* — the reader is only ever asked for the one that exists.
-    expect(asked).not.toContain("Programs/mappings/mappings/oh/kick_snon_map.sfz");
-    expect(result.missing, "the doubled path was reported missing to the caller, which is what caused the 404").toEqual([]);
+    const result = expandIncludes('#include "Data/group_ten.txt"', recording({
+      "MTG Solo Saxophones/Data/group_ten.txt": '#include "Data/ten_f_rr2.txt"',
+      "MTG Solo Saxophones/Data/ten_f_rr2.txt": "<region> sample=ten_f_02.flac",
+    }), { path: "MTG Solo Saxophones/MTG Tenor Sax.sfz" });
+    expect(result.included).toEqual(["MTG Solo Saxophones/Data/group_ten.txt", "MTG Solo Saxophones/Data/ten_f_rr2.txt"]);
+    expect(result.text).toContain("sample=ten_f_02.flac");
+    // (a) the correct address is the only one read, and (b) the doubled one is not even a candidate.
+    expect(asked).toContain("MTG Solo Saxophones/Data/ten_f_rr2.txt");
+    expect(asked).not.toContain("MTG Solo Saxophones/Data/Data/ten_f_rr2.txt");
+    // ⭐ And the asynchronous caller is told to fetch exactly one path — this is the assertion that fails when `missing` reports both readings.
+    expect(result.missing).toEqual([]);
   });
 
-  it("still reads a file whose path really is doubled, because nothing was refused", () => {
-    // The rule only reorders: a library that genuinely keeps a doubled directory still resolves, one request later.
-    const result = expandIncludes('#include "mappings/kickmic_basic.sfz"', files({
-      "Programs/mappings/kickmic_basic.sfz": '#include "mappings/mappings/x.sfz"',
-      "Programs/mappings/mappings/mappings/x.sfz": "<region> sample=x.wav",
+  it("reports one path per unresolvable include, never two readings of the same line", () => {
+    /**
+     * ⭐ The fetch-list half of the same defect, and the reason the reader assertion above is not enough: a **nested** include is what
+     * `missing` carries, and only the file that wrote it can be read. The old code pushed `…/Data/Data/ten_f_rr2.txt` here *beside*
+     * `…/Data/ten_f_rr2.txt`, and `remoteIncludes.ts` then fetched both — one guaranteed 404 beside one guaranteed 200. The chain is
+     * written as the real one is nested, because at the top level the two readings coincide and this criterion could not fail.
+     */
+    const files: Record<string, string> = { "MTG Solo Saxophones/Data/group_ten.txt": '#include "Data/ten_f_rr2.txt"' };
+    const result = expandIncludes('#include "Data/group_ten.txt"', (path) => files[path], {
+      path: "MTG Solo Saxophones/MTG Tenor Sax.sfz",
+    });
+    expect(result.missing).toEqual(["MTG Solo Saxophones/Data/ten_f_rr2.txt"]);
+    expect(result.missing.some((path) => path.includes("/Data/Data/")), "no doubled reading may reach the fetch list").toBe(false);
+  });
+
+  it("reads a doubled spelling only when the library really wrote one", () => {
+    // Nothing is refused: a library that genuinely keeps a nested directory still resolves, because the written path is taken at face value.
+    const result = expandIncludes('#include "mappings/mappings/x.sfz"', files({
+      "Programs/mappings/mappings/x.sfz": "<region> sample=x.wav",
     }), { path: "Programs/01-basic-kit.sfz" });
     expect(result.text).toContain("sample=x.wav");
-  });
-
-  it("keeps the documented rule first when no directory would repeat", () => {
-    // Unchanged from before: the including file's own directory wins when both readings are possible.
-    const result = expandIncludes('#include "shared.sfz"', files({
-      "Programs/keymaps/shared.sfz": "<region> sample=keymap.wav",
-      "Programs/shared.sfz": "<region> sample=root.wav",
-    }), { path: "Programs/keymaps/keymap.sfz" });
-    expect(result.included).toEqual(["Programs/keymaps/shared.sfz"]);
+    expect(result.problems).toEqual([]);
   });
 });
 

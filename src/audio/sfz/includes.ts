@@ -82,31 +82,34 @@ function substitute(line: string, defines: Map<string, string>): string {
 }
 
 /**
- * Where an include's path is resolved from — and this is **evidence-driven, not guessed**.
+ * ⭐ **Where an include's path is resolved from: the main SFZ file's directory, and nowhere else.**
  *
- * The first version resolved only against the **including file's directory**, which is what SFZ says and what a synthetic fixture cannot contradict. Running the real
- * library showed it is not enough: `Programs/mappings/kickmic_basic.sfz` contains `#include "mappings/kick_dampen.sfz"`, and that file lives at
- * `Programs/mappings/kick_dampen.sfz` — so resolving from the including file produced `Programs/mappings/mappings/kick_dampen.sfz` and found nothing, 119 times over.
+ * This function replaces `resolveCandidates`, which returned **two** readings — the including file's directory first and the main program's directory second — and
+ * then reported **both** as "missing" to an asynchronous caller. The second reading is the format's own; the first was this project's invention, and it cost a
+ * 404 for every include a real library writes the way the format says to write it. The owner measured it on `/genre/bebop`: the browser asked for
+ * `…/MTG Solo Saxophones/Data/Data/ten_f_rr2.txt` (404) and then for `…/MTG Solo Saxophones/Data/ten_f_rr2.txt` (200) — the same for all six `Data/ten_{p,f}_rrN.txt`
+ * and all sixteen `Data/vel_NN.txt` of Salamander Grand Piano, **22 wasted requests out of 68 in one pass**.
  *
- * So both bases are tried, in this order, and the choice is recorded here because the fallback is not a guess: the file that needs it is a real, pinned library. Trying
- * the including file first keeps the documented behaviour intact for files that follow it; falling back to the root keeps this library working.
+ * The one rule is stated by both the format and the reference engine, and neither of them probes a second base:
+ *
+ * · **sfzformat.com** (<https://sfzformat.com/opcodes/include/>), verbatim: *"Either a filename or a path can be used. If the #included files are in another folder, the
+ *   SFZ is interpreted as if it was in the main SFZ file's path, not the path where the #included files are."*
+ * · **sfizz**, the engine this project measures itself against (`src/sfizz/parser/Parser.cpp`, `includeNewFile`, commit
+ *   `f5c6e29f23b8057867c08e88f5f6ac6738baa30b` — <https://github.com/sfztools/sfizz/blob/f5c6e29f23b8057867c08e88f5f6ac6738baa30b/src/sfizz/parser/Parser.cpp#L71>), verbatim:
+ *   `fs::path fullPath = (path.empty() || path.is_absolute()) ? path : _originalDirectory / path;` with
+ *   `if (_pathsIncluded.empty()) _originalDirectory = fullPath.parent_path();` — `_originalDirectory` is set **once**, from the first file opened, and every include
+ *   below it resolves against that. There is no second candidate to try.
+ *
+ * ⭐ **The real library the two-base version was written for is still served by the one base that remains.** `virtuosity_drums`' `Programs/mappings/kickmic_basic.sfz`
+ * writes `#include "mappings/kick_dampen.sfz"`, and that file lives at `Programs/mappings/kick_dampen.sfz` — which is exactly `_originalDirectory / path` when the
+ * program is `Programs/01-basic-kit.sfz`. What the old code called "the fallback this library needs" **is the rule**; the file-relative reading was the extra one.
+ *
+ * A path that is already absolute or carries a scheme is returned unchanged, because it never meant "relative to the program" — the same refusal `defaultPath.ts`
+ * applies to a `sample=`.
  */
-function resolveCandidates(rootPath: string, fromPath: string, wanted: string): string[] {
-  if (wanted.startsWith("/") || /^[a-zA-Z]+:/.test(wanted)) return [wanted];
-  const relative = resolvePath(fromPath, wanted);
-  const fromRoot = resolvePath(rootPath, wanted);
-  if (relative === fromRoot) return [relative];
-  /**
-   * ⭐ **The doubled candidate goes last, and that is a fact about the path rather than a guess about the library.**
-   *
-   * The owner's report: fetching a real library threw a wall of 404s — `Programs/mappings/mappings/oh/kick_snon_map.sfz` among them — and then asked for `Programs/mappings/oh/kick_snon_map.sfz` and got a 200. Both requests were ours: the file-relative reading goes first (the documented rule), then the root-relative fallback, and this library needs the fallback. That order was measured, and it is why the fallback exists.
-   *
-   * But **when the file-relative reading would enter the same directory twice** — the including file lives in `mappings/` and the include starts with `mappings/` — that candidate cannot be what the line means: it would have to say "go into `mappings`, and then into `mappings` again". So the root-relative candidate is asked for first, the 404 stops happening in the ordinary case, and the doubled reading survives only as a genuine last resort. **Nothing is refused**: both are still tried, in the order the evidence supports.
-   */
-  const directory = fromPath.includes("/") ? fromPath.slice(0, fromPath.lastIndexOf("/")) : "";
-  const fromTail = directory.slice(directory.lastIndexOf("/") + 1);
-  const wantedHead = wanted.split("/")[0] ?? "";
-  return wantedHead !== "" && wantedHead === fromTail ? [fromRoot, relative] : [relative, fromRoot];
+function includePath(rootPath: string, wanted: string): string {
+  if (wanted.startsWith("/") || /^[a-zA-Z]+:/.test(wanted)) return wanted;
+  return resolvePath(rootPath, wanted);
 }
 
 /** The file whose run covers output line `line` in a child expansion's map, or `undefined` when the map is empty. */
@@ -246,9 +249,13 @@ export function expandIncludes(
       mine += own;
       ownLength += own.length;
       cursor = start + match[0]!.length;
-      const candidates = resolveCandidates(chain[0]!, path, match[1]!);
-      // The first candidate that exists wins; if none does, the error names the one SFZ's own rule would have chosen, which is the informative one.
-      const wanted = candidates.find((candidate) => read(candidate) !== undefined) ?? candidates[0]!;
+      /**
+       * ⭐ **One candidate, and it is the format's.** This used to be `resolveCandidates(...)` followed by
+       * `candidates.find((candidate) => read(candidate) !== undefined) ?? candidates[0]!`, and the not-found branch below pushed **every** candidate into
+       * `missing` — so an asynchronous caller fetched the file-relative spelling and the main-program spelling both, one of which is always a 404. See
+       * {@link includePath} for the two primary sources that state the single rule.
+       */
+      const wanted = includePath(chain[0]!, match[1]!);
 
       if (chain.includes(wanted)) {
         // A cycle is reported rather than followed: includes can legitimately reference each other, and an unguarded resolver recurses until the stack dies.
@@ -263,9 +270,13 @@ export function expandIncludes(
       const child = read(wanted);
       if (child === undefined) {
         /**
-         * **Every candidate, not just the one reported.** The resolver tries the including file's directory first and the root fallback second, and for a real library the **second** is usually the right one: this library writes `#include "mappings/…"` from inside `Programs/mappings/…`, so the file-relative candidate gets a doubled `mappings/` while the root-relative one is correct. Reporting only `candidates[0]` meant an asynchronous caller could never fetch the candidate that would have worked — the loop fetched the wrong path, got a 404, and the library resolved to no regions.
+         * ⭐ **The one path that was asked for is the one path reported as missing.**
+         *
+         * This used to push **every** candidate — and that is precisely what made the browser fetch the wrong address first: `missing` is the asynchronous caller's
+         * fetch list (`remoteIncludes.ts` fetches each entry), so a second, file-relative candidate meant a guaranteed 404 beside a guaranteed 200. With the single
+         * rule there is nothing to choose between and nothing to try twice; a genuinely absent file is still named, once, with the line it was written on.
          */
-        for (const candidate of candidates) if (!missing.includes(candidate)) missing.push(candidate);
+        if (!missing.includes(wanted)) missing.push(wanted);
         problems.push(`${where}: included file "${wanted}" was not found`);
         continue;
       }

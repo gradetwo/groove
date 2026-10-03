@@ -33,6 +33,16 @@ import { AudioEngine } from "../audio/AudioEngine";
 import { patternFromGenre } from "../data/genreMix";
 import { useLanguage } from "../i18n/LanguageContext";
 import { useAudioEngineInstance } from "../features/sequencer/hooks/useAudioEngineInstance";
+import { prepareSamplerLanes, standDownSamplerLanes, type SamplerLaneProgress } from "../audio/samplerLanePrepare";
+import { sharedSamplerLoader } from "../audio/sharedSamplerLoader";
+import { reportSampledLaneProblems, sampledInstrumentProblems } from "../audio/sampledLanes";
+import type { SampleAsset } from "../data/sampleCatalogue";
+
+/**
+ * ⭐ **The session's shared loader, as `useRecordedLanes` wants it.** One factory at module scope rather than an inline arrow, so the option
+ * object's identity never matters: the hook reads it through a ref, and this is the same function for every render.
+ */
+const sharedLoaderFor = (catalogue: readonly SampleAsset[], context: BaseAudioContext) => sharedSamplerLoader(context, catalogue);
 
 const getTrackMiniTheme = (track: SequencerTrack, idx: number) => {
   const id = `${track.track_id || ""} ${track.name || ""}`.toLowerCase();
@@ -115,6 +125,22 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
   const [bpm, setBpm] = useState(genre.default_bpm || 124);
   const [bpmInput, setBpmInput] = useState<string>(String(genre.default_bpm || 124));
   /**
+   * ⭐ **"The recordings this audition needs are still downloading", as a visible state.**
+   *
+   * `null` means "nothing is being fetched"; a `{loaded,total}` pair means the button has been pressed and the transport has **not** started
+   * yet. `loaded` only ever grows and `total` is known before the first request, so the indicator is determinate rather than a spinner —
+   * the shape `smplr` documents (*"`total` is known before loading starts, so you can display a determinate progress bar"*,
+   * <https://raw.githubusercontent.com/danigb/smplr/main/README.md>).
+   */
+  const [preparing, setPreparing] = useState<SamplerLaneProgress | null>(null);
+  /**
+   * ⭐ **Why an audition did not start, or which of its lanes are missing — never a silent wait and never a quiet lane.**
+   *
+   * The sentences come from `reportSampledLaneProblems`, the one place every playback path's stand-down failures become visible, so this
+   * surface reports them in the same words the transport and the other views already use.
+   */
+  const [samplingProblems, setSamplingProblems] = useState<string[]>([]);
+  /**
    * The genre preview engine, owned by `useAudioEngineInstance`.
    *
    * The engine used to be constructed inside the effect below and destroyed in its cleanup, with the
@@ -122,13 +148,22 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
    * now; the effect keeps only the part that is genuinely about the genre — seeding the pattern, the
    * bpm and the input field — and re-runs on a genre change without any engine bookkeeping.
    */
-  const { engineRef, startRecordedLanes, stopRecordedLanes } = useAudioEngineInstance({
-    onStep: ({ step }) => setCurrentStep(step),
-    onStop: () => {
-      setIsPlaying(false);
-      setCurrentStep(0);
+  const { engineRef, startRecordedLanes, stopRecordedLanes, catalogue } = useAudioEngineInstance(
+    {
+      onStep: ({ step }) => setCurrentStep(step),
+      onStop: () => {
+        setIsPlaying(false);
+        setCurrentStep(0);
+      },
     },
-  });
+    /**
+     * ⭐ **The session's shared loader, so warming the recordings and sounding them are the same download.**
+     *
+     * `prepareSamplerLanes` fills this loader's caches and `startRecordedLanes` sounds through it, which is what makes the wait a cache hit
+     * rather than 45 files fetched twice — see `src/audio/sharedSamplerLoader.ts` for the measurement.
+     */
+    { loaderFor: sharedLoaderFor }
+  );
 
   // Seed the preview from the genre. The engine's own lifecycle is the hook's business now.
   useEffect(() => {
@@ -142,7 +177,21 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
     engine.setBpm(defaultBpm);
   }, [genre, engineRef]);
 
-  const handlePlayMode = (mode: "drums" | "full") => {
+  /**
+   * ⭐ **"This lane is a recording this build cannot serve" — said before anyone presses play.**
+   *
+   * The owner's rule is *"a recording by default, and a synthesiser when the recording is not there"*, and a mirror that is not configured makes
+   * that fallback apply to **every** mapped lane at once. Left unsaid, that is a genre page whose promised saxophone is a synthesiser and
+   * nothing on screen explaining it — so the sentences `sampledInstrumentProblems` produces (the same ones every playback path reports) are
+   * rendered here as soon as the catalogue answers, rather than waiting for a press that would otherwise look like a bug.
+   */
+  useEffect(() => {
+    if (catalogue === null) return;
+    const gaps = sampledInstrumentProblems(patternFromGenre(genre), catalogue);
+    if (gaps.length > 0) setSamplingProblems(reportSampledLaneProblems(gaps));
+  }, [catalogue, genre]);
+
+  const handlePlayMode = async (mode: "drums" | "full") => {
     if (!engineRef.current) return;
 
     // If clicking same mode while playing, stop
@@ -163,24 +212,69 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
        * "Audition Drums Only" mutes the non-drum lanes on the engine, and the recorded lanes are placed by a scheduler
        * the engine's mute state cannot silence — so without this the bass and the piano would keep sounding over a mode
        * whose whole promise is that they are silent. `startRecordedLanes` reads the mute state and re-plans from it,
-       * which is the same audibility rule `playArrangementV2` applies.
+       * which is the same audibility rule `playArrangementV2` applies. Nothing is fetched again: the session's loader
+       * already holds every recording this pattern names.
        */
       void startRecordedLanes(patternFromGenre(genre));
       return;
     }
 
-    // Otherwise start playback in this mode
+    /**
+     * ⭐ **Ready first, then the transport — the order the owner asked for, and the order that puts the notes in the right place.**
+     *
+     * The recorded lanes are **stood down** in the engine (`prepareSampledLanes`) and sounded from their own bytes by a scheduler that
+     * `await`s a fetch and a decode for every note. Starting the transport first therefore opens the bar with those lanes *missing*, and
+     * when the bytes arrive every onset whose time has already passed starts at once — the "先静音后补" burst this view used to play.
+     * So the recordings are warmed **before** `play()`, through the very loader the scheduler will use, and the wait is shown.
+     *
+     * ⚠️ **A failure is visible and does not hang.** If nothing could be prepared while there was something to prepare, the audition does
+     * not start and the reasons are rendered below; if only some lanes failed, the audition starts and the missing ones are named. Neither
+     * branch is a silent wait, and neither is a silent lanes-are-quiet-for-no-reason.
+     */
+    const pattern = patternFromGenre(genre);
+    const engine = engineRef.current;
+    const context: BaseAudioContext | null = engine.audioContext ?? null;
+    const assets = catalogue ?? [];
+    const loader = context ? sharedLoaderFor(assets, context) : null;
+    setSamplingProblems([]);
+    setPreparing(null);
+    if (loader) {
+      const preparation = await prepareSamplerLanes({
+        pattern,
+        catalogue: assets,
+        loader,
+        bpm: engine.getBpm(),
+        /**
+         * ⭐ **Exactly the lanes the stand-down will silence** — `sampledStandDownIndexes`, the function `AudioEngine.prepareSampledLanes`
+         * itself uses, reached through `standDownSamplerLanes`. A lane the catalogue does not serve keeps its synthesiser and will be heard
+         * however slow the network is, so waiting for it would be waiting for nothing; a lane it does serve is the one that would open the
+         * bar silent. With no catalogue at all, this list is empty and nothing is fetched.
+         */
+        lanes: standDownSamplerLanes(pattern, assets),
+        /**
+         * `total: 0` is the ordinary case for a genre with no mapped lane, and a progress display that flashed "0 / 0" for it would be a
+         * lie about work that never happened — so the indicator is only raised when there is something to wait for.
+         */
+        onProgress: (progress) => setPreparing(progress.total > 0 ? progress : null),
+      });
+      setPreparing(null);
+      if (preparation.problems.length > 0) setSamplingProblems(reportSampledLaneProblems(preparation.problems));
+      if (!preparation.ready && !preparation.empty) {
+        setIsPlaying(false);
+        return;
+      }
+      if (!engineRef.current) return;
+    }
+
     setAuditionMode(mode);
     applyAudioMutes(engineRef.current, mode, genre);
     /**
-     * ⭐ **The transport first, then the recorded lanes.**
-     *
-     * `play()` resumes the context and starts the engine's own grid, and the sampler places its notes on that same
-     * clock — so starting it second is what puts the two halves on one grid. It is deliberately **not awaited**: the
-     * catalogue fetch and the decode happen behind a play button that must not wait on the network.
+     * **The transport, then the lanes — now on one grid because the bytes are already here.** `play()` resumes the context and starts
+     * the engine's own grid; the scheduler places its notes on that same clock, and with the loader warm that placement is a cache hit
+     * rather than a download, so a note's onset is where the step says it is.
      */
-    void engineRef.current.play();
-    void startRecordedLanes(patternFromGenre(genre));
+    await engineRef.current.play();
+    void startRecordedLanes(pattern);
     setIsPlaying(true);
   };
 
@@ -190,6 +284,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
     stopRecordedLanes();
     setIsPlaying(false);
     setCurrentStep(0);
+    setPreparing(null);
   };
 
   const handleBpmChange = (newBpm: number) => {
@@ -473,7 +568,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
           {/* Full Band Audition Button */}
           <button
-            onClick={() => handlePlayMode("full")}
+            onClick={() => void handlePlayMode("full")}
             className={`flex items-center justify-center space-x-2.5 py-3.5 px-5 rounded-2xl font-bold text-sm transition-all shadow-md ${
               isPlaying && auditionMode === "full"
                 ? "bg-accent text-black shadow-[0_0_20px_rgba(245,183,61,0.4)] ring-2 ring-amber-400/50"
@@ -500,7 +595,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
 
           {/* Drums Only Audition Button */}
           <button
-            onClick={() => handlePlayMode("drums")}
+            onClick={() => void handlePlayMode("drums")}
             className={`flex items-center justify-center space-x-2.5 py-3.5 px-5 rounded-2xl font-bold text-sm transition-all shadow-md ${
               isPlaying && auditionMode === "drums"
                 ? "bg-accent text-black shadow-[0_0_20px_rgba(245,183,61,0.4)] ring-2 ring-amber-400/50"
@@ -526,18 +621,69 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
           </button>
         </div>
 
+        {/**
+         * ⭐ **"正在获取音源" — the wait, said out loud, with a determinate count.**
+         *
+         * It sits directly under the two audition buttons because that is where the press happened, and it replaces the transport's own status
+         * while it is up: a bar that claims to be playing while nothing has been scheduled yet is the "control that lies" this repository keeps
+         * removing. `total` is known before the first request, so the number is a fact rather than an animation.
+         */}
+        {preparing && (
+          <div
+            role="status"
+            aria-live="polite"
+            data-testid="sampler-loading"
+            className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-[#0c0d11] border border-accent/40"
+          >
+            <span className="w-2.5 h-2.5 rounded-full bg-accent animate-pulse shadow-[0_0_10px_#f5b73d]" />
+            <span className="text-xs sm:text-sm font-bold text-[#f0ede6]">{t("detail_sampling_loading")}</span>
+            <span className="ml-auto font-mono text-xs text-accent">
+              {t("detail_sampling_progress", { loaded: preparing.loaded, total: preparing.total })}
+            </span>
+            <span className="w-24 h-1.5 rounded-full bg-neutral-800 overflow-hidden" aria-hidden="true">
+              <span
+                className="block h-full bg-accent transition-[width] duration-200"
+                style={{ width: `${preparing.total > 0 ? Math.round((preparing.loaded / preparing.total) * 100) : 0}%` }}
+              />
+            </span>
+          </div>
+        )}
+
+        {/**
+         * ⭐ **A failure is a sentence, not silence.** Nothing here is a "try again silently" and nothing is a lane that is quiet for no stated
+         * reason: every line names a lane and a cause, and these are the same sentences every other playback path logs.
+         */}
+        {samplingProblems.length > 0 && (
+          <div
+            role="alert"
+            data-testid="sampler-problems"
+            className="px-4 py-3 rounded-2xl bg-red-500/10 border border-red-500/40 space-y-1"
+          >
+            <p className="text-xs font-bold text-red-300">{t("detail_sampling_problem")}</p>
+            <ul className="space-y-0.5">
+              {samplingProblems.map((problem) => (
+                <li key={problem} className="font-mono text-[11px] text-red-200/90 break-all">
+                  {problem}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {/* Dynamic Multi-color Beat Spectrum & Status Console (No blank space, rich color transitions) */}
         <div className="p-4 sm:p-5 rounded-2xl bg-[#0c0d11] border border-line space-y-3.5">
           {/* Status Bar & Active Channels Header */}
           <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
             <div className="flex items-center space-x-2.5">
-              <span className={`w-2.5 h-2.5 rounded-full ${isPlaying ? "bg-accent shadow-[0_0_10px_#f5b73d] animate-pulse" : "bg-neutral-700"}`} />
+              <span className={`w-2.5 h-2.5 rounded-full ${isPlaying ? "bg-accent shadow-[0_0_10px_#f5b73d] animate-pulse" : preparing ? "bg-accent/60 animate-pulse" : "bg-neutral-700"}`} />
               <span className="font-bold text-sm text-[#f0ede6]">
-                {isPlaying 
-                  ? (auditionMode === "drums" 
-                      ? t("detail_status_drums") 
+                {isPlaying
+                  ? (auditionMode === "drums"
+                      ? t("detail_status_drums")
                       : t("detail_status_full"))
-                  : t("detail_status_ready")}
+                  : preparing
+                    ? t("detail_sampling_loading")
+                    : t("detail_status_ready")}
               </span>
             </div>
 
