@@ -291,6 +291,23 @@ export class AudioEngine {
   private stepQueue: Array<{ step: number; time: number; activeTracks: number[] }> = [];
   /** A-07: hard cap so a hidden tab (rAF paused) cannot grow this without bound. */
   private static readonly MAX_STEP_QUEUE = 128;
+  /**
+   * ⭐ **The steps this look-ahead pass has already consumed, and which lanes audibility kept out of each.**
+   *
+   * The look-ahead places a note 200 ms before it sounds, so a mute decides *whether the voice
+   * exists* for every step inside that window. Muting is still immediate — the strip's own gain is
+   * downstream of every voice and a ramp there silences an already-placed one (measured in
+   * `src/test/lookaheadMuteWindow.test.ts`) — but **unmuting** is not: the onsets the pass already
+   * walked past were never voiced and are lost, so the lane stays silent until the next grid event
+   * *beyond* `now + scheduleAheadSec`. That is the one direction where the look-ahead is felt (up
+   * to two 1/16 steps on a dense lane), and this log is what lets the engine give those onsets back.
+   *
+   * It holds only the *unconsumed* window — entries whose onset has passed are dropped on the next
+   * pass — so it is bounded by `ceil(scheduleAheadSec / stepDur) + 1` entries in practice, and by
+   * {@link MAX_SCHEDULED_WINDOW} in the pathological case.
+   */
+  private scheduledWindow: Array<{ step: number; time: number; stepDur: number; silenced: Set<number> }> = [];
+  private static readonly MAX_SCHEDULED_WINDOW = 64;
   private lastReportedStep: number = -1;
   private rafId: number | null = null;
 
@@ -795,6 +812,12 @@ export class AudioEngine {
   }
 
   public setPattern(pattern: SequencerPattern, resetStates = false): void {
+    /**
+     * ⭐ A pattern carries `mute`/`solo`, so a commit can un-silence a lane — an undo of a mute, a
+     * slot switch, a genre load. The "before" is taken here, above everything that can change
+     * audibility, so the same transition rule applies however the change arrived.
+     */
+    const audibilityBefore = this.audibilitySnapshot();
     this.pattern = pattern;
     /**
      * A pattern arriving means the lanes may have changed, so the stand-down set is **re-derived on the next
@@ -878,6 +901,9 @@ export class AudioEngine {
     // N-14: the genre's master FX and bus character, applied at the same moment and from
     // the same `genre_id` as the loudness trim.
     this.applyGenreFxForPattern(pattern);
+    // A lane this commit un-silenced gets back the onsets the look-ahead already consumed
+    // (see `revoiceStepsThatBecameAudible`). A no-op unless the transport is running.
+    this.revoiceStepsThatBecameAudible(audibilityBefore);
   }
 
   /**
@@ -1006,8 +1032,9 @@ export class AudioEngine {
       const strip = this.trackStrips[idx];
       if (!strip) return;
       const track = this.pattern?.tracks[idx];
-      const isDrum = track ? isDrumTrack(track, idx) : idx < 4;
-      const isSilenced = Boolean(state.mute) || (anySolo && !state.solo) || (this.isDrumsOnly && !isDrum);
+      // One audibility rule for the scheduler and the fader (see `isTrackAudible`): what a lane
+      // sounds and what its meter shows cannot disagree about whether it is silent.
+      const isSilenced = !this.isTrackAudible(track, idx, anySolo);
       const targetGain = isSilenced ? 0 : (state.volume !== undefined ? Math.max(0, Math.min(1.0, state.volume)) : 0.8);
 
       try {
@@ -1426,6 +1453,13 @@ export class AudioEngine {
   }
 
   public setTrackState(trackIdx: number, state: Partial<TrackState>): void {
+    /**
+     * ⭐ The "before" of an audibility transition, and only for a patch that can change audibility:
+     * a fader drag sends `volume` on every frame, and that cannot un-silence a lane, so the snapshot
+     * is not taken for it.
+     */
+    const before =
+      state.mute !== undefined || state.solo !== undefined ? this.audibilitySnapshot() : null;
     if (!this.trackStates[trackIdx]) {
       this.trackStates[trackIdx] = {
         mute: false,
@@ -1439,6 +1473,7 @@ export class AudioEngine {
     }
     this.trackStates[trackIdx] = { ...this.trackStates[trackIdx], ...state };
     this.syncTrackGains();
+    if (before) this.revoiceStepsThatBecameAudible(before);
   }
 
   public getTrackState(trackIdx: number): TrackState | undefined {
@@ -1526,8 +1561,10 @@ export class AudioEngine {
   }
 
   public setDrumsOnly(enabled: boolean): void {
+    const before = this.audibilitySnapshot();
     this.isDrumsOnly = enabled;
     this.syncTrackGains();
+    this.revoiceStepsThatBecameAudible(before);
   }
 
   public getDrumsOnly(): boolean {
@@ -1750,6 +1787,8 @@ export class AudioEngine {
       this.nextStepTime = now + 0.035 - compensationSec;
     }
     this.stepQueue = [];
+    // The window log describes a pass that is about to be replaced.
+    this.scheduledWindow = [];
     this.lastReportedStep = -1;
 
     // P4-05: Soft fade-in prevents speaker pops and protects hearing
@@ -1798,6 +1837,8 @@ export class AudioEngine {
     this.currentStep = 0;
     this.lastReportedStep = -1;
     this.stepQueue = [];
+    // Nothing is scheduled after a stop, so no onset is left to give back.
+    this.scheduledWindow = [];
     if (this.onStopCallback) {
       this.onStopCallback();
     }
@@ -2069,7 +2110,9 @@ export class AudioEngine {
           this.playMetronome(actualStepTime, isDownbeat);
         }
 
-        const activeTracks = this.scheduleStep(step, actualStepTime, stepDur);
+        const silenced = new Set<number>();
+        const activeTracks = this.scheduleStep(step, actualStepTime, stepDur, silenced);
+        this.scheduledWindow.push({ step, time: actualStepTime, stepDur, silenced });
         this.stepQueue.push({ step, time: actualStepTime, activeTracks });
         if (this.stepQueue.length > AudioEngine.MAX_STEP_QUEUE) {
           this.stepQueue.splice(0, this.stepQueue.length - AudioEngine.MAX_STEP_QUEUE);
@@ -2093,9 +2136,22 @@ export class AudioEngine {
         this.currentStep = (this.currentStep + 1) % stepsCount;
       }
     }
+
+    // The window log only ever holds onsets still in the future (see `scheduledWindow`).
+    this.pruneScheduledWindow();
   }
 
-  private scheduleStep(step: number, time: number, stepDur: number): number[] {
+  private scheduleStep(
+    step: number,
+    time: number,
+    stepDur: number,
+    /**
+     * ⭐ Filled with the lanes the look-ahead's audibility rule kept out of this step, when the
+     * caller wants to be able to give those onsets back afterwards (see `scheduledWindow`).
+     * Optional because the criteria call this directly with three arguments.
+     */
+    silenced?: Set<number>
+  ): number[] {
     const activeTracks: number[] = [];
     if (!this.pattern || !this.ctx) return activeTracks;
     // Narrowed once for the callbacks below, where `this.ctx` would widen back to nullable.
@@ -2104,117 +2160,241 @@ export class AudioEngine {
     const anySolo = this.trackStates.some((t) => t.solo);
 
     this.pattern.tracks.forEach((track, trackIdx) => {
-      const state = this.trackStates[trackIdx] || { mute: false, solo: false, volume: 0.8, pan: 0 };
-      if (state.mute) return;
-      if (anySolo && !state.solo) return;
-      if (this.isDrumsOnly && !isDrumTrack(track, trackIdx)) return;
-      /**
-       * Isolated preview: skip every track but the previewed one.
-       *
-       * This sits *after* the mute/solo/drums-only rules on purpose — the preview then shows the
-       * track as the mix actually treats it instead of overriding the user's own solo/mute.
-       */
-      if (this.previewScope && trackIdx !== this.previewScope.trackIdx) return;
-
-      // Independent track loop length (Polymeter)
-      const trackLen = (track.trackLength && track.trackLength > 0)
-        ? track.trackLength
-        : (track.steps ? track.steps.length : 16);
-      const stepIdx = trackLen > 0 ? step % trackLen : step;
-
-      const stepVal = track.steps ? track.steps[stepIdx] : 0;
-      const isStepActive = stepVal > 0;
-      if (!isStepActive) return;
-
-      // Probability check (Chance: 0 - 100)
-      // V-01 note: this is the one place where live playback is deliberately NOT
-      // identical to an export. Chance is a performance feature, so live rolls
-      // `Math.random()` on every pass; the three exporters share the seeded
-      // `probabilityPasses()` in `noteEvents.ts` instead, so re-exporting a project
-      // always yields the same notes. Do not "fix" this by seeding live playback.
-      const prob = (track.probability && track.probability[stepIdx] !== undefined)
-        ? track.probability[stepIdx]
-        : 100;
-      if (prob < 100 && Math.random() * 100 > prob) {
-        return;
-      }
-
-      const velVal = track.velocity && track.velocity[stepIdx] !== undefined ? track.velocity[stepIdx] : 100;
-      // H-01/F-03: track volume is applied exactly once, by the track strip gain node.
-      // It used to be multiplied into the velocity as well (amplitude ∝ volume²),
-      // which made live playback disagree with the offline WAV renderer.
-      const normalizedVel = velVal / 127;
-      const pitchVal = track.pitch && track.pitch[stepIdx] !== undefined && track.pitch[stepIdx] !== null ? track.pitch[stepIdx]! : 0;
-      const gateVal = (track.gate && track.gate[stepIdx] !== undefined) ? track.gate[stepIdx] : 0.8;
-
-      // Independent per-track swing offset
-      const trackSwingOffset = (track.swing !== undefined ? track.swing / 100 : 0);
-      const effSwing = Math.max(0, Math.min(0.75, this.swing + trackSwingOffset));
-      /**
-       * M11: a track with its own swing must carry the same two live-only adjustments the caller
-       * already folded into `time` — the latency compensation every voice is shifted by, and the
-       * `>= currentTime` clamp that keeps a late step in the future.
-       *
-       * This branch rebuilt the time from `nextStepTime` alone, so a track with independent swing
-       * fired a full latency-compensation ahead of every other track, and ahead of its own export
-       * (a bounce has no output latency to compensate). Only the swing term may differ here.
-       */
-      const trackStepTime = (swingMovesStep(step) && effSwing !== this.swing)
-        ? Math.max(
-            ctx.currentTime,
-            this.nextStepTime + (effSwing * 0.5) * stepDur + this.latencyCompensationMs / 1000
-          )
-        : time;
-
-      // Ratchet / Subdivisions
-      const isHatTriplet = (track.track_id === "hihat" || track.name.toLowerCase().includes("hat")) && stepVal === 3;
-      /**
-       * Q10: route through the same `resolveRatchet` the exporters use.
-       *
-       * Live playback took `track.ratchet[stepIdx]` raw, while every exporter clamps it to
-       * 1..8 (`noteEvents.ts`). A malformed or imported value — or simply a corrupt pattern —
-       * therefore fired an unbounded burst of voices in one step live, and the live take could
-       * never match its own bounce. One shared function is the only way those two stay equal.
-       */
-      const ratchet = resolveRatchet(
-        track.ratchet ? track.ratchet[stepIdx] : undefined,
-        isHatTriplet
-      );
-
-      activeTracks.push(trackIdx);
-
-      /**
-       * ⭐ **A lane whose sound is a catalogue recording is not voiced here.**
-       *
-       * The owner's rule is "a recording by default, and a synthesiser only when the recording is not there", and
-       * `prepareSampledLanes` is where this engine is told which of the two this lane is: its set contains exactly the
-       * lanes whose asset **this session's catalogue** can serve, so a mapped `piano_lead` chord track is silent here
-       * and sounded from its own bytes by the audio-lane path, while a mapped instrument no mirror serves is absent
-       * from the set and keeps the synthesiser it has today — the fallback, decided where the catalogue is known.
-       *
-       * The guard sits **after** `activeTracks.push`, because the lane is still playing: its strip, its meter and its
-       * inserts are live, and it is the *voice* that belongs to someone else. It is also after the step, probability
-       * and swing gates, so a lane that was not going to sound anyway costs nothing.
-       *
-       * ⭐ It is here rather than in `triggerInstrument` because that method is also the audition path: pressing a
-       * mapped track's own preview button must still make a sound, and a synthesised preview is better than the
-       * silence that standing the lane down inside the shared voice would produce.
-       */
-      if (this.sampledLaneIndexes.has(trackIdx)) return;
-
-      if (ratchet > 1) {
-        const subDur = stepDur / ratchet;
-        for (let r = 0; r < ratchet; r++) {
-          const subTime = trackStepTime + r * subDur;
-          const subVel = normalizedVel * ratchetVelocityScale(r, ratchet);
-          this.triggerInstrument(trackIdx, track.name, subTime, subVel, pitchVal, stepVal, subDur, gateVal, false, noisePositionFor(trackIdx, stepIdx, r), stepIdx);
-        }
-      } else {
-        this.triggerInstrument(trackIdx, track.name, trackStepTime, normalizedVel, pitchVal, stepVal, stepDur, gateVal, false, noisePositionFor(trackIdx, stepIdx), stepIdx);
+      if (this.scheduleTrackStep(track, trackIdx, step, time, stepDur, ctx, anySolo, silenced)) {
+        activeTracks.push(trackIdx);
       }
     });
 
     return activeTracks;
+  }
+
+  /**
+   * ⭐ **The audibility rule, in one place: muted, un-soloed under a solo, or outside the drums-only audition.**
+   *
+   * Both halves of the engine read it — the scheduler decides whether a voice exists at all, and
+   * `syncTrackGains` decides what the lane's fader is doing — so "this lane is silent" cannot come
+   * to mean two different things. `track` is optional because a state can exist for a lane the
+   * current pattern does not describe, and the drum fallback is the one `syncTrackGains` has always
+   * used for that case.
+   */
+  private isTrackAudible(track: SequencerTrack | undefined, trackIdx: number, anySolo: boolean): boolean {
+    const state = this.trackStates[trackIdx];
+    if (state?.mute) return false;
+    if (anySolo && !state?.solo) return false;
+    if (this.isDrumsOnly) {
+      const isDrum = track ? isDrumTrack(track, trackIdx) : trackIdx < 4;
+      if (!isDrum) return false;
+    }
+    return true;
+  }
+
+  /**
+   * ⭐ **One lane, one step — the whole scheduling decision, in a form that can be taken again.**
+   *
+   * Extracted from {@link scheduleStep} so a lane that becomes audible again can be given back the
+   * onsets that pass already consumed ({@link revoiceStepsThatBecameAudible}): re-deciding one
+   * lane's step has to run *exactly* the gates it would have run at its own time, and the only way
+   * to guarantee that is to keep one copy of them.
+   *
+   * Returns whether the lane belongs to this step's **active set** — the list the playhead flashes
+   * and `getSchedulerHealth` counts — which is where the old inline body pushed into it. `false`
+   * covers every reason a lane is not part of a step; `silenced` records the one reason that is the
+   * transport's audibility rule rather than the pattern's own data, because only that one may be
+   * re-decided later.
+   */
+  private scheduleTrackStep(
+    track: SequencerTrack,
+    trackIdx: number,
+    step: number,
+    time: number,
+    stepDur: number,
+    ctx: AudioContext,
+    anySolo: boolean,
+    silenced?: Set<number>
+  ): boolean {
+    if (!this.isTrackAudible(track, trackIdx, anySolo)) {
+      silenced?.add(trackIdx);
+      return false;
+    }
+    /**
+     * Isolated preview: skip every track but the previewed one.
+     *
+     * This sits *after* the mute/solo/drums-only rules on purpose — the preview then shows the
+     * track as the mix actually treats it instead of overriding the user's own solo/mute.
+     */
+    if (this.previewScope && trackIdx !== this.previewScope.trackIdx) return false;
+
+    // Independent track loop length (Polymeter)
+    const trackLen = (track.trackLength && track.trackLength > 0)
+      ? track.trackLength
+      : (track.steps ? track.steps.length : 16);
+    const stepIdx = trackLen > 0 ? step % trackLen : step;
+
+    const stepVal = track.steps ? track.steps[stepIdx] : 0;
+    const isStepActive = stepVal > 0;
+    if (!isStepActive) return false;
+
+    // Probability check (Chance: 0 - 100)
+    // V-01 note: this is the one place where live playback is deliberately NOT
+    // identical to an export. Chance is a performance feature, so live rolls
+    // `Math.random()` on every pass; the three exporters share the seeded
+    // `probabilityPasses()` in `noteEvents.ts` instead, so re-exporting a project
+    // always yields the same notes. Do not "fix" this by seeding live playback.
+    const prob = (track.probability && track.probability[stepIdx] !== undefined)
+      ? track.probability[stepIdx]
+      : 100;
+    if (prob < 100 && Math.random() * 100 > prob) {
+      return false;
+    }
+
+    const velVal = track.velocity && track.velocity[stepIdx] !== undefined ? track.velocity[stepIdx] : 100;
+    // H-01/F-03: track volume is applied exactly once, by the track strip gain node.
+    // It used to be multiplied into the velocity as well (amplitude ∝ volume²),
+    // which made live playback disagree with the offline WAV renderer.
+    const normalizedVel = velVal / 127;
+    const pitchVal = track.pitch && track.pitch[stepIdx] !== undefined && track.pitch[stepIdx] !== null ? track.pitch[stepIdx]! : 0;
+    const gateVal = (track.gate && track.gate[stepIdx] !== undefined) ? track.gate[stepIdx] : 0.8;
+
+    // Independent per-track swing offset
+    const trackSwingOffset = (track.swing !== undefined ? track.swing / 100 : 0);
+    const effSwing = Math.max(0, Math.min(0.75, this.swing + trackSwingOffset));
+    /**
+     * M11: a track with its own swing must carry the same two live-only adjustments the caller
+     * already folded into `time` — the latency compensation every voice is shifted by, and the
+     * `>= currentTime` clamp that keeps a late step in the future.
+     *
+     * This branch rebuilt the time from `nextStepTime` alone, so a track with independent swing
+     * fired a full latency-compensation ahead of every other track, and ahead of its own export
+     * (a bounce has no output latency to compensate). Only the swing term may differ here.
+     */
+    const trackStepTime = (swingMovesStep(step) && effSwing !== this.swing)
+      ? Math.max(
+          ctx.currentTime,
+          this.nextStepTime + (effSwing * 0.5) * stepDur + this.latencyCompensationMs / 1000
+        )
+      : time;
+
+    // Ratchet / Subdivisions
+    const isHatTriplet = (track.track_id === "hihat" || track.name.toLowerCase().includes("hat")) && stepVal === 3;
+    /**
+     * Q10: route through the same `resolveRatchet` the exporters use.
+     *
+     * Live playback took `track.ratchet[stepIdx]` raw, while every exporter clamps it to
+     * 1..8 (`noteEvents.ts`). A malformed or imported value — or simply a corrupt pattern —
+     * therefore fired an unbounded burst of voices in one step live, and the live take could
+     * never match its own bounce. One shared function is the only way those two stay equal.
+     */
+    const ratchet = resolveRatchet(
+      track.ratchet ? track.ratchet[stepIdx] : undefined,
+      isHatTriplet
+    );
+
+    /**
+     * ⭐ **A lane whose sound is a catalogue recording is not voiced here.**
+     *
+     * The owner's rule is "a recording by default, and a synthesiser only when the recording is not there", and
+     * `prepareSampledLanes` is where this engine is told which of the two this lane is: its set contains exactly the
+     * lanes whose asset **this session's catalogue** can serve, so a mapped `piano_lead` chord track is silent here
+     * and is sounded from its own bytes by the audio-lane path, while a mapped instrument no mirror serves is absent
+     * from the set and keeps the synthesiser it has today — the fallback, decided where the catalogue is known.
+     *
+     * The guard sits **after** the active-set membership, because the lane is still playing: its strip, its meter and
+     * its inserts are live, and it is the *voice* that belongs to someone else. It is also after the step, probability
+     * and swing gates, so a lane that was not going to sound anyway costs nothing.
+     *
+     * ⭐ It is here rather than in `triggerInstrument` because that method is also the audition path: pressing a
+     * mapped track's own preview button must still make a sound, and a synthesised preview is better than the
+     * silence that standing the lane down inside the shared voice would produce.
+     */
+    if (this.sampledLaneIndexes.has(trackIdx)) return true;
+
+    if (ratchet > 1) {
+      const subDur = stepDur / ratchet;
+      for (let r = 0; r < ratchet; r++) {
+        const subTime = trackStepTime + r * subDur;
+        const subVel = normalizedVel * ratchetVelocityScale(r, ratchet);
+        this.triggerInstrument(trackIdx, track.name, subTime, subVel, pitchVal, stepVal, subDur, gateVal, false, noisePositionFor(trackIdx, stepIdx, r), stepIdx);
+      }
+    } else {
+      this.triggerInstrument(trackIdx, track.name, trackStepTime, normalizedVel, pitchVal, stepVal, stepDur, gateVal, false, noisePositionFor(trackIdx, stepIdx), stepIdx);
+    }
+
+    return true;
+  }
+
+  /** The audibility of every lane, in the state's own index order — the "before" of a transition. */
+  private audibilitySnapshot(): boolean[] {
+    const anySolo = this.trackStates.some((t) => t.solo);
+    return this.trackStates.map((_, idx) => this.isTrackAudible(this.pattern?.tracks?.[idx], idx, anySolo));
+  }
+
+  /**
+   * ⭐ **A lane that becomes audible again gets back the onsets this pass already walked past.**
+   *
+   * The look-ahead consumes every step inside `[now, now + scheduleAheadSec)` and a silenced lane is
+   * skipped in that pass, so unmuting had no effect until the grid reached a step *beyond* the
+   * window: measured at 120 BPM this lost two 1/16 onsets (285 ms to the next sound) on a lane that
+   * plays every step. Muting is the other direction and was never affected — the lane's fader gain
+   * is downstream of every voice, so an already-placed note is silent at its own onset
+   * (`src/test/lookaheadMuteWindow.test.ts` measures both).
+   *
+   * The window log says which lanes were kept out of which step, so exactly those are re-decided,
+   * at their **original onsets** (not "now"), through the same `scheduleTrackStep` the pass used. A
+   * step whose onset has already passed is deliberately not revived: firing it late would be a
+   * stutter, which is the same reason the scheduler's stall recovery drops missed steps rather than
+   * firing a backlog (`computeCatchUp`).
+   *
+   * Two properties this deliberately keeps:
+   *   · **no double trigger** — the lane is removed from the entry's silenced set as it is voiced,
+   *     and a step the pass already voiced is never in that set;
+   *   · **no cost for a lane that stays muted** — the schedule-time gate stays, so a muted lane
+   *     still places no voices at all (the reading `audioScheduler.test.ts` pins). Only a transition
+   *     that actually un-silences a lane with pending onsets does any work, and then it is bounded
+   *     by the window.
+   *
+   * The piano roll's isolated preview is a *different* rule and is not re-voiced here: a scope is
+   * set and cleared around a transport start (`playScoped`, and `play` clears it), not ridden
+   * mid-pass, so there is no transition to give back.
+   */
+  private revoiceStepsThatBecameAudible(before: readonly boolean[]): void {
+    if (!this.ctx || !this.isPlaying || this.scheduledWindow.length === 0) return;
+    const anySolo = this.trackStates.some((t) => t.solo);
+    const now = this.ctx.currentTime;
+    for (const entry of this.scheduledWindow) {
+      if (entry.time <= now || entry.silenced.size === 0) continue;
+      for (const trackIdx of [...entry.silenced]) {
+        if (before[trackIdx] !== false) continue; // it was audible when this step was planned
+        const track = this.pattern?.tracks?.[trackIdx];
+        if (!track) {
+          entry.silenced.delete(trackIdx);
+          continue;
+        }
+        if (!this.isTrackAudible(track, trackIdx, anySolo)) continue; // still silent
+        const active = this.scheduleTrackStep(track, trackIdx, entry.step, entry.time, entry.stepDur, this.ctx, anySolo);
+        entry.silenced.delete(trackIdx);
+        /**
+         * The playhead flashes a step's lanes from `stepQueue`, so a lane that has just been given
+         * its onset back is added there as well: otherwise the note would be heard from a lane that
+         * never lit up, and the two reports of the same step would disagree.
+         */
+        if (active) {
+          const queued = this.stepQueue.find((item) => item.step === entry.step && item.time === entry.time);
+          if (queued && !queued.activeTracks.includes(trackIdx)) queued.activeTracks.push(trackIdx);
+        }
+      }
+    }
+    this.pruneScheduledWindow();
+  }
+
+  /** Drops the onsets the transport has passed — the log only ever holds the unconsumed window. */
+  private pruneScheduledWindow(): void {
+    const now = this.ctx ? this.ctx.currentTime : 0;
+    while (this.scheduledWindow.length > 0 && this.scheduledWindow[0].time <= now) {
+      this.scheduledWindow.shift();
+    }
+    if (this.scheduledWindow.length > AudioEngine.MAX_SCHEDULED_WINDOW) {
+      this.scheduledWindow.splice(0, this.scheduledWindow.length - AudioEngine.MAX_SCHEDULED_WINDOW);
+    }
   }
 
   /**

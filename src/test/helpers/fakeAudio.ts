@@ -8,7 +8,13 @@
 
 export class FakeAudioParam {
   value = 0;
-  events: Array<{ type: string; value: number; time: number }> = [];
+  /**
+   * `timeConstant` is recorded on `setTargetAtTime` because it is the **only** thing that says how
+   * long an exponential approach takes: a double that dropped it made "muted" and "ramped over
+   * 40 ms" indistinguishable, so no criterion could tell a click-free ramp from a hard step (see
+   * `lookaheadMuteWindow.test.ts`, which evaluates the recorded automation at a note's onset).
+   */
+  events: Array<{ type: string; value: number; time: number; timeConstant?: number }> = [];
   exponentialTargets: number[] = [];
 
   setValueAtTime(value: number, time = 0) {
@@ -31,8 +37,8 @@ export class FakeAudioParam {
     this.value = value;
     return this;
   }
-  setTargetAtTime(value: number, time = 0) {
-    this.events.push({ type: "setTargetAtTime", value, time });
+  setTargetAtTime(value: number, time = 0, timeConstant = 0) {
+    this.events.push({ type: "setTargetAtTime", value, time, timeConstant });
     this.value = value;
     return this;
   }
