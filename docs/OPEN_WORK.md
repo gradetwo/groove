@@ -5182,3 +5182,58 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
 ⇒ ⭐ **本笔现在算完整验收** ✓：判据 ✓ ＋ **反面** ✓ ＋ **性能级（丢步 41→0 ✓、最坏单帧 7,683→183 ms ✓、占比 58.54%→11.16% ✓）** ✓ ＋ 反向量 ✓ ＋ CI ✓
    ⇒ `perf2`（`25e23d78`）可停 ✓（它要补的证据已由原作者交齐 ✓）
 ```
+
+## 一百六十六、⭐⭐ **MusicXML 12 份语料实测表（目标明文要求的那张表）＋ 真正的缺口已修** ✓（2026-10-03 23:5x ✓）
+
+```
+**方法** ✓：Chromium headless（Playwright 1.63 ✓）→ `vite` **dev server（不是 dist，本地不 build ✓）** → `/new` → `template-drums-bass`
+   → Create → 选中轨道 → Score 页签 → `score-import-musicxml-input` 经 `setInputFiles` 喂**真实文件** ✓；
+   报告逐字读 `arrangement-file-report` ✓；`problems`／每 part 音符数**同页同字节**再走一遍 `/src/data/musicxmlImport.ts` 取全量 ✓；
+   播放用 `requestAnimationFrame` ＋ 经 `/src/audio/activeEngine.ts` 读 `getSchedulerHealth()` ✓；**每份一个隔离 context，全程一次一个浏览器** ✓
+**时点／负载** ✓：`measuredAt 2026-10-03T15:49:02Z`（＝ UTC ✓），load1m **10.6 → 14.8** ✓（读数按此背景看 ✓）
+
+| 文件（缩写） | KB | 导入 | UI 耗时 | format | parts | notes | problems | 映射对话框 | sampler | dropped | pageErr |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| su_ming_hui_xiang | 183.3 | ✓ | 6686ms | xml | 3 | 198 | **[]** | **出现(3行)** | **1** | 2 | 0 |
+| su_ming_hui_xiang | 8.0 | ✓ | 4475ms | **mxl** | 3 | 198 | **[]** | **出现(3行)** | **1** | 1 | 0 |
+| …Piano_弦乐 | 102.0 | ✓ | 3652ms | xml | 1 | 60 | **[]** | 否 | – | 0 | 0 |
+| …Piano_弦乐 | 4.4 | ✓ | 3154ms | **mxl** | 1 | 60 | **[]** | 否 | – | 0 | 0 |
+| …Piano_贝斯 | 41.1 | ✓ | 2594ms | xml | 1 | 80 | **[]** | 否 | – | 0 | 0 |
+| …Piano_贝斯 | 2.7 | ✓ | 2798ms | **mxl** | 1 | 80 | **[]** | 否 | – | 0 | 0 |
+| …Piano_钢琴 | 44.5 | ✓ | 2218ms | xml | 1 | 58 | **[]** | 否 | – | 0 | 0 |
+| …Piano_钢琴 | 3.2 | ✓ | 3465ms | **mxl** | 1 | 58 | **[]** | 否 | – | 0 | 0 |
+| 安静…周杰伦 | 620.6 | ✓ | 7275ms | xml | 1 | 1433 | **[]** | 否 | – | 0 | 0 |
+| 安静…周杰伦 | 21.0 | ✓ | 3623ms | **mxl** | 1 | 1433 | **[]** | 否 | – | 1 | 0 |
+| 安静…Piano_Track0 | 620.6 | ✓ | 3951ms | xml | 1 | 1433 | **[]** | 否 | – | 0 | 0 |
+| 安静…Piano_Track0 | 21.1 | ✓ | 2646ms | **mxl** | 1 | 1433 | **[]** | 否 | – | 0 | 0 |
+
+⭐ **结论**：**12/12 全部导入成功** ✓、**`problems` 全 `[]`** ✓、**0 pageerror（12/12）** ✓、
+   ⭐ **`.musicxml` 与配对 `.mxl` 的音符数逐值相同** ✓（198／198 ✓、60／60 ✓、80／80 ✓、58／58 ✓、1433／1433 ×2 ✓）
+   ⇒ ⭐ **".mxl 根本不是缺口"** ✓（`fflate` ＋ `META-INF/container.xml` 早在 `musicxmlImport.ts:367-403` ✓）
+   ⚠️ fps 4.5–21.6 **是在 load 10–14 下量的** ✓ ⇒ **不能当缺口读法** ✓（它自己就这样声明 ✓；性能一律带同机空载基线 ✓）
+
+### 166.1 ⭐⭐ **真正的缺口：`instruments` 从未被传（已修 ✓）**
+
+```
+✗ **旧代码**：`arrangementFiles.ts:522` `arrangementWithImportedParts(arrangement, imported)` ✓
+   ＋ `useArrangementFileActions.ts:319` 一行直落 ✓ ⇒ **没读第一步、没有对话框、也没说"还在用合成器"** ✗
+⭐ **同一份 183.3KB 三声部文件的前后对照** ✓：
+   · **修复前**：`mappingDialog.appeared=false` ✓；报告逐字 `"Imported su_ming_hui_xiang_project.musicxml — 3 track(s), 198 note(s)"` ✗
+   · **修复后**：对话框 **3 行** ✓（`Piano, 钢琴 58 note(s)`／`Piano, 弦乐 60 note(s)`／`Piano, 贝斯 80 note(s)` ✓）
+     ⇒ 第 0 行选 `piano_lead` → `→ salamander-grand` → 确认 ✓ ⇒ `trackKindSelects=8, samplerTracks=1` ✓
+     ⇒ 报告逐字 `"… · 1 imported track(s) are now sampler tracks playing the recording you chose ·
+        2 imported track(s) still play built-in synthesizers because no instrument was named: Piano, 弦乐, Piano, 贝斯 …"` ✓✓
+   ⇒ ⭐ **这正是目标要的"sampler 通路真的落地 ✓ ＋ 不静默降级 ✓"**
+```
+
+### 166.2 ✅ **十六分缺口（`1/2` → `1/4`）逐值对照** ✓
+
+```
+**改前（`1/2` ✗，`vite-node` 逐值）**：`{60,0,0.25}→len 0.5` ✗｜`{62,0.25,0.25}→start 0.5` ✗｜
+   `{65,0.75,0.25}→start 1, len 0.5` ✗｜`{64,0.5,0.5}` **不动** ✓｜`{67,1,0.25}→len 0.5` ✗
+**导出侧本来就是对的** ✓（`<divisions>4</divisions>` ＋ `<duration>1</duration>` ＋ `<type>sixteenth</type>` ✓）⇒ **纯读侧** ✓
+**改后**：五项**逐值相等** ✓；且既有 `musicXmlImport`(25)／`musicXmlExport`(13)／`lyricExport`(12) **全绿、一个数字未改** ✓
+⚠️ **推送异常的如实说明** ✗：该线的 `push:dev` 输出 **`☑️ nothing to push: dev already has a92207f … this run published nothing`** ✓
+   ⇒ ⭐ **因为我已代它推过** ✓（`§161` ✓）；它**没拿到自己的 `HEAD -> dev` 行** ✗（**它如实报、不冒充** ✓）
+   ⇒ ⭐ **那笔的判决是 run `37134738976`（headSha `a92207f`）** ✓
+```
