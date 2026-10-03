@@ -110,5 +110,33 @@ export function sampledInstrumentProblems(
   return problems;
 }
 
+/**
+ * ⭐ **The one place a playback path's stand-down failures become visible, rather than a silent empty set.**
+ *
+ * `AudioEngine.prepareSampledLanes` already returns the sentences for every mapped lane this catalogue cannot serve
+ * (`sampledInstrumentProblems`, above) — including the case that matters most here, a **mirror that is not
+ * configured at all**, where every recorded lane quietly keeps its synthesiser. The transport read those sentences and
+ * logged them; the engine-owning hooks did not, so a whole playback route could fall back to synthesis with nothing
+ * anywhere saying why. That is the "a control that lies" shape this repository keeps removing, in its audio form.
+ *
+ * The two destinations are the same two the transport already uses, and for the same reason: a `console.warn` with a
+ * stable `[sampled-instrument]` prefix for a developer reading the network panel, and the `problems` array for a caller
+ * that wants to surface them in the interface. `warn` is injectable so a criterion can assert the sentence without
+ * spying on the console.
+ *
+ * Returns the problems so a caller can compose them into its own report instead of only logging them.
+ */
+export function reportSampledLaneProblems(
+  problems: readonly string[],
+  warn: (message: string) => void = (message) => {
+    // eslint-disable-next-line no-console -- the same prefix and shape `useTransportControls` reports lane problems with
+    console.warn(message);
+  }
+): string[] {
+  const reported = problems.map((problem) => `[sampled-instrument] ${problem}`);
+  for (const line of reported) warn(line);
+  return reported;
+}
+
 /** Whether this lane's sound is a catalogue recording, whatever the catalogue holds. Re-exported for the audio chain. */
 export { isSampledLane };

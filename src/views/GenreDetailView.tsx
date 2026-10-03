@@ -122,7 +122,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
    * now; the effect keeps only the part that is genuinely about the genre — seeding the pattern, the
    * bpm and the input field — and re-runs on a genre change without any engine bookkeeping.
    */
-  const { engineRef } = useAudioEngineInstance({
+  const { engineRef, startRecordedLanes, stopRecordedLanes } = useAudioEngineInstance({
     onStep: ({ step }) => setCurrentStep(step),
     onStop: () => {
       setIsPlaying(false);
@@ -148,6 +148,7 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
     // If clicking same mode while playing, stop
     if (isPlaying && auditionMode === mode) {
       engineRef.current.stop();
+      stopRecordedLanes();
       setIsPlaying(false);
       return;
     }
@@ -156,19 +157,37 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
     if (isPlaying && auditionMode !== mode) {
       setAuditionMode(mode);
       applyAudioMutes(engineRef.current, mode, genre);
+      /**
+       * ⭐ **A mode switch re-plans the recorded lanes, because the mutes just changed.**
+       *
+       * "Audition Drums Only" mutes the non-drum lanes on the engine, and the recorded lanes are placed by a scheduler
+       * the engine's mute state cannot silence — so without this the bass and the piano would keep sounding over a mode
+       * whose whole promise is that they are silent. `startRecordedLanes` reads the mute state and re-plans from it,
+       * which is the same audibility rule `playArrangementV2` applies.
+       */
+      void startRecordedLanes(patternFromGenre(genre));
       return;
     }
 
     // Otherwise start playback in this mode
     setAuditionMode(mode);
     applyAudioMutes(engineRef.current, mode, genre);
-    engineRef.current.play();
+    /**
+     * ⭐ **The transport first, then the recorded lanes.**
+     *
+     * `play()` resumes the context and starts the engine's own grid, and the sampler places its notes on that same
+     * clock — so starting it second is what puts the two halves on one grid. It is deliberately **not awaited**: the
+     * catalogue fetch and the decode happen behind a play button that must not wait on the network.
+     */
+    void engineRef.current.play();
+    void startRecordedLanes(patternFromGenre(genre));
     setIsPlaying(true);
   };
 
   const handleStop = () => {
     if (!engineRef.current) return;
     engineRef.current.stop();
+    stopRecordedLanes();
     setIsPlaying(false);
     setCurrentStep(0);
   };

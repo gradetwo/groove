@@ -7,6 +7,10 @@ import { debugModeForcedByUrl, isDebugModeEnabled } from "../platform/debugMode"
 import { installProbeHooks, uninstallProbeHooks } from "../platform/probeHooks";
 import { createVinylScrub, type VinylScrub } from "../audio/VinylScrub";
 import { patternFromGenre } from "../data/genreMix";
+import { appCatalogueRuntime } from "../data/sampleCatalogueRuntime";
+import { createSamplerLanePlayback, type SamplerLanePlayback } from "../audio/samplerLanePlayback";
+import { reportSampledLaneProblems } from "../audio/sampledLanes";
+import type { SampleAsset } from "../data/sampleCatalogue";
 import { arrangementSections, type ArrangementFormId } from "../data/arrangementForm";
 import { flattenSong, sessionSong } from "../data/songFlatten";
 import { announcer } from "../platform/announcer";
@@ -140,6 +144,41 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
    */
   const lastStepOfPatternRef = useRef<number | null>(null);
 
+  /**
+   * ⭐ **The recorded lanes this audition is sounding.**
+   *
+   * A genre whose lanes the palette maps (`sax_lead`, `walking_upright`, …) is a set of **recordings**, and before this
+   * the shuffle played their built-in synthesisers while requesting no SFZ and no WAV at all — the owner's report,
+   * visible in the network panel. The stand-down on its own was not the answer: it silences the synthesiser and plays
+   * nothing, because the bytes come from a scheduler of their own (`src/audio/samplerLanePlayback.ts`). The reference is
+   * held so a stop can silence voices that are already on the audio clock, which `engine.stop()` cannot reach.
+   */
+  const samplerLanesRef = useRef<SamplerLanePlayback | null>(null);
+
+  /**
+   * The catalogue this session resolved, so a lane can be resolved against it without a second fetch.
+   *
+   * `appCatalogueRuntime` is single-flight per session, so loading it here costs one request that any other path in the
+   * app would have made anyway — and `undefined` means "not answered yet", where every mapped lane keeps the
+   * synthesiser, which is the owner's stated fallback rather than a failure.
+   */
+  const catalogueRef = useRef<readonly SampleAsset[] | undefined>(undefined);
+  useEffect(() => {
+    let cancelled = false;
+    void appCatalogueRuntime
+      .load()
+      .then(({ assets }) => {
+        if (!cancelled) catalogueRef.current = assets;
+      })
+      .catch((error: unknown) => {
+        // eslint-disable-next-line no-console -- a catalogue that cannot be read leaves every recorded lane on its synthesiser, and that must not be silent
+        console.warn("[sampled-instrument] the sample catalogue could not be loaded, so recorded lanes keep their synthesised voices", error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Clean up engine on unmount
   useEffect(() => {
     return () => {
@@ -147,6 +186,9 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
       cleanupProbeRef.current = null;
       cleanupDiagRef.current?.();
       cleanupDiagRef.current = null;
+      // The sampler voices are placed on the audio clock, so they are stopped by name before the engine goes.
+      samplerLanesRef.current?.stop();
+      samplerLanesRef.current = null;
       if (engineRef.current) {
         engineRef.current.stop();
         setActiveAudioEngine(null);
@@ -158,6 +200,8 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
   }, []);
 
   const stopAudition = useCallback(() => {
+    samplerLanesRef.current?.stop();
+    samplerLanesRef.current = null;
     if (engineRef.current) {
       engineRef.current.stop();
     }
@@ -273,6 +317,45 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
         : loop;
       engine.setPattern(pattern, true);
       /**
+       * ⭐ **The recorded lanes are sounded from their own bytes, not from the built-in synthesiser.**
+       *
+       * Two things have to happen and both are done here, in this order:
+       *
+       *   1. `prepareSampledLanes` stands the synthesiser down for exactly the lanes whose asset the catalogue really
+       *      serves — a lane with no palette row, or whose recording this mirror does not carry, keeps the synthesiser
+       *      it has always had, and is *named* rather than left silent (`reportSampledLaneProblems`);
+       *   2. the scheduler places those lanes' notes on the engine's clock, and re-plans them on every loop wrap, so a
+       *      looping track does not fall silent on the second pass.
+       *
+       * It must come **after** `setPattern`: that call clears the stand-down set on purpose, so a resolve done first
+       * would be discarded. And it is deliberately **not awaited** before `play()` — the catalogue fetch and the decode
+       * happen behind a button that must not wait on the network, and the transport start is the gesture the browser's
+       * audio policy is watching.
+       */
+      const tempo = genre.default_bpm ?? 120;
+      const previousLanes = samplerLanesRef.current;
+      const playback = createSamplerLanePlayback({
+        engine,
+        pattern,
+        catalogue: catalogueRef.current ?? [],
+        bpm: tempo,
+        warn: (message) => {
+          // eslint-disable-next-line no-console -- the same prefix and shape `useTransportControls` reports lane problems with
+          console.warn(message);
+        },
+      });
+      samplerLanesRef.current = playback;
+      /**
+       * **Asked for rather than assumed**, the same way `useAudioEngineInstance` and `playerFromEngine` ask it: a
+       * criterion's partial engine double is engine-shaped and must not be handed a method it never claimed.
+       */
+      const capable = engine as AudioEngine & {
+        prepareSampledLanes?: (catalogue: readonly SampleAsset[]) => { problems: readonly string[] };
+      };
+      if (typeof capable.prepareSampledLanes === "function") {
+        reportSampledLaneProblems(capable.prepareSampledLanes(catalogueRef.current ?? []).problems);
+      }
+      /**
        * The pattern's own length, and a cleared observation, so the first step of *this* pattern is never read as
        * the end of the previous one — see the note on `onPatternEnd`.
        */
@@ -282,6 +365,9 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
       setPlayingGenreId(genre.id);
       announcer.announce(`正在试听：${genre.name} / Auditioning: ${genre.name}`);
       await engine.play();
+      // The previous genre's voices are silenced only once the new pass owns the lane, so a skip does not gap.
+      previousLanes?.stop();
+      await playback.play(tempo);
     },
     [playingGenreId, stopAudition, metronome]
   );

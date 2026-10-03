@@ -29,6 +29,11 @@
 import { useEffect, useRef } from "react";
 import { AudioEngine } from "../../../audio/AudioEngine";
 import type { StepCallbackInfo } from "../../../audio/AudioEngine";
+import { appCatalogueRuntime } from "../../../data/sampleCatalogueRuntime";
+import { createSamplerLanePlayback, type SamplerLanePlayback } from "../../../audio/samplerLanePlayback";
+import { reportSampledLaneProblems } from "../../../audio/sampledLanes";
+import type { SampleAsset } from "../../../data/sampleCatalogue";
+import type { SequencerPattern } from "../../../types/genre";
 
 export interface AudioEngineCallbacks {
   onStep?: (info: StepCallbackInfo) => void;
@@ -45,10 +50,36 @@ export interface UseAudioEngineInstanceResult {
   engineRef: React.MutableRefObject<AudioEngine | null>;
   /** Throws rather than returning null, for the common "I know it exists by now" call site. */
   getEngine: () => AudioEngine;
+  /**
+   * ⭐ **Sound this pattern's recorded lanes, and keep them sounding across the transport's wraps.**
+   *
+   * Call it after `engine.setPattern(pattern)` — the stand-down clears on every pattern change — and after
+   * `engine.play()`, because the voices are placed on the engine's clock.
+   *
+   * ## Why an engine this hook built never made a sound out of an SFZ before
+   *
+   * A lane whose instrument the palette maps is a **recording**, and two separate things have to happen for it to be
+   * heard: `prepareSampledLanes` stands its synthesiser down, and a scheduler places its notes from their own bytes.
+   * The studio's transport and the arrangement player each did both; the screens this hook serves — the genre detail
+   * page's audition, the custom-genre maker's preview — did **neither**, so a bebop chart with `sax_lead` and
+   * `walking_upright` on it played two synthesisers and requested **not one** SFZ or WAV. The owner found it by
+   * watching the network panel. Calling only the stand-down would have been worse than the bug: a lane that played the
+   * wrong instrument would have played nothing. Hence one call that does both, from one place
+   * (`src/audio/samplerLanePlayback.ts`).
+   *
+   * Returns the controller so a caller can stop it; `sounding` on it is what a criterion reads.
+   */
+  startRecordedLanes: (pattern: SequencerPattern) => Promise<SamplerLanePlayback | null>;
+  /** Silence whatever {@link startRecordedLanes} started, and how many voices that stopped. */
+  stopRecordedLanes: () => number;
 }
 
 export function useAudioEngineInstance(callbacks: AudioEngineCallbacks = {}): UseAudioEngineInstanceResult {
   const engineRef = useRef<AudioEngine | null>(null);
+  /** The catalogue this session resolved, kept so a lane set later can be resolved against it without a second fetch. */
+  const catalogueRef = useRef<readonly SampleAsset[] | null>(null);
+  /** The recorded lanes currently scheduled, so a stop can silence them and a second start can replace them. */
+  const lanesRef = useRef<SamplerLanePlayback | null>(null);
 
   /**
    * The callbacks are held in a ref and read through it, so changing them never recreates the engine.
@@ -68,7 +99,29 @@ export function useAudioEngineInstance(callbacks: AudioEngineCallbacks = {}): Us
     });
     engineRef.current = engine;
 
+    /**
+     * The catalogue is fetched whether or not anything is playing: it is one request per session
+     * (`appCatalogueRuntime` is single-flight), and a route that only auditions should not have to play a pass of
+     * synthesiser first. A failure is reported and not cached by the runtime, so the next mount tries again — and it
+     * must never stop the view's own playback, which is why nothing here throws or blocks.
+     */
+    let cancelled = false;
+    void appCatalogueRuntime
+      .load()
+      .then(({ assets }) => {
+        if (cancelled) return;
+        catalogueRef.current = assets;
+      })
+      .catch((error: unknown) => {
+        // eslint-disable-next-line no-console -- a catalogue that cannot be read leaves every recorded lane on its synthesiser, and that must not be silent
+        console.warn("[sampled-instrument] the sample catalogue could not be loaded, so recorded lanes keep their synthesised voices", error);
+      });
+
     return () => {
+      cancelled = true;
+      // The sampler voices are on the audio clock, which `destroy()` does not reach — so they are stopped by name.
+      lanesRef.current?.stop();
+      lanesRef.current = null;
       // Stop before destroying: `destroy()` tears down the graph, and a still-running transport would
       // otherwise be relying on the teardown to silence it — which leaks a scheduled tail on some
       // browsers when the context is closed mid-note.
@@ -77,6 +130,43 @@ export function useAudioEngineInstance(callbacks: AudioEngineCallbacks = {}): Us
       engineRef.current = null;
     };
   }, []);
+
+  const stopRecordedLanes = () => {
+    const stopped = lanesRef.current?.stop() ?? 0;
+    lanesRef.current = null;
+    return stopped;
+  };
+
+  const startRecordedLanes = async (pattern: SequencerPattern): Promise<SamplerLanePlayback | null> => {
+    const engine = engineRef.current;
+    if (!engine) return null;
+    /**
+     * ⭐ **The stand-down and the scheduler, in that order, and neither is optional.**
+     *
+     * `prepareSampledLanes` is called with whatever the catalogue holds: it stands the synthesiser down for exactly
+     * the lanes whose asset is **really there**, and hands back a sentence for every mapped lane this mirror cannot
+     * serve — which `reportSampledLaneProblems` makes visible instead of leaving the fallback silent. The scheduler
+     * then places those lanes from their own bytes.
+     *
+     * A catalogue that has not answered yet is not an error: the lane keeps its synthesiser, which is the owner's
+     * stated fallback for "the recording is not there".
+     */
+    reportSampledLaneProblems(engine.prepareSampledLanes(catalogueRef.current ?? []).problems);
+    stopRecordedLanes();
+    const playback = createSamplerLanePlayback({
+      engine,
+      pattern,
+      catalogue: catalogueRef.current ?? [],
+      bpm: engine.getBpm(),
+      warn: (message) => {
+        // eslint-disable-next-line no-console -- the same prefix and shape `useTransportControls` reports lane problems with
+        console.warn(message);
+      },
+    });
+    lanesRef.current = playback;
+    await playback.play(engine.getBpm());
+    return playback;
+  };
 
   /**
    * Re-published every render so that a caller which reads `engineRef.current` imperatively always
@@ -92,5 +182,5 @@ export function useAudioEngineInstance(callbacks: AudioEngineCallbacks = {}): Us
     return engine;
   };
 
-  return { engineRef, getEngine };
+  return { engineRef, getEngine, startRecordedLanes, stopRecordedLanes };
 }
