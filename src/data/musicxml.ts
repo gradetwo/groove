@@ -117,7 +117,7 @@ function splitAtBarlines(startBeats: number, lengthBeats: number, beatsPerMeasur
 export function notesToMeasures(notes: readonly NoteEvent[], bars: number, options: MusicXmlOptions = {}): string[] {
   const beatsPerMeasure = options.beatsPerMeasure ?? 4;
   const measureCount = Math.max(1, Math.round(bars));
-  const divisionsPerBeat = divisionsFor(notes, options.divisions);
+  const divisionsPerBeat = divisionsFor(notes);
 
   /** Deterministic order, because a file that changed with the input's order would make every diff a coin toss. */
   const ordered = [...notes].filter((note) => note.pitch >= 0 && note.pitch <= 127).sort((a, b) => a.startBeats - b.startBeats || a.pitch - b.pitch);
@@ -355,7 +355,7 @@ function noteElement(
  * whatever the file states, so a larger count is exact on the way back. The cap is this project's own tick
  * resolution: beyond it a value that is still not exact is reported by the caller rather than rounded here.
  */
-function divisionsFor(notes: readonly NoteEvent[], requested: number | undefined, cap = 960): number {
+function divisionsFor(notes: readonly NoteEvent[], cap = 960): number {
   /**
    * Within half a thousandth of a beat. Demanding an exact count would reject every candidate for a value such as
    * 2.167, which is itself a rounded decimal (the true length is thirteen sixths), and the corpus comparison this
@@ -367,7 +367,7 @@ function divisionsFor(notes: readonly NoteEvent[], requested: number | undefined
     if (candidate > cap) break;
     if (values.every((value) => closeEnough(value, candidate))) return candidate;
   }
-  return Math.min(cap, requested ?? 4);
+  return cap;
 }
 
 export function toMusicXml(notes: readonly NoteEvent[], bars: number, options: MusicXmlOptions = {}): string {
