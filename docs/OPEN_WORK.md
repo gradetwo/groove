@@ -4421,3 +4421,45 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
    ⇒ 那正是 **§26「定位后前几拍缺音」** ✗ ⇒ **这条必须实测**（定位到第 N 小节 ⇒ 第 N 小节第一个音就响 ✓），**不许只靠读代码** ✓
    **判据**：① 定位后**从该步起播**（不再从 1.1 ✓）② **定位后第一拍有声**（§26 ✓）③ 反向五个数逐字 ✓；**去掉 seek 的写入 ⇒ 必须红** ✓
 ```
+
+## 一百三十二、✅ **Logic 真工程：两处更正 ＋ 两件真缺陷已修（`73511ef`，CI success ✓）**（2026-10-03 21:1x–21:4x ✓）
+
+### 132.1 ⚠️ **更正 §123 两处（我错、对方对 ✓）**
+
+```
+✗ **更正一**：我写"**8/8 `tempo` 为 null**" ✗ —— **是我的探针读了不存在的字段名** ✓
+   接口逐字：`LogicProjectImport { parts; problems; tempoBpm?: number; timeSignature?: string }`（`logicToArrangement.ts:51-63` ✓）
+   我读的是 `out.tempo ?? out.bpm` ✗ ⇒ 改读 **`tempoBpm`** 后 **8/8 都有值** ✓：
+   Colors 120｜MONTERO 179｜MONTERO-SA 179｜Manzana 146｜Manzana-SA 146｜Grid 120｜**Swing! 115**｜ocean eyes 145 ✓
+   ⇒ **`readTempo` 从未丢值** ✓ ⇒ 对方**一行未改** ✓（真正被当整数读错的是 **MetaData 那份 binary plist 的 real** ✓，见 132.2 ✓）
+✗ **更正二**：我写"**4/8 解析出 0 声部（疑似读取器缺口）**" ✗ —— 分清后是 **3 份真音频 ＋ 2 类真缺陷** ✓：
+   · **合法：只有音频** ✓ —— `Spatial Audio Demo Grid` 的 240 条记录里**第一条 payload dword 是 `0x90` 的：0 条** ✓（纯音频演示 ✓）；
+     `MONTERO` 两份只有 **1 条序列 / 7 个音符** ✓（6.3 MB 里 7 个音＝真实但极少 ✓）
+   · ✗✗ **真缺陷**：**`Swing!` 与两个 `Manzana`** ✓ —— 它们的音符序列用 **`90 40 00 00` 标记 ＋ 48 字节事件** ✓，
+     而**规范与官方 writer 只写 `90 00 00 00`／32 字节** ✓ ⇒ 读取器 `isNoteSequence` **整 dword 相等** ⇒ **整条序列被跳过** ✗
+✅ 另：**`meter` 8/8 是"真值"不是默认** ✓（签名头逐字 `... 00 00 02 04 00 00 ...` ⇒ 2²=4 ✓；自造 3/4、7/8 最小工程分别报 3/4、7/8 ✓ —— 对方如实标成**守卫**、不冒充修复 ✓）
+```
+
+### 132.2 ✅ **修了什么（唯一产品文件 `src/data/logicToArrangement.ts` ✓，禁改区一处未碰 ✓）**
+
+```
+① **48 字节音符形态**：32 字节路径**原封不动** ✓（实测放宽会把鼓的 48→117 并打红 `logicFixtures` ✗ ⇒ 对方自己抓到的回归 ✓）；
+   48 字节形态**只在终止符刚好收满整数个 48B 事件且 ≥2 个事件时**才接管 ✓（单事件下限不是装饰：短 payload 会碰巧满足 ✓ —— 实测过 ✓）
+② ⭐ **binary plist 的 `real` 被当整数读** ✗：`BeatsPerMinute = 120.0` 读成 **1123024896**（＝120.0 的 float32 位型 ✓）
+   ⇒ 4 字节按 `getFloat32`、8 字节按 `getFloat64` ✓ —— ⭐ 这正是那条 **8/8 都出现的 problems** 的真凶 ✓
+③ 那条 problems 曾在**一个音符都没读到**时也说 "the notes are correct" ✗ ⇒ 改成**如实说该形态不可读** ✓（只动措辞 ✓）
+⭐ **前后实测（真工程只作测量 ✓，同脚本同时点 ✓）**：
+   `Swing!` **0/0 → 5/581** ✓✓｜`Manzana`×2 **5/44 → 6/89** ✓｜`MONTERO`×2 **0/0 → 1/7** ✓｜`Grid` 0/0→0/0 ✓
+   ｜⭐ **`Colors` 111/1557 与 `ocean eyes` 31/1240 一字不动** ✓✓（无回归 ✓）｜`tempoBpm` 8/8 有值 ✓
+   恢复出的音符自检：pitch 全在 1–127 ✓、**零长度 0 条** ✓、无负起点 ✓、velocity 合理 ✓｜解析耗时 **0.6–3.1 秒/份** ✓（未变慢 ✓）
+✅ **判据**：自造 Buffer 夹具 ✓（**官方工程未进仓库／未当快照** ✓）；无修复实跑 **5 条红**（逐字 ✓）⇒ 有修复 **9/9 绿** ✓；
+   反向四文件 `git diff` = **0 行** ✓（`ownerProjectAcceptance`／`logicImport`／`logicFixtures`／`mcpLogicImport` ＋ `logic_project.mjs` ✓）
+   实跑：`ownerProjectAcceptance` 8 ✓、`legatoLoopCarry` 5 ✓、`logicImport` 18 ✓、`logicFixtures` **10（21 个真实 `.logicx` 全跑 ✓）**、`mcpLogicImport` 8 ✓ ⇒ 5 files／**53 passed** ✓
+✅ **门禁**：`tsc` 0 ✓｜`eslint .` 0 ✓｜`docs:check` 0 ✓｜`check:docs:refs` 0 ✓｜**`check:mcp` 123 checks 0 failed** ✓
+   全套：**4927 passed / 2 failed** —— 两红**均与本改动无关、改前就红** ✓（对方用**原读取器**复现同样红 ✓）
+✅ **推送与判决**：`9636432..73511ef  HEAD -> dev` ✓（**未强推** ✓）｜CI run **37127500770 = success** ✓、失败 job **空** ✓
+   ｜`git merge-base --is-ancestor 73511ef origin/dev` ⇒ **YES** ✓
+⚠️ **对方如实标的未核实** ✓：48 字节形态**规范里没有** ✗（按实测自洽性采纳、**不声称按规范验证** ✓）；
+   `Swing!` 其余序列是 **80/64 步距** ✗ ⇒ **不强行解释、没夸大"读全了"** ✓；`unreadableNoteForms` 分支在本语料**计数 0**（防御性 ✓）
+⚠️ **未改（先量后改 ✓，不顺手放宽）**：`isTempoSequence`/`isMeterSequence` 仍**整 dword 相等** ✓（真工程里恰好都是 `60…`/`30…` ⇒ 未暴露缺口 ✓）
+```
