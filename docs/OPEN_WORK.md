@@ -4762,3 +4762,24 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
    工作台 MIDI 项**无 `data-testid`** ✓（外观事实 ✓）；**文档口径**只提 WAV/MIDI/Ableton、未提 MusicXML ✓（**它先问、未擅改** ✓）
 ✅ **纪律**：未改代码／未提交、`git status` **空**、3 个探针**已删**（0 残留 ✓）、语料未进工作树 ✓、未跑门禁 ✓、未动本台账 ✓、dev server 已停 ✓
 ```
+
+## 一百四十二、✅✅ **密度契约验收：`2b6e512` 的 E2E 真判决 = success**（2026-10-03 23:0x ✓）—— 发布阻塞彻底闭环
+
+```
+✅ **真判决**：dispatch run **`37129489502`**（event=workflow_dispatch，sha `2b6e512` ✓）⇒ **`conclusion=success`** ✓
+   ⭐ **`E2E Desktop browsers (Playwright)` = `success`** ✓，其中 step **`Studio DOM Probes (toolbar density, grid gutter, arrangement)` = `success`** ✓
+   CI 上该探针读数逐字：`   below-Tier-1 by default : 1 element(s) — declared exceptions on screen: arrangement` ✓（无 ❌ ✓）
+   push run `37129454653` 的 `Typecheck, Lint, Unit Tests & Build` 也是 success ✓（`E2E` 按 push 策略 skipped ✓ ⇒ 所以必须 dispatch ✓）
+⭐⭐ **并且补上了一块"未知"** ✓：那次**失败**的 run 在 `probe:toolbar` 处就 `exit 1` 中止（`bash -e` ✓）⇒
+   **grid-gutter／arrangement×2／arrangement-audio 三条根本没跑过** ✗（不是"绿" ✓）——
+   这次 dispatch 里它们**全跑了且全绿** ✓：grid-gutter 出数 ✓；`Arrangement view [desktop 1440x900]: 2 regions, 48 px bars,
+   worst bar misalignment 1 px, smallest finger target 44 px` ✓；`[iPad Pro 11 landscape (touch)]` ✓；`Arrangement audio: 4 bars rendered` ✓
+✅ **修法与反面都过硬** ✓：`scripts/measure_toolbar_density.mjs`（**唯一改动文件** ✓）不再**复述**口径 ✗，
+   改为 **`await import("src/components/sequencer/toolbarTiers.ts")` 复用 `isControlVisible`** ✓（导入失败**显式 exit 1** ✓，
+   即"看不见判据不许报绿" ✓）；例外**字面量钉死** `DEFAULT_VISIBILITY_EXCEPTIONS = ["arrangement"]` ✓，并新增**表级钉死检查** ✓
+   反面两条实跑都红 ✓：① 去掉 `arrangement.showByDefault` ⇒ 陈旧 dist 报泄漏 ✓、重 build 后报"表声明 `[]` 但本探针钉 `[arrangement]`" ✓；
+   ② 再加第二个（`tap-tempo`／`meter`）⇒ 报"表声明 `[arrangement, tap-tempo]` 但探针钉 `[arrangement]`" ✓
+   ⇒ ⭐ **"能红"被证明，且"悄悄放宽"不可能** ✓（要放宽必须**改那一行并写日期与理由** ✓）
+⚠️ 它如实标的遗留：`src/test/toolbarTiers.test.tsx:476–481` 的**注释措辞**仍是旧口径 ✗（断言不受影响 ✓、CI 单测已过 ✓）⇒ 小尾巴，随手改 ✓
+⚠️ 它**没有**为当前 tip 单独再取一次 E2E（后续三笔是 **docs-only** ✓，push 策略下 E2E 必 skipped ✓）⇒ 如实说明 ✓
+```
