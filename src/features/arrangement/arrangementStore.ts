@@ -8,7 +8,7 @@
  *
  * - **the answer the studio's boot restore needs** (`isStudioEditor`), because "is this my record?" is a question
  *   about the edit surface;
- * - **how long a save may lag an edit** (`AUTOSAVE_DEBOUNCE_MS`) and the reason there is a lag at all;
+ * - **how soon a save follows an edit** (there is no fixed delay any more, and the measurement that removed it);
  * - **the rule that a name is written even when the arrangement has not changed** — otherwise a rename would only
  *   reach storage the next time a note moved.
  *
@@ -19,11 +19,19 @@
  * is the export. So the choice made here is: **the project is named up front, and then saved automatically, including
  * while it is new.** What is deliberately copied from the industry is the naming, not the manual save.
  *
- * ⭐ **Why a debounce rather than a write per keystroke.** The edits that arrive fastest are the ones that matter
- * least: dragging a note across the piano roll produces a `moveTrackNote` per pointer move. Writing each one would put
- * a transaction between the pointer and the paint for no gain, because the *content* is what has to survive, and the
- * content is the same at the end of the drag. `AUTOSAVE_DEBOUNCE_MS` is short enough that a person cannot finish an
- * action and refresh faster than it, and `pagehide` flushes whatever is still pending.
+ * ⭐ **Why there is no fixed delay between an edit and its write.** The first version of this hook waited
+ * `AUTOSAVE_DEBOUNCE_MS = 600` and relied on `pagehide` to flush whatever was still pending. A real browser measured
+ * that claim **false**: `pagehide` and `visibilitychange` both fired and the flush was called, and **no IndexedDB
+ * `put` was ever issued** — the flush had to `await openProjectsDb()` (two asynchronous round trips), and a dying
+ * document never gets another task. The tempo typed 100 ms before the reload was on neither the screen nor the disk
+ * afterwards. Caching the connection and starting the transaction in the caller's own task made the `put` appear, and
+ * the transaction still aborted, because Chromium tears in-flight IndexedDB transactions down with the document. The
+ * only position that survives is therefore **the write is done before the page can die**, not started as it does.
+ *
+ * What that costs is bounded rather than scheduled: one write is in flight at a time, and a change arriving while one
+ * is in flight replaces the waiting slot instead of queueing another. A drag writes at the speed of IndexedDB commits
+ * and its intermediate positions coalesce — which is what the debounce was for — but a single edit is durable as soon
+ * as it is made, with no window left for a refresh to outrun.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ArrangementV2 } from "../../types/arrangementV2";
@@ -38,12 +46,6 @@ import {
   setSavedArrangementProject,
 } from "../sequencer/projectDb";
 import type { ArrangementProjectRecord } from "../sequencer/projectDb";
-
-/**
- * How long an edit may sit unwritten. **Short, and it is not a save interval**: it exists to collapse the burst of
- * changes one gesture makes, not to schedule saves.
- */
-export const AUTOSAVE_DEBOUNCE_MS = 600;
 
 /**
  * ⭐ **The studio must never restore an arrangement into its own surface.**
@@ -135,20 +137,20 @@ export interface UseArrangementV2ProjectResult {
   /**
    * ⭐ **The chooser's Create**: a project exists as soon as it has a name.
    *
-   * It writes immediately rather than on the debounce, because there is nothing to wait for — a person who creates a
-   * project and closes the tab has still created it — and because this is the one moment the *name* is decided.
+   * It writes immediately, because there is nothing to wait for — a person who creates a project and closes the tab
+   * has still created it — and because this is the one moment the *name* is decided.
    */
   create: (name: string, arrangement: ArrangementV2) => void;
   /**
    * ⭐ **What the arrangement view calls when the arrangement changes**, including its first render.
    *
-   * The write is debounced, and there is no separate "save" verb on purpose: a verb would have to be called from
-   * somewhere, and "somewhere" is what gets forgotten. One report per change cannot be skipped by a surface that
-   * forgot to call it.
+   * The write starts as the report arrives — there is no delay left to outrun — and there is no separate "save" verb
+   * on purpose: a verb would have to be called from somewhere, and "somewhere" is what gets forgotten. One report per
+   * change cannot be skipped by a surface that forgot to call it.
    */
   report: (arrangement: ArrangementV2) => void;
   /**
-   * ⭐ **A rename is a save even though no note moved**, and it is written immediately rather than on the debounce: the
+   * ⭐ **A rename is a save even though no note moved**, and it goes through the same immediate write as an edit: the
    * name is what the top bar is showing, and a rename whose write is cancelled by a refresh is the same defect as a
    * name that was never written at all.
    */
@@ -198,13 +200,16 @@ export function useArrangementV2Project(options: UseArrangementV2ProjectOptions 
   /**
    * ⭐ **The project also lives in a ref, and the writes read the ref.**
    *
-   * A debounced write reads its arguments when it *fires*, not when it was scheduled. If it read `project` from the
-   * closure it would write what the project was when the note moved — the same arrangement, but possibly the name from
-   * before a rename, which is a quieter version of the defect this whole change is about. The ref is updated
-   * synchronously by every path that changes the project.
+   * A write that is waiting behind another one reads its arguments when that one settles, not when the change was
+   * made. If it read `project` from the closure it would write what the project was when the note moved — the same
+   * arrangement, but possibly the name from before a rename, which is a quieter version of the defect this whole
+   * change is about. The ref is updated synchronously by every path that changes the project.
    */
   const projectRef = useRef<ArrangementProjectState | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** True while a write is on its way to storage; a change arriving then replaces `queuedWriteRef` instead. */
+  const writeInFlightRef = useRef(false);
+  /** The one change waiting for the in-flight write to settle — the newest, so the intermediate ones coalesce. */
+  const queuedWriteRef = useRef<ArrangementProjectState | null>(null);
 
   projectRef.current = project;
 
@@ -243,32 +248,58 @@ export function useArrangementV2Project(options: UseArrangementV2ProjectOptions 
   }, [projectId, repoint]);
 
   /**
-   * ⭐ **One write, and everything that wants the arrangement stored goes through it.** The debounce, `pagehide`, the
-   * unmount and a rename would otherwise be four near-copies of "write the current arrangement", and the copies would
+   * ⭐ **One write, and everything that wants the arrangement stored goes through it.** `pagehide`, the unmount, a
+   * rename and every edit would otherwise be four near-copies of "write the current arrangement", and the copies would
    * disagree the first time one of them was corrected.
+   *
+   * ⭐ **It starts now, and there is no timer.** The delay this function used to schedule is the defect this file's
+   * header records: a page can be gone before a timer fires, and an IndexedDB transaction merely *started* as the
+   * document dies is aborted with it (measured — the earlier attempt issued the `put` and still lost it). What keeps
+   * an immediate write from becoming one transaction per pointer move is the one-slot queue: while a write is in
+   * flight, a newer change replaces the waiting slot rather than adding to it, and the slot is written when the
+   * in-flight write settles. A drag therefore coalesces exactly as the debounce made it, but the newest value is never
+   * *scheduled* — it is only ever waiting on a write that has already begun.
    *
    * The pointer (`{id, name}` in localStorage) is written by `saveArrangementProject` itself, synchronously, which is
    * what lets the top bar name the project on the frame it is created rather than one transaction later.
    */
   const write = useCallback((target: ArrangementProjectState, fresh = false) => {
-    if (timerRef.current !== null) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    void saveArrangementProject({
-      ...(target.id === "" ? {} : { id: target.id }),
-      ...(fresh ? { fresh: true } : {}),
-      name: target.name,
-      arrangement: target.arrangement,
-    })
-      .then((record) => {
-        // The id the store gave it, so the next save updates this project rather than starting another one.
-        setProject((current) => (current === null || current.id === record.id ? current : { ...current, id: record.id }));
+    const start = (state: ArrangementProjectState, isFresh: boolean) => {
+      writeInFlightRef.current = true;
+      void saveArrangementProject({
+        ...(state.id === "" ? {} : { id: state.id }),
+        ...(isFresh ? { fresh: true } : {}),
+        name: state.name,
+        arrangement: state.arrangement,
       })
-      .catch((err: unknown) => {
-        // Reported rather than swallowed: a save that did not happen must not look like one that did.
-        console.warn("[arrangementStore] The arrangement could not be saved:", err);
-      });
+        .then((record) => {
+          // The id the store gave it, so the next save updates this project rather than starting another one.
+          setProject((current) => (current === null || current.id === record.id ? current : { ...current, id: record.id }));
+        })
+        .catch((err: unknown) => {
+          // Reported rather than swallowed: a save that did not happen must not look like one that did.
+          console.warn("[arrangementStore] The arrangement could not be saved:", err);
+        })
+        .finally(() => {
+          writeInFlightRef.current = false;
+          const queued = queuedWriteRef.current;
+          queuedWriteRef.current = null;
+          /**
+           * ⭐ **A queued write reads the project as it is now, not as it was when the change was made.** A write that
+           * closed over the value it was queued with can store the older arrangement when two changes arrive inside
+           * one commit — the same class of defect the write queue in `projectDb` records, and the one a real browser
+           * run measured as "two added tracks on screen, one track in storage". Reading the newest value here makes
+           * the last write the newest by construction.
+           */
+          const latest = projectRef.current;
+          if (queued !== null && latest !== null) start(latest, false);
+        });
+    };
+    if (writeInFlightRef.current) {
+      queuedWriteRef.current = target;
+      return;
+    }
+    start(target, fresh);
   }, []);
 
   const writeRef = useRef(write);
@@ -276,14 +307,16 @@ export function useArrangementV2Project(options: UseArrangementV2ProjectOptions 
 
   useEffect(() => {
     /**
-     * ⭐ A page being hidden is the last moment a write can be started at all; without this, a refresh inside the
-     * debounce window would lose the gesture that had just been made. Leaving the route is the same page and the same
-     * cheap write, so it flushes too.
+     * ⭐ **The last chance to hand over a change that has not been written yet — a net, not the mechanism.**
      *
-     * ⚠️ **Both events, because they are not the same event.** `pagehide` is what a navigation fires; `visibilitychange`
-     * → hidden is what a tab switch, a phone lock or a backgrounded browser fires. A listener for one of them is a
-     * write that happens on the desktop and not on the device, and the measured case that found this was a real reload
-     * in a headless browser, where `pagehide` alone did not fire.
+     * The write-through above puts every edit on its way at the moment it is made. This exists for the change still
+     * waiting behind an in-flight write when the page goes away, and for the surface that unmounts without the page
+     * (leaving the route), where the same cheap write is also correct.
+     *
+     * ⚠️ **It cannot be relied on, and the measurement says so.** `pagehide` fires and the flush runs, and a write
+     * issued only here is aborted with the document if it had not been made earlier — which is exactly why the write
+     * is no longer scheduled. Both events are listened for because they are not the same event: `pagehide` is a
+     * navigation, and `visibilitychange` → hidden is a tab switch, a phone lock or a backgrounded browser.
      */
     const flush = () => {
       const current = projectRef.current;
@@ -330,22 +363,12 @@ export function useArrangementV2Project(options: UseArrangementV2ProjectOptions 
     const next: ArrangementProjectState = { ...current, arrangement };
     projectRef.current = next;
     setProject(next);
-    if (timerRef.current !== null) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      timerRef.current = null;
-      /**
-       * ⭐ **The write reads the project as it is when the timer fires, not as it was when the report was made.**
-       *
-       * A debounce that closes over the value it was scheduled with can, when two reports arrive within the window and
-       * the timers interleave with a cancel, end up storing the older arrangement — the same class of defect the write
-       * queue in `projectDb` records, and the one a real browser run measured as "two added tracks on screen, one track
-       * in storage". Reading the newest value here makes the last write the newest by construction, whichever timer
-       * happens to run.
-       */
-      const latest = projectRef.current;
-      if (latest === null) return;
-      writeRef.current(latest);
-    }, AUTOSAVE_DEBOUNCE_MS);
+    /**
+     * ⭐ **The write is asked for in this task, not scheduled for a later one.** `write` reads the newest project when
+     * it starts and holds a burst to one write in flight, so "no timer" costs a coalesced write rather than one
+     * transaction per move — and there is no window left in which a refresh can beat the write.
+     */
+    writeRef.current(next);
   }, []);
 
   const rename = useCallback(

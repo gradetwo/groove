@@ -217,7 +217,64 @@ export function calculateSnapshotSummary(patterns: { A: SequencerPattern; B: Seq
 }
 
 /**
- * Opens or upgrades the IndexedDB database instance
+ * ⭐ **The open connection is kept, and that is a correctness fix rather than a cache.**
+ *
+ * `saveArrangementProject` used to open the database for **every** write, and that open is two asynchronous browser
+ * round trips (`indexedDB.databases()` → `indexedDB.open()`). That is nearly invisible while the page is alive — the
+ * write is merely a task late — but a document that is being unloaded never gets another task. A `pagehide` flush
+ * therefore *started* and never *issued*: a real browser run measured `pagehide` and `visibilitychange` both firing,
+ * two `indexedDB.open()` calls leaving the dying document, and **zero `ObjectStore.put` calls** — the tempo typed a
+ * moment earlier was gone after the reload, and nothing on screen or in storage had it.
+ *
+ * Keeping the handle removes the open from the write path entirely, and `saveArrangementProject` uses the kept handle
+ * to start its transaction **in the caller's own task**. The rest of the measurement is in that function.
+ *
+ * ⚠️ **Keyed by the `IDBFactory` instance, not filled once.** A test (or any code that swaps `indexedDB`) installs a
+ * fresh factory between cases, and a handle from the previous factory is the wrong database entirely. A handle that
+ * was closed — by `close()`, or by the `versionchange` handshake below — is refused and reopened rather than handed
+ * out, because a closed connection throws on the first `transaction()`.
+ */
+let cachedDbFactory: IDBFactory | null = null;
+/** The open in flight, so two callers in the same task share one `indexedDB.open` rather than racing two. */
+let cachedDbOpening: Promise<IDBDatabase> | null = null;
+/** The **resolved** connection, kept apart from the promise so a caller can have it synchronously. */
+let cachedDbOpen: IDBDatabase | null = null;
+
+/** The factory this environment is using — `window.indexedDB` in a browser, the global in a test host. */
+function currentIndexedDb(): IDBFactory | null {
+  if (typeof window !== "undefined") return window.indexedDB ?? null;
+  return typeof indexedDB !== "undefined" ? indexedDB : null;
+}
+
+/** A closed connection answers nothing: `objectStoreNames` throws once it is closed, which is how that is asked. */
+function dbIsUsable(db: IDBDatabase): boolean {
+  try {
+    void db.objectStoreNames.length;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function forgetCachedDb(): void {
+  cachedDbFactory = null;
+  cachedDbOpening = null;
+  cachedDbOpen = null;
+}
+
+/**
+ * ⭐ **The connection right now, or `null`** — the read `saveArrangementProject` uses to start a write in the same
+ * task it was called in. It deliberately never opens anything, because an open is exactly what a dying document
+ * cannot wait for.
+ */
+function peekProjectsDb(): IDBDatabase | null {
+  const idb = currentIndexedDb();
+  if (idb === null || cachedDbFactory !== idb) return null;
+  return cachedDbOpen !== null && dbIsUsable(cachedDbOpen) ? cachedDbOpen : null;
+}
+
+/**
+ * Opens or upgrades the IndexedDB database instance, **once per factory**.
  *
  * ⭐ **The version is decided by what is already there, so a v1 database is upgraded rather than refused.** A browser
  * that last opened this app before the arrangement store existed has `groove_projects_db` at version 1 and no such
@@ -227,16 +284,35 @@ export function calculateSnapshotSummary(patterns: { A: SequencerPattern; B: Seq
  * a browser with no database at all must be given anyway.
  */
 export function openProjectsDb(): Promise<IDBDatabase> {
+  const idb = currentIndexedDb();
+  if (idb === null) {
+    return Promise.reject(new Error("IndexedDB is not supported in this environment"));
+  }
+
+  if (cachedDbFactory === idb) {
+    if (cachedDbOpen !== null && dbIsUsable(cachedDbOpen)) return Promise.resolve(cachedDbOpen);
+    if (cachedDbOpening !== null) return cachedDbOpening;
+  } else {
+    forgetCachedDb();
+  }
+
+  cachedDbFactory = idb;
+  const opening = openProjectsDbOnce(idb);
+  cachedDbOpening = opening;
+  opening.then(
+    (db) => {
+      if (cachedDbOpening === opening) cachedDbOpen = db;
+    },
+    () => {
+      // A refused open must not be remembered as this factory's answer for the page's life.
+      if (cachedDbOpening === opening) forgetCachedDb();
+    }
+  );
+  return opening;
+}
+
+function openProjectsDbOnce(idb: IDBFactory): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    if (typeof window === "undefined" && typeof indexedDB === "undefined") {
-      return reject(new Error("IndexedDB is not supported in this environment"));
-    }
-
-    const idb = typeof window !== "undefined" ? window.indexedDB : indexedDB;
-    if (!idb) {
-      return reject(new Error("window.indexedDB is unavailable"));
-    }
-
     const open = (version: number) => {
       const request = idb.open(GROOVE_DB_NAME, version);
 
@@ -267,6 +343,12 @@ export function openProjectsDb(): Promise<IDBDatabase> {
         db.onversionchange = () => {
           db.close();
           storageStatus.lastError = "Database closed to allow an upgrade in another tab";
+          // ⭐ The kept handle is now a closed one. Forgetting it makes the next call open a fresh connection rather
+          // than hand out a connection that can no longer run a transaction.
+          if (cachedDbOpen === db) forgetCachedDb();
+        };
+        db.onclose = () => {
+          if (cachedDbOpen === db) forgetCachedDb();
         };
         resolve(db);
       };
@@ -1143,37 +1225,53 @@ export async function saveArrangementProject(input: {
   }
 
   /**
-   * ⭐ **Writes are queued, so the last call to this function is the last write.**
+   * ⭐ **An already-open connection means the transaction starts here, in the caller's task — the fix for the loss
+   * `openProjectsDb`'s note records.**
    *
-   * This is not tidiness; it is a measured defect. `saveArrangementProject` awaits `openProjectsDb()` before it can
-   * start its transaction, and on a fresh profile that open *creates the database* — a slow operation that everything
-   * else queues behind. Two calls arriving close together (the chooser's Create and the first debounced report, or a
-   * report and a `pagehide` flush) can therefore reach `store.put` in the **opposite order to the one they were made
-   * in**, and the older arrangement lands last: a real browser run added two tracks, waited for them to be stored,
-   * looked again and found the one-track project back.
+   * `pagehide` is the last moment a write can be *started*; the document is torn down before it gets another task.
+   * Starting the transaction through `await openProjectsDb()` put two microtask hops (and, before the handle was kept,
+   * two browser round trips) between the event and `store.put`, and a real browser measured the round trips winning:
+   * the event fired, two `open()` calls left, **no put was ever issued**, and the edit was gone. Calling `putRecord`
+   * with the kept handle runs before this function's first `await`, so the request is queued while the pagehide
+   * handler is still on the stack.
    *
-   * A promise chain makes "later call wins" true by construction rather than by hoping the two paths resolve in order.
-   * The pointer above is still written synchronously, so the top bar and the route are never waiting on this queue.
+   * ⭐ **The queue below is still needed, and now for exactly one case: no connection yet.** When a handle is open,
+   * two calls create their transactions in call order, and IndexedDB serialises read-write transactions on one store
+   * in creation order — so "later call wins" is IndexedDB's own guarantee and needs no chain. When there is no handle
+   * the open *is* the nondeterminism the chain was added for (see the measurement below), so the write is queued
+   * behind it instead.
    */
-  const write = arrangementWriteChain.then(async () => {
-    try {
-      const db = await openProjectsDb();
-      await runStoreTx(db, GROOVE_ARRANGEMENT_STORE_NAME, "readwrite", (store) => store.put(record));
-    } catch (err) {
-      if (!isIndexedDbUnavailable(err)) {
-        // Quota exceeded / aborted transaction: the write did NOT happen, and saying so is the whole point of F-07.
-        markDegraded(err);
-        throw err instanceof Error ? err : new Error(String(err));
-      }
-      markDegraded(err);
-    }
-  });
+  const putRecord = (db: IDBDatabase) =>
+    runStoreTx(db, GROOVE_ARRANGEMENT_STORE_NAME, "readwrite", (store) => store.put(record));
+  const alreadyOpen = peekProjectsDb();
+  const write =
+    alreadyOpen !== null
+      ? putRecord(alreadyOpen)
+      : /**
+         * ⭐ **Writes are queued, so the last call to this function is the last write.**
+         *
+         * This is not tidiness; it is a measured defect. On a fresh profile the first `openProjectsDb()` *creates the
+         * database* — a slow operation that everything else queues behind. Two calls arriving close together (the
+         * chooser's Create and the first debounced report, or a report and a `pagehide` flush) then reach `store.put`
+         * in the **opposite order to the one they were made in**, and the older arrangement lands last: a real browser
+         * run added two tracks, waited for them to be stored, looked again and found the one-track project back.
+         */
+        arrangementWriteChain.then(() => openProjectsDb().then(putRecord));
   // The chain must not carry a failure forward, or one refused write would block every later one for the page's life.
   arrangementWriteChain = write.then(
     () => undefined,
     () => undefined
   );
-  await write;
+  try {
+    await write;
+  } catch (err) {
+    if (!isIndexedDbUnavailable(err)) {
+      // Quota exceeded / aborted transaction: the write did NOT happen, and saying so is the whole point of F-07.
+      markDegraded(err);
+      throw err instanceof Error ? err : new Error(String(err));
+    }
+    markDegraded(err);
+  }
 
   // The mirror is written either way, so a restricted sandbox still has the arrangement for this page's lifetime.
   arrangementMemoryStore.set(record.id, record);
