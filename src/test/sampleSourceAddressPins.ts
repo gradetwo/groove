@@ -1,5 +1,5 @@
 /**
- * ⭐ **The 32 libraries' addresses, pinned — measured, not written by hand from memory.**
+ * ⭐ **The 33 libraries' addresses, pinned — measured, not written by hand from memory.**
  *
  * Every value here was produced by running the repository's own `sourceSfzUrl`／`mirrorSfzUrl` over `public/samples/manifest.json`, and the criterion next door re-derives the same values on
  * every test run. A hand-copied table would be a second implementation; this is a recording of the first one, and the reason it is a separate file is that the test file should read as the
@@ -75,4 +75,5 @@ export const SOURCE_ADDRESS_PINS: Readonly<Record<string, SourceAddressPin>> = {
   ganjo: { programs: 1, source: "https://raw.githubusercontent.com/sfzinstruments/ganjo/ccff5cd5cd3b513873a48994c07724d9d3c39e1c/ganjo.sfz", mirror: "https://r2mirror.groove.wangda.today/ganjo/ganjo.sfz" },
   "ixox-flute": { programs: 1, source: "https://raw.githubusercontent.com/sfzinstruments/Ixox.Flute/0cc54468bb0d2d9b32921958585caad65ba8df21/Ixox Flute.sfz", mirror: "https://r2mirror.groove.wangda.today/ixox-flute/Ixox Flute.sfz" },
   "karoryfer-cowsynth": { programs: 5, source: "https://raw.githubusercontent.com/sfzinstruments/karoryfer.cowsynth/5a5b5afc2dabbe54cf9d75ab64711ce01862b42c/cowsynth_baggy.sfz", mirror: "https://r2mirror.groove.wangda.today/karoryfer-cowsynth/cowsynth_baggy.sfz" },
+  "karoryfer-pastabass": { programs: 1, source: "https://raw.githubusercontent.com/sfzinstruments/karoryfer.pastabass/90135cd026db5d4fa0fe538240b4203f085f5244/linguine.sfz", mirror: "https://r2mirror.groove.wangda.today/karoryfer-pastabass/linguine.sfz" },
 };

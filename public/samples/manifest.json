@@ -129858,6 +129858,1281 @@
       "enumeratedAt": "2026-10-03",
       "durationSeconds": 15.833333,
       "mirroredAt": "2026-10-02"
+    },
+    {
+      "id": "karoryfer-pastabass",
+      "name": "Karoryfer Pastabass (linguine)",
+      "licence": "CC0",
+      "sourceUrl": "https://github.com/sfzinstruments/karoryfer.pastabass",
+      "prefix": "karoryfer-pastabass",
+      "repo": "sfzinstruments/karoryfer.pastabass",
+      "pin": "90135cd026db5d4fa0fe538240b4203f085f5244",
+      "paths": [
+        "linguine.sfz",
+        "samples/linguine",
+        "LICENSE",
+        "readme.txt"
+      ],
+      "category": "Bass",
+      "needs": [
+        "amp_velcurve_47",
+        "amp_velcurve_95",
+        "ampeg_release",
+        "hikey",
+        "hirand",
+        "hivel",
+        "lokey",
+        "lorand",
+        "lovel",
+        "pitch_keycenter",
+        "sample",
+        "tune"
+      ],
+      "files": [
+        {
+          "path": "LICENSE",
+          "bytes": 7048,
+          "sha256": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499"
+        },
+        {
+          "path": "linguine.sfz",
+          "bytes": 20253,
+          "sha256": "1faa0913f2b8eae2ebbb73114681abf83bfc193837615730bf50fb9d0b0a55cc"
+        },
+        {
+          "path": "readme.txt",
+          "bytes": 889,
+          "sha256": "1b5376e550b60f2e03c4d1d7c4b5eeeb44ce5d3199f0055dbab71f3a1cf6f04c"
+        },
+        {
+          "path": "samples/linguine/bb2_vl1_rr1.wav",
+          "bytes": 668360,
+          "sha256": "c853bb1a1659f904b8b29e6a0ab9f8ed95ef8bac6ffdef4db0e6728a2e7ae69e",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/bb2_vl1_rr2.wav",
+          "bytes": 668360,
+          "sha256": "afbcb845405b15e9c90103a04b6e23dd86ba23c1e25d28bd0c37c0708f66c392",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/bb2_vl1_rr3.wav",
+          "bytes": 668360,
+          "sha256": "d0399882691779f1c3a54480837d533a71434cb139486db19cfe769f3adff90d",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/bb2_vl1_rr4.wav",
+          "bytes": 668360,
+          "sha256": "1b6098b1cdc230eb173fd8b6743f3fd62d2754d99281d91d34bc9d2de4a622cf",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/bb2_vl2_rr1.wav",
+          "bytes": 668360,
+          "sha256": "bfdbb8c8ecf4b004f674d5dcf356069f84b17dbe8dd9a6c591099bc80b76935e",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/bb2_vl2_rr2.wav",
+          "bytes": 668360,
+          "sha256": "1fa32d24ea476208f8af46f97638ba31a4c1df49f4123300647a1053df94657c",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/bb2_vl2_rr3.wav",
+          "bytes": 668360,
+          "sha256": "d801d5f06d95e84c90f4078b8321108bfc896e0e36e2f25bf023fbd36f26849a",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/bb2_vl2_rr4.wav",
+          "bytes": 668360,
+          "sha256": "56a1d7e018629f96a57a15b54813da4a0e600247b04188c155621960b4eba007",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/bb2_vl3_rr1.wav",
+          "bytes": 668360,
+          "sha256": "cdd401a4e5e9f02f7a04e1405b784c4bee5d68868e4ed396acb045cdd48a1e9e",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/bb2_vl3_rr2.wav",
+          "bytes": 668360,
+          "sha256": "4d7f3e5e36dacfbda1870d9e4939d83d449e92e44f93615595c5d5f1e2bc094f",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/bb2_vl3_rr3.wav",
+          "bytes": 668360,
+          "sha256": "08edfb8679464308ff6f3cf9b28115e66a37f8eff32ae8ab5b6c3a4aa0b7abfa",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/bb2_vl3_rr4.wav",
+          "bytes": 668360,
+          "sha256": "03eae6ea6bf8ba357ac9d814a0da792b6da445d190cdf49f55c2e528ed4abaf9",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/bb3_vl1_rr1.wav",
+          "bytes": 502982,
+          "sha256": "1ad72c403f1c5071861c59bfe6d346bdc0c06b5bf94395e9613bd48124430493",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/bb3_vl1_rr2.wav",
+          "bytes": 502982,
+          "sha256": "90d15c25e2e88b0f345df5069c21e990c304b3297eed0f974635b6cb03b5c7a7",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/bb3_vl1_rr3.wav",
+          "bytes": 502982,
+          "sha256": "153162f757a27affb66c31a46bc12e022750045d6e8f65d82f6d563c50528bc0",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/bb3_vl1_rr4.wav",
+          "bytes": 502982,
+          "sha256": "328bd1f05b1e225ae3ba674b9cbc0b412edd2570ba5989a412848900d48fb340",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/bb3_vl2_rr1.wav",
+          "bytes": 502982,
+          "sha256": "cd994f8eefddc267e06423a25f335b909e16160c43c9648c3ee7ebefadff9824",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/bb3_vl2_rr2.wav",
+          "bytes": 502982,
+          "sha256": "24857166e48fd769a92d92bc9878c2bdd0e251f2a9d23951c640cfac61a45c91",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/bb3_vl2_rr3.wav",
+          "bytes": 502982,
+          "sha256": "5604f7a62a5ae2513b016fbe8bacf7322763c32dd56b911f69db665189957077",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/bb3_vl2_rr4.wav",
+          "bytes": 502982,
+          "sha256": "f4c41701254693bcb3d4b5e93b6c3bc9ec33b615130af21d7a3648809b399e80",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/bb3_vl3_rr1.wav",
+          "bytes": 502982,
+          "sha256": "a6925290e99452045ea2dbf60eb014fd907c3d5e60a90492cb763fc0589fab8d",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/bb3_vl3_rr2.wav",
+          "bytes": 502982,
+          "sha256": "6ac4689392ba7f9fe210a1653242d346d25360b6e105cde51c2a41f29fec38e5",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/bb3_vl3_rr3.wav",
+          "bytes": 502982,
+          "sha256": "f9015c2d1f1d8f5647017583ba4c2f86f9d48970c399865264d2de10226108c9",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/bb3_vl3_rr4.wav",
+          "bytes": 502982,
+          "sha256": "65e27e587b7db2618120d82d267c173186f8c85b7dbd59def28ea5b7260fba85",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/bb4_vl1_rr1.wav",
+          "bytes": 668360,
+          "sha256": "680b9934c4e7f62a2a5bf59a383ef037afed88ba0aa6d7f259e335dda7dd1bc7",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/bb4_vl1_rr2.wav",
+          "bytes": 668360,
+          "sha256": "861c43775e2de25c8e643197fd0f400e4cc1ef180ff5a8b080f4d5cd79e82bec",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/bb4_vl1_rr3.wav",
+          "bytes": 668360,
+          "sha256": "54739d7920ee6bdaa49888c50e077bb392c836f41297c784482c779a37a9cc4c",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/bb4_vl1_rr4.wav",
+          "bytes": 668360,
+          "sha256": "c084ae38ab2ccef84f909b4e45cf5c4ebd1964670381a434cf90f1610e779df8",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/bb4_vl2_rr1.wav",
+          "bytes": 668360,
+          "sha256": "b0fb3c9e98d5ca04cb0abb7d6d69292f30397695cf5fd9f31eea6bccc2424a15",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/bb4_vl2_rr2.wav",
+          "bytes": 668360,
+          "sha256": "86888caaa68d5bbdf424b7baf9fe3fb7ae1c7b8ae609472e071343b36fae7e50",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/bb4_vl2_rr3.wav",
+          "bytes": 668360,
+          "sha256": "b2fee3f39ee28b22f985a5ef059051f4bdf3cabf55659fd6d9ede6addaebc689",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/bb4_vl2_rr4.wav",
+          "bytes": 668360,
+          "sha256": "909c89cfdfd177b3dc911a4d252825b251c06d551bbe375102323e513d842784",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/bb4_vl3_rr1.wav",
+          "bytes": 668360,
+          "sha256": "6bbe49a6715d28be12fafc1e42a5c4d196c5d511334f135135e57e101a1ebe03",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/bb4_vl3_rr2.wav",
+          "bytes": 668360,
+          "sha256": "0c167f8e8d42f00c0aeb4dd3e6b6bbfff9a2df5f8412dba2d41c0703e7884a5c",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/bb4_vl3_rr3.wav",
+          "bytes": 668360,
+          "sha256": "e456156e2bd951a2b47e3079be640853478ae862394c255b89a515118f51c5ec",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/bb4_vl3_rr4.wav",
+          "bytes": 668360,
+          "sha256": "2e96e512e744f580286ee09f0c2605a0901786ca2d4a36b620ce11d21ea9d10e",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/bb5_vl1_rr1.wav",
+          "bytes": 502982,
+          "sha256": "70cd555c4cafb7d8206a4f1953963b87be771f28f42954d2e0240265f56a963c",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/bb5_vl1_rr2.wav",
+          "bytes": 502982,
+          "sha256": "e8d110b4266c8533d9069d3338a3083c245a188c9b99a63fc9d755696f91ff4c",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/bb5_vl1_rr3.wav",
+          "bytes": 502982,
+          "sha256": "c33eedf780aecdf0f58f00e573785ef71c5cc92935de4ad3ea64e6af549a9ca6",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/bb5_vl1_rr4.wav",
+          "bytes": 502982,
+          "sha256": "13954d7a93760431ad9337dc02fe587b94a2fc6b0d54272712d2f982a8592d98",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/bb5_vl2_rr1.wav",
+          "bytes": 502982,
+          "sha256": "03342a5a61dadbf8f8b87af05a2684b439715449a0f29b2a491fe1bf30bbfdc2",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/bb5_vl2_rr2.wav",
+          "bytes": 502982,
+          "sha256": "5c1f01357cae3c424dd229c4aed7a7b079b7f5f3a21c1d5d36652e4771c5918b",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/bb5_vl2_rr3.wav",
+          "bytes": 502982,
+          "sha256": "4299c7f7a2702f67827d0831f06f2c11f5730fb372f503f6c96186718175f491",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/bb5_vl2_rr4.wav",
+          "bytes": 502982,
+          "sha256": "c277315e39e8bdbc50c9f14d9fa7c54b7751162740cc6d719b81aa3010cef55d",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/bb5_vl3_rr1.wav",
+          "bytes": 502982,
+          "sha256": "ead770999790e67ff07cc0e638de7e6f551e57893b02f0eb982822e1d5fb3b70",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/bb5_vl3_rr2.wav",
+          "bytes": 502982,
+          "sha256": "2cac7b301eaec23f207cc9fef69e9e3a1f225e8586c413a8700ce0d6f6624c72",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/bb5_vl3_rr3.wav",
+          "bytes": 502982,
+          "sha256": "c6e8e67d1025a827dbbf46197f185e891d86a5fd90f5a46886b7f7f45a14105f",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/bb5_vl3_rr4.wav",
+          "bytes": 502982,
+          "sha256": "9fafe432f49f391ac75c480fefc3fdb926f4a6b37ba032ccf794448479872f55",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/db2_vl1_rr1.wav",
+          "bytes": 833736,
+          "sha256": "edee9d73f2f994fa1ca086a382ad1888af1c68e12d9eb3b2927df22a2b8697d7",
+          "durationSeconds": 9.375057
+        },
+        {
+          "path": "samples/linguine/db2_vl1_rr2.wav",
+          "bytes": 833736,
+          "sha256": "3d9111f5e962c4070b4e034d108a1cb845caa68a013ffea43922ab43a070bf57",
+          "durationSeconds": 9.375057
+        },
+        {
+          "path": "samples/linguine/db2_vl1_rr3.wav",
+          "bytes": 833736,
+          "sha256": "196dd7f69ca1c9762b914b885ca501a59aa5a800b7a0c089d9ae2d2a391e00fa",
+          "durationSeconds": 9.375057
+        },
+        {
+          "path": "samples/linguine/db2_vl1_rr4.wav",
+          "bytes": 833736,
+          "sha256": "91a3e333d210981a01dda2d6c70ea63eeb9e7bbfc0383cb0750b233c012c1f89",
+          "durationSeconds": 9.375057
+        },
+        {
+          "path": "samples/linguine/db2_vl2_rr1.wav",
+          "bytes": 833736,
+          "sha256": "6a42ee5c8d1a8472d25d77d09c0ba69bb5eb4ef535f0f7061aa7c1c8ab8a362a",
+          "durationSeconds": 9.375057
+        },
+        {
+          "path": "samples/linguine/db2_vl2_rr2.wav",
+          "bytes": 833736,
+          "sha256": "3dccc0bfb12ad70590f1ad48cd9ff982090410a730a6b71ac82cf18e4b3917e2",
+          "durationSeconds": 9.375057
+        },
+        {
+          "path": "samples/linguine/db2_vl2_rr3.wav",
+          "bytes": 833736,
+          "sha256": "ca0b436d9affadf081abb23df4ad9138da9afc35e44cec3b774653d68529aeeb",
+          "durationSeconds": 9.375057
+        },
+        {
+          "path": "samples/linguine/db2_vl2_rr4.wav",
+          "bytes": 833736,
+          "sha256": "a8f28ba272fbafc3f313cf455de9b9829997e881376119a60e5009f7f4d89966",
+          "durationSeconds": 9.375057
+        },
+        {
+          "path": "samples/linguine/db2_vl3_rr1.wav",
+          "bytes": 833736,
+          "sha256": "b68bc93f0ecdbd73ec78b2c93d22c8cc102d56c3b845997244cd36895bc5b091",
+          "durationSeconds": 9.375057
+        },
+        {
+          "path": "samples/linguine/db2_vl3_rr2.wav",
+          "bytes": 833736,
+          "sha256": "29e087a35ae047efae747b34c05fa2dd1cc53677a8659e36f17884341d25c32a",
+          "durationSeconds": 9.375057
+        },
+        {
+          "path": "samples/linguine/db2_vl3_rr3.wav",
+          "bytes": 833736,
+          "sha256": "b28c05dadcb487dc9d5775e73f09e5c1dd93434a49849a8768cd7b990f2ffd7d",
+          "durationSeconds": 9.375057
+        },
+        {
+          "path": "samples/linguine/db2_vl3_rr4.wav",
+          "bytes": 833736,
+          "sha256": "abc46a9e9bb768efb2a838b435e0c55099d3731d635298681d5054f526c5850f",
+          "durationSeconds": 9.375057
+        },
+        {
+          "path": "samples/linguine/db3_vl1_rr1.wav",
+          "bytes": 502984,
+          "sha256": "70be17cdcf49039a2cca5fc42763919fa9400c31825e568f217a619b874cea1b",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/db3_vl1_rr2.wav",
+          "bytes": 502984,
+          "sha256": "4c1f13a6adc439655501075edba0eca46c9e14a629523b4ab16e82a1ba8ee060",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/db3_vl1_rr3.wav",
+          "bytes": 502984,
+          "sha256": "02fa40b8798372247cf048d0c0038dac94e400c2602561ca2dfbde4e0344f906",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/db3_vl1_rr4.wav",
+          "bytes": 502984,
+          "sha256": "0aa6a647639d3228dc50c581a2a2b14412b2ca836bb63c01c84300adf654a63b",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/db3_vl2_rr1.wav",
+          "bytes": 502984,
+          "sha256": "277c7c1e7c4fec4443bc5863fd423642fc2a2ce8c1c9418d2d13c3f89dba7186",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/db3_vl2_rr2.wav",
+          "bytes": 502984,
+          "sha256": "31877a9e384f70cdc49c7a8e98d270007c42df6aa9ccdd8ae7dbbe05ea049f13",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/db3_vl2_rr3.wav",
+          "bytes": 502984,
+          "sha256": "c0a9627027c678ae08e648f21ee9a1d1e7b62b9566d07cba6f53632428a52569",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/db3_vl2_rr4.wav",
+          "bytes": 502984,
+          "sha256": "bf8f9fcaa8210a35af187adaba937696f7d84a98c2104548253231ed742baeb6",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/db3_vl3_rr1.wav",
+          "bytes": 502984,
+          "sha256": "8d3082af1bbf4d3d83dc91812a3a3843cf6923434dba26ca06b5b85cf64e022a",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/db3_vl3_rr2.wav",
+          "bytes": 502984,
+          "sha256": "43a093a69b257467f9b4017a93cf766c45fa5a067b7af684ab5673080d088c93",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/db3_vl3_rr3.wav",
+          "bytes": 502984,
+          "sha256": "2521665535925c51f270a5b6c110e7dcee02c41ed2fcc00b70fe53be4deed21d",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/db3_vl3_rr4.wav",
+          "bytes": 502984,
+          "sha256": "2baca14f585cf2a7e443fe0b176f0766a8abd71e59f4da48eebb851a6fe4ede8",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/db4_vl1_rr1.wav",
+          "bytes": 668358,
+          "sha256": "998d6f86111a77c15adbe040a96268e28fc80ef1094319ca8878ae6ff5c936e1",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/db4_vl1_rr2.wav",
+          "bytes": 668358,
+          "sha256": "2105d6177278fef2eaffe8681863708947a135a5c5a2c60a62c988a0a308bbc4",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/db4_vl1_rr3.wav",
+          "bytes": 668358,
+          "sha256": "9c8422e0b2c19c8162ce8c053d1c91b0864f52ee3e68d66d65c5db1ffba98ae9",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/db4_vl1_rr4.wav",
+          "bytes": 668358,
+          "sha256": "4b0eaa1fba0c8e8037ae362e8050716396e944e0ac060511c54706fa7aadea37",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/db4_vl2_rr1.wav",
+          "bytes": 668358,
+          "sha256": "ea689faf6633ea4b075405e652d82f7a1b44b2dddfde1df8f6f1b654d0d0a18c",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/db4_vl2_rr2.wav",
+          "bytes": 668358,
+          "sha256": "94b079a811a176a595b6844892634b43d35e7acd2105fd5502d3b0782ebf9069",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/db4_vl2_rr3.wav",
+          "bytes": 668358,
+          "sha256": "69736919a3f1cd4a5e021e2cb587d2130851275c1b79caf17edfdbe223f3be82",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/db4_vl2_rr4.wav",
+          "bytes": 668358,
+          "sha256": "3b61d1ea11fc0170ec7e6eb76a11b3b74beab691558801a9ef982af9938c0724",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/db4_vl3_rr1.wav",
+          "bytes": 668358,
+          "sha256": "e7a17fae230563beee7781c1b55c0a52656f488488bf35a9d6bfe84f8b2cc238",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/db4_vl3_rr2.wav",
+          "bytes": 668358,
+          "sha256": "150ff7e94b9a2f00ed6ee059f4ec409fc57585e128b6b6d337043c023d699d68",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/db4_vl3_rr3.wav",
+          "bytes": 668358,
+          "sha256": "0d17f039b972b6e38710b5a753bb791f149cdf631aba6ba0617a0d1236f974ca",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/db4_vl3_rr4.wav",
+          "bytes": 668358,
+          "sha256": "377504cffd17a439c5303c98a7055219c668fed48a0bbc817ef4820a0c19f3f5",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/db5_vl1_rr1.wav",
+          "bytes": 502984,
+          "sha256": "94d91fa291465f3b7f2c5afc12740b2d5ffaf29c524e4cce234e4e1ec415fc9c",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/db5_vl1_rr2.wav",
+          "bytes": 502984,
+          "sha256": "cc604868120f98cb6f6329f4b4ab8c4bee6a3da2e32fb9f1a120680d8375077b",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/db5_vl1_rr3.wav",
+          "bytes": 502984,
+          "sha256": "4ef15012d5c270f9abca95850e9d16958a1bf46767001904fb2d4c839cff32f4",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/db5_vl1_rr4.wav",
+          "bytes": 502984,
+          "sha256": "5d9b04a17d28a37f5ea53a28c4c84fff0b95d9b7c70f65054458be4e966a5f32",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/db5_vl2_rr1.wav",
+          "bytes": 502984,
+          "sha256": "1b4c9c4d7aad96225de9506ab65c3d7526d87399027d676b67202d12b9541f00",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/db5_vl2_rr2.wav",
+          "bytes": 502984,
+          "sha256": "b3bde55992c6b4d7fd4ed81e3bee14c005b593aa589e090c8859aac54554a2a7",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/db5_vl2_rr3.wav",
+          "bytes": 502984,
+          "sha256": "90a1982ec47ef466a93a7900671f01567e5b8d5f8cfda92c49dc8097093232b6",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/db5_vl2_rr4.wav",
+          "bytes": 502984,
+          "sha256": "7aa4a2831797fc77b8ff57cb1f942bfcefdcbcce6348be80223455772c1bfc4c",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/db5_vl3_rr1.wav",
+          "bytes": 502984,
+          "sha256": "af32efcb4bee0dbdfe7f7967b38a05598d0c6d6580cad863228639ec0897986f",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/db5_vl3_rr2.wav",
+          "bytes": 502984,
+          "sha256": "4f654243a842768b4975bab36c6dbf4bbd0c6379e7d0f9bf52dd2c5fd0b8a507",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/db5_vl3_rr3.wav",
+          "bytes": 502984,
+          "sha256": "d532be9a2b125b31f565fe18dd9866e10b2a2a59a7171036fc99a940e13dd809",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/db5_vl3_rr4.wav",
+          "bytes": 502984,
+          "sha256": "602d12a694884a3367105380be143d5afc6c2842df5ad541a06728b40e73870f",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/db6_vl1_rr1.wav",
+          "bytes": 461640,
+          "sha256": "d138919fba58bd3e2492fd023b7dbda634a66ea29165f5a0161abc913fba8af6",
+          "durationSeconds": 5.156281
+        },
+        {
+          "path": "samples/linguine/db6_vl1_rr2.wav",
+          "bytes": 461640,
+          "sha256": "9bfb9b2c2271b9084a78496283689d00ccc1ee231cb6c2551507f886dee78fd3",
+          "durationSeconds": 5.156281
+        },
+        {
+          "path": "samples/linguine/db6_vl1_rr3.wav",
+          "bytes": 461640,
+          "sha256": "bdd205f2edd7f66d102c56f7c00a590f50f0efa06438513306de23cad697ed28",
+          "durationSeconds": 5.156281
+        },
+        {
+          "path": "samples/linguine/db6_vl1_rr4.wav",
+          "bytes": 461640,
+          "sha256": "aeb233895952ea155ad4a4dce0d886bceb336fb2723d56f03802b4e3f7dad62c",
+          "durationSeconds": 5.156281
+        },
+        {
+          "path": "samples/linguine/db6_vl2_rr1.wav",
+          "bytes": 461640,
+          "sha256": "48902132ed832f2edc8e0161902263ec444e122f6bcaf3a451f74fb1787375fa",
+          "durationSeconds": 5.156281
+        },
+        {
+          "path": "samples/linguine/db6_vl2_rr2.wav",
+          "bytes": 461640,
+          "sha256": "60373fea8e466572502a942a774066715da752c37ea66310cc760ed763683dd6",
+          "durationSeconds": 5.156281
+        },
+        {
+          "path": "samples/linguine/db6_vl2_rr3.wav",
+          "bytes": 461640,
+          "sha256": "3e680314a103cf004ca26561fd634d4225f083a7ad706634f630ea27f298a098",
+          "durationSeconds": 5.156281
+        },
+        {
+          "path": "samples/linguine/db6_vl2_rr4.wav",
+          "bytes": 461640,
+          "sha256": "e58ead2f939084fd8ba4377dfbdfdcec28e88b52f7bd528459047f52ccea9505",
+          "durationSeconds": 5.156281
+        },
+        {
+          "path": "samples/linguine/db6_vl3_rr1.wav",
+          "bytes": 461640,
+          "sha256": "973279a60755a5f028eca33faac09e59aacdda29bcce400706cfb48ba389c80e",
+          "durationSeconds": 5.156281
+        },
+        {
+          "path": "samples/linguine/db6_vl3_rr2.wav",
+          "bytes": 461640,
+          "sha256": "5d5dbbf19d3b204477594164f640e741ede5df56f50f55559ff57a0a4b10eb60",
+          "durationSeconds": 5.156281
+        },
+        {
+          "path": "samples/linguine/db6_vl3_rr3.wav",
+          "bytes": 461640,
+          "sha256": "30dbde6cabd1b41b81a02c9affa13ba814ae68af6c16d273522532c6bc951672",
+          "durationSeconds": 5.156281
+        },
+        {
+          "path": "samples/linguine/db6_vl3_rr4.wav",
+          "bytes": 461640,
+          "sha256": "ffc75cd01acc54dd815fe068da9168b6fef71445cfba72a61568e2ec14701f9f",
+          "durationSeconds": 5.156281
+        },
+        {
+          "path": "samples/linguine/e2_vl1_rr1.wav",
+          "bytes": 833736,
+          "sha256": "6e0601d4ac7381e6be6d43ea2671a7326d237d800c22b5120616ca0f743a782f",
+          "durationSeconds": 9.375057
+        },
+        {
+          "path": "samples/linguine/e2_vl1_rr2.wav",
+          "bytes": 833736,
+          "sha256": "6544c6e3fa1c0b9b817189bc135c84bf047f144626b285547ea72ae5d0fbd829",
+          "durationSeconds": 9.375057
+        },
+        {
+          "path": "samples/linguine/e2_vl1_rr3.wav",
+          "bytes": 833736,
+          "sha256": "3eb53df1914d8884671850babf9673fdfa3ed343af2c36b471c35ee363845416",
+          "durationSeconds": 9.375057
+        },
+        {
+          "path": "samples/linguine/e2_vl1_rr4.wav",
+          "bytes": 833736,
+          "sha256": "b34e93f75c565981c99ddaae63802c4526f7273c9f5d74564a171d2df363575b",
+          "durationSeconds": 9.375057
+        },
+        {
+          "path": "samples/linguine/e2_vl2_rr1.wav",
+          "bytes": 833736,
+          "sha256": "04f632fcbbdcad88e2eb01ebac10d8c984ffb2309266f917fb5fa002efc334e4",
+          "durationSeconds": 9.375057
+        },
+        {
+          "path": "samples/linguine/e2_vl2_rr2.wav",
+          "bytes": 833736,
+          "sha256": "19bdcfb6a374a6eb00d733b9d6368040bafa1e3d83305f2b77df84c326766de4",
+          "durationSeconds": 9.375057
+        },
+        {
+          "path": "samples/linguine/e2_vl2_rr3.wav",
+          "bytes": 833736,
+          "sha256": "51ba8e6b0060869710d1444edeb09f2c739a39f89b011a9b390d0f663d7f9f3d",
+          "durationSeconds": 9.375057
+        },
+        {
+          "path": "samples/linguine/e2_vl2_rr4.wav",
+          "bytes": 833736,
+          "sha256": "f6a3b4ea6ab3cf830ff7b21e602328a2ec17c04acefc87d0fcbe462a53723491",
+          "durationSeconds": 9.375057
+        },
+        {
+          "path": "samples/linguine/e2_vl3_rr1.wav",
+          "bytes": 833736,
+          "sha256": "0802ad383b9dcbb3b7670599c135109bc20920480f50791d3555faf56352d168",
+          "durationSeconds": 9.375057
+        },
+        {
+          "path": "samples/linguine/e2_vl3_rr2.wav",
+          "bytes": 833736,
+          "sha256": "0e85e1daac8cb001aae232a3de71a7de6bea85a9d7ccfe300277197e623d6fc3",
+          "durationSeconds": 9.375057
+        },
+        {
+          "path": "samples/linguine/e2_vl3_rr3.wav",
+          "bytes": 833736,
+          "sha256": "f3b7a93b837874888d70aaecf99489c3b18062b8b9467e255821153b54c845d0",
+          "durationSeconds": 9.375057
+        },
+        {
+          "path": "samples/linguine/e2_vl3_rr4.wav",
+          "bytes": 833736,
+          "sha256": "f7d34d949b6f5065e4ccfe8eaced2e2f016eb3b5f50cfc948752623983909dfa",
+          "durationSeconds": 9.375057
+        },
+        {
+          "path": "samples/linguine/e3_vl1_rr1.wav",
+          "bytes": 668358,
+          "sha256": "e49a7d074e4ecdb7c71e56dea699b059a2b3b31916017a71a040e4aed126df3e",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/e3_vl1_rr2.wav",
+          "bytes": 668358,
+          "sha256": "adf68cc1b37e4d1a9a323cf2b797992a54359ad09e5e75ff188b3524f0291340",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/e3_vl1_rr3.wav",
+          "bytes": 668358,
+          "sha256": "e46e6be56751f9f09383195c2bb6fb53659520bb648e61d211fa2c5c539724e4",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/e3_vl1_rr4.wav",
+          "bytes": 668358,
+          "sha256": "b1e3dcc8384e79caf9f30f43aefef4874e81f919a210a4df110b1eda26006a3e",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/e3_vl2_rr1.wav",
+          "bytes": 668358,
+          "sha256": "910dd82ff557ef8deaa30a6dd121e6c22d3c37db7e019917b6adc2c4f8e0e3da",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/e3_vl2_rr2.wav",
+          "bytes": 668358,
+          "sha256": "71d6801639e1114eae1c87b7b0eda3a0b696c2481b3c05e9a492e5c1cafd520b",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/e3_vl2_rr3.wav",
+          "bytes": 668358,
+          "sha256": "d19bbc6cfcd5f407225a657849339cced9ea180d90af308de6fa28edcf44267f",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/e3_vl2_rr4.wav",
+          "bytes": 668358,
+          "sha256": "7ae5551fabfef4fe85c6322515013dbe1ca125ce5174df5ce7e6f21b665a8c0e",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/e3_vl3_rr1.wav",
+          "bytes": 668358,
+          "sha256": "65b25472a902337158cd8b543bf157cc5039179ea1da67de7d6c8bf2a896c09a",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/e3_vl3_rr2.wav",
+          "bytes": 668358,
+          "sha256": "bcb0cfe309062722fa38d41e6ea216408ef7ef3372ee8159d4495b0fec3fdff4",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/e3_vl3_rr3.wav",
+          "bytes": 668358,
+          "sha256": "9e56bf73e49f915a34e3341e47db1a6737f619edb748688131371bd770826761",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/e3_vl3_rr4.wav",
+          "bytes": 668358,
+          "sha256": "8a6e6c564365c7e6758bd30b0463fd5e4e97890959a44c4cb7a4a0897b481f54",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/e4_vl1_rr1.wav",
+          "bytes": 668360,
+          "sha256": "448c52d162b5868f2c7aaa1c56ce99d4e11a66e7d4298c256f018716b1b58592",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/e4_vl1_rr2.wav",
+          "bytes": 668360,
+          "sha256": "a6cec2749f1fe5388f53d653795bd3bab9d8b755f5e4d6dcd7aa3ad2ce420717",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/e4_vl1_rr3.wav",
+          "bytes": 668360,
+          "sha256": "617fe0a68f0d9621adee2dfcaa6fdc93002b6de92a5691d3fcaec6f5f96ed4ef",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/e4_vl1_rr4.wav",
+          "bytes": 668360,
+          "sha256": "9648865ba505255c4114190947d066fb1d1ad7d46db654fadf0217ae9c9b3092",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/e4_vl2_rr1.wav",
+          "bytes": 668360,
+          "sha256": "51f255da62a7bad30d055a97a46b94c36d73d66726c93ef6e1d4250ca714bca9",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/e4_vl2_rr2.wav",
+          "bytes": 668360,
+          "sha256": "b59f209158fa6739f181d53decdbe91cf39212bd91af1070b85e11dfeb0b854e",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/e4_vl2_rr3.wav",
+          "bytes": 668360,
+          "sha256": "10f9fa80a45be0e472fba6bb1e9e41b14f91d9a74c19c53ddd9f1f1e3a63c1f0",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/e4_vl2_rr4.wav",
+          "bytes": 668360,
+          "sha256": "7596513fd517de1766a79f6c7bd8fb6230c2bb3dc0f0080b09b973328d5bb797",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/e4_vl3_rr1.wav",
+          "bytes": 668360,
+          "sha256": "61fc49512f2a7d6741d84e01ab6894a71d122ac7b86cb8a854e37a1bd7fc3b0d",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/e4_vl3_rr2.wav",
+          "bytes": 668360,
+          "sha256": "c0abe5a2f4b7dbaf262314b8da9d706ccf5ebc62aad180e5c9fa9cc9bba696fc",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/e4_vl3_rr3.wav",
+          "bytes": 668360,
+          "sha256": "b6d0defb1c802719aa8de46f2a38f1fe92811e8940cab766e81924aefd43abbd",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/e4_vl3_rr4.wav",
+          "bytes": 668360,
+          "sha256": "b5a7ac1d719112adff39803d8fd50570cec38ecfe32574e0cf688ba5ca80bc1c",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/e5_vl1_rr1.wav",
+          "bytes": 502984,
+          "sha256": "4f7e5c54be56fd7b500ebb726cb959a1dbc6370178728627cc692b3ff0b9bc8a",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/e5_vl1_rr2.wav",
+          "bytes": 502984,
+          "sha256": "af3cec44d025dadbcf6b4d789fcaa387d6175f037679d5750ff3043518a19467",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/e5_vl1_rr3.wav",
+          "bytes": 502984,
+          "sha256": "49a5df9a1a1e33ffc579b8b2d51308102e5acfc9ecea1160ca060549b482e0e9",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/e5_vl1_rr4.wav",
+          "bytes": 502984,
+          "sha256": "4e389ae44439261fb8444a0da8553987d7902506b7d3ce7d4021781151900cd3",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/e5_vl2_rr1.wav",
+          "bytes": 502984,
+          "sha256": "5adfc9a957cc00298e0af588fbe68beacff25ba420c336ff360f3b7b5e40ae76",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/e5_vl2_rr2.wav",
+          "bytes": 502984,
+          "sha256": "cbe33b26443c74dddb8df620bd1ff8af119ae015987371c51cd5e9254fe5a8b8",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/e5_vl2_rr3.wav",
+          "bytes": 502984,
+          "sha256": "141801b9159fbc4110c11a741c0960c453212f1d4b73b3613beb785f2a9e1e03",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/e5_vl2_rr4.wav",
+          "bytes": 502984,
+          "sha256": "c193482dddd8a59104c7899d5a6a7f94e8fec4191c4bdea26ce35ba537af2883",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/e5_vl3_rr1.wav",
+          "bytes": 502984,
+          "sha256": "227e95008839a3399fbc9a1f32dee5695e0ff0e4385f8834e41f78a1db82a5b9",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/e5_vl3_rr2.wav",
+          "bytes": 502984,
+          "sha256": "3abd92fb66453c3983ecb934561ffd53955c944b45f1471576422f06fd78f7a5",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/e5_vl3_rr3.wav",
+          "bytes": 502984,
+          "sha256": "16823b7ca71b80e0b5db8f640db81b3ba91c7cd3e8b5d2d063cf82a45eab5096",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/e5_vl3_rr4.wav",
+          "bytes": 502984,
+          "sha256": "fc0ff01e982c33347eeafeeae6c8686664203d0d179d0b2fd124c99aabc05c1e",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/g2_vl1_rr1.wav",
+          "bytes": 668360,
+          "sha256": "50a96206d380dab46a60e80c8da39936b07672b0cf436762f5c297f4e5a069fa",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g2_vl1_rr2.wav",
+          "bytes": 668360,
+          "sha256": "973619ac189b227424ea5433ae7294c0bf7cd985c54c0181a41e7bd96de474a8",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g2_vl1_rr3.wav",
+          "bytes": 668360,
+          "sha256": "7e3f4a017e4ad6683b2cf70a52ad3bf804f61d565d19ed25e4e63360dd76f016",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g2_vl1_rr4.wav",
+          "bytes": 668360,
+          "sha256": "ade8ad7f3988cc0e94be1b77e30a183e04e0f43f642e39c61d12bc39829f25dc",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g2_vl2_rr1.wav",
+          "bytes": 668360,
+          "sha256": "105585387406314afcff21903106279f7676b74cf7b6f53a9a6bfb14eff4eb5f",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g2_vl2_rr2.wav",
+          "bytes": 668360,
+          "sha256": "aadae98c4374f3c00a4997cbabe3eac575dfe61812d3a21197da1971e192ef52",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g2_vl2_rr3.wav",
+          "bytes": 668360,
+          "sha256": "e7bc86e3bb3d2e97c424852bac2f82dbd1b28c9b022466c72c4eb1800ee5b0be",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g2_vl2_rr4.wav",
+          "bytes": 668360,
+          "sha256": "caf629eb57ba10bd28e986222bd9a314aea9ba1df98df056d6184a8b5a6ce993",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g2_vl3_rr1.wav",
+          "bytes": 668360,
+          "sha256": "4cf6a3fa1d80ac5837a9593aff01f376b51ce2c2231b6f458b8f68255149d9f5",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g2_vl3_rr2.wav",
+          "bytes": 668360,
+          "sha256": "ec424da69e10ceb3820440beb3864f1677039855031c23d52c0064c6ff1eb83b",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g2_vl3_rr3.wav",
+          "bytes": 668360,
+          "sha256": "a58783b3688a588139d42e5c2b714c06f346a5ff1a63011d94fc42634eefc27c",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g2_vl3_rr4.wav",
+          "bytes": 668360,
+          "sha256": "baefc69187dfa1e008b85fd08a00794b5cffe8d35fc8fdf0a90ce4ba0b5ec90e",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g3_vl1_rr1.wav",
+          "bytes": 668358,
+          "sha256": "0b6df44479b8334eb5fc2d8751b91de8ba7f1b7abeb0455d9ed245847eab9705",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g3_vl1_rr2.wav",
+          "bytes": 668358,
+          "sha256": "2d92a3324f1d76cc2f5f7abdcd6e11aa114d51a0c727e3e3d54d8707c89c4c34",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g3_vl1_rr3.wav",
+          "bytes": 668358,
+          "sha256": "9522366ffd47f88823767feddae35ee9a504a7601935a92dffc19b0c48a8a8e1",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g3_vl1_rr4.wav",
+          "bytes": 668358,
+          "sha256": "d2e435d8d198e05ac01621d7d61d3af2773a054f1866e3f8f6b67f925ae1d040",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g3_vl2_rr1.wav",
+          "bytes": 668358,
+          "sha256": "0d98392aee5f6d654ae9554f0947981a82c97391761cfd36de0cb486d153e9c0",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g3_vl2_rr2.wav",
+          "bytes": 668358,
+          "sha256": "d05fa28b549aee29613e1eb072e6b65f7c07e1a3a46ba97c9a0daafc0e317bbe",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g3_vl2_rr3.wav",
+          "bytes": 668358,
+          "sha256": "4463c892f99bffb38ab5f659e1ea65519ef1418fad2bf9a246ce20e177dbeeb5",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g3_vl2_rr4.wav",
+          "bytes": 668358,
+          "sha256": "d6a00422992b6ce8a2c10e0dafd4d6599e891089a9da54fcb04d3eb49d2246fc",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g3_vl3_rr1.wav",
+          "bytes": 668358,
+          "sha256": "69f327a8aa6894d64c0ef033d6c3248486d689d11c966b49a9016cc6fa38c444",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g3_vl3_rr2.wav",
+          "bytes": 668358,
+          "sha256": "740c18738fb845d6313fc8b6b6d23e5194a32af0f0ef7546da00207fd754831e",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g3_vl3_rr3.wav",
+          "bytes": 668358,
+          "sha256": "6109e9c0df62de7f11ef571d66ec5eb9cee1584c8508145c605761fa07f61a28",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g3_vl3_rr4.wav",
+          "bytes": 668358,
+          "sha256": "699be553a65697e52e3a315f67b0ea363c1a5528fb2cce5fe09ee767b8c632ff",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g4_vl1_rr1.wav",
+          "bytes": 668360,
+          "sha256": "e8ed6003e5f8c1620a89c7eb3abfc5b83e78111cc4c30033f45feb310f44aeb9",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g4_vl1_rr2.wav",
+          "bytes": 668360,
+          "sha256": "9fdea3f900c6df3ac3daf429d20440cdb78e387692f2916b7509301b7671e597",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g4_vl1_rr3.wav",
+          "bytes": 668360,
+          "sha256": "59210a350f424c4dba0d18829168ded86c114daa0c0a4544cdbb8c53158ea6f9",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g4_vl1_rr4.wav",
+          "bytes": 668360,
+          "sha256": "b694850d48e86a59c2bf1325d8ccb3affd11baeb014c5eae6106b62365475763",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g4_vl2_rr1.wav",
+          "bytes": 668360,
+          "sha256": "e0854989171f961a2e203485caf58a6f6da11857da3265135fb11e90fb9aaaba",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g4_vl2_rr2.wav",
+          "bytes": 668360,
+          "sha256": "d897fd0736492630f2998400c62b7dea8dfef33598c90f6dbef5f17fddfc2cde",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g4_vl2_rr3.wav",
+          "bytes": 668360,
+          "sha256": "9e53cac13159b50b878a54155063b3ff27784fc9d5e7878a0439e678d01c1abb",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g4_vl2_rr4.wav",
+          "bytes": 668360,
+          "sha256": "c6968d51f306ff912b9dfbd8d896681dab76a186927c00b36fe569f445f240f1",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g4_vl3_rr1.wav",
+          "bytes": 668360,
+          "sha256": "049ba6f823845ddae5d067eb864023ce2f55b3f066b8190e0a50e6b731103f84",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g4_vl3_rr2.wav",
+          "bytes": 668360,
+          "sha256": "4c0fa8542cc9c2eddb4231eb079d9fe8eb1f7c27fa6fcd40fcb48d7bb873b5c9",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g4_vl3_rr3.wav",
+          "bytes": 668360,
+          "sha256": "f8372fb6022dee1e2f36ca8aa63d972d9efbd19a81b0006ffa831b2d444ac5ff",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g4_vl3_rr4.wav",
+          "bytes": 668360,
+          "sha256": "fc151a30085565544ddd8ef75c0850b9680fc29eb2086b0cbfe87c9e457a990e",
+          "durationSeconds": 7.500045
+        },
+        {
+          "path": "samples/linguine/g5_vl1_rr1.wav",
+          "bytes": 502984,
+          "sha256": "c8ec6d3e7fae968aedeb66d2813d94869204514bf9843c4389e076046178b25a",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/g5_vl1_rr2.wav",
+          "bytes": 502984,
+          "sha256": "417dbd903c56150f3cb694a78febfa39d666354d799136a8fc6edf29db3964bc",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/g5_vl1_rr3.wav",
+          "bytes": 502984,
+          "sha256": "ad662b306f8c12c722348cf7d4153abd1e0b3cae85e0244abfb7cbd16d0473b3",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/g5_vl1_rr4.wav",
+          "bytes": 502984,
+          "sha256": "bcd8b464ed2626091221c79c26b2161dfa47b58b1f782eddc517bb25bbd7eca7",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/g5_vl2_rr1.wav",
+          "bytes": 502984,
+          "sha256": "26ac15305dd6f36070283d1eea398a4cd2f035c918f1500eac7719326cff60b2",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/g5_vl2_rr2.wav",
+          "bytes": 502984,
+          "sha256": "5d154a8a5979a0794e7c82ebb575f5fef79339aec783d07f50f03382e8534127",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/g5_vl2_rr3.wav",
+          "bytes": 502984,
+          "sha256": "1917e2a3c5049180895acb80c4138294ae942a39f1531e0241b7b259d1bc21f7",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/g5_vl2_rr4.wav",
+          "bytes": 502984,
+          "sha256": "4613d0304b8796b248840e82fca5ebec7f7cf99a41b59d6079dfed0c2834422a",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/g5_vl3_rr1.wav",
+          "bytes": 502984,
+          "sha256": "5d3847a6fa60379cb793a75eda2288c9cc54daf654e5dc896d4e2d2f42f4262a",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/g5_vl3_rr2.wav",
+          "bytes": 502984,
+          "sha256": "4ca2a46aba1b3db94845cfa01d48d028d14eb85b14e2ac442357be27d8d3cd41",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/g5_vl3_rr3.wav",
+          "bytes": 502984,
+          "sha256": "526f102ac1a02af03bc58a002c9495ab0441e0d227cc68c9ababe396e4f56bb4",
+          "durationSeconds": 5.625034
+        },
+        {
+          "path": "samples/linguine/g5_vl3_rr4.wav",
+          "bytes": 502984,
+          "sha256": "4e81ecfe1b6daa730a5cfd0c1ff2508dcef76a1fcea8bedd90bc12e66a5e474e",
+          "durationSeconds": 5.625034
+        }
+      ],
+      "sfz": "linguine.sfz",
+      "enumeratedAt": "2026-10-03",
+      "durationSeconds": 9.375057,
+      "mirroredAt": "2026-10-03"
     }
   ]
 }

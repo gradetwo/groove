@@ -19,10 +19,10 @@
  * (`sampleLoader.ts`), and calling the engine's `resolveInstrumentNote` once per key 0–127 — so a coverage claim here
  * is the engine's answer, not a hand-read `lokey`/`hikey`.
  *
- * The assertions that matter are the three counts (silent / partial / sounding) and the named silent lanes. A change
- * to `src/data/genres/**` moves a written range; a change to `src/data/sampledInstruments.ts` moves an asset; either
- * one moves a count and turns this file red. The **online** half re-derives the whole table from the pins and fails if
- * it no longer matches — which is how a library, a pin or a manifest edit gets caught rather than assumed.
+ * The assertions that matter are the three counts (sounding / partial / silent) and the lanes named in each class. A
+ * change to `src/data/genres/**` moves a written range; a change to `src/data/sampledInstruments.ts` moves an asset;
+ * either one moves a count and turns this file red. The **online** half re-derives the whole table from the pins and
+ * fails if it no longer matches — which is how a library, a pin or a manifest edit gets caught rather than assumed.
  *
  * ## Why the verdict is per note and not a min/max comparison
  *
@@ -34,9 +34,12 @@
  * ## The velocity dimension
  *
  * The engine resolves a note with the velocity the lane writes, and a `lovel`/`hivel` split could in principle make a
- * key sound at one velocity and not another. It does not here: for the ten assets any silent or partial lane uses,
- * the sounding key set was measured at velocities 1, 64 and 127 and is **identical** at all three, so the offline
- * verdict (which uses the measured key set) and the online verdict (which resolves at each note's own velocity) agree.
+ * key sound at one velocity and not another. It does not here: for the ten assets the silent and partial lanes used
+ * when this table was taken, the sounding key set was measured at velocities 1, 64 and 127 and is **identical** at
+ * all three, so the offline verdict (which uses the measured key set) and the online verdict (which resolves at each
+ * note's own velocity) agree. ⭐ `karoryfer-pastabass` was measured the same way when the `pick_bass` row moved onto
+ * it — 1, 64, 100 and 127 all give the same **33–101 with no holes** — and `PickedBassYR`, the recording that row left,
+ * likewise gave the same 26–46 at all four.
  * `docs/SAMPLED_RANGE_COVERAGE.md` §method records the numbers.
  */
 import { describe, expect, it } from "vitest";
@@ -102,13 +105,13 @@ const MEASURED_COVERAGE: readonly AssetCoverage[] = [
   { assetId: "dsmolken-double-bass:d-smolken-rubner-bass-pizz", first: 12, last: 120, holes: [61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 90, 91, 92, 93, 94, 95], sha256: "0aea1def56753b0dcc89914b1ac24054200bacc01dd696572745c70787eaec4f" },
   { assetId: "freepats-button-accordion-hn", first: 0, last: 127, holes: [], sha256: "1f273b331061ca72e32321b3673fdff1c66d056a0877456f1ed1499781fec36c" },
   { assetId: "freepats-drawbar-organ", first: 33, last: 98, holes: [], sha256: "d3fbbf3d96833cfd3a706204a1bc8a31c81b9fe253812a74ea8b9574b5cfc184" },
-  { assetId: "freepats-electric-bass-yr:PickedBassYR-20190930", first: 26, last: 46, holes: [], sha256: "08e69035ccd7fc6b47ab79f216614858e14a408a900801b89fc517d404a54626" },
   { assetId: "freepats-fsbs-dist2", first: 35, last: 86, holes: [], sha256: "746b36690f1d4a0e8d4dcc3ab8c7880998b313fa46d060e12671d208e639c754" },
   { assetId: "freepats-percussive-organ", first: 31, last: 108, holes: [], sha256: "ac09175af24dd52ab8a931dc8b0805f14a302f72b65ec67b45cea192dde1130a" },
   { assetId: "freepats-spanish-classical-guitar", first: 29, last: 88, holes: [], sha256: "7edec559c98c0658e9ad9e38156ef16346f81049fab96c6166fbb872f3f7d92e" },
   { assetId: "jlearman-jrhodes3c:jRhodes-both-looped", first: 24, last: 103, holes: [], sha256: "d689a1884b4cf877da712b69ad4873888b6141c73af7c1ed737e3f22a7ac8315" },
   { assetId: "karoryfer-black-and-blue-basses:05-darkblack-pluck", first: 35, last: 76, holes: [], sha256: "9584c30da4ad3f5df609a6322b2e0a2ce6a21aed07188c2386844b6c06948358" },
   { assetId: "karoryfer-emilyguitar:emily-clean", first: 33, last: 96, holes: [], sha256: "e4e0fb4938db52459dc369ae4347548b5894bb75b21ea04ff66a2033be0d96cc" },
+  { assetId: "karoryfer-pastabass", first: 33, last: 101, holes: [], sha256: "1faa0913f2b8eae2ebbb73114681abf83bfc193837615730bf50fb9d0b0a55cc" },
   { assetId: "mtg-solo-sax:MTG-Tenor-Sax", first: 39, last: 76, holes: [41, 42, 43], sha256: "28e25102e99a00f8dd864d8596ef2ac2a8a263203fe958814d9c9a54246ed636" },
   { assetId: "salamander-grand", first: 21, last: 108, holes: [], sha256: "c8b282f03fdb2d9e6be24a99df0d97a05e7ece718d1a14e0b882c518161f7837" },
   { assetId: "sonatina-brass:All-Brass-Sustain", first: 28, last: 88, holes: [], sha256: "3f9eeabf84212a3e25bb9df9a680136bdf40ef98a79ab19966d2866c245e9712" },
@@ -203,6 +206,17 @@ const inKeyOrder = (verdict: Verdict) => CENSUS.filter((lane) => lane.verdict ==
  */
 const PRE_FOLD_CENSUS_DIGEST = "7b9d4bc4caadb7b888fb868e37c48a96f247f59567a16b8064fba7a86ccba761";
 
+/**
+ * ⭐ **The `pick_bass` recording the 2026-10-03 swap moved onto, and the one it moved off.**
+ *
+ * The pre-fold reconstruction below needs both names: the fold happened while `pick_bass` still named
+ * `PickedBassYR`, so reproducing that census means undoing *this* edit as well as the fold. The before-name is kept
+ * here rather than only in the git history because it is the address whose **measured 26–46 span** is the reason the
+ * nine narrow lanes exist, and a future reader should be able to see the swap without a `git log`.
+ */
+const PICK_BASS_AFTER = "karoryfer-pastabass";
+const PICK_BASS_BEFORE = "freepats-electric-bass-yr:PickedBassYR-20190930";
+
 describe("the written pitch range of every palette-mapped lane, against what its recording sounds", () => {
   it("measures 202 palette-mapped lanes across 96 genres and leaves the other 63 genres with none", () => {
     /**
@@ -216,7 +230,7 @@ describe("the written pitch range of every palette-mapped lane, against what its
     expect(new Set(CENSUS.map((lane) => lane.assetId)).size).toBe(22);
   });
 
-  it("⭐ pins the three counts: 172 sounding, 25 partial, 1 silent (and 4 lanes the genre leaves empty)", () => {
+  it("⭐ pins the three counts: 181 sounding, 17 partial, 0 silent (and 4 lanes the genre leaves empty)", () => {
     /**
      * ⭐ **These four numbers are the criterion.** They move when a genre's written notes move, when the palette's
      * asset assignment moves, or when the measured coverage table moves — which is exactly the set of edits that can
@@ -232,47 +246,59 @@ describe("the written pitch range of every palette-mapped lane, against what its
      * tubular bells, whose written range is C4–F5 = keys 60–77, up to G5 = 79 on a few professional sets, against a
      * line written 79/82/84). Folding moved them from `silent` to `sounding`: 168 + 4 = 172, 5 − 4 = 1.
      *
-     * ⭐ **The one remaining silent lane is left silent on purpose.** `post-punk` bass writes 50, 53 and 55 — D3, F3
-     * and G3, ordinary notes for a 4-string electric bass — against `PickedBassYR`, whose **recordings** stop at A♯2
-     * (46). That is a **narrow library**, not a genre error, so the fix belongs in the palette (a proposal, see the
-     * report) and not in the genre's notes. It is still counted and still named below: this file's guard is that a
-     * **new** silent lane turns it red, which the pinned map does.
+     * ⭐ **`{172, 25, 1, 4}` → `{181, 17, 0, 4}`, and why: the `pick_bass` row moved onto a wider recording.** The one
+     * remaining silent lane was `post-punk` bass (written 50/53/55 — D3, F3, G3) and the 25 partial lanes included
+     * **eight more** `pick_bass` lanes that lost their top notes; both were the same fact about the recording, which
+     * `resolveInstrumentNote` measures at **26–46** (A♯2). The row now names `karoryfer-pastabass`, whose `linguine`
+     * program the same sweep measures at **33–101 with no holes**, so every one of those nine lanes sounds all of its
+     * written notes: nine lanes leave `silent`/`partial` for `sounding`, i.e. 172 + 9 = 181, 25 − 8 = 17, 1 − 1 = 0.
+     * ⚠️ **The genre data was not touched** — that is the point of the swap: the notes were always ordinary electric
+     * bass notes and it was the library that was narrow (see `docs/SAMPLED_RANGE_COVERAGE.md` §8.5(b) and §8.6).
      */
     expect({ sounding: countOf("sounding"), partial: countOf("partial"), silent: countOf("silent"), "no-notes": countOf("no-notes") }).toEqual({
-      sounding: 172,
-      partial: 25,
-      silent: 1,
+      sounding: 181,
+      partial: 17,
+      silent: 0,
       "no-notes": 4,
     });
     // And the sounding/partial/silent counts are over lanes that have notes, so the four classes partition the 202.
     expect(countOf("sounding") + countOf("partial") + countOf("silent") + countOf("no-notes")).toBe(CENSUS.length);
   });
 
-  it("⭐ names the one genre still left with a lane that should have a recording and sounds nothing", () => {
+  it("⭐ leaves no genre with a palette-mapped lane that should have a recording and sounds nothing", () => {
     /**
-     * The creator-facing number: one silent lane, in `post-punk` alone. Pinned as a **map**, not a total, so moving the
-     * silence from one genre to another cannot pass as "still one" — and so that a **new** silent lane, in any of the
-     * 155 genres this fix did not touch, is a red.
+     * The creator-facing number, and it is now **zero** — the state the `pick_bass` swap reached. Pinned as a **map**,
+     * not a total, so a **new** silent lane, in any of the 159 genres, is a red rather than something a total of zero
+     * would hide; the named lane that used to be the one entry is pinned by the case below.
      */
     const byGenre = Object.fromEntries(silentGenres.map((genre) => [genre, CENSUS.filter((lane) => lane.verdict === "silent" && lane.genreId === genre).length]));
-    expect(byGenre).toEqual({ "post-punk": 1 });
-    expect(silentGenres).toHaveLength(1);
+    expect(byGenre).toEqual({});
+    expect(silentGenres).toHaveLength(0);
   });
 
-  it("⭐ names the one silent lane, with the asset, the written notes and the measured keys that refuse them", () => {
-    const silent = inKeyOrder("silent");
-    expect(silent.map(summary)).toEqual([
-      "post-punk/bass:pick_bass→freepats-electric-bass-yr:PickedBassYR-20190930(12 notes, written 50,53,55)",
-    ]);
+  it("⭐ the lane that was silent sounds every note, and the recording it left behind could not have answered it", () => {
     /**
-     * It is silent because its written notes sit **above** the recording's measured span — not because the asset is
-     * missing, not because of a loader failure. The span is stated so the reason is in the test rather than inferred:
+     * ⭐ **The case the swap was made for, pinned as a fact rather than a symptom.** `post-punk`'s bass writes 50, 53
+     * and 55 — D3, F3 and G3, ordinary notes for a 4-string electric bass — and every one was refused by
+     * `PickedBassYR`, whose measured span was **26–46**. The row now names `karoryfer-pastabass`, whose measured span
+     * is **33–101**, so all twelve written notes resolve. Both halves are asserted: a revert to the old asset fails
+     * the `assetId` and the `sounding` expectation, and a regression in the genre's notes fails the pitch list.
      */
-    const spans = Object.fromEntries(silent.map((lane) => {
-      const entry = coverageOf(lane.assetId);
-      return [lane.key, `${entry.first}–${entry.last}`];
-    }));
-    expect(spans).toEqual({ "post-punk/bass#4": "26–46" });
+    const lane = CENSUS.find((candidate) => candidate.genreId === "post-punk" && candidate.trackId === "bass")!;
+    expect(lane).toBeDefined();
+    expect(lane.instrument).toBe("pick_bass");
+    expect(lane.assetId).toBe(PICK_BASS_AFTER);
+    expect(lane.distinct).toEqual([50, 53, 55]);
+    expect(lane.soundingCount).toBe(lane.noteCount);
+    expect(lane.verdict).toBe("sounding");
+    // The recording it left: 26–46 as the engine measured it. Every written note is above its top key — which is why
+    // the lane was silent, and not because the asset was missing or a loader failed.
+    const before = { first: 26, last: 46 };
+    for (const pitch of lane.distinct) expect(pitch).toBeGreaterThan(before.last);
+    // The recording it moved onto, stated with its own gaps, and the written notes sit inside it.
+    const entry = coverageOf(lane.assetId);
+    expect([entry.first, entry.last, entry.holes]).toEqual([33, 101, []]);
+    for (const pitch of lane.distinct) expect(pitch).toBeLessThanOrEqual(entry.last);
   });
 
   it("⭐ the four folded lanes sound now, keep their pitch classes, and are the only lanes whose written notes moved", () => {
@@ -320,11 +346,14 @@ describe("the written pitch range of every palette-mapped lane, against what its
 
     /**
      * 3. **Nothing else moved.** The digest is over `genre/lane#index:instrument→asset(count notes, written …)` for
-     *    every one of the 202 lanes, sorted, so it is insensitive to file order. The four rows are swapped back to
-     *    their pre-fold text first; the result must equal the digest this file would have produced on the commit
-     *    before the fold (`docs/SAMPLED_RANGE_COVERAGE.md` §7.4 records the same digest and how it was taken).
+     *    every one of the 202 lanes, sorted, so it is insensitive to file order. The pre-fold text is reconstructed by
+     *    undoing **both** edits this table has seen since: the four folded rows go back to their before-notes, and the
+     *    sixteen `pick_bass` lanes go back to `PICK_BASS_BEFORE` — the recording the row named when the fold was made,
+     *    measured 26–46. Neither edit changed a written pitch, so restoring both must equal the digest this file would
+     *    have produced on the commit before the fold (`docs/SAMPLED_RANGE_COVERAGE.md` §7.4 records the same digest).
      */
     const line = (lane: LaneCensus) => summary(lane);
+    const undoPickBassSwap = (row: string) => row.replace(`→${PICK_BASS_AFTER}(`, `→${PICK_BASS_BEFORE}(`);
     const laneOf = (genreId: string, trackId: string) => CENSUS.find((lane) => lane.genreId === genreId && lane.trackId === trackId)!;
     const beforeLines = new Map(
       folded.map((expected) => {
@@ -335,46 +364,47 @@ describe("the written pitch range of every palette-mapped lane, against what its
         ];
       }),
     );
-    const restored = CENSUS.map((lane) => beforeLines.get(`${lane.genreId}/${lane.trackId}`) ?? line(lane));
+    const restored = CENSUS.map((lane) => beforeLines.get(`${lane.genreId}/${lane.trackId}`) ?? undoPickBassSwap(line(lane)));
     const digest = (rows: readonly string[]) => createHash("sha256").update([...rows].sort().join("\n")).digest("hex");
     expect(digest(restored)).toBe(PRE_FOLD_CENSUS_DIGEST);
     // and the after-state is a different census, so the assertion above is not vacuous
     expect(digest(CENSUS.map(line))).not.toBe(PRE_FOLD_CENSUS_DIGEST);
-    // the four rows really were among the census rows that changed
-    expect(restored.filter((row, index) => row !== line(CENSUS[index]))).toHaveLength(4);
+    // Twenty rows differ: the four written ranges the fold moved, plus the sixteen `pick_bass` lanes the swap moved
+    // onto a different recording. Nothing else in the census has changed since the pre-fold baseline.
+    expect(restored.filter((row, index) => row !== line(CENSUS[index]))).toHaveLength(20);
   });
 
-  it("⭐ pins the 25 partial lanes — the ones that lose some notes and keep the rest", () => {
+  it("⭐ pins the 17 partial lanes — the ones that lose some notes and keep the rest", () => {
     /**
      * A partial lane is the dangerous middle: something is heard, so nothing looks broken, and the notes that vanish
      * are the top of a line. Pinned by name and by the count of written notes each loses, because "partial" alone
      * cannot tell a lane that loses one note from one that loses five.
+     *
+     * ⭐ **Eight lines left this list with the `pick_bass` swap and no other line changed.** The eight were
+     * `alternative-rock`/`blues-rock`/`doom-metal`/`grunge`/`hard-rock`/`heavy-metal`/`math-rock`/`shoe-gaze` bass,
+     * each losing the top of its line to the same 26–46 recording; the one this row now names sounds 33–101, so all
+     * eight moved to `sounding`. The remaining seventeen are the *other* narrow cases, which this change does not
+     * touch — an instrument written above its own range (guitars, tubular bells, a 61-key organ) or a hole in a
+     * recording's key map (`dsmolken-double-bass` 61–71, `microhouse`'s finger bass from 35) — and each is pinned
+     * here, verbatim, so that "eight left" cannot quietly become nine.
      */
     const partial = inKeyOrder("partial");
     expect(partial.map((lane) => `${summary(lane)} loses ${lane.noteCount - lane.soundingCount}`)).toEqual([
-      "alternative-rock/bass:pick_bass→freepats-electric-bass-yr:PickedBassYR-20190930(6 notes, written 43,50) loses 2",
       "bachata/chords:guitar_lead→karoryfer-emilyguitar:emily-clean(64 notes, written 81,84,88,91,93,96,100,103) loses 16",
       "black-metal/chords:distorted_guitar→freepats-fsbs-dist2(96 notes, written 64,71,76,83,88) loses 12",
-      "blues-rock/bass:pick_bass→freepats-electric-bass-yr:PickedBassYR-20190930(12 notes, written 40,45,47,52) loses 4",
       "brooklyn-drill/lead:bell_lead→vcsl:Tubular-Bells-1(12 notes, written 77,79,80) loses 8",
-      "doom-metal/bass:pick_bass→freepats-electric-bass-yr:PickedBassYR-20190930(4 notes, written 36,43,48) loses 2",
       "funk/chords:guitar_lead→karoryfer-emilyguitar:emily-clean(32 notes, written 76,79,83,86,88,91,95,98) loses 4",
-      "grunge/bass:pick_bass→freepats-electric-bass-yr:PickedBassYR-20190930(6 notes, written 40,47) loses 2",
       "gypsy-jazz/chords:guitar_lead→karoryfer-emilyguitar:emily-clean(64 notes, written 79,83,86,90,91,95,98,102) loses 16",
       "hard-bop/lead:sax_lead→mtg-solo-sax:MTG-Tenor-Sax(16 notes, written 72,75,77) loses 4",
-      "hard-rock/bass:pick_bass→freepats-electric-bass-yr:PickedBassYR-20190930(6 notes, written 45,52) loses 2",
-      "heavy-metal/bass:pick_bass→freepats-electric-bass-yr:PickedBassYR-20190930(20 notes, written 40,47,52) loses 16",
       "idm/lead:bell_lead→vcsl:Tubular-Bells-1(16 notes, written 74,77,79,81) loses 8",
       "j-pop/chords:strings_lead→vsco2ce:ViolinEnsSusVib(32 notes, written 77,81,84,88,89,93,96,100) loses 20",
       "kawaii-future-bass/lead:bell_lead→vcsl:Tubular-Bells-1(20 notes, written 72,76,79,83,84) loses 12",
-      "math-rock/bass:pick_bass→freepats-electric-bass-yr:PickedBassYR-20190930(20 notes, written 41,45,48) loses 4",
       "microhouse/bass:finger_bass→karoryfer-black-and-blue-basses:05-darkblack-pluck(8 notes, written 34,36,39,44) loses 2",
       "microhouse/chords:vibraphone→vcsl:Vibraphone-Keyswitch(40 notes, written 48,51,55,56,58,60,62,63,65,67,68,70,74,79,80) loses 12",
       "modal-jazz/bass:walking_upright→dsmolken-double-bass:d-smolken-rubner-bass-pizz(16 notes, written 33,38,40,45,47,50,52,57,62) loses 1",
       "nu-disco-house/chords:m1_organ→freepats-drawbar-organ(32 notes, written 81,84,88,91,93,96,100,103) loses 8",
       "samba/chords:guitar_lead→karoryfer-emilyguitar:emily-clean(24 notes, written 79,83,86,90,91,95,98,102) loses 8",
       "sambass/chords:guitar_lead→karoryfer-emilyguitar:emily-clean(48 notes, written 74,78,81,85,86,90,93,97) loses 8",
-      "shoe-gaze/bass:pick_bass→freepats-electric-bass-yr:PickedBassYR-20190930(16 notes, written 45,49,52) loses 8",
       "shoe-gaze/chords:guitar_lead→karoryfer-emilyguitar:emily-clean(32 notes, written 81,85,88,92,93,97,100,104) loses 12",
       "trap-rap/lead:bell_lead→vcsl:Tubular-Bells-1(4 notes, written 77,80) loses 2",
     ]);
@@ -554,27 +584,36 @@ describe.skipIf(offline)("the measurement still holds at the pins", () => {
     });
   }
 
-  it("⭐ every written note of the one remaining silent lane is refused by the engine at the velocity the lane writes", { timeout: 180_000 }, () => {
+  it("⭐ every written note of every pick_bass lane now resolves at the velocity its own step writes", { timeout: 180_000 }, () => {
     /**
      * The offline census compares against a measured key set; this case asks the engine directly, per note, at the
-     * lane's own velocity — the same call `createSampleLoader.loadNote` makes. It is the "12 notes, no playback" claim
-     * for `post-punk`'s bass executed rather than summarised. The other four lanes that used to be silent are now
-     * covered by the fold criterion above, and their own notes are asserted to resolve there.
+     * lane's own velocity — the same call `createSampleLoader.loadNote` makes. It is the criterion for the 2026-10-03
+     * swap: the lane that was **silent** (`post-punk` bass, twelve notes at 50/53/55) and the **eight
+     * partially-silent** lanes `docs/SAMPLED_RANGE_COVERAGE.md` §8.5(b) named must each resolve **every** note, so a
+     * revert to the 26–46 recording turns this red rather than leaving a summary that agrees with itself. All sixteen
+     * `pick_bass` lanes are asked, including the seven that already sounded, because a swap that broke one of those
+     * would otherwise pass unnoticed.
      */
-    const silent = CENSUS.filter((lane) => lane.verdict === "silent");
-    expect(silent).toHaveLength(1);
-    for (const lane of silent) {
-      const index = MEASURED_COVERAGE.findIndex((row) => row.assetId === lane.assetId);
-      const program = programs[index];
-      if (program === null || program === undefined) throw new Error(`${lane.assetId} did not fetch, so its silence could not be re-proved`);
+    const lanes = CENSUS.filter((lane) => lane.instrument === "pick_bass");
+    expect(lanes.length, "sixteen lanes play pick_bass, and this criterion is about all of them").toBe(16);
+    expect(new Set(lanes.map((lane) => lane.assetId))).toEqual(new Set([PICK_BASS_AFTER]));
+    const index = MEASURED_COVERAGE.findIndex((row) => row.assetId === PICK_BASS_AFTER);
+    const program = programs[index];
+    if (program === null || program === undefined) throw new Error(`${PICK_BASS_AFTER} did not fetch, so the swap could not be re-proved`);
+    let checked = 0;
+    let refused = 0;
+    for (const lane of lanes) {
       const asset = catalogue.assets.find((candidate) => candidate.assetId === lane.assetId)!;
       const genre = ALL_GENRES.find((candidate) => candidate.id === lane.genreId)!;
       const track = patternFromGenre(genre).tracks[lane.trackIndex];
       const notes = writtenNotes(track);
       expect(notes.length).toBe(lane.noteCount);
-      const answers = notes.map((note) => resolveInstrumentNote(asset, program.expanded, note.pitch, { velocity: note.velocity }));
-      expect(answers.every((answer) => !answer.ok)).toBe(true);
-      for (const answer of answers) expect(answer.reason).toMatch(/no playback/);
+      for (const note of notes) {
+        checked += 1;
+        if (!resolveInstrumentNote(asset, program.expanded, note.pitch, { velocity: note.velocity }).ok) refused += 1;
+      }
     }
+    // 250 is the number of written notes the sixteen lanes carry; zero of them are refused.
+    expect({ checked, refused }).toEqual({ checked: 250, refused: 0 });
   });
 });

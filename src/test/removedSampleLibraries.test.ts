@@ -69,12 +69,13 @@ describe("the two libraries removed on 2026-10-03", () => {
     }
   });
 
-  it("leaves the manifest at 32 entries and 322 program-level assets", () => {
-    expect(MANIFEST.entries).toHaveLength(32);
+  it("leaves the manifest at 33 entries and 323 program-level assets", () => {
+    expect(MANIFEST.entries).toHaveLength(33);
     const assets = catalogueFromManifestText(MANIFEST_TEXT, "").assets;
-    // 34 → 32 entries and 327 → 322 assets: the two libraries held 2 and 3 SFZ programs. The numbers are asserted
-    // because a list that silently shrank (or grew back) is the failure this file exists for.
-    expect(assets).toHaveLength(322);
+    // 34 → 32 entries and 327 → 322 assets when the two libraries left (they held 2 and 3 SFZ programs); 32 → 33 and
+    // 322 → 323 on 2026-10-03, when `karoryfer-pastabass` was added as the one program `pick_bass` moved onto. The
+    // numbers are asserted because a list that silently shrank (or grew back) is the failure this file exists for.
+    expect(assets).toHaveLength(323);
   });
 
   it("names neither library in any palette row, so no lane points at a recording that is gone", () => {

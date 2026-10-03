@@ -107,7 +107,7 @@ describe("the source hosts and the mirror serve opposite layouts, measured", () 
     expect(await status(`${MIRROR_ROOT}/karoryfer-meatbass/Programs/01_arco_modwheel.sfz`)).toBe(404);
   }, 120_000);
 
-  it("answers every one of the 32 libraries' pinned source programs, so no library depends on the mirror to sound", async () => {
+  it("answers every one of the 33 libraries' pinned source programs, so no library depends on the mirror to sound", async () => {
     if (!(await reachable())) {
       console.warn("[sampleSourceAddress] raw.githubusercontent.com is unreachable from this machine — the coverage criterion is skipped, not passed");
       return;

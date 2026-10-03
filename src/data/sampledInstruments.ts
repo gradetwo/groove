@@ -139,8 +139,8 @@ export const SAMPLED_INSTRUMENTS: readonly SampledInstrumentChoice[] = [
   },
   {
     instrument: "pick_bass",
-    assetId: "freepats-electric-bass-yr:PickedBassYR-20190930",
-    because: "`pick_bass` is an electric bass played **with a pick**; FreePats' Bass Guitar YR `pick` variation is a Yamaha RBX recorded one sample per semitone, and the pick is the difference the name states. It is the other half of the same instrument as `finger_bass`.",
+    assetId: "karoryfer-pastabass",
+    because: "`pick_bass` is an electric bass played **with a pick**. Karoryfer's Pastabass `linguine` is a picked flatwound bass on its bridge pickup — the readme's own words are \"linguine - flatwound strings, picked, bridge pickup\" — and the engine measures it sounding **keys 33–101 (69 keys, no holes)**, so it answers the D3/F3/G3 that `post-punk`'s bass writes and every note the eight `pick_bass` lanes that were losing their top notes write. It replaces FreePats' `PickedBassYR`, a picked bass too, but one the same measurement puts at **keys 26–46** — which is why those lanes were partial and `post-punk`'s bass was silent. Its licence is CC0 (its `LICENSE` is the CC0 1.0 text), and the readme adds \"royalty-free for all commercial and non-commercial use, including conversion into other sampler formats and redistribution as part of larger sample libraries\". ⚠️ Recorded rather than hidden: the highest **recorded** root is D♭6 (key 85), so keys 84–101 are that one recording transposed up; and `ampeg_release`, `amp_velcurve_*` and `lorand`/`hirand` are outside the implemented subset (they are in the entry's `needs`), so the note ends by the app's own release, velocity follows the app's own curve, and a repeated note takes its first round robin.",
   },
   {
     instrument: "finger_bass",

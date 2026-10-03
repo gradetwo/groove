@@ -78,7 +78,7 @@ describe("the source address is the repository's own path, and the mirror's is n
 });
 
 describe("every library's source and mirror addresses, pinned", () => {
-  it("holds exactly the 32 libraries the manifest ships, each with the pinned program count and first addresses", () => {
+  it("holds exactly the 33 libraries the manifest ships, each with the pinned program count and first addresses", () => {
     const manifest = shipped();
     const ids = manifest.entries.map((entry) => entry.id).sort();
     expect(ids).toEqual(Object.keys(SOURCE_ADDRESS_PINS).sort());

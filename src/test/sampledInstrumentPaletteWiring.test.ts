@@ -57,10 +57,11 @@ function genreInstrumentNames(): string[] {
 }
 
 /**
- * The rows this round **moved**, with the library each must now name and the asset each used to name.
+ * The rows that **moved**, with the library each must now name and the asset each used to name.
  *
- * `oldAssetId` is carried so the criterion fails if a later round reverts the row *and* so a reviewer can see what
- * was replaced without reading the git history.
+ * The first two are the rows the 2026-10-03 wiring round moved; `pick_bass` joined them on the same day when the
+ * narrow `PickedBassYR` recording was replaced. `oldAssetId` is carried so the criterion fails if a later round
+ * reverts the row *and* so a reviewer can see what was replaced without reading the git history.
  */
 const MOVED_ROWS = [
   {
@@ -75,10 +76,18 @@ const MOVED_ROWS = [
     assetId: "dsmolken-double-bass:d-smolken-rubner-bass-pizz",
     oldAssetId: "karoryfer-meatbass:pizz-basic",
   },
+  {
+    // ⭐ The recording was the fault, not the genre: `PickedBassYR` sounds only keys 26–46, so `post-punk`'s bass
+    // (50/53/55) was silent and eight more lanes lost the tops of their lines. Pastabass `linguine` measures 33–101.
+    instrument: "pick_bass",
+    library: "karoryfer-pastabass",
+    assetId: "karoryfer-pastabass",
+    oldAssetId: "freepats-electric-bass-yr:PickedBassYR-20190930",
+  },
 ] as const;
 
 /**
- * The rows this round **refused to move**, and the exact asset each must still name.
+ * The rows that **refused to move**, and the exact asset each must still name.
  *
  * Three groups, and the reason is written per group rather than per row:
  *
@@ -87,8 +96,9 @@ const MOVED_ROWS = [
  *  * `bell_lead` / `vibraphone` / `marimba_lead` are three different instruments, and `jlearman-steel-drum` is a
  *    fourth. A steel drum is not a bell patch, a vibraphone or a marimba.
  *  * `rhodes_ep` means a **Fender Rhodes**; the candidate this round weighed and refused held a Yamaha CP80, a Hohner
- *    Pianet T and a Wurlitzer EP200 — none is a Rhodes, and **the judgement outlives the library** (it has since left the mirror); `finger_bass` and `pick_bass` are **electric** basses and
- *    `dsmolken-double-bass` is an upright double bass; `flute_lead`'s reason asks for a sustained flute *with the
+ *    Pianet T and a Wurlitzer EP200 — none is a Rhodes, and **the judgement outlives the library** (it has since left the mirror); `finger_bass` is an **electric** bass and
+ *    `dsmolken-double-bass` is an upright double bass (so `finger_bass` may not be seated on it, while `pick_bass`
+ *    moved sideways between two electric basses rather than onto the upright); `flute_lead`'s reason asks for a sustained flute *with the
  *    vibrato a lead line wants*, and Ixox Flute's vibrato is a modwheel LFO (`pitchlfo_depth_oncc1`) this loader does
  *    not implement, so it would answer without the vibrato the recorded `FluteSusVib` program has.
  */
@@ -99,7 +109,6 @@ const HELD_ROWS = [
   { instrument: "marimba_lead", assetId: "vcsl:Marimba" },
   { instrument: "rhodes_ep", assetId: "jlearman-jrhodes3c:jRhodes-both-looped" },
   { instrument: "finger_bass", assetId: "karoryfer-black-and-blue-basses:05-darkblack-pluck" },
-  { instrument: "pick_bass", assetId: "freepats-electric-bass-yr:PickedBassYR-20190930" },
   { instrument: "flute_lead", assetId: "vsco2ce:FluteSusVib" },
 ] as const;
 
@@ -132,7 +141,7 @@ function libraryOf(assetId: string): string {
 }
 
 describe("the palette row each of the seventeen new libraries was wired into", () => {
-  it("moves the two rows onto the library they were moved to, and nowhere else", () => {
+  it("moves the three rows onto the library they were moved to, and nowhere else", () => {
     for (const row of MOVED_ROWS) {
       const chosen = sampledInstrumentFor(row.instrument);
       expect(chosen, `${row.instrument} must still have a row`).toBeDefined();
@@ -161,7 +170,7 @@ describe("the palette row each of the seventeen new libraries was wired into", (
     for (const row of HELD_ROWS) {
       expect(sampledInstrumentFor(row.instrument)?.assetId, `${row.instrument} must stay on ${row.assetId}`).toBe(row.assetId);
     }
-    // The two rows the round *declared* moved are the only rows whose library changed.
+    // The rows the table *declares* moved are the only rows whose library changed, and none of them is also held.
     const held = new Set<string>(HELD_ROWS.map((row) => row.instrument));
     for (const moved of MOVED_ROWS) expect(held.has(moved.instrument)).toBe(false);
   });

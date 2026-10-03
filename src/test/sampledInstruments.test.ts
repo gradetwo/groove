@@ -109,13 +109,17 @@ describe("the recorded-instrument table", () => {
     expect(sampledInstrumentGapReason("pan_flute")).toMatch(/pan flute/);
     expect(sampledInstrumentGap({ track_id: "chords", instrument: "pan_flute" }, catalogue)).toMatch(/no catalogue recording is mapped/);
     expect(sampledInstrumentGap({ track_id: "bass", instrument: "slap_bass" }, catalogue)).toMatch(/electric bass/);
-    // ⭐ The names this round filled: each was a gap and now resolves to the recording that was mirrored for it. Asserted one by one because a mapping row is the
-    // judgement this whole file exists to record, and "a gap quietly became a row" and "a row quietly became a gap" look the same in a diff of two lists.
+    // ⭐ The names this round filled: each was a gap and now resolves to the recording that serves it **today** — a row
+    // whose recording was replaced later names the replacement, and says so where it changed. Asserted one by one
+    // because a mapping row is the judgement this whole file exists to record, and "a gap quietly became a row" and
+    // "a row quietly became a gap" look the same in a diff of two lists.
     for (const [instrument, assetId] of [
       ["rhodes_ep", "jlearman-jrhodes3c:jRhodes-both-looped"],
       ["m1_organ", "freepats-drawbar-organ"],
       ["organ_lead", "freepats-percussive-organ"],
-      ["pick_bass", "freepats-electric-bass-yr:PickedBassYR-20190930"],
+      // ⭐ Replaced 2026-10-03: FreePats' `PickedBassYR` sounds only keys 26–46, so `post-punk`'s bass was silent and
+      // eight more lanes lost their top notes; the row moved onto Karoryfer Pastabass `linguine` (measured 33–101).
+      ["pick_bass", "karoryfer-pastabass"],
       ["finger_bass", "karoryfer-black-and-blue-basses:05-darkblack-pluck"],
       ["distorted_guitar", "freepats-fsbs-dist2"],
       ["pluck_string", "freepats-spanish-classical-guitar"],
