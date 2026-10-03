@@ -3,27 +3,27 @@
   "releaseDate": "2026-10-03",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.44",
+    "version": "2.34.45",
     "date": "2026-10-03",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "地址不再多一层、Studio 取录音、循环框真的循环",
-      "en": "One directory fewer, the studio fetches its recordings, and the brace loops"
+      "zh": "编曲工程列出来了、走带真跳、导出可取消",
+      "en": "Arrangement projects are listed, the transport really seeks, and an export can be cancelled"
     },
     "highlights": [
       {
-        "zh": "循环框此前只是画面；现在按引擎自己的“步”交给走带（3/4 是每小节 12 步），并夹紧到实际会演奏的长度，开循环不会再把编排变静音。",
-        "en": "The brace was picture only; it now hands the transport its range in the engine's own steps (twelve per bar in 3/4) and clamps to what will play, so switching it on cannot silence an arrangement."
+        "zh": "Hub 列出编曲工程，可打开、改名、删除，打开的是你点的那份。",
+        "en": "The hub lists arrangement projects, with open, rename and delete, and Open enters the one you clicked."
       },
       {
-        "zh": "源站地址此前多一层目录，32 库 320 个地址里 45 个 404；修好后全部可用，不再只靠镜像。",
-        "en": "Source addresses carried one directory too many and forty-five 404ed; they now resolve, so a library no longer leans on the mirror."
+        "zh": "新装就能看见「编曲」；点标尺会跳到那一小节，模板工程也真是 8 小节。",
+        "en": "A fresh install shows Arrangement, a ruler click really seeks to that bar, and a template project really is eight bars."
       },
       {
-        "zh": "/studio 点播放会真的取录音并出声，显示下载进度、等就绪才播。",
-        "en": "Pressing play in the studio fetches and sounds its recordings, showing progress and waiting for readiness."
+        "zh": "按下播放就有「正在准备」（3204→280 毫秒）；导出母带报进度、能取消，取消后不出下载。",
+        "en": "Play shows its preparing state at once (3,204 down to 280 ms), and a master export reports progress, can be cancelled, and produces no download once cancelled."
       }
     ],
-    "truncated": false
+    "truncated": true
   }
 }
