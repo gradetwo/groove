@@ -64,5 +64,20 @@ fi
 # promotes from. Pushing `dev` would need a local branch of that name and would silently push whatever it last pointed
 # at; `HEAD:dev` publishes exactly the commit you are looking at, which is what the old mirror script meant by "push the
 # working tree". `set -e` is the point: a rejected push must fail this script, not print a success line.
-git push origin HEAD:dev
-echo "✅ pushed ($(git log --oneline -1 | cut -c1-40)) — now read what CI says: npm run ci:status"
+#
+# ⚠️ **And `git push` also exits 0 when there is nothing to send**, which the line below used to report as
+# `✅ pushed (<HEAD>)` — the same false success this script's header exists to prevent, one layer down. In a rebase race
+# `HEAD` can already be on `dev`, and the run then credited itself with publishing a commit it never sent. Which of the
+# two happened is decided by what the push says, and by nothing else.
+if PUSH_OUT=$(git push origin HEAD:dev 2>&1); then
+  printf '%s\n' "$PUSH_OUT"
+  if printf '%s' "$PUSH_OUT" | grep -q 'Everything up-to-date'; then
+    echo "☑️  nothing to push: dev already has $(git log --oneline -1 | cut -c1-40) — this run published nothing"
+  else
+    echo "✅ pushed ($(git log --oneline -1 | cut -c1-40)) — now read what CI says: npm run ci:status"
+  fi
+else
+  printf '%s\n' "$PUSH_OUT" >&2
+  echo "❌ the push was rejected or failed; this run published nothing" >&2
+  exit 1
+fi
