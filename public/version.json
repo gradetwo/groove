@@ -1,27 +1,23 @@
 {
-  "version": "2.34.43",
+  "version": "2.34.44",
   "releaseDate": "2026-10-03",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.43",
+    "version": "2.34.44",
     "date": "2026-10-03",
     "category": "fix",
     "title": {
-      "zh": "编曲卷帘会响、录音会被下载、越界音折回",
-      "en": "The roll sounds, recordings are cached, out-of-range lines fold back"
+      "zh": "编曲的循环框真的循环了",
+      "en": "The arrangement loop brace now actually loops"
     },
     "highlights": [
       {
-        "zh": "卷帘里写音符或拖到新音高会试听，Space／Delete 归卷帘自己（带输入框守卫），拖拽在网格外抬手不再误改别的音符。",
-        "en": "Writing or dragging a note auditions it, Space and Delete belong to the roll, and a drag released outside no longer moves an untouched note."
+        "zh": "编曲视图标尺上的循环框此前只是画面：播放头一条路播到底。现在它在框变化时与每次开播前把区间交给走带，按引擎自己的“步”换算（4/4 每小节 16 步、3/4 每小节 12 步），关掉循环框即清空。",
+        "en": "The ruler's loop brace was picture only and the playhead ran past it; it now hands its range to the transport on every change and before each play, converted into the engine's own steps (sixteen per bar in 4/4, twelve in 3/4), and cleared when the brace is switched off."
       },
       {
-        "zh": "音源会下载并持久化、渲染前先取齐；挑选器显示每段录音能发哪些键并在某轨写超范围时出声报告；某小节轨数不一致时补静音而不是整小节丢掉。",
-        "en": "Recordings are cached and fetched before a render, the picker shows what a recording can sound and reports out-of-range lanes, and a bar with a different track count is padded rather than dropped."
-      },
-      {
-        "zh": "静音即刻生效，取消静音也在提前排期窗口内生效（短斜坡、不爆音）；曲风里写超出乐器音域的四条线折回域内。",
-        "en": "Muting stays immediate and unmuting is now heard inside the look-ahead window, with a ramp; four genre lines written outside their instrument's range fold back."
+        "zh": "并夹紧到实际会被演奏的长度：框画在一小节工程之外时不再把调度器送到一个永不发声的窗口，因此“开循环”不会把正在播的编排变成静音。",
+        "en": "The range is clamped to what will actually play, so a brace past a one-bar arrangement no longer parks the scheduler in a window that fires nothing: switching the loop on cannot silence a playing arrangement."
       }
     ],
     "truncated": false
