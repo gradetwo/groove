@@ -1338,7 +1338,7 @@ GET https://r2mirror.groove.wangda.today/vsco2ce/Strings/Violin Section/Pizz/Vln
 
 ### 还不知道什么
 
-* **键位选择本身没实现。** `sw_last`/`sw_lokey`/`sw_hikey`/`sw_default` 只是被当作普通 opcode 保留：`sw_default=c2` 不会让 `c2` 选中"持续音"那一段，`regionsForNote` 也不看它们。所以在同一音区折叠了多套奏法的 `-KS` 文件里，**同一音高会同时命中每套奏法**，实际响的是文件顺序里的第一条。这是下一步的事，且它有自己的测量问题（`sw_default` 与"没送过键位"的关系、`sw_last` 的默认值、`sw_previous`），本轮没有碰；上面的合成判据因此把两段的音区与力度层错开，只测 `default_path`。
+* ~~**键位选择本身没实现。** `sw_last`/`sw_lokey`/`sw_hikey`/`sw_default` 只是被当作普通 opcode 保留：`sw_default=c2` 不会让 `c2` 选中"持续音"那一段，`regionsForNote` 也不看它们。所以在同一音区折叠了多套奏法的 `-KS` 文件里，**同一音高会同时命中每套奏法**，实际响的是文件顺序里的第一条。这是下一步的事，且它有自己的测量问题（`sw_default` 与"没送过键位"的关系、`sw_last` 的默认值、`sw_previous`），本轮没有碰；上面的合成判据因此把两段的音区与力度层错开，只测 `default_path`。~~ ⇒ ✅ **已实现（2026-10-03，`1efe6ba`）**：`sw_last`／`sw_default`／`sw_lokey`／`sw_hikey`／`sw_label` 按下述规则读取——键位值有 `sw_default` 就用它，**没有则一个 `sw_last` 区域都不答**（规范原句见 `src/test/sfzSwKeyswitch.test.ts` 文件头：*"will not have a default articulation preselected … it will play no sound until one of the keyswitches is pressed"*）。**仍然不实现**的是 `sw_previous`／`sw_down`／`sw_up`／`sw_vel`／`sw_lolast`／`sw_hilast` 与**实时键位状态**——判据在 `src/test/sfzSwKeyswitch.test.ts`，逐条遍历这些 opcode 名。上面两段的合成判据**仍旧成立**（音区与力度层错开，只测 `default_path`）；`sfzKeyswitchPaths.test.ts` 的 tremolo 组为此补了 `sw_default=c#6`（带规范出处），因为严格规则下那个夹具原本一个音都不答。
 * **不可知那种情况只按"声明在该 region 之后"判定。** 声明若来自 include 进来的文件，判定发生在 `expandRemoteIncludes` 拼好的文本上，与加载看到的一致；但 `<control>` 里的 `default_path` 是否在 include 边界上重置，没有量过——上游 75 个程序都没有这种写法，所以没有实现。
 * **没有镜像任何新东西。** 八个 `-KS` 程序要进镜像，代价是它们引用的全部采样（1022 个 region 指向的文件，含与已镜像 `susvib`/`sus` 段重叠的部分），这与 ⑥ 那份"表情程序 = 162.7 MiB"是**不同的账**（那份只是 12 件各加一个单奏法程序），需要单独量、单独决定。
 
@@ -1657,19 +1657,25 @@ roster 于是补上 `vsco2ce:TimpaniRolls`，`Orchestral` 计数 91 → **108**�
 
 #### ⭐ 买前的三道实测：哪些候选**没买**，以及为什么
 
-1. **`karoryfer.war-tuba`（计划书 P4，132.1 MiB）——未买。** 它的 6 个 acoustic 根程序（`1-solo-legato` … `6-trio-poly`）
+1. ~~**`karoryfer.war-tuba`（计划书 P4，132.1 MiB）——未买。** 它的 6 个 acoustic 根程序（`1-solo-legato` … `6-trio-poly`）
    都是 **`sw_*` 键位包装**：本仓不读 `sw_*` ⇒ 逐音探针显示**每个音都答成 `*_ss_*`（staccatissimo）**，不是文件自己的
    `sw_default=25`。而真正逐奏法的文件写在 `Programs/legato/` 等子目录里，它们的 `sample=..\Samples\…` 会按
    **根程序 URL** 解析（`sampleAssetForPath` 的语义）⇒ 拿子程序当条目入口会解析到 `Programs/Samples/…`，
-   **4 387 个 region 里 3 850 个引用悬空**。⇒ **要它先得实现 `sw_*`（或路径溯源），本轮不买、0 字节。**
+   **4 387 个 region 里 3 850 个引用悬空**。⇒ **要它先得实现 `sw_*`（或路径溯源），本轮不买、0 字节。**~~
+   ⇒ ✅ **未买（原技术原因＝需 `sw_*`，**已由 `1efe6ba` 解除**）⇒ 现在纯粹是采购决定**：CC0、132.1 MiB，
+   自 `1efe6ba` 起逐音探针从 `*_ss_*` 变成 **`*_s_*`（`sw_label="Staccato"`）**；`..\Samples\` 那 3 850 条**不是悬空**——
+   实测（本机 `sfizz_render`）根程序入口 peak **0.0604**、子程序入口 **0.00003** ⇒ 路径按**主程序**目录解析，全部 **0 悬空**；
+   "3 850"回答的是"拿子程序当入口"，见本节末"复核"一段的更正。买不买是业主的事。
 2. **键位包装一律不进 `instruments`**（与 VSCO 当年排除 `-KS` 同一条规矩）：`aliexpress-erhu` 的
    `01-erhu_keyswitch`、`cithara-barbarica` 的 `01-…_keyswitch`、`dsmolken-double-bass` 的
    `…_switched` 都不列；列出的是**单一奏法**的程序（`02-erhu_long`、`02-cithara_barbarica_finger`、`…_arco`）。
    `karoryfer-bear-sax` 的 `1-solo-mono`／`2-solo-poly` 是包装，但逐音探针显示它们**答的是 sustain**（`*_looped_f/p`）
    ——这是可用的默认，于是留下并写明"键位选不出 staccato/subtone/growl"；`5-bearcussion`／`6-bearborg` 直接可用。
-3. **`kinwie.dim-cabasa`（CC-BY 4.0，11.2 MiB）——未买，技术原因。** 它的 250 个 region **全部**带未解析变量
+3. ~~**`kinwie.dim-cabasa`（CC-BY 4.0，11.2 MiB）——未买，技术原因。** 它的 250 个 region **全部**带未解析变量
    （`$POS` 等），因为定义写在 `<group> #define $POS 1 …` 这种**行内**形式里，而 `expandIncludes` 的 `#define`
-   只认行首 ⇒ `unresolvedVariables` 报 **250/250** ⇒ 本仓解析下**一个音都不发**。⇒ 需要先支持行内 `#define`。
+  只认行首 ⇒ `unresolvedVariables` 报 **250/250** ⇒ 本仓解析下**一个音都不发**。⇒ 需要先支持行内 `#define`。~~
+   ⇒ ✅ **未买（原技术原因＝需**行内 `#define`**，**已由 `1efe6ba` 解除**）⇒ 现在纯粹是采购决定**：CC-BY 4.0、11.2 MiB，
+   自 `1efe6ba` 起本仓解析它**250/250 未解析 → 0/0**、两个键位都有音（读数与出处见本节末"复核"一段）。买不买是业主的事。
 4. **体量对不上的**（不是许可问题）：`Karoryfer.HorsePulse`（182.6 MiB，bass tagelharpa）、
    `karoryfer.gogodze-phu-vol-ii`（461.6 MiB，1973 风格套鼓）、`SamsSonor`（34.8 MiB，Sonor 套鼓）——最后剩
    11.1 MiB 时都放不下；**没有为花完预算而硬凑**。
@@ -1711,7 +1717,7 @@ roster 于是补上 `vsco2ce:TimpaniRolls`，`Orchestral` 计数 91 → **108**�
 #### 还没做到的
 
 * `slap_bass`／`pan_flute` 两个缺口不变（原因同上）。
-* `karoryfer.war-tuba` 未买（需 `sw_*`）；`kinwie.dim-cabasa` 未买（需行内 `#define`）。
+* `karoryfer.war-tuba` 未买（原技术原因＝需 `sw_*`）；`kinwie.dim-cabasa` 未买（原技术原因＝需行内 `#define`）——**两个原因都已由 `1efe6ba` 解除**，所以现在**纯粹是采购决定**，不是解析器缺口。
 * `bigcat.cello` 的 `smpl` 循环点今天用不上（要加载器读 `smpl`）——**素材已到位**，代码那一格未动。
 * 桶上没有逐条对象核对（与上一轮同）：本轮用的是 `rclone size` 前后对账 ＋ 逐条抽查，**不是** 10 108 个文件
   逐个核对。
