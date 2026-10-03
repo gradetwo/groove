@@ -19,11 +19,12 @@
  * (the note layer's own migration, which handles chord stacks, gates and ratchets), and the track/notes write is
  * `addTrack` + `addTrackNotes`.
  */
-import type { ArrangementV2, NoteEvent } from "../types/arrangementV2";
+import type { ArrangementV2, NoteEvent, TrackKindV2 } from "../types/arrangementV2";
 import type { GrooveProjectPackage } from "../types/project";
 import type { SequencerPattern, SequencerTrack } from "../types/genre";
 import type { ImportedPart } from "./musicxmlImport";
 import { addTrack } from "./arrangementEdits";
+import { sampledInstrumentFor } from "./sampledInstruments";
 import { placementForPart, type SituationPlacement, type StringSituationSpec } from "./stringSituation";
 import { projectSongToV2, v1KindForTrackId } from "./arrangementProjection";
 import { notesFromLane } from "./noteLayer";
@@ -45,6 +46,33 @@ export interface ArrangementImportResult {
    * situation has the reply shape it always had.
    */
   situations?: SituationPlacement[];
+  /**
+   * ⭐ **How many of the added tracks were created as `sampler` tracks playing a recording**, because the name given
+   * for their part resolved to one. Absent when none were, so an import that named nothing has the reply shape it
+   * always had. It is counted here rather than re-derived by a caller from the arrangement, because "what the import
+   * did" is one fact the reply already owns — the file picker's toolbar reads it back and the MCP reply reports it.
+   */
+  mapped?: number;
+}
+
+/**
+ * ⭐ **The kind and the recording a named part becomes — the one place a name is turned into a track's identity.**
+ *
+ * `arrangementWithImportedParts` creates one track per part, and the name a caller gave that part decides what the
+ * track **is**: a name the recorded-instrument table serves (`piano_lead`, `walking_upright`, the string techniques, …)
+ * makes a `sampler` pointed at the very asset `sampledAssetForLane` resolves the lane to — so the kind, the asset and
+ * the sound cannot disagree; anything else — no name, or a name that means a built-in voice — is the `synth` an
+ * imported part has always been, which is what keeps the default exactly what it was.
+ *
+ * **It is exported because `mcp/arrangement.ts` has its own copy of the creation call.** The name→kind decision lived
+ * in the interface's own caller (`arrangementFiles.ts`, `withMappedPartsAsSamplers`) and nowhere else, so the same
+ * file imported through the mapping dialog produced `sampler` tracks while the same file imported by an agent calling
+ * `import_arrangement_midi` with the same `instruments` produced `synth` tracks — two answers to one question, for the
+ * same music. One shared function is what makes the two paths the same semantics rather than two implementations.
+ */
+export function importedPartVoice(instrument: string | undefined): { kind: TrackKindV2; sample?: { assetId: string } } {
+  const choice = sampledInstrumentFor(instrument);
+  return choice === undefined ? { kind: "synth" } : { kind: "sampler", sample: { assetId: choice.assetId } };
 }
 
 /**
@@ -60,6 +88,14 @@ export interface ArrangementImportResult {
  * every part is an anonymous synthesiser. **The default is unchanged** — absent, a part is exactly the track it was
  * before — so this adds a way to name identity without deciding anything on a caller's behalf. Reading it off
  * `part.name` is refused on purpose; see `ImportMcpMusicXmlOptions.instruments`.
+ *
+ * ⭐⭐ **A name that is a recording makes the track a `sampler` pointed at it, and that decision is made here.**
+ * {@link importedPartVoice} turns the name into the created track's kind and asset, so the interface path (which named
+ * the parts) and `mcp/arrangement.ts`'s `addImportedParts` (which named them through a tool call) cannot answer
+ * differently — this used to be applied by the file picker as a second pass over the arrangement, which left the MCP
+ * path creating the same named part as a synthesiser. A name the recorded table does not serve is **said out loud** in
+ * `problems` and the track keeps its built-in synthesizer, which is the same treatment every other dropped thing gets;
+ * the count of tracks that became samplers travels back as `mapped`.
  *
  * ⭐ **`situations` is the other half: the caller says what the music is doing, and the technique is chosen.** For a
  * part with one, `placementForPart` runs the rule table (`chooseTechnique`) over that part's own notes and returns the
@@ -130,10 +166,34 @@ export function arrangementWithImportedParts(
   let next = arrangement;
   const trackIds: string[] = [];
   let notes = 0;
+  /** How many of the tracks created below are `sampler` tracks playing a recording, for the `mapped` reading. */
+  let mapped = 0;
   for (const { part, index } of withNotes) {
     const instrument = resolved[index];
-    const withTrack = addTrack(next, "synth", part.name.slice(0, 40) || "Imported", instrument === undefined ? {} : { instrument });
+    /**
+     * ⭐ **The identity decides what the track *is*, not only what it says.** A name the recorded table serves makes
+     * a `sampler` pointed at that asset; anything else is the `synth` every imported part was before this option
+     * existed (see {@link importedPartVoice}). Deriving the kind at the one creation call is what keeps the interface
+     * and the MCP import from being two answers to this question.
+     */
+    const voice = importedPartVoice(instrument);
+    const withTrack = addTrack(next, voice.kind, part.name.slice(0, 40) || "Imported", {
+      ...(instrument === undefined ? {} : { instrument }),
+      ...(voice.sample === undefined ? {} : { sample: voice.sample }),
+    });
     const trackId = withTrack.tracks[withTrack.tracks.length - 1]!.id;
+    /**
+     * ⭐ **A name nothing recorded serves is said out loud rather than silently left a synthesiser.** Only when that
+     * name is the identity that actually landed: a situation that won over it has already reported the conflict, and
+     * "keeps its built-in synthesizer" about a part playing the situation's recording would be false.
+     */
+    const named = instruments[index];
+    if (named !== undefined && named !== "" && resolved[index] === named && sampledInstrumentFor(named) === undefined) {
+      problems.push(
+        `part ${index + 1} "${part.name}" was named "${named}", which is not one of the recorded instruments, so the track keeps its built-in synthesizer`
+      );
+    }
+    if (voice.kind === "sampler") mapped += 1;
     /**
      * The part's notes **replace** the new track's starter content rather than being appended to it — the starter
      * notes are the app's own "a track with nothing in it looks broken" default, and an imported part has something
@@ -150,6 +210,7 @@ export function arrangementWithImportedParts(
     tracks: trackIds.length,
     notes,
     problems,
+    ...(mapped === 0 ? {} : { mapped }),
     ...(readings.length ? { situations: readings } : {}),
   };
 }

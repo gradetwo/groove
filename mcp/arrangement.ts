@@ -55,6 +55,7 @@ import { compileArrangementToSongInput, laneInstrumentForTrack, laneRoleForTrack
 import { resolveInstrumentPresetKey } from "../src/audio/instrumentPresets";
 import { SAMPLED_INSTRUMENT_SYNTHS, sampledAssetForLane, sampledInstrumentFor, sampledInstrumentGapReason } from "../src/data/sampledInstruments";
 import { placementForPart, placementForTrack, type SituationPlacement, type StringSituationSpec } from "../src/data/stringSituation";
+import { importedPartVoice } from "../src/data/arrangementImport";
 import { DEFAULT_SYNTH_PRESETS } from "../src/audio/PolySynth";
 import { stepsFromNotes, STEPS_PER_BEAT } from "../src/data/noteEvents";
 import { beatsPerBar } from "../src/data/genreExpression";
@@ -776,9 +777,11 @@ export interface ImportMcpMusicXmlOptions {
    * notes, and "the violin ended up on the bass" is not a failure anyone would notice in time.
    *
    * **The name is a genre instrument name** (`strings_lead`, `piano_lead`, `walking_upright`, …), which is the key of
-   * `src/data/sampledInstruments.ts`. Naming one that the table maps makes the created track play that catalogue
-   * recording through the ordinary lane resolver; naming one it does not map is **reported as a problem** rather than
-   * silently ignored, and naming a synthesiser name (`warm_pad`) is honoured as the synthesiser it means.
+   * `src/data/sampledInstruments.ts`. Naming one that the table maps makes the created track a **`sampler`** pointed
+   * at that recording's asset — the same kind and asset the file picker's mapping dialog produces, decided by the one
+   * shared `importedPartVoice` so the two roads cannot disagree. Naming one it does not map is **reported as a
+   * problem** rather than silently ignored, and naming a synthesiser name (`warm_pad`) is honoured as the synthesiser
+   * it means (the track stays a `synth`).
    *
    * ## Why this is a parameter and not a guess
    *
@@ -1088,8 +1091,18 @@ function addImportedParts(
       /**
        * The instrument travels **at creation** rather than through a second edit: the track is born with the identity
        * its part was named with, so there is no window in which it exists as an anonymous synthesiser.
+       *
+       * ⭐ **And the identity decides the kind, through the same function the file picker uses**
+       * ({@link importedPartVoice}, `src/data/arrangementImport.ts`). This call used to hardcode `"synth"`, so an
+       * agent that named each part's instrument got the same nine anonymous synthesizers the interface produced
+       * before its own caller-side upgrade — the same file, the same `instruments`, two answers. The shared function
+       * is what makes "a named part sounds a recording" true on both roads rather than on one.
        */
-      const withTrack = addTrack(next, "synth", candidate.part.name.slice(0, 40) || "Imported", instrument === undefined ? {} : { instrument });
+      const voice = importedPartVoice(instrument);
+      const withTrack = addTrack(next, voice.kind, candidate.part.name.slice(0, 40) || "Imported", {
+        ...(instrument === undefined ? {} : { instrument }),
+        ...(voice.sample === undefined ? {} : { sample: voice.sample }),
+      });
       const trackId = withTrack.tracks[withTrack.tracks.length - 1]!.id;
       // The notes arrive whole rather than one call each: an imported part is one decision, not two hundred edits.
       next = { ...withTrack, notesByTrack: { ...(withTrack.notesByTrack ?? {}), [trackId]: candidate.part.notes } };
