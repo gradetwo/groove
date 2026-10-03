@@ -37,7 +37,7 @@ export const helpMessages = {
   tut_acoustics_title: { en: "Lesson 4: Kick Anatomy & Panoramic Acoustic Scope", zh: "第 4 课: 底鼓谐振解剖与全景声谱示波器" },
   tut_acoustics_desc: { en: "Analyze click transients, pitch decay envelopes, stereo phase Lissajous curves, and FFT spectra.", zh: "解构瞬态点击与低频谐振体，实时查看立体声声谱图、李萨如相位椭圆与纯音信号发生器。" },
   tut_maker_title: { en: "Lesson 5: Custom Genre Workshop & Cloud Sharing", zh: "第 5 课: 自定义曲风工坊派生与云端链接分享" },
-  tut_maker_desc: { en: "Fork from 159 historical genres, rewrite drum engines, tweak timbres, and share lossless URLs.", zh: "从 159 种曲风图谱中派生工程、修改合成器音色与音轨步进，并通过无损轻量 URL 自由分享。" },
+  tut_maker_desc: { en: "Fork from 159 historical genres, rewrite drum engines, tweak timbres, and share a link to your genre.", zh: "从 159 种曲风图谱中派生工程、修改合成器音色与音轨步进，并通过链接分享你的派生曲风。" },
   tut_chords_title: { en: "Lesson 6: Harmonic Progressions & Voicing Theory", zh: "第 6 课: 和弦走向编配与调式和声理论" },
   tut_chords_desc: { en: "Author diatonic progression blocks, audition acoustic voicings, and bake progressions into studio tracks.", zh: "推导自然音阶和弦骨架、试听吉他/钢琴真实声部排列，并将走向一键烘焙入工作台。" },
   tut_masterclass_title: { en: "Lesson 7: Rhythm & Grooves (Polyrhythmic Challenges)", zh: "第 7 课: 节奏律动与交互式复节奏挑战" },
@@ -135,7 +135,7 @@ export const helpMessages = {
   // Onboarding 7 Slides
   onboarding_s1_title: { en: "1. Zero-Sample Pure Audio Synthesis", zh: "1. 零采样纯物理声音合成" },
   onboarding_s1_desc: { en: "Groove runs 100% on W3C Web Audio DSP algorithms in your browser with zero sample libraries, zero loading delay, and zero audio latency.", zh: "Groove 完全基于 W3C Web Audio DSP 算法在您的浏览器本地实时运算，0 采样库依赖、0 音频加载等待、极低硬件延迟。" },
-  onboarding_s1_tip: { en: "159 authentic historical genres synthesized in real time with studio master quality.", zh: "实时合成 159 种现代音乐流派地道音色，输出无损母带级音频。" },
+  onboarding_s1_tip: { en: "159 authentic historical genres synthesized in real time with studio master quality.", zh: "实时合成 159 种现代音乐流派地道音色，输出母带级音频。" },
 
   // U2: the guide's single action, on the first slide.
   onboarding_listen_now: { en: "Hear this genre now", zh: "先听一下这个曲风" },

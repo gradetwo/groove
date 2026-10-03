@@ -971,7 +971,7 @@ export const studioMessages = {
   kick_dossier_ch3_body_2: { en: "In Koçer's work 'Dub Techno: The Orphic Experience of Sound', headphones are not passive isolation tools, but Orphic Media constructing an internal subterranean cathedral inside the mind. Sub-bass resonance becomes the emotional infrastructure of inner architecture.", zh: "在 Koçer 著作《Dub Techno: The Orphic Experience of Sound》中，耳机并非隔离外界的被动工具，而是向内构筑宏大精神神殿的奥菲斯媒介（Orphic Media）。低频的深渊与回响，是大脑内部建筑的情绪骨架。" },
   kick_dossier_ch4_title: { en: "ABLETON OPERATOR // 3-LAYER SYNTHESIS BLUEPRINT", zh: "Ableton Operator 三层合成工程蓝图" },
   kick_dossier_ch4_intro: { en: "Standard Ableton Operator routing matrix to replicate this 3-layer somatic kick drum:", zh: "在 Ableton Live 中使用 Operator 或类似 FM/加法合成器构建三层解剖底鼓的标准机架配置：" },
-  kick_dossier_ch4_tip: { en: "Tip: The 'EXPORT WAV' button exports your customized algorithmic kick as a studio-grade 24-bit PCM WAV sample ready for your DAW or hardware sampler.", zh: "提示：本工作台右上角提供了「导出 WAV」功能，可直接将当前调节的纯算法底鼓导出为 24-bit 无损采样，拖拽进 Ableton 或任何硬件采样器中直接使用。" },
+  kick_dossier_ch4_tip: { en: "Tip: The 'EXPORT WAV' button exports your customized algorithmic kick as a studio-grade 16-bit PCM WAV sample ready for your DAW or hardware sampler.", zh: "提示：本工作台右上角提供了「导出 WAV」功能，可直接将当前调节的纯算法底鼓导出为 16-bit PCM 采样，拖拽进 Ableton 或任何硬件采样器中直接使用。" },
 
   // Hardware Console View (N-01 / P8-02)
   console_nav_label: { en: "Console", zh: "调音台" },
