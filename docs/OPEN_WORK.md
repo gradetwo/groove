@@ -5576,3 +5576,38 @@ problems: **[]** ✓
 ⚠️ 仍欠它的**完整报告** ✗（逐条判定表 ＋ `skins:gen`／`check:skins` 退出码与是否零 diff ✓）
 ⏳ 余下三处同类"无损"由 `6d3b8442` 处理中 ✓（已见它改 `HelpCenterModal.tsx`／`NewUserOnboardingModal.tsx` ✓）
 ```
+
+## 一百九十六、✅✅ **`lossless` 完整报告（CI `37136243376` success）＋ 它挖出"两个数全反"的一处** ✗（2026-10-04 00:2x ✓）
+
+```
+✅ **逐条真假（全部实测 ✓）**：
+   ① `help.ts:40`「share lossless URLs」**假** ✗（指的是**曲风工坊**分享 ✓ `CustomGenreMakerView.tsx:350` → `encodeGenreToSharePayload` ✓）
+      实测往返：**velocity 40→缺**、**ratchet 3→缺**、**probability 100→缺**、**trackLength 12→null**、**pan −0.4→null**、**sendA 0.3→null** ✗
+      （gate 0.75→0.75 ✓、pitch 36→36 ✓ 有到 ✓）；解码器还**凭空造**：`aliases ["alias-one"]→[]` ✗、
+      `common_chords ["i","VI"]→["i","VI","III","VII"]` ✗、`structure ["Intro","A"]→["Intro","A","B","Drop","Outro"]` ✗、
+      `sources ["source-one"]→["GROOVE LAB Custom Genre Maker"]` ✗（`customGenreCodec.ts:67-78/148-160/170-213` ✓）
+      ⚠️ **deflate 本身是无损压缩** ✓ ⇒ **假的是"参数无损"这个断言** ✗，不是压缩 ✓（它把这一点也讲清了 ✓）
+      ＋ ⚠️ 它另量到 `src/audio/SequencerUrlShare.ts:652-688`：**106 组输入返回 `degraded: true`** ✗，
+        且 `studio.ts:828` **自带字符串承认**：「Link copied (too large — pitch/gate detail omitted)」✓
+   ② `help.ts:138`：**zh 的「无损」假** ✗（指**实时合成** ✓ `AudioEngine.ts:432 new AudioContext()` 无 options ⇒ **不声明任何格式** ✓；
+      而本应用出口里有**有损 MP3**（`Mp3Exporter.ts:40` ✓）＋ **16-bit PCM** 母带（`WavExporter.ts:415` ✓））
+      ⭐ **而 en「studio master quality」为真** ✓ ⇒ **保留** ✓ 并钉在 `MasterLimiter.ts:54 MASTER_LIMITER_CEILING_DB = -1.0` ✓
+      ＋ `masterGraph.ts:353 createBusCompressor` ✓ ⇒ ⭐ **"别把真的说成假的"** ✓✓
+   ③ `studio.ts:974`「24-bit PCM WAV／24-bit 无损采样」**24-bit 假** ✗ ⇒ ⭐ **端到端渲染**底鼓导出并读 RIFF 头 ✓：
+      `{riff:"RIFF", wave:"WAVE", audioFormat:1(PCM), channels:1(mono), sampleRate:44100, bitsPerSample:16}`
+      （`SomaticControls.tsx:92` → `AnatomyKickEngine.ts:655 exportWav → :739 audioBufferToWavBlob → :778 setUint16(16)` ✓）
+      ⇒ **两语都改成 16-bit** ✓（词取自工坊自己的控件 `maker.ts:36 Copy Share Link／复制分享链接` ✓）
+⭐⭐⭐ **它挖出的最强剩余处** ✗：**`src/components/help/HelpCenterModal.tsx:1537`** 写
+   **「输出 48kHz / 24-bit 无损立体声母带音频」** ✗ —— 其实测**两个数都反**（**44100 Hz、16-bit** ✓）；
+   ⚠️ 该文件在它的禁区 ⇒ **它只点名、未改** ✓✓ ⇒ ⭐ **我已把这条精确读数转给正在改该文件的 `lossless2`** ✓（`§285` ✓）
+   其余被点名的行：`HelpCenterModal.tsx:308,576,654,1527,1528` ✓、`src/data/tutorialCourses.ts:199-200` ✓、`NewUserOnboardingModal.tsx:100` ✓
+✅ **判据 8/8** ✓（三处**各自回退分别红** ✓，原文：`expected '…24-bit PCM WAV sample…' to contain '16-bit'` ✓、
+   `'实时合成…输出无损母带级音频。' not to contain '无损'` ✓、`reverted to "share lossless URLs"` ✓）；
+   **从实现 derive** ✓（解析编码器头得 `{16,1,44100}` ✓、**跑**真实编解码器 ✓、词取自控件标签 ✓、头注**明写排除面** ✓）
+✅ **门禁** ✓：`tsc` 0｜`eslint`（仅改动文件）0｜`skins:gen` **0 且零 diff** ✓｜`check:skins` 0｜`docs:check` 0｜`check:docs:refs` 0
+   ｜**反向量 `i18n*/export*` 20 文件 / 114 passed** ✓｜**五数逐字** ✓
+✅ **推送与判决** ✓：首次 push **被拒 non-fast-forward** ✓（未强推 ✓）⇒ rebase 后重推 `eaa90cb..31878f7 HEAD -> dev` ✓
+   ｜CI run **`37136243376` = success** ✓｜`31878f7` 已确认是 `origin/dev` 祖先 ✓、三文件在远端**逐字节相同** ✓
+⚠️ 它如实标未核实 ✓：母带 WAV **只解析未端到端渲染** ✗（只有底鼓导出是端到端 ✓）；**设备采样率未测** ✓；
+   推送时被取消的 3 个 run 终态未核 ✓；另有并行工作树 `groove-lossless2` 停在 `31878f7` ✓（＝我派的那条 ✓，它未动 ✓）
+```
