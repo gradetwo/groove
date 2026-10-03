@@ -6880,3 +6880,38 @@ problems: **[]** ✓
    📌 纪律：**门的输出不接管道** ✓（或必须 `set -o pipefail` ✓）；脚本的真实退出码要**单独打印** ✓
 **⚠️ 一处如实标欠** ✗：`exportLogic` 的**挂载式**判据（"选中空轨仍继续导出" ✓）仍欠 ✓；纯函数那半已判据化且**红证成立** ✓
 ```
+
+## 二百九十八、📐 **P5「结构对齐」先量：我们写的包 vs 业主真实工程（逐项差集 ＋ 常量/变量判定）**（2026-10-04 07:1x ✓）
+
+```
+**材料** ✓：`/home/crow/music/midi-corpus/LogicPro/{Colors,ocean eyes,MONTERO}.logicx`（**业主自己的真实工程** ✓）
+**方法** ✓：`find -printf` 数文件与字节 ✓；`plistlib.load` 读真实 plist 的键与值 ✓；我们的包**真跑一次** `logicProjectBundle` 取键 ✓（不凭记忆 ✗）
+**① 文件清单差集** ✓：
+   · 真实工程体量几乎全在 `Media/`（**322／299／462** 个文件 ✓）＝ 工程自己的**录音素材**（`Media/Audio Files/*.m4a`／`.lbm` ✓）
+     ⇒ ⭐ **不是"我们漏了结构"，是那些工程有音频轨而我们没有** ✓（我们若导音频轨，那才是缺口 ✓）
+   · `Resources/`：只有 `ProjectInformation.plist` ✓（我们有 ✓）
+   · ⭐ `Alternatives/<alt>/`：真实有 **5** 个文件（`ProjectData` 2.6 MB／`MetaData.plist` 11 KB／
+     `DisplayState.plist` 18 KB／`DisplayStateArchive` 35 KB／`WindowImage.jpg` 1.6 MB ✓），我们只有 **2** 个 ✗
+**② `MetaData.plist` 键与值** ✓：三工程逐键对照 ⇒ ⭐ **键集随 Logic 版本变** ✗（union **24** 键；Colors 19／ocean eyes 有
+   `AlchemyFiles`／`HasARAPlugins`／`HasGrid`／`QuicksamplerFiles`／`SurroundModeIndex` ✓）
+   ⇒ ⭐ **"19 键"不是目标** ✗ —— 目标是我们**模仿的那个版本**的键集 ✓
+   常量 ✓（可照写）：`FrameRateIndex 1`／`SampleRate 44100`／`SurroundFormatIndex 5`／`Version 3`／`isTimeCodeBased false`／
+     `PlaybackFiles []`／`UnusedAudioFiles []`
+   随工程变 ✗：`BeatsPerMinute`（120／145／179 ✓）／`NumberOfTracks`（135／42／139 ✓）／`SongSignature*`／`SongKey`／`SignatureKey`／`SongGenderKey`／各 `*Files` 列表
+   我们现状 ✓：**3** 键（`BeatsPerMinute` ＋ 两个拍号 ✓）—— 全部命中"变量"里的**必须项** ✓
+**③ `ProjectInformation.plist`** ✓：真实 **6–8** 键；常量 ✓：`HasProjectFolder false`／`VariantNames` 形状 ✓；
+   ⭐ **`VariantNames` 的形状**＝`{"<变体索引字符串>": "<名字>"}` ✓（实测 `{'0':'Demo Song'}`／`{'1':'ocean eyes'}`／`{'2':'Stereo Mix'}` ✓）
+     —— 与 `ActiveVariant` 不补零那条发现**互相印证** ✓
+   随工程变 ✗：`ActiveVariant`（0／1／2 ✓）／`BundleVersion`（1.0／2.0 ✓）／`LastSavedFrom`（"Logic Pro X 10.4.0 (4905.7)"… ✓）／
+     `projectAssetFlags`（8701／8537／12765 ✓）／`ExternalRecordPath`（**二进制书签**，指向业主自己的磁盘路径 ✗）
+**④ `DisplayState.plist`** ✓：5 键（`displayDataVersion`／`docPreferences`／`screenVisibleFrames`／`screensetCurrSlot`／`screensetDictArray` ✓）＝ **视图状态** ✓
+**⇒ 由此定的写入方案（P5.1–P5.3，各配能红判据 ✓）**：
+   · **P5.1 `MetaData.plist`**：写到**我们模仿版本**的键集 ✓ —— bpm／拍号用**编排的** ✓；常量照写 ✓；资产列表**写空数组** ✓（我们确实没有 ✓，不是漏 ✗）；
+     ⚠️ `SongKey`／`SongGenderKey`／`SignatureKey`／`VideoFiles`：**编排里没有来源** ⇒ ⚠️ **不编** ✗，**如实进 `needs`** ✓（编一个"C 大调"就是替用户声明了他没声明的东西 ✗）
+   · **P5.2 `ProjectInformation.plist`**：`ActiveVariant`（**按值** ✓，不补零 ✓）＋ `BundleVersion 2.0` ✓ ＋ `HasProjectFolder false` ✓ ＋
+     `VariantNames`／`VariantNamesV2` 按**实测形状**写变体名 ✓；⚠️ **`LastSavedFrom` 我们绝不写** ✗（那字段声明"由谁保存" ⇒ 写 "Logic Pro X …" 就是**冒充自己不是的东西** ✗ ⇒ `needs` ✓）；
+     `projectAssetFlags`／`ExternalRecordPath` ⇒ `needs` ✓（含义未知 ✗／是他人磁盘的书签 ✗）
+   · **P5.3 `DisplayState.plist`**：按实测 **5 键**写最小视图状态 ✓ ⇒ 每变体文件数 **2 → 3 / 5** ✓
+   · `WindowImage.jpg`（缩略图 ✗）与 `DisplayStateArchive`（35 KB **不透明归档** ✗）⇒ `needs` ✓（不伪造 ✗）
+**⚠️ 判据口径（能红 ✓）**：以"**键集与真实工程一致**"为断言 ✓（删一个键即红 ✗）；文件数断言 **3/5** ✓；`needs` 断言"我们**不写** `LastSavedFrom`" ✓（若有人偷偷写上 ⇒ 红 ✓）
+```
