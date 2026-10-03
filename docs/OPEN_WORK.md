@@ -2825,9 +2825,9 @@ sitar_lead 1 ｜ pluck_string 1 ｜ organ_lead 1 ｜ muted_trumpet 1 ｜ marimba
 
 ### 92.1 精确划分 ✓
 
-**清单 34 条 ⇒ 由已发布内容可达 **16 条****（**15 条调色板行 ＋ 1 条鼓组常量
+**清单 34 条 ⇒ 由已发布内容可达 **17 条****（**16 个库的调色板行 ＋ 1 条鼓组常量
 `src/audio/drumRoles.ts:101 DRUM_KIT_ASSET_ID = "virtuosity-drums-basic"`** ✓）、
-**18 条不可达**（**17 个新库 ＋ `freepats-tubular-bells1`**）✓✓；
+**17 条不可达**（⚠️ **§99 两套基线：`d036619` 上为 16/18；`c19b416` 之后为 17/17**）✓✓；
 **`virtuosity-drums-basic` 与 `freepats-tubular-bells1` 的差别**：**前者有路线（鼓组常量）**，
 **后者只在 `sampledInstruments.ts:178` 的 `because` 散文里被提到** ⇒ **是唯一"只在散文里存在"的条目** ✓。
 
@@ -3054,3 +3054,53 @@ You are not authenticated"** ✗ ⇒ **⇒ 缺的是 **worker 名 ＋ 认证****
 **⇒ 同时保留证据**：**"真文件里有几处某某写法"这类**读数**留在**文档/回报**里** ✓（**证据是读数，不是副本** ✓）。
 **⇒ 这条与既有的"镜像可撤下、原链优先"是**同一套逻辑**** ✓。
 **⇒ 落地前的代价远小于落地后**（**这条是在它 push 之前拦下的** ✓；**若已进 `dev`，撤一个文件要连带改判据、改文档、重跑门禁** ✓）。
+
+## 一百零二、⭐ **目标收口**：(A) 与 (B) 都已完成、落地、门禁绿，且**判据都真红过**（2026-10-03 ✓）
+
+### 102.1 (A) 采样器读 WAV `smpl` 循环块 ✓✓
+
+**离线**（`6a5a8ed`）＋ **实时**（`d234f9d`／链上 `2944b0c`）：**`browserSampleDecoder` 在 `decodeAudioData` 夺走字节之前读 `smpl`**
+⇒ **零额外请求**（离线那条只能靠 HTTP Range 逐块走）✓；**SFZ 显式 `loop_*` 仍胜过 WAV** ✓。
+**新增判据 55 条**（`wavLoop` 28／`waveLoopPlayback` 15／`legatoLoopCarry` 5／`liveWaveLoop` 7），**红法都真跑过**：
+读 `smpl` 那行注释掉 ⇒ **8 条红**；去掉 `declaredSamples` ⇒ 2 条红；去掉 `voice.looping` ⇒ 2 条红；关掉实时的读 ⇒ 4 条红 ✓。
+**裁定（§90.1）**：**循环参与连奏长度判断** ✓（改前 15 拒 → 改后 15 接；12 s 长音末尾 RMS 0→0.4825）✓。
+**而"仍然存在的缺口"被具名**（`docs/LEGATO_OVERLAP.md` §11.6）：**`playerFromEngine` 的单音试听连 `loopMode` 都不转发**
+—— **对 SFZ 循环也一样 ⇒ 既有缺口**，判据应是"按住的键上循环在走、松开的键上循环退出" ✓。
+**反向**：`ownerProjectAcceptance` 五个数逐字未变（**57→25／3→1／60→28**）✓✓；**既有判据是**变强**而非放宽**（形状改 `.buffer`，另加
+`decoded.waveLoop` 为 undefined 的断言 ✓）。**副作用具名并由判据钉住**：`vsco2ce` 的 6 个立式钢琴采样在实时里也会循环 ✓。
+
+### 102.2 (B) 解析器三件 ✓✓（`1efe6ba`，门禁 **success** ✓）
+
+① **行内 `#define`**：`dim-cabasa` 的 **10 处**写在**使用它的那行** ⇒ **250 个区域全保留字面量 `$POS`、一个音都不发** ✓；
+   规则单点拥有（`defines.ts`／`splitInlineDefines`／`definedNamesAt`，`includes.ts` 引用 ⇒ 两层不漂移 ✓）；
+   **值＝第一个词、其余推回该行** —— 依据是 **sfizz 自己的 `processDirective`** ✓；**按最长已定义前缀匹配** ✓。
+② **`sw_*`**：读 `sw_last`／`sw_default`／`sw_lokey`／`sw_hikey`／`sw_label`；**`war-tuba` 六个声学根带 `sw_default=25`**
+   ⇒ **探针从 `*_ss_*`（staccatissimo）变成 `*_s_*`（staccato）** ✓；**未声明就什么都不答**（规范原话「will play no sound until…」）⇒ **不静默降级 ✓**；
+   **六个未实现开关由判据逐条钉住**（`sfzSwKeyswitch.test.ts:424/491`：`sw_previous`／`sw_down`／`sw_up`／`sw_vel`／`sw_lolast`／`sw_hilast`）✓。
+③ **路径溯源**：`src/audio/sfz/defaultPath.ts`（`samplePathRelativeToProgram(sample, declaredIn, …)`／`libraryPathOf(programUrl, sourcePath)`）
+   ⇒ **§87 裁决形态**：**基目录不改、来源作元数据、显式使用** ✓（它的注释写着那个坑：`Programs/Samples/…` vs `../Samples/…` ✓）。
+**我自验**：判据 ＋ 反向面 **28 文件 / 315 条全绿** ✓；**反向五个数逐字未变** ✓；**§101 许可规矩守住**（`dev` 上**没有** `dim-cabasa` 夹具 ✓）。
+
+### 102.3 ⭐ "把两个量后放弃的候选**变回可用**"——**字面成真** ✓
+
+**那两库原先的记录是「未买，技术原因」：`war-tuba` 需 `sw_*`；`dim-cabasa` 需行内 `#define`** ✓
+⇒ **⇒ 这两个理由今天被 `1efe6ba` 解除** ⇒ **剩下的纯粹是采购决定**（业主）：`dim-cabasa` ~**11.2 MiB**（CC-BY 4.0 ✓）／`war-tuba` ~**132.1 MiB** ✓。
+**B 已把文档里两处过时说法改准**（`8004117`：`sw_*` 的实现状态；`siku`／技术原因 ⇒ **保留原句划掉＋注明日期与 `1efe6ba`** ✓）。
+
+### 102.4 两个**仅剩的缺口**（`slap_bass`／`pan_flute`）的裁定材料（**第五份调研线核实，逐字出处 ✓**）
+
+**⇒ 一句话**：**若接受"自产 SFZ（含 sf2→WAV 转换）"这条新通道**，**FluidR3 Mono（MIT）一条源可同时补两个缺口** ✓
+（客观读数：**GM37 `Slap Bass` 9 个采样区**、**GM76 `Pan Flute` 8 个采样区** ✓）；
+**若只走现有纯镜像通道** ⇒ **排箫只有 Winds Studio（CC-BY-SA-4.0，24-bit WAV，7 zones）**，**但 SFZ 要自己写**；
+**slap_bass 则暂时没有合格来源** —— **⇒ 按业主的要求，"暂时都缺"比凑数诚实** ✓。
+**六个坑（它逐条给出出处 ✓）**：① **GPL（Strix）不兼容**（copyleft 并入 MIT ⇒ 整体要 GPLv3，且接收集无 GPL）；② **midi-js 不合格的真正理由不是"有损"**
+（本仓 manifest 里**已有 6 mp3／18 ogg**，VCSL 上游自带），**而是它给的是逐音符有损重渲染的 base64 `.js`、没有 SFZ/WAV**，且其自称 CC-BY-3.0 与作者 MIT 冲突；
+③ **"插件不是素材"（JohnSlap）不成立** —— 采样**单独发布且提交在仓库里**，真正的缺口是**整仓无 LICENSE** ⇒ 只能 `unknown-mirrored`；
+④ **Asia Sun Flute 的 EULA 致命**（逐字禁止转给购买者以外任何人，**"even if sounds are converted into a different format"**）；
+⑤ ⭐ **ShareAlike 在本仓机制下**不构成障碍**** —— 逐字节镜像＋保留许可与署名＋不改许可＝**原样再分发**，SA 只在 **remix/transform** 时触发；
+   **唯一会变的地方**是**我们自己做衍生**（抽 WAV／切片／重采样／切 zone）⇒ **衍生采样必须继续按同一 SA 许可分发**；
+   **我们自己写的 SFZ 文本是否算衍生，是唯一需要评审者表态的点** ✓；**真正会卡死转换的是 ND，本次候选里没有** ✓；
+⑥ **两处词表不一致（真 bug）**：`libraryLicence.ts` 有 `public-domain`，而 `sampleManifest.ts` 的 `SampleLicence` **没有** ⇒
+   **一个 PD 库会在 manifest 校验处被拒** ✗；且 `MIT`／`WTFPL`／`GPL` 两个表都没有 ✓（**⇒ 列为下一件** ✓）。
+**它另外核到**：本仓已镜像的 Discord GM Bank 里 `037-Slap Bass 1.sfz`／`038-Slap Bass 2.sfz`／`076-Pan Flute.sfz`
+**都只有 30 字节**（`sample=*sine` 桩）⇒ **与既有 gap reason 一致** ✓。
