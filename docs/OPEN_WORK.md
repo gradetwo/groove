@@ -3549,3 +3549,13 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
    40 ms" **indistinguishable**, so **no criterion could tell a click-free ramp from a hard step**」✓✓（纯测试面 ✓）
 ⇒ **⇒ 裁定：接受"mute 已立即生效、修 unmute"这个实测结论** ✓；**我的任务书前提记为此处更正** ✓
 ```
+
+### 一百一十四、✅ **验收：目标 ⭐5（lookahead 的真实方向是 unmute）** —— `b808980`，**CI success** ✓
+
+```
+**我复核（看退出码 ✓）**：`lookaheadMuteWindow.test.ts` ⇒ **8 passed ｜ 1 skipped ／ 退出码 0** ✓；
+   `ownerProjectAcceptance` ⇒ **退出码 0**、五个数逐字未变 ✓；1 条 skipped ＝ **具名排除**（recorded-lane path ✓，合 §27 ✓）
+**读数**：**mute 本来就立即生效** ✓；真缺口是 **unmute**（已消费的起音点回不来 ✓）⇒ 重排窗口外的起音点 ✓（`ceil(scheduleAheadSec/stepDur)+1` ✓）
+**判据**：M1／**M1b 斜坡而非阶跃**／M2／**M3 unmute 在窗口内**／M3b／**M3c 重排在未来** ✓✓
+⭐ 任务书前提被实测更正（"mute 与推子都无效" ✗ 只对一半 ✓）⇒ §113 ✓
+```
