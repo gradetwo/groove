@@ -18,7 +18,8 @@
  *   3. two tracks are added — each one waited for on screen **and** in storage, so a step that silently did nothing is
  *      named rather than averaged away;
  *   4. one note is written into a cell **the panel itself says is empty** (a cell that already holds a note is replaced,
- *      not duplicated, so "the first cell" is not a safe choice), and the write is proved to have reached storage;
+ *      not duplicated, so "the first cell" is not a safe choice), the gesture is proved to have put a note **on screen**
+ *      before storage is asked anything, and then the write is proved to have reached storage;
  *   5. **the page is reloaded**;
  *   6. the tracks, the notes track by track, the stored record and the top bar's name all still say what they said.
  *
@@ -26,6 +27,13 @@
  * and closed a connection on every poll, and that churn made this probe's own readings disagree with each other — a poll
  * would see three tracks and the read after it two. A probe whose measurements contradict themselves cannot be evidence
  * about the app, so the reading was fixed before the app was suspected further.
+ *
+ * ⚠️ **The note step settles the gesture before it measures it, and the second version of that was also a probe fix.**
+ * The roll focuses itself on the first press (`PianoRollV2`, `onPointerDown`), so that press is the one that scrolls
+ * the roll into view: the offset changed *during* the gesture, the release landed a pitch row below the press, and the
+ * roll correctly wrote nothing — while this script said the note "never reached storage". It reported a loss that had
+ * not happened, on the same build where a settled press writes and stores its note. Step 4 now focuses the roll first
+ * and refuses to blame storage for a gesture that put no note on screen at all; the paragraph there has the readings.
  */
 import http from "node:http";
 import path from "node:path";
@@ -243,6 +251,24 @@ try {
   if (!LEGACY && (storedBeforeWrite.tracks ?? []).length !== 3) {
     await fail("the stored record does not hold the three tracks that were added", { storedBeforeWrite, screen: await readScreen() });
   }
+  /**
+   * ⭐ **The roll is focused before the cell is measured, and with `preventScroll`.**
+   *
+   * A press in the grid calls `panel.current?.focus()` (`PianoRollV2`, `onPointerDown`), so the **first** press on
+   * the roll is also the press that scrolls it into view — measured, not assumed: the page settled at one scroll
+   * offset while the panel was focused and at another once a grid cell took focus, and the offset changed *during*
+   * the gesture, 10–40 ms after `pointerdown`. Every measurement taken before that press was therefore a picture of a
+   * layout that no longer existed by the time the button came up, and the release landed one pitch row lower:
+   * `pointerdown roll-cell-84-0` … `pointerup roll-cell-75-0`.
+   *
+   * ⚠️ **That is the probe being wrong, not the app losing work.** The roll treats a press and a release in two
+   * different cells as the drag it is (a drag that ends on an empty cell moves the note that was dragged; there was
+   * none), so it correctly wrote nothing — and the probe then blamed storage for a note that had never been written.
+   * It reported a loss of work that never happened while the same roll writes and stores a settled press, which the
+   * run below proves. Focusing first removes the gesture's own scroll from the measurement, so the coordinates are
+   * read once the roll is where the press will find it.
+   */
+  if (!LEGACY) await page.evaluate(() => document.querySelector('[data-testid="piano-roll-v2"]')?.focus({ preventScroll: true }));
   const target = await page.evaluate(() => {
     const occupied = new Set(
       Array.from(document.querySelectorAll('[data-testid^="roll-note-"]')).map((node) => node.getAttribute("data-testid")?.replace("roll-note-", ""))
@@ -253,24 +279,47 @@ try {
     });
     if (!cell) return null;
     cell.scrollIntoView({ block: "center" });
-    const box = cell.getBoundingClientRect();
-    return { id: cell.getAttribute("data-testid"), box: { x: box.x, y: box.y, width: box.width, height: box.height } };
+    return cell.getAttribute("data-testid");
   });
   if (target === null) await fail("the roll offers no empty cell to write into", storedBeforeWrite);
+  /**
+   * ⚠️ **The box is read after the scroll, from the locator rather than from the same evaluate that scrolled.** A
+   * rect read in the same task as `scrollIntoView` is the pre-scroll rect, which is exactly the stale coordinate the
+   * paragraph above is about.
+   */
+  const targetBox = await page.locator(`[data-testid="${target}"]`).boundingBox();
+  if (targetBox === null) await fail("the cell chosen for the note is not on screen", { cell: target, storedBeforeWrite });
+  const rollNotesBefore = await page.locator('[data-testid^="roll-note-"]').count();
   /**
    * ⚠️ **A real pointer gesture, not a click**: the roll writes on `pointerdown` + `pointerup` in one cell, so a
    * synthesised click writes nothing and the probe would report "nothing was lost" about a project with nothing new.
    */
-  await page.mouse.move(target.box.x + target.box.width / 2, target.box.y + target.box.height / 2);
+  await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2);
   await page.mouse.down();
   await page.mouse.up();
+  /**
+   * ⭐ **The gesture is judged on screen before storage is judged at all.** Without this, a press that never wrote
+   * anything (a stale coordinate, a cell that moved) produced exactly the sentence this step exists to say — "the note
+   * that was written never reached storage" — about a note that was never written. The two failures are different
+   * facts and this is the step that keeps them apart.
+   */
+  const rollNotesAfter = await page.locator('[data-testid^="roll-note-"]').count();
+  if (rollNotesAfter <= rollNotesBefore) {
+    await fail("the pointer gesture wrote no note, so there is nothing to look for in storage", {
+      cell: target,
+      box: targetBox,
+      rollNotesBefore,
+      rollNotesAfter,
+      screen: await readScreen(),
+    });
+  }
   // ⚠️ The same pause-not-poll rule as above: one look, after the debounce.
   await page.waitForTimeout(1500);
   const storedAfterWrite = await readStored();
   if (!LEGACY && storedAfterWrite.total < storedBeforeWrite.total + 1) {
-    await fail("the note that was written never reached storage", { cell: target.id, storedBeforeWrite, storedAfterWrite });
+    await fail("the note that was written never reached storage", { cell: target, storedBeforeWrite, storedAfterWrite });
   }
-  result.written = { cell: target.id, notesBefore: storedBeforeWrite.total, notesAfter: storedAfterWrite.total };
+  result.written = { cell: target, rollNotesBefore, rollNotesAfter, notesBefore: storedBeforeWrite.total, notesAfter: storedAfterWrite.total };
 
   /* ── 5. ⭐ The refresh ─────────────────────────────────────────────────────────────────────────────────────── */
   const before = { screen: await readScreen(), notes: await readNotesPerTrack(), stored: await readStored() };
