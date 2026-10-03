@@ -6612,3 +6612,15 @@ problems: **[]** ✓
      但**别的读取器**（含真 Logic ✗）可能按 `<type>` 理解 ⇒ **未验、不可宣称** ✗
    ⇒ ✅ 修法方向（未做 ✗）：把当前 divisions 传进那个函数 ✓，或让 `noteTypeFor` 接收 divisions ✓
 ```
+
+**二百五十五·再补 —— `needs` ⑦ 的修法（已量清 ✓，未实施 ✗）**：
+```
+**读到的结构** ✓（`musicxml.ts` ✓）：
+   · `:302 function typeElement(duration: number): string` ✓ —— ⭐ **它只拿 duration，不知道 divisions** ✗ ⇒ 于是内部必然按常量折算 ✗
+   · 调用点三处 ✓：`:278`／`:279`（`noteElement(pitch, event, voiceNumber, isChord)` ✓）与 `:291`（休止 `<rest/>` ✓）
+   · `:311 function noteElement(…)` ✓ 内部应也调 `typeElement` ✓（待核 ✗）
+⇒ **修法（下一步 ✓）**：给 `typeElement` 与 `noteElement` **各加一个 `divisionsPerBeat` 参数** ✓，
+   在 `:278`／`:279`／`:291` 三处传入**当前作用域里的 `divisionsPerBeat`** ✓，内部用 `noteTypeFor(duration / divisionsPerBeat)` ✓
+   ⇒ 判据：**divisions 提高时 `<type>` 与 `<duration>` 一致** ✓（例：`dur=52`／divisions=24 ⇒ 2.1667 拍 ⇒ 应写最近的记谱值并**与其一致** ✓）；能红：改回常量即红 ✓
+⚠️ 注意（防我犯错 ✗）：`typeElement` 可能被**多处**调用（含 `<forward>`／休止 ✓）⇒ 改签名要**全部**更新 ✓，且推前跑 `tsc` ✓
+```
