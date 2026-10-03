@@ -6650,3 +6650,14 @@ problems: **[]** ✓
 ⚠️ **我没动界面** ✗（**等你确认要不要这个按钮** ✓）；接口与判据已就绪 ✓
 ⚠️ 本条**只本地提交** ✓（CI 队列仍 4 笔 ✗ ⇒ 不推 ✓）
 ```
+
+**二百六十六·补 —— 第三位兄弟的**确切取数方式**（读到 ✓）**：
+```
+· `midiFileFor`（`arrangementFiles.ts:122`）是**极薄的一层** ✓：`arrangementToMidi(arrangement)` 出字节 ⇒ 包成
+  `{ kind, filename: safeFileStem(stem)+".mid", blob, tracks, notes, problems }` ✓
+· ⭐ **音符在 `arrangement.notesByTrack`** ✓ —— `:138–141` **明写**："arrangement 自己的 `notesByTrack` 是**与轨同住的内容**，
+  不是 compile 会去取的字段" ✓ ⇒ ⭐ **Logic 侧的 parts ＝ 按轨切 `notesByTrack`** ✓（轨名取自 arrangement ✓）
+⇒ `logicFileFor(arrangement, stem)` 的做法明确 ✓：逐轨取 `notesByTrack[trackId]` ⇒ `ImportedPart{name, notes}` ⇒
+  `logicProjectBundle(parts, arrangement.bpm)` ⇒ `zipSync` ⇒ `Blob`（名 `<stem>.logicx.zip` ✓）＋ 与兄弟同形的计数 ✓
+⚠️ 待核（下一步，不猜 ✗）：`tracks` 的字段名（`id`／`name` ✓）与 `notesByTrack` 的键 ✓ —— 从 `arrangementToMidi.ts` 的逐轨循环照抄最稳 ✓
+```
