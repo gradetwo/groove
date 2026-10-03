@@ -1,23 +1,27 @@
 {
-  "version": "2.34.42",
+  "version": "2.34.43",
   "releaseDate": "2026-10-03",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.42",
+    "version": "2.34.43",
     "date": "2026-10-03",
     "category": "fix",
     "title": {
-      "zh": "修：不再为 include 试错地址，音源加载有了进度",
-      "en": "Fix: no wrong include addresses, and sample loading has progress"
+      "zh": "编曲卷帘会响、录音会被下载、越界音折回",
+      "en": "The roll sounds, recordings are cached, out-of-range lines fold back"
     },
     "highlights": [
       {
-        "zh": "`#include` 曾同时试两个基目录，多请求一层目录、产生大量 404；现在只按主程序目录解析（与规范原句和 sfizz 一致），请求数 68→45、404 22→0。",
-        "en": "Includes probed two base directories and asked for a doubled path; they now resolve against the main program only, cutting requests from 68 to 45 and 404s from 22 to zero."
+        "zh": "卷帘里写音符或拖到新音高会试听，Space／Delete 归卷帘自己（带输入框守卫），拖拽在网格外抬手不再误改别的音符。",
+        "en": "Writing or dragging a note auditions it, Space and Delete belong to the roll, and a drag released outside no longer moves an untouched note."
       },
       {
-        "zh": "音源加载有确定性进度、就绪后才开始播放、失败给出可见理由；同一 AudioContext 共用一个加载器，重播不再重复下载与重复解码。",
-        "en": "Loading shows determinate progress, playback starts when ready, failures are visible, and one loader per audio context stops repeat downloads and decoding."
+        "zh": "音源会下载并持久化、渲染前先取齐；挑选器显示每段录音能发哪些键并在某轨写超范围时出声报告；某小节轨数不一致时补静音而不是整小节丢掉。",
+        "en": "Recordings are cached and fetched before a render, the picker shows what a recording can sound and reports out-of-range lanes, and a bar with a different track count is padded rather than dropped."
+      },
+      {
+        "zh": "静音即刻生效，取消静音也在提前排期窗口内生效（短斜坡、不爆音）；曲风里写超出乐器音域的四条线折回域内。",
+        "en": "Muting stays immediate and unmuting is now heard inside the look-ahead window, with a ramp; four genre lines written outside their instrument's range fold back."
       }
     ],
     "truncated": false
