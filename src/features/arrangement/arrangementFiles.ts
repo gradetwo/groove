@@ -20,6 +20,8 @@ import type { ArrangementV2, NoteEvent } from "../../types/arrangementV2";
 import type { GrooveProject, GrooveProjectArrangement } from "../../types/project";
 import type { MidiArrangementImport } from "../../data/midiToArrangement";
 import { arrangementToMidi } from "../../data/arrangementToMidi";
+import { zipSync } from "fflate";
+import { logicProjectBundle } from "../../data/arrangementToLogic";
 import { arrangementWithImportedParts, arrangementFromGroovePackage, type ArrangementImportResult } from "../../data/arrangementImport";
 import { compileArrangementToPattern } from "../../data/arrangementCompile";
 import type { MusicXmlBytesImport } from "../../data/musicxmlImport";
@@ -568,4 +570,43 @@ export function describeError(error: unknown): string {
   } catch {
     return String(error);
   }
+}
+
+/**
+ * The arrangement written as a `.logicx` **package**, delivered as a zip.
+ *
+ * ⚠️ **The name says both extensions on purpose** (docs/OPEN_WORK.md 266): a `.logicx` is a *directory*, and a browser
+ * can only hand a user one file, so this is `…​.logicx.zip` rather than `…​.logicx`, which would suggest they had been
+ * given the directory itself.
+ *
+ * ⚠️ **What this does not claim** (docs/OPEN_WORK.md 243): that real Logic opens the package, or which versions accept
+ * it — neither can be shown on this machine. What is shown is that our own reader opens it and returns the notes.
+ *
+ * The shape follows its siblings: producers return a name and a blob and write nothing, and `downloadProducedFile`
+ * remains the one place that touches the document.
+ */
+/** A `.logicx` package on its way out: the same shape as its siblings, with a zip rather than a directory. */
+export interface ProducedLogic {
+  kind: "logic";
+  filename: string;
+  blob: Blob;
+  tracks: number;
+  notes: number;
+  problems: string[];
+}
+
+export function logicFileFor(arrangement: ArrangementV2, stem = ARRANGEMENT_FILE_STEM): ProducedLogic {
+  const parts = arrangement.tracks
+    .filter((track) => track.kind !== "folder")
+    .map((track) => ({ name: track.name, notes: arrangement.notesByTrack?.[track.id] ?? [] }));
+  const bundle = logicProjectBundle(parts, arrangement.bpm ?? 120);
+  const zipped = zipSync(bundle.files);
+  return {
+    kind: "logic",
+    filename: `${safeFileStem(stem)}.logicx.zip`,
+    blob: new Blob([zipped as unknown as BlobPart], { type: "application/zip" }),
+    tracks: parts.length,
+    notes: parts.reduce((total, part) => total + part.notes.length, 0),
+    problems: [],
+  };
 }
