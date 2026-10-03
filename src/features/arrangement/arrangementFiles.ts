@@ -576,7 +576,7 @@ export function describeError(error: unknown): string {
  * The arrangement written as a `.logicx` **package**, delivered as a zip.
  *
  * ⚠️ **The name says both extensions on purpose** (docs/OPEN_WORK.md 266): a `.logicx` is a *directory*, and a browser
- * can only hand a user one file, so this is `…​.logicx.zip` rather than `…​.logicx`, which would suggest they had been
+ * can only hand a user one file, so this is `… .logicx.zip` rather than `… .logicx`, which would suggest they had been
  * given the directory itself.
  *
  * ⚠️ **What this does not claim** (docs/OPEN_WORK.md 243): that real Logic opens the package, or which versions accept

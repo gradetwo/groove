@@ -8,7 +8,7 @@ import type { ArrangementV2 } from "../types/arrangementV2";
  * ⭐ **The Logic export the browser can actually hand over.**
  *
  * A `.logicx` is a directory, so what leaves the browser is a zip whose name says both extensions
- * (docs/OPEN_WORK.md 266) — asserting that name is deliberate: a file called `…​.logicx` would tell the user they had
+ * (docs/OPEN_WORK.md 266) — asserting that name is deliberate: a file called `… .logicx` would tell the user they had
  * been given the directory.
  *
  * The function reads only `tracks`, `notesByTrack` and `bpm`, so the fixture carries exactly those: a smaller
