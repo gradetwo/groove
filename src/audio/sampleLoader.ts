@@ -177,10 +177,41 @@ export function createSampleLoader(
    * It is the last parameter and it defaults to nothing, so every existing caller is unchanged down to the network
    * traffic it causes.
    */
-  readWaveLoop?: SampleWaveLoopReader
+  readWaveLoop?: SampleWaveLoopReader,
+  /**
+   * ⭐ **Where a program's *text* comes from, when the caller can serve it from somewhere cheaper than the network.**
+   *
+   * `fetchSfzText` is the only door the SFZ text comes through — the program itself (`expandedProgram`) and every `#include`
+   * under it (`expandRemoteIncludes`) — so a caller that has the bytes on disk can answer here and have the whole program half
+   * of a render come from disk. That is the MCP server's on-disk cache (`mcp/render/sampleCache.ts`), and the measurement that
+   * makes it worth a parameter: on a three-bar `chicago-house` song the program and include files were **126 of 134**
+   * requests, because a pinned library is one small `.sfz` per articulation plus a keymap and a mapping file each.
+   *
+   * An injected fetcher **caches only a success**: a throw leaves the next caller to make a real attempt, which is this module's
+   * standing rule rather than a property the fetcher has to remember.
+   */
+  fetchSfzBytes?: (url: string) => Promise<string>
 ): SampleLoader {
   const cache = new Map<string, Promise<DecodedSample>>();
   let decodes = 0;
+
+  /**
+   * ⭐ **One read of one URL per loader, whichever route asked for it.**
+   *
+   * The program cache below is keyed by **asset**, so two assets that `#include` the same keymap file would fetch it twice —
+   * and the injected on-disk fetcher would answer the second one from disk, which is cheap but is still a disk read and a
+   * decode. This map makes it one in-memory promise per URL, and it is deliberately **not** keyed by asset: a URL is a URL.
+   * A failure is not kept, for the same reason neither of the other two caches keeps one.
+   */
+  const sfzText = new Map<string, Promise<string>>();
+  const fetchSfz = (url: string): Promise<string> => {
+    const cached = sfzText.get(url);
+    if (cached) return cached;
+    const pending = (fetchSfzBytes ?? fetchSfzText)(url);
+    pending.catch(() => sfzText.delete(url));
+    sfzText.set(url, pending);
+    return pending;
+  };
 
   /**
    * Decode an **asset**, with the single-flight rule in one place.
@@ -276,14 +307,14 @@ export function createSampleLoader(
     const cached = programs.get(asset.assetId);
     if (cached) return cached;
     const pending = (async () => {
-      let sfzText: string;
+      let programText: string;
       try {
-        sfzText = await fetchSfzText(asset.sfz.url);
+        programText = await fetchSfz(asset.sfz.url);
       } catch (primaryError) {
         const fallback = asset.sfz.fallbackUrl;
         if (!fallback) throw primaryError;
         try {
-          sfzText = await fetchSfzText(fallback);
+          programText = await fetchSfz(fallback);
         } catch (fallbackError) {
           const reason = (error: unknown) => (error instanceof Error ? error.message : String(error));
           const notes = [await transportNote(asset.sfz.url, probeTransport), await transportNote(fallback, probeTransport)];
@@ -295,7 +326,11 @@ export function createSampleLoader(
       }
       const programPath = asset.sfz.path;
       const baseUrl = programPath ? asset.sfz.url.slice(0, asset.sfz.url.length - programPath.length) : asset.sfz.url;
-      return expandRemoteIncludes(sfzText, { fetchText: fetchSfzText, programUrl: programPath || asset.sfz.url, baseUrl });
+      /**
+       * Every `#include` goes through `fetchSfz` too, so one keymap shared by two programs of one library is read once — and so
+       * a caller serving the text from disk answers the includes from disk as well, which is where most of the requests are.
+       */
+      return expandRemoteIncludes(programText, { fetchText: fetchSfz, programUrl: programPath || asset.sfz.url, baseUrl });
     })();
     pending.catch(() => programs.delete(asset.assetId));
     programs.set(asset.assetId, pending);

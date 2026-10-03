@@ -48,6 +48,8 @@
     "probe:arrangement-audio": "node scripts/probe_arrangement_audio.mjs",
     "probe:arrangement-undo": "node scripts/probe_arrangement_undo.mjs",
     "probe:headless": "vite-node scripts/probe_headless_parity.ts",
+    "cache:stats": "vite-node scripts/sample_cache.mjs --stats",
+    "cache:clear": "vite-node scripts/sample_cache.mjs --clear",
     "probe:headless-silence": "vite-node scripts/probe_headless_silence.ts",
     "layout:sync": "vite-node scripts/layout_tokens.mjs",
     "check:layout": "vite-node scripts/layout_tokens.mjs --check",

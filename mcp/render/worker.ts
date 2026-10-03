@@ -36,7 +36,7 @@ import { isSampledLane } from "../../src/data/sampledInstruments";
  * The budgets and the measured costs, from `budget.json` — read by the tool descriptions and by
  * `scripts/check_mcp.mjs` as well as by the timeouts below, so there is one number rather than six.
  */
-import { NAVIGATION_BUDGET_MS, RENDER_BUDGET_MS } from "./budget";
+import { NAVIGATION_BUDGET_MS, RENDER_BUDGET_MS, resolveRenderBudgetMs } from "./budget";
 import { createRenderProgress, runWithProgress, type ProgressReporter } from "./progress";
 import {
   channelCorrelation,
@@ -216,8 +216,40 @@ export async function aFreePort(): Promise<number> {
  *
  * It names **what** was being rendered and **how long** it had, because "the render timed out" leaves a person unable to tell a slow piece from a stuck page — which is exactly the position Muse was in while four movements of a piece would not render and nothing said whether work was happening.
  */
-export function renderTimeoutMessage(what: string, seconds: number): string {
-  return `the render of ${what} did not answer within ${seconds}s — the page may be stuck, and the renderer has been reset so the next call starts a fresh one`;
+export function renderTimeoutMessage(
+  what: string,
+  seconds: number,
+  clause = "the page may be stuck, and the renderer has been reset so the next call starts a fresh one"
+): string {
+  return `the render of ${what} did not answer within ${seconds}s — ${clause}`;
+}
+
+/**
+ * What the **Node host's** timeout says instead of the page sentence, because there is no page: the render really is still
+ * running, and the caller needs the levers rather than a renderer reset that will not happen.
+ */
+export const NODE_HOST_BUDGET_CLAUSE =
+  "the Node host render did not finish in that time; render fewer bars, a lower `sampleRate`, mono `channels`, a `startBar`/`endBar` span, or raise your own client timeout — which is the other ceiling and not this server's to set";
+
+/**
+ * ⭐ **The render named by how much audio it is, because "bars" means two different things to the two callers.**
+ *
+ * `render_arrangement`'s `bars` is a pass count over a pattern that is `bars` measures long, while `render_song` passes `bars: 1`
+ * and hands over a pattern that is the **whole song** — and a song's sections are counted in *passes of their clip*, a clip being
+ * eight measures for `chicago-house` (`mcp/song.ts`'s own note: *"a section's `bars` counts passes of its clip"*). So the step
+ * count cannot be divided by sixteen and called measures: measured on the owner's own reproduction, a three-**measure** song
+ * (`add_section {slot:"A", bars:2}` on the seeded one-bar section, 49.75 s of audio) has `totalSteps: 384`, and `384/16` is the
+ * **24 bars** an earlier version of this sentence printed. A timeout that names the wrong length sends the reader to the wrong
+ * lever, so this names the **seconds of audio** instead — from the step count at sixteenth notes and the pattern's own tempo,
+ * which is the arithmetic `secondsEstimate` already uses — and leaves "how many bars that is" to the pattern's own model.
+ */
+function renderLengthFor(what: string, pattern: Pick<SequencerPattern, "totalSteps" | "bpm">, options: RenderOptions): string {
+  const passes = Math.max(1, options.bars ?? 1);
+  const steps = pattern.totalSteps ?? 0;
+  const bpm = Math.max(20, Math.min(300, pattern.bpm ?? 120));
+  if (!(steps > 0)) return `${what} (${passes} pass(es))`;
+  const seconds = steps * passes * (60 / bpm / 4);
+  return `${what} — ${seconds.toFixed(1)}s of audio, ${passes} pass(es) of a ${steps}-step pattern at ${bpm} bpm —`;
 }
 
 /**
@@ -289,6 +321,35 @@ export async function withRenderTimeout<T>(work: Promise<T>, what: string, timeo
     // A page that did not answer is not a page to keep using.
     await resetRenderer();
     throw error;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+/**
+ * ⭐ **The same ceiling for the Node host, where there is no page to reset and therefore nothing that may hang in silence.**
+ *
+ * `withRenderTimeout` above was written for a stuck *page*: it rejects **and resets the renderer**, which is the right pair for
+ * a browser and meaningless for an in-process render. That was read as "an in-process render needs no ceiling", and the owner's
+ * measurement is what that costs: `render_song {headless: true}` on a two-bar `chicago-house` song **outlives a 60 s and a 300 s
+ * client timeout with no result and no WAV**, because the render is slow — measured on this checkout, **135.9 s of wall clock for
+ * 49.75 s of audio**, 2.7× realtime — and nothing in the server was counting. A caller cannot tell that from a hang, and §27's
+ * rule is that a failure has to be visible rather than silent.
+ *
+ * So this path gets the same `RENDER_BUDGET_MS` ceiling as the browser path — **the same number**, because two ceilings for one
+ * render would be the drift `budget.json` exists to prevent — and **no `resetRenderer()`**, since there is no renderer to reset.
+ * Nothing can stop a `startRendering()` already under way; what this guarantees is that the **call** answers, with a sentence
+ * naming what was rendering, how long it had, and the levers that make it cheaper.
+ */
+export async function withNodeHostBudget<T>(work: Promise<T>, what: string, timeoutMs: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      work,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(renderTimeoutMessage(what, Math.round(timeoutMs / 1000), NODE_HOST_BUDGET_CLAUSE))), timeoutMs);
+      }),
+    ]);
   } finally {
     if (timer) clearTimeout(timer);
   }
@@ -623,10 +684,23 @@ export async function renderAudio(pattern: SequencerPattern, options: RenderOpti
   if (options.headless === true) {
     const catalogueRead = readAudioLaneCatalogue(pattern);
     const { renderPatternHeadless } = await import("./headless");
-    const payload = await renderPatternHeadless(pattern, options, catalogueRead, {
-      publicRoot: path.join(appRoot(), "public"),
-      sampleRoot: sampleMirrorRoot(),
-    });
+    /**
+     * ⭐ **The ceiling the owner's report asks for.**
+     *
+     * The Node host used to run without one, on the reasoning that `withRenderTimeout` exists to reset a stuck page. Measured:
+     * two bars of `chicago-house` at full rate is **135.9 s**, so a caller with a shorter client timeout sees "no result and no
+     * WAV" rather than an answer. `withNodeHostBudget` gives this path the same budget as the browser path and keeps the
+     * call from hanging in silence (`mcp/render/worker.ts:renderTimeoutMessage`).
+     */
+    const what = renderLengthFor(options.genreId ?? pattern.genre_id ?? "a pattern", pattern, options);
+    const payload = await withNodeHostBudget(
+      renderPatternHeadless(pattern, options, catalogueRead, {
+        publicRoot: path.join(appRoot(), "public"),
+        sampleRoot: sampleMirrorRoot(),
+      }),
+      what,
+      options.renderTimeoutMs ?? resolveRenderBudgetMs()
+    );
     return finishRenderAudio(payload, pattern, options, catalogueRead, "node-web-audio-api");
   }
   if (process.env.GROOVE_MCP_NO_BROWSER === "1") {
@@ -1274,11 +1348,15 @@ export async function renderStems(
      * stays a difference of *host* and never of *arguments*.
      */
     const rendered = headless
-      ? await renderPatternHeadless!(
-          pattern,
-          { ...options, bars: options.bars ?? 1, stemTrackIdx: index, progress: stemProgress(index, framesRendered) },
-          catalogueRead,
-          headlessContext
+      ? await withNodeHostBudget(
+          renderPatternHeadless!(
+            pattern,
+            { ...options, bars: options.bars ?? 1, stemTrackIdx: index, progress: stemProgress(index, framesRendered) },
+            catalogueRead,
+            headlessContext
+          ),
+          `stem ${index + 1} of ${pattern.tracks.length} (${trackName})`,
+          options.renderTimeoutMs ?? resolveRenderBudgetMs()
         )
       : await renderStemInPage(page!, pattern, options, index, catalogueRead, sampleRoot);
     // The stem's own length, so the next stem's frames continue this request's count instead of restarting it.

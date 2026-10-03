@@ -34,6 +34,7 @@ import path from "node:path";
 import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
 import { createFrameProgress } from "./progress";
+import * as sampleCache from "./sampleCache";
 import type { SequencerPattern } from "../../src/types/genre";
 import type { OfflineAudioLaneReport } from "../../src/audio/offlineAudioLanes";
 // Types only: `worker.ts` loads this module dynamically, so a value import back would be a cycle.
@@ -168,7 +169,7 @@ let originalFetch: typeof globalThis.fetch | null = null;
  * and the pack must build on a checkout where it is not installed. `createRequire(import.meta.url)` resolves it at the
  * moment a caller actually asks for a headless render, which is also when the error message is useful.
  */
-function loadHeadlessHost(publicRoot: string): unknown {
+export function loadHeadlessHost(publicRoot: string): unknown {
   let wa: any;
   try {
     wa = createRequire(import.meta.url)(HEADLESS_PACKAGE);
@@ -239,12 +240,17 @@ export async function renderPatternHeadless(
    * Imported **after** the globals exist, as the probe does: these modules reach for `OfflineAudioContext` when they
    * build a graph, and one of them may do it while it is being evaluated.
    */
-  const [wav, mp3, loudness, metrics, catalogue] = await Promise.all([
+  const [wav, mp3, loudness, metrics, catalogue, graph] = await Promise.all([
     import("../../src/audio/WavExporter"),
     import("../../src/audio/Mp3Exporter"),
     import("../../src/test/helpers/loudness"),
     import("../../src/test/helpers/audioMetrics"),
     import("../../src/data/sampleCatalogue"),
+    /**
+     * The bytes→buffer half of the app's own decoder, so the cache in front of it decodes through exactly the code the
+     * uncached path uses — including the `smpl`-chunk read that has to happen before `decodeAudioData` detaches the buffer.
+     */
+    import("../../src/audio/browserSampleGraph"),
   ]);
   const audioCatalogue = catalogueRead.text ? catalogue.catalogueFromManifestText(catalogueRead.text, context.sampleRoot).assets : [];
   const bars = Math.max(1, Math.min(64, options.bars ?? 1));
@@ -275,8 +281,63 @@ export async function renderPatternHeadless(
   let gs1PatchProblems: string[] = [];
   const renderProblems: string[] = [];
 
+  /**
+   * ⭐ **The process's sample cache, as this render's decoder and text fetcher.**
+   *
+   * One object per render and one byte store per process: the store is what survives the render (and the server restart), and
+   * the decoder is built on the `AudioContext` this render creates. See `mcp/render/sampleCache.ts`.
+   */
+  const cacheWiring = sampleCache.renderSampleCacheWiring();
+
+  /**
+   * The render's own length in frames, for the one progress value this host does not get from the renderer: the warm-up. Same
+   * rate and the same bar count the renderer will use, so the two numbers agree about the shape of the render.
+   */
+  const renderFramesEstimate = Math.ceil(
+    ((options.sampleRate ?? 44100) * bars * 4 * 60) / Math.max(20, Math.min(300, pattern.bpm ?? 120))
+  );
+
   const buffer = await wav.renderPatternOffline(pattern, {
     bars,
+    /**
+     * ⭐ **The bytes come from the process's disk cache, and this render fetches every recording before it starts.**
+     *
+     * This argument is the owner's requirement on the render path. It builds the render's decoder **on the context the
+     * renderer creates** — the same `decodeAudioData` this host already used, behind `mcp/render/sampleCache.ts` — so a second
+     * render, and every track of a stem render, find the bytes on disk rather than downloading them again. `fetchSfzBytes` is
+     * the same store for the program and `#include` text, which on this repository's manifest is most of the requests. The
+     * warm-up itself lives inside `renderPatternOffline` (`prepareOfflineAudioLanes`), because that is where the plan and the
+     * loader are.
+     */
+    sampleDecoder: (context) => cacheWiring.decoderFor(context, graph.browserBytesDecoder(context)),
+    fetchSfzBytes: cacheWiring.fetchSfzBytes,
+    /**
+     * ⭐ **The warm-up narrates itself, in the same channel and the same shape as smplr's `onLoadProgress`** — *"`total` is
+     * known before loading starts, so you can display a determinate progress bar"*
+     * (<https://raw.githubusercontent.com/danigb/smplr/main/README.md>). It goes out through `reportOf` rather than `report`
+     * because its unit is recordings, not budget milliseconds, and it is sent **before** `reportRenderedFrames` ever fires, so a
+     * caller sees "fetching, 12 of 40" and then "rendering, 30 %".
+     */
+    onAudioLanePreparation: (preparation) => {
+      const message =
+        `recordings ready: ${preparation.loaded} of ${preparation.total}` +
+        (preparation.problems.length ? ` (${preparation.problems.length} could not be resolved)` : "");
+      /**
+       * ⭐ **Expressed in the render's own frames, because that is the unit the rest of this path reports in.**
+       *
+       * `reportOf` keeps one monotonic counter per request and drops a value that is not increasing. The frame reports start at
+       * 10 % of the render, so a preparation that reported *recordings* (0…40) would be below the first frame count
+       * (hundreds of thousands) and every one of them would be silently dropped — a narration that looks like it worked and
+       * never reaches the client. Scaling the count into frames keeps one unit for the whole path: the warm-up fills the first
+       * tenth, `startRendering()` fills the rest.
+       *
+       * A preparation with nothing to warm reports nothing; there is genuinely nothing to say about it.
+       */
+      if (preparation.total > 0) {
+        const reached = Math.round((preparation.loaded / preparation.total) * (renderFramesEstimate / 10));
+        progress?.reportOf(reached, renderFramesEstimate, message);
+      }
+    },
     /**
      * ⭐ **The stems argument, forwarded rather than re-implemented.**
      *
@@ -416,7 +477,20 @@ export async function renderInstrumentNoteHeadless(
   const frames = Math.ceil(sampleRateValue * seconds);
   const OfflineContext = offlineContextClass();
   const hostContext = new OfflineContext(1, frames, sampleRateValue);
-  const loader = loaderModule.createSampleLoader(graph.browserSampleDecoder(hostContext), assets);
+  /**
+   * ⭐ **The same on-disk cache as the render path**, for the same reason: an audition of a library that was just rendered — or
+   * of a second note of the same instrument — must not download the program and the sample again. The decoder is bound to this
+   * audition's own context, which is the only part that cannot be shared.
+   */
+  const cacheWiring = sampleCache.renderSampleCacheWiring();
+  const loader = loaderModule.createSampleLoader(
+    cacheWiring.decoderFor(hostContext, graph.browserBytesDecoder(hostContext)),
+    assets,
+    undefined,
+    undefined,
+    undefined,
+    cacheWiring.fetchSfzBytes
+  );
 
   let loaded: Awaited<ReturnType<typeof loader.loadNote>>;
   try {

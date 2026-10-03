@@ -28,6 +28,25 @@ import budget from "./budget.json";
 export const RENDER_BUDGET_MS = budget.renderBudgetMs;
 
 /**
+ * How long the **Node host** is given for one render, from the same default the browser path uses.
+ *
+ * It is the same number because two ceilings for one render would be the drift this file exists to prevent, and
+ * {@link RENDER_BUDGET_MS}'s own sentence already tells a caller that its client timeout is the other ceiling. What this adds is
+ * a process-level override — `GROOVE_MCP_RENDER_TIMEOUT_MS` — because the default is fifteen minutes and the two callers who need
+ * it shorter cannot get it from the tool schema: a **criterion** proving "an in-process render answers inside its ceiling rather
+ * than hanging" cannot wait 900 s to observe it, and an operator capping a batch render wants the cap in the environment rather
+ * than in every request.
+ *
+ * A malformed value is ignored rather than fatal: a typo must not make every render refuse.
+ */
+export function resolveRenderBudgetMs(): number {
+  const raw = process.env.GROOVE_MCP_RENDER_TIMEOUT_MS;
+  if (raw === undefined || raw.trim() === "") return RENDER_BUDGET_MS;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : RENDER_BUDGET_MS;
+}
+
+/**
  * How long Playwright is given to load the app's page before the navigation is attempted once more.
  *
  * Not part of the render. Measured cause: Vite answers "ready" before the module graph has finished, and a busy

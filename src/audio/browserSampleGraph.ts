@@ -98,6 +98,25 @@ export function browserSampleDecoder(context: BaseAudioContext, probe?: Transpor
 }
 
 /**
+ * ⭐ **The same decode, for bytes a caller already has** — the seam a persistent cache needs.
+ *
+ * `browserSampleDecoder` owns fetching *and* decoding, which is right for a caller with only an address and wrong for one that
+ * has the bytes already (a disk cache, or a criterion). This is the decode half alone, and it is the same two steps in the
+ * same order: read the `smpl` chunk **before** `decodeAudioData` detaches the buffer, then decode.
+ *
+ * `context` is the only thing it takes: a decode belongs to one `AudioContext`, and the bytes do not.
+ */
+export function browserBytesDecoder(context: BaseAudioContext): (asset: SampleAsset, bytes: ArrayBuffer) => Promise<DecodedSample> {
+  return async (asset: SampleAsset, bytes: ArrayBuffer): Promise<DecodedSample> => {
+    // The loop is read first, because `decodeAudioData` takes ownership of the buffer it is given.
+    const waveLoop = readWaveSustainLoop(new Uint8Array(bytes));
+    const buffer = await context.decodeAudioData(bytes);
+    void asset;
+    return waveLoop ? { buffer, waveLoop } : { buffer };
+  };
+}
+
+/**
  * Starts a buffer source at the given second, through its own gain so a caller can place a sample quietly.
  *
  * ⭐ **The third parameter is the legato ledger, and it is the same one the offline sink uses.** `planAudioLaneEvents`

@@ -534,6 +534,133 @@ export interface OfflineAudioLaneScheduleInput {
 }
 
 /**
+ * ⭐ **The recordings this render needs, resolved and fetched *before* the render is allowed to start.**
+ *
+ * ## Why this exists, and where the shape comes from
+ *
+ * The owner's requirement is one sentence: *"音源需要下载和持久化，渲染前应该用到的音源都下载完毕"* — the samples must be stored, and
+ * everything the render will use must be **already downloaded** when it begins. Without this step the mixing pass at
+ * {@link scheduleOfflineAudioLanes} is where the bytes arrive: it walks the plan and `await`s a fetch and a decode per note,
+ * **between** the scheduling of the synthesised lanes and `startRendering()`. That works, and it makes two things true that
+ * should not be: the network is inside the render's critical path, and "what this render needs" has no answer until the render
+ * has already started asking.
+ *
+ * The shape is **not invented here**. It is `prepareSamplerLanes` (`src/audio/samplerLanePrepare.ts`), which the Web session
+ * uses for the same problem on the live side, and that module in turn takes it from the closest mainstream web sampler — `smplr`
+ * states both halves verbatim: *"#### Wait for audio loading — You can wait for all of them, await either: `piano.ready`"* and
+ * *"#### Load progress — Track how many samples have loaded via the `onLoadProgress` option … `total` is known before loading
+ * starts, so you can display a determinate progress bar."*
+ * (<https://raw.githubusercontent.com/danigb/smplr/main/README.md>). This reuse is deliberate: a second prewarm shape on the
+ * render side would be the "two places, one thing" failure this repository spends gates avoiding.
+ *
+ * ## What is deliberately the same, and what is deliberately not
+ *
+ *   · **The set is the plan's own.** `planOfflineAudioLanes` is called here with the caller's own step window, bpm and tempo
+ *     map, so "what was warmed" and "what will sound" cannot be two answers. Nothing is re-derived.
+ *   · **A failure is a reported state, not an endless wait.** Every note that cannot be resolved is pushed into `problems` in
+ *     the **same sentence shape** `scheduleOfflineAudioLanes` uses (and, through the MCP reply, the shape
+ *     `reportSampledLaneProblems` reports), so a lane that will be silent says so before the render rather than after it.
+ *   · **A failure does not stop the render.** `ready` is false and the render proceeds to the mixing pass, which will report
+ *     the same failure in its own report: refusing the whole render because one kit's note 60 has no region would trade a
+ *     partial render for no render, and `scheduleOfflineAudioLanes` already exists to sound every note that *can* sound.
+ *   · **A plain sample and an instrument note are both warmed**, through `load` and `loadNote` respectively — the same two
+ *     calls the mixing pass makes, so a prewarm hit really is a cache hit and not a third route.
+ *
+ * ⚠️ **What it costs, stated.** Warming resolves *every distinct note* of the render, and the loader's decode cache then holds
+ * all of them for the render's lifetime. The mixing pass would hold them for the same reason (it is the same loader and the same
+ * cache), so this moves the work rather than adding it — but it does mean a lane with a hundred distinct pitches decodes a
+ * hundred recordings before any audio exists, where the old order would have sounded the first note before decoding the last.
+ * That is the trade the owner asked for: "before rendering, everything needed is downloaded".
+ */
+export interface OfflineAudioLanePreparation {
+  /** Distinct notes (and plain samples) that resolved and are now decoded in the loader's cache. */
+  loaded: number;
+  /** Distinct notes this render needs, known before the first request — which is what makes a progress display determinate. */
+  total: number;
+  /** True when every needed recording is ready to sound. */
+  ready: boolean;
+  /** True when there was nothing to load — the ordinary case for a render with no recorded lane. */
+  empty: boolean;
+  /** One sentence per recording that could not be resolved, in the mixing pass's own report shape. */
+  problems: string[];
+}
+
+export interface PrepareOfflineAudioLanesInput {
+  pattern: Pick<SequencerPattern, "tracks" | "bpm" | "totalSteps">;
+  /** The loader the mixing pass will sound through — **the same one**, or this is a second download rather than a warm-up. */
+  loader: SampleLoader;
+  catalogue?: readonly SampleAsset[];
+  /** The same options the mixing pass will be given, so the two plan the same events. */
+  bpm?: number;
+  tempoTrack?: readonly TempoPoint[];
+  totalSteps?: number;
+  stepSpan?: number;
+  stepOffset?: number;
+  timeOffsetSec?: number;
+  stemTrackIdx?: number;
+  silencedTrackIndexes?: readonly number[];
+  /** Called after every recording resolves, on both the success and the failure path, so a display never freezes. */
+  onProgress?: (progress: { loaded: number; total: number }) => void;
+}
+
+/** The identity of one recording a render needs: which asset, which pitch, which articulation. */
+function recordingKey(event: Pick<OfflineAudioLaneEvent, "assetId" | "pitch" | "technique">): string {
+  return `${event.assetId}\u0000${event.pitch ?? ""}\u0000${event.technique ?? ""}`;
+}
+
+/**
+ * Resolve and fetch every recording the plan names, reporting progress, and answer whether the render is ready.
+ *
+ * **Resolves rather than rejects**, exactly as `prepareSamplerLanes` does: a caller about to start a render needs the answer,
+ * and the sentences it needs to show a person are in `problems`.
+ */
+export async function prepareOfflineAudioLanes(input: PrepareOfflineAudioLanesInput): Promise<OfflineAudioLanePreparation> {
+  const plan = planOfflineAudioLanes(input.pattern, input.catalogue ?? SAMPLE_CATALOGUE, {
+    ...(input.bpm === undefined ? {} : { bpm: input.bpm }),
+    ...(input.tempoTrack === undefined ? {} : { tempoTrack: input.tempoTrack }),
+    ...(input.totalSteps === undefined ? {} : { totalSteps: input.totalSteps }),
+    ...(input.stepSpan === undefined ? {} : { stepSpan: input.stepSpan }),
+    ...(input.stepOffset === undefined ? {} : { stepOffset: input.stepOffset }),
+    ...(input.timeOffsetSec === undefined ? {} : { timeOffsetSec: input.timeOffsetSec }),
+    ...(input.stemTrackIdx === undefined ? {} : { stemTrackIdx: input.stemTrackIdx }),
+    ...(input.silencedTrackIndexes === undefined ? {} : { silencedTrackIndexes: input.silencedTrackIndexes }),
+  });
+
+  /**
+   * ⭐ **Deduplicated by recording, not by event.** A walking bass plays the same note on several steps and a chord repeats
+   * across a bar; the loader's cache would collapse those into one fetch anyway, but they would still be N `loadNote` calls,
+   * each re-running resolution over the whole expanded program. Asking once per distinct recording is what makes `total` a
+   * number a person recognises, and it is the same reason `prepareSamplerLanes` deduplicates by note.
+   */
+  const wanted = new Map<string, OfflineAudioLaneEvent>();
+  for (const event of plan.events) {
+    const key = recordingKey(event);
+    if (!wanted.has(key)) wanted.set(key, event);
+  }
+
+  const problems = [...plan.problems.map((problem) => (problem.assetId ? `${problem.assetId}: ${problem.reason}` : problem.reason))];
+  let loaded = 0;
+  const total = wanted.size;
+  input.onProgress?.({ loaded, total });
+
+  for (const event of wanted.values()) {
+    try {
+      if (event.pitch === undefined) {
+        await input.loader.load(event.assetId);
+      } else {
+        await input.loader.loadNote(event.assetId, event.pitch, event.technique === undefined ? undefined : { technique: event.technique });
+      }
+      loaded += 1;
+    } catch (error) {
+      problems.push(`${event.assetId}${event.pitch === undefined ? "" : ` note ${event.pitch}`}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    input.onProgress?.({ loaded, total });
+  }
+
+  return { loaded, total, ready: problems.length === 0, empty: total === 0, problems };
+}
+
+/**
  * Plan, load and place every audio lane — the offline twin of `scheduleAudioLaneSamples`.
  *
  * **Every note is attempted.** A lane whose first written note is outside its instrument's key range must still sound the notes that are inside it, so a failure

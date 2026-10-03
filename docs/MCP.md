@@ -41,6 +41,8 @@ Three properties of this codebase make a Node-side MCP server possible without t
 | `mcp/registry.ts` | every tool / resource / prompt with its schema — the single source of truth |
 | `mcp/tools/*.ts` | the handlers, split by concern (library, pattern, export, analysis) |
 | `mcp/render/worker.ts` | the lazily started Vite + Playwright renderer |
+| `mcp/render/sampleCache.ts` | the on-disk sample cache every render reads through, and its LRU bound |
+| `src/audio/sampleCacheKey.ts` | what a sample's bytes are called, independently of which host served them |
 | `mcp/README.md` | how to run it in an MCP client |
 | `scripts/build_mcp.mjs` | esbuild bundle → `dist-mcp/groove-mcp.mjs` (one file, plain `node`) |
 | `scripts/check_mcp.mjs` | boots the built server over stdio and calls it — the gate |
@@ -469,6 +471,30 @@ caller that sent a vocal pattern got it back with the lyric gone.
 path, so a 4-bar WAV never has to travel through the model's context as base64. `analyze_audio` closes the loop:
 an agent can render, measure, change one op and measure again.
 
+### The sample cache
+
+A render that mixes a recorded lane has to **have the bytes**, and a recorded lane is a library: an SFZ program, its
+`#include` files, and one recording per region it names. Those bytes are cached on disk, keyed by the **library and the
+path** rather than by the address, so a second render — and every track of a `render_arrangement_stems` call — finds them
+instead of downloading them again. `docs/SAMPLE_CACHE.md` is the measurement and the reasoning; this is the operator's
+half.
+
+| Setting | Default | Meaning |
+| :--- | :--- | :--- |
+| `GROOVE_SAMPLE_CACHE` | the OS's per-user cache directory under `groove-samples` (`%LOCALAPPDATA%`, `~/Library/Caches`, `$XDG_CACHE_HOME`/`~/.cache`) | where the bytes live. **Never `/tmp`** — a memory-backed `/tmp` has filled up on this project's own machine, and a cache that has to be re-earned every boot is not persistent. `off` disables it for one process. |
+| `GROOVE_SAMPLE_CACHE_BYTES` | `536870912` (512 MB) | the bound, enforced by whole-file LRU: a read touches the entry, a write sweeps the least recently used until the directory fits. `0` means unbounded, which is a deliberate choice and not the default. |
+| `GROOVE_SAMPLE_ROOT` | the project mirror | where the bytes are fetched from when they are not cached. It is part of neither the key nor the file name: moving the mirror is a cache **hit**. |
+
+```bash
+npm run cache:stats                    # where it is, how many entries, how many bytes, against what bound
+npm run cache:clear                    # delete every cached file
+GROOVE_SAMPLE_CACHE=off npm run mcp    # measure the cold path on purpose
+```
+
+Every render also reports its warm-up through the same channel as its other progress — "recordings ready: n of N"
+before `startRendering()` begins — and a recording that could not be resolved is named in the render's own `problems`
+list **before** the render, in the same sentence shape the lane report uses.
+
 ### Resources
 
 | URI | Contents |
@@ -497,8 +523,11 @@ grounded in its own description and tips), `practice_plan` (a study order over t
   pure Node, so an agent doing library work never pays 300 MB of browser.
 * **Determinism.** Given the same pattern, ops and seed, every tool returns byte-identical output. The renderer
   inherits the app's own determinism (a repeated render differs only where Chrome's DSP does; see the README).
-* **No network, no credentials.** The server makes no outbound requests; the share URL it produces is a string, not
-  a fetch.
+* **No credentials.** The server holds no token and signs no request; the share URL it produces is a string, not a
+  fetch. **It does make outbound requests, and only for audio rendering**: a render that mixes a recorded lane fetches
+  its SFZ program, its `#include` files and its recordings from `GROOVE_SAMPLE_ROOT` (the project's mirror by default)
+  unless they are already in the sample cache. Every other tool — the library, patterns, MIDI, Ableton, share links —
+  is pure Node with no network at all.
 * **Honest about what it does not know.** `get_genre` returns the *recorded* metadata (era, origin, description,
   tips) rather than generated prose, and `get_loudness_report` returns measured numbers.
 

@@ -61,10 +61,10 @@ import { createGs1Host, type Gs1Host } from "./gs1/Gs1Host";
 import { capPlanPolyphony, applyGs1Voice, isGs1RoutingEnabled, planGs1Notes, patchNeedsSample, resolveGs1Lane, type Gs1Voice } from "./gs1/gs1Tracks";
 import { generateTextureSample } from "./gs1/textureSample";
 import { applyGenreFxToGraph, resolveGenreFx } from "../data/genreFx";
-import { scheduleOfflineAudioLanes, isAudioLane, type OfflineAudioLaneReport } from "./offlineAudioLanes";
+import { scheduleOfflineAudioLanes, isAudioLane, prepareOfflineAudioLanes, type OfflineAudioLaneReport } from "./offlineAudioLanes";
 import { sampledInstrumentProblems, sampledStandDownIndexes } from "./sampledLanes";
 import { browserSampleDecoder } from "./browserSampleGraph";
-import { createSampleLoader } from "./sampleLoader";
+import { createSampleLoader, type SampleDecoder } from "./sampleLoader";
 import { createWaveLoopReader } from "./wavLoop";
 import { createOfflineSamplerSink } from "./samplerLaneSink";
 import { SAMPLE_CATALOGUE, type SampleAsset } from "../data/sampleCatalogue";
@@ -216,6 +216,42 @@ export interface RenderWavOptions {
    * the same shape `onLimiterKind` already uses, and for the same reason — a render that quietly dropped a lane has to be able to say so.
    */
   onAudioLanes?: (report: OfflineAudioLaneReport) => void;
+  /**
+   * ⭐ **How a recorded lane's bytes are obtained — the seam a persistent cache is plugged into.**
+   *
+   * The default is `browserSampleDecoder(ctx)`: fetch the asset's URL (source, then mirror) and decode it on this render's
+   * context. That is right for the app, which has nowhere else to look. A Node caller that keeps the bytes on disk — the MCP
+   * server, `mcp/render/sampleCache.ts` — passes a factory that reads them there and decodes on the same context, which is what
+   * makes a second render and a stem's every track free of the download.
+   *
+   * It is a **factory of the context** rather than a decoder, because a decoder is bound to one `AudioContext` and only the
+   * renderer builds the context. Handing one in would mean guessing which context it belongs to; asking for one per context
+   * makes that impossible to get wrong.
+   */
+  sampleDecoder?: (context: BaseAudioContext) => SampleDecoder;
+  /**
+   * ⭐ **Where a program's text comes from**, when the caller can serve it from somewhere cheaper than the network.
+   *
+   * The program and its `#include` files are text, not audio, and on a pinned SFZ library they are most of a render's requests.
+   * A caller with an on-disk cache answers here; the default sends the loader to the network exactly as before.
+   */
+  fetchSfzBytes?: (url: string) => Promise<string>;
+  /**
+   * ⭐ **What the pre-render warm-up found** — called once, before the mixing pass and before `startRendering()`.
+   *
+   * `loaded`/`total` are distinct recordings, and `total` is known before the first request, so a caller can draw a determinate
+   * progress bar (the same two numbers `src/audio/samplerLanePrepare.ts` reports on the live path). `ready` is false when
+   * something could not be resolved, and `problems` names each one in the same sentence shape the lane report uses. Called
+   * **before** any audio exists, deliberately: the fact this exists to make visible is "everything this render needs is here
+   * already", which is a statement about the moment before the render, not after it.
+   */
+  onAudioLanePreparation?: (preparation: {
+    loaded: number;
+    total: number;
+    ready: boolean;
+    empty: boolean;
+    problems: string[];
+  }) => void;
   /**
    * **Sample-counted progress, for a host that can be asked where it is inside the render.**
    *
@@ -1771,6 +1807,65 @@ async function renderPatternOfflineOnce(
      */
     const silencedTrackIndexes = mixerStates.map((state, index) => (silenced(state) ? index : -1)).filter((index) => index >= 0);
     /**
+     * ⭐ **The loader this render's recorded lanes are mixed through — built once, and prewarmed before any audio exists.**
+     *
+     * Two things changed here, and they are the owner's two requirements on the render path.
+     *
+     *   · **The decoder is injectable** (`options.sampleDecoder`). `browserSampleDecoder(ctx)` fetches *and* decodes, which is
+     *     right for a caller holding only an address; a caller that can serve the bytes from somewhere else — the MCP server's
+     *     on-disk cache, `mcp/render/sampleCache.ts` — supplies a decoder that reads them there. Without the seam, the only way
+     *     to add a cache was a second loader, and a second loader is a second cache.
+     *   · **Every recording the plan names is fetched and decoded before the mixing pass runs**, with progress — see
+     *     `prepareOfflineAudioLanes`, the renderer's half of the "ready, then start" shape `src/audio/samplerLanePrepare.ts`
+     *     already uses on the live side. Its problems travel into the same `renderProblems` list the report is built from, so a
+     *     lane that will be silent is named **before** the render rather than after it.
+     *
+     * ⭐ **And the loader reads the recording's own loop, when the region declared none.**
+     *
+     * `browserSampleLoader(ctx, catalogue)` is `createSampleLoader(browserSampleDecoder(ctx), catalogue)` — the same decoder,
+     * the same catalogue — with the recording's `smpl` chunk left unread. Measured before this: the program's regions declare
+     * no loop opcode at all and **136 of 136** of its sustained recordings carry one, so a 12 s note on a 5.2 s recording went
+     * silent at 9.2 s and every legato handover was refused `recording-would-run-out`. `createWaveLoopReader()` reads that
+     * chunk with `Range` requests and never downloads the audio — the chunk sits **after** a 600 KB–1 MB `data` body, so
+     * nothing cheaper can see it. `sampleLoader` owns the priority (SFZ first, recording second); this line only hands it the
+     * reader, and it is the *same* reader for the prewarm and for the mixing pass, so the header is read once.
+     */
+    const loader = createSampleLoader(
+      options.sampleDecoder ? options.sampleDecoder(ctx) : browserSampleDecoder(ctx),
+      audioCatalogue,
+      undefined,
+      undefined,
+      createWaveLoopReader(),
+      options.fetchSfzBytes
+    );
+    mark("audioLanes:prepare");
+    const preparation = await prepareOfflineAudioLanes({
+      pattern,
+      loader,
+      catalogue: audioCatalogue,
+      bpm,
+      ...(patternTempo.length ? { tempoTrack: patternTempo } : {}),
+      totalSteps,
+      ...(chunkWindow
+        ? {
+            stepOffset: chunkWindow.fromStep,
+            stepSpan: scheduledSteps,
+            timeOffsetSec: timelineOffsetSec,
+          }
+        : {}),
+      ...(options.stemTrackIdx === undefined ? {} : { stemTrackIdx: options.stemTrackIdx }),
+      silencedTrackIndexes,
+    });
+    if (preparation.problems.length) audioLaneProblems.push(...preparation.problems);
+    options.onAudioLanePreparation?.({
+      loaded: preparation.loaded,
+      total: preparation.total,
+      ready: preparation.ready,
+      empty: preparation.empty,
+      problems: [...preparation.problems],
+    });
+    mark("audioLanes:prepareDone");
+    /**
      * ⭐ **The lane's voices, and the ledger that carries one into the next note when the overlap rule says the join
      * is legato** (`src/audio/samplerLaneSink.ts` owns the sink's rules, including the release and the loop
      * declaration, and `src/audio/legatoVoices.ts` the carry). One ledger per render: what is sounding is a fact
@@ -1782,18 +1877,11 @@ async function renderPatternOfflineOnce(
       catalogue: audioCatalogue,
       ...(options.audioLaneCatalogueProblem ? { catalogueProblem: options.audioLaneCatalogueProblem } : {}),
       /**
-       * ⭐ **The loader reads the recording's own loop, when the region declared none.**
-       *
-       * `browserSampleLoader(ctx, catalogue)` is `createSampleLoader(browserSampleDecoder(ctx), catalogue)` — the same
-       * decoder, the same catalogue — with the recording's `smpl` chunk left unread. Measured before this: the
-       * program's regions declare no loop opcode at all and **136 of 136** of its sustained recordings carry one, so a
-       * 12 s note on a 5.2 s recording went silent at 9.2 s and every legato handover was refused
-       * `recording-would-run-out`. `createWaveLoopReader()` reads that chunk with `Range` requests and never downloads
-       * the audio — the chunk sits **after** a 600 KB–1 MB `data` body, so nothing cheaper can see it.
-       *
-       * `sampleLoader` owns the priority (SFZ first, recording second); this line only hands it the reader.
+       * ⭐ **The loader reads the recording's own loop, when the region declared none** — and it is the *same* loader the
+       * prewarm above filled, which is the point: without the sharing, the warm-up would be a second download rather than a
+       * cache hit. `createWaveLoopReader()` is on that loader's construction, above.
        */
-      loader: createSampleLoader(browserSampleDecoder(ctx), audioCatalogue, undefined, undefined, createWaveLoopReader()),
+      loader,
       sink,
       bpm,
       ...(patternTempo.length ? { tempoTrack: patternTempo } : {}),
