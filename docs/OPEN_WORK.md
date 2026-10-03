@@ -3764,3 +3764,38 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
 **✗ 我不据此就改**：① 现在高负载 ✗ ⇒ 要**低负载复测**（线在跑 A/B/C 矩阵 ✓）；
    ② 要**先看那 26% 在做什么**（解码？DOM 更新？每 step 重排？✓）⇒ 需 `--manifest`／火焰图精确拆解 ✓
 **方法卫生**：整组读数**带时点与 load** ✓（这正是把"记负载"写进目标的价值 ✓）
+
+### 116.9 ⭐ Studio 入口的"两半都缺"已修（`20bf89f`／`d5cb58f`✓）＋ **它顺带发现的第二件静音**（2026-10-03 19:1x 时点 ✓）
+
+```
+**① 它量出的"两半都缺"**（方法：单文件、真实 `StudioView`、双桩引擎、真实 manifest、`delta-blues`）：
+   `order = ["engine.play"]` ✓（**按下即起，之前没有任何等待** ✗）｜`loadNote` **0** ｜`scheduleSamplerSteps` **0** ｜
+   `prepareSampledLanes` **2**（引擎**确实**被要求撤下这些声部 ✓）｜loading／problems **都不显示** ✗
+   机制（只读复核 ✓）：`AudioEngine.ts:2211` 撤下的声部**不再发声** ✓；`createSamplerLanePlayback` 全仓**两个调用点**
+   （`playerFromEngine.ts:518`／`useRecordedLanes.ts:194`）而 `StudioView` 走 `useAudioEngineLifecycle`（**0 处** sampler 引用 ✓）
+   ⇒ **两半都缺 ⇒ 静音且不请求** ✓ —— 正是 `useRecordedLanes.ts:14-18` 自己写的 "**worse than the defect**" ✓
+   ⭐ **入口清单（它的 ①）**：`GenreDetailView` 两半都有 ✓ ｜ Timeline 视图**状态有但没人画** ⚠️ ｜
+      **`StudioView` 是唯一"两半都缺"** ✗ ｜ V2 编排／CustomGenreMaker／Challenge／Compare **各缺"等待"半边**（4 处只列不做 ✓）
+**② 修法**：**复用曲风页那一条**（准备 → `engine.play()` → 调度器 ✓），无第二套 ✓；`useTransportControls` 新增**可选**
+   `recordedLanes` ⇒ **不传它时行为逐字不变** ✓；准备失败 ⇒ **不启动走带** ✓（判据："a press whose recordings all failed
+   must not start a transport" ✓）；面板如实写"**未知**"（loader 层**不可知**是源站还是镜像答的 ✓）
+**③ 判据能红**：8 项**各自实跑过红**（摘接线 ⇒ 找不到 `sampler-loading` ✓；去掉 `recordedLanes.start` ⇒ 调度器未被调 ✓；
+   去 `loaderFor` ⇒ 两个 loader 不是同一对象 ✓；静默启动 ⇒ `engine.play` 被调 ✓；面板无 reader 也渲染 ⇒ 假绿被抓出 ✓
+   —— 它自己发现"**这条一开始假绿**：断言跑在异步 render 之前" ✓✓）；反向量：**57→25／3→1／60→28 一字未动** ✓
+```
+
+### 116.10 📌 队列追加（两条新发现，都带证据 ✓）
+
+```
+① ⭐ **第二件静音（不是它修的那件）**：`edm-trap` 的 **2 条被映射的鼓声部**被 `sampledStandDownIndexes` 撤下 ✓，
+   而 `planSamplerSteps` 因"**鼓轨不写音高**"产出 **0 event** ⇒ **它们是静音的** ✗
+   （与 `docs/SAMPLED_RANGE_COVERAGE.md` §1.1 的口径一致 ✓）⇒ 它**只报告不修** ✓（`src/audio/**` 不是它的地盘 ✓）
+   ⇒ **这正是业主早先问过的 `/studio?genre=edm-trap` 无提示那条的一个组成部分** ✓ ⇒ **进 (乙) 缺口清单** ✓
+② ⚠️ **它自己引入的一个风险，它主动说了** ✓：新流程在 `engine.play()`（内含 `ctx.resume()`）**之前** `await` 一次网络下载 ✗
+   ⇒ **用户手势与音频 resume 之间多了一段等待** ✓（Chrome 明文：手势前创建的 AudioContext 是 suspended ✓）
+   ⇒ 与 `GenreDetailView` 既有做法一致、且业主已接受 ✓，但 **iOS 静音键场景未验证** ✗ ⇒ **进队列**：
+   「验证/加固：等待音源时的自动播放策略（`primeAudioContext` 是否该在入口 tap 里先建上下文 ✓）」
+③ ⚠️ **一条无主的红**：`npm run check:skin-roles` **= 1** ✗ —— `--d-warn` 被 `CatalogueRecordingPicker.tsx` 用了一次 ✓；
+   它量到"在 `485d0a3`（无它改动）上**逐字同一条**" ✓、**不在 dev CI 那个 job 里** ✓ ⇒ **不是它引入的** ✗，
+   但它**没有追到是哪条线引入的** ✗ ⇒ **进队列**（无主缺陷，需人认领 ✓）
+```
