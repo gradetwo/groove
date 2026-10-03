@@ -271,7 +271,21 @@ export function useGenreAudition(options: UseGenreAuditionOptions = {}): UseGenr
         if (isDebugModeEnabled() || debugModeForcedByUrl()) {
           void import("../platform/diagnostics").then((mod) => {
             // The panel is a diagnostic, never a reason to fail a playback path.
-            cleanupDiagRef.current = mod.installDiagnostics(engineRef.current!);
+            cleanupDiagRef.current = mod.installDiagnostics(engineRef.current!, {
+              /**
+               * ⭐ **The same sampler section the studio's panel has**, read from the same module-level ledger — the panel
+               * describes the *last press on the page*, whichever route made it, so a listener who auditions from
+               * `/genre/…` and then opens the panel sees that audition rather than nothing.
+               */
+              sampler: async () => {
+                const { samplerDiagView } = await import("./samplerDiagnostics");
+                return samplerDiagView();
+              },
+              probe: async () => {
+                const { probeSamplerAddresses } = await import("./samplerDiagnostics");
+                return probeSamplerAddresses();
+              },
+            });
           });
         }
         engineRef.current.setOnStep((info) => {

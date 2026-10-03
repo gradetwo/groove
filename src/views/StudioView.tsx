@@ -77,6 +77,18 @@ import { BakedArpeggioResult } from "../utils/arpeggiatorTheory";
 import { calculateGroupSize, calculateStepsPerBar } from "../utils/meter";
 import { useAuditionPreview } from "../features/sequencer/hooks/useAuditionPreview";
 import { useEffectsRack } from "../features/sequencer/hooks/useEffectsRack";
+import { useRecordedLanes } from "../hooks/useRecordedLanes";
+import { sharedSamplerLoader } from "../audio/sharedSamplerLoader";
+import { SamplerLaneStatus } from "../components/sequencer/SamplerLaneStatus";
+
+/**
+ * ⭐ **The session's shared loader, as `useRecordedLanes` wants it** — one factory at module scope rather than an inline
+ * arrow, so the option's identity is stable and the scheduler it builds is the *same object* `prepareSamplerLanes` warmed
+ * (`sharedSamplerLoader` is keyed by `AudioContext` **and** by the catalogue array, and both call sites pass
+ * `appCatalogueRuntime`'s own array). Same shape as `GenreDetailView.tsx`'s, deliberately: one spelling of the sharing.
+ */
+const sharedLoaderFor = (catalogue: readonly SampleAsset[], context: BaseAudioContext) =>
+  sharedSamplerLoader(context, catalogue);
 
 // A-02: the track colour/name mapping moved to components/sequencer/trackConfig.
 // Re-exported here so this module's public surface is unchanged.
@@ -540,6 +552,23 @@ export const StudioView: React.FC<StudioViewProps> = ({
   const releasePreviewScopeRef = useRef<(() => void) | null>(null);
   const releasePreviewScope = useCallback(() => releasePreviewScopeRef.current?.(), []);
 
+  /**
+   * ⭐ **The half `/studio` was missing: something that sounds a mapped lane from its own bytes.**
+   *
+   * `useTransportControls` hands the engine `prepareSampledLanes`, which stands a recorded lane's synthesiser **down** —
+   * and plays nothing. Measured on this route with `delta-blues` loaded, before this: `order: ["engine.play"]`,
+   * `loadNote` calls **0**, `scheduleSamplerSteps` calls **0**, so every mapped lane was stood down and silent and no
+   * sample was ever requested. `useRecordedLanes` is the repository's one pairing of the two halves (stand down **and**
+   * schedule), and it already serves the custom-genre preview, the ear-training arena and the A/B comparison; the studio
+   * was simply never wired to it.
+   *
+   * The loader factory is the shared one, so the bytes `useTransportControls` warms before the press are the bytes this
+   * sounds after it — `src/audio/sharedSamplerLoader.ts` carries the measurement (45 files, fetched once per play).
+   */
+  const { startRecordedLanes, stopRecordedLanes } = useRecordedLanes(() => engineRef.current, {
+    loaderFor: sharedLoaderFor,
+  });
+
   // Transport & playback modes: play, drums-only, undo/redo, tap, song, slots (A-02)
   const {
     handleTapTempo,
@@ -555,6 +584,8 @@ export const StudioView: React.FC<StudioViewProps> = ({
     handleToggleBlindCompare,
     handleToggleMetronome,
     handleToggleCountIn,
+    samplerPreparation,
+    samplerProblems,
   } = useTransportControls({
     engineRef,
     /**
@@ -575,6 +606,15 @@ export const StudioView: React.FC<StudioViewProps> = ({
     isZh,
     showToast,
     releasePreviewScope,
+    /**
+     * ⭐ **Ready, then start** — the transport will not run until the recordings this pattern needs are in memory, and the
+     * wait is drawn below. Both halves come from `useRecordedLanes`, so the studio sounds a recorded lane exactly the way
+     * the four views that already do describe it.
+     */
+    recordedLanes: {
+      start: (pattern) => void startRecordedLanes(pattern),
+      stop: stopRecordedLanes,
+    },
   });
 
   // Patterns handed over from other views (chords / arpeggio / masterclass) (A-02)
@@ -1041,6 +1081,11 @@ export const StudioView: React.FC<StudioViewProps> = ({
           {/* Unconditional, like the hint above it: a conditional sibling here would remount the
               sequencer panel. The indicator takes a `visible` prop for its own visibility. */}
           <SaveIndicator visible status={autosave} />
+          {/* ⭐ "正在获取音源" — the wait between the press and the transport, and the reasons a lane will not sound.
+              Unconditional for the same reason as the two elements above it: `SamplerLaneStatus` decides its own
+              visibility from the state it is handed, so the sequencer below is never remounted by a download starting
+              or finishing. */}
+          <SamplerLaneStatus progress={samplerPreparation} problems={samplerProblems} />
         <SequencerPanel
           pattern={pattern}
           seqState={seqState}

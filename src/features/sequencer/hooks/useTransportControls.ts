@@ -8,6 +8,44 @@ import { patternForSlot } from "../../../types/project";
 import type { ClipSlot } from "../../../types/song";
 import { playAudioLanes } from "../../../audio/audioLanePlayback";
 import { appCatalogueRuntime } from "../../../data/sampleCatalogueRuntime";
+import { sharedSamplerLoader } from "../../../audio/sharedSamplerLoader";
+import {
+  prepareSamplerLanes,
+  standDownSamplerLanes,
+  type SamplerLaneProgress,
+} from "../../../audio/samplerLanePrepare";
+import { reportSampledLaneProblems } from "../../../audio/sampledLanes";
+import type { SampleAsset } from "../../../data/sampleCatalogue";
+import { sharedSamplerLoaderBuilds } from "../../../audio/sharedSamplerLoader";
+import {
+  ledgerLanesOf,
+  observingSamplerLoader,
+  publishSamplerPlay,
+  type SamplerLedgerAsset,
+} from "../../../hooks/samplerPlayLedger";
+import type { SequencerPattern } from "../../../types/genre";
+
+/**
+ * ⭐ **The recorded-lane half of this transport, handed in by the surface that owns the engine.**
+ *
+ * A lane whose `instrument` the palette maps (`walking_upright`, `piano_lead`, `guitar_lead`, …) is a **recording**, and
+ * it takes two calls to hear it: `AudioEngine.prepareSampledLanes` stands its synthesiser down — and plays nothing — while
+ * `createSamplerLanePlayback` places its notes from their own bytes. This transport did the first and never the second, so
+ * on `/studio` a mapped lane was stood down from the synthesiser and then **sounded by nothing at all**: silent, with no
+ * request made and nothing on screen. That is `src/hooks/useRecordedLanes.ts`'s own warning — *"Calling only the first is
+ * **worse than the defect**: a lane that played the wrong instrument becomes a lane that plays nothing"* — measured rather
+ * than read (`order: ["engine.play"]`, `loadNote` calls `0`, `scheduleSamplerSteps` calls `0`).
+ *
+ * `start` is `useRecordedLanes`'s `startRecordedLanes`, so the pairing exists once in the repository rather than a second
+ * time here; `stop` is its `stopRecordedLanes`, because a recorded note is already on the audio clock and `engine.stop()`
+ * cannot reach it.
+ */
+export interface TransportRecordedLanes {
+  /** Sound this pattern's recorded lanes from their own bytes, once the transport is running. */
+  start: (pattern: SequencerPattern) => void;
+  /** Silence every voice the last `start` placed, and report how many that stopped. */
+  stop: () => void;
+}
 
 export interface UseTransportControlsOptions {
   /**
@@ -35,6 +73,15 @@ export interface UseTransportControlsOptions {
    * over a scope that no longer exists.
    */
   releasePreviewScope?: () => void;
+  /**
+   * ⭐ **The recordings this pattern's mapped lanes need, when the surface owns the scheduler that sounds them.**
+   *
+   * Absent — every caller but the studio today — this hook behaves exactly as it did: the target is handed to the engine
+   * and `play()` is awaited. Present, a press resolves and decodes the recordings through the session's **shared** loader
+   * (`sharedSamplerLoader`, keyed by `AudioContext`) *before* `engine.play()`, so a second press on the same genre is a
+   * cache hit rather than 45 files fetched again.
+   */
+  recordedLanes?: TransportRecordedLanes;
 }
 
 export interface UseTransportControlsResult {
@@ -56,6 +103,17 @@ export interface UseTransportControlsResult {
   handleToggleBlindCompare: () => void;
   handleToggleMetronome: () => void;
   handleToggleCountIn: () => void;
+  /**
+   * ⭐ **The wait between the press and the transport**, so a surface can say "正在获取音源" instead of starting a bar whose
+   * recorded lanes are stood down. `null` whenever there is nothing to wait for, including `total: 0`.
+   */
+  samplerPreparation: SamplerLaneProgress | null;
+  /**
+   * One sentence per recorded lane this session's catalogue could not serve, in `reportSampledLaneProblems`' own
+   * `[sampled-instrument] …` shape — the same sentences the genre page and the engine-owning hooks render. Never silent:
+   * a mirror that is not configured makes every mapped lane a synthesiser, and this is where that is said.
+   */
+  samplerProblems: string[];
 }
 
 /**
@@ -82,8 +140,24 @@ export function useTransportControls({
   redo,
   showToast,
   releasePreviewScope,
+  recordedLanes,
 }: UseTransportControlsOptions): UseTransportControlsResult {
   const { t } = useLanguage();
+  /**
+   * ⭐ **The visible wait, and the reasons a lane will not sound.**
+   *
+   * State rather than a ref because both have to *change a render*: the press that raises "正在获取音源" must repaint the
+   * page, and the sentence that replaces it must be readable when the download failed. `null` means "nothing to wait
+   * for", which is the ordinary case for a pattern with no mapped lane.
+   */
+  const [samplerPreparation, setSamplerPreparation] = useState<SamplerLaneProgress | null>(null);
+  const [samplerProblems, setSamplerProblems] = useState<string[]>([]);
+  /**
+   * Read through a ref, like `useRecordedLanes` reads its own `loaderFor`: every call site writes an inline arrow, and a
+   * fresh identity here would re-create `handleTogglePlay` on every render for no behavioural reason.
+   */
+  const recordedLanesRef = useRef(recordedLanes);
+  recordedLanesRef.current = recordedLanes;
   /**
    * ⭐ **Whether the Stop control would do anything**, so it can be disabled rather than be a live button that does
    * nothing (U7).
@@ -150,6 +224,158 @@ export function useTransportControls({
   }, [t, showToast]);
 
   /**
+   * ⭐ **Ready, then start** — the recordings this pass needs are resolved and decoded *before* the transport runs.
+   *
+   * ## The defect this removes, measured
+   *
+   * The engine's dispatch skips a lane in `sampledLaneIndexes` (`AudioEngine.prepareSampledLanes` fills it from
+   * `sampledStandDownIndexes`), and this transport filled it while **nothing** placed those lanes' notes: a `grep` for
+   * `prepareSamplerLanes` in this file was empty, and pressing Play on `/studio` with `delta-blues` loaded produced
+   * `order: ["engine.play"]`, `loadNote` calls **0**, `scheduleSamplerSteps` calls **0**. So the mapped lanes were stood
+   * down and silent, and no sample was requested at all — the owner's "点播放，没看到哪里会提示下载音源", with a worse
+   * half he could not see.
+   *
+   * ## Why the order is prepare → play → schedule
+   *
+   * `scheduleSamplerSteps` awaits a fetch and a decode per note, so a transport that started first would open the bar
+   * with exactly those lanes missing and then start every onset whose time had already passed **at once** — the compressed
+   * burst `src/audio/samplerLanePrepare.ts` describes as "先静音后补". This is the order `GenreDetailView.handlePlayMode`
+   * already uses and the owner has accepted on that page; it is copied rather than re-derived.
+   *
+   * ## Why the loader is the shared one
+   *
+   * `sharedSamplerLoader(context, catalogue)` is keyed by `AudioContext` and by the catalogue **array**, and
+   * `useRecordedLanes` resolves its own loader through the same factory — so the warm-up below and the scheduler that
+   * follows arrive at one loader and the second press is a cache hit. A loader built here and another built there would
+   * be `samplerLanePrepare.test.ts`'s measured red: the whole warm-up paid a second time.
+   *
+   * ## What it does on failure
+   *
+   * Resolves to `false` only when there was something to prepare and **nothing** could be prepared, so the transport does
+   * not start and the sentences go on screen; a partial failure starts the pass with the missing lanes named. Neither
+   * branch is silent, and nothing waits on a request that has already failed (`prepareSamplerLanes` resolves rather than
+   * rejects).
+   */
+  const prepareRecordings = useCallback(
+    async (engine: AudioEngine, pattern: SequencerPattern): Promise<boolean> => {
+      setSamplerPreparation(null);
+      setSamplerProblems([]);
+
+      /**
+       * The catalogue is fetched (once per session, `appCatalogueRuntime` is single-flight) rather than read from
+       * `appCatalogueRuntime.assets`, because on a cold first press that array is still empty — and an empty catalogue is
+       * the one answer that would make the wait silently disappear. A catalogue that cannot be read at all is a *reason*
+       * for every mapped lane keeping its synthesiser, so it travels with the stand-down's own sentences.
+       */
+      let assets: readonly SampleAsset[] = [];
+      let catalogueFailure: string | undefined;
+      try {
+        assets = (await appCatalogueRuntime.load()).assets;
+      } catch (error) {
+        catalogueFailure = `the sample catalogue could not be loaded, so recorded lanes keep their synthesised voices (${
+          error instanceof Error ? error.message : String(error)
+        })`;
+      }
+
+      /**
+       * ⭐ **The engine is told which lanes are recordings before it is asked to play**, so the only window in which a
+       * lane could be doubled is the engine's own scheduling lead rather than a whole pass. Asked for rather than assumed,
+       * the same way `useRecordedLanes` and `useGenreAudition` ask it: a criterion's engine double is engine-shaped and
+       * must not be handed a method it never claimed.
+       */
+      const stoodDown =
+        typeof engine.prepareSampledLanes === "function"
+          ? engine.prepareSampledLanes(assets)
+          : { stoodDown: [], problems: [] as string[] };
+      const reasons = [...(catalogueFailure === undefined ? [] : [catalogueFailure]), ...stoodDown.problems];
+
+      const context: BaseAudioContext | null = engine.audioContext ?? null;
+      /**
+       * ⭐ **Exactly the lanes the stand-down will silence** — `sampledStandDownIndexes`, reached through
+       * `standDownSamplerLanes`. A lane this catalogue does not serve keeps its synthesiser and is heard however slow the
+       * network is, so waiting for it would be waiting for nothing; with no catalogue at all this list is empty and
+       * nothing is fetched.
+       */
+      const lanes = standDownSamplerLanes(pattern, assets);
+      /**
+       * ⭐ **What the `?diag=1` panel will show about this press**, written before the fetch so a play that fails is still
+       * described. `writtenNotesOf`-equivalent reads (`stepPitches`/`stepVelocity`) are the model's own, so a drum lane's
+       * "no pitch at all" is the same fact `planSamplerSteps` reads.
+       */
+      const ledgerLanes = ledgerLanesOf(pattern, assets);
+
+      if (context === null || lanes.length === 0) {
+        const noGraph = context === null && lanes.length > 0
+          ? ["the engine has no audio context, so no recording could be prepared"]
+          : [];
+        const reported = reportSampledLaneProblems([...reasons, ...noGraph]);
+        setSamplerProblems(reported);
+        publishSamplerPlay({
+          entry: "/studio",
+          ...(pattern.genre_id === undefined ? {} : { genre: pattern.genre_id }),
+          at: new Date().toISOString(),
+          lanes: ledgerLanes,
+          laneCount: pattern.tracks?.length ?? 0,
+          assets: [],
+          progress: null,
+          ready: lanes.length === 0,
+          empty: lanes.length === 0,
+          problems: reported,
+          loaderBuilds: sharedSamplerLoaderBuilds(),
+          decodes: 0,
+        });
+        return true;
+      }
+
+      const loader = sharedSamplerLoader(context, assets);
+      const decodesBefore = loader.decodes();
+      /**
+       * ⭐ **The loader is observed through a thin delegate rather than replaced.**
+       *
+       * The panel needs "which asset, which note, resolved or refused" — `prepareSamplerLanes` answers only `loaded/total`
+       * in aggregate. A second loader would be a second download and a different cache; this delegates every call to the
+       * session's shared one and records the outcome, so the observation cannot change what the play does. The scheduler
+       * that follows gets the *unwrapped* loader, so its notes are the same cache entries the wait just filled.
+       */
+      const observed = new Map<string, SamplerLedgerAsset>();
+      const observingLoader = observingSamplerLoader(loader, assets, observed);
+
+      const preparation = await prepareSamplerLanes({
+        pattern,
+        catalogue: assets,
+        loader: observingLoader,
+        bpm: engine.getBpm(),
+        lanes,
+        /**
+         * `total: 0` is the ordinary case for a lane that writes no pitch — every drum lane, whose notes the engine's own
+         * table voices — and an indicator raised for it would be a progress display for work that never happened. It is
+         * also the measured `edm-trap` answer: two mapped lanes, zero notes to fetch.
+         */
+        onProgress: (progress) => setSamplerPreparation(progress.total > 0 ? progress : null),
+      });
+      setSamplerPreparation(null);
+      const reported = reportSampledLaneProblems([...reasons, ...preparation.problems]);
+      setSamplerProblems(reported);
+      publishSamplerPlay({
+        entry: "/studio",
+        ...(pattern.genre_id === undefined ? {} : { genre: pattern.genre_id }),
+        at: new Date().toISOString(),
+        lanes: ledgerLanes,
+        laneCount: pattern.tracks?.length ?? 0,
+        assets: [...observed.values()],
+        progress: preparation.total > 0 ? { loaded: preparation.loaded, total: preparation.total } : null,
+        ready: preparation.ready,
+        empty: preparation.empty,
+        problems: reported,
+        loaderBuilds: sharedSamplerLoaderBuilds(),
+        decodes: loader.decodes() - decodesBefore,
+      });
+      return preparation.ready || preparation.empty;
+    },
+    []
+  );
+
+  /**
    * Transport toggle play.
    *
    * `play()` is async and its `ctx.resume()` can reject or simply leave the context suspended
@@ -186,6 +412,13 @@ export function useTransportControls({
        * just kept, and clearing it would be the same rewind drawn somewhere else.
        */
       engine.pause();
+      /**
+       * ⭐ **The sampler half is silenced by name, because the transport cannot reach it.** A recorded note is already on
+       * the audio clock and `engine.pause()` releases only the engine's own voices, so without this a "Pause" would leave
+       * the piano and the bass playing over a playhead that has stopped — the label promising one thing and the sound
+       * doing another.
+       */
+      recordedLanesRef.current?.stop();
       setIsPlaying(false);
       refreshCanStop();
       announcer.announce(t("transport_playback_paused"));
@@ -194,6 +427,23 @@ export function useTransportControls({
 
     // Asking for the arrangement releases any leftover lane scope before the transport starts.
     releasePreviewScope?.();
+
+    /**
+     * ⭐ **The recordings are ready before the transport is.**
+     *
+     * The pattern is the store's own active slot — `patternForSlot`, the same read `handleSwitchSlot` uses — so what is
+     * warmed is by construction the pattern the engine will play. A press whose recordings could not be prepared does not
+     * start a transport at all: it reports why, which is the difference between a slow start and a silent one.
+     */
+    const pattern = patternForSlot(seqStateRef.current, seqStateRef.current.activeSlot);
+    if (recordedLanesRef.current !== undefined && pattern !== undefined) {
+      const canStart = await prepareRecordings(engine, pattern);
+      if (!canStart) {
+        setIsPlaying(false);
+        return;
+      }
+    }
+
     try {
       /**
        * ⭐ **The engine is told which lanes it must not voice, before it is asked to play.**
@@ -208,10 +458,29 @@ export function useTransportControls({
        * played once — or that loaded the catalogue for any other reason — stands every recorded lane down *before* the
        * first step. On a cold first play the stand-down lands one catalogue fetch late, which is stated rather than
        * hidden: the alternative is making the play button wait on a network round trip before it starts.
+       *
+       * ⭐ **Skipped when a recorded-lane scheduler was handed in**, because `prepareRecordings` already made exactly this
+       * call — with the catalogue it awaited rather than with whatever happened to be in hand — and a second call would
+       * only re-derive the same set. A surface with no scheduler keeps this line unchanged, which is what keeps this
+       * change invisible to every other caller of this hook.
        */
-      const alreadyLoaded = appCatalogueRuntime.assets;
-      if (alreadyLoaded.length > 0) engine.prepareSampledLanes(alreadyLoaded);
+      if (recordedLanesRef.current === undefined) {
+        const alreadyLoaded = appCatalogueRuntime.assets;
+        if (alreadyLoaded.length > 0) engine.prepareSampledLanes(alreadyLoaded);
+      }
       await engine.play();
+
+      /**
+       * ⭐ **The recorded lanes are placed once the transport is running, from the bytes the wait above already fetched.**
+       *
+       * This is the half that was missing: `prepareSampledLanes` stands the synthesiser down and plays nothing, so
+       * without this call a mapped lane on `/studio` is silent. The order — transport, then lanes — is
+       * `useRecordedLanes`'s and the genre page's: the notes are placed on the clock `play()` has just started, and the
+       * warm loader makes that placement a cache hit rather than a download, so an onset lands where its step says.
+       */
+      if (recordedLanesRef.current !== undefined && pattern !== undefined) {
+        recordedLanesRef.current.start(pattern);
+      }
 
       /**
        * Audio lanes, started **beside** the transport rather than inside the engine.
@@ -263,6 +532,11 @@ export function useTransportControls({
        * judge the app by the silence.
        */
       engine.stop();
+      /**
+       * The sampler half as well, for the same reason the Pause branch stops it: its voices are on the audio clock, and
+       * an "audio is blocked" notice over a still-sounding recorded lane would be a second claim the app cannot observe.
+       */
+      recordedLanesRef.current?.stop();
       setIsPlaying(false);
       clearPlayhead();
       refreshCanStop();
@@ -274,7 +548,7 @@ export function useTransportControls({
     setIsPlaying(true);
     refreshCanStop();
     announcer.announce(t("transport_playback_started"));
-  }, [isPlaying, clearPlayhead, engineRef, refreshCanStop, showToast, t, releasePreviewScope]);
+  }, [isPlaying, clearPlayhead, engineRef, refreshCanStop, showToast, t, releasePreviewScope, prepareRecordings]);
 
   /**
    * ⭐ **Stop: the one control that returns to the top, added because a real Pause removed the only way back.**
@@ -292,6 +566,8 @@ export function useTransportControls({
     if (!engine) return;
     triggerHaptic(HapticPatterns.playPause);
     engine.stop();
+    // The recorded voices again: `engine.stop()` reaches the engine's own schedule and not a note already placed.
+    recordedLanesRef.current?.stop();
     setIsPlaying(false);
     clearPlayhead();
     refreshCanStop();
@@ -415,5 +691,7 @@ export function useTransportControls({
     handleToggleBlindCompare,
     handleToggleMetronome,
     handleToggleCountIn,
+    samplerPreparation,
+    samplerProblems,
   };
 }

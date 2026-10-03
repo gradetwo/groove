@@ -34,6 +34,12 @@ import { patternFromGenre } from "../data/genreMix";
 import { useLanguage } from "../i18n/LanguageContext";
 import { useAudioEngineInstance } from "../features/sequencer/hooks/useAudioEngineInstance";
 import { prepareSamplerLanes, standDownSamplerLanes, type SamplerLaneProgress } from "../audio/samplerLanePrepare";
+import {
+  ledgerLanesOf,
+  observingSamplerLoader,
+  publishSamplerPlay,
+  type SamplerLedgerAsset,
+} from "../hooks/samplerPlayLedger";
 import { sharedSamplerLoader } from "../audio/sharedSamplerLoader";
 import { reportSampledLaneProblems, sampledInstrumentProblems } from "../audio/sampledLanes";
 import type { SampleAsset } from "../data/sampleCatalogue";
@@ -235,14 +241,24 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
     const engine = engineRef.current;
     const context: BaseAudioContext | null = engine.audioContext ?? null;
     const assets = catalogue ?? [];
-    const loader = context ? sharedLoaderFor(assets, context) : null;
     setSamplingProblems([]);
     setPreparing(null);
-    if (loader) {
+    /**
+     * ⭐ **This press is written to the same ledger the studio's press is** (`src/hooks/samplerPlayLedger.ts`), so the
+     * `?diag=1` panel describes **the last play on the page whichever route made it** — and `/genre/delta-blues` is the
+     * owner's own verification page for the two questions the panel exists to answer (the wait, and the source address with
+     * an extra directory level). The observation rides on the session's own shared loader, so it cannot change what the
+     * play fetches: `sharedLoaderFor` is memoised per context, so both calls below are the same object.
+     */
+    const ledgerLanes = ledgerLanesOf(pattern, assets);
+    const observed = new Map<string, SamplerLedgerAsset>();
+    if (context) {
+      const sessionLoader = sharedLoaderFor(assets, context);
+      const decodesBefore = sessionLoader.decodes();
       const preparation = await prepareSamplerLanes({
         pattern,
         catalogue: assets,
-        loader,
+        loader: observingSamplerLoader(sessionLoader, assets, observed),
         bpm: engine.getBpm(),
         /**
          * ⭐ **Exactly the lanes the stand-down will silence** — `sampledStandDownIndexes`, the function `AudioEngine.prepareSampledLanes`
@@ -258,7 +274,21 @@ export const GenreDetailView: React.FC<GenreDetailViewProps> = ({
         onProgress: (progress) => setPreparing(progress.total > 0 ? progress : null),
       });
       setPreparing(null);
-      if (preparation.problems.length > 0) setSamplingProblems(reportSampledLaneProblems(preparation.problems));
+      const reported = reportSampledLaneProblems(preparation.problems);
+      if (reported.length > 0) setSamplingProblems(reported);
+      publishSamplerPlay({
+        entry: "/genre",
+        ...(pattern.genre_id === undefined ? {} : { genre: pattern.genre_id }),
+        at: new Date().toISOString(),
+        lanes: ledgerLanes,
+        laneCount: pattern.tracks?.length ?? 0,
+        assets: [...observed.values()],
+        progress: preparation.total > 0 ? { loaded: preparation.loaded, total: preparation.total } : null,
+        ready: preparation.ready,
+        empty: preparation.empty,
+        problems: reported,
+        decodes: sessionLoader.decodes() - decodesBefore,
+      });
       if (!preparation.ready && !preparation.empty) {
         setIsPlaying(false);
         return;

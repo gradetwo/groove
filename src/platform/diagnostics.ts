@@ -88,16 +88,68 @@ export interface DiagReport {
   currentStep: number | null;
   master: Awaited<ReturnType<typeof measureMaster>>;
   notes: string[];
+  /**
+   * ⭐ **The sampler half of the report, when the caller can produce one** — see {@link DiagnosticsOptions.sampler}.
+   *
+   * Carried in the copied JSON as well as on screen, because the two questions it answers (which lane is a recording and
+   * which address serves it) are the ones that have to travel back from the machine that saw the fault.
+   */
+  sampler?: unknown;
+}
+
+/**
+ * What a surface may add to the panel.
+ *
+ * ⭐ **The sampler section is a callback rather than an import, and that is the layering rule rather than a preference.**
+ * Reading an asset's playable key range needs `src/features/sampledCoverage/**` — the **logic** layer — and `src/platform`
+ * sits *below* logic, so a `platform → logic` import would invert the declared order even though the layer gate does not
+ * happen to check that edge. The caller that owns the engine (also logic) supplies the reader; this module only renders it.
+ * The second reason is the bundle: the diagnostics module is dynamically imported for a hard budget, and a static import of
+ * the SFZ resolver here would put the whole sampled-coverage chain into that chunk for a panel that is off by default.
+ */
+export interface DiagnosticsOptions {
+  /**
+   * The sampler section, when this session has one. Absent ⇒ the panel renders exactly what it always did.
+   *
+   * Awaited on every refresh, so the reader must be cheap once it has an answer (it is: the ledger is a module-level value
+   * and the coverage reading is cached per asset).
+   */
+  sampler?: () => Promise<{ lines: string[] }>;
+  /**
+   * ⭐ **Ask the addresses the sampler section is showing what they answer.**
+   *
+   * Supplied by the same caller and for the same reason as {@link DiagnosticsOptions.sampler}: the addresses come from the
+   * session's catalogue, which is logic's to read. It is **on demand** rather than part of every refresh — a panel that
+   * fetched every asset's program every two seconds would be exactly the stampede `src/hooks/useSampledCoverage.ts`
+   * describes — and it reports **this panel's own request**, which is a different fact from what the playback experienced.
+   */
+  probe?: () => Promise<Array<{ assetId: string; kind: string; url: string; status: string; ok: boolean; reason?: string }>>;
 }
 
 /** Everything the panel shows, in the shape that gets copied. Pure apart from the engine reads it is handed. */
-export async function collectDiagReport(engine: AudioEngine, notes: string[] = []): Promise<DiagReport> {
+export async function collectDiagReport(
+  engine: AudioEngine,
+  notes: string[] = [],
+  options: DiagnosticsOptions = {}
+): Promise<DiagReport> {
   const ctx = (engine as unknown as { ctx?: AudioContext | null }).ctx ?? null;
   let gs1Hosts: Array<Record<string, unknown>> = [];
   try {
     gs1Hosts = engine.getGs1Diagnostics().hosts;
   } catch {
     /* an engine that cannot report is itself worth seeing, but not worth throwing over */
+  }
+  /**
+   * A sampler reader that throws must not take the whole report with it: the rest of the panel is still the thing the
+   * person came for, and a blank panel over a broken lane would be worse than a section that says it could not answer.
+   */
+  let sampler: unknown;
+  if (options.sampler) {
+    try {
+      sampler = await options.sampler();
+    } catch (error) {
+      sampler = { error: error instanceof Error ? error.message : String(error) };
+    }
   }
   return {
     at: new Date().toISOString(),
@@ -119,6 +171,7 @@ export async function collectDiagReport(engine: AudioEngine, notes: string[] = [
     currentStep: engine.getCurrentStep(),
     master: await measureMaster(engine),
     notes,
+    ...(options.sampler === undefined ? {} : { sampler }),
   };
 }
 
@@ -132,7 +185,7 @@ export async function collectDiagReport(engine: AudioEngine, notes: string[] = [
  * matters for a defect that *starts*: peak, rms, clipped samples and the worklet's own voice count and load, updated
  * once a second.
  */
-export function installDiagnostics(engine: AudioEngine): () => void {
+export function installDiagnostics(engine: AudioEngine, options: DiagnosticsOptions = {}): () => void {
   if (typeof document === "undefined") return () => undefined;
 
   const pill = document.createElement("button");
@@ -208,6 +261,23 @@ export function installDiagnostics(engine: AudioEngine): () => void {
   const buttons = document.createElement("div");
   buttons.style.cssText = "display:flex;gap:6px;flex-wrap:wrap";
 
+  /**
+   * ⭐ **The sampler section** — the owner's ask: *"在 `diag=1` 模式里头加些这类的信息"*, while stuck on "点播放看不到正在下载音源"
+   * and on a source address with an extra directory level.
+   *
+   * It is a plain block of lines rather than a table, for the same reason the rest of the panel is: the value of this
+   * surface is that one JSON blob survives being pasted into a message, and structured markup buys nothing there. The
+   * structured object is kept on the panel node (`__sampler`) so a criterion can read the facts rather than parse the text.
+   * Created unconditionally and left **empty** when no reader was handed in, so its position in the panel never changes.
+   */
+  const sampler = document.createElement("div");
+  sampler.setAttribute("data-testid", "diag-sampler");
+  sampler.style.cssText = "white-space:pre-wrap;opacity:.85;border-top:1px solid #2a2a34;padding-top:6px";
+
+  const probeResults = document.createElement("div");
+  probeResults.setAttribute("data-testid", "diag-sampler-probe");
+  probeResults.style.cssText = "white-space:pre-wrap;opacity:.85";
+
   // ---- collapse / expand -------------------------------------------------------
   let collapsed = false;
   let timer: ReturnType<typeof setInterval> | undefined;
@@ -234,6 +304,8 @@ export function installDiagnostics(engine: AudioEngine): () => void {
   body.appendChild(live);
   body.appendChild(buttons);
   body.appendChild(out);
+  body.appendChild(sampler);
+  body.appendChild(probeResults);
 
   // ---- drag by the header ------------------------------------------------------
   let drag: { x: number; y: number; left: number; top: number } | null = null;
@@ -261,7 +333,7 @@ export function installDiagnostics(engine: AudioEngine): () => void {
   // ---- the numbers -------------------------------------------------------------
   const notes: string[] = [];
   const render = async () => {
-    const report = await collectDiagReport(engine, [...notes]);
+    const report = await collectDiagReport(engine, [...notes], options);
     const host = report.gs1Hosts.find((h) => h.analysis) ?? report.gs1Hosts[0] ?? null;
     const analysis = (host?.analysis ?? null) as Record<string, number> | null;
     const rows: Array<[string, string]> = [
@@ -297,10 +369,54 @@ export function installDiagnostics(engine: AudioEngine): () => void {
     ]
       .filter(Boolean)
       .join("\n");
+    /**
+     * ⭐ **The sampler section's own render.** Written from the reader's lines, and the structured object kept on the node so
+     * a criterion reads facts rather than text. With no reader this stays empty — one character less than the panel had
+     * before, which is what "默认不显示" means for a section that is *inside* the already-gated panel.
+     */
+    const samplerView = report.sampler as { lines?: string[] } | undefined;
+    sampler.textContent = samplerView?.lines === undefined ? "" : samplerView.lines.join("\n");
+    (panel as unknown as { __sampler?: unknown }).__sampler = report.sampler;
     (panel as unknown as { __report?: DiagReport }).__report = report;
   };
 
   buttons.appendChild(small("刷新", () => void render(), "diag-refresh"));
+  /**
+   * ⭐ **探测地址** — the owner's extra-directory question, answered with the two statuses side by side.
+   *
+   * Only offered when a prober was handed in, so a panel with no sampler section grows no button that would do nothing
+   * (the same "a control that does nothing must say so" rule `useTransportControls` states).
+   */
+  if (options.probe) {
+    const probe = options.probe;
+    buttons.appendChild(
+      small(
+        "探测地址",
+        () => {
+          probeResults.textContent = "probing…";
+          void probe().then(
+            (rows) => {
+              probeResults.textContent =
+                rows.length === 0
+                  ? "no address to probe (no play recorded, or no catalogue entry for its assets)"
+                  : rows
+                      .map(
+                        (row) =>
+                          `${row.ok ? "OK " : "!! "}${row.status.padStart(3)} ${row.kind.padEnd(6)} ${row.assetId}\n         ${row.url}${
+                            row.reason === undefined ? "" : `\n         ${row.reason}`
+                          }`
+                      )
+                      .join("\n");
+            },
+            (error: unknown) => {
+              probeResults.textContent = `probe failed: ${error instanceof Error ? error.message : String(error)}`;
+            }
+          );
+        },
+        "diag-sampler-probe-button"
+      )
+    );
+  }
   buttons.appendChild(
     small(
       "GS-1 开关",

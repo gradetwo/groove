@@ -411,7 +411,23 @@ export function useAudioEngineLifecycle({
     const syncDiag = (on: boolean) => {
       if (on && !cleanupDiag) {
         void import("../../../platform/diagnostics").then((mod) => {
-          if (isDebugModeEnabled() || debugModeForcedByUrl()) cleanupDiag = mod.installDiagnostics(engine);
+          if (isDebugModeEnabled() || debugModeForcedByUrl())
+            cleanupDiag = mod.installDiagnostics(engine, {
+              /**
+               * ⭐ **The sampler half of the panel**, supplied from here rather than imported by the panel — the panel is
+               * the platform layer and the readers are logic's (`src/hooks/samplerDiagnostics.ts`, which owns the SFZ
+               * resolver and the program fetcher). Both are already in this bundle; the panel's own chunk stays free of
+               * them for the budget gate.
+               */
+              sampler: async () => {
+                const { samplerDiagView } = await import("../../../hooks/samplerDiagnostics");
+                return samplerDiagView();
+              },
+              probe: async () => {
+                const { probeSamplerAddresses } = await import("../../../hooks/samplerDiagnostics");
+                return probeSamplerAddresses();
+              },
+            });
         });
       } else if (!on && cleanupDiag) {
         cleanupDiag();
