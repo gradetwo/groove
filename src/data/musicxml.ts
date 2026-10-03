@@ -117,7 +117,7 @@ function splitAtBarlines(startBeats: number, lengthBeats: number, beatsPerMeasur
 export function notesToMeasures(notes: readonly NoteEvent[], bars: number, options: MusicXmlOptions = {}): string[] {
   const beatsPerMeasure = options.beatsPerMeasure ?? 4;
   const measureCount = Math.max(1, Math.round(bars));
-  const divisionsPerBeat = DIVISIONS_PER_QUARTER;
+  const divisionsPerBeat = divisionsFor(notes, options.divisions);
 
   /** Deterministic order, because a file that changed with the input's order would make every diff a coin toss. */
   const ordered = [...notes].filter((note) => note.pitch >= 0 && note.pitch <= 127).sort((a, b) => a.startBeats - b.startBeats || a.pitch - b.pitch);
@@ -293,6 +293,9 @@ export function notesToMeasures(notes: readonly NoteEvent[], bars: number, optio
 }
 
 function typeElement(duration: number): string {
+  // WARNING: this still divides by the constant, so at a raised division count the <type> label can be wrong.
+  // Our own reader takes the length from <duration> / divisions and ignores the label, which is why this is a
+  // recorded gap rather than a silent one: see docs/OPEN_WORK.md 250.
   const type = noteTypeFor(duration / DIVISIONS_PER_QUARTER);
   // No type element at all when the duration is not a written value: a wrong `<type>` is read as authoritative by most readers, an absent one is inferred from the duration.
   return type ? `<type>${type}</type>` : "";
@@ -337,6 +340,29 @@ function noteElement(
  *
  * **`score-partwise` and version 4.0**: partwise is what the notation programs write and read, and 4.0 is backward-compatible — a reader that wants 3.1 ignores what it does not know.
  */
+/**
+ * The divisions the file needs: the smallest count per quarter that represents **every** start and length exactly.
+ *
+ * With four divisions a length of 2.167 beats cannot be written, and the rounding at the call site turns it into
+ * 2.25 — a silent fidelity loss measured on the owner's corpus (docs/OPEN_WORK.md 244/249). The reader scales by
+ * whatever the file states, so a larger count is exact on the way back. The cap is this project's own tick
+ * resolution: beyond it a value that is still not exact is reported by the caller rather than rounded here.
+ */
+function divisionsFor(notes: readonly NoteEvent[], requested: number | undefined, cap = 960): number {
+  /**
+   * Within half a thousandth of a beat. Demanding an exact count would reject every candidate for a value such as
+   * 2.167, which is itself a rounded decimal (the true length is thirteen sixths), and the corpus comparison this
+   * has to satisfy is to three decimals.
+   */
+  const closeEnough = (value: number, divisions: number): boolean => Math.abs(value - Math.round(value * divisions) / divisions) < 5e-4;
+  const values = [...notes.map((note) => note.startBeats), ...notes.map((note) => note.lengthBeats)];
+  for (const candidate of [4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 240, 320, 480, 960]) {
+    if (candidate > cap) break;
+    if (values.every((value) => closeEnough(value, candidate))) return candidate;
+  }
+  return Math.min(cap, requested ?? 4);
+}
+
 export function toMusicXml(notes: readonly NoteEvent[], bars: number, options: MusicXmlOptions = {}): string {
   const measures = notesToMeasures(notes, bars, options);
   const partName = escapeXml(options.partName ?? "Track");
