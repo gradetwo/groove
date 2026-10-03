@@ -4010,3 +4010,42 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
    ⑤ 12 条"只在 MCP、`src/` 无实现"的能力：**做界面**还是按 §27 **写进 `needs`**（"只给 agent"）✓
    ⚠️ 另：G4/G5/G6 要加的 command 壳落在 `src/data/arrangementHistory.ts`（在 `src/data/**` 禁改区 ✗）
      ⇒ 动手时**只对该文件放开、且只允许新增 command 壳** ✓（普查线已收工 ⇒ 无碰撞 ✓）
+
+## 一百一十八、⭐⭐ **真发现：业主的「轨道设为 sampler」在界面上落不下去** ✗（2026-10-03 19:4x 时点 ✓，已开线 `d488e8c5` ✓）
+
+**背景**：业主验收路径 ＝「导入 MIDI／MusicXML ⇒ **把轨道设为 sampler** ⇒ 播放」✓；而**第二步今天做不到** ✗
+**四重独立读数（性能线量，四条互相独立 ✓）**：
+```
+① 8 个映射下拉框全部设 `piano_lead` ⇒ 回读 **8×`"piano_lead"`** ✓
+② 每行 `import-mapping-target-${i}` 显示 **`→ salamander-grand`** ×8 ✓（**选项确实解析到资产** ✓）
+③ 确认按钮 **`disabled: false`**、文案 **`"Import (8 named)"`** ✓（⇒ **不是**"没选所以禁用" ✗）
+④ 点确认后 **`dialogStillOpen: false`** ✓（对话框关了 ⇒ `confirmMapping` **真的跑了** ✓）
+   ✗✗ **但导入后 9 条轨道 `track-kind-*` 全部回读 `"synth"`** ✓（9 ＝ 8 part ＋ 模板 1 ✓）
+⇒ ⭐ **人把 8 个声部命名成采样音源、按确认、界面说 "Import (8 named)"、对话框关闭 —— 轨道仍是合成器** ✗✗
+⇒ **一条静默 no-op** ✗（§27 明令禁止的那一类 ✓）⇒ 也**挡住了"设 sampler 才卡"这条复现路径** ✗
+```
+**第二重独立读数**：`instrument-slot-*`／`instrument-open-*` **只在 `kind === "sampler"` 时渲染**（`TrackListV2.tsx:149` ✓）
+   ⇒ 若为 0 ⇒ "轨道真是 synth"被二次证实 ✓
+**成因候选（未验证 ✓，不当结论 ✗）**：`useArrangementFileActions.ts:294` 的
+   `confirmMapping → placeMidiIntoArrangement(arrangement, read, instruments)` 没把 `instruments` 落成 `kind:"sampler"`，
+   **或**落了又被模板／后续 commit 覆盖 ✓
+**⇒ 已派的修复线要求** ✓：① 独立复现那四重＋第二读数 ✓ ② **成因靠量**（临时探针，测完还原 ✓）
+   ③ 修成"映射真的生效" ✓；若查明是**刻意**的 ⇒ 按 §27 **必须让 UI 明说** ✗（**不许两边都不做** ✗）
+   ④ 判据**今天就是红的** ✓（导入并映射 8 part ⇒ 断言 8 条轨道 `kind === "sampler"` ✓；去掉修复 ⇒ 红 ✓）
+   ⑤ **Playwright 等待 ≥90 s** ✓（性能线实测：40 s 在高负载下失败、90 s 成功且 `msToCreate=2061` ✓
+      ⇒ **否则会把"慢"误报成"坏"** ✗✓）
+
+### 118.1 ⚠️ **它三处更正我**（我都认 ✓ —— 这是本会话第 N 次"我把间接信号当结论" ✗）
+
+```
+✗ 我说"性能线的矩阵**静默死了**" —— **错** ✓：它是**按我的指令主动杀的** ✓
+   （我说的"一次只开一个浏览器"＋"D 组优先于 A/B/C 补测" ✓）⇒ **不是崩溃** ✓，`matrix.err` 因此为空 ✓
+   ⚠️ **代价它如实报了**：`B-prod` 被杀在内存组中途 ⇒ **`B-prod.json` 从未写出** ✗ ⇒ **B 目前无读数** ✓（不假装 ✓）
+✗ 我猜"`D-smoke3` 没挂载 ⇒ 可能与 G2/G3 同源" —— **错** ✓：那是**它脚本超时太短**（40 s ✗ ⇒ 90 s 立刻成功 ✓）
+✗ 我说"`arrangement-import-input` 大概率没有 testid" —— **错** ✓：**它有** ✓，只是**必须先进那个路由**才在 DOM 里 ✓
+⭐ 它找到的**未文档化路线**（宝贵 ✓）：**编曲编辑器的唯一入口 ＝ `/new` → 选模板 → Create** ✓
+   （`?tab=arrangement` 是**7 testid 的兜底页**、不是路由 ✗；studio 的 `toolbar-arrangement-toggle`
+     开的是**另一个内联面板**、**没有** import input ✗）
+⭐ 它接受的三条也记下 ✓：**stderr 单独留** ✓／**每个 label 写带退出码的收尾行** ✓／
+   **一次只开一个浏览器** ✓ —— 这三条是长跑测量的最低要求 ✓（`run-d.sh` 已按此写 ✓）
+```
