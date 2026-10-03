@@ -119,7 +119,24 @@ export const TEMPLATES: readonly Template[] = [
   { id: "samplers", name: "Samplers", kinds: [{ kind: "sampler", name: "Sampler 1" }, { kind: "sampler", name: "Sampler 2" }] },
 ];
 
-/** An arrangement from a template — **never empty**: every template has at least one track, and so does the blank case. */
+/**
+ * An arrangement from a template — **never empty**: every template has at least one track, and so does the blank case.
+ *
+ * ⭐ **And the same length as the blank case, which is what "the same question has two answers" was.**
+ *
+ * This path used to return an arrangement with **no `bars`** while `createArrangement` (the blank path, one screen
+ * below) states `DEFAULT_BARS`. `bars` is optional and the two readers of its absence disagree: the arrangement's
+ * ruler falls back to eight (`DEFAULT_REGION_BARS`) while the compile falls back to **one** — so a project created
+ * from a template drew eight clickable bars over a one-bar pattern, and clicking bar six moved the play-start marker
+ * to a bar the transport did not have. It is the same disagreement `features/arrangement/loopSteps.ts` documents for
+ * the loop brace, arriving through the other door.
+ *
+ * ⭐ **The length is the templates' own:** every template is built from `defaultContentFor`, whose material is
+ * sixteen steps (`steps(4)`) — a one-bar figure. `createArrangement`'s comment already says so ("The templates were
+ * written as one-bar patterns, so a new arrangement is long enough for them and short enough to see whole"), which is
+ * why the answer here is the same constant rather than a per-template length: no template carries more than one bar
+ * of content, and a template that one day does would have to say so in its own entry.
+ */
 export function createArrangementFromTemplate(songId: string, templateId: string | undefined, blankKind: TrackKindV2 = "synth"): ArrangementV2 {
   const template = TEMPLATES.find((candidate) => candidate.id === templateId);
   if (!template) return createArrangement(songId, blankKind);
@@ -132,7 +149,7 @@ export function createArrangementFromTemplate(songId: string, templateId: string
     tracks.push({ id, kind, name, ...(content.sample ? { sample: content.sample } : {}) });
     notesByTrack[id] = starterNotes(content);
   }
-  return { songId, tracks, notesByTrack, sourceSlots: [] };
+  return { songId, tracks, notesByTrack, bars: DEFAULT_BARS, sourceSlots: [] };
 }
 
 /**

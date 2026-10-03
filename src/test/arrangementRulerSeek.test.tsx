@@ -256,23 +256,22 @@ describe("⭐ clicking the ruler moves the transport, on a real engine", () => {
    * (`DEFAULT_REGION_BARS` = 8) and the compile's answer (one bar) disagree — the disagreement
    * `features/arrangement/loopSteps.ts` documents for the loop brace. The engine clamps a seek to the pattern it holds,
    * `seek` **returns** what it landed on, and the marker is drawn from that: an out-of-range click shows the position
-   * the transport really got. This case pins the reflection; the underlying eight-bars-versus-one is reported rather
-   * than changed here, because it is a model decision about how long a new arrangement is.
+   * the transport really got.
+   *
+   * ⚠️ **The arrangement here states no `bars` on purpose, and after the template fix that is a hand-made shape.**
+   * `createArrangementFromTemplate` now writes `DEFAULT_BARS` on both creation paths (`arrangementTemplateBars.test.ts`
+   * is the criterion for that), so this case deletes the field rather than relying on a path that no longer omits it —
+   * a legacy or hand-built arrangement is exactly the input that can still be shorter than its ruler.
    */
   it("draws the play-start where the transport actually landed when the ruler asked for a bar the pattern does not have", () => {
     const engine = new AudioEngine();
     engine.setBpm(120);
     const seekTransport = vi.fn((step: number) => engine.seek(step));
 
-    /**
-     * ⭐ **A template-created arrangement, which is the case that disagrees with itself**: `createArrangementFromTemplate`
-     * returns no `bars`, so the ruler falls back to eight (`DEFAULT_REGION_BARS`) while the compile answers **one**
-     * (`createArrangement`, the blank path, states `DEFAULT_BARS`). `"drums-bass"` is the chooser's own first
-     * template.
-     */
-    const template = createArrangementFromTemplate("s", "drums-bass", "synth");
-    expect(template.bars, "this criterion is about an arrangement that states no bars").toBeUndefined();
-    renderView({ seekTransport, initialArrangement: template });
+    const stated = createArrangementFromTemplate("s", "drums-bass", "synth");
+    const unstated: ArrangementV2 = { ...stated };
+    delete unstated.bars;
+    renderView({ seekTransport, initialArrangement: unstated });
 
     fireEvent.click(screen.getByTestId("ruler-bar-6"));
     const landed = engine.getCurrentStep();
@@ -286,6 +285,30 @@ describe("⭐ clicking the ruler moves the transport, on a real engine", () => {
      * pins for the in-range case.
      */
     expect(screen.getByTestId("arrangement-play-start").style.left).toBe(`${0 * 64 - 4}px`);
+    engine.destroy();
+  });
+
+  /**
+   * ⭐ **And the project the chooser actually creates now seeks where its own label says.**
+   *
+   * This is the other side of the same coin: with `bars` stated on the template path, the ruler's eight bars and the
+   * transport's eight bars are one length, so a click on `ruler-bar-6` (labelled 「跳到第 7 小节」) lands on step 96 and
+   * the marker stays there. Before the fix it was clamped to 15 and the marker snapped back to bar one.
+   */
+  it("⭐ a template project seeks to the bar it names, because its ruler and its transport are one length", () => {
+    const engine = new AudioEngine();
+    engine.setBpm(120);
+    const seekTransport = vi.fn((step: number) => engine.seek(step));
+
+    renderView({ seekTransport, initialArrangement: createArrangementFromTemplate("s", "drums-bass", "synth") });
+    // The label the audit quoted: `ruler-bar-6` is the seventh bar.
+    expect(screen.getByTestId("ruler-bar-6").getAttribute("aria-label")).toBe("Go to bar 7");
+
+    fireEvent.click(screen.getByTestId("ruler-bar-6"));
+    // eslint-disable-next-line no-console -- the reading is the evidence this criterion exists to produce
+    console.log("RULER_SEEK_TEMPLATE_READING", JSON.stringify({ requested: 96, landed: engine.getCurrentStep() }));
+    expect(engine.getCurrentStep(), "a template project's ruler still names bars the transport does not have").toBe(96);
+    expect(screen.getByTestId("arrangement-play-start").style.left).toBe(`${6 * 64 - 4}px`);
     engine.destroy();
   });
 });
