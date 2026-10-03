@@ -175,3 +175,35 @@ export function arrangementToLogicFiles(parts: readonly ImportedPart[], bpm = 12
   }
   return { projectData, metaData: logicMetaDataPlist(bpm) };
 }
+
+/** The three files a `.logicx` must carry for this reader to open it, as a directory map. */
+export interface LogicProjectBundle {
+  /** Path inside the package → its bytes. The names are the ones `logicFixtures.test.ts` reads. */
+  files: Record<string, Uint8Array>;
+}
+
+/**
+ * The package a `.logicx` is: a directory holding `Alternatives/<alt>/ProjectData`, the `MetaData.plist` beside it,
+ * and `Resources/ProjectInformation.plist` naming that alternative as active.
+ *
+ * **The alternative name is written into the plist exactly as the directory is named.** A real project in the
+ * owner's corpus states `0` while its directory is `000` (docs/OPEN_WORK.md 258), so a reader that joins the two has
+ * to match by value — this writer does not add a second inconsistency to that.
+ *
+ * What this does **not** claim: that real Logic opens it, or which versions accept it. Those stay needs (237).
+ */
+export function logicProjectBundle(parts: readonly ImportedPart[], bpm = 120, alternative = "000"): LogicProjectBundle {
+  const { projectData, metaData } = arrangementToLogicFiles(parts, bpm);
+  const projectInformation = new TextEncoder().encode(
+    `<?xml version="1.0" encoding="UTF-8"?>\n` +
+      `<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n` +
+      `<plist version="1.0"><dict>\n\t<key>ActiveVariant</key><string>${alternative}</string>\n</dict></plist>\n`
+  );
+  return {
+    files: {
+      [`Alternatives/${alternative}/ProjectData`]: projectData,
+      [`Alternatives/${alternative}/MetaData.plist`]: metaData,
+      "Resources/ProjectInformation.plist": projectInformation,
+    },
+  };
+}
