@@ -5449,7 +5449,7 @@ problems: **[]** ✓
 ✗ **现象（实测 ✓）**：把快照恢复成功后（boot 时 `totalSteps 32 / swing 0` ✓），访问 **`/studio?genre=chicago-house`** ⇒
    **约 2 秒内 localStorage 变成流派默认**（`totalSteps 128 / swing 15` ✗）⇒ 用户刚恢复的编排**被覆盖** ✗
 ⭐ **根因（file:line ✓）**：`src/hooks/useUrlShareLoad.ts:97-101` 对 URL 的 `genre=` 参数**在挂载时无条件**
-   `commit({type:"SET_GENRE"})` ✓，而 `src/state/useSequencerStore.ts:345-350` 的 `SET_GENRE`
+   `commit({type:"SET_GENRE"})` ✓，而 `src/features/sequencer/useSequencerStore.ts:345-350` 的 `SET_GENRE`
    会用 `patternFromGenre(genre)` **覆盖 A/B 两个槽** ✗
 ⚠️ 而 `App.tsx:84,92-99` **已经**用 `route.genreId||"chicago-house"` 选好流派并挂给 `StudioView` ✓
    ⇒ 这次二次派发**看起来是多余且破坏性的** ✓
@@ -5544,3 +5544,26 @@ problems: **[]** ✓
 ⇒ ⚠️ **这三处仍写"无损"** ✗ ⇒ **进队列** ✓（同 `§179` 的处置 ✓；要另开一条线 ✓）
 ⚠️ 仍欠它的**完整报告** ✗（逐条判定表 ＋ `skins:gen`／`check:skins` 退出码与是否零 diff ＋ CI 判决 ✓）
 ```
+
+## 一百九十四、🔧 **`?genre=` 覆盖缺陷：修复形状已正确（在飞 ✓，`8ab0fbdb`）**（2026-10-04 00:2x ✓）
+
+```
+⚠️ 本条的**来源要标明** ✗：这是我从**它在树上的 diff 读到的** ✓（它尚未提交／未回报 ✓）⇒ 待其回报后再补一条正式验收 ✓
+✅ **它只改一个文件** ✓：`src/features/sequencer/hooks/useUrlShareLoad.ts`（**+17／−14** ✓）⇒ 且在允许清单内 ✓
+✅ **改法＝删掉挂载时的 `?genre=` 分支** ✓（旧代码：`const genreParam = urlParams.get("genre")` → `loadGenre(...)` → `SET_GENRE` ✗）
+⭐⭐ **它把整条推理写进了注释** ✓（逐字要点 ✓）：
+   · **"URL 里的 `?genre=` 故意不在这里处理 —— 以前处理，而那就是 bug"** ✓
+   · `SET_GENRE` **会把两个 pattern 槽都换掉** ✓
+   · 流派**上一层就定了**：`App.tsx` 解析 `route.genreId` ✓ → `StudioView` ✓ → `useSequencerStore` 用
+     `createInitialSequencerState(genre)` 播种 ✓ —— ⭐ **"而正是那个初始化器负责恢复用户匹配的快照"** ✓✓
+   · 所以重开 `/studio?genre=<你正在做的流派>` 会**先恢复工作、约一秒后被流派默认覆盖** ✗
+   · ⭐ **"分享链接的 `genre=` 只应决定初始流派，那本来就是它唯一被要求做的事"** ✓✓
+✅ 且它明确 **`?groove=` 不受影响** ✓（**那份载荷真的替换 pattern** ✓，仍在下面处理 ✓）⇒ ⭐ **没把在用的路径一起删掉** ✓✓
+✅ **没有碰** `src/features/sequencer/useSequencerStore.ts` ✓（反向量钉住、我要求"先报再改"的那处 ✓）⇒ **无越界** ✓
+⇒ ⭐ 这条与 R2（自动保存丢失 ✗）**同级** ✓：都是"**丢用户的活**"✗ ⇒ 修好后**两者都闭环** ✓
+```
+
+**⚠️ 修正（同一提交内 ✓）**：我上一段把 `useSequencerStore.ts` 的路径写成 **`src/state/useSequencerStore.ts`** ✗ ——
+实际是 **`src/features/sequencer/useSequencerStore.ts`** ✓；这是 `check:docs:refs` **精确抓出来的** ✓
+（它甚至点名"同一文件名在 `src/features/sequencer/useSequencerStore.ts`" ✓）。⭐ **教训**：**别从"光秃秃的文件名"推路径** ✗ ——
+`exp3` 的报告里只写了 `useSequencerStore.ts:345-350` ✓，**目录是我自己补的** ✗，于是补错了 ✓。
