@@ -137,8 +137,15 @@ describe.skipIf(!present)("real Logic projects from a textbook's companion asset
     /**
      * The nearest thing to a ground-truth ladder in the set: one song saved three times — first recording, ready for
      * mixing, simply mastered. `017`'s audio does not match the later two (it has a bounce the others replace), but
-     * **the MIDI does**: 48 drum notes, 90 piano, 51 bass, in every stage. A reader that dropped a region or
+     * **the MIDI does**: the same three parts, to the note, in every stage. A reader that dropped a region or
      * mis-sized an event would show up as three different totals for one song.
+     *
+     * ⚠️ **The numbers moved when the reader was rebuilt on the 16-byte line model, and this is the measurement that
+     * says why.** They used to be `drum: 48, piano: 90, bass: 51`. The drum region holds **117** 32-byte note events,
+     * but only 48 of its head dwords are the bare `90 00 00 00` the old reader tested the whole dword for — the other
+     * 69 carry data in the flag bytes beside the status (`90 00 51 9d` and eleven other shapes, measured), so the old
+     * exact-dword test skipped them. The piano region likewise holds 92 and read 90. The bass, at 51, never moved.
+     * Reading the head line's **status nibble** — which is what the status byte is — reads all of them.
      */
     const stages = [
       "017_Blues_C_Treble_(first_recording).logicx",
@@ -152,13 +159,14 @@ describe.skipIf(!present)("real Logic projects from a textbook's companion asset
       return { stage, drum: byName.get("Drummer"), piano: byName.get("Yamaha Grand Piano"), bass: byName.get("Upright Studio Bass") };
     });
     for (const total of totals) {
-      expect(total, `${total.stage} disagrees`).toMatchObject({ drum: 48, piano: 90, bass: 51 });
+      expect(total, `${total.stage} disagrees`).toMatchObject({ drum: 117, piano: 92, bass: 51 });
     }
   });
 
   it("every project parses without throwing, and every one of them says what it dropped", () => {
-    // The blunt criterion: a reader meets 25 real files or it meets none of them. A crash on any one of them is a red
-    // bar here, and so is a project that quietly produced no problems at all while holding audio or plugins.
+    // The blunt criterion: a reader meets every real file in the directory or it meets none of them. A crash on any
+    // one of them is a red bar here, and so is a project that quietly produced no problems at all while holding audio
+    // or plugins.
     const directories = readdirSync(DIR).filter((name) => name.endsWith(".logicx")).sort();
     for (const directory of directories) {
       const { projectData, metaData } = readAlternative(directory);

@@ -19,8 +19,12 @@
  * bytes of real community fixtures agree with those readings. "This parses what the specification says" is the whole
  * claim; "the import is correct" is not, and a green test here must not be read as one.
  *
- * The byte-level spec is `jonkubis/logicproformatwriter`'s `PROJECTDATA_FORMAT.md` (**MIT**). The parser is written
- * here in TypeScript rather than ported. The GPL-licensed analyser (`geoffmyers/logicx-analyzer`) was not copied.
+ * The byte-level spec is `jonkubis/logicproformatwriter`'s `PROJECTDATA_FORMAT.md` (**MIT**). The note **event
+ * framing** is not that file's — it defines one fixed 32-byte note, and real projects write notes of every length —
+ * so the framing is read as the sequence of 16-byte lines that three independent projects document
+ * (`phierceweb/logicxkit`, Apache-2.0; `Evilander/logic2ableton`, MIT; `loov/logicx`, GPL-3.0-or-later, quoted for one
+ * conclusion only). See the note on `lineRun`. This parser is written here in TypeScript rather than ported, and the
+ * GPL-licensed analyser (`geoffmyers/logicx-analyzer`) was not copied.
  *
  * ## The honest boundaries, which reach `problems` by name
  *
@@ -404,114 +408,112 @@ function recordName(payload: Uint8Array, offset: number): { name?: string; inval
  * ------------------------------------------------------------------ */
 
 /**
- * The three marker dwords that decide what an event sequence **is**.
+ * The markers that decide what an event sequence **is**.
  *
- * `0x90` is a MIDI note-on status byte and marks a region's note sequence; `0x60` and `0x30` mark the tempo track and
- * the signature track. A region holding no notes still writes its note sequence — the 16-byte `f1` tail and nothing
- * before it — so an empty sequence is accepted too. Without that, a region holding nothing is a record the walk never
- * saw, and a project with empty regions looks like a project that has none.
+ * The first byte of a head line is a MIDI-style status, and the note one is `NOTE_STATUS_NIBBLE` below; `0x60` and
+ * `0x30` mark the tempo track and the signature track. A region holding no notes still writes its note sequence — the
+ * 16-byte `f1` tail and nothing before it — so an empty sequence is accepted too. Without that, a region holding
+ * nothing is a record the walk never saw, and a project with empty regions looks like a project that has none.
  */
-const NOTE_MARKER = 0x90;
 const EMPTY_SEQUENCE_MARKER = 0xf1;
 const TEMPO_MARKER = 0x60;
 const METER_MARKER = 0x30;
 
-/** The 16-byte terminator every `qSvE` event run ends with, so a run's length is known before it is read. */
-const SEQUENCE_TAIL = [0xf1, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0x3f];
-const SEQUENCE_TAIL_SIZE = 16;
+/**
+ * The **line**: the 16 bytes every event in a `qSvE` payload is built from, and the byte inside it whose top bit
+ * carries the one fact the framing needs.
+ *
+ * This is the whole model. A line whose byte 7 has its top bit clear **opens an event**; a line whose byte 7 has it
+ * set **continues the event before it**. A note is therefore `16 × (N + 1)` bytes for however many continuation lines
+ * were attached to it — 16 for none, 32 for one (the form the byte-level specification's writer emits), 48 for two,
+ * 64 for three, 80 for four — and **there is no size to guess**. Nothing in the head line selects a length: its bytes
+ * 1..3 carry flags, so `90 40 00 00` and `90 00 51 9d` are both notes at whatever length their *continuations* say.
+ *
+ * The model is documented by three independent projects, quoted here rather than copied:
+ * `phierceweb/logicxkit` (**Apache-2.0**, `logic/services/events.py`) — "The payload is 16-byte lines. A line whose
+ * byte 7 has its top bit clear starts an event … A line whose byte 7 has the top bit set continues the event before
+ * it"; `Evilander/logic2ableton` (**MIT**, `logic_project_data.py`) — a status bit marks a trailing extension record;
+ * and `loov/logicx` (**GPL-3.0-or-later**, `event.go`) — "a note event grows by one atom per attached score symbol",
+ * quoted as a conclusion only, with no GPL code copied. This reader is an independent TypeScript reimplementation of
+ * that documented byte model, not a port of any of them.
+ */
+const EVENT_LINE_SIZE = 16;
+const CONTINUATION_BYTE = 7;
+const CONTINUATION_FLAG = 0x80;
 
 /**
- * The two event sizes a note run is written in.
+ * The high nibble of a head line's first byte that marks a **note**: `0x90`..`0x9F`, one status per MIDI channel.
  *
- * **Both exist in real projects, and the size is the second byte of the marker dword rather than a field
- * anywhere.** The specification's own writer emits the 32-byte form (`90 00 00 00`), and that is what the fixtures
- * here were built from. Opening the owner's eight official projects shows the other form as well: the run is
- * `90 40 00 00` and each event is 48 bytes, with the same pitch/velocity/length offsets moved by nothing at all —
- * only the stride changes. A reader that assumed the 32-byte stride on one of those runs walks into the middle of
- * an event and reports zero notes, which is exactly what the measurement in `docs/OPEN_WORK.md` §123 found.
+ * The first byte is a MIDI-style status, not a size. `0xB0` is a controller, `0xC0` a program change and `0xE0` a
+ * pitch bend (`logicxkit`'s `midi.py` writes exactly that table), and the owner's corpus really does hold those
+ * inside a region's event sequence: measured, `Colors` carries 861 bend lines beside its 2007 notes and `ocean eyes`
+ * 314 controller lines beside its 1415 notes. Reading the status is what keeps a sustain pedal from becoming a note.
  */
-const NOTE_EVENT_SIZE_32 = 32;
-const NOTE_EVENT_SIZE_48 = 48;
+const NOTE_STATUS_NIBBLE = 0x9;
+const NOTE_STATUS_MASK = 0xf0;
+
+/** The 16-byte `f1` line that closes a run, so a run's end is known before it is read. */
+const SEQUENCE_TAIL_SIZE = EVENT_LINE_SIZE;
 
 function firstPayloadWord(record: LogicRecord): number | undefined {
   return record.payload.length >= RECORD_HEADER + 4 ? u32(record.payload, RECORD_HEADER) : undefined;
 }
 
-/** The marker dword of a note event, with the flag byte that carries the event size cleared. */
-function noteMarker(record: LogicRecord): number | undefined {
-  const word = firstPayloadWord(record);
-  return word === undefined ? undefined : word & 0xff;
+/** Whether a 16-byte line continues the event before it rather than opening one. */
+function isContinuationLine(line: Uint8Array): boolean {
+  return (line[CONTINUATION_BYTE]! & CONTINUATION_FLAG) !== 0;
 }
 
-/**
- * Whether a payload ends with the terminator that closes an event run of `size`-byte events.
- *
- * `headered` says whether the bytes still carry the 36-byte record header, because the caller that decides *what a
- * record is* holds the whole record while the caller that reads its notes holds the payload alone.
- */
-function hasSequenceTail(payload: Uint8Array, size: number, headered: boolean): boolean {
-  const body = payload.length - (headered ? RECORD_HEADER : 0) - SEQUENCE_TAIL_SIZE;
-  if (body < 0 || body % size !== 0) return false;
-  const tail = payload.length - SEQUENCE_TAIL_SIZE;
-  return SEQUENCE_TAIL.every((byte, index) => payload[tail + index] === byte);
+/** Whether a line's first byte carries a note status. */
+function isNoteStatus(status: number): boolean {
+  return (status & NOTE_STATUS_MASK) === NOTE_STATUS_NIBBLE << 4;
 }
 
 /** One note event's own start, kept as an offset so `readNotes` reads the fields from the bytes it was given. */
 interface NoteEventAt {
   at: number;
-}
-
-/** A run of note events at one stride, as the reader found it. */
-interface NoteRun {
-  /** The event stride the run is written at: 32 or 48 bytes. */
-  stride: number;
-  events: NoteEventAt[];
+  /**
+   * Whether the event carries at least one continuation line.
+   *
+   * It matters because the **length lives at `+12` of the first continuation**, not in the head line: an event with no
+   * continuation has no length field at all, so reading `+0x1c` for it would take whatever the *next* event begins
+   * with. A 16-byte event is read as length zero, which the caller already reports rather than hiding.
+   */
+  hasDataLine: boolean;
 }
 
 /**
- * The 32-byte run, read the way the specification and the reference implementation read it: the marker dword is
- * `90 00 00 00` **exactly**, and an event is one 32-byte slot.
+ * Walk a `qSvE` payload as what it is: a sequence of 16-byte lines.
  *
- * This is deliberately the strictest form. It is the one the byte-level specification defines, the one its writer
- * emits, and the one the committed fixtures are written in — so it is also the reading an existing measurement is
- * pinned to, and widening *this* test would silently move those numbers.
+ * Head lines that are **not** notes — controllers, program changes, pitch bends — are stepped over together with
+ * their continuations and are not returned; read as notes they would arrive with meaningless pitches (a sustain
+ * pedal's value read as a pitch) and are what a probe that counted every line reported as notes.
+ *
+ * The extra continuation lines of a note are consumed as part of the event and **not interpreted**. The sources name
+ * them as the note's *score symbols* — the GPL source puts it "articulations, fermatas and slur segments are extra
+ * atoms of the note record itself" — but **no project states what they do to a note's position, length or velocity**,
+ * so this reader takes only the five fields the specification names and leaves the rest unread. That is a real limit,
+ * not a claim that nothing is there.
  */
-function exact32Run(payload: Uint8Array): NoteRun {
+function lineRun(payload: Uint8Array): NoteEventAt[] {
   const events: NoteEventAt[] = [];
-  for (let at = 0; at + NOTE_EVENT_SIZE_32 <= payload.length; at += NOTE_EVENT_SIZE_32) {
-    if (u32(payload, at) === NOTE_MARKER) events.push({ at });
+  let at = 0;
+  while (at + EVENT_LINE_SIZE <= payload.length) {
+    const line = payload.subarray(at, at + EVENT_LINE_SIZE);
+    if (u16(line, 0) === EMPTY_SEQUENCE_MARKER) break;
+    // A continuation with no event before it: the run does not start here, so there is nothing to read.
+    if (isContinuationLine(line)) break;
+    let next = at + EVENT_LINE_SIZE;
+    while (
+      next + EVENT_LINE_SIZE <= payload.length &&
+      isContinuationLine(payload.subarray(next, next + EVENT_LINE_SIZE))
+    ) {
+      next += EVENT_LINE_SIZE;
+    }
+    if (isNoteStatus(line[0]!)) events.push({ at, hasDataLine: next > at + EVENT_LINE_SIZE });
+    at = next;
   }
-  return { stride: NOTE_EVENT_SIZE_32, events };
-}
-
-/**
- * The 48-byte run, which the specification does **not** describe and which real projects nevertheless contain.
- *
- * It is admitted only when the payload's own length and terminator say the run is 48-byte framed **and** the framing
- * spans more than one event: the body must close on the terminator, and the marker is tested by its status byte
- * alone because the bytes beside it carry flags (`90 40 00 00`). The single-event minimum is not cosmetic — a short
- * payload can satisfy a terminator by coincidence, and a one-event 48-byte reading of a 32-byte run would move
- * numbers the 32-byte reading is pinned to.
- */
-function framed48Run(payload: Uint8Array): NoteRun | undefined {
-  if (!hasSequenceTail(payload, NOTE_EVENT_SIZE_48, false)) return undefined;
-  const events: NoteEventAt[] = [];
-  for (let at = 0; at + NOTE_EVENT_SIZE_48 <= payload.length; at += NOTE_EVENT_SIZE_48) {
-    if ((u32(payload, at) & 0xff) !== NOTE_MARKER) break;
-    events.push({ at });
-  }
-  return events.length < 2 ? undefined : { stride: NOTE_EVENT_SIZE_48, events };
-}
-
-/**
- * The notes a region's payload holds.
- *
- * Two framings exist in real files and the order they are tried in matters: the 48-byte framing is checked **first**
- * and only claims a payload its terminator closes, and everything else falls to the 32-byte exact reading. That
- * ordering is what makes this addition additive — a payload the old reader read, it still reads, byte for byte.
- */
-function noteRun(payload: Uint8Array): NoteRun | undefined {
-  return framed48Run(payload) ?? exact32Run(payload);
+  return events;
 }
 
 /**
@@ -525,18 +527,22 @@ function isCheckableEmpty(payload: Uint8Array): boolean {
   return payload.length <= SEQUENCE_TAIL_SIZE;
 }
 
+/**
+ * Whether a `qSvE` payload is a region's note sequence.
+ *
+ * The **first line** decides it. A run that opens with the `0xf1` terminator is the empty sequence Logic still writes
+ * for a region with nothing in it; a run that opens with a note-status head line is a note sequence. The head line is
+ * tested by its status **nibble**, so a region whose first event is on channel 3 is still read — the corpus has such
+ * regions, and testing the whole first byte for `0x90` dropped them.
+ *
+ * A run that opens with a controller or a pitch bend is **not** claimed: those sequences hold the events beside the
+ * notes, and reading them as notes is what turned 18 measured notes into 52 in the corpus.
+ */
 function isNoteSequence(record: LogicRecord): boolean {
-  if (record.tag !== "qSvE" || record.payload.length < RECORD_HEADER + 16) return false;
-  const marker = firstPayloadWord(record);
-  if (marker === EMPTY_SEQUENCE_MARKER) return true;
-  if (marker === NOTE_MARKER) return true;
-  /**
-   * A marker that is `0x90` in its **low byte** with flags beside it is the 48-byte form, and is admitted only when
-   * the payload really is 48-byte framed. Testing the low byte alone would make every payload that happens to begin
-   * with `90` a note region.
-   */
-  if (noteMarker(record) !== NOTE_MARKER) return false;
-  return framed48Run(record.payload.subarray(RECORD_HEADER)) !== undefined;
+  if (record.tag !== "qSvE" || record.payload.length < RECORD_HEADER + EVENT_LINE_SIZE) return false;
+  const body = record.payload.subarray(RECORD_HEADER);
+  if (u16(body, 0) === EMPTY_SEQUENCE_MARKER) return true;
+  return isNoteStatus(body[0]!) && !isContinuationLine(body);
 }
 
 function isTempoSequence(record: LogicRecord): boolean {
@@ -618,24 +624,26 @@ interface NoteReading {
 /**
  * The notes of one region.
  *
- * A note event's fields are the five the specification names and they sit at the same offsets in **both** the
- * 32-byte and the 48-byte form: the position (`38400 + region-relative tick`), the fine and coarse velocity bytes,
- * the pitch, and the length in ticks. What changes between the forms is only the stride, which `noteRun` settles
- * from the bytes.
+ * A note event's fields sit in its **head line** at the offsets the specification names — the position
+ * (`38400 + region-relative tick`) at `+0x04`, the coarse velocity at `+0x0b`, the pitch at `+0x0c` — and its
+ * **length is at `+12` of the first continuation line** (the `…89…` one). Those offsets do not move with the number
+ * of continuation lines, which is the whole point of reading the lines instead of guessing a stride: the previous
+ * reader knew two fixed sizes and every event of any other length was silently dropped or misread.
  *
- * The 48-byte form is the one the specification does not describe and real projects do contain: its marker carries
- * flags beside the status byte (`90 40 00 00`), and reading it is what turns a project that reported **no notes at
- * all** into one that reports the notes it holds.
+ * A zero-length note is a note that cannot sound, and one is reported rather than hidden. An event with **no**
+ * continuation line has no length field at all, so it is read as length zero rather than taking the first four bytes
+ * of whatever follows it.
  *
- * Every note is `>= 1` tick long: a zero-length note is a note that cannot sound, and one is reported.
+ * ⚠️ What this does **not** read: the note's further continuation lines (the score-symbol atoms). The sources name
+ * them and no project says what they do to a note's timing or dynamics, so they are consumed with the event and left
+ * uninterpreted. And this takes note-status lines only: a controller or pitch-bend line in the same sequence is not a
+ * note, whatever a count of every line would say.
  */
 function readNotes(payload: Uint8Array): { notes: NoteReading[]; zeroLength: number } {
   const notes: NoteReading[] = [];
   let zeroLength = 0;
-  const run = noteRun(payload);
-  if (run === undefined) return { notes, zeroLength };
-  for (const event of run.events) {
-    const lengthTicks = u32(payload, event.at + 0x1c);
+  for (const event of lineRun(payload)) {
+    const lengthTicks = event.hasDataLine ? u32(payload, event.at + 0x1c) : 0;
     const pitch = payload[event.at + 0x0c]!;
     if (pitch === 0 || pitch > 127) continue;
     if (lengthTicks === 0) zeroLength += 1;

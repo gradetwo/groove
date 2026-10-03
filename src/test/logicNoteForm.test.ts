@@ -1,17 +1,22 @@
 /**
- * Reading the **48-byte note form**: what the fix adds, and what it must not move.
+ * Reading the **16-byte line model**: what the rebuild reads, and what it must not move.
  *
- * The owner handed over eight official Logic Pro projects. Four of them reported **zero parts and zero notes**, and
- * three of those four are genuinely audio — `Spatial Audio Demo Grid` holds no note sequence at all, and the two
- * `MONTERO` projects hold a single seven-note region inside gigabytes of audio. But `Swing!` holds hundreds of
- * notes in a form the specification does not describe: the marker dword is `90 40 00 00` and the event is **48**
- * bytes, where the specification's writer emits `90 00 00 00` and 32. Measured on the corpus, `Swing!` went from
- * **0 parts / 0 notes to 5 parts / 581 notes**, the two `Manzana` projects from 5/44 to 6/89, and all four
- * projects that already read correctly were unchanged to the note.
+ * A `qSvE` payload is a sequence of 16-byte lines. A line whose byte 7 has its top bit clear **opens an event**; one
+ * whose byte 7 has it set **continues the event before it**. A note is therefore `16 × (N + 1)` bytes — 16 with no
+ * continuation, 32 with one (the form the byte-level specification's writer emits), 48 with two, 64 with three, 80
+ * with four — and **nothing in the head line selects a size**. The reader this replaces knew two fixed strides (32 and
+ * 48) and silently dropped or misread every note of any other length.
+ *
+ * Measured on the owner's eight official projects, the rebuild reads `Swing!` 581 → **2903** notes, `Manzana` 89 →
+ * **1369** each, `Colors` 1557 → **2007**, `ocean eyes` 1240 → **1415**, with `MONTERO` (7) and `Spatial Audio Demo
+ * Grid` (0) unchanged. `Colors` and `ocean eyes` read *fewer* than the line totals their sequences hold, and that is
+ * the point of the status check: the remaining lines are 861 pitch bends and 314 controller events — `0xE0` and `0xB0`
+ * head lines `logicxkit`'s `midi.py` names in its own table — and a sustain pedal is not a note.
  *
  * There is **no Mac and no Logic on this machine**, so nothing here has been opened in Logic and compared. What the
- * criteria prove is narrower and is the whole claim: the reader reads this form's fields, and it reads them without
- * moving the number the 32-byte reading already produced. A green run here is not "the import is correct".
+ * criteria prove is narrower and is the whole claim: the reader reads every continuation length at the offsets the
+ * sources name, and it reads them without moving the number the 32-byte reading already produced. A green run here is
+ * not "the import is correct".
  *
  * Every byte below is built in this repository's own tests from a `Buffer`. **No real project is committed,
  * vendored or used as a snapshot** — the corpus is measured outside the checkout and reported in `docs/OPEN_WORK.md`.
@@ -19,7 +24,7 @@
 import { describe, expect, it } from "vitest";
 import { fromLogicProject, LOGIC_TICKS_PER_QUARTER, parsePlist } from "../data/logicToArrangement";
 import { buildLogicProjectData, buildMetaDataPlist } from "./fixtures/logic_project.mjs";
-import { buildLogicProjectData48, NOTE_FORM_48 } from "./fixtures/logic_note_form.mjs";
+import { buildLogicProjectDataLines, buildNoteEvent, eventSize, NOTE_FORM } from "./fixtures/logic_note_form.mjs";
 
 /**
  * A **binary** plist holding one real number, written here because it is the shape a real `MetaData.plist` has and
@@ -61,105 +66,197 @@ function buildBinaryPlistReal(key: string, value: number, size = 4): Uint8Array 
   return Uint8Array.from(out);
 }
 
-/** Four notes in the 48-byte form, pitched and spaced so a person can check them by eye. */
-function quarterNotes48(bpm: number) {
-  return buildLogicProjectData48({
-    bpm,
-    timeSignature: { numerator: 4, denominator: 4 },
-    regions: [
-      {
-        name: "Swing Kit",
-        notes: [
-          { startTicks: 0, pitch: 36, velocity: 100, lengthTicks: 240 },
-          { startTicks: 480, pitch: 38, velocity: 90, lengthTicks: 240 },
-          { startTicks: 960, pitch: 42, velocity: 110, lengthTicks: 480 },
-          { startTicks: 1440, pitch: 36, velocity: 80, lengthTicks: 240 },
-        ],
-      },
-    ],
-  });
+/**
+ * Six regions, one per continuation count, each with two notes an octave and a semitone apart so a person can check
+ * them by eye. The lengths differ per N so a reader that found the events but read the length from the wrong line
+ * cannot pass by luck.
+ */
+function projectWithEveryLength(bpm = 120) {
+  const regions = [];
+  for (let n = 0; n <= 5; n += 1) {
+    regions.push({
+      name: `N${n}`,
+      notes: [
+        { startTicks: 0, pitch: 60 + n, velocity: 100, lengthTicks: 240 * (n + 1), continuations: n },
+        { startTicks: 480, pitch: 72 + n, velocity: 80, lengthTicks: 960, continuations: n },
+      ],
+    });
+  }
+  return buildLogicProjectDataLines({ bpm, timeSignature: { numerator: 4, denominator: 4 }, regions });
 }
 
-describe("Logic import · the 48-byte note form", () => {
-  it("reads the notes a 48-byte region holds, at the offsets the specification names", () => {
+describe("Logic import · the 16-byte line model", () => {
+  it("reads a note at every continuation length, N = 0 through 5", () => {
     /**
-     * The criterion in one assertion, and it is the one that was red: this project produced **no parts at all**
-     * before the fix, because its note sequence's marker dword is `90 40 00 00` and the reader tested the whole
-     * dword for `90 00 00 00`. The pitches, velocities, starts and lengths are each checked separately, so a reader
-     * that found the events but read the wrong offset cannot pass by luck.
+     * ⭐ **The criterion in one assertion, and it was red for four of the six lengths.** Before the rebuild the reader
+     * had one fixed 48-byte branch and one fixed 32-byte branch: N=2 was read by the first and N=1 by the second, and
+     * N=0/3/4/5 were read by neither — a real 80-byte note fell through to a 32-byte walk and was lost. Every field is
+     * checked per region, so a reader that found the events but read the wrong offset cannot pass by luck.
      */
-    const imported = fromLogicProject({ projectData: quarterNotes48(120), metaData: buildMetaDataPlist({}) });
-    expect(imported.parts.map((part) => part.name)).toEqual(["Swing Kit"]);
+    const imported = fromLogicProject({ projectData: projectWithEveryLength(), metaData: buildMetaDataPlist({}) });
+    expect(imported.parts.map((part) => part.name)).toEqual(["N0", "N1", "N2", "N3", "N4", "N5"]);
+    for (const [n, part] of imported.parts.entries()) {
+      expect(part.notes.length).toBe(2);
+      expect(part.notes[0]).toMatchObject({ startBeats: 0, pitch: 60 + n, velocity: 100 });
+      // A bare 16-byte event has no continuation, so it has no length field at all: the reader says zero, not the
+      // first four bytes of the event after it.
+      expect(part.notes[0]!.lengthBeats).toBe(n === 0 ? 0 : (240 * (n + 1)) / LOGIC_TICKS_PER_QUARTER);
+      expect(part.notes[1]).toMatchObject({
+        startBeats: 0.5,
+        pitch: 72 + n,
+        velocity: 80,
+      });
+      expect(part.notes[1]!.lengthBeats).toBe(n === 0 ? 0 : 960 / LOGIC_TICKS_PER_QUARTER);
+    }
+  });
+
+  it("does not take the bytes beside the status for a size selector", () => {
+    /**
+     * `90 40 00 00` is not a 48-byte marker — `0x40` is a flag, and the corpus writes notes whose head dword is
+     * `90 00 51 9d`. Three head shapes at the **same** continuation count must read identically; a reader that
+     * branched on the head bytes would answer three different things here.
+     */
+    const headShapes: [number, number, number][] = [
+      [0x40, 0x00, 0x00],
+      [0x00, 0x51, 0x9d],
+      [0x00, 0x00, 0x00],
+    ];
+    for (const headFlags of headShapes) {
+      const project = buildLogicProjectDataLines({
+        bpm: 120,
+        regions: [{ name: "Flags", notes: [{ startTicks: 0, pitch: 61, lengthTicks: 720, continuations: 2, headFlags }] }],
+      });
+      const imported = fromLogicProject({ projectData: project, metaData: buildMetaDataPlist({}) });
+      expect(imported.parts.map((part) => part.name), `head ${headFlags.join(" ")}`).toEqual(["Flags"]);
+      expect(imported.parts[0]!.notes).toEqual([
+        { startBeats: 0, lengthBeats: 720 / LOGIC_TICKS_PER_QUARTER, pitch: 61, velocity: 100 },
+      ]);
+    }
+  });
+
+  it("steps over a controller or pitch-bend line inside a note sequence instead of reading it as a note", () => {
+    /**
+     * A region's sequence holds the events beside the notes, and `0xB0`/`0xE0` head lines are a controller and a
+     * pitch bend (`logicxkit`'s `KINDS` table). Counting every head line as a note is what turned 18 measured notes
+     * into 52 in the corpus and gave `Colors` 861 extra "notes" whose pitch byte is a bend's low byte. The two real
+     * notes must survive and the two non-notes must not become notes.
+     */
+    const project = buildLogicProjectDataLines({
+      bpm: 120,
+      regions: [
+        {
+          name: "Mixed",
+          notes: [
+            { startTicks: 0, pitch: 60, velocity: 100, lengthTicks: 480, continuations: 1 },
+            { startTicks: 240, pitch: 64, velocity: 127, status: 0xb0, continuations: 0 },
+            { startTicks: 480, pitch: 67, velocity: 90, lengthTicks: 240, continuations: 2 },
+            { startTicks: 720, pitch: 0, status: 0xe0, continuations: 0 },
+          ],
+        },
+      ],
+    });
+    const imported = fromLogicProject({ projectData: project, metaData: buildMetaDataPlist({}) });
+    expect(imported.parts.map((part) => part.name)).toEqual(["Mixed"]);
     expect(imported.parts[0]!.notes).toEqual([
-      { startBeats: 0, lengthBeats: 0.25, pitch: 36, velocity: 100 },
-      { startBeats: 0.5, lengthBeats: 0.25, pitch: 38, velocity: 90 },
-      { startBeats: 1, lengthBeats: 0.5, pitch: 42, velocity: 110 },
-      { startBeats: 1.5, lengthBeats: 0.25, pitch: 36, velocity: 80 },
+      { startBeats: 0, lengthBeats: 0.5, pitch: 60, velocity: 100 },
+      { startBeats: 0.5, lengthBeats: 0.25, pitch: 67, velocity: 90 },
     ]);
   });
 
-  it("keeps reading the tempo of a 48-byte project, which the region reading must not take down with it", () => {
-    /**
-     * ⚠️ **This one was already green and is a guard, not a fix** — said plainly so nobody reads it as one. The
-     * tempo comes from the `gnoS` slot and never from a region, so the original reader answered `137.5` on this
-     * fixture even while it returned zero parts. The measurement that reported "8/8 projects return no tempo" was a
-     * probe reading the wrong field name (`tempo` for the property the interface calls `tempoBpm`), not a reader
-     * defect, and this asserts the property the interface actually declares.
-     */
-    const imported = fromLogicProject({ projectData: quarterNotes48(137.5), metaData: buildMetaDataPlist({}) });
-    expect(imported.tempoBpm).toBe(137.5);
+  it("does not read the terminator as an event, at any length", () => {
+    // The `f1` line closes the run. A reader that kept walking would turn the terminator into a note whose pitch is
+    // the byte at its `+0x0c` — a number no writer put there as a pitch.
+    for (const continuations of [0, 1, 2, 5]) {
+      const project = buildLogicProjectDataLines({
+        bpm: 120,
+        regions: [{ name: `T${continuations}`, notes: [{ startTicks: 0, pitch: 60, lengthTicks: 480, continuations }] }],
+      });
+      const imported = fromLogicProject({ projectData: project, metaData: buildMetaDataPlist({}) });
+      expect(imported.parts[0]!.notes.length, `N=${continuations}`).toBe(1);
+    }
   });
 
-  it("reads the tick resolution the 48-byte form shares with the 32-byte form", () => {
+  it("names the line model it read, so a criterion can turn red when the writer and the reader drift apart", () => {
+    // Asserted about the bytes rather than about the reader: the line is 16 bytes, the first continuation's byte 7 is
+    // `0x89`, a score-symbol continuation has its top bit set, and a head line does not.
+    expect(NOTE_FORM.lineSize).toBe(16);
+    expect(NOTE_FORM.dataLine).toBe(0x89);
+    expect(eventSize(0)).toBe(16);
+    expect(eventSize(1)).toBe(32);
+    expect(eventSize(2)).toBe(48);
+    expect(eventSize(3)).toBe(64);
+    expect(eventSize(4)).toBe(80);
+    expect(eventSize(5)).toBe(96);
+
+    const bare = buildNoteEvent({ pitch: 60, continuations: 0 });
+    expect(bare.length).toBe(16);
+    expect(bare[7]! & 0x80).toBe(0);
+
+    const three = buildNoteEvent({ pitch: 60, lengthTicks: 480, continuations: 3 });
+    expect(three.length).toBe(64);
+    expect(three[7]! & 0x80).toBe(0); // the head line opens the event
+    expect(three[16 + 7]!).toBe(0x89); // the first continuation carries the length
+    expect(three[32 + 7]! & 0x80).toBe(0x80); // a score-symbol atom
+    expect(three[48 + 7]! & 0x80).toBe(0x80);
+  });
+
+  it("reports a bare 16-byte note as zero length rather than hiding it", () => {
     /**
-     * Logic counts 960 ticks per quarter in both forms, so a note written 480 ticks after its region's start is
-     * half a beat. Pinning this catches a reader that found the 48-byte stride and then divided by the wrong
-     * resolution, which would put every note in the wrong place while the counts still looked right.
+     * An event with no continuation has no length field, so its length is not "whatever the next four bytes say". The
+     * reader answers zero and **says so** in `problems`, which is the difference between an honest limit and a silent
+     * wrong number.
      */
-    const imported = fromLogicProject({ projectData: quarterNotes48(120), metaData: buildMetaDataPlist({}) });
-    const notes = imported.parts[0]!.notes;
-    expect(notes[1]!.startBeats).toBe(480 / LOGIC_TICKS_PER_QUARTER);
+    const project = buildLogicProjectDataLines({
+      bpm: 120,
+      regions: [{ name: "Bare", notes: [{ startTicks: 0, pitch: 60, lengthTicks: 960, continuations: 0 }] }],
+    });
+    const imported = fromLogicProject({ projectData: project, metaData: buildMetaDataPlist({}) });
+    expect(imported.parts[0]!.notes).toEqual([{ startBeats: 0, lengthBeats: 0, pitch: 60, velocity: 100 }]);
+    expect(imported.problems.join("\n")).toContain("zero ticks");
+  });
+
+  it("keeps reading the tick resolution every length shares", () => {
+    // Logic counts 960 ticks per quarter whatever the continuation count, so a note written 480 ticks after its
+    // region's start is half a beat. A reader that divided by the wrong resolution would move every note.
+    const imported = fromLogicProject({ projectData: projectWithEveryLength(), metaData: buildMetaDataPlist({}) });
     expect(LOGIC_TICKS_PER_QUARTER).toBe(960);
+    for (const part of imported.parts) expect(part.notes[1]!.startBeats * LOGIC_TICKS_PER_QUARTER).toBe(480);
   });
 
-  it("reports the meter the project states rather than a default, in the 48-byte form too", () => {
+  it("reports the meter the project states rather than a default, in the line model too", () => {
     /**
      * `3/4` is written into the signature header's own bytes, and this is the criterion that separates "read the
      * value" from "fell back to 4/4": a reader that never finds the signature sequence answers `4/4` here and is
      * wrong, and one that defaults would answer `4/4` and pass a `4/4` fixture. The two fixtures are read together
      * for exactly that reason.
      */
-    const threeFour = buildLogicProjectData48({
+    const threeFour = buildLogicProjectDataLines({
       bpm: 120,
       timeSignature: { numerator: 3, denominator: 4 },
-      regions: [{ name: "Waltz", notes: [{ startTicks: 0, pitch: 60, velocity: 100, lengthTicks: 960 }] }],
+      regions: [{ name: "Waltz", notes: [{ startTicks: 0, pitch: 60, velocity: 100, lengthTicks: 960, continuations: 2 }] }],
     });
     expect(fromLogicProject({ projectData: threeFour, metaData: buildMetaDataPlist({}) }).timeSignature).toBe("3/4");
 
-    const sevenEight = buildLogicProjectData48({
+    const sevenEight = buildLogicProjectDataLines({
       bpm: 120,
       timeSignature: { numerator: 7, denominator: 8 },
-      regions: [{ name: "Seven", notes: [{ startTicks: 0, pitch: 60, velocity: 100, lengthTicks: 480 }] }],
+      regions: [{ name: "Seven", notes: [{ startTicks: 0, pitch: 60, velocity: 100, lengthTicks: 480, continuations: 4 }] }],
     });
     expect(fromLogicProject({ projectData: sevenEight, metaData: buildMetaDataPlist({}) }).timeSignature).toBe("7/8");
   });
 
-  it("names the form it read, so a criterion can turn red when the writer and the reader drift apart", () => {
-    // The fixture's own marker and event size, asserted about the bytes rather than about the reader.
-    const project = quarterNotes48(120);
-    expect(NOTE_FORM_48.eventSize).toBe(48);
-    expect(NOTE_FORM_48.marker).toEqual([0x90, 0x40, 0x00, 0x00]);
-    // The region's note payload is 4 × 48 + 16, so the fixture really is the form it claims.
-    expect(project.length).toBeGreaterThan(4 * NOTE_FORM_48.eventSize);
+  it("keeps reading the tempo of a line-model project, which the region reading must not take down with it", () => {
+    // ⚠️ **This one was already green and is a guard, not a fix** — said plainly so nobody reads it as one. The tempo
+    // comes from the `gnoS` slot and never from a region.
+    const imported = fromLogicProject({ projectData: projectWithEveryLength(137.5), metaData: buildMetaDataPlist({}) });
+    expect(imported.tempoBpm).toBe(137.5);
   });
 
-  it("leaves the 32-byte reading exactly where it was", () => {
+  it("leaves the specification's 32-byte reading exactly where it was", () => {
     /**
      * ⭐ **This is the criterion that protects the pinned numbers.** `logicFixtures.test.ts` pins real projects to
-     * 48 drum / 90 piano / 51 bass etc., all of them written in the specification's 32-byte form. The 48-byte branch
-     * is tried first in the reader, so if its guard ever loosened enough to claim a 32-byte payload, those numbers
-     * would move silently. This reads one project through both forms' bytes and asserts the 32-byte one is
-     * unchanged from what the specification says.
+     * note counts, and the specification's own writer emits 32-byte notes. The line model must read those byte for
+     * byte as the old 32-byte branch did.
      */
     const project = buildLogicProjectData({
       bpm: 120,
@@ -209,14 +306,14 @@ describe("Logic import · the real numbers in a binary plist", () => {
      * disagreement. Here the two sides genuinely disagree, so the sentence must appear and must name both values.
      */
     const agreeing = fromLogicProject({
-      projectData: quarterNotes48(120),
+      projectData: projectWithEveryLength(120),
       metaData: buildBinaryPlistReal("BeatsPerMinute", 120),
     });
     expect(agreeing.tempoBpm).toBe(120);
     expect(agreeing.problems.some((problem) => problem.includes("MetaData.plist says"))).toBe(false);
 
     const disagreeing = fromLogicProject({
-      projectData: quarterNotes48(120),
+      projectData: projectWithEveryLength(120),
       metaData: buildBinaryPlistReal("BeatsPerMinute", 128),
     });
     expect(disagreeing.tempoBpm).toBe(120);
