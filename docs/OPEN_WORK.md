@@ -5347,3 +5347,28 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
    ⇒ ⭐ **我裁：这就是本仓库既有的唯一通道，且确实"不静默降级"** ✓ ⇒ **不改代码去造 `needs` 字段** ✗
      （若业主要真正的 `needs` 通道 ⇒ 那是**新功能**，另立 ✓）
 ℹ️ 它另报：**单 part 文件不开对话框是设计** ✓（"一个 part 不是一张表" ✓，与 MIDI 一致 ✓）⇒ 用户仍可在轨头 `track-kind-*` 改成 sampler ✓；语料里 **10/12** 属这一类 ✓
+
+## 一百八十四、📦 **导出阶段第一批实测读数（`exp3` 的 `browser.json` ✓）**（2026-10-04 00:1x ✓）
+
+```
+**方法** ✓：真 Chromium ⇒ 造三轨夹具（Lead／Bass／Drums ✓，`arr_exp3_roundtrip` ✓）⇒ 界面导出 ⇒ 抓下载 ⇒（读回比对**待报** ✓）；
+   下载耗时带**同机空载基线** ✓（全零 492 B 对照 blob ✓ —— 见 `§243` 疑问解答 ✓）
+
+| 面 | 文件 | 生成 ms | 字节 | 轨 | 音符 | problems | 下载 ms（基线 14 ✓） | sha256 |
+|---|---|---|---|---|---|---|---|---|
+| **编排 MIDI** | `arrangement.mid` | **3** | **492** | **3** | **43** | **[]** | **90** | `716ce14c…` |
+| **编排 MusicXML** | `lead.musicxml` | **10.7** | **13,675** | – | **34** | – | **102** | `3c1b6689…` |
+| **工作台 MIDI** | `Chicago House.mid` | – | **2,556** | **1** | – | – | **182** | `42d2cbfe…` |
+
+✅ **报告行逐字** ✓：`Exported arrangement.mid ✓ · 3 track(s), 43 note(s)` ✓｜`Exported lead.musicxml — 34 note(s)` ✓
+✅ **文件头逐字** ✓：编排 MIDI `4d 54 68 64 00 00 00 06 00 01 00 04 01 e0 4d 54` ⇒ `MThd`／**format 1**／**4 轨**／**480** ✓；
+   工作台 MIDI `… 00 00 00 01 …` ⇒ **format 0／1 轨／480** ✓（⭐ 与 `§141` 侦察**逐项一致** ✓，**连 2,556 B 这个字节数都一样** ✓✓）
+✅ **MusicXML 头** ✓：`<?xml version="1.0" encoding="UTF-8"?>` ＋ `<!DOCTYPE score-partwise` ✓
+✅ **工作台快照回读** ✓：`genreId chicago-house` ✓、**`resolution '1/16'`** ✓、`totalSteps 128` ✓、`swing 15` ✓
+   （⭐ 与 `§166.2` 的"模型网格是十六分"互为旁证 ✓）
+⚠️ **两处未决（我不猜 ✗，等它的报告 ✓）**：
+   ① `phase2` 有 **`expectedSha256` ≠ 它算出的 `sha256`** ✗ ⇒ 可能"导出不确定" ✗，也可能"期望值来自另一次" ✓ ⇒ **要它说明** ✓
+   ② `console` **12 条 AudioWorklet 加载失败警告** ✗（`GlueCompressor`／`MasterLimiter`／`InsertCompressor` ⇒ 回退节点压缩器 ✓）；`errors: []` ✓
+      ⇒ ⚠️ 像 **headless 下 worklet 模块加载不了** ✓ ⇒ **记为观察** ✓（除非能证实在有头环境也这样 ✓，否则**不当缺陷** ✗）
+⚠️ **仍欠**：**读回比对**（逐音 pitch／startBeats／lengthBeats ✓，含**十六分**专项 ✓）＋ MIDI **两处实现**的往返结论 ✓
+```
