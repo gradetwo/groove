@@ -85,12 +85,15 @@ describe("the plists match the shapes the real projects use", () => {
       "SampleRate", "FrameRateIndex", "SurroundFormatIndex", "Version", "isTimeCodeBased",
       "HasARAPlugins", "HasGrid", "PlaybackFiles", "UnusedAudioFiles", "AudioFiles", "AlchemyFiles",
       "QuicksamplerFiles", "UltrabeatFiles", "SamplerInstrumentsFiles", "ImpulsResponsesFiles", "VideoFiles",
-    ]) expect(md, `missing ${key}`).toContain(`<key>${key}</key>`);
-    expect(md).toContain("<real>139</real>", "the tempo is the arrangement's");
+    ]) {
+      // The key is asserted through an object so a failure names the key rather than printing the whole plist.
+      expect({ key, present: md.includes(`<key>${key}</key>`) }).toEqual({ key, present: true });
+    }
+    expect(md).toContain("<real>139</real>");
     // ⚠️ The three key fields are deliberately absent: an arrangement here has no field stating a key, and writing
     // "C major" would put a claim in the user's mouth. Recorded in needs; asserted so nobody adds one silently.
     for (const absent of ["SongKey", "SongGenderKey", "SignatureKey"])
-      expect(md, `${absent} must not be invented`).not.toContain(`<key>${absent}</key>`);
+      expect({ absent, written: md.includes(`<key>${absent}</key>`) }).toEqual({ absent, written: false });
   });
 
   it("⭐ numbers the alternative rather than spelling it, and names it in both tables", () => {
@@ -107,7 +110,7 @@ describe("the plists match the shapes the real projects use", () => {
   it("writes the display state's measured keys and no fabricated thumbnail", () => {
     const ds = text("Alternatives/000/DisplayState.plist");
     for (const key of ["displayDataVersion", "docPreferences", "screenVisibleFrames", "screensetCurrSlot", "screensetDictArray"])
-      expect(ds, `missing ${key}`).toContain(`<key>${key}</key>`);
+      expect({ key, present: ds.includes(`<key>${key}</key>`) }).toEqual({ key, present: true });
     expect(Object.keys(files)).not.toContain("Alternatives/000/WindowImage.jpg");
     expect(Object.keys(files)).not.toContain("Alternatives/000/DisplayStateArchive");
   });
