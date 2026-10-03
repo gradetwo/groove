@@ -5145,3 +5145,40 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
      ＋ 可选 CDP profile（**关 `snapshots`** ✗）看 `sfz/parse.ts` 占比变化 ✓ ＋ ⚠️ 明确"**读数若说没变好就如实说没变好**" ✗
 ✅ 该笔的提交方式**已在 `§160` 如实记录** ✓（**我代 `jank` 提交** ✓，只 add 它那 5 个文件 ✓，消息注明"代提交、报告仍欠" ✓）
 ```
+
+## 一百六十三、✅✅ **完整验收：导入后播放卡顿（`f9bf949`）—— 性能级证据到齐** ✓（2026-10-03 23:5x ✓）
+
+```
+✅ **原作者交回报告** ✓（我先前代提交之笔 ✓）—— 读数表（**每组都带同机 idle 基线** ✓，语料 `/home/crow/music/midi-corpus/midi/敢当.mid`：20,458 B、**2,371 note-on** ✓）：
+   组别                              fps      p50/p95/max            长任务 n/合计/最坏        **丢步**
+   空白模板（对照）                  33.37    33.3/33.4/150          1 / 67 / 67 ms           0
+   synth（导入＋Skip）               31.75    16.7/83.3/400          6 / 694 / 149 ms         0
+   **sampler 前置（未 minify）**      12.48    16.7/66.7/**7,683**    12 / **15,112** / 7,676  **41** ✗
+   sampler 前置（minified）          31.77    16.7/50/**2,833**      10 / 4,835 / 2,846       **17** ✗
+   ⭐ **sampler 修后（minified）**    **43.29** 16.7/50/**183**      **8 / 846 / 193**        **0** ✓✓
+   sampler 修后（未 minify）         11.16    50.1/233.4/850         20 / 4,678 / 784         0 ✓（该行 fps 低是因为**当时 idle 只有 9.49** ✗）
+   ⚠️ 它明确：**fps 在这台机上不可跨运行比** ✗（同页 idle 在 9.49–53.45 间波动 ✓）⇒ **可比量是"长任务天花板／丢步／CPU 占比"** ✓✓
+✅⭐ **机制级（占比，不靠 fps ✓）**：`samplerLanePlayback` chunk **58.54% → 11.16%** ✓（`(idle)` 23.43% → 48.14% ✓）；
+   逐条：**`scanOpcodes` 9.61% → 0.34%** ✓、`ccTuneCents` 6.87% → 0.30% ✓、`regionSoundsAtCc` 6.10% → 0.28% ✓、
+   **`parseSfz` 5.40% → 0.44%** ✓、`noteNumber` 5.09% → 0.17% ✓、`readControlDefaults` 2.51% → — ✓
+   ⇒ ⭐ **它修掉的正是它命名的那个原因** ✓（"逐音符重解析同一份 SFZ" ✗）
+   ⚠️ **它量到但没修（如实 ✓）**：剩下 ≈5% 是**建声代价**（`startSamplerNote` 1.20% ✓、`createBufferSource` 1.08% ✓、`createGain` 0.85% ✓
+      ＝"一次把 2,371 个 voice 放上时钟" ✓）⇒ 要动 `src/audio/**` 更大面 ⇒ **按边界停手** ✓（下一个候选 ✓）
+✅ **判据（能红 ✓）**：4 条 ＝ ① 60 音 ⇒ `parseSfz ≤ 2` ✓ ② **两个 asset 不串味** ✓ ③ **同一 asset 换文本不吃旧值** ✓ ④ **§26 冻结表** ✓
+   **反面原文** ✓：`parseSfz ran 61 time(s) for one program and sixty notes: expected 61 to be less than or equal to 2` ✓
+⭐ **§26（它实测的 / 没测的，都写明 ✓）**：真 VSCO 程序 `ViolinEnsSusVib.sfz`（2,538 B ✓）上 **20 个音改前/改后
+   `samplePath`／`ratio`／`rootKey`／region 数逐值相同** ✓（例：note 58 → `VlnEns_susVib_B2_v2.wav`、ratio `0.9438743126816935`、root 59 ✓，
+   两次 JSON **完全相同** ✓）＋ **已冻结进判据第 4 条** ✓
+   ⚠️ **没做**：**无真听** ✗（本会话没有耳朵 ✓）、**无离线渲染 A/B WAV** ✗ ⇒ 它**不声称做过** ✓（理由：只删除对同一字符串的重复解析 ✓ 不碰 opcode 语义与算术 ✓）
+✅ **反向量** ✓：`ownerProjectAcceptance` **8/8**、五数**逐字**（`planned {overlappingOnsets:19, notesAtOverlaps:57, joins:57, reattacks:0}` ✓、
+   `voices.joins 32` ✓、`refusals 25`（全 `recording-would-run-out` ✓）、`beat 48 = 1` ✓、`createdBufferSources 28` ✓、`32+28 = 60` ✓）；
+   另 10 个采样相关判据 **102 passed / 1 skipped** ✓
+   ⚠️ **它报了一处既有偶发红** ✗✓：`genreAuditionSampledLanes.test.tsx` 高负载下偶发 2 红（`Test timed out in 5000ms` ✗）
+     ⇒ 它做了 A/B：**把它的修复拿掉，同一文件出现逐字相同的两条红** ✓ ⇒ **不是它的改动** ✓（此后带修复连跑两次全绿 ✓）⇒ ⭐ **记为既有 flake** ✓（进队列 ✓）
+✅ **CI**：run `37134048789` = **success** ✓（含 `Unit Tests & Coverage`／`Production Build`／**`Bundle Budget & Performance Gate`** ✓）
+⚠️ **它再次纠正我两处** ✗✓（我认 ✓）：① 我引用的 `2.25 fps / 9,282.9 ms / 48,351 ms` **复现不到** ✗（它只到 7,683 ms／41 丢步 ✓）
+   ② 我那份 `droppedSteps 0` 是**空读数** ✗（`/new` 从不装 probe 钩子 ✓ —— 它按同一把 `?probe=1` 门补上才读得出 ✓）
+   ＋ ⚠️ 它标"窗口 15 s 对上 202 s 的编排 ⇒ 观察到的全是**第一遍**排程" ✓、**短文件的一个 loop wrap 没量** ✗（如实 ✓）
+⇒ ⭐ **本笔现在算完整验收** ✓：判据 ✓ ＋ **反面** ✓ ＋ **性能级（丢步 41→0 ✓、最坏单帧 7,683→183 ms ✓、占比 58.54%→11.16% ✓）** ✓ ＋ 反向量 ✓ ＋ CI ✓
+   ⇒ `perf2`（`25e23d78`）可停 ✓（它要补的证据已由原作者交齐 ✓）
+```
