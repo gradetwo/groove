@@ -14,7 +14,16 @@
  * — and the second is the one that settles an argument about a file.
  */
 
-/** The parameters worth surfacing: the ones that change how a note sounds or whether it sounds at all. */
+/**
+ * The parameters worth surfacing: the ones that change how a note sounds or whether it sounds at all.
+ *
+ * ⭐ **`sw_` is a prefix rather than one name, because the keyswitch set is the answer to a question the owner asked
+ * directly**: which articulation a file actually offers, and which one it loads with. `sw_last` alone said *that* a
+ * region is gated but not *which* articulation it is — the names live in `sw_label`, the power-on value in
+ * `sw_default`, and the reachable key range in `sw_lokey`/`sw_hikey`. Reporting the gate without the label is the
+ * shape this whole tool exists to remove: the value was read and had no outlet. The matcher below is already a
+ * prefix match, so this one entry covers every switch opcode the parser keeps.
+ */
 const INTERESTING = [
   "note_polyphony",
   "amplitude_oncc",
@@ -31,7 +40,7 @@ const INTERESTING = [
   "seq_position",
   "locc",
   "hicc",
-  "sw_last",
+  "sw_",
   "xfin_lokey",
 ] as const;
 

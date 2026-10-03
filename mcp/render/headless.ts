@@ -90,6 +90,51 @@ export interface HeadlessNoteResolution {
   offBy?: number;
   oneShot?: boolean;
   notePolyphony?: number;
+  /**
+   * ⭐ **The articulation the file's own keyswitch selected, and its name in the file's words.**
+   *
+   * `loadNote` has returned both since `1efe6ba` (`src/audio/sfz/regionPlayback.ts` sets them from the region that
+   * answered, and `src/audio/sampleLoader.ts` carries them into `noteInfo`), and the MCP surface dropped them: the
+   * reply summarised the sample file and the ratio but never said *which articulation* that file was. That is the one
+   * fact a keyswitch library exists to communicate — a `-KS` program sounds six different things depending on the
+   * switch — so a caller could see that a note resolved and not which take it resolved to. Carried here, and in the
+   * page path's own copy of this builder, so neither host can be the one that forgets.
+   */
+  switchState?: number;
+  switchLabel?: string;
+}
+
+/**
+ * **The claim side of a note, built once for this host** — the headless twin of the page's own inline builder.
+ *
+ * It is a function rather than an object literal so a criterion can hand it a `loadNote` result and read what comes
+ * out (`src/test/mcpHeadlessNoteResolution.test.ts`): the fields that reach the reply are then a thing that can be
+ * asserted rather than a thing that has to be diffed against `sampleLoader`'s return type by eye. The two hosts keep
+ * two copies of this deliberately — one of them is serialised into a browser and cannot call this module — and the
+ * shared `RenderAudioPayload`/`HeadlessNoteResolution` types are what make a divergence a type error.
+ */
+export function headlessNoteResolution(loaded: {
+  samplePath: string;
+  ratio: number;
+  rootKey?: number;
+  group?: number;
+  offBy?: number;
+  oneShot?: boolean;
+  notePolyphony?: number;
+  switchState?: number;
+  switchLabel?: string;
+}): HeadlessNoteResolution {
+  return {
+    samplePath: loaded.samplePath,
+    ratio: loaded.ratio,
+    ...(loaded.rootKey === undefined ? {} : { rootKey: loaded.rootKey }),
+    ...(loaded.group === undefined ? {} : { group: loaded.group }),
+    ...(loaded.offBy === undefined ? {} : { offBy: loaded.offBy }),
+    ...(loaded.oneShot === undefined ? {} : { oneShot: loaded.oneShot }),
+    ...(loaded.notePolyphony === undefined ? {} : { notePolyphony: loaded.notePolyphony }),
+    ...(loaded.switchState === undefined ? {} : { switchState: loaded.switchState }),
+    ...(loaded.switchLabel === undefined ? {} : { switchLabel: loaded.switchLabel }),
+  };
 }
 
 /**
@@ -380,15 +425,7 @@ export async function renderInstrumentNoteHeadless(
     // A refusal from the loader is the answer to the question, so it is returned rather than thrown — as in the page.
     return { error: error instanceof Error ? error.message : String(error) };
   }
-  const resolved: HeadlessNoteResolution = {
-    samplePath: loaded.samplePath,
-    ratio: loaded.ratio,
-    ...(loaded.rootKey === undefined ? {} : { rootKey: loaded.rootKey }),
-    ...(loaded.group === undefined ? {} : { group: loaded.group }),
-    ...(loaded.offBy === undefined ? {} : { offBy: loaded.offBy }),
-    ...(loaded.oneShot === undefined ? {} : { oneShot: loaded.oneShot }),
-    ...(loaded.notePolyphony === undefined ? {} : { notePolyphony: loaded.notePolyphony }),
-  };
+  const resolved: HeadlessNoteResolution = headlessNoteResolution(loaded);
   if (options.resolveOnly === true) return { resolved, resolvedOnly: true };
 
   const source = hostContext.createBufferSource();

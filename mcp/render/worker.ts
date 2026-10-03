@@ -221,6 +221,53 @@ export function renderTimeoutMessage(what: string, seconds: number): string {
 }
 
 /**
+ * **What a caller sees when the default path's worker cannot start at all** — the mirror of
+ * `headlessUnavailableMessage()`, and written for the same reason.
+ *
+ * The default path needs Vite + Chromium and says so in every tool description; what it did **not** have was an
+ * answer in this repository's own words when the browser was not there. Measured on this checkout by pointing
+ * `PLAYWRIGHT_BROWSERS_PATH` at a directory that does not exist: the render failed in **1.2 s**, which is the fast
+ * refusal the shape calls for — and the message was Playwright's raw
+ * `browserType.launch: Executable doesn't exist at …` block, whose advice is **`pnpm exec playwright install`** in a
+ * repository that installs with **npm** and whose own CI, `DEPLOY.md` and README all say
+ * `npx playwright install --with-deps chromium`. It also could not mention the one alternative that needs no browser
+ * at all, because the worker does not know the tool schema.
+ *
+ * So this names: what could not start, the reason, **both** executable next steps (install the browser, or ask for
+ * `headless: true`), and — in its own sentence, like the headless message — the thing that did **not** happen. A
+ * caller that did not ask for the Node host must not receive one; the whole point of the flag is that the two engines
+ * are distinguishable, and quietly substituting the other one is the silent fallback this file's header is about.
+ *
+ * Exported so the sentence can be judged without a browser: `src/test/mcpRenderNoBrowser.test.ts` drives the real
+ * start path with an empty `PLAYWRIGHT_BROWSERS_PATH`, asserts the message carries both steps, and asserts the call
+ * takes seconds rather than minutes.
+ */
+export function browserUnavailableMessage(reason: unknown): string {
+  const raw = reason instanceof Error ? reason.message : String(reason);
+  /**
+   * ⭐ **The detail is kept and the advice is dropped.**
+   *
+   * A Playwright launch failure arrives as one diagnostic line followed by a boxed "please run `pnpm exec playwright
+   * install`" block. The diagnostic is the useful half — it names the executable path or the closed target — and the
+   * block is the half this repository must not pass on, because a caller following it in an npm checkout gets a
+   * command that is not installed. Filtering the pnpm line and the box characters rather than taking only the first
+   * line keeps a multi-line cause intact.
+   */
+  const detail =
+    raw
+      .split("\n")
+      .filter((line) => !/pnpm/.test(line) && !/^\s*[╔║╚═]/.test(line))
+      .join("\n")
+      .trim() || raw.trim();
+  return (
+    `the default render path runs the app's own engine in Vite + Chromium, and the browser could not be started here (${detail}). ` +
+    `Install Playwright's browser with \`npx playwright install --with-deps chromium\` — this repository installs with npm — or, if the \`playwright\` package itself is missing, restore it with \`npm ci\`. ` +
+    `Alternatively ask for \`headless: true\`, which renders the same engine on the Node Web Audio host with no browser; the two hosts differ by a measured residual, recorded in docs/HEADLESS_CORE_PLAN.md. ` +
+    `**No headless render was started instead** — a caller that did not ask for the Node host does not get it.`
+  );
+}
+
+/**
  * **A render that stops answering is reported, and the renderer is reset so the next call can work.**
  *
  * Muse, rendering a nine-movement piece through this server, described the worst version of this problem: four movements hung with **no CPU progress and no message**, so the only way to tell a stuck page from a slow piece was to give up on it. A page that has stopped answering cannot be asked anything more, and keeping it would make every later render fail the same way — which is what "worked once, then never again" was.
@@ -331,8 +378,23 @@ async function ensurePage(): Promise<import("playwright").Page> {
     await awaitRendererStart(child);
 
     const { chromium } = await import("playwright");
-    state.browser = await chromium.launch({ args: ["--no-sandbox"] });
-    const page = await state.browser.newPage();
+    /**
+     * ⭐ **The browser's own failure is translated here, and only here.**
+     *
+     * This is the one startup failure whose message is not this repository's: `chromium.launch()` reports what
+     * Playwright knows (a missing executable, a missing package, a refused sandbox) and its advice is written for a
+     * pnpm checkout. `browserUnavailableMessage()` turns it into this project's sentence — the install command this
+     * repository actually documents, and the `headless: true` alternative — while the catch below still does the
+     * cleanup, so a failed launch leaves no half-built renderer behind.
+     */
+    let browser: import("playwright").Browser;
+    try {
+      browser = await chromium.launch({ args: ["--no-sandbox"] });
+    } catch (error) {
+      throw new Error(browserUnavailableMessage(error));
+    }
+    state.browser = browser;
+    const page = await browser.newPage();
     state.page = page;
     state.port = port;
     /**
@@ -1331,6 +1393,16 @@ export interface AuditionResult {
     offBy?: number;
     oneShot?: boolean;
     notePolyphony?: number;
+    /**
+     * ⭐ **Which articulation the file's keyswitch selected, and its name in the file's own words.**
+     *
+     * `loadNote` has returned both since `1efe6ba` (`src/audio/sfz/regionPlayback.ts:90`), and this reply dropped
+     * them: a caller could see the sample file that answered and not which take of a `-KS` program it was, which is
+     * the one fact a keyswitch library exists to state. The headless builder carries the same two fields
+     * (`headlessNoteResolution` in `mcp/render/headless.ts`), so a criterion on either host covers both.
+     */
+    switchState?: number;
+    switchLabel?: string;
   };
 }
 
@@ -1440,6 +1512,10 @@ export async function auditionInstrumentNote(
         ...(loaded.offBy === undefined ? {} : { offBy: loaded.offBy }),
         ...(loaded.oneShot === undefined ? {} : { oneShot: loaded.oneShot }),
         ...(loaded.notePolyphony === undefined ? {} : { notePolyphony: loaded.notePolyphony }),
+        // The keyswitch's answer — see the note on `AuditionResult["resolved"]`: the loader has carried these since
+        // `1efe6ba` and this builder is where they were lost.
+        ...(loaded.switchState === undefined ? {} : { switchState: loaded.switchState }),
+        ...(loaded.switchLabel === undefined ? {} : { switchLabel: loaded.switchLabel }),
       };
       // Resolving without rendering: the pitch inspector's source half, and nothing else.
       if (resolveOnly) return { resolved, resolvedOnly: true };

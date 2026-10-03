@@ -8,7 +8,7 @@
  * addresses need a root, and they are omitted rather than guessed when one is not configured.
  */
 import { readFileSync } from "node:fs";
-import { catalogueFromManifestText } from "../src/data/sampleCatalogue";
+import { catalogueFromManifestText, type SampleAsset } from "../src/data/sampleCatalogue";
 import { parseManifest } from "../src/data/sampleManifest";
 import { mergeUserLibraries } from "../src/data/userLibraries";
 import { readUserLibraries } from "./sampleLibraries";
@@ -23,6 +23,57 @@ import {
 import { ALL_SAMPLED_INSTRUMENTS } from "../src/data/sampledInstruments";
 
 const MANIFEST_PATH = "public/samples/manifest.json";
+
+/**
+ * ⭐ **The instrument an `assetId` names, with the addresses that instrument's own file lives at.**
+ *
+ * `inspect_instrument_sfz` was declared as taking the SFZ's **URL** and nothing else, and the schema said
+ * `list_sample_libraries` reports one per instrument — which it does not. That tool answers a licensing question and
+ * carries each library's `sourceUrl`/`repo`/`pin`, never a `.sfz` address, so the documented route to a usable
+ * argument did not exist; the owner's own plan ("get the URL from `list_sample_libraries`, then inspect") could not
+ * be carried out, and what a caller following the schema got was `Failed to parse URL from <instrument name>`.
+ *
+ * So the lookup exists: an id from `list_arrangement_instruments` — the tool that actually lists the ids a sampler
+ * track can be pointed at — is resolved through the same catalogue that tool builds, and the caller never has to know
+ * that a source URL is derived from `repo` + `pin` while a mirror URL is derived from the configured root.
+ *
+ * The **merged** catalogue is used, the same one `list_sample_libraries` counts from, so a library the owner
+ * registered through `register_sample_library` is inspectable by the id that registry gave it rather than being the
+ * one case the tool refuses.
+ */
+export function catalogueAssetById(assetId: string): SampleAsset | undefined {
+  const root = process.env.GROOVE_SAMPLE_ROOT ?? "";
+  const text = readFileSync(MANIFEST_PATH, "utf8");
+  const stored = readUserLibraries();
+  const { assets } = catalogueFromManifestText(text, root, stored.libraries);
+  return assets.find((asset) => asset.assetId === assetId);
+}
+
+/**
+ * The ids near a miss, so a refusal can say what does exist — the same shape `unknownGenre` uses.
+ *
+ * Ranked by **how many of the miss's own tokens an id contains**, not by which comes first: every id in a library
+ * starts with the library's name, so a first-match rule answers `vcsl:Agogo-Bells` for a misspelled
+ * `vcsl:Vibraphone-Keywitch`. Counting the tokens puts the ids that agree about the instrument above the ones that
+ * merely agree about the library, which is the whole value of naming them.
+ */
+export function nearestCatalogueAssetIds(assetId: string, limit = 3): string[] {
+  const tokens = assetId
+    .trim()
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token.length >= 3);
+  if (tokens.length === 0) return [];
+  return listCatalogueInstruments({ limit: 5000 })
+    .instruments.map((instrument) => ({
+      id: instrument.assetId,
+      score: tokens.filter((token) => instrument.assetId.toLowerCase().includes(token)).length,
+    }))
+    .filter((candidate) => candidate.score > 0)
+    .sort((a, b) => b.score - a.score || a.id.length - b.id.length || a.id.localeCompare(b.id))
+    .slice(0, limit)
+    .map((candidate) => candidate.id);
+}
 
 /**
  * ⭐ **The situations a technique serves**, read from the rules rather than restated here.

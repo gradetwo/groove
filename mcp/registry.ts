@@ -68,7 +68,7 @@ import { generateMelody } from "./melody";
 import { examplesFor, listExamples } from "./examples";
 import { validateProsody } from "./prosody";
 import { flattenSong } from "../src/data/songFlatten";
-import { listCatalogueInstruments, listSampleLibraries } from "./instruments";
+import { catalogueAssetById, listCatalogueInstruments, listSampleLibraries, nearestCatalogueAssetIds } from "./instruments";
 import {
   addMcpNote,
   addMcpTake,
@@ -1079,27 +1079,75 @@ export const TOOLS: ToolDefinition[] = [
     name: "inspect_instrument_sfz",
     title: "Read an SFZ's parameters without playing it",
     description:
-      "Which regions set `note_polyphony`, `amplitude_onccN`, `one_shot`, `locc`/`hicc`, `tune`, `loop_mode` and the rest — each value **as written**, and marked when it came from a `<group>` rather than from the region itself. Muse's gap: those parameters had criteria and no way to be seen from a tool, so debugging a sampler meant reading the parser's source. This reads over plain HTTP (source address, then the mirror) and **runs no audio**, so the cheapest question costs a request rather than a browser.",
+      "Which regions set `note_polyphony`, `amplitude_onccN`, `one_shot`, `locc`/`hicc`, `tune`, `loop_mode`, and **every switches opcode** (`sw_last`, `sw_label`, `sw_default`, `sw_lokey`/`sw_hikey`, …) — each value **as written**, and marked when it came from a `<group>` rather than from the region itself. Muse's gap: those parameters had criteria and no way to be seen from a tool, so debugging a sampler meant reading the parser's source. This reads over plain HTTP (source address, then the mirror) and **runs no audio**, so the cheapest question costs a request rather than a browser. **Name the instrument or its file, and the tool takes either**: `assetId` is an instrument from `list_arrangement_instruments` and its source and mirror addresses are resolved from the catalogue, while `url` is an SFZ address you already hold. Give exactly one — a caller that supplies both would have one of them silently ignored, so it is refused instead. Reading the addresses out of the catalogue here is deliberate: `list_sample_libraries` reports each library's **provenance** (`sourceUrl`, `repo`, `pin`), not a per-instrument `.sfz` address, and the parameter used to claim otherwise.",
     readOnly: true,
     inputSchema: {
-      url: z.string().describe("the SFZ's address; `list_sample_libraries` reports one per instrument"),
-      fallbackUrl: z.string().optional().describe("the mirror, tried when the source does not answer"),
+      assetId: z
+        .string()
+        .optional()
+        .describe(
+          'an instrument id from `list_arrangement_instruments`, e.g. "vcsl:Vibraphone-Keyswitch" or "karoryfer-black-and-blue-basses:01-darkblack-keysw" — its `.sfz` source address, and the mirror to fall back to, come from the catalogue so nothing has to be known about `repo`/`pin` layouts'
+        ),
+      url: z.string().optional().describe("the SFZ's own http(s) address, when you already have one; give this or `assetId`, not both"),
+      fallbackUrl: z.string().optional().describe("the mirror, tried when `url` does not answer; only meaningful with `url`, since an `assetId`'s mirror comes from the catalogue"),
     },
     handler: async (args) => {
       try {
-        const result = await inspectSfzAt(
-          {
-            assetId: String(args.url),
-            sfz: { url: String(args.url), ...(args.fallbackUrl === undefined ? {} : { fallbackUrl: String(args.fallbackUrl) }) },
-          },
-          {
-            fetchText: async (url: string) => {
-              const response = await fetch(url);
-              if (!response.ok) throw new Error(`HTTP ${response.status} from ${url}`);
-              return response.text();
-            },
+        const assetId = typeof args.assetId === "string" && args.assetId.trim() !== "" ? args.assetId.trim() : undefined;
+        const url = typeof args.url === "string" && args.url.trim() !== "" ? args.url.trim() : undefined;
+        const fallbackUrl = typeof args.fallbackUrl === "string" && args.fallbackUrl.trim() !== "" ? args.fallbackUrl.trim() : undefined;
+
+        if (assetId !== undefined && url !== undefined) {
+          return failure(
+            "give either `assetId` (an instrument from `list_arrangement_instruments`) or `url` (an SFZ address), not both — taking one and ignoring the other would answer a question the caller did not ask"
+          );
+        }
+        if (assetId === undefined && url === undefined) {
+          return failure(
+            "give either `assetId` (an instrument from `list_arrangement_instruments`, e.g. \"vcsl:Vibraphone-Keyswitch\") or `url` (an SFZ's own address); `list_sample_libraries` does not report SFZ addresses, so it is not where a `url` comes from"
+          );
+        }
+        if (assetId !== undefined && fallbackUrl !== undefined) {
+          return failure(
+            "`fallbackUrl` only means something with `url`: an `assetId` already carries the catalogue's own mirror address, and accepting a second one would make which mirror is used depend on the argument rather than on the manifest"
+          );
+        }
+
+        let target: { assetId: string; sfz: { url: string; fallbackUrl?: string } };
+        if (assetId !== undefined) {
+          const asset = catalogueAssetById(assetId);
+          if (!asset) {
+            const near = nearestCatalogueAssetIds(assetId);
+            return failure(
+              `no instrument "${assetId}" — list_arrangement_instruments lists every playable id` +
+                (near.length ? `; closest: ${near.map((id) => `"${id}"`).join(", ")}` : "")
+            );
           }
-        );
+          if (!asset.sfz?.url) {
+            return failure(
+              `"${assetId}" is a sample rather than an SFZ instrument, so it has no program to read — its own bytes are at ${asset.url ?? "no address the catalogue states"}`
+            );
+          }
+          target = {
+            assetId,
+            sfz: { url: asset.sfz.url, ...(asset.sfz.fallbackUrl === undefined ? {} : { fallbackUrl: asset.sfz.fallbackUrl }) },
+          };
+        } else {
+          if (!/^https?:\/\//i.test(url!)) {
+            return failure(
+              `"${url}" is not an http(s) address — an SFZ address is absolute, and an instrument **name** belongs in \`assetId\` instead`
+            );
+          }
+          target = { assetId: url!, sfz: { url: url!, ...(fallbackUrl === undefined ? {} : { fallbackUrl }) } };
+        }
+
+        const result = await inspectSfzAt(target, {
+          fetchText: async (address: string) => {
+            const response = await fetch(address);
+            if (!response.ok) throw new Error(`HTTP ${response.status} from ${address}`);
+            return response.text();
+          },
+        });
         /** A file with no regions is reported as such rather than as "no parameters": they are different facts. */
         return result.regions === 0
           ? failure(`${result.servedFrom} parsed to no regions, so there are no parameters to report`)
