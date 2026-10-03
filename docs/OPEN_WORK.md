@@ -4516,3 +4516,45 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
    ⭐⭐ **它查出一件我们都没注意的事**：那道 step 在 **`probe:toolbar` 处就 exit 1 中止** ✓ ⇒ **后面三条探针在那个 run 里根本没跑过** ✓
      ⇒ 所以它**没有当成绿** ✗✓，而是 `gh workflow run ci.yml --ref dev` 去取**真判决** ✓（`37129489502` ✓，见下一轮读数 ✓）
 ```
+
+## 一百三十五、✅ **G2（刷新丢编排）结案：今天不存在** ＋ ✗✗ **新发现一条真数据丢失窗口（R2，600 ms）**（2026-10-03 22:36–22:47 ✓）
+
+### 135.1 ✅ **G2 已被 `2a93098` 解决**（专项线**未改一行代码** ✓，符合"别为了交差改东西" ✓）
+
+```
+**五条真实路线（真 Chromium headless ＋ 真 dev server ✓，DOM ＋ localStorage 指针 ＋ IndexedDB 记录三方同取 ✓）**：
+   A `/new`→选模板→Create→加 sampler 轨＋改 BPM→刷新 ⇒ **全同**（3 轨/3 region/bars 8/BPM 137/工程名 ✓）✓
+   B 先建 B，再直开 `/new?project=<idA>`→刷新 ⇒ 打开的是 **A 而非最后建的 B** ✓（id 真"选中"✓）
+   C Hub→Open→刷新 ⇒ **全同** ✓ ｜ D **Create 后 209 ms 就刷新**（全新 profile）⇒ **仍在** ✓
+   G ⭐ **正是我原来那条读数路**（`/#/studio?genre=…`→页头 New Project→Create→改 BPM→刷新）⇒ **仍在** ✓✓
+⭐⭐ **红→绿对照（它自己造的 ✓）**：把父提交 **`140810a`** 单独 checkout 跑同一条 G ⇒
+   🔴 URL 停在 **`/studio?genre=chicago-house`** ✓（`formatRouteToUrl` 当时没有 `newProject` 分支 ⇒ 上一路由的 `genreId` 泄漏进合并后的 route ✓）；
+     工程**确实建了、IndexedDB 里也有**（含指针 ✓）但**刷新后 45 秒内编排与选择器都没出现** ⇒ 回 studio 主页 ✓✓ ＝ **G2 原文**
+   🟢 在 `990c28e` 上同一条点击 ⇒ URL `/new` ⇒ 刷新后编排在 ✓
+   ⇒ **判据能红能绿，关闭它的是 `2a93098`** ✓（`git blame` 证实 `router.tsx:284-286` 出自 `2a930985` ✓）
+⚠️ 它如实标：量的是 **dev 分支代码**（dev server），**线上 2.34.44 未复测** ✓；headless 里 F5 不触发导航 ⇒ 用 `page.reload()` ＋ 页内 `location.reload()` 双测 ✓
+```
+
+### 135.2 ⚠️ **R1（不是丢失，是深链不便）** ✗
+
+```
+**Create 之后 URL 仍是不带 id 的 `/new`** ✓（id 只在 localStorage 指针里 ✓）⇒ 刷新能复原 ✓，
+**但该 URL 不能自证"打开的是哪个工程"** ✗ ⇒ 收藏/分享 `/new` 打开的是"最后一个"而不是这一个 ✓
+（Hub Open 那条路**有** id：`/new?project=<id>` ✓）⇒ 属"**能用但不够好**" ✓，进 (丙) 队列 ✓
+```
+
+### 135.3 ✗✗ **R2 —— 真数据丢失窗口（约 600 ms），已量到 4 次**（**新发现，优先级最高** ✓）
+
+```
+**读数**：改 BPM 后 **100 ms / 500 ms** 内刷新 ⇒ 刷新后 **BPM 仍是 120、存储里也没有那笔** ✗（丢失 ✓）；
+   **900 ms**（超过 `AUTOSAVE_DEBOUNCE_MS = 600` ✓）⇒ **存活** ✓
+⭐ **它的插桩很硬** ✓：`pagehide` 与 `visibilitychange` **标记实测都触发** ✓，而同窗口内
+   `IDBObjectStore.prototype.put` 打点显示**一次 arrangement 的 put 都没发出**（`persistedLog: []` ✓）
+   ⇒ 判读：flush 里那次写要先过 **`openProjectsDb()`**（`indexedDB.databases()` → `idb.open()` **异步** ✓），
+     **濒死文档拿不到 task turn** ⇒ **写不出去** ✗✓
+⚠️ **而 `arrangementStore.ts` 的注释自称**：加 flush 就是为了"**刷新落在 debounce 窗口内也不丢**" ✗ ⇒
+   **注释与读数不一致** ✓（"说了做得到、实际做不到" ✗）—— 这正是本目标要抓的那一类 ✓✓
+⇒ **修点**：`src/features/arrangement/arrangementStore.ts` / `src/features/sequencer/projectDb.ts` ✓
+   （它**不在该线的可改清单内** ⇒ **它停手并如实上报** ✓ —— 做法正确 ✓）
+⇒ **下一件事：派专线按"先量后改"修 R2** ✓（判据必须能红：在 debounce 窗口内触发页面卸载 ⇒ 改动必须已落库 ✓），并顺带核 R1 是否一并处理 ✓
+```
