@@ -5472,7 +5472,7 @@ problems: **[]** ✓
    ＋ **字节级与 Node 一致** ✓ ＋ **十六分网格完整** ✓（`divisions 4`、33 个 `<type>sixteenth</type>` ✓、跨小节 tie 合并 ✓）
    ＋ **未发现导出侧缺陷** ✓
 ⚠️ **Logic 导出**：按 `§143` 记**边界** ✓（**不做也不假装** ✗；要立项先定"交付形态 ＋ ground truth 策略" ✓）
-🔄 **在飞两条（都是新挖出的缺陷类）**：`8ab0fbdb`（`?genre=` 二次派发**覆盖用户编排** ✗ —— 与 R2 同级 ✓）｜`lossless`（三处"无损"措辞 ✗）
+🔄 **在飞两条（都是新挖出的缺陷类）**：`fc2e651`（`?genre=` 二次派发**覆盖用户编排** ✗ —— 与 R2 同级 ✓）｜`lossless`（三处"无损"措辞 ✗）
 ```
 
 ## 一百八十九、✅✅ **`np` 完整回报：探针自身写错（真丢失不成立 ✓）＋ 一条可复用的读数纪律** ✓（`cd15b86`，CI `37135383471` success ✓）
@@ -5545,7 +5545,7 @@ problems: **[]** ✓
 ⚠️ 仍欠它的**完整报告** ✗（逐条判定表 ＋ `skins:gen`／`check:skins` 退出码与是否零 diff ＋ CI 判决 ✓）
 ```
 
-## 一百九十四、🔧 **`?genre=` 覆盖缺陷：修复形状已正确（在飞 ✓，`8ab0fbdb`）**（2026-10-04 00:2x ✓）
+## 一百九十四、🔧 **`?genre=` 覆盖缺陷：修复形状已正确（在飞 ✓，`fc2e651`）**（2026-10-04 00:2x ✓）
 
 ```
 ⚠️ 本条的**来源要标明** ✗：这是我从**它在树上的 diff 读到的** ✓（它尚未提交／未回报 ✓）⇒ 待其回报后再补一条正式验收 ✓
@@ -5723,4 +5723,30 @@ problems: **[]** ✓
 ⇒ ⭐ **这四条都不是"手滑"** ✗，而是**方法问题** ✓：**检查写好了，却没核对"它检查的到底是哪件事"** ✗
    ＋ ⚠️ 与之对照：今天我**做对的地方**也是同一件事的正向 ✓ —— **凡是我真的去读数的地方（而非推断），都站得住** ✓
      （例：我自己读 `arrangement.mid` 的 `MThd` 字节 ✓ 与 `exp3` 的读数吻合 ✓；我在 `lossless2` 上直接取 vitest 退出码 ✓）
+```
+
+## 二百零八、✅✅ **`genre` 线完整回报（CI `37137005557` success）＋ 我又犯第五处同类失误** ✗（2026-10-04 00:3x ✓）
+
+```
+✅ **逐字复现（真 Chromium ✓，两腿对照 ✓）**：
+   修复前：`leg A /studio` ⇒ **PRESERVED (32/0)** ✓（对照腿 ✓）；`leg B /studio?genre=chicago-house` ⇒
+     live `+1195 ms stepCount=32 swing=0`（**恢复出来的编排** ✓）⇒ **`+1569 ms stepCount=128 swing=15`**（**流派默认，374 ms 后** ✗）
+     ⇒ 写 `128/15` ⇒ **at rest `128/15` CLOBBERED** ✗ ✓
+   修复后：`leg B` ⇒ live `+1315 ms 32/0` ✓、写 `+2099 ms 32/0` ✓ ⇒ **PRESERVED (32/0)** ✓✓
+   正向 ✓：清空 localStorage 后 `/studio?genre=detroit-techno` ⇒ `genreId=detroit-techno, stepCount=64` ✓ ⇒ **URL 流派仍作初始流派生效** ✓
+⭐ **性质判定：多余派发** ✓（**不是 `SET_GENRE` 语义缺陷** ✓）—— 它给了依据 ✓：`unsavedGuard.ts` 与 `StudioView.tsx:412` **明写**"换流派＝换图案" ✓，
+   且 `useGenreSwitching.performSwitch`／`usePatternActions` 的 `reset_preset`／`clear_saved` **都依赖它** ✓
+   ⇒ ⭐ **所以它没碰 store** ✓（改语义会破坏 reset/clear ✓）⇒ **正是我交代的"先报再改"** ✓✓
+✅ **它更正了我两个路径** ✓（`useUrlShareLoad` 在 `src/features/sequencer/hooks/` ✓、store 在 `src/features/sequencer/` ✓）—— 我已在 `7a8c82a` 改对 ✓
+✅ **判据红→绿（含对照腿 ✓）**：把修复 `git checkout` 掉 ⇒ `expected 128 to be 32` ✗（1 failed / 2 passed ✓）；恢复后 **3/3** ✓；
+   正向前向与 `?groove=` 那条**修复前后都绿** ✓ ⇒ **功能没被一起删掉** ✓
+✅ **反向量** ✓：五数逐字 ✓；相关既有判据 **13 文件 / 124 passed** ✓（`router` 21 ✓／`sharePayloadSecurity` 22 ✓／`sequencerStore` 22 ✓／`unsavedGuard` 11 ✓…）零红 ✓
+✅ **CI**：run `37137005557` = **success** ✓（含 Production Build／Bundle Budget／"built app starts" 探针 ✓）；**未强推** ✓
+⚠️⚠️ **它抓出我第五处同类失误** ✗：我在 `§194` 里把**它的 agent id** `8ab0fbdb` 写成 sha ✗ ——
+   ⚠️ **该对象在仓库里根本不存在**（`git cat-file` fatal ✓），落地的是 `fc2e651` ✓ ⇒ **已改** ✓
+   ⇒ ⭐ 与前面四类**同一根因** ✓：**我拿一个"看起来像标识符"的东西当标识符用了** ✗（**没去核** ✓）
+ℹ️ 它另报一条**观察**（未改 ✓）：`useSequencerStore.ts:118` 的 `SET_GENRE` 变体声明了 **`resetPattern?: boolean`** ✓
+   而**无人传、reducer 也不读** ✗ ⇒ **死字段** ✓（潜在混淆源 ✓）⇒ **进队列** ✓
+ℹ️ 它另核：全仓只有 `useUrlShareLoad` 直接读 `window.location.search` ✓ ⇒ `/new?genre=` 不受影响 ✓（该 hook 不挂载 ✓）、
+   `/console?genre=` 不受影响 ✓、`?groove=` **有意**替换 ✓ 保留 ✓ ⇒ **无需扩散** ✓
 ```
