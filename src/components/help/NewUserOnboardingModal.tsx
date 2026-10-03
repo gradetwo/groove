@@ -97,7 +97,7 @@ export const NewUserOnboardingModal: React.FC<NewUserOnboardingModalProps> = ({
       titleKey: "onboarding_s7_title" as const,
       descKey: "onboarding_s7_desc" as const,
       tipKey: "onboarding_s7_tip" as const,
-      highlight: isZh ? "随时按 ? 查看按键 · 7 种导出格式" : "Press '?' for keys · 7 Export Formats",
+      highlight: isZh ? "随时按 ? 查看按键 · 8 种导出格式" : "Press '?' for keys · 8 Export Formats",
     },
   ];
 
