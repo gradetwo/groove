@@ -6674,3 +6674,36 @@ problems: **[]** ✓
    ⚠️ **唯一剩的仍是"接界面"** ✗（**等业主一句话** ✓，我不擅自动界面 ✗）
 ⚠️ 本条**只本地提交** ✓（CI 队列仍 4 笔在跑 ✗ ⇒ 不推 ✓）
 ```
+
+## 二百六十八、📐 **界面接线：四处位置已定位、文案决定已下（下一次一次改完）**（2026-10-04 01:5x ✓）
+
+```
+**已定位（grep 实证 ✓）**：
+   · `src/components/arrangement/ScoreV2.tsx`：`:56` prop 声明（`onExportMusicXml?: () => void` ✓）／
+     `:301` 解构 ✓／`:557–563` 渲染按钮（`onClick={onExportMusicXml}` ✓）
+   · `src/components/arrangement/ArrangementViewV2.tsx:1328` 传入（在 `<ScoreV2 …>` 里 ✓）
+   ⇒ **四处**：① `ScoreV2:56` 加 prop 类型 ② `:301` 解构 ③ `:557–563` 平加第二个按钮 ④ `:1328` 传 `onExportLogic={files.exportLogic}`
+**文案决定（我裁 ✓）**：**加 i18n 键** ✓ —— ① 按钮键（如 `arrangement_logic_export` ✓）② 完成句键 ✓
+   ⚠️ **不复用现有键** ✗（复用会给 Logic 按钮贴 MusicXML 的字 ⇒ 那是"说错" ✗，不是省事 ✓）
+   ⚠️ 代价：碰 locale 文件 ✓；**若涉及界面文案 ⇒ 必须跑 `skins:gen`／`check:skins`** ✓
+**钩子层现状（已完成且 `tsc=0` ✓，但界面未接力 ⇒ 仅本地提交 ✗）**：
+   · `useArrangementFileActions.ts` ✓：接口加 `exportLogic` ✓、照抄 `exportMusicXml` 形状写 `useCallback` ✓、加进返回对象 ✓、导入 `logicFileFor` ✓
+   ⚠️ 回调里**暂时复用**了 `arrangement_musicxml_export_done` ✗（代码注释已如实写明 ✓）⇒ 新键到位时**必须替换** ✓
+⇒ **下一次的顺序**：① locale 加两个键 ② 四处接线 ③ 菜单锚点判据（能红：去掉按钮即红 ✓，照 `toolbarExportAnchors.test.ts` ✓）
+   ④ `tsc` ＋ 判据 ＋ `skins:gen`／`check:skins` ⑤ 提交推送 ⇒ 核判决 ✓
+```
+
+## 二百七十、⏳ **界面接线已完成编码，但**判据待写**⇒ 本地压住、不推** ✗（2026-10-04 01:5x ✓）
+
+```
+**已改（`tsc`=0 ✓、`skins:gen`=0 零 diff ✓、`check:skins`=0 ✓）**：
+   · `src/i18n/locales/common.ts` ✓：加 `arrangement_logic_export`（"Export Logic Project (.logicx.zip)" ✓）与 `arrangement_logic_export_done` ✓
+   · `src/features/arrangement/useArrangementFileActions.ts` ✓：回调**改用新键** ✓（不再复用 MusicXML 的句子 ✓）
+   · `src/components/arrangement/ScoreV2.tsx` ✓：prop 类型 ✓／解构 ✓／**外层守卫**加 `onExportLogic` ✓／
+     插入按钮 `data-testid="score-export-logic"` ✓（照抄邻居的类名与 `musicXmlBusy` 禁用 ✓，标题与文字用新键 ✓）
+   · `src/components/arrangement/ArrangementViewV2.tsx` ✓：传 `onExportLogic={files.exportLogic}` ✓（`:1328` 旁 ✓）
+   · ⚠️ **无零宽空格** ✓（我上一轮刚因它被 CI 抓过 ✗ ⇒ 这次核查过 ✓）
+**仍欠（不推的原因 ✓）**：**判据** ✗ —— 既有 `toolbarExportAnchors.test.tsx` 的头注明写：
+   它要的是**渲染断言 ＋ 接线断言** ✓（"id 摆在 JSX 里而组件从不渲染，那不是锚点" ✗；且要**点它、且只有它自己的处理函数跑一次** ✓）
+   ⇒ 我**没有**用"源码 grep"充数 ✗（那正是它头部批评的做法 ✗）⇒ 需挂载 `ScoreV2` 写这条判据 ✓ ⇒ **下一个动作** ✓
+⚠️ 界面改动**仅本地提交** ✓（不推未判据的 UI ✗）
