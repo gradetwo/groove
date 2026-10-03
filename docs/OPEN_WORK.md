@@ -3281,3 +3281,18 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
 **覆盖 UI 那条线的读数（它自报，已进 dev ✓）**：范围＝**引擎自己的答案**（对展开后的程序在 0–127 上跑 `resolveInstrumentNote`，
    按该音符自己的力度 ✓，**没有第二份表** ✓，**空洞算超范围** ✓，**未加载显示"尚未加载"且不显示数字** ✓）；
    反向：普查 **33/33 {168,25,5,4}** ✓、`ownerProjectAcceptance` **8/8** ✓。
+
+### 107.7 ✅ **§107 的"未核"项已补齐**（方法：grep／读源码，时点 2026-10-03 17:00 前后 ✓）
+
+| 报告条目 | 我的判定 | 依据（我跑的命令／读到的代码） |
+|---|---|---|
+| **C16** `create_song` 的 `clips` 强制四槽位 | ❌ **已不是缺陷**（代码里已修 ✓） | `mcp/registry.ts:32-38` 的注释逐字写着：**"`.optional()` on the **value** type, so a caller may send the slots it has"** 与 **"required, which is what a composer hit when it sent `{B, C}` and got \"expected object, receive…\""** ✓ —— 报告描述的正是**它被修掉的原因** ✓ |
+| **C11** 无 V2 分享 URL（`share_url` 只吃 V1 pattern） | ✅ **真**（且**我round-2 的核验是错的** ✗） | `mcp/exporting.ts:75 export function shareUrl(pattern: SequencerPattern, …)` ✓ ＋ `mcp/registry.ts:2785 name: "share_url"` ✓ ⇒ **入参是 V1 `SequencerPattern`** ✓。⚠️ 我上次搜的是字面量 `share_url`（那是**工具名**）而函数叫 **`shareUrl`** ⇒ **假阴性** ✗✓ |
+| **C07** DOM 4 736～75 776 | ⚠️ **可推导，非"实测"**（数字本身对 ✓） | `PianoRollV2.tsx:69 const steps = Math.round(beats * STEPS_PER_BEAT)` ＋ `:45 const ROW_HEIGHT = 16` ＋ `pitchRows()` ⇒ **37 行 × 128 步 = 4 736** ✓、**128 × 592 = 75 776** ✓ |
+| **C20** iPad 命中区 12×16px | ✅ **真** | `PianoRollV2.tsx:45 const ROW_HEIGHT = 16` ✓ ＋ `:194 style={{ width: CELL, height: ROW_HEIGHT }}`（`CELL`＝格宽 ✓）⇒ **12×16px** ✓ |
+
+**⇒ §107 至此：真 16 条／假 3 条（C03／C06／C10）／报告自身不准 5 处／C16 已修／C07 为可推导／C20 属实／C11 属实 ✓。**
+
+⚠️ **我自己在本会话第三次栽在同一类错上**（**字面量搜索 ⇒ 假阴性** ✗）：
+① 在**我的克隆**里搜提交号（缺 ref ✗）；② 只搜 `saveArrangement` 而功能叫 `useArrangementFileActions` ✗；③ 只搜 `share_url` 而函数叫 `shareUrl` ✗。
+**⇒ 规矩（写下来）**：**核验"某功能是否存在"时，必须搜**语义**（动词/名词的各种拼写与命名风格 ✓），并**顺着调用链**读一处真实使用点 ✓ —— 只搜一个字符串不算核过** ✓✓
