@@ -4204,3 +4204,50 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
    ⑤ **官方工程不许提交、不许当判据夹具** ✗（夹具要自造最小 `ProjectData` ✓）
    ⑥ ⚠️ **`logicToArrangement.ts` 本身在 `src/data/**` 里** ⇒ 若需改它 ⇒ **先停手告我** ✓
 ```
+
+## 一百二十三、🎹 **用业主的 8 个官方 Logic 工程真跑读取器**（2026-10-03 20:05 时点 ✓，我自己 `vite-node` 跑的 ✓）
+
+**方法**：直接调 `src/data/logicToArrangement.ts` 的 `activeVariant(plist)`（`:304` ✓）与 `fromLogicProject({projectData, metaData})`（`:595` ✓），
+逐工程只读那三个契约文件 ✓（脚本 `/var/tmp/logic-probe.mjs` ✓；**未改任何产品代码** ✓）。
+
+```
+⭐⭐ **`activeVariant()` 工作正常** ✓✓：读二进制 plist 得 **000／003／002／001／004** ⇒ **与真实目录名一一对上** ✓
+   （我用 grep 做不到、代码做到了 ✓ —— §122 那个坑**读取器确实处理了** ✓）
+✅ 有内容的 4 份：`Colors`（000）**111 声部／1557 音符** ✓ ｜ `ocean eyes`（001）**31／1240** ✓ ｜
+   `Manzana`（003）与 `Manzana - Spatial Audio`（003）各 **5／44** ✓
+✗✗ **0 声部/0 音符的 4 份**：`MONTERO`（002）｜`MONTERO - Spatial Audio`（001）｜`Swing!`（004）｜
+   `Spatial Audio Demo Grid`（000）✓ —— 而这些**显然不是空工程** ⇒ **大概率是读取器在真文件上的缺口** ✓ ⇒ **进 (乙) 队列** ✓
+⚠️ **8/8 都带 6–8 条 `problems`** ✗；其中 5 份第一条是同一类：
+   「**the project holds N tempo points and this model…**」✓ ⇒ ⭐ **正是 (乙) G6「不能写 tempo map」的形状** ✓✓
+⚠️ **8/8 的 `tempo` 都是 `null`** ✗（与"多点速度不被携带"一致 ✓）；**`meter` 8/8 都是 `4/4`** ✗（可疑，像默认值 ⇒ 待查 ✓）
+⏱ 解析耗时 **2.7–4.3 秒/份** ✗（load 15+ 的机器上 ✓）
+⇒ ⭐ **通过率：4/8 有内容、0/8 无 problems、0/8 带出 tempo** ✓ —— 这是它自陈"没有 ground truth"那半边的**第一次真实检验** ✓
+```
+
+## 一百二十四、(甲) **性能基线交付：关键锚点、三条结论、两处更正**（性能线 `5f408d2b` ✓，报告在 `/var/tmp/perf-baseline/REPORT.md` ✓）
+
+```
+**⚠️ 可信度先说清**：本轮 **0 组"可信"**（安静窗口从未出现 ✗，load 12.4–23.4）⇒ 多数读数**仅上界** ✓（它不假装 ✓）
+⭐⭐ **决定性方法锚点（帧投递对照组）**：空页只跑 rAF ＋ 每帧一次样式/布局写入 ⇒ **headless 59.63 fps**
+   （p50 16.7／p95 16.8／>50ms 长帧 **0**）✓✓；**Xvfb headed 59.0 fps** ✓ —— 都在 **load 14.7–16.5** 下 ✓
+   ⇒ ⭐ **⇒ 应用内 7–10 fps 不能归因于"headless／没 GPU／机器忙"** ✓✓（这是把"宿主太忙"从**假设**变成**可证伪** ✓）
+⭐ 并**否掉软件渲染**：studio 路由上唯一 canvas 是 **192×60 的 2D 缩略图** ✓（`three` 只在 `GalaxyView` ✓）
+⭐⭐ **冷启动 9.1 秒那段**（A-live n=5）：`responseEnd 1199` → React 首次 commit **823** → **toolbar 9956** ms；
+   **LCP p50 10,832 ms** vs 官方 poor 门 **4,000 ms** ✗；⭐ **它的 CPU profile**（B-prod，`toolbar 7175 ms`）：
+   **`(program)` 浏览器内部（样式/布局/绘制/合成）＝ 41%** ✗（**近一半不是 JS** ✓）；随后 `vendor-react 18.8%`
+   ｜`AudioEngine 12.9%`（含 **`rebuildImpulse` 4.24%** ✓）｜入口 11.9%｜`StudioView 4.4%` ✓
+⭐ **按两栏分开**（照我要求 ✓）：**UI/渲染** p50 **83.3 ms ≈ 5 个 60Hz 帧预算** ✗、长任务 88 条/8,061 ms/最长 703 ms ✓
+   ｜**音频/调度** `baseLatency 10.7 ms` ✓、`scheduleAheadSec 200 ms` ✓、**丢步 0→19→100 后 527 秒不增（自愈）** ✓
+⭐⭐ **播放期归因**：`samplerLanePlayback` ＝ **全部样本 57.69%** ✓ —— ⚠️ **但它自己抓到一条方法学坑**：
+   开 `snapshots:true` 的那份里它只占 **4.64%**、`(program)` 46.1%，并出现 **`visitNode`（Playwright 自己的 DOM 快照机 ✗）**
+   ⇒ **两份不可比；引占比必须关掉 `snapshots`** ✓✓
+✅ **内存无泄漏** ✓（604 s 斜率 **−1.5 MB/min**、forced-GC 后留存 +1.5 MB、DOM 节点恒定 **3249** ✓）
+✅ **INP 量到了** ✓（196 条、13 条带 `interactionId`、**每交互 p98 = 3,704 ms** 仅上界；CDP 往返噪声地板 p50 **7 ms** ✓）
+⚠️ **它弃用 A 侧绝对毫秒** ✗（`blocked fraction = 117.8% > 100%` 单线程不可能 ⇒ 宿主饿死渲染进程，最长"任务" 29,084 ms ✓）
+**⇒ 它更正我两处**（我都认 ✓）：① `droppedSteps` **不是封顶** ✓（纯累加 ✓ ＋ 中间值 19 ✓）—— **它没动那行代码是对的** ✓
+   ② 因映射不落地，`D1-midi-sampler` **其实是纯合成器组** ✓ ⇒ **不能**用它论证"采样不慢" ✗
+      （它能证的只是"**纯合成器路径也慢**"✓）；它与 `samplerLanePlayback 57.69%`**不矛盾**（不同路由 ✓）
+**它诚实列出的未取到**：C dev 未测 ✗｜B 完整基线未写出 ✗｜滚轮/拖音符三端未取 ✗｜⭐**MusicXML/`.mxl` 未跑** ✗
+   （但实现存在：`src/data/musicxmlImport.ts:316 fromMusicXml` ✓，入口 `ScoreV2.tsx:471-473` ✓ **需先选一条轨道** ✓）
+   ｜热缓存未取 ✗｜trace zip 未落盘 ✗｜⚠️ **编曲路由读不到引擎**（`?probe=1` 只暴露 studio 的 ✓）⇒ 那里 `drop=0` 是**假零** ✗
+   ｜⚠️ "同会话再走 `/new` 不再出现模板选择器"**已观察未定论** ⇒ **不记为缺陷** ✓
