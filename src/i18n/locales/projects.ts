@@ -3,8 +3,15 @@ export const projectsMessages = {
   project_hub: { en: "Projects", zh: "工程" },
   project_hub_title: { en: "Project Hub", zh: "工程管理中心" },
   project_hub_sub: {
-    en: "IndexedDB Multi-Project Hub · Sub-50ms Retrieval · 500MB+ Capacity",
-    zh: "IndexedDB 本地多工程库 · 毫秒级闪存 · 500MB+ 离线安全",
+    /**
+     * ⭐ **What this hub actually manages, said honestly the moment it stopped managing one thing.**
+     *
+     * This line used to promise "studio state" alone. The list now holds studio sessions *and* arrangement projects —
+     * two kinds of project the same person made in the same app — so a subtitle that named one of them would be the
+     * defect G1 reported in a quieter form: a hub that shows you a row it never said it kept.
+     */
+    en: "Studio sessions and arrangements · stored in this browser · 500MB+ capacity",
+    zh: "录音室工程与编排工程 · 存于本浏览器 · 500MB+ 离线容量",
   },
   project_new: { en: "New Project", zh: "新建空白工程" },
   project_save_as: { en: "Save As...", zh: "另存为新工程" },
@@ -43,6 +50,15 @@ export const projectsMessages = {
   project_tag_add: { en: "+ Tag", zh: "+ 标签" },
   project_drag_drop_hint: { en: "Drop .groove project file here to import", zh: "拖拽 .groove 工程包至此处即可自动导入" },
   project_storage_status: { en: "{count} saved projects · 500MB+ offline capacity", zh: "已存 {count} 个工程 · 500MB+ 离线持久化" },
+
+  // The second kind of project the hub lists (G1: an arrangement project was stored but never shown).
+  project_hub_kind_arrangement: { en: "Arrangement", zh: "编排工程" },
+  project_hub_kind_studio: { en: "Studio", zh: "录音室工程" },
+  project_hub_open_arrangement: { en: "Open", zh: "打开编排" },
+  project_hub_open_arrangement_missing: {
+    en: "That arrangement project ({name}) is no longer stored",
+    zh: "该编排工程（{name}）已不在存储中",
+  },
 
   // Project Hub modal (U-11: migrated from inline bilingual ternaries)
   project_hub_create_failed: { en: "Could not create project: {error}", zh: "创建工程失败：{error}" },

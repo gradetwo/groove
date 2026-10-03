@@ -11,6 +11,15 @@ export interface RouteState {
    * precedent set for `/console`.
    */
   newProject?: boolean;
+  /**
+   * ⭐ **Which stored arrangement project the new-project route should open.**
+   *
+   * `newProject: true` says "the arrangement editor"; this says *which arrangement*. It exists because the project
+   * list the Hub now shows had no way to act on a row: opening an arrangement is a route with a project in it, so the
+   * project has to be sayable in a URL — otherwise the Hub could display a saved arrangement and do nothing with it,
+   * which is the same defect one step further along. Absent means "reopen what I last had open".
+   */
+  arrangementId?: string;
   genreId?: string;
   compareIds?: string[];
   difficulty?: "easy" | "medium" | "hard";
@@ -143,13 +152,23 @@ export function parseUrlToRoute(pathname: string, search: string, hash: string =
   // Check a new project: /new — ⭐ **before the studio fallback**, because that fallback is what always supplied a genre.
   if (cleanPath === "/new" || cleanPath.startsWith("/new/")) {
     // ⭐ Deliberately **no `genreId`**, not even `undefined` from a missing parameter: this route means "blank", and a genre here would be the default leaking back in.
-    return { tab: "studio", newProject: true };
+    const project = params.get("project");
+    return {
+      tab: "studio",
+      newProject: true,
+      ...(project ? { arrangementId: decodeURIComponent(project) } : {}),
+    };
   }
 
   // Check studio: /studio?genre=
   if (cleanPath === "/studio" || cleanPath.startsWith("/studio/")) {
     const gParam = params.get("genre");
-    return { tab: "studio", genreId: gParam || undefined };
+    const project = params.get("project");
+    return {
+      tab: "studio",
+      genreId: gParam || undefined,
+      ...(project ? { arrangementId: decodeURIComponent(project) } : {}),
+    };
   }
 
   // Fallback to query-param tab matching (compatible with root /?tab=...)
@@ -258,6 +277,13 @@ export function formatRouteToUrl(route: RouteState): string {
     }
     case "studio":
     default: {
+      /**
+       * ⭐ The new-project route is a path of its own, and a named arrangement rides on it — **asked before the
+       * genre fallback**, so a URL that names a project can never be answered with the studio's default genre.
+       */
+      if (route.newProject) {
+        return route.arrangementId ? `/new?project=${encodeURIComponent(route.arrangementId)}` : "/new";
+      }
       if (route.sequencerPayload) {
         return `/s/${encodeURIComponent(route.sequencerPayload)}`;
       }

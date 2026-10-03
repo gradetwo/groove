@@ -19,6 +19,7 @@ import {
   ArrowUpDown,
   Sparkles,
   QrCode,
+  Layers,
 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import QRCode from "qrcode";
@@ -41,6 +42,13 @@ import {
   setActiveProjectId,
   migrateLegacyLocalStorage,
 } from "../../features/sequencer/projectDb";
+import {
+  listArrangementProjects,
+  openArrangementProject,
+  removeArrangementProject,
+  renameArrangementProject,
+} from "../../features/arrangement/arrangementStore";
+import type { ArrangementProjectRecord } from "../../features/sequencer/projectDb";
 
 export interface ProjectHubModalProps {
   isOpen: boolean;
@@ -63,12 +71,48 @@ export interface ProjectHubModalProps {
   isMetronome: boolean;
   isCountIn: boolean;
   onLoadProject: (project: GrooveProject) => void;
+  /**
+   * ⭐ **Opens one stored arrangement project, by id.**
+   *
+   * The hub is the app's one "my projects" surface, so the second kind of project has to be actionable here rather
+   * than merely visible: a list of arrangements that cannot open one is the same defect with a better screenshot.
+   * Absent means the host cannot route (a criterion that only renders the modal), and the Open control is then not
+   * drawn rather than drawn dead.
+   */
+  onOpenArrangementProject?: (id: string) => void;
   onToast: (msg: string) => void;
 }
 
 /** F-07: storage errors are now surfaced to the user instead of being swallowed. */
 function storageErrorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
+}
+
+/**
+ * **One row of "my projects", whichever store it came from.**
+ *
+ * `kind` is the discriminator, and it is not decoration: the two records genuinely differ (a studio project has
+ * patterns, a kit, a snapshot summary; an arrangement has tracks and notes), so every action below branches on it
+ * rather than pretending one shape is the other.
+ */
+export type HubEntry =
+  | { kind: "studio"; project: GrooveProject }
+  | { kind: "arrangement"; record: ArrangementProjectRecord };
+
+/** The subject of the rename / delete dialogs: what they need, and nothing they do not. */
+interface HubTarget {
+  kind: "studio" | "arrangement";
+  id: string;
+  name: string;
+}
+
+/** What the search box and the tag pills read, independent of which store the row came from. */
+function entryName(entry: HubEntry): string {
+  return entry.kind === "studio" ? entry.project.name : entry.record.name;
+}
+
+function entryUpdatedAt(entry: HubEntry): number {
+  return entry.kind === "studio" ? entry.project.updatedAt : entry.record.updatedAt;
 }
 
 export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
@@ -91,10 +135,20 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
   isMetronome,
   isCountIn,
   onLoadProject,
+  onOpenArrangementProject,
   onToast,
 }) => {
   const { t, isZh } = useLanguage();
   const [projects, setProjects] = useState<GrooveProject[]>([]);
+  /**
+   * ⭐ **The second store, read by the same hub.**
+   *
+   * `getAllArrangementProjects` had zero callers outside its own module before this: an arrangement was written to
+   * `arrangements_v2` and the hub — which read only `projects` — honestly said "0 saved projects" beside it. Both
+   * stores live in the same IndexedDB database and the same module, so listing both here is the hub becoming a hub
+   * for the projects that exist rather than for one of the two shapes they are stored in.
+   */
+  const [arrangements, setArrangements] = useState<ArrangementProjectRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTag, setSelectedTag] = useState<string>("all");
@@ -105,9 +159,16 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
   // Sub-dialogs state
   const [saveAsOpen, setSaveAsOpen] = useState(false);
   const [saveAsTitle, setSaveAsTitle] = useState("");
-  const [renameTarget, setRenameTarget] = useState<GrooveProject | null>(null);
+  /**
+   * ⭐ **The rename and delete dialogs name a *stored project*, not a `GrooveProject`.**
+   *
+   * Both kinds of record share an id and a name and nothing else, and both are renameable and deletable, so the
+   * dialog's subject is the pair `{id, name}` plus which store it came from. Keeping the studio's type here (as it
+   * was) would mean the arrangement rows could only be shown, never managed — which is half of the fix.
+   */
+  const [renameTarget, setRenameTarget] = useState<HubTarget | null>(null);
   const [renameTitle, setRenameTitle] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState<GrooveProject | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<HubTarget | null>(null);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   // N-05: share a project as a deep link + QR (encoded through the sequencer share codec).
   const [shareTarget, setShareTarget] = useState<GrooveProject | null>(null);
@@ -121,9 +182,21 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     try {
       setLoading(true);
       await migrateLegacyLocalStorage();
+      /**
+       * ⭐ **Both stores, one load.** Two awaits rather than a `Promise.all` on purpose: the studio list is the one
+       * that existed, and a refusal from the arrangement store must not blank it. The arrangement read is the one that
+       * can throw for a record this build cannot parse, so it is the one caught separately — the studio rows stay on
+       * screen and the reason is logged, instead of "0 saved projects" standing in for a read failure.
+       */
       const list = await getAllProjects(sortField, sortOrder);
       setProjects(list);
       setActiveId(getActiveProjectId());
+      try {
+        setArrangements(await listArrangementProjects());
+      } catch (err) {
+        console.error("[ProjectHubModal] Error loading arrangement projects:", err);
+        setArrangements([]);
+      }
     } catch (err) {
       console.error("[ProjectHubModal] Error loading projects:", err);
     } finally {
@@ -163,24 +236,59 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     return Array.from(set);
   }, [projects]);
 
-  // Filter projects by query and tag
+  /**
+   * **The two stores as one list of rows**, in the order the reader already sorts by.
+   *
+   * The arrangement records arrive newest-first and the studio rows come back in the chosen sort order, so the merged
+   * list is sorted once here (updatedAt desc) and the studio rows keep their own ordering when the user asked for
+   * name/BPM sorting — a single list cannot be sorted two ways, and the honest thing is for the *combined* list to
+   * follow the control the user is looking at.
+   */
+  const entries = useMemo<HubEntry[]>(() => {
+    const merged: HubEntry[] = [
+      ...projects.map((project) => ({ kind: "studio" as const, project })),
+      ...arrangements.map((record) => ({ kind: "arrangement" as const, record })),
+    ];
+    if (sortField === "updatedAt") {
+      merged.sort((a, b) => (sortOrder === "desc" ? entryUpdatedAt(b) - entryUpdatedAt(a) : entryUpdatedAt(a) - entryUpdatedAt(b)));
+    } else if (sortField === "name") {
+      merged.sort((a, b) => {
+        const order = entryName(a).localeCompare(entryName(b));
+        return sortOrder === "desc" ? -order : order;
+      });
+    }
+    return merged;
+  }, [projects, arrangements, sortField, sortOrder]);
+
+  // Filter the merged rows by query and tag
   const filteredProjects = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return projects.filter((p) => {
-      // Tag filter
-      if (selectedTag === "favorites" && !p.isFavorite) return false;
-      if (selectedTag !== "all" && selectedTag !== "favorites" && (!p.tags || !p.tags.includes(selectedTag))) {
+    return entries.filter((entry) => {
+      // Tag filter — arrangements carry no tags, so only "all" can match one.
+      if (entry.kind === "studio") {
+        const p = entry.project;
+        if (selectedTag === "favorites" && !p.isFavorite) return false;
+        if (selectedTag !== "all" && selectedTag !== "favorites" && (!p.tags || !p.tags.includes(selectedTag))) {
+          return false;
+        }
+      } else if (selectedTag === "favorites") {
         return false;
       }
 
       // Search query filter
       if (!q) return true;
-      const titleMatch = (p.name || "").toLowerCase().includes(q);
-      const genreMatch = (p.genreName || "").toLowerCase().includes(q);
-      const tagMatch = p.tags?.some((t) => t.toLowerCase().includes(q));
-      return titleMatch || genreMatch || tagMatch;
+      if (entry.kind === "studio") {
+        const p = entry.project;
+        const titleMatch = (p.name || "").toLowerCase().includes(q);
+        const genreMatch = (p.genreName || "").toLowerCase().includes(q);
+        const tagMatch = p.tags?.some((t) => t.toLowerCase().includes(q));
+        return titleMatch || genreMatch || tagMatch;
+      }
+      // An arrangement has a name and nothing else to search, and it says so rather than matching on a genre it
+      // does not have.
+      return (entry.record.name || "").toLowerCase().includes(q);
     });
-  }, [projects, searchQuery, selectedTag]);
+  }, [entries, searchQuery, selectedTag]);
 
   // Create new blank project
   const handleCreateNew = async () => {
@@ -267,13 +375,41 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     }
   };
 
+  /**
+   * ⭐ **Open an arrangement project — the action the Hub never had.**
+   *
+   * It reads the record before routing so the toast can name what is actually being opened, and so a refusal (a record
+   * this build cannot read) is reported here instead of becoming a route that draws its chooser with no explanation.
+   * The route carries the id; `useArrangementV2Project` does the actual load, which keeps "which project is open" in
+   * one place rather than two.
+   */
+  const handleOpenArrangement = async (record: ArrangementProjectRecord) => {
+    try {
+      const stored = await openArrangementProject(record.id);
+      if (stored === null) {
+        onToast(t("project_hub_open_arrangement_missing", { name: record.name }));
+        await reloadProjects();
+        return;
+      }
+      onOpenArrangementProject?.(stored.id);
+      onToast(t("project_hub_loaded", { name: stored.name }));
+      onClose();
+    } catch (err) {
+      onToast(t("project_hub_rename_failed", { error: storageErrorMessage(err) }));
+    }
+  };
+
   // Confirm rename
   const handleConfirmRename = async () => {
     if (!renameTarget) return;
     const title = renameTitle.trim();
     if (title && title !== renameTarget.name) {
       try {
-        await renameProject(renameTarget.id, title);
+        if (renameTarget.kind === "arrangement") {
+          await renameArrangementProject(renameTarget.id, title);
+        } else {
+          await renameProject(renameTarget.id, title);
+        }
         onToast(t("project_hub_renamed", { name: title }));
         await reloadProjects();
       } catch (err) {
@@ -290,7 +426,11 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     if (!deleteTarget) return;
     const name = deleteTarget.name;
     try {
-      await deleteProject(deleteTarget.id);
+      if (deleteTarget.kind === "arrangement") {
+        await removeArrangementProject(deleteTarget.id);
+      } else {
+        await deleteProject(deleteTarget.id);
+      }
     } catch (err) {
       onToast(t("project_hub_delete_failed", { error: storageErrorMessage(err) }));
       return;
@@ -601,14 +741,118 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-              {filteredProjects.map((project) => {
-                const isActive = project.id === activeId;
-                const formattedDate = new Date(project.updatedAt).toLocaleString(isZh ? "zh-CN" : "en-US", {
-                  month: "short",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                });
+              {filteredProjects.map((entry) => {
+                if (entry.kind === "arrangement") {
+                  const record = entry.record;
+                  const arrangementBpm = record.arrangement.bpm;
+                  const arrangementBars = record.arrangement.bars;
+                  const arrangementTrackCount = record.arrangement.tracks.length;
+                  const arrangementDate = new Date(record.updatedAt).toLocaleString(isZh ? "zh-CN" : "en-US", {
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  });
+
+                  /**
+                   * ⭐ **An arrangement project, drawn as itself rather than as a studio project with missing fields.**
+                   *
+                   * It has no genre, no kit and no snapshot — those are studio facts — so the card shows the facts an
+                   * arrangement genuinely has (tempo, bars, tracks) and its type, which is what makes the merged list
+                   * readable. Rename and Delete are wired to the same dialogs as a studio row; Share, Duplicate and
+                   * .groove export are deliberately **not** offered, because this channel has no implementation for
+                   * them and a button that does nothing is worse than an absent one.
+                   */
+                  return (
+                    <div
+                      key={`arrangement:${record.id}`}
+                      data-testid={`project-hub-arrangement-${record.id}`}
+                      data-project-kind="arrangement"
+                      className="group relative rounded-xl p-4 border transition-all flex flex-col justify-between bg-[#10121a] hover:bg-[#141722] border-line/80 hover:border-line-strong"
+                    >
+                      <div>
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <h4
+                                className="text-sm font-bold font-['JetBrains_Mono'] text-text truncate group-hover:text-accent transition-colors"
+                                title={record.name}
+                              >
+                                {record.name}
+                              </h4>
+                              <button
+                                onClick={() => {
+                                  setRenameTarget({ kind: "arrangement", id: record.id, name: record.name });
+                                  setRenameTitle(record.name);
+                                }}
+                                className="opacity-0 group-hover:opacity-100 p-0.5 text-text-dim hover:text-text rounded transition-opacity"
+                                title={t("project_rename")}
+                              >
+                                <Edit3 className="w-3 h-3" />
+                              </button>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                              <span className="text-[10px] font-medium font-['JetBrains_Mono'] px-2 py-0.5 rounded-md bg-[#191e2b] text-[#c084fc] border border-[#c084fc]/30 flex items-center gap-1">
+                                <Layers className="w-2.5 h-2.5" />
+                                {t("project_hub_kind_arrangement")}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-1.5 py-2.5 my-2 border-y border-line/40 text-[10px] font-['JetBrains_Mono'] text-text-sub">
+                          <div className="bg-[#151824]/60 px-2 py-1 rounded-md">
+                            <span className="text-text-dim block text-[9px] uppercase">BPM</span>
+                            <span className="font-bold text-text">{arrangementBpm}</span>
+                          </div>
+                          <div className="bg-[#151824]/60 px-2 py-1 rounded-md">
+                            <span className="text-text-dim block text-[9px] uppercase">{t("arrangement_bars")}</span>
+                            <span className="font-bold text-text">{arrangementBars}</span>
+                          </div>
+                          <div className="bg-[#151824]/60 px-2 py-1 rounded-md">
+                            <span className="text-text-dim block text-[9px] uppercase">{t("project_hub_steps_label")}</span>
+                            <span className="font-bold text-accent">{arrangementTrackCount}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="text-[10px] font-['JetBrains_Mono'] text-text-dim mb-2.5 flex items-center justify-between">
+                          <span>{arrangementDate}</span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 pt-2 border-t border-line/30">
+                          {/* ⭐ The action the hub never had: open *this* arrangement, not merely the last one. */}
+                          <button
+                            onClick={() => void handleOpenArrangement(record)}
+                            data-testid={`project-hub-open-arrangement-${record.id}`}
+                            className="flex-1 h-7 rounded-lg text-xs font-bold font-['JetBrains_Mono'] flex items-center justify-center gap-1 transition-all bg-accent hover:bg-accent/90 text-black shadow-[0_0_10px_rgba(69,224,201,0.2)]"
+                          >
+                            <span>{t("project_hub_open_arrangement")}</span>
+                          </button>
+
+                          <button
+                            onClick={() => setDeleteTarget({ kind: "arrangement", id: record.id, name: record.name })}
+                            className="h-7 w-7 rounded-lg bg-panel2 hover:bg-[#2a1315] border border-line hover:border-[#ff5964]/40 text-text-sub hover:text-[#ff5964] flex items-center justify-center transition-colors"
+                            title={t("project_delete")}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                const project = entry.project;
+                  const isActive = project.id === activeId;
+                  const formattedDate = new Date(project.updatedAt).toLocaleString(isZh ? "zh-CN" : "en-US", {
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  });
 
                 return (
                   <div
@@ -632,7 +876,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
                             </h4>
                             <button
                               onClick={() => {
-                                setRenameTarget(project);
+                                setRenameTarget({ kind: "studio", id: project.id, name: project.name });
                                 setRenameTitle(project.name);
                               }}
                               className="opacity-0 group-hover:opacity-100 p-0.5 text-text-dim hover:text-text rounded transition-opacity"
@@ -760,7 +1004,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
 
                         {/* Delete */}
                         <button
-                          onClick={() => setDeleteTarget(project)}
+                          onClick={() => setDeleteTarget({ kind: "studio", id: project.id, name: project.name })}
                           className="h-7 w-7 rounded-lg bg-panel2 hover:bg-[#2a1315] border border-line hover:border-[#ff5964]/40 text-text-sub hover:text-[#ff5964] flex items-center justify-center transition-colors"
                           title={t("project_delete")}
                         >
@@ -780,7 +1024,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
             <span>
-              {t("project_hub_storage_hint", { count: projects.length })}
+              {t("project_hub_storage_hint", { count: entries.length })}
             </span>
           </div>
 
@@ -827,9 +1071,9 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
         </div>
       )}
 
-      {/* Sub-Dialog: Rename Project */}
+      {/* Sub-Dialog: Rename Project — one dialog for both kinds of project (G1: an arrangement row renames here too). */}
       {renameTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
+        <div data-testid="project-hub-rename-dialog" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
           <div className="w-full max-w-md bg-[#121520] border border-line-strong rounded-2xl p-5 shadow-2xl space-y-4">
             <h3 className="text-base font-bold font-['JetBrains_Mono'] text-text">
               {t("project_rename_modal_title")}
@@ -946,7 +1190,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
       )}
 
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
+        <div data-testid="project-hub-delete-dialog" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
           <div className="w-full max-w-md bg-[#141014] border border-[#ff5964]/40 rounded-2xl p-5 shadow-2xl space-y-4">
             <div className="flex items-center gap-2.5 text-[#ff5964]">
               <AlertCircle className="w-5 h-5 shrink-0" />

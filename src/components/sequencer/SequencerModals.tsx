@@ -39,6 +39,13 @@ export interface SequencerModalsProps {
   effectsRackState: EffectsRackState;
   drumKit: DrumKitType;
   handleLoadProject: (project: GrooveProject) => Promise<void>;
+  /**
+   * ⭐ **Opens a saved arrangement project from the Hub, by id** — threaded through unchanged.
+   *
+   * It is optional at every hop so a caller that cannot route still renders; `ProjectHubModal` then shows the
+   * arrangement rows without an Open control rather than one that does nothing.
+   */
+  onOpenArrangementProject?: (id: string) => void;
 }
 
 /**
@@ -69,6 +76,7 @@ export const SequencerModals: React.FC<SequencerModalsProps> = ({
   effectsRackState,
   drumKit,
   handleLoadProject,
+  onOpenArrangementProject,
 }) => {
   return (
     <>
@@ -159,6 +167,7 @@ export const SequencerModals: React.FC<SequencerModalsProps> = ({
         isMetronome={seqState.isMetronome}
         isCountIn={seqState.isCountIn}
         onLoadProject={handleLoadProject}
+        {...(onOpenArrangementProject === undefined ? {} : { onOpenArrangementProject })}
         onToast={showToast}
       />
     </>

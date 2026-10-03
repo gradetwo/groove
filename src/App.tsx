@@ -347,6 +347,7 @@ const MainApp: React.FC = () => {
               <React.Suspense fallback={null}>
                 <NewProjectView
                   onProjectNameChange={setProjectName}
+                  {...(route.arrangementId === undefined ? {} : { arrangementId: route.arrangementId })}
                   capture={async () => {
                     // The store is the browser's own filesystem; if it is unavailable the capture reports that rather than pretending to record.
                     const root = await navigator.storage?.getDirectory?.();
@@ -372,6 +373,14 @@ const MainApp: React.FC = () => {
                     onOpenSettings={() => setSettingsOpen(true)}
                     onOpenGenreMaker={() => navigate({ tab: "maker", customGenreFork: selectedGenre?.id })}
                     onOpenHelp={handleOpenHelp}
+                    /**
+                     * ⭐ **The hub's "open this arrangement" lands here, because opening a project is a route.**
+                     *
+                     * The id travels in the URL (`/new?project=<id>`) rather than in a module-level "pending project"
+                     * variable, so the open is refreshable, bookmarkable and back-buttonable — and so the arrangement
+                     * route keeps exactly one answer to "which project am I showing".
+                     */
+                    onOpenArrangementProject={(id) => navigate({ tab: "studio", newProject: true, arrangementId: id })}
                     initialChords={initialChords}
                     onClearInitialChords={() => setInitialChords(null)}
                     initialArpeggio={initialArpeggio}

@@ -13,6 +13,15 @@ import type { CaptureOutcome } from "../audio/captureTake";
 export interface NewProjectViewProps {
   capture: () => Promise<CaptureOutcome>;
   /**
+   * ⭐ **The arrangement project this route was asked to open, when the URL named one.**
+   *
+   * Absent is the route's original meaning — "reopen the arrangement I last had" — and present is what the Project Hub
+   * needs: a saved arrangement that a person picked out of a list. It arrives as a prop rather than from `useRouter`
+   * because this view is rendered by `App`, which is where the route lives; a second reader of the same route is how
+   * two surfaces come to disagree about which project is open.
+   */
+  arrangementId?: string;
+  /**
    * ⭐ **What the top bar should call this project**, reported by the view that actually owns the name.
    *
    * A prop rather than a context or a router field, for the reason `HeaderProps.onNewProject` records: the header is
@@ -61,15 +70,21 @@ export function useNewProjectEngine(): AudioEngine | null {
   return engine;
 }
 
-export function NewProjectView({ capture, onProjectNameChange }: NewProjectViewProps) {
+export function NewProjectView({ capture, onProjectNameChange, arrangementId }: NewProjectViewProps) {
   const engine = useNewProjectEngine();
   const [instruments, setInstruments] = useState<InstrumentChoice[]>([]);
   /**
    * ⭐ **The stored project** — the whole persistence story for this route: it is read once, here, and every change the
    * arrangement reports is written back through it. `project === null` means "nothing saved yet", which is exactly the
    * condition Logic's chooser exists for.
+   *
+   * ⭐ **`arrangementId` is the difference between "reopen" and "open this one".** The Hub lists arrangements, so a row
+   * has to be able to say which project it means; without it the list could only ever reopen the most recent one,
+   * which is the state the survey measured as "no way to open a saved arrangement".
    */
-  const store = useArrangementV2Project();
+  const store = useArrangementV2Project(
+    arrangementId === undefined ? {} : { projectId: arrangementId, repoint: true }
+  );
   /**
    * ⭐ **The name is kept in a ref as well as in state, and the effect reads the ref.**
    *

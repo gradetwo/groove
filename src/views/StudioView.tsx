@@ -104,6 +104,14 @@ interface StudioViewProps {
   onOpenSettings?: () => void;
   onOpenGenreMaker?: () => void;
   onOpenHelp?: (chapterId?: string) => void;
+  /**
+   * ⭐ **The studio's own "open an arrangement", for the Hub's arrangement rows.**
+   *
+   * The path the toolbar already uses (`handleOpenArrangement` below) opens the *studio's* song panel, which is a
+   * different surface from a saved v2 arrangement project. A project picked out of the hub must reach the project's own
+   * route, so it travels up to `App` — the only place that can route — instead of being answered with the wrong panel.
+   */
+  onOpenArrangementProject?: (id: string) => void;
   initialChords?: ChordDefinition[] | null;
   onClearInitialChords?: () => void;
   initialArpeggio?: { baked: BakedArpeggioResult; label?: string } | null;
@@ -129,6 +137,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
   onOpenGenreMaker,
   onOpenSettings,
   onOpenHelp,
+  onOpenArrangementProject,
   initialChords,
   onClearInitialChords,
   initialArpeggio,
@@ -1272,6 +1281,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
         handleLoadProject={async (project) => {
           guard.request(t("unsaved_action_project", { name: project.name }), () => handleLoadProject(project));
         }}
+        {...(onOpenArrangementProject === undefined ? {} : { onOpenArrangementProject })}
       />
 
       {/* Piano roll (item ⑦) opens for the track whose header was clicked; the drawer itself is

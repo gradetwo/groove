@@ -28,7 +28,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ArrangementV2 } from "../../types/arrangementV2";
 import type { GrooveProject } from "../../types/project";
-import { getLastArrangementProject, isArrangementProjectId, saveArrangementProject } from "../sequencer/projectDb";
+import {
+  deleteArrangementProject,
+  getAllArrangementProjects,
+  getArrangementProject,
+  getLastArrangementProject,
+  isArrangementProjectId,
+  saveArrangementProject,
+  setSavedArrangementProject,
+} from "../sequencer/projectDb";
+import type { ArrangementProjectRecord } from "../sequencer/projectDb";
 
 /**
  * How long an edit may sit unwritten. **Short, and it is not a save interval**: it exists to collapse the burst of
@@ -66,6 +75,58 @@ export interface ArrangementProjectState {
   arrangement: ArrangementV2;
 }
 
+/**
+ * ⭐ **The arrangement projects that exist, from the one surface that lists projects at all.**
+ *
+ * The gap this closes was measured, not guessed: `getAllArrangementProjects` had **zero callers outside its own
+ * module**, so an arrangement could be created and then never found again — the Project Hub read the studio's object
+ * store and honestly reported "0 saved projects" while an arrangement sat in the store next to it. The list belongs
+ * here, beside `isStudioEditor`, because "what projects exist" is a question about this application rather than about
+ * the database.
+ */
+export function listArrangementProjects(): Promise<ArrangementProjectRecord[]> {
+  return getAllArrangementProjects();
+}
+
+/**
+ * ⭐ **One named arrangement project, or `null` when there is none by that id** — the read behind "open *this* project"
+ * from the Hub.
+ *
+ * It is deliberately **not** `getLastArrangementProject`: opening project B while project A is the last one opened is
+ * exactly the case the Hub exists for. A refusal is not swallowed — a record this build cannot read throws naming the
+ * field, and the route reports it the same way it reports one it could not restore on boot.
+ */
+export function openArrangementProject(id: string): Promise<ArrangementProjectRecord | null> {
+  return getArrangementProject(id);
+}
+
+/**
+ * **Renames one stored arrangement.** The write goes through `saveArrangementProject` so the record keeps its id,
+ * creation time and — the half a naive "write the whole record back" would lose — its place in the same write queue as
+ * the route's autosave.
+ *
+ * ⭐ `repoint: false`, and that is the point: renaming a project in a **list** must not make the studio reopen an
+ * arrangement the user never opened. A rename is not an open.
+ */
+export async function renameArrangementProject(id: string, name: string): Promise<ArrangementProjectRecord> {
+  const existing = await getArrangementProject(id);
+  if (existing === null) {
+    throw new Error(`No arrangement project with id "${id}" is stored`);
+  }
+  return saveArrangementProject({
+    id: existing.id,
+    name,
+    arrangement: existing.arrangement,
+    createdAt: existing.createdAt,
+    repoint: false,
+  });
+}
+
+/** **Removes one stored arrangement** — the pointer included, when it was the one that named it. */
+export function removeArrangementProject(id: string): Promise<void> {
+  return deleteArrangementProject(id);
+}
+
 export interface UseArrangementV2ProjectResult {
   /** The stored project, or `null` when there is none — which is also what makes the route show its chooser. */
   project: ArrangementProjectState | null;
@@ -97,17 +158,40 @@ export interface UseArrangementV2ProjectResult {
 }
 
 /**
+ * **Which stored project the route should open.**
+ *
+ * ⭐ **Absent means "the last one I had open", and present means "this one, named by the address bar".** Without the
+ * second form the Project Hub can list an arrangement and still not be able to open anything but the most recent one —
+ * the gap that made a saved arrangement effectively unfindable.
+ */
+export interface UseArrangementV2ProjectOptions {
+  /** The id from the route (`/new?project=<id>`), or `undefined` for the usual "reopen what I had". */
+  projectId?: string;
+  /**
+   * ⭐ **Whether to move the "last open" pointer when the named project is read.**
+   *
+   * True for the route — arriving at `/new?project=<id>` *is* opening it, and the top bar must name it on the next
+   * refresh too. It exists as an option rather than always-on because the Hub renders a list of arrangements, and a
+   * list must not re-point the app at a row it merely drew. `saveArrangementProject` writes the pointer synchronously,
+   * which is why the caller that wants it asks for it explicitly.
+   */
+  repoint?: boolean;
+}
+
+/**
  * The new-project route's project state.
  *
- * It starts by **reading what is stored** — that read is the refresh: `getLastArrangementProject()` returns the
- * arrangement that was last open, or `null` on a first visit, and the route shows its chooser only in the second case.
+ * It starts by **reading what is stored** — that read is the refresh: with no project id it is
+ * `getLastArrangementProject()` (the arrangement that was last open), and with one it is that exact project. `null`
+ * means there is nothing to draw, and the route shows its chooser.
  *
  * ⚠️ **A refusal is not a crash.** A stored record this build cannot read (a track kind that no longer exists, a field
- * of the wrong type) makes `getLastArrangementProject` throw *naming the field*, and this hook catches it, leaves the
- * project `null`, and reports it. So the route opens its chooser with an explanation instead of either losing the work
- * in silence or drawing an arrangement with no tracks in it.
+ * of the wrong type) makes the read throw *naming the field*, and this hook catches it, leaves the project `null`, and
+ * reports it. So the route opens its chooser with an explanation instead of either losing the work in silence or
+ * drawing an arrangement with no tracks in it.
  */
-export function useArrangementV2Project(): UseArrangementV2ProjectResult {
+export function useArrangementV2Project(options: UseArrangementV2ProjectOptions = {}): UseArrangementV2ProjectResult {
+  const { projectId, repoint = true } = options;
   const [project, setProject] = useState<ArrangementProjectState | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadProblem, setLoadProblem] = useState<string | null>(null);
@@ -128,9 +212,25 @@ export function useArrangementV2Project(): UseArrangementV2ProjectResult {
     let cancelled = false;
     void (async () => {
       try {
-        const stored = await getLastArrangementProject();
+        /**
+         * ⭐ **Two reads, one shape.** The route without an id reopens what was last open (unchanged, including its
+         * preference for the pointer); the route *with* an id reads that exact project, because a named project is a
+         * decision the address bar already made.
+         */
+        const stored = projectId === undefined ? await getLastArrangementProject() : await openArrangementProject(projectId);
         if (cancelled) return;
-        if (stored !== null) setProject({ id: stored.id, name: stored.name, arrangement: stored.arrangement });
+        if (stored !== null) {
+          setProject({ id: stored.id, name: stored.name, arrangement: stored.arrangement });
+          /**
+           * ⭐ Arriving at a named project **is** opening it: the pointer is moved here rather than at boot, so a
+           * refresh and the top bar both follow the project the user actually opened. Only the pointer is written —
+           * the record is already stored, and rewriting a whole arrangement to say "this is the open one" would put a
+           * quota-checked write on the path that merely opens a project.
+           */
+          if (projectId !== undefined && repoint) {
+            setSavedArrangementProject({ id: stored.id, name: stored.name });
+          }
+        }
       } catch (err) {
         if (!cancelled) setLoadProblem(err instanceof Error ? err.message : String(err));
       } finally {
@@ -140,7 +240,7 @@ export function useArrangementV2Project(): UseArrangementV2ProjectResult {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [projectId, repoint]);
 
   /**
    * ⭐ **One write, and everything that wants the arrangement stored goes through it.** The debounce, `pagehide`, the

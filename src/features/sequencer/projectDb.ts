@@ -1107,6 +1107,17 @@ export async function saveArrangementProject(input: {
   createdAt?: number;
   /** True only from the chooser's Create: a new id is taken and the pointer's project is not touched. */
   fresh?: boolean;
+  /**
+   * ⭐ **Whether this write also moves the "last open" pointer** — false for a write that edits a project the user is
+   * **not** in.
+   *
+   * The pointer is what the top bar names and what the new-project route reopens, so a save from inside the route must
+   * move it (that is the whole reason it exists). A **rename issued from the Project Hub** is the other case: the user
+   * is looking at a list, not at the arrangement, and taking the pointer would mean that reloading the studio
+   * afterwards reopens an arrangement the user renamed and never opened. Defaults to `true`, so every existing caller
+   * keeps exactly the behaviour it had.
+   */
+  repoint?: boolean;
 }): Promise<ArrangementProjectRecord> {
   const now = Date.now();
   const existingId = input.id ?? (input.fresh === true ? null : getSavedArrangementProject()?.id ?? null);
@@ -1127,7 +1138,9 @@ export async function saveArrangementProject(input: {
   }
 
   lastArrangementId = record.id;
-  setSavedArrangementProject({ id: record.id, name: record.name });
+  if (input.repoint !== false) {
+    setSavedArrangementProject({ id: record.id, name: record.name });
+  }
 
   /**
    * ⭐ **Writes are queued, so the last call to this function is the last write.**
@@ -1190,7 +1203,42 @@ export async function getArrangementProject(id: string): Promise<ArrangementProj
   }
 }
 
-/** Every saved arrangement, newest first — the list a future chooser of saved arrangements will read. */
+/**
+ * ⭐ **Removes one stored arrangement, and clears the pointer when it was the one the pointer named.**
+ *
+ * This is the half of "a project you can manage" that the Hub needed and the arrangement channel never had: before it,
+ * a second arrangement could be created but not removed, so a mistake was permanent — and §27's rule that a list must
+ * be honest cuts both ways, because a list you can only add to is a list that fills up with junk.
+ *
+ * The pointer is cleared **only when it names this project**, following `clearSavedArrangementProject`'s rule: deleting
+ * a project the user is not in must not change which project the studio or the arrangement route reopens. Deleting an
+ * id that is not stored is not an error — the caller asked for it to be gone, and it is.
+ */
+export async function deleteArrangementProject(id: string): Promise<void> {
+  const write = arrangementWriteChain.then(async () => {
+    try {
+      const db = await openProjectsDb();
+      await runStoreTx(db, GROOVE_ARRANGEMENT_STORE_NAME, "readwrite", (store) => store.delete(id));
+    } catch (err) {
+      if (!isIndexedDbUnavailable(err)) {
+        markDegraded(err);
+        throw err instanceof Error ? err : new Error(String(err));
+      }
+      markDegraded(err);
+    }
+  });
+  arrangementWriteChain = write.then(
+    () => undefined,
+    () => undefined
+  );
+  await write;
+
+  arrangementMemoryStore.delete(id);
+  if (lastArrangementId === id) lastArrangementId = null;
+  if (getSavedArrangementProject()?.id === id) clearSavedArrangementProject();
+}
+
+/** Every saved arrangement, newest first — the list the Project Hub reads alongside the studio projects. */
 export async function getAllArrangementProjects(): Promise<ArrangementProjectRecord[]> {
   const fromStore = async (): Promise<unknown[]> => {
     const db = await openProjectsDb();
