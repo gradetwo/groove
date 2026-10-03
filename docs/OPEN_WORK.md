@@ -6154,3 +6154,25 @@ problems: **[]** ✓
   291:  if (open.size > 0) problems.push(`${open.size} tie(s) never ended and were left as written`);
 ⚠️ 仅行号图 ✓，**无因果结论** ✗ ⇒ 下一步按行读那段判定是否使用 `<voice>` ✓
 ```
+
+## 二百三十三、⭐⭐⭐ **根因定位：读取端的待配对 tie 表只按"音高"做键，没带 `<voice>`** ✗（2026-10-04 01:0x ✓）
+
+```
+**读到的源码（`src/data/musicxmlImport.ts` ✓，行号由 grep 实证 ✓）**：
+   `:153` 注释：`/** The notes still open, **by pitch**: a tie's beginning is waiting for its end. **Not cleared per measure** … */`
+           ⇒ ⭐ 作者**自己写明**这张表是 **"by pitch"（按音高）** ✗
+   `:242`  `const tieBeginning = open.get(parsed.midi);` ✗ —— **键只有音高** ✓
+   `:243`  `if (tieBeginning && parsed.tieStop) {` ⇒ 命中就把**那个**音的时长延长 ✓（`:246` ✓）
+   `:269`  `if (parsed.tieStart) open.set(parsed.midi, …)` ✗ —— **第二次也只用音高做键** ✓
+   ⚠️ grep 里 **没有任何 `querySelector("voice")`** ✗ ⇒ 读取端**根本不解析 `<voice>`** ✓（`:208` 只提到 `<backup>` 把游标推坏 ✓）
+⇒ ⭐⭐ **根因**：**两个声部各有同音高的跨小节 tie 时，`open` 表撞键** ✗ ——
+   后写的 `tie=start`（v1@m2游标3.75 ✓）**覆盖**先写的（v2@m1游标3.75 ✓）⇒ 于是 v2 的 `tie=stop`（m2游标0 ✓）
+   **配到了错的起点** ✗ ⇒ 观察到的三件事**全部得到解释** ✓：头部留成 `+0.25` ✗、时长没被延长 ✗、v1 那对没被合并而**续段被单独吐出**（计数 **+1**）✗
+⇒ ⭐ 这也与"**单声部时合得对**"（`§223` 用例 A ✓）**一致** ✓（单声部不撞键 ✓）
+⇒ ⭐ 并且它**违反读取端自己写下的契约** ✗：`:7` "merge what notation splits" ✓、`:8` "report what is dropped rather than dropping it silently" ✓
+**改法（下一步实施 ✓，先量后改已完成 ✓）**：
+   ① 解析 `<voice>`（缺省视作 `"1"` ✓，MusicXML 的默认声部 ✓）—— ⚠️ **待确认** `ParsedNote` 是否已有该字段 ✗（下一步 grep 核对 ✓）
+   ② `open` 的键由 `parsed.midi` 改为 **`${voice}|${parsed.midi}`** ✓（`:242`／`:269` 两处 ✓）
+   ③ 加**能红的判据** ✓：用 `§229` 的三音最小复现 ⇒ 断言往返音符数 **3** ✓（改回旧行为即红 ✓）
+   ④ 跑反向量（`ownerProjectAcceptance` 五数 ✓）⇒ 推 `dev` ⇒ 核 CI 判决 ✓
+```
