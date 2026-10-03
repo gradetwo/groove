@@ -5516,3 +5516,31 @@ problems: **[]** ✓
      而**本仓库没有 `needs` 字段** ✓（`§183` 已记 ✓）⇒ 若业主要"面向用户的缺口清单" ⇒ **那是新功能，另立** ✓
 ✅ **参考（若将来立项 ✓）**：**MIT** 的 `jonkubis/LogicProFormatWriter` ✓（**须署名说明** ✓）；GPL 项目**只读、只引短句** ✗（`§106`／`§143` ✓）
 ```
+
+## 一百九十一、⭐⭐ **三处"无损"措辞：全是量出来的（`31878f7`）＋ 一条判据设计的范本** ✓（2026-10-04 00:1x ✓）
+
+```
+✅ **改动** ✓：`src/i18n/locales/help.ts` ✓ ＋ `src/i18n/locales/studio.ts` ✓ ＋ 新判据 `src/test/helpStudioLosslessClaims.test.ts` ✓
+   ⇒ **`Test Files 1 passed`、`Tests 8 passed`、退出码 0** ✓（我跑的 ✓）
+
+① **`help.ts:40`「share lossless URLs」** ✗ ⇒ ⭐ **用 maker 自己的编解码器量** ✓（`CustomGenreMakerView.tsx → encodeGenreToSharePayload` ✓）：
+   编码后的 lane **不携带** per-step velocity／ratchet／probability／trackLength／pan／sends ✗；
+   **解码器会凭空造出** aliases／common_chords／structure／sources ✗
+   ⇒ 改成 **"share a link to your genre"** ✓（⭐ **名词取自 maker 自己已发布控件上的叫法** ✓✓）
+② **`help.ts:138`「输出无损母带级音频」** ✗ ⇒ 它量出：**实际路径根本不声明格式** ✗，且应用自己的文件面里
+   **有损 MP3 编码器**（`Mp3Exporter.ts` ✓）与 **16-bit PCM 母带**（`WavExporter.ts:415` ✓）**并存**
+   ⇒ **一概而论的"无损"不成立** ✗ ⇒ 中文行**改成与英文一致** ✓；⭐ 而**保留的"母带级"被钉在它真正依赖的东西上** ✓
+     （真峰值上限 `MasterLimiter.ts` ✓ ＋ 胶水总线 `masterGraph.ts` ✓）⇒ ⭐ **"别把真的说成假的"** ✓✓
+③ **`studio.ts:974`「24-bit PCM WAV」** ✗ ⇒ ⭐ 它**渲染那份导出并读 RIFF 头** ✓：
+   **RIFF/WAVE／PCM／mono／44100 Hz／16 bits** ✓（且母带 WAV 导出也是 **16-bit** ✓）⇒ **两种语言都改成 16-bit** ✓✓
+
+⭐ **它的判据设计是范本** ✓（我写进可复用清单 ✓）：
+   · **从编码器取位深**（不是照抄我给的数 ✗）✓
+   · **真的跑 maker 的分享编解码器** ✓（**不是把"它提到哪些字段"抄成断言** ✗）✓
+   · **链接的名词取自 maker 自己的已发布标签** ✓
+   · **把旧句逐字带在判据里** ⇒ 回退时**判据自己报出自己的名字** ✓✓
+   ＋ ⭐ **把我们没权改的三处同类"无损"逐条列在判据头注** ✓（`tutorialCourses.ts` ✓／`HelpCenterModal.tsx` ✓／
+     `NewUserOnboardingModal.tsx:100` ✓）⇒ **不默默跳过** ✓（与 `helpExportSurfaceCopy` 的排除写法一脉相承 ✓）
+⇒ ⚠️ **这三处仍写"无损"** ✗ ⇒ **进队列** ✓（同 `§179` 的处置 ✓；要另开一条线 ✓）
+⚠️ 仍欠它的**完整报告** ✗（逐条判定表 ＋ `skins:gen`／`check:skins` 退出码与是否零 diff ＋ CI 判决 ✓）
+```
