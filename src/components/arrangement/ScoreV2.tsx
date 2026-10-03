@@ -54,6 +54,8 @@ export interface ScoreV2Props {
    * route that only plays music.
    */
   onExportMusicXml?: () => void;
+  /** Delivered as a zip whose name says both extensions: a logicx is a directory (docs/OPEN_WORK.md 266). */
+  onExportLogic?: () => void;
   /** Read a MusicXML document (or a compressed `.mxl`) in as arrangement tracks. */
   onImportMusicXml?: (file: File) => void;
   /** True while a read or a write is in flight, so the header says it is working. */
@@ -298,7 +300,8 @@ export function planMeasure(
   return { entries, complete: true };
 }
 
-export function ScoreV2({ notes, bars = 8, width = 900, title, kind, onExportMusicXml, onImportMusicXml, musicXmlBusy = false }: ScoreV2Props) {
+export function ScoreV2({ notes, bars = 8, width = 900, title, kind, onExportMusicXml,
+  onExportLogic, onImportMusicXml, musicXmlBusy = false }: ScoreV2Props) {
   const { t } = useLanguage();
   /**
    * ⭐ **Which skin is on, as a value the drawing effect depends on.**
@@ -554,8 +557,20 @@ export function ScoreV2({ notes, bars = 8, width = 900, title, kind, onExportMus
       */}
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs text-text opacity-80">{title ?? t("score_hint")}</span>
-        {(onExportMusicXml || onImportMusicXml) && (
+        {(onExportMusicXml || onImportMusicXml || onExportLogic) && (
           <span className="ml-auto flex items-center gap-1">
+            {onExportLogic && (
+              <button
+                type="button"
+                data-testid="score-export-logic"
+                onClick={onExportLogic}
+                disabled={musicXmlBusy}
+                className="h-11 shrink-0 rounded border border-[rgb(var(--d-line))] px-2 text-xs text-text disabled:opacity-50"
+                title={t("arrangement_logic_export")}
+              >
+                {t("arrangement_logic_export")}
+              </button>
+            )}
             {onExportMusicXml && (
               <button
                 type="button"

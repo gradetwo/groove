@@ -4,7 +4,7 @@
  * The claims worth checking are not "does it call VexFlow" but (a) **the two views are two readings of one array**, so a note written in the roll is on the stave at the same pitch and beat, and (b) VexFlow is really lazy, because the feature's whole cost argument rests on it.
  */
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import { ScoreV2 } from "../components/arrangement/ScoreV2";
 import { LanguageProvider } from "../i18n/LanguageContext";
@@ -387,5 +387,35 @@ describe("the score", () => {
       expect(drawn.clefs).toEqual(expect.arrayContaining(["bass"]));
       expect(screen.queryByTestId("score-percussion-notice")).toBeNull();
     });
+  });
+});
+
+/**
+ * The Logic export in the score header, held to the standard `toolbarExportAnchors.test.tsx` states: an id sitting in
+ * the JSX that the component never renders is not an anchor, and a rendered control is only proven by clicking it and
+ * seeing **its own** handler run. So this mounts the score rather than reading its source, and it checks both halves:
+ * the button appears when a handler is given, and clicking it runs that handler and not its neighbour's.
+ */
+describe("the Logic export in the score header", () => {
+  it("renders the button and runs only its own handler", () => {
+    const onExportLogic = vi.fn();
+    const onExportMusicXml = vi.fn();
+    render(
+      <LanguageProvider>
+        <ScoreV2 notes={[note(60, 0)]} bars={1} width={400} onExportLogic={onExportLogic} onExportMusicXml={onExportMusicXml} />
+      </LanguageProvider>
+    );
+    fireEvent.click(screen.getByTestId("score-export-logic"));
+    expect(onExportLogic).toHaveBeenCalledTimes(1);
+    expect(onExportMusicXml).not.toHaveBeenCalled();
+  });
+
+  it("does not render it when the caller gives no handler", () => {
+    render(
+      <LanguageProvider>
+        <ScoreV2 notes={[note(60, 0)]} bars={1} width={400} />
+      </LanguageProvider>
+    );
+    expect(screen.queryByTestId("score-export-logic")).toBeNull();
   });
 });

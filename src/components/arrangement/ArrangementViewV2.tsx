@@ -1326,6 +1326,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
                 kind={selected.kind}
                 title={`${selected.name} — ${t("view_score")}`}
                 onExportMusicXml={files.exportMusicXml}
+                onExportLogic={files.exportLogic}
                 onImportMusicXml={files.importMusicXml}
                 musicXmlBusy={files.busy}
               />

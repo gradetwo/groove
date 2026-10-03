@@ -272,7 +272,7 @@ export function useArrangementFileActions({
        * another format is a copy gap rather than a correct one here. Recorded in docs/OPEN_WORK.md.
        */
       const file = logicFileFor(arrangement);
-      return { file, report: t("arrangement_musicxml_export_done", { filename: file.filename, notes: file.notes }) };
+      return { file, report: t("arrangement_logic_export_done", { filename: file.filename, notes: file.notes }) };
     });
   }, [arrangement, run, say, scoreNotes.length, t]);
 

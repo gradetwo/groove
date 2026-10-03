@@ -149,6 +149,8 @@ export const commonMessages = {
   arrangement_export_hint_stems: { en: "one WAV per track (.zip)", zh: "每轨一个 WAV（.zip）" },
   /** The score's own interchange, in the Score tab's header — the one place a score leaves this building. */
   arrangement_musicxml_export: { en: "Export MusicXML", zh: "导出 MusicXML" },
+  arrangement_logic_export: { en: "Export Logic Project (.logicx.zip)", zh: "导出 Logic 工程（.logicx.zip）" },
+  arrangement_logic_export_done: { en: "Exported {filename} - {notes} note(s)", zh: "已导出 {filename}——{notes} 个音符" },
   arrangement_musicxml_import: { en: "Import MusicXML", zh: "导入 MusicXML" },
   arrangement_musicxml_export_done: { en: "Exported {filename} — {notes} note(s)", zh: "已导出 {filename}——{notes} 个音符" },
   arrangement_musicxml_empty: { en: "This track holds no notes, so there is no score to write", zh: "这条轨道没有音符，写不出乐谱" },
