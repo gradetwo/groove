@@ -170,6 +170,75 @@ function loopFrameOf(value: string | undefined): number | undefined {
 }
 
 /**
+ * ⭐ **The half of a resolution that belongs to the program rather than to the note — read once per program.**
+ *
+ * ## The measurement that made this exist (2026-10-03)
+ *
+ * `resolveInstrumentNote` was written to parse the file on every call, and the comment in `sampleLoader` said the
+ * per-note `parseSfz` was *"CPU rather than network and it is not the measured cost"*. **On the owner's real corpus it
+ * is the whole cost.** Importing `敢当.mid` (20,458 B, 2 parts, **2,371 note-ons**, ≈101 bars) with both parts mapped
+ * to `salamander-grand` and pressing play produced, in a 15-second window on a production build:
+ *
+ * ```
+ *   worst single frame            7,683 ms      (the blank template: 150 ms)
+ *   long tasks                    12, total 15,112 ms, worst 7,676 ms
+ *   droppedSteps                  41            (the blank template: 0)
+ *   CPU profile, sampler chunk    58.5 % of all samples — scanOpcodes 9.6 %, parse.ts walk 9.3 %,
+ *                                 ccTuneCents 6.9 %, regionSoundsAtCc 6.1 %, parseSfz 5.4 %,
+ *                                 noteNumber 5.1 %, unresolvedIn 3.9 %, readControlDefaults 2.5 %
+ *   from second 6 on              the main thread was 100 % busy in that parse, to the end of the window
+ * ```
+ *
+ * Salamander's expanded program is ~24 KB and some six hundred regions, and it was re-parsed **per note**: 2,371
+ * parses of one unchanged string. A parsed program does not depend on the note, the velocity or the keyswitch, so it is
+ * read once here and kept.
+ *
+ * ## Why a `WeakMap` keyed by the asset object
+ *
+ * The key is the catalogue **entry**, not the id and not the text: two entries that name different programs can never
+ * be served each other's regions, and an entry that is replaced by a new object (a reloaded catalogue, a criterion's
+ * own fixture) is simply a miss rather than a stale answer. Nothing else is retained: no text, no id, no parse of a
+ * library the session has stopped using.
+ *
+ * ⚠️ **A `sources` expansion line map is deliberately not cached.** It changes what `parseSfz` records on every region
+ * (`sourcePath`), so a caller that supplied one is served fresh facts each time and the whole of that path is byte for
+ * byte what it was — the cache is only ever consulted for the call shape the parser was already being re-run for.
+ */
+interface ProgramFacts {
+  /** The exact text these facts were read from, so a different program on the same asset object is never served these. */
+  text: string;
+  /** Every region the file defines, in order — what `InstrumentResolution.regions` has always carried. */
+  regions: SfzRegion[];
+  /** The regions that sound at the controller values the file's own `<control>` block declares. */
+  audible: SfzRegion[];
+  /** The file's own `sw_default`, from `audible`. */
+  switchDefault: number | undefined;
+  /** The file's `<control>` block, which `amplitude_onccN` is measured against. */
+  controlValues: ReadonlyMap<number, number>;
+}
+
+/** One entry per program this session has resolved, keyed by the catalogue entry object. See {@link ProgramFacts}. */
+const programFactsByAsset = new WeakMap<object, ProgramFacts>();
+
+function programFactsFor(
+  asset: object,
+  sfzText: string,
+  sources: ReadonlyArray<{ from: number; to: number; file: string }> | undefined
+): ProgramFacts {
+  if (sources === undefined) {
+    const cached = programFactsByAsset.get(asset);
+    if (cached !== undefined && cached.text === sfzText) return cached;
+  }
+  const regions = parseSfz(sfzText, sources === undefined ? {} : { sources });
+  const controlValues = readControlDefaults(sfzText);
+  const audible = regionsAtCc(regions, controlValues);
+  const facts: ProgramFacts = { text: sfzText, regions, audible, switchDefault: declaredSwitchDefault(audible), controlValues };
+  // Only the call shape that has no line map: a `sources` result must not be handed to a caller that asked without one, or the reverse.
+  if (sources === undefined) programFactsByAsset.set(asset, facts);
+  return facts;
+}
+
+/**
  * Resolve one note for one instrument entry.
  *
  * Failure is a **result**, not an exception and not a default: an entry with no `sfz`, empty SFZ text, a file with no regions, or a note outside every region each
@@ -207,7 +276,12 @@ export function resolveInstrumentNote(
     return { ok: false, regions: [], reason: `instrument "${asset.assetId}" has empty SFZ text` };
   }
 
-  const regions = parseSfz(sfzText, options.sources === undefined ? {} : { sources: options.sources });
+  /**
+   * ⭐ **The program half, read once per program rather than once per note** — see {@link ProgramFacts} for the
+   * measurement. Everything below depends only on the note, the velocity and the keyswitch, and nothing here changes
+   * what any of them resolves to.
+   */
+  const { regions, audible, switchDefault, controlValues } = programFactsFor(asset, sfzText, options.sources);
   if (regions.length === 0) {
     return { ok: false, regions, reason: `instrument "${asset.assetId}" defines no regions` };
   }
@@ -216,7 +290,7 @@ export function resolveInstrumentNote(
    * **The controller gates first, at the values the file itself declares.** `loccN`/`hiccN` decide whether a region exists rather than how loud it is, and with no controller sent the file's own `<control>` block is where those values come from — `virtuosity_drums`
    * turns every one of its microphones on by setting CC101 to 127 there. So a gate that would silence every region is not a bug in the file; it is a file whose defaults say so.
    */
-  const audible = regionsAtCc(regions, readControlDefaults(sfzText));  if (audible.length === 0) {
+  if (audible.length === 0) {
     return { ok: false, regions, reason: `instrument "${asset.assetId}" has ${regions.length} region(s) and none of them sound at the controller values the file declares` };
   }
 
@@ -230,7 +304,6 @@ export function resolveInstrumentNote(
    *
    * A file with no `sw_default` gets `undefined`, which is exactly the old behaviour — see `declaredSwitchDefault` for why that rule is chosen and what it costs.
    */
-  const switchDefault = declaredSwitchDefault(audible);
   /**
    * ⭐ **The chosen articulation, when the caller named one** — and the file's own `sw_label` is what turns a name into a switch value.
    *
@@ -322,9 +395,8 @@ export function resolveInstrumentNote(
    *
    * Measured with sfizz rather than read off the opcode's name, and the four points fit exactly: with `amplitude_oncc1=100`, CC 32 gives −11.9 dB and CC 64 gives −5.9 dB, which are `20·log10(32/127)` and `20·log10(64/127)`; with the controller at 127, `N=50` gives −6.0 dB and `N=200` gives +6.0 dB. So the controller scales **linearly** (it is a percentage of level, not a number of decibels) and `N` is a percentage of that, which is why `N=100` is "unchanged".
    *
-   * The controller values come from the file's own `<control>` block, exactly as the `locc`/`hicc` gates do: a file that never sends CC 101 has it at zero, and the measurement above says zero is silence — so a region whose controller is unset must not be quietly played at full level.
+   * The controller values come from the file's own `<control>` block, exactly as the `locc`/`hicc` gates do: a file that never sends CC 101 has it at zero, and the measurement above says zero is silence — so a region whose controller is unset must not be quietly played at full level. They are read once with the rest of the program half ({@link ProgramFacts}).
    */
-  const controlValues = readControlDefaults(sfzText);
   let gainScale = 1;
   for (const [opcode, value] of Object.entries(answered?.opcodes ?? {})) {
     const matched = /^amplitude_oncc(\d+)$/.exec(opcode);

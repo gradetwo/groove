@@ -298,9 +298,14 @@ export function createSampleLoader(
    * cache holds the *promise*, so two notes asking at once share one fetch) and **a failure is not cached** (a cache
    * that remembers a transient 502 turns it into a permanent silent instrument).
    *
-   * What it does not cache is `parseSfz`, which still runs per note on the same text. That is CPU rather than network
-   * and it is not the measured cost; caching parsed instruments would be a third thing, and this one is the one the
-   * number names.
+   * ⚠️ **Corrected 2026-10-03 — the sentence that stood here was wrong.** It read *"What it does not cache is `parseSfz`,
+   * which still runs per note on the same text. That is CPU rather than network and it is not the measured cost"*. On the
+   * **render** path that was true, and it is where the sentence came from. On the owner's import path it was **the whole
+   * cost**: `敢当.mid` (2,371 note-ons) with both parts on `salamander-grand` spent **58.5 % of a 15-second window's CPU
+   * inside the parse** — `scanOpcodes` 9.6 %, `ccTuneCents` 6.9 %, `regionSoundsAtCc` 6.1 %, `parseSfz` 5.4 % — with a
+   * **7,683 ms worst frame** and **41 dropped steps**, against 150 ms and 0 for the same arrangement with its synth
+   * tracks left alone. The parse is now cached per program (`sfz/instrument.ts`, `programFactsByAsset`), so this map and
+   * that one together mean one program is fetched **and parsed** once per session rather than once per note.
    */
   const programs = new Map<string, Promise<{ text: string }>>();
   const expandedProgram = (asset: SampleAsset & { sfz: NonNullable<SampleAsset["sfz"]> }): Promise<{ text: string }> => {

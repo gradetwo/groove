@@ -8,6 +8,7 @@ import { instrumentChoicesFromAssets } from "../components/arrangement/Catalogue
 import type { InstrumentChoice } from "../components/arrangement/TrackListV2";
 import { useAudioEngineInstance } from "../features/sequencer/hooks/useAudioEngineInstance";
 import { useArrangementV2Project } from "../features/arrangement/arrangementStore";
+import { installProbeHooks, uninstallProbeHooks } from "../platform/probeHooks";
 import type { CaptureOutcome } from "../audio/captureTake";
 
 export interface NewProjectViewProps {
@@ -60,7 +61,22 @@ export function useNewProjectEngine(): AudioEngine | null {
     setActiveAudioEngine(instance);
     instance.primeAudioContext();
     setEngine(instance);
+    /**
+     * ⭐ **The measurement seam, on this route too — `?probe=1` only, and nothing at all otherwise.**
+     *
+     * The seam was installed by the studio's lifecycle and by the genre audition, and this route has neither: it builds
+     * its engine through `useAudioEngineInstance`, which installs nothing. So a probe on `/new` could reach no engine —
+     * `getSchedulerHealth()` was unreadable there, and a reading that should have been "the scheduler dropped N steps"
+     * came out as `0 - 0` from two `undefined`s. The jank report this exists for *is* this route (import a MIDI, press
+     * play), so the reading has to be available where the symptom is.
+     *
+     * It exposes exactly what a measurement needs and cannot guess — the engine — and it is torn down with the engine, so
+     * a probe can never reach a destroyed transport. There is no sequencer store on this route, so `readState`/`commit`
+     * are honestly absent rather than faked.
+     */
+    const probeInstalled = installProbeHooks({ engine: instance });
     return () => {
+      if (probeInstalled) uninstallProbeHooks();
       // Only clear the slot if it is still ours. Leaving this route must not unregister an engine that replaced it, and the studio may register its own in the same commit.
       if (getActiveAudioEngine() === instance) setActiveAudioEngine(null);
       setEngine(null);
