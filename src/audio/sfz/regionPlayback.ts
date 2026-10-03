@@ -8,7 +8,7 @@
  * variant the *n*-th repeat takes. This file only turns the answer into numbers.
  */
 import { regionsForNote, roundRobinPick } from "./parse";
-import type { SfzRegion } from "./parse";
+import type { SfzRegion, SwitchGate } from "./parse";
 
 export interface RegionPlayback {
   /** The sample path exactly as the SFZ file wrote it — the catalogue's job is to resolve it, not this function's to invent a mapping. */
@@ -45,13 +45,26 @@ export interface RegionPlayback {
  * ⭐ **`switch`/`switchDefault` are the keyswitch state**, and passing neither is exactly the old behaviour — `regionsForNote` only gates when one of them is
  * present. `resolveInstrumentNote` passes the file's own `sw_default` (see `declaredSwitchDefault`); a caller with no keyswitch state and a file with none either
  * gets the file-order answer this function always gave.
+ *
+ * ⭐ **`down`/`up`/`previousNote`/`previousVelocity` are the rest of the gate** — `sw_down`, `sw_up`, `sw_previous` and `sw_vel=previous`, which only a live keyboard
+ * can satisfy. They are threaded straight through to `regionsForNote`, so this file still owns no rule of its own about them.
  */
 export function playbackForNote(
   regions: readonly SfzRegion[],
   note: number,
-  { velocity = 100, nth = 0, switch: keyswitch, switchDefault }: { velocity?: number; nth?: number; switch?: number; switchDefault?: number } = {}
+  { velocity = 100, nth = 0, switch: keyswitch, switchDefault, down, up, previousNote, previousVelocity }: {
+    velocity?: number;
+    nth?: number;
+  } & SwitchGate = {}
 ): RegionPlayback | null {
-  const covering = regionsForNote(regions, note, velocity, 1, { switch: keyswitch, switchDefault });
+  const covering = regionsForNote(regions, note, velocity, 1, {
+    switch: keyswitch,
+    switchDefault,
+    down,
+    up,
+    previousNote,
+    previousVelocity,
+  });
   if (covering.length === 0) return null;
   const region = roundRobinPick(covering, nth);
   if (!region) return null;

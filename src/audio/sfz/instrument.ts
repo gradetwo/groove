@@ -10,9 +10,9 @@
 import { parseSfz, readControlDefaults, declaredSwitchDefault } from "./parse";
 import { regionsAtCc } from "./ccGate";
 import { playbackForNote, playbackGap } from "./regionPlayback";
-import { techniqueSwitchFor } from "./keyswitch";
+import { techniqueSwitchFor, type KeyswitchState } from "./keyswitch";
 import { isAbsolutePath, samplePathRelativeToProgram } from "./defaultPath";
-import type { SfzRegion } from "./parse";
+import type { SfzRegion, SwitchGate } from "./parse";
 import type { SampleAsset } from "../../data/sampleCatalogue";
 
 export interface ResolvedInstrumentNote {
@@ -187,12 +187,17 @@ export function resolveInstrumentNote(
    * keyswitch value through the file's own `sw_label`, and it wins over the file's `sw_default` — which is the whole point, since six of the eight pinned `-KS`
    * programs declare no `sw_default` for the articulation being asked for and are silent without it. A name the file's own labels do not carry is **refused with
    * those labels named** rather than guessed at, and a file with no keyswitches at all is untouched by the option.
+   *
+   * ⭐ `keyswitch` is **the live state a caller is holding** (see `keyswitch.ts`). When it is present it is driven from here — the file is learned, the note-on already
+   * recorded by the caller is read back as a gate, and every switch condition (`sw_last`, `sw_lolast`／`sw_hilast`, `sw_down`, `sw_up`, `sw_previous`, `sw_vel`) is
+   * decided against it. Absent means the offline rule, exactly as it was.
    */
   options: {
     velocity?: number;
     nth?: number;
     sources?: ReadonlyArray<{ from: number; to: number; file: string }>;
     technique?: string;
+    keyswitch?: KeyswitchState;
   } = {}
 ): InstrumentResolution {
   if (!asset.sfz) {
@@ -237,10 +242,26 @@ export function resolveInstrumentNote(
   if (chosen !== undefined && !chosen.ok) {
     return { ok: false, regions, reason: `instrument "${asset.assetId}": ${chosen.reason}` };
   }
+
+  /**
+   * ⭐ **A live state decides everything, and it is driven here rather than at the call site** — because this is the only place that has the parsed regions, and
+   * `KeyswitchState.observe` is what turns them into "which notes are switches".
+   *
+   * The caller has already recorded the note-on (in the order the keys were pressed, which is what `sw_previous` needs); this reads it back as the gate for this very
+   * note. That split is deliberate: the press order belongs to the layer that owns the keyboard, and the file's facts belong to the layer that owns the parser.
+   */
+  let gate: SwitchGate | undefined;
+  if (options.keyswitch) {
+    const learned = options.keyswitch.observe(audible, options.technique);
+    if (!learned.ok) return { ok: false, regions, reason: `instrument "${asset.assetId}": ${learned.reason}` };
+    gate = options.keyswitch.gate();
+  }
   const playback = playbackForNote(audible, note, {
     ...options,
+    ...(gate ?? {}),
     ...(chosen === undefined ? {} : { switch: chosen.switch }),
-    switchDefault,
+    // With a live state the state's own value is authoritative, and its seed already came from `sw_default` — passing the default too would re-open the gate behind it.
+    ...(gate === undefined ? { switchDefault } : {}),
   });
   if (!playback) {
     return { ok: false, regions, reason: playbackGap(audible, note) };

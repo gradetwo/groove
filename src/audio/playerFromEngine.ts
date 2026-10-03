@@ -16,6 +16,7 @@ import type { SampleAsset } from "../data/sampleCatalogue";
 import { browserSampleDecoder } from "./browserSampleGraph";
 import { createSampleLoader, type SampleDecoder } from "./sampleLoader";
 import { startSamplerNote, type SamplerVoice } from "./samplerVoice";
+import { KeyswitchState } from "./sfz/keyswitch";
 import { planSamplerSteps, scheduleSamplerSteps } from "./samplerSteps";
 import type { AudioEngine } from "./AudioEngine";
 import type { SequencerPattern } from "../types/genre";
@@ -106,6 +107,36 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
    */
   const oneShotKeys = new Set<number>();
   /**
+   * ⭐ **One keyswitch state per track — the live, sticky/non-sticky articulation machine (`src/audio/sfz/keyswitch.ts`).**
+   *
+   * ## Why this layer, and why keyed by track
+   *
+   * It cannot live in the loader: `audition` builds a fresh `createSampleLoader` on **every key press**, so loader-held state would be forgotten between two
+   * notes of one performance. It cannot live in `regionsForNote`, which is pure and re-entered per note. What has to own it is the layer that owns a
+   * *sequence* of key presses for one instrument — this one, which is the only path in the repository with both a press (`audition`) and a release
+   * (`releaseNote`), and which is what the arrangement keyboard in `ArrangementViewV2` actually calls.
+   *
+   * Keyed by **track**, not by track-and-note, because the state is per instrument instance: the reference engine keeps one `currentSwitch_` per loaded
+   * instrument (`SynthPrivate.h:292`) rather than one per key or per channel, and one track here is one instrument instance. Keying it by note would give every
+   * key its own state; keying it globally would let two tracks cross switches, which is the owner's explicit "多轨不能串".
+   */
+  const keyswitches = new Map<string, KeyswitchState>();
+  /**
+   * The same states, indexed by the **voice key** a release names (`keyFor(trackId, midi)`) — because `releaseNote` gets a track and a note and no asset, so it cannot
+   * rebuild the track-or-asset key above on its own.
+   */
+  const keyswitchByVoiceKey = new Map<number, KeyswitchState>();
+  /** The state one track's keyboard is driving — created on first use and kept, so a sticky switch survives between notes. */
+  const keyswitchFor = (trackId: string | undefined, assetId: string): KeyswitchState => {
+    // A track with no id still gets its own state rather than sharing one: the asset is the best identity left, and two id-less tracks either differ by asset or are the same instrument.
+    const key = trackId ?? `asset:${assetId}`;
+    const existing = keyswitches.get(key);
+    if (existing) return existing;
+    const created = new KeyswitchState();
+    keyswitches.set(key, created);
+    return created;
+  };
+  /**
    * The sampler steps `play` scheduled, separately from `voices`, because a transport stop is not a key release: it silences everything the arrangement started, whereas `releaseNote` names one key.
    */
   const scheduled: SamplerVoice[] = [];
@@ -152,6 +183,16 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
   };
 
   const audition = async ({ assetId, midi, trackId, gainDb }: { assetId: string; midi: number; trackId?: string; gainDb?: number }) => {
+    /**
+     * ⭐ **The key press is recorded before anything can await**, because the order of presses is what `sw_previous` means and what the sticky switch is.
+     *
+     * `loadNote` is a fetch and a decode, so two quick presses can interleave; recording here, synchronously, keeps the state in the order the keys were actually
+     * pressed. And the press is recorded even when the audio engine is not ready, because a keyboard's key press happened either way — the reference engine updates
+     * its switch state in `noteOnDispatch`, before any voice is started, and refuses the *voice*, not the switch.
+     */
+    const keyswitch = keyswitchFor(trackId, assetId);
+    keyswitchByVoiceKey.set(keyFor(trackId, midi), keyswitch);
+    keyswitch.noteOn(midi, DEFAULT_AUDITION_VELOCITY);
     if (engine.audioContext === null || engine.musicDestination === null) {
       // Reported rather than thrown, the same way `play` reports a missing engine: a key press that throws is worse than one that is silent for a stated reason.
       return { ok: false as const, reason: "audio engine is not ready" };
@@ -192,7 +233,7 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
       fetchSfzText
     );
     try {
-      const note = await loader.loadNote(assetId, midi);
+      const note = await loader.loadNote(assetId, midi, { keyswitch });
       /**
        * ⭐ **The new note asks about its own `group`, and each voice registered what silences it.** The choke still happens before the new voice starts, so the cut is heard as the new note rather than as a gap after it.
        *
@@ -236,7 +277,14 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
       else oneShotKeys.delete(key);
       sounding.push(voice);
       voices.set(key, sounding);
-      return { ok: true as const, ratio: note.ratio, samplePath: note.samplePath };
+      return {
+        ok: true as const,
+        ratio: note.ratio,
+        samplePath: note.samplePath,
+        // Which articulation answered, when a keyswitch decided it — the caller can print the file's own name for it rather than guess from a sample path.
+        ...(note.switchState === undefined ? {} : { switchState: note.switchState }),
+        ...(note.switchLabel === undefined ? {} : { switchLabel: note.switchLabel }),
+      };
     } catch (error) {
       // A refusal from the loader is a result here too: the key press is answered with why, and the instrument's own gaps are named rather than turned into silence.
       return { ok: false as const, reason: error instanceof Error ? error.message : String(error) };
@@ -540,6 +588,12 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
     transport,
     audition,
     releaseNote({ trackId, midi }) {
+      /**
+       * ⭐ **The release moves the switch state as well as the voices**, and it does so **before** the one-shot early return below: a `sw_up` region's whole condition
+       * is *"the key … is not depressed"* (<https://sfzformat.com/opcodes/sw_down/>), so a release that never reached the state would leave an ornamentation switch
+       * stuck down for the rest of the session.
+       */
+      keyswitchByVoiceKey.get(keyFor(trackId, midi))?.noteOff(midi);
       const key = keyFor(trackId, midi);
       /**
        * ⭐ **A one-shot voice is not stopped by a release, and the count says zero.** Returning the number of voices actually stopped is what makes this visible to a criterion: a file that asks for a ringing drum hit answers `0` here, and one that does not answers the number it stopped.
@@ -553,6 +607,14 @@ export function createArrangementPlayer({ engine, loadCatalogue, decode, fetchSf
     },
   };
 }
+
+/**
+ * The velocity a hand-played key carries when the caller names none.
+ *
+ * It is the same 100 the loader has always defaulted to (`playbackForNote`'s `velocity = 100`), written down here because the keyswitch state now needs it at the moment
+ * of the press — before the loader is reached — so that `sw_vel=previous` and a velocity-selected articulation see the same number the note will be resolved with.
+ */
+const DEFAULT_AUDITION_VELOCITY = 100;
 
 /**
  * A voice is keyed by **track and note**, which is what a key release names. Without the track, two sampler tracks playing the same note would stop each other — and with only the note, a piano's sustain would be cut by the next track's key press.

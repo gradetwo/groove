@@ -72,7 +72,7 @@ export interface ArrangementPlayer {
    * could be parsed, chosen and scheduled and still not be playable by hand, which is what "I cannot test the sampler" meant.
    */
   audition?(input: { assetId: string; midi: number; trackId?: string; gainDb?: number }): Promise<
-    { ok: true; ratio: number; samplePath: string } | { ok: false; reason: string }
+    { ok: true; ratio: number; samplePath: string; switchState?: number; switchLabel?: string } | { ok: false; reason: string }
   >;
   /** A key release stops the voices that key started, and reports how many it stopped. */
   releaseNote?(input: { trackId?: string; midi: number }): number;

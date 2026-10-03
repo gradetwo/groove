@@ -368,17 +368,22 @@ describe("sw_* — the offline keyswitch rule, stated and tested", () => {
   /**
    * ⭐ **The offline rule when the file declares no `sw_default`, stated rather than hidden.**
    *
-   * The spec says such a file is silent until a keyswitch is pressed (<https://sfzformat.com/opcodes/sw_last/>), and this loader has no live keyboard. The rule chosen
-   * here is that **no declared default means no gate**: the regions stay selectable in file order. Two reasons, both concrete: the eight pinned VSCO `-KS` programs
-   * declare `sw_last` with no `sw_default` and their own criteria require a note to resolve; and the alternative "invent a switch value" is the silent-wrong-answer this
-   * codebase treats as the worst kind. What it is **not** is sfizz-faithful for those files — sfizz plays nothing there — and this case exists so that the divergence is
-   * a fact on the record rather than a footnote.
+   * The spec says such a file is silent until a keyswitch is pressed (<https://sfzformat.com/opcodes/sw_last/>), and a caller that supplies no switch value has
+   * nothing to open the gate with. So the rule is the **literal** one: no declared default means **every `sw_last`-gated region is out**, and only regions that declare
+   * no `sw_last` at all stay selectable. The alternative — "invent a switch value", or let file order decide — is the silent-wrong-answer this codebase treats as the
+   * worst kind, and "the eight pinned `-KS` programs need a note to resolve" was never a reason to keep it: what they needed was a way to *ask*, which
+   * `src/audio/sfz/keyswitch.ts` now provides, and `sfzKeyswitchTechnique.test.ts` is where that is judged.
+   *
+   * ⚠️ **This doc comment was wrong and was corrected on 2026-10-03 with a reason.** It used to say the opposite of the criterion beneath it — *"no declared default
+   * means no gate: the regions stay selectable in file order"* — and that described an earlier iteration whose behaviour the assertions had already left behind, so the
+   * comment had been contradicting its own test. The **assertions are untouched**: they are the strict reading, and the live state machine does not relax them either
+   * (see `sfzKeyswitchState.test.ts`'s "a file with no sw_default and no key pressed still answers nothing").
    */
   it("answers nothing when the file declares no sw_default and no switch is supplied, which is the spec's own sentence", () => {
     /**
      * ⭐ **The strict reading, and the one the spec states**: *"an instrument which uses `sw_last` to select articulations will not have a default articulation
-     * preselected, meaning when loaded, it will play no sound until one of the keyswitches is pressed"* (<https://sfzformat.com/opcodes/sw_last/>). This project has no
-     * live keyboard, so a file in that shape answers **nothing** — and the risk is named rather than discovered: the eight pinned VSCO `-KS` programs are exactly this
+     * preselected, meaning when loaded, it will play no sound until one of the keyswitches is pressed"* (<https://sfzformat.com/opcodes/sw_last/>). With no live
+     * keyboard and no switch value, a file in that shape answers **nothing** — and the risk is named rather than discovered: the eight pinned VSCO `-KS` programs are exactly this
      * shape, and `sfzKeyswitchPaths.test.ts` records the same outcome for them.
      */
     const noDefault = "<group> sw_lokey=c6 sw_hikey=d#6 sw_last=c6\n<region> sample=sus.wav lokey=69 hikey=72\n<group> sw_last=c#6\n<region> sample=trem.wav lokey=69 hikey=72";
@@ -421,7 +426,8 @@ describe("sw_* — the offline keyswitch rule, stated and tested", () => {
  *
  * The six acoustic roots are `sw_*` wrappers: each `<global>` states `sw_lokey=24 sw_hikey=26 sw_default=25`, each of the 14 articulation files it includes writes
  * `sw_last=24` (Staccatissimo), `25` (Staccato) or `26` (Sustain) on every group, and the library's whole `sw_*` vocabulary is exactly those five opcodes plus
- * `sw_label` (`sw_previous`, `sw_down`, `sw_up`, `sw_vel`, `sw_lolast`, `sw_hilast` do not occur in it at all).
+ * `sw_label` (`sw_previous`, `sw_down`, `sw_up`, `sw_vel`, `sw_lolast`, `sw_hilast` do not occur in it at all — they are implemented for the files that do use them,
+ * in `KeyswitchState`, and `sfzKeyswitchState.test.ts` is where that is judged).
  *
  * The programs are fetched from the pin rather than vendored, because they are 6 files of 6–40 KB whose includes are another 84 — and the point of the criterion is the
  * real chain. It skips without the network, the same pattern the other real-library criteria use.
@@ -478,10 +484,18 @@ describe.skipIf(warTuba === null)("war-tuba's six acoustic roots, from the pin",
     }
   }, 60_000);
 
-  it("declares exactly the five sw_* opcodes this reads, plus sw_label", () => {
+  it("declares exactly the five sw_* opcodes war-tuba uses, and none of the six that need a keyboard", () => {
     /**
-     * The census that bounds the work, and the honest scope statement: `war-tuba` uses `sw_lokey`, `sw_hikey`, `sw_default`, `sw_last` and `sw_label` and nothing else,
-     * so a `sw_*` outside those five is not needed by this library and is not claimed as implemented anywhere.
+     * The census that bounds what this library needs, and nothing more: `war-tuba` writes `sw_lokey`, `sw_hikey`, `sw_default`, `sw_last` and `sw_label` and no other
+     * `sw_*` opcode, so its 14 articulations are selected by `sw_last`／`sw_default` alone.
+     *
+     * ⚠️ **What this criterion does *not* say, changed on 2026-10-03 with a reason.** It used to end *"a `sw_*` outside those five is not needed by this library and is
+     * not claimed as implemented anywhere"*, and that second clause stopped being true when `KeyswitchState` (`src/audio/sfz/keyswitch.ts`) implemented `sw_down`,
+     * `sw_up`, `sw_previous`, `sw_vel`, `sw_lolast` and `sw_hilast` for files that do use them — each has its own page at <https://sfzformat.com/opcodes/sw_down/>,
+     * <https://sfzformat.com/opcodes/sw_previous/>, <https://sfzformat.com/opcodes/sw_vel/>, <https://sfzformat.com/opcodes/sw_lolast/>, and sfizz implements all of
+     * them. The **assertions are unchanged**, because they are a fact about war-tuba's own text: two `counts.has(...)` checks over the pinned files, which no
+     * implementation decision can move. Only the claim about the rest of the format was overtaken, and it is removed rather than left to read as a scope statement.
+     * `src/test/sfzKeyswitchState.test.ts` is where the six opcodes' behaviour is now judged.
      */
     const counts = new Map<string, number>();
     for (const text of warTuba!.values()) {

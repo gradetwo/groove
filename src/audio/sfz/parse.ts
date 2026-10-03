@@ -111,6 +111,46 @@ export interface SfzRegion {
   swLow?: number;
   swHigh?: number;
   /**
+   * ⭐ **`sw_lolast`／`sw_hilast` — the same gate as `sw_last`, over a range of keyswitches.**
+   *
+   * <https://sfzformat.com/opcodes/sw_lolast/>: *"Like `sw_last`, but allowing a region to be triggered across a range of keyswitches. `sw_lolast` specifies the bottom of
+   * the range, and `sw_hilast` the high."* Both are ARIA opcodes with default `N/A`, so an absent one is absent rather than `0`.
+   *
+   * When either is present the pair is the range and `sw_last` is ignored — which is what sfizz does: `Region.cpp`'s `sw_last` arm is guarded by `if (!lastKeyswitchRange)`
+   * while `sw_lolast`／`sw_hilast` build that range, so a file writing both gets the range (<https://github.com/sfztools/sfizz/blob/f5c6e29f23b8057867c08e88f5f6ac6738baa30b/src/sfizz/Region.cpp#L285-L312>).
+   */
+  swLoLast?: number;
+  swHiLast?: number;
+  /**
+   * ⭐ **`sw_down`／`sw_up` — the switches that apply only while a key is held, and only while it is not.**
+   *
+   * <https://sfzformat.com/opcodes/sw_down/>: *"Enables the region to play if the key equal to `sw_down` value is depressed."* … *"`sw_last` is a \"sticky\"
+   * keyswitch - after releasing the keyswitch note, it continues to affect notes until another keyswitch is pressed. `sw_down`, on the other hand, is \"non-sticky\" and
+   * only affects notes played while the switch is held down."* And the same page for `sw_up`: *"`sw_up` should be defined for those regions"* that are the default
+   * articulation, *"so it only sounds when no ornamentation keyswitch is held down"* — i.e. a region with `sw_up=X` plays while X is **not** depressed.
+   *
+   * These are carried as the **targets they are** rather than as a file-level rule: `sw_down`/`sw_up` name the note that holds the switch, and only live note-off
+   * events can change it, which is why they are read here and gated in `regionsForNote` against a live state (`keyswitch.ts`) rather than resolved statically.
+   */
+  swDown?: number;
+  swUp?: number;
+  /**
+   * ⭐ **`sw_previous` — the region plays if the last note-on before this one was this pitch.**
+   *
+   * <https://sfzformat.com/opcodes/sw_previous/>: *"Previous note value. The region will play if last note-on message was equal to `sw_previous` value."* … *"unlike
+   * `sw_last`, the note specified by `sw_previous` doesn't need to fall in the `sw_lokey`/`sw_hikey` range"* — which is why it is gated against the previous note-on and
+   * **not** against the switch range, and why a state that keeps that pitch is what makes it decidable at all.
+   */
+  swPrevious?: number;
+  /**
+   * ⭐ **`sw_vel=previous` — this region takes the previous note's velocity rather than its own.**
+   *
+   * <https://sfzformat.com/opcodes/sw_vel/>: *"Allows overriding the velocity for the region with the velocity of the previous note."* Values are `current` (the default)
+   * and `previous`; sfizz implements exactly this in `Voice.cpp`／`Layer.cpp` (`if (region.velocityOverride == VelocityOverride::previous) velocity =
+   * midiState_.getVelocityOverride();`), and its `MidiState` keeps that velocity beside the last note played.
+   */
+  swVelPrevious?: boolean;
+  /**
    * ⭐ **The file that wrote this region** — the `#include`d file it sits in, or the program itself. Absent when the caller did not supply the expansion's
    * `sources` map (a hand-written string, a fixture), because "declared in the program" and "provenance not recorded" are different facts and this field must not
    * confuse them.
@@ -468,6 +508,18 @@ export function parseSfz(text: string, options: { sources?: ReadonlyArray<{ from
       ...(noteNumber(merged.sw_default) === undefined ? {} : { swDefault: noteNumber(merged.sw_default) }),
       ...(noteNumber(merged.sw_lokey) === undefined ? {} : { swLow: noteNumber(merged.sw_lokey) }),
       ...(noteNumber(merged.sw_hikey) === undefined ? {} : { swHigh: noteNumber(merged.sw_hikey) }),
+      /**
+       * ⭐ **The rest of the `sw_*` family, read the same way and for the same reason** — a note name or a number, absent when neither.
+       *
+       * `sw_vel` is the one non-numeric member: its two values are `current` (SFZ's own default, <https://sfzformat.com/opcodes/sw_vel/>) and `previous`, so it is read
+       * as a flag rather than a key. A file writing anything else gets `false`, which is `current`'s behaviour rather than a manufactured override.
+       */
+      ...(noteNumber(merged.sw_lolast) === undefined ? {} : { swLoLast: noteNumber(merged.sw_lolast) }),
+      ...(noteNumber(merged.sw_hilast) === undefined ? {} : { swHiLast: noteNumber(merged.sw_hilast) }),
+      ...(noteNumber(merged.sw_down) === undefined ? {} : { swDown: noteNumber(merged.sw_down) }),
+      ...(noteNumber(merged.sw_up) === undefined ? {} : { swUp: noteNumber(merged.sw_up) }),
+      ...(noteNumber(merged.sw_previous) === undefined ? {} : { swPrevious: noteNumber(merged.sw_previous) }),
+      ...(merged.sw_vel?.trim().toLowerCase() === "previous" ? { swVelPrevious: true } : {}),
       // `tune` plus whatever the controller-driven tuning adds at rest, so a region's cents are the cents it will play.
       tuneCents: num(merged.tune, DEFAULTS.tuneCents) + ccTuneCents(merged, cc),
       seqLength: Math.max(1, num(merged.seq_length, DEFAULTS.seqLength)),
@@ -590,14 +642,17 @@ function scanOpcodes(line: string, into: Record<string, string>): void {
  * `sw_default` is SFZ v2's / ARIA's opcode, so its default is genuinely absent rather than a number (<https://sfzformat.com/opcodes/sw_default/>: version SFZ v2,
  * default `N/A`) — and the **absence is a behaviour, not a gap**: <https://sfzformat.com/opcodes/sw_last/> states that an instrument which uses `sw_last` to select
  * articulations *"will not have a default articulation preselected, meaning when loaded, it will play no sound until one of the keyswitches is pressed"*. This project
- * has no live keyboard, so that sentence has to be turned into a rule, and the rule here is the literal one:
+ * live keyboard supplies the value that opens the gate (`KeyswitchState`, `keyswitch.ts`); a caller without one has to turn that sentence into a rule, and the rule here is
+ * the literal one:
  *
  * · **a value is active** when the caller passes `switch`, or when the file declares a `sw_default` — and then only the regions whose `sw_last` matches it are selectable;
  * · **no value is active** — a file with `sw_last` regions and no `sw_default`, and no caller switch — and then **every `sw_last`-gated region is out**, because its
  *   condition can never have been met. Regions that declare no `sw_last` are unaffected: they are not keyswitch candidates at all.
  *
  * The price is stated rather than hidden: the eight pinned VSCO `-KS` programs are exactly this shape, and under this rule they answer nothing until a switch is
- * supplied — which is what sfizz does with them, and what `sfzSwKeyswitch.test.ts` pins so the choice is on the record instead of discovered later.
+ * supplied — which is what sfizz does with them, and what `sfzSwKeyswitch.test.ts` pins so the choice is on the record instead of discovered later. ⭐ **And "a switch is
+ * supplied" is now something a caller can actually do**: `techniqueSwitchFor` turns the articulation a track chose into a `sw_last` value through the file's own `sw_label`,
+ * and `KeyswitchState` holds the value a live keyboard presses — the strict rule below is what makes both of them necessary rather than optional.
  *
  * ## ⭐ Which declaration wins when a file writes more than one: **the last**, and that is the reference engine's rule
  *
@@ -635,6 +690,31 @@ export function hasReachableSwitch(regions: readonly SfzRegion[]): boolean {
 }
 
 /**
+ * ⭐ **The live keyswitch state a region is gated against** — one value per opcode that can only be known from a keyboard.
+ *
+ * It is a type of its own rather than four more inline parameters because `regionsForNote`, `playbackForNote` and `KeyswitchState` all have to agree about it word for
+ * word, and "the second copy of one rule" is the defect this workstream keeps paying for.
+ *
+ * Every field is **optional, and absent means "not supplied" rather than "nothing held"**. That distinction is the whole of the offline path's backwards
+ * compatibility: `down`／`up` absent is what an offline caller passes, and a region gated on `sw_down` then cannot be reached — which is the literal rule, since
+ * <https://sfzformat.com/opcodes/sw_down/> makes the region's condition *"the key … is depressed"* and nothing is depressed without a keyboard.
+ */
+export interface SwitchGate {
+  /** The sticky keyswitch in force — `sw_last`'s value (see `swLast`), or the file's `sw_default`. */
+  switch?: number;
+  /** The file's `sw_default`, used only when no live value was supplied. */
+  switchDefault?: number;
+  /** The `sw_down` targets **currently held down**. */
+  down?: ReadonlySet<number>;
+  /** The `sw_up` targets **currently held down** — such a region plays while its key is *not* depressed. */
+  up?: ReadonlySet<number>;
+  /** The pitch of the **previous note-on**, for `sw_previous`. Undefined means there was none. */
+  previousNote?: number;
+  /** Its velocity, for `sw_vel=previous`. */
+  previousVelocity?: number;
+}
+
+/**
  * Which region a note and velocity select, out of those that cover them.
  *
  * Order matters and is not obvious: SFZ picks the region whose key range is **narrowest** around the note (the "most specific" match), and this returns the first of
@@ -652,13 +732,19 @@ export function hasReachableSwitch(regions: readonly SfzRegion[]): boolean {
  *    "plays no sound until one of the keyswitches is pressed"; the caller can tell that apart from "the file covers no such key" by reading the regions' `swLast`.
  *
  * A region with **no** `sw_last` is never gated: the opcode's default is `-1`, which is out of range and therefore "not declared" rather than "declared as -1".
+ *
+ * ## ⭐ And the three opcodes that need a live keyboard, which this used to read and ignore
+ *
+ * `sw_down`, `sw_up` and `sw_previous` are gated from `SwitchGate` — `sw_lolast`／`sw_hilast` widen `sw_last` to a range. Each one's absence closes its own region
+ * rather than opening it, which is the same literal reading the `sw_last` rule above takes, and `SwitchGate`'s own note says why an offline caller therefore reaches
+ * none of them.
  */
 export function regionsForNote(
   regions: readonly SfzRegion[],
   note: number,
   velocity = 100,
   channel = 1,
-  options: { switch?: number; switchDefault?: number } = {}
+  options: SwitchGate = {}
 ): SfzRegion[] {
   const keyswitch = options.switch ?? options.switchDefault;
   const covering = regions.filter(
@@ -673,9 +759,16 @@ export function regionsForNote(
       region.unresolved.length === 0 &&
       note >= region.lokey &&
       note <= region.hikey &&
-      velocity >= region.lovel &&
-      velocity <= region.hivel &&
-      switchAllows(region, keyswitch)
+      /**
+       * ⭐ **`sw_vel=previous` is a per-region velocity**, so the velocity test is per region too.
+       *
+       * sfizz does the same substitution before matching: `Layer::registerNoteOn` and `Voice.cpp` both read
+       * `if (region.velocityOverride == VelocityOverride::previous) velocity = midiState_.getVelocityOverride();`. A file that asks for it and a caller that has no
+       * previous velocity keeps the note's own, which is the `current` behaviour rather than a manufactured one.
+       */
+      effectiveVelocity(region, velocity, options) >= region.lovel &&
+      effectiveVelocity(region, velocity, options) <= region.hivel &&
+      switchAllows(region, keyswitch, options)
   );
   void channel;
   if (covering.length === 0) return [];
@@ -683,19 +776,37 @@ export function regionsForNote(
   return covering.filter((region) => region.hikey - region.lokey === narrowest);
 }
 
+/** The velocity a region is actually matched and played with — its own, or the previous note's when `sw_vel=previous`. */
+function effectiveVelocity(region: SfzRegion, velocity: number, gate: SwitchGate): number {
+  if (region.swVelPrevious && gate.previousVelocity !== undefined) return gate.previousVelocity;
+  return velocity;
+}
+
 /**
- * Whether a region gated on `sw_last` is selectable under the switch value in force, and `true` for a region that declares none — such a region is not a keyswitch
- * candidate at all (the opcode's default is `-1`, out of range, so "not declared" rather than "declared as -1").
+ * Whether a region's switch conditions are all satisfied, and `true` for a region that declares none of them — such a region is not a keyswitch candidate at all (each
+ * opcode's own default is out of range, so "not declared" rather than "declared as -1").
  *
- * With a value `v`, the region's `sw_last` must equal it **and** the range must admit it: `swLow <= v <= swHigh`, where an unspecified pair is no constraint (both arms
- * are `undefined`, which is the opcodes' own `-1` default). With **no** value the gate is **closed**, which is the format's own "silent until a keyswitch is pressed".
+ * Every arm **closes** on absence: `sw_last` with no value in force is the format's *"silent until a keyswitch is pressed"*; `sw_down`／`sw_up` with no live keyboard
+ * is a condition that has never been met; `sw_previous` with no previous note-on is a note that was never played.
  */
-function switchAllows(region: SfzRegion, keyswitch: number | undefined): boolean {
-  if (region.swLast === undefined) return true;
-  if (keyswitch === undefined) return false;
-  if (region.swLast !== keyswitch) return false;
-  if (region.swLow !== undefined && keyswitch < region.swLow) return false;
-  if (region.swHigh !== undefined && keyswitch > region.swHigh) return false;
+function switchAllows(region: SfzRegion, keyswitch: number | undefined, gate: SwitchGate): boolean {
+  /**
+   * `sw_lolast`／`sw_hilast` replace `sw_last` with a range, and either alone is a one-value range — sfizz builds `emplace(value, value)` and then moves one end
+   * (`Region.cpp`, the `sw_lolast`／`sw_hilast` arms). So the low end is `sw_lolast`, else `sw_last`; the high end is `sw_hilast`, else `sw_last`.
+   */
+  const lastLow = region.swLoLast ?? region.swLast;
+  const lastHigh = region.swHiLast ?? region.swLast;
+  if (lastLow !== undefined || lastHigh !== undefined) {
+    if (keyswitch === undefined) return false;
+    const low = Math.min(lastLow ?? lastHigh!, lastHigh ?? lastLow!);
+    const high = Math.max(lastLow ?? lastHigh!, lastHigh ?? lastLow!);
+    if (keyswitch < low || keyswitch > high) return false;
+    if (region.swLow !== undefined && keyswitch < region.swLow) return false;
+    if (region.swHigh !== undefined && keyswitch > region.swHigh) return false;
+  }
+  if (region.swDown !== undefined && !(gate.down?.has(region.swDown) ?? false)) return false;
+  if (region.swUp !== undefined && (gate.up?.has(region.swUp) ?? false)) return false;
+  if (region.swPrevious !== undefined && gate.previousNote !== region.swPrevious) return false;
   return true;
 }
 

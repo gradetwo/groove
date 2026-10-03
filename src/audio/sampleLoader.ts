@@ -15,6 +15,7 @@
 import { findSampleAsset, sampleAssetIds } from "../data/sampleCatalogue";
 import type { SampleAsset } from "../data/sampleCatalogue";
 import { resolveInstrumentNote } from "./sfz/instrument";
+import type { KeyswitchState } from "./sfz/keyswitch";
 import { expandRemoteIncludes } from "./sfz/remoteIncludes";
 import { sampleAssetForPath } from "./sfz/instrument";
 import { parseSfz } from "./sfz/parse";
@@ -72,7 +73,11 @@ export interface SampleLoader {
    * It used to return the buffer alone, and the ratio `resolveInstrumentNote` had just computed was discarded — so the sampler path had no pitch at all and nothing in the application called this method. Returning both is what makes a
    * sampler play the note rather than the recording.
    */
-  loadNote(assetId: string, note: number, options?: { velocity?: number; nth?: number; technique?: string }): Promise<LoadedNote>;
+  loadNote(
+    assetId: string,
+    note: number,
+    options?: { velocity?: number; nth?: number; technique?: string; keyswitch?: KeyswitchState }
+  ): Promise<LoadedNote>;
   /** How many decodes have actually run — for a test, and for a probe that wants to prove rule 1 rather than trust it. */
   decodes(): number;
 }
@@ -83,6 +88,14 @@ export interface LoadedNote {
   ratio: number;
   /** The sample the note resolved to, relative to the library root — so a diagnostic can name the file rather than the buffer. */
   samplePath: string;
+  /**
+   * ⭐ **Which articulation answered, when a keyswitch decided it** — the value in force and the file's own `sw_label` for it.
+   *
+   * Carried for the same reason the choke group is: only the resolver saw the region that answered, and "the wrong articulation
+   * played" and "no keyswitch support" are indistinguishable from a buffer. Absent means the note was not gated by a keyswitch at all.
+   */
+  switchState?: number;
+  switchLabel?: string;
   /** The region's key centre, absent when the file sets none — which means "no transposition" rather than 60. */
   rootKey?: number;
   /**
@@ -382,6 +395,9 @@ export function createSampleLoader(
       const noteInfo = {
         ratio: resolution.note.ratio,
         samplePath,
+        // Which articulation answered, when a keyswitch decided it — only the resolver saw the region.
+        ...(resolution.note.switchState === undefined ? {} : { switchState: resolution.note.switchState }),
+        ...(resolution.note.switchLabel === undefined ? {} : { switchLabel: resolution.note.switchLabel }),
         ...(resolution.note.rootKey === undefined ? {} : { rootKey: resolution.note.rootKey }),
         // The choke group travels with the note, because only the resolver knew which region answered it.
         ...(resolution.note.group === undefined ? {} : { group: resolution.note.group }),
