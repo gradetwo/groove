@@ -1,13 +1,26 @@
 # 调色板映射的音域覆盖普查：哪些声部写出的音，库一个音都发不出来
 
 **普查日期**：2026-10-03 ｜ **基线**：`origin/dev` @ `44321b8`（`fix(samples): one base for #include, ready-then-play, and one loader per session`）
-**样本清单**：`public/samples/manifest.json`（32 条库，程序级 322 个资产）
-**判据**：`src/test/sampledRangeCensus.test.ts`（34 例：离线 9 例 ＋ 联网 pin 25 例）
+**样本清单**：`public/samples/manifest.json`（**普查当天**是 32 条库、程序级 322 个资产；**2026-10-03 换源后是 33 条 / 323 个**，见 §9）
+**判据**：`src/test/sampledRangeCensus.test.ts`（35 例：离线 10 例 ＋ 联网 pin 25 例）
 
 > ⚠️ **§2–§6 记录的是"修复前"这一次普查（2026-10-03）。** 普查之后，业主授权把**实测越出乐器本身音域**的曲风写得音修回域内：
 > 5 条静音声部里有 **4 条**属于这一类（3 条 `sax_lead` ＋ 1 条 `bell_lead`），已按**整条八度折回（保音级）**修好；
 > 剩 **1 条**（`post-punk` 的 bass）判为**库窄而非曲风错**，**故意的没改**。
 > ⇒ **本节之后所有"168／25／5"的数都是修复前的数**；**修复后的数、逐条定性依据与"库窄"声部的替代音源调查，全部在 §8**（§8.4 给出新的三类计数与判据）。
+
+> ⭐ **2026-10-03 二次更新（换源，提交 `45524c3`）：本报告写"还剩 1 条静音"的那一条也已经修好了。**
+> 业主选定 **§8.6.3 提案 1 的 `linguine`**，`pick_bass` 的映射从 `freepats-electric-bass-yr:PickedBassYR-20190930`
+> （实测 **26–46**）换到 **`karoryfer-pastabass`**（程序 `linguine.sfz`，实测 **33–101，69 键无洞**，CC0-1.0，
+> 207 文件 / 125 954 822 B，镜像 `https://r2mirror.groove.wangda.today/karoryfer-pastabass/`）。
+> ⚠️ **因此本报告 §2–§8 里所有"25 条部分静音""1 条静音""`post-punk` 一条""26–46""8 条 `pick_bass`"都是换源前的读数**，
+> 保留下来正是为了对照（**换源后的完整对照、逐条读数与日期理由见 §9**）。
+>
+> ⭐ **当前计数**（与 `src/test/sampledRangeCensus.test.ts` 的期望值同源；该文件里有一条判据读下面这一行、并与它自己
+> 实测的计数逐项比对 ⇒ **文档和判据不能各说各话**，改一边不改另一边就会红）：
+>
+> <!-- census-current -->
+> `sounding: 181, partial: 17, silent: 0, no-notes: 4`
 
 ---
 
@@ -21,6 +34,10 @@
 * 另有 **4 条**声部调色板有行、但曲风这一版没写任何音（本报告单列，不计入上面三类）。
 
 ⇒ **业主最关心的数：159 个曲风里，有 5 个曲风各自有 1 条"本该有录音、却一个音都不发"的声部**（`bebop`／`chicago-drill`／`free-jazz`／`post-punk`／`smooth-jazz`）。
+
+> ⚠️ **以上是换源前（也是折八度前）的读数。** 折八度把 4 条（3 条 `sax_lead` ＋ 1 条 `bell_lead`）修好 ⇒ `{172, 25, 1, 4}`；
+> 2026-10-03 的换源把最后 1 条（`post-punk` 的 `pick_bass`）与 8 条部分静音的 `pick_bass` lane 一并修好 ⇒ **`{181, 17, 0, 4}`**，
+> 静音曲风 **0 个**。**换源后的对照与理由见 §9**（`post-punk` 那条现在是 `karoryfer-pastabass`，实测 33–101）。
 
 ---
 
@@ -284,6 +301,9 @@
 
 ### 2.3 全库合计与三类计数
 
+> ⚠️ **这一节是折八度前的合计（`{168, 25, 5, 4}`）。** 折八度后是 `{172, 25, 1, 4}`（§8.4）；2026-10-03 换源后是
+> **`{181, 17, 0, 4}`**（§9）。下面两张表保留普查当天的读数作对照。
+
 | 类别 | 声部数 |
 | --- | --- |
 | 能发 | **168** |
@@ -294,29 +314,33 @@
 
 **全库合计（159 曲风 × 每曲风一行）**：有调色板行的旋律声部 **202**，能发 **168**，部分能发 **25**，一个都不发 **5**，无声部内容 **4**；⭐ **"本该有录音、却一个音都不发"的声部 = 5**（分布见 §2.2 与下表）。
 
-**⭐ 创作者能感知的数（每个曲风里完全静音的声部数）**
+**⭐ 创作者能感知的数（每个曲风里完全静音的声部数）**（**折八度前的读数**；折八度后只剩 `post-punk`，换源后为 0）
 
 | 曲风 | 完全静音的声部数 | 是哪条声部 |
 | --- | --- | --- |
 | `bebop` | **1** | lead |
 | `chicago-drill` | **1** | lead |
 | `free-jazz` | **1** | lead |
-| `post-punk` | **1** | bass |
+| `post-punk` | **1** | bass（⚠️ **已修**：§8.6.3 提案 1 的 `linguine`，见 §9） |
 | `smooth-jazz` | **1** | lead |
 | 其余 154 个曲风 | **0** | — |
 | **合计** | **5** | — |
 
-### 2.4 5 条"一个都不发"的明细（含引擎给出的逐字原因）
+### 2.4 5 条"一个都不发"的明细（含引擎给出的逐字原因）（**折八度前的读数**；其中 4 条见 §8.3 折回域内，第 5 条见 §9 换源）
 
 | 曲风 | 声部 | 乐器名 | 资产 | 写出范围 | 音符数 | 覆盖范围（引擎） | 引擎给出的原因（逐字） |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `chicago-drill` | lead | `bell_lead` | `vcsl:Tubular-Bells-1` | 79, 82, 84 | 32 | 60–77 | note 79 has no playback: the file's regions cover keys 60–77 |
-| `post-punk` | bass | `pick_bass` | `freepats-electric-bass-yr:PickedBassYR-20190930` | 50, 53, 55 | 12 | 26–46 | note 50 has no playback: the file's regions cover keys 26–46 |
+| `post-punk` | bass | `pick_bass` | `freepats-electric-bass-yr:PickedBassYR-20190930`（⚠️ 换源前；现在是 `karoryfer-pastabass`，33–101） | 50, 53, 55 | 12 | 26–46 | note 50 has no playback: the file's regions cover keys 26–46 |
 | `bebop` | lead | `sax_lead` | `mtg-solo-sax:MTG-Tenor-Sax` | 82, 85–86, 89, 91 | 44 | 39–76 (41–43 缺) | note 82 has no playback: the file's regions cover keys 39–76 |
 | `free-jazz` | lead | `sax_lead` | `mtg-solo-sax:MTG-Tenor-Sax` | 81–82, 84–85, 87–88, 90 | 32 | 39–76 (41–43 缺) | note 81 has no playback: the file's regions cover keys 39–76 |
 | `smooth-jazz` | lead | `sax_lead` | `mtg-solo-sax:MTG-Tenor-Sax` | 77, 81–82 | 12 | 39–76 (41–43 缺) | note 77 has no playback: the file's regions cover keys 39–76 |
 
 ### 2.5 25 条"部分能发"的明细（列出**发不出的音**）
+
+> ⚠️ **这是折八度前的 25 条。** 2026-10-03 换源后是 **17 条**：下表里带
+> `freepats-electric-bass-yr:PickedBassYR-20190930`（26–46）的 **8 条 `pick_bass`** 全部移到 `sounding`（换了录音，
+> 不是改了曲风），其余 **17 条逐字未变**。逐条改前／改后读数见 §9.2。
 
 | 曲风 | 声部 | 乐器名 | 资产 | 写出范围 | 音符数 | 覆盖范围 | 发不出的音 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -631,6 +655,10 @@
 
 ### 3.3 `post-punk` 的 bass：`pick_bass` → `freepats-electric-bass-yr:PickedBassYR-20190930`（26–46）
 
+> ⚠️ **这一节的候选分析写在换源之前，其"纯 A"建议已被 §8.6.2 的生态级事实与 §8.6.3 的提案取代**：业主选定的是
+> **`karoryfer-pastabass` 的 `linguine`**（picked、flatwound、bridge pickup、CC0-1.0、实测 33–101 无洞），
+> 而不是本节建议的黑蓝贝斯（那是 finger_bass 的录音，会把"拨片／手指"的区别抹掉）。**执行结果见 §9。**
+
 写出 50, 53, 55（12 条 note），**全部高于 46**。
 
 * **候选 A（盖得住、且仍是电贝斯）**：`karoryfer-black-and-blue-basses:05-darkblack-pluck`（**35–76**，无缺键）、`:06-darkblack-pluck-warm`、`:09-darkblack-stac`、`:10-darkblack-btb`（均 35–76）；`karoryfer-meatbass:pizz-basic` / `:04-pizz`（12–79，缺 66–71，但盖得住 50–55）；`karoryfer-meatbass:pizz-six`（12–65）；`dsmolken-double-bass:d-smolken-rubner-bass-pizz`（12–120，缺 61–71 与 90–95，盖得住 50–55）。**⇒ 纯 A 可解**。
@@ -699,6 +727,8 @@
 
 > ⚠️ **本表是修复前的版本（`{168,25,5,4}` / 5 个静音曲风 / 5 条静音声部 / bebop 写 `[82,85,86,89,91]`）。**
 > 修复后的判据（`{172,25,1,4}`、只剩 `post-punk`、bebop 写 `[58,61,62,65,67]`）与新增的"只有这 4 条 lane 变了"判据见 **§8.4**。
+> ⭐ **再往后一次（2026-10-03 换源）计数又动了一次：`{172,25,1,4}` → `{181,17,0,4}`，静音 0 条、静音曲风 0 个**，
+> 见 **§9**；本表的"每个曲风的静音声部数"那一行现在钉的是**空 map**（新静音 lane 依旧红）。
 
 ### 5.2 证红实跑（两次突变，跑完立刻还原，`git diff` 为空）
 
@@ -916,6 +946,8 @@ AssertionError: expected [ 70, 73, 74, 77, 79 ] to deeply equal [ 82, 85, 86, 89
 改动都写在判据文件自己的注释里（"因为修了 4 条曲风越界"），**数字没有被悄悄改**：
 
 1. **三类计数** `{能发:168, 部分:25, 静音:5, 无声部内容:4}` → **`{172, 25, 1, 4}`**，注释写明这 4 条的来龙去脉。
+   ⛔ **这条已被 2026-10-03 的换源再次推进到 `{181, 17, 0, 4}`（静音 0）**，见 §9.3；本报告其余写 `{172,25,1,4}` 的地方
+   都是**换源前**的读数。
 2. **静音曲风的 map** `{bebop:1, chicago-drill:1, free-jazz:1, post-punk:1, smooth-jazz:1}` → **`{post-punk:1}`**。它仍然是**按名字钉的 map**，所以**将来任何一条新静音 lane 依旧红**——守卫作用保留（不是"总数一样就算过"）。
 3. **新增** ⭐ "这 4 条折回的 lane 现在发声、音级不变、且**只有它们动了**"：
    * 每条 lane 的 `verdict === "sounding"`（**逐音**对着测量键集判，不是 min/max）；
@@ -943,10 +975,10 @@ AssertionError: expected [ 70, 73, 74, 77, 79 ] to deeply equal [ 82, 85, 86, 89
 
 | 条数 | 曲风／声部 | 说明 |
 | --- | --- | --- |
-| 8 | `alternative-rock`/`blues-rock`/`doom-metal`/`grunge`/`hard-rock`/`heavy-metal`/`math-rock`/`shoe-gaze` 的 `pick_bass` (47,48,49,50,52) | **与 `post-punk` 同一个根因**：`PickedBassYR` 录音只到 E2(40)、程序拉到 46。电贝斯上这些音完全正常 ⇒ §8.6 的提案一次覆盖 |
-| 1 | `microhouse` bass `finger_bass` (34) | 录音从 35 起 |
-| 1 | `modal-jazz` bass `walking_upright` (62) | **不是越界，是采样表 61–71 整段有洞**（低音提琴发 62 毫无问题） |
-| 1 | `black-metal` chords `distorted_guitar` (88) | 88 = E6 正好是 24 品吉他上界，录音到 86 |
+| ~~8~~ → **0** | `alternative-rock`/`blues-rock`/`doom-metal`/`grunge`/`hard-rock`/`heavy-metal`/`math-rock`/`shoe-gaze` 的 `pick_bass` (47,48,49,50,52) | ✅ **已修（2026-10-03 换源，§9）**：**与 `post-punk` 同一个根因**——`PickedBassYR` 录音只到 E2(40)、程序拉到 46；`pick_bass` 换到 `karoryfer-pastabass`（实测 **33–101**）后，这 8 条 lane 与 `post-punk` 那一条**全部整条发声**，曲风内容一个音都没改。 |
+| 1 | `microhouse` bass `finger_bass` (34) | 录音从 35 起（**本次未改**） |
+| 1 | `modal-jazz` bass `walking_upright` (62) | **不是越界，是采样表 61–71 整段有洞**（低音提琴发 62 毫无问题）（**本次未改**） |
+| 1 | `black-metal` chords `distorted_guitar` (88) | 88 = E6 正好是 24 品吉他上界，录音到 86（**本次未改**） |
 
 **（c）边界／需人耳定**（不做结论，留档）：
 
@@ -986,6 +1018,9 @@ AssertionError: expected [ 70, 73, 74, 77, 79 ] to deeply equal [ 82, 85, 86, 89
 
 #### 8.6.3 提案（**给业主决定，本报告没有改调色板、没有改 manifest、没有下载任何音频**）
 
+> ✅ **已执行（2026-10-03，提交 `45524c3`）：业主选了提案 1 的 `linguine`（不是 `tagliatelle`——后者的 muted 性格业主
+> 不要）。执行结果、逐条读数、上传与镜像验证见 §9。** 下面两条提案原文保留作决定记录。
+
 * **提案 1（许可最干净）**：把 `pick_bass` 的映射从 `freepats-electric-bass-yr:PickedBassYR-20190930`（26–46）换到 **`karoryfer.pastabass:tagliatelle`**（picked、muted、**33–101**、**CC0**、53.5 MiB）或 `linguine`（picked、120.1 MiB）。
   改哪一行：`src/data/sampledInstruments.ts` 里 `pick_bass` 那一行（**本次未动**）。
   ⇒ 一次覆盖 `post-punk`（50/53/55）＋ §8.5 里 8 条 `pick_bass` 部分静音 lane 里所有 ≤ 101 的音（47/48/49/50/52/55…）。
@@ -1002,3 +1037,117 @@ AssertionError: expected [ 70, 73, 74, 77, 79 ] to deeply equal [ 82, 85, 86, 89
 4. **§8.5 的定性是按 §8.1 的音域做的静态度量**，**没有**逐条在浏览器里试听；其中 `hard-bop` lead 的 77（超上界 1 个半音）与 `j-pop` strings 的 100（约在小提琴上界）属**边界**，需要人耳／业主定。
 5. **§8.5 用到的电吉他／风琴／颤音琴／小提琴的域界没有逐字引用**（24 品 E6 = 88、61 键 C7 = 96、颤音琴 F3–F6、小提琴 E7 = 100 都是常见规格，本次未找源） ⇒ §8.5 的 (a) 类里，**吉他 97–104、管钟 80–84、风琴 100–103 是稳的**（远超任何常见规格），其余按未核实读。**§8.5 全程没有试听、也没有逐条跑引擎**（只比了写出的音高与这些域界）。
 6. **§8.6 的候选只在"覆盖"这一个维度上比过**（能不能发 50/53/55）；**音色、动态、与现有 `pick_bass` 的性格差异没有试听**，也没有核 manifest 级的 sha256／字节数（只核了文件大小）。
+
+---
+
+## §9 `pick_bass` 换源（2026-10-03，业主选定 §8.6.3 提案 1 的 `linguine`）
+
+**提交**：`45524c3`（`fix(samples): pick_bass plays a picked bass that reaches D3/F3/G3, not one that stops at A#2`）
+**改动面**：`public/samples/manifest.json`（+1 条）／`src/data/sampledInstruments.ts`（`pick_bass` 一行）／
+7 个测试文件的 pin 与计数。**`src/data/genres/**` 一个音都没改**（§9.4）。
+
+### 9.0 一句话结论
+
+`post-punk` 的 bass（写 50/53/55）与 §8.5(b) 里那 8 条"库窄"的 `pick_bass` lane **全部整条发声**；
+三类计数 `{172, 25, 1, 4}` → **`{181, 17, 0, 4}`**，**静音 lane 0 条、静音曲风 0 个**。
+
+### 9.1 换到了什么（读数可核）
+
+| 项 | 换源前 | 换源后 |
+| --- | --- | --- |
+| 资产 id | `freepats-electric-bass-yr:PickedBassYR-20190930` | **`karoryfer-pastabass`**（程序 `linguine.sfz`） |
+| 引擎实测覆盖（`resolveInstrumentNote` 逐键问 0–127） | **26–46**（21 键，无洞） | **33–101**（69 键，无洞） |
+| 速度维度 | 1/64/100/127 四档键集一致（26–46） | 1/64/100/127 四档键集一致（33–101） |
+| 条目 id／镜像前缀 | `freepats-electric-bass-yr` | `karoryfer-pastabass` |
+| repo @ pin | `freepats/electric-bass-YR` @ `8dcb7ea9116f417273ef8c030d15e7b3aa654301` | `sfzinstruments/karoryfer.pastabass` @ `90135cd026db5d4fa0fe538240b4203f085f5244` |
+| 程序 sha256（与 manifest `files[].sha256` 相同） | `08e69035…54626`（827 B） | **`1faa0913f2b8eae2ebbb73114681abf83bfc193837615730bf50fb9d0b0a55cc`**（20 253 B） |
+| 许可 | CC0 | **CC0-1.0**；其 `LICENSE`（7 048 B，sha `a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499`）与 FreePats 那份**逐字节相同**；readme（889 B，sha `1b5376e550b60f2e03c4d1d7c4b5eeeb44ce5d3199f0055dbab71f3a1cf6f04c`）逐字另有 **"royalty-free for all commercial and non-commercial use, including conversion into other sampler formats and redistribution as part of larger sample libraries"** ⇒ `checkLibraryLicence` = `{ok:true, problems:[]}` |
+| 性格（readme 逐字） | Yamaha RBX，一音一采样 | Squier Bass VI，**flatwound，picked，bridge pickup**（"linguine - flatwound strings, picked, bridge pickup"） |
+| 镜像载荷 | 29 文件 | **207 文件 / 125 954 822 B**（204 wav ＋ sfz ＋ LICENSE ＋ readme），`rclone size` 与 manifest 合计**逐字节相同** |
+| `durationSeconds` | 5.740045 s | 9.375057 s（该条目最长采样，ffprobe 实测） |
+| `needs`（实测 opcode） | 7 个 | 12 个：`amp_velcurve_47/95`、`ampeg_release`、`hirand`/`lorand`（**未实现**）＋ `hikey/hivel/lokey/lovel/pitch_keycenter/sample/tune`（已实现） |
+
+**公开地址与状态码（2026-10-03 实核）**
+
+| | URL | 状态 |
+| --- | --- | --- |
+| 源 sfz | `https://raw.githubusercontent.com/sfzinstruments/karoryfer.pastabass/90135cd026db5d4fa0fe538240b4203f085f5244/linguine.sfz` | **200**（20 253 B） |
+| 镜像 sfz | `https://r2mirror.groove.wangda.today/karoryfer-pastabass/linguine.sfz` | **200**（20 253 B） |
+| 源采样 | `…/90135cd0…/samples/linguine/db2_vl1_rr1.wav` | **200**（833 736 B） |
+| 镜像采样 | `https://r2mirror.groove.wangda.today/karoryfer-pastabass/samples/linguine/db2_vl1_rr1.wav` | **200**（833 736 B） |
+
+上传用**仓库自己的脚本**（`scripts/upload_samples.mjs <id> --upload`，先 `build_sample_manifest.mjs --write` 枚举），
+验证用 `scripts/check_mirror_reachability.mjs`（**exit 0**，含 `karoryfer-pastabass sfz 200 · 20253 bytes` 与
+"smallest 200"两行）＋ 上面的 `rclone size`。
+
+### 9.2 十六条 `pick_bass` lane 的改前／改后（逐条，写出的音全部在 33–101 内）
+
+| 曲风 | 写出音高 | 音符数 | 改前（26–46） | 改后（33–101） |
+| --- | --- | --- | --- | --- |
+| `post-punk` | 50, 53, 55 | 12 | **0/12（一个都不发）** | **12/12** |
+| `alternative-rock` | 43, 50 | 6 | 4/6（部分） | 6/6 |
+| `blues-rock` | 40, 45, 47, 52 | 12 | 8/12（部分） | 12/12 |
+| `doom-metal` | 36, 43, 48 | 4 | 2/4（部分） | 4/4 |
+| `grunge` | 40, 47 | 6 | 4/6（部分） | 6/6 |
+| `hard-rock` | 45, 52 | 6 | 4/6（部分） | 6/6 |
+| `heavy-metal` | 40, 47, 52 | 20 | 4/20（部分） | 20/20 |
+| `math-rock` | 41, 45, 48 | 20 | 16/20（部分） | 20/20 |
+| `shoe-gaze` | 45, 49, 52 | 16 | 8/16（部分） | 16/16 |
+| `deathstep` | 40, 43, 46 | 8 | 8/8 | 8/8 |
+| `punk-rock` | 40, 43, 45 | 16 | 16/16 | 16/16 |
+| `thrash-metal` | 40, 43, 45, 46 | 32 | 32/32 | 32/32 |
+| `death-metal` | 36, 39, 41, 42 | 32 | 32/32 | 32/32 |
+| `black-metal` | 40, 43, 44 | 32 | 32/32 | 32/32 |
+| `metalcore` | 38 | 12 | 12/12 | 12/12 |
+| `progressive-rock` | 38, 41, 43 | 16 | 16/16 | 16/16 |
+
+⇒ 前 9 行是这次动的（1 条静音 ＋ 8 条部分 ⇒ 全部 `sounding`），后 7 行本来就能发、换源后仍然 100%；
+**16 条合计 250 个写出音，改后 0 个被引擎拒绝**（判据里那条联网 case 就是逐个问这 250 个音）。
+
+**`post-punk` 三个音的引擎答案**（`resolveInstrumentNote`，本声部自己的力度）：
+
+```
+note 50: ok=true  chosen=samples\linguine\db3_vl3_rr1.wav  rootKey=49  ratio=1.0576…
+note 53: ok=true  chosen=samples\linguine\e3_vl3_rr1.wav   rootKey=52  ratio=1.0595…
+note 55: ok=true  chosen=samples\linguine\g3_vl3_rr1.wav   rootKey=55  ratio=1
+```
+
+### 9.3 计数怎么变的（算术，不是重述）
+
+```
+能发    172 → 181   （+9：1 条静音 + 8 条部分，全部转 sounding）
+部分     25 →  17   （−8）
+静音      1 →   0   （−1）
+无声部内容 4 →   4   （不变）
+合计    202 → 202   ✓
+静音曲风的 map  {post-punk: 1} → {}   （空 map；新静音 lane 仍然红）
+```
+
+### 9.4 没有动的东西（逐字相同）
+
+`src/data/genres/**`（**一个音都没改**——这正是换源的意义：那些音在电贝斯上一直正常，窄的是库）；
+`src/audio/**`；`mcp/**`；`docs/OPEN_WORK.md`；`src/mobile/**`；版本号；`.github/**`；`scripts/push_dev.sh`；
+任何 `.env*`／`wrangler.toml`。调色板的**其余 21 行逐字相同**（只有 `pick_bass` 一行改）。
+`ownerProjectAcceptance` 的五个数（57→25／3→1／60→28）**期望值一字未动**。
+
+### 9.5 判据（含"文档与判据不能各说各话"）
+
+`src/test/sampledRangeCensus.test.ts`（**35 例**）本次的改动：
+
+* 测量表：删 `PickedBassYR`（26–46）一行，加 `karoryfer-pastabass`（**33–101**，sha `1faa0913…`）一行；
+* 三类计数 → `{181, 17, 0, 4}`，静音曲风 → `{}`，partial 表 **25 → 17**（只删 8 条 `pick_bass`，其余 17 行逐字未变）；
+* `post-punk` 静音那条改成"这条 lane 现在整条发声、且它换掉的那个录音答不了它（26–46 < 50/53/55）"⇒ **换回旧资产即红**（实测：3 条判据红，读数复现 `{172,25,1}` 与 `{post-punk:1}`）；
+* "折八度的 4 条"那条的**修复前 sha256 复原**改成同时撤销换源（16 条 `pick_bass` + 4 条折八度 = **20 行不同**），历史基线 `7b9d4bc4…a761` 仍然成立；
+* 联网半场：改为逐个问 **16 条 `pick_bass` lane 的 250 个写出音**（`checked:250, refused:0`）；
+* ⭐ **新增**一条：读本文件顶部 `<!-- census-current -->` 标记后的那一行，与判据自己实测的计数**逐项比对** ⇒
+  **文档数字与判据期望值同源**；改文档不改判据（或反之）即红。
+
+### 9.6 §9 新增的"判不了／未核实"
+
+1. **音色未试听**：换源依据是 readme 逐字 "picked" ＋ 引擎实测覆盖，不是耳朵；`linguine` 是 bridge pickup、
+   flatwound（旧的是 Yamaha RBX），性格差异见 §8.7#6。
+2. **最高的"录音"根音是 D♭6（key 85）**：84–101 是把这一个录音往上拉（`lokey=84 hikey=101 pitch_keycenter=85`），
+   已在 manifest 条目的 `needs` 与调色板 `because` 里写明，不是隐藏事实。50/53/55 落在各自根音附近（见 §9.2 的 `rootKey`）。
+3. **`amp_velcurve_*`／`ampeg_release`／`lorand`・`hirand` 未实现**（在条目 `needs` 里）：力度走 app 自己的曲线、
+   包络走 app 自己的 release、重复音取第一个 round robin。
+4. 本报告**未重写 §1–§8**：那几节是普查与折八度那一轮的记录，本节只做前向对照；**旧数字保留是有意的**。

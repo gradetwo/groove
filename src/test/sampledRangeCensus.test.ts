@@ -457,6 +457,32 @@ describe("the written pitch range of every palette-mapped lane, against what its
     expect([...new Set(CENSUS.map((lane) => lane.assetId))].sort()).toEqual(MEASURED_COVERAGE.map((row) => row.assetId).sort());
     for (const row of MEASURED_COVERAGE) expect(row.sha256).toMatch(/^[0-9a-f]{64}$/);
   });
+
+  it("⭐ the coverage report's `census-current` numbers are the numbers this file measures", () => {
+    /**
+     * ⭐ **Why this exists: a document that restated an older census sent a reviewer to the wrong conclusion once
+     * already.** `docs/SAMPLED_RANGE_COVERAGE.md` describes several rounds — the census, the octave fold, and the
+     * `pick_bass` swap — so it necessarily carries old numbers *and* the current ones. Its header marks the current
+     * pair with `<!-- census-current -->` and this case reads that line back, so the sentence a reader trusts is the
+     * sentence this file measures. Editing either side alone is a red: the document cannot claim a count the census
+     * disagrees with, and a count cannot move without its summary moving with it.
+     *
+     * The comparison is against **`countOf(...)`, the measured value**, not the pinned expectation — so a broken
+     * measurement fails here too, rather than two wrong numbers agreeing with each other.
+     */
+    const report = readFileSync("docs/SAMPLED_RANGE_COVERAGE.md", "utf8");
+    // The marker lives inside the report's header blockquote, so the optional `>` is part of the pattern rather than a
+    // reason to move the line out of the passage a reader actually reads.
+    const marked = /<!-- census-current -->\s*\n>?\s*`sounding: (\d+), partial: (\d+), silent: (\d+), no-notes: (\d+)`/.exec(report);
+    expect(marked, "docs/SAMPLED_RANGE_COVERAGE.md no longer carries the `<!-- census-current -->` block").not.toBeNull();
+    const [, sounding, partial, silent, noNotes] = marked!;
+    expect({ sounding: Number(sounding), partial: Number(partial), silent: Number(silent), "no-notes": Number(noNotes) }).toEqual({
+      sounding: countOf("sounding"),
+      partial: countOf("partial"),
+      silent: countOf("silent"),
+      "no-notes": countOf("no-notes"),
+    });
+  });
 });
 
 /* ------------------------------------------------------------------------------------------------------------ */
