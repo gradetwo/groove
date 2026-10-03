@@ -1919,6 +1919,64 @@ export class AudioEngine {
   }
 
   /**
+   * ⭐ **Move the transport's position — "click anywhere to set a new play position".**
+   *
+   * ## Why the engine and not the view
+   *
+   * The position is private state (`currentStep`, kept alongside `resumeStep`), and the two places that read it
+   * are the scheduler's own step cursor and {@link play}'s start. A view that drew a "play start" marker without
+   * writing this could only ever draw a picture of a guess — which is what the arrangement's ruler did: its
+   * `aria-label` said 「跳到第 N 小节」, its cursor said pointer, and the transport stayed at bar 1 for the whole
+   * pass (`/var/tmp/uxaudit/seek3.json`, load 18.4: `arrangement-play-start` x 245 → 629 while
+   * `arrangement-position` stayed `1.1` and all sixteen sampled steps were `1.1…1.4`).
+   *
+   * ## Why it writes `resumeStep` as well as `currentStep`
+   *
+   * `step` here is a step of the **compiled pattern**, the unit `setLoopRange` already counts in — a bar is
+   * `stepsPerBarFor(timeSignature)` of them, never a constant sixteen, and the conversion belongs to
+   * `features/arrangement/loopSteps.ts`. Writing `currentStep` alone would move a transport that is **running**
+   * (the scheduler's `step = this.currentStep` at the top of each pass is the seek) and would do **nothing** to a
+   * stopped one, because `play` does not read the step it is sitting on: it recomputes it from `resumeStep` (what
+   * `pause` left) or from the loop window's start, and otherwise begins at zero. `resumeStep` is exactly that
+   * "the next play starts here" slot, so a seek is a pause at a chosen step — which is also the arrangement's own
+   * documented gesture for this control.
+   *
+   * ⚠️ **And the seek survives only if the caller that owns the recorded lanes is told too.** `player.pause()`
+   * captures this step and hands it to the sampler scheduler on the next play (`playback.play(bpm, {fromStep})`);
+   * without that half the engine would start at bar six and the recordings at bar one — the §26 "the first beats are
+   * missing after locating" failure, measured rather than argued in `transportPreparationFeedback.test.tsx`.
+   *
+   * The pending look-ahead is dropped with the move: those steps belong to the position that was left, and the
+   * playhead reads the queue. Voices already on the audio clock are not recalled — nothing can un-schedule a note,
+   * which is the same limit {@link pause} has.
+   *
+   * @returns the step actually landed on, after clamping — so a caller can report what happened rather than assume.
+   */
+  public seek(step: number): number {
+    const requested = Math.max(0, Math.round(Number.isFinite(step) ? step : 0));
+    /**
+     * ⚠️ **Clamped only against a pattern this engine has actually been handed.**
+     *
+     * `totalSteps` starts at sixteen and is replaced by `setPattern`, which the arrangement route calls when it
+     * starts a pass — so before the first play it is a default that describes nothing. Clamping against it made the
+     * very first click on a bar past the first one land on step 15: measured, a ruler click at bar 6 of an eight-bar
+     * arrangement came back `15` (`expected 15 to be 96`). Accepting the step instead is safe because {@link play}
+     * clamps `resumeStep` against whatever pattern it is handed — its own comment says so — so a position past the end
+     * of the real pattern is corrected at the moment the pattern is known rather than by a guess before it.
+     */
+    const limit = this.pattern === null ? Number.POSITIVE_INFINITY : Math.max(0, this.totalSteps - 1);
+    const target = Math.min(requested, limit);
+    this.currentStep = target;
+    this.resumeStep = target;
+    // The two caches that describe where the transport *was*: a stale reported step would suppress the report of
+    // this one (`startPlayheadSync` only reports a change), and the queue holds the old position's look-ahead.
+    this.lastReportedStep = -1;
+    this.stepQueue = [];
+    this.scheduledWindow = [];
+    return target;
+  }
+
+  /**
    * Whether a `stop()` would **return the transport somewhere** — i.e. whether the Stop control has anything to do.
    *
    * A control that does nothing must say so (U7), and the only thing that can answer this is the transport itself:

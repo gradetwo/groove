@@ -207,9 +207,29 @@ export interface ArrangementViewV2Props {
    * `null` means "no loop", which is also how the transport is told that the brace was switched off.
    */
   setTransportLoopRange?: (range: [number, number] | null) => void;
+  /**
+   * ⭐ **Where the transport's own position goes, in steps — the seek a ruler click means.**
+   *
+   * The ruler draws `<button aria-label="跳到第 4 小节">` with `cursor: pointer`, and until this prop existed the
+   * click moved a **decorative** play-start marker and nothing else: `AudioEngine` had no way to be told a position,
+   * so the transport started at bar 1 however the ruler was clicked (measured in `/var/tmp/uxaudit/seek3.json`).
+   * The engine gained `seek(step)` for exactly this call, and this is its only caller.
+   *
+   * **The unit is the engine's** — steps of the compiled pattern, the same one `setTransportLoopRange` is in — and the
+   * conversion is this view's, because this view is the one that knows `stepsPerBarFor(arrangement.timeSignature)`.
+   *
+   * ⚠️ **Nothing about the recorded lanes here.** This moves the transport; the sampler half is told by
+   * `player.pause()`, which is the only seam that carries a step to it (see {@link onRulerSelect}).
+   *
+   * **It returns where the transport landed**, because the engine clamps a seek to the pattern it actually holds and
+   * the ruler can draw bars that pattern does not have (a template-created arrangement states no `bars`, so the ruler
+   * reads eight and the compile answers one). The view draws the play-start marker from the landing, so an
+   * out-of-range click shows the position the transport really got rather than the one it asked for.
+   */
+  seekTransport?: (step: number) => number | undefined;
 }
 
-export function ArrangementViewV2({ songId, capture, bar = 0, player, instruments, playheadBar, initialArrangement, onArrangementChange, onCreateProject, loadProblem, setTransportLoopRange }: ArrangementViewV2Props) {
+export function ArrangementViewV2({ songId, capture, bar = 0, player, instruments, playheadBar, initialArrangement, onArrangementChange, onCreateProject, loadProblem, setTransportLoopRange, seekTransport }: ArrangementViewV2Props) {
   const { t } = useLanguage();
   /**
    * ⭐ **A new project starts by choosing what it is** — which is Logic's `Choose a Project`, and the owner's "there is no good new-project entry". `undefined` means the choice has not been made, and the panel is
@@ -265,7 +285,11 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
    * on at the bar the view is looking at rather than at bar 1, because the bar on screen is the bar the user means.
    */
   const [loopRange, setLoopRange] = useState<LoopRange | undefined>(undefined);
-  /** The play-start marker, in bars. Clicking the ruler sets it — Bitwig's "single click in the upper ruler sets the play start". */
+  /**
+   * The play-start marker, in bars. Clicking the ruler sets it — Bitwig's "single click in the upper ruler sets the play start".
+   *
+   * ⭐ **And it is now a marker of something real**: see `onRulerSelect` below, which moves the transport to the same bar.
+   */
   const [playStartBar, setPlayStartBar] = useState(0);
   /** Which row's instrument library is open. One at a time: two panels would make the header column jump height. */
   const [openLibraryFor, setOpenLibraryFor] = useState<string | undefined>(undefined);
@@ -335,12 +359,6 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
     setLoopRange((current) => (current ? undefined : loopRangeAt(bars, stripBar)));
   }, [bars, stripBar]);
 
-  const onRulerSelect = useCallback((next: number) => {
-    setStripBar(next);
-    // The ruler click sets where a play will begin, which is Bitwig's gesture and why the play-start marker is here.
-    setPlayStartBar(next);
-  }, []);
-
   /**
    * ⭐ **A finished region gesture, as one undo entry.**
    *
@@ -395,6 +413,90 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
    * `pixelsPerBar`.
    */
   const stepsPerBar = stepsPerBarFor(arrangement.timeSignature);
+
+  /**
+   * ⭐ **How long the pattern the transport will hold actually is — the number a seek has to be clamped against.**
+   *
+   * The engine cannot answer this before the first press: it learns its length from `setPattern`, which the player
+   * sends when a pass starts. The **view** can, because the compile is the same call the brace below already makes, and
+   * it is the compile's answer that matters rather than the ruler's — the two disagree for an arrangement that states
+   * no `bars` (the ruler falls back to eight, the compile to one), which is the disagreement
+   * `features/arrangement/loopSteps.ts` documents at length.
+   *
+   * Clamped here rather than only in the engine so the **marker can be drawn from a length this view knows**: a click
+   * on a bar past the pattern's end moves the transport to the last step that exists and the play-start triangle goes
+   * with it, instead of the triangle claiming bar six over a one-bar pattern.
+   *
+   * Nothing is compiled when there is no transport to seek (a view rendered as a picture, every existing criterion) —
+   * the same rule the brace's memo follows.
+   */
+  const seekPatternSteps = useMemo(() => {
+    if (seekTransport === undefined) return undefined;
+    const compiled = compileArrangementToPattern(arrangement, arrangement.notesByTrack ?? {});
+    return compiled.totalSteps ?? compiled.tracks[0]?.steps.length ?? STEPS_PER_BAR;
+  }, [seekTransport, arrangement]);
+
+  /**
+   * ⭐ **The ruler click, which is a seek — the whole of the audit's hardest finding.**
+   *
+   * ## What it used to do
+   *
+   * Two `setState` calls and nothing else. The ruler draws a `<button>` whose name is 「跳到第 4 小节」 and whose
+   * cursor is a pointer, so the interface promised a move it could not make: measured on the live build
+   * (`/var/tmp/uxaudit/seek3.json`, load 18.4), the click moved `arrangement-play-start` from x 245 to 629 while
+   * `arrangement-position` stayed `1.1` and all sixteen sampled steps after the next Play were `1.1…1.4`. Ableton's
+   * arrangement view states the contract this was pretending to honour — *"You can click anywhere within a track to
+   * move the insert marker and set a new play position"* — so this was one step in a DAW and **no** steps here.
+   *
+   * ## The three things a click now does, and why each is needed
+   *
+   * 1. **The view's own two facts** (which strip of bars is shown, where the play-start triangle is drawn). Unchanged.
+   * 2. **The transport is moved to the same bar**, in the engine's unit: `seekTransport(next * stepsPerBar)`, clamped
+   *    to `seekPatternSteps`. `stepsPerBar` is the shared number above, so bar *N* here is the same step the playhead
+   *    and the brace mean by bar *N* — `loopSteps.ts`'s own reading, applied to the one other caller of it — and the
+   *    clamp is the compile's own length for the same reason the brace's is.
+   * 3. ⭐ **The player is told, by `pause()` — and without this the seek is a lie for every recorded lane.**
+   *
+   *    `playerFromEngine.play` holds its own idea of where a pass starts (`pausedAtStep`) and, when it has none,
+   *    **stops the engine first** — which is `currentStep = 0` — and then re-plans the sampler lanes from step 0. So a
+   *    bare `seek` would be wiped by the very press it was meant to affect, and the arrangement's recorded lanes would
+   *    sound the top of the piece while the engine played bar six: the §26 "locating loses the first beats" failure.
+   *    `pause()` is the seam that carries the step across (`pausedAtStep = engine.getCurrentStep()`, and the sampler
+   *    scheduler receives `{ fromStep }` on the play that follows), and its documented meaning — *hold the transport's
+   *    place, so the next play continues from there* — is exactly what setting a play position is. **Order matters**:
+   *    the seek is written first, so the step the player captures is the step the user clicked.
+   *
+   * ⚠️ **A click while the transport is running relocates and holds it**, rather than relocating mid-flight. That is
+   * deliberate and it is the honest limit of doing this without touching the recorded-lane scheduler: a pass that is
+   * already planned cannot be re-planned mid-flight, so continuing to play would leave the engine at bar six and the
+   * recordings on their old plan. Holding both halves at the same step is a smaller lie than a seek that only half
+   * happens.
+   *
+   * ⭐ **And the marker follows the landing, not the request.** `seek` answers with the step it clamped to, so a click
+   * on a bar the pattern does not reach leaves the triangle where the transport actually is. A marker drawn from the
+   * requested bar would be the same decorative triangle this change removes, one clamp further along.
+   */
+  const onRulerSelect = useCallback(
+    (next: number) => {
+      setStripBar(next);
+      /**
+       * The bar the transport can actually reach: the ruler draws eight bars whatever the pattern holds, so a click
+       * past the end lands on the last step that exists rather than on a step the scheduler would wrap away.
+       */
+      const limit = seekPatternSteps === undefined ? Number.POSITIVE_INFINITY : Math.max(0, seekPatternSteps - 1);
+      const target = Math.min(next * stepsPerBar, limit);
+      const landed = seekTransport?.(target);
+      /**
+       * The ruler click sets where a play will begin, which is Bitwig's gesture and why the play-start marker is here
+       * — and it is drawn from the transport's own answer when there is a transport to ask. No engine (a view rendered
+       * as a picture, every existing criterion) keeps the requested bar, which is exactly what it drew before.
+       */
+      setPlayStartBar(Math.floor((landed ?? target) / stepsPerBar));
+      // And the half that owns the recorded lanes — see the note above; this is not an optional extra.
+      player?.pause?.();
+    },
+    [stepsPerBar, seekPatternSteps, seekTransport, player]
+  );
 
   /**
    * ⭐ **The brace, in the transport's unit — converted once, here, and stated in the one place both units meet.**

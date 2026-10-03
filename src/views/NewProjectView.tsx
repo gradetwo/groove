@@ -156,6 +156,18 @@ export function NewProjectView({ capture, onProjectNameChange, arrangementId }: 
   );
 
   /**
+   * ⭐ **The same seam for the other half of the ruler: where the transport actually is.**
+   *
+   * A ruler click is a **seek**, and the engine is the only thing that owns a position — so the view is handed
+   * `AudioEngine.seek` the way it is handed `setLoopRange`: in the engine's own unit (**steps**, converted by the view
+   * that draws the bars) and bound for the same reason (`seek` reads `this.currentStep` and `this.totalSteps`).
+   *
+   * Absent while the engine is still being constructed, so the view's "there is no transport to move" is the prop's
+   * absence rather than an empty function claiming one.
+   */
+  const seekTransport = useCallback((step: number) => engine?.seek(step), [engine]);
+
+  /**
    * ⭐ **Nothing is drawn until the stored project has been read.**
    *
    * The read is asynchronous, and rendering the arrangement before it resolves would draw the chooser for one frame —
@@ -171,7 +183,7 @@ export function NewProjectView({ capture, onProjectNameChange, arrangementId }: 
       player={player}
       capture={capture}
       instruments={instruments}
-      {...(engine === null ? {} : { setTransportLoopRange })}
+      {...(engine === null ? {} : { setTransportLoopRange, seekTransport })}
       {...(store.project === null ? {} : { initialArrangement: store.project.arrangement })}
       {...(store.loadProblem === null ? {} : { loadProblem: store.loadProblem })}
       /**

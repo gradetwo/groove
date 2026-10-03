@@ -56,7 +56,15 @@ export interface ArrangementRulerV2Props {
   bars: number;
   /** Which bar the view is looking at, 0-based. */
   currentBar: number;
-  /** Moving the view. Optional, so the ruler can be drawn as a picture of the arrangement's length. */
+  /**
+   * Moving the view. Optional, so the ruler can be drawn as a picture of the arrangement's length.
+   *
+   * ⭐ **Named for what it was, and it is now a seek.** The label on each of these bars has always said
+   * 「跳到第 4 小节」 and the cursor has always been a pointer, but for a long time the callback moved a decorative
+   * play-start triangle while the transport stayed at bar one (`/var/tmp/uxaudit/seek3.json`). The view that draws
+   * this ruler converts the bar to the engine's own steps and moves the transport with it, which is Ableton's own
+   * gesture — *"You can click anywhere within a track to move the insert marker and set a new play position"*.
+   */
   onSelectBar?: (bar: number) => void;
   /**
    * The zoom, in pixels per bar. **The same number the lanes are laid out with**, because a ruler whose columns and
