@@ -378,9 +378,26 @@ describe("grounding: the table cannot drift from the real Toolbar", () => {
 
 describe("the tier table decides what is on screen", () => {
   it("shows exactly Tier 1 while the advanced density is off", () => {
+    /**
+     * ⭐ **"Exactly Tier 1" gained one named exception, and it is not a density change.**
+     *
+     * G3 measured that `arrangement` was rendered through `shows("arrangement")` — false until the user found the
+     * advanced-controls toggle — so a fresh install's toolbar did not contain the entry **in the DOM at all**. The
+     * table now says so explicitly: a control whose row declares `showByDefault` is on the default surface, and
+     * `validateTiers` refuses that declaration unless it names a real Tier 1 `reachableVia`.
+     *
+     * The expectation is derived from the row rather than from a list of ids here, so the number of such controls
+     * cannot grow silently, and the assertion below pins the exception at exactly one. `TIER_1_MAX` is untouched:
+     * `arrangement` is still Tier 2, which the left-hand side of the comparison proves.
+     */
     for (const item of ALL_TIER_ITEMS) {
-      expect(isControlVisible(item.id, false), `${item.id} (tier ${item.tier})`).toBe(item.tier === 1);
+      const expected = item.tier === 1 || item.showByDefault === true;
+      expect(isControlVisible(item.id, false), `${item.id} (tier ${item.tier})`).toBe(expected);
     }
+    // The exception is declared, not accidental: exactly one control claims it today.
+    expect(ALL_TIER_ITEMS.filter((item) => item.showByDefault === true).map((item) => item.id)).toEqual([
+      "arrangement",
+    ]);
   });
 
   it("shows everything while the advanced density is on", () => {

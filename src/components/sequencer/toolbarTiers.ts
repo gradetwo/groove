@@ -80,6 +80,18 @@ export interface ToolbarTierItem {
    * `validateTiers`, so a binding can never be recorded without a way to reach it.
    */
   reachableVia?: string;
+  /**
+   * ⭐ **This control belongs on the default toolbar, because the Tier 1 surface in `reachableVia` is where it lives.**
+   *
+   * Separate from `reachableVia` on purpose. `reachableVia` exists to justify a **keyboard binding** on a control that
+   * is not always visible (D, C and P all carry one), so it is set on three rows that are correctly *behind* the
+   * advanced density. This field is about **the default surface** and is set only where the survey measured a
+   * discoverability defect: `arrangement`, which no fresh install could see at all.
+   *
+   * `validateTiers` requires it to be paired with a `reachableVia` that names a real Tier 1 surface, so "on screen by
+   * default" always comes with a stated way to reach it.
+   */
+  showByDefault?: boolean;
   tier: ToolbarTier;
   /** The control's real `data-testid`, when the Toolbar renders one. */
   testId?: string;
@@ -170,11 +182,26 @@ export const TIER_2: readonly ToolbarTierItem[] = [
   /**
    * B3's arrangement view.
    *
-   * Tier 2 beside song mode because it is the editor for the same thing that toggle turns on — and because Tier 1
-   * is at its cap of 14. It has no keyboard binding of its own, so it needs no `reachableVia`; the host passes its
-   * handler only on the desktop/iPad shell, so the phone never renders it at all.
+   * Tier 2 because Tier 1 is at its cap of 15, and because that is this control's real *frequency* judgement: an
+   * arrangement is opened on purpose for a whole session, not reached for every few seconds like the transport.
+   *
+   * ⭐ **`reachableVia: "more"` + `showByDefault`, and the pair is the whole G3 fix.** This row was the one control
+   * the shortcut invariant could not see: it carries no keyboard binding, so `validateTiers` never asked how it is
+   * reached, and the Toolbar rendered it through `shows("arrangement")` — false until the user guessed that an
+   * unlabelled "advanced controls" toggle existed. The measured report is that a fresh install's toolbar did not
+   * contain the arrangement entry **in the DOM at all**, and that `document.body.innerText` did not contain the word.
+   *
+   * `reachableVia` names the Tier 1 surface that keeps it reachable; `showByDefault` is what puts the control **on**
+   * that surface instead of behind a second toggle. Both are needed and they are not the same claim — see the field's
+   * comment: three other rows declare `reachableVia: "more"` only to justify a key, and they stay behind the density
+   * where they belong. Remove either field and `toolbarArrangementDiscoverability.test.tsx` goes red.
+   *
+   * No keyboard binding of its own, deliberately: every single-key binding must be grounded in
+   * `useTransportShortcuts.ts` (a test reads that hook and compares its keys against this table), so inventing a
+   * token here would be the table promising a key the app does not answer — and the brief's "a shortcut is not enough
+   * on its own, because a new user does not read shortcuts" is why the visible surface is the mechanism used.
    */
-  { id: "arrangement", labelKey: "toolbar_arrangement_title", tier: 2 },
+  { id: "arrangement", labelKey: "toolbar_arrangement_title", reachableVia: "more", showByDefault: true, tier: 2 },
   // The hook binds C to the floating console; reachable from "more" (note 3).
   { id: "console",
     labelKey: "console_float_toggle",
@@ -278,19 +305,45 @@ export function tierOf(id: string): ToolbarTier | undefined {
 }
 
 /**
+ * ⭐ **The controls that belong on the default toolbar because a permanently visible Tier 1 surface reaches them.**
+ *
+ * `reachableVia` is read by `validateTiers` to keep the shortcut invariant honest — it answers *"a key on this control
+ * is not a broken promise"*. That is a different question from *"is this control on the surface a fresh install
+ * shows?"*, and conflating the two is a mistake this file made once: `drums-only`, `console` and `project-hub` all
+ * declare `reachableVia: "more"` to justify their single-key bindings, and treating every such declaration as
+ * "visible by default" would have put four more controls on a toolbar whose whole density budget is the point.
+ *
+ * So visibility is its own declaration, `showByDefault`, and it must be paired with a real Tier 1 `reachableVia` —
+ * `validateTiers` refuses the pairing that would otherwise be a control on screen for no stated reason.
+ *
+ * The measured defect it exists for (G3): `arrangement` was rendered through `shows("arrangement")`, which is false
+ * until the user finds the advanced-controls toggle, so a fresh install's toolbar did not contain the entry **in the
+ * DOM at all** and no text on the page said "arrangement". Computed once, because the table is static and this
+ * predicate runs for every control on every render.
+ */
+const SHOWN_BY_DEFAULT: ReadonlySet<string> = new Set(
+  ALL_TIER_ITEMS.filter((item) => item.showByDefault === true).map((item) => item.id)
+);
+
+/**
  * Whether a control is shown at the given density — the one predicate the Toolbar renders through.
  *
  * `showAdvanced` is the existing "advanced" toggle, which the toolbar has had for a while. Wiring
  * the tier table to it is what turns that toggle from a *sound-design* drawer into the density
  * control: Tier 1 stays on screen, Tier 2 and Tier 3 wait behind it.
  *
+ * ⭐ **One named exception**, and it is named by the table rather than by a component: a control whose row declares
+ * `showByDefault` is on the default surface, because a Tier 1 surface reaches it and a control you can reach from the
+ * default toolbar is not "hidden". An id the table does not know is still hidden — "unrecorded" must never read as
+ * "show it", and the grounding test fails on one anyway.
+ *
  * It lives here, beside `tierOf`, so that a control's frequency and its visibility cannot be
- * decided in two places — the failure this table exists to prevent. An id the table does not know
- * returns `false`: an unrecorded control is not something to show by accident, and the grounding
- * test fails on one anyway.
+ * decided in two places — the failure this table exists to prevent.
  */
 export function isControlVisible(id: string, showAdvanced: boolean): boolean {
-  return tierOf(id) === 1 || showAdvanced;
+  if (tierOf(id) === 1) return true;
+  if (SHOWN_BY_DEFAULT.has(id)) return true;
+  return showAdvanced;
 }
 
 /**
@@ -362,6 +415,9 @@ export function validateTiers(items: readonly ToolbarTierItem[]): string[] {
           `${where}: tier 1 item declares reachableVia "${item.reachableVia}" — it is already visible`,
         );
       }
+      if (item.showByDefault) {
+        violations.push(`${where}: tier 1 item declares showByDefault — it is already visible`);
+      }
     } else if (item.reachableVia) {
       if (!allIds.has(item.reachableVia)) {
         violations.push(`${where}: reachableVia "${item.reachableVia}" is not a known control id`);
@@ -370,6 +426,17 @@ export function validateTiers(items: readonly ToolbarTierItem[]): string[] {
           `${where}: reachableVia "${item.reachableVia}" is not a tier 1 item, so it cannot keep this control reachable`,
         );
       }
+    }
+
+    /**
+     * ⭐ `showByDefault` is what `isControlVisible` reads, so a row carrying it is a control on the user's screen with
+     * no explanation unless `reachableVia` names a real Tier 1 surface. This check is what makes that impossible: the
+     * default surface can only grow by naming, in the table, the always-visible control that already reaches it.
+     */
+    if (item.showByDefault && !item.reachableVia) {
+      violations.push(
+        `${where}: showByDefault with no reachableVia — a control on the default toolbar must name the tier 1 surface that reaches it`,
+      );
     }
 
     const tokens = [...(item.shortcut ? [item.shortcut] : []), ...(item.shortcutAliases ?? [])];
