@@ -4,7 +4,8 @@ import { getActiveAudioEngine, setActiveAudioEngine } from "../audio/activeEngin
 import { createArrangementPlayer } from "../audio/playerFromEngine";
 import { appCatalogueRuntime } from "../data/sampleCatalogueRuntime";
 import { ArrangementViewV2 } from "../components/arrangement/ArrangementViewV2";
-import { libraryOfAsset, type InstrumentChoice } from "../components/arrangement/TrackListV2";
+import { instrumentChoicesFromAssets } from "../components/arrangement/CatalogueRecordingPicker";
+import type { InstrumentChoice } from "../components/arrangement/TrackListV2";
 import { useAudioEngineInstance } from "../features/sequencer/hooks/useAudioEngineInstance";
 import { useArrangementV2Project } from "../features/arrangement/arrangementStore";
 import type { CaptureOutcome } from "../audio/captureTake";
@@ -98,6 +99,10 @@ export function NewProjectView({ capture, onProjectNameChange }: NewProjectViewP
   /**
    * The instruments the catalogue actually holds, read from the same load the player uses. An instrument is an asset with an SFZ — the catalogue's own definition rather than a name that happens to look like one — and the list is
    * allowed to stay empty: a deployment whose manifest carries no instrument then offers no chooser instead of an empty one.
+   *
+   * ⭐ **The mapping itself lives in `CatalogueRecordingPicker`, beside the studio's chooser**, because the genre
+   * route grew the same one and two copies of "what an instrument is" would be the "two places, one thing" failure
+   * this codebase keeps removing. It is one function, called by both routes.
    */
   useEffect(() => {
     let cancelled = false;
@@ -105,19 +110,7 @@ export function NewProjectView({ capture, onProjectNameChange }: NewProjectViewP
       .load()
       .then(({ assets }) => {
         if (cancelled) return;
-        setInstruments(
-          assets
-            .filter((asset) => asset.sfz)
-            // The library comes from the id rather than from a second lookup: a multi-instrument library names its programs `entry:program`, and the entry is the library.
-            .map((asset) => ({
-              assetId: asset.assetId,
-              name: asset.name,
-              library: libraryOfAsset(asset.assetId),
-              // The category the manifest declares, absent when it does not — the panel then groups by library rather than inventing a word.
-              ...(asset.category ? { category: asset.category } : {}),
-              ...(asset.subcategory ? { subcategory: asset.subcategory } : {}),
-            }))
-        );
+        setInstruments(instrumentChoicesFromAssets(assets));
       })
       .catch(() => undefined);
     return () => {

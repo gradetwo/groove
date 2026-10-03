@@ -1948,3 +1948,74 @@ modwheel 不产生效果。
    `sw_last` to select articulations will not have a default articulation preselected, meaning when loaded, it will play no sound
    until one of the keyswitches is pressed"*），而本仓没有实时键盘；且**八个已 pin 的 VSCO `-KS` 程序**正是这种文件，它们自己的
    判据要求一个音能解析出来。**代价**：对这八个文件，本仓与 sfizz 不一致（sfizz 静音）——这是**显式选择**，不是静默降级。
+
+## ⭐⭐⭐⭐ 资产选择器对所有该能挑它的轨开放（2026-10-03）：曲风的旋律轨第一次能挑录音
+
+### ① 量出来的读数（我自跑，`src/test/*` 里那条临时测量脚本已删）
+
+| 量 | 读数 | 出处 |
+| --- | --- | --- |
+| 清单条目 | **34** | `public/samples/manifest.json` |
+| 程序级资产 | **327**，且**每一个都带 `sfz`** | `catalogueFromManifestText(text, "")` |
+| 资产所属库 | **34** 个 | 同上（按 `assetId` 冒号前切） |
+| 调色板行 | **22**（`ALL_SAMPLED_INSTRUMENTS` 48 ＝ 22 ＋ 26 条派生） | `src/data/sampledInstruments.ts` |
+| 经调色板行／鼓组常量可达的资产 | **48 / 327**（47 行资产 ＋ `virtuosity-drums-basic`） | `ALL_SAMPLED_INSTRUMENTS.map(assetId)` ∪ `DRUM_KIT_ASSET_ID` |
+| **不可达** | **279 / 327** | 同上 |
+| 可达／不可达的**库** | **17 / 17** | 同上 |
+
+⚠️ **更正 `docs/OPEN_WORK.md` §92.1 的"16 可达／18 不可达"**：那是**库**一级、且漏算了一行；我按资产的**真目录口径**
+重算，是 **17 库可达／17 库不可达**、资产一级 **48 / 327**。差别不影响结论，但读数以这里为准。
+
+**曲风路线的旋律轨为什么到不了那 279 条**：`src/views/StudioView.tsx` 的 inspector 走的是
+`InstrumentPicker`＋`INSTRUMENT_PRESET_ALIASES`，那是**乐器名**；名字要变成录音，必须在
+`src/data/sampledInstruments.ts` 里有一行手写的判断 —— 而 61 个名字里只有 22 个有。
+
+### ② 形状：写引擎已经读的那个字段，不发明第二套
+
+* `src/features/sequencer/useSequencerStore.ts` 新增 **`SET_TRACK_SAMPLE { trackIdx, assetId | null }`**：
+  写／删 `SequencerTrack.sample`。这个字段**本来就在**（`src/types/genre.ts`，`projectDb.ts` 已经持久化），
+  **引擎本来就读它**：`sampledAssetForLane` 的第一个来源就是 `lane.sample.assetId`（`audio` 与 `SAMPLED_ROLES`），
+  `sampledLaneRefs`／`sampledStandDownIndexes` 决定它是否真的从自己的字节混出来。**本轮没有改 `src/audio/**`，
+  也没有改 `src/data/sampledInstruments.ts` 一个字。**
+* `src/components/arrangement/CatalogueRecordingPicker.tsx`（新）：列表来自
+  `instrumentChoicesFromAssets(assets)` —— **和 `/new` 同一个函数**（从 `NewProjectView` 原样搬出，两边不再各写一份）；
+  角色的边界来自 `SAMPLED_ROLES` 本身（不是抄一份名字表）＋ `audio`；
+  `null` 是"改回按乐器名解析"，不是静音。
+* `src/views/StudioView.tsx`：inspector 打开时在旁边渲染它，`onChoose` → `SET_TRACK_SAMPLE`。
+* **空目录给理由**：`src/data/sampleCatalogueStatus.ts` 的 `describeRuntimeStatus`
+  （它自己的注释就写着"a UI imports both"），**没有第二套句子**；没有镜像时**不画按钮**，画原因。
+
+### ③ 为什么没做 `/studio` 的 `ArrangementPanel`
+
+**因为它没有能播录音的轨。** `ArrangementPanel`／`TrackRows` 画的是 `Song` 的**段落与 clip 车道**
+（`src/types/song.ts`、`src/data/songFlatten.ts`），不是 `ArrangementV2` 的 track，也不是 `SequencerPattern` 的
+lane：那里没有 `kind: "sampler"`、没有 `instrument`、没有 `sample`，一条车道就是一个 clip 槽位。给它加"资产选择器"
+要先发明"这条车道播哪个录音"这个概念 —— 那是**新模型**，不是本轮 S–M 的形状。曲风路线（StudioView 的 v1 旋律轨）
+是**已经有那个字段**的那条路，所以先做它。
+
+### ④ 判据与"能红"实跑（`src/test/catalogueRecordingPicker.test.tsx`，14 条）
+
+| 反向实验（改完再跑，随后恢复） | 结果 |
+| --- | --- |
+| 从 `StudioView.tsx` 摘掉 `<CatalogueRecordingPicker/>` 那个入口 | **1 条红**：`Unable to find an element by: [data-testid="lane-recording"]`（"the studio's inspector" 那条） |
+| 把 `SET_TRACK_SAMPLE` 的 reducer 改成 `return state` | **1 条红**：`expected undefined to deeply equal { Object (assetId) }`（"the choice reaches the engine" 那条） |
+| 把空目录的原因那一段改成 `null` | **1 条红**：`Unable to find an element by: [data-testid="lane-recording-unavailable"]` |
+
+断言**落在引擎的入口**上，不是组件状态：`sampledAssetForLane`（这条车道响什么）、`sampledLaneRefs`（哪些车道是录音）、
+`sampledStandDownIndexes`（哪些会真的从自己的字节混、合成器退场）；集成那条读的是
+`engineMock.setPattern` **最后一次拿到的 pattern**，即 transport 真会播的那个对象。
+
+**反向判据**：`sampledInstrumentPaletteWiring.test.ts`、`sampledInstruments.test.ts`、`drumRoles.test.ts`、
+`trackInstrumentChooser.test.tsx`、`instrumentLibrary.test.tsx`、`importInstrumentMapping.test.tsx`、
+`sequencerStore.test.ts`、`trackInspector.test.tsx`、`newProjectPanel*`、`arrangement*`、`StudioConsoleFloat.test.tsx`
+**一字未改、全部通过**（选中的定向套件 30 个文件 327 条）。
+
+### ⑤ 判不了／未核实
+
+* **`CatalogueStatus.summary` 是英文的**（`src/data/sampleCatalogueStatus.ts` 只有一份句子，没有 i18n）。中文界面下那一行
+  会显示英文；要么给这个模块加语言参数（另一个文件的改动），要么接受。如实记录。
+* **`/studio` 的 `ArrangementPanel` 未做**，理由见 ③。
+* 试听/预听（不打断播放）**没做**：录音要到 transport 起播时的 `prepareSampledLanes` 才生效，与既有的调色板路线同一条路；
+  "换录音时正在响的那一段会怎样"**未测**。
+* 资产一级 48/327 的"可达"是**按已发布内容**（调色板行＋鼓组常量＋technique 派生行）算的；technique 名字不在曲风数据里，
+  所以**曲风路线实际可达的是 22 行 ＋ 鼓组**，比 48 更窄。这个更窄的口径我只算了名字表，**没有逐曲风跑一遍**。

@@ -134,6 +134,20 @@ export type SequencerAction =
   | { type: "SET_TRACK_SENDS"; trackIdx: number; sendA?: number; sendB?: number }
   | { type: "SET_TRACK_INSTRUMENT"; trackIdx: number; instrument: string }
   /**
+   * ⭐ **The catalogue recording a lane plays, chosen by the person rather than by the written table.**
+   *
+   * `null` clears it, and that is not "silence": it puts the lane back on whatever decided its sound before — the
+   * name table's row for its `instrument`, or its built-in synthesised voice. Setting it writes the one field
+   * `sampledAssetForLane` reads first (a lane's own `sample.assetId`), so the choice reaches the engine through the
+   * resolver that already existed rather than through a second place that would have to be kept in step.
+   *
+   * It is accepted for every lane, and honoured by the engine for the roles that can play a recording
+   * (`src/data/sampledInstruments.ts`: a drum role's `sample` is refused on purpose, so a kit lane cannot become
+   * one note). The interface is responsible for offering it only where it is honoured — see
+   * `laneAcceptsCatalogueRecording`.
+   */
+  | { type: "SET_TRACK_SAMPLE"; trackIdx: number; assetId: string | null }
+  /**
    * E-10: an insert-chain edit. `patch` is merged over the track's current chain, and a
    * missing chain resolves from the role's factory default first — so the first edit on a
    * track starts from the strip the user is actually hearing, not from a blank one.
@@ -568,6 +582,22 @@ export function sequencerReducer(state: SequencerState, action: SequencerAction)
         ...t,
         instrument: action.instrument,
       }));
+      return withUpdatedPattern({ ...state.pattern, tracks });
+    }
+
+    /**
+     * The lane's own recording. Cleared by **removing the field** rather than writing `undefined`, so a lane that
+     * never chose one and a lane whose choice was undone have the same shape — and so a project saved after a clear
+     * carries no `sample` key at all, exactly like the one that was read before the choice was made.
+     */
+    case "SET_TRACK_SAMPLE": {
+      const tracks = updateTrack(state.pattern.tracks, action.trackIdx, (t) => {
+        if (action.assetId === null) {
+          const { sample: _cleared, ...withoutSample } = t;
+          return withoutSample;
+        }
+        return { ...t, sample: { assetId: action.assetId } };
+      });
       return withUpdatedPattern({ ...state.pattern, tracks });
     }
 

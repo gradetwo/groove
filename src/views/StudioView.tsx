@@ -27,6 +27,17 @@ import { ArrangementPanel, type ArrangementEdit } from "../components/arrangemen
 import { sessionSong } from "../data/songFlatten";
 import { arrangementSections, type ArrangementFormId } from "../data/arrangementForm";
 import { TrackInspector } from "../components/console/TrackInspector";
+import {
+  CatalogueRecordingPicker,
+  instrumentChoicesFromAssets,
+} from "../components/arrangement/CatalogueRecordingPicker";
+import type { InstrumentChoice } from "../components/arrangement/TrackListV2";
+import { appCatalogueRuntime } from "../data/sampleCatalogueRuntime";
+import {
+  describeCatalogueStatus,
+  describeRuntimeStatus,
+  type CatalogueStatus,
+} from "../data/sampleCatalogueStatus";
 import { MusicalTypingModal } from "../components/sequencer/MusicalTypingModal";
 import { INSTRUMENT_PRESET_ALIASES } from "../audio/instrumentPresets";
 import { bypassTrackInsert } from "../data/trackInsert";
@@ -907,6 +918,44 @@ export const StudioView: React.FC<StudioViewProps> = ({
     releasePreviewScopeRef.current = releaseAuditionPreviewScope;
   }, [releaseAuditionPreviewScope]);
 
+  /**
+   * ⭐ **The catalogue recordings this session can offer a genre lane** — the list the studio never had.
+   *
+   * `/new` has loaded the runtime since its chooser existed; the genre route's timbre picker goes by instrument
+   * *name*, so a lane could only reach a recording when `src/data/sampledInstruments.ts` happened to have a row for
+   * its name. The runtime is the same one the transport already uses to stand recorded lanes down
+   * (`useTransportControls`), so this adds one consumer to a fetch that is single-flight and per session — not a
+   * second catalogue.
+   *
+   * The **status travels with the list** because an empty list has four different causes and only one of them is
+   * "there is nothing to play" — `describeRuntimeStatus` is the module that tells them apart, and it was written for
+   * a UI to import. Without it, this surface would have nothing to say when the mirror is not configured, which is
+   * the shipped default.
+   */
+  const [catalogueInstruments, setCatalogueInstruments] = useState<InstrumentChoice[]>([]);
+  const [catalogueStatus, setCatalogueStatus] = useState<CatalogueStatus>(() =>
+    // Before any load has been asked for: "loading" when there is a mirror to ask, and the runtime's own words when
+    // there is not (calling it "loading" forever would be a promise nothing is working on).
+    appCatalogueRuntime.configured
+      ? describeCatalogueStatus({ configured: true, loading: true, ready: false, problems: [], assetCount: 0 })
+      : describeRuntimeStatus(appCatalogueRuntime)
+  );
+  useEffect(() => {
+    if (!appCatalogueRuntime.configured) return;
+    let cancelled = false;
+    void appCatalogueRuntime
+      .load()
+      .then(({ assets }) => {
+        if (cancelled) return;
+        setCatalogueInstruments(instrumentChoicesFromAssets(assets));
+        setCatalogueStatus(describeRuntimeStatus(appCatalogueRuntime));
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const anySolo = useMemo(() => pattern.tracks.some((t) => t.solo), [pattern.tracks]);
 
   return (
@@ -1191,6 +1240,7 @@ export const StudioView: React.FC<StudioViewProps> = ({
       {/* Feature #2: the mixing console floats over the studio with the SAME engine
           and store — it never constructs either. Closed => renders nothing. */}
       {inspectorTrackIdx !== null && pattern.tracks[inspectorTrackIdx] && (
+        <>
         <TrackInspector
           onOpenPianoRoll={() => handleOpenPianoRoll(inspectorTrackIdx)}
           // The header's ▶ audition button is desktop-only now (it did not fit the 142 px
@@ -1266,6 +1316,33 @@ export const StudioView: React.FC<StudioViewProps> = ({
           }
           onClose={() => setInspectorTrackIdx(null)}
         />
+        {/**
+          ⭐ **The catalogue recordings, for the lane the inspector is open on.**
+          *
+          * The inspector's own timbre picker chooses an instrument **name**, and a name reaches a recording only
+          * through a hand-written row in `src/data/sampledInstruments.ts` — 22 of the 61 names the genre data writes.
+          * This is the other half, and it is deliberately a separate surface rather than a second list inside that
+          * picker: a name decides which *family* of sound a lane is (and is what the written table, `resolveGs1Patch`
+          * and every genre's own timbre resolve), while this decides **which recording** that sound is played from.
+          * Folding the two into one list would make "saw_lead" and "Steel drum, no crossfades" look like alternatives
+          * of the same kind, and the first is a synthesised voice by definition.
+          *
+          * It renders nothing at all for a lane whose role the engine would not honour a recording on (a drum role,
+          * `fx`), and it states the reason rather than drawing an empty browser when the mirror is not configured —
+          * both rules live in the component, where they can be judged without the studio.
+          */}
+        <CatalogueRecordingPicker
+          trackName={pattern.tracks[inspectorTrackIdx].name}
+          role={pattern.tracks[inspectorTrackIdx].track_id}
+          {...(pattern.tracks[inspectorTrackIdx].sample?.assetId
+            ? { assetId: pattern.tracks[inspectorTrackIdx].sample.assetId }
+            : {})}
+          instruments={catalogueInstruments}
+          status={catalogueStatus}
+          // One command, one undo entry: the lane's own recording, which `sampledAssetForLane` reads first.
+          onChoose={(assetId) => commit({ type: "SET_TRACK_SAMPLE", trackIdx: inspectorTrackIdx, assetId })}
+        />
+        </>
       )}
 
       <ConsoleOverlay
