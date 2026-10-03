@@ -3970,3 +3970,43 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
    （像 `playing-B` 里 `samplerLanePlayback ≈26%` 那种粒度 ✓ ⇒ 否则只知道"慢 9 秒"，不可修 ✗）
 ⚠️ 全部仍按三档负载标签 ✓（当时 load 12.6→18.8 ✗ ⇒ **仅上界** ✓）
 ```
+
+## 一百一十七、(乙) **Web 版功能缺口普查：10 条**（2026-10-03 19:3x 时点 ✓，全文 548 行在 `/var/tmp/gaps-work/WEB_FEATURE_GAPS.md` ✓）
+
+**方法**：worktree `groove-gaps`（base `b8b7405` ✓）、Playwright 1.63 ＋ 8 个探针、**0 pageerror／0 console error** ✓；
+**load 同记**（11.7 → 峰值 19.6 → 14.9 ✓）；**28 张截图**在 `/var/tmp/gaps-work/` ✓；`/tmp` 未用 ✓；**未改任何产品代码** ✓。
+
+| # | 缺口（创作者视角） | 关键证据 | 分类 |
+|---|---|---|---|
+| **G1** ★ | 编排工程**没有列表**，只能回"最近一个"；**Hub 显示 "0 saved projects"** | `getAllArrangementProjects`（`projectDb.ts:1194`）排除自身模块后 **0 调用** ✓；Hub 读**另一个 object store**（`ProjectHubModal.tsx:124` → `getAllProjects`）✓；截图 `62-project-hub-empty.png`：Hub 0，而同会话 IndexedDB 直读有 `"Gap Probe One"` ✓ | 能做但没做 |
+| **G2** ★ | 点顶栏 New ⇒ URL 变 `/` ⇒ **一刷新编排就没了** | `formatRouteToUrl`（`router.tsx:270-283`）**从不序列化 `newProject`** ✓；实测刷新后 `arrangementView:1 → 0` ✓ | 能做但没做 |
+| **G3** ★ | 新装下**"编排"入口不在 DOM 里** | `toolbarTiers.ts:177` ✓；默认工具栏实测**只有 8 个控件**（点"高级控件"后 20 ✓）；本仓**为导出修过同类**（`toolbarExportDiscoverability.test.tsx:1-17` ✓） | 能做但没做 |
+| **G4** ★ | 编排里**不能改轨名** | `renameTrack`（`arrangementEdits.ts:289`）UI **0 调用** ✓；MCP 有 ✓；`mcpCoverage.test.ts:52` 把它写进 `EXPOSED` ⇒ **闸门认为已覆盖** ✗ | 能做但没做 |
+| **G5** ★ | **不能建组/folder** | `setTrackParent`（`:267`）UI **0 真实调用**（唯一命中是 `TrackListV2.tsx:4` 的**注释** ✓）；MCP 注释：「Folding is display only and must never change what is heard」✓ | 能做但没做（需裁定 folder vs bus） |
+| **G6** ★ | **不能写 tempo map／拍号变化** | `setArrangementTempoMap`（`:332`）／`setArrangementTimeSignature`（`:386`）UI **0 调用** ✓；`types/arrangementV2.ts:194` 自陈「the only thing missing was a way for the arrangement to say it」✓ | 能做但没做 |
+| **G7** ★ | **不能"加一段"**：3 个形态按钮按下去**整份被替换** | `StudioView.tsx:333-343` → `SET_SECTIONS` ✓；`ArrangementCommand`（`songEdit.ts:198`）只有 move/grow/shrink/duplicate/remove ✓；`songEdit.ts:10` 自陈「**never invents a section**」✓ | 能做但没做（需裁定） |
+| **G8** | 无撤销历史面板 | `useArrangementHistory.ts:74-75` 注释「for the toolbar's readout」✓；**能绕**（连按 Ctrl+Z ✓） | 能做但没做（低优先） |
+| **G9** ★ | **音频启动门硬编码中文** ＋ 无 `aria-modal`／Esc 无效／无初始聚焦 | `AudioStartGate.tsx` **完全无 `useLanguage`/`t()`** ✓（正则 → null）；`:127 aria-label="开始"`／`:147 "启动音频引擎"` ✓；实测 `after Escape, still present: 1` ✗；截图 `01-boot.png`：**英文界面 ＋ 中文按钮** ✗ ⇒ 违反 ARIA APG Dialog 三条 ✓ | 能做但没做（门本身正当：Chrome autoplay 要求手势 ✓） |
+| **G10** ★★ | ⭐ **元缺口**：闸门**只单向**（模型 ⇒ MCP 工具），**没有反向的"⇒ Web 入口"闸门** | `mcpCoverage.test.ts` 比对的是 `TOOLS.map(t=>t.name)` ✓；它"覆盖"的 **4 个操作恰好就是界面到不了的 4 个** ✓✓；仓库**已为 FX 参数发明过反向闸门**（`fxParamReachability.test.ts`，连"注释先剥离"都处理了 ✓） | 能做但没做（**建议第一批做** ✓） |
+
+**来源 B（MCP 口径，它独立复核 ✓）**：`npm run check:mcp` ⇒ **92 tools／7 resources／4 prompts／123 checks passed／0 failed** ✓；
+   另从 `mcp/registry.ts` 抽 96 − 4 prompt ＝ **92** ✓ 一致；逐工具表在全文（**18 条缺 Web 入口** ✓，
+   其中 **12 条在 `src/` 里完全无实现** ⇒ 待业主裁定 ✓）
+**来源 C ⚠️ 更正**：**`src/mobile/**` 在 `dev` 上不存在** ✗ —— 移动形态**被刻意砍掉且有裁定** ✓
+   （`src/platform/surfaceCapabilities.ts:1-13` 逐字引「That shell is **cut**（`docs/OPEN_WORK.md` §十三，preserved on `mobile-preserved`）」✓）
+   ⇒ 分类 **故意不做** ✓（它**未**去 `mobile-preserved` 做对照 ✗，如实标超范围 ✓）
+**§106 已备**（逐字＋URL ✓）：开最近工程（Ableton §5.4.1）｜撤销历史面板（§5.4.2）｜导出分轨（§5.1.3.1）｜
+   改轨名（§18.2）｜Group Track（§18.3）｜拍号标记（§6.5）｜循环区间（§6.6，本仓已有 ✓）｜MIDI 导入导出（§5.2）｜
+   合并 Set（§5.4.3）｜Chrome autoplay（门的正当性）｜ARIA APG Dialog｜WCAG 2.1.1／2.5.7 ✓
+   如实写"未找到"：Logic 分轨导出逐字 ✓、Logic tempo track 逐字 ✓、Ableton §7.2.1 正文 ✓、Tone.js 工程外壳 ✓
+**⚠️ 诚实项**：**§8 的"把缺陷放回去验判据会红"本轮没做** ✗（禁止改代码 ✓）⇒ **所有判据都是未执行草案** ✓（**没假装验过** ✓✓）
+   ＋ 它核了 `dev` 前进的 4 笔**全是 `docs/OPEN_WORK.md`**（`git diff --name-only b8b7405 c01e367` ✓）⇒ 结论仍成立 ✓
+
+**⇒ 我已派第一批修复（一条线，顺序 ✓）**：**G10**（只改 `src/test/**` ✓，落地**即产 4 条红** ✓，豁免须**逐条具名＋理由** ✓，
+   **不许放宽扫描** ✗）⇒ **G2**（最小改动：点 New 后刷新仍是编排 ✓）⇒ **G9**（文案走既有 i18n ✓＋`aria-modal`／Esc／初始聚焦 ✓，
+   **门本身正当、不删** ✗）
+**⇒ 待业主裁定 5 条**：① G1 并入现有 Hub 还是另立 ✓ ② G5 folder（只显示）还是 summing bus（能听见）✓
+   ③ G6 编排拍号与 studio `timeSignature` 是同**一个事实**还是两个 ✓ ④ G7 "never invents a section"是**刻意边界**还是现状 ✓
+   ⑤ 12 条"只在 MCP、`src/` 无实现"的能力：**做界面**还是按 §27 **写进 `needs`**（"只给 agent"）✓
+   ⚠️ 另：G4/G5/G6 要加的 command 壳落在 `src/data/arrangementHistory.ts`（在 `src/data/**` 禁改区 ✗）
+     ⇒ 动手时**只对该文件放开、且只允许新增 command 壳** ✓（普查线已收工 ⇒ 无碰撞 ✓）
