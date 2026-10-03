@@ -21,5 +21,13 @@ describe("the blank-kind description", () => {
     // The facts the report needed are all still there, not just the first one.
     expect(described).toContain("synth");
     expect(described).toContain("templateId");
+    /**
+     * ⭐ The owners report also met this one: a blank sampler track really does start on the drum kit
+     * (`src/data/defaultContent.ts:25`), which was "unexpected" in their words. The default is left alone — it is a
+     * musical choice and changing it would change what every future blank track sounds like — so the fact is written
+     * where an agent reads it, and asserted here so it cannot quietly disappear.
+     */
+    expect(described).toContain("virtuosity-drums-basic");
+    expect(described).toContain("salamander-grand");
   });
 });
