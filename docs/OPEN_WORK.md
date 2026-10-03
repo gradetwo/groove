@@ -6216,3 +6216,47 @@ problems: **[]** ✓
 ⇒ ⭐ **下一步**：① 写**能红的判据**（三音最小复现 ⇒ 往返 3 ✓，改回旧行为即红 ✓）② 跑**反向量五数** ✓
    ③ **在 `groove-xval` 里提交代码改动**（⚠️ 目前它**还在工作树里未提交** ✗）并推 `dev` ④ 核 CI 判决 ⑤ 再单独量这两处残余 ✓
 ```
+
+```
+## 二百三十六、🔎 **Logic 导出立项·第一步：量清"自家读取器要什么"（原样留档 ✓）**（2026-10-04 01:1x ✓）
+
+**方法** ✓：`ls` ＋ `grep -nE`（包结构关键词／调用入口 ✓）：
+    === 与 logic 有关的源文件 ✓ ===
+      44426 src/data/logicToArrangement.ts
+    === 读取器要求的包结构／入口（grep 实证 ✓） ===
+  4: * A `.logicx` is a directory, and only two of its files carry music this model can hold:
+  6: *   Alternatives/NNN/ProjectData       the binary: tracks, regions, the notes inside them, tempo and meter
+  7: *   Alternatives/NNN/MetaData.plist    the plain plist beside it
+  8: *   Resources/ProjectInformation.plist which alternative `NNN` is the active one — **not** always `000`
+  10: * So the entry point takes **those files' bytes**, not a bundle: a `.logicx`'s `Media/` may hold gigabytes of audio
+  25: * (`phierceweb/logicxkit`, Apache-2.0; `Evilander/logic2ableton`, MIT; `loov/logicx`, GPL-3.0-or-later, quoted for one
+  27: * GPL-licensed analyser (`geoffmyers/logicx-analyzer`) was not copied.
+  39:/** 960 ticks per quarter note, the resolution Logic writes into `ProjectData`. */
+  49:  /** `Alternatives/NNN/ProjectData`. */
+  51:  /** `Alternatives/NNN/MetaData.plist` — XML or binary plist. */
+  70:  /** The alternative `ProjectInformation.plist` names as active, or `undefined` when it names none. */
+  82: * `ProjectInformation.plist` is a **binary** plist and `MetaData.plist` may be either, and this runs in the browser
+  179:       * `MetaData.plist` says `BeatsPerMinute = 120.0`, whose bytes read as the integer `1123024896`. That number
+  180:       * then reaches the caller as the project's tempo and, worse, makes the "MetaData and ProjectData disagree"
+  303: * **This is the field that must not be assumed.** A project may hold several alternatives under `Alternatives/`, and
+  304: * `004` is as ordinary as `000`; a reader that opens `Alternatives/000/ProjectData` because that is the first name it
+  305: * saw can import a different arrangement than the one the project is on. `Resources/ProjectInformation.plist` names
+  324: * The ProjectData record stream
+  354: * `ProjectData` is a 24-byte root header followed by a flat run of records, and each record is a 36-byte header —
+  362:    return { records: [], problems: ["the project data does not begin with the Logic root frame magic (23 47 C0 AB) — this is not a ProjectData fi
+  366:    problems.push(`ProjectData declares ${declared} payload bytes but holds ${bytes.length - 0x18} — reading what is there`);
+  423: * The **line**: the 16 bytes every event in a `qSvE` payload is built from, and the byte inside it whose top bit
+  433: * `phierceweb/logicxkit` (**Apache-2.0**, `logic/services/events.py`) — "The payload is 16-byte lines. A line whose
+  436: * and `loov/logicx` (**GPL-3.0-or-later**, `event.go`) — "a note event grows by one atom per attached score symbol",
+  448: * pitch bend (`logicxkit`'s `midi.py` writes exactly that table), and the owner's corpus really does hold those
+  486: * Walk a `qSvE` payload as what it is: a sequence of 16-byte lines.
+  531: * Whether a `qSvE` payload is a region's note sequence.
+  542:  if (record.tag !== "qSvE" || record.payload.length < RECORD_HEADER + EVENT_LINE_SIZE) return false;
+    === 谁调用它（入口 ✓） ===
+  src/test/logicCorpusLines.test.ts:27:import { activeVariant, fromLogicProject } from "../data/logicToArrangement";
+  src/test/logicFixtures.test.ts:20:import { activeVariant, fromLogicProject } from "../data/logicToArrangement";
+  src/test/logicImport.test.ts:16:import { activeVariant, fromLogicProject, fromLogicProjectBase64, LOGIC_TICKS_PER_QUARTER, scanPluginNames }
+  src/test/logicNoteForm.test.ts:25:import { fromLogicProject, LOGIC_TICKS_PER_QUARTER, parsePlist } from "../data/logicToArrangement";
+  src/test/mcpDocNoteForm.test.ts:34:import { fromLogicProject, LOGIC_TICKS_PER_QUARTER } from "../data/logicToArrangement";
+⚠️ 仅结构侦察 ✓，**无结论** ✗ ⇒ 下一步据此定写入端的最小可自洽目标 ✓
+```
