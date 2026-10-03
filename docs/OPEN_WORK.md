@@ -4736,3 +4736,29 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
 ✅ **MusicXML 导出**：**3 个测试文件** ✓（`musicXmlExport.test.ts` ✓、`musicXmlImport.test.ts` ✓、`lyricExport.test.ts` ✓）
 ⇒ ⭐ **修正 §139 的措辞**：第二阶段对 MIDI／MusicXML **不是"新建"** ✗，而是「**真浏览器实测 ＋ 补真实缺口 ＋ 补缺口判据**」✓；
    **只有 Logic 导出确实没有** ✗ ⇒ 借 **MIT** 的 `jonkubis/LogicProFormatWriter` 建 ✓（**须署名＋说明修改** ✓）或写进 `needs` ✓
+
+## 一百四十一、📦 **导出侦察实测（`0091e1f0` ✓，只量不改 ✓）＋ 挖出一条读侧真缺陷** ✗（2026-10-03 23:0x ✓）
+
+```
+✅ **我自查的三条全被确认** ✓：
+   · **MIDI 导出有两处实现** ✓ —— 编排面 `arrangementFiles.ts:123 midiFileFor` ← `arrangementToMidi.ts:210`（**SMF format 1** ＋ conductor 轨 ✓）；
+     工作台面 `useExportActions.ts:246` ← `MidiExporter.ts:340 downloadMidiFile` → `:92 generateMidiBytes`（**format 0** ✓）
+     实测：`arrangement.mid` **251 B**（头 `MThd` ✓、format 1、division 480、4×`MTrk` ✓）**102 ms** ✓；工作台 `Chicago House.mid` **2556 B／92 ms** ✓
+   · **MusicXML 导出存在** ✓：`musicxml.ts:340 toMusicXml` ← `arrangementFiles.ts:294`；入口 `ScoreV2.tsx:562 score-export-musicxml` ✓
+     实测 `chords.musicxml` **2827 B** ✓（`<?xml…?>` ＋ DOCTYPE MusicXML 4.0 ＋ `<score-partwise version="4.0">` ✓）**219 ms** ✓（有 busy 态、无百分比 ✓）
+   · **Logic 导出不存在** ✓（四条独立证据：`grep logicx` 全树**只命中一句注释** ✓；UI 所有 testid 的 `/logic/i` = **[]** ✓、
+     导出菜单**逐字 6 项** ✓；MCP **无 `export_logic*`** ✓；⭐ **产品自己的书面计划**写着「**导出：暂不做**」✓）
+⭐⭐ **往返实测** ✓：**MIDI ⇒ 完美** ✓（`parseMidiFile`＋`fromMidi` 读回 **3 parts／8+4+4＝16 音符**、轨名逐字相同、`problems: []` ✓✓；
+   同进程对照三轨 `firstFour` 逐值一致 ✓）
+✗✗ **MusicXML ⇒ 读侧量化偏差** ✗ ⇒ 病根**一行**：`src/data/musicxmlImport.ts:229` **`const resolution = 1 / 2;`** ✗
+   —— **同处注释自己说模型网格是十六分** ✓ ⇒ 应为 **`1/4`** ✓；影响 `:251` 起点量化与 `:252` 最短长度 ✓
+   实测对照：`len 0.25 → 0.5` ✗｜`start 0.25 → 0.5` ✗｜`start 0.75 → 1` ✗｜（`start 0.5 / len 0.5` 与 `start 1` 两行相符 ✓）
+   ⭐ 而**导出的 XML 本身合规** ✓（`<duration>1</duration>` ＋ `<type>sixteenth</type>` 正确 ✓）⇒ **这是读侧保真缺口** ✓，不是导出器的错 ✓
+   ⚠️ **今天没有任何判据覆盖十六分位置** ✗（`git log -L 228,232` 指向 `a042819` ✓）
+   ⇒ **已转给 `771d0d17`**（`musicxmlImport.ts` 在它的可改清单内 ✓，**一文件一写者** ✓）：先复现那张表 ✓ ⇒ 再改 ✓
+     （**若读数说别的值，以读数为准** ✗别信我 ✓）；判据：**十六分位置与长度往返逐值相等** ✓、**改回 `1/2` 必须红** ✓；
+     ⚠️ 若 `musicXmlImport`／`musicXmlExport`／`lyricExport` 既有判据因此变红 ⇒ **先停手告我** ✓
+⚠️ **其余缺口（导出阶段用 ✓）**：**MIDI 无进度/取消** ✓（实测 92–102 ms ⇒ **今天不需要** ✓，它**没夸大成缺陷** ✓）；
+   工作台 MIDI 项**无 `data-testid`** ✓（外观事实 ✓）；**文档口径**只提 WAV/MIDI/Ableton、未提 MusicXML ✓（**它先问、未擅改** ✓）
+✅ **纪律**：未改代码／未提交、`git status` **空**、3 个探针**已删**（0 残留 ✓）、语料未进工作树 ✓、未跑门禁 ✓、未动本台账 ✓、dev server 已停 ✓
+```
