@@ -11,6 +11,7 @@
  * also why `busy` exists — an offline render takes seconds and a menu that looks idle while it works is a lie.
  */
 import { useCallback, useState } from "react";
+import { logicFileFor } from "./arrangementFiles";
 import type { ArrangementV2, NoteEvent } from "../../types/arrangementV2";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { announcer } from "../../platform/announcer";
@@ -58,6 +59,8 @@ export interface UseArrangementFileActionsResult {
   exportMp3: () => void;
   exportStems: () => void;
   exportMusicXml: () => void;
+  /** Delivered as a zip named logicx.zip: a logicx is a directory and a browser hands over one file. */
+  exportLogic: () => void;
   /** A chosen file, dispatched by its own extension. */
   importFile: (file: File) => void;
   /** A chosen MusicXML document, which the toolbar's own input deliberately does not accept. */
@@ -258,6 +261,21 @@ export function useArrangementFileActions({
     });
   }, [arrangement.bpm, arrangement.timeSignature, run, say, scoreBars, scoreNotes, scoreTitle, t]);
 
+  const exportLogic = useCallback(() => {
+    if (scoreNotes.length === 0) {
+      say(t("arrangement_musicxml_empty"));
+      return;
+    }
+    void run(async () => {
+      /**
+       * The message is the MusicXML one, reused: it names the file and the note count, but a sentence written for
+       * another format is a copy gap rather than a correct one here. Recorded in docs/OPEN_WORK.md.
+       */
+      const file = logicFileFor(arrangement);
+      return { file, report: t("arrangement_musicxml_export_done", { filename: file.filename, notes: file.notes }) };
+    });
+  }, [arrangement, run, say, scoreNotes.length, t]);
+
   const importFile = useCallback(
     (file: File) => {
       /**
@@ -396,6 +414,7 @@ export function useArrangementFileActions({
     exportMp3,
     exportStems,
     exportMusicXml,
+    exportLogic,
     importFile,
     importMusicXml,
     ...(pendingMapping === undefined ? {} : { pendingMapping }),
