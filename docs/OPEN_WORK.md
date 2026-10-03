@@ -3376,3 +3376,26 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
    而我**打印了它的输出却没看退出码** ✗ ⇒ 直到下一轮才发现 ✓。
    **规矩**：**凡跑门禁，必须看**退出码**（不是看输出像不像成功 ✓）**；而且**文档里不许把"工作树里的新文件"写成"存在的文件"** ✓
    （本节已改为不构成路径引用的写法 ✓，`check:docs:refs` 退出码 0 ✓）
+
+### 一百零九、✅ **交付并复核：采样"下载并持久化 ＋ 渲染前取齐"**（`0000e01`，16 文件 ＋2261 ✓）
+
+**这是业主那条要求**（「音源需要下载和持久化，渲染前应该用到的音源都下载完毕」✓）**在 MCP／离线侧的实现** ✓。
+
+```
+⭐ **重复下载（用 fetch tap 量的 ✓）**：同一首歌连播两次（同进程）＝ **268 请求／134 URL／134 个被下两遍** ✗
+   ⇒ 修后 **新增 134 → 0** ✓；`render_arrangement_stems` 三轨 ＝ **15／5／每个三遍** ✗ ⇒ 修后 **15 → 5、每个一次** ✓；
+   真 bundle 复验：第二次渲染 **0 网络、0 新解码** ✓✓
+⭐ **缓存**：**落盘**（`GROOVE_SAMPLE_CACHE`，否则 OS 每用户缓存目录；**绝不用 `/tmp`** ✓✓）、
+   **键＝含 pin 的库根 ＋ 库内相对路径、丢掉 host** ⇒ **换 `GROOVE_SAMPLE_ROOT` 仍命中** ✓（正是"键不能是 URL"的要求 ✓）、
+   **存字节非解码缓冲** ✓、**上限默认 512 MB ＋ 整文件 LRU** ✓、**`npm run cache:stats`／`cache:clear`** ✓
+⭐ **渲染前预热**：`prepareOfflineAudioLanes` 把 plan 点名的每段录音**先解析＋解码完**再 `startRendering()` ✓，
+   报 `loaded/total` ✓、逐个点名失败 ✓ —— **复用** `samplerLanePrepare.ts` 的形状，**没造第二套** ✓
+⭐ **P0-2 翻案**：`render_song {headless:true}` **不是卡死** —— 60 s 上限＝无回复（60 100 ms ✓），
+   **300 s 上限＝135 937 ms、出 WAV（时长 49.75 s／8 775 944 字节 ✓）＝ 2.73× 实时** ⇒ **是调用方上限先到** ✗✓；
+   它与 `render_arrangement` **最终同一个 `renderPatternOffline`**（差在传入的 pattern：`mcp/song.ts:584` vs `mcp/arrangement.ts:1270` ✓）
+⇒ **我的复核（看退出码 ✓）**：`mcpSampleCache` **17 passed/exit 0** ✓、`mcpHeadlessTimeout` **2 passed/exit 0** ✓、
+   `ownerProjectAcceptance` **exit 0** 且五个数逐字未变 ✓；门禁全绿（`tsc` 0／eslint 0／**`check:mcp` 123 checks 0 failed、92 tools 未变**／
+   **全量 vitest 507 文件 4 853 passed 1 skipped**／`probe:headless` 残差未变 ✓）
+⚠️ **仍然缺的那半（后续项 ✓）**：**浏览器（Web）侧没有落盘缓存** ✗ ⇒ 每次会话仍重下（要靠 IndexedDB／CacheStorage ✓）；
+   而"下载时看得见"那半由 Studio 加载提示 ＋ `diag=1` 那条线在做 ✓
+```
