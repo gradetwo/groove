@@ -4710,3 +4710,29 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
 📋 ⇒ **导出阶段排序（待 `0091e1f0` 的逐字读数确认 ✓）**：① MIDI 往返实测（导出→`parseMidiFile` 读回→比轨/音符 ✓）
    ② MusicXML 往返实测（导出→`fromMusicXml` 读回 ✓）③ Logic 建或记 `needs` ✗
 ```
+
+## 一百四十、🔎 **两件自查事实（修正 §139 的估计 ✓ 2026-10-03 23:04 ✓）**
+
+### 140.1 ✅ **MusicXML 的 `.mxl`（zip）实现是有的** ✓ —— 那个"空白"是**没人跑过** ✗，不是没实现 ✗
+
+```
+`src/data/musicxmlImport.ts:14` ⇒ **`import { unzipSync } from "fflate"`** ✓（注释写明 fflate **MIT、无依赖、浏览器可用**，
+   而 `node:zlib` 不行 ✓）；`package.json` 确有 **`fflate ^0.8.3`** ✓
+`:348` 用 **`PK\x03\x04` 签名**判断是否 zip ✓；`:363-393` **按规范读 `META-INF/container.xml` 选根文件** ✓
+   （注释：it is the only entry a reader may rely on ✓）、**校验 `mimetype`** ✓，失败时抛**如实**错误 ✓
+   （`the zip could not be read…`／`this zip is not a MusicXML container: its mimetype is "…"`／`names no root file…` ✓ —— 合 §27 ✓）
+`ScoreV2.tsx:57` 注释写明支持"MusicXML 或压缩的 `.mxl`" ✓；入口 `accept=".musicxml,.xml,.mxl"` ✓
+⇒ 结论：**导入路径完整 ✓** ⇒ `771d0d17` 要补的是**测量 ＋ 映射通路缺口的修复** ✓
+```
+
+### 140.2 ✅ **导出侧比 §139 估计的更成熟** ✓（往返判据**已存在** ✓）
+
+```
+✅ **MIDI 导出**：入口齐全 ✓ `generateMidiBytes`（`MidiExporter.ts:92` ✓）、`downloadMidiFile`（`:340` ✓）、
+   `exportChordsMidi`（`:358` ✓）、`MidiExporter` 对象（`:500` ✓）；`arrangementToMidi`（`arrangementToMidi.ts:210` ✓，
+   常量 `ARRANGEMENT_MIDI_DIVISION = 480` ✓）
+   ⭐ **已有 9 个测试文件**引用 ✓：含 **`exporterParity.test.ts`（一致性 ✓）**、`midiExportNoteLength.test.ts` ✓、
+     `midiImport.test.ts` ✓、`arrangementEntries.test.ts` ✓ ⇒ **往返已被钉过** ✓
+✅ **MusicXML 导出**：**3 个测试文件** ✓（`musicXmlExport.test.ts` ✓、`musicXmlImport.test.ts` ✓、`lyricExport.test.ts` ✓）
+⇒ ⭐ **修正 §139 的措辞**：第二阶段对 MIDI／MusicXML **不是"新建"** ✗，而是「**真浏览器实测 ＋ 补真实缺口 ＋ 补缺口判据**」✓；
+   **只有 Logic 导出确实没有** ✗ ⇒ 借 **MIT** 的 `jonkubis/LogicProFormatWriter` 建 ✓（**须署名＋说明修改** ✓）或写进 `needs` ✓
