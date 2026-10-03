@@ -5995,3 +5995,67 @@ problems: **[]** ✓
    并**同时读写入端源码**（跨小节切分处 ✓）⇒ 才谈"改哪里" ✓
    ⚠️ 规则追加：**凡"从 XML 推位置"的读数，必须先证明游标模型与被读文件一致** ✗（今天第三次栽在同一类上：拿一个量的形状当另一个量 ✓）
 ```
+
+```
+## 二百二十八、🔎 **写入端源码结构图（跨小节切分／`<backup>` 所在处 ✓）**（2026-10-04 01:0x ✓）
+
+**方法** ✓：`grep -nE` 直接列出 `src/data/musicxml.ts` 里的函数与关键词 ✓（原样留档，不经我转述 ✓）：
+    === musicxml.ts 结构图（函数／backup／tie／measure 关键词 ✓） ===
+  11: *   1. **A note is split at a barline, and the halves are tied.** MusicXML cannot express a note that crosses a barline; a six-beat note in 4/4 is a whole note tied to a half note. Writing it as a six-beat duration produces a file that renders as a mess in every reader.
+  12: *   2. **Gaps become rests.** A measure whose notes do not cover it is not "a measure with holes" — notation needs a rest, and its duration has to be exactly the gap, which means splitting rests at barlines too.
+  14: *   4. **Simultaneous notes in one track become a chord** (`<chord/>` on every note after the first), because a track is a voice. Two notes that start at the same instant in different tracks would be different voices, which is a separate part and out of scope here.
+  31:  /** Beats in a measure. 4/4 unless said otherwise. */
+  35:  /** The tempo written in the first measure. Absent means none is written, rather than a tempo being invented. */
+  42:export function pitchToMusicXml(pitch: number): { step: string; alter?: number; octave: number } {
+  49:export function noteTypeFor(durationInQuarters: number): string | null {
+  61:/** A note or a rest the exporter has decided to write, already split at barlines. */
+  77:function escapeXml(text: string): string {
+  82:function lyricTextOf(note: NoteEvent): string | undefined {
+  88: * Split one note into the pieces a measure can hold, tied across the barlines it crosses.
+  90: * A note that fits in one measure is one piece, which is the common case; the tie only appears when it is needed, so a file with no crossing notes has no ties in it.
+  92:function splitAtBarlines(startBeats: number, lengthBeats: number, beatsPerMeasure: number): { startBeats: number; lengthBeats: number; tiedFrom: boolean; tiedTo: boolean }[] {
+  98:    const measureEnd = (Math.floor(at / beatsPerMeasure) + 1) * beatsPerMeasure;
+  99:    const piece = Math.min(remaining, measureEnd - at);
+  108: * The measures of one track, as MusicXML text.
+  112: *   · **A chord** is notes that start together *and last the same length*: one voice, one note, several `<key>`s.
+  113: *   · **Overlap** — a note that begins while another is still sounding — has no single-voice spelling at all, because MusicXML is a sequence: a second note at the same instant without `<chord/>` starts **after** the first. Overlapping notes therefore go into **separate voices with a `<backup>` between them**, which is what every notation program writes.
+  115: * So chords are grouped first and voices assigned second. The first version did it the other way round and split every block chord across three voices.
+  117:export function notesToMeasures(notes: readonly NoteEvent[], bars: number, options: MusicXmlOptions = {}): string[] {
+  119:  const measureCount = Math.max(1, Math.round(bars));
+  141:  const measures: string[] = [];
+  143:   * **Voices are assigned inside the measure, and a voice number means the same line of music for the whole part.**
+  145:   * A `<voice>` is an identity, not a per-measure slot: a later measure rewinds the cursor with a `<backup>` and the notes that follow carry the voice numbers a reader draws as lines. **The first version reused the first voice free anywhere in the piece**, which let a voice hold music that went *backwards* between measures: in a
+  146:   * bar of four overlapping notes it wrote two `<backup>` elements in a row and drove the cursor to minus sixteen divisions, which the cursor criterion below now refuses. Assigning once per measure instead fixed that and introduced the opposite fault: a voice was taken by a group whose tie was still travelling through the bar, and two independent lines collided in one `<voice>`.
+  148:   * The rule below is that a voice may take a group in measure m only when the group that last took it ended **before m began**, or ended inside m before this group starts. A piece of a tie that starts in m claims that voice for the whole of m, so nothing else may take it.
+  150:  const voiceOf = new Map<string, number>();
+  151:  /** Every group split at the barlines, in time order — the pieces are what a measure holds, and what a voice claim is made of. */
+  154:      splitAtBarlines(group.startBeats, group.lengthBeats, beatsPerMeasure).map((piece) => ({
+  158:        measureIndex: Math.floor(piece.startBeats / beatsPerMeasure),
+  161:        voice: -1,
+  165:  /** Where each voice's last group finished, and which of the groups tied from before are holding it in this measure. */
+  166:  const voiceEnds: number[] = [];
+  169:  for (let index = 0; index < measureCount; index += 1) {
+  171:      if (piece.measureIndex !== index) continue;
+  172:      if (piece.voice !== -1) {
+  173:        // A group whose head is in an earlier measure was placed once, there, and every later piece of it belongs to that same voice.
+  174:        voiceOf.set(piece.group.key, piece.voice);
+  177:      if (voiceOf.has(piece.group.key)) continue;
+  178:      let voice = -1;
+  179:      for (let candidate = 0; candidate < voiceEnds.length; candidate += 1) {
+  180:        // A voice carrying a tie into this measure is not free until that tie ends, whatever else has finished.
+  182:        const end = voiceEnds[candidate] ?? 0;
+  186:          voice = candidate;
+  190:      if (voice === -1) {
+  191:        voice = voiceEnds.length;
+  192:        voiceEnds.push(0);
+  194:      voiceOf.set(piece.group.key, voice);
+  195:      voiceEnds[voice] = piece.startBeats + piece.lengthBeats;
+  197:        if (later.voice !== -1 || later.group !== piece.group) continue;
+  198:        later.voice = voice;
+  199:        // Every piece of this group that begins in a later measure holds its voice there, which is what keeps another group from claiming it in between.
+  200:        if (later.tiedFrom) heldByContinuation.set(voice, later.measureIndex);
+  204:    const measureStart = index * beatsPerMeasure * divisionsPerBeat;
+  205:    const measureEnd = measureStart + beatsPerMeasure * divisionsPerBeat;
+  grep: write error: Broken pipe
+⚠️ 本条**只是结构图** ✓，**不含任何因果结论** ✗；下一步按行号读那两处源码 ✓
+```
