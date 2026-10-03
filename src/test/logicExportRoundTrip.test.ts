@@ -42,7 +42,15 @@ describe("a written logic project reads back", () => {
     const at = projectData.findIndex((_, i) => nameBytes.every((b, j) => projectData[i + j] === b));
     expect(at).toBeGreaterThan(0);
     const after = at + nameBytes.length;
-    expect(projectData[after]! | (projectData[after + 1]! << 8) | (projectData[after + 2]! << 16) | (projectData[after + 3]! << 24)).toBe(34560);
+    /**
+     * Measured, and this is where the earlier claim was wrong (docs/OPEN_WORK.md 300). The criterion used to
+     * assert `REGION_ORIGIN_TICKS` here, which baked in the belief that the bytes after the region name carry
+     * the region's timeline start. Reading the owner's real projects settled it the other way: with the name
+     * read correctly at record 0x34, the four bytes after it are zero in Colors, in MONTERO - Spatial Audio
+     * and in two fixtures. Zero is what the neighbours carry, so zero is what this asserts.
+     */
+    const regionField = projectData[after]! | (projectData[after + 1]! << 8) | (projectData[after + 2]! << 16) | (projectData[after + 3]! << 24);
+    expect(regionField).toBe(0);
   });
 
   it("carries the length in the continuation the reader takes it from", () => {

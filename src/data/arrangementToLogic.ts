@@ -225,7 +225,7 @@ function regionRecord(cluster: number, name: string): Uint8Array {
   body[nameOffsetInBody + 1] = (nameBytes.length >>> 8) & 0xff;
   body.set(nameBytes, nameOffsetInBody + 2);
   /**
-   * The region's own start, in the **Logic 11.x** shape the specification documents: a plain `uint32` immediately
+       * The `uint32` immediately after the name, which the real projects carry as zero.
    * after the variable-length name.
    *
    * WARNING: **our own reader does not apply this field** -- it documents that the layout moved between versions and
@@ -234,10 +234,13 @@ function regionRecord(cluster: number, name: string): Uint8Array {
    * neighbour than one that carries it, and a reader which does apply it can then place the region. This writer does
    * **not** claim the timeline position is placed: that stays a need.
    *
-   * The value is the arrangement's own zero -- `REGION_ORIGIN_TICKS`, the region origin the reader states -- because
+       * Measured, not assumed: the four bytes after the name are **zero** in `Colors`, in
+       * `MONTERO - Spatial Audio` and in two fixtures, so this field is not the region's timeline start.
+       * The region's placement is not established by this writer and is recorded in `needs` (docs/OPEN_WORK.md 300).
    * the notes already carry their absolute positions from `NOTE_ORIGIN_TICKS` inside the sequence.
    */
-  setU32(body, nameOffsetInBody + 2 + nameBytes.length, REGION_ORIGIN_TICKS);
+      // Measured: every real project sampled carries zero here, so this is not the region's start.
+      setU32(body, nameOffsetInBody + 2 + nameBytes.length, 0);
   return record("qeSM", body, cluster);
 }
 
