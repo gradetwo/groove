@@ -74,29 +74,78 @@ function fillTargets(fill: SongFill, track: SequencerTrack): boolean {
  */
 
 /**
- * The clip a **lane** takes its steps from in this bar — the section's own clip, unless the section names another.
+ * Every lane of a clip, in order, each carrying the key that names it **across the song**.
+ *
+ * The key is `laneId` first and `track_id` second — the same order `mcp/pattern.ts`'s `findTrack` addresses lanes by
+ * (`types/genre.ts`), so a second lane of a kind lines up with itself in every clip that carries it. The trailing
+ * occurrence index only separates two lanes a clip gives the *same* handle: nothing can address those apart anyway,
+ * and collapsing them into one key would silently lose a lane, which is the shape of bug this change exists to stop.
+ */
+function clipLanes(clip: SequencerPattern): Array<{ key: string; track: SequencerTrack }> {
+  const seen = new Map<string, number>();
+  return (clip.tracks ?? []).map((track) => {
+    const handle = track.laneId ?? track.track_id ?? track.name ?? "";
+    const occurrence = seen.get(handle) ?? 0;
+    seen.set(handle, occurrence + 1);
+    return { key: `${handle}\u0000${occurrence}`, track };
+  });
+}
+
+/** The lane a clip carries for this key, or `undefined` when the clip has no such lane. */
+function laneIn(clip: SequencerPattern | undefined, key: string): SequencerTrack | undefined {
+  return clip ? clipLanes(clip).find((lane) => lane.key === key)?.track : undefined;
+}
+
+/** The clip a section names for this lane, when it names one that is not the section's own clip. */
+function overrideSlotFor(bar: SongBar, baseTrack: { track_id?: string }): ClipSlot | undefined {
+  const named = baseTrack.track_id ? bar.slots?.[baseTrack.track_id] : undefined;
+  return named && named !== bar.slot ? named : undefined;
+}
+
+/**
+ * The lane a bar **declares** for this key: the named per-lane clip's own lane when the section names one, else the
+ * bar's own clip's.
+ *
+ * `undefined` means "this bar declares nothing", and it is deliberately **not** the fallback `laneSourceFor` resolves
+ * to. A named clip that has no such lane contributes no opinion about that lane's optional arrays — the answer the
+ * flattener gave before the union change, kept so that a lane's arrays are read from what the section *asked for*
+ * rather than from where it fell back to. Folding the two together would silently add a `velocity` (or `gate`, or
+ * `ratchet`) array to songs that never had one, which is a byte-level change this fix must not make.
+ */
+function declaredLaneFor(
+  song: Song,
+  bar: SongBar,
+  key: string,
+  baseTrack: { track_id?: string; name?: string }
+): SequencerTrack | undefined {
+  return laneIn(clipFor(song, overrideSlotFor(bar, baseTrack) ?? bar.slot), key);
+}
+
+/**
+ * The clip and lane a **lane** takes its steps from in this bar — the section's own clip, unless the section names
+ * another.
  *
  * `SongSection.slots` is the per-lane choice (`docs/TRACK_ARRANGEMENT_PLAN.md`), addressed by `track_id` rather than
  * by position: a lane the other clip does not have falls back to the section's clip instead of quietly taking a
  * different lane's steps. When a section names nothing, this is `clipFor(song, bar.slot)` for every lane — which is
  * what makes the "no overrides is byte-identical" test possible.
+ *
+ * `null` means neither clip carries this lane: a bar to **pad with silence**, not to drop. The caller writes zero
+ * steps for it and keeps its place on the timeline, so the song stays as long as the arrangement says (see the
+ * union note in `flattenSong`).
  */
 function laneSourceFor(
   song: Song,
   bar: SongBar,
-  trackIdx: number,
+  key: string,
   baseTrack: { track_id?: string; name?: string }
-): { clip: SequencerPattern; trackIdx: number } | null {
-  const named = baseTrack.track_id ? bar.slots?.[baseTrack.track_id] : undefined;
-  if (!named || named === bar.slot) {
-    const clip = clipFor(song, bar.slot);
-    return clip ? { clip, trackIdx } : null;
-  }
-  const override = clipFor(song, named);
-  if (!override) return null;
-  const at = (override.tracks ?? []).findIndex((track) => track.track_id === baseTrack.track_id);
-  if (at < 0) return null;
-  return { clip: override, trackIdx: at };
+): { clip: SequencerPattern; track: SequencerTrack } | null {
+  const primary = clipFor(song, overrideSlotFor(bar, baseTrack) ?? bar.slot);
+  const declared = laneIn(primary, key);
+  if (primary && declared) return { clip: primary, track: declared };
+  const clip = clipFor(song, bar.slot);
+  const track = laneIn(clip, key);
+  return clip && track ? { clip, track } : null;
 }
 
 export function flattenSong(song: Song): FlattenedSong {
@@ -125,23 +174,78 @@ export function flattenSong(song: Song): FlattenedSong {
     return { pattern: skeletonPattern(song), problems, totalBars: bars.length, totalSteps: 0, boundaries: [] };
   }
 
-  const baseTracks = firstClip.tracks ?? [];
   /**
-   * A clip whose track *list* differs from the first bar's cannot be flattened lane by lane; the bar is skipped
-   * (with a reason) rather than silently importing another clip's kick into this song's chord lane.
+   * ⭐ **The lanes are the union of every lane the song uses, and a bar that lacks one is padded, never dropped.**
+   *
+   * The old shape compared each clip's track *count* with the first clip's and returned `false` — the bar vanished
+   * from `playable`, so `totalSteps` shrank and the rendered song was shorter than the arrangement (the defect
+   * `docs/OPEN_WORK.md` §107.3 records as ⭐4). A count is the wrong test twice over: it says nothing about *which*
+   * lane is which, and it turns "this bar has no pad lane" into "this bar does not exist".
+   *
+   * The union is ordered by first use, so for the ordinary song — every clip carrying the same lanes in the same
+   * order — the lane list **is** the first clip's own list and the flattened result is byte-identical to before.
+   * What moves is only the case that used to lose a bar: its missing lanes are written as zero steps for that bar
+   * (`undefined` in the optional arrays, which is the renderer's "not written", never an invented pitch), and the
+   * bar keeps its place in `totalSteps`, `totalBars` and `boundaries`.
+   *
+   * §106 (the standing "check the industry first" rule, `docs/OPEN_WORK.md` 一百零六): the mature shape is **align and
+   * stay silent**, never truncate. Ableton Live's Export Audio/Video dialog documents `Render Length` as deciding
+   * "the overall length of the rendered file", with both start and length defaulting "to cover the entire length of
+   * the Set", and exporting tracks separately produces files that "will have the same length" — a track with less
+   * material is padded out, not allowed to shorten the take
+   * (<https://www.ableton.com/en/live-manual/12/managing-files-and-sets/> §5.1.3.1); the same manual resolves content
+   * it cannot play by playing "silence instead of the missing samples" rather than dropping the region (§5.6). At the
+   * format level a Standard MIDI File is the same: every `MTrk` chunk carries its own events and its own End of
+   * Track, and nothing requires the chunks to be equally long, so a track with no event over a span is simply silent
+   * there (<https://ccrma.stanford.edu/~craig/14q/midifile/MidiFileFormat.html>). Truncating to the first clip is
+   * recorded as the *bug* rather than as a convention: a Cubase import that shows the whole file is contrasted with
+   * an application that "will show lenght taking in account only the NotOff of that single note and throwing all the
+   * rest of the (empty) midi out" (<https://forum.juce.com/t/midi-file-length/8164>). **No source was found that
+   * documents silently dropping a bar on a track-count mismatch** — hence "pad and say so".
    */
-  const playable = bars.filter((bar) => {
-    const clip = clipFor(song, bar.slot);
-    if (!clip) return false;
-    if ((clip.tracks?.length ?? 0) !== baseTracks.length) {
-      problems.push(
-        `clip ${bar.slot} has ${clip.tracks?.length ?? 0} tracks but the song's first clip has ${baseTracks.length}; ` +
-          "the bar was skipped"
-      );
-      return false;
+  const laneKeys: string[] = [];
+  const baseTracks: SequencerTrack[] = [];
+  {
+    const seen = new Set<string>();
+    for (const bar of bars) {
+      const clip = clipFor(song, bar.slot);
+      if (!clip) continue;
+      for (const lane of clipLanes(clip)) {
+        if (seen.has(lane.key)) continue;
+        seen.add(lane.key);
+        laneKeys.push(lane.key);
+        baseTracks.push(lane.track);
+      }
     }
-    return true;
+  }
+
+  const mismatched = bars.filter((bar) => {
+    if (!clipFor(song, bar.slot)) return false;
+    return laneKeys.some((key, index) => !laneSourceFor(song, bar, key, baseTracks[index]!));
   });
+  /**
+   * Still a **visible** problem — never silence about it. What changed is the tail: the bar is padded with silence
+   * and keeps its length, rather than being skipped and shortening the song. The sentence is reported for exactly
+   * the bars that are padded, which is not the same set as "clip count differs from the first clip's" once a later
+   * clip is the longer one.
+   */
+  for (const bar of mismatched) {
+    const count = clipFor(song, bar.slot)!.tracks?.length ?? 0;
+    const first = firstClip.tracks?.length ?? 0;
+    problems.push(
+      count === first
+        ? `clip ${bar.slot} has ${count} tracks, the same count as the song's first clip, but not the same lanes; ` +
+            "the bar was padded with silence"
+        : `clip ${bar.slot} has ${count} tracks but the song's first clip has ${first}; the bar was padded with silence`
+    );
+  }
+
+  /**
+   * A bar whose clip is absent cannot be measured (there is no pass length to write), so it is the one bar still
+   * dropped. `resolveTimeline` cannot produce one — it enumerates a section only when its slot holds a clip — so
+   * this guard is for a hand-built `Song` and behaves exactly as it did before.
+   */
+  const playable = bars.filter((bar) => clipFor(song, bar.slot) !== undefined);
 
   const totalSteps = playable.reduce((sum, bar) => {
     const clip = clipFor(song, bar.slot)!;
@@ -164,6 +268,8 @@ export function flattenSong(song: Song): FlattenedSong {
   }
 
   const tracks: SequencerTrack[] = baseTracks.map((baseTrack, trackIdx) => {
+    /** This union lane's identity — what `laneSourceFor` matches a clip's own lanes against. */
+    const key = laneKeys[trackIdx]!;
     /**
      * Only an array *every* contributing clip provides becomes one; otherwise the lane keeps the renderer default.
      * The exception is `velocity`: a bar whose section carries a fill names a velocity for the hits it adds, so that
@@ -173,11 +279,9 @@ export function flattenSong(song: Song): FlattenedSong {
     const filled = playable.some((bar) => bar.fill && fillTargets(bar.fill, baseTrack));
     const arrays = OPTIONAL_STEP_ARRAYS.filter(
       (name) =>
-        playable.some((bar) => {
-          const source = laneSourceFor(song, bar, trackIdx, baseTrack);
-          const track = source?.clip?.tracks?.[source.trackIdx];
-          return Array.isArray(track?.[name as OptionalStepArray]);
-        }) || (name === "velocity" && filled)
+        playable.some((bar) =>
+          Array.isArray(declaredLaneFor(song, bar, key, baseTrack)?.[name as OptionalStepArray])
+        ) || (name === "velocity" && filled)
     );
 
     const steps: number[] = [];
@@ -188,14 +292,18 @@ export function flattenSong(song: Song): FlattenedSong {
       /**
        * A lane the section's own clip choice does not provide falls back to the section's clip: a missing name is
        * "no opinion", not "silence".
+       *
+       * ⭐ A bar whose clip has **no such lane at all** is the one case the fallback cannot answer, and it is where
+       * the old code used to drop the bar. `track` stays `undefined` there and the bar contributes zero steps —
+       * silence, of the bar's own length — instead of being removed from the song.
        */
-      const source = laneSourceFor(song, bar, trackIdx, baseTrack);
+      const source = laneSourceFor(song, bar, key, baseTrack);
       const clip = source?.clip ?? clipFor(song, bar.slot)!;
-      const track = clip.tracks[source?.trackIdx ?? trackIdx];
+      const track = source?.track;
       const clipLength = clipSteps(clip);
-      const muted = bar.mute.includes(track.track_id) || bar.mute.includes(track.name);
+      const muted = !track || bar.mute.includes(track.track_id) || bar.mute.includes(track.name);
       const scale = Number.isFinite(bar.velocityScale) ? bar.velocityScale : 1;
-      const fill = bar.fill && fillTargets(bar.fill, track) ? bar.fill : undefined;
+      const fill = track && bar.fill && fillTargets(bar.fill, track) ? bar.fill : undefined;
       /**
        * A fill's velocity, and — when it carries a ramp — the value for *this* step of it.
        *
@@ -222,12 +330,12 @@ export function flattenSong(song: Song): FlattenedSong {
         transpose && typeof note === "number" && note > 0 ? Math.max(0, Math.min(127, note + transpose)) : note;
 
       for (let step = 0; step < clipLength; step += 1) {
-        const on = track.steps?.[step] ?? 0;
+        const on = track?.steps?.[step] ?? 0;
         const fillHit = Boolean(fill?.steps.includes(step));
         steps.push(muted ? 0 : fillHit ? 1 : on);
         for (const name of arrays) {
-          const source = track[name as OptionalStepArray] as unknown[] | undefined;
-          const value = source?.[step];
+          const written = track?.[name as OptionalStepArray] as unknown[] | undefined;
+          const value = written?.[step];
           if (name === "velocity" && !muted) {
             /**
              * A fill hit carries the fill's own velocity; a written value keeps the lane's, scaled.

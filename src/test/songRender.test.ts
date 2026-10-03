@@ -206,7 +206,18 @@ describe("B2 · the arrangement flattens into one pattern", () => {
       )
     );
     expect(flattened.problems.join(" ")).toMatch(/tracks but the song's first clip has 2/);
-    expect(flattened.totalBars).toBe(1);
+    /**
+     * ⭐ **This assertion used to be `totalBars` 1, and its flip is the fix rather than a loosened test.**
+     *
+     * B has one lane where A has two, and the old flattener answered by **deleting B's bar**: `totalBars` 1, four
+     * steps instead of eight, and a rendered song half the length the arrangement asked for (`docs/OPEN_WORK.md`
+     * §107.3 ⭐4 — measured as `FLATTEN_SKIP|slot=B|n=1|base=2|bars=2`). The bar is now padded with silence instead,
+     * which is what the assertion below pins: two bars, the bar's own pass counted, and the lane B lacks silent
+     * rather than the bar gone. The warning above is unchanged and still visible.
+     */
+    expect(flattened.totalBars).toBe(2);
+    expect(flattened.totalSteps).toBe(8);
+    expect(Array.from(flattened.pattern.tracks[1].steps)).toEqual([1, 0, 0, 0, 0, 0, 0, 0]);
   });
 
   it("has nothing to render when the song has no playable bars", () => {
