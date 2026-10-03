@@ -40,6 +40,17 @@ const TEMPO_MARKER = 0x60;
 const TEMPO_SLOT_AUTHORITATIVE = 0x3a6;
 const TEMPO_SLOT_FALLBACK = 0x92;
 
+/**
+ * How many notes the **whole** arrangement holds, across every track.
+ *
+ * ⭐ This is what a Logic export's guard has to ask, and not the notes of the track the score view happens to show:
+ * `logicProjectBundle` writes every track, so refusing on an empty selected track would hide an export that has
+ * content elsewhere (docs/OPEN_WORK.md 294). Pure and exported so a criterion can hold it to that.
+ */
+export function arrangementNoteCount(arrangement: { notesByTrack?: Record<string, readonly unknown[]> }): number {
+  return Object.values(arrangement.notesByTrack ?? {}).reduce((total, lane) => total + lane.length, 0);
+}
+
 export interface LogicWrittenFiles {
   /** `Alternatives/NNN/ProjectData`. */
   projectData: Uint8Array;

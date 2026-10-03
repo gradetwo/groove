@@ -11,6 +11,7 @@
  * also why `busy` exists — an offline render takes seconds and a menu that looks idle while it works is a lie.
  */
 import { useCallback, useState } from "react";
+import { arrangementNoteCount } from "../../data/arrangementToLogic";
 import { logicFileFor } from "./arrangementFiles";
 import type { ArrangementV2, NoteEvent } from "../../types/arrangementV2";
 import { useLanguage } from "../../i18n/LanguageContext";
@@ -262,19 +263,25 @@ export function useArrangementFileActions({
   }, [arrangement.bpm, arrangement.timeSignature, run, say, scoreBars, scoreNotes, scoreTitle, t]);
 
   const exportLogic = useCallback(() => {
-    if (scoreNotes.length === 0) {
-      say(t("arrangement_musicxml_empty"));
+    /**
+     * The guard asks whether **any** track holds notes, because `logicFileFor` below writes the whole arrangement: the
+     * score tab's notes are one track, and refusing on an empty selected track would hide an export that has content
+     * elsewhere. The empty sentence is this export's own rather than the MusicXML one (docs/OPEN_WORK.md 294).
+     */
+    const totalNotes = arrangementNoteCount(arrangement);
+    if (totalNotes === 0) {
+      say(t("arrangement_logic_empty"));
       return;
     }
     void run(async () => {
       /**
-       * The message is the MusicXML one, reused: it names the file and the note count, but a sentence written for
-       * another format is a copy gap rather than a correct one here. Recorded in docs/OPEN_WORK.md.
+       * The completion sentence is this export's own (`arrangement_logic_export_done`), unlike the empty-note guard
+       * above, which still says the MusicXML one — recorded in docs/OPEN_WORK.md 294 rather than left to look right.
        */
       const file = logicFileFor(arrangement);
       return { file, report: t("arrangement_logic_export_done", { filename: file.filename, notes: file.notes }) };
     });
-  }, [arrangement, run, say, scoreNotes.length, t]);
+  }, [arrangement, run, say, t]);
 
   const importFile = useCallback(
     (file: File) => {

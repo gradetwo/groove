@@ -151,6 +151,7 @@ export const commonMessages = {
   arrangement_musicxml_export: { en: "Export MusicXML", zh: "导出 MusicXML" },
   arrangement_logic_export: { en: "Export Logic Project (.logicx.zip)", zh: "导出 Logic 工程（.logicx.zip）" },
   arrangement_logic_export_done: { en: "Exported {filename} - {notes} note(s)", zh: "已导出 {filename}——{notes} 个音符" },
+  arrangement_logic_empty: { en: "This arrangement holds no notes, so there is nothing to write", zh: "这份编排没有音符，写不出工程" },
   arrangement_musicxml_import: { en: "Import MusicXML", zh: "导入 MusicXML" },
   arrangement_musicxml_export_done: { en: "Exported {filename} — {notes} note(s)", zh: "已导出 {filename}——{notes} 个音符" },
   arrangement_musicxml_empty: { en: "This track holds no notes, so there is no score to write", zh: "这条轨道没有音符，写不出乐谱" },
