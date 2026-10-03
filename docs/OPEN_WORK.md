@@ -3526,3 +3526,26 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
 ③ 📌 **`check:docs:refs` 不在 CI 里**（已实测 ✓）：本地门禁拦住了 CI 会放行的问题 ⇒
    若将来有人"精简本地门禁" ⇒ **不要删它** ✗（它是独一无二的一份 ✓）
 ```
+
+### 一百一十三、⭐5（lookahead）——**任务书前提只对一半**（我用实测记下，待其落地后正式验收）
+
+```
+**背景**：我的任务书说"200ms lookahead 使 **mute／推子**改动对已排期音符无效" ✗ ——
+   而那条线**先量后改**，量出的事实是：
+   · **mute 本来就是立即生效的** ✓（"the strip's own gain is downstream of every voice and a ramp there silences
+     an already-placed one"，实测在它的判据里 ✓）
+   · ✗ **真正的缺口是 unmute**：那一段**已被提前排掉的起音点回不来** ⇒
+     「**That is the one direction where the look-ahead is felt**」✓✓
+   ⇒ 它的修法＝把落在 `now + scheduleAheadSec` **之外**的起音点**重新排一次** ✓，规模上界
+     `ceil(scheduleAheadSec / stepDur) + 1` ✓
+**判据设计（我复核过，很讲究 ✓）**：
+   M1 已排期音符在自身起音点上**是静的** ✓ ｜ **M1b "the mute is a ramp rather than a step"** ✓✓（我要求的斜坡 ✓）
+   ｜ M2 已排期音符**按新推子值**响 ✓ ｜ **M3 unmute 在窗口**内**就被听到** ✓✓（真正的修复 ✓）
+   ｜ M3b 整段静音的轨**不排任何 voice**（"being muted stays free" ✓）｜ M3c **重排的是未来、不是"静音过去的迟到爆音"** ✓✓
+   ＋ 单独一节 **"the recorded-lane path (excluded, and said so)"** ✓✓ ⇒ **没覆盖的那条路它点名了** ✓（合 §27 ✓）
+⭐ **它还引用了本台账并纠正我的推断** ✓：注释写「`docs/OPEN_WORK.md` §107.3 (⭐5) **inferred from two constants**」
+   （`lookaheadMs=20` ＋ `scheduleAheadSec=0.20` ✓）⇒ **它把"从两个常量推断"变成了实测** ✓✓
+**另**：它给测试用 fake 加了 **`timeConstant` 记录** ✓，理由逐字：「…a double that dropped it made "muted" and "ramped over
+   40 ms" **indistinguishable**, so **no criterion could tell a click-free ramp from a hard step**」✓✓（纯测试面 ✓）
+⇒ **⇒ 裁定：接受"mute 已立即生效、修 unmute"这个实测结论** ✓；**我的任务书前提记为此处更正** ✓
+```
