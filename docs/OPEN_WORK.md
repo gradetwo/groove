@@ -6123,3 +6123,34 @@ problems: **[]** ✓
 ⚠️ **仍未做**：读 `src/data/musicxmlImport.ts` 的合并实现，确认它**是否读取并使用了 `<voice>`** ✗ ⇒ **下一步**（先量后改 ✓）
 ⚠️ 规则（今天第四次同类）：**我上一条的结论下早了** ✗ —— 全表读完才看清"每对 tie 都在同一 voice 内" ✓
    ⇒ 纪律：**凡"谁坏了"的判定，必须先把该判定所需的那张表读全** ✓
+
+```
+## 二百三十二、🔎 **读取端的 voice／tie 行号图（原样留档 ✓）**（2026-10-04 01:0x ✓）
+
+**方法** ✓：`grep -nE "voice|tie|pending|merge|tied"` ✓：
+    === musicxmlImport.ts 里 voice／tie／合并 相关行 ✓ ===
+  4: * Writing has one author and one model, so its rules can be exact. Reading has **whatever the file happens to contain**: divisions that change mid-piece, several voices per staff, notes tied across barlines, chords, grace notes, whole measures of rest, and elements from versions we do not implement. The honest posture is therefore:
+  7: *   · **merge what notation splits** — a note tied across two measures is one note in a model with free positions, so the tie is joined back into one;
+  8: *   · **report what is dropped rather than dropping it silently** — a grace note, a second voice's overlap, a tuplet — because a file that imports "successfully" and lost half a bar is worse than one that says what it could not read.
+  47:   * Everything the file held that this model cannot, stated in the words a person needs to act on it — "measure 7: a tuplet was read as its written length", "measure 3: a second voice was ignored". An empty list means the whole file survived.
+  66:  tieStart: boolean;
+  67:  tieStop: boolean;
+  102:  // A tie is written twice in MusicXML — as `<tie>` for playback and inside `<notations><tied>` for engraving. Files in the wild carry one, the other, or both, so either is honoured.
+  103:  const ties = Array.from(element.querySelectorAll("tie, tied")).map((node) => node.getAttribute("type"));
+  115:    tieStart: ties.includes("start"),
+  116:    tieStop: ties.includes("stop"),
+  153:  /** The notes still open, by pitch: a tie's beginning is waiting for its end. **Not cleared per measure** — a tie that crosses a barline is the normal case, so clearing here would refuse to merge exactly the notes the tie exists for. */
+  208:       * More `<backup>` than the measure holds drives the cursor before the measure's start, which is what a file with a broken voice structure looks like. The note is placed at the start rather than at a negative beat, because a negative `startBeats` is not a position this model can hold and would be written back out as a note before the piece begins.
+  242:        const tieBeginning = open.get(parsed.midi);
+  243:        if (tieBeginning && parsed.tieStop) {
+  244:          // One note in the model, two in the file: extend the note that started the tie rather than adding a second.
+  245:          const existing = notes[tieBeginning.index]!;
+  246:          notes[tieBeginning.index] = { ...existing, lengthBeats: Math.max(existing.lengthBeats, endsAt - existing.startBeats) };
+  248:          if (parsed.tieStart) open.set(parsed.midi, { index: tieBeginning.index, startBeats: existing.startBeats });
+  250:           * A tie's continuation is the **same sounding event**, so a syllable written under it belongs to the note the tie began on — a second copy written
+  251:           * where the tie ends is one word printed twice.
+  254:            chordHeadIndex = tieBeginning.index;
+  269:          if (parsed.tieStart) open.set(parsed.midi, { index: notes.length - 1, startBeats });
+  291:  if (open.size > 0) problems.push(`${open.size} tie(s) never ended and were left as written`);
+⚠️ 仅行号图 ✓，**无因果结论** ✗ ⇒ 下一步按行读那段判定是否使用 `<voice>` ✓
+```
