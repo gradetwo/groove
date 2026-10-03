@@ -67,6 +67,13 @@ interface ParsedNote {
   tieStop: boolean;
   isGrace: boolean;
   /**
+   * The `<voice>` this note belongs to, as the file writes it. Absent means the file states none, and MusicXML's own default is 1.
+   *
+   * A tie is paired **within one voice**: a writer that assigns voices per measure may tie the same pitch in two voices,
+   * which is exactly the case that pairing by pitch alone destroys.
+   */
+  voice?: string;
+  /**
    * The syllable the file writes under this note, from `<lyric><text>` — absent when the note is not sung.
    *
    * `<syllabic>` is read past rather than interpreted: this model has one syllable per note and no word grouping, so the syllable's role in a word is
@@ -84,6 +91,17 @@ interface PartMetadata {
 const STEP_SEMITONES: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 
 /** MIDI for a `<pitch>`, using the same C4 = middle C convention as the writer. A pitch we cannot read is `undefined` rather than a guess. */
+/**
+ * The key a tie is paired by: **voice and pitch, not pitch alone**.
+ *
+ * Two voices may each tie the same pitch — a writer that assigns voices inside the measure does exactly that, and this
+ * project's own writer does it whenever a second voice has to hold a continuation. Pairing by pitch alone lets one
+ * voice's stop consume the other voice's start, which loses a note's tail and leaves a continuation stranded.
+ */
+function tieKey(note: ParsedNote): string {
+  return `${note.voice ?? "1"}|${note.midi ?? -1}`;
+}
+
 function pitchToMidi(pitch: XmlElement): number | undefined {
   const step = pitch.querySelector("step")?.textContent?.trim().toUpperCase();
   const octave = Number(pitch.querySelector("octave")?.textContent ?? NaN);
@@ -107,6 +125,7 @@ function parseNoteElement(element: XmlElement): ParsedNote {
    * its first, which is the one a singer's line follows.
    */
   const syllable = element.querySelector("lyric > text")?.textContent?.trim();
+  const voice = element.querySelector("voice")?.textContent?.trim();
   return {
     ...(pitch ? { midi: pitchToMidi(pitch) } : {}),
     duration: Number.isFinite(duration) ? duration : 0,
@@ -116,6 +135,7 @@ function parseNoteElement(element: XmlElement): ParsedNote {
     tieStop: ties.includes("stop"),
     isGrace,
     ...(syllable ? { syllable } : {}),
+    ...(voice ? { voice } : {}),
   };
 }
 
@@ -151,7 +171,7 @@ function readPart(part: XmlElement, problems: string[], metadata: PartMetadata):
   let measureLengthDivisions = 16;
   let measureStartBeats = 0;
   /** The notes still open, by pitch: a tie's beginning is waiting for its end. **Not cleared per measure** — a tie that crosses a barline is the normal case, so clearing here would refuse to merge exactly the notes the tie exists for. */
-  const open = new Map<number, { index: number; startBeats: number }>();
+  const open = new Map<string, { index: number; startBeats: number }>();
 
   measures.forEach((measure, measureIndex) => {
     const label = `measure ${measureIndex + 1}`;
@@ -239,13 +259,13 @@ function readPart(part: XmlElement, problems: string[], metadata: PartMetadata):
          */
         const resolution = 1 / 4;
         const endsAt = startBeats + lengthBeats;
-        const tieBeginning = open.get(parsed.midi);
+        const tieBeginning = open.get(tieKey(parsed));
         if (tieBeginning && parsed.tieStop) {
           // One note in the model, two in the file: extend the note that started the tie rather than adding a second.
           const existing = notes[tieBeginning.index]!;
           notes[tieBeginning.index] = { ...existing, lengthBeats: Math.max(existing.lengthBeats, endsAt - existing.startBeats) };
-          open.delete(parsed.midi);
-          if (parsed.tieStart) open.set(parsed.midi, { index: tieBeginning.index, startBeats: existing.startBeats });
+          open.delete(tieKey(parsed));
+          if (parsed.tieStart) open.set(tieKey(parsed), { index: tieBeginning.index, startBeats: existing.startBeats });
           /**
            * A tie's continuation is the **same sounding event**, so a syllable written under it belongs to the note the tie began on — a second copy written
            * where the tie ends is one word printed twice.
@@ -266,7 +286,7 @@ function readPart(part: XmlElement, problems: string[], metadata: PartMetadata):
             // A chord is one sounding event, so its lyric belongs to the note the chord hangs off — never to a member of it.
             ...(parsed.syllable && !parsed.isChord ? { syllable: parsed.syllable } : {}),
           });
-          if (parsed.tieStart) open.set(parsed.midi, { index: notes.length - 1, startBeats });
+          if (parsed.tieStart) open.set(tieKey(parsed), { index: notes.length - 1, startBeats });
           if (!parsed.isChord) chordHeadIndex = notes.length - 1;
         }
         /**
