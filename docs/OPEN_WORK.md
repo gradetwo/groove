@@ -4695,3 +4695,18 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
    （已知：母带 **WAV** 导出**有进度与取消** ✓；`Logic` 导出**整个没有** ✗ ⇒ 只报"外部有 **MIT** 依据"这一事实 ✓）
 
 **⇒ 之后按目标顺序**：**MIDI 导入后播放卡（实测 2.25 fps ✗，甲类 ✓，含 `rebuildImpulse` 4.24% 等线索 ✓）** ⇒ 再进入**导出阶段** ✓
+
+## 一百三十九、📦 **导出阶段的底（我自查 ✓ 2026-10-03 23:00 ✓）** —— 第二阶段是「实测＋补缺口」，不是从零 ✗
+
+```
+✅ **MusicXML 导出：已存在** ✓（`toMusicXml` ✓；`src/components/arrangement/ScoreV2.tsx:56 onExportMusicXml` ✓）
+⭐⭐ **MIDI 导出：也已经存在** ✓（**12 个文件命中** ✓）——`src/audio/MidiExporter.ts` ✓、
+   `src/data/arrangementToMidi.ts` ✓、`src/features/arrangement/useArrangementFileActions.ts` 接线 ✓
+   ⇒ 对它是「**真浏览器实测 ＋ 补缺口 ＋ 补判据**」✓，**不是新功能** ✗
+✗ **Logic（`.logicx`）导出：确实没有** ✓（`writeProjectData|encodeProjectData` 命中 **0** ✓；唯一命中是 `logicToArrangement.ts` 的一句注释 ✓）
+   ⇒ 要么按 **MIT** 的 `jonkubis/LogicProFormatWriter` 做 ✓（**须署名＋说明修改** ✓；GPL 项目**只读** ✗），要么**写进 `needs`** ✓（§27 ✓）
+⭐ UI 侧现有导出入口（`ArrangementFileEntriesV2` ✓）：`onExportMidi` ✓｜**`onExportAls`**（Ableton Live Set ✓ 不在本目标三格式内 ✓）｜
+   `onExportGroove` ✓｜`onExportWav`／`onExportMp3`／`onExportStems` ✓（母带 WAV 的**进度与取消**已修 ✓ `140810a` ✓）
+📋 ⇒ **导出阶段排序（待 `0091e1f0` 的逐字读数确认 ✓）**：① MIDI 往返实测（导出→`parseMidiFile` 读回→比轨/音符 ✓）
+   ② MusicXML 往返实测（导出→`fromMusicXml` 读回 ✓）③ Logic 建或记 `needs` ✗
+```
