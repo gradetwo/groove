@@ -6862,3 +6862,21 @@ problems: **[]** ✓
 📌 紧随其后（`§294` ＋ `§297`）✗：已修①守卫范围／②空提示键／③过期注释 ✓（本地 ✓）；
    ⚠️ 两条**行为判据**仍欠 ✗（"选中空轨但别轨有音符仍可导出"／"回调用 logic 空键" ⇒ 需挂载 hook ✓）
 ```
+
+## 二百九十七、🚀 **发行 v2.34.46 成功（线上已换版 ✓）＋ 我两次操作失误** ✗（2026-10-04 07:0x ✓）
+```
+**发行读数** ✓（`SKIP_LOCAL_GATE=1 bash scripts/release.sh` ✓，日志 `/var/tmp/release-2.34.46.log` ✓）：
+  `version:check` ok ✓ → `version:new` ok ✓ → local gate **skipped（业主政策 ✓）** → `build` ok ✓ → `budget` ok ✓ →
+  `full CI` ok ✓ → `deploy` ok ✓ → `tag` ok ✓ → `remote` ok ✓ ⇒ **脚本退出码 0** ✓
+**四处核对一致** ✓：`tag v2.34.46 → b3baecc`（＝被构建的提交 ✓）｜`origin/dev` ＝ `origin/main` ＝ `b3baecc` ✓（**快进**，未强推 ✓）｜
+  线上 `https://groove.wangda.today/version.json` 的 `version` 与 `latest.version` ＝ **2.34.46** ✓｜线上 `changelog.json` **含 2.34.46**（date 2026-10-04／feature／"Logic 工程能导出了…" ✓）｜首页指向新构建 ✓
+**两处"看起来可疑、实为设计"** ✓（读 `scripts/version.mjs` 实证 ✓，非猜 ✗）：
+  · `changelogCount: 10` 而条目 11 ⇒ `:111` 有 `CHANGELOG_KEEP` 上限 ✓、`:127` 用它计数 ✓
+  · `releaseDate` 仍是 2026-10-03 ⇒ `:123` 在版本一致时故意保留旧日期 ✓（`:117` 注释：否则 artifact 写完后 `version:check` 每天红 ✗）
+⚠️ **我的操作失误 ①（已修 ✓）**：第一次发行被 `full CI` **正确拦住** ✗（`HEAD (b3baecc) is not on origin/dev — dispatching would judge the remote's ref` ✓，
+   ⇒ 它拒绝"判的不是这个提交"就继续 ✓，并声明 **nothing has been published** ✓）⇒ 先 `push_branch.sh dev` ✓ 再重跑 ✓ 即成功 ✓
+⚠️ **我的操作失误 ②（教训 ✓）**：我用 `| tail -60` 接脚本输出 ✗ ⇒ 后台任务报的是 **tail 的退出码 0** ✗，
+   **把脚本的失败掩盖成了成功** ✗ —— 与 `scripts/check_local.sh` 存在的同一类教训（"记得看退出码"失败过三次 ✗）
+   📌 纪律：**门的输出不接管道** ✓（或必须 `set -o pipefail` ✓）；脚本的真实退出码要**单独打印** ✓
+**⚠️ 一处如实标欠** ✗：`exportLogic` 的**挂载式**判据（"选中空轨仍继续导出" ✓）仍欠 ✓；纯函数那半已判据化且**红证成立** ✓
+```
