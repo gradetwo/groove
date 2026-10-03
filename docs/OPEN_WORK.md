@@ -5766,3 +5766,28 @@ problems: **[]** ✓
 ⇒ ⭐⭐ **本目标最后一条欠件（真浏览器复测）由我独立核实** ✓ ⇒ **`fc2e651` 的修复在真浏览器里有效** ✓
 ⇒ ⚠️ 该线的**完整报告**仍欠 ✗（它的两份 json 已产出 ✓ ⇒ 我读的是**它的原始数据** ✓，不是它的转述 ✓）
 ```
+
+## 二百一十八、✅✅ **真浏览器复测完整报告（`f1eb1bc7` 线 ✓）⇒ `?genre=` 缺陷的证据链闭合**（2026-10-04 00:4x ✓）
+
+```
+✅ **装具与纪律** ✓：worktree @ `69cda85`（含 `fc2e651` ✓）、树**干净** ✓、Vite `:5233` ✓、Chromium **一次一浏览器** ✓、
+   **跑完已停服** ✓、产物全在 `/var/tmp/genre2/` ✓（**未进工作树** ✓）、**未提交任何东西** ✓
+✅⭐ **方法的关键在前置对照** ✓：经**产品自身落库路径**造带特征编排（`swing 0／totalSteps 32／stepCount 32／bpm 124` ✓，
+   **只留一个可辨认音符**：kick step 5／pitch 55／vel 111／gate 0.9 ✓）⇒ **导航前从 IndexedDB 逐值读回并与种子比对相等** ✓✓
+   读数用产品自带 seam `window.__grooveProbe.readState()`（`?probe=1` ✓）＋ localStorage ＋ IndexedDB ✓（250ms 采样 ✓）
+
+| 腿 | 读数（逐值 ✓） |
+|---|---|
+| **改前**（临时还原分支 ✓，跑完已还原 ✓） | 导航前 `32/0, 1/55/111` ✓ ⇒ **首帧 `+1265 ms` 仍带 marker** ✓ ⇒ **live `+2105 ms` 变 `128/15`、音符消失** ✗ ⇒ localStorage／IndexedDB 均 `128/15` ✗<br>⇒ ⭐ **CLOBBERED，首帧后 0.84 s** ✓ |
+| **改前之对照**（同一代码，URL **去掉** `?genre=` ✓） | 首帧 `+1201 ms` marker ✓，4 s 内三处恒为 **`32/0, 1/55/111`** ✓✓ ⇒ ⭐ **恢复路径本身没问题，丢失只由 `?genre=` 引起** ✓ |
+| **改后**（HEAD ✓） | live **16 次采样**（`+1421…+5685 ms`）恒 **`32/0, 1/55/111`** ✓；localStorage／IndexedDB 同 ✓；**无 console error／pageerror** ✓ ⇒ ⭐ **PRESERVED** ✓ |
+
+✅ **正向** ✓：清空 localStorage 后 `/studio?genre=chicago-house` ⇒ live `genreId=chicago-house, totalSteps=128, swing=15` ✓ ⇒ **流派仍作初始流派生效** ✓
+⚠️⭐ **它自报的两条"读数口径"提醒（很要紧 ✓，我记进清单 ✓）**：
+   ① 改前腿里产品 seam 装得晚（随音频引擎 ✓）⇒ "**恢复态**"是用**渲染首帧**（`data-active=true` ✓）抓的，**不是 probe** ✓ —— 它**说明来源** ✓
+   ② ⚠️ **步骤网格两条腿都渲染 128 个 `step-cell-0-*`**（即使 `totalSteps=32` ✗）⇒ ⭐ **DOM 单元格数不是 `totalSteps` 读数** ✗
+      ⇒ **一律取 probe／localStorage／IndexedDB** ✓，DOM 只取 marker 的 `data-active` ✓✓（**"别拿一个量的形状当另一个量"** ✓）
+✅ 它另跑 `urlShareGenreSnapshot` ⇒ **3 passed** ✓（只读 ✓）；`origin/dev` 之后只多了 `docs/OPEN_WORK.md` 变化 ⇒ 无源码差异 ✓
+⇒ ⭐⭐ **`§201` ④ 里"一处真浏览器复测"这条欠件至此闭环** ✓（**我自己也独立读过它的 A/B 原始 json** ✓ `§210` ✓）
+⚠️ 本目标仍**只剩报告级**一件：`np` 线的完整回报 ✓（其代码与判据已落地并绿 ✓）
+```
