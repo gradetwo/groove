@@ -9,8 +9,16 @@
  * owed as a rendering criterion in the harness `mcpRenderArrangementBars.test.ts` already uses, and is recorded in
  * docs/OPEN_WORK.md rather than implied by this file.
  */
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { TOOLS } from "../../mcp/registry";
+import {
+  addMcpTrackNotes,
+  clearMcpArrangements,
+  createMcpArrangement,
+  flattenMcpArrangement,
+  getMcpArrangement,
+  summariseArrangement,
+} from "../../mcp/arrangement";
 
 const preview = TOOLS.find((t) => t.name === "render_arrangement_preview");
 const schemaOf = (tool: unknown) =>
@@ -35,3 +43,43 @@ describe("the arrangement preview tool", () => {
     expect(schema.endBar?.description ?? "").toContain("exclusive");
   });
 });
+
+/**
+ * ⭐ **The behaviour, not the shape** (the half the file above says it owes).
+ *
+ * Both properties are decided by the notes map the flatten narrows, so they are held here without rendering anything:
+ * a scope that is asked for must actually narrow, and a span must actually cut. Each fails if the filter stops working.
+ */
+const lanesPlaying = (flattened: { pattern: { tracks: Array<{ steps?: number[] }> } }) =>
+  flattened.pattern.tracks.filter((row) => (row.steps ?? []).some((step) => step !== 0)).length;
+
+describe("the preview scope really narrows", () => {
+  beforeEach(() => clearMcpArrangements());
+
+  /** One synth lane with one note, at bar 0. */
+  const oneLane = () => {
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth" });
+    const track = summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).tracks[0]!;
+    addMcpTrackNotes(arrangementId, track.id, [{ pitch: 60, startBeats: 0, lengthBeats: 1, velocity: 100 }]);
+    return { arrangementId, trackId: track.id };
+  };
+
+  it("plays the lane with no scope, and nothing at all when the scope names no lane", () => {
+    const { arrangementId } = oneLane();
+    expect(lanesPlaying(flattenMcpArrangement(arrangementId).flattened)).toBeGreaterThan(0);
+    // An unknown id contributes nothing: a filter that quietly rendered everything would answer a question nobody asked.
+    expect(lanesPlaying(flattenMcpArrangement(arrangementId, undefined, ["not-a-track"]).flattened)).toBe(0);
+    expect(lanesPlaying(flattenMcpArrangement(arrangementId, undefined, [trackIdOf(arrangementId)]).flattened)).toBeGreaterThan(0);
+  });
+
+  it("⭐ keeps the note out when the span starts after it", () => {
+    const { arrangementId } = oneLane();
+    expect(lanesPlaying(flattenMcpArrangement(arrangementId, { startBar: 2, endBar: 3 }).flattened)).toBe(0);
+    expect(lanesPlaying(flattenMcpArrangement(arrangementId, { startBar: 0, endBar: 1 }).flattened)).toBeGreaterThan(0);
+  });
+});
+
+/** The one lane's id, read from the model rather than assumed. */
+function trackIdOf(arrangementId: string): string {
+  return summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).tracks[0]!.id;
+}
