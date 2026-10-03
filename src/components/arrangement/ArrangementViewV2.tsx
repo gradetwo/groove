@@ -551,6 +551,19 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
     void play();
   }, [player, playing, play, pause]);
 
+  /**
+   * ⭐ **Writing a note is heard, through the engine's own audition** — the same seam the keyboard below the roll already uses, rather than a second synthesis path invented for the roll. `audition` resolves one note of one instrument through the SFZ path and sounds it at that note's rate; the roll reports a pitch and this sounds it, which is what keeps the roll a reading of the notes rather than a caller of the engine.
+   *
+   * **One preview at a time.** A click that lands on the next pitch replaces the last voice instead of stacking on it, so sliding a note up a scale is one note moving rather than a chord nobody asked for; the voice is released when the editor goes or another track is selected, because a preview that outlives its editor is a note nobody can stop.
+   */
+  const auditioned = useRef<number | undefined>(undefined);
+  const releaseAudition = useCallback(() => {
+    const midi = auditioned.current;
+    auditioned.current = undefined;
+    if (midi !== undefined) player?.releaseNote?.({ midi, trackId: selectedTrackId });
+  }, [player, selectedTrackId]);
+  useEffect(() => releaseAudition, [releaseAudition]);
+
   // ⭐ The early return sits **after every hook**, because a conditional hook changes their order: the first version of this had it above `useCallback` and produced six type errors, whose real content was a React bug.
   if (choosing) {
     return (
@@ -1153,6 +1166,23 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
                 onRemoveNote={(at) => commit(removeTrackNoteCommand(selected.id, at, noteFor(selected.id, at)))}
                 onMoveNote={(from, to) => commit(moveTrackNoteCommand(selected.id, from, to))}
                 onResizeNote={(at, lengthBeats) => commit(setTrackNoteLengthCommand(selected.id, at, noteFor(selected.id, at)?.lengthBeats, lengthBeats))}
+                /**
+                 * ⭐ **The roll writes, the view sounds.** A sampler track is the one with an instrument behind it, so it is the one whose notes can be heard — the same condition the keyboard below is drawn under, so the two cannot disagree about which tracks are audible. A drum or synth track gets no audition rather than a silent one, which is the honest answer and the one its own keyboard is already given.
+                 */
+                onAudition={
+                  selected.kind === "sampler" && selected.sample
+                    ? (midi) => {
+                        releaseAudition();
+                        // Reported rather than discarded, exactly as the keyboard's own press is: a silent audition has to say why it was silent.
+                        void player?.audition?.({ assetId: selected.sample!.assetId, midi, trackId: selected.id, gainDb: selected.gainDb })?.then((result) => {
+                          setPlayProblem(result && result.ok === false ? result.reason : undefined);
+                        });
+                        auditioned.current = midi;
+                      }
+                    : undefined
+                }
+                /** Space, while the roll has focus — the transport, routed to the same toggle the toolbar's button calls. */
+                onToggleTransport={togglePlay}
               />
             )}
             {selected.kind === "sampler" && selected.sample ? (

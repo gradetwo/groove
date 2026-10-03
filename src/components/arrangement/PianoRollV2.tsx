@@ -16,8 +16,12 @@
  *
  * A press on a note is not yet a click and not yet a drag, so the two are told apart when the pointer comes up: moving nothing means "delete", moving somewhere means "move". That is the same distinction Logic makes, and it is why a person who meant to delete does not move
  * anything and a person who meant to move does not delete.
+ *
+ * **Writing is heard, and the keys are this editor's.** A roll that silently wrote a note made a person guess whether the pitch was the one they meant, which is the one thing a roll exists to answer — so a write and a move that lands on a **new pitch** report the pitch through `onAudition`, and the caller sounds it with the engine's own audition path. And `Space`/`Delete` are handled **here, on the editor**, rather than by a second window listener: Cubase's own editor commands are worded "if the editor has the focus" and Live's "when the MIDI Note Editor is focused", because a transport key that also fires while the pointer is in a toolbar is a key that belongs to no surface at all.
+ *
+ * **The pointer gesture has a backstop.** The destination of a drag is the cell the pointer reaches, so the gesture is read from the cells rather than by capturing the pointer — capture retargets every subsequent event to the capturing element, and the browser then stops running hit tests, which is precisely what a cell-based destination is made of (measured: with capture on, the cells' `pointerenter` never fires). What capture would have bought — a release that always comes home — is bought instead by a window-level `pointerup`: without it, a release over another panel left the drag armed and the *next* gesture moved a note nobody touched.
  */
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { STEPS_PER_BEAT, STEP_BEATS } from "../../data/noteEvents";
 import type { NoteEvent } from "../../types/arrangementV2";
@@ -38,11 +42,37 @@ export interface PianoRollV2Props {
   /** The lowest and highest pitch drawn. A window rather than all 128, because 128 rows is a scroll bar where a melody is a glance. */
   lowPitch?: number;
   highPitch?: number;
+  /**
+   * ⭐ **Sound one pitch, right now.** The roll reports and the caller sounds, for the same reason it reports every edit: the player is the view's, and a roll that reached for it could not be rendered as a picture of the notes. Absent means "no instrument to hear", which is a drum or effect track's honest answer rather than a silent write.
+   */
+  onAudition?: (midi: number) => void;
+  /**
+   * ⭐ **What `Space` means while this editor has focus.** Optional like the rest: a host with no transport draws a roll whose Space does nothing rather than one that lies about playing.
+   */
+  onToggleTransport?: () => void;
 }
 
 /** Pixels per sixteenth step — the grid's unit, and the scale every position is computed in. */
 const CELL = 12;
 const ROW_HEIGHT = 16;
+
+/**
+ * Whether a keystroke belongs to a text control rather than to the roll.
+ *
+ * The roll is a focusable editor, so `Space` and `Delete` are its own — but the panel it draws **contains two controls of its own**, a length field and a velocity slider. A key handler on the panel sees every keystroke that bubbles out of them, so without this guard typing a space in the length field would start the transport and `Backspace` in it would delete a note. The shape is the one `useTransportShortcuts.isTextEntryTarget` established, including the `range` exemption (U-09: a focused slider must not permanently kill transport keys), so the two surfaces cannot disagree about what a text field is.
+ */
+function isTextEntryTarget(target: EventTarget | null): boolean {
+  const element = target as HTMLElement | null;
+  if (!element || typeof element.closest !== "function") return false;
+  if (element.isContentEditable) return true;
+  const editableHost = element.closest<HTMLElement>("[contenteditable]");
+  if (editableHost && editableHost.isContentEditable) return true;
+  const control = element.closest<HTMLElement>("input, textarea, select");
+  if (!control) return false;
+  if (control.tagName === "TEXTAREA" || control.tagName === "SELECT") return true;
+  const type = (control as HTMLInputElement).type?.toLowerCase() || "text";
+  return type !== "range";
+}
 
 /** The pitch rows, highest first — the way a roll reads, and the way a keyboard is laid out. */
 function pitchRows(low: number, high: number): number[] {
@@ -57,14 +87,42 @@ export function noteName(pitch: number): string {
 
 const isBlackKey = (pitch: number) => [1, 3, 6, 8, 10].includes(pitch % 12);
 
-export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResizeNote, beats = 16, onSetBars, lowPitch = 48, highPitch = 84 }: PianoRollV2Props) {
+export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResizeNote, beats = 16, onSetBars, lowPitch = 48, highPitch = 84, onAudition, onToggleTransport }: PianoRollV2Props) {
   const { t } = useLanguage();
   const [lengthBeats, setLengthBeats] = useState(1);
   const [velocity, setVelocity] = useState(100);
+  /**
+   * ⭐ **The note a `Delete` would remove — the one the person last put the pointer on**, whether they wrote it or pressed it. The roll had no selection at all, and the keys cannot delete "the selected note" without one; this is the smallest selection that is true, and it never changes what a press means (a press-and-release in place still deletes, as it always did).
+   */
+  const [selected, setSelected] = useState<{ pitch: number; startBeats: number } | undefined>(undefined);
   /** Where a drag started, and which cell it is over. Only the first is a property of an element, and the pointer moves between cells. */
   const drag = useRef<{ kind: "move" | "resize"; from: { pitch: number; startBeats: number }; to: { pitch: number; startBeats: number } } | undefined>(undefined);
   /** The cell a press started in, so a press that slides without a note under it does not write somewhere the person did not press. */
   const pressed = useRef<{ pitch: number; step: number } | undefined>(undefined);
+  /** The panel, so a press on a note can hand it the focus the keys arrive through. */
+  const panel = useRef<HTMLDivElement | null>(null);
+
+  /**
+   * ⭐ **A gesture that ends anywhere else is cleared, and the clear is unconditional on purpose.**
+   *
+   * The cells and the notes already clear the gesture themselves when the release is theirs, so a release that did reach one arrives here with nothing left to clear — while a release over the toolbar, over another panel, or outside the window (where no cell can see it) is exactly the case this exists for. Without it the drag stayed armed, and the next press inherited it: measured before the fix, a press on a note released over the grid's own padding, followed by a short slide on two empty cells, **moved the untouched note to a new pitch**.
+   *
+   * `pointercancel` is the same fact as `pointerup` (the browser suppressing the stream, per the Pointer Events spec) and `blur` is the keyboard's version of it: a gesture is not still in progress because the window went away.
+   */
+  useEffect(() => {
+    const clear = () => {
+      drag.current = undefined;
+      pressed.current = undefined;
+    };
+    window.addEventListener("pointerup", clear);
+    window.addEventListener("pointercancel", clear);
+    window.addEventListener("blur", clear);
+    return () => {
+      window.removeEventListener("pointerup", clear);
+      window.removeEventListener("pointercancel", clear);
+      window.removeEventListener("blur", clear);
+    };
+  }, []);
 
   const steps = Math.round(beats * STEPS_PER_BEAT);
   const rows = useMemo(() => pitchRows(lowPitch, highPitch), [lowPitch, highPitch]);
@@ -81,8 +139,58 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
     return map;
   }, [notes, steps]);
 
+  /**
+   * One move, in one place: the edit is reported, and **the pitch is heard only when it changed**. A move along the timeline is the same note in another place, and re-sounding it would say the pitch had been edited when nothing about it had.
+   */
+  const commitMove = useCallback(
+    (from: { pitch: number; startBeats: number }, to: { pitch: number; startBeats: number }) => {
+      onMoveNote?.(from, to);
+      if (to.pitch !== from.pitch) onAudition?.(to.pitch);
+    },
+    [onMoveNote, onAudition]
+  );
+
+  /**
+   * ⭐ **`Space` and `Delete`, while this editor has focus** — not on the window, so they cannot be stolen from a field somewhere else, and not from a global listener, so there is no second place that owns them.
+   *
+   * The two exceptions are both real: a key that arrived in one of the roll's own text controls is left to it, and a **button that is not a grid cell** keeps the Space that activates it (the bar controls). The cells are the editor's own surface, so Space over them is the transport — the same reading Live and Cubase give their editors.
+   */
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.defaultPrevented) return;
+    if (isTextEntryTarget(event.target)) return;
+
+    if (event.code === "Space" || event.key === " ") {
+      const button = (event.target as HTMLElement | null)?.closest?.("button");
+      // `data-note` marks the grid's cells; every other button in the panel (add/remove bar) keeps its own Space.
+      if (button && button.dataset.note === undefined) return;
+      if (onToggleTransport === undefined) return;
+      event.preventDefault();
+      onToggleTransport();
+      return;
+    }
+
+    if (event.key === "Delete" || event.key === "Backspace") {
+      if (selected === undefined) return;
+      // Read from the notes on screen rather than trusted: the selected note may have been removed, moved or never existed as a prop.
+      const note = notes.find((candidate) => candidate.pitch === selected.pitch && candidate.startBeats === selected.startBeats);
+      if (note === undefined) return;
+      event.preventDefault();
+      setSelected(undefined);
+      onRemoveNote({ pitch: note.pitch, startBeats: note.startBeats });
+    }
+  };
+
   return (
-    <div data-testid="piano-roll-v2" className="flex flex-col gap-2 p-3 rounded border border-[rgb(var(--d-line))]">
+    <div
+      ref={panel}
+      data-testid="piano-roll-v2"
+      /**
+       * ⭐ **The editor takes the focus when it is pressed, and is not a tab stop of its own.** `tabIndex={-1}` is deliberate: the cells are already reachable, so the panel needs to be focusable *programmatically* and must not add a second, unlabelled stop to the tab sequence (APG: a composite's tab sequence should carry one entry, and the grid's cells are it).
+       */
+      tabIndex={-1}
+      onKeyDown={handleKeyDown}
+      className="flex flex-col gap-2 p-3 rounded border border-[rgb(var(--d-line))]"
+    >
       <div className="flex flex-wrap items-center gap-3 text-xs text-text opacity-80">
         <span>{t("roll_hint")}</span>
         <label className="flex items-center gap-2">
@@ -170,6 +278,8 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
                          */
                         onPointerDown={() => {
                           pressed.current = { pitch, step };
+                          // Every press in the grid hands the panel the focus, so the keys act on this editor and on nothing else.
+                          panel.current?.focus();
                         }}
                         onPointerEnter={() => {
                           if (drag.current) drag.current = { ...drag.current, to: { pitch, startBeats: step * STEP_BEATS } };
@@ -180,7 +290,7 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
                           if (started) {
                             // A drag that ended on a cell rather than on the note it started from still moves it — the pointer is where the person is looking.
                             if (started.to.pitch !== started.from.pitch || Math.round(started.to.startBeats / STEP_BEATS) !== Math.round(started.from.startBeats / STEP_BEATS)) {
-                              onMoveNote?.(started.from, { pitch, startBeats: step * STEP_BEATS });
+                              commitMove(started.from, { pitch, startBeats: step * STEP_BEATS });
                             }
                             return;
                           }
@@ -189,6 +299,9 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
                           // Written where the press started, not where the pointer happens to be: a press that slid across cells without a note under it was not a drag of anything.
                           if (from && from.pitch === pitch && from.step === step) {
                             onAddNote({ pitch, startBeats: step * STEP_BEATS, lengthBeats, velocity });
+                            // The note just written is the one the keys act on, and the one worth hearing: a roll that wrote silently made the person guess the pitch.
+                            setSelected({ pitch, startBeats: step * STEP_BEATS });
+                            onAudition?.(pitch);
                           }
                         }}
                         style={{ width: CELL, height: ROW_HEIGHT }}
@@ -206,9 +319,14 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
                         data-testid={`roll-note-${pitch}-${step}`}
                         data-note="true"
                         data-length={note.lengthBeats}
+                        data-selected={selected?.pitch === note.pitch && selected.startBeats === note.startBeats ? "true" : "false"}
+                        /** No tab stop of its own — the keyboard focuses the one it is asked to, which is what keeps `Delete` aimed at the note a person pressed rather than at the first one in the DOM. */
+                        tabIndex={-1}
                         aria-label={t("roll_remove_note", { note: noteName(pitch) })}
                         onPointerDown={() => {
                           drag.current = { kind: "move", from: { pitch, startBeats: note.startBeats }, to: { pitch, startBeats: note.startBeats } };
+                          setSelected({ pitch, startBeats: note.startBeats });
+                          panel.current?.focus();
                         }}
                         onPointerEnter={() => {
                           if (drag.current) drag.current = { ...drag.current, to: { pitch, startBeats: step * STEP_BEATS } };
@@ -219,10 +337,12 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
                           if (!started) return;
                           const samePlace = started.to.pitch === pitch && Math.round(started.to.startBeats / STEP_BEATS) === step;
                           if (samePlace) onRemoveNote({ pitch, startBeats: note.startBeats });
-                          else onMoveNote?.(started.from, { pitch, startBeats: step * STEP_BEATS });
+                          else commitMove(started.from, { pitch, startBeats: step * STEP_BEATS });
                         }}
                         style={{ left: step * CELL, width: Math.max(CELL, (note.lengthBeats / STEP_BEATS) * CELL), height: ROW_HEIGHT }}
-                        className="absolute top-0 z-10 cursor-grab rounded-sm bg-[rgb(var(--d-accent))]"
+                        className={`absolute top-0 z-10 cursor-grab rounded-sm bg-[rgb(var(--d-accent))] ${
+                          selected?.pitch === note.pitch && selected.startBeats === note.startBeats ? "outline outline-2 outline-[rgb(var(--d-on-accent))]" : ""
+                        }`}
                       >
                         {onResizeNote && (
                           <span
@@ -232,6 +352,9 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
                               // The handle is inside the note, so the body's drag must not also start: the intention here is length, not position.
                               event.stopPropagation();
                               drag.current = { kind: "resize", from: { pitch, startBeats: note.startBeats }, to: { pitch, startBeats: note.startBeats } };
+                              // Grabbing the edge is still aiming at this note, so the keys keep acting on it.
+                              setSelected({ pitch, startBeats: note.startBeats });
+                              panel.current?.focus();
                             }}
                             onPointerEnter={() => {
                               if (drag.current?.kind === "resize") drag.current = { ...drag.current, to: { pitch, startBeats: step * STEP_BEATS } };
