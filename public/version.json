@@ -1,29 +1,29 @@
 {
-  "version": "2.34.45",
+  "version": "2.34.46",
   "releaseDate": "2026-10-03",
   "changelogCount": 10,
   "latest": {
-    "version": "2.34.45",
-    "date": "2026-10-03",
+    "version": "2.34.46",
+    "date": "2026-10-04",
     "category": "feature",
     "title": {
-      "zh": "编曲工程列出来了、走带真跳、导出可取消",
-      "en": "Arrangement projects are listed, the transport really seeks, and an export can be cancelled"
+      "zh": "Logic 工程能导出了、配对文件修好两处保真损失",
+      "en": "A Logic project can be exported, and the paired files fixed two writing losses"
     },
     "highlights": [
       {
-        "zh": "Hub 列出编曲工程，可打开、改名、删除，打开的是你点的那份。",
-        "en": "The hub lists arrangement projects, with open, rename and delete, and Open enters the one you clicked."
+        "zh": "乐谱页头部多了一个「导出 Logic 工程（.logicx.zip）」：写出的是 Logic 的工程目录结构，浏览器交给你一个包。",
+        "en": "The score header carries Export Logic Project (.logicx.zip): it writes a Logic project structure, and the browser hands you one package."
       },
       {
-        "zh": "新装就能看见「编曲」；点标尺会跳到那一小节，模板工程也真是 8 小节。",
-        "en": "A fresh install shows Arrangement, a ruler click really seeks to that bar, and a template project really is eight bars."
+        "zh": "同曲 MIDI 与 MusicXML 配对互校，逼出两处听不出来的保真损失并修好：非网格音长不再被取整、重叠音不再被顺延两拍。",
+        "en": "Cross-checking the same piece in MIDI and MusicXML exposed two silent fidelity losses, now fixed: off-grid note lengths are no longer rounded and overlapping notes are no longer pushed two beats late."
       },
       {
-        "zh": "按下播放就有「正在准备」（3204→280 毫秒）；导出母带报进度、能取消，取消后不出下载。",
-        "en": "Play shows its preparing state at once (3,204 down to 280 ms), and a master export reports progress, can be cancelled, and produces no download once cancelled."
+        "zh": "导出条数是跟着菜单算出来的，所以多一个导出项时那句文案会自己更新——这次它从 7 变成 8。",
+        "en": "The stated export count is derived from the menu, so it follows a new export by itself: this time it went from seven to eight."
       }
     ],
-    "truncated": true
+    "truncated": false
   }
 }
