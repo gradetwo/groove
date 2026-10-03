@@ -5372,3 +5372,47 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
       ⇒ ⚠️ 像 **headless 下 worklet 模块加载不了** ✓ ⇒ **记为观察** ✓（除非能证实在有头环境也这样 ✓，否则**不当缺陷** ✗）
 ⚠️ **仍欠**：**读回比对**（逐音 pitch／startBeats／lengthBeats ✓，含**十六分**专项 ✓）＋ MIDI **两处实现**的往返结论 ✓
 ```
+
+## 一百八十六、⭐⭐⭐ **导出往返实测：MIDI 与 MusicXML 都逐值通过（`exp3` 的 `compare.txt` ✓）**（2026-10-04 00:1x ✓）
+
+```
+**方法** ✓：真 Chromium ⇒ 三轨夹具（Lead／Bass／Drums ✓，含十六分 ✓）⇒ 界面导出 ⇒ 抓下载 ⇒ **用产品自己的读回路径**读
+   （`parseMidiFile`／`fromMusicXml` ✓，**不自写解析** ✓）⇒ **逐音比对**（pitch／startBeats／lengthBeats ✓）
+
+### 186.1 ✅✅ **编排 MIDI（format 1）往返：完美** ✓
+
+```
+header: MThd ✓｜format **1** ✓｜ntrks **4** ✓｜division **480** ✓｜492 B ✓
+parseMidiFile 读回: format 1 ✓、division 480 ✓、⭐ trackNames ["Conductor","Lead","Bass","Drums"] ✓✓、noteCount **43** ✓
+problems: writer **[]** ✓ ｜ reader **[]** ✓ ｜ parts: Lead, Bass, Drums ✓
+⭐⭐ **字节级一致**：`bytes: browser 492 vs node fixture 492 equal=true` ✓（浏览器导出与 Node 夹具逐字节相同 ✓）
+⭐⭐⭐ **逐音**：`ALL: 43/43 逐值相等 (pitch/start/length/velocity)` ✓✓✓
+   逐 part：Lead **34/34** ✓、Bass **5/5** ✓、Drums **4/4** ✓，**mismatches 0** ✓
+✅ **歌词音节往返一致** ✓：`expected ["67@2.5=la","57@10=li","67@14=lo"]` ＝ actual ✓
+✅ **前 32 音**逐行 期望＝实际 ✓，**含十六分**（`length 0.25` 在 0.75／1.5／1.75／2.5／3.75／4.25／4.75／5.25／5.75／6.25／6.75／7.25／7.75 ✓✓）
+```
+
+### 186.2 ✅✅ **编排 MusicXML 往返：通过** ✓
+
+```
+文件：XML 声明 ✓｜**MusicXML 4.0 DTD** ✓｜`<score-partwise version="4.0">` ✓
+读回：⭐ **`divisions = "4"`** ✓（十六分网格 ✓）｜`workTitle/partName = Lead` ✓｜measureCount **6** ✓
+⭐ **type counts: {"quarter":5,"eighth":6,"sixteenth":33,"half":7,"whole":1}** ✓ ⇒ **33 个十六分真的写进 XML** ✓
+problems: **[]** ✓
+⭐⭐ **逐音**：**`part Lead: equal 34/34 mismatches 0`**（**pitch／start／length** ✓）
+   ＋ ⭐ 它**明写** `velocity not compared — MusicXML carries none` ✓✓（**MusicXML 不带力度 ⇒ 该列不参与比对** ✓）
+✅ 前 32 音 pitch／start／length 全对 ✓，十六分位置全在（1.5／1.75／2.5／3.75／…／12.25／12.5／13.25 ✓）
+⇒ ⭐ **十六分网格完整穿过两种往返** ✓ —— 这正是读侧 `1/4` 修好后要看的最终证据 ✓
+```
+
+### 186.3 ⚠️ 两处**未决/观察**（我不替它下结论 ✗）
+
+```
+⚠️ ① **MIDI 段的 "Lead-only first 32 (per-part)" 里 velocity 期望 96／实际 100** ✗（8 行全如此 ✓），
+   而**聚合那节**说 **43/43 含力度全等** ✓ ⇒ ⚠️ **两节的"期望"基准不同** ✓（疑似"夹具里 Lead 的意向力度 vs 编排里的实际力度" ✓）
+   ⇒ ⭐ **要 `exp3` 说明哪个是准的** ✗（**不是往返丢失** 的可能性大 ✓，但**不许我替它下结论** ✗）
+ℹ️ ② `console` 观察（**都不当缺陷** ✗）：**AudioWorklet 加载失败**（两段各 3 条 ✓，回退节点压缩器 ✓）
+   ＋ **`Web MIDI: NotAllowedError`** ✓（headless 权限 ✓）；`errors: []` ✓
+✅ ③ **`expectedSha256` 之谜已解** ✓（`§250`）：**状态相同 ⇒ 哈希相同** ✓（新一次 `sha256 = expectedSha256 = 193c3448…` ✓）
+   ⇒ **工作台导出可复现** ✓；两次字节数不同（2,556 → **308** ✓）是**因为 studio 状态不同** ✓（`totalSteps` 128→32 ✓、`swing` 15→0 ✓）
+```
