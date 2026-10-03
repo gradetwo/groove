@@ -5306,3 +5306,23 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
 ⚠️ 它如实标的**覆盖缝隙** ✓（既有安排 ✓，非本次引入 ✗）：新判据**不重测语料** ✓（无语料也绿 ✓），
    而散文里的语料数由 `logicCorpusLines.test.ts` 钉住 —— 那条在**无语料时响亮跳过** ✓ ⇒ **无语料环境下这些数不被本地钉住** ✓
 ```
+## 一百七十九、✅ **`help.ts:164` 导出口径修复的完整回报（`a969d55`）＋ 它挖出两件新东西** ✓（2026-10-04 00:0x ✓）
+
+```
+✅ **它改了什么**（我核过 ✓）：`src/i18n/locales/help.ts:164` 的 `onboarding_s7_desc` ✓ —— **en 与 zh 都改** ✓，
+   **去掉「lossless／无损」** ✓（⭐ 理由：**MP3 就在同一句里，说"无损"自相矛盾** ✓✓），**列全 7 项** ✓（MIDI／Ableton／.groove／WAV／MP3／stems／MusicXML ✓），
+   保留原有语气与句式 ✓；＋ 新判据 `src/test/helpExportSurfaceCopy.test.ts`（135 行 ✓，5 例 ✓）
+✅⭐ **它的判据质量高** ✓：**从组件 derive 锚点集合** ✓（非复述我的话 ✓）；每个词必须出现在**该控件自己的既有 label** 里 ✓；
+   **两种语言各含全部 7 词** ✓；**长度上限**（en<220／zh<90 ✓ —— **防把帮助文案写成说明文** ✓✓）；**旧句与"无损"措辞不得回归** ✓
+✅ **反面做了两个方向** ✓（原文 ✓）：把 en 改回旧句 ⇒ `the English onboarding line no longer names Ableton` ✓
+   ＋ ⭐ `the English line still claims losslessness, which MP3 contradicts` ✓✓；只把 zh 改回 ⇒ `no longer names .groove` ✓ ＋ `still claims 无损` ✓
+✅ `skins:gen`＝0 且**零 diff** ✓（`check:skins` 也 0 ✓）；反向量与既有判据 **22 passed / 0 failed** ✓（`exportSurfaceCopy` 4 ✓／`i18n` 6 ✓／`i18nKeys` 4 ✓／`toolbarExportAnchors` 4 ✓／`toolbarExportDiscoverability` 4 ✓）
+✅ **CI**：run `37134687509` = **success** ✓（首次 push 被 non-fast-forward 拒 ✓，脚本如实报 ✓，rebase 后重推 ✓，**未强推** ✓）
+⭐⭐ **它挖出第三处导出面（简报没提 ✓）**：`PianoRollLane.tsx:1715 piano-roll-export-btn` ✓／`:1728 …-export-json` ✓／`:1737 …-export-midi` ✓／`:1747 …-copy-json` ✓
+   （文案在 `studio.ts:669-671` ✓）⇒ ⭐ 它判定**不在本句射程内** ✓（该句讲"工程"导出 ✓，而那是**单轨片段级** ✓；且 JSON 是片段数据、MIDI 与已列的 MIDI 同格式 ✓）
+   ⇒ ⭐ 并把这条排除**写进判据头注** ✓（**不是默默忽略** ✗✓）—— 这正是我要的做法 ✓
+⚠️⚠️ **它报了三处同类"未验证的无损"措辞** ✗（**本微任务未授权 ⇒ 它没改** ✓，做法正确 ✓）：
+   ① `help.ts:40`「share lossless URLs」✗ ② `help.ts:138`「studio master quality／无损母带级音频」✗ ③ `studio.ts:974`「24-bit 无损采样」✗
+   ⇒ ⭐ **进队列** ✓（同类"说了不实" ✗ ⇒ 值得另开一条微任务 ✓；⚠️ 判它是否真的"无损"要先量 ✓ —— 例如 MP3/压缩路径存在即矛盾 ✓）
+⚠️ 它另如实标注：该 worktree 的本地分支**被外部进程 rebase 过**（reflog 有一条非它发起的 `rebase (start)` ✓）⇒ 不影响已交付提交 ✓（已核实 `origin/dev` 里第 164 行就是修好的句子 ✓）
+```
