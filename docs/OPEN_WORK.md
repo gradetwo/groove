@@ -4295,3 +4295,25 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
 ✅ **d8200c4**（G10 反向闸门，CI success ✓）：默认 exit 0 ✓、`GROOVE_UI_REACHABILITY=hard` ⇒ **exit 1、列出正好 6 条** ✓✓ ⇒ 能红且不常占用 CI ✓
 ⚠️ **我的读数错误**：见「34 passed」就说"计数没变" ✗ —— 34 是**条数**不是断言的计数 ✓ ⇒ 教训：看断言了什么，不看通过几条 ✓
 ```
+
+## 一百二十六、✅✅ **三笔验收（linguine／G10 闸门／G9 首屏）＋ 我一次读数错误**（2026-10-03 20:3x–20:39 ✓）
+
+```
+✅ **① `45524c3` `pick_bass`→`karoryfer-pastabass:linguine`**（CI `37122290149` **success** ✓）
+   我核过：`paletteWiring` 6/6 ✓、`sampledRangeCensus` 34/34 ✓、反向量五数逐字 ✓
+   ⭐ post-punk bass **12/12 解析** ✓（50/53/55 → root 49/52/55 ✓）；新库 33–101／69 键无洞 vs 旧 26–46 ✓
+   ⭐ 另有 **8 条 `pick_bass` lane 一起变好** ✓（heavy-metal 4/20→20/20、math-rock 16/20→20/20、blues-rock 8/12→12/12… ✓）
+   普查 `{172,25,1,4}`→**`{181,17,0,4}`** ✓｜镜像全 200、`reachability` exit 0、`rclone size` **207／125,954,822 B** 与 manifest 逐字节同 ✓｜CC0 ✓
+   ⚠️ 音色未试听 ✓；`docs/SAMPLED_RANGE_COVERAGE.md` 仍旧 ✗（已批准补同步 ✓）
+✅ **② `d8200c4` G10 反向闸门**（CI `37123011396` **success** ✓，失败 job 空 ✓）
+   我亲手核两模式 ✓：默认 **exit 0**（7 passed＋1 skipped ✓，`unreachable=6 pending-owner-ruling=6` ✓）；
+   ⭐ `GROOVE_UI_REACHABILITY=hard` ⇒ **exit 1**、列出**正好 6 条** ✓✓；塞假账 ⇒ exit 1（"账本与扫描不一致" ✓）
+   ⇒ **能红且不常占用 CI** ✓；它比普查多找到 2 条（`addTrackNotes`／`setTrackSteps` ✓）；规则**是量出来的** ✓
+✅ **③ 同笔含 G9（音频启动门）** ✓：文案走 i18n ✓、`aria-modal="true"` ✓、Escape 关闭且**不写**启动标记 ✓、**初始聚焦**按钮 ✓
+   判据红→绿实跑 ✓（修前 5/5 全红 ⇒ 修后 5 passed ⇒ 改回原样再红 ✓）；真浏览器复核 ✓
+   （en `"Start audio engine"` ✓、`aria-modal:"true"` ✓、`activeTestId:"audio-start-button"` ✓、**`afterEscape:0`** ✓）
+   ⚠️ 它自己列的未做：**APG 建议的可见关闭按钮未加** ✗；**无焦点陷阱**（`aria-modal` 已声明，但 Tab 仍可能离开 ✓）；**G2 按我的更正跳过**（未碰 `router.tsx` ✓）
+⚠️ **我的读数错误**：我跑普查看到「**34 passed**」就断言"计数没变／可能假绿" ✗ ——
+   **34 是判据条数，不是它断言的计数** ✓✓（实际期望值已是 `{181,17,0,4}` ✓；对方逻辑：若仍旧值那条会红不会绿 ✓）
+   ⇒ **教训：看判据"断言了什么"，不看"通过了几条"** ✓（这是我第 8 次同类：以间接信号代替直接读数 ✗）
+```
