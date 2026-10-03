@@ -6321,3 +6321,10 @@ problems: **[]** ✓
 ⇒ **下一步**：grep 读取器里"**由哪些记录 tag 建 part**"（照抄 ✓，不猜 ✗）⇒ 补齐三样 ⇒ 判据转绿 ✓
 ⚠️ 本轮**未提交代码** ✗（判据仍红 ⇒ 不提交半成品 ✓）；台账继续**只本地**（队列 8 笔我的 run ✗）
 ```
+
+**二百三十九·补（P1 缺口定位 ✓）**：
+```
+⭐ **part 由 `qeSM` 记录建出** ✓（`logicToArrangement.ts:781` `if (record.tag !== "qeSM") continue;` ✓ ⇒ `:815 parts.push({ name: name ?? \`Region N\`, notes })` ✓）
+   ⇒ **我的独立 `qSvE` 记录建不出 part** ✗（与 `parts = 0` 的观察一致 ✓）⇒ ⭐ **`qeSM` 与 `qSvE` 的关系是下一步要读的** ✓（疑：`qeSM` 正文内嵌一条 `qSvE` 序列 ✓ —— **待证，不许当结论** ✗）
+ℹ️ 另见（后续阶段会用 ✓）：`:665 countAudioRegions`（音频区要**报告** ✓）、`:859 "rpyH"`（自动化 ✓）、`:869 "ivnE"`（内嵌 XML ✓）
+```
