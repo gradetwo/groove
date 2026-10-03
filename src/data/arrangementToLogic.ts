@@ -33,6 +33,8 @@ const RECORD_SIZE_OFFSET = 0x1c;
 const CLUSTER_OFFSET = 8;
 /** The reader subtracts this from a note's ticks, so the writer has to add it (see `readNotes`). */
 const NOTE_ORIGIN_TICKS = 38400;
+/** Where a region's placement is counted from: nine bars of 4/4, the same origin the reader names. */
+const REGION_ORIGIN_TICKS = 34560;
 const METER_MARKER = 0x30;
 const TEMPO_MARKER = 0x60;
 const TEMPO_SLOT_AUTHORITATIVE = 0x3a6;
@@ -115,10 +117,24 @@ export function logicMetaDataPlist(bpm: number, beatsPerMeasure = 4, beatType = 
 function regionRecord(cluster: number, name: string): Uint8Array {
   const nameBytes = new TextEncoder().encode(name);
   const nameOffsetInBody = 0x34 - RECORD_HEADER;
-  const body = new Uint8Array(nameOffsetInBody + 2 + nameBytes.length);
+  const body = new Uint8Array(nameOffsetInBody + 2 + nameBytes.length + 4);
   body[nameOffsetInBody] = nameBytes.length & 0xff;
   body[nameOffsetInBody + 1] = (nameBytes.length >>> 8) & 0xff;
   body.set(nameBytes, nameOffsetInBody + 2);
+  /**
+   * The region's own start, in the **Logic 11.x** shape the specification documents: a plain `uint32` immediately
+   * after the variable-length name.
+   *
+   * WARNING: **our own reader does not apply this field** -- it documents that the layout moved between versions and
+   * that in its 10.x fixtures the same bytes contradict the notes they should bound, so it imports every part from
+   * beat 0 (docs/OPEN_WORK.md 242). It is written anyway, because a file that omits a documented field is a worse
+   * neighbour than one that carries it, and a reader which does apply it can then place the region. This writer does
+   * **not** claim the timeline position is placed: that stays a need.
+   *
+   * The value is the arrangement's own zero -- `REGION_ORIGIN_TICKS`, the region origin the reader states -- because
+   * the notes already carry their absolute positions from `NOTE_ORIGIN_TICKS` inside the sequence.
+   */
+  setU32(body, nameOffsetInBody + 2 + nameBytes.length, REGION_ORIGIN_TICKS);
   return record("qeSM", body, cluster);
 }
 

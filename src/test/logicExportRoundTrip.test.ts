@@ -34,6 +34,15 @@ describe("a written logic project reads back", () => {
       [67, 3.75, 1.25, 80],
     ]);
     expect(read.tempoBpm).toBe(120);
+    /**
+     * The region start field, in the 11.x shape (a word after the name). Our own reader does not apply it, so this
+     * asserts the writer's output rather than a placement, and changing the value turns this red.
+     */
+    const nameBytes = new TextEncoder().encode("Piano, Track0");
+    const at = projectData.findIndex((_, i) => nameBytes.every((b, j) => projectData[i + j] === b));
+    expect(at).toBeGreaterThan(0);
+    const after = at + nameBytes.length;
+    expect(projectData[after]! | (projectData[after + 1]! << 8) | (projectData[after + 2]! << 16) | (projectData[after + 3]! << 24)).toBe(34560);
   });
 
   it("carries the length in the continuation the reader takes it from", () => {
