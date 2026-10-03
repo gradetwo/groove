@@ -8,6 +8,8 @@
  * `parseSfz` still touches no I/O, and neither does this: the reader is injected, which is what makes the three failure modes that matter here — a **cycle**, a **missing
  * file** and a **nesting depth** — testable without a network and without a browser.
  */
+import { splitInlineDefines, substituteVariables } from "./defines";
+
 export interface IncludeReader {
   /** Returns the file's text, or `undefined` when there is no such file. */
   (path: string): string | undefined;
@@ -20,6 +22,18 @@ export interface ExpandIncludesResult {
   problems: string[];
   /** The paths that were read, in the order they were resolved, so a caller can report what an instrument actually loaded. */
   included: string[];
+  /**
+   * ⭐ **Which file each line of `text` came from** — the provenance the expander has and a flattened text loses.
+   *
+   * A sample path is written **inside** the file that declares it, and this project needs to be able to say which file that was: `karoryfer.war-tuba`'s articulation
+   * files live in `Programs/legato/` and name their samples `..\Samples\…`, and the reference engine resolves that against the **root program's** directory (measured:
+   * sfizz renders the root program at peak 0.0604 and the same file as its own entry point at 0.00003), so this is not what the engine does — it is what a caller who
+   * *wants* the declaring file's reading needs in order to have it without a second include expander (`sampleAssetForPath(…, { declaredIn })`).
+   *
+   * One entry per contiguous run of lines, so it is small: a run of `Programs/legato/staccato_dyn.sfz` covering 200 lines is one entry, not 200. The list is built
+   * during the same walk that builds `text`, so the two cannot drift.
+   */
+  sources: Array<{ from: number; to: number; file: string }>;
   /**
    * **The include paths the reader could not supply**, deduplicated and in the order they were met.
    *
@@ -45,9 +59,12 @@ function resolvePath(fromPath: string, wanted: string): string {
 
 /**
  * An include **anywhere in a line**, not only one that owns the whole line: Salamander Grand Piano writes `<group> #include "Data/vel_01.txt" lovel=1 hivel=26 #include "Data/region.txt"`, and the earlier whole-line rule silently ignored every one of them.
+ *
+ * `#define` is read by the **same rule the pure expander in `defines.ts` uses** — `splitInlineDefines`/`definedNamesAt` live there and are imported here,
+ * because a second opinion about where a directive may sit is how the two layers would drift. The real file that needed this is
+ * `sfzinstruments/kinwie.dim-cabasa@016457e5`, whose ten definitions ride on the `<group>` header that uses them.
  */
 const INCLUDE = /#include\s+"([^"]+)"/g;
-const DEFINE = /^\s*#define\s+\$([A-Za-z_][A-Za-z0-9_]*)\s+(\S+)\s*$/;
 
 /**
  * `$VAR` substitution, scoped **globally and in order** — decided by measurement rather than by taste.
@@ -55,9 +72,13 @@ const DEFINE = /^\s*#define\s+\$([A-Za-z_][A-Za-z0-9_]*)\s+(\S+)\s*$/;
  * The real library defines its keys in `Programs/keymaps/keymap_basic.sfz` (`#define $KICK_SNRIGHT_KEY 36`) and uses them in files reached later, deeper in the include
  * tree, which sfizz resolves. A per-file scope would not reproduce that; a global map that grows as the tree is walked does. Definitions are therefore inherited by
  * includes **and** by whatever the parent expands afterwards, which is the rule that makes this library read the way sfizz reads it.
+ *
+ * ⭐ **The name boundary is `defines.ts`'s rule too, and it is a defect fix rather than a preference.** A plain `\$([A-Za-z_][A-Za-z0-9_]*)` replace treats `$POS_01`
+ * as one name and therefore never substitutes `$POS` where `_01` is literal text — which is exactly what `dim-cabasa` writes. `substituteVariables` picks the
+ * longest defined name that prefixes the token and leaves the remainder alone; an undefined name is left as written, so the parser still marks it.
  */
 function substitute(line: string, defines: Map<string, string>): string {
-  return line.replace(/\$([A-Za-z_][A-Za-z0-9_]*)/g, (whole, name: string) => defines.get(name) ?? whole);
+  return substituteVariables(line, defines).text;
 }
 
 /**
@@ -88,6 +109,12 @@ function resolveCandidates(rootPath: string, fromPath: string, wanted: string): 
   return wantedHead !== "" && wantedHead === fromTail ? [fromRoot, relative] : [relative, fromRoot];
 }
 
+/** The file whose run covers output line `line` in a child expansion's map, or `undefined` when the map is empty. */
+function sourceFileFor(runs: ReadonlyArray<{ from: number; to: number; file: string }>, line: number): string | undefined {
+  for (const run of runs) if (line >= run.from && line < run.to) return run.file;
+  return undefined;
+}
+
 export function expandIncludes(
   text: string,
   read: IncludeReader,
@@ -110,6 +137,22 @@ export function expandIncludes(
    */
   const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
   const out: string[] = [];
+  /**
+   * The provenance of `out`, appended in the same places the output is, so the two cannot drift.
+   *
+   * ⭐ **The entry point seeds it, because a region written in the entry file must be attributable too** — a list that only ever named included files would make
+   * `sourcePath` absent for the common case and present only for the interesting one, and a caller could not tell "declared in the program" from "provenance not
+   * recorded". `path` may be `""` for a caller that passes no path at all, and an empty string is kept rather than dropped: it means the same as "the program",
+   * which is what `defaultPath`'s absent case means too.
+   */
+  const sources: Array<{ from: number; to: number; file: string }> = [];
+  /** One output line, attributed to `file` — coalesced with the previous run when it is the same file. `to` is exclusive. */
+  const pushLine = (line: string, file: string): void => {
+    const last = sources[sources.length - 1];
+    if (last && last.file === file && last.to === out.length) last.to = out.length + 1;
+    else sources.push({ from: out.length, to: out.length + 1, file });
+    out.push(line);
+  };
 
   /**
    * Comments are stripped **before** a directive is recognised, and that is a bug fix rather than tidiness.
@@ -131,11 +174,29 @@ export function expandIncludes(
 
   lines.forEach((rawLine, index) => {
     const line = stripComment(rawLine);
-    const define = line.match(DEFINE);
-    if (define) {
-      // A definition produces no output of its own; it changes what later lines mean, including in files included afterwards.
-      defines.set(define[1]!, define[2]!);
-      return;
+    /**
+     * ⭐ **A `#define` is a directive wherever it sits on the line, and what follows it stays part of the line.**
+     *
+     * The old pattern was `^\s*#define\s+\$NAME\s+(\S+)\s*$` — whole-line, single-token value — so `kinwie.dim-cabasa`'s
+     * `<group> #define $POS 1 seq_position=$POS` was read as an ordinary `<group>` line holding an unknown opcode `#define`. The definition was never made, so all 250 of
+     * its regions carried a literal `$POS` and none of them could answer a note. The rule now is the format's own: a directive begins a statement (sfizz's parser takes
+     * `#` ⇒ directive at the first non-space character of each statement), its value runs to the end of the statement's line, and the rest of the same line is more of
+     * the file.
+     */
+    const { pieces, defines: found, found: anyDefine } = splitInlineDefines(line);
+    const withoutDefines = anyDefine ? pieces.map((piece) => piece.text).join("") : line;
+    if (anyDefine) {
+      /**
+       * **Definitions are made in file order, before the rest of the line is rendered** — and that is not a shortcut for the same-line case, it is the semantics:
+       * a definition applies from its own point onward, so `seq_position=$POS` on the line that defines `$POS` reads the value just defined, exactly as sfizz's
+       * left-to-right statement scan does. The value is stored as written here rather than expanded, because the caller expands it when it renders the rest of the
+       * line — `defines.ts` is where that ordering is asserted with a criterion.
+       */
+      for (const define of found) {
+        defines.set(define.name, substitute(define.value, defines));
+      }
+      // A line that was nothing but a directive produces no output of its own — not even the space where the directive sat. One that shares its line keeps the rest of it.
+      if (withoutDefines.trim() === "") return;
     }
 
     /**
@@ -149,18 +210,41 @@ export function expandIncludes(
      *
      * Every include in that file was ignored — the velocity layers and the region definitions never expanded — while the file still parsed well enough to look as though it had worked. The rule is now the one SFZ states: an include is replaced **in place**, the rest of the line stays, and there may be as many as the file likes.
      */
-    const includes = [...line.matchAll(INCLUDE)].filter((match) => match.index !== undefined);
+    const includes = [...withoutDefines.matchAll(INCLUDE)].filter((match) => match.index !== undefined);
     if (includes.length === 0) {
-      out.push(substitute(line, defines));
+      pushLine(substitute(withoutDefines, defines), path);
       return;
     }
 
-    const where = `${path || "<root>"}:${index + 1}`;
-    const pieces: string[] = [];
+    /**
+     * ⭐ **The line is assembled fragment by fragment, and each fragment keeps its own file** — which is the whole point of the map.
+     *
+     * Fragments are joined with **no separator** (the old `pieces.join("")`), so `cursor` tracks the byte offset in the assembled line and `mine` the bytes belonging
+     * to this file. Whenever a fragment of another file interrupts — an included file's text — the current run of this file's own text is closed, and a new one starts
+     * after it. A line that is one `#include` on its own therefore has `mine === ""` and contributes nothing, so no output line is ever attributed to a file that did
+     * not write it.
+     */
+    /**
+     * ⭐ **A line that is nothing but `#include`s expands into the included lines themselves; a line that carries other text keeps them in place.**
+     *
+     * Both shapes are real and they need different treatment for the `sources` map to mean anything. The **bare include** is the common case in every library
+     * (`#include "legato/staccato_dyn.sfz"` owns its line, and inside that file are hundreds of region lines), and treating its expansion as one output line would
+     * claim an entire 4 000-line file was output line 70 — which is exactly what the first version of this map did, and the first lookup of a real region returned
+     * `undefined` for it. The **line with an include in the middle** is Salamander Grand Piano's `<group> #include … lovel=1 hivel=26 #include …`, where the include
+     * is replaced *in place* and the result is one line, which is the shape `sfzIncludes.test.ts` pins.
+     */
+    const bare = includes.length > 0 && withoutDefines.replace(INCLUDE, "").trim() === "";
     let cursor = 0;
+    let mine = "";
+    /** How many characters of this output line the line's own file wrote — the other side of the comparison below. */
+    let ownLength = 0;
+    const contributions: Array<{ file: string; length: number }> = [];
+    const where = `${path || "<root>"}:${index + 1}`;
     for (const match of includes) {
       const start = match.index!;
-      pieces.push(substitute(line.slice(cursor, start), defines));
+      const own = substitute(withoutDefines.slice(cursor, start), defines);
+      mine += own;
+      ownLength += own.length;
       cursor = start + match[0]!.length;
       const candidates = resolveCandidates(chain[0]!, path, match[1]!);
       // The first candidate that exists wins; if none does, the error names the one SFZ's own rule would have chosen, which is the informative one.
@@ -187,7 +271,15 @@ export function expandIncludes(
       }
 
       const nested = expandIncludes(child, read, { path: wanted, maxDepth, stack: [...chain, wanted], defines });
-      pieces.push(nested.text);
+      if (bare) {
+        // Own lines, each attributed to the file that wrote it. A child's own text already carries its own runs, so they are copied rather than rebuilt.
+        for (const [offset, line] of nested.text.split("\n").entries()) {
+          pushLine(line, sourceFileFor(nested.sources, offset) ?? wanted);
+        }
+      } else {
+        mine += nested.text;
+        contributions.push({ file: wanted, length: nested.text.length });
+      }
       problems.push(...nested.problems);
       included.push(wanted, ...nested.included);
     /**
@@ -200,9 +292,23 @@ export function expandIncludes(
     missing.splice(0, missing.length, ...new Set(missing));
     }
     // Whatever followed the last include on the line: `<group> #include "…" lovel=1` keeps its `lovel=1`.
-    pieces.push(substitute(line.slice(cursor), defines));
-    out.push(pieces.join(""));
+    const tail = substitute(withoutDefines.slice(cursor), defines);
+    mine += tail;
+    ownLength += tail.length;
+    /**
+     * ⭐ **A line that carried its own text belongs to the file that wrote that text.** The comparison is against the sum of the included fragments, so a
+     * `<group> #include "…" lovel=1` line is attributed to the group's own file (which is also the file whose `default_path` governs it), and a line whose own text is
+     * a mere space around a mid-line include is attributed to the include that filled it. Ties go to the line's own file, the conservative choice: its `sourcePath` is
+     * the one a caller can already infer from the program URL.
+     */
+    if (!bare) {
+      const winner = contributions.reduce<{ file: string; length: number } | null>(
+        (best, entry) => (entry.length > (best?.length ?? -1) ? { file: entry.file, length: entry.length } : best),
+        null
+      );
+      pushLine(mine, winner !== null && winner.length > ownLength ? winner.file : path);
+    }
   });
 
-  return { text: out.join("\n"), problems, included, missing };
+  return { text: out.join("\n"), problems, included, missing, sources };
 }

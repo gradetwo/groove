@@ -23,6 +23,15 @@ export interface RegionPlayback {
   tuneCents: number;
   /** Round-robin position that was chosen, 1-based, for reporting. */
   seqPosition: number;
+  /**
+   * The keyswitch state the selection was made under — **carried out rather than thrown away**, so a caller can say *which articulation answered* instead of
+   * printing a sample name and hoping. `undefined` means the note was not gated by a keyswitch at all; a number means it was, and `switchLabel` is the file's own
+   * name for it when the answering region declared one. §27 of the working standards is the reason: a `sw_*` the implementation cannot honour must be **visible**,
+   * and silence about the state that chose a region is how "wrong sample" becomes indistinguishable from "no keyswitch support".
+   */
+  switchState?: number;
+  /** SFZ's `sw_label` on the region that answered — ARIA's own name for the articulation ("Staccato", "Sustain"), taken from the file rather than invented here. */
+  switchLabel?: string;
 }
 
 /**
@@ -32,13 +41,17 @@ export interface RegionPlayback {
  * nearest sample as if it were right — is how a sampler sounds subtly wrong for months.
  *
  * `nth` is how many times this note has already been played, which is what round-robin selection needs.
+ *
+ * ⭐ **`switch`/`switchDefault` are the keyswitch state**, and passing neither is exactly the old behaviour — `regionsForNote` only gates when one of them is
+ * present. `resolveInstrumentNote` passes the file's own `sw_default` (see `declaredSwitchDefault`); a caller with no keyswitch state and a file with none either
+ * gets the file-order answer this function always gave.
  */
 export function playbackForNote(
   regions: readonly SfzRegion[],
   note: number,
-  { velocity = 100, nth = 0 }: { velocity?: number; nth?: number } = {}
+  { velocity = 100, nth = 0, switch: keyswitch, switchDefault }: { velocity?: number; nth?: number; switch?: number; switchDefault?: number } = {}
 ): RegionPlayback | null {
-  const covering = regionsForNote(regions, note, velocity);
+  const covering = regionsForNote(regions, note, velocity, 1, { switch: keyswitch, switchDefault });
   if (covering.length === 0) return null;
   const region = roundRobinPick(covering, nth);
   if (!region) return null;
@@ -51,6 +64,7 @@ export function playbackForNote(
    */
   const semitones = region.pitchKeycenter === undefined ? 0 : note - region.pitchKeycenter;
   const ratio = Math.pow(2, semitones / 12) * Math.pow(2, region.tuneCents / 1200);
+  const effectiveSwitch = keyswitch ?? switchDefault;
 
   return {
     sample: region.sample,
@@ -59,6 +73,9 @@ export function playbackForNote(
     ratio,
     tuneCents: region.tuneCents,
     seqPosition: region.seqPosition,
+    // Reported only when a keyswitch actually decided something, so an ordinary file's answer is byte-for-byte what it was.
+    ...(effectiveSwitch === undefined ? {} : { switchState: effectiveSwitch }),
+    ...(region.opcodes.sw_label === undefined ? {} : { switchLabel: region.opcodes.sw_label }),
   };
 }
 

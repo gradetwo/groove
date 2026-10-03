@@ -43,8 +43,16 @@ const CELLO_KS_FIXTURE = join(dirname(fileURLToPath(import.meta.url)), "fixtures
  * fixture with invented names would pass while the real names resolved nowhere.
  *
  * The two sections carry **disjoint** key ranges, which one file cannot do in general: in a keyswitch program a note belongs to every folded articulation at once and only
- * the keyswitch decides which sounds, and that selection is not implemented here. Disjoint ranges keep the criterion about `default_path` rather than about a feature this change did
- * not touch. The declarations and the sample names are the upstream ones; only the ranges are arranged so a note picks one section.
+ * the keyswitch decides which sounds. Disjoint ranges keep the criterion about `default_path` rather than about articulation selection. The declarations and the sample names
+ * are the upstream ones; only the ranges are arranged so a note picks one section.
+ *
+ * ⭐ **`sw_default=c#6` was added to the tremolo group when the keyswitch gate was implemented, and it is load-bearing rather than decorative.**
+ *
+ * SFZ's own rule is that a file with `sw_last` and **no** `sw_default` *"will not have a default articulation preselected, meaning when loaded, it will play no sound until
+ * one of the keyswitches is pressed"* (<https://sfzformat.com/opcodes/sw_last/>), and `regionsForNote` now implements that sentence literally. So this fixture — which has
+ * `sw_last` on every region — answered **nothing** for note 69 until the tremolo group declared a power-on default: the criterion below is about which `default_path` the
+ * answering region belongs to, and it needs an answering region to be about anything. `c#6` rather than `c6` because the **tremolo** half is the one that answers note 69 at
+ * velocity 20, and because the sustain half at `c6` is what the default reading got wrong before the file-level reader was replaced.
  */
 const KEYSWITCH = `
 <control>
@@ -66,6 +74,7 @@ default_path=Strings\\Cello Section\\trem\\
 sw_lokey=c6
 sw_hikey=d#6
 sw_last=c#6
+sw_default=c#6
 sw_label=C#6 Tremolo
 
 <region> sample=trem_A2_v1_1.wav lokey=45 hikey=48 pitch_keycenter=45

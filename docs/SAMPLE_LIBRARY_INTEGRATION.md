@@ -1890,3 +1890,61 @@ modwheel 不产生效果。
 * `karoryfer-big-rusty-drums` 的 percussion(82) 是否在别的 mapping 文件里被覆盖，只查了 keymap 与
   `mappings/tom_18_map_basic.sfz`（都无 82），**没有逐文件穷举 4 814 个 region**。
 * 17 个库里 `karoryfer-string-cyborgs` 是否与 `strings_lead` 同一件乐器**未判**（本轮不换 `strings_lead`）。
+
+#### ⭐ 复核：那两个"量后放弃"的候选，以及解析器补齐后的处置（2026-10-03，`src/audio/sfz/**`）
+
+两条候选的读数**用本仓自己的 `expandIncludes` ＋ `parseSfz` 重核**，不是沿用上一轮的结论；复核过程中**两条旧结论各有一处
+需要更正**，逐条写在这里。
+
+| | `kinwie.dim-cabasa` @ `016457e5` | `karoryfer.war-tuba` @ `5b62dd6e` |
+| --- | --- | --- |
+| 复核前 | 250 region，`unresolvedVariables` **250/250**，note 0/60/69/70/127 探针全 `null` | 6 个 acoustic 根程序，note 60 vel 100 **全部**答 `*_ss_*`（`sw_last=24`），而 `<global>` 写 `sw_default=25` |
+| 复核后 | 250 region，`unresolvedVariables` **0/0**；note 69 → `bw_rr1_01.flac`、70 → `fw_rr1_01.flac`，`seq_length=5` 的轮转逐位前进 | 6 个根程序 note 60/50/40 全部答 **`*_s_*`（Staccato）**，`switchState=25`、`switchLabel="Staccato"` |
+| 成因 | **行内 `#define`**：10 处，第 59/86/113/140/167/201/228/255/282/309 行，全是 `<group> #define $POS <1..5> seq_position=$POS`。另有 30 处**行首** `#define`，本仓一直能认 | `sw_*` 一族**只有 5 个** opcode：`sw_label` 6 499、`sw_last` 6 499、`sw_default`/`sw_lokey`/`sw_hikey` 各 6（只在 6 个 acoustic 根程序里，值 `24`/`26`/`25`） |
+
+**两处更正** ✗✓：
+
+1. **`expandIncludes` 认行首 `#define`** ⇒ "250/250 全部未解析"的成因不是 `#define` 都不认，而是**行内**那一族（`$POS`）。
+   上一轮"`#define` 只认行首"的说法对，但"250 个 region 全部带未解析变量"被读成了"所有定义都没生效"——实际是 30 处行首定义
+   生效了、10 处行内定义没有。两者都导致 250/250，但**修的东西不同**。
+2. **`..\Samples\` 不悬空**。sfizz 实测（本机 `sfizz_render`，夹具在 `/var/tmp`）：根程序入口 **peak 0.0604**、
+   子程序入口 **0.00003**、同一文件把 `..\Samples\` 改写成 `Samples\` 后入口 **0.00003** ⇒ **sample 路径按「主程序所在目录 ＋
+   当时的 `default_path`」解析**，源码同向（`Synth::Impl::buildRegion` 只把 `defaultPath_` 交给 Layer；`Region::parseOpcode`
+   拼 `defaultPath + sample`；`FilePool` 开 `rootDirectory / filename`）。⇒ war-tuba 6 个根程序 **23 232 region
+   0 悬空**；"3 850/4 387 悬空"回答的是**另一个问题**——把 `Programs/<sub>/*.sfz` 当入口 ⇒ **这条前提要更正**。
+
+**⚠️ 夹具形态（许可）**：`src/test/sfzSwKeyswitch.test.ts` 用的是**合成夹具**（自己写的、复现形状），**没有**把真文件
+（`Dim Cabasa.sfz`，333 行／24 276 字节，自带头写 "Attribution 4.0" 却给 `by-sa/4.0` 链接）复制进源码树——第三方作品进了源码树
+就等于进了本仓 MIT 分发，与"镜像只存链接、可随时撤下"是两件事 ✓。**真文件的读数**（250 region、250/250 → 0/0、行内 10 处／
+行首 30 处、行号 59/86/113/140/167/201/228/255/282/309）改为**联网门控判据**：从 pin 取原文，只断言数字，不落盘 ✓。
+
+**代码层补齐的三项**（判据在 `src/test/sfzSwKeyswitch.test.ts`，39 例）：
+
+1. **行内 `#define`**：`src/audio/sfz/defines.ts` 的 `splitInlineDefines`/`definedNamesAt` 是**唯一**的规则读法，
+   `includes.ts` 直接 import 它（两层不会各写一套）。值取**第一个词**、其余留在行内，这是 sfizz 的 `processDirective`
+   原样（读整行后把多余部分 `putBackChars` 回去，注释写 *"ARIA/not Cakewalk: cut the value after the first word"*）。
+   变量名按"**最长已定义前缀**"匹配，`$POS_01` 因此解析为 `$POS` ＋ 字面 `_01`——这正是 dim-cabasa 的写法。
+2. **`sw_*` 键位切换**：读 `sw_last`/`sw_default`/`sw_lokey`/`sw_hikey`/`sw_label`，区域选择尊重它们；离线规则见下。
+3. **路径溯源**：`SfzRegion.sourcePath` 记录**声明该 region 的文件**（`expandIncludes(...).sources` 的行区间给出），
+   `sampleAssetForPath(…, { declaredIn, libraryPath })` 提供**显式**的"按声明文件解析"，**默认解析基目录一字未改**。
+
+**⚠️ §27：本实现仍不支持的 `sw_*`，逐条列出（不许静默）** —— `war-tuba` 本身一个都没用到（census 只有上面 5 个）：
+
+* **没有清单条目可写**：两条候选至今**未买**（本轮 0 字节、`manifest.json` 一个字节未改）⇒ 没有 `needs` 字段。下面这张表就是
+  它们的 `needs` 正文，将来若买，**照抄进 `needs`**：`sw_previous`、`sw_down`、`sw_up`、`sw_vel`、`sw_lolast`、`sw_hilast`、
+  **实时键位状态**——读得到、留在 `region.opcodes` 里、**不产生任何行为**。
+* **有行为但有限**：`sw_last`/`sw_default`/`sw_lokey`/`sw_hikey`/`sw_label` 五个已实现；`sw_lokey`/`sw_hikey` 按"文件自己声明的
+  取值范围内可达"实现，**不按按键范围过滤被弹的音**（本仓没有实时键盘，这是唯一不需要按键的读法）。
+* **明确的分歧**：`sw_default` 缺失时本仓**不静音**（规范说该文件在按下键位前无声），规则与代价见代码注释；
+  这**不是** sfizz 一致，`sfzSwKeyswitch.test.ts` 专门有一例把这个分歧钉住。
+
+**离线键位规则（无实时按键）与依据**：
+
+1. 有 `sw_default` ⇒ 用**它**。出处：<https://sfzformat.com/opcodes/sw_default/> —— *"Define keyswitch 'power on default' so
+   that you hear something when a patch loads. … Without `sw_default`, this instrument would be silent until a keyswitch is
+   manually used to select an articulation."*
+2. 没有 `sw_default` ⇒ **不设门槛**（`sw_last` 区域按文件顺序仍可选），并在探针输出里以 `switchState: undefined` 明示。
+   依据是**两件事实**：规范说这类文件"load 后无声"（<https://sfzformat.com/opcodes/sw_last/>：*"an instrument which uses
+   `sw_last` to select articulations will not have a default articulation preselected, meaning when loaded, it will play no sound
+   until one of the keyswitches is pressed"*），而本仓没有实时键盘；且**八个已 pin 的 VSCO `-KS` 程序**正是这种文件，它们自己的
+   判据要求一个音能解析出来。**代价**：对这八个文件，本仓与 sfizz 不一致（sfizz 静音）——这是**显式选择**，不是静默降级。

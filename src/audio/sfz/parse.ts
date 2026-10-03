@@ -78,6 +78,55 @@ export interface SfzRegion {
    * treats as the worst kind, so it is carried as a named problem instead.
    */
   defaultPathProblem?: string;
+  /**
+   * ⭐ **SFZ's `sw_last` — the keyswitch value this region plays on**, or `undefined` when the region says nothing about keyswitches.
+   *
+   * Absent means "not gated": SFZ's own default for the opcode is `-1`, which `Opcode::readOptional` rejects as out of the 0–127 range
+   * (`Defaults.cpp`: `UInt8Spec key { 60, {0, 127}, kCanBeNote }`), so a region without `sw_last` is not a region that matches keyswitch `-1` — it is a region the
+   * opcode never touched. The two are different, and conflating them would silence every ordinary region of a file that happens to use keyswitches elsewhere.
+   *
+   * It is carried on the region rather than reported for the file because that is what the format does: `kinwie`-style keyswitch programs put the same
+   * `sw_lokey`/`sw_hikey` in `<global>` and then a different `sw_last` in each `<group>`, so the only place the answer exists is the region.
+   */
+  swLast?: number;
+  /**
+   * ⭐ **SFZ's `sw_default` — the articulation a player picks when the patch loads and nobody has pressed a keyswitch.**
+   *
+   * [sfzformat.com/opcodes/sw_default](https://sfzformat.com/opcodes/sw_default/) states the reason it exists: *"Define keyswitch 'power on default' so that you hear
+   * something when a patch loads. … Without `sw_default`, this instrument would be silent until a keyswitch is manually used to select an articulation."* The opcode is
+   * ARIA's answer to a documented SFZ v1/v2 behaviour — its `sw_last` page says an instrument that uses keyswitches *"will not have a default articulation preselected,
+   * meaning when loaded, it will play no sound until one of the keyswitches is pressed"*.
+   *
+   * It travels on the region for the same reason `defaultPath` does: it is **file-level state captured where the region was written**, and a caller that read one
+   * value at the end would give every region the last declaration in the file.
+   */
+  swDefault?: number;
+  /**
+   * ⭐ **The `sw_lokey`/`sw_hikey` pair in force for this region**, from whatever scope carried it (`<global>` in the libraries that use it), or `undefined` when the
+   * file names neither — an unspecified range, which is the opcodes' own default of `-1` and is not the same as `0–127`.
+   *
+   * It gates the **switch values a file offers** rather than the played note: with a switch value `v` active, a region's `sw_last` is reachable only when
+   * `lokey <= v <= hikey`. See the note on `swLast` for why that is the reading, and for what it costs (it needs no live keyboard, which is the point).
+   */
+  swLow?: number;
+  swHigh?: number;
+  /**
+   * ⭐ **The file that wrote this region** — the `#include`d file it sits in, or the program itself. Absent when the caller did not supply the expansion's
+   * `sources` map (a hand-written string, a fixture), because "declared in the program" and "provenance not recorded" are different facts and this field must not
+   * confuse them.
+   *
+   * It exists because the reference engine and this project disagree about what a sample path is relative to, and the disagreement is **measured rather than
+   * assumed**. sfizz resolves `sample=` against the **main program's directory** plus the `default_path` in force (its `Synth::Impl::buildRegion` hands the Layer only
+   * `defaultPath_`; `Region::parseOpcode` builds `defaultPath + sample`; `FilePool` opens `rootDirectory / filename`), and a render says the same thing: a fixture
+   * whose `Programs/root.sfz` includes `Programs/sub/art.sfz`, where `art.sfz` writes `sample=..\Samples\tone.wav`, plays at peak **0.0604** through the root and
+   * **0.00003** through `art.sfz` as its own entry point. `karoryfer.war-tuba` is that shape: all six acoustic roots include their articulations, the articulations write
+   * `..\Samples\…`, and those 3 850 references **resolve correctly through the root and nowhere else**.
+   *
+   * So the field is provenance, not a different resolver: it lets a caller that wants the **other** reading have it explicitly
+   * (`sampleAssetForPath(path, { …, declaredIn })`, or `samplePathRelativeToProgram`), which is the only way a sub-program can be a usable entry point — and it is a
+   * deliberate divergence from sfizz, stated here so it cannot be mistaken for parity.
+   */
+  sourcePath?: string;
 }
 
 const DEFAULTS: Omit<SfzRegion, "sample" | "opcodes" | "unresolved"> = {
@@ -202,9 +251,30 @@ export function ccTuneCents(opcodes: Record<string, string>, cc: ReadonlyMap<num
   return cents;
 }
 
-export function parseSfz(text: string): SfzRegion[] {
+export function parseSfz(text: string, options: { sources?: ReadonlyArray<{ from: number; to: number; file: string }> } = {}): SfzRegion[] {
   // ⭐ The `#define` layer runs first: a definition applies from its point onward, and doing it here means the parser never sees a directive nor a `$NAME` it could have resolved.
   text = applyDefines(text).text;
+  /**
+   * ⭐ **The line-based provenance, read from the expansion's own map, so a region knows which file wrote it.**
+   *
+   * `from`/`to` are half-open line ranges and the runs are contiguous and sorted, so a pointer that only moves forward resolves each line in amortised constant time —
+   * which matters: a real `war-tuba` root program is 20 000-odd lines through 12 includes, and a linear search per line would be quadratic.
+   */
+  const sourceAt = (line: number): string | undefined => {
+    const runs = options.sources;
+    if (!runs || runs.length === 0) return undefined;
+    // A binary search, because the runs are contiguous and sorted and a `war-tuba` root is long enough for it to matter.
+    let low = 0;
+    let high = runs.length - 1;
+    while (low <= high) {
+      const middle = (low + high) >> 1;
+      const run = runs[middle]!;
+      if (line < run.from) high = middle - 1;
+      else if (line >= run.to) low = middle + 1;
+      else return run.file;
+    }
+    return undefined;
+  };
   // Read from the text as written, once: a `<control>` block applies to every region in the file wherever it sits.
   const cc = readControlDefaults(text);
 
@@ -236,7 +306,7 @@ export function parseSfz(text: string): SfzRegion[] {
   /** That the file declares a path somewhere, even if not before the region being examined — the difference between "no path to apply" and "not knowable here". */
   let declaresDefaultPath = false;
 
-  for (const rawLine of text.split(/\r?\n/)) {
+  for (const [lineIndex, rawLine] of text.split(/\r?\n/).entries()) {
     // Comments run to the end of the line; SFZ uses `//`, and a file that uses it must not be swallowed whole.
     const line = rawLine.replace(/\/\/.*$/, "").replace(/\/\/.*$/, "").trim();
     if (!line) continue;
@@ -319,12 +389,15 @@ export function parseSfz(text: string): SfzRegion[] {
         current = group;
       } else if (name === "region") {
         current = {};
+        const source = sourceAt(lineIndex);
         regions.push({
           ...DEFAULTS,
           sample: "",
           opcodes: current,
           unresolved: [],
           inherited: { ...global, ...master, ...group },
+          // Only present when the caller supplied the map, so "declared in the program" is never invented from a missing map.
+          ...(source === undefined ? {} : { sourcePath: source }),
         } as SfzRegion & { inherited: Record<string, string> });
       } else {
         // A header this subset does not model (curve, effect, …) is skipped, not fatal — and its opcodes are ignored with it.
@@ -386,12 +459,23 @@ export function parseSfz(text: string): SfzRegion[] {
       hivel: num(merged.hivel, DEFAULTS.hivel),
       // Left undefined when absent, because "no transposition" is the real behaviour and 60 is only a value a file may choose.
       pitchKeycenter: merged.pitch_keycenter === undefined ? undefined : noteNumber(merged.pitch_keycenter) ?? num(merged.pitch_keycenter, 0),
+      /**
+       * ⭐ **`sw_last` and `sw_default`, read the way a key is read** — a note name or a number, because SFZ allows both and the library that motivated this writes
+       * numbers while the VSCO keyswitch programs write `c6`. A value that is neither stays absent rather than becoming a number: an unreadable keyswitch is not
+       * keyswitch 0, and defaulting it would gate the region on a value the file never named.
+       */
+      ...(noteNumber(merged.sw_last) === undefined ? {} : { swLast: noteNumber(merged.sw_last) }),
+      ...(noteNumber(merged.sw_default) === undefined ? {} : { swDefault: noteNumber(merged.sw_default) }),
+      ...(noteNumber(merged.sw_lokey) === undefined ? {} : { swLow: noteNumber(merged.sw_lokey) }),
+      ...(noteNumber(merged.sw_hikey) === undefined ? {} : { swHigh: noteNumber(merged.sw_hikey) }),
       // `tune` plus whatever the controller-driven tuning adds at rest, so a region's cents are the cents it will play.
       tuneCents: num(merged.tune, DEFAULTS.tuneCents) + ccTuneCents(merged, cc),
       seqLength: Math.max(1, num(merged.seq_length, DEFAULTS.seqLength)),
       seqPosition: Math.max(1, num(merged.seq_position, DEFAULTS.seqPosition)),
       ...(applicable === undefined ? {} : { defaultPath: applicable }),
       ...(problem === undefined ? {} : { defaultPathProblem: problem }),
+      // The provenance captured when the region was created, carried out unchanged: it is a fact about where the line was, which the end of the file cannot recover.
+      ...(region.sourcePath === undefined ? {} : { sourcePath: region.sourcePath }),
       opcodes: merged,
       unresolved: unresolvedIn(merged),
     };
@@ -490,13 +574,60 @@ function scanOpcodes(line: string, into: Record<string, string>): void {
 }
 
 /**
+ * ⭐ **The keyswitch a file declares as its power-on default, or `undefined` when it declares none.**
+ *
+ * `sw_default` is SFZ v2's / ARIA's opcode, so its default is genuinely absent rather than a number (<https://sfzformat.com/opcodes/sw_default/>: version SFZ v2,
+ * default `N/A`) — and the **absence is a behaviour, not a gap**: <https://sfzformat.com/opcodes/sw_last/> states that an instrument which uses `sw_last` to select
+ * articulations *"will not have a default articulation preselected, meaning when loaded, it will play no sound until one of the keyswitches is pressed"*. This project
+ * has no live keyboard, so that sentence has to be turned into a rule, and the rule here is the literal one:
+ *
+ * · **a value is active** when the caller passes `switch`, or when the file declares a `sw_default` — and then only the regions whose `sw_last` matches it are selectable;
+ * · **no value is active** — a file with `sw_last` regions and no `sw_default`, and no caller switch — and then **every `sw_last`-gated region is out**, because its
+ *   condition can never have been met. Regions that declare no `sw_last` are unaffected: they are not keyswitch candidates at all.
+ *
+ * The price is stated rather than hidden: the eight pinned VSCO `-KS` programs are exactly this shape, and under this rule they answer nothing until a switch is
+ * supplied — which is what sfizz does with them, and what `sfzSwKeyswitch.test.ts` pins so the choice is on the record instead of discovered later.
+ */
+export function declaredSwitchDefault(regions: readonly SfzRegion[]): number | undefined {
+  for (const region of regions) if (region.swDefault !== undefined) return region.swDefault;
+  return undefined;
+}
+
+/**
+ * Whether **this file's** `sw_last` regions can be reached at all — true when a `sw_default` exists, and false when the file is the documented "silent until a
+ * keyswitch is pressed" shape. A caller with a live keyboard passes `switch` and never consults this.
+ */
+export function hasReachableSwitch(regions: readonly SfzRegion[]): boolean {
+  return declaredSwitchDefault(regions) !== undefined;
+}
+
+/**
  * Which region a note and velocity select, out of those that cover them.
  *
  * Order matters and is not obvious: SFZ picks the region whose key range is **narrowest** around the note (the "most specific" match), and this returns the first of
  * those in file order — which is the documented behaviour for the layer/round-robin cases this subset covers. Round-robin selection is a separate call, because it
  * depends on how many times the note has already been played.
+ *
+ * ## ⭐ The keyswitch gate
+ *
+ * `sw_last` means *"Enables the region to play if the last key pressed in the range specified by sw_lokey and sw_hikey is equal to the `sw_last` value"*
+ * (<https://sfzformat.com/opcodes/sw_last/>). There is no last key press here, so the value comes from, in order:
+ *
+ * 1. **`options.switch`** — a caller that has one (a live keyboard, a test, an explicit articulation choice). It wins outright.
+ * 2. **`options.switchDefault`** — the file's `sw_default`, or `declaredSwitchDefault(regions)`.
+ * 3. **Nothing** — and then a region gated by `sw_last` is **not selectable**, because its condition was never satisfied. A file in that shape is the format's own
+ *    "plays no sound until one of the keyswitches is pressed"; the caller can tell that apart from "the file covers no such key" by reading the regions' `swLast`.
+ *
+ * A region with **no** `sw_last` is never gated: the opcode's default is `-1`, which is out of range and therefore "not declared" rather than "declared as -1".
  */
-export function regionsForNote(regions: readonly SfzRegion[], note: number, velocity = 100, channel = 1): SfzRegion[] {
+export function regionsForNote(
+  regions: readonly SfzRegion[],
+  note: number,
+  velocity = 100,
+  channel = 1,
+  options: { switch?: number; switchDefault?: number } = {}
+): SfzRegion[] {
+  const keyswitch = options.switch ?? options.switchDefault;
   const covering = regions.filter(
     (region) =>
       /**
@@ -510,7 +641,8 @@ export function regionsForNote(regions: readonly SfzRegion[], note: number, velo
       note >= region.lokey &&
       note <= region.hikey &&
       velocity >= region.lovel &&
-      velocity <= region.hivel
+      velocity <= region.hivel &&
+      switchAllows(region, keyswitch)
   );
   void channel;
   if (covering.length === 0) return [];
@@ -519,10 +651,21 @@ export function regionsForNote(regions: readonly SfzRegion[], note: number, velo
 }
 
 /**
- * The round-robin pick for the `nth` time this note is played (0-based), so a repeated note cycles through its variants instead of repeating one sample.
+ * Whether a region gated on `sw_last` is selectable under the switch value in force, and `true` for a region that declares none — such a region is not a keyswitch
+ * candidate at all (the opcode's default is `-1`, out of range, so "not declared" rather than "declared as -1").
  *
- * `seq_length` 1 means no round-robin, which is the default and the reason this returns the same region every time for a file that does not ask for it.
+ * With a value `v`, the region's `sw_last` must equal it **and** the range must admit it: `swLow <= v <= swHigh`, where an unspecified pair is no constraint (both arms
+ * are `undefined`, which is the opcodes' own `-1` default). With **no** value the gate is **closed**, which is the format's own "silent until a keyswitch is pressed".
  */
+function switchAllows(region: SfzRegion, keyswitch: number | undefined): boolean {
+  if (region.swLast === undefined) return true;
+  if (keyswitch === undefined) return false;
+  if (region.swLast !== keyswitch) return false;
+  if (region.swLow !== undefined && keyswitch < region.swLow) return false;
+  if (region.swHigh !== undefined && keyswitch > region.swHigh) return false;
+  return true;
+}
+
 export function roundRobinPick(regions: readonly SfzRegion[], nth: number): SfzRegion | null {
   if (regions.length === 0) return null;
   const cycle = Math.max(1, ...regions.map((region) => region.seqLength));

@@ -7,9 +7,10 @@
  *
  * Fetching the SFZ text is deliberately **not** done here: I/O is not pure, and this stays pure so its criteria need no browser and no network.
  */
-import { parseSfz, readControlDefaults } from "./parse";
+import { parseSfz, readControlDefaults, declaredSwitchDefault } from "./parse";
 import { regionsAtCc } from "./ccGate";
 import { playbackForNote, playbackGap } from "./regionPlayback";
+import { isAbsolutePath, samplePathRelativeToProgram } from "./defaultPath";
 import type { SfzRegion } from "./parse";
 import type { SampleAsset } from "../../data/sampleCatalogue";
 
@@ -93,6 +94,21 @@ export interface ResolvedInstrumentNote {
    * resolve the sample against a guess.
    */
   defaultPathProblem?: string;
+  /**
+   * ⭐ **Which keyswitch articulation answered**, so the choice is visible instead of inferred from a sample name.
+   *
+   * `switchState` is the value the selection was made under (`sw_default` when the file declares one and the caller passed none), and `switchLabel` is ARIA's own
+   * `sw_label` from the region that answered — `"Staccato"`, `"Sustain"`. A caller can therefore print *why* this sample and not the other one, which is what §27 asks of
+   * a partially implemented opcode family: silence about the reason is how a wrong articulation becomes undistinguishable from a missing one.
+   */
+  switchState?: number;
+  switchLabel?: string;
+  /**
+   * ⭐ **The file that declared the region which answered** — the provenance `parseSfz` recorded from the expansion, when the caller supplied it. It travels with the
+   * note for the same reason `defaultPath` does: only the resolver knows which region answered, and a caller that wants the declaring-file reading of a sample path
+   * cannot recover it from the program URL afterwards.
+   */
+  sourcePath?: string;
 }
 
 export interface InstrumentResolution {
@@ -162,7 +178,11 @@ export function resolveInstrumentNote(
   asset: Pick<SampleAsset, "assetId" | "sfz">,
   sfzText: string,
   note: number,
-  options: { velocity?: number; nth?: number } = {}
+  /**
+   * `sources` is the expansion's line map, when the caller has one (`expandIncludes(...).sources`). Supplying it makes every region carry the file that declared it,
+   * which the note then reports as `sourcePath`; omitting it is exactly the old behaviour and leaves the field absent.
+   */
+  options: { velocity?: number; nth?: number; sources?: ReadonlyArray<{ from: number; to: number; file: string }> } = {}
 ): InstrumentResolution {
   if (!asset.sfz) {
     return { ok: false, regions: [], reason: `sample "${asset.assetId}" is not an instrument (it has no sfz)` };
@@ -171,7 +191,7 @@ export function resolveInstrumentNote(
     return { ok: false, regions: [], reason: `instrument "${asset.assetId}" has empty SFZ text` };
   }
 
-  const regions = parseSfz(sfzText);
+  const regions = parseSfz(sfzText, options.sources === undefined ? {} : { sources: options.sources });
   if (regions.length === 0) {
     return { ok: false, regions, reason: `instrument "${asset.assetId}" defines no regions` };
   }
@@ -184,7 +204,18 @@ export function resolveInstrumentNote(
     return { ok: false, regions, reason: `instrument "${asset.assetId}" has ${regions.length} region(s) and none of them sound at the controller values the file declares` };
   }
 
-  const playback = playbackForNote(audible, note, options);
+  /**
+   * ⭐ **The power-on articulation, from the file's own `sw_default`.**
+   *
+   * `karoryfer.war-tuba`'s six acoustic programs are the measured reason this line exists: 14 articulations are `#include`d into each, every region of each carries
+   * `sw_last` (24 = staccatissimo, 25 = staccato, 26 = sustain) and the `<global>` states `sw_default=25`. Without the gate the probe answered **note 60 as
+   * `g2_ss_vl3_rr4_cnd.wav` — a staccatissimo — while the file asks for staccato**, because the narrowest-covering-range rule has nothing to choose between two
+   * articulations that cover the same note. With it, the answer is the articulation the file declares, and `switchLabel` says so in the file's own words.
+   *
+   * A file with no `sw_default` gets `undefined`, which is exactly the old behaviour — see `declaredSwitchDefault` for why that rule is chosen and what it costs.
+   */
+  const switchDefault = declaredSwitchDefault(audible);
+  const playback = playbackForNote(audible, note, { ...options, switchDefault });
   if (!playback) {
     return { ok: false, regions, reason: playbackGap(audible, note) };
   }
@@ -259,6 +290,11 @@ export function resolveInstrumentNote(
       // The path the answering region answers to, and the reason it has none when that is the truth — never a substitute value.
       ...(answered?.defaultPath === undefined ? {} : { defaultPath: answered.defaultPath }),
       ...(answered?.defaultPathProblem === undefined ? {} : { defaultPathProblem: answered.defaultPathProblem }),
+      // And the articulation that answered, in the file's own words when it has any.
+      ...(playback.switchState === undefined ? {} : { switchState: playback.switchState }),
+      ...(playback.switchLabel === undefined ? {} : { switchLabel: playback.switchLabel }),
+      // And where the region was written, so a caller wanting the declaring-file reading does not have to guess it from the program URL.
+      ...(answered?.sourcePath === undefined ? {} : { sourcePath: answered.sourcePath }),
     },
   };
 }
@@ -277,6 +313,24 @@ export interface InstrumentAddresses {
   /** Where the program was fetched from, and where the mirror serves it. */
   programUrl: string;
   programFallbackUrl?: string;
+  /**
+   * ⭐ **A different base for the sample path: the file that declared the region**, when the caller wants the "how a sub-program would have meant it" reading.
+   *
+   * Omitted — the default — is the reference engine's behaviour: the path resolves against `programUrl`, which is what makes `karoryfer.war-tuba`'s six roots work.
+   * Passing it is an **explicit divergence from sfizz**, and it exists so an articulation file can be a usable entry point on its own; see
+   * `samplePathRelativeToProgram` for the measurement that establishes the difference and for the refusals (absolute paths, climbing past the program's root).
+   */
+  declaredIn?: string;
+  /**
+   * ⭐ **The program's own path relative to the library root** (`Programs/1-solo-legato.sfz`), when the caller knows it — which every caller that got its
+   * `sourcePath`s from `expandIncludes` does, because the expander was handed exactly that path.
+   *
+   * It is what makes the declaring-file reading exact: `samplePathRelativeToProgram` compares two library-relative paths, and without this one the program's own path
+   * has to be inferred from the URL, which cannot tell `/PIN/Programs/x.sfz` from `/PIN/Samples/x.sfz`. When it is absent the program's directory is assumed to be the
+   * library root, the reading that matches every layout this project has measured; when the two are equal the rewrite is the identity, so a caller that supplies
+   * nothing gets exactly the behaviour that was there before `declaredIn` existed.
+   */
+  libraryPath?: string;
 }
 
 /**
@@ -291,7 +345,28 @@ function encodeSamplePath(samplePath: string): string {
 }
 
 export function sampleAssetForPath(samplePath: string, addresses: InstrumentAddresses): SampleAsset {
-  const escaped = encodeSamplePath(samplePath);
+  /**
+   * ⭐ **The declaring-file reading, in the coordinate both paths are given in — and the default reading when that coordinate is not known.**
+   *
+   * `SfzRegion.sourcePath` and the `libraryPath` a caller supplies are both **library-relative**, which is the only pair of paths `samplePathRelativeToProgram` compares.
+   * `libraryPath` is the program's own path in that currency, and **the reading is offered only when the caller states it**: a caller holding
+   * `expandIncludes(...).sources` knows the program path it handed the expander, so it can always state it, and one that does not gets the default reading rather than a
+   * guess about where the library root begins inside a URL. That is the conservative direction — the address a caller already had — and it is also what keeps this
+   * function's default path byte-for-byte what it was before `declaredIn` existed.
+   *
+   * An **absolute or URL** sample path is never rewritten: `samplePathRelativeToProgram` refuses it, and so does this, because the base cannot change for a path that
+   * does not depend on a base at all.
+   */
+  const adjusted =
+    addresses.declaredIn === undefined || addresses.libraryPath === undefined || isAbsolutePath(samplePath)
+      ? samplePath
+      : samplePathRelativeToProgram(samplePath, addresses.declaredIn, addresses.libraryPath);
+  const escaped = encodeSamplePath(adjusted);
+  /**
+   * **The base does not move; the path is expressed against it.** That is what keeps this function's two readings comparable, and what lets the mirror fallback reuse
+   * the identical arithmetic: `samplePathRelativeToProgram` has already put the declaring file's meaning into the program's own terms, so `new URL` sees one base in
+   * both cases.
+   */
   const primary = new URL(escaped, addresses.programUrl).toString();
   const mirror = addresses.programFallbackUrl ? new URL(escaped, addresses.programFallbackUrl).toString() : undefined;
   return {
@@ -304,3 +379,4 @@ export function sampleAssetForPath(samplePath: string, addresses: InstrumentAddr
     ...(mirror && mirror !== primary ? { fallbackUrl: mirror } : {}),
   };
 }
+
