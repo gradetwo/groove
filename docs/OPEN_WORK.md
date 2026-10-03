@@ -3450,3 +3450,44 @@ C25／C27–C29（路线图 ✓；`GrooveProjectV3` 全仓 **0 命中** ✓）
 🟡 **曲风里"库窄"的替代音源**（`post-punk` 的 picked 电贝斯等 ✓）：已要求给出候选／或"镜像内外都找不到"的证据 ✓（换库由业主定 ✓）
 🟡 **两个待业主决定**：买 `dim-cabasa`／`war-tuba`？开"自产 SFZ（sf2→WAV）"通道？（sax 上界 89、管钟上界 79 是镜像硬边界 ✓）
 ```
+
+## 一百一十二、⭐ 采样地址：**源站与镜像是两套规则**（业主报的 404），量测与更正（2026-10-03 17:47 时点 ✓）
+
+**业主报的**：线上 2.34.42 请求 `…/karoryfer.emilyguitar/<pin>/**Emilyguitar**/notes/c6_mf_rr1.wav` ⇒ 404 ✗，而正确地址是 `…/<pin>/notes/c6_mf_rr1.wav` ✓
+（「**是不是把我们的命名混在里头了啊**」✓ —— 方向对 ✓，但**混进去的不是 `prefix`** ✗）。
+
+### 112.1 量测（方法：对**源站**与**镜像**各发真实请求，读状态码 ✓）
+
+```
+**源站（raw.githubusercontent.com）**：带那层 ⇒ **404** ✗／根级 ⇒ **200** ✓
+   `emilyguitar`：`Emilyguitar/notes/c6_mf_rr1.wav` 404 ✗ ｜ `notes/c6_mf_rr1.wav` **200** ✓
+                `Emilyguitar/emily_basic.sfz` 404 ✗ ｜ `emily_basic.sfz` **200** ✓（**SFZ 也在仓库根** ✓）
+                `Emilyguitar/LICENSE` 404 ✗ ｜ `LICENSE` **200** ✓
+   ⭐ `meatbass` **同样**：`Meatbass/Programs/01_arco_modwheel.sfz` 404 ✗ ｜ `Programs/01_arco_modwheel.sfz` **200** ✓
+**镜像（r2mirror）**：**恰好相反** —— `karoryfer-emilyguitar/**Emilyguitar**/notes/c6_mf_rr1.wav` ⇒ **200** ✓／不带 ⇒ 404 ✗
+⇒ **⇒ 规则**：**源站 ＝ `<repo>/<pin>/<仓库内真实相对路径>`** ✓；**镜像 ＝ `<root>/<prefix>/<记录路径原样>`** ✓（两条**不可合并** ✗）
+**全量（那条线实测 ✓）**：**32 库／320 个程序地址** ⇒ 改前 **45 个源站 404** ✗、改后 **0** ✓；
+   **镜像地址 320/320 逐字不变** ✓✓；**45 个 404 恰好只在两个库**（`meatbass` 39 ＋ `emilyguitar` 6 ✓），
+   其余 **30 库 275 个源站地址逐字不变** ✓；45 个程序修后**端到端 2xx** ✓（含 `…/notes/c6_mf_rr1.wav` ⇒ **206** ✓）
+```
+
+### 112.2 ⚠️ **我自己的两处更正**（写下来防后人照抄 ✗）
+
+```
+① ✗ 我曾说"**manifest 记录的路径多了一层（写错了）**" —— **错** ✓。`files[].path` 的语义**就是"镜像里的路径"** ✓
+   （`upload_samples.mjs` 用 `path.relative(workdir, full)` 取 zip 内路径 ✓；`mirrorSfzUrl` 与 `check_mirror_reachability.mjs` 同规则 ✓）
+   ⇒ 那些路径**对镜像是正确的** ✓；缺的是"**源仓库比镜像少一层**"这条**声明** ✓ ⇒ 修法＝加显式字段（`sourcePrefix` ✓，单点使用 ✓），
+     **不是**去改数据、**更不是**启发式剥离 ✗
+② ✗ 我曾据 `reflog` 的 `reset: moving to HEAD` 判断那条线"回到起点" —— **错** ✓：
+   那是 **`git stash push`／`pop`** 各写一条（stash ＝ 存起来 ＋ reset 到 HEAD ✓），我恰好在窗口里取数 ✓
+   ⇒ **又一次"间接信号 ≠ 测量"** ✓（本会话第 5 次同类 ✓）
+```
+
+### 112.3 排进队列的一条**潜伏地雷**（那条线点名、未碰禁改文件 ✓）
+
+```
+`meatbass` 的 4 个入口程序用 `#include "arco_mw_basic_map.sfz"`（**与程序同目录的相对路径** ✓），
+而 `sampleLoader.ts:297` 的 `baseUrl` 算法（`url.slice(0, url.length - programPath.length)` ✓）在**源站**路径下会算出**仓库根**
+⇒ 那几个 include 会 404 ✗。**只在"走镜像兜底"那条支路可达** ✓（源站现在 206 ⇒ 永不进兜底 ✓），且该文件当时**禁改** ✗
+⇒ 已排队：「**源站兜底分支下 meatbass 的 include 基目录**」✓（是否开线由我后续决定 ✓）
+```
