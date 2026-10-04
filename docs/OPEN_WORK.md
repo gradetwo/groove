@@ -7142,3 +7142,26 @@ problems: **[]** ✓
 **⇒ 下一步** ✓：① 跑 probe:latency 与（需浏览器的）perf:check 补响应基线 ✓；② P1-④ 预览**渲染级判据** ✓（照
   `mcpRenderArrangementBars.test.ts` 形状：A 轨／全量／B 轨三次渲染、断言**两两不同** ✓、边界写明"不做频谱级断言" ✗）；
   ③ 长描述逐个瘦身（一次 3–5 个 ✓，一个一推 ✓）
+
+## 三百一十一、📐 **V1 负担度量：能弃，但必须切片（先立 V2 判据再删 V1）**（2026-10-04 18:4x ✓）
+
+```
+**方法** ✓：`git grep -l` 全树引用面 ＋ 逐条读 `src/types/genre.ts` 的导出符号 ✓（时刻 18:42–18:43 ✓；不含文档 ✓）
+**① `SequencerPattern` 定义在 `src/types/genre.ts`（271 行）—— 与曲风内容库同文件** ✗
+   内容面 ✓：GenreCategory／I18nString(Array)／RepresentativeTrack／DrumPatternFeatures／RelationType／
+     GenreRelation／GenreRadarMetrics／**Genre**(:225)
+   V1 面 ✗：MAX_NOTE_GATE_STEPS=16 ✓／**SequencerTrack**(:49–182 ⇒ 约 **134 行**)／**SequencerPattern**(:183–200)／别名 DrumPattern、Track
+   ⇒ V1 那半 ≈ **150 / 271 行**，大头是 `SequencerTrack`
+**② 引用面（代码文件 / 其中测试 ✓）**：
+   `SequencerPattern` **139 / 73** ✗（删了会有 73 个判据红 ✗）｜`sequencer_pattern` 69 / 40
+   `patternFromGenre` **31 / 17** ✓（＝V2 播种入口，要切断的就是这条 ✓）｜`GENRE_MIX_RESOLVED` 7 / 6
+   `Genre` **217 / 102** ✓（曲风内容面，更大更承重 ⇒ **不能动** ✗）
+**③ V2 播种面的落点（切依赖的目标清单 ✓）**：`src/data/genreMix.ts` ✓／`features/sequencer/useSequencerStore.ts` ✓／
+   `hooks/useGenreSwitching.ts` ✓／`hooks/useUrlShareLoad.ts` ✓／`features/sequencer/projectDb.ts` ✓／`unsavedGuard.ts` ✓／
+   `hooks/useGenreAudition.ts` ✓／`test/CompareViewLoudness.test.tsx` ✓
+**④ V1→V2 的桥**：`src/data/songFlatten.ts`（**542 行** ✓）被 **`mcp/arrangement.ts` ＋ `mcp/registry.ts`** 引用 ✓（MCP 面依赖它 ✓）
+⚠️ **没量到的（不编 ✗）**：曲风库自身规模（`src/data/genres.ts` 不存在 ✗；我那条 `sed` 也报错 ✗）⇒ 下一轮补 ✓
+**⇒ 结论与做法** ✓：**V1 能弃，但现在不是"整支抛弃"的形态** ✗ —— 三步走、一次一支、可回退 ✓：
+   第 1 步 **切 V2 播种路径**（31 文件那面 ✓）并给 **V2 自己的能红判据** ✓；第 2 步 拆 `genre.ts`（内容面 217 引用**一律不动** ✗，
+   V1 那 150 行单独成文件 ✓）；第 3 步 收残余（139 文件 ✓）**逐个删、每次跑触及判据** ✓
+   ⚠️ 铁则：**先立 V2 判据 ✓ 再删 V1 ✓**，绝不反过来 ✗
