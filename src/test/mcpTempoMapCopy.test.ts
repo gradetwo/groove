@@ -27,6 +27,6 @@ describe("set_arrangement_tempo_map's description", () => {
 
   it("⭐ and its long sentences are recorded with the ceiling this commit measured", () => {
     const longest = Math.max(...description.split(/(?<=[.!?])\s+/).map((part) => part.length));
-    expect({ longest, under: longest < 285 }).toEqual({ longest, under: true });
+    expect({ longest, under: longest < 200 }).toEqual({ longest, under: true });
   });
 });
