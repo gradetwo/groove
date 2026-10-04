@@ -19,6 +19,7 @@ import { describe, expect, it } from "vitest";
 const source = [
   readFileSync("mcp/registry.ts", "utf8"),
   readFileSync("mcp/registryArrangement.ts", "utf8"),
+  readFileSync("mcp/registryProject.ts", "utf8"),
 ].join("\n");
 
 /** Pair every `name:` with the description that follows it, so the count does not depend on how the file is split. */
