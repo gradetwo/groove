@@ -1,9 +1,9 @@
 /**
- * ⭐ **`render_instrument_note`'s description, with the reading about resolving a library named.**
+ * ⭐ **render_instrument_note's description: the note reading and the one-shot reading, as sentences.**
  *
- * The change that split the silence sentence left this criterion unwritten because of a formatting error, so it is here
- * with a ceiling taken from the measurement: the tool still carries a sentence about whether a library resolves, and the
- * ceiling reflects that rather than the target.
+ * One boundary is the colon that introduced what the library answered, hand-chosen because the splitter leaves colons
+ * alone; the other is a separator it knows. All assertions ran before the write and this file is regenerated from the
+ * rewritten text.
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
@@ -17,16 +17,17 @@ const description = /\bdescription:\s*\n?\s*"((?:[^"\\]|\\.)*)"/s.exec(block)![1
 describe(TOOL + "'s description", () => {
   it("⭐ still carries the sentences the splits kept", () => {
     for (const anchor of [
-      "Render **one note** of one instrument th",
+      "Which sample file answered, at what play",
+      "Does it do what its file says?* A note t",
       "Silence has two readings, because a sile",
-      "*Does this library resolve, and does it ",
-      "Use it to answer the question a whole-mi"
+      "Render **one note** of one instrument th",
+      "A silent note without one is a library t",
     ])
       expect({ anchor, present: description.includes(anchor) }).toEqual({ anchor, present: true });
   });
 
-  it("⭐ and nothing outgrows the reading about resolving a library", () => {
+  it("⭐ and no sentence is over two hundred characters", () => {
     const longest = Math.max(...description.split(/(?<=[.!?])\s+/).map((part) => part.length));
-    expect({ longest, under: longest < 263 }).toEqual({ longest, under: true });
+    expect({ longest, under: longest < 200 }).toEqual({ longest, under: true });
   });
 });
