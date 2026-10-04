@@ -7,23 +7,19 @@
     "date": "2026-10-04",
     "category": "feature",
     "title": {
-      "zh": "编曲能试听一段了、Logic 工程能导出了，经验也写成了 skill",
+      "zh": "编曲能试听一段、Logic 工程能导出，经验也写成了 skill",
       "en": "Hear a passage of an arrangement, export it as a Logic project, and the lessons written down as skills"
     },
     "highlights": [
       {
-        "zh": "新增 `render_arrangement_preview`：只渲染一段、可只出指定轨（默认 8 kHz 单声道）——改完立刻听；`render_arrangement_stems` 也支持按小节范围。",
-        "en": "A new render_arrangement_preview renders one passage, optionally only the tracks you name, at 8 kHz mono by default, so a change can be heard at once; render_arrangement_stems takes a bar span too."
+        "zh": "新增预览工具：只渲一段、可只出指定轨，默认 8 kHz 单声道；分轨渲染也支持小节范围。",
+        "en": "A new preview renders one passage, optionally only the tracks you name, at 8 kHz mono by default; the stems renderer takes a bar span too."
       },
       {
-        "zh": "新增 `export_logic_project`：把编排写成 Logic 工程包，并能被本服务自己的导入器逐值读回。真 Logic 能否打开仍未证，写在 needs 里。",
-        "en": "A new export_logic_project writes the arrangement as a Logic project, read back value for value by this server's own importer. Whether Logic itself opens it is still unproven and stays in needs."
-      },
-      {
-        "zh": "预览怎么 A/B 写进了工具说明（同一段调两次，两条回复各自带文件与读数），音频落盘位置统一说明为 GROOVE_MCP_OUT。",
-        "en": "How to A/B a preview is now in the tool text (call it twice and compare two self-describing replies), and the render family says together where the file is written."
+        "zh": "新增 Logic 工程导出，能被本服务自己的导入器逐值读回；真 Logic 能否打开仍未证。",
+        "en": "A new export writes a Logic project that this server's own importer reads back value for value; whether Logic itself opens it stays unproven."
       }
     ],
-    "truncated": true
+    "truncated": false
   }
 }
