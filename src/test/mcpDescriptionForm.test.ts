@@ -15,6 +15,7 @@ const source = [
   readFileSync("mcp/registry.ts", "utf8"),
   readFileSync("mcp/registryArrangement.ts", "utf8"),
   readFileSync("mcp/registryProject.ts", "utf8"),
+  readFileSync("mcp/registryLibrary.ts", "utf8"),
 ].join("\n");
 const names = [...source.matchAll(/^    name: "([a-z0-9_]+)",/gm)].map((m) => m[1]);
 const blocks = source.split(/^    name: "[a-z0-9_]+",/m).slice(1);

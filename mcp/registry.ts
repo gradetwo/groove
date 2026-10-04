@@ -102,7 +102,10 @@ import { clipSlotSchema, unknownGenre, failure, describeGs1Sound, patternSchema,
 
 import { PROJECT_TOOLS } from "./registryProject";
 
+import { LIBRARY_TOOLS } from "./registryLibrary";
+
 export const TOOLS: ToolDefinition[] = [
+  ...LIBRARY_TOOLS,
   ...PROJECT_TOOLS,
   ...ARRANGEMENT_TOOLS,
   /**
