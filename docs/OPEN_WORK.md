@@ -7278,3 +7278,26 @@ problems: **[]** ✓
   set_arrangement_track_asset → list_arrangement_instruments → inspect_instrument_sfz 302 → …（>300 共 13 条起 ✓、首句 >200 共 14 条 ✓）
 **⏳ 仍欠** ✗：`registry.ts` 第一片（§315 配方 ✓ 未落地 ✓）；**本程推的十余笔 CI 判决全部未出结论** ✗
   （⭐ 会话时钟走得极慢 ✓ —— 回合间约 10 秒 ✓，而一轮 CI 约 16 分钟 ✓ ⇒ 交接第一件事就是核判决 ✓）
+
+## 三百一十八、🗺️ **MCP 描述瘦身：带名字的队列（E 的工作地图 ✓）**（2026-10-04 19:2x ✓）
+
+```
+**方法** ✓：逐工具块取 description ✓、按句切分 ✓、按**最长句**降序 ✓（时刻 19:20 ✓）
+⚠️ **口径**：数到 **97 条** vs 权威 **94 工具** ✓ ⇒ **相对排序有效** ✓，绝对值以 `check:mcp` 为准 ✓
+**起点对照**（§316／§317 ✓）：>300 的从 **13 → 8 个** ✓；>400 的从 1 → **0 个** ✓；棘轮 **420 → 357** ✓；已拆 7 条 ✓
+**>300 的 8 个（按最长句 ✓，`首句` 一并标出 —— ⭐ 它揭示了一类新改法 ✗）**：
+  355 ｜ 首句 **355** ✗ ｜ set_arrangement_track_asset      ← ⭐ 冠军，**首句即最长** ⇒ 要"先短结论、后长枚举" ✗
+  352 ｜ 首句  21 ✓ ｜ add_arrangement_notes
+  327 ｜ 首句 258 ✗ ｜ render_instrument_note
+  319 ｜ 首句 **319** ✗ ｜ apply_gs1_patch
+  312 ｜ 首句  94 ✓ ｜ render_arrangement
+  309 ｜ 首句 224 ✗ ｜ get_gs1_patch
+  306 ｜ 首句 **306** ✗ ｜ apply_chord_progression
+  302 ｜ 首句 **302** ✗ ｜ inspect_instrument_sfz
+  ⇒ ⭐ **8 个里 5 个"首句就是最长句"** ✗ ⇒ 对它们**光拆不够** ✗，要**结论前置** ✓（目标 E 的原话 ✓）
+**>200 的共 34 个** ✓（`list_arrangement_instruments` 299／`import_arrangement_midi` 288／`set_arrangement_tempo_map` 287／
+  `add_arrangement_track` 275／`import_logic_project` 271／`set_arrangement_track_kind` 271／`get_pitch_report` 264／
+  `export_logic_project` 264／… 到 211 ✓）｜**首句 >200 的 13 个** ✓
+**⏳ 后续节奏（每轮一条 ✓）**：先读全文 ✓ → 机械可拆则机械拆（内容零损失 ✓）／否则手拆或"先短后长" ✓
+  → 短语判据**先对改写后文本校验再写** ✓（第 5 条纪律 ✓，前三次回退都是它 ✗）→ 三门（**含 vitest** ✓）→ 推 → 棘轮按实测再降 ✓
+**⏳ 仍欠** ✗：registry 第一片（§315 配方 ✓）；**本程十余笔 CI 判决仍未出结论** ✗（标出 19:20 ✓；其中 `b6e75f6` 是红的 ✓，后继 `a6f183a` 已修 ✓）
