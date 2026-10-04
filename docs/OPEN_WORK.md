@@ -7953,3 +7953,31 @@ problems: **[]** ✓
    ② 单文件行数极值 ✓（本节 ✓）
    ③ 脚本与文档漂移 ✓（`check:docs` ＋ `check:docs:refs` 两道门 ✓，见 `§336` 门禁清单 ✓）
 ```
+
+## 三百四十三、⚡ **响应基线成立，且门是绿的 —— `§C` 的"量不了"缺口关闭**（2026-10-05 01:18 ✓）
+
+```
+**背景 ✓（`§A`／`§C` 的旧记录 ✗）**：`probe:latency` 曾**exit=1** ✓（要真浏览器 ✓，本机 `waitForSelector` 超时 ✗）
+   ⇒ 上一阶段如实记了"**响应基线本机量不了**" ✗ —— 并把"**量不了本身当待修**" ✓（探针要可诊断 ✓）
+**本会话已修 ✓（前几轮）**：探针补上**失败时先 dump 页面 test id** ✓、`exit` 前 dump ✓、
+   点 **`audio-start-button`** ✓、关 **`first-run-prompt-dismiss`** ✓、设置面板**重试 3 次** ✓
+   ⇒ ⭐ **现在本机可量** ✓（且**两次测量一致** ✓ ⇒ 可复现 ✓）
+**读数 ✓（同口径两次 ✓，方法：`npm run probe:latency` / `npm run probe:latency:gate` ✓）**：
+   动作                              settle(ms)      预算(ms)    longTasks   worst(ms)
+   baseline（播放中、无输入）          **1510.7 / 1510.4**   1700        0 / 0       0
+   GS-1 off                           42.8 / 43          150         0 / 0       0
+   GS-1 on                            39.4 / 47.7        150         0 / 0       0
+   timbre → warm_pad                  **138 / 119.8**      400        **1**       63 / 54
+   timbre → saw_lead                  110.3 / 124.1      400         0           0
+   timbre → rhodes_ep                  81.3 / 85.4       400         0           0
+   timbre → reese_bass                 81.2 / 82.6       400         0           0
+   toggle one step                     **81.5 / 79.9**      250         0           0
+**门 ✓**：`npm run probe:latency:gate` ⇒ **exit=0** ✓（"every action is inside its budget" ✓）
+**⚠️ 诚实标注 ✓（不掩盖 ✗）**：
+   · 只有 `timbre → warm_pad` 出现 **1 个 long task** ✓（**54–63 ms** ✓）—— 属**一次性、点击路径** ✓，
+     与上一阶段的结论一致 ✓；⚠️ 其余音色与开关**均 0 个** ✓
+   · ⚠️ **CI 上仍未实跑** ✗：`nightly` 里的 `probe:latency:gate` 是 **`schedule`** 触发 ✓ ⇒
+     **至今只在本地量过** ✓ ⇒ 该缺口**继续留在 `needs`** ✓
+**⭐ 结论与纪律 ✓**：**响应基线已立** ✓ ⇒ 若将来要"优化响应" ✓，**靶子必须由这张表指出** ✓；
+   **当前没有超预算项** ✓ ⇒ **不做无谓改动** ✗（避免"为优化而优化"把听感搭进去 ✗ —— §26 听感优先 ✓）
+```
