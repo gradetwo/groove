@@ -17,6 +17,7 @@ import { fromMidi } from "../src/data/midiToArrangement";
 import type { MidiArrangementImport } from "../src/data/midiToArrangement";
 import { DEFAULT_NOTE_CONVENTION, noteName, type NoteConvention } from "../src/data/pitchTruth";
 import { fromLogicProjectBase64 } from "../src/data/logicToArrangement";
+import { logicProjectBundle } from "../src/data/arrangementToLogic";
 import { arrangementToMidi } from "../src/data/arrangementToMidi";
 import type { MusicXmlImport } from "../src/data/musicxmlImport";
 import {
@@ -948,6 +949,36 @@ export function importMcpMidi(
  * them quietly: each reaches `problems` by name. Where a region sits on the timeline is the one reading this version
  * of `ProjectData` does not yet give reliably, and the reply says so rather than implying the notes start at bar 1.
  */
+/**
+ * Write an arrangement as the two files `importMcpLogicProject` reads, so the pair round-trips through this server.
+ *
+ * It is deliberately the mirror of the import beside it: the same two names, the same base64 convention, and the parts
+ * built the same way the browser's own `logicFileFor` builds them. Whether **Logic itself** opens the result is not
+ * proven here and stays in `needs`; what is proven is that this server's reader reads back the same music.
+ */
+export function exportMcpLogicProject(arrangementId: string, trackIds?: readonly string[]):
+  { projectDataBase64: string; metaDataBase64: string; projectInformationBase64: string;
+    notes: number; parts: number; trackIds: string[]; tempoBpm: number } {
+  const arrangement = requireArrangement(arrangementId);
+  const lanes = (arrangement.tracks ?? []).filter((track) => track.kind !== "folder");
+  const chosen = trackIds ? lanes.filter((track) => trackIds.includes(track.id)) : lanes;
+  const parts = chosen.map((track) => ({
+    name: track.name ?? track.id,
+    notes: (arrangement.notesByTrack ?? {})[track.id] ?? [],
+  }));
+  const bundle = logicProjectBundle(parts as never, arrangement.bpm ?? 120);
+  const bytes = (path: string) => Buffer.from(bundle.files[path]!).toString("base64");
+  return {
+    projectDataBase64: bytes("Alternatives/000/ProjectData"),
+    metaDataBase64: bytes("Alternatives/000/MetaData.plist"),
+    projectInformationBase64: bytes("Resources/ProjectInformation.plist"),
+    notes: parts.reduce((total, part) => total + part.notes.length, 0),
+    parts: parts.length,
+    trackIds: chosen.map((track) => track.id),
+    tempoBpm: arrangement.bpm ?? 120,
+  };
+}
+
 export function importMcpLogicProject(
   arrangementId: string,
   projectDataBase64: string,

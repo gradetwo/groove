@@ -76,6 +76,7 @@ import {
   exportMcpMusicXml,
   importMcpMusicXml,
   importMcpLogicProject,
+  exportMcpLogicProject,
   importMcpMidi,
   importMcpMusicXmlBytes,
   addMcpTrack,
@@ -1066,6 +1067,27 @@ export const TOOLS: ToolDefinition[] = [
           ...(instrumentsByPart(args.instruments) === undefined ? {} : { instruments: instrumentsByPart(args.instruments)! }),
           ...(situationsByPart(args.situations) === undefined ? {} : { situations: situationsByPart(args.situations)! }),
         });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "export_logic_project",
+    title: "Export an arrangement as a Logic Pro project",
+    description:
+      "Write this arrangement as the **two files `import_logic_project` reads** — `projectDataBase64` (`Alternatives/NNN/ProjectData`) and `metaDataBase64` (`Alternatives/NNN/MetaData.plist`), plus `ProjectInformation.plist` — so the pair round-trips through this server. One part per lane, optionally only the lanes named in `trackIds`. **Phase 1 is MIDI only**: no audio, no AU chains, no automation. Whether **Logic itself** opens the result is not proven by this tool; the structure follows what real projects were measured to carry, and nothing here claims more.",
+    readOnly: true,
+    inputSchema: {
+      arrangementId: z.string(),
+      trackIds: z.array(z.string()).optional().describe("write only these lanes; every non-folder lane otherwise"),
+    },
+    handler: (args) => {
+      try {
+        return exportMcpLogicProject(
+          String(args.arrangementId),
+          args.trackIds === undefined ? undefined : (args.trackIds as string[])
+        );
       } catch (error) {
         return failure((error as Error).message);
       }
