@@ -33,7 +33,7 @@ const source = [
 /** Pair every `name:` with the description that follows it, so the count does not depend on how the file is split. */
 function descriptions(): Array<{ name: string; text: string }> {
   const found: Array<{ name: string; text: string }> = [];
-  const nameAt = /^    name: "([a-z0-9_]+)",$/gm;
+  const nameAt = /^ {4}name: "([a-z0-9_]+)",$/gm;
   let match: RegExpExecArray | null;
   const starts: Array<{ name: string; at: number }> = [];
   while ((match = nameAt.exec(source))) starts.push({ name: match[1], at: match.index });
@@ -65,7 +65,7 @@ describe("the tool descriptions stay readable", () => {
 
   it("⭐ and nothing above one hundred and ninety unless it contains a list", () => {
     const sentences = source
-      .split(/^    name: "[a-z0-9_]+",/m)
+      .split(/^ {4}name: "[a-z0-9_]+",/m)
       .slice(1)
       .flatMap((block) => {
         const m = /\bdescription:\s*\n?\s*"((?:[^"\\]|\\.)*)"/s.exec(block);

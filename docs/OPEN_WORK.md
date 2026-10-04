@@ -7695,3 +7695,23 @@ problems: **[]** ✓
 **⏳ 仍未做 ✓**：尚未在 GitHub 上**实跑**过这一步 ✗（`nightly` 是定时的 ✓；要立刻验证需
    `workflow_dispatch` ＋ `nightly: true` ✓）—— ⚠️ 在它真跑绿之前，本条只能说"已挂上" ✓，**不能说"已验证"** ✗
 ```
+
+## 三百三十四、🧹 **纪律更正：本地门禁清单漏了 `npm run lint`**（2026-10-04 23:0x ✓）
+
+```
+**事实 ✓**：本会话我每轮只跑 `tsc` ✓ ＋ 相关 vitest ✓ ＋ docs 门 ✓ ＋（涉 mcp 时）`check:mcp` ✓，
+   **从未跑 `npm run lint`** ✗ ⇒ 4 个 `no-regex-spaces` 错误**积压** ✓，让 **`dev` 上连续三笔推送变红** ✗
+   （CI 的 `validate` 是 **lint 先跑** ✓ ⇒ 红得比测试更早 ✓）
+**根因 ✓**：描述判据里我写了**字面空格**的正则 ✓（`^    name:` ✗）⇒ eslint 要求写成 `^ {4}name:` ✓（**语义相同** ✓）
+**修法 ✓**：`npx eslint --fix` 那两个文件 ✓（各 2 处 ✓，共 4 处 ✓）⇒
+   **本地复跑**：`npm run lint` **exit=0** ✓ ｜ 受影响的描述判据 **5/5 仍绿** ✓（证明语义未变 ✓）｜ `tsc=0` ✓
+**⭐ 从此固定的本地门禁清单 ✓**（每轮至少前四项 ✓）：
+   ① `npx tsc --noEmit` ✓
+   ② **`npm run lint`** ✓ ← 本轮补上 ✓（**别再用"CI 会跑"当借口** ✗）
+   ③ 与本轮改动**相关的 vitest** ✓
+   ④ `node scripts/check_docs.mjs` ＋ `npm run check:docs:refs` ✓（改到 docs 时 ✓）
+   ⑤ 改到 `mcp/**` ⇒ `npm run check:mcp`（**94 tools / 123 checks** ✓）
+   ⑥ 改到构建／尺寸／预算 ⇒ `npm run build` ＋ `npm run check:budget` ✓
+**⭐ 另一条常规动作 ✓**：**每次推后必看 `gh run list`** ✓ ——
+   今晚证明了"不看"的代价：红积压三笔 ✓、根因却只有 4 个字符级的错 ✓
+```
