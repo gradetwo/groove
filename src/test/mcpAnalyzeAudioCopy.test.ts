@@ -20,7 +20,7 @@ describe("analyze_audio's description", () => {
       "The position is what makes the count useful",
       "a whole-file count is dominated by the music's own transients",
       "the boundaries you can derive from `get_song`'s sections",
-      "this tool counts; the arrangement says where the joins are",
+      "This tool counts; the arrangement says where the joins are",
     ])
       expect({ phrase, present: description.includes(phrase) }).toEqual({ phrase, present: true });
   });
