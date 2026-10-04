@@ -26,6 +26,24 @@ Written from a session that produced five red builds and eleven measured lessons
    the next person re-derives it wrongly.
 10. **Record your own mistakes together with the rule they produced.** Cheapest documentation there is.
 
+## Reach outside before you invent
+
+A design question or a thorny bug is usually **already solved somewhere**. Reach for that first.
+
+1. **Search, then read, then design.** Look for the vendor's own specification, a maintained open-source
+   implementation, or a well-argued write-up before inventing a format, an algorithm or a workaround. Reinventing
+   something the field has settled is how a small problem becomes a large one.
+2. **Reuse by understanding, not by pasting.** Name what the reference does and why it does it there, then write what
+   *this* project needs. Code you cannot explain is code you cannot fix later.
+3. **Two independent sources beat one.** Prefer a specification **and** an implementation; where they disagree, say so
+   and measure — the real artefacts in front of you decide, not the louder article.
+4. **Licences are part of the design.** MIT/Apache: reuse with attribution. GPL: read, learn, quote a short line —
+   do not copy the code into this tree. Record the source and its licence next to whatever borrows from it.
+5. **Prefer the head of the field, and say who you followed.** Quality over novelty: a maintained project with tests
+   and issues beats a clever gist. Credit the project you learned from, even when no licence demands it.
+6. **When nothing is found, record the search.** A `needs` entry naming what you looked for and what you found is worth
+   more than an invented answer, and it tells the next person where to start.
+
 ## Per-change workflow
 
 1. Measure; write the number down before touching anything.
