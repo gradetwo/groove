@@ -96,6 +96,8 @@ async function measure(page, label, action, settle) {
     longTasks: durations.length,
     totalBlockedMs: +durations.reduce((s, d) => s + d, 0).toFixed(1),
     worstTaskMs: durations.length ? +Math.max(...durations).toFixed(1) : 0,
+    /** ⭐ Where each long task began, relative to the action (same clock: performance.now). */
+    tasks: tasks.map((t) => ({ offsetMs: +(t.start - t0).toFixed(1), durationMs: +t.duration.toFixed(1) })),
   };
   // Stream the row as soon as it exists, *before* any later step can throw: the sibling project's
   // WebKit notes record a probe that printed after its assertions and therefore left nothing at all
@@ -192,7 +194,18 @@ async function waitForTestId(page, id, timeout = 15000) {
   results.push(await measure(page, "baseline (playing, no input)", async () => {}, () => page.waitForTimeout(1500)));
 
   // 1. GS-1 switch, off then on, through the settings panel (the surface the user used).
-  await page.click("[data-testid='header-settings-open']", { force: true });
+  // ⭐ The panel does not always open on the first click right after boot; retry and, if it still
+  // refuses, say so instead of waiting fifteen seconds for the toggle inside a panel nobody opened.
+  let settingsOpened = false;
+  for (let attempt = 1; attempt <= 3 && !settingsOpened; attempt += 1) {
+    await page.click("[data-testid='header-settings-open']", { force: true }).catch(() => {});
+    settingsOpened = await page
+      .waitForSelector("[data-testid='settings-panel-audio'], [data-testid='settings-tab-audio']", { timeout: 4000 })
+      .then(() => true)
+      .catch(() => false);
+    if (!settingsOpened && attempt < 3) await page.waitForTimeout(400);
+  }
+  if (!settingsOpened) throw new Error("the settings panel did not open after three attempts");
   if (process.env.PROBE_DIAG) {
     await page.waitForTimeout(600);
     const panelIds = await page.evaluate(() =>
