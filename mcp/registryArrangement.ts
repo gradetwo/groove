@@ -31,6 +31,8 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { importMcpMidi, importMcpMusicXmlBytes } from "./arrangement";
 import { instrumentsByPart } from "./toolKit";
 
+import { setMcpArrangementTempo, setMcpArrangementTimeSignature } from "./arrangement";
+
 export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
   {
     name: "describe_arrangement",
@@ -625,6 +627,38 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
           ...(instrumentsByPart(args.instruments) === undefined ? {} : { instruments: instrumentsByPart(args.instruments)! }),
           ...(situationsByPart(args.situations) === undefined ? {} : { situations: situationsByPart(args.situations)! }),
         });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "set_arrangement_tempo",
+    title: "Set the arrangement's tempo",
+    description: "Beats per minute, clamped to 20…300. The arrangement's own tempo rather than the song's: the same projection played at two speeds is two performances.",
+    readOnly: false,
+    inputSchema: { arrangementId: z.string(), bpm: z.number().min(20).max(300) },
+    handler: (args) => {
+      try {
+        return setMcpArrangementTempo(String(args.arrangementId), Number(args.bpm));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "set_arrangement_time_signature",
+    title: "Set the arrangement's time signature",
+    description:
+      'How many beats a bar holds — `"4/4"`, `"3/4"`, `"6/8"`, `"5/4"`, `"7/8"`. It decides how long a bar of the step grid is, which is why `3/4` gives twelve steps a bar where the default gives sixteen: before this, a caller with a 3/4 movement had to convert by hand (`ceil(bars × beatsPerBar / 4)`), and a 6/8 read as six quarters comes out **twice as long as it sounds**. The value is **refused rather than clamped** when it cannot be read — `"4/5"` and `"waltz"` are errors, not 4/4 — because a caller must not be left believing a 7/8 arrangement was written when a 4/4 one was.',
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      timeSignature: z.string().max(16).describe('two positive numbers, e.g. "4/4", "3/4", "6/8"; spaces around the slash are normalised away'),
+    },
+    handler: (args) => {
+      try {
+        return setMcpArrangementTimeSignature(String(args.arrangementId), String(args.timeSignature));
       } catch (error) {
         return failure((error as Error).message);
       }
