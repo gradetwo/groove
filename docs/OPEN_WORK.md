@@ -7118,3 +7118,27 @@ problems: **[]** ✓
 ⚠️ 另记：`docs/MCP.md` 的工具表是**精选**（71 行 vs **94 tools** ✓，缺的含 `compose_groove`／`explain_genre` 等核心 ✓）⇒ **不是完整清单** ✓，
    我那两个新工具没有行**未必是缺陷** ✗；若业主要"完整清单入档" ✓，那是**独立文档决定** ✓（⚠️ 我那个"98 tools"是**正则代理** ✗，以 `check:mcp` 的 **94** 为准 ✓）
 ```
+
+## 三百一十、📊 **新阶段基线（完善／响应／CPU／交互体验）：先量后改的第一步**（2026-10-04 18:3x ✓）
+
+```
+**方法** ✓：跑仓库**现成**的度量入口（不新造 ✓），时刻 18:37 ✓，真实退出码（**不接管道** ✗）
+**可用入口盘点** ✓（这一阶段不用造轮子 ✓）：probe:latency（纯 Node ✓）｜perf:check（**需 playwright** ✗）｜probe:boot（纯 Node ✓）
+  ｜check:budget ✓｜probe:headless／-silence ✓｜probe:arrangement ／-audio ／-undo ／continuity ✓｜probe:skins ／:full ✓｜probe:score-ink ✓
+  ｜probe:toolbar ／probe:grid-gutter ／probe:scroll ✓｜check:mcp ✓｜check:mcp:build ✓
+**③ 包体（check:budget，exit 0 ✓，全部在阈值内 ✓）**：
+  index.js **135.7KB** ｜ vendor-react.js 44.7KB ｜ vendor-icons.js 11.1KB ｜ index.css 29.8KB
+  synth_core.wasm **75.1KB** ｜ synth_core_scalar.wasm **72.3KB**（**per-artifact limit 96 KB** ⇒ 用到 78% ✓）
+**⭐ GS-1 内嵌核心的真实数字（同一次运行里，ABI 9 契约 25 项全过 ✓）**：
+  gs_max_block_size()=1024 ✓ ｜ gs_spectrum_bins()=36 ✓ ｜ ABI 9 vs UPSTREAM.json 9 ✓（scalar 版也一致 ✓）
+  参数表 **224 个 id 唯一** ✓ ｜ 渲染冒烟 **峰值 0.2491**（40×128 帧、非静音 ✓）｜ **gs_alloc_violations()=0** ✓
+**④ MCP 交互面（方法：从 `mcp/registry.ts` 源码量 ✓，无需构建 ✓）**：
+  权威工具数 = **94**（`check:mcp` ✓；⚠️ 我按 `name:` 行数到 **98** ✗ ⇒ **代理口径偏高，以 94 为准** ✗）
+  描述字符：min 41 ｜ 中位 **262** ｜ 均值 335 ｜ max **1178** ⇒ **>400 字符的有 32 个** ✓、>800 的 5 个 ✓、>1500 的 0 个 ✓
+  最长的五个：inspect_instrument_sfz(1178)／get_pitch_report(1067)／get_transposition_report(1037)／
+    list_arrangement_instruments(970)／add_arrangement_notes(900) ✓
+⇒ **一眼可见的交互成本** ✓：MCP 客户端**每次连接都要读完所有描述** ✓，而 **32 个超过 400 字符** ✓ ⇒ 改法＝**结论前置** ✓、
+  **长篇细节下沉到回复或资源** ✓；⚠️ **绝不删必要边界**（"仅 song" ✓、"真 Logic 未证" ✓）✗；每改一条都要给**改前/改后同口径**读数 ✓
+**⇒ 下一步** ✓：① 跑 probe:latency 与（需浏览器的）perf:check 补响应基线 ✓；② P1-④ 预览**渲染级判据** ✓（照
+  `mcpRenderArrangementBars.test.ts` 形状：A 轨／全量／B 轨三次渲染、断言**两两不同** ✓、边界写明"不做频谱级断言" ✗）；
+  ③ 长描述逐个瘦身（一次 3–5 个 ✓，一个一推 ✓）
