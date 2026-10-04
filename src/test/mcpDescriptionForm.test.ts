@@ -11,7 +11,10 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const source = readFileSync("mcp/registry.ts", "utf8");
+const source = [
+  readFileSync("mcp/registry.ts", "utf8"),
+  readFileSync("mcp/registryArrangement.ts", "utf8"),
+].join("\n");
 const names = [...source.matchAll(/^    name: "([a-z0-9_]+)",/gm)].map((m) => m[1]);
 const blocks = source.split(/^    name: "[a-z0-9_]+",/m).slice(1);
 
