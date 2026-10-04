@@ -7440,3 +7440,45 @@ problems: **[]** ✓
 **⚠️ 但**：`registry.ts` 若**最后一次**切完仍剩一堆"其他" ✓ ⇒ 就**停在"杂项汇总 + TOOLS 装配"**这个定位上 ✓
    （它本来就是 barrel ✓ —— 只求它**只做装配** ✓，不再放十几件互不相干的工具 ✓）
 ```
+
+## 三百二十四、🏁 **registry 切片收官：4051 → 457 行，一文件一主题**（2026-10-04 22:2x ✓）
+
+```
+**收官读数 ✓**（第 208 轮实测 ✓）：
+  mcp/registry.ts                  457 行 ｜  7 个工具名
+  mcp/toolKit.ts                   534 行 ｜  0 个工具名
+  mcp/registryArrangement.ts      1315 行 ｜ 40 个工具名
+  mcp/registrySong.ts              422 行 ｜  8 个工具名
+  mcp/registryGs1.ts               382 行 ｜  3 个工具名
+  mcp/registryRender.ts            281 行 ｜  4 个工具名
+  mcp/registryFiles.ts             220 行 ｜  4 个工具名
+  mcp/registryLibrary.ts           143 行 ｜ 10 个工具名
+  mcp/registryPattern.ts            98 行 ｜  5 个工具名
+  mcp/registryProject.ts            59 行 ｜  2 个工具名
+  mcp/registryAnalysis.ts          270 行 ｜  7 个工具名
+  mcp/registryExamples.ts          218 行 ｜  8 个工具名
+    ── 合计：98 个工具名（MCP 面 94）
+**`registry.ts`：4051 行 → 457 行 ✓（−89% ✓）**；它现在只做三件事 ✓：
+  `export * from "./toolKit";` ✓ ｜ 各域模块数组的 `...X_TOOLS` 展开 ✓ ｜ `TOOLS`／`PROMPTS`／`RESOURCES` ✓
+
+**依赖方向（单向 ✓、不会再有初始化期循环 ✓）**：
+  `toolKit` ← 各域模块 ← `registry`（barrel）← `server.ts`
+  ⚠️ 且 `server.ts` 的 import 面**全程一个字未改** ✓（`{ PROMPTS, RESOURCES, TOOLS, failure, json }` ✓）
+
+**可复算的维护性证据 ✓**：
+  ① 改一个域 ⇒ 进一个 **59–534 行**的文件 ✓（曾是 4051 行单文件 ✗）
+  ② 每次搬动都过**四道门** ✓：`tsc` ✓ ＋ **check:mcp 94 tools / 123 checks** ✓ ＋ **docs 门** ✓ ＋ 描述判据 ✓
+  ③ **94 个工具名** ✓ 无重复 ✓、跨 12 个文件 ✓ —— 功能面**零变化** ✓（不是声称 ✓，是门禁验的 ✓）
+```
+
+### 三百二十二之补、第 12–15 条坑（2026-10-04 22:2x ✓）
+```
+12. **扫描不限定数组区间** ✗ —— `registry*.ts` 里除了 `TOOLS` 还有 `PROMPTS`／`RESOURCES` ✓，
+    它们也用 `name:` ✓ ⇒ 会**把提示词当工具搬走** ✗（症状：`TS2353 'arguments' does not exist in type ToolDefinition` ✓
+    ＋ `check:mcp`：`Prompt … not found` ✓）⇒ 扫描必须**限定在目标数组的声明与下一个顶层 `export const` 之间** ✓
+13. **以为 helper 都在数组之前** ✗ —— `estimateKey`／`changelog` 住在**文件尾部** ✓ ⇒
+    推导"谁被用到"时要扫**全文声明** ✓；且**共享 helper 的归宿是 `toolKit`** ✓（否则新模块又要反向依赖 registry ⇒ 循环 ✗）
+14. **搬 helper 前不量调用方** ✗ —— 连**还没搬走的**工具（如 `estimate_key` ✓）也在调用它 ✓ ⇒ 补 import 要一次补全 ✓
+15. **脚本里"先用变量、后定义"** ✗（我写 `anchor` 用在赋值之前 ⇒ `NameError` ⇒ 半成品树 ✗）
+    ⇒ ⚠️ 同一段脚本内，**定义必须在使用之前** ✓；且**跨 heredoc 传变量**极易失手 ✗ ⇒ 宁可在**同一段脚本**里做完 ✓
+```
