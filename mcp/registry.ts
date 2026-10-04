@@ -871,7 +871,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "export_arrangement_musicxml",
     title: "Export a score as MusicXML",
     description:
-      "The arrangement's notes as a MusicXML 4.0 `score-partwise` document — the file a notation program opens. One part, from one track; a note that crosses a barline is written as two tied notes, gaps become rests, and overlapping notes become separate voices, because those are the three things the format cannot express any other way.",
+      "The arrangement's notes as a MusicXML 4.0 `score-partwise` document. The file a notation program opens. One part, from one track. A note that crosses a barline is written as two tied notes, gaps become rests. Overlapping notes become separate voices, because those are the three things the format cannot express any other way.",
     readOnly: true,
     inputSchema: {
       arrangementId: z.string(),
