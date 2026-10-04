@@ -465,7 +465,10 @@ export interface ToolContext {
   progress?: ProgressReporter;
 }
 
+import { ARRANGEMENT_TOOLS } from "./registryArrangement";
+
 export const TOOLS: ToolDefinition[] = [
+  ...ARRANGEMENT_TOOLS,
   /**
    * The arrangement surface — the v2 model the interface has used since `/new`.
    *
@@ -713,20 +716,6 @@ export const TOOLS: ToolDefinition[] = [
         const arrangement = getMcpArrangement(String(args.arrangementId));
         if (!arrangement) throw new Error(`unknown arrangementId "${String(args.arrangementId)}" — create one with create_arrangement`);
         return summariseArrangement(String(args.arrangementId), arrangement);
-      } catch (error) {
-        return failure((error as Error).message);
-      }
-    },
-  },
-  {
-    name: "describe_arrangement",
-    title: "Describe an arrangement",
-    description: "One line per track, for reading rather than parsing — including what each track sounds with, so a synth preset is not mistaken for a recorded instrument.",
-    readOnly: true,
-    inputSchema: { arrangementId: z.string() },
-    handler: (args) => {
-      try {
-        return describeMcpArrangement(String(args.arrangementId));
       } catch (error) {
         return failure((error as Error).message);
       }
