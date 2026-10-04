@@ -7000,3 +7000,22 @@ problems: **[]** ✓
 ⇒ ⭐ **结论：⑦② 无需实现** ✗；此前 `:5792`／`:5803` 又把"只剩报告级一件"写上，属于**旧标注回流** ✗ ⇒ 本条给**最终确认** ✓
 📌 教训（省事且诚实 ✓）：**"欠件清单"会自己回流** ✗ —— 关闭一条时要**引用它的交付条目与 CI 判决** ✓，否则下一轮会把已交付的再排一次队 ✗
 ```
+
+## 三百零四、⚠️ **`check:mcp` 不覆盖"名字与标签相符" ⇒ 一堆红同一个根因（我的第 5 次"本地绿、CI 红"）** ✗→✅（2026-10-04 08:2x ✓）
+
+```
+**CI 原文** ✓（最早那笔 `553c7ab`，run `37163155185` ✓）：
+   `FAIL src/test/mcpTools.test.ts > …` ｜ `AssertionError: expected [ 'render_arrangement_preview' ] to deepl…`
+**根因** ✓（读 `mcpTools.test.ts:241–255` ✓ 所得，非猜 ✗）：那条判据**从工具名的动词推导 read-only 承诺** ✓：
+   `WRITING_VERBS` 含 `render`／`export` ✓；`RETURNS_BYTES_DESPITE_THE_VERB = {export_midi, export_ableton, export_arrangement_musicxml}` ✓；
+   `expect(TOOLS.filter(t => looksLikeAWriter(t.name) === t.readOnly).map(t => t.name)).toEqual([])` ✓
+   我两个新工具都与它冲突 ✗：① `render_arrangement_preview` 是**写者**（渲染出文件 ✓，其兄弟 `render_arrangement` 正是 `readOnly:false` ✓）却标了 `true` ✗
+   ② `export_logic_project` **不改状态、只回字节** ✓ ⇒ 应进**豁免集** ✓（该集合注释写的正是这种情形 ✓）
+**修法** ✓（`459ad2a` ✓）：preview 改 `readOnly:false` ✓；`export_logic_project` 加入豁免集 ✓
+**验证** ✓：`tsc` 当闸门 0 ✓｜触及族 **4 文件 67 用例**绿 ✓（含 `mcpTools.test.ts` ✓）｜`check:mcp` **123/0** ✓
+**⚠️ 更早那几笔红同因** ✓：`a0fd313`／`f0ffbe5`／`3104818`／`03908c1`／`c304ec1` 的失败日志**都是同一条**该断言 ✓
+   （CI 判的是含新工具的树 ✓）⇒ ⭐ **一堆红＝一个根因** ✓，已修 ✓
+📌 **新纪律** ✓：**加 MCP 工具时，触及集必须包含 `mcpTools.test.ts`** ✓ —— **`check:mcp` 只管协议面 ✓，不管"名字 vs 标签"这类规则** ✗
+   （与 `§289` 同源：**改动改变了"集合/属性"⇒ 必须跑从该集合推导属性的判据** ✓）
+⚠️ 本程第 5 次"本地绿、CI 红" ✗（前四次：类型错 ✗／零宽空格 ✗／计数文案 ✗／复制改写弄坏多行 ✗）⇒ 每次换来一条具体纪律 ✓
+```
