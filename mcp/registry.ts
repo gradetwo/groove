@@ -1817,7 +1817,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "apply_pattern_ops",
     title: "Compose with pattern operations",
     description:
-      "Apply a list of operations (set_step, clear_step, set_velocity, set_pitch, set_gate, transpose, humanize, swing, clear_track, copy_track, set_chord_progression, transform_pattern) to a pattern and return the new pattern plus a per-operation report. `transform_pattern` bakes the app's arpeggiator or strummer into a lane's held chords (the engine is `src/utils/arpeggiatorTheory.ts`, so the order and register match what the interface plays); copy a lane first to arpeggiate the chords into a lead. The input is never mutated; seeded operations are deterministic.",
+      "Apply a list of operations (set_step, clear_step, set_velocity, set_pitch, set_gate, transpose, humanize, swing, clear_track, copy_track, set_chord_progression, transform_pattern) to a pattern. It returns the new pattern plus a per-operation report. `transform_pattern` bakes the app's arpeggiator or strummer into a lane's held chords (the engine is `src/utils/arpeggiatorTheory.ts`, so the order and register match what the interface plays). Copy a lane first to arpeggiate the chords into a lead. The input is never mutated; seeded operations are deterministic.",
     readOnly: true,
     inputSchema: {
       genreId: z.string().optional().describe("start from this genre's pattern"),
