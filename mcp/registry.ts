@@ -1238,7 +1238,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "set_arrangement_tempo_map",
     title: "Set an arrangement's tempo changes",
     description:
-      "The whole map, not one number: points at whole bars, each `{ atBar, bpm }` with `atBar` **0-based**, so a movement can change speed without becoming a separate arrangement. Muse's list carried this as a gap three times — \"arrangement 无 tempo map — 整曲只能一个固定 BPM\" — and she was right about the **surface**. The model field, its projection into the song input and the renderer's bar-by-bar scheduling were built earlier in this work, and no tool could set them. Points are **refused rather than clamped** when a bar or tempo cannot be read, sorted by bar (a map whose meaning depends on the order it was written in changes meaning when someone reorders it). An empty list **clears** the map, returning the arrangement to its single `bpm`.",
+      "The whole map, not one number: points at whole bars, each `{ atBar, bpm }` with `atBar` **0-based**, so a movement can change speed without becoming a separate arrangement. Muse's list carried this as a gap three times — \"arrangement 无 tempo map — 整曲只能一个固定 BPM\" — and she was right about the **surface**. The model field, its projection into the song input and the renderer's bar-by-bar scheduling were built earlier in this work, and no tool could set them. Points are **refused rather than clamped** when a bar or tempo cannot be read. They are sorted by bar (a map whose meaning depends on the order it was written in changes meaning when someone reorders it). An empty list **clears** the map, returning the arrangement to its single `bpm`.",
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
