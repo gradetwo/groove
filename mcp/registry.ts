@@ -1413,7 +1413,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "set_arrangement_track_steps",
     title: "Write a track's steps",
     description:
-      "Set the whole step pattern a track plays: a step is on when its value is non-zero. The length is yours, so a pattern is the steps it has rather than padded to sixteen. Refused for effect and folder tracks, whose silence is their definition. ⭐ **For a melody, use `add_arrangement_note` instead**: a step pattern puts every onset on the grid and caps a held note at one bar, so a line with dotted notes, ties, syllables of different lengths or a note sustained across a bar has to be chopped to fit here. A note begins at a fractional beat and its length has no cap.",
+      "Set the whole step pattern a track plays: a step is on when its value is non-zero. The length is yours. A pattern is the steps it has rather than padded to sixteen. Refused for effect and folder tracks, whose silence is their definition. ⭐ **For a melody, use `add_arrangement_note` instead**: a step pattern puts every onset on the grid and caps a held note at one bar. A line with dotted notes, ties, syllables of different lengths or a note sustained across a bar has to be chopped to fit here. A note begins at a fractional beat and its length has no cap.",
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
