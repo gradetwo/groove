@@ -1,3 +1,4 @@
+import { registrySource } from "./helpers/registrySource";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { MAX_SECTION_BARS, MAX_SONG_BARS } from "../types/song";
@@ -17,7 +18,7 @@ describe("the relaxed ceilings", () => {
   });
 
   it("are what the tools actually accept, bound for bound", () => {
-    const registry = readFileSync("mcp/registry.ts", "utf8");
+    const registry = registrySource();
     // Every `add_section`-style bar bound in the schema must be the constant's value, however it is written.
     // (`max(64)` legitimately survives elsewhere — 64 syllables, 64 tones — so the assertion is about the **bars** bound, not about the number 64.)
     const raised = [...registry.matchAll(/\.max\((\d+)\)/g)].map((m) => Number(m[1]));

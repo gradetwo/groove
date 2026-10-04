@@ -11,24 +11,13 @@
  * good — the target is a first sentence a reader can act on (roughly 200) and no sentence over 300, and getting there is
  * a sequence of small edits with their own criteria, not something this file can pretend.
  */
+import { registrySource } from "./helpers/registrySource";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 // The cap only ever moves down: each split that lowers the measured maximum lowers this number with it.
 
-const source = [
-  readFileSync("mcp/registry.ts", "utf8"),
-  readFileSync("mcp/registryArrangement.ts", "utf8"),
-  readFileSync("mcp/registryProject.ts", "utf8"),
-  readFileSync("mcp/registryLibrary.ts", "utf8"),
-  readFileSync("mcp/registryGs1.ts", "utf8"),
-  readFileSync("mcp/registryPattern.ts", "utf8"),
-  readFileSync("mcp/registrySong.ts", "utf8"),
-  readFileSync("mcp/registryRender.ts", "utf8"),
-  readFileSync("mcp/registryFiles.ts", "utf8"),
-  readFileSync("mcp/registryAnalysis.ts", "utf8"),
-  readFileSync("mcp/registryExamples.ts", "utf8"),
-].join("\n");
+const source = registrySource();
 
 /** Pair every `name:` with the description that follows it, so the count does not depend on how the file is split. */
 function descriptions(): Array<{ name: string; text: string }> {
@@ -46,8 +35,10 @@ function descriptions(): Array<{ name: string; text: string }> {
   return found;
 }
 
-const longestSentence = (text: string) => Math.max(...text.split(/(?<=[.!?])\s+/).map((part) => part.length));
+const longestSentence = (text: string) => Math.max(...text.replace(/\*/g, "").split(/(?<=[.!?])\s+/).map((part) => part.length));
 
+// ⭐ Length is measured on the prose, not the markup: a sentence ending `.**` followed by another
+// sentence used to read as one 276-character sentence, which is a measurement artefact, not prose.
 describe("the tool descriptions stay readable", () => {
   it("⭐ finds the descriptions at all, so a silent extraction failure cannot pass", () => {
     const all = descriptions();

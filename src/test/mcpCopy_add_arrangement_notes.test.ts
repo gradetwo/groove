@@ -4,11 +4,12 @@
  * One boundary is the colon that introduced how a silent decline is seen, chosen by hand because the splitter leaves
  * colons alone; the other two are separators it knows. The assertions ran before the write. Anchors come from the rewrite.
  */
+import { registrySource } from "./helpers/registrySource";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const TOOL = "add_arrangement_notes";
-const source = readFileSync("mcp/registry.ts", "utf8");
+const source = registrySource();
 const start = source.indexOf('name: "' + TOOL + '"');
 const block = source.slice(start, source.indexOf('name: "', start + 10));
 const description = /\bdescription:\s*\n?\s*"((?:[^"\\]|\\.)*)"/s.exec(block)![1];

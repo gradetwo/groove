@@ -5,12 +5,13 @@
  *
  * The rendering itself runs on either host — Chromium, or the Node Web Audio host with `headless: true` (held for real in `src/test/mcpHeadlessRender.test.ts`) — so this criterion holds the half that needs neither engine: **the naming rule**, which is decided in Node so that it is one testable rule rather than two. Two tracks with the same name must stay two files, and a name with slashes or spaces must not become a path.
  */
+import { registrySource } from "./helpers/registrySource";
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { stemFilename } from "../data/stemNaming";
 
-const registry = readFileSync(join(__dirname, "..", "..", "mcp", "registry.ts"), "utf8");
+const registry = registrySource();
 
 describe("stem filenames", () => {
   it("leads with the track's position, so two tracks of one name stay two files", () => {

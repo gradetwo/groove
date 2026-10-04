@@ -4,10 +4,11 @@
  * The sentence was three hundred and fifty two characters and split at its own dash into what legato means and why a
  * detached note is rarely wanted. The anchors are derived from the rewritten text rather than typed.
  */
+import { registrySource } from "./helpers/registrySource";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const source = readFileSync("mcp/registry.ts", "utf8");
+const source = registrySource();
 const start = source.indexOf('name: "add_arrangement_notes"');
 const block = source.slice(start, source.indexOf('name: "', start + 10));
 const description = /\bdescription:\s*\n?\s*"((?:[^"\\]|\\.)*)"/s.exec(block)![1];

@@ -4,11 +4,12 @@
  * The list used plain commas, which the splitter deliberately leaves alone; the boundaries are hand-chosen and the width
  * is unchanged, so the content is untouched by construction. Anchors come from the rewrite.
  */
+import { registrySource } from "./helpers/registrySource";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const TOOL = "set_arrangement_track_kind";
-const source = readFileSync("mcp/registry.ts", "utf8");
+const source = registrySource();
 const start = source.indexOf('name: "' + TOOL + '"');
 const block = source.slice(start, source.indexOf('name: "', start + 10));
 const description = /\bdescription:\s*\n?\s*"((?:[^"\\]|\\.)*)"/s.exec(block)![1];

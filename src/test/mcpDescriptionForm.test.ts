@@ -8,11 +8,12 @@
  * Code spans are replaced with a placeholder before the check so that a file extension such as `.als` or a code span
  * followed by punctuation is not mistaken for damage.
  */
+import { registrySource } from "./helpers/registrySource";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const source = [
-  readFileSync("mcp/registry.ts", "utf8"),
+  registrySource(),
   readFileSync("mcp/registryArrangement.ts", "utf8"),
   readFileSync("mcp/registryProject.ts", "utf8"),
   readFileSync("mcp/registryLibrary.ts", "utf8"),

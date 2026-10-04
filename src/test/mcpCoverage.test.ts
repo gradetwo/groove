@@ -9,6 +9,7 @@
  *
  * Reading the source rather than importing the module is deliberate: the point is to notice an export that **nobody wired up**, and an import list would only see the ones somebody did.
  */
+import { registrySource } from "./helpers/registrySource";
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { TOOLS } from "../../mcp/registry";
@@ -109,7 +110,7 @@ describe("the arrangement surface covers the arrangement layer", () => {
 describe("MCP · the operations written for MCP reach a tool", () => {
   it("names every exported operation from a tool handler, or says why not", () => {
     const module = readFileSync("mcp/arrangement.ts", "utf8");
-    const registry = readFileSync("mcp/registry.ts", "utf8");
+    const registry = registrySource();
     const exported = [...module.matchAll(/^export function (\w+)/gm)].map((match) => match[1]!);
 
     /** Exported for a caller that is not a tool: the internal helpers the tools are built from. */

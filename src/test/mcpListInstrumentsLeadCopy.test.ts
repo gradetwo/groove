@@ -5,10 +5,11 @@
  * break on, so the boundaries are hand-chosen. ⚠️ The tool still carries a two hundred and fifty three character sentence
  * about `mappedInstruments`, and the ceiling below is measured from that rather than from the target.
  */
+import { registrySource } from "./helpers/registrySource";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const source = readFileSync("mcp/registry.ts", "utf8");
+const source = registrySource();
 const start = source.indexOf('name: "list_arrangement_instruments"');
 const block = source.slice(start, source.indexOf('name: "', start + 10));
 const description = /\bdescription:\s*\n?\s*"((?:[^"\\]|\\.)*)"/s.exec(block)![1];

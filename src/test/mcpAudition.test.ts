@@ -5,13 +5,14 @@
  *
  * The resolved fields are the reason this tool is worth its render: a **silent** render with a `samplePath` is a gain problem, and a silent render without one is a library that never resolved. Reporting the two the same way would make the tool useless for exactly the case it was added for.
  */
+import { registrySource } from "./helpers/registrySource";
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { auditionFilename } from "../../mcp/render/worker";
 
 const root = join(__dirname, "..", "..");
-const registry = readFileSync(join(root, "mcp", "registry.ts"), "utf8");
+const registry = registrySource();
 const gate = readFileSync(join(root, "scripts", "check_mcp.mjs"), "utf8");
 
 describe("the audition's filename", () => {

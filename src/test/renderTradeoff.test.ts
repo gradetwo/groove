@@ -1,3 +1,4 @@
+import { registrySource } from "./helpers/registrySource";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { renderBudgetSentence, renderCostSentence } from "../../mcp/render/budget";
@@ -17,7 +18,7 @@ import { renderBudgetSentence, renderCostSentence } from "../../mcp/render/budge
  * 2. the "about 6 seconds per minute of audio" figure was the preview's, quoted as a floor. The descriptions now quote the measured eight-bar cost from
  *    `docs/RENDER_PROFILE.md`, and the assertion reads that measurement from the module that holds it rather than from a paraphrase.
  */
-const registry = readFileSync("mcp/registry.ts", "utf8");
+const registry = registrySource();
 
 describe("what render_song says about its own limits", () => {
   it("says which progress it reports, and why a bar counter is not one of them", () => {

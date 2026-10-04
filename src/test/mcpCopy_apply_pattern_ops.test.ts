@@ -4,11 +4,12 @@
  * The operation names sit inside brackets, so the splitter cannot see a boundary there and the two chosen here are hand
  * made; both assertions about length and anchors ran before the write.
  */
+import { registrySource } from "./helpers/registrySource";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const TOOL = "apply_pattern_ops";
-const source = readFileSync("mcp/registry.ts", "utf8");
+const source = registrySource();
 const start = source.indexOf('name: "' + TOOL + '"');
 const block = source.slice(start, source.indexOf('name: "', start + 10));
 const description = /\bdescription:\s*\n?\s*"((?:[^"\\]|\\.)*)"/s.exec(block)![1];

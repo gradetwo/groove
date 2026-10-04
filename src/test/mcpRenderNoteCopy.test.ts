@@ -4,10 +4,11 @@
  * A mechanical split at a bracket-depth-zero separator: the separator becomes a full stop and the length check is that
  * exactly one character per split went away. The anchors are derived from the rewritten text rather than typed.
  */
+import { registrySource } from "./helpers/registrySource";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const source = readFileSync("mcp/registry.ts", "utf8");
+const source = registrySource();
 const start = source.indexOf('name: "render_instrument_note"');
 const block = source.slice(start, source.indexOf('name: "', start + 10));
 const description = /\bdescription:\s*\n?\s*"((?:[^"\\]|\\.)*)"/s.exec(block)![1];
@@ -15,7 +16,7 @@ const description = /\bdescription:\s*\n?\s*"((?:[^"\\]|\\.)*)"/s.exec(block)![1
 describe("render_instrument_note's description", () => {
   it("⭐ still carries the sentences the split kept", () => {
     for (const anchor of [
-      "*Does this library resolve, and does it ",
+      "*Does this library resolve.",
       "Render **one note** of one instrument th",
       "Use it to answer the question a whole-mi",
     ])

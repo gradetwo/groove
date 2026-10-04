@@ -4,11 +4,12 @@
  * The clause is inside no bracket but the splitter leaves relative clauses alone; the rewrite adds a subject and keeps
  * every fact. The assertions ran before the write and this pass's ceiling is one hundred and ninety.
  */
+import { registrySource } from "./helpers/registrySource";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const TOOL = "apply_gs1_patch";
-const source = readFileSync("mcp/registry.ts", "utf8");
+const source = registrySource();
 const start = source.indexOf('name: "' + TOOL + '"');
 const block = source.slice(start, source.indexOf('name: "', start + 10));
 const description = /\bdescription:\s*\n?\s*"((?:[^"\\]|\\.)*)"/s.exec(block)![1];

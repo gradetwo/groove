@@ -5,11 +5,12 @@
  * lost. The boundary is hand-chosen because the splitter leaves plain commas alone, and the ceiling is one hundred and
  * ninety. Assertions ran before the write.
  */
+import { registrySource } from "./helpers/registrySource";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const TOOL = "set_arrangement_tempo_map";
-const source = readFileSync("mcp/registry.ts", "utf8");
+const source = registrySource();
 const start = source.indexOf('name: "' + TOOL + '"');
 const block = source.slice(start, source.indexOf('name: "', start + 10));
 const description = /\bdescription:\s*\n?\s*"((?:[^"\\]|\\.)*)"/s.exec(block)![1];

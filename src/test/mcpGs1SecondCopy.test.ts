@@ -4,10 +4,11 @@
  * The splitter now tracks quotation parity as well as brackets, so a dash inside a quoted phrase is never a boundary;
  * the assertions run before the write and the exact net loss is checked rather than a split count.
  */
+import { registrySource } from "./helpers/registrySource";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const source = readFileSync("mcp/registry.ts", "utf8");
+const source = registrySource();
 const start = source.indexOf('name: "apply_gs1_patch"');
 const block = source.slice(start, source.indexOf('name: "', start + 10));
 const description = /\bdescription:\s*\n?\s*"((?:[^"\\]|\\.)*)"/s.exec(block)![1];
@@ -15,7 +16,7 @@ const description = /\bdescription:\s*\n?\s*"((?:[^"\\]|\\.)*)"/s.exec(block)![1
 describe("apply_gs1_patch's description, after a second pass", () => {
   it("⭐ still carries the sentences the split kept", () => {
     for (const anchor of [
-      "Values are the engine's own, whose range",
+      "Values are the engine's own.",
       "Set or clear one lane's own GS-1 sound, ",
       "Reaches the rendered audio and live play",
       "A code that cannot be decoded, an unknow",

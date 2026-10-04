@@ -1,3 +1,4 @@
+import { registrySource } from "./helpers/registrySource";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -22,7 +23,7 @@ import { describe, expect, it } from "vitest";
  * for the same reason). A schema that lost the fields entirely is caught too, so the phrasing checks cannot be
  * satisfied against nothing.
  */
-const SOURCE = readFileSync(path.join(__dirname, "..", "..", "mcp", "registry.ts"), "utf8");
+const SOURCE = registrySource();
 
 describe("the pattern schema names the two pitch fields", () => {
   it("⭐ states the precedence from both sides, so a caller reading either field learns it", () => {

@@ -5,10 +5,11 @@
  * no separator of its own: the list boundaries are hand-chosen and each case is now its own sentence. Anchors come from
  * the rewritten text.
  */
+import { registrySource } from "./helpers/registrySource";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const source = readFileSync("mcp/registry.ts", "utf8");
+const source = registrySource();
 const start = source.indexOf('name: "render_arrangement"');
 const block = source.slice(start, source.indexOf('name: "', start + 10));
 const description = /\bdescription:\s*\n?\s*"((?:[^"\\]|\\.)*)"/s.exec(block)![1];
@@ -16,7 +17,7 @@ const description = /\bdescription:\s*\n?\s*"((?:[^"\\]|\\.)*)"/s.exec(block)![1
 describe("render_arrangement's description", () => {
   it("⭐ still carries the three audio lane cases", () => {
     for (const anchor of [
-      "**An arrangement has its own length** — ",
+      "**An arrangement has its own length**.",
       "**Audio lanes are mixed**: a `sampler` t",
       "A lane whose bytes cannot be resolved is",
       "Render an arrangement to audio through t",

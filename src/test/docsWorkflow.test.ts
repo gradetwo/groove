@@ -1,3 +1,4 @@
+import { registrySource } from "./helpers/registrySource";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
@@ -7,7 +8,7 @@ import { describe, expect, it } from "vitest";
  * A workflow section that lists a call the server does not have is worse than no section at all — `set_song_structure` is exactly the name the report's composer
  * tried first, and it does not exist. So the six steps are checked against the registry by source, which costs nothing and cannot drift silently.
  */
-const registry = readFileSync("mcp/registry.ts", "utf8");
+const registry = registrySource();
 const docs = readFileSync("docs/MCP.md", "utf8");
 
 // `add_lane` is deliberately absent: it is an **op** inside `apply_pattern_ops`, not a tool, and the first version of the workflow table got that wrong — which is

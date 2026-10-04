@@ -6,10 +6,11 @@
  * caller acts on: where asset ids come from, and that `assetId` and `instrument` are accepted on one kind each and
  * refused elsewhere. The deletion test is to drop either sentence — the corresponding case then fails.
  */
+import { registrySource } from "./helpers/registrySource";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const source = readFileSync("mcp/registry.ts", "utf8");
+const source = registrySource();
 const start = source.indexOf('name: "add_arrangement_track"');
 const block = source.slice(start, source.indexOf('name: "', start + 10));
 const description = /\bdescription:\s*\n?\s*"((?:[^"\\]|\\.)*)"/s.exec(block)![1];
@@ -18,14 +19,14 @@ describe("add_arrangement_track's description", () => {
   it("⭐ still says where asset ids come from, and which kind accepts which", () => {
     expect({ source: description.includes("Asset ids come from `list_arrangement_instruments`.") }).toEqual({ source: true });
         for (const phrase of [
-      "starts on the **default catalogue asset, which is a drum kit**",
+      "starts on the **default catalogue asset, a drum kit**",
       "by name rather than by asset id",
       "the built-in preset when the name is not mapped or the mirror does not serve it",
     ])
       expect({ phrase, present: description.includes(phrase) }).toEqual({ phrase, present: true });
-expect({
+    expect({
       acceptance: description.includes(
-        '**`assetId` is accepted on `kind:\\"sampler\\"` only and `instrument` on `kind:\\"synth\\"` only, each refused — not ignored — for any other kind.**',
+        "**`assetId` is accepted on `kind:\\\"sampler\\\"` only and `instrument` on `kind:\\\"synth\\\"` only; each is refused, not ignored, for any other kind.**"
       ),
     }).toEqual({ acceptance: true });
   });

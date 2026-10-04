@@ -1,3 +1,4 @@
+import { registrySource } from "./helpers/registrySource";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
@@ -12,7 +13,7 @@ import { describe, expect, it } from "vitest";
  * erased — reading both texts is the only way to notice a member that exists in one and not the other.
  */
 const patternSource = readFileSync("mcp/pattern.ts", "utf8");
-const registrySource = readFileSync("mcp/registry.ts", "utf8");
+const registryText = registrySource();
 
 describe("the op schema covers the op type", () => {
   it("declares a zod literal for every `op:` in the PatternOp union", () => {
@@ -21,7 +22,7 @@ describe("the op schema covers the op type", () => {
     const declared = [...union.matchAll(/\{\s*op:\s*"([a-z_]+)"/g)].map((match) => match[1]);
     expect(declared.length).toBeGreaterThanOrEqual(10);
 
-    const schemas = [...registrySource.matchAll(/z\.literal\("([a-z_]+)"\)/g)].map((match) => match[1]);
+    const schemas = [...registryText.matchAll(/z\.literal\("([a-z_]+)"\)/g)].map((match) => match[1]);
     const missing = declared.filter((op) => !schemas.includes(op));
     expect(missing, `ops declared but not accepted by the schema: ${missing.join(", ")}`).toEqual([]);
   });
@@ -30,7 +31,7 @@ describe("the op schema covers the op type", () => {
     const union = patternSource.slice(patternSource.indexOf("export type PatternOp"));
     const declared = new Set([...union.matchAll(/\{\s*op:\s*"([a-z_]+)"/g)].map((match) => match[1]));
     // Only the `op` literals inside the op union matter; other `z.literal` uses in the registry are for unrelated enums.
-    const opBlock = registrySource.slice(registrySource.indexOf("const opSchema"), registrySource.indexOf("Turn a genre id into a pattern"));
+    const opBlock = registryText.slice(registryText.indexOf("const opSchema"), registryText.indexOf("Turn a genre id into a pattern"));
     const schemas = [...opBlock.matchAll(/z\.literal\("([a-z_]+)"\)/g)].map((match) => match[1]);
     const extra = schemas.filter((op) => !declared.has(op));
     expect(extra, `schema accepts ops the type does not declare: ${extra.join(", ")}`).toEqual([]);

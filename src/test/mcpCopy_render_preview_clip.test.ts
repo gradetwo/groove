@@ -3,11 +3,12 @@
  *
  * ⚠️ Second, narrower pass: the ceiling is one hundred and ninety.
  */
+import { registrySource } from "./helpers/registrySource";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const TOOL = "render_preview_clip";
-const source = readFileSync("mcp/registry.ts", "utf8");
+const source = registrySource();
 const start = source.indexOf('name: "' + TOOL + '"');
 const block = source.slice(start, source.indexOf('name: "', start + 10));
 const description = /\bdescription:\s*\n?\s*"((?:[^"\\]|\\.)*)"/s.exec(block)![1];
@@ -19,7 +20,7 @@ describe(TOOL + "'s description, after the split", () => {
       "Render a section (or one pattern) at a l",
       "measures about 1.8 s against 6-24 s for ",
       "Report how long it took.",
-      "Defaults are 8 kHz mono.",
+      "Defaults are 8 kHz mono, which measures about 1.8 s against 6-24 s",
     ])
       expect({ anchor, present: description.includes(anchor) }).toEqual({ anchor, present: true });
   });

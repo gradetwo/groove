@@ -6,10 +6,11 @@
  * acts on are asserted here: a whole-file count is dominated by the music's own transients, the comparison is against
  * boundaries derived from `get_song`'s sections, and this tool counts while the arrangement says where the joins are.
  */
+import { registrySource } from "./helpers/registrySource";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const source = readFileSync("mcp/registry.ts", "utf8");
+const source = registrySource();
 const start = source.indexOf('name: "analyze_audio"');
 const block = source.slice(start, source.indexOf('name: "', start + 10));
 const description = /\bdescription:\s*\n?\s*"((?:[^"\\]|\\.)*)"/s.exec(block)![1];

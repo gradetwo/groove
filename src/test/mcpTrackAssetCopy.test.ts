@@ -6,10 +6,11 @@
  * rewritten text** rather than typed, because four earlier attempts in this family were rolled back for asserting the
  * pre-edit wording of a sentence the split had capitalised.
  */
+import { registrySource } from "./helpers/registrySource";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const source = readFileSync("mcp/registry.ts", "utf8");
+const source = registrySource();
 const start = source.indexOf('name: "set_arrangement_track_asset"');
 const block = source.slice(start, source.indexOf('name: "', start + 10));
 const description = /\bdescription:\s*\n?\s*"((?:[^"\\]|\\.)*)"/s.exec(block)![1];

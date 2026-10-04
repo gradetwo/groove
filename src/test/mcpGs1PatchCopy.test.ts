@@ -5,10 +5,11 @@
  * parameters it cannot write. Four bracket-depth-zero separators became full stops, and the length check is the exact
  * net loss rather than the number of splits, because the separators differ in width. Anchors come from the rewrite.
  */
+import { registrySource } from "./helpers/registrySource";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const source = readFileSync("mcp/registry.ts", "utf8");
+const source = registrySource();
 const start = source.indexOf('name: "apply_gs1_patch"');
 const block = source.slice(start, source.indexOf('name: "', start + 10));
 const description = /\bdescription:\s*\n?\s*"((?:[^"\\]|\\.)*)"/s.exec(block)![1];
@@ -17,7 +18,7 @@ describe("apply_gs1_patch's description", () => {
   it("⭐ still carries the sentences the split kept", () => {
     for (const anchor of [
       "Overrides the instrument table for that ",
-      "Values are the engine's own, whose range",
+      "Values are the engine's own. The engine ",
       "Set or clear one lane's own GS-1 sound, ",
       "And write **individual parameters and mo",
     ])
