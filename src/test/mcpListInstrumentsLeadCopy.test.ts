@@ -26,6 +26,6 @@ describe("list_arrangement_instruments, after the list was split", () => {
 
   it("⭐ and no sentence is over the measured ceiling", () => {
     const longest = Math.max(...description.split(/(?<=[.!?])\s+/).map((part) => part.length));
-    expect({ longest, under: longest < 258 }).toEqual({ longest, under: true });
+    expect({ longest, under: longest < 222 }).toEqual({ longest, under: true });
   });
 });
