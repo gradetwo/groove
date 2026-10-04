@@ -1313,7 +1313,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "set_arrangement_bars",
     title: "Make the arrangement longer",
     description:
-      "How long the arrangement is, in bars, clamped to 1…128. The length is respected even when it is longer than the notes, and the notes are never cut when it is shorter — the arrangement spans whichever reaches further, which the summary reports as `steps`.",
+      "How long the arrangement is, in bars, clamped to 1…128. The length is respected even when it is longer than the notes. The notes are never cut when it is shorter. The arrangement spans whichever reaches further.  the summary reports as `steps`.",
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
