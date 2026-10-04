@@ -530,7 +530,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "render_arrangement",
     title: "Bounce an arrangement",
     description:
-      "Render an arrangement to audio through the same offline engine the song and pattern tools use. **An arrangement has its own length** — its own bars (`set_arrangement_bars`, eight by default) and its own notes — so one pass bounces the whole arrangement rather than a loop; `bars` repeats that pass. Ask for what the arrangement is with `get_arrangement`, which reports `bars` and `steps`. **Audio lanes are mixed**: a `sampler` track's notes are resolved through the app's own SFZ loader and placed at their own steps, a lane with a sample and no notes is played once at the arrangement's start, and a lane whose bytes cannot be resolved is named in `skippedLanes` with the reason rather than dropped. " +
+      "Render an arrangement to audio through the same offline engine the song and pattern tools use. **An arrangement has its own length** — its own bars (`set_arrangement_bars`, eight by default) and its own notes — so one pass bounces the whole arrangement rather than a loop; `bars` repeats that pass. Ask for what the arrangement is with `get_arrangement`, which reports `bars` and `steps`. **Audio lanes are mixed**: a `sampler` track's notes are resolved through the app's own SFZ loader and placed at their own steps. A lane with a sample and no notes is played once at the arrangement's start. A lane whose bytes cannot be resolved is named in `skippedLanes` with the reason rather than dropped. " +
       renderCostSentence() +
       " " +
       renderBudgetSentence() +
