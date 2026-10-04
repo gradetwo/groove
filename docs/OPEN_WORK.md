@@ -7069,3 +7069,26 @@ problems: **[]** ✓
 **⇒ ⑧(b) 至此完整** ✓：`render_arrangement` 与 `render_arrangement_preview` 早有范围 ✓，stems 现在也有 ✓ ⇒ 三个 arrangement 渲染工具**一致** ✓
 ⚠️ `render_arrangement_stems` 仍**不收 `trackIds`** ✓ —— 这是**有意的** ✓：stems 的语义就是"每条轨各一份" ✓，加轨过滤是另一种工具 ✗
 ```
+
+## 三百零八、📐 **`dev` 之外的清算：`next` 两笔 ＋ 24 支首轮量清（用 `git cherry`，非 `git log`）**（2026-10-04 09:1x ✓）
+
+```
+**① `next`（主工作目录）那 2 笔：⭐ 都已在 `dev`** ✓
+   · `git cherry -v origin/dev next` 对 `ee5cb9c`（build(push): publish dev straight to GitHub… ✓）与
+     `2949d5d`（feat(mcp): list_examples indexes… ✓）**都给出 `-`** ✓ ＝ **已有等价补丁在上游** ✓（同补丁不同 sha ✓）
+   · 文件侧印证：`mcp/examples.ts`／`mcp/library.ts` 在 `dev` 上最后改动 `0691edc`（2026-10-01 ✓，同日 ✓）
+   ⇒ **无需合并** ✓；`next` 是过期副本 ✓（树上 6 个未跟踪 PNG 是产物 ✓）
+**② 度量纠偏（重要 ✓）**：`git log origin/dev..branch` 把**同补丁不同 sha** 也算进去 ✗ ⇒ 我改用 **`git cherry`** ✓
+   （`+`＝真不在 dev ✗；`-`＝已有等价 ✓）⇒ 例：`measure-render-profile` 按 log 是 7 笔 ✗，按 cherry 只有 **1 笔**真独有 ✓
+**分层结果** ✓：**24 支里 13 支"全部已有等价"** ✓（`probe-headless-core`／`feat-vsco-articulations`／`feat-vsco2ce`／
+   `fix-long-render-timeouts`／`next`／`feat-transform-pattern`／`fix-worker-honesty`／`fix-vsco-fetch`／`fix-headless-silence`／
+   `feat-midi-export`／`feat-lyric-export`／`feat-gs1-patch-passthrough`／`feat-gs1-assessment` ✓）
+   ⚠️ **11 支有真独有提交** ✗ ⇒ 去重后**仅 ~11 笔**（`7804223` 在 `fix-app-export-audio-lanes` 与 `feat-audio-lane-render` 各现一次 ✓；
+   `5df017b` 在 `graphsplit-preserved` 与 `feat-graph-split` 各现一次 ✓）
+**逐笔适用性干跑** ✓（`git show <sha> | git apply --check --3way -` ✓，**不落盘** ✓；另查其触碰的文件在 `dev` 是否还在 ✓）：
+   11 笔**全部**"可套用" ✓ 且文件**几乎全在** ✓（唯 `5df017b` 缺 2/11 ✓）
+   ⚠️ **但 `--3way` 会靠三方合并成功** ✗ ⇒ ⭐ **"能套用" ≠ "还需要"** ✗：`fa44717`"静音渲染算失败" ✗ 的**行为已在 dev**
+     （`render_audio` 描述原文："a host that returns a buffer with **no samples in it is a failed render**" ✓）⇒ 必须做**内容/行为比对** ✓
+**⇒ 下一步（尚未做 ✗）**：逐笔做**内容比对** —— ① 把补丁的**关键新增标识/句子**在 `dev` 现值里搜 ✓；② 若已含 ⇒ **该弃** ✓（附证据 ✓）；
+   若未含 ⇒ 干跑套用 ＋ 补**能红判据** ⇒ **该合** ✓；`wip` 两笔（`2362dfc` ＋1150 ✓／`5df017b` ＋873 ✓）**先问业主** ✗，不擅自动 ✓
+```
