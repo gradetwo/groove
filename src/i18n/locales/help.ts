@@ -71,7 +71,7 @@ export const helpMessages = {
 
   tut_maker_s1: { en: "Open the 'Custom Genre Maker' workshop to forge your own hybrid musical style.", zh: "打开「曲风制作工坊 (Custom Genre Maker)」工作区，开启独特的跨界混血音乐流派定制。" },
   tut_maker_s2: { en: "Customize genre name, tempo (BPM), swing ratio, scale mode, and program custom drum/instrument step patterns.", zh: "设定曲风流派代号、BPM 速度、摇摆律动率与调式，并在 8 轨点音矩阵中录入标志性节奏与副歌模式。" },
-  tut_maker_s3: { en: "Click 'Share via URL' to generate an ultra-compact compressed link, or export directly as an Ableton project. A lane can also carry the synth's own GS-1 patch.", zh: "点击「复制分享链接」生成一个极紧凑的压缩链接，或一键导出为 Ableton Live 工程。轨道也可以携带合成器自己的 GS-1 音色补丁。" },
+  tut_maker_s3: { en: "Click 'Share via URL' to generate an ultra-compact compressed link, or export directly as an Ableton project. A lane that sounds through GS-1 uses its own patch when it is rendered.", zh: "点击「复制分享链接」生成一个极紧凑的压缩链接，或一键导出为 Ableton Live 工程。走 GS-1 发声的轨道在渲染时会用上它自己的音色补丁。" },
 
   tut_chords_s1: { en: "Select your root key and choose between Major, Minor, or modal diatonic tonal centers.", zh: "在和弦工坊顶部选定根音与大调/小调模式，系统将自动映射调内各级自然和弦。" },
   tut_chords_s2: { en: "Browse curated progression cards (Pop 4-Chords, Royal Road, Jazz 2-5-1, Epic Minor) with live preview.", zh: "翻阅经典和弦走向库（流行四和弦、王道走向、爵士 2-5-1、史诗小调等），轻点卡片即时试听。" },

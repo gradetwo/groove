@@ -21,5 +21,16 @@ describe("the share link sentence", () => {
     // The true half is the compact link, and it has to stay said.
     expect(entry!.zh).toContain("压缩");
     expect(entry!.en.toLowerCase()).toContain("compact");
+    /**
+     * ⭐ The other half of the line, measured rather than assumed (the ledger carried it as unverified).
+     *
+     * `TrackV2` has no patch or synth field at all, so a lane cannot "carry" one; the share-link encoder has no gs1
+     * reference either, so the link does not carry one; what the code does is apply the patch when a GS-1 lane is
+     * rendered, which is what `gs1PatchPassthrough.test.ts` holds. The sentence now says that and no more.
+     */
+    expect({ claim: entry!.zh.includes("轨道也可以携带") }).toEqual({ claim: false });
+    expect({ claim: entry!.en.includes("A lane can also carry") }).toEqual({ claim: false });
+    expect(entry!.zh).toContain("渲染");
+    expect(entry!.en.toLowerCase()).toContain("rendered");
   });
 });
