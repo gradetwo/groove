@@ -115,3 +115,19 @@ describe("the render family names where the audio is written", () => {
     }
   });
 });
+
+/**
+ * ⭐ **The stems renderer takes the same span** (owner: "针对 arrangement 这些功能都要补齐").
+ *
+ * It used to take four parameters and neither a span nor a track scope, so a part could only be judged over the whole
+ * piece. The span travels through the same notes-map seam the other two tools use, so the behaviour is already held by
+ * the criteria above; what is held here is that the tool **exposes** it, and `endBar` says it is exclusive.
+ */
+describe("the stems renderer takes a span", () => {
+  it("⭐ declares the span, exclusive at its end", () => {
+    const schema = schemaOf(TOOLS.find((t) => t.name === "render_arrangement_stems"));
+    for (const key of ["startBar", "endBar"])
+      expect({ key, present: key in schema }).toEqual({ key, present: true });
+    expect(schema.endBar?.description ?? "").toContain("exclusive");
+  });
+});

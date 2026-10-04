@@ -3646,12 +3646,23 @@ export const TOOLS: ToolDefinition[] = [
     inputSchema: {
       arrangementId: z.string(),
       sampleRate: z.number().int().min(8000).max(96000).optional().describe("default 44100; a lower rate renders faster and is honest about it"),
+      startBar: z.number().int().min(0).optional().describe("first bar of the span, with endBar; 0 is the first bar"),
+      endBar: z.number().int().min(0).optional().describe("exclusive end of the span, with startBar; the bar it names is not rendered"),
       channels: z.union([z.literal(1), z.literal(2)]).optional().describe("default 2, the exporter's own stereo"),
       headless: z.boolean().optional().describe(headlessParameterDescription()),
     },
     handler: async (args, ctx) => {
       try {
-        const { flattened, bars } = flattenMcpArrangement(String(args.arrangementId));
+        /**
+         * ⭐ **The span the other two arrangement tools take, so a part can be judged on a passage rather than the whole
+         * piece.** It travels through the same notes-map seam (`flattenMcpArrangement`'s range), so this is not a second
+         * definition of what a span means; with no span the call is byte for byte what it was.
+         */
+        const range =
+          args.startBar !== undefined && args.endBar !== undefined
+            ? { startBar: args.startBar as number, endBar: args.endBar as number }
+            : undefined;
+        const { flattened, bars } = flattenMcpArrangement(String(args.arrangementId), range);
         const result = await renderStems(flattened.pattern, {
           format: "wav",
           ...(args.sampleRate ? { sampleRate: args.sampleRate as number } : {}),
