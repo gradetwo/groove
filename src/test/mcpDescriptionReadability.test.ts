@@ -50,4 +50,25 @@ describe("the tool descriptions stay readable", () => {
       .map((entry) => `${entry.name} (${entry.longest})`);
     expect({ over, atMost: descriptions().length }).toEqual({ over: [], atMost: descriptions().length });
   });
+
+  it("⭐ and nothing above one hundred and ninety unless it contains a list", () => {
+    const sentences = source
+      .split(/^    name: "[a-z0-9_]+",/m)
+      .slice(1)
+      .flatMap((block) => {
+        const m = /\bdescription:\s*\n?\s*"((?:[^"\\]|\\.)*)"/s.exec(block);
+        if (!m) return [];
+        return [...m[1].matchAll(/[^.!?]+[.!?]?/g)].map((x) => x[0].trim()).filter((x) => x.length > 0);
+      });
+    // ⭐ 豁免规则（显式 ✓、按可测形态 ✓）：句中出现一段括号，其内部逗号 ≥ 7 ⇒ 那是**≥8 项清单** ✓，
+    // 拆开只会把客户端最该一眼看全的东西打散 ✗；⚠️ 口径严格 **> 190** ✓（与宣称一致 ✓）
+    const listy = (sentence: string) =>
+      (sentence.match(/\([^()]*\)/g) ?? []).some((group) => (group.match(/,/g) ?? []).length >= 7);
+    const over = sentences.filter((x) => x.length > 190);
+    const exempted = over.filter(listy);
+    const offending = over.filter((x) => !listy(x));
+    expect({ offending }).toEqual({ offending: [] });
+    // ⚠️ 豁免条数**钉死** ✓：多一个或少一个都会红 ✓（放宽必须是有意改动 ✓）
+    expect({ exempted: exempted.length }).toEqual({ exempted: 1 });
+  });
 });
