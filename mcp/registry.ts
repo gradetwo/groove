@@ -1043,7 +1043,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "import_arrangement_midi",
     title: "Import a MIDI file as tracks",
     description:
-      "Read a Standard MIDI File and **add** one track per MIDI track, named from the file. Unlike a step-grid import, the file's own note lengths and positions are kept: this is the arrangement's model, not a sixteen-step pattern. A format-0 file that puts several instruments on one track is split by channel. Use `partIndex` to take one part, or `\"all\"` for every part; the reply names the tempo the file states so the arrangement can be set to it. **`instruments` is how a part sounds a real recording instead of a built-in synthesiser** — the file itself usually cannot say (measured: the owner's own project carries no program-change events at all), so name each part's instrument and the created track plays that catalogue recording.",
+      "Read a Standard MIDI File and **add** one track per MIDI track, named from the file. Unlike a step-grid import, the file's own note lengths and positions are kept: this is the arrangement's model, not a sixteen-step pattern. A format-0 file that puts several instruments on one track is split by channel. Use `partIndex` to take one part, or `\"all\"` for every part. The reply names the tempo the file states so the arrangement can be set to it. **`instruments` is how a part sounds a real recording instead of a built-in synthesiser**. The file itself usually cannot say (measured: the owner's own project carries no program-change events at all). Name each part's instrument and the created track plays that catalogue recording.",
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
