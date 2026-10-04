@@ -17,7 +17,13 @@ const description = /\bdescription:\s*\n?\s*"((?:[^"\\]|\\.)*)"/s.exec(block)![1
 describe("add_arrangement_track's description", () => {
   it("⭐ still says where asset ids come from, and which kind accepts which", () => {
     expect({ source: description.includes("Asset ids come from `list_arrangement_instruments`.") }).toEqual({ source: true });
-    expect({
+        for (const phrase of [
+      "starts on the **default catalogue asset, which is a drum kit**",
+      "by name rather than by asset id",
+      "the built-in preset when the name is not mapped or the mirror does not serve it",
+    ])
+      expect({ phrase, present: description.includes(phrase) }).toEqual({ phrase, present: true });
+expect({
       acceptance: description.includes(
         '**`assetId` is accepted on `kind:\\"sampler\\"` only and `instrument` on `kind:\\"synth\\"` only, each refused — not ignored — for any other kind.**',
       ),
@@ -27,6 +33,6 @@ describe("add_arrangement_track's description", () => {
   it("⭐ leads with what it does, and no longer hides a four hundred character sentence", () => {
     expect({ leads: description.startsWith("Add a track to an arrangement.") }).toEqual({ leads: true });
     const longest = Math.max(...description.split(/(?<=[.!?])\s+/).map((part) => part.length));
-    expect({ longest, under: longest < 400 }).toEqual({ longest, under: true });
+    expect({ longest, under: longest < 280 }).toEqual({ longest, under: true });
   });
 });
