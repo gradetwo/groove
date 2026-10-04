@@ -1359,7 +1359,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "set_arrangement_region",
     title: "Place a track's region, or change its length",
     description:
-      "Where a track's region sits on the timeline, in bars — the same range the interface's drag writes, clamped to the arrangement (never before bar 1, never past its end, never shorter than a bar). Absent, a region covers the whole arrangement; pass null for both bounds to put it back there.",
+      "Where a track's region sits on the timeline, in bars. The same range the interface's drag writes, clamped to the arrangement (never before bar 1, never past its end, never shorter than a bar). Absent, a region covers the whole arrangement. Pass null for both bounds to put it back there.",
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
