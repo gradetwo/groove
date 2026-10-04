@@ -2648,7 +2648,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "render_preview_clip",
     title: "Render one short section quickly, for listening while composing",
     description:
-      "Render a section (or one pattern) at a low sample rate for fast iteration, and report how long it took. Defaults are 8 kHz mono, which measures about 1.8 s against 6-24 s for a full-rate song render, so a composing loop that needs to hear a two-bar change does not have to re-render the whole piece. " +
+      "Render a section (or one pattern) at a low sample rate for fast iteration. Report how long it took. Defaults are 8 kHz mono.  measures about 1.8 s against 6-24 s for a full-rate song render. A composing loop that needs to hear a two-bar change does not have to re-render the whole piece. " +
       renderCostSentence() +
       " " +
       PREVIEW_DEFAULT_CLAUSE +
