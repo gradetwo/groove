@@ -43,7 +43,7 @@ describe("the tool descriptions stay readable", () => {
   });
 
   it("⭐ no description grows a sentence longer than the longest one measured today", () => {
-    const CAP = 273;
+    const CAP = 271;
     const over = descriptions()
       .map((entry) => ({ name: entry.name, longest: longestSentence(entry.text) }))
       .filter((entry) => entry.longest > CAP)
