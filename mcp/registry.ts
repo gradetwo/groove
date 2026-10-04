@@ -1076,7 +1076,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "export_logic_project",
     title: "Export an arrangement as a Logic Pro project",
     description:
-      "Write this arrangement as the **two files `import_logic_project` reads** — `projectDataBase64` (`Alternatives/NNN/ProjectData`) and `metaDataBase64` (`Alternatives/NNN/MetaData.plist`), plus `ProjectInformation.plist` — so the pair round-trips through this server. One part per lane, optionally only the lanes named in `trackIds`. **Phase 1 is MIDI only**: no audio, no AU chains, no automation. Whether **Logic itself** opens the result is not proven by this tool; the structure follows what real projects were measured to carry, and nothing here claims more.",
+      "Write this arrangement as the **two files `import_logic_project` reads**. `ProjectDataBase64` (`Alternatives/NNN/ProjectData`) and `metaDataBase64` (`Alternatives/NNN/MetaData.plist`), plus `ProjectInformation.plist`. So the pair round-trips through this server. One part per lane, optionally only the lanes named in `trackIds`. **Phase 1 is MIDI only**: no audio, no AU chains, no automation. Whether **Logic itself** opens the result is not proven by this tool. The structure follows what real projects were measured to carry, and nothing here claims more.",
     readOnly: true,
     inputSchema: {
       arrangementId: z.string(),
