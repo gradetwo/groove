@@ -83,7 +83,8 @@
     "push:dev": "bash scripts/push_dev.sh",
     "ci:full": "bash scripts/ci_full.sh",
     "push:branch": "bash scripts/push_branch.sh",
-    "check:duplication": "node scripts/check_duplication.mjs"
+    "check:duplication": "node scripts/check_duplication.mjs",
+    "check:file-sizes": "node scripts/check_file_sizes.mjs"
   },
   "dependencies": {
     "@breezystack/lamejs": "^1.2.7",
