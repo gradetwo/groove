@@ -139,6 +139,49 @@ npm run check:mcp        # 门禁：用 stdio 启动它并真调用各个工具
 - 浏览器要求先有一次用户操作才能出声，因此进入页面后需要点一下播放或按键。
 - 界面只有一套，即桌面端；手机与平板浏览器渲染的都是同一套界面。
 
+## 致谢
+
+**规则只说一次，免得靠记性**：本项目**打包或再分发**的声音库，都在加入的那一刻写进**第一张表**，并把其许可证要求的署名写全。
+有判据守着它：清单里凡许可证**要求署名**的条目，都必须出现署名方**许可证所要求的名字**。
+
+两张表**故意分开**，且判据依赖这种分开：第二张表里的条目只是**计划**；"打算给某人署名"不等于已经给了。
+把两者混为一谈，正是许可证义务悄悄落空、而文件看起来还很完整的方式。
+
+⚠️ **以英文为准** ✓：以下表格的**条目名与许可证名原样保留** ✓；条款与署名的**准确措辞**见
+[README.md 的 `## Credits`](README.md#credits) ✓（本节的目的是让中文读者在同一位置看到**同一份署名事实** ✓）。
+
+### 本项目再分发的库
+
+| 库 | 许可证 | 要求的署名 |
+|---|---|---|
+| **Salamander Grand Piano**（`salamander-grand`） | **CC BY** | **Chisato Yamauchi**（重制）与 **Alexander Holm**（原始采样） |
+| **VSCO 2 CE** — Versilian Studios Chamber Orchestra: Community Edition（`vsco2ce`） | **CC0** | 无强制要求；**Sam Gossner / Versilian Studios** 为礼节署名 |
+| **MTG Solo Saxophones**（`mtg-solo-sax`） | **CC BY** | 萨克斯采样来自 Music Technology Group（Universitat Pompeu Fabra, Barcelona） |
+| **Greg Sullivan's E-Pianos**（`gregsullivan-e-pianos`） | **CC BY** | 录音：Greg Sullivan（<http://www.sullivang.net/>）；SFZ 映射：kinwie |
+| **Ixox Flute**（`ixox-flute`） | **CC BY** | Ixox Flute：Xavier Hosxe（<http://xhosxe.free.fr/ixoxflute.html>）；SFZ 转换：Lars Ekman / the sfz 社区 |
+
+2026-10-03 那一轮又加了十四个库 —— 十三个 **CC0**、一个 **Unlicense** —— 都**不要求署名**；
+上表三行是该轮**仅有的 CC BY** 条目。
+
+署名是"先计划、后镜像"的；两张表并存，就是为了**字节上传之后署名不会落在计划里**。
+每加一个库，就把它的行写到这里，并写明**其许可证要求的那些名字** —— 对 CC BY 库而言，是**作者，而不只是库**。
+
+**VSCO 2 CE 的许可证是读它自己的文件得出的，不是凭名声。** 早先这里曾写"CC Sampling Plus 1.0 — 不可再分发"，
+后来按其自带 LICENSE 更正。
+
+### 已计划、尚未包含
+
+本表**不主张任何一条已被包含**；每行写的是它**到来时**将会被要求的署名。
+
+| 库 | 许可证 | 届时将要求的署名 |
+|---|---|---|
+| **VCSL** — Versilian Community Sample Library | CC0 | 无强制要求；礼节署名 |
+| **Virtuosity Drums** — Versilian Studios / Karoryfer | CC0 | 无强制要求；礼节署名 |
+| **Karoryfer** 免费乐器 | CC0（视发行版而定） | CC0 发行版无要求；**部分旧发行版为 CC-BY-4.0**，故每个版本都要单独确认 |
+
+代码依赖的署名单列于 [public/THIRD_PARTY_NOTICES.md](public/THIRD_PARTY_NOTICES.md)，因为它们的义务不同、读者也不同。
+
+
 ## 许可
 
 MIT，见 [LICENSE](LICENSE)。随仓库一起打包的 GS-1 合成器内核，以及编译进它二进制里的几个 DSP
