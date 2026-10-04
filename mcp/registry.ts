@@ -479,7 +479,7 @@ export const TOOLS: ToolDefinition[] = [
     title: "Preview a span of an arrangement",
     description:
       "Hear one span of an arrangement cheaply: 8 kHz mono unless told otherwise, optionally only the tracks that changed. It renders the span once, where render_arrangement renders the whole thing and can repeat it. The file is written under GROOVE_MCP_OUT, or a fresh temp directory when that is unset, and the reply names it; playing it is up to the caller. **For an A/B, call it twice on the same span — before against after, or one track against another — and compare the two replies: each names its own file, span, tracks and levels, so the pair is self-describing and nothing has to be mixed together here.**",
-    readOnly: true,
+    readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
       trackId: z.string().optional().describe("hear only this track; omit for every lane, as render_arrangement does"),
