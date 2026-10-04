@@ -1693,7 +1693,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "save_custom_genre",
     title: "Save a custom genre",
     description:
-      "Save a custom genre, or fork a library genre and save the fork. Give forkFromGenreId (an id list_genres returns) and the fork copies that genre's metadata, pattern and lineage with the same forkGenre the app's Fork button calls; give genre to save a document you already have, such as one from get_custom_genre. Saving the same id twice replaces the first rather than adding a second. The store is process-local: the genre lives for this session and is separate from the browser's library.",
+      "Save a custom genre, or fork a library genre and save the fork. Give forkFromGenreId (an id list_genres returns) and the fork copies that genre's metadata, pattern and lineage with the same forkGenre the app's Fork button calls. Give genre to save a document you already have, such as one from get_custom_genre. Saving the same id twice replaces the first rather than adding a second. The store is process-local: the genre lives for this session and is separate from the browser's library.",
     readOnly: false,
     inputSchema: {
       forkFromGenreId: z.string().optional().describe("an id to fork, from list_genres or from an earlier save in this session"),
