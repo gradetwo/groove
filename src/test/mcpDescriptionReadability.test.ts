@@ -3,7 +3,7 @@
  *
  * A client reads every description on every connection, so the shape of the writing is part of the interaction, not
  * decoration. Measured on 2026-10-04 18:54 across the descriptions in `mcp/registry.ts`: the longest sentence has a
- * median of 174 characters, a ninetieth percentile of 312, and a maximum of 417; thirteen descriptions hide a sentence
+ * median of 174 characters, a ninetieth percentile of 312, and a maximum of 381 (420 before the first two sentences were split); thirteen descriptions hide a sentence
  * over 300 and fourteen open with a sentence over 200.
  *
  * The cap below is today's measured maximum, so this case is green now and can only get tighter: it fails if any
@@ -13,6 +13,8 @@
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+
+// The cap only ever moves down: each split that lowers the measured maximum lowers this number with it.
 
 const source = readFileSync("mcp/registry.ts", "utf8");
 
@@ -41,7 +43,7 @@ describe("the tool descriptions stay readable", () => {
   });
 
   it("⭐ no description grows a sentence longer than the longest one measured today", () => {
-    const CAP = 420;
+    const CAP = 385;
     const over = descriptions()
       .map((entry) => ({ name: entry.name, longest: longestSentence(entry.text) }))
       .filter((entry) => entry.longest > CAP)
