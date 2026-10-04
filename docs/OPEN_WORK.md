@@ -7092,3 +7092,29 @@ problems: **[]** ✓
 **⇒ 下一步（尚未做 ✗）**：逐笔做**内容比对** —— ① 把补丁的**关键新增标识/句子**在 `dev` 现值里搜 ✓；② 若已含 ⇒ **该弃** ✓（附证据 ✓）；
    若未含 ⇒ 干跑套用 ＋ 补**能红判据** ⇒ **该合** ✓；`wip` 两笔（`2362dfc` ＋1150 ✓／`5df017b` ＋873 ✓）**先问业主** ✗，不擅自动 ✓
 ```
+
+## 三百零九、📋 **`dev` 之外清算：定案表（13 支全等价 ＋ 11 笔独有 ⇒ 10 该弃 ／ 1 待业主）**（2026-10-04 09:1x ✓）
+
+```
+**方法** ✓：`git cherry`（补丁等价 ✓）＋ **逐笔内容覆盖率**（该笔新增行中已在 `dev` 现值里的比例 ✓）＋ 对存疑者**单独核实符号/文件** ✓
+**① `next` 2 笔 ⇒ 都已在 `dev`** ✓（cherry 双 `-` ✓；`mcp/examples.ts` 在 dev 最后改动 `0691edc` 同日 ✓）
+**② 13 支"全部已有等价"** ✓ ⇒ 视为已交付：`probe-headless-core`／`feat-vsco-articulations`／`feat-vsco2ce`／`fix-long-render-timeouts`／
+   `next`／`feat-transform-pattern`／`fix-worker-honesty`／`fix-vsco-fetch`／`fix-headless-silence`／`feat-midi-export`／
+   `feat-lyric-export`／`feat-gs1-patch-passthrough`／`feat-gs1-assessment`
+**③ 11 笔独有 ⇒ 逐笔定案** ✓：
+   覆盖率 85–100%（**该弃** ✓）：`2362dfc` 97%／`e9ab228` 100%／`e3b4590` 91%／`fa44717` 96%／`4fcaed4` 95%／
+     `b2ac664` 98%／`9a94a53` 98%／`7804223` 85% ✓
+   单独核实后**该弃** ✓：`010ddb8`（覆盖率 0% ✗ 但**意图已在**：`dev` 的 `ConsolePanel.test.tsx:112` 已改用
+     `GENRE_MIX_RESOLVED[genre.id]?.kick.volume` ✓ ＝"读编排后混音" ✓，**实现比它更好** ✓；两测试 17/17 绿 ✓）
+     ｜`6bb99e2`（覆盖率 73% ✓；其唯一价值＝`docs/MCP.md` 的 `list_examples` 行 ✓，而 **`dev:424` 已有该行** ✓；
+     其计数 **85 tools／95 checks** ✗ 已过期（今天 **94／123** ✓）⇒ 合它会写入错数字 ✗）
+     ｜`7804223`（85% ✓＋单独核实：`hasAudioLane` **已在 dev** `mcp/render/worker.ts:611` ✓，台账记其**后被有意放宽** ✓；
+     `offlineAudioLanes.ts` dev **732 行** vs 该版 **243 行** ✓ ⇒ 被**重写扩展**取代 ✓；招牌行为 `skippedLanes` 已在 dev 描述 ✓）
+⚠️ **1 笔待业主** ✗：`5df017b`（`graphsplit-preserved`／`feat-graph-split` 同 sha ✓）＝`wip(graph-split): preserve an uncommitted
+   workstream` ✓，633 行、覆盖率 **6%** ✓、**2/11 文件已不存在** ✗ ⇒ 是"**保存的未完成工作流**" ✓：合＝把 633 行 wip 带进 dev ✗，弃＝永久丢 ✗
+**⇒ 结论** ✓：**`dev` 之外没有"该合而未合的成熟工作"** ✓ —— 唯一例外是那笔自称 wip 的 ✗（等业主一句话 ✓）
+**📌 三条度量纪律（本程换来的 ✓）**：① `git log origin/dev..branch` **不可用**（会把同补丁不同 sha 算成领先 ✗）⇒ 用 `git cherry` ✓；
+   ② **"能套用" ≠ "还需要"**（`--3way` 会靠三方合并成功 ✗）✓；③ **"行没匹配上" ≠ "事没做"**（`010ddb8` 覆盖率 0% ✗ 而意图早已交付 ✓）✓
+⚠️ 另记：`docs/MCP.md` 的工具表是**精选**（71 行 vs **94 tools** ✓，缺的含 `compose_groove`／`explain_genre` 等核心 ✓）⇒ **不是完整清单** ✓，
+   我那两个新工具没有行**未必是缺陷** ✗；若业主要"完整清单入档" ✓，那是**独立文档决定** ✓（⚠️ 我那个"98 tools"是**正则代理** ✗，以 `check:mcp` 的 **94** 为准 ✓）
+```
