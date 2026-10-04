@@ -819,7 +819,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "set_arrangement_track_kind",
     title: "Set a track's kind",
     description:
-      "Change what a track is. **The kinds, by what makes the sound:** `synth` is the built-in synthesiser (a fixed timbre that cannot be pointed at a catalogue asset), `sampler` plays a real recorded instrument, `drumkit` the built-in drum voices, `fx` an effect, `folder` a group that does not sound. Becoming a sampler gives it the default catalogue asset, keeping one it already had; leaving a sampler drops the asset, since a synth, drum or effect track does not play a catalogue asset. The kind was spelled `instrument` before and that value is no longer accepted.",
+      "Change what a track is. **The kinds, by what makes the sound:** `synth` is the built-in synthesiser (a fixed timbre that cannot be pointed at a catalogue asset). `sampler` plays a real recorded instrument, `drumkit` the built-in drum voices. `fx` an effect, `folder` a group that does not sound. Becoming a sampler gives it the default catalogue asset, keeping one it already had; leaving a sampler drops the asset, since a synth, drum or effect track does not play a catalogue asset. The kind was spelled `instrument` before and that value is no longer accepted.",
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
