@@ -7042,3 +7042,18 @@ problems: **[]** ✓
      多行拼接禁盲改写 ✓／**加 MCP 工具必跑 `mcpTools.test.ts`** ✓（`check:mcp` 不管名字 vs 标签 ✗）
 📌 **判决**：⑧ 与 ⑥ 的修复合计落在 `459ad2a` ✓；该笔 CI 判决在本条写下时**仍未出** ✗（只认 `HEAD -> dev` ✓）
 ```
+
+## 三百零六、🔬 **补量：`render_arrangement_stems` 的范围现状（§305 里唯一"未量"的那条 ✓）**（2026-10-04 08:2x ✓）
+
+```
+**读数** ✓（方法：定位工具名后逐个读 `inputSchema` 键 ✓，`mcp/registry.ts:3636` ✓）：
+   参数只有 **4 个** ✓：`arrangementId` ✓｜`sampleRate`（默认 **44100**，"a lower rate renders faster and is honest about it" ✓）｜
+   `channels`（默认 **2**，"the exporter's own stereo" ✓）｜`headless` ✓
+   ⇒ ⚠️ **既无 `startBar`/`endBar`，也无 `trackId`/`trackIds`** ✗ ⇒ 它**永远渲染全部轨、整首长度** ✓
+**⇒ 由此得到的工作项（业主令"都要补齐" ⇒ 这是一项 ✓，不是可选项 ✗）**：
+   给 `render_arrangement_stems` 加 **`startBar`/`endBar`** ✓（`trackIds` **不加** ✗ —— stems 的语义就是"每条轨各一份" ✓，加轨过滤反而是另一种工具 ✓）
+   ⇒ 复用 **同一条缝** `flattenMcpArrangement(id, range, trackIds)` ✓（`§300`／`57eb09e` ✓），不新增渲染路径 ✗
+**判据口径（能红 ✓）**：给 `startBar: 2, endBar: 3` ⇒ 每条 stem 的**时长/`totalSteps`** 与整首不同（且 bar 0 的音不进 ✓）；
+   不给范围 ⇒ 与现状**逐字相同** ✓（默认行为不变 ✓ ⇒ 改回旧行为即"缺参数"⇒ 红 ✓）
+⚠️ 本条**只记测量与方案** ✓；实现留待下一轮（此刻 `459ad2a` 的判决**仍未出** ✗ ⇒ 不叠加改动 ✗，免得"宣告完成"指向的树又变 ✗）
+```
