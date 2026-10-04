@@ -7671,8 +7671,27 @@ problems: **[]** ✓
 **为什么这么宽 ✓**：门若因噪声假红 ✓ 就会被关掉 ✓，然后什么也守不住 ✗ ⇒ 余量取 2–3× ✓，只抓**明显退化** ✓
 **为什么是低频门 ✓**：它要起 Chromium ✓、约 30 s ✗ ⇒ **不塞进每推必跑的 `verify`** ✗；
    定位是"**发布前／定期**跑一次" ✓（⚠️ 目前**没有**任何自动流程在跑它 ✗ —— 这一点**如实写明** ✓，不假装已接 CI ✗）
+
+　⚠️ **已更新（2026-10-04 23:0x ✓）**：本条**不再成立** ✓ —— `ci.yml` 的 **`nightly`** 作业已新增一步 `npm run probe:latency:gate` ✓（YAML 校验：nightly 步数 **13 → 14** ✓）⇒ **有自动流程会跑它了** ✓（见 `§333` ✓）
 **能红证据 ✓**：`src/test/latencyBudget.test.ts` ✓（3/3 ✓）—— 真样本 ⇒ exit=0 ✓；
    把 `timbre → saw_lead` 抬到 900 ms ⇒ **exit≠0 ＋ 含 breach** ✓；给 `GS-1 on` 塞一个长任务 ⇒ **exit≠0** ✓
    ⭐ 后两条正是"**门不是空转**"的证明 ✓（若门恒返回 0 ✓，它们必红 ✓）
 **⚠️ 口径 ✓**：以上全部为 headless Chromium ✓、本机 `dist/` ✓、1440×900 ✓；真机绝对值可能不同 ✗，
    但"**该在预算内**"的相对结论应成立 ✓
+
+## 三百三十三、🌙 **读数门挂进 `nightly`：现在真的会跑了**（2026-10-04 23:0x ✓）
+
+```
+**挂点 ✓**：`.github/workflows/ci.yml` 的 `nightly` 作业 ✓（第 400–481 行区间 ✓）
+**为何选它 ✓**（三条都是读出来的事实 ✓）：
+   ① 它**已经装好浏览器** ✓（`npx playwright install --with-deps chromium firefox webkit` ✓）⇒ 探针能跑 ✓
+   ② 它**已经有 build** ✓（`- name: Production Build  run: npm run build` ✓）⇒ `dist/` 现成 ✓
+   ③ 它的名字与注释里就写着这是"**重、慢、看趋势**"的槽位 ✓（已有 `check:loudness:fresh` ✓、`test:e2e:all` ✓、
+      `perf:check` ✓）⇒ 与"**读数按阈值判定**"同类 ✓
+**改动 ✓**（+1 步 ✓，**未动** build／perf／e2e ✓）：在第 475 行（`Performance Gate` 之前 ✓）插入 ✓
+   `- name: Interaction latency budget` ✓ ／ `run: npm run probe:latency:gate` ✓ ／ 附三行注释说明归属 ✓
+**校验 ✓**：`js-yaml` 解析通过 ✓；`jobs.nightly.steps.length` **13 → 14** ✓；含读数门 ✓、含 build ✓、含 perf ✓
+**为何不挂 `verify`／`validate`** ✗：它要起 Chromium ✓、约 30 s ✗ ⇒ 与"每推要快"冲突 ✓
+**⏳ 仍未做 ✓**：尚未在 GitHub 上**实跑**过这一步 ✗（`nightly` 是定时的 ✓；要立刻验证需
+   `workflow_dispatch` ＋ `nightly: true` ✓）—— ⚠️ 在它真跑绿之前，本条只能说"已挂上" ✓，**不能说"已验证"** ✗
+```

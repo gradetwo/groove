@@ -472,5 +472,11 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+      - name: Interaction latency budget
+        # ⭐ Judges the probe's readings against budgets instead of only printing them. It sits beside the
+        # performance gate because it is the same kind of measurement: real browser, local build, and a
+        # value that is worth watching over time rather than on every push.
+        run: npm run probe:latency:gate
+
       - name: Performance Gate (real browser, local build)
         run: npm run perf:check
