@@ -84,7 +84,8 @@
     "ci:full": "bash scripts/ci_full.sh",
     "push:branch": "bash scripts/push_branch.sh",
     "check:duplication": "node scripts/check_duplication.mjs",
-    "check:file-sizes": "node scripts/check_file_sizes.mjs"
+    "check:file-sizes": "node scripts/check_file_sizes.mjs",
+    "probe:render-cpu:gate": "node scripts/check_render_cpu_budget.mjs"
   },
   "dependencies": {
     "@breezystack/lamejs": "^1.2.7",

@@ -478,5 +478,10 @@ jobs:
         # value that is worth watching over time rather than on every push.
         run: npm run probe:latency:gate
 
+
+      # The same kind of measurement in the same place: real browser, local build, and a number
+      # worth watching over time. It pins the ratio, not the wall clock, which depends on the machine.
+      - name: Render CPU budget
+        run: npm run probe:render-cpu:gate
       - name: Performance Gate (real browser, local build)
         run: npm run perf:check

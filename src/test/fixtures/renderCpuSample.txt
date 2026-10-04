@@ -1,0 +1,3 @@
+  silent       wall 7.81 s, process CPU 8.50 s ⇒ 109% of one core
+  only-kick    wall 10.23 s, process CPU 10.89 s ⇒ 106% of one core
+  baseline     wall 14.55 s, process CPU 15.56 s ⇒ 107% of one core

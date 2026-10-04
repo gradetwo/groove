@@ -8076,3 +8076,35 @@ problems: **[]** ✓
    下一轮**单独决定**是否把 `--mode=cpu` 纳入 `nightly` ＋ 判据（如"每场景 CPU÷wall ≤ 1.25" ✓）；
    ⚠️ **不拿精确墙钟当门** ✗（机器相关 ⇒ flaky ✗），墙钟最多做**宽松上限** ✓
 ```
+
+## 三百四十九、📐 **渲染 CPU 预算门：只钉比例；并接进 `nightly`**（2026-10-05 02:25 ✓）
+
+```
+**为什么立 ✓**：`§329` 当时就记了"**把这条复核纳入会跑的门**" ✗ ⇒ 本节做完 ✓
+**口径 ✓（写在 `scripts/check_render_cpu_budget.mjs` 头部 ✓）**：
+   驱动 `profile_offline_render.mjs --bars=1 --runs=2 --mode=cpu` ✓ ⇒ 解析每场景自报的
+   `process CPU ÷ 该场景 wall ⇒ N% of one core` ✓ ⇒ 断言 **N ≤ 125** ✓（余量约 15% ✓；实测 106–109% ✓）
+   ⚠️ **不断言精确墙钟** ✗（机器／负载相关 ⇒ flaky ✗）
+**⭐ 定位 ✓**：应用内带 **AudioWorklet**、无头 shell 没有 ✓ ⇒ 这个数**不能**当"应用里就是这样" ✓，
+   但**能**当"**有没有突然变多核、或 CPU 暴涨**"的**哨兵** ✓
+**资产 ✓**：`check_render_cpu_budget.mjs` ✓（`MAX_PERCENT=125` ✓／`parseRenderCpu` ✓／`judge` ✓／CLI ✓）
+   ＋ `.d.mts` 类型 ✓（⚠️ 缺它时 `tsc=2` ✗ ⇒ 补后 `tsc=0` ✓）
+   ＋ `src/test/fixtures/renderCpuSample.txt` ✓（**取自真实运行** ✓ 109／106／107 ✓）
+   ＋ `src/test/renderCpuBudget.test.ts` ✓ **3 用例** ✓（解析 ✓／**能红**：109⇒140 ⇒ `ok:false, over:["silent 140%"]` ✓／空输入 ⇒ 防静默失效 ✓）
+   ＋ `package.json` ＋ `probe:render-cpu:gate` ✓
+**接进 CI ✓（本节最费事的一步 ✓）**：`ci.yml` 的 `nightly` 增一步 `Render CPU budget` ✓
+   ⭐ 双侧断言 ✓：`nightly` **含** ✓ ∧ `e2e` **不含** ✓（`nightly steps: 15` ✓，位置在延迟门之后、性能门之前 ✓）
+**⚠️ 未实跑 ✓（如实标注 ✗）**：它是 `schedule` 触发 ✓ ⇒ **CI 上至今没跑过** ✗ ——
+   与 `probe:latency:gate` **同一缺口** ✓，两条一起留在 `needs` ✓
+
+### 349.1 **插入类改动的五条教训（今晚用 5 次自伤换来的 ✓）**
+```
+① **YAML 改动必须过校验** ✓ —— 用**仓库自带的 `js-yaml`** ✓（本机 python **没有 pyyaml** ✗，第 62 条 ✓）
+② **锚点按"结构"定，不按"印象"定** ✗ —— 步骤的结束行**不是**它的 `run:` ✗（后面可能有别的键 ✓，第 63／65 条 ✓）
+③ **别在 f-string 里跨行** ✗（用 `"\n".join([...])` ✓，第 64 条 ✓）
+④ **量缩进要保留空白** ✗ —— 用 `repr` ✓，别用会剥空白的 `awk` ✗（第 66 条 ✓）
+⑤ ⭐ **锚点必须限定在目标 job／block 内** ✗ —— 同名步骤（`Performance Gate …` ✓）在**多个 job** 里都有 ✓
+   ⇒ 正确顺序 ✓：**先定 job 边界** ✓ ⇒ **再在范围内找锚点** ✓ ⇒ **再插入** ✓ ⇒
+   ⭐ **并断言"只进了目标 job"** ✓（`nightly: true` ∧ `e2e: false` ✓）—— 这条断言正是前几次自伤的解药 ✓
+**⇒ 本地清单补两项 ✓**：第 10 项 **改 `ci.yml` ⇒ `js-yaml` 校验** ✓；第 11 项 **改 YAML ⇒ 双侧断言** ✓
+```
