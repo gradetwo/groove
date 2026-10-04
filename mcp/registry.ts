@@ -106,7 +106,10 @@ import { LIBRARY_TOOLS } from "./registryLibrary";
 
 import { GS1_TOOLS } from "./registryGs1";
 
+import { PATTERN_TOOLS } from "./registryPattern";
+
 export const TOOLS: ToolDefinition[] = [
+  ...PATTERN_TOOLS,
   ...GS1_TOOLS,
   ...LIBRARY_TOOLS,
   ...PROJECT_TOOLS,
