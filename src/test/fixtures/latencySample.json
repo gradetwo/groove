@@ -1,0 +1,75 @@
+{
+  "url": "http://127.0.0.1:41235",
+  "pageErrors": [],
+  "results": [
+    {
+      "label": "baseline (playing, no input)",
+      "latencyMs": 1511.1,
+      "longTasks": 0,
+      "totalBlockedMs": 0,
+      "worstTaskMs": 0,
+      "tasks": []
+    },
+    {
+      "label": "GS-1 off",
+      "latencyMs": 40.2,
+      "longTasks": 0,
+      "totalBlockedMs": 0,
+      "worstTaskMs": 0,
+      "tasks": []
+    },
+    {
+      "label": "GS-1 on",
+      "latencyMs": 37.7,
+      "longTasks": 0,
+      "totalBlockedMs": 0,
+      "worstTaskMs": 0,
+      "tasks": []
+    },
+    {
+      "label": "timbre \u2192 warm_pad",
+      "latencyMs": 169.7,
+      "longTasks": 1,
+      "totalBlockedMs": 83,
+      "worstTaskMs": 83,
+      "tasks": [
+        {
+          "offsetMs": 35.8,
+          "durationMs": 83
+        }
+      ]
+    },
+    {
+      "label": "timbre \u2192 saw_lead",
+      "latencyMs": 105.8,
+      "longTasks": 0,
+      "totalBlockedMs": 0,
+      "worstTaskMs": 0,
+      "tasks": []
+    },
+    {
+      "label": "timbre \u2192 rhodes_ep",
+      "latencyMs": 80.5,
+      "longTasks": 0,
+      "totalBlockedMs": 0,
+      "worstTaskMs": 0,
+      "tasks": []
+    },
+    {
+      "label": "timbre \u2192 reese_bass",
+      "latencyMs": 86.3,
+      "longTasks": 0,
+      "totalBlockedMs": 0,
+      "worstTaskMs": 0,
+      "tasks": []
+    },
+    {
+      "label": "toggle one step",
+      "latencyMs": 91.3,
+      "longTasks": 0,
+      "totalBlockedMs": 0,
+      "worstTaskMs": 0,
+      "tasks": []
+    }
+  ]
+}
