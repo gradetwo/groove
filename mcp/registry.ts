@@ -402,7 +402,7 @@ function instrumentsByPart(value: unknown): Record<number, string> | undefined {
  * ⭐ **The `situations` argument, declared once** — the same wire shape on every import tool, so a caller that learns
  * it on `import_arrangement_midi` can use it on the MusicXML and Logic tools unchanged.
  */
-const situationsArgument = z
+export const situationsArgument = z
   .array(
     z.object({
       partIndex: z.number().int().min(0),
@@ -424,7 +424,7 @@ const situationsArgument = z
  * schema's own `enum` refuses it first, and a value that still arrives from a client that ignores schemas is better
  * reported by the importer's own index check than turned into a technique nobody chose.
  */
-function situationsByPart(
+export function situationsByPart(
   value: unknown
 ): Record<number, { instrument: StringInstrument; situation: StringSituation }> | undefined {
   if (!Array.isArray(value) || value.length === 0) return undefined;
