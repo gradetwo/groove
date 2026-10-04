@@ -1623,7 +1623,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "get_genre",
     title: "Get a genre",
     description:
-      "One genre in full: recorded metadata (era, origin, cultural context, key characteristics, sound design, rhythm features, production tips, representative tracks), its instrumentation, radar metrics, mix, loudness trim and lineage siblings.",
+      "One genre in full: recorded metadata (era, origin, cultural context, key characteristics, sound design, rhythm features, production tips, representative tracks). Its instrumentation, radar metrics, mix, loudness trim and lineage siblings.",
     readOnly: true,
     inputSchema: { id: z.string().describe("genre id, e.g. chicago-house") },
     handler: (args) => {
