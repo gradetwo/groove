@@ -3040,7 +3040,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "render_audio",
     title: "Render audio",
     description:
-      "Render a pattern (or a genre's default) through the app's own offline engine to WAV or MP3, writing a file under GROOVE_MCP_OUT, and return its path, duration, loudness, true peak and per-track peaks. Needs headless Chromium unless `headless: true`, which renders on the Node Web Audio host with no browser at all; the first browser call starts Chromium. A host that returns a buffer with **no samples in it** is a failed render, not a quiet one: the renderer retries and, if the retry succeeds, names that in `problems`; if every attempt is silent it errors instead of writing a file of silence. " +
+      "Render a pattern (or a genre's default) through the app's own offline engine to WAV or MP3, writing a file under GROOVE_MCP_OUT. Return its path, duration, loudness, true peak and per-track peaks. Needs headless Chromium unless `headless: true`.  renders on the Node Web Audio host with no browser at all. The first browser call starts Chromium. A host that returns a buffer with **no samples in it** is a failed render, not a quiet one: the renderer retries and, if the retry succeeds, names that in `problems`. If every attempt is silent it errors instead of writing a file of silence. " +
       renderCostSentence() +
       " " +
       renderBudgetSentence() +
