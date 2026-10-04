@@ -8193,3 +8193,31 @@ problems: **[]** ✓
    **改 `ci.yml` ⇒ `js-yaml`** ✓、**改 YAML ⇒ 双侧断言** ✓）只在**相应改动时**才需要 ✓ ⇒ 未在无改动时重复跑 ✓
 **⭐ 结论 ✓**：门禁清单**可用且当前全绿** ✓ ⇒ 后续任何改动都能拿它**自查** ✓
 ```
+
+## 三百五十三、🔍 **死代码：逐个核查（口径两次修正 ＋ 9 个真死 ＋ 1 个假阳性）**（2026-10-05 03:00 ✓）
+
+```
+**读数 ✓（**两次都写清** ✓）**：
+   · **口径 v1**（生产 ＝ `src/**` ＋ `mcp/**` ✗）⇒ 导出 2095 ✓、**全仓无引用 32** ✗、仅测试 101 ✗
+   · **口径 v2**（生产 ＝ `src/**` ＋ `mcp/**` ＋ **`scripts/**`** ✓）⇒ 生产文件 **528** ✓、导出 **2176** ✓、
+     ⭐ **全仓无引用 30** ✓、**仅测试 85** ✓
+   ⇒ v1 的 32 里**至少 2 个被 `scripts/**` 用着** ✓ —— 已核实：`renderSongChunkOffline`
+     （`src/audio/WavExporter.ts:2264` ✓ 被 `scripts/lib/chunkProbePage.mjs:470` 调用 ✓）
+   ⚠️ **仍有一处待收** ✓：`src/test/triggerCensus.ts`（**测试支撑文件** ✓，非 `*.test.*` ✓）被算成"生产" ✗
+     ⇒ 严格应排除 **`src/test/**` 整个目录** ✓ ⇒ 真实死代码 **≤ 30** ✓
+   📌 教训（第 69 条 ✓）：**"生产 vs 测试"的边界要按目录明确** ✗，**不能只靠文件名后缀** ✓
+**逐个核查 ✓（只读 ✓，含名字的"字符串形式"检查 ✓）**：
+   ⭐ **真死（全仓仅定义处）9 个** ✓：`RecordedNote`（`src/audio/LiveRecorder.ts:10` ✓）／
+     `loadGenrePresetAsync`（`SoundBankManager.ts:53` ✓）／`loadGenreSampleBufferAsync`（`:82` ✓）／
+     `MASTER_BUS_COMP_THRESHOLD_DB`・`_KNEE_DB`（`masterGraph.ts:271-272` ✓）／
+     `useCoverWarmupBothSizes`（`src/hooks/useCoverWarmup.ts:55` ✓）／`useLabelArt`（`useLabelArt.ts:20` ✓）／
+     `useReducedMotion`（`useReducedMotion.ts:27` ✓）／`resetDebugModeForTests`（`src/platform/debugMode.ts:56` ✓）
+   ✗ **假阳性 1 个** ✓：`renderSongChunkOffline` ✓（被脚本调用 ✓）
+   ⚠️ **"功能做了一半" 3 个** ✓（**是死代码 ✓，但不能简单删** ✗）：`useReducedMotion`（**无障碍** ✓）／
+     `useLabelArt`（封面艺术 ✓）／`useCoverWarmupBothSizes`（封面预热 ✓）
+     ⇒ ⭐ **提请业主定夺**：**接上去**（补功能 ✗）还是**删掉**（清代码 ✓）✓
+**⭐ 处置立场 ✓**：本轮**没有删任何东西** ✗ —— 铁律"**不擅自删可逆性差的东西**" ✓；
+   且半成品**删了会丢意图** ✗ ⇒ 必须**先问** ✓
+**⇒ 死代码链条完整 ✓**：**筛查表**（可复算 ✓）⇒ **逐个核查**（带证据 ✓）⇒ **分类**（真死／假阳性／半成品 ✓）
+   ⇒ **处置待业主一句话** ✓ —— ⭐ 比"直接删 30 个"**更诚实也更安全** ✓
+```
