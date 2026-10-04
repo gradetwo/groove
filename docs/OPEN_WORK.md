@@ -7555,3 +7555,17 @@ problems: **[]** ✓
    ③ 一个句子可能满足两个锚点 ✓ ⇒ 列表要**去重**并加断言 ✓
    ⚠️ 另 ✓：中文说明文字里**不要嵌 `"`** ✓（同一类错犯过 4 次 ✗ ⇒ 一律用 `「」` ✓）
 ```
+
+## 三百二十七、📮 **回执形状有判据了：自描述 ＋ 结论前置**（2026-10-04 22:4x ✓）
+
+```
+**机制 ✓**：回执是 `json(value)` = **格式化 JSON** ✓ ⇒ 调用者先读到的是**第一个键** ✓（不是第一行 ✓，第一行永远是 `{` ✓）
+**实证的现状 ✓**：`summariseSong` ✓ 返回 `{ songId, name, genreId, … }` ✓（答案在先、整棵树在后 ✓）；
+   `summariseArrangement` ✓ 先算 `problems[]` ✓，注释写明"放在这里是为了**每条回执**都读到它" ✓；
+   `renderOutputSentence()` ✓ 说落盘位置（`GROOVE_MCP_OUT` ✓）并**承诺回执点名文件** ✓；
+   `renderCostSentence()` ✓ 以 `Measured on this server:` 开头 ✓
+**判据 ✓**：`src/test/mcpReplyShape.test.ts` ✓ —— 短平片段钉自描述 ✓ ＋ 断言 `summariseSong` 的 **首键**仍是 `songId` ✓；
+   ⚠️ 已**弄红验证**（改弱 `and the reply names it.` ⇒ 判据红 ✓）
+**⚠️ 取材教训（第 35 条 ✓）**：断言片段要**短而平** ✓ —— 整句抽取踩过两次坑 ✗：
+   ① 锚点在字符串字面量内部 ⇒ 向后找引号先撞到闭合引号 ✗；② 片段里带 markdown 强调符 ⇒ 根本不是源文子串 ✗
+```
