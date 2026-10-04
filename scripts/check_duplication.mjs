@@ -19,7 +19,7 @@ import { createHash } from "node:crypto";
 const ROOTS = ["mcp", "src"];
 const SKIP = /(^|\/)(node_modules|dist|fixtures|data)(\/|$)|\.test\.|\.d\.ts$/;
 const MIN = 12;
-const WIN = 12;
+const WIN = 8; // ⚠️ 必须 **< MIN** ✗：否则短于 MIN 的块永远不会被哈希 ⇒ MIN 成了死参数 ✓
 
 function files(dir) {
   const out = [];
@@ -35,16 +35,23 @@ const isDecl = (l) => /^(import|export)\b/.test(l) || /^}?\s*from\s+"/.test(l) |
 
 export function measureDuplication() {
   const all = ROOTS.flatMap(files);
+  // ⚠️ 真实行号：过滤掉空行与注释后**仍然记得它原本在第几行** ✓
+  //    （早先这里报的是"过滤后数组的下标" ✗ ⇒ 行号系统性偏移 ✓ ⇒ 读者会被指到错误的位置 ✓）
   const lines = new Map();
   for (const f of all) {
-    lines.set(f, readFileSync(f, "utf8").split("\n").map((l) => l.trim())
-      .filter((l) => l.length > 0 && !l.startsWith("//") && !l.startsWith("*") && !l.startsWith("/*")));
+    const kept = [];
+    readFileSync(f, "utf8").split("\n").forEach((raw, i) => {
+      const s = raw.trim();
+      if (s.length === 0 || s.startsWith("//") || s.startsWith("*") || s.startsWith("/*")) return;
+      kept.push({ lineNo: i + 1, text: s });
+    });
+    lines.set(f, kept);
   }
   const byHash = new Map();
   for (const f of all) {
     const ls = lines.get(f);
     for (let i = 0; i + WIN <= ls.length; i++) {
-      const h = createHash("sha1").update(ls.slice(i, i + WIN).join("\n")).digest("hex");
+      const h = createHash("sha1").update(ls.slice(i, i + WIN).map((l) => l.text).join("\n")).digest("hex");
       if (!byHash.has(h)) byHash.set(h, []);
       byHash.get(h).push([f, i]);
     }
@@ -59,12 +66,12 @@ export function measureDuplication() {
         if (f === g && j <= i) continue;
         const ls = lines.get(f), gs = lines.get(g);
         let k = 0;
-        while (i + k < ls.length && j + k < gs.length && ls[i + k] === gs[j + k]) k++;
+        while (i + k < ls.length && j + k < gs.length && ls[i + k].text === gs[j + k].text) k++;
         if (k < MIN) continue;
-        const body = ls.slice(i, i + k);
+        const body = ls.slice(i, i + k).map((l) => l.text);
         if (body.filter(isDecl).length / body.length > 0.5) continue;
         for (let t = 0; t < k; t++) { claimed.add(f + ":" + (i + t)); claimed.add(g + ":" + (j + t)); }
-        blocks.push({ f, g, i: i + 1, j: j + 1, n: k, same: f === g });
+        blocks.push({ f, g, i: ls[i].lineNo, j: gs[j].lineNo, n: k, same: f === g });
       }
     }
   }

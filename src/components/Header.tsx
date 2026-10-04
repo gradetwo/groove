@@ -76,6 +76,115 @@ interface HeaderProps {
   isPlaying?: boolean;
 }
 
+/**
+ * ⭐ One navigation button, written once.
+ *
+ * The desktop nav carried this markup copied per tab — the same class template, the same icon size, the
+ * same truncated label — which is why the duplication measure listed two twenty-five-line blocks in this
+ * file. The two neighbours that are not this shape stay as they are: `New Project` is an anchor rather
+ * than a tab button, and the Explore dropdown carries `aria-expanded`/`aria-haspopup`.
+ */
+/**
+ * ⭐ One dropdown row, written once.
+ *
+ * The lab and explore dropdowns each carried their own copy of this row — the same active/class logic, the
+ * same two-step click (`select the tab`, then `close the dropdown`), the same icon-plus-description layout —
+ * which was the twenty-five line pair the duplication measure reported at this file.
+ */
+function MenuRow({
+  active,
+  icon,
+  labelKey,
+  descKey,
+  onSelect,
+}: {
+  active: boolean;
+  icon: React.ReactNode;
+  labelKey: string;
+  descKey: string;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      onClick={onSelect}
+      className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs transition-colors text-left ${
+        active ? "bg-accent/15 text-accent font-medium" : "text-text-sub hover:text-text hover:bg-[#181a22]"
+      }`}
+    >
+      <div className="flex items-center gap-2">
+        {icon}
+        <span className="font-medium">{labelKey}</span>
+      </div>
+      <span className="text-[10px] font-mono text-text-dim">{descKey}</span>
+    </button>
+  );
+}
+
+/**
+ * ⭐ One mobile-sheet row, written once.
+ *
+ * This is **not** the same component as `MenuRow`: the sheet's rows carry a border and their own active
+ * colours, the icon is tinted separately, and the wrapper draws the left rule. The two are easy to mistake
+ * for each other because the markup rhymes, and merging them would change one of the two designs.
+ */
+function MobileMenuRow({
+  active,
+  icon,
+  labelKey,
+  descKey,
+  onSelect,
+}: {
+  active: boolean;
+  icon: React.ReactNode;
+  labelKey: string;
+  descKey: string;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      onClick={onSelect}
+      className={`w-full flex items-center justify-between text-xs font-medium px-3 py-2 rounded-lg border transition-all ${
+        active
+          ? "border-accent/60 text-accent bg-accent/15 font-semibold shadow-[0_0_10px_rgba(245,183,61,0.15)]"
+          : "border-line/70 text-text-sub hover:text-text bg-[#0f1118] hover:bg-[#161922]"
+      }`}
+    >
+      <div className="flex items-center gap-2">
+        <span className="text-accent">{icon}</span>
+        <span className={active ? "text-accent font-semibold" : "text-text font-medium"}>{labelKey}</span>
+      </div>
+      <span className="text-[10px] font-mono text-text-dim">{descKey}</span>
+    </button>
+  );
+}
+
+function NavItemButton({
+  active,
+  title,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  title: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      className={`flex items-center gap-1.5 text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-lg border transition-all shrink-0 ${
+        active
+          ? "border-accent/50 text-accent bg-accent/10 shadow-[0_0_12px_rgba(245,183,61,0.15)]"
+          : "border-line text-text-sub hover:text-text hover:border-line-strong bg-panel2"
+      }`}
+    >
+      {children}
+      <span className="truncate max-w-[84px] whitespace-nowrap select-none">{title}</span>
+    </button>
+  );
+}
+
 export const Header: React.FC<HeaderProps> = ({
   currentTab,
   onSelectTab,
@@ -191,6 +300,38 @@ export const Header: React.FC<HeaderProps> = ({
     { tab: "masterclass", labelKey: "nav_masterclass", descKey: "nav_masterclass_desc", icon: <Disc className="w-3.5 h-3.5" /> },
     { tab: "maker", labelKey: "nav_maker", descKey: "nav_maker_desc", icon: <Wand2 className="w-3.5 h-3.5" /> },
   ];
+  // ⭐ The two lists differ; the row they render does not. Writing the `map` twice was itself an
+  // eleven-line duplicate the measure could see — the honest way to learn that extracting a component
+  // is only half the job.
+  type MenuItem = { tab: NavTab; labelKey: string; descKey: string; icon: React.ReactNode };
+  const renderMenuRows = (items: MenuItem[]) =>
+    items.map((item) => (
+      <MenuRow
+        key={item.tab}
+        active={currentTab === item.tab}
+        icon={item.icon}
+        labelKey={t(item.labelKey)}
+        descKey={t(item.descKey)}
+        onSelect={() => {
+          onSelectTab(item.tab);
+          setExploreOpen(false);
+        }}
+      />
+    ));
+  const renderMobileRows = (items: MenuItem[]) =>
+    items.map((item) => (
+      <MobileMenuRow
+        key={item.tab}
+        active={currentTab === item.tab}
+        icon={item.icon}
+        labelKey={t(item.labelKey)}
+        descKey={t(item.descKey)}
+        onSelect={() => {
+          onSelectTab(item.tab);
+          setMobileMenuOpen(false);
+        }}
+      />
+    ));
 
   const exploreItems: Array<{ tab: NavTab; labelKey: string; descKey: string; icon: React.ReactNode }> = [
     { tab: "galaxy", labelKey: "nav_galaxy", descKey: "nav_galaxy_desc", icon: <Orbit className="w-3.5 h-3.5" /> },
@@ -252,18 +393,13 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Navigation Links: Reorganized IA (P1-09) */}
       <nav className="hidden md:flex items-center gap-1.5" aria-label="Main Navigation">
         {/* 1. Studio */}
-        <button
-          onClick={() => onSelectTab("studio")}
+        <NavItemButton
+          active={currentTab === "studio"}
           title={t("nav_studio")}
-          className={`flex items-center gap-1.5 text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-lg border transition-all shrink-0 ${
-            currentTab === "studio"
-              ? "border-accent/50 text-accent bg-accent/10 shadow-[0_0_12px_rgba(245,183,61,0.15)]"
-              : "border-line text-text-sub hover:text-text hover:border-line-strong bg-panel2"
-          }`}
+          onClick={() => onSelectTab("studio")}
         >
           <Sliders className="w-3.5 h-3.5" />
-          <span className="truncate max-w-[84px] whitespace-nowrap select-none">{t("nav_studio")}</span>
-        </button>
+        </NavItemButton>
 
         {/* ⭐ New Project — an **anchor**, not a tab button: "new project" is a route of its own (`/new`), and `onSelectTab` can only express a tab. Its own route rather than a fourteenth nav word follows the precedent set for `/console`.
             ⚠️ **A plain left click is intercepted when the caller can route**, because the native navigation is a full document load and that destroys the `AudioContext`. A modified or middle click is deliberately left to the browser, so "open in a new tab" still works — an unconditional handler would take that away. */}
@@ -286,32 +422,22 @@ export const Header: React.FC<HeaderProps> = ({
         </a>
 
         {/* 2. Chords */}
-        <button
-          onClick={() => onSelectTab("chords")}
+        <NavItemButton
+          active={currentTab === "chords"}
           title={t("nav_chords")}
-          className={`flex items-center gap-1.5 text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-lg border transition-all shrink-0 ${
-            currentTab === "chords"
-              ? "border-accent/50 text-accent bg-accent/10 shadow-[0_0_12px_rgba(245,183,61,0.15)]"
-              : "border-line text-text-sub hover:text-text hover:border-line-strong bg-panel2"
-          }`}
+          onClick={() => onSelectTab("chords")}
         >
           <Music2 className="w-3.5 h-3.5" />
-          <span className="truncate max-w-[84px] whitespace-nowrap select-none">{t("nav_chords")}</span>
-        </button>
+        </NavItemButton>
 
         {/* 3. Kick Anatomy */}
-        <button
-          onClick={() => onSelectTab("kick")}
+        <NavItemButton
+          active={currentTab === "kick"}
           title={t("nav_kick")}
-          className={`flex items-center gap-1.5 text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-lg border transition-all shrink-0 ${
-            currentTab === "kick"
-              ? "border-accent/50 text-accent bg-accent/10 shadow-[0_0_12px_rgba(245,183,61,0.15)]"
-              : "border-line text-text-sub hover:text-text hover:border-line-strong bg-panel2"
-          }`}
+          onClick={() => onSelectTab("kick")}
         >
           <Activity className="w-3.5 h-3.5" />
-          <span className="truncate max-w-[84px] whitespace-nowrap select-none">{t("nav_kick")}</span>
-        </button>
+        </NavItemButton>
 
         {/* 4. Explore Dropdown (P1-09 IA Reorganization) */}
         <div className="relative" ref={exploreRef}>
@@ -338,31 +464,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <span>{isZh ? "高级与实验室" : "Pro & Labs"}</span>
               </div>
               <div className="space-y-0.5 mt-0.5 mb-1.5">
-                {labItems.map((item) => {
-                  const isItemActive = currentTab === item.tab;
-                  return (
-                    <button
-                      key={item.tab}
-                      onClick={() => {
-                        onSelectTab(item.tab);
-                        setExploreOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs transition-colors text-left ${
-                        isItemActive
-                          ? "bg-accent/15 text-accent font-medium"
-                          : "text-text-sub hover:text-text hover:bg-[#181a22]"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        {item.icon}
-                        <span className="font-medium">{t(item.labelKey)}</span>
-                      </div>
-                      <span className="text-[10px] font-mono text-text-dim">
-                        {t(item.descKey)}
-                      </span>
-                    </button>
-                  );
-                })}
+                {renderMenuRows(labItems)}
               </div>
 
               <div className="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-text-dim select-none flex items-center gap-1.5 pt-1.5 border-t border-line/60">
@@ -370,63 +472,29 @@ export const Header: React.FC<HeaderProps> = ({
                 <span>{t("header_explore_title")}</span>
               </div>
               <div className="space-y-0.5 mt-0.5">
-                {exploreItems.map((item) => {
-                  const isItemActive = currentTab === item.tab;
-                  return (
-                    <button
-                      key={item.tab}
-                      onClick={() => {
-                        onSelectTab(item.tab);
-                        setExploreOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs transition-colors text-left ${
-                        isItemActive
-                          ? "bg-accent/15 text-accent font-medium"
-                          : "text-text-sub hover:text-text hover:bg-[#181a22]"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        {item.icon}
-                        <span className="font-medium">{t(item.labelKey)}</span>
-                      </div>
-                      <span className="text-[10px] font-mono text-text-dim">
-                        {t(item.descKey)}
-                      </span>
-                    </button>
-                  );
-                })}
+                {renderMenuRows(exploreItems)}
               </div>
             </div>
           )}
         </div>
 
         {/* 4. Compare */}
-        <button
-          onClick={() => onSelectTab("compare")}
+        <NavItemButton
+          active={currentTab === "compare"}
           title={t("nav_compare")}
-          className={`flex items-center gap-1.5 text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-lg border transition-all shrink-0 ${
-            currentTab === "compare"
-              ? "border-accent/50 text-accent bg-accent/10 shadow-[0_0_12px_rgba(245,183,61,0.15)]"
-              : "border-line text-text-sub hover:text-text hover:border-line-strong bg-panel2"
-          }`}
+          onClick={() => onSelectTab("compare")}
         >
           <Columns className="w-3.5 h-3.5" />
-          <span className="truncate max-w-[84px] whitespace-nowrap select-none">{t("nav_compare")}</span>
-        </button>
+        </NavItemButton>
 
         {/* 5. Challenge */}
-        <button
-          onClick={() => onSelectTab("challenge")}
+        <NavItemButton
+          active={currentTab === "challenge"}
           title={t("nav_challenge")}
-          className={`flex items-center gap-1.5 text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-lg border transition-all shrink-0 ${
-            currentTab === "challenge"
-              ? "border-accent/50 text-accent bg-accent/10 shadow-[0_0_12px_rgba(245,183,61,0.15)]"
-              : "border-line text-text-sub hover:text-text hover:border-line-strong bg-panel2"
-          }`}
+          onClick={() => onSelectTab("challenge")}
         >
           <HelpCircle className="w-3.5 h-3.5" />
-          <span className="truncate max-w-[84px] whitespace-nowrap select-none">{t("nav_challenge")}</span>
-        </button>
+        </NavItemButton>
       </nav>
 
       {/*
@@ -638,31 +706,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
           <div className="space-y-1.5 pl-2.5 border-l-2 border-[#262a38] ml-1">
-            {exploreItems.map((item) => {
-              const isSubActive = currentTab === item.tab;
-              return (
-                <button
-                  key={item.tab}
-                  onClick={() => {
-                    onSelectTab(item.tab);
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center justify-between text-xs font-medium px-3 py-2 rounded-lg border transition-all ${
-                    isSubActive
-                      ? "border-accent/60 text-accent bg-accent/15 font-semibold shadow-[0_0_10px_rgba(245,183,61,0.15)]"
-                      : "border-line/70 text-text-sub hover:text-text bg-[#0f1118] hover:bg-[#161922]"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-accent">{item.icon}</span>
-                    <span className={isSubActive ? "text-accent font-semibold" : "text-text font-medium"}>{t(item.labelKey)}</span>
-                  </div>
-                  <span className="text-[10px] font-mono text-text-dim">
-                    {t(item.descKey)}
-                  </span>
-                </button>
-              );
-            })}
+            {renderMobileRows(exploreItems)}
           </div>
 
           {/* Compare & Challenge */}
@@ -704,31 +748,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
           <div className="space-y-1.5 pl-2.5 border-l-2 border-[#262a38] ml-1">
-            {labItems.map((item) => {
-              const isSubActive = currentTab === item.tab;
-              return (
-                <button
-                  key={item.tab}
-                  onClick={() => {
-                    onSelectTab(item.tab);
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center justify-between text-xs font-medium px-3 py-2 rounded-lg border transition-all ${
-                    isSubActive
-                      ? "border-accent/60 text-accent bg-accent/15 font-semibold shadow-[0_0_10px_rgba(245,183,61,0.15)]"
-                      : "border-line/70 text-text-sub hover:text-text bg-[#0f1118] hover:bg-[#161922]"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-accent">{item.icon}</span>
-                    <span className={isSubActive ? "text-accent font-semibold" : "text-text font-medium"}>{t(item.labelKey)}</span>
-                  </div>
-                  <span className="text-[10px] font-mono text-text-dim">
-                    {t(item.descKey)}
-                  </span>
-                </button>
-              );
-            })}
+            {renderMobileRows(labItems)}
           </div>
 
           {onOpenOnboarding && (

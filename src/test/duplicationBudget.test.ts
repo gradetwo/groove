@@ -1,10 +1,16 @@
 /**
  * 📐 **The duplicated-logic budget only moves down.**
  *
- * Measured 2026-10-05 00:45 over `mcp/**` and `src/**` (excluding the data tables, whose repetition is
- * structural): **47** maximal blocks of twelve or more identical consecutive lines that are not pure
- * imports, **23** of them inside one file — which is where a missing function hides — **24** across
- * files, longest **25** lines, and **3** at twenty-four lines or more.
+ * Measured 2026-10-05 01:08 over `mcp/**` and `src/**` (excluding the data tables, whose repetition is
+ * structural): **46** maximal blocks of twelve or more identical consecutive lines that are not pure
+ * imports, **22** of them inside one file — which is where a missing function hides — **24** across
+ * files, longest **25** lines, and **1** at twenty-four lines or more.
+ *
+ * The first reading was 47/23/24/25/3. Extracting the header's navigation button, its dropdown row and its
+ * mobile-sheet row took the twenty-four-line bucket from three to one, and collapsing the two `map` call
+ * sites — which had themselves become an eleven-line duplicate, visible only after the window dropped from
+ * twelve lines to eight — took blocks to 46 and same-file repetition to 22. The intermediate reading **rose**
+ * to 48/24 before it fell: extracting a component is only half the job, and the measure said so.
  *
  * ⚠️ Two numbers circulate for this metric. An earlier probe counted **291** because it recorded a
  * block for every pair of matching start positions and so counted nested and overlapping duplicates
@@ -19,7 +25,7 @@ type Measure = {
   blocks: number; sameFile: number; crossFile: number; longest: number; atLeast24: number; top: string[];
 };
 
-const CAP: Measure = { blocks: 47, sameFile: 23, crossFile: 24, longest: 25, atLeast24: 3, top: [] };
+const CAP: Measure = { blocks: 46, sameFile: 22, crossFile: 24, longest: 25, atLeast24: 1, top: [] };
 
 function measure(): Measure {
   const out = execFileSync("node", ["scripts/check_duplication.mjs"], { encoding: "utf8" });
