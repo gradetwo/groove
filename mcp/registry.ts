@@ -2745,7 +2745,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "set_vocal_melody",
     title: "Bind a lyric to a melody and check its tones (倒字)",
     description:
-      "Put syllables on a song's vocal lane, one per note and at the same index as its pitch, and return the prosody check on the result. Give `pitches` to set the melody yourself, or give only the lyric and a melody is written for it. Tones are input (1 阴平, 2 阳平, 3 上声, 4 去声, 0/5 neutral) and never guessed: a rising tone sung on a falling interval is reported as a warning, because that is what makes a listener hear the wrong word.",
+      "Put syllables on a song's vocal lane, one per note and at the same index as its pitch, and return the prosody check on the result. Give `pitches` to set the melody yourself, or give only the lyric and a melody is written for it. Tones are input (1 阴平, 2 阳平, 3 上声, 4 去声, 0/5 neutral) and never guessed. A rising tone sung on a falling interval is reported as a warning, because that is what makes a listener hear the wrong word.",
     readOnly: false,
     inputSchema: {
       songId: z.string().optional().describe("the song whose clip to edit"),
