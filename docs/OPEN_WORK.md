@@ -6970,3 +6970,22 @@ problems: **[]** ✓
    A/B 诚实版：**同一段两次 cheap render 各自返回文件 ＋ 关键读数**（峰值/RMS/LUFS ✓）—— ⚠️ **不是**把两段混在一起播 ✗（播放是客户端的事 ✓）
 **判据口径（能红 ✓）**：传 `trackId` ⇒ 渲染里**只出现该轨** ✓；`startBar/endBar` 外的音符**不进渲染** ✓；默认 `sampleRate` 为 8000 ✓
 ```
+
+## 三百零二、✅ **⑧ arrangement 预览／对比"补齐"完成（五项全落地，判据全红证）**（2026-10-04 08:0x ✓）
+
+```
+**(a) 单轨/多轨** ✓：`flattenMcpArrangement(id, range, trackIds)` 加**可选**过滤 ✓（不传时行为不变 ✓，`57eb09e` ✓）；
+   新工具收 `trackId`/`trackIds` ✓。**判据（能红 ✓）**：给**不存在的 id** ⇒ **一条轨都不响** ✓（过滤器"安静地什么都没做"地渲全部 ⇒ 红 ✓）。
+**(b) 范围** ✓：`startBar`/`endBar` ✓（end **排他** ✓ 且描述写明 ✓）。**判据**：span `2–3` ⇒ bar 0 的音**被挡出** ✓；`0–1` ⇒ 在内 ✓。
+**(c) 廉价预览工具 `render_arrangement_preview`** ✓（`553c7ab` ✓）：默认 **`sampleRate: 8000`／`channels: 1`** ✓，`bars: 1`（只渲一次 ✓），
+   返回同族形态（文件 ＋ 时长/响度/真峰值 ＋ `span`/`tracks` 回显 ✓）。**闸门**：`check:mcp` **93 tools／123 checks 0 failed** ✓。
+**(d) A/B** ✓（`3104818` ✓）：⭐ 量的结论＝**不需要新工具** ✓ —— 同一段**调两次**即对比 ✓，两条回复各带**自己的文件/span/tracks/读数** ⇒ **自描述** ✓；
+   文档**明写**"这里不把任何东西混在一起" ✗。**判据**：删掉那句 A/B 说明 ⇒ 红 ✓。
+**(e) 文档** ✓（`f0ffbe5` ＋ `c304ec1` ✓）：① **读完** `render_arrangement` 的说明并答"备否" ✓（它由共享片段拼成 ✓）；② 落盘位置**量自**
+   `mcp/render/worker.ts:591`（`outputDir` → `GROOVE_MCP_OUT` → 临时目录 ✓）⇒ 加**共享句** `renderOutputSentence()`（`mcp/render/budget.ts` ✓）
+   ⇒ `render_arrangement` 也说了 ✓。**判据**：渲染族**三个工具**都必须含 `GROOVE_MCP_OUT` ✓（抽掉共享句 ⇒ `render_arrangement` 红 ✓）。
+**本程我的失误（入册 ✓）**：① 复制＋改写 `render_arrangement` 时弄坏多行描述 ✗ ⇒ `tsc` 红 ⇒ **回滚** ✓（预案生效 ✓）；
+   ② 锚点 `HEADLESS_POINTER_SENTENCE,` 在 `registry.ts` **出现 3 次** ✗ ⇒ 断言中止、**只成功一半** ✓ ⇒ 改为**在归属者块内按位置**替换 ✓
+   📌 教训：**多行拼接别用盲改写** ✓；**替换要落在"归属者"内部，不认全局字面量** ✓。
+⚠️ 仍未做：`render_arrangement_stems` 的**范围**参数现状（当初列在 (b) 的"先量"里 ✓）**尚未量** ✗ —— 留作后续，不假装已有 ✓。
+```
