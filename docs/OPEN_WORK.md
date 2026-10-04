@@ -7907,3 +7907,26 @@ problems: **[]** ✓
 **⚠️ 仍未做 ✓**：`useExportActions.ts`（同文件 25 行 ✓）、`masterclass/*` 两处（21／20 行 ✓）
    ⇒ 留作下一次"按量动手"的靶子 ✓（**先量后改** ✓，不一次做完 ✗）
 ```
+
+## 三百四十一、🔻 **重复块：`≥24 行` 归零，最长 25 ⇒ 21**（2026-10-05 01:11 ✓）
+
+```
+**做了什么 ✓**（`src/features/sequencer/hooks/useExportActions.ts` ✓，一文件一处 ✓、行为零变化 ✓、可回退 ✓）：
+   `handleExportGroove` 里的 `const projToExport: GrooveProject = activeProject ? {…} : {…}` ✓ ——
+   两个分支**只有 5 个字段不同** ✓（`id`／`name`／`tags`／`isFavorite`／`createdAt` ✓），
+   **另外 16 个字段逐字写了两遍** ✗（含 `patterns` 的 A/B activeSlot 判定 ✓）
+   ⇒ 抽出 `const base = { …16 个共有字段… }` ✓ ⇒ 两分支变成
+     `{ ...activeProject, ...base, updatedAt: Date.now() }` ✓ 与 `{ ...base, id, name, tags, isFavorite, createdAt, updatedAt }` ✓
+   ⚠️ **语义核对 ✓**：原"已有工程"分支是 `{ ...activeProject, 逐字段…, updatedAt }` ✓
+      ⇒ 换成 `{ ...activeProject, ...base, updatedAt }` ✓ **等价** ✓（`base` 不含 `updatedAt` ✓）
+**读数 ✓（同口径 ✓，方法：`node scripts/check_duplication.mjs` ✓）**：
+   `blocks` **46 ⇒ 45** ✓｜`sameFile` **22 ⇒ 21** ✓｜`longest` **25 ⇒ 21** ✓｜⭐ **`atLeast24` 1 ⇒ 0** ✓
+   ⇒ 区间本身 **64 行 ⇒ 41 行** ✓；**相关单测 24 文件 / 118 用例全过** ✓
+**⭐ 本轮最强的一条判据 ✓**：`atLeast24 ≤ 0` ✓ —— **从此再出现一条 ≥24 行的重复块就会红** ✓
+   （这是"只许下降"的自然终点 ✓：最粗的那一档已经清空 ✓，且被钉住 ✓）
+**⚠️ 仍欠 ✓**：`masterclass/*` 三处（**21 行** ×1 ✓、**20 行** ×2 ✓）⇒ 留作下一批靶子 ✓
+**⭐ 形态经验（值得记 ✓）**：这四处重复**形态各不相同** ✗ ——
+   ① 模板抄 5 遍（`NavItemButton` ✓）② 菜单行抄 2 遍（`MenuRow` ✓）③ 另一套样式抄 2 遍（`MobileMenuRow` ✓）
+   ④ **同一个对象字面量在三分支里写两遍**（`base` ✓）
+   ⇒ 度量**只报"哪里重复、多少行"** ✓，**怎么抽仍需人读原文判断** ✓ —— 这正是"先量后改"的分工 ✓
+```

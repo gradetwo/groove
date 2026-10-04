@@ -278,69 +278,46 @@ export function useExportActions({
   }, [bpm, currentGenre.name, exportPattern, t, showToast]);
 
   const handleExportGroove = useCallback(() => {
-    const projToExport: GrooveProject = activeProject
-      ? {
-          ...activeProject,
-          genreId: currentGenre.id,
-          genreName: currentGenre.name,
-          bpm,
-          swing,
-          timeSignature,
-          resolution,
-          stepCount,
-          patterns: {
-            A:
-              seqStateRef.current.activeSlot === "A"
-                ? patternRef.current
-                : seqStateRef.current.patterns.A,
-            B:
-              seqStateRef.current.activeSlot === "B"
-                ? patternRef.current
-                : seqStateRef.current.patterns.B,
-          },
-          activeSlot: seqStateRef.current.activeSlot,
-          songMode: seqStateRef.current.songMode,
-          songChain: seqStateRef.current.songChain,
-          loopRange: seqStateRef.current.loopRange,
-          effectsRack: effectsRackState,
-          drumKit,
-          isMetronome: seqStateRef.current.isMetronome,
-          isCountIn: seqStateRef.current.isCountIn,
-          updatedAt: Date.now(),
-        }
-      : {
-          id: `proj_${Date.now()}`,
-          name: `${currentGenre.name} Session`,
-          genreId: currentGenre.id,
-          genreName: currentGenre.name,
-          bpm,
-          swing,
-          timeSignature,
-          resolution,
-          stepCount,
-          patterns: {
-            A:
-              seqStateRef.current.activeSlot === "A"
-                ? patternRef.current
-                : seqStateRef.current.patterns.A,
-            B:
-              seqStateRef.current.activeSlot === "B"
-                ? patternRef.current
-                : seqStateRef.current.patterns.B,
-          },
-          activeSlot: seqStateRef.current.activeSlot,
-          songMode: seqStateRef.current.songMode,
-          songChain: seqStateRef.current.songChain,
-          loopRange: seqStateRef.current.loopRange,
-          effectsRack: effectsRackState,
-          drumKit,
-          isMetronome: seqStateRef.current.isMetronome,
-          isCountIn: seqStateRef.current.isCountIn,
-          tags: [currentGenre.name, "Exported"],
-          isFavorite: false,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        };
+      // ⭐ The two branches differ in five fields; the other sixteen were typed twice. `base` is the part
+      // that does not depend on whether a project is already open.
+      const base = {
+        genreId: currentGenre.id,
+        genreName: currentGenre.name,
+        bpm,
+        swing,
+        timeSignature,
+        resolution,
+        stepCount,
+        patterns: {
+          A:
+            seqStateRef.current.activeSlot === "A"
+              ? patternRef.current
+              : seqStateRef.current.patterns.A,
+          B:
+            seqStateRef.current.activeSlot === "B"
+              ? patternRef.current
+              : seqStateRef.current.patterns.B,
+        },
+        activeSlot: seqStateRef.current.activeSlot,
+        songMode: seqStateRef.current.songMode,
+        songChain: seqStateRef.current.songChain,
+        loopRange: seqStateRef.current.loopRange,
+        effectsRack: effectsRackState,
+        drumKit,
+        isMetronome: seqStateRef.current.isMetronome,
+        isCountIn: seqStateRef.current.isCountIn,
+      };
+      const projToExport: GrooveProject = activeProject
+        ? { ...activeProject, ...base, updatedAt: Date.now() }
+        : {
+            ...base,
+            id: `proj_${Date.now()}`,
+            name: `${currentGenre.name} Session`,
+            tags: [currentGenre.name, "Exported"],
+            isFavorite: false,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          };
 
     exportProjectToGrooveFile(projToExport);
     showToast(

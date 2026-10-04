@@ -1,10 +1,12 @@
 /**
  * 📐 **The duplicated-logic budget only moves down.**
  *
- * Measured 2026-10-05 01:08 over `mcp/**` and `src/**` (excluding the data tables, whose repetition is
- * structural): **46** maximal blocks of twelve or more identical consecutive lines that are not pure
- * imports, **22** of them inside one file — which is where a missing function hides — **24** across
- * files, longest **25** lines, and **1** at twenty-four lines or more.
+ * Measured 2026-10-05 01:11 over `mcp/**` and `src/**` (excluding the data tables, whose repetition is
+ * structural): **45** maximal blocks of twelve or more identical consecutive lines that are not pure
+ * imports, **21** of them inside one file — which is where a missing function hides — **24** across
+ * files, longest **21** lines, and **none** at twenty-four lines or more: the last of those was a single
+ * twenty-five line object literal typed once per branch of a ternary, now one `base` object spread into
+ * both. That bucket must stay at zero.
  *
  * The first reading was 47/23/24/25/3. Extracting the header's navigation button, its dropdown row and its
  * mobile-sheet row took the twenty-four-line bucket from three to one, and collapsing the two `map` call
@@ -25,7 +27,7 @@ type Measure = {
   blocks: number; sameFile: number; crossFile: number; longest: number; atLeast24: number; top: string[];
 };
 
-const CAP: Measure = { blocks: 46, sameFile: 22, crossFile: 24, longest: 25, atLeast24: 1, top: [] };
+const CAP: Measure = { blocks: 45, sameFile: 21, crossFile: 24, longest: 21, atLeast24: 0, top: [] };
 
 function measure(): Measure {
   const out = execFileSync("node", ["scripts/check_duplication.mjs"], { encoding: "utf8" });
