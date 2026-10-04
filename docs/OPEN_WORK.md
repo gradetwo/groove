@@ -7981,3 +7981,25 @@ problems: **[]** ✓
 **⭐ 结论与纪律 ✓**：**响应基线已立** ✓ ⇒ 若将来要"优化响应" ✓，**靶子必须由这张表指出** ✓；
    **当前没有超预算项** ✓ ⇒ **不做无谓改动** ✗（避免"为优化而优化"把听感搭进去 ✗ —— §26 听感优先 ✓）
 ```
+
+## 三百四十四、🎨 **抽组件忘了重生成皮肤表 ⇒ 连红四笔**（2026-10-05 01:41 ✓）
+
+```
+**症状 ✓**：`a87221f` ✓／`11df0dc` ✓／`c98eca9` ✓ 之后，**连续四笔**（`c87d87e` ✓／`563c73e` ✓／`3b374c5` ✓／`7e4b540` ✓）**全红** ✗
+   日志 ✓（`c87d87e` ⇒ run `37219528531` ✓）：**唯一**失败是 `src/test/desktopSkins.test.ts` ✓
+     `❌ desktop skin sheets are out of date — run `node scripts/desktop_skins.mjs`` ✗
+     其余 **615 文件 / 5191 用例通过** ✓ ⇒ ⭐ **一个生成物没跟上** ✗
+**根因 ✓**：我抽了 `Header.tsx` 的组件（`NavItemButton` ✓／`MenuRow` ✓／`MobileMenuRow` ✓），
+   **类名的出现顺序变了** ✓ ⇒ 桌面皮肤表**由组件派生** ✓ ⇒ 生成的 `desktopSkins.css` 里两条既有规则**换了位置** ✗
+**修法 ✓**：`node scripts/desktop_skins.mjs`（＝ `npm run skins:gen` ✓）⇒ diff **仅 2 行移动** ✓
+   （`hover:bg-[#161922]` ✓ 与 `bg-[#161922]` ✓ 从 `bg-[#090b10]` 之后移到之前 ✓）
+   ⇒ ⭐ **语义等价** ✓（无新增/删除规则 ✓）；判据 **6/6 通过** ✓
+**⚠️ 教训（第 58 条 ✓，而且目标书里**早就写着** ✗）**：`§E` 明写「**改文案必跑 `skins:gen`（零 diff ✓）＋ `check:skins`**」✓
+   ⇒ 我**改了组件标记结构**却没跑 ✓ ⇒ 连红四笔 ✗
+   ⭐ **本地门禁清单补第 9 项** ✓：**凡改 `src/components/**` 的标记结构** ⇒ 跑
+     `npm run skins:gen` ✓ ＋ `npm run check:skins` ✓（＋ `vitest run src/test/desktopSkins.test.ts` ✓）
+**⚠️ 另一条教训（第 57 条 ✓，同一轮更贵）**：我**连推三笔**，是因为把"最新一笔显示 `Install measurement dependencies
+   in_progress`"读成了"**排队慢**" ✗ —— 实际那是**刚起跑** ✓，随后即失败 ✗
+   ⇒ ⭐ **不许由"某一步 pending"推断"在排队"** ✗；判队列要**同一 run 连续两次 `updatedAt` 不变** ✓，
+     判结果只能看 **`conclusion`** ✓；**红了就先修、不要再推** ✗（第 33／52 条同族 ✓）
+```

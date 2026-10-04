@@ -818,12 +818,12 @@
 [class~="hover:bg-[#181a22]"]:hover { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#181a22]"] { background-color: rgb(var(--d-surface)); }
 [class~="border-[#181a22]"] { border-color: rgb(var(--d-surface)); }
+[class~="hover:bg-[#161922]"]:hover { background-color: rgb(var(--d-surface)); }
+[class~="bg-[#161922]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#090b10]"] { background-color: rgb(var(--d-bg)); }
 [class~="bg-[#13151d]"] { background-color: rgb(var(--d-panel)); }
 [class~="hover:bg-[#1a1d27]"]:hover { background-color: rgb(var(--d-surface)); }
 [class~="border-[#262a38]"] { border-color: rgb(var(--d-line)); }
-[class~="hover:bg-[#161922]"]:hover { background-color: rgb(var(--d-surface)); }
-[class~="bg-[#161922]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#1c1f2b]"] { background-color: rgb(var(--d-surface)); }
 [class~="border-[#1c1f2b]"] { border-color: rgb(var(--d-surface)); }
 [class~="bg-[#1d2028]"] { background-color: rgb(var(--d-surface)); }
