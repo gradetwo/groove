@@ -991,7 +991,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "import_arrangement_musicxml",
     title: "Import a MusicXML score",
     description:
-      "Read a MusicXML `score-partwise` document and **add** its part as a track, named after the part. Notes that notation splits at a barline are joined back into one, chords arrive as notes that start together, and anything the model cannot hold — a grace note, a second voice inside one staff — is listed in `problems` rather than dropped in silence. `partIndex` names the part to read and defaults to the first; `\"all\"` imports every part as its own track, skipping parts that hold no notes. The reply names the tracks it added in `trackIds`, and reports the file's own `tempoBpm` and time signature when it states them.",
+      "Read a MusicXML `score-partwise` document and **add** its part as a track, named after the part. Notes that notation splits at a barline are joined back into one, chords arrive as notes that start together. Anything the model cannot hold. A grace note, a second voice inside one staff. Is listed in `problems` rather than dropped in silence. `partIndex` names the part to read and defaults to the first. `\"all\"` imports every part as its own track, skipping parts that hold no notes. The reply names the tracks it added in `trackIds`. Reports the file's own `tempoBpm` and time signature when it states them.",
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
