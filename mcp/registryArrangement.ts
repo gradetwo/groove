@@ -33,6 +33,10 @@ import { instrumentsByPart } from "./toolKit";
 
 import { setMcpArrangementTempo, setMcpArrangementTimeSignature } from "./arrangement";
 
+import { addMcpTrackNotes, setMcpArrangementBars, setMcpArrangementTempoMap, setMcpTrackGain } from "./arrangement";
+import { catalogueAssetById, listSampleLibraries, nearestCatalogueAssetIds } from "./instruments";
+import { inspectSfzAt } from "./sfzInspectRemote";
+
 export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
   {
     name: "describe_arrangement",
@@ -659,6 +663,195 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
     handler: (args) => {
       try {
         return setMcpArrangementTimeSignature(String(args.arrangementId), String(args.timeSignature));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "inspect_instrument_sfz",
+    title: "Read an SFZ's parameters without playing it",
+    description:
+      "Which regions set `note_polyphony`, `amplitude_onccN`, `one_shot`, `locc`/`hicc`, `tune`, `loop_mode`. **Every switches opcode** (`sw_last`, `sw_label`, `sw_default`, `sw_lokey`/`sw_hikey`, …). Each value **as written**. Marked when it came from a `<group>` rather than from the region itself. Muse's gap: those parameters had criteria and no way to be seen from a tool. Debugging a sampler meant reading the parser's source. This reads over plain HTTP (source address, then the mirror) and **runs no audio**. The cheapest question costs a request rather than a browser. **Name the instrument or its file. The tool takes either**. `assetId` is an instrument from `list_arrangement_instruments` and its source and mirror addresses are resolved from the catalogue, while `url` is an SFZ address you already hold. Give exactly one. A caller that supplies both would have one of them silently ignored. It is refused instead. Reading the addresses out of the catalogue here is deliberate**. `list_sample_libraries` reports each library's **provenance** (`sourceUrl`, `repo`, `pin`), not a per-instrument `.sfz` address. The parameter used to claim otherwise.",
+    readOnly: true,
+    inputSchema: {
+      assetId: z
+        .string()
+        .optional()
+        .describe(
+          'an instrument id from `list_arrangement_instruments`, e.g. "vcsl:Vibraphone-Keyswitch" or "karoryfer-black-and-blue-basses:01-darkblack-keysw" — its `.sfz` source address, and the mirror to fall back to, come from the catalogue so nothing has to be known about `repo`/`pin` layouts'
+        ),
+      url: z.string().optional().describe("the SFZ's own http(s) address, when you already have one; give this or `assetId`, not both"),
+      fallbackUrl: z.string().optional().describe("the mirror, tried when `url` does not answer; only meaningful with `url`, since an `assetId`'s mirror comes from the catalogue"),
+    },
+    handler: async (args) => {
+      try {
+        const assetId = typeof args.assetId === "string" && args.assetId.trim() !== "" ? args.assetId.trim() : undefined;
+        const url = typeof args.url === "string" && args.url.trim() !== "" ? args.url.trim() : undefined;
+        const fallbackUrl = typeof args.fallbackUrl === "string" && args.fallbackUrl.trim() !== "" ? args.fallbackUrl.trim() : undefined;
+
+        if (assetId !== undefined && url !== undefined) {
+          return failure(
+            "give either `assetId` (an instrument from `list_arrangement_instruments`) or `url` (an SFZ address), not both — taking one and ignoring the other would answer a question the caller did not ask"
+          );
+        }
+        if (assetId === undefined && url === undefined) {
+          return failure(
+            "give either `assetId` (an instrument from `list_arrangement_instruments`, e.g. \"vcsl:Vibraphone-Keyswitch\") or `url` (an SFZ's own address); `list_sample_libraries` does not report SFZ addresses, so it is not where a `url` comes from"
+          );
+        }
+        if (assetId !== undefined && fallbackUrl !== undefined) {
+          return failure(
+            "`fallbackUrl` only means something with `url`: an `assetId` already carries the catalogue's own mirror address, and accepting a second one would make which mirror is used depend on the argument rather than on the manifest"
+          );
+        }
+
+        let target: { assetId: string; sfz: { url: string; fallbackUrl?: string } };
+        if (assetId !== undefined) {
+          const asset = catalogueAssetById(assetId);
+          if (!asset) {
+            const near = nearestCatalogueAssetIds(assetId);
+            return failure(
+              `no instrument "${assetId}" — list_arrangement_instruments lists every playable id` +
+                (near.length ? `; closest: ${near.map((id) => `"${id}"`).join(", ")}` : "")
+            );
+          }
+          if (!asset.sfz?.url) {
+            return failure(
+              `"${assetId}" is a sample rather than an SFZ instrument, so it has no program to read — its own bytes are at ${asset.url ?? "no address the catalogue states"}`
+            );
+          }
+          target = {
+            assetId,
+            sfz: { url: asset.sfz.url, ...(asset.sfz.fallbackUrl === undefined ? {} : { fallbackUrl: asset.sfz.fallbackUrl }) },
+          };
+        } else {
+          if (!/^https?:\/\//i.test(url!)) {
+            return failure(
+              `"${url}" is not an http(s) address — an SFZ address is absolute, and an instrument **name** belongs in \`assetId\` instead`
+            );
+          }
+          target = { assetId: url!, sfz: { url: url!, ...(fallbackUrl === undefined ? {} : { fallbackUrl }) } };
+        }
+
+        const result = await inspectSfzAt(target, {
+          fetchText: async (address: string) => {
+            const response = await fetch(address);
+            if (!response.ok) throw new Error(`HTTP ${response.status} from ${address}`);
+            return response.text();
+          },
+        });
+        /** A file with no regions is reported as such rather than as "no parameters": they are different facts. */
+        return result.regions === 0
+          ? failure(`${result.servedFrom} parsed to no regions, so there are no parameters to report`)
+          : result;
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "set_arrangement_tempo_map",
+    title: "Set an arrangement's tempo changes",
+    description:
+      "The whole map, not one number: points at whole bars, each `{ atBar, bpm }` with `atBar` **0-based**, so a movement can change speed without becoming a separate arrangement. Muse's list carried this as a gap three times — \"arrangement 无 tempo map — 整曲只能一个固定 BPM\" — and she was right about the **surface**. The model field, its projection into the song input and the renderer's bar-by-bar scheduling were built earlier in this work, and no tool could set them. Points are **refused rather than clamped** when a bar or tempo cannot be read. They are sorted by bar (a map whose meaning depends on the order it was written in changes meaning when someone reorders it). An empty list **clears** the map, returning the arrangement to its single `bpm`.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      points: z
+        .array(
+          z.object({
+            atBar: z.number().int().min(0).describe("0-based bar the change takes effect at"),
+            bpm: z.number().min(20).max(300).describe("20…300, the range set_arrangement_tempo enforces"),
+            curve: z.enum(["jump", "linear"]).optional().describe("default jump"),
+          })
+        )
+        .describe("an empty list clears the map and falls back to the arrangement's single tempo"),
+    },
+    handler: (args) => {
+      try {
+        return setMcpArrangementTempoMap(
+          String(args.arrangementId),
+          args.points as readonly { atBar: number; bpm: number; curve?: "jump" | "linear" }[]
+        );
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "add_arrangement_notes",
+    title: "Add many notes to an arrangement track in one call",
+    description:
+      "A whole part at once. Muse measured the alternative: 4176 notes through `add_arrangement_note` meant **4176 tool calls**, a `MaxListenersExceededWarning`. Hours of wall clock for one movement. The loop sat on the caller's side of the wire, where every iteration costs a round trip. The reply carries `requested` beside the arrangement's own `summary`, because a lane of kind `fx` or `folder` **declines notes silently**. Comparing what was asked for with the track's note count afterwards is how that mistake is seen rather than assumed away. **For sustained strings and pads, write legato**: a chord bed reads as connected when each note's `lengthBeats` is a little longer than the gap to the next chord. The releases overlap rather than leaving a seam of silence between two chords. A note that ends exactly where the next begins sounds detached. That is rarely what a string part is for.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      trackId: z.string().describe("the lane to add to; `fx` and `folder` lanes decline notes"),
+      notes: z
+        .array(
+          z.object({
+            pitch: z.number().int().min(0).max(127),
+            startBeats: z.number().min(0),
+            lengthBeats: z.number().min(0),
+            velocity: z.number().min(0).max(127),
+          })
+        )
+        .min(1)
+        .describe("the notes to add, in any order"),
+    },
+    handler: (args) => {
+      try {
+        const notes = args.notes as readonly { pitch: number; startBeats: number; lengthBeats: number; velocity: number }[];
+        const result = addMcpTrackNotes(String(args.arrangementId), String(args.trackId), notes as never);
+        return { ...result, requested: notes.length };
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "list_sample_libraries",
+    title: "List sample libraries, their licences and what is missing",
+    description:
+      "The libraries this project has pinned. **With the licence and the provenance of each**. The question to ask before publishing anything made with them. Attribution-required licences are named in the reply, with the `sourceUrl` (and the `repo`/`pin` for a byte-for-byte reference) to point at. A library with no measured duration says so rather than reporting a zero. Durations are written by the mirroring step after the bytes are downloaded. Until then the honest answer is that nobody measured one.",
+    readOnly: true,
+    inputSchema: {},
+    handler: () => {
+      try {
+        return listSampleLibraries();
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "set_arrangement_bars",
+    title: "Make the arrangement longer",
+    description:
+      "How long the arrangement is, in bars, clamped to 1…128. The length is respected even when it is longer than the notes. The notes are never cut when it is shorter. The arrangement spans whichever reaches further. The summary reports that as `steps`.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      bars: z.number().int().min(1).max(128).describe("a bar is four beats, or sixteen steps"),
+    },
+    handler: (args) => {
+      try {
+        return setMcpArrangementBars(String(args.arrangementId), Number(args.bars));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "set_arrangement_track_gain",
+    title: "Set a track's level",
+    description: "A track's level in dB, where 0 is unity. Clamped to −60…+12; a muted track keeps its level, so unmuting does not undo a decision about loudness.",
+    readOnly: false,
+    inputSchema: { arrangementId: z.string(), trackId: z.string(), gainDb: z.number().min(-60).max(12) },
+    handler: (args) => {
+      try {
+        return setMcpTrackGain(String(args.arrangementId), String(args.trackId), Number(args.gainDb));
       } catch (error) {
         return failure((error as Error).message);
       }
