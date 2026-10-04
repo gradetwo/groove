@@ -28,6 +28,9 @@ import { addMcpTrack, exportMcpArrangementMidi, exportMcpMusicXml, importMcpMusi
 import { situationsArgument, situationsByPart } from "./toolKit";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 
+import { importMcpMidi, importMcpMusicXmlBytes } from "./arrangement";
+import { instrumentsByPart } from "./toolKit";
+
 export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
   {
     name: "describe_arrangement",
@@ -561,6 +564,65 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
       try {
         return importMcpMusicXml(String(args.arrangementId), String(args.xml), {
           ...(args.partIndex === undefined ? {} : { partIndex: args.partIndex as number | "all" }),
+          ...(situationsByPart(args.situations) === undefined ? {} : { situations: situationsByPart(args.situations)! }),
+        });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "import_arrangement_musicxml_file",
+    title: "Import a compressed MusicXML (.mxl)",
+    description:
+      "The same import as `import_arrangement_musicxml`, for a **compressed** `.mxl` file: pass the file's bytes as base64 and the zip is read here, so a caller does not have to unzip it first. A `.mxl` is a zip whose `META-INF/container.xml` names the score, and that is what is followed. A plain `.musicxml` file's bytes are also accepted, and the reply's `format` says which it was. `partIndex` works exactly as in the text tool, `\"all\"` included.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      bytesBase64: z.string().describe("the base64 of the .mxl file's bytes"),
+      partIndex: z
+        .union([z.number().int().min(0), z.literal("all")])
+        .optional()
+        .describe('which part to read; the first unless said otherwise, or "all" for one track per part'),
+      situations: situationsArgument,
+    },
+    handler: async (args) => {
+      try {
+        return await importMcpMusicXmlBytes(String(args.arrangementId), String(args.bytesBase64), {
+          ...(args.partIndex === undefined ? {} : { partIndex: args.partIndex as number | "all" }),
+          ...(situationsByPart(args.situations) === undefined ? {} : { situations: situationsByPart(args.situations)! }),
+        });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "import_arrangement_midi",
+    title: "Import a MIDI file as tracks",
+    description:
+      "Read a Standard MIDI File and **add** one track per MIDI track, named from the file. Unlike a step-grid import, the file's own note lengths and positions are kept: this is the arrangement's model, not a sixteen-step pattern. A format-0 file that puts several instruments on one track is split by channel. Use `partIndex` to take one part, or `\"all\"` for every part. The reply names the tempo the file states so the arrangement can be set to it. **`instruments` is how a part sounds a real recording instead of a built-in synthesiser**. The file itself usually cannot say (measured: the owner's own project carries no program-change events at all). Name each part's instrument and the created track plays that catalogue recording.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      bytesBase64: z.string().describe("the .mid file's bytes, base64-encoded"),
+      partIndex: z
+        .union([z.number().int().min(0), z.literal("all")])
+        .optional()
+        .describe('which part to read; the first unless said otherwise, or "all" for one track per part'),
+      instruments: z
+        .array(z.object({ partIndex: z.number().int().min(0), instrument: z.string() }))
+        .optional()
+        .describe(
+          'the instrument each part is, by part index: `[{partIndex:1, instrument:"strings_lead"}]`. The names are the genre instrument names the recordings are keyed by — strings_lead, piano_lead, walking_upright, flute_lead, trumpet_lead and the rest that list_arrangement_instruments names. A name no recording or built-in voice serves is reported in `problems` and the track keeps its synthesiser'
+        ),
+      situations: situationsArgument,
+    },
+    handler: (args) => {
+      try {
+        return importMcpMidi(String(args.arrangementId), String(args.bytesBase64), {
+          ...(args.partIndex === undefined ? {} : { partIndex: args.partIndex as number | "all" }),
+          ...(instrumentsByPart(args.instruments) === undefined ? {} : { instruments: instrumentsByPart(args.instruments)! }),
           ...(situationsByPart(args.situations) === undefined ? {} : { situations: situationsByPart(args.situations)! }),
         });
       } catch (error) {
