@@ -1097,7 +1097,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "import_logic_project",
     title: "Import a Logic Pro project as tracks (MIDI only)",
     description:
-      "Read a **Logic Pro project** and **add** one track per MIDI region, named from the region. A `.logicx` is a directory, so pass the two files that carry the music: `projectDataBase64` (`Alternatives/NNN/ProjectData`) and `metaDataBase64` (`Alternatives/NNN/MetaData.plist`); `Media/` audio is not needed and is not accepted. **Phase 1 is MIDI only.** Audio tracks, AU plugin chains and automation have no counterpart in this model and each is named in `problems` rather than dropped quietly, and so is the one reading this version does not yet give reliably — where a region sits on the timeline. Use `partIndex` to take one part, or `\"all\"` for every part. The reply names the project's tempo and meter so the arrangement can be set from them.",
+      "Read a **Logic Pro project** and **add** one track per MIDI region, named from the region. A `.logicx` is a directory. Pass the two files that carry the music: `projectDataBase64` (`Alternatives/NNN/ProjectData`) and `metaDataBase64` (`Alternatives/NNN/MetaData.plist`). `Media/` audio is not needed and is not accepted. **Phase 1 is MIDI only.** Audio tracks, AU plugin chains and automation have no counterpart in this model and each is named in `problems` rather than dropped quietly. So is the one reading this version does not yet give reliably. Where a region sits on the timeline. Use `partIndex` to take one part, or `\"all\"` for every part. The reply names the project's tempo and meter so the arrangement can be set from them.",
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
