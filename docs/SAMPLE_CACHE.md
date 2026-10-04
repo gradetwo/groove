@@ -40,7 +40,7 @@ fetch tap : `node --import` 包住 `globalThis.fetch`，逐条记 URL / 状态 /
 | 层 | `render_song` | `render_arrangement` |
 | :--- | :--- | :--- |
 | 取模型 | `flattenMcpSong(songId)` → `flattened.pattern`（`mcp/song.ts:584`） | `flattenMcpArrangement(id, range)` → `flattened.pattern`（`mcp/arrangement.ts:1270`） |
-| 渲染入口 | `renderAudio(pattern, {...})`（`mcp/registry.ts:3695`） | `renderAudio(pattern, {...})`（`mcp/registry.ts:532`） |
+| 渲染入口 | `renderAudio(pattern, {...})`（`mcp/registryRender.ts`） | `renderAudio(pattern, {...})`（`mcp/registryArrangement.ts`） |
 | Node 分支 | `renderPatternHeadless`（`mcp/render/worker.ts:676`） | **同一个** `renderPatternHeadless`（`mcp/render/worker.ts:676`） |
 | 离线渲染 | `renderPatternOffline`（`src/audio/WavExporter.ts:698`） | **同一个** `renderPatternOffline` |
 

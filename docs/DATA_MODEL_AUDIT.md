@@ -16,7 +16,7 @@
 | **时间** | **`steps` 数组，固定 16 分栅格** ✗ | **`startBeats`，节拍单位，注释明写 "fractional is allowed"** ✓✓ |
 | **时值** | **`gate`，上限 `MAX_NOTE_GATE_STEPS = 16`（一小节）** ✗ | **`lengthBeats: positive()`，无上界** ✓✓ |
 | **歌词** | **无** ✗ | **⭐ "A lyric is written on the note it is sung on, not in an array beside a grid"** ✓✓ |
-| **MCP 面** | `set_arrangement_track_steps`（`mcp/registry.ts:1048`） | **`add_arrangement_note`（`:1067`）、`add_arrangement_notes`（`:927`）、`remove_…`（`:1095`）、`move_…`（`:1114`）** ✓ |
+| **MCP 面** | `set_arrangement_track_steps`（`mcp/registryArrangement.ts`） | **`add_arrangement_note`（`:1067`）、`add_arrangement_notes`（`:927`）、`remove_…`（`:1095`）、`move_…`（`:1114`）** ✓ |
 
 **⇒ 意见里要的"音节时值、附点、连音、跨小节延音、歌词轨高阶抽象"，在编排模型里**都是已有的** ✓✓**——**而意见描述的症状，是模式模型的特征 ✓**。**这本身就是一条发现：能力在，但**没被找到** ✓**（可发现性问题）。
 
@@ -32,7 +32,7 @@
 
 * **定义**：`src/types/genre.ts:47` `export const MAX_NOTE_GATE_STEPS = 16;` ✓；**其含义由 `genreExpression.ts:40` 自己写出**："**Notes may last up to a bar (``MAX_NOTE_GATE_STEPS``): a pad or a whole-bar chord…**" ✓；
 * **使用者至少 6 处**：`genreExpression.ts`（`:3542`／`:3554`／`:3571`）、`rollModel.ts`（`:180`／`:282`／`:702`／`:720`／`:753`／`:918`／`:1188`）、`AudioEngine.ts:2139`、`MidiExporter.ts:167`、`AbletonExporter.ts:203`、`SequencerUrlShare.ts:299` ✓；
-* **编排侧无此上限** ✓：**`lengthBeats` 只要求正数**（`mcp/registry.ts:1067` 起的 schema ✓）。
+* **编排侧无此上限** ✓：**`lengthBeats` 只要求正数**（`mcp/registryArrangement.ts` 起的 schema ✓）。
 
 ## §3 "`pitch` 与 `pitches` 双轨是历史包袱" —— **成立，但包袱是两个字段**并存**，不是某个字段** ✓
 

@@ -568,7 +568,7 @@ This is the same root as the dev-branch report's claim 6 ("destructive edit or m
 
 **And the fix needs no schema change**, which is the part worth noticing:
 
-* `ClipSlot` is already `"A" | "B" | "C" | "D"` and `set_clip` already accepts all four (`mcp/registry.ts:702`), so there are **two free slots**
+* `ClipSlot` is already `"A" | "B" | "C" | "D"` and `set_clip` already accepts all four (`mcp/registryArrangement.ts`), so there are **two free slots**
   in the ordinary case;
 * the `.groove` format already carries the slots, and this project's editor gained all four in workstream 3a of this plan;
 * so **make-unique is an allocation plus a repoint**: copy the clip into a free slot, point **that one section** at it, and leave every other

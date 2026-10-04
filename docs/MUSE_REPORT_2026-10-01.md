@@ -511,7 +511,7 @@ kill 浏览器出现后 8s（导航中）：失败  墙钟 9.6 s
 
 报告 P1「GS-1 逐参数写入未暴露」**成立**，而且已有裁定（`docs/GS1_PATCH_SURFACE.md` §7「仍然不做的：逐参数编辑器」）。本次把它从"概述"变成**清单**，落在同一文档新增的 **§8**，全文 224 行逐条可查。要点与可复现命令：
 
-* **工具今天的音色入参只有一个** `patch`：一个 `gs1.1.` share code（或 `null` 清除）；`genreId`/`pattern`/`track` 与音色无关（`mcp/registry.ts:1284-1295`）。
+* **工具今天的音色入参只有一个** `patch`：一个 `gs1.1.` share code（或 `null` 清除）；`genreId`/`pattern`/`track` 与音色无关（`mcp/registryArrangement.ts`）。
 * **一个 code 能装 224 个参数**（`DEFAULT_PARAMS`，`gs1PatchCode.ts:76` 按 id 升序），外加路由 `r`；其中**只有 84 个**在 vendored 表里有标签 + 声明范围（`PARAM_SPECS`），另外 **140 个**只有枚举名与默认值（开关、波形/类型、LFO 目标、`TEMPO`、FX 链序、6 槽 graph、4 槽调制矩阵、过采样覆盖）。
 * **缺口清单**：逐参数写入 **224 个里 0 个可单独写**；调制路由 **0 条可单独写**；**19 个具名预设**（`GS1_PATCHES`）**0 个可按名写**（只能间接经 `instrument` 名映射）。
 * **引擎侧本来就有** `Gs1Host.setParam/setPatch/setModRoute`（`Gs1Host.ts:184/188/196`）→ 缺的是**暴露**，不是能力。

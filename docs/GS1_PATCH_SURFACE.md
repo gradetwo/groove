@@ -95,7 +95,7 @@
 
 **一句话（写于覆盖层落地之前）**：它接受**一个不透明的 `gs1.1.` share code**（或 `null` 清除），**当时不接受任何单个参数** ✗✓。**这条已被 §10 取代** ✓✓：`apply_gs1_patch` 现在另有 `parameters` 与 `routes`（存在 `SequencerTrack.gs1PatchOverrides` 上，见 §10），所以"逐参数写入未暴露"这条报告**已关闭**；本节把"当时到底有多少、是哪些"变成清单，保留为**当时的**逐条记录。
 
-**当时的入参就这些**（今天这个工具在 `mcp/registry.ts:1784-1817` ✓；`parameters`／`routes` 是 §10 加的）：
+**当时的入参就这些**（今天这个工具在 `mcp/registryPattern.ts` ✓；`parameters`／`routes` 是 §10 加的）：
 
 | 入参 | 是什么 | 与音色参数的关系 |
 | --- | --- | --- |

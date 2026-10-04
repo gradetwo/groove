@@ -10,7 +10,7 @@
 
 ## §1 结论先行：**那条建议已经实现了** ✗✓✓
 
-**`render_preview_clip`（`mcp/registry.ts:2270`）就是它** ✓，**而且比建议更全**：
+**`render_preview_clip`（`mcp/registryGs1.ts`）就是它** ✓，**而且比建议更全**：
 
 | 参数 | 它自己的说明 |
 | --- | --- |
@@ -32,13 +32,13 @@
 | **某一节／某几小节** | **`render_preview_clip`** ✓（`sectionId` ＋ `bars` ✓） | **⚠️ 这一格已过时（更正 2026-10-03，见 §4）** ✓：循环框**当时**不接音频 ✗——`src/data/arrangementLoop.ts` ✓ 与 `LoopBraceV2`（`:441` ✓）只有**模型与 UI** ✓，**`ArrangementViewV2.tsx:25-29` 当时自己写着 "the loop brace is a ruler-level loop that **no audio path reads**"** ✓✓；**现在**视图把区间按 **步**交给 `AudioEngine.setLoopRange` ✓（`ArrangementViewV2.tsx` 的 `transportLoopRange` ＋ `play()` ✓，换算在 `features/arrangement/loopSteps.ts` ✓），**走带确实在框内 wrap** ✓ |
 | **单轨／多轨** | **`render_arrangement_stems`**（`:3234` ✓，分轨导出 ✓） | **每轨 solo／mute** ✓：`track-solo-${id}`／`track-mute-${id}`（`TrackHeaderV2.tsx:198`／`:211` ✓），**而它的注释写着"solo overrides mute, and it is not cosmetic"** ✓ |
 | **低采样率快速版** | ✓ `sampleRate: 8000` ✓（`render_arrangement:408` ✓、stems ✓） | —（**实时播放，不需要渲染** ✓） |
-| **arrangement 的任意小节区间** | **✓ 有** ✓✓ —— `render_arrangement`（`mcp/registry.ts:395` ✓）现在带 **`startBar`／`endBar`**（`:435-441` ✓），切点在 `flattenMcpArrangement(id, range?)`（`mcp/arrangement.ts:865` ✓），`c07a6d8`／`e8074ac` ✓（**原先只有** `arrangementId`／`format`／`bitrateKbps`／重复次数／`sampleRate`／`channels` ✗） | **✓ 有**（loop range ✓） |
+| **arrangement 的任意小节区间** | **✓ 有** ✓✓ —— `render_arrangement`（`None` ✓）现在带 **`startBar`／`endBar`**（`:435-441` ✓），切点在 `flattenMcpArrangement(id, range?)`（`mcp/arrangement.ts:865` ✓），`c07a6d8`／`e8074ac` ✓（**原先只有** `arrangementId`／`format`／`bitrateKbps`／重复次数／`sampleRate`／`channels` ✗） | **✓ 有**（loop range ✓） |
 | **⭐ 改前／改后对比（A/B）** | **✗ 没有** | **✗ 没有** |
 
 ## §3 因此真正缺的两件
 
 1. **⭐ A/B 两边都没有** ✗✓✓，**而业主明确说这件最重要** ✓。**项目里的 take 是**录音**（`takePlanning.ts:24 PlannedTake` ✓，注释还强调"a recording is not a track kind" ✓）**——**不是"某次编辑前后"的对比** ✗**。**今天"改前"只能靠人记住，或者自己存两个文件去比 ✓**；
-2. ~~**`render_arrangement` 没有小节范围**~~ ✗✓ —— **这条已经解决** ✓✓：`render_arrangement` 现在带 `startBar`／`endBar`（`mcp/registry.ts:435-441` ✓），由 `flattenMcpArrangement(id, range?)` 在 flatten 那一处切（`c07a6d8`／`e8074ac` ✓，见 §6）。
+2. ~~**`render_arrangement` 没有小节范围**~~ ✗✓ —— **这条已经解决** ✓✓：`render_arrangement` 现在带 `startBar`／`endBar`（`None` ✓），由 `flattenMcpArrangement(id, range?)` 在 flatten 那一处切（`c07a6d8`／`e8074ac` ✓，见 §6）。
 
 ## §4 一处值得记下的**不对称** ✓✓
 
@@ -56,13 +56,13 @@
 
 ## §6 `render_arrangement` 加范围的**实测尺寸**（2026-10-01）——**该范围已实现** ✓✓
 
-**⚠️ 落地（2026-10-02）** ✓✓：本节量出的落点就是最终落点——参数加在 `render_arrangement`（`mcp/registry.ts:435-441` ✓），切点交给 `flattenMcpArrangement`（`mcp/arrangement.ts:865` ✓），提交 `c07a6d8`／`e8074ac` ✓。下面"量到的三件事"与判据保留为当时的读数。
+**⚠️ 落地（2026-10-02）** ✓✓：本节量出的落点就是最终落点——参数加在 `render_arrangement`（`None` ✓），切点交给 `flattenMcpArrangement`（`mcp/arrangement.ts:865` ✓），提交 `c07a6d8`／`e8074ac` ✓。下面"量到的三件事"与判据保留为当时的读数。
 
 **结论：不是小改 ✓，而且实现必须选对地方 ✓✓。**
 
 **量到的三件事** ✓：
 
-1. **`render_arrangement` 的 `bars` 是**重复遍数**，不是范围** ✗：`mcp/registry.ts:421` 把它读成 `passes = Math.max(1, Math.min(64, args.bars ?? 1))` ✓，**然后交给 `renderAudio(…, { bars: passes })`** ✓——**所以它说的是"这个编排放几遍"，不是"放哪几小节"** ✓；
+1. **`render_arrangement` 的 `bars` 是**重复遍数**，不是范围** ✗：`None` 把它读成 `passes = Math.max(1, Math.min(64, args.bars ?? 1))` ✓，**然后交给 `renderAudio(…, { bars: passes })`** ✓——**所以它说的是"这个编排放几遍"，不是"放哪几小节"** ✓；
 2. **`flattenMcpArrangement(arrangementId)` 不接范围** ✗（`mcp/arrangement.ts:811` ✓，**它只按音符建步**：`:133` `stepsFromNotes(notes, Math.max(16, …))` ✓）；
 3. **⭐ 而范围的**词汇**已经在了，只是用途不同** ✓✓：`mcp/arrangement.ts:329-341` 的 `startBar`／`endBar` → `{ region: { startBar, endBar, takeId } }` ✓——**那是"把某个 take 指派到某一段"** ✓，**不是"渲染某一段"** ✗。**词有了，管子没接 ✓**。
 
