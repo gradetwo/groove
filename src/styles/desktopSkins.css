@@ -645,7 +645,7 @@
 /*
  * The literal map: the desktop's hardcoded hexes, by role.
  *
- * 604 rules, generated from the literals the source actually uses. Because each rule names a
+ * 605 rules, generated from the literals the source actually uses. Because each rule names a
  * **token**, the same rules serve all six skins — the skin decides what the token resolves to. The few
  * near-duplicate grounds and inks in the default theme therefore converge onto one value each, which is
  * what "the same palette on both surfaces" means in practice.
@@ -932,6 +932,7 @@
 [class~="bg-[#131624]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#1c2236]"] { background-color: rgb(var(--d-surface)); }
 [class~="hover:bg-[#252d47]"]:hover { background-color: rgb(var(--d-surface)); }
+[class~="bg-[#0b0e16]"] { background-color: rgb(var(--d-panel2)); }
 [class~="hover:bg-[#ffc95c]"]:hover { background-color: rgb(var(--d-track-snare)); }
 [class~="hover:bg-[#181d28]"]:hover { background-color: rgb(var(--d-surface)); }
 [class~="hover:bg-[#181d28]/60"]:hover { background-color: rgb(var(--d-surface) / 0.60); }

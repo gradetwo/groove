@@ -5,6 +5,25 @@
 
 **在线体验：<https://groove.wangda.today/>** · [English](README.md)
 
+## 快速开始
+
+**环境要求** —— Node.js **22.22.2 或更高**（`^22.22.2 || ^24.15.0 || >=26.0.0`，见 `package.json` 的
+`engines` 与 `.nvmrc`）；`.npmrc` 设了 `engine-strict`，所以 `npm ci` 在版本不符时会**直接拒绝并给出一句
+清楚的提示**，而不是抛一堆失败。Node **只用于构建**：运行应用只需要浏览器 —— 无后端、无数据库、无需 API key。
+
+```bash
+npm install          # 只需一次
+npm run dev          # http://localhost:3000
+```
+
+```bash
+npm run build        # 静态产物在 dist/
+npm run preview      # 本地预览该产物
+```
+
+质量门：`npm test`（Vitest）与 `npm run verify`（改动必须过的门）。端到端测试首次需要装浏览器：
+`npx playwright install --with-deps chromium firefox webkit`。
+
 <p align="center">
   <img src="docs/screenshots/pc-studio.jpg" alt="工作台：8 轨步进音序器，左侧是该曲风的中英双语制作说明" width="880">
 </p>

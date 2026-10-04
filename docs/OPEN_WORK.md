@@ -7846,10 +7846,18 @@ problems: **[]** ✓
    ① **`sfzTrigger` 的上游语料抓取** ✗：`karoryfer-black-and-blue-basses` 的声明文本文件**取不到** ✓
       ⇒ 2026-10-05 00:22 的全量**恰好通过** ✓ ⇒ 属**间歇性**（网络／上游态 ✓）
       ⚠️ 不要把它记成"已修" ✗ —— 它随时可能再红 ✓；真相在**上游地址／网络** ✓，不在本仓 ✓
-   ② `nightly` 的 **`probe:latency:gate`** 步 ✓：需**定时触发**才能实跑 ✓（或业主允许手动 `workflow_dispatch` ✓）
+   ② `nightly` 的两条门 ✓：**`probe:latency:gate`** ✓ 与 **`probe:render-cpu:gate`** ✓ ——
+      ⭐ **2026-10-05 06:24 已手动实跑通过** ✓（业主批准 ✓，`gh workflow run … -f nightly=true` ✓、
+      run **`37239893482`** ✓，两步均 `completed／success` ✓）⇒ **不再是"从未跑过"** ✗
+      ⚠️ 仅剩 **读数数字待补** ✓（run 未整体结束时 `--log` 不可读 ✗，不得拿本机旧数冒名 ✗）
    ③ P2-⑥ 六条 ✓：需 **Mac**（Logic 侧 ✓）
    ④ P0-⑧ `next` 分支处置 ✓：**等业主 (a)/(b)/(c)** ✓（`archive/next` 已保底 ✓）
    ⑤ P3-⑦ wip 去向 ✓：已 tag ＋ bundle 保全 ✓，**等决定** ✓
+   ⑥ ⭐ **中文 README 缺一节** ✗（2026-10-05 06:58 量到 ✓）：英文 **13** 节 ✓ vs 中文 **12** 节 ✓ ——
+      英文有 `## Credits` ✓ 与 `## License` ✓，中文只有 `## 许可` ✓，**没有"致谢/Credits"** ✗
+      ⇒ 属**双语文档不同步** ✓（**既有**问题 ✗，非本次引入 ✓）；`check_docs.mjs` **不管** README 配对 ✗
+      ⇒ ⚠️ 处置待业主一句话 ✓（补中文 `## 致谢` ✓ ／ 或保持现状 ✓）；
+        ⭐ 若要立"两份标题集合一致"的判据 ⇒ **必须先补齐再立** ✓（顺序不能反 ✗），我在本轮**未擅自补** ✗
 ```
 
 ## 三百三十九、📐 **重复实现第一次有了"可复算 ＋ 能红"的量**（2026-10-05 00:45 ✓）
@@ -8474,7 +8482,12 @@ problems: **[]** ✓
 **结果 ✓（步骤级 ✓）**：`Unit Tests & Coverage` **success** ✓｜`Production Build` **success** ✓｜
    `Loudness Baseline Freshness` **success** ✓｜⭐ **`Full Browser & Device Matrix` success** ✓｜
    ⭐⭐ **`Interaction latency budget` `completed／success`** ✓｜⭐⭐ **`Render CPU budget` `completed／success`** ✓
-**⚠️ 读数待补 ✓**：run 未整体结束时 `--log` 不可读 ✗ ⇒ **结论已定** ✓、**数字待补** ✓（不拿本机旧数冒名 ✗）
+**⭐ 读数已补 ✓（run 结束后取 ✓，2026-10-05 07:08 ✓）**：
+   · **延迟门** ✓：`baseline (playing, no input)` **1502.5 / 1700 ms** ✓｜`GS-1 off` **25.6** ✓／`on` **27.4** ✓（限 150 ✓）｜
+     音色 `warm_pad` **81.6** ✓／`saw_lead` **51.4** ✓／`rhodes_ep` **46.1** ✓／`reese_bass` **47.1** ✓（限 400 ✓）｜
+     `toggle one step` **39.3** ✓（限 250 ✓）｜**`longTasks` 全 0** ✓ ⇒ ⭐ `✅ every action is inside its budget` ✓
+   · **CPU 门** ✓：`percent` **105** ✓／`worst` **108** ✓／`over: []` ✓／`ok: true` ✓ ⇒ ⭐ `✅ every scenario is inside the CPU ceiling` ✓
+   ⇒ ⭐ **CI 侧（1502.5 ms／105–108%）与本机同量级** ✓ ⇒ 两条门不只是"跑过" ✓，而是**有可比较的真实读数** ✓
 **⭐ 意义 ✓**：响应与 CPU 从"**本机跑过一次**" ✗ ⇒ "**有会跑的门，且已在真实 CI 实跑通过**" ✓
 
 ## 三百五十七、📐 **死代码度量落地：范围枚举成清单，判据只许下降**（2026-10-05 06:39 ✓）
@@ -8490,3 +8503,42 @@ problems: **[]** ✓
    ＋ ⭐ **在 CI 口径内 ✓**：`vitest` 的 `include` ＝ `src/**/*.{test,spec}.{ts,tsx}` ✓ ⇒ 该判据**会被 CI 跑到** ✓
 **⚠️ 性质重申 ✓**：标识符计数 ⇒ **下界** ✓；看不见动态路径 ✓ ⇒ **只是筛查表** ✗；
    删除须**逐个核对** ✓（**6 处已读证 ✓**：残渣 2 ✗／真缺口 4 ✓，见 `§359`／`§361`／`§362`／`§364` ✓）
+
+## 三百六十六、🚀 **业主任务：README 与站内都加"显著位置"的 Quick Start（Requirements ＋ 编译/运行命令）**（2026-10-05 06:56 ✓）
+
+```
+**业主要求（原话 ✓）**：「readme 和网站里头都应该在**前面重要显著的位置**增加 Quick Start，
+   包含：**编译运行的 Requirements** ✓、**编译、运行的命令** ✓」
+**侦察 ✓**：内容**本来就有** ✓（`README.md` 第 53 行 `## Requirements` ✓、第 64 行 `## Run it` ✓）——
+   问题是**位置靠后** ✗（前面压着六皮肤 ✓／更多截图 ✓／功能清单 ≈ 48 行 ✓）⇒ 等价于没有 ✓；
+   「网站里头」＝ **应用内 Help Center** ✓（已有 `quickstart` 分区 ✓ 且是第一个 tab ✓）—— 那里只讲"怎么用" ✗
+**① README ×2 ✓（英 ＋ 中同步 ✓）**：插在**第 6 行"在线体验"之后** ⇒ 标题**落在第 8 行** ✓（**显著靠前 ✓**）
+   · **Requirements** ✓：Node **`^22.22.2 || ^24.15.0 || >=26.0.0`** ✓、`.nvmrc` ✓、`.npmrc` 的 `engine-strict`
+     ⇒ `npm ci` 直接拒绝低版本并给一句清楚提示 ✓、**Node 只用于构建；运行只需浏览器** ✓（无后端／无数据库／无 API key ✓）
+   · **命令** ✓：`npm install` ✓／`npm run dev` → `:3000` ✓／`npm run build` → `dist/` ✓／`npm run preview` ✓
+   · **质量门** ✓：`npm test` ✓／`npm run verify` ✓／e2e 首次 `npx playwright install --with-deps …` ✓
+   · ⚠️ 原有 `## Requirements`／`## Run it` **保留** ✓（含更细解释：jsdom 30／undici 8 与 Node 20 的报错 ✓）
+**② 应用内 ✓**：`quickstart` 分区（hero 之后 ✓）加 **"自己跑起来（从源码构建）"** ✓，
+   ⭐ **抽成独立组件** `src/components/help/QuickStartRunItYourselfCard.tsx`（37 行 ✓，**见 `§367` 的原因** ✗）
+**③ 判据 ×2 ✓，都弄红过 ✓**：`readmeQuickStart.test.ts` ✓（标题须在前 **40** 行 ✓ ∧ 必含 Node 版本 ＋ 四条命令 ✓ ∧ 自检 ✓；
+   弄红：改标题 ⇒ **3 条断言全红** ✓）｜`helpQuickStartCard.test.ts` ✓（分区 ＋ 卡片必含同样五项 ✓ ∧ **双语** ✓ ∧ 自检 ✓；
+   弄红：删 `npm run preview` 一行 ⇒ 红 ✓）
+**④ ⭐ 第 ⑨ 项实测 ✓**：改 `src/components/**` 标记 ⇒ `node scripts/desktop_skins.mjs` ⇒ `check:skins` ✓，
+   输出 **"6 palettes, 1704 lines"** ✓（改动前 **1703** ✓ ⇒ 差 1 行 ✓ —— 正是早前连红 4 笔那个坑的成因 ✓）
+
+## 三百六十七、📊 **CI 真实读数落册 ＋ 一条自伤教训（第 75 条 ✓）**（2026-10-05 07:11 ✓）
+
+```
+**A. 两条门的 CI 读数 ✓（run `37239893482` ✓，`completed／success` ✓）**：见 `§356` 的补充 ✓ ——
+   延迟门 `1502.5／1700 ms` ✓、GS-1 `25.6／27.4` ✓、音色 `46.1–81.6` ✓、开关 `39.3` ✓、**`longTasks` 全 0** ✓；
+   CPU 门 `105／108%`（限 125 ✓）、`over: []` ✓ ⇒ ⭐ 两条门**不再是"跑过就算"** ✓，而是**有可比读数** ✓
+**B. ⭐ 自伤与修复（第 75 条 ✓）**：我把卡片**直接写进** `HelpCenterModal.tsx` ✗ ——
+   那是**被 `fileSizeBudget` 钉住 1687 行**的文件 ✓ ⇒ 撑到 **1688** ✓ ⇒ 判据红 ✗（`1688 > 1687` ✓）
+   ⚠️ **为什么我上一轮没发现** ✗：我只跑了 `tsc`／`lint`／help／新判据／`skins` ✗ ⇒ **漏了从尺寸推导的判据** ✗
+   ⭐ **是全量单测（`bash-639` ✓）把它抓出来的** ✓（`1 failed | 624 passed` ✓）⇒ 这条铁律又一次证明必要 ✓
+   ⭐ **修法 ✓**：卡片**抽成独立组件** ✓（`QuickStartRunItYourselfCard.tsx` ✓）⇒ 钉住的文件回到 **1687** ✓
+     ＋ 顺带删掉该文件里**一处冗余双空行**（第 155/156 行 ✓）
+   ✅ **复跑全绿 ✓**：`tsc` ✓／`lint` ✓／**六项推导判据 23/23** ✓／`check:skins` ✓／docs `0/0` ✓
+   📌 **第 75 条 ✓**：**改动被钉住（或计入桶）的文件，必须显式跑从那项推导的判据** ✗ ——
+     `fileSizeBudget` ✓／`duplicationBudget` ✓／`deadExportsBudget` ✓／`check:skins` ✓ 一个都不能省 ✓
+```

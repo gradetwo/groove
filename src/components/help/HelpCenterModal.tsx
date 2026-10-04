@@ -49,6 +49,7 @@ import {
 } from "lucide-react";
 import { UI_MANUAL_ITEMS, UI_MANUAL_CATEGORIES } from "../../data/uiManualItems";
 import type { NavTab } from "../Header";
+import { QuickStartRunItYourselfCard } from "./QuickStartRunItYourselfCard";
 
 export interface HelpCenterModalProps {
   isOpen: boolean;
@@ -151,7 +152,6 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
       setActiveCategory(initialCategory);
     }
   }, [initialCategory, isOpen]);
-
 
   // Tutorial progression state for interactive step-throughs
   const [tutorialStep, setTutorialStep] = useState<Record<string, number>>({
@@ -593,7 +593,7 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
                         </button>
                       </div>
                     </div>
-
+                    <QuickStartRunItYourselfCard isZh={isZh} />
                     {onOpenOnboarding && (
                       <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-accent/20 via-[#191d2e] to-[#101322] border-2 border-accent/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-[0_0_20px_rgba(245,183,61,0.15)]">
                         <div className="space-y-1">

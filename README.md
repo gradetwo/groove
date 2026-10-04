@@ -5,6 +5,26 @@ with a short production note and an eight-track pattern you can play, edit and e
 
 **Live demo: <https://groove.wangda.today/>** · [中文说明](README.zh-CN.md)
 
+## Quick Start
+
+**Requirements** — Node.js **22.22.2 or newer** (`^22.22.2 || ^24.15.0 || >=26.0.0`; see `engines` in
+`package.json` and `.nvmrc`). `.npmrc` sets `engine-strict`, so `npm ci` refuses an unsupported Node with one
+clear message instead of a wall of failures. Node is needed only to *build* the app: running it needs nothing
+but a browser — no backend, no database, no API key.
+
+```bash
+npm install          # once
+npm run dev          # http://localhost:3000
+```
+
+```bash
+npm run build        # static output in dist/
+npm run preview      # serve that build locally
+```
+
+Gates: `npm test` (Vitest) and `npm run verify` (the gate a change has to pass). The end-to-end tests need the
+browsers once: `npx playwright install --with-deps chromium firefox webkit`.
+
 <p align="center">
   <img src="docs/screenshots/pc-studio.jpg" alt="The studio: eight tracks, a step sequencer, and a bilingual production note for the genre" width="880">
 </p>
