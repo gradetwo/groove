@@ -2,7 +2,7 @@
  * 📐 **The duplicated-logic budget only moves down.**
  *
  * Measured 2026-10-05 01:11 over `mcp/**` and `src/**` (excluding the data tables, whose repetition is
- * structural): **45** maximal blocks of twelve or more identical consecutive lines that are not pure
+ * structural): **38** maximal blocks of twelve or more identical consecutive lines that are not pure
  * imports, **21** of them inside one file — which is where a missing function hides — **24** across
  * files, longest **21** lines, and **none** at twenty-four lines or more: the last of those was a single
  * twenty-five line object literal typed once per branch of a ternary, now one `base` object spread into
@@ -19,6 +19,11 @@
  * several times; this one marks the positions it has already accounted for, so it counts distinct
  * blocks. The drop from 291 to 47 is a change of definition, **not** a repair, and the ranking of the
  * worst offenders is identical under both.
+ *
+ * 2026-10-05 07:27 — the masterclass labs had copied a thirty-six-line transport row each, differing
+ * only in the slider range and two labels; extracting `MasterclassTransport` took the reading from
+ * 45/21/24/21/0 to 38/21/17/21/0 and the caps came down with it, which is the rule: they only move
+ * down, so a later regression to forty-five blocks fails here.
  */
 import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
@@ -27,7 +32,7 @@ type Measure = {
   blocks: number; sameFile: number; crossFile: number; longest: number; atLeast24: number; top: string[];
 };
 
-const CAP: Measure = { blocks: 45, sameFile: 21, crossFile: 24, longest: 21, atLeast24: 0, top: [] };
+const CAP: Measure = { blocks: 38, sameFile: 21, crossFile: 17, longest: 21, atLeast24: 0, top: [] };
 
 function measure(): Measure {
   const out = execFileSync("node", ["scripts/check_duplication.mjs"], { encoding: "utf8" });

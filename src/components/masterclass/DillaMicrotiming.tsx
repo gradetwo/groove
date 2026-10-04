@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { MasterclassAudioEngine, TapAccuracyResult } from "../../audio/MasterclassAudioEngine";
-import { Play, Square, Zap, Sliders, Sparkles, MoveHorizontal, Disc } from "lucide-react";
+import {Zap, Sliders, Sparkles, MoveHorizontal, Disc} from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
+import { MasterclassTransport } from "./MasterclassTransport";
 
 interface DillaMicrotimingProps {
   engine: MasterclassAudioEngine;
@@ -157,42 +158,16 @@ export const DillaMicrotiming: React.FC<DillaMicrotimingProps> = ({
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-xs font-mono text-text-sub">
-            <span>BPM</span>
-            <input
-              type="range"
-              min={70}
-              max={110}
-              value={bpm}
-              onChange={(e) => {
-                const b = Number(e.target.value);
-                onBpmChange(b);
-              }}
-              className="w-20 accent-accent"
-            />
-            <span className="w-8 text-right font-bold text-accent">{bpm}</span>
-          </div>
-
-          <button
-            onClick={handleTogglePlay}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all shadow-md ${
-              isPlaying
-                ? "bg-red-500/20 text-red-400 border border-red-500/40 hover:bg-red-500/30"
-                : "bg-accent text-black hover:bg-[#ffc65c] shadow-[0_0_12px_rgba(245,183,61,0.3)]"
-            }`}
-          >
-            {isPlaying ? (
-              <>
-                <Square className="w-3.5 h-3.5 fill-current" />
-                <span>{t("dilla_stop")}</span>
-              </>
-            ) : (
-              <>
-                <Play className="w-3.5 h-3.5 fill-current" />
-                <span>{t("dilla_play")}</span>
-              </>
-            )}
-          </button>
+          <MasterclassTransport
+            bpm={bpm}
+            min={70}
+            max={110}
+            onBpmChange={onBpmChange}
+            isPlaying={isPlaying}
+            onTogglePlay={handleTogglePlay}
+            stopLabel={t("dilla_stop")}
+            playLabel={t("dilla_play")}
+          />
         </div>
       </div>
 

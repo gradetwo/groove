@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { MasterclassAudioEngine, TapAccuracyResult } from "../../audio/MasterclassAudioEngine";
-import { Play, Square, Zap, Sparkles, Footprints, MoveRight } from "lucide-react";
+import {Zap, Sparkles, Footprints, MoveRight} from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
+import { MasterclassTransport } from "./MasterclassTransport";
 
 interface BalkanOddMetersProps {
   engine: MasterclassAudioEngine;
@@ -188,42 +189,16 @@ export const BalkanOddMeters: React.FC<BalkanOddMetersProps> = ({
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-xs font-mono text-text-sub">
-            <span>BPM</span>
-            <input
-              type="range"
-              min={90}
-              max={180}
-              value={bpm}
-              onChange={(e) => {
-                const b = Number(e.target.value);
-                onBpmChange(b);
-              }}
-              className="w-20 accent-accent"
-            />
-            <span className="w-8 text-right font-bold text-accent">{bpm}</span>
-          </div>
-
-          <button
-            onClick={handleTogglePlay}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all shadow-md ${
-              isPlaying
-                ? "bg-red-500/20 text-red-400 border border-red-500/40 hover:bg-red-500/30"
-                : "bg-accent text-black hover:bg-[#ffc65c] shadow-[0_0_12px_rgba(245,183,61,0.3)]"
-            }`}
-          >
-            {isPlaying ? (
-              <>
-                <Square className="w-3.5 h-3.5 fill-current" />
-                <span>{t("balkan_stop")}</span>
-              </>
-            ) : (
-              <>
-                <Play className="w-3.5 h-3.5 fill-current" />
-                <span>{t("balkan_play")}</span>
-              </>
-            )}
-          </button>
+          <MasterclassTransport
+            bpm={bpm}
+            min={90}
+            max={180}
+            onBpmChange={onBpmChange}
+            isPlaying={isPlaying}
+            onTogglePlay={handleTogglePlay}
+            stopLabel={t("balkan_stop")}
+            playLabel={t("balkan_play")}
+          />
         </div>
       </div>
 
