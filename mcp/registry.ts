@@ -1762,7 +1762,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "apply_chord_progression",
     title: "Write a chord progression into a pattern",
     description:
-      "Take the progression `suggest_progression` gave you — or numerals you wrote yourself — and **put it into the music**: the chord lane gets a note at each chord's step, held for the chord's length, and the reply says which lane, how many chords were written, the chords' notes, and anything that did not fit. A pure transform like `apply_pattern_ops`: a pattern in, a pattern out, nothing on the server changed.",
+      "Take the progression `suggest_progression` gave you. Or numerals you wrote yourself. And **put it into the music**: the chord lane gets a note at each chord's step, held for the chord's length, and the reply says which lane, how many chords were written, the chords' notes, and anything that did not fit. A pure transform like `apply_pattern_ops`: a pattern in, a pattern out, nothing on the server changed.",
     readOnly: true,
     inputSchema: {
       genreId: z.string().optional().describe("start from this genre's pattern"),
