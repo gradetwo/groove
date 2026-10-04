@@ -7232,3 +7232,23 @@ problems: **[]** ✓
    ⇒ 打印的是**赋值语句的 0** ✓，把自己的失败读成了成功 ✗；② **不要用 `startswith("import ")` 拼 import 块** ✗；
   ③ **一次只做一件结构改动** ✗（"下沉＋切块＋替换"三合一＝失败一的根因 ✓）
 **纪律（搬的时候 ✓）**：**只搬不改** ✗ —— 描述文案一个字都不动 ✓（改文案另起一片 ✓，红了好分清是"搬"还是"改" ✓）
+
+## 三百一十六、📏 **MCP 长描述：按句度量 ＋ E 的第一个目标（含一条关于本会话时钟的事实）**（2026-10-04 18:51 ✓）
+
+```
+**方法** ✓：逐**工具块**切分后取 description ✓（⚠️ 比按 `name:` 块取更准 ✓ —— 上一轮按 name 块取**漏了最长的那条** ✗）
+**最长 5 条（总长 ｜ 句数 ｜ 最长单句 ✓）**：
+  **add_arrangement_track 1206 ｜ 7 句 ｜ 最长 433** ✗ ← ⭐ 真正最长的一条 ✓（上一轮名单里没有它 ✗）
+  apply_gs1_patch 1185 ｜ 5 ｜ 319 ｜ inspect_instrument_sfz 1178 ｜ 6 ｜ 302
+  get_pitch_report 1067 ｜ 5 ｜ 264 ｜ get_transposition_report 1037 ｜ 5 ｜ 381
+**`add_arrangement_track` 逐句** ✓：1)30"Add a track to an arrangement."（⭐ 结论已前置 ✓）2)321"Choose the kind…"
+  3)**433**"`synth` is a built-in synthesiser…" ✗ ← **拆点** 4)91"drumkit…folder groups without sounding."
+  5)130"why the kind is called `synth` rather than `gs1`…"（**动机** ✓ 可后移/压缩 ✓）6)51"Asset ids come from
+  `list_arrangement_instruments`." ✓ 7)144"**`assetId` … only … `instrument` … only**" ✗ ← ⭐ **边界，一字不许动** ✗
+**⇒ E 的第一个目标** ✓：拆第 3 句 ＋ 后移/压缩第 5 句 ✓，**第 7 句与第 6 句原样保留** ✗；预计 **1206 → 约 850–900** ✓
+  判据（能红 ✓）：改写后的描述**必须仍含**第 6 句的来源与第 7 句的两条 acceptance 约束 ✓ ⇒ 删掉即红 ✓
+**⚠️ 关于本会话时钟的事实** ✗：本会话的**模型回合之间只隔约 10 秒** ✓（18:51:21 → 18:51:33 ✓），而一轮 CI 要 ~16 分钟 ✓
+  ⇒ ⭐ **在会话内等 7 笔判决排空是不现实的** ✓；`04270a0`…`c0c3b2d` 这 7 笔在会话结束时**仍未出结论** ✗ ⇒
+  **接手方第一件事应当是核这 7 笔判决** ✓（`69373fa`／`e8bb29d`／`3ce47b2` 三笔已确认 success ✓）
+**📌 队列纪律（本阶段新认识 ✓）**：小步常落 ✓ 与"推后核判决" ✓ 在 CI 有队列时会打架 ✓ ⇒ **等上一笔出结论再推下一笔** ✓，
+  且**绝不把 in_progress 读成绿** ✗
