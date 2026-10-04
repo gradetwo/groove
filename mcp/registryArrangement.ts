@@ -39,6 +39,12 @@ import { inspectSfzAt } from "./sfzInspectRemote";
 
 import { addMcpNote, addMcpTake, moveMcpNote, removeMcpNote, setMcpNoteLength, setMcpTrackAsset, setMcpTrackPan, setMcpTrackParent, setMcpTrackRegion, setMcpTrackSteps } from "./arrangement";
 
+import { CustomGenre } from "../src/types/customGenre";
+import { assignMcpTakeRange, selectMcpTake, setMcpTrackCollapsed } from "./arrangement";
+import { deleteMcpCustomGenre, getMcpCustomGenre, listMcpCustomGenres, saveMcpCustomGenre } from "./customGenres";
+import { getGenre, getGenreRelations, listCategories, listGenres, searchGenres } from "./library";
+import { customGenreSchema } from "./toolKit";
+
 export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
   {
     name: "describe_arrangement",
@@ -1064,6 +1070,182 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
           startBar: args.startBar as number | undefined,
           endBar: args.endBar as number | undefined,
         });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "assign_arrangement_take_range",
+    title: "Use a take for a bar range",
+    description:
+      "Claim an existing take for part of the arrangement — comping. Ranges never overlap: a new range splits whatever it crosses, so 'this section from take 3, the next from take 7' is expressible without the two fighting.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      trackId: z.string(),
+      takeId: z.string(),
+      startBar: z.number().int().min(0),
+      endBar: z.number().int().min(1).describe("exclusive, and must be greater than startBar"),
+    },
+    handler: (args) => {
+      try {
+        return assignMcpTakeRange(
+          String(args.arrangementId),
+          String(args.trackId),
+          String(args.takeId),
+          Number(args.startBar),
+          Number(args.endBar)
+        );
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "set_arrangement_track_collapsed",
+    title: "Fold a track",
+    description: "Fold a track in the interface. **Display only**: folding never changes what is heard, which is why it is safe to call freely while composing.",
+    readOnly: false,
+    inputSchema: { arrangementId: z.string(), trackId: z.string(), collapsed: z.boolean() },
+    handler: (args) => {
+      try {
+        return setMcpTrackCollapsed(String(args.arrangementId), String(args.trackId), Boolean(args.collapsed));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "select_arrangement_take",
+    title: "Choose which take plays",
+    description: "Choose the take a track plays, or pass null to clear the choice. Refused when the take is not on that track, naming the ones that are.",
+    readOnly: false,
+    inputSchema: { arrangementId: z.string(), trackId: z.string(), takeId: z.string().nullable() },
+    handler: (args) => {
+      try {
+        return selectMcpTake(String(args.arrangementId), String(args.trackId), args.takeId === null ? null : String(args.takeId));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "list_genres",
+    title: "List genres",
+    description:
+      "The genre library, filtered by category and paged. Returns the compact row (bpm, key, era, track/step counts, swing) for each genre, not the full document.",
+    readOnly: true,
+    inputSchema: {
+      category: z.string().optional().describe("one of the categories from list_categories, case-insensitive"),
+      limit: z.number().int().min(1).max(200).optional().describe("default 50"),
+      offset: z.number().int().min(0).optional(),
+    },
+    handler: (args) => listGenres(args as { category?: string; limit?: number; offset?: number }),
+  },
+  {
+    name: "get_genre",
+    title: "Get a genre",
+    description:
+      "One genre in full: recorded metadata (era, origin, cultural context, key characteristics, sound design, rhythm features, production tips, representative tracks). Its instrumentation, radar metrics, mix, loudness trim and lineage siblings.",
+    readOnly: true,
+    inputSchema: { id: z.string().describe("genre id, e.g. chicago-house") },
+    handler: (args) => {
+      const result = getGenre(String(args.id));
+      return result ?? failure(`unknown genre "${String(args.id)}" — use list_genres or search_genres`);
+    },
+  },
+  {
+    name: "search_genres",
+    title: "Search genres",
+    description: "Fuzzy search over id, name, aliases, subgenres, category, era/origin and description, with the matched fields reported.",
+    readOnly: true,
+    inputSchema: {
+      query: z.string().min(1),
+      limit: z.number().int().min(1).max(50).optional().describe("default 10"),
+    },
+    handler: (args) => searchGenres({ query: String(args.query), limit: args.limit as number | undefined }),
+  },
+  {
+    name: "list_categories",
+    title: "List categories",
+    description: "The genre categories and how many genres each holds.",
+    readOnly: true,
+    inputSchema: {},
+    handler: () => listCategories(),
+  },
+  {
+    name: "get_genre_relations",
+    title: "Get genre relations",
+    description: "The recorded influences/derivations for a genre (from the app's relation graph), plus its declared parents, subgenres and related genres.",
+    readOnly: true,
+    inputSchema: { id: z.string() },
+    handler: (args) => {
+      const result = getGenreRelations(String(args.id));
+      return result ?? failure(`unknown genre "${String(args.id)}"`);
+    },
+  },
+  /**
+   * The custom-genre surface: the maker's Fork and Save, for an agent.
+   *
+   * It sits beside the library tools because it is the same activity one step further on — read a genre, fork it,
+   * save the variation. The store behind it is the server process's own rather than the browser's IndexedDB library:
+   * a genre saved here lives for the session, and the genres a person saved in the app are not visible to these tools.
+   */
+  {
+    name: "list_custom_genres",
+    title: "List saved custom genres",
+    description:
+      "The custom genres saved in this MCP session, newest first: id, name, category, tempo, track count and the genre each was forked from. This is the server session's own store, separate from the browser's IndexedDB library, so it lists what an agent saved here rather than what a person made in the app.",
+    readOnly: true,
+    inputSchema: {},
+    handler: () => listMcpCustomGenres(),
+  },
+  {
+    name: "get_custom_genre",
+    title: "Get a custom genre",
+    description:
+      "One custom genre in full: every recorded field and its eight-track pattern, exactly as save_custom_genre stored it. The pattern's genre_id is the genre's own id, so the pattern can be passed straight to get_pattern, apply_pattern_ops or render_audio.",
+    readOnly: true,
+    inputSchema: { id: z.string().describe("a custom genre id, as list_custom_genres returns") },
+    handler: async (args) => {
+      const genre = await getMcpCustomGenre(String(args.id));
+      return genre ?? failure(`unknown custom genre "${String(args.id)}" — list_custom_genres returns the genres saved in this session`);
+    },
+  },
+  {
+    name: "save_custom_genre",
+    title: "Save a custom genre",
+    description:
+      "Save a custom genre, or fork a library genre and save the fork. Give forkFromGenreId (an id list_genres returns) and the fork copies that genre's metadata, pattern and lineage with the same forkGenre the app's Fork button calls. Give genre to save a document you already have, such as one from get_custom_genre. Saving the same id twice replaces the first rather than adding a second. The store is process-local: the genre lives for this session and is separate from the browser's library.",
+    readOnly: false,
+    inputSchema: {
+      forkFromGenreId: z.string().optional().describe("an id to fork, from list_genres or from an earlier save in this session"),
+      genre: customGenreSchema.optional().describe("or a full custom genre document to save as given"),
+      name: z.string().optional().describe('the name to save under; for a fork it replaces the generated "<name> (Variation)"'),
+    },
+    handler: async (args) => {
+      try {
+        return await saveMcpCustomGenre({
+          ...(args.forkFromGenreId === undefined ? {} : { forkFromGenreId: String(args.forkFromGenreId) }),
+          ...(args.genre === undefined ? {} : { genre: args.genre as CustomGenre }),
+          ...(args.name === undefined ? {} : { name: String(args.name) }),
+        });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "delete_custom_genre",
+    title: "Delete a custom genre",
+    description:
+      "Remove a custom genre from this session's store and report the ids that remain. A genre that is not there is refused with the ids that are, rather than reported as deleted.",
+    readOnly: false,
+    inputSchema: { id: z.string().describe("a custom genre id, as list_custom_genres returns") },
+    handler: async (args) => {
+      try {
+        return await deleteMcpCustomGenre(String(args.id));
       } catch (error) {
         return failure((error as Error).message);
       }
