@@ -7057,3 +7057,15 @@ problems: **[]** ✓
    不给范围 ⇒ 与现状**逐字相同** ✓（默认行为不变 ✓ ⇒ 改回旧行为即"缺参数"⇒ 红 ✓）
 ⚠️ 本条**只记测量与方案** ✓；实现留待下一轮（此刻 `459ad2a` 的判决**仍未出** ✗ ⇒ 不叠加改动 ✗，免得"宣告完成"指向的树又变 ✗）
 ```
+
+## 三百零七、✅ **`render_arrangement_stems` 的范围已补上（`§306` 的收口）** ✓（`f277245` ✓，2026-10-04 08:2x ✓）
+
+```
+**改了什么** ✓：schema 加 `startBar`/`endBar` ✓（**end 排他** ✓，措辞与兄弟工具一致 ✓）；handler 构造 `range` 并传给
+   `flattenMcpArrangement(id, range)` ✓ ⇒ ⭐ **"一段"的含义只定义一次** ✓，**不开第二条渲染路径** ✗；
+   ⭐ **不给范围时那次调用与从前逐字相同** ✓（既有行为安全 ✓）
+**判据** ✓：schema 必须暴露两个键且 `endBar` 含 **exclusive** ✓（**红证成立** ✓：删键 ⇒ 红 ✓）；范围的**行为**由既有 flatten 级判据持有 ✓
+**闸门** ✓：`tsc` 当闸门 0 ✓｜判据 6/6 ✓｜触及集**含 `mcpTools.test.ts`** ✓（§304 的纪律 ✓）｜`check:mcp` **94 tools／123 checks 0 failed** ✓
+**⇒ ⑧(b) 至此完整** ✓：`render_arrangement` 与 `render_arrangement_preview` 早有范围 ✓，stems 现在也有 ✓ ⇒ 三个 arrangement 渲染工具**一致** ✓
+⚠️ `render_arrangement_stems` 仍**不收 `trackIds`** ✓ —— 这是**有意的** ✓：stems 的语义就是"每条轨各一份" ✓，加轨过滤是另一种工具 ✗
+```
