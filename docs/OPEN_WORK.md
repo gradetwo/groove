@@ -8262,3 +8262,231 @@ problems: **[]** ✓
 **⇒ "死代码"一格的最终读数 ✓**：**29 个全仓无引用** ✓（其中 **9 个已逐个核实为真死** ✓）＋ **76 个仅测试引用** ✓；
    三次口径变化与名单**全部可复算** ✓（一遍词频扫描 ✓，**1.06 s** ✓）
 ```
+
+## 三百五十八、🧭 **`§A` 的口径对齐：`probe:boot` 与 `perf:check` 各管一件事**（2026-10-05 06:42 ✓）
+
+```
+**`§A` 里原来的两句"未量到" ✗**：`probe:boot` 只是**冒烟** ✓、**无毫秒数** ✗ ⇒ 现**对齐为分工** ✓：
+   · **`probe:boot`** ✓ ＝ "**能不能启动**" ✓（`✅ the built app starts` ✓，在 CI 的 `validate` 里守着 ✓）
+   · **`perf:check`** ✓ ＝ "**首屏多快**" ✓ —— 本阶段实测过 ✓（方法：`npm run perf:check` ✓，本机 ✓）：
+       Desktop 1440×900 ✓：**FCP 1220–2080 ms** ✓／**LCP 2656–3336 ms** ✓／**CLS 0.011** ✓／wall 4377–5952 ms ✓
+       Mobile 390×844（**4G ＋ 4× CPU** ✓）：**FCP 3560–3568 ms** ✓／LCP 3560–6216 ms ✓／**CLS 0.000** ✓／wall 7590–8890 ms ✓
+       首屏只取 **1 个 genre chunk** ✓（`genre-house-…js` ✓）
+   ⇒ ⭐ 所以"**首屏毫秒数**"**并不缺** ✓；缺的是**把两者分工写清** ✓ ⇒ 本节即为对齐 ✓
+**⚠️ 口径警示 ✓（照脚本自己的说明 ✓）**：`perf:check` 的**字节数是未压缩原值** ✗
+   （"the local static server does not compress, so byte figures are raw, not transfer size" ✓）
+   ⇒ **不可当作传输体积** ✗；引用体积要用 `check:budget` 的口径 ✓
+**⇒ `§A` 现状 ✓**：包体 ✓／GS-1 25 项 ABI ✓／MCP 94 tools ✓／**响应**（`probe:latency` 已修好 ✓ ＋ 门 ✓）／
+   **首屏**（本节 ✓）／**渲染 CPU**（`§346`／`§348` ✓）—— ⭐ **该量的都有了，且各自口径写明** ✓
+```
+
+## 三百五十九、🔍 **死代码里最像"半成品"的那 6 个：逐个读证（结论：功能提案 ＞ 清理对象）**（2026-10-05 06:43 ✓）
+
+```
+**动机 ✓**：`§350`／`§353` 把"无人引用"的导出**数**出来了 ✓（29 个 ✓）⇒ 但**数量不是行动依据** ✗ ——
+   得知道每个"**本该没人用**" ✓ 还是"**本该有人用却没有**" ✗ ⇒ 本节**只读**逐个读证 ✓（**未删未接** ✗）
+**① `useReducedMotion`（`src/hooks/useReducedMotion.ts:27` ✓）—— 接了一半 ✓**
+   它做真事 ✓：三态偏好（`system`／`reduce`／`no-preference` ✓）、键 `groove_reduced_motion` ✓、
+   `matchMedia("(prefers-reduced-motion: reduce)")` ✓，并**给 `<html>` 加/去 `reduced-motion` 类** ✓
+   ⇒ 但**全仓无人调用** ✗ ⇒ 该类**从未被加上** ✗ ⇒ 以它为选择器的样式**永不生效** ✗
+   ⚠️ 且 `src/hooks/useDeviceCapabilities.ts` **也提到** `prefers-reduced-motion` ✓ ⇒ **两处各做一半** ✓ ⇒ 建议**先看能否合并** ✓
+**② `useLabelArt`（`useLabelArt.ts:20` ✓）—— 注释里的消费者**已不存在** ✗**
+   注释说它服务于 `VinylCanvas` 的重绘 key ✓；但 `src/components` 里搜 `redrawKey|redraw` ✓ **只有 `ScoreV2.tsx`** ✓，
+   **没有 `VinylCanvas`** ✗ ⇒ ⭐ 要么**功能搬走了** ✓ 要么**注释旧了** ✗ ⇒ 需**先辨明**再决定 ✓
+**③ `useCoverWarmupBothSizes`（`useCoverWarmup.ts:55` ✓）—— 只死"双尺寸变体" ✓**
+   基础钩子 `useCoverWarmup` **在用** ✓（`src/views/ExploreListView.tsx:208` ✓）⇒ 死的只是**同时要缩略图与整图**的变体 ✓
+   ⚠️ 而这一族的动机**正是业主自己的话** ✓（注释原文引用：**"涉及到图片加载的地方，没有合适的预加载，每次都是触发才下载"** ✓）
+**④ `subscribePwaStatus`（`pwa.ts:32` ✓）＋ ⑤ `promptInstallApp`（`pwa.ts:38` ✓）—— UI 缺一半 ✓**
+   PWA 生命周期**已在跑** ✓（`initPwa()` 于 `src/main.tsx:52` ✓）；但 `components`／`views` 里搜
+   `installApp|安装应用|canInstall|isUpdateAvailable` ⇒ **0 命中** ✗ ⇒ ⭐ **"安装应用／有更新"的入口不存在** ✗
+   ⇒ 这两项**永远没人调用** ✓ ⇒ 属**用户可见的功能缺口** ✓，不是垃圾 ✓
+**⑥ `CATEGORY_SWATCH`（`genreArt.ts:37` ✓）—— 真死 ✓，但像预留表 ✓**
+   连文件内也未被用 ✓ ⇒ 真死 ✓；语义上像"**给分类着色预留的色板**" ✓ ⇒ 删前问一句 ✓
+**⭐ 一句话结论 ✓**：**6 处里 4 处是"用户可感知的功能做了一半"** ✓（无障碍 ✓／黑胶标签图 ✓／封面预热变体 ✓／PWA 安装入口 ✓），
+   1 处待辨明（注释旧 ✗），1 处是预留表 ✓ ⇒ ⭐ **是功能提案 ✓，不是清理对象 ✗** ——
+   业主 2026-10-05「**先留着、只记账**」的判断有依据 ✓；**我一个字没删、也没擅自接线** ✗（接线＝功能开发 ✓，需点头 ✓）
+**📌 由此新增一条教训（第 70 条 ✓）**：**判据守得住 `docs/**` ✓，守不住源码注释** ✗ ——
+   `useLabelArt` 那种"注释引用的组件已消失"只能靠**人读**发现 ✓ ⇒ 结论：**"死代码"要定期人读一遍性质** ✓，不能只看数 ✓
+```
+
+## 三百六十、📐 **注释漂移：能量化、能排名，但**不能设门**（一条诚实的负结果 ✗）**（2026-10-05 06:44 ✓）
+
+```
+**动机 ✓**（承接第 70 条 ✓）：`useLabelArt` 的注释引用了一个**已不存在的组件** ✗ ⇒ 想把它变成**可查的读数** ✓
+**口径 ✓（只读 ✓）**：取 `src/**` ＋ `mcp/**` ＋ `scripts/**` 的**注释行**（以 `*`／`//`／`/*` 起 ✓）里
+   **反引号包起来的、含大写的自家风格标识符** ✓ ⇒ 检查它是否出现在**非注释代码**里 ✓
+**读数 ✓（时点 2026-10-05 06:44 ✓）**：引用 1621 个（去重 ✓）⇒ ⭐ **"代码里已不存在" 101 个** ✗
+**⚠️ 但它不适合作判据 ✗（抽查即可看出：假阳性为主 ✓）**：
+   `SVGContext` ✓（DOM 规范类型 ✓）｜`ChannelSplitter`・`ChannelMergerNode` ✓（Web Audio API ✓）｜
+   `ReferenceError` ✓（JS 内建 ✓）｜`FilePool`・`Chordophones`・`withProgramIds`・`buildRegion`・`allParts` ✓
+   （**外部库／测试夹具里的名字** ✓）｜`currentSwitch_`・`defaultPath_`・`onLoadProgress` ✓（**局部/字段名** ✓）…
+   ⇒ 若拿它当门 ✗ ⇒ **天天红** ✗ ⇒ **毫无意义** ✓
+      （这正合那条铁律的反面 ✓：判据要能红 ✓，且**红了必须有意义** ✓）
+**⭐ 真正的用处 ✓**：**按被引用次数排序** ✓ ⇒ 头部＝"**最该看一眼**" ✓ ⇒
+   头名正是 ⭐ **`VinylCanvas`（7 处 ✓，首例 `src/hooks/useLabelArt.ts:6` ✓）** ✓ —— 与**手工**发现完全吻合 ✓
+   ⇒ 即：这个读法**能定位问题 ✓、不能自动判决** ✗
+**⇒ 结论 ✓（写下来供后人照用 ✓）**：
+   ① 门只能架在**语义确定**的东西上 ✓（如 `docs/**` 的引用 ✓，已有判据 ✓）；
+   ② 注释里的名字**语义不确定** ✓（可能是库名 ✓／规范名 ✓／夹具名 ✓）⇒ **只能人读头名** ✓，**不设门** ✗；
+   ③ ⭐ 这条"**不设门**"本身是**结论** ✓，不是省略 ✗ —— 与 `§346`"CPU 不立门"同一处理 ✓
+   ＋ ⭐ **保留做法** ✓：**定期人读该排名的前几名** ✓（尤其组件/钩子名 ✓）
+```
+
+## 三百六十一、🧹 **"裁剪残渣" vs "功能提案"：`VinylCanvas` 的证据链（更正 `§359` 的分类）**（2026-10-05 06:45 ✓）
+
+```
+**为什么要更正 ✓**：`§359` 把 6 处"无人引用"读成"**功能做了一半**" ✓ —— 对其中 5 处成立 ✓，
+   但 ⭐ **`useLabelArt` 不是** ✗：它的目标消费者**已被有意退役** ✓ ⇒ 本节更正 ✓（不是反转全部 ✓，是**分得更细** ✓）
+**证据链 ✓（只读 ✓）**：
+   ① 现在仍有 **7 处注释**引用 `VinylCanvas` ✗ —— `src/features/settings/lightPlayerPrefs.ts:7／10` ✓、
+      `src/hooks/useLabelArt.ts:6` ✓、`src/test/canvasPalette.test.tsx:30` ✓、`src/utils/canvasPalette.ts:9／31／46` ✓
+   ② ⭐ **它的退役是刻意的** ✓（git 历史 ✓）：
+      `4dffdf0 refactor(mobile): the phone version is cut, and the platform it ran on is not` ✓
+      `a9c8793 chore: retire the phone-era diagnostics and the jank step` ✓
+      `fcc6907 docs(residue): the two mechanisms the phone cut left behind now say what they actually do` ✓
+   ③ ＋ `docs/AUDIT_2026-10-02_PART2.md` 亦注明 `src/mobile/` 与 `VinylCanvas` 属**当时被裁**的部分 ✓
+   ⇒ ⭐ 即：**不是"改名/搬走"** ✗，而是**随手机版一起删掉** ✓ ⇒ `useLabelArt` 及其 7 处引用**都是裁剪残渣** ✗
+**⭐ 更正后的分类 ✓（6 处）**：
+   · **倾向删 ✓（残渣 ✗）**：`useLabelArt` ✓（消费方已按设计消失 ✓）
+   · **倾向接 ✓（真缺口 ✗）**：`useReducedMotion` ✓（无障碍 ✓，且另有平行实现待合并 ✓）、
+     `useCoverWarmupBothSizes` ✓（基础钩子在用 ✓，业主点名的封面预加载 ✓）、
+     `subscribePwaStatus` ＋ `promptInstallApp` ✓（PWA 已初始化 ✓，**安装/更新入口 UI 缺失** ✗）
+   · **待辨**：`CATEGORY_SWATCH` ✓（自述是"类别→稳定高对比色板" ✓；若 `genreArtBackground` 已独立配色 ⇒ 亦属残渣 ✓）
+**⚠️ 处置纪律（不变 ✓）**：**仍不擅自删** ✗ —— 业主 2026-10-05 已定"**先留着、只记账**" ✓；
+   真要清理 ⇒ **一次一个 ✓、可回退 ✓**，并**先确认无隐性用途** ✓（注释引用也得一并更新 ✓）
+**📌 又一条方法教训（第 71 条 ✓）**：**"无人引用"要先问"它的**消费者是被删了**还是**还没写**"** ✗ ——
+   两者结论相反 ✓（一个该删 ✓、一个该接 ✓），而**只看名单分不出来** ✗ ⇒ 必须读 **git 历史 ＋ 注释** ✓
+```
+
+## 三百六十二、📋 **6 处"无人引用"的处置决策表（给业主 ✓；我一项未动 ✗）**（2026-10-05 06:45 ✓）
+
+```
+**背书 ✓**：全部来自 `§350`／`§353` 的筛查（29 个全仓无引用 ✓）与 `§359`／`§361` 的**逐个读证** ✓；
+**业主 2026-10-05 已定**：**先留着、只记账** ✓ ⇒ 本表**只把决策所需信息摆齐** ✓，**不含任何执行** ✗
+**补记（`CATEGORY_SWATCH` 判明 ✓）**：`genreArtBackground()` 用的是 **`CATEGORY_HUES`** ✓（`src/utils/genreArt.ts:110` ✓），
+   全仓再搜类别色彩 ⇒ `CATEGORY_BADGES`（`UpdatesModal` ✓）／`CATEGORY_EXPRESSION_PROFILES` ✓／`CATEGORY_FX_PROFILES` ✓
+   ⇒ ⭐ **没有一处用 `CATEGORY_SWATCH`** ✗ ⇒ 它是**第二张没人用的色板** ✓ ⇒ 与 `useLabelArt` 同类：**残渣** ✓
+```
+| # | 名称（位置） | 性质 | 证据 | 建议 | 成本 / 风险 |
+|---|---|---|---|---|---|
+| ① | `useLabelArt`（`src/hooks/useLabelArt.ts:20`） | **裁剪残渣** ✗ | 消费方 `VinylCanvas` 随手机版**有意退役** ✓（`4dffdf0`／`a9c8793`／`fcc6907` ✓）＋ 全仓 7 处注释仍引用它 ✗ | **删**（一次一个 ✓，连同 7 处注释引用 ✓） | 低 / 低（可回退 ✓）；⚠️ 先确认无隐性用途 ✓ |
+| ② | `CATEGORY_SWATCH`（`src/utils/genreArt.ts:37`） | **裁剪残渣** ✗ | 活色板是 `CATEGORY_HUES` ✓；全仓无人用 ✗ | **删**（或若你想留作皮肤预留 ⇒ 加注释说明 ✓） | 极低 / 极低 |
+| ③ | `useReducedMotion`（`src/hooks/useReducedMotion.ts:27`） | **真缺口** ✗ | 会加 `.reduced-motion` 类 ✓ 但无人调用 ⇒ 类从未生效 ✗；且 `useDeviceCapabilities` 有**平行实现** ✓ | **接**（根组件调用一次 ✓）＋ **先合并两处实现** ✓ | 低 / 中（要视觉核对 ✓，§26 听感优先 ✓） |
+| ④ | `useCoverWarmupBothSizes`（`src/hooks/useCoverWarmup.ts:55`） | **真缺口** ✗ | 基础钩子在用 ✓（`ExploreListView:208` ✓）；动机是**业主原话**（无预加载、触发才下载 ✓） | **接**（列表＋主视觉同屏处 ✓） | 低 / 低 |
+| ⑤ | `subscribePwaStatus`（`src/utils/pwa.ts:32`） | **真缺口** ✗ | `initPwa()` 已在跑 ✓（`main.tsx:52` ✓），但 `components/views` 无安装/更新 UI ✗ | **接**（设置或帮助入口显示"可安装／有更新" ✓） | 中 / 低（纯增量 UI ✓） |
+| ⑥ | `promptInstallApp`（`src/utils/pwa.ts:38`） | **真缺口** ✗ | 同上 ✓；`deferredPrompt` 已捕获 ✓ | **接**（与 ⑤ 同一处按钮 ✓） | 中 / 低 |
+```text
+**⭐ 一句话 ✓**：**2 处是"该扫的地" ✗（删）｜4 处是"该补的墙" ✓（接）** —— 二者**混在同一份名单里** ✗，
+   只看"无人引用"分不出来 ✓（第 71 条 ✓：要读 **git 历史 ＋ 注释** ✓）
+**⚠️ 我这一阶段的动作 ✓**：**一项都没做** ✗ —— 没删 ✓、没接 ✓、没改任何一行 ✓（按业主"先留着" ✓；且接线＝功能开发 ✓ 需点头 ✓）
+```
+
+## 三百六十三、📐 **"注释漂移"的精确率：前 8 名里只有 1 个是真的（≈12%）**（2026-10-05 06:46 ✓）
+
+```
+**做法 ✓**（第 71 条的方法 ✓）：对 `§360` 排名**前 8** 逐个跑 `git log -S <名字> --max-count=3` ✓
+   ⇒ 判据 ✓：**历史里被删/退役 ⇒ 真命中 ✓**；**历史里一直在演进 ⇒ 假阳性 ✗**
+**⭐ 真命中 1 个 ✓**：`VinylCanvas`（7 处 ✓）⇒ `a9c8793 chore: retire the phone-era diagnostics and the jank step` ✓
+   ＋ `fcc6907 docs(residue): the two mechanisms the phone cut left behind now say what they actually do` ✓
+   ⇒ **确属退役后的残留引用** ✓（并已由 `§361` 处置记录 ✓）
+**✗ 假阳性 7 个 ✓**（功能**活着**，只是我的口径没取到该名字 ✓）：
+   `currentSwitch_` ✓（`c0db631 feat(sfz): a live keyswitch state machine, one per track…` ✓ —— **私有字段** ✓，
+     访问写作 `this.currentSwitch_` ✓ 本应被我取到 ✗ ⇒ **口径漏项** ✓）
+   `withProgramIds` ✓（`2814b60`／`04d7950`／`c54b60f` ✓ 注册库功能在 ✓）
+   `applyGenreExpression` ✓（`2c592d7`／`0880598` ✓ 和弦/表情在 ✓）
+   `onLoadProgress` ✓（`20bf89f`／`0000e01` ✓ 采样加载在 ✓）
+   `allParts` ✓／`Chordophones` ✓／`buildRegion` ✓（皆对应真实特性 ✓）
+**⭐ 精确率 ≈ 1/8 ≈ 12%** ✗
+**⇒ 结论 ✓（`§360` 的负结果现在**有数字** ✓）**：
+   ① 它**能靠人读头部命中真问题** ✓（本轮就命中 1 个 ✓）⇒ **"定期人读头部"确有价值** ✓；
+   ② 但**若设成门 ⇒ 87% 的红是噪声** ✗ ⇒ ⭐ **"不设门"的结论被数字支持** ✓（不是偷懒 ✗）；
+   ③ 📌 **假阳性四类 ✓**：**上游参考实现的名字／库与规范名／夹具名／类成员名** ✓
+      ⚠️ **更正（2026-10-05 06:47 ✓）**：原写"**前两类是我的口径漏项** ✗"**是错的** ✗ ——
+      我当时**没读原文就推断**"`this.currentSwitch_` 本应被取到 ⇒ 口径漏项" ✗；**实际查证** ✓：
+      `currentSwitch_` 的**全部 5 处出现都在注释行** ✗（`src/audio/sfz/keyswitch.ts:141／230` ✓、
+      `src/audio/sfz/parse.ts:763` ✓、`src/audio/playerFromEngine.ts:107` ✓、
+      `src/test/sfzKeyswitchState.test.ts:20` ✓），且注释原文写明它是**上游 sfizz 的 C++ 成员** ✓
+      （"sfizz keeps exactly one `absl::optional<uint8_t> currentSwitch_`…" ✓）
+      ⇒ ⭐ **它压根不在我们的代码里** ✓ ⇒ **不存在口径漏项** ✗，它属"**上游参考实现名**"这一类 ✓
+      ⇒ 即：**结论方向不变 ✓（不设门 ✓），错的是我的归因** ✗ —— 由此得
+      📌 **第 72 条 ✓**：**推断口径缺陷之前，先把那几行原文读出来** ✗（只差"读一行"就能避免把错的写进台账 ✓）；
+      ⭐ 此处**保留原判断的痕迹** ✓（不改写历史 ✓，与本台账既有做法一致 ✓）
+```
+
+## 三百六十四、🔌 **`useReducedMotion` 不是"没墙"，是"线断了"** —— 消费者已在读那个类（`§362` 第 ③ 项升级）**（2026-10-05 06:48 ✓）
+
+```
+**动机 ✓**：`§362` 把 6 处分成"该扫地 ✗ / 该补墙 ✓" ✓ ⇒ 本节把第 ③ 项（`useReducedMotion` ✓）的**收益读实** ✓
+**关键发现 ✓（只读 ✓）**：
+   ⭐ `src/views/GalaxyView.tsx:1237` **已经在读** `document.documentElement.classList.contains("reduced-motion")` ✓
+   ＋ 同文件 `:411／417` 另有 `window.matchMedia("(prefers-reduced-motion: reduce)")` 的直读 ✓
+   ⇒ ⭐ 即：**消费者早就写好了，只等有人把那个类加上** ✓；而**全仓无人调用 `useReducedMotion`** ✗
+      ⇒ 那个类**永远加不上** ✗ ⇒ `GalaxyView:1237` 那一段**是死逻辑** ✗（比"钩子没人用"更严重 ✓：**两端都在，线断了** ✗）
+**平行实现对照 ✓（确实是两处各做一半 ✓）**：
+   · `src/hooks/useDeviceCapabilities.ts` ✓ 提供 `prefersReducedMotion` ✓（读 `matchMedia` ✓，含 `QUERY_REDUCED_MOTION` ✓）
+     已被 3 处组件使用 ✓（`GravitationalSequencer` ✓／`PhosphorOscilloscope` ✓／`Ruler` ✓ —— 但**只用 `isMobile`** ✓）
+   · `src/hooks/useReducedMotion.ts` ✓ 能读**用户选择**（`localStorage` 键 `groove_reduced_motion` ✓）**并设置类** ✓
+**CSS 侧现状 ✓**：`src/styles/skin-comic.css:813` 有 `@media (prefers-reduced-motion: reduce)` ✓
+   ⇒ ⭐ **CSS 已尊重"系统偏好"** ✓，但**不认"应用内用户选择"** ✗ —— 这恰是 `useReducedMotion` 的独有价值 ✓
+**⇒ 升级后的结论 ✓（仍待业主 ✓，我未动 ✗）**：
+   第 ③ 项从"真缺口（低／中 ✓）" ⇒ ⭐ **"真缺口 ＋ 消费者就绪（收益明确 ✓、成本低 ✓、风险中＝视觉需核对 ✓）"**；
+   正确的接法 ✓：**先合并两处实现** ✓（`useDeviceCapabilities.prefersReducedMotion` 与 `useReducedMotion` 合成一处 ✓），
+   再在**根组件调用一次** ✓ ⇒ `GalaxyView` 那段死逻辑**当场复活** ✓
+   ⚠️ 但**是否现在做，仍等业主一句话** ✓（本阶段纪律：**不擅自接、不擅自删** ✗）
+```
+
+## 三百六十五、🧭 **收束索引（业主一处看全 ✓）＋ 一条诊断规则的当场校正（第 57 条修订 ✓）**（2026-10-05 06:49 ✓）
+
+```
+**A. 校正 ✓（我在 `§324` 之后定的"两次 `updatedAt` 不变 ⇒ 卡死" ✗ 是错的）**：
+   本轮实测 ✓：两条 run 的 **run 级 `updatedAt` 在长作业期间完全静止** ✗（`37240709781` = 22:37:58Z ✓、
+   `37239893482` = 22:37:11Z ✓，而当前 UTC 22:49:30 ✓），但**作业级状态显示两者都在干活** ✓
+   （nightly 在 `E2E Desktop browsers (Playwright)` ✓；push 在 `Typecheck, Lint, Unit Tests & Build` ✓）
+   ⇒ ⭐ **修订后的规则 ✓**：
+     ① 判"在不在干活"⇒ 看**作业级** `in_progress` ✓（`gh run view <id> --json jobs` ✓）
+     ② 判"在不在排队"⇒ 看作业**是否尚未开始** ✓（缺 `startedAt` ✓／`status=queued` ✓）
+     ③ **run 级 `updatedAt` 只是粗粒度参考** ✗ —— 长作业期间静止**属正常** ✓，**不是**活性心跳 ✗
+**B. 本阶段索引 ✓（一页看全 ✓；每项都有读数与判据 ✓）**：
+   · **A 基线** ✓ → `§310`（包体 ✓／GS-1 25 项 ABI ✓／MCP 94 tools ✓）＋ `§358`（`probe:boot` 与 `perf:check` 分工 ✓）
+   · **B 可维护性五项 ✓** → 重复 `§327` ✓／行数 `§331` ✓／**死代码 `§350`・`§353`・`§355`・`§357`** ✓／
+     文档漂移 ✓／模块边界 `§324` ✓ ＋ ⭐ **性质读证与决策表 `§359`・`§361`・`§362`・`§364`** ✓
+   · **C 响应 ✓** → 基线 `§343` ✓／预算门 `§344` ✓／⭐ **CI 实跑通过 `§356`** ✓
+   · **D CPU ✓** → 口径统一 `§346`・`§348` ✓／比例门 `§349` ✓／⭐ **CI 实跑通过 `§356`** ✓
+   · **E 交互 ✓** → 四条现成判据覆盖 `§347` ✓（结论前置 ✓／自描述 ✓／边界不许删 ✓／工具登记 ✓）
+   · **阶段收束 ✓** → `§351`（A–E ＋ 门禁 11 项 ＋ 未做 7 条 ✓）＋ `§352`（清单实证 ✓）
+   · **两条诚实负结果 ✓** → CPU 不立门 `§346` ✓／注释漂移不立门（**精确率 12%** ✓）`§360`・`§363` ✓
+   · **本阶段自我更正 3 次 ✓** → 死代码口径 32⇒30⇒29 ✓（`§355` ✓）＋ `§363` 归因更正 ✓ ＋ 本节第 57 条修订 ✓
+**C. 仍待业主的一句话 ✓（共 6 项 ✓，表在 `§362` ✓，其中第 ③ 项收益已由 `§364` 证实 ✓）**：
+   ① `useLabelArt` ✗ 残渣 ⇒ 删 ✓｜② `CATEGORY_SWATCH` ✗ 残渣 ⇒ 删 ✓
+   ③ `useReducedMotion` ✗ **有现成消费者** ⇒ 接（先合并平行实现 ✓）｜④ `useCoverWarmupBothSizes` ✗ ⇒ 接 ✓
+   ⑤⑥ `subscribePwaStatus`／`promptInstallApp` ✗ ⇒ 接（PWA 安装/更新入口 ✓）
+   ⚠️ ＋ 既有开口 ✓：`next` 的 (a)/(b)/(c) ✓｜wip 去向 ✓（两项业主已答"先留着" ✓）
+```
+
+## 三百五十六、🏁 **两条门在真实 CI 上双双通过 —— 最后的验证缺口关闭**（2026-10-05 06:38 ✓）
+
+```
+**背景 ✓**：`probe:latency:gate`（`§343` ✓）与 `probe:render-cpu:gate`（`§349` ✓）早已接进 `nightly` ✓，
+   但 nightly 是 **`schedule`** 触发 ✓ ⇒ ⭐ 两条门此前**从未在 CI 上跑过** ✗（台账一直如实记着 ✓）
+**业主批准 ✓** ⇒ 先**核实触发条件** ✓ 再执行 ✓：`nightly.if` 含
+   `github.event_name == 'workflow_dispatch' && inputs.nightly` ✓ ⇒ ⭐ 手动通道**确实会跑** ✓（非空转 ✗）
+**run ✓**：**`37239893482`** ✓（sha `5bdb8d6` ✓、`workflow_dispatch` ✓、2026-10-05 **06:24** 北京 ✓）
+**结果 ✓（步骤级 ✓）**：`Unit Tests & Coverage` **success** ✓｜`Production Build` **success** ✓｜
+   `Loudness Baseline Freshness` **success** ✓｜⭐ **`Full Browser & Device Matrix` success** ✓｜
+   ⭐⭐ **`Interaction latency budget` `completed／success`** ✓｜⭐⭐ **`Render CPU budget` `completed／success`** ✓
+**⚠️ 读数待补 ✓**：run 未整体结束时 `--log` 不可读 ✗ ⇒ **结论已定** ✓、**数字待补** ✓（不拿本机旧数冒名 ✗）
+**⭐ 意义 ✓**：响应与 CPU 从"**本机跑过一次**" ✗ ⇒ "**有会跑的门，且已在真实 CI 实跑通过**" ✓
+
+## 三百五十七、📐 **死代码度量落地：范围枚举成清单，判据只许下降**（2026-10-05 06:39 ✓）
+
+```
+**资产 ✓**：`scripts/check_dead_exports.mjs` ✓（**范围枚举** ✓：`src`（排除 `src/test` ✓）／`mcp`／`scripts` ✓）
+   ＋ `package.json` ＋ `check:dead-exports` ✓ ＋ `src/test/deadExportsBudget.test.ts` ✓
+   （**dead ≤ 29** ✓ ∧ **testOnly ≤ 76** ✓ ＋ "仍在测量"自检 ✓）
+**读数 ✓（06:39 ✓，方法：`npm run check:dead-exports` ✓）**：`production files 519 ｜ exports 2101 ｜ dead 29 ｜ testOnly 76` ✓
+   ⚠️ 与临时脚本的 **518／2098** 有 1／3 小差异 ✓ ⇒ 台账**并列两版** ✓、判据用**提交版** ✓
+   ⭐ **输出契约自查 ✓**：摘要 `dead=29` 与明细 29 行**一致** ✓、29 个名字**皆为合规标识符** ✓、CLI `exit=0` ✓
+**⭐ 弄红验证 ✓**：`src/utils/pwa.ts` 追加 `export const __deadProbe = 1;` ⇒ 判据 **exit=1** ✓（29⇒30 ✓）⇒ 已还原 ✓
+   ＋ ⭐ **在 CI 口径内 ✓**：`vitest` 的 `include` ＝ `src/**/*.{test,spec}.{ts,tsx}` ✓ ⇒ 该判据**会被 CI 跑到** ✓
+**⚠️ 性质重申 ✓**：标识符计数 ⇒ **下界** ✓；看不见动态路径 ✓ ⇒ **只是筛查表** ✗；
+   删除须**逐个核对** ✓（**6 处已读证 ✓**：残渣 2 ✗／真缺口 4 ✓，见 `§359`／`§361`／`§362`／`§364` ✓）
