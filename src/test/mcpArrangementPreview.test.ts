@@ -42,6 +42,11 @@ describe("the arrangement preview tool", () => {
     // The span's end is exclusive, which is the detail a caller gets wrong when it is not said.
     expect(schema.endBar?.description ?? "").toContain("exclusive");
     /**
+     * ⭐ Where the file lands, measured rather than copied from a sibling: `mcp/render/worker.ts` writes to `outputDir`,
+     * then `GROOVE_MCP_OUT`, then a fresh temp directory, and this tool passes no `outputDir`.
+     */
+    expect((preview as unknown as { description: string }).description).toContain("GROOVE_MCP_OUT");
+    /**
      * ⭐ The A/B recipe belongs in the description, because the comparison is not a tool: two calls on one span are the
      * comparison, and what makes them comparable is that each reply names its own file, span, tracks and levels. The
      * sentence also says the honest limit — nothing is mixed together here.
