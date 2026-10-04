@@ -112,6 +112,19 @@ export function renderBudgetSentence(): string {
  * **not** linear: 7.3× the audio took 18-28× the wall clock. A rule of thumb that ignored that would under-quote
  * the only render long enough to need the budget.
  */
+/**
+ * Where the audio a render tool hands back is written.
+ *
+ * Measured rather than copied from a neighbouring description: `worker.ts` resolves the directory as `outputDir`, then
+ * `GROOVE_MCP_OUT`, then a fresh temp directory, and the arrangement tools pass no `outputDir`. One sentence shared by
+ * the family, so a tool cannot quietly document a location the others do not.
+ */
+export function renderOutputSentence(): string {
+  return (
+    "The file is written under `GROOVE_MCP_OUT`, or a fresh temp directory when that is unset, and the reply names it."
+  );
+}
+
 export function renderCostSentence(): string {
   const m = MEASURED_RENDER_COST;
   return (

@@ -97,3 +97,21 @@ describe("the preview scope really narrows", () => {
 function trackIdOf(arrangementId: string): string {
   return summariseArrangement(arrangementId, getMcpArrangement(arrangementId)!).tracks[0]!.id;
 }
+
+/**
+ * ⭐ **The whole render family says where the file goes** (owner's question: is the preview documentation complete?).
+ *
+ * It was not: `render_audio` and the exports named the location, `render_arrangement` did not, and the preview said only
+ * that it returns a file. One shared sentence now carries it, and this fails if any tool loses it — including if the
+ * shared sentence itself is dropped, which takes `render_arrangement` red.
+ */
+describe("the render family names where the audio is written", () => {
+  it("⭐ every render tool that hands back a file says where it lands", () => {
+    for (const name of ["render_arrangement", "render_arrangement_preview", "render_audio"]) {
+      const tool = TOOLS.find((t) => t.name === name);
+      expect({ name, found: tool !== undefined }).toEqual({ name, found: true });
+      const described = (tool as unknown as { description: string }).description;
+      expect({ name, names: described.includes("GROOVE_MCP_OUT") }).toEqual({ name, names: true });
+    }
+  });
+});

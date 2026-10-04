@@ -123,6 +123,7 @@ import { analyseWavFile, auditionInstrumentNote, renderAudio, renderStems } from
 import {
   renderBudgetSentence,
   renderCostSentence,
+  renderOutputSentence,
   PREVIEW_DEFAULT_CLAUSE,
   HEADLESS_POINTER_SENTENCE,
   headlessParameterDescription,
@@ -532,7 +533,9 @@ export const TOOLS: ToolDefinition[] = [
       renderCostSentence() +
       " " +
       renderBudgetSentence() +
-      HEADLESS_POINTER_SENTENCE,
+      HEADLESS_POINTER_SENTENCE +
+      " " +
+      renderOutputSentence(),
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
