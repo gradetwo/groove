@@ -3636,7 +3636,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "render_arrangement_stems",
     title: "Render the arrangement as one file per track",
     description:
-      "Bounce every track of an arrangement to **its own WAV**, next to each other in one directory, through the same offline engine as `render_arrangement`. Use it when the question is about a part rather than the mix: an agent that can hear the bass alone can fix a balance problem instead of guessing at one. Each reply entry carries the measured duration, sample rate, channel count and true peak of that stem, and a stem that rendered to silence says so rather than being reported as a file nobody can hear. **It costs one render per track**, so a four-track arrangement is four of the measurements quoted here — one of the few render calls that can report progress per track rather than only a heartbeat. " +
+      "Bounce every track of an arrangement to **its own WAV**, next to each other in one directory, through the same offline engine as `render_arrangement`. Use it when the question is about a part rather than the mix: an agent that can hear the bass alone can fix a balance problem instead of guessing at one. Each reply entry carries the measured duration, sample rate, channel count and true peak of that stem. A stem that rendered to silence says so rather than being reported as a file nobody can hear. **It costs one render per track**. A four-track arrangement is four of the measurements quoted here. One of the few render calls that can report progress per track rather than only a heartbeat. " +
       renderCostSentence() +
       " " +
       renderBudgetSentence() +
