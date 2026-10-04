@@ -3457,7 +3457,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "add_section",
     title: "Add a section",
     description:
-      "Place a clip on the song's timeline: slot, how many times it repeats, and optional per-section mutes, velocity scale, label, velocity ramp (a build across the section), a drum fill on its last pass, and a transposition of its pitched lanes. Returns the whole arrangement, so a model can see what it built.",
+      "Place a clip on the song's timeline: slot, how many times it repeats. Optional per-section mutes, velocity scale, label, velocity ramp (a build across the section), a drum fill on its last pass. A transposition of its pitched lanes. Returns the whole arrangement, so a model can see what it built.",
     readOnly: false,
     inputSchema: {
       songId: z.string().describe("the id create_song returned"),
