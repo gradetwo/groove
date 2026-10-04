@@ -705,7 +705,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "get_arrangement",
     title: "Read an arrangement",
     description:
-      "The arrangement's tracks: each one's kind. **The sound it actually plays (`sound` — a catalogue asset id for a sampler, or the built-in synth preset by name and key)**, its level, pan and flags, its steps and takes, plus `problems` — anything that would stop it being heard, and for a `synth` track the entry that names the preset it sounds through and the sampler call that would sound a recorded instrument instead.",
+      "The arrangement's tracks: each one's kind. **The sound it actually plays (`sound` — a catalogue asset id for a sampler, or the built-in synth preset by name and key)**. Its level, pan and flags, its steps and takes. Plus `problems` — anything that would stop it being heard. For a `synth` track the entry that names the preset it sounds through and the sampler call that would sound a recorded instrument instead.",
     readOnly: true,
     inputSchema: { arrangementId: z.string() },
     handler: (args) => {
