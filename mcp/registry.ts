@@ -2827,7 +2827,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "synthesize_vocal",
     title: "Sing a lyric (reserved — not implemented)",
     description:
-      "Reserved for singing synthesis (SVS) and **not implemented**: this call always reports that the capability is reserved, and changes nothing. It exists so an agent discovers the absence instead of guessing, and it validates the arguments a future implementation would take (a lyric, one tone per syllable, and the lane to sing on) so the failure explains what is missing rather than what is malformed.",
+      "Reserved for singing synthesis (SVS) and **not implemented**: this call always reports that the capability is reserved. Changes nothing. It exists so an agent discovers the absence instead of guessing. It validates the arguments a future implementation would take (a lyric, one tone per syllable, and the lane to sing on) so the failure explains what is missing rather than what is malformed.",
     readOnly: true,
     inputSchema: {
       syllables: z.array(z.string().max(8)).min(1).max(64).describe("one syllable per note, as set_vocal_melody takes them"),
