@@ -530,7 +530,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "render_arrangement",
     title: "Bounce an arrangement",
     description:
-      "Render an arrangement to audio through the same offline engine the song and pattern tools use. **An arrangement has its own length** — its own bars (`set_arrangement_bars`, eight by default) and its own notes — so one pass bounces the whole arrangement rather than a loop; `bars` repeats that pass. Ask for what the arrangement is with `get_arrangement`, which reports `bars` and `steps`. **Audio lanes are mixed**: a `sampler` track's notes are resolved through the app's own SFZ loader and placed at their own steps. A lane with a sample and no notes is played once at the arrangement's start. A lane whose bytes cannot be resolved is named in `skippedLanes` with the reason rather than dropped. " +
+      "Render an arrangement to audio through the same offline engine the song and pattern tools use. **An arrangement has its own length**. Its own bars (`set_arrangement_bars`, eight by default) and its own notes. So one pass bounces the whole arrangement rather than a loop. `Bars` repeats that pass. Ask for what the arrangement is with `get_arrangement`.  reports `bars` and `steps`. **Audio lanes are mixed**: a `sampler` track's notes are resolved through the app's own SFZ loader and placed at their own steps. A lane with a sample and no notes is played once at the arrangement's start. A lane whose bytes cannot be resolved is named in `skippedLanes` with the reason rather than dropped. " +
       renderCostSentence() +
       " " +
       renderBudgetSentence() +
@@ -1298,7 +1298,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "list_sample_libraries",
     title: "List sample libraries, their licences and what is missing",
     description:
-      "The libraries this project has pinned, **with the licence and the provenance of each** — the question to ask before publishing anything made with them. Attribution-required licences are named in the reply, with the `sourceUrl` (and the `repo`/`pin` for a byte-for-byte reference) to point at. A library with no measured duration says so rather than reporting a zero: durations are written by the mirroring step after the bytes are downloaded, and until then the honest answer is that nobody measured one.",
+      "The libraries this project has pinned. **With the licence and the provenance of each**. The question to ask before publishing anything made with them. Attribution-required licences are named in the reply, with the `sourceUrl` (and the `repo`/`pin` for a byte-for-byte reference) to point at. A library with no measured duration says so rather than reporting a zero. Durations are written by the mirroring step after the bytes are downloaded. Until then the honest answer is that nobody measured one.",
     readOnly: true,
     inputSchema: {},
     handler: () => {
