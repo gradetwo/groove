@@ -7,8 +7,8 @@
  */
 import { z } from "zod";
 import { describeMcpArrangement } from "./arrangement";
-import { failure } from "./registry";
-import type { ToolDefinition } from "./registry";
+import { failure } from "./toolKit";
+import type { ToolDefinition } from "./toolKit";
 
 import { createMcpArrangement, getMcpArrangement, summariseArrangement } from "./arrangement";
 
@@ -18,6 +18,15 @@ import { listCatalogueInstruments } from "./instruments";
 import { audioLaneReplyFields } from "./pattern";
 import { HEADLESS_POINTER_SENTENCE, headlessParameterDescription, renderBudgetSentence, renderCostSentence, renderOutputSentence } from "./render/budget";
 import { renderAudio } from "./render/worker";
+
+import os from "node:os";
+import path from "node:path";
+import { fromMidi } from "../src/data/midiToArrangement";
+import { collectTranspositions } from "../src/data/pitchTruth";
+import { STRING_INSTRUMENT_IDS, StringInstrument } from "../src/data/stringTechniques";
+import { addMcpTrack, exportMcpArrangementMidi, exportMcpMusicXml, importMcpMusicXml, removeMcpTrack, renameMcpTrack, setMcpTrackFlag, setMcpTrackKind } from "./arrangement";
+import { situationsArgument, situationsByPart } from "./toolKit";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 
 export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
   {
@@ -272,6 +281,287 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
           situation: args.situation as StringSituation | undefined,
           query: args.query as string | undefined,
           limit: args.limit as number | undefined,
+        });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "add_arrangement_track",
+    title: "Add a track",
+    description:
+      "Add a track to an arrangement. **Choose the kind by what makes the sound.** `sampler` plays a **real recorded instrument** from the catalogue. Pass `assetId` in this same call (for example `assetId: \"salamander-grand\"`). A sampler created without one starts on the **default catalogue asset, a drum kit**. Not what a melodic part wants. `synth` is a **built-in synthesiser**, right for an electronic part. **It can still play a recording, but by name rather than by asset id**. Pass `instrument:\"piano_lead\"` (or another name from `list_arrangement_instruments`'s `mappedInstruments`). That lane sounds the catalogue recording the written instrument table maps it to. It falls back to the built-in preset when the name is not mapped or the mirror does not serve it. `drumkit` is the built-in drum voices. `Fx` is an effect. `Folder` groups without sounding. Asset ids come from `list_arrangement_instruments`. **`assetId` is accepted on `kind:\"sampler\"` only and `instrument` on `kind:\"synth\"` only, each refused. Not ignored. For any other kind.** The kind is called `synth` rather than `gs1` because most roles play the built-in subtractive presets and only some route to GS-1.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      kind: z.enum(["synth", "sampler", "drumkit", "fx", "folder"]),
+      name: z.string().max(40).optional(),
+      /**
+       * ⭐ **The one-step form.** The report's reproduction was two calls where an agent made one — create a track,
+       * then point it at an instrument — and the second call never happened, so the track kept the default asset. The
+       * parameter is on this tool so "the track and its instrument" is one request.
+       */
+      assetId: z
+        .string()
+        .optional()
+        .describe(
+          "kind:\"sampler\" only — the catalogue asset this sampler plays (an id from list_arrangement_instruments, e.g. \"salamander-grand\"). Refused for every other kind rather than ignored, because only a sampler plays a catalogue asset"
+        ),
+      /**
+       * ⭐ **The shorter way to ask for a real instrument: name it, and the table finds the recording.**
+       *
+       * `src/data/sampledInstruments.ts` maps the written genre instrument names (`piano_lead`, `walking_upright`,
+       * `strings_lead`, `sax_lead`, …) to catalogue assets, so `kind:"synth", instrument:"piano_lead"` sounds Salamander
+       * without the caller knowing an asset id. `list_arrangement_instruments` returns that table under
+       * `mappedInstruments`, so the names are discoverable rather than guessable — and a name the table does not map
+       * keeps the built-in preset, with the reply saying which of the two it got.
+       */
+      instrument: z
+        .string()
+        .optional()
+        .describe(
+          'kind:"synth" only — the instrument this track declares, e.g. "piano_lead", "walking_upright", "strings_lead". The names the recorded-instrument table maps are listed by list_arrangement_instruments under `mappedInstruments`; a mapped name plays that catalogue recording, an unmapped one keeps the built-in preset. That list now also carries the string techniques as names (`violin_section_pizzicato`, `contrabass_solo_sustain`, …)'
+        ),
+      /**
+       * ⭐ **The musical way to ask for a recording: say what the music is doing, and the technique follows.**
+       *
+       * `src/data/stringTechniques.ts` writes down which playing technique serves which musical situation, and
+       * `placementForTrack` resolves the answer to a `TrackV2.instrument` identity the recorded-instrument table maps.
+       * The register and length questions need the notes, so they are named as still open; a part imported with the
+       * same situation has them answered (see `situations` on the import tools).
+       */
+      situation: z
+        .object({
+          instrument: z.enum(STRING_INSTRUMENT_IDS).describe("the string instrument this track is"),
+          situation: z.enum(STRING_SITUATION_IDS).describe("what the music is doing — a sustained bed, a short repeating figure, a plucked walking line, tremolo tension, an accent"),
+        })
+        .optional()
+        .describe(
+          'kind:"synth" only — the playing technique is chosen from what the music is doing rather than named: `{instrument:"violin", situation:"short-repeating"}` asks for spiccato, gets pizzicato because spiccato\'s bytes are not mirrored, and says so. The registers and note lengths are read when notes exist (the import tools take the same object and answer them)'
+        ),
+    },
+    handler: (args) => {
+      try {
+        return addMcpTrack(
+          String(args.arrangementId),
+          args.kind as never,
+          args.name as string | undefined,
+          args.assetId as string | undefined,
+          args.instrument as string | undefined,
+          args.situation as { instrument: StringInstrument; situation: StringSituation } | undefined
+        );
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "remove_arrangement_track",
+    title: "Remove a track",
+    description: "Remove a track and the notes it held. A folder's children are not removed with it — they keep existing, detached.",
+    readOnly: false,
+    inputSchema: { arrangementId: z.string(), trackId: z.string() },
+    handler: (args) => {
+      try {
+        return removeMcpTrack(String(args.arrangementId), String(args.trackId));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "set_arrangement_track_kind",
+    title: "Set a track's kind",
+    description:
+      "Change what a track is. **The kinds, by what makes the sound:** `synth` is the built-in synthesiser (a fixed timbre that cannot be pointed at a catalogue asset). `sampler` plays a real recorded instrument, `drumkit` the built-in drum voices. `fx` an effect, `folder` a group that does not sound. Becoming a sampler gives it the default catalogue asset, keeping one it already had; leaving a sampler drops the asset, since a synth, drum or effect track does not play a catalogue asset. The kind was spelled `instrument` before and that value is no longer accepted.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      trackId: z.string(),
+      kind: z.enum(["synth", "sampler", "drumkit", "fx", "folder"]),
+    },
+    handler: (args) => {
+      try {
+        return setMcpTrackKind(String(args.arrangementId), String(args.trackId), args.kind as never);
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "rename_arrangement_track",
+    title: "Rename a track",
+    description: "Give a track the name a person will read.",
+    readOnly: false,
+    inputSchema: { arrangementId: z.string(), trackId: z.string(), name: z.string().min(1).max(40) },
+    handler: (args) => {
+      try {
+        return renameMcpTrack(String(args.arrangementId), String(args.trackId), String(args.name));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "set_arrangement_track_flag",
+    title: "Mute or solo a track",
+    description: "Mute or solo a track. Soloing is what a person uses to hear one part of an arrangement on its own.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      trackId: z.string(),
+      flag: z.enum(["muted", "soloed"]),
+      value: z.boolean(),
+    },
+    handler: (args) => {
+      try {
+        return setMcpTrackFlag(String(args.arrangementId), String(args.trackId), args.flag as "muted" | "soloed", Boolean(args.value));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "export_arrangement_musicxml",
+    title: "Export a score as MusicXML",
+    description:
+      "The arrangement's notes as a MusicXML 4.0 `score-partwise` document. The file a notation program opens. One part, from one track. A note that crosses a barline is written as two tied notes, gaps become rests. Overlapping notes become separate voices, because those are the three things the format cannot express any other way.",
+    readOnly: true,
+    inputSchema: {
+      arrangementId: z.string(),
+      trackId: z.string().optional().describe("which track to write; the first that is not a folder unless said otherwise"),
+      title: z.string().optional(),
+      tempoBpm: z.number().optional(),
+    },
+    handler: (args) => {
+      try {
+        return exportMcpMusicXml(String(args.arrangementId), {
+          ...(args.trackId === undefined ? {} : { trackId: String(args.trackId) }),
+          ...(args.title === undefined ? {} : { title: String(args.title) }),
+          ...(args.tempoBpm === undefined ? {} : { tempoBpm: Number(args.tempoBpm) }),
+        });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "export_arrangement_midi",
+    title: "Export an arrangement as a Standard MIDI File",
+    description:
+      "Write the arrangement as a **Standard MIDI File, format 1**. The file a DAW opens. And return its path under GROOVE_MCP_OUT. One MIDI track per lane, named after the lane, with a conductor track carrying the tempo (`bpm` and every `tempoTrack` point) and the time signature. Each note at its own pitch, start, length and velocity. This is the mirror of `import_arrangement_midi`: a file written here imports back into the same notes. What MCP composed can leave the building. Folders are left out (MIDI has no folder), lanes with no notes are written as empty named tracks. Anything the format cannot carry. A note between ticks, two overlapping notes of one pitch. Is listed in `problems` rather than dropped in silence.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      outputDir: z.string().optional().describe("where to write it; defaults to GROOVE_MCP_OUT"),
+      filename: z.string().max(64).optional().describe("the file's name; defaults to the arrangement's id, and `.mid` is appended when missing"),
+      pitchMode: z
+        .enum(["original", "sounding"])
+        .optional()
+        .describe(
+          "which pitch to write. **original** (the default) writes each note's own MIDI number, unchanged — the file a DAW opens holds what the arrangement states. **sounding** applies every transposition the arrangement carries, so the file plays what you hear. The reply always reports the offset it applied and then **reads the file back** to compare, so what landed is measured rather than asserted."
+        ),
+    },
+    handler: (args) => {
+      try {
+        const wantedMode = args.pitchMode === "sounding" ? "sounding" : "original";
+        /**
+         * ⭐ **What "sounding" means here, stated rather than guessed.**
+         *
+         * The arrangement model carries **no transposition at all**: `TrackV2` has no `transpose` field, and the
+         * section-level one lives on the song, not on an arrangement. So `sounding` and `original` write the
+         * same bytes today, and this says so instead of implying otherwise. When an arrangement-level
+         * transposition arrives, this is the one line that changes: collect it and put its semitones here.
+         */
+        const modeTranspositions = collectTranspositions({});
+        const transposeSemitones = modeTranspositions.reduce((sum, item) => sum + item.semitones, 0);
+        const file = exportMcpArrangementMidi(String(args.arrangementId), {
+          ...(args.filename === undefined ? {} : { filename: String(args.filename) }),
+          ...(transposeSemitones === 0 ? {} : { transposeSemitones }),
+        });
+        /**
+         * ⭐ **The round trip, measured rather than asserted.** The owner asked for a comparison against the
+         * file rather than a promise: this reads back the bytes just written and compares the pitches that
+         * landed against the ones the arrangement states, shifted by whatever offset was applied. An exporter
+         * that moved a pitch without saying so fails here and nowhere else.
+         */
+        const arrangement = getMcpArrangement(String(args.arrangementId));
+        const statedPitches = Object.values(arrangement?.notesByTrack ?? {})
+          .flatMap((notes) => (notes ?? []).map((note) => note.pitch))
+          .sort((a, b) => a - b);
+        const reimported = fromMidi(file.bytes);
+        const writtenPitches = reimported.parts
+          .flatMap((part) => part.notes.map((note) => note.pitch))
+          .sort((a, b) => a - b);
+        const shifted = statedPitches.map((pitch) => pitch + transposeSemitones).sort((a, b) => a - b);
+        const roundTrip = {
+          notesStated: statedPitches.length,
+          notesWritten: writtenPitches.length,
+          /** True when the file holds exactly the numbers the arrangement states, moved by the reported offset. */
+          matches: shifted.length === writtenPitches.length && shifted.every((pitch, index) => pitch === writtenPitches[index]),
+          ...(shifted.length === writtenPitches.length && !shifted.every((pitch, index) => pitch === writtenPitches[index])
+            ? {
+                firstDifference: shifted.findIndex((pitch, index) => pitch !== writtenPitches[index]),
+              }
+            : {}),
+        };
+        const dir = (args.outputDir as string | undefined) || process.env.GROOVE_MCP_OUT || mkdtempSync(path.join(os.tmpdir(), "groove-mcp-"));
+        mkdirSync(dir, { recursive: true });
+        const target = path.join(dir, file.filename);
+        writeFileSync(target, file.bytes);
+        return {
+          path: target,
+          filename: file.filename,
+          mimeType: file.mimeType,
+          bytes: file.bytes.length,
+          format: file.format,
+          division: file.division,
+          tracks: file.tracks,
+          notes: file.notes,
+          bpm: file.bpm,
+          timeSignature: file.timeSignature,
+          tempoEvents: file.tempoEvents,
+          problems: file.problems,
+          /** ⭐ Which pitch was asked for, and what was actually applied — never one without the other. */
+          pitchMode: wantedMode,
+          transposeSemitones,
+          ...(transposeSemitones === 0
+            ? {
+                pitchNote:
+                  "this arrangement states no transposition, so `original` and `sounding` write the same bytes here — the mode is reported so that stays visible rather than being assumed",
+              }
+            : {
+                pitchNote: `every note was written ${transposeSemitones > 0 ? "above" : "below"} the arrangement's own number by ${Math.abs(transposeSemitones)} semitone(s), so this file will sound ${Math.abs(transposeSemitones)} semitone(s) ${transposeSemitones > 0 ? "higher" : "lower"} in a DAW than the arrangement states`,
+              }),
+          /** Read back out of the bytes just written, not asserted. */
+          roundTrip,
+        };
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "import_arrangement_musicxml",
+    title: "Import a MusicXML score",
+    description:
+      "Read a MusicXML `score-partwise` document and **add** its part as a track, named after the part. Notes that notation splits at a barline are joined back into one, chords arrive as notes that start together. Anything the model cannot hold. A grace note, a second voice inside one staff. Is listed in `problems` rather than dropped in silence. `partIndex` names the part to read and defaults to the first. `\"all\"` imports every part as its own track, skipping parts that hold no notes. The reply names the tracks it added in `trackIds`. Reports the file's own `tempoBpm` and time signature when it states them.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      xml: z.string().describe("the whole document, as text"),
+      partIndex: z
+        .union([z.number().int().min(0), z.literal("all")])
+        .optional()
+        .describe('which part to read; the first unless said otherwise, or "all" for one track per part'),
+      situations: situationsArgument,
+    },
+    handler: (args) => {
+      try {
+        return importMcpMusicXml(String(args.arrangementId), String(args.xml), {
+          ...(args.partIndex === undefined ? {} : { partIndex: args.partIndex as number | "all" }),
+          ...(situationsByPart(args.situations) === undefined ? {} : { situations: situationsByPart(args.situations)! }),
         });
       } catch (error) {
         return failure((error as Error).message);
