@@ -7488,3 +7488,29 @@ problems: **[]** ✓
    `registry.ts` 里的 **4 个 `PROMPTS`** 也数成了工具 ✗。正确口径 ✓：**只数"各文件目标数组区间内"的 `name:` 行** ✓
    （同 `§322` 第 12 条坑 ✓）⇒ 实测 **94** ✓，与 MCP 面**完全一致** ✓。
 ```
+
+## 三百二十五、⏱️ **响应基线第一次真的量到了**（2026-10-04 22:31 ✓）
+
+```
+**探针修好的四处 ✓**（`scripts/measure_interaction_latency.mjs` ✓）：
+  ① 失败即**转储页面上全部 testid** ✓（不再只有一行 15s 超时 ✗）
+  ② `process.exit` 会**吞掉未完成的诊断** ✗ ⇒ 改为**先转储再退出** ✓
+  ③ 先点**音频自动播放闸门** ✓（`audio-start-button` ✓）—— 否则"应用根本没启动" ✗
+  ④ 再关掉**首次运行提示** ✓（`first-run-prompt-dismiss` ✓）—— 否则设置弹窗被遮住 ✗
+  ⚠️ 这四处是靠**转储**一轮一个揪出来的 ✓，不是靠猜 ✓（第 30 条教训 ✓）
+
+**读数 ✓**（headless Chromium ✓、本机 `dist/` ✓、1440×900 ✓、2026-10-04 22:31 ✓）：
+   action                       settle(ms)  longTasks  blocked(ms)  worst(ms)
+   baseline (playing, no input)    1510.4          0            0          0
+   GS-1 off                          52.1          0            0          0
+   GS-1 on                           39.2          0            0          0
+   timbre → warm_pad                143.6          1           61         61
+   timbre → saw_lead                 88.1          0            0          0
+   timbre → rhodes_ep                97.9          0            0          0
+   timbre → reese_bass              100.2          0            0          0
+
+**结论 ✓**：① GS-1 开关 **39–52 ms**、零长任务 ✓ ⇒ "开关后卡住"在本口径下**不复现** ✓；
+   ② 音色切换 **88–144 ms** ✓，其中 `warm_pad` 有一次 **61 ms 长任务** ✓ ⇒ ⭐ **唯一被量出的热点** ✓，
+      后续 C 轴只盯它 ✓；③ 播放基线窗口内**零长任务** ✓ ⇒ 此前"未量"的格子**现在有数** ✓
+**能红判据 ✓**：`src/test/probeLatencySelectors.test.ts` ✓ —— 探针驱动的**每个 testid 必须在 `src/**` 存在** ✓
+   ＋ **启动序列必须先过闸门与首次提示** ✓；⚠️ 已当场**弄红一次再还原** ✓（把 `audio-start-button` 改名 ⇒ 判据红 ✓）

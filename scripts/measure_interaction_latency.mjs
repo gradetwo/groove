@@ -124,6 +124,7 @@ async function main() {
 
   const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  globalThis.__probePage = page; // ⭐ 失败诊断要用它（catch 在 main 之外 ✓）
 
   // Long-task observer, installed before the app boots.
   await page.addInitScript(() => {
@@ -139,11 +140,42 @@ async function main() {
     }
   });
 
+
+/** ⭐ Wait for a test id and, on failure, say what it looked for and what the page actually has. */
+async function waitForTestId(page, id, timeout = 15000) {
+  const sel = `[data-testid='${id}']`;
+  try {
+    await page.waitForSelector(sel, { timeout });
+  } catch (error) {
+    let present = [];
+    try {
+      present = await page.evaluate(() =>
+        Array.from(document.querySelectorAll("[data-testid]"))
+          .map((el) => el.getAttribute("data-testid"))
+          .filter(Boolean)
+          .slice(0, 40)
+      );
+    } catch { /* the page may be gone; the message below still helps */ }
+    throw new Error(
+      `the probe waited ${timeout} ms for ${sel} and it never appeared.\n` +
+      `  test ids present on the page (up to 40): ${present.join(", ") || "(none)"}\n` +
+      `  if the control was renamed or moved, update this probe; the id has to exist in src/**.`
+    );
+  }
+}
+
   const pageErrors = [];
   page.on("pageerror", (e) => pageErrors.push(e.message));
 
   await page.goto(`${baseUrl}/?tab=studio`, { waitUntil: "domcontentloaded" });
-  await page.waitForSelector("[data-testid='toolbar-advanced-toggle']", { timeout: 30000 });
+  await waitForTestId(page, "toolbar-advanced-toggle", 30000);
+  // ⭐ Headless Chromium blocks autoplay until a gesture: the app sits behind a start gate, and
+  // every later interaction waits on a studio that never started. Click through it first.
+  await page.click("[data-testid='audio-start-button']", { timeout: 5000 }).catch(() => {});
+  await page.click("[data-testid='audio-start-gate']", { timeout: 1000 }).catch(() => {});
+  // ⭐ Then the first-run prompt, which sits above everything until dismissed.
+  await page.click("[data-testid='first-run-prompt-dismiss']", { timeout: 3000 }).catch(() => {});
+  await page.click("[data-testid='first-run-prompt-play']", { timeout: 1000 }).catch(() => {});
   await page.waitForTimeout(1500); // let the lazy chunks and the audio graph settle
 
   const results = [];
@@ -161,7 +193,16 @@ async function main() {
 
   // 1. GS-1 switch, off then on, through the settings panel (the surface the user used).
   await page.click("[data-testid='header-settings-open']", { force: true });
-  await page.waitForSelector("[data-testid='audio-settings-gs1-toggle']", { timeout: 15000 });
+  if (process.env.PROBE_DIAG) {
+    await page.waitForTimeout(600);
+    const panelIds = await page.evaluate(() =>
+      Array.from(document.querySelectorAll("[data-testid]"))
+        .map((el) => el.getAttribute("data-testid")).filter(Boolean)
+        .filter((id) => /settings|audio|gs1|tab|modal|dialog/i.test(id))
+    );
+    console.error(`[diag] settings-ish test ids (${panelIds.length}): ${panelIds.join(", ")}`);
+  }
+  await waitForTestId(page, "audio-settings-gs1-toggle", 15000);
   const gs1 = "[data-testid='audio-settings-gs1-toggle']";
   for (const label of ["GS-1 off", "GS-1 on"]) {
     const expected = await page.getAttribute(gs1, "aria-pressed");
@@ -187,7 +228,7 @@ async function main() {
 
   // 2. Timbre switching while playing, through the inspector's picker.
   await page.click("[data-testid='track-inspector-open-0']", { force: true });
-  await page.waitForSelector("[data-testid='track-inspector-instrument-search']", { timeout: 15000 });
+  await waitForTestId(page, "track-inspector-instrument-search", 15000);
   const search = "[data-testid='track-inspector-instrument-search']";
   const instruments = ["warm_pad", "saw_lead", "rhodes_ep", "reese_bass"];
   for (const instrument of instruments) {
@@ -246,7 +287,18 @@ async function main() {
 
 main()
   .then((code) => process.exit(code))
-  .catch((err) => {
+  .catch(async (err) => {
     console.error(`❌ probe failed: ${err?.stack ?? err}`);
+    // ⭐ 兜底诊断：把页面上真实存在的 testid 列出来，省得下一次又要靠猜（**先转储，再退出** ✓）。
+    try {
+      const live = globalThis.__probePage;
+      const ids = live
+        ? await live.evaluate(() =>
+            Array.from(document.querySelectorAll("[data-testid]"))
+              .map((el) => el.getAttribute("data-testid")).filter(Boolean)
+          )
+        : [];
+      console.error(`   page test ids (${ids.length}): ${ids.join(", ") || "(none)"}`);
+    } catch { /* the page may already be gone */ }
     process.exit(1);
   });
