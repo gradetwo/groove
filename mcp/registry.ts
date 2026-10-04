@@ -640,7 +640,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "list_arrangement_instruments",
     title: "List playable instruments",
     description:
-      "The catalogue assets a sampler track can play, with the library each came from and the measured duration. A multi-instrument library names each program `<library>:<program>`, e.g. vcsl declares 88 of them. Read this before set_arrangement_track_asset. **String programs also carry what the player is doing** (`technique`). The situations that technique serves (`situations`). How many recorded dynamic layers velocity selects between (`dynamicLayers`). How many seconds a note may be held before the one-shot recording runs out (`maxHeldSeconds`). The pinned strings do not loop, so a longer note stops early. **`mappedInstruments` is the other half**: the written genre instrument names (`piano_lead`, `walking_upright`, `strings_lead`, `sax_lead`, …) that already play a catalogue recording without any asset id being chosen. Each carries the reason it was mapped. So an instrument can be asked for by name, and a name that is *not* there keeps its built-in preset.",
+      "The catalogue assets a sampler track can play, with the library each came from and the measured duration. A multi-instrument library names each program `<library>:<program>`, e.g. vcsl declares 88 of them. Read this before set_arrangement_track_asset. **String programs also carry what the player is doing** (`technique`). The situations that technique serves (`situations`). How many recorded dynamic layers velocity selects between (`dynamicLayers`). How many seconds a note may be held before the one-shot recording runs out (`maxHeldSeconds`). The pinned strings do not loop. A longer note stops early. **`mappedInstruments` is the other half**. The written genre instrument names (`piano_lead`, `walking_upright`, `strings_lead`, `sax_lead`, …) that already play a catalogue recording without any asset id being chosen. Each carries the reason it was mapped. So an instrument can be asked for by name. A name that is *not* there keeps its built-in preset.",
     readOnly: true,
     inputSchema: {
       library: z.string().optional().describe("narrow to one library id, as listed in `libraries`"),
@@ -3214,7 +3214,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "set_tempo",
     title: "Set a song's tempo changes",
     description:
-      "Give a song a tempo map: points at whole bars, each `jump` (the default — the new tempo holds from that bar) or `linear` (it ramps to the next point across the bars between them). Absent, every bar costs 4 * 60 / bpm and nothing about the song differs from before; present, the renderer schedules from the map bar by bar rather than restarting the audio context, and `secondsEstimate` follows it. An empty list clears the map. Unreadable points reject the whole change rather than being dropped.",
+      "Give a song a tempo map: points at whole bars, each `jump` (the default — the new tempo holds from that bar) or `linear` (it ramps to the next point across the bars between them). Absent, every bar costs 4 * 60 / bpm and nothing about the song differs from before. Present, the renderer schedules from the map bar by bar rather than restarting the audio context. `SecondsEstimate` follows it. An empty list clears the map. Unreadable points reject the whole change rather than being dropped.",
     readOnly: false,
     inputSchema: {
       songId: z.string().describe("the id create_song returned"),
