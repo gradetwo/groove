@@ -7165,3 +7165,18 @@ problems: **[]** ✓
    第 1 步 **切 V2 播种路径**（31 文件那面 ✓）并给 **V2 自己的能红判据** ✓；第 2 步 拆 `genre.ts`（内容面 217 引用**一律不动** ✗，
    V1 那 150 行单独成文件 ✓）；第 3 步 收残余（139 文件 ✓）**逐个删、每次跑触及判据** ✓
    ⚠️ 铁则：**先立 V2 判据 ✓ 再删 V1 ✓**，绝不反过来 ✗
+
+## 三百一十二、📐 **曲风库规模与 `genreMix` 的形状（可维护性第一组硬数字）**（2026-10-04 18:4x ✓）
+
+```
+**方法** ✓：`git ls-tree -r` ＋ 逐文件 `wc -l` ＋ 逐行读 import/导出（时刻 18:43 ✓）
+**① 曲风内容面规模（≈ 65,000 行，11 个曲风文件 ＋ index.ts 66 行）**：
+   house 7272 ｜ jazz_blues 6794 ｜ **rock_metal 8238** ⚠️（单文件极值）｜ pop_rnb 6309 ｜ future_downtempo 6319
+   ｜ hard_electro 5833 ｜ hiphop 5342 ｜ latin_world 5336 ｜ techno 4857 ｜ dnb 4373 ｜ dubstep 4371
+   ⇒ ⭐ 这是"可维护性要有量"的第一个硬数字 ✓：**内容面不动** ✗（喂 V2 ✓），但**单文件 8238 行**值得记 ✓
+**② `src/data/genreMix.ts`（799 行）—— 职责是 V2 的，类型借的是 V1 的** ✗：
+   line 30 `import { Genre, GenreCategory, SequencerPattern, SequencerTrack } from "../types/genre"` ✗
+   导出面是 V2 的 ✓：MIX_TRACK_IDS／TrackMix／ResolvedGenreMix／CategoryMixProfile／CATEGORY_MIX_PROFILES／
+     HUMANISE_BY_CATEGORY／HUMANISE_TRACK_SCALE／DuckSetting／DUCK_DB_MIN／DUCK_DB_MAX／DUCK_RELEASE_MIN_MS
+   ⇒ **要切的是"类型依赖"，不是功能** ✓：先给它的 V2 行为立**金值判据** ✓（播种结果一变即红 ✓），
+     这样**日后动 V1 时由它守着 V2** ✓ —— 正是铁则"先立 V2 判据 ✓ 再删 V1 ✓" ✓
