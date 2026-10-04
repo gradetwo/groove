@@ -8030,3 +8030,27 @@ problems: **[]** ✓
 **⚠️ 遗留（`needs`）✓**：`§329` 的 **1.07 核** 与本节的 **0.20 核** **口径不同** ✓ ⇒ 需**同口径复现**才能并列 ✓；
    在复现之前，**两个数都不得单独拿去下结论** ✗
 ```
+
+## 三百四十七、🧭 **`§E`（用户与 MCP 交互体验）收口：不新立门，只记覆盖证据**（2026-10-05 01:55 ✓）
+
+```
+**做法 ✓**：守"**先查覆盖、不重复造门**" ✓ —— 逐条要求 → 找到**现成的能红判据** ✓
+   · **结论前置 ＋ 回复自描述** ✓ ⇒ `src/test/mcpReplyShape.test.ts` ✓（39 行 ✓）
+       用例原文 ✓："keeps the self-describing sentences" ✓／
+                  "the song summary's first key is an answer, not the payload" ✓
+   · **边界不许删**（"仅 song" ✓／"真 Logic 未证" ✓）⇒ `src/test/mcpBoundarySentences.test.ts` ✓（54 行 ✓）
+       用例原文 ✓："keeps every boundary sentence in the file that owns it" ✓／
+                  "lists each boundary once, and is not vacuous" ✓
+   · **新工具必须登记** ✓ ⇒ `src/test/mcpTools.test.ts` ✓（273 行 ✓：全量 ✓／分页 ✓／分类 ✓／字段搜索 ✓）
+   · **描述形态与可读性** ✓ ⇒ `mcpDescriptionForm.test.ts` ✓（61 行 ✓：≥90 条被找到 ✓、无损坏拼接 ✓）
+       ＋ `mcpDescriptionReadability.test.ts` ✓（77 行 ✓：**无超长句** ✓ —— 本会话还修过它那把"量尺" ✓）
+   · 另有 8 个文件涉及路径／自描述／读数关键词 ✓（`mcpHeadlessRender` ✓／`mcpCopy_render_instrument_note` ✓ … ✓）
+**数字只用权威来源 ✓**：`npm run check:mcp` ⇒ **94 tools ✓／7 resources ✓／4 prompts ✓，stdio 可达 ✓**
+   ⚠️ 我本轮先用**临时正则**数出"98 个工具名／111 个 description" ✗ ⇒ **作废** ✗ ——
+     那条正则把**资源／提示／schema 里的 `name:`** 也算进去了 ✗ ⇒ 📌 第 61 条 ✓：
+     **不许用自己临时搓的正则去发布数字** ✗；要用**既有脚本／判据**的数 ✓，或**只引判据名** ✓；
+     ⚠️ 更不能报一个**与既有判据冲突**的数 ✗（那等于悄悄制造第二个真相 ✗）
+**⭐ 结论 ✓**：`§E` 的"能红判据"**已齐备** ⇒ **不新立门** ✗（重复的门只会互相漂移 ✗）
+**⚠️ 诚实标注（留在 `needs` ✓）**：以上**全部是单测层** ✓ —— **真机（真 Logic／真客户端）仍未证** ✗；
+   这条边界是 `§E` 明令**不许删**的 ✓，继续保留 ✓
+```
