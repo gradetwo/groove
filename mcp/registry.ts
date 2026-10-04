@@ -478,7 +478,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "render_arrangement_preview",
     title: "Preview a span of an arrangement",
     description:
-      "Hear one span of an arrangement cheaply: 8 kHz mono unless told otherwise, optionally only the tracks that changed. It renders the span once, where render_arrangement renders the whole thing and can repeat it. The file is written under GROOVE_MCP_OUT, or a fresh temp directory when that is unset, and the reply names it; playing it is up to the caller. **For an A/B, call it twice on the same span — before against after, or one track against another — and compare the two replies: each names its own file, span, tracks and levels, so the pair is self-describing and nothing has to be mixed together here.**",
+      "Hear one span of an arrangement cheaply: 8 kHz mono unless told otherwise, optionally only the tracks that changed. It renders the span once, where render_arrangement renders the whole thing and can repeat it. The file is written under GROOVE_MCP_OUT, or a fresh temp directory when that is unset. The reply names it. Playing it is up to the caller. **For an A/B, call it twice on the same span. Before against after, or one track against another. And compare the two replies: each names its own file, span, tracks and levels. The pair is self-describing and nothing has to be mixed together here.**",
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
