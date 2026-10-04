@@ -26,6 +26,8 @@ const source = [
   readFileSync("mcp/registrySong.ts", "utf8"),
   readFileSync("mcp/registryRender.ts", "utf8"),
   readFileSync("mcp/registryFiles.ts", "utf8"),
+  readFileSync("mcp/registryAnalysis.ts", "utf8"),
+  readFileSync("mcp/registryExamples.ts", "utf8"),
 ].join("\n");
 
 /** Pair every `name:` with the description that follows it, so the count does not depend on how the file is split. */

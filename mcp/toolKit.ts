@@ -466,3 +466,69 @@ export interface ToolContext {
 }
 
 import { ARRANGEMENT_TOOLS } from "./registryArrangement";
+
+export function estimateKey(pattern: { tracks?: Array<{ pitch?: Array<number | null>; pitches?: Array<number[] | null> }> }): Record<string, unknown> {
+  const histogram = new Array(12).fill(0);
+  let notes = 0;
+  for (const track of pattern.tracks ?? []) {
+    for (const value of track.pitch ?? []) {
+      if (typeof value === "number" && value > 0) {
+        histogram[value % 12] += 1;
+        notes += 1;
+      }
+    }
+    for (const stack of track.pitches ?? []) {
+      for (const value of stack ?? []) {
+        if (typeof value === "number" && value > 0) {
+          histogram[value % 12] += 1;
+          notes += 1;
+        }
+      }
+    }
+  }
+  if (!notes) return { error: "this pattern carries no pitches to estimate a key from", notes: 0 };
+
+  const major = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
+  const minor = [6.33, 2.68, 3.52, 5.38, 2.6, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
+  const correlate = (profile: number[], tonic: number) => {
+    const rotated = profile.map((_, index) => profile[(index - tonic + 12) % 12]);
+    const mean = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;
+    const hm = mean(histogram);
+    const pm = mean(rotated);
+    let num = 0;
+    let hd = 0;
+    let pd = 0;
+    for (let i = 0; i < 12; i += 1) {
+      num += (histogram[i] - hm) * (rotated[i] - pm);
+      hd += (histogram[i] - hm) ** 2;
+      pd += (rotated[i] - pm) ** 2;
+    }
+    return hd && pd ? num / Math.sqrt(hd * pd) : 0;
+  };
+
+  const names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+  let best = { tonic: 0, mode: "major", fit: -2 };
+  for (let tonic = 0; tonic < 12; tonic += 1) {
+    for (const [mode, profile] of [["major", major], ["minor", minor]] as const) {
+      const fit = correlate(profile as number[], tonic);
+      if (fit > best.fit) best = { tonic, mode, fit };
+    }
+  }
+  return {
+    tonic: names[best.tonic],
+    mode: best.mode,
+    fit: Number(best.fit.toFixed(3)),
+    notes,
+    histogram: Object.fromEntries(names.map((name, index) => [name, histogram[index]])),
+    note: "estimated from the pattern's pitches; `fit` is a correlation, so a sparse pattern reports a low fit rather than certainty",
+  };
+}
+
+export function changelog(): unknown {
+  const file = path.resolve("public/changelog.json");
+  try {
+    return JSON.parse(readFileSync(file, "utf8"));
+  } catch (error) {
+    return { error: `could not read ${file}: ${(error as Error).message}` };
+  }
+}
