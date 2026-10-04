@@ -355,7 +355,17 @@ check(
  * the Node entry point and its 4 MB of library data are a build dependency of the app. The first is a count and
  * a name list; the second is a grep over `src/`.
  */
-const registrySource = read("mcp/registry.ts");
+/**
+ * ⭐ The registry is split by domain now — `registryArrangement`, `registrySong`, `registryGs1` and the
+ * rest, with `registry.ts` reduced to the barrel that spreads them. The declaration therefore has to be
+ * looked for across the whole family, or a tool that merely **moved** reads as a tool that was dropped.
+ * The extraction itself is unchanged, so nothing but the file set moved.
+ */
+const registrySource = fs.readdirSync("mcp")
+  .filter((name) => /^registry.*\.ts$/.test(name))
+  .sort()
+  .map((name) => read(`mcp/${name}`))
+  .join("\n");
 const declaredTools = [...registrySource.matchAll(/^\s{4}name: "([a-z_]+)",$/gm)].map((match) => match[1]);
 const REQUIRED_MCP_TOOLS = [
   "list_genres",

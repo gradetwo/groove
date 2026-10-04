@@ -7715,3 +7715,23 @@ problems: **[]** ✓
 **⭐ 另一条常规动作 ✓**：**每次推后必看 `gh run list`** ✓ ——
    今晚证明了"不看"的代价：红积压三笔 ✓、根因却只有 4 个字符级的错 ✓
 ```
+
+## 三百三十五、🧱 **红线 `R11a` 跟上模块化：注册面跨文件，检查器随之扩及全族**（2026-10-04 23:1x ✓）
+
+```
+**症状 ✓**：`npm run redlines` 红一条 ✓ —— `R11a every declared MCP tool is still registered` ✗
+   报缺 `list_genres, get_genre, search_genres, list_categories, get_genre_relations, list_chord_progressions,
+   get_chord_progression, list_masterclasses, get_pattern, …` ✓
+**根因 ✓**：检查器原来只读**一个文件** ✓：`const registrySource = read("mcp/registry.ts")` ✓，
+   而我把注册面搬成了 **12 个模块** ✓（`registry.ts` 只剩 barrel ✓）⇒ **只是位置变了** ✓
+   ⚠️ 功能面**没有回归** ✓：`check:mcp` 一直 **94 tools / 123 checks 通过** ✓；那些工具逐个 grep 仍在 ✓
+   （`registryLibrary.ts` ✓／`registryPattern.ts` ✓／`registryArrangement.ts` ✓ …）
+**修法 ✓**：把取源改成**全族** ✓ —— `fs.readdirSync("mcp")` ✓ → 过滤 `^registry.*\.ts$` ✓ → 排序 ✓ → 逐个 `read` ✓ → join ✓；
+   **提取正则一字未改** ✓（`^\s{4}name: "([a-z_]+)",$` ✓）⇒ 变的**只有文件集合** ✓
+**⚠️ 途中的两个小坑 ✓（都写在这里，别再踩 ✓）**：
+   ① 该脚本用的是**默认导入** `import fs from "node:fs"` ✓ ⇒ 必须写 **`fs.readdirSync`** ✓（裸 `readdirSync` ✗ 会 `ReferenceError` ✓）
+   ② 我"检查是否已 import"时**搜了整个文件头部** ✗ ⇒ 命中了我**刚写进去的那行** ⇒ **假阳性** ✓
+      ⇒ 📌 第 38 条 ✓：**判断某符号是否已导入，只能看 import 区** ✓，绝不能搜整个文件 ✓
+**✅ 教训（第 39 条 ✓）：门禁清单再补一项** —— 本地固定清单第 **7** 项 = **`npm run redlines`** ✓
+   （今晚它证明了自己：`lint` ✗ → `redlines` ✗ 两次都是它先喊 ✓）
+```
