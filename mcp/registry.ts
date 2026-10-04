@@ -895,7 +895,7 @@ export const TOOLS: ToolDefinition[] = [
     name: "export_arrangement_midi",
     title: "Export an arrangement as a Standard MIDI File",
     description:
-      "Write the arrangement as a **Standard MIDI File, format 1** — the file a DAW opens — and return its path under GROOVE_MCP_OUT. One MIDI track per lane, named after the lane, with a conductor track carrying the tempo (`bpm` and every `tempoTrack` point) and the time signature, and each note at its own pitch, start, length and velocity. This is the mirror of `import_arrangement_midi`: a file written here imports back into the same notes, so what MCP composed can leave the building. Folders are left out (MIDI has no folder), lanes with no notes are written as empty named tracks, and anything the format cannot carry — a note between ticks, two overlapping notes of one pitch — is listed in `problems` rather than dropped in silence.",
+      "Write the arrangement as a **Standard MIDI File, format 1**. The file a DAW opens. And return its path under GROOVE_MCP_OUT. One MIDI track per lane, named after the lane, with a conductor track carrying the tempo (`bpm` and every `tempoTrack` point) and the time signature. Each note at its own pitch, start, length and velocity. This is the mirror of `import_arrangement_midi`: a file written here imports back into the same notes. What MCP composed can leave the building. Folders are left out (MIDI has no folder), lanes with no notes are written as empty named tracks. Anything the format cannot carry. A note between ticks, two overlapping notes of one pitch. Is listed in `problems` rather than dropped in silence.",
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
