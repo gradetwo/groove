@@ -8108,3 +8108,28 @@ problems: **[]** ✓
    ⭐ **并断言"只进了目标 job"** ✓（`nightly: true` ∧ `e2e: false` ✓）—— 这条断言正是前几次自伤的解药 ✓
 **⇒ 本地清单补两项 ✓**：第 10 项 **改 `ci.yml` ⇒ `js-yaml` 校验** ✓；第 11 项 **改 YAML ⇒ 双侧断言** ✓
 ```
+
+## 三百五十、🧹 **死代码：导出但无人引用（可复算读数 ✓，只当筛查表 ✗）**（2026-10-05 02:40 ✓）
+
+```
+**口径 ✓（可复算 ✓）**：范围 `mcp/**` ＋ `src/**` ✓（排除 `node_modules`／`dist`／`fixtures`／`data` ✓、
+   `*.test.*` ✓、`*.d.ts`／`*.d.mts` ✓）；取 `export (function|const|let|class|type|interface|enum) NAME` ✓；
+   全仓建**标识符词频** ✓ ⇒ 某导出名在**其它生产文件**中出现 0 次 ⇒ 判"无人引用" ✓
+**⭐ 方法教训（第 68 条 ✓）**：第一版写成"**每个符号 × 每个文件**各搜一次" ✗ ⇒ O(导出 × 文件) ✗ ⇒
+   本机 **>10 分钟未结束** ✗（只能 kill ✓）；改成**一遍遍历建词频、再查表** ✓ ⇒ **real 1.06 s** ✓（约 **600 倍** ✓）
+   ⇒ **扫描类工具先想复杂度** ✗，别等跑不动才想 ✓
+**读数 ✓（时点 2026-10-05 02:40 ✓，方法：一遍词频扫描 ✓）**：
+   生产文件 **384** ✓｜导出符号 **2095** ✓
+   ⭐ **全仓无人引用：32 个** ✓：`RecordedNote`（`src/audio/LiveRecorder.ts:10` ✓）／
+     `loadGenrePresetAsync`（`SoundBankManager.ts:53` ✓）／`loadGenreSampleBufferAsync`（`:82` ✓）／
+     `MASTER_BUS_COMP_THRESHOLD_DB`・`_KNEE_DB`（`masterGraph.ts:271-272` ✓）／
+     `renderSongChunkOffline`（`WavExporter.ts:2264` ✓）／`useCoverWarmupBothSizes`・`useLabelArt`・`useReducedMotion`（`src/hooks/**` ✓）／
+     `resetDebugModeForTests`（`src/platform/debugMode.ts:56` ✓）
+   ⚠️ **仅测试引用：101 个** ✓（`getDistortionCurveCacheSize` ✓／`PERCUSSION_MODEL_IDS` ✓／`getShareUrl` ✓／`stopCapture` ✓ … ✓）
+**⚠️ 假阳性与性质 ✓（必须一起读 ✓）**：① 数的是**标识符出现次数** ✓ ⇒ **同名局部变量**会虚高 ⇒
+   真死代码**可能多于 32** ✓（**下界** ✓）；② 可能有"**看着没人用、实则经动态路径用**"的 ✓（反射／字符串键／入口注册 ✓）；
+   ③ ⚠️ 尤其 `src/hooks/**` 三个 ✓ —— 很可能是"**该用而未用**" ✗（无障碍／封面预热 ✓），**不是死码** ✓
+**⭐ 立场 ✓**：这张表**只当筛查表** ✗，**不据此删** ✗ —— 铁律"**不擅自删可逆性差的东西**" ✓；
+   要清理须**逐个核对** ✓（一次一个 ✓、可回退 ✓），并先回答"**本该没人用，还是本该有人用却没有？**" ✓
+**⇒ `§B③`"可维护性要有量"至此五项齐备 ✓**：模块边界 ✓／单文件行数 ✓／重复实现 ✓／**死代码（本节）** ✓／脚本与文档漂移 ✓
+```
