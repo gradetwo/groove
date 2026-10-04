@@ -45,6 +45,20 @@ import { deleteMcpCustomGenre, getMcpCustomGenre, listMcpCustomGenres, saveMcpCu
 import { getGenre, getGenreRelations, listCategories, listGenres, searchGenres } from "./library";
 import { customGenreSchema } from "./toolKit";
 
+import { gs1ParameterReadings, gs1RouteOverrideReadings, gs1RouteReadings, mergeGs1Overrides } from "../src/audio/gs1/gs1ParamOverrides";
+import { decodeGs1PatchCode } from "../src/audio/gs1/gs1PatchCode";
+import { resolveGs1Lane } from "../src/audio/gs1/gs1Tracks";
+import { DEFAULT_NOTE_CONVENTION, NoteConvention, describePitch } from "../src/data/pitchTruth";
+import { DEFAULT_PARAMS, MAX_ROUTES } from "../vendor/gs1/src/audio/params";
+import { duplicateMcpCustomGenre } from "./customGenres";
+import { clonePattern, findGenre, getChordProgression, listChordProgressions, listMasterclasses } from "./library";
+import { PatternOp, applyPatternOps, findTrack, validatePattern } from "./pattern";
+import { applyChordProgression } from "./progression";
+import { auditionInstrumentNote } from "./render/worker";
+import { changeUserLibraries } from "./sampleLibraries";
+import { getMcpSong } from "./song";
+import { describeGs1Sound, opSchema, patternFromArgs, patternSchema, unknownGenre } from "./toolKit";
+
 export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
   {
     name: "describe_arrangement",
@@ -1122,4 +1136,627 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
    * save the variation. The store behind it is the server process's own rather than the browser's IndexedDB library:
    * a genre saved here lives for the session, and the genres a person saved in the app are not visible to these tools.
    */
+  {
+    name: "duplicate_custom_genre",
+    title: "Duplicate a custom genre",
+    description:
+      "Copy a saved custom genre under a new id and a name ending in (Copy), leaving the original in place, and return the copy. This is the maker's Duplicate button, for an agent that wants a variation without risking the first.",
+    readOnly: false,
+    inputSchema: { id: z.string().describe("a custom genre id, as list_custom_genres returns") },
+    handler: async (args) => {
+      try {
+        return await duplicateMcpCustomGenre(String(args.id));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    name: "list_chord_progressions",
+    title: "List chord progressions",
+    description: "The popular-progression library (roman numerals, category, emotional tag, example songs).",
+    readOnly: true,
+    inputSchema: { category: z.string().optional() },
+    handler: (args) => listChordProgressions({ category: args.category as string | undefined }),
+  },
+  {
+    name: "get_chord_progression",
+    title: "Get a chord progression",
+    description: "One progression with its full song list, description and degrees.",
+    readOnly: true,
+    inputSchema: { id: z.string() },
+    handler: (args) => getChordProgression(String(args.id)) ?? failure(`unknown progression "${String(args.id)}"`),
+  },
+  {
+    name: "apply_chord_progression",
+    title: "Write a chord progression into a pattern",
+    description:
+      "Take the progression `suggest_progression` gave you. Or numerals you wrote yourself. And **put it into the music**: the chord lane gets a note at each chord's step, held for the chord's length. The reply says which lane, how many chords were written, the chords' notes. Anything that did not fit. A pure transform like `apply_pattern_ops`: a pattern in, a pattern out, nothing on the server changed.",
+    readOnly: true,
+    inputSchema: {
+      genreId: z.string().optional().describe("start from this genre's pattern"),
+      pattern: patternSchema.optional().describe("or start from a pattern you already have"),
+      progressionId: z.string().optional().describe("a progression from the library, by id"),
+      roman: z.string().max(120).optional().describe('or the numerals directly, e.g. "i-VI-III-VII"'),
+      tonic: z.number().int().min(0).max(127).optional().describe("MIDI note of the key's tonic; default 60"),
+      mode: z.enum(["major", "minor"]).optional().describe("default major"),
+      chordBeats: z.number().int().min(1).max(16).optional().describe("steps each chord is held; default 4, one bar in a sixteen-step pattern"),
+      track: z.string().max(40).optional().describe('which lane to write to; default the chord lane'),
+      velocity: z.number().int().min(1).max(127).optional().describe("default 100"),
+    },
+    handler: (args) => {
+      const base = patternFromArgs(args as { genreId?: string; pattern?: unknown });
+      if (!base) {
+        const wanted = (args as { genreId?: string }).genreId;
+        return failure(wanted ? unknownGenre(wanted) : "provide either genreId or pattern");
+      }
+      const result = applyChordProgression(base, {
+        ...(args.progressionId === undefined ? {} : { progressionId: String(args.progressionId) }),
+        ...(args.roman === undefined ? {} : { roman: String(args.roman) }),
+        ...(args.tonic === undefined ? {} : { tonic: args.tonic as number }),
+        ...(args.mode === undefined ? {} : { mode: args.mode as "major" | "minor" }),
+        ...(args.chordBeats === undefined ? {} : { chordBeats: args.chordBeats as number }),
+        ...(args.track === undefined ? {} : { track: String(args.track) }),
+        ...(args.velocity === undefined ? {} : { velocity: args.velocity as number }),
+      });
+      return { ...result, validation: validatePattern(result.pattern) };
+    },
+  },
+  {
+    name: "list_masterclasses",
+    title: "List masterclasses",
+    description: "The masterclass lessons the app ships, with level, genre binding and step count.",
+    readOnly: true,
+    inputSchema: {},
+    handler: () => listMasterclasses(),
+  },
+  {
+    name: "get_pattern",
+    title: "Get a pattern",
+    description: "A genre's default sequencer pattern, verbatim and copied (the library itself is never exposed by reference).",
+    readOnly: true,
+    inputSchema: { genreId: z.string() },
+    handler: (args) => {
+      const genre = findGenre(String(args.genreId));
+      if (!genre?.sequencer_pattern) return failure(`unknown genre "${String(args.genreId)}"`);
+      return { genreId: genre.id, name: genre.name, pattern: clonePattern(genre.sequencer_pattern) };
+    },
+  },
+  {
+    name: "apply_pattern_ops",
+    title: "Compose with pattern operations",
+    description:
+      "Apply a list of operations (set_step, clear_step, set_velocity, set_pitch, set_gate, transpose, humanize, swing, clear_track, copy_track, set_chord_progression, transform_pattern) to a pattern. It returns the new pattern plus a per-operation report. `transform_pattern` bakes the app's arpeggiator or strummer into a lane's held chords. The engine is `src/utils/arpeggiatorTheory.ts`, so the order and register match what the interface plays. Copy a lane first to arpeggiate the chords into a lead. The input is never mutated; seeded operations are deterministic.",
+    readOnly: true,
+    inputSchema: {
+      genreId: z.string().optional().describe("start from this genre's pattern"),
+      pattern: patternSchema.optional().describe("or start from a pattern you already have"),
+      ops: z.array(opSchema).min(1),
+    },
+    handler: (args) => {
+      const base = patternFromArgs(args as { genreId?: string; pattern?: unknown });
+      if (!base) {
+        // A genreId that was supplied but not found deserves better than the message for supplying nothing at all.
+        const wanted = (args as { genreId?: string }).genreId;
+        return failure(wanted ? unknownGenre(wanted) : "provide either genreId or pattern");
+      }
+      const result = applyPatternOps(base, args.ops as PatternOp[]);
+      return { applied: result.applied, pattern: result.pattern, validation: validatePattern(result.pattern) };
+    },
+  },
+  /**
+   * The GS-1 **patch pass-through**, the per-parameter layer on top of it, and the one place a
+   * caller can shape a lane's GS-1 sound.
+   *
+   * The synth project already defines the format, the encoder, the decoder and the parameter table
+   * (`gs1.patch.get` prints a `gs1.1.` share code; `gs1.patch.set` accepts one). This tool stores
+   * that string on the lane, and — since the code alone made 0 of the engine's 224 parameters
+   * writable — the caller's per-parameter overrides **beside** it. No payload is built here and no
+   * encoder is vendored: the code is untouched, and the overrides reach the engine through its own
+   * `setParam`/`setModRoute` at the one seam every consumer resolves a lane through
+   * (`resolveGs1Lane`). A code or an override that cannot be read is **refused here** (and reported
+   * by `validate_pattern`), never written to a lane where it would quietly become a different sound.
+   */
+  {
+    name: "get_transposition_report",
+    title: "What is moving this pitch",
+    description:
+      "**Every place a pitch can move, named, with the total beside the list**. Because the fix for a surprise octave is not a promise that it cannot happen but a report of who did it. Reads the section's own `transpose` and its `overrides.transpose` from a song. The GS-1 pitch parameters from a lane's own overrides (OSC1_PITCH OSC2_PITCH in semitones, OSC1_DETUNE OSC2_DETUNE MASTER_TUNE in cents). Each entry carries its source, its size, whether it can be undone and where it lives. Nothing is applied: this reports what the model states. Two things it deliberately does not read, both named in its reply rather than silently omitted: the **SFZ's own `tune` and `pitch_keycenter`**. They need a resolved note and are reported by `get_pitch_report` with an `assetId`. The chord register in `genreExpression` is written into the pitches at composition time and is therefore not a playback transposition at all. Note that **no track-level transposition exists in either model**. Both `transpose` fields live on sections.",
+    readOnly: true,
+    inputSchema: {
+      songId: z.string().optional().describe("a song whose sections to read; every section unless sectionId names one"),
+      sectionId: z.string().optional().describe("one section of that song"),
+      pattern: patternSchema.optional().describe("a pattern whose lane's GS-1 overrides to read"),
+      track: z.string().optional().describe('the lane in that pattern — laneId first, then kind ("chords", "lead"…)'),
+    },
+    handler: (args) => {
+      const songId = typeof args.songId === "string" && args.songId.length > 0 ? args.songId : undefined;
+      const sectionId = typeof args.sectionId === "string" && args.sectionId.length > 0 ? args.sectionId : undefined;
+      const trackName = typeof args.track === "string" && args.track.length > 0 ? args.track : undefined;
+      if (songId === undefined && args.pattern === undefined) {
+        return failure("give a songId, a pattern, or both — there is nothing to report on otherwise");
+      }
+
+      const sections: Array<{ sectionId: string; label?: string; transpositions: unknown[] }> = [];
+      if (songId !== undefined) {
+        const song = getMcpSong(songId);
+        if (!song) return failure(`no song "${songId}"`);
+        // `SongSection.id`, not `sectionId` — the field names here are the model's, read from the type rather
+        // than assumed. Its transposition is `overrides.transpose`, the value `sectionTranspose` reads.
+        const wanted = song.sections.filter((section) => sectionId === undefined || section.id === sectionId);
+        if (sectionId !== undefined && wanted.length === 0) {
+          return failure(`no section "${sectionId}" in song "${songId}"`);
+        }
+        for (const section of wanted) {
+          sections.push({
+            sectionId: section.id,
+            ...(section.label === undefined ? {} : { label: section.label }),
+            transpositions: collectTranspositions({
+              ...(typeof section.overrides?.transpose === "number"
+                ? { overridesTranspose: section.overrides.transpose }
+                : {}),
+            }),
+          });
+        }
+      }
+
+      let lane: { track: string; transpositions: unknown[] } | undefined;
+      if (args.pattern !== undefined) {
+        const pattern = patternFromArgs(args as { pattern?: unknown });
+        if (!pattern) return failure("that pattern could not be read");
+        if (trackName === undefined) return failure("name a track — the GS-1 overrides live per lane");
+        const row = findTrack(pattern, trackName);
+        if (!row) {
+          const lanes = pattern.tracks.map((item) => item.laneId ?? item.track_id).join(", ");
+          return failure(`no lane "${trackName}" in this pattern — the lanes are: ${lanes}`);
+        }
+        const overrides = (row as { gs1PatchOverrides?: { parameters?: Record<string, number | string> } })
+          .gs1PatchOverrides;
+        lane = {
+          track: String(row.laneId ?? row.track_id),
+          transpositions: collectTranspositions({
+            ...(overrides?.parameters === undefined ? {} : { gs1Parameters: overrides.parameters }),
+          }),
+        };
+      }
+
+      const all = [
+        ...sections.flatMap((section) => section.transpositions),
+        ...(lane?.transpositions ?? []),
+      ] as Array<{ semitones: number }>;
+      const totalSemitones = all.reduce((sum, item) => sum + item.semitones, 0);
+      return {
+        totalSemitones,
+        /** The list is the report; the total is only its sum, so it is never returned without it. */
+        ...(sections.length === 0 ? {} : { sections }),
+        ...(lane === undefined ? {} : { lane }),
+        notRead: [
+          "the SFZ's own tune and pitch_keycenter — these need a resolved note, so ask get_pitch_report with an assetId",
+          "the GS-1 parameters of any lane you did not name",
+          "the chord register in genreExpression, which is written into the pitches at composition time and is not a playback transposition",
+        ],
+        note: "each entry is what the model states, and reversible says whether the creator can set it back",
+      };
+    },
+  },
+  {
+    name: "add_sample_library",
+    title: "Register your own sound source",
+    description:
+      "**Add a sound library you supply**. The orchestral one you prefer over ours. Or remove one you added. Give `library` with an `id` (the namespace its asset ids take), a `name`, a `licence`. Where its files live: a pinned source as `repo` + `pin`, or a mirror as `root` + `prefix`, or both. Plus an `sfz` path or an `instruments` list. The library is merged into the catalogue **before** asset ids are made. It acquires them from the same function the built-in libraries do and its notes resolve through the same resolver. There is no second loading path. **A licence is required and `\"unknown\"` is a real answer**: guessing would be believed. Saying nothing is better than that. Give `durationSeconds` when you know it. Without one the library is registered but **excluded from the catalogue with that reason attached**, because a duration nobody measured is not a duration. A refusal writes nothing. Call with neither argument to list what is registered, or with `remove` to undo an addition.",
+    readOnly: false,
+    inputSchema: {
+      library: z
+        .record(z.string(), z.unknown())
+        .optional()
+        .describe(
+          'the library: { id, name, licence, sfz, repo?, pin?, root?, prefix?, instruments?, durationSeconds?, attribution?, sourceUrl? }'
+        ),
+      remove: z.string().optional().describe("the id of a library to remove, undoing an earlier addition"),
+    },
+    handler: (args) => {
+      /**
+       * ⭐ **The ids the project already ships, so a collision is refused here rather than silently dropped
+       * later.** `listSampleLibraries` reads the shipped manifest and lists exactly those; a library that took
+       * one of their ids would be accepted, written, and then excluded from the catalogue at merge time — which
+       * looks to the person like it worked. Found by running this tool, not by reading it.
+       */
+      const reservedIds = listSampleLibraries().libraries.map((library) => library.id);
+      const result = changeUserLibraries({
+        ...(args.library === undefined ? {} : { library: args.library }),
+        ...(args.remove === undefined ? {} : { remove: String(args.remove) }),
+        reservedIds,
+      });
+      return {
+        changed: result.changed,
+        path: result.path,
+        /** ⭐ What is registered now, so a caller sees the effect without a second call. */
+        libraries: result.libraries.map((library) => ({
+          id: library.id,
+          name: library.name,
+          licence: library.licence,
+          ...(library.repo === undefined ? {} : { repo: library.repo }),
+          ...(library.pin === undefined ? {} : { pin: library.pin }),
+          ...(library.durationSeconds === undefined ? {} : { durationSeconds: library.durationSeconds }),
+          ...(library.durationSeconds === undefined ? { excluded: "no duration has been measured for this library" } : {}),
+        })),
+        ...(result.problems.length === 0 ? {} : { problems: result.problems }),
+        note:
+          result.changed === "none"
+            ? "nothing was written"
+            : "the catalogue merges this at load, so the library's instruments and their asset ids appear the next time the catalogue is built — run get_pitch_report against one of them to see whether its labels match what it plays",
+      };
+    },
+  },
+  {
+    name: "get_pitch_report",
+    title: "What a note actually is",
+    description:
+      "One note, in every form a caller might have to check it against something else: the **MIDI note number** first, because that is the only field that never changes, then the name. **Together with which middle-C convention produced that name**, then the frequency. Names like C4 are a display choice. The same note number is C3 in Yamaha's convention, C4 in scientific pitch notation and C5 in some older software. So a bare name is never returned without the convention beside it. Use this before and after anything that might transpose. Compare the numbers rather than the names. The sound source's own account of the note. Which sample file it resolved to, that sample's root key and the ratio it is played at. Comes back from `render_instrument_note` as its `resolved` field. `DescribePitch` in the app reports both halves in one shape. With an `assetId`, the arithmetic half needs no engine at all and the source half can resolve on either host: `headless: true` resolves it on the Node Web Audio host. The reply's `engine` says which host answered.",
+    readOnly: true,
+    inputSchema: {
+      midi: z
+        .union([z.number().int().min(0).max(127), z.array(z.number().int().min(0).max(127)).min(1).max(128)])
+        .describe("one MIDI note 0-127, or a list of them — note 60 is middle C, note 69 is A4 at 440 Hz"),
+      convention: z
+        .enum(["C4", "C3", "C5"])
+        .optional()
+        .describe("which name goes with which number; defaults to C4 (scientific pitch notation, note 60 is C4)"),
+      cents: z.number().min(-1200).max(1200).optional().describe("micro-tuning for the note, in cents"),
+      assetId: z
+        .string()
+        .optional()
+        .describe(
+          "a catalogue asset to resolve the notes against, e.g. \"vsco2ce:ViolinEnsSusVib\" — adds which sample file each note lands on, that file's declared root key, the ratio it is played at, and what the root sounds at. This is what the source **claims**, not a measurement of it: only a render and a measurement can say whether the claim is true."
+        ),
+      /**
+       * ⭐ **The shared `headlessParameterDescription()` is deliberately not used here.**
+       *
+       * That text is about *rendering*, and quotes the two hosts' measured sound difference; this tool renders nothing
+       * on this path — it resolves the note's source and returns the claim. Quoting a band/loudness gap for a call that
+       * produces no audio would be a true sentence about the wrong thing, so this parameter says what it actually buys:
+       * the same `loadNote` and loader, without a page.
+       */
+      headless: z
+        .boolean()
+        .optional()
+        .describe(
+          "resolve the note's source on the **Node Web Audio host** (`node-web-audio-api`) instead of the Vite + Chromium page — no browser process, and it also works under GROOVE_MCP_NO_BROWSER=1. The same `loadNote` and the same sample loader answer either way, and **no audio is rendered on this path**, so the two hosts' sound difference does not apply here; the reply's `engine` names which host resolved the sample. Only meaningful with `assetId`. **This never falls back**: a missing optional package errors rather than quietly resolving through the page."
+        ),
+    },
+    handler: async (args) => {
+      const raw = args.midi;
+      // Narrowed rather than cast: the schema allows one number or a list, and a caller's value arrives loose.
+      const wanted: number[] = (Array.isArray(raw) ? raw : [raw]).map((value) => Number(value));
+      const convention = (args.convention ?? DEFAULT_NOTE_CONVENTION) as NoteConvention;
+      const cents = typeof args.cents === "number" ? args.cents : undefined;
+      const assetId = typeof args.assetId === "string" && args.assetId.length > 0 ? args.assetId : undefined;
+
+      /**
+       * ⭐ **The sound source's own account, resolved through the same `loadNote` the app plays with.**
+       *
+       * `rootKey` is what the sample file *declares*, and `ratio` is what the engine will multiply by to reach
+       * the note — so `ratioCents` says how far the sample is being moved, and `rootFrequencyHz` says what the
+       * sample's own root sounds at. What none of this says is whether the declaration is **true**: a sample
+       * whose audio is an octave away from its label produces a wrong frequency here exactly as it does in a
+       * render. That is what the census measures by rendering, and this tool will not imply otherwise.
+       *
+       * Resolving needs an engine — a page, or the Node Web Audio host with `headless: true` — so a failure is
+       * reported per note rather than thrown: the number-and-name half above is pure arithmetic and stays correct
+       * either way, and an unreachable mirror costs the source half of one note rather than the whole reply.
+       */
+      const sources = new Map<number, { samplePath: string; rootKey: number; ratio: number }>();
+      const sourceProblems: string[] = [];
+      /** Which host resolved the samples; absent when no `assetId` was given, because then no engine ran at all. */
+      let resolveEngine: "browser" | "node-web-audio-api" | undefined;
+      if (assetId) {
+        for (const midi of wanted) {
+          try {
+            const resolved = await auditionInstrumentNote(assetId, midi, {
+              format: "wav",
+              resolveOnly: true,
+              ...(args.headless === true ? { headless: true } : {}),
+            });
+            if (!("resolved" in resolved)) {
+              sourceProblems.push(`note ${midi}: the source returned audio rather than a resolution`);
+              continue;
+            }
+            resolveEngine = resolved.engine;
+            const rootKey = resolved.resolved.rootKey;
+            if (typeof rootKey !== "number") {
+              sourceProblems.push(
+                `note ${midi}: ${resolved.resolved.samplePath} states no root key, so there is nothing to compare the note against`
+              );
+              continue;
+            }
+            sources.set(midi, { samplePath: resolved.resolved.samplePath, rootKey, ratio: resolved.resolved.ratio });
+          } catch (error) {
+            sourceProblems.push(`note ${midi}: ${(error as Error).message}`);
+          }
+        }
+      }
+
+      const report = wanted.map((midi) => {
+        const source = sources.get(midi);
+        return describePitch({
+          midi,
+          convention,
+          ...(cents === undefined ? {} : { cents }),
+          ...(source === undefined ? {} : { source }),
+        });
+      });
+      return {
+        convention,
+        defaultConvention: DEFAULT_NOTE_CONVENTION,
+        ...(assetId === undefined ? {} : { assetId }),
+        /** The host that resolved the source half, named rather than inferred — absent when there was no source half. */
+        ...(resolveEngine === undefined ? {} : { engine: resolveEngine }),
+        ...(sourceProblems.length === 0 ? {} : { sourceProblems }),
+        /** The reader's first line: the convention is named here too, not only per note. */
+        note: `names below are ${convention} (note 60 is ${convention}); the numbers are the truth and do not depend on it`,
+        notes: report.map((item) => ({
+          midi: item.midi,
+          name: item.name,
+          frequencyHz: Number(item.frequencyHz.toFixed(6)),
+          ...(item.transposed
+            ? { soundingMidi: item.soundingMidi, soundingFrequencyHz: Number(item.soundingFrequencyHz.toFixed(6)) }
+            : {}),
+          transposed: item.transposed,
+          totalSemitones: item.totalSemitones,
+          transpositions: item.transpositions,
+          ...(item.source === undefined
+            ? {}
+            : {
+                source: {
+                  samplePath: item.source.samplePath,
+                  rootKey: item.source.rootKey,
+                  rootFrequencyHz: Number(item.source.rootFrequencyHz.toFixed(6)),
+                  ratio: Number(item.source.ratio.toFixed(9)),
+                  /** How far the sample is being moved to reach this note: +100 for one semitone up. */
+                  ratioCents: Number(item.source.ratioCents.toFixed(3)),
+                  /** ⚠️ The claim, not a verdict: whether it is *true* needs a render and a measurement. */
+                  claimOnly: true,
+                },
+              }),
+        })),
+      };
+    },
+  },
+  {
+    name: "apply_gs1_patch",
+    title: "Give a lane a GS-1 patch, and write individual parameters",
+    description:
+      "Set or clear one lane's own GS-1 sound, as the synth project's own share code (a \"gs1.1.…\" string from gs1.patch.get; gs1.patch.set and gs1.render accept the same string). And write **individual parameters and modulation rows** on top of it with `parameters` / `routes`, which is what the share code alone cannot do. Overrides the instrument table for that lane only. Reaches the rendered audio and live playback through the same resolution: the base code goes to the engine's `setPatch`, the overrides to its own `setParam`/`setModRoute`. `Get_gs1_patch` reads the effective result back. Parameter keys are Param names (\"FILTER_CUTOFF\") or numeric ids (\"14\"). Values are the engine's own. The engine clamps their ranges (PARAM_SPECS covers only 84 of 224 parameters and is narrower than what the engine serves, so it is deliberately not used as a filter). Returns the new pattern and its validation. A code that cannot be decoded, an unknown parameter or route, or either on a lane GS-1 never plays is refused with the reason, naming the lane. `patch: null` clears the lane's whole GS-1 sound, overrides included. `Parameters: {}` or `routes: []` clears just that half.",
+    readOnly: true,
+    inputSchema: {
+      genreId: z.string().optional().describe("start from this genre's pattern"),
+      pattern: patternSchema.optional().describe("or start from a pattern you already have"),
+      track: z
+        .string()
+        .min(1)
+        .describe('the lane to patch — matched by laneId first, then by kind ("chords", "lead", "fx", "lead-2"…), as everywhere else'),
+      patch: z
+        .string()
+        .nullable()
+        .optional()
+        .describe('a GS-1 share code ("gs1.1.…"); null clears this lane\'s own patch **and its overrides** and goes back to the instrument table; omit it to leave the code as it is'),
+      parameters: z
+        .record(z.string(), z.number())
+        .optional()
+        .describe('parameter name ("FILTER_CUTOFF", case-insensitive) or numeric id ("14") → the engine\'s own value, e.g. { "FILTER_CUTOFF": 700 }; replaces this lane\'s parameter overrides ({} clears them)'),
+      routes: z
+        .array(
+          z.object({
+            index: z.number().int().min(0).max(MAX_ROUTES - 1).optional().describe("engine slot 0..7; defaults to this row's position"),
+            src: z.union([z.number().int(), z.string()]).describe('a MOD_SOURCES name ("velocity", "lfo", "env"…) or its index'),
+            dst: z.union([z.number().int(), z.string()]).describe('a MOD_DESTS name ("cutoff", "pitch"…) or its index'),
+            amount: z.number(),
+            enabled: z.boolean().optional().describe("defaults to true — writing a row is what turns it on"),
+          })
+        )
+        .optional()
+        .describe("modulation rows written on top of the base patch, by slot, e.g. [{ src: \"velocity\", dst: \"cutoff\", amount: 0.5 }]; replaces this lane's route overrides ([] clears them)"),
+    },
+    handler: (args) => {
+      const base = patternFromArgs(args as { genreId?: string; pattern?: unknown });
+      if (!base) {
+        const wanted = (args as { genreId?: string }).genreId;
+        return failure(wanted ? unknownGenre(wanted) : "provide either genreId or pattern");
+      }
+      // `patternFromArgs` hands back the caller's own object when one was supplied; never mutate it.
+      const pattern = clonePattern(base);
+      const track = findTrack(pattern, String(args.track));
+      if (!track) {
+        const lanes = pattern.tracks.map((row) => row.laneId ?? row.track_id).join(", ");
+        return failure(`no lane "${String(args.track)}" in this pattern — the lanes are: ${lanes}`);
+      }
+      const laneKey = track.laneId ?? track.track_id;
+
+      const patchGiven = args.patch !== undefined;
+      const parametersGiven = args.parameters !== undefined;
+      const routesGiven = args.routes !== undefined;
+      if (!patchGiven && !parametersGiven && !routesGiven) {
+        return failure(
+          `nothing to apply to lane "${laneKey}" — pass \`patch\` (a "gs1.1.…" share code, or null to clear), \`parameters\`, or \`routes\``
+        );
+      }
+      if (args.patch === null && (parametersGiven || routesGiven)) {
+        return failure(
+          `lane "${laneKey}": \`patch: null\` clears the lane's whole GS-1 sound, overrides included — pass \`parameters\`/\`routes\` without \`patch\` to override the instrument table's patch instead`
+        );
+      }
+
+      if (args.patch === null) {
+        delete track.gs1Patch;
+        delete track.gs1PatchOverrides;
+        return {
+          pattern,
+          track: laneKey,
+          patch: null,
+          overrides: null,
+          detail: `lane "${laneKey}" is back on the instrument table's patch`,
+          validation: validatePattern(pattern),
+        };
+      }
+
+      /**
+       * Each half replaces only itself, so two calls compose: writing a route does not silently drop
+       * the parameter overrides a previous call stored, and `{}` / `[]` is how a caller clears one
+       * half on purpose. The reply carries the resulting layer, so nothing about the merge is hidden.
+       */
+      const stored = track.gs1PatchOverrides;
+      const nextOverrides =
+        parametersGiven || routesGiven
+          ? {
+              ...(parametersGiven
+                ? { parameters: args.parameters as Record<string, number> }
+                : stored?.parameters !== undefined
+                  ? { parameters: stored.parameters }
+                  : {}),
+              ...(routesGiven
+                ? { routes: args.routes as NonNullable<typeof stored>["routes"] }
+                : stored?.routes !== undefined
+                  ? { routes: stored.routes }
+                  : {}),
+            }
+          : stored;
+
+      const nextCode = patchGiven ? String(args.patch) : track.gs1Patch;
+      const lane = resolveGs1Lane(track.track_id, track.instrument, base.genre_id, nextCode, nextOverrides);
+      if (lane.kind === "problem") return failure(`lane "${laneKey}": ${lane.problem}`);
+      if (lane.kind === "native") {
+        // Unreachable with a code or an override (the resolver's `voice`/`problem` arms cover it),
+        // and stated rather than asserted away: a caller must never get a success for a patch that
+        // did not land.
+        return failure(`lane "${laneKey}": the patch code was neither accepted nor refused`);
+      }
+
+      if (patchGiven && nextCode !== undefined) track.gs1Patch = nextCode;
+      const resolvedOverrides = lane.voice.overrides;
+      if (resolvedOverrides && (resolvedOverrides.parameters.length > 0 || resolvedOverrides.routes.length > 0)) {
+        track.gs1PatchOverrides = nextOverrides;
+      } else {
+        delete track.gs1PatchOverrides;
+      }
+
+      // The effective record: base code (or table patch) with the overrides folded on, so the count
+      // is "how far the lane's sound is from the synth's default patch" and not "how big the code is".
+      const effective = mergeGs1Overrides(lane.voice.params, resolvedOverrides);
+      const changed = Object.entries(effective).filter(([id, value]) => value !== DEFAULT_PARAMS[Number(id)]).length;
+      const routing = gs1RouteReadings(lane.voice.routes);
+      const overrideCount = (resolvedOverrides?.parameters.length ?? 0) + (resolvedOverrides?.routes.length ?? 0);
+      const baseName = lane.voice.code ? "its own share code" : `the instrument table's "${String(lane.voice.patch)}"`;
+      return {
+        pattern,
+        track: laneKey,
+        patch: {
+          shareCode: track.gs1Patch ?? null,
+          /** How far the lane is from the synth's own default patch — a real sound, not `INIT`. */
+          parametersChanged: changed,
+          routes: routing.length,
+        },
+        overrides:
+          resolvedOverrides && overrideCount > 0
+            ? {
+                parameters: gs1ParameterReadings({}, resolvedOverrides, "share code", true),
+                routes: gs1RouteOverrideReadings(resolvedOverrides.routes),
+              }
+            : null,
+        detail:
+          `lane "${laneKey}" plays ${baseName}` +
+          (overrideCount > 0 ? ` with ${overrideCount} per-parameter override${overrideCount === 1 ? "" : "s"} on top` : "") +
+          ` (${changed} parameter${changed === 1 ? "" : "s"} away from the synth's default patch)`,
+        validation: validatePattern(pattern),
+      };
+    },
+  },
+  /**
+   * The **read side** of the per-parameter layer — and of the code itself.
+   *
+   * It answers "what does this lane actually play" in terms a creator can act on: the parameters that
+   * differ from the synth's default patch, by name, with the engine's own label and formatting; the
+   * modulation rows by source/destination name; and which of those the caller overrode. It is the
+   * tool that makes the write side usable at all — a share code is one opaque string, and without a
+   * read a caller cannot see what it set, or what a `parameters` write changed.
+   */
+  {
+    name: "get_gs1_patch",
+    title: "Read a lane's GS-1 sound (or a share code)",
+    description:
+      "Say what a GS-1 sound actually is, in named parameters rather than 224 numbers. Read the lane's own share code and per-parameter overrides (with `genreId`/`pattern` + `track`), or decode a code the caller has (with `patch`). Returns the parameters that differ from the synth's default patch. Param name, engine label, value in its own unit (Hz, %, ms), and whether it came from the code, the instrument table, or an override. Plus the modulation rows by source/destination name, and the counts for the parameters that are unchanged. `includeUnchanged: true` lists all 224. A lane with no code and no overrides is reported as playing the instrument table's patch. A lane GS-1 does not voice, and a code or override that cannot be read, are said plainly instead of guessed at.",
+    readOnly: true,
+    inputSchema: {
+      patch: z.string().optional().describe('a share code to read directly ("gs1.1.…"), instead of a lane'),
+      genreId: z.string().optional().describe("read a lane of this genre's pattern"),
+      pattern: patternSchema.optional().describe("or read a lane of a pattern you already have"),
+      track: z.string().min(1).optional().describe('which lane to read ("chords", "lead", "lead-2"…) — required unless `patch` is given'),
+      includeUnchanged: z
+        .boolean()
+        .optional()
+        .describe("also list every parameter still at the synth's default patch (off by default: a code typically sets tens of the 224)"),
+    },
+    handler: (args) => {
+      const includeUnchanged = args.includeUnchanged === true;
+
+      if (args.patch !== undefined) {
+        const decoded = decodeGs1PatchCode(String(args.patch));
+        if (!decoded.ok) return failure(decoded.problem);
+        return describeGs1Sound({
+          source: "code",
+          shareCode: String(args.patch),
+          tablePatch: null,
+          params: decoded.patch.params,
+          routes: decoded.patch.routes,
+          overrides: undefined,
+          includeUnchanged,
+          instrument: null,
+          track: null,
+        });
+      }
+
+      if (args.track === undefined || args.track === null || String(args.track).trim() === "") {
+        return failure(
+          "name the lane to read with `track` (plus `genreId` or `pattern`), or pass the share code itself as `patch`"
+        );
+      }
+      const base = patternFromArgs(args as { genreId?: string; pattern?: unknown });
+      if (!base) {
+        const wanted = (args as { genreId?: string }).genreId;
+        return failure(wanted ? unknownGenre(wanted) : "provide either genreId or pattern");
+      }
+      const track = findTrack(base, String(args.track));
+      if (!track) {
+        const lanes = base.tracks.map((row) => row.laneId ?? row.track_id).join(", ");
+        return failure(`no lane "${String(args.track)}" in this pattern — the lanes are: ${lanes}`);
+      }
+      const laneKey = track.laneId ?? track.track_id;
+      const lane = resolveGs1Lane(
+        track.track_id,
+        track.instrument,
+        base.genre_id,
+        track.gs1Patch,
+        track.gs1PatchOverrides
+      );
+      if (lane.kind === "problem") return failure(`lane "${laneKey}": ${lane.problem}`);
+      if (lane.kind === "native") {
+        return {
+          track: laneKey,
+          instrument: track.instrument ?? null,
+          voiced: false,
+          detail: `lane "${laneKey}" is not voiced by GS-1: instrument "${String(track.instrument)}" has no patch in the GS-1 table (src/data/gs1Patches.ts), so it plays the native engine and there is nothing here to read`,
+        };
+      }
+      return describeGs1Sound({
+        source: lane.voice.code ? "lane" : "table",
+        shareCode: lane.voice.code ?? null,
+        tablePatch: lane.voice.patch,
+        params: lane.voice.params,
+        routes: lane.voice.routes ?? [],
+        overrides: lane.voice.overrides,
+        includeUnchanged,
+        instrument: track.instrument ?? null,
+        track: laneKey,
+      });
+    },
+  },
 ];
