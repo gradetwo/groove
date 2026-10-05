@@ -10747,3 +10747,22 @@ export async function prepareArrangementAudioLanes(input: {
    ⇒ ⭐ **下一步** ✓：量清 `:240–300` 段里的局部变量与依赖 ✓ ⇒ 抽 helper ✓ ⇒ 再写 `validateArrangementHeadless` ✓
 ```
 
+**⭐ 第 2 步接线块已量清（2026-10-05 20:32 ✓）**：
+```
+· `renderPatternHeadless`（`mcp/render/headless.ts:231` ✓）的准备局部量 ✓：
+  ① ⭐ 六个动态导入 ✓：`const [wav, mp3, loudness, metrics, catalogue, graph] = await Promise.all([...])` ✓（`:243` ✓）
+  ② ⭐ `audioCatalogue` ✓：`catalogueRead.text ? catalogue.catalogueFromManifestText(catalogueRead.text, context.sampleRoot).assets : []` ✓（`:255` ✓）
+  ③ `bars` ✓／`cacheWiring` ✓（`sampleCache.renderSampleCacheWiring()` ✓）／`progress` ✓／`what` ✓／
+     `reportRenderedFrames` ✓／`renderProblems` ✓／`renderFramesEstimate` ✓
+· ⭐ 校验只需要其中五项 ✓：`wav` ✓／`catalogue` ✓／`graph` ✓／`audioCatalogue` ✓／`cacheWiring` ✓
+  ⇒ ⭐ **helper 形状** ✓（`mcp/render/headless.ts` 内 ✓，导出 ✓）：
+     `async function loadHeadlessLaneWiring(context, catalogueRead)` ⇒
+     `{ wav, catalogue, graph, audioCatalogue, cacheWiring }` ✓
+  ⇒ ⭐ **然后** ✓：`export async function validateArrangementHeadless(pattern, options, catalogueRead, context): Promise<ArrangementLaneReport>` ✓
+     ＝ `loadHeadlessHost(context.publicRoot)` ✓ ⇒ `loadHeadlessLaneWiring(...)` ✓ ⇒
+       `wav.preparePatternAudioLanes(pattern, { bars, sampleDecoder: cacheWiring.decoderFor(...), fetchSfzBytes: cacheWiring.fetchSfzBytes, ... })` ✓
+  ⇒ ⚠️ `sampleDecoder` 需要 `graph.browserBytesDecoder(context)` ✓（与渲染同一写法 ✓）⇒ helper 要**一并返回**它能建的东西 ✓
+     ⇒ ⭐ helper 实际返回 ✓：`{ wav, audioCatalogue, makeSampleDecoder, fetchSfzBytes }` ✓（⭐ 更小更直接 ✓）
+· ⚠️ 纪律 ✓：⭐ **搬移而非复制** ✓ ⇒ 渲染侧的第 ① ② 段改为调 helper ✓；⭐ 行数会变 ⇒ **必须再跑 `fileSizeBudget`（测试 ✓）** ✓
+```
+
