@@ -29,7 +29,7 @@
 | 8 | 导出（MIDI／WAV／MP3／Groove／ALS） | ✓ | ✓ `src/components/arrangement/ArrangementFileEntriesV2.tsx` | ✓ `export_midi`、`export_arrangement_midi`、`export_groove`、`export_ableton`、`render_audio`、`render_song` | 三方齐 |
 | 9 | 导出乐谱（MusicXML） | ✓ | ✓ 乐谱页头部 | ✓ `export_arrangement_musicxml` | 三方齐 |
 | 10 | ⭐ 导出 Logic 工程（`.logicx.zip`） | ✓ | ✓ 乐谱页头部（v2.34.46 新增） | ✓ `export_logic_project` | 三方齐；⚠️ **Logic 本体能否打开未证**（无 Mac） |
-| 11 | ⭐ 导入 Logic 工程 | ✓ `src/data/logicToArrangement.ts` | **✗ 无入口** | ✓ `import_logic_project` | **Web ✗**：实现已有、**只缺 UI 入口**；业主已批准补（2026-10-05） |
+| 11 | ⭐ 导入 Logic 工程 | ✓ `src/data/logicToArrangement.ts` | ✅ **有入口**：`src/features/arrangement/arrangementFiles.ts`（`kind = "logic"` ⇒ 解包取 `Alternatives/<n>/ProjectData` ✓） | ✓ `import_logic_project` | ✅ **三方齐**（2026-10-05 补 ✓）：Web 的导入入口是**单一按内容嗅探**的那一个 ⇒ 用户直接上传 `.logicx.zip` 即可 ✓；判据 `src/test/webLogicImport.test.ts`（含**往返** ✓） |
 | 12 | 导入（MIDI／MusicXML／Groove） | ✓ | ? `ArrangementFileEntriesV2` 有导入项，逐个核对 | ✓ `import_arrangement_midi`、`import_arrangement_musicxml`、`import_arrangement_musicxml_file`、`import_groove` | Web 侧**待核**（逐项） |
 | 13 | 渲染音频（整曲／编曲） | ✓ | ✓ 实时播放（`StudioView`）；离线导出见第 8 行 | ✓ `render_audio`、`render_song`、`render_arrangement` | 三方齐；⚠️ 全曲 64 小节 ≈ 360 s，**客户端 300 s 超时偏紧**（见"未暴露/待办"） |
 | 14 | ⭐ 段落试听渲染（span） | ✓ | ✗（Web 靠实时播放） | ✓ `render_arrangement_preview`、`render_preview_clip` | **Web ✗**：MCP 独有的"便宜听一段"；⚠️ span 语义 2026-10-05 改为**裁到 span**（`mcp/arrangement.ts` 的 `intoSpan`） |
@@ -54,7 +54,7 @@
 
 | 项 | 原因 | 计划 | 状态 |
 |---|---|---|---|
-| **Web：Logic 导入入口**（第 11 行） | 实现已有（`src/data/logicToArrangement.ts`），**只缺 UI 入口** | 业主要求补（2026-10-05） | **已批准，未开工** |
+| ✅ **Web：Logic 导入入口**（第 11 行） | — | 已完成（2026-10-05 ✓，见 `docs/OPEN_WORK.md` §378） | **已完成并推** ✓（判据含往返 ✓） |
 | **MCP：段落渲染超时**（第 13/15 行） | 渲染时长由编曲长度决定：8 小节 5 轨 ≈ 300 s、全曲 64 小节 ≈ 360 s，而客户端预算 300 s | 业主要求"放宽预算 ＋ 进度回调"（2026-10-05） | **已批准，未开工** |
 | **MCP：`add_arrangement_track` 顶层 `trackId`** | 回执为 `{summary, problems}`，新 id 藏在 `summary.tracks[last].id` | 业主要求补顶层字段（向后兼容） | **已批准，未开工** |
 | **Web：PWA 安装/更新入口**（第 27 行） | 生命周期已实现且已启动，缺 UI | 就地加在既有设置面板或更新弹窗 | **已批准，未开工** |
@@ -73,4 +73,6 @@
 1. **MCP 列只信服务端自报**：改完注册面 ⇒ `npm run mcp:build && node scripts/list_mcp_tools.mjs` ⇒ 与本表比对。
 2. **新增能力** ⇒ **三列同时补**：实现（系统）＋ 入口（Web，或写明"仅 MCP"的原因）＋ 工具（MCP，或写明原因）。
 3. **"没有"必须带原因**："设计如此 / 仅 MCP / 未建 / 需 Mac / 未测" 五类之一，不允许留空。
-4. **本表不是判据**：它随实现更新，不设阈值；能被判据钉住的是"**每个 MCP 工具都出现在表里**"（见 `src/test/featureAlignmentCoverage.test.ts`）。
+4. ⭐ **改完实现要回来改这张表** ✗ —— 本表会**过时**（2026-10-05 就发生过一次：Logic 导入已实现 ✗ 而表里仍写"未开工" ✓）；
+   覆盖判据只保证"工具名一个不漏" ✓，**保证不了"状态与事实一致"** ✗ ⇒ 这一条靠人 ✓。
+5. **本表不是判据**：它随实现更新，不设阈值；能被判据钉住的是"**每个 MCP 工具都出现在表里**"（见 `src/test/featureAlignmentCoverage.test.ts`）。
