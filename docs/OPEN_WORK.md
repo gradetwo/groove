@@ -12126,3 +12126,27 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未开工 ✗**（⭐ 余量用尽 ✓）⇒ ⭐ **这一个单元适合在新上下文里一次做完 ✓**
 ```
 
+### 四百八十八、🎯 **迁移 ② 第一刀：枚举后单元缩到 3 个文件**（2026-10-06 00:23 ✓）
+
+```
+**⭐ 方法 ✓**：⭐ 只改 `export_groove` 的 schema ＋ handler ✓ ⇒ ⭐ 跑门 ⇒ ⭐ **枚举全部连结点** ✓ ⇒ ⭐ **回退** ✓（树脏 0 ✓）
+**⭐ 枚举结果（⭐ 全部读数 ✓）**：
+  · ⚠️ ⭐ `tsc=2` ✓：⭐ **`ArrangementV2` 没有 `title` 字段** ✗ ⇒ ⭐ 我叫错了字段名 ✓
+    （⭐ 正确字段名见同文件 ✓ —— ⭐ 这是**唯一**的类型错 ✓）
+  · ✅ ⭐ `lint=0` ✓
+  · ⚠️ ⭐ `check:mcp` **2 项失败** ✓：
+    ⭐ ① `export_groove writes a validated v2 package` ✓ —— ⭐ 它的调用传 `songId` ✗ ⇒ ⭐ 入参校验失败 ✓
+    ⭐ ② `import_groove restores the arrangement under a new songId` ✓ —— ⭐ 导入路径也依赖 v1 形状 ✓
+  · ✅ ⭐ **相关判据全过** ✓：⭐ `projectDb.test.ts` ✓／`arrangementEntries.test.ts` ✓／`mcpTools.test.ts` ✓ ＝ **0** ✓
+**⭐⭐ 因此单元缩小 ✓（我先前多算了两个文件 ✗）**：
+  ⭐ **①** ⭐ `src/features/sequencer/arrangementPackage.ts` ✓ —— ⭐ **已就绪** ✓（写手＋校验＋读口 ✓，都有判据 ✓）
+  ⭐ **②** ⭐ `mcp/registryFiles.ts` ✓ —— ⭐ `export_groove`：⭐ schema 改 `arrangementId` ✓（**已验可行 ✓**）＋
+    ⭐ handler 换成 v2 ✓（⭐⭐ 只差**字段名** ✓）＋ ⭐ 删伪造与 `as unknown as` ✗
+  ⭐ **③** ⭐ `scripts/check_mcp.mjs` ✓ —— ⭐ `:502` 的调用改传 `arrangementId` ✓ ＋ ⭐ `:504` 的断言**重写**
+    （⭐ 去掉 `clips` ✗ ⇒ ⭐ 改为断言 ⭐ `format === "groove-arrangement"` ✓ 与 ⭐ **不含 `clips`** ✓）＋ ⭐ `import_groove` 那条 ✓
+  ⇒ ⚠️ ⭐ **`src/test/` 里无需改动** ✓（⭐ 这是枚举带来的最大简化 ✓）
+**⭐ 教训 106 ✓**：⭐ **怕大的联动，就先只改一处并跑全门** ✓ ⇒ ⭐ 枚举出的连结点往往**比担心的少** ✓
+  （⭐ 本会话第二次靠这招把工作缩小 ✓：⭐ 提取函数那次也是 ✓）
+**⏳ 未落地 ✗**（⭐ 余量用尽 ✓）⇒ ⭐ **这个 3 文件单元可在新上下文里一次做完 ✓**
+```
+
