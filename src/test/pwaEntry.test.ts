@@ -14,17 +14,24 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const PANEL = "src/components/settings/SettingsModal.tsx";
+const ROW = "src/components/settings/PwaInstallRow.tsx";
 const PWA = "src/utils/pwa.ts";
 
 describe("the web exposes install and update", () => {
-  it("⭐ the settings panel subscribes and offers both actions", () => {
-    const panel = readFileSync(PANEL, "utf8");
+  it("⭐ the row subscribes and offers both actions", () => {
+    const row = readFileSync(ROW, "utf8");
     expect({
-      subscribes: panel.includes("subscribePwaStatus"),
-      install: panel.includes("promptInstallApp"),
-      update: panel.includes("applyUpdate"),
-      rows: panel.includes('data-testid="settings-about-install"') && panel.includes('data-testid="settings-about-apply-update"'),
+      subscribes: row.includes("subscribePwaStatus"),
+      install: row.includes("promptInstallApp"),
+      update: row.includes("applyUpdate"),
+      rows: row.includes('data-testid="settings-about-install"') && row.includes('data-testid="settings-about-apply-update"'),
     }).toEqual({ subscribes: true, install: true, update: true, rows: true });
+  });
+
+  it("⭐ the settings panel actually renders that row", () => {
+    const panel = readFileSync(PANEL, "utf8");
+    expect({ imports: panel.includes('from "./PwaInstallRow"'), renders: panel.includes("<PwaInstallRow />") })
+      .toEqual({ imports: true, renders: true });
   });
 
   it("⭐ accepts the platform's install prompt only when it can be honoured", () => {

@@ -36,7 +36,7 @@ import {
   HapticPatterns,
 } from "../../utils/haptics";
 import { APP_VERSION, BUILD_DATE } from "../../version";
-import { applyUpdate, promptInstallApp, subscribePwaStatus, type PwaStatus } from "../../utils/pwa";
+import { PwaInstallRow } from "./PwaInstallRow";
 
 /**
  * Global settings panel (item ⑤).
@@ -169,17 +169,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   }, []);
 
   const usage = useMemo(() => (isOpen && tab === "about" ? storageUsage() : { entries: [], totalBytes: 0 }), [isOpen, tab]);
-
-  /**
-   * ⭐ **The install and update entries the platform offered and nothing showed.**
-   *
-   * `initPwa` has always captured the install prompt and watched for a waiting worker, and `pwa.ts` has always
-   * exposed `subscribePwaStatus`, `promptInstallApp` and `applyUpdate` — but no component ever called them, so a
-   * user who could install the app had no button for it and an update sat waiting until the tab was closed. The
-   * subscription reports the current status immediately, so this row is right the first time it renders.
-   */
-  const [pwa, setPwa] = useState<PwaStatus>({ isInstalled: false, canInstall: false, isUpdateAvailable: false, offlineReady: false });
-  useEffect(() => (isOpen ? subscribePwaStatus(setPwa) : undefined), [isOpen]);
 
   const tabLabel = (id: SettingsTabId) => t(`settings_tab_${id}`);
   const tabIcon = (id: SettingsTabId) => {
@@ -532,44 +521,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     groove@wangda.today
                   </a>
                 </div>
-                {/*
-                  ⭐ Shown only when the platform says it can be done: a disabled "install" button would be a promise
-                  the browser has not made, which is the same rule the rest of this panel follows.
-                */}
-                {pwa.canInstall && !pwa.isInstalled && (
-                  <div className="space-y-1">
-                    <button
-                      type="button"
-                      data-testid="settings-about-install"
-                      onClick={() => void promptInstallApp()}
-                      className="w-full px-3 py-2 rounded-lg text-xs font-bold border border-accent bg-accent/20 text-accent hover:bg-accent/30 transition-colors"
-                    >
-                      {t("settings_about_install")}
-                    </button>
-                    <p className={hintClass}>{t("settings_about_install_hint")}</p>
-                  </div>
-                )}
-                {pwa.isInstalled && (
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-text-sub">{t("settings_about_install")}</span>
-                    <span className="font-mono text-text" data-testid="settings-about-installed">
-                      {t("settings_about_installed")}
-                    </span>
-                  </div>
-                )}
-                {pwa.isUpdateAvailable && (
-                  <div className="space-y-1">
-                    <p className={hintClass}>{t("settings_about_update_ready")}</p>
-                    <button
-                      type="button"
-                      data-testid="settings-about-apply-update"
-                      onClick={() => applyUpdate()}
-                      className="w-full px-3 py-2 rounded-lg text-xs font-bold border border-accent bg-accent/20 text-accent hover:bg-accent/30 transition-colors"
-                    >
-                      {t("settings_about_update_now")}
-                    </button>
-                  </div>
-                )}
+                {/* ⭐ Its own component: the panel is at the six-hundred-line bucket, and the row is self-contained. */}
+                <PwaInstallRow />
                 {onOpenUpdates && (
                   <button
                     type="button"
