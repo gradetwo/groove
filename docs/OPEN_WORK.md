@@ -12877,3 +12877,28 @@ export async function prepareArrangementAudioLanes(input: {
   ⭐ **1 个（`undo_song`）要移植** ✓
 ```
 
+### 五百一十三、🎯 **撤销栈只服务 v1 歌 ⇒ ⑤ 唯一的移植件已定**（2026-10-06 01:51 ✓）
+
+```
+**⭐ 量到 ✓**：
+  · ⭐ `mcp/song.ts` ✓：⭐ `const history = new Map<string, SongHistoryEntry[]>();` ✓（⭐ **按 `songId` 键** ✗，
+    ⭐ 每个 id 最多留 ⭐ **50** 条 ✓）＋ ⭐ `export function undoMcpSong(songId: string, steps = 1)` ✓
+  · ⚠️ ⭐ `mcp/arrangement.ts` ✓：⭐ 搜 `undo`／`history`／`snapshot` ⭐ **零命中** ✗ ⇒ ⭐ **编曲侧没有历史** ✓
+  · ⭐ 设计理由已写在源码里 ✓：⭐ "**The app keeps history per `onChange`; the MCP server kept none,
+    so an agent could only fix a mistake by re-sending the whole state**" ✓
+    ⇒ ⭐ 即 ⭐ **这条历史的存在理由正是"⭐ 工具边界是 agent 能用它的地方**" ✓ ⇒ ⭐ **它不该随 v1 一起消失** ✓
+**⇒ 结论 ✓**：⭐ 这是 ⭐ **v2 缺失的能力** ✗ ⇒ ⭐ **要移植** ✓（⭐ 与教训 116 一致 ✓）
+**⭐ 移植的配方 ✓（⭐ 同机制、⭐ 换键、⭐ 换术语 ✓）**：
+  ⭐ ① ⭐ 在 ⭐ `mcp/arrangement.ts` 里加 ⭐ `const arrangementHistory = new Map<string, ArrangementHistoryEntry[]>()` ✓
+    （⭐ 键 ⭐ **`arrangementId`** ✓，⭐ 上限同样 50 ✓）
+  ⭐ ② ⭐ 加 ⭐ `recordArrangementChange(arrangementId, tool)` ✓ ＋ ⭐ `undoMcpArrangement(arrangementId, steps)` ✓
+    （⭐ 快照取法照 ⭐ `undoMcpSong` ✓ —— ⭐ 存"⭐ 改动前的编曲" ✓）
+  ⭐ ③ ⭐ 在每个**改模型的** v2 写工具里调 ⭐ `recordArrangementChange` ✓（⭐ 与 v1 侧同样的位置 ✓）
+  ⭐ ④ ⭐ 新工具 ⭐ **`undo_arrangement`** ✓（⭐ `{ arrangementId, steps? }` ✓，⭐ 回包用 v2 术语 ✓）
+  ⭐ ⑤ ⭐ 判据 ✓（⭐ "⭐ 一串调用回到起点" ✓ —— ⭐ `check_mcp` 已有同样形状的用例可照抄 ✓ `:428` ✓）＋
+    ⭐ `docs/MCP.md` ✓ ＋ ⭐ 回填 ✓
+**⭐ 于是 ⑤ 的执行清单完全确定 ✓**：⭐ **10 个退场** ✓（⭐ 各有现成家 ✓）＋ ⭐ **1 个移植** ✓（⭐ `undo_song` ⇒
+  `undo_arrangement` ✓，⭐ 且**先立 v2 判据再删 v1** ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 配方已到函数 ✓
+```
+
