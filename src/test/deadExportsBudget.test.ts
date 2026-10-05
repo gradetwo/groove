@@ -19,7 +19,13 @@ import { describe, expect, it } from "vitest";
 type Entry = { name: string; file: string; line: number };
 type Measure = { productionFiles: number; exports: number; dead: Entry[]; testOnly: Entry[] };
 
-const CAP = { dead: 27, testOnly: 76 };
+/**
+ * ⭐ **Raised by four for the v2 package module** (`src/features/sequencer/arrangementPackage.ts`), added with its own
+ * criteria one step before it is wired into the builder, the validator and the file tools. Those four exports are reached
+ * by tests only until that wiring lands, which is what this budget measures. Lower it back to 76 when the module has
+ * production callers, and raise it for nothing else.
+ */
+const CAP = { dead: 27, testOnly: 80 };
 
 function measure(): Measure {
   const out = execFileSync("node", ["scripts/check_dead_exports.mjs"], { encoding: "utf8" });
