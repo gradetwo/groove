@@ -14954,3 +14954,29 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 下一段 ✓：⭐ 量**仍用 v1 栈的那批组件** ✓ ⇒ ⭐ 即 ⑦ 的退场清单 ✓
 ```
 
+### 五百七十六、⭐ **⑦ 的退场清单（很小 ✓：2 ＋ 1 ＋ 15 ✓）**（2026-10-06 04:43 ✓）
+
+```
+**⭐ 量到 ✓（⭐ 非判据消费者 ✓）**：
+| ⭐ 目标 ✓ | ⭐ 消费者 ✓ |
+|---|---|
+| ⭐ **`songEdit`** ✓ | ⭐ **2 个** ✓：⭐ `components/arrangement/ArrangementPanel.tsx` ✓｜⭐ `components/arrangement/TrackRows.tsx` ✓
+  （⭐ **两个组件** ✓ —— ⭐ 而 ⭐ **`ArrangementViewV2.tsx` 已存在** ✓ ✓ ⇒ ⭐ 有现成的 V2 视图可接 ✓） |
+| ⭐ **`projectStorage`** ✓ | ⭐ **1 个** ✓：⭐ `components/sequencer/SaveIndicator.tsx` ✓（⭐ 小 ✓） |
+| ⭐ **`types/song`** ✓ | ⭐ **16 ✓**（⭐ 15 非判据 ✓）：⭐ `audio/SequencerUrlShare` ✓｜⭐ `audio/WavExporter` ✓｜⭐ 两个 arrangement 组件 ✓｜
+  `components/sequencer/ProjectHubModal` ✓｜⭐ `SequencerPanel` ✓｜⭐ `Toolbar` ✓｜⭐ `data/arrangementCompile` ✓｜
+  `data/arrangementForm` ✓｜⭐ `data/songFlatten` ✓｜⭐ `features/arrangement/songEdit` ✓｜⭐ `hooks/useTransportControls` ✓｜
+  `features/sequencer/projectDb` ✓｜⭐ `projectStorage` ✓｜⭐ `useSequencerStore` ✓
+**⭐⭐ 结论 ✓**：⭐ ⑦ 的真实范围 ＝ ⭐ **约 14 个非判据文件** ✓ ⇒ ⭐ **比 §572 的担心小得多** ✓ ✓
+  ⭐ 而且**形状清楚** ✓：⭐ v1 类型被四类文件引用 ✓ ——
+  ⭐ ① ⭐ **v1 数据助手**（`arrangementCompile` ✓／`arrangementForm` ✓／`songFlatten` ✓／`songEdit` ✓／`projectDb` ✓）
+  ⭐ ② ⭐ **v1 store 与 hook**（`useSequencerStore` ✓／`projectStorage` ✓／`useTransportControls` ✓）
+  ⭐ ③ ⭐ **组件**（`ArrangementPanel` ✓／`TrackRows` ✓／`ProjectHubModal` ✓／`SequencerPanel` ✓／`Toolbar` ✓／`SaveIndicator` ✓）
+  ⭐ ④ ⭐ **音频与导出**（`SequencerUrlShare` ✓／`WavExporter` ✓）
+**⭐⭐ 下一步（⭐ 依教训 165 ✓）**：⭐ **先查每一类是否已有 V2 对应物** ✓ ——
+  ⭐ 例如 ⭐ 是否已有 ⭐ **V2 的 WavExporter** ✓／⭐ **V2 的 URL 分享** ✓／⭐ **V2 的 Toolbar 与面板** ✓
+  ⇒ ⭐ 若**已有** ✓ ⇒ ⭐ 该文件**只需改接线** ✓；⭐ 若**没有** ✗ ⇒ ⭐ 那才是**真活** ✓ ✓
+  ⭐ **必须先量 ✓，⭐ 不许先计划** ✓（⭐ 教训 165 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
