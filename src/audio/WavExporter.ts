@@ -104,6 +104,8 @@ function renderTimingSink(): RenderPhaseTimings | null {
 }
 
 export interface RenderWavOptions {
+  /** ⭐ Stop after the recordings resolve, and return the answer instead of audio. A full pass costs about two minutes per track. */
+  prepareOnly?: boolean;
   bpm?: number;
   swing?: number;
   bars?: number;
@@ -823,7 +825,7 @@ async function renderPatternOfflineInternal(
             options,
             (v) => { verdict = v; },
             (available) => { workletsAvailable = available; }
-          ),
+          ) as Promise<RenderedChunk>,
         problems,
         RENDER_SILENCE_ATTEMPTS,
         () => verdict
@@ -831,12 +833,12 @@ async function renderPatternOfflineInternal(
     }
     return (await renderPatternOfflineGuarded<ChannelDataBuffer>(
       () =>
-        renderPatternOfflineOnce(
+        (renderPatternOfflineOnce(
           pattern,
           options,
           (v) => { verdict = v; },
           (available) => { workletsAvailable = available; }
-        ).then((chunk) => chunk.buffer),
+        ) as Promise<RenderedChunk>).then((chunk) => chunk.buffer),
       problems,
       RENDER_SILENCE_ATTEMPTS,
       () => verdict
@@ -958,6 +960,30 @@ export function resolveOfflineContextClass(): typeof OfflineAudioContext {
 }
 
 
+/**
+ * ⭐ **Answer whether a pattern's audio lanes would resolve, without rendering it.**
+ *
+ * The same preparation the render uses, stopped before any audio exists. The report has its own shape: a render result
+ * would carry a path, a byte count and loudness numbers that do not exist here.
+ */
+export async function preparePatternAudioLanes(
+  pattern: DrumPattern,
+  options: RenderWavOptions = {}
+): Promise<ArrangementLaneReport> {
+  const result = await renderPatternOfflineOnce(pattern, { ...options, prepareOnly: true });
+  return result as ArrangementLaneReport;
+}
+
+/** What `preparePatternAudioLanes` answers: whether the recordings an arrangement needs are ready. */
+export interface ArrangementLaneReport {
+  prepareOnly: true;
+  ready: boolean;
+  empty: boolean;
+  loaded: number;
+  total: number;
+  problems: string[];
+}
+
 async function renderPatternOfflineOnce(
   pattern: DrumPattern,
   options: RenderWavOptions = {},
@@ -969,7 +995,7 @@ async function renderPatternOfflineOnce(
    * the problem list and a render that retries must not report the same origin fact once per attempt.
    */
   onWorkletsAvailable?: (available: boolean) => void
-): Promise<RenderedChunk> {
+): Promise<RenderedChunk | ArrangementLaneReport> {
   const sampleRate = options.sampleRate || 44100;
   // F-10: clamp render parameters — a negative bpm produced a negative
   // `lengthInSamples`, and an unbounded `bars` could allocate gigabytes.
@@ -1920,6 +1946,16 @@ async function renderPatternOfflineOnce(
       ...(options.stemTrackIdx === undefined ? {} : { stemTrackIdx: options.stemTrackIdx }),
     });
     if (preparation.problems.length) audioLaneProblems.push(...preparation.problems);
+if (options.prepareOnly) {
+  return {
+    prepareOnly: true,
+    ready: preparation.ready,
+    empty: preparation.empty,
+    loaded: preparation.loaded,
+    total: preparation.total,
+    problems: [...audioLaneProblems],
+  };
+}
     options.onAudioLanePreparation?.({
       loaded: preparation.loaded,
       total: preparation.total,
