@@ -10858,3 +10858,20 @@ export async function prepareArrangementAudioLanes(input: {
 · ⏳ **未落码 ✗**（本轮余量不足 ✓）；⭐ 规格已无未知 ✓
 ```
 
+### 四百五十六、⭐ **业主两条新约束：不并存 ＋ 术语用 V2（2026-10-05 20:55 ✓）**
+
+```
+**业主原话 ✓**：⭐ "**不要新老并存，术语也都用 V2 的**" ✓
+⇒ ⭐ **① 不并存** ✗：⭐ 不许"`songId`／`pattern`／`arrangementId` **三选一**" ✗ —— ⭐ 那是**新老并存** ✓
+  ⇒ ⭐ 正确做法 ✓：⭐ **换成 `arrangementId` 一个入参** ✓，**删掉** `songId` 与 `pattern` 入参 ✓（⭐ 不保兼容 ✓）
+⇒ ⭐ **② 术语用 V2** ✓：⭐ `song`／`clip`／`slot`／`section` 等 **v1 词汇要换掉** ✓
+  ⇒ ⭐ 命名与描述都用 v2 词汇 ✓（`arrangement` ✓／`track` ✓／`notes` ✓／`take` ✓／`bar` ✓）
+**⇒ 因此上一节的"三选一"方案**作废** ✗（已在台账保留，供追溯 ✓）**：
+  · ⭐ 新方案 ✓：`set_vocal_melody` 入参 ⭐ **只有 `arrangementId`** ✓ ＋ 旋律字段 ✓
+  · ⭐ handler 只留一条路径 ✓：`getMcpArrangement` ⇒ `flattenMcpArrangement` ⇒ `setVocalMelody` ⇒ **写回 v2** ✓
+  · ⚠️ 但**歌词引擎 `setVocalMelody` 吃 `SequencerPattern`** ✓ ⇒ ⭐ 这是**内部实现** ✓，
+    ⭐ 只要**外部入参、回包、术语**都是 v2 ✓，内部借用**不算并存** ✓（⭐ 但要**注释说明** ✓，避免误解 ✓）
+**⏳ 下一轮 ✓**：量 `set_vocal_melody` 的 v1 引用面（`songId` 分支 ＋ section/clip/slot 术语 ✓）
+  ⇒ 一次改净 ✓ ⇒ 判据先红后绿 ✓ ⇒ 回填对齐表 ✓
+```
+
