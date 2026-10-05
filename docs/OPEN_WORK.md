@@ -13378,3 +13378,26 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 可直接写 ✓
 ```
 
+### 五百二十七、🎯 **第 ① 步第二块：两条精确发现（树已回退 ✓）**（2026-10-06 02:57 ✓）
+
+```
+**⭐ 读数 ✓（⭐ `check:mcp` 报三条 ✓）**：
+  ⭐ ① ⚠️ ⭐ 我的新断言 ✗：⭐ "⭐ a second track with its own steps … — **tracks=0** trackId=sampler-3" ✓
+    ⇒ ⭐ 原因 ✓：⭐ 我读 ⭐ `v2Played.tracks` ✗ ⇒ ⭐ 而回包是 ⭐ `{ summary, problems }` ✓
+      ⇒ ⭐ 应读 ⭐ **`v2Played.summary.tracks`** ✓ ✓（⭐ 我上一轮刚发现的形状 ✓，⭐ 用在了 add ✓ 却漏在这 ✓）
+  ⭐ ② ⚠️ ⭐ 另两条 ⭐ **也红了** ✗：⭐ "⭐ undo_song steps back … — before 1 sections, after undefined" ✓
+    ＋ ⭐ "⭐ get_song lists what is undoable — history entries: 0" ✓
+    ⇒ ⭐ 原因 ✓：⭐ 剧本二（⭐ 撤销验收 ✓）⭐ **的初始状态是剧本一建的** ✗ —— ⭐ 我删掉 `add_section`／`set_clip` ✗
+      ⇒ ⭐ 歌里就没有"⭐ 两段"可撤 ✗ ⇒ ⭐ 两条断言都失去前提 ✓
+**⭐⭐ 结论 ✓**：⭐ **两个剧本是**耦合**的** ✗ ⇒ ⭐ 必须**同批改** ✓（⭐ 或 ⭐ 给剧本二**自己的建立** ✓）
+  ⇒ ⭐ 这也解释了为什么它们当初被排成"⭐ 一个批次" ✓ —— ⭐ 依赖不只工具层面 ✓，⭐ **剧本之间也有** ✓
+**⭐ 修正后的第二块写法 ✓（⭐ 两处 ✓）**：
+  ⭐ ① ⭐ 断言改读 ⭐ `v2Played.summary.tracks` ✓（⭐ 长度 2 ✓）＋ ⭐ `summary.clips === undefined` ✓
+  ⭐ ② ⭐ 剧本二 ⭐ **自带建立** ✓：⭐ 在它开头加 ⭐ `create_arrangement` ✓ ⇒ ⭐ 两次 ⭐ `set_arrangement_bars` ✓
+    ⇒ ⭐ 再 ⭐ `undo_arrangement` ✓ ⇒ ⭐ 断言"⭐ 退回起点" ✓ ⇒ ⭐ **删**"⭐ lists what is undoable" ✗
+      ⇒ ⭐ 而且 ⭐ 剧本二 ⭐ 不应再引用 ⭐ `song`／`get_song`／`undo_song` ✗ ✓
+**⚠️ ⭐ 教训 139 ✓**：⭐ **一个剧本的状态可能由前一个剧本建立** ✗ ——
+  ⭐ 删前一个的建立步骤 ⇒ ⭐ **后面那个失去前提** ✓ ⇒ ⭐ 判法 ✓：⭐ 改剧本时 ⭐ **看它下面的剧本用了什么** ✓
+**⏳ 未落码 ✗**（⭐ 树已回退 ⇒ 脏 0 ✓ ✓）；⭐ 两处改法已定 ✓
+```
+
