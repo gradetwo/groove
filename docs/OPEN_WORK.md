@@ -13094,3 +13094,27 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 范围缩小 7 件 ✓
 ```
 
+### 五百二十一、⭐ **`set_tempo` 的实量与两工具映射**（2026-10-06 02:23 ✓）
+
+```
+**⭐ 触及约 7 个文件 ✓**：
+  ⭐ ① ⭐ 工具块 ✓（`mcp/registrySong.ts:389` ✓）
+  ⭐ ② ⭐ ⭐ **两个判据** ✓：⭐ `src/test/mcpCopy_set_tempo.test.ts` ✓（⭐ 它的长句拆句 ✓）＋
+    ⭐ `src/test/tempoWorkedExample.test.ts` ✓（⭐ 测的是描述里那个 ⭐ **66 → 84 → 66 的算例** ✓）
+  ⭐ ③ ⭐ `check_mcp.mjs:384–391` ✓（⭐ 一个用例 ＋ ⭐ `:387` 的**对称性断言** ✓ —— ⭐ 它是 A/B 探针 ✓）
+  ⭐ ④ ⭐ `src/test/docsWorkflow.test.ts:16` ✓（⭐ **步骤表**里有它 ✓）
+  ⭐ ⑤ ⭐ `src/test/mcpCapability.test.ts:149` ✓（⭐ 能力清单 ✓）
+  ⭐ ⑥ ⭐ `scripts/mcp_call.mjs:120` ✓（⭐ 用法示例 ✓）
+  ⭐ ⑦ ⭐ `docs/MCP.md:227` 与 `:261` ✓（⭐ 两处散文 ✓）＋ ⭐ 活对齐表 ✓
+  ⇒ ⭐ 另加 ✓：⭐ `src/types/arrangementV2.ts:194–196` ✓ —— ⭐ **v2 类型自己的注释**引用了
+    "⭐ `set_tempo` 文档里的形状" ✓ ⇒ ⭐ 改名就要连注释一起改 ✓
+**⭐⭐ 关键 ✓：⭐ 它的能力**分在两个 v2 工具**上 ✓**：
+  ⭐ `set_arrangement_tempo` ✓：⭐ `{ arrangementId, bpm }` ✓ ⇒ ⭐ **单个数值** ✗
+  ⭐ `set_arrangement_tempo_map` ✓：⭐ 表达 **tempo 地图** ✓ ⇒ ⭐ 而 ⭐ `set_tempo` 收的是 ⭐ `tempoTrack` 地图 ✓
+  ⇒ ⭐ **映射 ✓**：⭐ `set_tempo`（⭐ 地图 ✓）⇒ ⭐ **`set_arrangement_tempo_map`** ✓；
+    ⭐ 而"⭐ 单个 bpm"那半边 ⇒ ⭐ `set_arrangement_tempo` ✓
+**⭐ 结论 ✓**：⭐ 这不是"⭐ 一刀" ✓ ⇒ ⭐ 与教训 131 一致 ✓（⭐ 便宜刀已用完 ✓）
+  ⇒ ⭐ 它是 ⭐ **7 文件 ＋ 一个能力拆分判断** ✓ 的真工作 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
