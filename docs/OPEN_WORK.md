@@ -11537,3 +11537,26 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 两个未知未量 ✓）；⭐ 其余设计已定 ✓
 ```
 
+### 四百六十九、✅ **调试采集（Web 侧）：采集器与判据已落地**（2026-10-05 21:50 ✓）
+
+```
+**⭐ 落地的两件 ✓**：
+  · ⭐ 新增模块 ✓（**待建 → 已建** ✓）：`src/features/debug/webDebugBundle.ts` ✓（94 行 ✓）
+    ⇒ ⭐ 导出 ⭐ `collectWebDebugBundle(input)` ✓（**纯函数** ✓ ⇒ **可单测** ✓）
+    ＋ ⭐ `downloadJsonFile(filename, text)` ✓ ＋ ⭐ `webDebugBundleFileName(at)` ✓
+  · ⭐ 新增判据 ✓：`src/test/webDebugBundle.test.ts` ✓（**3 用例** ✓）
+**⭐ 关键设计决定 ✓（消掉两个未知 ✓）**：⭐ 采集器**不依赖**编曲 store ✓ 与音频上下文 ✓ ——
+  两者作 ⭐ **可选入参** ✓ ⇒ ⭐ 采不到就在 `omissions` **写明原因** ✓
+  ⇒ ⭐ 于是"store 读取 API"与"音频上下文取用点"**不再阻塞** ✓（⭐ 由调用方传入 ✓）
+**⭐ 判据读数 ✓**：⭐ 新判据 **3 用例全过** ✓｜`tsc=0` ✓｜`lint=0` ✓｜`check:file-sizes=0` ✓｜
+  `check:dead-exports=0` ✓｜`check:duplication=0` ✓｜`check:module-boundaries=0` ✓｜`docs=0` ✓｜`refs=0` ✓
+**⚠️ 一件未做（诚实记 ✓）**：⭐ **顶栏入口还没接** ✗ ⇒ ⭐ 功能**对用户尚不可达** ✓
+  · ⚠️ 原因 ✓：⭐ `src/components/Header.tsx`（820 行 ✓）用 ⭐ `useLanguage` ✓ ⇒ ⭐ 按钮文案要进 **i18n** ✓
+    ⇒ ⭐ 还要跑 ⭐ `skins:gen`（零 diff ✓）＋ `check:skins` ✓ ⇒ ⭐ 那是**独立一支** ✓（⭐ 一次一支 ✓）
+  · ⚠️ 连带 ✓：⭐ `check:dead-exports` 已**列出** ⭐ `downloadJsonFile` 未使用 ✓（⭐ 门**不失败** ✓，⭐ 但列出来了 ✓）
+    ⇒ ⭐ 接完顶栏它就**不再列出** ✓ ⇒ ⭐ 这也是"接完没有"的一个判据 ✓
+**⏳ 下一轮 ✓**：① 量 `Header.tsx` 的按钮区与 i18n 键写法 ✓ ② 加按钮 ✓ ③ 跑 `skins:gen` ＋ `check:skins` ✓
+  ④ 传编曲摘要（⭐ 来自 `useArrangementV2Project` ✓，`arrangementStore.ts:195` ✓）与音频上下文（若可达 ✓）
+  ⑤ 回填对齐表 ✓
+```
+

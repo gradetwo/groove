@@ -134,10 +134,6 @@ const PROPOSED = new Map([
     "scripts/measure_phone_surface.mjs",
     "Removed with the phone shell: its working-area count is defined by the same two deleted bars, and the phone surface it measured (the shell's `?tab=` tabs) is gone. The PRODUCT_PLAN lines name it as the source of the redesign baseline — the record, not a claim.",
   ],
-  [
-    "src/features/debug/webDebugBundle.ts",
-    "新增（待建）：调试采集的 Web 侧采集器。它还没写；台账 §468 记的是设计，不是已建的路径。建成后删此条。"
-  ],
 ]);
 
 /** Doc files to scan: the repository's own notes and plans. */
