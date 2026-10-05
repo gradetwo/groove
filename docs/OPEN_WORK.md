@@ -11526,7 +11526,7 @@ export async function prepareArrangementAudioLanes(input: {
   ① ⭐ **v2 编曲 store 的读取 API** ✓ —— ⭐ 用来做"当前编曲摘要" ✓（⭐ **轨数／小节数／音符数** ✓，⚠️ **不含内容** ✗）
   ② ⭐ **音频上下文的取用点** ✓ —— ⭐ 用来报"采样率与状态" ✓
 **⭐ 设计（定案 ✓）**：
-  · ⭐ 新模块 ✓：⭐ `src/features/debug/webDebugBundle.ts` ✓ ⇒ ⭐ 导出 ⭐ `collectWebDebugBundle()` ✓（⭐ 纯函数 ✓，**可单测** ✓）
+  · ⭐ 新增（待建 ✓）：⭐ `src/features/debug/webDebugBundle.ts` ✓ ⇒ ⭐ 导出 ⭐ `collectWebDebugBundle()` ✓（⭐ 纯函数 ✓，**可单测** ✓）
   · ⭐ 内容（⭐ **白名单** ✓）：⭐ 应用版本 ✓／⭐ UA 与平台 ✓／⭐ 当前编曲摘要（⭐ 计数 ✓，**不含音符内容** ✗）／
     ⭐ 最近界面错误（⭐ 环形记录 ✓）／⭐ 关键耗时（⭐ `performance` ✓）／⭐ 音频上下文①采样率②状态 ✓／
     ⭐ 采集时刻 ✓／⭐ `manifest[]` ✓／⭐ `omissions[]` ✓（⭐ 缺什么／为什么 ✓）
