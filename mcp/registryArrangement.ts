@@ -17,7 +17,7 @@ import type { ToolDefinition } from "./toolKit";
 import { createMcpArrangement, getMcpArrangement, summariseArrangement } from "./arrangement";
 
 import { STRING_SITUATION_IDS, StringSituation } from "../src/data/stringTechniques";
-import { flattenMcpArrangement } from "./arrangement";
+import { flattenMcpArrangement, undoMcpArrangement } from "./arrangement";
 import { listCatalogueInstruments } from "./instruments";
 import { audioLaneReplyFields } from "./pattern";
 import { HEADLESS_POINTER_SENTENCE, headlessParameterDescription, renderBudgetSentence, renderCostSentence, renderOutputSentence } from "./render/budget";
@@ -1422,6 +1422,28 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
         const file = path.join(dir, filename);
         writeFileSync(file, set.data);
         return { path: file, filename, bytes: set.data.length, format: "als", tracks: (arrangement?.tracks ?? []).length };
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    /**
+     * ⭐ **Undo, at the tool boundary, because that is where an agent can use it.** The store keeps the states a change
+     * left behind; this returns to one of them and answers with the arrangement as it now stands.
+     */
+    name: "undo_arrangement",
+    title: "Undo the arrangement's last change",
+    description:
+      "Return the arrangement to the state before its most recent change, or before the one `steps` changes ago, and report the arrangement as it now stands. It answers a failure when there is nothing to undo, rather than pretending the call did something.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string().describe("the arrangement to step back"),
+      steps: z.number().int().min(1).max(50).optional().describe("how many changes back to go; default 1"),
+    },
+    handler: (args) => {
+      try {
+        return undoMcpArrangement(String(args.arrangementId), (args.steps as number | undefined) ?? 1);
       } catch (error) {
         return failure((error as Error).message);
       }

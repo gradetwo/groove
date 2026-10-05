@@ -95,6 +95,23 @@ export function putMcpArrangement(
   arrangements.set(id, arrangement);
   return summariseArrangement(id, arrangement);
 }
+/**
+ * ⭐ **One change back, or several, and it says so when there is nothing to undo.** It reads the history the seam records,
+ * drops the entries it consumed, and puts the recorded state back — the same shape as the older store's undo, keyed by the
+ * arrangement and carrying no tool name, because the seam does not know its caller and a name nothing reads is noise.
+ */
+export function undoMcpArrangement(arrangementId: string, steps = 1): ArrangementEditResult {
+  const entries = arrangementHistory.get(arrangementId);
+  if (!entries?.length) {
+    throw new Error(`nothing to undo for "${arrangementId}" — it has not been changed since it was created`);
+  }
+  const take = Math.max(1, Math.min(Math.floor(steps), entries.length));
+  const before = entries[entries.length - take]!;
+  arrangementHistory.set(arrangementId, entries.slice(0, entries.length - take));
+  arrangements.set(arrangementId, before);
+  return { summary: summariseArrangement(arrangementId, before), problems: [] };
+}
+
 
 
 /** Every function that changes an arrangement reports the same way: a summary, plus anything wrong with the request. */
@@ -433,8 +450,19 @@ export function createMcpArrangement(input: CreateMcpArrangementInput = {}): Arr
   return summariseArrangement(id, base);
 }
 
+/**
+ * ⭐ **The tool boundary keeps its own history, because that is where an agent can use it.** The editor keeps history per
+ * change; the server kept none, so a mistake could only be repaired by resending the whole arrangement. The seam below is
+ * the one place a change happens, so one line there records it — and creation and import do not, because they establish a
+ * state rather than change one, and undo means returning to before a change.
+ */
+const arrangementHistory = new Map<string, ArrangementV2[]>();
+const ARRANGEMENT_HISTORY_LIMIT = 50;
+
 function edit(arrangementId: string, apply: (arrangement: ArrangementV2) => ArrangementV2): ArrangementEditResult {
   const arrangement = requireArrangement(arrangementId);
+  // ⭐ Record the state being left behind, then change it: that is what undo returns to.
+  arrangementHistory.set(arrangementId, [...(arrangementHistory.get(arrangementId) ?? []), arrangement].slice(-ARRANGEMENT_HISTORY_LIMIT));
   const next = apply(arrangement);
   arrangements.set(arrangementId, next);
   const summary = summariseArrangement(arrangementId, next);
