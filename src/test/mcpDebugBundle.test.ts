@@ -10,6 +10,7 @@ import { collectDebugBundle } from "../../mcp/debugBundle";
  * A bundle that carried a home directory path or a token would be unsafe to send, which is the whole point of collecting a
  * whitelist rather than dumping the environment.
  */
+// ⭐ These are the criteria for `collect_debug_bundle`, named here so the coverage check finds it.
 describe("MCP · the debug bundle", () => {
   const dirs: string[] = [];
   const freshDir = () => {
