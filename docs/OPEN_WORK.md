@@ -14796,3 +14796,28 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+### 五百七十、⚠️ **⑥ 开量：我的第一次扫描太窄（教训 163 ✓）；实际 142 文件／1010 处**（2026-10-06 04:40 ✓）
+
+```
+**⭐ 第一次扫描的结果 ✗**：⭐ 只扫 ⭐ `src/features/*` ✓ 与 ⭐ `apps/` ✗（⭐ 不存在 ✓）⭐ 且正则偏窄 ✓
+  ⇒ ⭐ 结论"⭐ 只有 1 个文件" ✗ ⇒ ⚠️ **错** ✗
+**⭐ 第二次（全 `src/` ＋ 更宽正则 ✓）✓**：⭐ **142 个文件／1010 处** ✗
+  ⭐ 关键命中 ✓（⭐ 排除 MCP 服务端文件后 ✓）：
+  | ⭐ 文件 ✓ | ⭐ 处数 ✓ | ⭐ 性质 ✓ |
+  |---|---|---|
+  | ⭐ `src/types/song.ts` ✓ | 50 ✓ | ⭐ **v1 模型类型** ✓ |
+  | ⭐ `src/features/arrangement/songEdit.ts` ✓ | 66 ✓ | ⭐ **Web 侧 v1 编辑层** ✓ |
+  | ⭐ `src/components/arrangement/ArrangementPanel.tsx` ✓ | 20 ✓ | ⭐ **UI 组件** ✗ |
+  | ⭐ `src/features/sequencer/useSequencerStore.ts` ✓ | 18 ✓ | ⭐ **store** ✗ |
+  | ⭐ `src/data/songFlatten.ts` ✓ | 14 ✓ | ⭐ 数据助手 ✓ |
+  | ⭐ `src/data/arrangementImport.ts` ✓ | 20 ✓ | ⭐ 导入 ✓ |
+  ⭐ 判据侧 ⭐ 大量 ✓：⭐ `mcpSong` ✓（82）｜⭐ `songEdit` ✓（52）｜⭐ `songPersistence` ✓（41）｜⭐ `songTimeline` ✓（29）｜⭐ …
+**⭐⭐ 教训 163 ✓**：⭐ **一次扫描的答案由"⭐ 根目录 ＋ ⭐ 正则"决定** ✗ ——
+  ⭐ 我的第一次扫描**根太窄**（⭐ 漏了 `src/components` ✓／⭐ `src/data` ✓／⭐ `src/types` ✓）
+  ⭐ ＋ ⭐ 正则太窄（⭐ 只查 `songId|createSong|useSong|SongSummary|getSong` ✗ ⇒ ⭐ 漏了 `clips` ✓／`sections` ✓）
+  ⇒ ⭐ 做法 ✓：⭐ ① ⭐ **根用仓库级的 `src/`** ✓ ② ⭐ 正则**同时含名词与 API** ✓ ③ ⭐ **并说明排除了什么**（⭐ 这里排除 MCP 服务端 ✓）
+**⭐ 因此 ⑥ 的实际范围 ✓**：⭐ 与业主说的"⭐ **14 个文件**"⭐ 对得上 ✓（⭐ 那是**主文件** ✓；
+  ⭐ 142 里多数是**判据** ✓ ⇒ ⭐ 判据随 ⑦ 一起动 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 下一段 ✓：⭐ 按"⭐ 主文件"逐个量 ✓ ⇒ ⭐ 定 ⑥ 的施工序 ✓
+```
+
