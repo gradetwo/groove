@@ -13218,3 +13218,27 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**；⭐ 五处移植不变 ✓，⭐ 理由已改准 ✓
 ```
 
+### 五百二十四、⭐ **三工具互锁：`set_clip`／`get_song`／`undo_song` 同批退**（2026-10-06 02:42 ✓）
+
+```
+**⭐ 量到 ✓（两个用例的原文 ✓）**：
+  · ⭐ 用例一 ✓（`check_mcp:396–403` ✓）：⭐ `set_clip` 给歌加 B 片段 ✓ ⇒ ⭐ `get_song` 读回 ✓ ⇒
+    ⭐ 断言 ⭐ `readBack.clips?.A && readBack.clips?.B && (readBack.sections ?? []).length === 2` ✗ ⇒ ⭐ **纯 v1 形状** ✗
+  · ⭐ 用例二 ✓（`:414–427` ✓）：⭐ 来自 `docs/V4_REVIEW_PLAN.md` 的**撤销验收线** ✓：
+    ⭐ `get_song(includePatterns:false)` 取"⭐ 改动前" ✓ ⇒ ⭐ `undo_song(steps:2)` ✓ ⇒
+    ⭐ 断言 ⭐ ① "⭐ undo_song steps back and reports the arrangement" ✓ ② ⭐ "⭐ **get_song lists what is undoable**" ✗
+      （⭐ 检查 ⭐ `beforeUndo.history[i].opId` ✗ —— ⭐ 那是**只有 v1 历史才有**的字段 ✓）
+**⭐⭐ 结论 ✓**：⭐ 三件事在这段剧本里**互相引用** ✓：
+  ⭐ `set_clip` ✗ 产生的状态 ⭐ 由 `get_song` ✗ 读 ✓ ⇒ ⭐ 而 `get_song` ✗ 又当 `undo_song` ✗ 的快照 ✓
+  ⇒ ⭐ 任何**单独**退一个都会**打断这段剧本** ✗ ⇒ ⭐ **必须同批** ✓
+**⭐ 同批的做法 ✓**：
+  ⭐ ① ⭐ 把这段剧本**改写为 v2** ✓：⭐ `create_arrangement` ✓ ⇒ ⭐ `set_arrangement_track_steps` ✓（⭐ 替代 `set_clip` ✓）
+    ⇒ ⭐ `get_arrangement` ✓（⭐ 替代 `get_song` ✓）⇒ ⭐ `undo_arrangement` ✓（⭐ 替代 `undo_song` ✓，⭐ 已就绪 ✓）
+  ⭐ ② ⭐ 第二条断言 ⭐ "⭐ lists what is undoable" ✗ ⭐ **删除** ✓（⭐ v2 历史不带 op 名 ✓ —— ⭐ 这是 §523 定的 ✓）
+  ⭐ ③ ⭐ 三个工具块退场 ✓ ＋ ⭐ 各自的判据／清单／文档行／README ✓ ＋ ⭐ 回填 ✓
+**⭐⭐ 教训 136 ✓**：⭐ **退场的批次由"⭐ 协议剧本"决定** ✗，⭐ 不由"⭐ 工具清单"决定 ✓ ——
+  ⭐ 三个工具**共用一段剧本** ⇒ ⭐ 它们**就是一个批次** ✓
+  ⇒ ⭐ 判法 ✓：⭐ 对每个候选 ✓，⭐ 看它的用例**还用到谁** ✓ ⇒ ⭐ 互相引用的 ⇒ ⭐ **同批** ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 批次与改法已定 ✓
+```
+
