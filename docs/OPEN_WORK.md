@@ -12199,3 +12199,24 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落地 ✗**（⭐ 余量用尽 ✓）⇒ ⭐ **4 件单元可在新上下文里一次做完 ✓**（⭐ 其中 3 件已验或已就绪 ✓）
 ```
 
+**⭐ 第 ④ 件的配方（2026-10-06 00:27 ✓，⭐ 未知已清零 ✓）**：
+```
+**⭐ 量到 ✓**：
+  · ⭐ 存储 ✓：⭐ `mcp/arrangement.ts` 里的模块级 Map ⭐ `arrangements` ✓，⭐ 写点 ⭐ `arrangements.set(id, base)` ✓
+    （⭐ 在 `createMcpArrangement` 内 ✓ `:390` 起 ✓）
+  · ⚠️ ⭐ **没有导出的"放入"函数** ✗（⭐ 只有 `getMcpArrangement` ✓／`clearMcpArrangements` ✓）
+  · ⭐ `import_groove` 现状 ✓：⭐ `validateGroovePackage(parsed)` ✓ ⇒ ⭐ `pkg.arrangement` ✓ ⇒ 无则报
+    "this package is a v1 project …" ✓ ⇒ ⭐ 否则 `importMcpSong(...)` **建 song** ✗
+    ⇒ ⭐ 注意 ✓：⭐ 它**已经读** `pkg.arrangement` ✓ ⇒ ⭐ 只是那个字段现在是 `{clips, sections}` ✗
+**⭐ 改法（定案 ✓）**：
+  ⭐ ① ⭐ 在 `mcp/arrangement.ts` 新增 ⭐ **`putMcpArrangement(arrangement: ArrangementV2): ArrangementSummary`** ✓
+    ⇒ ⭐ 内部 ⭐ `arrangements.set(id, arrangement)` ✓ ⇒ ⭐ `return summariseArrangement(id, arrangement)` ✓
+    ⇒ ✅ ⭐ **不触及 `mcpCoverage`** ✓（⭐ 那个判据只覆盖 `src/data/arrangementEdits.ts` ✓）
+  ⭐ ② ⭐ `import_groove` ✓：⭐ `validateArrangementPackage(parsed)` ✓ ⇒ ⭐ `arrangementFromPackage(parsed)` ✓ ⇒
+    ⭐ `putMcpArrangement(...)` ✓ ⇒ ⭐ 回 ⭐ `{ arrangementId, tracks, bars }` ✓（⭐ 术语 v2 ✓）
+    ⇒ ⭐ 描述也要改 ✓（⭐ 现在写"create a song" ✗ ⇒ ⭐ 改为"load into an arrangement" ✓）
+  ⭐ ③ ⭐ `check_mcp.mjs` 的 Case B ✓（⭐ 断言新 `arrangementId` 与轨数 ✓ ＋ 用例名改掉 `songId` ✓）
+**⭐ 于是 4 件单元全部无未知 ✓**：⭐ ① 包模块就绪 ✓ ② 导出已验通过 ✓ ③ 协议两条 ✓ ④ 导入 ＋ 新增"放入" ✓
+**⏳ 未落地 ✗**；⭐ 但每一步都已到函数与行 ✓
+```
+
