@@ -13539,3 +13539,25 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+### 五百三十一、⚠️ **第 ② 步：删除成功但暴露两个漏掉的调用点**（2026-10-06 03:08 ✓，树已回退 ✓）
+
+```
+**⭐ 成功的部分 ✓（已验 ✓）**：⭐ 四段删除**正确** ✓（⭐ 自下而上 ✓ ⇒ `tsc=0` ✓｜`lint=0` ✓｜`redlines=0` ✓）
+  ⭐ ② 清单与注释 ✓ ③ 读者数组 ✓ ④ 两处清单 ✓ ⑤ 判据来源 ✓ ⑥ docs 四行 ✓ ⇒ ⭐ **相关判据全过** ✓
+**⭐ 失败的部分 ✗**：⭐ `check:mcp` 三条 ✗，⭐ 全与 `add_section` 有关 ✓：
+  · ⭐ "⭐ add_section grows the arrangement and reports its shape" ✗
+  · ⭐ "⭐ add_section carries a build, a fill and a transposition" ✗
+  · ⭐ "⭐ the ramp reaches the timeline as a per-bar velocity scale" ✗
+**⭐ 根因（已实测 ✓）**：⭐ `add_section` 在 `check_mcp` 里有 ⭐ **2 个 `tools/call` 点** ✓（`:827` ✓ 与 `:843` ✓）
+  ＋ ⭐ 注释 1 ✓（`:808` ✓）＋ ⭐ 清单 1 ✓（`:814` ✓）⇒ ⭐ **3 条检查**依赖它们 ✓
+**⚠️ ⭐ 教训 142 ✓（重要 ✓）**：⭐ **计划清单是"⭐ 记忆的快照**" ✗，⭐ 会丢项 ✓ ——
+  ⭐ 第 127 轮的表**当时是对的** ✓（⭐ "4 总命中／3 调用点" ✓）⇒ ⭐ **是我后来写计划时漏抄了那 2 个调用点** ✗
+  ⇒ ⭐ 做法 ✓：⭐ **计划里的每一项都要在计划时**重新计数** ✓（⭐ 不能抄旧结论 ✓）
+    ⭐ 具体 ✓：⭐ 对每个待退工具 ✓ ⇒ ⭐ `grep -n "name: "工具"" scripts/check_mcp.mjs` ✓ ⇒ ⭐ **逐个调用点列出** ✓
+**⭐ 因此第 ② 步要补 ✓**：⭐ 那 2 个调用点 ✗ ⇒ ⭐ 按 v2 改写或删除 ✓（⭐ 它们测的是 v1 语义 ✓：
+  ⭐ "⭐ 加段并报告形状" ✓／"⭐ 带 build／fill／transpose" ✓／"⭐ 速度斜坡落成逐小节力度" ✓）
+  ⇒ ⭐ v2 对应 ✓：⭐ `add_arrangement_track` ✓ ／ ⭐ `set_arrangement_track_steps` ✓ ／ ⭐ 力度与斜坡见 v2 的相应工具 ✓
+    ⇒ ⭐ 先查这些语义在 v2 是否已有判据 ✓ ⇒ ⭐ 有 ⇒ ⭐ 删用例 ✓；⭐ 无 ⇒ ⭐ 补判据再删 ✓（⭐ 铁律 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
