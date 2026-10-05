@@ -127,6 +127,10 @@ describe("MCP · the operations written for MCP reach a tool", () => {
       "summariseArrangement",
       "requireArrangement",
       "arrangementFromArgs",
+      // ⭐ `putMcpArrangement` is called by `import_groove`, which lives in `mcp/registryFiles.ts` rather than in the
+      // registry source this guard reads, so the call is real but invisible here. It is the write side of the lookup, used
+      // by the import path and by the criteria that load a package into the store.
+      "putMcpArrangement",
     ]);
 
     const unreachable = exported.filter((name) => !NOT_A_TOOL.has(name) && !registry.includes(`${name}(`));
