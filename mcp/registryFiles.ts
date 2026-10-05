@@ -12,6 +12,7 @@ import { ClipSlot } from "../src/types/song";
 import { APP_VERSION } from "../src/version";
 import { exportAbleton, exportMidi, toBase64 } from "./exporting";
 import { collectDebugBundle } from "./debugBundle";
+import { getMcpArrangement } from "./arrangement";
 import { findGenre } from "./library";
 import { getMcpSong, importMcpSong } from "./song";
 import { ToolDefinition, failure, patternFromArgs, patternSchema, unknownGenre } from "./toolKit";
@@ -238,12 +239,21 @@ export const FILE_TOOLS: ToolDefinition[] = [
         .max(500)
         .optional()
         .describe("what you saw, in your own words — the one thing no instrument records"),
+      arrangementId: z
+        .string()
+        .optional()
+        .describe("the arrangement to put in the archive, so the fault can be reproduced from the work itself"),
     },
     handler: (args) => {
       try {
+        const arrangement = args.arrangementId ? getMcpArrangement(String(args.arrangementId)) : undefined;
+        if (args.arrangementId && !arrangement) {
+          return failure(`unknown arrangementId "${String(args.arrangementId)}" — the archive would not carry the work`);
+        }
         return collectDebugBundle({
           outputDir: args.outputDir as string | undefined,
           note: args.note as string | undefined,
+          arrangement,
         });
       } catch (error) {
         return failure((error as Error).message);

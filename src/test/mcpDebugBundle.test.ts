@@ -5,6 +5,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { DEBUG_BUNDLE_FILE_LIMIT, collectDebugBundle } from "../../mcp/debugBundle";
 import { readTar } from "../features/debug/tar";
+import { TOOLS } from "../../mcp/registry";
 
 // ⭐ These are the criteria for `collect_debug_bundle`, named here so the coverage check finds it.
 describe("MCP · the debug bundle", () => {
@@ -60,5 +61,11 @@ describe("MCP · the debug bundle", () => {
       expect(all.toLowerCase(), word).not.toContain(word);
     }
     expect(Object.keys(JSON.parse(textOf(result.path, "environment.json")))).toEqual(["GROOVE_MCP_OUT"]);
+  });
+
+  it("declares the arrangement input, so an archive can carry the work it came from", () => {
+    const tool = TOOLS.find((candidate) => candidate.name === "collect_debug_bundle");
+    expect(tool, "collect_debug_bundle is not declared").toBeTruthy();
+    expect(Object.keys(tool!.inputSchema as Record<string, unknown>)).toContain("arrangementId");
   });
 });

@@ -11861,3 +11861,39 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 第八道门（全量＋覆盖率）✓**：⭐ 后台作业 ⭐ `bash-2068` ✓ 在 `3edd15e` 上跑 ✓ ⇒ ⭐ 结果一到就报 ✓
 ```
 
+### 四百七十九、⭐⭐ **外部性能深测报告（2026-10-05 22:50–23:30 ✓，提交 `e3920f1e` ✓）**
+
+```
+**⭐ 来源 ✓**：⭐ 业主转交的独立深测报告 ✓（⭐ 自有 MCP client ✓，⭐ stdio ✓，⭐ `dist-mcp` 当日重建 ✓，
+  Linux x86_64 ✓，⭐ node 24 ✓）⇒ ⭐ 它见的工具数 **94** ✓ ⇒ ⭐ 与我的计数**一致** ✓
+**⭐ 读数（方法与时机都在报告里 ✓）**：
+  · ⭐ 元数据类（⭐ `create_song` ✓／`create_arrangement` ✓／`set_arrangement_bars` ✓／`add_arrangement_notes` ×1200 ✓／
+    `export_logic_project` ✓）⭐ **全部毫秒级** ✓ ⇒ ⭐ 无性能问题 ✓
+  · ⭐ `render_arrangement` ✓（8 bars ✓，2 轨 ✓，64 音符 ✓，32.6 s WAV ✓）：
+    ⭐ 冷 ⭐ **50.4 s**（含浏览器启动 ✓）⇒ ⭐ 热 ⭐ **31.6 s ／ 31.8 s** ✓ ⇒ ⭐ **实时倍率 1.03x ／ 1.02x** ✓
+  · ⭐ `render_song` ✓（13.4 s WAV ✓）：⭐ **51.1 s** ✓ ⇒ ⭐ **0.26x** ✓（⭐ P1 ✓）
+  · ⭐ 16 bars 空编曲 ✓：⭐ **28.4 s** ✓ ⇒ ⭐ 1.15x ✓
+  · ⭐ 冷启动成本 ⭐ **约 19 秒** ✓（⭐ 冷 50.4 − 热 31.6 ✓）｜⭐ CPU 36–54 s ✓（⭐ 多核约 1.2x ✓）｜
+    ⭐ RSS ⭐ **400–700 MB** ✓（含 headless Chromium ✓）
+**⭐ 问题清单（我按本目标的执行顺序对齐 ✓）**：
+  · ⭐ **P0 ✓：大编曲渲染超时** ✓ —— ⭐ 32 bars ✓／**1200 音符** ✓／单 sampler 轨 ✓ ⇒ ⭐ `render_arrangement`
+    **300 秒 MCP 超时无返回** ✗ ⇒ ⭐ 按 0.57 s/音符推算 ⭐ 需约 **680 s** ✓ ⇒ ⭐ **慢到超时，非死锁** ✓
+    ⇒ ⭐ 建议 ✓：⭐ **服务端返回增量进度** ✓（⭐ **＝我的执行顺序 ⑥"分析／渲染进度上报"** ✓）＋ ⭐ 客户端超时放宽到 900 s ✓
+    ⇒ ⚠️ ⭐ **优先级应上调** ✓：⭐ 它**现在就是用户可见的"等同不可用"** ✓ ⇒ ⭐ 我建议 ⭐ **紧接着做 ⑥** ✓
+  · ⭐ **P1 ✓：`render_song` 每次付冷启动** ✓（⭐ 0.26x ✓）⇒ ⭐ 建议 ⭐ **复用浏览器 worker** ✓（⭐ 与 render_arrangement
+    热路径一致 ✓）⇒ ⭐ **这是一条系统（音频引擎）项** ✓
+  · ⭐ **P1 ✓：`headless: true` 需 `node-web-audio-api`** ✓，⭐ 未装则直接报错 ✓（⭐ 错误信息完善 ✓）
+    ⇒ ⭐ 写进 `needs` ✓（⭐ CI／测试环境需预装 ✓）；⭐ 装后性能**未测** ✓
+  · ⭐ **P2 ✓：命名摩擦** ✓ —— ⭐ `songId` vs `song_id` ✓／⭐ `add_arrangement_track` 的 `kind` 只收
+    `synth|sampler|drumkit|fx|folder` ✓／⭐ `add_arrangement_notes` 用 `startBeats`／`lengthBeats` ✓ ＋ 顶层 `trackId` ✓
+    ⇒ ⭐ 这些是**描述与命名要写清**的地方 ✓（⭐ 与本目标"术语用 v2 ✓"一致 ✓）
+    ⇒ ⚠️ ⭐ 报告还记了一条**破坏性变更** ✗：⭐ `create_song` **现在必须**给 `genreId` 或 `pattern` ✓
+      ⇒ ⭐ 那是 v1 侧工具 ✓，⭐ 它会随 ⭐ **迁移 ⑤** 一并处置 ✓ ⇒ ⭐ 记账即可 ✓
+  · ⭐ **P2 ✓：`export_logic_project` 只支持 `arrangementId`** ✓，⭐ 不支持 `songId` ✓
+    ⇒ ✅ ⭐ **这与"纯 V2"一致 ✓**，⭐ **不是缺陷** ✓（⭐ 报告是对的：⭐ song 级导出未测，⭐ 因为工具不支持 ✓）
+**⭐ 结论 ✓**：⭐ 常规渲染性能与上一版持平 ✓；⭐ **大编曲超时依旧** ✓；⭐ 新工具 `export_logic_project` 可用 ✓；
+  ⭐ 命名不一致是持续的摩擦源 ✓
+**⏳ 我的动作 ✓**：⭐ ① **上调执行顺序 ⑥（进度上报）的优先级** ✓ ② 把两条 P1 写进 `needs` ✓
+  ③ ⭐ 本轮同时落地 ⭐ **调试工具加 `arrangementId`** ✓（⭐ 让压缩包真能载作品 ⇒ 可复现 ✓）
+```
+
