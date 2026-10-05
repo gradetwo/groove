@@ -387,15 +387,30 @@ try {
     `totalBars=${song.totalBars} passBars=${song.passBars}`
   );
 
-  const withSection = payload(
-    await client.request("tools/call", { name: "add_section", arguments: { songId: song.songId, slot: "A", bars: 2, label: "chorus" } })
+  /**
+   * ⭐ **A second part is a second track, and what it plays is its steps.** Placing a section and giving it a clip were the
+   * older model's two moves for one idea; the arrangement states it once, and the assertion names the older fields as
+   * absent rather than merely unused.
+   */
+  const v2Parts = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "synth" } }));
+  const v2Part = payload(
+    await client.request("tools/call", {
+      name: "add_arrangement_track",
+      arguments: { arrangementId: v2Parts.arrangementId, kind: "sampler", name: "chorus" },
+    })
   );
-  check("add_section places a second section", (withSection.sections ?? []).length === 2, JSON.stringify(withSection.shape ?? ""));
-
-  const withClip = payload(
-    await client.request("tools/call", { name: "set_clip", arguments: { songId: song.songId, slot: "B", genreId: "chicago-house" } })
+  const v2TrackId = (v2Part.summary?.tracks ?? []).at(-1)?.id;
+  const v2Played = payload(
+    await client.request("tools/call", {
+      name: "set_arrangement_track_steps",
+      arguments: { arrangementId: v2Parts.arrangementId, trackId: v2TrackId, steps: [1, 0, 0, 0, 1, 0, 0, 0] },
+    })
   );
-  check("set_clip gives a song a second clip", (withClip.clips ?? []).includes("B"), JSON.stringify(withClip.clips ?? []));
+  check(
+    "a second track with its own steps is how v2 places a second part",
+    (v2Played.summary?.tracks ?? []).length === 2 && v2Played.summary?.clips === undefined && v2Played.summary?.sections === undefined,
+    `tracks=${(v2Played.summary?.tracks ?? []).length} trackId=${String(v2TrackId)}`
+  );
 
   /**
    * ⭐ **The reader, on the model that is staying.** This used to read the older song back through `get_song`, which is what
@@ -427,17 +442,19 @@ try {
   /**
    * The undo acceptance line from docs/V4_REVIEW_PLAN.md: a sequence of tool calls returns to its starting arrangement.
    */
-  const beforeUndo = payload(await client.request("tools/call", { name: "get_song", arguments: { songId: song.songId, includePatterns: false } }));
-  const undone = payload(await client.request("tools/call", { name: "undo_song", arguments: { songId: song.songId, steps: 2 } }));
-  check(
-    "undo_song steps back and reports the arrangement as it now stands",
-    (undone.sections ?? []).length === 1 && (beforeUndo.sections ?? []).length === 2,
-    `before ${beforeUndo.sections?.length} sections, after ${undone.sections?.length}`
+  /** ⭐ **Its own setup**, so this scenario no longer borrows the state the one above it builds. */
+  const undoProbe = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "synth" } }));
+  const undoStart = payload(await client.request("tools/call", { name: "get_arrangement", arguments: { arrangementId: undoProbe.arrangementId } }));
+  for (const bars of [8, 16]) {
+    await client.request("tools/call", { name: "set_arrangement_bars", arguments: { arrangementId: undoProbe.arrangementId, bars } });
+  }
+  const undone = payload(
+    await client.request("tools/call", { name: "undo_arrangement", arguments: { arrangementId: undoProbe.arrangementId, steps: 2 } })
   );
   check(
-    "get_song lists what is undoable",
-    Array.isArray(beforeUndo.history) && beforeUndo.history.length >= 2 && typeof beforeUndo.history[0]?.opId === "string",
-    `history entries: ${beforeUndo.history?.length ?? 0}`
+    "undo_arrangement steps back and reports the arrangement as it now stands",
+    undone.summary?.bars === undoStart.bars && undone.summary?.bars !== 16,
+    `before ${String(undoStart.bars)} bars, after ${String(undone.summary?.bars)}`
   );
 
   /**

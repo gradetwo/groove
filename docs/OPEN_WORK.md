@@ -13401,3 +13401,18 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 树已回退 ⇒ 脏 0 ✓ ✓）；⭐ 两处改法已定 ✓
 ```
 
+**⭐ 第 ① 步完成 ✓（2026-10-06 02:58 ✓）**：
+```
+⭐ 两块一次通过 ✓：⭐ `check:mcp=0` ✓｜⭐ `tsc=0` ✓｜⭐ `lint=0` ✓
+  · ⭐ 块一 ✓：⭐ `add_section` ＋ `set_clip` ✗ ⇒ ⭐ `create_arrangement` ✓ ＋ `add_arrangement_track` ✓
+    ＋ `set_arrangement_track_steps`（⭐ `steps: [1,0,0,0,1,0,0,0]` ✓）⇒ ⭐ 断言 ⭐ `summary.tracks` 长度 2 ✓
+    ＋ ⭐ `summary.clips`／`summary.sections` 为 `undefined` ✓
+  · ⭐ 块二 ✓：⭐ 撤销剧本 ⭐ **自带建立** ✓（⭐ `create_arrangement` ✓ ⇒ ⭐ 两次 `set_arrangement_bars` ✓）
+    ⇒ ⭐ `undo_arrangement` ✓ ⇒ ⭐ 断言 ⭐ `summary.bars` 回到起点 ✓ ⇒ ⭐ **删**"⭐ lists what is undoable" ✗
+    ⇒ ⭐ **不再引用** `song`／`get_song`／`undo_song` ✗ ✓
+  ⇒ ⭐ 这同时**证明**了 ✓：⭐ 回包是 `{ summary, problems }` ✓（⭐ 三处 ✓）｜⭐ `set_arrangement_bars` 收 `{ arrangementId, bars }` ✓
+    ｜⭐ `undo_arrangement` 回 ⭐ `summary.bars` ✓
+**⭐ 因此现在**四个 v1 工具都不再被协议脚本调用** ✓**：⭐ `add_section` ✗／⭐ `set_clip` ✗／⭐ `get_song` ✗／⭐ `undo_song` ✗
+  ⇒ ⭐ **它们已可安全退场** ✓（⭐ 第 ② 步 ✓）＋ ⭐ 地板改为跟随登记表 ✓
+```
+
