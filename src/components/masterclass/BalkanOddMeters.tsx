@@ -82,6 +82,30 @@ export const BalkanOddMeters: React.FC<BalkanOddMetersProps> = ({
   const meter = BALKAN_METERS.find((m) => m.id === selectedMeterId) || BALKAN_METERS[0];
   const totalUnits = meter.subdivisions.reduce((a, b) => a + b, 0);
 
+  const playNextSubdiv = useCallback(() => {
+    const idx = activeSubdivRef.current;
+    setActiveSubdivIdx(idx);
+    const durationUnits = meter.subdivisions[idx];
+    const isLong = durationUnits === 3;
+    const isFirst = idx === 0;
+
+    if (isFirst) {
+      engine.triggerSound("davul", undefined, 1.0);
+    } else if (isLong) {
+      engine.triggerSound("bell", undefined, 0.85);
+    } else {
+      engine.triggerSound("woodblock", undefined, 0.8);
+    }
+
+    engine.registerPulseTimestamp(engine.getCurrentTime());
+
+    // Each unit is one eighth / two sixteenths of a beat at the current tempo.
+    const unitMs = ((60 / bpm) / 2) * (durationUnits / 2) * 1000;
+
+    activeSubdivRef.current = (idx + 1) % meter.subdivisions.length;
+    timerRef.current = window.setTimeout(playNextSubdiv, unitMs);
+  }, [bpm, meter, engine]);
+
   const handleTogglePlay = useCallback(() => {
     if (isPlaying) {
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -92,66 +116,21 @@ export const BalkanOddMeters: React.FC<BalkanOddMetersProps> = ({
       setIsPlaying(true);
       activeSubdivRef.current = 0;
 
-      const playNextSubdiv = () => {
-        const idx = activeSubdivRef.current;
-        setActiveSubdivIdx(idx);
-        const durationUnits = meter.subdivisions[idx];
-        const isLong = durationUnits === 3;
-        const isFirst = idx === 0;
-
-        if (isFirst) {
-          engine.triggerSound("davul", undefined, 1.0);
-        } else if (isLong) {
-          engine.triggerSound("bell", undefined, 0.85);
-        } else {
-          engine.triggerSound("woodblock", undefined, 0.8);
-        }
-
-        engine.registerPulseTimestamp(engine.getCurrentTime());
-
-        // Calculate ms duration for this specific subdivision unit (each unit = 1 eighth / 2 sixteenths)
-        const unitMs = ((60 / bpm) / 2) * (durationUnits / 2) * 1000;
-
-        activeSubdivRef.current = (idx + 1) % meter.subdivisions.length;
-        timerRef.current = window.setTimeout(playNextSubdiv, unitMs);
-      };
-
       playNextSubdiv();
     }
-  }, [isPlaying, bpm, meter, engine]);
+  }, [isPlaying, bpm, meter, engine, playNextSubdiv]);
 
   // Handle updates while playing
   useEffect(() => {
     if (isPlaying) {
       if (timerRef.current) clearTimeout(timerRef.current);
       activeSubdivRef.current = 0;
-      const playNextSubdiv = () => {
-        const idx = activeSubdivRef.current;
-        setActiveSubdivIdx(idx);
-        const durationUnits = meter.subdivisions[idx];
-        const isLong = durationUnits === 3;
-        const isFirst = idx === 0;
-
-        if (isFirst) {
-          engine.triggerSound("davul", undefined, 1.0);
-        } else if (isLong) {
-          engine.triggerSound("bell", undefined, 0.85);
-        } else {
-          engine.triggerSound("woodblock", undefined, 0.8);
-        }
-
-        engine.registerPulseTimestamp(engine.getCurrentTime());
-        const unitMs = ((60 / bpm) / 2) * (durationUnits / 2) * 1000;
-
-        activeSubdivRef.current = (idx + 1) % meter.subdivisions.length;
-        timerRef.current = window.setTimeout(playNextSubdiv, unitMs);
-      };
       playNextSubdiv();
     }
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [isPlaying, bpm, meter, engine]);
+  }, [isPlaying, bpm, meter, engine, playNextSubdiv]);
 
   const handleTap = useCallback(() => {
     const result = engine.evaluateTap();

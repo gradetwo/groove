@@ -2,7 +2,7 @@
  * 📐 **The duplicated-logic budget only moves down.**
  *
  * Measured 2026-10-05 01:11 over `mcp/**` and `src/**` (excluding the data tables, whose repetition is
- * structural): **38** maximal blocks of twelve or more identical consecutive lines that are not pure
+ * structural): **37** maximal blocks of twelve or more identical consecutive lines that are not pure
  * imports, **21** of them inside one file — which is where a missing function hides — **24** across
  * files, longest **21** lines, and **none** at twenty-four lines or more: the last of those was a single
  * twenty-five line object literal typed once per branch of a ternary, now one `base` object spread into
@@ -24,6 +24,10 @@
  * only in the slider range and two labels; extracting `MasterclassTransport` took the reading from
  * 45/21/24/21/0 to 38/21/17/21/0 and the caps came down with it, which is the rule: they only move
  * down, so a later regression to forty-five blocks fails here.
+ *
+ * 2026-10-05 07:39 — `BalkanOddMeters` carried the same subdivision scheduler twice, once in its play
+ * callback and once in the effect that re-schedules while playing; it is now one `useCallback` that both
+ * call, taking the reading from 38/21/17/21/0 to 37/20/17/19/0.
  */
 import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
@@ -32,7 +36,7 @@ type Measure = {
   blocks: number; sameFile: number; crossFile: number; longest: number; atLeast24: number; top: string[];
 };
 
-const CAP: Measure = { blocks: 38, sameFile: 21, crossFile: 17, longest: 21, atLeast24: 0, top: [] };
+const CAP: Measure = { blocks: 37, sameFile: 20, crossFile: 17, longest: 19, atLeast24: 0, top: [] };
 
 function measure(): Measure {
   const out = execFileSync("node", ["scripts/check_duplication.mjs"], { encoding: "utf8" });
