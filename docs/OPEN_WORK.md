@@ -14821,3 +14821,35 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 下一段 ✓：⭐ 按"⭐ 主文件"逐个量 ✓ ⇒ ⭐ 定 ⑥ 的施工序 ✓
 ```
 
+### 五百七十一、⭐⭐ **⑥ 的 14 个主文件已确定（与业主说的"14 个文件"吻合 ✓）**（2026-10-06 04:40 ✓）
+
+```
+**⭐ 量法 ✓**：⭐ 全 `src/` ✓ ⇒ ⭐ **排除判据** ✓（`src/test/*` 随 ⑦ ✓）⇒ ⭐ **43 个非判据文件** ✓
+  ⇒ ⭐ 取**前 14** ✓（⭐ 与业主说的数目吻合 ✓ ✓）
+| ⭐ # ✓ | ⭐ 文件 ✓ | ⭐ 处数 ✓ | ⭐ 层 ✓ |
+|---|---|---|---|
+| ⭐ 1 ⭐ | ⭐ `src/types/song.ts` ✓ | 50 ✓ | ⭐ **类型（根）** ✓ |
+| ⭐ 2 ⭐ | ⭐ `src/features/arrangement/songEdit.ts` ✓ | 66 ✓ | ⭐ 编辑层 ✓ |
+| ⭐ 3 ⭐ | ⭐ `src/data/arrangementImport.ts` ✓ | 20 ✓ | ⭐ 数据 ✓ |
+| ⭐ 4 ⭐ | ⭐ `src/components/arrangement/ArrangementPanel.tsx` ✓ | 20 ✓ | ⭐ 组件 ✓ |
+| ⭐ 5 ⭐ | ⭐ `src/features/sequencer/useSequencerStore.ts` ✓ | 18 ✓ | ⭐ store ✓ |
+| ⭐ 6 ⭐ | ⭐ `src/data/songFlatten.ts` ✓ | 14 ✓ | ⭐ 数据 ✓ |
+| ⭐ 7 ⭐ | ⭐ `src/audio/audioLanePlan.ts` ✓ | 13 ✓ | ⭐ 音频 ✓ |
+| ⭐ 8 ⭐ | ⭐ `src/features/sequencer/hooks/useAudioEngineLifecycle.ts` ✓ | 12 ✓ | ⭐ hook ✓ |
+| ⭐ 9 ⭐ | ⭐ `src/views/StudioView.tsx` ✓ | 10 ✓ | ⭐ 视图 ✓ |
+| ⭐ 10 ⭐ | ⭐ `src/features/sequencer/projectDb.ts` ✓ | 10 ✓ | ⭐ 存储 ✓ |
+| ⭐ 11 ⭐ | ⭐ `src/data/arrangementCompile.ts` ✓ | 9 ✓ | ⭐ 数据 ✓ |
+| ⭐ 12 ⭐ | ⭐ `src/audio/SequencerUrlShare.ts` ✓ | 8 ✓ | ⭐ 音频 ✓ |
+| ⭐ 13 ⭐ | ⭐ `src/features/sequencer/hooks/useExportActions.ts` ✓ | 7 ✓ | ⭐ hook ✓ |
+| ⭐ 14 ⭐ | ⭐ `src/audio/AbletonExporter.ts` ✓ | 7 ✓ | ⭐ 导出 ✓ |
+**⭐ 尾部的噪声 ✓**：⭐ 剩下 29 个文件多为 ⭐ **无关命中** ✓ —— ⭐ 例如 ⭐ `src/i18n/locales/studio.ts` ✓（⭐ UI 文案 ✓）、
+  ⭐ `src/data/genres/*.ts` ✓（⭐ 流派数据 ✓）、⭐ `HelpCenterModal.tsx` ✓ ⇒ ⭐ 那是 ⭐ **`sections` 一词的别的意思** ✗ ✓
+  ⇒ ⭐ 做法 ✓：⭐ 逐个**看一眼上下文** ✓ 再定 ✓（⭐ 教训 163 的延伸 ✓）
+**⭐ 依赖顺序 ✓（⭐ 与 ⑦ 同一纪律 ✓：⭐ 根先行 ✓）**：
+  ⭐ ① ⭐ **类型**（`src/types/song.ts` ✓）⇒ ⭐ ② ⭐ **数据助手**（`songFlatten` ✓／`arrangementImport` ✓／`arrangementCompile` ✓）
+  ⇒ ⭐ ③ ⭐ **store 与存储**（`useSequencerStore` ✓／`projectDb` ✓／`projectStorage` ✓）
+  ⇒ ⭐ ④ ⭐ **编辑层**（`songEdit.ts` ✓）⇒ ⭐ ⑤ ⭐ **组件与视图**（`ArrangementPanel` ✓／`StudioView` ✓／…）
+  ⇒ ⭐ ⑥ ⭐ **音频与导出**（`audioLanePlan` ✓／`SequencerUrlShare` ✓／`AbletonExporter` ✓／`useExportActions` ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 下一段 ✓：⭐ 从 ⭐ **① 类型**开始量它的用途 ✓
+```
+
