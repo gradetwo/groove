@@ -75,6 +75,18 @@ export function getMcpArrangement(arrangementId: string): ArrangementV2 | undefi
   return arrangements.get(arrangementId);
 }
 
+/**
+ * ⭐ **The write side of the lookup, for an arrangement that came from a file rather than from the editor.**
+ *
+ * Importing needs to put a whole arrangement in, not build one field by field, and the store had only a get. The id is
+ * fresh by default, because an imported work is a new one: two files of the same name must not collide in the store.
+ */
+export function putMcpArrangement(arrangement: ArrangementV2, id = `imported-${Date.now().toString(36)}`): ArrangementSummary {
+  arrangements.set(id, arrangement);
+  return summariseArrangement(id, arrangement);
+}
+
+
 /** Every function that changes an arrangement reports the same way: a summary, plus anything wrong with the request. */
 export interface ArrangementEditResult {
   summary: ArrangementSummary;
