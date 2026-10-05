@@ -12102,3 +12102,27 @@ export async function prepareArrangementAudioLanes(input: {
   ⇒ ⚠️ ⭐ **不可合并成"覆盖率通过"** ✗（⭐ 那是没测到的事实 ✗）
 ```
 
+### 四百八十七、⭐ **迁移 ② 的第一刀：一个 5 文件单元（2026-10-06 00:19 ✓）**
+
+```
+**⭐ 为什么不能更小 ✓**：⭐ 我原想"⭐ 只把 `export_groove` 改接 `arrangementId`" ✓ ⇒ ⚠️ **不成立** ✗
+  ⇒ ⭐ 因为 ⭐ `exportProjectPackage` 的**第一参数是 v1 的 `project`** ✗
+  ⇒ ⭐ 包形状改动 ⭐ **必须与它同批** ✓（⭐ 否则就是并存 ✗）
+**⭐ 单元内容（5 个文件 ✓，⭐ 已全部定位 ✓）**：
+  ⭐ ① ⭐ `src/features/sequencer/arrangementPackage.ts` ✓ —— ⭐ **已就位** ✓（⭐ 拒绝 v1 形状 ✓）
+    ⇒ ⭐ 让它**成为写手** ✓（⭐ 或改 `projectDb` 的两个函数 ✓，⭐ 二选一 ✓）
+  ⭐ ② ⭐ `mcp/registryFiles.ts` ✓ 的 `export_groove` ✓：⭐ 入参 ⭐ `songId` ⇒ **`arrangementId`** ✓；
+    ⭐ **删** `:136–142` 的伪造对象与 ⭐ `as unknown as` ✗（⭐ 教训 102 ✓）
+  ⭐ ③ ⭐ `scripts/check_mcp.mjs:502` ✓：⭐ 调用改传 `arrangementId` ✓；
+    ⚠️ ⭐ **`:504` 的断言本身就期望 v1 形状** ✗：⭐ `exported.version === 2 && exported.clips?.includes?.("B") !== false` ✓
+    ⇒ ⭐ **该断言是"不并存"要重写的** ✓（⭐ 改为断言 v2 形状 ✓ 且 ⭐ **不含 `clips`** ✗）
+  ⭐ ④ ⭐ `src/test/projectDb.test.ts`（×13 ✓）＋ ⭐ `src/test/arrangementEntries.test.ts:78` ✓ ——
+    ⚠️ ⭐ 其中 `projectDb.test.ts:315` **期望 v2 形状被拒** ✗ ⇒ ⭐ 那正是要移除的旧规则 ✓
+  ⭐ ⑤ ⭐ 其余三个工具 ✓：⭐ `export_ableton` ✓（⭐ 接 `arrangementId` ✓）＋ ⭐ `export_midi` ✓（⭐ 与
+    `export_arrangement_midi` **同义则合并** ✓）＋ ⭐ `import_groove` ✓（⭐ **建 arrangement** ✓）
+**⭐ 完成的判据 ✓**：⭐ ① 包 ⭐ **不含** `clips`／`sections`／`slots`／`project` ✓ ② ⭐ 一个**新写入的包**能被
+  `validateArrangementPackage` **接受** ✓ ③ ⭐ 一个**旧形状的包被拒** ✓（⭐ 且错误信息**指名**是哪一项 ✓）
+  ④ ⭐ `check_mcp` 的用例改为断言 v2 形状 ✓ ⑤ ⭐ 回填对齐表 ✓
+**⏳ 未开工 ✗**（⭐ 余量用尽 ✓）⇒ ⭐ **这一个单元适合在新上下文里一次做完 ✓**
+```
+
