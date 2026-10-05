@@ -221,7 +221,7 @@ complaint was that the names have to be guessed, so the names are here — and e
 | # | call | what it is for |
 |---|---|---|
 | 1 | `create_song` | start from a genre's pattern or from one you already have; its reply carries `secondsEstimate`, which is the number that makes `bars` unambiguous |
-| 2 | `set_clip` | give a section its own variation — a clip is what a section plays, and four slots (`A`-`D`) are shared song-wide |
+| 2 | `set_arrangement_track_steps` | give a part its own variation — a track plays its own steps, so the older "a clip is what a section plays" became this |
 | 3 | `apply_pattern_ops` (op `add_lane`) | a **second** lane of a kind (`laneId`), so a counter-melody, a doubled part or an audio lane can exist at all — the ops are how one tool carries many small transforms |
 | 4 | `add_section` | place sections in order, with `bars` counted as **passes of the clip**, and per-section `mute` / `velocityScale` / `velocityRamp` |
 | 5 | ⭐ tempo points | **v2 用 `set_arrangement_tempo_map`** ✓ —— 旧模型的 `set_tempo` 随 v1 退场；整幅地图写进编曲 ✓，写法与旧的一致 ✓（点落在整小节、`jump` 或 `linear`） |
