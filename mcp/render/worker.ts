@@ -672,6 +672,24 @@ export interface RenderAudioPayload {
  * Returning the measurements alongside the file is deliberate: "here is a 4-bar WAV" is far less useful to an
  * agent than "here is a 4-bar WAV, 8.1 s, -1.3 dBTP, -14.2 LUFS, and the hi-hat is 12 dB above the chords".
  */
+/**
+ * ⭐ **Answer whether a pattern's audio lanes would resolve, without rendering it.**
+ *
+ * Same catalogue read and same host context as the render, stopped after the recordings resolve. A full pass costs about
+ * two minutes per track, so a caller that only wants the answer must not pay that.
+ */
+export async function validateArrangement(
+  pattern: SequencerPattern,
+  options: RenderOptions
+): Promise<import("../../src/audio/WavExporter").ArrangementLaneReport> {
+  const catalogueRead = readAudioLaneCatalogue(pattern);
+  const { validateArrangementHeadless } = await import("./headless");
+  return validateArrangementHeadless(pattern, options, catalogueRead, {
+    publicRoot: path.join(appRoot(), "public"),
+    sampleRoot: sampleMirrorRoot(),
+  });
+}
+
 export async function renderAudio(pattern: SequencerPattern, options: RenderOptions): Promise<RenderResult> {
   /**
    * ⭐ **The headless branch is first, it is explicit, and it does not fall through.**
