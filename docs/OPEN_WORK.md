@@ -15349,3 +15349,25 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 下一段：⭐ 改两处为整行锚点 ✓（⭐ 写前那一处 ✓）⇒ ⭐ 落净 ✓
 ```
 
+**⭐ 结构查明 ✓＋ 修正锚点已验 ✓（2026-10-06 05:03 ✓）**：
+```
+**⭐ 真实结构 ✓（`projectDb.ts:1244–1250` ✓）**：
+  ⭐ `  const putRecord = (db: IDBDatabase) =>` ✓
+  ⭐ `    runStoreTx(db, GROOVE_ARRANGEMENT_STORE_NAME, "readwrite", (store) => store.put(record));` ✓
+  ⭐ `  const alreadyOpen = peekProjectsDb();` ✓
+  ⭐ `  const write =` ✓｜⭐ `    alreadyOpen !== null` ✓｜⭐ `      ? putRecord(alreadyOpen)` ✓｜⭐ `      : /**` ✓ …
+  ⇒ ⭐ 即 ⭐ `runStoreTx(…)` 是 ⭐ **箭头函数 `putRecord` 的函数体** ✗ ⇒ ⭐ 我的 "saving" ⭐ **插进了函数体内** ✗
+    ⇒ ⭐ 报错一（⭐ `Cannot find name 'db'` ✗）⭐ 与报错二 ✓ 由此而来 ✓ ✓
+**⭐ 锚点计数 ✓（⭐ 实测 ✓）**：
+  | ⭐ 候选 ✓ | ⭐ 计数 ✓ |
+  |---|---|
+  | ⭐ `const putRecord = (db: IDBDatabase) =>` ＋ ⭐ `runStoreTx(…)`（⭐ 2 行 ✓） | **1** ✓ ✓ |
+  | ⭐ `const write =`（⭐ 单行 ✓） | **2** ✗ |
+  | ⭐ `const alreadyOpen = peekProjectsDb();` ✓ | **1** ✓ |
+**⭐⭐ 修正后的落点 ✓**：⭐ "saving" 插在 ⭐ **`const putRecord = …` 这 2 行之前** ✓ ✓
+  ⭐ 理由 ✓：⭐ 它在 ⭐ `saveArrangementProject` **函数体内** ✓ ⇒ ⭐ 运行时**先于写入** ✓ ⇒ ✅ ⭐ 语义正确 ✓ ✓
+  ⭐ （⭐ 而 ⭐ `const write =` ✗ 出现 2 次 ✗ ⇒ ⭐ 不可作为锚 ✓）
+**⭐ 其余五处 ✓（⭐ 均已验 ✓）**：⭐ 形状 ✓／⭐ 初值 ✓／⭐ `await write;` ✓（⭐ 4 空格整行 ✓）｜⭐ catch 三行 ✓｜⭐ hook ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 下一段：⭐ 用修正锚落"写前"那一处 ＋ ⭐ 其余五处 ⇒ ⭐ 本组完成 ✓
+```
+
