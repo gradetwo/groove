@@ -11304,3 +11304,27 @@ export async function prepareArrangementAudioLanes(input: {
 · 📌 **本会话收尾 ✓**：⭐ 迁移 ③ 的**规格已完整** ✓（⭐ 5 条修法 ＋ 1 个最小判定实验 ✓）⇒ ⭐ 下一轮或新会话可完成 ✓
 ```
 
+### 四百六十一、⭐ **迁移 ③ 规格完成：最后两个原因（2026-10-05 21:31 ✓）**
+
+```
+**① ⚠️ `lint` 的真正原因 ✓**：⭐ `mcpHeadlessRouting.test.ts:141` ⭐ **重复的 case 标签** ✗
+  （`no-duplicate-case` ✓）⇒ ⭐ 原因：⭐ 该 `switch` **本来就有** `case "render_arrangement":` ✓，
+  我把同一处的 `case "render_audio":` 改名 ⇒ ⭐ **两行同名** ✗
+  ⇒ ⭐ **正确动作** ✓：⭐ 删掉**旧的那一行 case** ✓（⭐ 不是改名 ✗，⭐ 与列表项同理 ✓ —— ⭐ 规律一致 ✓）
+**② ⭐ 那 3 个用例的真实差异（重要 ✓）**：⭐ 失败原文 ✓：
+  `AssertionError: promise resolved "{ content: [ { …(2) } ], isError: true }" instead of rejecting` ✓
+  ⇒ ⭐ **含义 ✓**：⭐ `render_audio` **抛异常** ✓（`rejects.toThrow("stub")` ✓）；
+    ⭐ `render_arrangement` ⭐ **返回失败回包** ✓（`{ isError: true }` ✓）—— ⭐ 这是 **v2 的既有行为** ✓
+  ⇒ ⭐ **这不是 v2 缺口** ✓（⭐ 返回失败回包是 MCP 的诚实做法 ✓，⭐ 与其它 v2 工具一致 ✓）
+    ⇒ ⭐ 所以**判据要改写成断言回包** ✓，⭐ **不是**去改 v2 ✗
+    ⇒ ⭐ 写法 ✓：⭐ `const reply = await toolNamed("render_arrangement").handler({ arrangementId: … }, { progress });` ✓
+      ＋ ⭐ `expect(JSON.stringify(reply)).toContain("stub: this test does not start a browser")` ✓
+      ＋ ⭐ 保留 `renderCalls` 的长度与 `progress` 字段断言 ✓（⭐ 那两句是**本用例的要点** ✓）
+**✅ 至此迁移 ③ 的规格 100% 完整 ✓（六条修法 ✓）**：
+  ① 删工具块 ✓ ② `check_mcp` 3 处改名挂靠 ✓（已证 ✓）③ `budgetHonesty` 两处**表项删** ✓ ＋ 加 `createMcpArrangement` 辅助 ✓（已证 ✓）
+  ④ 那 3 个用例**改写为断言失败回包** ✓ ⑤ `registrySong.ts:383` 文案 ＋ `renderSongBudgetGuard` 判据**成对改** ✓
+  ⑥ ⭐ `mcpHeadlessRouting` 的**重复 case 删一行** ✓ ＋ 旧拷贝判据 `rm`（⭐ 不用 `mv` ✗）
+  ⑦ 台账 4 处旧文件名同步 ✓（⭐ 本轮已验证该方法可行 ✓）
+**⏳ 状态 ✓**：⭐ 本轮**未落地** ✗（⭐ 余量用尽 ✓，⭐ 已安全回退 ✓ 树脏 0 ✓）
+```
+
