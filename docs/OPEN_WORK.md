@@ -12282,3 +12282,21 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落地 ✗**；⭐ 三件都已定位 ✓
 ```
 
+**⭐ Web 读取路径：锚点缩进不符（2026-10-06 00:39 ✓，树脏 0 ✓）**：
+```
+· ⚠️ ⭐ 读取处的锚点 ⭐ **0 次匹配** ✗ ⇒ ⭐ python 在**写盘前**断言 ⇒ ⭐ 文件未改 ✓（⭐ 树脏 0 ✓）
+  ⇒ ⭐ 我**肉眼**从 `cat -A` 的输出里"数"空格 ✗ ⇒ ⭐ **不可靠** ✓（⭐ 这是第 4 次同类 ✗）
+**⭐ 教训 110 ✓（把教训 108 再收紧 ✓）**：⭐ **不要数空格** ✗ ——
+  ⭐ 用 ⭐ **`python` 读该行并输出"前导空格数"** ✓（⭐ 本轮已这样量 ✓），⭐ 或 ⭐ **按行号插删** ✓
+  ⇒ ⭐ 即：⭐ **锚点用"行内容"（`.strip()` ✓），缩进用"相邻行的前导空格数"** ✓
+**⭐ 下一轮的正确做法 ✓（具体到操作 ✓）**：
+  ⭐ ① ⭐ 找到包含 ⭐ `validateGroovePackage(JSON.parse(await file.text()))` 的**行号** ✓
+  ⭐ ② ⭐ 取**该行**与其**上一行**的**前导空格数** ✓
+  ⭐ ③ ⭐ `lines[i] = ind + "const { arrangementFromPackage } = await import(\"../sequencer/arrangementPackage\");"` ✓
+    ⭐ `lines[i+1] = ind + "const carried = arrangementFromPackage(JSON.parse(await file.text()));"` ✓
+    ⭐ `lines[i+2] = ind + "const imported: ArrangementImportResult = { tracks: carried.tracks.length, notes: Object.values(carried.notesByTrack ?? {}).reduce((s, l) => s + l.length, 0), problems: [] };"` ✓
+  ⭐ ④ ⭐ 删掉原第 ⭐ `i`、`i+1`、`i+2` 三行 ✓（⭐ 即 `validateGroovePackage` 两行 ＋ `arrangementFromGroovePackage` 一行 ✓）
+  ⭐ ⑤ ⭐ 保存侧的替换**上一轮已验可编译** ✓（⭐ 只差 ⭐ **`stem` 参数** ✓ —— ⭐ 已写好在 §491 的补丁里 ✓）
+**⏳ 未落地 ✗**（⭐ 余量用尽 ✓）；⭐ 操作已到"第几行、改哪几行" ✓
+```
+
