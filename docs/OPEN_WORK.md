@@ -13654,3 +13654,31 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+### 五百三十五、⭐ **`render_song` 是干净的退场（逐入参全有家 ✓）**（2026-10-06 03:13 ✓）
+
+```
+**⭐ 逐入参 ✓（⭐ 方法＝§532／§534 ✓）**：
+| ⭐ `render_song` 入参 ✓ | ⭐ v2 家 ✓ |
+|---|---|
+| ⭐ `format` ✓（`wav`／`mp3` ✓） | ✅ ⭐ `render_arrangement.format` ✓ |
+| ⭐ `bitrateKbps?` ✓ | ✅ ⭐ `render_arrangement.bitrateKbps` ✓ |
+| ⭐ `songId` ✗ | ✅ ⭐ `arrangementId` ✓ |
+**⭐ 且 v2 侧**更全** ✓**：⭐ `render_arrangement` 入参 ＝ ⭐
+  `arrangementId` ✓／`format` ✓／`bitrateKbps` ✓／`sampleRate` ✓／`channels` ✓／`headless` ✓／`startBar` ✓
+  ⇒ ⭐ **严格覆盖** ✓（⭐ 还多四项 ✓）
+**⭐ 描述里的差异 ✓**：⭐ `render_song` 说"⭐ every section, in order, with its repeats, mutes and velocity scale" ✗ ——
+  ⭐ 那是**段落模型**的语言 ✓ ⇒ ⭐ 而 ⭐ v2 的 `render_arrangement` 渲染**编曲本身** ✓（⭐ 轨 ＋ 小节 ✓）
+  ⇒ ⭐ **能力（⭐ 把整首渲染出来 ✓）在** ✓；⭐ "⭐ repeats／mutes／velocity scale" 里
+    ⭐ 属于 ⭐ **段落模型**的部分 ✗ 与 ⭐ §533 的缺口**同一处** ✓（⭐ velocity scale ✓），
+    ⭐ 而"⭐ mutes"在 v2 有 ⭐ `set_arrangement_track_flag` ✓ ⇒ ⭐ 也覆盖 ✓
+**⭐ 另 ✓**：⭐ 它用 ⭐ `summariseSong(song).secondsEstimate` ✓ 做预算 ✓ ⇒ ⭐ v2 有 **`estimateRenderCost`** ✓
+  （⭐ 本会话自己加的 ✓）⇒ ⭐ 预算能力在 ✓
+**⇒ 结论 ✓**：⭐ **`render_song` 可以退场** ✓ ✓ —— ⭐ 它是 ⑤ 里**第一个逐入参无缺口**的 ✓
+  ⇒ ⭐ 退法照 §529 的算法 ✓（⭐ 三个块的教训已吸收 ✓）＋ ⭐ `check_mcp` 的调用点**逐个列** ✓（⭐ 教训 142 ✓）
+**⭐⭐ 因此 ⑤ 的收尾很清楚 ✓**：
+  ⭐ **可退** ✓：⭐ `render_song` ✓（⭐ 干净 ✓）
+  ⭐ **暂留** ✗：⭐ `add_section` ✓（⭐ 3 项缺口 ✓）｜⭐ `create_song` ✓（⭐ 4 项缺口 ✓）
+  ⇒ ⭐ 后两个要 ⭐ **先移植或先登记 `needs`** ✓（⭐ 与业主的"⭐ 移植，不删功能"一致 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
