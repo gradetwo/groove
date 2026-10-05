@@ -10437,3 +10437,27 @@ problems: **[]** ✓
 **⚠️ 本节要防的错 ✓**：⭐ 下一个人看到 `probe:boot` 报 3521 ms 会以为**回归** ✗（我上一轮就差点这么想 ✓）
    ⇒ 所以把**离散度**写下来 ✓，并写明"**它不是尺子**" ✓
 **✅ 零产品改动 ✓**（只是探针读数的性质 ✓）
+### 四百四十八、📊 **`needs ②` 两半的实情：render-cpu 读数已取到，latency 那半因聚合任务被 skip**（2026-10-05 19:21 ✓）
+
+```
+**方法与时点 ✓**：`gh run view 37239893482 --log` ✓（**4.96 MB 可读** ✓，时点 19:21 ✓）
+   ＋ 精确定位到 **`Render CPU budget`** 步骤 ✓
+**✅ render-cpu 门（nightly）读数 ✓**：
+   · `"scenario": "baseline"` ✓｜⭐ `"percent": **105**` ✓｜⭐ `"worst": **108**` ✓｜⭐ `"over": **[]**` ✓
+   · ⭐ **`✅ every scenario is inside the CPU ceiling`** ✓
+   ⇒ ⭐ 与本机 `§445`（**107／106／108、`over: []`** ✓）**同一量级、同一结论** ✓ ⇒ 互相印证 ✓
+**⚠️ latency 门（nightly）那半 ⇒ 仍未取到，且原因与台账原话不同 ✓**：
+   · 日志里**有** `latency:gate`／`latency budget`／`latency_budget.mjs`／`latencyBudget.test.ts` 字样 ✓，
+     但它们来自 **`Disabled Gates Ledger`**（禁用门清单 ✓）与**单测名** ✓ ⇒ ⭐ **不是那个门的输出** ✗
+   · 按 `interaction latency probe`／`settle(ms)` 搜 ⇒ **未命中** ✗
+   · ⭐ 最可能原因 ✓：该 run 里聚合任务 **`Groove gate (the aggregate judges the budgets)` 是
+     `completed/skipped`** ✓ ⇒ ⭐ **门没有真正执行** ✗
+   ⇒ ⭐ 所以"读数待补"的真正原因是 **"那次没跑"** ✓ —— ⚠️ **不是**台账原先写的"run 未结束时 `--log` 不可读" ✗
+     （⭐ 日志现在**完全可读** ✓）⇒ 本节即为**对该句的更正** ✓
+**⇒ `needs ②` 的现状（诚实）✓**：
+   · ⭐ **render-cpu**：读数**已补** ✓（**105／worst 108／over []** ✓）
+   · ⚠️ **latency**：**待补** ✓，且**原因已查明**（聚合任务被 skip ✓）⇒ 下一次 nightly 真正跑聚合任务时即可取 ✓
+   · ⭐ 而**本机**的响应基线**仍有效、且更干净** ✓（**1510.5 ms** ✓，`§444` ✓，**CI 已判 success** ✓）
+**📌 顺带看到的 ✓**：该 nightly 还跑了 **Studio DOM Probes** ✓（`Arrangement view [desktop 1440x900]` ✓ 与
+   `[iPad Pro 11 landscape (touch)]` ✓）＋ 一条 `boundary click : worst step within ±10 ms` ✓
+```
