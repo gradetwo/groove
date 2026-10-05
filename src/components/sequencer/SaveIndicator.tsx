@@ -1,7 +1,15 @@
 import React from "react";
 import { Check, Loader2, TriangleAlert } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
-import type { SaveStatusSnapshot } from "../../features/sequencer/projectStorage";
+/**
+ * ⭐ **What this component needs of a save status, declared where it is used.** The older store's type described a storage
+ * implementation the arrangement side has replaced, so the shape lives here rather than travelling with that store. It
+ * matches the arrangement store's own status: four states and a save time that is null before the first write.
+ */
+export interface SaveIndicatorStatus {
+  status: "idle" | "saving" | "saved" | "failed";
+  savedAt: number | null;
+}
 
 export interface SaveIndicatorProps {
   /**
@@ -12,7 +20,7 @@ export interface SaveIndicatorProps {
    * remounts the panel the moment the condition flips.
    */
   visible: boolean;
-  status: SaveStatusSnapshot;
+  status: SaveIndicatorStatus;
 }
 
 /**

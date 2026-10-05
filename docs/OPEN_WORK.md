@@ -15661,3 +15661,17 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 下一步 ✓**：⭐ ⑦ 其余各组 ✓（⭐ 数据助手 ⇒ store／存储 ⇒ 编辑层 ⇒ 组件 ⇒ 音频／导出 ✓）⇒ ⭐ v1 退场 ⇒ ⭐ 发布 ✓
 ```
 
+### 五百九十六、✅ **CI 转绿 ✓；⑦ 第二件：`SaveIndicator` 自带形状**（2026-10-06 07:50 ✓）
+
+```
+**⭐ CI 判决 ✓**：⭐ `f17d34c` ⭐ **绿** ✓（⭐ `gh run watch --exit-status` 退出码 **0** ✓）⇒ ⭐ 三处陈旧基线的修复生效 ✓
+**⭐ ⑦ 的 v1 存储消费者 ✓（⭐ 实测仅 4 个 ✓）**：
+  ⭐ `src/components/sequencer/SaveIndicator.tsx` ✓ ✅ **本轮已收** ✓
+  ⭐ `src/features/sequencer/hooks/usePatternActions.ts` ✓｜⭐ `…/hooks/useProjectHub.ts` ✓｜⭐ `…/useSequencerStore.ts` ✓
+**⭐ 本轮改动 ✓**：⭐ `SaveIndicator` 的 ⭐ `import type { SaveStatusSnapshot }` ✗ ⇒ ⭐ **本地声明** `SaveIndicatorStatus` ✓
+  ⭐ 形状 ✓：⭐ `{ status: "idle" | "saving" | "saved" | "failed"; savedAt: number | null }` ✓（⭐ 与编曲存储一致 ✓）
+  ⭐ 理由 ✓：⭐ 旧类型描述的是**已被替换的存储实现** ✓ ⇒ ⭐ 形状**留在使用处** ✓（⭐ 不小改新类型 ✓）
+  ⭐ 读数 ✓：⭐ `tsc=0` ✓｜⭐ `lint=0` ✓｜⭐ `autosaveStatus` 全过 ✓
+**⏳ 下一步 ✓**：⭐ 再收 3 个（⭐ `usePatternActions` ✓／`useProjectHub` ✓／`useSequencerStore` ✓）⇒ ⭐ 然后 v1 类型与层退场 ✓
+```
+
