@@ -12018,4 +12018,4 @@ export async function prepareArrangementAudioLanes(input: {
 **⭐ 另记一条（不入 needs ✓，⭐ 属迁移 ⑤ ✓）**：⭐ 报告指出 ⭐ `create_song` **现在必须**给 `genreId` 或 `pattern` ✓
   ⇒ ⭐ 那是 v1 侧工具 ✓ ⇒ ⭐ 随 ⭐ **迁移 ⑤（`registrySong` 整支处置）** 一并处理 ✓
 **⏳ 状态 ✓**：⭐ 两条 needs **已登记 ✓，未开工 ✗**（⭐ 本轮余量用尽 ✓）
-
+```
