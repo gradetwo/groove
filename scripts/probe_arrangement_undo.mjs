@@ -282,6 +282,7 @@ await page.evaluate(() => {
 });
 await page.waitForTimeout(300);
 const notesBeforeClick = (await readDom()).notes;
+const noteIdsBefore = await page.evaluate(() => Array.from(document.querySelectorAll("[data-testid^='roll-note-']")).map((e) => e.getAttribute('data-testid')).sort());
 /* 选中轨是哪一条（判据：写入去了选中轨；若点击的格子不在选中轨上，读数就不会变）。 */
 const selectedTrack = () =>
   page.evaluate(() => {
@@ -306,6 +307,8 @@ if (cellBox) {
   await page.click(`[data-testid='${emptyCell}']`);
 }
 const afterAddNote = await readDom();
+report.readings.noteIdsBefore = noteIdsBefore;
+report.readings.noteIdsAfter = await page.evaluate(() => Array.from(document.querySelectorAll("[data-testid^='roll-note-']")).map((e) => e.getAttribute('data-testid')).sort());
 report.readings.selectedTrackAfter = await selectedTrack();
 report.readings.addedNoteAt = emptyCell;
 report.readings.afterAddNote = afterAddNote;
@@ -455,6 +458,9 @@ if (asJson) {
   line("   direct dispatch", `dispatched=${r.dispatchedDirectly} notesAfter=${r.notesAfterDispatch}`);
   line("   hit test at cell centre", JSON.stringify(r.hitTest));
   line("   selected track", `before=${JSON.stringify(r.selectedTrackBefore)} after=${JSON.stringify(r.selectedTrackAfter)}`);
+  line("   note ids added", JSON.stringify((r.noteIdsAfter || []).filter((i) => !(r.noteIdsBefore || []).includes(i))));
+  line("   note ids removed", JSON.stringify((r.noteIdsBefore || []).filter((i) => !(r.noteIdsAfter || []).includes(i))));
+  line("   cross-task down/up", JSON.stringify(r.crossTask) + " notesAfter=" + r.notesAfterCrossTask);
   line("⑤ after change length", `bars=${r.afterLength.bars} action=${r.afterLength.undoAction}`);
   line("⑥ after Ctrl+Z ×3", `tracks=${r.afterUndo3.tracks.length} bars=${r.afterUndo3.bars} undo=${r.afterUndo3.undoDisabled} redo=${r.afterUndo3.redoDisabled}`);
   line("   order unwound (newest first)", `bars ${r.afterLength.bars}→${r.afterUndo1.bars}, notes ${r.afterUndo1.notes}→${r.afterUndo2.notes}, tracks ${r.afterUndo2.tracks.length}→${r.afterUndo3.tracks.length}`);
