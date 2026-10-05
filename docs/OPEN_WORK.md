@@ -14520,3 +14520,30 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+### 五百六十三、⭐ **最后一件零未知（四处调用全部结算 ✓）**（2026-10-06 04:14 ✓）
+
+```
+**⭐ 第 4 处定案 ✓（`:238` ✓，⭐ 宽窗口 ✓）**：⭐ 它后面 80 行里三个 ⭐ `check(` 的标题是 ✓
+  ⭐ ① ⭐ "⭐ set_arrangement_vocal_melody binds one syllable per note and warns about the 倒字" ✓
+  ⭐ ② ⭐ "⭐ set_arrangement_vocal_melody refuses a syllable/tone mismatch rather than guessing" ✓
+  ⭐ ③ ⭐ "⭐ add_lane appends a second lane of a kind and refuses a duplicate id" ✓
+  ⇒ ⭐ 即 ⭐ `:238` 的 `song` 是 ⭐ **别人的建台** ✓（⭐ 首个用例要一个"⭐ 歌"存在 ✓）⇒ ⭐ **改接** `create_arrangement` ✓ ✓
+**⭐⭐ 四处全部结算 ✓**：
+  | ⭐ 调用 ✓ | ⭐ 判定 ✓ |
+  |---|---|
+  | ⭐ `:238` ✓ | ✗ ⭐ 主题是 `set_arrangement_vocal_melody` ⇒ ⭐ **改接** ✓ |
+  | ⭐ `:359` ✓ | ⚠️ ⭐ 主题是**它自己的校验** ⇒ ⭐ **整例删** ✓ |
+  | ⭐ `:809` ✓ | ⚠️ ⭐ 主题**就是它** ⇒ ⭐ **整例删** ✓ |
+  | ⭐ `:1074` ✓ | ✗ ⭐ 主题是 `get_transposition_report` ⇒ ⭐ **改接** ✓ |
+**⭐ 最后一件的完整清单 ✓（⭐ 零未知 ✓）**：
+  ⭐ ① ⭐ `check_mcp` ✓：⭐ 删 `:359` ✓ 与 ⭐ `:809` 两例 ✓｜⭐ 改接 `:238` ✓ 与 ⭐ `:1074` 的建台 ✓（⭐ 换 `create_arrangement` ＋ ⭐ 一轨 ✓）
+  ⭐ ② ⭐ `mcpCapability` 清单项 ⇒ v2 ✓
+  ⭐ ③ ⭐ `mcpSong.test.ts` 的 5 处 ⇒ 同一判断法逐个定 ✓
+  ⭐ ④ ⭐ 两个探针 ＋ `mcp_call.mjs` ⇒ 改接或删 ✓
+  ⭐ ⑤ ⭐ **工具块** ✓（§529 ✓）＋ ⭐ **地板** ✓（读数将到 **84** ✓ ⇒ `> 80` 有余量 ✓）
+  ⭐ ⑥ ⭐ **文档引用**检查 ✓（教训 154 ✓）＋ ⭐ 回填 ✓
+**⭐ 一处提醒 ✓**：⭐ ① ⭐ 与 ⭐ ④ 的**改接**要 ⭐ 同时给出 ⭐ `arrangementId` 与 ⭐ `trackId` ✓
+  （⭐ `set_arrangement_vocal_melody` 与 ⭐ `get_transposition_report` 都收这两个 ✓）⇒ ⭐ 用 ⭐ `create_arrangement` ＋ ⭐ `add_arrangement_track` ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ **下一段一次做净即可关闭 ⑤** ✓
+```
+
