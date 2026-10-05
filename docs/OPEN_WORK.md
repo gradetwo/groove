@@ -15521,3 +15521,22 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 已回退 ✓，⭐ 树干净 ✓）
 ```
 
+### 五百九十、⚠️ **教训 181：替换块按语句取，花括号数须相同**（2026-10-06 05:17 ✓）
+
+```
+**⭐ 报错 ✓**：⭐ `autosaveStatus.test.tsx(204,1): error TS1005: '}' expected` ✗ ⇒ ⭐ 判据 ⭐ `no tests` ✗
+  ⇒ ⭐ **文件语法坏了** ✗ ⇒ ⭐ 已回退 ✓（⭐ 树干净 ✓）
+**⭐⭐ 原因 ✓**：⭐ 我的替换块用了 ⭐ **固定 10 行窗口** ✗（⭐ `vl[a-1:a+10]` ✓）
+  ⇒ ⭐ 它**吃掉了用例的收尾花括号** ✓ ⇒ ⭐ 而我的新文本**花括号更少** ✗ ⇒ ⭐ **失衡** ✗ ✓
+**⭐⭐ 教训 181 ✓**：⭐ **替换块的边界按语句取** ✗，⭐ **不按固定行数** ✓
+  ⭐ 且 ⭐ **新文本与旧文本的花括号数必须相同** ✓（⭐ 这就是"⭐ 数括号**"习惯 ✓，⭐ 教训 97 ✓ 的同源 ✓）
+  ⭐ 做法 ✓：⭐ 旧块＝**恰好两条语句** ✓（⭐ `act(() => { … });` ✓ ＋ ⭐ `expect(…);` ✓）
+    ⇒ ⭐ 新块＝**同样两条语句** ✓ ⇒ ⭐ 括号数自然相同 ✓ ✓
+**⭐ 最小改法 ✓（⭐ 逐字 ✓）**：
+  ⭐ 旧 ✓：⭐ `    act(() => {` ✓｜⭐ `      debounceSaveProject(payload());` ✓｜⭐ `    });` ✓｜⭐ `    expect(result.current.status).toBe("saving");` ✓
+  ⭐ 新 ✓：⭐ `    act(() => {` ✓｜⭐ `      void saveArrangementProject({ name: "criteria", arrangement: createArrangement("criteria", "synth") });` ✓
+    ⭐ `    });` ✓｜⭐ `    expect(result.current.status).not.toBe("idle");` ✓
+  ⇒ ⭐ 两条语句 ⇒ ⭐ 两条语句 ✓ ⇒ ⭐ 括号数不变 ✓ ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 下一段：⭐ 这一处 ＋ ⭐ 其余八处 ✓（⭐ 全部已验 ✓）⇒ ⭐ 本组完成 ✓
+```
+
