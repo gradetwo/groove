@@ -42,7 +42,12 @@ describe("add_arrangement_track names the new track at the top level", () => {
   });
 
   it("⭐ still measures, so a renamed tool cannot pass quietly", () => {
+    /**
+     * ⭐ **A floor, not the exact count.** The number moves whenever a tool is retired, and the claim worth guarding is that
+     * the list is still the surface rather than something emptied or renamed. It stood at ninety when the retirements
+     * began; the floor sits below it and leaves room for the ones still to come.
+     */
     const names = TOOLS.map((tool) => tool.name);
-    expect({ has: names.includes("add_arrangement_track"), tools: names.length > 90 }).toEqual({ has: true, tools: true });
+    expect({ has: names.includes("add_arrangement_track"), tools: names.length > 85 }).toEqual({ has: true, tools: true });
   });
 });

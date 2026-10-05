@@ -13261,3 +13261,12 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未修 ✗**（⭐ 余量用尽 ✓）
 ```
 
+**⭐ 本地实测 ✓（2026-10-06 02:43 ✓）**：⭐ `npx vitest run src/test/mcpAddTrackTopLevelId.test.ts` ⇒
+  ⭐ **Test Files 1 failed ✗｜Tests 1 failed | 2 passed（3）** ✗ ⇒ ⭐ **本机是确定性失败** ✓，⭐ 不是偶发 ✓
+**⚠️ 但与 CI 的判决不一致 ✗**：⭐ `8a615e6`（⭐ 同一份代码 ＋ 文档 ✓）⭐ **CI 判 success** ✓ ⇒
+  ⭐ 同一份代码 ⭐ **CI 过、本机不过** ✗ ⇒ ⭐ **环境相关** ✓（⭐ 教训 127 那一类 ✓）
+  ⇒ ⭐ 形状也对得上 ✓：⭐ 断言比的是 ⭐ `{ has: true, tools: false }` ✗（⭐ 两个**存在性布尔** ✓）
+    ⇒ ⭐ 存在性通常取决于 ⭐ **构建产物／`dist-mcp`** ✓ ⇒ ⭐ 本机与 CI 的构建状态不同 ✓
+**⏳ 未修 ✗**（⭐ 余量用尽 ✓）；⭐ 下一段读该判据的上下文 ✓
+```
+```
