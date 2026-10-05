@@ -334,3 +334,17 @@
 **⭐ 实施笔记 ✓**：⭐ python 中途语法错一次 ✗（⭐ 写盘前即死 ⇒ 树脏 0 ✓）⇒ ⭐ 修一行即过 ✓
 **⏳ ⑤ 的下一刀 ✓**：⭐ 1–2 命中的五个 ✓（⭐ `apply_chord_progression` ✓／`set_clip` ✓／⭐ **`undo_song` 移植** ✓／`get_pattern` ✓／`get_song` ✓／`set_tempo` ✓）
 
+## 2026-10-06 02:26 回填（第 4 条规矩：改完实现回来改表）
+
+| 面 | 变化 | 依据 |
+|---|---|---|
+| ⭐ **MCP 面** | ✅ ⭐ 新增 ⭐ **v2 工具级判据** ✓：⭐ `arrangementTempoMapRoundTrip.test.ts` ✓ —— ⭐ 通过 ⭐ `setMcpArrangementTempoMap` **把地图写进编曲** ✓，⭐ 再 ⭐ `getMcpArrangement` **读回逐点对照** ✓；⭐ 第二例断言"⭐ **整图替换**，⭐ 不是追加**" ✓（⭐ 已验**能红** ✓） | 本轮 ✓ |
+| ⭐ **系统／数据** | ✅ ⭐ 数据层判据 ⭐ `tempoWorkedExample.test.ts` **保留** ✓（⭐ 它测 `tempoMap.ts` ✓，⭐ 与 v1／v2 无关 ✓；⭐ tempo 地图两边**形状相同** ✓） | 本轮 ✓ |
+| ⭐ **Web 面** | **无变化** ✓ | — |
+
+**⭐ 为什么这一步必须在退场之前 ✓**：⭐ 该工具原有的两个判据 ⭐ 只测**描述措辞** ✗ ⇒ ⭐ "⭐ 写读往返"**无人守** ✗
+  ⇒ ⭐ 现在有人守了 ✓ ⇒ ⭐ **才允许**退 `set_tempo` ✓（⭐ 铁律 ✓）
+**⭐ 判据读数 ✓**：⭐ 新判据 2 用例 ✓（⭐ 能红 ✓）｜⭐ `check:mcp` ✓｜⭐ 十一道门全 0 ✓｜⭐ 相关判据全过 ✓｜⭐ 文档双门 0 ✓
+**⏳ 下一步 ✓**：⭐ 退 `set_tempo`（⭐ 约 7 处 ✓：⭐ 块 ✓／⭐ `mcpCopy_set_tempo.test.ts` ✓／⭐ `check_mcp:384–391` ✓／
+  `docsWorkflow` 步骤表 ✓／`mcpCapability:149` ✓／`mcp_call.mjs:120` ✓／`docs/MCP.md:227`＋`:261` ✓／`arrangementV2.ts:194–196` 注释 ✓）
+
