@@ -209,12 +209,12 @@ describe.skipIf(!headlessInstalled)("normalize_loudness on the Node Web Audio ho
   });
 
   it("measures and renders on the Node host, and says so in the reply", async () => {
-    const { songId } = createMcpSong({ genreId: "chicago-house", genre: findGenre("chicago-house") ?? null });
+const { arrangementId } = createMcpArrangement({ blankKind: "drumkit", songId: "loudness-probe" });
     const tool = TOOLS.find((candidate) => candidate.name === "normalize_loudness");
     expect(tool, "normalize_loudness is not declared").toBeTruthy();
 
     // The default `passes: 1` is the measured path: one render, its reading, and the trim the loop would apply next.
-    const reply = (await tool!.handler({ songId, targetLufs: -14, passes: 1, sampleRate: 8000, channels: 1, headless: true })) as Record<string, unknown>;
+    const reply = (await tool!.handler({ arrangementId, targetLufs: -14, passes: 1, sampleRate: 8000, channels: 1, headless: true })) as Record<string, unknown>;
 
     expect(reply.engine, "the loudness loop must name the host every pass used").toBe("node-web-audio-api");
     const before = reply.before as Record<string, unknown>;
