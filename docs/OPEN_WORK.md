@@ -13178,3 +13178,30 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 依赖序已定 ✓
 ```
 
+### 五百二十三、🎯 **undo 移植的关键发现：唯一写缝 `edit()`**（2026-10-06 02:36 ✓）
+
+```
+**⭐ 量到 ✓**：⭐ `mcp/arrangement.ts` 里所有写操作都经过 ⭐ **一个函数** ✓：
+  ⭐ `function edit(arrangementId, apply: (a: ArrangementV2) => ArrangementV2): ArrangementEditResult` ✓
+    ⇒ ⭐ 内部顺序 ✓：⭐ `requireArrangement` ✓ ⇒ ⭐ `apply(arrangement)` ✓ ⇒ ⭐ `arrangements.set(id, next)` ✓
+      ⇒ ⭐ `summariseArrangement` ✓ ⇒ ⭐ 回 `{ summary, problems }` ✓
+**⭐ 且 ⭐ `arrangements.set(` 只出现在那一处 ✓**（⭐ 无旁路 ✓）⇒ ⭐ **没有第二个写口** ✓ ✓
+**⇒ 因此记录器**只挂一处** ✓**：⭐ 在 `edit` 里、⭐ 在 `arrangements.set` **之前** ✓，
+  ⭐ 把"⭐ **改动前**的编曲" ✓ 推进历史 ✓ ⇒ ⭐ **不必逐个工具改** ✗ ✓
+**⭐ 于是移植变成 5 处 ✓（⭐ 比 §513 的估算小 ✓）**：
+  ⭐ ① ⭐ 历史表 ✓：⭐ `const arrangementHistory = new Map<string, { at: number; before: ArrangementV2 }[]>()` ✓（⭐ 上限 50 ✓）
+  ⭐ ② ⭐ `edit` 里加 ⭐ **一行** ✓：⭐ 推入 `arrangement`（⭐ 即 `before` ✓）⭐ 并裁剪到 50 ✓
+  ⭐ ③ ⭐ `undoMcpArrangement(id, steps = 1)` ✓ —— ⭐ 照抄 `undoMcpSong` ✓（⭐ 已读全文 ✓）：
+    ⭐ 取不到就抛"⭐ nothing to undo for …" ✓；⭐ 裁剪历史 ✓；⭐ `arrangements.set(id, entry.before)` ✓；⭐ 回摘要 ✓
+  ⭐ ④ ⭐ 新工具 ⭐ **`undo_arrangement`** ✓（⭐ `{ arrangementId, steps? }` ✓，⭐ v2 术语 ✓）
+  ⭐ ⑤ ⭐ 判据 ✓：⭐ "⭐ 一串调用回到起点" ✓ —— ⭐ `check_mcp:428` 已有同形状的 v1 用例可照抄 ✓
+**⚠️ ⭐ 一处差别 ✓**：⭐ v1 的历史带 ⭐ `op`／`opId` ✓（⭐ 工具名 ✓），⭐ 供"⭐ get_song lists what is undoable" ✓
+  ⇒ ⭐ 而 `edit` **不知道调用者是谁** ✗ ⇒ ⭐ 两个选择 ✓：⭐ ① 给 `edit` 加一个可选 `op` 参数 ✓（⭐ 但那要改各工具 ✗）；
+    ⭐ ② ⭐ **v2 的历史不带 op 名** ✓ ⇒ ⭐ 更简 ✓，⭐ 且 v1 那条"⭐ 列出可撤销项"的用例 ⭐ 随 `get_song` 一起退 ✓
+  ⇒ ⭐ **选 ②** ✓（⭐ 与"⭐ 不并存"一致 ✓：⭐ 不保留只为旧用例存在的形状 ✓）
+**⭐⭐ 教训 135 ✓**：⭐ **"⭐ 要改很多处"之前先找**唯一写缝** ✓** ——
+  ⭐ 一个中心化的 `edit`／`set` 能把"N 处改动"降到"⭐ 一处 ✓"
+  ⇒ ⭐ 判法 ✓：⭐ `grep -c "store.set("` ✓ ⇒ ⭐ 若只有一处 ✓，⭐ 记录器就挂那一处 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 五处已定 ✓
+```
+
