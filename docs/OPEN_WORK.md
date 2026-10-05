@@ -13290,3 +13290,26 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 两步已定 ✓
 ```
 
+**⭐ 更正 §524／§526：批次是 **4 个工具**（`add_section` 也在内 ✓）（2026-10-06 02:51 ✓）**：
+```
+**⭐ 剧本一的全文 ✓（`check_mcp:390–404` ✓）**：
+  ⭐ `add_section`（⭐ `{ songId, slot:"A", bars:2, label:"chorus" }` ✗）⇒ ⭐ `check("add_section places a second section" ✓，
+    slots 数为 2 ✓)`
+  ⭐ `set_clip`（⭐ `{ songId, slot:"B", genreId }` ✗）⇒ ⭐ `check("set_clip gives a song a second clip" ✓)`
+  ⭐ `get_song`（⭐ `{ songId }` ✗）⇒ ⭐ `check("get_song reads the arrangement back with its clips" ✗，
+    断言 `clips.A && clips.B && sections.length === 2` ✗)`
+**⇒ 因此批次是 4 个 ✓**：⭐ `add_section` ✗ ＋ ⭐ `set_clip` ✗ ＋ ⭐ `get_song` ✗ ＋ ⭐ `undo_song` ✗
+  （⭐ 前三个在剧本一 ✓，⭐ 后一个在剧本二 ✓，⭐ 而剧本二用 `get_song` 取快照 ✓ ⇒ ⭐ 四者连在一起 ✓）
+**⭐ 第 ① 步的完整改法 ✓（⭐ 可绿 ✓）**：
+  ⭐ 剧本一 ⇒ ⭐ 改成 ⭐ `create_arrangement` ✓ ⇒ ⭐ `add_arrangement_track`（⭐ 替 `add_section` ✓ —— ⭐ v2 的"⭐ 加一段"就是加轨 ✓）
+    ⇒ ⭐ `set_arrangement_track_steps`（⭐ 替 `set_clip` ✓）⇒ ⭐ `get_arrangement`（⭐ 替 `get_song` ✓）
+    ⇒ ⭐ 断言 v2 形状 ✓：⭐ 轨数 ✓、⭐ 每轨步进 ✓、⭐ **不含 `clips`／`sections`** ✓（⭐ 明证旧字段已去 ✓）
+  ⭐ 剧本二 ⇒ ⭐ `create_arrangement` ✓ ⇒ ⭐ `set_arrangement_bars` 两次（⭐ 造两次改动 ✓）
+    ⇒ ⭐ `undo_arrangement`（⭐ 替 `undo_song` ✓）⇒ ⭐ 断言"⭐ 退回起点" ✓ ⇒ ⭐ **删**"⭐ lists what is undoable" ✗
+**⭐ 第 ② 步 ✓**：⭐ 退 **4 个**工具块 ✓ ＋ ⭐ 清单／文档行／README ✓ ＋ ⭐ `mcpSchemaPassthrough:105` 改接 ✓ ＋
+  `mcpCapability` 两处清单 ✓ ＋ ⭐ 回填 ✓
+**⭐ 数量 ✓**：⭐ **90 ⇒ 86** ✓（⭐ 退 4 个 ✓）⇒ ⭐ 地板 **85** ✓ ⇒ ⭐ 余量 **1** ✗ ⇒
+  ⚠️ ⭐ 因此 ⭐ **本批之后地板要再降一次** ✓（⭐ 或者把地板改成"⭐ 与登记表一致" ✓ —— ⭐ 更稳 ✓，⭐ 记入下一步 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 四工具与两步改法已定 ✓
+```
+
