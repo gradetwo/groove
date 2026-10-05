@@ -10680,3 +10680,19 @@ export async function prepareArrangementAudioLanes(input: {
        ⭐ 在新函数里应改成 ⭐ **`...(tempoTrack ? { tempoTrack } : {})`** ✓（形参名是 `tempoTrack` ✓；`patternTempo` 是**调用方**的名字 ✓）
 · ⭐ **净结论** ✓：★ 只差这两处 ✓ ⇒ **下一次即收口** ✓；⭐ 备份/回退机制**每次都保住了干净树** ✓（4 次全绿 ✓）
 ```
+**⭐ `validate_arrangement` 的落点（2026-10-05 20:19 ✓，已量 ✓）**：
+```
+· ⭐ 抽出的 `prepareArrangementAudioLanes` 需要 ⭐ **`BaseAudioContext`** ✓ ⇒ 它**只在渲染内部**被造出来 ✓
+  ⇒ ⚠️ **registry 层拿不到 ctx** ✗ ⇒ ⭐ 工具实现**不能**只写在 registry 里 ✗（这是上一轮方案的漏洞 ✓）
+· ⭐ 正确的三层形状 ✓：
+  ① `mcp/render/headless.ts` ✓ —— 已有 **`loadHeadlessHost(context.publicRoot)`** ✓（装上 Node 宿主的
+     `OfflineAudioContext` 等全局 ✓：`:237` ✓）＋ ⭐ **全局装好之后**才 **动态 import** `../../src/audio/WavExporter` ✓（`:240–252` ✓）
+  ② `src/audio/WavExporter.ts` ✓ —— ⭐ 需要一个**建 ctx ＋ 建 loader ＋ 跑 preparation** 的**新导出入口** ✓
+     （≈ `preparePatternAudioLanes(pattern, options)` ✓），⭐ 因为 ctx 是**渲染入口自己造**的 ✓
+  ③ registry ✓ —— 新工具 `validate_arrangement` ✓ 只做：解析 arrangement ✓ ⇒ 调 ① 的宿主 ＋ ② 的入口 ✓ ⇒
+     ⭐ 回**自己的形状** ✓（`{ dryRun: true, arrangementId, passes, totalSteps, ready, loaded, total, problems[], skippedLanes[] }` ✓）
+· ⚠️ 因此**下一步**＝⭐ 先看 `renderPatternOffline`／`renderPatternOfflineOnce`（`:698`／`:883` ✓）
+  **怎么造 ctx** ✓ ⇒ 在 `WavExporter.ts` 里加那个入口 ✓ ⇒ 再回 `headless.ts` 加 `validateArrangementHeadless` ✓
+  ⇒ 最后才是 registry 工具块 ✓
+· ✅ **已完成的地基** ✓：`a5f685f` ✓（一处 preparation ✓，`tsc` ＋ 40 headless 判据过 ✓）
+```
