@@ -13626,3 +13626,31 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 登记已完成 ✓）
 ```
 
+### 五百三十四、⭐ **教训 143 第二次生效：`create_song` 也带 v2 没有的能力**（2026-10-06 03:13 ✓）
+
+```
+**⭐ 逐入参对照 ✓（⭐ 方法＝§532 的教训 143 ✓）**：
+| ⭐ `create_song` 入参 ✓ | ⭐ v2 家 ✓ |
+|---|---|
+| ⭐ `bpm?` ✓ | ✅ ⭐ `set_arrangement_tempo` ✓ |
+| ⭐ `bars?` ✓ | ✅ ⭐ `set_arrangement_bars` ✓ |
+| ⭐ `genreId?`（⭐ 用流派的**编曲 pattern** 播种 A ✗） | ✗ ⭐ **无对应** ✓ —— `create_arrangement` 只收 `songId` ✓（＋ `blankKind` ✓） |
+| ⭐ `name?` ✓ | ✗ ⭐ 无对应 ✓（⭐ 编曲**没有名字** ✗） |
+| ⭐ `swing?` ✓ | ✗ ⭐ **无对应** ✓ |
+| ⭐ `resolution?` ✓ | ✗ ⭐ **无对应** ✓（⭐ v2 的网格是隐含的 ✗） |
+| ⭐ `pattern?` ✓ | ⚠️ ⭐ **形状不同** ✓ —— v2 用 `set_arrangement_track_steps` **按轨**写 ✓ ⇒ ⭐ **能力在** ✓，⭐ 写法不同 ✓ |
+**⇒ 结论 ✓**：⭐ `create_song` ⭐ **不能简单退场** ✗ —— ⭐ 它带着 ⭐ **四项 v2 无对应** ✓：
+  ⭐ **流派播种** ✗／⭐ **名字** ✗／⭐ **swing** ✗／⭐ **resolution** ✗
+  ⇒ ⭐ 与 `add_section` ⭐ **同一类** ✓ ⇒ ⭐ 都要 ⭐ **先移植或先登记** ✓
+**⭐⭐ 因此 ⑤ 的剩余三个工具 ✓**：⭐ `create_song` ✗（⭐ 四项缺口 ✓）｜⭐ `render_song` ✗（⭐ 待量 ✓）｜
+  ⭐ `add_section` ✗（⭐ 三项缺口 ✓）
+  ⇒ ⭐ 而 ⭐ `render_song` ⇔ ⭐ `render_arrangement` ✓ ⇒ ⭐ 大概率是"⭐ 同义＋丢弃 ✓" ⇒ ⭐ 但它也要**逐入参查** ✓
+    （⭐ 它的入参 ✓：⭐ `bitrateKbps` ✓／⭐ `format` ✓／⭐ `headless` ✓／⭐ `songId` ✗ ⇒
+     ⭐ v2 的 `render_arrangement` 有对应 ✓ ⇒ ⭐ 需核 ✓）
+**⭐ 于是下一步 ✓**：⭐ 把 `create_song` 的四项缺口 ⭐ **补登 `needs`** ✓（⭐ 与 §533 同格式 ✓），
+  ⭐ 并 ⭐ 在 `docs/MCP.md` 的 `create_song` 行写明"⭐ **暂留**" ✓ —— ⭐ 与 `add_section` ⭐ 同一处理 ✓
+**⚠️ ⭐ 教训 144 ✓**：⭐ **同一类判断要重复做** ✓ —— ⭐ 我在 `add_section` 上做对了 ✓，
+  ⭐ 若不重做 ⭐ 就会在 `create_song` 上**直接退掉** ✗ ⇒ ⭐ **每件都要走一遍"⭐ 逐入参"** ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
