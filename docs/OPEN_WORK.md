@@ -9120,3 +9120,25 @@ problems: **[]** ✓
      并**实测后果** ✓：`describeError(undefined) = undefined`（`typeof = undefined` ✓）⇒ 屏幕上即字面 `{error}` ✗
      ⇒ 从**修复后**备份还原 ✓（第 78 条 ✓）
 **门禁 ✓**：`tsc=0` ✓｜`lint=0` ✓｜`check:duplication=0` ✓｜`check:dead-exports=0` ✓｜`check:file-sizes=0` ✓
+
+## 三百九十二、🔇 **E 段"无静默丢功能"有量：126 处空 catch 逐类分清，并把"保存失败不许静默"钉成判据**（2026-10-05 13:12 ✓）
+
+```
+**先量 ✓（时点 13:11 ✓，方法：正则统计 `src` 生产代码里 catch 体为空的块 ✓，排除 `src/test` ✓）**：
+   · 我第一版把"**只有注释**"和"**完全空**"混在一起 ✗ ⇒ 报 126 处 ✗ ⇒ ⭐ 精确区分后 ✓：
+     **完全空 16 处** ✓｜**只有注释 110 处** ✓（后者多为**刻意说明** ✓，如 `// Ignore localStorage read errors` ✓）
+   · 那 16 处的分布 ✓：`src/audio` 6 ✓｜`src/views` 5 ✓｜`src/components/sequencer` 3 ✓｜`src/components` 2 ✓
+**逐个读原文 ✓（判断"良性兜底" vs "吞掉真失败" ✓）**：用户可见的 10 处**全部**是 `localStorage` 层 ✓——
+   `GlobalSearch`（最近搜索 ✓）／`ChallengeView`（挑战分数 ✓ ×3）／`SequencerPanel`（轨道折叠 ✓ ×2）／`Toolbar`（工具栏折叠 ✓）／
+   `AnalyzerView` ✓／`GalaxyView` ✓ ⇒ ⭐ **都是偏好或可选状态** ✓，**不是项目数据** ✗
+**⭐ 关键结论 ✓**：**项目数据的持久化不吞异常** ✓ —— `projectDb` ✓ 会把失败写进 `storageStatus.lastError` ✓，
+   且有 **22 处**告知出口（`toast.error` ✓／面板 problem 行 ✓／`say(t(…))` ✓）✓ ⇒ ⭐ "**无静默丢功能**"**在要紧处成立** ✓
+**判据 ✓（能红 ✓）**：新增 `src/test/silentPersistence.test.ts` ✓（**3 用例 ✓**）：
+   · ⭐ **三个持久化模块（`projectDb` ✓／`projectStorage` ✓／`useSequencerStore` ✓）不得出现空 catch** ✓
+     （偏好可以 best effort ✓，**丢活不行** ✗ —— 这条把两者的界限写成规则 ✓）
+   · 持久化路径**必须**有告知出口 ✓（断言 `storageStatus.lastError` ✓）
+   · "仍在测量"自检 ✓（三个文件都在且都不小 ✓）
+   ⭐ **弄红验证 ✓**：往 `projectDb` 注入一个空 catch ⇒ 判据 **exit=1** ✓（`expected [ Array(1) ] to deeply equal []` ✓）
+     ⇒ 从备份还原 ✓（第 78 条 ✓）⇒ `tsc=0` ✓／判据 3/3 ✓
+**⇒ E 段现状 ✓**：文案诚实 ✓（有判据 ✓）｜**错误可理解 ✓**（`§391` 修掉"屏幕出现字面 `{error}`" ✗ ＋ 3 份助手合一 ✓）｜
+   **无静默丢功能 ✓**（本节：偏好可静默 ✓，**项目数据不可** ✓ 且已成判据 ✓）
