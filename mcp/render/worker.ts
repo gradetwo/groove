@@ -22,7 +22,7 @@
 import os from "node:os";
 import path from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
-import { readFileSync, writeFileSync, mkdirSync, mkdtempSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, mkdtempSync, existsSync, statSync } from "node:fs";
 import type { SequencerPattern } from "../../src/types/genre";
 import { measureLoudness, truePeakDbChannels } from "../../src/test/helpers/loudness";
 import { songSlug } from "../../src/utils/songSlug";
@@ -1048,7 +1048,25 @@ export function energyCurveDb(channels: Float32Array[], sampleRate: number): { c
   return { curve: windows, spreadDb: Number(spread.toFixed(2)) };
 }
 
+/**
+ * ⭐ **One decode per unchanged file, and never a stale one.** Two tools call this (spectral_balance and analyze_audio)
+ * and a creation run paid twice for the same decode, measure and curve — 2.73 s and 2.58 s with byte-identical replies.
+ * The key is the file's size and mtime, so an unchanged file hands back what it already has while a changed one is
+ * analysed again; the path alone would have served a stale curve, which is the failure this key exists to prevent.
+ */
+const analysisCache = new Map<string, { key: string; value: Record<string, unknown> }>();
+
 export function analyseWavFile(filePath: string): Record<string, unknown> {
+  const stat = statSync(filePath);
+  const key = `${stat.size}:${stat.mtimeMs}`;
+  const cached = analysisCache.get(filePath);
+  if (cached !== undefined && cached.key === key) return cached.value;
+  const value = buildAnalysis(filePath);
+  analysisCache.set(filePath, { key, value });
+  return value;
+}
+
+function buildAnalysis(filePath: string): Record<string, unknown> {
   const { channels, sampleRate } = decodeWav(readFileSync(filePath));
   return {
     filePath,
