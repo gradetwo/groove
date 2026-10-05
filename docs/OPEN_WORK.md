@@ -15235,3 +15235,30 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+### 五百八十一、⭐⭐ **通知落点须修正：降级失败也会走到 `return record`**（2026-10-06 04:57 ✓）
+
+```
+**⭐ 拦下 ✓**：⭐ 本轮断言 ⭐ `抛出锚点 ✗ 8` ✗（⭐ `throw err instanceof Error ? …` ⭐ 出现 **8 次** ✗）
+  ⇒ ⭐ 脚本在任何写入**之前**中止 ✓ ⇒ ⭐ **本次零改动** ✓（⭐ `dirty=0` ✓、⭐ 门全绿 ✓）✓
+  ⇒ ⭐ **断言在前的写法再次拦住一次不安全的改动** ✓ ✓
+**⭐⭐ 教训 169 ✓**：⭐ **常见错误归一化行不是唯一锚点** ✗（⭐ `throw err instanceof Error ? …` ✗ 全仓 8 处 ✓）
+  ⭐ 做法 ✓：⭐ 用**更宽的块**做锚 ✓（⭐ 整个 ⭐ `catch` 块 ✓）—— ⭐ 与 150 ✓／153 ✓／167 ✓ **同源** ✓
+**⭐⭐ 更重要的发现 ✓（⭐ 设计错了 ✗）**：⭐ `catch` 原文 ✓（`:1267–1278` ✓）：
+  ⭐ `} catch (err) {` ✓
+  ⭐ `  if (!isIndexedDbUnavailable(err)) { markDegraded(err); throw …; }` ✓ ⇒ ⭐ **只有这一条抛出** ✓
+  ⭐ `  markDegraded(err);` ✓ ⇒ ⭐ **这一条继续往下** ✓
+  ⭐ `}` ✓｜⭐ `arrangementMemoryStore.set(record.id, record);` ✓｜⭐ `return record;` ✓
+  ⇒ ⚠️ ⭐ 因此我 §242 的计划"⭐ 在 `:1278` 的 `return` 前报 saved**"⭐ **错了** ✗ ——
+    ⭐ 因为 ⭐ **降级失败后也会走到 `:1278`** ✗ ⇒ ⭐ 会**谎报"已保存"** ✗ ✗
+**⭐⭐ 修正后的落点 ✓（⭐ 三处 ✓）**：
+  ⭐ ① ⭐ "saving" ✓ ⇒ ⭐ 写前（`:1245` 的 `runStoreTx(…)` 之前 ✓）
+  ⭐ ② ⭐ "saved" ✓ ⇒ ⭐ **`try` 内、`await write;` 之后**（`:1266` 之后 ✓）✓ —— ⭐ 这样**只有真成功**才报 ✓ ✓
+  ⭐ ③ ⭐ "failed" ✓ ⇒ ⭐ **`catch` 的第一行**（`:1268` 之前 ✓）✓ —— ⭐ 两条分支都会经过 ✓ ✓
+  ⇒ ⭐ 即 ⭐ **失败路径永不触发 "saved"** ✓ ✓
+**⭐ 唯一锚点 ✓（⭐ 现在有了 ✓）**：
+  ⭐ catch 首行 ✓：⭐ `  } catch (err) {\n    if (!isIndexedDbUnavailable(err)) {` ✓
+  ⭐ try 尾部 ✓：⭐ `      await write;` ✓（⭐ 需再核唯一性 ✓）
+  ⭐ 写前 ✓：⭐ `runStoreTx(db, GROOVE_ARRANGEMENT_STORE_NAME, "readwrite", (store) => store.put(record));` ✓（⭐ 唯一 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 下一段按修正后的三处落 ✓
+```
+
