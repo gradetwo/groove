@@ -23,8 +23,10 @@ import {
   BookOpen,
   Sparkles,
   Plus,
+  Bug,
 } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
+import { collectWebDebugBundle, downloadJsonFile, webDebugBundleFileName } from "../features/debug/webDebugBundle";
 import { GENRE_INDEX } from "../data/index/genresIndex";
 import { CURRENT_CLIENT_VERSION } from "./UpdatesModal";
 
@@ -540,6 +542,20 @@ export const Header: React.FC<HeaderProps> = ({
           aria-label={t("random_genre")}
         >
           <Shuffle className="w-4 h-4" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            const bundle = collectWebDebugBundle({});
+            downloadJsonFile(webDebugBundleFileName(bundle.collectedAt), `${JSON.stringify(bundle, null, 2)}\n`);
+          }}
+          className="p-1.5 border border-dashed border-line hover:border-accent rounded-lg text-text-sub hover:text-accent bg-panel2"
+          title={t("debug_bundle")}
+          aria-label={t("debug_bundle")}
+          data-testid="header-debug-bundle"
+        >
+          <Bug className="w-4 h-4" />
         </button>
 
         {/* Language Switch */}

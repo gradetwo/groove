@@ -371,4 +371,6 @@ export const commonMessages = {
   audio_gate_start: { en: "Start audio engine", zh: "启动音频引擎" },
   audio_gate_starting: { en: "Starting…", zh: "正在启动…" },
   audio_gate_failed: { en: "Startup failed", zh: "启动失败" },
+  // ⭐ The debug bundle: collect what a problem needs, then send the file.
+  debug_bundle: { en: "Collect debug info", zh: "采集调试信息" },
 } as const;

@@ -129,3 +129,16 @@
 **落盘规矩 ✓：** 与既有写手一致 ✓ —— `args.outputDir || GROOVE_MCP_OUT || mkdtempSync(os.tmpdir())` ✓；回包 ⭐ **绝对路径 ＋ 字节数** ✓
 **判据读数 ✓：** 新判据 **2 用例** ✓（⭐ 已验**能红** ✓：清单长度断言改成 99 时失败 ✓）；`tsc=0` ✓／`lint=0` ✓／`check:mcp` ✓／工具与尺寸门 0 ✓
 
+## 2026-10-05 21:54 回填（第 4 条规矩：改完实现回来改表）
+
+| 面 | 变化 | 依据 |
+|---|---|---|
+| ⭐ **系统** | **无变化** ✓（采集只读 ✓） | — |
+| ⭐ **MCP 面** | ✅ `collect_debug_bundle`（只读 ✓）⇒ 工具 **94** ✓ | `7da3851` ✓ |
+| ⭐ **Web 面** | ✅ ⭐ **顶栏"采集调试信息"按钮** ✓（`data-testid="header-debug-bundle"` ✓）⇒ 采集 ⇒ ⭐ **下载一个文件** ✓，⭐ 文件名与 MCP 侧**同名规** ✓ | `91fb07c` ✓ ＋ 本轮 ✓ |
+
+**Web 侧采集内容 ✓：** 应用版本 ✓／UA 与平台与语言 ✓／视口与像素比 ✓／关键耗时 ✓／编曲计数（⭐ 调用方传入才采 ✓）／音频上下文（⭐ 同理 ✓）／⭐ 你的一句话 ✓／⭐ `manifest[]` ✓／⭐ `omissions[]` ✓
+**两条判据 ✓：** ⭐ Web 判据 **3 用例** ✓（与 MCP 侧同形状 ✓）；⭐ ⭐ **`check:dead-exports` 不再列出 `downloadJsonFile`** ✓ —— ⭐ 这就是"顶栏接完了"的判据 ✓
+**文案 ✓：** 新键 `debug_bundle`（`zh` ＋ `en` ✓）在 `src/i18n/locales/common.ts` ✓；⭐ `skins:gen` 零 diff ✓ ＋ `check:skins=0` ✓
+**读数 ✓：** `tsc=0` ✓／`lint=0` ✓／`check:skins=0` ✓／相关判据 **13 个文件**全过 ✓（`i18nKeys` ✓／`i18n` ✓／`headerNav` ✓／`desktopSkins` ✓…）
+
