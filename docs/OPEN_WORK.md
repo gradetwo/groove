@@ -10995,3 +10995,23 @@ export async function prepareArrangementAudioLanes(input: {
 · ⏳ **下一步 ✓**：⭐ 入参与回包换 v2 术语 ✓（⭐ 删 `songId` ✗／`sectionId` ✗／`index` ✗／`pattern` ✗；
   回包删 `editedSlot` ✗／`sharedSlot` ✗ ⇒ 改用 `setMcpTrackNotes` 写回 ✓）
 ```
+
+**⭐ 步骤 2 的真实障碍（2026-10-05 21:04 ✓，已量 ✓，已回退 ✓ 树脏 0 ✓）**：
+```
+· ⚠️ 我原以为 `setVocalMelody` 返回的 `notes` 就是 v2 的音符 ✗ ⇒ ⭐ **类型检查当场否掉** ✓：
+  `TS2345` ⇒ ⭐ `result.notes` 的形状是 ⭐ **`{ index, syllable, tone, pitch, step }[]`** ✓
+  —— ⭐ 那是**音节级元数据** ✗，**不是** `NoteEvent[]` ✓（v2 要 `pitch` ✓／`startBeats` ✓／`lengthBeats` ✓／`velocity` ✓）
+· ⭐ **根因** ✓：⭐ **v1 把旋律存成"步进"事** ✗（`SequencerPattern` 是步进矩阵 ✓），
+  ⭐ 而 v2 存**音符**（拍为单位 ✓）⇒ ⭐ **两种模型不同构** ✗
+  ⇒ ⭐ 需要一个 ⭐ **步进 → 拍的换算层** ✓：`startBeats = step / STEPS_PER_BAR × 4` ✓
+    ⚠️ 还要决定**音长** ✓（一个步进？✓）与**力度** ✓（取步进力度？✓）
+· 📌 **因此"纯 V2"在这里的真实工作量** ✓：⭐ 不是"换个入参" ✗，而是 ⭐ **写一个 pattern → arrangement 的旋律转换** ✓
+  ⇒ ⭐ 这与会话早先记的"**v1/v2 不同构**"一致 ✓（⭐ 台账 §443 曾记过 ✓）
+· ⭐ **下一步选择（我倾向 A ✓）**：
+  ⭐ **A（小 ✓）**：加一个转换函数 `vocalMelodyNotesForTrack(pattern, trackId)` ✓ ——
+    ⭐ 从 `result.pattern` 里取该轨的步进 ✓ ⇒ 换成 `NoteEvent[]` ✓ ⇒ `setMcpTrackNotes` ✓
+    ⭐ 判据 ✓：步进 s 的音符 `startBeats === s / 16 * 4` ✓；音长与力度**明写** ✓；**不静默丢音符** ✓
+  ⚠️ **B（大 ✗）**：让 `setVocalMelody` **直接产出 v2 音符** ✓（⭐ 改 v1 引擎内部 ✗ ⇒ 更彻底但更大 ✓）
+· ⚠️ ⭐ **本轮未落码** ✗（余量不足 ✓）；⭐ 但**障碍已定位、方案已定** ✓ ⇒ 下一轮可写 ✓
+```
+
