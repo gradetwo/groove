@@ -11078,3 +11078,22 @@ export async function prepareArrangementAudioLanes(input: {
 · ⚠️ 顺带 ✓：`patternSchema`／`clipSlotSchema` 可能变未使用 ⇒ ⭐ lint 会报 ⇒ 一并清理 ✓
 ```
 
+### 四百五十九、✅ **第 1 项收口：落盘回包已统一（实测 ✓）**（2026-10-05 21:16 ✓）
+
+```
+**量测 ✓（方法：`grep -cE 'path:|filename:|bytes:'` 逐注册面 ＋ 读回包构建处 ✓）**：
+| 面 | path | filename | bytes | 判断 |
+|---|---|---|---|---|
+| ⭐ `registryFiles.ts` | 3 | 4 | 4 | ⭐ **写盘者已齐** ✓ |
+| ⭐ `registryArrangement.ts` | 2 | 3 | 1 | ⭐ 导出者齐 ✓ |
+| ⭐ `registryRender.ts` | 2 | 0 | 0 | ⭐ 经 `RenderResult` 带 ✓ |
+| `registryAnalysis.ts` | 3 | 0 | 0 | `filePath` ✓（只读分析 ✓） |
+· ⭐ **写盘者实例 ✓**：`export_groove` ⇒ `{ path: file ✓（绝对路径 ✓）, filename: path.basename(file) ✓, bytes: Buffer.byteLength(json) ✓ }` ✓
+· ⭐ **渲染 ✓**：`RenderResult`（`worker.ts:130–132` ✓）＝ `path` ✓／`filename` ✓／`bytes` ✓
+· ⚠️ ⭐ **内联交付者**（`export_midi` ✓／`export_ableton` ✓）⇒ `{ filename ✓, mimeType ✓, bytes ✓, base64 ✓ }` ✓
+  ⇒ ⭐ **没有 `path`** ✗ —— ⭐ **因为它不写盘** ✓ ⇒ ⭐ **没有盘上路径可报** ✓ ⇒ ⭐ 报 `bytes` **正是诚实** ✓
+  ⇒ ⚠️ 所以"**落盘统一为绝对路径＋字节数**"✔ 对**写盘者**已满足 ✓；对**内联者不适用** ✗（⭐ 不是缺陷 ✓）
+**⇒ 结论 ✓**：⭐ **第 1 项（`validate_arrangement` ＋ 落盘统一）完成 ✓** ✓
+**⇒ 迁移顺序推进 ✓**：⭐ 下一项＝ ⭐ **② `registryFiles`（4 工具／10 处 `songId`）** ✓
+```
+
