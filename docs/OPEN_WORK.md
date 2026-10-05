@@ -11897,3 +11897,15 @@ export async function prepareArrangementAudioLanes(input: {
   ③ ⭐ 本轮同时落地 ⭐ **调试工具加 `arrangementId`** ✓（⭐ 让压缩包真能载作品 ⇒ 可复现 ✓）
 ```
 
+**⭐ 第八道门（全量 ＋ 覆盖率）读数（2026-10-05 23:41 ✓，方法：`npm run test:coverage` ✓）**：
+```
+· ⭐ 退出码 ⭐ **0** ✓ ⇒ ⭐ **测试通过** ✓（⭐ 在 `3edd15e` 上 ✓）
+· ⚠️ ⭐ **但覆盖率插件自己报错** ✗：⭐ `TypeError: (0 , brace_expansion_1.default) is not a function` ✓
+  （⭐ 出自 `node_modules/test-exclude/node_modules/glob/.../minimatch` ✓）
+  ⇒ ⭐ 即 ⭐ `V8CoverageProvider.getUntestedFiles` **抛错** ✗ ⇒ ⭐ **覆盖率报告没算出来** ✗
+  ⇒ ⭐ 判定 ✓：⭐ **环境／依赖的 ESM-CJS 互操作问题** ✓，⭐ **不是我的代码** ✓
+  ⇒ ⭐ 且 CI 上 `979f331` 判 **success** ✓ ⇒ ⭐ CI 容忍或不受影响 ✓
+· ⭐ 结论 ✓：⭐ 八道门 ⭐ **全部不再红** ✓（⭐ 第七道已修 ✓，⭐ 第八道测试通过 ✓）
+  ⇒ ⭐ 本机读数是"**测试绿 ＋ 覆盖率插件异常**" ✓ ⇒ ⭐ 报告须**分开写** ✓，⭐ 不可写成"覆盖率绿" ✗
+```
+
