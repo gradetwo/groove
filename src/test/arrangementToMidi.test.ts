@@ -265,3 +265,34 @@ describe("the MCP export of an arrangement", () => {
     expect(fromMidi(new Uint8Array(readFileSync(result.path))).parts[0]!.notes).toEqual([note(60, 0, 1)]);
   });
 });
+
+/**
+ * ⭐ **The words, in the bytes.** The older tool's criterion asserted that a lyric reaches a midi file; this is the same
+ * claim made against the arrangement, so that retiring the older tool does not take the only proof with it. The reading
+ * looks for the event the format reserves for a lyric — `FF 05 <length> <utf-8>` — because a file that merely has the right
+ * shape would pass any weaker check.
+ */
+describe("a lyric written into an arrangement's midi file", () => {
+  beforeEach(() => {
+    clearMcpArrangements();
+  });
+
+  it("writes the syllable as the FF 05 event the format reserves for a lyric", () => {
+    const created = createMcpArrangement({ songId: "s" });
+    const trackId = created.tracks[0]!.id;
+    setMcpTrackSteps(created.arrangementId, trackId, []);
+    addMcpTrackNotes(created.arrangementId, trackId, [{ ...note(60, 0, 1, 100), syllable: "够" }]);
+
+    const bytes = exportMcpArrangementMidi(created.arrangementId).bytes;
+    let at = -1;
+    for (let i = 0; i + 3 < bytes.length; i += 1) {
+      if (bytes[i] === 0xff && bytes[i + 1] === 0x05) {
+        at = i;
+        break;
+      }
+    }
+    expect(at, "the file must carry a lyric meta event").toBeGreaterThan(-1);
+    const length = bytes[at + 2]!;
+    expect(Buffer.from(bytes.subarray(at + 3, at + 3 + length)).toString("utf8")).toBe("够");
+  });
+});
