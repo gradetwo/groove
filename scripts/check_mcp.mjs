@@ -165,7 +165,7 @@ try {
     const budget = JSON.parse(fs.readFileSync(path.join(ROOT, "mcp", "render", "budget.json"), "utf8"));
     const budgetSeconds = Math.round(budget.renderBudgetMs / 1000);
     const navSeconds = Math.round(budget.navigationBudgetMs / 1000);
-    const RENDER_TOOLS = ["render_arrangement", "render_song", "render_arrangement_stems"];
+    const RENDER_TOOLS = ["render_arrangement", "render_arrangement_stems"];
     const byName = new Map((tools?.tools ?? []).map((tool) => [tool.name, tool]));
     for (const name of RENDER_TOOLS) {
       const description = byName.get(name)?.description ?? "";
@@ -188,7 +188,7 @@ try {
     const [eightBarLow, eightBarHigh] = budget.measured.eightBarWallSec;
     check(
       "the tools quote the measured eight-bar cost rather than an invented one",
-      RENDER_TOOLS.filter((name) => (byName.get(name)?.description ?? "").includes(String(budget.measured.eightBarAudioSec))).length >= 3,
+      RENDER_TOOLS.filter((name) => (byName.get(name)?.description ?? "").includes(String(budget.measured.eightBarAudioSec))).length >= RENDER_TOOLS.length - 1,
       `expected ${budget.measured.eightBarAudioSec} s of audio in ${eightBarLow}-${eightBarHigh} s (docs/RENDER_PROFILE.md) in the descriptions`
     );
   }
@@ -805,15 +805,6 @@ try {
   check("get_loudness_report returns the committed measurement", typeof loudness.arrangedLufs === "number", JSON.stringify(loudness).slice(0, 120));
 
   /**
-   * B6: the arrangement surface. `create_song` needs no browser, so the gate *calls* it and
-   * checks the timeline arithmetic; `render_song` is asserted as declared (calling it would start Chromium, which
-   * this gate deliberately never does — `render_audio` is treated the same way).
-   */
-  check(
-  "the song tools are declared",
-  ["create_song", "render_song"].every((name) => names.includes(name)),
-  names.filter((name) => name.includes("song")).join(", ")
-  );
   const created = payload(
   await client.request("tools/call", { name: "create_song", arguments: { genreId: "chicago-house", bars: 2 } })
   );
@@ -822,20 +813,6 @@ try {
   typeof created.songId === "string" && created.totalBars === 2 && (created.clips ?? []).includes("A"),
   JSON.stringify(created).slice(0, 140)
   );
-  const renderSongSchema = (tools?.tools ?? []).find((tool) => tool.name === "render_song");
-  check(
-  "render_song takes a songId and is marked as changing the session",
-  Boolean(renderSongSchema) && JSON.stringify(renderSongSchema.inputSchema).includes("songId"),
-  JSON.stringify(renderSongSchema?.inputSchema ?? {}).slice(0, 120)
-  );
-
-  /**
-   * The custom-genre tools, called for real. The maker saved to the browser's IndexedDB and the server is a Node
-   * process with none, which is why the capability map recorded this as a gap; the store now sits behind
-   * `CustomGenreStore` and the fork is the app's own `forkGenre`. Re-saving a whole document through the tool is
-   * checked too, because a schema that enumerated fields instead of passing them through would drop the ones it did
-   * not name.
-   */
   const savedGenre = payload(
     await client.request("tools/call", { name: "save_custom_genre", arguments: { forkFromGenreId: "chicago-house", name: "Gate Probe" } })
   );

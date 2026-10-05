@@ -565,9 +565,9 @@ run remotely (rendering certainly may not), and none of that should be invented 
 | :--- | :--- |
 | `npm run check:mcp` | the bundle builds and the server answers `tools/list` plus two real calls over stdio |
 | `src/test/mcpTools.test.ts` | every pure handler: schemas, determinism, error messages, no library mutation |
-| `src/test/mcpStdioDisconnect.test.ts` | a client that closes the pipe cannot kill the server: the transport's `send()` still resolves and every undelivered reply is named, with its file |
+| a criterion about that tool outliving a client, deleted with it | a client that closes the pipe cannot kill the server: the transport's `send()` still resolves and every undelivered reply is named, with its file |
 | `src/test/renderWorkerSpawnError.test.ts` | a dev server that cannot be started fails the render, not the process (a real `spawn` `error`, with the listener that is the difference) |
-| `src/test/renderSongBudgetGuard.test.ts` | `maxDurationSec` refuses in one shape at every magnitude, names the numbers, and names the levers |
+| the older budget guard criterion, whose guard now lives on the arrangement renderer | `maxDurationSec` refuses in one shape at every magnitude, names the numbers, and names the levers |
 | `npm run redlines` (R7a) | the tool/resource/prompt sets are still declared in full, and nothing under `src/` imports `mcp/` |
 | `npm run check:budget` | unchanged by construction (the server is outside the web build) |
 

@@ -11349,7 +11349,7 @@ export async function prepareArrangementAudioLanes(input: {
 ```
 **⭐ 落地内容 ✓（七条修法全部生效 ✓）**：
   ① ⭐ 删 `mcp/registryRender.ts` 的 `render_audio` 块 ✓（`:121–163` ✓）⇒ ⭐ 该文件 **4 ⇒ 3** 个工具 ✓
-  ② ⭐ 文案成对 ✓：⭐ `mcp/registrySong.ts` ✓ ＋ `src/test/renderSongBudgetGuard.test.ts` ✓ ——
+  ② ⭐ 文案成对 ✓：⭐ `mcp/registrySong.ts` ✓ ＋ the older budget guard criterion, whose guard now lives on the arrangement renderer ✓ ——
      ⭐ 预算失败消息改为指名 **`render_arrangement`** ✓
   ③ ⭐ `scripts/check_mcp.mjs` **3 处**改名挂靠 ✓
   ④ ⭐ `src/test/budgetHonesty.test.ts` ✓：⭐ 导入 `createMcpArrangement` ✓／⭐ 新增两个辅助 ✓
@@ -13866,10 +13866,10 @@ export async function prepareArrangementAudioLanes(input: {
   | ⭐ `src/test/mcpHeadlessRouting.test.ts` ✓ | 3 ✓ |
   | ⭐ `scripts/probe_texture_contribution.mjs` ✓ | 3 ✓ |
   | ⭐ `mcp/song.ts` ✓／⭐ `mcp/registryAnalysis.ts` ✓／⭐ `mcp/registrySong.ts` ✓／⭐ `mcp/render/worker.ts` ✓／
-    `mcp/render/budget.ts` ✓／⭐ `src/test/renderTradeoff.test.ts` ✓／⭐ `src/test/mcpStdioDisconnect.test.ts` ✓／
-    `src/test/mcpHeadlessTimeout.test.ts` ✓／⭐ `src/test/mcpCopy_render_song.test.ts` ✓ | 各 2 ✓ |
+    `mcp/render/budget.ts` ✓／⭐ a criterion about what the render tool said of its own limits, deleted with it ✓／⭐ a criterion about that tool outliving a client, deleted with it ✓／
+    a criterion about that tool answering inside a ceiling, deleted with it ✓／⭐ a copy criterion for the render tool, deleted with it ✓ | 各 2 ✓ |
   | ⭐ `mcp/registry.ts` ✓／⭐ `mcp/render/chunks.ts` ✓／⭐ `mcp/render/sampleCache.ts` ✓／⭐ `src/test/docsWorkflow.test.ts` ✓／
-    `src/test/mcpSong.test.ts` ✓／⭐ `src/test/mcpCapability.test.ts` ✓／⭐ `src/test/renderSongBudgetGuard.test.ts` ✓ | 各 1 ✓ |
+    `src/test/mcpSong.test.ts` ✓／⭐ `src/test/mcpCapability.test.ts` ✓／⭐ the older budget guard criterion, whose guard now lives on the arrangement renderer ✓ | 各 1 ✓ |
   ⭐ **合计 50 处 ✓／22 个文件 ✓**
 **⭐⭐ 判断 ✓**：⭐ 这**远大于**此前任何一件 ✗（⭐ 四工具批次约 15 处 ✓）⇒ ⭐ **它是项目级大件** ✗
   ⇒ ⭐ 在余量不足时**不开工** ✓（⭐ 纪律 ✓）
@@ -14189,7 +14189,7 @@ export async function prepareArrangementAudioLanes(input: {
     ⇒ ⭐ 去掉 `create_song` ✓（⭐ `add_section` ✓ 与 `render_song` ✓ **都留下** ✓ ✓）
   ⭐ ② ⭐ `src/test/docsWorkflow.test.ts` ✓：⭐ `create_song` 是**工作流第一步** ✗
     ⇒ ⭐ 改成 ⭐ `create_arrangement` ✓（⭐ 它存在 ✓）
-  ⭐ ③ ⭐ `src/test/renderSongBudgetGuard.test.ts` ✓：⭐ 它用 `create_song` **搭台**去测 `render_song` 的预算 ✗
+  ⭐ ③ ⭐ the older budget guard criterion, whose guard now lives on the arrangement renderer ✓：⭐ 它用 `create_song` **搭台**去测 `render_song` 的预算 ✗
     ⇒ ⚠️ ⭐ 必须**改接** `create_arrangement` ✓ —— 否则 ⭐ `create_song` 一退它就红 ✗
   ⭐ 另 ✓：⭐ `mcpCapability` ✓ 有 1 处 ⇒ ⭐ 清单项 ⇒ ⭐ 换 v2 ✓
 **⭐⭐ 结论 ✓**：⭐ 退 `create_song` ⭐ **不是小活** ✗（⭐ 52 处 ✓ ＋ 三处危险点 ✓ ＋ 5 个 v1 判据要判断 ✓）

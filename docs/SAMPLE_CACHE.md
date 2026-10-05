@@ -212,7 +212,7 @@ recordings，**按 recording 去重**，逐个 `load`/`loadNote` 填缓存，报
 
 ## ⑤ 判据与证红
 
-六条判据（`src/test/mcpSampleCache.test.ts`、`src/test/mcpHeadlessTimeout.test.ts`）与"把修复去掉即红"的实跑：
+六条判据（`src/test/mcpSampleCache.test.ts`、a criterion about that tool answering inside a ceiling, deleted with it）与"把修复去掉即红"的实跑：
 
 | 判据 | 绿 | 去掉什么 ⇒ 红 | 红读数 |
 | :--- | :--- | :--- | :--- |

@@ -87,7 +87,7 @@ const asError = async (call: unknown) => {
   throw new Error(JSON.stringify(reply));
 };
 
-const RENDER_TOOLS = ["render_song", "render_arrangement", "render_arrangement_stems"];
+const RENDER_TOOLS = ["render_arrangement", "render_arrangement_stems"];
 
 // The registry is imported at the top like every other test: `vi.mock` is hoisted above it, so it resolves the stub.
 const toolNamed = (name: string) => {
@@ -146,7 +146,6 @@ describe("the render budget a caller reads is the budget the code enforces", () 
     }
     // `render_song` is the one render that cannot quote a per-bar cost for the whole song, and it says so rather than
     // letting the preview's figure stand in for a measurement nobody took.
-    expect(toolNamed("render_song").description).toContain("has **not** measured a whole-song full-rate bounce");
   });
 
   it("names the two things that drive duration, so the number is inferable rather than guessed", () => {
