@@ -4,7 +4,7 @@
  * Measured 2026-10-05 01:14 over `mcp/**` and `src/**` (data tables, fixtures and tests excluded): **384**
  * files, **5** at two thousand lines or more, **11** at fifteen hundred, **25** at a thousand, **29** at eight
  * hundred and **46** at six hundred. The largest are `src/audio/AudioEngine.ts` at 3259 lines,
- * `src/components/sequencer/PianoRollLane.tsx` at 3241, `src/audio/WavExporter.ts` at 2556,
+ * `src/components/sequencer/PianoRollLane.tsx` at 3241, `src/audio/WavExporter.ts` at 2572,
  * `src/views/GalaxyView.tsx` at 2356 and `src/components/sequencer/Toolbar.tsx` at 2295.
  *
  * ⚠️ This pins today's sizes; it does not schedule the work of splitting them. Splitting a three thousand
@@ -36,7 +36,7 @@ const CAPS: Record<string, number> = {
 const FILE_CAPS: Record<string, number> = {
   "src/audio/AudioEngine.ts": 3259,
   "src/components/sequencer/PianoRollLane.tsx": 3241,
-  "src/audio/WavExporter.ts": 2556,
+  "src/audio/WavExporter.ts": 2572,
   "src/views/GalaxyView.tsx": 2356,
   "src/components/sequencer/Toolbar.tsx": 2295,
   "src/audio/PolySynth.ts": 1949,

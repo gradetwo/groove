@@ -938,6 +938,26 @@ export function computeRenderWindow(input: RenderWindowInput): ChunkRenderWindow
 }
 
 /** The renderer itself: one context, one graph, one `startRendering()`. Wrapped by `renderPatternOffline`. */
+/**
+ * ⭐ **The one place that finds the offline audio context.**
+ *
+ * A browser supplies it on `window`. The Node host installs it on `globalThis` before the exporter is imported
+ * (`mcp/render/headless.ts`). A caller that only prepares lanes must find it the same way a render does, so the
+ * resolution lives here instead of inside one render path.
+ */
+export function resolveOfflineContextClass(): typeof OfflineAudioContext {
+  const fromWindow =
+    typeof window === "undefined"
+      ? undefined
+      : window.OfflineAudioContext ||
+        (window as unknown as { webkitOfflineAudioContext?: typeof OfflineAudioContext }).webkitOfflineAudioContext;
+  const resolved =
+    fromWindow ?? (globalThis as unknown as { OfflineAudioContext?: typeof OfflineAudioContext }).OfflineAudioContext;
+  if (!resolved) throw new Error("OfflineAudioContext is not supported in this environment");
+  return resolved;
+}
+
+
 async function renderPatternOfflineOnce(
   pattern: DrumPattern,
   options: RenderWavOptions = {},
@@ -1010,13 +1030,9 @@ async function renderPatternOfflineOnce(
   });
   const contextDurationSec = chunkWindow ? chunkWindow.contextSeconds : totalDurationSec;
 
-  const OfflineContextClass =
-    (typeof window !== "undefined" && (window.OfflineAudioContext || (window as any).webkitOfflineAudioContext)) ||
-    (globalThis as any).OfflineAudioContext;
-
-  if (!OfflineContextClass) {
-    throw new Error("OfflineAudioContext is not supported in this environment");
-  }
+  /** The render path keeps the loose type it had before: the resolution used `any`, and a typed value here
+   * exposes two pre-existing Float32Array mismatches downstream that are not part of this change. */
+  const OfflineContextClass = resolveOfflineContextClass() as any;
 
   const lengthInSamples = Math.ceil(contextDurationSec * sampleRate);
   /**
