@@ -13581,3 +13581,29 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+### 五百三十二、⭐⭐ **重大发现：`add_section` 暂不能退场（三项能力 v2 没有 ✓）**（2026-10-06 03:08 ✓）
+
+```
+**⭐ 量到的三项 ✓（⭐ 每一项都有出处 ✓）**：
+  | ⭐ `add_section` 的能力 ✓ | ⭐ v2 现状 ✓ | ⭐ 出处 ✓ |
+  |---|---|---|
+  | ⭐ **段落级 `velocityRamp`**（⭐ 逐小节力度斜坡 ✓） | ✗ ⭐ 无 ✓ —— v2 的 `steps` 是 ⭐ `number[]` ✓，⭐ 描述 ⭐ "**one entry per step; non-zero is on**" ✗ ⇒ ⭐ **开／关**，⭐ 不是力度 ✓ | `registryArrangement.ts:970` ✓ |
+  | ⭐ **`fill`**（⭐ 按 clip 的轨生成填充 ✓） | ✗ ⭐ 无对应生成器 ✓ | ⭐ 本轮 grep ✓ |
+  | ⭐ **`transpose`**（⭐ 段落移调 ✓） | ✗ ⭐ **源码明说没有** ✓：⭐ "**The arrangement model carries no transposition at all: `TrackV2` has no `transpose` field, and the section-level one lives on the song, not on an arrangement**" ✓ | `registryArrangement.ts:529` ✓ |
+**⇒ 结论 ✓（⭐ 铁律的最高价值一次 ✓）**：⭐ `add_section` ✗ 的退场 ⭐ **不是纯删除** ✗ ——
+  ⭐ 它带着 ⭐ **三项 v2 缺失的能力** ✗ ⇒ ⭐ 按业主的"⭐ **页面原有的 V1 功能用 V2 架构实现**" ✓
+  ⇒ ⭐ **必须先移植或先登记缺口** ✓，⭐ **不能静默删掉** ✗
+**⭐ 因此 ✓**：
+  ⭐ ① ⭐ **`add_section` 暂不退场** ✗ ⇒ ⭐ 第 ② 步 ⭐ **只退其余三个** ✓（⭐ `set_clip` ✓／`get_song` ✓／`undo_song` ✓）
+    ⚠️ ⭐ 但注意 ✓：⭐ 剧本一**已经改成 v2** ✓ ⇒ ⭐ 协议脚本**不再调用** `add_section` ✓
+      ⭐ 而 ⭐ `check_mcp:826–860` 的**两处仍在调它** ✗ ⇒ ⭐ 那两处**保留** ✓（⭐ 它们正是能力的判据 ✓ ✓）
+  ⭐ ② ⭐ 把三项写成 ⭐ **`needs`** ✓（⭐ §484 的寄存器 ✓）：⭐ "⭐ 段落级力度斜坡／填充／移调在 v2 无对应物" ✓
+  ⭐ ③ ⭐ 且 ⭐ 在 `docs/MCP.md` 的 `add_section` 行**写明**：⭐ "⭐ **暂留**：⭐ 它承载三项 v2 尚无的能力 ✓" ✓
+**⚠️ ⭐ 教训 143 ✓（本会话最重要的判断之一 ✓）**：⭐ **退场前要问"⭐ 它的**每一项**能力在新侧有家吗"** ✗ ——
+  ⭐ 我按"⭐ 同名对应物"配对 ✓（⭐ `add_arrangement_track` ✓）⭐ 就以为它是"⭐ 同义 ⇒ 退场" ✗
+  ⇒ ⭐ 而它实际带着 **三项** 别处没有的能力 ✗ ⇒ ⭐ 若退了就**丢能力** ✓
+  ⇒ ⭐ **做法 ✓**：⭐ ① ⭐ 列出该工具的**入参每一栏** ✓ ② ⭐ 逐个问"⭐ v2 有对应物吗" ✓
+    ③ ⭐ **只要有一项没有 ⇒ 不能退** ✓（⭐ 或先移植 ✓，⭐ 或先登记 `needs` ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 结论：⭐ 暂退三个 ✓，⭐ `add_section` 留待移植 ✓
+```
+
