@@ -14710,3 +14710,25 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 下一段按上表落 ✓（⭐ 六处 ✓，⭐ 都在一个脚本里 ✓ 无门风险 ✓）
 ```
 
+### 五百六十八、⭐ **缺口 ⑥ 的决定（依据业主"其它事情按你建议来" ✓）**（2026-10-06 04:30 ✓）
+
+```
+**⭐ 决定 ✓（四条 ✓）**：
+  ⭐ ① ⭐ **"⭐ 按段落移调**"在 v2 的表达 ＝ ⭐ **音符的音高** ✓ —— ⭐ 移调就是**改写音高** ✓
+    （⭐ 已由 §553 的音符级工具与判据证实 ✓：⭐ `move_arrangement_note.toPitch` ✓）
+  ⭐ ② ⭐ **"⭐ 按段落读取移调**"⭐ 改为 ⭐ **按轨读取** ✓ —— ⭐ v2 的"⭐ 部分"就是**轨** ✓（⭐ `TrackV2` ✓）
+  ⭐ ③ ⭐ `get_transposition_report` 的**机械半**（⭐ `pattern?` ＋ ⭐ `track?` ✓）**保留** ✓
+  ⭐ ④ ⭐ **不做"⭐ 段落"概念的回迁** ✗ —— ⭐ 段落是 v1 模型 ✓，⭐ 已按业主指示**移出模型** ✓
+**⭐ 理由 ✓**：⭐ v2 的模型注释明说 ✓：⭐ "⭐ **This replaces a sixteen-step array, which was the v1 pattern's grid carried
+  into a model that no longer needs it**" ✓ ＋ ⭐ "⭐ **The owner's instruction was to stop letting the old step design
+  constrain this one**" ✓ ⇒ ⭐ 同一条道理适用于**段落** ✓ ⇒ ⭐ **不把 v1 的段落塞回 v2** ✓ ✓
+**⭐ 因此 `get_transposition_report` 的迁移变为机械 ✓**：
+  ⭐ ① ⭐ schema ✓：⭐ `songId?` ✗ ⇒ ⭐ **`arrangementId?`** ✓（⭐ 描述改"⭐ an arrangement whose tracks to read**" ✓）
+  ⭐ ② ⭐ handler ✓：⭐ `getMcpSong(songId)` ✗ ⇒ ⭐ `getMcpArrangement(arrangementId)` ✓ ⇒ ⭐ 遍历 **`tracks`** ✓（⭐ 不是 `sections` ✓）
+    ⭐ 段落的移调读法 ⇒ ⭐ 轨的**音符音高**读法 ✓（⭐ 或 ⭐ 该轨的移调报告 ✓）
+  ⭐ ③ ⭐ 判据 ✓：⭐ `check_mcp:1051` 的建台 ⇒ ⭐ `create_arrangement` ＋ ⭐ `add_arrangement_track` ✓
+    ＋ ⭐ 其用例标题（⭐ "⭐ get_transposition_report answers with a total, the sections it read…**" ✓）⇒ ⭐ "⭐ tracks**" ✓
+  ⭐ ④ ⭐ 已登记的缺口 ⑥ ⇒ ⭐ **标为"⭐ 已决定"** ✓（⭐ 不删登记 ✓，⭐ 因为决定要留痕 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ **下一段的这一项现在是机械工作 ✓**
+```
+
