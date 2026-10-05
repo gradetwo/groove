@@ -12150,3 +12150,31 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落地 ✗**（⭐ 余量用尽 ✓）⇒ ⭐ **这个 3 文件单元可在新上下文里一次做完 ✓**
 ```
 
+### 四百八十九、⭐ **3 文件单元的逐字清单（2026-10-06 00:25 ✓，⭐ 已无未知 ✓）**
+
+```
+**⭐ ② `mcp/registryFiles.ts` 的 `export_groove` ✓**：
+  · ⭐ schema ✓：⭐ `songId: z.string()…` ⇒ ⭐ `arrangementId: z.string().describe("the arrangement to write, by id")` ✓
+  · ⭐ handler ✓（⭐ 27 行版已验可编译 ✓）：⭐ `getMcpArrangement(String(args.arrangementId))` ✓ ⇒ ⭐ 未找到则 `failure` ✓
+    ⇒ ⭐ `buildArrangementPackage(arrangement)` ✓ ⇒ ⭐ 落盘 ✓ ⇒ 回包 ⭐ `{ path, filename, bytes, version: 2, format, tracks }` ✓
+  · ⚠️ ⭐ **文件名不能用 `title`** ✗ —— ⭐ 量到 ⭐ **`ArrangementV2` 没有名字字段** ✗
+    （⭐ 实测字段 ✓：⭐ `songId` ✓／`tracks` ✓／`notesByTrack?` ✓／`bars?` ✓／`bpm?` ✓／`tempoTrack?` ✓／
+     `timeSignature?` ✓／`sourceSlots` ✓）
+    ⇒ ⭐ **slug 用 `arrangementId`** ✓（⭐ 清洗规则沿用原样 ✓）
+  · ⭐ 删掉 ⭐ `:136–142` 的伪造对象与 `as unknown as` ✗（⭐ 教训 102 ✓）
+**⭐ ③ `scripts/check_mcp.mjs` 两条用例（⭐ 逐字已取 ✓）**：
+  · ⭐ **Case A ✓（`:502` ✓）原文 ✓**：⭐ `arguments: { songId: song.songId }` ✗ ＋ ⭐ 断言
+    `exported.version === 2 && exported.clips?.includes?.("B") !== false && Number.isFinite(exported.bytes)` ✗
+    ⇒ ⭐ **改法 ✓**：⭐ 先 `create_arrangement`（⭐ `{ blankKind: "synth" }` ✓）⇒ ⭐ 传 ⭐ `arrangementId` ✓ ⇒
+      ⭐ 断言改为 ⭐ `exported.format === "groove-arrangement"` ✓ ＋ ⭐ `Number.isFinite(exported.bytes)` ✓
+      ＋ ⭐ **`exported.clips === undefined`** ✓（⭐ 明证不含旧字段 ✓）
+  · ⭐ **Case B ✓（`:532` ✓）原文 ✓**：⭐ `imported.songId !== song.songId && (imported.sections ?? []).length === 2
+    && (imported.clips ?? []).includes("B")` ✗
+    ⇒ ⭐ **改法 ✓**：⭐ 改为断言 ⭐ **新的 `arrangementId`** ✓（⭐ 与原 id 不同 ✓）＋ ⭐ `tracks` 数 ✓
+      ⇒ ⭐ 并把用例名里的 ⭐ "under a new songId" ✗ ⇒ ⭐ 改为 ⭐ "**as an arrangement**" ✓（⭐ 术语用 v2 ✓）
+**⭐ ④ `src/test/` ✓：⭐ 无需改动 ✓**（⭐ 枚举已证 ✓）
+**⭐ 完成后 ✓**：⭐ 回填 `FEATURE_ALIGNMENT.md` ✓（⭐ `export_groove`／`import_groove` 改接 `arrangementId` ✓）
+  ＋ ⭐ 台账记提交 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）⇒ ⭐ **这一单元现在是纯机械工作 ✓**
+```
+
