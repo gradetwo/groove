@@ -55,3 +55,13 @@ export function validateArrangementPackage(data: unknown): ArrangementPackage {
   }
   return pkg as unknown as ArrangementPackage;
 }
+
+/**
+ * ⭐ **The reading side of the same door**: a caller with a parsed file gets the arrangement, or the validator's refusal.
+ *
+ * Nothing here tolerates the older shape, so a v1 package fails at this function rather than somewhere further in, which is
+ * where a reader would otherwise discover it carrying fields nothing understands.
+ */
+export function arrangementFromPackage(data: unknown): ArrangementV2 {
+  return validateArrangementPackage(data).arrangement;
+}
