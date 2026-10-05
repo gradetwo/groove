@@ -10608,3 +10608,43 @@ problems: **[]** ✓
 · ⭐ **判据（能红 ✓）**：ⓐ `dryRun.problems` ≡ 同 arrangement 正式渲染的 `problems` ✓ ⓑ **不产生任何文件** ✓
   ⓒ 热缓存下耗时**远小于**渲染 ✓；⚠️ 且诚实口径必须写进描述 ✓（**冷缓存仍受取采样支配** ✗）
 ```
+### 四百五十三、🛠 **`§452` 方案丙的抽函数签名（最后一块已量到 ✓）**（2026-10-05 20:02 ✓）
+
+```
+**量到 ✓**（`src/audio/WavExporter.ts` ✓，`renderPatternOfflineInternal` 内 ✓）：
+   · ⭐ `:1801` 守卫 ✓：`if (sampledLaneIndexes.size > 0 || pattern.tracks?.some((t) => isAudioLane(t)))` ⇒ ⭐ **没有 audio lane 就整段跳过** ✓
+   · ⭐ `:1803` `const audioCatalogue = offlineCatalogue;` ✓
+   · ⭐ `:1808` `const silencedTrackIndexes = mixerStates.map((s, i) => (silenced(s) ? i : -1)).filter((i) => i >= 0);` ✓
+   · ⭐ `:1833–1840` `const loader = createSampleLoader(<options.sampleDecoder ? options.sampleDecoder(ctx) : browserSampleDecoder(ctx)>, audioCatalogue, undefined, undefined, createWaveLoopReader(), options.fetchSfzBytes);` ✓
+   · ⭐ `:1841` `mark("audioLanes:prepare");` ✓ ⇒ `:1842–1858` `await prepareOfflineAudioLanes({ pattern, loader, catalogue: audioCatalogue, bpm, ...(patternTempo.length ? { tempoTrack: patternTempo } : {}), totalSteps, ...(chunkWindow ? { stepOffset: chunkWindow.fromStep, stepSpan: scheduledSteps, timeOffsetSec: timelineOffsetSec } : {}), ...(options.stemTrackIdx === undefined ? {} : { stemTrackIdx: options.stemTrackIdx }), silencedTrackIndexes })` ✓
+   · ⭐ `:1859` `if (preparation.problems.length) audioLaneProblems.push(...preparation.problems);` ✓
+   · ⭐ `:1860` `options.onAudioLanePreparation?.({ loaded, total, ready, ... })` ✓
+**⇒ 抽函数（`export`，供 `validate_arrangement` 复用 ✓）的签名 ✓**：
+```
+```ts
+export async function prepareArrangementAudioLanes(input: {
+  pattern: SequencerPattern;
+  ctx: BaseAudioContext;
+  catalogue: SampleCatalogue;      // 渲染侧传 offlineCatalogue
+  bpm: number;
+  patternTempo: TempoPoint[];      // 空数组 ⇒ 不传 tempoTrack
+  totalSteps: number;
+  chunkWindow?: ChunkRenderWindow | null;
+  scheduledSteps: number;
+  timelineOffsetSec: number;
+  silencedTrackIndexes: number[];
+  sampleDecoder?: (context: BaseAudioContext) => SampleDecoder;
+  fetchSfzBytes?: (url: string) => Promise<string>;
+  stemTrackIdx?: number;
+  onProgress?: (p: { loaded: number; total: number; ready: boolean }) => void;
+}): Promise<{ loader: ReturnType<typeof createSampleLoader>; preparation: OfflineAudioLanePreparation }>
+```
+```
+**⇒ 于是落地步骤（机械 ✓）**：① 把 `:1833–1858` **原样搬进**该函数（⭐ **不复制** ✗：原处**改为调用**它 ✓）
+  ② `renderPatternOfflineInternal` 原处保持行为不变 ✓（⭐ `mark("audioLanes:prepare")` 留在调用处 ✓）
+  ③ `validate_arrangement` 工具：`flattenMcpArrangement` ✓ → 该函数 ✓ → ⭐ **回自己的形状** ✓
+  `{ dryRun: true, arrangementId, passes, totalSteps, ready, loaded, total, problems[], skippedLanes[], renderWouldNeed: {…} }` ✓
+  ④ ⭐ 判据三条 ✓（`problems` 同源 ✓／不落盘 ✓／热缓存远小于渲染 ✓）＋ 登记 `mcpTools.test.ts` ✓
+  ⑤ ⭐ **回填 `docs/FEATURE_ALIGNMENT.md`** ✓（维护约定第 4 条 ✓，系统／MCP／Web 三方对齐 ✓）
+**⚠️ 仍未做 ✗**：代码本体（本轮余量不足 ✓，⭐ 不写半成品 ✗）；⭐ 但**规格已无未知** ✓ ⇒ 下次照此执行即可 ✓
+```
