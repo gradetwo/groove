@@ -216,6 +216,7 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
         .describe("1 is one pass through the whole arrangement; raising it repeats the arrangement, and it drives the duration the description quotes"),
       sampleRate: z.number().int().min(8000).max(96000).optional().describe("render rate; 8000 makes an analysis pass about a fifth of the work — and the rate is one of the two things that drives the duration the description quotes"),
       channels: z.number().int().min(1).max(2).optional().describe("1 for a mono analysis render"),
+      maxDurationSec: z.number().int().min(1).optional().describe("refuse rather than start a render longer than this, in seconds"),
       /**
        * ⭐ **The one explicit engine choice on the MCP surface, and the reason it is explicit.**
        *
@@ -269,6 +270,20 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
          * exactly the arrangement an MCP caller now starts from.
          */
         const summary = summariseArrangement(String(args.arrangementId), getMcpArrangement(String(args.arrangementId))!);
+        /**
+         * ⭐ **Refuse rather than start a render nobody will wait for.** The older song tool carried this guard and the
+         * arrangement tool did not, which is the one ability the retirement of that tool still needed. The estimate is the
+         * shared one, so this number and the one `validate_arrangement` reports cannot drift apart.
+         */
+        const budget = args.maxDurationSec as number | undefined;
+        if (budget !== undefined) {
+          const estimate = estimateRenderCost({ bars: summary.bars ?? 1, bpm: summary.bpm ?? 120 }).audioSeconds;
+          if (estimate > budget) {
+            return failure(
+              `this arrangement is about ${Math.round(estimate)}s and maxDurationSec is ${budget}s — shorten it, raise the limit, or render fewer bars`
+            );
+          }
+        }
         const result = await renderAudio(flattened.pattern, {
           format: (args.format as "wav" | "mp3") ?? "wav",
           ...(args.sampleRate ? { sampleRate: args.sampleRate as number } : {}),
