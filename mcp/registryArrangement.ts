@@ -97,6 +97,7 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
         ),
       songId: z.string().optional().describe("the v1 song this is an arrangement of; defaults to a scratch id"),
       name: z.string().optional().describe("what a person calls it; absent means unnamed"),
+      genreId: z.string().optional().describe("seed the tracks from this genre's arranged pattern"),
     },
     handler: (args) => {
       try {
@@ -105,6 +106,7 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
           blankKind: args.blankKind as never,
           songId: args.songId as string | undefined,
           name: args.name as string | undefined,
+          genreId: args.genreId as string | undefined,
         });
       } catch (error) {
         return failure((error as Error).message);

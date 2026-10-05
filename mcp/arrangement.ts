@@ -10,6 +10,9 @@
  * The map is deliberately not persisted, exactly as the song map is not: the application owns projects, and this is a scratchpad for one session.
  */
 import { stepCountFor, stepsPerBarFor } from "../src/data/noteEvents";
+import { findGenre } from "./library";
+import { patternFromGenre } from "../src/data/genreMix";
+import { projectSongToV2 } from "../src/data/arrangementProjection";
 import { toMusicXml } from "../src/data/musicxml";
 import { fromMusicXml, fromMusicXmlBytes } from "../src/data/musicxmlImport";
 import type { ImportedPart } from "../src/data/musicxmlImport";
@@ -429,6 +432,8 @@ export interface CreateMcpArrangementInput {
   blankKind?: TrackKindV2;
   /** ⭐ What a person calls it; absent means unnamed. */
   name?: string;
+  /** ⭐ Seed the tracks from this genre's arranged pattern; absent means a blank arrangement. */
+  genreId?: string;
 }
 
 export function createMcpArrangement(input: CreateMcpArrangementInput = {}): ArrangementSummary {
@@ -436,9 +441,20 @@ export function createMcpArrangement(input: CreateMcpArrangementInput = {}): Arr
   if (input.templateId !== undefined && !TEMPLATES.some((template) => template.id === input.templateId)) {
     throw new Error(`unknown templateId "${input.templateId}" — the templates are ${TEMPLATES.map((template) => template.id).join(", ")}, or omit it for a blank arrangement`);
   }
-  const seeded = input.templateId
-    ? createArrangementFromTemplate(songId, input.templateId, input.blankKind)
-    : createArrangement(songId, input.blankKind ?? "synth");
+  /**
+   * ⭐ **A genre seeds the tracks, which is what the v1 creator did.** `patternFromGenre` writes the genre's arranged
+   * pattern and `projectSongToV2` turns a song-shaped value into an arrangement, so seeding is those two calls rather than
+   * a second implementation. An unknown id is refused before anything is created, naming the argument.
+   */
+  const seeded = input.genreId
+    ? (() => {
+        const genre = findGenre(input.genreId as string);
+        if (!genre) throw new Error(`unknown genreId "${input.genreId}" — use list_genres to see the ids`);
+        return projectSongToV2({ id: songId, clips: { A: patternFromGenre(genre) } });
+      })()
+    : input.templateId
+      ? createArrangementFromTemplate(songId, input.templateId, input.blankKind)
+      : createArrangement(songId, input.blankKind ?? "synth");
   /**
    * ⭐ **An MCP-created arrangement carries no starter notes.**
    *
