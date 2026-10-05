@@ -12573,3 +12573,27 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落地 ✗**（⭐ 余量用尽 ✓）
 ```
 
+### 五百零二、⭐ **`export_ableton` 退场的完整清单（10 处 ✓，已逐字量 ✓）**（2026-10-06 01:15 ✓）
+
+```
+**⭐ 前件已满足 ✓**：⭐ v2 对应能力 ⭐ `export_arrangement_ableton` ✓ 已落地 ✓ ＋ ⭐ **运行时用例** ✓ 已通过 ✓
+  （⭐ 真导出 ⇒ ⭐ gunzip ⇒ ⭐ 断言是 Live Set ✓）⇒ ⭐ 满足"⭐ **先立 v2 判据再删 v1**" ✓
+**⭐ 十处（⭐ 依出现顺序 ✓）**：
+  ⭐ ① ⭐ `mcp/registryFiles.ts:42` ✓ —— ⭐ 工具块**整体删除** ✓（⭐ 含 `genreId?`／`pattern?`／`songId?` 三选一 ✓）
+  ⚠️ ⭐ ② ⭐ `scripts/redlines.mjs:387` ✓ —— ⭐ **必需工具清单里有它** ✗ ⇒ ⭐ **删表项** ✓
+    ⇒ ⚠️ ⭐ **这正是 `render_audio` 那次让 18 个 CI 红的老陷阱** ✓（⭐ `979f331` ✓）⇒ ⭐ **必须同批删** ✓
+  ⭐ ③ ⭐ `scripts/check_mcp.mjs:141` ✓ —— ⭐ 工具名清单 ✓ ⇒ ⭐ 删表项 ✓
+  ⭐ ④ ⭐ `check_mcp.mjs:493–498` ✓ —— ⭐ song 用例（⭐ "one clip per section" ✗）⇒ ⭐ **整块删** ✓
+  ⭐ ⑤ ⭐ `check_mcp.mjs:871–873` ✓ —— ⭐ gzip XML 用例 ✗ ⇒ ⭐ **删** ✓
+    ⇒ ✅ ⭐ 它证明的"⭐ 产物是 gzip XML" ✓ 由 ⭐ 新工具的运行时用例**接管** ✓（⭐ 能力不丢 ✓）
+  ⭐ ⑥ ⭐ `src/test/mcpTools.test.ts:251` ✓ —— ⭐ `RETURNS_BYTES_DESPITE_THE_VERB` 集合 ⇒ ⭐ 删名字 ✓
+  ⭐ ⑦ ⭐ `src/test/exportSurfaceCopy.test.ts:10` ✓ —— ⭐ 注释里点名 ✓ ⇒ ⭐ 改文字 ✓
+  ⭐ ⑧ ⭐ `src/test/mcpCapability.test.ts:165` ✓ —— ⭐ 工具数组 ⇒ ⭐ 换名（⭐ 换成 `export_arrangement_ableton` ✓）
+  ⭐ ⑨ ⭐ `docs/MCP.md` ✓ —— ⭐ 声明行 ⇒ ⭐ 换名 ✓（⭐ 上一轮记的"待办" ✓）
+  ⭐ ⑩ ⭐ `mcp/README.md:104` ✓ ＋ ⭐ `docs/FEATURE_ALIGNMENT.md` 的**活表** ✓ ⇒ ⭐ 更新 ✓
+**⭐ 不必改的 ✓（⭐ 历史记录应留原样 ✓）**：⭐ `docs/Z2_ADJUDICATION.md` ✓／⭐ `docs/DAW_MCP_REFACTOR.md` ✓／
+  `docs/TRACK_ARRANGEMENT_PLAN.md` ✓／`docs/V4_REVIEW_PLAN.md` ✓ —— ⭐ 它们是**当时的记录** ✓ ⇒ ⭐ 不改 ✓
+**⭐ 完成判据 ✓**：⭐ ① `check:mcp` 绿 ✓ ② ⭐ `redlines` 绿 ✓ ③ ⭐ 工具数 **95 ⇒ 94** ✓ ④ ⭐ 回填对齐表 ✓
+**⏳ 未落地 ✗**（⭐ 余量用尽 ✓）；⭐ 清单已到行 ✓
+```
+
