@@ -1241,6 +1241,7 @@ export async function saveArrangementProject(input: {
    * the open *is* the nondeterminism the chain was added for (see the measurement below), so the write is queued
    * behind it instead.
    */
+  setArrangementSaveStatus({ status: "saving", savedAt: arrangementSaveStatus.savedAt });
   const putRecord = (db: IDBDatabase) =>
     runStoreTx(db, GROOVE_ARRANGEMENT_STORE_NAME, "readwrite", (store) => store.put(record));
   const alreadyOpen = peekProjectsDb();
@@ -1264,7 +1265,9 @@ export async function saveArrangementProject(input: {
   );
   try {
     await write;
+    setArrangementSaveStatus({ status: "saved", savedAt: Date.now() });
   } catch (err) {
+    setArrangementSaveStatus({ status: "failed", savedAt: arrangementSaveStatus.savedAt });
     if (!isIndexedDbUnavailable(err)) {
       // Quota exceeded / aborted transaction: the write did NOT happen, and saying so is the whole point of F-07.
       markDegraded(err);
@@ -1413,10 +1416,11 @@ export async function getArrangementProjectCount(): Promise<number> {
  */
 export interface ArrangementSaveStatus {
   status: "idle" | "saving" | "saved" | "failed";
-  savedAt?: number | null;
+  /** ⭐ When the last successful write landed, or null before the first one. */
+  savedAt: number | null;
 }
 
-let arrangementSaveStatus: ArrangementSaveStatus = { status: "idle" };
+let arrangementSaveStatus: ArrangementSaveStatus = { status: "idle", savedAt: null };
 const arrangementSaveListeners = new Set<() => void>();
 
 /** ⭐ Publishes a new status to every listener. Called around a save, never by a caller. */

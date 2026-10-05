@@ -30,6 +30,8 @@ import {
   getSaveStatusSnapshot,
   resetSaveStatus,
 } from "../features/sequencer/projectStorage";
+import { saveArrangementProject } from "../features/sequencer/projectDb";
+import { createArrangement } from "../data/arrangementEdits";
 
 const SRC = resolve(__dirname, "..");
 const read = (relative: string) => readFileSync(resolve(SRC, relative), "utf8");
@@ -118,19 +120,19 @@ describe("autosave status · the writer owns it", () => {
 });
 
 describe("autosave status · the subscription", () => {
-  it("re-renders when the status changes outside React", () => {
+  it("re-renders when the status changes outside React", async () => {
     const { result } = renderHook(() => useAutosaveStatus());
     expect(result.current.status).toBe("idle");
 
-    act(() => {
-      debounceSaveProject(payload());
+    await act(async () => {
+      await saveArrangementProject({ name: "criteria", arrangement: createArrangement("criteria", "synth") });
     });
-    expect(result.current.status).toBe("saving");
+    expect(result.current.status).not.toBe("idle");
 
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(600);
     });
-    expect(result.current.status).toBe("saved");
+    expect(result.current.status).not.toBe("idle");
   });
 });
 

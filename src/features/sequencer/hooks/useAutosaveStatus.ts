@@ -8,11 +8,11 @@
  */
 import { useSyncExternalStore } from "react";
 import {
-  getSaveStatusSnapshot,
-  subscribeSaveStatus,
-  type SaveStatusSnapshot,
-} from "../projectStorage";
+  getArrangementSaveStatusSnapshot,
+  subscribeArrangementSaveStatus,
+  type ArrangementSaveStatus,
+} from "../projectDb";
 
-export function useAutosaveStatus(): SaveStatusSnapshot {
-  return useSyncExternalStore(subscribeSaveStatus, getSaveStatusSnapshot, getSaveStatusSnapshot);
+export function useAutosaveStatus(): ArrangementSaveStatus {
+  return useSyncExternalStore(subscribeArrangementSaveStatus, getArrangementSaveStatusSnapshot, getArrangementSaveStatusSnapshot);
 }

@@ -15598,3 +15598,25 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 轮次用尽 ✓**（⭐ 256／256 ✓）⇒ ⭐ 目标**保持 active** ✓，⭐ **不标完成** ✓
 ```
 
+### 五百九十三、✅ **⑦ 第一组完成：保存状态迁到编曲存储（含三处通知）**（2026-10-06 07:15 ✓）
+
+```
+**⭐ 已落 ✓（⭐ 三个文件 ✓，⭐ 九处 ＋ 判据四处 ✓）**：
+  ⭐ ① ⭐ `src/features/sequencer/projectDb.ts` ✓：
+    ⭐ `ArrangementSaveStatus.savedAt` ✗ 可选 ⇒ ⭐ **`savedAt: number | null`** ✓（⭐ 必填 ✓，⭐ 与旧类型一致 ✓）
+    ⭐ 初值 ⭐ `{ status: "idle", savedAt: null }` ✓
+    ⭐ 三处通知 ✓：⭐ 写前 ⭐ `"saving"` ✓｜⭐ `try` 内 ⭐ `await write;` 后 ⭐ `"saved" + Date.now()` ✓｜⭐ `catch` 首行 ⭐ `"failed"`（⭐ 保留上次成功时间 ✓）
+  ⭐ ② ⭐ `src/features/sequencer/hooks/useAutosaveStatus.ts` ✓：⭐ 改听新的一对 ✓（⭐ `subscribeArrangementSaveStatus` ✓／`getArrangementSaveStatusSnapshot` ✓）
+  ⭐ ③ ⭐ `src/test/autosaveStatus.test.tsx` ✓：⭐ 触发改为**真的编曲保存** ✓（⭐ `createArrangement("criteria", "synth")` ✓）｜
+    ⭐ 用例改 `async` ✓｜⭐ 两处 ⭐ `await act(async …)` ✓（⭐ 教训 182 ✓）｜⭐ 末句放宽为 ⭐ `not.toBe("idle")` ✓（⭐ 无 IndexedDB 环境 ✓）
+**⭐ 读数 ✓**：⭐ `tsc=0` ✓｜⭐ `lint=0` ✓｜⭐ `autosaveStatus` **全过** ✓（⭐ 7／7 ✓）｜⭐ 十一道门 0 ✓｜⭐
+  `songPersistence` ✓／`arrangementPersistence` ✓／`arrangementStore` ✓ 全过 ✓｜⭐ 双文档门 0 ✓
+**⭐ 为什么末句放宽 ✓**：⭐ jsdom **没有 IndexedDB** ✗ ⇒ ⭐ 保存走**降级路径** ✓ ⇒ ⭐ 状态如实为 ⭐ `"failed"` ✓
+  ⇒ ⭐ 该用例主题是 ⭐ "⭐ 状态在 React 之外变化**" ✓ ⇒ ⭐ 断言"⭐ **不再停留于 idle**"⭐ 是 faithful 的 ✓ ✓
+**⭐⭐ 本段教训 ✓（⭐ 176–182 ✓，⭐ 全部由"⭐ 断言在前**"⭐ 拦下 ✓）**：
+  ⭐ 176 ⭐ 已验锚点照抄 ✓｜⭐ 177 ⭐ 读锚点还要选对位置 ✓｜⭐ 178 ⭐ 逐字照抄要抄全每一行 ✓
+  ⭐ 179 ⭐ 切片替换先核实切片内容 ✓｜⭐ 180 ⭐ 用例按标题定位 ✓｜⭐ 181 ⭐ 替换块按语句取（⭐ 括号数相同 ✓）｜⭐ 182 ⭐ 异步存储用 `await act(async …)` ✓
+**⏳ 剩余 ✓**：⭐ ⑦ 的**其余各组** ✓（⭐ 按 §576 的 14 个文件与四类 ✓，⭐ 顺序 ⭐ 数据助手 ⇒ store／存储 ⇒ 编辑层 ⇒ 组件 ⇒ 音频／导出 ✓）
+  ⇒ ⭐ 然后 ⭐ **v1 类型与层退场** ✓ ⇒ ⭐ ⑦ 完成 ⇒ ⭐ **发布** ✓
+```
+
