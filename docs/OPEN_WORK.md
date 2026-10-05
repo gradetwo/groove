@@ -12902,3 +12902,23 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 配方已到函数 ✓
 ```
 
+### 五百一十四、⚠️ **CI 红：`mcpHeadlessRouting` —— 与台账的 `needs` 对上号**（2026-10-06 01:51 ✓）
+
+```
+**⭐ 事实 ✓**：⭐ `1e59004`（⭐ 纯文档提交 ✓）⭐ **CI 判失败** ✗ ⇒ ⭐ 失败判据 ⭐ **`src/test/mcpHeadlessRouting.test.ts`** ✓
+  ⭐ 原文 ✓：⭐ "**the Node host must have been reached: expected []**" ✓ ＋
+    "**the default reached the browser path**" ✓
+**⭐ 含义 ✓**：⭐ 判据期望"⭐ 走 **Node** 宿主" ✓，⭐ 但实际**没走到** ✗ ⇒ ⭐ 落回**浏览器路径** ✓
+  ⇒ ⭐ 与台账里那条 `needs` **对上** ✓：⭐ "⭐ **install `node-web-audio-api` in CI/test so the `headless: true` path is testable**" ✓
+    （⭐ §484 的 `needs` 之一 ✓）
+**⭐ 因此 ✓**：⭐ 这是 ⭐ **已知缺口**（⭐ CI 未装该依赖 ⇒ ⭐ `headless` 路径在 CI 上不可测 ✓）⭐ 的表现 ✓
+  ⚠️ ⭐ 但**尚未确定** ✗：⭐ 我上一轮改的 ⭐ `normalize_loudness` ✗（⭐ 我动了 `analysis` 对象的两个字段 ✓）
+    ⭐ **是否也参与** ✓ ⇒ ⭐ **不假设** ✓ ⇒ ⭐ 下一段第一件事 ✓：⭐ 跑该判据并读它对 ⭐ `analysis` 的期望 ✓
+**⭐ 两个假设（⭐ 待验 ✓）**：
+  ⭐ ① ⭐ 环境缺口 ✓：⭐ CI 无 ⭐ `node-web-audio-api` ✓ ⇒ ⭐ Node 宿主不可达 ✓（⭐ 那条 `needs` ✓）
+  ⭐ ② ⭐ 我的改动 ✓：⭐ `analysis.genreId` 由歌改取 ⭐ `flattened.pattern.genre_id` ✗ ⇒ ⭐ 若该判据依赖
+    ⭐ "⭐ 有 genreId 才走 Node" ✓ ⇒ ⭐ 也成立 ✓
+  ⇒ ⭐ 区分方法 ✓：⭐ 看 ⭐ `1e59004` **之前**的提交是否也红 ✓（⭐ `72e04ed` 在跑 ✓ ⇒ ⭐ 它的判决可判 ✓）
+**⏳ 未修 ✗**（⭐ 余量用尽 ✓）；⭐ 红因与两个假设已入账 ✓
+```
+
