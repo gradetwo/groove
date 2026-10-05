@@ -12537,3 +12537,23 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 三步已定 ✓
 ```
 
+**⭐ Ableton 新工具的可写配方（2026-10-06 01:04 ✓，⭐ 事实齐 ✓）**：
+```
+**⭐ 量到 ✓**：⭐ `ExportAlsOptions` ＝ ⭐ `{ bpm: number ✓, pattern: SequencerPattern ✓, genreName?: string ✓ }`
+  ⇒ ⭐ `ExportedAls` ＝ ⭐ `{ xml ✓, data: Uint8Array ✓, blob ✓, filename ✓ }` ✓
+  ⇒ ⭐ 参照 ✓：⭐ `export_arrangement_midi` 的 handler ✓（⭐ 写文件并回包 ✓，⭐ 入参 `filename?` ✓）
+**⭐ 工具（≈15 行 ✓，⭐ 放 `mcp/registryArrangement.ts` ✓）**：
+  ⭐ `name: "export_arrangement_ableton"` ✓｜⭐ `title`／`description` 用 v2 词 ✓（⭐ 短句 ≤ 97 ✓）
+  ⭐ `readOnly: false` ✓（⭐ 它写文件 ✓ —— ⭐ 与 `export_arrangement_midi` 一致 ✓）
+  ⭐ 入参 ✓：⭐ `arrangementId: z.string()` ✓ ＋ ⭐ `filename?: z.string().max(64)` ✓ ＋ ⭐ `outputDir?` ✓
+  ⭐ handler ✓：
+    ⭐ `const { flattened } = flattenMcpArrangement(String(args.arrangementId));` ✓
+    ⭐ `const arrangement = getMcpArrangement(String(args.arrangementId));` ✓（⭐ 为拿 `bpm` ✓）
+    ⭐ `const set = exportAbletonLiveSet({ pattern: flattened, bpm: arrangement?.bpm ?? 120, genreName: … });` ✓
+    ⭐ 落盘 ⭐ `writeFileSync(path.join(dir, set.filename), set.data)` ✓
+    ⭐ 回包 ⭐ `{ path ✓, filename ✓, bytes: set.data.length ✓, format: "als" ✓, tracks: flattened.tracks.length ✓ }` ✓
+**⭐ 随后 ✓**：⭐ 判据 ✓（⭐ 断言回包形状 ＋ ⭐ 文件可 gunzip 成 XML ✓）＋ ⭐ `check_mcp` 用例 ✓ ＋
+  ⭐ `docs/MCP.md` 声明 ✓ ＋ ⭐ 回填对齐表 ✓ ⇒ ⭐ **然后**删 `export_ableton` ✗（⭐ 先立 v2 判据再删 v1 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 配方已到函数与字段 ✓
+```
+
