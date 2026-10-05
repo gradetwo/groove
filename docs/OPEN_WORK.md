@@ -10647,4 +10647,3 @@ export async function prepareArrangementAudioLanes(input: {
   ④ ⭐ 判据三条 ✓（`problems` 同源 ✓／不落盘 ✓／热缓存远小于渲染 ✓）＋ 登记 `mcpTools.test.ts` ✓
   ⑤ ⭐ **回填 `docs/FEATURE_ALIGNMENT.md`** ✓（维护约定第 4 条 ✓，系统／MCP／Web 三方对齐 ✓）
 **⚠️ 仍未做 ✗**：代码本体（本轮余量不足 ✓，⭐ 不写半成品 ✗）；⭐ 但**规格已无未知** ✓ ⇒ 下次照此执行即可 ✓
-```
