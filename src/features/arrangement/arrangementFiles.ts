@@ -628,16 +628,15 @@ export async function importArrangementFile(arrangement: ArrangementV2, file: Fi
   }
 }
 
-/** Anything thrown, as a sentence. An `undefined` interpolated into a message leaves a literal `{error}` on screen. */
-export function describeError(error: unknown): string {
-  if (error instanceof Error) return error.message || error.name;
-  if (typeof error === "string") return error;
-  try {
-    return JSON.stringify(error);
-  } catch {
-    return String(error);
-  }
-}
+/**
+ * Anything thrown, as a sentence — **the shared one** (`src/utils/describeError.ts`), re-exported so the fifteen call
+ * sites in this module keep their import. It moved because the two sequencer hooks had grown their own byte-identical
+ * copies, and because the moved version was also fixed: `JSON.stringify(undefined)` returns `undefined`, so the old
+ * body could hand `undefined` to a message that shows an `{error}` placeholder verbatim.
+ */
+import { describeError } from "../../utils/describeError";
+
+export { describeError };
 
 /**
  * The arrangement written as a `.logicx` **package**, delivered as a zip.

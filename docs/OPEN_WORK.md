@@ -9090,3 +9090,33 @@ problems: **[]** ✓
    本轮我写 `echo "① \`SequencerPattern\` 的引用面"` ✗ ⇒ shell 试图**执行** `SequencerPattern` ✗ ⇒ 报
    `command not found` ✓（数据未受影响 ✓，但标签少了 ✓）。⭐ 正确做法 ✓：**在 `echo` 里用「」或单引号** ✓，
    与先前那条"中文 `print` 里别放 ASCII 引号" ✓ 同族 ✓ —— **把要显示的东西与要被解释的东西分开** ✓。
+
+## 三百九十一、🗣 **E 段"错误可理解"首次有量：3 份同源助手合一，并修掉一个"屏幕上会出现字面 `{error}`"的真 bug**（2026-10-05 12:57 ✓）
+
+```
+**先量 ✓（时点 12:53 ✓，方法：在今晚的树上 grep 用户可见出口 ✓，排除 `src/test` ✓）**：
+   · 友好文案出口 ✓：`say(t("…failed"))` **5 处** ✓（本地化 ✓）
+   · ⚠️ **原始异常直接上屏 ✓：15 处**（`ScoreV2` ✓／`ProjectHubModal` ✓／`AudioStartGate` ✓／`arrangementStore` ✓／`CompareView` ✓ …）
+   · 错误类 i18n key ✓：**40 个** ✓
+   · ⭐ **空话检查 ✓**：`unknown error`／`Something went wrong`／字面 `[object Object]` ⇒ **0 处** ✓
+   · ⚠️ `error instanceof Error ? error.message : String(error)` 这一模式 **~40 处** ✓
+**⚠️ 更正我自己的两处描述 ✗（读原文之后 ✓）**：
+   ① 我说两个 hook 的副本是"直接 `String(err)`" ✗ —— **错** ✓：**三份逐字节相同** ✓（⇒ 合并**零语义风险** ✓）
+   ② 因此 `[object Object]` 那条**不是**这批代码的缺陷 ✗（JSON 优先 ✓）⇒ ⭐ 但我**读出了真缺陷** ✓（见下 ✓）
+**⭐ 真 bug ✓（两个条件同时成立才会暴露 ✓）**：`JSON.stringify(undefined)` 返回 **`undefined`（不是字符串）** ✗ ⇒
+   旧写法 `describeError(undefined)` ⇒ **返回 `undefined`** ✗ ⇒ ⭐ 而它喂给 `t("…{error}…")` ✓，`formatMessage`
+   **刻意保留未知占位符** ✓ ⇒ ⭐ **屏幕上原样显示字面 `{error}`** ✗ —— **正是那段注释警告的事** ✗，而代码里就带着它 ✓
+**改动 ✓（3 份 ⇒ 1 份 ＋ 修 bug ✓）**：
+   · 新增 **`src/utils/describeError.ts`** ✓：`undefined`／`null` ⇒ 一句可读的话 ✓；`Error` ⇒ `message || name` ✓；
+     string ⇒ 原样 ✓；对象 ⇒ **JSON 优先** ✓；JSON 拒绝（环／BigInt ✓）⇒ `String()` 兜底 ✓ ⇒ ⭐ **永不返回非字符串** ✓
+   · `src/features/arrangement/arrangementFiles.ts` ✓：**保留导出** ✓（15 个引用点**不动** ✗ ⇒ 零风险 ✓）
+     ⚠️ 过程细节 ✓：先写 `export { x } from "…"` ✗ ⇒ **本模块内部看不到它** ✗（`tsc` 立刻报 4 处 `Cannot find name` ✓）
+     ⇒ 改为 **`import` ＋ `export`** ✓（第 86 条小教训 ✓：再导出**不进本模块作用域** ✓）
+   · 两个 hook（`usePatternActions` ✓／`useExportActions` ✓）⇒ 删本地副本 ✓、改用共享版 ✓
+**判据 ✓（能红 ✓）**：新增 `src/test/describeError.test.ts` ✓（**3 用例 ✓**）：① 八种输入（含 `undefined`／`null` ✓）
+   **必须都得到非空字符串** ✓② `Error` 保消息 ✓／对象**不得**是 `[object Object]` ✓／环也能给字符串 ✓
+   ③ **只允许一份拥有者** ✓（四个文件里只有 `src/utils/describeError.ts` 允许出现 `function describeError(` ✓）
+   ⭐ **弄红验证 ✓**：把共享版退回旧写法 ⇒ 判据 **exit=1** ✓，报 `input: 'undefined'` ✓；
+     并**实测后果** ✓：`describeError(undefined) = undefined`（`typeof = undefined` ✓）⇒ 屏幕上即字面 `{error}` ✗
+     ⇒ 从**修复后**备份还原 ✓（第 78 条 ✓）
+**门禁 ✓**：`tsc=0` ✓｜`lint=0` ✓｜`check:duplication=0` ✓｜`check:dead-exports=0` ✓｜`check:file-sizes=0` ✓

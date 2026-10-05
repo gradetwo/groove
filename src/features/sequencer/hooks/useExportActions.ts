@@ -1,3 +1,4 @@
+import { describeError } from "../../../utils/describeError";
 import { useCallback, useRef, useState } from "react";
 import { Genre, SequencerPattern } from "../../../types/genre";
 import { GrooveProject } from "../../../types/project";
@@ -30,15 +31,7 @@ import { useLanguage } from "../../../i18n/LanguageContext";
  * `undefined` would leave the literal `{error}` placeholder on screen, because
  * `formatMessage` deliberately preserves unknown placeholders.
  */
-function describeError(err: unknown): string {
-  if (err instanceof Error) return err.message || err.name;
-  if (typeof err === "string") return err;
-  try {
-    return JSON.stringify(err);
-  } catch {
-    return String(err);
-  }
-}
+
 
 export interface UseExportActionsOptions {
   patternRef: React.MutableRefObject<SequencerPattern>;
