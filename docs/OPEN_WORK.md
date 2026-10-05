@@ -10188,3 +10188,29 @@ problems: **[]** ✓
    **把后续 shell 命令行当成正文写进了 `docs/OPEN_WORK.md`** ✗（32 行垃圾 ✓）⇒
    所幸**没提交、没推送** ✓，已 `git checkout --` **完整恢复** ✓（0 脏项 ✓）
    ⇒ ⭐ 老习惯重申 ✓：**文档改动走 `edit`／`write` 工具 ✓，不走 heredoc／echo** ✗（本轮即刻改用 `edit` ✓）
+
+### 四百三十九、✅ **响应优化 A 落地：把"两个工具=同一份分析"写在描述里**（2026-10-05 17:34–17:37 ✓）
+
+```
+**改动 ✓（`mcp/registryAnalysis.ts:184` ✓）**：`spectral_balance` 描述末尾追加 ✓
+   ⭐ "**The same measurement as `analyze_audio`**: both call one analysis, so calling both repeats it and only costs time.
+      Ask for one of them." ✓
+   ⇒ ⭐ **省法**：调用方**别两个都调** ✓ —— 子代理在同进程同文件实测两次调用 **2.73 s／2.58 s** 且**回复逐字节相同** ✗
+     ⇒ ⭐ **省 115–126 s/曲** ✓（本轮那一跑确实两个都调了 ✗）
+   ⇒ ⭐ **不删工具** ✗ —— 工具面被协议门与 `check:mcp` 锁着 ✓，"边界不许删"是铁律 ✓
+**判据 ✓（新建 `src/test/mcpAnalysisOverlap.test.ts` ✓，先红后绿 ✓）**：
+   ① 写判据 ⇒ ⭐ **`exit=1`**（`overlaps: false` ✓ 失败在"描述里没提 `analyze_audio`" ✓）
+   ② 加那句话 ⇒ ⭐ **`exit=0`**（1 passed ✓）
+   ⭐ 判据口径 ✓：读 `mcp/registryAnalysis.ts` ✓，切出 `spectral_balance` 的块（到 `readOnly: true` 为止 ✓），
+     要求块内出现 `analyze_audio` ✓ ⇒ **删掉那句话就红** ✓
+**门 ✓（全绿）**：⭐ `check:mcp` ⇒ **94 tools／7 resources／4 prompts** ✓、**123 checks passed／0 failed** ✓｜
+   `tsc=0` ✓｜`lint=0` ✓｜`check:docs=0` ✓｜`check:docs:refs=0` ✓
+   ＋ ⭐ **描述长度自检 = 429 字符** ✓（上限 1178 ✓，加完仍宽裕 ✓）
+**已推 ✓**：`4751d5e` ✓（未推 0 ✓）
+**⇒ 还差的一半（B ✓，下一轮按纪律落 ✓）**：给 `mcp/render/worker.ts:1051` 的 `analyseWavFile` 加
+   **`path + mtime + size`** 缓冲 ✓ ⇒ 同文件重复分析**瞬时** ✓、**文件变了必重算** ✓（不静默过期 ✓）
+   ⚠️ 判据两条 ✓：① **同文件连两次 ⇒ 结果深相等** ✓ ② **改文件（mtime/size 变）⇒ 必须反映新内容** ✓
+     （⭐ 弄红法 ✓：把键临时改成**只用 path** ⇒ ②必红 ✓ ⇒ 再还原 ✓）
+   ⚠️ 且记下子代理那条更根本的读数 ✓：**它全同步 ⇒ 挡事件循环 2390 ms** ✗（基线 1–8 ms ✓）
+     ⇒ 缓冲只缓解**重复调用** ✓，**并发被挡**需另想办法 ✓（长任务间让出事件循环 ✓）⇒ 另立一条 ✓
+```
