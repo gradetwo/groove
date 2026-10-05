@@ -14365,3 +14365,26 @@ export async function prepareArrangementAudioLanes(input: {
 **⭐ 目标状态 ✓**：⭐ **保持 active** ✓ —— ⭐ 迁移未完成 ⇒ ⭐ **不标完成** ✓
 ```
 
+### 五百六十、⭐ **最后一件的三处确切目标值（先写定 ✓，免得再猜 ✓）**（2026-10-06 04:01 ✓）
+
+```
+**⭐ ① ⭐ `check_mcp` 的清单检查 ⇒ **整条删除** ✓**：
+  ⭐ 现状 ✓：⭐ `["create_song", "render_song"].every((name) => names.includes(name)),` ✗
+  ⭐ 原因 ✓：⭐ 两个名字**都要退** ✗ ⇒ ⭐ 这条检查**没有对象**了 ✓ ⇒ ⭐ 连它的 ⭐ `check("the song tools are declared", …)` ✓
+    ＋ ⭐ 上方注释 ⭐ `:808–810` ✓ **一并删除** ✓（⭐ 注释整段讲的就是这三个工具 ✓）
+**⭐ ② ⭐ `docsWorkflow` 的 `STEPS` ⇒ 最终形态 ✓**：
+  ⭐ 现状 ✓：⭐ `["create_song", "set_arrangement_track_steps", "apply_pattern_ops", "add_arrangement_track", "render_song"]` ✓
+  ⭐ 目标 ✓：⭐ `["create_arrangement", "set_arrangement_track_steps", "apply_pattern_ops", "add_arrangement_track", "render_arrangement"]` ✓
+    ⇒ ⭐ **两个名字一次换净** ✓（⭐ `create_song` ⇒ `create_arrangement` ✓；⭐ `render_song` ⇒ `render_arrangement` ✓）
+    ⭐ 且 ⭐ 该判据的**标题**（⭐ "⭐ names six steps…" ✓）与 ⭐ 上面注释 ⭐ `:14` ✓ 里的例子（⭐ `add_lane` ✓）**不受影响** ✓
+**⭐ ③ ⭐ `mcpCapability:171` 的清单 ⇒ v2 ✓**：
+  ⭐ 现状 ✓：⭐ `tools: ["normalize_loudness", "get_loudness_report", "render_arrangement", "render_song"]` ✗
+  ⭐ 目标 ✓：⭐ 去掉 `render_song` ✓（⭐ `render_arrangement` **已在** ✓ ⇒ ⭐ 无需替换 ✓）
+**⭐ ④ ⭐ 附：`budgetHonesty` 的 `RENDER_TOOLS`（`:90` ✓）✗**：
+  ⭐ 现状 ✓：⭐ `["render_song", "render_arrangement", "render_arrangement_stems"]` ✗ ⇒ ⭐ 去掉 `render_song` ✓
+  ⭐ 而它 ⭐ `:147–149` ✓ 的**那一例**（⭐ 断言 `render_song` 描述含某句 ✓）⇒ ⭐ **整例删除** ✓
+**⭐⭐ 因此最后一件的目标值 ✓ 全部写定 ✓**：⭐ 三处"⭐ 换成 v2 ✔"＋ ⭐ 一处"⭐ 整条删除 ✔"＋ ⭐ 六处"⭐ 文件整体 `rm` ✔"
+  ＋ ⭐ 文档引用改叙述 ✔ ＋ ⭐ 地板跟随登记表 ✔ ⇒ ⭐ **零未知** ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
