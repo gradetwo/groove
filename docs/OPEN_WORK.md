@@ -11209,3 +11209,26 @@ export async function prepareArrangementAudioLanes(input: {
   ⇒ ⭐ 删除必须**同批**改这三处 ✓；⭐ `render_preview_clip` 的删除**单独一轮**更稳 ✓
 ```
 
+**⭐ 迁移 ③ 的第二次尝试：改名挂靠法只成立一半（2026-10-05 21:23 ✓，已全部回退 ✓ 树脏 0 ✓）**：
+```
+· ⭐ 做法 ✓：⭐ 删 `render_audio` 块 ✓ ⇒ ⭐ 把判据里的名字**改挂到 `render_arrangement`** ✓
+  （⭐ 理由：那些断言讲的是**共享句子** ✓ —— 预算／格式／时限／headless ✓ ⇒ 挂到 v2 工具同样成立 ✓）
+· ⭐ **通过的 ✓**：`tsc=0` ✓｜⭐ **`check:mcp` 0（123 项全过 ✓）** ✓｜docs 双门 0 ✓
+  ⇒ ⭐ 证明：⭐ **`scripts/check_mcp.mjs` 的 5 项改名挂靠成立** ✓（⭐ 因为它们查的是**描述句子** ✓，两者共享 ✓）
+· ⚠️ **失败的是 `budgetHonesty.test.ts` 的 4 个用例** ✗（⭐ 标题 ⭐ "**the render tools hand the reporter to the renderer**" ✓）：
+  `passes this request's reporter into renderAudio` ✓／`drops the reporter when the context has none` ✓／
+  `drops the reporter when a caller invokes the handler with no context at all` ✓／
+  `sends notifications/progress when the request …` ✓
+  ⇒ ⭐ 失败现象 ✓：`the stub returns a rendered file, so the call succeeds: expected true to be falsy` ✓
+  ⇒ ⭐ **根因** ✓：⭐ 这 4 个用例**测的是 `render_audio` 这个工具的信息流** ✓（⭐ 进度回调怎么传下去 ✓），
+    ⚠️ ⭐ **不是**测共享句子 ✗ ⇒ ⭐ 改挂到 `render_arrangement` 后**期望不符** ✗（⭐ 它的 handler 形状不同 ✓）
+· 📌 **正确做法（下一轮 ✓）**：⭐ 这 4 个用例**要重写** ✗（⭐ 不是改名 ✗）：
+  ⭐ 让它们测 ⭐ **`render_arrangement` 自己**的信息流 ✓（⭐ 它会传 `progress` ✓ ⇒ 断言照旧成立 ✓），
+  ⭐ 但**入参与桩**都要按 v2 工具写 ✓（⭐ `arrangementId` ✓ 而非 song／pattern ✓）
+· ⭐ **教训 95** ✓：⭐ **"改名挂靠"只对"测共享文本"的判据成立** ✓；⭐ 对"**测该工具自身行为**"的判据 ✗
+  ⇒ ⭐ 必须**先读用例在测什么** ✓，再决定改名还是重写 ✓（⭐ 本轮我跳过了这一步 ✗）
+· ⭐ **净结论 ✓**：⭐ 迁移 ③ 的删除**仍需同批做**：⭐ ① 删块 ✓ ② `check_mcp.mjs` 5 项**改名挂靠** ✓（⭐ 已证成立 ✓）
+  ③ 2 个拷贝判据：⭐ `mcpCopy_render_audio.test.ts` **删** ✓（⭐ `render_arrangement` 已有自己的拷贝判据 ✓ 已核 ✓）
+  ④ `budgetHonesty.test.ts` 的 4 个用例**重写** ✓ ⑤ 台账里 2 处旧文件名同步 ✓
+```
+
