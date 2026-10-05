@@ -204,7 +204,7 @@ is B2's `flattenSong`, so the tool cannot render something the app would not). S
 | ⭐ 段落与片段 | **v2 用 `takes`** ✓ —— 旧模型的 `make_unique`（把某段落的 clip 复制到空 slot）随 v1 退场；"每段各有旋律"在 v2 是**同一轨的多个 take** ✓ |
 | `set_clip` ▣ | `songId`, `slot`, `pattern?`, `genreId?` | the song's shape after one slot's clip is replaced (or seeded from a genre) — how a section gets its own variation |
 | `add_section` ▣ | `songId`, `slot`, `bars?`, `label?`, `mute?`, `velocityScale?`, `velocityRamp?`, `fill?`, `transpose?`, `index?` | the whole arrangement (shape, bar count, per-section overrides, problems) |
-| `duplicate_section` ▣ | `songId`, `index`, `at?`, `bars?`, `label?` | the arrangement with a copy of that section, its clip and **all** its overrides intact |
+| ⭐ 段落复制 | **v2 用 `takes`** ✓ —— 旧模型的 `duplicate_section`（复制一段）随 v1 退场；"同一轨的多个变体"在 v2 是 `add_arrangement_take` ✓／`assign_arrangement_take_range` ✓ |
 | `get_song` ▢ | `songId`, `includePatterns?` | the clips (each with its pattern), the sections in order, the shape and the tempo — what makes a composition readable and re-exportable |
 | `export_groove` ▣ | `songId`, `outputDir?` | a **validated** `.groove` package under `GROOVE_MCP_OUT`, carrying the arrangement rather than a flattened copy |
 | `undo_song` ▣ | `songId`, `steps?` | the arrangement as it now stands, one change back by default — every song change is recorded with an `opId`, which `get_song` lists under `history` |

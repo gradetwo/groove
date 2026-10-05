@@ -271,37 +271,6 @@ export const SONG_TOOLS: ToolDefinition[] = [
   },
   {
     /**
-     * Both composers asked for a songwriting shortcut of this shape: `add_section` plus re-typing every override is how a second
-     * chorus gets written today, and the point of a repeated chorus is that it is the same and then slightly different.
-     */
-    name: "duplicate_section",
-    title: "Copy a section",
-    description:
-      "Copy a section of a song, keeping its clip and every override, and place the copy where you want it (right after the original by default). Change only what differs afterwards — one more pass, a fill, a ramp — instead of re-typing the whole section.",
-    readOnly: false,
-    inputSchema: {
-      songId: z.string().describe("the id create_song returned"),
-      index: z.number().int().min(0).describe("which section to copy, by position in the arrangement"),
-      at: z.number().int().min(0).optional().describe("where the copy goes; right after the original when omitted"),
-      bars: z.number().int().min(1).max(MAX_BARS).optional().describe("passes for the copy; the original's when omitted"),
-      label: z.string().max(24).optional().describe('a name for the copy, e.g. "chorus 2"'),
-    },
-    handler: (args) => {
-      try {
-        return duplicateMcpSection({
-          songId: args.songId as string,
-          index: args.index as number,
-          at: args.at as number | undefined,
-          bars: args.bars as number | undefined,
-          label: args.label as string | undefined,
-        });
-      } catch (error) {
-        return failure((error as Error).message);
-      }
-    },
-  },
-  {
-    /**
      * The tool boundary's undo, which an evaluation listed as missing ("no opId/undo/snapshot transaction semantics") and which
      * matters most for exactly the calls an agent gets wrong: a `set_clip` on the wrong slot, a `duplicate_section` one time too
      * many. Re-sending the whole arrangement was the only fix before this.

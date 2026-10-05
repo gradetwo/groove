@@ -104,7 +104,7 @@ const CAPABILITIES: Capability[] = [
   {
     surface: "HorizontalTimelineView",
     feature: "arrange sections along a horizontal timeline",
-    tools: ["create_song", "add_section", "duplicate_section", "set_clip", "get_song", "undo_song"],
+    tools: ["create_song", "add_section", "set_clip", "get_song", "undo_song"],
   },
   {
     surface: "VerticalTimelineView",

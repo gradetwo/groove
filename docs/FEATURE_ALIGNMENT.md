@@ -320,3 +320,17 @@
 **⭐ 判据读数 ✓**：⭐ `check:mcp` **91 tools** ✓｜⭐ 十一道门全 0 ✓｜⭐ 相关判据全过 ✓｜⭐ 文档双门 0 ✓
 **⏳ ⑤ 的下一刀 ✓**：⭐ `duplicate_section` ✓（⭐ 同样零纠缠 ✓）⇒ ⭐ 然后 1–2 命中的五个 ✓（⭐ 含 `undo_song` 移植 ✓）
 
+## 2026-10-06 02:19 回填（第 4 条规矩：改完实现回来改表）
+
+| 面 | 变化 | 依据 |
+|---|---|---|
+| ⭐ **MCP 面** | ✅ ⭐ **`duplicate_section` 退场** ✓ ⇒ 工具 **91 ⇒ 90** ✓（⭐ ⑤ 第二刀 ✓，⭐ 也是零纠缠 ✓） | 本轮 ✓ |
+| ⭐ **系统／数据** | ✅ ⭐ 能力由 ⭐ **`takes`** 承接 ✓：⭐ `add_arrangement_take` ✓／`assign_arrangement_take_range` ✓（⭐ "同一轨的多个变体" ✓） | 本轮 ✓ |
+| ⭐ **Web 面** | **无变化** ✓ | — |
+
+**⭐ 触及 4 个文件 ✓**：⭐ `mcp/registrySong.ts`（工具块 272–302 ✓）｜⭐ `src/test/mcpSong.test.ts`（**整个 describe 327–368** ✓ —— ⭐ 边界先打印后删 ✓）｜
+  `src/test/mcpCapability.test.ts`（清单 ✓）｜⭐ `docs/MCP.md`（表行 ⇒ **记账为 takes** ✓）
+**⭐ 判据读数 ✓**：⭐ `check:mcp` **90 tools** ✓｜⭐ 十一道门全 0 ✓｜⭐ 相关判据全过 ✓｜⭐ 文档双门 0 ✓
+**⭐ 实施笔记 ✓**：⭐ python 中途语法错一次 ✗（⭐ 写盘前即死 ⇒ 树脏 0 ✓）⇒ ⭐ 修一行即过 ✓
+**⏳ ⑤ 的下一刀 ✓**：⭐ 1–2 命中的五个 ✓（⭐ `apply_chord_progression` ✓／`set_clip` ✓／⭐ **`undo_song` 移植** ✓／`get_pattern` ✓／`get_song` ✓／`set_tempo` ✓）
+
