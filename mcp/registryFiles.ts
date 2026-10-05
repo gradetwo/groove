@@ -229,7 +229,7 @@ export const FILE_TOOLS: ToolDefinition[] = [
     name: "collect_debug_bundle",
     title: "Collect what a problem needs, as one file to send",
     description:
-      "Write one self-describing JSON file for a problem report. It carries the version, the platform and Node. It carries how many tools, resources and prompts are declared. It carries the measured render costs the tool prose quotes. It says whether the output directory variable is set, never its value. It carries the note you pass. The collection is a whitelist. No home directory paths, no tokens, no environment dump, no work content. Anything it cannot collect it lists in `omissions` with the reason. Read-only: it changes no arrangement. The reply names the file's absolute path and its byte count.",
+      "Write one self-describing `.tar.gz` archive for a problem report. It carries the version, the platform and Node. It carries how many tools, resources and prompts are declared. It carries the measured render costs the tool prose quotes. It says whether the output directory variable is set, never its value. It carries the note you pass, and the arrangement when given one. It carries any related files, under a size ceiling. The collection is a whitelist. No home directory paths, no tokens, no environment dump, no work content. Anything it cannot collect it lists in `omissions` with the reason. Read-only: it changes no arrangement. The reply names the file's absolute path and its byte count.",
     readOnly: true,
     inputSchema: {
       outputDir: z.string().optional().describe("where to write it; defaults to GROOVE_MCP_OUT, then a temporary directory"),

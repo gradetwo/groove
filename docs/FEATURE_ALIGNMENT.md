@@ -142,3 +142,14 @@
 **文案 ✓：** 新键 `debug_bundle`（`zh` ＋ `en` ✓）在 `src/i18n/locales/common.ts` ✓；⭐ `skins:gen` 零 diff ✓ ＋ `check:skins=0` ✓
 **读数 ✓：** `tsc=0` ✓／`lint=0` ✓／`check:skins=0` ✓／相关判据 **13 个文件**全过 ✓（`i18nKeys` ✓／`i18n` ✓／`headerNav` ✓／`desktopSkins` ✓…）
 
+## 2026-10-05 23:12 回填（第 4 条规矩：改完实现回来改表）
+
+| 面 | 变化 | 依据 |
+|---|---|---|
+| ⭐ **系统** | ⭐ 新增共享 ⭐ **tar 写入器** ✓（`src/features/debug/tar.ts` ✓，纯函数 ✓，ustar ✓，含读回 ✓） | `0abfcb9` ✓ |
+| ⭐ **MCP 面** | ⭐ `collect_debug_bundle` ⭐ **改为产出 `.tar.gz` 压缩包** ✓（⭐ 不再是单文件 JSON ✗）：内含 `bundle.json` ✓／`environment.json` ✓／`manifest.json` ✓／`README.md` ✓（⭐ 自描述 ✓）／⭐ **若给了编曲** ⇒ `arrangement.groove.json` ✓／⭐ 相关文件 ⇒ `files/…` ✓（⭐ 每个 ≤ 8 MiB ✓，⭐ 超限**记名不截断** ✓）；⭐ 回包含 ⭐ `entries` ✓／`carriesWork` ✓／`omitted` ✓ | 本轮 ✓ |
+| ⭐ **Web 面** | ⏳ **待做** ✗ —— Web 按钮仍产出单文件 JSON ✓ ⇒ ⭐ 要改为同一压缩包格式 ✓ | — |
+
+**⚠️ 隐私取舍（明写 ✓）**：⭐ 若传入编曲 ✓ ⇒ ⭐ **包内含作品内容** ✓ ⇒ ⭐ `README.md` **显眼写明** ✓；⭐ 未传编曲时 ⭐ 包内含**不含作品内容** ✓ 且 `omitted` 写明原因 ✓
+**判据读数 ✓**：⭐ `src/test/mcpDebugBundle.test.ts` **4 用例** ✓（⭐ **真实解包往返** ✓：`gunzip` ＋ `readTar` ✓）｜⭐ `src/test/tarArchive.test.ts` **3 用例** ✓｜⭐ 可读性 ✓／覆盖 ✓／死导出预算 ✓／`check:mcp` ✓｜⭐ 七道快门全 0 ✓｜⭐ 两处均已**验能红** ✓
+

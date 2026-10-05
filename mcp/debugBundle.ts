@@ -1,7 +1,9 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { gzipSync } from "node:zlib";
 import os from "node:os";
 import path from "node:path";
 import { APP_VERSION } from "../src/version";
+import { buildTar, type TarEntry } from "../src/features/debug/tar";
 import { MEASURED_RENDER_COST } from "./render/budget";
 import { PROMPTS, RESOURCES, TOOLS } from "./registry";
 
@@ -16,14 +18,25 @@ export interface DebugBundleResult {
   path: string;
   filename: string;
   bytes: number;
+  /** ⭐ What the archive holds, so a caller can see it without unpacking it. */
+  entries: string[];
   sections: string[];
   omitted: string[];
+  /** ⭐ Named here because the archive carries the work: a person should know before sending it. */
+  carriesWork: boolean;
 }
 
 export interface DebugBundleInput {
   outputDir?: string;
   note?: string;
+  /** ⭐ The open work, which is the strongest thing for reproducing a fault and the one item worth naming in the readme. */
+  arrangement?: unknown;
+  /** ⭐ Related files a caller has in hand, each written under `files/`; oversize ones are named, not truncated. */
+  files?: Array<{ name: string; bytes: Uint8Array }>;
 }
+
+/** ⭐ A ceiling per file, so a bundle cannot grow without bound; an oversize file is reported, never cut. */
+export const DEBUG_BUNDLE_FILE_LIMIT = 8 * 1024 * 1024;
 
 const MANIFEST = [
   { section: "collectedAt", what: "when this bundle was written", why: "a reading is only meaningful with its time" },
@@ -44,6 +57,7 @@ export function collectDebugBundle(input: DebugBundleInput = {}): DebugBundleRes
   const dir = input.outputDir || process.env.GROOVE_MCP_OUT || mkdtempSync(path.join(os.tmpdir(), "groove-debug-"));
   mkdirSync(dir, { recursive: true });
   const collectedAt = new Date().toISOString();
+  const omitted = [...OMITTED];
   const bundle = {
     collectedAt,
     appVersion: APP_VERSION,
@@ -53,17 +67,67 @@ export function collectDebugBundle(input: DebugBundleInput = {}): DebugBundleRes
     env: { GROOVE_MCP_OUT: process.env.GROOVE_MCP_OUT ? "set" : "unset" },
     ...(input.note ? { note: input.note } : {}),
     manifest: MANIFEST,
-    omissions: OMITTED,
+    omissions: omitted,
   };
-  const json = `${JSON.stringify(bundle, null, 2)}\n`;
-  const filename = `groove-debug-${collectedAt.replace(/[:.]/g, "-")}.json`;
+  const encoder = new TextEncoder();
+  const entries: TarEntry[] = [
+    { name: "bundle.json", bytes: encoder.encode(`${JSON.stringify(bundle, null, 2)}\n`) },
+    { name: "environment.json", bytes: encoder.encode(`${JSON.stringify(bundle.env, null, 2)}\n`) },
+  ];
+  if (input.arrangement) {
+    entries.push({ name: "arrangement.groove.json", bytes: encoder.encode(`${JSON.stringify(input.arrangement, null, 2)}\n`) });
+  } else {
+    omitted.push("the arrangement: no arrangement was passed, so this archive cannot reproduce the work it came from");
+  }
+  for (const file of input.files ?? []) {
+    if (file.bytes.length > DEBUG_BUNDLE_FILE_LIMIT) {
+      omitted.push(`${file.name}: ${file.bytes.length} bytes is above the ${DEBUG_BUNDLE_FILE_LIMIT} byte ceiling, so it is named rather than cut`);
+      continue;
+    }
+    entries.push({ name: `files/${file.name.replace(/^\/+/, "")}`, bytes: file.bytes });
+  }
+  const list = entries.map((entry) => `| \`${entry.name}\` | ${entry.bytes.length} |`).join("\n");
+  const carriesWork = Boolean(input.arrangement);
+  const readme = [
+    "# Groove debug bundle",
+    "",
+    `Written ${collectedAt} by version ${APP_VERSION}.`,
+    "",
+    carriesWork
+      ? "**This archive carries the work itself**, in `arrangement.groove.json`, because a fault is easiest to reproduce from the work that caused it. Read that file's contents before sending the archive to anyone."
+      : "This archive carries no work content: no arrangement was available when it was collected.",
+    "",
+    "## What is inside",
+    "",
+    "| file | bytes |",
+    "|---|---|",
+    list,
+    "",
+    "## What each part is for",
+    "",
+    ...MANIFEST.map((part) => `- **${part.section}**: ${part.what} — ${part.why}`),
+    "",
+    "## What could not be collected, and why",
+    "",
+    ...(omitted.length ? omitted.map((line) => `- ${line}`) : ["- nothing: every part was collected"]),
+    "",
+  ].join("\n");
+  entries.push({ name: "README.md", bytes: encoder.encode(readme) });
+  entries.push({
+    name: "manifest.json",
+    bytes: encoder.encode(`${JSON.stringify({ collectedAt, carriesWork, entries: entries.map((entry) => ({ name: entry.name, bytes: entry.bytes.length })), omitted }, null, 2)}\n`),
+  });
+  const archive = gzipSync(buildTar(entries), { level: 9 });
+  const filename = `groove-debug-${collectedAt.replace(/[:.]/g, "-")}.tar.gz`;
   const file = path.join(dir, filename);
-  writeFileSync(file, json);
+  writeFileSync(file, archive);
   return {
     path: file,
     filename,
-    bytes: Buffer.byteLength(json),
+    bytes: archive.length,
+    entries: entries.map((entry) => entry.name),
     sections: Object.keys(bundle),
-    omitted: OMITTED.map((line) => line.split(":")[0]!),
+    omitted,
+    carriesWork,
   };
 }
