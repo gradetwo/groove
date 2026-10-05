@@ -9442,3 +9442,25 @@ problems: **[]** ✓
 **⇒ 结论 ✓**：工具条密度**有读数 ✓、有契约 ✓、有门 ✓、且当前在契约内** ✓ ⇒ 属"**已具备**"，记档而非改动 ✓
    ⚠️ 剩下同类未跑探针 ✓（`probe:skins:full` ✓／`probe:score-ink` ✓／`probe:arrangement(-audio/-undo)` ✓／`probe:continuity` ✓）
      ⇒ 下一轮继续按同法跑 ✓（每条都可能给一格真实读数 ✓）
+
+### 四百零六、🎼 **两条探针的读数：乐谱墨色（可读性 ✓）与音符连续性**（2026-10-05 15:25 ✓）
+
+```
+**同一把尺子 ✓**：继续跑**从未跑过**的探针 ✓（每条给一格真实读数 ✓）。
+**① `npm run probe:score-ink` ✓（exit=0 ✓）—— 乐谱墨色对比度 ✓**：
+   | 皮肤 | 墨／底 | 对比度 |
+   · default ✓ | rgb(233,231,224) on rgb(26,28,34) | **13.76 : 1** ✓
+   · minimal ✓ | rgb(20,20,20) on rgb(240,240,240) | **16.17 : 1** ✓
+   · comic ✓ | rgb(17,16,20) on rgb(236,229,212) | **15.09 : 1** ✓
+   · soviet ✓ | rgb(237,228,204) on rgb(47,51,55) | **10.05 : 1** ✓
+   · sovietYears ✓ | rgb(17,17,17) on rgb(222,217,201) | **13.38 : 1** ✓
+   · pixel ✓ | rgb(232,232,240) on rgb(40,43,59) | **11.50 : 1** ✓
+   ⭐ 口径写在输出里 ✓：**正文下限 4.5:1**（WCAG 2.1 SC 1.4.3 ✓）／**图形 3:1**（SC 1.4.11 ✓）
+   ⇒ ⭐ **最低 10.05 : 1** ✓ ⇒ **六套皮肤全部远高于下限** ✓；每套 **199/275** 形状 ✓
+   且末行确认 ✓："every skin draws the stave in the skin's ink, **and redraws with the next one**" ✓（切换会重绘 ✓）
+**② `npm run probe:continuity` ✓（exit=0 ✓）—— 音符事件连续性 ✓**：
+   `✅ uk-garage/lead: no step at the note events` ✓ ⇒ ⭐ 即在音符事件处**没有台阶**（包络连续 ✓）
+**⇒ 结论 ✓**：两条**都通过** ✓ ⇒ 记档 ✓（属"已具备" ✓，无需改动 ✓）
+**⚠️ 仍未见底的一类 ✓**：`probe:arrangement` ✓／`probe:arrangement-audio` ✓／`probe:arrangement-undo` ✓／
+   `probe:live-arrangement` ✓／`probe:headless(-silence)` ✓／`probe:skins:full` ✓／`probe:scroll` ✓
+   ⇒ 下一轮继续同法跑 ✓（能跑就跑 ✓，跑不了的**明说口径** ✓ 并进 `needs` ✓）
