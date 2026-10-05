@@ -12386,3 +12386,25 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未修 ✗**（⭐ 余量用尽 ✓）
 ```
 
+### 四百九十四、🎯 **`mcpCoverage` 第二条的规则逐字到手**（2026-10-06 00:45 ✓）
+
+```
+**⭐ 原文 ✓**（`src/test/mcpCoverage.test.ts:112–135` ✓）：
+  ⭐ `const exported = [...module.matchAll(/^export function (\w+)/gm)]…` ✓（⭐ 取 `mcp/arrangement.ts` ✓）
+  ⭐ `const NOT_A_TOOL = new Set([ "clearMcpArrangements" ✓, "edit" ✓, "flattenMcpArrangement" ✓,
+    "notesInBarRange" ✓, "summariseArrangement" ✓, "requireArrangement" ✓, "arrangementFromArgs" ✓ ])` ✓（**7 个** ✓）
+  ⭐ `const unreachable = exported.filter((name) => !NOT_A_TOOL.has(name) && !registry.includes(`` `${name}(` ``));` ✓
+**⇒ 规则 ✓**：⭐ `mcp/arrangement.ts` 的每个导出 ⭐ **要么在 `NOT_A_TOOL` 里** ✓ ⭐ **要么被 `registry` 源码文本点名** ✓
+  ⇒ ⚠️ ⭐ 而 ⭐ **我的调用点在 `registryFiles.ts`** ✗ —— ⭐ 判据读的是 ⭐ `registrySource()` ✓
+    ⇒ ⭐ 若它只读 `mcp/registry.ts` ✗ ⇒ ⭐ **即便 `import_groove` 调用了它，判定仍可能看不见** ✗
+      ⇒ ⭐ 那就**必须**登记进 `NOT_A_TOOL` ✓ **并写明理由** ✓（⭐ 该名单的注释正是这个用法 ✓：
+        ⭐ "⭐ Exported for a caller that is not a tool: the internal helpers the tools are built from" ✓）
+    ⇒ ⚠️ ⭐ 但 `putMcpArrangement` **不是内部助手** ✗ —— ⭐ 它是**被工具调用的操作** ✓
+      ⇒ ⭐ 因此**优先查 `registrySource()` 的真实范围** ✓（⭐ 本轮正在量 ✓）
+**⭐ 本地与 CI 的差异 ✓**：⭐ 带覆盖率跑本机 ✓ ⇒ ⭐ 用例 **5 passed** ✓ 但 ⭐ **退出码 1** ✗
+  ⇒ ⭐ 原因仍是那条**已知的覆盖率插件依赖错** ✓（`brace-expansion` ✓）⇒ ⭐ 所以本机**无法**用它和 CI 对照 ✗
+  ⇒ ⭐ 结论 ✓：⭐ 差异**仍未解释** ✗（⭐ 我不编 ✓）
+**⏳ 未修 ✗**；⭐ 修法候选 ✓：⭐ ① 查 `registrySource()` 范围 ✓（⭐ 若含 `registry*.ts` ⇒ 落 `import_groove` 即够 ✓）
+  ⭐ ② 否则 ⭐ 登记 `NOT_A_TOOL` ＋ ⭐ 写明"⭐ 它由 `import_groove` 调用，⭐ 而该工具在 `registryFiles.ts`" ✓
+```
+
