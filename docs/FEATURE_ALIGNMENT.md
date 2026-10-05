@@ -153,3 +153,14 @@
 **⚠️ 隐私取舍（明写 ✓）**：⭐ 若传入编曲 ✓ ⇒ ⭐ **包内含作品内容** ✓ ⇒ ⭐ `README.md` **显眼写明** ✓；⭐ 未传编曲时 ⭐ 包内含**不含作品内容** ✓ 且 `omitted` 写明原因 ✓
 **判据读数 ✓**：⭐ `src/test/mcpDebugBundle.test.ts` **4 用例** ✓（⭐ **真实解包往返** ✓：`gunzip` ＋ `readTar` ✓）｜⭐ `src/test/tarArchive.test.ts` **3 用例** ✓｜⭐ 可读性 ✓／覆盖 ✓／死导出预算 ✓／`check:mcp` ✓｜⭐ 七道快门全 0 ✓｜⭐ 两处均已**验能红** ✓
 
+## 2026-10-05 23:21 回填（第 4 条规矩：改完实现回来改表）
+
+| 面 | 变化 | 依据 |
+|---|---|---|
+| ⭐ **系统** | ⭐ 共享 tar 写入器 ✓（`src/features/debug/tar.ts` ✓）＋ ⭐ 两侧各自压缩 ✓（Node `zlib` ✓／浏览器 `CompressionStream` ✓） | `0abfcb9` ✓ |
+| ⭐ **MCP 面** | ✅ `collect_debug_bundle` 产出 `.tar.gz` ✓（`945a05a` ✓） | `945a05a` ✓ |
+| ⭐ **Web 面** | ✅ ⭐ **顶栏按钮改为产出同一 `.tar.gz`** ✓ —— 内含 `bundle.json` ✓／`environment.json` ✓／`manifest.json` ✓／`README.md` ✓／⭐ 若传入编曲 ⇒ `arrangement.groove.json` ✓／⭐ 相关文件 ⇒ `files/…` ✓（⭐ ≤ 8 MiB ✓，⭐ 超限记名不截断 ✓） | 本轮 ✓ |
+
+**⭐ 两侧现已同名规同形状 ✓**：⭐ `groove-debug-<时间>.tar.gz` ✓｜⭐ 同一 tar 写入器 ✓｜⭐ 同一 `README`／`manifest` 结构 ✓｜⭐ 同一 8 MiB 上限 ✓｜⭐ 同一"载作品时写明"规则 ✓
+**判据读数 ✓**：⭐ Web 判据 **4 用例** ✓（⭐ **真实解包往返** ✓：`DecompressionStream` ＋ `readTar` ✓）｜⭐ tar 判据 3 ✓｜⭐ MCP 判据 4 ✓｜⭐ 可读性 ✓／覆盖 ✓／死导出预算 ✓／`i18nKeys` ✓／`headerNav` ✓｜⭐ 七道快门 ＋ 皮肤门 ＋ `check:mcp` 全 0 ✓
+

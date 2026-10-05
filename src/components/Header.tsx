@@ -26,7 +26,7 @@ import {
   Bug,
 } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
-import { collectWebDebugBundle, downloadJsonFile, webDebugBundleFileName } from "../features/debug/webDebugBundle";
+import { collectWebDebugArchive, downloadArchive, webDebugBundleFileName } from "../features/debug/webDebugBundle";
 import { GENRE_INDEX } from "../data/index/genresIndex";
 import { CURRENT_CLIENT_VERSION } from "./UpdatesModal";
 
@@ -546,9 +546,10 @@ export const Header: React.FC<HeaderProps> = ({
 
         <button
           type="button"
-          onClick={() => {
-            const bundle = collectWebDebugBundle({});
-            downloadJsonFile(webDebugBundleFileName(bundle.collectedAt), `${JSON.stringify(bundle, null, 2)}\n`);
+          onClick={async () => {
+            const at = new Date().toISOString();
+            const archive = await collectWebDebugArchive({});
+            downloadArchive(webDebugBundleFileName(at), archive.blob);
           }}
           className="p-1.5 border border-dashed border-line hover:border-accent rounded-lg text-text-sub hover:text-accent bg-panel2"
           title={t("debug_bundle")}

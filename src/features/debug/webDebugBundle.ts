@@ -1,4 +1,5 @@
 import { APP_VERSION } from "../../version";
+import { buildTar, type TarEntry } from "./tar";
 
 /**
  * ⭐ **The web side's debug bundle: the same shape as the server's, collected on demand and downloaded as one file.**
@@ -9,7 +10,8 @@ import { APP_VERSION } from "../../version";
  * stated fact rather than a silence.
  */
 export interface WebDebugBundleInput {
-  arrangement?: { tracks?: number; bars?: number; notes?: number };
+  arrangement?: unknown;
+  files?: Array<{ name: string; bytes: Uint8Array }>;
   audioContext?: { sampleRate?: number; state?: string };
   note?: string;
 }
@@ -20,7 +22,7 @@ export interface WebDebugBundle {
   runtime: Record<string, unknown>;
   viewport: Record<string, number>;
   timings: Record<string, number | undefined>;
-  arrangement?: WebDebugBundleInput["arrangement"];
+  arrangement?: { tracks?: number; bars?: number; notes?: number };
   audioContext?: WebDebugBundleInput["audioContext"];
   note?: string;
   manifest: Array<{ section: string; what: string; why: string }>;
@@ -76,19 +78,102 @@ export function collectWebDebugBundle(input: WebDebugBundleInput = {}): WebDebug
   };
 }
 
+/** ⭐ A ceiling per file, the same one the server uses, so neither side can grow a bundle without bound. */
+export const WEB_DEBUG_FILE_LIMIT = 8 * 1024 * 1024;
+
+export interface WebDebugArchive {
+  blob: Blob;
+  entries: string[];
+  carriesWork: boolean;
+  omitted: string[];
+}
+
 /**
- * ⭐ **One file, downloaded, named the same way the server names its bundle**, so the two can sit side by side in a report.
+ * ⭐ **The archive, built the same way the server builds its own**: the metadata bundle, a readme that explains each part, a
+ * manifest, the arrangement when the caller can read it, and any related files under the ceiling. The tar writer is the
+ * module both sides share; only the compression differs, and the browser has a stream for it.
  */
-export function downloadJsonFile(filename: string, text: string): void {
-  const blob = new Blob([text], { type: "application/json" });
+export async function collectWebDebugArchive(input: WebDebugBundleInput = {}): Promise<WebDebugArchive> {
+  const bundle = collectWebDebugBundle(input);
+  const omitted = [...bundle.omissions];
+  const encoder = new TextEncoder();
+  const entries: TarEntry[] = [
+    { name: "bundle.json", bytes: encoder.encode(`${JSON.stringify(bundle, null, 2)}\n`) },
+    { name: "environment.json", bytes: encoder.encode(`${JSON.stringify(bundle.runtime, null, 2)}\n`) },
+  ];
+  if (input.arrangement) {
+    entries.push({ name: "arrangement.groove.json", bytes: encoder.encode(`${JSON.stringify(input.arrangement, null, 2)}\n`) });
+  } else {
+    omitted.push("the arrangement: the caller did not pass it, so this archive cannot reproduce the work it came from");
+  }
+  for (const file of input.files ?? []) {
+    if (file.bytes.length > WEB_DEBUG_FILE_LIMIT) {
+      omitted.push(`${file.name}: ${file.bytes.length} bytes is above the ${WEB_DEBUG_FILE_LIMIT} byte ceiling, so it is named rather than cut`);
+      continue;
+    }
+    entries.push({ name: `files/${file.name.replace(/^\/+/, "")}`, bytes: file.bytes });
+  }
+  const carriesWork = Boolean(input.arrangement);
+  const readme = [
+    "# Groove debug bundle (web)",
+    "",
+    `Written ${bundle.collectedAt} by version ${bundle.appVersion}.`,
+    "",
+    carriesWork
+      ? "**This archive carries the work itself**, in `arrangement.groove.json`. Read that file's contents before sending the archive to anyone."
+      : "This archive carries no work content: no arrangement was available when it was collected.",
+    "",
+    "## What is inside",
+    "",
+    "| file | bytes |",
+    "|---|---|",
+    ...entries.map((entry) => `| \`${entry.name}\` | ${entry.bytes.length} |`),
+    "",
+    "## What each part is for",
+    "",
+    ...bundle.manifest.map((part) => `- **${part.section}**: ${part.what} — ${part.why}`),
+    "",
+    "## What could not be collected, and why",
+    "",
+    ...(omitted.length ? omitted.map((line) => `- ${line}`) : ["- nothing: every part was collected"]),
+    "",
+  ].join("\n");
+  entries.push({ name: "README.md", bytes: encoder.encode(readme) });
+  entries.push({
+    name: "manifest.json",
+    bytes: encoder.encode(
+      `${JSON.stringify({ collectedAt: bundle.collectedAt, carriesWork, entries: entries.map((entry) => ({ name: entry.name, bytes: entry.bytes.length })), omitted }, null, 2)}\n`
+    ),
+  });
+  // ⭐ A stream is fed by hand rather than taken from a Blob: not every environment gives a Blob one, and the bytes are
+  // already in hand.
+  const tar = buildTar(entries);
+  const source = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(tar);
+      controller.close();
+    },
+  });
+  // ⭐ The stream types disagree on the buffer flavour; the cast is narrow and local.
+  const compressed = source.pipeThrough(new CompressionStream("gzip") as unknown as ReadableWritablePair<Uint8Array, Uint8Array>);
+  return {
+    blob: await new Response(compressed).blob(),
+    entries: entries.map((entry) => entry.name),
+    carriesWork,
+    omitted,
+  };
+}
+
+/** ⭐ One download, named the same way the server names its archive, so the two sit side by side in a report. */
+export function downloadArchive(filename: string, blob: Blob): void {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = filename.endsWith(".json") ? filename : `${filename}.json`;
+  anchor.download = filename.endsWith(".tar.gz") ? filename : `${filename}.tar.gz`;
   anchor.click();
   URL.revokeObjectURL(url);
 }
 
 export function webDebugBundleFileName(at: string): string {
-  return `groove-debug-${at.replace(/[:.]/g, "-")}.json`;
+  return `groove-debug-${at.replace(/[:.]/g, "-")}.tar.gz`;
 }
