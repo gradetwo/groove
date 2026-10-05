@@ -347,7 +347,13 @@ if (cellBox) {
   const cy = cellBox.y + cellBox.height / 2;
   await page.mouse.move(cx, cy);
   await page.mouse.down();
-  await page.waitForTimeout(80);
+  /* 按下后保持不放，逐点采样 scrollY：判定滚动是否紧跟 pointerdown。 */
+  const samples = [];
+  for (let k = 0; k < 8; k++) {
+    samples.push(await page.evaluate(() => Math.round(window.scrollY)));
+    await page.waitForTimeout(100);
+  }
+  report.readings.scrollSamples = samples;
   await page.mouse.up();
 } else {
   await page.click(`[data-testid='${emptyCell}']`);
@@ -508,6 +514,7 @@ if (asJson) {
   line("   hit test at cell centre", JSON.stringify(r.hitTest));
   line("   selected track", `before=${JSON.stringify(r.selectedTrackBefore)} after=${JSON.stringify(r.selectedTrackAfter)}`);
         line("   focusin trace", JSON.stringify(r.focusin));
+  line("   scrollY samples while held", JSON.stringify(r.scrollSamples));
 line("   window scroll events", JSON.stringify(r.scrolls));
 line("   real pointerdown landed on", JSON.stringify(r.pointerHits));
 line("   note ids added", JSON.stringify((r.noteIdsAfter || []).filter((i) => !(r.noteIdsBefore || []).includes(i))));
