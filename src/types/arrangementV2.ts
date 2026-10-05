@@ -164,6 +164,8 @@ export interface NoteEvent {
 export interface ArrangementV2 {
   /** The v1 song this was projected from — **kept, not copied**, so nothing can drift out of step with it. */
   songId: string;
+  /** ⭐ **What a person calls it**; absent means unnamed. The v1 song had this and the arrangement did not. */
+  name?: string;
   tracks: TrackV2[];
   /**
    * ⭐ **What each track plays**, keyed by `trackId` — because notes are **content**, not identity, exactly as takes are.

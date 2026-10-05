@@ -288,6 +288,8 @@ export interface ArrangementSummary {
    * is a bar question.
    */
   steps: number;
+  /** ⭐ What a person calls it; absent means unnamed. */
+  name?: string;
   /** Anything that would stop it being heard: an empty arrangement, a sampler with no catalogue asset. */
   problems: string[];
 }
@@ -406,6 +408,7 @@ export function summariseArrangement(arrangementId: string, arrangement: Arrange
   }
   const allNotes = Object.values(arrangement.notesByTrack ?? {}).flatMap((notes) => notes ?? []);
   return {
+    ...(arrangement.name === undefined ? {} : { name: arrangement.name }),
     arrangementId,
     songId: arrangement.songId,
     ...(arrangement.bars === undefined ? {} : { bars: arrangement.bars }),
@@ -424,6 +427,8 @@ export interface CreateMcpArrangementInput {
   templateId?: string;
   /** The kind the blank template's single track gets; ignored when a template is named. */
   blankKind?: TrackKindV2;
+  /** ⭐ What a person calls it; absent means unnamed. */
+  name?: string;
 }
 
 export function createMcpArrangement(input: CreateMcpArrangementInput = {}): ArrangementSummary {
@@ -444,7 +449,7 @@ export function createMcpArrangement(input: CreateMcpArrangementInput = {}): Arr
    * `sample` is kept — the asset is identity ("a sampler with no instrument would be silent"), not content. The
    * detector in `summariseArrangement` names any starter content that still reaches a reply.
    */
-  const base: ArrangementV2 = { ...seeded, notesByTrack: {} };
+  const base: ArrangementV2 = { ...seeded, notesByTrack: {}, ...(input.name === undefined ? {} : { name: input.name }) };
   const id = `arrangement-${++idSequence}`;
   arrangements.set(id, base);
   return summariseArrangement(id, base);
