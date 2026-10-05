@@ -10300,3 +10300,4 @@ problems: **[]** ✓
 **⇒ 剩下的可做项 ✓（按"小投入大回报"排序 ✓）**：b 的音域字段 ✓ → `worker.ts:1333` 一行
    （每轨预热进度被 `reportOf` 丢 ✓）→ `dryRun` ✓ → 报出已有的 `decodeMs/networkMs` ✓
 ```
+```
