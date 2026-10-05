@@ -13964,3 +13964,22 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 树干净 ✓）
 ```
 
+### 五百四十五、⭐ **播种家：两块拼图已找到 ✓**（2026-10-06 03:33 ✓）
+
+```
+**⭐ 拼图一 ✓**：⭐ **`patternFromGenre(genre)`** ✓ —— ⭐ 正是 ⭐ v1 `create_song` 的播种原语 ✓
+  ⭐ 证据 ✓：⭐ `mcp/song.ts:213` ✓：⭐ `const seed = input.pattern ?? (input.genre ? patternFromGenre(input.genre) : undefined);` ✓
+  ⭐ 且 ⭐ `createMcpSong` 的 `name` 来自 ⭐ `input.name ?? input.genreId` ✓ ⇒ ⭐ **印证了 `name` 家的用途** ✓ ✓
+**⭐ 拼图二 ✓**：⭐ **`projectSongToV2(song: ProjectionInput): ArrangementV2`** ✓
+  ⭐ 位置 ✓：⭐ `src/data/arrangementProjection.ts:49` ✓ —— ⭐ 即"⭐ **v1 歌 ⇒ v2 编曲**"的投影 ✓
+  ⭐ 它已被 ⭐ `arrangementFromGroovePackage` ✓ 与 ⭐ `drumLaneProjection.test.ts` ✓ 使用 ✓（⭐ 早先普查已知 ✓）
+**⭐ 反向不可用 ✓**：⭐ `compileArrangementToPattern` ✓（`arrangementCompile.ts:294` ✓）是 ⭐ **v2 ⇒ pattern** ✗
+  ⇒ ⭐ 方向相反 ✓ ⇒ ⭐ 播种要用 ⭐ `projectSongToV2` ✓ ✓
+**⭐ 因此播种家的做法 ✓**：
+  ⭐ ① ⭐ `patternFromGenre(genre)` ✓ ⇒ ⭐ 得到一个 ⭐ `SequencerPattern` ✓
+  ⭐ ② ⭐ 把它包成一个最小的 ⭐ `ProjectionInput` ✓ ⇒ ⭐ 交给 ⭐ `projectSongToV2` ✓ ⇒ ⭐ 得到带轨的 ⭐ `ArrangementV2` ✓
+  ⭐ ③ ⭐ `create_arrangement` 接受 ⭐ `genreId?` ✓ ⇒ ⭐ 在建编曲时做 ①＋② ✓
+**⚠️ ⭐ 唯一余下未知 ✗**：⭐ `ProjectionInput` 的**字段**是什么 ✗（⭐ 本轮已在查 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
