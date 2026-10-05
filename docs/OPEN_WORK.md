@@ -11015,3 +11015,20 @@ export async function prepareArrangementAudioLanes(input: {
 · ⚠️ ⭐ **本轮未落码** ✗（余量不足 ✓）；⭐ 但**障碍已定位、方案已定** ✓ ⇒ 下一轮可写 ✓
 ```
 
+**⭐ 步骤 2 的两处失败（2026-10-05 21:06 ✓，已回退 ✓ 树脏 0 ✓）**：
+```
+· ⭐ 改动已完成且基本通过 ✓：`tsc=0` ✓｜`lint=0` ✓｜⭐ **`check:mcp` 122/123** ✗｜判据组 **14/15** ✗
+· ⭐ **两处失败同一原因 ✅**：⭐ 旧判据仍用**旧入参** ✓（给 `pattern` ✓、不给 `trackId` ✗）
+  ⇒ ⭐ 报错原文 ✓：`Invalid input: expected string, received undefined at trackId` ✓
+· ⭐ **准确位置 ✓（下一轮就改这两处 ✓）**：
+  ① ⭐ `scripts/check_mcp.mjs` ✓：用例名 ⭐ "**set_arrangement_vocal_melody binds one syllable per note and warns
+     about the 倒字**" ✓ —— ⭐ 要改成"**先 `create_arrangement` ⇒ 再带 `arrangementId` ＋ `trackId` 调用**" ✓
+  ② ⭐ `src/test/mcpSchemaPassthrough.test.ts` ✓：用例 ⭐ "**keeps a lyric the vocal tool just bound when the pattern
+     goes back through a tool**" ✓ —— ⭐ 名字与做法都是 **v1 形状** ✗（"pattern goes back through a tool" ✓）
+     ⇒ ⭐ 按"不并存 ✗"应改为 ⭐ **v2 形状** ✓：对 **arrangement** 插入歌词 ⇒ 再 `get_arrangement` 读回 ✓
+· ⭐ **本轮净产出 ✓**：⭐ 转换方案**已验证可编译可 lint** ✓（⭐ 仅差两个旧判据未同步 ✓）
+  ⇒ ⭐ 转换规则已定 ✓：`startBeats = step / 16 × 4` ✓（`STEPS_PER_BAR` 来自 `src/data/noteEvents.ts` ✓）｜
+    音长 **一步** ✓｜力度 **0.8 明写** ✓；⭐ 引擎返回的音节记录**自带 `pitch` 与 `step`** ✓ ⇒ **不必读 pattern 的步进** ✓
+· ⚠️ ⭐ 纪律 ✓：门红**不提交** ✓（⭐ 教训 94 ✓）⇒ 已回退 ✓
+```
+
