@@ -9422,3 +9422,23 @@ problems: **[]** ✓
 **⇒ 结果 ✓**：表内 `?` 计数 **0** ✓ ⇒ ⭐ **每一格都明确回答了"有／没有（附原因）"** ✓；
    仍标 ✗ 的只有**设计如此**（挑战 ✓／硬件控制台 ✓）与**未实现**（人声合成 ✓）与**触发时机**（PWA 按钮条件显示 ✓）
 ⚠️ 又一次 `echo` 里写反引号 ✗（shell 当命令 ✓，数据无损 ✓）⇒ 硬习惯照旧 ✓：`echo` 里只用「」 ✓
+
+### 四百零五、📏 **另一格从未跑过的探针：工具条密度（已是 CI 门 ✓）**（2026-10-05 15:24 ✓）
+
+```
+**为什么跑 ✓**：同一把尺子（今晚正是这样发现了延迟／CPU／启动三处 ✓）⇒ 把**从未跑过的探针**逐个跑一遍 ✓。
+**① `npm run probe:toolbar` ✓（`scripts/measure_toolbar_density.mjs`，546 行 ✓；exit=0 ✓）读数 ✓（pc, 1440×900 ✓）**：
+   · **可见控件 25 个** ✓（15 个 distinct tier id ✓，DOM 里 26 ✓）· **视觉行数 2** ✓
+   · **工具条高 110 px ＝ 视口 12.2%** ✓ ⭐ —— 而它存在的**原因**是一个手工测量 ✓：
+     当初 **38 个控件／9–10 行／215 px ＝ 24–27%** ✗（`PRODUCT_PLAN_v2.1.0.md` G.10 ✓）⇒ ⭐ **已瘦到约一半以下** ✓
+   · 分层 ✓：`{"1":24,"2":1}` ✓；**默认低于 Tier 1 的只有 1 个** ✓ 且是**声明过的例外**（arrangement ✓）
+   · "More" 触发器 ✓：`left=1320 right=1404`（视口 1440 ✓）⇒ ⭐ **滚动到尽头后可见＝true** ✓ ⇒
+     横向滚动（`scrollWidth 996 > clientWidth 976` ✓）是**设计如此** ✓，且可达性**成立** ✓ ⇒ **无缺陷** ✓
+**② 它是不是门 ✓ —— 是 ✓（无需新增 ✓）**：
+   · `src/test/toolbarTiers.test.tsx` ✓ **导入**密度契约 ✓｜`src/test/readabilityAudit.test.ts` ✓／`desktopCharacters.test.ts` ✓ 亦引用 ✓
+   · ⭐ **`ci.yml` 里直接跑它** ✓ ⇒ **CI 上已生效** ✓
+   · 且脚本自述**刻意不擅自失败** ✓（"a gate must never fail a build for behaving as designed" ✓）：谓词从
+     `src/components/sequencer/toolbarTiers.ts` **导入** ✓，而不是在探针里重写一遍 ✓
+**⇒ 结论 ✓**：工具条密度**有读数 ✓、有契约 ✓、有门 ✓、且当前在契约内** ✓ ⇒ 属"**已具备**"，记档而非改动 ✓
+   ⚠️ 剩下同类未跑探针 ✓（`probe:skins:full` ✓／`probe:score-ink` ✓／`probe:arrangement(-audio/-undo)` ✓／`probe:continuity` ✓）
+     ⇒ 下一轮继续按同法跑 ✓（每条都可能给一格真实读数 ✓）
