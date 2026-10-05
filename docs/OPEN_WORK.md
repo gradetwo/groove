@@ -13757,3 +13757,28 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 登记已完成 ✓）
 ```
 
+### 五百三十八、⭐ **缺口 ⑤ 的移植配方（`maxDurationSec` ⇒ v2 渲染器 ✓）**（2026-10-06 03:16 ✓）
+
+```
+**⭐ 量到 ✓（`registryArrangement.ts:195` ✓）**：⭐ `render_arrangement` 已有 ✓：
+  ⭐ `arrangementId` ✓／`format` ✓／`bitrateKbps` ✓／⭐ **`bars`（1–64 ✓；描述：⭐ "1 is one pass through the whole arrangement" ✓）**／
+  `sampleRate` ✓／`channels` ✓／`headless` ✓
+  ⭐ 且 ⭐ 它的描述**已经**拼了 ⭐ `renderCostSentence()` ✓ ＋ ⭐ `renderBudgetSentence()` ✓
+  ⇒ ⭐ 即 ⭐ **成本与预算的话都在 ✓，⭐ 只缺**那一道守卫** ✗** ✓
+**⭐ 照抄对象 ✓（`registrySong.ts:293–300` ✓）**：
+  ⭐ `const budget = args.maxDurationSec as number | undefined;` ✓
+  ⭐ `if (budget !== undefined) { const estimate = summariseSong(song).secondsEstimate;` ✓
+    ⭐ `if (estimate > budget) return failure(\`this song is about ${estimate}s and maxDurationSec is ${budget}s — shorten the arrangement, raise the limit, or render one section with…\`); }` ✓
+**⭐ 移植的两处 ✓**：
+  ⭐ ① ⭐ schema 加 ⭐ `maxDurationSec: z.number().int().min(1).optional()` ✓（⭐ 描述照旧引 ⭐ `renderBudgetSentence()` 的语义 ✓）
+  ⭐ ② ⭐ handler 里、⭐ **渲染之前** ✓：⭐ 取编曲的 ⭐ `bars` ✓ 与 ⭐ `bpm` ✓ ⇒
+    ⭐ `const estimate = estimateRenderCost({ bars, bpm }).audioSeconds;` ✓（⭐ 本会话加的估算 ✓）
+    ⇒ ⭐ 若 ⭐ `estimate > budget` ⇒ ⭐ `failure(...)` ✓，⭐ 消息按 v2 措辞 ✓：
+      ⭐ "⭐ this arrangement is about Ns and maxDurationSec is Ms — shorten it, raise the limit, or render fewer bars" ✓
+**⭐ 判据 ✓**：⭐ 新例 ✓ —— ⭐ ① ⭐ 给一个**极小**的 `maxDurationSec` ✓ ⇒ ⭐ 必须**失败** ✓ 且 ⭐ 消息含
+  `maxDurationSec` ✓；⭐ ② ⭐ 给一个**足够大**的 ✓ ⇒ ⭐ 正常渲染 ✓ ⇒ ⭐ **能红** ✓
+**⭐ 这一处的价值 ✓**：⭐ 它**同时** ✓（⭐ a ✓）⭐ 关掉缺口 ⑤ ✓（⭐ 你报告里最在意的"⭐ 先拒答" ✓）
+  ⭐ 且（⭐ b ✓）⭐ 让 ⭐ `render_song` ⭐ **具备退场条件** ✓ ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 配方到行 ✓
+```
+
