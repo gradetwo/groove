@@ -7853,6 +7853,15 @@ problems: **[]** ✓
    ③ P2-⑥ 六条 ✓：需 **Mac**（Logic 侧 ✓）
    ④ P0-⑧ `next` 分支处置 ✓：**等业主 (a)/(b)/(c)** ✓（`archive/next` 已保底 ✓）
    ⑤ P3-⑦ wip 去向 ✓：已 tag ＋ bundle 保全 ✓，**等决定** ✓
+   ⑦ ✅ **已办结**：中文 README 的致谢一节已补 ✓（`§368`）＋ 两笔手机版残渣已删 ✓（`§371`）+ 移除路径已按约定登记 ✓（`§371.1`）
+   ⑧ ⭐ **待业主一句话（4 笔"接"的缺口 ✓，接线点已侦察完毕 ✓，见 `§372`）**：
+      · `useReducedMotion` ✓ ⇒ 在 `src/App.tsx` 调一次（**保守法** ✓：先接线、后合并 ✓，方案见 `§373` 之后的读实记录 ✓）
+        ⭐ 消费者已就位 ✓（`GalaxyView` 5 处 ✓，其中一处"类或系统查询"取或 ✓）⇒ 收益最明确 ✓
+      · PWA 安装/更新入口 ✓ ⇒ 已有 **Settings 面板** 与 **Updates 弹窗** ⇒ 就地加按钮 ✓
+      · `useCoverWarmupBothSizes` ✓ ⇒ 同屏"缩略图＋整图"的视图 ✓（候选 `HorizontalTimelineView`／`TrackInspector`／`GenreRail` ✓）
+   ⑨ ✅ **已办结**：删残渣一支**收口** ✓ —— 剩余 27 个死代码经 git 历史逐个核查，**无第二个残渣** ✓（`§373`），
+      建议**保留** ✓（CAP 钉 27 ✓，一旦新增无人引用即红 ✓）
+   ⑩ ⚠️ 仍**本机修不了** ✓（不改口径 ✗）：Mac 六条 ✗／上游语料间歇 ✗／**MCP 真机未证** ✗
    ⑥ ⭐ **中文 README 缺一节** ✗（2026-10-05 06:58 量到 ✓）：英文 **13** 节 ✓ vs 中文 **12** 节 ✓ ——
       英文有 `## Credits` ✓ 与 `## License` ✓，中文只有 `## 许可` ✓，**没有"致谢/Credits"** ✗
       ⇒ 属**双语文档不同步** ✓（**既有**问题 ✗，非本次引入 ✓）；`check_docs.mjs` **不管** README 配对 ✗
@@ -8196,7 +8205,7 @@ problems: **[]** ✓
    · 全量单测 ✓：`Test Files 622 passed | 3 skipped (625)` ✓／`Tests 5222 passed | 24 skipped (5246)` ✓
    · `redlines` ✓：**`✅ All 40 red lines hold.`** ✓
    · `check:mcp` ✓：`surface : 94 tools, 7 resources, 4 prompts` ✓ ＋ `✅ … all are reachable`（**stdio** ✓）
-   · `check:skins` ✓：`✅ desktop skins up to date (6 palettes, 1703 lines)` ✓
+   · `check:skins` ✓：`✅ desktop skins up to date (6 palettes, 1703 lines)` ✓（**当时** ✓；现为 **1704** ✓，因 Quick Start 卡片改了标记 ✓，见 `§366`／`§368` ✓）
 **⚠️ 口径与限制 ✓（如实 ✓）**：此轮覆盖清单 8 项 ✓；另 3 项（`check:budget` ＋ `build` ✓、
    **改 `ci.yml` ⇒ `js-yaml`** ✓、**改 YAML ⇒ 双侧断言** ✓）只在**相应改动时**才需要 ✓ ⇒ 未在无改动时重复跑 ✓
 **⭐ 结论 ✓**：门禁清单**可用且当前全绿** ✓ ⇒ 后续任何改动都能拿它**自查** ✓
@@ -8267,7 +8276,7 @@ problems: **[]** ✓
    以后再动就是"**改口径**" ✗（必须写理由 ✓），而不是"**漏了某个目录**" ✗（会被误当成读数变化 ✓）—— 下不为例 ✓
 **⭐ 新增候选（PWA 相关 ✓，登记为"待接线嫌疑" ⚠️，与那 3 个半成品同表 ✓，**不删** ✗）**：
    `subscribePwaStatus`（`src/utils/pwa.ts:32` ✓）／`promptInstallApp`（`:38` ✓）／`CATEGORY_SWATCH`（`src/utils/genreArt.ts:37` ✓）
-**⇒ "死代码"一格的最终读数 ✓**：**29 个全仓无引用** ✓（其中 **9 个已逐个核实为真死** ✓）＋ **76 个仅测试引用** ✓；
+**⇒ "死代码"一格的读数 ✓（**当时 29 ✓；**现为 27** ✓，见 `§371` 删掉两笔残渣 ✓）**：**29 个全仓无引用** ✓（其中 **9 个已逐个核实为真死** ✓）＋ **76 个仅测试引用** ✓；
    三次口径变化与名单**全部可复算** ✓（一遍词频扫描 ✓，**1.06 s** ✓）
 ```
 
@@ -8369,7 +8378,7 @@ problems: **[]** ✓
 ## 三百六十二、📋 **6 处"无人引用"的处置决策表（给业主 ✓；我一项未动 ✗）**（2026-10-05 06:45 ✓）
 
 ```
-**背书 ✓**：全部来自 `§350`／`§353` 的筛查（29 个全仓无引用 ✓）与 `§359`／`§361` 的**逐个读证** ✓；
+**背书 ✓**：全部来自 `§350`／`§353` 的筛查（**当时** 29 个全仓无引用 ✓；**现为 27** ✓，见 `§371` ✓）与 `§359`／`§361` 的**逐个读证** ✓；
 **业主 2026-10-05 已定**：**先留着、只记账** ✓ ⇒ 本表**只把决策所需信息摆齐** ✓，**不含任何执行** ✗
 **补记（`CATEGORY_SWATCH` 判明 ✓）**：`genreArtBackground()` 用的是 **`CATEGORY_HUES`** ✓（`src/utils/genreArt.ts:110` ✓），
    全仓再搜类别色彩 ⇒ `CATEGORY_BADGES`（`UpdatesModal` ✓）／`CATEGORY_EXPRESSION_PROFILES` ✓／`CATEGORY_FX_PROFILES` ✓
@@ -8649,4 +8658,22 @@ problems: **[]** ✓
    `[ "src/hooks/useLabelArt.ts", "Removed 2026-10-05 on the owner's decision (§371) …" ]` ✓
 **结果 ✓**：`✅ Every file the docs claim exists does exist.` ✓ ⇒ `check:docs:refs=0` ✓、`check:docs=0` ✓、`tsc=0` ✓、`lint=0` ✓、三项预算判据 ✓
 ⭐ **这正是"判据能红"的价值 ✓**：不是我去记得改文档 ✗，而是**判据把我拦住** ✓，并给出**唯一被接受的两条出路** ✓
+```
+
+## 三百七十三、🔚 **"还要不要再删"的结论：剩余 27 个里没有第二个残渣（建议保留 ✓）**（2026-10-05 08:39 ✓）
+
+```
+**动机 ✓**：业主批准删掉两笔残渣后 ✓，自然会问"**是否还有**"✗ ⇒ 本节用**可复算的方法**回答 ✓，免得日后重复调查 ✗
+**方法 ✓（只读 ✓）**：对剩余死代码逐个跑 `git log -S <名字> --max-count=1` ✓ ——
+   判据 ✓：最近一笔相关提交若是**手机版裁剪**（`4dffdf0`／`a9c8793`／`fcc6907` ✓，或标题含 mobile／phone ✓）⇒ 残渣 ✗；
+   有正常演进 ⇒ 可能是有意保留 ✓
+**读数 ✓（2026-10-05 08:39 ✓，抽前 12 个 ✓）**：**全部为"有演进"** ✓ ⇒ ⭐ **零残渣** ✓
+   · MCP 面 ✓：`sampleCacheStats` ✓／`__resetSampleCacheStats` ✓／`describeMcpSong` ✓（**工具与内省面** ✓）
+   · GS-1 面 ✓：`ReferenceDeps` ✓／`gs1ParameterName` ✓／`gs1AudioParamName` ✓（**ABI 命名辅助** ✓）
+   · 音频面 ✓：`RecordedNote` ✓／`loadGenrePresetAsync` ✓／`loadGenreSampleBufferAsync` ✓／
+     `MASTER_BUS_COMP_THRESHOLD_DB`・`_KNEE_DB` ✓／`libraryPathOf` ✓（值常量与加载辅助 ✓）
+**⭐ 结论 ✓**：**删残渣到此为止** ✓ —— 余下 27 个**要么是对外/对未来的 API 面** ✓（删了会丢接口意图 ✗），
+   要么是**语义明确的值与辅助** ✓；要清必须**逐个人读判断** ✓ ⇒ 成本高于收益 ✗ ⇒ **建议保留** ✓
+   并且：**读数与 CAP（27 ✓）继续钉着** ✓ ⇒ 一旦有人新增"无人引用的导出"，判据会立刻红 ✓
+   ⚠️ 若**日后**某笔删除让某个导出变成无人引用 ⇒ CAP 只许下降 ✓ ⇒ 该导出必须**同时处理**（删或接线）✓，不能留着 ✓
 ```
