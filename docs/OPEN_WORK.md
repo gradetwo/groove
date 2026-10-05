@@ -12728,3 +12728,15 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 量测已入账 ✓
 ```
 
+**⭐ 量测补齐 ✓（2026-10-06 01:37 ✓）**：⭐ 全文件 `songId` **5 处** ✓，⭐ 只涉及 ⭐ **2 个工具** ✓：
+```
+⭐ `:59` ✓ ⭐ `normalize_loudness` 的 schema ✓（"the song to normalize" ✓）
+⭐ `:78` ✓ ⭐ 它的体内 ✓：`flattenMcpSong(String(args.songId))` ✗
+⭐ `:150` ✓ ⭐ 回包字段 ✓：`songId: song.id` ✓
+⭐ `:246` ✓ ⭐ `make_unique` 的 schema ✓（"the id create_song returned" ✓）
+⭐ `:254` ✓ ⭐ 它的体内 ✓：`songId: String(args.songId)` ✓
+**⇒ 因此 ④ 的实际范围 ✓**：⭐ **2 个工具** ✓（⭐ 另 5 个干净 ✓）⇒ ⭐ 比预想小 ✓
+  ⇒ ⭐ 顺序 ✓：⭐ ① `normalize_loudness` ⭐ 接 `arrangementId` ✓ ＋ ⭐ 加**峰值余量** ✓（⭐ 含执行顺序 ④ ✓）
+    ⭐ ② `make_unique` ⭐ 处置（⭐ 段落是 v1 ✓）⇒ ⭐ 然后 ④ 完成 ✓
+```
+
