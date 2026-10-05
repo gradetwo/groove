@@ -11748,3 +11748,32 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 目标保持 active ✓**（⭐ 迁移 ②④⑤⑥⑦ 与执行顺序 ②③④⑤⑥ 未做 ✓）
 ```
 
+### 四百七十五、⭐⭐ **完整 CI 门清单（本会话最贵的教训 ✓）**（2026-10-05 22:48 ✓）
+
+```
+**⭐ 事实 ✓**：⭐ `.github/workflows/ci.yml` 的作业 ⭐ "Typecheck, Lint, Unit Tests & Build" 跑 ⭐ **八道门** ✓
+  ⇒ ⚠️ 而我只跑了其中 ⭐ **三道** ✗ ⇒ ⭐ **连续 18 个提交判失败** ✗
+**⭐ 完整清单（照 workflow 原文 ✓，推送前逐条跑 ✓）**：
+  ① ⭐ `npm run check:actions` ✓（Actions Runtime Gate ✓）
+  ② ⭐ `npm run check:disabled-gates` ✓（Disabled Gates Ledger ✓）
+  ③ ⭐ `npm run version:check` ✓（Version Single-Source ✓）
+  ④ ⭐ `npm run docs:check` ✓（Documentation Baseline ✓ —— ⚠️ ⭐ **不是** `node scripts/check_docs.mjs` ✗，
+     ⭐ 两者都在 ✓；⭐ 我此前用错名字 ✓ ⇒ 教训 98 ✓）
+  ⑤ ⭐ `npm run typecheck` ✓（⭐ 等价于 `npx tsc --noEmit` ✓）
+  ⑥ ⭐ `npm run lint` ✓
+  ⑦ ⭐ `npm run redlines` ✓（Red-Line Gate ✓）⇒ ⭐ **真因就在这一道** ✓
+  ⑧ ⭐ `npm test` ＝ ⭐ **`npm run test:coverage`** ✓（⭐ 带覆盖率阈值 ✓ —— ⚠️ 我只跑过 `npx vitest run` ✗）
+**⭐ 真因（一行 ✓）**：⭐ `scripts/redlines.mjs:370–390` 的 ⭐ `REQUIRED_MCP_TOOLS` **硬编码** ✓
+  ⭐ 其中 ⭐ `"render_audio"`（`:388` ✓）✗ —— ⭐ 我删了该工具 ⇒ ⭐ 该要求**不可能满足** ✗
+  ⇒ ⭐ 门自己的提示 ✓：⭐ "**若基线确实要改，就在它自己的提交里改，并说明原因**" ✓ ⇒ ⭐ 我照做 ✓（`979f331` ✓）
+  ⇒ ⭐ 同时删掉 `docs/MCP.md` 里两行**已删工具**的声明 ✓
+**⭐ 两条教训 ✓（同一根源 ✓）**：
+  · ⭐ **101 ✓**：⭐ **子集 ≠ 套件** ✓ ⇒ ⭐ 推送前跑全量 ✓
+  · ⭐ **104 ✓**：⭐ **本地门集合必须与 `ci.yml` 逐条对齐** ✓ ⇒ ⭐ 缺一道就够红 ✗
+    ⇒ ⭐ 且 ⭐ **先读 workflow 原文** ✓，⭐ 不要凭印象列门 ✓
+**⭐ 修复后读数 ✓**：⭐ `redlines=0` ✓／`typecheck=0` ✓／`lint=0` ✓／`docs=0` ✓／`refs=0` ✓／
+  `docs:check=0` ✓／`version:check=0` ✓／`check:actions=0` ✓／`check:disabled-gates=0` ✓
+  ⇒ ⭐ 八道门中 ⭐ **七道绿** ✓（⭐ 第八道＝全量＋覆盖率，⭐ 后台在跑 ✓）
+**⏳ 待核 ✓**：⭐ `979f331` 的 CI 判决 ✓（⭐ 已排队 ✓）＋ 全量结果 ✓
+```
+
