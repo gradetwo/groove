@@ -11707,3 +11707,44 @@ export async function prepareArrangementAudioLanes(input: {
   ⭐ **要看它的字段** ✓，⭐ 不要看它的名字 ✓（⭐ 我上一轮就是看了名字 ✗）
 ```
 
+### 四百七十四、⭐ **交班清单（2026-10-05 22:44 ✓，会话余量用尽 ✓）**
+
+```
+**⭐ 状态 ✓**：分支 `dev` ✓｜⭐ 未推送 0 ✓｜⭐ 工作树干净 ✓｜⭐ **无半成品** ✓｜⭐ 全量测试**绿** ✓（646 文件／5275 用例 ✓）
+**✅ 已完成 ✓**：
+  · ⭐ 调试采集**两侧都完成** ✓：⭐ MCP 工具 `collect_debug_bundle` ✓（`7da3851` ✓）＋
+    ⭐ Web 顶栏按钮 ✓（`91fb07c` ＋ `26886ee` ✓）⇒ ⭐ 工具 **94** ✓
+  · ⭐ 迁移 ① ✓：⭐ 歌词工具只收 `arrangementId` ＋ `trackId` ✓（`7b2c3e3` ✓）
+  · ⭐ 迁移 ③ ✓：⭐ 删两个 v1 重复渲染工具 ✓（`7179863` ＋ `ae149f1` ✓）
+  · ⭐ 执行顺序 ① ✓（`validate_arrangement` ✓）＋ ⑦ ✓（歌词 × 编曲 ✓）
+  · ⭐ v2 包形状**业主已定** ✓（⭐ 台账 §463 ✓）
+**⏳ 下一步（按序 ✓，每步都"一次一支" ✓）**：
+  ⭐ **第 1 步（迁移 ②）**：⭐ 定义 v2 包形状与建包函数 ✓
+    · ⭐ 位置 ✓：`src/features/sequencer/projectDb.ts` ✓ —— ⭐ `GrooveProjectPackage` 类型 ✓／
+      `exportProjectPackage`（`:719` ✓，⭐ 第三参数类型 `GrooveProjectArrangement` ＝ `{clips, sections}` ✗）／
+      `validateGroovePackage`（`:668` ✓，⭐ `:702–709` **要求 clips 与 sections** ✗）
+    · ⭐ 动作 ✓：⭐ 包改为主载 ⭐ `ArrangementV2` ✓（tracks／notes／takes／bars／tempoMap ✓）⇒
+      ⭐ 建包函数改吃 `ArrangementV2` ✓ ⇒ ⭐ 校验器改校验 v2 形状 ✓（⭐ 删 clips／sections 规则 ✓）
+    · ⭐ 调用点 ✓：`mcp/registryFiles.ts:142` ✓（⭐ 现用 `as unknown as` 伪造 ✗ ⇒ 删 ✗）｜
+      `src/features/arrangement/arrangementFiles.ts:202` ＋ `:515` ✓｜`projectDb.ts:748` ＋ `:775` ✓｜
+      测试 ⭐ `src/test/projectDb.test.ts`（×13 ✓）＋ `src/test/arrangementEntries.test.ts:78` ✓
+  ⭐ **第 2 步**：⭐ `registryFiles` 的 4 个工具改接 ⭐ `arrangementId` ✓（⭐ 删 `songId` ✗）；
+    ⭐ `import_groove` ⭐ **建 arrangement** ✓；⭐ `export_midi` 与 `export_arrangement_midi` **同义则合并** ✓
+  ⭐ **第 3 步（迁移 ④）**：⭐ `registryAnalysis`（7 工具／5 处 `songId` ✓）
+  ⭐ **第 4 步（迁移 ⑥）**：⭐ Web 面 14 个文件**移植到 V2** ✓（⭐ 不删功能 ✓）—— ⚠️ 但 ⭐ **底层 v2 存储已存在** ✓
+    （`arrangements_v2` ✓，`projectDb.ts:59` ✓）⇒ ⭐ 比原估小 ✓
+  ⭐ **第 5 步（迁移 ⑤）**：⭐ `registrySong`（11 ✓）＋ `registryPattern`（5 ✓）**整支处置** ✓
+    ⭐ 执行顺序 ② region 真实音域 ✓ ⇒ ③ `add_arrangement_notes` 当场校验 ✓ ⇒ ④ `normalize_loudness` ＋ 峰值余量 ✓ ⇒
+     ⑤ "同一 handler 两张脸"结构级扫描 ✓ ⇒ ⑥ 分析进度上报 ✓
+**⭐⭐ 验证方法（最重要的一条 ✓）**：⭐ **推送前跑 `npx vitest run` 全量** ✓
+  （⭐ 本会话最大失误＝只跑子集 ✗ ⇒ CI 红 18 个 ✓ ⇒ 教训 101 ✓）
+  ⭐ 其余门 ✓：⭐ `npx tsc --noEmit` ✓｜`npm run lint` ✓｜`npm run check:mcp` ✓｜
+  `node scripts/check_docs.mjs` ✓｜`npm run check:docs:refs` ✓｜
+  `check:file-sizes`／`check:dead-exports`／`check:duplication`／`check:module-boundaries` ✓
+  ⚠️ ⭐ `npm run check:docs` **不存在** ✗（教训 98 ✓）⇒ ⭐ 跑门前先确认脚本名 ✓
+**⭐ 本会话的十条教训（都在 §§448–473 ✓）**：⭐ 12 ✓／94 ✓／95 ✓／96 ✓／97 ✓／98 ✓／99 ✓／100 ✓／101 ✓／102 ✓／103 ✓
+  ⭐ 最常用的三条 ✓：⭐ ① 判据里的旧名字**四种位置四种动作** ✓ ② **`as unknown as` 是并存的气味** ✓
+  ③ ⭐ **看字段判断是否已迁移，不看名字** ✓
+**⏳ 目标保持 active ✓**（⭐ 迁移 ②④⑤⑥⑦ 与执行顺序 ②③④⑤⑥ 未做 ✓）
+```
+
