@@ -3,7 +3,7 @@
 How work is done here, and how several lines of work run at once without stepping on each other.
 Written from a session that produced five red builds and eleven measured lessons; no code, just the rules.
 
-## The ten rules, each one paid for
+## The eleven rules, each one paid for
 
 1. **Measure before changing.** Read the real bytes, schemas, files, projects. Two "must fix" report items turned
    out to be already satisfied, and one believed field was measured to be zero in every real file — the belief was
@@ -25,6 +25,11 @@ Written from a session that produced five red builds and eleven measured lessons
 9. **One writer per file, and write the numbers down.** If a reading is not in the ledger with its method and moment,
    the next person re-derives it wrongly.
 10. **Record your own mistakes together with the rule they produced.** Cheapest documentation there is.
+11. **Profile the big contributor before you theorise about it, and spend the fix where the numbers are.** A press on a
+    roll cell that wrote nothing cost an evening of hypotheses: the cause was one `focus()` call scrolling the window 226
+    pixels, and a five-line wrapper that recorded who called the scrolling APIs named it in a single run. Latency, CPU and
+    memory belong in the same habit — measure the whole path, rank what dominates, and fix the largest contributor whose
+    fix is small. The three of them are one discipline: the cheapest win is almost always the biggest number.
 
 ## Reach outside before you invent
 
