@@ -10,6 +10,7 @@ import { describeMcpArrangement } from "./arrangement";
 import { failure } from "./toolKit";
 import { validateArrangement } from "./render/worker";
 import { estimateRenderCost } from "./render/estimate";
+import { exportAbletonLiveSet } from "../src/audio/AbletonExporter";
 
 import type { ToolDefinition } from "./toolKit";
 
@@ -1382,6 +1383,45 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
           renderEstimate: estimateRenderCost({ bars: estimateBars, bpm: forEstimate?.bpm ?? 120 }),
           totalSteps: flattened.pattern.totalSteps,
         };
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    /**
+     * ⭐ **The Live set for an arrangement, so the pattern based exporter can retire.**
+     *
+     * It flattens the arrangement into the pattern the app's own Ableton writer takes, and writes the file the writer
+     * produces. The borrow is an implementation detail: the inputs, the reply and every word a caller reads are v2.
+     */
+    name: "export_arrangement_ableton",
+    title: "Write the arrangement as an Ableton Live Set",
+    description:
+      "Write the arrangement as an `.als` Live Set, gzipped XML. The file a DAW opens. It flattens the arrangement with the same code the renderer uses. The reply names the file's absolute path, its byte count and its track count. Read-only on the arrangement: it writes a file and changes nothing.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string().describe("the arrangement to write"),
+      filename: z.string().max(64).optional().describe("the file's name; `.als` is appended when missing"),
+      outputDir: z.string().optional().describe("where to write it; defaults to GROOVE_MCP_OUT, then a temporary directory"),
+    },
+    handler: async (args) => {
+      try {
+        const arrangementId = String(args.arrangementId);
+        const { flattened } = flattenMcpArrangement(arrangementId);
+        const arrangement = getMcpArrangement(arrangementId);
+        const set = await exportAbletonLiveSet({
+          pattern: flattened,
+          bpm: arrangement?.bpm ?? 120,
+          genreName: (args.filename as string | undefined) ?? arrangementId,
+        } as never);
+        const dir = (args.outputDir as string | undefined) || process.env.GROOVE_MCP_OUT || mkdtempSync(path.join(os.tmpdir(), "groove-mcp-"));
+        mkdirSync(dir, { recursive: true });
+        const name = String(args.filename ?? set.filename).replace(/^[.]+|[.]+$/g, "");
+        const filename = name.endsWith(".als") ? name : `${name || "arrangement"}.als`;
+        const file = path.join(dir, filename);
+        writeFileSync(file, set.data);
+        return { path: file, filename, bytes: set.data.length, format: "als", tracks: (arrangement?.tracks ?? []).length };
       } catch (error) {
         return failure((error as Error).message);
       }

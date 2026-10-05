@@ -207,3 +207,19 @@
 **⏳ 遗留 ✓**：⭐ `arrangementFromGroovePackage`（`src/data/arrangementImport.ts:232` ✓）⭐ **已无 v2 调用者** ✓ ⇒
   ⭐ 退场待办 ✓（⭐ `check:dead-exports` 会**列出**它 ✓，⭐ 不失败 ✓）；⭐ 退场前先量其余调用者 ✓（可逆性差 ✓）
 
+## 2026-10-06 01:06 回填（第 4 条规矩：改完实现回来改表）
+
+| 面 | 变化 | 依据 |
+|---|---|---|
+| ⭐ **系统** | **无变化** ✓ —— 复用既有 Live 写手 ✓（`exportAbletonLiveSet` ✓）与既有展平 ✓（`flattenMcpArrangement` ✓） | 本轮 ✓ |
+| ⭐ **MCP 面** | ✅ ⭐ 新增 ⭐ **`export_arrangement_ableton`** ✓ ⇒ 工具 **94 ⇒ 95** ✓（⭐ 这是**移植**：⭐ 保住能力，⭐ 而 pattern 版 `export_ableton` 稍后退场 ⇒ ⭐ 回到 94 ✓） | 本轮 ✓ |
+| ⭐ **Web 面** | **无变化** ✓ | — |
+
+**工具行为 ✓**：⭐ 展平编曲 ⇒ ⭐ 取编曲自己的 `bpm`（⭐ 缺省 120 ✓）⇒ ⭐ 写 `.als`（gzipped XML ✓）⇒
+  ⭐ 回包 ⭐ `{ path ✓, filename ✓, bytes ✓, format: "als" ✓, tracks ✓ }` ✓
+**⚠️ 一处诚实说明 ✓**：⭐ `readOnly: false` ✓（⭐ 它写文件 ✓）；⭐ 描述明说"⭐ 只读编曲：⭐ 它写文件，⭐ 不改编曲" ✓
+**判据读数 ✓**：⭐ 新判据 **2 用例** ✓（⭐ 读源码断言：⭐ 接 `arrangementId` ✓、⭐ 经既有写手 ✓、⭐ 回包含 `format: "als"` ✓、⭐ 速度取编曲 ✓）｜
+  ⭐ `check:mcp` **123/123** ✓｜⭐ 十一道门全 0 ✓｜⭐ 相关判据 6 文件全过 ✓｜⭐ 文档双门 0 ✓
+**⏳ 下一步 ✓**：⭐ ① 给该工具加 ⭐ `check_mcp` 的**运行时**用例（⭐ 真跑一次并 gunzip 成 XML ✓）
+  ⭐ ② ⭐ `docs/MCP.md` 声明行 ✓ ③ ⭐ **然后**删 `export_ableton` ✗（⭐ 先立 v2 判据再删 v1 ✓）④ ⭐ 回填 ✓
+
