@@ -13416,3 +13416,21 @@ export async function prepareArrangementAudioLanes(input: {
   ⇒ ⭐ **它们已可安全退场** ✓（⭐ 第 ② 步 ✓）＋ ⭐ 地板改为跟随登记表 ✓
 ```
 
+**⭐ 第 ② 步的前置清单 ✓（2026-10-06 03:01 ✓，⭐ 陷阱已提前排除 ✓）**：
+```
+**⭐ 量到 ✓**：⭐ 四个工具（`add_section` ✗／`set_clip` ✗／`get_song` ✗／`undo_song` ✗）
+  ⭐ **都不在**任何必需清单里 ✓：
+  · ⭐ `scripts/redlines.mjs` 的 `REQUIRED_MCP_TOOLS` ✓ ⇒ ⭐ 四个都不在 ✓ ✓（⭐ **这正是一次让 18 个 CI 红、另一次让 9 个红的陷阱** ✗）
+  · ⭐ `scripts/check_mcp.mjs` 的"⭐ tool declared"清单 ✓ ⇒ ⭐ 四个都不在 ✓ ✓
+  ⇒ ⭐ 即 ⭐ **退场不会踩这条陷阱** ✓ —— ⭐ 而且这次是**删之前查的** ✓（⭐ 教训 137 的精神 ✓）
+**⭐ 其余引用 ✓（⭐ 5 个文件 ✓）**：
+  · ⭐ `mcp/registrySong.ts` ✓：⭐ 四个工具块 ✓（⭐ 边界待打印 ✓）
+  · ⭐ `src/test/mcpSchemaPassthrough.test.ts` ✓：⭐ `get_song` ✗（⭐ `:105` 改接 ✓）
+  · ⭐ `src/test/mcpCapability.test.ts` ✓：⭐ **四个**都在两处清单里 ✗（⭐ 删项 ✓）
+  · ⭐ `docs/MCP.md` ✓：⭐ **四个**的声明行 ✗（⭐ 改成"⭐ 由 v2 承接"的记账 ✓）
+  · ⭐ `mcp/README.md` ✓：⭐ 三个 ✗（⭐ 更新 ✓）
+**⭐⭐ 因此第 ② 步＝**5 个文件** ✓**（⭐ 比预想小 ✓，⭐ 因为必需清单干净 ✓）
+  ⇒ ⭐ 预期工具数 ✓：⭐ **90 ⇒ 86** ✓；⭐ 地板 **85** ✓ ⇒ ⭐ 只剩 1 个余量 ✗ ⇒ ⭐ **同批把地板改成"⭐ 跟随登记表"** ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 清单已备 ✓
+```
+
