@@ -14039,3 +14039,26 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 树干净 ✓）；⭐ 播种代码未改 ✓，⭐ 判据待改 ✓
 ```
 
+### 五百四十七、⭐ **同类隐患扫描（教训 152）：只有一个"注册表交叉核对"类判据**（2026-10-06 03:42 ✓）
+
+```
+**⭐ 量法 ✓**：⭐ 在 ⭐ `src/test/*.ts` ✓ ＋ ⭐ `scripts/*.mjs` ✓ 里找 ⭐ **11 个已退场工具名** ✓
+  （⭐ `set_clip` ✓／`get_song` ✓／`undo_song` ✓／`render_audio` ✓／`render_preview_clip` ✓／`export_ableton` ✓／
+   `export_midi` ✓／`make_unique` ✓／`set_lane_slots` ✓／`duplicate_section` ✓／`set_tempo` ✓）
+  ⇒ ⭐ **13 个文件**仍提到它们 ✓
+**⭐ 分类 ✓（⭐ 关键是"⭐ 提法"而不是"⭐ 提到" ✓）**：
+  ⚠️ ⭐ **危险类 ✗＝ 断言"⭐ 它必须存在／已注册"** ✓ ⇒ ⭐ 只有 ⭐ **`docsWorkflow`** ✗（⭐ 本轮已修 ✓）
+  ✅ ⭐ **安全类 ✓**：
+    · ⭐ **叙述／历史** ✓：⭐ `budgetHonesty` ✓（`render_audio` ✓）｜⭐ `mcpAnalyzeAudioCopy` ✓（`get_song` ✓）｜
+      `mcpHeadlessRouting` ✓（`render_preview_clip` ✓）｜⭐ `tempoWorkedExample` ✓（`set_tempo` ✓）｜
+      `clipSlotsEight` ✓／`makeUniqueSection` ✓（`make_unique` ✓ —— ⭐ 用于"⭐ 它已去，⭐ 现在是怎样" ✓）
+    · ⭐ **脚本注释／历史** ✓：⭐ `check_mcp` ✓（四个 ✓）｜⭐ `redlines` ✓（⭐ 已改成交接说明 ✓）｜⭐ 三个探针 ✓｜`build_mcp` ✓
+**⭐ 结论 ✓**：⭐ 唯一的"⭐ 交叉核对注册表"类判据就是 ⭐ `docsWorkflow` ✓ ⇒ ⭐ **已修完 ✓**
+  ⭐ 且 ⭐ 与"⭐ 那些更早提交当时 CI 是绿的"**一致** ✓ ⇒ ⭐ 佐证扫描结论 ✓
+**⭐⭐ 教训 152 ✓**：⭐ **退场后要专门扫"⭐ 交叉核对类"判据** ✗ ——
+  ⭐ 即那些**把两处信息对起来**的判据 ✓（⭐ 文档 ⇔ 注册表 ✓／⭐ 清单 ⇔ 工具 ✓／⭐ 计数 ⇔ 登记表 ✓）
+  ⭐ 做法 ✓：⭐ 退场后 ⭐ `grep` 旧名 ✓ ⇒ ⭐ 逐个问"⭐ 这里是在**提**它 ✓，⭐ 还是在**要求它存在** ✗？" ✓
+    ⭐ 只有后者会红 ✓ ✓
+**⏳ 未落码 ✗**（⭐ 扫描完成 ✓）
+```
+
