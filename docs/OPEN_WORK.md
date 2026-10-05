@@ -14224,3 +14224,20 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+**⭐ 音符级工具的入参 ✓（2026-10-06 03:49 ✓）**：
+```
+| ⭐ 工具 ✓ | ⭐ 入参 ✓ |
+|---|---|
+| ⭐ **`add_arrangement_note`** ✓ | `arrangementId` ✓／`trackId` ✓／`pitch` ✓／`startBeats` ✓／`lengthBeats` ✓／⭐ **`velocity`** ✓ |
+| ⭐ `add_arrangement_notes` ✓ | `arrangementId` ✓／`trackId` ✓／`notes` ✓（⭐ 批量 ✓） |
+| ⭐ **`move_arrangement_note`** ✓ | `arrangementId` ✓／`trackId` ✓／`pitch` ✓／`startBeats` ✓／⭐ **`toPitch`** ✓／`toStartBeats` ✓ |
+| ⭐ `set_arrangement_note_length` ✓ | `arrangementId` ✓／`trackId` ✓／`pitch` ✓／`startBeats` ✓／`lengthBeats` ✓ |
+**⭐⭐ 因此三项都能**直接**写出 ✓（⭐ 零未知 ✓）**：
+  ⭐ ① ⭐ **力度斜坡** ✓ ⇒ ⭐ `add_arrangement_note` **本身收 `velocity`** ✓ ⇒ ⭐ 逐音符写 ✓ ⇒ ⭐ 读回断言斜坡 ✓
+  ⭐ ② ⭐ **`fill`** ✓ ⇒ ⭐ 一个填充就是**一串音符** ✓（⭐ 批量用 `add_arrangement_notes` ✓）⇒ ⭐ 断言数量与落点 ✓
+  ⭐ ③ ⭐ **移调** ✓ ⇒ ⭐ `move_arrangement_note` 的 ⭐ `toPitch` ✓ ⇒ ⭐ 逐音符 +2 半音 ✓ ⇒ ⭐ 断言音高 ✓
+**⭐ 因此判据可一次写完 ✓**：⭐ 一个文件三条用例 ✓（⭐ 各写各断言 ✓）
+  ⭐ **红验证法 ✓**：⭐ 临时把某条断言写成**错的音高／错的力度** ✓ ⇒ ⭐ 看它红 ✓ ⇒ ⭐ 改回 ✓（⭐ §552 已记此法 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 下一轮一次写完 ✓
+```
+
