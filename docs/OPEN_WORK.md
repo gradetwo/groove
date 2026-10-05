@@ -13360,3 +13360,21 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+**⭐ 最后那处未知已解 ✓（2026-10-06 02:56 ✓）**：
+```
+**⭐ 答案 ✓**：⭐ `add_arrangement_track`（⭐ 以及所有编曲写工具 ✓）⭐ 的回包是 ⭐ **`{ summary, problems }`** ✓
+  ⇒ ⭐ 新轨在 ⭐ **`summary.tracks`** ✓ 里 ✓ ⇒ ⭐ 取法 ✓：⭐ `added.summary.tracks.at(-1).id` ✓（⭐ 新加的在最后 ✓）
+  ⭐ 或 ⭐ `added.summary.tracks.find((t) => t.name === "chorus")!.id` ✓（⭐ 更明确 ✓）
+**⭐ 证据 ✓**：⭐ `src/test/mcpArrangement.test.ts:222` ✓ 用 ⭐
+  `addMcpTrack(arrangementId, "folder", "Group").summary.tracks.find(…)` ✓ —— ⭐ 现成用法 ✓，⭐ 照抄最稳 ✓
+  ⭐ 且 ⭐ `check_mcp:408` ✓ ⭐ **已经在调 `add_arrangement_track`** ✓（⭐ 我上一轮写的 ✓，⭐ 门绿 ✓）
+    ⇒ ⭐ 该工具的调用形态**已被证明** ✓
+**⚠️ ⭐ 教训 138 ✓**：⭐ **量不出来时，去看**现成的用法** ✓** ——
+  ⭐ 我两次直接读实现都失败 ✗（⭐ shell 算术错 ✗ ＋ 窗口太窄 ✗）⇒ ⭐ 而 `grep "调用点"` 一次就够 ✓
+  ⇒ ⭐ 通用做法 ✓：⭐ 想知道"⭐ 回包长什么样" ✓ ⇒ ⭐ **搜它已经在哪被用过** ✓（⭐ 判据／脚本 ✓）
+**⇒ 第 ① 步第二块现在**零未知** ✓**：⭐ `create_arrangement` ✓ ⇒ ⭐ `add_arrangement_track` ✓
+  ⇒ ⭐ `added.summary.tracks.at(-1).id` ✓ ⇒ ⭐ `set_arrangement_track_steps`（⭐ `steps: [1,0,0,0,1,0,0,0]` ✓）
+  ⇒ ⭐ `check(…)` 断言 ⭐ 轨数为 2 ✓ ＋ ⭐ `clips`／`sections` 为 `undefined` ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 可直接写 ✓
+```
+
