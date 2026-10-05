@@ -252,7 +252,7 @@ export async function renderPatternHeadless(
      */
     import("../../src/audio/browserSampleGraph"),
   ]);
-  const audioCatalogue = catalogueRead.text ? catalogue.catalogueFromManifestText(catalogueRead.text, context.sampleRoot).assets : [];
+  const { audioCatalogue, cacheWiring } = laneWiringFrom(context, catalogueRead, { catalogue });
   const bars = Math.max(1, Math.min(64, options.bars ?? 1));
 
   /**
@@ -287,7 +287,6 @@ export async function renderPatternHeadless(
    * One object per render and one byte store per process: the store is what survives the render (and the server restart), and
    * the decoder is built on the `AudioContext` this render creates. See `mcp/render/sampleCache.ts`.
    */
-  const cacheWiring = sampleCache.renderSampleCacheWiring();
 
   /**
    * The render's own length in frames, for the one progress value this host does not get from the renderer: the warm-up. Same
@@ -463,20 +462,16 @@ function offlineContextClass(): new (channels: number, frames: number, sampleRat
  * Three modules, the audio catalogue from the manifest text and the sample root, and the on-disk cache. A validation
  * caller that skipped any of these would answer about no samples at all.
  */
-async function loadHeadlessLaneWiring(
+function laneWiringFrom(
   context: HeadlessRenderContext,
-  catalogueRead: AudioLaneCatalogueRead
+  catalogueRead: AudioLaneCatalogueRead,
+  deps: { catalogue: typeof import("../../src/data/sampleCatalogue") }
 ) {
-  const [wav, catalogue, graph] = await Promise.all([
-    import("../../src/audio/WavExporter"),
-    import("../../src/data/sampleCatalogue"),
-    import("../../src/audio/browserSampleGraph"),
-  ]);
   const audioCatalogue = catalogueRead.text
-    ? catalogue.catalogueFromManifestText(catalogueRead.text, context.sampleRoot).assets
+    ? deps.catalogue.catalogueFromManifestText(catalogueRead.text, context.sampleRoot).assets
     : [];
   const cacheWiring = sampleCache.renderSampleCacheWiring();
-  return { wav, graph, audioCatalogue, cacheWiring };
+  return { audioCatalogue, cacheWiring };
 }
 
 /**
@@ -492,7 +487,12 @@ export async function validateArrangementHeadless(
   context: HeadlessRenderContext
 ): Promise<import("../../src/audio/WavExporter").ArrangementLaneReport> {
   loadHeadlessHost(context.publicRoot);
-  const { wav, graph, audioCatalogue, cacheWiring } = await loadHeadlessLaneWiring(context, catalogueRead);
+  const [wav, catalogue, graph] = await Promise.all([
+    import("../../src/audio/WavExporter"),
+    import("../../src/data/sampleCatalogue"),
+    import("../../src/audio/browserSampleGraph"),
+  ]);
+  const { audioCatalogue, cacheWiring } = laneWiringFrom(context, catalogueRead, { catalogue });
   const bars = Math.max(1, Math.min(64, options.bars ?? 1));
   return wav.preparePatternAudioLanes(pattern, {
     bars,
