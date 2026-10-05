@@ -9837,3 +9837,24 @@ problems: **[]** ✓
 **📌 意义 ✓**：⭐ 这是**第一条能直接指向修复的根因** ✓ —— 要修的是"**点格子时页面跳动**"✗，
    而不是写入逻辑 ✗（后者自始至终是对的 ✓）；且**判据方向**也已明确 ✓：
    ⭐ "**在格子中心 pointerdown ⇒ pointerup 必须落在同一格 ∧ `window.scrollY` 不得变化**" ✓（可写成能红判据 ✓）
+
+### 四百二十四、🔬 **三次修法都无效 ⇒ 回退；根因收敛到"谁把焦点给了格子"**（2026-10-05 16:30–16:31 ✓）
+
+```
+**只读取证再进一步 ✓**（探针侧 ✓）：挂 `window` 的 `scroll` 监听 ✓ ⇒
+   ⭐ **整个手势里只发生了一次滚动** ✓：`{y: 226, active: "roll-cell-84-0"}` ✓
+   ⇒ ⭐ **滚动发生时，`document.activeElement` 是格子自己** ✗（**不是** panel ✓）
+**据此试的三个修法 ✓（都改产品代码 ✓，都失败 ✓，**全部已回退** ✓）**：
+   ① 3 处 `panel.focus()` ⇒ `focus({ preventScroll: true })` ✓ ⇒ **仍红** ✗
+   ② 单元格 `onPointerDown` 加 `event.preventDefault()` ＋ `focus({preventScroll:true})` ✓ ⇒ **仍红** ✗
+   ③ 再加 `onMouseDown={(e) => e.preventDefault()}` ✓ ⇒ **仍红** ✗（仍是 `{y:226, active: roll-cell-84-0}` ✓）
+   ⇒ ⭐ 即：**`pointerdown` 与 `mousedown` 的 `preventDefault` 都拦不住这次滚动** ✗
+**⇒ 回退 ✓**：`git checkout -- src/components/arrangement/PianoRollV2.tsx` ✓ ⇒ `tsc=0` ✓、**`src/` 与 HEAD 差异 0 行** ✓（净零 ✓）
+**⇒ 下一步的疑点（诚实列出 ✓，尚未定案 ✗）**：
+   ⭐ 焦点**确实**落在格子上（`activeElement` 证明 ✓），而 `preventDefault` **拦不住**它 ⇒
+   可能是 **React 合成事件 vs 原生默认** 的时序 ✓，或 ⭐ **别处**（非本组件 ✓）在 pointerdown 期间
+   **程序化地 `focus()` 了该格** ✓（例如卷帘外层的容器管理 ✓）⇒
+   ⇒ 验法 ✓：⭐ 在**原生**捕获阶段监听 `focusin` ✓ 记录**每次焦点变化**（元素 ＋ 时间 ＋ 当时的 `scrollY` ✓）
+     ⇒ 一次看清"谁在什么时候把焦点给了格子、以及滚动是否紧随其后" ✓
+**⚠️ 纪律回顾 ✓**：三次改动都**先量后改 + 无效即回退** ✓，产品代码最终**净零** ✓；
+   探针侧只读取证保留 ✓（`scroll` 监听＋事件目标 ✓）——⭐ 它们**只读** ✓，符合教训 88 七续 ✓

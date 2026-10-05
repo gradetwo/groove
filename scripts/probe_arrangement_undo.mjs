@@ -295,13 +295,17 @@ report.readings.selectedTrackBefore = await selectedTrack();
 /* 显式指针序列：真浏览器里写入可能挂在 pointerdown/up 上，jsdom 里零尺寸元素让 click 必然命中。 */
 /* 先滚进可视区：可信点击落在视口外会被丢弃，而 elementsFromPoint 仍能命名该元素。 */
 report.readings.cellBoxBeforeScroll = await page.locator(`[data-testid='${emptyCell}']`).first().boundingBox();
-await page.locator(`[data-testid='${emptyCell}']`).first().scrollIntoViewIfNeeded();
 await page.waitForTimeout(120);
 report.readings.cellBoxAfterScroll = await page.locator(`[data-testid='${emptyCell}']`).first().boundingBox();
 report.readings.viewport = page.viewportSize();
 /* 只读捕获监听：记录真实 pointerdown 落在哪个元素上。 */
 await page.evaluate(() => {
   (window).__hits = [];
+  (window).__scrolls = [];
+  window.addEventListener('scroll', () => {
+    const a = document.activeElement;
+    (window).__scrolls.push({ y: Math.round(window.scrollY), active: a && a.getAttribute ? (a.getAttribute('data-testid') || a.tagName) : null });
+  }, true);
   for (const kind of ['pointerup', 'pointercancel', 'lostpointercapture']) {
     document.addEventListener(kind, (e) => {
       const el = e.target;
@@ -342,6 +346,7 @@ if (cellBox) {
 }
 const afterAddNote = await readDom();
 report.readings.pointerHits = await page.evaluate(() => (window).__hits ?? null);
+report.readings.scrolls = await page.evaluate(() => (window).__scrolls ?? null);
 report.readings.noteIdsBefore = noteIdsBefore;
 report.readings.noteIdsAfter = await page.evaluate(() => Array.from(document.querySelectorAll("[data-testid^='roll-note-']")).map((e) => e.getAttribute('data-testid')).sort());
 report.readings.selectedTrackAfter = await selectedTrack();
@@ -493,7 +498,8 @@ if (asJson) {
   line("   direct dispatch", `dispatched=${r.dispatchedDirectly} notesAfter=${r.notesAfterDispatch}`);
   line("   hit test at cell centre", JSON.stringify(r.hitTest));
   line("   selected track", `before=${JSON.stringify(r.selectedTrackBefore)} after=${JSON.stringify(r.selectedTrackAfter)}`);
-    line("   real pointerdown landed on", JSON.stringify(r.pointerHits));
+      line("   window scroll events", JSON.stringify(r.scrolls));
+line("   real pointerdown landed on", JSON.stringify(r.pointerHits));
 line("   note ids added", JSON.stringify((r.noteIdsAfter || []).filter((i) => !(r.noteIdsBefore || []).includes(i))));
   line("   note ids removed", JSON.stringify((r.noteIdsBefore || []).filter((i) => !(r.noteIdsAfter || []).includes(i))));
   line("   cell box", `before=${JSON.stringify(r.cellBoxBeforeScroll)} after=${JSON.stringify(r.cellBoxAfterScroll)} viewport=${JSON.stringify(r.viewport)}`);
