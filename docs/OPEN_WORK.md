@@ -11611,3 +11611,31 @@ export async function prepareArrangementAudioLanes(input: {
   ⇒ ⭐ 当前树的判决会在 CI 跑完后出现 ✓（⭐ 约 15–25 分钟 ✓）
 ```
 
+### 四百七十一、🎯 **迁移 ② 的关键发现：v2 包层已经存在**（2026-10-05 22:42 ✓，已量 ✓）
+
+```
+**⭐ 发现一 ✓：v2 持久层已存在 ✓**（`src/features/sequencer/projectDb.ts` ✓）
+  · ⭐ `GROOVE_ARRANGEMENT_STORE_NAME = "arrangements_v2"` ✓（`:59` ✓）
+  · ⭐ `ACTIVE_ARRANGEMENT_STORAGE_KEY` ✓（`:69` ✓）／⭐ `GROOVE_DB_ARRANGEMENT_STORE_VERSION = 2` ✓（`:44` ✓）
+  · ⭐ `GrooveEditorKind = "studio" | "arrangement-v2"` ✓（`:74` ✓）
+  · ⭐ `ArrangementProjectRecord` ✓（`:82` ✓，⭐ 其 `arrangement: ArrangementV2` ✓ `:86` ✓）
+  ⇒ ⭐ **所以 Web 侧的数据层已是 v2** ✓ ⇒ ⭐ 迁移 ⑥（那 14 个文件）比预想**更小** ✓
+**⭐ 发现二（决定性 ✓）：v2 包已实现 ✓**
+  · ⭐ `exportProjectPackage(project, appVersion = APP_VERSION, arrangement?: GrooveProjectArrangement)` ✓（`:719` ✓）
+    ⇒ ⭐ 源码注释原文 ✓：⭐ "**A package that carries an arrangement is v2; one that does not is byte-for-byte
+      the v1 shape it always was.**" ✓
+  · ⭐ `validateGroovePackage(data)` ✓（`:668` ✓）⇒ ⭐ 返回 `GrooveProjectPackage` ✓
+  ⇒ ⚠️ ⭐ **但这是"新老并存"** ✗（⭐ 第三个参数**可选** ⇒ ⭐ 不带就是 v1 形状 ✗）
+    ⇒ ⭐ **按业主硬约束 ② ✓，迁移 ② 要做的是：**
+      ⭐ ① 让 `arrangement` **成为必需参数** ✓（⭐ 去掉"不带即 v1"的分支 ✗）
+      ⭐ ② ⭐ Web 自身的导出 ✓（`exportProjectToGrooveFile` ✓ `:748` ✓）**也要传 arrangement** ✓
+        （⭐ 它现在**没传** ✗ —— ⭐ 因为签名允许 ✓；⭐ 改必需后 `tsc` 会**当场点出**这一处 ✓ ✓）
+      ⭐ ③ ⭐ `registryFiles.export_groove` 改为接 ⭐ **`arrangementId`** ✓（⭐ 去掉 `songId` ✗）
+      ⭐ ④ ⭐ `import_groove` 建 ⭐ **arrangement** ✓（⭐ 不再建 song ✗）
+      ⭐ ⑤ ⭐ `export_ableton`／`export_midi` 接 **`arrangementId`** ✓（⭐ 与已有 `export_arrangement_midi`
+        **同义则合并** ✓ —— ⭐ 量了再定 ✓）
+**⭐ 落地顺序（我定 ✓）**：⭐ 先改 ⭐ **`exportProjectPackage` 的必需参数** ✓ ⇒ ⭐ `tsc` 会**列出所有调用点** ✓
+  ⇒ ⭐ 逐个补 arrangement ✓ ⇒ ⭐ 再改 4 个工具 ✓ ⇒ ⭐ 判据先红后绿 ✓ ⇒ ⭐ 回填对齐表 ✓
+**⏳ 未落码 ✗**（⭐ 本轮余量不足 ✓）；⭐ 关键未知已消 ✓（⭐ 不需从零设计 v2 包 ✓）
+```
+
