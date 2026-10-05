@@ -13349,3 +13349,14 @@ export async function prepareArrangementAudioLanes(input: {
   ⭐ 以及剧本二的 undo 段 ✓
 ```
 
+**⭐ 第 ① 步第二块的材料 ✓（2026-10-06 02:56 ✓）**：
+```
+⭐ `set_arrangement_track_steps` ✓：⭐ `{ arrangementId, trackId, steps: number[] }` ✓ —— ⭐ 描述 ✓：
+  "**one entry per step; non-zero is on**" ✓（⭐ min 1 ✓，⭐ max 64 ✓）
+  ⇒ ⭐ 替 `set_clip` 有了确定写法 ✓：⭐ `steps: [1,0,0,0,1,0,0,0]` ✓（⭐ 非零即开 ✓）
+⚠️ ⭐ **还差一处未知 ✗**：⭐ `add_arrangement_track` 的回包里 ⭐ **`trackId` 在哪** ✗
+  （⭐ 候选 ✓：⭐ 顶层 `trackId` ✓ 或 ⭐ `summary.tracks.at(-1).id` ✓）
+  ⇒ ⭐ 下一轮先量它 ✓，⭐ 再写这一块 ✓（⭐ 这是本会话反复奏效的顺序 ✓：⭐ 先量 ✗ → 后写 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
