@@ -303,6 +303,18 @@ if (cellBox) {
   await page.click(`[data-testid='${emptyCell}']`);
 }
 /* 定案实验：绕过命中测试，直接向该格派发指针事件；能写出音符 ⇒ 命中测试是问题；写不出 ⇒ 处理器／状态源是问题。 */
+/* 命中测试取证：真实点击前，看格子中心的最上层元素是谁（不是该格 ⇒ 被遮挡）。 */
+report.readings.hitTest = await page.evaluate((id) => {
+  const cell = document.querySelector(`[data-testid='${id}']`);
+  if (!cell) return null;
+  const r = cell.getBoundingClientRect();
+  const top = document.elementsFromPoint(r.x + r.width / 2, r.y + r.height / 2).slice(0, 3).map((el) => ({
+    tag: el.tagName.toLowerCase(),
+    testid: el.getAttribute('data-testid'),
+    cls: (el.className || '').toString().slice(0, 60),
+  }));
+  return { cellRect: { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) }, top };
+}, emptyCell);
 const dispatched = await page.evaluate((id) => {
   const cell = document.querySelector(`[data-testid='${id}']`);
   if (!cell) return false;
@@ -464,6 +476,7 @@ if (asJson) {
   line("③ after add track", `tracks=${r.afterAddTrack.tracks.length} undo=${r.afterAddTrack.undoDisabled} redo=${r.afterAddTrack.redoDisabled} action=${r.afterAddTrack.undoAction}`);
   line("④ after add note", `notes=${r.afterAddNote.notes} action=${r.afterAddNote.undoAction}`);
   line("   direct dispatch", `dispatched=${r.dispatchedDirectly} notesAfter=${r.notesAfterDispatch}`);
+  line("   hit test at cell centre", JSON.stringify(r.hitTest));
   line("   selected track", `before=${JSON.stringify(r.selectedTrackBefore)} after=${JSON.stringify(r.selectedTrackAfter)}`);
   line("⑤ after change length", `bars=${r.afterLength.bars} action=${r.afterLength.undoAction}`);
   line("⑥ after Ctrl+Z ×3", `tracks=${r.afterUndo3.tracks.length} bars=${r.afterUndo3.bars} undo=${r.afterUndo3.undoDisabled} redo=${r.afterUndo3.redoDisabled}`);
