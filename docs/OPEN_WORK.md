@@ -12617,3 +12617,28 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落地 ✗**（⭐ 余量用尽 ✓）
 ```
 
+### 五百零四、🎯 **`export_midi` 不能退场：它承载歌词，而 v2 没有这条出口**（2026-10-06 01:24 ✓，已量 ✓）
+
+```
+**⭐ 先解决了一个疑虑 ✓**：⭐ `export_midi` 的引用清单里 ⭐ **三个 Web 组件** ✓（`ArrangementFileEntriesV2.tsx` ✓／
+  `PianoRollLane.tsx` ✓／`Toolbar.tsx` ✓）⭐ **全是 i18n 键** ✓（`toolbar_export_midi` ✓／`roll_export_midi` ✓／
+  `chords_export_midi` ✓）⇒ ⭐ **同名不同物，与此工具无关** ✓ ✓
+**⭐ 真正的 MCP 引用 9 处 ✓**：⭐ ① `mcp/registryFiles.ts:25`（工具块 ✓）⭐ ② `scripts/redlines.mjs:386`
+  （**必需清单** ✗ —— ⭐ 又一次 ✓）⭐ ③ `check_mcp.mjs:140`（名表 ✓）⭐ ④ `check_mcp.mjs:855–857`（用例 ✓）
+  ⭐ ⑤ `mcpTools.test.ts:251`（返回字节集合 ✓）⭐ ⑥ `exportSurfaceCopy.test.ts:10`（注释 ✓）
+  ⭐ ⑦ ⚠️ **`lyricExport.test.ts:107–114`** ✗ ⭐ ⑧ `docs/MCP.md:464`（声明行 ✓）⭐ ⑨ `mcp/README.md:104` ✓
+**⭐⭐ ⑦ 就是拦路的那个 ✓**：⭐ 它断言 ⭐ "**歌词经 MCP 的 `export_midi` 工具可达**" ✓
+  ⇒ ⭐ 即 ⭐ **`export_midi` 是把歌词送出成 MIDI 的那条路** ✓
+**⭐ 再量 v2 侧 ✓**：⭐ `exportMcpArrangementMidi`（`mcp/arrangement.ts` ✓）里 ⭐ **没有任何歌词处理** ✗；
+  ⭐ 全仓搜 ⭐ "歌词 → MIDI"（`lyricToMidi` ✓／`midiWithLyric` ✓／`lyric.*midi` ✓）⭐ **零命中** ✗
+**⇒ 结论 ✓（⭐ 教训 116 的问题 ✓：⭐ v2 有没有这个能力 ✓？）**：⭐ **没有** ✗
+  ⇒ ⭐ 所以 ⭐ **`export_midi` 退场会**丢能力** ✗ —— ⭐ 它**现在必须留着** ✓
+  ⇒ ⭐ 正确的下一步不是"⭐ 删它" ✗，⭐ 而是 ⭐ **把"带歌词的 MIDI 导出"移植到编曲** ✓
+    ⇒ ⭐ 即 ⭐ 让 ⭐ `export_arrangement_midi` **写出歌词事件** ✓（⭐ 从编曲自己的歌词字段 ✓）
+    ⇒ ⭐ 之后才谈退场 ✓（⭐ 先立 v2 判据再删 v1 ✓）
+**⭐ 教训 120 ✓**：⭐ **"⭐ 同义则合并／退场"要先问"⭐ 它的**全部**能力在新侧有没有？"** ✗ ——
+  ⭐ 我只看了"⭐ 入参／交付方式" ✓ 就下过"⭐ 该退场"的结论 ✗ ⇒ ⭐ **不够** ✓
+  ⇒ ⭐ 必查项 ✓：⭐ 入参 ✓、⭐ 交付 ✓、⭐ **内容** ✓（⭐ 这里就是歌词 ✓）、⭐ 调用者 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 结论就是"⭐ 先别动" ✓，⭐ 台账已更正 ✓
+```
+
