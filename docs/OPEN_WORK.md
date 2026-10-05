@@ -12220,3 +12220,27 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落地 ✗**；⭐ 但每一步都已到函数与行 ✓
 ```
 
+### 四百九十一、⚠️ **第 77 轮：我第三次栽在"没先抓逐字文本"** ✗（2026-10-06 00:35 ✓）
+
+```
+**⭐ 事实 ✓**：⭐ 我要改 ⭐ `src/features/arrangement/arrangementFiles.ts` 的 ⭐ `grooveFileFor` ✓（⭐ Web 的保存路径 ✓）
+  ⇒ ⚠️ ⭐ 锚点 ⭐ **0 次匹配** ✗ ⇒ ⭐ 文件**未被改动** ✓（⭐ 树脏 0 ✓ ⇒ ⭐ 四道门的"绿"是**未改**的树 ✓，⭐ 无意义 ✓）
+**⭐⭐ 这是本会话第三次同类失误 ✓（§483 教训 105 已记过一次 ✗）**
+  ⇒ ⭐ 因此把它从"教训"升为 ⭐ **固定流程 ✓（教训 108 ✓）**：
+    ⭐ **①** ⭐ 先 ⭐ `sed -n 'X,Yp' 文件 | cat -A` ✓ **抓逐字文本** ✓
+    ⭐ **②** ⭐ 再照抄进替换串 ✓（⭐ 含前导空格 ✓）
+    ⭐ **③** ⭐ 或 ⭐ **按行结构定位** ✓（⭐ 找唯一相邻两行 ✓，⭐ 缩进取自相邻行 ✓ —— ⭐ 上一轮成功用过 ✓）
+    ⚠️ ⭐ **永不**凭记忆写多行锚点 ✗
+**⭐ 已抓到的逐字文本 ✓（⭐ 下一轮可直接用 ✓）**：
+  ⭐ `grooveFileFor(arrangement: ArrangementV2): Promise<ProducedGroove>` ✓ 内：
+    ⭐ `const { exportProjectPackage, validateGroovePackage } = await import("../sequencer/projectDb");` ✓
+    ⭐ `const pattern = compiledPatternFor(arrangement);` ✓
+    ⭐ `const project = grooveProjectFor(arrangement);` ✓
+    ⭐ `const carried: GrooveProjectArrangement = { clips: { A: pattern }, sections: [] };` ✓
+    ⭐ `const pkg = exportProjectPackage(project, undefined, carried);` ✓
+    ⭐ `validateGroovePackage(pkg);` ✓
+  ⇒ ⭐ 改法 ✓：⭐ 换成 ⭐ `buildArrangementPackage(arrangement)` ✓ ＋ ⭐ `validateArrangementPackage(pkg)` ✓
+    ⇒ ⭐ 于是 Web 的 `.groove` 也变 v2 ✓（⭐ 与 MCP 侧一致 ✓）
+**⏳ 未落地 ✗**；⭐ 文本已抓 ✓，⭐ 下一轮一次可成 ✓
+```
+
