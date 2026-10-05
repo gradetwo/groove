@@ -10934,3 +10934,24 @@ export async function prepareArrangementAudioLanes(input: {
   ⇒ ⭐ **下一轮** ✓：⭐ 量 **Web 面**的 v1 依赖（⭐ 这是纯 V2 架构里最大的一块 ✓，之前没量过 ✓）
 ```
 
+**⭐ 纯 V2 盘点：Web 面（2026-10-05 20:59 ✓，首次实测 ✓）**：
+```
+· ⭐ **引用 v1 模型的文件数** ✓（判据：`types/song` ✓／`data/songFlatten` ✓／`data/song` ✓／`songSnapshot` ✓）：
+  · `src/views` ⇒ ⭐ **1** ✓（⭐ 直属 15 个文件 ✓）
+  · `src/components` ⇒ ⭐ **6** ✓（⭐ 直属 8 个 ✓）
+  · `src/features` ⇒ ⭐ **7** ✓（⭐ 全部在子目录 ✓）
+  ⇒ ⭐ **合计 14 个文件** ✓
+· ⭐ **v1 词汇在 Web 面的次数** ✓：`songId` **6** ✓／`song` **59** ✓／`clip` **25** ✓／`slot` **62** ✓／`section` **76** ✓
+· ⭐ **`arrangement` 出现在 30 个文件里** ✓ ⇒ ⭐ **Web 面主体已是 V2** ✓ ✓
+· ⭐ **`src/data` 的 v1 模型模块只剩一个** ✓：`songFlatten.ts` ✓
+⇒ ⭐ **结论（与预期相反 ✓）**：⭐ **v1 的最大块不在 Web 面** ✗ —— ⭐ Web 迁移是**小工程（14 文件）** ✓
+  ⇒ ⭐ 真正的大块是 ⭐ **MCP 的 `registrySong`（11 工具 ✓）＋ `registryPattern`（5 ✓）＋ 混合面** ✓
+    ＋ ⭐ **`src/data` 的 v1 模型（`songFlatten` 等 ✓）** ✓ ＋ ⭐ **内部仍借 v1 pattern 的引擎调用** ✓
+· 📌 **于是优先级调整 ✓**：
+  ① ⭐ 先做第 7 项步骤 2（歌词工具换 v2 入参 ✓，地基已备 ✓）
+  ② ⭐ 再 `registryFiles` → `registryRender` → `registryAnalysis`（混合面收拢 ✓）
+  ③ ⭐ 再 **Web 的 14 个文件**（小 ✓，可一次一支 ✓）
+  ④ ⭐ 再 `src/data` 的 v1 模型（⭐ 先立 v2 判据 ✓，因为它是**数据层** ✓，风险最高 ✓）
+  ⑤ ⭐ 最后 `registrySong` ＋ `registryPattern` 整支处置 ✓
+```
+
