@@ -15130,3 +15130,25 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+### 五百七十八、✅ **⑦ 第一组第一步已落：V2 存储有了订阅＋快照**（2026-10-06 04:48 ✓）
+
+```
+**⭐ 已加（`src/features/sequencer/projectDb.ts` 末尾 ✓）**：⭐ 4 个导出 ✓
+  ⭐ ① ⭐ `interface ArrangementSaveStatus` ✓ —— ⭐ `{ status: "idle" | "saving" | "saved" | "failed"; savedAt?: number | null }` ✓
+    （⭐ 与判据一致 ✓：⭐ 四态 ✓ ＋ ⭐ 时间可为空 ✓）
+  ⭐ ② ⭐ `setArrangementSaveStatus(next)` ✓ —— ⭐ 发布给全部监听者 ✓（⭐ 只由存储内部调用 ✓）
+  ⭐ ③ ⭐ `subscribeArrangementSaveStatus(listener)` ✓ —— ⭐ 返回退订函数 ✓（⭐ 供 `useSyncExternalStore` ✓）
+  ⭐ ④ ⭐ `getArrangementSaveStatusSnapshot()` ✓ —— ⭐ 读当前快照 ✓
+  ⭐ 内部 ✓：⭐ 模块级快照 ＋ ⭐ `Set<() => void>` ✓
+**⭐ 读数 ✓**：⭐ `tsc=0` ✓｜⭐ `lint=0` ✓｜⭐ **`dead-exports=0`** ✓｜⭐ 十一道门 0 ✓｜⭐ 双文档门 0 ✓
+**⭐ 本步为何可独立 ✓**：⭐ 这一对**暂无消费者** ✓ ⇒ ⭐ **行为不变** ✓ ⇒ ⭐ 门必绿 ✓ ✓
+  ⇒ ⭐ 即 ⭐ "⭐ 先补 V2 侧 ✓，⭐ 再改消费者 ✓"⭐ 的**安全第一步** ✓ ✓
+**⭐ 下一步 ✓（⭐ 本组余下 4 件 ✓）**：
+  ⭐ ① ⭐ `useAutosaveStatus.ts` ✓ ⇒ ⭐ 改用这一对 ✓（⭐ 它是根 ✓）
+  ⭐ ② ⭐ `StudioView.tsx` ✓ ⇒ ⭐ 类型随 hook 对齐 ✓
+  ⭐ ③ ⭐ `SaveIndicator.tsx` ✓ ⇒ ⭐ 本地 props 形状**含 `null`** ✓
+  ⭐ ④ ⭐ `autosaveStatus.test.tsx` ✓ ⇒ ⭐ 形状已由它证实 ✓
+  ⭐ 并 ⭐ 在 `saveArrangementProject` 周围**接三次通知** ✓（⭐ 开始／成功／失败 ✓）⇒ ⭐ 让状态真的流动 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+

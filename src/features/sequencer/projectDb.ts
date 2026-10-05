@@ -1403,3 +1403,36 @@ export async function getArrangementProjectCount(): Promise<number> {
     return arrangementMemoryStore.size;
   }
 }
+
+/**
+ * ⭐ **The save status of an arrangement, readable and subscribable.**
+ *
+ * The older store exposed a snapshot plus a subscription so a component could show whether the work was safe; that store is
+ * being retired, so the arrangement store states the same thing in its own terms. The shape matches what the criteria for the
+ * indicator already assert: four states and a save time that may be absent.
+ */
+export interface ArrangementSaveStatus {
+  status: "idle" | "saving" | "saved" | "failed";
+  savedAt?: number | null;
+}
+
+let arrangementSaveStatus: ArrangementSaveStatus = { status: "idle" };
+const arrangementSaveListeners = new Set<() => void>();
+
+/** ⭐ Publishes a new status to every listener. Called around a save, never by a caller. */
+export function setArrangementSaveStatus(next: ArrangementSaveStatus): void {
+  arrangementSaveStatus = next;
+  for (const listener of arrangementSaveListeners) listener();
+}
+
+export function subscribeArrangementSaveStatus(listener: () => void): () => void {
+  arrangementSaveListeners.add(listener);
+  return () => {
+    arrangementSaveListeners.delete(listener);
+  };
+}
+
+export function getArrangementSaveStatusSnapshot(): ArrangementSaveStatus {
+  return arrangementSaveStatus;
+}
+
