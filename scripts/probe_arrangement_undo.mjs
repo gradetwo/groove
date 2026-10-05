@@ -282,6 +282,9 @@ await page.evaluate(() => {
 });
 await page.waitForTimeout(300);
 /* 候选③：手动 focus 该格一次，看是否同样把页面滚走。 */
+/* 候选④：先把窗口滚到 226，再取坐标、再按。若这次能写入 ⇒ 只是初始滚动位置问题。 */
+report.readings.preScrolled = await page.evaluate(() => { window.scrollTo(0, 226); return Math.round(window.scrollY); });
+await page.waitForTimeout(150);
 const focusProbe = await page.evaluate((id) => {
   const cell = document.querySelector(`[data-testid='${id}']`);
   if (!cell) return null;
@@ -524,7 +527,8 @@ if (asJson) {
   line("   hit test at cell centre", JSON.stringify(r.hitTest));
   line("   selected track", `before=${JSON.stringify(r.selectedTrackBefore)} after=${JSON.stringify(r.selectedTrackAfter)}`);
         line("   focusin trace", JSON.stringify(r.focusin));
-    line("   manual focus probe", JSON.stringify(r.focusProbe));
+      line("   pre-scrolled to", JSON.stringify(r.preScrolled));
+line("   manual focus probe", JSON.stringify(r.focusProbe));
 line("   scrollY samples while held", JSON.stringify(r.scrollSamples));
 line("   window scroll events", JSON.stringify(r.scrolls));
 line("   real pointerdown landed on", JSON.stringify(r.pointerHits));
