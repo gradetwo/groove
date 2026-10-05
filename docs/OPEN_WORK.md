@@ -15073,3 +15073,20 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 已回退 ✓，⭐ 树干净 ✓）
 ```
 
+**⭐ 产出链查全 ✓（2026-10-06 04:47 ✓）**：
+```
+**⭐ 链条 ✓**：⭐ `useAutosaveStatus()` ✓ ⇒ ⭐ `StudioView.tsx:672` ✓ ⇒ ⭐ `SaveIndicator.tsx:15` ✓ ⇒ ⭐ 其判据 ✓
+  ⭐ 证据 ✓：⭐ `StudioView.tsx:61` ✓：⭐ `import { useAutosaveStatus } from "../features/sequencer/hooks/useAutosaveStatus";` ✓
+    ⭐ `:672` ✓：⭐ `const autosave = useAutosaveStatus();` ✓ ⇒ ⭐ 即 ⭐ **真正的产出者是该 hook** ✓ ✓
+**⭐ 联合类型已由判据证实 ✓（⭐ 不再靠猜 ✓）**：⭐ `autosaveStatus.test.tsx` ✓ 传的形状 ✓：
+  ⭐ `{ status: "idle", savedAt: null }` ✓｜⭐ `{ status: "saved", savedAt: Date.now() }` ✓｜
+  ⭐ `{ status: "saving", savedAt: null }` ✓｜⭐ `{ status: "failed", savedAt: null }` ✓
+  ⇒ ⭐ 联合 ＝ ⭐ **`"idle" | "saved" | "saving" | "failed"`** ✓ ✓ ∧ ⭐ **`savedAt` 可为 `null`** ✓
+  ⇒ ⭐ 我先前猜的联合**正确** ✓，⭐ 而 `savedAt` **漏了 `null`** ✗ ⇒ ⭐ **以判据为准** ✓（⭐ 教训 151 ✓）
+**⭐⭐ 因此这一组的同批清单 ✓（⭐ 四件 ✓）**：
+  ⭐ ① ⭐ `useAutosaveStatus.ts` ✓（⭐ 产出者 ✓）⭐ ② ⭐ `StudioView.tsx` ✓（⭐ 中继 ✓）
+  ⭐ ③ ⭐ `SaveIndicator.tsx` ✓（⭐ 消费者 ✓）⭐ ④ ⭐ `autosaveStatus.test.tsx` ✓（⭐ 形状的判据 ✓）
+  ⇒ ⭐ 顺序 ✓：⭐ ① ⇒ ⭐ ② ⇒ ⭐ ③（⭐ ④ 随 ③ 一起 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
