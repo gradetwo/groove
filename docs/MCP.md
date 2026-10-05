@@ -202,12 +202,12 @@ is B2's `flattenSong`, so the tool cannot render something the app would not). S
 | :--- | :--- | :--- |
 | `create_song` ▣ | `genreId?`, `pattern?`, `name?`, `bpm?`, `swing?`, `resolution?`, `bars?`, `label?`, `clips?` | `songId` plus the arrangement summary; clip A is seeded from the genre's *arranged* pattern, or from an explicit `pattern`, and `clips` seeds further slots |
 | ⭐ 段落与片段 | **v2 用 `takes`** ✓ —— 旧模型的 `make_unique`（把某段落的 clip 复制到空 slot）随 v1 退场；"每段各有旋律"在 v2 是**同一轨的多个 take** ✓ |
-| `set_clip` ▣ | `songId`, `slot`, `pattern?`, `genreId?` | the song's shape after one slot's clip is replaced (or seeded from a genre) — how a section gets its own variation |
+| ⭐ 片段替代 | **v2 用 `set_arrangement_track_steps`** ✓ —— 旧模型的 `set_clip` 随 v1 退场；某部分播什么，在 v2 就是那一轨的**步进** ✓ |
 | ⭐ `add_section` ▣（**暂留** ✗） | `songId`, `slot`, `bars?`, `label?`, `mute?`, `velocityScale?`, `velocityRamp?`, `fill?`, `transpose?`, `index?` | the whole arrangement (shape, bar count, per-section overrides, problems) | ⭐ **Why it stays**: it carries three abilities the arrangement has none of — a per-bar velocity ramp, a fill, and a transposition — so it retires only after those have a home on the v2 side.（⭐ 见台账 §533 的 `needs` ✓）
 | ⭐ 段落复制 | **v2 用 `takes`** ✓ —— 旧模型的 `duplicate_section`（复制一段）随 v1 退场；"同一轨的多个变体"在 v2 是 `add_arrangement_take` ✓／`assign_arrangement_take_range` ✓ |
-| `get_song` ▢ | `songId`, `includePatterns?` | the clips (each with its pattern), the sections in order, the shape and the tempo — what makes a composition readable and re-exportable |
+| ⭐ 读回编曲 | **v2 用 `get_arrangement`** ✓（摘要用 `describe_arrangement` ✓）—— 旧模型的 `get_song` 随 v1 退场 ✓ |
 | `export_groove` ▣ | `songId`, `outputDir?` | a **validated** `.groove` package under `GROOVE_MCP_OUT`, carrying the arrangement rather than a flattened copy |
-| `undo_song` ▣ | `songId`, `steps?` | the arrangement as it now stands, one change back by default — every song change is recorded with an `opId`, which `get_song` lists under `history` |
+| ⭐ 撤销 | **v2 用 `undo_arrangement`** ✓ —— 旧模型的 `undo_song` 随 v1 退场；记录点在编曲存储的**唯一写缝** ✓ |
 | `render_song` ▣ | `songId`, `format?`, `bitrateKbps?`, `sampleRate?`, `channels?`, `maxDurationSec?`, `headless?` | a WAV/MP3 path under `GROOVE_MCP_OUT`, its duration, loudness and true peak — every section, in order. Reports progress as a **heartbeat** (a phase message, then "still working" every 15 s) when the request carries a `progressToken`; see [the two timeouts](#the-two-timeouts-and-which-one-is-ours-2026-10-05). `headless: true` bounces it on the **Node Web Audio host** instead of Chromium — no browser, and it works under `GROOVE_MCP_NO_BROWSER=1`; the parameter states the measured host-node residual (1.03 dB band 3, 1.04 dB band 7, 1.612 LU) and the bound each one sets, the reply's `engine` says which host answered, and that path's progress is **better than a heartbeat**: it can suspend inside `startRendering()`, so the same `progressToken` receives frames rendered out of the render's own frame count, at the same 15 s cadence |
 
 The package this writes is specified field by field in [`GROOVE_PACKAGE_FORMAT.md`](GROOVE_PACKAGE_FORMAT.md).

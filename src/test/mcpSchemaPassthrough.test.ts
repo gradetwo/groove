@@ -100,10 +100,9 @@ describe("MCP · a pattern's own fields survive the tool boundary", () => {
 
   it("keeps every top-level and per-track key of a pattern the app itself produces", async () => {
     await withMcp(async (call) => {
-      // The app's own genre seeding, taken through create_song and read back, rather than a pattern written here.
-      const created = await call("create_song", { genreId: "chicago-house", bars: 1 });
-      const read = await call("get_song", { songId: created.songId });
-      const clip = read.clips.A;
+      // ⭐ The app's own genre seeding, taken through `get_pattern`, rather than a pattern written here.
+      const read = await call("get_pattern", { genreId: "chicago-house" });
+      const clip = read.pattern;
       expect(Object.keys(clip).length).toBeGreaterThan(3);
 
       const composed = await call("apply_pattern_ops", { pattern: clip, ops: [{ op: "swing", amount: 10 }] });

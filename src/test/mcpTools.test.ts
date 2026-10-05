@@ -254,7 +254,7 @@ describe("MCP · the declared surface", () => {
     const mislabelled = TOOLS.filter((tool) => looksLikeAWriter(tool.name) === tool.readOnly).map((tool) => tool.name);
     expect(mislabelled).toEqual([]);
     // And the promise holds for the readers the arrangement group added, which is what makes them safe to call freely.
-    for (const name of ["get_arrangement", "describe_arrangement", "get_song", "list_genres"]) {
+    for (const name of ["get_arrangement", "describe_arrangement", "list_genres"]) {
       expect(TOOLS.find((tool) => tool.name === name)?.readOnly, name).toBe(true);
     }
   });

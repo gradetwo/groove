@@ -185,37 +185,6 @@ export const SONG_TOOLS: ToolDefinition[] = [
     },
   },
   {
-    /**
-     * P2: the song lived only in this process's map, so a composition could not be read back or re-exported.
-     *
-     * It returns the clips **with their patterns**, the sections in order, and the shape — everything needed to write a project
-     * package or hand the arrangement to another exporter.
-     */
-    name: "get_song",
-    title: "Read a song back",
-    description:
-      "Return a song's clips (each with its full pattern), its sections in order, its shape and its tempo. This is what makes a composition re-exportable: render_song and the exporters take a songId, and without this the arrangement could not be inspected once created.",
-    readOnly: true,
-    inputSchema: {
-      songId: z.string().describe("the id create_song returned"),
-      includePatterns: z.boolean().optional().describe("include each clip's full pattern (default true)"),
-    },
-    handler: (args) => {
-      try {
-        const song = getMcpSong(args.songId as string);
-        if (!song) return failure(`unknown songId "${args.songId}" — create one with create_song`);
-        const summary = summariseSong(song);
-        const history = mcpSongHistory(args.songId as string);
-        if (args.includePatterns === false) {
-          return { ...summary, clips: Object.keys(song.clips ?? {}), history };
-        }
-        return { ...summary, clips: song.clips, sections: song.sections, history };
-      } catch (error) {
-        return failure((error as Error).message);
-      }
-    },
-  },
-  {
     name: "add_section",
     title: "Add a section",
     description:
@@ -264,29 +233,6 @@ export const SONG_TOOLS: ToolDefinition[] = [
           transpose: args.transpose as number | undefined,
           index: args.index as number | undefined,
         });
-      } catch (error) {
-        return failure((error as Error).message);
-      }
-    },
-  },
-  {
-    /**
-     * The tool boundary's undo, which an evaluation listed as missing ("no opId/undo/snapshot transaction semantics") and which
-     * matters most for exactly the calls an agent gets wrong: a `set_clip` on the wrong slot, a `duplicate_section` one time too
-     * many. Re-sending the whole arrangement was the only fix before this.
-     */
-    name: "undo_song",
-    title: "Undo a song's last change",
-    description:
-      "Return a song to the state before its most recent change (or before the one `steps` changes ago) and report the arrangement as it now stands. Every change a song tool makes is recorded with an opId, which get_song lists under `history` so the caller can see what is undoable before undoing it.",
-    readOnly: false,
-    inputSchema: {
-      songId: z.string().describe("the id create_song returned"),
-      steps: z.number().int().min(1).max(50).optional().describe("how many changes back to go; default 1"),
-    },
-    handler: (args) => {
-      try {
-        return undoMcpSong(args.songId as string, (args.steps as number | undefined) ?? 1);
       } catch (error) {
         return failure((error as Error).message);
       }
@@ -374,41 +320,6 @@ export const SONG_TOOLS: ToolDefinition[] = [
           totalSteps: flattened.pattern.totalSteps,
           ...audioLaneReplyFields(result.audioLanes),
         };
-      } catch (error) {
-        return failure((error as Error).message);
-      }
-    },
-  },
-  {
-    /**
-     * P1 of the composer's report: `setMcpClip` existed and no tool reached it, so a song could only ever have clip A.
-     *
-     * This is the minimum for the standard verse/chorus workflow — write a variation, point a later section at it — instead of
-     * squeezing the contrast out of `mute`/`velocityRamp`/`transpose`/`fill`.
-     */
-    name: "set_clip",
-    title: "Replace one of a song's clips",
-    description:
-      "Set a slot's clip (A–D) to an explicit pattern or one derived from a genre's arranged pattern, then point sections at it with add_section. Replaces what is there; returns the song's shape.",
-    readOnly: false,
-    inputSchema: {
-      songId: z.string().describe("the id create_song returned"),
-      slot: clipSlotSchema,
-      pattern: patternSchema.optional().describe("the clip to store; omit it to seed the slot from the genre instead"),
-      genreId: z.string().optional().describe("seed the slot from a genre's arranged pattern (used when pattern is absent)"),
-    },
-    handler: (args) => {
-      try {
-        const songId = args.songId as string;
-        const slot = args.slot as ClipSlot;
-        let pattern = args.pattern as SequencerPattern | undefined;
-        if (!pattern && args.genreId) {
-          const genre = findGenre(args.genreId as string);
-          if (!genre) return failure(`unknown genreId "${args.genreId}"`);
-          pattern = patternFromGenre(genre);
-        }
-        if (!pattern) return failure("provide either pattern or genreId");
-        return setMcpClip(songId, slot, pattern);
       } catch (error) {
         return failure((error as Error).message);
       }

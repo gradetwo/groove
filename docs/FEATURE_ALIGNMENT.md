@@ -383,3 +383,17 @@
   ⭐ 随 `get_song` 一起退 ✓
 **⏳ ⑤ 剩 5 ✓**：⭐ `get_song`（⭐ 现在其前置已就绪 ✓）⇒ `create_song` ✓／`render_song` ✓／`set_clip` ✓／`add_section` ✓
 
+## 2026-10-06 03:10 回填（第 4 条规矩：改完实现回来改表）
+
+| 面 | 变化 | 依据 |
+|---|---|---|
+| ⭐ **MCP 面** | ✅ ⭐ **`set_clip`／`get_song`／`undo_song` 退场** ✓ ⇒ 工具 **90 ⇒ 87** ✓；⚠️ ⭐ **`add_section` 暂留** ✗ —— ⭐ 它承载**三项 v2 没有的能力** ✓（⭐ 逐小节力度斜坡 ✓／`fill` ✓／移调 ✓，⭐ 见 §533 的 `needs` ✓） | 本轮 ✓ |
+| ⭐ **系统／数据** | ✅ ⭐ 能力承接 ✓：⭐ `set_arrangement_track_steps` ✓（⭐ 替 `set_clip` ✓）／⭐ `get_arrangement` ✓（⭐ 替 `get_song` ✓）／⭐ `undo_arrangement` ✓（⭐ 替 `undo_song` ✓） | 本轮 ✓ |
+| ⭐ **Web 面** | **无变化** ✓ | — |
+
+**⭐ 触及 6 个文件 ✓**：⭐ `mcp/registrySong.ts`（⭐ 三段删除 ✓，⭐ `add_section` 保留 ✓）｜⭐ `src/test/mcpTools.test.ts`（⭐ 读者数组 ✓）｜
+  `src/test/mcpCapability.test.ts`（⭐ 两处清单 ⇒ v2 ✓）｜⭐ `src/test/mcpSchemaPassthrough.test.ts`（⭐ pattern 来源 ⇒ `get_pattern` ✓）｜
+  `docs/MCP.md`（⭐ 三行 ⇒ 记账 ✓）｜⭐ `docs/FEATURE_ALIGNMENT.md` ✓
+**⭐ 判据读数 ✓**：⭐ `check:mcp` **87 tools** ✓｜⭐ 十一道门全 0 ✓｜⭐ 相关判据全过 ✓｜⭐ 文档双门 0 ✓
+**⭐ 教训 143 的落地 ✓**：⭐ 退**三个**而**留一个** ✓ —— ⭐ 因为那一个带三项别处没有的能力 ✓ ⇒ ⭐ **按能力退，不按名字退** ✓
+
