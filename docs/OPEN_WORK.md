@@ -11980,3 +11980,25 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 算法与位置已定到函数 ✓
 ```
 
+### 四百八十三、⚠️ **第 ⑥ 项接线：算法已落地，回包接线卡在缩进（2026-10-05 23:52 ✓）**
+
+```
+**✅ 已完成 ✓（`b44b5c6` ✓）**：⭐ 估算**算法**已落地 ✓（⭐ `mcp/render/estimate.ts` ✓，⭐ 3 用例 ✓，⭐ 已验能红 ✓，
+  ⭐ 七道快门 ＋ `deadExportsBudget` 全绿 ✓）
+**⚠️ 接线卡点 ✓（诚实记 ✓）**：⭐ 我要在 ⭐ `mcp/registryArrangement.ts` 的 `validate_arrangement` 回包里
+  ⭐ 加 ⭐ `renderEstimate` ✓ ⇒ ⚠️ ⭐ 我的锚点字符串**没匹配上** ✗（⭐ `return 0` ⇒ **缩进不符** ✗）
+  ⇒ ⭐ 于是**文件未被改动** ✓（⭐ typecheck=0 是落在**未改**的文件上 ✓）
+  ⇒ ⭐ 教训 105 ✓：⭐ **多行锚点要先抓逐字文本（含前导空格 ✓），再写替换** ✓
+    （⭐ 本会话第 4 次同类 ✗ ⇒ ⭐ 我应把它当作**固定流程** ✓：⭐ 先 `sed -n | cat -A` ✓，⭐ 后替换 ✓）
+**⭐ 下一轮的精确步骤 ✓**：
+  ① ⭐ 抓 `sed -n '1374,1380p' … | cat -A` ✓（⭐ 本次已抓 ✓）
+  ② ⭐ 在 `return {` 之前插两行 ✓：⭐ `const forEstimate = getMcpArrangement(String(args.arrangementId));` ✓
+     ＋ ⭐ `const estimateBars = forEstimate?.bars ?? Math.max(1, Math.ceil((flattened.pattern.totalSteps ?? 16) / 16));` ✓
+  ③ ⭐ 在 `totalSteps: …` 之后加一行 ✓：⭐ `renderEstimate: estimateRenderCost({ bars: estimateBars, bpm: forEstimate?.bpm ?? 120 }),` ✓
+  ④ ⭐ 顶部加导入 ✓：⭐ `import { estimateRenderCost } from "./render/estimate";` ✓
+  ⑤ ⭐ 描述加一句 ✓（⭐ 短句 ≤ 97 ✓）：⭐ "It also estimates what rendering it will cost."
+  ⑥ ⭐ 判据加一例 ✓（⭐ 回包含 `renderEstimate` ✓ 且 ⭐ **不含 `bytes:`** ✓）
+  ⑦ ⭐ 回填对齐表 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 步骤已到行 ✓
+```
+
