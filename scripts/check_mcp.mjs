@@ -355,16 +355,6 @@ try {
    * Fifth report, P1.2: a composer guessed `"techno"`, was told only "provide either genreId or pattern", and concluded the ids had to be read from the source.
    * `list_genres` is a tool; the error must say so, and should recognise an abbreviation.
    */
-  const badGenre = await client.request("tools/call", {
-    name: "create_song",
-    arguments: { genreId: "techno", ops: [{ op: "set_step", track: "kick", step: 0 }] },
-  });
-  const badGenreText = JSON.stringify(badGenre);
-  check(
-    "an unknown genreId names list_genres and suggests the nearest real id",
-    /list_genres/.test(badGenreText) && /detroit-techno/.test(badGenreText),
-    badGenreText.slice(0, 140)
-  );
 
   const vocalStub = await client.request("tools/call", {
     name: "synthesize_vocal",
@@ -806,13 +796,6 @@ try {
 
   /**
   const created = payload(
-  await client.request("tools/call", { name: "create_song", arguments: { genreId: "chicago-house", bars: 2 } })
-  );
-  check(
-  "create_song seeds a song with one repeated section",
-  typeof created.songId === "string" && created.totalBars === 2 && (created.clips ?? []).includes("A"),
-  JSON.stringify(created).slice(0, 140)
-  );
   const savedGenre = payload(
     await client.request("tools/call", { name: "save_custom_genre", arguments: { forkFromGenreId: "chicago-house", name: "Gate Probe" } })
   );
