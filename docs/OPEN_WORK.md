@@ -14903,3 +14903,28 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+### 五百七十四、⭐⭐ **重大更正：v2 编辑层已存在（⑥ 从"新建"变为"接线"）**（2026-10-06 04:42 ✓）
+
+```
+**⭐ 量到 ✓**：⭐ `src/data/arrangementEdits.ts` ✓ —— ⭐ **656 行 ✓／37 个导出 ✓** ⇒ ⭐ **它就是 v2 的编辑层** ✓ ✓
+  ⭐ 轨道 ✓：⭐ `addTrack` ✓／⭐ `removeTrack` ✓／⭐ `insertTrack` ✓／⭐ `replaceTrack` ✓／⭐ `changeTrackKind` ✓／
+    `setTrackParent` ✓／⭐ `setTrackFlag`（⭐ muted／soloed ✓）✓／⭐ `renameTrack` ✓／⭐ `setCollapsed` ✓／
+    `setTrackRegion` ✓／⭐ `setTrackGain` ✓／⭐ `setTrackPan` ✓／⭐ `setTrackSample` ✓
+  ⭐ 编曲 ✓：⭐ `createArrangement` ✓／⭐ `createArrangementFromTemplate` ✓／⭐ `setArrangementTempo` ✓／
+    `setArrangementTempoMap` ✓／⭐ `setArrangementBars` ✓／⭐ `setArrangementTimeSignature` ✓
+  ⭐ 步进与音符 ✓：⭐ `toggleStep` ✓／⭐ `setTrackSteps` ✓／⭐ `addTrackNote` ✓／⭐ `addTrackNotes` ✓／
+    `removeTrackNote` ✓／⭐ `moveTrackNote` ✓／⭐ `setTrackNoteLength` ✓
+**⚠️ ⭐ 因此 §232 的计划有误 ✗**：⭐ 我写"⭐ 先立一个 v2 编辑层**" ✗ ⇒ ⭐ 而**它早就在** ✓ ✓
+  ⇒ ⭐ 真实情况 ✓：⭐ v2 编辑层**已是既有模块** ✓ ⇒ ⭐ **⑥ 的工作只是"⭐ 让 Web 组件与 store 改用它与 `ArrangementV2`**" ✓ ✓
+  ⇒ ⭐ 即 ⭐ **接线 ✓**，⭐ 不是**重写 ✓** ⇒ ⭐ 工作量**大幅缩小** ✓ ✓
+**⭐⭐ 教训 164 ✓**：⭐ **打算"⭐ 新建**"之前，⭐ 先查"⭐ 新侧是否已存在**" ✗ ——
+  ⭐ 我连续两次犯同类错 ✓：⭐ ① ⭐ 窄扫描误判"⭐ 只剩 1 个文件" ✗（⭐ §570 ✓）② ⭐ 未查就计划"⭐ 新建编辑层" ✗（⭐ 本节 ✓）
+  ⭐ 共同点 ✓：⭐ **都是"⭐ 没先量 ⭐ 就下判断**" ✗ ⇒ ⭐ 做法 ✓：⭐ 任何"⭐ 要新建 X**"⭐ 的前一句，⭐ 必须先 `grep "⭐ X 的关键词**"`
+    ⭐ 确认**它不存在** ✓ ✓
+**⭐ 于是 ⑥ 的真实形状 ✓**：
+  ⭐ ① ⭐ **接线**：⭐ `src/features/arrangement/songEdit.ts` ✓ 的函数 ⇒ ⭐ 改为**基于** `arrangementEdits` ✓ ＋ ⭐ `ArrangementV2` ✓
+  ⭐ ② ⭐ **视图助手**（⭐ `sectionRegions` ✓／⭐ `trackRows` ✓）⇒ ⭐ 从 ⭐ `tracks` ＋ ⭐ `bars` 生成 ✓
+  ⭐ ③ ⭐ **组件与 store** 改用新入口 ✓ ⇒ ⭐ 旧类型（`types/song.ts` ✓）与旧层随后退场 ✓（⭐ 与 ⑦ 同批 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
