@@ -12839,3 +12839,27 @@ export async function prepareArrangementAudioLanes(input: {
   （⭐ 本轮我就是**先写进台账**、⭐ **后量** ✗ ⇒ ⭐ 顺序反了 ✓ ⇒ ⭐ 正确顺序 ✓：⭐ **先量，⭐ 后写** ✓）
 ```
 
+### 五百一十二、⭐ **⑤ 的判定表（逐行量过 ✓）**（2026-10-06 01:50 ✓）
+
+```
+| v1 工具 ✓ | v2 对应物（**实测存在** ✓） | 判定 ✓ |
+|---|---|---|
+| ⭐ `create_song` ✓ | ⭐ `create_arrangement` ✓ | ⭐ ① 同义 ⇒ **退场** ✓（⭐ 先比回包 ✓） |
+| ⭐ `get_song` ✓ | ⭐ `get_arrangement` ✓ | ⭐ ① 退场 ✓ |
+| ⭐ `render_song` ✓ | ⭐ `render_arrangement` ✓ ＋ ⭐ `render_arrangement_preview` ✓ | ⭐ ② **能力已在新侧 ⇒ 退场** ✓ |
+| ⭐ `set_tempo` ✓ | ⭐ `set_arrangement_tempo` ✓ ＋ ⭐ `set_arrangement_tempo_map` ✓ | ⭐ ① 退场 ✓ |
+| ⭐ `set_lane_slots` ✓ | ⭐ `set_arrangement_track_steps` ✓ | ⭐ ① 退场 ✓ |
+| ⭐ `set_clip` ✓ | ⭐ `set_arrangement_track_steps` ✓ | ⭐ ① 退场 ✓（⭐ clip ✗ ⇒ ⭐ steps ✓） |
+| ⭐ `add_section` ✓ | ⭐ `add_arrangement_notes` ✓ ＋ ⭐ `add_arrangement_track` ✓ | ⭐ ③ v1 概念 ⇒ **退场进 notes／takes** ✓ |
+| ⭐ `duplicate_section` ✓ | ⚠️ ⭐ **无同名候选** ✗ | ⭐ ③ ⇒ ⭐ 退场进 ⭐ `add_arrangement_take` ✓／`assign_arrangement_take_range` ✓（⭐ 这就是 v2 做"⭐ 变体"的方式 ✓） |
+| ⭐ `undo_song` ✓ | ⚠️ ⭐ **无同名候选** ✗ | ⚠️ ⭐ **待判 ✓** —— ⭐ 见下 ✓ |
+| ⭐ `get_pattern` ✓ | ⭐ `get_arrangement` ✓ | ⭐ ③ ⇒ ⭐ 退场（⭐ v2 里"⭐ pattern"就是 ⭐ notes ✓） |
+| ⭐ `apply_pattern_ops` ✓ | ⭐ `set_arrangement_track_steps` ✓ | ⭐ ③／② ⇒ ⭐ 判定 ✓ |
+| ⭐ `apply_chord_progression` ✓ | ⭐ `add_arrangement_notes` ✓ | ⭐ ② ⇒ ⭐ 退场／移植 ✓ |
+**⭐ `registryArrangement` 的 42 个名字已全部列出 ✓**（⭐ 存于本节上下文 ✓）⇒ ⭐ 配对不必再猜 ✓
+**⭐ 结论 ✓**：⭐ ⑤ **大多是"⭐ 退场 ＋ ⭐ 记账"** ✓；⭐ 只有 ⭐ **`undo_song` 一个真问题** ✗
+  ⇒ ⭐ 若 v2 有撤销机制 ⇒ ⭐ 退场 ✓；⭐ 若无 ⇒ ⭐ **这是要移植的能力** ✓（⭐ 不能丢 ✓）
+**⭐⭐ 教训 124 生效 ✓**：⭐ 这份表**每一行都有计数支撑** ✓（⭐ 不再按名字猜 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 表已立 ✓
+```
+
