@@ -69,6 +69,9 @@ import { createWaveLoopReader } from "./wavLoop";
 import { createOfflineSamplerSink } from "./samplerLaneSink";
 import { SAMPLE_CATALOGUE, type SampleAsset } from "../data/sampleCatalogue";
 import { bufferHasAudio, type ChannelDataBuffer } from "./renderSilence";
+import type { SequencerPattern } from "../types/genre";
+import type { OfflineAudioLanePreparation } from "./offlineAudioLanes";
+import type { SampleLoader } from "./sampleLoader";
 
 /**
  * **Measurement-only phase timing, and inert unless switched on.**
@@ -714,6 +717,61 @@ export async function renderPatternChunkOffline(
   options: RenderWavOptions = {}
 ): Promise<RenderedChunk> {
   return (await renderPatternOfflineInternal(pattern, options, true)) as RenderedChunk;
+}
+
+/**
+ * ⭐ **Resolve and fetch the recordings a render will need, without rendering it.**
+ *
+ * Extracted rather than copied: the offline render calls this, and so does a validation caller, so there is one
+ * preparation and not two that can disagree. The progress callback and the problem collector stay with the caller,
+ * because they describe the render's own flow rather than what this returns.
+ */
+export async function prepareArrangementAudioLanes(input: {
+  pattern: SequencerPattern;
+  ctx: BaseAudioContext;
+  catalogue: readonly SampleAsset[];
+  bpm: number;
+  tempoTrack?: readonly TempoPoint[];
+  totalSteps: number;
+  chunkWindow?: ChunkRenderWindow | null;
+  scheduledSteps: number;
+  timelineOffsetSec: number;
+  silencedTrackIndexes: readonly number[];
+  sampleDecoder?: (context: BaseAudioContext) => SampleDecoder;
+  fetchSfzBytes?: (url: string) => Promise<string>;
+  stemTrackIdx?: number;
+}): Promise<{ loader: SampleLoader; preparation: OfflineAudioLanePreparation }> {
+  const {
+    pattern, ctx, catalogue, bpm, tempoTrack, totalSteps,
+    chunkWindow, scheduledSteps, timelineOffsetSec, silencedTrackIndexes,
+    sampleDecoder, fetchSfzBytes, stemTrackIdx,
+  } = input;
+  const loader = createSampleLoader(
+    sampleDecoder ? sampleDecoder(ctx) : browserSampleDecoder(ctx),
+    catalogue,
+    undefined,
+    undefined,
+    createWaveLoopReader(),
+    fetchSfzBytes
+  );
+  const preparation = await prepareOfflineAudioLanes({
+    pattern,
+    loader,
+    catalogue: catalogue,
+    bpm,
+    ...(tempoTrack ? { tempoTrack } : {}),
+    totalSteps,
+    ...(chunkWindow
+      ? {
+          stepOffset: chunkWindow.fromStep,
+          stepSpan: scheduledSteps,
+          timeOffsetSec: timelineOffsetSec,
+        }
+      : {}),
+    ...(stemTrackIdx === undefined ? {} : { stemTrackIdx: stemTrackIdx }),
+    silencedTrackIndexes,
+  });
+  return { loader, preparation };
 }
 
 async function renderPatternOfflineInternal(
@@ -1830,31 +1888,20 @@ async function renderPatternOfflineOnce(
      * nothing cheaper can see it. `sampleLoader` owns the priority (SFZ first, recording second); this line only hands it the
      * reader, and it is the *same* reader for the prewarm and for the mixing pass, so the header is read once.
      */
-    const loader = createSampleLoader(
-      options.sampleDecoder ? options.sampleDecoder(ctx) : browserSampleDecoder(ctx),
-      audioCatalogue,
-      undefined,
-      undefined,
-      createWaveLoopReader(),
-      options.fetchSfzBytes
-    );
-    mark("audioLanes:prepare");
-    const preparation = await prepareOfflineAudioLanes({
+    const { loader, preparation } = await prepareArrangementAudioLanes({
       pattern,
-      loader,
+      ctx,
       catalogue: audioCatalogue,
       bpm,
       ...(patternTempo.length ? { tempoTrack: patternTempo } : {}),
       totalSteps,
-      ...(chunkWindow
-        ? {
-            stepOffset: chunkWindow.fromStep,
-            stepSpan: scheduledSteps,
-            timeOffsetSec: timelineOffsetSec,
-          }
-        : {}),
-      ...(options.stemTrackIdx === undefined ? {} : { stemTrackIdx: options.stemTrackIdx }),
+      chunkWindow,
+      scheduledSteps,
+      timelineOffsetSec,
       silencedTrackIndexes,
+      ...(options.sampleDecoder ? { sampleDecoder: options.sampleDecoder } : {}),
+      ...(options.fetchSfzBytes ? { fetchSfzBytes: options.fetchSfzBytes } : {}),
+      ...(options.stemTrackIdx === undefined ? {} : { stemTrackIdx: options.stemTrackIdx }),
     });
     if (preparation.problems.length) audioLaneProblems.push(...preparation.problems);
     options.onAudioLanePreparation?.({
