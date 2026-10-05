@@ -45,8 +45,8 @@
 | 24 | 分享链接 | ✓ | ? | ✓ `share_url` | Web **待核** |
 | 25 | ⭐ 人声：绑定歌词与旋律 | ✓ | ✗ | ✓ `set_vocal_melody` | **Web ✗**：无 UI |
 | 26 | ⭐ 人声：合成演唱 | 🔶 **未实现** | ✗ | 🔶 `synthesize_vocal`（标题自述 "reserved — not implemented"） | **计划**：工具面预留；两侧都没有可用实现 |
-| 27 | ⭐ PWA 安装／更新入口 | ✓ `src/utils/pwa.ts`（`initPwa` 已在 `src/main.tsx` 跑） | **✗ 无入口** | n/a | **Web ✗ 半接线**：`subscribePwaStatus` 与 `promptInstallApp` 无人调用（`docs/OPEN_WORK.md` §E）；业主已批准补 |
-| 28 | ⭐ 无障碍"减少动效" | 🔶 `src/hooks/useReducedMotion.ts`（能写 `.reduced-motion` 类但**无人调用**）＋ `src/hooks/useDeviceCapabilities.ts`（只读系统偏好） | 🔶 `GalaxyView` **已在读**该类 | n/a | **半接线**：接一次即生效（`docs/OPEN_WORK.md` 记有方案） |
+| 27 | ⭐ PWA 安装／更新入口 | ✓ `src/utils/pwa.ts`（`initPwa` 已在 `src/main.tsx` 跑） | ✅ **有入口**：`src/components/settings/SettingsModal.tsx`（「关于」页订阅 `subscribePwaStatus` ✓；`canInstall` 时给「安装应用」✓；`isUpdateAvailable` 时给「立即更新」✓） | n/a | ✅ **已完成**（2026-10-05 ✓，见 `docs/OPEN_WORK.md` §399）；判据 `src/test/pwaEntry.test.ts` ✓（含「缺 `matchMedia` 的主机不得在导入时抛」✓） |
+| 28 | ⭐ 无障碍「减少动效」 | ✓ `src/hooks/useReducedMotion.ts`（写 `.reduced-motion` ✓、跟随系统查询 ✓）＋ `src/hooks/useDeviceCapabilities.ts`（只读系统偏好） | ✅ **已接**：`src/App.tsx` 在根上**调一次** ✓（`GalaxyView` 另在读该类 ✓） | n/a | ✅ **已完成**（2026-10-05 ✓，见 `docs/OPEN_WORK.md` §398）；判据 `src/test/reducedMotionWiring.test.ts` ✓（要求**调用**而非导入 ✓；`check:skins` 零 diff ✓） |
 | 29 | 工程文件（`.groove` 包） | ✓ | ✓ 导出／导入菜单 | ✓ `export_groove`、`import_groove` | 三方齐 |
 | 30 | 试听预热／封面（体验项） | 🔶 `src/hooks/useCoverWarmup.ts`（基础钩子已用于列表） | 🔶 部分 | n/a | **待接线**：`useCoverWarmupBothSizes` 无人调用（业主已批准补） |
 
@@ -57,8 +57,8 @@
 | ✅ **Web：Logic 导入入口**（第 11 行） | — | 已完成（2026-10-05 ✓，见 `docs/OPEN_WORK.md` §378） | **已完成并推** ✓（判据含往返 ✓） |
 | ✅ **MCP：段落渲染超时**（第 13/15 行） | 渲染时长由编曲长度决定（8 小节 5 轨 ≈ 300 s、全曲 ≈ 360 s） | 业主批准后**逐条核查** ⇒ **表面已具备**：服务端预算 **900 s** ✓／描述已写「客户端超时须至少同长」✓／带 `progressToken` 即报进度 ✓／stems 已写「每轨一次渲染」✓ | **核查完成，无需改代码** ✓（`docs/OPEN_WORK.md` §380；两条判据守着那句提示 ✓） |
 | ✅ **MCP：`add_arrangement_track` 顶层 `trackId`** | 原回执为 `{summary, problems}`，新 id 藏在 `summary.tracks[last].id` | 业主批准后已实现（保留嵌套 ✓ 向后兼容 ✓） | **已完成并推** ✓（§377；判据拿返回 id 直接做下一步调用 ✓，验红 ✓） |
-| **Web：PWA 安装/更新入口**（第 27 行） | 生命周期已实现且已启动，缺 UI | 就地加在既有设置面板或更新弹窗 | **已批准，未开工** |
-| **Web：减少动效**（第 28 行） | 钩子与消费者都在，**只差一次调用**（且另有平行实现待合并） | 保守法：先在根组件调一次 | **已批准，未开工** |
+| ✅ **Web：PWA 安装/更新入口**（第 27 行） | — | 已完成（2026-10-05 ✓，见 `§399`） | **已完成并推** ✓（判据 4 用例 ✓，弄红过 ✓） |
+| ✅ **Web：减少动效**（第 28 行） | — | 已完成（2026-10-05 ✓，见 `§398`）：保守法，根组件调一次 ✓ | **已完成并推** ✓（判据 3 用例 ✓，弄红过 ✓；`check:skins` 零 diff ✓） |
 | **MCP：`synthesize_vocal`**（第 26 行） | 标题即写明 "reserved — not implemented" | 无 | **计划（预留）** |
 | **Logic 工程实机打开** | 无 Mac／Logic | 需外部环境 | **未测（`needs`）** |
 | **采样镜像可达性对渲染的影响** | 本机渲染宿主连不上采样镜像；deep-test 沙箱亦然 | 需可用的镜像出口 | **未测（`needs`）** |
