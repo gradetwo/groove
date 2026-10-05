@@ -12244,3 +12244,22 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落地 ✗**；⭐ 文本已抓 ✓，⭐ 下一轮一次可成 ✓
 ```
 
+**⭐ Web 保存路径切换的枚举结果（2026-10-06 00:37 ✓，已回退 ✓ 树脏 0 ✓）**：
+```
+· ✅ ⭐ `typecheck=0` ✓｜⭐ `lint=0` ✓ ⇒ ⭐ **保存路径的 v2 写法本身没问题** ✓
+· ⚠️ ⭐ **两条判据失败** ✓（⭐ 都在 `arrangementEntries.test.ts` ✓）：
+  ⭐ ① ⭐ `expected 'new.groove' to be 'arrangement.groove'` ✗
+    ⇒ ⭐ 原因 ✓：⭐ 我用 ⭐ `arrangement.songId` 做文件名 ✓ ⇒ ⭐ 而 ⭐ **`ArrangementV2` 没有名字** ✗
+    ⇒ ⚠️ ⭐ 且 `songId` **不是每个编曲唯一** ✗（⭐ 同一 song 的多份编曲会撞名 ✗）
+    ⇒ ⭐ **正确改法 ✓**：⭐ 让 `grooveFileFor(arrangement, stem = "arrangement")` **接收一个名** ✓
+      ⇒ ⭐ 默认 `"arrangement"` ✓ ⇒ ⭐ 判据里那个 `'arrangement.groove'` **自然通过** ✓
+  ⭐ ② ⭐ `opens a .groove package as the whole arrangement` ✗ ⇒ ⭐ 报
+    "**Invalid .groove package: format identifier missing or incorrect**" ✓
+    ⇒ ⭐ 原因 ✓：⭐ **读取路径**（`validateGroovePackage(JSON.parse(...))` ✓）⭐ **仍用旧校验** ✗
+    ⇒ ⚠️ ⭐ **又是"对偶"✗**：⭐ 我改了保存 ✓ 却没同批改读取 ✓ ⇒ ⭐ 教训 107 **再次应验** ✓
+    ⇒ ⭐ **正确改法 ✓**：⭐ 读入改用 ⭐ `arrangementFromPackage(parsed)` ✓
+**⭐ 下一轮的两处（都已定位 ✓）**：⭐ ① 保存：⭐ 整函数换 v2 ＋ ⭐ **加 `stem` 参数** ✓（⭐ 默认 `"arrangement"` ✓）
+  ⭐ ② 读取：⭐ 换 `arrangementFromPackage` ✓（⭐ 逐字文本已抓 ✓，⭐ 见下 ✓）
+**⏳ 未落地 ✗**（⭐ 余量用尽 ✓）
+```
+
