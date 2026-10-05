@@ -15110,3 +15110,23 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+**⭐ 缺口确认 ✓＋ 小活定案 ✓（2026-10-06 04:47 ✓）**：
+```
+**⭐ 量到 ✓**：⭐ `src/features/sequencer/projectDb.ts` ✓ ⭐ **零命中** ⭐ `subscribe` ✓／⭐ `getStatus` ✓／⭐ `snapshot` ✗
+  ⇒ ⭐ **V2 存储没有那一对** ✗ ✓ ⇒ ⭐ 这一组的真活 ＝ ⭐ **在 V2 存储上补一小对** ✓ ✓
+  ⭐ 其他 ⭐ `useSyncExternalStore` 的用户 ✓（⭐ `gs1Tracks` ✓／⭐ `AudioSettingsTab` ✓／⭐ `useGs1Setting` ✓／
+    `platform/debugMode` ✓／⭐ `ui/Modal` ✓）⭐ **都与保存状态无关** ✓ ⇒ ⭐ **没有现成写法可抄** ✓
+**⭐⭐ 这一组的施工 ✓（⭐ 约 5 个文件 ✓，⭐ 真活很小 ✓）**：
+  ⭐ ① ⭐ **在 `projectDb.ts` 加一对** ✓（⭐ 约 20 行 ✓）：
+    ⭐ `subscribeArrangementSaveStatus(listener)` ✓ ＋ ⭐ `getArrangementSaveStatusSnapshot()` ✓
+    ⭐ 内部 ✓：⭐ 一个 ⭐ `Set<() => void>` ✓ ＋ ⭐ 一个模块级快照对象 ✓ ＋ ⭐ 在 ⭐ `saveArrangementProject` ✓ 的
+      **成功／失败／开始**三处**通知** ✓ ✓
+    ⭐ 形状 ✓：⭐ `{ status: "idle" | "saving" | "saved" | "failed"; savedAt?: number | null }` ✓（⭐ 与判据一致 ✓）
+  ⭐ ② ⭐ **hook** ✓（`useAutosaveStatus.ts` ✓ 改 import ＋ ⭐ 类型 ✓）
+  ⭐ ③ ⭐ **视图** ✓（`StudioView.tsx` ✓ ⇒ ⭐ 类型随 hook 自动对齐 ✓）
+  ⭐ ④ ⭐ **组件** ✓（`SaveIndicator.tsx` ✓ ⇒ ⭐ 本地 props 形状**含 `null`** ✓）
+  ⭐ ⑤ ⭐ **判据** ✓（`autosaveStatus.test.tsx` ✓ ⇒ ⭐ 形状已由它证实 ✓）
+**⭐ 这是 ⑦ 的第一组 ✓**：⭐ 之后 ⭐ 13 个文件按同一方法推进 ✓（⭐ 每组：⭐ 找根 ⇒ ⭐ 补／改 V2 侧 ⇒ ⭐ 逐个改接 ⇒ ⭐ 跑门 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
