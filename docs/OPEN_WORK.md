@@ -11250,3 +11250,18 @@ export async function prepareArrangementAudioLanes(input: {
   ⇒ ⭐ 判别法 ✓：⭐ 先看名字出现在**哪里** ✓ —— ⭐ 列表＝删项 ✓；句子断言＝改名 ✓；`handler(...)` 调用＝改参数 ✓
 ```
 
+**⭐ 迁移 ③ 第三次尝试：断言拦住，已回退（2026-10-05 21:25 ✓，树脏 0 ✓）**：
+```
+· ⭐ 阻断点 ✓：⭐ `"render_audio", `（**含尾逗号 ✓**）在文件里出现 ⭐ **2 次** ✗ ——
+  ⭐ ① `:75` 的 `RENDER_TOOLS` ✓ ② `:138` 的 for 循环数组 ✓ ⇒ ⭐ 我按"只出现一次"写的替换不成立 ✗
+  ⇒ ⭐ 教训 ✓：⭐ **替换前先数出现次数** ✓，并**逐处处理** ✓（⭐ 这次的断言正好挡住了错误的单次替换 ✓）
+· ⚠️ ⭐ 状态 ✓：⭐ ① 删块 ✓ ② `check_mcp` 改挂 ✓ 已写盘 ✗ ⇒ ⭐ 已 `git checkout -- .` **全部回退** ✓
+· ⭐ **仍未解决的一件 ✓**：⭐ 那 4 个用例需要 ⭐ **一个"造编曲"的辅助** ✓（⭐ 我引用了 `freshArrangementId()` ✗
+  但**它不存在** ✗）⇒ ⭐ 正确写法 ✓：⭐ 在测试里 `import { createMcpArrangement } from "../mcp/arrangement"` ✓
+  ＋ 一个本地辅助 `const freshArrangementId = () => createMcpArrangement({}).arrangementId;` ✓
+  ⇒ ⚠️ ⭐ 但要先确认 ✓：⭐ `createMcpArrangement` 的入参默认值 ✓ 与返回字段名（`arrangementId` ✓）✓ 以及
+    ⭐ **它建出的编曲是否自带一个轨** ✓（⭐ `render_arrangement` 不需要轨 ✓，但**歌词工具需要** ✓）
+· 📌 **结论 ✓**：⭐ 删除的**全部未知已收敛到 2 点** ✓：⭐ ① 两处列表项逐个删 ✓ ② 测试里的"造编曲"辅助 ✓
+  ⇒ ⭐ **下一轮可一次做完 ✓**；⭐ 本轮到此为止（⭐ 我已连续 3 次安全回退 ✓，不再勉强 ✗）
+```
+
