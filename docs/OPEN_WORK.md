@@ -13513,3 +13513,29 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 下一步：⭐ **自下而上删这四段** ✓ ＋ ⭐ §528 的两处引用点 ✓ ＋ ⭐ 文档行 ✓ ＋ ⭐ 地板 ✓
 ```
 
+### 五百三十、⭐ **第 ② 步零未知（含一个单词级修正 ✓）**（2026-10-06 03:06 ✓）
+
+```
+**⭐ ① ⭐ `scripts/check_mcp.mjs:813` ✓**：
+  ⭐ `["create_song", "add_section", "render_song"].every((name) => names.includes(name))` ✗
+  ⇒ ⭐ 改成 ⭐ **`["create_song", "render_song"]`** ✓ —— ⭐ 这两个**都留下** ✓（⭐ 它们是 ⑤ 剩下的两个 ✓）
+  ⇒ ⭐ 且 ⭐ 上方注释（`:807–812` ✓）⭐ 里也点名 `add_section` ✗ ⇒ ⭐ 同改 ✓
+**⭐ ② ⭐ `src/test/mcpTools.test.ts:241–263` ✓**：⭐ 它写明是 ⭐ **"a rule rather than a roster"** ✓
+  ⇒ ⭐ 规则本身**不含**那四个名字 ✓（⭐ 按**动词前缀**判断 ✓）⇒ ⭐ 删对之后**自然通过** ✓
+  ⚠️ ⭐ 但末尾一行 ⭐ 点名检查 ✓：
+    ⭐ `for (const name of ["get_arrangement", "describe_arrangement", "get_song", "list_genres"])` ✗
+    ⇒ ⭐ `get_song` 退场后 ⭐ `TOOLS.find(...)` 为 `undefined` ✗ ⇒ ⭐ `expect(undefined).toBe(true)` ✗
+    ⇒ ⭐ **从该数组删掉 `"get_song"`** ✓ ✓ —— ⭐ 这是**单词级**修正 ✓，⭐ 不改规则 ✓
+**⭐⭐ 因此第 ② 步的全部改动 ✓**：
+  ⭐ ① ⭐ 自下而上删四段（⭐ **187–217** ✓／**218–271** ✓／**272–294** ✓／**382–416** ✓）
+  ⭐ ② ⭐ `check_mcp:813` 清单 ⇒ ⭐ `["create_song", "render_song"]` ✓ ＋ ⭐ 注释 ✓
+  ⭐ ③ ⭐ `mcpTools.test.ts` 读者数组删 `"get_song"` ✓
+  ⭐ ④ ⭐ `mcpCapability` 两处清单 ⇒ v2 ✓
+  ⭐ ⑤ ⭐ `mcpSchemaPassthrough` 的 pattern 来源 ⇒ ⭐ `get_pattern` ✓
+  ⭐ ⑥ ⭐ `docs/MCP.md` 四行 ⇒ 记账 ✓
+  ⭐ ⑦ ⭐ 地板 ⇒ 跟随登记表 ✓
+  ⭐ ⑧ ⭐ 回填 ✓
+**⭐ 预期 ✓**：⭐ 工具数 **90 ⇒ 86** ✓；⭐ **零未知** ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
