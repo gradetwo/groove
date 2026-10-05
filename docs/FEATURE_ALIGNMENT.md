@@ -457,3 +457,17 @@
 **⭐ `mcp/registrySong.ts` 现在只剩 3 个工具 ✓**：⭐ `set_arrangement_vocal_melody` ✓／⭐ `synthesize_vocal` ✓／⭐ `create_song` ✓
 **⭐ 判据读数 ✓**：⭐ `check:mcp` **85 tools** ✓｜⭐ 十一道门 0 ✓｜⭐ 地板判据 0 ✓｜⭐ 文档双门 0 ✓
 
+## 2026-10-06 04:37 回填（第 4 条规矩：改完实现回来改表）
+
+| 面 | 变化 | 依据 |
+|---|---|---|
+| ⭐ **MCP 面** | ✅ ⭐ **`create_song` 退场** ✓ ⇒ 工具 **85 ⇒ 84** ✓；⭐ `registrySong.ts` 只剩 ⭐ **`set_arrangement_vocal_melody`** ✓ 与 ⭐ **`synthesize_vocal`** ✓；⭐ 该文件从 ⭐ **11 个工具**降到 ⭐ **2 个** ✓ | 本轮 ✓ |
+| ⭐ **系统／数据** | ✅ ⭐ `get_transposition_report` **改为只读 pattern 的 lane** ✓ —— ⭐ 去掉段落半 ✓（⭐ 依 §568 的决定 ✓）；⭐ 六个缺口**全部结案或已定** ✓ | 上一轮 ✓ |
+| ⭐ **Web 面** | **无变化** ✓ | — |
+
+**⭐ ⑤ 的状态 ✓**：⭐ **九个待退工具全部退场** ✓（⭐ `set_lane_slots` ✓／⭐ `duplicate_section` ✓／⭐ `set_tempo` ✓／
+  `set_clip` ✓／⭐ `get_song` ✓／⭐ `undo_song` ✓／⭐ `render_audio` ✓／⭐ `render_preview_clip` ✓／⭐ `add_section` ✓／
+  `render_song` ✓／⭐ **`create_song`** ✓）⇒ ⭐ **⑤ 的退场阶段完成** ✓ ✓
+**⭐ 判据读数 ✓**：⭐ `check:mcp` **84 tools** ✓｜⭐ 十一道门 0 ✓｜⭐ 地板判据 0 ✓｜⭐ 文档双门 0 ✓
+**⭐ 注 ✓**：⭐ 若 ⭐ **`registrySong.ts` 只剩 2 个工具** ✗ ⇒ ⚠️ ⭐ 可考虑**并入编曲侧** ✓（⭐ 记为下一步的整理项 ✓）
+
