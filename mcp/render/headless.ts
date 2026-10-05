@@ -420,6 +420,7 @@ export async function renderPatternHeadless(
   return {
     base64,
     durationSec: buffer.duration,
+    ...sampleCache.sampleCacheStats(),
     sampleRate: buffer.sampleRate,
     channels: buffer.numberOfChannels,
     limiterKind,
