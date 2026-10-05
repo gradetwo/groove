@@ -13561,3 +13561,23 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+**⭐ 两个漏点的语义与能力问题 ✓（2026-10-06 03:08 ✓）**：
+```
+**⭐ 原文要点 ✓（`check_mcp:826–860` ✓）**：
+  · ⭐ 站点一 ✓（`:827` ✓）：⭐ `add_section { songId, slot:"A", bars:4, label:"drop", velocityScale:0.8 }` ✗
+    ⇒ ⭐ 断言 ⭐ `totalBars === 6` ✓、⭐ `shape === "A×2 → drop×4"` ✗（⭐ **v1 形状串** ✗）、⭐ `problems.length === 0` ✓
+  · ⭐ 站点二 ✓（`:843` ✓）：⭐ `add_section { …, bars:8, label:"build", velocityRamp:[0.6,1], fill:true, transpose:-2 }` ✗
+    ⇒ ⭐ 断言 ⭐ `overrides.velocityRamp[0..1]` ✓、⭐ `overrides.fill.steps` 是数组 ✓、⭐ `transpose` ✗
+  · ⭐ 第三处 ✗：⭐ "⭐ the ramp reaches the timeline as a per-bar velocity scale" ✓（⭐ 断言斜坡落到时间线 ✓）
+**⚠️ ⭐ 关键问题 ✓**：⭐ 它们测的是 ⭐ **段落级覆盖**（`velocityRamp` ✗／`fill` ✗／`transpose` ✗ 与 ⭐ 形状串 ✗）
+  ⇒ ⭐ 而 v2 的步进是 ⭐ `steps: number[]` ✓，⭐ 描述说 ⭐ "**one entry per step; non-zero is on**" ✗
+    ⇒ ⚠️ ⭐ 即 ⭐ **v2 的步进可能是"开／关"** ✗，⭐ 而不是"⭐ 逐小节力度" ✗
+  ⇒ ⭐ 若如此 ✓：⭐ 这三条断言的**能力在 v2 没有对应** ✗ ⇒ ⭐ **不能静默删掉** ✗
+    ⇒ ⭐ 按纪律 ✓：⭐ **先查 v2 是否有等价能力** ✓（⭐ 本轮已在查 ✓）
+      ⭐ 有 ⇒ ⭐ 删用例 ✓（⭐ 或改接 ✓）；⭐ **没有** ⇒ ⭐ 写进 ⭐ **`needs`** ✓（⭐ 缺口登记 ✓），⭐ 并在文档里写明承接关系 ✓
+**⭐⭐ 这一步的价值 ✓**：⭐ 它可能揭示 ⭐ **一处真实的能力缺口** ✗ ——
+  ⭐ 也就是"⭐ 逐小节力度斜坡／填充／移调"在 v2 侧是否已被别的工具覆盖 ✓
+  ⇒ ⭐ 下一段第一件事 ✓：⭐ 逐个在 v2 侧找对应物 ✓（⭐ `set_arrangement_track_gain` ✓／⭐ 音符力度 ✓／⭐ `get_transposition_report` ✓ 等 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
