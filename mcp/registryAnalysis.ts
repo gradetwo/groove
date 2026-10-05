@@ -8,6 +8,7 @@ import { loudnessReport, shareUrl } from "./exporting";
 import { HEADLESS_POINTER_SENTENCE, headlessParameterDescription } from "./render/budget";
 import { analyseWavFile, renderAudio } from "./render/worker";
 import { flattenMcpSong, makeUniqueMcpSection } from "./song";
+import { flattenMcpArrangement } from "./arrangement";
 import { ToolDefinition, estimateKey, failure, patternFromArgs, patternSchema, unknownGenre } from "./toolKit";
 import { z } from "zod";
 
@@ -49,14 +50,14 @@ export const ANALYSIS_TOOLS: ToolDefinition[] = [
      * and "it reached the ceiling, so the target was not reachable" — the second being a real answer a caller can act on.
      */
     name: "normalize_loudness",
-    title: "Render a song to a target loudness",
+    title: "Render an arrangement to a target loudness",
     description:
-      "Render a song, measure it, compute the master trim that would reach a target integrated loudness, render again with it, and report both readings plus which bound decided the trim. The gain is capped by a true-peak ceiling, so the answer distinguishes reaching the target from reaching the ceiling. Returns the path of the normalized file. " +
+      "Render an arrangement, measure it, compute the master trim that would reach a target integrated loudness, render again with it, and report both readings plus which bound decided the trim. The gain is capped by a true-peak ceiling, so the answer distinguishes reaching the target from reaching the ceiling. Returns the path of the normalized file. " +
       HEADLESS_POINTER_SENTENCE +
       " **Every pass of the loop runs on the host you chose, and the reply's `engine` names it**: with `passes: 1` (the default) this is one render and the choice is the same one `render_song` offers; with more passes the loop is still the same host each time, so the trim is corrected against that host's own readings rather than mixing two engines. The measured host gap (1.03 dB band 3, 1.04 dB band 7, 1.612 LU) applies to the final file exactly as it does to a single render — what is *not* measured is a multi-pass loop whose rounds used different hosts, which this does not do.",
     readOnly: false,
     inputSchema: {
-      songId: z.string().describe("the song to normalize"),
+      arrangementId: z.string().describe("the arrangement to normalize"),
       targetLufs: z.number().min(-40).max(0).optional().describe("default −14, the usual streaming target"),
       truePeakCeilingDb: z.number().min(-12).max(0).optional().describe("default −1 dBTP, the usual delivery ceiling"),
       format: z.enum(["wav", "mp3"]).optional().describe("default wav"),
@@ -75,15 +76,15 @@ export const ANALYSIS_TOOLS: ToolDefinition[] = [
     },
     handler: async (args) => {
       try {
-        const { song, flattened } = flattenMcpSong(String(args.songId));
+        const { flattened } = flattenMcpArrangement(String(args.arrangementId));
         const target = (args.targetLufs as number | undefined) ?? -14;
         const ceiling = (args.truePeakCeilingDb as number | undefined) ?? -1;
         const format = (args.format as "wav" | "mp3" | undefined) ?? "wav";
         const analysis = {
           format,
           bars: 1,
-          genreId: song.genreId,
-          nameSlug: song.name,
+          genreId: flattened.pattern.genre_id,
+          nameSlug: String(args.arrangementId),
           ...(args.sampleRate ? { sampleRate: args.sampleRate as number } : {}),
           ...(args.channels ? { channels: args.channels as 1 | 2 } : {}),
           // ⭐ Every pass carries the engine choice, so one call cannot render its rounds on two hosts.
@@ -147,7 +148,8 @@ export const ANALYSIS_TOOLS: ToolDefinition[] = [
         const limitedBy = peakPinned && Math.abs(best.result.integratedLufs - target) > 0.2 ? "masterLimiter" : residual - headroom > 0.05 ? "truePeak" : "target";
         const after = best.result;
         return {
-          songId: song.id,
+            peakHeadroom: Number(headroom.toFixed(3)),
+          arrangementId: String(args.arrangementId),
           targetLufs: target,
           truePeakCeilingDb: ceiling,
           /** Which host rendered every pass — read, not inferred, the same rule as the single-render tools. */
