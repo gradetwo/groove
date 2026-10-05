@@ -14853,3 +14853,30 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 下一段 ✓：⭐ 从 ⭐ **① 类型**开始量它的用途 ✓
 ```
 
+### 五百七十二、⭐ **⑥／⑦ 的中枢：`src/types/song.ts`（468 行 ＋ 16 导入者 ✓）**（2026-10-06 04:41 ✓）
+
+```
+**⭐ 它是什么 ✓**：⭐ **v1 模型之家** ✓ —— ⭐ 468 行 ✓ ⇒ ⭐ 类型 ✓＋常量 ✓＋函数 ✓ 三类共 30 个导出 ✓
+  ⭐ 类型 ✓：⭐ `Song` ✓／⭐ `SongSection` ✓／⭐ `SectionOverrides` ✓／⭐ `SongFill` ✓／⭐ `SongBar` ✓／
+    `SongTimeline` ✓／⭐ `CreateSongInput` ✓／⭐ `ClipSlot` ✓
+  ⭐ 常量 ✓：⭐ **`CLIP_SLOTS` ＝ A–H（八个 ✓）** ✗｜⭐ `RISER_STEPS` ✓／⭐ `RISER_VELOCITY_RAMP` ✓／⭐ `DEFAULT_FILL_VELOCITY` ✓／
+    `MAX_SECTION_BARS` ✓／⭐ `MAX_SONG_BARS` ✓／⭐ `MAX_SECTION_TRANSPOSE` ✓
+  ⭐ 函数 ✓：⭐ `sectionTranspose` ✓／⭐ `resolveTimeline` ✓／⭐ `normaliseFill` ✓／⭐ `createSong` ✓／⭐ `appendSection` ✓／
+    `updateSection` ✓／⭐ `removeSection` ✓／⭐ `duplicateSection` ✓／⭐ `migrateSongChain` ✓／⭐ `sectionsFromSongChain` ✓／
+    `toSongChain` ✓／⭐ `sectionsToSongChain` ✓／⭐ `describeSong` ✓
+**⭐ 16 个导入者 ✓（⭐ 非判据 ✓）**：⭐ `audio/SequencerUrlShare` ✓｜⭐ `audio/WavExporter` ✓｜⭐ `data/arrangementForm` ✓｜
+  `data/arrangementCompile` ✓｜⭐ `data/songFlatten` ✓｜⭐ `features/arrangement/songEdit` ✓｜⭐ `features/sequencer/projectStorage` ✓｜
+  `…/useSequencerStore` ✓｜⭐ `…/projectDb` ✓｜⭐ `…/hooks/useTransportControls` ✓｜⭐ `components/arrangement/TrackRows` ✓｜
+  `components/arrangement/ArrangementPanel` ✓｜⭐ `components/sequencer/SequencerPanel` ✓｜⭐ `…/ProjectHubModal` ✓｜⭐ `…/Toolbar` ✓
+**⭐⭐ 判断 ✓**：⭐ 这一个文件**就是 v1 的根** ✓ ⇒ ⚠️ **它是 ⑥ ＋ ⑦ 的中枢 ✓ 也是大件** ✗
+  ⭐ 改动它会**同时牵动**：⭐ 16 个导入者 ✓＋ ⭐ 其全部判据 ✓＋ ⭐ MCP 侧的 v1 存储 ✓
+  ⇒ ⚠️ ⭐ 在余量不足时**不开工** ✓（⭐ 纪律 ✓）；⭐ 且它必须与 ⭐ **⑦**（v1 数据模型）**同批** ✓ ✓
+**⭐ 一处细节 ✓**：⭐ `CLIP_SLOTS` 是 ⭐ **A–H 八个** ✗ ⇒ ⭐ 早先 v1 文档说"⭐ 四个槽 A–D**"⭐ 是**文档**的说法 ✗ ✓
+  ⇒ ⭐ 迁移时 ⭐ v2 的 ⭐ `slots` ✗ 早已退场 ✓ ⇒ ⭐ 无需回迁 ✓
+**⭐ 因此 ⑥ 的施工建议 ✓（⭐ 与 ⑦ 合并 ✓）**：
+  ⭐ ① ⭐ 先量 ⭐ **`songEdit.ts`** ✓（⭐ 66 处 ✓，⭐ 编辑层 ✓ ⇒ ⭐ 它决定别的层怎么改 ✓）
+  ⭐ ② ⭐ 再逐层推进 ✓（⭐ 数据助手 ⇒ ⭐ store／存储 ⇒ ⭐ 组件 ⇒ ⭐ 音频／导出 ✓）
+  ⭐ ③ ⭐ 每层**先立 v2 判据** ✓ ⇒ ⭐ 再改实现 ✓ ⇒ ⭐ 再退 v1 ✓（⭐ 铁律 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
