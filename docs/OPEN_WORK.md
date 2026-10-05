@@ -14304,3 +14304,18 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 树已回退 ✓，⭐ 其余改动已验证可行 ✓）
 ```
 
+**⭐ 三条用例的精确边界 ✓（2026-10-06 03:55 ✓，⭐ 零未知 ✓）**：
+```
+| ⭐ 行 ✓ | ⭐ 内容 ✓ | ⭐ 处置 ✓ |
+|---|---|---|
+| ⭐ `808–810` ✓ | ⭐ 注释块（⭐ 提 `create_song` ✓／`add_section` ✗／`render_song` ✓） | ⭐ **保留** ✓，⭐ 只去掉 `add_section` 一词 ✓ |
+| ⭐ `812–815` ✓ | ⭐ "⭐ the song tools are declared" 清单 ✓ | ⭐ 上一轮已改成 ⭐ `["create_song","render_song"]` ✓ |
+| ⭐ `817–823` ✓ | ⭐ `const created = …` ＋ ⭐ 它的 check ✓ | ⭐ **保留** ✓（⭐ 探 `create_song` ✓，⭐ 且 `created` 仍被用 ✓） |
+| ⭐ **`825–870`** ✓ | ⭐ **三条 `add_section` 用例**（⭐ `const arranged` ✓／⭐ `withOverrides` ✓／⭐ 第三条 check ✓） | ⭐ **删除** ✓ |
+| ⭐ `871–874` ✓ | ⭐ `renderSongSchema` ＋ ⭐ "⭐ render_song takes a songId…" ✓ | ⭐ **保留** ✓ |
+**⭐ 删除区间 ✓**：⭐ **`:825` 到 `:870`** ✓（⭐ 即 ⭐ 到 ⭐ `const renderSongSchema` 行**之前** ✓ —— ⭐ 用**下一个语义单元的起点**界定 ✓，⭐ 教训 141 ✓）
+**⭐ 注释改法 ✓**：⭐ `:808` 的 ⭐ "⭐ `create_song` and `add_section` need no browser" ✗ ⇒ ⭐ 去掉 ⭐ "⭐ and `add_section`" ✓
+**⭐ 因此 `add_section` 的退场 ✓**：⭐ 六块里 ⭐ 五块已验可行 ✓（§555 ✓）＋ ⭐ 这一块边界到行 ✓ ⇒ ⭐ **一次落净** ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
