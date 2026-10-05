@@ -12323,3 +12323,30 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落地 ✗**（⭐ 余量用尽 ✓）；⭐ 四件都已到行，⭐ 缩进已**实测**（不再靠数 ✓）
 ```
 
+**⭐ Web 四件的最后两处未知（2026-10-06 00:43 ✓，已量 ✓）**：
+```
+**⭐ ② 读取要构造的完整对象 ✓（`ArrangementImportResult` 实测字段 ✓）**：
+  ⭐ `{ arrangement: carried, trackIds: carried.tracks.map((track) => track.id), tracks: carried.tracks.length,
+    notes: Object.values(carried.notesByTrack ?? {}).reduce((sum, list) => sum + list.length, 0), problems: [] }` ✓
+  （⭐ 可选字段 ✓：⭐ `situations?` ✓／⭐ `mapped?` ✓ ⇒ ⭐ 不传即可 ✓）
+**⭐ ④ 判据 `src/test/arrangementEntries.test.ts` 要改 5 处 ✓（逐字已量 ✓）**：
+  ⭐ ① ⭐ `:17` ⭐ `import { arrangementFromGroovePackage } from "../data/arrangementImport";` ✗ ⇒ ⭐ 删掉 ✓
+    （⭐ 或改用 ⭐ `arrangementFromPackage` ✓，⭐ 视 ⭐ `:82` 的用法而定 ✓）
+  ⭐ ② ⭐ `:18` ⭐ `import { validateGroovePackage } from "../features/sequencer/projectDb";` ✗ ⇒
+    ⭐ 换成 ⭐ `import { validateArrangementPackage } from "../features/sequencer/arrangementPackage";` ✓
+  ⭐ ③ ⭐ `:78` ⭐ `const pkg = validateGroovePackage(JSON.parse(await file.blob.text()) as unknown);` ✗ ⇒
+    ⭐ `const pkg = validateArrangementPackage(JSON.parse(await file.blob.text()) as unknown);` ✓
+  ⭐ ④ ⭐ `:79–80` ⭐ 断言 `expect(pkg.version).toBe(2)` ✗ ＋ ⭐ `expect(pkg.arrangement?.clips.A).toBeDefined()` ✗ ⇒
+    ⭐ 改为 ⭐ `expect(pkg.format).toBe("groove-arrangement")` ✓ ＋ ⭐ `expect(pkg.arrangement.tracks).toHaveLength(2)` ✓
+    ⇒ ⚠️ ⭐ 注意 ✓：⭐ `validateArrangementPackage` 的返回**不是** `{version, arrangement}` ✗（⭐ 是
+      `{format, appVersion, writtenAt, arrangement}` ✓）⇒ ⭐ 断言要照它的**真实形状**写 ✓
+  ⭐ ⑤ ⭐ `:82` ⭐ `const back = arrangementFromGroovePackage(pkg, "new");` ✗ ⇒ ⭐ 改为直接取
+    ⭐ `const back = pkg.arrangement;` ✓（⭐ 因为包里就是编曲 ✓）⇒ ⭐ 随之 ⭐ `back.problems` ✗ ⇒ ⭐ 改为
+    ⭐ `Object.values(back.notesByTrack ?? {})` ✓ 或 ⭐ `back.tracks` ✓（⭐ 视该用例想断言什么 ✓）
+  ⭐ 另 ✓：⭐ `:74` 的期望 ⭐ `"arrangement.groove"` ✓ **正好与我的默认 `stem` 相同** ✓ ⇒ ⭐ **无需改** ✓
+**⭐ 另一用例（`:116` 起 ✓）**：⭐ `const exported = await grooveFileFor(arrangement());` ✓ ⇒ ⭐ 无需改 ✓；
+  ⭐ 它断言 ⭐ `outcome.tracks === 2` ✓ 与 ⭐ `outcome.notes === 5` ✓ 与 ⭐ `outcome.arrangement.tracks` ✓
+  ⇒ ⭐ 只要 ⭐ ② 的读取构造**正确** ✓，⭐ 这些**都会通过** ✓
+**⏳ 未落地 ✗**（⭐ 余量用尽 ✓）；⭐ 四件全部到行、逐字在案 ✓
+```
+
