@@ -245,22 +245,24 @@ try {
    * The vocal binding, on the chain the gate already builds. It is browser-free by nature — the tool writes notes and checks tones, it renders
    * nothing — so unlike the loudness and preview checks this one belongs here, where it runs in seconds.
    */
+  const lyricArrangement = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "synth" } }));
+  const lyricTrackId = String((lyricArrangement.trackIds ?? [])[0] ?? "track-1");
   const vocal = payload(
     await client.request("tools/call", {
       name: "set_arrangement_vocal_melody",
-      arguments: { songId: song.songId, syllables: ["能", "够"], tones: [2, 4], pitches: [60, 64] },
+      arguments: { arrangementId: lyricArrangement.arrangementId, trackId: lyricTrackId, syllables: ["能", "够"], tones: [2, 4], pitches: [60, 64] },
     })
   );
   check(
     "set_arrangement_vocal_melody binds one syllable per note and warns about the 倒字",
-    vocal.notes?.length === 2 &&
-      vocal.notes.every((note) => typeof note.syllable === "string" && typeof note.pitch === "number") &&
+    vocal.syllables?.length === 2 &&
+      vocal.syllables.every((record) => typeof record.syllable === "string" && typeof record.pitch === "number") &&
       vocal.prosody?.warnings?.length === 1,
     `${vocal.notes?.length} note(s), ${vocal.prosody?.warnings?.length} warning(s): ${vocal.prosody?.warnings?.[0]?.detail ?? ""}`.slice(0, 120)
   );
   const mismatched = await client.request("tools/call", {
     name: "set_arrangement_vocal_melody",
-    arguments: { songId: song.songId, syllables: ["能", "够"], tones: [2], pitches: [60, 64] },
+    arguments: { arrangementId: lyricArrangement.arrangementId, trackId: lyricTrackId, syllables: ["能", "够"], tones: [2], pitches: [60, 64] },
   });
   check(
     "set_arrangement_vocal_melody refuses a syllable/tone mismatch rather than guessing",

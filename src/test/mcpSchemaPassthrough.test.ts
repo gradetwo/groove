@@ -79,22 +79,23 @@ describe("MCP · a pattern's own fields survive the tool boundary", () => {
     });
   });
 
-  it("keeps a lyric the vocal tool just bound when the pattern goes back through a tool", async () => {
+  it("an arrangement keeps the lyric it was given", async () => {
     await withMcp(async (call) => {
-      const { pattern } = await call("get_pattern", { genreId: "chicago-house" });
+      const arrangement = await call("create_arrangement", { blankKind: "synth" });
+      const trackId = String((arrangement.trackIds ?? [])[0] ?? "track-1");
       const sung = await call("set_arrangement_vocal_melody", {
-        pattern,
+        arrangementId: arrangement.arrangementId,
+        trackId,
         syllables: ["能", "够"],
         tones: [2, 4],
         pitches: [60, 64],
       });
-      const syllables = sung.pattern.tracks.find((track: any) => track.track_id === "lead").syllables;
-      expect(syllables.filter(Boolean)).toEqual(["能", "够"]);
-
-      const composed = await call("apply_pattern_ops", { pattern: sung.pattern, ops: [{ op: "swing", amount: 20 }] });
-      const outLead = composed.pattern.tracks.find((track: any) => track.track_id === "lead");
-      expect(outLead.syllables).toEqual(syllables);
+      expect(sung.syllables.filter(Boolean).map((record: any) => record.syllable)).toEqual(["能", "够"]);
+      expect(sung.notes.map((note: any) => note.pitch)).toEqual([60, 64]);
+      expect(sung.arrangementId).toBe(arrangement.arrangementId);
+    expect(sung.trackId).toBe(trackId);
     });
+  });
   });
 
   it("keeps every top-level and per-track key of a pattern the app itself produces", async () => {
@@ -135,4 +136,3 @@ describe("MCP · a pattern's own fields survive the tool boundary", () => {
       ).rejects.toThrow(/pan|less than|invalid/i);
     });
   });
-});

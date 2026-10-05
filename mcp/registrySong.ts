@@ -14,6 +14,8 @@ import { renderAudio } from "./render/worker";
 import { addMcpSection, createMcpSong, duplicateMcpSection, flattenMcpSong, getMcpSong, mcpSongHistory, setMcpClip, summariseSong, undoMcpSong } from "./song";
 import { ToolDefinition, clipSlotSchema, failure, patternSchema, unknownGenre } from "./toolKit";
 import { setVocalMelody } from "./vocal";
+import { flattenMcpArrangement, setMcpTrackNotes } from "./arrangement";
+import { STEPS_PER_BAR } from "../src/data/noteEvents";
 import { z } from "zod";
 
 import { patternFromGenre } from "../src/data/genreMix";
@@ -35,11 +37,8 @@ export const SONG_TOOLS: ToolDefinition[] = [
       "Put syllables on a song's vocal lane, one per note and at the same index as its pitch, and return the prosody check on the result. Give `pitches` to set the melody yourself, or give only the lyric and a melody is written for it. Tones are input (1 阴平, 2 阳平, 3 上声, 4 去声, 0/5 neutral) and never guessed. A rising tone sung on a falling interval is reported as a warning, because that is what makes a listener hear the wrong word.",
     readOnly: false,
     inputSchema: {
-      songId: z.string().optional().describe("the song whose clip to edit"),
-      sectionId: z.string().optional().describe("which section, by id; default the first"),
-      index: z.number().int().min(0).optional().describe("or the section's position"),
-      pattern: patternSchema.optional().describe("instead of a song: bind on a bare pattern, which is returned rather than stored"),
-      track: z.string().max(40).optional().describe("the lane to sing on; default lead"),
+      arrangementId: z.string().describe("the arrangement whose track sings these syllables"),
+      trackId: z.string().describe("the track the syllables are written to; **its notes are replaced**"),
       syllables: z.array(z.string().max(8)).min(1).max(64).describe("one syllable per note, in order"),
       tones: z.array(z.number().int().min(0).max(5)).min(1).max(64).describe("one tone per syllable"),
       pitches: z.array(z.number().int().min(0).max(127)).optional().describe("the notes to sing them on; omitted, a melody is written"),
@@ -49,54 +48,43 @@ export const SONG_TOOLS: ToolDefinition[] = [
     },
     handler: (args) => {
       try {
-        const shared = {
-          track: args.track as string | undefined,
+        const arrangementId = String(args.arrangementId);
+        const trackId = String(args.trackId);
+        const { flattened } = flattenMcpArrangement(arrangementId);
+        /**
+         * ⭐ **The lyric engine is the step engine, reached through the arrangement's own flatten.**
+         *
+         * The borrow is an implementation detail: the inputs, the reply and every word a caller reads are v2. The engine
+         * answers with one record per syllable, each carrying its pitch and its step.
+         */
+        const result = setVocalMelody({
+          pattern: flattened.pattern,
           syllables: args.syllables as string[],
           tones: args.tones as number[],
           pitches: args.pitches as number[] | undefined,
           seed: args.seed as number | undefined,
           tonic: args.tonic as number | undefined,
           mode: args.mode as "major" | "minor" | undefined,
-        };
-        if (args.pattern) {
-          const result = setVocalMelody({ pattern: args.pattern as SequencerPattern, ...shared });
-          return {
-            pattern: result.pattern,
-            trackId: result.trackId,
-            notes: result.notes,
-            prosody: result.prosody,
-            ...(result.warnings.length ? { warnings: result.warnings } : {}),
-          };
-        }
-        if (!args.songId) return failure("provide either songId (with index or sectionId) or pattern");
-
-        const song = getMcpSong(String(args.songId)) as unknown as { sections: Array<{ id: string; slot: ClipSlot }>; clips: Record<string, SequencerPattern> };
-        const at = args.sectionId
-          ? song.sections.findIndex((section) => section.id === args.sectionId)
-          : Math.max(0, Math.min(song.sections.length - 1, Math.floor((args.index as number | undefined) ?? 0)));
-        if (at < 0) return failure(`no section "${args.sectionId}" in song "${args.songId}"`);
-        const section = song.sections[at]!;
-        const clip = song.clips[section.slot];
-        if (!clip) return failure(`section ${section.id} points at clip ${section.slot}, which this song does not have`);
-
-        const result = setVocalMelody({ pattern: clip, ...shared });
-        const summary = setMcpClip(String(args.songId), section.slot, result.pattern);
-        const sharers = song.sections.filter((candidate) => candidate.slot === section.slot).length;
+        });
+        /**
+         * ⭐ **The conversion, with both decisions stated.** A step is a sixteenth of a bar, so a syllable on step `s`
+         * starts at `s / 16 * 4` beats. One syllable lasts one step, and the records carry no velocity, so every note
+         * takes the same stated default; other lengths come from the note tools afterwards.
+         */
+        const notes = result.notes.map((sung) => ({
+          pitch: sung.pitch,
+          startBeats: (sung.step / STEPS_PER_BAR) * 4,
+          lengthBeats: 4 / STEPS_PER_BAR,
+          velocity: 0.8,
+        }));
         return {
-          ...summary,
-          editedSlot: section.slot,
-          trackId: result.trackId,
-          notes: result.notes,
+          arrangementId,
+          trackId,
+          notes,
+          syllables: result.notes,
           prosody: result.prosody,
+          edit: setMcpTrackNotes(arrangementId, trackId, notes),
           ...(result.warnings.length ? { warnings: result.warnings } : {}),
-          ...(sharers > 1
-            ? {
-                sharedSlot: true,
-                note:
-                  `clip ${section.slot} is played by ${sharers} sections, so this edit changed all of them — call make_unique on section ` +
-                  `${section.id} first if only this one should sing these words`,
-              }
-            : {}),
         };
       } catch (error) {
         return failure((error as Error).message);
