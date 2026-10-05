@@ -10556,3 +10556,25 @@ problems: **[]** ✓
 **📌 教训 93 ✓**：⭐ **"报出去的一个数，必须连它的口径一起报"** ✓ ——
    本次数**是对的** ✓、**代码注释里也写了前提** ✓，但**用户看不到注释** ✗ ⇒ ⭐ **注释里的前提要搬到描述里** ✓
 ```
+### 四百五十二、🛠 **`dryRun` 开工简报（已量到位，未动代码 ✗ —— 不做半成品 ✓）**（2026-10-05 19:46 ✓）
+
+```
+**为什么先立简报 ✓**：⭐ 我读到了插入点，但**余量不足**以保证"一次做对" ✓ ⇒ ⭐ **不动代码** ✗（不写假参数 ✗ ——
+   一个"接了但不生效"的参数 ✗ 正是今晚修掉的那类"静默无效" ✗）
+**已量的插入点 ✓（`mcp/registryArrangement.ts` ✓）**：
+   · `render_arrangement` 工具块 ⇒ `:191` 起 ✓；`readOnly: **false**` ✓（`:201` ✓）
+   · `inputSchema` ⇒ `:202` 起 ✓，已有 `arrangementId` ✓／`format` ✓／`bitrateKbps` ✓／`bars` ✓／`sampleRate` ✓／
+     `channels` ✓／`headless` ✓／`startBar`／`endBar` ✓ ⇒ ⭐ `dryRun` 加在 schema 末尾 ✓
+   · 描述由 `renderCostSentence()` ＋ `renderBudgetSentence()` ＋ `HEADLESS_POINTER_SENTENCE` ＋ `renderOutputSentence()`
+     拼成 ✓ ⇒ ⭐ `dryRun` 的说明应**单列一句短句** ✓（避免最长句超限 ✗ —— 今晚已被文风判据绊过一次 ✓）
+**要走的实现（已找好 ✓）**：`prepareOfflineAudioLanes`（`src/audio/offlineAudioLanes.ts:617` ✓）——
+   文档原文 *"Resolve and fetch every recording the plan names … answer whether the render is ready"* ✓、
+   *"Resolves rather than rejects … sentences … are in `problems`"* ✓
+   ⇒ ⭐ `dryRun` ＝ 跑到 preparation 为止 ✓：**不合成** ✓、**不落盘** ✓、**返回 `problems`／`loaded`／`total`** ✓
+**⭐ 诚实口径（必须写进描述 ✓，不许无条件承诺 ✗）**：preparation **会取每条录音** ✓ ⇒
+   热缓存／同 session ⇒ **秒级** ✓；冷缓存 ⇒ **仍受"取采样"支配** ✗（但**省掉合成** ✓ 且**不产生文件** ✓）
+**⭐ 判据（能红 ✓）**：ⓐ `dryRun` 报的 `problems` 与**同 arrangement 正式渲染一致** ✓（走**同一段** preparation ✓）
+   ⓑ `dryRun` **不产生任何文件** ✓（目录前后对比 ✓）ⓒ 热缓存下耗时**远小于**渲染 ✓（同口径读数 ✓）
+**⚠️ 收尾纪律 ✓**：新增参数 ⇒ 跑**文风四条** ✓（`mcpDescriptionForm` ✓／`mcpDescriptionReadability` ✓／copy ✓）＋
+   `check:mcp` ✓＋`tsc` ✓＋从它推导的判据 ✓；⭐ 完成后**回写 skill** ✓（"想校验就先 `dryRun`，别整曲渲染" ✓）＋**重建 `dist-mcp/`** ✓
+```
