@@ -9185,3 +9185,28 @@ problems: **[]** ✓
 **⚠️ 老毛病复发（第 85 条的第二次 ✓）**：我又把反引号写进了 `echo`（★ 被 shell 当命令执行 ⇒ `degraded: command not found` ✗）
    ⇒ ⭐ 这已不是"知识"问题而是**习惯**问题 ✓ ⇒ 定死做法 ✓：**`echo`／双引号里永不出现反引号或 `$`** ✓，
      要显示就用「」或**单引号** ✓（要解释就交给脚本，别交给 shell ✓）
+
+## 三百九十五、🧾 **E 段 MCP 侧两句落地：结论前置已有判据；"新工具必须进测试"变成可红规则**（2026-10-05 13:41 ✓）
+
+```
+**① "结论前置" ✓ 早已被判据钉住 ✓（核查 ✓，无需新增 ✓）**：`src/test/mcpReplyShape.test.ts` ✓ 明写
+   "**keeps the song summary's first key an answer, not the payload**" ✓ —— 即 `summariseSong` 的**第一个键**必须是
+   **答案**（`songId` ✓）而不是载荷 ✓；同文件另钉**自描述**句 ✓（`GROOVE_MCP_OUT` ✓／"and the reply names it." ✓／
+   "Measured on this server:" ✓）⇒ ⭐ "结论前置 ＋ 回复自描述"**有据可查** ✓
+**② "新工具必须进测试" ✓ 从口号变成规则 ✓**（先量后立 ✓）：
+   · 量 ✓（时点 13:39 ✓，方法：注册面 `name:` 与 `src/test` 全文比对 ✓）：**98 个条目中 97 个被点名** ✓
+     ⇒ ⚠️ 唯一一个未被点名的 ⭐ **`import_arrangement_musicxml_file`** ✗
+   · ⭐ **澄清 ✓（避免误判为"没测" ✗）**：它的**读取行为**其实**已被测** ✓ —— `mcpArrangement.test.ts:423` ✓
+     用自建 `.mxl` zip 调 `importMcpMusicXmlBytes` ✓ ⇒ 缺的是 ⭐ **"工具自己的那一层"** ✗
+     （schema → handler → 与函数同一 reply ✓）**没人调过** ✓ ⇒ 这才是真缺口 ✓
+   · 改动 ✓（两处 ✓）：新增 `src/test/mcpMxlImportTool.test.ts` ✓ —— **像客户端一样调该工具的 handler** ✓
+     （base64 进 ✓、`partIndex:"all"` ✓、断言编曲轨数增加 ✓ 且**拒绝也是一句话而非抛出** ✓）
+     ＋ 新增 `src/test/mcpToolCoverage.test.ts` ✓：⭐ **注册面每个条目都必须在 `src/test` 里出现** ✓
+     （**98 个对齐 ✓**；"仍在测量"自检 ✓：名字 > 80 ✓、语料 > 100 KB ✓）
+   ⭐ **弄红验证 ✓**：往 `mcp/registry.ts` 注入一个假工具 ⇒ 判据 **exit=1** ✓，报
+     `registered but never named in src/test: expected [ 'definitely_not_tested_anywhere' ] to deeply equal []` ✓
+     ⇒ 从**修复后**备份还原 ✓（第 78 条 ✓）⇒ `tsc=0` ✓／4 用例 ✓
+   ⚠️ 口径说明 ✓：这条判据**只保证"被点名"** ✓，**保证不了"测得深"** ✗（每个工具的行为另有各自判据 ✓）——
+     写成"名字检查"是刻意的 ✓，否则它会变成一条又宽又假的规则 ✗
+**⇒ E 段至此三面齐 ✓**：用户侧文案 ✓（有判据 ✓）／错误可理解 ✓（`§391` 修真 bug ✓）／无静默丢功能 ✓（`§392` ✓）；
+   MCP 侧 ✓：结论前置 ✓（有判据 ✓）／自描述 ✓（有判据 ✓）／**边界不删** ✓（`needs` 六条可核对 ✓）／**新工具进测试** ✓（本节 ✓）
