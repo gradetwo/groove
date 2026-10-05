@@ -15560,3 +15560,22 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 下一段：⭐ 这一处 ＋ ⭐ 其余八处 ✓（⭐ 全已验 ✓）⇒ ⭐ 本组完成 ✓
 ```
 
+### 五百九十一、⭐⭐ **6／7 通过；最后一步是 `await act(async …)`**（2026-10-06 05:18 ✓）
+
+```
+**⭐ 本轮 ✓**：⭐ `tsc=0` ✓｜⭐ `lint=0` ✓｜⭐ **6 个用例通过** ✓（⭐ 7 个中 ✓）
+  ⭐ 唯一失败 ✓：⭐ "⭐ **autosave status · the subscription > re-renders when the status changes outside React**" ✗
+    ⭐ `expected 'saving' to be 'saved'` ✗
+**⭐⭐ 原因 ✓**：⭐ 编曲保存是**异步的** ✓（⭐ IndexedDB 写入 ✓）⭐ 而 ⭐ `vi.advanceTimersByTime(600)` ✗
+  ⭐ **只推进计时器** ✓ ⇒ ⭐ **不冲刷 Promise** ✗ ⇒ ⭐ 状态停在 ⭐ `"saving"` ✗ ✓
+**⭐⭐ 教训 182 ✓**：⭐ **异步存储的效果要 `await act(async …)`** ✗ —— ⭐ 计时器推进**不等于** Promise 落定 ✓
+**⭐ 剩余改法 ✓（⭐ 同一用例内三处 ✓）**：
+  ⭐ ① ⭐ 用例回调改 ⭐ `async` ✓：⭐ `it("re-renders when the status changes outside React", async () => {` ✓
+  ⭐ ② ⭐ 第一处 ⭐ `act` ✓ ⇒ ⭐ `await act(async () => { await saveArrangementProject({ name: "criteria", arrangement: createArrangement("criteria", "synth") }); });` ✓
+  ⭐ ③ ⭐ 第二处 ⭐ `act` ✓ ⇒ ⭐ `await act(async () => { vi.advanceTimersByTime(600); });` ✓
+  ⇒ ⭐ 之后 ⭐ `:133` 的 ⭐ `expect(…toBe("saved"))` ✓ 应通过 ✓ ✓
+**⭐ 已验八处 ✓**：⭐ 整块形状 ✓（⭐ 重复消失 ✓）｜⭐ 初值 ✓｜⭐ 写前 ✓｜⭐ `try` 尾 ✓｜⭐ catch 首行 ✓｜⭐ hook 三处 ✓
+  ＋ ⭐ 判据的 4 行触发替换 ✓（⭐ 括号平衡 ✓）＋ ⭐ 两行 import ✓
+**⏳ 未落码 ✗**（⭐ 已回退 ✓，⭐ 树干净 ✓）；⭐ 下一段：⭐ 上面三处 ＋ ⭐ 上述八处 ⇒ ⭐ 本组完成 ✓
+```
+
