@@ -87,7 +87,7 @@
 | — 工具面 | 仍 **94 tools** ✓（三处都**只改文案／回包**，**未增删工具** ✓） | 表的口径是"**暴露/未暴露**" ⇒ 本次**不改变暴露面** ✓，只提高**可用性**与**诚实度** |
 
 > ⚠️ **仍未暴露、且已记账不改** ✓（见 `docs/OPEN_WORK.md` `§443`）：音域字段 `rangeLow/High` ✗（全仓无该数据 ✗）、
-> `set_arrangement_vocal_melody` 接 `arrangementId` ✗（歌词 × 编曲的打通 ✓）。两者都写了"**什么条件下才该改**" ✓。
+> `set_arrangement_vocal_melody` 接 `arrangementId` ⭐ **已办结（2026-10-05 ✓，`7b2c3e3` ✓）**：**现已接受 `arrangementId` ＋ `trackId`** ✓，写入编曲轨道 ✓ —— ~~✗~~（歌词 × 编曲的打通 ✓）。两者都写了"**什么条件下才该改**" ✓。
 
 ## 2026-10-05 20:42 回填（第 4 条规矩：改完实现回来改表）
 
@@ -104,3 +104,15 @@
 
 **判据：** `src/test/mcpValidateArrangement.test.ts`（先红后绿 ✓）；`src/test/mcpTools.test.ts` 已登记（22 用例 ✓）。
 **历史行不改：** 上表中「仍 94 tools」那一行是**当时**的记录，保留原样。
+
+## 2026-10-05 21:15 回填（第 4 条规矩：改完实现回来改表）
+
+| 面 | 变化 | 依据 |
+|---|---|---|
+| ⭐ **系统（音频引擎）** | 新增 `setMcpTrackNotes(arrangementId, trackId, notes)`：**替换**某轨全部音符（⭐ 不改模型层 ✓，守 `fx`／`folder` 守卫 ✓） | `f030a01` ✓ |
+| ⭐ **MCP 面** | `set_vocal_melody` ⇒ ⭐ **`set_arrangement_vocal_melody`** ✓；入参 ⭐ **只留 `arrangementId` ＋ `trackId`** ✓（删 `songId`／`sectionId`／`index`／`pattern` ✗）；回包 ⭐ `notes`（音符事件 ✓）＋ `syllables`（音节记录 ✓）＋ `prosody` ＋ `edit` ✓ | `4a6904e` ✓／`7b2c3e3` ✓ |
+| ⭐ **Web 面** | **无变化** ✓（该项本来就没有界面 ✓ —— 见第 25 行"Web ✗" ✓） | — |
+
+**转换规则（明写 ✓）：** 一步 ＝ 十六分之一小节 ⇒ `startBeats = step / 16 × 4` ✓；音长 ＝ 一步 ✓；力度 ＝ **0.8**（明写的默认值 ✓，因为音节记录不带力度 ✓）。
+**术语 ✓：** 入参、回包、描述**全部 v2** ✓；⚠️ 内部**仍借 v1 的步进引擎** ✓ ⇒ ⭐ 已注释说明 ✓（⭐ 纯 V2 架构最终要换掉它 ✓）。
+**判据读数 ✓：** `tsc=0` ✓｜`lint=0` ✓｜`check:mcp` **123/123** ✓｜判据组 **15 用例** ✓（含改名后的 `mcpCopy_set_arrangement_vocal_melody.test.ts` ✓）｜结构门全 0 ✓
