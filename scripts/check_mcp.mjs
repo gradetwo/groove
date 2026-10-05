@@ -499,10 +499,11 @@ try {
     JSON.stringify({ sections: alsSong.sections, filename: alsSong.filename })
   );
 
-  const exported = payload(await client.request("tools/call", { name: "export_groove", arguments: { songId: song.songId } }));
+  const grooveArrangement = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "synth" } }));
+  const exported = payload(await client.request("tools/call", { name: "export_groove", arguments: { arrangementId: grooveArrangement.arrangementId } }));
   check(
     "export_groove writes a validated v2 package",
-    exported.version === 2 && exported.clips?.includes?.("B") !== false && Number.isFinite(exported.bytes),
+    exported.format === "groove-arrangement" && Number.isFinite(exported.bytes) && exported.clips === undefined,
     JSON.stringify(exported).slice(0, 160)
   );
 
@@ -529,8 +530,8 @@ try {
    */
   const imported = payload(await client.request("tools/call", { name: "import_groove", arguments: { path: exported.path } }));
   check(
-    "import_groove restores the arrangement under a new songId",
-    imported.songId !== song.songId && (imported.sections ?? []).length === 2 && (imported.clips ?? []).includes("B"),
+    "import_groove restores the arrangement as an arrangement",
+    Boolean(imported.arrangementId) && imported.arrangementId !== grooveArrangement.arrangementId && (imported.tracks ?? 0) >= 1,
     JSON.stringify({ songId: imported.songId, sections: imported.sections?.length, clips: imported.clips })
   );
 

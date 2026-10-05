@@ -12,9 +12,10 @@ import { ClipSlot } from "../src/types/song";
 import { APP_VERSION } from "../src/version";
 import { exportAbleton, exportMidi, toBase64 } from "./exporting";
 import { collectDebugBundle } from "./debugBundle";
-import { getMcpArrangement } from "./arrangement";
+import { arrangementFromPackage, buildArrangementPackage } from "../src/features/sequencer/arrangementPackage";
+import { getMcpArrangement, putMcpArrangement } from "./arrangement";
 import { findGenre } from "./library";
-import { getMcpSong, importMcpSong } from "./song";
+import { getMcpSong } from "./song";
 import { ToolDefinition, failure, patternFromArgs, patternSchema, unknownGenre } from "./toolKit";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { z } from "zod";
@@ -104,74 +105,33 @@ export const FILE_TOOLS: ToolDefinition[] = [
       "Write a song created with create_song as a validated .groove package under GROOVE_MCP_OUT, carrying its clips and sections. This is the composition-to-project path: the package is what the app imports, and validateGroovePackage checks it before anything is written.",
     readOnly: false,
     inputSchema: {
-      songId: z.string().describe("the id create_song returned"),
+      arrangementId: z.string().describe("the arrangement to write, by id"),
       outputDir: z.string().optional().describe("where to write it; defaults to GROOVE_MCP_OUT"),
     },
     handler: (args) => {
       try {
-        const song = getMcpSong(args.songId as string);
-        if (!song) return failure(`unknown songId "${args.songId}" — create one with create_song`);
-        const clips = song.clips ?? {};
-        const slots = Object.keys(clips) as ClipSlot[];
-        const a = clips.A ?? clips[slots[0]];
-        const b = clips.B ?? a;
-        if (!a) return failure("this song has no clips to export");
-
-        const project = {
-          id: song.id,
-          name: song.name,
-          genreId: song.genreId,
-          genreName: findGenre(song.genreId)?.name ?? song.genreId,
-          bpm: song.bpm,
-          swing: song.swing,
-          timeSignature: "4/4",
-          resolution: song.resolution,
-          // The pattern's own step count, read the way the project type asks for it (a track's steps array).
-          stepCount: a.tracks?.[0]?.steps?.length ?? 16,
-          patterns: { A: a, B: b },
-          activeSlot: (clips.A ? "A" : "B") as "A" | "B",
-          songMode: song.sections.length > 1,
-        } as unknown as Parameters<typeof exportProjectPackage>[0];
-
-        const arrangement = {
-          clips,
-          sections: song.sections,
-          activeSlot: clips.A ? "A" : "B",
-        } as unknown as Parameters<typeof exportProjectPackage>[2];
-
-        // Validated **before** anything is written: a package that fails its own gate must not reach the disk.
-        const pkg = validateGroovePackage(exportProjectPackage(project, APP_VERSION, arrangement));
+        const arrangement = getMcpArrangement(String(args.arrangementId));
+        if (!arrangement) return failure(`unknown arrangementId "${String(args.arrangementId)}"`);
+        const pkg = buildArrangementPackage(arrangement);
         const dir = (args.outputDir as string | undefined) || process.env.GROOVE_MCP_OUT || mkdtempSync(path.join(os.tmpdir(), "groove-mcp-"));
         mkdirSync(dir, { recursive: true });
-        /**
-         * The name keeps whatever script the caller wrote, and strips only what a path cannot carry.
-         *
-         * The first version whitelisted `[a-z0-9]`, so a Chinese title became nothing and every export was `song.groove` — a
-         * composer reported exactly that. Separators, control characters and leading dots go; letters and digits of any script
-         * stay, which is what modern filesystems and browsers accept.
-         */
-        const slug = (song.name || song.genreId)
+        // ⭐ An arrangement carries no name, so the file is named from its id.
+        const slug = String(args.arrangementId)
           .normalize("NFKC")
           .replace(/[\s/\\:*?"<>|]+/g, "-")
-          // Control characters are stripped from a filename slug, which is deliberate — the rule objects to writing them literally, so the Unicode category says the same
-          // thing and is harder to misread: `Cc` is the control-character category, and it includes DEL.
           .replace(/\p{Cc}/gu, "")
-          // `-` last in a character class needs no escape; the escapes were flagged and were redundant.
           .replace(/^[.-]+|[.-]+$/g, "")
           .slice(0, 40);
-        const file = path.join(dir, `${slug || "song"}.groove`);
+        const file = path.join(dir, `${slug || "arrangement"}.groove`);
         const json = `${JSON.stringify(pkg, null, 2)}\n`;
         writeFileSync(file, json);
         return {
           path: file,
           filename: path.basename(file),
-          // The bytes actually written, not a second serialisation of the same object: the two disagree, and the file is the
-          // one that matters (a composer noticed the mismatch).
           bytes: Buffer.byteLength(json),
-          version: pkg.version,
-          clips: slots,
-          sections: song.sections.length,
-          carried: "clips and sections ride in the package's arrangement field; nothing is flattened",
+          version: 2,
+          format: pkg.format,
+          tracks: arrangement.tracks.length,
         };
       } catch (error) {
         return failure((error as Error).message);
@@ -184,36 +144,22 @@ export const FILE_TOOLS: ToolDefinition[] = [
      * restart loses the whole arrangement": a package can be read back, validated, and put back into the server to continue.
      */
     name: "import_groove",
-    title: "Load a .groove package back into a song",
+    title: "Load a .groove package as an arrangement",
     description:
-      "Read a .groove package from disk, validate it with the app's own validator, and create a song from it — the clips, the sections and the tempo as they were exported. Use it after a server restart, or to continue a package someone else wrote; the imported song gets a new songId, so importing the same file twice gives two independent songs.",
+      "Read a .groove package from disk, validate it with the app's own validator, and load it as an arrangement. A package that carries the older shape is refused rather than half read. The reply names the new arrangement's id.",
     readOnly: false,
     inputSchema: {
       path: z.string().describe("a .groove file under GROOVE_MCP_OUT (or anywhere readable)"),
-      name: z.string().max(80).optional().describe("a name for the imported song; the package's own when omitted"),
     },
     handler: (args) => {
       try {
         const file = args.path as string;
         if (!existsSync(file)) return failure(`no such file: ${file}`);
         const parsed = JSON.parse(readFileSync(file, "utf8")) as unknown;
-        // The app's validator is the gate: a package that fails it is not imported, rather than imported as something else.
-        const pkg = validateGroovePackage(parsed);
-        const arrangement = pkg.arrangement;
-        if (!arrangement) {
-          return failure(
-            "this package is a v1 project (two patterns, no arrangement), so there is no song to import — use get_pattern and create_song instead"
-          );
-        }
-        return importMcpSong({
-          name: (args.name as string | undefined) ?? pkg.project.name,
-          genreId: pkg.project.genreId,
-          bpm: pkg.project.bpm,
-          swing: pkg.project.swing,
-          resolution: pkg.project.resolution,
-          clips: arrangement.clips as Partial<Record<ClipSlot, SequencerPattern>>,
-          sections: arrangement.sections as never[],
-        });
+        // ⭐ The app's validator is the gate, and it refuses the older shape rather than importing something else.
+        const arrangement = arrangementFromPackage(parsed);
+        const summary = putMcpArrangement(arrangement);
+        return { arrangementId: summary.arrangementId, tracks: summary.trackCount, bars: summary.bars };
       } catch (error) {
         return failure((error as Error).message);
       }
