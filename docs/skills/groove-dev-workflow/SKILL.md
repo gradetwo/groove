@@ -13,6 +13,9 @@ Written from a session that produced five red builds and eleven measured lessons
 3. **Gate the commit on the type checker, not on your eyes.** Printing a typecheck and committing anyway shipped a
    type error. The exit code must block the commit.
 4. **Never pipe a gate.** `gate | tail` reports `tail`'s exit code: a release pipeline's failure looked like success.
+   **Never let a test be the last command either.** A comparison that is false ends the script with its own non-zero
+   status, so a watch whose run succeeded was reported as a failure and read as one. The exit code has to belong to the
+   thing being judged; put a plain `exit 0`, or the gate itself, after any decision.
 5. **Change a count, run the checks that derive the count.** Adding one export made a "seven formats" sentence false;
    adding tools broke a name-vs-annotation rule that the protocol gate does not cover.
 6. **Find the touched set by searching, never from memory.** Ask what the change affects. The set recalled was six

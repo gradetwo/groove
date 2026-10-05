@@ -19,6 +19,7 @@ describe("the development workflow skill", () => {
       "A criterion must be able to fail",
       "Gate the commit on the type checker",
       "Never pipe a gate",
+          "Never let a test be the last command",
       "run the checks that derive the count",
       "Find the touched set by searching",
       "is not \"it is needed\"",
