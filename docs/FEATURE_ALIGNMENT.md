@@ -11,7 +11,7 @@
 |---|---|---|
 | **系统**（引擎／数据层） | `src/audio/**`、`src/data/**`、`mcp/**` 里的实现 | 看该能力是否有实现与调用方；下面每行给路径 |
 | **Web**（界面暴露） | `src/views/**`、`src/components/**`（菜单／面板／按钮） | 路径即入口；`✓` 表示界面里能点到，`🔶` 表示只读或部分 |
-| **MCP**（工具面） | ⭐ **服务端自报**，不是 grep | `npm run mcp:build` 后 `node scripts/list_mcp_tools.mjs`（**94 tools**，2026-10-05 实测） |
+| **MCP**（工具面） | ⭐ **服务端自报**，不是 grep | `npm run mcp:build` 后 `node scripts/list_mcp_tools.mjs`（**95 tools**，2026-10-05 20:41 实测） |
 
 `node scripts/list_mcp_tools.mjs` 走 stdio 问 `tools/list`，与真实客户端所见**同一份**；`npm run check:mcp` 另外跑 123 项断言（含 stdio 可达性）。**不要用正则数注册面**：`name`/`title` 在 resources 与 prompts 上也出现，2026-10-05 实测正则会数出 98 个，而真实是 94 个。
 
@@ -89,3 +89,18 @@
 > ⚠️ **仍未暴露、且已记账不改** ✓（见 `docs/OPEN_WORK.md` `§443`）：音域字段 `rangeLow/High` ✗（全仓无该数据 ✗）、
 > `set_vocal_melody` 接 `arrangementId` ✗（歌词 × 编曲的打通 ✓）。两者都写了"**什么条件下才该改**" ✓。
 
+## 2026-10-05 20:42 回填（第 4 条规矩：改完实现回来改表）
+
+| 面 | 变化 | 依据 |
+|---|---|---|
+| ⭐ **系统（音频引擎）** | `src/audio/WavExporter.ts` 新增 `preparePatternAudioLanes` ＋ `RenderWavOptions.prepareOnly` ＋ `ArrangementLaneReport` | `a7d652d` ✓；一处准备，不复制 |
+| ⭐ **MCP 面** | **新增只读工具 `validate_arrangement`** ⇒ 工具数 **94 ⇒ 95** | `cc86138` ✓；`check:mcp` **95 tools／123 checks 0 failed** ✓ |
+| ⭐ **Web 面** | **无变化** ✓ | 新入口只在 MCP／Node 宿主路径上使用 ✓；页面不动 ✓ |
+
+**新工具的口径：** 它**只解析、不渲染**，**不写文件**。
+**它的回包是自己的形状：** `prepareOnly`、`ready`、`empty`、`loaded`、`total`、`problems`。
+**它不借用渲染字段：** 没有 `path`、`bytes`、`truePeakDb`、`integratedLufs`。
+**诚实边界：** 热缓存几秒；冷缓存仍要取采样。
+
+**判据：** `src/test/mcpValidateArrangement.test.ts`（先红后绿 ✓）；`src/test/mcpTools.test.ts` 已登记（22 用例 ✓）。
+**历史行不改：** 上表中「仍 94 tools」那一行是**当时**的记录，保留原样。
