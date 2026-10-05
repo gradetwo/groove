@@ -13118,3 +13118,22 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+**⭐ `set_tempo` 退场的前置检查结果 ✓（2026-10-06 02:24 ✓）**：
+```
+**⭐ 量到 ✓**：⭐ v2 的 ⭐ `set_arrangement_tempo_map` ✓ 有 ⭐ **两个判据** ✓：
+  · ⭐ `src/test/mcpCopy_set_arrangement_tempo_map.test.ts` ✓
+  · ⭐ `src/test/mcpTempoMapCopy.test.ts` ✓
+  ⚠️ ⭐ **但两者都在测**措辞** ✗**：⭐ "⭐ still says what happens to points and in what order" ✓／
+    "⭐ no sentence is over one hundred and ninety characters" ✓／⭐ "⭐ keeps the quotation word for word" ✓
+    ⇒ ⭐ **没有一条**断言地图的**行为**（⭐ 点、顺序、渲染效果 ✓）✗
+  ⇒ ⭐ 而 ⭐ `src/test/tempoWorkedExample.test.ts` ✓（⭐ 66 → 84 → 66 那个算例 ✓）
+    ⭐ **是唯一在行为上证明 tempo 地图的判据** ✓
+**⇒ 结论 ✓（铁律 ✓）**：⭐ **先立 v2 行为判据 ⇒ 再退 `set_tempo`** ✗
+  ⇒ ⭐ 顺序 ✓：⭐ ① ⭐ 把 ⭐ `tempoWorkedExample.test.ts` 的算例 ⭐ **改接到 v2** ✓
+    （⭐ 即用 ⭐ `set_arrangement_tempo_map` ✓ 重述 66 → 84 → 66 ✓ ⇒ ⭐ v2 侧就有行为判据 ✓）
+    ⭐ ② ⭐ **然后**删 ⭐ `set_tempo` ✓ ＋ ⭐ `mcpCopy_set_tempo.test.ts` ✓ ＋ ⭐ 其余 7 处 ✓
+**⚠️ ⭐ 价值 ✓**：⭐ 这一步**避免丢掉 tempo 地图的唯一行为证明** ✓ —— ⭐ 正是铁律存在的理由 ✓
+  ⇒ ⭐ 若先删 ✗ ⇒ ⭐ v2 侧只剩"⭐ 句子长度"判据 ✗ ⇒ ⭐ 地图**行为无人守** ✗
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 顺序已定 ✓
+```
+
