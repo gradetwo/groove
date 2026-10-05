@@ -10875,3 +10875,26 @@ export async function prepareArrangementAudioLanes(input: {
   ⇒ 一次改净 ✓ ⇒ 判据先红后绿 ✓ ⇒ 回填对齐表 ✓
 ```
 
+**⭐ 第 7 项：`set_vocal_melody` 的现状与迁移方案（2026-10-05 20:55 ✓，已量 ✓）**：
+```
+· ⭐ 现状两条路 ✓（`mcp/registrySong.ts:32` 起 ✓）：
+  ① 给 `pattern` ⇒ `setVocalMelody({ pattern, ...shared })` ⇒ **原样返回** ✓（不存储 ✓）
+  ② 给 `songId` ⇒ 找 `section` ✓ ⇒ 找 `song.clips[section.slot]` ✓ ⇒ 算 ✓ ⇒
+     ⭐ `setMcpClip(songId, section.slot, result.pattern)` ✓（**v1 存储** ✗）⇒ 回包含 `editedSlot` ✓／
+     若**多 section 共用同一 clip** ⇒ 加 `sharedSlot: true` ＋ 提示先 `make_unique` ✓
+· ⚠️ ⭐ **v2 缺一件东西** ✗：⭐ **没有"替换某轨全部音符"的写接口** ✓
+  （v2 只有 `addMcpTrackNotes` ✓ 追加 ✓；`removeMcpTrack` ✓ 删轨 ✓；⚠️ 没有 `setMcpTrackNotes` ✗）
+· ⭐ **因此迁移分两步 ✓**：
+  ⭐ **步骤 1（先立 v2 判据 ✓）**：在 `mcp/arrangement.ts` 加 ⭐ `setMcpTrackNotes(arrangementId, trackId, notes)` ✓
+     —— ⭐ 语义＝**替换该轨的音符** ✓（⭐ 与 `addMcpTrackNotes` 的"追加"**明确区分** ✓）
+     ＋ 判据（能红 ✓）：替换后 `get_arrangement` 只剩新音符 ✓；旧音符不残留 ✓；轨道其它属性（乐器/资产 ✓）不变 ✓
+  ⭐ **步骤 2（替换 v1 路 ✓，不并存 ✗）**：`set_vocal_melody` ⇒
+     · schema ⭐ **只留 `arrangementId`** ✓（⭐ 删 `songId` ✗ 与 `pattern` ✗）
+     · handler ⭐ **只留一条路** ✓：`getMcpArrangement` ✓ ⇒ `flattenMcpArrangement` ✓ ⇒ `setVocalMelody` ✓ ⇒
+       ⭐ 找（或建）演唱轨 ✓ ⇒ `setMcpTrackNotes` ✓ 写回 ✓
+     · 回包 ⭐ 用 v2 术语 ✓：`arrangementId` ✓／`trackId` ✓／`notes` ✓／`prosody` ✓／`warnings` ✓
+       （⭐ 删 `editedSlot` ✗／`sharedSlot` ✗ —— ⭐ v1 词 ✓）
+     · ⭐ **内部借 `setVocalMelody`（吃 pattern ✓）要写注释** ✓（属实现细节 ✓）
+· ⚠️ **待业主决策 ✓**：工具名 ⇒ `set_arrangement_vocal_melody`（与 v2 命名一致 ✓）还是保留 `set_vocal_melody` ✓
+```
+
