@@ -83,7 +83,6 @@ import {
   renderBudgetSentence,
   renderCostSentence,
   renderOutputSentence,
-  PREVIEW_DEFAULT_CLAUSE,
   HEADLESS_POINTER_SENTENCE,
   headlessParameterDescription,
 } from "./render/budget";

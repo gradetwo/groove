@@ -99,7 +99,6 @@ import { findGenre } from "../../mcp/library";
 const HEADLESS_TOOLS = [
   "render_arrangement",
   "render_song",
-  "render_preview_clip",
   "normalize_loudness",
   "render_instrument_note",
   "render_arrangement_stems",
@@ -142,7 +141,6 @@ function renderArgs(name: string, headless: boolean): Record<string, unknown> {
       const { songId } = createMcpSong({ genreId: "chicago-house", genre: findGenre("chicago-house") ?? null });
       return { songId, sampleRate: 8000, channels: 1, ...flag };
     }
-    case "render_preview_clip":
       return { genreId: "chicago-house", ...flag };
     case "normalize_loudness": {
       const { songId } = createMcpSong({ genreId: "chicago-house", genre: findGenre("chicago-house") ?? null });

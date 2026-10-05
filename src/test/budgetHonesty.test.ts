@@ -87,7 +87,7 @@ const asError = async (call: unknown) => {
   throw new Error(JSON.stringify(reply));
 };
 
-const RENDER_TOOLS = ["render_song", "render_arrangement", "render_arrangement_stems", "render_preview_clip"];
+const RENDER_TOOLS = ["render_song", "render_arrangement", "render_arrangement_stems"];
 
 // The registry is imported at the top like every other test: `vi.mock` is hoisted above it, so it resolves the stub.
 const toolNamed = (name: string) => {

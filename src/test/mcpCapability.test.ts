@@ -87,7 +87,7 @@ const CAPABILITIES: Capability[] = [
   {
     surface: "GenreDetailView",
     feature: "read one genre's recipe and hear it",
-    tools: ["get_genre", "render_preview_clip"],
+    tools: ["get_genre"],
     resources: ["groove://genre/{id}", "groove://examples/{genre}"],
     prompts: ["explain_genre", "compose_groove"],
   },
@@ -168,7 +168,7 @@ const CAPABILITIES: Capability[] = [
   {
     surface: "loudness and rendering",
     feature: "measure, normalise and render audio",
-    tools: ["normalize_loudness", "get_loudness_report", "render_arrangement", "render_song", "render_preview_clip"],
+    tools: ["normalize_loudness", "get_loudness_report", "render_arrangement", "render_song"],
   },
   {
     surface: "voice",

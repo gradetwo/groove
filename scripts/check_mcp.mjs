@@ -166,7 +166,7 @@ try {
     const budget = JSON.parse(fs.readFileSync(path.join(ROOT, "mcp", "render", "budget.json"), "utf8"));
     const budgetSeconds = Math.round(budget.renderBudgetMs / 1000);
     const navSeconds = Math.round(budget.navigationBudgetMs / 1000);
-    const RENDER_TOOLS = ["render_arrangement", "render_song", "render_arrangement", "render_arrangement_stems", "render_preview_clip"];
+    const RENDER_TOOLS = ["render_arrangement", "render_song", "render_arrangement_stems"];
     const byName = new Map((tools?.tools ?? []).map((tool) => [tool.name, tool]));
     for (const name of RENDER_TOOLS) {
       const description = byName.get(name)?.description ?? "";
@@ -189,7 +189,7 @@ try {
     const [eightBarLow, eightBarHigh] = budget.measured.eightBarWallSec;
     check(
       "the tools quote the measured eight-bar cost rather than an invented one",
-      RENDER_TOOLS.filter((name) => (byName.get(name)?.description ?? "").includes(String(budget.measured.eightBarAudioSec))).length >= 4,
+      RENDER_TOOLS.filter((name) => (byName.get(name)?.description ?? "").includes(String(budget.measured.eightBarAudioSec))).length >= 3,
       `expected ${budget.measured.eightBarAudioSec} s of audio in ${eightBarLow}-${eightBarHigh} s (docs/RENDER_PROFILE.md) in the descriptions`
     );
   }

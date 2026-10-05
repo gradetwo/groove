@@ -73,7 +73,7 @@ try {
 
   const args = { genreId: "chicago-house", bars: 1 };
   console.log("第一次渲染（浏览器应被拉起）…");
-  const first = await callTool("render_preview_clip", args).catch(() => callTool("render_audio", args));
+  const first = await callTool("render_arrangement_preview", args).catch(() => callTool("render_audio", args));
   console.log(`  → ${first.ok ? "OK ✓" : "FAIL ✗"}  ${first.text}`);
 
   const pids = chromiumPids();
@@ -83,7 +83,7 @@ try {
   console.log(`  → 剩余 Chromium: ${chromiumPids().length}`);
 
   console.log("第二次渲染（浏览器已死，看它是否自愈）…");
-  const second = await callTool("render_preview_clip", args).catch(() => callTool("render_audio", args));
+  const second = await callTool("render_arrangement_preview", args).catch(() => callTool("render_audio", args));
   console.log(`  → ${second.ok ? "OK ✓" : "FAIL ✗"}  ${second.text}`);
   console.log(
     second.ok

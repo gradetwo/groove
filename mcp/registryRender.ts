@@ -12,112 +12,13 @@ import { SequencerPattern } from "../src/types/genre";
 import { flattenMcpArrangement, getMcpArrangement, summariseArrangement } from "./arrangement";
 import { findGenre } from "./library";
 import { audioLaneReplyFields } from "./pattern";
-import { HEADLESS_POINTER_SENTENCE, PREVIEW_DEFAULT_CLAUSE, headlessParameterDescription, renderBudgetSentence, renderCostSentence } from "./render/budget";
+import { HEADLESS_POINTER_SENTENCE, headlessParameterDescription, renderBudgetSentence, renderCostSentence } from "./render/budget";
 import { auditionInstrumentNote, renderAudio, renderStems } from "./render/worker";
 import { flattenMcpSong } from "./song";
 import { ToolDefinition, failure, patternFromArgs, patternSchema, unknownGenre } from "./toolKit";
 import { z } from "zod";
 
 export const RENDER_TOOLS: ToolDefinition[] = [
-  {
-    /**
-     * Recommendation 1 of the dev-branch report, and the answer to the pain it describes: a 48-bar song takes **6–24 s** at full rate, while an
-     * 8 kHz mono analysis render takes **1.8 s** — so an agent debugging a two-bar transition should not be re-rendering the whole piece into a
-     * client that may time out at 30 s.
-     *
-     * It is not a new renderer: it slices the requested section out of the song exactly the way `export_ableton` already slices its clips
-     * (`flattenSong({ ...song, sections: [section] })`), and renders it through the same path with a low rate and one channel by default. What
-     * it adds is a **name** for that path, a **default that is fast**, and a truthful label: the reply says `preview: true` and carries its own
-     * wall-clock time, because a preview that is mistaken for a deliverable is worse than no preview.
-     */
-    name: "render_preview_clip",
-    title: "Render one short section quickly, for listening while composing",
-    description:
-      "Render a section (or one pattern) at a low sample rate for fast iteration. Report how long it took. Defaults are 8 kHz mono, which measures about 1.8 s against 6-24 s for a full-rate song render. A composing loop that needs to hear a two-bar change does not have to re-render the whole piece. " +
-      renderCostSentence() +
-      " " +
-      PREVIEW_DEFAULT_CLAUSE +
-      " " +
-      renderBudgetSentence() +
-      HEADLESS_POINTER_SENTENCE +
-      " **The measured speed above is the browser path's** — the Node host's cold start for a preview has not been measured here, so `headless` on this tool buys a preview with no browser rather than a faster one." +
-      " The reply is labelled `preview: true` — use render_song or render_audio for anything you intend to deliver.",
-    readOnly: false,
-    inputSchema: {
-      songId: z.string().optional().describe("the song to take a section from"),
-      sectionId: z.string().optional().describe("which section, by id"),
-      index: z.number().int().min(0).optional().describe("or by position; default 0"),
-      genreId: z.string().optional().describe("instead of a song: preview a bare genre's pattern"),
-      bars: z.number().int().min(1).max(16).optional().describe("how many bars of the section to render; default 4"),
-      sampleRate: z.number().int().min(8000).max(96000).optional().describe("default 8000, which is the point of this tool"),
-      channels: z.number().int().min(1).max(2).optional().describe("default 1"),
-      format: z.enum(["wav", "mp3"]).optional().describe("default wav"),
-      headless: z.boolean().optional().describe(headlessParameterDescription()),
-    },
-    handler: async (args, ctx) => {
-      try {
-        const bars = (args.bars as number | undefined) ?? 4;
-        const sampleRate = (args.sampleRate as number | undefined) ?? 8000;
-        const channels = (args.channels as 1 | 2 | undefined) ?? 1;
-        const format = (args.format as "wav" | "mp3" | undefined) ?? "wav";
-
-        let pattern: SequencerPattern;
-        let label: string;
-        if (args.songId) {
-          const { song } = flattenMcpSong(String(args.songId));
-          const at = args.sectionId
-            ? song.sections.findIndex((section) => section.id === args.sectionId)
-            : Math.max(0, Math.min(song.sections.length - 1, Math.floor((args.index as number | undefined) ?? 0)));
-          if (at < 0) return failure(`no section "${args.sectionId}" in song "${args.songId}"`);
-          const section = song.sections[at]!;
-          // The same slice `export_ableton` uses for its per-section clips: one section, flattened on its own.
-          pattern = flattenSong({ ...song, sections: [{ ...section, bars }] }).pattern;
-          label = `${song.genreId} ${section.label ?? section.slot}${at + 1}`;
-        } else if (args.genreId) {
-          const genre = findGenre(String(args.genreId));
-          if (!genre) return failure(`unknown genreId "${args.genreId}"`);
-          pattern = patternFromGenre(genre);
-          label = String(args.genreId);
-        } else {
-          return failure("provide either songId (with index or sectionId) or genreId");
-        }
-
-        const startedAt = Date.now();
-        // `bars: 1` is the flattened pattern *is* the section, the same convention `render_song` documents.
-        const result = await renderAudio(pattern, {
-          format,
-          bars: 1,
-          sampleRate,
-          channels,
-          nameSlug: `${label.replace(/[^a-z0-9]+/gi, "-")}-preview`,
-          // Absent when the caller did not ask for it, so "default engine" is a missing key rather than `false`.
-          ...(args.headless === true ? { headless: true } : {}),
-          ...(ctx?.progress ? { progress: ctx?.progress } : {}),
-        });
-        const seconds = Number(((Date.now() - startedAt) / 1000).toFixed(2));
-        return {
-          preview: true,
-          label,
-          seconds,
-          sampleRate: result.sampleRate,
-          channels: result.channels,
-          durationSec: result.durationSec,
-          integratedLufs: result.integratedLufs,
-          truePeakDb: result.truePeakDb,
-          path: result.path,
-          // Which host produced this file, read rather than inferred — the preview reply is a curated shape rather than a
-          // spread of the render result, so the field has to be named here or it would be dropped and the silence
-          // this line of work keeps meeting would be back.
-          engine: result.engine,
-          note:
-            `a ${seconds}s preview at ${result.sampleRate} Hz and ${result.channels} channel(s) — for iterating, not for delivery; ` +
-            "use render_song or render_audio when the file matters",
-        };
-      } catch (error) {
-        return failure((error as Error).message);
-      }
-    },
-  },
   {
     name: "render_instrument_note",
     title: "Sound one instrument note and say which sample answered",

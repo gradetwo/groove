@@ -1,7 +1,7 @@
 /**
  * **The render budget, in one place, because it is quoted in six.**
  *
- * `render_audio`, `render_song`, `render_arrangement`, `render_arrangement_stems`, `render_preview_clip` and
+ * `render_song`, `render_arrangement`, `render_arrangement_stems`, `render_arrangement_preview` and
  * `docs/MCP.md` all have to state how long a render may take, and the worker is the thing that actually enforces
  * it. Six copies of "900" is the defect this repository treats as its worst: the doc and the code drift, and the
  * caller plans against a number nothing enforces.
@@ -135,14 +135,11 @@ export function renderCostSentence(): string {
   );
 }
 
-/** The clause that follows `renderCostSentence()` on the preview tool, where the low-rate default is the point. */
-export const PREVIEW_DEFAULT_CLAUSE = "Which is why render_preview_clip defaults to 8 kHz mono.";
-
 /**
  * **The `headless` parameter's description, in one place because seven tools now carry it.**
  *
- * `render_arrangement` was the first tool to expose the Node host (`84638d0`); `render_song`, `render_audio` and
- * `render_preview_clip` run through the same `renderAudio` and gained the same parameter. `normalize_loudness`,
+ * `render_arrangement` was the first tool to expose the Node host (`84638d0`); `render_song` and
+ * `render_arrangement_preview` run through the same `renderAudio` and gained the same parameter. `normalize_loudness`,
  * `render_instrument_note` and `render_arrangement_stems` followed through the same host — the first through
  * `renderAudio` once per pass, the second through the same loader the Node renderer already builds, the third through
  * the same `stemTrackIdx` argument the page path passes. A copy of the three measured host-node residual readings and the

@@ -11176,7 +11176,7 @@ export async function prepareArrangementAudioLanes(input: {
 | `src/test/mcpCapability.test.ts` ✓ | 1 ✓ | 2 ✓ | 调整 ✓ |
 | `src/test/mcpArrangementPreview.test.ts` ✓ | 1 ✓ | 0 ✓ | 调整 ✓ |
 | `src/test/mcpCopy_render_arrangement.test.ts` ✓ | 1 ✓ | 0 ✓ | ⭐ **删文件** ✓ |
-| `src/test/mcpCopy_render_preview_clip.test.ts` ✓ | 0 ✓ | 1 ✓ | ⭐ **删文件** ✓ |
+| `src/test/mcpCopy_render_arrangement_preview.test.ts` ✓ | 0 ✓ | 1 ✓ | ⭐ **删文件** ✓ |
 | ⭐ `mcp/render/budget.ts` ✓ | 0 ✓ | 0 ✓ | ⭐ **不改** ✓ |
 | ⭐ `mcp/server.ts` ✓ | 0 ✓ | 0 ✓ | ⭐ **不改** ✓ |
 | ⭐ `src/test/mcpTools.test.ts` ✓ | 0 ✓ | 0 ✓ | ⭐ **不改** ✓ |
@@ -11405,7 +11405,7 @@ export async function prepareArrangementAudioLanes(input: {
 | 位置 ✓ | 文件与行 ✓ | ⭐ 动作 ✓ |
 |---|---|---|
 | ⭐ 工具块 ✓ | `mcp/registryRender.ts:33` ✓ | **删块** ✓ |
-| ⭐ 拷贝判据 ✓ | `src/test/mcpCopy_render_preview_clip.test.ts` ✓ | ⭐ **删文件** ✓（⚠️ 先查 v2 是否已有对应 ✓）|
+| ⭐ 拷贝判据 ✓ | `src/test/mcpCopy_render_arrangement_preview.test.ts` ✓ | ⭐ **删文件** ✓（⚠️ 先查 v2 是否已有对应 ✓）|
 | ⭐ 参数化列表 ✓ | `budgetHonesty.test.ts:90` ✓ | **删表项** ✓ |
 | ⭐ 参数化列表（已重复 ✗） | `check_mcp.mjs:169` ✓ | **删杂项** ✓（⭐ 即上文缺陷 ✓）|
 | ⭐ 列表 ✓ | `mcpHeadlessRouting.test.ts:102` ✓ | **删表项** ✓ |

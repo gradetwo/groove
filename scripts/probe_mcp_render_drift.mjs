@@ -82,7 +82,7 @@ try {
     const started = Date.now();
     let reply;
     try {
-      reply = await callTool("render_preview_clip", args);
+      reply = await callTool("render_arrangement_preview", args);
     } catch (error) {
       reply = { ok: false, text: String(error).slice(0, 90) };
     }

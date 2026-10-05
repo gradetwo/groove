@@ -72,7 +72,7 @@ class Client {
       /**
        * 30 s, like a real client — and it has already fired here once, on a `tools/call` that renders. That is the strongest evidence
        * this project has for the preview tool's existence. Raised for the probe so a slow render is measured rather than aborting the run;
-       * the number a *client* uses is the one that matters, which is why `render_preview_clip` defaults to a fast rate.
+       * the number a *client* uses is the one that matters, which is why `render_arrangement_preview` defaults to a fast rate.
        */
       const timer = setTimeout(() => reject(new Error(`${method} timed out after ${CLIENT_TIMEOUT_MS} ms`)), CLIENT_TIMEOUT_MS);
       this.pending.set(id, (message) => {
@@ -226,13 +226,13 @@ try {
    */
   const preview = payload(
     await client.request("tools/call", {
-      name: "render_preview_clip",
+      name: "render_arrangement_preview",
       arguments: { songId: analysisRate.songId, index: 0, bars: 4 },
     })
   );
   const previewOk = typeof preview.seconds === "number" && preview.seconds <= 3 && preview.preview === true;
   console.log(
-    `  ${previewOk ? "✅" : "❌"} render_preview_clip : ${preview.seconds}s at ${preview.sampleRate} Hz, ${preview.channels} channel(s) ` +
+    `  ${previewOk ? "✅" : "❌"} render_arrangement_preview : ${preview.seconds}s at ${preview.sampleRate} Hz, ${preview.channels} channel(s) ` +
       `(${preview.durationSec?.toFixed?.(2) ?? preview.durationSec}s of audio)`
   );
   if (!previewOk) process.exitCode = 1;
