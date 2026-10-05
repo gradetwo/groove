@@ -15328,3 +15328,24 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 本组随后即完成 ✓
 ```
 
+### 五百八十三、⚠️ **教训 173：子串锚点不能做行插入**（2026-10-06 05:02 ✓）
+
+```
+**⭐ 报错 ✓（⭐ 精确 ✓）**：
+  ⭐ `projectDb.ts(1246,16): Cannot find name 'db'` ✗
+  ⭐ `projectDb.ts(1262,33): Property 'then' does not exist on type 'void | Promise<void>'` ✗
+**⭐⭐ 诊断 ✓**：⭐ 真实行是 ⭐ `const write = runStoreTx(db, GROOVE_ARRANGEMENT_STORE_NAME, "readwrite", (store) => store.put(record));` ✓
+  ⭐ 而我的锚点只取了 ⭐ **`runStoreTx(…)` 这一段子串** ✗ ⇒ ⭐ 插入"⭐ 在锚点之前**"⭐ 就落在了
+  ⭐ **`const write =` 与 ⭐ 调用之间** ✗ ⇒ ⭐ 语句被切断 ✓ ✓ ——
+  ⭐ 于是 ⭐ `db` 不在作用域 ✓（⭐ 报错一 ✓）＋ ⭐ `write` 变成 `void | Promise<void>` ✗（⭐ 报错二 ✓）
+  ⇒ ⭐ 已回退 ✓（⭐ 树干净 ✓）
+**⭐⭐ 教训 173 ✓**：⭐ **子串锚点不能做"⭐ 插入一行**"⭐ 的操作** ✗ —— ⭐ 插入必须**尊重行边界** ✓
+  ⭐ 做法 ✓：⭐ ① ⭐ 锚点**从行首开始、到行尾（含分号／换行）结束** ✓
+    ⭐ ② ⭐ 或在断言里**检查锚点前后是行首／行尾** ✓（⭐ `t[i-1] == "\n"` ✓ ∧ ⭐ `t[i+len] == "\n"` ✓）
+    ⭐ ③ ⭐ 或直接**按行号插入** ✓（⭐ 但行号会漂移 ✗ ⇒ ⭐ 仍以行内容为准 ✓）
+**⭐ 正确锚点 ✓**：⭐ `const write = runStoreTx(db, GROOVE_ARRANGEMENT_STORE_NAME, "readwrite", (store) => store.put(record));` ✓
+  （⭐ 整行 ✓）⇒ ⭐ 在它**之前**插入 "saving" ✓ ✓
+**⭐ 其余五处 ✓**：⭐ 形状 ✓／⭐ 初值 ✓／⭐ `await write;` ✓（⭐ 整行 ✓，⭐ 4 空格 ✓）｜⭐ catch 三行 ✓｜⭐ hook ✓ —— 它们都是整行 ✓ ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 下一段：⭐ 改两处为整行锚点 ✓（⭐ 写前那一处 ✓）⇒ ⭐ 落净 ✓
+```
+
