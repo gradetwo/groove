@@ -1471,6 +1471,11 @@ export function flattenMcpArrangement(
    * The clip needs the fields a `SequencerPattern` requires and nothing more: the compiled lanes, and the four the format insists on. `genre_id` is `"custom"` because an arrangement is not a genre's pattern — saying otherwise would make a render claim a
    * provenance it does not have.
    */
+  /**
+   * ⭐ **A view default, not a model field.** The arrangement's time is beats and its grid is a view, so the older
+   * pattern this compiles back to needs a resolution to be a pattern at all; `1/16` is what that view shows when
+   * nobody says otherwise. Nothing on the arrangement side selects it, and no v2 tool has to.
+   */
   const clip = { genre_id: "custom", bpm: songInput.bpm, scale: "chromatic", resolution: "1/16" as const, tracks: songInput.clips.A.tracks };
   const song = createSong({
     id: arrangement.songId,
