@@ -14547,3 +14547,26 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ **下一段一次做净即可关闭 ⑤** ✓
 ```
 
+### 五百六十四、⭐⭐ **两处"改接"查清后性质不同：一处死代码 ✓，一处真实遗漏 ✗**（2026-10-06 04:19 ✓）
+
+```
+**⭐ 发现一 ✓（`:238` 是**死代码** ✓）**：⭐ 它的下一行 ⭐ `:247` ✓ 就是 ⭐
+  `const lyricArrangement = payload(… "create_arrangement" …)` ✓ ⇒ ⭐ 而 ⭐ `song` ⭐ **只在 `:238` 出现** ✓（⭐ 全程未被使用 ✓）
+  ⇒ ⭐ 即 ⭐ 它是迁移时**遗留的一行** ✓ ⇒ ⭐ **删掉那一行即可** ✓ ✓（⭐ 一行 ✓）
+**⭐⭐ 发现二 ✓（⭐ 一处真实的迁移遗漏 ✗）**：⭐ `get_transposition_report` 的入参仍是 ⭐ **`songId, sectionId, track`** ✗
+  ⭐ 描述 ✓：⭐ "⭐ **a song whose sections to read; every section unless sectionId names one**" ✗
+  ⇒ ⚠️ ⭐ 它是一个**编曲侧工具** ✓（⭐ 住在 `registryArrangement.ts` ✓）⭐ 却仍收 **v1 的歌 id** ✗ ✓
+  ⇒ ⭐ 这是 ⭐ **迁移 ④／⑤ 漏掉的一处** ✓ ✓ —— ⭐ 而且它是**真的**（⭐ 不是判据写法问题 ✓）
+  ⇒ ⭐ 因此 ⭐ `check_mcp:1062` ✓ 的 ⭐ `{ songId: pitchSong.songId ?? pitchSong.id }` ✗ ⭐ **不是测试侧要改** ✗，
+    ⭐ 而是 ⭐ **工具本身要迁移** ✓ ✓
+**⭐ 处置 ✓**：
+  ⭐ ① ⭐ `:238` 那行 ⇒ ⭐ **删** ✓（⭐ 死代码 ✓）
+  ⭐ ② ⭐ `get_transposition_report` ⇒ ⭐ **列入迁移清单** ✓：⭐ `songId` ⇒ `arrangementId` ✓ ＋ ⭐ handler ✓ ＋ ⭐ 判据 ✓
+    ⇒ ⭐ 它属于 ⭐ **④（`registryAnalysis`）或 ⑤ 的剩余** ✓ ⇒ ⭐ 记为一条独立待办 ✓ ✓
+  ⭐ ③ ⭐ `:1057` 的 `pitchSong` ⇒ ⭐ **随 ② 一起改** ✓（⭐ 建成编曲 ✓ ⇒ ⭐ 传 `arrangementId` ✓）
+**⭐⭐ 教训 160 ✓**：⭐ **一处"⭐ 测试要改接**"可能掩盖**工具本身没迁移** ✗ ——
+  ⭐ 判法 ✓：⭐ 看**被调用工具的入参** ✓，⭐ 不要只看调用方 ✓
+  ⭐ 若工具的入参还是 v1 名词 ✗ ⇒ ⭐ **问题在工具** ✓，⭐ 不在判据 ✓ ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
