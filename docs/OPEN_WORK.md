@@ -12019,3 +12019,42 @@ export async function prepareArrangementAudioLanes(input: {
   ⇒ ⭐ 那是 v1 侧工具 ✓ ⇒ ⭐ 随 ⭐ **迁移 ⑤（`registrySong` 整支处置）** 一并处理 ✓
 **⏳ 状态 ✓**：⭐ 两条 needs **已登记 ✓，未开工 ✗**（⭐ 本轮余量用尽 ✓）
 ```
+
+### 四百八十五、⭐ **交班清单（第二次，2026-10-05 23:59 ✓ —— §474 那份已过时 ✓）**
+
+```
+**⭐ 仓库状态 ✓**：分支 `dev` ✓｜⭐ 未推送 0 ✓｜⭐ 工作树干净 ✓｜⭐ 无半成品 ✓
+  ⭐ CI：⭐ 自 `979f331` 起**全绿** ✓（⭐ 此前 18 个红已止 ✓）；⭐ 全量测试**绿** ✓（⭐ 646 文件／5275 用例 ✓）
+**✅ 本会话完成的 ✓**：
+  · ⭐ **调试压缩包** ✓ —— ⭐ MCP 工具 `collect_debug_bundle` ✓（`7da3851`／`945a05a` ✓，⭐ 可带 `arrangementId` ✓ `22bf045` ✓）
+    ＋ ⭐ Web 顶栏按钮 ✓（`91fb07c`／`3edd15e` ✓）＋ ⭐ 共享 tar 写入器 ✓（`0abfcb9` ✓）
+    ⇒ ⭐ 两侧同名规 `.tar.gz` ✓，⭐ 含 `bundle.json`／`README.md`／`manifest.json`／`environment.json`／
+      `arrangement.groove.json`（若给 ✓）／`files/…` ✓，⭐ 每文件 ≤ 8 MiB ✓，⭐ 载作品时 README 写明 ✓
+  · ⭐ **迁移 ①** ✓（`7b2c3e3` ✓）｜⭐ **迁移 ③** ✓（`7179863`／`ae149f1` ✓）｜⭐ **执行顺序 ①** ✓｜⭐ **执行顺序 ⑦** ✓
+  · ⭐ **渲染成本估算** ✓（`b44b5c6` ✓ ＋ ⭐ 接线 `b50e040` ✓）⇒ ⭐ `validate_arrangement` 回包含 `renderEstimate` ✓
+    （⭐ 性能报告 P0 的可行解 ✓：⭐ 渲染前即可定超时 ✓）
+  · ⭐ **v2 包模块** ✓（`3daabdc` ✓）：⭐ `src/features/sequencer/arrangementPackage.ts` ✓ ——
+    ⭐ **拒绝 v1 形状** ✓（⭐ `clips`／`slots`／`sections`／`project` ✓）⇒ ⚠️ **尚无调用点** ✗
+  · ⭐ **CI 修复** ✓（`979f331` ✓：⭐ `redlines.mjs` 的 `REQUIRED_MCP_TOOLS` 删 `render_audio` ✓）
+**⏳ 下一步（迁移 ② 第一步 ✓，⭐ 步骤已到函数 ✓）**：
+  ⭐ ① ⭐ `src/features/sequencer/projectDb.ts` ✓：⭐ `exportProjectPackage`（`:719` ✓）⇒ ⭐ 第三参数改**必需** ✓
+    ＋ ⭐ `validateGroovePackage`（`:668` ✓）⇒ ⭐ **删 `clips`／`sections` 要求** ✓（⭐ `:702–709` ✓）⇒ ⭐ 改校验 **v2 形状** ✓
+    ⇒ ⭐ **或更好 ✓**：⭐ 直接让 ⭐ `arrangementPackage.ts` **成为唯一路径** ✓（⭐ 它已就位 ✓）
+  ⭐ ② ⭐ 调用点 ✓：⭐ `mcp/registryFiles.ts:142` ✓（⭐ **删 `as unknown as` 伪造** ✗ —— ⭐ 教训 102 ✓）｜
+    ⭐ `arrangementFiles.ts:202` ＋ `:515` ✓｜⭐ `projectDb.ts:748` ＋ `:775` ✓
+  ⭐ ③ ⭐ 测试 ✓：⭐ `projectDb.test.ts`（×13 ✓）＋ ⭐ `arrangementEntries.test.ts:78` ✓ ——
+    ⚠️ ⭐ 其中 `projectDb.test.ts:315` ⭐ **期望 v2 形状被拒** ✗ ⇒ ⭐ 该用例**正是"不并存"要移除的** ✓
+  ⭐ ④ ⭐ `registryFiles` 4 个工具改接 `arrangementId` ✓ ＋ ⭐ `import_groove` **建 arrangement** ✓
+  ⭐ ⑤ ⭐ 回填对齐表 ✓ ＋ ⭐ 把 ⭐ `CAP.testOnly`（⭐ 现 80 ✓）⭐ **调回** ✓（⭐ 新模块接上生产调用后 ✓）
+**⏳ 之后的顺序 ✓**：⭐ ④ `registryAnalysis`（7 工具／5 处 `songId` ✓）⇒ ⭐ ⑥ Web 14 个文件**移植** ✓
+  （⭐ 底层 `arrangements_v2` 已存在 ✓）⇒ ⭐ ⑤ `registrySong`（11 ✓）＋ `registryPattern`（5 ✓）⇒ ⭐ ⑦ v1 数据模型 ✓
+**⭐⭐ 推送前必跑 ✓（八道 ✓，⭐ 教训 101／104 ✓）**：⭐ ① `npm run check:actions` ② `check:disabled-gates`
+  ③ `version:check` ④ `docs:check` ⑤ `typecheck` ⑥ `lint` ⑦ `redlines` ⑧ `npm test`（⭐ ＝`test:coverage` ✓）
+  ⚠️ ⭐ 另跑 ✓：`node scripts/check_docs.mjs` ✓／`check:docs:refs` ✓／`check:mcp` ✓／`check:file-sizes`／
+  `dead-exports`／`duplication`／`module-boundaries` ✓ ＋ ⭐ **围栏偶数** ✓（⭐ 台账 ✓）
+**⚠️ 教训 12 条（§§448–484 ✓）**：⭐ 最常用的五条 ✓：⭐ ① **判据旧名字四种位置四种动作** ✓
+  ② ⭐ **`as unknown as` 是并存的气味** ✓ ③ ⭐ **看字段判断是否已迁移，不看名字** ✓
+  ④ ⭐ **多行锚点先抓逐字文本或按结构定位** ✓（105 ✓）⑤ ⭐ **自查发现的问题就是失败检查，不是备注** ✓
+**⏳ 未做 ✓**：⭐ 见上"下一步"与"之后的顺序" ✓ ⇒ ⭐ **目标保持 active ✓**
+```
+
