@@ -13072,3 +13072,25 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 重量结果与判定问题已入账 ✓
 ```
 
+### 五百二十、🎯 **定论：`registryPattern` 无需迁移 ⇒ ⑤ ＝ `registrySong` 的 9 个**（2026-10-06 02:23 ✓）
+
+```
+**⭐ 量到 ✓（`get_pattern` 的全文 ✓）**：
+  · ⭐ 入参 ✓：⭐ **只有 `{ genreId }`** ✓（⭐ 无 `songId` ✓）
+  · ⭐ 描述 ✓：⭐ "**A genre's default sequencer pattern**, verbatim and copied
+    (the library itself is never exposed by reference)" ✓
+  · ⭐ 体内 ✓：⭐ `findGenre(String(args.genreId))` ✓ ⇒ ⭐ 回 ⭐ `{ genreId, name, pattern }` ✓
+  ⇒ ⭐ 即 ⭐ **它是"⭐ 流派库的读口"** ✓ ⇒ ⭐ **不碰歌，也不碰编曲** ✓ ⇒ ⭐ **与模型无关 ⇒ 不动** ✓
+**⚠️ ⭐ 这是 §512 判定表的**第三处**误判 ✗**（⭐ 前两处：⭐ `apply_chord_progression` ✗；⭐ `set_clip` 的深度 ✗）
+  ⇒ ⭐ 共同点 ✓：⭐ 我在表里**按"⭐ 有没有同名 v2 工具"**配对 ✗ ⇒ ⭐ 而**正确的判据是"⭐ 它碰不碰 v1 模型"** ✓
+**⭐ 实测 `registryPattern` 五个 ✓**：⭐ 入参里 ⭐ **没有一个 `songId`** ✓（⭐ `genreId`／`pattern`／`ops`／`progressionId` 等 ✓）
+  ⇒ ✅ ⭐ **因此 `registryPattern` 无需迁移** ✓
+**⭐⭐ 结论 ✓**：⭐ **⑤ 的实际范围＝`registrySong` 的 9 个** ✓（⭐ 已完成 2 ✓ ⇒ ⭐ **剩 7** ✓）：
+  ⭐ `create_song` ✓／⭐ `get_song` ✓／⭐ `render_song` ✓／⭐ `set_tempo` ✓／⭐ `set_clip` ✓／
+  ⭐ `add_section` ✓／⭐ `undo_song` ✓（**移植** ✓）＋ ⭐ 已退的 2 ✓
+  ⇒ ⭐ 另两个（⭐ `set_arrangement_vocal_melody` ✓／⭐ `synthesize_vocal` ✓）⭐ 已经就绪 ✓
+**⚠️ ⭐ 教训 132 ✓**：⭐ **分类要按"⭐ 它碰不碰旧模型"** ✗，⭐ 不是按"⭐ 有没有同名新工具" ✓ ——
+  ⭐ 前者给出**真实范围** ✓（⭐ 9 而非 16 ✓），⭐ 后者引我误判三处 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 范围缩小 7 件 ✓
+```
+
