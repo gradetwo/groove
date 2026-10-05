@@ -14500,3 +14500,23 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+**⭐ 四处调用的用例标题与判定 ✓（2026-10-06 04:13 ✓）**：
+```
+| ⭐ 调用行 ✓ | ⭐ 其用例标题 ✓（⭐ 语法锚定 ✓） | ⭐ 判定 ✓ |
+|---|---|---|
+| ⭐ `:359` ✓ | ⭐ "⭐ **an unknown genreId names list_genres and suggests the nearest real id**" ✓ | ⚠️ ⭐ 主题**就是它**（⭐ 它自己的校验 ✗）⇒ ⭐ **整例删** ✓ |
+| ⭐ `:809` ✓ | ⭐ "⭐ **create_song seeds a song with one repeated section**" ✓ | ⚠️ ⭐ 主题**就是它** ⇒ ⭐ **整例删** ✓ |
+| ⭐ `:1074` ✓ | ⭐ "⭐ **get_transposition_report answers with a total, the sections it read, and what it did not read**" ✓ | ✗ ⭐ 主题**是** `get_transposition_report` ⇒ ⭐ **改接** `create_arrangement` ✓ |
+| ⭐ `:238` ✓ | ⚠️ ⭐ 14 行内**无** `check(` ✗ | ⏳ ⭐ 需**更宽扫描** ✓（⭐ 它的 `song` 在后面被用 ✓） |
+**⭐⭐ 教训 156 连中两次 ✓**：⭐ 两处**标题直接定案** ✓（⭐ 一个"⭐ 就是它**"⇒ 删 ✓，⭐ 一个"⭐ 是别人**"⇒ 改接 ✓）
+  ⇒ ⭐ 这证明"⭐ 看标题 ＋ ⭐ 首条语句**"的判断法**可靠 ✓ ✓
+**⭐ 因此最后一件的施工清单 ✓**：
+  ⭐ ① ⭐ `check_mcp`：⭐ `:359` 与 ⭐ `:809` 两例**整例删** ✓ ＋ ⭐ `:1074` 的建台**改接** ✓ ＋ ⭐ `:238` 待宽扫描 ✓
+  ⭐ ② ⭐ `mcpCapability` 清单项 ⇒ v2 ✓
+  ⭐ ③ ⭐ `mcpSong.test.ts` 的 5 处逐个判断 ✓（⭐ 用同一判断法 ✓）
+  ⭐ ④ ⭐ 两个探针 ＋ `mcp_call.mjs` ⇒ 改接或删 ✓
+  ⭐ ⑤ ⭐ **工具块** ✓（§529 ✓）＋ ⭐ **地板** ✓（读数将到 **84** ✓ ⇒ `> 80` 有余量 ✓）
+  ⭐ ⑥ ⭐ **文档引用**检查 ✓（教训 154 ✓）＋ ⭐ 回填 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
