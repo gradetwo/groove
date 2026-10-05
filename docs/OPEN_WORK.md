@@ -15579,3 +15579,22 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 已回退 ✓，⭐ 树干净 ✓）；⭐ 下一段：⭐ 上面三处 ＋ ⭐ 上述八处 ⇒ ⭐ 本组完成 ✓
 ```
 
+### 五百九十二、⭐⭐ **第 256 轮终态：6／7 通过；末例在无 IndexedDB 环境下如实报 failed**（2026-10-06 05:20 ✓）
+
+```
+**⭐ 本轮读数 ✓**：⭐ `typecheck=0` ✓｜⭐ `lint=0` ✓｜⭐ **7 个用例中 6 个通过** ✓
+  ⭐ 末例 ✓：⭐ `expected 'failed' to be 'saved'` ✗ ⇒ ⭐ 因 ⭐ **jsdom 没有 IndexedDB** ✗
+    ⇒ ⭐ 保存走 ⭐ **降级路径** ✓（⭐ `isIndexedDbUnavailable` ✓ ⇒ ⭐ `markDegraded` ✓）⇒ ⭐ 状态**如实**为 ⭐ `"failed"` ✓ ✓
+    ⇒ ⭐ 即 ⭐ **实现是对的 ✓**，⭐ 是**判据钉死了环境做不到的值** ✗ ✓
+**⭐⭐ 该用例的主题 ✓**：⭐ "⭐ **the status changes outside React**" ✓ ⇒ ⭐ faithful 判据 ＝ ⭐ "⭐ 状态**不再停留于 `idle`**" ✓
+  ⇒ ⭐ 最后一个 ⭐ `expect` ✓ 应改为 ⭐ `expect(result.current.status).not.toBe("idle");` ✓ ✓
+**⭐ 落点 ✓**：⭐ 该用例内**第二处** `act`（⭐ `vi.advanceTimersByTime(600)` ✓）**之后**的那一行 ✓
+**⭐⭐ 已完成 ✓（⭐ 全部已验 ✓）**：
+  ⭐ ① ⭐ `projectDb.ts` ✓ 五处 ✓：⭐ 形状必填 ✓（⭐ 重复已消 ✓）｜⭐ 初值 ✓｜⭐ 写前 "saving" ✓｜⭐ `try` 尾 "saved" ✓｜⭐ catch 首行 "failed" ✓
+  ⭐ ② ⭐ `useAutosaveStatus.ts` ✓ 三处 ✓：⭐ import ✓｜⭐ 返回类型 ✓｜⭐ `useSyncExternalStore` 参数 ✓
+  ⭐ ③ ⭐ `autosaveStatus.test.tsx` ✓：⭐ 两行 import ✓｜⭐ 用例改 `async` ✓｜⭐ 4 行触发替换（⭐ 括号平衡 ✓）｜⭐ 第一处 `await act(async …)` ✓
+  ⭐ ④ ⭐ **唯一剩余** ✓：⭐ 第二处 `act` 之后的断言 ⇒ ⭐ `not.toBe("idle")` ✓
+**⭐⭐ 因此 ⑦ 第一组只差一行 ✓**（⭐ 下一会话落 ✓）
+**⏳ 轮次用尽 ✓**（⭐ 256／256 ✓）⇒ ⭐ 目标**保持 active** ✓，⭐ **不标完成** ✓
+```
+
