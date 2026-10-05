@@ -650,6 +650,15 @@ are the places where it is more accurate than the evaluations that came before i
 
 判据在 `src/test/arrangementToMidi.test.ts`（含"导出→导入→音符逐一相同"、速度/拍号往返、tempo map 的落点）；`npm run check:mcp` 里另有一条**协议级**往返：导出写盘，把字节交回 `import_arrangement_midi`，比较前后音符的多重集。
 
+### Ableton 导出：按**编排**写 Live Set（2026-10-06）
+
+原来只有一个 `export_ableton`，它吃的是**一个 pattern**（或一个 song），产出**内联 base64**：那是 v1 的步进网格形状，在纯 v2 的表面上没有位置。但它提供的**能力**要留住，所以先补上按编排导出的路，再让 pattern 版退场。
+
+新的 `export_arrangement_ableton` 只接 `arrangementId`（可给 `filename`、`outputDir`）。它用**渲染器同一份展平代码**把编排展平，速度取**编排自己的 `bpm`**（缺省 120），然后交给应用自己的 Live 写手（`src/audio/AbletonExporter.ts`）产出 `.als`：gzip 压过的 XML。回包给出**绝对路径、文件名、字节数、格式与轨数**。它只读编排，只写文件。
+
+判据**解开文件**再断言，因为一个 gzip 的 Live Set 和一个叫 `.als` 的文本文件从外面看是一样的：`check:mcp` 真建一个编排、真导出、`gunzipSync` 之后断言解压出来的文本带 Live Set 的标记（`scripts/check_mcp.mjs`）。
+
+
 ### Logic Pro 工程导入：Phase 1 只做 MIDI（2026-10-01）
 
 `import_logic_project` 把 Logic Pro 工程读成**编排轨道**，是 `addImportedParts` 上的**第三个生产者**（前两个是 MusicXML 与 MIDI 导入），不是第二条落库路径——这正是 `src/test/mcpLogicImport.test.ts` 里那条**结构判据**要钉住的：`mcp/arrangement.ts` 里 `addImportedParts` 只有一处定义、三处调用，任何一个导入器自己写 `edit(...)` 或手写 `notesByTrack` 都会让这条断言变红。
