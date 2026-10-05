@@ -15016,3 +15016,23 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+**⭐ 改接第一件：`SaveIndicator` 只需改一个类型 ✓（2026-10-06 04:45 ✓）**：
+```
+**⭐ 量到 ✓**：⭐ `src/components/sequencer/SaveIndicator.tsx` ✓ ⭐ **只 import 一个 v1 类型** ✓：
+  ⭐ `:4` ✓：⭐ `import type { SaveStatusSnapshot } from "../../features/sequencer/projectStorage";` ✓
+  ⇒ ⭐ **没有别处用它** ✓ ⇒ ⭐ 改接是**一行** ✓ ✓
+**⭐ 两个存储的对比 ✓**：
+  | ⭐ 模块 ✓ | ⭐ 性质 ✓ |
+  |---|---|
+  | ⭐ `projectStorage.ts` ✓ | ⭐ **v1（localStorage）** ✓：⭐ `groove_project_v1` ✓／⭐ `subscribeSaveStatus` ✓／⭐ `debounceSaveProject` ✓／
+    `flushPendingProject` ✓／⭐ `loadSavedProject` ✓／⭐ `clearSavedProject` ✓／⭐ `hasSavedProject` ✓ |
+  | ⭐ `projectDb.ts` ✓ | ⭐ **V2（IndexedDB）** ✓：⭐ `groove_projects_db` ✓／⭐ `arrangements_v2` ✓／⭐ `saveArrangementProject` ✓／
+    getArrangementProject ✓／⭐ `getLastArrangementProject` ✓／⭐ `isArrangementProjectId` ✓
+    ⭐ ＋ ⭐ **`LEGACY_STORAGE_KEY = "groove_project_v1"`** ✓ ＋ ⭐ **`migrateLegacyLocalStorage`** ✓ ✓ |
+**⭐⭐ 关键 ✓**：⭐ **V2 的存储已经包含 v1 数据的迁移** ✓ ✓ ⇒ ⭐ 所以 ⭐ 退 v1 存储**不会丢数据** ✓ ✓
+  （⭐ 数据路径 ✓：⭐ 旧 localStorage ⇒ ⭐ `migrateLegacyLocalStorage` ✓ ⇒ ⭐ IndexedDB 的 ⭐ `arrangements_v2` ✓）
+**⭐ 一类细节待量 ✗**：⭐ V2 侧的状态类型候选是 ⭐ `projectDb.ts:112` 的 ⭐ **`ProjectsStorageStatus`** ✓
+  ⇒ ⚠️ ⭐ 但它与 ⭐ `SaveStatusSnapshot` 的**字段是否一致** ✗ ⇒ ⭐ 下一段先比字段 ✓（⭐ 教训 151 ✓：⭐ 基线先量 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
