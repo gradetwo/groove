@@ -9163,3 +9163,25 @@ problems: **[]** ✓
    ⭐ **弄红验证 ✓**：删掉毫秒输出行 ⇒ 判据 **exit=1** ✓（`{ prints: false, scope: false }` ✓）⇒ 从**修复后**备份还原 ✓（第 78 条 ✓）
 **⇒ 至此 A 段三处"未量"全部关闭 ✓**：响应基线 ✓（`§382`）／渲染 CPU ＋ 倍率 ✓（`§383`）／**启动耗时 ✓（本节）**
    ⭐ A 段真正**量不了**的只剩：Mac 六条 ✗（`needs` 已可核对 ✓）／上游语料间歇 ✗／**MCP 真机未证** ✗
+
+## 三百九十四、🔻 **D 段"不许静默降质"实测：降级路径都**会说话**，且有判据**（2026-10-05 13:39 ✓）
+
+```
+**目标原话 ✓**：D 段「**不得为省 CPU 静默降质**（如偷降采样率 ✓）；**需降级必须说出来并写成选项** ✓；不可量处**明说口径** ✓」
+**先量 ✓（时点 13:39 ✓，方法：grep `src` 生产代码，排除 `src/test` ✓）**：
+   · 一次搜"降质/降级"类词（degrade／adaptive／throttle／lowPower／halfRate／dropout ✓）⇒ 命中处**全部带说明** ✓
+   · ⭐ 三处关键 ✓：
+     ① **分享链接** ✓：`src/audio/SequencerUrlShare.ts` 返回 **`degraded: boolean`** ✓（整条 URL 过长 ⇒ 退化为精简版 ✓
+        `degraded: true` ✓）⇒ 界面 **`ProjectHubModal.tsx:469` `setShareDegraded(result.degraded)`** ✓
+        ⇒ **显示** `t("project_hub_share_degraded")`（同文件 `:1142` ✓）⇒ **用户被告知** ✓
+     ② **限幅器** ✓：`MasterLimiter.ts:562` 明说 "**(no true-peak ceiling, no lookahead). Peak limiting is degraded.**" ✓；
+        导出侧经 `limiterKind === "fallback"` ✓ 上报 ⇒ **`export_wav_degraded_limiter`** ✓（`useArrangementFileActions.ts:143` ✓／
+        `useExportActions.ts:381` ✓）；GS-1 宿主失败另报 **`export_wav_degraded_gs1`** ✓
+     ③ **写文件** ✓：`WavExporter.ts:361` 注释写明它"**is expected to tell the user rather than ship a silently degraded file**" ✓
+   · ⭐ **反例排查 ✓**：`useDeviceCapabilities` 被 4+ 处使用 ✓，但用途是 **`isMobile` 布局** ✓ ⇒ **没有**"按设备偷降音质" ✗ ✓
+**判据面 ✓（已有 ✓，无需新增 ✓）**：`limiterFallbackWarning.test.ts` ✓／`exportLimiterKind.test.ts` ✓／
+   `workletsUnavailable.test.ts` ✓／`helpCenterLosslessClaims.test.ts` ✓（⭐ 后者正压着"无损"这类**文案不许吹** ✓）
+**⇒ 结论 ✓**：D 段这一条**实测成立** ✓ —— 降级**有出口 ✓、有名字 ✓、有判据 ✓**，且**没有**按设备静默降质的路径 ✗
+**⚠️ 老毛病复发（第 85 条的第二次 ✓）**：我又把反引号写进了 `echo`（★ 被 shell 当命令执行 ⇒ `degraded: command not found` ✗）
+   ⇒ ⭐ 这已不是"知识"问题而是**习惯**问题 ✓ ⇒ 定死做法 ✓：**`echo`／双引号里永不出现反引号或 `$`** ✓，
+     要显示就用「」或**单引号** ✓（要解释就交给脚本，别交给 shell ✓）
