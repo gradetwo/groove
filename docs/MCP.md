@@ -461,7 +461,6 @@ caller that sent a vocal pattern got it back with the lyric gone.
 
 | Tool | Arguments | Returns |
 | :--- | :--- | :--- |
-| `export_midi` ▢ | `pattern`, `bpm?`, `filename?` | base64 of a Standard MIDI File (8 tracks, 16th grid) |
 | `share_url` ▢ | `pattern`, `genreId?` | a `groove://`-free https URL that opens the app with the groove loaded |
 | `analyze_audio` ▢ | `path` (a WAV this server produced) | LUFS, true peak, pinned samples, discontinuity count, band shape, stereo correlation |
 

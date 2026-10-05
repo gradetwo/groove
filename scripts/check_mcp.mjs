@@ -137,7 +137,6 @@ try {
     "apply_gs1_patch",
     "get_gs1_patch",
     "compare_genres",
-    "export_midi",
     "share_url",
     "render_arrangement",
     "render_arrangement_stems",
@@ -851,10 +850,6 @@ try {
 
   const stats = payload(await client.request("tools/call", { name: "pattern_statistics", arguments: { pattern } }));
   check("pattern_statistics describes every track", (stats.tracks ?? []).length === pattern.tracks.length);
-
-  const midi = payload(await client.request("tools/call", { name: "export_midi", arguments: { pattern } }));
-  const midiBytes = Buffer.from(midi.base64 ?? "", "base64");
-  check("export_midi returns a Standard MIDI File", midiBytes.subarray(0, 4).toString("ascii") === "MThd", `${midiBytes.length} bytes`);
 
   const share = payload(await client.request("tools/call", { name: "share_url", arguments: { pattern } }));
   check("share_url returns an absolute link", typeof share.url === "string" && share.url.startsWith("http") && share.url.includes("groove="), share.url?.slice(0, 60));

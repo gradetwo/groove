@@ -104,24 +104,6 @@ describe("lyrics in a MIDI export", () => {
     expect(soundingOf(parsed.notes, 9)).toEqual([[0, 36, undefined]]);
   });
 
-  it("is reachable through the MCP `export_midi` tool, whose schema did not have to change", () => {
-    /**
-     * ⭐ The repository's own rule is that a capability may not exist only inside a test or only behind the interface: a composer working through MCP exports
-     * the pattern whose lane carries `syllables`, and the words have to be in the bytes the tool returns. No tool was added or altered for this — the pattern
-     * schema already passed `syllables` through (`src/test/mcpSchemaPassthrough.test.ts`), and the writing happens in the exporter both callers share.
-     */
-    const tool = TOOLS.find((candidate) => candidate.name === "export_midi")!;
-    expect(tool, "export_midi must be on the MCP surface").toBeTruthy();
-    const result = tool.handler({ pattern: sungPattern(), bpm: 120 }) as { base64: string; bytes: number };
-    const bytes = new Uint8Array(Buffer.from(result.base64, "base64"));
-    expect(result.bytes).toBe(bytes.length);
-    expect(soundingOf(parse(bytes).notes, 2)).toEqual([
-      [0, 60, "能"],
-      [480, 62, undefined],
-      [960, 64, "够"],
-    ]);
-  });
-
   it("puts the syllables back on their own steps, so the null between them does not shift the rest", () => {
     const result = importMidiToPattern(bufferOf(generateMidiBytes({ bpm: 120, pattern: sungPattern() })), { totalSteps: STEPS, quantization: "1/16" });
     const lead = result.pattern.tracks.find((candidate) => candidate.track_id === "lead")!;

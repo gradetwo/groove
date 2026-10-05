@@ -22,23 +22,6 @@ import { z } from "zod";
 
 export const FILE_TOOLS: ToolDefinition[] = [
   {
-    name: "export_midi",
-    title: "Export MIDI",
-    description: "Standard MIDI File bytes for a pattern (8 tracks on a 16th grid; drums on channel 10), returned as base64 and as a byte count.",
-    readOnly: true,
-    inputSchema: { genreId: z.string().optional(), pattern: patternSchema.optional(), bpm: z.number().min(20).max(300).optional() },
-    handler: (args) => {
-      const pattern = patternFromArgs(args as { genreId?: string; pattern?: unknown });
-      if (!pattern) {
-        // `create_song` reaches here when a supplied genreId did not resolve, so this is the message most composers will actually see.
-        const wanted = (args as { genreId?: string }).genreId;
-        return failure(wanted ? unknownGenre(wanted) : "provide either genreId or pattern");
-      }
-      const file = exportMidi(pattern, { bpm: args.bpm as number | undefined });
-      return { filename: file.filename, mimeType: file.mimeType, bytes: file.bytes.length, base64: toBase64(file.bytes) };
-    },
-  },
-  {
     /**
      * P3 of the composer's report, unblocked by C1: the project package can now carry a song's arrangement, so exporting one is
      * a mapping rather than a lossy guess.

@@ -261,3 +261,22 @@
   ⇒ ⭐ 先把它在 v2 侧**立起来** ✓ ⇒ ⭐ 才允许退 v1 ✓（⭐ 铁律 ✓）
 **⏳ 下一步 ✓**：⭐ `export_midi` 退场（⭐ 8 处 ＋ ⭐ 那条旧判据 ＝ 9 处 ✓，⭐ §506 清单 ✓）⇒ ⭐ 工具数 **94 ⇒ 93** ✓
 
+## 2026-10-06 01:31 回填（第 4 条规矩：改完实现回来改表）
+
+| 面 | 变化 | 依据 |
+|---|---|---|
+| ⭐ **MCP 面** | ✅ ⭐ **pattern 基的 `export_midi` 退场** ✓ ⇒ 工具 **94 ⇒ 93** ✓；⭐ 歌词能力由 ⭐ `export_arrangement_midi` 承接 ✓
+  （⭐ 判据已在 v2 侧立住 ✓，`c0b80e6` ✓） | 本轮 ✓ |
+| ⭐ **系统／Web** | **无变化** ✓ | — |
+
+**⭐ 退场触及 8 个文件 ✓**：⭐ `mcp/registryFiles.ts` ✓｜⭐ `scripts/redlines.mjs`（⭐ **必需清单** ✓）｜
+  `scripts/check_mcp.mjs`（⭐ 名表 ＋ ⭐ 用例块 ＋ ⭐ 孤立的断言行 ✓）｜⭐ `src/test/mcpTools.test.ts` ✓｜
+  `src/test/exportSurfaceCopy.test.ts` ✓｜⭐ `src/test/lyricExport.test.ts`（⭐ 旧歌词判据 ✓ —— ⭐ 已在 `c0b80e6` 立好 v2 版 ✓）｜
+  `docs/MCP.md`（⭐ 声明行 ✓）｜⭐ `mcp/README.md` ✓
+**⭐ 判据读数 ✓**：⭐ `redlines=0` ✓｜⭐ `check:mcp=0` ✓｜⭐ 十一道门全 0 ✓｜⭐ 相关判据 7 文件全过 ✓｜⭐ 文档双门 0 ✓
+**⚠️ ⭐ 教训 122 ✓**：⭐ **块尾按"括号归零"算，会在"⭐ 自平衡的一行"上提前停** ✗ ——
+  ⭐ 本例 ⭐ `const midi = payload(` ✓ 自身配平 ⇒ ⭐ 块尾算在它那里 ✓ ⇒ ⭐ **留下一条孤立的 `check(…)`** ✓ ⇒ `check:mcp` 报
+  "midi is not defined" ✓
+  ⇒ ⭐ 修法 ✓：⭐ ① 块尾若后面紧跟 ⭐ `check(` ✓ ⇒ ⭐ **一并吃进来** ✓ ② ⭐ 或跑门后 ⭐ **按报错补删** ✓（⭐ 本轮用的 ② ✓）
+  ⇒ ⭐ 更稳 ✓：⭐ **删完立刻跑 `check:mcp`** ✓（⭐ 它抓到了 ✓）
+

@@ -383,7 +383,6 @@ const REQUIRED_MCP_TOOLS = [
   "validate_pattern",
   "pattern_statistics",
   "compare_genres",
-  "export_midi",
   "share_url",
   "get_loudness_report",
   "analyze_audio",
