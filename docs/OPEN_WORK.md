@@ -15394,3 +15394,19 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 已回退 ✓，⭐ 树干净 ✓）；⭐ 下一段：⭐ 改这一处 ⇒ ⭐ 本组完成 ✓
 ```
 
+**⭐ 教训 174／175 ✓（2026-10-06 05:07 ✓）**：
+```
+**⭐ 本轮拦下 ✓**：⭐ 实现六处 ✓ **编译通过** ✓；⭐ 判据的**触发块已改对** ✓ ⇒ ⚠️ 但 ⭐ **import 没加上** ✗
+  ⭐ 报错 ✓：⭐ `autosaveStatus.test.tsx(126,12): Cannot find name 'saveArrangementProject'` ✗
+    ＋ ⭐ `(126,68): Cannot find name 'createArrangement'` ✗
+**⭐⭐ 教训 174 ✓**：⭐ **每一处替换都必须断言** ✗ —— ⭐ **包括"⭐ 加 import**" ✓
+  ⭐ 我给**触发块**加了断言 ✓，⭐ 却给 **import 的 `replace`** 忘了断言 ✗ ⇒ ⭐ 它**静默未命中** ✗
+  ⇒ ⭐ 只有下游 ⭐ `tsc` ⭐ 才发现 ✓ ✓
+  ⭐ 做法 ✓：⭐ **凡 `str.replace` 之前，⭐ 先 `assert t.count(old) == 1`** ✓
+**⭐⭐ 教训 175 ✓**：⭐ **找 import 要扫整个文件** ✗
+  ⭐ 我扫前 20 行 ✓ ⇒ ⭐ 只看到 ⭐ `vitest` ✓ 与 ⭐ `@testing-library/react` ✓ ⇒ ⚠️ 就以为"⭐ import 少**" ✗
+  ⭐ 而 ⭐ `projectStorage` 的 import **在更下面** ✓（⭐ 教训 163 ✓ 的又一形态 ✓）
+  ⭐ 做法 ✓：⭐ `for k, l in enumerate(lines)` ⭐ **全文件** ✓，⭐ 且**同时查多行 import 的续行** ✓（⭐ `} from "…"` ✓）
+**⏳ 未落码 ✗**（⭐ 已回退 ✓，⭐ 树干净 ✓）；⭐ 下一段：⭐ 读到真实 import 行 ⇒ ⭐ 照抄补齐 ⇒ ⭐ 本组完成 ✓
+```
+
