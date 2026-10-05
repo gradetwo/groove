@@ -8994,3 +8994,22 @@ problems: **[]** ✓
    ⭐ **弄红验证 ✓**：把限额临时降到 2 ⇒ 门 **exit=1**（报 `❌ a module boundary moved:
       fix it rather than raising the ceiling` ✓）**且判据 exit=1** ✓ ⇒ 从**修复后**备份还原 ✓（第 78 条 ✓）
 **⇒ 五项可维护性指标现在全部有数 ✓**：单文件行数 ✓／重复 37 ✓／死代码 27 ✓／文档漂移 ✓／**模块边界 3 ＋ 0** ✓
+
+## 三百八十七、✅ **模块边界全貌 ＋ 计数复验**（2026-10-05 10:57 ✓）
+
+```
+**边界全貌 ✓（口径：`.ts/.tsx` 的**值导入** ＋ 裸标识符导入 ✓；⚠️ `scripts/*.mjs` **不在内** ✗，如实标明 ✓）**：
+   | 方向 | 读数 | 性质 |
+   · `src` 内部**值导入环** | **3** ✓（`genreMix↔genreMid` ✓／`genreMix↔genreGroove` ✓／`projectDb↔projectStorage↔useSequencerStore` ✓） | 限额 ✓ 只许下降 ✓
+   · `src ⇒ mcp` | **0** ✓ | ⭐ **硬规则** ✗（应用层不得依赖自己的服务端 ✗）
+   · `src ⇒ scripts` | **0** ✓ | 硬规则 ✓
+   · `mcp ⇒ scripts` | **0** ✓ | 硬规则 ✓
+   · `scripts ⇒ src|mcp` | **0** ✓ | 硬规则 ✓（⚠️ 仅 `.ts` ✓；`.mjs` 未扫 ✗）
+   · `src` 里的 `@/` 别名导入 | **0** ✓ | ⇒ 分层没有被别名绕开 ✓
+**计数复验 ✓（时点 10:57 ✓，方法：`npm test` ✓）**：`npm test **exit=0**` ✓
+   · `Test Files **631 passed** | 3 skipped (634)` ✓｜`Tests **5250 passed** | 24 skipped (5274)` ✓
+   · ⭐ 与上一轮（630／5247 ✓）之比＝ **＋1 文件 ＋3 用例** ✓ —— **正是** `src/test/moduleBoundaries.test.ts`（3 用例 ✓）
+     ⇒ ⭐ 说明**没有**任何"钉住脚本清单／测试计数"的判据被这次新增碰坏 ✓（否则这里会红 ✗）
+   · 五项度量门 ✓：`check:duplication=0` ✓／`check:file-sizes=0` ✓／`check:dead-exports=0` ✓／
+     **`check:module-boundaries=0`** ✓／`check:docs=0` ＋ `check:docs:refs=0` ✓
+**⇒ B③ 五项可维护性：全部有数 ✓（本目标里唯一曾"只有断言没有数"的一项已补上 ✓）**
