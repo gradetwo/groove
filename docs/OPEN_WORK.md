@@ -12368,3 +12368,21 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未修 ✗**（⭐ 余量用尽 ✓）；⭐ 原因与修法已定 ✓
 ```
 
+**⭐ `mcpCoverage` 的真实形状（2026-10-06 00:45 ✓，已量 ✓）**：
+```
+· ⭐ 它有 ⭐ **两条检查** ✓：
+  ⭐ ① ⭐ `:63` ⭐ `readFileSync("src/data/arrangementEdits.ts")` ✓ ⇒ ⭐ 数据层操作 → 工具（`EXPOSED` 映射 ✓）
+  ⭐ ② ⭐ `:112` ⭐ `readFileSync("mcp/arrangement.ts")` ✓ ⇒ ⭐ **MCP 层的导出** ✓ → ⭐ **一份白名单** ✓
+    （⭐ 白名单里已见 ✓：⭐ `clearMcpArrangements` ✓／⭐ `flattenMcpArrangement` ✓／⭐ `summariseArrangement` ✓／
+     ⭐ `requireArrangement` ✓）
+  ⇒ ⚠️ ⭐ **我新加的 `putMcpArrangement` 不在白名单里** ✗ ⇒ ⭐ **第 ② 条失败** ✓（⭐ 这正是 CI 报的那条 ✓）
+· ⚠️ ⭐ **本地仍绿** ✗（⭐ 刚跑：⭐ 5 用例全过 ✓）⇒ ⭐ **本地与 CI 的差异我仍未解释** ✗
+  ⇒ ⭐ 最可能 ✓：⭐ 本地 vitest 有**转换缓存** ✗，⭐ 或两条检查的**取源方式**不同 ✓（⭐ 但我不假设 ✓）
+  ⇒ ⭐ **下一轮第一件事 ✓**：⭐ 用 ⭐ **`npm run test:coverage`**（⭐ CI 的同一条命令 ✓）复现 ✓（⭐ 教训 113 ✓）
+**⭐ 两条修法（我选第一条 ✓）**：
+  ⭐ ① ⭐ **让 `import_groove` 调用它** ✓ ⇒ ⭐ 但 ⭐ **白名单是按函数名硬列的** ✗ ⇒ ⭐ 即便有调用者 ✓
+    ⭐ 也可能仍要**加进白名单** ✓ ⇒ ⭐ **两个动作都要** ✓（⭐ 工具调用 ＋ 白名单登记 ✓，⭐ 并写明理由 ✓）
+  ⭐ ② ⭐ 只加白名单 ✗ ⇒ ⭐ 会在"还没有调用者"时**说谎** ✓ ⇒ ⭐ 不选 ✓
+**⏳ 未修 ✗**（⭐ 余量用尽 ✓）
+```
+
