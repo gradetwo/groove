@@ -85,6 +85,7 @@
     "push:branch": "bash scripts/push_branch.sh",
     "check:duplication": "node scripts/check_duplication.mjs",
     "check:file-sizes": "node scripts/check_file_sizes.mjs",
+    "check:module-boundaries": "node scripts/check_module_boundaries.mjs",
     "probe:render-cpu:gate": "node scripts/check_render_cpu_budget.mjs",
     "check:dead-exports": "node scripts/check_dead_exports.mjs"
   },
