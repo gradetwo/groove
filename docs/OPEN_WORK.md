@@ -11639,3 +11639,24 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 本轮余量不足 ✓）；⭐ 关键未知已消 ✓（⭐ 不需从零设计 v2 包 ✓）
 ```
 
+**⭐ 迁移 ② 的调用点图（2026-10-05 22:42 ✓，已量 ✓）**：
+```
+**⭐ `exportProjectPackage` 的 9 个调用点 ✓**：
+| 调用点 ✓ | 传 arrangement ✓ | ⭐ 处置 ✓ |
+|---|---|---|
+| ⭐ `src/features/arrangement/arrangementFiles.ts:202` ✓ | ✅ 传 `carried` ✓ | ⭐ **已是 v2** ✓ 不改 ✓ |
+| ⚠️ `src/features/sequencer/projectDb.ts:748` ✓（Web 的 v1 导出 ✓） | ✗ 没传 ✗ | ⭐ **要改** ✓（⭐ 传 store 里的编曲 ✓）|
+| ⭐ `mcp/registryFiles.ts:142` ✓ | ✅ 传 `arrangement` ✓ | ⚠️ ⭐ 要看它**从哪拿** ✓（⭐ 现在应是从 song ✗ ⇒ ⭐ 改接 `arrangementId` ✓）|
+| ⚠️ `src/test/projectDb.test.ts` × 6 ✓（`:147` ✓／`:178` ✓／`:191` ✓／`:201` ✓／`:297` ✓／`:306` ✓） | 混合 ✓ | ⭐ **要改** ✓（⭐ 两次是 v2 用例 ✓ `:297`／`:314` ✓）|
+**⭐ `validateGroovePackage` 的调用点 ✓**：⭐ `arrangementFiles.ts:204` ✓／`:515` ✓（v2 ✓）｜⭐ `projectDb.ts:775` ✓（v1 ✓）｜
+  ⭐ `mcp/registryFiles.ts:200` ✓｜⭐ `src/test/projectDb.test.ts` × 7 ✓｜⭐ `src/test/arrangementEntries.test.ts:78` ✓
+**⭐ 要删的 v1 分支（两处 ✓，都在 `projectDb.ts` ✓）**：
+  · ⭐ 导出 ✓：⭐ `:722` 的 `arrangement?` **可选** ✓ ⇒ ⭐ 改**必需** ✓ ⇒ ⭐ 去掉"不带即 v1 形状" ✓
+  · ⭐ 校验 ✓：⭐ `:702–709` ⭐ **要求 `clips` 与 `sections`** ✓ ⇒ ⭐ 那是 **v1 规则** ✗
+    ⇒ ⚠️ ⭐ 于是 `src/test/projectDb.test.ts:315` ⭐ **期望"v2 形状被拒"** ✗（`toThrow(/carries no clips/)` ✓）
+    ⇒ ⭐ 该用例**正是"不并存"要移除的** ✓（⭐ 它保护的规则要作废 ✓）
+**⭐ 结论 ✓**：⭐ 迁移 ② 的**改动面比预期小** ✓ —— ⭐ **两个函数 ＋ 1 处 Web 导出 ＋ 8 个测试用例** ✓
+  ＋ ⭐ `registryFiles` 的 4 个工具 ✓ ⇒ ⭐ **Web 侧的 v2 文件路径已经存在** ✓（⭐ 这是好消息 ✓）
+**⏳ 未落码 ✗**（⭐ 余量不足 ✓）
+```
+
