@@ -44,7 +44,7 @@ describe("the maxDurationSec guard", () => {
     expect(message).toContain("maxDurationSec is 600s");
     // The ways forward, and the two that only make the render cheaper.
     expect(message).toMatch(/shorten the arrangement/);
-    expect(message).toMatch(/render one section with render_audio/);
+    expect(message).toMatch(/render one section with render_arrangement/);
     expect(message).toMatch(/sampleRate/);
     expect(message).toMatch(/channels/);
   });

@@ -119,49 +119,6 @@ export const RENDER_TOOLS: ToolDefinition[] = [
     },
   },
   {
-    name: "render_audio",
-    title: "Render audio",
-    description:
-      "Render a pattern (or a genre's default) through the app's own offline engine to WAV or MP3, writing a file under GROOVE_MCP_OUT. Return its path, duration, loudness, true peak and per-track peaks. Needs headless Chromium unless `headless: true`, which renders on the Node Web Audio host with no browser at all. The first browser call starts Chromium. A host that returns a buffer with **no samples in it** is a failed render, not a quiet one: the renderer retries and, if the retry succeeds, names that in `problems`. If every attempt is silent it errors instead of writing a file of silence. " +
-      renderCostSentence() +
-      " " +
-      renderBudgetSentence() +
-      HEADLESS_POINTER_SENTENCE,
-    readOnly: false,
-    inputSchema: {
-      genreId: z.string().optional(),
-      pattern: patternSchema.optional(),
-      format: z.enum(["wav", "mp3"]).default("wav"),
-      bars: z.number().int().min(1).max(64).optional().describe(
-        "default 1 (the export default); one of the two things that drives the duration the description quotes. It counts repetitions of the genre's pattern, and every catalogue genre's pattern is sixteen steps — one bar in 4/4 — so for a catalogue render it is the number of bars and the two readings coincide. They stop coinciding on a pattern longer than a bar, which is why this says repetitions rather than bars: asking for 2 of a four-bar pattern renders eight bars."
-      ),
-      bitrateKbps: z.number().int().min(32).max(320).optional().describe("MP3 only; default 192"),
-      trackPeaks: z
-        .boolean()
-        .optional()
-        .describe("also render each track alone and report its peak (costs one render per track, but shows the balance)"),
-      headless: z.boolean().optional().describe(headlessParameterDescription()),
-    },
-    handler: async (args, ctx) => {
-      const pattern = patternFromArgs(args as { genreId?: string; pattern?: unknown });
-      if (!pattern) {
-        // `create_song` reaches here when a supplied genreId did not resolve, so this is the message most composers will actually see.
-        const wanted = (args as { genreId?: string }).genreId;
-        return failure(wanted ? unknownGenre(wanted) : "provide either genreId or pattern");
-      }
-      return renderAudio(pattern, {
-        format: (args.format as "wav" | "mp3") ?? "wav",
-        bars: args.bars as number | undefined,
-        bitrateKbps: args.bitrateKbps as number | undefined,
-        trackPeaks: args.trackPeaks as boolean | undefined,
-        genreId: args.genreId as string | undefined,
-        // Absent when the caller did not ask for it, so "default engine" is a missing key rather than `false`.
-        ...(args.headless === true ? { headless: true } : {}),
-        ...(ctx?.progress ? { progress: ctx?.progress } : {}),
-      });
-    },
-  },
-  {
     name: "render_instrument_note",
     title: "Sound one instrument note and say which sample answered",
     description:

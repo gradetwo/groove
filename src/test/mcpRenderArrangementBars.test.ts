@@ -1,7 +1,7 @@
 /**
  * `render_arrangement`'s `bars` means passes through the arrangement, and the reply says so.
  *
- * The field report caught this as "the same parameter name, two meanings": `render_audio`'s `bars` is obeyed, and
+ * The field report caught this as "the same parameter name, two meanings": `render_arrangement`'s `bars` is obeyed, and
  * `render_arrangement`'s was **ignored** — the handler passed a hardcoded `bars: 1`, so a caller asking for four passes
  * got one, with the number it asked for nowhere in the reply (`docs/MUSE_REPORT_2026-10-01.md`, the section on the two
  * tools' `bars`). The schema and the description promised otherwise, which is the class of defect this repository treats

@@ -139,7 +139,7 @@ try {
     "export_midi",
     "export_ableton",
     "share_url",
-    "render_audio",
+    "render_arrangement",
     "render_arrangement_stems",
     "render_instrument_note",
     "analyze_audio",
@@ -147,7 +147,7 @@ try {
   ]) {
     check(`tool declared: ${required}`, names.includes(required));
   }
-  const renderTool = (tools?.tools ?? []).find((tool) => tool.name === "render_audio");
+  const renderTool = (tools?.tools ?? []).find((tool) => tool.name === "render_arrangement");
   check("render_audio declares its format enum", JSON.stringify(renderTool?.inputSchema ?? {}).includes('"wav"'));
   check("tools carry a description for the model", (tools?.tools ?? []).every((tool) => (tool.description ?? "").length > 40));
 
@@ -166,7 +166,7 @@ try {
     const budget = JSON.parse(fs.readFileSync(path.join(ROOT, "mcp", "render", "budget.json"), "utf8"));
     const budgetSeconds = Math.round(budget.renderBudgetMs / 1000);
     const navSeconds = Math.round(budget.navigationBudgetMs / 1000);
-    const RENDER_TOOLS = ["render_audio", "render_song", "render_arrangement", "render_arrangement_stems", "render_preview_clip"];
+    const RENDER_TOOLS = ["render_arrangement", "render_song", "render_arrangement", "render_arrangement_stems", "render_preview_clip"];
     const byName = new Map((tools?.tools ?? []).map((tool) => [tool.name, tool]));
     for (const name of RENDER_TOOLS) {
       const description = byName.get(name)?.description ?? "";

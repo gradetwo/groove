@@ -7,7 +7,7 @@
  * "WAV/MIDI/Ableton export" — long after the surface had grown past them. Measured on this tree, the browser
  * exports **seven**: the workbench and arrangement menus each hold six (`MIDI`, `Ableton Live Set`, `.groove`,
  * `WAV`, `MP3`, `stems`), and the arrangement's score tab exports `MusicXML`; the MCP server exposes the same
- * seven as tools (`export_midi`, `export_ableton`, `export_groove`, `render_audio`, `render_arrangement_stems`,
+ * seven as tools (`export_midi`, `export_ableton`, `export_groove`, `render_arrangement`, `render_arrangement_stems`,
  * `export_arrangement_midi`, `export_arrangement_musicxml`). A reader deciding whether this app can hand a
  * score to MuseScore, or stems to a mixer, was told no by omission — the defect is the omission, not the order.
  *

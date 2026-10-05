@@ -129,13 +129,13 @@ function trackIdOf(arrangementId: string): string {
 /**
  * ⭐ **The whole render family says where the file goes** (owner's question: is the preview documentation complete?).
  *
- * It was not: `render_audio` and the exports named the location, `render_arrangement` did not, and the preview said only
+ * It was not: `render_arrangement` and the exports named the location, `render_arrangement` did not, and the preview said only
  * that it returns a file. One shared sentence now carries it, and this fails if any tool loses it — including if the
  * shared sentence itself is dropped, which takes `render_arrangement` red.
  */
 describe("the render family names where the audio is written", () => {
   it("⭐ every render tool that hands back a file says where it lands", () => {
-    for (const name of ["render_arrangement", "render_arrangement_preview", "render_audio"]) {
+    for (const name of ["render_arrangement", "render_arrangement_preview", "render_arrangement"]) {
       const tool = TOOLS.find((t) => t.name === name);
       expect({ name, found: tool !== undefined }).toEqual({ name, found: true });
       const described = (tool as unknown as { description: string }).description;

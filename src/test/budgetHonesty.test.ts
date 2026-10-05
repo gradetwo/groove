@@ -14,6 +14,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { TOOLS } from "../../mcp/registry";
+import { createMcpArrangement } from "../../mcp/arrangement";
 import {
   RENDER_BUDGET_MS,
   NAVIGATION_BUDGET_MS,
@@ -72,7 +73,21 @@ vi.mock(new URL("../../mcp/render/worker.ts", import.meta.url).pathname, () => (
 }));
 
 /** The tools that render audio — the five a caller must raise its timeout for. */
-const RENDER_TOOLS = ["render_audio", "render_song", "render_arrangement", "render_arrangement_stems", "render_preview_clip"];
+/** ⭐ A fresh arrangement per call: the render tools take an arrangement id. */
+const freshArrangementId = () => createMcpArrangement({}).arrangementId;
+
+/**
+ * ⭐ **The v2 render tool answers a failed render with a failure reply, where the v1 tool threw.**
+ *
+ * These cases read the reporter the handler passed down, so the reply is reduced to a throw and the assertions stay.
+ */
+const asError = async (call: unknown) => {
+  const reply = (await call) as { isError?: boolean } | undefined;
+  if (!reply?.isError) throw new Error("expected a failure reply");
+  throw new Error(JSON.stringify(reply));
+};
+
+const RENDER_TOOLS = ["render_song", "render_arrangement", "render_arrangement_stems", "render_preview_clip"];
 
 // The registry is imported at the top like every other test: `vi.mock` is hoisted above it, so it resolves the stub.
 const toolNamed = (name: string) => {
@@ -135,7 +150,7 @@ describe("the render budget a caller reads is the budget the code enforces", () 
   });
 
   it("names the two things that drive duration, so the number is inferable rather than guessed", () => {
-    for (const name of ["render_audio", "render_arrangement"]) {
+    for (const name of ["render_arrangement"]) {
       const bars = toolNamed(name).inputSchema.bars?.description ?? "";
       expect(bars, `${name}.bars must say it moves the duration`).toContain("drives the duration");
     }
@@ -238,7 +253,7 @@ describe("the render tools hand the reporter to the renderer", () => {
 
     // The stub's failure propagates out of the handler — `render_audio` deliberately does not swallow it, so that
     // `mcp/server.ts` can add the tool name. What this test reads is what the handler passed down.
-    await expect(toolNamed("render_audio").handler({ genreId: "chicago-house" }, { progress })).rejects.toThrow(
+    await expect(asError(toolNamed("render_arrangement").handler({ arrangementId: freshArrangementId() }, { progress }))).rejects.toThrow(
       "stub: this test does not start a browser"
     );
     expect(renderCalls).toHaveLength(1);
@@ -247,7 +262,7 @@ describe("the render tools hand the reporter to the renderer", () => {
 
   it("drops the reporter when the context has none", async () => {
     renderCalls.length = 0;
-    await expect(toolNamed("render_audio").handler({ genreId: "chicago-house" }, {})).rejects.toThrow("stub");
+    await expect(asError(toolNamed("render_arrangement").handler({ arrangementId: freshArrangementId() }, {}))).rejects.toThrow("stub");
     expect(renderCalls).toHaveLength(1);
     expect("progress" in (renderCalls[0] ?? {})).toBe(false);
   });
@@ -256,7 +271,7 @@ describe("the render tools hand the reporter to the renderer", () => {
     renderCalls.length = 0;
     // `handlers` are called without a context by the unit tests that predate progress; that path must stay silent
     // rather than throwing on `ctx.progress`.
-    await expect(toolNamed("render_audio").handler({ genreId: "chicago-house" })).rejects.toThrow("stub");
+    await expect(asError(toolNamed("render_arrangement").handler({ arrangementId: freshArrangementId() }))).rejects.toThrow("stub");
     expect(renderCalls).toHaveLength(1);
     expect("progress" in (renderCalls[0] ?? {})).toBe(false);
   });
@@ -299,8 +314,8 @@ async function withProgressClient<T>(
   try {
     const call = (meta?: Record<string, unknown>) =>
       client.callTool({
-        name: "render_audio",
-        arguments: { genreId: "chicago-house" },
+        name: "render_arrangement",
+        arguments: { arrangementId: freshArrangementId() },
         ...(meta ? { _meta: meta } : {}),
       }) as Promise<{ isError?: boolean }>;
     return await run(call, received);

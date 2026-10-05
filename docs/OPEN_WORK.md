@@ -11175,7 +11175,7 @@ export async function prepareArrangementAudioLanes(input: {
 | `src/test/mcpHeadlessRouting.test.ts` ✓ | 2 ✓ | 2 ✓ | 调整 ✓ |
 | `src/test/mcpCapability.test.ts` ✓ | 1 ✓ | 2 ✓ | 调整 ✓ |
 | `src/test/mcpArrangementPreview.test.ts` ✓ | 1 ✓ | 0 ✓ | 调整 ✓ |
-| `src/test/mcpCopy_render_audio.test.ts` ✓ | 1 ✓ | 0 ✓ | ⭐ **删文件** ✓ |
+| `src/test/mcpCopy_render_arrangement.test.ts` ✓ | 1 ✓ | 0 ✓ | ⭐ **删文件** ✓ |
 | `src/test/mcpCopy_render_preview_clip.test.ts` ✓ | 0 ✓ | 1 ✓ | ⭐ **删文件** ✓ |
 | ⭐ `mcp/render/budget.ts` ✓ | 0 ✓ | 0 ✓ | ⭐ **不改** ✓ |
 | ⭐ `mcp/server.ts` ✓ | 0 ✓ | 0 ✓ | ⭐ **不改** ✓ |
@@ -11198,7 +11198,7 @@ export async function prepareArrangementAudioLanes(input: {
     `tool declared: render_audio` ✓／`render_audio declares its format enum` ✓／
     `states the 900 s render budget` ✓／`says the client's timeout is the other ceiling` ✓／
     `gives page loading its own 120 s allowance` ✓
-  · ⭐ `src/test/mcpCopy_render_audio.test.ts` ⇒ **整文件失败** ✓（⭐ 应删 ✓）
+  · ⭐ `src/test/mcpCopy_render_arrangement.test.ts` ⇒ **整文件失败** ✓（⭐ 应删 ✓）
   · ⭐ `src/test/budgetHonesty.test.ts` ⇒ **多处失败** ✓：⭐ 它**读注册源码文本**做断言 ✓
     （`states the client's timeout…` ✓／`says what drives the duration…` ✓／`names the two things…` ✓／
       `passes this request's reporter into renderAudio` ✓／`drops the reporter when…` ✓／
@@ -11228,7 +11228,7 @@ export async function prepareArrangementAudioLanes(input: {
 · ⭐ **教训 95** ✓：⭐ **"改名挂靠"只对"测共享文本"的判据成立** ✓；⭐ 对"**测该工具自身行为**"的判据 ✗
   ⇒ ⭐ 必须**先读用例在测什么** ✓，再决定改名还是重写 ✓（⭐ 本轮我跳过了这一步 ✗）
 · ⭐ **净结论 ✓**：⭐ 迁移 ③ 的删除**仍需同批做**：⭐ ① 删块 ✓ ② `check_mcp.mjs` 5 项**改名挂靠** ✓（⭐ 已证成立 ✓）
-  ③ 2 个拷贝判据：⭐ `mcpCopy_render_audio.test.ts` **删** ✓（⭐ `render_arrangement` 已有自己的拷贝判据 ✓ 已核 ✓）
+  ③ 2 个拷贝判据：⭐ `mcpCopy_render_arrangement.test.ts` **删** ✓（⭐ `render_arrangement` 已有自己的拷贝判据 ✓ 已核 ✓）
   ④ `budgetHonesty.test.ts` 的 4 个用例**重写** ✓ ⑤ 台账里 2 处旧文件名同步 ✓
 ```
 
@@ -11273,7 +11273,7 @@ export async function prepareArrangementAudioLanes(input: {
 · ⚠️ **四处问题 ✓（下一轮照此修 ✓）**：
   ① ⚠️ ⭐ **我的真错误 ✗**：⭐ 我用 `mv` 把旧的拷贝判据**覆盖到** ⭐ **已存在的 `mcpCopy_render_arrangement.test.ts`** ✗
      ⇒ ⭐ **毁掉了 v2 自己的拷贝判据** ✗ + 连内容也改错（⭐ 它断言的是**旧工具**的描述句子 ✗）
-     ⇒ ⭐ **正确动作** ✓：⭐ **保留** v2 那个 ✓，⭐ **删除** `mcpCopy_render_audio.test.ts` ✓（⭐ 不要 mv ✗）
+     ⇒ ⭐ **正确动作** ✓：⭐ **保留** v2 那个 ✓，⭐ **删除** `mcpCopy_render_arrangement.test.ts` ✓（⭐ 不要 mv ✗）
   ② ⚠️ ⭐ `lint` 红 ✗（⭐ 我未留日志 ⇒ ⭐ 原因**未知** ✗，⭐ 下次要**留输出** ✓）
      推测：⭐ 删块后 `registryRender.ts` 里有**未使用的导入** ✗（例如只为该工具引入的 helper ✓）
   ③ ⚠️ ⭐ `renderSongBudgetGuard.test.ts:47` ✓ 期望消息含 ⭐ "render one section with render_audio" ✓

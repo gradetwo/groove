@@ -97,7 +97,7 @@ const pattern: SequencerPattern = {
   ],
 };
 
-describe.skipIf(!headlessInstalled)("render_audio on the Node Web Audio host", () => {
+describe.skipIf(!headlessInstalled)("render_arrangement on the Node Web Audio host", () => {
   let out = "";
 
   beforeEach(() => {

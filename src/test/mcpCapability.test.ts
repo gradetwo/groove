@@ -168,7 +168,7 @@ const CAPABILITIES: Capability[] = [
   {
     surface: "loudness and rendering",
     feature: "measure, normalise and render audio",
-    tools: ["normalize_loudness", "get_loudness_report", "render_audio", "render_song", "render_preview_clip"],
+    tools: ["normalize_loudness", "get_loudness_report", "render_arrangement", "render_song", "render_preview_clip"],
   },
   {
     surface: "voice",

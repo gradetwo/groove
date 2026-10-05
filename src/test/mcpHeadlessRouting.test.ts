@@ -1,7 +1,7 @@
 /**
  * **Every render tool that reaches `renderAudio` has two engines, and neither direction is allowed to be silent.**
  *
- * `render_arrangement` was the first tool to expose `headless` (`84638d0`); `render_song`, `render_audio` and
+ * `render_arrangement` was the first tool to expose `headless` (`84638d0`); `render_song` and
  * `render_preview_clip` reach the same `renderAudio` and now carry the same parameter. The failure mode this file is
  * built against is the one this line of work keeps meeting: a render that *says* headless and quietly used Chromium —
  * or a caller who asked for the default and got the Node host. Both are invisible in a reply, so both are held here as
@@ -98,7 +98,6 @@ import { findGenre } from "../../mcp/library";
  */
 const HEADLESS_TOOLS = [
   "render_arrangement",
-  "render_audio",
   "render_song",
   "render_preview_clip",
   "normalize_loudness",
@@ -119,7 +118,7 @@ function replyText(reply: unknown): string {
 }
 
 /**
- * Call a tool and reduce **both** reply shapes to text: a `failure()` reply, and a rejection — `render_audio` returns
+ * Call a tool and reduce **both** reply shapes to text: a `failure()` reply, and a rejection — `render_arrangement` returns
  * `renderAudio` directly and does not catch, so a render error arrives as a thrown error rather than a reply.
  */
 async function callText(name: string, args: Record<string, unknown>): Promise<string> {
@@ -138,7 +137,6 @@ function renderArgs(name: string, headless: boolean): Record<string, unknown> {
       const { arrangementId } = createMcpArrangement({ blankKind: "drumkit", songId: "route-probe" });
       return { arrangementId, sampleRate: 8000, channels: 1, ...flag };
     }
-    case "render_audio":
       return { genreId: "chicago-house", ...flag };
     case "render_song": {
       const { songId } = createMcpSong({ genreId: "chicago-house", genre: findGenre("chicago-house") ?? null });
