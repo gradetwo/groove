@@ -15051,3 +15051,25 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+### 五百七十七、⭐⭐ **改接必须"生产者先行"（教训 166 ✓）**（2026-10-06 04:45 ✓）
+
+```
+**⭐ 首试的报错 ✓（⭐ 精确 ✓）**：
+  ⭐ ① ⭐ `src/test/autosaveStatus.test.tsx` ✗ ×3：⭐ `Type 'null' is not assignable to type 'string | number | undefined'` ✓
+    ⇒ ⭐ 真实形状**允许 `null`** ✓ ⇒ ⭐ 我的本地声明**太窄** ✗
+  ⭐ ② ⭐ `src/views/StudioView.tsx:1095` ✗：⭐ `Type 'SaveStatusSnapshot' is not assignable to type 'SaveIndicatorStatus'` ✓
+    ⇒ ⭐ **`StudioView` 还在产出 v1 类型** ✓ ⇒ ⚠️ ⭐ 它**也是** §576 清单里的文件 ✓ ✓
+**⭐⭐ 因此得出的顺序规则 ✓**：⭐ **产出者先改，消费者后改** ✓ ——
+  ⭐ `StudioView`（⭐ 产出 `SaveStatusSnapshot` ✓）⇒ ⭐ 必须先迁移 ✓
+  ⭐ `SaveIndicator`（⭐ 消费它 ✓）⇒ ⭐ 随后即可 ✓
+  ⇒ ⭐ 且**两者同批** ✓（⭐ 一个改完另一个不改 ⇒ 类型不匹配 ⇒ 红 ✓ ✓）
+**⭐⭐ 教训 166 ✓**：⭐ **改接一组类型时，先找"⭐ 谁产出它**" ✓，⭐ 再看"⭐ 谁消费它**" ✓ ——
+  ⭐ 顺序**从产出者到消费者** ✓ ✓（⭐ 与 §529 的"⭐ 用下一个单元的起点定边界"⭐ 同类：⭐ 先找**依赖方向** ✓）
+  ⭐ 做法 ✓：⭐ ① ⭐ `grep "类型名"` ✓ ⇒ ⭐ ② ⭐ 找**赋值／返回它的地方** ✓（⭐ 那是产出者 ✓）
+    ⭐ ③ ⭐ 从产出者开始逐个改 ✓ ⇒ ⭐ 每次 `tsc` 会告诉你下一个是谁 ✓ ✓（⭐ 本轮正是如此 ✓）
+**⭐ 两处具体目标值 ✓**：
+  ⭐ ① ⭐ `SaveIndicatorStatus.savedAt` ⇒ ⭐ **`string | number | null`** ✓（⭐ 含 `null` ✓）
+  ⭐ ② ⭐ `StudioView.tsx:1095` ⇒ ⭐ 改为传**它自己的 V2 状态** ✓（⭐ 待量它从哪取该状态 ✓）
+**⏳ 未落码 ✗**（⭐ 已回退 ✓，⭐ 树干净 ✓）
+```
+
