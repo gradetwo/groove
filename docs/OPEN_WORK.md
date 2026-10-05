@@ -10806,3 +10806,33 @@ export async function prepareArrangementAudioLanes(input: {
 · ✅ **本项其余已落地** ✓：工具 ✓（`cc86138`）｜对齐表 ✓（`8292cc9`）｜去掉不需要的断言 ✓（`b539966`）｜真机包 ✓（95 tools ✓）
 ```
 
+### 四百五十五、⭐ **业主指令：v1 全量迁移到 v2，不考虑兼容（2026-10-05 20:53 ✓）**
+
+```
+**业主原话 ✓**：⭐ "**迁移。如有必要 v1 的东西全部迁移到 V2，不用考虑兼容**" ✓
+⇒ ⭐ 这是**方向性指令** ✓：⭐ 与 A／B 段"**V1 若构成负担可整支弃用**"一致 ✓，且**更强** ✓ ——
+   ⭐ **不需要保留向后兼容** ✗ ⇒ ⭐ 可以**改签名、改入参、删旧工具** ✓（⭐ 但仍守"先量后改、一次一支、可回退" ✓）
+
+**⭐ v1 面清单（本次实测 ✓，时点 20:53 ✓，方法：`grep -cE 'songId'` ＋ 工具计数 ✓）**：
+| 文件 | 工具数 | `songId` 次数 | 判断 |
+|---|---|---|---|
+| ⭐ `mcp/registrySong.ts` | **11** | **27** | ⭐ **v1 核心面** ✓（song 侧） |
+| ⭐ `mcp/registryPattern.ts` | **5** | 0 | ⭐ **v1**（步进矩阵 `SequencerPattern` ✓，与 A 段点名的 V1 同源 ✓） |
+| ⭐ `mcp/registryFiles.ts` | **4** | **10** | ⭐ **偏 v1**（导出 MIDI 等 ✓） |
+| ⭐ `mcp/registryRender.ts` | **4** | **5** | ⭐ **混合** ✓（同时有 `arrangementId` ✓） |
+| ⭐ `mcp/registryAnalysis.ts` | **7** | **5** | ⭐ **混合** ✓ |
+| ⭐ `mcp/registryArrangement.ts` | **41** | 10 | ⭐ **v2 主线** ✓（`arrangementId` ✓） |
+| ⭐ `mcp/registryProject.ts` | **2** | 0 | ⭐ **v2** ✓ |
+| 其余（`registry`／`registryGs1`／`registryLibrary`／`registryExamples`） | 32 | 0 | 中性 ✓ |
+
+**⭐ 执行顺序（我定 ✓，与第 1 项的 ①–⑦ 合流 ✓）**：
+1. ⭐ **先做第 7 项** ✓：`set_vocal_melody` 接 `arrangementId` ✓（⭐ 业主已定：**arrangementId 为主** ✓）
+2. ⭐ **再迁 `registryFiles`** ✓（4 个工具、10 处 `songId` ✓；`export_*` 接 `arrangementId` ✓）
+3. ⭐ **再迁 `registryRender`** ✓（混合面 ✓，5 处 `songId` ⇒ 收拢到 `arrangementId` ✓）
+4. ⭐ **再迁 `registryAnalysis`** ✓（5 处 ✓）
+5. ⭐ **最后处置 `registrySong` ＋ `registryPattern`** ✓（⭐ 11 ＋ 5 个工具 ✓ —— ⭐ **整支弃用**前必须**先立 v2 判据** ✓，见 B① ✓）
+
+**⚠️ 铁律不变 ✓**：⭐ **先量后改** ✓｜⭐ **一次一支、可回退** ✓｜⭐ **先立 V2 判据再删 V1** ✓（序绝不反 ✗）｜
+   每条迁移都要**能红判据** ✓ ＋ **回填 `FEATURE_ALIGNMENT.md`** ✓（⭐ 三方对齐 ✓）｜工具增删要跑 `check:mcp` ＋ `mcpTools.test.ts` ✓
+```
+
