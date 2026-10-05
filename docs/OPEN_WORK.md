@@ -10710,3 +10710,23 @@ export async function prepareArrangementAudioLanes(input: {
 · ✅ 地基 ✓：`a5f685f` ✓（抽取 ✓，`tsc` ＋ 40 headless 用例 ✓，size pin 已同步 ✓）
 · ⚠️ 方案更正史 ✓（都在台账 ✓）：`§452` 工具层直调 ✗ ⇒ 方案丙 新工具 ✓ ⇒ **本轮：入口在 exporter ＋ 用小全局** ✓
 ```
+
+**⭐ `validate_arrangement` 第 1 步的落码记录（2026-10-05 20:25–20:28 ✓，均自动回退 ✓ 树脏恒 0 ✓）**：
+```
+· ⭐ 量到 ✓：⭐ **准备阶段在 `renderPatternOfflineOnce` 里** ✓（`:961` ✓，**不是** `renderPatternOfflineInternal` ✗）
+  —— 签名 ✓：`renderPatternOfflineOnce(pattern, options = {}, onSilenceContext?, onWorkletsAvailable?): Promise<RenderedChunk>` ✓
+  调用点两处 ✓：`:821` ✓／`:834` ✓（都在 `renderPatternOfflineInternal` 内 ✓）
+· ⭐ 尝试 1 ✗：我改了 `renderPatternOfflineInternal` 的返回类型 ✗ ⇒ `prepareOnly` 不属于 `RenderedChunk` ✗
+  ⇒ ⭐ 教训 ✓：**先确认代码在哪一层** ✓，别按"我以为"改 ✗
+· ⭐ 尝试 2 ✗：锚点缩进写多了 ✗（⭐ 我在量的时候自己 `sed` 加了 5 个空格 ✓）
+  ⇒ ⭐ 教训 ✓：⭐ **量的时候不要改缩进** ✓（或改用正则 ✓）
+· ⭐ 尝试 3 ✗（**只剩 2 个错，且都在调用点** ✓）：
+  `:823` `Promise<RenderedChunk | ArrangementLaneReport>` 不能赋给 `Promise<RenderedChunk>` ✓
+  `:841` `RenderedChunk | ArrangementLaneReport` 上没有 `buffer` ✓
+  ⇒ ⭐ **下一次的修法** ✓：在 `:821`／`:834` 两处加 `as RenderedChunk` ✓（⭐ 因为 `prepareOnly` 时它们不会被执行 ✓）
+· ⭐ 已定形状（不变 ✓）：`RenderWavOptions.prepareOnly?: boolean` ✓＋
+  `export interface ArrangementLaneReport { prepareOnly: true; ready; empty; loaded; total; problems: string[] }` ✓＋
+  `export async function preparePatternAudioLanes(pattern, options): Promise<ArrangementLaneReport>` ✓
+  ⇒ 入口调 `renderPatternOfflineOnce(pattern, { ...options, prepareOnly: true })` ✓ ⇒ 在准备阶段后**提前返回** ✓
+```
+
