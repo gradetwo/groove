@@ -10125,3 +10125,22 @@ problems: **[]** ✓
    ⇒ ⭐ 判别法 ✓：**`tsc` 绿而行为完全不变** ⇒ 第一件事就是**怀疑没构建** ✗（而不是怀疑改动无用 ✓）
 **📌 教训 89 续 ✓**：本轮**只读包装**（记录调用栈 ✓）一次就命名了真凶 ✓ ——
    ⭐ **"谁调用的"这类问题，包装＋记栈比推测便宜一个数量级** ✓
+
+### 四百三十六、✅✅ **修复落地并验证：`focus({ preventScroll: true })` 让探针转绿**（2026-10-05 17:04–17:06 ✓）
+
+```
+**改动 ✓（产品 ✓，业主已授权 ✓）**：`PianoRollV2.tsx` 三处 `panel.current?.focus()` ⇒ **`focus({ preventScroll: true })`** ✓
+**⭐ 关键：这次先 `npm run build`** ✓（`build=0` ✓，22.66 s ✓，`index-*.js` gzip **139.71 kB** ✓）
+**探针读数 ✓（exit=0 ✓，"every reading above is what the change claims" ✓）**：
+   · `who scrolled` ⇒ 仍记录到 `focus`（`piano-roll-v2` ✓，来自 `onPointerDown` ✓）—— ⭐ 但这次带 `preventScroll` ✓
+   · ⭐ **`window scroll events = []`** ✓（对照改前：`[{y:226}]` ✗）
+   · ⭐ `pointerdown` 与 **`pointerup` 同格** `roll-cell-84-0` ✓（对照改前：`roll-cell-70-0` ✗）
+   · ⭐ **`note ids added: ["roll-note-84-0"]`** ✓｜`notes=5` ✓｜`action=add-note` ✓
+**判据情况 ✓**：
+   · ⭐ `probe:arrangement-undo` **本身就是这条行为的判据** ✓（**改前红 ✓ ⇒ 改后绿 ✓**，确定性 ✓、两次同结果 ✓）
+   · 相关单测 ✓ `pianoRollV2` ＋ `pianoRollLane` ⇒ **88 用例全过** ✓
+   · 五项度量门全 0 ✓｜文档双门 0 ✓｜⭐ 模块边界 **3 值环**（**与基线一致 ✓，未抬升 ✓**）
+**⇒ 用户面收益 ✓**：⭐ **点卷帘格子不再让页面跳 226 px、不再吞掉点击** ✓ ——
+   即"真人点格子写音符"这条路径**取回了它应有的行为** ✓（此前只会静默无反应 ✗）
+**📌 教训 90 的代价回收 ✓**：三次假阴性（`§422`／`§424`／`§433`）**换来了这条教训** ✓ ——
+   ⭐ **改 `src/` ⇒ 必须 `npm run build` ⇒ 才能跑读 `dist/` 的浏览器探针** ✗

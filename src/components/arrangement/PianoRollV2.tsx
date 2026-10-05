@@ -279,7 +279,7 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
                         onPointerDown={() => {
                           pressed.current = { pitch, step };
                           // Every press in the grid hands the panel the focus, so the keys act on this editor and on nothing else.
-                          panel.current?.focus();
+                          panel.current?.focus({ preventScroll: true });
                         }}
                         onPointerEnter={() => {
                           if (drag.current) drag.current = { ...drag.current, to: { pitch, startBeats: step * STEP_BEATS } };
@@ -326,7 +326,7 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
                         onPointerDown={() => {
                           drag.current = { kind: "move", from: { pitch, startBeats: note.startBeats }, to: { pitch, startBeats: note.startBeats } };
                           setSelected({ pitch, startBeats: note.startBeats });
-                          panel.current?.focus();
+                          panel.current?.focus({ preventScroll: true });
                         }}
                         onPointerEnter={() => {
                           if (drag.current) drag.current = { ...drag.current, to: { pitch, startBeats: step * STEP_BEATS } };
@@ -354,7 +354,7 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
                               drag.current = { kind: "resize", from: { pitch, startBeats: note.startBeats }, to: { pitch, startBeats: note.startBeats } };
                               // Grabbing the edge is still aiming at this note, so the keys keep acting on it.
                               setSelected({ pitch, startBeats: note.startBeats });
-                              panel.current?.focus();
+                              panel.current?.focus({ preventScroll: true });
                             }}
                             onPointerEnter={() => {
                               if (drag.current?.kind === "resize") drag.current = { ...drag.current, to: { pitch, startBeats: step * STEP_BEATS } };
