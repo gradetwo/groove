@@ -14621,3 +14621,18 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 脚本已回退 ✓，⭐ 台账保留 ✓）
 ```
 
+**⭐ 第 4 处判定到手 ✓＋ 清单项已换 ✓（2026-10-06 04:22 ✓）**：
+```
+**⭐ `:238` 的 `song` 由哪个用例用 ✓**：⭐ 全文件扫描 ⇒ ⭐ 用在 ⭐ **`:376`–`:377`** ✓ ⇒ ⭐ 其用例在 ⭐ **`:374`–`:378`** ✓
+  ⭐ 标题 ✓：⭐ "⭐ **bars counts passes: two passes expand to passBars × 2 measures**" ✓
+  ⇒ ⭐ 主题是 ⭐ **`create_song` 的 `bars`／`passes` 语义** ✗ ⇒ ⭐ 按教训 156 ✓：⭐ **主题就是它** ✓ ⇒ ⭐ **随工具删** ✓
+  ⭐ **而能力有新家 ✓**：⭐ v2 的 "⭐ passes" ⭐ 住在 ⭐ `render_arrangement.bars` ✓
+    （⭐ 描述：⭐ "⭐ **1 is one pass through the whole arrangement**" ✓，⭐ 且回包把 `passes` 与编曲自身长度**并列**报出 ✓ —— §170 ✓）
+    ⇒ ⭐ 即 ⭐ "⭐ 两遍展开为 2× 小节**"⭐ 由 ⭐ v2 渲染器的判据承载 ✓ ✓
+**⭐ 已落 ✓**：⭐ `mcpCapability:107` ✓ 的清单项 ⭐ `create_song` ✗ ⇒ **`create_arrangement`** ✓
+  ⇒ ⭐ `tsc=0` ✓｜⭐ `lint=0` ✓｜⭐ 判据 0 ✓
+**⭐ 因此 `create_song` 的扫除清单更完整了 ✓**：⭐ `check_mcp` 三处（⭐ `:238` 段**整例删** ✓／⭐ `:1057` **与缺口 ⑥ 绑定** ✓／⭐ 其余 ✓）
+  ＋ ⭐ `mcpCapability` ✅ 已改 ✓ ＋ ⭐ `mcpSong.test.ts` 5 处待判 ✓ ＋ ⭐ 探针 ✓ ＋ ⭐ 工具块 ✓ ＋ ⭐ 地板 ✓ ＋ ⭐ 文档引用 ✓
+**⏳ 未落码 ✗**（⭐ 除清单项 ✓）；⭐ 余量用尽 ✓
+```
+
