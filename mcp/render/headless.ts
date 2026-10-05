@@ -457,6 +457,52 @@ function offlineContextClass(): new (channels: number, frames: number, sampleRat
  * `resolveOnly` returns before any audio exists, so the pitch inspector's source half costs a manifest parse rather
  * than a render — the same shortcut the page path takes.
  */
+/**
+ * ⭐ **The wiring a lane question needs, built the same way the render builds it.**
+ *
+ * Three modules, the audio catalogue from the manifest text and the sample root, and the on-disk cache. A validation
+ * caller that skipped any of these would answer about no samples at all.
+ */
+async function loadHeadlessLaneWiring(
+  context: HeadlessRenderContext,
+  catalogueRead: AudioLaneCatalogueRead
+) {
+  const [wav, catalogue, graph] = await Promise.all([
+    import("../../src/audio/WavExporter"),
+    import("../../src/data/sampleCatalogue"),
+    import("../../src/audio/browserSampleGraph"),
+  ]);
+  const audioCatalogue = catalogueRead.text
+    ? catalogue.catalogueFromManifestText(catalogueRead.text, context.sampleRoot).assets
+    : [];
+  const cacheWiring = sampleCache.renderSampleCacheWiring();
+  return { wav, graph, audioCatalogue, cacheWiring };
+}
+
+/**
+ * ⭐ **Answer whether an arrangement's audio lanes would resolve, without rendering it.**
+ *
+ * A full pass costs about two minutes per track, and the field test paid that cost three times only to learn an
+ * instrument's range. This stops after the recordings resolve and returns that answer.
+ */
+export async function validateArrangementHeadless(
+  pattern: SequencerPattern,
+  options: RenderOptions,
+  catalogueRead: AudioLaneCatalogueRead,
+  context: HeadlessRenderContext
+): Promise<import("../../src/audio/WavExporter").ArrangementLaneReport> {
+  loadHeadlessHost(context.publicRoot);
+  const { wav, graph, audioCatalogue, cacheWiring } = await loadHeadlessLaneWiring(context, catalogueRead);
+  const bars = Math.max(1, Math.min(64, options.bars ?? 1));
+  return wav.preparePatternAudioLanes(pattern, {
+    bars,
+    sampleDecoder: (ctx: BaseAudioContext) => cacheWiring.decoderFor(ctx, graph.browserBytesDecoder(ctx)),
+    fetchSfzBytes: cacheWiring.fetchSfzBytes,
+    ...(options.sampleRate === undefined ? {} : { sampleRate: options.sampleRate }),
+    ...(options.channels === undefined ? {} : { channels: options.channels }),
+  } as never);
+}
+
 export async function renderInstrumentNoteHeadless(
   assetId: string,
   midi: number,
