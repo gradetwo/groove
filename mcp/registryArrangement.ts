@@ -8,6 +8,7 @@
 import { z } from "zod";
 import { describeMcpArrangement } from "./arrangement";
 import { failure } from "./toolKit";
+import { validateArrangement } from "./render/worker";
 import type { ToolDefinition } from "./toolKit";
 
 import { createMcpArrangement, getMcpArrangement, summariseArrangement } from "./arrangement";
@@ -1334,4 +1335,51 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
    * tool that makes the write side usable at all — a share code is one opaque string, and without a
    * read a caller cannot see what it set, or what a `parameters` write changed.
    */
+  {
+    name: "validate_arrangement",
+    title: "Check an arrangement would render, without rendering it",
+    description:
+      "Resolve every recording an arrangement's audio lanes need, and report what would fail. It stops before any audio exists, so it writes no file and costs a fraction of a render. The report carries `ready`, `empty`, `loaded`, `total` and `problems`. A cached recording answers in seconds. A cold one still pays for the fetch, because preparation fetches every recording the plan names. Ask for what the arrangement is with `get_arrangement`. Use `render_arrangement` when you want the audio.",
+    readOnly: true,
+    inputSchema: {
+      arrangementId: z.string(),
+      bars: z
+        .number()
+        .int()
+        .min(1)
+        .max(64)
+        .optional()
+        .describe("1 is one pass through the whole arrangement; raising it repeats the arrangement"),
+      sampleRate: z.number().int().min(8000).max(96000).optional().describe("render rate the check would use; the check does not render"),
+      channels: z.number().int().min(1).max(2).optional().describe("1 for a mono check"),
+      startBar: z.number().int().min(0).optional().describe("first bar of the span, with `endBar`"),
+      endBar: z.number().int().optional().describe("exclusive end bar of the span, with `startBar`"),
+    },
+    handler: async (args) => {
+      try {
+        const range =
+          typeof args.startBar === "number" && typeof args.endBar === "number"
+            ? { startBar: args.startBar, endBar: args.endBar }
+            : undefined;
+        const { flattened } = flattenMcpArrangement(String(args.arrangementId), range);
+        const passes = Math.max(1, Math.min(64, (args.bars as number | undefined) ?? 1));
+        const report = await validateArrangement(flattened.pattern, {
+          format: "wav",
+          genreId: "custom",
+          bars: passes,
+          headless: true,
+          ...(args.sampleRate === undefined ? {} : { sampleRate: args.sampleRate }),
+          ...(args.channels === undefined ? {} : { channels: args.channels }),
+        } as never);
+        return {
+          ...report,
+          arrangementId: String(args.arrangementId),
+          passes,
+          totalSteps: flattened.pattern.totalSteps,
+        };
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
 ];

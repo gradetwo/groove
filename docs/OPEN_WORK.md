@@ -10766,3 +10766,31 @@ export async function prepareArrangementAudioLanes(input: {
 · ⚠️ 纪律 ✓：⭐ **搬移而非复制** ✓ ⇒ 渲染侧的第 ① ② 段改为调 helper ✓；⭐ 行数会变 ⇒ **必须再跑 `fileSizeBudget`（测试 ✓）** ✓
 ```
 
+### 四百五十四、⭐ **业主三条决策（2026-10-05 20:40 ✓）＋ 第 1 项工具已落地** ✓
+
+```
+**决策 ✓（业主原话原则：⭐ "arrangementId 为主，老的东西改成 arrangementId" ✓）**：
+  ① ⭐ **第 7 项走路线 A** ✓：`set_vocal_melody` 接受 `arrangementId` ✓；
+     ⭐ 并且**后续把 v1 song 侧入口逐步改为以 `arrangementId` 为主** ✓（⭐ 这是方向性指令 ✓，不只是第 7 项 ✓）
+  ② ⭐ **工具名＝`validate_arrangement`** ✓（采纳我的建议 ✓）
+  ③ ⭐ **顺序保持 1–7** ✓
+**第 1 项：工具已落地 ✓（本次提交 ✓）**：
+  · ⭐ `mcp/registryArrangement.ts` 表尾新增工具 `validate_arrangement` ✓
+    `readOnly: **true**` ✓（⭐ 它**不写文件** ✓）｜入参 `arrangementId` ✓／`bars` ✓／`sampleRate` ✓／`channels` ✓／`startBar`／`endBar` ✓
+    ⇒ 回 ⭐ **自己的形状** ✓：`{ ...report, arrangementId, passes, totalSteps }` ✓；⭐ **不塞 `RenderResult`** ✗
+       （`report` ＝ `{ prepareOnly, ready, empty, loaded, total, problems }` ✓）
+    ⇒ 描述里写明 ⭐ **冷缓存仍要取采样** ✓（诚实口径 ✓）
+  · ⭐ `import { validateArrangement } from "./render/worker";` ✓
+**判据读数 ✓（时点 20:41–20:42 ✓）**：
+  · `tsc=0` ✓｜⭐ `check:mcp` ⇒ **95 tools／7 resources／4 prompts** ✓，**123 checks passed／0 failed** ✓（工具数 94 ⇒ **95** ✓）
+  · ⭐ `mcpTools.test.ts` ⇒ **22 用例通过** ✓（新工具已登记 ✓）
+  · ⭐ **新判据 `src/test/mcpValidateArrangement.test.ts`** ✓ ⇒ **先弄红**（临时改名 ⇒ `{present:false}` ✗）⇒ **后转绿**（3 用例 ✓）✓
+  · ⭐ 文风四条衍生判据 ＋ `fileSizeBudget`（**测试** ✓）⇒ **8 用例通过** ✓
+**📌 落地过程中量的两条 ✓**：
+  · ⚠️ 插入点不能找"文件里最后一个 `];`" ✗ —— ⭐ `rfind('];')` 会命中**嵌套数组的结尾** ✓
+    ⇒ ⭐ 正确做法 ✓：先 `rstrip()` ✓，再断言 `len(rs) - (i+3) == 0` ✓（⭐ 确认是**表尾** ✓）
+  · ⚠️ `mcp/render/worker.ts` 的尺寸 pin 已从 **1651 ⇒ 1653** ✓（`validateArrangement` 函数 ✓）
+**⏳ 第 1 项剩 ✓**：回填 `FEATURE_ALIGNMENT.md` ✓（⭐ 95 工具 ＋ 新能力 ⇒ 三方对齐 ✓）｜重建 `dist-mcp` ✓｜
+   把渲染侧改用同一接线 helper ✓｜去掉 `as never` 占位断言 ✓
+```
+
