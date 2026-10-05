@@ -12949,3 +12949,20 @@ export async function prepareArrangementAudioLanes(input: {
   ⭐ ② ⭐ 或 ⭐ `grep -rln "旧函数名" src/test/` ✓ ⇒ ⭐ 跑那些文件 ✓
 ```
 
+### 五百一十五、⚠️ **全量的两处失败：一处同修 ✓，一处是 `needs` 缺口 ✗**（2026-10-06 02:08 ✓）
+
+```
+**⭐ 全量读数 ✓（本机 ✓，⭐ 不带覆盖率 ✓）**：⭐ **Test Files 2 failed | 649 passed** ✓｜⭐ **Tests 3 failed | 5291 passed** ✓
+  ⚠️ ⭐ 更正 ✓：⭐ 我此前写"⭐ 零失败" ✗ ⇒ ⭐ **读得早了** ✗（⭐ 日志当时还在跑 ✓）⇒ ⭐ 又是"⭐ 先写后量" ✗（⭐ 教训 124 ✓）
+**⭐ 失败一 ✓：⭐ `mcpHeadlessRender.test.ts`** ✗ —— ⭐ 同类第二处 ✓（⭐ 与 `mcpHeadlessRouting` 同一病 ✓）：
+  ⭐ 它在 ⭐ `:212` 用 ⭐ `createMcpSong` ✓ ⇒ ⭐ `:217` 传 ⭐ `{ songId, targetLufs: -14, … }` ✗
+  ⇒ ⭐ 我改成建编曲 ＋ 传 ⭐ `arrangementId` ✓ ⇒ ✅ ⭐ **校验过了** ✓（⭐ 错误从"⭐ 参数无效" ✗ 变成
+    "⭐ expected false to be true" ✓）⇒ ⚠️ ⭐ 但断言仍红 ✗ ⇒ ⭐ 因为该 describe 断言"⭐ **用的就是 Node 宿主**" ✓
+    ⇒ ⭐ 而**本机没有那个宿主** ✗ ⇒ ⭐ 这正是台账那条 `needs` ✓（⭐ "⭐ install `node-web-audio-api` …" ✓）
+  ⇒ ⭐ **我回退了该文件的编辑** ✗（⭐ 不留红 ✓）⇒ ⭐ 下一段把两件事一起做 ✓：⭐ ① 传编曲 ✓ ② 让宿主可用 ✓
+**⭐ 失败二 ✓：⭐ `sfzTrigger.test.ts`（2 例 ✓）** ✗ —— ⭐ **台账已记的"⭐ 本机网络失败"** ✓（⭐ CI 上通过 ✓）⇒ ⭐ 不必处理 ✓
+**⭐⭐ 教训 126 ✓**：⭐ **"⭐ 测试通过"要看**跑完**的那一行** ✗ ——
+  ⭐ 中途读日志会看到"⭐ 还没失败" ✓，⭐ 那不是"⭐ 零失败" ✗ ⇒ ⭐ 一律读 ⭐ **`Tests  N failed | M passed`** 整行 ✓
+**⏳ 未修 ✗**（⭐ 余量用尽 ✓）；⭐ 两处原因与先后已定 ✓
+```
+
