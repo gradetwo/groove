@@ -12763,3 +12763,25 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 四处到行 ✓
 ```
 
+### 五百一十、⭐ **④ 最后一件：`make_unique` 退场，用途由 v2 的 `takes` 承接**（2026-10-06 01:44 ✓，已量 ✓）
+
+```
+**⭐ 量到 ✓（`mcp/registryAnalysis.ts:242` 起 ✓）**：⭐ 它**整体建立在 v1 模型上** ✗：
+  · ⭐ 描述 ✓："**Copy the clip a section plays into a free slot (A-D) and point only that section at it**" ✗
+  · ⭐ 入参 ✓：⭐ `songId` ✗ ＋ ⭐ `sectionId?` ✗ ＋ ⭐ `index?` ✗ ＋ ⭐ `pattern?`（⭐ 替换用 clip ✗）
+  · ⭐ 体内 ✓：⭐ `makeUniqueMcpSection({ songId, sectionId, index, pattern })` ✗
+  ⇒ ⭐ 全是 v1 概念 ✓：⭐ **clip** ✗／⭐ **slot** ✗／⭐ **section** ✗
+**⭐ v2 侧要不要对应品 ✓？**：⭐ **不需要** ✓ —— ⭐ 因为 ⭐ v2 里音符**按轨存** ✓，⭐ **没有** clip／slot／section ✗
+  ⇒ ⭐ 它要解决的那个问题（⭐ "⭐ 两个段落指向同一个 clip ✓"）⭐ 在 v2 模型里**不存在** ✓
+**⭐⭐ 但它服务的**用途**要留住 ✓**：⭐ 原注释写得很清楚 ✓ —— ⭐ "⭐ **which is what lets three verses have three melodies**" ✓
+  ⇒ ⭐ 在 v2 里 ⭐ **同一个用途由 `takes` 承接** ✓（⭐ 包形状里本来就有 ⭐ `takes` ✓）
+  ⇒ ⭐ 即 ⭐ "⭐ 每段各有自己的旋律" ✓ ⇔ ⭐ v2 的 "⭐ 同一轨的多个 take" ✓
+  ⇒ ✅ ⭐ 因此 ⭐ **`make_unique` 退场 ✓，⭐ 且它在 v2 有承接 ✓**（⭐ 不是丢功能 ✓）
+**⭐ 退场要做的 ✓**：⭐ ① ⭐ 删工具块 ✓ ② ⭐ `redlines.mjs` 必需清单（⭐ 若列了 ✓）③ ⭐ `check_mcp.mjs`
+  （⭐ 名表 ＋ ⭐ 用例 ✓）④ ⭐ 判据（⭐ 若点名 ✓）⑤ ⭐ `docs/MCP.md` 声明行 ✓ ⑥ ⭐ `mcp/README.md` ✓
+  ⭐ ⑦ ⭐ ⭐ **在文档里写明：⭐ "每段独立旋律"在 v2 用 `takes`** ✓（⭐ 这是"⭐ 移植"的**记账** ✓，⭐ 不只是删除 ✓）
+**⇒ ④ 的收尾 ✓**：⭐ `normalize_loudness` 已改 ✓（`5fe6a53` ✓）＋ ⭐ `make_unique` 退场 ✓ ⇒ ⭐ **④ 完成** ✓
+  ⇒ ⭐ 工具数 **93 ⇒ 92** ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 清单与承接说明已定 ✓
+```
+
