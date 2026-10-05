@@ -14732,3 +14732,27 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ **下一段的这一项现在是机械工作 ✓**
 ```
 
+### 五百六十九、⭐⭐ **`get_transposition_report` 迁移定案：改为只用 pattern／lane**（2026-10-06 04:31 ✓）
+
+```
+**⭐ 量完 handler ✓（`:1232–1292` ✓）**：
+  ⭐ `:1240–1259` ✓：⭐ **段落分支** ✗ —— ⭐ 遍历 ⭐ `song.sections` ✓ ⇒ ⭐ 取 ⭐ `section.overrides?.transpose` ✓ ⇒ ⭐ 交给 ⭐ `collectTranspositions` ✓
+  ⭐ `:1263–1281` ✓：⭐ **pattern／lane 分支** ✓ —— ⭐ `patternFromArgs` ✓／⭐ `findTrack` ✓／⭐ `gs1PatchOverrides.parameters` ✓
+    ⇒ ⭐ **模型中立** ✓ ✓
+  ⭐ `:1284–1292` ✓：⭐ 求和 ✓（⭐ `sections.flatMap(…).transpositions` ✗ ＋ ⭐ `lane.transpositions` ✓）＋ ⭐ 回包 ✓
+**⭐⭐ 关键推理 ✓**：⭐ v2 里 ⭐ **移调就是写下来的音高** ✓（⭐ §223 的决定 ✓）
+  ⇒ ⭐ **没有"⭐ 可读的移调**" ✗ ⇒ ⭐ `collectTranspositions` ⭐ 只能从 ⭐ **GS-1 覆盖**推导 ✓
+  ⭐ 而覆盖住在 ⭐ **pattern** ✓（⭐ `gs1PatchOverrides` ✓）⭐ **不在轨上** ✗（⭐ `TrackV2` **没有** `transpose` ✓ —— ⭐ 源码明说 ✓）
+  ⇒ ⭐ **因此"⭐ 按段落／按轨读取移调**"⭐ 在 v2 **没有非空对应物** ✓ ✓
+**⭐ 于是迁移＝**删除那半** ✓**：
+  ⭐ ① ⭐ **去掉** ⭐ `songId?` ✗ 与 ⭐ `sectionId?` ✗（⭐ 及 ⭐ `getMcpSong` ✓／⭐ 段落遍历 ✓／⭐ `sections` 回包字段 ✗）
+  ⭐ ② ⭐ **保留** ⭐ `pattern?` ✓ ＋ ⭐ `track?` ✓ ＋ ⭐ `lane` 回包 ✓
+  ⭐ ③ ⭐ 若无 `pattern` ⇒ ⭐ 失败文字改为"⭐ give a pattern — the GS-1 overrides live per lane**" ✓
+  ⭐ ④ ⭐ 描述与标题改掉"⭐ **a song whose sections to read**" ✗
+**⭐⭐ 巨大后果 ✓**：⭐ `check_mcp:1051` 的建台（⭐ `create_song` ✗）⭐ **随之消失** ✓ ✓
+  ⇒ ⭐ 即 ⭐ **`create_song` 的最后一个调用点也没了** ✓ ✓ ⇒ ⭐ **工具块随后可就地删除** ✓ ⇒ ⭐ **⑤ 关闭** ✓ ✓
+**⭐ 因此下一段的顺序 ✓**：⭐ ① ⭐ 迁移本工具（⭐ 上表四步 ✓）② ⭐ 改 ⭐ `check_mcp:1051` 的用例 ⇒ ⭐ **改为只用 pattern** ✓
+  （⭐ 或 ⭐ 随建台一起删 ✓）③ ⭐ 删 ⭐ `create_song` 工具块 ✓ ④ ⭐ 地板 ✓ ⑤ ⭐ 文档引用 ＋ 回填 ✓ ⇒ ⭐ **⑤ 关闭** ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
