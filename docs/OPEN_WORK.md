@@ -11560,3 +11560,21 @@ export async function prepareArrangementAudioLanes(input: {
   ⑤ 回填对齐表 ✓
 ```
 
+**⭐ Web 调试采集：接顶栏的精确改法（2026-10-05 21:52 ✓，已量 ✓）**：
+```
+· ⭐ **i18n ✓**：⭐ `useLanguage()` 给 `t` ✓／`isZh` ✓（`Header.tsx:203` ✓）⇒ ⭐ 取词用 ⭐ `t("键")` ✓
+  · ⭐ 语言文件 ⭐ **按功能分模块** ✓：`src/i18n/locales/` 下 `common.ts` ✓／`analyzer.ts` ✓／`updates.ts` ✓ …
+    ＋ ⭐ 一个 `index.ts` 聚合 ✓
+  · ⭐ 键的形状 ✓：⭐ `键: { zh: "…", en: "…" }` ✓
+  ⇒ ⭐ **第 1 步 ✓**：⭐ 在 ⭐ `common.ts` 加一个键（⭐ 例如 `debug_bundle` ✓）＋ ⭐ `zh` 与 `en` 两句 ✓
+**· ⭐ 按钮写法 ✓**：⭐ 顶栏用 ⭐ `title={t("nav_studio")}` ✓（`:398` ✓）／`t("nav_new_project")` ✓（`:417` ✓）…
+  ⭐ 按钮簇在 ⭐ `:509–599` ✓ ⇒ ⭐ **第 2 步 ✓**：⭐ 在该簇内加一个按钮 ✓：
+  ⭐ `title={t("debug_bundle")}` ✓ ＋ ⭐ `onClick` ✓ ＝ ⭐ 采集 ✓ ⇒ ⭐ `JSON.stringify` ✓ ⇒ ⭐ `downloadJsonFile(...)` ✓
+  ⭐ 文件名用 ⭐ `webDebugBundleFileName(bundle.collectedAt)` ✓ ⇒ ⭐ 与 MCP 侧**同名规** ✓
+**· ⚠️ 还要做的 ✓（纪律 ✓）**：⭐ 改文案必须跑 ⭐ `skins:gen`（零 diff ✓）＋ `check:skins` ✓；⭐ `tsc` ✓／`lint` ✓
+  ⭐ 并确认 ⭐ `check:dead-exports` **不再列出** ⭐ `downloadJsonFile` ✓（⭐ 那就是"接完了"的判据 ✓）
+**· ⚠️ 可选（若可达 ✓）**：⭐ 传 ⭐ 编曲摘要（⭐ `useArrangementV2Project` ✓，`arrangementStore.ts:195` ✓）与
+  ⭐ 音频上下文状态 ✓；⭐ 若在 `Header` 里取不到 ✓ ⇒ ⭐ **不传** ✓（⭐ 包内 `omissions` 会写明 ✓ —— ⭐ 这正是那两处可选入参的用处 ✓）
+**⏳ 未落码 ✗**（⭐ 本轮余量不足 ✓）；⭐ 步骤已无未知 ✓
+```
+
