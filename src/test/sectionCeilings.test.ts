@@ -19,13 +19,11 @@ describe("the relaxed ceilings", () => {
 
   it("are what the tools actually accept, bound for bound", () => {
     const registry = registrySource();
-    // Every `add_section`-style bar bound in the schema must be the constant's value, however it is written.
-    // (`max(64)` legitimately survives elsewhere — 64 syllables, 64 tones — so the assertion is about the **bars** bound, not about the number 64.)
-    const raised = [...registry.matchAll(/\.max\((\d+)\)/g)].map((m) => Number(m[1]));
-    expect(raised.filter((value) => value === MAX_SECTION_BARS).length).toBeGreaterThanOrEqual(1);
-    // And no stale 64 survives in the prose that explains the bound.
+    // ⭐ **The section bound's tool copies went with `add_section`.** The registry states no per-section bar ceiling any
+    // more, so what remains to guard is that the stale 64 never returns to the prose. The arrangement side is bounded by
+    // its own model, and the gap that leaves is registered in `docs/OPEN_WORK.md`.
     expect(registry).not.toMatch(/at most 64 per section/);
-    expect(registry).toMatch(new RegExp(`at most ${MAX_SECTION_BARS} per section`));
+    expect(registry).not.toMatch(/at most \d+ per section/);
   });
 
   it("are enforced by the model, not only documented", () => {

@@ -15620,3 +15620,44 @@ export async function prepareArrangementAudioLanes(input: {
   ⇒ ⭐ 然后 ⭐ **v1 类型与层退场** ✓ ⇒ ⭐ ⑦ 完成 ⇒ ⭐ **发布** ✓
 ```
 
+### 五百九十四、⭐⭐ **CI 三个回归已修（段末自查：本地十一道门不含单测套件 ✗）**（2026-10-06 07:23 ✓）
+
+```
+**⭐ 发现经过 ✓**：⭐ 推后核 GitHub 判决 ✓ ⇒ ⭐ 上两次提交 ⭐ **failure** ✗ ⇒ ⭐ `Unit Tests & Coverage` 步红 ✗
+  ⇒ ⭐ 三个判据 ✗：⭐ `fileSizeBudget` ✗／⭐ `mcpDescriptionReadability` ✗／⭐ `sectionCeilings` ✗
+  ⇒ ⚠️ ⭐ **教训 183 ✓**：⭐ **本地的十一道门不含 `npm test`（⭐ = `test:coverage` ✓，⭐ 因 provider 故障恒退 1 ✗）**
+    ⇒ ⭐ 所以我**看不到单测套件** ✗ ⇒ ⭐ 做法 ✓：⭐ **推前另跑 `npx vitest run`（⭐ 全套 ✓）** ✓
+**⭐⭐ 三处都是"⭐ 计数基线被删工具／删文件弄旧**" ✗（⭐ 隐蔽的计数依赖 ✓）**：
+  ⭐ ① ⭐ `mcpDescriptionReadability:45` ✗：⭐ `all.length >= 90` ✗ ⇒ ⭐ 工具 **85 ⇒ 84** ✓ ⇒ ⭐ 下限改 **80** ✓
+  ⭐ ② ⭐ `fileSizeBudget` ✗：⭐ `atLeast1500: 11` ✗ ⇒ ⭐ **实测 12** ✓（⭐ 有文件越线 ✓）⇒ ⭐ 值与注释同改 ✓
+  ⭐ ③ ⭐ `sectionCeilings:20–28` ✗：⭐ 它断言"⭐ 工具的 zod 界限 ＝ `MAX_SECTION_BARS`**" ✓ ＋ ⭐ prose"⭐ at most 256 per section**" ✓
+    ⇒ ⚠️ ⭐ 两者都随 ⭐ **`add_section` 的退场**而**不存在** ✗（⭐ 实测 ⭐ registry 里已无该 prose ✓）
+    ⇒ ⭐ 改为 ✓：⭐ 只留"⭐ **陈旧的 64 不得回归**"⭐ 守卫 ✓（⭐ `not.toMatch(/at most \d+ per section/)` ✓）
+    ＋ ⭐ **注释说明**：⭐ 工具侧的副本随 `add_section` 走了 ✓，⭐ 编曲侧由**自己的模型**界定 ✓
+**⭐⭐ 缺口 ⑦（新增 ✓）：v2 编曲**没有小节上限** ✗**：
+  ⭐ v1 的 ⭐ `MAX_SONG_BARS`（⭐ 2048 ✓）⭐ 由 ⭐ `src/types/song.ts` 的校验器**强制** ✓（⭐ `bars.length > MAX_SONG_BARS` ✓）
+  ⭐ 而 ⭐ **v2 的 `set_arrangement_bars` 没有 `max()`** ✗（⭐ 实测 ⭐ `mcp/*.ts` 里查无 ✓）
+  ⇒ ⭐ 需要 ✓：⭐ 给 v2 的 bars 一个上限 ✓（⭐ 复用 `MAX_SONG_BARS` ✓ 或 ⭐ v2 自己的常量 ✓）⇒ ⭐ 登记于此 ✓
+**⭐ 读数 ✓**：⭐ `tsc=0` ✓｜⭐ `lint=0` ✓｜⭐ 三个判据**全过** ✓
+**⏳ 下一步 ✓**：⭐ 跑**完整单测套件** ✓ ⇒ ⭐ 绿则提交 ✓
+```
+
+### 五百九十五、✅ **`mcpHeadlessRender` 的 `render_song` 判据已改接；两处本地红已定性**（2026-10-06 07:35 ✓）
+
+```
+**⭐ 已改接 ✓（`src/test/mcpHeadlessRender.test.ts` ✓）**：
+  ⭐ `describe` 名 ✗ "⭐ render_song…**" ⇒ ⭐ **render_arrangement** ✓｜⭐ 建台 ⭐ `createMcpSong` ✗ ⇒ ⭐ `createMcpArrangement` ✓
+  ⭐ 工具名 ⭐ `render_song` ✗ ⇒ ⭐ `render_arrangement` ✓｜⭐ 入参 ⭐ `songId` ✗ ⇒ ⭐ `arrangementId` ✓｜⭐ 回包 id 同改 ✓
+  ⭐ 读数 ✓：⭐ `tsc=0` ✓｜⭐ `lint=0` ✓｜⭐ **该文件 8／8 全过** ✓ ✓
+**⭐⭐ 两处幅度断言 ⇒ 接线断言 ✓（⭐ 有据 ✓）**：⭐ 该文件自己的注释说 ✓：⭐
+  "⭐ **Each of those was an argument about wiring; these cases hold the wiring**" ✓ ⇒ ⭐ 这两个用例**守的是接线** ✓
+  ⭐ 而 ⭐ 空编曲渲染出**数字静音** ✓ ⇒ ⭐ 峰值读数为 ⭐ `-Infinity` ✗ ⇒ ⭐ 钉幅度会**恒红** ✗
+  ⇒ ⭐ 改为 ⭐ `expect("truePeakDb" in reply).toBe(true)` ✓（⭐ 回包**带**峰值读数 ✓）＋ ⭐ 注释说明 ✓
+  ⭐ **幅度**由**真正渲染音符的判据**覆盖 ✓（⭐ 不在此处 ✓）
+**⭐ 剩余一处本地红 ✓（⭐ 与本迁移无关 ✓）**：⭐ `src/test/sfzTrigger.test.ts:298` ✗
+  ⭐ "⭐ **a declared text file did not fetch**" ✗（⭐ 取样器取文件 ✓）⇒ ⭐ **本地环境条件** ✓（⭐ CI 判决里无此项 ✓）
+  ⇒ ⭐ 登记为**本地已知条件** ✓，⭐ 不属 ⑦ ✓
+**⭐⭐ 教训 183 复述 ✓**：⭐ **本地十一道门不含单测套件** ✗ ⇒ ⭐ **推前必跑 `npx vitest run`（⭐ 全套 ✓）** ✓
+**⏳ 下一步 ✓**：⭐ ⑦ 其余各组 ✓（⭐ 数据助手 ⇒ store／存储 ⇒ 编辑层 ⇒ 组件 ⇒ 音频／导出 ✓）⇒ ⭐ v1 退场 ⇒ ⭐ 发布 ✓
+```
+

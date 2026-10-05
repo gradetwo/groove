@@ -42,7 +42,7 @@ const longestSentence = (text: string) => Math.max(...text.replace(/\*/g, "").sp
 describe("the tool descriptions stay readable", () => {
   it("⭐ finds the descriptions at all, so a silent extraction failure cannot pass", () => {
     const all = descriptions();
-    expect({ atLeast: all.length >= 90, names: all.length > 0 }).toEqual({ atLeast: true, names: true });
+    expect({ atLeast: all.length >= 80, names: all.length > 0 }).toEqual({ atLeast: true, names: true });
   });
 
   it("⭐ no description grows a sentence longer than the longest one measured today", () => {
