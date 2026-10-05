@@ -299,6 +299,29 @@ await page.locator(`[data-testid='${emptyCell}']`).first().scrollIntoViewIfNeede
 await page.waitForTimeout(120);
 report.readings.cellBoxAfterScroll = await page.locator(`[data-testid='${emptyCell}']`).first().boundingBox();
 report.readings.viewport = page.viewportSize();
+/* 只读捕获监听：记录真实 pointerdown 落在哪个元素上。 */
+await page.evaluate(() => {
+  (window).__hits = [];
+  for (const kind of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+    document.addEventListener(kind, (e) => {
+      const el = e.target;
+      (window).__hits.push({ kind, tag: el && el.tagName ? el.tagName.toLowerCase() : String(el),
+        testid: el && el.getAttribute ? el.getAttribute('data-testid') : null,
+        x: Math.round(e.clientX || 0), y: Math.round(e.clientY || 0) });
+    }, true);
+  }
+  document.addEventListener('pointerdown', (e) => {
+    const el = e.target;
+    (window).__hits.push({
+      tag: el && el.tagName ? el.tagName.toLowerCase() : String(el),
+      testid: el && el.getAttribute ? el.getAttribute('data-testid') : null,
+      x: Math.round(e.clientX), y: Math.round(e.clientY),
+      scrollX: Math.round(window.scrollX), scrollY: Math.round(window.scrollY),
+      kind: 'pointerdown',
+      atPoint: (() => { const t = document.elementFromPoint(e.clientX, e.clientY); return t ? (t.getAttribute('data-testid') || t.tagName) : null; })(),
+    });
+  }, true);
+});
 await page.locator(`[data-testid='${emptyCell}']`).first().hover();
 await page.waitForTimeout(120);
 const cellBox = await page.locator(`[data-testid='${emptyCell}']`).first().boundingBox();
@@ -313,6 +336,7 @@ if (cellBox) {
   await page.click(`[data-testid='${emptyCell}']`);
 }
 const afterAddNote = await readDom();
+report.readings.pointerHits = await page.evaluate(() => (window).__hits ?? null);
 report.readings.noteIdsBefore = noteIdsBefore;
 report.readings.noteIdsAfter = await page.evaluate(() => Array.from(document.querySelectorAll("[data-testid^='roll-note-']")).map((e) => e.getAttribute('data-testid')).sort());
 report.readings.selectedTrackAfter = await selectedTrack();
@@ -464,7 +488,8 @@ if (asJson) {
   line("   direct dispatch", `dispatched=${r.dispatchedDirectly} notesAfter=${r.notesAfterDispatch}`);
   line("   hit test at cell centre", JSON.stringify(r.hitTest));
   line("   selected track", `before=${JSON.stringify(r.selectedTrackBefore)} after=${JSON.stringify(r.selectedTrackAfter)}`);
-  line("   note ids added", JSON.stringify((r.noteIdsAfter || []).filter((i) => !(r.noteIdsBefore || []).includes(i))));
+    line("   real pointerdown landed on", JSON.stringify(r.pointerHits));
+line("   note ids added", JSON.stringify((r.noteIdsAfter || []).filter((i) => !(r.noteIdsBefore || []).includes(i))));
   line("   note ids removed", JSON.stringify((r.noteIdsBefore || []).filter((i) => !(r.noteIdsAfter || []).includes(i))));
   line("   cell box", `before=${JSON.stringify(r.cellBoxBeforeScroll)} after=${JSON.stringify(r.cellBoxAfterScroll)} viewport=${JSON.stringify(r.viewport)}`);
   line("⑤ after change length", `bars=${r.afterLength.bars} action=${r.afterLength.undoAction}`);
