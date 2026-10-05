@@ -10589,3 +10589,22 @@ problems: **[]** ✓
   调 `prepareOfflineAudioLanes` ✓，把它的 `problems`／`loaded`／`total` 直接回包 ✓，**不合成、不落盘** ✓
 · ⚠️ 同形的还有 `render_arrangement_preview`（handler 约 `:142` ✓）⇒ ⭐ 实现时**两个一起**或**明确只做一个** ✓（不留不一致 ✗）
 ```
+**⚠️ 更正（2026-10-05 19:49 ✓，`§452` 的方案**乙**被推翻 ✗）**：
+```
+· ⭐ 我先前写的"工具层直接调 `prepareOfflineAudioLanes`" ✗ **不成立** ✗ ——
+  因为 preparation 需要 ⭐ **`loader`**（`WavExporter.ts:1833` 的 `createSampleLoader(...)` ✓）＋
+  **`catalogue`** ＋ **`silencedTrackIndexes`** ✓，⭐ 而这些都**在 `renderAudio` 内部** ✓，
+  registry 手里**只有** `flattened.pattern` ＋ `{ format, sampleRate?, channels?, bars, bitrateKbps, genreId, headless?, progress? }` ✓
+  ⇒ ⭐ 在工具层复刻一套 loader ⇒ ⭐ 正是台账记过的 "**two places, one thing**" ✗（今晚刚修完同类 ✗）
+· ⭐ **于是唯一正确落点** ✓：⭐ 在 `renderAudio`（`mcp/render/worker.ts:675` ✓）**内部**、
+  `preparation` 拿到之后（`WavExporter.ts:1858` 一带 ✓）⭐ 按 `options.dryRun` 早返回 ✓
+· ⚠️ **由此必然多文件** ✗：① `RenderOptions` 加 `dryRun?: boolean` ✓（锚点可用 `stemTrackIdx?: number;` `:134` ✓）
+  ② `renderAudio` 返回类型 ⇒ ⭐ **联合** `RenderResult | DryRunResult` ✓（或单开 `prepareRender` 导出 ✓）
+  ③ ⭐ **`DryRunResult` 必须是自己的形状** ✓：`{ dryRun: true, ready, loaded, total, problems, arrangementId, passes, totalSteps }` ✓
+     —— ⚠️ **不能**冒充 `RenderResult` ✗（它要求 `path`／`bytes`／`truePeakDb`／`integratedLufs` ✓ ⇒ ⭐ 假读数 ✗）
+  ④ registry 两处（`render_arrangement` `:243` ✓／`render_arrangement_preview` `:142` ✓）✓
+  ⑤ ⭐ **行数余量充足** ✓：`fileSizeBudget.test.ts:46` 钉 `mcp/render/worker.ts` **1651** ✓，实际 **1634** ✓
+     ⇒ ⚠️ 但 `WavExporter.ts` 的钉**未查** ✗（改它前要先查 ✓ —— 教训 90/91 ✓）
+· ⭐ **判据（能红 ✓）**：ⓐ `dryRun.problems` ≡ 同 arrangement 正式渲染的 `problems` ✓ ⓑ **不产生任何文件** ✓
+  ⓒ 热缓存下耗时**远小于**渲染 ✓；⚠️ 且诚实口径必须写进描述 ✓（**冷缓存仍受取采样支配** ✗）
+```
