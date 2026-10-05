@@ -9272,3 +9272,33 @@ problems: **[]** ✓
      ⇒ 从**修复后**备份还原 ✓（第 78 条 ✓）⇒ `tsc=0` ✓／3 用例 ✓
 **⚠️ 过程小记 ✓**：我第一次的补丁脚本在**找到组件定义前就退出** ✗ ⇒ ⭐ 好在**写盘在最后一步** ✓ ⇒
    **文件完全没被改** ✓（无半截状态 ✓）；也顺带学到 ✓：App 的真身是 `export function App()` ✓（不是 `export default function App` ✗）
+
+## 三百九十九、📲 **已批准项②落地：Web 的 PWA 安装／更新入口（并顺手修掉一处"导入即崩"）**（2026-10-05 14:28 ✓）
+
+```
+**背景 ✓**：对齐表第 27 行「PWA 安装／更新入口 —— **半接线**（`initPwa` 已在 `src/main.tsx` 跑 ✓，
+   `subscribePwaStatus` ✓／`promptInstallApp` ✓／`applyUpdate` ✓ 都无人调用 ✗）」⇒ 属**已批准、未开工** ✓
+**先量 ✓（时点 14:14 ✓）**：`src/utils/pwa.ts` 能力齐 ✓ —— `PwaStatus{isInstalled, canInstall, isUpdateAvailable, offlineReady}` ✓、
+   `subscribePwaStatus(fn)`（**立即回吐当前状态** ✓）、`promptInstallApp()`（无 deferred prompt ⇒ `return false` ✓）、`applyUpdate()` ✓
+   ⇒ ⭐ **只缺 UI** ✓；挂点 ✓：设置面板**「关于」页**（该页已有"更新检查"按钮 ✓，同类 ✓）
+**改动 ✓（两文件 ＋ 文案 ✓）**：
+   · `src/i18n/locales/studio.ts` ✓：**5 个双语键** ✓（`settings_about_install` ✓／`_install_hint` ✓／`_installed` ✓／
+     `_update_ready` ✓／`_update_now` ✓）
+   · `src/components/settings/SettingsModal.tsx` ✓：导入 ✓ ＋ `useState<PwaStatus>` ✓ ＋ **只在面板打开时订阅** ✓
+     （`useEffect(() => (isOpen ? subscribePwaStatus(setPwa) : undefined), [isOpen])` ✓）
+     ＋ **仅在 `canInstall` 时给「安装应用」** ✓（⭐ 不给禁用按钮 —— 那是浏览器没做的承诺 ✗，与面板既有规矩一致 ✓）
+     ＋ 已安装时显示状态 ✓ ＋ **`isUpdateAvailable` 时给「立即更新」** ✓（`applyUpdate()` ✓）＋ `data-testid` ✓
+**⭐ 顺手修掉一处真脆弱点 ✓（判据先抓到 ✓）**：首次接线后 `settingsModal.test.tsx` **整文件加载失败** ✗，真因
+   `TypeError: window.matchMedia is not a function` ✓ —— `pwa.ts` 在**模块顶层**就调 `window.matchMedia(...)` ✓
+   ⇒ ⭐ 任何**缺该 API 的宿主**（jsdom ✓／内嵌 webview ✓）**一导入就崩** ✗
+   ⇒ 改为 `typeof window.matchMedia === "function"` 守卫 ✓（口径 ✓：**API 缺失＝"无从得知"＝false** ✓，不是崩 ✗）
+**判据 ✓（能红 ✓）**：新增 `src/test/pwaEntry.test.ts` ✓（**4 用例 ✓**）：
+   ① 面板**订阅** ✓ ＋ **两个动作都在** ✓ ＋ **两个 `data-testid` 都在** ✓
+   ② 无 deferred prompt ⇒ `return false` ✓（按钮所依赖的形状 ✓）
+   ③ ⭐ **缺 `matchMedia` 的主机不得在导入时抛** ✓（守住刚修的那处 ✓）
+   ④ "仍在测量"自检 ✓
+   ⭐ **弄红验证 ✓**：临时改掉安装按钮的 `data-testid` ⇒ 判据 **exit=1** ✓ ⇒ 从**修复后**备份还原 ✓（第 78 条 ✓）
+**门禁 ✓**：`tsc=0` ✓｜`lint=0` ✓｜**`check:skins=0`** ✓（动了标记 ⇒ 已跑 `desktop_skins.mjs` ✓）｜
+   相关判据 ✓ **21 用例全过**（含先前失败的 `settingsModal.test.tsx` ✓，现绿 ✓）
+**⚠️ 过程自省 ✓**：我这次补丁里用了 `'/'.rjust(0)` 这种小聪明 ✗ ⇒ 结果插进一个多余 `/` ✗（`//**` ✗）
+   ⇒ `tsc=2`／`lint=1` 立刻拦住 ✓ ⇒ ⭐ **教训：补丁脚本写"笨"一点** ✓（能读懂的字符串拼接 ✓，别玩花活 ✗）

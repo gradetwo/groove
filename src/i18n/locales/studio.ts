@@ -417,6 +417,11 @@ export const studioMessages = {
   settings_layout_reset: { en: "Restore default layout", zh: "恢复默认布局" },
   settings_section_about: { en: "This build", zh: "当前构建" },
   settings_about_version: { en: "Version", zh: "版本" },
+  settings_about_install: { en: "Install the app", zh: "安装应用" },
+  settings_about_install_hint: { en: "Adds Groove to your home screen and keeps it usable offline.", zh: "把 Groove 加到主屏幕，并可在离线时使用。" },
+  settings_about_installed: { en: "Installed", zh: "已安装" },
+  settings_about_update_ready: { en: "A new version is ready.", zh: "新版本已就绪。" },
+  settings_about_update_now: { en: "Update now", zh: "立即更新" },
   settings_about_gs1: { en: "GS-1 voices (chords/lead)", zh: "GS-1 新架构音色（和弦/旋律）" },
   /**
    * ⭐ **The contact address, in one place.** `groove@wangda.today` is where anything that needs an address points, and the bug line is a `mailto:` so that reporting one does not require finding this page first.

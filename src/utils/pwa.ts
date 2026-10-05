@@ -19,7 +19,15 @@ let waitingWorker: ServiceWorker | null = null;
 const listeners = new Set<(status: PwaStatus) => void>();
 
 const currentStatus: PwaStatus = {
-  isInstalled: typeof window !== "undefined" && window.matchMedia("(display-mode: standalone)").matches,
+  /**
+   * ⭐ **Guarded, because this line runs at import time.** A host without `matchMedia` — jsdom in the unit tests, an
+   * embedded webview — threw `window.matchMedia is not a function` the moment anything imported this module, which
+   * took a whole settings criterion down with it. A missing API means "cannot know", which is `false`, not a crash.
+   */
+  isInstalled:
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(display-mode: standalone)").matches,
   canInstall: false,
   isUpdateAvailable: false,
   offlineReady: false,
