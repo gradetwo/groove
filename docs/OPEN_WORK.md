@@ -15410,3 +15410,23 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 已回退 ✓，⭐ 树干净 ✓）；⭐ 下一段：⭐ 读到真实 import 行 ⇒ ⭐ 照抄补齐 ⇒ ⭐ 本组完成 ✓
 ```
 
+**⭐ import 块逐字到手 ✓（2026-10-06 05:07 ✓）**：
+```
+**⭐ 它是多行 import ✓（`autosaveStatus.test.tsx:27–32` ✓）**：
+  ⭐ `:27` ⭐ `import {` ✓
+  ⭐ `:28` ⭐ `  debounceSaveProject,` ✓｜⭐ `:29` ⭐ `  flushPendingProject,` ✓
+  ⭐ `:30` ⭐ `  getSaveStatusSnapshot,` ✓｜⭐ `:31` ⭐ `  resetSaveStatus,` ✓
+  ⭐ `:32` ⭐ `} from "../features/sequencer/projectStorage";` ✓
+**⭐ 锚点计数 ✓**：⭐ `} from "../features/sequencer/projectStorage";` ⇒ **1** ✓ ✓
+  ⭐ （⭐ `import { useAutosaveStatus } from "../features/sequencer/hooks/useAutosaveStatus";` ✓ ⇒ **1** ✓ ✓）
+**⭐⭐ 因此下一段零未知 ✓**：
+  ⭐ ① ⭐ 六处实现 ✓（⭐ §247／§248 已验编译 ✓）
+  ⭐ ② ⭐ 触发块 ✓（⭐ 已验 ✓）
+  ⭐ ③ ⭐ **在 `:32` 之后插两行** ✓：
+    ⭐ `import { saveArrangementProject } from "../features/sequencer/projectDb";` ✓
+    ⭐ `import { createArrangement } from "../data/arrangementEdits";` ✓
+  ⭐ ④ ⭐ 跑门 ✓ ⇒ ⭐ **⑦ 第一组完成** ✓ ✓
+**⭐ 纪律补充 ✓（⭐ 教训 174／175 ✓）**：⭐ 每个 `replace` 前先断言 ✓；⭐ 找 import **扫全文件** ✓（⭐ 含多行块的续行 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
