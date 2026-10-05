@@ -324,6 +324,21 @@ report.readings.viewport = page.viewportSize();
 /* 只读捕获监听：记录真实 pointerdown 落在哪个元素上。 */
 await page.evaluate(() => {
   (window).__hits = [];
+  /* 只读包装：记录谁调用了会滚动的 API（scrollIntoView / scrollTo / scrollBy / focus）。 */
+  (window).__scrollCalls = [];
+  const note = (kind, extra) => {
+    const st = new Error().stack || '';
+    (window).__scrollCalls.push({ kind, extra: extra ?? null, stack: st.split('\n').slice(1, 5).join(' | ') });
+  };
+  const el0 = Element.prototype;
+  const si = el0.scrollIntoView;
+  el0.scrollIntoView = function (...a) { note('scrollIntoView', (this.getAttribute && this.getAttribute('data-testid')) || this.tagName); return si.apply(this, a); };
+  const wt = window.scrollTo.bind(window);
+  window.scrollTo = (...a) => { note('scrollTo', JSON.stringify(a)); return wt(...a); };
+  const wb = window.scrollBy.bind(window);
+  window.scrollBy = (...a) => { note('scrollBy', JSON.stringify(a)); return wb(...a); };
+  const hf = HTMLElement.prototype.focus;
+  HTMLElement.prototype.focus = function (...a) { note('focus', (this.getAttribute && this.getAttribute('data-testid')) || this.tagName); return hf.apply(this, a); };
   (window).__focusin = [];
   document.addEventListener('focusin', (e) => {
     const el = e.target;
@@ -383,6 +398,7 @@ if (cellBox) {
 }
 const afterAddNote = await readDom();
 report.readings.pointerHits = await page.evaluate(() => (window).__hits ?? null);
+report.readings.scrollCalls = await page.evaluate(() => (window).__scrollCalls ?? null);
 report.readings.scrolls = await page.evaluate(() => (window).__scrolls ?? null);
 report.readings.focusin = await page.evaluate(() => (window).__focusin ?? null);
 report.readings.noteIdsBefore = noteIdsBefore;
@@ -540,6 +556,7 @@ if (asJson) {
       line("   page settle", JSON.stringify(r.settle));
 line("   manual focus probe", JSON.stringify(r.focusProbe));
 line("   scrollY samples while held", JSON.stringify(r.scrollSamples));
+  line("   who scrolled", JSON.stringify(r.scrollCalls));
 line("   window scroll events", JSON.stringify(r.scrolls));
 line("   real pointerdown landed on", JSON.stringify(r.pointerHits));
 line("   note ids added", JSON.stringify((r.noteIdsAfter || []).filter((i) => !(r.noteIdsBefore || []).includes(i))));
