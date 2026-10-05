@@ -127,11 +127,6 @@ describe("MCP · the operations written for MCP reach a tool", () => {
       "summariseArrangement",
       "requireArrangement",
       "arrangementFromArgs",
-      // ⭐ **Temporary, and it says so.** `putMcpArrangement` is the write side of the lookup and is being added with the
-      // import path that calls it; this guard reads every `registry*.ts` file, so that tool's call will satisfy the rule on
-      // its own. Until that lands, the entry keeps the guard honest about a function nothing calls yet — remove it in the
-      // same commit as `import_groove`, rather than leaving an exclusion with no reason.
-      "putMcpArrangement",
     ]);
 
     const unreachable = exported.filter((name) => !NOT_A_TOOL.has(name) && !registry.includes(`${name}(`));

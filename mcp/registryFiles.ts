@@ -157,8 +157,8 @@ export const FILE_TOOLS: ToolDefinition[] = [
         if (!existsSync(file)) return failure(`no such file: ${file}`);
         const parsed = JSON.parse(readFileSync(file, "utf8")) as unknown;
         // ⭐ The app's validator is the gate, and it refuses the older shape rather than importing something else.
-        const arrangement = arrangementFromPackage(parsed);
-        const summary = putMcpArrangement(arrangement);
+        const carried = arrangementFromPackage(parsed);
+        const summary = putMcpArrangement(carried);
         return { arrangementId: summary.arrangementId, tracks: summary.trackCount, bars: summary.bars };
       } catch (error) {
         return failure((error as Error).message);
