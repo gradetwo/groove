@@ -10898,3 +10898,20 @@ export async function prepareArrangementAudioLanes(input: {
 · ⚠️ **待业主决策 ✓**：工具名 ⇒ `set_arrangement_vocal_melody`（与 v2 命名一致 ✓）还是保留 `set_vocal_melody` ✓
 ```
 
+**⭐ 步骤 1 的两条路（2026-10-05 20:56 ✓，已量 ✓）**：
+```
+· ⭐ 模型层（`src/data/arrangementEdits.ts` ✓）：`addTrackNote`（`:537` ✓）／`addTrackNotes`（`:556` ✓）／
+  `removeTrackNote`（`:561` ✓）⇒ ⚠️ ⭐ **没有"替换整轨"的模型操作** ✗
+· ⚠️ ⭐ **硬约束** ✓：`src/test/mcpCoverage.test.ts`（`:73` ✓）要求 ⭐ **每个改模型的操作都能从 MCP 工具到达** ✓
+  ⇒ 要么进 `EXPOSED`（映射到真实工具名 ✓），要么进 `EXCLUDED`（**必须给理由** ✓）
+  ⇒ ⭐ 即：⭐ **在模型层加一个新操作 ⇒ 必须同时改覆盖表** ✓（⭐ 这是"能力只在一侧"的防线 ✓）
+· ⭐ **两条路 ✓**：
+  ⭐ **路 A（我选 ✓，不改模型层 ✓）**：在 ⭐ `mcp/arrangement.ts` 里组合**已有**操作 ✓ ——
+    ⭐ `setMcpTrackNotes` ＝ ⭐ 先对**该轨现有音符**逐个 `removeTrackNote` ✓ ⇒ 再 `addTrackNotes` ✓
+    ⇒ ⭐ 不新增模型操作 ✓ ⇒ ⭐ **不用动 `mcpCoverage` 的 `EXPOSED`／`EXCLUDED`** ✓（⭐ 更小、更稳 ✓）
+    ⚠️ 还需一量 ✗：⭐ 怎么从 `ArrangementV2` 读出**某轨现有音符** ✓（⭐ 下一轮先量这个 ✓）
+  ⚠️ **路 B（不选 ✗）**：在模型层加 `setTrackNotes` ✓ ⇒ ⭐ 必须同时改覆盖表 ✓（⭐ 改动面更大 ✓）
+· ⭐ **判据（能红 ✓，两路通用 ✓）**：① 替换后 ⭐ `get_arrangement` **只剩新音符** ✓（旧的不残留 ✓）
+  ② ⭐ 该轨**其它属性不变** ✓（乐器／资产／名称／静音 ✓）③ ⭐ 音符数读数与该轨一致 ✓
+```
+
