@@ -26,7 +26,7 @@ const pattern = () => ({
   ],
 });
 
-describe("set_vocal_melody", () => {
+describe("set_arrangement_vocal_melody", () => {
   it("puts each syllable on the step its note is sung on, and reports the binding", () => {
     const result = setVocalMelody({
       pattern: pattern() as never,

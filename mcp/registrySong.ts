@@ -29,7 +29,7 @@ export const SONG_TOOLS: ToolDefinition[] = [
      * clip is where a composer's work actually lives. It says which slot it edited, and points at `make_unique` when that slot is shared — the
      * honesty about song-global slots belongs in the reply, not in a doc the caller may not read.
      */
-    name: "set_vocal_melody",
+    name: "set_arrangement_vocal_melody",
     title: "Bind a lyric to a melody and check its tones (倒字)",
     description:
       "Put syllables on a song's vocal lane, one per note and at the same index as its pitch, and return the prosody check on the result. Give `pitches` to set the melody yourself, or give only the lyric and a melody is written for it. Tones are input (1 阴平, 2 阳平, 3 上声, 4 去声, 0/5 neutral) and never guessed. A rising tone sung on a falling interval is reported as a warning, because that is what makes a listener hear the wrong word.",
@@ -117,16 +117,16 @@ export const SONG_TOOLS: ToolDefinition[] = [
       "Reserved for singing synthesis (SVS) and **not implemented**: this call always reports that the capability is reserved. Changes nothing. It exists so an agent discovers the absence instead of guessing. It validates the arguments a future implementation would take (a lyric, one tone per syllable, and the lane to sing on) so the failure explains what is missing rather than what is malformed.",
     readOnly: true,
     inputSchema: {
-      syllables: z.array(z.string().max(8)).min(1).max(64).describe("one syllable per note, as set_vocal_melody takes them"),
+      syllables: z.array(z.string().max(8)).min(1).max(64).describe("one syllable per note, as set_arrangement_vocal_melody takes them"),
       tones: z.array(z.number().int().min(0).max(5)).min(1).max(64).describe("one tone per syllable"),
       track: z.string().max(40).optional().describe("the lane to sing on; default lead"),
     },
     handler: (args) => {
       if ((args.syllables as string[]).length !== (args.tones as number[]).length) {
-        return failure("one tone per syllable, as set_vocal_melody requires — and note that this tool is reserved and does not sing anything yet");
+        return failure("one tone per syllable, as set_arrangement_vocal_melody requires — and note that this tool is reserved and does not sing anything yet");
       }
       return failure(
-        "reserved, not implemented: singing synthesis is an interface here and no implementation. For a sung line today use set_vocal_melody (which binds syllables to notes and checks the tones) with the synth voices the genre already has; the SVS direction is the upstream synth project (docs/SYNTH_UPSTREAM_PLAN.md)."
+        "reserved, not implemented: singing synthesis is an interface here and no implementation. For a sung line today use set_arrangement_vocal_melody (which binds syllables to notes and checks the tones) with the synth voices the genre already has; the SVS direction is the upstream synth project (docs/SYNTH_UPSTREAM_PLAN.md)."
       );
     },
   },

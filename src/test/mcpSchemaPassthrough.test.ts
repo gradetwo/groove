@@ -82,7 +82,7 @@ describe("MCP · a pattern's own fields survive the tool boundary", () => {
   it("keeps a lyric the vocal tool just bound when the pattern goes back through a tool", async () => {
     await withMcp(async (call) => {
       const { pattern } = await call("get_pattern", { genreId: "chicago-house" });
-      const sung = await call("set_vocal_melody", {
+      const sung = await call("set_arrangement_vocal_melody", {
         pattern,
         syllables: ["能", "够"],
         tones: [2, 4],

@@ -1,5 +1,5 @@
 /**
- * ⭐ **set_vocal_melody's tone sentence is split at its colon.**
+ * ⭐ **set_arrangement_vocal_melody's tone sentence is split at its colon.**
  *
  * The colon introduced the warning rule, which is a boundary a human chooses because a colon often holds a list inside
  * one sentence. The assertions ran before the write and this pass's ceiling is one hundred and ninety.
@@ -8,7 +8,7 @@ import { registrySource } from "./helpers/registrySource";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const TOOL = "set_vocal_melody";
+const TOOL = "set_arrangement_vocal_melody";
 const source = registrySource();
 const start = source.indexOf('name: "' + TOOL + '"');
 const block = source.slice(start, source.indexOf('name: "', start + 10));

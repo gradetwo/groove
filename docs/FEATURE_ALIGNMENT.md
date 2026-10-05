@@ -43,7 +43,7 @@
 | 22 | 硬件控制台 | ✓ | ✓ `src/views/HardwareConsoleView.tsx` | ✗ | **MCP ✗**：面向现场操作，非 agent 场景 |
 | 23 | 音频分析视图（示波器／频谱） | ✓ | ✓ `src/views/AnalyzerView.tsx` | 🔶 `spectral_balance`、`analyze_audio`（离线文件级） | 实时可视化 MCP 无法表达 |
 | 24 | 分享链接 | ✓ | ✅ **有入口**：`src/components/sequencer/ProjectHubModal.tsx`（`shareUrl` ＋ 文案 `project_hub_share` ✓ ＋ 二维码 `project_hub_share_qr_alt` ✓；降级时显示 `project_hub_share_degraded` ✓） | ✓ `share_url` | ✅ **三方齐**（2026-10-05 核实 ✓）；且**降级会明说** ✓（见 `docs/OPEN_WORK.md` §394） |
-| 25 | ⭐ 人声：绑定歌词与旋律 | ✓ | ✗ | ✓ `set_vocal_melody` | **Web ✗**：无 UI |
+| 25 | ⭐ 人声：绑定歌词与旋律 | ✓ | ✗ | ✓ `set_arrangement_vocal_melody` | **Web ✗**：无 UI |
 | 26 | ⭐ 人声：合成演唱 | 🔶 **未实现** | ✗ | 🔶 `synthesize_vocal`（标题自述 "reserved — not implemented"） | **计划**：工具面预留；两侧都没有可用实现 |
 | 27 | ⭐ PWA 安装／更新入口 | ✓ `src/utils/pwa.ts`（`initPwa` 已在 `src/main.tsx` 跑） | ✅ **有入口**：`src/components/settings/SettingsModal.tsx`（「关于」页订阅 `subscribePwaStatus` ✓；`canInstall` 时给「安装应用」✓；`isUpdateAvailable` 时给「立即更新」✓） | n/a | ✅ **已完成**（2026-10-05 ✓，见 `docs/OPEN_WORK.md` §399）；判据 `src/test/pwaEntry.test.ts` ✓（含「缺 `matchMedia` 的主机不得在导入时抛」✓） |
 | 28 | ⭐ 无障碍「减少动效」 | ✓ `src/hooks/useReducedMotion.ts`（写 `.reduced-motion` ✓、跟随系统查询 ✓）＋ `src/hooks/useDeviceCapabilities.ts`（只读系统偏好） | ✅ **已接**：`src/App.tsx` 在根上**调一次** ✓（`GalaxyView` 另在读该类 ✓） | n/a | ✅ **已完成**（2026-10-05 ✓，见 `docs/OPEN_WORK.md` §398）；判据 `src/test/reducedMotionWiring.test.ts` ✓（要求**调用**而非导入 ✓；`check:skins` 零 diff ✓） |
@@ -87,7 +87,7 @@
 | — 工具面 | 仍 **94 tools** ✓（三处都**只改文案／回包**，**未增删工具** ✓） | 表的口径是"**暴露/未暴露**" ⇒ 本次**不改变暴露面** ✓，只提高**可用性**与**诚实度** |
 
 > ⚠️ **仍未暴露、且已记账不改** ✓（见 `docs/OPEN_WORK.md` `§443`）：音域字段 `rangeLow/High` ✗（全仓无该数据 ✗）、
-> `set_vocal_melody` 接 `arrangementId` ✗（歌词 × 编曲的打通 ✓）。两者都写了"**什么条件下才该改**" ✓。
+> `set_arrangement_vocal_melody` 接 `arrangementId` ✗（歌词 × 编曲的打通 ✓）。两者都写了"**什么条件下才该改**" ✓。
 
 ## 2026-10-05 20:42 回填（第 4 条规矩：改完实现回来改表）
 

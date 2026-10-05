@@ -173,7 +173,7 @@ const CAPABILITIES: Capability[] = [
   {
     surface: "voice",
     feature: "write and check a vocal line",
-    tools: ["synthesize_vocal", "set_vocal_melody", "validate_prosody"],
+    tools: ["synthesize_vocal", "set_arrangement_vocal_melody", "validate_prosody"],
   },
 ];
 
