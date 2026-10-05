@@ -104,12 +104,12 @@ const CAPABILITIES: Capability[] = [
   {
     surface: "HorizontalTimelineView",
     feature: "arrange sections along a horizontal timeline",
-    tools: ["create_song", "add_section", "set_arrangement_track_steps", "get_arrangement", "undo_arrangement"],
+    tools: ["create_song", "add_arrangement_track", "set_arrangement_track_steps", "get_arrangement", "undo_arrangement"],
   },
   {
     surface: "VerticalTimelineView",
     feature: "the same arrangement, stacked",
-    tools: ["get_arrangement", "set_arrangement_track_steps", "add_section"],
+    tools: ["get_arrangement", "set_arrangement_track_steps", "add_arrangement_track"],
   },
   {
     surface: "KickAnatomyView",

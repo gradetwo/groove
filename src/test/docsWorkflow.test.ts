@@ -13,7 +13,7 @@ const docs = readFileSync("docs/MCP.md", "utf8");
 
 // `add_lane` is deliberately absent: it is an **op** inside `apply_pattern_ops`, not a tool, and the first version of the workflow table got that wrong — which is
 // the whole reason this file exists.
-const STEPS = ["create_song", "set_arrangement_track_steps", "apply_pattern_ops", "add_section", "render_song"];
+const STEPS = ["create_song", "set_arrangement_track_steps", "apply_pattern_ops", "add_arrangement_track", "render_song"];
 
 describe("the documented workflow", () => {
   it("names six steps that the registry actually registers", () => {

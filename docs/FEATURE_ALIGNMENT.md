@@ -432,3 +432,17 @@
 **⭐ 新增判据 ✓**：`src/test/arrangementSeeding.test.ts` ✓（3 例 ✓；⭐ 基线**在用例内量出** ✓ 而非假设 ✓）
 **⭐ 读数 ✓**：⭐ `check:mcp` **0** ✓｜⭐ 十一道门 **0** ✓｜⭐ 双文档门 **0** ✓
 
+## 2026-10-06 03:56 回填（第 4 条规矩：改完实现回来改表）
+
+| 面 | 变化 | 依据 |
+|---|---|---|
+| ⭐ **MCP 面** | ✅ ⭐ **`add_section` 退场** ✓ ⇒ 工具 **87 ⇒ 86** ✓；⭐ 它的三项能力**由音符级工具承载** ✓（⭐ 见 §553 的判据 ✓）；⭐ 便利工具另记 `needs` ✓ | 本轮 ✓ |
+| ⭐ **系统／数据** | ✅ ⭐ **§537 五处缺口全部结案** ✓：⭐ ⑤ `maxDurationSec` ✓／⭐ ④ `swing`＋`resolution` ✓／⭐ ①②③ 力度斜坡＋`fill`＋移调 ✓ | 本轮 ✓ |
+| ⭐ **Web 面** | **无变化** ✓ | — |
+
+**⭐ 触及 5 个文件 ✓**：⭐ `mcp/registrySong.ts` ✓（⭐ 工具块 187–240 ✓）｜⭐ `scripts/check_mcp.mjs` ✓（⭐ 清单 ＋ ⭐ 删三条用例 825–870 ✓ ＋ ⭐ 注释 ✓）｜
+  `src/test/docsWorkflow.test.ts` ✓（⭐ `STEPS` ⇒ `add_arrangement_track` ✓）｜⭐ `src/test/mcpCapability.test.ts` ✓（⭐ 两处 ⇒ v2 ✓）｜
+  ⭐ `src/test/mcpAddSectionCopy.test.ts` ✓（⭐ **删除** ✓，⭐ `rm` ✓）
+**⭐ 判据读数 ✓**：⭐ `check:mcp` **86 tools** ✓｜⭐ 十一道门 0 ✓｜⭐ 相关判据全过 ✓｜⭐ 文档双门 0 ✓
+**⭐ 因此 ✓**：⭐ ⑤ 的**暂留三个**里 `add_section` 已完成 ✓ ⇒ ⭐ 剩 `create_song` ✗ 与 `render_song` ✗ ⇒ ⭐ **两者合并一次收尾** ✓
+

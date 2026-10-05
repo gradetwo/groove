@@ -185,60 +185,6 @@ export const SONG_TOOLS: ToolDefinition[] = [
     },
   },
   {
-    name: "add_section",
-    title: "Add a section",
-    description:
-      "Place a clip on the song's timeline: slot, how many times it repeats. Optional per-section mutes, velocity scale, label, velocity ramp (a build across the section), a drum fill on its last pass. A transposition of its pitched lanes. Returns the whole arrangement, so a model can see what it built.",
-    readOnly: false,
-    inputSchema: {
-      songId: z.string().describe("the id create_song returned"),
-      slot: clipSlotSchema,
-      bars: z
-        .number()
-        .int()
-        .min(1)
-        .max(MAX_BARS)
-        .optional()
-        .describe(
-          "how many PASSES of the section's clip — not measures. The result reports `passBars` and a running `secondsEstimate`."
-        ),
-      label: z.string().max(24).optional().describe('e.g. "intro", "drop", "fill"'),
-      mute: z.array(z.string()).max(16).optional().describe("track ids silenced in this section"),
-      velocityScale: z.number().min(0).max(2).optional().describe("1 = as written, 0.8 = a quieter build"),
-      velocityRamp: z
-        .tuple([z.number().min(0).max(4), z.number().min(0).max(4)])
-        .optional()
-        .describe("velocity multiplier at the section's first and last pass, e.g. [0.6, 1] for an 8-bar build"),
-      fill: z.boolean().optional().describe("add a drum fill on the section's last pass; the lanes come from the clip"),
-      transpose: z
-        .number()
-        .int()
-        .min(-24)
-        .max(24)
-        .optional()
-        .describe("move the section's pitched lanes by this many semitones; drums are untouched"),
-      index: z.number().int().min(0).optional().describe("insert position; appended when omitted"),
-    },
-    handler: (args) => {
-      try {
-        return addMcpSection({
-          songId: String(args.songId),
-          slot: args.slot as "A" | "B" | "C" | "D",
-          bars: args.bars as number | undefined,
-          label: args.label as string | undefined,
-          mute: args.mute as string[] | undefined,
-          velocityScale: args.velocityScale as number | undefined,
-          velocityRamp: args.velocityRamp as [number, number] | undefined,
-          fill: args.fill as boolean | undefined,
-          transpose: args.transpose as number | undefined,
-          index: args.index as number | undefined,
-        });
-      } catch (error) {
-        return failure((error as Error).message);
-      }
-    },
-  },
-  {
     name: "render_song",
     title: "Render the arrangement",
     description:
