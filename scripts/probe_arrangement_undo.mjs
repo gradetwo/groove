@@ -302,6 +302,20 @@ if (cellBox) {
 } else {
   await page.click(`[data-testid='${emptyCell}']`);
 }
+/* 定案实验：绕过命中测试，直接向该格派发指针事件；能写出音符 ⇒ 命中测试是问题；写不出 ⇒ 处理器／状态源是问题。 */
+const dispatched = await page.evaluate((id) => {
+  const cell = document.querySelector(`[data-testid='${id}']`);
+  if (!cell) return false;
+  const rect = cell.getBoundingClientRect();
+  const opts = { bubbles: true, cancelable: true, composed: true, clientX: rect.x + rect.width / 2, clientY: rect.y + rect.height / 2, pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 1 };
+  cell.dispatchEvent(new PointerEvent('pointerdown', opts));
+  cell.dispatchEvent(new PointerEvent('pointerup', { ...opts, buttons: 0 }));
+  cell.dispatchEvent(new MouseEvent('click', { ...opts, buttons: 0 }));
+  return true;
+}, emptyCell);
+report.readings.dispatchedDirectly = dispatched;
+await page.waitForTimeout(200);
+report.readings.notesAfterDispatch = (await readDom()).notes;
 const afterAddNote = await readDom();
 report.readings.selectedTrackAfter = await selectedTrack();
 report.readings.addedNoteAt = emptyCell;
@@ -449,6 +463,7 @@ if (asJson) {
   line("② state one (fresh project)", `undo=${r.stateOne.undoDisabled} redo=${r.stateOne.redoDisabled} tracks=${r.stateOne.tracks.length}`);
   line("③ after add track", `tracks=${r.afterAddTrack.tracks.length} undo=${r.afterAddTrack.undoDisabled} redo=${r.afterAddTrack.redoDisabled} action=${r.afterAddTrack.undoAction}`);
   line("④ after add note", `notes=${r.afterAddNote.notes} action=${r.afterAddNote.undoAction}`);
+  line("   direct dispatch", `dispatched=${r.dispatchedDirectly} notesAfter=${r.notesAfterDispatch}`);
   line("   selected track", `before=${JSON.stringify(r.selectedTrackBefore)} after=${JSON.stringify(r.selectedTrackAfter)}`);
   line("⑤ after change length", `bars=${r.afterLength.bars} action=${r.afterLength.undoAction}`);
   line("⑥ after Ctrl+Z ×3", `tracks=${r.afterUndo3.tracks.length} bars=${r.afterUndo3.bars} undo=${r.afterUndo3.undoDisabled} redo=${r.afterUndo3.redoDisabled}`);
