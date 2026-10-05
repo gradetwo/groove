@@ -11285,3 +11285,22 @@ export async function prepareArrangementAudioLanes(input: {
   ⇒ ⭐ 教训 96 ✓：⭐ **`mv` 到已存在的路径会覆盖** ✗ ⇒ ⭐ 删旧文件用 `rm` ✓，改名只在**目标不存在**时用 ✓
 ```
 
+**⭐ 迁移 ③ 的最后两处性质（2026-10-05 21:28 ✓，已量 ✓）**：
+```
+· ⭐ **① 三个 `handler(...)` 用例在测什么 ✓**（`budgetHonesty.test.ts:239–259` ✓）：
+  形式 ✓：⭐ `toolNamed("render_audio").handler({ genreId: "chicago-house" }, { progress })` ✓
+  断言 ✓：⭐ 桩抛 `stub: this test does not start a browser` ✓ ⇒ ⭐ `renderCalls` 长 1 ✓ ⇒ ⭐ 该次调用的 `progress`
+  字段 **等于／不存在** ✓（⭐ 三种上下文：有 reporter ✓／`{}` ✓／无 ✓）
+  ⇒ ⭐ **含义 ✓**：⭐ 它们测的是 ⭐ **该工具如何把 reporter 传下去** ✓ ⇒ ⚠️ 改挂到 `render_arrangement` 时
+    ⭐ **必须确认 v2 工具用同样方式传** ✓（⭐ 若不同 ⇒ ⭐ 那是 ⭐ **v2 的能力缺口** ✓ ⇒ ⭐ **先补 v2** ✓ 再删 ✓ —— 铁律 ✓）
+  ⇒ ⭐ 也可能是 v2 **本来就传得对** ✓（⭐ 上轮失败原因未定 ✗）⇒ ⭐ **下一轮先跑一次单点实验** ✓（⭐ 只改这 3 个用例 ✓，
+    ⭐ 看 `renderCalls[0]` 实际是什么 ✓）⇒ ⭐ 这是**最小判定实验** ✓
+· ⭐ **② 预算文案 ✓**：⭐ 判据在 `src/test/renderSongBudgetGuard.test.ts:47` ✓ 期望含
+  `render one section with render_audio` ✓；⚠️ **但代码里搜不到该短语** ✗ ⇒ ⭐ 它由多行拼装 ✓
+  ⇒ ⭐ 产生处是 ⭐ `mcp/registrySong.ts:383` 一带的预算句子 ✓ ⇒ ⭐ **下一轮读该段全文** ✓ 再**成对改**（代码＋判据 ✓）
+  ⇒ ⚠️ 或者：⭐ 该句**属于 v1 的 `render_song` 路径** ✓ ⇒ ⭐ 那它会随 ⭐ **迁移 ⑤（`registrySong` 整支处置）** 一起消失 ✓
+    ⇒ ⭐ 因此**可以先不动它** ✓，⭐ 只要**不在本轮删掉 `render_audio`** … ⚠️ 不行 ✗：⭐ 它等不到那时 ✓
+    ⇒ ⭐ 所以仍要**同批改** ✓
+· 📌 **本会话收尾 ✓**：⭐ 迁移 ③ 的**规格已完整** ✓（⭐ 5 条修法 ＋ 1 个最小判定实验 ✓）⇒ ⭐ 下一轮或新会话可完成 ✓
+```
+
