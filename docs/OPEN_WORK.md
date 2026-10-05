@@ -11660,3 +11660,27 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量不足 ✓）
 ```
 
+### 四百七十二、⚠️ **量到真缺陷：`export_groove` 伪造"arrangement"参数**（2026-10-05 22:42 ✓）
+
+```
+**⭐ 源码原文 ✓**（`mcp/registryFiles.ts:136–142` ✓）：
+  ⭐ `const arrangement = { clips, sections: song.sections, activeSlot: clips.A ? "A" : "B" }` ✓
+  ⭐ `  as unknown as Parameters<typeof exportProjectPackage>[2];` ✓
+  ⭐ `const pkg = validateGroovePackage(exportProjectPackage(project, APP_VERSION, arrangement));` ✓
+**⚠️ 三条问题 ✓**：
+  ① ⭐ **类型谎报** ✗：⭐ `as unknown as` ✓ —— ⭐ 类型检查被绕过 ✓ ⇒ ⭐ 它送进去的不是 `ArrangementV2` ✓
+  ② ⭐ **写出的"v2 包"其实是 v1 形状** ✗（⭐ 只有 `clips`／`sections`／`activeSlot` ✓）⇒ ⭐ **名不副实** ✓
+  ③ ⭐ **这正是业主禁止的"新老并存"** ✗ —— ⭐ 表面接 v2 参数 ✓，⭐ 实际塞 v1 形状 ✓
+  ⇒ ⭐ 并且它**解释了校验器为何要求 `clips` 与 `sections`** ✓（⭐ 那条规则是为这个假形状服务的 ✗）
+**⭐ 因此迁移 ② 的真实工作 ✓（比我上一版清单更准 ✓）**：
+  ⭐ ① `export_groove` 改接 ⭐ **`arrangementId`** ✓ ⇒ ⭐ `getMcpArrangement(arrangementId)` ✓ ⇒ ⭐ 传**真** `ArrangementV2` ✓
+    ⇒ ⭐ **删掉那个 `as unknown as`** ✓（⭐ 类型检查从此真正起作用 ✓）
+  ⭐ ② `exportProjectPackage` 的 `arrangement` 改**必需** ✓
+  ⭐ ③ `validateGroovePackage` ⭐ **删掉 `clips`／`sections` 要求** ✓ ⇒ ⭐ 改为**校验 v2 形状** ✓（⭐ tracks／notes ✓）
+  ⭐ ④ Web 的 v1 导出（`projectDb.ts:748` ✓）⭐ **补传编曲** ✓
+  ⭐ ⑤ `import_groove` ⭐ **建 arrangement** ✓ ⑥ 4 个工具改接 `arrangementId` ✓ ⑦ 8 个测试用例同步 ✓
+**⭐ 教训 102 ✓**：⭐ **`as unknown as` 是并存的气味** ✓ —— ⭐ 它常常正把一个旧形状塞进新参数 ✓
+  ⇒ ⭐ 迁移时**优先搜 `as unknown as`** ✓（⭐ 本会话两次遇到同形问题 ✓）
+**⏳ 未落码 ✗**（⭐ 余量不足 ✓）；⭐ 缺陷已定位到行 ✓
+```
+
