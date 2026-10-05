@@ -7,6 +7,11 @@
  * and it cannot see dynamic reach, so this is a screening budget and not a licence to delete. Three of the
  * twenty nine are believed to be features that were started and never wired up, and per the owner's decision
  * of the same day they stay where they are and stay recorded instead.
+ *
+ * 2026-10-05 08:07 — the owner asked for the two leftovers to go: `useLabelArt` (whose intended consumer,
+ * `VinylCanvas`, was retired with the phone shell) and `CATEGORY_SWATCH` (whose own comment says the phone
+ * shell needed exactly six swatches). They were confirmed to have no references anywhere, the file and the
+ * block were removed, and the reading fell from twenty nine to twenty seven, so the cap comes down with it.
  */
 import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
@@ -14,7 +19,7 @@ import { describe, expect, it } from "vitest";
 type Entry = { name: string; file: string; line: number };
 type Measure = { productionFiles: number; exports: number; dead: Entry[]; testOnly: Entry[] };
 
-const CAP = { dead: 29, testOnly: 76 };
+const CAP = { dead: 27, testOnly: 76 };
 
 function measure(): Measure {
   const out = execFileSync("node", ["scripts/check_dead_exports.mjs"], { encoding: "utf8" });

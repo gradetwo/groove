@@ -107,6 +107,10 @@ const PROPOSED = new Map([
     "Removed with the phone shell. Same line in OPEN_WORK.md §十三 as MobileTabBar; the record of what `mobileShell.test.tsx` covered.",
   ],
   [
+    "src/hooks/useLabelArt.ts",
+    "Removed 2026-10-05 on the owners decision (OPEN_WORK.md §371): it loaded the record labels artwork, its intended consumer VinylCanvas was retired with the phone shell, and a repo-wide search found no reference to it or to the LabelArt type. The line in §371 is the record of the removal, not a claim that the file exists.",
+  ],
+  [
     "src/components/sequencer/MobileTransportBar.tsx",
     "Removed with the phone shell. OPEN_WORK.md §十三 records which criteria (`mobileTransportBar`, `mobileSharedBottomRow`) tested it.",
   ],

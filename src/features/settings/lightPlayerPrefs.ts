@@ -3,8 +3,8 @@
  *
  * The vinyl screen's cost was its motion — the disc spin, the pulsing step dots, the sheen, the aura's breath — and a
  * phone that is hot, or a user who simply does not want it, should be able to say so. What this switch does **not** do is
- * change the sound: the canvas kept its clock, its beat slaves and its published tempo, and only the painting was skipped
- * (see `VinylCanvas`'s `lite` prop). A stopped picture is not a stopped transport.
+ * change the sound: the canvas kept its clock, its beat slaves and its published tempo, and only the painting was skipped.
+ * A stopped picture is not a stopped transport.
  *
  * ⚠️ **Every consumer of the preference went with the phone shell** (`docs/OPEN_WORK.md` §十三, commit `4dffdf0`):
  * `VinylCanvas` and its `lite` prop, the `LightPlayerToggle` switch, and the stylesheet rule that answered the class.

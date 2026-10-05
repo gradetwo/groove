@@ -8606,3 +8606,47 @@ problems: **[]** ✓
      第一次（`BalkanOddMeters` ✓）成功在于**先把两处整块取出对照** ✓；第二次我省了这一步、直接写替换 ✗ ⇒ 连错三次 ✓
    ⇒ 也说明 **"先量后改"里"量"也包括"量清楚插入点在谁的｛｝里"** ✗
 ```
+
+## 三百七十一、🧹 **业主决定执行：删掉两笔"裁剪残渣"（死代码 29 ⇒ 27，CAP 同步下调）**（2026-10-05 08:07 ✓）
+
+```
+**决定来源 ✓**：业主 2026-10-05 08:07 明确选择「**删 2 笔残渣**」（我一次只做一笔、可回退 ✓）
+**删前量 ✓（零引用证据 ✓）**：
+   · `src/hooks/useLabelArt.ts` ✓：全仓搜 `useLabelArt`／`LabelArt` ⇒ **除定义处外 0 命中** ✓ ⇒ ⭐ 整个文件删 ✓
+   · `CATEGORY_SWATCH`（`src/utils/genreArt.ts:37` ✓）：全仓 0 命中 ✓ ⇒ ⭐ 连同其文档注释共 **20 行**删 ✓
+   ⭐ 且那注释**自己写着**"the phone shell needs exactly six swatches" ✗ ⇒ 与 `§361` 的"手机版残渣"判定吻合 ✓
+**执行 ✓**：`git rm src/hooks/useLabelArt.ts` ✓ ＋ 删 `CATEGORY_SWATCH` 块 ✓
+**推导判据与读数 ✓**：
+   · 死代码 ✓：`production files 520 ｜ exports 2100 ｜` **dead 29 ⇒ 27** ✓／`testOnly 76` 未变 ✓
+     ⇒ ⭐ CAP 按"只许下降"改为 **dead: 27** ✓，头部说明记下**原因与决定来源** ✓
+   · 三项预算判据 ✓ 7/7 ✓｜`genreArt`／封面族 ✓ **16 文件 / 101 用例** ✓｜`check:skins=0` ✓｜docs `0/0` ✓
+   · ⭐ **全量单测 ✓ 626 文件 / 5233 用例全过** ✓（删除牵动 import 链 ⇒ 这是必要的确认 ✓）
+**同源尾巴一并清掉 ✓（只动注释 ✓）**：`VinylCanvas` 的**过时现在时注释 5 处** ✓ ——
+   `canvasPalette.ts` ×3 ✓（"`VinylCanvas` does exactly this" ⇒ **kick canvases** ✓ 等）／
+   `lightPlayerPrefs.ts` ✓（删指向已退役 `lite` prop 的括号 ✓）／`canvasPalette.test.tsx` ✓（⇒ "Skin-token readings" ✓）
+   ⚠️ **保留 2 处 ✓**：`lightPlayerPrefs.ts:10` 的"**消费方随手机壳一起走了**" ✓ 与判据文档里的记述 ✓
+     —— 它们是**准确的历史说明** ✗ 不该删 ✓；验证 ✓：判据 3 文件 / 20 用例 ✓、docs `0/0` ✓
+
+## 三百七十二、🧭 **4 笔"该接缺口"的接线点侦察（只读 ✓，供业主决定 ✓）**（2026-10-05 08:30 ✓）
+
+```
+| 缺口 | 已侦察到的接线点 ✓ | 成本／风险 |
+|---|---|---|
+| `useReducedMotion` | ⭐ 根组件 **`src/App.tsx`** ✓ 调用一次；先与 `useDeviceCapabilities.prefersReducedMotion`（**平行实现** ✓）合并；消费者已就位 ✓（`GalaxyView:1237` 读 `.reduced-motion` 类 ✓，`:411–417` 另直读 `prefers-reduced-motion` ✓） | 低／中（视觉需核对 ✓，§26 听感优先 ✓） |
+| `useCoverWarmupBothSizes` | 同族基础钩子用在 `ExploreListView:208` ✓；`GenreCover.tsx:38/63` 在缩略图／整图之间**二选一** ✓ ⇒ 适合**同屏两者都要**的视图 ✓（`HorizontalTimelineView` ✓／`TrackInspector` ✓／`GenreRail` ✓ 候选） | 低／低 |
+| `subscribePwaStatus` | ⭐ **已有 Settings 面板** ✓（`Header.tsx` 的 `onOpenSettings` ✓）＋ 已有 **Updates 弹窗** ✓ ⇒ 入口**就地可加** ✓ | 低／低 |
+| `promptInstallApp` | 同上 ✓（`deferredPrompt` 已在 `pwa.ts` 捕获 ✓，`initPwa()` 已在 `main.tsx:52` 跑 ✓） | 低／低 |
+**⭐ 结论 ✓**：**4 笔都能"就地接线"，无需新造界面** ✓ ⇒ 待业主一句话即可动手 ✓（一次一支 ✓、每笔配能红判据 ✓）
+
+### 371.1 📌 **删掉路径后，`check:docs:refs` 会拦 ✗ ⇒ 按仓库约定登记（已删除 ≠ 计划中 ✓）**（2026-10-05 08:36 ✓）
+
+```
+**当场被拦 ✓**：`npm run check:docs:refs` ⇒ `❌ 1 reference(s) name something that does not exist: docs/OPEN_WORK.md:8615 src/hooks/useLabelArt.ts` ✗
+   —— 即：**我在 `§371` 里写下了已删文件的路径** ✓，而该判据要求"**文档声称存在的文件必须存在**" ✓
+**它给的两条正路 ✓**：① 改掉引用 ✓；② **若文档是在记录"已不存在/尚未建"的东西 ⇒ 在 `scripts/check_doc_refs.mjs` 的声明表里登记并写明理由** ✓
+   （⭐ 它明确拒绝"靠散文猜意图" ✗：`Intent is deliberately not inferred from the prose` ✓ —— 两次都失败过 ✓）
+**做法 ✓**：按仓库既有惯例（`MobileTabBar.tsx` 等就是"随手机壳删除"的登记项 ✓）加一条 ✓：
+   `[ "src/hooks/useLabelArt.ts", "Removed 2026-10-05 on the owner's decision (§371) …" ]` ✓
+**结果 ✓**：`✅ Every file the docs claim exists does exist.` ✓ ⇒ `check:docs:refs=0` ✓、`check:docs=0` ✓、`tsc=0` ✓、`lint=0` ✓、三项预算判据 ✓
+⭐ **这正是"判据能红"的价值 ✓**：不是我去记得改文档 ✗，而是**判据把我拦住** ✓，并给出**唯一被接受的两条出路** ✓
+```

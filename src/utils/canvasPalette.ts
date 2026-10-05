@@ -6,9 +6,8 @@
  * A canvas is the one surface a stylesheet cannot reach. `ctx.fillStyle = "var(--m-gold)"` is not a
  * colour to the 2D context — it is an invalid value it silently ignores, leaving the *previous*
  * style in place — so a visualiser that wants to wear the active skin has to resolve the custom
- * property to a concrete colour itself and paint with that. `VinylCanvas` does exactly this for the
- * record's label; these helpers are the resolution half, factored out so the three kick canvases do
- * not each grow their own copy.
+ * property to a concrete colour itself and paint with that. The kick canvases do exactly this; these
+ * helpers are the resolution half, factored out so the three of them do not each grow their own copy.
  *
  * They are pure on purpose, which is also why they live in `src/utils` (the util layer) rather than
  * next to their callers: no React, no DOM, no knowledge that a skin — or the `--m-*` tokens one
@@ -28,7 +27,7 @@ export interface CanvasColor {
  * Parse a *concrete* CSS colour into its components, or `null` when it is not one.
  *
  * Accepted, because these are the forms a resolved custom property actually takes in this codebase:
- *   - `#rrggbb`, with or without the `#` (`VinylCanvas` reads `--m-gold` as a bare hex),
+ *   - `#rrggbb`, with or without the `#` (`--m-gold` is read as a bare hex),
  *   - `rgb(r g b)`, the space-separated form the skin stylesheets use,
  *   - `rgb(r, g, b)` and `rgba(r, g, b, a)`, the comma forms the older literals use,
  *   - the space/slash alpha form (`rgb(r g b / a)`).
@@ -43,7 +42,7 @@ export function parseCanvasColor(value: string | null | undefined): CanvasColor 
   const text = value.trim();
   if (!text) return null;
 
-  // `#rrggbb` — the optional `#` is the `VinylCanvas` convention.
+  // `#rrggbb` — the optional `#` is the skin-token convention.
   const hex = /^#?([0-9a-f]{6})$/i.exec(text);
   if (hex) {
     const packed = parseInt(hex[1], 16);

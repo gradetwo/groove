@@ -27,7 +27,7 @@ describe("parseCanvasColor", () => {
   it("parses the hex form a resolved token usually takes", () => {
     expect(parseCanvasColor("#f5b73d")).toEqual({ r: 245, g: 183, b: 61, a: 1 });
     expect(parseCanvasColor("#F5B73D")).toEqual({ r: 245, g: 183, b: 61, a: 1 });
-    // `VinylCanvas`'s readings can arrive without the hash, and tokens can arrive with whitespace.
+    // Skin-token readings can arrive without the hash, and tokens can arrive with whitespace.
     expect(parseCanvasColor("  f5b73d ")).toEqual({ r: 245, g: 183, b: 61, a: 1 });
   });
 
