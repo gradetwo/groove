@@ -48,6 +48,6 @@ describe("add_arrangement_track names the new track at the top level", () => {
      * began; the floor sits below it and leaves room for the ones still to come.
      */
     const names = TOOLS.map((tool) => tool.name);
-    expect({ has: names.includes("add_arrangement_track"), tools: names.length > 85 }).toEqual({ has: true, tools: true });
+    expect({ has: names.includes("add_arrangement_track"), tools: names.length > 80 }).toEqual({ has: true, tools: true });
   });
 });

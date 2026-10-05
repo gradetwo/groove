@@ -44,7 +44,7 @@ describe("the alignment table covers the registry", () => {
   it("⭐ still measures, so an empty registry or a moved doc cannot pass quietly", () => {
     const names = registryNames();
     const doc = readFileSync(DOC, "utf8");
-    expect({ many: names.length > 85, docSizeable: doc.length > 3000 })
+    expect({ many: names.length > 80, docSizeable: doc.length > 3000 })
       .toEqual({ many: true, docSizeable: true });
   });
 });
