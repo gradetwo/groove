@@ -13709,3 +13709,31 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+**⭐ 确认：第五处能力缺口 ✓（2026-10-06 03:14 ✓）**：
+```
+**⭐ 证据 ✓**：⭐ `maxDurationSec` ⭐ 全仓**只**出现在 ⭐ `mcp/registrySong.ts` ✓：
+  ⭐ `:273` ✓（⭐ schema ✓）｜⭐ `:293` ✓（⭐ 读它做预算 ✓）｜⭐ `:298` ✓（⭐ 拒绝语：⭐
+    "⭐ this song is about Ns and maxDurationSec is Ms — shorten the arrangement, raise the …" ✓）
+  ⇒ ⭐ **`render_arrangement` 没有它** ✗ ✓
+**⭐ 而它保护的正是 ✓**：⭐ "⭐ **先拒答，不要挂住**" ✓ —— ⭐ 业主报告里最在意的那条 ✓
+  ⇒ ⚠️ ⭐ 因此 ⭐ 退 `render_song` 会**丢掉**这条保护 ✗ ⇒ ⭐ **不能退** ✗
+**⭐⭐ 于是 ⑤ 的结论（更正后 ✓）**：
+  | ⭐ 工具 ✓ | ⭐ 判定 ✓ | ⭐ 缺口 ✓ |
+  |---|---|---|
+  | ⭐ `set_lane_slots` ✓ | ✅ 已退 ✓ | — ✓ |
+  | ⭐ `duplicate_section` ✓ | ✅ 已退 ✓ | — ✓ |
+  | ⭐ `set_tempo` ✓ | ✅ 已退 ✓ | — ✓ |
+  | ⭐ `set_clip` ✓ | ✅ 已退 ✓ | — ✓ |
+  | ⭐ `get_song` ✓ | ✅ 已退 ✓ | — ✓ |
+  | ⭐ `undo_song` ✓ | ✅ 已退 ✓ | — ✓（⭐ 且移植出 `undo_arrangement` ✓） |
+  | ⭐ `add_section` ✗ | ⚠️ **暂留** ✓ | 3 项 ✓（⭐ 力度斜坡／`fill`／移调 ✓） |
+  | ⭐ `create_song` ✗ | ⚠️ **暂留** ✓ | 4 项 ✓（⭐ 流派播种／名字／swing／resolution ✓） |
+  | ⭐ `render_song` ✗ | ⚠️ **暂留** ✓ | 1 项 ✓（⭐ `maxDurationSec` 的"⭐ 先拒答" ✓） |
+**⭐ 工具数 ✓**：⭐ **87** ✓（⭐ 从 95 起 ✓：⭐ 迁移 ③ 退 2 ✓、⑤ 退 6 ✓、⭐ 新增 3 ✓（`collect_debug_bundle` ✓／
+  `export_arrangement_ableton` ✓／`undo_arrangement` ✓）⇒ ⭐ 95 − 8 ＋ 3 ＝ **90** ✗ ⇒ ⚠️ ⭐ 需与登记表核对 ✓
+  （⭐ 上一轮 `check:mcp` 读数是 **87 tools** ✓ ⇒ ⭐ 以**读数**为准 ✓）
+**⭐⭐ ⑤ 的收尾 ✓**：⭐ **六个已退 ＋ 三个暂留** ✓ ⇒ ⭐ 暂留的三个写进 `needs` ✓（⭐ §533 ✓ ＋ ⭐ 新增 4 ＋ 1 ✓）
+  ＋ ⭐ `docs/MCP.md` 三行标"⭐ **暂留**" ✓ ＋ ⭐ 回填对齐表 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
