@@ -26,4 +26,10 @@ describe("validate_arrangement", () => {
   it("⭐ says that a cold cache still pays for the fetch", () => {
     expect({ caveat: /cold one still pays for the fetch/i.test(block) }).toEqual({ caveat: true });
   });
+
+  it("answers what a render will cost, from the constants the project measured", () => {
+    const source = readFileSync("mcp/registryArrangement.ts", "utf8");
+    expect(source).toContain("renderEstimate: estimateRenderCost(");
+    expect(source).toContain('from "./render/estimate"');
+  });
 });

@@ -9,6 +9,8 @@ import { z } from "zod";
 import { describeMcpArrangement } from "./arrangement";
 import { failure } from "./toolKit";
 import { validateArrangement } from "./render/worker";
+import { estimateRenderCost } from "./render/estimate";
+
 import type { ToolDefinition } from "./toolKit";
 
 import { createMcpArrangement, getMcpArrangement, summariseArrangement } from "./arrangement";
@@ -1371,10 +1373,13 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
           ...(args.sampleRate === undefined ? {} : { sampleRate: args.sampleRate }),
           ...(args.channels === undefined ? {} : { channels: args.channels }),
         } as never);
+        const forEstimate = getMcpArrangement(String(args.arrangementId));
+        const estimateBars = forEstimate?.bars ?? Math.max(1, Math.ceil((flattened.pattern.totalSteps ?? 16) / 16));
         return {
           ...report,
           arrangementId: String(args.arrangementId),
           passes,
+          renderEstimate: estimateRenderCost({ bars: estimateBars, bpm: forEstimate?.bpm ?? 120 }),
           totalSteps: flattened.pattern.totalSteps,
         };
       } catch (error) {
