@@ -35,6 +35,10 @@ Written from a session that produced five red builds and eleven measured lessons
     sixteen added lines, and four pushes went red behind it. When a count already has a criterion derived from it, that
     criterion is the instrument; the script under it is a part, and running the part is how a green reading gets reported
     for a red tree. The same shape as reading a pipe's exit code instead of the gate's, one layer further in.
+    **And one change to a text or a size usually has more than one criterion derived from it.** An inline component met
+    a line-count bucket, sixteen added lines met a pinned file size, and a single sentence met four prose suites; each
+    was found in CI rather than before the push. Ask which numbers the edit moves, then run every criterion that watches
+    them, by name.
 
 ## Reach outside before you invent
 
