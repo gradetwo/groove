@@ -94,7 +94,7 @@ const CAPABILITIES: Capability[] = [
   {
     surface: "HardwareConsoleView",
     feature: "play the console's controls while it sounds",
-    tools: ["set_lane_slots", "apply_pattern_ops"],
+    tools: ["apply_pattern_ops"],
     prompts: ["compose_groove"],
     /**
      * The console is a **performance surface**: its faders write to the live engine, and the state that matters afterwards is the pattern the engine is playing, which the listed tools do reach. A tool that moved a fader mid-render would be a tool for nothing.
@@ -109,7 +109,7 @@ const CAPABILITIES: Capability[] = [
   {
     surface: "VerticalTimelineView",
     feature: "the same arrangement, stacked",
-    tools: ["get_song", "set_clip", "set_lane_slots", "add_section"],
+    tools: ["get_song", "set_clip", "add_section"],
   },
   {
     surface: "KickAnatomyView",
@@ -146,7 +146,7 @@ const CAPABILITIES: Capability[] = [
   {
     surface: "StudioView",
     feature: "the pattern studio: lanes, clips, inserts, mixing",
-    tools: ["get_pattern", "set_lane_slots", "apply_pattern_ops", "validate_pattern", "pattern_statistics", "set_tempo"],
+    tools: ["get_pattern", "apply_pattern_ops", "validate_pattern", "pattern_statistics", "set_tempo"],
     prompts: ["compose_groove", "compose_with_examples"],
   },
   {

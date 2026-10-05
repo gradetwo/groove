@@ -227,7 +227,7 @@ complaint was that the names have to be guessed, so the names are here — and e
 | 5 | `set_tempo` | tempo points at whole bars, `jump` or `linear` — how a multi-movement piece stops being one grid |
 | 6 | `render_song` | bounce it; check `secondsEstimate` first and use `maxDurationSec` to refuse rather than hang |
 
-Two companions worth knowing at the same point: `set_lane_slots` binds a lane to its own clip across **many** sections in one all-or-nothing call (the matrix
+**Being retired with the older model** (`set_lane_slots` bound a lane to its own clip across many sections; in v2 a track's steps come from `set_arrangement_track_steps`), and the other companion binds a lane (the matrix
 rather than 72 requests), and `analyze_audio` is the ear — it returns the energy curve, loudness, true peak and spectral balance for a rendered file, which is
 what closes the write-render-listen-revise loop.
 
@@ -257,7 +257,7 @@ one has to satisfy, because a decision whose criterion lives only in a conversat
 |---|---|---|
 | **non-ASCII song titles** must not collide | a title with no ASCII in it gets a stable token derived from itself; ASCII names are byte-identical and an unnamed song is still `master` | `src/test/songSlug.test.ts` — five cases, including the pair of Chinese titles that exposed it |
 | **lane multiplicity**: keep the eight `track_id`s as roles, add optional `laneId` | addressed by `laneId` first, kind as fallback, so `{track_id: "lead", laneId: "lead-2"}` is a distinct lane that everything naming `"lead"` still ignores | `laneIdAddressing.test.ts` (four cases) and `laneIdFlatten.test.ts`, which also proves `validatePattern` accepts two lanes of a kind — the rule that rejected every such song |
-| **lane slots over MCP**: a batch op and a tool | `set_lane_slots`: 72 cells in one all-or-nothing call, reporting the slots the edited sections share | `setSectionLaneSlotsBatch.test.ts` (deep-equality with N single calls, transaction by object identity, the 72-cell case) and `laneSlotsStore.test.ts` |
+| **lane slots over MCP**: a batch op and a tool | **retired into `set_arrangement_track_steps`**: the older tool wrote 72 cells in one all-or-nothing call and reported the slots the edited sections share | `setSectionLaneSlotsBatch.test.ts` (deep-equality with N single calls, transaction by object identity, the 72-cell case) and `laneSlotsStore.test.ts` |
 | **a tempo track** for multi-movement pieces | `tempoTrack` points at whole bars, `jump` or `linear`, absent meaning byte-identical; `set_tempo` writes it, validated rather than filtered; the renderer reads it while scheduling | `tempoMap.test.ts` (absent, jump ratio, per-bar interpolation, unreadable points ignored), `tempoCarry.test.ts` (the map travels, additively), `tempoStore.test.ts`, and `tempoSeamWiring.test.ts` for the branch that keeps the no-map expressions literal |
 | **audio tracks and SVS** | audio tracks scoped in `docs/AUDIO_TRACKS_AND_SVS_PLAN.md`; **SVS reserved and empty**, exposed so the absence is discoverable | `check:mcp` asserts the stub says it is reserved and validates its arguments |
 

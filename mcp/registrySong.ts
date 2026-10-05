@@ -453,59 +453,6 @@ export const SONG_TOOLS: ToolDefinition[] = [
   },
   {
     /**
-     * Owner decision 3b, the tool half: the whole lane matrix in one call.
-     *
-     * The batch is **all-or-nothing** — an entry naming a section, a lane or a clip the song does not have leaves the song untouched and says which entry was
-     * wrong — because a half-applied matrix is the failure the fourth report was worried about, and because a caller that has to check which half landed will
-     * simply send the whole thing again.
-     */
-    name: "set_lane_slots",
-    title: "Set a lane's own clip across many sections at once",
-    description:
-      "Bind one lane to its own clip for several sections in a single call — the 9-movement x 8-lane matrix rather than 72 requests. All-or-nothing: if any entry names a section, a lane or a clip this song does not have, nothing is applied and the reply lists what was wrong. Reports which slots the edited sections end up sharing, because a clip slot is song-global. Use `null` for a slot to clear an override back to the section's own.",
-    readOnly: false,
-    inputSchema: {
-      songId: z.string().describe("the id create_song returned"),
-      edits: z
-        .array(
-          z.object({
-            sectionId: z.string(),
-            trackId: z.string().max(40),
-            slot: clipSlotSchema.nullable(),
-          })
-        )
-        .min(1)
-        .max(128)
-        .describe("one entry per cell; `slot: null` clears the override"),
-    },
-    handler: (args) => {
-      try {
-        const result = setMcpLaneSlots(
-          String(args.songId),
-          args.edits as Array<{ sectionId: string; trackId: string; slot: ClipSlot | null }>
-        );
-        if (result.problems.length) {
-          return failure(`nothing was applied — ${result.problems.join("; ")}`);
-        }
-        return {
-          ...result.summary,
-          applied: result.applied,
-          ...(result.sharedSlots.length
-            ? {
-                sharedSlots: result.sharedSlots,
-                note: `these slots are played by more than one section, so a later set_clip on them changes every one of those sections: ${result.sharedSlots
-                  .map((entry) => `${entry.slot} (${entry.sections} sections)`)
-                  .join(", ")} — call make_unique on a section first if only that one should differ`,
-              }
-            : {}),
-        };
-      } catch (error) {
-        return failure((error as Error).message);
-      }
-    },
-  },
-  {
-    /**
      * P1 of the composer's report: `setMcpClip` existed and no tool reached it, so a song could only ever have clip A.
      *
      * This is the minimum for the standard verse/chorus workflow — write a variation, point a later section at it — instead of
