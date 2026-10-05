@@ -14001,3 +14001,21 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 配方到行 ✓
 ```
 
+**⭐ 播种的最后材料 ✓（2026-10-06 03:34 ✓，⭐ 零未知 ✓）**：
+```
+**⭐ 三处 import ✓（⭐ `mcp/arrangement.ts` 目前都没有 ✓）**：
+  ⭐ `findGenre` ✓ —— ⭐ `mcp/library.ts:43` ✓：⭐ `findGenre(id: string): Genre | undefined` ✓
+    ⇒ ⭐ **未知流派返回 `undefined`** ✓ ⇒ ⭐ 上一轮那条"⭐ 要小心"**解除** ✓（⭐ 可安全处理 ✓）
+  ⭐ `patternFromGenre` ✓ —— ⭐ `src/data/genreMix.ts:696` ✓
+  ⭐ `projectSongToV2` ✓ —— ⭐ `src/data/arrangementProjection.ts:49` ✓
+**⭐ ④ 的分支 ✓（⭐ 取代现有 `const seeded = …` 三元 ✓）**：
+  ⭐ 若 ⭐ `input.genreId` ✓：⭐ `const genre = findGenre(input.genreId);` ✓
+    ⭐ ⇒ ⭐ 若找不到 ⭐ ⇒ ⭐ **抛错并列出可用流派** ✓（⭐ 与 `templateId` 的处理同形 ✓）
+    ⭐ ⇒ ⭐ 否则 ⭐ `createArrangementFromSeed = projectSongToV2({ id: songId, clips: { A: patternFromGenre(genre) } })` ✓
+  ⭐ 否则 ⭐ 保持现状 ✓（⭐ `templateId` 那条 ✓ 或 ⭐ 空编曲 ✓）
+**⭐ 判据 ✓（能红 ✓）**：⭐ ① ⭐ 带真实流派（`chicago-house` ✓）建 ⇒ ⭐ `summary.tracks` 非空 ✓
+  ⭐ ② ⭐ 带**不存在的流派** ⇒ ⭐ 失败回包含"unknown genreId" ✓
+  ⭐ ③ ⭐ 不带 ⇒ ⭐ 空编曲（⭐ 现状不变 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 下一轮一次落全（⭐ 写盘一次 ✓／锚在单行字段之后 ✓）
+```
+
