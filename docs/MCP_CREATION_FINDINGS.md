@@ -73,3 +73,27 @@
    6. **不存在的能力要说出来** ✓：人声合成 ✗ ⇒ 用器乐代唱并**在交付里写明** ✓
    7. **交付自描述** ✓：绝对路径 ＋ 字节数 ＋ 关键读数 ＋ **未测项** ✓
 ```
+
+## 六、⭐ 实测后的修正（2026-10-05 19:45 ✓，覆盖上面表格里的两处估算）
+
+```
+⭐ **第 1 条 `dryRun`：切面现成 ✓，代价要说清 ✓**
+   · 切面 ✓：`prepareOfflineAudioLanes`（`src/audio/offlineAudioLanes.ts:617` ✓）——
+     文档原文 *"Resolve and fetch every recording the plan names … answer whether the render is ready"* ✓，
+     且 *"Resolves rather than rejects … the sentences it needs to show a person are in problems"* ✓
+     ⇒ ⭐ 即 `dryRun` ＝ **plan ＋ 解析 ＋ 取采样，不合成、不落盘** ✓，**它已经返回 problems** ✓
+     （⭐ 还已按"录音"去重 ✓，所以 total 是"人能认得的数" ✓）
+   ⚠️ **诚实口径** ✓：它会**取每条录音**（fetch ✓）⇒
+     ⭐ **热缓存／同 session ⇒ 秒级** ✓；⚠️ **冷缓存 ⇒ 仍受"取采样"支配** ✗
+     （但 ⭐ **省掉合成** ✓（整曲 ≈ **2 分钟/轨** ✗）＋ **不产生文件** ✓）
+     ⇒ ⭐ 所以上面第 1 条写的"< 1 s"必须加这个条件 ✓，不能当无条件承诺 ✗
+   ⭐ **判据（能红 ✓）**：ⓐ 报的 `problems` 与**同 arrangement 正式渲染一致** ✓（因为走**同一段** preparation ✓）
+     ⓑ **不产生任何文件** ✓（目录前后对比 ✓）ⓒ 热缓存下耗时**远小于**渲染 ✓（同口径读数 ✓）
+
+⭐ **第 2 条 region 音域：不是"只是没暴露"** ✗ ⇒ **估算从"中"上调为"中大"** ✗
+   · ⭐ 实测 ✓：全仓搜 `lokey`／`hikey`／`pitch_keycenter`（作**音域**用 ✓）⇒ **没有解析** ✗；
+     命中的只有 **`sw_lokey`／`sw_hikey`**（开关触发 ✓，`src/audio/sfz/keyswitch.ts` ✓）
+     与 **`xfin_lokey`**（滤波器键跟踪 ✓，`mcp/sfzInspect.ts:44` ✓）⇒ ⭐ **都不是音的上下限** ✓
+   ⇒ ⭐ 要**先在加载器里解析出 region 音域** ✓（入参／存储／工具／判据 **四处以上** ✓），再暴露 ✓
+   ⚠️ 但现状**是诚实的** ✓：`mcp/arrangement.ts:889` 已写明 *"no tool exposes an SFZ's keyranges yet"* ✓
+```
