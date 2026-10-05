@@ -11187,3 +11187,25 @@ export async function prepareArrangementAudioLanes(input: {
 · ⏳ **下一步 ✓**：⭐ 按此清单**一次删净** ✓（⭐ 门红即回退 ✓ —— 教训 94 ✓），再回填对齐表 ✓
 ```
 
+**⭐ 迁移 ③ 删除的第一次尝试（2026-10-05 21:20 ✓，已回退 ✓ 树脏 0 ✓）**：
+```
+· ⭐ 做法 ✓：python 按"块边界"删工具 ⇒ ⚠️ ⭐ 只删到 **`render_audio`**（`:121–163` ✓）✗
+  ⇒ ⭐ **`render_preview_clip` 没删到** ✗ —— ⭐ 原因：⭐ 我的探测要求"`{` 的**下一行**是 `name:`" ✗，
+    而首元素的写法不同 ✓（前面有注释块 ✓）⇒ ⭐ 下次要**按 `name:` 反查块起止** ✓，不要按 `{` 猜 ✓
+· ⭐ 读数 ✓：`tsc=**0**` ✓（⭐ 删掉一个工具不破坏类型 ✓）｜`check:mcp` **红** ✗｜判据组 **红** ✗
+· ⭐ **失败清单（精确 ✓，下一轮照此改 ✓）**：
+  · ⭐ `check:mcp` **5 项** ✓（⚠️ 全在 `render_audio` ✓）：
+    `tool declared: render_audio` ✓／`render_audio declares its format enum` ✓／
+    `states the 900 s render budget` ✓／`says the client's timeout is the other ceiling` ✓／
+    `gives page loading its own 120 s allowance` ✓
+  · ⭐ `src/test/mcpCopy_render_audio.test.ts` ⇒ **整文件失败** ✓（⭐ 应删 ✓）
+  · ⭐ `src/test/budgetHonesty.test.ts` ⇒ **多处失败** ✓：⭐ 它**读注册源码文本**做断言 ✓
+    （`states the client's timeout…` ✓／`says what drives the duration…` ✓／`names the two things…` ✓／
+      `passes this request's reporter into renderAudio` ✓／`drops the reporter when…` ✓／
+      `sends notifications/progress…` ✓）⇒ ⭐ 删工具后这些句子**找不到载体** ✓ ⇒ ⭐ 要把断言**改挂到 v2 工具** ✓
+  · ⚠️ `mcpCapability`／`mcpHeadlessRouting`／`mcpArrangementPreview`／`mcpTools`：⭐ 本轮**未报失败** ✓
+    ⇒ ⭐ 说明它们只是**提到**名字 ✓（⭐ 改文案即可 ✓，不是结构性依赖 ✓）
+· 📌 **结论 ✓**：⭐ 真正的耦合点是 ⭐ **`budgetHonesty`（读源码文本 ✓）＋ `mcpCopy_*`（拷贝判据 ✓）＋ `check_mcp` 的 5 项** ✓
+  ⇒ ⭐ 删除必须**同批**改这三处 ✓；⭐ `render_preview_clip` 的删除**单独一轮**更稳 ✓
+```
+
