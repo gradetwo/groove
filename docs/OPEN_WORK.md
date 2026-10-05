@@ -11374,3 +11374,48 @@ export async function prepareArrangementAudioLanes(input: {
     （⭐ 本轮我在**未确认真实性**的情况下就把它当成红门并推了 ✗ —— ⭐ 推送本身无过 ✓，⭐ 但判断有误 ✓）
 ```
 
+### 四百六十三、⭐ **业主确认：v2 包形状以 arrangement 为主体（2026-10-05 21:37 ✓）**
+
+```
+**业主原话 ✓**：⭐ "**v2 包形状以 arrangement 为主体**" ✓
+⇒ ⭐ **迁移 ② 的前提已定 ✓**：⭐ `.groove` v2 包 ⭐ **以 arrangement 为主体** ✓ —— ⭐ 存 `tracks` ✓／`notes` ✓／
+  `takes` ✓／`bars` ✓／`tempoMap` ✓；⭐ **不存** `clips` ✗／`slots` ✗／`sections` ✗
+  ⇒ ⭐ 连带 ✓：⭐ `import_groove` **建 arrangement** ✓（不建 song ✗）；⭐ `export_groove` 接 `arrangementId` ✓；
+    ⭐ `export_ableton` 接 `arrangementId` ✓（去 `songId` ✗ 与 `pattern` ✗）；
+    ⭐ `export_midi` 与 `export_arrangement_midi` **若同义则合并** ✓
+  ⇒ ⭐ 落在数据层 ✓：⭐ `projectDb` 的建包／读包／校验 ✓ ＋ `flattenSong` ✗／`ClipSlot` ✗ 的退场 ✓
+    ⇒ ⭐ 与迁移 ⑦（v1 数据模型）**同批** ✓
+```
+
+### 四百六十四、⚠️ **量到一个真缺陷：`check_mcp` 的渲染工具列表有重复项**（2026-10-05 21:37 ✓）
+
+```
+**位置 ✓**：⭐ `scripts/check_mcp.mjs:169` ✓
+**原文 ✓**：⭐ `const RENDER_TOOLS = ["render_arrangement" ✓, "render_song" ✓, "render_arrangement" ✗, "render_arrangement_stems" ✓, "render_preview_clip" ✓];`
+⇒ ⚠️ ⭐ **`render_arrangement` 出现两次** ✗ —— ⭐ 这是我上一批把 `"render_audio"` **改名**所留的**残留** ✓
+  ⇒ ⚠️ ⭐ 说明该处**正确动作也是"删表项"** ✗（⭐ 我当时按"改名"处理 ✗）
+  ⇒ ⭐ 它**没被门抓住** ✗（⭐ `check:mcp` **123 项全过** ✓）—— ⭐ 因为该列表只用于**取并集／遍历** ✓，
+    ⭐ **重复项不改变结果** ✓ ⇒ ⚠️ ⭐ **这是一个"判据看不见的重复"** ✓
+  ⇒ ⭐ 教训 99 ✓：⭐ **改名成列表里已有的项 ⇒ 造出重复且门不报** ✗ ⇒ ⭐ 改名前**先查该名字是否已在列表里** ✓
+**⭐ 修法 ✓**：⭐ 删掉重复的那一项 ✓（⭐ 一行 ✓）
+```
+
+**⭐ 迁移 ③ 第二步（删 `render_preview_clip`）的按位置分类 ✓（2026-10-05 21:37 ✓）**：
+```
+| 位置 ✓ | 文件与行 ✓ | ⭐ 动作 ✓ |
+|---|---|---|
+| ⭐ 工具块 ✓ | `mcp/registryRender.ts:33` ✓ | **删块** ✓ |
+| ⭐ 拷贝判据 ✓ | `src/test/mcpCopy_render_preview_clip.test.ts` ✓ | ⭐ **删文件** ✓（⚠️ 先查 v2 是否已有对应 ✓）|
+| ⭐ 参数化列表 ✓ | `budgetHonesty.test.ts:90` ✓ | **删表项** ✓ |
+| ⭐ 参数化列表（已重复 ✗） | `check_mcp.mjs:169` ✓ | **删杂项** ✓（⭐ 即上文缺陷 ✓）|
+| ⭐ 列表 ✓ | `mcpHeadlessRouting.test.ts:102` ✓ | **删表项** ✓ |
+| ⭐ `switch` 的 case ✓ | `mcpHeadlessRouting.test.ts:145` ✓ | ⭐ **删该行** ✓（⚠️ 先看是否共体 ✓）|
+| ⭐ 能力清单 ✓ | `mcpCapability.test.ts:90` ✓／`:171` ✓ | ⭐ **删表项** ✓ |
+| ⭐ 句子常量 ✓ | `mcp/render/budget.ts:4` ✓／`:139` ✓／`:145` ✓ | ⭐ **改文案** ✓（⭐ `:139` 是**导出常量** ⇒ ⚠️ 查是否还有引用 ✓）|
+| ⭐ 注释 ✓ | `mcpHeadlessRouting:5` ✓／`:223` ✓／`budget.ts:4` ✓／`probe_*` ✓ | 改文案 ✓（⭐ 探针脚本可留 ✓）|
+| ⭐ 探针 ✓ | `scripts/probe_*.mjs` 4 处 ✓ | ⚠️ ⭐ **要改** ✓（⭐ 否则探针调用已删工具 ✗）|
+· ⚠️ ⭐ **`budget.ts:139` 的导出常量 `PREVIEW_DEFAULT_CLAUSE`** ✓ ⇒ ⭐ 它文本里写着 `render_preview_clip` ✓
+  ⇒ ⭐ 若它在 v2 预览工具的描述里用 ✓ ⇒ ⭐ **要改成 `render_arrangement_preview`** ✓
+· ⏳ **未落码 ✗**（本轮余量不足 ✓）；⭐ 分类已完整 ✓
+```
+
