@@ -14693,3 +14693,20 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 除示例 ✓）
 ```
 
+**⭐ 渲染探针的改接配方 ✓（2026-10-06 04:28 ✓）**：
+```
+**⭐ 现状 ✓（`probe_mcp_render_scratch.mjs:196–210` ✓）**：
+  ⭐ `create_song { genreId, bars, label: "probe" }` ✗ ⇒ ⭐ `song.songId ?? song.id` ✗ ⇒
+  ⭐ `callArgs = { songId, format: "wav", maxDurationSec: 1800 }` ✗ ⇒ ⭐ 再调 ⭐ `render_song` ✗
+| ⭐ 处 ✓ | ⭐ 改为 ✓ |
+|---|---|
+| ⭐ 建台 ✓ | ⭐ `create_arrangement { genreId, blankKind: "synth" }` ✓ ＋ ⭐ **`set_arrangement_bars { bars }`** ✓（⭐ v2 的 `create_arrangement` **不收 `bars`** ✗） |
+| ⭐ 取 id ✓ | ⭐ **`created.arrangementId`** ✓（⭐ v2 的编曲回包直接给 ✓） |
+| ⭐ 报错文字 ✓ | ⭐ "⭐ no arrangementId in create_arrangement reply**" ✓ |
+| ⭐ 渲染参数 ✓ | ⭐ `{ arrangementId, format, maxDurationSec }` ✓（⭐ v2 **已有 `maxDurationSec`** ✓ —— §172 ✓ ✓） |
+| ⭐ 渲染调用 ✓ | ⭐ `render_song` ✗ ⇒ ⭐ **`render_arrangement`** ✓ |
+**⭐ 一处发现 ✓**：⭐ v2 的 `create_arrangement` ⭐ **不收 `bars`** ✗ ⇒ ⭐ 建台要**两步** ✓
+  （⭐ 与 §211 记的"⭐ 改接需 ⭐ `arrangementId` ＋ ⭐ `trackId`"同类 ✓ —— ⭐ v2 把"⭐ 建"⭐ 与"⭐ 设"⭐ 分开 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 下一段按上表落 ✓（⭐ 六处 ✓，⭐ 都在一个脚本里 ✓ 无门风险 ✓）
+```
+
