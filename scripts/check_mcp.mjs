@@ -397,11 +397,23 @@ try {
   );
   check("set_clip gives a song a second clip", (withClip.clips ?? []).includes("B"), JSON.stringify(withClip.clips ?? []));
 
-  const readBack = payload(await client.request("tools/call", { name: "get_song", arguments: { songId: song.songId } }));
+  /**
+   * ⭐ **The reader, on the model that is staying.** This used to read the older song back through `get_song`, which is what
+   * the retirement of that tool needs replaced first: a fresh arrangement, a second track as its second part, and the reply
+   * naming tracks while the older fields are absent rather than merely unused.
+   */
+  const v2Probe = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "synth" } }));
+  payload(
+    await client.request("tools/call", {
+      name: "add_arrangement_track",
+      arguments: { arrangementId: v2Probe.arrangementId, kind: "sampler", name: "chorus" },
+    })
+  );
+  const v2Read = payload(await client.request("tools/call", { name: "get_arrangement", arguments: { arrangementId: v2Probe.arrangementId } }));
   check(
-    "get_song reads the arrangement back with its clips",
-    readBack.clips?.A && readBack.clips?.B && (readBack.sections ?? []).length === 2,
-    `clips=${Object.keys(readBack.clips ?? {}).join(",")} sections=${(readBack.sections ?? []).length}`
+    "get_arrangement reads an arrangement back, and the older fields are absent rather than unused",
+    (v2Read.tracks ?? []).length === 2 && v2Read.clips === undefined && v2Read.sections === undefined,
+    `tracks=${(v2Read.tracks ?? []).length} clips=${String(v2Read.clips)} sections=${String(v2Read.sections)}`
   );
 
   const grooveArrangement = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "synth" } }));

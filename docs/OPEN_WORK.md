@@ -13337,3 +13337,15 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+**⭐ 第 ① 步第一块已落 ✓（2026-10-06 02:53 ✓）**：
+```
+⭐ 把剧本一里 ⭐ `get_song` 的读回 ✓（`check_mcp:400–404` ✓）⭐ 换成 ⭐ **v2 读回** ✓：
+  ⭐ `create_arrangement` ✓ ⇒ ⭐ `add_arrangement_track`（⭐ 第二个声部 ✓）⇒ ⭐ `get_arrangement` ✓
+  ⇒ ⭐ 断言 ⭐ ① **轨数为 2** ✓ ② ⭐ **`clips === undefined && sections === undefined`** ✓
+⭐ 读数 ✓：⭐ **`check:mcp=0`** ✓｜⭐ `tsc=0` ✓｜⭐ `lint=0` ✓
+  ⇒ ⭐ 这同时**证明**了 ⭐ `get_arrangement` 的入参是 `arrangementId` ✓、⭐ 回包字段是 `tracks` ✓（⭐ 原先未知 ✓）
+⭐ 安全 ✓：⭐ 三个 v1 工具**仍在** ✓（⭐ 只是不再被这段调用 ✓）⇒ ⭐ 门不红 ✓（⭐ §526 的证明 ✓）
+**⏳ 还有两块要改 ✓**：⭐ `add_section` 那段 ✓ 与 ⭐ `set_clip` 那段 ✓（⭐ 它们各自的退场 ✓）
+  ⭐ 以及剧本二的 undo 段 ✓
+```
+
