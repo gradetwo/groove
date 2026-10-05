@@ -12830,3 +12830,12 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 表已开 ✓
 ```
 
+**⚠️ 更正 §511（2026-10-06 01:49 ✓）**：⭐ 我在那条里写"⭐ `set_arrangement_tempo` **不存在**" ✗ ⇒ ⭐ **错了** ✓
+```
+**⭐ 实测（⭐ 按名字计数 ✓）**：⭐ `create_arrangement` **1** ✓｜⭐ `get_arrangement` **1** ✓｜
+  `render_arrangement` **1** ✓｜⭐ `set_arrangement_tempo` **1** ✓ ⇒ ⭐ **都存在** ✓
+  ⭐ 只有 ⭐ `add_arrangement_section` **0** ✗ ⇒ ⭐ 它的对应物是 ⭐ `add_arrangement_notes` ✓（⭐ 因为 v2 没有"段落" ✗）
+**⚠️ ⭐ 教训 124 ✓**：⭐ **"⭐ 按名字猜有没有"不可靠** ✗ ⇒ ⭐ **一律用 `grep -c` 量** ✓
+  （⭐ 本轮我就是**先写进台账**、⭐ **后量** ✗ ⇒ ⭐ 顺序反了 ✓ ⇒ ⭐ 正确顺序 ✓：⭐ **先量，⭐ 后写** ✓）
+```
+
