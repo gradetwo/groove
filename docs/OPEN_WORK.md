@@ -14756,3 +14756,26 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+**⭐ 迁移首试 ✓＋ 判据新形状 ✓（2026-10-06 04:33 ✓）**：
+```
+**⭐ 迁移源码 ✓：编译正确 ✓** —— ⭐ `tsc=0` ✓｜⭐ `lint=0` ✓ ⇒ ⭐ **段落半的删除是对的** ✓ ✓
+  ⭐ 唯一红 ✗：⭐ "⭐ **get_transposition_report answers with a total, the sections it read… — total undefined, 0 section(s), 0 notRead**" ✗
+  ⇒ ⭐ **正如预期** ✓：⭐ 判据还在用旧形状 ✓（⭐ 与 §569 的第 ② 步对应 ✓）⇒ ⭐ **同批改判据即可 ✓**
+**⭐ 判据现状 ✓（`check_mcp:1052–1074` ✓）**：
+  ⭐ 注释 ✓：⭐ "⭐ The transposition report, **on a song the gate builds itself**" ✗
+  ⭐ 建台 ✓：⭐ `const pitchSong = payload(… "create_song", { genreId: "chicago-house" } …)` ✗
+  ⭐ 调用 ✓：⭐ `get_transposition_report { songId: pitchSong.songId ?? pitchSong.id }` ✗
+  ⭐ 断言 ✓：⭐ `typeof reported.totalSemitones === "number"` ✓ ＋ ⭐ `Array.isArray(reported.sections)` ✗ ＋
+    `reported.sections.length >= 1` ✗ ＋ ⭐ `reported.notRead.length === 3` ✓
+**⭐ 新形状 ✓（⭐ 本工具已只剩 pattern／lane ✓）**：
+  ⭐ ① ⭐ 用 ⭐ **`get_pattern { genreId }`** ✓ 造一个 pattern ✓（⭐ 脚本里已有该工具的用法 ✓ ⇒ ⭐ 无新依赖 ✓）
+  ⭐ ② ⭐ 调 ⭐ `get_transposition_report { pattern, track }` ✓ —— ⚠️ ⭐ `track` 需**一个真实 lane 名** ✗
+    ⇒ ⭐ 从 ⭐ pattern 的轨读 ✓（⭐ 或用 ⭐ `track: "chords"` ✓ 等已知名 ✓）⇒ ⭐ **下一段先量一个真实 lane 名** ✓
+  ⭐ ③ ⭐ 断言 ✓：⭐ `totalSemitones` 是数字 ✓ ＋ ⭐ **去掉 `sections` 两条** ✗ ＋ ⭐ `notRead.length === 3` 视新形状定 ✓
+  ⭐ ④ ⭐ 标题 ✓：⭐ "⭐ …the sections it read…**" ✗ ⇒ ⭐ "⭐ …the lane it read…**" ✓
+  ⭐ ⑤ ⭐ 注释 ✓：⭐ "on a song the gate builds itself" ✗ ⇒ ⭐ "on a **pattern** the gate builds itself" ✓
+**⭐ 因此同批＝三件 ✓**：⭐ ① ⭐ 源码迁移（✅ 已验编译 ✓）② ⭐ 判据改写（⭐ 上表五处 ✓，⭐ 待量 lane 名 ✓）
+  ⭐ ③ ⭐ 随后 ⭐ `create_song` 的建台**消失** ✓ ⇒ ⭐ 工具块可删 ✓ ⇒ ⭐ **⑤ 关闭** ✓
+**⏳ 未落码 ✗**（⭐ 源码已回退 ✓ —— ⚠️ ⭐ 因为它与判据必须**同批** ✓）
+```
+
