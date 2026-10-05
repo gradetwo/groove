@@ -281,6 +281,16 @@ await page.evaluate(() => {
   if (target) target.click();
 });
 await page.waitForTimeout(300);
+/* 候选③：手动 focus 该格一次，看是否同样把页面滚走。 */
+const focusProbe = await page.evaluate((id) => {
+  const cell = document.querySelector(`[data-testid='${id}']`);
+  if (!cell) return null;
+  const before = Math.round(window.scrollY);
+  cell.focus();
+  const after = Math.round(window.scrollY);
+  return { before, after, active: document.activeElement ? (document.activeElement.getAttribute('data-testid') || document.activeElement.tagName) : null };
+}, emptyCell);
+report.readings.focusProbe = focusProbe;
 const notesBeforeClick = (await readDom()).notes;
 const noteIdsBefore = await page.evaluate(() => Array.from(document.querySelectorAll("[data-testid^='roll-note-']")).map((e) => e.getAttribute('data-testid')).sort());
 /* 选中轨是哪一条（判据：写入去了选中轨；若点击的格子不在选中轨上，读数就不会变）。 */
@@ -514,7 +524,8 @@ if (asJson) {
   line("   hit test at cell centre", JSON.stringify(r.hitTest));
   line("   selected track", `before=${JSON.stringify(r.selectedTrackBefore)} after=${JSON.stringify(r.selectedTrackAfter)}`);
         line("   focusin trace", JSON.stringify(r.focusin));
-  line("   scrollY samples while held", JSON.stringify(r.scrollSamples));
+    line("   manual focus probe", JSON.stringify(r.focusProbe));
+line("   scrollY samples while held", JSON.stringify(r.scrollSamples));
 line("   window scroll events", JSON.stringify(r.scrolls));
 line("   real pointerdown landed on", JSON.stringify(r.pointerHits));
 line("   note ids added", JSON.stringify((r.noteIdsAfter || []).filter((i) => !(r.noteIdsBefore || []).includes(i))));
