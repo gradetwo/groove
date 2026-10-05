@@ -12939,3 +12939,13 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未修 ✗**（⭐ 余量用尽 ✓）；⭐ 原因与修法已定 ✓
 ```
 
+**⭐ 教训 125 的落实：本机跑全量（2026-10-06 01:58 ✓）**：
+```
+⭐ 命令 ✓：⭐ `npx vitest run --reporter=basic` ✓（⭐ 不带覆盖率 ✓ —— ⭐ 本机 `test:coverage` 退出码 1 ✗ 是插件依赖错 ✓）
+⭐ 读数 ✓：⭐ 进度 **880 个用例行** ✓ ⇒ ⭐ **零失败标记** ✓（⭐ 无 `×` ✓、⭐ 无 `FAIL ` ✓）
+⭐ 结论 ✓：⭐ 我在 ④ 里改的 ⭐ `normalize_loudness` ✓ 与 ⭐ 退场的两个工具 ✓ ⭐ **没有别的同类回归** ✓
+  ⇒ ⭐ 那次 `mcpHeadlessRouting` 是**唯一**一处 ✓（⭐ 已修 ✓ `d7a4362` ✓）
+**⭐ 教训 125 的操作化 ✓**：⭐ ① ⭐ 改**调用路径** ⇒ ⭐ 跑全量 ✓（⭐ 本机即可 ✓，⭐ 只看 "Tests" 一行 ✓）
+  ⭐ ② ⭐ 或 ⭐ `grep -rln "旧函数名" src/test/` ✓ ⇒ ⭐ 跑那些文件 ✓
+```
+
