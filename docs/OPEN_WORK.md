@@ -15193,3 +15193,25 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 已回退 ✓，⭐ 树干净 ✓）
 ```
 
+**⭐ 差异精确到一处 ✓（2026-10-06 04:54 ✓）**：
+```
+**⭐ 旧类型原文 ✓（`projectStorage.ts` ✓）**：
+  ⭐ `interface SaveStatusSnapshot {` ✓
+  ⭐ `  status: SaveStatus;` ✓
+  ⭐ `  /** When the last successful write landed, or null before the first one. */` ✓
+  ⭐ `  savedAt: number | null;` ✗ ⇒ ⭐ **必填** ✓（⭐ 首次写入前为 `null` ✓）
+  ⭐ `}` ✓｜⭐ `let saveStatusSnapshot = { status: "idle", savedAt: null };` ✓
+  ⭐ `const saveStatusListeners = new Set<() => void>();` ✓｜⭐ `function setSave…` ✓（⭐ 旧存储自己的发布者 ✓）
+**⭐⭐ 因此差异只有一处 ✓**：⭐ 我写 ⭐ `savedAt?: number | null` ✗（⭐ 可选 ✓）⭐ 而旧的是 ⭐ **`savedAt: number | null`** ✗（⭐ 必填 ✓）
+  ⇒ ⭐ **改一个字符**（⭐ 去掉 `?` ✓）⇒ ⭐ **两者即结构兼容** ✓ ✓ ⇒ ⭐ **视图与组件可不动** ✓ ✓
+**⭐ 但判据仍需"发布真的发生" ✗**：⭐ `autosaveStatus.test.tsx` ✗ 要求 ⭐ 状态变化时**重渲染** ✓
+  ⇒ ⭐ 所以 ⭐ **三次通知仍必须接上** ✓（⭐ 开始／成功／失败 ✓）
+**⭐⭐ 修正后的本组计划 ✓（⭐ 缩小为三件 ✓）**：
+  ⭐ ① ⭐ 把新形状的 ⭐ `savedAt?` ✗ ⇒ ⭐ **`savedAt: number | null`** ✓（⭐ 必填 ✓）＋ ⭐ 初值 ⭐ `{ status: "idle", savedAt: null }` ✓
+  ⭐ ② ⭐ **接三次通知** ✓（⭐ 在 ⭐ `saveArrangementProject` ✓ 的开始／成功／失败 ✓）
+  ⭐ ③ ⭐ `useAutosaveStatus.ts` ✓ 换到新的一对 ✓（⭐ 三处已验可行 ✓）
+  ⇒ ⭐ **视图 ✓／组件 ✓／判据 ✓ 预计无需改动** ✓ ✓（⭐ 结构兼容 ✓）
+**⭐ 之后 ✓**：⭐ 跑门 ✓ ⇒ ⭐ 本组完成 ✓ ⇒ ⭐ 其余各组按同一方法 ✓ ⇒ ⭐ ⑦ 完成 ⇒ ⭐ 发布 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 三件已定案 ✓
+```
+
