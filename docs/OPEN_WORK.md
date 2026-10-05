@@ -11056,3 +11056,25 @@ export async function prepareArrangementAudioLanes(input: {
 · ⏳ **未落码 ✗**（余量不足 ✓）；⭐ 但**形状与两处改法已无未知** ✓
 ```
 
+**⭐ 步骤 2：判据的验证方式定案（2026-10-05 21:09 ✓，已量 ✓）**：
+```
+· ⭐ 量到 ✓：`get_arrangement` ⇒ `summariseArrangement(...)` ✓ —— ⭐ 它给每轨 **`kind` ＋ `sound`** ✓
+  ⚠️ ⭐ **不给音符列表** ✗ ⇒ ⭐ 判据**不能**靠 `get_arrangement` 回读音符 ✓
+· ⭐ 量到 ✓：`ArrangementEditResult` ⭐ **带 `trackIds?: string[]`** ✓（`mcp/arrangement.ts:820` ✓）
+  ⇒ ⭐ 编辑回包**能给出受影响的轨** ✓ ⇒ ⭐ 判据用**工具自己的回包**验证 ✓（⭐ `edit.trackIds` 含目标轨 ✓）
+· ⭐ **于是两处判据的改法（最终 ✓）**：
+  ⭐ **① `scripts/check_mcp.mjs:255` ✓**：
+    · 建编曲 ✓：`create_arrangement`（`{ blankKind: "synth" }` ✓）⇒ 取 ⭐ `trackIds[0]` ✓
+    · 调歌词工具 ✓：`{ arrangementId, trackId, syllables: ["能","够"], tones: [2,4], pitches: [60,64] }` ✓
+    · 断言 ✓：⭐ `vocal.syllables?.length === 2` ✓（`syllable`／`pitch` 为字符串／数字 ✓）＋
+      ⭐ `vocal.notes?.length === 2` ✓（⭐ 音符事件已写出 ✓）＋ `vocal.prosody?.warnings?.length === 1` ✓
+    · 不匹配用例 ✓：同样换入参 ✓（⭐ 断言"拒绝而非猜" ✓ 不变 ✓）
+  ⭐ **② `src/test/mcpSchemaPassthrough.test.ts:82` ✓**：
+    · 改为 ✓：⭐ `create_arrangement` ⇒ 取 `trackIds[0]` ⇒ 带 `arrangementId`／`trackId` 调歌词工具 ✓
+    · 断言 ✓：`sung.notes` 的**音高与个数**与写入一致 ✓ ＋ ⭐ `sung.edit.trackIds` 含该轨 ✓
+    · ⭐ 测试名改为 ✓：**"an arrangement keeps the lyric it was given"** ✓
+· ✅ **至此步骤 2 无未知 ✓**：⭐ 入参 ✓／回包（`notes` ＋ `syllables` ＋ `edit` ✓）✓／转换规则 ✓／两处判据改法 ✓
+  ⇒ ⭐ 下一轮＝**一次写完** ✓（⭐ 门红即回退 ✓ 不提交 ✓）
+· ⚠️ 顺带 ✓：`patternSchema`／`clipSlotSchema` 可能变未使用 ⇒ ⭐ lint 会报 ⇒ 一并清理 ✓
+```
+
