@@ -14980,3 +14980,19 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+**⭐ 四类对应物的检查 ✓（2026-10-06 04:44 ✓）**：
+```
+| ⭐ 类 ✓ | ⭐ V2 对应物 ✓ | ⭐ 证据 ✓ |
+|---|---|---|
+| ⭐ **URL 分享** ✓ | ✅ ⭐ **已有** ✓ | ⭐ `src/features/sequencer/hooks/useUrlShareLoad.ts` ✓（＋ ⭐ `useExportActions` ✓） |
+| ⭐ **保存指示** ✓ | ✅ ⭐ **已有路径** ✓ | ⭐ `src/views/StudioView.tsx` ✓（⭐ V2 视图 ✓）⭐ 用 ⭐ `SaveIndicator` ✓ |
+| ⭐ **面板与工具条** ✓ | ✅ ⭐ **已有** ✓ | ⭐ **`src/components/arrangement/ArrangementViewV2.tsx`** ✓ ＋ ⭐ `src/views/NewProjectView.tsx` ✓ |
+| ⭐ **Wav 导出** ✓ | ⚠️ ⭐ **未定** ✗ | ⭐ 我的正则含 ⭐ `renderArrangement` ✗ ⇒ ⭐ 命中 27 个 ✗（⭐ 无信息量 ✓） |
+**⚠️ ⭐ 教训 163 复现 ✓**：⭐ **正则的宽窄决定答案** ✗ ⇒ ⭐ 用 ⭐ `renderArrangement` ✗ 这种**常见词** ⇒ ⭐ 命中一片 ✓
+  ⭐ 做法 ✓：⭐ 查"⭐ 某物的对应物**"⭐ 要用**它的精确符号名** ✓（⭐ 例如 ⭐ `WavExporter` ✓），
+    ⭐ 而不是 ⭐ 它可能调用的**通用动词** ✗
+**⭐ 结论 ✓**：⭐ **四类里三类已确认有 V2 对应物** ✓ ⇒ ⭐ 它们的 v1 文件**只需改接线或退场** ✓ ✓
+  ⇒ ⭐ 与 §234／§235 一致 ✓：⭐ **⑦ 的主体是"⭐ 退旧**" ✓，⭐ 不是"⭐ 建新**" ✓ ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
