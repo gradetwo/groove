@@ -15371,3 +15371,26 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 下一段：⭐ 用修正锚落"写前"那一处 ＋ ⭐ 其余五处 ⇒ ⭐ 本组完成 ✓
 ```
 
+### 五百八十四、⭐⭐ **六处改动编译正确 ✓；只剩判据的触发源**（2026-10-06 05:05 ✓）
+
+```
+**⭐ 好消息 ✓**：⭐ 六处改动（⭐ 形状必填 ✓／⭐ 初值 ✓／⭐ 写前 ✓／⭐ `try` 内 ✓／⭐ catch 首行 ✓／⭐ hook ✓）
+  ⭐ **编译正确** ✓ ✓ —— ⭐ `tsc=0` ✓｜⭐ `lint=0` ✓ ⇒ ⭐ **实现已对** ✓ ✓
+  ⭐ 且 ⭐ 行边界断言（⭐ 教训 173 ✓）⭐ 全部通过 ✓
+**⭐ 唯一红 ✓**：⭐ `autosaveStatus.test.tsx:120–135` ✓ ——
+  ⭐ "⭐ **autosave status · the subscription > re-renders when the status changes outside React**" ✗
+  ⭐ 失败点 ✓：⭐ `expect(result.current.status).toBe("saving")` ✗
+  ⭐ 原因 ✓：⭐ 它调的是 ⭐ **v1 的 `debounceSaveProject(payload())`** ✗（⭐ `:126` ✓）
+    ⭐ 而 ⭐ hook 已改听**新存储** ✓ ⇒ ⭐ **收不到** ✓ ✓
+**⭐⭐ 修正方向 ✓**：⭐ 把该用例的**触发**改为**真实的编曲保存** ✓
+  ⭐ 最小输入 ✓（⭐ 已量 ✓）：⭐ `saveArrangementProject({ name, arrangement })` ✓（⭐ 签名 `:1179–1203` ✓）
+  ⭐ 编曲造法 ✓：⭐ 现成助手 ⭐ **`createArrangement("crit", "synth")`** ✓（⭐ `data/arrangementEdits` ✓，⭐ §233 已见 ✓）
+  ⭐ 改动三行 ✓：
+    ⭐ `const arrangement = createArrangement("crit", "synth");` ✓
+    ⭐ `act(() => { void saveArrangementProject({ name: "crit", arrangement }); });` ✓
+    ⭐ `expect(result.current.status).toBe("saving");` ✓（⭐ 此后 ⭐ 600ms ✓ ⇒ ⭐ "saved" ✓）
+  ⭐ ⚠️ ⭐ 注意 ✓：⭐ 该用例在 ⭐ **v1 存储的判据文件**里 ✗ ⇒ ⭐ 文件其余用例仍测 v1 存储 ✓（⭐ 随 ⑦ 退场 ✓），
+    ⭐ 本用例**先改触发** ✓ ✓
+**⏳ 未落码 ✗**（⭐ 已回退 ✓，⭐ 树干净 ✓）；⭐ 下一段：⭐ 改这一处 ⇒ ⭐ 本组完成 ✓
+```
+
