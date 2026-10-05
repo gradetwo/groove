@@ -292,6 +292,8 @@ const selectedTrack = () =>
   });
 report.readings.selectedTrackBefore = await selectedTrack();
 /* 显式指针序列：真浏览器里写入可能挂在 pointerdown/up 上，jsdom 里零尺寸元素让 click 必然命中。 */
+await page.locator(`[data-testid='${emptyCell}']`).first().hover();
+await page.waitForTimeout(120);
 const cellBox = await page.locator(`[data-testid='${emptyCell}']`).first().boundingBox();
 if (cellBox) {
   const cx = cellBox.x + cellBox.width / 2;
@@ -302,32 +304,6 @@ if (cellBox) {
 } else {
   await page.click(`[data-testid='${emptyCell}']`);
 }
-/* 定案实验：绕过命中测试，直接向该格派发指针事件；能写出音符 ⇒ 命中测试是问题；写不出 ⇒ 处理器／状态源是问题。 */
-/* 命中测试取证：真实点击前，看格子中心的最上层元素是谁（不是该格 ⇒ 被遮挡）。 */
-report.readings.hitTest = await page.evaluate((id) => {
-  const cell = document.querySelector(`[data-testid='${id}']`);
-  if (!cell) return null;
-  const r = cell.getBoundingClientRect();
-  const top = document.elementsFromPoint(r.x + r.width / 2, r.y + r.height / 2).slice(0, 3).map((el) => ({
-    tag: el.tagName.toLowerCase(),
-    testid: el.getAttribute('data-testid'),
-    cls: (el.className || '').toString().slice(0, 60),
-  }));
-  return { cellRect: { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) }, top };
-}, emptyCell);
-const dispatched = await page.evaluate((id) => {
-  const cell = document.querySelector(`[data-testid='${id}']`);
-  if (!cell) return false;
-  const rect = cell.getBoundingClientRect();
-  const opts = { bubbles: true, cancelable: true, composed: true, clientX: rect.x + rect.width / 2, clientY: rect.y + rect.height / 2, pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 1 };
-  cell.dispatchEvent(new PointerEvent('pointerdown', opts));
-  cell.dispatchEvent(new PointerEvent('pointerup', { ...opts, buttons: 0 }));
-  cell.dispatchEvent(new MouseEvent('click', { ...opts, buttons: 0 }));
-  return true;
-}, emptyCell);
-report.readings.dispatchedDirectly = dispatched;
-await page.waitForTimeout(200);
-report.readings.notesAfterDispatch = (await readDom()).notes;
 const afterAddNote = await readDom();
 report.readings.selectedTrackAfter = await selectedTrack();
 report.readings.addedNoteAt = emptyCell;
