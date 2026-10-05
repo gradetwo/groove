@@ -143,9 +143,9 @@ function renderArgs(name: string, headless: boolean): Record<string, unknown> {
     }
       return { genreId: "chicago-house", ...flag };
     case "normalize_loudness": {
-      const { songId } = createMcpSong({ genreId: "chicago-house", genre: findGenre("chicago-house") ?? null });
+      const { arrangementId } = createMcpArrangement({ blankKind: "drumkit", songId: "route-probe" });
       // `passes: 1` keeps the routing assertion a count of one; the multi-pass case is the real-render criterion's.
-      return { songId, passes: 1, sampleRate: 8000, channels: 1, ...flag };
+      return { arrangementId, passes: 1, sampleRate: 8000, channels: 1, ...flag };
     }
     case "render_instrument_note":
       // The id is never fetched under the mock; it only has to be a string the handler forwards.
