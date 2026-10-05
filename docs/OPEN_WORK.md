@@ -13434,3 +13434,24 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 清单已备 ✓
 ```
 
+**⭐ 第 ② 步的四处文本与判定 ✓（2026-10-06 03:02 ✓）**：
+```
+**⭐ ① ⭐ `mcp/registrySong.ts` ✓**：⭐ 四个工具块 ✓（⭐ 边界删前打印 ✓）
+**⭐ ② ⭐ `src/test/mcpSchemaPassthrough.test.ts:104–107` ✓**：⭐ 用例造 ⭐ `create_song` ✓ ⇒ ⭐ `get_song` 读回 ✓
+  ⇒ ⭐ 取 ⭐ `read.clips.A` ✗ 当"⭐ app 自己产出的 pattern" ✓ ⇒ ⭐ 再喂 ⭐ `apply_pattern_ops` ✓
+  ⇒ ⭐ **改法很小 ✓**：⭐ 把来源换成 ⭐ **`get_pattern { genreId }`** ✓（⭐ 它**保留** ✓ ✓）⇒
+    ⭐ 即"⭐ the app's own genre seeding, taken through `get_pattern`" ✓ ⇒ ⭐ 用例主题（⭐ pattern 键透传 ✓）不变 ✓
+**⭐ ③ ⭐ `src/test/mcpCapability.test.ts:107` 与 `:112` ✓**：⭐ 两处清单 ✓
+  ⭐ `:107` ✓：⭐ `create_song` ✗／`add_section` ✗／`set_clip` ✗／`get_song` ✗／`undo_song` ✗
+    ⇒ ⭐ 换成 v2 ✓：⭐ `create_arrangement` ✓／`add_arrangement_track` ✓／`set_arrangement_track_steps` ✓／
+      `get_arrangement` ✓／`undo_arrangement` ✓（⭐ 这正是这两条"⭐ 表面"在 v2 的实现 ✓）
+  ⭐ `:112` ✓：⭐ `get_song` ✗／`set_clip` ✗／`add_section` ✗ ⇒ ⭐ 换 v2 ✓
+**⭐ ④ ⭐ `docs/MCP.md:205／206／208／210` ✓**：⭐ 四行 v1 声明 ✗ ⇒ ⭐ 改成**记账** ✓（⭐ 各自写明由哪个 v2 工具承接 ✓）
+**⭐ ⑤ ⭐ `mcp/README.md` ⇒ **不改** ✓**：⭐ 那几行是 ⭐ **当时的记录** ✓（⭐ "⭐ P1 … **true.**" ✓）⇒
+  ⭐ 按"⭐ 历史记录留原样" ✓ ⇒ ⭐ 且 ⭐ `check:docs:refs` 只查**路径** ✓ ⇒ ⭐ 工具名不触发 ✓ ✓
+**⭐ ⑥ ⭐ 地板改"跟随登记表" ✓** ＋ ⭐ 回填 ✓
+**⭐⭐ 因此第 ② 步的完整清单 ✓**：⭐ **4 个块** ✓ ＋ ⭐ 1 个判据小改 ✓ ＋ ⭐ 2 处清单 ✓ ＋ ⭐ 4 行文档 ✓ ＋ ⭐ 地板 ✓ ＋ ⭐ 回填 ✓
+  ⇒ ⭐ **5 个文件 ✓**（⭐ README 不动 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 一处不剩 ✓
+```
+
