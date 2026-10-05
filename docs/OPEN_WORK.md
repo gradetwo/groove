@@ -15281,3 +15281,31 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+### 五百八十二、⭐⭐ **教训 171／172：样板构造要用"最大可用上下文"做锚（连续三次拦下 ✓）**（2026-10-06 05:01 ✓）
+
+```
+**⭐ 第三次拦下 ✓**：⭐ `catch 首行 ✗ 6` ✗ ⇒ ⭐ **零改动** ✓（⭐ `dirty=0` ✓、⭐ 门全绿 ✓）
+**⭐ 命中计数 ✓（⭐ 实测 ✓）**：
+  | ⭐ 候选锚点 ✓ | ⭐ 全文次数 ✓ |
+  |---|---|
+  | ⭐ `} catch (err) {` ＋ ⭐ `if (!isIndexedDbUnavailable(err)) {`（⭐ 两行 ✓） | **6** ✗ |
+  | ⭐ 再加 ⭐ `// Quota exceeded…`（⭐ 三行 ✓） | **2** ✗ |
+  | ⭐ `// Quota exceeded / aborted transaction: the write did NOT happen` ✓（⭐ 注释首句 ✓） | **2** ✗ |
+  | ⭐ `throw err instanceof Error ? err : new Error(String(err));` ✓ | **8** ✗ |
+**⭐ 逐字原文 ✓（`repr` ✓，⭐ `:1267–1272` ✓）**：
+  ⭐ `'  } catch (err) {'` ✓
+  ⭐ `'    if (!isIndexedDbUnavailable(err)) {'` ✓
+  ⭐ `'      // Quota exceeded / aborted transaction: the write did NOT happen, and saying so is the whole point of F-07.'` ✓
+  ⭐ `'      markDegraded(err);'` ✓
+  ⭐ `'      throw err instanceof Error ? err : new Error(String(err));'` ✓
+  ⭐ `'    }'` ✓
+**⭐⭐ 教训 171 ✓**：⭐ **两行的 `catch` ＋ 守卫是样板，会重复** ✗（⭐ 6 处 ✓）
+**⭐⭐ 教训 172 ✓**：⭐ **凡"⭐ 样板构造**" ✓ ⇒ ⭐ 锚点要取**最大的可用上下文** ✓，⭐ 且**写前必须核实计数** ✓ ✓
+  ⭐ 本轮的做法**正是**这个 ✓（⭐ 断言在前 ⇒ ⭐ 三次拦下 ✓ ✓）⇒ ⭐ 但**代价是每错一次耗一轮** ✗
+  ⭐ **改进 ✓**：⭐ **锚点分两批** ✓ —— ⭐ 先**一次性打印全部候选锚点的计数** ✓ ⇒ ⭐ 全为 1 才落笔 ✓ ✓
+    （⭐ 本轮即是如此：⭐ 先量计数 ✓，⭐ 再落 ✓）
+**⭐ 因此 `catch` 处的锚点 ✓（⭐ 待核实 ✓）**：⭐ 取 ⭐ **4–5 行** ✓（⭐ 到 ⭐ `throw …` 行 ✓）
+  ⭐ 两处三行锚点**位置不同** ✓ ⇒ ⭐ 加长后**应唯一** ✓ ⇒ ⭐ 下一段先印其计数 ✓ 再落 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
