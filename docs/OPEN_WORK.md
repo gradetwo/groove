@@ -14451,3 +14451,32 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 下一段一次落净 ✓
 ```
 
+### 五百六十二、⭐ **最后工具 `create_song` 的现状（44 处／13 文件 ✓，危险点归零 ✓）**（2026-10-06 04:12 ✓）
+
+```
+**⭐ 扫除后的重新计数 ✓（教训 142 ✓）**：⭐ 从 **52／16** ✗ 降到 ⭐ **44／13** ✓ ——
+  ⭐ 已消失的三处 ✓：⭐ `docsWorkflow` ✓（⭐ `STEPS` 已换 ✓）｜⭐ `mcpCopy_render_song` ✓（⭐ 已删 ✓）｜⭐ `renderSongBudgetGuard` ✓（⭐ 已删 ✓）
+  | ⭐ 文件 ✓ | ⭐ 处数 ✓ | ⭐ 性质 ✓ |
+  |---|---|---|
+  | ⭐ `mcp/song.ts` ✓ | 14 ✓ | ⭐ 注释／字符串 ✓（⭐ v1 存储自身 ✓ ⇒ ⭐ **⑦** ✓） |
+  | ⭐ `src/test/mcpSong.test.ts` ✓ | 5 ✓ | ⭐ v1 存储判据 ✓（⚠️ ⭐ 判断它用**工具**还是 `createMcpSong` ✓） |
+  | ⭐ 两个探针 ✓ | 5 ＋ 3 ✓ | ⭐ 脚本 ✓ |
+  | ⭐ `scripts/check_mcp.mjs` ✓ | 5 ✓ | ⚠️ ⭐ **含调用点** ✗（⭐ 见下 ✓） |
+  | ⭐ `mcp/registryAnalysis.ts` ✓／⭐ `registryExamples.ts` ✓／⭐ `registrySong.ts` ✓／⭐ `mcp_call.mjs` ✓ | 各 2 ✓ | ⭐ 注释／工具块／脚本 ✓ |
+  | ⭐ `registryFiles.ts` ✓／⭐ `registry.ts` ✓／⭐ `makeUniqueSection.test.ts` ✓／⭐ `mcpCapability.test.ts` ✓ | 各 1 ✓ | ⭐ 注释／清单项 ✓ |
+**⭐⭐ 危险点扫描结果 ✓：零 ✓** —— ⭐ "⭐ 要求它存在**"的判据**一处也没有** ✓ ✓
+  （⭐ `check_mcp:814` 的整条检查**已删** ✓；⭐ `docsWorkflow` 的 `STEPS` 已写 `create_arrangement` ✓；
+   ⭐ `redlines` 的必需清单**不含**它 ✓）
+  ⇒ ⭐ 因此 ⭐ 最后一件**只剩机械工作** ✓ ✓
+**⚠️ ⭐ 但 `check_mcp` 仍有 **5 处** ✗ ⇒ ⭐ 其中**至少一处是调用点** ✗**（⭐ `:817` 的 ⭐ `const created = payload(… "create_song" …)` ✓）
+  ⇒ ⚠️ ⭐ **必须先量这 5 处** ✗（⭐ 哪些是调用 ✓，⭐ 哪些是注释 ✓）⇒ ⭐ 再动手 ✓（⭐ 否则会重复 §207 的"⭐ 隐藏依赖" ✗）
+**⭐ 建议的最后一件事的施工序 ✓**：
+  ⭐ ① ⭐ 量 `check_mcp` 的 5 处 ✓ ⇒ ⭐ 调用点**整段删**（⭐ 它的用例对象随工具消失 ✓）
+  ⭐ ② ⭐ `mcpCapability` 的清单项 ⇒ v2 ✓
+  ⭐ ③ ⭐ `mcpSong.test.ts` 的 5 处 ⇒ 判断 ⇒ ⭐ 工具调用**改接**／⭐ `createMcpSong` **保留** ✓
+  ⭐ ④ ⭐ 两个探针 ＋ `mcp_call.mjs` ⇒ 改接或删 ✓
+  ⭐ ⑤ ⭐ **工具块** ✓（§529 算法 ✓）＋ ⭐ **地板** ✓（读数将到 **84** ✗ ⇒ ⭐ 地板 `> 80` 仍有余量 ✓ ✓）
+  ⭐ ⑥ ⭐ **文档引用**检查 ✓（⭐ 教训 154 ✓）＋ ⭐ 回填 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
