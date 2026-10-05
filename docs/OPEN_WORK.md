@@ -10730,3 +10730,20 @@ export async function prepareArrangementAudioLanes(input: {
   ⇒ 入口调 `renderPatternOfflineOnce(pattern, { ...options, prepareOnly: true })` ✓ ⇒ 在准备阶段后**提前返回** ✓
 ```
 
+**⭐ 第 1 步已完成（2026-10-05 20:31 ✓，`a7d652d` ✓）；第 2 步的量测（20:32 ✓）**：
+```
+✅ **已落地 ✓**：`src/audio/WavExporter.ts` 的 `preparePatternAudioLanes(pattern, options)` ✓
+   ＋ `RenderWavOptions.prepareOnly?: boolean` ✓ ＋ `ArrangementLaneReport` ✓（**自己的形状** ✓，不借 `RenderResult` ✗）
+   ＋ 两处调用点加 `as RenderedChunk` ✓（`prepareOnly` 时它们不执行 ✓）
+   判据 ✓：`tsc=0` ✓｜尺寸 pin **2572 ⇒ 2608** ✓（含说明文字 ✓）｜headless 组 **44 用例** ✓｜`lint=0` ✓｜四结构门 0 ✓
+📌 **第 2 步的量测 ✓**（`mcp/render/headless.ts` ✓）：
+   · `HeadlessRenderContext` ＝ `{ publicRoot: string; sampleRoot: string }` ✓（`:68–73` ✓）
+   · ⭐ headless 渲染在 **`:300`** 调 `wav.renderPatternOffline(pattern, { bars, sampleDecoder, fetchSfzBytes, onAudioLanePreparation… })` ✓
+   · ⚠️ 但 `sampleDecoder`／`fetchSfzBytes` 来自 ⭐ **`cacheWiring`** ✓（⭐ 用 `context.sampleRoot` 建 ✓）
+     与 ⭐ **`graph`** ✓，而这些在 **`:240–300` 一带约 60 行的准备里** ✓（动态 import `wav`／`catalogue`／`graph` ✓）
+   ⇒ ⭐ **结论** ✓：⭐ 校验函数**不能只调导出层** ✗ —— 它必须先建**同一套接线** ✓
+     ⇒ ⭐ **正确做法** ✓：把 `:240–300` 那段"建宿主 ＋ 导入 ＋ 接线"抽成一个 helper ✓，**渲染与校验共用** ✓
+       （⭐ 与第 1 步同一手法 ✓：⭐ **搬移而非复制** ✓）
+   ⇒ ⭐ **下一步** ✓：量清 `:240–300` 段里的局部变量与依赖 ✓ ⇒ 抽 helper ✓ ⇒ 再写 `validateArrangementHeadless` ✓
+```
+
