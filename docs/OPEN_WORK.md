@@ -14388,3 +14388,27 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+**⭐ 最后那处未知关闭 ✓（2026-10-06 04:02 ✓）**：
+```
+**⭐ `mcpHeadlessRouting.test.ts` 的形状 ✓**：⭐ 它是 ⭐ **按名单驱动**的 ✓
+  ⭐ `:100–104` ✓：⭐ `HEADLESS_TOOLS = ["render_arrangement", **"render_song"**, … , "render_arrangement_stems"]` ✗
+  ⭐ `:134–144` ✓：⭐ `switch (name)` 里有 ⭐ **`case "render_song": {`** ✗（⭐ `:140` ✓）⇒ ⭐ 边界由 ⭐ `:145` 的
+    `case "normalize_loudness"` ✓ 界定 ✓
+  ⭐ `:182` ✓：⭐ `describe.each(HEADLESS_TOOLS)` ✓ ⇒ ⭐ 用例**按名单逐个跑** ✓
+  ⭐ `:4` ✓：⭐ 注释点名 ⚠️ ⇒ ⭐ 改 ✓
+**⭐ 因此处置 ✓（⭐ 不是删文件 ✗，⭐ 是三处小改 ✓）**：⭐ ① ⭐ 名单去掉 `render_song` ✓ ② ⭐ 删那个 case 块 ✓
+  （⭐ 起于 `case "render_song": {` ✓，⭐ 止于下一个 `case` 之前 ✓，⭐ 教训 141 ✓）③ ⭐ 改 `:4` 注释 ✓
+**⭐⭐ 于是最后一件**零未知** ✓**：
+  ⭐ ① ⭐ `check_mcp` 四处 ✓（⭐ §560 ✓）
+  ⭐ ② ⭐ `mcpHeadlessRouting`：⭐ 名单 ✓ ＋ ⭐ case ✓ ＋ ⭐ 注释 ✓（⭐ 本轮定 ✓）
+  ⭐ ③ ⭐ **五个整文件 `rm`** ✓：⭐ `mcpCopy_render_song` ✓／⭐ `renderTradeoff` ✓／⭐ `mcpStdioDisconnect` ✓／
+    `mcpHeadlessTimeout` ✓／⭐ `renderSongBudgetGuard` ✓
+  ⭐ ④ ⭐ `budgetHonesty` ✓：⭐ 名单去 `render_song` ✓ ＋ ⭐ 删 `:147–149` 那一例 ✓
+  ⭐ ⑤ ⭐ `mcpCapability:171` ✓：⭐ 去掉 `render_song` ✓（⭐ `render_arrangement` 已在 ✓）
+  ⭐ ⑥ ⭐ `docsWorkflow` ✓：⭐ `STEPS` 两名字一次换净 ✓
+  ⭐ ⑦ ⭐ **文档引用** ⇒ 改叙述 ✓（⭐ 教训 154 ✓）
+  ⭐ ⑧ ⭐ **地板** ⇒ 跟随登记表 ✓（⭐ 读数将到 **85** ✗）
+  ⭐ ⑨ ⭐ `create_song` 的 52 处 ✓（⭐ §551 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ **下一段可直接一次做净** ✓
+```
+
