@@ -13782,3 +13782,24 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 配方到行 ✓
 ```
 
+**⭐ 缺口 ⑤ 的插入点与代码 ✓（2026-10-06 03:16 ✓）**：
+```
+**⭐ `render_arrangement` 的 handler 顺序 ✓（`:247` 起 ✓）**：
+  ⭐ `range` ✓ ⇒ ⭐ `flattenMcpArrangement(…, range)` ✓ ⇒ ⭐ `passes = Math.max(1, Math.min(64, args.bars ?? 1))` ✓
+  ⇒ ⭐ **`const summary = summariseArrangement(String(args.arrangementId), getMcpArrangement(String(args.arrangementId))!)`** ✓
+  ⇒ ⭐ 渲染 ✓
+**⭐ 关键 ✓**：⭐ `summary` 带 ⭐ `secondsEstimate` ✓（⭐ handler 自己的注释：⭐ "**The length comes from the model's own
+  summary rather than `flattenMcpArrangement().bars`**" ✓）
+  ⇒ ⭐ 因此守卫可以**照 `render_song` 一模一样的形状** ✓，⭐ 插在 ⭐ `summary` 那行**之后** ✓：
+    ⭐ `const budget = args.maxDurationSec as number | undefined;` ✓
+    ⭐ `if (budget !== undefined && summary.secondsEstimate > budget) {` ✓
+    ⭐ `  return failure(\`this arrangement is about ${summary.secondsEstimate}s and maxDurationSec is ${budget}s — shorten it, raise the limit, or render fewer bars\`);` ✓
+    ⭐ `}` ✓
+**⭐ 加上 schema 一行 ✓**：⭐ `maxDurationSec: z.number().int().min(1).optional().describe("refuse rather than start a render longer than this")` ✓
+  ⇒ ⭐ **合计：⭐ 1 行 schema ＋ 4 行守卫 ✓** ⇒ ⭐ 极小 ✓
+**⭐ 判据 ✓（能红 ✓）**：⭐ ① ⭐ `maxDurationSec: 1` ⇒ ⭐ 必须 `failure` ✓ 且 ⭐ 消息含 `maxDurationSec` ✓；
+  ⭐ ② ⭐ `maxDurationSec: 100000` ⇒ ⭐ 必须正常渲染 ✓
+**⭐⭐ 这一步同时 ✓**：⭐ 关掉缺口 ⑤ ✓（⭐ "⭐ 先拒答" ✓）＋ ⭐ 让 `render_song` ⭐ **具备退场条件** ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 插入点到行 ✓
+```
+
