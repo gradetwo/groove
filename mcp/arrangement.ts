@@ -81,7 +81,17 @@ export function getMcpArrangement(arrangementId: string): ArrangementV2 | undefi
  * Importing needs to put a whole arrangement in, not build one field by field, and the store had only a get. The id is
  * fresh by default, because an imported work is a new one: two files of the same name must not collide in the store.
  */
-export function putMcpArrangement(arrangement: ArrangementV2, id = `imported-${Date.now().toString(36)}`): ArrangementSummary {
+/**
+ * ⭐ **A counter beside the clock, because two imports can share a millisecond.** Measured on the pipeline: a criterion that
+ * imports twice got the same id and failed there while passing here, which is what a name built from the time alone does
+ * under a fast machine.
+ */
+let importSequence = 0;
+
+export function putMcpArrangement(
+  arrangement: ArrangementV2,
+  id = `imported-${Date.now().toString(36)}-${(importSequence++).toString(36)}`
+): ArrangementSummary {
   arrangements.set(id, arrangement);
   return summariseArrangement(id, arrangement);
 }
