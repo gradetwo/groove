@@ -94,14 +94,24 @@ describe("BS.1770 gated integrated loudness", () => {
     const shelfGain = magnitudeAt(PUBLISHED_48K.shelf, 997, sampleRate);
     const hpGain = magnitudeAt(PUBLISHED_48K.highpass, 997, sampleRate);
     const meanSquare = (peak * peak) / 2;
-    const expected = -0.691 + 10 * Math.log10(meanSquare * (shelfGain * hpGain) ** 2);
+    /**
+     * ⭐ **BS.1770 sums the channels.** Both channels carry the same signal, so the sum is twice one channel's mean
+     * square; the expectation used to count it once, which agreed with an implementation that divided by the channel
+     * count as well and so made every stereo render read about 3 dB quiet. The coefficients still come from the
+     * published tables on their own path — only the channel sum was missing.
+     */
+    const channelSum = 2;
+    const expected = -0.691 + 10 * Math.log10(channelSum * meanSquare * (shelfGain * hpGain) ** 2);
 
     const { integratedLufs } = measureLoudness(channels, sampleRate);
     expect(integratedLufs).toBeCloseTo(expected, 1);
-    // The K-weighted 997 Hz curve sits a little above 0 dB, so a −20 dBFS-peak sine
-    // reads in the low −23 LUFS region — the familiar EBU alignment number.
-    expect(integratedLufs).toBeGreaterThan(-24.2);
-    expect(integratedLufs).toBeLessThan(-22.8);
+    /**
+     * ⭐ **The alignment number already contains the stereo sum.** EBU's alignment is a stereo pair at −23 dBFS
+     * reading −23 LUFS, so the same pair at −20 dBFS reads about −20; the bands below used to sit around −23 because
+     * the meter was averaging the channels and the expectation was computed from one channel alone.
+     */
+    expect(integratedLufs).toBeGreaterThan(-20.2);
+    expect(integratedLufs).toBeLessThan(-19.8);
   });
 
   it("reports raw sample peak in dBFS", () => {

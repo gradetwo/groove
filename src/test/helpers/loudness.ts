@@ -243,7 +243,14 @@ export function truePeakDbChannels(channels: Float32Array[]): number {
 }
 
 function loudnessOfBlock(meanSquareSum: number, blockSamples: number, channels: number): number {
-  const meanSquare = meanSquareSum / (blockSamples * channels);
+  /**
+   * ⭐ **BS.1770 sums the channels; it does not average them.** The caller accumulates each channel's weighted
+   * squares, so the mean square of the block is that total over the frames alone. Dividing by the channel count as
+   * well cancelled the sum and made every stereo render report 10·log10(2) ≈ 3.01 dB quieter than it is, which a
+   * mono test cannot see. `channels` stays in the signature because the caller's contract names it.
+   */
+  void channels;
+  const meanSquare = meanSquareSum / blockSamples;
   if (meanSquare <= 0) return -Infinity;
   // BS.1770: L = −0.691 + 10·log10(Σ G_i · z_i). The −0.691 offset is applied once,
   // when a loudness value is *reported*; block values are kept offset-free so the
