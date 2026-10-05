@@ -300,6 +300,7 @@ if (cellBox) {
   const cy = cellBox.y + cellBox.height / 2;
   await page.mouse.move(cx, cy);
   await page.mouse.down();
+  await page.waitForTimeout(80);
   await page.mouse.up();
 } else {
   await page.click(`[data-testid='${emptyCell}']`);
