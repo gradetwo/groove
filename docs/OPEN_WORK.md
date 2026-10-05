@@ -12863,3 +12863,17 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 表已立 ✓
 ```
 
+**⭐ `undo_song` 的答案 ✓（2026-10-06 01:50 ✓，已量 ✓）**：
+```
+**⭐ 量到 ✓**：⭐ `scripts/check_mcp.mjs:431` ✓ 用 ⭐ `{ songId: song.songId, steps: 2 }` ✗ 调它 ✓；
+  ⭐ v2 注册表（`registryArrangement.ts` ✓ 42 个名字 ✓）里 ⭐ **没有** `undo_arrangement` ✗
+  （⭐ grep 只命中散文里的 "⭐ undoing" ✓ 与 ⭐ "⭐ undo_song returns the song to the state before it" ✓ 的说明文字 ✓）
+**⇒ 结论 ✓**：⭐ **v2 面没有撤销能力** ✗ ⇒ ⭐ 按业主的"⭐ 页面原有功能用 V2 实现" ✓ ＋ ⭐ 教训 116 ✓
+  ⇒ ⭐ **这是要移植的能力** ✓，⭐ 不是要删的工具 ✓
+  ⇒ ⭐ 做法（⭐ 下一段 ✓）：⭐ 或 ⭐ 给 v2 加 ⭐ **`undo_arrangement`** ✓（⭐ 把撤销栈接上编曲 ✓），
+    ⭐ 或 ⭐ 证明撤销在 v2 是**会话级**的 ✓（⭐ 那样 `undo_song` 只是旧接口 ⇒ ⭐ 退场 ✓）
+    ⇒ ⚠️ ⭐ **先量撤销栈的实现位置** ✓（⭐ `mcp/song.ts` 的 `undoMcpSong` ✓？）⭐ 再定 ✓
+**⭐ 于是 ⑤ 的全表有答案 ✓**：⭐ 11 个工具里 ⭐ **10 个有现成 v2 家** ✓（⭐ 退场 ＋ ⭐ 记账 ✓）＋
+  ⭐ **1 个（`undo_song`）要移植** ✓
+```
+
