@@ -13853,3 +13853,33 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 除已落的 §540 记录 ✓）
 ```
 
+### 五百四十一、⚠️ **`render_song` 是项目级大件（50 处／22 文件 ✓）**（2026-10-06 03:26 ✓）
+
+```
+**⭐ 计划时重新计数 ✓（教训 142 ✓；量法：⭐ `mcp/**/*.ts` ＋ `src/test/*.ts` ＋ `scripts/*.mjs` 里 `render_song` 出现次数 ✓）**：
+  | ⭐ 文件 ✓ | ⭐ 处数 ✓ |
+  |---|---|
+  | ⭐ `scripts/probe_mcp_render_scratch.mjs` ✓ | 6 ✓ |
+  | ⭐ `scripts/check_mcp.mjs` ✓ | 6 ✓ |
+  | ⭐ `src/test/mcpHeadlessRender.test.ts` ✓ | 4 ✓ |
+  | ⭐ `src/test/budgetHonesty.test.ts` ✓ | 3 ✓ |
+  | ⭐ `src/test/mcpHeadlessRouting.test.ts` ✓ | 3 ✓ |
+  | ⭐ `scripts/probe_texture_contribution.mjs` ✓ | 3 ✓ |
+  | ⭐ `mcp/song.ts` ✓／⭐ `mcp/registryAnalysis.ts` ✓／⭐ `mcp/registrySong.ts` ✓／⭐ `mcp/render/worker.ts` ✓／
+    `mcp/render/budget.ts` ✓／⭐ `src/test/renderTradeoff.test.ts` ✓／⭐ `src/test/mcpStdioDisconnect.test.ts` ✓／
+    `src/test/mcpHeadlessTimeout.test.ts` ✓／⭐ `src/test/mcpCopy_render_song.test.ts` ✓ | 各 2 ✓ |
+  | ⭐ `mcp/registry.ts` ✓／⭐ `mcp/render/chunks.ts` ✓／⭐ `mcp/render/sampleCache.ts` ✓／⭐ `src/test/docsWorkflow.test.ts` ✓／
+    `src/test/mcpSong.test.ts` ✓／⭐ `src/test/mcpCapability.test.ts` ✓／⭐ `src/test/renderSongBudgetGuard.test.ts` ✓ | 各 1 ✓ |
+  ⭐ **合计 50 处 ✓／22 个文件 ✓**
+**⭐⭐ 判断 ✓**：⭐ 这**远大于**此前任何一件 ✗（⭐ 四工具批次约 15 处 ✓）⇒ ⭐ **它是项目级大件** ✗
+  ⇒ ⭐ 在余量不足时**不开工** ✓（⭐ 纪律 ✓）
+**⭐ 开工前的分类（下一步 ✓）**：⭐ ① ⭐ **调用点** ✗（⭐ `name: "render_song"` ✓ ＋ ⭐ 字符串调用 ✓）⇒ ⭐ 删／改 ✓
+  ⭐ ② ⭐ **概念提及** ✓（⭐ `render/budget.ts` ✓／`chunks.ts` ✓／`sampleCache.ts` ✓ 等注释 ✓）⇒ ⭐ **改名或改写** ✓
+    ⚠️ ⭐ 不是删 ✓ —— ⭐ 因为它们说的是**行为** ✓，⭐ 那个行为在 v2 仍然存在 ✓
+  ⭐ ③ ⭐ **判据** ✗（⭐ 约 8 个 ✓）⇒ ⭐ 逐个定"⭐ 改接 v2 ✓／删 ✓／迁移 ✓" ✓
+  ⭐ ④ ⭐ **文档与探针** ✓（⭐ `docsWorkflow` ✓／`probe_*.mjs` ✓）⇒ ⭐ 更新 ✓
+**⭐ 因此 `render_song` 的退场排在其后 ✓**：⭐ 先把余下四处缺口（⭐ ①②③④ ✓）处理掉 ✓，⭐ 再整体做这一件 ✓
+  ⇒ ⭐ 这也是"⭐ 按纠缠度排序" ✓（⭐ 教训 129 ✓）的自然结果 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
