@@ -272,6 +272,15 @@ const emptyCell = await page.evaluate(() => {
   return null;
 });
 if (emptyCell === null) await fail("the piano roll drew no empty cell to write into");
+/* 先切到一条非 sampler 轨：sampler 车道的格子放的是采样触发，不是音高音符。 */
+await page.evaluate(() => {
+  const picker = document.querySelector("[data-testid='arrangement-track-picker']");
+  if (!picker) return;
+  const buttons = Array.from(picker.querySelectorAll('button'));
+  const target = buttons.find((b) => !(b.textContent || '').toLowerCase().includes('sampler')) || buttons[1] || null;
+  if (target) target.click();
+});
+await page.waitForTimeout(300);
 const notesBeforeClick = (await readDom()).notes;
 /* 选中轨是哪一条（判据：写入去了选中轨；若点击的格子不在选中轨上，读数就不会变）。 */
 const selectedTrack = () =>
