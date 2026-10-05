@@ -12665,3 +12665,20 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+### 五百零六、⭐ **`export_midi` 退场只差一次核实**（2026-10-06 01:25 ✓）
+
+```
+**⭐ 已确 ✓**：⭐ v2 的歌词写手**有自己的判据文件** ✓ —— ⭐ `src/test/arrangementToMidi.test.ts` ✓
+**⭐ 未确 ✗**：⭐ 那个文件里 ⭐ **是否断言了音节的字节** ✓？⭐ 我两次搜索都没命中 ✗
+  ⇒ ⚠️ ⭐ 按教训 120／121 的规矩 ✓：⭐ **未核实之前不动旧判据** ✗
+    （⭐ 否则可能删掉"⭐ 唯一在断言这条能力"的那一处 ✗）
+**⭐ 下一步（一步即可 ✓）**：⭐ 打开 ⭐ `src/test/arrangementToMidi.test.ts` ✓ ⇒
+  ⭐ 若它断言了音节 ⇒ ⭐ 旧的歌词判据（`lyricExport.test.ts:107–114` ✓）⭐ **可退场** ✓（⭐ v2 判据在先 ✓）
+  ⭐ 若没断言 ⇒ ⭐ **先给 v2 判据补上那一条** ✓，⭐ 再退场 ✓
+**⭐ 其余 8 处已量清 ✓**（⭐ §504 的清单 ✓）：⭐ 工具块 ✓｜⭐ `redlines.mjs:386` ✓（⭐ 必需清单 ✓）｜
+  `check_mcp.mjs:140` ✓｜`check_mcp.mjs:855–857`（用例 ✓）｜`mcpTools.test.ts:251` ✓｜
+  `exportSurfaceCopy.test.ts:10` ✓｜`docs/MCP.md:464` ✓｜`mcp/README.md:104` ✓
+**⭐ 机制已验 ✓**：⭐ 与 Ableton 那次同形 ✓ ⇒ ⭐ **按括号配平定块边界** ✓ ＋ ⭐ **全部边界先算后写** ✓（⭐ 教训 118／119 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
