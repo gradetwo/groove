@@ -14171,3 +14171,33 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+### 五百五十一、⚠️ **`create_song` 也是项目级大件（52 处／16 文件）＋ 三处危险点**（2026-10-06 03:48 ✓）
+
+```
+**⭐ 计划时重新计数 ✓（教训 142／152 ✓）**：
+  | ⭐ 文件 ✓ | ⭐ 处数 ✓ |
+  |---|---|
+  | ⭐ `mcp/song.ts` ✓ | 14 ✓（⭐ 多为字符串／注释 ✓） |
+  | ⭐ `scripts/check_mcp.mjs` ✓ | 7 ✓ |
+  | ⭐ `mcp/registrySong.ts` ✓ | 5 ✓（⭐ 工具块 ＋ 注释 ✓） |
+  | ⭐ `src/test/mcpSong.test.ts` ✓ | 5 ✓（⭐ v1 存储的判据 ✓） |
+  | ⭐ 两个探针 ✓ | 5 ＋ 3 ✓ |
+  | ⭐ 其余 10 个文件 ✓ | 各 1–2 ✓ |
+  ⭐ **合计 52 处／16 文件 ✓** ⇒ ⭐ 与 `render_song`（50／22 ✓）**同级** ✗ ⇒ ⭐ **同样是项目级** ✗
+**⚠️ ⭐ 三处"⭐ 要求它存在**"的危险点 ✓**：
+  ⭐ ① ⭐ `check_mcp:814` ✓：⭐ `["create_song", "add_section", "render_song"].every((name) => names.includes(name))` ✗
+    ⇒ ⭐ 去掉 `create_song` ✓（⭐ `add_section` ✓ 与 `render_song` ✓ **都留下** ✓ ✓）
+  ⭐ ② ⭐ `src/test/docsWorkflow.test.ts` ✓：⭐ `create_song` 是**工作流第一步** ✗
+    ⇒ ⭐ 改成 ⭐ `create_arrangement` ✓（⭐ 它存在 ✓）
+  ⭐ ③ ⭐ `src/test/renderSongBudgetGuard.test.ts` ✓：⭐ 它用 `create_song` **搭台**去测 `render_song` 的预算 ✗
+    ⇒ ⚠️ ⭐ 必须**改接** `create_arrangement` ✓ —— 否则 ⭐ `create_song` 一退它就红 ✗
+  ⭐ 另 ✓：⭐ `mcpCapability` ✓ 有 1 处 ⇒ ⭐ 清单项 ⇒ ⭐ 换 v2 ✓
+**⭐⭐ 结论 ✓**：⭐ 退 `create_song` ⭐ **不是小活** ✗（⭐ 52 处 ✓ ＋ 三处危险点 ✓ ＋ 5 个 v1 判据要判断 ✓）
+  ⇒ ⭐ 与 `render_song` ⭐ **合并成一次"⭐ MCP 面的 v1 歌工具大扫除**" ✓ 更合理 ✓
+    （⭐ 两者纠缠度高 ✓ ⇒ ⭐ 分两次做会**互相打断** ✓ ⇒ ⭐ 教训 129 ✓ 按纠缠度排序 ✓）
+**⭐ 下一段的建议顺序 ✓**：⭐ ① ⭐ 先做 ⭐ `add_section` 的三项**真家** ✓（⭐ 力度斜坡 ✓／`fill` ✓／移调 ✓）
+  ⭐ ② ⭐ 再一次性处理 ⭐ `create_song` ＋ `render_song` ✗（⭐ 52 ＋ 50 处 ✓ ⇒ ⭐ 一次收尾 ✓）
+  ⭐ ③ ⭐ 然后 ⭐ ⑤ 完成 ✓ ⇒ ⭐ 进 ⑥⑥⑥（Web 14 文件 ✓）与 ⑦ ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
