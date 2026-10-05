@@ -11785,3 +11785,23 @@ export async function prepareArrangementAudioLanes(input: {
   ⇒ ⭐ 注 ✓：⭐ 目标里**已有**教训 101（子集≠套件 ✓）与 104 的精神（⭐ 门集合要对齐 ✓），
     ⭐ 但**没有那八条命令** ✗ ⇒ ⭐ 台账是当前权威位置 ✓
 
+### 四百七十六、⭐ **迁移 ② 第一步（加法）：v2 包模块与判据已建**（2026-10-05 22:51 ✓）
+
+```
+**⭐ 新增 ✓（⭐ **未接任何调用点** ✓ —— ⭐ 加法 ✓，⭐ 所以不可能破坏现状 ✓）**：
+  · ⭐ `src/features/sequencer/arrangementPackage.ts` ✓
+    ⇒ ⭐ `ARRANGEMENT_PACKAGE_FORMAT = "groove-arrangement"` ✓
+    ⇒ ⭐ `ArrangementPackage = { format, appVersion, writtenAt, arrangement: ArrangementV2 }` ✓
+    ⇒ ⭐ `buildArrangementPackage(arrangement, appVersion?, writtenAt?)` ✓
+    ⇒ ⭐ `validateArrangementPackage(data)` ✓ —— ⚠️ ⭐ **拒绝 v1 形状** ✗：
+      ⭐ 发现 `clips`／`slots`／`sections`／`project` 任一项 ⇒ ⭐ **报错** ✓（⭐ 且**指名**是哪一项 ✓）
+  · ⭐ `src/test/arrangementPackage.test.ts` ✓（**3 用例** ✓）：⭐ 建包 ✓／⭐ 往返 ✓／
+    ⭐ **拒绝四种 v1 键** ✓ ＋ 拒绝 `groove-project` 格式 ✓
+**⭐ 读数 ✓**：⭐ `typecheck=0` ✓｜⭐ `lint=0` ✓｜⭐ 新判据 **绿** ✓｜⭐ 并**已验能红** ✓
+  （⭐ 把 `toThrow(/v1 shape/)` 改成不存在的模式 ⇒ ⭐ 当场红 ✓ ⇒ ⭐ 还原 ✓）
+**⚠️ 说明 ✓**：⭐ 本模块**尚无调用点** ✓ ⇒ ⭐ `check:dead-exports` 会**列出**它的导出 ✓（⭐ 门**不失败** ✓ ——
+  ⭐ 与 `downloadJsonFile` 当初同理 ✓）⇒ ⭐ 接上调用点后即不再列出 ✓
+**⏳ 下一步 ✓**：⭐ 让 `validateArrangementPackage`／`buildArrangementPackage` ⭐ **成为唯一路径** ✓ ——
+  ⭐ 改 `projectDb.ts` 的 `exportProjectPackage`／`validateGroovePackage` ✓ ＋ ⭐ 4 个工具 ✓ ＋ ⭐ 调用点 ✓
+```
+
