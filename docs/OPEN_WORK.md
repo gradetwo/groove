@@ -10955,3 +10955,30 @@ export async function prepareArrangementAudioLanes(input: {
   ⑤ ⭐ 最后 `registrySong` ＋ `registryPattern` 整支处置 ✓
 ```
 
+### 四百五十八、⭐ **业主指令：页面的 V1 功能用 V2 架构实现（2026-10-05 21:00 ✓）**
+
+```
+**业主原话 ✓**：⭐ "**页面原有的 V1 功能用 V2 架构实现就好**" ✓
+⇒ ⭐ **含义** ✓：⭐ **不是删功能** ✗ —— ⭐ 是**把功能移植到 V2 架构上** ✓（⭐ 能力保留 ✓，架构换掉 ✓）
+  ⇒ ⭐ 与三条硬约束合起来＝⭐ **同一能力、只留 V2 实现** ✓（⭐ 不留 v1 版本并行 ✗）
+  ⇒ ⚠️ ⭐ 因此 Web 面那 **14 个文件**（第 10 轮实测 ✓）的处置是 ⭐ **重写为 V2** ✓，**不是移除** ✓
+**⭐ 我替业主定的一条 ✓（依据："其它事情按你建议来" ✓）**：
+  · 歌词工具名 ⇒ ⭐ **`set_arrangement_vocal_melody`** ✓（⭐ 与 `create_arrangement`／`get_arrangement` 一致 ✓）
+**⭐ 步骤 2 的波及面实测（21:00 ✓，`grep -rl set_vocal_melody` ✓）**：
+  · ⭐ **12 个文件、33 处引用** ✓
+  · ⭐ **判据文件 4 个** ✓：`src/test/mcpSchemaPassthrough.test.ts` ✓／`src/test/vocalMelody.test.ts` ✓／
+    `src/test/mcpCapability.test.ts` ✓／`src/test/mcpCopy_set_vocal_melody.test.ts` ✓（⭐ 最后一个要**改名** ✓）
+  · ⭐ 代码 3 处 ✓：`mcp/registrySong.ts` ✓／`mcp/song.ts` ✓／`scripts/check_mcp.mjs` ✓
+  · ⭐ 文档 6 处 ✓：`docs/MCP.md` ✓／`docs/FEATURE_ALIGNMENT.md` ✓／`docs/OPEN_WORK.md` ✓／
+    `docs/MCP_CREATION_FINDINGS.md` ✓／`docs/Z2_ADJUDICATION.md` ✓／`docs/V4_REVIEW_PLAN.md` ✓
+    ⚠️ ⭐ 其中 `Z2_ADJUDICATION`／`V4_REVIEW_PLAN` 是**历史裁决文档** ✓ ⇒ ⭐ **不改** ✗（⭐ 历史留痕 ✓）
+· ⭐ **步骤 2 的执行清单 ✓（下一轮起 ✓）**：
+  ① `mcp/registrySong.ts`：工具改名为 `set_arrangement_vocal_melody` ✓；入参 ⭐ **只留 `arrangementId` ＋ `trackId`** ✓
+     （⭐ 删 `songId` ✗／`sectionId` ✗／`index` ✗／`pattern` ✗）＋ 旋律字段 ✓；回包 ⭐ 只用 v2 词 ✓
+     （`arrangementId` ✓／`trackId` ✓／`notes` ✓／`prosody` ✓／`warnings` ✓；⭐ 删 `editedSlot` ✗／`sharedSlot` ✗）
+  ② handler ⭐ 只留一条路 ✓：`getMcpArrangement` ⇒ `flattenMcpArrangement` ⇒ `setVocalMelody` ⇒ **`setMcpTrackNotes`** ✓
+  ③ 判据 4 个文件同步 ✓（含**改 `mcpCopy_set_vocal_melody.test.ts` 的文件名** ✓）
+  ④ `scripts/check_mcp.mjs` 的工具清单同步 ✓
+  ⑤ ⭐ 回填 `docs/MCP.md` ＋ `FEATURE_ALIGNMENT.md` ✓（⚠️ 历史文档不改 ✗）
+```
+
