@@ -14109,3 +14109,18 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+**⭐ 更强的一句 ✓（`arrangementV2.ts:137–142` ✓）**：
+```
+⭐ 原文 ✓：⭐ "⭐ **This replaces a sixteen-step array, which was the v1 pattern's grid carried into a model that no longer
+  needs it.** A step array cannot say where … those are exactly the three things a piano roll writes. ⭐ **The owner's
+  instruction was to stop letting the old step design constrain this one** …" ✓
+**⭐⭐ 因此 `resolution` **不是缺口** ✓**：⭐ 它是 ⭐ **按业主指示把 v1 的步进网格移出模型** ✓ 的结果 ✓
+  ⇒ ⭐ 与 ⭐ §543 的"⭐ 时间以拍计、⭐ 网格是视图" ✓ **同一条决定** ✓ ✓
+**⭐ 缺口 ④ 的最终结案 ✓**：⭐ ① ⭐ 名字 ✓ **建好** ✓｜⭐ ② ⭐ 播种 ✓ **建好** ✓｜
+  ⭐ ③ ⭐ `swing` ✓ **由设计覆盖** ✓（⭐ 拍位置即抖动 ✓，⭐ 记 §26 听感确认 ✓）｜
+  ⭐ ④ ⭐ `resolution` ✓ **由业主指示覆盖** ✓（⭐ 网格是视图 ✓，⭐ 步进网格已按指示移出 ✓）
+  ⇒ ⭐ **四项全部有家或有明文理由** ✓ ⇒ ⭐ **`create_song` 可退** ✓ ✓
+**⭐ 待办（小 ✓）**：⭐ ① ⭐ 给回桥那处默认网格加一句注释 ✓ ② ⭐ 改写 v1 那两个用例 ✓ ③ ⭐ `swing` 记一次听感确认 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
