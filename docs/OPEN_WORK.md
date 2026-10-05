@@ -9249,3 +9249,26 @@ problems: **[]** ✓
 **⚠️ 顺带一条自查 ✓（第三次同型 ✗）**：本轮我的 python 补丁**又**在字符串里嵌了 ASCII 引号 ✗ ⇒ 语法错 ⇒ 替换未生效 ✓
    （⭐ 好在"空提交"被 git 挡住 ✓ ⇒ **没有半截状态落盘** ✓）⇒ 铁定做法 ✓：**补丁脚本里一律用「」，绝不用 ASCII 引号** ✓
 ```
+
+## 三百九十八、♿ **已批准项落地①：`useReducedMotion` 在根上接一次（"只差一次调用"变成"已经接了"）**（2026-10-05 14:12 ✓）
+
+```
+**背景 ✓**：对齐表第 28 行写着「无障碍"减少动效" —— **半接线**（钩子能写 `.reduced-motion` ✓ 但**无人调用** ✗）」✓
+   ⇒ 属**已批准、未开工** ✓（`§364` 记的"保守法：先在根组件调一次" ✓）
+**先量 ✓（时点 14:08 ✓，方法：读 `src/hooks/useReducedMotion.ts` ＋ grep 全仓 ✓）**：
+   · 钩子**机制完整** ✓：读 `localStorage` 的 `groove_reduced_motion` ✓（`system`／`reduce`／`no-preference` ✓）、
+     跟随系统查询 ✓、并**往 `document.documentElement` 加/去 `reduced-motion`** ✓
+   · ⚠️ **谁在读那个类 ✓**：全仓**只有 `GalaxyView:1237`** ✓，而且是
+     `classList.contains("reduced-motion") || matchMedia(...)` ✓（**OR 系统查询** ✓）
+     ⇒ ⭐ 即：**用户自己选了"减少"、而系统没选** ⇒ 什么都不会变 ✗，且样式表里所有 `.reduced-motion` 规则**全是死代码** ✗
+**改动 ✓（最小 ✓、不动标记 ✓）**：`src/App.tsx` —— 导入 ✓ ＋ 在 `export function App()` 体内
+   **调一次 `useReducedMotion();`** ✓（带理由注释 ✓，指向 `§364` 的接线点 ✓）⇒ **1 文件 +11 行** ✓
+**读数 ✓（时点 14:10–14:12 ✓）**：`tsc=0` ✓｜`lint=0` ✓｜⭐ **`check:skins=0`（零 diff ✓ —— 未动标记 ⇒ 无须重生成 ✓）**
+**判据 ✓（能红 ✓）**：新增 `src/test/reducedMotionWiring.test.ts` ✓（**3 用例 ✓**）：
+   · ⭐ **App 必须"调用"而不只是"导入"** ✓（正则 `\n\s*useReducedMotion\(\);` ✓ ⇒ **机制**而非措辞 ✓）
+   · 钩子仍须**拥有那个类** ✓（`add` ✓／`remove` ✓／仍听系统查询 ✓）⇒ 保证这次调用**确实有效果** ✓
+   · "仍在测量"自检 ✓
+   ⭐ **弄红验证 ✓**：临时移除那次调用 ⇒ 判据 **exit=1** ✓，报 `{ imports: true, calls: false }` ✓
+     ⇒ 从**修复后**备份还原 ✓（第 78 条 ✓）⇒ `tsc=0` ✓／3 用例 ✓
+**⚠️ 过程小记 ✓**：我第一次的补丁脚本在**找到组件定义前就退出** ✗ ⇒ ⭐ 好在**写盘在最后一步** ✓ ⇒
+   **文件完全没被改** ✓（无半截状态 ✓）；也顺带学到 ✓：App 的真身是 `export function App()` ✓（不是 `export default function App` ✗）

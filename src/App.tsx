@@ -2,6 +2,7 @@ import { captureWithBrowser } from "./audio/captureBrowser";
 import { createOpfsRecordingStore } from "./audio/opfsRecordingStore";
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { LanguageProvider, useLanguage } from "./i18n/LanguageContext";
+import { useReducedMotion } from "./hooks/useReducedMotion";
 import { Header, NavTab } from "./components/Header";
 import { useGs1Setting } from "./features/sequencer/useGs1Setting";
 import { GlobalSearch } from "./components/GlobalSearch";
@@ -802,6 +803,16 @@ const MainApp: React.FC = () => {
 };
 
 export function App() {
+  /**
+   * ⭐ **One call, so a person's own choice is honoured app-wide.**
+   *
+   * The hook writes `.reduced-motion` on the root element and follows the system query. `GalaxyView` was the only
+   * reader of that class and it OR-ed the class with the media query, so a user who chose to reduce motion
+   * without their operating system doing the same saw nothing change. Calling it here makes every
+   * `.reduced-motion` rule in the stylesheets apply; the wiring point was recorded as the conservative first step
+   * (docs/OPEN_WORK.md §364), and it changes no markup.
+   */
+  useReducedMotion();
   return (
     <ErrorBoundary fallbackTitle="应用遇到未知错误 / Application Error">
       <LanguageProvider>
