@@ -194,19 +194,18 @@ export function grooveProjectFor(arrangement: ArrangementV2): GrooveProject {
  * and an arrangement is exactly what this route has. So the file carries both halves: the v1 two-pattern project every
  * older reader understands, and the clips that make re-opening it faithful.
  */
-export async function grooveFileFor(arrangement: ArrangementV2): Promise<ProducedGroove> {
-  const { exportProjectPackage, validateGroovePackage } = await import("../sequencer/projectDb");
-  const pattern = compiledPatternFor(arrangement);
-  const project = grooveProjectFor(arrangement);
-  const carried: GrooveProjectArrangement = { clips: { A: pattern }, sections: [] };
-  const pkg = exportProjectPackage(project, undefined, carried);
+export async function grooveFileFor(arrangement: ArrangementV2, stem = "arrangement"): Promise<ProducedGroove> {
+  const { buildArrangementPackage, validateArrangementPackage } = await import("../sequencer/arrangementPackage");
+  // ⭐ The package carries the arrangement itself: no compiled pattern, no clips and no project half.
+  const pkg = buildArrangementPackage(arrangement);
   // The app's own validator is the gate on the way out too: a package this refuses must never reach a person's disk.
-  validateGroovePackage(pkg);
+  validateArrangementPackage(pkg);
+  const safeStem = safeFileStem(stem);
   return {
     kind: "groove",
-    filename: `${safeFileStem(project.name)}.groove`,
+    filename: `${safeStem}.groove`,
     blob: new Blob([JSON.stringify(pkg, null, 2)], { type: "application/json" }),
-    name: project.name,
+    name: safeStem,
   };
 }
 
@@ -511,9 +510,16 @@ function toBase64(bytes: Uint8Array): string {
 
 async function importGrooveIntoArrangement(arrangement: ArrangementV2, file: File): Promise<ArrangementImportOutcome> {
   try {
-    const { validateGroovePackage } = await import("../sequencer/projectDb");
-    const pkg = validateGroovePackage(JSON.parse(await file.text()));
-    const imported: ArrangementImportResult = arrangementFromGroovePackage(pkg, arrangement.songId);
+    const { arrangementFromPackage } = await import("../sequencer/arrangementPackage");
+    const carried = arrangementFromPackage(JSON.parse(await file.text()));
+    // ⭐ The package already carries an arrangement, so nothing is projected: the counts come from it directly.
+    const imported: ArrangementImportResult = {
+      arrangement: carried,
+      trackIds: carried.tracks.map((track) => track.id),
+      tracks: carried.tracks.length,
+      notes: Object.values(carried.notesByTrack ?? {}).reduce((sum, list) => sum + list.length, 0),
+      problems: [],
+    };
     return { ok: true, filename: file.name, format: "groove", tracks: imported.tracks, notes: imported.notes, problems: imported.problems, arrangement: imported.arrangement };
   } catch (error) {
     return { ok: false, filename: file.name, reason: describeError(error) };

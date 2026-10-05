@@ -15,7 +15,7 @@ import type { ArrangementV2, NoteEvent } from "../types/arrangementV2";
 import { fromMidi } from "../data/midiToArrangement";
 import { fromMusicXml } from "../data/musicxmlImport";
 import { arrangementFromGroovePackage } from "../data/arrangementImport";
-import { validateGroovePackage } from "../features/sequencer/projectDb";
+import { validateArrangementPackage } from "../features/sequencer/arrangementPackage";
 import {
   arrangementFileKind,
   alsFileFor,
@@ -75,15 +75,15 @@ describe("the arrangement's exports, read back by the readers that read real fil
     expect(file.filename).toBe("arrangement.groove");
 
     // `validateGroovePackage` is the gate the Project Hub's own Import calls, so a package it accepts is one the hub opens.
-    const pkg = validateGroovePackage(JSON.parse(await file.blob.text()) as unknown);
-    expect(pkg.version).toBe(2);
-    expect(pkg.arrangement?.clips.A).toBeDefined();
+    const pkg = validateArrangementPackage(JSON.parse(await file.blob.text()) as unknown);
+    expect(pkg.format).toBe("groove-arrangement");
+    expect(pkg.arrangement.tracks).toHaveLength(2);
 
-    const back = arrangementFromGroovePackage(pkg, "new");
-    expect(back.tracks).toBe(2);
+    const back = pkg.arrangement;
+    expect(back.tracks).toHaveLength(2);
     // The notes come back through the note layer rather than being flattened onto a sixteenth grid.
-    expect(back.notes).toBe(5);
-    expect(back.arrangement.bpm).toBe(128);
+    expect(Object.values(back.notesByTrack ?? {}).reduce((sum, list) => sum + list.length, 0)).toBe(5);
+    expect(back.bpm).toBe(128);
   });
 
   it("writes MusicXML that `fromMusicXml` reads back note for note", async () => {
@@ -144,7 +144,7 @@ describe("the arrangement's imports, fed files this app itself exported", () => 
     const outcome = await importArrangementFile(emptyArrangement(), new File(["{\"format\":\"nope\"}"], "broken.groove", { type: "application/json" }));
     expect(outcome.ok).toBe(false);
     if (outcome.ok) return;
-    expect(outcome.reason).toMatch(/Invalid \.groove package/);
+    expect(outcome.reason).toMatch(/Invalid arrangement package/);
   });
 });
 

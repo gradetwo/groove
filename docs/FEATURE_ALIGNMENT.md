@@ -195,3 +195,15 @@
 
 **判据读数 ✓**：⭐ `mcpCoverage=0` ✓｜⭐ `check:mcp` **123/123** ✓｜⭐ 十一道门全 0 ✓｜⭐ 相关判据 6 文件全过 ✓｜⭐ 文档双门 0 ✓
 
+## 2026-10-06 00:55 回填（第 4 条规矩：改完实现回来改表）
+
+| 面 | 变化 | 依据 |
+|---|---|---|
+| ⭐ **系统** | ✅ `.groove` v2 包成为**唯一路径** ✓（⭐ MCP 与 Web 都是 ✓） | 本轮 ✓ |
+| ⭐ **MCP 面** | ✅ 导出接 `arrangementId` ✓／导入载入为 arrangement ✓（`5a2f423`／`e5db525` ✓） | 前轮 ✓ |
+| ⭐ **Web 面** | ✅ ⭐ **保存与读取都走 v2 包** ✓：⭐ `grooveFileFor(arrangement, stem = "arrangement")` ✓（⭐ 文件名不再取 `songId` ✓ —— ⭐ 那会撞名 ✓）；⭐ 读取用 ⭐ `arrangementFromPackage` ✓ 并直接取包内编曲 ✓；⭐ 判据改为断言 v2 形状与"不含 `clips`" ✓ | 本轮 ✓ |
+
+**判据读数 ✓**：⭐ `arrangementEntries`（Web 的包往返 ✓）**通过** ✓｜⭐ `check:mcp` **123/123** ✓｜⭐ 十一道门全 0 ✓｜⭐ 相关判据 7 文件全过 ✓｜⭐ 文档双门 0 ✓
+**⏳ 遗留 ✓**：⭐ `arrangementFromGroovePackage`（`src/data/arrangementImport.ts:232` ✓）⭐ **已无 v2 调用者** ✓ ⇒
+  ⭐ 退场待办 ✓（⭐ `check:dead-exports` 会**列出**它 ✓，⭐ 不失败 ✓）；⭐ 退场前先量其余调用者 ✓（可逆性差 ✓）
+
