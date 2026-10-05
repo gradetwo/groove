@@ -12473,3 +12473,22 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 本轮不动代码 ✓**（⭐ 结论就是"不该动" ✓）；⭐ 台账已更正 ✓
 ```
 
+### 四百九十七、⭐ **`export_midi` 与 `export_arrangement_midi` 不同义 ⇒ 不合并，而是 `export_midi` 退场**（2026-10-06 00:59 ✓，已量 ✓）
+
+```
+**⭐ 量到的差别 ✓（入参由脚本从 schema 抽出 ✓）**：
+| 工具 ✓ | 入参 ✓ | 交付 ✓ |
+|---|---|---|
+| ⭐ `export_midi` ✓（`registryFiles.ts` ✓） | ⭐ **`pattern`** ✗（⭐ v1 步进网格 ✓，⭐ "8 tracks on a 16th grid; drums on channel 10" ✓） | ⭐ **base64 字节** ✓（**内联** ✓，⭐ 不落盘 ✓） |
+| ⭐ `export_arrangement_midi` ✓（`registryArrangement.ts` ✓） | ⭐ `arrangementId` ✓ ＋ `filename`／`outputDir` ✓ | ⭐ **写文件** ✓（⭐ format 1 ✓） |
+**⇒ 判断 ✓**：⭐ **输入模型不同 ✗、交付方式不同 ✗** ⇒ ⭐ **不是同一个工具** ✓
+  ⇒ ⚠️ ⭐ 因此目标里那句"⭐ **同义则合并**" ✗ **不适用** ✓
+  ⇒ ⭐ 但 ⭐ 按"**不并存**" ✗：⭐ `export_midi` ⭐ **吃 v1 的 pattern** ✗ ⇒ ⭐ 在纯 v2 表面里**没有位置** ✓
+    ⇒ ⭐ **决定 ✓：⭐ 退场** ✓（⭐ 而**不是**合并 ✓）—— ⭐ 它的用途（"⭐ 给我 pattern 的 MIDI 字节" ✓）
+      ⭐ 由 ⭐ `export_arrangement_midi` 对**真编曲**提供 ✓
+**⭐ 退场前必做 ✓（教训 114 ✓）**：⭐ 列出它的**全部引用** ✓（⭐ 本轮已列 ✓）⇒ ⭐ 逐个处置 ✓：
+  ⭐ 工具块 ✓｜⭐ `scripts/check_mcp.mjs` 的用例 ✓｜⭐ 判据（⭐ 若有 ✓）｜⭐ `docs/MCP.md` 的声明行 ✓｜
+  ⭐ `docs/FEATURE_ALIGNMENT.md` ✓｜⭐ `redlines.mjs` 的必需清单（⭐ 若列了它 ✓）
+**⏳ 未退场 ✗**（⭐ 余量用尽 ✓）；⭐ 引用清单已取 ✓
+```
+
