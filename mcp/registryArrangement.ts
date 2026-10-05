@@ -1224,40 +1224,13 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
       "**Every place a pitch can move, named, with the total beside the list**. Because the fix for a surprise octave is not a promise that it cannot happen but a report of who did it. Reads the section's own `transpose` and its `overrides.transpose` from a song. The GS-1 pitch parameters from a lane's own overrides (OSC1_PITCH OSC2_PITCH in semitones, OSC1_DETUNE OSC2_DETUNE MASTER_TUNE in cents). Each entry carries its source, its size, whether it can be undone and where it lives. Nothing is applied: this reports what the model states. Two things it deliberately does not read, both named in its reply rather than silently omitted: the **SFZ's own `tune` and `pitch_keycenter`**. They need a resolved note and are reported by `get_pitch_report` with an `assetId`. The chord register in `genreExpression` is written into the pitches at composition time and is therefore not a playback transposition at all. Note that **no track-level transposition exists in either model**. Both `transpose` fields live on sections.",
     readOnly: true,
     inputSchema: {
-      songId: z.string().optional().describe("a song whose sections to read; every section unless sectionId names one"),
-      sectionId: z.string().optional().describe("one section of that song"),
       pattern: patternSchema.optional().describe("a pattern whose lane's GS-1 overrides to read"),
       track: z.string().optional().describe('the lane in that pattern — laneId first, then kind ("chords", "lead"…)'),
     },
     handler: (args) => {
-      const songId = typeof args.songId === "string" && args.songId.length > 0 ? args.songId : undefined;
-      const sectionId = typeof args.sectionId === "string" && args.sectionId.length > 0 ? args.sectionId : undefined;
       const trackName = typeof args.track === "string" && args.track.length > 0 ? args.track : undefined;
-      if (songId === undefined && args.pattern === undefined) {
-        return failure("give a songId, a pattern, or both — there is nothing to report on otherwise");
-      }
-
-      const sections: Array<{ sectionId: string; label?: string; transpositions: unknown[] }> = [];
-      if (songId !== undefined) {
-        const song = getMcpSong(songId);
-        if (!song) return failure(`no song "${songId}"`);
-        // `SongSection.id`, not `sectionId` — the field names here are the model's, read from the type rather
-        // than assumed. Its transposition is `overrides.transpose`, the value `sectionTranspose` reads.
-        const wanted = song.sections.filter((section) => sectionId === undefined || section.id === sectionId);
-        if (sectionId !== undefined && wanted.length === 0) {
-          return failure(`no section "${sectionId}" in song "${songId}"`);
-        }
-        for (const section of wanted) {
-          sections.push({
-            sectionId: section.id,
-            ...(section.label === undefined ? {} : { label: section.label }),
-            transpositions: collectTranspositions({
-              ...(typeof section.overrides?.transpose === "number"
-                ? { overridesTranspose: section.overrides.transpose }
-                : {}),
-            }),
-          });
-        }
+      if (args.pattern === undefined) {
+        return failure("give a pattern — the GS-1 overrides live per lane");
       }
 
       let lane: { track: string; transpositions: unknown[] } | undefined;
@@ -1280,15 +1253,11 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
         };
       }
 
-      const all = [
-        ...sections.flatMap((section) => section.transpositions),
-        ...(lane?.transpositions ?? []),
-      ] as Array<{ semitones: number }>;
+      const all = [...(lane?.transpositions ?? [])] as Array<{ semitones: number }>;
       const totalSemitones = all.reduce((sum, item) => sum + item.semitones, 0);
       return {
         totalSemitones,
         /** The list is the report; the total is only its sum, so it is never returned without it. */
-        ...(sections.length === 0 ? {} : { sections }),
         ...(lane === undefined ? {} : { lane }),
         notRead: [
           "the SFZ's own tune and pitch_keycenter — these need a resolved note, so ask get_pitch_report with an assetId",
