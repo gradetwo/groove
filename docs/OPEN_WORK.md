@@ -11328,3 +11328,19 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 状态 ✓**：⭐ 本轮**未落地** ✗（⭐ 余量用尽 ✓，⭐ 已安全回退 ✓ 树脏 0 ✓）
 ```
 
+**⭐ 迁移 ③ 第七次尝试：两处语法问题，已回退（2026-10-05 21:32 ✓，树脏 0 ✓）**：
+```
+· ✅ **本轮全部改法都已写对程序上 ✓**：⭐ 删块 ✓／文案成对 ✓／`check_mcp` 改挂 ✓（**123 项全过** ✓）／
+  `budgetHonesty` 辅助 ＋ 表项删 ＋ `asError` 包装 ✓／旧拷贝判据 `rm` ✓／台账 4 处 ✓
+· ⚠️ **两处语法／结构问题 ✓（精确 ✓）**：
+  ① ⭐ `budgetHonesty.test.ts:259` ⭐ `Parsing error: ')' expected` ✓
+     ⇒ ⭐ 原因 ✓：⭐ 原式 `expect(handler(...)).rejects` ✓ ⇒ ⭐ 包一层 `asError(` 后**要补一个右括号** ✓
+     ⇒ ⭐ 即 `expect(asError(handler(...))).rejects` ✓（⭐ 我漏了这个 `)` ✗）
+  ② ⭐ `mcpHeadlessRouting.test.ts:141` ⭐ 重复 case **仍在** ✗
+     ⇒ ⭐ 原因 ✓：⭐ 该文件有 ⭐ **两个 switch** 都带 `render_audio` 的 case ✓ ⇒ ⭐ 我只删了**一个** ✗
+     ⇒ ⭐ 改法 ✓：⭐ 两处的旧 case 都要**删** ✓（⭐ 各自与既有的 `render_arrangement` case 合并 ✓）
+· 📌 **至此该迁移的未知＝0 ✓**：⭐ 全部修法都已定位到**行** ✓，⭐ 只剩两处"数个数＋补括号"的机械动作 ✓
+· ⚠️ ⭐ 教训 97 ✓：⭐ 用"包一层函数"去改**跨行表达式**时 ✓，⭐ 必须**同时补对应的右括号** ✓
+  （⭐ 类型检查会当场发现 ✓ —— ⭐ 这就是它拦住的原因 ✓）
+```
+
