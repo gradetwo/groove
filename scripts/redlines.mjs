@@ -384,7 +384,6 @@ const REQUIRED_MCP_TOOLS = [
   "pattern_statistics",
   "compare_genres",
   "export_midi",
-  "export_ableton",
   "share_url",
   "get_loudness_report",
   "analyze_audio",

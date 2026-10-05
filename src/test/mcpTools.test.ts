@@ -248,7 +248,7 @@ describe("MCP · the declared surface", () => {
      */
     const WRITING_VERBS = new Set(["add", "assign", "create", "delete", "duplicate", "export", "import", "make", "move", "normalize", "remove", "rename", "render", "save", "select", "set", "undo"]);
     // `export_*` names a verb that sounds like writing and returns bytes while changing nothing: the promise `readOnly` makes is about the state, not about the word.
-    const RETURNS_BYTES_DESPITE_THE_VERB = new Set(["export_midi", "export_ableton", "export_arrangement_musicxml", "export_logic_project"]);
+    const RETURNS_BYTES_DESPITE_THE_VERB = new Set(["export_midi", "export_arrangement_musicxml", "export_logic_project"]);
 
     const looksLikeAWriter = (name: string) => WRITING_VERBS.has(name.split("_")[0]!) && !RETURNS_BYTES_DESPITE_THE_VERB.has(name);
     const mislabelled = TOOLS.filter((tool) => looksLikeAWriter(tool.name) === tool.readOnly).map((tool) => tool.name);

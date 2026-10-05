@@ -101,7 +101,7 @@ get_pattern boom-bap                  → the pattern it actually plays
 apply_pattern_ops                     → clear a step, humanize the hats with a seed, set swing
 validate_pattern / pattern_statistics → is it well formed, and what does it sound like on paper
 share_url                             → a link a human can open and hear
-export_midi / export_ableton          → files for a DAW
+export_midi / export_arrangement_ableton          → files for a DAW
 render_audio wav|mp3                  → a real file through the app's own engine, with LUFS/true peak/balance
 analyze_audio                         → measure what came out
 ```

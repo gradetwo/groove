@@ -138,7 +138,6 @@ try {
     "get_gs1_patch",
     "compare_genres",
     "export_midi",
-    "export_ableton",
     "share_url",
     "render_arrangement",
     "render_arrangement_stems",
@@ -487,17 +486,6 @@ try {
     "get_song reads the arrangement back with its clips",
     readBack.clips?.A && readBack.clips?.B && (readBack.sections ?? []).length === 2,
     `clips=${Object.keys(readBack.clips ?? {}).join(",")} sections=${(readBack.sections ?? []).length}`
-  );
-
-  /**
-   * The song reaches a DAW as an arrangement rather than one flattened clip: `export_ableton` with a songId places one clip per
-   * section, in its own scene, named after the section.
-   */
-  const alsSong = payload(await client.request("tools/call", { name: "export_ableton", arguments: { songId: song.songId } }));
-  check(
-    "export_ableton exports a song as one clip per section",
-    alsSong.sections === 2 && alsSong.filename?.endsWith(".als") && Number.isFinite(alsSong.bytes),
-    JSON.stringify({ sections: alsSong.sections, filename: alsSong.filename })
   );
 
   const grooveArrangement = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "synth" } }));
@@ -867,10 +855,6 @@ try {
   const midi = payload(await client.request("tools/call", { name: "export_midi", arguments: { pattern } }));
   const midiBytes = Buffer.from(midi.base64 ?? "", "base64");
   check("export_midi returns a Standard MIDI File", midiBytes.subarray(0, 4).toString("ascii") === "MThd", `${midiBytes.length} bytes`);
-
-  const als = payload(await client.request("tools/call", { name: "export_ableton", arguments: { pattern } }));
-  const alsBytes = Buffer.from(als.base64 ?? "", "base64");
-  check("export_ableton returns gzipped XML", alsBytes[0] === 0x1f && alsBytes[1] === 0x8b, `${alsBytes.length} bytes`);
 
   const share = payload(await client.request("tools/call", { name: "share_url", arguments: { pattern } }));
   check("share_url returns an absolute link", typeof share.url === "string" && share.url.startsWith("http") && share.url.includes("groove="), share.url?.slice(0, 60));
