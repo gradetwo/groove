@@ -380,18 +380,6 @@ try {
     JSON.stringify(vocalStub).slice(0, 100)
   );
 
-  const tempoApplied = payload(
-    await client.request("tools/call", { name: "set_tempo", arguments: { songId: song.songId, tempoTrack: [{ atBar: 0, bpm: 240 }] } })
-  );
-  const tempoRejected = await client.request("tools/call", {
-    name: "set_tempo",
-    arguments: { songId: song.songId, tempoTrack: [{ atBar: -1, bpm: 120 }] },
-  });
-  check(
-    "set_tempo accepts a map and refuses an unreadable point",
-    typeof tempoApplied.secondsEstimate === "number" && tempoRejected?.isError === true,
-    `estimate ${tempoApplied.secondsEstimate}s; rejected: ${tempoRejected?.isError === true}`
-  );
 
   check(
     "bars counts passes: two passes expand to passBars x 2 measures",

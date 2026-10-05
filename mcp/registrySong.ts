@@ -381,47 +381,6 @@ export const SONG_TOOLS: ToolDefinition[] = [
   },
   {
     /**
-     * Owner decision 2b, the tool half: a nine-movement piece stops being one grid.
-     *
-     * The write is **validated rather than filtered** — an unreadable point (a fractional bar, a tempo outside 20–300, an unknown curve) rejects the whole
-     * change and leaves the song untouched, because a silently dropped point means the tempo the caller asked for is not the tempo they get.
-     */
-    name: "set_tempo",
-    title: "Set a song's tempo changes",
-    description:
-      "Give a song a tempo map: points at whole bars, each `jump` (the default — the new tempo holds from that bar) or `linear` (it ramps to the next point across the bars between them). Absent, every bar costs 4 * 60 / bpm and nothing about the song differs from before. Present, the renderer schedules from the map bar by bar rather than restarting the audio context. `SecondsEstimate` follows it. An empty list clears the map. Unreadable points reject the whole change rather than being dropped.",
-    readOnly: false,
-    inputSchema: {
-      songId: z.string().describe("the id create_song returned"),
-      tempoTrack: z
-        .array(
-          z.object({
-            atBar: z.number().int().min(0).max(4096).describe("0-based bar the point takes effect at"),
-            bpm: z.number().min(20).max(300),
-            curve: z.enum(["jump", "linear"]).optional().describe("default jump"),
-          })
-        )
-        .max(64)
-        .describe("an empty list clears the map"),
-    },
-    handler: (args) => {
-      try {
-        const result = setMcpTempo(String(args.songId), args.tempoTrack as Array<{ atBar: number; bpm: number; curve?: "jump" | "linear" }>);
-        if (result.problems.length) return failure(`nothing was changed — ${result.problems.join("; ")}`);
-        return {
-          ...result.summary,
-          tempoTrack: (args.tempoTrack as unknown[]) ?? [],
-          note: (args.tempoTrack as unknown[])?.length
-            ? "the renderer schedules bar by bar from this map; secondsEstimate follows it"
-            : "the map is cleared, so the song plays at its own bpm again",
-        };
-      } catch (error) {
-        return failure((error as Error).message);
-      }
-    },
-  },
-  {
-    /**
      * P1 of the composer's report: `setMcpClip` existed and no tool reached it, so a song could only ever have clip A.
      *
      * This is the minimum for the standard verse/chorus workflow — write a variation, point a later section at it — instead of

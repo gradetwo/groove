@@ -193,7 +193,7 @@ export interface ArrangementV2 {
    *
    * Muse composed a nine-movement piece whose movements run at 66–168 bpm and had to split it into **nine arrangements** rendered separately and stitched outside, because an arrangement could carry only a single tempo. The song layer has had a tempo map all along (`set_tempo`), the renderer schedules bar by bar from it (`src/data/tempoMap.ts`), and the arrangement's compile already projects into a song input — so the only thing missing was a way for the arrangement to say it, which is this field.
    *
-   * Same shape as the song's own points, deliberately: `atBar` is **0-based**, exactly as `set_tempo` documents it, so a caller who has used one can read the other without learning a second convention.
+   * Same shape as the song's own points, deliberately: `atBar` is **0-based**, exactly as `set_arrangement_tempo_map` documents it, so a caller who has used one can read the other without learning a second convention.
    */
   tempoTrack?: { atBar: number; bpm: number; curve?: "jump" | "linear" }[];
   /**

@@ -348,3 +348,21 @@
 **⏳ 下一步 ✓**：⭐ 退 `set_tempo`（⭐ 约 7 处 ✓：⭐ 块 ✓／⭐ `mcpCopy_set_tempo.test.ts` ✓／⭐ `check_mcp:384–391` ✓／
   `docsWorkflow` 步骤表 ✓／`mcpCapability:149` ✓／`mcp_call.mjs:120` ✓／`docs/MCP.md:227`＋`:261` ✓／`arrangementV2.ts:194–196` 注释 ✓）
 
+## 2026-10-06 02:31 回填（第 4 条规矩：改完实现回来改表）
+
+| 面 | 变化 | 依据 |
+|---|---|---|
+| ⭐ **MCP 面** | ✅ ⭐ **`set_tempo` 退场** ✓ ⇒ 工具 **90 ⇒ 89** ✓（⭐ ⑤ 第三刀 ✓，⭐ 且是**先立判据再删**的范式 ✓） | 本轮 ✓ |
+| ⭐ **系统／数据** | ✅ ⭐ tempo 地图能力由 ⭐ **`set_arrangement_tempo_map`** 承接 ✓：⭐ 整幅地图写进编曲 ✓，⭐ 点落整小节 ✓、⭐ `jump`／`linear` ✓（⭐ 语义与旧的一致 ✓） | 本轮 ✓ |
+| ⭐ **Web 面** | **无变化** ✓ | — |
+
+**⭐ 触及 8 处 ✓**：⭐ `mcp/registrySong.ts`（工具块 382–422 ✓）｜⭐ `the criterion that measured its description（随工具退场已删除 ✓）`（**删文件** ✓ 用 `rm` ✓）｜
+  `scripts/check_mcp.mjs`（**整个场景 383–391** ✓）｜⭐ `src/test/docsWorkflow.test.ts`（步骤表 ✓）｜
+  `src/test/mcpCapability.test.ts`（清单 ✓）｜⭐ `scripts/mcp_call.mjs`（示例行 ✓）｜⭐ `docs/MCP.md`（两处散文 ⇒ **记账** ✓）｜
+  ⭐ `src/types/arrangementV2.ts`（注释里的旧名 ⇒ 新名 ✓）
+**⚠️ ⭐ 又一次块边界错 ✓（第三次 ✓）**：⭐ 首删只删了 ⭐ `const tempoApplied` 一行 ✗ ⇒ ⭐ 门报
+  "⭐ **tempoApplied is not defined**" ✓ ⇒ ⭐ 场景实为 ⭐ **383–391**（⭐ 含 `tempoRejected` 与断言 ✓）⇒ 补删即绿 ✓
+  ⇒ ⭐ 印证教训 123 ✓：⭐ **场景要整体删** ✓；⭐ 且 ⭐ **按"提及该变量的行"定场景** ✓ 是可靠的定界法 ✓
+**⭐ 判据读数 ✓**：⭐ `check:mcp` **89 tools** ✓｜⭐ 十一道门全 0 ✓｜⭐ 相关判据全过 ✓｜⭐ 文档双门 0 ✓
+**⏳ ⑤ 剩 6 ✓**：⭐ `create_song` ✓／⭐ `get_song` ✓／⭐ `render_song` ✓／⭐ `set_clip` ✓／⭐ `add_section` ✓／⭐ `undo_song`（移植 ✓）
+

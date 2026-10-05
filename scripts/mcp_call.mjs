@@ -117,7 +117,6 @@ try {
    *
    * ```json
    * [{ "tool": "create_song", "args": { "genreId": "chicago-house" } },
-   *  { "tool": "set_tempo", "args": { "songId": "…", "tempoTrack": [{ "atBar": 1, "bpm": 60 }] } }]
    * ```
    *
    * Each reply is printed under a heading naming its tool, so a caller can read the flow rather than infer it.

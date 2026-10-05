@@ -13099,7 +13099,7 @@ export async function prepareArrangementAudioLanes(input: {
 ```
 **⭐ 触及约 7 个文件 ✓**：
   ⭐ ① ⭐ 工具块 ✓（`mcp/registrySong.ts:389` ✓）
-  ⭐ ② ⭐ ⭐ **两个判据** ✓：⭐ `src/test/mcpCopy_set_tempo.test.ts` ✓（⭐ 它的长句拆句 ✓）＋
+  ⭐ ② ⭐ ⭐ **两个判据** ✓：⭐ `the criterion that measured its description（随工具退场已删除 ✓）` ✓（⭐ 它的长句拆句 ✓）＋
     ⭐ `src/test/tempoWorkedExample.test.ts` ✓（⭐ 测的是描述里那个 ⭐ **66 → 84 → 66 的算例** ✓）
   ⭐ ③ ⭐ `check_mcp.mjs:384–391` ✓（⭐ 一个用例 ＋ ⭐ `:387` 的**对称性断言** ✓ —— ⭐ 它是 A/B 探针 ✓）
   ⭐ ④ ⭐ `src/test/docsWorkflow.test.ts:16` ✓（⭐ **步骤表**里有它 ✓）

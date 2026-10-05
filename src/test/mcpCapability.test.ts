@@ -146,7 +146,7 @@ const CAPABILITIES: Capability[] = [
   {
     surface: "StudioView",
     feature: "the pattern studio: lanes, clips, inserts, mixing",
-    tools: ["get_pattern", "apply_pattern_ops", "validate_pattern", "pattern_statistics", "set_tempo"],
+    tools: ["get_pattern", "apply_pattern_ops", "validate_pattern", "pattern_statistics"],
     prompts: ["compose_groove", "compose_with_examples"],
   },
   {
