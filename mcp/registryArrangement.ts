@@ -89,7 +89,7 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
         .enum(["synth", "sampler", "drumkit", "fx", "folder"])
         .optional()
         .describe(
-          "a piano/strings/bass part wants `sampler` with an `assetId` from list_arrangement_instruments, so that fact comes first: a client that truncates this text still shows it. Otherwise the blank arrangement's single track gets `synth`. Ignored when templateId is given. A blank `sampler` track starts on the drum kit `virtuosity-drums-basic`, so pass `assetId` (for example `salamander-grand`) when you meant an instrument rather than a kit"
+          "a piano/strings/bass part wants `sampler`, and **this tool takes no `assetId`**: give that track its sound afterwards with `set_arrangement_track_asset`, using an asset from list_arrangement_instruments, so that fact comes first: a client that truncates this text still shows it. Otherwise the blank arrangement's single track gets `synth`. Ignored when templateId is given. A blank `sampler` track starts on the drum kit `virtuosity-drums-basic`, so pass `assetId` (for example `salamander-grand`) when you meant an instrument rather than a kit"
         ),
       songId: z.string().optional().describe("the v1 song this is an arrangement of; defaults to a scratch id"),
     },
