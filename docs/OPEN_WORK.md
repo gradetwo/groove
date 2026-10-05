@@ -15540,3 +15540,23 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 下一段：⭐ 这一处 ＋ ⭐ 其余八处 ✓（⭐ 全部已验 ✓）⇒ ⭐ 本组完成 ✓
 ```
 
+**⭐ 目标用例精确正文 ✓＋ 最小改法 ✓（2026-10-06 05:18 ✓）**：
+```
+**⭐ 正文 ✓（`:121–135` ✓，⭐ `repr()` ✓）**：
+  ⭐ `:121` ⭐ `  it("re-renders when the status changes outside React", () => {` ✓
+  ⭐ `:122` ⭐ `    const { result } = renderHook(() => useAutosaveStatus());` ✓
+  ⭐ `:123` ⭐ `    expect(result.current.status).toBe("idle");` ✓
+  ⭐ `:125` ⭐ `    act(() => {` ✓｜⭐ `:126` ⭐ `      debounceSaveProject(payload());` ✓
+  ⭐ `:127` ⭐ `    });` ✓｜⭐ `:128` ⭐ `    expect(result.current.status).toBe("saving");` ✓
+  ⭐ `:130` ⭐ `    act(() => {` ✓｜⭐ `:131` ⭐ `      vi.advanceTimersByTime(600);` ✓
+  ⭐ `:132` ⭐ `    });` ✓｜⭐ `:133` ⭐ `    expect(result.current.status).toBe("saved");` ✓
+  ⭐ `:134` ⭐ `  });` ✓｜⭐ `:135` ⭐ `});` ✓
+**⭐⭐ 最小改法 ✓（⭐ 替换 `:125–128` ✓ 4 行 ＝ 2 条语句 ✓，⭐ 括号数不变 ✓）**：
+  ⭐ 新 ✓：⭐ `    act(() => {` ✓
+    ⭐ `      void saveArrangementProject({ name: "criteria", arrangement: createArrangement("criteria", "synth") });` ✓
+    ⭐ `    });` ✓｜⭐ `    expect(result.current.status).not.toBe("idle");` ✓
+  ⭐ 且 ⭐ `:130–133` **不动** ✓ ⇒ ⭐ 成功保存后状态正是 ⭐ `"saved"` ✓ ⇒ ⭐ `:133` **会通过** ✓ ✓
+**⭐ 4 行旧块的计数 ✓**：⭐ 全文 ⭐ **1** ✓ ✓（⭐ 已印 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 下一段：⭐ 这一处 ＋ ⭐ 其余八处 ✓（⭐ 全已验 ✓）⇒ ⭐ 本组完成 ✓
+```
+
