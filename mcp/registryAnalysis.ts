@@ -181,7 +181,7 @@ export const ANALYSIS_TOOLS: ToolDefinition[] = [
     name: "spectral_balance",
     title: "Spectral balance of a rendered file",
     description:
-      "The 13-band spectral shape of a WAV this server produced, with the bands named (sub, low, low-mid, mid, high-mid, high) rather than left as indices, plus the spectral centroid. This is the same fingerprint the timbre baseline uses, so a reading here is comparable with it. No browser needed.",
+      "The 13-band spectral shape of a WAV this server produced, with the bands named (sub, low, low-mid, mid, high-mid, high) rather than left as indices, plus the spectral centroid. This is the same fingerprint the timbre baseline uses, so a reading here is comparable with it. No browser needed. **The same measurement as `analyze_audio`**: both call one analysis, so calling both repeats it and only costs time. Ask for one of them.",
     readOnly: true,
     inputSchema: { path: z.string().describe("a .wav path this server produced") },
     handler: (args) => {
