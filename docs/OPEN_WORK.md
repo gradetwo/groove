@@ -13157,3 +13157,24 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 顺序已更正 ✓
 ```
 
+### 五百二十二、⭐ **⑤ 的依赖序：先 `undo_song` 移植，再退 `get_song`**（2026-10-06 02:36 ✓，已量 ✓）
+
+```
+**⭐ 量到 ✓**：⭐ `get_song` ⭐ **被另外两个协议用例当探针** ✗：
+  · ⭐ `check_mcp:400–402` ✓：⭐ "**get_song reads the arrangement back with its clips**" ✓
+  · ⚠️ ⭐ `check_mcp:418` ✓ 与 ⭐ `:426` ✓：⭐ 撤销用例 ⭐ **先用 `get_song` 取 `beforeUndo`** ✓
+    ⇒ ⭐ 断言 ⭐ "**get_song lists what is undoable**" ✓
+  ⇒ ⚠️ ⭐ 因此 ⭐ **先退 `get_song` 会打断撤销用例** ✗ ⇒ ⭐ 必须**先做 undo 移植** ✓
+**⭐ v2 读口的覆盖是够的 ✓**：⭐ 测 `get_arrangement`／编曲读口的判据有 ⭐ **8 个文件** ✓
+  （`mcpArrangement.test.ts` ✓／`mcpArrangementReadCopy.test.ts` ✓／`mcpArrangementPreview.test.ts` ✓ 等 ✓）
+  ⇒ ⭐ 但 ⭐ `get_song` 的 ⭐ `includePatterns`（⭐ v1 形态 ✗）⭐ **在 v2 没有对应** ✗ ⇒ ⭐ 它属于"⭐ v1 独有形态" ✓
+    ⇒ ⭐ 记账去向 ✓：⭐ `get_arrangement` ✓／⭐ `describe_arrangement` ✓（⭐ 摘要 ✓）
+**⭐⭐ 因此 ⑤ 的正确下一件是 ⭐ `undo_song` 的移植 ✓**（⭐ §513 的配方 ✓）——
+  ⭐ 它 ⭐ **是 `get_song` 的前置** ✓；⭐ 而且 ⭐ 它本身是"⭐ v2 缺能力" ✓（⭐ 非删不可 ✓）
+  ⇒ ⭐ 顺序 ✓：⭐ ① ⭐ undo 移植（⭐ 6 处 ✓）⭐ ② ⭐ 退 `get_song` ✓ ⭐ ③ ⭐ 余下 `create_song` ✓／`render_song` ✓／
+    `set_clip` ✓／`add_section` ✓
+**⚠️ ⭐ 教训 134 ✓**：⭐ **退场有依赖序** ✗ —— ⭐ 一个工具若被**别的用例当探针** ✓，⭐ 它的退场要**排在那条用例之后** ✓
+  ⇒ ⭐ 判法 ✓：⭐ 看它在协议脚本里的每一处是"⭐ 自己的用例" ✓ 还是"⭐ 别人的探针" ✗
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 依赖序已定 ✓
+```
+
