@@ -89,6 +89,15 @@ try {
     }
   });
 
+  /**
+   * ⭐ **How long the app took to become usable, not just whether it did.**
+   *
+   * The smoke line said "the built app starts", which answers yes or no and gives nothing to compare across
+   * nights. The clock starts at the navigation and stops when the splash element is gone, which is the moment a
+   * person can first act. The 口径 is deliberately narrow: a cold renderer, a build served from this machine, and
+   * no network shaping, so it is a **regression signal** rather than a production number.
+   */
+  const bootStartedAt = Date.now();
   await page.goto(`http://127.0.0.1:${port}/?tab=studio`, { waitUntil: "domcontentloaded" });
   /**
    * The first frame going away **is** the proof that React committed.
@@ -111,7 +120,9 @@ try {
   if (failures.length > 0) {
     throw new Error(`the page reported ${failures.length} problem(s):\n   ${failures.slice(0, 5).join("\n   ")}`);
   }
+  const bootMs = Date.now() - bootStartedAt;
   console.log(`✅ the built app starts: ${state.surface ? "a mounted surface" : "a mounted root"}, “${state.text}…”`);
+  console.log(`   time to a usable app: ${bootMs} ms (navigation → splash gone; cold renderer, local build)`);
 } catch (error) {
   console.error(`❌ ${error.message}`);
   exitCode = 1;
