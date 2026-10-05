@@ -15090,3 +15090,23 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+**⭐ 链条的根 ✓＋ 真正的缺口 ✓（2026-10-06 04:47 ✓）**：
+```
+**⭐ 根 ✓（`src/features/sequencer/hooks/useAutosaveStatus.ts:9–17` ✓）**：
+  ⭐ `import { getSaveStatusSnapshot, subscribeSaveStatus, type SaveStatusSnapshot } from "…projectStorage";` ✓
+  ⭐ `export function useAutosaveStatus(): SaveStatusSnapshot {` ✓
+  ⭐ `  return useSyncExternalStore(subscribeSaveStatus, getSaveStatusSnapshot, getSaveStatusSnapshot);` ✓
+  ⇒ ⭐ 即 ⭐ **它是 v1 存储运行时 API 的最后一个消费者** ✓ ✓（⭐ 订阅 ＋ ⭐ 快照 ✓）
+**⭐⭐ 因此真正要补的 ✓**：⭐ **一份"⭐ 在 V2 存储之上的订阅 ＋ ⭐ 快照**" ✓（⭐ 供 ⭐ `useSyncExternalStore` ✓ 用 ✓）
+  ⭐ 若 ⭐ `projectDb` **已有** ✓ ⇒ ⭐ 只改接线 ✓（小 ✓）
+  ⭐ 若 ⭐ **没有** ✗ ⇒ ⭐ 需**新增一小对函数** ✓（⭐ `subscribeArrangementSaveStatus` ✓ ＋ ⭐ `getArrangementSaveStatusSnapshot` ✓）
+    ⇒ ⭐ 那才是这一组的**真活** ✗（⭐ 但很小 ✓：⭐ 一个监听器集合 ＋ ⭐ 一个快照对象 ✓）
+**⭐ 这一组的完整清单 ✓（⭐ 顺序 ✓）**：
+  ⭐ ① ⭐ **存储**（⭐ `projectStorage` 的替代 ✓ ⇒ ⭐ 在 ⭐ `projectDb` 上补订阅／快照 ✓）
+  ⭐ ② ⭐ **hook**（`useAutosaveStatus.ts` ✓ 改 import ✓）
+  ⭐ ③ ⭐ **视图**（`StudioView.tsx` ✓）
+  ⭐ ④ ⭐ **组件**（`SaveIndicator.tsx` ✓ ＋ ⭐ 本地 props 形状含 `null` ✓）
+  ⭐ ⑤ ⭐ **判据**（`autosaveStatus.test.tsx` ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
