@@ -14928,3 +14928,29 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+### 五百七十五、⭐⭐ **第三次同类发现：Web 侧的 V2 栈已接线完成（⑥ 已基本完成）**（2026-10-06 04:43 ✓）
+
+```
+**⭐ 量到 ✓**：⭐ **已 import `arrangementEdits` 的非判据文件 ＝ 6 ✓**：
+  ⭐ `src/components/arrangement/ArrangementViewV2.tsx` ✓｜⭐ `src/components/arrangement/NewProjectPanelV2.tsx` ✓｜
+  ⭐ `src/data/arrangementCompile.ts` ✓｜⭐ `src/data/arrangementHistory.ts` ✓｜⭐ `src/data/arrangementImport.ts` ✓｜
+  ⭐ `src/features/sequencer/projectDb.ts` ✓
+  ＋ ⭐ **25 个判据** ✓（⭐ `arrangementEdits.test` ✓／⭐ `arrangementStore.test` ✓／⭐ `arrangementViewV2.test` ✓／
+    `arrangementPersistence.test` ✓／⭐ `arrangementProjectHub.test` ✓／⭐ `arrangementWriteThrough.test` ✓／⭐ `scoreV2.test` ✓ …）
+**⭐ 已用 `ArrangementV2` 的非判据文件 ＝ 21 ✓**：⭐ 含 ⭐ **`arrangementStore.ts`** ✓（⭐ V2 store ✓）｜
+  ⭐ **`useArrangementHistory.ts`** ✓（⭐ V2 历史 ✓）｜⭐ **`useArrangementFileActions.ts`** ✓（⭐ V2 文件动作 ✓）｜
+  ⭐ `arrangementLanes.ts` ✓｜⭐ `arrangementToMidi.ts` ✓｜⭐ `legatoGaps.ts` ✓｜⭐ `arrangementPackage.ts` ✓ …
+**⭐⭐ 结论 ✓**：⭐ **Web 侧已经有一套完整的 V2 栈** ✓ ✓：
+  ⭐ **V2 视图**（`ArrangementViewV2` ✓）⭐ **V2 store**（`arrangementStore` ✓）⭐ **V2 历史**（`arrangementHistory` ＋ ⭐ hook ✓）
+  ⭐ **V2 文件动作**（`useArrangementFileActions` ✓）⭐ **V2 新建面板**（`NewProjectPanelV2` ✓）＋ ⭐ **25 条判据** ✓
+  ⇒ ⭐ **⑥（Web 移植到 V2）⭐ 基本已完成** ✓ ✓
+  ⇒ ⭐ **真正剩下的是 ⭐ ⑦：旧栈的退场** ✓ —— ⭐ `songEdit.ts` ✓／⭐ `types/song.ts` ✓／⭐ v1 store 与 `projectStorage` ✓
+    ＋ ⭐ 仍用它们的那批组件 ✗ ⇒ ⭐ **与 ⑦ 同批 ✓**
+**⭐⭐ 教训 165 ✓（⭐ 同类第三次 ✗）**：⭐ 我**三次**把"⭐ 已存在的工作**"当作"⭐ 待做**" ✗：
+  ⭐ ① ⭐ 窄扫描误判"⭐ 只剩 1 个文件**" ✗（⭐ §570 ✓）② ⭐ 计划"⭐ 新建编辑层**" ✗（⭐ §233 ✓，⭐ 而它已在 ✓）
+  ⭐ ③ ⭐ 计划"⭐ 接线 Web**" ✗（⭐ 本节 ✓，⭐ 而它已接线 ✓）
+  ⇒ ⭐ **做法（⭐ 必须成为第一步 ✓）**：⭐ **每个计划步骤之前，⭐ 先 `grep` 新侧的关键符号** ✓
+    ⇒ ⭐ 若**已存在** ✓ ⇒ ⭐ 该步骤的**性质变为"⭐ 退旧**" ✗，⭐ **不是"⭐ 建新**" ✓ ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 下一段 ✓：⭐ 量**仍用 v1 栈的那批组件** ✓ ⇒ ⭐ 即 ⑦ 的退场清单 ✓
+```
+
