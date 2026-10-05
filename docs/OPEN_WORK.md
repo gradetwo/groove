@@ -11097,3 +11097,29 @@ export async function prepareArrangementAudioLanes(input: {
 **⇒ 迁移顺序推进 ✓**：⭐ 下一项＝ ⭐ **② `registryFiles`（4 工具／10 处 `songId`）** ✓
 ```
 
+### 四百六十、⭐ **迁移 ② 的真实依赖：工程包层是 v1**（2026-10-05 21:17 ✓，已量 ✓）
+
+```
+**`mcp/registryFiles.ts` 实测 ✓**：
+· 工具 4 个 ✓：`export_midi`（`:22` ✓）／`export_ableton`（`:39` ✓）／`export_groove`（`:99` ✓）／`import_groove`（`:184` ✓）
+· `songId` 用在哪 ✓：`export_ableton` ⇒ ⭐ **可选** `songId` ✓（`:47` ✓，也可给 `pattern` ✓）；
+  `export_groove` ⇒ ⭐ **必须** `songId` ✓（`:105` ✓）⇒ `getMcpSong` ✓（`:110` ✓）⇒ `exportProjectPackage` ✓
+· 导入块 ✓：⭐ `flattenSong`（`../src/data/songFlatten` ✓）✓／⭐ `ClipSlot`（`../src/types/song` ✓）✓／
+  ⭐ `getMcpSong` ＋ `importMcpSong`（`./song` ✓）✓／⭐ `exportProjectPackage` ＋ `validateGroovePackage`（`projectDb` ✓）✓
+⇒ ⚠️ ⭐ **结论** ✓：⭐ 迁移 ② **不是改工具入参** ✗ —— 它**压在 v1 的工程包层上** ✓
+  ⇒ ⭐ 真正的前提是 ⭐ **`.groove` 包本身改成 v2 形状** ✓（⭐ 建包／读包／校验三处 ✓）
+    ⇒ ⚠️ 而"**不并存**"✗ 禁止"导出时把编曲转成 v1 song 形状" ✗ ⇒ ⭐ 包格式**必须**是 v2 ✓
+· ⭐ **因此 v2 包形状的决定（我按授权提出 ✓，请你确认 ✓）**：
+  ⭐ `.groove` v2 包 ⭐ **以 `arrangement` 为主体** ✓ —— ⭐ 存 `tracks` ✓／`notes` ✓／`takes` ✓／`bars` ✓／
+  `tempoMap` ✓（⭐ 即 v2 的对象 ✓），⭐ **不再存 v1 的 `clips`／`slots`／`sections`** ✗
+  ⇒ ⭐ `import_groove` ⭐ **建一个 arrangement** ✓（⭐ 不再建 song** ✗）；`export_groove` ⭐ **接 `arrangementId`** ✓
+  ⇒ ⭐ 于是 `export_ableton` ⭐ **接 `arrangementId`** ✓（⭐ 去掉 `songId` 与 `pattern` ✗）
+  ⇒ ⭐ `export_midi` ⭐ 若已只接 `pattern` ✓ ⇒ ⭐ 改为接 `arrangementId` ✓（⭐ 与 `export_arrangement_midi` 的关系**要理清** ✓
+    —— ⚠️ 可能**重复** ✗：⭐ 若两者同义 ⇒ ⭐ **合并** ✓，不留两个 ✓）
+· ⚠️ **这是一个较大的接口改动 ✓**：⭐ 涉及 `projectDb` 的建包／读包／校验 ✓ ＋ 4 个工具 ✓ ＋ 判据 ✓
+  ⇒ ⭐ 按纪律：⭐ **先立 v2 判据** ✓（⭐ 建包－读包往返 ✓、校验器认新形状 ✓、旧包**可以拒绝** ✓）⇒ ⭐ 再改 ✓
+· 📌 **与迁移 ⑦（v1 数据模型）合并 ✓**：⭐ 这条**本质属于数据模型迁移** ✓ ⇒ ⭐ 两者应**一起做** ✓
+  ⇒ ⭐ 因此**调整顺序** ✓：⭐ 先做 ③ `registryRender` ＋ ④ `registryAnalysis`（⭐ 它们**不压包层** ✓，较小 ✓），
+    ⭐ 再回头看包层 ＋ 数据模型 ✓（⭐ 那条最大 ✓）
+```
+
