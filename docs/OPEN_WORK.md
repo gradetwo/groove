@@ -9950,3 +9950,31 @@ problems: **[]** ✓
 **📌 我该停止的地方 ✓**：此线已用 **13** 支排除 ＋ **四次产品改动全回退** ✓；
    ⭐ 现在**足以交给业主**一份精确复现 ✓：**"在编曲页按下卷帘格子 ⇒ 窗口同步滚 226 px ⇒ 抬起落在别的格 ⇒ 点击被吞"** ✓
    ⇒ 剩下的三支候选都属"探针/浏览器细节" ✗，**不再值得我单方面继续挖** ✗（除非业主说继续 ✓）
+
+### 四百二十九、⭐⭐ **强线索：`onPointerUp` 的 `drag` 分支在写入之前 return**（2026-10-05 16:54 ✓）
+
+```
+**怎么来的 ✓**：历史上有个子代理叫「卷帘试听键盘与**指针捕获**」（`b65baf8d` ✓）⇒ 顺着查 `setPointerCapture` ✓
+**读数 ✓（只读 grep ✓）**：
+   · ⭐ **`PianoRollV2` 自己没有任何 `setPointerCapture`** ✗（捕获只出现在 `LoopBraceV2` ✓／`ArrangementPanel` ✓／
+     `ArrangementLaneV2` ✓／`PianoRollLane` ✓ 等处 ✓）⇒ "捕获抢走了抬起"这一支**不成立** ✗
+   · ⭐ 但 `PianoRollV2.tsx:110–122` 有一个**窗口级 backstop** ✓：
+     `window.addEventListener("pointerup", clear)` ✓ ＋ `window.addEventListener("pointercancel", clear)` ✓
+     （注释自述：`pointercancel` 与 `pointerup` 是同一件事 ✓）
+**⭐⭐ 关键洞见 ✓（解释了我先前那个"空日志" ✗）**：单元格 `onPointerUp` 的逻辑是
+   ```
+   const started = drag.current;  drag.current = undefined;
+   if (started) { …拖拽收尾…; return; }        // ⭐ 在这里 return
+   const from = pressed.current;               // ⭐ 我的诊断日志插在**这句之后**
+   ```
+   ⇒ ⭐ 若 **`drag.current` 在按下时是非空的**（陈旧 ✓）⇒ `onPointerUp` **确实执行了** ✓
+     但**走了拖拽分支并在写入之前 return** ✗ ⇒ ⭐ **我的诊断日志永远不会被写到** ✗
+     ⇒ ⭐ 这**完全解释**了 `§421` 的 `roll log = null` ✓（不是"处理器没跑" ✗，而是"**在日志之前就 return 了**" ✓）
+     ⇒ ⭐ 也解释了四次 `preventDefault` 无效 ✗（处理器跑了 ✓，但压根没走到写入 ✓）
+**⇒ 下一刀（一行 ✓，产品侧只读取证 ✓，读完回退 ✓）**：把诊断插到 **`onPointerUp` 的最顶部**
+   （在 `const started = drag.current` **之前** ✓）⇒ 一次看清
+   ⭐ `drag.current` 到底是不是陈旧非空 ✓ ＋ `pressed.current` 是否已设 ✓
+**⇒ 若确认 ✓（很可能 ✓）** ⇒ 修复方向明确 ✓：⭐ **让"按下"清掉陈旧 drag** ✓
+   （例如单元格 `onPointerDown` 里 `drag.current = undefined` ✓，或把拖拽收尾与"同格点击"的判定顺序理顺 ✓）
+   ⇒ ⭐ 且**能红判据**清楚 ✓：**"在格子上按下并抬起（无拖拽）必须写入一个音符"** ✓
+**⚠️ 纪律 ✓**：本轮**只读** ✓（grep ✓），产品代码**仍然净零** ✓；这条线即将收敛到**一处可修的 bug** ✓（非探针瑕疵 ✓）
