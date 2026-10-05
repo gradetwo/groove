@@ -12740,3 +12740,26 @@ export async function prepareArrangementAudioLanes(input: {
     ⭐ ② `make_unique` ⭐ 处置（⭐ 段落是 v1 ✓）⇒ ⭐ 然后 ④ 完成 ✓
 ```
 
+### 五百零九、⭐ **④ 第一件的改点：四处，且"峰值余量"已在算**（2026-10-06 01:38 ✓）
+
+```
+**⭐ 量到 ✓（⭐ handler 全文已读 ✓）**：
+  · ⭐ 它已算 ⭐ **`const headroom = ceiling - previous.truePeakDb;`** ✓ ＋ ⭐ `const residual = target - previous.integratedLufs;` ✓
+    ⇒ ⭐ `limitedBy` 由 ⭐ `residual - headroom > 0.05` 判定 ✓ ⇒ ⭐ **"⭐ 哪个边界赢了"已经在回包里** ✓
+    ⇒ ✅ ⭐ **因此执行顺序 ④ 的"⭐ 加峰值余量"主要是**把 `headroom` 报出来** ✓（⭐ 小改动 ✓），⭐ 不是新算法 ✓
+  · ⭐ 收敛循环已存在 ✓：⭐ `attempts` ✓／`maxPasses` ✓（1–3 ✓）／⭐ `peakPinned` ✓／⭐ `limitedBy` ✓
+  · ⭐ 渲染走 ⭐ `renderAudio(flattened.pattern, {…})` ✓ ⇒ ⭐ 要的仍是 **`pattern`** ✓（⭐ 与 Ableton 那次同理 ✓：
+    ⭐ **底层写手可复用** ✓ ⇒ ⭐ 传编曲展平后的 pattern 即可 ✓）
+**⭐ 四处改点 ✓（⭐ 已定位 ✓）**：
+  ⭐ ① ⭐ schema ✓：`songId` ✗ ⇒ `arrangementId` ✓（⭐ 描述也改 ✓）
+  ⭐ ② ⭐ 首行 ✓：`const { song, flattened } = flattenMcpSong(String(args.songId));` ✗ ⇒
+    ⭐ `const { flattened } = flattenMcpArrangement(String(args.arrangementId));` ✓
+  ⭐ ③ ⭐ `analysis` 对象 ✓：`genreId: song.genreId` ✗ ＋ `nameSlug: song.name` ✗
+    ⇒ ⚠️ ⭐ **编曲没有名字** ✗（⭐ 已知 ✓）⇒ ⭐ `nameSlug` 用 **`arrangementId`** ✓；
+    ⚠️ ⭐ `genreId` ✗ —— ⭐ 本轮 grep：⭐ **`arrangementV2.ts` 里没有 `genreId`** ✗ ⇒ ⭐ 取默认或省略 ✓（⭐ 待定量 ✓）
+    ⇒ 另 ⭐ `getGenreLoudnessTrimDb(flattened.pattern.genre_id)` ✓ ⇒ ⭐ 展平后的 pattern **仍带 `genre_id`** ✓ ✓
+      ⇒ ⭐ 所以 ⭐ **种子增益不用改** ✓
+  ⭐ ④ ⭐ 回包 ✓：⭐ 加 ⭐ **`peakHeadroom`** ✓（⭐ 即 `headroom` ✓）＋ ⭐ 术语改 v2 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 四处到行 ✓
+```
+
