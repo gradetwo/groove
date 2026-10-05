@@ -21,6 +21,11 @@ describe("the groove-composition skill", () => {
       expect({ fact, present: skill.includes(fact) }).toEqual({ fact, present: true });
   });
 
+  it("⭐ keeps what the two-song field test measured about the analysis tools", () => {
+    for (const fact of ["real range", "get_pitch_report", "the same measurement", "synchronous", "samplePeakDb"])
+      expect({ fact, present: skill.includes(fact) }).toEqual({ fact, present: true });
+  });
+
   it("⭐ says that a preview hands back a file rather than playing it", () => {
     expect(skill).toContain("hand back files");
     expect(skill).toContain("playing them is the caller's job");
