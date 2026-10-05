@@ -14996,3 +14996,23 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+**⭐⭐ 决定性证据 ✓：四类全部已有 V2 对应物 ✓（2026-10-06 04:44 ✓）**：
+```
+**⭐ Wav 导出 ✓**：⭐ `WavExporter` ⭐ **本身就是 V2 的导出器** ✓ ——
+  ⭐ `src/features/arrangement/arrangementFiles.ts:240` ✓：⭐ `const { exportMasterWav } = await import("../../audio/WavExporter");` ✓
+  ⭐ `:273` ✓：⭐ `const { exportStemsZip } = await import("../../audio/WavExporter");` ✓
+  ⇒ ⭐ 即 ⭐ **编曲导出早已走它** ✓ ✓（⭐ 正是早期几轮的"⭐ `.groove` 导出"⭐ 工作 ✓）
+**⭐ 因此四类 ✓**：
+  | ⭐ 类 ✓ | ⭐ V2 对应物 ✓ |
+  |---|---|
+  | ⭐ URL 分享 ✓ | ✅ ⭐ `hooks/useUrlShareLoad.ts` ✓ |
+  | ⭐ 保存指示 ✓ | ✅ ⭐ `views/StudioView.tsx` ✓（⭐ V2 视图 ✓） |
+  | ⭐ 面板与工具条 ✓ | ✅ ⭐ `components/arrangement/ArrangementViewV2.tsx` ✓ ＋ ⭐ `views/NewProjectView.tsx` ✓ |
+  | ⭐ Wav 导出 ✓ | ✅ ⭐ **`audio/WavExporter`** ✓（⭐ 编曲侧已在调用 ✓） |
+**⭐⭐ 结论 ✓**：⭐ **⑦ 完全是"⭐ 退旧**" ✓** —— ⭐ **无需新建任何模块** ✓ ✓
+  ⭐ 余下工作 ＝ ⭐ 把 §576 的 **14 个文件**逐个**改接到既有 V2 路径** ✓ ⇒ ⭐ 再退 v1 类型与层 ✓
+**⭐ 一处细节 ✓**：⭐ `WavExporter` 自己 ⭐ **import 了 `types/song`** ✓（⭐ §576 的清单里 ✓）⇒ ⚠️ 它需要
+  ⭐ **去掉对 v1 类型的依赖** ✓（⭐ 但它**不是 v1 模块** ✓）⇒ ⭐ 属"⭐ 改接线**" ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
