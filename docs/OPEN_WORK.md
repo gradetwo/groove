@@ -11148,3 +11148,20 @@ export async function prepareArrangementAudioLanes(input: {
 · 📌 **因此顺序修正 ✓**：⭐ ③ 先做**能力对比** ✓（⭐ 旧工具的入参逐项对照 v2 对应 ✓）⇒ 缺的补上 ✓ ⇒ 再删 ✓
 ```
 
+**⭐ 迁移 ③ 的覆盖性证明（2026-10-05 21:19 ✓，删前必证 ✓）**：
+```
+| 旧工具 ✓ | v2 对应 ✓ | ⚠️ 旧有而 v2 无 ✗ | ＋ v2 多出 ✓ |
+|---|---|---|---|
+| `render_preview_clip` ✓ | `render_arrangement_preview` ✓ | ⭐ `songId`／`sectionId`／`index`／`genreId` ✓（⭐ **全是 v1 概念** ✓） | `arrangementId` ✓／`startBar`／`endBar` ✓／⭐ **`trackId`／`trackIds`** ✓ |
+| `render_audio` ✓ | `render_arrangement` ✓ | ⭐ `genreId` ✓（v1 概念 ✓） | `arrangementId` ✓／`channels` ✓／`sampleRate` ✓／`startBar` ✓ |
+· ⭐ **逐项判断 ✓**：
+  · `songId`／`sectionId`／`index` ⇒ ⭐ 被 **`arrangementId`** 取代 ✓（⭐ v2 没有 section 概念 ✓）
+  · `genreId` ⇒ ⭐ v1 用"流派"现造一个 pattern ✓；⭐ v2 改为 ⭐ **先 `create_arrangement`** ✓（⭐ 多一步 ✓，**能力不丢** ✓）
+  · `bars` ⇒ ⭐ v2 用 ⭐ **`startBar`／`endBar`** 表达"听哪一段" ✓（⭐ 更精确 ✓）⇒ ⭐ **不算缺失** ✓
+    （⚠️ 抽取器因它换行而未识别 ✓，已人工核对 ✓）
+  · ⭐ **v2 多出**：`trackIds`（⭐ 只渲变化的轨 ✓ —— 正是业主报告要的能力 ✓）
+⇒ ⭐ **结论** ✓：⭐ **v2 覆盖旧能力** ✓（⭐ 无能力损失 ✓，只有"多一步建编曲" ✓）
+  ⇒ ⭐ **因此可以删** ✓（⭐ 铁律"先立 v2 再删 v1"**已满足** ✓）
+· ⏳ **删除本身未做 ✗**（⭐ 涉及 32 处工具名 ✓、6 个判据文件 ✓、`check_mcp.mjs` ✓、对齐表 ✓ ⇒ 下一步 ✓）
+```
+
