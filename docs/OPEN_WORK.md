@@ -15675,3 +15675,36 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 下一步 ✓**：⭐ 再收 3 个（⭐ `usePatternActions` ✓／`useProjectHub` ✓／`useSequencerStore` ✓）⇒ ⭐ 然后 v1 类型与层退场 ✓
 ```
 
+### 五百九十七、⭐⭐ **⑦ 的核心对位查明：v1 音序器 store（24 个消费者）对 v2 编曲 store**（2026-10-06 07:59 ✓）
+
+```
+**⭐ 量到 ✓（⭐ 两侧 store 的导出 ✓）**：
+  ⭐ **v1** ✓ `src/features/sequencer/useSequencerStore.ts` ✓（⭐ 8 个导出 ✓）：
+    ⭐ `SequencerState` ✓｜⭐ `SequencerAction` ✓｜⭐ `sequencerReducer` ✓｜⭐ `useSequencerStore` ✓｜⭐ `clonePattern` ✓
+    ⭐ `createInitialSequencerState` ✓｜⭐ `StudioHistorySnapshot` ✓｜⭐ `estimateSnapshotBytes` ✓
+    ⇒ ⭐ 它管的是 ⭐ **模式与步进网格的编辑态** ✓（⭐ v1 的 16 步 ✓／⭐ 槽位 ✗）
+  ⭐ **v2** ✓ `src/features/arrangement/arrangementStore.ts` ✓：⭐ `useArrangementV2Project` ✓｜⭐ `listArrangementProjects` ✓
+    ⭐ `openArrangementProject` ✓｜⭐ `removeArrangementProject` ✓ ⇒ ⭐ 它管的是 ⭐ **工程生命周期** ✓
+    ⇒ ⚠️ ⭐ **不含**音序器的编辑态 ✗
+  ⭐ **消费者 ✓**：⭐ v1 store 被 ⭐ **24 个非判据文件**使用 ✗ ——
+    ⭐ 组件 ✓：⭐ `SequencerPanel` ✓｜⭐ `PianoRollLane` ✓｜⭐ `SequencerModals` ✓｜⭐ `StepContextMenu` ✓｜⭐ `ConsolePanel` ✓
+    ⭐ 视图 ✓：⭐ `StudioView` ✓｜⭐ `HardwareConsoleView` ✓
+    ⭐ hook ✓：⭐ `useAudioEngineLifecycle` ✓／⭐ `useEffectsRack` ✓／⭐ `useExportActions` ✓／⭐ `useGenreSwitching` ✓／
+      `useGridInteraction` ✓／⭐ `useInitialPatternLoad` ✓／⭐ `useLiveRecordingBridge` ✓／⭐ `useMatrixScroll` ✓／
+      `usePatternActions` ✓／⭐ `useProjectHub` ✓／⭐ `useToolbarControls` ✓／⭐ `useTrackControls` ✓／⭐ `useTransportControls` ✓／
+      `useUrlShareLoad` ✓／⭐ `useVelocityLaneEditing` ✓
+    ⭐ 其他 ✓：⭐ `projectDb` ✓｜⭐ `platform/probeHooks` ✓
+**⭐⭐ 结论 ✓**：⭐ 这是**业主第 ④ 条**的主体 ✓ —— "⭐ **页面原有的 V1 功能用 V2 架构实现**" ✓
+  ⭐ 即 ⭐ **音序器界面要重新表达在 `ArrangementV2` 的轨与音符之上** ✓ ⇒ ⭐ **⑦ 的最大一块** ✗
+  ⭐ 而 ⭐ 模型的注释**支持这一做法** ✓：⭐ "⭐ **the grid is a view, not a model field**" ✓ ⇒
+    ⭐ 步进网格＝**编曲的一个视图** ✓，⭐ 不是模型字段 ✓ ✓
+**⭐ 因此 ⑦ 的工作流 ✓（⭐ 登记 ✓）**：
+  ⭐ **⑦-A** ✓ 收 v1 存储的 3 个消费者 ✓（⭐ `usePatternActions` ✓／⭐ `useProjectHub` ✓／⭐ `useSequencerStore` ✓）
+    ⇒ ⭐ 前两个是"⭐ 保存／载入"⭐ 类 ✓ ⇒ ⭐ 改接到**编曲保存** ✓（⭐ `saveArrangementProject` ✓）
+  ⭐ **⑦-B** ✓ **音序器 ⇒ 编曲视图的移植** ✗（⭐ 24 个消费者 ✓）：⭐ 先立 **v2 判据** ✓（⭐ 视图从 `tracks` ＋ ⭐ `bars` 生成 ✓，
+    ⭐ 步进＝`notes` 的网格视图 ✓）⇒ ⭐ 再逐个改组件／hook ✓
+  ⭐ **⑦-C** ✓ **退场** ✓：⭐ `src/types/song.ts` ✓＋ ⭐ `features/arrangement/songEdit.ts` ✓＋ ⭐ v1 store ✓＋ ⭐ `projectStorage` ✓
+    ＋ ⭐ 其判据 ✓（⭐ `songEdit` ✓／⭐ `songPersistence` ✓／⭐ `songTimeline` ✓／⭐ `makeUniqueSection` ✓／⭐ `clipSlotsEight` ✓ …）
+**⏳ 下一步 ✓**：⭐ 从 **⑦-A** 开始 ✓（⭐ 先量那两个 hook 用 `projectStorage` 的哪些函数 ✓）
+```
+
