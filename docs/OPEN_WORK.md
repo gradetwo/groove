@@ -13682,3 +13682,30 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+### 五百三十六、⚠️ **更正 §166：`render_song` 不是干净退场（我漏了两个入参）**（2026-10-06 03:14 ✓）
+
+```
+**⚠️ ⭐ 我的漏项 ✓**：⭐ §166 的入参提取只抓到 ⭐ `songId` ✓／`format` ✓／`bitrateKbps` ✓ ✗
+  ⇒ ⭐ 而 ⭐ `docs/MCP.md:211` 的声明行列出 ⭐ **七个** ✓：
+    ⭐ `songId` ✓／`format?` ✓／`bitrateKbps?` ✓／`sampleRate?` ✓／`channels?` ✓／
+    ⭐ **`maxDurationSec?`** ✗／⭐ **`headless?`** ✓
+  ⇒ ⚠️ ⭐ 因此 "⭐ 逐入参全有家 ⇒ 干净退场" ✗ **不成立** ✓
+**⭐ 纠缠度 ✓（⭐ 计划时重新数 ✓，教训 142 ✓）**：
+  · ⭐ `check_mcp` ✓：⭐ `RENDER_TOOLS` 清单（`:168` ✓）／⭐ 注释（`:809` ✓）／⭐ "⭐ 歌工具"清单（`:814` ✓）／
+    ⭐ schema 查找（`:871` ✓）／⭐ 一条检查（`:873` ✓）
+  · ⚠️ ⭐ **判据约 8 个** ✗：⭐ `mcpCopy_render_song` ✓／⭐ `budgetHonesty:149` ✓（⭐ 断言描述含某句 ✓）／
+    `mcpHeadlessTimeout:101` ✓（⭐ 直接调它 ✓）／⭐ `renderSongBudgetGuard` ✓／⭐ `mcpHeadlessRouting:140` ✓／
+    `mcpHeadlessRender:152` ✓（⭐ 整段 guarded describe ✓）／⭐ `renderTradeoff` ✓／⭐ `mcpStdioDisconnect` ✓
+  · ⭐ 文档 ⭐ 十几处 ✗（`MCP.md` ×7 ✓／`README` ×2 ✓／⭐ 及多份历史计划 ✓）
+  · ⭐ 源码注释 ⭐ 五处 ✗（`render/chunks.ts` ✓／`render/worker.ts` ✓／`song.ts` ×2 ✓／`registry.ts` ✓）
+**⚠️ ⭐ 关键 ✓**：⭐ `maxDurationSec`（⭐ "⭐ 先拒答，⭐ 不要挂住" ✓）⭐ 是**行为面** ✓ ⇒ ⭐ 而 v2 的
+  `render_arrangement` ⭐ 是否收它 ✗ —— ⭐ 本轮正在量 ✓ ⇒ ⭐ 若无 ⇒ ⭐ **又一处能力缺口** ✗
+**⭐⭐ 结论 ✓**：⭐ `render_song` ⭐ **不能算干净退场** ✗ ⇒ ⭐ 它与 `add_section` ✗／`create_song` ✗ ⭐ **同类** ✓：
+  ⭐ **先移植或先登记** ✓
+  ⇒ ⭐ 即 ⭐ **⑤ 的三个剩余工具都需要"⭐ 先补或先登记"** ✗ ⇒ ⭐ 没有一个是纯删除 ✓
+**⚠️ ⭐ 教训 145 ✓**：⭐ **入参提取必须与文档的声明行对账** ✗ ——
+  ⭐ 我的 regex 少读了两个 ✓ ⇒ ⭐ 做法 ✓：⭐ ① ⭐ 从 **`docs/MCP.md` 的声明行**读**完整入参表** ✓
+    （⭐ 那是人写的、⭐ 完整 ✓）⭐ ② ⭐ 或用 ⭐ `grep -A20` **看整个 schema 段** ✓（⭐ 不靠单行 regex ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
