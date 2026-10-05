@@ -10696,3 +10696,17 @@ export async function prepareArrangementAudioLanes(input: {
   ⇒ 最后才是 registry 工具块 ✓
 · ✅ **已完成的地基** ✓：`a5f685f` ✓（一处 preparation ✓，`tsc` ＋ 40 headless 判据过 ✓）
 ```
+**⭐ ctx 从哪来（2026-10-05 20:20 ✓，已量 ✓）**：
+```
+· ⭐ `src/audio` 全目录里 **`new OfflineAudioContext` 只出现在 `AnatomyKickEngine.ts:658`** ✓（与渲染路径无关 ✗）
+  ⇒ ⭐ 即：⭐ **渲染路径不自己构造 ctx** ✓ —— 它用的是 ⭐ **宿主全局 `OfflineAudioContext`** ✓
+    （⭐ `mcp/render/headless.ts:237` 的 `loadHeadlessHost(context.publicRoot)` 正是把它装进 `globalThis` ✓：`:195` ✓；
+     浏览器侧则由浏览器提供 ✓）⇒ ⭐ 这也解释了为什么 `headless.ts` 要**先装全局、再动态 import** ✓
+· ⭐ **由此简化方案** ✓：`WavExporter.ts` 里的新入口 ⭐ **不需要把 ctx 当参数传** ✓ ——
+  它可以⭐ **和渲染走同一套"用全局"的路径** ✓ ⇒ ⭐ 三层形状不变 ✓，但第 ② 层更小 ✓
+· ⚠️ 仍需一量 ✗：⭐ 渲染**具体在哪一行**去取那个全局 ✓（`renderPatternOfflineInternal` 里 ✓ 或某个 wrapper ✓）
+  ⇒ ⭐ 下一轮先用一次 grep 定位 ✓（`OfflineAudioContext` 在该文件**无字面量** ✗ ⇒ ⭐ 可能是经 helper ✓，
+    也可能是 `globalThis` 取用 ✓）⇒ ⭐ 定位后即可写入口 ✓
+· ✅ 地基 ✓：`a5f685f` ✓（抽取 ✓，`tsc` ＋ 40 headless 用例 ✓，size pin 已同步 ✓）
+· ⚠️ 方案更正史 ✓（都在台账 ✓）：`§452` 工具层直调 ✗ ⇒ 方案丙 新工具 ✓ ⇒ **本轮：入口在 exporter ＋ 用小全局** ✓
+```
