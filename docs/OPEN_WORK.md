@@ -15309,3 +15309,22 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+**⭐ 六个锚点全部计数为 1 ✓（2026-10-06 05:01 ✓，⭐ 教训 172 的做法已执行 ✓）**：
+```
+**⭐ 唯一判别 ✓**：⭐ 两处注释**文本不同** ✓ ——
+  ⭐ `:471` ✓：⭐ `// Quota exceeded / aborted transaction: the write did NOT happen. Report it` ✓
+  ⭐ `:1269` ✓：⭐ `// Quota exceeded / aborted transaction: the write did NOT happen, and saying so is the whole point of F-07.` ✓
+  ⇒ ⭐ 用 ⭐ `:1269` 的**完整注释行** ✓（⭐ 或含它的三行 ✓）⇒ ⭐ 唯一 ✓ ✓
+**⭐ 一次过印全部候选计数 ✓（⭐ 教训 172 ✓）**：
+  | ⭐ 锚点 ✓ | ⭐ 计数 ✓ |
+  |---|---|
+  | ⭐ `} catch (err) {` ＋ ⭐ guard ＋ ⭐ **完整注释**（⭐ 3 行 ✓） | **1** ✓ |
+  | ⭐ 完整注释行本身 ✓ | **1** ✓ |
+  | ⭐ 写前 ⭐ `runStoreTx(…)` ✓ | **1** ✓ |
+  | ⭐ `try` 尾 ⭐ `await write;` ✓ | **1** ✓ |
+  | ⭐ 形状 ⭐ `savedAt?: number \| null;` ✓ | **1** ✓ |
+  | ⭐ 初值 ⭐ `{ status: "idle" }` ✓ | **1** ✓ |
+**⭐⭐ 因此下一段是零风险的纯照抄 ✓**：⭐ 六处改动 ✓，⭐ 全部锚点唯一 ✓，⭐ 缩进已 repr 核实 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 本组随后即完成 ✓
+```
+
