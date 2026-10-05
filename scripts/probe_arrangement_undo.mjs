@@ -337,7 +337,9 @@ await page.evaluate(() => {
     });
   }, true);
 });
-await page.locator(`[data-testid='${emptyCell}']`).first().hover();
+/* 用 mouse.move 而不是 locator.hover()：hover 的可操作性检查会把元素滚入视野，那会改变被测状态。 */
+const preBox = await page.locator(`[data-testid='${emptyCell}']`).first().boundingBox();
+if (preBox) await page.mouse.move(preBox.x + preBox.width / 2, preBox.y + preBox.height / 2);
 await page.waitForTimeout(120);
 const cellBox = await page.locator(`[data-testid='${emptyCell}']`).first().boundingBox();
 if (cellBox) {
