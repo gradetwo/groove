@@ -10528,3 +10528,31 @@ problems: **[]** ✓
    "**分析同步独占事件循环**"不只是理论 ✓ —— 这 112 s 内服务端**不能响应任何请求** ✓（口径写在同一处 ✓）
 **✅ 至此该闭环完整 ✓**：发现 → 定位 → 判据先红后绿 → 互证 → 连带修正 → 全门 → 落盘 → **重建** ✓ → ⭐ **真机读数** ✓
 ```
+### 四百五十一、📌 **`discontinuities` 不是缺陷，但"没把前提写出来"是（已修 ＋ 已到真机 ✓）**（2026-10-05 19:36–19:39 ✓）
+
+```
+**起点 ✓**：真机 `analyze_audio` 的民谣回包（`§450` ✓）里 ⭐ `discontinuities: **1824**` ✓
+   ＋ `worstDiscontinuityDb` **112.30** ✓ ⇒ ⚠️ 我**先不下结论** ✗
+**① 定性（先量后说 ✓）**：读 `src/test/helpers/audioMetrics.ts` ✓
+   · 第 44 行 ✓：*"How many sample-to-sample jumps exceed `factor` × **the median jump**."* ✓
+     ⇒ ⭐ 它是**相对素材自身**的指标 ✓，不是绝对失真 ✗
+   · 第 192 行 ✓：*"Click detector: an **isolated** discontinuity, **not a waveform's own edges**"* ✓
+   · ⭐ 第 197 行**自己就记着这个坑** ✓：*"…every edge looks like a discontinuity — **one stem reported thousands
+     of "clicks" that were** …"* ✓ ⇒ ⭐ **密集打击／拨弦素材报出上千是预期的** ✓
+   ⇒ ✅ **结论** ✓：⭐ **素材没问题** ✓、**1824 属正常** ✓ ⇒ **本条不构成缺陷** ✗
+**② 但发现真缺口（E 类 ✓）**：搜真机回包正文 ＋ 工具描述 ✓ ⇒
+   ⭐ `dense`／`edge`／`click`／`isolat`／`median`／`caution` **全部命中 0** ✗
+   ⇒ ⭐ 调用方**只看到一个裸数** ✓ ⇒ 极易读成"**1824 处爆音**" ✗
+**③ 修（判据先红后绿 ✓）**：`analyze_audio` 描述**开头补两句短句** ✓：
+   *"Dense material reports many discontinuities. The count is relative to the file's own median jump,
+   so percussive and plucked mixes look busy without any click."* ✓
+   · 判据 ✓：`src/test/mcpDiscontinuityCaveat.test.ts` ✓ ⇒ ⭐ **改前红**（`{warns:false}` ✗）⇒ **改后绿** ✓
+**④ 推导判据（教训 12 ✓）**：文风／可读性／copy／⭐ **`fileSizeBudget`（测试 ✓）** 四文件 **10 用例全过** ✓
+   ＋ `check:mcp` **123/123** ✓｜`tsc` ✓｜`lint` ✓｜五项度量门 ✓｜docs 双门 ✓
+**⑤ 到真机 ✓**：`npm run mcp:build` ⇒ exit=0 ✓ ⇒ 包内核对 ✓：
+   响度修复 **命中 1** ✓／旧式 **0** ✓；新描述 **命中 1** ✓；`check:mcp`（对新包 ✓）**123/123** ✓；
+   ⭐ 仓库仍 **0 脏项** ✓（`dist-mcp/` 是 gitignore 产物 ✓）
+**已推 ✓**：`704e612` ✓
+**📌 教训 93 ✓**：⭐ **"报出去的一个数，必须连它的口径一起报"** ✓ ——
+   本次数**是对的** ✓、**代码注释里也写了前提** ✓，但**用户看不到注释** ✗ ⇒ ⭐ **注释里的前提要搬到描述里** ✓
+```
