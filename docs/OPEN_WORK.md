@@ -12263,3 +12263,22 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落地 ✗**（⭐ 余量用尽 ✓）
 ```
 
+**⭐ Web 读取路径的逐字文本 ＋ 它引出的第三件（2026-10-06 00:38 ✓）**：
+```
+**⭐ 逐字 ✓（`arrangementFiles.ts:515` ✓）**：
+  ⭐ `async function importGrooveIntoArrangement(arrangement: ArrangementV2, file: File): Promise<ArrangementImportOutcome> {` ✓
+  ⭐ `  const { validateGroovePackage } = await import("../sequencer/projectDb");` ✓
+  ⭐ `  const pkg = validateGroovePackage(JSON.parse(await file.text()));` ✗（⭐ **旧校验** ✓）
+  ⭐ `  const imported: ArrangementImportResult = arrangementFromGroovePackage(pkg, arrangement.songId);` ✗
+  ⭐ `  return { ok: true, filename: file.name, format: "groove", tracks: … }` ✓
+  ⭐ `} catch (error) { return { ok: false, … reason: describeError(error) }; }` ✓
+**⚠️ ⭐ 因此第三件 ✓**：⭐ `arrangementFromGroovePackage(pkg, songId)` ⭐ **也吃旧包形状** ✗
+  ⇒ ⭐ 它也要迁移 ✓（⭐ 接收 **`ArrangementV2`** ✓ 而不是 v1 包 ✓）
+**⇒ Web 这一对实际上是三件 ✓**：⭐ ① `grooveFileFor`（⭐ 保存 ✓，⭐ 已验可编译 ✓ ＋ ⭐ **加 `stem` 参数** ✓）
+  ⭐ ② `importGrooveIntoArrangement`（⭐ 换校验 ✓）⭐ ③ `arrangementFromGroovePackage`（⭐ 改吃 `ArrangementV2` ✓）
+**⭐ 教训 107 第三次应验 ✓（⭐ 对偶 ✓）** ⇒ ⭐ 我已在 §490 记过 ✗ ⇒ ⭐ **把它也升为流程 ✓（教训 109 ✓）**：
+  ⭐ **改一个工具／函数时，先列出它的对偶** ✓（⭐ 导出↔导入 ✓、保存↔读取 ✓、写↔读 ✓、建↔删 ✓）
+  ⇒ ⭐ **对偶要在同一批里改** ✓，⭐ 否则门会替我发现 ✗
+**⏳ 未落地 ✗**；⭐ 三件都已定位 ✓
+```
+
