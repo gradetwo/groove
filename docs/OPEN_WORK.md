@@ -13839,3 +13839,17 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 树已回退 ✓ 干净 ✓）；⭐ 修法：⭐ 锚点改用**行内唯一片段** ✓
 ```
 
+### 五百四十、✅ **缺口 ⑤ 已关闭（"先拒答"已在 v2 落地 ✓）**（2026-10-06 03:24 ✓）
+
+```
+**⭐ 已落 ✓（`996cc00` ✓）**：⭐ `render_arrangement` 增加 ⭐ `maxDurationSec` ✓：
+  ⭐ 渲染**前**先拒答 ✓ ＋ ⭐ 点名参数 ✓ ＋ ⭐ 用**共享**估算（`estimateRenderCost(...).audioSeconds` ✓）
+  ⭐ 判据 ✓：`src/test/arrangementRenderBudget.test.ts` ✓（2 例 ✓）⭐ **落守卫前已见红** ✓ ✓
+**⭐ 因此 §537 的缺口 ⑤ 结案 ✓**：⭐ ① ⭐ 它在 v2 **有家** ✓（⭐ `render_arrangement.maxDurationSec` ✓）
+  ⇒ ⭐ ② ⭐ `render_song` ⭐ **具备退场条件** ✓ ✓（⭐ 它的唯一独有能力已在新侧 ✓）
+**⭐ §537 的余下四项 ✓（⭐ 仍在 ✓）**：⭐ ① ⭐ 逐小节力度斜坡 ✓ ② ⭐ `fill` ✓ ③ ⭐ 段落移调 ✓
+  （⭐ 三者由 `add_section` ✗ 携带 ✓）⭐ ④ ⭐ 流派播种／名字／swing／resolution ✓（⭐ 由 `create_song` ✗ 携带 ✓）
+**⭐ 下一步 ✓**：⭐ 退 `render_song` ✓（⭐ 现在干净 ✓）⇒ ⭐ 那时 ⭐ **⑤ 的剩余三个里去掉一个** ✓
+**⏳ 未落码 ✗**（⭐ 除已落的 §540 记录 ✓）
+```
+
