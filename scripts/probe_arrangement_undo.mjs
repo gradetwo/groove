@@ -273,6 +273,15 @@ const emptyCell = await page.evaluate(() => {
 });
 if (emptyCell === null) await fail("the piano roll drew no empty cell to write into");
 const notesBeforeClick = (await readDom()).notes;
+/* 选中轨是哪一条（判据：写入去了选中轨；若点击的格子不在选中轨上，读数就不会变）。 */
+const selectedTrack = () =>
+  page.evaluate(() => {
+    const picker = document.querySelector("[data-testid='arrangement-track-picker']");
+    if (!picker) return null;
+    const active = picker.querySelector("button[aria-pressed='true'], button[data-active='true'], button.bg-accent");
+    return active ? active.textContent : null;
+  });
+report.readings.selectedTrackBefore = await selectedTrack();
 /* 显式指针序列：真浏览器里写入可能挂在 pointerdown/up 上，jsdom 里零尺寸元素让 click 必然命中。 */
 const cellBox = await page.locator(`[data-testid='${emptyCell}']`).first().boundingBox();
 if (cellBox) {
@@ -285,6 +294,7 @@ if (cellBox) {
   await page.click(`[data-testid='${emptyCell}']`);
 }
 const afterAddNote = await readDom();
+report.readings.selectedTrackAfter = await selectedTrack();
 report.readings.addedNoteAt = emptyCell;
 report.readings.afterAddNote = afterAddNote;
 if (afterAddNote.notes !== notesBeforeClick + 1) problems.push(`adding a note should have drawn one more, ${notesBeforeClick} → ${afterAddNote.notes}`);
@@ -430,6 +440,7 @@ if (asJson) {
   line("② state one (fresh project)", `undo=${r.stateOne.undoDisabled} redo=${r.stateOne.redoDisabled} tracks=${r.stateOne.tracks.length}`);
   line("③ after add track", `tracks=${r.afterAddTrack.tracks.length} undo=${r.afterAddTrack.undoDisabled} redo=${r.afterAddTrack.redoDisabled} action=${r.afterAddTrack.undoAction}`);
   line("④ after add note", `notes=${r.afterAddNote.notes} action=${r.afterAddNote.undoAction}`);
+  line("   selected track", `before=${JSON.stringify(r.selectedTrackBefore)} after=${JSON.stringify(r.selectedTrackAfter)}`);
   line("⑤ after change length", `bars=${r.afterLength.bars} action=${r.afterLength.undoAction}`);
   line("⑥ after Ctrl+Z ×3", `tracks=${r.afterUndo3.tracks.length} bars=${r.afterUndo3.bars} undo=${r.afterUndo3.undoDisabled} redo=${r.afterUndo3.redoDisabled}`);
   line("   order unwound (newest first)", `bars ${r.afterLength.bars}→${r.afterUndo1.bars}, notes ${r.afterUndo1.notes}→${r.afterUndo2.notes}, tracks ${r.afterUndo2.tracks.length}→${r.afterUndo3.tracks.length}`);
