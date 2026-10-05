@@ -14335,3 +14335,33 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 断链已修 ✓）
 ```
 
+### 五百五十九、⭐ **重启简报（任何人接手先读这一节 ✓）**（2026-10-06 04:00 ✓）
+
+```
+**⭐ 一句话现状 ✓**：⭐ MCP 面 ⭐ **九退三留**（⭐ 95 ⇒ **86 tools** ✓）；⭐ **五处能力缺口全部结案** ✓；
+  ⭐ 只剩 ⭐ **`create_song` ✗ 与 `render_song` ✗**（⭐ 合并一次扫除 ✓）⇒ ⭐ 然后 ⭐ **⑤ 完成** ✓
+**⭐ 立刻可做的下一件 ✓**：⭐ **`create_song` ＋ `render_song` 合并扫除** ✓
+  ⭐ 清单与危险点 ✓：⭐ `create_song` ⭐ **§190／§551** ✓（⭐ 52 处／16 文件 ✓，⭐ 三处危险点 ✓）｜
+    ⭐ `render_song` ⭐ **§199／§557** ✓（⭐ 50 处／22 文件 ✓，⭐ 约 12 处危险点 ✓，⭐ 多为整块删除 ✓）
+  ⭐ 施工序 ✓：⭐ ① ⭐ `check_mcp` 的四处（⭐ `:168` ✓／`:809` ✓／`:814` ✓／`:825–830` ✓）
+    ⭐ ② ⭐ 六个"⭐ 以 `render_song` 为对象**"的判据**整体 `rm`** ✓（⭐ `mcpCopy_render_song` ✓／`renderTradeoff` ✓／
+      `mcpStdioDisconnect` ✓／`mcpHeadlessTimeout` ✓／`mcpHeadlessRouting` 的 case ✓／`renderSongBudgetGuard` ✓）
+    ⭐ ③ ⭐ `docsWorkflow` ＋ `mcpCapability` 的清单 ⇒ v2 ✓
+    ⭐ ④ ⭐ `create_song` 的 52 处（⭐ 含 `check_mcp:814` 整条删 ✓）
+    ⭐ ⑤ ⭐ **文档引用检查** ✓（⚠️ ⭐ 见教训 154 ✓ —— ⭐ `grep -rn "文件名" docs/` ✓ ⇒ ⭐ 改叙述 ✓ ⇒ ⭐ 跑 `check:docs:refs` ✓）
+    ⭐ ⑥ ⭐ 回填 ✓ ＋ ⭐ 地板改成**跟随登记表** ✓（⭐ 读数将到 ⭐ **85** ✗）
+**⭐ 之后的顺序 ✓**：⭐ 投影助手 ⇒ **⑦** ✓｜⭐ **⑥ Web 14 文件**（移植到 V2 ✓）｜⭐ ⑦ v1 数据模型 ✓｜
+  ⭐ 执行顺序 ②③⑤⑥ ✓｜⭐ 旧 `needs` ＋ ⭐ 便利工具条目 ✓
+**⭐ 必守的十一条纪律 ✓**（⭐ 本节是索引 ✓）：⭐ 97 补右括号 ✓｜⭐ 96 删文件用 `rm` ✓｜⭐ 99 改名先查表 ✓｜⭐ 98 脚本名先确认 ✓｜
+  ⭐ 141 用下一个同类起点界定块 ✓｜⭐ 142 计划时重新计数 ✓｜⭐ 146 段＝本 name 到下一个 name ✓｜
+  ⭐ 147 打印用 `repr()` ✓｜⭐ 148 内存先改、写盘一次 ✓｜⭐ 149 插在语义边界上 ✓｜⭐ 150 锚点必须唯一 ✓｜
+  ⭐ 151 判据基线先量 ✓｜⭐ 152 退场后扫"⭐ 交叉核对类"判据 ✓｜⭐ 153 锚点只用行内唯一片段＋缩进取自真实行 ✓｜
+  ⭐ 154 删文件同批查文档引用 ✓
+**⭐ 八道 CI 门 ＋ 本地三道 ✓**：⭐ `check:actions` ✓／⭐ `check:disabled-gates` ✓／⭐ `version:check` ✓／⭐ `docs:check` ✓／
+  ⭐ `typecheck` ✓／⭐ `lint` ✓／⭐ `redlines` ✓／⭐ `npm test` ✓（⭐ 本地 `test:coverage` 因 V8 provider 故障退出 1 ✓，
+  ⭐ 读最后的 ⭐ `Tests N failed | M passed` ✓）＋ ⭐ `node scripts/check_docs.mjs` ✓／⭐ `check:docs:refs` ✓／⭐ `check:mcp` ✓
+**⭐ 推送与发布 ✓**：⭐ `SKIP_LOCAL_GATE=1 npm run push:dev -- "…"` ✓ ⇒ ⭐ **推后核 `gh run list`** ✓；
+  ⭐ **发布只在迁移全部完成后** ✓，⭐ 走 ⭐ `bash scripts/release.sh` ✓（⭐ 配方 §495 ✓；⭐ 版本建议 ⭐ `2.35.0` ✓）
+**⭐ 目标状态 ✓**：⭐ **保持 active** ✓ —— ⭐ 迁移未完成 ⇒ ⭐ **不标完成** ✓
+```
+
