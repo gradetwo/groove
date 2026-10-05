@@ -9210,3 +9210,23 @@ problems: **[]** ✓
      写成"名字检查"是刻意的 ✓，否则它会变成一条又宽又假的规则 ✗
 **⇒ E 段至此三面齐 ✓**：用户侧文案 ✓（有判据 ✓）／错误可理解 ✓（`§391` 修真 bug ✓）／无静默丢功能 ✓（`§392` ✓）；
    MCP 侧 ✓：结论前置 ✓（有判据 ✓）／自描述 ✓（有判据 ✓）／**边界不删** ✓（`needs` 六条可核对 ✓）／**新工具进测试** ✓（本节 ✓）
+
+## 三百九十六、🚦 **铁律核查：发布只走 `scripts/release.sh`，且版本单一来源有"红线"钉住**（2026-10-05 13:54 ✓）
+
+```
+**为什么要核 ✓**：铁律里写着「**发布只走 `scripts/release.sh`**」✓；我今晚**没碰过它** ✓ ⇒ 按"先量后改"的同一把尺子 ✓，
+   确认它**还在、且仍被守住** ✓（而不是靠默认它没坏 ✓）。
+**① 发布路径 ✓**：`scripts/release.sh` **在** ✓；`docs/RELEASE.md` ✓ 写明**唯一手改处是 `package.json` 的 `version`** ✓
+   然后 `npm run version:sync` ✓ ⇒ `SKIP_LOCAL_GATE=1 bash scripts/release.sh` ✓；且 `release.sh:40` 会先跑
+   `check_version_is_new.sh` ✓（`version:new` 步 ✓）
+**② 版本四处一致 ✓（时点 13:53 ✓）**：`package.json` = **2.34.47** ✓ ＝ `public/version.json` ✓ ＝
+   `public/changelog.json` 的**顶层 `version` 与 `changelog[0].version`** ✓（均为 2.34.47 ✓）
+   ＝ ⭐ **线上** `groove.wangda.today/version.json` ✓（2.34.47 ✓，`releaseDate 2026-10-04` ✓）
+   ⚠️ 我第一版解析脚本报 `changelog 头部 = None` ✗ —— **是我猜错了结构** ✗，不是真不一致 ✓（第 83 条再次生效 ✓）
+**③ 它由"红线"钉住 ✓（不是靠自觉 ✓）**：`scripts/redlines.mjs`
+   · **R1** ✓：`package.json` 是**唯一手改版本** ✓ ∧ `version.json` 与它相等 ✓ ∧ `public/sw.js` 含 `groove-v${pkg.version}` ✓
+     ∧ `src/version.ts` 含 `APP_VERSION = "${pkg.version}"` ✓
+   · **R1b** ✓：**`src/version.ts` 之外不得出现手写版本字面量** ✓ —— 且注释记着**一次真事故** ✓：
+     曾有硬编码 `"1.15.2"` ✗ ⇒ **每个导出的 `.groove` 都带上错的版本** ✗
+   · `scripts/version.mjs check` ✓（CI／红线用 ✓）⇒ 本地 `npm run redlines` 复跑 ✓（见下 ✓）
+**⇒ 结论 ✓**：铁律这一条**成立** ✓，且**有门** ✓（不只是"应该" ✓）⇒ 无需改动 ✓
