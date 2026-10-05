@@ -14880,3 +14880,26 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+### 五百七十三、⭐⭐ **`songEdit.ts` 是 ⑤ 的 Web 孪生（同一张能力表可用 ✓）**（2026-10-06 04:41 ✓）
+
+```
+**⭐ 量到 ✓（`src/features/arrangement/songEdit.ts` ✓，415 行 ✓，20 个导出 ✓）**：
+| ⭐ 导出 ✓ | ⭐ v1 概念 ✓ | ⭐ v2 处置 ✓ |
+|---|---|---|
+| ⭐ `moveSection` ✓／⭐ `resizeSection` ✓／⭐ `applyArrangementCommand` ✓（＋ `commandForKey` ✓／`dropIndexForBar` ✓） | ⭐ 段落移动／改长 ✓ | ✅ ⭐ **有对应** ✓（⭐ `set_arrangement_bars` ✓／⭐ 轨顺序 ✓） |
+| ⭐ `duplicateSectionInPlace` ✓ | ⭐ 复制段落 ✓ | ✅ ⭐ **有**（⭐ `takes` ✓／⭐ 加轨 ✓） |
+| ⭐ `setSectionLabel` ✓（`MAX_SECTION_LABEL` ✓）／⭐ `toggleSectionMute` ✓ | ⭐ 标签／静音 ✓ | ✅ ⭐ **有**（⭐ `name` ✓／⭐ 轨标志 ✓） |
+| ⭐ **`setSectionLaneSlots`** ✗／⭐ **`setSectionLaneSlot`** ✗（`LaneSlotEdit` ✓，⭐ 签名带 ⭐ `ClipSlot \| null` ✗） | ⭐ **槽位** ✗ | ✗ ⭐ **v2 无槽位** ✓ ⇒ ⭐ **删** ✓（⭐ 能力＝写步进 ✓，⭐ §163 早定的 ✓） |
+| ⭐ **`transposeSection`** ✗ | ⭐ **段落移调** ✗ | ✅ ⭐ **由 §568 的决定覆盖** ✓（⭐ 移调＝写下的音高 ✓） |
+| ⭐ `sectionRegions` ✓／⭐ `trackRows` ✓／⭐ `arrangementBars` ✓ | ⭐ **视图助手** ✓ | ⇒ ⭐ 需要 ⭐ **v2 视图**（⭐ 轨 ＋ 小节 ✓） |
+**⭐⭐ 关键洞察 ✓**：⭐ 它与 ⭐ **MCP 侧的 `registrySong`** ✓ ⭐ **一一对应** ✓ ——
+  ⭐ 同样的"⭐ 段落移动 ✓／复制 ✓／标签 ✓／静音 ✓／槽位 ✗／移调 ✗" ✓
+  ⇒ ⭐ 因此 ⭐ **⑤ 的能力判定表可以整张复用** ✓ ✓ ⇒ ⭐ 不必重新判定 ✓
+**⭐ 它的 import 块（`:11` ✓）✓**：⭐ 从 ⭐ `types/song` ✓ 取 v1 类型 ✓ ⇒ ⭐ 与 §572 的根**直接相连** ✓ ✓
+**⭐ 因此 ⑥ 的分层施工更清楚了 ✓**：
+  ⭐ ① ⭐ **编辑层**（本文件 ✓）⇒ ⭐ 先立 ⭐ **v2 编辑层** ✓（⭐ 在 ⭐ `src/features/arrangement/` ✓ 内 ✓，⭐ 用 ⭐ `ArrangementV2` ✓）
+  ⭐ ② ⭐ **视图助手**（⭐ `sectionRegions` ✓／⭐ `trackRows` ✓）⇒ ⭐ v2 版从 ⭐ `tracks` ＋ ⭐ `bars` 生成 ✓
+  ⭐ ③ ⭐ 组件改用新编辑层 ✓ ⇒ ⭐ 旧层与旧类型随后退场 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
