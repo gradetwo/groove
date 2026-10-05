@@ -282,9 +282,19 @@ await page.evaluate(() => {
 });
 await page.waitForTimeout(300);
 /* 候选③：手动 focus 该格一次，看是否同样把页面滚走。 */
-/* 候选④：先把窗口滚到 226，再取坐标、再按。若这次能写入 ⇒ 只是初始滚动位置问题。 */
-report.readings.preScrolled = await page.evaluate(() => { window.scrollTo(0, 226); return Math.round(window.scrollY); });
-await page.waitForTimeout(150);
+/* 等页面稳定再动手势：载入后页面会自行滚动一段，若手势跨在它中间，抬起就会落到别的格子。 */
+report.readings.settle = await page.evaluate(async () => {
+  const seen = [];
+  let last = -1; let stable = 0;
+  for (let i = 0; i < 60; i++) {
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
+    const y = Math.round(window.scrollY);
+    seen.push(y);
+    if (y === last) { stable += 1; if (stable >= 3) break; } else { stable = 0; }
+    last = y;
+  }
+  return { first: seen[0], last: seen[seen.length - 1], frames: seen.length, moved: seen[0] !== seen[seen.length - 1] };
+});
 const focusProbe = await page.evaluate((id) => {
   const cell = document.querySelector(`[data-testid='${id}']`);
   if (!cell) return null;
@@ -527,7 +537,7 @@ if (asJson) {
   line("   hit test at cell centre", JSON.stringify(r.hitTest));
   line("   selected track", `before=${JSON.stringify(r.selectedTrackBefore)} after=${JSON.stringify(r.selectedTrackAfter)}`);
         line("   focusin trace", JSON.stringify(r.focusin));
-      line("   pre-scrolled to", JSON.stringify(r.preScrolled));
+      line("   page settle", JSON.stringify(r.settle));
 line("   manual focus probe", JSON.stringify(r.focusProbe));
 line("   scrollY samples while held", JSON.stringify(r.scrollSamples));
 line("   window scroll events", JSON.stringify(r.scrolls));
