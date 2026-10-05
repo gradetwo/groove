@@ -11232,3 +11232,21 @@ export async function prepareArrangementAudioLanes(input: {
   ④ `budgetHonesty.test.ts` 的 4 个用例**重写** ✓ ⑤ 台账里 2 处旧文件名同步 ✓
 ```
 
+**⭐ `budgetHonesty.test.ts` 的按行改法（2026-10-05 21:24 ✓，已量 ✓）**：
+```
+· ⭐ **根因确认 ✓**：`:75` ⭐ `const RENDER_TOOLS = ["render_audio" ✓, "render_song" ✓, "render_arrangement" ✓,
+  "render_arrangement_stems" ✓, "render_preview_clip" ✓];` ✓ —— ⭐ 它是**按工具名参数化的列表** ✓
+  ⇒ ⭐ 我把 `"render_audio"` 改名 ⇒ ⭐ **列表里出现两个 `render_arrangement`** ✗ ⇒ ⭐ 正是
+    `expected {…(2)} to deeply equal {…(2)}` ✓ ⇒ ⭐ 所以正确动作是 ⭐ **从列表删掉该项** ✓，**不是改名** ✗
+· ⭐ **按行清单 ✓（下一轮照此改 ✓）**：
+  · `:75` ⭐ `RENDER_TOOLS` ⇒ **删 `"render_audio"`** ✓（⭐ 以后 `render_song`／`render_preview_clip` 也照此 ✓）
+  · `:114`／`:129` ⇒ ⭐ 遍历该列表 ✓ ⇒ ⭐ **不用改** ✓（⭐ 删列表项即自动覆盖 ✓）
+  · `:138` ⭐ `for (const name of ["render_audio", "render_arrangement"])` ✓ ⇒ ⭐ **删 `"render_audio"`** ✓
+  · `:239–259` ⭐ 三处 ⭐ `toolNamed("render_audio").handler({ genreId: "chicago-house" }, …)` ✓
+    ⇒ ⭐ **要改参数为 v2** ✓：⭐ `toolNamed("render_arrangement").handler({ arrangementId: "…" }, …)` ✓
+    （⚠️ 桩会抛 `stub: this test does not start a browser` ✓ ⇒ ⭐ 只要参数**能过校验**并走到渲染即可 ✓）
+  · `:293–312` ⇒ ⚠️ **未看清** ✗（⭐ 桩里有 `name: "render_audio"` ✓）⇒ ⭐ 下一轮先读这段再改 ✓
+· ⭐ **教训 95 的补充 ✓**：⭐ 参数化列表里的**改名会造重复** ✗ ⇒ ⭐ 这类判据的动作是 ⭐ **删表项** ✓
+  ⇒ ⭐ 判别法 ✓：⭐ 先看名字出现在**哪里** ✓ —— ⭐ 列表＝删项 ✓；句子断言＝改名 ✓；`handler(...)` 调用＝改参数 ✓
+```
+
