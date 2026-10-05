@@ -12802,3 +12802,31 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落地 ✗**（⭐ 余量用尽 ✓）；⭐ 7 处里 6 处已验 ✓
 ```
 
+### 五百一十一、⭐ **⑤ 的量测：9 个工具在 v1 歌模型上，`registryPattern` 是干净的**（2026-10-06 01:49 ✓）
+
+```
+**⭐ `mcp/registrySong.ts` ✓**（⭐ 543 行 ✓，⭐ **11 个工具** ✓）：
+| 工具 ✓ | 入参 ✓ | 判定 ✓ |
+|---|---|---|
+| ⭐ `set_arrangement_vocal_melody` ✓ | `arrangementId` ✓ | ✅ ⭐ 已是 v2 ✓（⭐ 迁移 ① ✓） |
+| ⭐ `synthesize_vocal` ✓ | `syllables`／`tones`／`track` ✓ | ✅ ⭐ 与歌模型无关 ✓ |
+| ⭐ `create_song` ✓ | `bpm`／`genreId`／`name`／`resolution`／`swing` ✗ | ⚠️ ⭐ **v1 的建歌入口** ✓ ⇒ ⭐ 判断是否退场 ✓ |
+| ⭐ `get_song` ✓／⭐ `undo_song` ✓／⭐ `render_song` ✓／⭐ `set_tempo` ✓／⭐ `set_lane_slots` ✓／⭐ `set_clip` ✓ | ⭐ **`songId`** ✗ | ⚠️ ⭐ **6 个吃 `songId`** ⇒ ⭐ 逐个判"⭐ 改接 ✓ / ⭐ 退场 ✓" |
+| ⭐ `add_section` ✓／⭐ `duplicate_section` ✓ | ⭐ **`songId` ＋ `index`** ✗ | ⚠️ ⭐ **段落是 v1** ✗ ⇒ ⭐ 多半进 ⭐ `takes` ✓ |
+**⭐ `mcp/registryPattern.ts` ✓**（⭐ 99 行 ✓，⭐ **5 个工具** ✓）：⭐ **没有一个吃 `songId`** ✓
+  （⭐ `list_chord_progressions` ✓／⭐ `get_chord_progression` ✓／⭐ `apply_chord_progression` ✓（`genreId` ✓）／
+   ⭐ `get_pattern` ✓／⭐ `apply_pattern_ops` ✓（`genreId`／`ops` ✓））
+  ⇒ ⭐ 它们工作在 **pattern／genre** 上 ✓ ⇒ ⚠️ ⭐ 但 `get_pattern` 返回的是 ⭐ **v1 的 pattern** ✗ ⇒ ⭐ 需逐个判 ✓
+**⭐ v2 侧规模 ✓**：⭐ `registryArrangement.ts` ⭐ **42 个工具** ✓ ⇒ ⭐ 大多能力有对应品 ✓
+  ⇒ ⭐ 已确认存在的 ✓：⭐ `create_arrangement` ✓／⭐ `render_arrangement` ✓（⭐ 但 `add_arrangement_section` ✗ 与
+    `set_arrangement_tempo` ✗ **不存在** ⇒ ⭐ 对应的是 ⭐ `add_arrangement_notes` ✓ 与 ⭐ `set_arrangement_tempo_map` ✓）
+**⭐⭐ 因此 ⑤ 是最大的一件 ✓，且答案**逐个不同** ✓**：
+  ⭐ ① ⭐ **同义 ⇒ 退场** ✓（⭐ 如 `get_song` ↔ `get_arrangement` ✓，⭐ 先量两者回包是否等价 ✓）
+  ⭐ ② ⭐ **能力已在新侧 ⇒ 退场 ＋ 记账** ✓（⭐ 如 `render_song` ⇒ `render_arrangement` ✓）
+  ⭐ ③ ⭐ **v1 独有概念 ⇒ 退场进 `takes`** ✓（⭐ 段落／slot／clip ✗）
+  ⭐ ④ ⭐ **与模型无关 ⇒ 不动** ✓（⭐ `synthesize_vocal` ✓；⭐ `registryPattern` 的多数 ✓）
+**⭐⭐ 做法 ✓（⭐ 本轮定的规矩 ✓）**：⭐ **先写一张"⭐ 工具 → 判定"的表** ✓（⭐ 11 ＋ 5 行 ✓），
+  ⭐ 再 ⭐ **一次一个工具**地执行 ✓ ⇒ ⭐ 这样每一支都可回退 ✓，⭐ 且不会在中途迷路 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 表已开 ✓
+```
+
