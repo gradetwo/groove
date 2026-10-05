@@ -8885,3 +8885,30 @@ problems: **[]** ✓
      ⭐ 唯一可靠的等待判据仍是**作业级状态** ✓（`in_progress` 即健康 ✓；`queued` 且无 `startedAt` 才是等 runner ✓）
    ⇒ 也解释了为什么**不该**因为"感觉很久"而反复轮询 ✗ ✓
 ```
+
+## 三百八十二、🔬 **更正：`probe:latency` 本机可量，且与 CI 吻合**（2026-10-05 10:18 ✓）
+
+```
+**为什么要更正 ✓**：目标 A 段（与先前台账）写着"`probe:latency` **exit=1** ⇒ 要真浏览器 ⇒ **本机量不了** ✗" ✓
+   ⭐ 但今天复跑 ⇒ **exit=0 并给出完整读数** ✓ —— 说明那条结论**是错的** ✗ ⇒ 必须改，不能让它继续当事实 ✓
+**真因 ✓（读脚本 ✓）**：`scripts/measure_interaction_latency.mjs`（317 行 ✓）只在两种情况下 `exit=1`：
+   ① **`dist/index.html` 不存在** ✓（第 53 行，并明确提示 "run `npm run build` first" ✓）
+   ② 抛出异常 ✓（打印 stack ✓）
+   ⇒ ⭐ 先前列到 `exit=1`，**当时正是没构建** ✗ —— **不是浏览器不可用** ✗，也不是探针不可诊断 ✗
+   ⭐ 而且该脚本**本来就是可诊断的** ✓：第 296 行写着"**rows are printed as they are measured,
+      so a failure still leaves the data above**" ✓ —— 失败也保留已测数据 ✓
+**本机读数 ✓（2026-10-05 10:18 ✓，方法：`npm run probe:latency` 于已构建的工作树 ✓）**：
+   | 动作 | settle(ms) | longTasks | blocked(ms) |
+   · baseline (playing, no input) **1510.8** ｜ 0 ｜ 0
+   · GS-1 off 42.9 ／ **GS-1 on 39** ｜ 0 ｜ 0
+   · timbre → warm_pad 128.4（1 longTask，56 ms）／ saw_lead 95 ／ rhodes_ep 83.8 ／ reese_bass 86.3 ｜ 0 ｜ 0
+   · toggle one step 80.7 ｜ 0 ｜ 0
+   ⇒ exit=0 ✓（即所有动作都在预算内 ✓）
+**与 CI 对比 ✓（同口径 ✓）**：CI nightly `37239893482` ✓ 的 baseline **1502.5 ms**（预算 **1700 ms** ✓）
+   vs 本机 **1510.8 ms** ⇒ ⭐ **差 8.3 ms（约 0.55%）** ✓ ⇒ **本机读数可信 ✓**，CI 与本机互证 ✓
+**⇒ 对目标的影响 ✓**：C 段"**只改被量出来的热点**" ✓ 现在**本机也有基线可用了** ✓ ——
+   baseline 1510.8 ≤ 1700 ✓、其余动作 ≤ 128.4 ms ✓、`longTasks` 几乎全 0 ✓
+   ⇒ ⭐ **没有需要改的热点** ✓（与 CI 门结论一致 ✓）；原先"量不了"的格子**已变成"可量且合格"** ✓
+**⚠️ 教训（第 80 条 ✓）**：**把"环境没准备好"记成"这件事量不了"** ✗ —— 两者完全不同 ✓：
+   前者**自己能修** ✓（`npm run build` ✓），后者才是缺口 ✓。⭐ 下次遇到 `exit≠0`，
+   **先读脚本的失败分支** ✓（它往往已经写好了原因 ✓），再决定这是"缺口"还是"我少做了一步" ✓。
