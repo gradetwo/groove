@@ -15152,3 +15152,26 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+### 五百七十九、⚠️ **教训 167：`import {` 不是锚点（我抓错了 import 块 ✗）**（2026-10-06 04:51 ✓）
+
+```
+**⭐ 现象 ✓**：⭐ 我用 ⭐ `t.index('import {')` ✗ 定位 ⭐ ⇒ ⭐ 它命中的是**第一处** ✓ ——
+  ⭐ 即 ⭐ `useAutosaveStatus.ts:9` 的 ⭐ `import { useSyncExternalStore } from "react";` ✗
+  ⇒ ⭐ 我把 ⭐ **React 的 import 换掉了** ✗ ⇒ ⭐ 报错原文 ✓：
+    ⭐ `Module '"react"' has no exported member 'getArrangementSaveStatusSnapshot'` ✗
+    ＋ ⭐ `Cannot find name 'useSyncExternalStore'` ✗
+  ⇒ ⭐ `tsc` 拦住 ⇒ ⭐ 已回退 ✓（⭐ 树干净 ✓）
+**⭐⭐ 教训 167 ✓**：⭐ **`import {` 不是锚点** ✗ —— ⭐ 一个文件**有多处** import ✓
+  ⭐ 做法 ✓：⭐ **锚在模块路径**上 ✓（⭐ 这里是 ⭐ `from "../projectStorage"` ✓）✓
+  ⭐ 与教训 150 ✓／153 ✓ **同源** ✓：⭐ **锚点必须唯一** ✓ ⇒ ⭐ 这次把该规则用在 **import 块**上 ✓
+**⭐ 正确的改法 ✓（⭐ 三处 ✓）**：
+  ⭐ ① ⭐ 找 ⭐ `from "../projectStorage"` ✓ ⇒ ⭐ 把它所在的 ⭐ **整块** import 换成新的一对 ✓
+    （⭐ 换后 ✓：⭐ `getArrangementSaveStatusSnapshot` ✓／⭐ `subscribeArrangementSaveStatus` ✓／⭐ `type ArrangementSaveStatus` ✓
+     ⭐ 来源 ⭐ `"../projectDb"` ✓）
+  ⭐ ② ⭐ 返回类型 ✓：⭐ `SaveStatusSnapshot` ✗ ⇒ ⭐ `ArrangementSaveStatus` ✓
+  ⭐ ③ ⭐ `useSyncExternalStore` 的两个参数 ✓ ⇒ ⭐ 换成新的一对 ✓（⭐ React 那一行**不动** ✓）
+**⭐ 附带的好消息 ✓**：⭐ 我设计的新形状与旧形状**结构相同** ✓ ⇒ ⭐ 换完 ⭐ `tsc` **应仍为 0** ✓ ✓
+  ⇒ ⭐ 即 ⭐ **hook 可先换，⭐ 消费者留到下一步** ✓（⭐ TypeScript 是结构类型 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
