@@ -7846,6 +7846,12 @@ problems: **[]** ✓
    ① **`sfzTrigger` 的上游语料抓取** ✗：`karoryfer-black-and-blue-basses` 的声明文本文件**取不到** ✓
       ⇒ 2026-10-05 00:22 的全量**恰好通过** ✓ ⇒ 属**间歇性**（网络／上游态 ✓）
       ⚠️ 不要把它记成"已修" ✗ —— 它随时可能再红 ✓；真相在**上游地址／网络** ✓，不在本仓 ✓
+      📊 **另一次独立读数（2026-10-05 19:22 ✓）**：`node scripts/check_mirror_reachability.mjs`
+      ⇒ ⭐ **exit=0** ✓，**名单里的库全部 200** ✓（`karoryfer-cowsynth` 5,647 B ✓／`karoryfer-pastabass` 20,253 B ✓／
+      `ixox-flute` ✓／`ganjo` ✓／`jlearman-steel-drum` ✓），末行 **"✅ the mirror serves what the manifest describes"** ✓
+      ⚠️ **但本条仍维持"间歇性"** ✗：① 失败项 `karoryfer-black-and-blue-basses` **不在该脚本的名单里** ✗
+      （⭐ 该脚本**没覆盖到它** ✓）② "**此刻可达**"**不等于**"那条间歇性失败已消失" ✗
+      ⇒ ⭐ 本读数只作**"此刻通"的证据** ✓，不作闭合依据 ✓
    ② `nightly` 的两条门 ✓：**`probe:latency:gate`** ✓ 与 **`probe:render-cpu:gate`** ✓ ——
       ⭐ **2026-10-05 06:24 已手动实跑通过** ✓（业主批准 ✓，`gh workflow run … -f nightly=true` ✓、
       run **`37239893482`** ✓，两步均 `completed／success` ✓）⇒ **不再是"从未跑过"** ✗
