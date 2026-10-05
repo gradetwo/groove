@@ -10377,3 +10377,20 @@ problems: **[]** ✓
    ⚠️ 唯一仍"部分"的是 `probe:boot` **只给冒烟** ✓ —— 但它的**时间维度已由 `§444` 的 baseline 1510.5 ms 覆盖** ✓
 **✅ 零产品改动 ✓**（只跑探针 ✓）
 ```
+### 四百四十六、📊 **今晚改动之后，五项度量门复测 —— 零漂移**（2026-10-05 19:08 ✓）
+
+```
+**时点 19:08 ✓｜方法：逐条跑门（**不接管道** ✗）✓｜读数为改后实测 ✓**
+   · `check:duplication` ⇒ **0** ✓
+   · `check:file-sizes` ⇒ **0** ✓（当前最大两个文件 **1559／1478 行** ✓，仍在既有桶内 ✓）
+   · `check:dead-exports` ⇒ **0** ✓（残留死导出仍是**已被记录接受**的那批 ✓）
+   · `check:module-boundaries` ⇒ **0** ✓｜⭐ **"3 value cycles, no app-to-server dependency"** ✓ ＝ **与基线一致** ✓
+   · `check:docs` ⇒ **0** ✓（**3326** 个受控文件 ✓；早前 3320 ✓ ⇒ ⭐ **＋6** 正是今晚新增文件 ✓ 自洽 ✓）
+   · `check:docs:refs` ⇒ **0** ✓｜`tsc` ⇒ **0** ✓（闸门 ✓）
+   · `check:mcp` ⇒ **0** ✓｜⭐ **94 tools／7 resources／4 prompts** ✓｜**123 checks passed／0 failed** ✓
+**⇒ 结论 ✓**：今晚动过 `PianoRollV2.tsx` ✓、`worker.ts` ＋ 新 `analysis.ts` ✓、`headless.ts` ✓、
+   `registryAnalysis.ts`／`registryArrangement.ts` ✓、**新增 5 条判据** ✓、若干文档 ✓
+   ⇒ ⭐ **五项度量门与工具面全部零漂移** ✓ ⇒ ⭐ **没有把可维护性卖给功能** ✗（目标 ② 的核心关切 ✓）
+**⇒ 新增判据清单 ✓（全部先红后绿 ✓）**：`mcpAnalysisOverlap` ✓／`mcpAnalysisCache` ✓／`mcpNotesResolveHint` ✓／
+   `mcpCreateArrangementAssetHonesty` ✓／`mcpRenderCacheStats` ✓（＋ skill 守卫判据两次扩容 ✓）
+```
