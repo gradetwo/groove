@@ -3,12 +3,12 @@
  * Scratch probe: drive the built MCP server over stdio and time individual tool calls.
  *
  * Not a gate — a measurement harness used while reproducing the three owner-reported defects
- * (`render_song` without `headless` never answering, the headless path's speed, and
+ * (`render_arrangement` without `headless` never answering, the headless path's speed, and
  * `inspect_instrument_sfz`'s arguments). Every number it prints is a wall-clock reading taken
  * on the machine it ran on, at the moment it ran.
  *
- *   node scripts/probe_mcp_render.py.mjs --tool=render_song --bars=2 --timeout=60000
- *   node scripts/probe_mcp_render.py.mjs --tool=render_song --bars=2 --headless --timeout=180000
+ *   node scripts/probe_mcp_render.py.mjs --tool=render_arrangement --bars=2 --timeout=60000
+ *   node scripts/probe_mcp_render.py.mjs --tool=render_arrangement --bars=2 --headless --timeout=180000
  *   node scripts/probe_mcp_render.py.mjs --script=inspect
  */
 import { spawn } from "node:child_process";
@@ -195,29 +195,31 @@ try {
     const genre = String(args.genre ?? "chicago-house");
     const created = await client.request(
       "tools/call",
-      { name: "create_song", arguments: { genreId: genre, bars, label: "probe" } },
+      { name: "create_arrangement", arguments: { genreId: genre, blankKind: "synth" } },
       60000
     );
-    const song = payload(created.result);
-    console.log(`create_song (${Math.round(created.elapsedMs)}ms): ${brief(song, 500)}`);
-    const songId = song.songId ?? song.id;
-    if (!songId) throw new Error("no songId in create_song reply");
+    const arrangement = payload(created.result);
+    console.log(`create_arrangement (${Math.round(created.elapsedMs)}ms): ${brief(arrangement, 500)}`);
+    const arrangementId = arrangement.arrangementId ?? arrangement.id;
+    if (!arrangementId) throw new Error("no arrangementId in create_arrangement reply");
+    // ⭐ **Creation does not set the length**, so the probe asks for the bars the caller named.
+    await client.request("tools/call", { name: "set_arrangement_bars", arguments: { arrangementId, bars } }, 60000);
 
-    const callArgs = { songId, format: "wav", maxDurationSec: 1800 };
+    const callArgs = { arrangementId, format: "wav", maxDurationSec: 1800 };
     if (args.headless) callArgs.headless = true;
     if (args.sampleRate) callArgs.sampleRate = Number(args.sampleRate);
     if (args.channels) callArgs.channels = Number(args.channels);
     const timeoutMs = Number(args.timeout ?? 60000);
     console.log(
-      `\n--- render_song ${JSON.stringify({ ...callArgs, songId: "<id>" })} ceiling=${timeoutMs}ms ---`
+      `\n--- render_arrangement ${JSON.stringify({ ...callArgs, arrangementId: "<id>" })} ceiling=${timeoutMs}ms ---`
     );
     const started = performance.now();
     try {
       const res = await client.request(
         "tools/call",
         args.progress
-          ? { name: "render_song", arguments: callArgs, _meta: { progressToken: `probe-${Date.now()}` } }
-          : { name: "render_song", arguments: callArgs },
+          ? { name: "render_arrangement", arguments: callArgs, _meta: { progressToken: `probe-${Date.now()}` } }
+          : { name: "render_arrangement", arguments: callArgs },
         timeoutMs
       );
       const out = payload(res.result);
