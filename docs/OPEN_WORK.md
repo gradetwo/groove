@@ -13911,3 +13911,24 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+### 五百四十三、⭐ **`name` 家的五处插入点（缺口 ④ 的第一处 ✓）**（2026-10-06 03:27 ✓）
+
+```
+**⭐ 量到 ✓**：⭐ `ArrangementV2` 现有 ⭐ `songId` ✓／`tracks` ✓／`notesByTrack?` ✓／`bars?` ✓／`bpm?` ✓…
+  ⭐ `createMcpArrangement(input: CreateMcpArrangementInput = {})` ✓（`mcp/arrangement.ts:429` ✓）
+  ⭐ `create_arrangement` 工具 ⭐ 只收 ⭐ `blankKind` ✓ ＋ ⭐ `songId?` ✓
+  ⭐ `ArrangementSummary` 在 ⭐ `mcp/arrangement.ts:276` ✓（⭐ 含 `arrangementId` ✓／`songId` ✓／`trackCount` ✓／`tracks` ✓／
+    `templates` ✓／`bars?` ✓／`bpm?` ✓／`steps` ✓／`problems` ✓）
+| ⭐ # ✓ | ⭐ 位置 ✓ | ⭐ 改动 ✓ |
+|---|---|---|
+| ⭐ ① ⭐ | ⭐ `src/types/arrangementV2.ts` ⭐ `ArrangementV2` ✓ | ⭐ 加 ⭐ **`name?: string`** ✓（⭐ 放 `songId` 旁 ✓ 附说明 ✓） |
+| ⭐ ② ⭐ | ⭐ `CreateMcpArrangementInput` ✓ | ⭐ 加 ⭐ `name?: string` ✓ |
+| ⭐ ③ ⭐ | ⭐ `createMcpArrangement` ✓ | ⭐ 把 `input.name` 带进编曲 ✓ |
+| ⭐ ④ ⭐ | ⭐ `create_arrangement` 工具 ✓ | ⭐ schema 加 ⭐ `name?` ✓ ＋ ⭐ 传下去 ✓ |
+| ⭐ ⑤ ⭐ | ⭐ `ArrangementSummary` ✓ | ⭐ 加 ⭐ `name?` ✓ ⇒ ⭐ 读／列／描述都带上 ✓ |
+**⭐ 判据（能红 ✓）**：⭐ ① ⭐ 建一个带名字的编曲 ✓ ⇒ ⭐ `get_arrangement` 与 ⭐ `describe_arrangement` 都回该名字 ✓
+  ⭐ ② ⭐ 不传名字 ⇒ ⭐ 字段**缺省**（⭐ 不是空串 ✓）⇒ ⭐ 保持"⭐ 缺省即未设"的 v2 风格 ✓
+**⭐ 顺带 ✓**：⭐ ⑤ 让 ⭐ `list_arrangements` ✓（⭐ 若有 ✓）⭐ 也能按名字认人 ✓ ⇒ ⭐ 这正是 v1 `create_song.name` 的用途 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 五处到行 ✓
+```
+
