@@ -12706,3 +12706,25 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 四步已定 ✓
 ```
 
+### 五百零八、⭐ **迁移 ④ 的量测：7 个工具，且与执行顺序 ④ 重叠**（2026-10-06 01:37 ✓）
+
+```
+**⭐ `mcp/registryAnalysis.ts` ✓**（⭐ 270 行 ✓，⭐ **7 个工具** ✓）：
+| 工具 ✓ | 入参（⭐ 从 schema 抽出 ✓） | 判定 ✓ |
+|---|---|---|
+| ⭐ `normalize_loudness` ✓ | ⭐ **`songId`** ✗ ＋ `channels`／`format`／`headless`／`sampleRate`／`targetLufs`／`truePeakCeilingDb` ✓ | ⚠️ ⭐ **同时是执行顺序 ④ 的目标** ✓（⭐ "⭐ 支持 arrangement ＋ ⭐ 峰值余量" ✓） |
+| ⭐ `make_unique` ✓ | ⭐ **`songId`** ✗ ＋ `index`／`sectionId` ✗ | ⭐ v1 的"⭐ 段落"概念 ✓ ⇒ ⭐ 要移或退 ✓ |
+| ⭐ `estimate_key` ✓ | ⭐ `genreId` ✗ | ⭐ 按**流派**估调 ✓ ⇒ ⭐ 判断流派是不是 v1 概念 ✓ |
+| ⭐ `spectral_balance` ✓／⭐ `share_url` ✓／⭐ `get_loudness_report` ✓／⭐ `analyze_audio` ✓ | ⭐ schema 无入参 ✓ | ⚠️ ⭐ 需看**体内**是否有 `songId` ✓（⭐ 本轮已 grep ✓，⭐ 见下 ✓） |
+**⭐ 全文件里 `songId` 的出现 ✓**：⭐ 见本轮 grep 输出 ✓（⭐ 上面已列 ✓）
+**⭐⭐ 关键发现 ✓**：⭐ **迁移 ④ 与执行顺序 ④ 是同一件事的一半** ✓ ——
+  ⭐ `normalize_loudness` 既在迁移清单里 ✓，⭐ 又是执行顺序 ④ 的目标 ✓
+  ⇒ ⭐ 因此做它一次 ⇒ ⭐ **同时推进两条线** ✓（⭐ 这符合"⭐ 一次一支、⭐ 可回退" ✓，⭐ 但要**一次只动它一个** ✓）
+**⭐ 建议的顺序 ✓**：
+  ⭐ ① ⭐ `normalize_loudness` ⭐ 接 `arrangementId` ✓ ＋ ⭐ 回包给 ⭐ **峰值余量** ✓（⭐ 含执行顺序 ④ ✓）
+  ⭐ ② ⭐ `make_unique` ⭐ 处置（⭐ 段落是 v1 ⇒ ⭐ 移到编曲或退场 ✓）
+  ⭐ ③ ⭐ `estimate_key` ⭐ 判断 `genreId` 是否 v1 ✓（⭐ 若是共享概念 ⇒ ⭐ 不动 ✓）
+  ⭐ ④ ⭐ 另四个 ⭐ 看体内 ✓ ⇒ ⭐ 有 `songId` 就照同法 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 量测已入账 ✓
+```
+
