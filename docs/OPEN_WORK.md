@@ -11684,3 +11684,26 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量不足 ✓）；⭐ 缺陷已定位到行 ✓
 ```
 
+### 四百七十三、⚠️ **更正 §471：v2 包"名字存在、形状不存在"**（2026-10-05 22:43 ✓）
+
+```
+**⚠️ ⭐ 我上一轮（§471）说"v2 包层已经存在" ✗ —— ⭐ 这个判断错了 ✓，此处更正 ✓**
+**⭐ 真相 ✓（已量 ✓）**：
+  · ⭐ `exportProjectPackage` 的第三参数类型是 ⭐ `GrooveProjectArrangement` ✓
+  · ⚠️ ⭐ 而它 ＝ ⭐ **`{ clips, sections }`** ✗ —— ⭐ **v1 词汇** ✗
+  · ⭐ Web 的"v2 保存"（`src/features/arrangement/arrangementFiles.ts` 的 `grooveFileFor` ✓）做法 ✓：
+    ⭐ `project = grooveProjectFor(arrangement)` ✓（⭐ 把编曲**编译成 v1 project** ✗）
+    ＋ ⭐ `carried = { clips: { A: pattern }, sections: [] }` ✓
+    ⇒ ⭐ 即：⭐ 它把编曲**压成 pattern** 塞进 `clips.A` ✓ ⇒ ⭐ **不是** `ArrangementV2` ✗
+  ⇒ ⭐ **结论 ✓**：⭐ 包里那个叫 `arrangement` 的字段 ⭐ **只有名字是 v2** ✗ ⇒ ⭐ **形状是 v1** ✗
+**⭐ 因此迁移 ② 是真正的格式改动 ✓（不是"把可选改必需" ✓）**：
+  ⭐ ① 定义 v2 包形状 ✓：⭐ `{ appVersion, arrangement: ArrangementV2, … }` ✓
+    ⇒ ⭐ 装 `tracks`／`notes`／`takes`／`bars`／`tempoMap` ✓ ⇒ ⭐ **不含** `project` ✗／`clips` ✗／`sections` ✗／`slots` ✗
+  ⭐ ② 建包函数改为吃 ⭐ **`ArrangementV2`** ✓（⭐ 去掉 v1 `project` 参数 ✓）
+  ⭐ ③ 校验器改为**校验 v2 形状** ✓（⭐ 删掉 `clips`／`sections` 要求 ✓）
+  ⭐ ④ 调用点 ✓：`registryFiles` 4 个工具 ✓／`arrangementFiles.ts` 2 处 ✓／`projectDb.ts` 2 处 ✓／测试 8+ 处 ✓
+  ⭐ ⑤ `import_groove` ⭐ **建 arrangement** ✓
+**⚠️ ⭐ 教训 103 ✓**：⭐ **"名字里有 v2"不等于"形状是 v2"** ✗ ⇒ ⭐ 判断一个类型是否已迁移 ✓，
+  ⭐ **要看它的字段** ✓，⭐ 不要看它的名字 ✓（⭐ 我上一轮就是看了名字 ✗）
+```
+
