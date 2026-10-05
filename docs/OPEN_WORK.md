@@ -9745,3 +9745,26 @@ problems: **[]** ✓
    （⭐ 关键怀疑：探针取的是 `boundingBox()` ✓，若该格在**横向滚动容器的可视区之外** ✓，
      Playwright 的可信点击落在**视口外** ✗ ⇒ 事件被丢弃 ✗，而 `elementsFromPoint` 因坐标仍在视口内仍能返回它 ✓）——
    验法：点击**前**把该格 `scrollIntoView()` ✓ 再跑一次 ✓（一行探针改动 ✓，不碰产品代码 ✓）
+
+### 四百二十、🔬 **指令 2 第二刀：视口外排除 ⇒ 下一支锁定 `drag.current` 吞点击**（2026-10-05 16:22 ✓）
+
+```
+**实验 ✓（探针侧一行 ✓，不碰产品代码 ✓）**：点击前 `scrollIntoViewIfNeeded()` ＋ 记录**滚动前后 boundingBox** ✓
+**读数 ✓**：`before={x:82,y:621,w:12,h:16}` ✓ ＝ `after`（**完全没变** ✓）｜`viewport={1440,1000}` ✓
+   ⇒ ⭐ 格子**明显在视口内** ✓ ⇒ ⭐ **"可信点击落在视口外"排除** ✗
+**⇒ 排除清单（指令 2 累积 10 支 ✓）**：几何/尺寸 ✗｜遮挡 ✗｜hover ✗｜同帧 ✗｜跨帧 ✗｜跨任务 ✗｜
+   选中轨 ✗（前后同为 Synth ✓）｜车道类型 ✗｜portal ✗（全仓无 ✓）｜`focus()` ✗（试过并回退 ✓）｜**视口外** ✗（本节 ✓）
+**⭐ 下一支（最强线索 ✓，且是产品代码 ✓）**：读 `PianoRollV2.tsx` 的 `onPointerUp` ✓：
+   ```
+   const started = drag.current;
+   drag.current = undefined;
+   if (started) { …拖拽处理…; return; }   // ⭐ 这一支会**在写入之前 return**
+   const from = pressed.current;
+   if (from && from.pitch === pitch && from.step === step) { onAddNote(…); }
+   ```
+   ⇒ ⭐ 若 `drag.current` 在**真实点击发生时是陈旧的**（非 `undefined` ✓）⇒ `onPointerUp` **走进拖拽分支并 return** ✗
+     ⇒ ⭐ **点击被吞掉** ✓ —— 这**恰好解释**"可信输入什么都不做 ✗／合成派发能写 ✓"
+     （合成派发里我**只发了 pointerdown/up** ✓，没有走 `mouse.move` ⇒ 不触发 `onPointerEnter` ✓）
+**⇒ 下一刀的验法 ✓（一行产品侧诊断 ✓，之后回退 ✓）**：在 `onPointerUp` 开头把 `drag.current` 与
+   `pressed.current` **写进 `window.__probeRoll`** ✓ ⇒ 探针读完再断言 ✓ ⇒ 若 `drag.current` 非空 ⇒ **定案** ✓
+   （⚠️ 这是"取证" ✓ ⇒ 按教训 88 七续：**只读、不改行为** ✓，读完即回退 ✓）

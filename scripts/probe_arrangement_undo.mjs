@@ -293,6 +293,12 @@ const selectedTrack = () =>
   });
 report.readings.selectedTrackBefore = await selectedTrack();
 /* 显式指针序列：真浏览器里写入可能挂在 pointerdown/up 上，jsdom 里零尺寸元素让 click 必然命中。 */
+/* 先滚进可视区：可信点击落在视口外会被丢弃，而 elementsFromPoint 仍能命名该元素。 */
+report.readings.cellBoxBeforeScroll = await page.locator(`[data-testid='${emptyCell}']`).first().boundingBox();
+await page.locator(`[data-testid='${emptyCell}']`).first().scrollIntoViewIfNeeded();
+await page.waitForTimeout(120);
+report.readings.cellBoxAfterScroll = await page.locator(`[data-testid='${emptyCell}']`).first().boundingBox();
+report.readings.viewport = page.viewportSize();
 await page.locator(`[data-testid='${emptyCell}']`).first().hover();
 await page.waitForTimeout(120);
 const cellBox = await page.locator(`[data-testid='${emptyCell}']`).first().boundingBox();
@@ -460,7 +466,7 @@ if (asJson) {
   line("   selected track", `before=${JSON.stringify(r.selectedTrackBefore)} after=${JSON.stringify(r.selectedTrackAfter)}`);
   line("   note ids added", JSON.stringify((r.noteIdsAfter || []).filter((i) => !(r.noteIdsBefore || []).includes(i))));
   line("   note ids removed", JSON.stringify((r.noteIdsBefore || []).filter((i) => !(r.noteIdsAfter || []).includes(i))));
-  line("   cross-task down/up", JSON.stringify(r.crossTask) + " notesAfter=" + r.notesAfterCrossTask);
+  line("   cell box", `before=${JSON.stringify(r.cellBoxBeforeScroll)} after=${JSON.stringify(r.cellBoxAfterScroll)} viewport=${JSON.stringify(r.viewport)}`);
   line("⑤ after change length", `bars=${r.afterLength.bars} action=${r.afterLength.undoAction}`);
   line("⑥ after Ctrl+Z ×3", `tracks=${r.afterUndo3.tracks.length} bars=${r.afterUndo3.bars} undo=${r.afterUndo3.undoDisabled} redo=${r.afterUndo3.redoDisabled}`);
   line("   order unwound (newest first)", `bars ${r.afterLength.bars}→${r.afterUndo1.bars}, notes ${r.afterUndo1.notes}→${r.afterUndo2.notes}, tracks ${r.afterUndo2.tracks.length}→${r.afterUndo3.tracks.length}`);
