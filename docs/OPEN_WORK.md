@@ -13270,3 +13270,23 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未修 ✗**（⭐ 余量用尽 ✓）；⭐ 下一段读该判据的上下文 ✓
 ```
 ```
+
+### 五百二十六、⭐ **3 工具批次拆成两步（先立 v2 剧本，再退 v1）**（2026-10-06 02:50 ✓）
+
+```
+**⭐ 为什么拆 ✓**：⭐ 三个工具（`set_clip` ✗／`get_song` ✗／`undo_song` ✗）⭐ 共用一段协议剧本 ✓ ⇒
+  ⭐ 一起改是**约 10 个文件** ✗ ⇒ ⭐ 在余量不足时开工会留红 ✗（⭐ 今天已两次 ✗）
+  ⇒ ⭐ 拆法 ✓：⭐ **先让剧本跑在 v2 上** ✓（⭐ 此时 v1 工具都还在 ✓ ⇒ ⭐ 可以**绿** ✓），
+    ⭐ **再退三个 v1 工具** ✓（⭐ 剧本已不依赖它们 ✓ ⇒ ⭐ 也可以**绿** ✓）
+**⭐ 第 ① 步（可绿 ✓）**：⭐ 把 `check_mcp` 的两段改成 v2 ✓：
+  ⭐ 剧本一九六–四〇三 ✓ ⇒ ⭐ `create_arrangement` ✓ ＋ ⭐ `set_arrangement_track_steps`（⭐ 替 `set_clip` ✓）
+    ＋ ⭐ `get_arrangement`（⭐ 替 `get_song` ✓）⇒ ⭐ 断言 v2 形状（⭐ 轨／步进 ✓，⭐ 不是 `clips`／`sections` ✗）
+  ⭐ 剧本二四一四–四二七 ✓ ⇒ ⭐ `create_arrangement` ✓ ＋ ⭐ `set_arrangement_bars` ✓（⭐ 造两次改动 ✓）
+    ＋ ⭐ `undo_arrangement`（⭐ 替 `undo_song` ✓）⇒ ⭐ 断言"⭐ 退回起点" ✓
+    ⭐ 并 ⭐ **删掉**"⭐ lists what is undoable" ✗（⭐ v2 历史不带 op 名 ✓，⭐ §523 已定 ✓）
+**⭐ 第 ② 步（可绿 ✓）**：⭐ 退三个工具块 ✓ ＋ ⭐ 各自清单／文档行／README ✓ ＋ ⭐ 两个判据文件
+  （`mcpSchemaPassthrough:105` ✗ 改接 ✓／`mcpCapability` 两处清单 ✗ 删项 ✓）＋ ⭐ 回填 ✓
+**⭐ 判据读数门槛 ✓（教训 137 ✓）**：⭐ 工具数将 **90 ⇒ 89 ⇒ 88 ⇒ 87** ✓ ⇒ ⭐ 地板已到 **85** ✓ ⇒ ⭐ 余量够 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 两步已定 ✓
+```
+
