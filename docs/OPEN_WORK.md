@@ -15215,3 +15215,23 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 三件已定案 ✓
 ```
 
+**⭐ 三次通知的精确插入点 ✓（2026-10-06 04:55 ✓，⭐ 零未知 ✓）**：
+```
+**⭐ 函数形状 ✓**：⭐ `saveArrangementProject` ⭐ 位于 ⭐ `src/features/sequencer/projectDb.ts:1179–1279` ✓（⭐ 101 行 ✓）
+  ⭐ 关键行 ✓：⭐ `:1217` 尺寸守卫 ✓｜⭐ `:1245` ⭐ `runStoreTx(db, GROOVE_ARRANGEMENT_STORE_NAME, "readwrite", (store) => store.put(record));` ✓
+  ⭐ `:1265` ⭐ `try {` ✓｜⭐ `:1266` ⭐ `await write;` ✓｜⭐ `:1267` ⭐ `} catch (err) {` ✓
+  ⭐ `:1271` ⭐ `throw err instanceof Error ? err : new Error(String(err));` ✓｜⭐ `:1278` ⭐ `return record;` ✓
+| ⭐ 通知 ✓ | ⭐ 插入点 ✓ | ⭐ 值 ✓ |
+|---|---|---|
+| ⭐ **"saving"** ✓ | ⭐ 写开始前（⭐ `:1245` 之前 ✓） | ⭐ `{ status: "saving", savedAt: null }` ✓（⭐ 首次前为 `null` ✓） |
+| ⭐ **"saved"** ✓ | ⭐ `:1278` 的 ⭐ `return record;` **之前** ✓ | ⭐ `{ status: "saved", savedAt: Date.now() }` ✓ |
+| ⭐ **"failed"** ✓ | ⭐ `:1267` 的 `catch` 内 ✓、⭐ `:1271` 抛出**之前** ✓ | ⭐ `{ status: "failed", savedAt: <保留原值> }` ✓ —— ⭐ 旧注释说 `savedAt` 是"⭐ 最后一次成功写入**" ✓ |
+**⭐⭐ 因此三件可一次落净 ✓**：
+  ⭐ ① ⭐ `projectDb.ts` ✓：⭐ `savedAt?` ✗ ⇒ ⭐ `savedAt: number | null` ✓（⭐ 必填 ✓）＋ ⭐ 初值 ⭐ `{ status: "idle", savedAt: null }` ✓
+    ＋ ⭐ **三处 `setArrangementSaveStatus`** ✓
+  ⭐ ② ⭐ `useAutosaveStatus.ts` ✓：⭐ 三处换新 ✓（⭐ 已验可行 ✓）
+  ⭐ ③ ⭐ 跑门 ✓ ⇒ ⭐ 视图／组件／判据**预计不动** ✓（⭐ 结构兼容 ✓）⇒ ⭐ 本组完成 ✓
+**⭐ 一处细节 ✓**：⭐ 新形状改造后 ⭐ **必须在同一步**改 hook ✗ —— ⭐ 否则判据红 ✗（⭐ §241 已证 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
