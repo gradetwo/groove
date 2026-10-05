@@ -116,7 +116,7 @@ try {
    * `--script <file.json>` runs a list of calls in this one process:
    *
    * ```json
-   * [{ "tool": "create_song", "args": { "genreId": "chicago-house" } },
+   * [{ "tool": "create_arrangement", "args": { "genreId": "chicago-house" } },
    * ```
    *
    * Each reply is printed under a heading naming its tool, so a caller can read the flow rather than infer it.
