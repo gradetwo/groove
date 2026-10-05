@@ -25,15 +25,15 @@
 | 4 | 歌曲与段落（song / section / clip） | ✓ | ✓ `src/views/StudioView.tsx` | ✓ `create_song`、`get_song`、`add_section`、`duplicate_section`、`make_unique`、`set_clip`、`set_lane_slots`、`set_tempo`、`undo_song` | 三方齐 |
 | 5 | 编曲 v2（轨道、区域、音符、take） | ✓ | ✓ `src/views/HorizontalTimelineView.tsx`、`VerticalTimelineView.tsx` | ✓ `create_arrangement`、`get_arrangement`、`describe_arrangement`、`add_arrangement_track`、`remove_arrangement_track`、`rename_arrangement_track`、`set_arrangement_track_kind`、`set_arrangement_track_flag`、`set_arrangement_track_gain`、`set_arrangement_track_pan`、`set_arrangement_track_parent`、`set_arrangement_track_asset`、`set_arrangement_track_steps`、`set_arrangement_track_collapsed`、`set_arrangement_region`、`set_arrangement_note_length`、`set_arrangement_bars`、`set_arrangement_tempo`、`set_arrangement_time_signature`、`set_arrangement_tempo_map`、`add_arrangement_note`、`add_arrangement_notes`、`add_arrangement_take`、`assign_arrangement_take_range`、`select_arrangement_take`、`remove_arrangement_note`、`move_arrangement_note` | 三方齐 |
 | 6 | 作曲辅助（进行／旋律／练习／示例） | ✓ | 🔶 `src/views/ChordProgressionsView.tsx`（**只浏览**） | ✓ `suggest_progression`、`generate_melody`、`practice_plan`、`compose_groove`、`compose_with_examples`、`list_examples`、`get_example`、`list_chord_progressions`、`get_chord_progression`、`apply_chord_progression` | **Web ✗**：生成链路只走 MCP（作曲是 agent 侧工作流） |
-| 7 | 理论核查（倒字、调性、音高） | ✓ | ? | ✓ `validate_prosody`、`estimate_key`、`get_pitch_report`、`get_transposition_report`、`compare_genres` | Web 侧**待核** |
+| 7 | 理论核查（倒字、调性、音高） | ✓ | 🔶 **部分**：有移调步进（`src/components/arrangement/ArrangementPanel.tsx`）；**倒字／调性／音高报告无界面** | ✓ `validate_prosody`、`estimate_key`、`get_pitch_report`、`get_transposition_report`、`compare_genres` | 已核（2026-10-05 ✓）：**MCP 独有那三项** ⇒ Web 只覆盖移调 |
 | 8 | 导出（MIDI／WAV／MP3／Groove／ALS） | ✓ | ✓ `src/components/arrangement/ArrangementFileEntriesV2.tsx` | ✓ `export_midi`、`export_arrangement_midi`、`export_groove`、`export_ableton`、`render_audio`、`render_song` | 三方齐 |
 | 9 | 导出乐谱（MusicXML） | ✓ | ✓ 乐谱页头部 | ✓ `export_arrangement_musicxml` | 三方齐 |
 | 10 | ⭐ 导出 Logic 工程（`.logicx.zip`） | ✓ | ✓ 乐谱页头部（v2.34.46 新增） | ✓ `export_logic_project` | 三方齐；⚠️ **Logic 本体能否打开未证**（无 Mac） |
 | 11 | ⭐ 导入 Logic 工程 | ✓ `src/data/logicToArrangement.ts` | ✅ **有入口**：`src/features/arrangement/arrangementFiles.ts`（`kind = "logic"` ⇒ 解包取 `Alternatives/<n>/ProjectData` ✓） | ✓ `import_logic_project` | ✅ **三方齐**（2026-10-05 补 ✓）：Web 的导入入口是**单一按内容嗅探**的那一个 ⇒ 用户直接上传 `.logicx.zip` 即可 ✓；判据 `src/test/webLogicImport.test.ts`（含**往返** ✓） |
-| 12 | 导入（MIDI／MusicXML／Groove） | ✓ | ? `ArrangementFileEntriesV2` 有导入项，逐个核对 | ✓ `import_arrangement_midi`、`import_arrangement_musicxml`、`import_arrangement_musicxml_file`、`import_groove` | Web 侧**待核**（逐项） |
+| 12 | 导入（MIDI／MusicXML／Groove） | ✓ | ✅ **逐项已核**：`src/features/arrangement/arrangementFiles.ts` 的 `arrangementFileKind` 认 `.mid/.midi` ⇒ `midi` ✓、`.groove` ⇒ `groove` ✓、`.musicxml/.mxl/.xml` ⇒ `musicxml` ✓、`.logicx.zip/.zip` ⇒ `logic` ✓ | ✓ `import_arrangement_midi`、`import_arrangement_musicxml`、`import_arrangement_musicxml_file`、`import_groove` | ✅ **三方齐**（2026-10-05 逐项核 ✓）；单一入口按**内容嗅探** ✓ |
 | 13 | 渲染音频（整曲／编曲） | ✓ | ✓ 实时播放（`StudioView`）；离线导出见第 8 行 | ✓ `render_audio`、`render_song`、`render_arrangement` | 三方齐；⚠️ 全曲 64 小节 ≈ 360 s，**客户端 300 s 超时偏紧**（见"未暴露/待办"） |
 | 14 | ⭐ 段落试听渲染（span） | ✓ | ✗（Web 靠实时播放） | ✓ `render_arrangement_preview`、`render_preview_clip` | **Web ✗**：MCP 独有的"便宜听一段"；⚠️ span 语义 2026-10-05 改为**裁到 span**（`mcp/arrangement.ts` 的 `intoSpan`） |
-| 15 | 分轨导出（stems） | ✓ | ? | ✓ `render_arrangement_stems` | Web **待核**；⚠️ 8 小节 5 轨 ≈ 300 s，**RPC 会超时**（见下） |
+| 15 | 分轨导出（stems） | ✓ | ✅ **有入口**：`src/components/arrangement/ArrangementFileEntriesV2.tsx` 的 `onExportStems`（`data-testid="arrangement-export-stems"` ✓，文案 `toolbar_export_stems` ✓） | ✓ `render_arrangement_stems` | ✅ **三方齐**（2026-10-05 核实 ✓）；⚠️ 8 小节 5 轨 ≈ 300 s，**RPC 会超时**（见"未暴露/待办"） |
 | 16 | 响度与频谱分析 | ✓ | 🔶 `src/views/AnalyzerView.tsx` | ✓ `normalize_loudness`、`get_loudness_report`、`analyze_audio`、`spectral_balance` | Web 只读展示；MCP 可**产出报告** |
 | 17 | GS-1 音色（patch） | ✓ | 🔶 `StudioView` 的开关与选择器 | ✓ `apply_gs1_patch`、`get_gs1_patch` | MCP 面**更深**（完整 patch 设计） |
 | 18 | 采样库管理 | ✓ | ✓ `src/components/settings/SampleLibrariesPanel.tsx` | ✓ `list_sample_libraries`、`add_sample_library`、`list_arrangement_instruments`、`inspect_instrument_sfz` | 三方齐 |
@@ -42,7 +42,7 @@
 | 21 | 挑战／耳训 | ✓ | ✓ `src/views/ChallengeView.tsx` | ✗ | **MCP ✗**：游戏化交互未工具化（无计划） |
 | 22 | 硬件控制台 | ✓ | ✓ `src/views/HardwareConsoleView.tsx` | ✗ | **MCP ✗**：面向现场操作，非 agent 场景 |
 | 23 | 音频分析视图（示波器／频谱） | ✓ | ✓ `src/views/AnalyzerView.tsx` | 🔶 `spectral_balance`、`analyze_audio`（离线文件级） | 实时可视化 MCP 无法表达 |
-| 24 | 分享链接 | ✓ | ? | ✓ `share_url` | Web **待核** |
+| 24 | 分享链接 | ✓ | ✅ **有入口**：`src/components/sequencer/ProjectHubModal.tsx`（`shareUrl` ＋ 文案 `project_hub_share` ✓ ＋ 二维码 `project_hub_share_qr_alt` ✓；降级时显示 `project_hub_share_degraded` ✓） | ✓ `share_url` | ✅ **三方齐**（2026-10-05 核实 ✓）；且**降级会明说** ✓（见 `docs/OPEN_WORK.md` §394） |
 | 25 | ⭐ 人声：绑定歌词与旋律 | ✓ | ✗ | ✓ `set_vocal_melody` | **Web ✗**：无 UI |
 | 26 | ⭐ 人声：合成演唱 | 🔶 **未实现** | ✗ | 🔶 `synthesize_vocal`（标题自述 "reserved — not implemented"） | **计划**：工具面预留；两侧都没有可用实现 |
 | 27 | ⭐ PWA 安装／更新入口 | ✓ `src/utils/pwa.ts`（`initPwa` 已在 `src/main.tsx` 跑） | ✅ **有入口**：`src/components/settings/SettingsModal.tsx`（「关于」页订阅 `subscribePwaStatus` ✓；`canInstall` 时给「安装应用」✓；`isUpdateAvailable` 时给「立即更新」✓） | n/a | ✅ **已完成**（2026-10-05 ✓，见 `docs/OPEN_WORK.md` §399）；判据 `src/test/pwaEntry.test.ts` ✓（含「缺 `matchMedia` 的主机不得在导入时抛」✓） |
