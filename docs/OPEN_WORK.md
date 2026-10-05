@@ -13983,3 +13983,21 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+**⭐ `ProjectionInput` 只有两个字段 ✓ ⇒ 播种配方到行 ✓（2026-10-06 03:33 ✓）**：
+```
+⭐ 原文 ✓：⭐ `export interface ProjectionInput { id: string; clips: Record<string, SequencerPattern | undefined>; }` ✓
+  ⇒ ⭐ 因此播种只需 ✓：
+    ⭐ `projectSongToV2({ id: songId, clips: { A: patternFromGenre(findGenre(genreId)) } })` ✓ ✓
+**⭐ 播种家的五处改动 ✓（⭐ 零未知 ✓）**：
+  | ⭐ # ✓ | ⭐ 位置 ✓ | ⭐ 改动 ✓ |
+  |---|---|---|
+  | ⭐ ① ⭐ | ⭐ `create_arrangement` schema ✓ | ⭐ 加 ⭐ `genreId: z.string().optional().describe("seed the first track from this genre's arranged pattern")` ✓（⭐ 锚在 `songId` 行之后 ✓，⭐ 教训 149 ✓） |
+  | ⭐ ② ⭐ | ⭐ 同一 handler ✓ | ⭐ 把 `args.genreId` 传下去 ✓ |
+  | ⭐ ③ ⭐ | ⭐ `CreateMcpArrangementInput` ✓ | ⭐ 加 `genreId?: string` ✓ |
+  | ⭐ ④ ⭐ | ⭐ `createMcpArrangement` ✓ | ⭐ 有 `genreId` ⇒ ⭐ 用 ⭐ `projectSongToV2({ id: songId, clips: { A: patternFromGenre(…) } })` ✓ **取代** ⭐ 空编曲那条路 ✓；⭐ 其余（⭐ `notesByTrack: {}` ✓／`name` ✓）不变 ✓ |
+  | ⭐ ⑤ ⭐ | ⭐ 新判据 ✓ | ⭐ ① ⭐ 带 `genreId` 建 ⇒ ⭐ 轨非空 ✓ 且 ⭐ 轨的步进来自该流派 ✓ ② ⭐ 不带 ⇒ ⭐ 空编曲（⭐ 现状 ✓） |
+**⚠️ ⭐ 一处要小心 ✓**：⭐ `findGenre` 未知流派会怎样 ✗（⭐ 抛错还是 `undefined` ✓）⇒ ⭐ 判据里要**用一个真实流派 id** ✓
+  （⭐ 判据已大量使用 ⭐ `chicago-house` ✓ ⇒ ⭐ 安全 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 配方到行 ✓
+```
+
