@@ -11165,3 +11165,25 @@ export async function prepareArrangementAudioLanes(input: {
 · ⏳ **删除本身未做 ✗**（⭐ 涉及 32 处工具名 ✓、6 个判据文件 ✓、`check_mcp.mjs` ✓、对齐表 ✓ ⇒ 下一步 ✓）
 ```
 
+**⭐ 迁移 ③ 删除清单（2026-10-05 21:19 ✓，按文件实测 ✓）**：
+```
+| 文件 ✓ | `"render_audio"` ✓ | `"render_preview_clip"` ✓ | ⭐ 动作 ✓ |
+|---|---|---|---|
+| `mcp/registryRender.ts` ✓ | — | — | ⭐ **删两个工具块** ✓ |
+| `scripts/check_mcp.mjs` ✓ | 3 ✓ | 1 ✓ | ⭐ 删相关用例 ✓ |
+| `src/test/budgetHonesty.test.ts` ✓ | 6 ✓ | 1 ✓ | 调整 ✓ |
+| `src/test/mcpHeadlessRouting.test.ts` ✓ | 2 ✓ | 2 ✓ | 调整 ✓ |
+| `src/test/mcpCapability.test.ts` ✓ | 1 ✓ | 2 ✓ | 调整 ✓ |
+| `src/test/mcpArrangementPreview.test.ts` ✓ | 1 ✓ | 0 ✓ | 调整 ✓ |
+| `src/test/mcpCopy_render_audio.test.ts` ✓ | 1 ✓ | 0 ✓ | ⭐ **删文件** ✓ |
+| `src/test/mcpCopy_render_preview_clip.test.ts` ✓ | 0 ✓ | 1 ✓ | ⭐ **删文件** ✓ |
+| ⭐ `mcp/render/budget.ts` ✓ | 0 ✓ | 0 ✓ | ⭐ **不改** ✓ |
+| ⭐ `mcp/server.ts` ✓ | 0 ✓ | 0 ✓ | ⭐ **不改** ✓ |
+| ⭐ `src/test/mcpTools.test.ts` ✓ | 0 ✓ | 0 ✓ | ⭐ **不改** ✓ |
+· ⚠️ ⭐ **修正上一轮的粗估** ✓：⭐ 我先前说"`budget.ts`／`server.ts`／`mcpTools` 被波及" ✗ ⇒ ⭐ **实测都是 0** ✓
+  （⭐ 原因：⭐ 上一轮的正则 `\brender_audio\b` 命中了**别处的子串** ✗ ⇒ ⭐ 本轮改用**带引号**的精确匹配 ✓）
+· ⭐ **净范围 ✓**：⭐ **1 个结构文件 ＋ 4 个判据调整 ＋ 2 个判据删除 ＋ 1 个脚本 ＋ 对齐表** ✓
+· ⭐ **工具数 ✓**：95 ⇒ **93** ✓
+· ⏳ **下一步 ✓**：⭐ 按此清单**一次删净** ✓（⭐ 门红即回退 ✓ —— 教训 94 ✓），再回填对齐表 ✓
+```
+
