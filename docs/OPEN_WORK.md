@@ -10666,3 +10666,17 @@ export async function prepareArrangementAudioLanes(input: {
    原处调用（`mark` 在调用前 ✓）⇒ 新函数插在 `\nasync function renderPatternOfflineInternal(` **之前** ✓ ⇒ `tsc` ✓
    ⇒ 再跑 `fileSizeBudget`（**测试** ✓）＋ 文风四条 ✓ ⇒ 然后才做 `validate_arrangement` 工具 ✓ ＋ **回填对齐表** ✓
 ```
+**⭐ 第 2–4 次落码（20:13–20:14 ✓）：错误在收敛 ✗，每次都自动回退 ✓（树脏恒 0 ✓）**：
+```
+· 第 2 次 ✗：`Duplicate identifier`（`SampleAsset`／`TempoPoint`／`SampleDecoder` ✓）
+  ⇒ ⭐ 学到的 ✓：这几个**早已导入** ✓，且藏在 **13–22 行的多行 import** 里 ✗
+  ⇒ ⭐ 我的 `startswith("import ")` 扫描**看不见续行** ✗ ⇒ 改用 ⭐ **`re.search(r'\bName\b', 前 120 行)`** 判断 ✓
+· 第 3 次 ✗：`Cannot find name 'options'` ✓（×3）＋ `'patternTempo'` ✓（×2）
+  ⇒ ⭐ 两条**真正的原因** ✓：
+    ① ⭐ 搬移块**多搬了一行** ✗：`options.onAudioLanePreparation?.(...)` ✓ —— 它属**调用方**（与 `mark` 同类 ✓）
+       ⭐ 与紧随其后的 `if (preparation.problems.length) audioLaneProblems.push(...)` ✓ 都应**留在原处** ✓
+       ⇒ ⭐ 正确的搬移范围＝**从 `const loader = createSampleLoader(` 到 `prepareOfflineAudioLanes({...})` 的 `});` 为止** ✓
+    ② ⭐ 搬移块里的 `...(patternTempo.length ? { tempoTrack: patternTempo } : {})` ✓
+       ⭐ 在新函数里应改成 ⭐ **`...(tempoTrack ? { tempoTrack } : {})`** ✓（形参名是 `tempoTrack` ✓；`patternTempo` 是**调用方**的名字 ✓）
+· ⭐ **净结论** ✓：★ 只差这两处 ✓ ⇒ **下一次即收口** ✓；⭐ 备份/回退机制**每次都保住了干净树** ✓（4 次全绿 ✓）
+```
