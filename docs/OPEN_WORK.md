@@ -8677,3 +8677,35 @@ problems: **[]** ✓
    并且：**读数与 CAP（27 ✓）继续钉着** ✓ ⇒ 一旦有人新增"无人引用的导出"，判据会立刻红 ✓
    ⚠️ 若**日后**某笔删除让某个导出变成无人引用 ⇒ CAP 只许下降 ✓ ⇒ 该导出必须**同时处理**（删或接线）✓，不能留着 ✓
 ```
+
+## 三百七十四、🧪 **业主转来《MCP 深测报告》（2026-10-05 ✓）：逐条到代码里核实，先修两条**（2026-10-05 09:01 ✓）
+
+```
+**来源 ✓**：业主转来外部深测报告（被测 `2.34.47`／`b9c3362` ✓；测试者用自有 stdio client ✓ 全链路作曲 632 音符 ✓；
+   仓库只读 ✓）。⭐ 报告本身很扎实 ✓（含 file:line ✓、把"我的测试脚本 bug"与"产品 bug"分得很清 ✓）
+**核实 ✓（先量后改 ✓，逐条到代码里看原文 ✓）**：
+   · ② **P2-新（span 只过滤音符、不裁剪时长 ✓）—— 属实 ✓**：
+     `flattenMcpArrangement`（`mcp/arrangement.ts:1314` ✓）注释**自述**"The span narrows the **notes** before they are compiled" ✓
+     ⇒ 输出仍按整编曲长度编译 ✓ ⇒ `durationSec` 与 `span` 不一致 ✓、span 外静默 ✓ ⇒ **真问题** ✓（取舍见下 ✓）
+   · ① **P1-新（trackIds 静默 ✓）—— 找到一条设计内成因 ✓**：同函数注释写着
+     "**An unknown id contributes nothing rather than silently rendering everything**" ✓ ⇒ 传错 id ⇒ 该轨静默 ✓（**但回执不说** ✗）
+   · ⑤ **seed 上限未写进描述 —— 属实 ✓**：`mcp/registryExamples.ts:111` ✓ 是 `z.number().int().min(0).max(1_000_000)` ✓，
+     描述只有 "default 1; the same seed gives the same melody" ✓
+   · ⑦ **Web 无 Logic 导入入口 —— 属实 ✓**：`logicToArrangement` 在 `src/` 里**只有测试引用** ✓（`src/test/logic*.test.ts` ✓）
+**已修两条 ✓（各配能红判据 ✓）**：
+   · ⑤ **seed 范围写进描述** ✓（`"…default 1; …same melody. The seed runs from 0 to 1000000."` ✓）⇒
+     `check:mcp=0` ✓（94 tools ＋ stdio ✓）＋ 描述/工具/回执判据 **6 文件 33 用例** ✓
+   · ① **未知 id 不再静默 ✓**：preview handler 现在算 `unknownTrackIds` ✓（用 arrangement 自己的 lane id 集合 ✓），
+     回执带 `unknownTrackIds` ✓ ＋ 在 `arrangementProblems` 里写明
+     "**no lane has the id …: the render contains only the lanes that matched, so it can be silent**" ✓
+     ⇒ 新增判据 `src/test/mcpPreviewScopeDiagnostic.test.ts` ✓（3 用例 ✓）⭐ **已弄红 ✓**：
+       临时删掉回执字段 ⇒ `inReply: false` ⇒ 红 ✓ ⇒ 还原 ⇒ 绿 ✓
+     ⇒ `tsc=0` ✓／`lint=0` ✓／`check:mcp=0` ✓／MCP 判据 **29 用例** ✓
+**待业主定夺 ✓（都写在报告里的"需确认"项 ✓）**：
+   · **② 的取舍** ✓：**把输出裁到 span** ✓（名副其实"便宜地听一段" ✓）**还是**保持整长但在回执里**声明** ✓（`durationSec` 与 span 的关系写明 ✓）
+   · ③ stems 8 小节 5 轨 ~300 s ＋ RPC 超时 ✓、④ 全曲 ~360 s 超客户端 300 s ✓ ⇒ 建议**放宽预算或加进度回调** ✓
+   · ⑥ `add_arrangement_track` 顶层 `trackId` ✓（向后兼容的新增字段 ✓）
+   · ⑦ Web 补 Logic 导入入口 ✓
+**未测/需环境 ✓（如实 ✓）**：Logic 本体打开 `.logicx.zip` ✗（无 Mac ✗）｜采样可达环境下的 lane skip ✗｜
+   ① 的"间歇静默"真因 ✗（需渲染宿主复现 ✓ —— 本轮已先把**可诊断性**补上 ✓）
+```

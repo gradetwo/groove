@@ -108,7 +108,7 @@ export const EXAMPLE_TOOLS: ToolDefinition[] = [
       bars: z.number().int().min(2).max(32).optional().describe("bars of 4/4; default 8, which gives an AABA of two-bar phrases"),
       form: z.enum(["AABA", "ABAB"]).optional().describe("default AABA"),
       range: z.tuple([z.number().int(), z.number().int()]).optional().describe("inclusive MIDI range; at most two octaves, clamped"),
-      seed: z.number().int().min(0).max(1_000_000).optional().describe("default 1; the same seed gives the same melody"),
+      seed: z.number().int().min(0).max(1_000_000).optional().describe("default 1; the same seed gives the same melody. The seed runs from 0 to 1000000."),
       density: z.number().min(0.1).max(1).optional().describe("how many eighth-note slots carry a note; default 0.55"),
       tones: z
         .array(z.number().int().min(0).max(5))

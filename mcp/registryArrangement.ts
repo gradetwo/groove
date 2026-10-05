@@ -146,8 +146,20 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
             ? { startBar: args.startBar as number, endBar: args.endBar as number }
             : undefined;
         const trackIds = (args.trackIds as string[] | undefined) ?? (args.trackId ? [String(args.trackId)] : undefined);
+        /**
+         * ⭐ **An id that matches no lane is named, not swallowed.** `flattenMcpArrangement` keeps only the lanes whose
+         * id is in `trackIds`, and an unknown id contributes nothing by design — but a caller that mistyped one id
+         * then receives a *silent* render and cannot tell why. The deep-test report hit exactly that shape of failure
+         * (2026-10-05). Naming the ids turns a silent result into one sentence of diagnosis.
+         */
+        const lanes = getMcpArrangement(String(args.arrangementId))!;
+        const knownTrackIds = new Set(lanes.tracks.map((track) => track.id));
+        const unknownTrackIds = trackIds ? trackIds.filter((id) => !knownTrackIds.has(id)) : [];
         const { flattened } = flattenMcpArrangement(String(args.arrangementId), range, trackIds);
-        const summary = summariseArrangement(String(args.arrangementId), getMcpArrangement(String(args.arrangementId))!);
+        const summary = summariseArrangement(String(args.arrangementId), lanes);
+        const scopeProblems = unknownTrackIds.length
+          ? [...summary.problems, `no lane has the id ${unknownTrackIds.map((id) => `"${id}"`).join(", ")}: the render contains only the lanes that matched, so it can be silent`]
+          : summary.problems;
         const result = await renderAudio(flattened.pattern, {
           format: (args.format as "wav" | "mp3") ?? "wav",
           sampleRate: (args.sampleRate as number | undefined) ?? 8000,
@@ -165,8 +177,9 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
           passes: 1,
           ...(range ? { span: range } : {}),
           ...(trackIds ? { tracks: trackIds } : {}),
+          ...(unknownTrackIds.length ? { unknownTrackIds } : {}),
           totalSteps: flattened.pattern.totalSteps,
-          ...(summary.problems.length ? { arrangementProblems: summary.problems } : {}),
+          ...(scopeProblems.length ? { arrangementProblems: scopeProblems } : {}),
           ...audioLaneReplyFields(result.audioLanes),
         };
       } catch (error) {
