@@ -10301,3 +10301,37 @@ problems: **[]** ✓
    （每轨预热进度被 `reportOf` 丢 ✓）→ `dryRun` ✓ → 报出已有的 `decodeMs/networkMs` ✓
 ```
 ```
+### 四百四十三、📌 **三个"先量之后决定不改"的记账**（2026-10-05 18:48 ✓）
+
+```
+**为什么单列一条 ✓**：⭐ 把"**为什么不改**"记得和"改了什么"一样清楚 ✓ ——
+   否则下一个人会**重新发现同一个诱惑** ✗，并**再改坏一次** ✗（今晚我已有三次同类代价 ✓）。
+   下面三条都**有原始读数** ✓，结论都是**不改** ✓，且都写明**什么条件下才该改** ✓。
+**① `list_arrangement_instruments` 加 `rangeLow/High`（音域字段）⇒ 不改 ✓**
+   · 读数 ✓：`list_arrangement_instruments` 只给库/时长 ✗；⭐ 全仓 `mcp`／`src` **搜不到 `rangeLow`／`keyLow`／
+     `keyHigh`／`keyRange` 任何一处** ✗ ⇒ **数据不存在** ✗（不是"有但没暴露" ✗）
+   · 代价 ✓：要**把 keyrange 从加载器里引出来** ✗（渲染/解析路径 ✓）⇒ 属**功能级** ✓
+   · ⚠️ 且产品**已经如实标注** ✓：`mcp/arrangement.ts:889` 原文 *"no tool exposes an SFZ's keyranges yet"* ✓
+     ⇒ **不是静默谎** ✓（与 `assetId` 那条**性质不同** ✗ —— 那条是"文档说有、实际没有" ✓ 已修 ✓）
+   · ✅ **改的条件** ✓：若某天加载器把 region 边界**暴露成数据** ✓ ⇒ 那时加字段就是**小投入** ✓
+**② 每轨预热进度"被 `reportOf` 丢掉"⇒ 不改 ✓（说法不成立 ✗）**
+   · 读数 ✓：`worker.ts:1300–1322` 的翻译是**忠实的** ✓
+     `outer.reportOf(framesBefore + frames, total === undefined ? undefined : framesBefore + total, …)` ✓
+     ⇒ ⭐ **保留 `undefined` ✓、对真实 total 偏移 ✓** ⇒ **不丢** ✗
+   · 而预热**确实带真实 total** ✓：`headless.ts:336–338` `if (preparation.total > 0) … reportOf(reached, renderFramesEstimate, …)` ✓
+   · 唯一传 `undefined` 的是 `worker.ts:1317` ✓，而它注释写明**故意** ✓（"Announced before the host's own cold start" ✓）
+   · ⚠️ **不把话说满** ✓：客户端**实收什么**只有**实跑**能证 ✓ ⇒ 记为「**未证实／需实跑**」✓
+   · ⛔ **若照那条说法改，就是改坏一处本来正确的管线** ✗ ⇒ **改的条件**＝**实跑量到**客户端确实丢了 total ✓
+**③ `set_vocal_melody` 接 `arrangementId`（歌词 × 编曲打通）⇒ 记账排期 ✓**
+   · 读数 ✓：`set_vocal_melody`（`mcp/registrySong.ts:32`）入参为 `songId`（**v1** ✓）／`sectionId`／`pattern`／
+     `track`／`syllables`／`tones`／`pitches`／`seed` —— ⭐ **没有 `arrangementId`** ✗
+   · 影响 ✓：⭐ **没有任何一个成品工程同时含"怎么编"（v2）与"怎么唱"（v1）** ✗
+     （子代理实测：歌词**带得进** v1 侧的导出 ✓，但**进不了** v2 arrangement ✗）
+   · 代价 ✓：四处 ✓ ① 新入参路径 ✓ ② 歌词落在**哪一层**存储 ✓ ③ **导出**（`.groove`／MIDI／MusicXML 带不带 ✓）
+     ④ 两套路的判据 ✓ —— ⚠️ 且它正压在 **v1／v2 边界**上 ✗（本阶段指令明确警告处 ✓）
+   · ⚠️ 另注 ✓：`registrySong.ts:129` 自述 *"reserved, not implemented: singing synthesis is an interface here and
+     no implementation"* ✓ ⇒ **该工具的边界是诚实的** ✓（它本职＝绑歌词 ＋ 查倒字 ✓，**不唱歌** ✓）
+   · ✅ **改的条件** ✓：先把 v1/v2 的**歌词落地层**量清 ✓ ⇒ 再作为**独立议题**排期 ✓
+**📌 结论 ✓**：⭐ 三条都**不改** ✓，但都**留了钩子** ✓（"什么条件下才该改" ✓）⇒
+   这正是 skill 第 11 条后半句要的姿势 ✓：**收益真实而改动不小 ⇒ 记账 ＋ 排期** ✓，**不顺手改** ✗
+```
