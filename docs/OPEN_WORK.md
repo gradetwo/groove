@@ -12922,3 +12922,20 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未修 ✗**（⭐ 余量用尽 ✓）；⭐ 红因与两个假设已入账 ✓
 ```
 
+**⭐ 红因定案 ✓（2026-10-06 01:52 ✓）**：
+```
+**⭐ 本地复现 ✓**：⭐ `npx vitest run src/test/mcpHeadlessRouting.test.ts` ⇒ ⭐ **3 failed | 21 passed（24）** ✗
+  ⇒ ⭐ **不是 CI 环境问题** ✗ ⇒ ⭐ **是我引入的真实回归** ✓
+**⭐ 原因 ✓**：⭐ 该判据用 ⭐ `vi.mock(...)` ✓（⭐ 在 `:63` 一带 ✓）⭐ 模拟几个模块 ✓ ⇒
+  ⚠️ ⭐ 我上一轮把 ⭐ `flattenMcpSong(...)` ✗ 换成 ⭐ `flattenMcpArrangement(...)` ✓
+  ⇒ ⭐ **mock 拦不住新的调用** ✗ ⇒ ⭐ 代码走不到被 mock 的宿主 ✓ ⇒ ⭐ "⭐ the Node host must have been reached: expected []" ✓
+**⚠️ ⭐ 教训 125 ✓（重要 ✓）**：⭐ **改了模块调用路径 ⇒ 必须跑**全量**判据** ✗ ——
+  ⭐ 我上一轮只跑了 ⭐ `mcpTools`／`mcpToolCoverage`／`mcpCapability` ✗ ＋ ⭐ `check:mcp` ✓ ⇒ ⭐ **漏了跨模块 mock** ✗
+  ⇒ ⭐ CI 的第八道门（⭐ `test:coverage` ✓）正是为这类问题存在的 ✓ ⇒ ⭐ **本机也应当跑它** ✓
+    （⭐ 本机该门退出码 1 ✗ 是**覆盖率插件依赖错** ✓ ⇒ ⚠️ ⭐ 但**用例结果仍可读** ✓ ⇒ ⭐ 应看 "⭐ Tests N failed" 一行 ✓）
+  ⇒ ⭐ 更省的近路 ✓：⭐ 改**模块调用路径**时 ⇒ ⭐ `grep -rln "旧函数名" src/test/` ✓ ⇒ ⭐ **逐个跑那些文件** ✓
+**⭐ 修法 ✓（⭐ 下一段 ✓）**：⭐ 把该判据里的 ⭐ mock 目标 ✗ 与 ⭐ 入参 ✗ 从 v1 改到 v2 ✓
+  （⭐ mock ⭐ `flattenMcpArrangement` ✓；⭐ 调用处传 ⭐ `arrangementId` ✓）⇒ ⭐ 三处失败应回绿 ✓
+**⏳ 未修 ✗**（⭐ 余量用尽 ✓）；⭐ 原因与修法已定 ✓
+```
+
