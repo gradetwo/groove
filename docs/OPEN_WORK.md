@@ -13325,3 +13325,15 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 安全前提已证 ✓
 ```
 
+**⭐ 改剧本一所需 schema ✓（2026-10-06 02:52 ✓）**：
+```
+⭐ `create_arrangement` ✓：⭐ `{ songId }` ✓（⭐ `blankKind` 另有 ✓）
+⭐ **`add_arrangement_track`** ✓：⭐ `{ arrangementId, kind, name }` ✓ ⇒ ⭐ **替 `add_section`** ✓（⭐ v2 的"⭐ 加一段"就是加轨 ✓）
+⭐ **`set_arrangement_track_steps`** ✓：⭐ `{ arrangementId, trackId, steps }` ✓ ⇒ ⭐ **替 `set_clip`** ✓
+⭐ ⭐ `get_arrangement` ✓：⭐ 本轮未显示必填入参 ✗ ⇒ ⭐ 按惯例用 `arrangementId` ✓（⭐ 回包字段按 `tracks` ✓）
+**⭐ 接下去的写法 ✓（⭐ 一步可绿 ✓）**：⭐ 剧本一的三段改成 v2 ✓
+  ⇒ ⭐ 断言 ⭐ ① 轨数为 2 ✓（⭐ 替"⭐ 两段" ✓）② ⭐ 写入的步进在轨上 ✓（⭐ 替"⭐ 第二个片段" ✓）
+    ③ ⭐ **`clips === undefined && sections === undefined`** ✓（⭐ 明证旧字段已去 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
