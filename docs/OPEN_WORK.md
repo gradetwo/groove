@@ -10967,7 +10967,7 @@ export async function prepareArrangementAudioLanes(input: {
 **⭐ 步骤 2 的波及面实测（21:00 ✓，`grep -rl set_vocal_melody` ✓）**：
   · ⭐ **12 个文件、33 处引用** ✓
   · ⭐ **判据文件 4 个** ✓：`src/test/mcpSchemaPassthrough.test.ts` ✓／`src/test/vocalMelody.test.ts` ✓／
-    `src/test/mcpCapability.test.ts` ✓／`src/test/mcpCopy_set_vocal_melody.test.ts` ✓（⭐ 最后一个要**改名** ✓）
+    `src/test/mcpCapability.test.ts` ✓／`src/test/mcpCopy_set_arrangement_vocal_melody.test.ts` ✓（⭐ 最后一个要**改名** ✓）
   · ⭐ 代码 3 处 ✓：`mcp/registrySong.ts` ✓／`mcp/song.ts` ✓／`scripts/check_mcp.mjs` ✓
   · ⭐ 文档 6 处 ✓：`docs/MCP.md` ✓／`docs/FEATURE_ALIGNMENT.md` ✓／`docs/OPEN_WORK.md` ✓／
     `docs/MCP_CREATION_FINDINGS.md` ✓／`docs/Z2_ADJUDICATION.md` ✓／`docs/V4_REVIEW_PLAN.md` ✓
@@ -10977,8 +10977,21 @@ export async function prepareArrangementAudioLanes(input: {
      （⭐ 删 `songId` ✗／`sectionId` ✗／`index` ✗／`pattern` ✗）＋ 旋律字段 ✓；回包 ⭐ 只用 v2 词 ✓
      （`arrangementId` ✓／`trackId` ✓／`notes` ✓／`prosody` ✓／`warnings` ✓；⭐ 删 `editedSlot` ✗／`sharedSlot` ✗）
   ② handler ⭐ 只留一条路 ✓：`getMcpArrangement` ⇒ `flattenMcpArrangement` ⇒ `setVocalMelody` ⇒ **`setMcpTrackNotes`** ✓
-  ③ 判据 4 个文件同步 ✓（含**改 `mcpCopy_set_vocal_melody.test.ts` 的文件名** ✓）
+  ③ 判据 4 个文件同步 ✓（含**改 `mcpCopy_set_arrangement_vocal_melody.test.ts` 的文件名** ✓）
   ④ `scripts/check_mcp.mjs` 的工具清单同步 ✓
   ⑤ ⭐ 回填 `docs/MCP.md` ＋ `FEATURE_ALIGNMENT.md` ✓（⚠️ 历史文档不改 ✗）
 ```
 
+**✅ 改名已完成（2026-10-05 21:01 ✓，提交 `4a6904e` ✓）**：
+```
+· ⭐ 工具名 ⇒ **`set_arrangement_vocal_melody`** ✓（⭐ 业主已确认 ✓："所有东西都以 V2 为准" ✓）
+· ⭐ 14 处替换 ✓／7 个文件 ✓；⭐ 判据文件同步改名 ✓：
+  `src/test/mcpCopy_set_arrangement_vocal_melody.test.ts` ✓
+· ⭐ 读数 ✓：`tsc=0` ✓｜`check:mcp` **95 tools／123 checks 0 failed** ✓｜判据组 **15 用例通过** ✓｜
+  尺寸 ＋ `mcpTools` **25 用例通过** ✓｜`lint=0` ✓
+· ⚠️ ⭐ **过程失误（诚实记 ✓）**：⭐ 我第一次提交时 `check:docs:refs` **是红的**（`:1` ✗）而**照样推了** ✗ ——
+  原因：⭐ 命令里没有"门红即停" ✓。⭐ 已修（本页两处旧文件名 ✓）＋ ⭐ **教训 94** ✓：
+  ⭐ **提交前必须逐门检查退出码；门红就停，不许把提交和推送写进同一条命令的尾部** ✗
+· ⏳ **下一步 ✓**：⭐ 入参与回包换 v2 术语 ✓（⭐ 删 `songId` ✗／`sectionId` ✗／`index` ✗／`pattern` ✗；
+  回包删 `editedSlot` ✗／`sharedSlot` ✗ ⇒ 改用 `setMcpTrackNotes` 写回 ✓）
+```
