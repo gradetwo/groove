@@ -11494,3 +11494,21 @@ export async function prepareArrangementAudioLanes(input: {
   ⑤ ⭐ 回填对齐表 ✓ ⑥ ⭐ 工具数 **93 ⇒ 94** ✓
 ```
 
+**⭐ 调试采集：实现前的四量（2026-10-05 21:43 ✓）**：
+```
+| 需要的 ✓ | 量到的 ✓ | 影响 ✓ |
+|---|---|---|
+| ⭐ 编曲清单 ✓ | ⚠️ ⭐ **只有 `summariseArrangement(id, arrangement)`** ✓（`mcp/arrangement.ts:293` ✓），⭐ **没有清单函数** ✗（⭐ 未见 `listMcpArrangements` ✗） | ⭐ **编曲摘要要改成"能诚实做到的"** ✓ |
+| ⭐ 注册面计数 ✓ | ✅ `TOOLS`（`registry.ts:122` ✓）／`RESOURCES`（`:160` ✓）／`PROMPTS`（`:254` ✓） | ⭐ **可直接计数** ✓ |
+| ⭐ 实测成本 ✓ | ✅ `MEASURED_RENDER_COST = budget.measured`（`mcp/render/budget.ts:68` ✓） | ⭐ **直接引用** ✓ |
+| ⭐ 落盘规矩 ✓ | ✅ `os`／`path`／`mkdtempSync`／`writeFileSync` 都已在 `registryFiles.ts` 导入 ✓（`:6`／`:7`／`:17` ✓） | ⭐ **同族，放这里合适** ✓ |
+**⇒ 因此两处**必须诚实处理** ✓（⭐ 不假装采到 ✗）**：
+  · ⭐ **编曲存储摘要** ✓ ⇒ ⭐ 第一版改为 ⭐ **"当前会话内 MCP 编曲的**已知 id 数量**"** ✓（⭐ 若无法枚举 ⇒
+    ⭐ 就**不含该节** ✓ 并在 `omissions` 里**写明原因** ✓：⭐ "本版没有编曲清单函数" ✓）
+  · ⭐ **最近失败回包** ✓ ⇒ ⭐ 同样**不含** ✓ ＋ ⭐ `omissions` 写明"本版没有环形缓冲" ✓
+**⭐ 包结构（定案 ✓）**：⭐ `{ collectedAt ✓, appVersion ✓, runtime{platform,arch,node} ✓, surface{tools,resources,prompts} ✓,
+  budget: MEASURED_RENDER_COST ✓, env{GROOVE_MCP_OUT: "set"|"unset"} ✓（⭐ **绝不写值** ✗）, note? ✓（业主的话 ✓）,
+  manifest[] ✓（每节"是什么／为什么" ✓）, omissions[] ✓（缺什么／为什么 ✓） }` ✓
+**⏳ 落地未做 ✗**（余量不足 ✓）；⭐ 设计已无未知 ✓
+```
+
