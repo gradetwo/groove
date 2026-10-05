@@ -277,6 +277,10 @@ jobs:
           # the iPad, and a mouse drag cannot prove that `touch-action: none` is in place.
           npm run probe:arrangement -- --viewport=ipad
           npm run probe:arrangement-audio
+          # `probe:arrangement-undo` presses a roll cell and requires the release to land on the same cell: a press
+          # focuses the panel, and without `preventScroll` the browser scrolled the window 226 px, moving a different
+          # cell under the pointer, so the write was refused and pressing a cell looked like it did nothing.
+          npm run probe:arrangement-undo
 
       # E-10: Lighthouse is not installable in this environment, so the performance
       # gate is a real-browser measurement with deterministic assertions (no genre
