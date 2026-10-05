@@ -10915,3 +10915,22 @@ export async function prepareArrangementAudioLanes(input: {
   ② ⭐ 该轨**其它属性不变** ✓（乐器／资产／名称／静音 ✓）③ ⭐ 音符数读数与该轨一致 ✓
 ```
 
+### 四百五十七、⭐ **业主指令：目标是纯 V2 架构（2026-10-05 20:57 ✓）**
+
+```
+**业主原话 ✓**：⭐ "**按你建议执行。目标是系统变为纯 V2 架构**" ✓
+⇒ ⭐ **范围升级** ✓：⭐ 不只是 MCP 工具面 ✓ —— ⭐ **数据模型、音频引擎、Web 面、导出**都要 V2 ✓
+  ⇒ ⭐ **v1 全面退场** ✓（⭐ 与"不并存 ✗＋不保兼容 ✗＋术语用 V2 ✓"三条一致 ✓）
+**⭐ 第 7 项步骤 1 已落地 ✓（`mcp/arrangement.ts` ✓）**：
+  · ⭐ 新增 `setMcpTrackNotes(arrangementId, trackId, notes)` ✓ —— ⭐ **替换某轨全部音符** ✓
+  · ⭐ **不改模型层** ✓（⭐ 直接写 `notesByTrack[trackId]` ✓，与单音符写函数**同一形状** ✓）
+  · ⭐ **守 fx／folder 守卫** ✓（⭐ 那两类轨不能有音符 ✓，与模型层同一判断 ✓）
+  · 判据读数 ✓：`tsc=0` ✓｜`lint=0` ✓｜尺寸判据 ✓
+**⚠️ 纯 V2 架构的盘点（下一步要做 ✓）**：
+  · ⭐ 数据模型：`src/data/arrangementEdits.ts` ✓（v2 ✓）vs v1 的 song／clip／slot 模型 ✗
+  · ⭐ Web 面：`src/views/*` ＋ `src/components/*` ✓ —— ⭐ 要量哪些还在用 v1 模型 ✗
+  · ⭐ MCP 面：见上文 v1 清单 ✓
+  · ⭐ 导出／导入：`registryFiles` ✓（`export_midi` 等 ✓）
+  ⇒ ⭐ **下一轮** ✓：⭐ 量 **Web 面**的 v1 依赖（⭐ 这是纯 V2 架构里最大的一块 ✓，之前没量过 ✓）
+```
+

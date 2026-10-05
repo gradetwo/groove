@@ -1186,6 +1186,28 @@ export function addMcpTrackNotes(arrangementId: string, trackId: string, notes: 
 }
 
 /**
+ * ⭐ **Replace every note on one track.**
+ *
+ * The model layer can add a note and remove one, and nothing replaces a whole track's notes. This composes no new model
+ * operation: it writes the array the same way the single-note writer does, with the same guard for `fx` and `folder`
+ * tracks, which cannot hold notes. A caller that wants to add without removing uses `addMcpTrackNotes`.
+ */
+export function setMcpTrackNotes(
+  arrangementId: string,
+  trackId: string,
+  notes: readonly NoteEvent[]
+): ArrangementEditResult {
+  return edit(arrangementId, (arrangement) => {
+    const track = arrangement.tracks.find((candidate) => candidate.id === trackId);
+    if (!track || track.kind === "fx" || track.kind === "folder") return arrangement;
+    return {
+      ...arrangement,
+      notesByTrack: { ...(arrangement.notesByTrack ?? {}), [trackId]: [...notes] },
+    };
+  });
+}
+
+/**
  * ⭐ **The arrangement's time signature, and the reason this wrapper exists at all.**
  *
  * The edit function `setArrangementTimeSignature` was written first and the gate refused the commit:
