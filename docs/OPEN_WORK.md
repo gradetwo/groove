@@ -12300,3 +12300,26 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落地 ✗**（⭐ 余量用尽 ✓）；⭐ 操作已到"第几行、改哪几行" ✓
 ```
 
+### 四百九十二、⭐ **Web 单元最终定形：4 件（含判据）**（2026-10-06 00:42 ✓）
+
+```
+**⚠️ ⭐ 更正 ✓**：⭐ 我此前说"⭐ Web 的 `src/test/` **无需改动**" ✗ —— ⭐ **错了** ✓
+  （⭐ 那个结论来自 ⭐ **MCP 侧**的枚举 ✓，⭐ 我错误地套到了 Web ✓ ⇒ ⭐ 教训 111 ✓：
+   ⭐ **一次枚举只对它那一个单元成立** ✗ ⇒ ⭐ 换文件就要**重新枚举** ✓）
+**⭐ Web 四件（⭐ 全部已定位 ✓）**：
+  ⭐ ① ⭐ 保存 ⭐ `grooveFileFor` ✓：⭐ 换 v2 包 ✓ ＋ ⭐ **加 `stem` 参数** ✓（⭐ 整函数替换**已验可编译** ✓）
+  ⭐ ② ⭐ 读取 ⭐ `importGrooveIntoArrangement` ✓（⭐ `:515` 一带 ✓，⭐ 缩进 ⭐ **实测 4 空格** ✓）：
+    ⭐ 换 ⭐ `arrangementFromPackage` ✓ ⇒ ⭐ 并构造**完整**的 `ArrangementImportResult` ✓
+    ⇒ ⭐ 它的字段（⭐ 实量 ✓）：⭐ `arrangement: ArrangementV2` ✓｜⭐ `trackIds: string[]` ✓｜⭐ `tracks: number` ✓｜
+      ⭐ `notes: number` ✓｜⭐ `problems: string[]` ✓｜（⭐ 还有更多 ✓ ⇒ ⭐ 取值时**照接口抄** ✓）
+  ⭐ ③ ⭐ 投影助手 ⭐ `arrangementFromGroovePackage` ✓（`src/data/arrangementImport.ts:232` ✓）：
+    ⭐ 它吃 **v1 包** ✗（⭐ 用 `pkg.project` 与 `pkg.arrangement.clips` ✓）⇒ ⭐ v2 无调用者 ⇒ ⭐ **退场** ✓
+    （⚠️ ⭐ 退场前**先量它还有没有别的调用者** ✓ —— ⭐ 这是"可逆性差"的东西 ✓）
+  ⭐ ④ ⭐ **判据** `src/test/arrangementEntries.test.ts` ✓：
+    ⭐ `:18` 导入 ⭐ **旧** `validateGroovePackage` ✗ ⇒ ⭐ 换成 ⭐ `validateArrangementPackage` ✓
+    ⭐ `:78` 用它当门 ✗ ⇒ ⭐ 同上 ✓
+    ⭐ `:74` ⭐ `grooveFileFor(arrangement())` ✓（⭐ 默认 stem ✓）⇒ ⭐ 文件名期望改为 ⭐ `arrangement.groove` ✓
+    ⭐ `:116` 另一处 `grooveFileFor` ✓ ⇒ ⭐ 同样检查 ✓
+**⏳ 未落地 ✗**（⭐ 余量用尽 ✓）；⭐ 四件都已到行，⭐ 缩进已**实测**（不再靠数 ✓）
+```
+
