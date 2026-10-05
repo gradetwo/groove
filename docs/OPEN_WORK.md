@@ -8709,3 +8709,72 @@ problems: **[]** ✓
 **未测/需环境 ✓（如实 ✓）**：Logic 本体打开 `.logicx.zip` ✗（无 Mac ✗）｜采样可达环境下的 lane skip ✗｜
    ① 的"间歇静默"真因 ✗（需渲染宿主复现 ✓ —— 本轮已先把**可诊断性**补上 ✓）
 ```
+
+## 三百七十五、📋 **业主任务：`docs/FEATURE_ALIGNMENT.md` 三方对齐表（系统 × Web × MCP）**（2026-10-05 09:17 ✓）
+
+```
+**业主要求 ✓**：「系统已经实现/计划功能，web 端暴露功能，mcp 暴露功能 **三方对齐检查表格**（放到 docs 下），
+   哪些已经有，**没有的标明原因/计划/状态**」✓
+**交付 ✓**：
+   · **`docs/FEATURE_ALIGNMENT.md`** ✓（**30 行能力表** ✓：作曲 ✓／编曲 v2 ✓／验证 ✓／导入导出 ✓／渲染试听 ✓／
+     分轨 ✓／响度频谱 ✓／GS-1 ✓／采样库 ✓／主课 ✓／挑战 ✓／硬件控制台 ✓／分享 ✓／人声 ✓／PWA ✓／无障碍 ✓／工程包 ✓／预热 ✓ … ✓）
+     列 ✓：**能力 ｜ 系统 ｜ Web（入口路径 ✓）｜ MCP（工具名 ✓）｜ 状态/原因 ｜** ＋ **"未暴露/待办"表** ✓ ＋ **"待核"表** ✓ ＋ **维护约定** ✓
+   · ⭐ **口径写进文档 ✓**（每列怎么复算 ✓）：**MCP 列只信服务端自报** ✓ —— `npm run mcp:build` 后
+     **`node scripts/list_mcp_tools.mjs`** ✓（新增 ✓，走 stdio 问 `tools/list` ✓）
+     ⚠️ **并写明不许用正则数注册面** ✗：`name`/`title` 在 resources／prompts 上也有 ⇒ **正则数出 98 ✗，真实 94 ✓**（实测 ✓）
+   · **未暴露项 8 条 ✓**，逐条给 **原因/计划/状态** ✓：Web Logic 导入（**已批准未开工** ✓）／渲染超时＋进度（已批准 ✓）／
+     `add_arrangement_track` 顶层 id（已批准 ✓）／PWA 入口（已批准 ✓）／减少动效（已批准 ✓）／
+     `synthesize_vocal`（**标题自述 reserved — not implemented** ✓ ⇒ 计划 ✓）／Logic 实机未测 ✗／采样镜像未测 ✗
+   · **待核 2 条 ✓**（标 `?` 而非"没有" ✗）：Web 侧导入项逐条、理论报告是否有界面、stems/分享入口、硬件控制台工具面 ✓
+**判据 ✓（能红 ✓）**：`src/test/featureAlignmentCoverage.test.ts` ✓（3 用例 ✓）——
+   ⭐ **注册面声明的每个名字都必须出现在表里** ✓（源＝`mcp/registry*.ts` ✓，**不依赖被 gitignore 的 `dist-mcp/`** ✗ ✓）
+   ＋ 表必须写出**权威计数 94** 且指向 `scripts/list_mcp_tools.mjs` ✓ ＋ "仍在测量"自检 ✓
+   ⭐ **弄红验证 ✓**：临时删掉 `set_arrangement_track_collapsed` 一行 ⇒ 判据 **exit=1** ✓ ⇒ 还原 ✓
+**门禁 ✓**：`tsc=0` ✓｜`check:docs=0` ✓｜**`check:docs:refs=0`** ✓（⚠️ 过程里被它拦过一次 ✗：
+   我在文档里**先引用了尚不存在的判据文件** ✓ ⇒ 这正是它的职责 ✓ ⇒ 补上判据后即绿 ✓）
+```
+
+## 三百七十六、✂️ **业主决定执行：span 渲染"裁到 span"（preview 与 stems 同一处生效）**（2026-10-05 09:19 ✓）
+
+```
+**由来 ✓**：深测报告 P2-新 ✓ —— `startBar/endBar` **只过滤音符、不裁剪时长** ✗ ⇒ `durationSec` 与 `span` 不一致 ✓、
+   span 外全是静默 ✓。我先到代码里核实 ✓：`flattenMcpArrangement` 的注释**自述**"The span narrows the **notes**…
+   the range **covers a span rather than claiming the audio starts at zero**" ✗ ⇒ **属刻意设计** ✓ ⇒ 故请业主定夺 ✓
+**业主决定（2026-10-05 09:12 ✓）**：**裁到 span** ✓（而非"保持整长但在回执里声明" ✗）
+**改动 ✓（一处改、两工具同时生效 ✓）**：`mcp/arrangement.ts`
+   · 新增 `intoSpan()` ✓：**移到 0** ✓（`startBeats = max(0, 原 − spanStart)` ✓）、**跨头裁剪** ✓
+     （`lengthBeats = 原 end − spanStart − 新 start` ✓）、**裁没了的丢弃** ✓
+   · `flattenMcpArrangement` ✓：给了 `range` ⇒ 音符过 `notesInBarRange` ✓ ⇒ 再 `intoSpan` ✓；
+     编译传 **`{ ...arrangement, bars: endBar − startBar }`** ✓（⭐ 长度就来自 `compileArrangementToSongInput` 的
+     `sections[0].bars = arrangement.bars` ✓，已读实 ✓）
+   · ⭐ **同步更正注释** ✓：`notesInBarRange` 原写 "Nothing is clipped…" ✗ ⇒ 改为"该函数仍保留绝对位置；
+     **移到 0 与裁头是调用方的一步，且对所有取 span 的工具只此一处**" ✓ —— 避免文档与行为打架 ✗
+   · `render_arrangement_stems` ✓ 走**同一助手** ✓（其注释本就写着"not a second definition of what a span means" ✓）⇒ 一并生效 ✓
+**判据 ✓（能红 ✓）**：扩充既有 `src/test/mcpArrangementPreview.test.ts` ✓（**7 用例 ✓**，该文件头本就写着"behaviour 这半由本文件持有" ✓）：
+   · `bars === 1` ✓（span 长度 ✓，旧行为是 arrangement 的长度 ✗）
+   · `flattened.pattern.totalSteps === 16` ✓（一小节十六分 ✓）
+   · ⭐ **第一个发声 step 必须为 0** ✓（bar 4 的音符以前在 **step 64** ✗）
+   ⭐ **弄红验证 ✓**：把两处退回旧行为 ⇒ 判据 **exit=1** ✓，报 **`expected 64 to be +0`** ✓ ⇒ 还原 ⇒ 7/7 绿 ✓
+**门禁 ✓**：`tsc=0` ✓｜`lint=0` ✓｜**既有 arrangement 族 41 文件 / 423 用例全过** ✓（改行为未碰坏其它 ✓）
+```
+
+## 三百七十七、🧭 **业主批准执行：`add_arrangement_track` 顶层 `trackId`**（2026-10-05 09:22 ✓）
+
+```
+**由来 ✓**：深测报告 ⑥（老问题 ✓）—— 回执为 `{summary, problems}` ✗，新轨 id 只藏在
+   `summary.tracks[summary.tracks.length - 1].id` ✓ ⇒ 刚加完轨的**下一步调用**（如 `add_arrangement_notes` ✓）
+   得伸手进 summary 去取 ✗。业主 2026-10-05 批准补 ✓。
+**改动 ✓**（`mcp/registryArrangement.ts` 的 `add_arrangement_track` handler ✓）：
+   `const result = addMcpTrack(...)` ✓ ⇒ **新增顶层 `trackId`** ✓（`{ ...result, trackId: added.id }` ✓），
+   ⭐ **保留原嵌套形状** ✓（已有调用方在读 ✓）⇒ 纯增量、向后兼容 ✓
+**判据 ✓（能红 ✓）**：新增 `src/test/mcpAddTopLevelId…`（`src/test/mcpAddTrackTopLevelId.test.ts` ✓，**3 用例 ✓**）——
+   · **handler 像客户端那样被调用** ✓ ⇒ 顶层 `trackId` 存在 ✓ **且与嵌套里那个 id 相同** ✓
+   · ⭐ **拿返回的 id 直接做下一次调用** ✓（`addMcpTrackNotes` ✓）⇒ 该 id 确实指向存在的轨 ✓
+     （这正是这个字段存在的意义 ✓：把两步变一步 ✓）
+   · "仍在测量"自检 ✓（工具名在、工具数 > 90 ✓）
+   ⭐ **弄红验证 ✓**：临时把 `return` 改回 `result` ⇒ 判据 **exit=1** ✓，报
+     `expected { topLevel: false … }` ✓ 与 `the id from the reply is not a track` ✓ ⇒ 修复回位 ⇒ 3/3 绿 ✓
+**门禁 ✓**：`tsc=0` ✓｜`lint=0` ✓｜**`check:mcp=0`** ✓（94 tools ✓ stdio 可达 ✓）
+**⚠️ 过程教训（第 78 条 ✓）**：**"弄红"的备份必须取"修复后"的状态** ✗ ——
+   我按惯例在**改前**备份 ✗ ⇒ 临时去掉字段后"还原"实际回到了**改前**版本 ✗ ⇒ 修复被我自己的回滚冲掉 ✓
+   （判据当场报红 ✓ 才发现 ✓）⇒ 正确做法 ✓：**改 → 验证绿 → 备份（此时）→ 弄红 → 从该备份还原** ✓

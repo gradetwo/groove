@@ -86,6 +86,34 @@ describe("the preview scope really narrows", () => {
     expect(lanesPlaying(flattenMcpArrangement(arrangementId, undefined, [trackIdOf(arrangementId)]).flattened)).toBeGreaterThan(0);
   });
 
+  /**
+   * ⭐ **A span render starts where the span starts and is as long as the span** (owner's decision, 2026-10-05).
+   *
+   * The deep-test report measured `durationSec` disagreeing with `span`: the span narrowed the notes but the audio
+   * kept the arrangement's own length, so a one-bar span of a long piece came back as a long file with the span
+   * buried in it. The flatten now moves the span to zero, clips a note that began before it, and compiles a section
+   * `endBar - startBar` bars long. Both halves are asserted here without rendering: the first sounding step is zero
+   * (it used to be step 64 for a note in bar 4), and the pattern is exactly one bar of sixteenths.
+   */
+  it("⭐ moves the span to zero and makes the render as long as the span", () => {
+    const { arrangementId, trackId } = oneLane();
+    // Bar 4 begins at beat 16; four beats to the bar, so that is step 64 at a sixteenth per step.
+    addMcpTrackNotes(arrangementId, trackId, [
+      { pitch: 62, startBeats: 16, lengthBeats: 1, velocity: 100 },
+      { pitch: 64, startBeats: 16, lengthBeats: 8, velocity: 100 },
+    ]);
+
+    const { flattened, bars } = flattenMcpArrangement(arrangementId, { startBar: 4, endBar: 5 });
+    expect(bars).toBe(1);
+
+    const rows = flattened.pattern.tracks;
+    const firstSounding = Math.min(
+      ...rows.flatMap((row) => (row.steps ?? []).map((step, index) => (step !== 0 ? index : Number.POSITIVE_INFINITY)))
+    );
+    expect(firstSounding).toBe(0);
+    expect(flattened.pattern.totalSteps).toBe(16);
+  });
+
   it("⭐ keeps the note out when the span starts after it", () => {
     const { arrangementId } = oneLane();
     expect(lanesPlaying(flattenMcpArrangement(arrangementId, { startBar: 2, endBar: 3 }).flattened)).toBe(0);

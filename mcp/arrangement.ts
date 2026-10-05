@@ -1273,9 +1273,10 @@ function refuseUnknownTrack(arrangement: ArrangementV2, trackId: string, apply: 
  *   * **A note that starts before the span but sustains into it is included.** A pad is exactly the case someone
  *     auditions bars of, and dropping it because its onset is one bar earlier would make a preview that does not
  *     match what plays.
- *   * **Nothing is clipped.** A note that begins before the span keeps its own start, so the render is what the
- *     arrangement actually says rather than a rearrangement of it. That is also why the reply says the range
- *     covers a span rather than claiming the audio starts at zero.
+ *   * **{@link flattenMcpArrangement} then moves the span to zero and clips the head** of a note that began before
+ *     it, so the render starts where the span starts and its length is the span's (`bars` in the reply agrees with
+ *     `durationSec`). This function alone still keeps absolute positions, which is what the arrangement says; the
+ *     shift is the caller's step, done in one place for every tool that takes a span.
  */
 export function notesInBarRange(
   notesByTrack: Record<string, readonly NoteEvent[]>,
@@ -1311,6 +1312,31 @@ export function notesInBarRange(
  * off-by-one-bar gets in. The bar length comes from `beatsPerBar`, the one function that reads a time signature,
  * rather than a second interpretation of `"3/4"` living in this file.
  */
+/**
+ * Move a span to zero on the timeline and clip the head of anything that began before it.
+ *
+ * The arrangement's notes carry absolute positions; a span render wants the audio to begin where the span does.
+ * A note that starts before the span keeps its tail and loses its head, and a note with nothing left inside the
+ * span is dropped rather than rendered as a zero-length event.
+ */
+function intoSpan(
+  notesByTrack: Record<string, readonly NoteEvent[]>,
+  startBeat: number
+): Record<string, NoteEvent[]> {
+  const moved: Record<string, NoteEvent[]> = {};
+  for (const [trackId, notes] of Object.entries(notesByTrack)) {
+    const within = notes
+      .map((note) => {
+        const clippedStart = Math.max(0, note.startBeats - startBeat);
+        const end = note.startBeats + note.lengthBeats - startBeat;
+        return { ...note, startBeats: clippedStart, lengthBeats: end - clippedStart };
+      })
+      .filter((note) => note.lengthBeats > 0);
+    if (within.length > 0) moved[trackId] = within;
+  }
+  return moved;
+}
+
 export function flattenMcpArrangement(
   arrangementId: string,
   range?: { startBar: number; endBar: number },
@@ -1331,10 +1357,23 @@ export function flattenMcpArrangement(
   const scoped = trackIds
     ? Object.fromEntries(Object.entries(allNotes).filter(([trackId]) => trackIds.includes(trackId)))
     : allNotes;
-  const notes = range
-    ? notesInBarRange(scoped, range, beatsPerBar(arrangement.timeSignature))
-    : scoped;
-  const songInput = compileArrangementToSongInput(arrangement, notes);
+  const beatsPerMeasure = beatsPerBar(arrangement.timeSignature);
+  /**
+   * ⭐ **A span render starts where the span starts** (owner's decision, 2026-10-05).
+   *
+   * This used to keep every note's absolute position and the arrangement's own length, so a one-bar span of a
+   * sixteen-bar piece compiled to sixteen bars of audio with the span's notes buried in it — the deep-test report
+   * measured exactly that, and the mismatch between `durationSec` and `span` was the tell. The notes are now moved
+   * so the span begins at zero, a note that began before the span is **clipped at its head**, and the compiled
+   * section is `endBar - startBar` bars long. `bars` in the reply, `totalSteps`, and the audio all agree.
+   */
+  const spanStartBeat = range ? range.startBar * beatsPerMeasure : 0;
+  const inRange = range ? notesInBarRange(scoped, range, beatsPerMeasure) : scoped;
+  const notes = range ? intoSpan(inRange, spanStartBeat) : inRange;
+  const songInput = compileArrangementToSongInput(
+    range ? { ...arrangement, bars: range.endBar - range.startBar } : arrangement,
+    notes
+  );
   /**
    * The clip needs the fields a `SequencerPattern` requires and nothing more: the compiled lanes, and the four the format insists on. `genre_id` is `"custom"` because an arrangement is not a genre's pattern — saying otherwise would make a render claim a
    * provenance it does not have.

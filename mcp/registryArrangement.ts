@@ -387,7 +387,7 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
     },
     handler: (args) => {
       try {
-        return addMcpTrack(
+        const result = addMcpTrack(
           String(args.arrangementId),
           args.kind as never,
           args.name as string | undefined,
@@ -395,6 +395,15 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
           args.instrument as string | undefined,
           args.situation as { instrument: StringInstrument; situation: StringSituation } | undefined
         );
+        /**
+         * ⭐ **The new track's id at the top level**, because it used to be reachable only as
+         * `summary.tracks[summary.tracks.length - 1].id`. The deep-test report of 2026-10-05 flagged the nesting: an
+         * agent that had just added a track had to read the summary's last row to learn what to pass to the next
+         * call. The nested shape is kept — existing callers read it — and the id is *added* where the next call
+         * needs it.
+         */
+        const added = result.summary?.tracks?.[result.summary.tracks.length - 1];
+        return { ...result, ...(added?.id ? { trackId: added.id } : {}) };
       } catch (error) {
         return failure((error as Error).message);
       }
