@@ -11,6 +11,7 @@ import { SequencerPattern } from "../src/types/genre";
 import { ClipSlot } from "../src/types/song";
 import { APP_VERSION } from "../src/version";
 import { exportAbleton, exportMidi, toBase64 } from "./exporting";
+import { collectDebugBundle } from "./debugBundle";
 import { findGenre } from "./library";
 import { getMcpSong, importMcpSong } from "./song";
 import { ToolDefinition, failure, patternFromArgs, patternSchema, unknownGenre } from "./toolKit";
@@ -211,6 +212,38 @@ export const FILE_TOOLS: ToolDefinition[] = [
           resolution: pkg.project.resolution,
           clips: arrangement.clips as Partial<Record<ClipSlot, SequencerPattern>>,
           sections: arrangement.sections as never[],
+        });
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    /**
+     * ⭐ **Run this when something is wrong, then send the file.**
+     *
+     * It answers a path and a byte count rather than a pile of fields, because the file is the product: it is written under
+     * the same output directory rule as every other writer, and it stays on disk so it can be attached to a report. The
+     * collection is a whitelist and the bundle says what it left out and why.
+     */
+    name: "collect_debug_bundle",
+    title: "Collect what a problem needs, as one file to send",
+    description:
+      "Write one self-describing JSON file for a problem report: the version, the platform and Node, how many tools, resources and prompts are declared, the measured render costs the tool prose quotes, whether the output directory variable is set (never its value), and the note you pass. It collects a **whitelist** — no home directory paths, no tokens, no environment dump and no work content — and it lists in `omissions` whatever it could not collect, with the reason. Read-only: it changes no arrangement. The reply names the file's absolute path and its byte count.",
+    readOnly: true,
+    inputSchema: {
+      outputDir: z.string().optional().describe("where to write it; defaults to GROOVE_MCP_OUT, then a temporary directory"),
+      note: z
+        .string()
+        .max(500)
+        .optional()
+        .describe("what you saw, in your own words — the one thing no instrument records"),
+    },
+    handler: (args) => {
+      try {
+        return collectDebugBundle({
+          outputDir: args.outputDir as string | undefined,
+          note: args.note as string | undefined,
         });
       } catch (error) {
         return failure((error as Error).message);
