@@ -11032,3 +11032,27 @@ export async function prepareArrangementAudioLanes(input: {
 · ⚠️ ⭐ 纪律 ✓：门红**不提交** ✓（⭐ 教训 94 ✓）⇒ 已回退 ✓
 ```
 
+**⭐ 步骤 2：两处旧调用的精确改法（2026-10-05 21:08 ✓，已量 ✓）**：
+```
+· ⭐ **回包形状定案 ✓**（⭐ 一个字段不够用 ✓）：`{ arrangementId, trackId, notes, syllables, prosody, edit, warnings? }` ✓
+  · ⭐ `notes` ＝ **写进编曲的音符事件** ✓（`pitch`／`startBeats`／`lengthBeats`／`velocity` ✓）
+  · ⭐ `syllables` ＝ **音节记录** ✓（`index`／`syllable`／`tone`／`pitch`／`step` ✓ —— ⭐ 引擎原样返回 ✓）
+  ⇒ ⚠️ 上一版我把音节记录塞进 `notes` ✗ ⇒ ⭐ 既不符合 v2 术语 ✗，也让旧断言失配 ✓（⭐ 这次改对 ✓）
+· ⭐ **① `scripts/check_mcp.mjs:255` 一带 ✓**：
+  · 现在 ✓：`arguments: { songId: song.songId, syllables: ["能","够"], tones: [2,4], pitches: [60,64] }` ✓
+  · ⭐ 改为 ✓：⭐ 先用 `create_arrangement` 建编曲 ✓ ⇒ 取一个轨 id ✓（⭐ `add_arrangement_track` 或默认轨 ✓）⇒
+    `arguments: { arrangementId, trackId, syllables, tones, pitches }` ✓
+  · ⭐ 断言改 ✓：`vocal.notes?.length === 2` ⇒ ⭐ `vocal.syllables?.length === 2` ✓（⭐ `syllable`/`pitch` 字段不变 ✓）；
+    `vocal.prosody?.warnings?.length === 1` ✓ **不变** ✓
+  · ⭐ 第二处（不匹配用例 ✓）：同样换 `arrangementId` ＋ `trackId` ✓
+· ⭐ **② `src/test/mcpSchemaPassthrough.test.ts:82` 一带 ✓**：
+  · 现在 ✓：`get_pattern` ⇒ 用 `pattern` 调歌词工具 ⇒ 从 `sung.pattern.tracks[lead].syllables` 取 ⇒
+    再过 `apply_pattern_ops` ⇒ 验证 `syllables` 还在 ✓ —— ⭐ 测试名与做法**都是 v1 形状** ✗
+  · ⭐ 改为 ✓（v2 形状 ✓）：⭐ `create_arrangement` ⇒ `add_arrangement_track`（或默认轨 ✓）⇒
+    用 `arrangementId` ＋ `trackId` 调歌词工具 ✓ ⇒ ⭐ `get_arrangement` **读回该轨的 `notes`** ✓ ⇒
+    断言音符数与音高与写入一致 ✓（⭐ 断言的是 **v2 的音符** ✓，不再是 pattern 的 `syllables` ✗）
+  · ⚠️ ⭐ 测试名要改 ✓：现名说"pattern goes back through a tool" ✗ ⇒ ⭐ 改成"**an arrangement keeps the lyric it was given**" ✓
+· ⚠️ 另外 ⚠️：`patternSchema` 与 `clipSlotSchema` 在该注册文件里可能变为**未使用** ✗ ⇒ ⭐ lint 会报 ✓ ⇒ 一并清理 ✓
+· ⏳ **未落码 ✗**（余量不足 ✓）；⭐ 但**形状与两处改法已无未知** ✓
+```
+
