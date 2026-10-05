@@ -12350,3 +12350,21 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落地 ✗**（⭐ 余量用尽 ✓）；⭐ 四件全部到行、逐字在案 ✓
 ```
 
+### 四百九十三、⚠️ **我引入了一个 CI 红：`putMcpArrangement` 无工具调用**（2026-10-06 00:44 ✓）
+
+```
+**⭐ 事实 ✓**：⭐ `dbae22d`（⭐ 放入门那次 ✓）⭐ **CI 判失败** ✗ —— ⭐ 而**本地全门绿** ✗（⭐ 因为我没跑 `mcpCoverage` ✓）
+**⭐ CI 原文 ✓**：⭐ `mcpCoverage.test.ts` ⇒ ⭐
+  "**these operations exist but no tool calls them: putMcpArrangement**" ✓
+**⚠️ ⭐ 更正我的判断 ✗**：⭐ 我在 §490 写"⭐ `putMcpArrangement` **不触及** `mcpCoverage` ✓（⭐ 那个判据只覆盖
+  `src/data/arrangementEdits.ts` ✓）" ✗ ⇒ ⭐ **错了** ✓ ⇒ ⭐ 该判据**也扫 `mcp/arrangement.ts` 的导出** ✓
+  ⇒ ⭐ 教训 112 ✓：⭐ **新公开一个"改模型"的函数 ⇒ 必须同批有一个工具调用它** ✓，⭐ 否则 CI 红 ✗
+    （⭐ 这正是那条判据存在的原因 ✓ —— ⭐ "⭐ 能力只在一侧" ✗）
+**⭐ 正确修法 ✓（不是加 `EXCLUDED` ✗）**：⭐ 落 ⭐ `import_groove` 的改写 ✓ —— ⭐ 它**会**调用
+  `putMcpArrangement` ✓ ⇒ ⭐ 红自动消失 ✓
+  ⇒ ⚠️ ⭐ 若加 `EXCLUDED` ✓ 会**说谎** ✓（⭐ 因为很快就真有调用者 ✓）⇒ ⭐ **不加** ✓
+**⭐ 因此下一步不变 ✓，但优先级更高 ✓**：⭐ **Web 四件 ＋ `import_groove`** ✓（⭐ `import_groove` 是让这条红消失的
+  那一件 ✓）⇒ ⭐ 两件可**同一批**做 ✓（⭐ 都在"包"这条线上 ✓）
+**⏳ 未修 ✗**（⭐ 余量用尽 ✓）；⭐ 原因与修法已定 ✓
+```
+
