@@ -10836,3 +10836,25 @@ export async function prepareArrangementAudioLanes(input: {
    每条迁移都要**能红判据** ✓ ＋ **回填 `FEATURE_ALIGNMENT.md`** ✓（⭐ 三方对齐 ✓）｜工具增删要跑 `check:mcp` ＋ `mcpTools.test.ts` ✓
 ```
 
+**⭐ 第 7 项第一支迁移的量测（2026-10-05 20:54 ✓）**：
+```
+· ⭐ `set_vocal_melody` 在 `mcp/registrySong.ts:32` ✓。⭐ **它已经支持"裸 pattern"** ✓：
+  `pattern: patternSchema.optional()` ✓ ⇒ 直接调 `setVocalMelody({ pattern, ...shared })` ✓ ⇒ **不必先有 song** ✓ ✓
+  ⇒ ⭐ 这是好消息 ✓：⭐ 迁移**不需要**新写一套歌词引擎 ✓，只需**换存的地方** ✓
+· ⭐ 现有分支 ✓：① 有 `pattern` ⇒ 算完**原样返回** ✓（不存储 ✓）② 有 `songId` ⇒ 取 song 的 section/clip ⇒ 存储 ✓
+· ⭐ v2 的写接口（`mcp/arrangement.ts` ✓）：
+  · `addMcpTrack(...)` ✓（`:431` ✓）—— 建轨 ✓
+  · `addMcpTrackNotes(arrangementId, trackId, notes)` ✓（`:1184` ✓）—— 往轨上写音符 ✓
+  · `setMcpTrackSteps` ✓／`setMcpTrackAsset` ✓／`addMcpNote` ✓／`setMcpNoteLength` ✓
+  ⚠️ ⭐ **没有"清空整轨音符"的接口** ✗ ⇒ 迁移时要么先删轨再建 ✓，要么只**追加**并**报告冲突** ✓
+· ⭐ **迁移方案（第 7 项 · 路线 A ✓）** ✓：
+  ① schema 加 `arrangementId: z.string().optional()` ✓（⭐ 与 `songId`／`pattern` **三选一** ✓）
+  ② handler 加分支 ✓：有 `arrangementId` ⇒ `getMcpArrangement` ✓ ⇒ `flattenMcpArrangement` ✓ ⇒
+     `setVocalMelody({ pattern, ...shared })` ✓ ⇒ ⭐ 写回 v2 ✓：找到（或建）演唱轨 ✓ ⇒ `addMcpTrackNotes` ✓
+  ③ 回包 ✓：`arrangementId` ✓／`trackId` ✓／`notes` ✓／`prosody` ✓／**warnings** ✓
+     ⚠️ ⭐ **不许**把"裸 pattern 返回"和"写入编曲"混成一个形状 ✗（形状要能区分 ✓）
+· ⭐ **判据（能红 ✓）** ✓：① `arrangementId` 传入后，`get_arrangement` 能读到这些音符 ✓
+  ② 不给 `arrangementId` 时，旧路径行为不变 ✓ ③ 三选一的错误信息可理解 ✓（⭐ 不许静默选一个 ✗）
+· ⏳ **未落码 ✗**（本轮余量不足 ✓）；⭐ 规格已无未知 ✓
+```
+
