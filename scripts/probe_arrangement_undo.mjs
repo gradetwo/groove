@@ -307,7 +307,10 @@ await page.evaluate(() => {
       const el = e.target;
       (window).__hits.push({ kind, tag: el && el.tagName ? el.tagName.toLowerCase() : String(el),
         testid: el && el.getAttribute ? el.getAttribute('data-testid') : null,
-        x: Math.round(e.clientX || 0), y: Math.round(e.clientY || 0) });
+        x: Math.round(e.clientX || 0), y: Math.round(e.clientY || 0),
+        scrollTop: (() => { const s = document.querySelector("[data-testid='piano-roll-v2']"); const sc = s ? s.closest('[class*=overflow]') : null; return sc ? Math.round(sc.scrollTop) : null; })(),
+        windowScrollY: Math.round(window.scrollY),
+        activeElement: document.activeElement && document.activeElement.getAttribute ? (document.activeElement.getAttribute('data-testid') || document.activeElement.tagName) : null });
     }, true);
   }
   document.addEventListener('pointerdown', (e) => {
@@ -318,6 +321,8 @@ await page.evaluate(() => {
       x: Math.round(e.clientX), y: Math.round(e.clientY),
       scrollX: Math.round(window.scrollX), scrollY: Math.round(window.scrollY),
       kind: 'pointerdown',
+      scrollTop: (() => { const s = document.querySelector("[data-testid='piano-roll-v2']"); const sc = s ? s.closest('[class*=overflow]') : null; return sc ? Math.round(sc.scrollTop) : null; })(),
+      windowScrollY: Math.round(window.scrollY),
       atPoint: (() => { const t = document.elementFromPoint(e.clientX, e.clientY); return t ? (t.getAttribute('data-testid') || t.tagName) : null; })(),
     });
   }, true);
