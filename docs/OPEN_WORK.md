@@ -11123,3 +11123,17 @@ export async function prepareArrangementAudioLanes(input: {
     ⭐ 再回头看包层 ＋ 数据模型 ✓（⭐ 那条最大 ✓）
 ```
 
+**⭐ 迁移 ③ `registryRender` 的量测（2026-10-05 21:17 ✓）**：
+```
+· 工具 4 个 ✓：`render_preview_clip`（`:33` ✓）／`render_audio`（`:122` ✓）／
+  `render_instrument_note`（`:165` ✓）／`render_arrangement_stems`（`:195` ✓）
+· ⭐ **两个是 v1 侧的重名功能 ✓**（⭐ "不并存" ✗ ⇒ **删** ✓）：
+  · ⭐ `render_preview_clip` ⇒ 接 `songId`（`:47` ✓）＋ `sectionId`／`index` ✓
+    ⇒ ⭐ **已有 v2 对应**：`render_arrangement_preview` ✓（`registryArrangement.ts:126` ✓）
+  · ⭐ `render_audio` ⇒ 接 `pattern`（v1 步进 ✓）⇒ ⭐ **已有 v2 对应**：`render_arrangement` ✓（`:191` ✓）
+· ⭐ **保留 2 个 ✓**：`render_arrangement_stems` ✓（已 v2 ✓）；`render_instrument_note` ✓（试听单个音 ✓，与 song／arrangement 无关 ✓）
+· ⚠️ ⭐ 删除会动：⭐ `scripts/check_mcp.mjs` ✓／`src/test/mcpTools.test.ts` ✓／**对齐表** ✓／**引用它们的判据** ✓
+  ⇒ ⭐ 所以**先量引用面** ✓（本轮的实测表 ✓）⇒ 再删 ✓
+· 📌 净效果 ✓：⭐ 工具数 **95 ⇒ 93** ✓（⭐ 表面变小是**目标** ✓，不是损失 ✓）
+```
+
