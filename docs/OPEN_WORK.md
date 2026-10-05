@@ -8778,3 +8778,46 @@ problems: **[]** ✓
 **⚠️ 过程教训（第 78 条 ✓）**：**"弄红"的备份必须取"修复后"的状态** ✗ ——
    我按惯例在**改前**备份 ✗ ⇒ 临时去掉字段后"还原"实际回到了**改前**版本 ✗ ⇒ 修复被我自己的回滚冲掉 ✓
    （判据当场报红 ✓ 才发现 ✓）⇒ 正确做法 ✓：**改 → 验证绿 → 备份（此时）→ 弄红 → 从该备份还原** ✓
+
+## 三百七十八、🍎 **业主批准执行：Web 补 Logic 导入入口（⑦）**（2026-10-05 09:38 ✓）
+
+```
+**由来 ✓**：深测报告 ⑦ —— **Web 无 Logic 导入入口** ✗（`logicToArrangement` 只有测试引用 ✓）；
+   而 v2.34.46 起**导出**侧（乐谱页头部）✓ 与 **MCP** 侧 `import_logic_project` ✓ 都在 ✓ ⇒ 只剩 Web ✓
+**先量 ✓（把范围读实 ✓，并纠正报告的措辞 ✓）**：报告说"实现已有、只缺 UI 入口" ✗ ⇒ **不完全准确** ✗：
+   · `arrangementFileKind`（`src/features/arrangement/arrangementFiles.ts:335` ✓）只认 `.mid/.midi` ✓、`.groove` ✓、
+     `.musicxml/.mxl/.xml` ✓ ⇒ `.logicx.zip` 落到 **`unsupported`** ✗
+   · `importArrangementFile`（同文件 551 ✓）**按 kind 分派** ✓ ⇒ ⭐ 分派与读取这一支**也未写** ✓（不只是 UI ✓）
+   · ⭐ 但 **Web 的导入入口本就是"单一入口按内容嗅探"** ✓（`ArrangementFileEntriesV2` 的 `onImportFile` ✓）
+     ⇒ 所以**不需要新菜单项** ✓，把这条路教会即可 ✓
+**契约 ✓（读自家导出物 ✓）**：`logicProjectBundle`（`src/data/arrangementToLogic.ts` ✓）写出
+   `Alternatives/<n>/ProjectData` ✓ ＋ 同目录 `MetaData.plist` ✓ ⇒ ⭐ 与 MCP 的 `import_logic_project` 读的**同一对** ✓
+**改动 ✓（一支 ✓，全在 `arrangementFiles.ts` ✓）**：
+   · `ArrangementFileKind` 增 `"logic"` ✓；`arrangementFileKind` 认 `.logicx.zip` ✓ 与**裸 `.zip`** ✓
+     ⚠️ 并注明 **`.zip` 必须按内容再校验** ✓（只凭扩展名会把任何压缩包都当 Logic ✗）；`.groove` 是 **JSON 不是 zip** ✓ ⇒ 无歧义 ✓
+   · `unzipSync`（`fflate` ✓，与既有 `zipSync` 同包 ✓）解包 ✓ ⇒ 找 `Alternatives/<n>/ProjectData` ✓（**找不到就拒绝** ✓，
+     给**可读原因**"has no Alternatives/<n>/ProjectData, so it is not a Logic project this route reads" ✓）
+   · `fromLogicProjectBase64` ✓（**与 MCP 同一读取器** ✓）⇒ `arrangementWithImportedParts` ✓ 放置
+     （**与 MIDI／MusicXML 路径同一放置** ✓ ⇒ 不重复定义 ✓）
+   · 新增本地 `toBase64()` ✓（镜像 `logicToArrangement` 的 `decodeBase64` ✓；分块编码避免大文件爆栈 ✓）
+   · 错误文案的扩展名清单补上 `.logicx.zip, .zip` ✓
+**判据 ✓（能红 ✓）**：新增 `src/test/webLogicImport.test.ts` ✓（**4 用例 ✓**）：
+   · **认名** ✓（`.logicx.zip` ⇒ logic ✓、裸 `.zip` ⇒ logic ✓、且不抢 `.mid/.groove/.musicxml` ✓）
+   · **拒绝无 `ProjectData` 的 zip 并说明原因** ✓
+   · ⭐ **往返** ✓：`logicFileFor(有音符的编曲)` 产出的包 ⇒ 经**同一条导入路**读回 ⇒ `ok:true` ∧ **轨 > 0 ∧ 音符 > 0** ✓
+     （即"**我们的读取器能读我们写入器写的东西**" ✓）
+   ⭐ **弄红验证 ✓**：临时删掉 `case "logic"` 分派 ⇒ 判据 **exit=1** ✓ ⇒ 从**修复后**备份还原 ✓（第 78 条 ✓）
+**门禁 ✓**：`tsc=0` ✓｜`lint=0` ✓｜`check:skins=0` ✓｜⭐ 过程里 `tsc` **两次拦住我** ✗：
+   ① `"logic"` 未加进联合类型 ✓ ② 我的脚本把 `addTrackNotes` 写成单数 `addTrackNote` ✗
+   （⚠️ 后者**测试竟然通过** ✗ —— esbuild 不做类型检查 ✓ ⇒ ⭐ **`tsc` 当闸门的价值再证一次** ✓）
+
+## 三百七十九、⏳ **深测报告剩余一项：③④ 渲染超时与进度回调**（2026-10-05 09:38 ✓）
+
+```
+**业主已批准（2026-10-05 09:12 ✓）**：「③④ 渲染超时/进度：放宽预算 ＋ 进度回调」✓
+**已有读数 ✓（来自深测报告 ✓，本机无法复现同类大编曲 ✗）**：
+   · `render_arrangement_stems` 8 小节 × 5 轨 ≈ **300 s** ⇒ **RPC 超时**（文件已写完、reply 未回 ✓）
+   · `render_arrangement` 全曲 64 小节 / 632 音符 ≈ **360 s** ⇒ 超客户端 300 s ✓（**不是 hang，是慢** ✓）
+**待做 ✓**：① 让渲染过程**回报进度**（`ctx.progress` 已在 preview 里接上 ✓ ⇒ 推广到其它渲染工具 ✓）
+          ② 把**预算**与实测对齐并在描述里写明 ✓（不静默拉长 ✗）
+**状态 ✓**：**已批准、未开工** ✓（下一支 ✓）

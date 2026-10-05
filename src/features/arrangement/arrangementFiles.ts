@@ -20,8 +20,9 @@ import type { ArrangementV2, NoteEvent } from "../../types/arrangementV2";
 import type { GrooveProject, GrooveProjectArrangement } from "../../types/project";
 import type { MidiArrangementImport } from "../../data/midiToArrangement";
 import { arrangementToMidi } from "../../data/arrangementToMidi";
-import { zipSync } from "fflate";
+import { unzipSync, zipSync } from "fflate";
 import { logicProjectBundle } from "../../data/arrangementToLogic";
+import { fromLogicProjectBase64 } from "../../data/logicToArrangement";
 import { arrangementWithImportedParts, arrangementFromGroovePackage, type ArrangementImportResult } from "../../data/arrangementImport";
 import { compileArrangementToPattern } from "../../data/arrangementCompile";
 import type { MusicXmlBytesImport } from "../../data/musicxmlImport";
@@ -330,13 +331,20 @@ export function downloadProducedFile(file: ProducedFile): void {
 }
 
 /** Which reader a chosen file belongs to, from its own name. Extension-first because a file picker gives no more. */
-export type ArrangementFileKind = "midi" | "groove" | "musicxml" | "unsupported";
+export type ArrangementFileKind = "midi" | "groove" | "musicxml" | "unsupported" | "logic";
 
 export function arrangementFileKind(filename: string): ArrangementFileKind {
   const lower = filename.trim().toLowerCase();
   if (lower.endsWith(".mid") || lower.endsWith(".midi")) return "midi";
   if (lower.endsWith(".groove")) return "groove";
   if (lower.endsWith(".musicxml") || lower.endsWith(".mxl") || lower.endsWith(".xml")) return "musicxml";
+  /**
+   * ⭐ **A Logic project arrives as the zip our own export writes** (`.logicx.zip`, `docs/OPEN_WORK.md` 266). A bare
+   * `.zip` is accepted too and then *checked by its contents* — `Alternatives/<n>/ProjectData` — because the extension
+   * alone would claim any archive is a Logic project. A `.groove` package is JSON, not a zip, so there is no ambiguity
+   * with the format above.
+   */
+  if (lower.endsWith(".logicx.zip") || lower.endsWith(".zip")) return "logic";
   return "unsupported";
 }
 
@@ -444,7 +452,64 @@ export function placeMidiIntoArrangement(
  * accepts opens here. Nothing is written to the project store, because importing an arrangement is not a request to
  * file a new project in a hub this route does not show.
  */
-export async function importGrooveIntoArrangement(arrangement: ArrangementV2, file: File): Promise<ArrangementImportOutcome> {
+export /**
+ * ⭐ **A Logic project read into this model** — the owner's "Web 补 Logic 导入入口" (2026-10-05).
+ *
+ * The export side has written `Alternatives/<n>/ProjectData` and its `MetaData.plist` since v2.34.46, and `MCP` could
+ * already read a Logic project back (`import_logic_project`), but the web could not: `arrangementFileKind` did not
+ * know the name, so the file fell to "unsupported". This reads the zip, takes those two entries, hands them to the
+ * same reader MCP uses (`fromLogicProjectBase64`), and places the resulting parts with
+ * `arrangementWithImportedParts` — the same placement the MIDI and MusicXML paths use, so nothing here re-keys or
+ * reorders anything.
+ *
+ * ⚠️ **What it does not claim**: that a *real* Logic project imports. What is shown is that a project **our export
+ * wrote** round-trips, which is what the MCP tests assert too. A real one is a Mac question (`needs`).
+ */
+async function importLogicIntoArrangement(arrangement: ArrangementV2, file: File): Promise<ArrangementImportOutcome> {
+  try {
+    const entries = unzipSync(new Uint8Array(await file.arrayBuffer()));
+    const names = Object.keys(entries);
+    const projectData = names.find((name) => /^Alternatives\/[^/]+\/ProjectData$/.test(name));
+    if (!projectData) {
+      return {
+        ok: false,
+        filename: file.name,
+        reason: `"${file.name}" has no Alternatives/<n>/ProjectData, so it is not a Logic project this route reads`,
+      };
+    }
+    const metaData = names.find((name) => /^Alternatives\/[^/]+\/MetaData\.plist$/.test(name));
+    const imported = fromLogicProjectBase64({
+      projectDataBase64: toBase64(entries[projectData]!),
+      metaDataBase64: toBase64(metaData ? entries[metaData]! : new Uint8Array()),
+    });
+    const placed = arrangementWithImportedParts(arrangement, { parts: imported.parts }, {});
+    return {
+      ok: true,
+      filename: file.name,
+      format: "logic",
+      tracks: placed.tracks,
+      notes: placed.notes,
+      problems: [...(placed.problems ?? []), ...imported.problems],
+      arrangement: placed.arrangement,
+    };
+  } catch (error) {
+    return { ok: false, filename: file.name, reason: describeError(error) };
+  }
+}
+
+/** Bytes as base64, the mirror of `logicToArrangement`'s own decoder, so both sides agree on the alphabet. */
+function toBase64(bytes: Uint8Array): string {
+  if (bytes.length === 0) return "";
+  if (typeof Buffer !== "undefined") return Buffer.from(bytes).toString("base64");
+  let binary = "";
+  const chunk = 0x8000;
+  for (let index = 0; index < bytes.length; index += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunk));
+  }
+  return btoa(binary);
+}
+
+async function importGrooveIntoArrangement(arrangement: ArrangementV2, file: File): Promise<ArrangementImportOutcome> {
   try {
     const { validateGroovePackage } = await import("../sequencer/projectDb");
     const pkg = validateGroovePackage(JSON.parse(await file.text()));
@@ -556,8 +621,10 @@ export async function importArrangementFile(arrangement: ArrangementV2, file: Fi
       return importGrooveIntoArrangement(arrangement, file);
     case "musicxml":
       return importMusicXmlIntoArrangement(arrangement, file);
+    case "logic":
+      return importLogicIntoArrangement(arrangement, file);
     default:
-      return { ok: false, filename: file.name, reason: `"${file.name}" is not a file this route reads (.mid, .midi, .groove, .musicxml, .mxl)` };
+      return { ok: false, filename: file.name, reason: `"${file.name}" is not a file this route reads (.mid, .midi, .groove, .musicxml, .mxl, .logicx.zip, .zip)` };
   }
 }
 
