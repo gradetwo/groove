@@ -12178,3 +12178,24 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）⇒ ⭐ **这一单元现在是纯机械工作 ✓**
 ```
 
+### 四百九十、⭐ **第一刀尝试：`export_groove` 已通 ✓，卡在 `import_groove`**（2026-10-06 00:26 ✓，已回退 ✓ 树脏 0 ✓）
+
+```
+**⭐ 读数 ✓**：⭐ `typecheck=0` ✓｜⭐ `lint=0` ✓｜⭐ **`export_groove` 的检查已通过** ✓
+  ⇒ ⭐ 只有 ⭐ **`import_groove` 那条**失败 ✗（⭐ 回包 ⭐ `{}` ✓ ⇒ ⭐ 工具**返回空／失败** ✓）
+**⭐ 原因 ✓**：⭐ `import_groove` **仍按 v1 包造 song** ✗ ⇒ ⭐ 它用 `validateGroovePackage` ✓（⭐ 要求
+  `clips`／`sections` ✗）⇒ ⭐ 遇到我新写的 **v2 包**就失败 ✓
+**⇒ 因此单元**必须**包含 `import_groove` ✓（⭐ 我先前把它算作"另一件事" ✗ —— ⭐ 枚举在此纠正 ✓）**
+**⭐ 单元最终为 4 件 ✓**：
+  ⭐ ① ⭐ `arrangementPackage.ts` ✓（⭐ 已就绪 ✓）
+  ⭐ ② ⭐ `export_groove` ✓（⭐ **本次已验通过** ✓ ⇒ ⭐ 改法有效 ✓）
+  ⭐ ③ ⭐ `check_mcp.mjs` 两条 ✓（⭐ A 已通 ✓，⭐ B 待 `import_groove` ✓）
+  ⭐ ④ ⭐ ⭐ **`import_groove` 改为建 arrangement** ✓ —— ⚠️ ⭐ **它需要自己的量测** ✗：
+    ⭐ 要读它现在怎么建 song ✓（⭐ `importMcpSong` ✓？）⇒ ⭐ 再找 ⭐ **v2 的"从包建编曲"入口** ✓
+    （⭐ 可能是 ⭐ `createMcpArrangement` ✓ 或往 store 写 ✓ —— ⭐ 需查 ✓）
+**⭐ 教训 107 ✓**：⭐ **枚举只跑"改了的那一条门"，会漏掉"同一工具的另一半"** ✗ ——
+  ⭐ 我这次改了导出 ✓ 却没想到 ⭐ **导入是同一对** ✓ ⇒ ⭐ 下一次：⭐ 改一个工具时 ⭐ **同批看它的对偶工具** ✓
+    （⭐ 导出／导入 ✓、写／读 ✓、建／删 ✓ 都是对偶 ✓）
+**⏳ 未落地 ✗**（⭐ 余量用尽 ✓）⇒ ⭐ **4 件单元可在新上下文里一次做完 ✓**（⭐ 其中 3 件已验或已就绪 ✓）
+```
+
