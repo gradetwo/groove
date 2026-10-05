@@ -273,7 +273,17 @@ const emptyCell = await page.evaluate(() => {
 });
 if (emptyCell === null) await fail("the piano roll drew no empty cell to write into");
 const notesBeforeClick = (await readDom()).notes;
-await page.click(`[data-testid='${emptyCell}']`);
+/* 显式指针序列：真浏览器里写入可能挂在 pointerdown/up 上，jsdom 里零尺寸元素让 click 必然命中。 */
+const cellBox = await page.locator(`[data-testid='${emptyCell}']`).first().boundingBox();
+if (cellBox) {
+  const cx = cellBox.x + cellBox.width / 2;
+  const cy = cellBox.y + cellBox.height / 2;
+  await page.mouse.move(cx, cy);
+  await page.mouse.down();
+  await page.mouse.up();
+} else {
+  await page.click(`[data-testid='${emptyCell}']`);
+}
 const afterAddNote = await readDom();
 report.readings.addedNoteAt = emptyCell;
 report.readings.afterAddNote = afterAddNote;
