@@ -301,6 +301,12 @@ report.readings.viewport = page.viewportSize();
 /* 只读捕获监听：记录真实 pointerdown 落在哪个元素上。 */
 await page.evaluate(() => {
   (window).__hits = [];
+  (window).__focusin = [];
+  document.addEventListener('focusin', (e) => {
+    const el = e.target;
+    (window).__focusin.push({ id: el && el.getAttribute ? (el.getAttribute('data-testid') || el.tagName) : String(el),
+      y: Math.round(window.scrollY), t: Math.round(performance.now()) });
+  }, true);
   (window).__scrolls = [];
   window.addEventListener('scroll', () => {
     const a = document.activeElement;
@@ -347,6 +353,7 @@ if (cellBox) {
 const afterAddNote = await readDom();
 report.readings.pointerHits = await page.evaluate(() => (window).__hits ?? null);
 report.readings.scrolls = await page.evaluate(() => (window).__scrolls ?? null);
+report.readings.focusin = await page.evaluate(() => (window).__focusin ?? null);
 report.readings.noteIdsBefore = noteIdsBefore;
 report.readings.noteIdsAfter = await page.evaluate(() => Array.from(document.querySelectorAll("[data-testid^='roll-note-']")).map((e) => e.getAttribute('data-testid')).sort());
 report.readings.selectedTrackAfter = await selectedTrack();
@@ -498,7 +505,8 @@ if (asJson) {
   line("   direct dispatch", `dispatched=${r.dispatchedDirectly} notesAfter=${r.notesAfterDispatch}`);
   line("   hit test at cell centre", JSON.stringify(r.hitTest));
   line("   selected track", `before=${JSON.stringify(r.selectedTrackBefore)} after=${JSON.stringify(r.selectedTrackAfter)}`);
-      line("   window scroll events", JSON.stringify(r.scrolls));
+        line("   focusin trace", JSON.stringify(r.focusin));
+line("   window scroll events", JSON.stringify(r.scrolls));
 line("   real pointerdown landed on", JSON.stringify(r.pointerHits));
 line("   note ids added", JSON.stringify((r.noteIdsAfter || []).filter((i) => !(r.noteIdsBefore || []).includes(i))));
   line("   note ids removed", JSON.stringify((r.noteIdsBefore || []).filter((i) => !(r.noteIdsAfter || []).includes(i))));
