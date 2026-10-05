@@ -10647,3 +10647,22 @@ export async function prepareArrangementAudioLanes(input: {
   ④ ⭐ 判据三条 ✓（`problems` 同源 ✓／不落盘 ✓／热缓存远小于渲染 ✓）＋ 登记 `mcpTools.test.ts` ✓
   ⑤ ⭐ **回填 `docs/FEATURE_ALIGNMENT.md`** ✓（维护约定第 4 条 ✓，系统／MCP／Web 三方对齐 ✓）
 **⚠️ 仍未做 ✗**：代码本体（本轮余量不足 ✓，⭐ 不写半成品 ✗）；⭐ 但**规格已无未知** ✓ ⇒ 下次照此执行即可 ✓
+**⭐ 首次落码的实测结果（2026-10-05 20:11 ✓）—— 编译不过，已**自动回退** ✓（树脏 0 ✓）**：
+```
+**做法 ✓**：先 `cp` 备份 ✓ ⇒ python 搬移 `:1833–1858` ＋ 在原处换成调用 ✓ ⇒ `tsc` 当闸门 ✓
+   ⇒ ⭐ **`tsc=2`** ✗ ⇒ ⭐ **自动 `cp` 回退** ✓（⭐ 机制有效 ✓：**没留下半成品** ✓）⇒ 树脏 **0** ✓
+**三条具体错因（下一轮照此修 ✓，一次即可 ✓）**：
+  ① ⭐ `mark("audioLanes:prepare")` **不能搬进新函数** ✗ —— 它是原函数里的**局部闭包** ✗（`TS2304: Cannot find name 'mark'` ✓）
+     ⇒ ⭐ **留在调用处** ✓（就在调用行之前 ✓）
+  ② ⭐ 搬进去的那段里，`catalogue: **audioCatalogue**` 要改成 ⭐ `catalogue: **catalogue**` ✓
+     （新函数里形参叫 `catalogue` ✓；`TS2304: Cannot find name 'audioCatalogue'` ✓ 就是这个 ✓）
+  ③ ⭐ **缺 7 个类型的 import** ✗：`SequencerPattern` ✓／`SampleLoader` ✓／`SampleAsset` ✓／`SampleDecoder` ✓／
+     `OfflineAudioLanePreparation` ✓／`TempoPoint` ✓／`ChunkRenderWindow` ✓
+     （该文件当前的 import 只到 `flattenSong`／`Song`／`sidechain` 那一批 ✓，**上述类型一个都没导入** ✗）
+**⭐ 插入锚点要用"行首形态"✓**：`grep -n` 显示 `async function renderPatternOfflineInternal(` **只在 `:719` 出现一次** ✓
+   （另有 `:702`／`:716` 两处是**调用** ✓）⇒ ⭐ 锚点必须带行首 + `async function` ✓，
+   ⚠️ 上一轮我用的是裸字符串 ✗ ⇒ 很可能插到了**提及它的注释旁** ✗ ⇒ ⭐ 这次用 `\nasync function renderPatternOfflineInternal(` ✓
+**⇒ 于是下一轮＝纯机械 ✓**：加 7 个 import ✓ ⇒ 搬移（**不含 `mark`** ✓、`audioCatalogue`→`catalogue` ✓）⇒
+   原处调用（`mark` 在调用前 ✓）⇒ 新函数插在 `\nasync function renderPatternOfflineInternal(` **之前** ✓ ⇒ `tsc` ✓
+   ⇒ 再跑 `fileSizeBudget`（**测试** ✓）＋ 文风四条 ✓ ⇒ 然后才做 `validate_arrangement` 工具 ✓ ＋ **回填对齐表** ✓
+```
