@@ -14287,3 +14287,20 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 11 个文件 ＋ 四个危险点已列 ✓
 ```
 
+**⭐ 退 `add_section` 首试：唯一剩余是它自己的三条协议用例 ✓（2026-10-06 03:53 ✓）**：
+```
+**⭐ 已成功 ✓**：⭐ ① ⭐ 工具块已删 ✓（**187–240** ✓，⭐ 54 行 ✓，⭐ §529 算法 ✓）｜⭐ ② ⭐ `check_mcp:814` 清单 ⇒ `["create_song","render_song"]` ✓｜
+  ⭐ ③ ⭐ `docsWorkflow` 的 `STEPS` ⇒ `add_arrangement_track` ✓｜⭐ ④ ⭐ `mcpCapability` 两处 ⇒ v2 ✓｜
+  ⭐ ⑤ ⭐ **copy 判据已 `rm`** ✓（⭐ 教训 96 ✓）⇒ ⭐ `tsc=0` ✓｜⭐ `lint=0` ✓｜⭐ 相关判据全过 ✓
+**⚠️ ⭐ 唯一剩余 ✗**：⭐ `check_mcp` 的三条 ✗ —— ⭐ 正是 §531／§162 找到并**当时决定保留**的那三条 ✓：
+  ⭐ "⭐ add_section grows the arrangement and reports its shape" ✗
+  ⭐ "⭐ add_section carries a build, a fill and a transposition" ✗
+  ⭐ "⭐ the ramp reaches the timeline as a per-bar velocity scale" ✗
+**⭐⭐ 为什么现在该删 ✓**：⭐ 当初保留是因为 ⭐ **它们是那三项能力的判据** ✓
+  ⇒ ⭐ 而 §553 已把三项能力**改由 v2 判据承载** ✓（`arrangementNoteAbilities.test.ts` ✓，⭐ 且红验证过 ✓）
+  ⇒ ⭐ 即 ⭐ **判据的职责已转移** ✓ ⇒ ⭐ 旧的三条**随工具退场** ✓ ✓ —— ⭐ 这正是"⭐ 先立新判据，⭐ 再退旧工具" ✓
+**⭐ 因此下一步 ✓**：⭐ 删 `check_mcp` 里那三个 `tools/call` 点（⭐ `:827` ✓／`:843` ✓）⭐ **连同其 check** ✓
+  ⇒ ⭐ 并 ⭐ 删掉上方 ⭐ `:809` 注释里对 `add_section` 的提及 ✓ ⇒ ⭐ 再跑全套门 ✓
+**⏳ 未落码 ✗**（⭐ 树已回退 ✓，⭐ 其余改动已验证可行 ✓）
+```
+
