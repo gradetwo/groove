@@ -442,7 +442,7 @@
 
 **⭐ 触及 5 个文件 ✓**：⭐ `mcp/registrySong.ts` ✓（⭐ 工具块 187–240 ✓）｜⭐ `scripts/check_mcp.mjs` ✓（⭐ 清单 ＋ ⭐ 删三条用例 825–870 ✓ ＋ ⭐ 注释 ✓）｜
   `src/test/docsWorkflow.test.ts` ✓（⭐ `STEPS` ⇒ `add_arrangement_track` ✓）｜⭐ `src/test/mcpCapability.test.ts` ✓（⭐ 两处 ⇒ v2 ✓）｜
-  ⭐ `src/test/mcpAddSectionCopy.test.ts` ✓（⭐ **删除** ✓，⭐ `rm` ✓）
+  ⭐ a copy criterion for `add_section` that was deleted with the tool (its subject ceased; the three abilities it asserted now have arrangement criteria) ✓（⭐ **删除** ✓，⭐ `rm` ✓）
 **⭐ 判据读数 ✓**：⭐ `check:mcp` **86 tools** ✓｜⭐ 十一道门 0 ✓｜⭐ 相关判据全过 ✓｜⭐ 文档双门 0 ✓
 **⭐ 因此 ✓**：⭐ ⑤ 的**暂留三个**里 `add_section` 已完成 ✓ ⇒ ⭐ 剩 `create_song` ✗ 与 `render_song` ✗ ⇒ ⭐ **两者合并一次收尾** ✓
 
