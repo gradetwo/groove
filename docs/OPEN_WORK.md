@@ -10578,3 +10578,14 @@ problems: **[]** ✓
 **⚠️ 收尾纪律 ✓**：新增参数 ⇒ 跑**文风四条** ✓（`mcpDescriptionForm` ✓／`mcpDescriptionReadability` ✓／copy ✓）＋
    `check:mcp` ✓＋`tsc` ✓＋从它推导的判据 ✓；⭐ 完成后**回写 skill** ✓（"想校验就先 `dryRun`，别整曲渲染" ✓）＋**重建 `dist-mcp/`** ✓
 ```
+**⭐ 补充（2026-10-05 19:47 ✓，`§452` 的最后一块已量到 ✓）**：
+```
+· ⭐ `render_arrangement` 的 handler ⇒ `mcp/registryArrangement.ts:243` ✓（`handler: async (args, ctx) => {` ✓，内含 `try` ✓）
+· ⭐ handler **第一步** 就是解析 ✓：`:249` `const { flattened } = flattenMcpArrangement(String(args.arrangementId), range);`
+  （`range` 来自 `startBar`／`endBar` ✓ `:245–248` ✓）
+· ⭐ 紧接着是 `passes`（`:257` ✓，`bars` 重复次数 ✓）与"**arrangement 自己的 problems 随渲染一起走**"的注释 ✓（`:258–262` ✓）
+⇒ ⭐ **于是 `dryRun` 的落点是机械的** ✓：在 `flattenMcpArrangement(...)` **之后**、渲染调用**之前**加一个分支 ✓ ——
+  用**同一批入参**（`flattened` ✓／`bpm` ✓／`tempoTrack` ✓／`totalSteps` ✓／`stepSpan`／`stepOffset`／`stemTrackIdx` ✓）
+  调 `prepareOfflineAudioLanes` ✓，把它的 `problems`／`loaded`／`total` 直接回包 ✓，**不合成、不落盘** ✓
+· ⚠️ 同形的还有 `render_arrangement_preview`（handler 约 `:142` ✓）⇒ ⭐ 实现时**两个一起**或**明确只做一个** ✓（不留不一致 ✗）
+```
