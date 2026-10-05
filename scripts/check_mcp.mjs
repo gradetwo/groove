@@ -14,6 +14,7 @@ import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
 import fs from "node:fs";
 import path from "node:path";
+import zlib from "node:zlib";
 import { buildMxlZip } from "../src/test/fixtures/mxl_zip.mjs";
 import { buildMidiFile, GBK_TRACK_NAME, GBK_TRACK_NAME_BYTES } from "../src/test/fixtures/midi_file.mjs";
 import { buildLogicProjectData, buildMetaDataPlist } from "../src/test/fixtures/logic_project.mjs";
@@ -1121,6 +1122,25 @@ try {
       JSON.stringify(afterExport) === JSON.stringify(beforeExport),
     `${exportedMidi.notes} note(s), ${exportedMidiBytes.length} bytes, re-imported ${afterExport.length} of ${beforeExport.length}`
   );
+  {
+    /**
+     * ⭐ **Wrapped in its own scope, so no name here can collide with the file's.** The reading matters: a gzipped Live set
+     * and a text file named `.als` look alike from outside, and only unpacking tells them apart.
+     */
+    const probeArrangement = payload(
+      await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "sampler" } })
+    );
+    const probeSet = payload(
+      await client.request("tools/call", { name: "export_arrangement_ableton", arguments: { arrangementId: probeArrangement.arrangementId } })
+    );
+    const probeXml = zlib.gunzipSync(fs.readFileSync(probeSet.path)).toString("utf8");
+    check(
+      "export_arrangement_ableton writes a gzipped Live set, not just a file with that name",
+      probeSet.format === "als" && String(probeSet.filename).endsWith(".als") && /Ableton|LiveSet/.test(probeXml),
+      JSON.stringify({ format: probeSet.format, filename: probeSet.filename, head: probeXml.slice(0, 60) })
+    );
+  }
+
 
   /**
    * ⭐ **The Logic import, over the wire.** The bytes are the same synthetic `ProjectData` the unit criteria read
