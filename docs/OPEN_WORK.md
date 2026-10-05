@@ -15036,3 +15036,18 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+**⭐ `SaveIndicator` 的改接方案 ✓（2026-10-06 04:45 ✓）**：
+```
+**⭐ 它需要的字段 ✓**：⭐ `{ status: "idle" | "saved" | "failed" | …; savedAt?: string | number }` ✓
+  ⭐ 证据 ✓：⭐ `:15` props 类型 ✓｜⭐ `:32` ⭐ `status.status === "idle"` ✓｜⭐ `:34` ⭐ `status.savedAt` ✓｜
+    `:56` ⭐ `data-save-status={status.status}` ✓
+**⭐ 最干净的改法 ✓**：⭐ 在组件内 ⭐ **自己声明 props 类型** ✓（⭐ 一个 3–4 字段的联合 ✓）
+  ⇒ ⭐ 即 ⭐ **不再 import v1 存储** ✓ ⇒ ⭐ 同时满足两条 ✓：⭐ 术语用 V2 ✓ ＋ ⭐ 不留 v1 依赖 ✓
+  ⭐ 对比方案 ✗：⭐ 改用 `projectDb` 的 ⭐ `ProjectsStorageStatus` ✓ —— ⚠️ ⭐ 但它的字段**可能不同** ✗
+    ⇒ ⭐ 若不同 ⇒ ⭐ 要么**扩字段** ✓ 要么**本地声明** ✓（⭐ 后者更小 ✓，⭐ 且不动别的文件 ✓）
+**⭐⭐ 这是一条通用做法 ✓（⭐ 值得记 ✓）**：⭐ 当 v1 类型的用途**只是"⭐ 一份数据的样子**" ✓、
+  ⭐ 而 v2 侧的类型**字段不同** ✗ 时 ⇒ ⭐ **在消费者本地声明该形状** ✓ 比**改 v2 类型**更小、更安全 ✓ ✓
+  ⇒ ⭐ 记入台账作为 ⑦ 的施工原则之一 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
