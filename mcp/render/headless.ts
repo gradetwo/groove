@@ -500,7 +500,7 @@ export async function validateArrangementHeadless(
     fetchSfzBytes: cacheWiring.fetchSfzBytes,
     ...(options.sampleRate === undefined ? {} : { sampleRate: options.sampleRate }),
     ...(options.channels === undefined ? {} : { channels: options.channels }),
-  } as never);
+  });
 }
 
 export async function renderInstrumentNoteHeadless(
