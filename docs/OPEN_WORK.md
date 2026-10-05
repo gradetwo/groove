@@ -10393,7 +10393,6 @@ problems: **[]** ✓
    ⇒ ⭐ **五项度量门与工具面全部零漂移** ✓ ⇒ ⭐ **没有把可维护性卖给功能** ✗（目标 ② 的核心关切 ✓）
 **⇒ 新增判据清单 ✓（全部先红后绿 ✓）**：`mcpAnalysisOverlap` ✓／`mcpAnalysisCache` ✓／`mcpNotesResolveHint` ✓／
    `mcpCreateArrangementAssetHonesty` ✓／`mcpRenderCacheStats` ✓（＋ skill 守卫判据两次扩容 ✓）
-```
 ### 四百四十七、📊 **`probe:boot` 的时间读数不稳（2.3× 抖动）⇒ 时间数字要用 `probe:latency`**（2026-10-05 19:13 ✓）
 
 ```
