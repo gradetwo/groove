@@ -127,9 +127,10 @@ describe("MCP · the operations written for MCP reach a tool", () => {
       "summariseArrangement",
       "requireArrangement",
       "arrangementFromArgs",
-      // ⭐ `putMcpArrangement` is called by `import_groove`, which lives in `mcp/registryFiles.ts` rather than in the
-      // registry source this guard reads, so the call is real but invisible here. It is the write side of the lookup, used
-      // by the import path and by the criteria that load a package into the store.
+      // ⭐ **Temporary, and it says so.** `putMcpArrangement` is the write side of the lookup and is being added with the
+      // import path that calls it; this guard reads every `registry*.ts` file, so that tool's call will satisfy the rule on
+      // its own. Until that lands, the entry keeps the guard honest about a function nothing calls yet — remove it in the
+      // same commit as `import_groove`, rather than leaving an exclusion with no reason.
       "putMcpArrangement",
     ]);
 
