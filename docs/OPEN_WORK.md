@@ -12516,3 +12516,24 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 五步已列 ✓
 ```
 
+**⭐ 更正 §498 的估算：Ableton 移植＝接线，不是重写（2026-10-06 01:03 ✓，已量 ✓）**：
+```
+**⭐ 量到的复用路径 ✓**：
+  · ⭐ 写手 ✓：⭐ `exportAbletonLiveSet(options: ExportAlsOptions)` ✓（`src/audio/AbletonExporter.ts:650` ✓）
+    ⇒ ⭐ 它内部 ⭐ `buildAbletonLiveSetXml(options)` ✓ ＋ ⭐ `gzipCompressXml(xml)` ✓ ⇒ ⭐ 返回 ⭐ `ExportedAls` ✓
+    ⇒ ⭐ `options` 里有 ⭐ `genreName` ✓（⭐ 用于文件名 ✓，⭐ `:654` 起 ✓）
+  · ⭐ v2 侧的展平 ✓：⭐ `flattenMcpArrangement(arrangementId, range)` ✓ —— ⭐ **已被三个工具使用** ✓
+    （`registryArrangement.ts:161` ✓／`:252` ✓／`:1366` ✓）
+**⇒ 因此新工具的写法 ✓（≈ 12 行 ✓）**：
+  ⭐ `const { flattened } = flattenMcpArrangement(String(args.arrangementId), range);` ✓
+  ⭐ `const result = await exportAbletonLiveSet({ pattern: flattened, genreName: … });` ✓
+  ⭐ 落盘（⭐ 与 `export_arrangement_midi` 同规矩 ✓）⇒ ⭐ 回包 ⭐ `{ path, filename, bytes, tracks, format: "als" }` ✓
+**⇒ 估算修正 ✓**：⭐ 这是 ⭐ **接线**（⭐ 内部借 v1 写手 ✓，⭐ 属实现细节 ✓ —— ⭐ 与歌词工具同理 ✓）
+  ⇒ ⭐ 所以 ⭐ §498 的五步可压成 ⭐ **三步** ✓：⭐ ① 新工具（≈12 行 ✓）② 判据 ＋ `check_mcp` 用例 ＋ `docs/MCP.md` ✓
+    ③ ⭐ 回填对齐表 ✓ ⇒ ⭐ 之后**才**删 `export_ableton` ✗（⭐ 先立 v2 判据再删 v1 ✓）
+**⭐ 教训 116 的补充 ✓**：⭐ 判"改名"还是"移植"之后 ✓，⭐ 还要再问一句 ⭐
+  "⭐ **v2 侧的**底层写手**能不能直接复用？**" ✓ ⇒ ⭐ 能 ⇒ ⭐ 移植也是**接线量级** ✓（⭐ 本件 ✓）
+    ⇒ ⭐ 否则才是重写 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 三步已定 ✓
+```
+
