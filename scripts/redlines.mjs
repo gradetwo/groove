@@ -367,6 +367,8 @@ const registrySource = fs.readdirSync("mcp")
   .map((name) => read(`mcp/${name}`))
   .join("\n");
 const declaredTools = [...registrySource.matchAll(/^\s{4}name: "([a-z_]+)",$/gm)].map((match) => match[1]);
+  // ⭐ `render_audio` and `render_preview_clip` are gone: their v2 counterparts take an arrangement. The v1 tools
+  //    were deleted, not renamed, so requiring them here would make the red line unsatisfiable.
 const REQUIRED_MCP_TOOLS = [
   "list_genres",
   "get_genre",
@@ -385,7 +387,6 @@ const REQUIRED_MCP_TOOLS = [
   "export_ableton",
   "share_url",
   "get_loudness_report",
-  "render_audio",
   "analyze_audio",
 ];
 const missingTools = REQUIRED_MCP_TOOLS.filter((name) => !declaredTools.includes(name));
