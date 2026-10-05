@@ -14257,3 +14257,33 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 退场是下一步 ✓）
 ```
 
+### 五百五十四、⭐ **退 `add_section` 的清单（29 处／11 文件 ✓ 可做 ✓）**（2026-10-06 03:53 ✓）
+
+```
+**⭐ 计划时重新计数 ✓（教训 142 ✓）**：
+  | ⭐ 文件 ✓ | ⭐ 处数 ✓ |
+  |---|---|
+  | ⭐ `mcp/song.ts` ✓ | 6 ✓（⭐ 多为注释／字符串 ✓） |
+  | ⭐ `scripts/check_mcp.mjs` ✓ | 6 ✓ |
+  | ⭐ `mcp/registrySong.ts` ✓ | 3 ✓（⭐ 工具块 ＋ 注释 ✓） |
+  | ⭐ `src/test/mcpSong.test.ts` ✓ | 3 ✓（⭐ v1 存储判据 ✓） |
+  | ⭐ `src/test/mcpAddSectionCopy.test.ts` ✓ | 3 ✓（⚠️ ⭐ **整文件以它为对象** ✗） |
+  | ⭐ `src/test/sectionCeilings.test.ts` ✓ | 2 ✓ |
+  | ⭐ `src/test/mcpCapability.test.ts` ✓ | 2 ✓（⭐ 清单项 ⇒ 换 v2 ✓） |
+  | ⭐ `mcp/registry.ts` ✓／⭐ `mcp/render/worker.ts` ✓／⭐ `docsWorkflow.test.ts` ✓／⭐ `longPatterns.test.ts` ✓ | 各 1 ✓ |
+  ⭐ **合计 29 处／11 文件 ✓** ⇒ ⭐ 比两个大件（52／50 ✓）**小一半** ✓ ⇒ **可做** ✓
+**⚠️ ⭐ 四个危险点（"⭐ 要求它存在**" ✓）**：
+  ⭐ ① ⭐ `check_mcp:814` ✓：⭐ `["create_song", "add_section", "render_song"].every(…)` ✗ ⇒ ⭐ 去掉 `add_section` ✓
+    ⇒ ⭐ 变 ⭐ `["create_song", "render_song"]` ✓ ✓
+  ⭐ ② ⭐ `docsWorkflow` 的 ⭐ `STEPS` ✓ **含 `add_section`** ✗ ⇒ ⭐ 它要求"⭐ 已注册" ✓ ⇒ ⭐ **换成 v2 的"⭐ 加声部"** ✓
+    ⇒ ⭐ `add_arrangement_track` ✓ ✓
+  ⭐ ③ ⭐ `src/test/mcpAddSectionCopy.test.ts` ✓：⚠️ ⭐ **整个文件以 `add_section` 为对象** ✗ ⇒ ⭐ 随工具**退场** ✓
+    （⭐ 它的对象消失了 ✓ ⇒ ⭐ 判据不成立 ✓ ⇒ ⭐ 删文件 ✓ —— ⚠️ 且 ⭐ 按教训 96 ⭐ **用 `rm`** ✓）
+  ⭐ ④ ⭐ `longPatterns.test.ts` ✓ 与 ⭐ `sectionCeilings.test.ts` ✓ 与 ⭐ `mcpSong.test.ts` ✓：
+    ⚠️ ⭐ 需逐处判断"⭐ 它测的是**工具** ✗ 还是**v1 存储的函数** ✓" ✓
+    （⭐ 后者属**迁移 ⑦** ✓ ⇒ ⭐ 本批不动 ✓）
+  ⭐ ⑤ ⭐ `mcpCapability` 两处 ✓ ⇒ ⭐ 清单换 v2 ✓（⭐ `add_arrangement_track` ✓）
+**⭐ 判据读数预期 ✓**：⭐ 工具数 **87 ⇒ 86** ✓；⭐ 地板 **85** ✓ ⇒ ⭐ 余量 **1** ✗ ⇒ ⚠️ ⭐ 同批把地板改成**跟随登记表** ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 11 个文件 ＋ 四个危险点已列 ✓
+```
+
