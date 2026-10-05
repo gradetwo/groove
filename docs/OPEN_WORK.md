@@ -13024,3 +13024,26 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 序已定 ✓
 ```
 
+### 五百一十八、⚠️ **§512 判定表的两处更正 ＋ 计数法教训**（2026-10-06 02:22 ✓）
+
+```
+**⭐ 更正一 ✓：`apply_chord_progression` ⭐ 不要退场 ✗（⭐ 我表里写它是"⭐ ② 退场" ✗）**
+  ⭐ 源码自述 ✓（`mcp/progression.ts:6` ✓）：⭐ "**It is a pure transform**, like `apply_pattern_ops`:
+    a pattern in, a pattern out, and **no server state touched**" ✓
+  ⇒ ⭐ 即 ⭐ **它不碰歌模型** ✓ ⇒ ⭐ 按第 ④ 类"⭐ 与模型无关 ⇒ **不动**" ✓
+  ⇒ ⚠️ 而且它有 ⭐ **四个判据文件** ✓（`mcpChordProgression.test.ts` ✓ ×2 describe ✓／
+    `mcpChordProgressionCopy.test.ts` ✓／`mcpCopy_apply_chord_progression.test.ts` ✓）＋ ⭐ `check_mcp:696` ✓
+    ⇒ ⭐ 退它**代价很大** ✓，⭐ 而**没有理由** ✓
+**⭐ 更正二 ✓：`set_clip` ⭐ 比"1/1"深得多 ✗（⭐ 我表里写 1 总命中 ✓）**
+  ⭐ 实量 ✓：⭐ `check_mcp:408–410` ✓｜⭐ `mcpCapability` **2 处** ✓｜⭐ `docsWorkflow.test.ts:16` 的**步骤表** ✓｜
+    `docs/MCP.md:205` 与 `:224` ✓｜⭐ `mcp/README.md` **2 处** ✓｜⭐ `mcp/song.ts` ✓
+  ⇒ ⭐ 它属于 ⭐ **深纠缠** ✗ ⇒ ⭐ 应排到**后面** ✓，⭐ 不是第 4 ✓
+**⚠️ ⭐ 教训 130 ✓（计数法的坑 ✓）**：⭐ 我只数了**带引号**的名字（`"set_clip"` ✗）⇒
+  ⭐ **漏掉散文里的裸名** ✗（`set_clip` 不带引号 ✓）⇒ ⭐ 低估了纠缠度 ✓
+  ⇒ ⭐ 正确做法 ✓：⭐ **裸名与带引号都数** ✓（`grep -c "\bset_clip\b"` ✓），⭐ 并**分开**看
+    "⭐ 调用点"（`tools/call` ✓）与"⭐ 提及"（⭐ 散文／清单／步骤表 ✓）✓
+**⭐ 因此修正后的下一刀 ✓**：⭐ 在 ⭐ **1–2 命中的真·浅工具**里选 ✓：⭐ `get_pattern` ✓／⭐ `get_song` ✓／⭐ `set_tempo` ✓
+  ⭐ （⭐ 三者都要先按**裸名**重量一次 ✓）⇒ ⭐ 而 ⭐ `set_clip` 与 `add_section` 排到后面 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 两处更正与教训已入账 ✓
+```
+
