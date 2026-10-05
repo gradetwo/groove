@@ -12642,3 +12642,26 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 结论就是"⭐ 先别动" ✓，⭐ 台账已更正 ✓
 ```
 
+### 五百零五、⚠️ **更正 §504：v2 已经会写歌词**（字段叫 `syllable` ✗ 不是 `lyric`）**（2026-10-06 01:25 ✓，已量 ✓）**
+
+```
+**⭐ 我上一轮错在哪 ✓**：⭐ 我搜 ⭐ `lyric` ✗ ⇒ ⭐ **零命中** ⇒ ⭐ 就下了"⭐ v2 没有这条能力"的结论 ✗
+  ⇒ ⚠️ ⭐ 而**正确的词是 `syllable`** ✓（⭐ 类型字段名 ✓）⇒ ⭐ 一搜就有 ✓
+**⭐ 量到的三件事 ✓**：
+  ⭐ ① ⭐ `src/types/arrangementV2.ts:161` ✓：⭐ `NoteEvent` 带 ⭐ **`syllable?: string`** ✓
+    （⭐ 注释 ✓：⭐ "The syllable sung on this note, when this note is a sung one." ✓）
+  ⭐ ② ⭐ ⭐ **`src/data/arrangementToMidi.ts`** ✓ **存在** ✓ ⇒ ⭐ `:137` ✓ 原文 ✓：
+    "**`FF 05 <len> <utf8>` — a syllable, the event the format reserves for a lyric, written as UTF-8**" ✓
+    ⇒ ⭐ `:315` ✓ 读 ⭐ `note.syllable?.trim()` ✓
+  ⭐ ③ ⭐ `src/data/arrangementImport.ts:355–362` ✓：⭐ 导入时也把音节带上 ✓
+**⇒ 结论更正 ✓**：⭐ **v2 的编曲 MIDI 导出**已经**会写歌词** ✓ ⇒ ⭐ `export_midi` 的歌词能力**已有承接** ✓
+  ⇒ ⭐ 因此 ⭐ **退场解除阻塞** ✓（⭐ §504 的"⭐ 先别动" ✗ **作废** ✓）
+**⭐ 退场时的唯一额外动作 ✓**：⭐ 判据 ⭐ `src/test/lyricExport.test.ts:107–114` ✓ ⭐ 现在断言"⭐ **经 `export_midi`** 可达" ✗
+  ⇒ ⭐ 改为断言 ⭐ **经 `export_arrangement_midi`** 可达 ✓（⭐ 即把该判据**改接**到 v2 ✓ —— ⭐ 这正是"⭐ 先立 v2 判据再删 v1" ✓）
+**⚠️ ⭐ 教训 121 ✓**：⭐ **同一个概念要在两套词里各搜一遍** ✗ —— ⭐ 这里是 ⭐ "lyric" ✗ 与 ⭐ "syllable" ✓
+  ⇒ ⭐ 一个词搜不到，**不等于**能力不存在 ✓（⭐ 与"⭐ 看字段、不看名字"同源 ✓）
+  ⇒ ⭐ 做法 ✓：⭐ 搜不到时 ⭐ **换同义词再搜一次** ✓（⭐ 或直接搜**类型定义**里的字段 ✓）
+**⭐ 因此下一步 ✓**：⭐ `export_midi` 退场（⭐ 9 处清单 ✓，⭐ 与 §502 的 Ableton 清单同形 ✓）＋ ⭐ 把歌词判据改接 v2 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
