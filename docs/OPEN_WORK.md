@@ -12492,3 +12492,27 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未退场 ✗**（⭐ 余量用尽 ✓）；⭐ 引用清单已取 ✓
 ```
 
+### 四百九十八、⭐ **`export_ableton` 也需要移植，而不是改名**（2026-10-06 01:03 ✓，已量 ✓）
+
+```
+**⭐ 现状 ✓（`mcp/registryFiles.ts:42` 起 ✓）**：
+  · ⭐ 描述原文 ✓：⭐ "**An .als project (gzipped XML) for a pattern, returned as base64**" ✓
+  · ⭐ 入参 ✓：⭐ `genreId?` ✗／⭐ `pattern?` ✗／⭐ `songId?` ✗ ⇒ ⭐ **三选一的 v1 输入** ✗
+  · ⭐ 内部 ✓：⭐ `exportAbleton(clips[0].pattern, { …, genreName: … })` ✓ ⇒ ⭐ **pattern 基** ✗
+**⭐ v2 侧现状 ✓**：⭐ `registryArrangement.ts` 有 ⭐ `export_arrangement_midi` ✓／`:musicxml` ✓／
+  `export_logic_project` ✓ —— ⚠️ ⭐ **没有 Ableton** ✗
+**⇒ 结论 ✓**：⭐ 这一件 ⭐ **不能"改名"** ✗ ⇒ ⭐ 按业主的"⭐ **页面原有的 V1 功能用 V2 架构实现**" ✓
+  ⇒ ⭐ **要新增** ⭐ 一条 ⭐ **按编曲导出 `.als`** 的路径 ✓（⭐ 用编曲自己的 tracks／notes ✓ ⇒
+    `buildAbletonLiveSetXml` ✓）⇒ ⭐ 然后 ⭐ `export_ableton`（pattern 基 ✗）退场 ✓
+**⭐ 因此它是一件"移植"工作 ✓，工程量比改名大 ✓**：
+  ⭐ ① ⭐ 先量 ⭐ `exportAbleton` 的第二参数（⭐ 除 pattern 外要什么 ✓）与 ⭐ `buildAbletonLiveSetXml` 的入参 ✓
+  ⭐ ② ⭐ 写 ⭐ `exportArrangementToAbleton(arrangement, …)` ✓（⭐ 放 ⭐ `src/features/…` 或 ⭐ `mcp/` ✓）
+  ⭐ ③ ⭐ 新工具 ⭐ `export_arrangement_ableton` ✓（⭐ 接 `arrangementId` ✓，⭐ 落盘 ✓ 或 ⭐ 内联 ✓ —— 待定 ✓）
+  ⭐ ④ ⭐ 判据 ✓ ＋ ⭐ `check_mcp` 用例 ✓ ＋ ⭐ `docs/MCP.md` ✓ ＋ ⭐ 回填对齐表 ✓
+  ⭐ ⑤ ⭐ 最后删 `export_ableton` ✗（⭐ 先立 v2 判据再删 v1 ✓ —— ⭐ 铁律 ✓）
+**⚠️ 教训 116 ✓**：⭐ **"迁移"有两种工作量** ✗ —— ⭐ ① **改名／换入参**（⭐ 小 ✓）② ⭐ **移植能力到新模型**（⭐ 大 ✓）
+  ⇒ ⭐ 判断方法 ✓：⭐ 问"⭐ v2 侧**有没有**这个能力 ✓？" ⇒ ⭐ 有 ⇒ ① ✓；⭐ 没有 ⇒ ② ✓
+  ⇒ ⭐ 本件是 ② ✓（⭐ Ableton 在 v2 侧不存在 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 五步已列 ✓
+```
+
