@@ -11344,3 +11344,33 @@ export async function prepareArrangementAudioLanes(input: {
   （⭐ 类型检查会当场发现 ✓ —— ⭐ 这就是它拦住的原因 ✓）
 ```
 
+### 四百六十二、✅ **迁移 ③（第一步）：删除 `render_audio` 已落地（2026-10-05 21:35 ✓，提交 `7179863` ✓）**
+
+```
+**⭐ 落地内容 ✓（七条修法全部生效 ✓）**：
+  ① ⭐ 删 `mcp/registryRender.ts` 的 `render_audio` 块 ✓（`:121–163` ✓）⇒ ⭐ 该文件 **4 ⇒ 3** 个工具 ✓
+  ② ⭐ 文案成对 ✓：⭐ `mcp/registrySong.ts` ✓ ＋ `src/test/renderSongBudgetGuard.test.ts` ✓ ——
+     ⭐ 预算失败消息改为指名 **`render_arrangement`** ✓
+  ③ ⭐ `scripts/check_mcp.mjs` **3 处**改名挂靠 ✓
+  ④ ⭐ `src/test/budgetHonesty.test.ts` ✓：⭐ 导入 `createMcpArrangement` ✓／⭐ 新增两个辅助 ✓
+     （`freshArrangementId()` ✓ ＋ `asError()` ✓）／⭐ 删 **两处表项** ✓／⭐ 包装 **3 个用例** ✓ ＋ **补右括号** ✓
+  ⑤ ⭐ `src/test/mcpHeadlessRouting.test.ts` ✓：⭐ 删**列表项**（`:101` ✓）＋ ⭐ 删**共体的 `case`**（`:141` ✓，⭐ 与
+     `render_song` 共体 ✓，⭐ 删该行后 `render_song` 保留其体 ✓）＋ **2 处注释**改词 ✓
+  ⑥ ⭐ `rm src/test/mcpCopy_render_audio.test.ts` ✓（⭐ 用 `rm` ✗ 不用 `mv` ✓ —— v2 那个**保留** ✓）
+  ⑦ ⭐ 台账 **4 处**旧文件名同步 ✓；⭐ 另 5 个判据文件改名挂靠 ✓（`exportSurfaceCopy` ✓／`mcpArrangementPreview` ✓／
+     `mcpCapability` ✓／`mcpHeadlessRender` ✓／`mcpRenderArrangementBars` ✓）
+**⭐ 判据读数（全绿 ✓）**：⭐ `tsc=0` ✓｜`lint=0` ✓｜⭐ `check:mcp` **123/123** ✓｜⭐ 判据组 **0** ✓（10 个文件 ✓）｜
+  `check:file-sizes=0` ✓｜`check:dead-exports=0` ✓｜`check:duplication=0` ✓｜`check:module-boundaries=0` ✓｜
+  尺寸判据 0 ✓｜⭐ `check:docs:refs=0` ✓｜⭐ `node scripts/check_docs.mjs=0` ✓
+**⭐ 关键经验（会话内最有用的一条 ✓）**：⭐ 判据里的旧名字出现在**四种位置** ✓，动作**各不相同** ✓：
+  ⭐ **参数化列表 ⇒ 删表项** ✓｜⭐ **`switch` 的 `case` ⇒ 删旧行** ✓（⭐ 尤其**共体 case** ✓）｜
+  ⭐ **断言句子的名字 ⇒ 改名** ✓｜⭐ **`handler(...)` 调用 ⇒ 改参数 ＋ 改成断言回包** ✓
+  ⇒ ⭐ 另有 ⭐ **包一层函数** 时必须**补右括号** ✓（教训 97 ✓）
+**⚠️ 我自己的两次失误（诚实记 ✓）**：
+  · ⭐ 第一次 ✓：⭐ `mv` 到**已存在**的路径 ⇒ ⭐ **覆盖了 v2 自己的拷贝判据** ✗（教训 96 ✓：⭐ 删旧用 `rm` ✓）
+  · ⭐ 第二次 ✓：⭐ 我在闸门循环里写了 ⭐ **`npm run check:docs`** ✗ —— ⭐ **该脚本不存在** ✓（⭐ 真实的是
+    `node scripts/check_docs.mjs` ✓ 与 `npm run check:docs:refs` ✓）⇒ ⭐ 于是"红"是**假的** ✗
+    ⇒ ⭐ **教训 98** ✓：⭐ **跑闸门要先确认脚本名存在** ✓；⭐ 报"门红"前也要先确认**那道门真实存在** ✓
+    （⭐ 本轮我在**未确认真实性**的情况下就把它当成红门并推了 ✗ —— ⭐ 推送本身无过 ✓，⭐ 但判断有误 ✓）
+```
+
