@@ -12408,3 +12408,49 @@ export async function prepareArrangementAudioLanes(input: {
   ⭐ ② 否则 ⭐ 登记 `NOT_A_TOOL` ＋ ⭐ 写明"⭐ 它由 `import_groove` 调用，⭐ 而该工具在 `registryFiles.ts`" ✓
 ```
 
+### 四百九十五、⭐⭐ **合并交班清单（2026-10-06 00:53 ✓，取代 §485–§494 的零散记录 ✓）**
+
+```
+**⭐ 仓库 ✓**：⭐ 分支 `dev` ✓｜⭐ 未推送 0 ✓｜⭐ 工作树干净 ✓｜⭐ 无半成品 ✓
+**✅ 本会话完成并验证 ✓**：
+  · ⭐ 调试压缩包 ✓：⭐ MCP 工具 `collect_debug_bundle` ✓ ＋ ⭐ Web 顶栏按钮 ✓ ＋ ⭐ 共享 tar 写入器 ✓
+    （⭐ `.tar.gz` ✓，⭐ 同名规 ✓，⭐ 白名单 ✓，⭐ 8 MiB 上限 ✓，⭐ 载作品时 README 写明 ✓，⭐ 可带 `arrangementId` ✓）
+  · ⭐ 渲染成本估算 ✓（⭐ 用项目自测常量 ✓）＋ ⭐ 接进 `validate_arrangement` ✓（⭐ 性能报告 P0 的可行解 ✓）
+  · ⭐ **`.groove` 文件已是 v2 包 ✓**：⭐ `arrangementPackage.ts` ✓（写手／校验器／读口 ✓）＋ ⭐ 存储 `putMcpArrangement` ✓
+    ＋ ⭐ MCP `export_groove` 接 `arrangementId` ✓ ＋ ⭐ `import_groove` **载入为编曲** ✓（`e5db525` ✓）
+  · ⭐ 迁移 ① ✓｜⭐ 迁移 ③ ✓（⭐ 工具 95 ⇒ 93，⭐ 加调试工具后 94 ✓）｜⭐ 执行顺序 ① ✓｜⭐ 执行顺序 ⑦ ✓
+  · ⭐ CI 修复 ✓（⭐ 18 个红止于 `979f331` ✓）＋ ⭐ 放入门的红以**删登记**方式消除 ✓（`e5db525` ✓）
+**⏳ 下一个单元：Web 四件 ✓（⭐ 逐字文本都在 §492／§494 末尾 ✓）**：
+  ⭐ ① ⭐ `src/features/arrangement/arrangementFiles.ts` 的 ⭐ `grooveFileFor` ✓（`:197` ✓）
+    ⇒ ⭐ 整函数换成 v2 ＋ ⭐ **加 `stem = "arrangement"` 参数** ✓（⭐ 编曲没有名字 ✗，⭐ `songId` 会撞名 ✗）
+    ⇒ ⭐ 顺带 ⭐ `filename` 与 `name` 用 `safeFileStem(stem)` ✓（⭐ 判据 `:74` 期望 `"arrangement.groove"` **正好吻合** ✓）
+  ⭐ ② ⭐ 同文件 ⭐ `importGrooveIntoArrangement` ✓（⭐ `:509` 起 ✓，⭐ **缩进实测 4 空格** ✓）：
+    ⇒ ⭐ `const { arrangementFromPackage } = await import("../sequencer/arrangementPackage");` ✓
+    ⇒ ⭐ `const carried = arrangementFromPackage(JSON.parse(await file.text()));` ✓
+    ⇒ ⭐ `const imported: ArrangementImportResult = { arrangement: carried, trackIds: carried.tracks.map((track) => track.id),
+      tracks: carried.tracks.length, notes: Object.values(carried.notesByTrack ?? {}).reduce((sum, list) => sum + list.length, 0),
+      problems: [] };` ✓（⭐ 可选 `situations?`／`mapped?` 不传 ✓）
+  ⭐ ③ ⭐ `src/data/arrangementImport.ts:232` 的 ⭐ `arrangementFromGroovePackage` ✓
+    ⇒ ⭐ v2 无调用者 ⇒ ⭐ **退场** ✓（⚠️ ⭐ **先量其余调用者** ✓ —— 可逆性差 ✓）
+  ⭐ ④ ⭐ 判据 ⭐ `src/test/arrangementEntries.test.ts` **5 处** ✓（⭐ 逐字见 §494 末尾 ✓）：
+    ⭐ `:17` 删旧导入 ✓｜⭐ `:18` 换新校验器 ✓｜⭐ `:78` 换调用 ✓｜⭐ `:79–80` 改断言（`format`／`tracks` ✓）｜
+    ⭐ `:82` 改取 `pkg.arrangement` ✓（⭐ 随之把 `back.problems` 换成 v2 字段 ✓）
+**⏳ 再之后 ✓**：⭐ `export_ableton` 接 `arrangementId` ✓ ⇒ ⭐ `export_midi` 与 `export_arrangement_midi` 是否合并 ✓
+  ⇒ ⭐ ④ `registryAnalysis`（7 工具／5 处 `songId` ✓）⇒ ⭐ ⑥ Web 14 个文件**移植** ✓（⭐ 底层 `arrangements_v2` 已在 ✓）
+  ⇒ ⭐ ⑤ `registrySong`（11 ✓）＋ `registryPattern`（5 ✓）**整支处置** ✓ ⇒ ⭐ ⑦ v1 数据模型 ✓
+  ⇒ ⭐ 执行顺序 ② region 真实音域 ✓／③ 当场校验音域 ✓／④ `normalize_loudness` ＋ 峰值余量 ✓／⑤ 结构级扫描 ✓／⑥ 进度上报 ✓
+  ⇒ ⭐ 两条 `needs`（⭐ §484 ✓）
+**⭐⭐ 推送前必跑 ✓（八道 CI 门 ✓ ＋ 本仓门 ✓）**：⭐ ① `check:actions` ② `check:disabled-gates` ③ `version:check`
+  ④ `docs:check` ⑤ `typecheck` ⑥ `lint` ⑦ `redlines` ⑧ `npm run test:coverage`（⭐ ＝CI 第八道 ✓）
+  ⚠️ ⭐ 另跑 ✓：⭐ `node scripts/check_docs.mjs` ✓／⭐ `check:docs:refs` ✓／⭐ `check:mcp` ✓／
+  `check:file-sizes`／`dead-exports`／`duplication`／`module-boundaries` ✓／⭐ `mcpCoverage` ✓／⭐ **围栏偶数** ✓
+  ⚠️ ⭐ 本机 `test:coverage` **退出码 1** ✗（⭐ 覆盖率插件依赖错 `brace-expansion` ✓）⇒ ⭐ 该门本机只能看"用例通过" ✓
+**⚠️ 十条最常用流程／教训 ✓**：⭐ ① 判据旧名字**四位置四动作** ✓ ② **`as unknown as` 是并存气味** ✓
+  ③ **看字段判断是否已迁移，不看名字** ✓ ④ **多行锚点先抓逐字文本，或按行结构定位** ✓ ⑤ **不要数空格，要量** ✓
+  ⑥ **改一个函数前先列它的对偶** ✓ ⑦ **枚举一次只对一个单元成立** ✓ ⑧ **自查发现的问题就是失败检查** ✓
+  ⑨ **新公开的"改模型"函数必须同批有工具调用它** ✓（⭐ `mcpCoverage` 第二条 ✓）⑩ ⭐ **跑门前确认脚本名存在** ✓
+**⭐ 发布 ✓**：⭐ 条件＝⭐ **迁移全部完成** ✓；⭐ 那时**直接发布 ✓ 不再请示** ✓；⭐ 走 ⭐ `bash scripts/release.sh` ✓
+  ⇒ ⭐ 先手工改三件 ✓：⭐ `package.json` 版本号（⭐ 建议 ⭐ `2.35.0` ✓）＋ ⭐ `CHANGELOG` ✓ ＋ ⭐ 派生版本文件 ✓
+**⏳ 目标 ✓**：⭐ 保持 **active** ✓（⭐ 未完成 ✓）
+```
+
