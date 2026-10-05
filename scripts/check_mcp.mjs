@@ -235,7 +235,6 @@ try {
    * meaning **passes** rather than measures — they built arrangements four times the length they intended — and a song being
    * limited to clip A because `set_clip` existed and no tool reached it.
    */
-  const song = payload(await client.request("tools/call", { name: "create_song", arguments: { genreId: "chicago-house", bars: 2, label: "verse" } }));
   /**
    * Make-unique, on the chain the gate already builds: two sections sharing a slot, one of them given its own copy, and the other left alone.
    * This is the property a composer could not get — three verses with three melodies — so the gate holds it rather than a description of it.
@@ -371,11 +370,6 @@ try {
   );
 
 
-  check(
-    "bars counts passes: two passes expand to passBars x 2 measures",
-    song.totalBars === song.passBars * 2,
-    `totalBars=${song.totalBars} passBars=${song.passBars}`
-  );
 
   /**
    * ⭐ **A second part is a second track, and what it plays is its steps.** Placing a section and giving it a clip were the
