@@ -9464,3 +9464,24 @@ problems: **[]** ✓
 **⚠️ 仍未见底的一类 ✓**：`probe:arrangement` ✓／`probe:arrangement-audio` ✓／`probe:arrangement-undo` ✓／
    `probe:live-arrangement` ✓／`probe:headless(-silence)` ✓／`probe:skins:full` ✓／`probe:scroll` ✓
    ⇒ 下一轮继续同法跑 ✓（能跑就跑 ✓，跑不了的**明说口径** ✓ 并进 `needs` ✓）
+
+### 四百零七、🔴 **探针扫描的实质发现：`probe:arrangement-undo` 确定性红，而 CI 不跑它**（2026-10-05 15:29 ✓）
+
+```
+**怎么来的 ✓**：同法跑**从未跑过**的探针 ✓（前几条都绿 ✓）⇒ 这条**红** ✗ 且**两次同结果** ✓ ⇒ **不是抖动** ✗
+**读数 ✓（时点 15:28／15:29 两次 ✓，方法：`npm run probe:arrangement-undo` ✓，exit=1 ✓）三条问题 ✓**：
+   ① `adding a note should have drawn one more, 4 → 4` ✗ —— 点击后**音符数没增加** ✓
+   ② `Undo should say "add-note", read "add-track"` ✗ —— 撤销标签仍是**上一步**的 `add-track` ✓
+   ③ `the second Ctrl+Z did not take the note back off, read 0 notes` ✗
+   ⇒ ⭐ 三条**同源** ✓：①没发生（没加进音符 ✓）⇒ ②③自然也对不上 ✓
+   ⚠️ 探针**其余九项全过** ✓（含：项目名框里 Ctrl+Z **不被应用吞掉** ✓／新项目无可撤销 ✓／undo/redo 按钮态 ✓／
+     长度 16 ✓／撤销顺序**由新到旧** ✓／重载后仍一致 ✓／`?` 帮助里**有编曲那一行** ✓）⇒ 存量功能正常 ✓
+**⚠️ 两种假设，均未被排除 ✓（**不擅自断言是产品 bug** ✗）**：
+   (a) **产品的"点击加音符"没落点** ✗（真 bug ✓）；(b) **探针的点击坐标过期** ✗（探针自己注释过它曾判错过 ✓）
+   ⇒ 判别法 ✓：看探针截图 ✓（`tmp/probe-arrangement-undo/…png` ✓）＋ 手动在 1440×900 下点一次 ✓
+**⭐⭐ 更关键的一点 ✓**：`grep` 三个 workflow ⇒ ⭐ **CI 里没有任何地方跑这条探针** ✗
+   ⇒ 即：一个**确定性红**的浏览器级探针 ✓ 一直**没被任何人看见** ✗ ⇒ ⭐ 这才是本条最有价值的信息 ✓
+**已有覆盖 ✓**：`src/test/arrangementHistory.test.ts` ✓ 覆盖**历史栈** ✓；但**未见到**对 `undoAction` 标签的断言 ✓
+   ⇒ 所以"②标签错"这类**表现层**问题，正是**单测看不到、而这条探针能看到的**那类 ✓
+**⇒ 下一轮 ✓**：① 看截图定 (a)／(b) ✓ ② 若 (a) ⇒ 按"先量后改"修 ✓ 并配**能红判据** ✓；
+   ③ 无论 (a)／(b) ⇒ ⭐ **决定是否把该探针接进 CI** ✓（它现在等于**白写** ✗）
