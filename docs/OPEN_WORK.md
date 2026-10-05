@@ -11512,3 +11512,28 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 落地未做 ✗**（余量不足 ✓）；⭐ 设计已无未知 ✓
 ```
 
+### 四百六十八、⭐ **调试采集（Web 侧）量测与设计（2026-10-05 21:47 ✓）**
+
+```
+**⭐ MCP 侧已落地 ✓（上一轮 ✓）**：⭐ `collect_debug_bundle` ✓（`7da3851` ✓）⇒ 工具 **94** ✓；⭐ 判据**已验能红** ✓
+**⭐ Web 侧量到三条 ✓**：
+  · ⭐ **下载写法已有 ✓**：⭐ `URL.createObjectURL(blob)` ＋ `a.download = …` ✓ ——
+    ⭐ 三处：`src/audio/MidiExporter.ts:343` ✓／`AbletonExporter.ts:670` ✓／`WavExporter.ts:2595` ✓
+    ⚠️ ⭐ 三处**各自内联** ✗ ⇒ ⭐ 抽一个**小辅助** ✓（⭐ 不重写三处 ✓，⭐ 新代码只用自己的那份 ✓）
+  · ⭐ **入口位置 ✓**：⭐ `src/components/Header.tsx` ✓（顶栏 ✓）—— ⭐ 可参照 `UpdatesModal.tsx` ✓（⭐ 已有弹窗先例 ✓）
+  · ⭐ **错误捕获已有 ✓**：⭐ `src/components/ErrorBoundary.tsx` ✓ ⇒ ⭐ "最近界面错误"可从这里取 ✓（⭐ 需加一个**小环形记录** ✓）
+**⚠️ 两个未知 ✓（下一轮先量 ✓）**：
+  ① ⭐ **v2 编曲 store 的读取 API** ✓ —— ⭐ 用来做"当前编曲摘要" ✓（⭐ **轨数／小节数／音符数** ✓，⚠️ **不含内容** ✗）
+  ② ⭐ **音频上下文的取用点** ✓ —— ⭐ 用来报"采样率与状态" ✓
+**⭐ 设计（定案 ✓）**：
+  · ⭐ 新模块 ✓：⭐ `src/features/debug/webDebugBundle.ts` ✓ ⇒ ⭐ 导出 ⭐ `collectWebDebugBundle()` ✓（⭐ 纯函数 ✓，**可单测** ✓）
+  · ⭐ 内容（⭐ **白名单** ✓）：⭐ 应用版本 ✓／⭐ UA 与平台 ✓／⭐ 当前编曲摘要（⭐ 计数 ✓，**不含音符内容** ✗）／
+    ⭐ 最近界面错误（⭐ 环形记录 ✓）／⭐ 关键耗时（⭐ `performance` ✓）／⭐ 音频上下文①采样率②状态 ✓／
+    ⭐ 采集时刻 ✓／⭐ `manifest[]` ✓／⭐ `omissions[]` ✓（⭐ 缺什么／为什么 ✓）
+  · ⭐ 下载 ✓：⭐ 一个辅助 ⭐ `downloadJson(filename, text)` ✓ ⇒ ⭐ 文件名与 MCP 侧**同名规** ✓（`groove-debug-<时间>.json` ✓）
+  · ⭐ 入口 ✓：⭐ `Header.tsx` 一个按钮 ✓（⭐ "采集调试信息" ✓）
+  · ⭐ 判据（能红 ✓）：⭐ 包是合法 JSON ✓／含 `manifest` 与版本 ✓／⭐ **不含**用户目录路径与令牌字样 ✓
+    ⇒ ⭐ 与 MCP 侧判据**同一形状** ✓，⭐ 便于对照 ✓
+**⏳ 未落码 ✗**（⭐ 两个未知未量 ✓）；⭐ 其余设计已定 ✓
+```
+
