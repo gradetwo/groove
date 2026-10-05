@@ -25,6 +25,7 @@ describe("the development workflow skill", () => {
       "patch equivalence",
       "One writer per file",
           "Profile the big contributor",
+          "the criterion that watches it",
     ])
       expect({ rule, present: skill.includes(rule) }).toEqual({ rule, present: true });
   });

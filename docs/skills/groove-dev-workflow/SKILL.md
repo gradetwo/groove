@@ -3,7 +3,7 @@
 How work is done here, and how several lines of work run at once without stepping on each other.
 Written from a session that produced five red builds and eleven measured lessons; no code, just the rules.
 
-## The eleven rules, each one paid for
+## The twelve rules, each one paid for
 
 1. **Measure before changing.** Read the real bytes, schemas, files, projects. Two "must fix" report items turned
    out to be already satisfied, and one believed field was measured to be zero in every real file — the belief was
@@ -30,6 +30,11 @@ Written from a session that produced five red builds and eleven measured lessons
     pixels, and a five-line wrapper that recorded who called the scrolling APIs named it in a single run. Latency, CPU and
     memory belong in the same habit — measure the whole path, rank what dominates, and fix the largest contributor whose
     fix is small. The three of them are one discipline: the cheapest win is almost always the biggest number.
+12. **Check a number with the criterion that watches it, not with the script it wraps.** A file-size script passed
+    while the unit suite's own file-size budget — the same script plus a rule that no pinned file may grow — failed on
+    sixteen added lines, and four pushes went red behind it. When a count already has a criterion derived from it, that
+    criterion is the instrument; the script under it is a part, and running the part is how a green reading gets reported
+    for a red tree. The same shape as reading a pipe's exit code instead of the gate's, one layer further in.
 
 ## Reach outside before you invent
 
