@@ -60,6 +60,8 @@ const EXCLUDED: Record<string, string> = {
     "a region edit driven by a drag, and the protocol reaches the same notes one at a time through add_arrangement_note and move_arrangement_note",
   removeNotesWithinRect:
     "the deletion half of that region edit, and remove_arrangement_note removes one note, which is what a protocol caller asks for",
+  legatoNotesInRect:
+    "a note-length edit driven by a selection, and the protocol sets one length at a time through set_arrangement_note_length",
   resetTrackIdsForTests: "a test seam rather than an operation — it exists so a criterion can predict an id",
 };
 

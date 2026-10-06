@@ -750,3 +750,33 @@ export function removeNotesWithinRect(arrangement: ArrangementV2, trackId: strin
   return { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [trackId]: kept } };
 }
 
+/**
+ * ⭐ **Legato: every selected note reaches the next one.** The older grid's rule, in beats: a note is extended to the next
+ * sounding start, or to the loop's end when nothing follows, and it shortens when the next note is closer than the note is
+ * long — that is what the word means. The ceiling is the distance itself unless a caller names a smaller one, because this
+ * layer has no audio-path gate limit to inherit.
+ */
+export function legatoNotesInRect(
+  arrangement: ArrangementV2,
+  trackId: string,
+  rect: NoteRect,
+  options: { loopEndBeats?: number; maxLengthBeats?: number; minLengthBeats?: number } = {}
+): ArrangementV2 {
+  const notes = arrangement.notesByTrack?.[trackId];
+  if (notes === undefined || notes.length === 0) return arrangement;
+  const targets = new Set(notesWithinRect(notes, rect));
+  if (targets.size === 0) return arrangement;
+  const sounding = [...new Set(notes.map((note) => note.startBeats))].sort((a, b) => a - b);
+  const fallbackEnd = options.loopEndBeats ?? (arrangement.bars ?? 4) * 4;
+  const floor = options.minLengthBeats ?? 0.1;
+  const landed = notes.map((note) => {
+    if (!targets.has(note)) return note;
+    const later = sounding.filter((start) => start > note.startBeats);
+    const boundary = later.length > 0 ? later[0]! : fallbackEnd;
+    const reach = Math.max(floor, boundary - note.startBeats);
+    const ceiling = options.maxLengthBeats ?? reach;
+    return { ...note, lengthBeats: Math.max(floor, Math.min(ceiling, reach)) };
+  });
+  return { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [trackId]: landed } };
+}
+
