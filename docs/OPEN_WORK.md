@@ -17135,3 +17135,20 @@ describe("the grid's editing actions", () => {
 **⭐ 结论 ✓**：⭐ 执行顺序 ⑤ **完成** ✓（⭐ 无需改动 ✓）
 ```
 
+### 六百五十八、⭐ **⑦ 分两类：死遗留可清 ✓，活桥只能换引擎** ✗（本轮量出 ✓）
+
+```
+**⭐ 量到的事实 ✓**（⭐ 起因：看到 `src/data/arrangementCompile.ts` 里有一处 `const song: Song = { … }` ✓）
+  ⭐ `compileArrangementToPattern` ✓ ⇒ ⚠️ **v2 编曲面自己在用** ✓（`ArrangementViewV2.tsx:448` ✓／`:528` ✓）
+    ＋ `playArrangementV2.ts:151` ✓ ＋ `arrangementFiles.ts:149` ✓
+  ⭐ `compileArrangementToSongInput` ✓ ⇒ ⚠️ **MCP 渲染路径在用** ✓（`mcp/arrangement.ts:1478` ✓）
+  ⭐ `mcp/arrangement.ts:1363` 的注释 ✓："The chain is the application's own: `compileArrangementToSongInput`
+    **projects the tracks onto the eight** …" ✓ ⇒ ⭐ 即：⭐ **编曲 → 八条泳道 → 音频引擎** ✓
+**⭐ 因此 ✓**：⭐ 这里的 `Song` ⚠️ **不是遗留类型** ✗ ⇒ ⭐ 它是**音频引擎的输入格式** ✓ ⇒ ⭐ **一道活桥** ✓
+  ⇒ ⚠️ "⭐ 迁移它**"⭐ 等于**把音频引擎的输入也换掉** ✗ ⇒ ⭐ **远超类型清理** ✓ ⇒ ⭐ **不做** ✗（⚠️ 且后果是**听不见声音** ✗，而判据大多**不测声音** ✗）
+**⭐ 处置 ✓**
+  ⭐ ① ⭐ **登记此桥** ✓（本节 ✓）：⭐ 属"⭐ 引擎换 v2**"⭐ 范畴 ✓，⭐ 不计入 ⑦ 的清理 ✓
+  ⭐ ② ⭐ ⑦ 重新表述 ✓：⭐ **只清"无人调用的 v1 类型使用者"** ✓（⭐ 例：`projectStorage` ✓ 只被 `useSequencerStore` ✓ ⇒ ⭐ 属 v1 链 ✓，⭐ 随 Studio 决定 ✓）
+  ⭐ ③ ⭐ 判据 ✓：⭐ 删任何 v1 使用者**前** ✓，⭐ 先量**它的导入者是否非判据使用者为零** ✓（⭐ 本轮的教训正是**没量就以为没人要** ✗）
+```
+
