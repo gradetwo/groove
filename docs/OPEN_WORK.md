@@ -16519,3 +16519,42 @@ describe("the grid's editing actions", () => {
   ⭐ ③ ⭐ 跑全套 ⇒ ⭐ 推 ✓
 ```
 
+### 六百三十、✅ **缺陷已修：斜坡／量化走命令层（进出撤销 ✓）**（2026-10-06 11:02 ✓）
+
+```
+**⭐ 命令层实况 ✓（`src/data/arrangementHistory.ts` ✓）**：
+  ⭐ 通用 ✓：⭐ `setterCommand<K>(action, apply, before, after)` ✓ ⇒ ⭐ 回包 ⭐ `{ action, redo, undo }` ✓
+    （⭐ `redo: apply(arrangement, after)` ✓｜⭐ `undo: apply(arrangement, before)` ✓）
+  ⭐ 专用 ✓：⭐ `addTrackCommand` ✓／⭐ `removeTrackCommand` ✓／⭐ `setTrackFlagCommand` ✓／⭐ `setArrangementTempoCommand` ✓／
+    `setArrangementBarsCommand` ✓／⭐ `setTrackGainCommand` ✓／⭐ `setTrackRegionCommand` ✓／⭐ `setTrackSampleCommand` ✓ …
+  ⭐ 视图调用法 ✓：⭐ `commit(command)` ✓（⭐ `:326` ✓／⭐ `:380` ✓／⭐ `:1019` ✓／⭐ `:1032` ✓ …）
+**✅ 已修 ✓**：⭐ 两个按钮由 ⭐ `setArrangement(...)` ✗ ⇒ ⭐ **`commit(setterCommand(action, (_current, value) => value,`
+  ⭐ `arrangement, <改后的编曲>))`** ✓ ✓ —— ⭐ 即 ⭐ **整编曲作为值** ✓ ⇒ ⭐ `undo` 可回到改动前 ✓
+  ⭐ 读数 ✓：⭐ `tsc=0` ✓｜⭐ `lint=0` ✓｜⭐ `arrangementViewV2` **全过** ✓（⭐ 行为不变 ✓，⭐ 只是**可撤销**了 ✓）
+**⭐⭐ 教训 192 ✓**：⭐ **"⭐ 编辑必须走 `commit`"** ✓ —— ⭐ 直接 `setArrangement` ⚠️ **不进历史** ✗
+  ⭐ 做法 ✓：⭐ 改状态前先问"⭐ **这一步能不能撤销**" ✓；⭐ 能撤销的编辑 ⇒ ⭐ 命令层 ✓；⭐ 纯视图状态（⭐ 缩放／吸附 ✓）⇒ ⭐ 可直接设 ✓
+**⏳ 下一轮 ✓**：⭐ 第 2 档三操作**按五步**落 ✓（⭐ 模型 ✓ ＋ ⭐ 判据 ✓ ＋ ⭐ MCP 可达 ✓ ＋ ⭐ Web 可达 ✓ ＋ ⭐ 台账 ✓）
+  ⇒ ⭐ 界面前提是 ⭐ **矩形框选**（⭐ 现在只有单音选择 ✗）
+```
+
+### 六百三十一、⭐⭐ **两条集成判据的规则具名（新操作落地清单）**（2026-10-06 11:07 ✓）
+
+```
+**⭐ `mcpCoverage` ✓（`src/test/mcpCoverage.test.ts` ✓）**：
+  ⭐ 它扫**编曲数据层**的**改模型导出** ✓ ⇒ ⭐ 每个都必须在 ⭐ **`EXPOSED`**（⭐ 操作 ⇒ ⭐ 暴露它的工具 ✓）
+    ⭐ 或 ⭐ **`EXCLUDED`**（⭐ 带理由 ✓）里 ✓（⭐ `:72–77` ✓：⭐ "⭐ **add one, or add them to EXCLUDED with a reason**" ✓）
+  ⭐ **双向核对 ✓**：⭐ ① ⭐ 映射里**工具不存在** ✗ ⇒ ⭐ 红 ✓（⭐ `:85` ✓）② ⭐ 条目**已不再导出** ✗ ⇒ ⭐ 红 ✓（⭐ `:91–93` ✓）
+  ⇒ ⭐ 所以 ⭐ **纯选择助手**（⭐ `notesWithinRect` ✓，⭐ 不改模型 ✓）⭐ 可能**不被扫到** ✓；
+    ⭐ 而 ⭐ `duplicateNotesByDelta` ✓／⭐ `removeNotesWithinRect` ✓ ⭐ **改模型** ✓ ⇒ ⭐ **要条目** ✓
+**⭐ `webEntryReachability` ✓（`src/test/webEntryReachability.test.ts` ✓）**：
+  ⭐ 有 ⭐ **`UI_LEDGER: Record<string, Ruling>`** ✓（⭐ `:99` ✓）⇒ ⭐ **钉住"⭐ 今天恰好哪些操作 UI 够不到**" ✓（⭐ `:364` ✓）
+  ⭐ 且 ⭐ 它**扫产品源码** ✓（⭐ `:339` ✓ 断言 ⭐ 操作 > 20 ✓、⭐ 文件 > 100 ✓）＋ ⭐ **剥注释** ✓（⭐ `:350` 有用例防它坏 ✗）
+  ⇒ ⭐ 新操作必须 ⭐ **要么接上界面** ✓（⭐ 有真实的引用根 ✓）⭐ **要么进 `UI_LEDGER` 并给理由** ✓（⭐ 通配不算理由 ✗）
+**⭐⭐ 因此"新操作落地"的清单 ✓（⭐ 五步具名 ✓）**：
+  ⭐ ① ⭐ **模型层实现** ✓（⭐ `arrangementEdits` ✓）② ⭐ **判据**（⭐ 独立量 ✓）③ ⭐ **`mcpCoverage`**：⭐ `EXPOSED` 或 `EXCLUDED` ✓
+  ⭐ ④ ⭐ **`webEntryReachability`**：⭐ 接界面 或 `UI_LEDGER` ✓ ⑤ ⭐ **`docs/OPEN_WORK.md`** 记录 ✓
+  ⭐ 且 ⭐ 若走**界面** ⇒ ⭐ 记 ⭐ **`commit(...)`** ✓（⭐ 教训 192 ✓：⭐ 能撤销的编辑走命令层 ✓）
+**⏳ 下一轮 ✓**：⭐ 第 2 档三操作**照此五步**落 ✓ —— ⭐ 界面前提是 ⭐ **矩形框选**（⭐ 现只有单音选择 ✗）
+  ⭐ 可选路径 ✓：⭐ 先以 ⭐ `UI_LEDGER` ＋ ⭐ `EXCLUDED`（⭐ 带理由 ✓）**合规落地** ✓ ⇒ ⭐ 再补界面 ✓（⭐ 两步走 ✓，⭐ 每步可绿 ✓）
+```
+

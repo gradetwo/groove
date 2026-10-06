@@ -36,6 +36,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Redo2, Undo2 } from "lucide-react";
 import type { ArrangementV2, TrackKindV2, TrackRegion } from "../../types/arrangementV2";
 import { createArrangementFromTemplate, quantizeArrangementNoteLengths, rampArrangementNoteVelocity } from "../../data/arrangementEdits";
+import { setterCommand } from "../../data/arrangementHistory";
 import { GENRES_MAP } from "../../data/genres";
 import { arrangementSeededFromGenre } from "../../data/arrangementProjection";
 import {
@@ -838,7 +839,9 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           disabled={editableTrackId === undefined}
           onClick={() => {
             if (editableTrackId === undefined) return;
-            setArrangement((current) => rampArrangementNoteVelocity(current, editableTrackId));
+            // ⭐ **An edit a person can take back.** The ramp and the quantiser go through the same command path as every
+            // other change, with the whole arrangement as the value, so undo restores what was there before.
+            commit(setterCommand("Ramp velocity", (_current, value) => value, arrangement, rampArrangementNoteVelocity(arrangement, editableTrackId)));
           }}
         >
           Ramp velocity
@@ -852,7 +855,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             if (editableTrackId === undefined) return;
             // ⭐ A `1/n` note is `4/n` beats in four four; `off` or anything unreadable falls back to a sixteenth.
             const divisor = Number(snap.split("/")[1]) || 16;
-            setArrangement((current) => quantizeArrangementNoteLengths(current, editableTrackId, 4 / divisor));
+            commit(setterCommand("Quantise lengths", (_current, value) => value, arrangement, quantizeArrangementNoteLengths(arrangement, editableTrackId, 4 / divisor)));
           }}
         >
           Quantise lengths
