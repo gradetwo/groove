@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyFormBars, formBarsV2, formPartsV2 } from "../data/arrangementFormPlan";
+import { applyForm, applyFormBars, formBarsV2, formPartsV2 } from "../data/arrangementFormPlan";
 import { arrangementSeededFromGenre } from "../data/arrangementProjection";
 import { GENRES_MAP } from "../data/genres";
 
@@ -46,3 +46,25 @@ describe("an arrangement in a chosen form", () => {
     expect(JSON.stringify(loop.notesByTrack)).toBe(JSON.stringify(before.notesByTrack));
   });
 });
+
+describe("a whole form applied", () => {
+  it("⭐ grows the music across the build rather than only lengthening the frame", () => {
+    const before = arrangementSeededFromGenre("new", Object.values(GENRES_MAP)[0]!);
+    const trackId = before.tracks[0]!.id;
+    const notes = (a: typeof before) => a.notesByTrack?.[trackId] ?? [];
+    const club = applyForm(before, "club");
+    expect(club.bars).toBe(40);
+    // ⭐ Every note in the intro's span (bars 0–8) is quieter, and none of them is silent.
+    const intro = (a: typeof before) => notes(a).filter((note) => note.startBeats < 32);
+    expect(intro(club).length).toBeGreaterThan(0);
+    expect(Math.max(...intro(club).map((note) => note.velocity))).toBeLessThan(
+      Math.max(...intro(before).map((note) => note.velocity))
+    );
+    expect(Math.min(...intro(club).map((note) => note.velocity))).toBeGreaterThan(0);
+    // ⭐ The form moves no note: the track still holds exactly what it held.
+    expect(notes(club).length).toBe(notes(before).length);
+    // ⭐ And the identity form leaves the music exactly as it was.
+    expect(JSON.stringify(applyForm(before, "loop").notesByTrack)).toBe(JSON.stringify(before.notesByTrack));
+  });
+});
+

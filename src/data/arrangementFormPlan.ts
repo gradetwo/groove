@@ -1,5 +1,7 @@
 import { ARRANGEMENT_FORMS, type ArrangementFormId } from "./arrangementForm";
 import type { ArrangementV2 } from "../types/arrangementV2";
+import { rampVelocityInRange } from "./arrangementEdits";
+import { beatsPerBar } from "./noteEvents";
 
 /**
  * ⭐ **What an arrangement form means in the arrangement layer.**
@@ -40,3 +42,32 @@ export function formPartsV2(form: ArrangementFormId): FormPart[] {
 export function applyFormBars(arrangement: ArrangementV2, form: ArrangementFormId): ArrangementV2 {
   return { ...arrangement, bars: formBarsV2(form) };
 }
+
+/**
+ * ⭐ **A whole form, applied: its frame and its ramps.**
+ *
+ * A form is not only how long the arrangement is — it says where the music grows, and a build that changed the length alone would
+ * be a build in name. Each step's ramp is applied across that step's bars on every track, because a build lifts the arrangement
+ * rather than one lane of it. The ramp multiplies, so the composer's dynamics survive it.
+ *
+ * ⚠️ The bars-to-beats step uses `beatsPerBar()`, which is four: an arrangement that states its own time signature is the next
+ * refinement, and until then a movement in three would ramp over the wrong span rather than over none.
+ */
+export function applyForm(arrangement: ArrangementV2, form: ArrangementFormId): ArrangementV2 {
+  const beatsInBar = beatsPerBar();
+  let at = 0;
+  let out = applyFormBars(arrangement, form);
+  for (const step of ARRANGEMENT_FORMS[form].steps) {
+    const ramp = step.velocityRamp;
+    if (ramp !== undefined) {
+      const fromBeats = at * beatsInBar;
+      const toBeats = (at + step.bars) * beatsInBar;
+      for (const track of out.tracks) {
+        out = rampVelocityInRange(out, track.id, fromBeats, toBeats, ramp[0], ramp[1]);
+      }
+    }
+    at += step.bars;
+  }
+  return out;
+}
+
