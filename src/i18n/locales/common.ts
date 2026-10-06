@@ -161,6 +161,7 @@ export const commonMessages = {
   arrangement_tracks_label: { en: "Arrangement tracks", zh: "编排轨道" },
   arrangement_lanes_label: { en: "Arrangement lanes", zh: "编排通道" },
   lanes_label: { en: "Lanes", zh: "通道" },
+  lanes_mute: { en: "Mute", zh: "静音" },
   arrangement_header_column: { en: "Track headers", zh: "轨道头" },
   track_header_label: { en: "{name} track header", zh: "{name} 轨道头" },
   track_volume_label: { en: "{name} volume", zh: "{name} 音量" },

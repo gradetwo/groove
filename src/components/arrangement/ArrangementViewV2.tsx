@@ -35,7 +35,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Redo2, Undo2 } from "lucide-react";
 import type { ArrangementV2, TrackKindV2, TrackRegion } from "../../types/arrangementV2";
-import { createArrangementFromTemplate, quantizeArrangementNoteLengths, rampArrangementNoteVelocity, legatoNotesInRect, arpeggiateNotesInRect, stampChordInRect } from "../../data/arrangementEdits";
+import { createArrangementFromTemplate, quantizeArrangementNoteLengths, rampArrangementNoteVelocity, legatoNotesInRect, arpeggiateNotesInRect, stampChordInRect, setTrackFlag } from "../../data/arrangementEdits";
 import { setterCommand } from "../../data/arrangementHistory";
 import { GENRES_MAP } from "../../data/genres";
 import { arrangementSeededFromGenre } from "../../data/arrangementProjection";
@@ -1522,6 +1522,14 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
                  */
                 {...(snapOn ? { snapBars: SNAP_BARS[snap] } : {})}
                 onRegionChange={onRegionChange}
+                /**
+                 * ⭐ **The track's own mute, set through the same door as every other edit.** `TrackV2.muted` is already read
+                 * by `playArrangementV2`, so this adds a control rather than a behaviour: the flag, the edit and the undo
+                 * entry all come from code that was already here.
+                 */
+                onSetTrackFlag={(trackId, flag, value) =>
+                  commit(setterCommand(flag === "muted" ? "Mute" : "Solo", (_current, v) => v, arrangement, setTrackFlag(arrangement, trackId, flag, value)))
+                }
               />
               {/**
                * The playhead: the second of the two indicators. A line over the lanes, positioned in bar space.

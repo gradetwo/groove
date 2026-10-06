@@ -55,6 +55,12 @@ import type { ArrangementV2, TrackRegion } from "../../types/arrangementV2";
 const REGION_RESIZE_HANDLE_WIDTH = 24;
 
 export interface ArrangementLaneV2Props {
+  /**
+   * ⭐ **The track flags, set through the caller.** Absent means the lane reports and offers no control, the same rule every
+   * optional callback here follows. `TrackV2.muted` is already honoured by `playArrangementV2`, so on this surface the control
+   * was the only thing missing.
+   */
+  onSetTrackFlag?: (trackId: string, flag: "muted" | "soloed", value: boolean) => void;
   arrangement: ArrangementV2;
   /** The zoom, in pixels per bar. Shared with the ruler. */
   pixelsPerBar: number;
@@ -89,10 +95,19 @@ function Region({
   resizeLabel,
   emptyLabel,
   isCurrent,
+  muted,
+  muteLabel,
+  onToggleMute,
   onSelect,
   onRange,
 }: {
   region: ArrangementRegion;
+  /** ⭐ Whether the arrangement's own `muted` flag is set for this track; the control mirrors it, never invents it. */
+  muted?: boolean;
+  /** ⭐ Flip it. Absent means the lane reports and offers no control, like every optional callback in this view. */
+  onToggleMute?: () => void;
+  /** ⭐ The control's own word: `Region` takes its labels as props, which is why it does not reach for the language itself. */
+  muteLabel?: string;
   pixelsPerBar: number;
   arrangementBars: number;
   snapBars: number | undefined;
@@ -185,6 +200,17 @@ function Region({
 
   return (
     <div className="flex items-center px-2" style={{ height: "var(--arr-track-h)" }}>
+      {onToggleMute !== undefined && (
+        <button
+          type="button"
+          data-testid={`arrangement-mute-${region.trackId}`}
+          aria-pressed={muted === true}
+          onClick={onToggleMute}
+          className="mt-0.5 self-start font-mono text-[10px] uppercase tracking-widest text-text-sub hover:text-accent"
+        >
+          {muteLabel}
+        </button>
+      )}
       <button
         type="button"
         data-testid={`arrangement-region-${region.trackId}`}
@@ -273,7 +299,7 @@ function Region({
   );
 }
 
-export function ArrangementLaneV2({ arrangement, pixelsPerBar, selectedTrackId, onSelectTrack, snapBars, onRegionChange }: ArrangementLaneV2Props) {
+export function ArrangementLaneV2({ arrangement, pixelsPerBar, selectedTrackId, onSelectTrack, snapBars, onRegionChange, onSetTrackFlag }: ArrangementLaneV2Props) {
   const { t } = useLanguage();
   // Folded folders hide their children's lanes, the same display state `TrackListV2` reads — folding must never
   // change what is heard, and a hidden lane is not a muted track.
@@ -305,6 +331,18 @@ export function ArrangementLaneV2({ arrangement, pixelsPerBar, selectedTrackId, 
             resizeLabel={t("region_resize_label", { name })}
             emptyLabel={t("region_empty")}
             isCurrent={region.trackId === selectedTrackId}
+            {...(onSetTrackFlag === undefined
+              ? {}
+              : {
+                  muted: arrangement.tracks.find((track) => track.id === region.trackId)?.muted === true,
+                  muteLabel: t("lanes_mute"),
+                  onToggleMute: () =>
+                    onSetTrackFlag(
+                      region.trackId,
+                      "muted",
+                      !(arrangement.tracks.find((track) => track.id === region.trackId)?.muted === true)
+                    ),
+                })}
             {...(onSelectTrack ? { onSelect: () => onSelectTrack(region.trackId) } : {})}
             {...(onRegionChange ? { onRange: (before: TrackRegion, after: TrackRegion) => onRegionChange(region.trackId, before, after) } : {})}
           />
