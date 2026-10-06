@@ -16411,3 +16411,28 @@ describe("the grid's editing actions", () => {
   ⭐ ③ ⭐ 跑全套 ⇒ ⭐ 推 ✓
 ```
 
+### 六百二十五、⭐⭐ **根因：`projectSongToV2` 从不写 `notesByTrack`（两个调用者都受影响）**（2026-10-06 10:15 ✓）
+
+```
+**⭐ 根因原文 ✓（⭐ `src/data/arrangementProjection.ts:82` ✓ 附近 ✓）**：
+  ⭐ `return { songId: song.id, tracks, sourceSlots };` ✗ ⇒ ⚠️ ⭐ **没有 `notesByTrack`** ✗ ✓
+  ⭐ 它只做 ✓：⭐ 遍历 ⭐ `song.clips` ✓ ⇒ ⭐ 建 ⭐ `tracks` ✓（⭐ `id` ✓／⭐ `kind` ✓／⭐ `name` ✓／⭐ `sample` ✓／⭐ `fromTrackId` ✓／
+    `fromLaneId` ✓／⭐ `instrument` ✓）⇒ ⭐ 然后**直接返回** ✗
+  ⇒ ⭐ 即 ⭐ **投影是"⭐ 只有轨"的** ✗（⭐ 尽管它的文件头写着"⭐ **the step that makes 'lossless' checkable**" ✓）
+**⭐⭐ 影响面 ✓（⭐ 两个调用者 ✓）**：
+  ⭐ ① ⭐ `src/data/arrangementImport.ts` ✓ ⇒ ⚠️ ⭐ **导入路径同样得到"⭐ 有轨无音符"** ✗
+  ⭐ ② ⭐ `src/data/arrangementProjection.ts` ✓（⭐ 即 ⭐ `arrangementSeededFromGenre` ✓）⇒ ⭐ **流派路径无音符** ✗
+**⭐⭐ 产品的真实后果 ✓（⭐ 必须直说 ✓）**：⭐ **"⭐ 按流派新建"⭐ 现在给出的是**空编曲** ✗**
+  ⇒ ⚠️ ⭐ 而我在 §270 说"⭐ 流派能力已落地**"⭐ 时，⭐ 判据**自己证明自己** ✗（⭐ 教训 191 ✓）⇒ ⭐ **结论只对了一半** ✓
+  ⇒ ⭐ 也说明 ⭐ **导入**（⭐ `.groove` / Logic / MIDI 等经该投影的路径 ✓）⭐ 可能同样丢音符 ✗ ⇒ ⭐ 待逐个量 ✓
+**⭐⭐ 修法 ✓（⭐ 已定方向 ✓）**：
+  ⭐ ① ⭐ **步 ⇒ 音符** 的映射实现在 **v2 层** ✓（⭐ `arrangementEdits` ✓ ⇒ ⚠️ **不引 v1 的 `rollModel`** ✗，
+    ⭐ 因为 ⭐ `rollModel` 会随 ⑦-C 退场 ✗）
+    ⭐ 现成参照 ✓：⭐ `rollModel.ts:82` ⭐ `notesFromTrack` ✓（⭐ 语义可照抄 ✓）｜⭐ `starterNotesFor` ✓（⭐ v2 侧已有"⭐ 起始音符**" ✓）
+  ⭐ ② ⭐ `projectSongToV2` ✓ ⇒ ⭐ 为每轨写 ⭐ `notesByTrack[key]` ✓（⭐ 步 ⇒ ⭐ 拍 ✓：⭐ `startBeats` ✓／⭐ `lengthBeats` ✓／⭐ `pitch` ✓／⭐ `velocity` ✓）
+  ⭐ ③ ⭐ **一条独立判据 ✓**（⭐ 不是"⭐ 自己证明自己**" ✗）：⭐ "⭐ **投影出的编曲音符数 > 0** ✓，⭐ 且与该轨**步数**一致 ✓"
+    ＋ ⭐ "⭐ 按流派新建 ⇒ ⭐ 屏上出现音符 ✓"
+  ⭐ ④ ⭐ 跑全套 ⇒ ⭐ 推 ✓
+**⏳ 下一步 ✓**：⭐ 照上面四步修 ✓（⭐ 先量 ⭐ `notesFromTrack` 的语义 ✓ 以便照抄 ✓）
+```
+
