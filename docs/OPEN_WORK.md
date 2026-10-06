@@ -16308,3 +16308,36 @@ describe("the grid's editing actions", () => {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+### 六百二十一、⭐⭐ **第 1 档落地清单（锚点全在手 ✓）＋ 教训 190**（2026-10-06 09:47 ✓）
+
+```
+**⚠️ 教训 190 ✓**：⭐ **判据的家必须是"⭐ 被测之物真的在屏上**"⭐ 的那个文件 ✗
+  ⭐ `arrangementGrid.test.tsx` ✓ ⭐ **从不放编曲上屏** ✗（⭐ `initialArrangement` **0 次** ✓）
+    ⭐ 它自己的注释 ✓：⭐ "⭐ **nothing in this file plays anything. … this file is about what is on screen before anything
+    sounds**" ✓ ⇒ ⭐ 它只断言**布局** ✓
+  ⇒ ⭐ 因此**能力判据搬去** ⭐ `src/test/arrangementViewV2.test.tsx` ✓ ✓（⭐ 它有 ⭐ `initialArrangement` ✓ 与 ⭐ 已验的流派路径 ✓）
+  ⭐ **入口判据可留可搬** ✓ ⇒ ⭐ 为一致性 ⭐ **两例同放一处** ✓ ✓
+**⭐⭐ 实现锚点 ✓（⭐ 全已量 ✓）**：
+  ⭐ ① ⭐ **工具栏插入点** ✓：⭐ `ArrangementViewV2.tsx:818–824` ✓ ——
+    ⭐ `data-testid="arrangement-toolbar"` ✓｜⭐ `role="toolbar"` ✓｜⭐ `aria-label={t("arrangement_toolbar_label")}` ✓｜
+    ⭐ `className="flex flex-wrap items-center gap-1"` ✓｜⭐ `style={{ minHeight: "var(--arr-toolbar-h)" }}` ✓ ⇒ ⭐ 其后 ⭐ `>` ✓
+  ⭐ ② ⭐ **吸附状态** ✓：⭐ `:283` ⭐ `const [snap, setSnap] = useState<SnapValue>(DEFAULT_SNAP);` ✓ ⇒ ⭐ 量化可用它 ✓
+  ⭐ ③ ⭐ **编辑惯例** ✓：⭐ `arrangementEdits` ✓ 的操作签名是 ⭐ `(arrangement, trackId, …) => ArrangementV2` ✓
+    （⭐ `addTrackNote` ✓／⭐ `addTrackNotes` ✓／⭐ `moveTrackNote` ✓／⭐ `setTrackNoteLength` ✓）
+**⭐⭐ 落地清单 ✓（⭐ 下一轮一次落净 ✓）**：
+  ⭐ **A. `arrangementEdits` 加两操作 ✓**（⭐ 语义照 §618 ✓）：
+    ⭐ `rampArrangementNoteVelocity(arrangement, trackId, startVel = 40, endVel = 120)` ✓
+      ⭐ 目标＝该轨**音符的不同起点**（⭐ 排序 ✓）⇒ ⭐ 单点取中点 ✓ ⇒ ⭐ 多点线性 ✓ ⇒ ⭐ `clamp(1..127, round(…))` ✓
+    ⭐ `quantizeArrangementNoteLengths(arrangement, trackId, snapBeats)` ✓
+      ⭐ 只改**长度** ✓ ⇒ ⭐ 取 `snapBeats` 的整数倍 ✓ ⇒ ⭐ 下限夹取（⭐ `> 0` ✓）⇒ ⭐ **起点不动** ✓
+  ⭐ **B. 视图加两按钮 ✓**（⭐ 插在工具栏 ⭐ `:824` 的 `>` 之后 ✓）：
+    ⭐ `Ramp velocity` ✓（⭐ `data-testid="arrangement-ramp-velocity"` ✓）⇒ ⭐ 调 A 的第一个 ✓
+    ⭐ `Quantise lengths` ✓（⭐ `data-testid="arrangement-quantize-lengths"` ✓）⇒ ⭐ 用当前 ⭐ `snap` ✓ 换算成**拍** ✓ 后调 A 的第二个 ✓
+    ⭐ 两者都 ⭐ **作用于当前选中的轨** ✓（⭐ 若无选中轨 ⇒ ⭐ 禁用 ✓，⭐ 与既有 Record 按钮同法 ✓ —— §619 已见"⭐ disables Record until a
+      track is selected**" ✓）
+  ⭐ **C. 两条判据放回 ✓ 但改放** ⭐ `arrangementViewV2.test.tsx` ✓：⭐ 用 ⭐ `initialArrangement` ✓ 播种（⭐ 由流派路径 ✓，
+    有真实音符 ✓）⇒ ⭐ 点两按钮 ⇒ ⭐ 断言力度线性（⭐ 40／120 ✓）与长度对齐且起点不变 ✓
+  ⭐ **D. 跑全套 ✓ ⇒ ⭐ 绿则推 ✓**
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
