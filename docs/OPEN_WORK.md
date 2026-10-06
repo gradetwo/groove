@@ -16858,3 +16858,23 @@ describe("the grid's editing actions", () => {
   ⇒ ⭐ **连带改动已明确 ✓**：⭐ 清单删条目 ✓ ＋ ⭐ 这两条判据同步（⭐ 接线判据的期望值 ✓／⭐ 地址钉条目 ✓）
   ⇒ ⭐ 判据会告诉我还差什么 ✓（⭐ 先改清单 ⇒ ⭐ 跑判据 ⇒ ⭐ 红 ⇒ ⭐ 补 ✓ ⇒ ⭐ 绿 ⇒ ⭐ `--apply` ✓）
 
+### 六百四十六、⚠️ **镜像删除的闸门生效（字节未删 ✓）＋ 三处期望要同步**（2026-10-06 12:49 ✓）
+
+```
+**✅ 安全属性 ✓**：⭐ 后台作业按"⭐ **绿则删、红则停**"执行 ✓ ⇒ ⭐ 全套**红** ✗ ⇒ ⭐ **674 MB 一个字节都没删** ✓ ✓
+  ⭐ 且 ⭐ **清单**改动**未被提交** ✓ ⇒ ⭐ 已**回退** ✓（⭐ 避免把红推给 CI ✓）
+**⭐⭐ 三处红 ✓（⭐ 即"⭐ 清单条目数"是被判据钉住的 ✓）**：
+  ⭐ ① ⭐ `src/test/removedSampleLibraries.test.ts` ✗：⭐ "⭐ **leaves the manifest at 33 entries** and 323 program-level…" ✓
+    ⇒ ⭐ 该判据**钉住** ⭐ 条目数 **33** ✓（⭐ 与 ⭐ 程序级数量 323 ✓）⇒ ⭐ 删一个库 ⇒ ⭐ 要改成 **32** ＋ ⭐ 对应程序数 ✓
+  ⭐ ② ⭐ `src/test/sampleSourceAddress.test.ts` ✗：⭐ "⭐ **holds exactly the 33 libraries the manifest ships**" ✓ ⇒ ⭐ 同类计数 ✓
+  ⭐ ③ ⭐ `src/test/catalogueRecordingPicker.test.tsx` ✗：⭐ "⭐ **the catalogue's own list — every program asset the man…**" ✓
+    ⇒ ⭐ **目录／录音选择器从清单取列表** ✓ ⇒ ⭐ 该库的程序消失 ⇒ ⭐ 期望要改 ✓
+**⚠️ 教训 197 ✓**：⭐ **"⭐ 相关判据跑过**"⭐ **不等于"⭐ 无连带**" ✗ ⇒ ⭐ 删除类改动**必须跑全套** ✓（⭐ 与教训 183 同一件事 ✓）
+  ⭐ 做法 ✓：⭐ ① ⭐ 先用**窄范围**快速迭代 ✓ ② ⭐ **下线前**必须跑**全套** ✓ ③ ⭐ 红 ⇒ ⭐ **改期望 ＋ 重跑** ✓ ④ ⭐ 绿 ⇒ ⭐ 才做**不可逆**动作 ✓
+**⭐⭐ 下一轮（⭐ 一次落 ✓）**：⭐ ① ⭐ 清单删条目 ✓（⭐ 脚本已备 ✓，⭐ 花括号配对 ✓，⭐ 33 ⇒ 32 ✓）
+  ⭐ ② ⭐ 同步三处期望 ✓（⭐ `removedSampleLibraries` 的 33 ⇒ 32 与程序数 ✓；⭐ `sampleSourceAddress` 的 33 ⇒ 32 ✓；
+    ⭐ `catalogueRecordingPicker` 的期望 ✓）③ ⭐ 跑**全套** ⇒ ⭐ 绿 ✓ ④ ⭐ `remove_samples.mjs … --apply` ✓ ⇒ ⭐ 自读 0 ✓
+  ⭐ ⑤ ⭐ `check_removed_samples` ✓／⭐ `check:mirror` ✓ ⑥ ⭐ 同树提交 ＋ ⭐ `git show --stat` 核对 ✓ ⑦ ⭐ 推 ✓
+**⏳ 另 ✓**：⭐ 界面（⭐ B ✓）在镜像收口后立即开始 ✓（⭐ 落点见 §645 与上轮测量：⭐ `drag.kind` 加 `marquee` ✓）
+```
+
