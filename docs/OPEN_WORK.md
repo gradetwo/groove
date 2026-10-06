@@ -16950,3 +16950,12 @@ describe("the grid's editing actions", () => {
     ⇒ ⭐ 改 ⭐ `isSelected(note.pitch, note.startBeats)` ✓
   ⭐ ⑤ ⭐ **待读一行** ✓：⭐ 音符块里的 ⭐ `setSelected({ pitch, startBeats })` ✓（⭐ 约 `:326–340` ✓）⇒ ⭐ 同样改为"⭐ 列表内选中／取消**" ✓
 
+**⭐ 另两处锚点 ✓（2026-10-06 13:15 ✓）**：
+  ⭐ ⑤ ⭐ `:328` ✓（⭐ 音符 `onPointerDown` 内 ✓）：⭐ `setSelected({ pitch, startBeats: note.startBeats });`
+    ⇒ ⭐ 改 ⭐ `setSelected([{ pitch, startBeats: note.startBeats }]);` ✓
+  ⭐ ⑥ ⭐ `:344` ✓（⭐ 音符 `className` 内 ✓）：⭐ `selected?.pitch === note.pitch && selected.startBeats === note.startBeats ?`
+    ⇒ ⭐ 改 ⭐ `isSelected(note.pitch, note.startBeats) ?` ✓
+  ⭐ 附 ✓：⭐ 音符块 ⭐ `:335–341` **已有** ⭐ `samePlace ⇒ onRemoveNote` ✓／⭐ 否则 `commitMove` ✓
+    ⇒ ⭐ **拖动行为不用碰** ✓（⭐ 这是 B 之所以"最小"的关键 ✓）
+  ⇒ ⭐ **B 现在全部是"誊写"** ✓（⭐ 六处锚点齐 ✓，⭐ 文件 ⭐ 387 行 ✓）
+
