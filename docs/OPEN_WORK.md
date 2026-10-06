@@ -16787,3 +16787,25 @@ describe("the grid's editing actions", () => {
 **⏳ 现状 ✓**：⭐ 界面工作**按住等你裁定** ✗ ⇒ ⭐ 其间推进**不依赖该裁定**的线（⭐ MCP 侧迁移 ②④⑤⑦ ✓）
 ```
 
+### 六百四十三、✅✅ **两项核实：迁移 ② 已完成；调试采集（MCP 侧）早已落地且有判据**（2026-10-06 12:35 ✓）
+
+```
+**✅ 结论一 ✓：迁移 ② 已完成 ✓（⭐ `registryFiles` ✓）**：
+  ⭐ `mcp/registryFiles.ts` ✓（⭐ **140 行** ✓）⭐ v1 词汇命中 ⭐ **0** ✓
+    （⭐ 查 ⭐ `songId`／⭐ `patternId`／⭐ `clipId`／⭐ `slotId`／⭐ `sectionId` ✓）
+  ⭐ 三件工具 ✓：⭐ `export_groove` ✓ ⭐ **接 `arrangementId`** ✓（⭐ 未知 id ⇒ ⭐ 失败回包 ✓）
+    ｜⭐ `import_groove` ✓ ⭐ 回包 ⭐ `{ arrangementId, tracks, bars }` ✓ ⇒ ⭐ **建的是编曲** ✓
+    ｜⭐ `collect_debug_bundle` ✓（⭐ 收可选 `arrangementId` ✓；⭐ 理由："⭐ **the archive would not carry the work**" ✓）
+  ⇒ ⭐ **迁移 ② 结案 ✓** ✓
+**✅ 结论二 ✓：调试信息采集（⭐ MCP 侧）早已落地 ✓ 且有判据 ✓**：
+  ⭐ `collect_debug_bundle` ⭐ **18 处引用** ✓｜⭐ 判据文件 ⭐ **`src/test/mcpDebugBundle.test.ts`** ✓｜⭐ `check:mcp=0` ✓
+  ⇒ ⚠️ ⭐ 即 ⭐ **业主 2026-10-05 21:41 那条需求，MCP 半边已完成** ✓ ⇒ ⭐ **待做清单要更新** ✓ ✓
+**⭐⭐ 因此剩下的缺口 ✓**：⭐ ① ⭐ 调试采集的 **Web 侧** ✗（⭐ 界面入口 ⇒ ⭐ 采集 ⭐ 版本／UA／编曲摘要／最近错误／关键耗时／
+  音频上下文状态 ✓ ⇒ ⭐ **打成一个文件下载** ✓，⭐ 与 MCP 包同名规 ✓）
+  ⭐ ② ⭐ 迁移 ④ `registryAnalysis` ✓｜⭐ ③ ⭐ 迁移 ⑤ `registrySong` ＋ `registryPattern` ✓｜⭐ ④ ⭐ 迁移 ⑦（⭐ v1 数据模型 ✓）
+  ⭐ ⑤ ⭐ 执行顺序 ②③④⑤⑥ ✓（⭐ region 音域 ✓／⭐ `add_arrangement_notes` 音域校验 ✓／⭐ `normalize_loudness` ✓／
+    ⭐ "同一 handler 两张脸"扫描 ✓／⭐ 分析进度上报 ✓）
+  ⭐ ⑥ ⭐ 界面入口（⭐ 框选 ＋ 按钮 ✓）⇒ ⭐ **按住等你裁定** ✗
+**⏳ 下一轮 ✓**：⭐ 量 **Web 侧调试采集** ✗ 的现状（⭐ 是否已有入口 ✓ ⇒ ⭐ 无 ⇒ ⭐ 落它 ✓）⇒ ⭐ 或 ⭐ 推进迁移 ④／⑤ ✓
+```
+
