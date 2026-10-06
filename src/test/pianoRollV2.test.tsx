@@ -147,3 +147,53 @@ describe("the roll and the arrangement's length", () => {
     expect(screen.queryByTestId("roll-add-bar")).toBeNull();
   });
 });
+
+/**
+ * ⭐ **The rectangle, and the selection it leaves behind.**
+ *
+ * The owner chose the smallest usable marquee: a drag across cells selects what it spanned, one cell still writes, and `Delete`
+ * removes the whole selection through the same removal the panel commits.
+ */
+describe("a drag across the roll", () => {
+  const cell = (pitch: number, step: number) => screen.getByTestId(`roll-cell-${pitch}-${step}`);
+  const markOf = (pitch: number, step: number) => screen.getByTestId(`roll-note-${pitch}-${step}`).dataset.selected;
+
+  it("⭐ selects what the rectangle covered, and leaves what it did not alone", () => {
+    renderRoll({
+      notes: [
+        { pitch: 60, startBeats: 0, lengthBeats: 0.25, velocity: 100 },
+        { pitch: 62, startBeats: STEP_BEATS, lengthBeats: 0.25, velocity: 100 },
+        { pitch: 72, startBeats: 0, lengthBeats: 0.25, velocity: 100 },
+      ],
+    });
+    // ⭐ From the first note's cell to the second one's: steps 0..1 and pitches 60..62.
+    fireEvent.pointerDown(cell(60, 0));
+    fireEvent.pointerEnter(cell(62, 1));
+    fireEvent.pointerUp(cell(62, 1));
+
+    expect(markOf(60, 0)).toBe("true");
+    expect(markOf(62, 1)).toBe("true");
+    // ⭐ Pitch 72 sits above the rectangle, so the drag must not have reached it.
+    expect(markOf(72, 0)).toBe("false");
+  });
+
+  it("⭐ removes every selected note, and only those, when Delete is pressed", () => {
+    const { onRemoveNote } = renderRoll({
+      notes: [
+        { pitch: 60, startBeats: 0, lengthBeats: 0.25, velocity: 100 },
+        { pitch: 62, startBeats: STEP_BEATS, lengthBeats: 0.25, velocity: 100 },
+        { pitch: 72, startBeats: 0, lengthBeats: 0.25, velocity: 100 },
+      ],
+    });
+    fireEvent.pointerDown(cell(60, 0));
+    fireEvent.pointerEnter(cell(62, 1));
+    fireEvent.pointerUp(cell(62, 1));
+    fireEvent.keyDown(cell(60, 0), { key: "Delete" });
+
+    // ⭐ The panel is told about each note inside the rectangle. It commits one command per note today, so the words
+    // "one press, one undo" are not yet true — see the reachability ledger's entry for the region helper.
+    expect(onRemoveNote).toHaveBeenCalledTimes(2);
+    const removed = onRemoveNote.mock.calls.map((call) => call[0].pitch).sort((a, b) => a - b);
+    expect(removed).toEqual([60, 62]);
+  });
+});

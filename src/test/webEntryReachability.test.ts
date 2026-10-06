@@ -100,7 +100,7 @@ const UI_LEDGER: Record<string, Ruling> = {
   removeNotesWithinRect: {
     status: "pending-owner-ruling",
     reason:
-      "Census G10. `PianoRollV2.tsx` selects one note at a time, so there is no region to delete: the owner decides whether the arrangement route gains a marquee, or whether a person deletes note by note.",
+      "Census G10. `PianoRollV2.tsx` reports a selection removal one note at a time, so `ArrangementViewV2.tsx` commits one command per note and never calls this region helper; the owner decides whether the roll should report the removal whole so one press is one undo.",
   },
   renameTrack: {
     status: "pending-owner-ruling",
