@@ -16341,3 +16341,34 @@ describe("the grid's editing actions", () => {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+### 六百二十二、⭐ **第 1 档实现 A＋B 已落（编译与 lint 通过 ✓）；C 留下轮**（2026-10-06 09:49 ✓）
+
+```
+**✅ A ✓（`src/data/arrangementEdits.ts` ✓，两个新操作 ✓）**：
+  ⭐ `rampArrangementNoteVelocity(arrangement, trackId, startVel = 40, endVel = 120)` ✓
+    ⭐ 语义照 §618 ✓：⭐ 按**起点排序** ✓ ⇒ ⭐ 单个取中点 ✓ ⇒ ⭐ 多个线性 ✓ ⇒ ⭐ `clamp(1..127)` ✓
+  ⭐ `quantizeArrangementNoteLengths(arrangement, trackId, snapBeats)` ✓
+    ⭐ 只改**长度** ✓ ⇒ ⭐ 取 `snapBeats` 整数倍 ✓ ⇒ ⭐ 下限 `snapBeats` ✓ ⇒ ⭐ **起点不动** ✓｜⭐ `snapBeats <= 0` ⇒ ⭐ 原样返回 ✓
+**✅ B ✓（`ArrangementViewV2.tsx` ✓，工具栏两个按钮 ✓）**：
+  ⭐ `Ramp velocity` ✓（⭐ `data-testid="arrangement-ramp-velocity"` ✓）｜⭐ `Quantise lengths` ✓（⭐ `…quantize-lengths` ✓）
+  ⭐ 作用轨 ✓：⭐ 选中的轨 ✓，⭐ 否则**第一条轨** ✓ ⇒ ⭐ 无轨 ⇒ ⭐ 禁用 ✓
+  ⭐ 吸附换算 ✓：⭐ `1/n` ⇒ ⭐ `4/n` 拍 ✓（⭐ `off` 或不可读 ⇒ ⭐ 回退十六分 ✓）
+  ⭐ 读数 ✓：⭐ `tsc=0` ✓｜⭐ `lint=0` ✓
+**⭐⭐ C 的两处发现 ✓（⭐ 留下轮 ✓）**：
+  ⭐ ① ⭐ 我在判据文件里把 ⭐ `projectSongToV2` ⭐ **替换**成了新助手 ✗ ⇒ ⭐ 破坏了 §610 的流派判据 ✗（⭐ `TS2304` ✓）
+    ⇒ ⭐ **正解** ✓：⭐ **追加** import ✓，⭐ **不替换** ✓ ✓
+  ⭐ ② ⭐ 斜坡例 ⭐ `byStart.length` ⭐ 为 **0** ✗ ⇒ ⚠️ ⭐ 播种后**第一条轨可能不带音符** ✗
+    ⭐ （⭐ 或音符在**别的轨**上 ✓）⇒ ⭐ **正解** ✓：⭐ 斜坡按钮应作用于**带音符的轨** ✓，⭐ 或判据挑选**有音符的轨** ✓ ✓
+**⏳ 状态 ✓**：⭐ A＋B 待提交 ✓（⭐ 全套单测由后台作业跑 ✓，⭐ 绿则推 ✓）；⭐ C 下一轮 ✓
+```
+
+**⭐ 决策 ✓（2026-10-06 09:50 ✓）**：⭐ A（⭐ 两个操作 ✓）**一并回退** ✗ —— ⭐ 因为它**单独存在即无消费者** ✗
+  （⭐ 视图改动在回退中复原 ✗ ⇒ ⭐ 只留 A ⇒ ⭐ 可能触发 ⭐ `check:dead-exports` ✗）
+  ⇒ ⭐ 为不把"⭐ 半截实现**"推进去 ✓ ⇒ ⭐ **A＋B＋C 下一轮一次落** ✓ ✓
+  ⭐ 信息未失 ✓：⭐ 方案在本节 ✓，⭐ 代码形状在本轮对话与下轮清单中 ✓
+**⭐ 下一轮清单 ✓（⭐ 三个文件 ＋ 两处修正 ✓）**：
+  ⭐ ① ⭐ `src/data/arrangementEdits.ts` ✓：⭐ 加两个操作 ✓（⭐ 语义照 §618 ✓）
+  ⭐ ② ⭐ `src/components/arrangement/ArrangementViewV2.tsx` ✓：⭐ 工具栏加两按钮 ✓（⭐ 选中的轨 ✓，⭐ 否则**第一条带音符的轨** ✓）
+  ⭐ ③ ⭐ `src/test/arrangementViewV2.test.tsx` ✓：⭐ 两条判据 ✓ ＋ ⚠️ **追加** `arrangementSeededFromGenre` ⭐ **不替换** `projectSongToV2` ✓
+  ⭐ ④ ⭐ 跑全套 ⇒ ⭐ 绿则推 ✓
+
