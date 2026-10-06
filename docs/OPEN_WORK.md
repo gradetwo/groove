@@ -16989,3 +16989,16 @@ describe("the grid's editing actions", () => {
 **⭐ 之后 ✓**：⭐ **"复制选区"** ✓ ＋ ⭐ **连奏／琶音／和弦图章** 三按钮 ✓（⭐ 作用于**真实存在的选区** ✓）
 ```
 
+**⭐ B 余下两步的事实已备齐 ✓（2026-10-06 13:36 ✓）**：
+  ⭐ ① ⭐ **判据的家 ✓**：⭐ `src/test/pianoRollV2.test.tsx` ✓ —— ⭐ **已存在** ✓ 且**已在渲染网格** ✓
+    ⭐ 必需 props 仅 **三个** ✓：⭐ `notes` ✓／⭐ `onAddNote` ✓／⭐ `onRemoveNote` ✓（⭐ 其余皆可选 ✓）
+  ⭐ ② ⭐ **台账条目原文 ✓**（⭐ `src/test/webEntryReachability.test.ts` ✓）：
+    ⭐ `removeNotesWithinRect: {` ✓ ⭐ `status: "pending-owner-ruling",` ✓ ⭐ `reason: "Census G10. `PianoRollV2.tsx` selects one note at a time, so there is no region to delete: the owner de…"` ✓ ⭐ `},` ✓
+    ⚠️ ⭐ **该理由现已过时** ✗ —— ⭐ 网格**已能选一片** ✓ ⇒ ⭐ 按台账**自身的诚实规则** ⇒ ⭐ **应当撤下** ✓ ✓
+**⭐ 下一轮 ✓**：⭐ ① ⭐ 在 `pianoRollV2.test.tsx` 加**框选判据** ✓：
+  ⭐ `pointerdown`（格 A）⇒ ⭐ `pointerenter`（格 B）⇒ ⭐ `pointerup`（格 B）⇒ ⭐ 断言**跨度内 `data-selected="true"`** ✓
+    ＋ ⭐ **跨度外为 `"false"`** ✓ ⇒ ⭐ 按 `Delete` ⇒ ⭐ 断言 ⭐ **`onRemoveNote` 收到跨度内每一个** ✓ ＝ ⭐ **选中的都没了** ✓
+    ＋ ⭐ **跨度外的音符仍在屏上** ✓
+  ⭐ ② ⭐ **删掉 `UI_LEDGER` 那条整块** ✓（⭐ 四条理由行 ✓）⇒ ⭐ 跑该判据 ⇒ ⭐ 绿 ✓
+  ⭐ ③ ⭐ 全套 ⇒ ⭐ 推 ✓
+
