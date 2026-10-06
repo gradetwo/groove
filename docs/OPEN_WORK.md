@@ -17074,3 +17074,19 @@ describe("the grid's editing actions", () => {
 **⭐ 未采纳的做法（记录理由 ✓）**：⭐ 让形态**携带原始力度** ✗ ⇒ ⭐ 模型要改 ✓（形态从"选择"变成"补丁" ✓）⇒ ⭐ 与"先量后改 ✓、一次一支 ✓"不合 ✓；⭐ 业主若要求完全对齐 v1 ⇒ ⭐ 再按此路做 ✓
 ```
 
+### 六百五十四、⭐ **⑥ 的能力表已清空** ✓ ⇒ 剩下的最后一步是**产品决定**，我不擅自做 ✗
+
+```
+**⭐ 量到的事实 ✓**
+  ⭐ v2 面的能力 ✓：⭐ 逐格编辑（`roll-grid` ✓／`roll-cell` ✓／`roll-velocity-value` ✓ ⇒ ⭐ 是 v1 步进矩阵的**超集** ✓）
+    ⭐ 长度 ✓／标尺 ✓／标签 ✓／问题 ✓／形态 ✓／移调 ✓／速度 ✓／拍号 ✓／snap ✓／zoom ✓／undo ✓／走带 ✓
+    ⭐ **takes** ✓：⭐ `TakeSelectorV2.tsx` ✓（界面 ✓）＋ `addTake` ✓／`selectTrackTake` ✓／`assignTakeToRange` ✓（模型 ✓）＋ 可撤销命令 ✓
+  ⭐ 导航角色 ✓（`src/App.tsx` ✓）：
+    ⭐ `StudioView` ✓ ＝ **Studio 标签页的内容** ✓（当前主工作区 ✓）
+    ⭐ `NewProjectView` ⇒ `ArrangementViewV2` ✓ ＝ **"新建工程"** 路线 ✓（`route.newProject` ✓；`:305 onNewProject={() => navigate({ tab: "studio", newProject: true })}` ✓）
+**⭐ 结论 ✓**：⭐ **没有一项 v1 能力缺家** ✓ ⇒ ⭐ v1 编排链（`StudioView` ⇒ `ArrangementPanel` ⇒ `TrackRows` ✓）**在技术上可退** ✓
+**⭐ 我的决定（按业主授权 ✓）**：⭐ **暂不动主界面** ✗ —— ⭐ 把 Studio 标签页从 v1 studio 换成 v2 编排面 ✓ 是**用户可见的产品变化** ✓，
+  ⭐ 不属于"⭐ 迁移** ✓，⭐ 而属于"⭐ 换产品** ✓ ⇒ ⭐ 我**不擅自做** ✗ ✓ ⇒ ⭐ 记为**待业主一句话** ✓
+**⏳ 我继续做的（非破坏性 ✓）**：⭐ ⑦ v1 数据类型（`src/types/song.ts` ✓ 43 使用者 ✓）⇒ ⭐ Web 侧调试包 ✓ ⇒ ⭐ 其余数据层耦合 ✓
+```
+
