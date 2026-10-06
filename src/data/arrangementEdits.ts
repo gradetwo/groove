@@ -896,3 +896,30 @@ export function stampChordInRect(
   return { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [trackId]: [...kept, ...stamped] } };
 }
 
+/**
+ * ⭐ **A ramp that scales what is there, and only inside a range.**
+ *
+ * The arrangement forms ask a section to grow from one factor to another — `[0.3, 0.7]` — and a factor is not a velocity: it
+ * multiplies the notes the composer wrote, so the shape of their dynamics survives the ramp. Notes outside the range are returned
+ * untouched, and a factor of exactly one leaves the range as it found it, which is what makes the operation reversible.
+ */
+export function rampVelocityInRange(
+  arrangement: ArrangementV2,
+  trackId: string,
+  fromBeats: number,
+  toBeats: number,
+  fromFactor: number,
+  toFactor: number
+): ArrangementV2 {
+  const notes = arrangement.notesByTrack?.[trackId];
+  if (notes === undefined || notes.length === 0) return arrangement;
+  const span = toBeats - fromBeats;
+  const landed = notes.map((note) => {
+    if (note.startBeats < fromBeats || note.startBeats >= toBeats) return note;
+    const at = span > 0 ? (note.startBeats - fromBeats) / span : 0;
+    const factor = fromFactor + at * (toFactor - fromFactor);
+    return { ...note, velocity: Math.max(1, Math.min(127, Math.round(note.velocity * factor))) };
+  });
+  return { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [trackId]: landed } };
+}
+
