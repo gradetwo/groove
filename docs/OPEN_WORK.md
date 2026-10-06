@@ -15868,3 +15868,35 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+### 六百零五、✅ **铁律第一步完成：流派入口的判据已立并证明能红**（2026-10-06 08:40 ✓）
+
+```
+**⭐ 判据 ✓（⭐ 已证明能红 ✓，⭐ 且**能编译** ✓ —— ⭐ 不是编译错 ✗，⭐ 是**真红** ✓）**：
+  ⭐ 加在 ⭐ `src/test/newProjectPanelV2.test.tsx` ✓ 的 ⭐ `describe("the new-project panel")` ✓ 里 ✓，
+  ⭐ 插在 ⭐ `"reads its sentence from the dictionary…"` ✓ 那一例**之前** ✓ ⇒ ⭐ **原文 ✓（⭐ 下一轮照抄 ✓）**：
+```
+```
+  it("⭐ offers a genre, so a project can start from the music rather than only from a template", () => {
+    const onCreate = vi.fn();
+    render(<NewProjectPanelV2 onCreate={onCreate} />);
+    // ⭐ The older studio leads with a genre, and this route must not lose that ability. The panel names the genres it can
+    // start from, and the chosen one travels with the choice the person makes.
+    for (const genreId of ["chicago-house", "jazz-blues"]) {
+      expect(screen.getByTestId(`genre-${genreId}`)).toBeDefined();
+    }
+  });
+```
+```
+**⭐ 红的原文 ✓**：⭐ `Unable to find an element by: [data-testid="genre-chicago-house"]` ✗
+  ⇒ ⭐ 即 ⭐ **面板现在没有流派入口** ✗ ⇒ ⭐ 正是要移植的能力 ✓ ✓
+**⭐ 读数 ✓**：⭐ 加判据后 ⭐ **1 failed | 9 passed** ✓ ⇒ ⭐ 回退后 ⭐ **该文件全绿** ✓｜⭐ `dirty=0` ✓
+  ⭐ 纪律 ✓：⭐ **不把红留在 CI** ✗ ⇒ ⭐ 证明能红后**回退** ✓，⭐ 下一轮**与实现同批落** ✓ ✓
+**⭐⭐ 下一轮（⭐ 同批 ✓）**：
+  ⭐ ① ⭐ **把上面那段判据放回** ✓
+  ⭐ ② ⭐ **实现** ✓：⭐ `NewProjectPanelV2` ✓ 加**流派选择** ✓（⭐ `data-testid="genre-<id>"` ✓）
+    ＋ ⭐ 创建时把流派带上 ✓ ⇒ ⭐ 走**已验**的两句 ✓：⭐ `patternFromGenre(genre)` ✓ ⇒ ⭐ `projectSongToV2({ id, clips: { A: … } })` ✓
+    （⭐ 优先抽**共享助手** ✓ ⇒ ⭐ MCP 与 Web 同源 ✓）
+  ⭐ ③ ⭐ 跑全套 ✓ ⇒ ⭐ 绿则推 ✓ ⇒ ⭐ 然后**关掉 `/` 那条 v1 路由** ✓（⭐ ⑦-C ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓，⭐ 实现留下轮 ✓）
+```
+

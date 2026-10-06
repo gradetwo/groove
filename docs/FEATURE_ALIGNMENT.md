@@ -556,3 +556,10 @@
 | ⭐ **MCP／Web 对齐** | ✅ ⭐ 流派播种**已实现** ✓（⭐ `createMcpArrangement` 的流派分支 ✓：`projectSongToV2({ id, clips: { A: patternFromGenre(genre) } })` ✓）⇒ ⭐ **Web 只需同样两句** ✓ ⇒ ⭐ 落地时抽**共享助手** ✓ 以保三方同源 ✓ | 本节 ✓ |
 | ⭐ **待办** | ⭐ 先立判据（⭐ 能红 ✓）⇒ ⭐ 再给 v2 新建面板加**流派入口** ✓ ⇒ ⭐ 然后关 `/` 老路 ✓ | 本节 ✓ |
 
+## 2026-10-06 08:41 回填（第 4 条规矩：改完实现回来改表）
+
+| 面 | 变化 | 依据 |
+|---|---|---|
+| ⭐ **判据（先立）** | ✅ ⭐ 新判据已立并**证明能红** ✓：⭐ "**offers a genre, so a project can start from the music rather than only from a template**" ✓ ⇒ ⭐ 红文：⭐ `Unable to find an element by: [data-testid="genre-chicago-house"]` ✗ ⇒ ⭐ 回退保持树绿 ✓ | 本节 ✓ |
+| ⭐ **待实现** | ⭐ 面板加**流派选择** ＋ ⭐ 创建时走 `patternFromGenre` ⇒ `projectSongToV2` ✓（⭐ 优先共享助手 ✓） | 本节 ✓ |
+
