@@ -923,3 +923,27 @@ export function rampVelocityInRange(
   return { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [trackId]: landed } };
 }
 
+/**
+ * ⭐ **A transposition that applies to a span, and only to that span.**
+ *
+ * The older editor transposed a section; an arrangement has parts rather than sections, so the operation is stated over a bar
+ * range and states the rule the older note helper also stated: the result is clamped to the MIDI range rather than wrapped, and zero semitones is the identity, which is what makes the move reversible by moving it back.
+ */
+export function transposeNotesInRange(
+  arrangement: ArrangementV2,
+  trackId: string,
+  fromBeats: number,
+  toBeats: number,
+  semitones: number
+): ArrangementV2 {
+  const notes = arrangement.notesByTrack?.[trackId];
+  if (notes === undefined || notes.length === 0) return arrangement;
+  const delta = Math.round(Number.isFinite(semitones) ? semitones : 0);
+  const landed = notes.map((note) => {
+    if (note.startBeats < fromBeats || note.startBeats >= toBeats) return note;
+    if (delta === 0) return { ...note };
+    return { ...note, pitch: Math.min(127, Math.max(1, note.pitch + delta)) };
+  });
+  return { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [trackId]: landed } };
+}
+
