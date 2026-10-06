@@ -45,7 +45,6 @@ const FILE_CAPS: Record<string, number> = {
   "src/components/help/HelpCenterModal.tsx": 1687,
   "mcp/render/worker.ts": 1653,
   "src/views/ChordProgressionsView.tsx": 1559,
-  "src/views/StudioView.tsx": 1478,
 };
 
 function measure(): Sizes {

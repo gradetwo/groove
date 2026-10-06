@@ -55,7 +55,7 @@ import {
 } from "../src/data/arrangementEdits";
 import type { ArrangementV2, NoteEvent, TrackKindV2, TrackV2 } from "../src/types/arrangementV2";
 import type { PlannedTake } from "../src/data/takePlanning";
-import { compileArrangementToSongInput, laneInstrumentForTrack, laneRoleForTrack } from "../src/data/arrangementCompile";
+import { flattenArrangementV2, laneInstrumentForTrack, laneRoleForTrack } from "../src/data/arrangementCompile";
 import { resolveInstrumentPresetKey } from "../src/audio/instrumentPresets";
 import { SAMPLED_INSTRUMENT_SYNTHS, sampledAssetForLane, sampledInstrumentFor, sampledInstrumentGapReason } from "../src/data/sampledInstruments";
 import { placementForPart, placementForTrack, type SituationPlacement, type StringSituationSpec } from "../src/data/stringSituation";
@@ -63,8 +63,7 @@ import { importedPartVoice } from "../src/data/arrangementImport";
 import { DEFAULT_SYNTH_PRESETS } from "../src/audio/PolySynth";
 import { stepsFromNotes, STEPS_PER_BEAT } from "../src/data/noteEvents";
 import { beatsPerBar } from "../src/data/genreExpression";
-import { createSong } from "../src/types/song";
-import { flattenSong, type FlattenedSong } from "../src/data/songFlatten";
+import type { FlattenedSong } from "../src/data/songFlatten";
 
 const arrangements = new Map<string, ArrangementV2>();
 let idSequence = 0;
@@ -1475,33 +1474,15 @@ export function flattenMcpArrangement(
   const spanStartBeat = range ? range.startBar * beatsPerMeasure : 0;
   const inRange = range ? notesInBarRange(scoped, range, beatsPerMeasure) : scoped;
   const notes = range ? intoSpan(inRange, spanStartBeat) : inRange;
-  const songInput = compileArrangementToSongInput(
+  /**
+   * ⭐ **The flatten goes straight from the arrangement.** It used to project onto the eight v1 roles, build a `Song` and flatten
+   * that; `flattenArrangementV2` does the same compile the arrangement surface already uses, so the detour is gone. The span
+   * handling above is unchanged: when a range is asked for, the arrangement handed over is the span's own length.
+   */
+  const { flattened } = flattenArrangementV2(
     range ? { ...arrangement, bars: range.endBar - range.startBar } : arrangement,
     notes
   );
-  /**
-   * The clip needs the fields a `SequencerPattern` requires and nothing more: the compiled lanes, and the four the format insists on. `genre_id` is `"custom"` because an arrangement is not a genre's pattern — saying otherwise would make a render claim a
-   * provenance it does not have.
-   */
-  /**
-   * ⭐ **A view default, not a model field.** The arrangement's time is beats and its grid is a view, so the older
-   * pattern this compiles back to needs a resolution to be a pattern at all; `1/16` is what that view shows when
-   * nobody says otherwise. Nothing on the arrangement side selects it, and no v2 tool has to.
-   */
-  const clip = { genre_id: "custom", bpm: songInput.bpm, scale: "chromatic", resolution: "1/16" as const, tracks: songInput.clips.A.tracks };
-  const song = createSong({
-    id: arrangement.songId,
-    genreId: "custom",
-    bpm: songInput.bpm,
-    clip,
-    /**
-     * ⭐ **The map the projection produced is handed to the song — without this, the two steps before it had no effect.**
-     *
-     * Creating the song with `bpm` alone dropped the map in silence, and that is exactly the failure the criterion is written to catch: two sections at different tempos would still render, just both at one tempo. The earlier attempt at this line was correct and failed only because the projection did not carry the field yet — the type check said so, which is why it is worth keeping the compiler in the loop rather than trusting that a spread "obviously" works.
-     */
-    ...(songInput.tempoTrack?.length ? { tempoTrack: songInput.tempoTrack } : {}),
-  });
-  const flattened = flattenSong(song);
   if (!flattened.totalBars || flattened.totalSteps <= 0) {
     throw new Error(`cannot render "${arrangementId}": ${flattened.problems.join("; ") || "no playable steps"}`);
   }

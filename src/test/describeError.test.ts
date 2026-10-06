@@ -38,7 +38,6 @@ describe("describeError", () => {
     const files = [
       "src/utils/describeError.ts",
       "src/features/arrangement/arrangementFiles.ts",
-      "src/features/sequencer/hooks/usePatternActions.ts",
       "src/features/sequencer/hooks/useExportActions.ts",
     ];
     const owning = files.filter((file) => /function describeError\(/.test(readFileSync(file, "utf8")));

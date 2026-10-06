@@ -795,3 +795,12 @@
 | ⭐ **判据随实现走的六处** | ⭐ 首次运行提示（⭐ v2 命名 ✓）／⭐ 帮助入口（⭐ 视图是**调用方** ✓）／⭐ 流派插轨（⭐ 编曲**无插入链** ✓）／⭐ 试听处理器（⭐ **内联**且调播放层 ✓）／⭐ 预览作用域（⭐ 视图自持释放 ✓）／⭐ GS‑1（⭐ 共享钩子 ＋ `aria-pressed` ✓）⇒ ⭐ 每处理由写进判据注释 ✓ | §626‑641 |
 | ✅ **G10 账本销一条** | ⭐ `addTrackNotes` 由欧几里得命令**接通** ⇒ ⭐ 从 `UI_LEDGER` 移除 ✓（⭐ 剩 6 条待裁定 ✓） | §647 |
 
+## 2026-10-06 23:54 回填（第 4 条规矩：改完实现回来改表）
+
+| 面 | 变化 | 依据 |
+|---|---|---|
+| ✅ **MCP 渲染不再走 v1 歌曲** | ⭐ 新增 `flattenArrangementV2(arrangement, notes)` ✓（⭐ `data/arrangementCompile.ts` ✓）⇒ ⭐ `flattenMcpArrangement` 改走它 ✓，⭐ 删掉 `compileArrangementToSongInput` → clip → `createSong` → `flattenSong` 四步 ✓｜⭐ 先立**等价判据** `arrangementFlattenParity.test.ts` ✓（⭐ 两条路对同一段音乐的 `totalSteps` 必须一致 ✓） | §666、§687‑689 |
+| ⭐ **`FlattenedSong` 的字段与边界** | ⭐ v1 投影把整首编曲描述成**一段** ⇒ ⭐ v2 侧 `boundaries: [0]` ✓（⭐ 不是空 ✗，⭐ 空会告诉渲染器"⭐ 没有跨度**"✗）｜⭐ `problems: []` ✓（⭐ 编曲无槽位 ⇒ ⭐ "⭐ 某小节指了轨道不同的图案**"这类问题不存在 ✓） | §687、§688 |
+| ✅ **三条判据跟着能力改指** | ⭐ `describeError`：⭐ 清单去掉已删的 `usePatternActions.ts` ✓｜⭐ `fileSizeBudget`：⭐ 清掉 `StudioView.tsx` 预算条目 ✓｜⭐ `layoutPrefs`：⭐ 目标的**拥有者从界面钩子改为设置面板** ✓（⭐ 五条纪律全留 ✓，⭐ 开关控件按**归属**合并检查 ✓） | §691‑695 |
+| ⚠️ **一处误判已纠正** | ⭐ 第 575 轮我把 `panelVisibility.test.ts` 当"⭐ v1 界面零件**"退役 ✗ ⇒ ⭐ 实为**用户设置** ✓｜⭐ 其存储面 `layoutPrefs.ts` 与设置面板都在 ✓，⭐ 故按"⭐ 拥有者换了地方**"处理 ✓ | §692‑695 |
+

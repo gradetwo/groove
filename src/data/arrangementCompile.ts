@@ -22,6 +22,7 @@ import { requireTrackKind } from "./arrangementEdits";
 import { sampledAssetForLane } from "./sampledInstruments";
 import { flattenSong } from "./songFlatten";
 import type { Song } from "../types/song";
+import type { FlattenedSong } from "./songFlatten";
 
 /**
  * Note data per track id — notes in **musical time**, which is the model.
@@ -330,3 +331,35 @@ export function compileArrangementToPattern(arrangement: ArrangementV2, notesOrC
 
 /** The tempo a compiled arrangement plays at when it states none. Named so the two compiles cannot disagree about it. */
 export const DEFAULT_ARRANGEMENT_BPM = 120;
+
+/**
+ * ⭐ **The arrangement flattened for a renderer, without passing through the v1 song model.**
+ *
+ * The MCP render path reached `FlattenedSong` by projecting the arrangement onto the eight v1 roles, creating a `Song` and then
+ * flattening it. That detour is the v1 model's last load-bearing use in the render path, and the arrangement side already compiles
+ * the same music straight to a `SequencerPattern`, so this is that compile plus the four bookkeeping fields a renderer reads.
+ *
+ * **`boundaries` is `[0]`**, not empty: the v1 projection describes the whole arrangement as **one** section, so the flatten reports
+ * one span starting at step zero. Reporting none would tell a renderer that this music has no span at all.
+ *
+ * **`problems` is empty because this route has nothing to report.** The v1 flatten could find a bar naming a clip with a different
+ * track list; an arrangement has no clips, so that class of problem cannot arise here. An empty list is a statement about this
+ * model, not a placeholder.
+ */
+export function flattenArrangementV2(
+  arrangement: ArrangementV2,
+  notes: NotesByTrack = {}
+): { flattened: FlattenedSong; bars: number } {
+  const pattern = compileArrangementToPattern(arrangement, notes);
+  const bars = arrangement.bars ?? 1;
+  return {
+    flattened: {
+      pattern,
+      problems: [],
+      totalBars: bars,
+      boundaries: [0],
+      totalSteps: pattern.totalSteps ?? pattern.tracks[0]?.steps?.length ?? 0,
+    },
+    bars,
+  };
+}

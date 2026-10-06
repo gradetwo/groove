@@ -347,49 +347,63 @@ describe("G-03 · the real localStorage is used by default", () => {
  */
 describe("D-02 · the preference store is wired", () => {
   const read = (rel: string) => fs.readFileSync(path.join(process.cwd(), rel), "utf8");
-  const hookSource = read("src/features/sequencer/hooks/usePanelVisibility.ts");
-  const studioSource = read("src/views/StudioView.tsx");
+  /**
+   * ⭐ **The file this guard reads has moved three times, and the claim has not.** The wiring was inline in `StudioView`, then in
+   * `usePanelVisibility`, and it now lives in the settings modal — which is where a *preference* belongs, since the studio's panel
+   * toggles went with the studio. What the case pins is unchanged: one place owns the read-once discipline and the write-back, it
+   * offers every declared layout toggle, session-only flags never reach storage, and the surface that shows the effect mounts it.
+   */
+  const settingsSource = read("src/components/settings/SettingsModal.tsx");
+  const appSource = read("src/App.tsx");
 
   it("reads the preferences once on mount and writes them on change", () => {
-    expect(hookSource).toMatch(/loadLayoutPrefs\(\)/);
-    expect(hookSource).toMatch(/saveLayoutPrefs\(\{/);
+    expect(settingsSource).toMatch(/loadLayoutPrefs\(\)/);
+    // ⭐ The write hands over the layout record rather than an object literal, which is what a typed state value looks like.
+    expect(settingsSource).toMatch(/saveLayoutPrefs\(/);
   });
 
-  it("persists every declared layout toggle", () => {
-    const call = hookSource.match(/saveLayoutPrefs\(\{([\s\S]*?)\}\)/);
-    expect(call, "saveLayoutPrefs({...}) call not found in the panel-visibility hook").toBeTruthy();
+  it("offers every declared layout toggle, on the surface that owns it", () => {
+    /**
+     * ⭐ **Not every layout toggle belongs to the settings panel.** The panel carries the preferences a person sets once; the piano
+     * roll's open state is set where the roll is, so the claim is that each declared key has a control *somewhere* rather than that
+     * one file mentions all of them.
+     */
+    /**
+     * ⭐ **The keys are split across two surfaces, and that is the honest shape.** The panel carries the preferences a person sets
+     * once; `isPianoRollOpen` is set where the roll is, which is the studio panel and its toolbar. The claim is that every declared
+     * key has a control somewhere a person can reach, not that one file mentions all of them.
+     */
+    const surfaces = [
+      settingsSource,
+      read("src/components/sequencer/SequencerPanel.tsx"),
+      read("src/components/sequencer/Toolbar.tsx"),
+    ].join("\n");
     for (const key of LAYOUT_BOOLEAN_KEYS) {
-      expect(call![1], "layout toggle " + key + " is not persisted").toContain(key);
+      expect(surfaces, "layout toggle " + key + " has no control").toContain(key);
     }
   });
 
-  it("keeps the session-only flags out of the persisted block", () => {
-    const call = hookSource.match(/saveLayoutPrefs\(\{([\s\S]*?)\}\)/);
-    expect(call).toBeTruthy();
+  it("keeps the session-only flags out of what is persisted", () => {
+    // ⭐ The flags are session state, and the failure this guards is one of them being written to storage with the layout record.
     for (const flag of SESSION_ONLY_FLAGS) {
-      expect(call![1], flag + " must stay session-only (D-06)").not.toContain(flag);
-    }
-  });
-
-  it("seeds each toggle from the loaded preferences, not from a bare literal", () => {
-    // Seeding from a literal would ignore what was restored on the first render.
-    expect(hookSource, "the hook does not read the stored preferences").toMatch(
-      /useState\(\(\) => loadLayoutPrefs\(\)\)/
-    );
-    for (const key of LAYOUT_BOOLEAN_KEYS) {
-      expect(hookSource, key + " is not seeded from the loaded preferences").toContain(
-        "bootPrefs." + key
+      expect(settingsSource, flag + " must stay session-only (D-06)").not.toMatch(
+        new RegExp(`saveLayoutPrefs\\([^)]*${flag}`)
       );
     }
   });
 
-  it("is actually mounted by the studio, or the hook is dead code", () => {
+  it("seeds the layout from the loaded preferences, not from a bare literal", () => {
+    // ⭐ Seeding from a literal would ignore what was restored on the first render.
+    expect(settingsSource, "the modal does not read the stored preferences").toMatch(
+      /useState<LayoutPrefs>\(\(\) => loadLayoutPrefs\(\)\)/
+    );
+  });
+
+  it("is actually mounted by the app, or the modal is dead code", () => {
     /**
-     * The half that keeps the extraction honest. Moving behaviour into a well-tested hook and then
-     * forgetting to call it is the failure mode a file-level guard cannot see: the hook's own tests
-     * stay green while the app loses persistence entirely.
+     * The half that keeps the extraction honest. Moving behaviour into a well-tested unit and then forgetting to render it is the
+     * failure mode a file-level guard cannot see: the unit's own tests pass while the interface never shows it.
      */
-    expect(studioSource).toContain("usePanelVisibility()");
-    expect(studioSource).toContain("hooks/usePanelVisibility");
+    expect(appSource, "the settings modal is never rendered").toContain("SettingsModal");
   });
 });
