@@ -1389,6 +1389,18 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
                  * `notesByTrack`, so a second copy of the note here would be the copy that goes stale.
                  */
                 onRemoveNote={(at) => commit(removeTrackNoteCommand(selected.id, at, noteFor(selected.id, at)))}
+                /**
+                 * ⭐ **One press, one undo.** The roll reports the whole selection when it can, and this commits a single
+                 * command that drops exactly those notes — the notes it named, not a rectangle that might hold others.
+                 */
+                onRemoveSelection={(at) => {
+                  const drop = new Set(at.map((note) => `${note.pitch}@${note.startBeats}`));
+                  const kept = (arrangement.notesByTrack?.[selected.id] ?? []).filter(
+                    (note) => !drop.has(`${note.pitch}@${note.startBeats}`)
+                  );
+                  const after = { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [selected.id]: kept } };
+                  commit(setterCommand("Remove selection", (_current, value) => value, arrangement, after));
+                }}
                 onMoveNote={(from, to) => commit(moveTrackNoteCommand(selected.id, from, to))}
                 onResizeNote={(at, lengthBeats) => commit(setTrackNoteLengthCommand(selected.id, at, noteFor(selected.id, at)?.lengthBeats, lengthBeats))}
                 /**
