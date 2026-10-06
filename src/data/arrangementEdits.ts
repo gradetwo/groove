@@ -654,3 +654,45 @@ export function assignTakeToRange(arrangement: ArrangementV2, trackId: string, s
     }),
   };
 }
+
+/**
+ * ⭐ **A velocity ramp across a track's notes**, read from the older grid's behaviour: the notes are ordered by where they
+ * start, a single one takes the midpoint of the two ends, and many run linearly between them, clamped to the legal range.
+ * Notes are ordered by start so the ramp is a shape in time rather than in whatever order the map happened to hold.
+ */
+export function rampArrangementNoteVelocity(
+  arrangement: ArrangementV2,
+  trackId: string,
+  startVel = 40,
+  endVel = 120
+): ArrangementV2 {
+  const notes = arrangement.notesByTrack?.[trackId];
+  if (notes === undefined || notes.length === 0) return arrangement;
+  const ordered = [...notes].sort((a, b) => a.startBeats - b.startBeats);
+  const landed = ordered.map((note, index) => {
+    const velocity =
+      ordered.length === 1
+        ? Math.round((startVel + endVel) / 2)
+        : Math.round(startVel + (index / (ordered.length - 1)) * (endVel - startVel));
+    return { ...note, velocity: Math.max(1, Math.min(127, velocity)) };
+  });
+  return { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [trackId]: landed } };
+}
+
+/**
+ * ⭐ **Lengths onto the grid, and only lengths.** The older quantiser snaps a note's gate and never its start, which is what
+ * both its name and its code say; a snap of zero or less means nothing to snap to, so the arrangement is returned as it is.
+ */
+export function quantizeArrangementNoteLengths(
+  arrangement: ArrangementV2,
+  trackId: string,
+  snapBeats: number
+): ArrangementV2 {
+  const notes = arrangement.notesByTrack?.[trackId];
+  if (notes === undefined || notes.length === 0 || !(snapBeats > 0)) return arrangement;
+  const landed = notes.map((note) => {
+    const snapped = Math.round(note.lengthBeats / snapBeats) * snapBeats;
+    return { ...note, lengthBeats: Math.max(snapBeats, snapped) };
+  });
+  return { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [trackId]: landed } };
+}

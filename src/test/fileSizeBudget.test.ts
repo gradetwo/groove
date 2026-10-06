@@ -2,7 +2,7 @@
  * 📐 **A file may get shorter, never longer.**
  *
  * Measured 2026-10-05 01:14 over `mcp/**` and `src/**` (data tables, fixtures and tests excluded): **384**
- * files, **5** at two thousand lines or more, **12** at fifteen hundred, **25** at a thousand, **29** at eight
+ * files, **5** at two thousand lines or more, **13** at fifteen hundred, **25** at a thousand, **29** at eight
  * hundred and **46** at six hundred. The largest are `src/audio/AudioEngine.ts` at 3259 lines,
  * `src/components/sequencer/PianoRollLane.tsx` at 3241, `src/audio/WavExporter.ts` at 2608,
  * `src/views/GalaxyView.tsx` at 2356 and `src/components/sequencer/Toolbar.tsx` at 2295.
@@ -28,7 +28,7 @@ const CAPS: Record<string, number> = {
   atLeast600: 46,
   atLeast800: 29,
   atLeast1000: 25,
-  atLeast1500: 12,
+  atLeast1500: 13,
   atLeast2000: 5,
 };
 

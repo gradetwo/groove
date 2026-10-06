@@ -35,7 +35,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Redo2, Undo2 } from "lucide-react";
 import type { ArrangementV2, TrackKindV2, TrackRegion } from "../../types/arrangementV2";
-import { createArrangementFromTemplate } from "../../data/arrangementEdits";
+import { createArrangementFromTemplate, quantizeArrangementNoteLengths, rampArrangementNoteVelocity } from "../../data/arrangementEdits";
 import { GENRES_MAP } from "../../data/genres";
 import { arrangementSeededFromGenre } from "../../data/arrangementProjection";
 import {
@@ -281,6 +281,10 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
   const [pixelsPerBar, setPixelsPerBar] = useState(DEFAULT_PX_PER_BAR);
   /** The visible snap value and whether snapping is actually on. Two facts, two pieces of state. */
   const [snap, setSnap] = useState<SnapValue>(DEFAULT_SNAP);
+  // ⭐ The track the two editing actions act on: the selected one, or the first that carries notes.
+  const editableTrackId =
+    selectedTrackId ??
+    arrangement.tracks.find((track) => (arrangement.notesByTrack?.[track.id]?.length ?? 0) > 0)?.id;
   const [snapOn, setSnapOn] = useState(true);
   /**
    * The loop brace. `undefined` is "no loop", which is the state Live starts in; the toolbar's Loop button turns one
@@ -822,6 +826,37 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
         className="flex flex-wrap items-center gap-1"
         style={{ minHeight: "var(--arr-toolbar-h)" }}
       >
+        {/**
+          * ⭐ **The two editing actions the studio's grid had.** A ramp is craft and a quantiser is time-keeping. Both act on
+          * the selected track, or on the first track that actually carries notes, so an arrangement with music in it is never
+          * a dead end when nothing is selected.
+          */}
+        <button
+          type="button"
+          data-testid="arrangement-ramp-velocity"
+          className="px-2 py-1 rounded text-xs text-text opacity-90"
+          disabled={editableTrackId === undefined}
+          onClick={() => {
+            if (editableTrackId === undefined) return;
+            setArrangement((current) => rampArrangementNoteVelocity(current, editableTrackId));
+          }}
+        >
+          Ramp velocity
+        </button>
+        <button
+          type="button"
+          data-testid="arrangement-quantize-lengths"
+          className="px-2 py-1 rounded text-xs text-text opacity-90"
+          disabled={editableTrackId === undefined}
+          onClick={() => {
+            if (editableTrackId === undefined) return;
+            // ⭐ A `1/n` note is `4/n` beats in four four; `off` or anything unreadable falls back to a sixteenth.
+            const divisor = Number(snap.split("/")[1]) || 16;
+            setArrangement((current) => quantizeArrangementNoteLengths(current, editableTrackId, 4 / divisor));
+          }}
+        >
+          Quantise lengths
+        </button>
         {/**
          * ⭐ **The transport, with the state the owner reported as missing.**
          *

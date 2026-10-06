@@ -16372,3 +16372,42 @@ describe("the grid's editing actions", () => {
   ⭐ ③ ⭐ `src/test/arrangementViewV2.test.tsx` ✓：⭐ 两条判据 ✓ ＋ ⚠️ **追加** `arrangementSeededFromGenre` ⭐ **不替换** `projectSongToV2` ✓
   ⭐ ④ ⭐ 跑全套 ⇒ ⭐ 绿则推 ✓
 
+### 六百二十三、✅ **第 1 档 A＋B 落地；入口判据转绿 ✓；能力例待查"播种是否被接受"**（2026-10-06 09:54 ✓）
+
+```
+**✅ 已落 ✓（⭐ 编译与 lint 都过 ✓）**：
+  ⭐ A ✓：⭐ `arrangementEdits` 加 ✓ `rampArrangementNoteVelocity` ✓（⭐ 起点排序 ✓／⭐ 单点中点 ✓／⭐ 多点线性 ✓／⭐ 1..127 ✓）
+    ＋ ⭐ `quantizeArrangementNoteLengths` ✓（⭐ 只改长度 ✓／⭐ 栅格整数倍 ✓／⭐ 下限 ✓／⭐ 起点不动 ✓／⭐ `snapBeats<=0` 原样 ✓）
+  ⭐ B ✓：⭐ 工具栏加 ✓ `Ramp velocity` ✓（⭐ `arrangement-ramp-velocity` ✓）＋ ⭐ `Quantise lengths` ✓（⭐ `…quantize-lengths` ✓）
+    ⭐ 目标轨 ✓：⭐ `editableTrackId` ✓ ＝ ⭐ 选中轨 ✓ ⇒ ⭐ 否则**第一条带音符的轨** ✓ ⇒ ⭐ 无 ⇒ ⭐ 禁用 ✓
+    ⭐ 吸附换算 ✓：⭐ `4 / divisor` 拍 ✓（⭐ `off` ⇒ ⭐ 回退十六分 ✓）
+**✅ 入口判据 ✓（⭐ 转绿 ✓）**：⭐ "⭐ **offers a velocity ramp and a length quantiser on the arrangement it shows**" ✓
+  （⭐ 用 ⭐ `arrangementSeededFromGenre` ✓ 播种 ＋ ⭐ 断言两个按钮存在 ✓）
+**⚠️ 能力例仍红 ✗（⭐ 待查 ✓）**：⭐ `byStart.length` ⭐ 为 **0** ✗
+  ⇒ ⭐ 两种可能 ✓：⭐ ① ⭐ 播种出的编曲**没有音符** ✗（⭐ `patternFromGenre` 对首个流派可能不产音符 ✓）
+    ⭐ ② ⭐ 或被视图**拒绝载入** ✗（⭐ `initialArrangement` 未通过校验 ⇒ ⭐ 回落选择器 ✓）
+  ⭐ 线索 ✓：⭐ **入口判据在同一 ⭐ `renderView` 下通过 ✓** ⇒ ⭐ 按钮在 ✓ ⇒ ⚠️ 但 ⭐ 按钮在选择器视图里**也存在** ✓
+    ⇒ ⭐ 所以**不能**用"⭐ 按钮存在**"⭐ 判断编曲已载入 ✗ ⇒ ⭐ 下一轮先量：⭐ 该 ⭐ `seeded` 是否被接受 ✓
+    （⭐ 例如断言 ⭐ `arrangement-view-v2` ✓ 或 ⭐ 轨名出现 ✓）
+**⭐ 下一轮 ✓**：⭐ ① ⭐ 量播种是否被接受 ✓（⭐ 加一行断言即知 ✓）⭐ ② ⭐ 修好后放回能力例 ✓ ⭐ ③ ⭐ 跑全套 ⇒ ⭐ 推 ✓
+```
+
+### 六百二十四、⭐⭐ **诊断结论：流派播种只给轨、不给音符（教训 191 ✓）**（2026-10-06 10:07 ✓）
+
+```
+**⭐ 诊断原文 ✓**：⭐ `DIAG tracks=8 notes=0 view=true picker=Kick Drum, Snare / Clap, Hi-Hats, Percussion, Bassline,`
+  ⭐ `Chords / Pad, Lead Synth, FX / Sweep` ✓
+**⭐⭐ 结论 ✓**：⭐ ① ⭐ **视图接受播种** ✓（⭐ `view=true` ✓，⭐ 轨名列全 ✓）⇒ ⭐ 所以**不是"⭐ 没载入**" ✗
+  ⭐ ② ⭐ **音符为 0** ✗ ✗ ⇒ ⭐ 即 ⭐ **流派播种只给了轨，没给音符** ✗ —— ⭐ 这正是**我们 §270 那次移植的缺口** ✗ ✓
+**⚠️ 教训 191 ✓**：⭐ §270 的"⭐ 流派能力判据**"⭐ 用**同一个助手**算期望值 ✓ ⇒ ⭐ 两边都是**空音符** ✓
+  ⇒ ⚠️ ⭐ **它无法发现"⭐ 空**" ✗ ✓（⭐ 判据与实现同源 ⇒ ⭐ 同错同对 ✗）
+  ⭐ 做法 ✓：⭐ 期望值**不能只用实现本身** ✗ ⇒ ⭐ 至少要有**一条独立的量** ✓（⭐ 例如"⭐ 音符数 > 0**" ✓ 或 ⭐ 与流派模式的**独立**读数比对 ✓）
+**⭐⭐ 因此下一步的目标改了 ✓**：⭐ **流派播种必须带音符** ✓（⭐ v1 的流派模式**是带音符的** ✓）
+  ⭐ 量法 ✓：⭐ ① ⭐ `patternFromGenre(genre)` ⭐ 的输出**是否有步** ✓ ② ⭐ `projectSongToV2` ⭐ 是否把步映射成音符 ✓
+    ⭐ ③ ⭐ 若两处都对 ⇒ ⭐ 缺口在**调用顺序或参数** ✓
+**⭐ 另两处红 ✓（⭐ 已辨明 ✓）**：⭐ `fileSizeBudget` ✗（⭐ 新代码把文件推过桶线 ✓ ⇒ ⭐ 按实测更新 ✓）
+  ＋ ⭐ `sfzTrigger` ✗（⭐ **本地取样获取**的老问题 ✓，⭐ 与本迁移无关 ✓，⭐ CI 上通过 ✓）
+**⏳ 下一轮 ✓**：⭐ ① ⭐ 修流派播种的音符 ✓（⭐ 先量那两处 ✓）⭐ ② ⭐ 能力例放回（⭐ 并加"⭐ 音符 > 0**"⭐ 的独立量 ✓）
+  ⭐ ③ ⭐ 跑全套 ⇒ ⭐ 推 ✓
+```
+

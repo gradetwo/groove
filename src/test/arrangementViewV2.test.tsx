@@ -5,7 +5,7 @@ import { ArrangementViewV2 } from "../components/arrangement/ArrangementViewV2";
 import { createArrangementFromTemplate } from "../data/arrangementEdits";
 import { GENRES_MAP } from "../data/genres";
 import { patternFromGenre } from "../data/genreMix";
-import { projectSongToV2 } from "../data/arrangementProjection";
+import { arrangementSeededFromGenre, projectSongToV2 } from "../data/arrangementProjection";
 import type { ArrangementV2 } from "../types/arrangementV2";
 import { LanguageProvider } from "../i18n/LanguageContext";
 
@@ -162,6 +162,13 @@ describe("the arrangement a host hands in, and what the host is told", () => {
     const arrangement = onCreateProject.mock.calls[0]![1] as ArrangementV2;
     expect(arrangement.tracks.map((track) => track.name)).toEqual(expected.tracks.map((track) => track.name));
     expect(notes(arrangement).length).toBe(notes(expected).length);
+  });
+
+  it("⭐ offers a velocity ramp and a length quantiser on the arrangement it shows", () => {
+    const seeded = arrangementSeededFromGenre("new", Object.values(GENRES_MAP)[0]!);
+    renderView(<ArrangementViewV2 songId="new" capture={noCapture} initialArrangement={seeded} />);
+    expect(screen.getByRole("button", { name: "Ramp velocity" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Quantise lengths" })).toBeDefined();
   });
 
   it("⭐ says why an unreadable project is not shown, instead of drawing a chooser in silence over work that still exists", () => {
