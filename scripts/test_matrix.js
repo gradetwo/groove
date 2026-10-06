@@ -562,14 +562,21 @@ async function runTestOnTarget(target, baseUrl) {
       throw new Error(`ErrorBoundary caught exception: ${errText.slice(0, 100)}`);
     }
 
-    // Sequencer tracks verification (wait for lazy chunk to mount)
-    await page.waitForSelector("[data-track-idx], [data-step-idx], .landscape-compact-cell", { state: "attached", timeout: 45000 });
-    const tracks = await page.$$("[data-track-idx], .touch-hit-44, [data-step-idx]");
+    /**
+     * ⭐ **The grid check follows the surface, not the file it used to be in.**
+     *
+     * This waited on the studio's step cells (`data-track-idx`, `data-step-idx`), which the landing surface no longer renders: the
+     * arrangement editor's grid carries `data-testid="arrangement-grid"`. What the check is for has not changed -- the matrix wants to
+     * know that a grid mounted before it drives one -- so it accepts either shape and names the arrangement in its failure.
+     */
+    const GRID_SELECTOR =
+      "[data-testid='arrangement-grid'], [data-track-idx], [data-step-idx], .landscape-compact-cell";
+    await page.waitForSelector(GRID_SELECTOR, { state: "attached", timeout: 45000 });
+    const tracks = await page.$$(GRID_SELECTOR + ", .touch-hit-44");
     if (tracks.length === 0) {
-      // Check for step cells or track headers
-      const cellCount = await page.evaluate(() => document.querySelectorAll(".landscape-compact-cell, [data-step-idx]").length);
+      const cellCount = await page.evaluate(() => document.querySelectorAll("[data-testid='arrangement-grid'], .landscape-compact-cell, [data-step-idx]").length);
       if (cellCount === 0) {
-        throw new Error("No sequencer step cells detected in StudioView");
+        throw new Error("No arrangement grid detected on the landing surface");
       }
     }
 
