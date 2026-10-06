@@ -266,3 +266,38 @@ describe("copying what the roll has marked", () => {
     expect(landed.some((note) => note.pitch === first.pitch && note.startBeats === first.startBeats + delta)).toBe(true);
   });
 });
+
+/**
+ * ⭐ **Legato, from the toolbar, on what the roll has marked.**
+ *
+ * The model's rule reaches the next sounding note or the loop's end; the button hands it the marks and commits one command. The
+ * criterion measures the distance the music actually has rather than repeating the formula.
+ */
+describe("making the marked notes reach", () => {
+  it("⭐ stretches the earlier marked note to where the next one starts", () => {
+    const seeded = arrangementSeededFromGenre("new", Object.values(GENRES_MAP)[0]!);
+    const track = seeded.tracks[0]!;
+    const notes = seeded.notesByTrack?.[track.id] ?? [];
+    const first = notes[0]!;
+    const second = notes.find((note) => note.startBeats > first.startBeats)!;
+    const stepOf = (beats: number) => Math.round(beats / 0.25);
+
+    const onArrangementChange = vi.fn();
+    renderView(
+      <ArrangementViewV2 songId="new" capture={noCapture} initialArrangement={seeded} onArrangementChange={onArrangementChange} />
+    );
+    fireEvent.click(within(screen.getByTestId("arrangement-track-picker")).getByText(track.name));
+    const cell = (pitch: number, step: number) => screen.getByTestId(`roll-cell-${pitch}-${step}`);
+    fireEvent.pointerDown(cell(first.pitch, stepOf(first.startBeats)));
+    fireEvent.pointerEnter(cell(second.pitch, stepOf(second.startBeats)));
+    fireEvent.pointerUp(cell(second.pitch, stepOf(second.startBeats)));
+    fireEvent.click(screen.getByTestId("arrangement-legato-selection"));
+
+    const after = onArrangementChange.mock.calls.at(-1)?.[0] as ArrangementV2;
+    const landed = after.notesByTrack?.[track.id] ?? [];
+    const stretched = landed.find((note) => note.pitch === first.pitch && note.startBeats === first.startBeats)!;
+    // ⭐ The earlier note now holds until the later one begins, and no note was added or lost by the gesture.
+    expect(stretched.lengthBeats).toBeCloseTo(second.startBeats - first.startBeats, 6);
+    expect(landed.length).toBe(notes.length);
+  });
+});
