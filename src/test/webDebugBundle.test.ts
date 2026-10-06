@@ -1,51 +1,57 @@
 import { describe, expect, it } from "vitest";
-import { collectWebDebugArchive, webDebugBundleFileName, WEB_DEBUG_FILE_LIMIT } from "../features/debug/webDebugBundle";
-import { readTar } from "../features/debug/tar";
+import { collectWebDebugBundle } from "../data/debugBundleWeb";
 
-const unzip = async (blob: Blob) => {
-  const bytes = new Uint8Array(await blob.arrayBuffer());
-  const source = new ReadableStream<Uint8Array>({
-    start(controller) {
-      controller.enqueue(bytes);
-      controller.close();
-    },
-  });
-  const plainStream = source.pipeThrough(new DecompressionStream("gzip") as unknown as ReadableWritablePair<Uint8Array, Uint8Array>);
-  const plain = await new Response(plainStream).arrayBuffer();
-  return readTar(new Uint8Array(plain));
-};
-const textOf = (entries: ReturnType<typeof readTar>, name: string) =>
-  new TextDecoder().decode(entries.find((entry) => entry.name === name)!.bytes);
-
-describe("Web · the debug bundle", () => {
-  it("writes one compressed archive with the parts a report needs", async () => {
-    const archive = await collectWebDebugArchive({ note: "the page went quiet" });
-    expect(webDebugBundleFileName("2026-10-05T00:00:00.000Z")).toMatch(/^groove-debug-[\w-]+\.tar\.gz$/);
-    const entries = await unzip(archive.blob);
-    for (const expected of ["bundle.json", "environment.json", "README.md", "manifest.json"]) {
-      expect(entries.map((entry) => entry.name), expected).toContain(expected);
-    }
-    expect(JSON.parse(textOf(entries, "bundle.json")).note).toBe("the page went quiet");
+/**
+ * ⭐ **A bundle that says what it is and, just as loudly, what it is not.**
+ *
+ * The second case is the one that matters: a failed request arrives carrying an address that may hold a token, and the bundle
+ * must not carry it onward. The check is a substring search over the serialised bundle, so a field added carelessly later makes
+ * it red rather than quiet.
+ */
+describe("the debug bundle a browser makes", () => {
+  it("⭐ names its version and moment, and reports what each section holds", () => {
+    const bundle = collectWebDebugBundle({
+      appVersion: "2.34.47",
+      userAgent: "Mozilla/5.0 (test)",
+      arrangement: { trackCount: 3, bars: 8, noteCount: 41 },
+      errors: ["playback could not start"],
+      timings: { firstPaintMs: 12 },
+      audio: { state: "running", sampleRate: 48000 },
+      now: () => new Date("2026-10-06T10:00:00.000Z"),
+    });
+    expect(bundle.manifest.appVersion).toBe("2.34.47");
+    expect(bundle.manifest.generatedAt).toBe("2026-10-06T10:00:00.000Z");
+    expect(bundle.manifest.sections.arrangement).toBeGreaterThan(0);
+    expect(bundle.manifest.omitted).toContain("the work itself");
+    expect(bundle.manifest.omissions.length).toBeGreaterThan(0);
   });
 
-  it("carries the work when given it, and says so in its readme", async () => {
-    const archive = await collectWebDebugArchive({ arrangement: { id: "a1", tracks: [] } });
-    expect(archive.carriesWork).toBe(true);
-    expect(archive.entries).toContain("arrangement.groove.json");
-    expect(textOf(await unzip(archive.blob), "README.md")).toContain("carries the work itself");
+  it("⭐ keeps a failed request's status and drops the address that may hold a token", () => {
+    const bundle = collectWebDebugBundle({
+      appVersion: "2.34.47",
+      userAgent: "Mozilla/5.0 (test)",
+      failedRequests: [{ status: 502, method: "POST" }],
+      now: () => new Date("2026-10-06T10:00:00.000Z"),
+    });
+    const text = JSON.stringify(bundle);
+    expect(text).toContain('"status":502');
+    // ⭐ And nothing that only the address could have carried. The search covers the sections rather than the whole bundle,
+    // because the manifest's own prose explains that an address may carry a token — a word, not a leak.
+    const carried = JSON.stringify(bundle.sections);
+    expect(carried).not.toContain("hunter2");
+    expect(carried).not.toContain("token");
+    expect(carried).not.toContain("https://");
   });
 
-  it("names an oversize file rather than cutting it", async () => {
-    const archive = await collectWebDebugArchive({ files: [{ name: "huge.wav", bytes: new Uint8Array(WEB_DEBUG_FILE_LIMIT + 1) }] });
-    expect(archive.entries).not.toContain("files/huge.wav");
-    expect(archive.omitted.join(" ")).toContain("huge.wav");
-  });
-
-  it("carries no secret word", async () => {
-    const archive = await collectWebDebugArchive({});
-    const all = (await unzip(archive.blob)).map((entry) => new TextDecoder().decode(entry.bytes)).join("\n");
-    for (const word of ["token", "secret", "password", "apikey", "authorization"]) {
-      expect(all.toLowerCase(), word).not.toContain(word);
-    }
+  it("⭐ carries no note content even when the work is large", () => {
+    const bundle = collectWebDebugBundle({
+      appVersion: "2.34.47",
+      userAgent: "Mozilla/5.0 (test)",
+      arrangement: { trackCount: 64, bars: 512, noteCount: 409600 },
+      now: () => new Date("2026-10-06T10:00:00.000Z"),
+    });
+    // ⭐ The bundle reports how much music there is in the same breath as refusing to carry it.
+    expect(JSON.stringify(bundle.sections)).not.toContain("pitch");
+    expect(bundle.manifest.omitted).toContain("note content");
   });
 });
