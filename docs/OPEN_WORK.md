@@ -16170,3 +16170,40 @@ export async function prepareArrangementAudioLanes(input: {
   ⇒ ⭐ 再立判据 ✓
 ```
 
+### 六百一十七、⭐⭐ **移植源头：`rollModel.ts`（1293 行，≈40 个操作，仅 1 个消费者）**（2026-10-06 09:43 ✓）
+
+```
+**⭐ 量到 ✓**：⭐ `src/features/sequencer/rollModel.ts` ✓ ⭐ **1293 行** ✓ ⇒ ⭐ ≈**40 个导出** ✓
+  ⭐ **唯一非判据消费者 ✓**：⭐ `src/components/sequencer/PianoRollLane.tsx` ✓ ✗（⭐ 即 v1 网格组件 ✓）
+  ⇒ ⭐ 这是**好消息** ✓：⭐ 移植面**清晰** ✓ —— ⭐ 一个模块 ＋ ⭐ 一个消费者 ✓
+**⭐ 它的操作分组 ✓（⭐ 即缺口清单的来源 ✓）**：
+  ⭐ 音符 ✓：⭐ `addNote` ✓｜⭐ `removeNote` ✓｜⭐ `removeNoteAt` ✓｜⭐ `moveNote` ✓｜⭐ `moveNotes` ✓｜⭐ `resizeNote` ✓｜
+    `splitNote` ✓｜⭐ `scaleNotesLength` ✓｜⭐ `copyNotes` ✓｜⭐ `deleteNotes` ✓
+  ⭐ 力度 ✓：⭐ `setNoteVelocity` ✓｜⭐ `setNotesVelocity` ✓｜⭐ `scaleNotesVelocity` ✓｜⭐ `compressNotesVelocity` ✓｜
+    ⭐ **`humanizeNotesVelocity`** ✓｜⭐ **`rampNotesVelocity`** ✓
+  ⭐ 音高／和声 ✓：⭐ `transposeTrack` ✓｜⭐ `transposeNotes` ✓｜⭐ `invertSelectedChord` ✓｜⭐ `drop2SelectedChord` ✓｜
+    `detectChordName` ✓
+  ⭐ 时序 ✓：⭐ **`quantizeLengths`** ✓｜⭐ **`legatoNotes`** ✓
+  ⭐ 选择与吸附 ✓：⭐ `normalizeSelection` ✓｜⭐ `selectedSteps` ✓｜⭐ **`notesInRect`**（⭐ ＝选择框 ✓）✓｜
+    `RollTool` ✓（⭐ 含 `marquee` ✓）｜⭐ `RollSnap` ✓｜⭐ `snapValue` ✓
+  ⭐ 和弦与进行 ✓：⭐ `chordNotesForStamp` ✓｜⭐ **`addChord`**（⭐ ＝和弦图章 ✓）✓｜⭐ `humanizeSelectedNotes` ✓｜
+    ⭐ **`arpeggiateSelectedNotes`**（⭐ ＝琶音 ✓）✓｜⭐ `CHORD_PROGRESSIONS` ✓｜⭐ `resolveProgressionChords` ✓｜
+    `previewProgressionNotes` ✓｜⭐ `applyChordProgression` ✓
+  ⭐ 复制小节 ✓：⭐ `duplicateBar1Notes` ✓
+**⭐⭐ 与 10 项缺口一一对应 ✓**：⭐ 量化 ⇒ ⭐ `quantizeLengths` ✓｜⭐ 力度斜坡 ⇒ ⭐ `rampNotesVelocity` ✓｜
+  ⭐ 人性化 ⇒ ⭐ `humanizeNotesVelocity` ✓／⭐ `humanizeSelectedNotes` ✓｜⭐ 选择框 ⇒ ⭐ `notesInRect` ✓｜
+  ⭐ 复制粘贴 ⇒ ⭐ `copyNotes` ✓／⭐ `deleteNotes` ✓｜⭐ 连奏 ⇒ ⭐ `legatoNotes` ✓｜⭐ 琶音 ⇒ ⭐ `arpeggiateSelectedNotes` ✓｜
+  ⭐ 和弦图章 ⇒ ⭐ `addChord` ✓／⭐ `chordNotesForStamp` ✓｜⭐ 力度压缩缩放 ⇒ ⭐ `scaleNotesVelocity` ✓／⭐ `compressNotesVelocity` ✓
+  ⭐ （⭐ 全屏／行高 ✗ ⇒ ⭐ 纯视图 ✓，⭐ 不在此模块 ✓）
+**⭐⭐ 移植的形状 ✓（⭐ 清晰 ✓）**：⭐ 这些操作作用在 v1 的 ⭐ `SequencerPattern` ✗；
+  ⭐ 而 v2 的 ⭐ `arrangementEdits` ✓ **已有底层原语** ✓：⭐ `addTrackNote` ✓／⭐ `moveTrackNote` ✓／⭐ `setTrackNoteLength` ✓／
+    `toggleStep` ✓／⭐ `setTrackSteps` ✓／⭐ `addTrackNotes` ✓／⭐ `removeTrackNote` ✓／⭐ `setTrackSample` ✓ …
+  ⇒ ⭐ 因此移植 ＝ ⭐ **在 v2 原语之上实现这些高层操作** ✓（⭐ 斜坡 ✓／⭐ 量化 ✓／⭐ 人性化 ✓／⭐ 连奏 ✓／⭐ 琶音 ✓／
+    ⭐ 和弦图章 ✓／⭐ 复制与矩形选择 ✓）⇒ ⭐ 作用在 ⭐ `ArrangementV2` 的 ⭐ `notesByTrack` ✓ ✓
+**⭐ 第 1 档的执行 ✓（⭐ 下一轮 ✓）**：
+  ⭐ ① ⭐ **力度斜坡** ✓：⭐ 先量 v1 的语义细节 ✓（⭐ `rampNotesVelocity` 的 `:624–656` ✓：⭐ 端点／步长／四舍五入 ✓）
+  ⭐ ② ⭐ **量化** ✓：⭐ 量 ⭐ `quantizeLengths` 的 `:693–713` ✓（⭐ 栅格取值／长度取整 ✓）
+  ⭐ ③ ⭐ **各立一条能红的判据** ✓（⭐ 放在 ⭐ v2 网格的判据里 ✓）⇒ ⭐ 再实现 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
