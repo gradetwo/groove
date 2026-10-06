@@ -39,7 +39,12 @@ describe("a velocity ramp over a range", () => {
   it("⭐ grows across the range rather than stepping to one value", () => {
     const { arrangement, trackId } = fixture();
     const notes = rampVelocityInRange(arrangement, trackId, 0, 8, 0.5, 1).notesByTrack![trackId]!;
-    // ⭐ The two inside keep their 2:1 relationship, which an absolute ramp would have destroyed.
+    /**
+     * ⭐ **The factor grows with position, so the ratios do not stay equal — and that is the point.**
+     *
+     * The first note is scaled by 0.5 and the second, four bars in, by 0.75: 100 → 50 and 50 → 38. An absolute ramp would have
+     * written two values chosen by the ramp and left the composer's difference between them nowhere.
+     */
     expect(notes[0]!.velocity).toBe(50);
     expect(notes[1]!.velocity).toBe(38);
     expect(notes[2]!.velocity).toBe(100);
