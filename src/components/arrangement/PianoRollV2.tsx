@@ -25,6 +25,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { STEPS_PER_BEAT, STEP_BEATS } from "../../data/noteEvents";
 import type { NoteEvent } from "../../types/arrangementV2";
+import { DEFAULT_NOTE_CONVENTION, noteName as sharedNoteName, type NoteConvention } from "../../data/pitchTruth";
 
 export interface PianoRollV2Props {
   notes: readonly NoteEvent[];
@@ -89,10 +90,12 @@ function pitchRows(low: number, high: number): number[] {
   return Array.from({ length: high - low + 1 }, (_, index) => high - index);
 }
 
-const NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-/** Note name for a row label, so a pitch is readable without counting semitones from C4. */
-export function noteName(pitch: number): string {
-  return `${NAMES[pitch % 12]}${Math.floor(pitch / 12) - 1}`;
+/**
+ * ⭐ **Note name for a row label, read from the one module that applies a convention.** The roll used to carry its own
+ * arithmetic beside it, which is how a project ends up spelling the same number two ways.
+ */
+export function noteName(pitch: number, convention: NoteConvention = DEFAULT_NOTE_CONVENTION): string {
+  return sharedNoteName(pitch, convention);
 }
 
 const isBlackKey = (pitch: number) => [1, 3, 6, 8, 10].includes(pitch % 12);
