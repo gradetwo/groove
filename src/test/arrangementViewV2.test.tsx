@@ -343,3 +343,42 @@ describe("arpeggiating the marks", () => {
     expect(landed.length).toBe(notes.length);
   });
 });
+
+/**
+ * ⭐ **A chord stamped from the toolbar.** The claim is what the control promises: the start the mark sits on holds a chord
+ * afterwards, and no other start is disturbed.
+ */
+describe("stamping a chord on the marks", () => {
+  it("⭐ leaves a chord where the mark's start was, and touches nowhere else", () => {
+    const seeded = arrangementSeededFromGenre("new", Object.values(GENRES_MAP)[0]!);
+    const track = seeded.tracks.find((candidate) => (seeded.notesByTrack?.[candidate.id] ?? []).length > 1)!;
+    const notes = seeded.notesByTrack?.[track.id] ?? [];
+    const first = notes[0]!;
+    const later = notes.find((note) => note.startBeats > first.startBeats)!;
+    const othersBefore = notes
+      .filter((note) => note.startBeats !== first.startBeats)
+      .map((note) => `${note.pitch}@${note.startBeats}`)
+      .sort();
+    const stepOf = (beats: number) => Math.round(beats / 0.25);
+
+    const onArrangementChange = vi.fn();
+    renderView(
+      <ArrangementViewV2 songId="new" capture={noCapture} initialArrangement={seeded} onArrangementChange={onArrangementChange} />
+    );
+    fireEvent.click(within(screen.getByTestId("arrangement-track-picker")).getByText(track.name));
+    const cell = (pitch: number, step: number) => screen.getByTestId(`roll-cell-${pitch}-${step}`);
+    fireEvent.pointerDown(cell(first.pitch, stepOf(first.startBeats)));
+    fireEvent.pointerEnter(cell(later.pitch, stepOf(later.startBeats)));
+    fireEvent.pointerUp(cell(later.pitch, stepOf(later.startBeats)));
+    fireEvent.click(screen.getByTestId("arrangement-stamp-chord"));
+
+    const after = onArrangementChange.mock.calls.at(-1)?.[0] as ArrangementV2;
+    const landed = after.notesByTrack?.[track.id] ?? [];
+    // ⭐ A triad stands where the mark's start was.
+    expect(landed.filter((note) => note.startBeats === first.startBeats).length).toBeGreaterThanOrEqual(3);
+    // ⭐ And every start the stamp did not land on is exactly as it was.
+    expect(
+      landed.filter((note) => note.startBeats !== first.startBeats).map((note) => `${note.pitch}@${note.startBeats}`).sort()
+    ).toEqual(othersBefore);
+  });
+});
