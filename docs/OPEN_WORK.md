@@ -16737,3 +16737,22 @@ describe("the grid's editing actions", () => {
 **⏳ 下一轮 ✓**：⭐ 照上述落和弦图章 ⇒ ⭐ 第 3 档三件齐 ✓ ⇒ ⭐ 然后界面入口（⭐ 框选 ＋ 按钮 ✓）
 ```
 
+### 六百四十一、✅ **第 3 档收口：和弦图章落地（档 3 三件齐 ✓）**（2026-10-06 12:12 ✓）
+
+```
+**✅ 已落 ✓**：⭐ `stampChordInRect(arrangement, trackId, rect, { type, rootMidi, velocity?, lengthBeats?, scale? })` ✓
+  ⭐ 语义照 §639 ✓：⭐ `note` ⇒ ⭐ 单音 ✓｜⭐ `ninth` ⇒ ⭐ `[r, r+4, r+7, r+11, r+14]` ✓｜⭐ `sus2` ⇒ ⭐ `[r, r+2, r+7]` ✓
+    ｜⭐ 其余（⭐ `triad`／⭐ `seventh`／⭐ `sus4`／⭐ `power` ✓）⇒ ⭐ **复用** ⭐ `chordVoicingForStep` ✓（⭐ 音频层 ✓，⭐ 无 v1 类型 ✓）
+    ｜⭐ 落在 ⭐ `rect.fromBeats` ✓ ⇒ ⭐ **替换该起点原有音符** ✓ ⇒ ⭐ 起点越界 ⇒ ⭐ 原样返回 ✓
+  ⭐ 类型 ✓：⭐ `ChordStampTypeV2` ✓ **在 v2 侧自定义** ✓（⭐ 不引 v1 的 `rollModel` ✓）
+  ⚠️ ⭐ **一处路径修正 ✓**：⭐ 我写成 ⭐ `"../../audio/chordVoicing"` ✗ ⇒ ⭐ 正确是 ⭐ **`"../audio/chordVoicing"`** ✓
+    （⭐ `arrangementEdits.ts` 在 `src/data/` ✓ ⇒ ⭐ 只上一层 ✓）⇒ ⭐ `TS2307` 及其连带的 `implicit any` 一并消失 ✓
+  ⭐ 判据 ✓ 四例：⭐ `note` ⇒ `[60]` ✓｜⭐ **`sus2` ⇒ `[60, 62, 67]`** ✓（⭐ 显式音程 ✓，⭐ 不依赖风格表 ✓）｜⭐ `ninth` ⇒ `[60, 64, 67, 71, 74]` ✓
+    ｜⭐ **替换**：⭐ 起点 0 原有 `48`／`55` 被替换为和弦 ✓ 且 ⭐ **未落到的起点 4 仍为 `[72]`** ✓
+  ⭐ 登记表 ✓：⭐ **`webEntryReachability` 绿** ✓ ⇒ ⭐ **图章无需 `UI_LEDGER` 条目** ✓；⭐ `mcpCoverage` 亦过 ✓
+**⭐⭐ 第 3 档三件齐 ✓**：⭐ **连奏** ✓（`de197ba` ✓）｜⭐ **琶音** ✓（`20ce9d9` ✓）｜⭐ **和弦图章** ✓（本轮 ✓）
+**⭐ 教训 196 ✓**：⭐ **相对路径要按文件所在层数写** ✗ —— ⭐ 在 `src/data/` 里 ⇒ ⭐ 上一层用 `../audio/...` ✓；⭐ 上一层再上一层才是 `../../` ✓
+  ⭐ 做法 ✓：⭐ 新 import 先**照同目录既有 import 的行**抄一份 ✓（⭐ 本文件 `arrangementImport.ts` 内就有 `../audio/drumRoles` ✓）
+**⏳ 下一轮 ✓**：⭐ 界面入口（⭐ 矩形框选 ＋ 连奏／琶音／图章按钮 ✓）⇒ ⭐ 把 `UI_LEDGER` 的 `removeNotesWithinRect` 一条撤下 ✓
+```
+

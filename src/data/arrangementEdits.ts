@@ -12,6 +12,7 @@ import { stepCountFor, stepsPerBarFor } from "./noteEvents";
 import type { PlannedTake } from "./takePlanning";
 import { DEFAULT_SAMPLER_ASSET, defaultContentFor, type DefaultContent } from "./defaultContent";
 import { addNote, moveNote, notesFromSteps, removeNote, setNoteLength, stepsFromNotes, STEPS_PER_BEAT } from "./noteEvents";
+import { chordVoicingForStep } from "../audio/chordVoicing";
 
 let nextId = 1;
 
@@ -817,5 +818,53 @@ export function arpeggiateNotesInRect(
     });
   }
   return { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [trackId]: working } };
+}
+
+/** ⭐ **The seven shapes a stamp can place.** The older grid's own union, named here so the arrangement does not import it. */
+export type ChordStampTypeV2 = "note" | "triad" | "seventh" | "ninth" | "sus4" | "sus2" | "power";
+
+/**
+ * ⭐ **A chord stamped where the rectangle starts.** The older grid's rule: a step outside the pattern is left alone, a single
+ * note takes the plain path, and any other shape replaces whatever sits on the step it lands on. Two shapes state their
+ * intervals outright; the rest come from the audio layer's voicing helper, which holds no grid types and is already shared
+ * between the engine and the data layer.
+ */
+export function stampChordInRect(
+  arrangement: ArrangementV2,
+  trackId: string,
+  rect: NoteRect,
+  options: { type: ChordStampTypeV2; rootMidi: number; velocity?: number; lengthBeats?: number; scale?: string }
+): ArrangementV2 {
+  const notes = arrangement.notesByTrack?.[trackId] ?? [];
+  const start = rect.fromBeats;
+  if (start < 0 || start >= (arrangement.bars ?? 4) * 4) return arrangement;
+  const root = Math.round(options.rootMidi);
+  const velocity = Math.max(1, Math.min(127, options.velocity ?? 100));
+  const lengthBeats = Math.max(0.05, options.lengthBeats ?? 0.5);
+  const pitches =
+    options.type === "note"
+      ? [root]
+      : options.type === "ninth"
+        ? [root, root + 4, root + 7, root + 11, root + 14]
+        : options.type === "sus2"
+          ? [root, root + 2, root + 7]
+          : chordVoicingForStep(root, options.scale, {
+              style:
+                options.type === "triad"
+                  ? "triad"
+                  : options.type === "seventh"
+                    ? "seventh"
+                    : options.type === "sus4"
+                      ? "sus"
+                      : "power",
+            });
+  const kept = notes.filter((note) => note.startBeats !== start);
+  const stamped = [...new Set(pitches.map((pitch) => Math.round(pitch)))].map((pitch) => ({
+    pitch,
+    startBeats: start,
+    lengthBeats,
+    velocity,
+  }));
+  return { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [trackId]: [...kept, ...stamped] } };
 }
 
