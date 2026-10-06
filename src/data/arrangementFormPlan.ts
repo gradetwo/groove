@@ -1,4 +1,5 @@
 import { ARRANGEMENT_FORMS, type ArrangementFormId } from "./arrangementForm";
+import type { ArrangementV2 } from "../types/arrangementV2";
 
 /**
  * ⭐ **What an arrangement form means in the arrangement layer.**
@@ -27,4 +28,15 @@ export function formPartsV2(form: ArrangementFormId): FormPart[] {
     at += step.bars;
     return part;
   });
+}
+
+/**
+ * ⭐ **A form sets the frame, never the music.**
+ *
+ * Choosing a form is a decision about how long the arrangement is and how its parts are laid out, so the notes are carried over
+ * untouched: a composer who picks `club` and then picks `loop` again has the music they started with. This is the whole of what a
+ * form means at this layer today — the ramps, fills and risers the form also names are recorded as gaps rather than applied here.
+ */
+export function applyFormBars(arrangement: ArrangementV2, form: ArrangementFormId): ArrangementV2 {
+  return { ...arrangement, bars: formBarsV2(form) };
 }

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { formBarsV2, formPartsV2 } from "../data/arrangementFormPlan";
+import { applyFormBars, formBarsV2, formPartsV2 } from "../data/arrangementFormPlan";
+import { arrangementSeededFromGenre } from "../data/arrangementProjection";
+import { GENRES_MAP } from "../data/genres";
 
 /**
  * ⭐ **The three forms, as the arrangement layer reads them.**
@@ -29,5 +31,18 @@ describe("an arrangement form read as bars", () => {
       expect(parts.at(-1)!.toBar).toBe(formBarsV2(form));
       for (let i = 1; i < parts.length; i += 1) expect(parts[i]!.fromBar).toBe(parts[i - 1]!.toBar);
     }
+  });
+});
+
+describe("an arrangement in a chosen form", () => {
+  it("⭐ takes the form's length and leaves every note where it was", () => {
+    const before = arrangementSeededFromGenre("new", Object.values(GENRES_MAP)[0]!);
+    const club = applyFormBars(before, "club");
+    expect(club.bars).toBe(40);
+    expect(JSON.stringify(club.notesByTrack)).toBe(JSON.stringify(before.notesByTrack));
+    // ⭐ And picking the identity form back gives the arrangement the composer started from.
+    const loop = applyFormBars(club, "loop");
+    expect(loop.bars).toBe(4);
+    expect(JSON.stringify(loop.notesByTrack)).toBe(JSON.stringify(before.notesByTrack));
   });
 });
