@@ -17151,4 +17151,32 @@ describe("the grid's editing actions", () => {
   ⭐ ② ⭐ ⑦ 重新表述 ✓：⭐ **只清"无人调用的 v1 类型使用者"** ✓（⭐ 例：`projectStorage` ✓ 只被 `useSequencerStore` ✓ ⇒ ⭐ 属 v1 链 ✓，⭐ 随 Studio 决定 ✓）
   ⭐ ③ ⭐ 判据 ✓：⭐ 删任何 v1 使用者**前** ✓，⭐ 先量**它的导入者是否非判据使用者为零** ✓（⭐ 本轮的教训正是**没量就以为没人要** ✗）
 ```
+### 六百五十九、⭐ **续跑锚点**（业主指示"上下文不够就压缩上下文" ✓ 2026-10-06 ✓）
+
+```
+**⭐ 本支：换入口（业主已答"切换入口" ✓）**
+  ⭐ 已完成 ✓：⭐ `App.tsx` 的 Studio 标签页改渲染 **v2 编曲面** ✓（`4fd1057` ✓）；⭐ v1 `StudioView` **保留未挂载** ✓
+    ⇒ ⭐ 回退 ✓：⭐ `git checkout src/App.tsx`
+  ⚠️ **唯一未绿的 CI 红**：⭐ `src/test/NewUserOnboardingModal.test.tsx:124` ✗
+    ⭐ 它读 **`App.tsx` 源码** ✓，断言 `:130–131` 两条属性 ✓：⭐ `initialAutoPlay={initialAutoPlay}` ✓ 与
+      `onClearInitialAutoPlay={() => setInitialAutoPlay(false)}` ✓ —— ⭐ 它们**过去挂在 studio 元素上** ✗
+    ⭐ ⇒ ⭐ **真能力缺口** ✗（"⭐ 看完引导 ⇒ 自动开播**" ✓），⭐ **不是判据陈旧** ✗ ⇒ ⭐ 不许改断言了事 ✗
+  ⭐ **移植四步（下一轮）**：⭐ ① 量 v2 面的"⭐ 引擎就绪**"信号 ✗（hook 需要 `ready` ✓）｜
+    ⭐ ② 在 v2 面调用 `useInitialAutoPlay({ requested, ready, onConsumed })` ✓（hook 在
+      `src/features/sequencer/hooks/useInitialAutoPlay.ts` ✓；⭐ 现唯一消费者 `StudioView.tsx:651–655` ✓）｜
+    ⭐ ③ `App.tsx` 把 `initialAutoPlay` ✓／`onClearInitialAutoPlay` ✓ 传给 v2 面 ✓（状态在 `App.tsx:173` ✓）｜
+    ⭐ ④ 判据**改指** v2 面 ✓（语义不变 ✓ ⇒ ⭐ 仍能红 ✓）
+  ⭐ 旁证 ✓：⭐ `:133` 的 `localStorage.removeItem(ONBOARDING_COMPLETED_KEY)` ✓ **与入口无关** ✓ ⇒ ⭐ 应保持通过 ✓
+**⭐ 业主指示（性能）**：⭐ "先做好测量和统计 ✓，弄清各环节耗时占比 ✓，再按高频和高占用先优化** ✓
+  ⭐ 现有数据（外部测试报告 ✓ 2026-10-06 ✓）：⭐ 22 次调用合计 **442 s** ⇒ ⭐ **渲染链路占 98% 以上** ✗
+    ⭐ `render_arrangement`（199 音符）**119.7 s** ✓（⭐ 0.17× 实时 ✗，⭐ 基线 0.26× ✗）｜
+    ⭐ P0-2（1000 音符）**300 s 超时 hang** ✗｜⭐ `analyze_audio` 21.4 s ✓｜⭐ 其余 19 次 **< 1 s** ✓
+  ⇒ ⭐ **第一步**：⭐ 拆**渲染内部阶段**（flatten ✓／AudioContext 启动 ✓／逐轨渲染 ✓／编码 ✓）⇒ ⭐ 占比表 ✓
+  ⚠️ 教训 ✓：⭐ 真渲染**固定成本高** ✗（⭐ 整首流派与**单个音符**都约 **90 s** ✓）⇒ ⭐ 判据里**别真渲染** ✓（`vi.mock` 桩 ✓）
+**⭐ 业主指示（发布）**：⭐ "待会可以发布了 ✓，你就自己发布 ✓，不用等我决策** ✓ ⇒ ⭐ 绿后自行
+  `bash scripts/release.sh` ⇒ **2.35.0** ✓
+**⭐ 纪律**：⭐ 多用 CI／少用本机全套 ✓（本机约 10 分钟 ✗）；⭐ 本机只跑**目标那一条**判据 ✓
+**⭐ 其余待办**：⭐ ⑦ v1 类型（⭐ 实测**无死遗留** ✗ ⇒ 随 v1 链退役 ✓）｜⭐ 执行顺序 ③ 缺来源 ✓（§656 ✓）｜
+  ⭐ 调试包的活的编曲计数 ✓（可选 ✓）
+```
 
