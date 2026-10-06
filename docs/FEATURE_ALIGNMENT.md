@@ -563,3 +563,10 @@
 | ⭐ **判据（先立）** | ✅ ⭐ 新判据已立并**证明能红** ✓：⭐ "**offers a genre, so a project can start from the music rather than only from a template**" ✓ ⇒ ⭐ 红文：⭐ `Unable to find an element by: [data-testid="genre-chicago-house"]` ✗ ⇒ ⭐ 回退保持树绿 ✓ | 本节 ✓ |
 | ⭐ **待实现** | ⭐ 面板加**流派选择** ＋ ⭐ 创建时走 `patternFromGenre` ⇒ `projectSongToV2` ✓（⭐ 优先共享助手 ✓） | 本节 ✓ |
 
+## 2026-10-06 08:42 回填（第 4 条规矩：改完实现回来改表）
+
+| 面 | 变化 | 依据 |
+|---|---|---|
+| ⭐ **教训** | ⚠️ ⭐ 嵌套括号的调用不能用扁平正则改 ✓（⭐ 计数为 1 不等于改得对 ✓ ⇒ ⭐ 靠 `tsc` 兜底 ✓） | 本节 ✓ |
+| ⭐ **待落** | ⭐ 面板流派选择 ＋ 判据（⭐ 已写就 ✓）＋ ⭐ 调用点按**收尾行**补第四参 ✓ | 本节 ✓ |
+
