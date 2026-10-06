@@ -1054,8 +1054,8 @@ async function runTestOnTarget(target, baseUrl) {
         page.waitForEvent("download", { timeout: 120000 }),
         (async () => {
           await page.click("[data-testid='arrangement-export-menu'], [data-toolbar-id='export']");
-          await page.waitForSelector("[data-testid='export-mp3']", { timeout: 10000 });
-          await page.click("[data-testid='export-mp3']");
+          await page.waitForSelector("[data-testid='arrangement-export-mp3'], [data-testid='export-mp3']", { timeout: 10000 });
+          await page.click("[data-testid='arrangement-export-mp3'], [data-testid='export-mp3']");
         })(),
       ]);
       const filename = download.suggestedFilename();
