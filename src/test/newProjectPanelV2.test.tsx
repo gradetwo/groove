@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { NewProjectPanelV2 } from "../components/arrangement/NewProjectPanelV2";
 import { TEMPLATES } from "../data/arrangementEdits";
+import { GENRES_MAP } from "../data/genres";
 import { LanguageProvider } from "../i18n/LanguageContext";
 
 /**
@@ -21,7 +22,7 @@ describe("the new-project panel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create" }));
     // The highlighted card is the one created — not a default that ignored the click.
     // ⭐ And the name is reported with it: it is the one thing the chooser decides that nothing else can supply.
-    expect(onCreate).toHaveBeenCalledWith("samplers", expect.anything(), expect.any(String));
+    expect(onCreate).toHaveBeenCalledWith("samplers", expect.anything(), expect.any(String), undefined);
   });
 
   it("carries the chosen kind into a blank project, and offers it only there", () => {
@@ -33,7 +34,7 @@ describe("the new-project panel", () => {
     fireEvent.change(screen.getByLabelText("First track kind"), { target: { value: "sampler" } });
     fireEvent.click(screen.getByRole("button", { name: "Create" }));
     // A blank project still has a typed track, which is the owner's requirement — and the card promised exactly that.
-    expect(onCreate).toHaveBeenCalledWith(undefined, "sampler", expect.any(String));
+    expect(onCreate).toHaveBeenCalledWith(undefined, "sampler", expect.any(String), undefined);
   });
 
   it("hides the blank-only choice when a template is selected, because templates bring their own tracks", () => {
@@ -63,6 +64,21 @@ describe("the new-project panel", () => {
    * **The card's sentence follows the language toggle.** It did not: the descriptions were an `{en, zh}` pair inside the component and the card rendered `?.en` unconditionally, so a Chinese session read English here while every other surface switched. The assertion
    * is against the dictionary's own value rather than against a sentence written here, so it cannot pass by both sides being hardcoded the same way.
    */
+  it("⭐ offers a genre, so a project can start from the music rather than only from a template", () => {
+    const onCreate = vi.fn();
+    render(<NewProjectPanelV2 onCreate={onCreate} />);
+    // ⭐ The older studio leads with a genre, and this route must not lose that ability. The panel names the genres it can
+    // start from, and the chosen one travels with the choice the person makes.
+    const [first, second] = Object.values(GENRES_MAP);
+    for (const genre of [first, second]) {
+      expect(screen.getByTestId(`genre-${genre.id}`)).toBeDefined();
+    }
+    fireEvent.click(screen.getByTestId(`genre-${first.id}`));
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    // ⭐ Read the reported genre directly: a matcher that accepts anything would also accept the wrong id.
+    expect(onCreate.mock.calls.at(-1)?.[3]).toBe(first.id);
+  });
+
   it("reads its sentence from the dictionary, in whichever language is on", () => {
     window.localStorage.setItem("groove_language", "zh");
     render(
@@ -120,7 +136,7 @@ describe("the project name", () => {
     const field = screen.getByLabelText("Project name") as HTMLInputElement;
     expect(field.value.trim().length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: "Create" }));
-    expect(onCreate).toHaveBeenCalledWith(undefined, expect.anything(), field.value);
+    expect(onCreate).toHaveBeenCalledWith(undefined, expect.anything(), field.value, undefined);
   });
 
   it("⭐ follows the card, and a name the person typed is never put back", () => {
@@ -140,7 +156,7 @@ describe("the project name", () => {
     expect(field.value).toBe("My Tune");
 
     fireEvent.click(screen.getByRole("button", { name: "Create" }));
-    expect(onCreate).toHaveBeenCalledWith("drums-bass", expect.anything(), "My Tune");
+    expect(onCreate).toHaveBeenCalledWith("drums-bass", expect.anything(), "My Tune", undefined);
   });
 
   it("falls back to the dictionary's default rather than creating an unnamed project from an emptied field", () => {
@@ -155,6 +171,6 @@ describe("the project name", () => {
     // language, and a name nobody can read in a list is barely better than no name.
     fireEvent.change(screen.getByLabelText("工程名"), { target: { value: "   " } });
     fireEvent.click(screen.getByRole("button", { name: "Create" }));
-    expect(onCreate).toHaveBeenCalledWith(undefined, expect.anything(), "未命名工程");
+    expect(onCreate).toHaveBeenCalledWith(undefined, expect.anything(), "未命名工程", undefined);
   });
 });

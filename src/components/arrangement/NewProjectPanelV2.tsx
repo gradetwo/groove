@@ -10,6 +10,7 @@
  */
 import { useState } from "react";
 import { TEMPLATES } from "../../data/arrangementEdits";
+import { GENRES_MAP } from "../../data/genres";
 import type { TrackKindV2 } from "../../types/arrangementV2";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { KIND_LABEL_KEY, TRACK_KIND_ORDER } from "./kindLabels";
@@ -27,7 +28,11 @@ const DESCRIPTION_KEYS: Record<string, string> = {
 
 export interface NewProjectPanelV2Props {
   /** Creating the project. The panel reports the choice; what an arrangement is made of belongs to the model. */
-  onCreate: (templateId: string | undefined, blankKind: TrackKindV2, name: string) => void;
+  /**
+   * ⭐ **Creating the project.** The panel reports the choice; what an arrangement is made of belongs to the model. The
+   * genre is optional and travels with the choice, because the older studio leads with one and this route must not lose it.
+   */
+  onCreate: (templateId: string | undefined, blankKind: TrackKindV2, name: string, genreId?: string) => void;
 }
 
 /**
@@ -67,6 +72,8 @@ export function NewProjectPanelV2({ onCreate }: NewProjectPanelV2Props) {
    * for you" and "put back the way we thought it should be".
    */
   const [nameWasEdited, setNameWasEdited] = useState(false);
+  // ⭐ A genre, when one is chosen: the older studio starts from the music, and so can this route.
+  const [genreId, setGenreId] = useState<string | undefined>(undefined);
 
   // ⭐ Blank is a card like the others, so the panel has one shape rather than a list plus an exception.
   const cards = [...TEMPLATES.map((template) => ({ id: template.id, name: template.name })), { id: "blank", name: "Blank" }];
@@ -124,6 +131,23 @@ export function NewProjectPanelV2({ onCreate }: NewProjectPanelV2Props) {
         ))}
       </div>
 
+      {/* ⭐ The genres, beside the templates: a project can start from the music as well as from a shape. */}
+      <div data-testid="genre-choices" className="flex flex-wrap gap-2 items-center text-sm text-text">
+        <span className="opacity-80">{t("new_project_genre")}</span>
+        {Object.values(GENRES_MAP).map((genre) => (
+          <button
+            key={genre.id}
+            type="button"
+            data-testid={`genre-${genre.id}`}
+            aria-pressed={genreId === genre.id}
+            className={genreId === genre.id ? "px-3 py-1 rounded border border-accent" : "px-3 py-1 rounded border border-transparent opacity-80"}
+            onClick={() => setGenreId(genreId === genre.id ? undefined : genre.id)}
+          >
+            {genre.name ?? genre.id}
+          </button>
+        ))}
+      </div>
+
       <button type="button" className="self-start px-3 py-1 rounded text-sm text-text opacity-80" onClick={() => setDetailsOpen((open) => !open)} aria-expanded={detailsOpen}>
         Details
       </button>
@@ -168,7 +192,7 @@ export function NewProjectPanelV2({ onCreate }: NewProjectPanelV2Props) {
             word Create disappears. `--d-on-accent` is what that token means — the ink that goes on a fill —
             and it is near-black there. The degenerate pair is a palette problem, recorded rather than guessed
             at here. */}
-        <button type="button" data-testid="new-project-create" className="px-4 py-2 rounded bg-[rgb(var(--d-accent))] text-[rgb(var(--d-on-accent))] font-medium" onClick={() => onCreate(selected === "blank" ? undefined : selected, blankKind, name.trim() || t("new_project_default_name"))}>
+        <button type="button" data-testid="new-project-create" className="px-4 py-2 rounded bg-[rgb(var(--d-accent))] text-[rgb(var(--d-on-accent))] font-medium" onClick={() => onCreate(selected === "blank" ? undefined : selected, blankKind, name.trim() || t("new_project_default_name"), genreId)}>
           Create
         </button>
       </footer>

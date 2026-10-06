@@ -15940,3 +15940,39 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 下一轮 ✓**：⭐ 上面的两处断言修法 ＋ ⭐ 面板／判据原样 ✓ ⇒ ⭐ 跑门 ⇒ ⭐ 绿则推 ✓
 ```
 
+### 六百零八、✅ **⑦-B 第一件落地：v2 新建路径提供流派入口**（2026-10-06 08:47 ✓）
+
+```
+**⭐ 已落 ✓（⭐ 两个文件 ✓）**：
+  ⭐ ① ⭐ `src/components/arrangement/NewProjectPanelV2.tsx` ✓：
+    ⭐ 流派段 ✓（⭐ 从 ⭐ `GENRES_MAP` ✓ 取 ✓，⭐ `data-testid="genre-<id>"` ✓，⭐ `aria-pressed` ✓，⭐ 点选可取消 ✓）
+    ⭐ `onCreate` 加**第四参** `genreId?: string` ✓（⭐ 类型层：⭐ 参数更少的回调也可赋值 ✓ ⇒ ⭐ **视图无需改** ✓）
+    ⭐ 调用点 ✓：⭐ 单行 ✓ ⇒ ⭐ **数括号**找收尾 ✓（⭐ 列 286 ✓）⇒ ⭐ 补 `, genreId` ✓ ✓
+  ⭐ ② ⭐ `src/test/newProjectPanelV2.test.tsx` ✓：
+    ⭐ 新例 ✓：⭐ "⭐ **offers a genre, so a project can start from the music rather than only from a template**" ✓
+      ⭐ 从数据取 id ✓（⭐ `Object.values(GENRES_MAP)` ✓）＋ ⭐ **直接读**上报的流派 ✓（⭐ `mock.calls.at(-1)?.[3]` ✓）
+    ⭐ **五处**既有断言**一次补齐第 4 参** ✓（⭐ 机械法 ✓：⭐ 数括号 ＋ ⭐ 数**顶层逗号** ✓）
+**⭐ 读数 ✓**：⭐ `tsc=0` ✓｜⭐ `lint=0` ✓｜⭐ 该判定文件**全过** ✓｜⭐ 全套单测 ✓（⭐ RC=0 ✓）
+**⭐⭐ 教训 187 ✓**：⭐ **改调用元数 ⇒ 牵动**该文件里所有** `toHaveBeenCalledWith`** ✓（⭐ 它们**逐参比对** ✓）
+  ⭐ 本轮我第一遍只改了 2 处 ✗ ⇒ ⭐ 又红 3 处 ✗ ⇒ ⭐ 做法 ✓：⭐ **先 `grep` 出全部断言 ✓，⭐ 再一次补齐** ✓ ✓
+  ⭐ 机械补法 ✓：⭐ 从 ⭐ `toHaveBeenCalledWith(` ✓ 数括号到收尾 ✓ ⇒ ⭐ 若**顶层逗号 < 3** ✗ ⇒ ⭐ 在 `)` 前插 `, undefined` ✓ ✓
+**⚠️ 尚差一步 ✓**：⭐ 流派**尚未被使用** ✗ —— ⭐ 视图（⭐ `ArrangementViewV2` ✓）**忽略第四参** ✗
+  ⇒ ⭐ 下一件 ✓：⭐ **能力判据** ✓：⭐ "⭐ **按流派创建 ⇒ 结果是带该流派音符的编曲**" ✓（⭐ 能红 ✓）
+    ⇒ ⭐ 实现走**已验的两句** ✓：⭐ `patternFromGenre(genre)` ✓ ⇒ ⭐ `projectSongToV2({ id, clips: { A: … } })` ✓
+**⏳ 下一步 ✓**：⭐ 立那条能力判据（⭐ 先红 ✓）⇒ ⭐ 视图接线 ✓ ⇒ ⭐ 然后 ⭐ **关 `/` 老路** ✓（⭐ ⑦-C ✓）
+```
+
+### 六百零九、⚠️ **教训 187 的第二半：新字面 `t("…")` 必须同时进词典**（2026-10-06 08:56 ✓）
+
+```
+**⭐ 红 ✓**：⭐ `src/test/i18nKeys.test.ts` ✗ —— "⭐ **resolves every literal t("...") usage found under src/ to a dictionary**" ✓
+  ⭐ 原文 ✓：⭐ `Missing i18n keys referenced by t("..."):` ✓ ｜⭐ `"new_project_genre" -> components/arrangement/NewProjectPanelV2.tsx` ✗
+**⭐ 已修 ✓**：⭐ 在 ⭐ `src/i18n/locales/common.ts:50` ✓ 的邻居键旁补 ✓：
+  ⭐ `new_project_genre: { en: "Genre", zh: "流派" }` ✓（⭐ 双语 ✓）
+**⭐⭐ 教训 187（完整形态 ✓）**：⭐ 一处实现改动可能牵动**两类全仓检查** ✗：
+  ⭐ ① ⭐ **调用元数** ⇒ ⭐ 牵动**全仓**所有 ⭐ `toHaveBeenCalledWith` ✓（⭐ 不只是一个文件 ✓）
+  ⭐ ② ⭐ **新的界面字面** ⇒ ⭐ 必须**同时进词典** ✓（⭐ `i18nKeys` ✓ 会全仓扫描 ✓）
+  ⭐ 做法 ✓：⭐ 改完 ⭐ **跑全套** ✓（⭐ 十一道门不含它 ✗，⭐ 教训 183 ✓）⇒ ⭐ 让全仓检查说话 ✓ ✓
+**⏳ 下一步 ✓**：⭐ 全绿后提交 ✓ ⇒ ⭐ 然后 ⭐ **能力判据**（⭐ 按流派创建 ⇒ 带该流派音符 ✓）⇒ ⭐ 视图接线 ✓ ⇒ ⭐ 关 `/` 老路 ✓
+```
+

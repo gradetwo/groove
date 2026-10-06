@@ -48,6 +48,8 @@ export const commonMessages = {
    * had no name to show and nothing written here could be found again by name.
    */
   new_project_name: { en: "Project name", zh: "工程名" },
+  // ⭐ The genre beside the name: the arrangement route can start from the music, not only from a template.
+  new_project_genre: { en: "Genre", zh: "流派" },
   new_project_name_placeholder: { en: "Enter project name...", zh: "输入工程名…" },
   new_project_default_name: { en: "Untitled Project", zh: "未命名工程" },
   /**
