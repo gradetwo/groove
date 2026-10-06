@@ -1359,10 +1359,21 @@ async function runTestOnTarget(target, baseUrl) {
           new Promise((resolve) =>
             requestAnimationFrame(() => requestAnimationFrame(() => resolve(null)))
           );
+        /**
+         * ⭐ **The carrier changes; the claim does not.**
+         *
+         * This asserts three things a person feels: the `--app-header-h` token matches the header's real height, the transport is inside the
+         * viewport once the page is scrolled, and a hit test at the transport's centre lands on the transport rather than on something
+         * covering it. The studio's carrier was the toolbar group inside a `div.sticky`; the arrangement surface puts the transport in
+         * `arrangement-transport` inside the arrangement view, so those are what the same three assertions are measured against.
+         */
         const header = document.querySelector("header");
-        const group = document.querySelector("[data-testid='toolbar-group-transport']");
-        const strip = group?.closest("div.sticky");
-        const panel = strip?.parentElement;
+        const group = document.querySelector(
+          "[data-testid='arrangement-transport'], [data-testid='toolbar-group-transport']"
+        );
+        const panel =
+          document.querySelector("[data-testid='arrangement-view-v2']") ??
+          group?.closest("div.sticky")?.parentElement;
         if (!header || !group || !panel) return { error: "no header, transport group or panel" };
         const token = parseFloat(
           getComputedStyle(document.documentElement).getPropertyValue("--app-header-h")
