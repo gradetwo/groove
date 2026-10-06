@@ -761,11 +761,23 @@ export function legatoNotesInRect(
   arrangement: ArrangementV2,
   trackId: string,
   rect: NoteRect,
-  options: { loopEndBeats?: number; maxLengthBeats?: number; minLengthBeats?: number } = {}
+  options: {
+    loopEndBeats?: number;
+    maxLengthBeats?: number;
+    minLengthBeats?: number;
+    /** ⭐ **Exactly these notes.** Marks are a set, and a rectangle can hold notes nobody marked — so a caller with marks says so. */
+    only?: readonly { pitch: number; startBeats: number }[];
+  } = {}
 ): ArrangementV2 {
   const notes = arrangement.notesByTrack?.[trackId];
   if (notes === undefined || notes.length === 0) return arrangement;
-  const targets = new Set(notesWithinRect(notes, rect));
+  const targets = new Set(
+    options.only === undefined
+      ? notesWithinRect(notes, rect)
+      : notes.filter((note) =>
+          options.only!.some((mark) => mark.pitch === note.pitch && mark.startBeats === note.startBeats)
+        )
+  );
   if (targets.size === 0) return arrangement;
   const sounding = [...new Set(notes.map((note) => note.startBeats))].sort((a, b) => a - b);
   const fallbackEnd = options.loopEndBeats ?? (arrangement.bars ?? 4) * 4;
