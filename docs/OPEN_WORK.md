@@ -17261,3 +17261,23 @@ describe("the grid's editing actions", () => {
   ⭐ 三者的**共同形状** ✓：⭐ **组件与字段都在，缺的是接到 v2 面的入口** ✓ ⇒ ⭐ 不是功能不存在 ✓
 ```
 
+### 六百六十三、⭐ **发布打包工作流已加，以及一条平台事实**（2026-10-06 ✓）
+
+```
+**⭐ 业主需求 ✓**：⭐ "增加 GitHub Actions 自动发布打包（tag 触发和手工触发）" ✓
+**⭐ 已加 ✓**：⭐ `.github/workflows/release.yml` ✓（提交 `6f2c6b5` ✓，⭐ 89 行 ✓）
+  ⭐ 触发 ✓：⭐ ① `push: tags: ["v*"]` ✓（⭐ 打包该 tag ✓）｜⭐ ② `workflow_dispatch` ✓（⭐ 输入 `tag` ✓ 必填 ✓ ＋ `verify` ✓ 默认 true ✓）
+  ⭐ 步骤 ✓：⭐ 解析 tag（⭐ 两条入口只有一处决定打包哪个提交 ✓）⇒ checkout 该 ref ⇒ setup-node（⭐ `.nvmrc` ✓，⭐ 同 `ci.yml` ✓）
+    ⇒ `npm ci` ⇒ ⭐ 门（⭐ 仅手工且 `verify` ✓：⭐ `version:check` ✓／`typecheck` ✓／`lint` ✓／`redlines` ✓）⇒ `npm run build`
+    ⇒ ⭐ `python3 scripts/package.py` ✓（⭐ 复用仓库自己的打包器 ✓）⇒ ⭐ 挂到 GitHub Release ✓
+  ⭐ **不部署** ✓：⭐ `scripts/release.sh` 负责线上 ✓（⭐ 它按序跑门⇒部署⇒tag⇒镜像 ✓，⭐ 因为 v2.34.25 那次部署失败后后续步骤仍然跑了 ✓）
+    ⇒ ⭐ 本工作流**不碰** `deploy` ✓／`main` ✓／也**不创建** tag ✓
+  ⭐ **重跑不产生两个发布** ✓：⭐ 已有发布 ⇒ `gh release upload --clobber` ✓；⭐ 没有 ⇒ `gh release create` ✓
+  ⭐ 产物 ✓：⭐ `release/groove-release.zip` ✓／`release/dist.zip` ✓／`release/groove-release.tar.gz` ✓（⭐ `scripts/package.py` ✓，⭐ `RELEASE_DIR='release'` ✓）
+**⚠️ 平台事实（本轮实测 ✓）**：⭐ `gh workflow list` 里**没有** Release ✓ ⇒ ⭐ 手工触发报 "could not find any workflows named Release" ✗
+  ⭐ 原因 ✓：⭐ GitHub 的工作流**列表**与**手工触发的输入校验**都读**默认分支** ✓（⭐ 本仓库默认分支是 `main` ✓）
+  ⭐ 对比 ✓：⭐ `Manual verify` 之所以能 `--ref dev` 触发 ✓，⭐ 是因为它**早已在默认分支上** ✓（⭐ §502 的经验只在"已注册"的前提下成立 ✓）
+  ⇒ ⭐ ⚠️ **tag 触发不受此限** ✓：⭐ 它读**被打 tag 的那个提交**上的文件 ✓ ⇒ ⭐ 下次 `release.sh` 打 tag 时即会运行 ✓
+  ⇒ ⭐ 处置 ✓：⭐ 记入本节 ✓，⭐ 等发布流程让 `dev` 到 `main` 后手工触发即可用 ✓；⭐ **不为验证它而单独推 `main`** ✗（⭐ 那会绕过 `release.sh` 的顺序纪律 ✓）
+```
+
