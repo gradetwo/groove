@@ -803,11 +803,19 @@ export function arpeggiateNotesInRect(
   arrangement: ArrangementV2,
   trackId: string,
   rect: NoteRect,
-  options: { direction?: "up" | "down" | "updown"; stepBeats?: number } = {}
+  options: {
+    direction?: "up" | "down" | "updown";
+    stepBeats?: number;
+    /** ⭐ **Exactly these notes.** Marks are a set; a rectangle can hold notes nobody marked. */
+    only?: readonly { pitch: number; startBeats: number }[];
+  } = {}
 ): ArrangementV2 {
   const notes = arrangement.notesByTrack?.[trackId];
   if (notes === undefined || notes.length === 0) return arrangement;
-  const targets = notesWithinRect(notes, rect);
+  const targets =
+    options.only === undefined
+      ? notesWithinRect(notes, rect)
+      : notes.filter((note) => options.only!.some((mark) => mark.pitch === note.pitch && mark.startBeats === note.startBeats));
   if (targets.length < 2) return arrangement;
   const direction = options.direction ?? "up";
   const stepBeats = options.stepBeats ?? 0.25;
@@ -845,10 +853,18 @@ export function stampChordInRect(
   arrangement: ArrangementV2,
   trackId: string,
   rect: NoteRect,
-  options: { type: ChordStampTypeV2; rootMidi: number; velocity?: number; lengthBeats?: number; scale?: string }
+  options: {
+    type: ChordStampTypeV2;
+    rootMidi: number;
+    velocity?: number;
+    lengthBeats?: number;
+    scale?: string;
+    /** ⭐ **Exactly these notes.** Marks are a set; a rectangle can hold notes nobody marked. */
+    only?: readonly { pitch: number; startBeats: number }[];
+  }
 ): ArrangementV2 {
   const notes = arrangement.notesByTrack?.[trackId] ?? [];
-  const start = rect.fromBeats;
+  const start = options.only?.[0]?.startBeats ?? rect.fromBeats;
   if (start < 0 || start >= (arrangement.bars ?? 4) * 4) return arrangement;
   const root = Math.round(options.rootMidi);
   const velocity = Math.max(1, Math.min(127, options.velocity ?? 100));
