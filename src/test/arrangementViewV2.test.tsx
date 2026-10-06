@@ -423,3 +423,42 @@ describe("choosing an arrangement form", () => {
     expect(shape(club)).toEqual(shape(seeded));
   });
 });
+
+/**
+ * ⭐ **Transposing what the roll has marked.** The interval comes from the field, the span from the marks, and one command moves
+ * it — so transposing by the negative interval is the way back.
+ */
+describe("transposing a marked span", () => {
+  it("⭐ lifts the marked notes by the stated interval and leaves the rest alone", () => {
+    const seeded = arrangementSeededFromGenre("new", Object.values(GENRES_MAP)[0]!);
+    const track = seeded.tracks[0]!;
+    const notes = seeded.notesByTrack?.[track.id] ?? [];
+    const first = notes[0]!;
+    const second = notes.find((note) => note.startBeats > first.startBeats)!;
+    const stepOf = (beats: number) => Math.round(beats / 0.25);
+
+    const onArrangementChange = vi.fn();
+    renderView(
+      <ArrangementViewV2 songId="new" capture={noCapture} initialArrangement={seeded} onArrangementChange={onArrangementChange} />
+    );
+    fireEvent.click(within(screen.getByTestId("arrangement-track-picker")).getByText(track.name));
+    const cell = (pitch: number, step: number) => screen.getByTestId(`roll-cell-${pitch}-${step}`);
+    fireEvent.pointerDown(cell(first.pitch, stepOf(first.startBeats)));
+    fireEvent.pointerEnter(cell(second.pitch, stepOf(second.startBeats)));
+    fireEvent.pointerUp(cell(second.pitch, stepOf(second.startBeats)));
+
+    fireEvent.change(screen.getByTestId("arrangement-transpose-semitones"), { target: { value: "12" } });
+    fireEvent.click(screen.getByTestId("arrangement-transpose-apply"));
+
+    const after = onArrangementChange.mock.calls.at(-1)?.[0] as ArrangementV2;
+    const landed = after.notesByTrack?.[track.id] ?? [];
+    // ⭐ The first marked note is an octave higher, at the same start, and a note outside the span is exactly as it was.
+    const lifted = landed.find((note) => note.startBeats === first.startBeats && note.pitch === first.pitch + 12);
+    expect(lifted, "the marked note did not rise by the interval").toBeDefined();
+    const untouched = landed.find((note) => note.startBeats > second.startBeats);
+    if (untouched) {
+      const before = notes.find((note) => note.startBeats === untouched.startBeats)!;
+      expect(untouched.pitch).toBe(before.pitch);
+    }
+  });
+});

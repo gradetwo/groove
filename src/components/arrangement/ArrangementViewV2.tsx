@@ -86,6 +86,7 @@ import { playArrangementV2, type ArrangementPlayer, type ArrangementTransportSta
 import { stepsPerBarFor, STEPS_PER_BAR, STEPS_PER_BEAT } from "../../data/noteEvents";
 import { announcer } from "../../platform/announcer";
 import { applyForm } from "../../data/arrangementFormPlan";
+import { transposeNotesInRange } from "../../data/arrangementEdits";
 
 /**
  * The snap values the toolbar offers, coarsest to finest. The **value** is shown, because a toggle's state is not a value.
@@ -268,6 +269,8 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
   const [selectedTrackId, setSelectedTrackId] = useState<string | undefined>(undefined);
   /** ⭐ **What the roll has marked.** The roll owns the mark; the toolbar acts on it, so the view keeps a copy. */
   const [rollSelection, setRollSelection] = useState<readonly { pitch: number; startBeats: number }[]>([]);
+  /** ⭐ The interval the transpose buttons move a marked span by. */
+  const [semitones, setSemitones] = useState(12);
   /**
    * ⭐ **Which bar the strips show, which is not the transport's bar.** `bar` above is where the transport is in the underlying song and is what the take selector marks; this is a view choice — which sixteen squares a row draws. They are separate because an arrangement of eight bars still
    * has one transport, and a person looking at bar three has not thereby moved the playhead.
@@ -978,6 +981,40 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           }
         >
           Song
+        </button>
+        {/**
+          * ⭐ **Transposing a marked span.** The older editor moved a section by a stated interval, and this is the same idea at
+          * this layer: the marks give the span, the field gives the interval, and one command moves it — so one press is one
+          * undo, and transposing by the negative interval brings the music back exactly.
+          */}
+        <label className="flex items-center gap-1 text-xs text-text opacity-90">
+          ±
+          <input
+            type="number"
+            aria-label="semitones"
+            data-testid="arrangement-transpose-semitones"
+            value={semitones}
+            onChange={(event) => setSemitones(Number(event.target.value))}
+            className="h-6 w-12 rounded border border-[rgb(var(--d-line))] bg-transparent px-1 font-['JetBrains_Mono'] text-[10px]"
+          />
+        </label>
+        <button
+          type="button"
+          data-testid="arrangement-transpose-apply"
+          className="px-2 py-1 rounded text-xs text-text opacity-90"
+          disabled={editableTrackId === undefined || rollSelection.length === 0}
+          onClick={() => {
+            if (editableTrackId === undefined || rollSelection.length === 0) return;
+            const marks = rollSelection;
+            const rect = {
+              fromBeats: Math.min(...marks.map((mark) => mark.startBeats)),
+              toBeats: Math.max(...marks.map((mark) => mark.startBeats)),
+            };
+            const after = transposeNotesInRange(arrangement, editableTrackId, rect.fromBeats, rect.toBeats, semitones);
+            commit(setterCommand("Transpose", (_current, value) => value, arrangement, after));
+          }}
+        >
+          Transpose
         </button>
         <button
           type="button"
