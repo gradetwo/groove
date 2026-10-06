@@ -94,7 +94,8 @@ import {
   getArrangementSaveStatusSnapshot,
   subscribeArrangementSaveStatus,
 } from "../../features/sequencer/projectDb";
-import type { AudioEngine } from "../../audio/AudioEngine";
+import type { AudioEngine, EffectsRackState } from "../../audio/AudioEngine";
+import { DEFAULT_FX_STATE } from "../../audio/EffectsRack";
 import { useMidiInput } from "../../features/sequencer/hooks/useMidiInput";
 
 /**
@@ -335,6 +336,32 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
    */
   const [metronome, setMetronome] = useState(false);
   const [countIn, setCountIn] = useState(false);
+
+  /**
+   * ⭐ **The master rack, read rather than assumed.** The engine exposes four setters over the rack it builds, and the studio drove
+   * them from a panel the v1 deletion took with it. This reads the rack's own state when the engine arrives and pushes the whole
+   * record back on every change, so what the buttons show is what the rack holds -- a genre override that changed it is not hidden.
+   */
+  const [fxState, setFxState] = useState<EffectsRackState | undefined>(undefined);
+  useEffect(() => {
+    const rack = engineRef?.current?.getMasterFxRack();
+    if (rack) setFxState(rack.getState());
+  }, [engineRef, player]);
+
+  const toggleFx = useCallback(
+    (key: "filterEnabled" | "saturationEnabled" | "chorusEnabled" | "bitcrusherEnabled") => {
+      const engineNow = engineRef?.current;
+      if (!engineNow) return;
+      const current = fxState ?? DEFAULT_FX_STATE;
+      const on = !current[key];
+      if (key === "filterEnabled") engineNow.setMasterFilter(on, current.filterCutoff, current.filterQ, current.filterType);
+      else if (key === "saturationEnabled") engineNow.setMasterSaturation(on, current.saturationDrive);
+      else if (key === "chorusEnabled") engineNow.setMasterChorus(on, current.chorusMix, current.chorusRate);
+      else engineNow.setMasterBitcrusher(on, current.bitDepth);
+      setFxState({ ...current, [key]: on });
+    },
+    [engineRef, fxState]
+  );
   /**
    * The play-start marker, in bars. Clicking the ruler sets it — Bitwig's "single click in the upper ruler sets the play start".
    *
@@ -1383,6 +1410,25 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
         >
           ⏱
         </button>
+
+        {/* Master rack: the four blocks the engine builds, each with its own switch. Parameters come after. */}
+        {(["filterEnabled", "saturationEnabled", "chorusEnabled", "bitcrusherEnabled"] as const).map((key) => {
+          const on = (fxState ?? DEFAULT_FX_STATE)[key];
+          const labelKey = `arrangement_fx_${key.replace("Enabled", "")}` as const;
+          return (
+            <button
+              key={key}
+              type="button"
+              data-testid={`arrangement-${key.replace("Enabled", "").toLowerCase()}`}
+              aria-label={t(labelKey)}
+              aria-pressed={on}
+              onClick={() => toggleFx(key)}
+              className={`h-11 shrink-0 rounded border px-2 text-[10px] uppercase tracking-wider ${on ? "border-[rgb(var(--d-accent))] bg-[rgb(var(--d-accent))]/15 text-text" : "border-white/10 text-text-sub"}`}
+            >
+              {t(labelKey)}
+            </button>
+          );
+        })}
 
         {/* Zoom. The same control the ruler's own manual gestures answer to, and the reason the labels subdivide. */}
         <span className="flex shrink-0 items-center">
