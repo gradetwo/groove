@@ -16456,3 +16456,26 @@ describe("the grid's editing actions", () => {
 **⏳ 下一轮 ✓**：⭐ 第 2 档 ✓：⭐ **选择框** ✗ ＋ ⭐ **复制粘贴** ✗（⭐ 参照 ⭐ `rollModel` 的 ⭐ `notesInRect` ✓／⭐ `copyNotes` ✓／⭐ `deleteNotes` ✓）
 ```
 
+### 六百二十七、⭐⭐ **第 2 档语义：矩形选择与"按位移复制"（v1 的复制不是剪贴板）**（2026-10-06 10:43 ✓）
+
+```
+**✅ 已落地 ✓（⭐ 第 1 档 ✓）**：⭐ 全套绿 ✓（⭐ `650 files` ✓／⭐ **5290 tests** ✓／⭐ 0 红 ✓）⇒ ⭐ 已推 ⭐ `eb0e9fb` ✓
+**⭐ `notesInRect` ✓（`rollModel.ts:451–462` ✓）**：
+  ⭐ 先**规范化**两轴 ✓：⭐ `lo/hi` ✓、⭐ `pitchLo/pitchHi` ✓ ⇒ ⭐ 选 ⭐ `stepIdx ∈ [lo,hi]` ∧ ⭐ `midi ∈ [pitchLo,pitchHi]` ✓
+  ⇒ ⭐ **矩形选择 ＝ 步 × 音高** ✓（⭐ 与 v2 的"⭐ 起点拍 × 音高"⭐ 同构 ✓）
+**⭐ `copyNotes` ✓（`:507–529` ✓）**：
+  ⭐ 把选中的音符**整体平移** ⭐ `deltaSteps` ✓ ⇒ ⭐ 越界（⭐ `stepIdx < 0` ✓ 或 ⭐ `>= stepCount` ✓）⭐ **丢弃** ✓
+  ⇒ ⭐ **落点步上的原有音符被替换** ✓（⭐ `kept = notes.filter(n => !copyStepSet.has(n.stepIdx))` ✓）
+  ⇒ ⭐ 回包 ✓：⭐ `{ pattern, selection: 副本们 }` ✓（⭐ 复制后**选中副本** ✓ —— ⭐ 便于连续复制 ✓）
+  ⇒ ⚠️ ⭐ **v1 的"复制"＝按位移的就地复制** ✗（⭐ **不是**剪贴板缓冲 ✓）⇒ ⭐ 移植**照此** ✓，⭐ 不必造缓冲 ✓
+**⭐ `deleteNotes` ✓（`:532–543` ✓）**：⭐ 删除选中 ⇒ ⭐ 保留其余 ✓
+**⭐⭐ v2 对应物 ✓（⭐ 以**拍**计 ✓，⭐ 建在 `arrangementEdits` 原语上 ✓）**：
+  ⭐ ① ⭐ `notesWithinRect(notes, rect: { fromBeats, toBeats, pitchFrom, pitchTo })` ✓ —— ⭐ 纯函数 ✓，⭐ 规范化两轴 ✓
+  ⭐ ② ⭐ `duplicateNotesByDelta(arrangement, trackId, rect, deltaBeats)` ✓ —— ⭐ 平移 ✓、⭐ 越界丢弃 ✓、⭐ 落点替换 ✓、⭐ 回包副本 ✓
+  ⭐ ③ ⭐ `removeNotesWithinRect(arrangement, trackId, rect)` ✓ —— ⭐ 删除 ✓、⭐ 其余不动 ✓
+**⭐ 判据计划 ✓（⭐ 独立量 ✓）**：⭐ ① ⭐ 矩形选中的**个数** ＝ ⭐ 落在矩形内的**实际**音符数 ✓（⭐ 与矩形外无关 ✓）
+  ⭐ ② ⭐ 复制后 ⭐ **音符数增加** ✓ ＝ ⭐ 选中的个数 ✓（⭐ 越界则更少 ✓）＋ ⭐ 副本的起点 ＝ ⭐ 原起点 ＋ `delta` ✓
+  ⭐ ③ ⭐ 删除后 ⭐ 矩形内为 **0** ✓，⭐ 且 ⭐ **矩形外的音符一个不少** ✓ ✓
+**⏳ 下一步 ✓**：⭐ 立这三条判据 ✓（⭐ 先红 ✓）⇒ ⭐ 实现三个操作 ✓ ⇒ ⭐ 界面入口（⭐ 框选与复制按钮 ✓）⇒ ⭐ 跑全套 ⇒ ⭐ 推 ✓
+```
+
