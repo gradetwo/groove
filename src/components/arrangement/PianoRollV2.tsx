@@ -47,6 +47,11 @@ export interface PianoRollV2Props {
    */
   onAudition?: (midi: number) => void;
   /**
+   * ⭐ **What the roll has marked, reported outward.** The roll owns the selection; the panel owns the arrangement, so the
+   * panel hears about the rectangle it would otherwise have to guess.
+   */
+  onSelectionChange?: (at: readonly { pitch: number; startBeats: number }[]) => void;
+  /**
    * ⭐ **What `Space` means while this editor has focus.** Optional like the rest: a host with no transport draws a roll whose Space does nothing rather than one that lies about playing.
    */
   onToggleTransport?: () => void;
@@ -87,7 +92,7 @@ export function noteName(pitch: number): string {
 
 const isBlackKey = (pitch: number) => [1, 3, 6, 8, 10].includes(pitch % 12);
 
-export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResizeNote, beats = 16, onSetBars, lowPitch = 48, highPitch = 84, onAudition, onToggleTransport }: PianoRollV2Props) {
+export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResizeNote, beats = 16, onSetBars, lowPitch = 48, highPitch = 84, onAudition, onSelectionChange, onToggleTransport }: PianoRollV2Props) {
   const { t } = useLanguage();
   const [lengthBeats, setLengthBeats] = useState(1);
   const [velocity, setVelocity] = useState(100);
@@ -96,6 +101,11 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
    */
   const [selected, setSelected] = useState<readonly { pitch: number; startBeats: number }[]>([]);
   /** ⭐ Whether a note is one of the selected ones, so the mark and the keys agree. */
+  /** ⭐ **The one way the selection changes**, so the panel hears about every change and about nothing else. */
+  const choose = (next: readonly { pitch: number; startBeats: number }[]) => {
+    setSelected(next);
+    onSelectionChange?.(next);
+  };
   const isSelected = (pitch: number, startBeats: number) =>
     selected.some((c) => c.pitch === pitch && c.startBeats === startBeats);
   /** Where a drag started, and which cell it is over. Only the first is a property of an element, and the pointer moves between cells. */
@@ -178,7 +188,7 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
       const doomed = notes.filter((candidate) => isSelected(candidate.pitch, candidate.startBeats));
       if (doomed.length === 0) return;
       event.preventDefault();
-      setSelected([]);
+      choose([]);
       // ⭐ Each one goes through the removal the panel already commits, so one Delete is one undo.
       for (const note of doomed) onRemoveNote({ pitch: note.pitch, startBeats: note.startBeats });
     }
@@ -304,13 +314,13 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
                           if (from && from.pitch === pitch && from.step === step) {
                             onAddNote({ pitch, startBeats: step * STEP_BEATS, lengthBeats, velocity });
                             // The note just written is the one the keys act on, and the one worth hearing: a roll that wrote silently made the person guess the pitch.
-                            setSelected([{ pitch, startBeats: step * STEP_BEATS }]);
+                            choose([{ pitch, startBeats: step * STEP_BEATS }]);
                             onAudition?.(pitch);
                           } else if (from) {
                             /* ⭐ A drag across cells is a rectangle: one cell writes, more selects what it spanned. */
                             const s0 = Math.min(from.step, step), s1 = Math.max(from.step, step);
                             const p0 = Math.min(from.pitch, pitch), p1 = Math.max(from.pitch, pitch);
-                            setSelected(
+                            choose(
                               notes
                                 .filter((n) => n.startBeats >= s0 * STEP_BEATS && n.startBeats <= s1 * STEP_BEATS && n.pitch >= p0 && n.pitch <= p1)
                                 .map((n) => ({ pitch: n.pitch, startBeats: n.startBeats }))
@@ -338,7 +348,7 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
                         aria-label={t("roll_remove_note", { note: noteName(pitch) })}
                         onPointerDown={() => {
                           drag.current = { kind: "move", from: { pitch, startBeats: note.startBeats }, to: { pitch, startBeats: note.startBeats } };
-                          setSelected([{ pitch, startBeats: note.startBeats }]);
+                          choose([{ pitch, startBeats: note.startBeats }]);
                           panel.current?.focus({ preventScroll: true });
                         }}
                         onPointerEnter={() => {
@@ -366,7 +376,7 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
                               event.stopPropagation();
                               drag.current = { kind: "resize", from: { pitch, startBeats: note.startBeats }, to: { pitch, startBeats: note.startBeats } };
                               // Grabbing the edge is still aiming at this note, so the keys keep acting on it.
-                              setSelected([{ pitch, startBeats: note.startBeats }]);
+                              choose([{ pitch, startBeats: note.startBeats }]);
                               panel.current?.focus({ preventScroll: true });
                             }}
                             onPointerEnter={() => {
