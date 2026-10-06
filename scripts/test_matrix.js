@@ -1310,12 +1310,19 @@ async function runTestOnTarget(target, baseUrl) {
        * without touching the DOM. (Assuming the DOM order was visual is how this check first failed
        * on the iPad in portrait, where the dossier is legitimately the *second* grid child.)
        */
+      /**
+       * ⭐ **The editor keeps the majority of the width, on the surface that exists now.**
+       *
+       * This used to measure the studio's two-column grid: the column holding the transport group, and the dossier `<aside>`, with the
+       * dossier required to sit left of the editor. That layout went with the studio, and the arrangement surface is a single column, so
+       * the dossier half of the claim has nothing to describe here -- but the half that matters to a person has not changed: the editor
+       * must still be what the screen is mostly made of. That is what is measured below, against the arrangement grid.
+       */
       const columns = await page.evaluate(() => {
-        const grid = document.querySelector("main.grid");
-        if (!grid) return { error: "the studio grid is gone" };
-        const seqSection = document
-          .querySelector("[data-testid='toolbar-group-transport']")
-          ?.closest("section");
+        const grid = document.querySelector("[data-testid='arrangement-view-v2']");
+        if (!grid) return { error: "the arrangement surface is gone" };
+        const editor = document.querySelector("[data-testid='arrangement-grid']");
+        if (!editor) return { error: "the arrangement grid is gone" };
         const box = (el) => {
           const r = el.getBoundingClientRect();
           return {
@@ -1325,34 +1332,18 @@ async function runTestOnTarget(target, baseUrl) {
             w: Math.round(r.width),
           };
         };
-        const items = [...grid.children];
-        const seqItem = items.find((el) => seqSection && el.contains(seqSection));
-        const dossierItem = items.find((el) => el.tagName.toLowerCase() === "aside");
         return {
-          itemCount: items.length,
-          seq: seqItem ? box(seqItem) : null,
-          dossier: dossierItem ? box(dossierItem) : null,
+          itemCount: grid.children.length,
+          seq: box(editor),
           viewportW: window.innerWidth,
-          cols: getComputedStyle(grid).gridTemplateColumns,
+          cols: getComputedStyle(grid).display,
         };
       });
       if (columns.error) throw new Error(`${columns.error} on ${target.name}`);
-      if (!columns.seq) throw new Error(`The studio grid has no editor column on ${target.name}`);
-      if (!columns.dossier) throw new Error(`The studio grid has no dossier column on ${target.name}`);
-      if (columns.viewportW >= 1024) {
-        if (columns.dossier.x >= columns.seq.x) {
-          throw new Error(
-            `The studio's columns are swapped on ${target.name}: dossier@${columns.dossier.x} ${columns.dossier.w}px, editor@${columns.seq.x} ${columns.seq.w}px (grid: ${columns.cols})`
-          );
-        }
-        if (columns.seq.w < columns.viewportW * 0.55) {
-          throw new Error(
-            `The sequencer is not the wide column on ${target.name}: ${columns.seq.w} of ${columns.viewportW} px (grid: ${columns.cols})`
-          );
-        }
-      } else if (columns.seq.y >= columns.dossier.y) {
+      if (!columns.seq) throw new Error(`The arrangement grid is missing on ${target.name}`);
+      if (columns.viewportW >= 1024 && columns.seq.w < columns.viewportW * 0.55) {
         throw new Error(
-          `Below lg the studio stacks the dossier above the editor on ${target.name}: dossier@${columns.dossier.y}, editor@${columns.seq.y}`
+          `The editor is not the wide column on ${target.name}: ${columns.seq.w} of ${columns.viewportW} px (display: ${columns.cols})`
         );
       }
 
