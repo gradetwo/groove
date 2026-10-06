@@ -16937,3 +16937,16 @@ describe("the grid's editing actions", () => {
 **⏳ 下一轮 ✓**：⭐ 照这三步实现 ＋ 判据 ＋ 撤台账那条 ＋ 跑全套 ⇒ ⭐ 推 ✓
 ```
 
+**⭐ B 的逐字锚点 ✓（2026-10-06 13:14 ✓，⭐ 下一轮照改 ✓）**：
+  ⭐ ① ⭐ `:97` ✓ ⭐ `const [selected, setSelected] = useState<{ pitch: number; startBeats: number } | undefined>(undefined);`
+    ⇒ ⭐ 改**列表** ✓（⭐ 并加 ⭐ `isSelected(pitch, startBeats)` ✓）
+  ⭐ ② ⭐ `:172–179` ✓（⭐ Delete ✓）：⭐ `if (selected === undefined) return;` ✓｜⭐ `const note = notes.find(candidate => …)` ✓｜
+    ⭐ `setSelected(undefined);` ✓｜⭐ `onRemoveNote({ pitch: note.pitch, startBeats: note.startBeats });` ✓
+    ⇒ ⭐ 改为 ⭐ **遍历选区** ✓ ⇒ ⭐ 逐个 ⭐ `onRemoveNote` ✓ ⇒ ⭐ `setSelected([])` ✓（⭐ 走父组件 `commit` ⇒ ⭐ 可撤销 ✓）
+  ⭐ ③ ⭐ `:297–305` ✓（⭐ 格的 `onPointerUp` ✓）：⭐ `const from = pressed.current; pressed.current = undefined;` ✓ ⇒
+    ⭐ `if (from && from.pitch === pitch && from.step === step) { onAddNote({…}); setSelected({ pitch, startBeats: step * STEP_BEATS }); onAudition?.(pitch); }`
+    ⇒ ⭐ 改为 ⭐ **同格 ⇒ 照旧写** ✓；⭐ **跨格 ⇒ 选中"⭐ 按下格 → 释放格**"范围内的音符 ✓（⭐ 不新增管线 ✓）
+  ⭐ ④ ⭐ `:322` ✓：⭐ `data-selected={selected?.pitch === note.pitch && selected.startBeats === note.startBeats}` ✓
+    ⇒ ⭐ 改 ⭐ `isSelected(note.pitch, note.startBeats)` ✓
+  ⭐ ⑤ ⭐ **待读一行** ✓：⭐ 音符块里的 ⭐ `setSelected({ pitch, startBeats })` ✓（⭐ 约 `:326–340` ✓）⇒ ⭐ 同样改为"⭐ 列表内选中／取消**" ✓
+
