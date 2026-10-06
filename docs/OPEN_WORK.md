@@ -16915,3 +16915,25 @@ describe("the grid's editing actions", () => {
   ⇒ ⭐ `Delete` 删**选区**（⭐ 走 `commit` ✓）⇒ ⭐ **撤下 `UI_LEDGER` 的 `removeNotesWithinRect`** ✓
 ```
 
+### 六百四十九、⭐⭐ **指令①（B：最小框选）的最小实现路径已定**（2026-10-06 13:14 ✓）
+
+```
+**⭐ 网格现状 ✓（⭐ `PianoRollV2.tsx` ✓）**：
+  ⭐ 格 ✓（⭐ `roll-cell-{pitch}-{step}` ✓）：⭐ `onPointerDown` ⇒ ⭐ `pressed.current = {pitch, step}` ✓ ＋ ⭐ 聚焦面板 ✓
+    ｜⭐ `onPointerEnter` ⇒ ⭐ 更新 `drag.current.to` ✓｜⭐ `onPointerUp` ⇒ ⭐ 有**音符拖动** ⇒ 提交移动 ✓；⭐ 否则**在按下处写入音符** ✓
+  ⭐ 音符 ✓（⭐ `roll-note-…` ✓）：⭐ 设 `drag.current`（⭐ move／resize ✓）＋ ⭐ `setSelected({pitch, startBeats})` ✓（⭐ `:303` ✓）
+  ⭐ 删除 ✓（⭐ `:172–178` ✓）：⭐ `Delete`／`Backspace` ⇒ ⭐ `selected === undefined` ⇒ ⭐ 返回 ✓ ⇒ ⭐ 删**一个** ✓ ⇒ ⭐ `setSelected(undefined)` ✓
+  ⭐ 选择状态 ✓：⭐ `:97` ⭐ `useState<{pitch, startBeats} | undefined>` ✓（⭐ **单音** ✓）
+**⭐⭐ B 的三步 ✓（⭐ 全部落在既有骨架里 ✓ ⇒ ⭐ 不新增 props ✗、⭐ 不引工具切换 ✗）**：
+  ⭐ ① ⭐ `selected` ⇒ ⭐ **列表** ✓（⭐ `useState<readonly {pitch, startBeats}[]>` ✓）＋ ⭐ 加 `isSelected(pitch, start)` ✓ 供 ⭐ `data-selected` ✓
+  ⭐ ② ⭐ **框选 ✓**：⭐ 在格的 ⭐ `onPointerUp` ✓ ⇒ ⭐ 若 `drag.current` 为空 ✓ ⇒ ⭐ 取**按下格 → 释放格**的跨度 ✓
+    ⇒ ⭐ **单格** ⇒ ⭐ **照旧写音符** ✓（⭐ 不破坏原有写入 ✓）；⭐ **多格** ⇒ ⭐ **选中范围内的音符** ✓
+    ⇒ ⭐ **不新增任何指针管线** ✓ ✓（⭐ 复用 ⭐ `pressed` ✓／⭐ `drag` ✓／⭐ `onPointerEnter` ✓）
+  ⭐ ③ ⭐ **`Delete` ⇒ 删除全部选中** ✓（⭐ 对每个选中调用既有 ⭐ `onRemoveNote` ✓ ⇒ ⭐ 父组件走 `commit` ✓ ⇒ ⭐ **可撤销** ✓，⭐ 教训 192 ✓）
+**⭐ 判据计划 ✓（⭐ 三步指针事件 ✓）**：⭐ `pointerdown`（格 A）⇒ `pointerenter`（格 B）⇒ `pointerup`（格 B）
+  ⇒ ⭐ 断言**跨度内的音符被选中** ✓（⭐ `data-selected="true"` ✓）且 ⭐ **跨度外未被选中** ✓ ⇒ ⭐ 再按 `Delete` ⇒
+  ⭐ 断言 ⭐ **选中的都没了** ✓ 且 ⭐ **未选中的都在** ✓ ✓
+**⭐ 附带 ✓**：⭐ 落地后 ⭐ **撤下 `UI_LEDGER` 的 `removeNotesWithinRect`** ✓（⭐ 界面能到了 ✓ ⇒ ⭐ 台账少一条例外 ✓）
+**⏳ 下一轮 ✓**：⭐ 照这三步实现 ＋ 判据 ＋ 撤台账那条 ＋ 跑全套 ⇒ ⭐ 推 ✓
+```
+
