@@ -907,7 +907,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
               pitchFrom: Math.min(...marks.map((mark) => mark.pitch)),
               pitchTo: Math.max(...marks.map((mark) => mark.pitch)),
             };
-            const after = legatoNotesInRect(arrangement, editableTrackId, rect, { loopEndBeats: bars * 4 });
+            const after = legatoNotesInRect(arrangement, editableTrackId, rect, { loopEndBeats: bars * 4, only: marks });
             commit(setterCommand("Legato", (_current, value) => value, arrangement, after));
           }}
         >
