@@ -94,6 +94,8 @@ import {
   getArrangementSaveStatusSnapshot,
   subscribeArrangementSaveStatus,
 } from "../../features/sequencer/projectDb";
+import type { AudioEngine } from "../../audio/AudioEngine";
+import { useMidiInput } from "../../features/sequencer/hooks/useMidiInput";
 
 /**
  * The snap values the toolbar offers, coarsest to finest. The **value** is shown, because a toggle's state is not a value.
@@ -138,6 +140,9 @@ export const SNAP_BARS: Record<SnapValue, number> = {
 
 /** The zoom step, applied on every press of − and +. The ends are the ruler's own exported bounds. */
 const ZOOM_FACTOR = 1.5;
+
+/** ⭐ Stands in for a host that has no engine yet, so the MIDI hook is called unconditionally and plays into nothing. */
+const noEngineRef: React.MutableRefObject<AudioEngine | null> = { current: null };
 
 export interface ArrangementViewV2Props {
   songId: string;
@@ -213,6 +218,13 @@ export interface ArrangementViewV2Props {
   initialAutoPlay?: boolean;
   onClearInitialAutoPlay?: () => void;
   /**
+   * ⭐ **The engine's ref, when the host has one.** Optional for the reason `player` is: this view renders and is judged
+   * without an engine, and the MIDI input needs the ref rather than the value — a device event arrives after the render that
+   * subscribed, so reading `engineRef.current` at that moment is the difference between playing a note and playing a stale
+   * engine.
+   */
+  engineRef?: React.MutableRefObject<AudioEngine | null>;
+  /**
    * ⭐ **Where the loop brace goes, in the transport's own unit — steps, half-open `[start, end)`.**
    *
    * A function rather than the engine itself, for the reason `player` is a seam: this view can be rendered and judged
@@ -250,8 +262,8 @@ export interface ArrangementViewV2Props {
   seekTransport?: (step: number) => number | undefined;
 }
 
-export function ArrangementViewV2({ songId, capture, bar = 0, player, instruments, playheadBar, initialArrangement, onArrangementChange, onCreateProject, loadProblem, setTransportLoopRange, seekTransport, initialAutoPlay, onClearInitialAutoPlay }: ArrangementViewV2Props) {
-  const { t } = useLanguage();
+export function ArrangementViewV2({ songId, capture, bar = 0, player, instruments, playheadBar, initialArrangement, onArrangementChange, onCreateProject, loadProblem, setTransportLoopRange, seekTransport, initialAutoPlay, onClearInitialAutoPlay, engineRef }: ArrangementViewV2Props) {
+  const { t, isZh } = useLanguage();
   /**
    * ⭐ **A new project starts by choosing what it is** — which is Logic's `Choose a Project`, and the owner's "there is no good new-project entry". `undefined` means the choice has not been made, and the panel is
    * what the route shows until it is; only then is there an arrangement to edit.
@@ -335,6 +347,24 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
    * loader, not to this view, and a bar that could not move would be a claim this surface cannot support.
    */
   const [preparing, setPreparing] = useState(false);
+  /**
+   * ⭐ **A device event is a performance, not an edit.** Web MIDI and the computer keyboard play through the engine without
+   * touching the arrangement, which is what the studio did and what a person plugging in a keyboard expects. The host passes its
+   * engine ref; a view rendered without one -- a criterion, or the gate before a tap -- still calls the hook, because React has no
+   * conditional hooks, and plays into nothing.
+   */
+  const [midiNotice, setMidiNotice] = useState<string | undefined>(undefined);
+  const midiPattern = useMemo(
+    () => compileArrangementToPattern(arrangement, arrangement.notesByTrack ?? {}),
+    [arrangement]
+  );
+  useMidiInput({
+    pattern: midiPattern,
+    engineRef: engineRef ?? noEngineRef,
+    isZh,
+    showToast: setMidiNotice,
+    isKeyboardMode: true,
+  });
   /**
    * ⭐ **Whether the work is safe, read from the store that does the writing.** The arrangement saves automatically, so the
    * interface owes the person one fact it never stated: that a change has landed. The status and its subscription already
@@ -1171,6 +1201,11 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             </span>
           )}
           <SaveIndicator visible status={saveStatus} />
+          {midiNotice !== undefined && (
+            <span data-testid="arrangement-midi-notice" className="font-mono text-[10px] uppercase tracking-widest text-text-sub">
+              {midiNotice}
+            </span>
+          )}
           {playProblem !== undefined && <span data-testid="arrangement-play-problem" className="text-[10px] text-text opacity-70">{playProblem}</span>}
         </span>
         <span className="flex items-center gap-1">

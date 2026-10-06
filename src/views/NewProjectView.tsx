@@ -55,7 +55,7 @@ export interface NewProjectViewProps {
  * Exported so the properties that matter can be judged without rendering the arrangement: that it registers, that it primes, that it clears the slot only when the slot is still its own, and that the engine is released on
  * unmount.
  */
-export function useNewProjectEngine(): AudioEngine | null {
+export function useNewProjectEngine(): { engine: AudioEngine | null; engineRef: React.MutableRefObject<AudioEngine | null> } {
   const { engineRef } = useAudioEngineInstance();
   const [engine, setEngine] = useState<AudioEngine | null>(null);
 
@@ -87,11 +87,16 @@ export function useNewProjectEngine(): AudioEngine | null {
     };
   }, [engineRef]);
 
-  return engine;
+  /**
+   * ⭐ **Both the engine and its ref**, because the MIDI input hook needs the ref: a device event arrives later than the render
+   * that subscribed, and reading `engineRef.current` at that moment is the difference between playing a note and playing the
+   * engine that existed when the listener was attached.
+   */
+  return { engine, engineRef };
 }
 
 export function NewProjectView({ capture, onProjectNameChange, arrangementId, initialAutoPlay, onClearInitialAutoPlay }: NewProjectViewProps) {
-  const engine = useNewProjectEngine();
+  const { engine, engineRef } = useNewProjectEngine();
   const [instruments, setInstruments] = useState<InstrumentChoice[]>([]);
   /**
    * ⭐ **The stored project** — the whole persistence story for this route: it is read once, here, and every change the
@@ -201,6 +206,7 @@ export function NewProjectView({ capture, onProjectNameChange, arrangementId, in
     <ArrangementViewV2
       songId="new"
       player={player}
+      engineRef={engineRef}
       // ⭐ The onboarding's auto-play request travels the same way the route choice does: the caller passes the capability down.
       {...(initialAutoPlay === undefined ? {} : { initialAutoPlay })}
       {...(onClearInitialAutoPlay === undefined ? {} : { onClearInitialAutoPlay })}
