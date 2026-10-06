@@ -15,7 +15,9 @@ const analyse = () => TOOLS.find((candidate) => candidate.name === "analyze_audi
 describe("narrating a loudness pass", () => {
   it("⭐ reports when it was given a reporter, and stays silent when it was not", async () => {
     clearMcpArrangements();
-    const { arrangementId } = createMcpArrangement({ genreId: "chicago-house", songId: "progress-probe" });
+    // ⚠️ A blank arrangement with one note, not a genre: this case is about whether progress is narrated, and rendering a whole
+    // genre made it the most expensive criterion in the suite (measured 0.17x realtime, so it timed out under parallel load).
+    const { arrangementId } = createMcpArrangement({ blankKind: "synth", songId: "progress-probe" });
     // ⚠️ One pass, and the shortest render the tool will make: this case calls the handler twice (with and without a reporter)
     // and each call renders for real, so a two-pass call doubled the work and timed out under a full parallel suite.
     const args = { arrangementId, targetLufs: -14, passes: 1, sampleRate: 8000, channels: 1, headless: false };
@@ -33,7 +35,7 @@ describe("narrating a loudness pass", () => {
     expect(report.mock.calls.length, "a token-less call must not narrate").toBe(0);
     expect(reportOf.mock.calls.length).toBe(0);
     expect(Object.keys(withoutReporter).length).toBeGreaterThan(0);
-  }, 300_000);
+  }, 120_000);
 });
 
 describe("narrating an analysis", () => {
