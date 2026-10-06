@@ -38,6 +38,7 @@ on:
           - skins
           - sfizz
           - mirror
+          - profile
           - all
       profile:
         description: "Playwright profile (e2e scope)"
@@ -106,6 +107,15 @@ jobs:
       - name: Skin readability sweep (report only)
         if: inputs.scope == 'skins' || inputs.scope == 'all'
         run: npm run probe:skins:full -- --report
+
+      # The render profile belongs here for the reason the probes above do: it renders for minutes on a real browser,
+      # which is not work for a laptop. `docs/RENDER_PROFILE.md` holds the readings this step reproduces, including the
+      # phase split that says `startRendering()` is 96-99.9% of the wall clock and the ablation that splits its inside.
+      - name: Render profile (phase split, then the ablation)
+        if: inputs.scope == 'profile' || inputs.scope == 'all'
+        run: |
+          node scripts/profile_offline_render.mjs --bars=1 --runs=3
+          node scripts/profile_offline_render.mjs --bars=1 --runs=3 --mode=ablate --arms=baseline,silent,reverb-convolution,silent-reverb,drums-only
 
       - name: Audio measurement gates
         if: inputs.scope == 'audio' || inputs.scope == 'all'
