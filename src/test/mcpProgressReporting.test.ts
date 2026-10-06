@@ -3,31 +3,45 @@ import { clearMcpArrangements, createMcpArrangement } from "../../mcp/arrangemen
 import { TOOLS } from "../../mcp/registry";
 
 /**
- * ⭐ **A long tool narrates only when it was asked to.**
+ * ⭐ **A long tool narrates only when it was asked to, and the renderer is a stub.**
  *
  * The server shell turns `_meta.progressToken` into a reporter and hands it to the handler as `ctx.progress`; it hands nothing
  * when there was no token, so "asked" and "not asked" are two different code paths rather than one that checks. These cases pin
  * the tool's own half: it reports through the reporter it was given, and it works exactly as before without one.
+ *
+ * ⚠️ **The renderer is mocked, and it was measured, not assumed.** A real render costs about ninety seconds whatever the music —
+ * measured 0.17x realtime with a whole genre and the same with a single note — so a case that rendered for real was the most
+ * expensive in the suite and timed out under parallel load. `vi.mock` is hoisted above the registry import, which is why the
+ * registry resolves the stub; the stub reports through the reporter it is handed, exactly as `renderAudio` does.
  */
+const renderStub = vi.hoisted(() => ({ seen: 0 }));
+
+vi.mock(new URL("../../mcp/render/worker.ts", import.meta.url).pathname, () => ({
+  analyseWavFile: () => ({ pinCount: 0, discontinuities: 0 }),
+  renderAudio: (
+    _pattern: unknown,
+    options: { progress?: { report: (progress: number, message: string) => void } }
+  ) => {
+    renderStub.seen += 1;
+    options.progress?.report(0, "the stub renderer");
+    return { integratedLufs: -14, truePeakDb: -1, path: "/tmp/groove-progress-stub.wav" };
+  },
+}));
+
 const normalize = () => TOOLS.find((candidate) => candidate.name === "normalize_loudness")!;
 const analyse = () => TOOLS.find((candidate) => candidate.name === "analyze_audio")!;
 
 describe("narrating a loudness pass", () => {
   it("⭐ reports when it was given a reporter, and stays silent when it was not", async () => {
     clearMcpArrangements();
-    // ⚠️ A blank arrangement with one note, not a genre: this case is about whether progress is narrated, and rendering a whole
-    // genre made it the most expensive criterion in the suite (measured 0.17x realtime, so it timed out under parallel load).
     const { arrangementId } = createMcpArrangement({ blankKind: "synth", songId: "progress-probe" });
-    // ⚠️ One pass, and the shortest render the tool will make: this case calls the handler twice (with and without a reporter)
-    // and each call renders for real, so a two-pass call doubled the work and timed out under a full parallel suite.
-    const args = { arrangementId, targetLufs: -14, passes: 1, sampleRate: 8000, channels: 1, headless: false };
+    const args = { arrangementId, targetLufs: -14, passes: 2, sampleRate: 8000, channels: 1, headless: false };
 
     const report = vi.fn();
     const reportOf = vi.fn();
     const withReporter = (await normalize().handler(args, { progress: { report, reportOf } } as never)) as Record<string, unknown>;
     expect(report.mock.calls.length, "the tool did not narrate a single phase").toBeGreaterThan(0);
-    // ⭐ And the reply is still a reply: progress narrates the work, it does not replace the answer.
-    expect(Object.keys(withReporter).length).toBeGreaterThan(0);
+    expect(Object.keys(withReporter).length, "progress must not replace the answer").toBeGreaterThan(0);
 
     report.mockClear();
     reportOf.mockClear();
@@ -35,13 +49,12 @@ describe("narrating a loudness pass", () => {
     expect(report.mock.calls.length, "a token-less call must not narrate").toBe(0);
     expect(reportOf.mock.calls.length).toBe(0);
     expect(Object.keys(withoutReporter).length).toBeGreaterThan(0);
-  }, 120_000);
+  });
 });
 
 describe("narrating an analysis", () => {
   it("⭐ announces its phase when a reporter was given, and answers the same without one", async () => {
-    // ⭐ A path this server did not produce is refused, and the refusal is the answer — progress does not change that.
-    const args = { path: "/nonexistent/groove-progress-probe.wav" };
+    const args = { path: "/tmp/groove-progress-stub.wav" };
     const report = vi.fn();
     const reportOf = vi.fn();
     const withReporter = (await analyse().handler(args, { progress: { report, reportOf } } as never)) as Record<string, unknown>;
@@ -54,4 +67,3 @@ describe("narrating an analysis", () => {
     expect(Object.keys(withoutReporter).length).toBeGreaterThan(0);
   });
 });
-
