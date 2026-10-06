@@ -35,7 +35,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Redo2, Undo2 } from "lucide-react";
 import type { ArrangementV2, TrackKindV2, TrackRegion } from "../../types/arrangementV2";
-import { createArrangementFromTemplate, quantizeArrangementNoteLengths, rampArrangementNoteVelocity, legatoNotesInRect } from "../../data/arrangementEdits";
+import { createArrangementFromTemplate, quantizeArrangementNoteLengths, rampArrangementNoteVelocity, legatoNotesInRect, arpeggiateNotesInRect, stampChordInRect } from "../../data/arrangementEdits";
 import { setterCommand } from "../../data/arrangementHistory";
 import { GENRES_MAP } from "../../data/genres";
 import { arrangementSeededFromGenre } from "../../data/arrangementProjection";
@@ -912,6 +912,51 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           }}
         >
           Legato
+        </button>
+        {/**
+          * ⭐ **The two shapes the older grid could stamp.** Both act on the marks, so a note nobody marked is left alone, and
+          * both commit one command so one press is one undo. Directions and chord types come next; today each takes its default.
+          */}
+        <button
+          type="button"
+          data-testid="arrangement-arpeggiate-selection"
+          className="px-2 py-1 rounded text-xs text-text opacity-90"
+          disabled={editableTrackId === undefined || rollSelection.length === 0}
+          onClick={() => {
+            if (editableTrackId === undefined || rollSelection.length === 0) return;
+            const marks = rollSelection;
+            const rect = {
+              fromBeats: Math.min(...marks.map((mark) => mark.startBeats)),
+              toBeats: Math.max(...marks.map((mark) => mark.startBeats)),
+              pitchFrom: Math.min(...marks.map((mark) => mark.pitch)),
+              pitchTo: Math.max(...marks.map((mark) => mark.pitch)),
+            };
+            const after = arpeggiateNotesInRect(arrangement, editableTrackId, rect, { only: marks });
+            commit(setterCommand("Arpeggiate", (_current, value) => value, arrangement, after));
+          }}
+        >
+          Arpeggio
+        </button>
+        <button
+          type="button"
+          data-testid="arrangement-stamp-chord"
+          className="px-2 py-1 rounded text-xs text-text opacity-90"
+          disabled={editableTrackId === undefined || rollSelection.length === 0}
+          onClick={() => {
+            if (editableTrackId === undefined || rollSelection.length === 0) return;
+            const marks = rollSelection;
+            const root = marks[0]!.pitch;
+            const rect = {
+              fromBeats: Math.min(...marks.map((mark) => mark.startBeats)),
+              toBeats: Math.max(...marks.map((mark) => mark.startBeats)),
+              pitchFrom: Math.min(...marks.map((mark) => mark.pitch)),
+              pitchTo: Math.max(...marks.map((mark) => mark.pitch)),
+            };
+            const after = stampChordInRect(arrangement, editableTrackId, rect, { type: "triad", rootMidi: root, only: marks });
+            commit(setterCommand("Stamp chord", (_current, value) => value, arrangement, after));
+          }}
+        >
+          Chord
         </button>
         {/**
          * ⭐ **The transport, with the state the owner reported as missing.**
