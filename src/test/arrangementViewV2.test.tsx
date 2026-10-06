@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import React from "react";
 import { ArrangementViewV2 } from "../components/arrangement/ArrangementViewV2";
 import { createArrangementFromTemplate } from "../data/arrangementEdits";
@@ -221,5 +221,48 @@ describe("the arrangement a host hands in, and what the host is told", () => {
     renderView(<ArrangementViewV2 songId="new" capture={noCapture} loadProblem='track "Bass" names kind "instrument", which this build does not have' />);
     const alert = screen.getByTestId("arrangement-load-problem");
     expect(alert.textContent).toContain("instrument");
+  });
+});
+
+/**
+ * ⭐ **The toolbar acts on what the roll has marked.**
+ *
+ * The mark is the roll's, the arrangement is the view's, and the button between them copies the marked notes forward by the span
+ * they cover. Everything is derived from the seeded arrangement rather than assumed, so the criterion is about the gesture and
+ * not about which pitches a genre happens to use.
+ */
+describe("copying what the roll has marked", () => {
+  it("⭐ copies the marked notes by the span they cover, and leaves the originals in place", () => {
+    const seeded = arrangementSeededFromGenre("new", Object.values(GENRES_MAP)[0]!);
+    const track = seeded.tracks[0]!;
+    const notes = seeded.notesByTrack?.[track.id] ?? [];
+    const first = notes[0]!;
+    const second = notes.find((note) => note.startBeats > first.startBeats)!;
+    const stepOf = (beats: number) => Math.round(beats / 0.25);
+
+    const onArrangementChange = vi.fn();
+    renderView(
+      <ArrangementViewV2
+        songId="new"
+        capture={noCapture}
+        initialArrangement={seeded}
+        onArrangementChange={onArrangementChange}
+      />
+    );
+    // ⭐ The picker's rows select on a click; the header row selects on a press, which is a different gesture.
+    fireEvent.click(within(screen.getByTestId("arrangement-track-picker")).getByText(track.name));
+
+    const cell = (pitch: number, step: number) => screen.getByTestId(`roll-cell-${pitch}-${step}`);
+    fireEvent.pointerDown(cell(first.pitch, stepOf(first.startBeats)));
+    fireEvent.pointerEnter(cell(second.pitch, stepOf(second.startBeats)));
+    fireEvent.pointerUp(cell(second.pitch, stepOf(second.startBeats)));
+    fireEvent.click(screen.getByTestId("arrangement-copy-selection"));
+
+    const after = onArrangementChange.mock.calls.at(-1)?.[0] as ArrangementV2;
+    const landed = after.notesByTrack?.[track.id] ?? [];
+    const delta = second.startBeats - first.startBeats;
+    // ⭐ The originals are still there, and each has a copy exactly one span later.
+    expect(landed.some((note) => note.pitch === first.pitch && note.startBeats === first.startBeats)).toBe(true);
+    expect(landed.some((note) => note.pitch === first.pitch && note.startBeats === first.startBeats + delta)).toBe(true);
   });
 });
