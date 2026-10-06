@@ -122,11 +122,6 @@ const UI_LEDGER: Record<string, Ruling> = {
     reason:
       "Census G6b. The arrangement toolbar has tempo, bars, snap, loop and zoom but no time signature at all, and no product file references this function outside its own module. Whether the arrangement's meter and the studio's `timeSignature` are one fact or two is a product ruling the census explicitly left to the owner.",
   },
-  addTrackNotes: {
-    status: "pending-owner-ruling",
-    reason:
-      "Found by this gate, not by the census's four. The bulk note write has no caller in product source: note entry goes through `addTrackNote` (via `PianoRollV2`). `mcpCoverage` maps it to `add_arrangement_notes`, so a model side exists. Whether the *bulk* form needs its own interface entry, or whether the per-note entry already covers the capability, is the owner's call — `mcpCoverage`'s `toggleStep` exclusion is the mirror-image decision and is not mine to extend.",
-  },
   setTrackSteps: {
     status: "pending-owner-ruling",
     reason:

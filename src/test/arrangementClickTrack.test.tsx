@@ -20,7 +20,10 @@ describe("the click track and the count-in", () => {
   it("⭐ tells the engine when each switch turns on and off", () => {
     const setMetronome = vi.fn();
     const setCountIn = vi.fn();
-    const engineRef = { current: { setMetronome, setCountIn } as unknown as AudioEngine };
+    // ⭐ The view reads the master rack and subscribes to Web MIDI as well, so a stand-in has to answer every wire the surface grew.
+    const engineRef = {
+      current: { setMetronome, setCountIn, getMasterFxRack: () => undefined } as unknown as AudioEngine,
+    };
     const arrangement = createArrangementFromTemplate("blank", "click-probe");
     renderView(<ArrangementViewV2 songId="s" capture={noCapture} initialArrangement={arrangement} engineRef={engineRef} />);
 

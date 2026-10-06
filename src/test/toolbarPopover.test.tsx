@@ -99,8 +99,14 @@ describe("Toolbar Advanced Controls Popover & Progressive Disclosure", () => {
     // nothing looks identical to no entry at all.
     const panel = readFileSync(resolve(__dirname, "../components/sequencer/SequencerPanel.tsx"), "utf8");
     expect(panel).toContain("onOpenHelp={onOpenHelp}");
-    const view = readFileSync(resolve(__dirname, "../views/StudioView.tsx"), "utf8");
-    expect(view).toContain("onOpenHelp={onOpenHelp}");
+    /**
+     * ⭐ **The arrangement view renders its own toolbar, so it calls the opener rather than handing it to a child.** The shared
+     * `Toolbar` took `onOpenHelp` as a prop; this surface draws its own controls, which is why the entry lives here as a call and a
+     * testid instead. What the case pins is unchanged: a correct entry that reaches nothing looks like no entry at all.
+     */
+    const view = readFileSync(resolve(__dirname, "../components/arrangement/ArrangementViewV2.tsx"), "utf8");
+    expect(view).toContain('data-testid="toolbar-help"');
+    expect(view).toContain('onOpenHelp("sequencer")');
   });
 
   it("closes advanced popover when clicking outside", () => {

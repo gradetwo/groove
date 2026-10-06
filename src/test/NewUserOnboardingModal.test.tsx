@@ -132,8 +132,10 @@ describe("NewUserOnboardingModal · Interactive Walkthrough", () => {
     expect(app).toMatch(/onReplayOnboarding=\{\(\) => \{/);
     expect(app).toContain("localStorage.removeItem(ONBOARDING_COMPLETED_KEY)");
 
-    const studio = read("views/StudioView.tsx");
+    // ⭐ The wiring moved with the surface: the studio tab renders the arrangement editor, and that view owns the player the
+    // onboarding hand-off waits on.
+    const studio = read("components/arrangement/ArrangementViewV2.tsx");
     expect(studio).toContain("useInitialAutoPlay({");
-    expect(studio).toContain("ready: engineReady");
+    expect(studio).toContain("ready: Boolean(player)");
   });
 });

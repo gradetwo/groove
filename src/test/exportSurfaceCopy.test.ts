@@ -47,7 +47,13 @@ const FORMATS: Array<{ id: string; source: string; prose: string }> = [
  * The two anchors that wrap the menu rather than choosing a format. Named explicitly so the derived set below
  * stays exact: a new *item* has to appear in `FORMATS`, a new *container* has to appear here.
  */
-const MENU_CONTAINER_IDS = ["arrangement-export-menu", "arrangement-export-items"];
+const MENU_CONTAINER_IDS = [
+  "arrangement-export-menu",
+  "arrangement-export-items",
+  // ⭐ Not formats: the progress readout and the cancel button were added with the export state and share the prefix.
+  "arrangement-export-progress",
+  "arrangement-export-cancel",
+];
 
 const descriptionOf = (): string => JSON.parse(read("package.json")).description as string;
 

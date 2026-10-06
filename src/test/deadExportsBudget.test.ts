@@ -55,7 +55,12 @@ describe("exports nothing refers to", () => {
      * criteria were deleted and the last unreferenced exports went with them. Zero dead exports is the goal this budget exists
      * to approach, so requiring one would now be requiring a defect.
      */
-    expect({ files: m.productionFiles > 400, exports: m.exports > 2000 })
+        /**
+     * ⭐ The floor only has to prove the scan read the tree, so it follows the tree down. Retiring the v1 sequencer chain removed
+     * exports along with the files that declared them -- the count sits at 1999 -- and a floor that stayed at 2000 would report a
+     * healthy scan as a broken one. The budget the case exists to protect is `dead` and `testOnly`, and neither moved.
+     */
+    expect({ files: m.productionFiles > 400, exports: m.exports > 1900 })
       .toEqual({ files: true, exports: true });
   }, 60000);
 });

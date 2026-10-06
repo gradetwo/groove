@@ -97,7 +97,12 @@ import {
 import type { AudioEngine, EffectsRackState } from "../../audio/AudioEngine";
 import { DEFAULT_FX_STATE } from "../../audio/EffectsRack";
 import { generateEuclidean } from "../../audio/Euclidean";
-import { addTrackNotes } from "../../data/arrangementEdits";
+import { useDensityPreference } from "../../hooks/useDensityPreference";
+import { useGs1Setting } from "../../features/sequencer/useGs1Setting";
+import { FirstRunPrompt } from "../onboarding/FirstRunPrompt";
+import { ArrangementClickTrackV2 } from "./ArrangementClickTrackV2";
+import { useFirstRunPrompt } from "../../features/sequencer/hooks/useFirstRunPrompt";
+import { addTrackNotes, varyArrangementNotes } from "../../data/arrangementEdits";
 import { useMidiInput } from "../../features/sequencer/hooks/useMidiInput";
 
 /**
@@ -228,6 +233,11 @@ export interface ArrangementViewV2Props {
    */
   engineRef?: React.MutableRefObject<AudioEngine | null>;
   /**
+   * ⭐ **The help opener, when the host has one.** `App` owns the help panel and hands the opener to every surface; this view's
+   * toolbar is its own rather than the shared `Toolbar`, so it needs the entry wired here rather than inherited.
+   */
+  onOpenHelp?: (chapterId?: string) => void;
+  /**
    * ⭐ **Where the loop brace goes, in the transport's own unit — steps, half-open `[start, end)`.**
    *
    * A function rather than the engine itself, for the reason `player` is a seam: this view can be rendered and judged
@@ -265,8 +275,16 @@ export interface ArrangementViewV2Props {
   seekTransport?: (step: number) => number | undefined;
 }
 
-export function ArrangementViewV2({ songId, capture, bar = 0, player, instruments, playheadBar, initialArrangement, onArrangementChange, onCreateProject, loadProblem, setTransportLoopRange, seekTransport, initialAutoPlay, onClearInitialAutoPlay, engineRef }: ArrangementViewV2Props) {
+export function ArrangementViewV2({ songId, capture, bar = 0, player, instruments, playheadBar, initialArrangement, onArrangementChange, onCreateProject, loadProblem, setTransportLoopRange, seekTransport, initialAutoPlay, onClearInitialAutoPlay, engineRef , onOpenHelp }: ArrangementViewV2Props) {
   const { t, isZh } = useLanguage();
+
+  /**
+   * ⭐ **The interface-density setting has to be mounted somewhere on every surface.** It writes `data-density` on `<html>` rather
+   * than holding React state, so a surface that never calls it leaves the attribute unwritten and the setting silently does
+   * nothing there. The studio called it; this is the arrangement surface taking over that duty.
+   */
+  useDensityPreference();
+
   /**
    * ⭐ **A new project starts by choosing what it is** — which is Logic's `Choose a Project`, and the owner's "there is no good new-project entry". `undefined` means the choice has not been made, and the panel is
    * what the route shows until it is; only then is there an arrangement to edit.
@@ -336,8 +354,6 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
    * and Loop Region" heading. Nothing on this surface ever turned them on, so the manual documented a feature the code could not
    * reach. They live here rather than on the arrangement, because a click track is not part of the piece.
    */
-  const [metronome, setMetronome] = useState(false);
-  const [countIn, setCountIn] = useState(false);
 
   /**
    * ⭐ **The Euclidean rhythm the button will write, as a pulse count.** The generator itself is a pure function the studio used
@@ -416,17 +432,6 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
    * existed in `projectDb`; the component that renders them already existed too, and this is the entry that was missing.
    */
   const saveStatus = useSyncExternalStore(subscribeArrangementSaveStatus, getArrangementSaveStatusSnapshot);
-
-  /**
-   * ⭐ The engine is told, not the arrangement: the click track and the count-in are properties of playback. A view without an
-   * engine -- a criterion, or the gate before a tap -- simply does nothing here.
-   */
-  useEffect(() => {
-    engineRef?.current?.setMetronome(metronome);
-  }, [engineRef, metronome]);
-  useEffect(() => {
-    engineRef?.current?.setCountIn(countIn);
-  }, [engineRef, countIn]);
 
   const bars = arrangement.bars ?? 8;
   const headerBars = arrangement.tracks.length === 0 ? 0 : bars;
@@ -513,6 +518,19 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
    * `playheadBus.ts` records for the studio and the reason `ArrangementTransport` is a subscription rather than a value.
    */
   const [playing, setPlaying] = useState(false);
+  /**
+   * ⭐ **The first-run hint, wired where the transport is.** `useFirstRunPrompt` retires itself once playback has happened, and the
+   * component is rendered unconditionally with a `visible` prop for the reason its own note gives: a conditional sibling in front of
+   * the lanes changes their position, and React responds by remounting them.
+   */
+  const firstRunPrompt = useFirstRunPrompt({ isPlaying: playing });
+
+  /**
+   * ⭐ **The GS-1 setting, read from the shared hook rather than mirrored.** The studio kept one `useState` per surface, which is
+   * how the toolbar and the settings panel came to disagree; `useGs1Setting` subscribes to the module state the schedulers read
+   * and leaves the engine as the owner of the persisted value. The engine ref is optional here, so it is passed as it is.
+   */
+  const [gs1Enabled, setGs1Enabled] = useGs1Setting(engineRef?.current ?? null);
   /**
    * ⭐ **Whether Stop would return the transport somewhere** — the fact its disabled state reports.
    *
@@ -1076,6 +1094,22 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           Arpeggio
         </button>
 
+        {/* Inspire Me: the same part, varied. Chance lives in the function's default source, not in this call. */}
+        <button
+          type="button"
+          data-testid="arrangement-inspire-me"
+          className="px-2 py-1 rounded text-xs text-text opacity-90"
+          disabled={selectedTrackId === undefined}
+          onClick={() => {
+            if (selectedTrackId === undefined) return;
+            const after = varyArrangementNotes(arrangement, selectedTrackId, { intensity: "medium" });
+            if (after === arrangement) return;
+            commit(setterCommand("Inspire Me", (_current, value) => value, arrangement, after));
+          }}
+        >
+          Inspire Me
+        </button>
+
         {/* Euclidean: a rhythm spread as evenly as its pulse count allows, written as notes. */}
         <label className="flex items-center gap-1 text-xs text-text-sub">
           <input
@@ -1230,6 +1264,16 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
         >
           {playing ? t("arrangement_pause") : t("arrangement_play")}
         </button>
+
+        {/* ⭐ Unconditional, per the component's own note: `visible` decides, not a conditional sibling. */}
+        <FirstRunPrompt
+          visible={firstRunPrompt.visible}
+          onPlay={() => {
+            firstRunPrompt.started();
+            void togglePlay();
+          }}
+          onDismiss={firstRunPrompt.dismiss}
+        />
         {/**
          * **Stop, because the sampler's notes are started on the audio clock and the engine's transport cannot reach them.** Without it, pressing play on a piano arrangement and then wanting it to
          * stop left every scheduled note ringing — the arrangement player is the only object that holds those voices, so only this button can silence them.
@@ -1419,6 +1463,31 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           #
         </button>
 
+        {/* GS-1: the engine's own setting, through the shared hook. */}
+        <button
+          type="button"
+          data-testid="arrangement-gs1"
+          aria-label={t("arrangement_gs1")}
+          aria-pressed={gs1Enabled}
+          onClick={() => setGs1Enabled(!gs1Enabled)}
+          className={`h-11 shrink-0 rounded border px-2 text-xs ${gs1Enabled ? "border-[rgb(var(--d-accent))] bg-[rgb(var(--d-accent))]/15 text-text" : "border-white/10 text-text-sub"}`}
+        >
+          GS-1
+        </button>
+
+        {/* Help. `App` owns the panel; this is the entry that reaches it. */}
+        {onOpenHelp !== undefined && (
+          <button
+            type="button"
+            data-testid="toolbar-help"
+            aria-label={t("arrangement_help")}
+            onClick={() => onOpenHelp("sequencer")}
+            className="h-11 shrink-0 rounded border border-white/10 px-2 text-xs text-text-sub"
+          >
+            ?
+          </button>
+        )}
+
         {/* Loop: the switch, and — when it is on — the brace in the ruler. */}
         <button
           type="button"
@@ -1431,27 +1500,8 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           ⟲
         </button>
 
-        {/* Metronome and count-in: the click track, and the four beats before it. */}
-        <button
-          type="button"
-          data-testid="arrangement-metronome"
-          aria-label={t("arrangement_metronome")}
-          aria-pressed={metronome}
-          onClick={() => setMetronome((on) => !on)}
-          className={`h-11 shrink-0 rounded border px-2 text-xs ${metronome ? "border-[rgb(var(--d-accent))] bg-[rgb(var(--d-accent))]/15 text-text" : "border-white/10 text-text-sub"}`}
-        >
-          🎵
-        </button>
-        <button
-          type="button"
-          data-testid="arrangement-count-in"
-          aria-label={t("arrangement_count_in")}
-          aria-pressed={countIn}
-          onClick={() => setCountIn((on) => !on)}
-          className={`h-11 shrink-0 rounded border px-2 text-xs ${countIn ? "border-[rgb(var(--d-accent))] bg-[rgb(var(--d-accent))]/15 text-text" : "border-white/10 text-text-sub"}`}
-        >
-          ⏱
-        </button>
+
+        <ArrangementClickTrackV2 engineRef={engineRef} />
 
         {/* Master rack: the four blocks the engine builds, each with its own switch. Parameters come after. */}
         {(["filterEnabled", "saturationEnabled", "chorusEnabled", "bitcrusherEnabled"] as const).map((key) => {

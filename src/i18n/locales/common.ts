@@ -172,6 +172,8 @@ export const commonMessages = {
   arrangement_fx_chorus: { en: "Chorus", zh: "合唱" },
   arrangement_fx_bitcrusher: { en: "Crush", zh: "位深" },
   arrangement_euclidean_pulses: { en: "Pulses", zh: "脉冲数" },
+  arrangement_gs1: { en: "GS-1", zh: "GS-1" },
+  arrangement_help: { en: "Help", zh: "帮助" },
   arrangement_header_column: { en: "Track headers", zh: "轨道头" },
   track_header_label: { en: "{name} track header", zh: "{name} 轨道头" },
   track_volume_label: { en: "{name} volume", zh: "{name} 音量" },

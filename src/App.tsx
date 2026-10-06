@@ -356,6 +356,7 @@ const MainApp: React.FC = () => {
                     if (!root) return { ok: false, refusal: "unsupported", summary: "This browser cannot store recordings" };
                     return captureWithBrowser(createOpfsRecordingStore(root as never), { source: "audio" });
                   }}
+                onOpenHelp={() => setHelpOpen(true)}
                 />
               </React.Suspense>
             )}

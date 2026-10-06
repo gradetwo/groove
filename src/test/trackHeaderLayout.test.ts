@@ -170,7 +170,13 @@ describe("the phone track header fits its column", () => {
     expect(inspector).toContain("track-inspector-audition");
     expect(inspector).toContain("onAudition");
     // And the studio actually supplies it, or the button silently never renders.
-    const studio = read("views/StudioView.tsx");
-    expect(studio).toContain("onAudition={handleAuditionInspectorTrack}");
+    const studio = read("components/arrangement/ArrangementViewV2.tsx");
+    /**
+     * ⭐ **The arrangement view supplies the handler inline rather than naming it.** The studio had a `handleAuditionInspectorTrack`
+     * callback; this view writes the closure at the prop, so the assignment alone would prove nothing. What the case checks is that
+     * the handler it supplies reaches the player's audition -- a handler wired to nothing looks exactly like no handler at all.
+     */
+    expect(studio).toContain("onAudition={");
+    expect(studio).toContain("player?.audition?.({");
   });
 });

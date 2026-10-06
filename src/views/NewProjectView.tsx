@@ -26,6 +26,8 @@ export interface NewProjectViewProps {
    * two surfaces come to disagree about which project is open.
    */
   arrangementId?: string;
+  /** ⭐ The help opener from `App`, handed on to the arrangement surface. */
+  onOpenHelp?: (chapterId?: string) => void;
   /**
    * ⭐ **What the top bar should call this project**, reported by the view that actually owns the name.
    *
@@ -95,7 +97,7 @@ export function useNewProjectEngine(): { engine: AudioEngine | null; engineRef: 
   return { engine, engineRef };
 }
 
-export function NewProjectView({ capture, onProjectNameChange, arrangementId, initialAutoPlay, onClearInitialAutoPlay }: NewProjectViewProps) {
+export function NewProjectView({ capture, onProjectNameChange, arrangementId, initialAutoPlay, onClearInitialAutoPlay , onOpenHelp}: NewProjectViewProps) {
   const { engine, engineRef } = useNewProjectEngine();
   const [instruments, setInstruments] = useState<InstrumentChoice[]>([]);
   /**
@@ -207,6 +209,7 @@ export function NewProjectView({ capture, onProjectNameChange, arrangementId, in
       songId="new"
       player={player}
       engineRef={engineRef}
+          onOpenHelp={onOpenHelp}
       // ⭐ The onboarding's auto-play request travels the same way the route choice does: the caller passes the capability down.
       {...(initialAutoPlay === undefined ? {} : { initialAutoPlay })}
       {...(onClearInitialAutoPlay === undefined ? {} : { onClearInitialAutoPlay })}

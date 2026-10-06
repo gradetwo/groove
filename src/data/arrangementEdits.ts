@@ -947,3 +947,69 @@ export function transposeNotesInRange(
   return { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [trackId]: landed } };
 }
 
+/**
+ * ⭐ **A variation of a track's notes, as a pure function of the notes and a source of chance.**
+ *
+ * The studio's version of this worked on a step grid: it cloned a `DrumPattern` and rolled dice over its arrays. The arrangement
+ * has no step grid -- notes are pitched, placed in beats and held for a length -- so the same idea is written against notes
+ * instead of being bridged back through a pattern that this model does not keep. The scales came with it, because they are music
+ * theory rather than a property of the older sequencer.
+ *
+ * **`random` is a parameter rather than a call to `Math.random` inside.** A variation is chance by nature, and a criterion for
+ * chance would be flaky; a caller that wants a fixed result passes a seeded source, and the interface passes nothing at all.
+ */
+const VARIATION_SCALES: Record<string, number[]> = {
+  minorPentatonic: [0, 3, 5, 7, 10],
+  dorian: [0, 2, 3, 5, 7, 9, 10],
+  naturalMinor: [0, 2, 3, 5, 7, 8, 10],
+  major: [0, 2, 4, 5, 7, 9, 11],
+  blues: [0, 3, 5, 6, 7, 10],
+};
+
+export type VariationIntensity = "subtle" | "medium" | "wild";
+
+export interface VaryNotesOptions {
+  intensity?: VariationIntensity;
+  /** ⭐ Which scale the melodic notes are moved within. Unknown names read as the minor pentatonic. */
+  scale?: keyof typeof VARIATION_SCALES;
+  /** ⭐ Injected so a criterion can ask for one exact variation and a caller can ask for a different one each time. */
+  random?: () => number;
+}
+
+export function varyArrangementNotes(
+  arrangement: ArrangementV2,
+  trackId: string,
+  options: VaryNotesOptions = {}
+): ArrangementV2 {
+  const notes = arrangement.notesByTrack?.[trackId];
+  if (notes === undefined || notes.length === 0) return arrangement;
+
+  const intensity = options.intensity ?? "medium";
+  const random = options.random ?? Math.random;
+  // The thresholds are the studio's own: how likely a note is to be touched at each setting.
+  const threshold = intensity === "subtle" ? 0.25 : intensity === "medium" ? 0.5 : 0.8;
+  const scale = VARIATION_SCALES[options.scale ?? "minorPentatonic"] ?? VARIATION_SCALES.minorPentatonic;
+
+  const landed = notes.map((note) => {
+    if (random() >= threshold) return note;
+    /**
+     * ⭐ **The lowest note keeps its place.** In a drum part that is the kick, and moving it turns a groove into a different one;
+     * the studio called the same rule `preserveKick`, and it is written here as "the lowest pitch in the part" because an
+     * arrangement track does not carry a role of its own.
+     */
+    const lowest = Math.min(...notes.map((candidate) => candidate.pitch));
+    if (note.pitch === lowest) return note;
+
+    // A step within the scale, upwards or downwards, taken from the chance source.
+    const step = random() < 0.5 ? -1 : 1;
+    const index = scale.indexOf(((note.pitch % 12) + 12) % 12);
+    const degree = index === -1 ? 0 : index;
+    const nextDegree = (degree + step + scale.length) % scale.length;
+    const octave = Math.floor(note.pitch / 12) * 12;
+    const pitch = Math.max(0, Math.min(127, octave + scale[nextDegree]!));
+    // And a touch of dynamics, so the variation is not only pitch.
+    const velocity = Math.max(1, Math.min(127, note.velocity + (step > 0 ? 10 : -10)));
+    return { ...note, pitch, velocity };
+  });
+  return { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [trackId]: landed } };
+}

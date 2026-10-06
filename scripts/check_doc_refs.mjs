@@ -140,6 +140,7 @@ const PROPOSED = new Map([
     ["src/features/sequencer/hooks/useAutosaveStatus.ts", "Removed with the v1 sequencer chrome. The v2 store reports every change to its writer as it happens."],
     ["src/test/autosaveStatus.test.tsx", "Removed with the v1 sequencer chrome. It tested the autosave indicator above."],
     ["src/features/sequencer/hooks/usePatternActions.ts", "Removed with the v1 sequencer chrome (OPEN_WORK.md §664). Pattern commands for the deleted studio."],
+    ["src/test/studioColumns.test.ts", "Removed with the v1 studio shell (OPEN_WORK.md §661-664). It pinned the studio's own column order and the phone dossier's, both of which went with the surfaces that carried them."],
     /**
      * ⭐ **The criteria that covered the chain, removed with it on 2026-10-06.** Their documents record which claim each
      * one guarded, and every claim was read as a capability before the file was deleted: two are covered by the

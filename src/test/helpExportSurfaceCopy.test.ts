@@ -58,7 +58,13 @@ const FORMATS: Array<{ id: string; source: string; labelKey: MessageKey; en: str
 ];
 
 /** Anchors that wrap the menu rather than choose a format. Named so the derived set below stays exact. */
-const MENU_CONTAINERS = ["arrangement-export-menu", "arrangement-export-items"];
+const MENU_CONTAINERS = [
+  "arrangement-export-menu",
+  "arrangement-export-items",
+  // ⭐ Not formats: the progress readout and the cancel button came with the export state and share the prefix.
+  "arrangement-export-progress",
+  "arrangement-export-cancel",
+];
 
 /** The `{ en, zh }` pair of the onboarding sentence under test. */
 function onboardingDesc(): { en: string; zh: string } {

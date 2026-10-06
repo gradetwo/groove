@@ -109,7 +109,13 @@ describe("genre insert · every call site passes the genre through", () => {
   const CALLERS = [
     "audio/AudioEngine.ts",
     "audio/WavExporter.ts",
-    "views/StudioView.tsx",
+    /**
+     * ⭐ **The console replaces the arrangement view on this list, and the reason is a model change.** The insert chain is a
+     * property of the mixer, not of the piece: the v2 arrangement carries `tracks`, `notes` and bars, and it has no field for an
+     * EQ curve at all. The studio's sequencer store held one because the v1 model folded the mixer into the studio; the surface
+     * that still owns an insert chain is the console's inspector.
+     */
+    "components/console/TrackInspector.tsx",
     "features/sequencer/useSequencerStore.ts",
   ] as const;
 

@@ -33,7 +33,16 @@ describe("external MIDI input", () => {
     const { input, access } = fakeAccess("Fake Keys 61");
     (navigator as { requestMIDIAccess?: unknown }).requestMIDIAccess = vi.fn(async () => access);
     const triggerNote = vi.fn();
-    const engineRef = { current: { triggerNote } as unknown as AudioEngine };
+    // ⭐ The view tells the engine about the click track and reads the master rack, so a fake engine has to answer those too: a
+    // stand-in that only carries the method under test fails the moment the surface grows another wire.
+    const engineRef = {
+      current: {
+        triggerNote,
+        setMetronome: vi.fn(),
+        setCountIn: vi.fn(),
+        getMasterFxRack: () => undefined,
+      } as unknown as AudioEngine,
+    };
     // ⭐ A note with no track index is routed by pitch -- below 48 to the fifth track, 48 to 65 to the sixth -- so the arrangement
     // needs those tracks for the note to land anywhere. That routing is the hook's own, unchanged from the studio.
     let arrangement: ArrangementV2 = createArrangementFromTemplate("blank", "midi-probe");

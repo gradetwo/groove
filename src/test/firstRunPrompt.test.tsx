@@ -180,11 +180,14 @@ describe("first-run prompt · wiring", () => {
     // rendered nowhere (or as a conditional sibling that remounts the panel) is the failure this pins.
     // It used to read `!isPhone && …`, because the phone layout replaced the toolbar it points at; the
     // phone shell is cut (`docs/OPEN_WORK.md` §十三), so every surface renders it the same way now.
-    const view = read("views/StudioView.tsx");
-    expect(view).toContain("useFirstRunPrompt({ isPlaying })");
+    // ⭐ The names are this view's own: the studio called its transport handler `handleTogglePlay`, and the arrangement view calls
+    // the same action `togglePlay`. What this case pins is that the prompt is wired and rendered, so it reads the view as it is
+    // rather than asking the view to carry the older surface's local names.
+    const view = read("components/arrangement/ArrangementViewV2.tsx");
+    expect(view).toContain("useFirstRunPrompt({ isPlaying: playing })");
     // Rendered unconditionally with a `visible` prop — see the component's note on remounting.
     expect(view).toContain("visible={firstRunPrompt.visible}");
     expect(view).not.toMatch(/\{firstRunPrompt\.visible && \(/);
-    expect(view).toContain("void handleTogglePlay()");
+    expect(view).toContain("void togglePlay()");
   });
 });

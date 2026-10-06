@@ -72,7 +72,9 @@ describe("useNewProjectEngine", () => {
 
   it("returns the engine, so the player is built from something rather than undefined", () => {
     const { result } = renderHook(() => useNewProjectEngine());
-    expect(result.current).toBeInstanceOf(FakeEngine);
+    // ⭐ The hook hands back the engine **and** its ref -- the MIDI input needs the ref, because a device event arrives after the
+    // render that subscribed. The claim is unchanged: the player is built from a real engine rather than from undefined.
+    expect(result.current.engine).toBeInstanceOf(FakeEngine);
   });
 
   it("clears the slot and releases the engine on unmount", () => {

@@ -128,16 +128,16 @@ describe("GS-1 toolbar switch", () => {
   });
 
   it("is wired to the engine's persisted setting through the one shared source of truth", () => {
-    const studio = read("views/StudioView.tsx");
+    const studio = read("components/arrangement/ArrangementViewV2.tsx");
     // The switch used to be mirrored in local state (one `useState` per surface), which is how the
     // toolbar and the settings panel could disagree. The value now comes from the shared hook,
     // which subscribes to the module state the schedulers read; the engine keeps ownership of the
     // persistent setting. Behaviour is covered by `gs1SettingSync.test.tsx` — this guard only
     // ensures nobody quietly reintroduces a private mirror.
-    expect(studio).toContain("useGs1Setting(engineRef.current)");
+    expect(studio).toContain("useGs1Setting(engineRef?.current ?? null)");
     expect(studio).not.toMatch(/const \[gs1Enabled, setGs1Enabled\] = useState/);
-    expect(studio).toContain("gs1Enabled={gs1Enabled}");
-    expect(studio).toContain("onToggleGs1={() => setGs1Enabled(!gs1Enabled)}");
+    expect(studio).toContain("aria-pressed={gs1Enabled}");
+    expect(studio).toContain("onClick={() => setGs1Enabled(!gs1Enabled)}");
 
     const hook = read("features/sequencer/useGs1Setting.ts");
     expect(hook).toContain("engine.setGs1Enabled(next)");

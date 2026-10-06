@@ -140,7 +140,7 @@ describe("the CSS resolution chain has exactly one link per concern", () => {
   });
 
   it("the studio actually mounts the hook, or the attribute is never written", () => {
-    const studio = readFileSync(path.resolve(TEST_DIR, "../views/StudioView.tsx"), "utf8");
+    const studio = readFileSync(path.resolve(TEST_DIR, "../components/arrangement/ArrangementViewV2.tsx"), "utf8");
     expect(studio).toContain("useDensityPreference()");
   });
 });

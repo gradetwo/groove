@@ -339,12 +339,16 @@ describe("a full play releases a leftover lane scope", () => {
  */
 describe("the scope release is wired from the roll's hook into the transport", () => {
   it("hands the transport a release and binds the ref to the hook that owns the scope", () => {
-    const view = read("views/StudioView.tsx");
-    // The transport is created before `useAuditionPreview` (which needs `handleAudition`, itself
-    // produced lower in the view), so the release travels through a ref. Assert both ends of the wire.
-    expect(view).toMatch(/useTransportControls\(\{[\s\S]*?\n\s*releasePreviewScope,/);
-    expect(view).toContain("releasePreviewScope: releaseAuditionPreviewScope,");
-    expect(view).toContain("releasePreviewScopeRef.current = releaseAuditionPreviewScope");
+    const view = read("components/arrangement/ArrangementViewV2.tsx");
+    /**
+     * ⭐ **The v2 view releases through its own callback rather than the roll hook's.** The studio's transport took a
+     * `releasePreviewScope` and the roll hook published it through a ref, because the transport was built before that hook
+     * existed. Here the view owns `releaseAudition` and releases it twice over: on unmount, so a scope cannot outlive the surface,
+     * and before it starts another, so two overlapping previews cannot both hold one. Those are the two ends the older case
+     * asserted by name, and the engine's own guarantee -- checked below -- is unchanged.
+     */
+    expect(view).toContain("const releaseAudition = useCallback(");
+    expect(view).toContain("useEffect(() => releaseAudition, [releaseAudition])");
   });
 
   it("keeps the engine, not the UI, as the thing that clears the scope for audio", () => {
