@@ -15,7 +15,6 @@ import { collectDebugBundle } from "./debugBundle";
 import { arrangementFromPackage, buildArrangementPackage } from "../src/features/sequencer/arrangementPackage";
 import { getMcpArrangement, putMcpArrangement } from "./arrangement";
 import { findGenre } from "./library";
-import { getMcpSong } from "./song";
 import { ToolDefinition, failure, patternFromArgs, patternSchema, unknownGenre } from "./toolKit";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { z } from "zod";
