@@ -87,6 +87,7 @@ import { stepsPerBarFor, STEPS_PER_BAR, STEPS_PER_BEAT } from "../../data/noteEv
 import { announcer } from "../../platform/announcer";
 import { applyForm } from "../../data/arrangementFormPlan";
 import { transposeNotesInRange } from "../../data/arrangementEdits";
+import { useInitialAutoPlay } from "../../features/sequencer/hooks/useInitialAutoPlay";
 
 /**
  * The snap values the toolbar offers, coarsest to finest. The **value** is shown, because a toggle's state is not a value.
@@ -197,6 +198,15 @@ export interface ArrangementViewV2Props {
    */
   playheadBar?: number;
   /**
+   * ⭐ **The onboarding's request to start playing once the engine exists**, and the acknowledgement that retires it.
+   *
+   * These arrive from `App` the same way they used to reach the studio: `StudioView` consumed them where the engine and the
+   * transport both exist, and on this route that place is here — this view owns the player and its transport, and it is
+   * deliberately renderable with `player` absent, so `ready` is simply whether the player is there yet.
+   */
+  initialAutoPlay?: boolean;
+  onClearInitialAutoPlay?: () => void;
+  /**
    * ⭐ **Where the loop brace goes, in the transport's own unit — steps, half-open `[start, end)`.**
    *
    * A function rather than the engine itself, for the reason `player` is a seam: this view can be rendered and judged
@@ -234,7 +244,7 @@ export interface ArrangementViewV2Props {
   seekTransport?: (step: number) => number | undefined;
 }
 
-export function ArrangementViewV2({ songId, capture, bar = 0, player, instruments, playheadBar, initialArrangement, onArrangementChange, onCreateProject, loadProblem, setTransportLoopRange, seekTransport }: ArrangementViewV2Props) {
+export function ArrangementViewV2({ songId, capture, bar = 0, player, instruments, playheadBar, initialArrangement, onArrangementChange, onCreateProject, loadProblem, setTransportLoopRange, seekTransport, initialAutoPlay, onClearInitialAutoPlay }: ArrangementViewV2Props) {
   const { t } = useLanguage();
   /**
    * ⭐ **A new project starts by choosing what it is** — which is Logic's `Choose a Project`, and the owner's "there is no good new-project entry". `undefined` means the choice has not been made, and the panel is
@@ -703,6 +713,20 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
     // Heard as well as seen: the running flag below is a visual state, and a screen reader gets no pixels from it.
     if (result.reason === undefined) announcer.announce(t("transport_playback_started"));
   }, [arrangement, player, t, setTransportLoopRange, transportLoopRange]);
+
+  /**
+   * ⭐ **The onboarding's auto-play request, consumed where the engine and the transport both exist.**
+   *
+   * `StudioView` used to be that place, and this view is it on this route: it owns the player, so `ready` is simply whether the
+   * player is there yet — the view is deliberately renderable without one, and that is exactly the state the hook has to wait
+   * through rather than start into.
+   */
+  useInitialAutoPlay({
+    requested: Boolean(initialAutoPlay),
+    ready: Boolean(player),
+    play,
+    onConsumed: () => onClearInitialAutoPlay?.(),
+  });
 
   const stop = useCallback(() => {
     player?.stop?.();

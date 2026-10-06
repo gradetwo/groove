@@ -12,6 +12,10 @@ import { installProbeHooks, uninstallProbeHooks } from "../platform/probeHooks";
 import type { CaptureOutcome } from "../audio/captureTake";
 
 export interface NewProjectViewProps {
+  /** ⭐ **Start playing once the engine exists**, when the onboarding asked for it: consumed by the arrangement view. */
+  initialAutoPlay?: boolean;
+  /** ⭐ Retire that request once it has been honoured, so a later mount does not start playing again. */
+  onClearInitialAutoPlay?: () => void;
   capture: () => Promise<CaptureOutcome>;
   /**
    * ⭐ **The arrangement project this route was asked to open, when the URL named one.**
@@ -86,7 +90,7 @@ export function useNewProjectEngine(): AudioEngine | null {
   return engine;
 }
 
-export function NewProjectView({ capture, onProjectNameChange, arrangementId }: NewProjectViewProps) {
+export function NewProjectView({ capture, onProjectNameChange, arrangementId, initialAutoPlay, onClearInitialAutoPlay }: NewProjectViewProps) {
   const engine = useNewProjectEngine();
   const [instruments, setInstruments] = useState<InstrumentChoice[]>([]);
   /**
@@ -197,6 +201,9 @@ export function NewProjectView({ capture, onProjectNameChange, arrangementId }: 
     <ArrangementViewV2
       songId="new"
       player={player}
+      // ⭐ The onboarding's auto-play request travels the same way the route choice does: the caller passes the capability down.
+      {...(initialAutoPlay === undefined ? {} : { initialAutoPlay })}
+      {...(onClearInitialAutoPlay === undefined ? {} : { onClearInitialAutoPlay })}
       capture={capture}
       instruments={instruments}
       {...(engine === null ? {} : { setTransportLoopRange, seekTransport })}

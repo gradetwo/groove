@@ -348,6 +348,8 @@ const MainApp: React.FC = () => {
               <React.Suspense fallback={null}>
                 <NewProjectView
                   onProjectNameChange={setProjectName}
+                  initialAutoPlay={initialAutoPlay}
+                  onClearInitialAutoPlay={() => setInitialAutoPlay(false)}
                   {...(route.arrangementId === undefined ? {} : { arrangementId: route.arrangementId })}
                   capture={async () => {
                     // The store is the browser's own filesystem; if it is unavailable the capture reports that rather than pretending to record.
