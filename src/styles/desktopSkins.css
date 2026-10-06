@@ -645,7 +645,7 @@
 /*
  * The literal map: the desktop's hardcoded hexes, by role.
  *
- * 605 rules, generated from the literals the source actually uses. Because each rule names a
+ * 603 rules, generated from the literals the source actually uses. Because each rule names a
  * **token**, the same rules serve all six skins — the skin decides what the token resolves to. The few
  * near-duplicate grounds and inks in the default theme therefore converge onto one value each, which is
  * what "the same palette on both surfaces" means in practice.
@@ -794,7 +794,6 @@
 [class~="bg-[#a78bfa]/20"] { background-color: rgb(var(--d-track-bass) / 0.20); }
 [class~="border-[#a78bfa]/40"] { border-color: rgb(var(--d-track-bass) / 0.40); }
 [class~="text-[#a78bfa]"] { color: rgb(var(--d-track-bass-ink)); }
-[class~="accent-[#ffb65c]"] { accent-color: rgb(var(--d-track-snare)); }
 [class~="text-[#ffb65c]"] { color: rgb(var(--d-track-snare-ink)); }
 [class~="text-[#ff8a5c]"] { color: rgb(var(--d-track-bass-ink)); }
 [class~="bg-[#0d0e14]"] { background-color: rgb(var(--d-panel2)); }
@@ -976,17 +975,11 @@
 [class~="bg-[#2a2f3f]"] { background-color: rgb(var(--d-surface)); }
 [class~="hover:bg-[#ffc65c]"]:hover { background-color: rgb(var(--d-track-snare)); }
 [class~="to-[#ffc65c]"] { --tw-gradient-to: rgb(var(--d-track-snare)); }
-[class~="text-[#f0ede6]"] { color: rgb(var(--d-ink)); }
-[class~="border-[#1e212b]"] { border-color: rgb(var(--d-line)); }
-[class~="bg-[#0a0b0e]"] { background-color: rgb(var(--d-bg)); }
-[class~="bg-[#0a0b0e]/95"] { background-color: rgb(var(--d-bg) / 0.95); }
-[class~="to-[#0a0b0e]"] { --tw-gradient-to: rgb(var(--d-bg)); }
-[class~="bg-[#1b1e26]"] { background-color: rgb(var(--d-surface)); }
-[class~="border-[#1b1e26]"] { border-color: rgb(var(--d-surface)); }
 [class~="border-[#2b2e38]"] { border-color: rgb(var(--d-line)); }
 [class~="hover:to-[#171920]"]:hover { --tw-gradient-to: rgb(var(--d-surface)); }
 [class~="bg-[#171920]"] { background-color: rgb(var(--d-surface)); }
 [class~="border-[#171920]"] { border-color: rgb(var(--d-surface)); }
+[class~="text-[#f0ede6]"] { color: rgb(var(--d-ink)); }
 [class~="text-[#c6c4bd]"] { color: rgb(var(--d-ink-2)); }
 [class~="bg-[#101217]/98"] { background-color: rgb(var(--d-panel) / 0.98); }
 [class~="via-[#101217]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-panel)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
@@ -1111,10 +1104,13 @@
 [class~="border-[#a855f7]"] { border-color: rgb(var(--d-track-chord)); }
 [class~="bg-[#1f232b]"] { background-color: rgb(var(--d-surface)); }
 [class~="text-[#f87171]"] { color: rgb(var(--d-danger)); }
+[class~="bg-[#0a0b0e]/95"] { background-color: rgb(var(--d-bg) / 0.95); }
+[class~="to-[#0a0b0e]"] { --tw-gradient-to: rgb(var(--d-bg)); }
 [class~="bg-[#161822]"] { background-color: rgb(var(--d-surface)); }
 [class~="from-[#161822]"] { --tw-gradient-from: rgb(var(--d-surface)); }
 [class~="to-[#d62839]"] { --tw-gradient-to: rgb(var(--d-danger)); }
 [class~="bg-[#0e1014]"] { background-color: rgb(var(--d-panel2)); }
+[class~="border-[#1e212b]"] { border-color: rgb(var(--d-line)); }
 [class~="bg-[#13141a]"] { background-color: rgb(var(--d-panel)); }
 [class~="bg-[#121622]"] { background-color: rgb(var(--d-surface)); }
 [class~="from-[#121622]"] { --tw-gradient-from: rgb(var(--d-surface)); }
@@ -1226,6 +1222,8 @@
 [class~="border-[#282c38]"] { border-color: rgb(var(--d-line)); }
 [class~="text-[#06b6d4]"] { color: rgb(var(--d-cat-electronic)); }
 [class~="bg-[#07080a]"] { background-color: rgb(var(--d-bg)); }
+[class~="bg-[#1b1e26]"] { background-color: rgb(var(--d-surface)); }
+[class~="border-[#1b1e26]"] { border-color: rgb(var(--d-surface)); }
 [class~="border-[#222632]"] { border-color: rgb(var(--d-line)); }
 [class~="border-[#262a3a]"] { border-color: rgb(var(--d-line)); }
 [class~="border-[#1b1d26]"] { border-color: rgb(var(--d-surface)); }

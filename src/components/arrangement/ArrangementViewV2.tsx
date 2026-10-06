@@ -326,6 +326,15 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
    * on at the bar the view is looking at rather than at bar 1, because the bar on screen is the bar the user means.
    */
   const [loopRange, setLoopRange] = useState<LoopRange | undefined>(undefined);
+
+  /**
+   * ⭐ **Two switches that belong to the performance, not to the work.** The studio played a metronome and counted in before it
+   * started, and the engine still supports both -- `setMetronome` and `setCountIn` are on it, under its own "Metronome, Count-In
+   * and Loop Region" heading. Nothing on this surface ever turned them on, so the manual documented a feature the code could not
+   * reach. They live here rather than on the arrangement, because a click track is not part of the piece.
+   */
+  const [metronome, setMetronome] = useState(false);
+  const [countIn, setCountIn] = useState(false);
   /**
    * The play-start marker, in bars. Clicking the ruler sets it — Bitwig's "single click in the upper ruler sets the play start".
    *
@@ -371,6 +380,17 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
    * existed in `projectDb`; the component that renders them already existed too, and this is the entry that was missing.
    */
   const saveStatus = useSyncExternalStore(subscribeArrangementSaveStatus, getArrangementSaveStatusSnapshot);
+
+  /**
+   * ⭐ The engine is told, not the arrangement: the click track and the count-in are properties of playback. A view without an
+   * engine -- a criterion, or the gate before a tap -- simply does nothing here.
+   */
+  useEffect(() => {
+    engineRef?.current?.setMetronome(metronome);
+  }, [engineRef, metronome]);
+  useEffect(() => {
+    engineRef?.current?.setCountIn(countIn);
+  }, [engineRef, countIn]);
 
   const bars = arrangement.bars ?? 8;
   const headerBars = arrangement.tracks.length === 0 ? 0 : bars;
@@ -1340,6 +1360,28 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           className={`h-11 shrink-0 rounded border px-2 text-xs ${loopRange !== undefined ? "border-[rgb(var(--d-accent))] bg-[rgb(var(--d-accent))] text-[rgb(var(--d-accent-ink))]" : "border-[rgb(var(--d-line))] text-text"}`}
         >
           ⟲
+        </button>
+
+        {/* Metronome and count-in: the click track, and the four beats before it. */}
+        <button
+          type="button"
+          data-testid="arrangement-metronome"
+          aria-label={t("arrangement_metronome")}
+          aria-pressed={metronome}
+          onClick={() => setMetronome((on) => !on)}
+          className={`h-11 shrink-0 rounded border px-2 text-xs ${metronome ? "border-[rgb(var(--d-accent))] bg-[rgb(var(--d-accent))]/15 text-text" : "border-white/10 text-text-sub"}`}
+        >
+          🎵
+        </button>
+        <button
+          type="button"
+          data-testid="arrangement-count-in"
+          aria-label={t("arrangement_count_in")}
+          aria-pressed={countIn}
+          onClick={() => setCountIn((on) => !on)}
+          className={`h-11 shrink-0 rounded border px-2 text-xs ${countIn ? "border-[rgb(var(--d-accent))] bg-[rgb(var(--d-accent))]/15 text-text" : "border-white/10 text-text-sub"}`}
+        >
+          ⏱
         </button>
 
         {/* Zoom. The same control the ruler's own manual gestures answer to, and the reason the labels subdivide. */}
