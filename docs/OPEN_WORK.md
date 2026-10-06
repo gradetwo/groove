@@ -15824,3 +15824,25 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+### 六百零三、⭐⭐ **能力差定形：v2 新建是"模板驱动"，缺的是"流派驱动"入口**（2026-10-06 08:38 ✓）
+
+```
+**⭐ 量到 ✓（⭐ v2 的创建路径 ✓）**：
+  ⭐ `NewProjectPanelV2` ✓ 提供 **4 个模板** ✓：⭐ `drums-bass` ✓｜⭐ `drums-bass-chords` ✓｜⭐ `samplers` ✓｜⭐ `blank` ✓
+    ⭐ 其设计注释 ✓：⭐ "⭐ **A few templates rather than a choice that has already been made for you**" ✓
+  ⭐ `createArrangementFromTemplate(songId, templateId, blankKind)` ✓：
+    ⭐ 按 ⭐ `template.kinds` ✓ 建轨 ✓ ＋ ⭐ `defaultContentFor(kind)` ✓ ＋ ⭐ `starterNotes(content)` ✓
+    ⇒ ⭐ **通用起始内容** ✓，⭐ **不收 `genreId`** ✗
+  ⭐ 调用点 ✓：⭐ `ArrangementViewV2:766` ✓
+**⭐⭐ 因此缺口精确 ✓**：⭐ v2 路由**没有"⭐ 选流派 ⇒ ⭐ 得到该流派的编曲**" ✗ —— ⚠️ ⭐ 而**这正是 v1 工作室的招牌** ✓
+  （⭐ `SET_GENRE` ✓／⭐ `RESET_TO_GENRE_DEFAULT` ✓／⭐ `LOAD_MASTERCLASS_PATTERN` ✓）
+**⭐⭐ 但能力**已在别处** ✓（⭐ 关键 ✓）**：
+  ⭐ MCP 的 ⭐ `create_arrangement` ✓ **收 `genreId`** ✓（⭐ 数据侧已支持流派播种 ✓）
+  ⭐ Web 侧的流派助手**已在** ✓：⭐ `src/data/genreVoicing.ts` ✓｜⭐ `genreGroove.ts` ✓｜⭐ `genreExpression.ts` ✓｜
+    `genreInsert.ts` ✓｜⭐ `genreFx.ts` ✓｜⭐ `defaultContent.ts` ✓
+  ⇒ ⭐ 即 ⭐ **缺的只是"⭐ 新建面板的入口 ＋ 调用**" ✓ ✓ —— ⭐ **接线** ✓，⭐ 不是新引擎 ✓
+**⭐ 下一步 ✓（⭐ 待量 ✓）**：⭐ Web 侧是否已有"⭐ 把流派灌进 `ArrangementV2`"⭐ 的现成函数 ✓
+  ⭐ 量法 ✓：⭐ 看 ⭐ `defaultContent.ts` ✓ 与 ⭐ `arrangementCompile.ts` ✓ 是否收流派 ✓；⭐ 否则 ⭐ 对照 MCP 的播种逻辑 ✓ 移植 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+

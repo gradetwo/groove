@@ -543,3 +543,9 @@
 | ⭐ **Web 面（路由）** | ⭐ 两套界面 ＝ **两条路由** ✓：⭐ `/`（v1 工作室：`SequencerPanel` 常驻 ＋ `ArrangementPanel` 开关 ✓）｜⭐ `/new`（v2：`ArrangementViewV2` ＋ `store.create` ✓）⇒ ⭐ 合成点明确 ✓ | 本节 ✓ |
 | ⭐ **待查能力** | ⚠️ ⭐ **流派驱动生成** ✓：⭐ v2 路由自称"deliberately has no genre" ✗，⭐ 但 `create_arrangement` 收 `genreId` ✓ ⇒ ⭐ 待量 `NewProjectPanelV2`／模板 ✓ | 本节 ✓ |
 
+## 2026-10-06 08:39 回填（第 4 条规矩：改完实现回来改表）
+
+| 面 | 变化 | 依据 |
+|---|---|---|
+| ⭐ **能力差（Web）** | ⚠️ ⭐ v2 新建＝**模板驱动**（4 模板 ＋ 通用起始音符 ✓），⭐ **无流派驱动** ✗；⭐ 但流派能力已在 MCP（`create_arrangement` 收 `genreId` ✓）与 Web 助手（`genreVoicing`／`genreGroove`／`genreExpression`／`genreInsert`／`genreFx` ✓）⇒ ⭐ 缺**入口与调用** ✓ | 本节 ✓ |
+
