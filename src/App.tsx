@@ -344,7 +344,7 @@ const MainApp: React.FC = () => {
             {/*
               The new-project route renders the arrangement instead of the studio. Its audio engine is created by that view, because the studio-owned lifecycle is not rendered here — see `NewProjectView`.
             */}
-            {route.newProject && (
+            {currentTab === "studio" && (
               <React.Suspense fallback={null}>
                 <NewProjectView
                   onProjectNameChange={setProjectName}
@@ -359,51 +359,6 @@ const MainApp: React.FC = () => {
               </React.Suspense>
             )}
 
-            {currentTab === "studio" && !route.newProject && (
-              <ErrorBoundary
-                fallbackTitle={t("error_studio_title")}
-                fallbackDescription={t("error_studio_desc")}
-              >
-                {selectedGenre ? (
-                  <StudioView
-                    selectedGenre={selectedGenre}
-                    onSelectGenre={handleSelectStudioGenre}
-                    onViewDetail={handleSelectDetailGenre}
-                    onAddToCompare={handleAddToCompare}
-                    onAudioEngineReady={handleEngineReady}
-                    onOpenSettings={() => setSettingsOpen(true)}
-                    onOpenGenreMaker={() => navigate({ tab: "maker", customGenreFork: selectedGenre?.id })}
-                    onOpenHelp={handleOpenHelp}
-                    /**
-                     * ⭐ **The hub's "open this arrangement" lands here, because opening a project is a route.**
-                     *
-                     * The id travels in the URL (`/new?project=<id>`) rather than in a module-level "pending project"
-                     * variable, so the open is refreshable, bookmarkable and back-buttonable — and so the arrangement
-                     * route keeps exactly one answer to "which project am I showing".
-                     */
-                    onOpenArrangementProject={(id) => navigate({ tab: "studio", newProject: true, arrangementId: id })}
-                    initialChords={initialChords}
-                    onClearInitialChords={() => setInitialChords(null)}
-                    initialArpeggio={initialArpeggio}
-                    onClearInitialArpeggio={() => setInitialArpeggio(null)}
-                    initialMasterclassPattern={initialMasterclassPattern}
-                    onClearInitialMasterclassPattern={() => setInitialMasterclassPattern(null)}
-                    initialOpenPianoRollTrack={initialOpenPianoRollTrack}
-                    onClearInitialOpenPianoRollTrack={() => setInitialOpenPianoRollTrack(null)}
-                    initialAutoPlay={initialAutoPlay}
-                    onClearInitialAutoPlay={() => setInitialAutoPlay(false)}
-                  />
-                ) : (
-                  <div className="max-w-7xl mx-auto px-4 py-8 space-y-6 min-h-[100dvh]">
-                    <div className="flex items-center justify-between">
-                      <Skeleton variant="line" className="w-48 h-10" />
-                      <Skeleton variant="rect" className="w-32 h-10" />
-                    </div>
-                    <Skeleton variant="card" className="h-96" />
-                  </div>
-                )}
-              </ErrorBoundary>
-            )}
 
             {currentTab === "chords" && (
               <ErrorBoundary
