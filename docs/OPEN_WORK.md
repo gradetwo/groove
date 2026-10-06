@@ -17042,3 +17042,23 @@ describe("the grid's editing actions", () => {
 **⏳ 下一轮 ✓**：⭐ ① ⭐ 给网格加**精确集合**的生成器入口（⭐ 连奏先做 ✓）② ⭐ 琶音 ＋ ⭐ 和弦图章按钮 ✓
   ⭐ ③ ⭐ 各一条判据 ✓ ④ ⭐ 全套 ⇒ ⭐ 推 ✓
 
+### 六百五十二、⭐ **迁移 ⑥ 的第一处真缺：编曲"形态"（loop／club／song）** ✓
+
+```
+**⭐ 量到的事实 ✓**
+  ⭐ `StudioView` 的"⭐ 生成编曲**"按钮 ✓ 调 `arrangementSections({ form, … })` ✓（`src/data/arrangementForm.ts:203` ✓）
+    ⇒ ⭐ 产出 `SongSection[]` ✓ ⇒ ⭐ 写进 **v1 音序器 store**（`SET_SECTIONS` ✓）＋ ⭐ 打开 **song mode** ✓
+  ⭐ `ArrangementFormId = "loop" | "club" | "song"` ✓ ⇒ ⭐ 三种形态各有步进表（`ARRANGEMENT_FORMS` ✓）＋ `formBars(form)` ✓
+  ⭐ **v2 侧没有形态入口** ✗：`mcp/registryArrangement.ts` 里 form/club/loop 的命中**全是散文** ✓
+    ⭐ `create_arrangement` 的入参 ✓：`templateId` ✓／`blankKind` ✓／**`genreId`**（⭐ "⭐ seed the tracks from this genre's arranged pattern**" ✓）
+  ⭐ `arrangementSeededFromGenre` ✓ 只按**流派的 clip** 铺音符 ✓ ⇒ ⚠️ **不设形态** ✗
+  ⭐ `src/types/genre.ts` 里 **无** bars／sections／form 字段 ✗（命中均为散文 ✓）
+  ⭐ `genreGroove.ts` 的 `bars` ✓ 是**单轨排版** ✓（按步数算 ✓），⭐ 不是歌曲形态 ✓
+**⭐ 因此 ✓**：⭐ v1 的"⭐ 用户选择形态**"（loop／club／song ✓）在 v2 **没有等价物** ✗ ⇒ ⭐ 按④条 ⇒ **移植** ✓（不删 ✓）
+**⭐ 处置（下一轮起 ✓）**
+  ⭐ ① ⭐ 先在 v2 **立判据** ✓："⭐ `club` 形态生成的编曲长度 ＝ `formBars('club')`**" ✓ ＋ ⭐ 三种形态长度互不相同 ✓
+  ⭐ ② ⭐ 实现：`arrangementEdits` 增 **形态 → 编曲长度／内容** 的入口 ✓（⭐ 复用 `ARRANGEMENT_FORMS` ✓／`formBars` ✓／`fillLanes` ✓ —— ⚠️ 它们与 v1 存储无关 ✓）
+  ⭐ ③ ⭐ 界面：`StudioView` 的按钮改指该入口 ✓（⭐ 或先在 v2 的编曲面接上 ✓）
+  ⭐ ④ ⭐ 全套 ⇒ ⭐ 推 ✓
+**⚠️ 不做的 ✗**：⭐ 不把按钮改成"⭐ 只能生成流派形态**" ✗ ⇒ ⭐ 那会让**用户的选择消失** ✗（违反④条 ✓）
+
