@@ -1,7 +1,4 @@
-import { CLIP_SLOTS } from "../src/types/song";
 
-/** The slot enum, derived from the one array so a tool cannot refuse a slot the model allows. */
-export const clipSlotSchema = z.enum([...CLIP_SLOTS] as [string, ...string[]]);
 import { audioLaneReplyFields } from "./pattern";
 import { legatoGapNote, legatoGapsFor } from "../src/data/legatoGaps";
 /**
@@ -132,7 +129,6 @@ import type { ProgressReporter } from "./render/progress";
 import { getGenreLoudnessTrimDb } from "../src/data/genreMix";
 import { setVocalMelody } from "./vocal";
 import { deleteMcpCustomGenre, duplicateMcpCustomGenre, getMcpCustomGenre, listMcpCustomGenres, saveMcpCustomGenre } from "./customGenres";
-import type { ClipSlot } from "../src/types/song";
 import type { SequencerPattern } from "../src/types/genre";
 import type { CustomGenre } from "../src/types/customGenre";
 

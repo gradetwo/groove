@@ -1,4 +1,3 @@
-import { CLIP_SLOTS } from "../src/types/song";
 import { audioLaneReplyFields } from "./pattern";
 import { legatoGapNote, legatoGapsFor } from "../src/data/legatoGaps";
 import {
@@ -90,13 +89,12 @@ import type { ProgressReporter } from "./render/progress";
 import { getGenreLoudnessTrimDb } from "../src/data/genreMix";
 import { setVocalMelody } from "./vocal";
 import { deleteMcpCustomGenre, duplicateMcpCustomGenre, getMcpCustomGenre, listMcpCustomGenres, saveMcpCustomGenre } from "./customGenres";
-import type { ClipSlot } from "../src/types/song";
 import type { SequencerPattern } from "../src/types/genre";
 import type { CustomGenre } from "../src/types/customGenre";
 import { ARRANGEMENT_TOOLS } from "./registryArrangement";
 
 export * from "./toolKit";
-import { clipSlotSchema, unknownGenre, failure, describeGs1Sound, patternSchema, customGenreSchema, opSchema, patternFromArgs, instrumentsByPart, situationsArgument, situationsByPart, ToolDefinition } from "./toolKit";
+import { unknownGenre, failure, describeGs1Sound, patternSchema, customGenreSchema, opSchema, patternFromArgs, instrumentsByPart, situationsArgument, situationsByPart, ToolDefinition } from "./toolKit";
 
 import { PROJECT_TOOLS } from "./registryProject";
 
@@ -132,7 +130,7 @@ export const TOOLS: ToolDefinition[] = [
   /**
    * The arrangement surface — the v2 model the interface has used since `/new`.
    *
-   * It sits first because it is where a project starts: the song tools below build a **v1 song** (clips, sections, lane slots), and an agent asked to "start a new arrangement" should not have to reach past that to find the tools that add tracks, choose
+   * It sits first because it is where a project starts: the song tools below name an **arrangement and a track**; the v1 song they used to build is gone, and an agent asked to "start a new arrangement" should not have to reach past that to find the tools that add tracks, choose
    * an instrument, write steps or file a recording.
    *
    * The kind list is repeated in the schemas rather than shared through a constant, because a `z.enum` is what a client reads for its own validation — and one source of truth for it is `TrackKindV2`, which the compiler checks these against.
