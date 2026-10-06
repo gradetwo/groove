@@ -1096,7 +1096,9 @@ async function runTestOnTarget(target, baseUrl) {
      * "no entry point" while the row was in fact present and working.
      */
     const MOBILE_AUDIO_SETTINGS = "[data-testid='mobile-studio-action-audio-settings']";
-    const DESKTOP_AUDIO_SETTINGS = "[data-testid='studio-audio-settings-open']";
+    /** ⭐ The studio opened its audio tab from the toolbar; the arrangement surface opens the settings modal, whose default tab is
+ * audio (`SettingsModal`'s `initialTab = "audio"`), so the same two assertions below still describe the same behaviour. */
+    const DESKTOP_AUDIO_SETTINGS = "[data-testid='header-settings-open'], [data-testid='studio-audio-settings-open']";
     if (!(await page.$(DESKTOP_AUDIO_SETTINGS)) && !(await page.$(MOBILE_AUDIO_SETTINGS))) {
       await openStudioMoreControls(page);
       await page.waitForTimeout(400);
