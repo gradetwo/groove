@@ -10,7 +10,7 @@
  * Every handler is `void`-returning because a button's `onClick` cannot await; the promise is caught inside, which is
  * also why `busy` exists — an offline render takes seconds and a menu that looks idle while it works is a lie.
  */
-import { useCallback, useState } from "react";
+import { useCallback, useState, useRef } from "react";
 import { arrangementNoteCount } from "../../data/arrangementToLogic";
 import { logicFileFor } from "./arrangementFiles";
 import type { ArrangementV2, NoteEvent } from "../../types/arrangementV2";
@@ -53,6 +53,13 @@ export interface UseArrangementFileActionsResult {
   /** The last thing an entry did, in a sentence. Rendered, so no failure is silent and no success is invisible. */
   report?: string;
   busy: boolean;
+  /**
+   * ⭐ **Which export is running, or `undefined`.** No percentage: see the state's own note -- the arrangement exporters report
+   * "working", and a bar that cannot move is the kind of control this repository keeps removing.
+   */
+  exportingKind?: string;
+  /** ⭐ Stop waiting: the work finishes, the file is not written. `OfflineAudioContext` has no cancellation primitive. */
+  cancelExport: () => void;
   exportMidi: () => void;
   exportAls: () => void;
   exportGroove: () => void;
@@ -119,6 +126,18 @@ export function useArrangementFileActions({
   const { t } = useLanguage();
   const [report, setReport] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
+  /**
+   * ⭐ **Which export is running, and whether the one in flight is still wanted.**
+   *
+   * The same idiom `useExportActions` uses, and for the same measured reason: `OfflineAudioContext.startRendering()` has no
+   * cancellation primitive, so the only honest guarantee is about the **file** — after a cancel, none is produced. The counter
+   * is how a run learns it is stale: `cancelExport` moves it on, and the run that was in flight finds itself behind.
+   *
+   * No percentage is reported because none was measured: the arrangement exporters report "working", not progress, and a bar
+   * that cannot move is the kind of control this repository keeps removing.
+   */
+  const [exportingKind, setExportingKind] = useState<string | undefined>(undefined);
+  const runIdRef = useRef(0);
   /** The file waiting for the person to name its parts, if the mapping dialog should be up. */
   const [pending, setPending] = useState<PendingImport | undefined>(undefined);
 
@@ -197,51 +216,56 @@ export function useArrangementFileActions({
    * including when it throws, because a renderer left spinning after a failure is the silent half of a broken export.
    */
   const run = useCallback(
-    async (work: () => Promise<{ report: string; file?: { filename: string; blob: Blob } }>) => {
+    async (kind: string, work: () => Promise<{ report: string; file?: { filename: string; blob: Blob } }>) => {
       setBusy(true);
+      const myRun = (runIdRef.current += 1);
+      setExportingKind(kind);
       try {
         const result = await work();
+        // ⭐ A cancelled run produces nothing: the files are the only guarantee this can honestly make.
+        if (runIdRef.current !== myRun) return;
         if (result.file) downloadProducedFile(result.file);
         say(result.report);
       } catch (error) {
         say(t("arrangement_export_failed", { error: describeError(error) }));
       } finally {
         setBusy(false);
+        if (runIdRef.current === myRun) setExportingKind(undefined);
       }
     },
     [say, t]
   );
 
   const exportAls = useCallback(() => {
-    void run(async () => {
+    void run("export", async () => {
       const file = await alsFileFor(arrangement);
       return { file, report: t("export_als_done", { filename: file.filename }) };
     });
   }, [arrangement, run, t]);
 
   const exportGroove = useCallback(() => {
-    void run(async () => {
+    void run("export", async () => {
       const file = await grooveFileFor(arrangement);
       return { file, report: t("export_groove_done", { name: file.name }) };
     });
   }, [arrangement, run, t]);
 
   const exportWav = useCallback(() => {
-    void run(async () => {
+    void run("export", async () => {
       const file = await wavFileFor(arrangement);
       return { file, report: audioReport(file) };
     });
   }, [arrangement, audioReport, run]);
 
   const exportMp3 = useCallback(() => {
-    void run(async () => {
+    void run("export", async () => {
       const file = await mp3FileFor(arrangement);
       return { file, report: audioReport(file) };
     });
   }, [arrangement, audioReport, run]);
 
   const exportStems = useCallback(() => {
-    void run(async () => {
+    void run("export", async () => {
       const file = await stemsFileFor(arrangement);
       return { file, report: audioReport(file) };
     });
@@ -252,7 +276,7 @@ export function useArrangementFileActions({
       say(t("arrangement_musicxml_empty"));
       return;
     }
-    void run(async () => {
+    void run("export", async () => {
       const file = await musicXmlFileFor(scoreNotes, scoreBars, {
         ...(scoreTitle === undefined ? {} : { title: scoreTitle }),
         ...(arrangement.timeSignature === undefined ? {} : { timeSignature: arrangement.timeSignature }),
@@ -273,7 +297,7 @@ export function useArrangementFileActions({
       say(t("arrangement_logic_empty"));
       return;
     }
-    void run(async () => {
+    void run("export", async () => {
       /**
        * The completion sentence is this export's own (`arrangement_logic_export_done`), unlike the empty-note guard
        * above, which still says the MusicXML one — recorded in docs/OPEN_WORK.md 294 rather than left to look right.
@@ -411,8 +435,19 @@ export function useArrangementFileActions({
           parts: pending.read.imported.parts.map((part) => ({ name: part.name, notes: part.notes.length })),
         };
 
+  /**
+   * ⭐ **Stop waiting for the run that is in flight.** The work itself finishes — `startRendering` cannot be interrupted — but
+   * its file is not written and its percentage is not shown, which is what a person pressing cancel is asking for.
+   */
+  const cancelExport = useCallback(() => {
+    runIdRef.current += 1;
+    setExportingKind(undefined);
+  }, []);
+
   return {
     report,
+    exportingKind,
+    cancelExport,
     busy,
     exportMidi,
     exportAls,

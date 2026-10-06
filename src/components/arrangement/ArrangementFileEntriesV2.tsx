@@ -25,7 +25,13 @@ export interface ArrangementFileEntriesV2Props {
   onExportMp3: () => void;
   onExportStems: () => void;
   /** The chosen file. The input is this component's only because a click has to start somewhere. */
-  onImportFile: (file: File) => void;
+  onImportFile: (file: File) => void;  /**
+   * ⭐ **Which export is running, or `undefined`.** The arrangement exporters report "working" rather than a percentage, so
+   * this is what the control can honestly say; a bar that cannot move is the kind of control this repository removes.
+   */
+  exportingKind?: string;
+  /** ⭐ Stop waiting for it: the run finishes, the file is not written. */
+  onCancelExport?: () => void;
 }
 
 /** The toolbar's own button, at the toolbar's own 44 px — the surface is a phone surface too. */
@@ -40,8 +46,9 @@ export const ArrangementFileEntriesV2 = memo(function ArrangementFileEntriesV2({
   onExportWav,
   onExportMp3,
   onExportStems,
-  onImportFile,
-}: ArrangementFileEntriesV2Props) {
+onImportFile,
+  exportingKind,
+  onCancelExport,}: ArrangementFileEntriesV2Props) {
   const { t } = useLanguage();
   const [exportOpen, setExportOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -64,6 +71,21 @@ export const ArrangementFileEntriesV2 = memo(function ArrangementFileEntriesV2({
 
   return (
     <span data-testid="arrangement-file-entries" className="relative ml-auto flex shrink-0 items-center gap-1">
+      {exportingKind !== undefined && (
+        <span data-testid="arrangement-export-progress" className="font-mono text-[10px] uppercase tracking-widest text-text-sub">
+          {t("arrangement_exporting")}
+        </span>
+      )}
+      {exportingKind !== undefined && onCancelExport !== undefined && (
+        <button
+          type="button"
+          data-testid="arrangement-export-cancel"
+          onClick={onCancelExport}
+          className="h-11 shrink-0 rounded border border-[rgb(var(--d-line))] px-2 text-xs text-text hover:text-accent"
+        >
+          {t("arrangement_export_cancel")}
+        </button>
+      )}
       <div className="relative" ref={menuRef}>
         <button
           type="button"
