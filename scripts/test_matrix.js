@@ -557,13 +557,17 @@ async function ensureArrangementMounted(page) {
   await page.waitForSelector("[data-testid='new-project-panel-v2'], [data-testid='arrangement-grid']", { state: "attached", timeout: 45000 }).catch(() => null);
   if (!(await page.$("[data-testid='new-project-panel-v2']"))) return;
   /**
-   * ⭐ **`force` because the panel sits under overlays the matrix does not control.**
+   * ⭐ **A DOM click, not a mouse click at the element's centre.**
    *
-   * The prompt and the gate are both dismissed above, but a first run can raise another one between them; `force` skips the hit test
-   * and dispatches to the element the selector names, which is what the run wants either way.
+   * `force` skips the hit test but still dispatches at coordinates, and on this surface those coordinates land on whatever overlay is
+   * up: the clicks retried until they timed out, and when they did land React did not see them (the panel stayed after Create, with no
+   * error anywhere). Calling `click()` on the element itself is independent of coordinates and of what covers it, and it is the form
+   * that was measured to work -- the panel goes and the grid mounts.
    */
-  await page.click("[data-testid='template-blank']", { force: true });
-  await page.click("[data-testid='new-project-create']", { force: true });
+  await page.evaluate(() => {
+    document.querySelector("[data-testid='template-blank']")?.click();
+    document.querySelector("[data-testid='new-project-create']")?.click();
+  });
 }
 
 async function runTestOnTarget(target, baseUrl) {
