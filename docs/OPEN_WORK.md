@@ -16059,3 +16059,34 @@ export async function prepareArrangementAudioLanes(input: {
   ⇒ ⭐ 然后 ⭐ **⑦-C** 退场 ✓ ⇒ ⭐ 发布 ✓
 ```
 
+### 六百一十三、⭐⭐ **下一阶段（业主要求 ✓）：2.35.0 发布后，先量后优，大头先做**（2026-10-06 09:40 ✓）
+
+```
+**⭐ 指令原文 ✓（业主 2026-10-06 ✓）**：
+  ⭐ "⭐ **2.35.0 发布后就先测量各种流程中各个环节时间消耗、响应延迟、CPU占用、内存占用，按照创作修改音乐过程中体验影响大小
+    和收益大小来优化，按照大头先优化原则，逐步推进**" ✓
+**⭐ 因此门槛 ✓**：⭐ **先完成 ⑦ 与发布 ✓，⭐ 再开始本阶段** ✓（⭐ 不提前动 ✗）
+**⭐⭐ 四个指标 ✓**：⭐ ① ⭐ **时间消耗**（⭐ 每个环节耗时 ✓）② ⭐ **响应延迟**（⭐ 输入 ⇒ 可见／可听 ✓）
+  ⭐ ③ ⭐ **CPU 占用** ✓ ④ ⭐ **内存占用** ✓
+**⭐⭐ 要覆盖的流程环节 ✓（⭐ 创作与修改音乐的主线 ✓）**：
+  ⭐ ① ⭐ **启动与载入工程** ✓（⭐ 冷启动 ✓／⭐ 恢复上次 ✓／⭐ 打开工程 ✓）
+  ⭐ ② ⭐ **新建与流派播种** ✓（⭐ 选流派 ⇒ ⭐ 得到编曲 ✓；⭐ 就是刚移植的这条 ✓）
+  ⭐ ③ ⭐ **编辑** ✓：⭐ 加轨 ✓／⭐ 写与改音符 ✓／⭐ 改参数（⭐ 力度／闸门／概率／棘轮 ✓）／⭐ 移动与缩放片段 ✓
+  ⭐ ④ ⭐ **播放与走带** ✓：⭐ 起播延迟 ✓／⭐ 播放头平滑 ✓／⭐ 长编曲下的稳定性 ✓
+  ⭐ ⑤ ⭐ **撤销与重做** ✓（⭐ 历史快照的代价 ✓）
+  ⭐ ⑥ ⭐ **渲染与导出** ✓：⭐ WAV ✓／⭐ 分轨 ✓／⭐ MIDI ✓／⭐ `.groove` ✓；⭐ 其**首字节时间**与**总时长** ✓
+  ⭐ ⑦ ⭐ **分享与导入** ✓（⭐ URL 分享 ✓／⭐ `.groove` 导入 ✓）
+  ⭐ ⑧ ⭐ **存储** ✓：⭐ 自动保存 ✓／⭐ 切换工程 ✓／⭐ IndexedDB 写入 ✓
+**⭐⭐ 已有器械 ✓（⭐ 不必从零 ✓）**：
+  ⭐ 脚本 ✓：⭐ `measure_interaction_latency` ✓｜⭐ `measure_live_perf` ✓｜⭐ `measure_playback_smoothness` ✓｜
+    `measure_gs1_load` ✓｜⭐ `measure_gs1_jitter` ✓｜⭐ `measure_lane_curve` ✓｜⭐ `profile_offline_render` ✓｜
+    `measure_musicxml_import` ✓｜⭐ `measure_genre_mix_ui` ✓｜⭐ `measure_toolbar_density` ✓｜⭐ `measure_skin_readability` ✓ …
+  ⭐ 判据 ✓：⭐ `latencyBudget` ✓｜⭐ `exportMemory` ✓｜⭐ `flattenCost` ✓｜⭐ `gs1AttackBudget` ✓｜⭐ `gs1ChordTiming` ✓｜
+    `gs1PolyphonyBudget` ✓｜⭐ `mirrorBudget` ✓｜⭐ `playheadLatencySync` ✓｜⭐ `arrangementRenderBudget` ✓ …
+  ⭐ 入口 ✓：⭐ `npm run perf:check` ⇒ ⭐ `node scripts/measure_live_perf.mjs --local` ✓
+  ⭐ 应用内计时 ✓：⭐ `performance.now()` ✓ 已用于音频与界面路径 ✓
+**⭐⭐ 排序规则 ✓（⭐ 业主指定 ✓）**：⭐ **体验影响 × 收益 ＝ 大头** ✓ ⇒ ⭐ **先做最大的一处** ✓，⭐ 逐步推进 ✓
+  ⭐ 且守既有纪律 ✓：⭐ **先量后改** ✓｜⭐ **改前判据能红** ✓｜⭐ **一次一处** ✓｜⭐ **可回退** ✓｜⭐ **读数落台账** ✓
+**⏳ 状态 ✓**：⭐ **待 2.35.0 发布后开始** ✓；⭐ 本轮先完成 ⑦ ✓
+```
+
