@@ -16714,3 +16714,26 @@ describe("the grid's editing actions", () => {
 **⏳ 下一轮 ✓**：⭐ 量 `chordVoicingForStep` 的层 ✓ ⇒ ⭐ 落和弦图章（⭐ 模型 ✓＋判据 ✓＋先问扫描 ✓＋台账 ✓）⇒ ⭐ 然后界面入口 ✓
 ```
 
+### 六百四十、✅ **和弦图章的两个前提都已查清（可复用 ✓ ＋ 边界允许 ✓）**（2026-10-06 12:11 ✓）
+
+```
+**⭐⭐ 前提一 ✓：`chordVoicingForStep` 住在音频层 ✓，可复用 ✓**：
+  ⭐ 定义于 ⭐ **`src/audio/chordVoicing.ts`** ✓（⭐ **421 行** ✓）
+  ⭐ 签名 ✓：⭐ `chordVoicingForStep(rootMidi: number, scale: string | undefined, options: ChordVoicingOptions = {})` ✓
+  ⭐ **不引用 v1 类型** ✓（⭐ 无 `SequencerPattern`／`SequencerTrack` ✓）⇒ ⭐ **v2 层可直接用** ✓
+  ⭐ 现有使用者 ✓：⭐ `AudioEngine` ✓（⭐ `:38` ✓／⭐ `:3005` ✓）｜⭐ `MusicalTypingModal` ✓
+    ⇒ ⭐ **本就在两条路线之间共享** ✓ ⇒ ⭐ **四种风格（⭐ `triad`／⭐ `seventh`／⭐ `sus4`／⭐ `power` ✓）无需重写** ✓ ✓
+**⭐⭐ 前提二 ✓：导入方向允许 ✓**：⭐ `src/data` → ⭐ `src/audio` **已被使用 14 处** ✓
+  ⭐ 其中就有 ⭐ **`genreExpression.ts → ../audio/chordVoicing`** ✓（⭐ 同一模块 ✓）⇒ ⭐ **边界闸门无异议** ✓
+**⭐⭐ 因此落地方案（⭐ 下一轮 ✓）**：
+  ⭐ `stampChordInRect(arrangement, trackId, rect, { type, rootMidi, velocity?, lengthBeats? })` ✓ 建在 ⭐ `arrangementEdits` ✓
+  ⭐ 实现 ✓：⭐ `type === "note"` ⇒ ⭐ 单音 ✓；⭐ 否则 ⇒ ⭐ 移除该起点原有音符 ✓ ⇒ ⭐ `chordNotesForStamp` 等价物 ✓
+    （⭐ `ninth` ⇒ ⭐ `[root,+4,+7,+11,+14]` ✓；⭐ `sus2` ⇒ ⭐ `[root,+2,+7]` ✓；⭐ 其余 ⇒ ⭐ `chordVoicingForStep(root, scale, { style })` ✓）
+    ⇒ ⭐ 把整组放在该起点 ✓（⭐ 长度用 `lengthBeats` ✓）
+  ⭐ 判据 ✓（⭐ 独立量 ✓）：⭐ `note` ⇒ ⭐ 恰一个音高 ＝ root ✓｜⭐ **`sus2` ⇒ ⭐ 集合 `{root, root+2, root+7}`** ✓（⭐ 显式 ✓，⭐ 最稳 ✓）
+    ｜⭐ `ninth` ⇒ ⭐ 五个 ✓｜⭐ **替换**：⭐ 该起点原有非图章音符**消失** ✓｜⭐ **矩形外不变** ✓
+  ⭐ 流程 ✓：⭐ 写实现＋判据 ⇒ ⭐ **先跑 `webEntryReachability`** ✓ ⇒ ⭐ 按需 `EXCLUDED` ✓ ⇒ ⭐ 台账 ⇒ ⭐ 同树提交 ⇒
+    ⭐ `git show --stat` 核对 ✓ ⇒ ⭐ 后台全套 ⇒ ⭐ 绿才推 ✓ ✓
+**⏳ 下一轮 ✓**：⭐ 照上述落和弦图章 ⇒ ⭐ 第 3 档三件齐 ✓ ⇒ ⭐ 然后界面入口（⭐ 框选 ＋ 按钮 ✓）
+```
+
