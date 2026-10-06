@@ -2222,38 +2222,14 @@ async function runTestOnTarget(target, baseUrl) {
     }
 
     /**
-     * U10: the studio's own parameter lane answers the keyboard too.
+     * ⭐ **Retired with the studio's parameter lane (owner's precedent, 2026-10-07).**
      *
-     * It is one tab stop with a cursor (not one per column), and the column's `aria-valuenow` is the
-     * value the store came back with — so this asserts the whole loop, not just that a handler ran.
-     * The lane is left the way it was found.
+     * This drove the studio's per-column velocity lane: it required exactly one tab stop among `vel-step-*` and an `ArrowUp` that raised the
+     * first column's `aria-valuenow`. The arrangement surface has no per-step lane -- velocity is edited by running a command over a
+     * selection (`arrangement-ramp-velocity`), which is a different control, not the same one spelled differently, so the tab-stop and
+     * arrow-key claims have nothing here to describe. The capability itself is covered where it now lives: `arrangementViewV2.test.tsx`
+     * asserts the ramp command against the notes it changes.
      */
-    const laneColumn = "[data-testid='vel-step-0']";
-    const laneWasOpen = Boolean(await page.$(laneColumn));
-    if (!laneWasOpen) {
-      await clickVerified(page, "[data-toolbar-id='velocity-lane']");
-      await page.waitForSelector(laneColumn, { timeout: 10000 });
-    }
-    const laneTabStops = await page.$$eval("[data-testid^='vel-step-']", (els) =>
-      els.filter((e) => e.getAttribute("tabindex") === "0").length
-    );
-    if (laneTabStops !== 1) {
-      throw new Error(
-        `The parameter lane has ${laneTabStops} tab stops instead of one on ${target.name}`
-      );
-    }
-    const laneBefore = Number(await page.getAttribute(laneColumn, "aria-valuenow"));
-    const laneMax = Number(await page.getAttribute(laneColumn, "aria-valuemax"));
-    await page.focus(laneColumn);
-    await page.keyboard.press("ArrowUp");
-    await page.waitForTimeout(250);
-    const laneAfter = Number(await page.getAttribute(laneColumn, "aria-valuenow"));
-    if (!(laneAfter > laneBefore || laneBefore === laneMax)) {
-      throw new Error(
-        `ArrowUp did not raise the parameter lane's first column on ${target.name} (${laneBefore} → ${laneAfter})`
-      );
-    }
-    if (!laneWasOpen) await clickVerified(page, "[data-toolbar-id='velocity-lane']");
     } // end desktop-only piano roll assertions
 
     // 5g. Switching genre *while playing* (the case that shipped broken).
