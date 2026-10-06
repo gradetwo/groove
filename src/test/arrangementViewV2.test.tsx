@@ -382,3 +382,27 @@ describe("stamping a chord on the marks", () => {
     ).toEqual(othersBefore);
   });
 });
+
+/**
+ * ⭐ **Choosing a form from the toolbar.** The claim is the one the numbers make: a form decides how long the arrangement is, and
+ * the music it holds is not part of that decision, so picking one form and then another gets the notes back as they were.
+ */
+describe("choosing an arrangement form", () => {
+  it("⭐ writes the form's length and leaves every note alone", () => {
+    const seeded = arrangementSeededFromGenre("new", Object.values(GENRES_MAP)[0]!);
+    const onArrangementChange = vi.fn();
+    renderView(
+      <ArrangementViewV2 songId="new" capture={noCapture} initialArrangement={seeded} onArrangementChange={onArrangementChange} />
+    );
+
+    fireEvent.click(screen.getByTestId("arrangement-form-club"));
+    const club = onArrangementChange.mock.calls.at(-1)?.[0] as ArrangementV2;
+    expect(club.bars).toBe(40);
+    expect(JSON.stringify(club.notesByTrack)).toBe(JSON.stringify(seeded.notesByTrack));
+
+    fireEvent.click(screen.getByTestId("arrangement-form-loop"));
+    const loop = onArrangementChange.mock.calls.at(-1)?.[0] as ArrangementV2;
+    expect(loop.bars).toBe(4);
+    expect(JSON.stringify(loop.notesByTrack)).toBe(JSON.stringify(seeded.notesByTrack));
+  });
+});
