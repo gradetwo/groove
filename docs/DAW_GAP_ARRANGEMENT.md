@@ -447,3 +447,23 @@
 - §3.5「改速度」：**仍是 ✓ 有**，速度输入框在编排工具栏上（`ArrangementViewV2.tsx:722-734`），与这次删除无关。
 - §4 第 8 条（"接上或删掉"）：**已按"删掉"结案**，不再需要排期；将来模型若有了工程级调性，字段应当**带着模型字段和 `onChange` 一起回来**，而不是先回来。
 - 其余 6 条优先级与 §③ 的全部 ✗／⚠️ 结论**不受影响**（第 3 条的成本估计已按 6.2 下调）。
+
+### 6.4 新缺口：编曲"形态"的两件事在 v2 里没有家（`fill`／`riser`）
+
+Studio 的"生成编曲"选择器提供 `loop`／`club`／`song`（`src/data/arrangementForm.ts:79-133`），每个形态是一串**步骤**，每步带：
+
+- `slot`（v1 槽位 ✓）／`bars` ✓／`label` ✓（`intro`／`build`／`drop`／`verse`／`chorus`／`outro` ✓）；
+- `velocityRamp` ✓（渐强 ✓）／**`riser`** ✗（进入下一段的上升 ✓）／**`fill`** ✗（该段最后一拍的鼓填充 ✓）（字段见 `src/data/arrangementForm.ts:45-55`）。
+
+v2 侧现状（本轮实测 ✓）：
+
+| 步骤里的东西 | v2 的家 |
+|---|---|
+| `bars`（总长 ✓） | ✅ **已有** ✓：`ArrangementV2.bars` ✓；本轮落 `src/data/arrangementFormPlan.ts` ✓（`formBarsV2` ✓／`formPartsV2` ✓ ＋ 判据 ✓） |
+| `velocityRamp` ✓ | ✅ **已有** ✓：`rampArrangementNoteVelocity` ✓（`src/data/arrangementEdits.ts` ✓） |
+| `slot` A／B ✓ | ✅ **可表达** ✓：v2 的 **takes** ✓（两个 take ✓，不是两个槽位 ✓） |
+| **`fill`** ✗ | ⚠️ **没有家** ✗ ⇒ 登记于此 ✓ |
+| **`riser`** ✗ | ⚠️ **没有家** ✗ ⇒ 登记于此 ✓ |
+
+⇒ **结论**：⚠️ 形态移植时**不得静默丢弃** `fill` 与 `riser` ✗ —— 要么在 v2 里补出等价物 ✓，要么在移植的命令里**明确报告"这两个效果未表达"** ✓（与 `mcp/song.ts` 退役同一原则：**能力先有家，再删旧路径** ✓）。
+
