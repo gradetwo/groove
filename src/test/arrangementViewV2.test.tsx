@@ -301,3 +301,45 @@ describe("making the marked notes reach", () => {
     expect(landed.length).toBe(notes.length);
   });
 });
+
+/**
+ * ⭐ **Arpeggio, from the toolbar.** The claim is the one the gesture makes — a chord that sounded together no longer does —
+ * rather than a copy of the roll's internal marks, which the criterion cannot see and should not have to.
+ */
+describe("arpeggiating the marks", () => {
+  it("⭐ takes a marked chord apart in time", () => {
+    const seeded = arrangementSeededFromGenre("new", Object.values(GENRES_MAP)[0]!);
+    const track = seeded.tracks.find((candidate) =>
+      (seeded.notesByTrack?.[candidate.id] ?? []).some(
+        (note, _index, all) => all.filter((other) => other.startBeats === note.startBeats).length > 1
+      )
+    )!;
+    expect(track, "no track in this genre holds a chord — the criterion needs one").toBeDefined();
+    const notes = seeded.notesByTrack?.[track.id] ?? [];
+    const chordStart = notes.find((note) => notes.filter((other) => other.startBeats === note.startBeats).length > 1)!.startBeats;
+    const chord = notes.filter((note) => note.startBeats === chordStart);
+    const later = notes.find((note) => note.startBeats > chordStart)!;
+    const stepOf = (beats: number) => Math.round(beats / 0.25);
+
+    const onArrangementChange = vi.fn();
+    renderView(
+      <ArrangementViewV2 songId="new" capture={noCapture} initialArrangement={seeded} onArrangementChange={onArrangementChange} />
+    );
+    fireEvent.click(within(screen.getByTestId("arrangement-track-picker")).getByText(track.name));
+    const cell = (pitch: number, step: number) => screen.getByTestId(`roll-cell-${pitch}-${step}`);
+    fireEvent.pointerDown(cell(chord[0]!.pitch, stepOf(chordStart)));
+    fireEvent.pointerEnter(cell(later.pitch, stepOf(later.startBeats)));
+    fireEvent.pointerUp(cell(later.pitch, stepOf(later.startBeats)));
+    fireEvent.click(screen.getByTestId("arrangement-arpeggiate-selection"));
+
+    const after = onArrangementChange.mock.calls.at(-1)?.[0] as ArrangementV2;
+    const landed = after.notesByTrack?.[track.id] ?? [];
+    // ⭐ At least one of the chord's pitches has left the start it sounded on: the chord is no longer a chord there.
+    const atChordStart = landed.filter(
+      (note) => note.startBeats === chordStart && chord.some((member) => member.pitch === note.pitch)
+    );
+    expect(atChordStart.length).toBeLessThan(chord.length);
+    // ⭐ And nothing was lost: the track still holds every note it began with.
+    expect(landed.length).toBe(notes.length);
+  });
+});
