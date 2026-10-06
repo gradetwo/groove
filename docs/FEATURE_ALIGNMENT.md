@@ -536,3 +536,10 @@
 | ⭐ **Web 面（盘点）** | ⚠️ ⭐ **两个工作室并存** ✗：⭐ `StudioView` 渲染 v1 的 `SequencerPanel`＋`ArrangementPanel` ✓；⭐ v2 的 `ArrangementViewV2` 由 `App`／`NewProjectView` 渲染 ✓ ⇒ ⭐ 与业主硬约束 ②"不要新老并存"**直接冲突** ✗ ⇒ ⭐ ⑦-B 目标改为**合二为一** ✓ | 本节 ✓ |
 | ⭐ **能力** | ✅ ⭐ v2 侧已有网格（`PianoRollV2` ✓）／轨 ✓／标尺 ✓／takes ✓／乐谱 ✓ ⇒ ⭐ 缺口**应为小** ✓，⭐ 须逐项量 ✓ | 本节 ✓ |
 
+## 2026-10-06 08:38 回填（第 4 条规矩：改完实现回来改表）
+
+| 面 | 变化 | 依据 |
+|---|---|---|
+| ⭐ **Web 面（路由）** | ⭐ 两套界面 ＝ **两条路由** ✓：⭐ `/`（v1 工作室：`SequencerPanel` 常驻 ＋ `ArrangementPanel` 开关 ✓）｜⭐ `/new`（v2：`ArrangementViewV2` ＋ `store.create` ✓）⇒ ⭐ 合成点明确 ✓ | 本节 ✓ |
+| ⭐ **待查能力** | ⚠️ ⭐ **流派驱动生成** ✓：⭐ v2 路由自称"deliberately has no genre" ✗，⭐ 但 `create_arrangement` 收 `genreId` ✓ ⇒ ⭐ 待量 `NewProjectPanelV2`／模板 ✓ | 本节 ✓ |
+

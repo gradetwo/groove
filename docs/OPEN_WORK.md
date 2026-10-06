@@ -15799,3 +15799,28 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+### 六百零二、⭐⭐ **路由查明：两个工作室 ＝ 两条路由（`/` 与 `/new`）**（2026-10-06 08:37 ✓）
+
+```
+**⭐ 量到 ✓**：
+  ⭐ `src/App.tsx` ✓：⭐ 按 ⭐ `route` 选 ✓ ⇒ ⭐ `route.newProject`（⭐ `/new` ✓）⭐ 归"⭐ **arrangement**"作用域 ✓；
+    ⭐ `currentTab === "studio"` ⭐ 归"⭐ **studio**"✓ ⇒ ⭐ 两套即**两条路由** ✓ ✓
+    ⭐ App 自己的注释 ✓：⭐ "⭐ **This route renders the arrangement *instead of* the studio**" ✓
+      ＋ ⭐ "⭐ …**the route that deliberately has no genre**" ✗ ← ⚠️ ⭐ 关键线索 ✓
+  ⭐ `src/views/StudioView.tsx` ✓：⭐ `<SequencerPanel …>` ✓ **常驻** ✓（⭐ `:1101` ✓）
+    ＋ ⭐ `<ArrangementPanel …>` ✓ 由 ⭐ **`isArrangementOpen`**（⭐ `:274` ✓）⭐ **开关** ✓（⭐ `:1433–1434` ✓）
+    ⇒ ⭐ 即 v1 工作室内部**再挂一个 v1 编曲面板** ✗
+  ⭐ `src/views/NewProjectView.tsx` ✓：⭐ `<ArrangementViewV2 …>` ✓（⭐ `:197` ✓）＋ ⭐ `store.create(name, arrangement)` ✓（⭐ `:210` ✓）
+    ⇒ ⭐ v2 路由**创建并打开一个编曲** ✓
+**⭐⭐ 结论 ✓**：⭐ 业主硬约束 ②"⭐ **不要新老并存**"⭐ 的落点很具体 ✓：
+  ⭐ **`/` 的 v1 工作室必须退场** ✗ ⇒ ⭐ 其**能力**必须在 ⭐ **`/new` 的 v2 路由**里成立 ✓（⭐ 业主 ④ ✓）
+**⚠️ 关键待查 ✓（⭐ 能力差的第一项 ✓）**：⭐ **流派驱动的生成** ✓
+  ⭐ v1 工作室的招牌功能 ✓：⭐ 选流派 ⇒ ⭐ 得到模式 ✓（⭐ `SET_GENRE` ✓／⭐ `RESET_TO_GENRE_DEFAULT` ✓／⭐ `LOAD_MASTERCLASS_PATTERN` ✓）
+  ⭐ 而 v2 的路由被注释描述为"⭐ **deliberately has no genre**" ✗ ⇒ ⚠️ ⭐ 这可能就是**最大的能力缺口** ✓
+  ⭐ 但**线索指向已有** ✓：⭐ MCP 的 ⭐ `create_arrangement` ⭐ 收 ⭐ **`genreId`** ✓ ⇒ ⭐ 数据层已支持 ✓；
+    ＋ ⭐ `createArrangementFromTemplate` ✓ ＋ ⭐ 组件 ⭐ `NewProjectPanelV2` ✓ ⇒ ⭐ **待量** ✓
+**⭐ 下一步 ✓**：⭐ 量 ⭐ `NewProjectPanelV2` ✓ 与 ⭐ `createArrangementFromTemplate` ✓ **是否已提供"⭐ 按流派生成**" ✓
+  ⇒ ⭐ 若是 ✓ ⇒ ⭐ 缺口为小 ✓，⭐ 直接进"⭐ 合成**" ✓；⭐ 若否 ✗ ⇒ ⭐ 登记缺口并移植 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
