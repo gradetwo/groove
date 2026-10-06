@@ -16558,3 +16558,22 @@ describe("the grid's editing actions", () => {
   ⭐ 可选路径 ✓：⭐ 先以 ⭐ `UI_LEDGER` ＋ ⭐ `EXCLUDED`（⭐ 带理由 ✓）**合规落地** ✓ ⇒ ⭐ 再补界面 ✓（⭐ 两步走 ✓，⭐ 每步可绿 ✓）
 ```
 
+### 六百三十二、⭐⭐ **台账的两道"诚实检查"（本轮又学两条）**（2026-10-06 11:19 ✓）
+
+```
+**⭐⭐ 红一 ✓**：⭐ `the ledger and the scan disagree. Unreachable today: addTrackNotes, removeNotesWithinRect,`
+  ⭐ `renameTrack, setArrangementTempoMap, setArrangementTimeSignature, setTrackPar…` ✗
+  ⇒ ⭐ 即 ⭐ **`duplicateNotesByDelta` 不在"⭐ 够不到**"之列 ✗（⭐ 扫描认定它**可达** ✓）
+  ⇒ ⚠️ ⭐ 我那条 `UI_LEDGER` 条目**不该存在** ✗ ⇒ ⭐ **删** ✓
+**⭐⭐ 红二 ✓**：⭐ `duplicateNotesByDelta's reason does not say where the gap is or who must decide` ✗
+  ⇒ ⭐ 每条的**理由必须写明** ✓：⭐ **① 缺口在哪** ✓ ＋ ⭐ **② 谁来决定** ✓（⭐ 否则红 ✓）
+**⭐⭐ 因此两张表的写法规则 ✓（⭐ 具名 ✓）**：
+  ⭐ **`UI_LEDGER`** ✓：⭐ ① ⭐ **只登记扫描确实够不到的操作** ✗（⭐ 多一条 ⇒ ⭐ 红 ✓）
+    ⭐ ② ⭐ 理由要**可核对** ✓：⭐ 写明**位置**（⭐ 哪个组件没有它 ✓）＋ **决定人**（⭐ 业主 ✓／⭐ 政策 ✓）
+    ⭐ ③ ⭐ `status` ✓：⭐ `excluded-by-policy`（⭐ 已裁定 ✓）｜⭐ `pending-owner-ruling`（⭐ 未决 ✓，⭐ 记录而非辩解 ✓）
+  ⭐ **`mcpCoverage` 的 `EXCLUDED`** ✓：⭐ 理由要说明**为什么协议面不需要它** ✓（⭐ 例如"⭐ 协议用逐音符工具达到同一效果**" ✓）
+**⭐ 本批已回退 ✓（⭐ 整批 ✓）** ⇒ ⭐ 下一轮：⭐ 三操作 ＋ 判据 ✓ ＋ ⭐ `EXCLUDED`（⭐ 2 条 ✓）
+  ＋ ⭐ `UI_LEDGER`（⭐ **仅** `removeNotesWithinRect` 一条 ✓，⭐ 理由写明位置与决定人 ✓）⇒ ⭐ 跑门 ⇒ ⭐ 推 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
