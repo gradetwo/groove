@@ -15976,3 +15976,45 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 下一步 ✓**：⭐ 全绿后提交 ✓ ⇒ ⭐ 然后 ⭐ **能力判据**（⭐ 按流派创建 ⇒ 带该流派音符 ✓）⇒ ⭐ 视图接线 ✓ ⇒ ⭐ 关 `/` 老路 ✓
 ```
 
+### 六百一十、✅ **能力判据已立并证明能红（红得极精确 ✓）**（2026-10-06 08:58 ✓）
+
+```
+**⭐ 判据 ✓（⭐ 加在 ⭐ `src/test/arrangementViewV2.test.tsx` ✓ 的 ⭐ `describe("the arrangement a host hands in, and what the host is told")` ✓ 里 ✓）**：
+  ⭐ 需要的 import ✓：⭐ `GENRES_MAP` ✓｜⭐ `patternFromGenre` ✓（⭐ `data/genreMix` ✓）｜⭐ `projectSongToV2` ✓（⭐ `data/arrangementProjection` ✓）
+  ⭐ **原文 ✓（⭐ 下一轮照抄 ✓）**：
+```
+```
+  it("⭐ starts from a genre, and what it creates is the genre's music rather than a template's", () => {
+    const onCreateProject = vi.fn();
+    renderView(<ArrangementViewV2 songId="new" capture={noCapture} onCreateProject={onCreateProject} />);
+    const genre = Object.values(GENRES_MAP)[0]!;
+    fireEvent.click(screen.getByTestId(`genre-${genre.id}`));
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+
+    // ⭐ The genre decides the content: what the route creates must be the genre's arranged pattern, projected into an
+    // arrangement — the same two steps the protocol creator uses — and not a template handed the same name.
+    const expected = projectSongToV2({ id: "new", clips: { A: patternFromGenre(genre) } });
+    const arrangement = onCreateProject.mock.calls[0]![1];
+    expect(arrangement.tracks.map((track: { name?: string }) => track.name)).toEqual(
+      expected.tracks.map((track) => track.name)
+    );
+    expect(Object.values(arrangement.notesByTrack).flat().length).toBe(
+      Object.values(expected.notesByTrack).flat().length
+    );
+  });
+```
+```
+**⭐⭐ 红的原文 ✓（⭐ 极精确 ✓）**：
+  ⭐ `expected [ 'Synth' ] to deeply equal [ 'Kick Drum', 'Snare / Clap', …(6) ]` ✗
+  ⇒ ⭐ 即 ⭐ 现在点流派＋创建 ⭐ 只得到**空白默认**（⭐ `['Synth']` ✗）✓，⭐ 而流派应给 ⭐ **8 条该流派的轨** ✓ ✓
+  ⇒ ⭐ 这正是**要移植的能力** ✓ ✓
+**⭐ 读数 ✓**：⭐ 加判据后 ⭐ **1 failed | 9 passed** ✓ ⇒ ⭐ 回退后该文件**全绿** ✓｜⭐ `dirty=0` ✓
+**⭐⭐ 下一轮（⭐ 同批 ✓）**：
+  ⭐ ① ⭐ **判据放回** ✓（⭐ 原文在上 ✓）＋ ⭐ 三个 import ✓
+  ⭐ ② ⭐ **实现** ✓：⭐ `ArrangementViewV2` 的 ⭐ `onCreate` 分支 ✓ 收第四参 ⭐ `genreId` ✓
+    ⇒ ⭐ 若有流派 ✓ ⇒ ⭐ `projectSongToV2({ id: songId, clips: { A: patternFromGenre(GENRES_MAP[genreId]) } })` ✓
+    ⇒ ⭐ 否则 ⭐ 走原模板路径 ✓（⭐ 行为不变 ✓）
+  ⭐ ③ ⭐ **优先抽共享助手** ✓（⭐ MCP 与 Web 同源 ✓）⇒ ⭐ 记作紧随其后的一件 ✓
+  ⭐ ④ ⭐ 跑全套 ✓ ⇒ ⭐ 绿则推 ✓ ⇒ ⭐ 然后 ⭐ **关 `/` 老路** ✓（⭐ ⑦-C ✓）
+```
+
