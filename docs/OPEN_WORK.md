@@ -16649,3 +16649,27 @@ describe("the grid's editing actions", () => {
 **⏳ 下一轮 ✓**：⭐ 第 3 档余下两件（⭐ 琶音 ✓／⭐ 和弦图章 ✓）⇒ ⭐ 再界面入口（⭐ 框选 ＋ 按钮 ✓）
 ```
 
+### 六百三十七、⭐⭐ **第 3 档第二件：琶音语义（`arpeggiateSelectedNotes`）**（2026-10-06 11:54 ✓）
+
+```
+**⭐ 已落地 ✓（⭐ 连奏 ✓）**：⭐ `de197ba` ✓ ⇒ ⭐ `git show --stat` **核实** ✓ —— ⭐ 恰好 5 个文件／**95** 行 ✓
+  （⭐ `arrangementEdits` ＋30 ✓／⭐ 连奏判据 ＋40 ✓／⭐ `mcpCoverage` ＋2 ✓／⭐ 两张文档 ＋23 ✓）⇒ ⭐ **教训 195 生效** ✓
+**⭐ `arpeggiateSelectedNotes` ✓（`rollModel.ts:930–985` ✓）**：
+  ⭐ 空选择 ✓ ⇒ ⭐ **不动** ✓｜⭐ 目标 ✓：⭐ 选中音符的**不同步**（⭐ 排序 ✓）
+  ⭐ 逐步 ✓：⭐ 该步的**选中音符** ≤ 1 ⇒ ⭐ **跳过** ✓（⭐ 无可琶音 ✓）
+  ⭐ 排序 ✓：⭐ 按 ⭐ `midi` **升序** ✓ ⇒ ⭐ 移除原和弦 ✓
+  ⭐ 方向 ✓：⭐ `up` ⇒ ⭐ 升序 ✓｜⭐ `down` ⇒ ⭐ 反转 ✓｜⭐ `updown` ⇒ ⭐ **升序 ＋ 内部反转** ✓（⭐ `slice(1, -1).reverse()` ✓）
+  ⭐ 落点 ✓：⭐ `targetStep = s + idx * stepInterval` ✓ ⇒ ⭐ **越界（⭐ `>= stepCount`）丢弃** ✓
+    ⇒ ⭐ **落点同音高替换** ✓（⭐ `filter(wn => !(wn.stepIdx === targetStep && wn.midi === n.midi))` ✓）
+  ⭐ 长度 ✓：⭐ `gate = Math.min(n.gate, 0.8)` ✓（⭐ 上限 **0.8 步** ✓）
+  ⭐ 回包 ✓：⭐ `{ pattern, nextSelection: 落下的新音符 }` ✓（⭐ 便于连续操作 ✓）
+**⭐⭐ v2 对应物 ✓（⭐ 以拍计 ✓）**：⭐ `arpeggiateNotesInRect(arrangement, trackId, rect, { direction, stepBeats })` ✓
+  ⭐ 语义照抄 ✓：⭐ 按**起点**分组 ✓ ⇒ ⭐ 组内 ≥ 2 才处理 ✓ ⇒ ⭐ 移走并按方向重排 ✓
+    ⇒ ⭐ 落点＝⭐ `起点 + idx * stepBeats` ✓ ⇒ ⭐ 越界（⭐ 编曲末）丢弃 ✓ ⇒ ⭐ 同（⭐ 音高 ＋ 起点）替换 ✓
+    ⇒ ⭐ 长度夹到 ⭐ `0.8 * stepBeats` ✓（⭐ 与 v1 的 0.8 步一致 ✓）⇒ ⭐ **矩形外不动** ✓
+**⭐ 判据计划 ✓（⭐ 独立量 ✓）**：⭐ ① ⭐ 3 音和弦（⭐ 起点 0 ✓）⇒ ⭐ `up` ＋ `stepBeats 0.5` ⇒ ⭐ 落在 **0／0.5／1.0** ✓
+  ⭐ 且 ⭐ **原和弦消失** ✓（⭐ 该起点只剩一个音符 ✓）② ⭐ `down` ⇒ ⭐ **降序** ✓ ③ ⭐ `updown` ⇒ ⭐ **4 个音符**（⭐ `[0,1,2,1]` ✓）
+  ⭐ ④ ⭐ **矩形外不变** ✓
+**⏳ 下一轮 ✓**：⭐ 落琶音（⭐ 模型 ✓ ＋ ⭐ 判据 ✓ ＋ ⭐ 先跑 `webEntryReachability` 读集合 ✓ ＋ ⭐ `EXCLUDED` 按需 ✓ ＋ ⭐ 台账 ✓）
+```
+
