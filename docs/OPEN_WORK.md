@@ -16207,3 +16207,32 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+### 六百一十八、⭐⭐ **第 1 档移植规格：力度斜坡与量化（原意已逐字读到 ✓）**（2026-10-06 09:44 ✓）
+
+```
+**⭐⭐ 力度斜坡 ✓（`rollModel.ts:624–650` ✓）**：
+  ⭐ 签名 ✓：⭐ `rampNotesVelocity(pattern, trackIdx, selection, startVel = 40, endVel = 120, stepCount)` ✓
+  ⭐ 目标步 ✓：⭐ **选中的步** ✓（⭐ `selectedSteps(selection)` ✓）⇒ ⭐ 若选择为空 ✗ ⇒ ⭐ **全部发响的步** ✓
+    （⭐ `[...new Set(allNotes.map(n => n.stepIdx))].sort()` ✓）⇒ ⭐ 无步 ⇒ ⭐ **原样返回** ✓
+  ⭐ 一步 ✓ ⇒ ⭐ 取**中点** ✓：⭐ `Math.round((startVel + endVel) / 2)` ✓
+  ⭐ 多步 ✓ ⇒ ⭐ **线性** ✓：⭐ `frac = idx / (steps.length - 1)` ✓
+    ⇒ ⭐ `Math.max(1, Math.min(127, Math.round(startVel + frac * (endVel - startVel))))` ✓
+  ⭐ 未落在斜坡步上的音符 ✓ ⇒ ⭐ **不动** ✓（⭐ `ramped !== undefined ? … : n` ✓）
+  ⭐ 写回 ✓：⭐ `withTrackNotes(pattern, trackIdx, next, stepCount)` ✓
+**⭐⭐ 量化（长度）✓（`rollModel.ts:693–704` ✓）**：
+  ⭐ 签名 ✓：⭐ `quantizeLengths(pattern, trackIdx, selection, snap, stepCount)` ✓
+  ⭐ 范围 ✓：⭐ **只对选中的步** ✓（⭐ `new Set(selectedSteps(selection))` ✓）
+  ⭐ 规则 ✓：⭐ `gate = Math.max(0.1, Math.min(MAX_NOTE_GATE_STEPS, snapValue(n.gate, snap)))` ✓
+    ⇒ ⭐ 即**把音符长度对齐栅格** ✓ —— ⚠️ **不是**对齐起点 ✗（⭐ 名字与实现都指向**长度** ✓）
+  ⭐ 写回 ✓：⭐ 同 `withTrackNotes` ✓
+**⭐⭐ v2 对应物 ✓（⭐ 以**拍**计 ✓，⭐ 因为 v2 的时间单位是拍 ✓；⭐ 栅格是**视图** ✓ 不是模型字段 ✓）**：
+  ⭐ ① ⭐ `rampArrangementNoteVelocity(arrangement, trackId, noteIds, startVel, endVel)` ✓
+    ⭐ 语义照抄 ✓：⭐ 目标＝⭐ 选中音符的**不同起点**（⭐ 排序 ✓）⇒ ⭐ 单点取中点 ✓ ⇒ ⭐ 多点线性 ✓ ⇒ ⭐ 1..127 夹取 ✓
+  ⭐ ② ⭐ `quantizeArrangementNoteLengths(arrangement, trackId, noteIds, snapBeats)` ✓
+    ⭐ 语义照抄 ✓：⭐ 只改**长度** ✓ ⇒ ⭐ 对齐到 ⭐ `snapBeats` 的整数倍 ✓ ⇒ ⭐ 下限夹取 ✓
+**⭐ 判据计划 ✓（⭐ 先红 ✓）**：⭐ 两条各一例 ✓，⭐ 放在 v2 网格的判据里 ✓：
+  ⭐ ① ⭐ "⭐ **斜坡从首到尾线性，且单点取中点**" ✓（⭐ 断言首末值与中点值 ✓）
+  ⭐ ② ⭐ "⭐ **量化只改长度、不改起点，并把长度对齐栅格**" ✓（⭐ 断言起点不变 ＋ ⭐ 长度是栅格整数倍 ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 下一轮：⭐ 立这两条判据并证明能红 ✓ ⇒ ⭐ 再实现 ✓
+```
+
