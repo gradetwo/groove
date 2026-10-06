@@ -254,7 +254,7 @@ export function CatalogueRecordingPicker({
           {outside !== undefined && outside.length > 0 && (
             // A `role="status"` rather than a silent colour: the report is the deliverable, and it must be reachable
             // without seeing the pixels.
-            <p data-testid="lane-range-report" role="status" className="text-[10px] text-[rgb(var(--d-warn,245,183,61))]">
+            <p data-testid="lane-range-report" role="status" className="text-[10px] text-[rgb(var(--d-warning))]">
               {outsideRangeText(outside.length, coverageLookup.coverageOf(reportAssetId), isZh)}
             </p>
           )}
