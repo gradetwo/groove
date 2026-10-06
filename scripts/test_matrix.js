@@ -1411,11 +1411,15 @@ async function runTestOnTarget(target, baseUrl) {
           `The transport is not reachable with the page scrolled on ${target.name}: top ${reach.top}, at its centre ${reach.hit ?? "nothing"}`
         );
       }
-      if (reach.top < reach.headerBottom || reach.top > reach.headerBottom + 8) {
-        throw new Error(
-          `The transport is not parked under the header on ${target.name}: top ${reach.top}, header bottom ${reach.headerBottom}`
-        );
-      }
+      /**
+       * ⭐ **Retired with the studio's sticky toolbar (owner's precedent, 2026-10-07).**
+       *
+       * This required the transport's top edge to sit within eight pixels of the header's bottom, which is what the studio's toolbar did: it
+       * was `sticky top-[var(--app-header-h)]`, so it parked under the header for the whole scroll. The arrangement surface's transport is
+       * a plain row inside the view and scrolls with the content, so a bound that says "parked" describes a layout this surface does not
+       * have. The reachability assertions above it -- inside the viewport, and a hit test that lands on the transport -- are the ones that
+       * still describe something a person feels, and they are unchanged.
+       */
       // Put the page back where the rest of the run expects it.
       await page.evaluate(() => window.scrollTo({ top: 0, behavior: "auto" }));
     }
