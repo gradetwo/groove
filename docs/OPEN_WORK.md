@@ -16878,3 +16878,22 @@ describe("the grid's editing actions", () => {
 **⏳ 另 ✓**：⭐ 界面（⭐ B ✓）在镜像收口后立即开始 ✓（⭐ 落点见 §645 与上轮测量：⭐ `drag.kind` 加 `marquee` ✓）
 ```
 
+### 六百四十七、⭐⭐ **镜像删除的四处改动已具名（数字已定 ✓）**（2026-10-06 12:53 ✓）
+
+```
+**⭐⭐ 关键数字 ✓**：⭐ 该库 ⭐ **4814 文件** ✓；⭐ `.sfz` **347** ✗ —— ⚠️ **不是判据的口径** ✓
+  ⭐ **判据口径 ✓ ＝ 地址钉里的 ⭐ `programs: 8`** ✓（⭐ `src/test/sampleSourceAddressPins.ts:68` ✓）
+  ⇒ ⭐ 程序级总数 ⭐ **323 − 8 ＝ 315** ✓（⭐ 待全套确认 ✓）⇒ ⭐ 条目数 ⭐ **33 − 1 ＝ 32** ✓
+**⭐⭐ 四处改动 ✓（⭐ 锚点已具名 ✓）**：
+  ⭐ ① ⭐ `public/samples/manifest.json` ✓ ⇒ ⭐ 删该条目（⭐ 外科式花括号配对 ✓，⭐ **33 ⇒ 32** ✓）
+  ⭐ ② ⭐ `src/test/removedSampleLibraries.test.ts` ✓ ⇒ ⭐ `:72` 测试名"⭐ **33 entries and 323 program-level assets**" ⇒
+    ⭐ **"32 entries and 315 program-level assets"** ✓；⭐ `:73` ⭐ `toHaveLength(33)` ⇒ ⭐ **32** ✓；
+    ⭐ `:78` ⭐ `toHaveLength(323)` ⇒ ⭐ **315** ✓；⭐ 并按该文件**自身惯例**加一行历史注释 ✓（⭐ 它已有 ⭐ "⭐ 34 → 32 … 32 → 33 …**" ✓）
+  ⭐ ③ ⭐ `src/test/sampleSourceAddressPins.ts` ✓ ⇒ ⭐ **删 `:68` 的地址钉** ✓（⭐ 判据拿钉与清单比对 ✓ ⇒ ⭐ 钉在库不在 ⇒ 红 ✓）
+  ⭐ ④ ⭐ `src/test/catalogueRecordingPicker.test.tsx` ✓ ⇒ ⭐ `:166` ⭐ `toHaveLength(323)` ⇒ ⭐ **315** ✓（⭐ 及其 ⭐ `:161–165` 注释 ✓）
+**⭐ 执行顺序 ✓（⭐ 下一轮一次落 ✓）**：⭐ 上面四处 ⇒ ⭐ **全套** ⇒ ⭐ 绿 ⇒ ⭐ `remove_samples.mjs karoryfer-big-rusty-drums --apply`
+  ⇒ ⭐ **自读 0** ✓ ⇒ ⭐ `check_removed_samples` ✓／⭐ `check:mirror` ✓ ⇒ ⭐ 同树提交 ＋ ⭐ `git show --stat` ✓ ⇒ ⭐ 推 ✓
+  ⚠️ ⭐ 若 ⭐ 315 猜错 ✗ ⇒ ⭐ 全套会给出**真实的数** ✓ ⇒ ⭐ 照它改 ✓（⭐ 教训 197 的做法 ✓）
+**⏳ 另 ✓**：⭐ 界面（⭐ B ✓）在其后立即开始 ✓
+```
+
