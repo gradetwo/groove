@@ -35,7 +35,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Redo2, Undo2 } from "lucide-react";
 import type { ArrangementV2, TrackKindV2, TrackRegion } from "../../types/arrangementV2";
-import { createArrangementFromTemplate, quantizeArrangementNoteLengths, rampArrangementNoteVelocity } from "../../data/arrangementEdits";
+import { createArrangementFromTemplate, quantizeArrangementNoteLengths, rampArrangementNoteVelocity, legatoNotesInRect } from "../../data/arrangementEdits";
 import { setterCommand } from "../../data/arrangementHistory";
 import { GENRES_MAP } from "../../data/genres";
 import { arrangementSeededFromGenre } from "../../data/arrangementProjection";
@@ -888,6 +888,30 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           }}
         >
           Copy selection
+        </button>
+        {/**
+          * ⭐ **Legato: each marked note reaches the next one.** The model's own rule, committed as one command so one press is
+          * one undo. It acts on the rectangle the marks cover, which is exactly the marks themselves after a drag.
+          */}
+        <button
+          type="button"
+          data-testid="arrangement-legato-selection"
+          className="px-2 py-1 rounded text-xs text-text opacity-90"
+          disabled={editableTrackId === undefined || rollSelection.length === 0}
+          onClick={() => {
+            if (editableTrackId === undefined || rollSelection.length === 0) return;
+            const marks = rollSelection;
+            const rect = {
+              fromBeats: Math.min(...marks.map((mark) => mark.startBeats)),
+              toBeats: Math.max(...marks.map((mark) => mark.startBeats)),
+              pitchFrom: Math.min(...marks.map((mark) => mark.pitch)),
+              pitchTo: Math.max(...marks.map((mark) => mark.pitch)),
+            };
+            const after = legatoNotesInRect(arrangement, editableTrackId, rect, { loopEndBeats: bars * 4 });
+            commit(setterCommand("Legato", (_current, value) => value, arrangement, after));
+          }}
+        >
+          Legato
         </button>
         {/**
          * ⭐ **The transport, with the state the owner reported as missing.**
