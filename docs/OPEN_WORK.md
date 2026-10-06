@@ -17002,3 +17002,16 @@ describe("the grid's editing actions", () => {
   ⭐ ② ⭐ **删掉 `UI_LEDGER` 那条整块** ✓（⭐ 四条理由行 ✓）⇒ ⭐ 跑该判据 ⇒ ⭐ 绿 ✓
   ⭐ ③ ⭐ 全套 ⇒ ⭐ 推 ✓
 
+**⭐ 框选判据的**全部事实**已齐 ✓（2026-10-06 13:36 ✓，⭐ 下一轮一次落 ✓）**：
+  ⭐ 家 ✓：⭐ `src/test/pianoRollV2.test.tsx` ✓（⭐ 149 行 ✓，⭐ 已渲染网格 ✓）
+  ⭐ 惯用法 ✓：⭐ `renderRoll(props)` ✓ ⇒ ⭐ 内部 ⭐ `<PianoRollV2 notes={[]} beats={4} lowPitch={60} highPitch={72} {...spies} {...props} />` ✓
+    ⭐ 四个 spy ✓：⭐ `onAddNote` ✓／⭐ `onRemoveNote` ✓／⭐ `onMoveNote` ✓／⭐ `onResizeNote` ✓
+  ⭐ 手势 ✓：⭐ `fireEvent.pointerDown(格)` ✓／⭐ `pointerEnter(格)` ✓／⭐ `pointerUp(格)` ✓（⭐ 与既有用例同法 ✓）
+  ⭐ 选中读数 ✓：⭐ `screen.getByTestId("roll-note-{pitch}-{step}").dataset.selected` ✓
+  ⭐ **删除触发 ✓**：⭐ `fireEvent.keyDown(screen.getByTestId("roll-cell-60-0"), { key: "Delete" })` ✓
+    （⭐ 事件**冒泡**到面板 ✓ ⇒ ⭐ 在**格**上触发即可 ✓）
+  ⭐ 判据设计 ✓：⭐ 三音符（⭐ 60@0 ✓／⭐ 62@1 步 ✓ 在跨度内 ✓；⭐ 72@0 ✓ 在跨度外 ✓）
+    ⇒ ⭐ 从格 ⭐ `roll-cell-60-0` ⭐ 拖到 ⭐ `roll-cell-62-1` ✓ ⇒ ⭐ 断言两个在跨度内的 ⭐ `selected === "true"` ✓
+    ＋ ⭐ 跨度外的 ⭐ `"false"` ✓ ⇒ ⭐ `Delete` ⇒ ⭐ `onRemoveNote` ⭐ **收到跨度内每一个**（⭐ 2 次 ✓）＋ ⭐ 跨度外**未被删** ✓
+  ⭐ 随后 ✓：⭐ **删掉 `UI_LEDGER` 那条整块** ✓ ⇒ ⭐ 跑两条判据 ⇒ ⭐ 全套 ⇒ ⭐ 推 ✓
+
