@@ -15917,3 +15917,26 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 下一轮 ✓**：⭐ 面板 ＋ 判据 ＋ **调用点按收尾行精确补第四参** ✓ ⇒ ⭐ 跑门 ✓ ⇒ ⭐ 绿则推 ✓
 ```
 
+### 六百零七、⭐⭐ **流派入口已证明结构正确；红全在"断言形状"**（2026-10-06 08:44 ✓）
+
+```
+**⭐ 本轮已证 ✓（⭐ 回退前 ✓）**：⭐ `tsc=0` ✓｜⭐ `lint=0` ✓ ⇒ ⭐ 面板改动**结构正确** ✓ ✓
+  ⭐ 关键手法 ✓：⭐ 调用点在**单行** `:171` ✓ ⇒ ⭐ **数括号**找收尾 ✓（⭐ 收尾在列 286 ✓）⇒ ⭐ 在 `)` 前插 `, genreId` ✓ ✓
+  ⭐ 调用行的真实尾部 ✓：⭐ `…name.trim() || t("new_project_default_name"))}` ✓ ⇒ ⚠️ ⭐ 所以 `name.trim()` 之后**不是 `)`** ✗
+    ⇒ ⭐ 教训 186 ✓：⭐ **不能假设表达式的形状** ✗ ⇒ ⭐ **数括号**或**打印整行** ✓
+**⭐⭐ 三处红 ✓（⭐ 全是断言形状 ✗，⭐ 不是实现 ✗）**：
+  ⭐ ① ⭐ `"shows every template plus blank…"` ✗：⭐ 期望 ⭐ `["samplers", Anything, Any<String>]` ✓（⭐ 3 参 ✓）
+    ⭐ 实际 ⭐ **4 参** ✓ ⇒ ⭐ `toHaveBeenCalledWith` ⭐ **逐参比对** ✓ ⇒ ⭐ 需补第 4 参 ✓
+  ⭐ ② ⭐ `"carries the chosen kind into a blank project…"` ✗：⭐ 同上 ✓（⭐ 期望 ⭐ `[undefined, 'sampler', Any<String>]` ✓）
+  ⭐ ③ ⭐ 新例 ✗：⭐ `expected "spy" to be called with arguments: [Anything, Anything, …(2)]` ✗
+    ⇒ ⚠️ ⭐ 因为 ⭐ **`expect.anything()` 不匹配 `undefined`** ✓ ⇒ ⭐ 若第 4 参为 `undefined` ✗ ⇒ ⭐ 该断言必红 ✓
+**⭐⭐ 精确的两处修法 ✓（⭐ 下一轮 ✓）**：
+  ⭐ ① ⭐ 既有两例 ⇒ ⭐ 补第 4 参 ✓：⭐ `expect(onCreate).toHaveBeenCalledWith("samplers", expect.anything(), expect.any(String), undefined);` ✓
+    （⭐ 另一例同理 ⭐ `undefined, "sampler", expect.any(String), undefined` ✓）
+  ⭐ ② ⭐ 新例 ⇒ ⭐ 不用 `expect.anything()` ✓，⭐ 直接读参 ✓：
+    ⭐ `expect(onCreate.mock.calls.at(-1)?.[3]).toBe(first.id);` ✓ ⇒ ⭐ 若为 `undefined` ✗ ⇒ ⭐ 失败信息会**直接显示** ✓ ✓
+**⭐ 纪律自省 ✓**：⭐ 同一小批**第三次** ✗ ⇒ ⭐ 每次红都源于**我的补丁精度** ✗（⭐ 正则 ✗ ⇒ ⭐ 尾串 ✗ ⇒ ⭐ 断言形状 ✗）
+  ⇒ ⭐ 做法 ✓：⭐ 改**调用签名**的同一批里，⭐ **必须同时检查所有既有断言** ✓（⭐ 它们**逐参比对** ✓）
+**⏳ 下一轮 ✓**：⭐ 上面的两处断言修法 ＋ ⭐ 面板／判据原样 ✓ ⇒ ⭐ 跑门 ⇒ ⭐ 绿则推 ✓
+```
+
