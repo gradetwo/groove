@@ -780,3 +780,42 @@ export function legatoNotesInRect(
   return { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [trackId]: landed } };
 }
 
+/**
+ * ⭐ **Arpeggio: a chord laid out one note at a time.** The older grid takes the notes that share a start, leaves a group of
+ * one alone, orders the rest by pitch and steps them forward by an interval in the chosen direction, dropping whatever runs
+ * past the end and replacing whatever already sits where a note lands. A note's length is capped at eight tenths of a step,
+ * which is the older rule carried into beats.
+ */
+export function arpeggiateNotesInRect(
+  arrangement: ArrangementV2,
+  trackId: string,
+  rect: NoteRect,
+  options: { direction?: "up" | "down" | "updown"; stepBeats?: number } = {}
+): ArrangementV2 {
+  const notes = arrangement.notesByTrack?.[trackId];
+  if (notes === undefined || notes.length === 0) return arrangement;
+  const targets = notesWithinRect(notes, rect);
+  if (targets.length < 2) return arrangement;
+  const direction = options.direction ?? "up";
+  const stepBeats = options.stepBeats ?? 0.25;
+  const endBeats = (arrangement.bars ?? 4) * 4;
+  const starts = [...new Set(targets.map((note) => note.startBeats))].sort((a, b) => a - b);
+  let working = [...notes];
+  for (const start of starts) {
+    const group = targets.filter((note) => note.startBeats === start);
+    if (group.length <= 1) continue;
+    const doomed = new Set(group);
+    working = working.filter((note) => !doomed.has(note));
+    const up = [...group].sort((a, b) => a.pitch - b.pitch);
+    const sequence =
+      direction === "up" ? up : direction === "down" ? [...up].reverse() : [...up, ...up.slice(1, -1).reverse()];
+    sequence.forEach((note, index) => {
+      const at = start + index * stepBeats;
+      if (at >= endBeats) return;
+      working = working.filter((candidate) => !(candidate.startBeats === at && candidate.pitch === note.pitch));
+      working.push({ ...note, startBeats: at, lengthBeats: Math.min(note.lengthBeats, 0.8 * stepBeats) });
+    });
+  }
+  return { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [trackId]: working } };
+}
+

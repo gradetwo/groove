@@ -16673,3 +16673,19 @@ describe("the grid's editing actions", () => {
 **⏳ 下一轮 ✓**：⭐ 落琶音（⭐ 模型 ✓ ＋ ⭐ 判据 ✓ ＋ ⭐ 先跑 `webEntryReachability` 读集合 ✓ ＋ ⭐ `EXCLUDED` 按需 ✓ ＋ ⭐ 台账 ✓）
 ```
 
+### 六百三十八、✅ **琶音落地（一次成 ✓：先问扫描 ⇒ 无需登记 ✓）**（2026-10-06 11:56 ✓）
+
+```
+**✅ 已落 ✓**：⭐ ① ⭐ 模型 ✓ `arpeggiateNotesInRect(arrangement, trackId, rect, { direction?, stepBeats? })` ✓
+  ⭐ 语义照 §637 ✓：⭐ 按**起点**分组 ✓ ⇒ ⭐ 组内 ≤ 1 ⇒ ⭐ 跳过 ✓ ⇒ ⭐ 按音高排序 ✓ ⇒ ⭐ `up`／`down`／`updown` ✓
+    ⇒ ⭐ 落点 ⭐ `起点 + idx * stepBeats` ✓ ⇒ ⭐ 越界丢弃 ✓ ⇒ ⭐ 同（音高＋起点）替换 ✓ ⇒ ⭐ 长度夹到 **0.8 × stepBeats** ✓
+  ⭐ ② ⭐ 判据 ✓ 四例：⭐ `up` ⇒ 起点 `[2, 2.5, 3]` ＋ 音高 `[60, 64, 67]` ✓ ＋ ⭐ **原和弦只剩一个** ✓｜⭐ `down` ⇒ `[67, 64, 60]` ✓
+    ｜⭐ `updown` ⇒ **4 个**（音高 `[60, 64, 67, 64]`，起点 `[2, 2.5, 3, 3.5]` ✓）｜⭐ **矩形外不变**（`pitch 72` 仍在起点 0 ✓）
+  ⭐ ③ ⭐ **`webEntryReachability` 先跑** ✓ ⇒ **绿** ⇒ ⭐ **琶音无需 `UI_LEDGER` 条目** ✓（⭐ 教训 194 ✓）
+  ⭐ ④ ⭐ `mcpCoverage` ✓ **亦未要求条目** ✓ ⇒ ⭐ 本次两张表**都无需改** ✓
+**⭐ 读数 ✓**：⭐ `tsc=0` ✓｜⭐ 四例琶音判据 ✓｜⭐ `mcpCoverage` ✓｜⭐ `webEntryReachability` ✓
+**⭐ 上一轮收口 ✓**：⭐ 连奏全套绿 ✓（⭐ `652 files` ✓／⭐ **5296 tests** ✓／⭐ 0 红 ✓）⇒ ⭐ head `0d42371` ✓
+**⏳ 下一轮 ✓**：⭐ 第 3 档最后一件 **和弦图章** ✓（⭐ `addChord` ✓／⭐ `chordNotesForStamp` ✓，⭐ 类型含 `triad`／`seventh`／
+  `ninth`／`sus4`／`sus2`／`power` ✓）⇒ ⭐ 然后界面入口 ✓
+```
+
