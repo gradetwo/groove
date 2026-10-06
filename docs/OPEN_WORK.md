@@ -15775,3 +15775,27 @@ export async function prepareArrangementAudioLanes(input: {
   ⇒ ⭐ 判据能红 ⇒ ⭐ 再改实现 ✓（⭐ 铁律：⭐ 序绝不反 ✓）
 ```
 
+### 六百零一、⭐⭐ **决定性发现：现在有"两个工作室"（v1 与 v2 并存 ✗）**（2026-10-06 08:37 ✓）
+
+```
+**⭐ v2 的编曲界面 ✓（⭐ 已经很完整 ✓，⭐ 又一次"⭐ 已有**" ✓ —— 教训 165 ✓）**：
+  ⭐ 组件 ✓：⭐ `ArrangementViewV2` ✓｜⭐ `ArrangementLaneV2` ✓｜⭐ `ArrangementRulerV2` ✓｜⭐ **`PianoRollV2`**（⭐ 音符网格 ✓）✓｜
+    `ScoreV2` ✓｜⭐ `TakeSelectorV2` ✓｜⭐ `TrackHeaderV2` ✓｜⭐ `TrackListV2` ✓｜⭐ `LoopBraceV2` ✓｜⭐ `ArrangementKeyboardV2` ✓
+  ⭐ 助手 ✓：⭐ `arrangementLanes` ✓（⭐ `regionBars` ✓／⭐ `deriveNoteMiniatures` ✓／⭐ `deriveArrangementRegions` ✓／⭐ `miniaturesFor` ✓）｜
+    `arrangementLoop` ✓｜⭐ `arrangementProjection` ✓｜⭐ `arrangementToMidi` ✓｜⭐ `arrangementToLogic` ✓
+  ⭐ 判据 ✓：⭐ `arrangementGrid.test.tsx` ✓｜⭐ `gridVsNoteSignpost.test.ts` ✓
+**⭐⭐ 但两套界面**都在**被渲染 ✗**：
+  ⭐ `src/views/StudioView.tsx` ✓：⭐ `:1101` ⭐ **`<SequencerPanel …>`** ✗（⭐ v1 音序器 ✗）＋ ⭐ `:1434` ⭐ **`<ArrangementPanel …>`** ✗（⭐ v1 面板 ✗）
+  ⭐ **v2 视图** ✓：⭐ `ArrangementViewV2` ✓ 由 ⭐ **`src/App.tsx`** ✓ ＋ ⭐ `NewProjectView.tsx` ✓ 渲染 ✓
+  ⇒ ⭐ 即 ⭐ **v1 工作室**（⭐ `StudioView` ✓）与 ⭐ **v2 编曲编辑器**（⭐ 经 `App`／新建页 ✓）⭐ **同时存在** ✗ ✗
+**⭐⭐ 判定 ✓**：⭐ 这就是业主**硬约束 ②「不要新老并存」**所指的状态 ✗
+  ⇒ ⭐ 因此 ⭐ **⑦-B 的真实目标不是"建视图" ✗，而是"把两个工作室合成 v2 那一个"** ✓ ✓
+  ⇒ ⭐ 而 ⭐ **能力 v2 侧已具备** ✓（⭐ §260 ✓：⭐ 50 个动作可译 ✓、⭐ 5 个被吸收 ✓；⭐ 视图侧 ⭐ `PianoRollV2` ✓／⭐ 轨／⭐ 标尺／
+    `TakeSelectorV2` ✓／⭐ `ScoreV2` ✓ 都在 ✓）⇒ ⚠️ ⭐ 缺口**应为小** ✓，⭐ 但**须逐项量** ✓
+**⭐ 下一步 ✓（⭐ 三件 ✓）**：
+  ⭐ ① ⭐ **量路由** ✓：⭐ `App`／`NewProjectView` ⭐ 如何选 v2 编辑器 ✓（⭐ `arrangementStore.isStudioEditor` ✓／⭐ `isStudioProject` ✓）
+  ⭐ ② ⭐ **量能力差** ✓：⭐ 把 v1 工作室**可见的功能**逐项对到 v2 组件 ✓ ⇒ ⭐ 缺口登记 ✓
+  ⭐ ③ ⭐ **合成** ✓：⭐ `StudioView` 的 v1 面 ⇒ ⭐ v2 视图 ✓ ⇒ ⭐ 旧 store／旧模型退场 ✓（⭐ ⑦-C ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
