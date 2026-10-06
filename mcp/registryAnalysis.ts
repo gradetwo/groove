@@ -8,6 +8,7 @@ import { loudnessReport, shareUrl } from "./exporting";
 import { HEADLESS_POINTER_SENTENCE, headlessParameterDescription } from "./render/budget";
 import { analyseWavFile, renderAudio } from "./render/worker";
 import { flattenMcpArrangement } from "./arrangement";
+import { runWithProgress } from "./render/progress";
 import { ToolDefinition, estimateKey, failure, patternFromArgs, patternSchema, unknownGenre } from "./toolKit";
 import { z } from "zod";
 
@@ -73,7 +74,7 @@ export const ANALYSIS_TOOLS: ToolDefinition[] = [
         ),
       headless: z.boolean().optional().describe(headlessParameterDescription()),
     },
-    handler: async (args) => {
+    handler: async (args, ctx) => {
       try {
         const { flattened } = flattenMcpArrangement(String(args.arrangementId));
         const target = (args.targetLufs as number | undefined) ?? -14;
@@ -98,7 +99,7 @@ export const ANALYSIS_TOOLS: ToolDefinition[] = [
           path: result.path,
         });
 
-        const before = await render();
+        const before = await runWithProgress(ctx?.progress, "measuring the arrangement", () => render());
         /**
          * **Iterate, because a limiter makes this a nonlinear problem.**
          *
@@ -122,7 +123,7 @@ export const ANALYSIS_TOOLS: ToolDefinition[] = [
           if (Math.abs(residual) <= 0.2) break;
           const headroom = ceiling - best.result.truePeakDb;
           const nextTrim = best.trimDb + Math.min(residual, headroom);
-          const next = await render(Number(nextTrim.toFixed(3)));
+          const next = await runWithProgress(ctx?.progress, `pass ${round + 1}`, () => render(Number(nextTrim.toFixed(3))));
           best = { result: next, trimDb: Number(nextTrim.toFixed(3)), lufs: next.integratedLufs };
           attempts.push({ trimDb: best.trimDb, integratedLufs: next.integratedLufs, truePeakDb: next.truePeakDb });
         }
