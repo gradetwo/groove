@@ -1,9 +1,9 @@
 /**
  * ⭐ The shape of an MCP reply, pinned.
  *
- * A reply is pretty-printed JSON, so the first thing a caller reads is the **first key**; the domain
- * summaries therefore put the answer there — `summariseSong` returns `songId` before the song tree —
- * and a reorder that buries it is a regression, not a tidy-up.
+ * A reply is pretty-printed JSON, so the first thing a caller reads is the **first key**; the domain summaries therefore put
+ * the answer there — the arrangement summary names its `arrangementId` before the track tree — and a reorder that buries it is
+ * a regression, not a tidy-up.
  *
  * The render replies also have to stay **self-describing**: say where the file landed, promise to
  * name it, and lead with the measurement rather than with an apology.
@@ -14,6 +14,9 @@
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { summariseArrangement } from "../../mcp/arrangement";
+import { arrangementSeededFromGenre } from "../data/arrangementProjection";
+import { GENRES_MAP } from "../data/genres";
 
 const raw = (path: string) => readFileSync(path, "utf8");
 const flat = (path: string) => raw(path).replace(/\s+/g, " ");
@@ -30,10 +33,13 @@ describe("MCP reply shape", () => {
     expect(missing, `reply-shape sentences missing:\n  ${missing.join("\n  ")}`).toEqual([]);
   });
 
-  it("keeps the song summary's first key an answer, not the payload", () => {
+  it("keeps the arrangement summary's identity ahead of its payload", () => {
+    // ⭐ Measured on the reply itself rather than on the source: a reorder that buries the identity is what this catches.
+    const summary = summariseArrangement("new", arrangementSeededFromGenre("new", Object.values(GENRES_MAP)[0]!));
+    const keys = Object.keys(summary);
     expect(
-      flat("mcp/song.ts").includes("return { songId:"),
-      `summariseSong no longer returns songId first; a caller reads the first key first`
-    ).toBe(true);
+      keys.indexOf("arrangementId"),
+      `summariseArrangement buries its identity behind the payload: ${keys.join(", ")}`
+    ).toBeLessThan(keys.indexOf("tracks"));
   });
 });
