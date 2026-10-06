@@ -16236,3 +16236,23 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 下一轮：⭐ 立这两条判据并证明能红 ✓ ⇒ ⭐ 再实现 ✓
 ```
 
+### 六百一十九、⭐⭐ **第 1 档判据的家与形状已定（皆走 UI ⇒ 能编译且必红 ✓）**（2026-10-06 09:44 ✓）
+
+```
+**⭐ 判据的家 ✓**：⭐ `src/test/arrangementGrid.test.tsx` ✓（⭐ 441 行 ✓，⭐ **UI 级** ✓）
+  ⭐ 它已有 ✓：⭐ `renderView(props)` ✓（⭐ 渲染 ⭐ `ArrangementViewV2` ✓ ＋ ⭐ `LanguageProvider` ✓）｜⭐ `noCapture` ✓｜
+    `resetTrackIdsForTests` ✓ ⇒ ⭐ 新例可直接照用 ✓ ✓
+**⭐ v2 网格的契约 ✓（`PianoRollV2Props` ✓）**：⭐ `notes` ✓｜⭐ `onAddNote` ✓｜⭐ `onRemoveNote` ✓｜⭐ `onMoveNote?` ✓｜
+  `onResizeNote?` ✓｜⭐ `onSetBars?` ✓｜⭐ `onAudition?` ✓（⭐ 注释原文：⭐ "⭐ **The parent owns the arrangement, so the roll reports
+  rather than mutates**" ✓）⇒ ⭐ 即 ⭐ **网格只上报 ✓，⭐ 编曲由父组件持有** ✓
+**⭐⭐ 两条判据的形状 ✓**：
+  ⭐ ① ⭐ **入口** ✓：⭐ "⭐ **网格／工具栏提供力度斜坡与量化**" ✓ ⇒ ⭐ 断言控件存在 ✓（⭐ 现在没有 ⇒ ⭐ 必红 ✓）
+  ⭐ ② ⭐ **能力** ✓：⭐ 点"⭐ 斜坡**"（⭐ 带上选择 ✓）⇒ ⭐ 断言**交给宿主**的编曲 ✓（⭐ `onArrangementChange` ✓）里
+    ⭐ 力度**线性** ✓（⭐ 首／末／中点 ✓）；⭐ 点"⭐ 量化**"⇒ ⭐ 断言**长度是栅格整数倍** ✓ 且 ⭐ **起点不变** ✓ ✓
+  ⭐ 两者**只碰界面与回包** ✓ ⇒ ⭐ **能编译** ✓（⭐ 不是编译错 ✗）＋ ⭐ **必红** ✓ ✓（⭐ 与 §610 同法 ✓）
+**⭐ 实现形状 ✓（⭐ 下一轮 ✓）**：⭐ ① ⭐ `ArrangementViewV2` 加两个动作 ✓（⭐ 斜坡 ✓／⭐ 量化 ✓）
+  ⭐ ② ⭐ 其下在 ⭐ `arrangementEdits` ✓ 加两个操作 ✓（⭐ 语义照 §618 ✓：⭐ `rampArrangementNoteVelocity` ✓／
+    `quantizeArrangementNoteLengths` ✓）⭐ ③ ⭐ 控件带上 ⭐ testid ✓ 与可及名称 ✓ ⇒ ⭐ 判据可点 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 下一轮：⭐ 立这两条判据 ⇒ ⭐ 证明能红 ⇒ ⭐ 实现 ⇒ ⭐ 跑全套 ⇒ ⭐ 推 ✓
+```
+
