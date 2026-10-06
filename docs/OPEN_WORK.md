@@ -16018,3 +16018,25 @@ export async function prepareArrangementAudioLanes(input: {
   ⭐ ④ ⭐ 跑全套 ✓ ⇒ ⭐ 绿则推 ✓ ⇒ ⭐ 然后 ⭐ **关 `/` 老路** ✓（⭐ ⑦-C ✓）
 ```
 
+### 六百一十一、✅ **⑦-B 第二件落地：按流派创建真的用上流派**（2026-10-06 09:02 ✓）
+
+```
+**⭐ 已落 ✓（⭐ 两个文件 ✓）**：
+  ⭐ ① ⭐ `src/components/arrangement/ArrangementViewV2.tsx` ✓：
+    ⭐ `onCreate` 回调收**第四参** ⭐ `genreId` ✓
+    ⭐ 创建分支 ✓：⭐ 有流派 ⇒ ⭐ `projectSongToV2({ id: songId, clips: { A: patternFromGenre(GENRES_MAP[genreId]) } })` ✓
+      ⇒ ⭐ **与协议创建者同两步** ✓ ✓；⭐ 无流派 ⇒ ⭐ 原模板路径**不变** ✓（⭐ 既有行为不动 ✓）
+  ⭐ ② ⭐ `src/test/arrangementViewV2.test.tsx` ✓：⭐ 能力判据放回 ✓ ＋ ⭐ 点击前**存在性断言** ✓
+**⭐⭐ 两处真问题 ✓（⭐ 都由 `tsc` 与运行时指出 ✓）**：
+  ⭐ ① ⭐ `Object.values(unknown)` ✗ ⇒ ⭐ **TS2769** ✓ ⇒ ⭐ 给回包加类型断言 ✓（⭐ `as ArrangementV2` ✓）
+  ⭐ ② ⭐ `notesByTrack` **可为 `undefined`** ✗（⭐ 无音符的编曲**省略该表** ✓）
+    ⇒ ⭐ `Cannot convert undefined or null to object` ✗ ⇒ ⭐ 两侧统一读法 ✓：⭐ `Object.values(value.notesByTrack ?? {})` ✓ ✓
+**⭐ 读数 ✓**：⭐ `tsc=0` ✓｜⭐ `lint=0` ✓｜⭐ `arrangementViewV2` **全过** ✓｜⭐ 全套单测 ✓（⭐ RC=0 ✓）
+**⭐⭐ 因此 ⑦-B 的两件都已完成 ✓**：
+  ⭐ **入口** ✓（⭐ 面板列流派并上报 ✓）＋ ⭐ **能力** ✓（⭐ 视图按流派建编曲 ✓）
+  ⇒ ⭐ v1 工作室的**招牌能力已在 v2 路由成立** ✓ ✓
+**⏳ 下一步 ✓**：⭐ ① ⭐ **抽共享助手** ✓（⭐ MCP 与 Web 同源 ✓ ⇒ ⭐ 三方对齐 ✓）
+  ⭐ ② ⭐ **关掉 `/` 那条 v1 路由** ✓（⭐ `StudioView` 的 ⭐ `SequencerPanel` ✓／⭐ `ArrangementPanel` ✓ ⇒ ⭐ v2 视图 ✓）
+  ⭐ ③ ⭐ ⭐ **⑦-C**：⭐ 退 v1 store 与 ⭐ `types/song.ts` ✓／⭐ `songEdit.ts` ✓／⭐ `projectStorage` ✓ 及其判据 ✓ ⇒ ⭐ 发布 ✓
+```
+

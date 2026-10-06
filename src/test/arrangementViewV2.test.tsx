@@ -3,6 +3,10 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import React from "react";
 import { ArrangementViewV2 } from "../components/arrangement/ArrangementViewV2";
 import { createArrangementFromTemplate } from "../data/arrangementEdits";
+import { GENRES_MAP } from "../data/genres";
+import { patternFromGenre } from "../data/genreMix";
+import { projectSongToV2 } from "../data/arrangementProjection";
+import type { ArrangementV2 } from "../types/arrangementV2";
 import { LanguageProvider } from "../i18n/LanguageContext";
 
 /**
@@ -137,6 +141,27 @@ describe("the arrangement a host hands in, and what the host is told", () => {
     expect(onCreateProject).toHaveBeenCalledTimes(1);
     expect(onCreateProject.mock.calls[0]![0]).toBe("Evening Tune");
     expect(onCreateProject.mock.calls[0]![1].tracks.length).toBeGreaterThan(0);
+  });
+
+  it("⭐ starts from a genre, and what it creates is the genre's music rather than a template's", () => {
+    const onCreateProject = vi.fn();
+    renderView(<ArrangementViewV2 songId="new" capture={noCapture} onCreateProject={onCreateProject} />);
+    const genre = Object.values(GENRES_MAP)[0]!;
+    // ⭐ Both controls must exist before either is pressed, so a missing one is named rather than inferred later.
+    expect(screen.getByTestId(`genre-${genre.id}`)).toBeDefined();
+    const create = screen.getByRole("button", { name: "Create" });
+    fireEvent.click(screen.getByTestId(`genre-${genre.id}`));
+    fireEvent.click(create);
+    expect(onCreateProject).toHaveBeenCalledTimes(1);
+
+    // ⭐ The genre decides the content: what the route creates must be the genre's arranged pattern, projected into an
+    // arrangement — the same two steps the protocol creator uses — and not a template handed the same name. An arrangement
+    // with no notes at all omits the map, so both sides are read the same way.
+    const notes = (value: ArrangementV2) => Object.values(value.notesByTrack ?? {}).flat();
+    const expected = projectSongToV2({ id: "new", clips: { A: patternFromGenre(genre) } });
+    const arrangement = onCreateProject.mock.calls[0]![1] as ArrangementV2;
+    expect(arrangement.tracks.map((track) => track.name)).toEqual(expected.tracks.map((track) => track.name));
+    expect(notes(arrangement).length).toBe(notes(expected).length);
   });
 
   it("⭐ says why an unreadable project is not shown, instead of drawing a chooser in silence over work that still exists", () => {

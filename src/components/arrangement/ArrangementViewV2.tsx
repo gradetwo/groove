@@ -36,6 +36,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Redo2, Undo2 } from "lucide-react";
 import type { ArrangementV2, TrackKindV2, TrackRegion } from "../../types/arrangementV2";
 import { createArrangementFromTemplate } from "../../data/arrangementEdits";
+import { GENRES_MAP } from "../../data/genres";
+import { patternFromGenre } from "../../data/genreMix";
+import { projectSongToV2 } from "../../data/arrangementProjection";
 import {
   addTakeCommand,
   addTrackCommand,
@@ -761,9 +764,14 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           </p>
         )}
         <NewProjectPanelV2
-          onCreate={(templateId, blankKind, name) => {
+          onCreate={(templateId, blankKind, name, genreId) => {
             // ⭐ The panel reports the choice; **what an arrangement is made of** is `createArrangementFromTemplate`'s business, including the default track a blank project still gets.
-            const created = createArrangementFromTemplate(songId, templateId, blankKind);
+            // ⭐ **A chosen genre decides the content.** The genre's arranged pattern is projected into an arrangement —
+            // the same two steps the protocol creator uses — and a template is only the fallback when no genre is chosen.
+            const chosenGenre = genreId === undefined ? undefined : GENRES_MAP[genreId];
+            const created = chosenGenre
+              ? projectSongToV2({ id: songId, clips: { A: patternFromGenre(chosenGenre) } })
+              : createArrangementFromTemplate(songId, templateId, blankKind);
             setArrangement(created);
             setSelectedTrackId(undefined);
             setChoosing(false);
