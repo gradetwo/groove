@@ -320,6 +320,15 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
   const [played, setPlayed] = useState<number | undefined>(undefined);
   /** Why nothing played, when nothing did — the engine can be unreachable or its instrument unresolvable, and both are answers rather than silence. */
   const [playProblem, setPlayProblem] = useState<string | undefined>(undefined);
+  /**
+   * ⭐ **The window between the press and the transport.** `playArrangementV2` awaits its preparation -- the catalogue, the
+   * sample loads, the engine standing its synthesisers down -- and that wait is real: it is seconds on a cold catalogue, and a
+   * Play button that says nothing for seconds is the silent control this workstream keeps removing.
+   *
+   * It reports that a wait is happening and not a percentage: the arrangement's preparation reports its progress to the studio's
+   * loader, not to this view, and a bar that could not move would be a claim this surface cannot support.
+   */
+  const [preparing, setPreparing] = useState(false);
 
   const bars = arrangement.bars ?? 8;
   const headerBars = arrangement.tracks.length === 0 ? 0 : bars;
@@ -690,6 +699,8 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
 
   const play = useCallback(async () => {
     if (player === undefined) return;
+    setPreparing(true);
+
     /**
      * ⭐ **The window is re-stated on the press, not merely left where the effect put it.**
      *
@@ -703,6 +714,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
     setTransportLoopRange?.(transportLoopRange);
     // ⭐ The arrangement's own notes, not an empty map: they are content and they live with the tracks.
     const result = await playArrangementV2(arrangement, arrangement.notesByTrack ?? {}, player);
+    setPreparing(false);
     setPlayed(result.planned);
     /**
      * ⭐ **A reason, shown.** The engine path answers with why when it cannot play — not ready, no transport, a
@@ -1141,6 +1153,11 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           {/* ⭐ Said rather than clicked into nothing: without an engine the button is disabled and this explains why. */}
           {player === undefined && <span className="text-[10px] text-text opacity-70">(audio engine not connected yet)</span>}
           {played !== undefined && <span data-testid="arrangement-played" className="text-[10px] text-text opacity-70">planned {played} lane event(s)</span>}
+          {preparing && (
+            <span data-testid="arrangement-preparing" className="font-mono text-[10px] uppercase tracking-widest text-text-sub">
+              {t("arrangement_preparing")}
+            </span>
+          )}
           {playProblem !== undefined && <span data-testid="arrangement-play-problem" className="text-[10px] text-text opacity-70">{playProblem}</span>}
         </span>
         <span className="flex items-center gap-1">
