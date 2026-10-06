@@ -17202,4 +17202,31 @@ describe("the grid's editing actions", () => {
   ⭐ ③ ⭐ 每臂 3 次 ✓ ⇒ ⭐ 结论只按"⭐ 同轮对照毫秒接近**"⭐ 的读数读 ✓（⭐ 1.6–4.1 ms ✓）
 **⭐ 下一步** ✓：⭐ 优化对象＝`startRendering()` 内部的**声部合成路径** ✓（⭐ 最大 ✓）⇒ ⭐ 改动须带判据 ✓
 ```
+### 六百六十一、⭐ **v1 编排链退役前的能力核对**（六条判据 ✓ 结论：一个界面提示差异 ✓）
+
+```
+**⭐ 对象** ✓：⭐ `StudioView.tsx`（1477 行 ✓）⇒ `ArrangementPanel.tsx`（575 ✓）⇒ `TrackRows.tsx`（101 ✓）⇒ **共 2153 行** ✓
+  ⭐ 引用方式 ✓：⭐ `App.tsx:45` 的**懒加载声明** ✓（⭐ 挂载已在 `4fd1057` 移除 ✓）｜⭐ `ArrangementPanel` 只被 `StudioView:26` 引用 ✓｜⭐ `TrackRows` 只被 `ArrangementPanel:36` 引用 ✓
+  ⭐ 相关判据 6 个 ✓：⭐ `StudioConsoleFloat` ✓｜`arrangementPanel` ✓｜`trackRowsView` ✓｜`studioSamplerLoading` ✓｜`catalogueRecordingPicker` ✓｜`transportPreparationFeedback` ✓
+**⭐ 逐条核对结果 ✓**
+  ⭐ `StudioConsoleFloat`（浮动混音台 ✓）⇒ ⭐ **调音台不丢** ✓：⭐ `HardwareConsoleView` 是独立视图 ✓ 挂在 **`console` 标签页** ✓（`App.tsx:421–429` ✓）
+    ⭐ `ConsolePanel.tsx:70` 注释 ✓："`HardwareConsoleView` on `/console`，`StudioView` **when floated**" ✓ ⇒ ⭐ 只丢**浮动形态** ✓
+  ⭐ `arrangementPanel`（每乐段一区域 ✓）⇒ ⭐ **v1 `sections` 概念** ✓ ⇒ ⭐ 随 v1 模型退役 ✓（v2 无乐段 ✓）
+  ⭐ `trackRowsView`（泳道行 ✓）⇒ ⭐ **v2 已覆盖** ✓（v2 面画泳道 ✓）
+  ⭐ `catalogueRecordingPicker`（目录选择器 ✓）⇒ ⭐ **v2 已有** ✓（`ImportInstrumentMappingV2` ✓／`CatalogueRecordingPicker` ✓）
+  ⭐ `transportPreparationFeedback`（按钮说真话 ✓）⇒ ⭐ **v2 已有** ✓：⭐ `aria-pressed={playing}` ✓（`:1081` ✓）＋ `playProblem` ✓（`:322` ✓）＋ 渲染 ✓（`:1144` ✓）
+  ⚠️ `studioSamplerLoading`（采样就绪 ✓）⇒ ⭐ **能力已在 ✓，界面提示缺 ✗**（详见下 ✓）
+**⚠️ 唯一差异：准备期间的可视提示 ✓**
+  ⭐ v2 **已会准备** ✓：⭐ `playerFromEngine.ts:549` ✓ 调 `engine.prepareSampledLanes?.(catalogue)` ✓ ⇒ ⭐ 且 `playArrangementV2` 是 `await` ✓
+  ⭐ v2 **已报失败** ✓（`playProblem` ✓）⇒ ⭐ 判据的核心承诺（**未就绪不许播放 ✓／失败可见 ✓**）**已满足** ✓
+  ⚠️ 缺的只是"⭐ 正在获取音源**"这条**状态文字** ✓：⭐ v1 的进度来自 `useTransportControls:390` 的 `onProgress` 回调 ✓
+    （⭐ `setSamplerPreparation(progress.total > 0 ? progress : null)` ✓ ⇒ ⭐ `total === 0` 时**不显示** ✓："⭐ 为没发生的工作显示进度＝撒谎的控件 ✓"）
+  ⇒ ⭐ 要移植它就得让 **v2 的播放路径改走那个高层加载器** ✗ ⇒ ⚠️ **那是改播放路径** ✓（⭐ 影响发声 ✓，⭐ 而判据对"有没有声音"覆盖很弱 ✗）
+**⭐ 我的决策（业主授权我择优 ✓）** ✓
+  ⭐ ① ⭐ 把这一项按**界面提示**处理 ✓，不按能力 ✗；⭐ 记为**已知差异** ✓，留专门一轮 ✓
+  ⭐ ② ⭐ **不在退役提交里混入**播放路径改动 ✗（⭐ 风险与收益不成比例 ✓；⭐ 当前优先级是渲染性能 ✓）
+  ⭐ ③ ⭐ 展示组件 `SamplerLaneStatus` **可复用** ✓（纯 props ✓，无事可报时保持沉默 ✓）⇒ ⭐ 将来只需补**来源** ✓
+**⭐ 退役顺序（先立判据再删 ✓）** ✓：⭐ 切换判据已在位 ✓（`700cfec` ✓，⭐ 已做反证能红 ✓）⇒
+  ⭐ 下一步 ✓：⭐ 删三个文件 ＋ `App.tsx:45` 的懒加载声明 ✓，⭐ 同时处置上表六条判据 ✓
+```
 
