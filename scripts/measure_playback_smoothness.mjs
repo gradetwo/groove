@@ -155,7 +155,7 @@ localStorage.setItem("groove_audio_started", "1");
 
     // Watch the ruler's active step: this is the actual visual playhead the user sees.
     const readStep = () => {
-      const cell = document.querySelector(".playhead-active");
+      const cell = document.querySelector("[data-testid='arrangement-playhead'], .playhead-active");
       if (!cell) return null;
       const attr = cell.getAttribute("data-ruler-step-idx");
       return attr === null ? null : Number(attr);

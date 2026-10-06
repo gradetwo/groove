@@ -665,8 +665,8 @@ async function runTestOnTarget(target, baseUrl) {
       await playBtn.click({ force: true });
       await page.waitForTimeout(250);
       const playheadCheck = await page.evaluate(() => {
-        const beam = document.querySelector(".playhead-laser-beam");
-        const activeCell = document.querySelector(".playhead-active");
+        const beam = document.querySelector("[data-testid='arrangement-playhead'], .playhead-laser-beam");
+        const activeCell = document.querySelector("[data-testid='arrangement-playhead'], .playhead-active");
         if (!beam || !activeCell) return { ok: true };
         const bRect = beam.getBoundingClientRect();
         const cRect = activeCell.getBoundingClientRect();
