@@ -804,3 +804,12 @@
 | ✅ **三条判据跟着能力改指** | ⭐ `describeError`：⭐ 清单去掉已删的 `usePatternActions.ts` ✓｜⭐ `fileSizeBudget`：⭐ 清掉 `StudioView.tsx` 预算条目 ✓｜⭐ `layoutPrefs`：⭐ 目标的**拥有者从界面钩子改为设置面板** ✓（⭐ 五条纪律全留 ✓，⭐ 开关控件按**归属**合并检查 ✓） | §691‑695 |
 | ⚠️ **一处误判已纠正** | ⭐ 第 575 轮我把 `panelVisibility.test.ts` 当"⭐ v1 界面零件**"退役 ✗ ⇒ ⭐ 实为**用户设置** ✓｜⭐ 其存储面 `layoutPrefs.ts` 与设置面板都在 ✓，⭐ 故按"⭐ 拥有者换了地方**"处理 ✓ | §692‑695 |
 
+## 2026-10-07 02:10 回填（第 4 条规矩：改完实现回来改表）
+
+| 面 | 变化 | 依据 |
+|---|---|---|
+| 🚨 **Web 面：`Create` 按钮从不调用 `onCreate`** | ⭐ `NewProjectPanelV2.tsx:195` 的按钮只有文案与样式 ✓，**没有 `onClick`** ✗ ⇒ ⭐ 声明并解构了 `onCreate` 却**从未调用** ✓｜⭐ 后果：⭐ 用户选好模板点 Create **毫无反应** ✗（⭐ 无法用"⭐ 新建项目**"开始编曲 ✓）｜⭐ 现补上接线 ✓：⭐ `selected === "blank" ? undefined : selected` ✓、⭐ 名字清空时回退 `t("new_project_default_name")` ✓ | §754‑755 |
+| ⭐ **为何没被拦住** | ⭐ `tsc` 与 `lint` 都把"⭐ 解构即使用**"✓ ⇒ ⭐ 没有任何门检查"⭐ 按钮的 `onClick` 是否真的接了东西**"✗｜⭐ 而 `newProjectPanelV2.test.tsx` 的判据**本来就在** ✓，⭐ 且准确描述了应有行为 ✓ ⇒ ⭐ **判据在、实现没接** ✓ | §755 |
+| ✅ **发布矩阵按 v2 进门顺序改指** | ⭐ `scripts/test_matrix.js` ✓：⭐ ① ⭐ 网格选择器改指 `data-testid="arrangement-grid"` ✓｜⭐ ② ⭐ helper `ensureArrangementMounted` ✓（⭐ 先等"⭐ 门／首次提示／新建面板／网格**"四者之一 ✓）｜⭐ ③ ⭐ 过音频门 ✓（⭐ 启动参数加 `--autoplay-policy=no-user-gesture-required` ✓ ＋ `force` 点击 ✓）｜⭐ ④ ⭐ 关首次运行提示 ✓（⭐ `first-run-prompt-dismiss` ✓）｜⭐ 5 处入口全部调用 ✓ | §746‑752 |
+| ⚠️ **仍在查** | ⭐ 本地全链条复验：⭐ 门 ⇒ 提示 ⇒ 模板 ⇒ Create ⇒ ⭐ **网格仍未出现** ✗，⭐ 且**无运行时错误** ✗ ⇒ ⭐ 下一步读"⭐ 面板 vs 网格**"的渲染分支 ✓ | §756 |
+

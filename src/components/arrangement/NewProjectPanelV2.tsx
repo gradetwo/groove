@@ -192,7 +192,14 @@ export function NewProjectPanelV2({ onCreate }: NewProjectPanelV2Props) {
             word Create disappears. `--d-on-accent` is what that token means — the ink that goes on a fill —
             and it is near-black there. The degenerate pair is a palette problem, recorded rather than guessed
             at here. */}
-        <button type="button" data-testid="new-project-create" className="px-4 py-2 rounded bg-[rgb(var(--d-accent))] text-[rgb(var(--d-on-accent))] font-medium" onClick={() => onCreate(selected === "blank" ? undefined : selected, blankKind, name.trim() || t("new_project_default_name"), genreId)}>
+        <button type="button" data-testid="new-project-create" className="px-4 py-2 rounded bg-[rgb(var(--d-accent))] text-[rgb(var(--d-on-accent))] font-medium" onClick={() => {
+            /**
+             * ⭐ **The same fallback the card switch uses.** An emptied field must not become an unnamed project: a blank name in a list
+             * is barely better than no name, and the word has to be one the session can read, so it comes from the dictionary.
+             */
+            const finalName = name.trim() ? name : t("new_project_default_name");
+            onCreate(selected === "blank" ? undefined : selected, blankKind, finalName, genreId);
+          }}>
           Create
         </button>
       </footer>

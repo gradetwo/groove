@@ -514,11 +514,73 @@ async function countActiveSteps(page, trackIdx) {
   );
 }
 
+/**
+ * ⭐ **The landing surface starts on the new-project panel, so the matrix creates one.**
+ *
+ * Opening `?tab=studio` renders `NewProjectView`, and its first screen is the new-project panel: template cards, a name field and
+ * genre choices. The arrangement grid -- and so every check below that drives it -- only exists after a project is created. The
+ * matrix used to wait for the grid straight after the goto, which is why it timed out on every browser once the studio's step grid
+ * was retired. This creates one explicitly, and only when the panel is actually there, so a run that opens an existing arrangement
+ * is unaffected.
+ */
+async function ensureArrangementMounted(page) {
+  /**
+   * ⭐ **Wait for whichever of the three screens arrives first, then act.**
+   *
+   * `domcontentloaded` fires before React renders, so a bare `page.$` right after the goto finds nothing and every later click is
+   * blocked by the audio gate, which is `aria-modal`. The order matters and was measured: wait for the gate, the new-project panel or
+   * the grid; tap the gate if it is the one that arrived; then create a project if the panel is what mounted. A run that opens an
+   * existing arrangement mounts the grid and is left alone.
+   */
+  const FIRST_SCREEN =
+    "[data-testid='audio-start-gate'], [data-testid='first-run-prompt'], [data-testid='new-project-panel-v2'], [data-testid='arrangement-grid']";
+  const arrived = await page.waitForSelector(FIRST_SCREEN, { state: "attached", timeout: 45000 }).catch(() => null);
+  if (!arrived) return;
+
+  if (await page.$("[data-testid='audio-start-gate']")) {
+    await page.click("[data-testid='audio-start-button']", { force: true });
+    await page.waitForSelector("[data-testid='audio-start-gate']", { state: "detached", timeout: 20000 }).catch(() => null);
+  }
+
+  /**
+   * ⭐ **The first-run prompt is a modal too, and a person dismisses it before choosing a template.**
+   *
+   * It is `fixed inset-0 z-50`, so the template cards are visible underneath and every click aimed at them lands on the prompt
+   * instead -- measured with `elementFromPoint`, which returned the prompt rather than the card. The matrix dismisses it the way the
+   * prompt offers, then carries on.
+   */
+  if (await page.$("[data-testid='first-run-prompt']")) {
+    await page.click("[data-testid='first-run-prompt-dismiss']", { force: true });
+    await page.waitForSelector("[data-testid='first-run-prompt']", { state: "detached", timeout: 20000 }).catch(() => null);
+  }
+
+  await page.waitForSelector("[data-testid='new-project-panel-v2'], [data-testid='arrangement-grid']", { state: "attached", timeout: 45000 }).catch(() => null);
+  if (!(await page.$("[data-testid='new-project-panel-v2']"))) return;
+  /**
+   * ⭐ **`force` because the panel sits under overlays the matrix does not control.**
+   *
+   * The prompt and the gate are both dismissed above, but a first run can raise another one between them; `force` skips the hit test
+   * and dispatches to the element the selector names, which is what the run wants either way.
+   */
+  await page.click("[data-testid='template-blank']", { force: true });
+  await page.click("[data-testid='new-project-create']", { force: true });
+}
+
 async function runTestOnTarget(target, baseUrl) {
   const browserLauncher = playwright[target.browserType];
   const browser = await browserLauncher.launch({
     headless: true,
-    args: target.browserType === "chromium" ? ["--no-sandbox", "--disable-setuid-sandbox"] : [],
+    /**
+     * ⭐ **The audio-unlock click has to work without a real gesture.**
+     *
+     * `AudioStartGate` stays up while the context is suspended, and a headless run has no gesture to resume it: the click retries
+     * against an `aria-modal` overlay until it times out, which is what kept `ensureArrangementMounted` from clicking anything. The
+     * flag is the browser's own way of saying the gesture is not required.
+     */
+    args:
+      target.browserType === "chromium"
+        ? ["--no-sandbox", "--disable-setuid-sandbox", "--autoplay-policy=no-user-gesture-required"]
+        : [],
   });
 
   const contextOptions = target.device
@@ -548,6 +610,7 @@ async function runTestOnTarget(target, baseUrl) {
   try {
     // 1. Initial Load & Studio View
     await page.goto(`${baseUrl}/?tab=studio`, { waitUntil: "domcontentloaded" });
+    await ensureArrangementMounted(page);
 
     // Title check
     const title = await page.title();
@@ -635,6 +698,7 @@ async function runTestOnTarget(target, baseUrl) {
      */
     // Back to the app: the checks below measure the surface under test.
     await page.goto(`${baseUrl}/?tab=studio`, { waitUntil: "domcontentloaded" });
+    await ensureArrangementMounted(page);
 
     // 2. Responsive Viewport Check (Horizontal scroll check)
     const overflowCheck = await page.evaluate(() => {
@@ -980,6 +1044,7 @@ async function runTestOnTarget(target, baseUrl) {
      */
     if (await page.$("[data-surface='desktop']")) {
       await page.goto(`${baseUrl}/?tab=studio`, { waitUntil: "domcontentloaded" });
+    await ensureArrangementMounted(page);
       await page.waitForSelector("[data-toolbar-id='export']", { timeout: 30000 });
       const [download] = await Promise.all([
         page.waitForEvent("download", { timeout: 120000 }),
@@ -1008,6 +1073,7 @@ async function runTestOnTarget(target, baseUrl) {
     // panel must reflect engine state, so toggling and dragging have to produce real
     // observable changes rather than a static picture of the defaults.
     await page.goto(`${baseUrl}/?tab=studio`, { waitUntil: "domcontentloaded" });
+    await ensureArrangementMounted(page);
     // React mounts after `domcontentloaded`, so wait for the toolbar itself before querying.
     // React mounts after `domcontentloaded`, so wait for a shell before querying.
     await page
@@ -2192,6 +2258,7 @@ async function runTestOnTarget(target, baseUrl) {
     // this, so nothing caught it — this check does, on every engine, by measuring the app's own
     // activity rather than trusting a screenshot.
     await page.goto(`${baseUrl}/?tab=studio`, { waitUntil: "domcontentloaded" });
+    await ensureArrangementMounted(page);
     await page.waitForSelector(
       "[data-testid='toolbar-advanced-toggle'], [data-testid='mobile-transport-more']",
       { timeout: 30000 }
