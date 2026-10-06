@@ -1178,6 +1178,24 @@ async function runTestOnTarget(target, baseUrl) {
       setter.call(el, "40");
       el.dispatchEvent(new Event("input", { bubbles: true }));
     });
+    /**
+     * ⭐ **Give React a frame to render the new number before reading it.**
+     *
+     * The dispatch above is the documented way to drive a controlled input, and the panel's handler is a real one -- but the value it
+     * shows is React state, so it lands in the DOM on the next render, not synchronously with the event. Reading straight afterwards
+     * saw the old number and reported the fader as stuck. The assertion is unchanged: the number must still change, and a fader that
+     * really is inert still fails, one poll later.
+     */
+    await page
+      .waitForFunction(
+        (before) => {
+          const el = document.querySelector("[data-testid='audio-settings-master-value']");
+          return Boolean(el) && el.textContent !== before;
+        },
+        masterBefore,
+        { timeout: 5000 }
+      )
+      .catch(() => null);
     await page.waitForTimeout(250);
     const masterAfter = await page.innerText("[data-testid='audio-settings-master-value']");
     if (masterBefore === masterAfter) {
