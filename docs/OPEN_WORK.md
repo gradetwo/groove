@@ -17327,3 +17327,26 @@ describe("the grid's editing actions", () => {
   ｜⭐ ③ 发布 2.35.0 ✓（⭐ 业主已授权自行发布 ✓）｜⭐ ④ 发布工作流会在打 tag 时首次运行 ✓（⭐ §663 ✓）
 ```
 
+### 六百六十六、⭐ **迁移 ⑤ 与 ⑦ 是同一处：v1 模型是 MCP 的渲染基底**（2026-10-06 ✓）
+
+```
+**⭐ 起因 ✓**：⭐ 迁 ⑦（⭐ v1 数据模型）⭐ 需要先知道谁还在用它 ✓ ⇒ ⭐ 逐层量 ✓，⭐ 三次修正 ✓
+**⭐ 量到的事实 ✓**
+  ⭐ ① ⭐ `src/types/song.ts` ✓：⭐ 435 行 ✓、23 个导出 ✓、**孤儿 0 个** ✓ ⇒ ⭐ 仍被生产代码完全引用 ✓，⭐ 不能靠删 ✓
+  ⭐ ② ⭐ 非判据引用者 **16 个** ✓ ⇒ ⭐ 三类 ✓：⭐ v2 编译/导出路径 ✓（⭐ `arrangementCompile` ✓／`arrangementForm` ✓／`songFlatten` ✓）
+    ｜⭐ **MCP 层** ✓（⭐ `arrangement.ts` ✓／`toolKit.ts` ✓／`registry.ts` ✓）｜⭐ v1 音序器界面 ✓（⭐ `components/sequencer/*` ✓／store ✓／projectDb ✓）
+  ⭐ ③ ⭐ 各组注册表**干净** ✓（⭐ `registrySong` 111 行 2 工具 ✓、`registryPattern` 98 行 5 工具 ✓，⭐ 均不引 v1 ✓）
+  ⭐ ④ ⭐ v1 依赖只在**共享工具箱** ✓：⭐ `toolKit.ts:4` 的 `clipSlotSchema = z.enum([...CLIP_SLOTS])` ✓（⭐ 工具参数枚举 ✓）
+    ＋ ⭐ `flattenSong` ✓ 与 `ClipSlot` 类型 ✓
+  ⭐ ⑤ ⚠️ ⭐ **决定性的读数** ✓：⭐ `flattenSong` 的**唯一调用**在 `mcp/arrangement.ts:1504` ✓ ⇒
+    ⭐ 而那一处**就在 `flattenMcpArrangement` 内部**（⭐ 该函数起于 `:1445` ✓）⇒
+    ⭐ 即：⭐ **没有并行的 v2 展平路** ✗，⭐ 只有一条主路 ✓：
+    ⭐ 编曲 → `compileArrangementToSongInput` → ⭐ 造 clip → `createSong` → `flattenSong` → `FlattenedSong` ✓
+**⭐ 结论 ✓**：⭐ v1 歌曲模型是 **MCP 渲染的基底** ✓ ⇒ ⭐ 要让 ⑤＋⑦ 同批收口 ✓，⭐ 必须**新写一个 v2 展平器** ✓
+  （⭐ 直接由 tracks／notesByTrack／bars／tempoMap 产出 `FlattenedSong` ✓）⇒ ⭐ 这不是"⭐ 换一处调用**"✗，⭐ 是"⭐ 替换主路**"✓
+**⭐ 因此的顺序 ✓**：⭐ ① ⭐ 写 v2 展平器 ✓ ⇒ ⭐ 先立判据 ✓（⭐ 同一声源上与原链比对 `pattern` ✓／`totalBars` ✓／`problems` ✓）
+  ⭐ ② ⭐ 判据绿后 `flattenMcpArrangement` 改走新函数 ✓ ⇒ ⭐ ③ ⭐ `createSong`／`flattenSong`／`ClipSlot`／`CLIP_SLOTS` 引用清空 ✓
+  ⇒ ⭐ ④ ⭐ v1 模型再处理其余两类引用者（⭐ v2 编译层 ＋ v1 音序器界面 ✓）
+**⚠️ 我的三次修正（⭐ 记录以备复查 ✓）**：⭐ "⭐ 11 个模块**"✗ → "⭐ 两个文件**"✗ → "⭐ 一处调用**"✗ → ⭐ 真相是"⭐ 一条需重写的主路**"✓
+```
+
