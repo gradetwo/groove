@@ -16090,3 +16090,30 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 状态 ✓**：⭐ **待 2.35.0 发布后开始** ✓；⭐ 本轮先完成 ⑦ ✓
 ```
 
+**⭐ 目标交接的决定 ✓（2026-10-06 09:41 ✓）**：⭐ **不改写本目标的对象文本** ✗（⭐ 避免巨型编辑 ✓）
+  ⭐ 本阶段已记于 ⭐ §613 ✓ ⇒ ⭐ **待 ⑦ 完成、本目标标记完成之时** ✓ ⇒ ⭐ **用 `create_goal` 另立新目标** ✓
+    ⭐ 对象文本取自 §613 ✓（⭐ 四指标 ✓ ＋ ⭐ 八环节 ✓ ＋ ⭐ 大头先做 ✓）
+  ⇒ ⭐ 这样两个阶段**各自有目标** ✓，⭐ 且**交接点明确** ✓ ✓
+
+### 六百一十四、⭐⭐ **⑦-C 收尾计划：关掉 `/` 老路的三个锚点 ＋ 能力清单法**（2026-10-06 09:41 ✓）
+
+```
+**⭐ 三个锚点 ✓（⭐ 已量 ✓）**：
+  ⭐ ① ⭐ `src/App.tsx:362` ✓：⭐ `{currentTab === "studio" && !route.newProject && (` ✓ ⇒ ⭐ 这里渲染 v1 ⭐ `StudioView` ✗
+    （⭐ `:347–349` ✓ 是 v2 的 ⭐ `route.newProject` ⇒ ⭐ `NewProjectView` ✓）
+  ⭐ ② ⭐ `src/views/StudioView.tsx` ✓ ⭐ **1477 行** ✗ ⇒ ⭐ 它是 v1 工作室的**整个外壳** ✓
+    ⭐ 内含 ✓：⭐ `<SequencerPanel …>` ✓（⭐ `:1101` ✓）＋ ⭐ `<ArrangementPanel …>` ✓（⭐ `:1434` ✓，⭐ 由 ⭐ `isArrangementOpen` ✓ 开关 ✓，⭐ `:274` ✓）
+  ⭐ ③ ⭐ 其依赖 ✓：⭐ v1 store（⭐ `useSequencerStore` ✓，⭐ 24 个消费者 ✓）＋ ⭐ `types/song.ts` ✓ ＋ ⭐ `songEdit.ts` ✓ ＋ ⭐ `projectStorage` ✓
+**⭐⭐ 规模判断 ✓**：⭐ 这是**整个迁移最大的一步** ✗（⭐ 1477 行外壳 ＋ ⭐ 24 个消费者 ✓）
+  ⇒ ⭐ 必须**按能力逐项**搬 ✓（⭐ 铁律 ✓）⇒ ⭐ **不能整体删除** ✗（⭐ 业主 ④：⭐ 移植，⭐ 不是删功能 ✗）
+**⭐⭐ 能力清单法 ✓（⭐ 下一步的执行方式 ✓）**：
+  ⭐ ① ⭐ **列出 v1 工作室可见的面** ✓：⭐ 以**界面元素与 testid** 为准 ✓（⭐ 不是以代码为单位 ✓）
+    ⭐ 来源 ✓：⭐ `StudioView` ✓／⭐ `SequencerPanel` ✓／⭐ `SequencerModals` ✓／⭐ `PianoRollLane` ✓／⭐ `Toolbar` ✓／
+      `TrackInspector` ✓／⭐ `ConsolePanel` ✓／⭐ `ProjectHubModal` ✓ 的 **testid 与可及名称** ✓
+  ⭐ ② ⭐ **对到 v2 路由** ✓：⭐ 逐项问"⭐ v2 路由里有没有** ✓（⭐ `ArrangementViewV2` ✓／⭐ `PianoRollV2` ✓／⭐ `TrackListV2` ✓／
+    `TrackHeaderV2` ✓／⭐ `TakeSelectorV2` ✓／⭐ `ScoreV2` ✓／⭐ `InstrumentBrowserV2` ✓／⭐ `ArrangementRulerV2` ✓…）"
+  ⭐ ③ ⭐ **缺口 ⇒ 登记并移植** ✓（⭐ 每项先立能红的判据 ✓）⇒ ⭐ 全部到齐后 ⭐ **关 `/` 老路** ✓ ⇒ ⭐ ⑦-C 退场 ✓
+**⭐ 已有依据 ✓**：⭐ §260 的动作面清单 ✓（⭐ 55 个动作 ✓：⭐ 50 中立 ✓／⭐ 5 被吸收 ✓）⇒ ⭐ ② 已有一半答案 ✓
+**⏳ 下一步 ✓**：⭐ 执行 ①：⭐ 量 v1 工作室的**可见面清单** ✓（⭐ 以 testid 为准 ✓）
+```
+

@@ -607,3 +607,10 @@
 | ⭐ **MCP／Web 对齐** | ✅ ⭐ **流派 ⇒ 编曲 只有一处实现** ✓：⭐ `arrangementSeededFromGenre` ✓（`data/arrangementProjection` ✓）⇒ ⭐ MCP 与 Web **同用** ✓ ⇒ ⭐ 三方对齐落点 ✓ | 本节 ✓ |
 | ⭐ **待办** | ⭐ 关 `/` 老路 ⇒ ⭐ ⑦-C 退场（v1 store／`types/song.ts`／`songEdit.ts`／`projectStorage` ＋ 其判据）⇒ ⭐ 发布 | 本节 ✓ |
 
+## 2026-10-06 09:41 回填（第 4 条规矩：改完实现回来改表）
+
+| 面 | 变化 | 依据 |
+|---|---|---|
+| ⭐ **收尾计划** | ⭐ 三个锚点 ✓：⭐ `App.tsx:362`（v1 路由 ✓）｜⭐ `StudioView.tsx` **1477 行** ✗（`SequencerPanel` ✓／`ArrangementPanel` ✓）｜⭐ 其依赖（v1 store／`types/song.ts`／`songEdit.ts`／`projectStorage` ✓）⇒ ⭐ 按**能力清单法**逐项搬 ✓ | 本节 ✓ |
+| ⭐ **下一阶段** | ⭐ 2.35.0 发布后：⭐ 量四指标 × 八环节 ⇒ ⭐ 大头先优化 ✓（⭐ §613 ✓） | §613 ✓ |
+
