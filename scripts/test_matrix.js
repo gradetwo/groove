@@ -1081,7 +1081,11 @@ async function runTestOnTarget(target, baseUrl) {
     // React mounts after `domcontentloaded`, so wait for the toolbar itself before querying.
     // React mounts after `domcontentloaded`, so wait for a shell before querying.
     await page
-      .waitForSelector("[data-testid='toolbar-advanced-toggle'], [data-testid='mobile-transport-more']", {
+      .waitForSelector(
+        /** ⭐ The studio kept its audio settings behind the toolbar's advanced drawer; the arrangement surface puts the same panel behind
+         * the header's settings button, whose own default tab is audio (`SettingsModal`'s `initialTab`). Both are accepted, so the block
+         * still asserts what it always did: that the audio-settings entry point is reachable in this shell. */
+        "[data-testid='header-settings-open'], [data-testid='toolbar-advanced-toggle'], [data-testid='mobile-transport-more']", {
         timeout: 20000,
       })
       .catch(() => {
