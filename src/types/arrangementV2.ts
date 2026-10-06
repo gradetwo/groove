@@ -9,6 +9,7 @@
  * **Notes stay in the pattern; tracks hold identity and routing.** `steps`, `velocity`, `pitch` and `syllables` belong to a clip in this engine, not to a track, so a v2 track carries what Logic's track list
  * carries — name, kind, colour, mute, solo, gain, pan, grouping — and the notes remain where every existing consumer already reads them.
  */
+import type { NoteConvention } from "../data/pitchTruth";
 
 /**
  * The sounding kinds, plus `folder`, which groups without making a sound. A discriminated union rather than a pile of optional fields: "a track that is both a drum kit and a sampler" is a shape the fields would permit and the semantics do not have.
@@ -166,6 +167,11 @@ export interface ArrangementV2 {
   songId: string;
   /** ⭐ **What a person calls it**; absent means unnamed. The v1 song had this and the arrangement did not. */
   name?: string;
+  /**
+   * ⭐ **The note-name convention this project states.** Absent for an older file, which reads as C4 — a label, never a fact
+   * about the music: changing it must not move a single note number.
+   */
+  noteConvention?: NoteConvention;
   tracks: TrackV2[];
   /**
    * ⭐ **What each track plays**, keyed by `trackId` — because notes are **content**, not identity, exactly as takes are.

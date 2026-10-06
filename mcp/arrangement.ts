@@ -286,6 +286,10 @@ export interface ArrangementSummary {
   bars?: number;
   /** Beats per minute — absent for an older file, which plays at 120, the value the compile used to hardcode. */
   bpm?: number;
+  /** The note-name convention this project states — absent for an older file, which reads as C4. */
+  noteConvention?: NoteConvention;
+  /** ⭐ What is assumed when nothing is stated, so a reader is told rather than left to guess. Absent once stated. */
+  pitchNote?: string;
   /**
    * How many sixteenth steps the arrangement actually spans: its stated length or its last note, whichever is further. **Reported beside `bars` rather than instead of it**, because "where may I write" is a step question and "how long is the"
    * is a bar question.
@@ -416,6 +420,14 @@ export function summariseArrangement(arrangementId: string, arrangement: Arrange
     songId: arrangement.songId,
     ...(arrangement.bars === undefined ? {} : { bars: arrangement.bars }),
     ...(arrangement.bpm === undefined ? {} : { bpm: arrangement.bpm }),
+    ...(arrangement.noteConvention === undefined ? {} : { noteConvention: arrangement.noteConvention }),
+    /**
+     * ⭐ **Said only while nothing is stated.** A reader is then told what the names mean and that no migration is involved,
+     * which is the honest answer for a file that predates the choice.
+     */
+    ...(arrangement.noteConvention === undefined
+      ? { pitchNote: "This project states no note-name convention, so names read as C4, and no migration is needed." }
+      : {}),
     steps: stepCountFor(allNotes, arrangement.bars),
     trackCount: arrangement.tracks.length,
     tracks: arrangement.tracks.map((track) => summariseTrack(track, arrangement)),
