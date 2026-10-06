@@ -422,6 +422,11 @@ export const studioMessages = {
   settings_about_installed: { en: "Installed", zh: "已安装" },
   settings_about_update_ready: { en: "A new version is ready.", zh: "新版本已就绪。" },
   settings_about_update_now: { en: "Update now", zh: "立即更新" },
+  settings_about_debug: { en: "Download debug information", zh: "下载调试信息" },
+  settings_about_debug_hint: {
+    en: "One file with the version, the browser, how much music is open and the recent errors. It carries no notes, no paths and no tokens.",
+    zh: "一个文件，含版本、浏览器、当前乐曲量、以及最近的错误。不含音符、不含路径、不含令牌。",
+  },
   settings_about_gs1: { en: "GS-1 voices (chords/lead)", zh: "GS-1 新架构音色（和弦/旋律）" },
   /**
    * ⭐ **The contact address, in one place.** `groove@wangda.today` is where anything that needs an address points, and the bug line is a `mailto:` so that reporting one does not require finding this page first.

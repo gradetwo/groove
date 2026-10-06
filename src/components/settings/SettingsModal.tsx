@@ -37,6 +37,7 @@ import {
 } from "../../utils/haptics";
 import { APP_VERSION, BUILD_DATE } from "../../version";
 import { PwaInstallRow } from "./PwaInstallRow";
+import { DebugBundleRow } from "./DebugBundleRow";
 
 /**
  * Global settings panel (item ⑤).
@@ -523,6 +524,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
                 {/* ⭐ Its own component: the panel is at the six-hundred-line bucket, and the row is self-contained. */}
                 <PwaInstallRow />
+                <DebugBundleRow />
                 {onOpenUpdates && (
                   <button
                     type="button"
