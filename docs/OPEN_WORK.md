@@ -17370,3 +17370,19 @@ describe("the grid's editing actions", () => {
 **⭐ 已完成的先行项 ✓**：⭐ MCP 渲染路径改走 `flattenArrangementV2` ✓（`54f36f6` ✓）⇒ ⭐ `flattenSong` 在 `mcp/` 里**已无调用** ✓
 ```
 
+### 六百六十八、⭐ **`flattenSong` 的 13 条判据：5 退 7 改 1 自退**（2026-10-06 ✓）
+
+```
+**⭐ 分流规则 ✓**：⭐ 判据守的是 **v1 专属概念**（⭐ clips／slots／sections ✓）⇒ ⭐ 随模型**退役** ✓；
+  ⭐ 守的是**通用行为**（⭐ 成本／泳道／速度／长内容／编辑／MCP 工具 ✓）⇒ ⭐ **改基准**到 v2 直路 ✓
+**⭐ 退役（5 ✓）**：⭐ `songFlatten` 42 行 ✓（⭐ 段起点 ✓）｜⭐ `boundaryFade` 60 ✓（⭐ 段边界淡入淡出 ✓）｜
+  ⭐ `sectionLaneSlots` 97 ✓（⭐ 每泳道段槽位 ✓）｜⭐ `songFlattenTrackCount` 232 ✓（⭐ clip 轨道数补齐 ✓）｜
+  ⭐ `arrangementForm` 465 ✓（⭐ 段的斜坡 ⇒ 每小节力度缩放 ✓）
+**⭐ 改基准（7 ✓）**：⭐ `flattenCost` 126 ✓（⭐ 成本曲线 ⇒ ⭐ 性能测量 ✓）｜⭐ `laneIdFlatten` 67 ✓（⭐ 泳道身份 ✓）｜
+  ⭐ `longPatterns` 99 ✓｜⭐ `tempoCarry` 50 ✓（⭐ 速度图 ⇒ ⭐ v2 的 `tempoMap` ✓）｜⭐ `arrangementEdits` 637 ✓（⭐ 仅少数用例走 flatten ✓）｜
+  ⭐ `mcpArrangement` 532 ✓｜⭐ `songRender` 441 ✓（⭐ "⭐ 编曲展平成一个图案**" ✓ ⇒ ⭐ 本就是 v2 主张 ✓，⭐ 改基准后更贴题 ✓）
+**⭐ 自退（1 ✓）**：⭐ `arrangementFlattenParity` 46 ✓（⭐ 我第 687 轮写 ✓；⭐ 它**故意**用 v1 路作对照 ✓ ⇒ ⭐ v1 路退役时同退 ✓）
+**⭐ 做完这两步之后 ✓**：⭐ `flattenSong` 只剩 `data/songFlatten.ts` 自身 ✓ ⇒ ⭐ 方可退役 ✓
+  ⚠️ ⭐ 同批量级提醒 ✓：⭐ 这与 v1 音序器界面那件（⭐ 7 文件 ✓）同属"⭐ 收尾工作流**"✓ ⇒ ⭐ 仍按 §667 的顺序 ✓，⭐ 不与发布混批 ✓
+```
+
