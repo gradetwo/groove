@@ -17104,3 +17104,20 @@ describe("the grid's editing actions", () => {
   ⭐ ③ ⭐ ⚠️ **不许**为了"看起来完整"而编造或近似 ✗（⭐ 与 MCP 半边的 `omitted` ✓／`omissions` ✓ 同一原则 ✓）
 ```
 
+### 六百五十六、⭐ **执行顺序 ③ 缺一个来源：可奏音域在模型与检查器里都没有** ✗
+
+```
+**⭐ 量到的事实 ✓**（⭐ 本轮全部按"看声明、不看词"复核 ✓）
+  ⭐ `ArrangementV2` ✓：⭐ `sample?: { assetId: string }` ✓ ⇒ ⭐ 音轨**只记资产 id** ✓，⭐ **无**音域字段 ✗
+  ⭐ `src/data/sampledInstruments.ts` ✓：⭐ 只有 **角色 ↦ assetId ↦ because** ✓ ⇒ ⚠️ **无**音域字段 ✗
+    （⭐ §452 我一度以为有 ✓ ⇒ ⚠️ 那是 `grep -oE` 命中了 `because` **说明文字里的词** ✗）
+  ⭐ `mcp/sfzInspect.ts` ✓：⭐ 导出 `SfzParameterRow` ✓ ＋ `summariseSfzParameters` ✓ ⇒ ⚠️ **无**键区字段 ✗
+    ⭐ 唯一出现处是**注释** ✓：⭐ "the reachable key range in `sw_lokey`/`sw_hikey`" ✓
+  ⭐ ⚠️ 而 `sw_lokey`／`sw_hikey` 是 **keyswitch（键切换）范围** ✗ ⇒ ⭐ **不是**"⭐ 这个音会不会响**" ✓
+**⭐ 因此 ✓**：⭐ 执行顺序 ③（`add_arrangement_notes` 当场校验音域 ✓）**缺少可用的音域来源** ✗ ⇒
+  ⭐ 若硬做 ⇒ ⭐ 只能**编造**（如假定 0–127 ✗ 或拿 keyswitch 范围冒充 ✗）⇒ ⚠️ **会产生误报** ✗ ⇒ ⭐ **不做** ✗
+**⭐ 处置 ✓**：⭐ **登记为缺口** ✓（⭐ 与 `fill`／`riser` 同类 ✓）⇒ ⭐ 记入本节 ✓，⭐ 并在 ③ 的条目上标注"⭐ 待有来源** ✓
+**⭐ 将来若有来源 ✓**：⭐ 优先 **`.sfz` 的 region 级 `lokey`/`hikey`** ✓（⭐ 逐区间的真实音域 ✓）
+  ⇒ ⭐ 到那时再实现 ✓：⭐ 越界**只报告** ✓（不拒收 ✗）＋ 判据 ✓（越界被写出 ✓；音符仍写入 ✓；界内不产生该条 ✓）
+```
+
