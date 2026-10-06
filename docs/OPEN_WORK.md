@@ -17350,3 +17350,23 @@ describe("the grid's editing actions", () => {
 **⚠️ 我的三次修正（⭐ 记录以备复查 ✓）**：⭐ "⭐ 11 个模块**"✗ → "⭐ 两个文件**"✗ → "⭐ 一处调用**"✗ → ⭐ 真相是"⭐ 一条需重写的主路**"✓
 ```
 
+### 六百六十七、⭐ **迁移 ⑦ 的剩余地图：三件工作，不是一件**（2026-10-06 ✓）
+
+```
+**⭐ 读法 ✓**：⭐ 全仓搜 `types/song"` ✓ ⇒ ⭐ 非判据引用者 **14 个文件** ✓（⭐ 判据 1 个 ✓）
+**⭐ 四组 ✓**
+  ⭐ ① ⭐ **MCP 参数层**（2 ✓）：⭐ `mcp/registry.ts` ✓／`mcp/toolKit.ts` ✓ ⇒ ⭐ 只取 `CLIP_SLOTS` ✓
+    （⭐ 用途 ✓：⭐ `toolKit.ts:4` 的 `clipSlotSchema = z.enum([...CLIP_SLOTS])` ✓ ⇒ ⭐ 工具参数枚举 ✓）
+  ⭐ ② ⭐ **v2 编译层**（3 ✓）：⭐ `data/arrangementCompile.ts` ✓（⭐ `Song` ✓）／`data/arrangementForm.ts` ✓／
+    `data/songFlatten.ts` ✓（⭐ `resolveTimeline` ✓ `ClipSlot` ✓ `Song` ✓ `SongBar` ✓ `SongFill` ✓）
+  ⭐ ③ ⭐ **v1 音序器界面**（7 ✓）：⭐ `ProjectHubModal` ✓／`SequencerPanel` ✓／`Toolbar` ✓／`useTransportControls` ✓／
+    `projectDb` ✓／`projectStorage` ✓／`useSequencerStore` ✓ ⇒ ⭐ 取 `ClipSlot` ✓／`SongSection` ✓／两个 sections 转换函数 ✓
+  ⭐ ④ ⭐ **音频**（2 ✓）：⭐ `audio/SequencerUrlShare.ts` ✓／`audio/WavExporter.ts` ✓（⭐ `Song` ✓）
+**⭐ 三件独立工作（⭐ 建议顺序 ✓）**
+  ⭐ Ⅰ ⭐ **MCP 参数层去槽位** ✓（⭐ 范围最小 ✓，⭐ 且正是目标里的 **⑤** ✓）⇒ ⭐ 先做 ✓
+  ⭐ Ⅱ ⭐ **编译层与音频** ✓（⭐ 4 文件 ✓）⇒ ⭐ `songFlatten` 在 MCP 侧已无使用者 ✓（⭐ 本轮已切走 ✓）⇒ ⭐ 只剩自身与编译层类型 ✓
+  ⭐ Ⅲ ⚠️ ⭐ **v1 音序器界面 7 文件** ✓ ⇒ ⚠️ ⭐ **与 `StudioView` 退役同型** ✗：⭐ 会再牵出**能力核对 ＋ 判据改指** ✓
+    ⇒ ⭐ 必须单独成批 ✓，⭐ 不可与 Ⅰ／Ⅱ 混 ✓（⭐ 教训见 §661‑664 与 §691‑695 ✓）
+**⭐ 已完成的先行项 ✓**：⭐ MCP 渲染路径改走 `flattenArrangementV2` ✓（`54f36f6` ✓）⇒ ⭐ `flattenSong` 在 `mcp/` 里**已无调用** ✓
+```
+
