@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { collectWebDebugBundle } from "../data/debugBundleWeb";
+import { collectWebDebugBundle, debugBundleFilename } from "../data/debugBundleWeb";
 
 /**
  * ⭐ **A bundle that says what it is and, just as loudly, what it is not.**
@@ -55,3 +55,14 @@ describe("the debug bundle a browser makes", () => {
     expect(bundle.manifest.omitted).toContain("note content");
   });
 });
+
+describe("the name the downloaded file carries", () => {
+  it("⭐ is the same rule the server half uses, with a stamp a file system will not rewrite", () => {
+    expect(debugBundleFilename("2026-10-06T10:00:00.000Z")).toBe("groove-debug-2026-10-06T10-00-00-000Z.json");
+    // ⭐ No colon and no bare dot beyond the extension: those are the two characters that make a name ambiguous on disk.
+    const name = debugBundleFilename("2026-10-06T10:00:00.000Z");
+    expect(name.slice(0, -".json".length)).not.toContain(":");
+    expect(name.slice(0, -".json".length)).not.toContain(".");
+  });
+});
+

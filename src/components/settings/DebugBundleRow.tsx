@@ -1,5 +1,5 @@
 import { useLanguage } from "../../i18n/LanguageContext";
-import { collectWebDebugBundle } from "../../data/debugBundleWeb";
+import { collectWebDebugBundle, debugBundleFilename } from "../../data/debugBundleWeb";
 import { APP_VERSION, getRecentErrors } from "../../utils/telemetry";
 
 /**
@@ -23,7 +23,7 @@ export function DebugBundleRow() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `groove-debug-${bundle.manifest.generatedAt.replace(/[:.]/g, "-")}.json`;
+    link.download = debugBundleFilename(bundle.manifest.generatedAt);
     link.click();
     URL.revokeObjectURL(url);
   };

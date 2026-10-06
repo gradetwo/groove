@@ -69,3 +69,15 @@ export function collectWebDebugBundle(input: WebDebugBundleInput): WebDebugBundl
     sections,
   };
 }
+
+/**
+ * ⭐ **The name the downloaded file carries**, built from the moment the bundle was made and nothing else.
+ *
+ * The server half names its archive `groove-debug-<stamp>.tar.gz`; this is the same rule for a browser download. The stamp is
+ * an ISO instant, which contains colons and dots a file name should not carry, so they become dashes — and the criterion pins
+ * that, because a name a filesystem rewrites is a name the reader cannot match against the reply.
+ */
+export function debugBundleFilename(generatedAt: string): string {
+  return `groove-debug-${generatedAt.replace(/[:.]/g, "-")}.json`;
+}
+
