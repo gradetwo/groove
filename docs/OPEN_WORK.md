@@ -16593,3 +16593,25 @@ describe("the grid's editing actions", () => {
   ⭐ 或 ⭐ 进第 3 档（⭐ 连奏 ✓／⭐ 琶音 ✓／⭐ 和弦图章 ✓）
 ```
 
+### 六百三十四、⭐⭐ **第 3 档第一件：`legatoNotes` 语义（连奏也会缩短 ✓）**（2026-10-06 11:38 ✓）
+
+```
+**⭐ 已落地 ✓（⭐ 第 2 档 ✓）**：⭐ 全套绿 ✓（⭐ `651 files` ✓／⭐ **5293 tests** ✓／⭐ 0 红 ✓）⇒ ⭐ 已推 ⭐ `01e434f` ✓
+**⭐ `legatoNotes` ✓（`rollModel.ts:714–731` ✓）**：
+  ⭐ 入参 ✓：⭐ `pattern, trackIdx, selection, stepCount, loopLength = stepCount, maxGate = MAX_NOTE_GATE_STEPS` ✓
+  ⭐ 范围 ✓：⭐ **选中的步** ✓（⭐ `new Set(selectedSteps(selection))` ✓）
+  ⭐ 界限 ✓：⭐ 该音符**之后最近的发响步** ✓（⭐ `sounding.filter(step > n.stepIdx)` ⇒ ⭐ `Math.min(...later)` ✓）
+    ⭐ 若无后继 ⇒ ⭐ **循环末** ✓（⭐ `loopLength` ✓）
+  ⭐ 长度 ✓：⭐ `gate = Math.max(0.1, Math.min(maxGate, boundary - n.stepIdx))` ✓
+  ⭐ 附则 ✓（⭐ 注释原文 ✓）：⭐ `maxGate` ⭐ **是引擎自身的夹取（2 步）** ✓ ⇒ ⭐ "⭐ **a long gap cannot produce a length the audio path
+    would silently ignore**" ✓；⭐ 且 ⭐ "⭐ **Legato can shorten as well as lengthen — that is what the word means**" ✓ ✓
+  ⭐ 未选中的音符 ✓ ⇒ ⭐ **不动** ✓
+**⭐⭐ v2 对应物 ✓（⭐ 以拍计 ✓）**：⭐ `legatoNotesInRect(arrangement, trackId, rect, loopEndBeats?, maxLengthBeats?)` ✓
+  ⭐ 每个选中音符 ✓：⭐ `lengthBeats = clamp(最小, 上限, 下一个音符起点 − 本音符起点)` ✓（⭐ 无后继 ⇒ ⭐ `loopEndBeats ?? 编曲末` ✓）
+  ⭐ 上限默认 ✓：⭐ 引擎的 2 步 ⇒ ⭐ 以拍计 ⇒ ⭐ **2 × `stepBeats`** ✓（⭐ 与 §618 的换算一致 ✓）
+**⭐ 判据计划 ✓（⭐ 独立量 ✓）**：⭐ ① ⭐ 0 与 2 拍各一音符 ⇒ ⭐ 连奏第一个 ⇒ ⭐ 其长度**恰为 2** ✓（⭐ 到下一个 ✓）
+  ⭐ ② ⭐ **最后一个** ⇒ ⭐ 伸到**循环末** ✓ ③ ⭐ 若后继**更近**（⭐ 例如 0.5 拍 ✓）⇒ ⭐ 长度**被缩短**到 0.5 ✓（⭐ 照"⭐ 也会缩短**" ✓）
+  ⭐ ④ ⭐ **未选中的音符长度不变** ✓
+**⏳ 下一轮 ✓**：⭐ 四操作落法同上（⭐ 模型 ✓＋判据 ✓＋`EXCLUDED`／`UI_LEDGER`（⭐ 按 §633 的写法 ✓）＋台账 ✓）
+```
+
