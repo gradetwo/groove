@@ -16809,3 +16809,27 @@ describe("the grid's editing actions", () => {
 **⏳ 下一轮 ✓**：⭐ 量 **Web 侧调试采集** ✗ 的现状（⭐ 是否已有入口 ✓ ⇒ ⭐ 无 ⇒ ⭐ 落它 ✓）⇒ ⭐ 或 ⭐ 推进迁移 ④／⑤ ✓
 ```
 
+### 六百四十四、⭐⭐ **业主裁定：① 选 B（最小可用框选 ✓）② 新任务：r2 镜像瘦身至 < 10 GB**（2026-10-06 12:36 ✓）
+
+```
+**✅ 裁定一 ✓：⭐ 选 B ✓** ⇒ ⭐ 界面工作**解锁** ✓ ⇒ ⭐ 按 §642 的顺序落 ✓（⭐ 最小框选 ⇒ ⭐ `Delete` 删选区 ⇒ ⭐ 撤下台账那条
+  `removeNotesWithinRect` ⇒ ⭐ "复制选区" ⇒ ⭐ 连奏／琶音／图章三按钮 ⇒ ⭐ 之后再考虑 A 的余项 ✓）
+**⭐⭐ 裁定二 ✓：⭐ r2 镜像 10.06 GB ⇒ 删**最没价值**（⭐ 使用频率低 ＋ ⭐ 质量差 ✓）的库，⭐ 保持 < 10 GB ✓**
+  ⭐ 工具已找到 ✓：⭐ **`scripts/remove_samples.mjs`** ✓ —— ⭐ **先算后删** ✓：
+    ⭐ 默认**只列键与字节** ✓；⭐ `--apply` 才**真删** ✓；⭐ 参数必须是**单个库前缀** ✓（⭐ 无通配 ✓、⭐ 不能清桶 ✗ ✓）
+    ⭐ **拒绝删除"清单仍在发布"的库** ✗ ⇒ ⭐ 顺序**定死** ✓：⭐ **先改清单 ✓ ⇒ 再删字节 ✓**
+    ⭐ `--apply` 后**自读校验** ✓（⭐ 键数与字节必须为 **0** ✓，⭐ 否则不报成功 ✓）
+    ⭐ 独立校验 ✓：⭐ `check_mirror_reachability.mjs` ✓（⭐ 应 404 的键 `curl -sI` ✓）＋ ⭐ `check_removed_samples.mjs` ✓
+  ⭐ 清单实况 ✓：⭐ `public/samples/manifest.json` ✓（⭐ 5.2 MB ✓）⇒ ⭐ **33 个库** ✓ ⇒ ⭐ 键 ✓ `id`／`name`／`licence`／
+    `prefix`／`repo`／`pin`／`sfz`／`needs`／`files`／`durationSeconds` ✓（⚠️ **无字节数** ✗ ⇒ ⭐ 体积用**干跑**量 ✓）
+  ⭐ **决策表已建 ✓**（⭐ 共 33 库 ✓／⭐ 21505 文件 ✓；⭐ 引用 ＝ ⭐ 代码与 `mcp` 中对前缀的引用数 ✓）
+  ⭐ **引用最少（⭐ 各 2 次 ✓）＝ 最没价值 ✓**：⭐ **`karoryfer-big-rusty-drums`（⭐ 4814 文件 ✓）** ✓｜⭐ `jlearman-steel-drum`（372 ✓）｜
+    `cithara-barbarica`（275 ✓）｜⭐ `body-percussion`（233 ✓）｜⭐ `hungarian-zither`（219 ✓）｜⭐ `ganjo`（65 ✓）｜⭐ `karoryfer-cowsynth`（59 ✓）
+  ⭐ **引用最多（⭐ 最该留 ✓）**：⭐ `vsco2ce`（39 ✓）｜⭐ `salamander-grand`（37 ✓）｜⭐ `virtuosity-drums`（34 ✓）｜⭐ `karoryfer-meatbass`（21 ✓）｜⭐ `vcsl`（20 ✓）
+  ⭐ **建议首删 ✓**：⭐ **`karoryfer-big-rusty-drums`** ✓ —— ⭐ 文件最多（⭐ 占全部文件约 22% ✓）＋ ⭐ 只被引用 2 次 ✓
+    ⇒ ⭐ 若仍 > 10 GB ⇒ ⭐ 依次 `jlearman-steel-drum` ✓／⭐ `cithara-barbarica` ✓／⭐ `body-percussion` ✓／⭐ `hungarian-zither` ✓
+**⏳ 下一轮 ✓**：⭐ ① ⭐ **干跑**量真实字节 ✓（⭐ `node scripts/remove_samples.mjs <前缀>` ✓，⭐ 不删 ✓）
+  ⭐ ② ⭐ 改清单（⭐ 去掉该库 ✓）⇒ ⭐ `--apply` ✓ ⇒ ⭐ 自读校验 0 ✓ ⇒ ⭐ `check_mirror_reachability` ✓ ＋ ⭐ `check_removed_samples` ✓
+  ⭐ ③ ⭐ 界面（⭐ 裁定一 ⇒ ⭐ 选 B ✓）并行推进 ✓
+```
+
