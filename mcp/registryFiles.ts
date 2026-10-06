@@ -5,17 +5,11 @@
  */
 import os from "node:os";
 import path from "node:path";
-import { flattenSong } from "../src/data/songFlatten";
-import { exportProjectPackage, validateGroovePackage } from "../src/features/sequencer/projectDb";
-import { SequencerPattern } from "../src/types/genre";
-import { ClipSlot } from "../src/types/song";
-import { APP_VERSION } from "../src/version";
-import { exportAbleton, exportMidi, toBase64 } from "./exporting";
+import { validateGroovePackage } from "../src/features/sequencer/projectDb";
 import { collectDebugBundle } from "./debugBundle";
 import { arrangementFromPackage, buildArrangementPackage } from "../src/features/sequencer/arrangementPackage";
 import { getMcpArrangement, putMcpArrangement } from "./arrangement";
-import { findGenre } from "./library";
-import { ToolDefinition, failure, patternFromArgs, patternSchema, unknownGenre } from "./toolKit";
+import { ToolDefinition, failure } from "./toolKit";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { z } from "zod";
 
