@@ -96,6 +96,8 @@ import {
 } from "../../features/sequencer/projectDb";
 import type { AudioEngine, EffectsRackState } from "../../audio/AudioEngine";
 import { DEFAULT_FX_STATE } from "../../audio/EffectsRack";
+import { generateEuclidean } from "../../audio/Euclidean";
+import { addTrackNotes } from "../../data/arrangementEdits";
 import { useMidiInput } from "../../features/sequencer/hooks/useMidiInput";
 
 /**
@@ -336,6 +338,13 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
    */
   const [metronome, setMetronome] = useState(false);
   const [countIn, setCountIn] = useState(false);
+
+  /**
+   * ⭐ **The Euclidean rhythm the button will write, as a pulse count.** The generator itself is a pure function the studio used
+   * from its own overlay; that overlay went with the view, while the function stayed. This is the arrangement-side shape of the
+   * same idea: the rhythm becomes notes on the selected track rather than switches in a step grid.
+   */
+  const [euclideanPulses, setEuclideanPulses] = useState(3);
 
   /**
    * ⭐ **The master rack, read rather than assumed.** The engine exposes four setters over the rack it builds, and the studio drove
@@ -1066,6 +1075,39 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
         >
           Arpeggio
         </button>
+
+        {/* Euclidean: a rhythm spread as evenly as its pulse count allows, written as notes. */}
+        <label className="flex items-center gap-1 text-xs text-text-sub">
+          <input
+            type="number"
+            min={1}
+            max={16}
+            value={euclideanPulses}
+            onChange={(e) => setEuclideanPulses(Math.max(1, Math.min(16, Number(e.target.value) || 1)))}
+            data-testid="arrangement-euclidean-pulses"
+            aria-label={t("arrangement_euclidean_pulses")}
+            className="w-10 rounded border border-white/10 bg-transparent px-1 py-0.5 text-text"
+          />
+          <button
+            type="button"
+            data-testid="arrangement-euclidean"
+            className="px-2 py-1 rounded text-xs text-text opacity-90"
+            disabled={selectedTrackId === undefined}
+            onClick={() => {
+              if (selectedTrackId === undefined) return;
+              const grid = 4 / stepsPerBar;
+              const steps = (arrangement.bars ?? 1) * stepsPerBar;
+              const pattern = generateEuclidean(steps, Math.min(euclideanPulses, steps), 0);
+              const notes = pattern.flatMap((on, index) =>
+                on === 0 ? [] : [{ pitch: 60, startBeats: index * grid, lengthBeats: grid, velocity: 100 }]
+              );
+              if (notes.length === 0) return;
+              commit(setterCommand("Euclidean", (_current, value) => value, arrangement, addTrackNotes(arrangement, selectedTrackId, notes)));
+            }}
+          >
+            Euclidean
+          </button>
+        </label>
         {/**
           * ⭐ **The three forms, at the arrangement layer.** A form is a decision about the arrangement's length, so each button
           * commits the same command the length field does — one command, one undo — and the notes are left exactly as they are,
