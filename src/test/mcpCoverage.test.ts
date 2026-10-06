@@ -56,6 +56,10 @@ const EXPOSED: Record<string, string> = {
  */
 const EXCLUDED: Record<string, string> = {
   toggleStep: "`set_arrangement_track_steps` writes a whole pattern in one call; a toggle would be a second way to say the same thing, and the two would drift",
+  duplicateNotesByDelta:
+    "a region edit driven by a drag, and the protocol reaches the same notes one at a time through add_arrangement_note and move_arrangement_note",
+  removeNotesWithinRect:
+    "the deletion half of that region edit, and remove_arrangement_note removes one note, which is what a protocol caller asks for",
   resetTrackIdsForTests: "a test seam rather than an operation — it exists so a criterion can predict an id",
 };
 

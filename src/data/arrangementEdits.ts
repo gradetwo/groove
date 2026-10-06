@@ -696,3 +696,57 @@ export function quantizeArrangementNoteLengths(
   });
   return { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [trackId]: landed } };
 }
+
+/**
+ * ⭐ **The notes inside a rectangle, in beats and pitches.** Both axes are normalised first, so a drag in any direction means
+ * the same rectangle — the older grid's rule, with steps replaced by where a note starts.
+ */
+export interface NoteRect {
+  fromBeats: number;
+  toBeats: number;
+  pitchFrom: number;
+  pitchTo: number;
+}
+
+export function notesWithinRect(notes: readonly NoteEvent[], rect: NoteRect): NoteEvent[] {
+  const lo = Math.min(rect.fromBeats, rect.toBeats);
+  const hi = Math.max(rect.fromBeats, rect.toBeats);
+  const pitchLo = Math.min(rect.pitchFrom, rect.pitchTo);
+  const pitchHi = Math.max(rect.pitchFrom, rect.pitchTo);
+  return notes.filter((note) => note.startBeats >= lo && note.startBeats <= hi && note.pitch >= pitchLo && note.pitch <= pitchHi);
+}
+
+/**
+ * ⭐ **A region copied to where it is put.** The older grid's copy shifts a selection by a delta, drops whatever falls outside
+ * the arrangement, and replaces what it lands on, so a copy cannot silently stack a stranger's notes; the copies come back.
+ */
+export function duplicateNotesByDelta(
+  arrangement: ArrangementV2,
+  trackId: string,
+  rect: NoteRect,
+  deltaBeats: number
+): { arrangement: ArrangementV2; copied: NoteEvent[] } {
+  const notes = arrangement.notesByTrack?.[trackId] ?? [];
+  const within = notesWithinRect(notes, rect);
+  const endBeats = (arrangement.bars ?? 4) * 4;
+  const copies = within
+    .map((note) => ({ ...note, startBeats: note.startBeats + deltaBeats }))
+    .filter((note) => note.startBeats >= 0 && note.startBeats < endBeats);
+  if (copies.length === 0) return { arrangement, copied: [] };
+  const landed = new Set(copies.map((note) => `${note.pitch}@${note.startBeats}`));
+  const kept = notes.filter((note) => !landed.has(`${note.pitch}@${note.startBeats}`));
+  return {
+    arrangement: { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [trackId]: [...kept, ...copies] } },
+    copied: copies,
+  };
+}
+
+/** ⭐ **The rectangle's notes removed, and nothing else touched.** */
+export function removeNotesWithinRect(arrangement: ArrangementV2, trackId: string, rect: NoteRect): ArrangementV2 {
+  const notes = arrangement.notesByTrack?.[trackId];
+  if (notes === undefined || notes.length === 0) return arrangement;
+  const doomed = new Set(notesWithinRect(notes, rect));
+  const kept = notes.filter((note) => !doomed.has(note));
+  return { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [trackId]: kept } };
+}
+

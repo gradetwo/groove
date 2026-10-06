@@ -97,6 +97,11 @@ interface Ruling {
  * is a sentence a reviewer can check against the census, not a restatement of the rule.
  */
 const UI_LEDGER: Record<string, Ruling> = {
+  removeNotesWithinRect: {
+    status: "pending-owner-ruling",
+    reason:
+      "Census G10. `PianoRollV2.tsx` selects one note at a time, so there is no region to delete: the owner decides whether the arrangement route gains a marquee, or whether a person deletes note by note.",
+  },
   renameTrack: {
     status: "pending-owner-ruling",
     reason:
