@@ -225,9 +225,14 @@ export const ANALYSIS_TOOLS: ToolDefinition[] = [
       "Dense material reports many discontinuities. The count is relative to the file's own median jump, so percussive and plucked mixes look busy without any click. Measure a WAV this server produced. Gated loudness, true peak, pinned samples, discontinuity count **and where the worst one is** (`worstDiscontinuitySec`), stereo correlation, tail level and the 13-band spectral shape. No browser needed. **The position is what makes the count useful**: a whole-file count is dominated by the music's own transients. To ask whether these are splice clicks at your section boundaries. Compare that position against the boundaries you can derive from `get_song`'s sections (`bars` per section, at the song's tempo). This tool counts; the arrangement says where the joins are. **A render already returns its own gated loudness and true peak for either format** — reach for this only when the extra metrics are what you want, not to measure a file you just rendered.",
     readOnly: true,
     inputSchema: { path: z.string().describe("a .wav path this server produced; the analyser decodes the app's own 16-bit PCM — there is no MP3 decoder here, because a render already reports its loudness and true peak") },
-    handler: (args) => {
+    handler: async (args, ctx) => {
       try {
-        return analyseWavFile(String(args.path));
+        /**
+         * ⭐ **One call, and one phase.** The analyser is synchronous, so a heartbeat could not fire between its start and its
+         * end — the event loop is inside it. The announcement is still worth making: a caller that asked to be told learns what
+         * the tool is doing, and if the analyser ever becomes asynchronous the heartbeat arrives without a second change.
+         */
+        return await runWithProgress(ctx?.progress, "analysing the rendered file", async () => analyseWavFile(String(args.path)));
       } catch (error) {
         return failure(`could not analyse "${String(args.path)}": ${(error as Error).message}`);
       }

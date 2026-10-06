@@ -10,6 +10,7 @@ import { TOOLS } from "../../mcp/registry";
  * the tool's own half: it reports through the reporter it was given, and it works exactly as before without one.
  */
 const normalize = () => TOOLS.find((candidate) => candidate.name === "normalize_loudness")!;
+const analyse = () => TOOLS.find((candidate) => candidate.name === "analyze_audio")!;
 
 describe("narrating a loudness pass", () => {
   it("⭐ reports when it was given a reporter, and stays silent when it was not", async () => {
@@ -32,3 +33,21 @@ describe("narrating a loudness pass", () => {
     expect(Object.keys(withoutReporter).length).toBeGreaterThan(0);
   }, 120_000);
 });
+
+describe("narrating an analysis", () => {
+  it("⭐ announces its phase when a reporter was given, and answers the same without one", async () => {
+    // ⭐ A path this server did not produce is refused, and the refusal is the answer — progress does not change that.
+    const args = { path: "/nonexistent/groove-progress-probe.wav" };
+    const report = vi.fn();
+    const reportOf = vi.fn();
+    const withReporter = (await analyse().handler(args, { progress: { report, reportOf } } as never)) as Record<string, unknown>;
+    expect(report.mock.calls.length, "the analysis did not announce its phase").toBeGreaterThan(0);
+    expect(Object.keys(withReporter).length).toBeGreaterThan(0);
+
+    report.mockClear();
+    const withoutReporter = (await analyse().handler(args, {} as never)) as Record<string, unknown>;
+    expect(report.mock.calls.length, "a token-less call must not narrate").toBe(0);
+    expect(Object.keys(withoutReporter).length).toBeGreaterThan(0);
+  });
+});
+
