@@ -424,7 +424,18 @@ describe("the help surfaces' remaining lossless claims match the code that makes
   it("states, on the last tour card, the measured export count rather than a losslessness claim", () => {
     // The count comes from the surface itself: the arrangement menu's items and the score tab's one export, the same
     // seven `helpExportSurfaceCopy.test.ts` holds `onboarding_s7_desc` to.
-    const containers = ["arrangement-export-menu", "arrangement-export-items"];
+    /**
+     * ⭐ **Not every `arrangement-export-*` id is a format.** The progress readout and the cancel button were added with the
+     * export state and share the prefix, so counting them as formats would have the copy claim two more than the menu offers --
+     * which is how this criterion first went red. It lists what it excludes rather than loosening the pattern, so a new *format*
+     * still changes the count and still forces the copy to follow.
+     */
+    const containers = [
+      "arrangement-export-menu",
+      "arrangement-export-items",
+      "arrangement-export-progress",
+      "arrangement-export-cancel",
+    ];
     const menuIds = [...read(ARRANGEMENT_MENU).matchAll(/data-testid="(arrangement-export-[a-z0-9]+)"/g)]
       .map((match) => match[1]!)
       .filter((id) => !containers.includes(id));
