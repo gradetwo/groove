@@ -6,7 +6,7 @@ import { clonePattern } from "../useSequencerStore";
 import type { SequencerAction } from "../useSequencerStore";
 import { importMidiToPattern } from "../../../audio/MidiImporter";
 import { generateVariation } from "../../../audio/InspireMe";
-import { clearSavedProject } from "../projectStorage";
+import { clearSavedArrangementProject } from "../projectDb";
 import { useLanguage } from "../../../i18n/LanguageContext";
 
 /**
@@ -102,7 +102,7 @@ export function usePatternActions({
         commit({ type: "SET_GENRE", genre: currentGenre });
         showToast(t("pattern_reset_done"));
       } else if (action === "clear_saved") {
-        clearSavedProject();
+        clearSavedArrangementProject();
         commit({ type: "SET_GENRE", genre: currentGenre });
         showToast(
           t("pattern_clear_saved_done")

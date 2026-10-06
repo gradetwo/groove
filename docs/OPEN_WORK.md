@@ -15708,3 +15708,20 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 下一步 ✓**：⭐ 从 **⑦-A** 开始 ✓（⭐ 先量那两个 hook 用 `projectStorage` 的哪些函数 ✓）
 ```
 
+### 五百九十八、✅ **⑦-A 第一件：`clear_saved` 改接编曲存储**（2026-10-06 08:00 ✓）
+
+```
+**⭐ 量到 ✓（⭐ 两个 hook 各只用一个函数 ✓）**：
+  ⭐ `usePatternActions.ts` ✓（198 行 ✓）⇒ ⭐ **`clearSavedProject`** ✓（⭐ 1 处 ✓，⭐ 在 ⭐ `clear_saved` ⭐ 动作里 ✓，⭐ `:105` ✓）
+  ⭐ `useProjectHub.ts` ✓（132 行 ✓）⇒ ⭐ **`saveProjectImmediate`** ✓（⭐ 1 处 ✓，⭐ `:109` ✓）
+    ⚠️ ⭐ 但它传的是 ⭐ **v1 字段**（⭐ `genreId` ✓／⭐ `bpm` ✓／⭐ `swing` ✓／⭐ `stepCount` ✓ …）✗
+    ⇒ ⭐ v2 的 ⭐ `saveArrangementProject` ⭐ 要的是**编曲** ✗ ⇒ ⭐ **不是改名** ✓ ⇒ ⭐ 留下一轮 ✓（⭐ 先量 ⭐ `GrooveProject` ✓）
+**⭐ 本轮落地 ✓（⭐ #1 ✓）**：⭐ `usePatternActions` ✓：⭐ `clearSavedProject` ✗ ⇒ ⭐ **`clearSavedArrangementProject`** ✓
+  （⭐ v2 侧已在 ✓：⭐ `projectDb.ts:1154` ✓；⭐ 同文件 ⭐ `:1144` ⭐ `setSavedArrangementProject` ✓）
+  ⭐ 读数 ✓：⭐ `tsc=0` ✓｜⭐ `lint=0` ✓｜⭐ 全套单测 ✓（⭐ RC=0 ✓）
+**⭐ v1 存储消费者 ✓**：⭐ **4 ⇒ 2** ✓（⭐ 剩 ⭐ `useProjectHub` ✓ 与 ⭐ `useSequencerStore` ✓）
+**⭐ 一处细节 ✓**：⭐ `GrooveProject` ⭐ **不在** `projectDb.ts` 里定义 ✓ ⇒ ⭐ 下一轮先找它的定义与是否已含编曲 ✓
+**⏳ 下一步 ✓**：⭐ #2 ⭐ `useProjectHub` 的 `saveProjectImmediate` ⇒ ⭐ 改用 ⭐ `saveArrangementProject({ name, arrangement })` ✓
+  ⇒ ⭐ 然后 ⑦-A 完成 ⇒ ⭐ 进 ⑦-B（⭐ 音序器 ⇒ 编曲视图 ✓）
+```
+
