@@ -15846,3 +15846,25 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
 ```
 
+### 六百零四、⭐⭐ **流派播种已实现（MCP 侧），Web 只需同样两句**（2026-10-06 08:39 ✓）
+
+```
+**⭐ 量到 ✓（`mcp/arrangement.ts:439–457` ✓）**：⭐ `createMcpArrangement` ✓ 的三分支 ✓ ——
+  ⭐ **流派** ✓：⭐ `projectSongToV2({ id: songId, clips: { A: patternFromGenre(genre) } })` ✓
+    ⭐ 其注释原文 ✓：⭐ "⭐ **A genre seeds the tracks, which is what the v1 creator did.** `patternFromGenre` writes the genre's
+    arranged pattern and `projectSongToV2` turns a song-shaped value into an arrangement, so seeding is those two calls**" ✓ ✓
+  ⭐ 模板 ✓：⭐ `createArrangementFromTemplate(songId, templateId, blankKind)` ✓
+  ⭐ 空白 ✓：⭐ `createArrangement(songId, blankKind ?? "synth")` ✓
+**⭐⭐ 因此 Web 侧的移植 ＝ 同样两句 ✓**：⭐ `patternFromGenre(genre)` ✓ ⇒ ⭐ `projectSongToV2({ id, clips: { A: … } })` ✓
+  ⚠️ ⭐ 且这两句**已是 v1 形状**（⭐ `clips` ✗／⭐ 名含 `Song` ✗）⇒ ⭐ 正是清单里的 ⭐ **投影助手**问题 ✓ ✓
+**⭐ 另一处佐证 ✓**：⭐ `defaultContent.ts` ✓ 的 ⭐ `defaultContentFor(kind)` ✓ 只按**轨类型** ✗ 播种 ✓
+  ⇒ ⭐ 所以"⭐ 按流派**"⭐ 必须走**上面那两句** ✓，⭐ 不能靠 `defaultContentFor` ✗
+**⭐⭐ 下一步 ✓（⭐ 铁律：⭐ 先立判据 ✓）**：
+  ⭐ ① ⭐ **先立判据** ✓（⭐ 能红 ✓）：⭐ "⭐ **新建路径可按流派创建，⭐ 结果是带该流派音符的编曲**" ✓
+    ⭐ 写成 ⭐ 一个新的判据文件（名字待定） ✓（⭐ 或并入现有新建判据 ✓）
+  ⭐ ② ⭐ **落实现** ✓：⭐ 在 ⭐ v2 新建面板 ✓／⭐ `ArrangementViewV2` ✓ 的创建分支加 ⭐ **流派入口** ✓
+    ＋ ⭐ 调那两句 ✓（⭐ 优先抽成**共享助手** ✓ ⇒ ⭐ MCP 与 Web 同源 ✓，⭐ 也满足"⭐ 三方对齐**" ✓）
+  ⭐ ③ ⭐ 之后 ⭐ **关掉 `/` 那条 v1 路由** ✓（⭐ ⑦-C ✓）
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
