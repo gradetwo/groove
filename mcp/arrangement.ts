@@ -7,7 +7,7 @@
  * **The operations are the interface's own.** Every function here calls `src/data/arrangementEdits`, the same code a track row's button calls, so "what the agent did" and "what a person did" cannot drift into two behaviours — and each has the criteria
  * that layer already carries. What is added is the part the interface does not need: a process-local map keyed by id, because MCP calls are stateless and the id is how a later call names the same arrangement.
  *
- * The map is deliberately not persisted, exactly as the song map is not: the application owns projects, and this is a scratchpad for one session.
+ * The map is deliberately not persisted: the application owns projects, and this is a scratchpad for one session.
  */
 import { stepCountFor, stepsPerBarFor } from "../src/data/noteEvents";
 import { findGenre } from "./library";
