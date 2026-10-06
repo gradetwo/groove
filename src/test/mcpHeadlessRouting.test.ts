@@ -88,7 +88,6 @@ vi.mock(new URL("../../mcp/render/headless.ts", import.meta.url).pathname, () =>
 
 import { TOOLS } from "../../mcp/registry";
 import { clearMcpArrangements, createMcpArrangement, addMcpNote } from "../../mcp/arrangement";
-import { clearMcpSongs, createMcpSong } from "../../mcp/song";
 import { findGenre } from "../../mcp/library";
 
 /**
@@ -160,7 +159,7 @@ let out = "";
 
 beforeEach(() => {
   clearMcpArrangements();
-  clearMcpSongs();
+  clearMcpArrangements();
   headlessCalls.length = 0;
   mockBehavior.mode = "throw";
   process.env.GROOVE_MCP_NO_BROWSER = "1";

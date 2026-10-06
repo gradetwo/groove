@@ -24,7 +24,6 @@ import { renderAudio, renderStems } from "../../mcp/render/worker";
 import { createRenderProgress } from "../../mcp/render/progress";
 import { TOOLS } from "../../mcp/registry";
 import { addMcpNote, addMcpTrack, clearMcpArrangements, createMcpArrangement } from "../../mcp/arrangement";
-import { clearMcpSongs, createMcpSong } from "../../mcp/song";
 import { findGenre } from "../../mcp/library";
 import type { SequencerPattern } from "../types/genre";
 
@@ -153,14 +152,14 @@ describe.skipIf(!headlessInstalled)("render_arrangement on the Node Web Audio ho
   let out = "";
 
   beforeEach(() => {
-    clearMcpSongs();
+    clearMcpArrangements();
     out = mkdtempSync(path.join(os.tmpdir(), "groove-headless-song-"));
     process.env.GROOVE_MCP_NO_BROWSER = "1";
     process.env.GROOVE_MCP_OUT = out;
   });
 
   afterEach(() => {
-    clearMcpSongs();
+    clearMcpArrangements();
     rmSync(out, { recursive: true, force: true });
     delete process.env.GROOVE_MCP_NO_BROWSER;
     delete process.env.GROOVE_MCP_OUT;
@@ -198,14 +197,14 @@ describe.skipIf(!headlessInstalled)("normalize_loudness on the Node Web Audio ho
   let out = "";
 
   beforeEach(() => {
-    clearMcpSongs();
+    clearMcpArrangements();
     out = mkdtempSync(path.join(os.tmpdir(), "groove-headless-normalize-"));
     process.env.GROOVE_MCP_NO_BROWSER = "1";
     process.env.GROOVE_MCP_OUT = out;
   });
 
   afterEach(() => {
-    clearMcpSongs();
+    clearMcpArrangements();
     rmSync(out, { recursive: true, force: true });
     delete process.env.GROOVE_MCP_NO_BROWSER;
     delete process.env.GROOVE_MCP_OUT;
