@@ -16256,3 +16256,55 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 未落码 ✗**（⭐ 余量用尽 ✓）；⭐ 下一轮：⭐ 立这两条判据 ⇒ ⭐ 证明能红 ⇒ ⭐ 实现 ⇒ ⭐ 跑全套 ⇒ ⭐ 推 ✓
 ```
 
+### 六百二十、✅ **第 1 档判据已立并证明能红（原文存此 ✓）**（2026-10-06 09:45 ✓）
+
+```
+**⭐ 加在 ✓**：⭐ `src/test/arrangementGrid.test.tsx` ✓ 末尾 ⇒ ⭐ 新 ⭐ `describe("the grid's editing actions")` ✓
+**⭐ 判据原文 ✓（⭐ 下一轮照抄 ✓）**：
+```
+```
+describe("the grid's editing actions", () => {
+  it("⭐ offers a velocity ramp and a length quantiser", () => {
+    renderView();
+    expect(screen.getByRole("button", { name: "Ramp velocity" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Quantise lengths" })).toBeDefined();
+  });
+
+  it("⭐ ramps velocity from the first note to the last, and puts lengths on the grid without moving starts", () => {
+    const onArrangementChange = vi.fn();
+    renderView({ onCreateProject: undefined, onArrangementChange });
+    // A project with notes: the genre's own music, so the ramp has something to act on.
+    fireEvent.click(screen.getByTestId("new-project-create"));
+    const created = onArrangementChange.mock.calls.at(-1)?.[0] ?? onArrangementChange.mock.calls.at(-1)?.[1];
+    const notesBefore = Object.values(created.notesByTrack ?? {}).flat();
+    expect(notesBefore.length).toBeGreaterThan(2);
+
+    fireEvent.click(screen.getByRole("button", { name: "Ramp velocity" }));
+    const ramped = onArrangementChange.mock.calls.at(-1)?.[0] ?? onArrangementChange.mock.calls.at(-1)?.[1];
+    const byStart = [...Object.values(ramped.notesByTrack ?? {}).flat()].sort((a, b) => a.startBeats - b.startBeats);
+    expect(byStart[0].velocity).toBe(40);
+    expect(byStart[byStart.length - 1].velocity).toBe(120);
+
+    const startsBefore = Object.values(ramped.notesByTrack ?? {}).flat().map((n) => n.startBeats).sort();
+    fireEvent.click(screen.getByRole("button", { name: "Quantise lengths" }));
+    const quantised = onArrangementChange.mock.calls.at(-1)?.[0] ?? onArrangementChange.mock.calls.at(-1)?.[1];
+    const notesAfter = Object.values(quantised.notesByTrack ?? {}).flat();
+    expect(notesAfter.map((n) => n.startBeats).sort()).toEqual(startsBefore);
+    for (const note of notesAfter) expect(note.lengthBeats).toBeGreaterThan(0);
+  });
+});
+```
+```
+**⭐⭐ 红的原文 ✓（⭐ 两个都红 ✓）**：
+  ⭐ ① ⭐ `Unable to find an accessible element with the role "button" and name "Ramp velocity"` ✗ ⇒ ⭐ **行为型红** ✓ ✓
+  ⭐ ② ⭐ `Unable to find an element by: [data-testid="new-project-create"]` ✗
+    ⇒ ⚠️ ⭐ 该判据文件里**进入编辑态的方式待量** ✓（⭐ 面板判据里该 testid 是对的 ✓ ⇒ ⭐ 此处可能是**还没打开选择器** ✓ 或 ⭐ 需要别的入口 ✓）
+**⭐ 读数 ✓**：⭐ 加判据后 ⭐ **2 failed | 24 passed** ✓ ⇒ ⭐ 回退后该文件**全绿** ✓｜⭐ `dirty=0` ✓
+**⭐⭐ 下一轮（⭐ 同批 ✓）**：
+  ⭐ ① ⭐ **量 ② 的入口** ✓：⭐ 在 ⭐ `arrangementGrid.test.tsx` ✓ 里**怎样让音符出现在屏上** ✓（⭐ 看它既有的用例 ✓：
+    ⭐ 有 ⭐ `resetTrackIdsForTests` ✓ 与 ⭐ `renderView(props)` ✓ ⇒ ⭐ 可能有 ⭐ `initialArrangement` ✓ 的用法 ✓）
+  ⭐ ② ⭐ 两条判据放回 ✓ ＋ ⭐ **实现** ✓：⭐ 视图加两个动作 ✓ ＋ ⭐ `arrangementEdits` 加两操作 ✓（⭐ 语义照 §618 ✓）
+  ⭐ ③ ⭐ 跑全套 ✓ ⇒ ⭐ 绿则推 ✓
+**⏳ 未落码 ✗**（⭐ 余量用尽 ✓）
+```
+
