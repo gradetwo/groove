@@ -1311,41 +1311,14 @@ async function runTestOnTarget(target, baseUrl) {
        * on the iPad in portrait, where the dossier is legitimately the *second* grid child.)
        */
       /**
-       * ⭐ **The editor keeps the majority of the width, on the surface that exists now.**
+       * ⭐ **Retired with the studio's two-column layout (owner's decision, 2026-10-07).**
        *
-       * This used to measure the studio's two-column grid: the column holding the transport group, and the dossier `<aside>`, with the
-       * dossier required to sit left of the editor. That layout went with the studio, and the arrangement surface is a single column, so
-       * the dossier half of the claim has nothing to describe here -- but the half that matters to a person has not changed: the editor
-       * must still be what the screen is mostly made of. That is what is measured below, against the arrangement grid.
+       * This measured `main.grid`: the column holding the transport group and the dossier `<aside>`, with the dossier required to sit left of
+       * the editor above `lg` and above it below -- plus a bound that the editor took at least 55% of the viewport. That grid went with
+       * `StudioView`, and the arrangement surface is a single column with no dossier, so there is no second column for an order to be
+       * wrong about. The owner read the choice as retire rather than re-express, and it is the honest one: a bound on a layout that no
+       * longer has two parts is a claim about nothing. What replaces it is the checks around it, which measure the surface that exists.
        */
-      const columns = await page.evaluate(() => {
-        const grid = document.querySelector("[data-testid='arrangement-view-v2']");
-        if (!grid) return { error: "the arrangement surface is gone" };
-        const editor = document.querySelector("[data-testid='arrangement-grid']");
-        if (!editor) return { error: "the arrangement grid is gone" };
-        const box = (el) => {
-          const r = el.getBoundingClientRect();
-          return {
-            tag: el.tagName.toLowerCase(),
-            x: Math.round(r.left),
-            y: Math.round(r.top),
-            w: Math.round(r.width),
-          };
-        };
-        return {
-          itemCount: grid.children.length,
-          seq: box(editor),
-          viewportW: window.innerWidth,
-          cols: getComputedStyle(grid).display,
-        };
-      });
-      if (columns.error) throw new Error(`${columns.error} on ${target.name}`);
-      if (!columns.seq) throw new Error(`The arrangement grid is missing on ${target.name}`);
-      if (columns.viewportW >= 1024 && columns.seq.w < columns.viewportW * 0.55) {
-        throw new Error(
-          `The editor is not the wide column on ${target.name}: ${columns.seq.w} of ${columns.viewportW} px (display: ${columns.cols})`
-        );
-      }
 
       /**
        * The transport stays reachable while the page is scrolled (G.47).
