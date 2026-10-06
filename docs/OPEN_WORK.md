@@ -15725,3 +15725,23 @@ export async function prepareArrangementAudioLanes(input: {
   ⇒ ⭐ 然后 ⑦-A 完成 ⇒ ⭐ 进 ⑦-B（⭐ 音序器 ⇒ 编曲视图 ✓）
 ```
 
+### 五百九十九、✅ **⑦-A 完成：v1 存储只剩 store 本身**（2026-10-06 08:10 ✓）
+
+```
+**⭐ 量到 ✓**：⭐ `ArrangementProjectPointer` ＝ ⭐ **`{ id: string; name: string }`** ✓（⭐ `projectDb.ts` ✓）
+  ⭐ 且 v2 已有 ✓：⭐ `setSavedArrangementProject` ✓（⭐ 写 ⭐ `groove_active_arrangement_v2` ✓）｜⭐ `clearSavedArrangementProject` ✓
+**⭐ 该 hook 的本意 ✓**（⭐ 旧注释原文 ✓）：⭐ "⭐ **a reload restores THIS project**" ✓ ⇒ ⭐ 正是**指针**的职责 ✓ ✓
+**⭐ 本轮落地 ✓（⭐ #2 ✓）**：⭐ `useProjectHub` ✓：
+  ⭐ `saveProjectImmediate({ genreId, bpm, swing, …, sections, songChain, loopRange, … })` ✗（⭐ 18 行 v1 载荷 ✓）
+    ⇒ ⭐ **`setSavedArrangementProject({ id: project.id, name: project.name })`** ✓ ✓
+  ⭐ import ✓：⭐ 去掉 ⭐ `projectStorage` ✓，⭐ 从 ⭐ `projectDb` ⭐ 多取一个函数 ✓
+  ⭐ 旧注释（⭐ F-06 草稿快照 ✓）⭐ 随实现移除 ✓，⭐ 换成说明"⭐ 指针就是同一个承诺**" ✓
+  ⭐ 读数 ✓：⭐ `tsc=0` ✓｜⭐ `lint=0` ✓｜⭐ 全套单测 ✓（⭐ RC=0 ✓）
+**⭐⭐ ⑦-A 完成 ✓**：⭐ v1 存储的消费者 ✓：⭐ 4 ⇒ **1** ✓ —— ⭐ 只剩 ⭐ **`useSequencerStore`** ✓（⭐ 即 v1 store **本身** ✓）
+  ⇒ ⭐ 它属于 **⑦-B／⑦-C** ✓（⭐ 音序器 ⇒ 编曲视图 ✓，⭐ 然后退场 ✓）
+**⭐ 一处重要发现 ✓**：⭐ `GrooveProject`（⭐ `src/types/project.ts` ✓）⭐ **仍是 v1 形状** ✗ ——
+  ⭐ `patterns: { A, B }` ✓／⭐ `activeSlot: ClipSlot` ✗／⭐ `extraClips: Partial<Record<ClipSlot, …>>` ✗／
+  `songChain` ✗／⭐ `sections?: SongSection[]` ✗ ⇒ ⚠️ ⭐ 连"⭐ v2 工程库**"⭐ 也仍存 v1 记录 ✗ ⇒ ⭐ 归入 ⑦-C ✓
+**⏳ 下一步 ✓**：⭐ 进 **⑦-B** ✓ —— ⭐ 先立"⭐ 音序器 ⇒ 编曲视图**"⭐ 的 v2 判据 ✓（⭐ 视图从 `tracks` ＋ ⭐ `bars` 生成 ✓）
+```
+

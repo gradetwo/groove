@@ -3,9 +3,8 @@ import { Genre } from "../../../types/genre";
 import { GrooveProject } from "../../../types/project";
 import { AudioEngine, DrumKitType, EffectsRackState } from "../../../audio/AudioEngine";
 import { loadGenre } from "../../../data/index/loader";
-import { getActiveProjectId, getProject, migrateLegacyLocalStorage } from "../projectDb";
+import { getActiveProjectId, getProject, migrateLegacyLocalStorage, setSavedArrangementProject } from "../projectDb";
 import { isStudioEditor } from "../../arrangement/arrangementStore";
-import { saveProjectImmediate } from "../projectStorage";
 import type { SequencerAction } from "../useSequencerStore";
 
 export interface UseProjectHubOptions {
@@ -102,28 +101,9 @@ export function useProjectHub({
         engineRef.current.setPattern(activePat);
       }
 
-      // F-06: the scratch snapshot in localStorage is scoped to one project id.
-      // Re-seed it right away so a reload restores THIS project instead of the
-      // previously active one (which the debounced autosave would then write into
-      // this project's record).
-      saveProjectImmediate({
-        genreId: project.genreId,
-        bpm: project.bpm,
-        swing: project.swing,
-        timeSignature: project.timeSignature,
-        resolution: project.resolution,
-        stepCount: project.stepCount,
-        patterns: project.patterns,
-        activeSlot: project.activeSlot,
-        songMode: project.songMode,
-        // B1: the arrangement rides with the project in both directions (load, and the scratch snapshot that
-        // makes a reload restore *this* project). A project saved before it migrates from the chain in the reducer.
-        sections: project.sections,
-        songChain: project.songChain,
-        loopRange: project.loopRange,
-        isMetronome: project.isMetronome,
-        isCountIn: project.isCountIn,
-      });
+      // ⭐ **A reload must restore this project.** The older store re-seeded a scratch snapshot keyed by project id; the
+      // arrangement store keeps only a pointer to the active project, and writing it here is the same promise.
+      setSavedArrangementProject({ id: project.id, name: project.name });
     },
     [commit, currentGenre]
   );

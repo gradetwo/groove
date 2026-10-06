@@ -516,3 +516,10 @@
 | ⭐ **Web 面** | ✅ ⭐ `clear_saved` 改接 **`clearSavedArrangementProject`** ✓ ⇒ ⭐ v1 存储消费者 **4 ⇒ 2** ✓ | 本节 ✓ |
 | ⭐ **待办** | ⭐ `useProjectHub` 的 `saveProjectImmediate`（⭐ 传 v1 字段 ✗）⇒ ⭐ 改用编曲保存 ✓ | 本节 ✓ |
 
+## 2026-10-06 08:10 回填（第 4 条规矩：改完实现回来改表）
+
+| 面 | 变化 | 依据 |
+|---|---|---|
+| ⭐ **Web 面** | ✅ ⭐ `useProjectHub` 的草稿快照 ⇒ **编曲指针** ✓（⭐ `setSavedArrangementProject` ✓）⇒ ⭐ v1 存储消费者 **3 ⇒ 1** ✓，⭐ 只剩 v1 store 本身 ✓ | 本节 ✓ |
+| ⭐ **盘点** | ⚠️ ⭐ `GrooveProject`（⭐ `src/types/project.ts` ✓）仍为 **v1 形状** ✗（⭐ `patterns A/B` ✓／`activeSlot` ✗／`songChain` ✗／`sections` ✗）⇒ ⭐ 归 ⑦-C ✓ | 本节 ✓ |
+
