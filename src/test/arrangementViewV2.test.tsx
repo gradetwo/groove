@@ -171,6 +171,52 @@ describe("the arrangement a host hands in, and what the host is told", () => {
     expect(screen.getByRole("button", { name: "Quantise lengths" })).toBeDefined();
   });
 
+  it("⭐ a genre project arrives with the genre's notes, not only its tracks", () => {
+    const seeded = arrangementSeededFromGenre("new", Object.values(GENRES_MAP)[0]!);
+    // ⭐ An independent measure: the notes come from the music, not from the same helper's opinion of it.
+    const notes = Object.values(seeded.notesByTrack ?? {}).flat();
+    expect(seeded.tracks.length).toBeGreaterThan(0);
+    expect(notes.length).toBeGreaterThan(0);
+    // ⭐ And they sit where the steps did: the first note starts at the beginning rather than nowhere.
+    expect(Math.min(...notes.map((note) => note.startBeats))).toBe(0);
+  });
+
+  it("⭐ ramps velocity from first to last, and puts lengths on the grid without moving a start", () => {
+    const seeded = arrangementSeededFromGenre("new", Object.values(GENRES_MAP)[0]!);
+    const onArrangementChange = vi.fn();
+    renderView(
+      <ArrangementViewV2
+        songId="new"
+        capture={noCapture}
+        initialArrangement={seeded}
+        onArrangementChange={onArrangementChange}
+      />
+    );
+
+    const read = () => onArrangementChange.mock.calls.at(-1)?.[0] as ArrangementV2;
+    const notesOf = (value: ArrangementV2) => Object.values(value.notesByTrack ?? {}).flat();
+
+    fireEvent.click(screen.getByTestId("arrangement-ramp-velocity"));
+    const ramped = read();
+    const byStart = [...notesOf(ramped)].sort((a, b) => a.startBeats - b.startBeats);
+    expect(byStart.length).toBeGreaterThan(1);
+    // ⭐ The two ends are the ramp's own defaults, so the shape is measurable rather than asserted in the abstract.
+    const lowest = Math.min(...byStart.map((note) => note.velocity ?? 0));
+    const highest = Math.max(...byStart.map((note) => note.velocity ?? 0));
+    expect(lowest).toBe(40);
+    expect(highest).toBe(120);
+
+    const startsBefore = notesOf(ramped).map((note) => note.startBeats).sort();
+    fireEvent.click(screen.getByTestId("arrangement-quantize-lengths"));
+    const quantised = read();
+    // ⭐ Lengths land on the grid and the starts do not move: quantising is time-keeping, not re-placement.
+    expect(notesOf(quantised).map((note) => note.startBeats).sort()).toEqual(startsBefore);
+    for (const note of notesOf(quantised)) {
+      expect(note.lengthBeats).toBeGreaterThan(0);
+      expect(Math.abs(note.lengthBeats / 0.25 - Math.round(note.lengthBeats / 0.25))).toBeLessThan(1e-9);
+    }
+  });
+
   it("⭐ says why an unreadable project is not shown, instead of drawing a chooser in silence over work that still exists", () => {
     renderView(<ArrangementViewV2 songId="new" capture={noCapture} loadProblem='track "Bass" names kind "instrument", which this build does not have' />);
     const alert = screen.getByTestId("arrangement-load-problem");

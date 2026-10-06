@@ -9,7 +9,7 @@
  */
 import type { Genre, SequencerPattern, SequencerTrack } from "../types/genre";
 import { patternFromGenre } from "./genreMix";
-import type { ArrangementV2, TrackKindV2, TrackV2 } from "../types/arrangementV2";
+import type { ArrangementV2, NoteEvent, TrackKindV2, TrackV2 } from "../types/arrangementV2";
 
 /** The v1 role to v2 kind, with one entry per role — so widening the v1 union becomes a type error here rather than a silent mis-projection. */
 const KIND_BY_TRACK_ID: Record<SequencerTrack["track_id"], TrackKindV2> = {
@@ -79,7 +79,28 @@ export function projectSongToV2(song: ProjectionInput): ArrangementV2 {
     }
   }
 
-  return { songId: song.id, tracks, sourceSlots };
+  /**
+   * ⭐ **The notes travel with the tracks.** The projection used to return tracks alone, so every arrangement it produced
+   * was silent — a genre project, and anything imported through it. The clip's resolution decides how long a step is.
+   */
+  const notesByTrack: Record<string, NoteEvent[]> = {};
+  for (const slot of Object.keys(song.clips).sort()) {
+    const clip = song.clips[slot];
+    if (!clip?.tracks?.length) continue;
+    for (const track of clip.tracks) {
+      const key = keyOf(track);
+      if (notesByTrack[key] !== undefined) continue;
+      const notes = notesFromSteps(track, stepBeatsFor(clip.resolution));
+      if (notes.length > 0) notesByTrack[key] = notes;
+    }
+  }
+
+  return {
+    songId: song.id,
+    tracks,
+    sourceSlots,
+    ...(Object.keys(notesByTrack).length === 0 ? {} : { notesByTrack }),
+  };
 }
 
 /**
@@ -104,4 +125,35 @@ export function v1TrackKeys(song: ProjectionInput): string[] {
  */
 export function arrangementSeededFromGenre(songId: string, genre: Genre): ArrangementV2 {
   return projectSongToV2({ id: songId, clips: { A: patternFromGenre(genre) } });
+}
+
+/** ⭐ A `1/n` resolution is `4/n` beats in four four; anything unreadable falls back to a sixteenth. */
+function stepBeatsFor(resolution: SequencerPattern["resolution"] | undefined): number {
+  const divisor = Number(String(resolution ?? "").split("/")[1]) || 16;
+  return 4 / divisor;
+}
+
+/**
+ * ⭐ **A lane's steps, as notes.** The mapping is the older grid's (`notesFromTrack`): a step whose value is not above zero
+ * holds nothing, its gate becomes the length and its velocity the strength, and a stack of pitches sounds together while a
+ * single pitch carries the line. The units change from steps to beats, because that is what an arrangement counts in.
+ */
+function notesFromSteps(track: SequencerTrack, stepBeats: number, fallbackMidi = 60): NoteEvent[] {
+  const notes: NoteEvent[] = [];
+  const steps = track.steps ?? [];
+  steps.forEach((value, stepIdx) => {
+    if (!(value > 0)) return;
+    const gate = track.gate?.[stepIdx] ?? 0.8;
+    const velocity = Math.max(1, Math.min(127, track.velocity?.[stepIdx] ?? 100));
+    const startBeats = stepIdx * stepBeats;
+    const lengthBeats = Math.max(stepBeats, gate * stepBeats);
+    const stack = track.pitches?.[stepIdx];
+    const midis = Array.isArray(stack)
+      ? [...new Set(stack.filter((n) => Number.isFinite(n) && n > 0).map((n) => Math.round(n)))]
+      : [];
+    const single = track.pitch?.[stepIdx];
+    const chosen = midis.length > 0 ? midis : [typeof single === "number" && single > 0 ? single : fallbackMidi];
+    for (const pitch of chosen) notes.push({ pitch, startBeats, lengthBeats, velocity });
+  });
+  return notes;
 }

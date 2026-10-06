@@ -16436,3 +16436,23 @@ describe("the grid's editing actions", () => {
 **⏳ 下一步 ✓**：⭐ 照上面四步修 ✓（⭐ 先量 ⭐ `notesFromTrack` 的语义 ✓ 以便照抄 ✓）
 ```
 
+### 六百二十六、✅ **投影已带音符；量化与力度斜坡**真的**可用（含独立判据 ✓）**（2026-10-06 10:28 ✓）
+
+```
+**✅ 修好 ✓（`src/data/arrangementProjection.ts` ✓）**：
+  ⭐ 加**本地助手** ⭐ `notesFromSteps(track, stepBeats, fallbackMidi = 60)` ✓ —— ⭐ 语义照 v1 的 ⭐ `notesFromTrack` ✓：
+    ⭐ `steps[i] <= 0` ⇒ ⭐ 跳过 ✓｜⭐ `gate ?? 0.8` ⇒ ⭐ `lengthBeats = max(stepBeats, gate * stepBeats)` ✓｜
+    ⭐ `velocity ?? 100` ⇒ ⭐ 夹取 1..127 ✓｜⭐ **音高栈优先** ✓ ⇒ ⭐ 单个 `pitch[i]` ✓ ⇒ ⭐ 回退 60 ✓
+    ⭐ 单位 ✓：⭐ **步 ⇒ 拍** ✓（⭐ `stepBeatsFor(resolution)` ✓：⭐ `1/n` ⇒ ⭐ `4/n` 拍 ✓，⭐ 不可读 ⇒ ⭐ 十六分 ✓）
+  ⭐ `projectSongToV2` ✓ ⇒ ⭐ 为每轨写 ⭐ `notesByTrack[key]` ✓（⭐ 空则**省略该表** ✓ ⇒ ⭐ 与既有读法一致 ✓）
+  ⭐ **一处类型修正 ✓**：⭐ 参数用**真实类型** ⭐ `SequencerTrack` ✓（⭐ 结构型参数不匹配 ⇒ ⭐ `TS2345` ✓）
+**✅ 判据 ✓（⭐ 加在 `arrangementViewV2.test.tsx` ✓）**：
+  ⭐ 独立判据 ✓：⭐ "⭐ **a genre project arrives with the genre's notes, not only its tracks**" ✓
+    ⇒ ⭐ 断言 **轨 > 0** ✓ ＋ ⭐ **音符 > 0** ✓ ＋ ⭐ **最小 `startBeats` ＝ 0** ✓（⭐ 独立于实现 ✓，⭐ 教训 191 的对策 ✓）
+  ⭐ 能力例 ✓：⭐ 斜坡 ⇒ ⭐ 最低 **40** ✓／⭐ 最高 **120** ✓；⭐ 量化 ⇒ ⭐ **起点不变** ✓ ＋ ⭐ **长度是 0.25 拍整数倍** ✓
+**⭐ 读数 ✓**：⭐ `tsc=0` ✓｜⭐ `lint=0` ✓｜⭐ 该文件**全过** ✓｜⭐ 四个导入判据（⭐ `midiArrangementImport` ✓／
+  `webLogicImport` ✓／⭐ `mcpImportSamplerKind` ✓）**全过** ✓ ⇒ ⭐ **没有破坏导入** ✓ ✓
+**⭐⭐ 因此第 1 档完成 ✓**：⭐ **量化** ✓ ＋ ⭐ **力度斜坡** ✓ 真的可用 ✓；⭐ 且 ⭐ **流派新建与导入都带上音符** ✓ ✓
+**⏳ 下一轮 ✓**：⭐ 第 2 档 ✓：⭐ **选择框** ✗ ＋ ⭐ **复制粘贴** ✗（⭐ 参照 ⭐ `rollModel` 的 ⭐ `notesInRect` ✓／⭐ `copyNotes` ✓／⭐ `deleteNotes` ✓）
+```
+
