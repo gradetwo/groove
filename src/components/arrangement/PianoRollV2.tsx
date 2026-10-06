@@ -52,6 +52,11 @@ export interface PianoRollV2Props {
    */
   onSelectionChange?: (at: readonly { pitch: number; startBeats: number }[]) => void;
   /**
+   * ⭐ **The whole selection removed at once.** Without it the roll reports one note at a time, as it always has; with it the
+   * panel commits a single command, so one press is one undo.
+   */
+  onRemoveSelection?: (at: readonly { pitch: number; startBeats: number }[]) => void;
+  /**
    * ⭐ **What `Space` means while this editor has focus.** Optional like the rest: a host with no transport draws a roll whose Space does nothing rather than one that lies about playing.
    */
   onToggleTransport?: () => void;
@@ -92,7 +97,7 @@ export function noteName(pitch: number): string {
 
 const isBlackKey = (pitch: number) => [1, 3, 6, 8, 10].includes(pitch % 12);
 
-export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResizeNote, beats = 16, onSetBars, lowPitch = 48, highPitch = 84, onAudition, onSelectionChange, onToggleTransport }: PianoRollV2Props) {
+export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResizeNote, beats = 16, onSetBars, lowPitch = 48, highPitch = 84, onAudition, onSelectionChange, onRemoveSelection, onToggleTransport }: PianoRollV2Props) {
   const { t } = useLanguage();
   const [lengthBeats, setLengthBeats] = useState(1);
   const [velocity, setVelocity] = useState(100);
@@ -189,8 +194,13 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
       if (doomed.length === 0) return;
       event.preventDefault();
       choose([]);
-      // ⭐ Each one goes through the removal the panel already commits, so one Delete is one undo.
-      for (const note of doomed) onRemoveNote({ pitch: note.pitch, startBeats: note.startBeats });
+      // ⭐ With the whole-selection report the panel commits one command, so one press is one undo; without it the older
+      // one-note-at-a-time path stays exactly as it was.
+      if (onRemoveSelection) {
+        onRemoveSelection(doomed.map((note) => ({ pitch: note.pitch, startBeats: note.startBeats })));
+      } else {
+        for (const note of doomed) onRemoveNote({ pitch: note.pitch, startBeats: note.startBeats });
+      }
     }
   };
 
