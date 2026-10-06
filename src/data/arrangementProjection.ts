@@ -7,7 +7,8 @@
  * The mapping is the obvious one, and the interesting part is what it does **not** do: it does not merge two lanes of the same kind (the v1 `laneId` exists precisely to keep them apart), and it does not
  * invent tracks for slots that are empty.
  */
-import type { SequencerPattern, SequencerTrack } from "../types/genre";
+import type { Genre, SequencerPattern, SequencerTrack } from "../types/genre";
+import { patternFromGenre } from "./genreMix";
 import type { ArrangementV2, TrackKindV2, TrackV2 } from "../types/arrangementV2";
 
 /** The v1 role to v2 kind, with one entry per role — so widening the v1 union becomes a type error here rather than a silent mis-projection. */
@@ -95,4 +96,12 @@ export function v1TrackKeys(song: ProjectionInput): string[] {
     }
   }
   return keys;
+}
+
+/**
+ * ⭐ **A genre's music, as an arrangement.** The genre's arranged pattern is projected into an arrangement — the two steps
+ * both the web route and the protocol creator need — so the two sides cannot drift apart in how a genre becomes a project.
+ */
+export function arrangementSeededFromGenre(songId: string, genre: Genre): ArrangementV2 {
+  return projectSongToV2({ id: songId, clips: { A: patternFromGenre(genre) } });
 }

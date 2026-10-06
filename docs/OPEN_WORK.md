@@ -16040,3 +16040,22 @@ export async function prepareArrangementAudioLanes(input: {
   ⭐ ③ ⭐ ⭐ **⑦-C**：⭐ 退 v1 store 与 ⭐ `types/song.ts` ✓／⭐ `songEdit.ts` ✓／⭐ `projectStorage` ✓ 及其判据 ✓ ⇒ ⭐ 发布 ✓
 ```
 
+### 六百一十二、✅ **共享助手落地：流派 ⇒ 编曲 只有一处实现（MCP 与 Web 同源）**（2026-10-06 09:15 ✓）
+
+```
+**⭐ 已落 ✓**：⭐ 助手 ✓：⭐ `src/data/arrangementProjection.ts` ✓ 新增
+  ⭐ `arrangementSeededFromGenre(songId: string, genre: Genre): ArrangementV2` ✓
+  ⭐ 实现 ✓：⭐ `return projectSongToV2({ id: songId, clips: { A: patternFromGenre(genre) } });` ✓
+  ⭐ 注释 ✓：⭐ "⭐ **A genre's music, as an arrangement.** … so the two sides cannot drift apart in how a genre becomes a
+    project**" ✓
+**⭐ 两侧同用 ✓**：
+  ⭐ Web ✓：⭐ `ArrangementViewV2` ✓ 的流派分支 ⇒ ⭐ `arrangementSeededFromGenre(songId, chosenGenre)` ✓（⭐ 去掉两个旧 import ✓）
+  ⭐ MCP ✓：⭐ `createMcpArrangement` ✓ 的流派分支 ⇒ ⭐ `arrangementSeededFromGenre(songId, genre)` ✓（⭐ 注释同步改名 ✓）
+**⭐ 读数 ✓**：⭐ `tsc=0` ✓｜⭐ `lint=0` ✓｜⭐ 三个相关判据**全过** ✓（⭐ 能力 ✓／⭐ `mcpArrangement` ✓／⭐ 面板 ✓）
+  ｜⭐ 全套单测 ✓（⭐ RC=0 ✓）
+**⭐⭐ 意义 ✓**：⭐ 这正是"⭐ **三方对齐**"⭐ 的落点 ✓ —— ⭐ **一处实现 ✓，⭐ 两处调用 ✓** ⇒
+  ⭐ 不会再出现"⭐ Web 按流派生成的和 MCP 生成的不一样**" ✗ ✓
+**⏳ 下一步 ✓**：⭐ **关掉 `/` 那条 v1 路由** ✓（⭐ `StudioView` 的 `SequencerPanel` ✓／⭐ `ArrangementPanel` ✓ ⇒ ⭐ v2 视图 ✓）
+  ⇒ ⭐ 然后 ⭐ **⑦-C** 退场 ✓ ⇒ ⭐ 发布 ✓
+```
+
