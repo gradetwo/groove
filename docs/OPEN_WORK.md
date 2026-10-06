@@ -16833,3 +16833,22 @@ describe("the grid's editing actions", () => {
   ⭐ ③ ⭐ 界面（⭐ 裁定一 ⇒ ⭐ 选 B ✓）并行推进 ✓
 ```
 
+### 六百四十五、✅ **镜像瘦身：真实字节已量，选定首删库（下一轮执行 ✓）**（2026-10-06 12:37 ✓）
+
+```
+**⭐ 工具按设计工作 ✓**：⭐ 不带 `--allow-shipped` ⇒ ⭐ **拒绝** ✗（⭐ 理由：⭐ "⭐ **is still in public/samples/manifest.json**" ✓）
+  ⇒ ⭐ 顺序被**强制** ✓：⭐ **先改清单 ✓ ⇒ 再删字节 ✓**（⭐ 与 §644 一致 ✓）
+**⭐⭐ 真实字节 ✓（⭐ 干跑 ✓，⭐ 未删任何东西 ✓）**：
+  ⭐ **`karoryfer-big-rusty-drums`** ✓ ⇒ ⭐ 4814 键 ＝ ⭐ **674.1 MB** ✓ ✓（⭐ 最大且最冷门 ✓）
+  ⭐ `cithara-barbarica` ✓ ⇒ ⭐ 275 键 ＝ ⭐ **228.0 MB** ✓｜⭐ `hungarian-zither` ✓ ⇒ ⭐ 219 键 ＝ ⭐ **170.1 MB** ✓
+  ⭐ `body-percussion` ✓ ⇒ ⭐ 58.9 MB ✓｜⭐ `jlearman-steel-drum` ✓ ⇒ ⭐ 36.8 MB ✓｜⭐ `ganjo` ✓ ⇒ ⭐ 23.4 MB ✓｜⭐ `karoryfer-cowsynth` ✓ ⇒ ⭐ 14.1 MB ✓
+**⭐⭐ 算术与选择 ✓**：⭐ 10.06 GB − ⭐ **0.674 GB** ≈ ⭐ **9.39 GB** ✓ ⇒ ⭐ **删一个即达标** ✓（⭐ 比删四五个小库更干净 ✓）
+  ⭐ 选 ⭐ **`karoryfer-big-rusty-drums`** ✓，理由 ✓：⭐ ① ⭐ 全仓仅 **2 处引用**（⭐ 与最冷门者并列最低 ✓）
+    ⭐ ② ⭐ **被替代** ✓：⭐ 打击乐主力是 ⭐ `virtuosity-drums`（⭐ 34 引用 ✓）＋ ⭐ `salamander-grand`（⭐ 37 ✓）
+    ⭐ ③ ⭐ 收益 **674 MB** ✓ ⇒ ⭐ **一次到位** ✓
+**⭐ 执行顺序 ✓（⭐ 下一轮 ✓）**：⭐ ① ⭐ **先核对其 2 处引用**（⭐ 若是某流派／乐器点名 ⇒ ⭐ 与删除同批改掉 ✓）
+  ⭐ ② ⭐ 从清单删条目 ✓ ③ ⭐ `remove_samples.mjs karoryfer-big-rusty-drums --apply` ✓（⭐ 自读必须 0 ✓）
+  ⭐ ④ ⭐ `check_mirror_reachability.mjs` ✓（⭐ 应 404 ✓）＋ ⭐ `check_removed_samples.mjs` ✓ ⑤ ⭐ 跑全套 ✓
+**⏳ 另 ✓**：⭐ 界面（⭐ 裁定一 ⇒ ⭐ B ✓）并行推进 ✓
+```
+
