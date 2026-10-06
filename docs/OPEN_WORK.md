@@ -13869,7 +13869,7 @@ export async function prepareArrangementAudioLanes(input: {
     `mcp/render/budget.ts` ✓／⭐ a criterion about what the render tool said of its own limits, deleted with it ✓／⭐ a criterion about that tool outliving a client, deleted with it ✓／
     a criterion about that tool answering inside a ceiling, deleted with it ✓／⭐ a copy criterion for the render tool, deleted with it ✓ | 各 2 ✓ |
   | ⭐ `mcp/registry.ts` ✓／⭐ `mcp/render/chunks.ts` ✓／⭐ `mcp/render/sampleCache.ts` ✓／⭐ `src/test/docsWorkflow.test.ts` ✓／
-    `src/test/mcpSong.test.ts` ✓／⭐ `src/test/mcpCapability.test.ts` ✓／⭐ the older budget guard criterion, whose guard now lives on the arrangement renderer ✓ | 各 1 ✓ |
+    ``mcpSong.test.ts`（⚠️ 已随 v1 模型一并删除 †b1752ee）` ✓／⭐ `src/test/mcpCapability.test.ts` ✓／⭐ the older budget guard criterion, whose guard now lives on the arrangement renderer ✓ | 各 1 ✓ |
   ⭐ **合计 50 处 ✓／22 个文件 ✓**
 **⭐⭐ 判断 ✓**：⭐ 这**远大于**此前任何一件 ✗（⭐ 四工具批次约 15 处 ✓）⇒ ⭐ **它是项目级大件** ✗
   ⇒ ⭐ 在余量不足时**不开工** ✓（⭐ 纪律 ✓）
@@ -14156,7 +14156,7 @@ export async function prepareArrangementAudioLanes(input: {
 
 ```
 **⭐ 量法 ✓**：⭐ 在 ⭐ `src/test/*.ts` 里找 ⭐ **同时**提 ⭐ `create_song` ✓ 与 ⭐ `resolution`／`swing` ✓ 的文件 ✓
-  ⇒ ⭐ **只有 1 处** ✓：⭐ `src/test/mcpSong.test.ts:31` ✓ 的 ⭐ `swing: 0,` ✓
+  ⇒ ⭐ **只有 1 处** ✓：⭐ ``mcpSong.test.ts`（⚠️ 已随 v1 模型一并删除 †b1752ee）:31` ✓ 的 ⭐ `swing: 0,` ✓
     ⚠️ ⭐ 而那是 ⭐ **v1 存储自身** ⭐ `createMcpSong` ✓ 的入参 ✓ ⇒ ⭐ **不是工具入参** ✗
     ⇒ ⭐ 它随 ⭐ **迁移 ⑦**（⭐ v1 数据模型 ✓）一起处理 ✓ ⇒ ⭐ **本批不动** ✓
   ⭐ 且 ⭐ 注册 `create_song` 的判据只有 ⭐ `docsWorkflow` ✓（⭐ 工作流清单 ✓，⭐ `create_song` **保留** ✓ ⇒ ⭐ 一致 ✓）
@@ -14180,7 +14180,7 @@ export async function prepareArrangementAudioLanes(input: {
   | ⭐ `mcp/song.ts` ✓ | 14 ✓（⭐ 多为字符串／注释 ✓） |
   | ⭐ `scripts/check_mcp.mjs` ✓ | 7 ✓ |
   | ⭐ `mcp/registrySong.ts` ✓ | 5 ✓（⭐ 工具块 ＋ 注释 ✓） |
-  | ⭐ `src/test/mcpSong.test.ts` ✓ | 5 ✓（⭐ v1 存储的判据 ✓） |
+  | ⭐ ``mcpSong.test.ts`（⚠️ 已随 v1 模型一并删除 †b1752ee）` ✓ | 5 ✓（⭐ v1 存储的判据 ✓） |
   | ⭐ 两个探针 ✓ | 5 ＋ 3 ✓ |
   | ⭐ 其余 10 个文件 ✓ | 各 1–2 ✓ |
   ⭐ **合计 52 处／16 文件 ✓** ⇒ ⭐ 与 `render_song`（50／22 ✓）**同级** ✗ ⇒ ⭐ **同样是项目级** ✗
@@ -14266,7 +14266,7 @@ export async function prepareArrangementAudioLanes(input: {
   | ⭐ `mcp/song.ts` ✓ | 6 ✓（⭐ 多为注释／字符串 ✓） |
   | ⭐ `scripts/check_mcp.mjs` ✓ | 6 ✓ |
   | ⭐ `mcp/registrySong.ts` ✓ | 3 ✓（⭐ 工具块 ＋ 注释 ✓） |
-  | ⭐ `src/test/mcpSong.test.ts` ✓ | 3 ✓（⭐ v1 存储判据 ✓） |
+  | ⭐ ``mcpSong.test.ts`（⚠️ 已随 v1 模型一并删除 †b1752ee）` ✓ | 3 ✓（⭐ v1 存储判据 ✓） |
   | ⭐ `src/test/mcpAddSectionCopy.test.ts` ✓ | 3 ✓（⚠️ ⭐ **整文件以它为对象** ✗） |
   | ⭐ `src/test/sectionCeilings.test.ts` ✓ | 2 ✓ |
   | ⭐ `src/test/mcpCapability.test.ts` ✓ | 2 ✓（⭐ 清单项 ⇒ 换 v2 ✓） |
@@ -14459,7 +14459,7 @@ export async function prepareArrangementAudioLanes(input: {
   | ⭐ 文件 ✓ | ⭐ 处数 ✓ | ⭐ 性质 ✓ |
   |---|---|---|
   | ⭐ `mcp/song.ts` ✓ | 14 ✓ | ⭐ 注释／字符串 ✓（⭐ v1 存储自身 ✓ ⇒ ⭐ **⑦** ✓） |
-  | ⭐ `src/test/mcpSong.test.ts` ✓ | 5 ✓ | ⭐ v1 存储判据 ✓（⚠️ ⭐ 判断它用**工具**还是 `createMcpSong` ✓） |
+  | ⭐ ``mcpSong.test.ts`（⚠️ 已随 v1 模型一并删除 †b1752ee）` ✓ | 5 ✓ | ⭐ v1 存储判据 ✓（⚠️ ⭐ 判断它用**工具**还是 `createMcpSong` ✓） |
   | ⭐ 两个探针 ✓ | 5 ＋ 3 ✓ | ⭐ 脚本 ✓ |
   | ⭐ `scripts/check_mcp.mjs` ✓ | 5 ✓ | ⚠️ ⭐ **含调用点** ✗（⭐ 见下 ✓） |
   | ⭐ `mcp/registryAnalysis.ts` ✓／⭐ `registryExamples.ts` ✓／⭐ `registrySong.ts` ✓／⭐ `mcp_call.mjs` ✓ | 各 2 ✓ | ⭐ 注释／工具块／脚本 ✓ |

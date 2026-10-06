@@ -328,7 +328,7 @@
 | ⭐ **系统／数据** | ✅ ⭐ 能力由 ⭐ **`takes`** 承接 ✓：⭐ `add_arrangement_take` ✓／`assign_arrangement_take_range` ✓（⭐ "同一轨的多个变体" ✓） | 本轮 ✓ |
 | ⭐ **Web 面** | **无变化** ✓ | — |
 
-**⭐ 触及 4 个文件 ✓**：⭐ `mcp/registrySong.ts`（工具块 272–302 ✓）｜⭐ `src/test/mcpSong.test.ts`（**整个 describe 327–368** ✓ —— ⭐ 边界先打印后删 ✓）｜
+**⭐ 触及 4 个文件 ✓**：⭐ `mcp/registrySong.ts`（工具块 272–302 ✓）｜⭐ ``mcpSong.test.ts`（⚠️ 已随 v1 模型一并删除 †b1752ee）`（**整个 describe 327–368** ✓ —— ⭐ 边界先打印后删 ✓）｜
   `src/test/mcpCapability.test.ts`（清单 ✓）｜⭐ `docs/MCP.md`（表行 ⇒ **记账为 takes** ✓）
 **⭐ 判据读数 ✓**：⭐ `check:mcp` **90 tools** ✓｜⭐ 十一道门全 0 ✓｜⭐ 相关判据全过 ✓｜⭐ 文档双门 0 ✓
 **⭐ 实施笔记 ✓**：⭐ python 中途语法错一次 ✗（⭐ 写盘前即死 ⇒ 树脏 0 ✓）⇒ ⭐ 修一行即过 ✓
