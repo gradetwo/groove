@@ -69,13 +69,16 @@ describe("the two libraries removed on 2026-10-03", () => {
     }
   });
 
-  it("leaves the manifest at 33 entries and 323 program-level assets", () => {
-    expect(MANIFEST.entries).toHaveLength(33);
+  it("leaves the manifest at 32 entries and 315 program-level assets", () => {
+    // ⭐ 2026-10-06: `karoryfer-big-rusty-drums` left the mirror — 8 programs, and the largest library the code named only
+    // twice. The file count in its archive was far larger than its program count, so the number here is the pin's, not the
+    // archive's.
+    expect(MANIFEST.entries).toHaveLength(32);
     const assets = catalogueFromManifestText(MANIFEST_TEXT, "").assets;
     // 34 → 32 entries and 327 → 322 assets when the two libraries left (they held 2 and 3 SFZ programs); 32 → 33 and
     // 322 → 323 on 2026-10-03, when `karoryfer-pastabass` was added as the one program `pick_bass` moved onto. The
     // numbers are asserted because a list that silently shrank (or grew back) is the failure this file exists for.
-    expect(assets).toHaveLength(323);
+    expect(assets).toHaveLength(315);
   });
 
   it("names neither library in any palette row, so no lane points at a recording that is gone", () => {
