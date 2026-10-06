@@ -4,21 +4,12 @@
  * ⚠️ Moved, not rewritten; helpers come from `./toolKit`.
  */
 import path from "node:path";
-import { MAX_BARS } from "../src/data/arrangementEdits";
-import { SequencerPattern } from "../src/types/genre";
-import { ClipSlot } from "../src/types/song";
-import { findGenre } from "./library";
-import { audioLaneReplyFields } from "./pattern";
-import { HEADLESS_POINTER_SENTENCE, headlessParameterDescription, renderBudgetSentence, renderCostSentence } from "./render/budget";
-import { renderAudio } from "./render/worker";
-import { ToolDefinition, clipSlotSchema, failure, patternSchema, unknownGenre } from "./toolKit";
+import { ToolDefinition, failure } from "./toolKit";
 import { setVocalMelody } from "./vocal";
 import { flattenMcpArrangement, setMcpTrackNotes } from "./arrangement";
 import { STEPS_PER_BAR } from "../src/data/noteEvents";
 import { z } from "zod";
 
-import { patternFromGenre } from "../src/data/genreMix";
-import { setMcpLaneSlots, setMcpTempo } from "./song";
 
 export const SONG_TOOLS: ToolDefinition[] = [
   {
