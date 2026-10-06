@@ -15745,3 +15745,33 @@ export async function prepareArrangementAudioLanes(input: {
 **⏳ 下一步 ✓**：⭐ 进 **⑦-B** ✓ —— ⭐ 先立"⭐ 音序器 ⇒ 编曲视图**"⭐ 的 v2 判据 ✓（⭐ 视图从 `tracks` ＋ ⭐ `bars` 生成 ✓）
 ```
 
+### 六百、⭐⭐ **⑦-B 能力面量全：55 个动作，50 个中立、5 个被编曲吸收**（2026-10-06 08:36 ✓）
+
+```
+**⭐ v1 store 的状态字段 ✓（`SequencerState` ✓）**：
+  ⭐ **v1 专有** ✗：⭐ `patterns: { A, B }` ✗｜⭐ `extraClips?: Partial<Record<ClipSlot, …>>` ✗｜⭐ `activeSlot: ClipSlot` ✗｜
+    `sections: SongSection[]` ✗｜⭐ `songChain: ClipSlot[]` ✗
+  ⭐ **模型中立** ✓：⭐ `currentGenre` ✓｜⭐ `pattern` ✓｜⭐ `bpm` ✓｜⭐ `swing` ✓｜⭐ `timeSignature` ✓｜⭐ `resolution` ✓｜
+    `stepCount` ✓｜⭐ `loopRange` ✓｜⭐ `isMetronome` ✓｜⭐ `isCountIn` ✓｜⭐ `parameterDimension` ✓｜⭐ `effectsRack` ✓｜
+    `canUndo`／⭐ `canRedo` ✓｜⭐ `blindTestMode` ✓
+**⭐ 动作面 ✓：55 个 ✗（`SequencerAction` ✓）**：
+  ⭐ **中立（⭐ ≈50 ✓）**：⭐ 步进与参数 ✓（⭐ `SET_STEP` ✓／⭐ `SET_VELOCITY` ✓／⭐ `SET_GATE` ✓／⭐ `SET_PROBABILITY` ✓／
+    `SET_RATCHET` ✓／⭐ `SET_PITCH` ✓／⭐ 五个 ⭐ `BATCH_SET_*` ✓）｜⭐ 轨操作 ✓（⭐ `CLEAR_TRACK` ✓／⭐ `SHIFT_TRACK` ✓／
+    `REORDER_TRACKS` ✓／⭐ `SET_TRACK_{INSTRUMENT,LENGTH,PAN,SAMPLE,SENDS,SWING,INSERT}` ✓／⭐ `REPLACE_TRACK_INSERT` ✓）｜
+    ⭐ 生成 ✓（⭐ `APPLY_EUCLIDEAN` ✓／⭐ `SMART_FILL_TRACK` ✓／⭐ `LOAD_{ARPEGGIATED_SEQUENCE,CHORDS,MASTERCLASS_PATTERN}` ✓）｜
+    ⭐ 全局 ✓（⭐ `SET_{BPM,SWING,TIME_SIGNATURE,RESOLUTION,STEP_COUNT,LOOP_RANGE,METRONOME,COUNT_IN,PARAMETER_DIMENSION,`
+    ⭐ `VOLUME,SCALE,EFFECTS_RACK,GENRE}` ✓）｜⭐ 其他 ✓（⭐ `TOGGLE_{MUTE,SOLO,PHASE_INVERT,BLIND_TEST}` ✓／⭐ `COMMIT_PATTERN` ✓／
+    ⭐ `LOAD_PROJECT` ✓／⭐ `RESTORE_SNAPSHOT` ✓／⭐ `RESET_TO_GENRE_DEFAULT` ✓）
+  ⭐ **v1 专有 ✗（5 ✓）**：⭐ `SWITCH_PATTERN_SLOT` ✗｜⭐ `COPY_PATTERN_SLOT` ✗｜⭐ `SET_SECTIONS` ✗｜⭐ `SET_SONG_CHAIN` ✗｜
+    `TOGGLE_SONG_MODE` ✗
+**⭐⭐ 判定 ✓（⭐ 依"⭐ 按能力退场**"⭐ 铁律 ✓）**：
+  ⭐ 前 50 个 ⇒ ⭐ **译到编曲模型上** ✓（⭐ 步进 ⇒ ⭐ `notes` 的网格视图 ✓；⭐ 轨 ⇒ ⭐ `tracks` ✓；⭐ bpm／摇摆／拍号／
+    循环／节拍器／效果器 ⇒ ⭐ 编曲与工程的字段 ✓）
+  ⭐ 后 5 个 ⇒ ⚠️ ⭐ **能力被编曲模型吸收** ✓，⭐ **不是删除** ✓ ✓：
+    ⭐ `SWITCH_PATTERN_SLOT` ✗／⭐ `COPY_PATTERN_SLOT` ✗ ⇒ ⭐ v2 用 ⭐ **轨与 takes** ✓ 表达"⭐ 换／复制一段**" ✓
+    ⭐ `SET_SECTIONS` ✗／⭐ `SET_SONG_CHAIN` ✗／⭐ `TOGGLE_SONG_MODE` ✗ ⇒ ⭐ **v2 的编曲本身就是线性形态** ✓
+      ⇒ ⭐ 即"⭐ 歌曲模式**"⭐ **恒真** ✓ ⇒ ⭐ 这三者成为**无需动作** ✓（⭐ 面板始终显示线性编曲 ✓）
+**⭐ 下一步 ✓**：⭐ **先立判据** ✓ —— ⭐ "⭐ 音序器视图从 ⭐ `tracks` ＋ ⭐ `bars` 生成，⭐ 步进写回 ⭐ `notes`**" ✓
+  ⇒ ⭐ 判据能红 ⇒ ⭐ 再改实现 ✓（⭐ 铁律：⭐ 序绝不反 ✓）
+```
+
