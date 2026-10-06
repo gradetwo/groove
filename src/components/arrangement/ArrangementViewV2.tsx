@@ -265,6 +265,8 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
    */
   const { commit, undo: undoEdit, redo: redoEdit, canUndo, canRedo, undoAction, redoAction } = useArrangementHistory(arrangement, setArrangement);
   const [selectedTrackId, setSelectedTrackId] = useState<string | undefined>(undefined);
+  /** ⭐ **What the roll has marked.** The roll owns the mark; the toolbar acts on it, so the view keeps a copy. */
+  const [rollSelection, setRollSelection] = useState<readonly { pitch: number; startBeats: number }[]>([]);
   /**
    * ⭐ **Which bar the strips show, which is not the transport's bar.** `bar` above is where the transport is in the underlying song and is what the take selector marks; this is a view choice — which sixteen squares a row draws. They are separate because an arrangement of eight bars still
    * has one transport, and a person looking at bar three has not thereby moved the playhead.
@@ -861,6 +863,33 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           Quantise lengths
         </button>
         {/**
+          * ⭐ **A copy placed by the selection's own length.** One command, so one undo, and the notes it lands on are the
+          * notes it wrote — read from the arrangement rather than from the mark, which carries a pitch and a start and no more.
+          */}
+        <button
+          type="button"
+          data-testid="arrangement-copy-selection"
+          className="px-2 py-1 rounded text-xs text-text opacity-90"
+          disabled={editableTrackId === undefined || rollSelection.length === 0}
+          onClick={() => {
+            if (editableTrackId === undefined || rollSelection.length === 0) return;
+            const from = Math.min(...rollSelection.map((mark) => mark.startBeats));
+            const to = Math.max(...rollSelection.map((mark) => mark.startBeats));
+            const delta = to > from ? to - from : 1;
+            const notes = arrangement.notesByTrack?.[editableTrackId] ?? [];
+            const marked = new Set(rollSelection.map((mark) => `${mark.pitch}@${mark.startBeats}`));
+            const copies = notes
+              .filter((note) => marked.has(`${note.pitch}@${note.startBeats}`))
+              .map((note) => ({ ...note, startBeats: note.startBeats + delta }));
+            const landed = new Set(copies.map((note) => `${note.pitch}@${note.startBeats}`));
+            const kept = notes.filter((note) => !landed.has(`${note.pitch}@${note.startBeats}`));
+            const after = { ...arrangement, notesByTrack: { ...arrangement.notesByTrack, [editableTrackId]: [...kept, ...copies] } };
+            commit(setterCommand("Copy selection", (_current, value) => value, arrangement, after));
+          }}
+        >
+          Copy selection
+        </button>
+        {/**
          * ⭐ **The transport, with the state the owner reported as missing.**
          *
          * Play follows the studio's own convention rather than inventing one: `Toolbar.tsx` draws the same control as a
@@ -1388,6 +1417,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
                  * from the arrangement on screen rather than from the roll's own props: the roll is a reading of
                  * `notesByTrack`, so a second copy of the note here would be the copy that goes stale.
                  */
+                onSelectionChange={setRollSelection}
                 onRemoveNote={(at) => commit(removeTrackNoteCommand(selected.id, at, noteFor(selected.id, at)))}
                 /**
                  * ⭐ **One press, one undo.** The roll reports the whole selection when it can, and this commits a single
