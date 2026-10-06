@@ -16689,3 +16689,28 @@ describe("the grid's editing actions", () => {
   `ninth`／`sus4`／`sus2`／`power` ✓）⇒ ⭐ 然后界面入口 ✓
 ```
 
+### 六百三十九、⭐⭐ **第 3 档最后一件：和弦图章语义**（2026-10-06 12:09 ✓）
+
+```
+**⭐ 已落地 ✓**：⭐ 琶音 ⭐ `20ce9d9` ✓ 经 `git show --stat` **核实** ✓（⭐ 4 文件／**111** 行 ✓）
+  ⭐ 另 ✓：⭐ 已推 head ⭐ `0d42371` ✓ ⇒ ⭐ 连奏与琶音均在库 ✓
+**⭐ `chordNotesForStamp(root, scale, chordType)` ✓（`rollModel.ts:784–800` ✓）**：
+  ⭐ `root = Math.round(targetRoot)` ✓
+  ⭐ `note` ⇒ ⭐ `[root]` ✓
+  ⭐ `ninth` ⇒ ⭐ `[root, +4, +7, +11, +14]` ✓（⭐ **显式音程** ✓）
+  ⭐ `sus2` ⇒ ⭐ `[root, +2, +7]` ✓（⭐ **显式** ✓）
+  ⭐ `triad`／⭐ `seventh`／⭐ `sus4`／⭐ `power` ⇒ ⭐ 委托 ⭐ `chordVoicingForStep(root, scale, { style })` ✓
+**⭐ `addChord(...)` ✓（`:804–825` ✓）**：
+  ⭐ `stepIdx < 0 || >= stepCount` ⇒ ⭐ **原样返回** ✓
+  ⭐ `note` ⇒ ⭐ 走 ⭐ `addNote(...)` ✓（⭐ 单音 ✓）
+  ⭐ 否则 ✓：⭐ **先移除该步原有音符** ✓（⭐ `filter(n => n.stepIdx !== stepIdx)` ✓）⇒ ⭐ 解析和弦音高 ✓ ⇒ ⭐ **一次全部放在该步** ✓
+**⭐⭐ v2 对应物 ✓（⭐ 以拍计 ✓）**：⭐ `stampChordInRect(arrangement, trackId, rect, { type, rootMidi, velocity?, lengthBeats? })` ✓
+  ⭐ `note` ⇒ ⭐ 单音路径 ✓；⭐ 其余 ⇒ ⭐ **替换该起点上的音符** ✓（⭐ 与 §628 的"⭐ 落点替换**"同法 ✓）＋ ⭐ 写入解析出的音高 ✓
+**⚠️ 一处待量 ✓（⭐ 下一轮第一件事 ✓）**：⭐ `chordVoicingForStep` **住在哪一层** ✗
+  ⭐ 若属**数据层**（⭐ 非 v1 网格 ✓）⇒ ⭐ **可直接复用** ✓；⭐ 若属 v1 ⇒ ⭐ 需在 v2 层实现这**四种风格**（⭐ `triad`／⭐ `seventh`／⭐ `sus4`／⭐ `power` ✓）
+**⭐ 判据计划 ✓（⭐ 独立量 ✓）**：⭐ ① ⭐ `note` ⇒ ⭐ 该起点**恰一个**音符 ✓ 且音高 ＝ root ✓
+  ⭐ ② ⭐ `sus2` ⇒ ⭐ 音高集合 ＝ ⭐ `{root, root+2, root+7}` ✓（⭐ 显式 ⇒ ⭐ 不依赖风格表 ✓，⭐ 最稳的一条 ✓）
+  ⭐ ③ ⭐ `ninth` ⇒ ⭐ 五个音高 ✓ ④ ⭐ **替换**：⭐ 该起点原有的**非图章**音符消失 ✓ ⑤ ⭐ **矩形外不变** ✓
+**⏳ 下一轮 ✓**：⭐ 量 `chordVoicingForStep` 的层 ✓ ⇒ ⭐ 落和弦图章（⭐ 模型 ✓＋判据 ✓＋先问扫描 ✓＋台账 ✓）⇒ ⭐ 然后界面入口 ✓
+```
+
