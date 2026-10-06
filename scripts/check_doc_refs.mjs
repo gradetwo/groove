@@ -129,6 +129,18 @@ const PROPOSED = new Map([
       "Removed with the v1 arrangement chain (OPEN_WORK.md §661). The arrangement surface draws its own lanes; this was the v1 row and cell grid.",
     ],
     /**
+     * ⭐ **Removed with the v1 sequencer and its edit layer, 2026-10-06.** These are the documents that record what each file
+     * was and which criteria covered it; declaring them keeps those lines accurate instead of rewriting them, which is the
+     * same reason the phone-shell entries above are declared.
+     */
+    ["src/features/arrangement/songEdit.ts", "Removed with the v1 arrangement chain (OPEN_WORK.md §661-664). It edited v1 sections, a concept the v2 model does not have."],
+    ["src/test/songEdit.test.ts", "Removed with the v1 arrangement chain. It tested the section and bar-ruler edit layer above."],
+    ["src/components/sequencer/EuclideanModal.tsx", "Removed with the v1 sequencer chrome (OPEN_WORK.md §664). One of the three overlays StudioView rendered."],
+    ["src/features/sequencer/hooks/useUrlShareLoad.ts", "Removed with the v1 sequencer chrome. The route still carries a genre; this hook resolved a shared payload into the v1 store."],
+    ["src/features/sequencer/hooks/useAutosaveStatus.ts", "Removed with the v1 sequencer chrome. The v2 store reports every change to its writer as it happens."],
+    ["src/test/autosaveStatus.test.tsx", "Removed with the v1 sequencer chrome. It tested the autosave indicator above."],
+    ["src/features/sequencer/hooks/usePatternActions.ts", "Removed with the v1 sequencer chrome (OPEN_WORK.md §664). Pattern commands for the deleted studio."],
+    /**
      * ⭐ **The criteria that covered the chain, removed with it on 2026-10-06.** Their documents record which claim each
      * one guarded, and every claim was read as a capability before the file was deleted: two are covered by the
      * arrangement surface's own criteria, and three are recorded as differences in OPEN_WORK.md §662.
