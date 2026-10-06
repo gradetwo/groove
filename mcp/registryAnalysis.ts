@@ -7,7 +7,6 @@ import { SequencerPattern } from "../src/types/genre";
 import { loudnessReport, shareUrl } from "./exporting";
 import { HEADLESS_POINTER_SENTENCE, headlessParameterDescription } from "./render/budget";
 import { analyseWavFile, renderAudio } from "./render/worker";
-import { flattenMcpSong, makeUniqueMcpSection } from "./song";
 import { flattenMcpArrangement } from "./arrangement";
 import { ToolDefinition, estimateKey, failure, patternFromArgs, patternSchema, unknownGenre } from "./toolKit";
 import { z } from "zod";
