@@ -85,7 +85,7 @@ import { useArrangementFileActions } from "../../features/arrangement/useArrange
 import { playArrangementV2, type ArrangementPlayer, type ArrangementTransportState } from "../../audio/playArrangementV2";
 import { stepsPerBarFor, STEPS_PER_BAR, STEPS_PER_BEAT } from "../../data/noteEvents";
 import { announcer } from "../../platform/announcer";
-import { formBarsV2 } from "../../data/arrangementFormPlan";
+import { applyForm } from "../../data/arrangementFormPlan";
 
 /**
  * The snap values the toolbar offers, coarsest to finest. The **value** is shown, because a toggle's state is not a value.
@@ -947,7 +947,11 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           type="button"
           data-testid="arrangement-form-loop"
           className="px-2 py-1 rounded text-xs text-text opacity-90"
-          onClick={() => commit(setArrangementBarsCommand(bars, formBarsV2("loop")))}
+          onClick={() =>
+            commit(
+              setterCommand("Form: loop", (_current, value) => value, arrangement, applyForm(arrangement, "loop"))
+            )
+          }
         >
           Loop
         </button>
@@ -955,7 +959,11 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           type="button"
           data-testid="arrangement-form-club"
           className="px-2 py-1 rounded text-xs text-text opacity-90"
-          onClick={() => commit(setArrangementBarsCommand(bars, formBarsV2("club")))}
+          onClick={() =>
+            commit(
+              setterCommand("Form: club", (_current, value) => value, arrangement, applyForm(arrangement, "club"))
+            )
+          }
         >
           Club
         </button>
@@ -963,7 +971,11 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           type="button"
           data-testid="arrangement-form-song"
           className="px-2 py-1 rounded text-xs text-text opacity-90"
-          onClick={() => commit(setArrangementBarsCommand(bars, formBarsV2("song")))}
+          onClick={() =>
+            commit(
+              setterCommand("Form: song", (_current, value) => value, arrangement, applyForm(arrangement, "song"))
+            )
+          }
         >
           Song
         </button>

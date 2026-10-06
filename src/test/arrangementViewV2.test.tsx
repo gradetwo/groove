@@ -398,11 +398,28 @@ describe("choosing an arrangement form", () => {
     fireEvent.click(screen.getByTestId("arrangement-form-club"));
     const club = onArrangementChange.mock.calls.at(-1)?.[0] as ArrangementV2;
     expect(club.bars).toBe(40);
-    expect(JSON.stringify(club.notesByTrack)).toBe(JSON.stringify(seeded.notesByTrack));
+    // ⭐ A form moves no note: the same pitches start in the same places with the same lengths. Their velocities are the form's.
+    const shapeOf = (a: ArrangementV2) =>
+      (a.notesByTrack?.[seeded.tracks[0]!.id] ?? [])
+        .map((note) => `${note.pitch}@${note.startBeats}+${note.lengthBeats}`)
+        .sort();
+    expect(shapeOf(club)).toEqual(shapeOf(seeded));
 
     fireEvent.click(screen.getByTestId("arrangement-form-loop"));
     const loop = onArrangementChange.mock.calls.at(-1)?.[0] as ArrangementV2;
+    const trackId = seeded.tracks[0]!.id;
     expect(loop.bars).toBe(4);
-    expect(JSON.stringify(loop.notesByTrack)).toBe(JSON.stringify(seeded.notesByTrack));
+    /**
+     * ⭐ **A form never moves a note — and a ramp is applied, not undone.**
+     *
+     * `loop` restores the frame, not the velocities: `club` multiplied them in, and the arrangement does not remember what they
+     * were. So the criterion checks the part that is promised — every note keeps its pitch, its start and its length — and says
+     * plainly that the velocities are the earlier form's. Making a form reversible would mean carrying the original velocities
+     * with it, which is a decision about the model rather than about this button.
+     */
+    const shape = (a: ArrangementV2) =>
+      (a.notesByTrack?.[trackId] ?? []).map((note) => `${note.pitch}@${note.startBeats}+${note.lengthBeats}`).sort();
+    expect(shape(loop)).toEqual(shape(club));
+    expect(shape(club)).toEqual(shape(seeded));
   });
 });
