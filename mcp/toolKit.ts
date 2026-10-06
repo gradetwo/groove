@@ -131,7 +131,6 @@ import {
 import type { ProgressReporter } from "./render/progress";
 import { getGenreLoudnessTrimDb } from "../src/data/genreMix";
 import { setVocalMelody } from "./vocal";
-import { addMcpSection, createMcpSong, duplicateMcpSection, flattenMcpSong, getMcpSong, importMcpSong, makeUniqueMcpSection, mcpSongHistory, setMcpClip, setMcpLaneSlots, setMcpTempo, summariseSong, undoMcpSong } from "./song";
 import { deleteMcpCustomGenre, duplicateMcpCustomGenre, getMcpCustomGenre, listMcpCustomGenres, saveMcpCustomGenre } from "./customGenres";
 import type { ClipSlot } from "../src/types/song";
 import type { SequencerPattern } from "../src/types/genre";

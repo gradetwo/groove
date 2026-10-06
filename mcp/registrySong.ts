@@ -11,7 +11,6 @@ import { findGenre } from "./library";
 import { audioLaneReplyFields } from "./pattern";
 import { HEADLESS_POINTER_SENTENCE, headlessParameterDescription, renderBudgetSentence, renderCostSentence } from "./render/budget";
 import { renderAudio } from "./render/worker";
-import { addMcpSection, createMcpSong, duplicateMcpSection, flattenMcpSong, getMcpSong, mcpSongHistory, setMcpClip, summariseSong, undoMcpSong } from "./song";
 import { ToolDefinition, clipSlotSchema, failure, patternSchema, unknownGenre } from "./toolKit";
 import { setVocalMelody } from "./vocal";
 import { flattenMcpArrangement, setMcpTrackNotes } from "./arrangement";

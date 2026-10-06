@@ -60,7 +60,6 @@ import { PatternOp, applyPatternOps, findTrack, validatePattern } from "./patter
 import { applyChordProgression } from "./progression";
 import { auditionInstrumentNote } from "./render/worker";
 import { changeUserLibraries } from "./sampleLibraries";
-import { getMcpSong } from "./song";
 import { describeGs1Sound, opSchema, patternFromArgs, patternSchema, unknownGenre } from "./toolKit";
 
 export const ARRANGEMENT_TOOLS: ToolDefinition[] = [

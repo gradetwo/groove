@@ -14,7 +14,6 @@ import { findGenre } from "./library";
 import { audioLaneReplyFields } from "./pattern";
 import { HEADLESS_POINTER_SENTENCE, headlessParameterDescription, renderBudgetSentence, renderCostSentence } from "./render/budget";
 import { auditionInstrumentNote, renderAudio, renderStems } from "./render/worker";
-import { flattenMcpSong } from "./song";
 import { ToolDefinition, failure, patternFromArgs, patternSchema, unknownGenre } from "./toolKit";
 import { z } from "zod";
 
