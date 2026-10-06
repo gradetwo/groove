@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import type { AudioEngine } from "../../audio/AudioEngine";
 import { AudioSettingsTab } from "./AudioSettingsTab";
+import { getActiveAudioEngine } from "../../audio/activeEngine";
 import {
   DENSITY_TIERS,
   loadLayoutPrefs,
@@ -231,8 +232,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
 
         <div className="overflow-y-auto pr-1">
+          {/* ⭐ **The panel reads the engine that is actually running.**
+              Its controls write through an engine setter and then re-read what the engine clamped to, so with `null` they look inert while
+              the rest of the panel (GS-1, which the view owns) keeps working. The arrangement surface creates its engine inside the view and
+              registers it in the active-engine slot, so the slot -- not a prop the shell may never have been given -- says which engine is
+              live. The prop still wins when a host passes one, which is how the criteria render this. */}
           {tab === "audio" && (
-            <AudioSettingsTab engine={engine} gs1Enabled={gs1Enabled} onToggleGs1={onToggleGs1} />
+            <AudioSettingsTab
+              engine={engine ?? getActiveAudioEngine()}
+              gs1Enabled={gs1Enabled}
+              onToggleGs1={onToggleGs1}
+            />
           )}
 
           {/* ⭐ Its own tab rather than a corner of Interface: this is about what you can play, not how it looks,

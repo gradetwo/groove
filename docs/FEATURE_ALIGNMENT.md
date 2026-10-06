@@ -813,3 +813,11 @@
 | ✅ **发布矩阵按 v2 进门顺序改指** | ⭐ `scripts/test_matrix.js` ✓：⭐ ① ⭐ 网格选择器改指 `data-testid="arrangement-grid"` ✓｜⭐ ② ⭐ helper `ensureArrangementMounted` ✓（⭐ 先等"⭐ 门／首次提示／新建面板／网格**"四者之一 ✓）｜⭐ ③ ⭐ 过音频门 ✓（⭐ 启动参数加 `--autoplay-policy=no-user-gesture-required` ✓ ＋ `force` 点击 ✓）｜⭐ ④ ⭐ 关首次运行提示 ✓（⭐ `first-run-prompt-dismiss` ✓）｜⭐ 5 处入口全部调用 ✓ | §746‑752 |
 | ⚠️ **仍在查** | ⭐ 本地全链条复验：⭐ 门 ⇒ 提示 ⇒ 模板 ⇒ Create ⇒ ⭐ **网格仍未出现** ✗，⭐ 且**无运行时错误** ✗ ⇒ ⭐ 下一步读"⭐ 面板 vs 网格**"的渲染分支 ✓ | §756 |
 
+## 2026-10-07 05:55 回填（第 4 条规矩：改完实现回来改表）
+
+| 面 | 变化 | 依据 |
+|---|---|---|
+| 🚨 **Web 面：设置面板的引擎为 `null`，控件看起来失灵** | ⭐ `App.tsx:196` 的 `engineInstance` 只由 `handleEngineReady`（`:266`）设置 ✓，⭐ 而 v2 面把引擎留在编曲视图内并注册到 `activeEngine` ✓（`NewProjectView:67` ✓）⇒ ⭐ **无人调用 `handleEngineReady`** ✗ ⇒ ⭐ `SettingsModal` 拿到 `null` ✓｜⭐ 后果：⭐ `AudioSettingsTab` 的控件"写引擎后回读"（`:19` 注释 ✓、`:55` 的 `if (!engine) return` ✓）⇒ ⭐ 拖动**主推子**时数字不变 ✗（⭐ GS-1 开关正常，⭐ 因为它是**视图持有的状态** ✓） | §844‑853 |
+| ✅ **修法** | ⭐ `SettingsModal` 的音频页：⭐ `engine={engine ?? getActiveAudioEngine()}` ✓ ⇒ ⭐ prop 优先（⭐ 判据靠它注入 ✓），⭐ 为 null 时回退到**活跃引擎注册表** ✓｜⭐ 不动 `App` 的生命周期（⭐ 它还管 `analyser` 与 `isPlaying` 轮询 ✓）| §852‑853 |
+| ⚠️ **写 JSX 注释的位置** | ⭐ `{/* … */}` **本身**就是一个表达式容器 ✓ ⇒ ⭐ 不能放进另一个（⭐ 如 `{cond && ( … )}` 的括号内 ✓），⭐ 否则报 `')' expected` ✗ ⇒ ⭐ 注释要放在**该行之前** ✓ | §853 |
+
