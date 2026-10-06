@@ -16615,3 +16615,21 @@ describe("the grid's editing actions", () => {
 **⏳ 下一轮 ✓**：⭐ 四操作落法同上（⭐ 模型 ✓＋判据 ✓＋`EXCLUDED`／`UI_LEDGER`（⭐ 按 §633 的写法 ✓）＋台账 ✓）
 ```
 
+### 六百三十五、✅ **连奏落地（含两条登记表规则再次印证 ✓）**（2026-10-06 11:39 ✓）
+
+```
+**✅ 已落 ✓**：⭐ ① ⭐ 模型 ✓：⭐ `legatoNotesInRect(arrangement, trackId, rect, { loopEndBeats?, maxLengthBeats?, minLengthBeats? })` ✓
+  ⭐ 语义照 §634 ✓：⭐ 伸到**下一个发响起点** ✓（⭐ 无后继 ⇒ ⭐ `loopEndBeats ?? 编曲末` ✓）⭐ **也会缩短** ✓
+  ⚠️ ⭐ **与 v1 的一处差异（已写明 ✓）**：⭐ v1 的上限是**音频路径的 2 步夹取** ✗ ⇒ ⭐ v2 侧**没有**该常量 ✗
+    ⇒ ⭐ 故 ⭐ 默认上限 ＝ **到界限的距离本身** ✓，⭐ 调用方可给更小的 `maxLengthBeats` ✓（⭐ 注释已说明 ✓）
+  ⭐ ② ⭐ 判据 ✓：⭐ 三例 ✓（⭐ `[0,2,4]` ⇒ ⭐ 长度 `[2,2,4]` ✓（⭐ 末个到循环末 8 ✓）｜⭐ 后继更近（0.5 ✓）⇒ ⭐ 缩短到 0.5 ✓
+    ｜⭐ 矩形外音符长度**不变** ✓）
+  ⭐ ③ ⭐ `EXCLUDED` ✓（⭐ 1 条 ✓：⭐ 协议用 `set_arrangement_note_length` 逐个设 ✓）⭐ ④ ⭐ `UI_LEDGER` ✗ ⇒ ⚠️ **又拦一次** ✓
+**⚠️ 教训 194 ✓（⭐ 再次印证 §633 ✓）**：⭐ `webEntryReachability` 报 ✗：
+  ⭐ "⭐ the ledger and the scan disagree. Unreachable today: addTrackNotes, **removeNotesWithinRect**, renameTrack, …" ✓
+  ⇒ ⭐ **`legatoNotesInRect` 不在扫描认定的"够不到"集合里** ✗ ⇒ ⭐ 那条 `UI_LEDGER` **不该存在** ✗ ⇒ ⭐ **撤下** ✓ ⇒ ⭐ 转绿 ✓
+  ⭐ 做法（⭐ 定死 ✓）：⭐ **先跑 `webEntryReachability` 看它印出的集合** ✓ ⇒ ⭐ **只登记集合里的名字** ✓ ⇒ ⭐ 理由写明位置与决定人 ✓
+**⭐ 读数 ✓**：⭐ `tsc=0` ✓｜⭐ 三个判据文件**全过** ✓（⭐ 连奏 ✓／⭐ `mcpCoverage` ✓／⭐ `webEntryReachability` ✓）
+**⏳ 下一轮 ✓**：⭐ 第 3 档余下两件（⭐ 琶音 ✓／⭐ 和弦图章 ✓）＋ ⭐ 界面入口（⭐ 框选 ＋ 按钮 ✓）
+```
+
