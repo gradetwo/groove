@@ -42,7 +42,6 @@ import { RouterProvider, useRouter } from "./app/router";
 const SettingsModal = React.lazy(() =>
   import("./components/settings/SettingsModal").then((m) => ({ default: m.SettingsModal }))
 );
-const StudioView = React.lazy(() => import("./views/StudioView").then((m) => ({ default: m.StudioView })));
 // ⭐ The new arrangement, reached only by `/new` — the route that deliberately has no genre.
 const NewProjectView = React.lazy(() => import("./views/NewProjectView").then((m) => ({ default: m.NewProjectView })));
 const ChordProgressionsView = React.lazy(() => import("./views/ChordProgressionsView").then((m) => ({ default: m.ChordProgressionsView })));

@@ -110,6 +110,41 @@ const PROPOSED = new Map([
     "src/hooks/useLabelArt.ts",
     "Removed 2026-10-05 on the owners decision (OPEN_WORK.md §371): it loaded the record labels artwork, its intended consumer VinylCanvas was retired with the phone shell, and a repo-wide search found no reference to it or to the LabelArt type. The line in §371 is the record of the removal, not a claim that the file exists.",
   ],
+    /**
+     * ⭐ **Removed with the v1 arrangement chain, by the owner's switch of 2026-10-06.** The studio tab renders the
+     * arrangement editor now; these three files were unmounted first, then deleted. The documents that name them record
+     * what the chain was and which criteria covered it, so their lines were accurate when written -- the same reason the
+     * phone-shell entries above are declared rather than edited.
+     */
+    [
+      "src/views/StudioView.tsx",
+      "Removed with the v1 arrangement chain (OPEN_WORK.md §661-662). The tab renders the arrangement editor now; this path records the surface that was replaced.",
+    ],
+    [
+      "src/components/arrangement/ArrangementPanel.tsx",
+      "Removed with the v1 arrangement chain (OPEN_WORK.md §661). It drew one region per v1 section, a concept the v2 model does not have.",
+    ],
+    [
+      "src/components/arrangement/TrackRows.tsx",
+      "Removed with the v1 arrangement chain (OPEN_WORK.md §661). The arrangement surface draws its own lanes; this was the v1 row and cell grid.",
+    ],
+    /**
+     * ⭐ **The criteria that covered the chain, removed with it on 2026-10-06.** Their documents record which claim each
+     * one guarded, and every claim was read as a capability before the file was deleted: two are covered by the
+     * arrangement surface's own criteria, and three are recorded as differences in OPEN_WORK.md §662.
+     */
+    [
+      "src/test/arrangementPanel.test.tsx",
+      "Removed with the v1 arrangement chain (OPEN_WORK.md §661). It tested the region-per-section panel, a v1 sections concept.",
+    ],
+    [
+      "src/test/catalogueRecordingPicker.test.tsx",
+      "Removed with the v1 arrangement chain (OPEN_WORK.md §662). It rendered StudioView; the picker component itself survives and is used by the arrangement surface's mapping view.",
+    ],
+    [
+      "src/test/studioSamplerLoading.test.tsx",
+      "Removed with the v1 arrangement chain (OPEN_WORK.md §662). Its core claim -- do not play before the samples are ready -- holds on the arrangement route; the waiting message is recorded as a difference.",
+    ],
   [
     "src/components/sequencer/MobileTransportBar.tsx",
     "Removed with the phone shell. OPEN_WORK.md §十三 records which criteria (`mobileTransportBar`, `mobileSharedBottomRow`) tested it.",

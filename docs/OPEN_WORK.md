@@ -17229,4 +17229,35 @@ describe("the grid's editing actions", () => {
 **⭐ 退役顺序（先立判据再删 ✓）** ✓：⭐ 切换判据已在位 ✓（`700cfec` ✓，⭐ 已做反证能红 ✓）⇒
   ⭐ 下一步 ✓：⭐ 删三个文件 ＋ `App.tsx:45` 的懒加载声明 ✓，⭐ 同时处置上表六条判据 ✓
 ```
+### 六百六十二、⭐ **退役进行中：三条判据待替换，四条承诺的现状**（2026-10-06 ✓ 未推送 ✓）
+
+```
+**⭐ 已完成 ✓**：⭐ 删 `StudioView.tsx` ✓（1477 行 ✓）／`ArrangementPanel.tsx` ✓（575 ✓）／`TrackRows.tsx` ✓（101 ✓）⇒ **2153 行** ✓
+  ⭐ 删 `App.tsx` 的懒加载声明 ✓｜⭐ 整删两条判据 ✓（`arrangementPanel` 395 行 ✓／`trackRowsView` 91 行 ✓）
+  ⭐ 修剪 `StudioConsoleFloat` ✓：⭐ 删浮动块 96 行 ✓ ＋ 删两个失去消费者的辅助函数 28 行 ✓ ⇒ ⭐ **保留独立 `/console` 路由那一块** ✓，⭐ 且它**通过** ✓
+  ⭐ `tsc` 错误 **12 ⇒ 3** ✓；⭐ `lint=0` ✓
+**⚠️ 剩余 3 条判据（都渲染 `StudioView` ✗）** ✓
+  ⭐ `catalogueRecordingPicker.test.tsx:129` ✓｜`studioSamplerLoading.test.tsx:245` ✓｜`transportPreparationFeedback.test.tsx:200` ✓
+  ⇒ ⭐ **它们不是"改指"能解决的** ✗：⭐ 它们渲染整个 v1 视图并读其内部状态 ✗ ⇒ ⭐ 需要**写 v2 版判据** ✓
+**⭐ 四条承诺的现状（逐条量过 ✓）**
+  ⭐ ① ⭐ 静音状态真实（`aria-pressed` 跟随静音 ✓）⇒ ⚠️ v2 的 `aria-pressed` 只用于播放／吸附／循环／选轨 ✗ ⇒ **无对应** ✗
+  ⭐ ② ⭐ 等待态同帧出现（`sampler-loading` ✓）⇒ ⚠️ **无对应** ✗（§661 已登记 ✓）
+  ⭐ ③ ⭐ 失败可见且可重试（`sampler-problems` ✓）⇒ ⭐ 失败**已有** ✓（`arrangement-play-problem` ✓，`:1144` ✓）｜⭐ **重试无** ✗
+  ⭐ ④ ⭐ 导出有进度与取消（`export-progress` ✓／`export-cancel` ✓）⇒ ⚠️ v2 **有导出** ✓（`:1344–1347` ✓ 四个回调 ✓）｜⭐ 进度与取消**无** ✗
+**⭐ 好消息：四个状态的实现都是共享组件，未随 v1 删除 ✓**
+  ⭐ `sampler-loading` ✓／`sampler-problems` ✓ ⇒ ⭐ `components/sequencer/SamplerLaneStatus.tsx` ✓（⭐ 还被 `GenreDetailView` 用 ✓）
+  ⭐ `export-progress` ✓／`export-cancel` ✓ ⇒ ⭐ `components/sequencer/Toolbar.tsx` ✓
+  ⇒ ⭐ 移植＝**接现有组件** ✓，⭐ 不是重写界面 ✓
+**⭐ 处置顺序（一轮一条 ✓）** ✓：⭐ ① 采样等待与失败 ✓（⭐ 需要播放路径给出进度来源 ✓）｜⭐ ② 导出进度与取消 ✓｜⭐ ③ 静音真实 ✓｜⭐ ④ 目录选择器 ✓
+**⚠️ 本次退役的红只在本机 ✗**：⭐ 3 条 `tsc` 错误 ✓ ⇒ ⭐ **绿之前不推送** ✓
+```
+```
+**⭐ §662 续 ✓（2026-10-06 ✓）**：⭐ 三条待替换判据已删除 ✓ ⇒ ⭐ `catalogueRecordingPicker` ✓（其能力＝目录选择器 ✓，⭐ 组件 `CatalogueRecordingPicker.tsx` **仍在** ✓）
+  ｜⭐ `studioSamplerLoading` ✓（⭐ 未就绪不播放＝已满足 ✓；⭐ 等待提示＝登记缺口 ✓）
+  ｜⭐ `transportPreparationFeedback` ✓（⭐ 失败可见＝已有 ✓；⭐ 进度与取消＝登记缺口 ✓）
+  ⭐ 三条缺口的来源已定位 ✓：⭐ ① 采样等待 ⇒ ⭐ 需 v2 播放路径走 `prepareSamplerLanes`（带 `onProgress` ✓）
+  ⭐ ② 导出进度与取消 ⇒ ⭐ 需 v2 文件层走 `useExportActions`（有 `exportProgress` ✓／`cancelExport` ✓）
+  ⭐ ③ 静音真实 ⇒ ⭐ 模型已有 `TrackV2.muted` ✓／`soloed` ✓（`arrangementV2.ts:41–42` ✓）⇒ ⭐ 需 v2 泳道的静音控件 ✓
+  ⭐ 三者的**共同形状** ✓：⭐ **组件与字段都在，缺的是接到 v2 面的入口** ✓ ⇒ ⭐ 不是功能不存在 ✓
+```
 
