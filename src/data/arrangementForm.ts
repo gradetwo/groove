@@ -72,9 +72,11 @@ export interface ArrangementForm {
 /**
  * The forms.
  *
- * `loop` is the identity — one section, the pattern as written — so "generate an arrangement" is always reversible
- * by picking it back. The other two differ in *shape*, not in content: which clip each section points at, how long
- * it repeats, where it builds and where it fills.
+ * `loop` is the identity for the **frame** — one section, the pattern as written — so picking it back restores how long the
+ * arrangement is. ⚠️ It does not restore velocities: a build is **applied** by multiplying the notes, and the arrangement keeps no
+ * copy of what they were, so a composer who wants the earlier dynamics has to undo the change rather than pick loop again. The
+ * other two forms differ in *shape*, not in content: which clip each section points at, how long it repeats, where it builds and
+ * where it fills.
  */
 export const ARRANGEMENT_FORMS: Record<ArrangementFormId, ArrangementForm> = {
   loop: {
