@@ -391,28 +391,8 @@ export function createSong(input: CreateSongInput): Song {
 }
 
 /** Append a section; the id is derived from the song so a saved song keeps stable ids. */
-export function appendSection(song: Song, section: Omit<SongSection, "id">): Song {
-  const index = song.sections.length + 1;
-  return { ...song, sections: [...song.sections, { ...section, id: `${song.id}-s${index}` }] };
-}
-
-export function updateSection(song: Song, id: string, patch: Partial<Omit<SongSection, "id">>): Song {
-  return { ...song, sections: song.sections.map((section) => (section.id === id ? { ...section, ...patch } : section)) };
-}
-
-export function removeSection(song: Song, id: string): Song {
-  return { ...song, sections: song.sections.filter((section) => section.id !== id) };
-}
 
 /** Duplicate a section in place — how a "fill" or a "variation" gets made in practice. */
-export function duplicateSection(song: Song, id: string): Song {
-  const index = song.sections.findIndex((section) => section.id === id);
-  if (index === -1) return song;
-  const copy: SongSection = { ...song.sections[index], id: `${song.id}-s${song.sections.length + 1}` };
-  const sections = [...song.sections];
-  sections.splice(index + 1, 0, copy);
-  return { ...song, sections };
-}
 
 /**
  * Migrate the historical `songChain` into sections.
@@ -437,14 +417,6 @@ export function sectionsFromSongChain(songId: string, songChain: Array<ClipSlot>
 }
 
 /**
- * The reverse of `migrateSongChain`, for code paths that still speak the old shape (the current persistence layer
- * and the project-hub modal do). Lossy by nature: it can only express A/B and one bar per entry.
- */
-export function toSongChain(song: Song): Array<ClipSlot> {
-  return sectionsToSongChain(song.sections);
-}
-
-/**
  * The same view from a bare section list.
  *
  * The store keeps `sections` as the source of truth and derives `songChain` from it, and it has no `Song` to hand
@@ -461,8 +433,3 @@ export function sectionsToSongChain(sections: readonly SongSection[]): Array<Cli
 }
 
 /** A one-line description of the arrangement, for a tooltip or a log. */
-export function describeSong(song: Song): string {
-  const { totalBars } = resolveTimeline(song);
-  const shape = song.sections.map((section) => `${section.label ?? section.slot}×${clampBars(section.bars)}`).join(" → ");
-  return `${song.name || song.id}: ${shape || "(empty)"} · ${totalBars} bar${totalBars === 1 ? "" : "s"}`;
-}

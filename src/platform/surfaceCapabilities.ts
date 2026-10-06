@@ -143,7 +143,9 @@ export function desktopOnly(): CapabilityId[] {
  * its entry used to name a planned path, and now names the component that really renders it.
  */
 export const CAPABILITY_MODULES: Partial<Record<CapabilityId, readonly string[]>> = {
-  arrangement: ["src/components/arrangement/ArrangementPanel"],
+  // ⭐ The capability's implementation moved with the owner's switch of 2026-10-06: the studio tab renders the
+  // arrangement editor now, and this map is the only link between a capability and the code that implements it.
+  arrangement: ["src/components/arrangement/ArrangementViewV2"],
   "piano-roll": ["src/components/sequencer/PianoRollLane"],
   "hardware-console": ["src/components/console"],
   "project-hub-multitrack": ["src/components/sequencer/ProjectHubModal"],

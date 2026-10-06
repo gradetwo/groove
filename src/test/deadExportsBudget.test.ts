@@ -49,7 +49,13 @@ describe("exports nothing refers to", () => {
 
   it("⭐ still measures, so a silent failure cannot pass", () => {
     const m = measure();
-    expect({ files: m.productionFiles > 400, exports: m.exports > 2000, dead: m.dead.length > 0 })
-      .toEqual({ files: true, exports: true, dead: true });
+    /**
+     * ⭐ **The measurement ran, which is all this case is for.** It used to require `dead > 0` as a floor -- proof the scan had
+     * not silently found nothing -- and that floor stopped being true on 2026-10-06, when the v1 arrangement chain and its
+     * criteria were deleted and the last unreferenced exports went with them. Zero dead exports is the goal this budget exists
+     * to approach, so requiring one would now be requiring a defect.
+     */
+    expect({ files: m.productionFiles > 400, exports: m.exports > 2000 })
+      .toEqual({ files: true, exports: true });
   }, 60000);
 });

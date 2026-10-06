@@ -88,6 +88,12 @@ import { announcer } from "../../platform/announcer";
 import { applyForm } from "../../data/arrangementFormPlan";
 import { transposeNotesInRange } from "../../data/arrangementEdits";
 import { useInitialAutoPlay } from "../../features/sequencer/hooks/useInitialAutoPlay";
+import { useSyncExternalStore } from "react";
+import { SaveIndicator } from "../sequencer/SaveIndicator";
+import {
+  getArrangementSaveStatusSnapshot,
+  subscribeArrangementSaveStatus,
+} from "../../features/sequencer/projectDb";
 
 /**
  * The snap values the toolbar offers, coarsest to finest. The **value** is shown, because a toggle's state is not a value.
@@ -329,6 +335,12 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
    * loader, not to this view, and a bar that could not move would be a claim this surface cannot support.
    */
   const [preparing, setPreparing] = useState(false);
+  /**
+   * ⭐ **Whether the work is safe, read from the store that does the writing.** The arrangement saves automatically, so the
+   * interface owes the person one fact it never stated: that a change has landed. The status and its subscription already
+   * existed in `projectDb`; the component that renders them already existed too, and this is the entry that was missing.
+   */
+  const saveStatus = useSyncExternalStore(subscribeArrangementSaveStatus, getArrangementSaveStatusSnapshot);
 
   const bars = arrangement.bars ?? 8;
   const headerBars = arrangement.tracks.length === 0 ? 0 : bars;
@@ -1158,6 +1170,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
               {t("arrangement_preparing")}
             </span>
           )}
+          <SaveIndicator visible status={saveStatus} />
           {playProblem !== undefined && <span data-testid="arrangement-play-problem" className="text-[10px] text-text opacity-70">{playProblem}</span>}
         </span>
         <span className="flex items-center gap-1">
