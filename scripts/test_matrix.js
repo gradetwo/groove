@@ -1049,11 +1049,11 @@ async function runTestOnTarget(target, baseUrl) {
     if (await page.$("[data-surface='desktop']")) {
       await page.goto(`${baseUrl}/?tab=studio`, { waitUntil: "domcontentloaded" });
     await ensureArrangementMounted(page);
-      await page.waitForSelector("[data-toolbar-id='export']", { timeout: 30000 });
+      await page.waitForSelector("[data-testid='arrangement-export-menu'], [data-toolbar-id='export']", { timeout: 30000 });
       const [download] = await Promise.all([
         page.waitForEvent("download", { timeout: 120000 }),
         (async () => {
-          await page.click("[data-toolbar-id='export']");
+          await page.click("[data-testid='arrangement-export-menu'], [data-toolbar-id='export']");
           await page.waitForSelector("[data-testid='export-mp3']", { timeout: 10000 });
           await page.click("[data-testid='export-mp3']");
         })(),
