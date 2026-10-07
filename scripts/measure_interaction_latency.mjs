@@ -266,7 +266,7 @@ async function waitForTestId(page, id, timeout = 15000) {
 
   // 3. Step toggle while playing (the other hot path that commits a whole pattern).
   {
-    const cellSel = "[data-track-idx='1'][data-step-idx='4']";
+    const cellSel = "[data-testid='roll-grid'] [data-selected]";
     const before = await page.getAttribute(cellSel, "aria-selected");
     results.push(
       await measure(

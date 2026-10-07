@@ -110,13 +110,13 @@ const gutterAtRest = await page.evaluate(() => {
   const inner = document.querySelector("[data-testid='track-header-0']");
   const header = inner && inner.closest("div.sticky");
   if (!header) return { error: "no sticky track header" };
-  let scroller = document.querySelector("[data-step-idx]");
+  let scroller = document.querySelector("[data-testid='roll-grid']");
   while (scroller && scroller.scrollWidth <= scroller.clientWidth + 1) scroller = scroller.parentElement;
   if (scroller && Math.round(scroller.scrollLeft) !== 0) {
     return { error: `the grid is already scrolled (scrollLeft ${Math.round(scroller.scrollLeft)})` };
   }
   const hr = header.getBoundingClientRect();
-  const cells = [...document.querySelectorAll("[data-step-idx]")].map((c) => c.getBoundingClientRect());
+  const cells = [...document.querySelectorAll("[data-testid='roll-grid'] [data-selected]")].map((c) => c.getBoundingClientRect());
   return {
     headerLeft: Math.round(hr.left),
     headerRight: Math.round(hr.right),
@@ -180,7 +180,7 @@ const sample = () =>
              * A transparent ancestor (`section`, the scroller) is a failure too: something would be
              * showing through, which is what "the space should feel solid" rules out.
              */
-            const isCell = el.hasAttribute("data-step-idx");
+            const isCell = el.hasAttribute("data-selected");
             const inColumn =
               el === header ||
               header.contains(el) ||
@@ -195,7 +195,7 @@ const sample = () =>
           }
         }
       }
-      let scroller = document.querySelector("[data-step-idx]");
+      let scroller = document.querySelector("[data-testid='roll-grid']");
       while (scroller && scroller.scrollWidth <= scroller.clientWidth + 1) scroller = scroller.parentElement;
       return { scrollLeft: scroller ? Math.round(scroller.scrollLeft) : null, samples };
     },
