@@ -11,7 +11,7 @@ import { STEPS_PER_BAR } from "../src/data/noteEvents";
 import { z } from "zod";
 
 
-export const SONG_TOOLS: ToolDefinition[] = [
+export const VOCAL_TOOLS: ToolDefinition[] = [
   {
     /**
      * The tool half of `setVocalMelody`, and the answer to the dev-branch report's third item from the composing side: a lyric used to be an

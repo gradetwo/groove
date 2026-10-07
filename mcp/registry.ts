@@ -105,7 +105,7 @@ import { GS1_TOOLS } from "./registryGs1";
 
 import { PATTERN_TOOLS } from "./registryPattern";
 
-import { SONG_TOOLS } from "./registrySong";
+import { VOCAL_TOOLS } from "./registryVocals";
 
 import { RENDER_TOOLS } from "./registryRender";
 
@@ -122,7 +122,7 @@ export const TOOLS: ToolDefinition[] = [
   ...ANALYSIS_TOOLS,
   ...FILE_TOOLS,
   ...RENDER_TOOLS,
-  ...SONG_TOOLS,
+  ...VOCAL_TOOLS,
   ...PATTERN_TOOLS,
   ...GS1_TOOLS,
   ...LIBRARY_TOOLS,

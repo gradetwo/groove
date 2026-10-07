@@ -356,7 +356,7 @@ check(
  * a name list; the second is a grep over `src/`.
  */
 /**
- * ⭐ The registry is split by domain now — `registryArrangement`, `registrySong`, `registryGs1` and the
+ * ⭐ The registry is split by domain now — `registryArrangement`, `registryVocals`, `registryGs1` and the
  * rest, with `registry.ts` reduced to the barrel that spreads them. The declaration therefore has to be
  * looked for across the whole family, or a tool that merely **moved** reads as a tool that was dropped.
  * The extraction itself is unchanged, so nothing but the file set moved.
