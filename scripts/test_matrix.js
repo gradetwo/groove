@@ -926,13 +926,13 @@ async function runTestOnTarget(target, baseUrl) {
     if (await page.$("[data-surface='desktop']")) {
       await page.goto(`${baseUrl}/?tab=studio`, { waitUntil: "domcontentloaded" });
     await ensureArrangementMounted(page);
-      await page.waitForSelector("[data-testid='arrangement-export-menu'], [data-toolbar-id='export']", { timeout: 30000 });
+      await page.waitForSelector("[data-testid='arrangement-export-menu']", { timeout: 30000 });
       const [download] = await Promise.all([
         page.waitForEvent("download", { timeout: 120000 }),
         (async () => {
-          await page.click("[data-testid='arrangement-export-menu'], [data-toolbar-id='export']");
-          await page.waitForSelector("[data-testid='arrangement-export-mp3'], [data-testid='export-mp3']", { timeout: 10000 });
-          await page.click("[data-testid='arrangement-export-mp3'], [data-testid='export-mp3']");
+          await page.click("[data-testid='arrangement-export-menu']");
+          await page.waitForSelector("[data-testid='arrangement-export-mp3']", { timeout: 10000 });
+          await page.click("[data-testid='arrangement-export-mp3']");
         })(),
       ]);
       const filename = download.suggestedFilename();
@@ -2097,7 +2097,7 @@ async function runTestOnTarget(target, baseUrl) {
     await page.goto(`${baseUrl}/?tab=studio`, { waitUntil: "domcontentloaded" });
     await ensureArrangementMounted(page);
     await page.waitForSelector(
-      "[data-testid='toolbar-advanced-toggle'], [data-testid='mobile-transport-more']",
+      "[data-testid='arrangement-view-v2']",
       { timeout: 30000 }
     );
     await page.waitForTimeout(800);
