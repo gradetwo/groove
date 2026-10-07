@@ -303,148 +303,30 @@ if (TARGET_PROFILE !== "all" || TARGET_FILTER) {
  * lets the caller skip the roll assertions on that shell and assert the *notice* instead — the
  * point being that an omitted feature must be visibly omitted rather than silently missing.
  */
+/**
+ * ⭐ **Opens the arrangement's own piano roll.**
+ *
+ * The roll is inside the arrangement editor (`PianoRollV2`), behind the editor tabs at the right of the toolbar, and `roll` is the tab that
+ * is open by default -- so this clicks the tab when the grid is not already there and waits for it. Two conditions are the editor's rather
+ * than this helper's: a track has to be selected, and it must not be an `fx` or `folder` lane, which carry no notes. The studio's drawer,
+ * the phone sheet and their toggles are gone, so nothing here reaches for them.
+ */
 async function openPianoRoll(page) {
-  /**
-   * The roll is Tier 2 (`toolbarTiers.ts`), so the desktop shell renders it only once the advanced
-   * density is on — that is what G.10's slimming does: 36 always-visible controls became 16, and the
-   * roll is one of those that moved behind the "More" control.
-   *
-   * The desktop path therefore opens the density first. The previous order — test for the toggle,
-   * and if it is absent fall through — would have silently deleted the roll's coverage from the
-   * desktop matrix, which is exactly the "an omitted feature must be *visibly* omitted" failure the
-   * phone branch below exists to avoid.
-   */
-  if (await page.$("[data-testid='mobile-transport-more']")) {
-    /**
-     * Phone shell: the roll is not offered. Its sheet row is "editing notes", which opens the
-     * explanation — so this opens that, and the caller asserts the explanation plus its route to
-     * the Chords view instead of the grid.
-     */
-    await openStudioMoreControls(page);
-    await clickSheetRowAndVerify(
-      page,
-      "[data-testid='mobile-studio-action-note-editing']",
-      "[data-testid='piano-roll-mobile-notice']",
-      "note-editing help"
-    );
-    return null;
+  if (await page.$("[data-testid='roll-grid']")) return "desktop";
+  if (await page.$("[data-testid='arrangement-editor-roll']")) {
+    await clickVerified(page, "[data-testid='arrangement-editor-roll']");
   }
-  // Already open (an earlier step left it that way): nothing to do.
-  if (await page.$("[data-testid='piano-roll-grid']")) return "desktop";
-
-  if (!(await page.$("[data-testid='toolbar-piano-roll-toggle']"))) {
-    await openStudioMoreControls(page);
-  }
-
-  /**
-   * Verify the *outcome*, not the click.
-   *
-   * `clickVerified` re-queries the selector on each retry, which is the wrong instrument for a
-   * control whose own click re-renders the toolbar: the retry can look for an element that the
-   * first, successful click already replaced. The roll's grid appearing is the thing the caller
-   * needs, and it cannot be satisfied by a click that did nothing.
-   */
-  const toggle = await page.waitForSelector("[data-testid='toolbar-piano-roll-toggle']", {
-    timeout: 15000,
-  });
-  await toggle.click();
-  await page.waitForSelector("[data-testid='piano-roll-grid']", { timeout: 45000 });
-  return "desktop";
-}
-
-/**
- * Clicks a row inside a scrolling bottom sheet.
- *
- * `clickVerified` handles elements that are already on screen, but a sheet row can sit far below
- * the fold — the studio sheet renders ~1300 px of rows inside a `max-h-[80dvh]` scroller, so its
- * last rows start outside a 664 px phone viewport and Playwright's actionability check simply
- * waits until the click times out. Scrolling the row into view first is the difference between
- * "the row is missing" and "the row exists and works", and only the first of those is a bug.
- */
-/**
- * Clicks a row in the studio sheet and verifies the result rather than the click.
- *
- * `clickVerified` asserts that a `click` event reached the element, which a row that *navigates
- * away* can never satisfy: the row's own handler closes the sheet, so the element is gone from the
- * document by the time the check runs. That is the intended behaviour, so the verification has to
- * be the outcome — the row's surface closed and its destination appeared — not the event.
- *
- * Scrolling is `block: "nearest"` on purpose: the sheet is its own scroller and `center` can
- * scroll the backdrop over the row's centre.
- */
-async function clickSheetRowAndVerify(page, selector, expectSelector, label) {
-  await page.waitForSelector(selector, { timeout: 45000 });
-  const prepared = await page.evaluate((sel) => {
-    const el = document.querySelector(sel);
-    if (!el) return false;
-    el.scrollIntoView({ block: "nearest", inline: "nearest" });
-    el.setAttribute("data-e2e-target", "1");
-    return true;
-  }, selector);
-  if (!prepared) throw new Error(`${selector} not found`);
-  await page.waitForTimeout(250);
-
-  const box = await page.evaluate(() => {
-    const el = document.querySelector("[data-e2e-target='1']");
-    if (!el) return null;
-    const r = el.getBoundingClientRect();
-    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
-  });
-  if (!box) throw new Error(`${selector} lost its box before the click`);
-  await page.mouse.move(box.x, box.y);
-  await page.mouse.down();
-  await page.waitForTimeout(60);
-  await page.mouse.up();
-  await page.evaluate(() => document.querySelector("[data-e2e-target='1']")?.removeAttribute("data-e2e-target"));
-
-  if (expectSelector) {
-    try {
-      await page.waitForSelector(expectSelector, { timeout: 45000 });
-    } catch {
-      const diag = await page.evaluate(() => ({
-        sheetOpen: Boolean(document.querySelector("[data-testid='mobile-studio-sheet']")),
-        panelOpen: Boolean(document.querySelector("[data-testid='audio-settings-gs1-toggle']")),
-      }));
-      throw new Error(`${label}: clicking ${selector} did not produce ${expectSelector} :: ${JSON.stringify(diag)}`);
+  if (!(await page.$("[data-testid='roll-grid']"))) {
+    const detail = await page.$("[data-testid='arrangement-detail']");
+    const text = detail ? await detail.innerText() : "";
+    if (/Select a track/i.test(text)) {
+      const first = await page.$("[data-testid='arrangement-track-picker'] button, [data-testid^='arrangement-track-']");
+      if (first) await first.click();
     }
   }
-}
-
-async function openStudioMoreControls(page) {
-  const mobileMore = await page.$("[data-testid='mobile-transport-more']");
-  if (mobileMore) {
-    await clickVerified(page, "[data-testid='mobile-transport-more']");
-    return "mobile";
-  }
-  const advanced = await page.$("[data-testid='toolbar-advanced-toggle']");
-  if (advanced) {
-    await clickVerified(page, "[data-testid='toolbar-advanced-toggle']");
-    return "desktop";
-  }
-  throw new Error("No studio secondary-controls surface found on this viewport");
-}
-
-/**
- * Opens the floated console from whichever shell is present. On a phone the console is reached
- * through the studio sheet; on desktop through the toolbar.
- */
-async function openFloatedConsole(page) {
-  const desktopToggle = await page.$("[data-testid='toolbar-console-toggle']");
-  if (desktopToggle) {
-    await clickVerified(page, "[data-testid='toolbar-console-toggle']");
-    return "desktop";
-  }
-  await openStudioMoreControls(page);
-  if (!(await page.$("[data-testid='mobile-studio-action-console']"))) {
-    throw new Error("Phone studio sheet has no console row");
-  }
-  await clickSheetRowAndVerify(
-    page,
-    "[data-testid='mobile-studio-action-console']",
-    null,
-    "floating console"
-  );
-  return "mobile";
+  await page.waitForSelector("[data-testid='roll-grid']", { timeout: 20000 }).catch(() => null);
+  if (await page.$("[data-testid='roll-grid']")) return "desktop";
+  return null;
 }
 
 async function clickVerified(page, selector, { timeoutMs = 10000, pressMs = 60, scrollInline = true } = {}) {
@@ -832,11 +714,8 @@ async function runTestOnTarget(target, baseUrl) {
          * kind of case: it is drawn by `SequencerPanel.tsx`, whose phone branches the freeze
          * reserves, so its size is recorded in the plan (G.36) instead of changed here.
          */
-        const ALLOWED_SMALL = new Set([
-          "mobile-transport-prev-bar",
-          "mobile-transport-next-bar",
-          "toggle-all-tracks-compact",
-        ]);
+        /** ⭐ Empty: the controls it excused belonged to the studio toolbar and the phone shell, and both are gone. */
+        const ALLOWED_SMALL = new Set<string>([]);
         const selector = 'button, select, input, textarea, [role="button"], [tabindex="0"]';
         const small = [];
         const headerControls = [];
@@ -990,7 +869,7 @@ async function runTestOnTarget(target, baseUrl) {
      * 外观) is the surface and is covered by leg 1.11.
      */
     await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
-    await page.waitForSelector("[data-surface='desktop'], [data-testid='mobile-shell']", { timeout: 30000 });
+    await page.waitForSelector("[data-surface='desktop']", { timeout: 30000 });
     if (await page.$("[data-surface='desktop']")) {
       await page.click("[data-testid='header-settings-open']");
       await page.click("[data-testid='settings-tab-interface']");
@@ -1083,7 +962,7 @@ async function runTestOnTarget(target, baseUrl) {
         /** ⭐ The studio kept its audio settings behind the toolbar's advanced drawer; the arrangement surface puts the same panel behind
          * the header's settings button, whose own default tab is audio (`SettingsModal`'s `initialTab`). Both are accepted, so the block
          * still asserts what it always did: that the audio-settings entry point is reachable in this shell. */
-        "[data-testid='header-settings-open'], [data-testid='toolbar-advanced-toggle'], [data-testid='mobile-transport-more']", {
+        "[data-testid='header-settings-open']", {
         timeout: 20000,
       })
       .catch(() => {
@@ -1097,31 +976,18 @@ async function runTestOnTarget(target, baseUrl) {
      * `studio-audio-settings-open` alone, and the earlier version of this block failed with
      * "no entry point" while the row was in fact present and working.
      */
-    const MOBILE_AUDIO_SETTINGS = "[data-testid='mobile-studio-action-audio-settings']";
-    /** ⭐ The studio opened its audio tab from the toolbar; the arrangement surface opens the settings modal, whose default tab is
- * audio (`SettingsModal`'s `initialTab = "audio"`), so the same two assertions below still describe the same behaviour. */
-    const DESKTOP_AUDIO_SETTINGS = "[data-testid='header-settings-open'], [data-testid='studio-audio-settings-open']";
-    if (!(await page.$(DESKTOP_AUDIO_SETTINGS)) && !(await page.$(MOBILE_AUDIO_SETTINGS))) {
-      await openStudioMoreControls(page);
-      await page.waitForTimeout(400);
-    }
-    const mobileEntry = await page.$(MOBILE_AUDIO_SETTINGS);
-    const desktopEntry = await page.$(DESKTOP_AUDIO_SETTINGS);
-    if (!mobileEntry && !desktopEntry) {
+    /** ⭐ One entry point now: the header's settings button, whose own default tab is audio (`initialTab = "audio"`). */
+    const AUDIO_SETTINGS_ENTRY = "[data-testid='header-settings-open']";
+    if (!(await page.$(AUDIO_SETTINGS_ENTRY))) {
       const diag = await page.evaluate(() => ({
         viewport: { w: window.innerWidth, h: window.innerHeight },
-        hasTransportBar: Boolean(document.querySelector("[data-testid='mobile-transport-bar']")),
-        studioSheetOpen: Boolean(document.querySelector("[data-testid='mobile-studio-sheet']")),
-        studioRows: [...document.querySelectorAll("[data-testid^='mobile-studio-action-']")].map((el) =>
-          el.getAttribute("data-testid")
-        ),
       }));
       throw new Error(`Audio settings panel has no entry point on this viewport :: ${JSON.stringify(diag)}`);
     }
     // A sheet row can start below the fold, so scroll it into view before clicking.
     await clickSheetRowAndVerify(
       page,
-      mobileEntry ? MOBILE_AUDIO_SETTINGS : DESKTOP_AUDIO_SETTINGS,
+      AUDIO_SETTINGS_ENTRY,
       "[data-testid='audio-settings-gs1-toggle']",
       "audio settings"
     );
