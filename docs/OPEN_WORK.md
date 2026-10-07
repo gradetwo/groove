@@ -18478,3 +18478,18 @@ describe("the grid's editing actions", () => {
     ① `renderPatternHeadless` 直调（探针 ✓）、② 经 job（子进程 ✓）下打印 `computeRenderWindow` 的输入与输出 ✓
     （`fromBar`/`bars`/`windowBars`/`preRollSec` → `preRollFrames`/`fromStep`/`toStep` ✓）⇒ 一次就能看出哪个字段在传递中变了 ✓。
     接线仍**撤着** ✓：便宜但音乐不同的首段不发货 ✓；判据回到全绿 ✓。
+
+### 七百二十二、✅ **修掉一个由 W7 引入的真缺陷：job 里带着 `progress` ⇒ 子进程崩**（2026-10-08 ✓）
+
+  ⭐ 冒烟里 `chunks=2` 的回包不是音频而是错误 ✓，照实打印后看到 ✓：
+    `span 0 (bars 0-4) exited 1: TypeError: progress?.reportOf is not a function` ✗
+    ——**根因**：`progress` 是个带方法的对象 ✓，`JSON.stringify` 把它变成 `{}` ✗ ⇒ 子进程看到一个"真值但没有方法"的 `progress` ✗。
+    与六百九十四 的 `chunks` 是同一类错误 ✓（**不可序列化的选项不能跟着 job 走** ✓），这次由 W7 的接线引入 ✓。
+  ⭐ 修法：`spanHosts` 里把 `progress` 与 `chunks` 一起**解构剔除** ✓（父进程负责按段播报 ✓，子进程没有自己的进度通道 ✓），
+    并在注释里写明这次实测到的报错原文 ✓（下一个人一眼能认出来 ✓）。
+  ⭐ 修完实测 ✓：同一冒烟**回包恢复为音频** ✓（不再打印 "reply had no file" ✓）、
+    模板编曲的逐小节对比 **全部 −inf** ✓（span 0 也 −inf ✓）⇒ **分块路径仍然逐样本等价** ✓。
+  ⚠️ 仍**未验证**：`progress notes: []` ✗——"按段播报"的通知没有出现在客户端 ✓（服务端确实会从 `_meta.progressToken`
+    建 `progress` 并发 `notifications/progress` ✓，工具也把它传进渲染选项 ✓）⇒ **只有代码、没有端到端证据** ✓，照实记下 ✓。
+    下一步查通知：把冒烟收到的**所有通知方法**都打印出来 ✓（现在是只过滤 `notifications/progress` ✗），
+    以及确认 `_meta.progressToken` 的位置与 SDK 期望一致 ✓。

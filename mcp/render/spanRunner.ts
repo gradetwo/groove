@@ -51,6 +51,12 @@ export interface SpanSidecar {
    */
   preRollFrames: number;
   chunkEndFrame: number;
+  /**
+   * ⭐ **What the child asked for and what it got**, recorded because the same window reported `preRollFrames: 0` through
+   * one call path and `16000` through another: a discrepancy like that is a field changing in transit, and the only way
+   * to see it is to write both sides down.
+   */
+  windowDebug?: { fromBar: number; bars: number; preRollSec: number; windowBars: number | null; gotPreRollFrames: number; gotChunkEndFrame: number };
   durationSec: number;
   limiterKind: string;
   gs1PatchProblems: string[];
@@ -148,6 +154,14 @@ export async function runSpanJob(jobPath: string): Promise<void> {
     gs1PatchProblems: rendered.gs1PatchProblems ?? [],
     audioLanes: rendered.audioLanes ?? { lanes: [], events: 0, problems: [] },
     problems: rendered.problems ?? [],
+    windowDebug: {
+      fromBar: job.fromBar,
+      bars: job.bars,
+      preRollSec: job.preRollSec,
+      windowBars: job.options.windowBars ?? null,
+      gotPreRollFrames: timeline?.preRollFrames ?? -1,
+      gotChunkEndFrame: timeline?.chunkEndFrame ?? -1,
+    },
     ...(selfAB ? { selfAB } : {}),
   };
   await fs.mkdir(path.dirname(job.outStem), { recursive: true });

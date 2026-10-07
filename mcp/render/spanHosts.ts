@@ -83,7 +83,13 @@ export async function renderPatternInSpans(
    * the child runs the same `renderPatternHeadless`, and the first smoke test was killed by resource exhaustion because
    * every span process spawned its own spans. Destructured out here so it cannot travel by accident.
    */
-  const { chunks: _parentChunks, ...parentOptions } = options;
+  /**
+   * ⚠️ **`progress` must not travel into the child either.** It is an object whose methods are functions, so
+   * `JSON.stringify` turns it into `{}`; the child then sees a truthy `progress` with no `reportOf` and dies with
+   * "progress?.reportOf is not a function" — measured through `render_arrangement` (the span exited 1 and the caller got
+   * a message instead of audio). The parent narrates per span; a child has no progress channel of its own.
+   */
+  const { chunks: _parentChunks, progress: _parentProgress, ...parentOptions } = options;
 
   const run = async (index: number, span: { fromBar: number; toBar: number }): Promise<{ result: MergeableChunk; sidecar: SpanSidecar; ms: number }> => {
     const outStem = path.join(scratch, `span-${index}`);
