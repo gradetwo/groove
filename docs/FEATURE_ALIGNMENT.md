@@ -897,3 +897,16 @@
 | 为什么是这个形状 | v1 的 `humanize` 作用在步上。编曲的音符自带起点、长度、力度。 | — | 同上 |
 | needs | 变化的强度与音阶选择（`intensity`／`scale`）暂用引擎默认。需要时再开参数。 | — | 同上 |
 
+## 2026-10-07 11:27 回填（v1 pattern 工具整支退役）
+
+| 工具 | 处置 | 理由 |
+|---|---|---|
+| `get_pattern` | ⭐ **退役** ✓ | 返回 v1 的流派 pattern。v2 用 `create_arrangement` ＋ 模板 ✓。 |
+| `apply_pattern_ops` | ⭐ **退役** ✓ | 操作 v1 pattern。同类能力在 v2 是编曲音符工具 ✓：`transpose_arrangement_notes` ✓／`quantize_arrangement_note_lengths` ✓／`vary_arrangement_notes` ✓。 |
+| `apply_chord_progression` | ⭐ **退役** ✓ | 写入 v1 pattern。v2 的对应是 `stampChordInRect` ✓（编曲面已有 ✓）。 |
+| `get_transposition_report` | ⭐ **退役** ✓ | 读 v1 pattern **每条泳道的 GS-1 覆盖** ✗。`TrackV2` **没有**这个字段 ✗ ⇒ 在 v2 **没有数据源** ✓。 |
+| `list_chord_progressions`／`get_chord_progression` | ✅ **保留** ✓ | 只读和弦进行库 ✓，从不碰 pattern ✓。 |
+| 模块 | ⭐ `mcp/registryPattern.ts` ⇒ **`registryChords.ts`** ✓ | 名字改了 ✓，因为它现在只装和弦库 ✓。 |
+| 判据 | ⭐ `check_mcp` 删 8 处 ✓；2 个文案判据删 ✓ | 门从 **8 红 ⇒ 0 红** ✓，检查数 **59 ⇒ 71** ✓。 |
+| needs | ⭐ `pattern_statistics` 与 `share_url` 仍吃 v1 pattern ✗ | 属**迁移 ④**（分析面吃编曲）✓。 |
+

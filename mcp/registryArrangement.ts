@@ -1122,57 +1122,6 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
    * by `validate_pattern`), never written to a lane where it would quietly become a different sound.
    */
   {
-    name: "get_transposition_report",
-    title: "What is moving this pitch",
-    description:
-      "**Every place a pitch can move, named, with the total beside the list**. Because the fix for a surprise octave is not a promise that it cannot happen but a report of who did it. Reads the section's own `transpose` and its `overrides.transpose` from a song. The GS-1 pitch parameters from a lane's own overrides (OSC1_PITCH OSC2_PITCH in semitones, OSC1_DETUNE OSC2_DETUNE MASTER_TUNE in cents). Each entry carries its source, its size, whether it can be undone and where it lives. Nothing is applied: this reports what the model states. Two things it deliberately does not read, both named in its reply rather than silently omitted: the **SFZ's own `tune` and `pitch_keycenter`**. They need a resolved note and are reported by `get_pitch_report` with an `assetId`. The chord register in `genreExpression` is written into the pitches at composition time and is therefore not a playback transposition at all. Note that **no track-level transposition exists in either model**. Both `transpose` fields live on sections.",
-    readOnly: true,
-    inputSchema: {
-      pattern: patternSchema.optional().describe("a pattern whose lane's GS-1 overrides to read"),
-      track: z.string().optional().describe('the lane in that pattern — laneId first, then kind ("chords", "lead"…)'),
-    },
-    handler: (args) => {
-      const trackName = typeof args.track === "string" && args.track.length > 0 ? args.track : undefined;
-      if (args.pattern === undefined) {
-        return failure("give a pattern — the GS-1 overrides live per lane");
-      }
-
-      let lane: { track: string; transpositions: unknown[] } | undefined;
-      if (args.pattern !== undefined) {
-        const pattern = patternFromArgs(args as { pattern?: unknown });
-        if (!pattern) return failure("that pattern could not be read");
-        if (trackName === undefined) return failure("name a track — the GS-1 overrides live per lane");
-        const row = findTrack(pattern, trackName);
-        if (!row) {
-          const lanes = pattern.tracks.map((item) => item.laneId ?? item.track_id).join(", ");
-          return failure(`no lane "${trackName}" in this pattern — the lanes are: ${lanes}`);
-        }
-        const overrides = (row as { gs1PatchOverrides?: { parameters?: Record<string, number | string> } })
-          .gs1PatchOverrides;
-        lane = {
-          track: String(row.laneId ?? row.track_id),
-          transpositions: collectTranspositions({
-            ...(overrides?.parameters === undefined ? {} : { gs1Parameters: overrides.parameters }),
-          }),
-        };
-      }
-
-      const all = [...(lane?.transpositions ?? [])] as Array<{ semitones: number }>;
-      const totalSemitones = all.reduce((sum, item) => sum + item.semitones, 0);
-      return {
-        totalSemitones,
-        /** The list is the report; the total is only its sum, so it is never returned without it. */
-        ...(lane === undefined ? {} : { lane }),
-        notRead: [
-          "the SFZ's own tune and pitch_keycenter — these need a resolved note, so ask get_pitch_report with an assetId",
-          "the GS-1 parameters of any lane you did not name",
-          "the chord register in genreExpression, which is written into the pitches at composition time and is not a playback transposition",
-        ],
-        note: "each entry is what the model states, and reversible says whether the creator can set it back",
-      };
-    },
-  },
-  {
     name: "add_sample_library",
     title: "Register your own sound source",
     description:

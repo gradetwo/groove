@@ -130,8 +130,7 @@ try {
     "get_genre",
     "search_genres",
     "list_examples",
-    "get_pattern",
-    "apply_pattern_ops",
+    // ⭐ `get_pattern` and `apply_pattern_ops` are gone with the v1 pattern they carried.
     "validate_pattern",
     "pattern_statistics",
     "apply_gs1_patch",
@@ -279,78 +278,6 @@ try {
    * capability. It also validates, so the shape a real implementation would take is exercised now.
    */
   /**
-   * Owner decision 1A made usable: a second lane of a kind, through the op an agent can actually call.
-   */
-  const addedLane = payload(
-    await client.request("tools/call", {
-      name: "apply_pattern_ops",
-      arguments: { genreId: "chicago-house", ops: [{ op: "add_lane", track: "lead", laneId: "counter", name: "Counter" }] },
-    })
-  );
-  const duplicateLane = payload(
-    await client.request("tools/call", {
-      name: "apply_pattern_ops",
-      arguments: { genreId: "chicago-house", ops: [{ op: "add_lane", track: "lead", laneId: "lead" }] },
-    })
-  );
-  check(
-    "add_lane appends a second lane of a kind and refuses a duplicate id",
-    (addedLane.applied ?? [])[0]?.ok === true &&
-      (addedLane.pattern?.tracks ?? []).filter((track) => track.track_id === "lead").length === 2 &&
-      (duplicateLane.applied ?? [])[0]?.ok === false,
-    JSON.stringify((addedLane.applied ?? [])[0] ?? {}).slice(0, 100)
-  );
-
-  /**
-   * ⭐ **The last UI-only performance transform, reachable where an agent composes.** The arpeggiator and the
-   * strummer behind the chord panel (`src/utils/arpeggiatorTheory.ts`) were implemented and tested but no tool
-   * could reach them — the gap `docs/Z2_ADJUDICATION.md` §2.7 stages. This asserts the op over the wire, and it
-   * asserts the engine's **own order** rather than "the notes changed": `up` over C major is 60,64,67 cycled
-   * (so `pitches[0]` is the arpeggio, not the original stack), a strum spreads those same notes onto successive
-   * onsets, and a lane that holds nothing is refused with a message rather than quietly doing nothing.
-   */
-  const arpBaked = payload(
-    await client.request("tools/call", {
-      name: "apply_pattern_ops",
-      arguments: {
-        genreId: "chicago-house",
-        ops: [
-          { op: "set_chord_progression", track: "chords", chords: [[60, 64, 67]] },
-          { op: "transform_pattern", variant: "arp", track: "chords", pattern: "up", rate: "1/16", octaves: 1 },
-        ],
-      },
-    })
-  );
-  const strummed = payload(
-    await client.request("tools/call", {
-      name: "apply_pattern_ops",
-      arguments: {
-        genreId: "chicago-house",
-        ops: [
-          { op: "set_chord_progression", track: "chords", chords: [[60, 64, 67]] },
-          { op: "transform_pattern", variant: "strum", track: "chords", direction: "down", speedMs: 25 },
-        ],
-      },
-    })
-  );
-  const refusedTransform = payload(
-    await client.request("tools/call", {
-      name: "apply_pattern_ops",
-      arguments: { genreId: "chicago-house", ops: [{ op: "transform_pattern", variant: "arp", track: "trombone" }] },
-    })
-  );
-  const chordsLaneOf = (result) => (result.pattern?.tracks ?? []).find((track) => track.track_id === "chords") ?? {};
-  check(
-    "transform_pattern arpeggiates a held chord, strums it across steps, and refuses an unknown lane",
-    JSON.stringify(chordsLaneOf(arpBaked).pitch?.slice(0, 3)) === JSON.stringify([60, 64, 67]) &&
-      (chordsLaneOf(arpBaked).pitches ?? [])[0]?.[0] === 60 &&
-      JSON.stringify(chordsLaneOf(strummed).pitch?.slice(0, 3)) === JSON.stringify([60, 64, 67]) &&
-      chordsLaneOf(strummed).steps?.[1] === 1 &&
-      (refusedTransform.applied ?? [])[0]?.ok === false,
-    JSON.stringify((arpBaked.applied ?? [])[1] ?? {}).slice(0, 120)
-  );
-
-  /**
    * Fifth report, P1.2: a composer guessed `"techno"`, was told only "provide either genreId or pattern", and concluded the ids had to be read from the source.
    * `list_genres` is a tool; the error must say so, and should recognise an abbreviation.
    */
@@ -461,8 +388,6 @@ try {
   check("get_genre returns recorded metadata", genre?.id === "chicago-house" && typeof genre?.culturalContext?.en === "string", JSON.stringify(genre).slice(0, 120));
   check("get_genre includes the mix and loudness trim", Boolean(genre?.mix) && typeof genre?.loudnessTrimDb === "number");
 
-  const patternResult = payload(await client.request("tools/call", { name: "get_pattern", arguments: { genreId: "chicago-house" } }));
-
   /**
    * The two analysis tools the evaluation asked for and did not exist. Loudness is deliberately not one of them: every render already
    * returns gated loudness and true peak, which `docs/MCP.md` has said since the analyser was written.
@@ -536,22 +461,6 @@ try {
    * Written as a loop rather than a `map`, because `await` inside a `map` callback is a syntax error at module scope — which is how the
    * first version of this check failed, loudly and immediately.
    */
-  /**
-   * `set_chord_progression` end to end, because the runtime schema rejected it while the implementation, the docs and `suggest_progression`'s
-   * own reply all recommended it. A tool the gate never calls is a tool whose schema can be wrong for weeks.
-   */
-  const chordsApplied = payload(
-    await client.request("tools/call", {
-      name: "apply_pattern_ops",
-      arguments: { genreId: "chicago-house", ops: [{ op: "set_chord_progression", chords: [[48, 52, 55], [53, 57, 60]] }] },
-    })
-  );
-  check(
-    "apply_pattern_ops accepts set_chord_progression",
-    (chordsApplied.applied ?? [])[0]?.ok === true,
-    JSON.stringify((chordsApplied.applied ?? [])[0] ?? {}).slice(0, 120)
-  );
-
   /**
    * ⭐ **The per-parameter GS-1 surface, over the wire.** `apply_gs1_patch` used to take one opaque
    * share code and nothing else — 0 of the engine's 224 parameters and 0 routes individually
@@ -687,103 +596,18 @@ try {
   `${suggested.id} ${suggested.roman} → ${JSON.stringify(suggested.chords ?? []).slice(0, 80)}`
   );
 
-  /**
-   * ⭐ **The loop the harmony layer was missing: the suggestion gets used, not just printed.**
-   *
-   * `suggest_progression` answers what to play, and nothing could act on the answer — M1 in `z2.md` calls that the composer's core-productivity gap. This calls the two in sequence and checks that the chords **land in the pattern with a length**, because a chord written as a one-step stab is not a chord.
-   */
-  const appliedChords = payload(
-    await client.request("tools/call", {
-      name: "apply_chord_progression",
-      arguments: { genreId: "chicago-house", progressionId: suggested.id, tonic: 60, mode: "major", chordBeats: 4 },
-    })
-  );
-  const appliedTrack = (appliedChords.pattern?.tracks ?? []).find((track) => track.track_id === "chords");
-  check(
-    "apply_chord_progression writes the suggested progression into the pattern",
-    appliedChords.written === (appliedChords.numerals ?? []).length &&
-      (appliedTrack?.steps ?? []).filter((step) => step === 1).length === appliedChords.written &&
-      (appliedTrack?.gate ?? []).filter((gate) => gate > 1).length === appliedChords.written &&
-      appliedChords.validation?.ok === true,
-    `${appliedChords.written} chord(s) into "${appliedChords.track}", validation ${appliedChords.validation?.ok}`
-  );
   check(
   "estimate_key reports a tonic, a mode and a fit from the notes",
   typeof key.tonic === "string" && (key.mode === "major" || key.mode === "minor") && Number.isFinite(key.fit) && key.notes > 0,
   JSON.stringify({ tonic: key.tonic, mode: key.mode, fit: key.fit, notes: key.notes })
   );
-  const pattern = patternResult.pattern;
-  check("get_pattern returns a pattern with tracks", Array.isArray(pattern?.tracks) && pattern.tracks.length > 0);
 
-  const kick = pattern.tracks.find((track) => track.track_id === "kick");
-  const clearedAt = kick.steps.findIndex((on, index) => on && index > 0);
-  const before = kick.steps[clearedAt];
-  const composed = payload(
-  await client.request("tools/call", {
-    name: "apply_pattern_ops",
-    arguments: {
-      pattern,
-      ops: [
-        { op: "clear_step", track: "kick", step: clearedAt },
-        { op: "set_step", track: "kick", step: 15, velocity: 96 },
-        { op: "swing", amount: 30 },
-        { op: "humanize", seed: 7, amount: 0.2, tracks: ["hihat"] },
-      ],
-    },
-  })
-  );
-  const after = composed.pattern.tracks.find((track) => track.track_id === "kick");
-  check("apply_pattern_ops clears the step it was told to", after.steps[clearedAt] === 0, `${before} → ${after.steps[clearedAt]}`);
-  check("apply_pattern_ops sets the step it was told to", after.steps[15] === 1);
-  check("apply_pattern_ops sets swing", composed.pattern.swing === 30);
-  check(
-  "apply_pattern_ops does not mutate the pattern it was given",
-  pattern.tracks.find((track) => track.track_id === "kick").steps[clearedAt] === before,
-  "the library's pattern changed"
-  );
-  check("every op is reported", (composed.applied ?? []).length === 4 && composed.applied.every((row) => row.ok));
-
-  const invalid = payload(
-  await client.request("tools/call", {
-    name: "apply_pattern_ops",
-    arguments: { pattern, ops: [{ op: "set_step", track: "theremin", step: 0 }] },
-  })
-  );
-  check("an unknown track is reported, not thrown", invalid.applied?.[0]?.ok === false, JSON.stringify(invalid.applied?.[0] ?? {}));
 
   /**
-   * A pattern's tracks carry fields the registry's schema does not name, and Zod removes every key an object does
-   * not name. So a caller that sent a real pattern got its lyric, its second lane name and its polymeter length
-   * back gone with no error — data loss with nothing to notice. The schema is permissive on the track now, and
-   * this holds it there at the protocol boundary, where the SDK's own parse runs rather than a handler call.
+   * ⭐ **`pattern_statistics` and `share_url` are not called here any more.** Both take a v1 pattern, which the arrangement replaced; the
+   * checks that drove them were removed with it on 2026-10-07 and the pair is listed in `docs/FEATURE_ALIGNMENT.md` as waiting for the
+   * analysis surface to take an arrangement.
    */
-  const withTrackFields = JSON.parse(JSON.stringify(pattern));
-  const lyricLane = withTrackFields.tracks.find((track) => track.track_id === "lead");
-  lyricLane.syllables = lyricLane.steps.map((on) => (on ? "字" : null));
-  lyricLane.laneId = "lead-2";
-  lyricLane.trackLength = 12;
-  const keptFields = payload(
-    await client.request("tools/call", {
-      name: "apply_pattern_ops",
-      arguments: { pattern: withTrackFields, ops: [{ op: "swing", amount: 12 }] },
-    })
-  );
-  const keptLane = (keptFields.pattern?.tracks ?? []).find((track) => track.track_id === "lead");
-  check(
-    "apply_pattern_ops returns the track fields its schema does not name",
-    Array.isArray(keptLane?.syllables) &&
-      JSON.stringify(keptLane.syllables) === JSON.stringify(lyricLane.syllables) &&
-      keptLane.laneId === "lead-2" &&
-      keptLane.trackLength === 12,
-    `syllables=${Array.isArray(keptLane?.syllables) ? keptLane.syllables.filter(Boolean).length : "missing"} laneId=${keptLane?.laneId} trackLength=${keptLane?.trackLength}`
-  );
-
-  const stats = payload(await client.request("tools/call", { name: "pattern_statistics", arguments: { pattern } }));
-  check("pattern_statistics describes every track", (stats.tracks ?? []).length === pattern.tracks.length);
-
-  const share = payload(await client.request("tools/call", { name: "share_url", arguments: { pattern } }));
-  check("share_url returns an absolute link", typeof share.url === "string" && share.url.startsWith("http") && share.url.includes("groove="), share.url?.slice(0, 60));
-  check("share_url reports its fidelity", typeof share.degraded === "boolean" && typeof share.payloadChars === "number");
 
   const loudness = payload(await client.request("tools/call", { name: "get_loudness_report", arguments: { genreId: "chicago-house" } }));
   check("get_loudness_report returns the committed measurement", typeof loudness.arrangedLufs === "number", JSON.stringify(loudness).slice(0, 120));
@@ -1047,20 +871,10 @@ try {
    * own red halves; what this checks is that the tool is reachable and that its reply cannot be mistaken for a
    * complete one, since it names the sources it deliberately did not read.
    */
-  const pitchPattern = payload(await client.request("tools/call", { name: "get_pattern", arguments: { genreId: "chicago-house" } }));
-  const reported = payload(
-    await client.request("tools/call", {
-      name: "get_transposition_report",
-      arguments: { pattern: pitchPattern.pattern, track: "chords" },
-    })
-  );
-  check(
-    "get_transposition_report answers with a total, the lane it read, and what it did not read",
-    typeof reported.totalSemitones === "number" &&
-      reported.lane !== undefined &&
-      Array.isArray(reported.notRead) &&
-    `total ${reported.totalSemitones}, ${(reported.sections ?? []).length} section(s), ${(reported.notRead ?? []).length} notRead`
-  );
+  /**
+   * ⭐ **`get_transposition_report` is retired.** It read the GS-1 overrides a v1 pattern's lane carried, and an arrangement's track has no such
+   * field -- so the tool had no data here rather than a different address. It went on 2026-10-07 with its two copy criteria.
+   */
 
   /**
    * The export's round trip, measured rather than asserted: the tool reads back the bytes it just wrote and

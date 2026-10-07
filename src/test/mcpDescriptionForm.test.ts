@@ -18,7 +18,7 @@ const source = [
   readFileSync("mcp/registryProject.ts", "utf8"),
   readFileSync("mcp/registryLibrary.ts", "utf8"),
   readFileSync("mcp/registryGs1.ts", "utf8"),
-  readFileSync("mcp/registryPattern.ts", "utf8"),
+  readFileSync("mcp/registryChords.ts", "utf8"),
   readFileSync("mcp/registryVocals.ts", "utf8"),
   readFileSync("mcp/registryRender.ts", "utf8"),
   readFileSync("mcp/registryFiles.ts", "utf8"),
