@@ -52,6 +52,7 @@ import {
   setTrackRegion,
   setTrackSample,
   setTrackSteps,
+  transposeNotesInRange,
 } from "../src/data/arrangementEdits";
 import type { ArrangementV2, NoteEvent, TrackKindV2, TrackV2 } from "../src/types/arrangementV2";
 import type { PlannedTake } from "../src/data/takePlanning";
@@ -699,6 +700,25 @@ export function addMcpNote(arrangementId: string, input: { trackId: string; pitc
         velocity: input.velocity ?? 100,
       })
     )
+  );
+}
+
+/**
+ * ⭐ **Transpose every note a track has inside a beat window.**
+ *
+ * The studio's `apply_pattern_ops` could transpose a pattern's steps, and that tool's data model is the one this migration removes. The
+ * arrangement carries the same ability as notes with a start in beats, so the operation keeps its meaning and changes its address: a caller
+ * names a track and a window instead of a step range.
+ */
+export function transposeMcpNotes(
+  arrangementId: string,
+  trackId: string,
+  fromBeats: number,
+  toBeats: number,
+  semitones: number
+): ArrangementEditResult {
+  return edit(arrangementId, (arrangement) =>
+    refuseUnknownTrack(arrangement, trackId, () => transposeNotesInRange(arrangement, trackId, fromBeats, toBeats, semitones))
   );
 }
 

@@ -9,7 +9,7 @@
 import { z } from "zod";
 import { failure } from "./toolKit";
 import type { ToolDefinition } from "./toolKit";
-import { addMcpNote, addMcpTrackNotes, moveMcpNote, removeMcpNote, setMcpNoteLength } from "./arrangement";
+import { addMcpNote, addMcpTrackNotes, moveMcpNote, removeMcpNote, setMcpNoteLength, transposeMcpNotes } from "./arrangement";
 import { getMcpArrangement } from "./arrangement";
 import { noteName } from "../src/data/pitchTruth";
 
@@ -193,5 +193,27 @@ export const ARRANGEMENT_NOTE_TOOLS: ToolDefinition[] = [
         return failure((error as Error).message);
       }
     },
+  },
+  {
+    name: "transpose_arrangement_notes",
+    title: "Transpose a track's notes in a beat window",
+    description:
+      "Shift every note whose start falls in **[fromBeats, toBeats)** by a number of semitones, on one track. Pitches are clamped to 1..127, so a window that would leave the range lands on the edge rather than disappearing. This is the arrangement's own transpose: the studio's `apply_pattern_ops` moved pattern steps, and a pattern is not what this carries.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      trackId: z.string(),
+      fromBeats: z.number().describe("window start, inclusive, in beats from the arrangement's beginning"),
+      toBeats: z.number().describe("window end, exclusive"),
+      semitones: z.number().int().describe("positive raises, negative lowers"),
+    },
+    handler: (args) =>
+      transposeMcpNotes(
+        String(args.arrangementId),
+        String(args.trackId),
+        Number(args.fromBeats),
+        Number(args.toBeats),
+        Number(args.semitones)
+      ),
   },
 ];
