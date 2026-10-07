@@ -882,3 +882,11 @@
 | ⚠️ **为何一次推全部四块** | ⭐ 引擎的 setter 各吃**自己那一块**的值 ✓（`setMasterFilter(on, cutoff, q, type)` ✓）⇒ ⭐ 改一个参数要**回推四块** ✓ ⇒ ⭐ `patchEffectsRack` 就是这么写的 ✓（⭐ 与 `toggleFx` 同一契约 ✓） | §1031 |
 | ✅ **判据的 sanity 参照物更新** | ⭐ 它原来参照 v1 工具栏的 `filterEnabled` 开关 ✗ ⇒ ⭐ 改为参照 **`filterCutoff`**（⭐ 架子上第一个滑块的写入 ✓）⇒ ⭐ 4 项全绿 ✓ | §1036 |
 
+## 2026-10-07 11:09 回填（新工具进表）
+
+| 工具 | 内容 | 数据 | 依据 |
+|---|---|---|---|
+| `transpose_arrangement_notes` | 把某一轨在 **拍窗口** 内的音符整体移调。音高夹在 1–127。窗口外的音符不动。 | `arrangementId`、`trackId`、`fromBeats`、`toBeats`、`semitones` | 第 1076–1081 轮 |
+| 为什么是这个形状 | v1 的 `apply_pattern_ops` 移动 pattern 的**步**。pattern 是本次迁移要移除的模型。编曲的音符带**起始拍**。所以窗口是拍范围，不是步范围。 | — | 同上 |
+| 判据 | `src/test/arrangementNoteAbilities.test.ts`。一个音符在窗口内，一个在窗口外。窗口内移动。窗口外不动。空窗口不变。 | — | 同上 |
+
