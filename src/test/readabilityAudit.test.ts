@@ -347,7 +347,7 @@ describe("type · the toolbar's own labels", () => {
    */
   it("keeps every control-surface label at 10px or larger", () => {
     const offenders: string[] = [];
-    for (const rel of ["components/sequencer/Toolbar.tsx", "components/sequencer/toolbarTiers.ts"]) {
+    for (const rel of ["components/sequencer/toolbarTiers.ts"]) {
       const source = readFileSync(join(SRC, rel), "utf8");
       for (const hit of smallTypeIn(source)) offenders.push(`src/${rel}:${hit}`);
     }

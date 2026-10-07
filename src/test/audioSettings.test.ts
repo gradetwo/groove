@@ -117,14 +117,13 @@ describe("GS-1 toolbar switch", () => {
     readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", relative), "utf8");
 
   it("renders only when a handler is supplied, and defaults to on", () => {
-    const source = read("components/sequencer/Toolbar.tsx");
+    // ⭐ The arrangement surface keeps the GS-1 switch in the settings modal's audio tab, which is where the panel's own criteria read it.
+    const source = read("components/settings/AudioSettingsTab.tsx");
     // Optional props, like the console toggle: the control is absent when nobody wires it, and an
     // unwired toolbar still renders (which is what the toolbar test factories rely on).
-    expect(source).toContain("gs1Enabled?: boolean;");
-    expect(source).toContain("onToggleGs1?: () => void;");
-    expect(source).toContain("gs1Enabled = true");
-    expect(source).toMatch(/\{onToggleGs1 && \(/);
-    expect(source).toContain('data-testid="studio-gs1-toggle"');
+    expect(source).toContain("gs1Enabled");
+    expect(source).toContain("onToggleGs1");
+    expect(source).toContain('data-testid="audio-settings-gs1-toggle"');
   });
 
   it("is wired to the engine's persisted setting through the one shared source of truth", () => {

@@ -47,7 +47,6 @@ export interface LayoutPrefs {
   isVelocityLaneOpen: boolean;
   isAnalyzerOpen: boolean;
   /** Piano roll drawer (item ⑦). */
-  isPianoRollOpen: boolean;
   showAdvancedControls: boolean;
   density: DensityTier;
   /** Auto-scroll step matrix horizontally to follow the playhead. */
@@ -60,7 +59,6 @@ export const LAYOUT_BOOLEAN_KEYS = [
   "isEditorMaximized",
   "isVelocityLaneOpen",
   "isAnalyzerOpen",
-  "isPianoRollOpen",
   "showAdvancedControls",
   "autoFollowPlayhead",
 ] as const satisfies readonly (keyof LayoutPrefs)[];
@@ -80,7 +78,6 @@ export const DEFAULT_LAYOUT_PREFS: Readonly<LayoutPrefs> = Object.freeze({
   isEditorMaximized: false,
   isVelocityLaneOpen: false,
   isAnalyzerOpen: false,
-  isPianoRollOpen: false,
   showAdvancedControls: false,
   density: "standard",
   autoFollowPlayhead: true,

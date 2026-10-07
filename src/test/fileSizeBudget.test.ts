@@ -38,7 +38,6 @@ const FILE_CAPS: Record<string, number> = {
   "src/components/sequencer/PianoRollLane.tsx": 3241,
   "src/audio/WavExporter.ts": 2608,
   "src/views/GalaxyView.tsx": 2356,
-  "src/components/sequencer/Toolbar.tsx": 2295,
   "src/audio/PolySynth.ts": 1949,
   "src/audio/DrumKitModels.ts": 1925,
   "src/views/CompareView.tsx": 1842,

@@ -375,8 +375,8 @@ describe("D-02 · the preference store is wired", () => {
      */
     const surfaces = [
       settingsSource,
-      read("src/components/sequencer/SequencerPanel.tsx"),
-      read("src/components/sequencer/Toolbar.tsx"),
+      read("src/components/arrangement/ArrangementViewV2.tsx"),
+      read("src/components/arrangement/NewProjectPanelV2.tsx"),
     ].join("\n");
     for (const key of LAYOUT_BOOLEAN_KEYS) {
       expect(surfaces, "layout toggle " + key + " has no control").toContain(key);

@@ -29,7 +29,6 @@ const read = (rel: string) => readFileSync(path.join(ROOT, rel), "utf8");
 const html = read("index.html");
 const css = read("src/index.css");
 const header = read("src/components/Header.tsx");
-const toolbar = read("src/components/sequencer/Toolbar.tsx");
 
 describe("sticky anchors · the page must not be a scroll container", () => {
   it("keeps `overflow-x-hidden` off the body tag", () => {
@@ -64,28 +63,5 @@ describe("sticky anchors · the page must not be a scroll container", () => {
     // worked while no finger could. `flex-wrap` lets it grow instead; the E2E asserts no header
     // control is outside the viewport on any desktop/tablet target.
     expect(header).toContain("flex flex-wrap items-center justify-between gap-x-4 gap-y-2");
-  });
-});
-
-describe("sticky anchors · the transport strip", () => {
-  it("is sticky, parked under the header by the token", () => {
-    expect(toolbar).toContain('data-testid="toolbar-transport-strip"');
-    expect(toolbar).toMatch(
-      /className="sticky top-\[var\(--app-header-h\)\] z-30 -mx-3 sm:-mx-4[^"]*"/
-    );
-  });
-
-  it("is a sibling of the toolbar, not a child of it", () => {
-    // A sticky element can only move inside its parent's box. Inside the toolbar (one ~116 px row)
-    // the strip had 63 px of travel and scrolled away with it; as a sibling its parent is the panel
-    // section, which is as tall as the whole panel.
-    const stripUsage = toolbar.indexOf("{transportStrip}");
-    const toolbarRoot = toolbar.indexOf('data-testid="studio-toolbar"');
-    expect(stripUsage).toBeGreaterThan(-1);
-    expect(toolbarRoot).toBeGreaterThan(stripUsage);
-  });
-
-  it("keeps the transport's own testid, which the E2E reachability check measures", () => {
-    expect(toolbar).toContain('data-testid="toolbar-group-transport"');
   });
 });
