@@ -922,3 +922,5 @@
 | ⭐ **编曲分享链接** | ⏳ **needs** | v1 的 `share_url` 把 **pattern 的字段**编进 URL ✗（`genre_id`／`bpm`／`swing`／`steps` ✓）⇒ v2 面**没有**编曲的分享编码 ✗ ⇒ 工具退役 ✓，能力记此 ✓。 |
 | ⭐ **示例行的 v1 pattern 校验** | ⏳ **needs** | `check_mcp` 曾用 `validate_pattern` 验证 `get_example` 的每一行 ✗。该工具随 v1 pattern 退役 ⇒ 现在只校验**形状**（行数 ＋ 每行有 recipe ✓）⇒ 逐行的 pattern 校验记此 ✓。 |
 
+| ⭐ **`TrackV2` 加了 GS-1 两个字段** ✓ | `gs1Patch?: string`（⭐ 分享码 ✓）＋ `gs1PatchOverrides?: Record<string, number>`（⭐ 逐参数覆盖 ✓）。v1 把它们放在 `SequencerTrack` 上 ✗ ⇒ v2 放在**轨**上 ✓ ⇒ 这样 `apply_gs1_patch`／`get_gs1_patch` 才能改吃编曲 ✓。 | 第 1221 轮 |
+
