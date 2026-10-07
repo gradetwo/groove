@@ -392,7 +392,37 @@ try {
    * The two analysis tools the evaluation asked for and did not exist. Loudness is deliberately not one of them: every render already
    * returns gated loudness and true peak, which `docs/MCP.md` has said since the analyser was written.
    */
-  const key = payload(await client.request("tools/call", { name: "estimate_key", arguments: { genreId: "chicago-house" } }));
+  /**
+   * ⭐ **The key estimate reads an arrangement now.** It took a genre's pattern before; an arrangement carries the notes, so the check builds
+   * one holding a C-major triad and asks which key it is in.
+   */
+  const keyArrangement = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "synth" } }));
+  const keyArrangementId = String(keyArrangement.arrangementId);
+  /**
+   * ⭐ **A blank arrangement has no track**, so the check makes one -- the same two calls a caller makes: create, then add a lane, then write.
+   */
+  const keyTrack = payload(
+    await client.request("tools/call", {
+      name: "add_arrangement_track",
+      arguments: { arrangementId: keyArrangementId, kind: "synth", name: "key" },
+    })
+  );
+  const keyTrackId = String(keyTrack.trackId);
+  await client.request("tools/call", {
+    name: "add_arrangement_notes",
+    arguments: {
+      arrangementId: keyArrangementId,
+      trackId: keyTrackId,
+      notes: [
+        { pitch: 60, startBeats: 0, lengthBeats: 1, velocity: 100 },
+        { pitch: 64, startBeats: 1, lengthBeats: 1, velocity: 100 },
+        { pitch: 67, startBeats: 2, lengthBeats: 1, velocity: 100 },
+      ],
+    },
+  });
+  const key = payload(
+    await client.request("tools/call", { name: "estimate_key", arguments: { arrangementId: keyArrangementId } })
+  );
 
   /**
    * The harmony pair, end to end and browser-free: choose a progression for a feeling, render it in a key, and check that what came

@@ -7,7 +7,8 @@ import { SequencerPattern } from "../src/types/genre";
 import { loudnessReport, shareUrl } from "./exporting";
 import { HEADLESS_POINTER_SENTENCE, headlessParameterDescription } from "./render/budget";
 import { analyseWavFile, renderAudio } from "./render/worker";
-import { flattenMcpArrangement } from "./arrangement";
+import { flattenMcpArrangement, getMcpArrangement } from "./arrangement";
+import type { NoteEvent } from "../src/types/arrangementV2";
 import { runWithProgress } from "./render/progress";
 import { ToolDefinition, estimateKey, failure, patternFromArgs, patternSchema, unknownGenre } from "./toolKit";
 import { z } from "zod";
@@ -25,17 +26,18 @@ export const ANALYSIS_TOOLS: ToolDefinition[] = [
       "Estimate the key of a pattern from **its notes** — a pitch-class histogram fitted against major and minor profiles — and report the tonic, the mode and the fit. It reads the composition rather than the audio on purpose. The notes are what the composer chose, while an FFT estimate of a loop with a kick on every beat is mostly a statement about the kick. Per-render loudness needs no tool: render_audio and render_song already return gated loudness and true peak.",
     readOnly: true,
     inputSchema: {
-      genreId: z.string().optional().describe("estimate this genre's pattern"),
-      pattern: patternSchema.optional().describe("or a pattern you have"),
+      arrangementId: z.string().describe("the arrangement whose notes to read"),
+      trackId: z.string().optional().describe("one track by id, or every track when omitted"),
     },
     handler: (args) => {
-      const pattern = patternFromArgs(args as { genreId?: string; pattern?: unknown });
-      if (!pattern) {
-        // ⭐ A `genreId` that does not resolve reaches here, so this is the message most composers will actually see.
-        const wanted = (args as { genreId?: string }).genreId;
-        return failure(wanted ? unknownGenre(wanted) : "provide either genreId or pattern");
-      }
-      return estimateKey(pattern);
+      const arrangement = getMcpArrangement(String(args.arrangementId));
+      if (arrangement === undefined) return failure(`unknown arrangement "${String(args.arrangementId)}"`);
+      const wanted = args.trackId === undefined ? undefined : String(args.trackId);
+      const tracks = Object.entries<NoteEvent[]>(arrangement.notesByTrack ?? {})
+        .filter(([id]) => wanted === undefined || id === wanted)
+        .map(([, notes]) => ({ pitch: notes.map((note) => note.pitch) }));
+      if (tracks.length === 0) return failure("that arrangement holds no notes in the tracks named");
+      return estimateKey({ tracks });
     },
   },
   {

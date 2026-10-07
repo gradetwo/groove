@@ -910,3 +910,7 @@
 | 判据 | ⭐ `check_mcp` 删 8 处 ✓；2 个文案判据删 ✓ | 门从 **8 红 ⇒ 0 红** ✓，检查数 **59 ⇒ 71** ✓。 |
 | needs | ⭐ `pattern_statistics` 与 `share_url` 仍吃 v1 pattern ✗ | 属**迁移 ④**（分析面吃编曲）✓。 |
 
+| ⭐ **`estimate_key` 改成读编曲** ✓ | 入参从 `genreId`／`pattern` ✗ 改为 **`arrangementId` ＋ `trackId?`** ✓。从 `notesByTrack` 组 `{ tracks: [{ pitch }] }` ✓。**算法不变** ✓。 | 第 1184–1197 轮 |
+| 判据 | `check_mcp` 改成：建编曲 ⇒ **建轨** ⇒ 写一个 C 大调三和弦 ⇒ 问调性 ✓。 | 同上 |
+| 量出来的事实 | ⭐ **空白编曲没有轨** ✓ ⇒ 建完编曲要 `add_arrangement_track` ✓ ⇒ 否则加音符会失败 ✓。 | 同上 |
+
