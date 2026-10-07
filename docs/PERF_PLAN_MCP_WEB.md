@@ -54,7 +54,9 @@ an idle machine before anyone treats the last digits as a target. The render, CP
 | draw one note in the roll (the *editing* gesture, not the entry path) | 368–507 ms per landed note | later steps need a horizontal scroll: 4 of 8 targeted cells landed |
 | "Copy selection" (the only repeat gesture) | 7,206 ms | duplicates the marked span **once**; the copies are not re-selected, so pressing again does nothing new |
 | start playback (11 imported parts) | **393 ms** to the first playhead movement | frames p50 16.7 ms, p95 21.6 ms, worst 45.8 ms, 1 frame >32 ms, 0 long tasks |
-| page JS heap | **15–16 MB with 11 imported (synth) lanes**; 43 MB with one *sampler* lane; **391 MB with ten sampler lanes and the instrument library open** | so the memory is in sampler state + the library, not in track count |
+| page JS heap | **10–18 MB** in import-only sessions (11 lanes, synth or partly mapped); **202–391 MB** after the full interaction sequence (10 sampler lanes + library opened and searched + roll drawn + generators + playback, two runs) | ⭐ the first attribution ("~35 MB per sampler lane") was **withdrawn**: ten sampler lanes with the library *never opened* stayed at **10 MB**, so lane count is not the driver. The two suspects left are the library's per-row coverage state and roll/DOM churn; a memory probe is on the plan (W6b) |
+| playback with **3 sampler lanes** among 11 | start **387 ms**; frames p50 16.7 / p95 22 / worst 65.1 ms, **6 frames >32 ms** | the all-synth import measured 1 frame >32 ms — sampler lanes visibly hitch the frame loop |
+| **export a 5:00 WAV** | progress element in **82 ms**; over **90 s** of watching the word never changed (`Exporting…`), **no percentage and no ETA anywhere on the page**; Cancel returned the UI in **70 ms** | the wait is the same engine as the MCP render (517.6 s for this piece), with no feedback while it runs |
 | boot / first paint (from `perf:check`, idle machine) | desktop FCP 1,300 ms, LCP 2,424 ms, CLS 0.000; mobile 4G+4× FCP 3,568 ms, LCP 6,192 ms | initial route **226 KB gzip** |
 
 ---
@@ -160,8 +162,8 @@ moved. Targets are for an **idle** 8-core machine unless stated.
 | W3c | **The mapping stays revisitable.** The per-track instrument chip already exists; make it the place the import's decision can be changed later, instead of re-importing. | decide-at-import only | any imported part can be re-pointed from its own track | UI criterion: change an imported track's asset and the lanes show the new recording |
 | W4 | **Orchestral generators.** An "ostinato" generator (figure × bars × dynamic arc), a "swell" (velocity/length curve over a phrase) and a "score from chords" pass; the existing generators stay for electronic idioms. | none | one gesture writes an 8-bar orchestral ostinato | unit criteria on the generated note set + a UI test that the gesture lands it |
 | W5 | **Length in seconds, on the toolbar.** Show `125 bars ≈ 5:00 @ 100 BPM` and let a person type either. | bars only | a creator can ask for 5:00 and get the bars | unit + toolbar criterion |
-| W6 | **Memory per track.** 35 MB per sampler lane is mostly duplicated catalogue/coverage state; share it per instrument and drop it when the lane's instrument changes. | 391 MB at 10 tracks | **≤ 150 MB** at 10 tracks | a browser criterion reading `performance.memory` after building 10 tracks |
-| W7 | **Export feedback.** A 5-minute export must show progress, remaining time and a cancel that works (the cancel exists; the estimate does not). | spinner only | progress ≥ 1 Hz with an ETA within ±30 % | export probe on a 32-bar fixture |
+| W6 | ⭐ **Attribute the heap first, then bound it.** The lane-count theory was withdrawn (ten sampler lanes with the library closed: 10 MB), so this starts with a probe rather than a fix: sample `performance.memory` at each step of the flow and bisect the 202–391 MB. | 202–391 MB after a long session; 10 MB for the same lanes in a short one | a stated, reproducible driver and **≤ 150 MB** | the new memory probe (W6b), plus a ceiling in `probe:web-interaction` |
+| W7 | **Export feedback.** A 5-minute export must show progress, remaining time and a cancel that works. Measured: the element appears in 82 ms and then **says the same word for the whole render**; there is no percentage, no elapsed and no ETA on the page; Cancel works (70 ms). | one static word for ~9 minutes | progress ≤ 1 s old, an ETA within ±30 %, and the rendered-seconds count | export probe on the 32-bar fixture (progress must change at least every second) |
 
 ### 3.4 Targets, in one place
 
@@ -183,7 +185,9 @@ Every target above names the instrument that owns it. Three of them do not exist
 1. **`probe:render-wall`** — fixed fixture, wall clock + CPU utilisation + peak RSS, with a ceiling (E1, E2, M4).
 2. **`probe:web-interaction`** — the arrangement surface's own operation costs (W1, W3, W5): add track, switch
    kind, open library, draw/marquee/repeat notes, start playback.
-3. **`check_mcp_replies`** — reply and catalogue sizes from a real stdio session (M1, M2).
+3. **`probe:web-memory`** (W6b) — `performance.memory` sampled at each step of the flow (panel → lanes → library →
+   search → roll → generators → playback), so the 202–391 MB has a named step rather than a theory.
+4. **`check_mcp_replies`** — reply and catalogue sizes from a real stdio session (M1, M2).
 
 The existing gates keep what they already own: `check_render_cpu_budget.mjs` (the render stays single-core-safe
 until E1 makes parallelism explicit), `flattenCost.test.ts` (E4), `fileSizeBudget.test.ts` and `check:budget`
