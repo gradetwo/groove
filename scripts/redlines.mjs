@@ -378,14 +378,12 @@ const REQUIRED_MCP_TOOLS = [
   "list_chord_progressions",
   "get_chord_progression",
   "list_masterclasses",
-  "get_pattern",
-  "apply_pattern_ops",
-  "validate_pattern",
-  "pattern_statistics",
   "compare_genres",
-  "share_url",
   "get_loudness_report",
   "analyze_audio",
+  // ⭐ `get_pattern`, `apply_pattern_ops`, `apply_chord_progression`, `get_transposition_report`, `pattern_statistics`, `share_url` and
+  //    `validate_pattern` are gone: each read or wrote a v1 pattern, and the arrangement replaced it. They were **deleted, not renamed**, so
+  //    requiring them here would make the red line unsatisfiable -- the same reason `render_audio` and `render_preview_clip` left this list.
 ];
 const missingTools = REQUIRED_MCP_TOOLS.filter((name) => !declaredTools.includes(name));
 check(
