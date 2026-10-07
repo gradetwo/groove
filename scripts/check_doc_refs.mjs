@@ -120,6 +120,19 @@ const PROPOSED = new Map([
     "scripts/probe_old_project_features.mjs",
     "Removed 2026-10-07: it probed the v1 project hub and its drawer, both of which went with the studio.",
   ],
+  /**
+   * ⭐ **Removed 2026-10-07 with the surfaces they measured.** One drove the studio's step grid, the other the v1
+   * arrangement panel's regions and its 44 px targets. `docs/OPEN_WORK.md` records what each asserted and which of
+   * those claims still need a probe written against `ArrangementViewV2`.
+   */
+  [
+    "scripts/probe_grid_gutter.mjs",
+    "Removed 2026-10-07: it measured the studio step grid's gutter against `.trk-head-solid`, a layout the arrangement surface does not have.",
+  ],
+  [
+    "scripts/probe_arrangement.mjs",
+    "Removed 2026-10-07: it drove the v1 arrangement panel (`arrangement-bar-*`, `arrangement-move-*`, its own buttons). The v2 surface has no such elements; its geometry and target-size claims are recorded as work.",
+  ],
   [
     "src/components/console/StudioConsoleFloat.tsx",
     "Planned draggable console float (STUDIO_REFACTOR_PLAN X-02/X-03). The console exists as ConsoleOverlay/TrackInspector instead.",
@@ -277,6 +290,14 @@ const SCRIPT_EXEMPT = new Map([
   [
     "probe:toolbar",
     "Historical mention: it ran `scripts/measure_toolbar_density.mjs`, which counted the studio toolbar's controls. Both went on 2026-10-07, and the plan and the ledger keep the lines as the record of what they measured.",
+  ],
+  [
+    "probe:grid-gutter",
+    "Historical mention: it measured the studio step grid's gutter. The script and the script entry went on 2026-10-07, and the ledger keeps the reading as the record of what it measured.",
+  ],
+  [
+    "probe:arrangement",
+    "Historical mention: it drove the v1 arrangement panel and its iPad touch targets. The script and the script entry went on 2026-10-07; what still needs a probe on the v2 surface is recorded as work.",
   ],
 ]);
 let scriptsChecked = 0;

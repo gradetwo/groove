@@ -135,26 +135,23 @@ describe("CI · every target runs on every push", () => {
     expect(jobBlock("validate")).toContain("npm run check:loudness");
   });
 
-  it("runs the studio DOM probes on the desktop leg, against the same build", () => {
+  it("runs the arrangement DOM probe on the desktop leg, against the same build", () => {
     /**
-     * The arrangement probe's contract is pixel geometry, finger-target sizes and a real pointer drag — none of it
-     * decidable from source, which is why it exists. It was born as a local `npm run probe:arrangement`; wiring it
-     * (and the two older probes) into CI is what keeps it from becoming a script nobody runs, and it is the kind of
-     * check that should not burn a developer's machine.
+     * The probe presses a roll cell and requires the release to land on the same cell — a pointer contract that is not
+     * decidable from source, which is why it exists. Wiring it into CI is what keeps it from becoming a script nobody
+     * runs, and it is the kind of check that should not burn a developer's machine.
+     *
+     * ⭐ **Two probes were retired on 2026-10-07** (`probe:grid-gutter`, `probe:arrangement`): they measured the studio's
+     * step-grid gutter and the v1 arrangement panel's regions and its 44 px targets — neither surface exists after the v1
+     * retirement. `check_doc_refs.mjs` declares their scripts and paths, and rebuilding the pixel/finger-target probe
+     * against `ArrangementViewV2` is recorded as work in the ledger. `probe:arrangement-audio` keeps its script for the
+     * manual `audio` scope but does not run here: it renders until a CI browser disconnects.
      */
-    /**
-     * ⭐ **The probes the leg must run.** `probe:toolbar` counted the studio toolbar's controls and went with it on 2026-10-07; the other three
-     * measure the arrangement surface, which is what is left to measure.
-     */
-    for (const script of ["probe:grid-gutter", "probe:arrangement", "probe:arrangement-audio"]) {
-      expect(e2e, `the e2e job must run ${script}`).toContain(`npm run ${script}`);
-    }
-    // They serve `dist/`, so the build has to come first…
-    expect(e2e.indexOf("npm run build")).toBeLessThan(e2e.indexOf("npm run probe:arrangement"));
-    // …and they belong to one leg: three copies of the same measurement would only burn three runners.
+    expect(e2e, "the e2e job must run probe:arrangement-undo").toContain("npm run probe:arrangement-undo");
+    // It serves `dist/`, so the build has to come first…
+    expect(e2e.indexOf("npm run build")).toBeLessThan(e2e.indexOf("npm run probe:arrangement-undo"));
+    // …and it belongs to one leg: three copies of the same measurement would only burn three runners.
     expect(e2e).toMatch(/if: matrix\.leg == 'Desktop browsers'\n\s+run: \|/);
-    // The iPad pass is the one that proves the touch half of B3's contract — a mouse drag cannot.
-    expect(e2e).toContain("npm run probe:arrangement -- --viewport=ipad");
   });
 });
 

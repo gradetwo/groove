@@ -257,25 +257,22 @@ jobs:
           E2E_ONLY: ${{ matrix.only }}
         run: npm run test:e2e:all
 
-      # The studio's DOM probes, on the one leg that already has browsers *and* a production build.
+      # The arrangement's DOM probe, on the one leg that already has browsers *and* a production build.
       #
-      # They serve `dist/` themselves and drive it in a real browser, so they are neither unit tests (the
-      # contracts they check — pixel geometry, finger-target sizes, a real pointer drag — are not decidable from
-      # source) nor part of the matrix (they are not per-device). Running them here is what keeps the local
-      # machine out of the loop for the checks that can run on a runner.
+      # It serves `dist/` itself and drives it in a real browser, so it is neither a unit test (the contract it
+      # checks — a pointer press landing on the same cell on release — is not decidable from source) nor part of the
+      # matrix (it is not per-device). Running it here is what keeps the local machine out of the loop for the checks
+      # that can run on a runner.
       #
-      # `probe:arrangement` (B3) asserts that every region sits above its own bar in the ruler's arithmetic, that
-      # every target a finger must hit is at least 44 × 44 px as painted, and that a real mouse drag reorders the
-      # song — with a sub-half-bar nudge as the negative control, because a check that cannot fail proves nothing.
-      - name: Studio DOM Probes (grid gutter, arrangement)
+      # ⭐ **Two probes were retired on 2026-10-07** (`probe:grid-gutter`, `probe:arrangement`): they measured the
+      # studio's step-grid gutter and the v1 arrangement panel's regions and 44 px targets, and neither surface exists
+      # after the v1 retirement. `check_doc_refs.mjs` declares the removed scripts and paths; rebuilding the
+      # pixel/finger-target probe against `ArrangementViewV2` is recorded as work in the ledger.
+      # `probe:arrangement-audio` keeps its script (the manual `audio` scope runs it by path) but the release gate does
+      # not: it renders until the runner's browser disconnects.
+      - name: Arrangement DOM Probe (roll press and undo)
         if: matrix.leg == 'Desktop browsers'
         run: |
-          npm run probe:grid-gutter
-          npm run probe:arrangement
-          # The same assertions on the *tablet* surface, with touch enabled: B3's finger-target contract is about
-          # the iPad, and a mouse drag cannot prove that `touch-action: none` is in place.
-          npm run probe:arrangement -- --viewport=ipad
-          npm run probe:arrangement-audio
           # `probe:arrangement-undo` presses a roll cell and requires the release to land on the same cell: a press
           # focuses the panel, and without `preventScroll` the browser scrolled the window 226 px, moving a different
           # cell under the pointer, so the write was refused and pressing a cell looked like it did nothing.
