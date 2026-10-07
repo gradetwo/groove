@@ -421,8 +421,7 @@ export const HelpCenterModal: React.FC<HelpCenterModalProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t("help_search_placeholder")}
-              aria-label={t("help_search_placeholder")}
+              placeholder={t("help_search_placeholder")} aria-label={t("help_search_placeholder")}
               className="w-full bg-[#141724] border border-line/80 rounded-xl pl-9 pr-8 py-2 text-xs text-text placeholder:text-text-dim focus:outline-none focus:border-accent/60 transition-colors"
               data-testid="help-center-search-input"
             />

@@ -1,10 +1,10 @@
 {
-  "url": "http://127.0.0.1:41235",
+  "url": "http://127.0.0.1:0 (measured 2026-10-07, probe:latency --json, v2.35.0 arrangement surface)",
   "pageErrors": [],
   "results": [
     {
       "label": "baseline (playing, no input)",
-      "latencyMs": 1511.1,
+      "latencyMs": 1518.1,
       "longTasks": 0,
       "totalBlockedMs": 0,
       "worstTaskMs": 0,
@@ -12,7 +12,7 @@
     },
     {
       "label": "GS-1 off",
-      "latencyMs": 40.2,
+      "latencyMs": 67.6,
       "longTasks": 0,
       "totalBlockedMs": 0,
       "worstTaskMs": 0,
@@ -20,56 +20,140 @@
     },
     {
       "label": "GS-1 on",
-      "latencyMs": 37.7,
+      "latencyMs": 60.3,
       "longTasks": 0,
       "totalBlockedMs": 0,
       "worstTaskMs": 0,
       "tasks": []
     },
     {
-      "label": "timbre \u2192 warm_pad",
-      "latencyMs": 169.7,
-      "longTasks": 1,
-      "totalBlockedMs": 83,
-      "worstTaskMs": 83,
+      "label": "timbre \u2192 Salamander Grand Piano",
+      "latencyMs": 471.3,
+      "longTasks": 4,
+      "totalBlockedMs": 381,
+      "worstTaskMs": 180,
       "tasks": [
         {
-          "offsetMs": 35.8,
-          "durationMs": 83
+          "offsetMs": 2.6,
+          "durationMs": 180
+        },
+        {
+          "offsetMs": 214.7,
+          "durationMs": 89
+        },
+        {
+          "offsetMs": 314,
+          "durationMs": 57
+        },
+        {
+          "offsetMs": 372,
+          "durationMs": 55
         }
       ]
     },
     {
-      "label": "timbre \u2192 saw_lead",
-      "latencyMs": 105.8,
-      "longTasks": 0,
-      "totalBlockedMs": 0,
-      "worstTaskMs": 0,
-      "tasks": []
+      "label": "timbre \u2192 Virtuosity Drums \u2014 Basic Kit",
+      "latencyMs": 578,
+      "longTasks": 4,
+      "totalBlockedMs": 461,
+      "worstTaskMs": 207,
+      "tasks": [
+        {
+          "offsetMs": 5,
+          "durationMs": 207
+        },
+        {
+          "offsetMs": 256.6,
+          "durationMs": 135
+        },
+        {
+          "offsetMs": 397.3,
+          "durationMs": 57
+        },
+        {
+          "offsetMs": 455,
+          "durationMs": 62
+        }
+      ]
     },
     {
-      "label": "timbre \u2192 rhodes_ep",
-      "latencyMs": 80.5,
-      "longTasks": 0,
-      "totalBlockedMs": 0,
-      "worstTaskMs": 0,
-      "tasks": []
+      "label": "timbre \u2192 Salamander Grand Piano",
+      "latencyMs": 511.8,
+      "longTasks": 4,
+      "totalBlockedMs": 409,
+      "worstTaskMs": 169,
+      "tasks": [
+        {
+          "offsetMs": 7.1,
+          "durationMs": 169
+        },
+        {
+          "offsetMs": 210.2,
+          "durationMs": 98
+        },
+        {
+          "offsetMs": 314.7,
+          "durationMs": 55
+        },
+        {
+          "offsetMs": 370.6,
+          "durationMs": 87
+        }
+      ]
     },
     {
-      "label": "timbre \u2192 reese_bass",
-      "latencyMs": 86.3,
-      "longTasks": 0,
-      "totalBlockedMs": 0,
-      "worstTaskMs": 0,
-      "tasks": []
+      "label": "timbre \u2192 Virtuosity Drums \u2014 Basic Kit",
+      "latencyMs": 515,
+      "longTasks": 4,
+      "totalBlockedMs": 400,
+      "worstTaskMs": 161,
+      "tasks": [
+        {
+          "offsetMs": 2.5,
+          "durationMs": 161
+        },
+        {
+          "offsetMs": 205.9,
+          "durationMs": 94
+        },
+        {
+          "offsetMs": 303.8,
+          "durationMs": 84
+        },
+        {
+          "offsetMs": 388.5,
+          "durationMs": 61
+        }
+      ]
     },
     {
-      "label": "toggle one step",
-      "latencyMs": 91.3,
-      "longTasks": 0,
-      "totalBlockedMs": 0,
-      "worstTaskMs": 0,
-      "tasks": []
+      "label": "write one note",
+      "latencyMs": 759.2,
+      "longTasks": 5,
+      "totalBlockedMs": 567,
+      "worstTaskMs": 223,
+      "tasks": [
+        {
+          "offsetMs": 26,
+          "durationMs": 223
+        },
+        {
+          "offsetMs": 255.4,
+          "durationMs": 77
+        },
+        {
+          "offsetMs": 350.4,
+          "durationMs": 75
+        },
+        {
+          "offsetMs": 425.6,
+          "durationMs": 75
+        },
+        {
+          "offsetMs": 605.1,
+          "durationMs": 117
+        }
+      ]
     }
   ]
 }

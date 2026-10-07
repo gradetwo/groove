@@ -1397,8 +1397,7 @@ export const ChordProgressionsView: React.FC<ChordProgressionsViewProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t("chords_search_placeholder")}
-              aria-label={t("chords_search_placeholder")}
+              placeholder={t("chords_search_placeholder")} aria-label={t("chords_search_placeholder")}
               className="w-full bg-[#121622] border border-line rounded-lg pl-9 pr-3 py-1.5 text-xs text-white placeholder-text-dim focus:outline-none focus:border-accent"
             />
           </div>

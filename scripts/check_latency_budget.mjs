@@ -9,8 +9,12 @@
  *     node scripts/check_latency_budget.mjs                 # runs the probe itself
  *     node scripts/check_latency_budget.mjs --from FILE     # judges a stored --json payload
  *
- * ⚠️ The budgets come from three measured runs (2026-10-04 22:58) and are deliberately wide — three
- * times the worst reading for the GS-1 toggles, twice it for the timbre switches — because a gate
+ * ⚠️ **Re-derived 2026-10-07 for the v2 surface**, because the actions themselves changed: the probe used to drive
+ * `TrackInspector` (a synth preset swap, "observed max 111.2 ms") and the studio sequencer's step cells, and it now
+ * drives the arrangement's instrument chip — which **loads a sampled instrument** (an SFZ and its audio) — and writes a
+ * note into the piano roll. Measured on that surface, one run, 2026-10-07: GS-1 60-68 ms / 0 long tasks; timbre
+ * 471-578 ms / 4 long tasks / worst 207 ms; write one note 759 ms / 5 long tasks / worst 223 ms. The ceilings below are
+ * ~2.5x the measured settle and ~2x the measured long tasks, which is the multiple this file has always used — a gate
  * that reddens on noise gets switched off, and then it guards nothing.
  *
  * The `--from` form is what makes this testable without a browser: a criterion hands it a payload
@@ -26,12 +30,11 @@ const from = fromIndex !== -1 ? argv[fromIndex + 1] : null;
 /** settle ceilings in ms, and how many long tasks each action may have. */
 const BUDGETS = [
   { match: /^baseline/, min: 1400, max: 1700, longTasks: 0, why: "the baseline is a fixed 1.5 s window" },
-  { match: /^GS-1/, min: 0, max: 150, longTasks: 0, why: "observed max 53.7 ms" },
-  { match: /^timbre → (?!warm_pad)/, min: 0, max: 400, longTasks: 0, why: "observed max 111.2 ms" },
-  { match: /^timbre → warm_pad/, min: 0, max: 400, longTasks: 2, why: "the first switch carries a one-off cost" },
-  { match: /^toggle one step/, min: 0, max: 250, longTasks: 0, why: "observed max 91.3 ms" },
+  { match: /^GS-1/, min: 0, max: 300, longTasks: 0, why: "measured 60-68 ms on the v2 surface" },
+  { match: /^timbre →/, min: 0, max: 1500, longTasks: 8, why: "measured 471-578 ms with 4 long tasks (a sampled instrument loads)" },
+  { match: /^write one note/, min: 0, max: 2000, longTasks: 10, why: "measured 759 ms with 5 long tasks (a roll repaint)" },
 ];
-const WORST_TASK_BUDGET_MS = 150;
+const WORST_TASK_BUDGET_MS = 450;
 
 function load() {
   if (from) return JSON.parse(fs.readFileSync(from, "utf8"));

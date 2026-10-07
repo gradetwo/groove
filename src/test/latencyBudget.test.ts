@@ -24,8 +24,14 @@ describe("latency budget gate", () => {
 
   it("fails a sample whose timbre switch got slower", () => {
     const payload = JSON.parse(readFileSync(SAMPLE, "utf8"));
-    const row = payload.results.find((x: { label: string }) => x.label === "timbre → saw_lead");
-    row.latencyMs = 900;
+    /**
+     * ⭐ Found by prefix, not by an instrument's name. The labels are the **chosen instrument's**, so they change with
+     * the catalogue (`timbre → saw_lead` was the v1 inspector's asset id; the v2 chip names what it loaded), and a
+     * criterion that hardcoded one name would either throw on `row.latencyMs` or quietly stop testing anything.
+     */
+    const row = payload.results.find((x: { label: string }) => x.label.startsWith("timbre →"));
+    expect(row).toBeDefined();
+    row.latencyMs = 4000; // four times the measured settle, and well past the 1500 ms ceiling
     const dir = mkdtempSync(join(tmpdir(), "latency-"));
     const file = join(dir, "slow.json");
     writeFileSync(file, JSON.stringify(payload));
