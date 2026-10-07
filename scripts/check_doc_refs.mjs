@@ -96,6 +96,18 @@ const PROPOSED = new Map([
     "src/data/debugBundleWeb.ts",
     "Removed by the merge in FEATURE_ALIGNMENT.md 2026-10-07 08:08; its errors, failed requests, per-section byte counts and the five things a reader must not expect now live in features/debug/webDebugBundle.ts.",
   ],
+  /**
+   * ⭐ **Removed with the studio toolbar they measured.** `PRODUCT_PLAN_v2.1.0.md` records what each one counted, and those lines are accurate
+   * for the version they were written about, so they are declared rather than edited. Both scripts measured the studio's own controls.
+   */
+  [
+    "scripts/measure_toolbar_density.mjs",
+    "Removed 2026-10-07: it counted the studio toolbar's controls, which the arrangement surface does not have. The plan document names it.",
+  ],
+  [
+    "scripts/probe_old_project_features.mjs",
+    "Removed 2026-10-07: it probed the v1 project hub and its drawer, both of which went with the studio.",
+  ],
   [
     "src/components/console/StudioConsoleFloat.tsx",
     "Planned draggable console float (STUDIO_REFACTOR_PLAN X-02/X-03). The console exists as ConsoleOverlay/TrackInspector instead.",
@@ -250,6 +262,10 @@ const SCRIPT_EXEMPT = new Map([
   ["test:wasm", "the synth repository's own script, quoted in the upstream plan"],
   ["verify:worklet-protocol", "the synth repository's own script, quoted in the upstream plan"],
   ["X", "a placeholder: prose about this gate has to be able to write `npm run X`"],
+  [
+    "probe:toolbar",
+    "Historical mention: it ran `scripts/measure_toolbar_density.mjs`, which counted the studio toolbar's controls. Both went on 2026-10-07, and the plan and the ledger keep the lines as the record of what they measured.",
+  ],
 ]);
 let scriptsChecked = 0;
 for (const doc of DOCS) {

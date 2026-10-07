@@ -43,7 +43,6 @@
     "probe:scroll": "node scripts/serve_probe.mjs",
     "check:css": "vite-node scripts/check_css_usage.mjs",
     "check:docs:refs": "vite-node scripts/check_doc_refs.mjs",
-    "probe:toolbar": "node scripts/measure_toolbar_density.mjs",
     "probe:grid-gutter": "node scripts/probe_grid_gutter.mjs",
     "probe:arrangement": "node scripts/probe_arrangement.mjs",
     "probe:arrangement-audio": "node scripts/probe_arrangement_audio.mjs",
