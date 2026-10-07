@@ -270,6 +270,21 @@ describe("copying what the roll has marked", () => {
     // ⭐ The originals are still there, and each has a copy exactly one span later.
     expect(landed.some((note) => note.pitch === first.pitch && note.startBeats === first.startBeats)).toBe(true);
     expect(landed.some((note) => note.pitch === first.pitch && note.startBeats === first.startBeats + delta)).toBe(true);
+    /**
+     * ⭐ **And the selection-acting velocity control, which is what "the strings are too loud on beat 3" needed.**
+     * The measurement behind it: a note element carried `data-length` and no velocity, and the only velocity controls
+     * were the slider for notes not yet written and the whole-track ramp. Here the marquee selection made above is
+     * still marked, so the control must be live, and changing it must reach the arrangement through the command path.
+     */
+    const velocitySlider = screen.getByTestId("arrangement-selection-velocity") as HTMLInputElement;
+    expect(velocitySlider.disabled).toBe(false);
+    fireEvent.change(velocitySlider, { target: { value: "42" } });
+    const reVoiced = onArrangementChange.mock.calls.at(-1)?.[0] as ArrangementV2;
+    const markedNote = (reVoiced.notesByTrack?.[track.id] ?? []).find(
+      (note) => note.pitch === first.pitch && note.startBeats === first.startBeats
+    );
+    expect(markedNote?.velocity).toBe(42);
+
   });
 });
 

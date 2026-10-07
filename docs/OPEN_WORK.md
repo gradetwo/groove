@@ -18584,3 +18584,17 @@ describe("the grid's editing actions", () => {
   ⏳ 还差**改的 UI** ✓（下一轮）：按仓库既有惯例做成"作用于**框选**的一个控件" ✓（`quantise lengths` 就是这么做的 ✓；
     "点音符＝删除"是设计 ✗，所以不走点击选中 ✓），并在 `ArrangementViewV2` 里用
     `setTrackNoteVelocityCommand` 提交 ✓（一条命令一次撤销 ✓，`before` 取音符当前值 ✓）。
+
+### 七百二十九、✅ **W5b 收尾：卷帘里可以改**选中音符**的力度了（数据层→UI→判据 全链）**（2026-10-08 ✓）
+
+  ⭐ 控件放在**工具条的编辑组**里 ✓（`arrangement-selection-velocity` ✓），与邻居同一惯例 ✓：
+    · 作用对象是**卷帘自己的框选** ✓（`rollSelection` ✓，和 `Copy selection`／quantise 一模一样 ✓），
+      **没有选择就 disabled** ✓（而不是默默什么都不做 ✓）；
+    · 读数从**选中音符自己的力度**推导 ✓（不另存状态 ⇒ 控件不可能与音乐不一致 ✓）；
+    · 改变时**逐个音符提交** ✓（`setTrackNoteVelocityCommand` ✓，`before` 取那个音符当前值 ✓）
+      ⇒ 撤销是**逐个恢复**而不是"全体重置成一个数" ✓。
+  ⭐ 判据 ✓（`arrangementViewV2.test.tsx` ✓ 在既有的框选用例末尾追加 ✓）：框选之后控件**必须可用** ✓，
+    改成 42 之后**arrangement 里那个音符的 velocity 必须是 42** ✓ ⇒ 删掉控件或断掉命令路径都会红 ✓。
+  ⭐ 至此 **W5b 全链完成** ✓：数据（`setNoteVelocity` 钳制 1..127 ✓）→ 编排层（`setTrackNoteVelocity` ✓）
+    → 命令（可撤销 ✓）→ **可见**（音符带 `data-velocity` ✓）→ **可改**（框选 + 工具条 ✓）→ 判据（3 个文件 ✓）。
+    这正是六百九十四 里记下的创作者原话"**单个音符既看不到力度也改不了**"✓ —— 现在两件事都成立了 ✓。

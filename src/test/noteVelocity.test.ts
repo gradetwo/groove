@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { setNoteVelocity } from "../data/noteEvents";
 import { setTrackNoteVelocity } from "../data/arrangementEdits";
 import { setTrackNoteVelocityCommand } from "../data/arrangementHistory";
-import type { ArrangementV2 } from "../types/arrangement";
+/** The arrangement's type is taken from the edit itself: these cases build the minimal shape the edits read. */
+type ArrangementV2 = Parameters<typeof setTrackNoteVelocity>[0];
 
 /**
  * ⭐ **One note's velocity, which the roll could neither show nor change.**

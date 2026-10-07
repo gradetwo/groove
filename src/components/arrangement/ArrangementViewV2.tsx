@@ -62,6 +62,7 @@ import {
   setTrackFlagCommand,
   setTrackGainCommand,
   setTrackNoteLengthCommand,
+  setTrackNoteVelocityCommand,
   setTrackPanCommand,
   setTrackRegionCommand,
   setTrackSampleCommand,
@@ -367,6 +368,18 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
   const editableTrackId =
     selectedTrackId ??
     arrangement.tracks.find((track) => (arrangement.notesByTrack?.[track.id]?.length ?? 0) > 0)?.id;
+  /**
+   * ⭐ **Where the slider starts**: the velocity of the first note in the roll's selection (or the default the new-note
+   * slider uses). Derived at render rather than stored, so the control cannot disagree with the music.
+   */
+  const selectionVelocity = (() => {
+    const first = rollSelection[0];
+    if (editableTrackId === undefined || first === undefined) return 100;
+    const note = (arrangement.notesByTrack?.[editableTrackId] ?? []).find(
+      (candidate) => candidate.pitch === first.pitch && candidate.startBeats === first.startBeats
+    );
+    return note?.velocity ?? 100;
+  })();
   const [snapOn, setSnapOn] = useState(true);
   /**
    * The loop brace. `undefined` is "no loop", which is the state Live starts in; the toolbar's Loop button turns one
@@ -1075,6 +1088,39 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           * ⭐ **A copy placed by the selection's own length.** One command, so one undo, and the notes it lands on are the
           * notes it wrote — read from the arrangement rather than from the mark, which carries a pitch and a start and no more.
           */}
+        {/**
+          * ⭐ **One note's velocity, acting on the roll's own selection.**
+          *
+          * The measurement behind it: a note element carried `data-length` and no velocity, and the only velocity
+          * controls were the slider for notes **not yet written** and the whole-track ramp — so "the strings are too
+          * loud on beat 3" had no answer. This follows the neighbours' idiom (the copy and quantise actions act on
+          * `rollSelection`, and an edit goes through the command path so one press is one undo), and it is disabled
+          * until something is selected rather than silently doing nothing.
+          */}
+        <label className="flex items-center gap-1 text-xs text-text opacity-90">
+          <span className="font-mono text-[10px] uppercase tracking-widest text-text-sub">Velocity</span>
+          <input
+            type="range"
+            min={1}
+            max={127}
+            data-testid="arrangement-selection-velocity"
+            className="h-1 w-20 accent-accent"
+            disabled={editableTrackId === undefined || rollSelection.length === 0}
+            value={selectionVelocity}
+            onChange={(event) => {
+              if (editableTrackId === undefined || rollSelection.length === 0) return;
+              const velocity = Number(event.target.value);
+              // ⭐ One command per note, each carrying that note's own previous value, so undo restores the selection
+              // note by note instead of resetting every note to one number.
+              for (const mark of rollSelection) {
+                const before = (arrangement.notesByTrack?.[editableTrackId] ?? []).find(
+                  (note) => note.pitch === mark.pitch && note.startBeats === mark.startBeats
+                )?.velocity;
+                commit(setTrackNoteVelocityCommand(editableTrackId, mark, before, velocity));
+              }
+            }}
+          />
+        </label>
         <button
           type="button"
           data-testid="arrangement-copy-selection"
