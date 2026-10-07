@@ -636,12 +636,12 @@ async function runTestOnTarget(target, baseUrl) {
      * arrangement editor's grid carries `data-testid="arrangement-grid"`. What the check is for has not changed -- the matrix wants to
      * know that a grid mounted before it drives one -- so it accepts either shape and names the arrangement in its failure.
      */
-    const GRID_SELECTOR =
-      "[data-testid='arrangement-grid'], [data-track-idx], [data-step-idx], .landscape-compact-cell";
+    /** ⭐ The landing surface is the arrangement editor's grid; the studio's step cells are gone, so nothing else is named here. */
+    const GRID_SELECTOR = "[data-testid='arrangement-grid']";
     await page.waitForSelector(GRID_SELECTOR, { state: "attached", timeout: 45000 });
-    const tracks = await page.$$(GRID_SELECTOR + ", .touch-hit-44");
+    const tracks = await page.$$(GRID_SELECTOR);
     if (tracks.length === 0) {
-      const cellCount = await page.evaluate(() => document.querySelectorAll("[data-testid='arrangement-grid'], .landscape-compact-cell, [data-step-idx]").length);
+      const cellCount = await page.evaluate(() => document.querySelectorAll("[data-testid='arrangement-grid']").length);
       if (cellCount === 0) {
         throw new Error("No arrangement grid detected on the landing surface");
       }
@@ -658,15 +658,13 @@ async function runTestOnTarget(target, baseUrl) {
      * `elementHandle.click: Element is not attached to the DOM`). The transport's own controls have
      * stable ids on both surfaces.
      */
-    const playBtn = await page.$(
-      "[data-toolbar-id='play'], [data-testid='mobile-transport-play']"
-    );
+    const playBtn = await page.$("[data-testid='arrangement-play']");
     if (playBtn) {
       await playBtn.click({ force: true });
       await page.waitForTimeout(250);
       const playheadCheck = await page.evaluate(() => {
-        const beam = document.querySelector("[data-testid='arrangement-playhead'], .playhead-laser-beam");
-        const activeCell = document.querySelector("[data-testid='arrangement-playhead'], .playhead-active");
+        const beam = document.querySelector("[data-testid='arrangement-playhead']");
+        const activeCell = document.querySelector("[data-testid='arrangement-playhead']");
         if (!beam || !activeCell) return { ok: true };
         const bRect = beam.getBoundingClientRect();
         const cRect = activeCell.getBoundingClientRect();
