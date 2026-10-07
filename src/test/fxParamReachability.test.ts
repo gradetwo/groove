@@ -213,13 +213,18 @@ export function findFxWrites(fields: readonly FxParamField[] = FX_PARAM_FIELDS) 
 }
 
 describe("FX param reachability (G-02 / S-P1-4)", () => {
-  it("scanner sanity: the pre-existing on/off toggles are detected as writes", () => {
-    // If this fails the regex/scanner is broken and the real assertion below would
-    // pass vacuously. `filterEnabled` is the four-toggle rack that already shipped.
-    const { hits } = findFxWrites(["filterEnabled" as unknown as FxParamField]);
+  it("scanner sanity: a parameter the arrangement rack writes is detected", () => {
+    /**
+     * ⭐ **If this fails, the scanner is broken and the assertion below would pass vacuously.**
+     *
+     * The reference used to be the studio toolbar's `filterEnabled` toggle, written through the same setter object. That toolbar went with the
+     * studio, and the arrangement rack writes its parameters through `patchEffectsRack` -- a setter name this file already lists, because the
+     * list is explicit. `filterCutoff` is the parameter its first slider writes, so it is the write that proves the scan works.
+     */
+    const { hits } = findFxWrites(["filterCutoff" as unknown as FxParamField]);
     expect(
-      hits.filterEnabled.length,
-      "scanner found no write for filterEnabled — the guard is not actually scanning"
+      hits.filterCutoff.length,
+      "scanner found no write for filterCutoff — the guard is not actually scanning"
     ).toBeGreaterThan(0);
   });
 

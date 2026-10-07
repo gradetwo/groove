@@ -373,6 +373,30 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
     if (rack) setFxState(rack.getState());
   }, [engineRef, player]);
 
+  /**
+   * ⭐ **The master rack's seven continuous parameters, written the way the four switches are.**
+   *
+   * The engine exposes one setter per block (`setMasterFilter`, `setMasterSaturation`, `setMasterChorus`, `setMasterBitcrusher`), and each
+   * takes the values of its own block, so a patch has to push every block's current values rather than only the one that changed. That is why
+   * this writes all four: it is the same contract `toggleFx` keeps. The studio's toolbar carried four sliders and a filter-type select for
+   * these; they went with the toolbar, and the rack's own switches were left saying "Parameters come after". This is that sentence.
+   */
+  const patchEffectsRack = useCallback(
+    (patch: Partial<EffectsRackState>) => {
+      const current = fxState ?? DEFAULT_FX_STATE;
+      const next = { ...current, ...patch };
+      const engineNow = engineRef?.current;
+      if (engineNow) {
+        engineNow.setMasterFilter(next.filterEnabled, next.filterCutoff, next.filterQ, next.filterType);
+        engineNow.setMasterSaturation(next.saturationEnabled, next.saturationDrive);
+        engineNow.setMasterChorus(next.chorusEnabled, next.chorusMix, next.chorusRate);
+        engineNow.setMasterBitcrusher(next.bitcrusherEnabled, next.bitDepth);
+      }
+      setFxState(next);
+    },
+    [engineRef, fxState]
+  );
+
   const toggleFx = useCallback(
     (key: "filterEnabled" | "saturationEnabled" | "chorusEnabled" | "bitcrusherEnabled") => {
       const engineNow = engineRef?.current;
@@ -1521,6 +1545,89 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             </button>
           );
         })}
+
+        {/* ⭐ The parameters the four switches above turn on and off. */}
+        <span className="flex shrink-0 items-center gap-1" data-testid="arrangement-fx-params">
+          <input
+            type="range"
+            min={20}
+            max={20000}
+            step={10}
+            value={(fxState ?? DEFAULT_FX_STATE).filterCutoff}
+            aria-label={t("arrangement_fx_cutoff")}
+            data-testid="arrangement-filter-cutoff"
+            onChange={(event) => patchEffectsRack({ filterCutoff: Number(event.target.value) })}
+            className="w-20"
+          />
+          <input
+            type="range"
+            min={0.5}
+            max={15}
+            step={0.1}
+            value={(fxState ?? DEFAULT_FX_STATE).filterQ}
+            aria-label={t("arrangement_fx_q")}
+            data-testid="arrangement-filter-q"
+            onChange={(event) => patchEffectsRack({ filterQ: Number(event.target.value) })}
+            className="w-16"
+          />
+          <select
+            value={(fxState ?? DEFAULT_FX_STATE).filterType}
+            aria-label={t("arrangement_fx_type")}
+            data-testid="arrangement-filter-type"
+            onChange={(event) => patchEffectsRack({ filterType: event.target.value as BiquadFilterType })}
+            className="h-11 shrink-0 rounded border border-[rgb(var(--d-line))] bg-transparent px-1 text-[10px]"
+          >
+            {(["lowpass", "highpass", "bandpass", "lowshelf", "highshelf", "peaking", "notch", "allpass"] as const).map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+          <input
+            type="range"
+            min={1}
+            max={6}
+            step={0.05}
+            value={(fxState ?? DEFAULT_FX_STATE).saturationDrive}
+            aria-label={t("arrangement_fx_drive")}
+            data-testid="arrangement-saturation-drive"
+            onChange={(event) => patchEffectsRack({ saturationDrive: Number(event.target.value) })}
+            className="w-16"
+          />
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={(fxState ?? DEFAULT_FX_STATE).chorusMix}
+            aria-label={t("arrangement_fx_mix")}
+            data-testid="arrangement-chorus-mix"
+            onChange={(event) => patchEffectsRack({ chorusMix: Number(event.target.value) })}
+            className="w-16"
+          />
+          <input
+            type="range"
+            min={0.2}
+            max={5}
+            step={0.05}
+            value={(fxState ?? DEFAULT_FX_STATE).chorusRate}
+            aria-label={t("arrangement_fx_rate")}
+            data-testid="arrangement-chorus-rate"
+            onChange={(event) => patchEffectsRack({ chorusRate: Number(event.target.value) })}
+            className="w-16"
+          />
+          <input
+            type="range"
+            min={4}
+            max={16}
+            step={1}
+            value={(fxState ?? DEFAULT_FX_STATE).bitDepth}
+            aria-label={t("arrangement_fx_bits")}
+            data-testid="arrangement-bit-depth"
+            onChange={(event) => patchEffectsRack({ bitDepth: Number(event.target.value) })}
+            className="w-16"
+          />
+        </span>
 
         {/* Zoom. The same control the ruler's own manual gestures answer to, and the reason the labels subdivide. */}
         <span className="flex shrink-0 items-center">
