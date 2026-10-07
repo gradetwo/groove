@@ -62,7 +62,7 @@ import { flattenArrangementV2, laneInstrumentForTrack, laneRoleForTrack } from "
 import { resolveInstrumentPresetKey } from "../src/audio/instrumentPresets";
 import { SAMPLED_INSTRUMENT_SYNTHS, sampledAssetForLane, sampledInstrumentFor, sampledInstrumentGapReason } from "../src/data/sampledInstruments";
 import { placementForPart, placementForTrack, type SituationPlacement, type StringSituationSpec } from "../src/data/stringSituation";
-import { barsCoveringNotes, importedPartVoice } from "../src/data/arrangementImport";
+import { barsCoveringNotes, importedPartVoice, importedTempoAndMeter } from "../src/data/arrangementImport";
 import { DEFAULT_SYNTH_PRESETS } from "../src/audio/PolySynth";
 import { stepsFromNotes, STEPS_PER_BEAT } from "../src/data/noteEvents";
 import { beatsPerBar } from "../src/data/genreExpression";
@@ -1092,7 +1092,8 @@ export function importMcpMidi(
   const imported = fromMidi(new Uint8Array(bytes));
   return {
     ...addImportedParts(arrangementId, imported, options),
-    // Said out loud so a caller can set the arrangement's tempo from the file rather than guessing 120.
+    // Applied **and** reported: the arrangement is at this tempo now, and a caller reading the reply does not have to
+    // ask again (the file picker's own import has always applied it; this road used to only say the number).
     ...(imported.tempoBpm === undefined ? {} : { tempoBpm: imported.tempoBpm }),
     // And the meter, for the same reason: the arrangement has a `timeSignature` and the file may state one.
     ...(imported.timeSignature === undefined ? {} : { timeSignature: imported.timeSignature }),
@@ -1172,7 +1173,7 @@ function addImportedParts(
   /**
    * **Only the two fields that are actually used**, so a MIDI import travels this same path: the parts, and what the reader could not make sense of. A music-specific type would have made the second import a second implementation, which is how two imports of the same music start disagreeing about note order and track naming.
    */
-  imported: { parts: ImportedPart[]; problems: string[] },
+  imported: { parts: ImportedPart[]; problems: string[]; tempoBpm?: number; timeSignature?: string },
   options: ImportMcpMusicXmlOptions
 ): ArrangementEditResult & { problems?: string[]; notes?: number; trackIds?: string[]; situations?: SituationPlacement[] } {
   const selection = options.partIndex ?? 0;
@@ -1310,10 +1311,19 @@ function addImportedParts(
      * ⭐ **The arrangement is as long as the music it now holds** — the same rule the file picker's own import uses
      * (`barsCoveringNotes`), so a 125-bar MIDI plays for 125 bars on both roads. Measured before this: the reply read
      * `steps: 2000` beside `bars: 8`, so an agent importing a five-minute file got sixteen seconds of it.
+     *
+     * ⭐ **And the file's own tempo and meter are applied, not merely reported.** The reply has always said
+     * `tempoBpm`— "so a caller can set the arrangement's tempo from the file rather than guessing 120" — while the
+     * file picker's import **did** set it (`placeMidiIntoArrangement`), so the same file arrived at 100 BPM through
+     * one road and at the arrangement's previous tempo through the other. It cost this project a measurement: a
+     * 126-bar piece rendered through MCP came out 252.6 s long (120 BPM) against the web's 302 s (100 BPM), and the
+     * two numbers were being compared as if they described the same render.
      */
     return {
       ...next,
       bars: barsCoveringNotes(next.bars ?? 8, withNotes.map(({ part }) => part), beatsPerBar(next.timeSignature)),
+      // ⭐ The same rule the data layer applies, from the one place that names the fields.
+      ...importedTempoAndMeter(imported),
     };
   });
   // Guarded because `slice(-0)` is `slice(0)`, which is the whole list: an import that added no track would otherwise report every track it did not add.

@@ -127,6 +127,26 @@ export function importedPartVoice(instrument: string | undefined): { kind: Track
  * shorten a piece, and `MAX_BARS` caps what the import may *ask for* (a longer file keeps its notes; the length stops
  * at the ceiling rather than pretending).
  */
+/**
+ * ⭐ **The file's own tempo and meter, in the arrangement's field names.**
+ *
+ * ⭐ **One place, because two roads disagreed.** The reply has always stated `tempoBpm` and the file picker applied
+ * it (`placeMidiIntoArrangement`), while `arrangementWithImportedParts` — the shared data layer both roads build on —
+ * and the MCP `addImportedParts` did not: the same file arrived at 100 BPM through one road and at the arrangement's
+ * previous tempo through the other. It cost this project a measurement (the same 126-bar piece rendered 252.6 s
+ * through MCP against 302 s through the web, and the two were compared as if they described one render), and that is
+ * the kind of disagreement a criterion should have caught, which is why `arrangementImportSamplerKind` now holds it.
+ */
+export function importedTempoAndMeter(imported: { tempoBpm?: number; timeSignature?: string }): {
+  bpm?: number;
+  timeSignature?: string;
+} {
+  return {
+    ...(imported.tempoBpm === undefined ? {} : { bpm: imported.tempoBpm }),
+    ...(imported.timeSignature === undefined ? {} : { timeSignature: imported.timeSignature }),
+  };
+}
+
 export function barsCoveringNotes(
   currentBars: number,
   parts: readonly { notes: readonly NoteEvent[] }[],
@@ -150,7 +170,7 @@ export function barsCoveringNotes(
 
 export function arrangementWithImportedParts(
   arrangement: ArrangementV2,
-  imported: { parts: readonly ImportedPart[]; problems?: readonly string[] },
+  imported: { parts: readonly ImportedPart[]; problems?: readonly string[]; tempoBpm?: number; timeSignature?: string },
   options: { instruments?: Record<number, string>; situations?: Record<number, StringSituationSpec> } = {}
 ): ArrangementImportResult {
   const problems = [...(imported.problems ?? [])];
@@ -245,6 +265,8 @@ export function arrangementWithImportedParts(
   next = {
     ...next,
     bars: barsCoveringNotes(next.bars ?? 8, withNotes.map(({ part }) => part), beatsPerBar(next.timeSignature)),
+    // ⭐ The file's tempo and meter, applied where the notes land, so both import roads and both surfaces agree.
+    ...importedTempoAndMeter(imported),
   };
 
   return {

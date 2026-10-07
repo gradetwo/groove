@@ -17793,3 +17793,36 @@ describe("the grid's editing actions", () => {
     ⇒ **实时性这一轴此前等于没有量具** ✓。改成走 v2 落地（gate／prompt／选择器／Create ✓）＋
     从播放头的 `left` 与缩放读数算步位 ✓＋按名字读 `arrangement-tempo` ✓（原先"第一个 number input"读到 Euclidean 的 3 ✓，于是 120 BPM 被判成 DRIFT ✗；修后 **IN PHASE** ✓：7.83 steps/s 对 8 ✓）。
   ⚠️ web 的播放头步率仍偏低 11–12% ✓（帧量化读数 ✓）⇒ 计划 §4 的 `probe:web-interaction` 要用原始 px 速率复测 ✓。
+
+### 六百八十三、✅ **两条路对同一首曲子的渲染、以及"报了速度却没应用"的两条路分歧**（2026-10-07 ✓）
+
+**⭐ 一、业主的框架之后，补齐 web 的编辑与导出读数（第二、三轮 ✓）**
+  ⭐ **导出**：5:00 的 WAV 在浏览器里 **726 s（12 分 6 秒）** 渲染 303 s 音频 ＝ **0.42× 实时** ✓（44.1 kHz 立体声 53.4 MB ✓）；
+    ⚠️ 但这一读数是在**其它浏览器探针同时跑**的时候量的 ✓，MCP 的 517.6 s 也不是在完全空闲时量的 ✗
+    ⇒ **"web 比 MCP 慢 40%" 的结论撤回** ✓（未成立 ✓）⇒ 改为**背靠背、空闲机**复测 ✓（`scratch/mcp-vs-web-render.mjs` ✓）。
+  ⭐ **导出的反馈**：点击后 **82 ms** 出现进度元素 ✓，随后**十二分钟只有同一个词**"Exporting…" ✗
+    —— 没有百分比 ✓、没有已用时间 ✓、没有预计 ✓；`Cancel` 70 ms 内把界面还回来 ✓。
+  ⭐ **卷帘的栅格**：8/32/126 小节 → **4,736 / 18,944 / 74,592 个格子** ✓、**5.4k / 19.6k / 75,460 个 DOM 节点** ✓、
+    **13 / 22 / 58 MB 堆** ✓；导入的 704 音符声部在 126 小节下打开要 **3,090 ms** ✓，打开后页面 **125 MB** ✓
+    ⇒ 栅格画的是"整个编曲 × 全部音高行" ✓（音符层已经只画可见的 ✓）⇒ 计划 W2b：**窗口化栅格** ✓。
+  ⭐ **力度**：屏幕上只有"给新音符用的滑杆" ✓ 与"整轨 Ramp velocity" ✓；音符元素只有 `data-length` ✗
+    ⇒ **改不了单个音符的力度** ✓，值也看不到 ✓（计划 W5b ✓）。
+  ⭐ **卷帘的手势集（读代码＋实测 ✓）**：点空格写入 ✓、**点音符删除** ✓（Logic 的区分 ✓，文档写明 ✓）、
+    拖音符本体移动 ✓、拖右边缘改时长 ✓、**在空格上拖框选它跨过的音符** ✓
+    ⇒ 音符**永远不会被"点选"** ✓；框选要求**两端都是空格** ✓ ⇒ 起点空格、终点落在音符上的拖拽 **选不中任何东西**（实测 171 ms、0 个 ✓）
+    ⇒ Copy / Legato / Transpose / Chord 缺少顺手的选区 ✓（计划 W5c ✓）；而 **quantise lengths 有选区就生效** ✓
+    （937 ms ✓，`data-length` 0.25 → 4 拍 ✓，DOM 可验 ✓）。
+  ⚠️ 本轮**三次"缺陷"其实是量具错** ✓："卷帘永远打不开"（选择轨道的按钮不存在 ✓）、"导入没反应"（映射对话框在等人 ✓）、
+    "点音符选不上"（设计就是点=删 ✓）⇒ 探针现在**先断言控件存在、再用文档写明的手势** ✓。
+
+**⭐ 二、真缺陷：文件的速度/meter 一条路应用、另一条只报数 ✗（已修 ✓）**
+  ⭐ 发现方式很直接：背靠背对比里，**同一首 126 小节的曲子经 MCP 渲染出 252.6 s** ✓（=120 BPM ✓）
+    而 web 导出 **302 s** ✓（=100 BPM ✓）——两个数字本来被当成同一次渲染在比 ✗。
+  ⭐ 根因：`import_arrangement_midi` 的回复一直写着 `tempoBpm`（"so a caller can set the arrangement's tempo from
+    the file rather than guessing 120" ✓）**但自己不应用** ✗；文件选择器的 `placeMidiIntoArrangement` **会应用** ✓；
+    数据层 `arrangementWithImportedParts` **两者都不应用** ✗ ⇒ **同一条路三个答案** ✗。
+  ⭐ 修：新增 `importedTempoAndMeter`（`src/data/arrangementImport.ts` ✓）作为**唯一规则** ✓，
+    数据层 ✓、web 包装（删掉重复的两行 ✓）、MCP `addImportedParts` ✓ 都用它 ⇒
+    实测：导入后 **bpm 100 / bars 126 / steps 2016 / 11 轨** ✓（先前 bpm 是 120 ✓）。
+  ⭐ 判据：`arrangementImportSamplerKind.test.ts` 新增"an import carries the file's tempo and meter" ✓
+    （fixture 用 `microsecondsPerQuarter: 600_000` = 100 BPM ✓）。

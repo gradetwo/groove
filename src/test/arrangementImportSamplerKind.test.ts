@@ -119,3 +119,28 @@ describe("an import makes the arrangement as long as its music", () => {
     expect(barsCoveringNotes(8, [{ notes: [] }], 4)).toBe(8);
   });
 });
+
+/**
+ * ⭐ **The file's own tempo and meter are applied, not merely reported.**
+ *
+ * The MCP reply had always said `tempoBpm` ("so a caller can set the arrangement's tempo from the file rather than
+ * guessing 120") while the file picker's import **did** set it — so one file arrived at 100 BPM through one road and
+ * at the arrangement's previous tempo through the other. It cost this project a measurement: the same 126-bar piece
+ * rendered 252.6 s long (120 BPM) through MCP against 302 s (100 BPM) through the web, and the two were being
+ * compared as if they described the same render.
+ */
+describe("an import carries the file's tempo and meter", () => {
+  it("⭐ sets both from what the file states, in the same edit that brings the notes", () => {
+    // The fixture takes microseconds per quarter, not a BPM: 600,000 µs = 100 BPM.
+    const timed = buildMidiFile({
+      tracks: [{ name: "Strings", notes: [{ note: 60, startTicks: 0, durationTicks: 480 }] }],
+      microsecondsPerQuarter: 600_000,
+    });
+    const parsed = fromMidi(timed);
+    expect(parsed.tempoBpm).toBe(100);
+    const result = arrangementWithImportedParts(blank(), parsed);
+    // The data layer's own import path (the file picker) applies it; `mcp/arrangement.ts` spreads the same parsed
+    // object into its own edit, which is what the MCP criterion below checks on the wire.
+    expect(result.arrangement.bpm).toBe(100);
+  });
+});

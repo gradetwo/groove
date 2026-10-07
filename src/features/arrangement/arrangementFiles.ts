@@ -426,11 +426,12 @@ export function placeMidiIntoArrangement(
 ): ArrangementImportOutcome {
   const { imported, filename } = read;
   const placed = arrangementWithImportedParts(arrangement, imported, instruments === undefined ? {} : { instruments });
-  const next: ArrangementV2 = {
-    ...placed.arrangement,
-    ...(imported.tempoBpm === undefined ? {} : { bpm: imported.tempoBpm }),
-    ...(imported.timeSignature === undefined ? {} : { timeSignature: imported.timeSignature }),
-  };
+  /**
+   * ⭐ The tempo and meter used to be spread in here, and only here — so the data layer and the MCP import applied
+   * neither. `arrangementWithImportedParts` owns that rule now (`importedTempoAndMeter`), and this wrapper has
+   * nothing left to add.
+   */
+  const next: ArrangementV2 = placed.arrangement;
   return {
     ok: true,
     filename,
