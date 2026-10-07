@@ -314,8 +314,15 @@ export async function renderPatternHeadless(
    * a process (measured 3.90× at K=4 — `scratch/node-host-scaling.mjs`); `options.chunks > 1` is the whole switch, and
    * an absent or 1 value leaves this function byte-for-byte the path it always was.
    */
+  /**
+   * ⭐ **Spans only where they are provably the same music.** `spanSafety` refuses a pattern whose sample lane has no
+   * notes (its one-shot would land at each window's start); the refusal is reported rather than silently absorbed, and
+   * the render falls back to the single pass.
+   */
+  const spanVerdict = (options.chunks ?? 1) > 1 ? (await import("./spanHosts")).spanSafety(pattern) : null;
+  if (spanVerdict && !spanVerdict.ok && spanVerdict.reason) renderProblems.push(spanVerdict.reason);
   const spanOutcome =
-    (options.chunks ?? 1) > 1
+    spanVerdict?.ok === true
       ? await (await import("./spanHosts")).renderPatternInSpans(pattern, options, catalogueRead, context).then((outcome) => {
           audioLanes = outcome.audioLanes;
           limiterKind = outcome.limiterKind;

@@ -214,3 +214,32 @@ export async function renderPatternInSpans(
     problems: [...new Set(outcomes.flatMap((outcome) => outcome.sidecar.problems))],
   };
 }
+
+/**
+ * ⭐ **Can this pattern be rendered in spans at all?**
+ *
+ * Measured: a template arrangement comes out **sample-identical** through the whole span path (K=2, cross-process,
+ * pre-roll + crossfade + merge), while the blank-sampler fixture — a **sampler lane that carries no notes** — differs by
+ * **−1.3 dBFS** from the single pass. The renderer's documented rule is why: *"a lane with a sample and no notes is
+ * played once at the arrangement's start"*, and inside a windowed render "the start" is the **window's** start, so the
+ * one-shot fires again in every span while the single pass plays it once.
+ *
+ * Until that one-shot is keyed on the **absolute** start (the follow-up, with the measurement above as its criterion),
+ * the honest answer is to refuse spans for such a pattern rather than to ship a render that is subtly wrong: the caller
+ * gets the single pass, and the reason travels in the reply's problems.
+ */
+export function spanSafety(pattern: SequencerPattern): { ok: boolean; reason?: string } {
+  const notes = (pattern as unknown as { notes?: Record<string, unknown[]> }).notes ?? {};
+  const lanes = ((pattern as unknown as { tracks?: Array<Record<string, unknown>> }).tracks ?? []) as Array<Record<string, unknown>>;
+  for (const lane of lanes) {
+    const id = String(lane.track_id ?? lane.id ?? lane.role ?? "?");
+    const asset = lane.assetId ?? lane.asset_id ?? lane.sampleId;
+    const hasAsset = typeof asset === "string" && asset.length > 0;
+    const laneNotes = notes[id];
+    const empty = laneNotes === undefined ? true : laneNotes.length === 0;
+    if (hasAsset && empty) {
+      return { ok: false, reason: `lane "${id}" has a sample and no notes, and its one-shot plays at the start of whatever is rendered — so a span is not the same music as the whole (measured −1.3 dBFS); rendering in one pass` };
+    }
+  }
+  return { ok: true };
+}

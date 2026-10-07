@@ -214,7 +214,15 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
        * two roads should know the merge is a tolerance, not an identity, and the null test that bounds it is
        * `scripts/probe_chunk_equivalence.mjs`'s question. Omitted or 1 is the single-pass render, unchanged.
        */
-      chunks: z.number().int().min(1).max(8).optional().describe("render in this many spans at once, one server process each (4 measured 3.90× the throughput of one); omitted or 1 is the single-pass render"),
+      /**
+       * ⚠️ **Withdrawn until the equivalence is proved for every pattern shape.** It is measured to work — a template
+       * arrangement comes out **sample-identical** through the whole span path (K=2, cross-process) — but a pattern whose
+       * sample lane carries no notes differs by **−1.3 dBFS**, and the guard written for that case keys on a lane shape
+       * the compiled pattern does not use, so it did not catch it. A parameter that can return subtly wrong audio must
+       * not be reachable: the next rounds fix the guard (or the renderer's one-shot) and add the null criterion, then
+       * this field comes back with the criterion beside it.
+       */
+      chunks: z.number().int().min(1).max(1).optional().describe("withdrawn: spans are measured to differ from a single pass for some pattern shapes, so only 1 is accepted until the equivalence criterion lands"),
       maxDurationSec: z.number().int().min(1).optional().describe("refuse rather than start a render longer than this, in seconds"),
       /**
        * ⭐ **The one explicit engine choice on the MCP surface, and the reason it is explicit.**

@@ -18281,3 +18281,17 @@ describe("the grid's editing actions", () => {
     要么把它算进前卷 ✓），然后：
     ① 用空白 fixture 复验 null ✓；② 用 §6.3 的阈值（窗口外 ≤ −60 dBFS ✓）写成**判据** ✓；
     ③ 跑真实 5 分钟对 753 s 基线 ✓；④ 达标后把默认设为 K=4 ✓。
+
+### 七百一十、⚠️ **等价性还没"对每种 pattern 形状"成立 ⇒ `chunks` 从工具面收回（只接受 1）**（2026-10-08 ✓）
+
+  ⭐ 本轮做了两件事 ✓：
+    ① 加了 `spanSafety(pattern)` 守卫 ✓（`mcp/render/spanHosts.ts` ✓）＋ 判据 ✓（`src/test/spanSafety.test.ts` ✓ 2 例 ✓）；
+    ② 但**守卫在真实 pattern 上没触发** ✗：它按 `tracks[].assetId` + 顶层 `notes[laneId]` 判空 ✓，
+       而 `compileArrangementToPattern` 出来的形状并不是这两个键 ✓ ⇒ 冒烟里空白 fixture 仍走 span ✓、仍差 **−1.3 dB** ✗。
+  ⭐ 处置（按纪律 ✓）：**把 `chunks` 从工具面收回** ✓（schema 只接受 `1` ✓，理由写在字段描述里 ✓）——
+    "能返回细微错误音频的参数不该可达" ✓；机制与已验证结论（模板编曲逐样本相同 ✓）都保留在原地 ✓，
+    等①修好守卫/渲染器一次性触发 ✓ 且②null 判据落地 ✓ 之后再放回 ✓。
+  ⏳ 下一步（两条并行 ✓）：
+    · **读 `compileArrangementToPattern` 的 lane 形状** ✓，把守卫改成按真实键判空 ✓（或更稳：直接按渲染器的音频轨报告判 ✓）；
+    · **把 null 写成判据** ✓：同一 fixture 渲两次（1 段 vs 2 段 ✓），断言交叉淡化窗口外 ≤ −60 dBFS ✓、窗口内 ≤ −40 dBFS ✓——
+      这条判据一旦存在 ✓，"某些 pattern 形状会差 −1.3 dB"就再也不会靠人记得 ✓。
