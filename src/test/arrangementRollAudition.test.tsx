@@ -77,6 +77,23 @@ describe("⭐ a note written in the roll is sounded by the view", () => {
     expect(screen.queryByTestId("roll-note-60-0")).toBeNull();
   });
 
+  it("⭐ writes the note's velocity onto the note, so the value is visible rather than only settable", () => {
+    const player = playerStub();
+    openRoll(player);
+    const cell = screen.getByTestId("roll-cell-60-0");
+    fireEvent.pointerDown(cell);
+    fireEvent.pointerUp(cell);
+    const note = screen.getByTestId("roll-note-60-0");
+    /**
+     * ⭐ The measurement this pins: the note element had `data-length` and **nothing about velocity**, so the value a
+     * person had just chosen for the note they wrote was not on screen anywhere. The slider's own readout is the value
+     * the note is given, so the two must agree; deleting `data-velocity` makes both of these comparisons fail.
+     */
+    const slider = screen.getByTestId("roll-velocity-value").textContent ?? "";
+    expect(note.getAttribute("data-velocity")).toBe(slider);
+    expect(Number(note.getAttribute("data-velocity"))).toBeGreaterThan(0);
+  });
+
   it("⭐ does not take Space or Delete from a text field inside the roll", async () => {
     /**
      * This is the failure mode a second *global* listener produces, and it is checked here rather than argued: the length field is inside the panel, so the panel's handler sees the keystroke bubble out of it.

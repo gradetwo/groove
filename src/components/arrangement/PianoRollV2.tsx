@@ -355,6 +355,13 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
                         data-testid={`roll-note-${pitch}-${step}`}
                         data-note="true"
                         data-length={note.lengthBeats}
+                        /**
+                         * ⭐ **The value the note actually carries.** Measured while authoring: a note element had
+                         * `data-length` and **nothing about velocity**, so "the strings are too loud on beat 3" could
+                         * not even be *seen* — the only velocity on screen was the slider for notes not yet written.
+                         * Exposing it costs one attribute and makes the value readable by a person and by a criterion.
+                         */
+                        data-velocity={note.velocity}
                         data-selected={isSelected(note.pitch, note.startBeats) ? "true" : "false"}
                         /** No tab stop of its own — the keyboard focuses the one it is asked to, which is what keeps `Delete` aimed at the note a person pressed rather than at the first one in the DOM. */
                         tabIndex={-1}
