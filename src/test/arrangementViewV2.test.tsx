@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import React from "react";
 import { ArrangementViewV2 } from "../components/arrangement/ArrangementViewV2";
 import { createArrangementFromTemplate } from "../data/arrangementEdits";
@@ -143,7 +143,7 @@ describe("the arrangement a host hands in, and what the host is told", () => {
     expect(onCreateProject.mock.calls[0]![1].tracks.length).toBeGreaterThan(0);
   });
 
-  it("⭐ starts from a genre, and what it creates is the genre's music rather than a template's", () => {
+  it("⭐ starts from a genre, and what it creates is the genre's music rather than a template's", async () => {
     const onCreateProject = vi.fn();
     renderView(<ArrangementViewV2 songId="new" capture={noCapture} onCreateProject={onCreateProject} />);
     const genre = Object.values(GENRES_MAP)[0]!;
@@ -152,7 +152,13 @@ describe("the arrangement a host hands in, and what the host is told", () => {
     const create = screen.getByRole("button", { name: "Create" });
     fireEvent.click(screen.getByTestId(`genre-${genre.id}`));
     fireEvent.click(create);
-    expect(onCreateProject).toHaveBeenCalledTimes(1);
+    /**
+     * ⭐ **The create path is a promise now, on purpose.** The genre's full record is fetched at create time
+     * (`loadGenre`) rather than imported with the surface, so the landing page does not carry every genre chunk; the
+     * report therefore arrives after that microtask, and the criterion waits for it instead of assuming it is
+     * synchronous.
+     */
+    await waitFor(() => expect(onCreateProject).toHaveBeenCalledTimes(1));
 
     // ⭐ The genre decides the content: what the route creates must be the genre's arranged pattern, projected into an
     // arrangement — the same two steps the protocol creator uses — and not a template handed the same name. An arrangement
