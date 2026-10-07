@@ -9,7 +9,7 @@
 import { z } from "zod";
 import { failure } from "./toolKit";
 import type { ToolDefinition } from "./toolKit";
-import { addMcpNote, addMcpTrackNotes, moveMcpNote, quantizeMcpNoteLengths, removeMcpNote, setMcpNoteLength, transposeMcpNotes } from "./arrangement";
+import { addMcpNote, addMcpTrackNotes, moveMcpNote, quantizeMcpNoteLengths, removeMcpNote, setMcpNoteLength, transposeMcpNotes, varyMcpNotes } from "./arrangement";
 import { getMcpArrangement } from "./arrangement";
 import { noteName } from "../src/data/pitchTruth";
 
@@ -207,6 +207,15 @@ export const ARRANGEMENT_NOTE_TOOLS: ToolDefinition[] = [
     },
     handler: (args) =>
       quantizeMcpNoteLengths(String(args.arrangementId), String(args.trackId), Number(args.snapBeats)),
+  },
+  {
+    name: "vary_arrangement_notes",
+    title: "Vary a track's notes like a player",
+    description:
+      "Nudge one track's notes the way a performance differs from a grid: small timing, velocity and pitch changes, applied with the variation's own default strength. This is the studio's `humanize` operation on the data that replaced the pattern -- notes with a start, a length, a pitch and a velocity.",
+    readOnly: false,
+    inputSchema: { arrangementId: z.string(), trackId: z.string() },
+    handler: (args) => varyMcpNotes(String(args.arrangementId), String(args.trackId)),
   },
   {
     name: "transpose_arrangement_notes",

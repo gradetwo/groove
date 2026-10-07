@@ -54,6 +54,7 @@ import {
   setTrackSteps,
   quantizeArrangementNoteLengths,
   transposeNotesInRange,
+  varyArrangementNotes,
 } from "../src/data/arrangementEdits";
 import type { ArrangementV2, NoteEvent, TrackKindV2, TrackV2 } from "../src/types/arrangementV2";
 import type { PlannedTake } from "../src/data/takePlanning";
@@ -718,6 +719,17 @@ export function addMcpNote(arrangementId: string, input: { trackId: string; pitc
  * this keeps is the one that rounds those lengths -- a caller names the division in beats, and a division of zero or less is refused by doing
  * nothing, which is what the underlying function does.
  */
+/**
+ * ⭐ **Vary a track's notes the way a player would: timing, velocity and pitch, by small amounts.**
+ *
+ * The pattern tool could humanize steps. Notes carry their own start, length and velocity, so the same idea has something to act on here. The
+ * variation's strength and scale are the underlying function's defaults -- a caller who needs to choose them is a later tool, and the entry in
+ * the alignment table says so.
+ */
+export function varyMcpNotes(arrangementId: string, trackId: string): ArrangementEditResult {
+  return edit(arrangementId, (arrangement) => refuseUnknownTrack(arrangement, trackId, () => varyArrangementNotes(arrangement, trackId)));
+}
+
 export function quantizeMcpNoteLengths(arrangementId: string, trackId: string, snapBeats: number): ArrangementEditResult {
   return edit(arrangementId, (arrangement) =>
     refuseUnknownTrack(arrangement, trackId, () => quantizeArrangementNoteLengths(arrangement, trackId, snapBeats))

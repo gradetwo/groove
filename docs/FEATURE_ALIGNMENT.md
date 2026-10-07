@@ -893,3 +893,7 @@
 | `quantize_arrangement_note_lengths` | 把某一轨的音符**长度**取整到拍的分数。起点不动。 | `arrangementId`、`trackId`、`snapBeats` | 第 1089 轮 |
 | 为什么是这个形状 | v1 的 `swing` 移动步的位置。编曲的音符自带长度。所以这里取整的是长度。 | — | 同上 |
 
+| `vary_arrangement_notes` | 把某一轨的音符做"人味"变化：时间、力度、音高的小幅偏移。 | `arrangementId`、`trackId` | 第 1091 轮 |
+| 为什么是这个形状 | v1 的 `humanize` 作用在步上。编曲的音符自带起点、长度、力度。 | — | 同上 |
+| needs | 变化的强度与音阶选择（`intensity`／`scale`）暂用引擎默认。需要时再开参数。 | — | 同上 |
+
