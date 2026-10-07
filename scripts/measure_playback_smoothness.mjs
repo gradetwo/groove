@@ -91,7 +91,7 @@ localStorage.setItem("groove_audio_started", "1");
 
   // Start playback from whatever transport control this layout has.
   const playSelectors = [
-    "[data-testid='mobile-transport-play']",
+    "[data-testid='arrangement-play']",
     "[data-testid='transport-play']",
     "[data-testid='play-button']",
     "[aria-label*='Play']",
@@ -155,7 +155,7 @@ localStorage.setItem("groove_audio_started", "1");
 
     // Watch the ruler's active step: this is the actual visual playhead the user sees.
     const readStep = () => {
-      const cell = document.querySelector("[data-testid='arrangement-playhead'], .playhead-active");
+      const cell = document.querySelector("[data-testid='arrangement-playhead']");
       if (!cell) return null;
       const attr = cell.getAttribute("data-ruler-step-idx");
       return attr === null ? null : Number(attr);

@@ -204,13 +204,13 @@ const sample = () =>
 
 const phases = [{ label: "at rest", ...(await sample()) }];
 
-await page.click("[data-toolbar-id='play']");
+await page.click("[data-testid='arrangement-play']");
 for (const ms of [4000, 5000]) {
   await page.waitForTimeout(ms);
   phases.push({ label: "playing", ...(await sample()) });
 }
 await page.evaluate(() => {
-  const b = document.querySelector("[data-toolbar-id='play']");
+  const b = document.querySelector("[data-testid='arrangement-play']");
   if (b) b.click();
 });
 

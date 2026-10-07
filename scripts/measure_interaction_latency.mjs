@@ -170,7 +170,7 @@ async function waitForTestId(page, id, timeout = 15000) {
   page.on("pageerror", (e) => pageErrors.push(e.message));
 
   await page.goto(`${baseUrl}/?tab=studio`, { waitUntil: "domcontentloaded" });
-  await waitForTestId(page, "toolbar-advanced-toggle", 30000);
+  await waitForTestId(page, "arrangement-view-v2", 30000);
   // ⭐ Headless Chromium blocks autoplay until a gesture: the app sits behind a start gate, and
   // every later interaction waits on a studio that never started. Click through it first.
   await page.click("[data-testid='audio-start-button']", { timeout: 5000 }).catch(() => {});

@@ -114,7 +114,7 @@ await page.evaluate(() => {
 });
 
 for (const sel of [
-  "[data-testid='mobile-transport-play']",
+  "[data-testid='arrangement-play']",
   "[data-testid='transport-play']",
   "[data-testid='play-button']",
 ]) {

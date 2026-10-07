@@ -51,7 +51,7 @@ const port = server.address().port;
 const PROBE = `(() => {
   const round = (n) => Math.round(n * 10) / 10;
   const root = getComputedStyle(document.documentElement);
-  const cell = document.querySelector("[data-testid='step-cell-0-0'], [data-step-idx='0']")
+  const cell = document.querySelector("[data-testid='arrangement-grid']")
     || document.querySelector(".track-row-0 > div:nth-child(2) > *");
   const row = document.querySelector(".track-row-0");
   const head = row ? row.querySelector(":scope > div") : null;
