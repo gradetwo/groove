@@ -52,6 +52,7 @@ import {
   setTrackRegion,
   setTrackSample,
   setTrackSteps,
+  quantizeArrangementNoteLengths,
   transposeNotesInRange,
 } from "../src/data/arrangementEdits";
 import type { ArrangementV2, NoteEvent, TrackKindV2, TrackV2 } from "../src/types/arrangementV2";
@@ -710,6 +711,19 @@ export function addMcpNote(arrangementId: string, input: { trackId: string; pitc
  * arrangement carries the same ability as notes with a start in beats, so the operation keeps its meaning and changes its address: a caller
  * names a track and a window instead of a step range.
  */
+/**
+ * ⭐ **Quantize a track's note lengths to a division of a beat.**
+ *
+ * The pattern tool could swing a pattern's steps, which moved where they sat; an arrangement's note carries its own length, so the operation
+ * this keeps is the one that rounds those lengths -- a caller names the division in beats, and a division of zero or less is refused by doing
+ * nothing, which is what the underlying function does.
+ */
+export function quantizeMcpNoteLengths(arrangementId: string, trackId: string, snapBeats: number): ArrangementEditResult {
+  return edit(arrangementId, (arrangement) =>
+    refuseUnknownTrack(arrangement, trackId, () => quantizeArrangementNoteLengths(arrangement, trackId, snapBeats))
+  );
+}
+
 export function transposeMcpNotes(
   arrangementId: string,
   trackId: string,

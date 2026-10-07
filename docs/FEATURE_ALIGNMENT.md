@@ -890,3 +890,6 @@
 | 为什么是这个形状 | v1 的 `apply_pattern_ops` 移动 pattern 的**步**。pattern 是本次迁移要移除的模型。编曲的音符带**起始拍**。所以窗口是拍范围，不是步范围。 | — | 同上 |
 | 判据 | `src/test/arrangementNoteAbilities.test.ts`。一个音符在窗口内，一个在窗口外。窗口内移动。窗口外不动。空窗口不变。 | — | 同上 |
 
+| `quantize_arrangement_note_lengths` | 把某一轨的音符**长度**取整到拍的分数。起点不动。 | `arrangementId`、`trackId`、`snapBeats` | 第 1089 轮 |
+| 为什么是这个形状 | v1 的 `swing` 移动步的位置。编曲的音符自带长度。所以这里取整的是长度。 | — | 同上 |
+

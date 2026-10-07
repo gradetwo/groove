@@ -9,7 +9,7 @@
 import { z } from "zod";
 import { failure } from "./toolKit";
 import type { ToolDefinition } from "./toolKit";
-import { addMcpNote, addMcpTrackNotes, moveMcpNote, removeMcpNote, setMcpNoteLength, transposeMcpNotes } from "./arrangement";
+import { addMcpNote, addMcpTrackNotes, moveMcpNote, quantizeMcpNoteLengths, removeMcpNote, setMcpNoteLength, transposeMcpNotes } from "./arrangement";
 import { getMcpArrangement } from "./arrangement";
 import { noteName } from "../src/data/pitchTruth";
 
@@ -193,6 +193,20 @@ export const ARRANGEMENT_NOTE_TOOLS: ToolDefinition[] = [
         return failure((error as Error).message);
       }
     },
+  },
+  {
+    name: "quantize_arrangement_note_lengths",
+    title: "Quantize a track's note lengths",
+    description:
+      "Round every note's length on one track to a division of a beat -- 0.25 for sixteenths, 1 for whole beats. Start positions are not moved, only lengths, so a phrase keeps its rhythm and loses its ragged tails. This is the half of the studio's `swing` operation that an arrangement can express, because an arrangement's note carries its own length.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      trackId: z.string(),
+      snapBeats: z.number().describe("the division to round to, in beats; 0.25 is a sixteenth"),
+    },
+    handler: (args) =>
+      quantizeMcpNoteLengths(String(args.arrangementId), String(args.trackId), Number(args.snapBeats)),
   },
   {
     name: "transpose_arrangement_notes",
