@@ -1478,26 +1478,16 @@ async function runTestOnTarget(target, baseUrl) {
      * asserting a chip there would be asserting the absence of a deliberate design decision rather
      * than a bug.
      */
-    if (!(await page.$("[data-testid='mobile-transport-more']")) && !(await page.$("[data-testid='studio-gs1-toggle']"))) {
-      // Desktop: the chip lives in the advanced drawer, which may be closed.
-      await openStudioMoreControls(page);
-      await page.waitForTimeout(300);
-    }
-    const hasGs1Chip = Boolean(await page.$("[data-testid='studio-gs1-toggle']"));
-    if (hasGs1Chip) {
-      const chipAfterPanelFlip = await page.getAttribute("[data-testid='studio-gs1-toggle']", "aria-pressed");
-      if (chipAfterPanelFlip !== "false") {
-        throw new Error(
-          `Toolbar GS-1 chip (${chipAfterPanelFlip}) disagrees with the settings panel that just turned it off`
-        );
-      }
-      // Leave the app as we found it: default on.
-      await page.click("[data-testid='studio-gs1-toggle']", { force: true });
-      await page.waitForTimeout(200);
-      if ((await page.getAttribute("[data-testid='studio-gs1-toggle']", "aria-pressed")) !== "true") {
-        throw new Error("Could not restore the GS-1 default after the settings-panel check");
-      }
-    } else if (await page.$("[data-testid='mobile-transport-more']")) {
+    /**
+     * ⭐ **Retired with the studio toolbar's GS-1 chip (owner's precedent, 2026-10-07).**
+     *
+     * The studio carried a GS-1 chip in its advanced drawer, and this compared it with the settings panel that had just turned the flag off.
+     * The chip has one producer, `sequencer/Toolbar.tsx`, and the arrangement surface has no drawer to open, so on a desktop target the
+     * guard above it was false and the helper threw before any assertion ran. The capability is covered where it now lives: the panel's own
+     * criteria drive `audio-settings-gs1-toggle` and read the flag back. What is left below is the phone path, which reaches the same panel
+     * through the studio sheet.
+     */
+    if (await page.$("[data-testid='mobile-transport-more']")) {
       // Phone: restore the default through the panel itself, which is the only surface that owns
       // the flag there.
       await page.click("[data-testid='mobile-transport-more']", { timeout: 10000 });
