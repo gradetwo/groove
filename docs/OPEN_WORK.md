@@ -17754,3 +17754,42 @@ describe("the grid's editing actions", () => {
     现有门禁各守其位 ✓（`check_render_cpu_budget` ✓、`flattenCost` ✓、`probe:latency:gate` ✓、`measure_playback_smoothness` ✓）。
   ⚠️ **口径**：web 的交互读数是在 MCP 整首渲染同时跑的（渲染占 1/8 核 ✓）⇒ 正式定目标前需在空闲机上复测 ✓；
     渲染/CPU/内存三组数据与渲染无重叠 ✓。
+
+### 六百八十二、✅ **业主纠正了框架：批量录入是"文件"，界面是"编辑"——以及由此查出的两个真缺陷**（2026-10-07 ✓）
+
+**⭐ 一、业主的原话（本轮的方向 ✓）**
+  ⭐ "创作者要输入大量音符其实可以用 MIDI 导入 ✓，还有 MIDI 键盘输入或者虚拟键盘输入 ✓，界面上更多的是编辑和调整（时长、力度等等）✓。"
+  ⭐ 我上一轮把"鼠标画 2096 个音符要 16 分钟"当成 web 的缺口 ✗ ⇒ **框架错了** ✓：鼠标是编辑手势，不是录入方式 ✓。
+
+**⭐ 二、按正确框架重测（同一首 5:00 曲子 ✓）**
+  ⭐ **MIDI 导入就是 web 的批量入口，而且很快** ✓：文件选择 → 映射对话框 **127 ms** ✓、
+    映射第 0 声部 **17 ms** ✓、确认落位 **303 ms** ✓ ⇒ **2096 个音符约 0.6 s** ✓；
+    对话框把 **10 个声部**（文件自己的名字 ✓）与 **49 个乐器选项**列出来 ✓，`Confirm` 在未命名任何声部前是禁用的 ✓，
+    `Skip` 则把全部声部做成合成器（报告里写明了 ✓）。
+  ⭐ **MCP 往返**：`export_arrangement_midi` **30 ms** ✓；`import_arrangement_midi`（`partIndex:"all"` ✓）
+    用 **23 ms** 还原 **10 条带名字的轨道 / 2096 音符 / 125 小节 / tempo 100 / 无 problems** ✓。
+    ⚠️ **省略 `partIndex` 只导入第一个声部** ✗（默认值如此 ✓）且 `problems` 为空 ✗ ⇒ 我自己第一次就静默丢了 9 个声部与 1392 个音符 ✓（记入计划 M 侧 ✓）。
+  ⭐ **web 实时性（导入 11 条轨、100 BPM ✓）**：按下播放到播放头首次移动 **393–435 ms** ✓；
+    帧 p50 **16.7 ms** ✓／p95 21.5–21.6 ✓／最差 45.8 ms ✓（>32 ms 仅 1 帧 ✓，长任务 0 ✓）；
+    页面 JS 堆 **15–16 MB** ✓（11 条**合成器**轨 ✓；上轮 391 MB 是 10 条**采样器**轨且乐器库开着 ✓ ⇒ 内存跟采样器状态与库走 ✓，不是轨道数 ✓）。
+
+**⭐ 三、两个真缺陷（已修第一个 ✓）**
+  ⭐ **① 导入不延长编曲长度** ✗（两条路都有 ✓）：125 小节的音乐导进 8 小节的编曲 ✓
+    ⇒ 标尺、区域、走带全停在 16 秒 ✓，而旁边的报告写着"10 track(s), 2096 note(s)" ✓；
+    MCP 的回复把 `steps: 2000` 和 `bars: 8` 并排 ✓ ⇒ 看起来是对的 ✓。
+    ⇒ **修**：`barsCoveringNotes`（`src/data/arrangementImport.ts` ✓）成为唯一规则 ✓，
+    文件选择器的导入 ✓ 与 MCP 的 `addImportedParts` ✓ 都用它 ✓：长度取"到达的最远处" ✓、
+    **既有长度是下限**（导入绝不缩短 ✓——第一版把 200 小节的编曲压到 128 上限 ✗，判据当场抓住 ✓）、
+    `MAX_BARS` 只约束"导入要求多长" ✓。
+    ⇒ **两侧实测**：MCP 往返 `bars: 126, steps: 2016` ✓；浏览器重建后 `after import: bars 126, ruler 126, regions 126` ✓（无需手动 ✓）。
+    ⇒ 判据 `arrangementImportSamplerKind.test.ts`（延长 ✓／不缩短 ✓／封顶 ✓）；计划 W3 标为 ✅ DONE ✓。
+  ⭐ **② 弹进去的音符不会被录下来** ✗（待做 ✓，计划 W3b ✓）：`ArrangementViewV2` 确实接了
+    `useMidiInput`（`isKeyboardMode: true` ✓）也渲染了 `ArrangementKeyboardV2` ✓，但两者都只 **audition** ✓
+    （`engineRef.triggerNote` ／ `player.audition` ✓）⇒ **"我弹的"到 `notesByTrack` 之间没有路** ✗
+    ⇒ 业主点名的两条输入方式今天一个音符都进不去 ✗。
+
+**⭐ 四、顺手修好的量具**
+  ⭐ `measure_playback_smoothness.mjs` 一直在等 v1 的 `track-header-0` ✗ ⇒ 三个 target 全报"studio did not render" ✗
+    ⇒ **实时性这一轴此前等于没有量具** ✓。改成走 v2 落地（gate／prompt／选择器／Create ✓）＋
+    从播放头的 `left` 与缩放读数算步位 ✓＋按名字读 `arrangement-tempo` ✓（原先"第一个 number input"读到 Euclidean 的 3 ✓，于是 120 BPM 被判成 DRIFT ✗；修后 **IN PHASE** ✓：7.83 steps/s 对 8 ✓）。
+  ⚠️ web 的播放头步率仍偏低 11–12% ✓（帧量化读数 ✓）⇒ 计划 §4 的 `probe:web-interaction` 要用原始 px 速率复测 ✓。
