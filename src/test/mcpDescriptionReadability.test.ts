@@ -71,7 +71,13 @@ describe("the tool descriptions stay readable", () => {
     const exempted = over.filter(listy);
     const offending = over.filter((x) => !listy(x));
     expect({ offending }).toEqual({ offending: [] });
-    // ⚠️ 豁免条数**钉死** ✓：多一个或少一个都会红 ✓（放宽必须是有意改动 ✓）
-    expect({ exempted: exempted.length }).toEqual({ exempted: 1 });
+    /**
+     * ⚠️ 豁免条数**钉死** ✓：多一个或少一个都会红 ✓（放宽必须是有意改动 ✓）。
+     *
+     * ⭐ **本轮 1 ⇒ 0** ✓：唯一被豁免的那句在 `apply_pattern_ops`／`pattern_statistics` 等七个 v1 工具的退役里
+     * 随它们的描述一起删掉了 ✓ ⇒ 现在没有任何 >190 的句子 ✓，所以钉 0 才是今天的事实 ✓；将来若要再放宽，
+     * 这一行会红，必须有意改 ✓。
+     */
+    expect({ exempted: exempted.length }).toEqual({ exempted: 0 });
   });
 });

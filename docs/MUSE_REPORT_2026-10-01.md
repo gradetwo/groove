@@ -423,7 +423,7 @@ bars 4: durationSec=16.600022675736962 · WAV 16.60 s · skipped=null
   set_arrangement_bars 1 → durationSec 2.600000            = 1×2.0 + 0.6
   set_arrangement_bars 8 → durationSec 16.600022675736962   = 8×2.0 + 0.6
   ```
-* ⇒ **我量到的 bars 1/2/4 全是 16.60 s，正是 `create_arrangement` 的默认 8 小节** ✓✓（其 handler 在 `mcp/registry.ts:300` 把 `bars: 1` 写死 ✗）。
+* ⇒ **我量到的 bars 1/2/4 全是 16.60 s，正是 `create_arrangement` 的默认 8 小节** ✓✓（其 handler 在 `mcp/registryArrangement.ts`，工具的 `bars` 参数被忽略 ✗）。
 
 **并且它指出了真正生效的那个入口** ✓✓：**`set_arrangement_bars`** ✓——**所以"设置排列长度"是有办法的** ✓，**被忽略的是渲染调用里的 `bars`** ✗✓。**这使修法更具体** ✓：要么让渲染的 `bars` 生效 ✓，要么把它从 schema 里去掉 ✗（**留着却无效，是最糟的一种** ✗✓）。
 
