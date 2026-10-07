@@ -17418,3 +17418,19 @@ describe("the grid's editing actions", () => {
 **⭐ 因此 ✓**：⭐ ⑤ **扫描已完成** ✓，⭐ 命中点**归入迁移 ⑤** ✓，⭐ 不另开一批 ✓
 ```
 
+### 六百七十一、⭐ **执行顺序 ⑥"分析进度上报"复核：已完成 ✅（2026-10-07 ✓）**
+
+```
+**⭐ 结论 ✓**：⭐ 两处**真正慢的**都已上报 ✓ **且有判据** ✓
+  ⭐ ① ⭐ `normalize_loudness`（⭐ 多轮渲染 ✓）⇒ ⭐ `runWithProgress` 报"⭐ measuring the arrangement**"（⭐ `registryAnalysis.ts:102` ✓）
+    ＋ ⭐ "⭐ pass N**"（⭐ `:126` ✓）
+  ⭐ ② ⭐ `analyze_audio`（⭐ 读渲染文件 ✓）⇒ ⭐ 报"⭐ analysing the rendered file**"（⭐ `:243` ✓）
+  ⭐ ③ ⭐ 渲染器本身 ✓：⭐ "⭐ starting the renderer (Vite + Chromium)**"（⭐ `render/worker.ts:735` ✓）＋ ⭐ "⭐ rendering <what>**"（⭐ `:754` ✓）
+**⭐ 判据 ✓**：⭐ `src/test/mcpProgressReporting.test.ts`（⭐ 69 行 ✓）⭐ 两条 —— ① ⭐ 给 reporter ⇒ ⭐ 上报 ✓，⭐ 且**进度不替代答案** ✓
+  ② ⭐ 不给 reporter ⇒ ⭐ **静默且答案相同** ✓（⭐ 这是纪律 ✓：⭐ MCP 不给 token 时不打扰 ✓）
+**⭐ 其余五个分析工具 ✓**：⭐ `estimate_key` ✓ `get_pitch_report` ✓ `pattern_statistics` ✓ `get_transposition_report` ✓ `validate_arrangement` ✓
+  ⇒ ⭐ **纯内存计算** ✓ ⇒ ⭐ 无需进度 ✓（⭐ 给纯函数加进度只会制造噪音 ✓）
+**⇒ ⭐ 因此第七节的执行顺序 ①…⑦ 全部完成 ✅**（⭐ ① ⭐ 落盘路径＋字节数 ✓｜② ⭐ region 音域 ✓｜③ ⭐ 加音符报告音域 ✓｜
+  ⭐ ④ ⭐ 峰值余量 ✓｜⑤ ⭐ 两张脸扫描 ✓｜⑥ ⭐ 进度上报 ✓｜⑦ ⭐ 歌词 × 编曲 ✓）
+```
+

@@ -16,17 +16,14 @@ import { z } from "zod";
 export const FILE_TOOLS: ToolDefinition[] = [
   {
     /**
-     * P3 of the composer's report, unblocked by C1: the project package can now carry a song's arrangement, so exporting one is
-     * a mapping rather than a lossy guess.
-     *
-     * The two-pattern `GrooveProject` the exporter takes is filled from the song's A and B clips (both required by its schema),
-     * and the **whole** arrangement rides along in the package's `arrangement` field — clips, sections and the active slot — so
-     * what comes out is the composition, not a flattened copy of it.
+     * ⭐ **An arrangement goes out as an arrangement.** The package carries the model itself -- `tracks`, `notes`, `takes`, `bars` and the
+     * tempo map -- rather than a projection of it, so what comes out is the composition and not a flattened copy. Names come from the id,
+     * because an arrangement carries no name of its own.
      */
     name: "export_groove",
-    title: "Export a song as a .groove project package",
+    title: "Export an arrangement as a .groove project package",
     description:
-      "Write a song created with create_song as a validated .groove package under GROOVE_MCP_OUT, carrying its clips and sections. This is the composition-to-project path: the package is what the app imports, and validateGroovePackage checks it before anything is written.",
+      "Write an arrangement as a validated .groove package under GROOVE_MCP_OUT, carrying its tracks, notes, takes, bars and tempo map. This is the composition-to-project path: the package is what the app imports, and validateGroovePackage checks it before anything is written.",
     readOnly: false,
     inputSchema: {
       arrangementId: z.string().describe("the arrangement to write, by id"),
