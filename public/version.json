@@ -1,29 +1,29 @@
 {
-  "version": "2.35.0",
+  "version": "2.35.1",
   "releaseDate": "2026-10-07",
   "changelogCount": 10,
   "latest": {
-    "version": "2.35.0",
+    "version": "2.35.1",
     "date": "2026-10-07",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "v1 退场：工作室界面、发布矩阵与 MCP 模式工具都换成编曲",
-      "en": "v1 retires: the studio view, the release matrix and the MCP pattern tools become the arrangement"
+      "zh": "编曲界面错位修复：轨道头、区域与工具条",
+      "en": "Arrangement layout: headers, regions and the toolbar"
     },
     "highlights": [
       {
-        "zh": "工作室界面、v1 模式工具与发布矩阵退役；人和智能体都只看编曲面。",
-        "en": "The studio view, the v1 pattern tools and the release matrix are gone; a person and an agent both work on the arrangement."
+        "zh": "轨道头与泳道逐行对齐，曲目名不再被挤成 0 宽。",
+        "en": "Each header shares its lane's row box, and the track name is no longer squeezed to zero width."
       },
       {
-        "zh": "GS-1 音色改挂到编曲轨道，经 compile 进渲染，真核渲染有判据。",
-        "en": "A track's own GS-1 sound is carried into the render by the compile, measured on the real core."
+        "zh": "区域落回小节网格（原先右移 36 px），通道里重复的 MUTE 退场。",
+        "en": "Regions sit on the bar grid again (they were 36 px right of it); the lane's duplicate MUTE is gone."
       },
       {
-        "zh": "编曲面补齐静音、导出取消、采样等待提示、保存状态与主效果架。",
-        "en": "The arrangement gains mute, export cancel, a sampler-waiting hint, save status and the master effects rack."
+        "zh": "工具条按家族分组，字形控件补了名称；落地页加流派筛选。",
+        "en": "The toolbar is labelled by family and its glyph controls are named; the landing panel gains a genre filter."
       }
     ],
-    "truncated": false
+    "truncated": true
   }
 }
