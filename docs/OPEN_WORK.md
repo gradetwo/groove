@@ -18530,3 +18530,17 @@ describe("the grid's editing actions", () => {
     `chunks` 仍只在可证等价的形状上用 span ✓（带采样轨的编曲自动回退单次并把原因写进 `problems` ✓）。
   ⚠️ 一处待看（不阻塞 ✓）：两次实测的 `problems` 都是 **1** ✓（合成器编曲、无采样轨 ✓）⇒ 下一轮值得打印出来看清是什么 ✓。
   ⏳ 目标剩余：④ 的后半（W7 网页侧进度/ETA ✓；MCP 侧按段播报的**通知**仍无端到端证据 ✓）与 W5b（单音符力度 ✓）。
+
+### 七百二十五、✅ **W7 网页侧落地：导出标签显示的百分比是渲染器自己报的**（2026-10-08 ✓）
+
+  ⭐ 事实先纠正 ✓：仓库里那句注释——"**No percentage is reported because none was measured**" ✓——写下时是真的 ✓，
+    但**现在不再是** ✓：`WavExporter` 早就通过 `OfflineAudioContext.suspend` 的接缝在**每 10%**回调一次 ✓
+    （`RenderWavOptions.onRenderProgress` ✓），只是导出 UI 从来没接 ✓。
+  ⭐ 本轮接线 ✓：`wavFileFor(arrangement, onProgress?)` ✓ → `useArrangementFileActions` 保存
+    `{fraction, elapsedSec}` ✓ → `ArrangementViewV2` 透传 ✓ → `ArrangementFileEntriesV2` 的
+    `arrangement-export-progress` 标签里显示 **`42%`** ✓（<3% 不显示 ✓，避免闪烁 ✓）。
+  ⭐ 判据 ✓（`src/test/arrangementExportCancel.test.tsx` ✓，3 例 ✓）：给了 `{fraction: 0.42}` 就**必须**出现 `42%` ✓；
+    没给就不许出现 `%` ✓（⇒ 删掉接线即红 ✓）。这条判据的价值在于：它让"百分比是**量出来的**"成为可验证的事实 ✓，
+    而不是 UI 上的装饰 ✓。
+  ⏳ 仍缺 ✓：ETA/剩余时间（`elapsedSec` 已经在状态里 ✓，缺的是一句双语文案与一个 i18n key ✓）；MP3/stems 导出没有百分比 ✓
+    （它们走的是别的渲染入口 ✗）。W5b（单音符力度）还没开始 ✓。

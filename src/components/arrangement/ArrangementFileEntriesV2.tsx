@@ -30,6 +30,8 @@ export interface ArrangementFileEntriesV2Props {
    * this is what the control can honestly say; a bar that cannot move is the kind of control this repository removes.
    */
   exportingKind?: string;
+  /** ⭐ The renderer's own fraction, when the running export can report one (WAV currently). */
+  exportProgress?: { fraction: number; elapsedSec: number };
   /** ⭐ Stop waiting for it: the run finishes, the file is not written. */
   onCancelExport?: () => void;
 }
@@ -48,6 +50,7 @@ export const ArrangementFileEntriesV2 = memo(function ArrangementFileEntriesV2({
   onExportStems,
 onImportFile,
   exportingKind,
+  exportProgress,
   onCancelExport,}: ArrangementFileEntriesV2Props) {
   const { t } = useLanguage();
   const [exportOpen, setExportOpen] = useState(false);
@@ -74,6 +77,9 @@ onImportFile,
       {exportingKind !== undefined && (
         <span data-testid="arrangement-export-progress" className="font-mono text-[10px] uppercase tracking-widest text-text-sub">
           {t("arrangement_exporting")}
+          {exportProgress !== undefined && exportProgress.fraction >= 0.03
+            ? ` ${Math.round(exportProgress.fraction * 100)}%`
+            : ""}
         </span>
       )}
       {exportingKind !== undefined && onCancelExport !== undefined && (

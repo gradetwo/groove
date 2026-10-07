@@ -264,10 +264,28 @@ const CHUNKED_EXPORT_FROM_BARS = 16;
  */
 const CHUNKED_EXPORT_ENABLED = false;
 
-export async function wavFileFor(arrangement: ArrangementV2): Promise<ProducedAudio> {
+export async function wavFileFor(
+  arrangement: ArrangementV2,
+  /**
+   * ⭐ **The renderer has reported its own progress since the `suspend` seams went in** (`RenderWavOptions.onRenderProgress`,
+   * 10% steps), and the UI said "no percentage is reported because none was measured" — which was true when it was
+   * written and is no longer: the measurement exists, so the caller gets to show it.
+   */
+  onProgress?: (fraction: number, elapsedSec: number) => void
+): Promise<ProducedAudio> {
   const pattern = compiledPatternFor(arrangement);
   const lanes = await audioLaneOptions(pattern);
-  const options = { ...renderOptionsFor(arrangement), ...lanes.options };
+  const startedAt = Date.now();
+  const options = {
+    ...renderOptionsFor(arrangement),
+    ...lanes.options,
+    ...(onProgress
+      ? {
+          onRenderProgress: (renderedFrames: number, totalFrames: number) =>
+            onProgress(totalFrames > 0 ? Math.min(1, renderedFrames / totalFrames) : 0, (Date.now() - startedAt) / 1000),
+        }
+      : {}),
+  };
   if (CHUNKED_EXPORT_ENABLED && barsOf(pattern) >= CHUNKED_EXPORT_FROM_BARS) {
     const { exportMasterWavChunked } = await import("../../audio/chunkedMasterWav");
     const result = await exportMasterWavChunked(pattern, ARRANGEMENT_FILE_STEM, options);

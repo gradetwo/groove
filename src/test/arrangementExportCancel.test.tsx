@@ -7,9 +7,11 @@ import { LanguageProvider } from "../i18n/LanguageContext";
 /**
  * ⭐ **The export tells the truth about being in flight, and the cancel is reachable while it is.**
  *
- * The arrangement's exporters report "working" rather than a percentage -- `OfflineAudioContext.startRendering()` cannot be
- * measured from outside and cannot be interrupted -- so what this pins is the pair of facts a person can act on: the menu says an
- * export is running, and a cancel is offered next to it. Deleting the `exportingKind` wiring turns the first case red.
+ * The exporters used to report "working" rather than a percentage, because `OfflineAudioContext.startRendering()` cannot be
+ * measured from outside -- and that changed: `WavExporter` calls back through its `suspend` seams at each 10%, so the WAV
+ * export now shows the render's own fraction. What this pins is what a person can act on: the menu says an export is
+ * running, a cancel is offered next to it, and (for WAV) the percentage is the renderer's rather than a decoration.
+ * Deleting the `exportingKind` wiring turns the first case red; deleting the `exportProgress` wiring turns the last one red.
  */
 const entries = (extra: Record<string, unknown>) =>
   render(
@@ -28,6 +30,26 @@ const entries = (extra: Record<string, unknown>) =>
   );
 
 describe("the export's own state", () => {
+  it("⭐ shows the renderer's own fraction, and shows nothing when there is no measurement", () => {
+    const { rerender } = entries({ exportingKind: "export", exportProgress: { fraction: 0.42, elapsedSec: 90 } });
+    expect(screen.getByTestId("arrangement-export-progress").textContent).toContain("42%");
+    rerender(
+      <LanguageProvider>
+        <ArrangementFileEntriesV2
+          onExportMidi={vi.fn()}
+          onExportAls={vi.fn()}
+          onExportGroove={vi.fn()}
+          onExportWav={vi.fn()}
+          onExportMp3={vi.fn()}
+          onExportStems={vi.fn()}
+          onImportFile={vi.fn()}
+          exportingKind="export"
+        />
+      </LanguageProvider>
+    );
+    expect(screen.getByTestId("arrangement-export-progress").textContent).not.toMatch(/%/);
+  });
+
   it("⭐ says nothing while idle, and offers a cancel while an export runs", () => {
     entries({});
     expect(screen.queryByTestId("arrangement-export-progress")).toBeNull();

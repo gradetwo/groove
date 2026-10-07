@@ -54,10 +54,12 @@ export interface UseArrangementFileActionsResult {
   report?: string;
   busy: boolean;
   /**
-   * ⭐ **Which export is running, or `undefined`.** No percentage: see the state's own note -- the arrangement exporters report
-   * "working", and a bar that cannot move is the kind of control this repository keeps removing.
+   * ⭐ **Which export is running, or `undefined`.** The percentage beside it is measured (see the state's note): the WAV
+   * render calls back through `WavExporter`'s 10% seams, so this is a moving number rather than a control that cannot.
    */
   exportingKind?: string;
+  /** ⭐ The render's own fraction and elapsed seconds, while a WAV export that can report them is running. */
+  exportProgress?: { fraction: number; elapsedSec: number };
   /** ⭐ Stop waiting: the work finishes, the file is not written. `OfflineAudioContext` has no cancellation primitive. */
   cancelExport: () => void;
   exportMidi: () => void;
@@ -133,10 +135,17 @@ export function useArrangementFileActions({
    * cancellation primitive, so the only honest guarantee is about the **file** — after a cancel, none is produced. The counter
    * is how a run learns it is stale: `cancelExport` moves it on, and the run that was in flight finds itself behind.
    *
-   * No percentage is reported because none was measured: the arrangement exporters report "working", not progress, and a bar
-   * that cannot move is the kind of control this repository keeps removing.
+   * ⭐ **A percentage is reported now, because one is measured**: `WavExporter` calls back at each 10% through the
+   * `OfflineAudioContext.suspend` seams and `wavFileFor` forwards it, so the label moves with the render instead of
+   * claiming to. The older note here said no percentage was reported "because none was measured" — true when written,
+   * and the measurement is what changed.
    */
   const [exportingKind, setExportingKind] = useState<string | undefined>(undefined);
+  /**
+   * ⭐ **How far the render is, and how long it has been going.** A five-minute bounce takes minutes, and "Exporting…"
+   * alone is the difference between waiting and wondering whether it hung. The fraction comes from the renderer itself.
+   */
+  const [exportProgress, setExportProgress] = useState<{ fraction: number; elapsedSec: number } | undefined>(undefined);
   const runIdRef = useRef(0);
   /** The file waiting for the person to name its parts, if the mapping dialog should be up. */
   const [pending, setPending] = useState<PendingImport | undefined>(undefined);
@@ -230,7 +239,10 @@ export function useArrangementFileActions({
         say(t("arrangement_export_failed", { error: describeError(error) }));
       } finally {
         setBusy(false);
-        if (runIdRef.current === myRun) setExportingKind(undefined);
+        if (runIdRef.current === myRun) {
+          setExportingKind(undefined);
+          setExportProgress(undefined);
+        }
       }
     },
     [say, t]
@@ -252,7 +264,7 @@ export function useArrangementFileActions({
 
   const exportWav = useCallback(() => {
     void run("export", async () => {
-      const file = await wavFileFor(arrangement);
+      const file = await wavFileFor(arrangement, (fraction, elapsedSec) => setExportProgress({ fraction, elapsedSec }));
       return { file, report: audioReport(file) };
     });
   }, [arrangement, audioReport, run]);
@@ -447,6 +459,7 @@ export function useArrangementFileActions({
   return {
     report,
     exportingKind,
+    exportProgress,
     cancelExport,
     busy,
     exportMidi,
