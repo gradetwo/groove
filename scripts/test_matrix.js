@@ -390,6 +390,56 @@ async function clickCentred(page, selector) {
 }
 
 /**
+ * ⭐ **A real mouse click on a control, with the "did it work" half attached.**
+ *
+ * **Restored 2026-10-07.** The helper was written when the phone studio sheet needed a row scrolled into view before a tap; the commit
+ * that removed the phone branches took the definition with it and left the desktop call, so every browser failed with
+ * `clickSheetRowAndVerify is not defined` before the audio-settings block ran.
+ *
+ * The one remaining caller is the header's settings button, and the same two things matter there: the control starts below the fold on a
+ * short viewport, and a `page.click` swallowed by an overlay looks exactly like a panel that did not open. So this scrolls the control into
+ * view, clicks its centre with a real mouse event, and then requires the expected target to appear — naming the entry, the target and what
+ * was on screen when it does not.
+ */
+async function clickSheetRowAndVerify(page, selector, expectSelector, label) {
+  await page.waitForSelector(selector, { timeout: 15000 });
+  const prepared = await page.evaluate((sel) => {
+    const el = document.querySelector(sel);
+    if (!el) return false;
+    el.scrollIntoView({ block: "nearest", inline: "nearest" });
+    el.setAttribute("data-e2e-target", "1");
+    return true;
+  }, selector);
+  if (!prepared) throw new Error(`${selector} not found`);
+  await page.waitForTimeout(250);
+
+  const box = await page.evaluate(() => {
+    const el = document.querySelector("[data-e2e-target='1']");
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  });
+  if (!box) throw new Error(`${selector} lost its box before the click`);
+  await page.mouse.move(box.x, box.y);
+  await page.mouse.down();
+  await page.waitForTimeout(60);
+  await page.mouse.up();
+  await page.evaluate(() => document.querySelector("[data-e2e-target='1']")?.removeAttribute("data-e2e-target"));
+
+  if (expectSelector) {
+    try {
+      await page.waitForSelector(expectSelector, { timeout: 15000 });
+    } catch {
+      const diag = await page.evaluate(() => ({
+        dialogs: document.querySelectorAll("[role='dialog']").length,
+        url: location.href,
+      }));
+      throw new Error(`${label}: clicking ${selector} did not produce ${expectSelector} :: ${JSON.stringify(diag)}`);
+    }
+  }
+}
+
+/**
   * ⭐ **Notes marked in the arrangement's own roll.**
   *
   * The step matrix this used to read is gone with the studio; `trackIdx` stays in the signature because the callers pass one, and the roll
