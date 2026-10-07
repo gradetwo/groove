@@ -18083,3 +18083,21 @@ describe("the grid's editing actions", () => {
   ⏳ 下一轮必须下探一层 ✓：绕过我的机制、直接在渲染器层面渲染 `{fromBar: 2, bars: 2}` 与 `{fromBar: 0, bars: 4}` 并逐小节比对 ✓，
     同时读 `computeRenderWindow` 在 `fromBar` 下给出的 `stepOffset`/`stepSpan` ✓（lane 排程的绝对步就来自那里 ✓）——
     怀疑点收敛为"**`bars` = 段长时，模式被截断或偏移**"这一种 ✓。
+
+### 六百九十九、⭐ **读到了窗口算术：它是对的，但"没有窗口"恰好解释了为什么只有起点 0 精确**（2026-10-08 ✓）
+
+  ⭐ 读 `computeRenderWindow`（`src/audio/WavExporter.ts` ✓）：
+    · **`fromBar <= 0` 直接 `return null`** ✓ ⇒ 从第 0 小节起的渲染**根本没有窗口**，渲的是**整个模式** ✓，
+      而父进程只拷贝它前面那一段 ✓ ⇒ **这正是第一段能到 −90.3 dB（逐样本相同）的原因** ✓（不是"窗口也正确" ✓）。
+    · `fromBar > 0` 时：`fromStep = fromBar × stepsPerBar` ✓、`toStep = fromStep + stepsPerBar × max(1, bars)` ✓、
+      `barStartSeconds`、`preRollFrames = ceil(preRollSec × rate)` ✓——**算术本身正确** ✓。
+    · `preRollSec` 被 `RENDER_PREROLL_MAX_SEC` 钳制 ✓，而它是 **30 s** ✓ ⇒ 上一轮那次 **6 s prereoll 实验是有效的** ✓
+      （不是被悄悄钳掉 ✓）⇒ "预热长度无关"这条结论**成立** ✓。
+  ⭐ 读窗口的两个消费者 ✓：
+    · **音频轨**：`prepareOfflineAudioLanes({ stepOffset, stepSpan, timeOffsetSec })` ✓，文档写明"note 落在自己 step 减去 offset" ✓；
+    · **合成器轨**：`scheduleFrom/scheduleTo = chunkWindow.fromStep/toStep` ✓，事件时间 `stepTimeAt(step) − timelineOffsetSec` ✓。
+    两处**看起来都对** ✓ ⇒ 所以差异不是"窗口算术"这一层能解释的 ✓。
+  ⏳ 下一轮的直接实验（渲染器层面、绕开我的合并 ✓）：同一 pattern 渲染 `{fromBar: 0, bars: 4}` 与 `{fromBar: 2, bars: 2}` ✓，
+    在**渲染器直出**的音频上逐小节比对 ✓ ⇒ 若确实不同 ✓，则问题在**窗口渲染本身**（而非合并 ✓、预热 ✓、平移 ✓、一次性触发 ✓）；
+    随后把嫌疑收在两个具体点上：**窗口下合成器 voice 的起始状态** ✓ 与 **seeded 噪声/概率滚动是否用绝对步** ✓
+    （文档声称绝对 ✓，但那正是要验的 ✓）。
