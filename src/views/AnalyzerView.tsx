@@ -348,6 +348,23 @@ export const AnalyzerView: React.FC<AnalyzerViewProps> = ({
                     </span>
                     <button
                       type="button"
+                      /**
+                       * ⭐ **The control the card is about, not a picture of one.** This was an icon-only button with no
+                       * accessible name and no `onClick` of its own — it worked only because the click bubbled to the
+                       * card, so a screen reader heard "button" and a keyboard user got no state. It now carries the
+                       * action itself (`stopPropagation` so the card's own handler does not fire twice), the state as
+                       * `aria-pressed`, and a name built from the signal's own label.
+                       */
+                      aria-label={
+                        isThisPlaying
+                          ? t("analyzer_signal_stop", { name: isZh ? sig.labelZh : sig.labelEn })
+                          : t("analyzer_signal_play", { name: isZh ? sig.labelZh : sig.labelEn })
+                      }
+                      aria-pressed={isThisPlaying}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleToggleSignal(sig.type);
+                      }}
                       className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
                         isThisPlaying
                           ? "bg-accent text-[#0a0b0d]"

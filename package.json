@@ -34,6 +34,7 @@
     "deploy:preview": "node scripts/deploy.mjs --preview",
     "perf:check": "node scripts/measure_live_perf.mjs --local",
     "probe:latency": "node scripts/measure_interaction_latency.mjs",
+    "audit:screens": "node scripts/audit_screens.mjs",
     "probe:latency:gate": "node scripts/check_latency_budget.mjs",
     "data:lint": "vite-node scripts/lint_genres.ts",
     "data:index": "vite-node scripts/build_genre_index.ts",

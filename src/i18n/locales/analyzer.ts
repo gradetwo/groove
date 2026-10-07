@@ -173,6 +173,15 @@ export const analyzerMessages = {
     zh: "停止发声",
     en: "Mute Signal",
   },
+  /** ⭐ The signal cards' own button: it was icon-only with no name, so a screen reader heard "button". */
+  analyzer_signal_play: {
+    zh: "试听信号：{name}",
+    en: "Audition signal: {name}",
+  },
+  analyzer_signal_stop: {
+    zh: "停止信号：{name}",
+    en: "Stop signal: {name}",
+  },
   analyzer_observation_label: {
     zh: "观测预期:",
     en: "Observation:",

@@ -158,6 +158,8 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({
           type="text"
           className="w-full bg-transparent text-text placeholder-text-dim text-base sm:text-lg focus:outline-none"
           placeholder={t("search_placeholder")}
+          /* ⭐ A placeholder is not a name: a screen reader announces the placeholder, but not as the control's label. */
+          aria-label={t("search_placeholder")}
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
