@@ -78,7 +78,7 @@ function target(attribute: string, value: string, rect?: Partial<DOMRect>) {
 describe("tutorial coach · anchored steps", () => {
   it("rings the control a step is about, at the control's own rect", () => {
     // Step 1 of the drum course points at the transport's play button.
-    target("data-toolbar-id", "play", { top: 100, left: 40, width: 120, height: 30 });
+    target("data-testid", "arrangement-play", { top: 100, left: 40, width: 120, height: 30 });
     renderCoach(0);
 
     const ring = screen.getByTestId("tutorial-coach-anchor");
@@ -109,8 +109,8 @@ describe("tutorial coach · anchored steps", () => {
 
   it("re-measures when the step changes", () => {
     // Step 1 → play button; step 2 → a step cell on the grid.
-    const play = target("data-toolbar-id", "play", { top: 10, left: 10, width: 20, height: 20 });
-    target("data-testid", "step-cell-1-4", { top: 500, left: 300, width: 40, height: 40 });
+    const play = target("data-testid", "arrangement-play", { top: 10, left: 10, width: 20, height: 20 });
+    target("data-testid", "arrangement-grid", { top: 500, left: 300, width: 40, height: 40 });
 
     const { rerender } = renderCoach(0);
     expect(screen.getByTestId("tutorial-coach-anchor").style.top).toBe("6px");
@@ -130,14 +130,14 @@ describe("tutorial coach · anchored steps", () => {
     });
 
     expect(screen.getByTestId("tutorial-coach-anchor").style.top).toBe("496px");
-    expect(play.getAttribute("data-toolbar-id")).toBe("play");
+    expect(play.getAttribute("data-testid")).toBe("arrangement-play");
   });
 });
 
 /**
  * Does the source stamp this attribute/value on some element?
  *
- * A static attribute (`data-toolbar-id="play"`) matches literally. Grid cells and channel strips are
+ * A static attribute (`data-testid="arrangement-play"`) matches literally. Grid cells and channel strips are
  * stamped from templates — ``data-testid={`step-cell-${trackIdx}-${stepIdx}`}`` — so those are matched
  * on the template's literal prefix instead. Still a real check: rename the cell's testid shape and the
  * anchor stops resolving.
@@ -179,8 +179,8 @@ describe("tutorial coach · anchor gate", () => {
       .filter((file) => !file.includes("/test/"))
       .map((file) => readFileSync(file, "utf8"))
       .join("\n");
-    expect(anchorExists(sources, "data-toolbar-id", "play")).toBe(true);
-    expect(anchorExists(sources, "data-toolbar-id", "this-control-does-not-exist")).toBe(false);
+    expect(anchorExists(sources, "data-testid", "arrangement-play")).toBe(true);
+    expect(anchorExists(sources, "data-testid", "this-control-does-not-exist")).toBe(false);
     expect(anchorExists(sources, "data-testid", "console-fader-99")).toBe(true); // template prefix
     expect(anchorExists(sources, "data-testid", "no-such-widget-3")).toBe(false);
   });
