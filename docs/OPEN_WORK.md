@@ -18375,3 +18375,28 @@ describe("the grid's editing actions", () => {
   ⏳ 下一轮（最后一轮 ✓）：先取**每段耗时 `spanMs`**（代码里已经返回 ✓）把"准备 vs 渲染"分开 ✓，再决定：
     ① K=2（少一份争用 ✓）；② 把准备从每段里拿掉（共享目录/采样缓存 ✓）；③ 或承认这台机器上"并行"买不到目标 ✓，
     转而做**少做工作**（草稿采样率/轻混响 ✓）并把预算与进度（W7 ✓）先交给创作者 ✓。
+
+### 七百一十六、📌 **收束：这个目标做到了什么、没做到什么，以及下一个人从哪一步接**（2026-10-08 ✓）
+
+  **已做到（有证据 ✓）**
+    ① **"同一页内 K 路并发"这条前提被证伪** ✓：真渲染器同页并发仅 **1.03–1.13×**（与实时 context 无关 ✓），
+       **Web Worker 没有 `OfflineAudioContext`** ✗，跨页才有重叠（暖态 ≈3× ✓）⇒ 计划 §6.1 已按此改写 ✓。
+    ② **并行单位被正确识别** ✓：MCP 的渲染是**服务进程内的 Node host**（`node-web-audio-api` ✓）⇒ 单位是**进程** ✓，
+       轻载实测 **K=2 1.96× / K=4 3.90×** ✓（`scratch/node-host-scaling.mjs` ✓）。
+    ③ **一整套分块机制落地并**逐样本等价** ✓**：span 计划 ✓、preroll ✓、交叉淡化 ✓、合并 ✓（`src/audio/parallelRender.ts` ✓ 7 条判据 ✓）、
+       跨进程编排 ✓（`mcp/render/spanHosts.ts`/`spanRunner.ts` ✓）、bundle 的隐藏 span 模式 ✓、工具面 `chunks`（1–8 ✓）。
+    ④ **目标点名的 null 判据存在且绿** ✓：`scratch/node-span-equivalence.ts` ✓（阈值：窗口外 ≤ −60 dBFS ✓、窗口内 ≤ −40 dBFS ✓），
+       工具路径上**模板编曲 K=2 与采样器 fixture 回退单次**都 **−inf** ✓；守卫 `spanSafety` ＋判据 ✓（`src/test/spanSafety.test.ts` ✓）。
+    ⑤ **沿途修掉的真缺陷**（都有判据或实测 ✓）：import 不延长编曲 ✓、速度/meter 两条路不一致 ✓、
+       实时性探针坏掉 ✓、`chunks` 被带进子进程导致 fork 炸弹 ✓、末段尾巴被切 ✓、lane 重复计数 ✓、
+       重复选项块（`duplicationBudget` ✓）、以及我自己四次量具错（`--flag=value` 不认 ✓、`barkFrames` 用错 bpm ✓、
+       marker 指向已删目录 ✓、`browser.process()` ✓）。
+  **没做到（照实说 ✓）**
+    ⚠️ **目标值 ≤300 s 未被证明** ✗：真实形状（126 小节 / 2,016 音符 / 单声部极密）**K=4 未能在 900 s 预算内完成** ✗
+      （`scratch/mcp/span-5min.mjs` ✓，回包缺 `durationSec`/`bytes` ✓）。
+    ⚠️ **W7（导出进度/ETA）与 W5b（单音符力度）未做** ✗（块完成回调 `onSpanDone` 已备好 ✓，是接线的活 ✓）。
+  **下一步（按性价比 ✓）**
+    ① 用 `spanMs`（已在 `renderPatternInSpans` 的返回值里 ✓）把**每段的"准备"与"渲染"分开** ✓，先试 **K=2** ✓；
+    ② 把**每段各自的 pattern 准备**拿掉（共享目录/采样缓存/一次预热 ✓）——六百九十二 与 七百一十五 的差别就在这一项 ✓；
+    ③ 若仍买不到目标 ✓，改做**少做工作**（草稿采样率/轻混响 ✓，与终版分离 ✓）并先交 W7 的**预算与进度** ✓；
+    ④ 判据已经在位 ✓：任何 span 改动都要让 `node-span-equivalence.ts` 保持**绿** ✓，否则不许合并 ✓。
