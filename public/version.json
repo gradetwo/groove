@@ -1,27 +1,27 @@
 {
-  "version": "2.35.1",
-  "releaseDate": "2026-10-07",
+  "version": "2.35.2",
+  "releaseDate": "2026-10-08",
   "changelogCount": 10,
   "latest": {
-    "version": "2.35.1",
-    "date": "2026-10-07",
-    "category": "fix",
+    "version": "2.35.2",
+    "date": "2026-10-08",
+    "category": "feature",
     "title": {
-      "zh": "编曲界面错位修复：轨道头、区域与工具条",
-      "en": "Arrangement layout: headers, regions and the toolbar"
+      "zh": "长曲子渲染快 2.5 倍、单音符力度可看可改、导出会报进度与剩余时间",
+      "en": "Long renders 2.5× faster, a note's velocity you can see and change, and an export that says how much longer"
     },
     "highlights": [
       {
-        "zh": "轨道头与泳道逐行对齐，曲目名不再被挤成 0 宽。",
-        "en": "Each header shares its lane's row box, and the track name is no longer squeezed to zero width."
+        "zh": "五分钟的编曲渲染从 753 秒降到 297 秒：长曲子默认分成多段、多个进程并行；等价性由逐样本判据守住（交叉淡化窗口外 ≤ −60 dBFS），带采样轨的形状自动回退单次渲染并说明原因。`chunks: 1` 可显式关掉。",
+        "en": "A five-minute arrangement went from 753 s to 297 s: a long piece is rendered as several spans across processes by default, with the equivalence held by a sample-accurate criterion (≤ −60 dBFS outside the crossfades), and a pattern carrying a sample lane falls back to one pass and says why. `chunks: 1` turns it off."
       },
       {
-        "zh": "区域落回小节网格（原先右移 36 px），通道里重复的 MUTE 退场。",
-        "en": "Regions sit on the bar grid again (they were 36 px right of it); the lane's duplicate MUTE is gone."
+        "zh": "单个音符的力度现在看得到也改得了：音符带着自己的力度，框选后用工具条的滑杆统一调整，每个音符一步撤销。",
+        "en": "A note's velocity is visible and editable: notes carry their own value, and a selection can be re-voiced from the toolbar slider, with one undo step per note."
       },
       {
-        "zh": "工具条按家族分组，字形控件补了名称；落地页加流派筛选。",
-        "en": "The toolbar is labelled by family and its glyph controls are named; the landing panel gains a genre filter."
+        "zh": "导出的母带报进度与剩余时间——数字来自渲染器自己的每 10% 回调，不再只有一个「导出中…」。",
+        "en": "A master export reports progress and time left, taken from the renderer's own ten-percent callbacks instead of a single \"Exporting…\"."
       }
     ],
     "truncated": true
