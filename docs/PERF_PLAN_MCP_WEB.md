@@ -256,6 +256,17 @@ one-off cost (≈500 ms at 8 kHz), and the warm spans run three-at-a-time in tha
 "one page is enough" was a property of its **worklet-free** graph: the real renderer carries a limiter worklet and a
 GS-1 wasm host, and Chromium's audio-worklet thread appears to be one per renderer process.
 
+⚠️ **And Workers cannot do it at all**: `new Worker(...)` rendering the same span answers
+`OfflineAudioContext is not supported in this environment` — Chromium exposes **no Web Audio in a worker scope**, so
+"render the chunks in K workers" is not an option on any web page. The measured parallel levers are therefore:
+
+| lever | measured | who can use it |
+| --- | --- | --- |
+| K contexts in one page | **1.1×** (serialised) | nobody — dead |
+| K Web Workers | **no `OfflineAudioContext`** | nobody — dead |
+| K pages / tabs | **1.5×** overall, **2.4×** on warm spans | the MCP render server (it spawns its own browser), **not** a web page |
+| less work per render (draft rate, lighter reverb) | not yet measured | both roads |
+
 Against the measured baseline (5:03 of audio in **753 s**, 0.40× realtime, one core of eight), K=4 projects to
 **≈ 270 s (4.5 min)** and K=8 to **≈ 230 s (3.8 min)**, before the pre-roll overhead below.
 
