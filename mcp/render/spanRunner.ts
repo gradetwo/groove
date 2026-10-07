@@ -28,7 +28,7 @@ import { renderPatternHeadless, type HeadlessRenderContext } from "./headless";
 export interface SpanJob {
   pattern: SequencerPattern;
   /** ⚠️ `chunks` is deliberately **not** carried: the child renders one span, and a forwarded count would recurse. */
-  options: RenderOptions & { bars?: number; sampleRate?: number; channels?: 1 | 2 };
+  options: RenderOptions & { bars?: number; sampleRate?: number; channels?: 1 | 2; windowBars?: number };
   catalogueRead: AudioLaneCatalogueRead;
   context: HeadlessRenderContext;
   fromBar: number;
@@ -109,6 +109,7 @@ export async function runSpanJob(jobPath: string): Promise<void> {
       bars: job.bars,
       fromBar: job.fromBar,
       preRollSec: job.preRollSec,
+      ...(job.options.windowBars === undefined ? {} : { windowBars: job.options.windowBars }),
       ...(job.options.sampleRate === undefined ? {} : { sampleRate: job.options.sampleRate }),
     },
     job.catalogueRead,

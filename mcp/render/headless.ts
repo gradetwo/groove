@@ -243,7 +243,7 @@ export async function renderPatternHeadless(
    * `mcp/render/worker.ts` (1652/1653 lines, held by `fileSizeBudget`): a field added to that interface would spend
    * the file's last line, and `renderAudio` already forwards its options object whole, so an extra field travels.
    */
-  options: RenderOptions & { chunks?: number; fromBar?: number; preRollSec?: number },
+  options: RenderOptions & { chunks?: number; fromBar?: number; preRollSec?: number; windowBars?: number },
   catalogueRead: AudioLaneCatalogueRead,
   context: HeadlessRenderContext
 ): Promise<RenderAudioPayload> {
@@ -356,6 +356,11 @@ export async function renderPatternHeadless(
      */
     ...(options.fromBar === undefined ? {} : { fromBar: options.fromBar }),
     ...(options.preRollSec === undefined ? {} : { preRollSec: options.preRollSec }),
+    /**
+     * ⭐ **The span length travels beside `fromBar`, not through `bars`** — on this path `bars` is the repeat count, and
+     * the first span of a chunked render is exactly the case where a window has to be asked for explicitly.
+     */
+    ...(options.windowBars === undefined ? {} : { windowBars: options.windowBars }),
     /**
      * ⭐ **The bytes come from the process's disk cache, and this render fetches every recording before it starts.**
      *

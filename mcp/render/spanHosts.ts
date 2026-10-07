@@ -82,6 +82,18 @@ export async function renderPatternInSpans(
 
   const run = async (index: number, span: { fromBar: number; toBar: number }): Promise<{ result: MergeableChunk; sidecar: SpanSidecar; ms: number }> => {
     const outStem = path.join(scratch, `span-${index}`);
+    /**
+     * ⚠️ **The first span renders the whole pattern, and that is the remaining cost problem.**
+     *
+     * `computeRenderWindow` returns `null` for `fromBar <= 0`, so span 0 has no window and its child renders everything;
+     * with K=4 the real 126-bar piece therefore spent one process on all of the work and blew the 900 s budget.
+     *
+     * The obvious workaround — hand the child a **truncated copy** whose `totalSteps` is the span's own steps — was tried
+     * and **rejected by the gate**: −21.6 dBFS outside the crossfade, both with the span's repeat count and with `1`, so
+     * truncating a pattern is not the same music as windowing it (the length feeds more than the schedule). The honest fix
+     * is in the renderer (`computeRenderWindow` must treat "from bar 0, this many bars" as a window rather than as the
+     * whole pattern), which is a pinned file and needs its own budget conversation.
+     */
     const job: SpanJob = {
       pattern,
       /**
@@ -89,6 +101,13 @@ export async function renderPatternInSpans(
        * to this module when `options.chunks > 1` — so a forwarded `chunks` makes every child spawn its own children, and
        * the first smoke test was killed by resource exhaustion instead of reporting a number. The child renders **one
        * span**; that is exactly `chunks: 1`.
+       */
+      /**
+       * ⚠️ **`windowBars` is deliberately NOT passed here.** It exists (the renderer accepts it and the gate can drive it),
+       * and it would make the first span cost a span instead of the whole piece — but measured through the gate it is
+       * **not equivalent**: −1.4 dBFS outside the crossfade on the template fixture, against −inf without it. A cheaper
+       * span 0 that renders different music is not a trade this project takes, so the first span keeps rendering the whole
+       * pattern and the cost problem stays open (see the note in the caller and `docs/OPEN_WORK.md`).
        */
       options: { ...parentOptions, headless: true },
       catalogueRead,
