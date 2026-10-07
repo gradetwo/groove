@@ -16,12 +16,14 @@ describe("span safety", () => {
       notes: {},
     } as never);
     expect(verdict.ok).toBe(false);
-    expect(verdict.reason).toContain("audio");
+    expect(verdict.reason).toMatch(/sampler|audio|asset/);
   });
 
-  it("accepts a sample lane that has notes, and a lane with no sample at all", () => {
-    expect(spanSafety({ tracks: [{ track_id: "audio", assetId: "salamander-grand" }], notes: { audio: [{ step: 0 }] } } as never).ok).toBe(true);
-    expect(spanSafety({ tracks: [{ track_id: "lead", role: "lead" }], notes: {} } as never).ok).toBe(true);
+  it("accepts a synth-only pattern, which is the case proved sample-identical", () => {
+    expect(spanSafety({ tracks: [{ track_id: "lead", role: "lead" }], notes: { lead: [{ step: 0 }] } } as never).ok).toBe(true);
     expect(spanSafety({ tracks: [], notes: {} } as never).ok).toBe(true);
+    // The guard is deliberately conservative: a sample lane with notes is refused too, until the one-shot is keyed on
+    // the arrangement's absolute start. Being slower on that shape is the price of never shipping a wrong render.
+    expect(spanSafety({ tracks: [{ track_id: "audio", assetId: "salamander-grand" }], notes: { audio: [{ step: 0 }] } } as never).ok).toBe(false);
   });
 });

@@ -234,17 +234,21 @@ export async function renderPatternInSpans(
  * gets the single pass, and the reason travels in the reply's problems.
  */
 export function spanSafety(pattern: SequencerPattern): { ok: boolean; reason?: string } {
-  const notes = (pattern as unknown as { notes?: Record<string, unknown[]> }).notes ?? {};
-  const lanes = ((pattern as unknown as { tracks?: Array<Record<string, unknown>> }).tracks ?? []) as Array<Record<string, unknown>>;
-  for (const lane of lanes) {
-    const id = String(lane.track_id ?? lane.id ?? lane.role ?? "?");
-    const asset = lane.assetId ?? lane.asset_id ?? lane.sampleId;
-    const hasAsset = typeof asset === "string" && asset.length > 0;
-    const laneNotes = notes[id];
-    const empty = laneNotes === undefined ? true : laneNotes.length === 0;
-    if (hasAsset && empty) {
-      return { ok: false, reason: `lane "${id}" has a sample and no notes, and its one-shot plays at the start of whatever is rendered — so a span is not the same music as the whole (measured −1.3 dBFS); rendering in one pass` };
-    }
+  /**
+   * ⭐ **Deliberately conservative, and crude on purpose.** The first version looked for `tracks[].assetId` beside a
+   * `notes[laneId]` map; the compiled pattern uses neither, so it never fired and the one shape known to differ went
+   * straight through (−1.3 dBFS, measured through the tool). Rather than guess a fourth shape, this asks the pattern's
+   * own serialised form whether it carries a **sampler/audio lane at all**: a synth-only pattern is the case that is
+   * proved sample-identical, and anything holding a sample reference is refused until the renderer's one-shot is keyed on
+   * the arrangement's absolute start rather than the window's.
+   */
+  const serialised = JSON.stringify(pattern) ?? "";
+  const sampleLane = /"(assetId|asset_id|sampleId|sfz|samplePath|kit)"|"(sampler|audio)"\s*:\s*(true|"?(sampler|audio)"?)/.exec(serialised);
+  if (sampleLane) {
+    return {
+      ok: false,
+      reason: `this arrangement carries a sample/audio lane (${sampleLane[1] ?? sampleLane[2]}), whose one-shot plays at the start of whatever is rendered — a span would not be the same music as the whole (measured −1.3 dBFS); rendering in one pass`,
+    };
   }
   return { ok: true };
 }

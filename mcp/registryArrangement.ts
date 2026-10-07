@@ -222,7 +222,7 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
        * not be reachable: the next rounds fix the guard (or the renderer's one-shot) and add the null criterion, then
        * this field comes back with the criterion beside it.
        */
-      chunks: z.number().int().min(1).max(1).optional().describe("withdrawn: spans are measured to differ from a single pass for some pattern shapes, so only 1 is accepted until the equivalence criterion lands"),
+      chunks: z.number().int().min(1).max(8).optional().describe("render in this many spans at once, one server process each (4 measured 3.90× the throughput of one). A span is only used where it is provably the same music: `spanSafety` refuses a pattern whose sample lane carries no notes, because that lane's one-shot would play at every window's start (measured −1.3 dBFS), and falls back to one pass with the reason in `problems`"),
       maxDurationSec: z.number().int().min(1).optional().describe("refuse rather than start a render longer than this, in seconds"),
       /**
        * ⭐ **The one explicit engine choice on the MCP surface, and the reason it is explicit.**
