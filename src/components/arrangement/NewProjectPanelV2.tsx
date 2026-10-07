@@ -10,7 +10,14 @@
  */
 import { useState } from "react";
 import { TEMPLATES } from "../../data/arrangementEdits";
-import { GENRES_MAP } from "../../data/genres";
+/**
+ * ⭐ **The lightweight index, not the genre map.** `GENRES_MAP` is the eager aggregation of all fourteen
+ * genre modules, so importing it here pulled every genre chunk into the landing surface's first paint —
+ * measured by `perf:check` as 14 first-load genre chunks against a budget of one. The panel only needs an
+ * id and a name to draw its buttons, and `GENRE_INDEX` is exactly that; the full record is fetched
+ * lazily by `loadGenre` when a project is actually created from a genre.
+ */
+import { GENRE_INDEX } from "../../data/index/genresIndex";
 import type { TrackKindV2 } from "../../types/arrangementV2";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { KIND_LABEL_KEY, TRACK_KIND_ORDER } from "./kindLabels";
@@ -32,7 +39,7 @@ export interface NewProjectPanelV2Props {
    * ⭐ **Creating the project.** The panel reports the choice; what an arrangement is made of belongs to the model. The
    * genre is optional and travels with the choice, because the older studio leads with one and this route must not lose it.
    */
-  onCreate: (templateId: string | undefined, blankKind: TrackKindV2, name: string, genreId?: string) => void;
+  onCreate: (templateId: string | undefined, blankKind: TrackKindV2, name: string, genreId?: string) => void | Promise<void>;
 }
 
 /**
@@ -134,7 +141,7 @@ export function NewProjectPanelV2({ onCreate }: NewProjectPanelV2Props) {
       {/* ⭐ The genres, beside the templates: a project can start from the music as well as from a shape. */}
       <div data-testid="genre-choices" className="flex flex-wrap gap-2 items-center text-sm text-text">
         <span className="opacity-80">{t("new_project_genre")}</span>
-        {Object.values(GENRES_MAP).map((genre) => (
+        {GENRE_INDEX.map((genre) => (
           <button
             key={genre.id}
             type="button"

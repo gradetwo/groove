@@ -37,7 +37,15 @@ import { Redo2, Undo2 } from "lucide-react";
 import type { ArrangementV2, TrackKindV2, TrackRegion } from "../../types/arrangementV2";
 import { createArrangementFromTemplate, quantizeArrangementNoteLengths, rampArrangementNoteVelocity, legatoNotesInRect, arpeggiateNotesInRect, stampChordInRect, setTrackFlag } from "../../data/arrangementEdits";
 import { setterCommand } from "../../data/arrangementHistory";
-import { GENRES_MAP } from "../../data/genres";
+/**
+ * ⭐ **The genre is loaded when one is chosen, not imported with the surface.**
+ *
+ * `GENRES_MAP` aggregated all fourteen genre modules at import time, so the landing surface fetched every
+ * genre chunk on first paint (`perf:check`: 14 against a budget of one). The seed path is the only place
+ * this file needs a full record, and it can afford to wait for it: `loadGenre` fetches just that genre's
+ * chunk through the loader whose whole purpose is this split.
+ */
+import { loadGenre } from "../../data/index/loader";
 import { arrangementSeededFromGenre } from "../../data/arrangementProjection";
 import {
   addTakeCommand,
@@ -950,11 +958,12 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           </p>
         )}
         <NewProjectPanelV2
-          onCreate={(templateId, blankKind, name, genreId) => {
+          onCreate={async (templateId, blankKind, name, genreId) => {
             // ⭐ The panel reports the choice; **what an arrangement is made of** is `createArrangementFromTemplate`'s business, including the default track a blank project still gets.
             // ⭐ **A chosen genre decides the content.** The genre's arranged pattern is projected into an arrangement —
             // the same two steps the protocol creator uses — and a template is only the fallback when no genre is chosen.
-            const chosenGenre = genreId === undefined ? undefined : GENRES_MAP[genreId];
+            // The record is fetched here rather than imported, so the landing surface does not carry every genre chunk.
+            const chosenGenre = genreId === undefined ? undefined : await loadGenre(genreId);
             const created = chosenGenre
               ? arrangementSeededFromGenre(songId, chosenGenre)
               : createArrangementFromTemplate(songId, templateId, blankKind);
