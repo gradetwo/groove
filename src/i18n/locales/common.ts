@@ -164,6 +164,9 @@ export const commonMessages = {
    * the per-bar step strip and the pan control exist, so it stays reachable without being a second wall of tracks.
    */
   arrangement_track_list_summary: { en: "Track list — steps, level and pan ({count})", zh: "轨道列表 —— 步进、电平与声像（{count}）" },
+  /** ⭐ The landing panel's genre filter: 159 chips was a ten-row wall before it existed. */
+  new_project_genre_filter: { en: "Filter genres", zh: "筛选流派" },
+  new_project_genre_count: { en: "{shown} / {total}", zh: "{shown} / {total}" },
   arrangement_lanes_label: { en: "Arrangement lanes", zh: "编排通道" },
   lanes_label: { en: "Lanes", zh: "通道" },
   lanes_mute: { en: "Mute", zh: "静音" },

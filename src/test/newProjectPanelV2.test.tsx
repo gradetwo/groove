@@ -64,6 +64,27 @@ describe("the new-project panel", () => {
    * **The card's sentence follows the language toggle.** It did not: the descriptions were an `{en, zh}` pair inside the component and the card rendered `?.en` unconditionally, so a Chinese session read English here while every other surface switched. The assertion
    * is against the dictionary's own value rather than against a sentence written here, so it cannot pass by both sides being hardcoded the same way.
    */
+  it("⭐ filters the genre list, and says how many of the library are showing", () => {
+    /**
+     * ⭐ **The wall this exists for.** 159 chips filled ~420 px of the landing screen, ten rows of names; the filter
+     * narrows by name and by id, and the count states the narrowing rather than leaving a person to count chips. The
+     * empty query is every genre, which is what the criterion above relies on.
+     */
+    render(<NewProjectPanelV2 onCreate={vi.fn()} />);
+    expect(screen.getByTestId("genre-filter-count").textContent).toContain(String(Object.keys(GENRES_MAP).length));
+
+    fireEvent.change(screen.getByTestId("genre-filter"), { target: { value: "chicago" } });
+    expect(screen.getByTestId("genre-chicago-house")).toBeDefined();
+    expect(screen.queryByTestId("genre-deep-house")).toBeNull();
+    // ⭐ The count says the list narrowed, without pinning how many genres happen to contain "chicago".
+    expect(screen.getByTestId("genre-filter-count").textContent?.startsWith(`${Object.keys(GENRES_MAP).length} /`)).toBe(false);
+
+    // Ids are searched too: "dnb" is how a person names drum & bass, and it appears in no display name.
+    fireEvent.change(screen.getByTestId("genre-filter"), { target: { value: "dnb" } });
+    expect(screen.queryByTestId("genre-chicago-house")).toBeNull();
+    expect(screen.getByTestId("genre-filter-count").textContent).not.toContain("0 /");
+  });
+
   it("⭐ offers a genre, so a project can start from the music rather than only from a template", () => {
     const onCreate = vi.fn();
     render(<NewProjectPanelV2 onCreate={onCreate} />);

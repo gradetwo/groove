@@ -71,6 +71,13 @@ export function NewProjectPanelV2({ onCreate }: NewProjectPanelV2Props) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [name, setName] = useState<string>(TEMPLATE_DEFAULT_NAMES.blank ?? "Untitled");
   /**
+   * ⭐ **The genre filter.** 159 chips is a ten-row wall on the page a person lands on (measured: the genre list
+   * alone was ~420 px of the first screen); the filter searches names and ids, and the list below is capped and
+   * scrolls. An empty query is every genre, so the panel's own criterion — that a genre can be chosen at all — is
+   * unchanged.
+   */
+  const [genreFilter, setGenreFilter] = useState("");
+  /**
    * ⭐ **The name is the one field the panel tracks the card with.**
    *
    * A name that stayed at "Untitled" after the card changed to Samplers would contradict the card the Create button is
@@ -81,6 +88,15 @@ export function NewProjectPanelV2({ onCreate }: NewProjectPanelV2Props) {
   const [nameWasEdited, setNameWasEdited] = useState(false);
   // ⭐ A genre, when one is chosen: the older studio starts from the music, and so can this route.
   const [genreId, setGenreId] = useState<string | undefined>(undefined);
+
+  /**
+   * The genres the list below shows: all of them, or the ones whose name or id contains what was typed. Ids are
+   * searched as well as names because "dnb" and "uk-bass" are how people who use this library name things.
+   */
+  const genreQuery = genreFilter.trim().toLowerCase();
+  const filteredGenres = genreQuery
+    ? GENRE_INDEX.filter((genre) => genre.name.toLowerCase().includes(genreQuery) || genre.id.toLowerCase().includes(genreQuery))
+    : GENRE_INDEX;
 
   // ⭐ Blank is a card like the others, so the panel has one shape rather than a list plus an exception.
   const cards = [...TEMPLATES.map((template) => ({ id: template.id, name: template.name })), { id: "blank", name: "Blank" }];
@@ -139,20 +155,36 @@ export function NewProjectPanelV2({ onCreate }: NewProjectPanelV2Props) {
       </div>
 
       {/* ⭐ The genres, beside the templates: a project can start from the music as well as from a shape. */}
-      <div data-testid="genre-choices" className="flex flex-wrap gap-2 items-center text-sm text-text">
-        <span className="opacity-80">{t("new_project_genre")}</span>
-        {GENRE_INDEX.map((genre) => (
-          <button
-            key={genre.id}
-            type="button"
-            data-testid={`genre-${genre.id}`}
-            aria-pressed={genreId === genre.id}
-            className={genreId === genre.id ? "px-3 py-1 rounded border border-accent" : "px-3 py-1 rounded border border-transparent opacity-80"}
-            onClick={() => setGenreId(genreId === genre.id ? undefined : genre.id)}
-          >
-            {genre.name ?? genre.id}
-          </button>
-        ))}
+      <div data-testid="genre-choices" className="flex flex-col gap-2 text-sm text-text">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="opacity-80">{t("new_project_genre")}</span>
+          <input
+            type="search"
+            data-testid="genre-filter"
+            aria-label={t("new_project_genre_filter")}
+            placeholder={t("new_project_genre_filter")}
+            value={genreFilter}
+            onChange={(event) => setGenreFilter(event.target.value)}
+            className="h-8 w-48 rounded border border-[rgb(var(--d-line))] bg-transparent px-2 text-xs text-text"
+          />
+          <span data-testid="genre-filter-count" className="font-['JetBrains_Mono'] text-[10px] opacity-60">
+            {t("new_project_genre_count", { shown: filteredGenres.length, total: GENRE_INDEX.length })}
+          </span>
+        </div>
+        <div className="flex max-h-40 flex-wrap gap-2 overflow-y-auto pr-1">
+          {filteredGenres.map((genre) => (
+            <button
+              key={genre.id}
+              type="button"
+              data-testid={`genre-${genre.id}`}
+              aria-pressed={genreId === genre.id}
+              className={genreId === genre.id ? "px-3 py-1 rounded border border-accent" : "px-3 py-1 rounded border border-transparent opacity-80"}
+              onClick={() => setGenreId(genreId === genre.id ? undefined : genre.id)}
+            >
+              {genre.name ?? genre.id}
+            </button>
+          ))}
+        </div>
       </div>
 
       <button type="button" className="self-start px-3 py-1 rounded text-sm text-text opacity-80" onClick={() => setDetailsOpen((open) => !open)} aria-expanded={detailsOpen}>
