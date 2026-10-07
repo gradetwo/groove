@@ -17474,3 +17474,22 @@ describe("the grid's editing actions", () => {
   ⭐ ② 必需的探针必须被跑 ✓ ⇒ ⭐ 删探针时两处一起红 ✓ ⇒ ⭐ 这是好的判据形状 ✓（⭐ 不会漏掉另一半 ✓）
 ```
 
+### 六百七十四、⭐ **DOM 契约的"内容面"：教学锚点也指向被删控件（2026-10-07 ✓）**
+
+```
+**⭐ 现象 ✓**：⭐ 删掉 `Toolbar`／步进格／力度泳道后，⭐ **教学教练**（⭐ `src/data/tutorialCourses.ts` ✓）的锚点仍指向它们 ✗
+  ⭐ 鼓课四步的锚点 ✗：⭐ `data-toolbar-id="play"` ✓／⭐ `step-cell-1-4` ✓／⭐ `data-toolbar-id="euclid"` ✓／⭐ `data-toolbar-id="velocity-lane"` ✓
+  ⭐ 钢琴课一步 ✗：⭐ `toolbar-piano-roll-toggle` ✓
+  ⇒ ⭐ 后果 ✓：⭐ **用户跟着教学走会找不到控件** ✗（⭐ 比判据红更严重 ✓：⭐ 判据红是给我们的 ✓，⭐ 这是给用户的 ✗）
+**⭐ 修法 ✓（五个锚点全部在 v2 面找到对应 ✓ ⇒ ⭐ 能力未丢 ✓）**：
+  ⭐ `play` ⇒ **`arrangement-play`** ✓｜⭐ `step-cell-1-4` ⇒ **`arrangement-grid`** ✓
+  ⭐ `euclid` ⇒ **`arrangement-euclidean-pulses`** ✓（⭐ v2 的欧几里得脉冲数 ✓）
+  ⭐ `velocity-lane` ⇒ **`roll-velocity-value`** ✓（⭐ v2 的力度在卷帘里 ✓）
+  ⭐ `toolbar-piano-roll-toggle` ⇒ **`arrangement-editor-roll`** ✓
+  ⇒ ⭐ 判据样本（⭐ `tutorialCoachAnchor.test.tsx` 里的 `target(...)` ✓）也要同改 ✓ —— ⚠️ ⭐ 我第一次改用了**单引号**、⭐ 文件里是**双引号** ⇒ ⭐ 没匹配上 ✗ ⇒ ⭐ 又红一轮 ✓
+**⭐ 规律（本会话第四次同型 ✓）**：⭐ **DOM 契约的引用面比"代码引用面"宽** ✗ —— ⭐ 至少五处 ✓：
+  ⭐ ① ⭐ 生产代码 ✓ ② ⭐ 判据（⭐ import ＋ **读源码文本** ✓）③ ⭐ **CI 工作流**（⭐ 运行行 ＋ 必需清单 ✓）
+  ⭐ ④ ⭐ `package.json` 的 scripts ✓ ⑤ ⭐ **内容**（⭐ 教学锚点 ✓、⭐ 提示文案 ✓、⭐ 文档 ✓）
+  ⇒ ⭐ 删一个 DOM 契约前 ✓：⭐ `grep -rn "<标记>" src/ mcp/ scripts/ .github/ *.json docs/` ✓ —— ⭐ **加上 `src/data` 与 `src/i18n`** ✓
+```
+
