@@ -28,22 +28,6 @@ export const EXAMPLE_TOOLS: ToolDefinition[] = [
     },
   },
   {
-    name: "pattern_statistics",
-    title: "Describe a pattern",
-    description: "Per-track density, off-beat ratio, velocity spread, pitch range, plus tempo/scale/meter — the numbers an agent needs to reason about a groove.",
-    readOnly: true,
-    inputSchema: { genreId: z.string().optional(), pattern: patternSchema.optional() },
-    handler: (args) => {
-      const pattern = patternFromArgs(args as { genreId?: string; pattern?: unknown });
-      if (!pattern) {
-        // `create_song` reaches here when a supplied genreId did not resolve, so this is the message most composers will actually see.
-        const wanted = (args as { genreId?: string }).genreId;
-        return failure(wanted ? unknownGenre(wanted) : "provide either genreId or pattern");
-      }
-      return patternStatistics(pattern);
-    },
-  },
-  {
     name: "compare_genres",
     title: "Compare two genres",
     description: "Tempo, key, meter, swing and per-track onset differences between two genres' default patterns.",

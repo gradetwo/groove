@@ -205,22 +205,6 @@ export const ANALYSIS_TOOLS: ToolDefinition[] = [
     },
   },
   {
-    name: "share_url",
-    title: "Build a share link",
-    description: "A URL that opens the app with this groove loaded. Reports whether fidelity had to be reduced to fit the URL budget.",
-    readOnly: true,
-    inputSchema: { genreId: z.string().optional(), pattern: patternSchema.optional(), origin: z.string().url().optional() },
-    handler: (args) => {
-      const pattern = patternFromArgs(args as { genreId?: string; pattern?: unknown });
-      if (!pattern) {
-        // ⭐ A `genreId` that does not resolve reaches here, so this is the message most composers will actually see.
-        const wanted = (args as { genreId?: string }).genreId;
-        return failure(wanted ? unknownGenre(wanted) : "provide either genreId or pattern");
-      }
-      return shareUrl(pattern, { origin: args.origin as string | undefined });
-    },
-  },
-  {
     name: "get_loudness_report",
     title: "Loudness report",
     description: "The committed measurement for one genre, or the whole library's spread (min/median/max LUFS) with per-genre rows.",

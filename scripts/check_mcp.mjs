@@ -132,11 +132,9 @@ try {
     "list_examples",
     // ⭐ `get_pattern` and `apply_pattern_ops` are gone with the v1 pattern they carried.
     "validate_pattern",
-    "pattern_statistics",
     "apply_gs1_patch",
     "get_gs1_patch",
     "compare_genres",
-    "share_url",
     "render_arrangement",
     "render_arrangement_stems",
     "render_instrument_note",
