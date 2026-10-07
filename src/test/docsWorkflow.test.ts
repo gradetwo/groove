@@ -11,9 +11,9 @@ import { describe, expect, it } from "vitest";
 const registry = registrySource();
 const docs = readFileSync("docs/MCP.md", "utf8");
 
-// `add_lane` is deliberately absent: it is an **op** inside `apply_pattern_ops`, not a tool, and the first version of the workflow table got that wrong — which is
+// ⭐ `add_arrangement_notes` writes the steps a lane plays: `apply_pattern_ops` used to, and its ops went with the v1 pattern it operated on. got that wrong — which is
 // the whole reason this file exists.
-const STEPS = ["create_arrangement", "set_arrangement_track_steps", "apply_pattern_ops", "add_arrangement_track", "render_arrangement"];
+const STEPS = ["create_arrangement", "set_arrangement_track_steps", "add_arrangement_notes", "add_arrangement_track", "render_arrangement"];
 
 describe("the documented workflow", () => {
   it("names six steps that the registry actually registers", () => {

@@ -221,7 +221,7 @@ export const ARRANGEMENT_NOTE_TOOLS: ToolDefinition[] = [
     name: "transpose_arrangement_notes",
     title: "Transpose a track's notes in a beat window",
     description:
-      "Shift every note whose start falls in **[fromBeats, toBeats)** by a number of semitones, on one track. Pitches are clamped to 1..127, so a window that would leave the range lands on the edge rather than disappearing. This is the arrangement's own transpose: the studio's `apply_pattern_ops` moved pattern steps, and a pattern is not what this carries.",
+      "Shift every note whose start falls in **[fromBeats, toBeats)** by a number of semitones, on one track. Pitches are clamped to 1 to 127, so a window that would leave the range lands on the edge rather than disappearing. This is the arrangement's own transpose: the studio's `apply_pattern_ops` moved pattern steps, and a pattern is not what this carries.",
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),

@@ -54,7 +54,7 @@ const CAPABILITIES: Capability[] = [
      * `apply_pattern_ops`' `transform_pattern` op, which calls the same engine (`src/utils/arpeggiatorTheory.ts`) the panel plays through. The
      * audition itself stays a live performance surface, like the console's faders: nothing to store beyond the notes the transform writes.
      */
-    tools: ["list_chord_progressions", "get_chord_progression", "suggest_progression", "apply_pattern_ops"],
+    tools: ["list_chord_progressions", "get_chord_progression", "suggest_progression"],
   },
   {
     surface: "CompareView",
@@ -64,7 +64,7 @@ const CAPABILITIES: Capability[] = [
   {
     surface: "CustomGenreMakerView",
     feature: "fork a genre and save your own",
-    tools: ["list_genres", "get_genre", "get_pattern", "apply_pattern_ops", "list_custom_genres", "get_custom_genre", "save_custom_genre", "delete_custom_genre", "duplicate_custom_genre"],
+    tools: ["list_genres", "get_genre", "list_custom_genres", "get_custom_genre", "save_custom_genre", "delete_custom_genre", "duplicate_custom_genre"],
     /**
      * **The gap this row used to describe, and what is left of it.** Saving lived only in the browser's IndexedDB, which the Node server does not have, so an agent could read the library it would fork from and keep nothing. The store now sits behind `CustomGenreStore`, and the tools above save, read, copy and delete a genre — a fork
      * through `save_custom_genre` carries the library's defaults because it calls the maker's own `forkGenre`.
@@ -94,7 +94,7 @@ const CAPABILITIES: Capability[] = [
   {
     surface: "HardwareConsoleView",
     feature: "play the console's controls while it sounds",
-    tools: ["apply_pattern_ops"],
+    tools: [],
     prompts: ["compose_groove"],
     /**
      * The console is a **performance surface**: its faders write to the live engine, and the state that matters afterwards is the pattern the engine is playing, which the listed tools do reach. A tool that moved a fader mid-render would be a tool for nothing.
@@ -114,7 +114,7 @@ const CAPABILITIES: Capability[] = [
   {
     surface: "KickAnatomyView",
     feature: "design a kick drum's own sound",
-    tools: ["apply_pattern_ops", "get_pattern"],
+    tools: [],
     prompts: ["compose_groove"],
     reason: "the anatomy editor writes live synth parameters; the pattern that results is reachable, the individual parameter is not",
   },
@@ -146,7 +146,7 @@ const CAPABILITIES: Capability[] = [
   {
     surface: "StudioView",
     feature: "the pattern studio: lanes, clips, inserts, mixing",
-    tools: ["get_pattern", "apply_pattern_ops", "validate_pattern", "pattern_statistics"],
+    tools: [],
     prompts: ["compose_groove", "compose_with_examples"],
   },
   {
@@ -162,7 +162,7 @@ const CAPABILITIES: Capability[] = [
   {
     surface: "sharing and export",
     feature: "share a link; export a song, a pattern or a score",
-    tools: ["share_url", "export_groove", "import_groove", "export_arrangement_midi", "export_arrangement_ableton", "export_arrangement_musicxml", "export_arrangement_midi"],
+    tools: ["export_groove", "import_groove", "export_arrangement_midi", "export_arrangement_ableton", "export_arrangement_musicxml", "export_arrangement_midi"],
     resources: ["groove://changelog", "groove://docs"],
   },
   {
