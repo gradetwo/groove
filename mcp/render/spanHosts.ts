@@ -120,6 +120,14 @@ export async function renderPatternInSpans(
        * to the **first quarter** (−1.4 dBFS, exact everywhere else), so a windowed bar-0 render is not the same music at
        * the head. Until that is understood, the first span keeps rendering the whole pattern.
        */
+      /**
+       * ⚠️ **`windowBars` stays unused in the pipeline.** With it wired, the three-way cut says the **child** renders
+       * different music (−1.4 dBFS against the whole render's own first four bars) while the merge is faithful
+       * (merged vs child −inf). The direct probe that had called the same window "bit-exact" reported
+       * `preRollFrames: 0`, while the job's span reports **16,000** — so the probe and the job were not the same call,
+       * and "the renderer is exact" is *not* confirmed for the job's configuration. That discrepancy is the next thing
+       * to chase, not a reason to ship the cheaper span.
+       */
       options: { ...parentOptions, headless: true },
       catalogueRead,
       context,

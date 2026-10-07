@@ -18460,3 +18460,21 @@ describe("the grid's editing actions", () => {
     （`七百零三` 就是同一个三方对比 ✓）⇒ 一次就能分清"**子进程渲的那一段不对**"还是"**父进程放错/裁错**" ✓：
     · 子进程那段不对 ⇒ 差在 job 的字段（`windowBars` 与 `preRollSec` 的组合 ✓、`bars` ✓）；
     · 父进程放错 ⇒ 差在合并的 `atFrame`/`preRollFrames`/`chunkEndFrame` ✓（这三者都已由渲染器报出 ✓，用它们而不是推算 ✓）。
+
+### 七百二十一、⭐⭐ **三方切割：带 bar-0 窗口时，是**子进程**渲的音乐不同（合并是忠实的）；并纠正上一轮的结论**（2026-10-08 ✓）
+
+  ⭐ 判据加了"当保留 span 时，对 span 0 做三方切割" ✓，并把 `windowBars` 临时接上跑一次 ✓：
+
+| fixture | 子进程 PCM vs 整曲同段 | 合并 vs 子进程 PCM |
+| --- | --- | --- |
+| template ✓ | **−1.4 dB** ✗ | **−inf** ✓（合并忠实 ✓） |
+| blank-sampler ✓（回退单次 ✓） | −inf ✓ | −inf ✓ |
+
+  ⇒ **差异在子进程渲出的那段音频里** ✓，不是合并放错 ✓（与 七百零三 的切法一致 ✓）。
+  ⚠️ **上一轮的结论要纠正** ✓：`scratch/window0-head.ts` 直出对比曾给出"逐样本精确" ✓，但它报的是
+    **`preRollFrames: 0`** ✓，而**同一条窗口经 job 走时报告 `preRollFrames: 16000`** ✓ ⇒
+    **探针与 job 根本不是同一次调用** ✗ ⇒ "渲染器精确"**在 job 的配置下并不成立** ✗（照实更正 ✓）。
+  ⭐ 下一轮就从这条**具体的不一致**入手 ✓（很窄 ✓）：同一 pattern、同一目标窗口 ✓，分别在
+    ① `renderPatternHeadless` 直调（探针 ✓）、② 经 job（子进程 ✓）下打印 `computeRenderWindow` 的输入与输出 ✓
+    （`fromBar`/`bars`/`windowBars`/`preRollSec` → `preRollFrames`/`fromStep`/`toStep` ✓）⇒ 一次就能看出哪个字段在传递中变了 ✓。
+    接线仍**撤着** ✓：便宜但音乐不同的首段不发货 ✓；判据回到全绿 ✓。
