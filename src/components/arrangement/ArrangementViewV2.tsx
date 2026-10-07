@@ -1489,6 +1489,8 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           type="button"
           data-testid="arrangement-snap-toggle"
           aria-label={t("arrangement_snap_toggle")}
+          /* ⭐ A visible `#` is a glyph, not a word: the tooltip says what it turns on. */
+          title={t("arrangement_snap_toggle")}
           aria-pressed={snapOn}
           onClick={() => setSnapOn((current) => !current)}
           className={`h-11 w-11 shrink-0 rounded border text-xs ${snapOn ? "border-[rgb(var(--d-accent))] bg-[rgb(var(--d-accent))] text-[rgb(var(--d-accent-ink))]" : "border-[rgb(var(--d-line))] text-text"}`}
@@ -1514,6 +1516,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             type="button"
             data-testid="toolbar-help"
             aria-label={t("arrangement_help")}
+            title={t("arrangement_help")}
             onClick={() => onOpenHelp("sequencer")}
             className="h-11 shrink-0 rounded border border-white/10 px-2 text-xs text-text-sub"
           >
@@ -1526,6 +1529,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           type="button"
           data-testid="arrangement-loop"
           aria-label={t("arrangement_loop")}
+          title={t("arrangement_loop")}
           aria-pressed={loopRange !== undefined}
           onClick={toggleLoop}
           className={`h-11 shrink-0 rounded border px-2 text-xs ${loopRange !== undefined ? "border-[rgb(var(--d-accent))] bg-[rgb(var(--d-accent))] text-[rgb(var(--d-accent-ink))]" : "border-[rgb(var(--d-line))] text-text"}`}
@@ -1564,6 +1568,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             step={10}
             value={(fxState ?? DEFAULT_FX_STATE).filterCutoff}
             aria-label={t("arrangement_fx_cutoff")}
+            title={t("arrangement_fx_cutoff")}
             data-testid="arrangement-filter-cutoff"
             onChange={(event) => patchEffectsRack({ filterCutoff: Number(event.target.value) })}
             className="w-20"
@@ -1575,6 +1580,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             step={0.1}
             value={(fxState ?? DEFAULT_FX_STATE).filterQ}
             aria-label={t("arrangement_fx_q")}
+            title={t("arrangement_fx_q")}
             data-testid="arrangement-filter-q"
             onChange={(event) => patchEffectsRack({ filterQ: Number(event.target.value) })}
             className="w-16"
@@ -1582,6 +1588,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           <select
             value={(fxState ?? DEFAULT_FX_STATE).filterType}
             aria-label={t("arrangement_fx_type")}
+            title={t("arrangement_fx_type")}
             data-testid="arrangement-filter-type"
             onChange={(event) => patchEffectsRack({ filterType: event.target.value as BiquadFilterType })}
             className="h-11 shrink-0 rounded border border-[rgb(var(--d-line))] bg-transparent px-1 text-[10px]"
@@ -1599,6 +1606,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             step={0.05}
             value={(fxState ?? DEFAULT_FX_STATE).saturationDrive}
             aria-label={t("arrangement_fx_drive")}
+            title={t("arrangement_fx_drive")}
             data-testid="arrangement-saturation-drive"
             onChange={(event) => patchEffectsRack({ saturationDrive: Number(event.target.value) })}
             className="w-16"
@@ -1610,6 +1618,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             step={0.01}
             value={(fxState ?? DEFAULT_FX_STATE).chorusMix}
             aria-label={t("arrangement_fx_mix")}
+            title={t("arrangement_fx_mix")}
             data-testid="arrangement-chorus-mix"
             onChange={(event) => patchEffectsRack({ chorusMix: Number(event.target.value) })}
             className="w-16"
@@ -1621,6 +1630,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             step={0.05}
             value={(fxState ?? DEFAULT_FX_STATE).chorusRate}
             aria-label={t("arrangement_fx_rate")}
+            title={t("arrangement_fx_rate")}
             data-testid="arrangement-chorus-rate"
             onChange={(event) => patchEffectsRack({ chorusRate: Number(event.target.value) })}
             className="w-16"
@@ -1632,6 +1642,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             step={1}
             value={(fxState ?? DEFAULT_FX_STATE).bitDepth}
             aria-label={t("arrangement_fx_bits")}
+            title={t("arrangement_fx_bits")}
             data-testid="arrangement-bit-depth"
             onChange={(event) => patchEffectsRack({ bitDepth: Number(event.target.value) })}
             className="w-16"
@@ -1644,6 +1655,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             type="button"
             data-testid="arrangement-zoom-out"
             aria-label={t("arrangement_zoom_out")}
+            title={t("arrangement_zoom_out")}
             onClick={() => setPixelsPerBar((current) => Math.max(MIN_PX_PER_BAR, Math.round(current / ZOOM_FACTOR)))}
             className={toolButton}
           >
@@ -1653,6 +1665,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             type="button"
             data-testid="arrangement-zoom-in"
             aria-label={t("arrangement_zoom_in")}
+            title={t("arrangement_zoom_in")}
             onClick={() => setPixelsPerBar((current) => Math.min(MAX_PX_PER_BAR, Math.round(current * ZOOM_FACTOR)))}
             className={toolButton}
           >

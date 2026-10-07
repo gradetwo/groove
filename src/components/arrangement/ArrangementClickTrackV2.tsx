@@ -35,6 +35,8 @@ export const ArrangementClickTrackV2: React.FC<ArrangementClickTrackV2Props> = (
                 type="button"
                 data-testid="arrangement-metronome"
                 aria-label={t("arrangement_metronome")}
+                /* ⭐ A glyph needs a word somewhere: the tooltip is where this one gets it. */
+                title={t("arrangement_metronome")}
                 aria-pressed={metronome}
                 onClick={() => setMetronome((on) => !on)}
                 className={`h-11 shrink-0 rounded border px-2 text-xs ${metronome ? "border-[rgb(var(--d-accent))] bg-[rgb(var(--d-accent))]/15 text-text" : "border-white/10 text-text-sub"}`}
@@ -45,6 +47,7 @@ export const ArrangementClickTrackV2: React.FC<ArrangementClickTrackV2Props> = (
                 type="button"
                 data-testid="arrangement-count-in"
                 aria-label={t("arrangement_count_in")}
+                title={t("arrangement_count_in")}
                 aria-pressed={countIn}
                 onClick={() => setCountIn((on) => !on)}
                 className={`h-11 shrink-0 rounded border px-2 text-xs ${countIn ? "border-[rgb(var(--d-accent))] bg-[rgb(var(--d-accent))]/15 text-text" : "border-white/10 text-text-sub"}`}
