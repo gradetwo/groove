@@ -346,7 +346,19 @@ export async function renderPatternHeadless(
               ...options,
               chunks: autoChunks,
               ...(progress
-                ? { onSpanDone: (done: number, total: number) => progress.reportOf(done, total, `rendered ${done} of ${total} spans`) }
+                ? {
+                    /**
+                     * ⚠️ **The span count has to be scaled into the render's own frames, or it is silently dropped.**
+                     *
+                     * `reportOf` keeps one monotonic counter per request and drops a value that is not increasing; the
+                     * child's frame progress has already reported *hundreds of thousands*, so a span counter of 1, 2, 3
+                     * was dropped every time — the narration was written and never arrived (measured: the smoke's
+                     * `span messages` stayed empty while frame-level notifications arrived). Same lesson as the
+                     * recordings counter, which was scaled into frames for exactly this reason.
+                     */
+                    onSpanDone: (done: number, total: number) =>
+                      progress.reportOf(Math.round((done / Math.max(1, total)) * renderFramesEstimate), renderFramesEstimate, `rendered ${done} of ${total} spans`),
+                  }
                 : {}),
             },
             catalogueRead,
