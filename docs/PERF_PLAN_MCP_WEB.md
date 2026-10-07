@@ -264,11 +264,20 @@ GS-1 wasm host, and Chromium's audio-worklet thread appears to be one per render
 | --- | --- | --- |
 | K contexts in one page | **1.1×** (serialised) | nobody — dead |
 | K Web Workers | **no `OfflineAudioContext`** | nobody — dead |
-| K pages / tabs | **1.5×** overall, **2.4×** on warm spans | the MCP render server (it spawns its own browser), **not** a web page |
+| K pages / tabs | **1.5×** overall at K=4 (the arm's wall is pinned by one page's **cold** first span, ≈4 s at 44.1 kHz, against ≈0.7 s warm); the **warm** pages overlap at ≈**3×** | the MCP render server (it spawns its own browser), **not** a web page |
+| K **warm** pages, sweep at 44.1 kHz stereo | K=2 1.17× · K=3 1.36× · K=4 1.58× · K=6 **2.34×** · K=8 **3.12×** — ⚠️ each level pays its own cold first span, so these are **upper bounds**; the clean reading is the 3 warmed pages completing inside one ≈0.8 s window | as above |
 | less work per render (draft rate, lighter reverb) | not yet measured | both roads |
 
-Against the measured baseline (5:03 of audio in **753 s**, 0.40× realtime, one core of eight), K=4 projects to
-**≈ 270 s (4.5 min)** and K=8 to **≈ 230 s (3.8 min)**, before the pre-roll overhead below.
+Against the measured baseline (5:03 of audio in **753 s**, 0.40× realtime, one core of eight) the projections change
+with the road:
+
+- **in-page contexts** (K=4, what the synthetic probe promised): dead — the real renderer serialises them (1.03–1.13×).
+- **K pages**, each rendering one **long** chunk (the MCP road's natural shape): the warm ratio is ≈2.5–3× at K=4–8, and
+  a page's cold start (≈4 s) is paid once per page and overlapped, so 753 s projects to **≈ 250–300 s** — the
+  objective's target, on the road that can actually open pages.
+- **web export**: no parallel lever at all (in-page serialised, no Web Audio in Workers, a page cannot open pages), so
+  the only levers there are *less work per render* (a draft rate/lighter reverb) or rendering through the headless
+  road.
 
 ### 6.2 The design
 
