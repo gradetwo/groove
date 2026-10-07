@@ -611,7 +611,20 @@ async function runTestOnTarget(target, baseUrl) {
       const headerRows = [...column.querySelectorAll("[data-testid^='arrangement-header-row-']")];
       const laneRows = [...lanes.children];
       const box = (el) => el.getBoundingClientRect();
+      /**
+       * ⭐ **The three things that must share one origin.** The lane column's left edge is bar 0; the first ruler bar
+       * starts there, and so must the first region — a `MUTE` button in the lane row's flow used to push every region
+       * 36 px right of the grid, so notes sat 0.56 of a bar after the ruler said they did and the playhead crossed them
+       * at the wrong time (measured 2026-10-07, fixed by leaving mute to the header).
+       */
+      const firstRegion = lanes.firstElementChild?.querySelector("[data-testid^='arrangement-region-']");
+      const firstBar = document.querySelector("[data-testid='ruler-bar-0']");
       return {
+        origin: {
+          lane: Math.round(box(lanes).left),
+          region: firstRegion ? Math.round(box(firstRegion).left) : null,
+          bar: firstBar ? Math.round(box(firstBar).left) : null,
+        },
         headerTops: headerRows.map((row) => Math.round(box(row).top)),
         headerHeights: headerRows.map((row) => Math.round(box(row).height)),
         laneTops: laneRows.map((row) => Math.round(box(row).top)),
@@ -630,6 +643,13 @@ async function runTestOnTarget(target, baseUrl) {
       };
     });
     if (gridGeometry.error) throw new Error(gridGeometry.error);
+    const origin = gridGeometry.origin;
+    if (origin.region === null || origin.bar === null || Math.abs(origin.region - origin.lane) > 1 || Math.abs(origin.bar - origin.lane) > 1) {
+      throw new Error(
+        `the lane column, the first ruler bar and the first region must share one origin on ${target.name}: ` +
+          `lane ${origin.lane}, bar ${origin.bar}, region ${origin.region}`
+      );
+    }
     if (gridGeometry.headerTops.length !== gridGeometry.laneTops.length) {
       throw new Error(
         `the grid draws ${gridGeometry.headerTops.length} header row(s) but ${gridGeometry.laneTops.length} lane row(s) on ${target.name}`
