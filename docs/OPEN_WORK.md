@@ -18329,3 +18329,17 @@ describe("the grid's editing actions", () => {
     逐帧比对 ✓：若前者 ≠ 后者 ✓，差就在 `renderArgs` 的字段（`bars` 的"重复几遍 vs 段长"两义 ✓、
     `fromBar`/`preRollSec` 的传递 ✓）；若相等 ✓，差在 `spanOutcome` 的**使用方式**（哪一段被当成音乐区 ✓）。
     修好后判据转绿 ✓ ⇒ 把 `chunks` 放回工具面 ✓、默认 K=4 ✓ ⇒ 再跑真实 5 分钟对 753 s 基线 ✓。
+
+### 七百一十三、⭐ **判据与工具对齐到"同一件事"，且全部精确；工具路径的收尾验证被自己调试代码挡住**（2026-10-08 ✓）
+
+  ⭐ 这一轮把判据的第二个 fixture 一路对齐到**工具那条路** ✓，每一步都仍然精确（−inf ✓）：
+    · fixture 同源 ✓（`createMcpArrangement{blankKind:"sampler"}` + notes + `flattenMcpArrangement` ✓）；
+    · **真实目录** ✓（改用 `readAudioLaneCatalogue(pattern)` ✓——上一版用 `{text:""}` ✓，没有一条轨道能解析 ✓，
+      采样轨是**哑的** ✓，于是"一次性触发"永远不显形 ✓ ⇒ 那版判据**根本红不了** ✓，是这次才补上的 ✓）；
+    · 工具那套**选项形状** ✓（`format/bitrateKbps/genreId:"custom"` ✓）。
+    ⇒ `renderPatternInSpans` 在 template 与 blank-sampler 上都 **−inf** ✓✓ ⇒ **它本身是精确的** ✓。
+  ⚠️ 收尾那一步没跑成 ✓：用工具路径复跑冒烟时，**我自己的调试代码**（读 marker 文件那段 ✓）抛了 `ERR_INVALID_ARG_TYPE` ✗
+    ⇒ **产品代码没报错 ✓，是探针的调试块 ✗**；下一轮先修那段（marker 指向已删除目录时应跳过 ✓），再确认工具路径。
+  ⭐ 与此同时 ✓，`spanSafety` 守卫已就位且判据绿 ✓（`src/test/spanSafety.test.ts` ✓ 2 例 ✓）——
+    它会**拒绝**"采样轨无音符"的形状 ✓（那条路径改走单次渲染 ✓ ⇒ 与单段渲染逐样本相同 ✓，这正是守卫的目的 ✓）。
+    而 `chunks` 在工具面**仍只接受 1** ✓：等工具路径端到端复验通过 ✓ 才放回 ✓。
