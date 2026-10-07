@@ -237,10 +237,24 @@ inside **one** page (`scratch/parallel-render-probe.mjs`):
 | 4 | 7.65 s | 10.5× | 7.72 s | 10.4× |
 | 8 | 12.93 s | 12.4× | — | — |
 
-**Two conclusions, and the second is the one that matters for the implementation:** the engine does parallelise
-(throughput 3.8× → 12.4× realtime from K=1 to K=8, i.e. ≈ **2.8× at K=4 and ≈ 3.3× at K=8**), and **one page with K
-contexts is as good as K pages** — so chunked rendering needs no multi-page or worker orchestration; it can live
-inside the render page both roads already use.
+**Two conclusions — and the second was wrong for the real renderer.** The synthetic graph does parallelise
+(throughput 3.8× → 12.4× realtime from K=1 to K=8, i.e. ≈ **2.8× at K=4 and ≈ 3.3× at K=8**), and with **no worklets**
+in the graph one page with K contexts is as good as K pages.
+
+⚠️ **Measured again with the app's own renderer** (`scratch/chunk-concurrency.mjs`, 4 spans of 2 bars at 8 kHz mono):
+
+| condition | serial | K=4 in one page | speedup |
+| --- | --- | --- | --- |
+| no realtime context | 868 ms | 765 ms | **1.13×** |
+| a running `AudioContext` | 860 ms | 795 ms | 1.08× |
+| that context suspended | 885 ms | 794 ms | 1.11× |
+| **4 separate pages**, 1 span each | 868 ms | **584 ms** | **1.49×** (≈2.4× on the warm spans) |
+
+So: **in-page concurrency is serialised for the real renderer** (≈1.1× — and the live engine is *not* the cause, since
+bare/running/suspended all measure the same), while **separate pages do overlap** — the first span of a page carries a
+one-off cost (≈500 ms at 8 kHz), and the warm spans run three-at-a-time in that window. The synthetic probe's
+"one page is enough" was a property of its **worklet-free** graph: the real renderer carries a limiter worklet and a
+GS-1 wasm host, and Chromium's audio-worklet thread appears to be one per renderer process.
 
 Against the measured baseline (5:03 of audio in **753 s**, 0.40× realtime, one core of eight), K=4 projects to
 **≈ 270 s (4.5 min)** and K=8 to **≈ 230 s (3.8 min)**, before the pre-roll overhead below.
