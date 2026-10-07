@@ -9,11 +9,23 @@ import { buildTar, type TarEntry } from "./tar";
  * missing is named in `omissions` with the reason. That keeps this a pure function a criterion can call, and keeps a gap a
  * stated fact rather than a silence.
  */
+/** ⭐ Only these two fields leave this function; the address is deliberately not part of its shape. */
+export interface WebFailedRequest {
+  status: number;
+  method: string;
+}
+
 export interface WebDebugBundleInput {
   arrangement?: unknown;
   files?: Array<{ name: string; bytes: Uint8Array }>;
   audioContext?: { sampleRate?: number; state?: string };
+  /** ⭐ The errors `telemetry` already keeps. Messages, never the work. */
+  errors?: readonly string[];
+  /** ⭐ A failed request keeps its status and method; its address may carry a token. */
+  failedRequests?: readonly WebFailedRequest[];
   note?: string;
+  /** ⭐ Injected so a criterion can pin the stamp; the surface passes the clock. */
+  now?: () => Date;
 }
 
 export interface WebDebugBundle {
@@ -25,9 +37,17 @@ export interface WebDebugBundle {
   arrangement?: { tracks?: number; bars?: number; notes?: number };
   audioContext?: WebDebugBundleInput["audioContext"];
   note?: string;
+  errors?: string[];
+  failedRequests?: WebFailedRequest[];
+  /** ⭐ Bytes per section, so a reader sees the weight of each part without opening it. */
+  sizes: Record<string, number>;
+  /** ⭐ What a reader must not expect to find here. */
+  omitted: string[];
   manifest: Array<{ section: string; what: string; why: string }>;
   omissions: string[];
 }
+
+const OMITTED = ["the work itself", "note content", "file paths", "tokens", "request addresses"] as const;
 
 const MANIFEST = [
   { section: "collectedAt", what: "when this bundle was written", why: "a reading is only meaningful with its time" },
@@ -38,6 +58,8 @@ const MANIFEST = [
   { section: "arrangement", what: "counts for the work in progress, when the caller can read them", why: "a count locates a fault without carrying any of the music" },
   { section: "audioContext", what: "the sample rate and state, when the caller can read them", why: "a silent page is often a suspended context" },
   { section: "note", what: "the reporter's own words, when given", why: "what the person saw is the one thing no instrument records" },
+  { section: "errors", what: "the messages the interface recorded", why: "the first error often names the cause" },
+  { section: "failedRequests", what: "the status and method of requests that failed", why: "a status locates the fault; an address may carry a token" },
 ];
 
 export function collectWebDebugBundle(input: WebDebugBundleInput = {}): WebDebugBundle {
@@ -48,10 +70,24 @@ export function collectWebDebugBundle(input: WebDebugBundleInput = {}): WebDebug
   if (!input.audioContext) {
     omissions.push("audio context: the caller did not pass its state, so a suspended context cannot be ruled out from this file");
   }
+  if (!input.errors?.length) {
+    omissions.push("interface errors: none were recorded, so a failure that left no trace cannot be described here");
+  }
   const nav = typeof navigator === "undefined" ? undefined : navigator;
   const perf = typeof performance === "undefined" ? undefined : performance;
+  const collectedAt = (input.now ?? (() => new Date()))().toISOString();
+  /** ⭐ Bytes per section, measured off the same values the bundle carries. */
+  const sizes: Record<string, number> = {};
+  const weigh = (key: string, value: unknown) => {
+    if (value !== undefined) sizes[key] = JSON.stringify(value).length;
+  };
+  weigh("arrangement", input.arrangement);
+  weigh("audioContext", input.audioContext);
+  weigh("errors", input.errors?.length ? [...input.errors] : undefined);
+  weigh("failedRequests", input.failedRequests?.length ? input.failedRequests : undefined);
+  weigh("note", input.note);
   return {
-    collectedAt: new Date().toISOString(),
+    collectedAt,
     appVersion: APP_VERSION,
     runtime: {
       userAgent: nav?.userAgent ?? "unavailable",
@@ -73,6 +109,12 @@ export function collectWebDebugBundle(input: WebDebugBundleInput = {}): WebDebug
     ...(input.arrangement ? { arrangement: input.arrangement } : {}),
     ...(input.audioContext ? { audioContext: input.audioContext } : {}),
     ...(input.note ? { note: input.note } : {}),
+    ...(input.errors?.length ? { errors: [...input.errors] } : {}),
+    ...(input.failedRequests?.length
+      ? { failedRequests: input.failedRequests.map((request) => ({ method: request.method, status: request.status })) }
+      : {}),
+    sizes,
+    omitted: [...OMITTED],
     manifest: MANIFEST,
     omissions,
   };
@@ -100,6 +142,10 @@ export async function collectWebDebugArchive(input: WebDebugBundleInput = {}): P
   const entries: TarEntry[] = [
     { name: "bundle.json", bytes: encoder.encode(`${JSON.stringify(bundle, null, 2)}\n`) },
     { name: "environment.json", bytes: encoder.encode(`${JSON.stringify(bundle.runtime, null, 2)}\n`) },
+    {
+      name: "sections.json",
+      bytes: encoder.encode(`${JSON.stringify({ sizes: bundle.sizes, omitted: bundle.omitted }, null, 2)}\n`),
+    },
   ];
   if (input.arrangement) {
     entries.push({ name: "arrangement.groove.json", bytes: encoder.encode(`${JSON.stringify(input.arrangement, null, 2)}\n`) });

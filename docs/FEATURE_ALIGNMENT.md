@@ -821,3 +821,12 @@
 | ✅ **修法** | ⭐ `SettingsModal` 的音频页：⭐ `engine={engine ?? getActiveAudioEngine()}` ✓ ⇒ ⭐ prop 优先（⭐ 判据靠它注入 ✓），⭐ 为 null 时回退到**活跃引擎注册表** ✓｜⭐ 不动 `App` 的生命周期（⭐ 它还管 `analyser` 与 `isPlaying` 轮询 ✓）| §852‑853 |
 | ⚠️ **写 JSX 注释的位置** | ⭐ `{/* … */}` **本身**就是一个表达式容器 ✓ ⇒ ⭐ 不能放进另一个（⭐ 如 `{cond && ( … )}` 的括号内 ✓），⭐ 否则报 `')' expected` ✗ ⇒ ⭐ 注释要放在**该行之前** ✓ | §853 |
 
+## 2026-10-07 08:08 回填（第 4 条规矩：改完实现回来改表）
+
+| 面 | 变化 | 依据 |
+|---|---|---|
+| ⚠️ **Web 面：调试采集有两条实现** | ⭐ `src/data/debugBundleWeb.ts`（A ✓ 产 **JSON 对象** ✓、名 `…​.json` ✓）⭐ 与 `src/features/debug/webDebugBundle.ts`（B ✓ 产 **`.tar.gz` 归档** ✓、可下载 ✓）⭐ 并存 ✓ ⇒ ⚠️ 违反"不要新老并存" ✗ | §886‑891 |
+| ✅ **合并为一个（B 为唯一实现 ✓）** | ⭐ 从 A 并入 **`errors`／`failedRequests`（只留状态与方法 ✓）／`audio`** ✓＋ **`sizes`**（每分区字节 ✓，归档里另有 `sections.json` ✓）＋ **`omitted`**（⭐ 五项：作品本体／音符内容／文件路径／令牌／请求地址 ✓）＋ **可注入时钟 `now?`** ✓｜⭐ 删除 `src/data/debugBundleWeb.ts` ✓｜⭐ 设置行改指 B ✓ ⇒ ⭐ **两个入口都产出同一个 `.tar.gz`** ✓（与 MCP 侧同名规 ✓） | §890‑891 |
+| ✅ **判据随实情改写** | ⭐ `src/test/webDebugBundle.test.ts` 改指 B ✓（断言版本＋时刻 ✓、分区字节 ✓、失败请求只留状态 ✓、无音符内容 ✓、名规 `…​.tar.gz` ✓）｜⭐ `src/test/debugBundleRow.test.tsx` 改为 `async` ＋ 等归档落地 ✓ ＋ 名规改 `.tar.gz` ✓ | §890 |
+| ⚠️ **写 JSX／插入代码的两处教训** | ⭐ 用 Python 插代码时**替换掉了 `return {`** ✗（`tsc` 报 5 处 ✓）⇒ ⭐ 插入要**锚在完整语句**上 ✓｜⭐ 替换 `collectedAt` 行时**连带删了该字段** ✗ ⇒ ⭐ 改后**跑 `tsc` 当闸门** ✓ 才发现 ✓ | §890 |
+

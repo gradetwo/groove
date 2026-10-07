@@ -1,6 +1,6 @@
 import { useLanguage } from "../../i18n/LanguageContext";
-import { collectWebDebugBundle, debugBundleFilename } from "../../data/debugBundleWeb";
-import { APP_VERSION, getRecentErrors } from "../../utils/telemetry";
+import { collectWebDebugArchive, downloadArchive, webDebugBundleFileName } from "../../features/debug/webDebugBundle";
+import { getRecentErrors } from "../../utils/telemetry";
 
 /**
  * ⭐ **The debug entry the browser side was missing.**
@@ -13,19 +13,11 @@ import { APP_VERSION, getRecentErrors } from "../../utils/telemetry";
 export function DebugBundleRow() {
   const { t } = useLanguage();
 
-  const download = () => {
-    const bundle = collectWebDebugBundle({
-      appVersion: APP_VERSION,
-      userAgent: typeof navigator === "undefined" ? "unknown" : navigator.userAgent,
+  const download = async () => {
+    const archive = await collectWebDebugArchive({
       errors: getRecentErrors().map((report) => JSON.stringify(report)),
     });
-    const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = debugBundleFilename(bundle.manifest.generatedAt);
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadArchive(webDebugBundleFileName(new Date().toISOString()), archive.blob);
   };
 
   return (

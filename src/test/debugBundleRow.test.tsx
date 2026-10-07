@@ -13,7 +13,7 @@ import { DebugBundleRow } from "../components/settings/DebugBundleRow";
  * the wording of the label is not what this case is about.
  */
 describe("the debug entry in the settings panel", () => {
-  it("⭐ hands one blob to a URL and clicks an anchor named by the rule", () => {
+  it("⭐ hands one blob to a URL and clicks an anchor named by the rule", async () => {
     const blobs: Blob[] = [];
     const names: string[] = [];
     // ⚠️ jsdom does not implement either method, so they are assigned rather than spied: a browser has both, and the test
@@ -31,10 +31,13 @@ describe("the debug entry in the settings panel", () => {
 
     render(<DebugBundleRow />);
     fireEvent.click(screen.getByTestId("settings-download-debug"));
+    // ⭐ The row builds the same compressed archive the header does, so its work settles on a later microtask.
+    await vi.waitFor(() => expect(blobs.length, "no blob was handed to a URL").toBe(1));
 
     expect(blobs.length, "no blob was handed to a URL").toBe(1);
     expect(names.length, "no anchor was clicked").toBe(1);
-    expect(names[0]).toMatch(/^groove-debug-.*\.json$/);
+    // ⭐ One rule for both halves: the server names its archive, and so does the browser. */
+    expect(names[0]).toMatch(/^groove-debug-.*\.tar\.gz$/);
     // ⭐ And the URL is released, so a second press cannot leak the first.
     expect(revoked).toHaveBeenCalledWith("blob:debug");
 

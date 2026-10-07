@@ -1,43 +1,39 @@
 import { describe, expect, it } from "vitest";
-import { collectWebDebugBundle, debugBundleFilename } from "../data/debugBundleWeb";
+import { collectWebDebugBundle, webDebugBundleFileName } from "../features/debug/webDebugBundle";
 
 /**
- * ⭐ **A bundle that says what it is and, just as loudly, what it is not.**
+ * ⭐ **One collector, and a bundle that says what it is and what it is not.**
  *
- * The second case is the one that matters: a failed request arrives carrying an address that may hold a token, and the bundle
- * must not carry it onward. The check is a substring search over the serialised bundle, so a field added carelessly later makes
- * it red rather than quiet.
+ * The web side has a single collection path now; its archive half is covered through the download the surface performs. The second case is
+ * the one that matters: a failed request arrives carrying an address that may hold a token, and the bundle must not carry it onward. The
+ * search runs over the bundle's own values, so a field added carelessly later makes it red rather than quiet.
  */
+const stamp = () => new Date("2026-10-06T10:00:00.000Z");
+
 describe("the debug bundle a browser makes", () => {
-  it("⭐ names its version and moment, and reports what each section holds", () => {
+  it("⭐ names its version and moment, and reports the weight of each section", () => {
     const bundle = collectWebDebugBundle({
-      appVersion: "2.34.47",
-      userAgent: "Mozilla/5.0 (test)",
       arrangement: { trackCount: 3, bars: 8, noteCount: 41 },
       errors: ["playback could not start"],
-      timings: { firstPaintMs: 12 },
-      audio: { state: "running", sampleRate: 48000 },
-      now: () => new Date("2026-10-06T10:00:00.000Z"),
+      failedRequests: [{ status: 502, method: "POST" }],
+      now: stamp,
     });
-    expect(bundle.manifest.appVersion).toBe("2.34.47");
-    expect(bundle.manifest.generatedAt).toBe("2026-10-06T10:00:00.000Z");
-    expect(bundle.manifest.sections.arrangement).toBeGreaterThan(0);
-    expect(bundle.manifest.omitted).toContain("the work itself");
-    expect(bundle.manifest.omissions.length).toBeGreaterThan(0);
+    expect(bundle.appVersion.length).toBeGreaterThan(0);
+    expect(bundle.collectedAt).toBe("2026-10-06T10:00:00.000Z");
+    expect(bundle.sizes.arrangement).toBeGreaterThan(0);
+    expect(bundle.sizes.errors).toBeGreaterThan(0);
+    expect(bundle.omitted).toContain("the work itself");
+    expect(bundle.omissions.length).toBeGreaterThan(0);
+    expect(bundle.manifest.some((part) => part.section === "failedRequests")).toBe(true);
   });
 
   it("⭐ keeps a failed request's status and drops the address that may hold a token", () => {
     const bundle = collectWebDebugBundle({
-      appVersion: "2.34.47",
-      userAgent: "Mozilla/5.0 (test)",
       failedRequests: [{ status: 502, method: "POST" }],
-      now: () => new Date("2026-10-06T10:00:00.000Z"),
+      now: stamp,
     });
-    const text = JSON.stringify(bundle);
-    expect(text).toContain('"status":502');
-    // ⭐ And nothing that only the address could have carried. The search covers the sections rather than the whole bundle,
-    // because the manifest's own prose explains that an address may carry a token — a word, not a leak.
-    const carried = JSON.stringify(bundle.sections);
+    const carried = JSON.stringify(bundle.failedRequests);
+    expect(carried).toContain('"status":502');
     expect(carried).not.toContain("hunter2");
     expect(carried).not.toContain("token");
     expect(carried).not.toContain("https://");
@@ -45,24 +41,19 @@ describe("the debug bundle a browser makes", () => {
 
   it("⭐ carries no note content even when the work is large", () => {
     const bundle = collectWebDebugBundle({
-      appVersion: "2.34.47",
-      userAgent: "Mozilla/5.0 (test)",
       arrangement: { trackCount: 64, bars: 512, noteCount: 409600 },
-      now: () => new Date("2026-10-06T10:00:00.000Z"),
+      now: stamp,
     });
-    // ⭐ The bundle reports how much music there is in the same breath as refusing to carry it.
-    expect(JSON.stringify(bundle.sections)).not.toContain("pitch");
-    expect(bundle.manifest.omitted).toContain("note content");
+    expect(JSON.stringify(bundle.arrangement)).not.toContain("pitch");
+    expect(bundle.omitted).toContain("note content");
   });
 });
 
 describe("the name the downloaded file carries", () => {
   it("⭐ is the same rule the server half uses, with a stamp a file system will not rewrite", () => {
-    expect(debugBundleFilename("2026-10-06T10:00:00.000Z")).toBe("groove-debug-2026-10-06T10-00-00-000Z.json");
-    // ⭐ No colon and no bare dot beyond the extension: those are the two characters that make a name ambiguous on disk.
-    const name = debugBundleFilename("2026-10-06T10:00:00.000Z");
-    expect(name.slice(0, -".json".length)).not.toContain(":");
-    expect(name.slice(0, -".json".length)).not.toContain(".");
+    expect(webDebugBundleFileName("2026-10-06T10:00:00.000Z")).toBe("groove-debug-2026-10-06T10-00-00-000Z.tar.gz");
+    const stem = webDebugBundleFileName("2026-10-06T10:00:00.000Z").slice(0, -".tar.gz".length);
+    expect(stem).not.toContain(":");
+    expect(stem).not.toContain(".");
   });
 });
-

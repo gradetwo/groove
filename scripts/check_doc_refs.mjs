@@ -87,6 +87,15 @@ const PROPOSED = new Map([
     "src/app/SequencerStoreProvider.tsx",
     "Planned store provider (STUDIO_REFACTOR_PLAN L-01, three-step migration). Not started; useSequencerStore is still called directly by each view.",
   ],
+  /**
+   * ⭐ **Merged away, not planned.** `FEATURE_ALIGNMENT.md` records the merge of the two web debug collectors on 2026-10-07, and that
+   * record has to name the file that went, or it would not be a record. The capability moved into `features/debug/webDebugBundle.ts`,
+   * which now writes the one self-describing archive both entry points download.
+   */
+  [
+    "src/data/debugBundleWeb.ts",
+    "Removed by the merge in FEATURE_ALIGNMENT.md 2026-10-07 08:08; its errors, failed requests, per-section byte counts and the five things a reader must not expect now live in features/debug/webDebugBundle.ts.",
+  ],
   [
     "src/components/console/StudioConsoleFloat.tsx",
     "Planned draggable console float (STUDIO_REFACTOR_PLAN X-02/X-03). The console exists as ConsoleOverlay/TrackInspector instead.",
