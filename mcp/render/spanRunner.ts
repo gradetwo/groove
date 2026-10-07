@@ -116,6 +116,14 @@ export async function runSpanJob(jobPath: string): Promise<void> {
       fromBar: job.fromBar,
       preRollSec: job.preRollSec,
       ...(job.options.windowBars === undefined ? {} : { windowBars: job.options.windowBars }),
+      /**
+       * ⚠️ **A child renders exactly one span, and must be told so explicitly now that the default is automatic.**
+       *
+       * While `chunks` had no default, "absent" meant one pass and a child could not recurse. With an automatic default
+       * the child computed a span count of its own from the piece's length and spawned spans of its own — a fork bomb,
+       * seen as two SIGKILLed smoke runs. The count is the parent's decision; the child's is 1.
+       */
+      chunks: 1,
       ...(job.options.sampleRate === undefined ? {} : { sampleRate: job.options.sampleRate }),
     },
     job.catalogueRead,

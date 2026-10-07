@@ -222,7 +222,7 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
        * not be reachable: the next rounds fix the guard (or the renderer's one-shot) and add the null criterion, then
        * this field comes back with the criterion beside it.
        */
-      chunks: z.number().int().min(1).max(8).optional().describe("render in this many spans at once, one server process each (4 measured 3.90× the throughput of one). A span is only used where it is provably the same music: `spanSafety` refuses a pattern whose sample lane carries no notes, because that lane's one-shot would play at every window's start (measured −1.3 dBFS), and falls back to one pass with the reason in `problems`"),
+      chunks: z.number().int().min(1).max(8).optional().describe("render in this many spans at once, one server process each. **Omitted, the count is chosen for you** from the arrangement's length and the machine's cores — 1 below 16 bars, 4 from 16, 8 from 64, never more than the cores — because one pass of a five-minute piece measured 753 s against 297 s in eight; pass 1 to ask for the single pass explicitly. A span is only used where it is provably the same music: `spanSafety` refuses a pattern carrying a sample lane, whose one-shot would play at every window's start (measured −1.3 dBFS), and falls back to one pass with the reason in `problems`"),
       maxDurationSec: z.number().int().min(1).optional().describe("refuse rather than start a render longer than this, in seconds"),
       /**
        * ⭐ **The one explicit engine choice on the MCP surface, and the reason it is explicit.**

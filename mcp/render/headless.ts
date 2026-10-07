@@ -32,6 +32,7 @@
  */
 import path from "node:path";
 import { createRequire } from "node:module";
+import os from "node:os";
 import { readFileSync } from "node:fs";
 import { createFrameProgress } from "./progress";
 import * as sampleCache from "./sampleCache";
@@ -319,7 +320,16 @@ export async function renderPatternHeadless(
    * notes (its one-shot would land at each window's start); the refusal is reported rather than silently absorbed, and
    * the render falls back to the single pass.
    */
-  const spanVerdict = (options.chunks ?? 1) > 1 ? (await import("./spanHosts")).spanSafety(pattern) : null;
+  /**
+   * ⭐ **The count is decided here when the caller did not decide it** (owner's decision, 2026-10-08): a long piece is
+   * chunked by default, because the measurement says a five-minute bounce takes 753 s in one pass and 297 s in eight —
+   * and a caller who says nothing should get the fast road without knowing the machinery exists. `defaultChunksFor` is
+   * a function of the piece's length and the machine's cores; an explicit `chunks` always wins, and 1 still means "one
+   * pass" exactly as before.
+   */
+  const spans = await import("./spanHosts");
+  const autoChunks = options.chunks ?? spans.defaultChunksFor(Math.max(1, Math.round(Number((pattern as { totalSteps?: number }).totalSteps ?? 16) / 16)), os.cpus().length);
+  const spanVerdict = autoChunks > 1 ? spans.spanSafety(pattern) : null;
   if (spanVerdict && !spanVerdict.ok && spanVerdict.reason) renderProblems.push(spanVerdict.reason);
   const spanOutcome =
     spanVerdict?.ok === true
@@ -334,6 +344,7 @@ export async function renderPatternHeadless(
              */
             {
               ...options,
+              chunks: autoChunks,
               ...(progress
                 ? { onSpanDone: (done: number, total: number) => progress.reportOf(done, total, `rendered ${done} of ${total} spans`) }
                 : {}),
