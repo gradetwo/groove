@@ -148,7 +148,15 @@ export const ANALYSIS_TOOLS: ToolDefinition[] = [
         const limitedBy = peakPinned && Math.abs(best.result.integratedLufs - target) > 0.2 ? "masterLimiter" : residual - headroom > 0.05 ? "truePeak" : "target";
         const after = best.result;
         return {
-            peakHeadroom: Number(headroom.toFixed(3)),
+          /**
+           * ⭐ **`null` when the reading is not a number, rather than `NaN`.**
+           *
+           * A blank arrangement is silent, and a silent render has no true peak to subtract from the ceiling -- so the arithmetic produces
+           * `NaN`, which JSON turns into `null` anyway on the way out. Saying `null` here means the reply reads the same before and after
+           * serialisation, and a caller can tell "there is no headroom to report" from a number. The criterion in `mcpHeadlessRender.test.ts`
+           * is what found this: it asserted the field meant what it said and got `NaN`.
+           */
+          peakHeadroom: Number.isFinite(headroom) ? Number(headroom.toFixed(3)) : null,
           arrangementId: String(args.arrangementId),
           targetLufs: target,
           truePeakCeilingDb: ceiling,

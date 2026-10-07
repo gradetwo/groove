@@ -227,6 +227,21 @@ const { arrangementId } = createMcpArrangement({ genreId: "chicago-house", songI
     // blank arrangement is silent.
     expect("truePeakDb" in before).toBe(true);
     expect(reply.passes).toBe(1);
+    /**
+     * ⭐ **The reply states the peak headroom instead of leaving the caller to subtract.**
+     *
+     * "How much room is left under the ceiling" is the question a delivery asks, and the answer is the ceiling minus the reading. It is
+     * asserted against the reply's own two numbers rather than a literal, because the level depends on what was written -- what is being
+     * protected is that the field is there and that it means what it says.
+     */
+    const after = reply.after as Record<string, unknown>;
+    // ⭐ The field is always present; it is a number when there is a reading, and `null` when the render was silent.
+    expect("peakHeadroom" in reply, "the reply must state the peak headroom").toBe(true);
+    if (reply.peakHeadroom === null) {
+      expect(Number.isFinite(Number(after.truePeakDb)), "null is only honest when the peak is not a number").toBe(false);
+    } else {
+      expect(Number(reply.peakHeadroom)).toBeCloseTo(Number(reply.truePeakCeilingDb) - Number(after.truePeakDb), 3);
+    }
   }, 180_000);
 });
 
