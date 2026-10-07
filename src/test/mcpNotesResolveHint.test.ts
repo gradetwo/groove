@@ -10,7 +10,11 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const registry = readFileSync("mcp/registryArrangement.ts", "utf8");
+/**
+ * ⭐ The note tools live in their own module: `registryArrangement` was split so it stays under its measured size, and the bulk note tool went
+ * with the other four.
+ */
+const registry = readFileSync("mcp/registryArrangementNotes.ts", "utf8");
 
 describe("add_arrangement_notes", () => {
   it("⭐ names the tool that resolves one pitch before an expensive render", () => {

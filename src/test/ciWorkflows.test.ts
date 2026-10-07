@@ -142,7 +142,11 @@ describe("CI · every target runs on every push", () => {
      * (and the two older probes) into CI is what keeps it from becoming a script nobody runs, and it is the kind of
      * check that should not burn a developer's machine.
      */
-    for (const script of ["probe:toolbar", "probe:grid-gutter", "probe:arrangement", "probe:arrangement-audio"]) {
+    /**
+     * ⭐ **The probes the leg must run.** `probe:toolbar` counted the studio toolbar's controls and went with it on 2026-10-07; the other three
+     * measure the arrangement surface, which is what is left to measure.
+     */
+    for (const script of ["probe:grid-gutter", "probe:arrangement", "probe:arrangement-audio"]) {
       expect(e2e, `the e2e job must run ${script}`).toContain(`npm run ${script}`);
     }
     // They serve `dist/`, so the build has to come first…

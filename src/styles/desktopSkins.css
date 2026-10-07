@@ -349,7 +349,7 @@
 /*
  * Tailwind's own palette names, by meaning: a green is a success, an indigo is a call to action, a
  * shade is decoration. They compile to Tailwind's colours, so without this a skinned page keeps them —
- * which is how a newsprint theme ended up with an indigo speaker key. 132 rules.
+ * which is how a newsprint theme ended up with an indigo speaker key. 131 rules.
  */
 [class~="hover:bg-indigo-500"],
 [class~="hover:bg-indigo-600"]:hover { background-color: rgb(var(--d-accent)); }
@@ -401,8 +401,6 @@
 [class~="hover:to-indigo-500/30"]:hover { --tw-gradient-to: rgb(var(--d-accent) / 0.30); }
 [class~="hover:to-amber-500"]:hover { --tw-gradient-to: rgb(var(--d-warning)); }
 [class~="accent-blue-400"],
-[class~="accent-cyan-400"],
-[class~="accent-fuchsia-400"],
 [class~="accent-purple-400"] { accent-color: rgb(var(--d-accent)); }
 [class~="accent-red-400"],
 [class~="accent-rose-400"] { accent-color: rgb(var(--d-danger)); }
@@ -428,7 +426,6 @@
 [class~="bg-purple-500/15"],
 [class~="bg-violet-500/15"] { background-color: rgb(var(--d-accent) / 0.15); }
 [class~="bg-cyan-500/20"],
-[class~="bg-fuchsia-500/20"],
 [class~="bg-indigo-500/20"],
 [class~="bg-indigo-600/20"],
 [class~="bg-pink-500/20"] { background-color: rgb(var(--d-accent) / 0.20); }
@@ -457,7 +454,6 @@
 [class~="bg-red-500/25"] { background-color: rgb(var(--d-danger) / 0.25); }
 [class~="bg-rose-500/30"] { background-color: rgb(var(--d-danger) / 0.30); }
 [class~="bg-rose-500/50"] { background-color: rgb(var(--d-danger) / 0.50); }
-[class~="bg-red-500/70"] { background-color: rgb(var(--d-danger) / 0.70); }
 [class~="bg-red-600/90"] { background-color: rgb(var(--d-danger) / 0.90); }
 [class~="bg-emerald-400"],
 [class~="bg-emerald-500"],
@@ -485,7 +481,6 @@
 [class~="border-cyan-300"],
 [class~="border-cyan-400"],
 [class~="border-cyan-500"],
-[class~="border-fuchsia-500"],
 [class~="border-indigo-400"],
 [class~="border-indigo-500"],
 [class~="border-pink-400"],
@@ -645,7 +640,7 @@
 /*
  * The literal map: the desktop's hardcoded hexes, by role.
  *
- * 603 rules, generated from the literals the source actually uses. Because each rule names a
+ * 585 rules, generated from the literals the source actually uses. Because each rule names a
  * **token**, the same rules serve all six skins — the skin decides what the token resolves to. The few
  * near-duplicate grounds and inks in the default theme therefore converge onto one value each, which is
  * what "the same palette on both surfaces" means in practice.
@@ -744,19 +739,16 @@
 [class~="text-[#d8b988]/80"] { color: rgb(var(--d-accent-soft) / 0.80); }
 [class~="bg-[#f59e0b]/20"] { background-color: rgb(var(--d-warning) / 0.20); }
 [class~="text-[#f59e0b]"] { color: rgb(var(--d-warning)); }
-[class~="hover:bg-[#ff5964]/20"]:hover { background-color: rgb(var(--d-danger) / 0.20); }
 [class~="hover:bg-[#ff5964]/90"]:hover { background-color: rgb(var(--d-danger) / 0.90); }
 [class~="hover:border-[#ff5964]/40"]:hover { border-color: rgb(var(--d-danger) / 0.40); }
 [class~="hover:border-[#ff5964]/50"]:hover { border-color: rgb(var(--d-danger) / 0.50); }
 [class~="hover:text-[#ff5964]"]:hover { color: rgb(var(--d-danger)); }
 [class~="bg-[#ff5964]"] { background-color: rgb(var(--d-danger)); }
-[class~="bg-[#ff5964]/10"] { background-color: rgb(var(--d-danger) / 0.10); }
 [class~="bg-[#ff5964]/15"] { background-color: rgb(var(--d-danger) / 0.15); }
 [class~="bg-[#ff5964]/20"] { background-color: rgb(var(--d-danger) / 0.20); }
 [class~="bg-[#ff5964]/25"] { background-color: rgb(var(--d-danger) / 0.25); }
 [class~="border-[#ff5964]"] { border-color: rgb(var(--d-danger)); }
 [class~="border-[#ff5964]/40"] { border-color: rgb(var(--d-danger) / 0.40); }
-[class~="border-[#ff5964]/60"] { border-color: rgb(var(--d-danger) / 0.60); }
 [class~="border-[#ff5964]/70"] { border-color: rgb(var(--d-danger) / 0.70); }
 [class~="from-[#ff5964]"] { --tw-gradient-from: rgb(var(--d-danger)); }
 [class~="text-[#ff5964]"] { color: rgb(var(--d-danger)); }
@@ -787,15 +779,11 @@
 [class~="text-[#38bdf8]"] { color: rgb(var(--d-track-fx-ink)); }
 [class~="to-[#38bdf8]/20"] { --tw-gradient-to: rgb(var(--d-track-fx) / 0.20); }
 [class~="bg-[#ec4899]/10"] { background-color: rgb(var(--d-track-chord) / 0.10); }
-[class~="bg-[#ec4899]/20"] { background-color: rgb(var(--d-track-chord) / 0.20); }
-[class~="border-[#ec4899]"] { border-color: rgb(var(--d-track-chord)); }
 [class~="text-[#ec4899]"] { color: rgb(var(--d-track-chord-ink)); }
 [class~="bg-[#a78bfa]/15"] { background-color: rgb(var(--d-track-bass) / 0.15); }
 [class~="bg-[#a78bfa]/20"] { background-color: rgb(var(--d-track-bass) / 0.20); }
 [class~="border-[#a78bfa]/40"] { border-color: rgb(var(--d-track-bass) / 0.40); }
 [class~="text-[#a78bfa]"] { color: rgb(var(--d-track-bass-ink)); }
-[class~="text-[#ffb65c]"] { color: rgb(var(--d-track-snare-ink)); }
-[class~="text-[#ff8a5c]"] { color: rgb(var(--d-track-bass-ink)); }
 [class~="bg-[#0d0e14]"] { background-color: rgb(var(--d-panel2)); }
 [class~="bg-[#0d0e14]/85"] { background-color: rgb(var(--d-panel2) / 0.85); }
 [class~="via-[#0d0e14]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-panel2)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
@@ -807,7 +795,6 @@
 [class~="border-[#323846]"] { border-color: rgb(var(--d-line-strong)); }
 [class~="hover:bg-[#252834]"]:hover { background-color: rgb(var(--d-surface)); }
 [class~="border-[#2d3139]"] { border-color: rgb(var(--d-line)); }
-[class~="bg-[#10b981]"] { background-color: rgb(var(--d-cat-electronic)); }
 [class~="text-[#10b981]"] { color: rgb(var(--d-cat-electronic)); }
 [class~="bg-[#121319]"] { background-color: rgb(var(--d-panel)); }
 [class~="to-[#121319]"] { --tw-gradient-to: rgb(var(--d-panel)); }
@@ -837,7 +824,6 @@
 [class~="bg-[#14161f]"] { background-color: rgb(var(--d-panel)); }
 [class~="bg-[#1d202a]"] { background-color: rgb(var(--d-surface)); }
 [class~="hover:bg-[#272b38]"]:hover { background-color: rgb(var(--d-surface)); }
-[class~="border-[#272b38]"] { border-color: rgb(var(--d-surface)); }
 [class~="text-[#8e92a0]"] { color: rgb(var(--d-ink-3)); }
 [class~="bg-[#050609]"] { background-color: rgb(var(--d-bg)); }
 [class~="bg-[#12141c]"] { background-color: rgb(var(--d-panel)); }
@@ -873,7 +859,6 @@
 [class~="hover:bg-[#ffffff]"]:hover { background-color: rgb(var(--d-track-fx)); }
 [class~="via-[#ffffff]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-track-fx)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
 [class~="bg-[#181a20]"] { background-color: rgb(var(--d-surface)); }
-[class~="border-[#181a20]"] { border-color: rgb(var(--d-surface)); }
 [class~="hover:bg-[#2c303c]"]:hover { background-color: rgb(var(--d-surface)); }
 [class~="border-[#2c303c]"] { border-color: rgb(var(--d-surface)); }
 [class~="bg-[#252a36]"] { background-color: rgb(var(--d-surface)); }
@@ -964,7 +949,6 @@
 [class~="bg-[#161a24]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#11131a]"] { background-color: rgb(var(--d-panel)); }
 [class~="bg-[#11131a]/80"] { background-color: rgb(var(--d-panel) / 0.80); }
-[class~="bg-[#11131a]/85"] { background-color: rgb(var(--d-panel) / 0.85); }
 [class~="bg-[#11131a]/90"] { background-color: rgb(var(--d-panel) / 0.90); }
 [class~="from-[#11131a]"] { --tw-gradient-from: rgb(var(--d-panel)); }
 [class~="bg-[#252a38]"] { background-color: rgb(var(--d-surface)); }
@@ -980,7 +964,6 @@
 [class~="bg-[#171920]"] { background-color: rgb(var(--d-surface)); }
 [class~="border-[#171920]"] { border-color: rgb(var(--d-surface)); }
 [class~="text-[#f0ede6]"] { color: rgb(var(--d-ink)); }
-[class~="text-[#c6c4bd]"] { color: rgb(var(--d-ink-2)); }
 [class~="bg-[#101217]/98"] { background-color: rgb(var(--d-panel) / 0.98); }
 [class~="via-[#101217]"] { --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--d-panel)), var(--tw-gradient-to, rgb(0 0 0 / 0)); }
 [class~="to-[#ffe28a]"] { --tw-gradient-to: rgb(var(--d-track-perc)); }
@@ -1098,14 +1081,6 @@
 [class~="bg-[#131522]"] { background-color: rgb(var(--d-surface)); }
 [class~="border-[#202434]"] { border-color: rgb(var(--d-line)); }
 [class~="hover:bg-[#191c2c]"]:hover { background-color: rgb(var(--d-surface)); }
-[class~="hover:bg-[#14151a]"]:hover { background-color: rgb(var(--d-panel)); }
-[class~="bg-[#14151a]"] { background-color: rgb(var(--d-panel)); }
-[class~="bg-[#a855f7]/20"] { background-color: rgb(var(--d-track-chord) / 0.20); }
-[class~="border-[#a855f7]"] { border-color: rgb(var(--d-track-chord)); }
-[class~="bg-[#1f232b]"] { background-color: rgb(var(--d-surface)); }
-[class~="text-[#f87171]"] { color: rgb(var(--d-danger)); }
-[class~="bg-[#0a0b0e]/95"] { background-color: rgb(var(--d-bg) / 0.95); }
-[class~="to-[#0a0b0e]"] { --tw-gradient-to: rgb(var(--d-bg)); }
 [class~="bg-[#161822]"] { background-color: rgb(var(--d-surface)); }
 [class~="from-[#161822]"] { --tw-gradient-from: rgb(var(--d-surface)); }
 [class~="to-[#d62839]"] { --tw-gradient-to: rgb(var(--d-danger)); }
@@ -1174,6 +1149,7 @@
 [class~="border-[#1f222a]"] { border-color: rgb(var(--d-line)); }
 [class~="bg-[#282c37]"] { background-color: rgb(var(--d-surface)); }
 [class~="hover:border-[#383d4a]"]:hover { border-color: rgb(var(--d-line-strong)); }
+[class~="bg-[#14151a]"] { background-color: rgb(var(--d-panel)); }
 [class~="hover:bg-[#222530]"]:hover { background-color: rgb(var(--d-surface)); }
 [class~="text-[#e0ded8]"] { color: rgb(var(--d-ink)); }
 [class~="text-[#f3f1ec]"] { color: rgb(var(--d-ink)); }
@@ -1242,6 +1218,7 @@
 [class~="from-[#090b12]"] { --tw-gradient-from: rgb(var(--d-panel2)); }
 [class~="bg-[#1c202d]"] { background-color: rgb(var(--d-surface)); }
 [class~="hover:bg-[#252b3d]"]:hover { background-color: rgb(var(--d-surface)); }
+[class~="to-[#0a0b0e]"] { --tw-gradient-to: rgb(var(--d-bg)); }
 [class~="text-[#b4b7c2]"] { color: rgb(var(--d-ink-2)); }
 [class~="text-[#7e8494]"] { color: rgb(var(--d-ink-3)); }
 [class~="bg-[#181b26]"] { background-color: rgb(var(--d-surface)); }
@@ -1278,7 +1255,6 @@
 [class~="bg-[#a78bfa]/20"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#e84855]"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#ec4899]/10"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
-[class~="bg-[#ec4899]/20"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#f59e0b]/20"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#f5b73d]"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#f5b73d]/10"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
@@ -1286,7 +1262,6 @@
 [class~="bg-[#f5b73d]/20"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#f5b73d]/5"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#ff5964]"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
-[class~="bg-[#ff5964]/10"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#ff5964]/15"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#ff5964]/20"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#ff5964]/25"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
@@ -1330,7 +1305,6 @@
 [class~="bg-emerald-600"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-emerald-600/15"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-emerald-600/20"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
-[class~="bg-fuchsia-500/20"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-indigo-400"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-indigo-500"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-indigo-500/10"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
@@ -1358,7 +1332,6 @@
 [class~="bg-red-500/15"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-red-500/20"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-red-500/25"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
-[class~="bg-red-500/70"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-red-600"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-red-600/15"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-red-600/90"][class~="text-white"] { color: rgb(var(--d-on-accent)); }
@@ -1448,7 +1421,6 @@
 [class~="bg-[#d47fa6]"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#e84855]"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#ec4899]/10"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
-[class~="bg-[#ec4899]/20"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#f59e0b]/20"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#f5b73d]"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#f5b73d]/10"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
@@ -1457,7 +1429,6 @@
 [class~="bg-[#f5b73d]/5"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#fbbf24]"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#ff5964]"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
-[class~="bg-[#ff5964]/10"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#ff5964]/15"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#ff5964]/20"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-[#ff5964]/25"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
@@ -1501,7 +1472,6 @@
 [class~="bg-emerald-600"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-emerald-600/15"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-emerald-600/20"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
-[class~="bg-fuchsia-500/20"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-indigo-400"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-indigo-500"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-indigo-500/10"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
@@ -1529,7 +1499,6 @@
 [class~="bg-red-500/15"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-red-500/20"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-red-500/25"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
-[class~="bg-red-500/70"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-red-600"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-red-600/15"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
 [class~="bg-red-600/90"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }
@@ -1616,7 +1585,6 @@
 /*
  * The accent as type; the flood keeps the raw accent and its label uses `--d-on-accent`.
  */
-[class~="focus:text-accent"]:focus { color: rgb(var(--d-accent-ink)); }
 .group:hover [class~="group-hover:text-accent"] { color: rgb(var(--d-accent-ink)); }
 [class~="hover:text-accent"]:hover { color: rgb(var(--d-accent-ink)); }
 [class~="selection:text-accent"]::selection { color: rgb(var(--d-accent-ink)); }
