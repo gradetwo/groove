@@ -17653,3 +17653,57 @@ describe("the grid's editing actions", () => {
   ⭐ 本轮**没有发版**（业主这次要的是修 UI，不是新版本 ✓）；改动分 5 个提交 ✓，每个都带**当次的量测** ✓。
   ⭐ 本机只跑**定向诊断**（矩阵单目标 Chromium ✓、三浏览器几何断言各一次 ✓）；⚠️ 全量门禁仍应交给 GitHub CI ✓（按业主两次的明确要求 ✓）。
   ⭐ 新增 `npm run audit:screens` 是**报告不是门禁** ✓（退出码 0 ✓，除非根本跑不起来 ✓）——它给的是证据与清单 ✓。
+
+### 六百八十、✅ **工具条按家族分组、审计工具落地编曲面，以及 nightly 延迟探针的三个 v1 选择器**（2026-10-07 ✓）
+
+**⭐ 一、工具条：控件各自说清了"做什么"，但没说"属于谁" ✓**
+  ⭐ 业主原话是"上面各种按钮都不明所以" ✓：`Ramp velocity`、`Quantise lengths` 都写了动词 ✓，
+    可五个编辑动词、形态按钮、音高工具、走带、网格、效果、缩放、文件入口**挤成一行 36 个控件** ✗。
+  ⇒ 八条**带标签的分隔**把簇打开 ✓：EDIT / FORM / PITCH / TRANSPORT / GRID / FX / ZOOM / FILE ✓。
+  ⭐ **分隔必须在自己簇的容器里** ✓——第一版把分隔放在控件旁边 ✓，实测 1820×918：`FILE` 标签留在第 2 行 ✗、
+    `Export/Import` 掉到第 3 行 ✗（标签和它命名的东西分家 ✓）⇒ 每簇包成一个 flex item ✓，整簇一起换行 ✓。
+  ⭐ 代价（量过 ✓）：1820×918 下工具条 **98 px / 两行 → 126 px / 三行** ✓；标签是 9 px、45% 不透明度 ✓。
+  ⭐ 判据：`arrangementGrid` 断言**八个标签的名字与顺序** ✓、每个分隔是**自己簇的第一个孩子** ✓、
+    且与真实控件同父 ✓（"标签单独一行"会红 ✓）。
+  ⭐ 顺手：详情面板空态那句 `Select a track to see its takes.` 是**硬编码英文** ✗（双语应用里 ✓）⇒ 走 `arrangement_detail_empty` ✓。
+
+**⭐ 二、`npm run audit:screens`：把"截图检查各种界面"做成工具，并让它**真的看到编曲面** ✓**
+  ⭐ 14 条路由 ＋ 4 个弹层 ✓，每个界面一张 PNG ＋ `report.json` ＋ `summary.md` ✓；判读规则写进脚本 ✓：
+    **只有没有任何横向滚动祖先能带进视野的溢出才算缺陷** ✓（`clipped` ✗ vs `in-scroller` ✓）。
+  ⭐ 第一版漏了最关键的一面 ✓：`?tab=studio` 现在是**新建面板** ✓，所以审计截的是选择器而不是编曲面 ✗
+    ⇒ 该路由加 `mount` ✓（按矩阵与延迟探针量过的步骤建项目 ✓：DOM 点击卡片 ✓、等 `aria-pressed` 再 Create ✓）。
+  ⭐ 同一次运行里量编曲几何 ✓：表头/通道**逐行对齐** ✓、表头内容**不越列**（-4 px ✓）、
+    通道列/标尺 bar0/首个 region **同一原点**（249/249/249 ✓）——与发布矩阵的断言同源 ✓，但截图与数字在同一份报告里 ✓。
+  ⭐ 一处**量测方法本身的错**：用 `innerText` 判断"控件有没有名字" ✓ ⇒ 折叠 `<details>` 里的控件
+    （`+ Synth`、`M`、`S`、`×` ✓）被报成 11 个"无名" ✗（`innerText` 由渲染决定 ✓）⇒ 改用 `textContent` ✓（读的是标记 ✓），复测 `unnamed 0` ✓。
+
+**⭐ 三、nightly 从 v2.35.0 发布起就红 ✗：不是性能回归，是探针还在打 v1 的面 ✓**
+  ⭐ 证据：nightly `37606029167`（main，2026-10-07 10:14 ✓）卡在 **Interaction latency budget** ✓，
+    探针自己的失败信息里列着 **181 个 testid，全是新建面板的** ✓。
+  ⭐ 三个失配 ✓：① goto 之后直接等 `arrangement-view-v2` ✗（落地页已是选择器 ✓）⇒ 永远超时 ✓；
+    ② `track-inspector-open-0` / `track-inspector-instrument-search` ✗（`TrackInspector` **无生产使用者** ✓）；
+    ③ `[data-testid='roll-grid'] [data-selected]` ✗（v1 步进格 ✓）。
+  ⇒ 三步都改成这个面上真人走的路 ✓，且**观测量换成 DOM 真有的那个** ✓：
+    仪器切换看**芯片自己的名字** ✓（点中的那一行会被这次点击卸载 ✓；同一个芯片在 `TrackListV2` 里又出现一次 ✓，
+    而那个实例不接 `onLibraryOpenChange` ✓），写音符用**第一个空 cell** ✓。
+  ⭐ 两个**量出来的坑**写进注释 ✓：滚动列表里对行做**坐标点击什么都点不到** ✗（`aria-pressed` 不动 ✓）；
+    开合信号要看芯片的 `aria-expanded` ✓——等列表再点第二次会把**已经打开**的库关掉 ✗（报告会显示成"没打开" ✓）。
+  ⭐ 预算**按新面重新量** ✓（同一份 `check_latency_budget.mjs` ✗ 旧上限 400 ms / 2 long tasks / 最差 150 ms ✓
+    描述的是"换合成器预设" ✓，现在做的是**加载采样乐器** ✓）：实测 GS-1 60-68 ms/0 ✓、timbre 471-578 ms/4/最差 207 ✓、
+    写一个音符 759 ms/5/最差 223 ✓ ⇒ 上限取 **~2.5× settle、~2× long tasks** ✓（本文件一贯的倍数 ✓）；
+    `src/test/fixtures/latencySample.json` 换成**这次真实 payload** ✓，判据按**前缀**找 timbre 行 ✓（标签就是乐器名 ✓）。
+
+**⭐ 四、CI 读数（判定的唯一依据 ✓）**
+  ⭐ 第一次全量 dispatch **红** ✗：`src/test/fileSizeBudget.test.ts` 的"pinned 文件不得增长" ✓
+    ——昨天那两处 `aria-label` 让 `HelpCenterModal` 1687→1688 ✓、`ChordProgressionsView` 1559→1560 ✓
+    ⇒ **不抬上限** ✓，把属性并回同一行 ✓，两个上限原样守住 ✓。
+  ⭐ 复推后全量 dispatch ✓：**`✓ dev CI · 37610219365`** ✓（`Typecheck, Lint, Unit Tests & Build` 13m32s ✓ ＋
+    `E2E Desktop browsers` 3m37s ✓＝含三浏览器矩阵的几何断言 ✓）。
+  ⭐ 本机（诊断用 ✓）：`npm run test` **5016 passed / 634 files** ✓、`typecheck` ✓、`lint` ✓、
+    快速门禁 11 项全绿 ✓、`fileSizeBudget` ✓、`check_latency_budget --from` ✓（真 payload 判"inside its budget" ✓）。
+  ⚠️ nightly 的**浏览器延迟步只在计划任务里跑** ✓ ⇒ 今晚的 nightly 才是它在 GitHub 上的第一次复验 ✓（本机已按真 payload 判过 ✓）。
+
+**⭐ 五、留给下一批**
+  ⭐ ① `audit:screens` 目前是**报告不是门禁** ✓（退出 0 ✓）⇒ 若要它变门禁，先把 `clipped`/`unnamed`/`arrangement.aligned` 定成硬断言 ✓。
+  ⭐ ② 网格上方那排 **track-picker chips** 仍是第三份轨道读数 ✓（表头 ✓、它 ✓；旧行列表已收进 `<details>` ✓）。
+  ⭐ ③ Galaxy 图例行与 Timeline H 的宽表都在滚动容器里 ✓（可达 ✓）但**在 1440 宽下需要横滚** ✓ ⇒ 若要"一眼看全"需改布局 ✓。

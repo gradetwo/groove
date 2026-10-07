@@ -42,7 +42,13 @@ fs.mkdirSync(OUT, { recursive: true });
 
 /** Every destination the router can show. `/new` has no nav word of its own, which is why it is named here. */
 const ROUTES = [
-  { name: "studio-arrangement", url: "/?tab=studio" },
+  /**
+   * ⭐ **The studio route is landed, not just loaded.** `?tab=studio` draws the new-project panel, so a pass that only
+   * waits for the page screenshots the chooser and never sees the surface the owner's reports are about; `mount`
+   * creates a project through the same steps the matrix and the latency probe use (a DOM click on the card, then
+   * Create once the card reports itself chosen).
+   */
+  { name: "studio-arrangement", url: "/?tab=studio", mount: true, wait: "[data-testid='arrangement-view-v2']" },
   { name: "new-project", url: "/new" },
   { name: "chords", url: "/?tab=chords" },
   { name: "kick", url: "/?tab=kick" },
@@ -130,9 +136,47 @@ const collect = (page) =>
     for (const el of document.querySelectorAll("button, a[href], input, select")) {
       const r = el.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) continue;
-      const name = (el.getAttribute("aria-label") || el.getAttribute("title") || el.innerText || el.value || "").trim();
+      /**
+       * ⭐ **`textContent`, not `innerText`.** `innerText` is defined by rendering, so a control inside the collapsed
+       * track-list `<details>` reads as "" while its label is right there in the markup — the first version of this
+       * check reported eleven "unnamed" controls on the arrangement, and all eleven were named (+ Synth, M, S, ×).
+       * The claim this list makes is about the markup, so it reads the markup.
+       */
+      const name = (el.getAttribute("aria-label") || el.getAttribute("title") || el.textContent || el.value || "").trim();
       if (!name) unnamed.push(label(el));
       if (unnamed.length > 20) break;
+    }
+    /**
+     * ⭐ **The arrangement's own geometry, measured where it is drawn.** The matrix asserts these on the three desktop
+     * browsers at release time; the audit reports them beside every other screen so a layout regression shows up in the
+     * same run as the picture that explains it: rows aligned, no header content past its column, and one origin for the
+     * lane column, the first ruler bar and the first region.
+     */
+    let arrangement = null;
+    const column = document.querySelector("[data-testid='arrangement-header-column'] > div:first-child");
+    const lanes = document.querySelector("[data-testid='arrangement-lane']");
+    if (column !== null && lanes !== null) {
+      const headerRows = [...column.querySelectorAll("[data-testid^='arrangement-header-row-']")];
+      const laneRows = [...lanes.children];
+      const tops = headerRows.map((row) => Math.round(row.getBoundingClientRect().top));
+      const laneTops = laneRows.map((row) => Math.round(row.getBoundingClientRect().top));
+      const overflow = headerRows.map((row) => {
+        const box = row.getBoundingClientRect();
+        const kids = [...(row.firstElementChild?.children ?? [])].map((child) => child.getBoundingClientRect());
+        return kids.length ? Math.round(Math.max(...kids.map((kid) => kid.right)) - box.right) : 0;
+      });
+      const firstRegion = lanes.firstElementChild?.querySelector("[data-testid^='arrangement-region-']");
+      const firstBar = document.querySelector("[data-testid='ruler-bar-0']");
+      arrangement = {
+        rows: headerRows.length,
+        aligned: headerRows.length === laneRows.length && tops.every((top, index) => top === laneTops[index]),
+        headerOverflowPx: overflow.length ? Math.max(...overflow) : null,
+        origin: {
+          lane: Math.round(lanes.getBoundingClientRect().left),
+          region: firstRegion ? Math.round(firstRegion.getBoundingClientRect().left) : null,
+          bar: firstBar ? Math.round(firstBar.getBoundingClientRect().left) : null,
+        },
+      };
     }
     const text = document.body.innerText || "";
     const dialogs = [...document.querySelectorAll("[role='dialog'], [role='menu'], [role='listbox']")]
@@ -148,6 +192,7 @@ const collect = (page) =>
       unnamed,
       dialogs,
       badText: ["undefined", "NaN", "[object Object]"].filter((n) => text.includes(n)),
+      arrangement,
     };
   });
 
@@ -172,9 +217,14 @@ const record = async (page, step, problems, extra = {}) => {
   const row = { step, ...extra, ...problems, ...diag };
   report.push(row);
   const flag = diag.clipped.length ? "❌" : "✓";
+  const grid = diag.arrangement
+    ? `  grid ${diag.arrangement.rows} rows ${diag.arrangement.aligned ? "aligned" : "MISALIGNED"}` +
+      `, header overflow ${diag.arrangement.headerOverflowPx ?? "-"} px, origin ` +
+      `${diag.arrangement.origin.lane}/${diag.arrangement.origin.bar}/${diag.arrangement.origin.region}`
+    : "";
   console.log(
     `${flag} ${step.padEnd(26)} ${String(diag.bodyHeight).padStart(6)}px  clipped ${String(diag.clipped.length).padStart(2)}  ` +
-      `scroller ${String(diag.overflow.length).padStart(2)}  unnamed ${diag.unnamed.length}  errors ${problems.pageErrors.length + problems.consoleErrors.length}`
+      `scroller ${String(diag.overflow.length).padStart(2)}  unnamed ${diag.unnamed.length}  errors ${problems.pageErrors.length + problems.consoleErrors.length}${grid}`
   );
   return row;
 };
@@ -193,6 +243,21 @@ for (const route of filtered) {
   try {
     await page.goto(`${base}${route.url}`, { waitUntil: "domcontentloaded" });
     await settle(page);
+    if (route.mount && (await page.$("[data-testid='new-project-panel-v2']"))) {
+      // ⭐ A DOM click, and Create only once the card says it is chosen: both measured in `test_matrix.js` -- a
+      // coordinate click lands on the modal, and both clicks in one tick create the previous render's template.
+      await page.evaluate(() => document.querySelector("[data-testid='template-samplers']")?.click());
+      await page
+        .waitForFunction(
+          () => document.querySelector("[data-testid='template-samplers']")?.getAttribute("aria-pressed") === "true",
+          { timeout: 5000 }
+        )
+        .catch(() => null);
+      await page.waitForTimeout(150);
+      await page.evaluate(() => document.querySelector("[data-testid='new-project-create']")?.click());
+      if (route.wait) await page.waitForSelector(route.wait, { state: "attached", timeout: 30000 }).catch(() => null);
+      await page.waitForTimeout(1200);
+    }
     await record(page, `route-${route.name}`, problems, { url: route.url });
   } catch (error) {
     report.push({ step: `route-${route.name}`, url: route.url, ok: false, error: String(error).slice(0, 200), ...problems });
@@ -246,6 +311,17 @@ fs.writeFileSync(
     `# Screen audit — ${stamp}`,
     "",
     `Viewport: ${W}x${H}. Screens: ${report.length}.`,
+    "",
+    "## The arrangement's geometry (the surface the layout reports are about)",
+    ...(report
+      .filter((r) => r.arrangement)
+      .map(
+        (r) =>
+          `- ${r.step}: ${r.arrangement.rows} header row(s), ${r.arrangement.aligned ? "aligned with their lanes" : "**MISALIGNED**"}, ` +
+          `header content overflow ${r.arrangement.headerOverflowPx ?? "-"} px, origin lane/bar/region ` +
+          `${r.arrangement.origin.lane}/${r.arrangement.origin.bar}/${r.arrangement.origin.region}`
+      )
+      .concat(report.some((r) => r.arrangement) ? [] : ["- (no arrangement screen in this run)"])),
     "",
     "## Clipped content (nothing scrolls it into reach)",
     ...(clipped.length ? clipped.map((r) => `- ${r.step}: ${r.clipped.map((c) => c.el).join(", ")}`) : ["- none"]),
