@@ -830,3 +830,12 @@
 | ✅ **判据随实情改写** | ⭐ `src/test/webDebugBundle.test.ts` 改指 B ✓（断言版本＋时刻 ✓、分区字节 ✓、失败请求只留状态 ✓、无音符内容 ✓、名规 `…​.tar.gz` ✓）｜⭐ `src/test/debugBundleRow.test.tsx` 改为 `async` ＋ 等归档落地 ✓ ＋ 名规改 `.tar.gz` ✓ | §890 |
 | ⚠️ **写 JSX／插入代码的两处教训** | ⭐ 用 Python 插代码时**替换掉了 `return {`** ✗（`tsc` 报 5 处 ✓）⇒ ⭐ 插入要**锚在完整语句**上 ✓｜⭐ 替换 `collectedAt` 行时**连带删了该字段** ✗ ⇒ ⭐ 改后**跑 `tsc` 当闸门** ✓ 才发现 ✓ | §890 |
 
+## 2026-10-07 08:33 回填（第 4 条规矩：改完实现回来改表）
+
+| 面 | 变化 | 依据 |
+|---|---|---|
+| ✅ **MCP 面：`add_arrangement_notes` 当场报告音域（只报告 ✓）** | 回包新增 **`addedPitchRange`**（本次写入的最低／最高 ＋ 音名 ✓）、**`trackPitchRange`**（写入后该轨音域 ✓）、**`widenedTrackRange`**（本次是否让该轨变宽 ✓）｜⭐ **不拒绝** ✓：越过邻轨是作曲家可能是故意的选择 ✓ | 执行顺序 ③（§900‑906）|
+| ⚠️ **判据抓出一个真缺陷 ✗** | ⭐ 我最初**先加音符、再算音域** ✗ ⇒ `widenedTrackRange` 比较的是"新 vs 新" ⇒ **恒为 false** ✗｜⭐ `arrangementNoteAbilities.test.ts` 的新判据要求"第二批更低 ⇒ true" ✓ ⇒ ⭐ 才发现 ✓ ⇒ ⭐ 改为**加音符之前先读该轨原有音域** ✓ | §906 |
+| ⭐ **音域用循环求，不用展开** | ⭐ `Math.min(...pitches)` 在几十万音符上爆栈 ✓（`mcp/arrangement.ts` 原有注释同此 ✓）⇒ ⭐ 两处都用 `for` ✓ | §903 |
+| ⭐ **v2 的音符在 `notesByTrack`（按 `trackId` 键 ✓）** | ⭐ 不在 track 上 ✗（`TrackV2` 无 `notes` ✓ ⇒ `tsc` 拦下 ✓）⇒ ⭐ 与 v2 包形状一致（`tracks`＋`notes` 分开 ✓）| §903 |
+

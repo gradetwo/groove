@@ -59,3 +59,35 @@ describe("the abilities the section tool carried, in arrangement terms", () => {
     expect(notesOf(id, trackId).map((note) => note.pitch).sort((a, b) => a - b)).toEqual([58, 59, 60]);
   });
 });
+
+  it("⭐ reports the pitch range a call wrote, and whether it widened the track", async () => {
+    const { id, trackId } = await setup();
+    // ⭐ A single note on an empty track states its own range; nothing is widened, because there was nothing to widen.
+    const first = await call("add_arrangement_notes", {
+      arrangementId: id,
+      trackId,
+      notes: [{ pitch: 60, startBeats: 0, lengthBeats: 1, velocity: 100 }],
+    });
+    const firstAdded = first.addedPitchRange as { lowest: number; highest: number; lowestName: string };
+    expect(firstAdded.lowest).toBe(60);
+    expect(firstAdded.highest).toBe(60);
+    expect(firstAdded.lowestName).toBe("C4");
+    expect(first.widenedTrackRange).toBe(false);
+
+    // ⭐ A second call an octave and a half lower is what widens it -- and the report has to say so, or the field is decoration.
+    const second = await call("add_arrangement_notes", {
+      arrangementId: id,
+      trackId,
+      notes: [{ pitch: 36, startBeats: 4, lengthBeats: 1, velocity: 100 }],
+    });
+    const secondAdded = second.addedPitchRange as { lowest: number };
+    const trackRange = second.trackPitchRange as { lowest: number; highest: number };
+    expect(secondAdded.lowest).toBe(36);
+    expect(trackRange.lowest).toBe(36);
+    expect(trackRange.highest).toBe(60);
+    expect(second.widenedTrackRange).toBe(true);
+
+    // ⭐ And the notes themselves are where the model keeps them, so the report is a reading rather than a second copy.
+    expect(notesOf(id, trackId).map((note) => note.pitch).sort((a, b) => a - b)).toEqual([36, 60]);
+  });
+

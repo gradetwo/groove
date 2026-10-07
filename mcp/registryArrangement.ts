@@ -26,7 +26,7 @@ import { renderAudio } from "./render/worker";
 import os from "node:os";
 import path from "node:path";
 import { fromMidi } from "../src/data/midiToArrangement";
-import { collectTranspositions } from "../src/data/pitchTruth";
+import { collectTranspositions, noteName } from "../src/data/pitchTruth";
 import { STRING_INSTRUMENT_IDS, StringInstrument } from "../src/data/stringTechniques";
 import { addMcpTrack, exportMcpArrangementMidi, exportMcpMusicXml, importMcpMusicXml, removeMcpTrack, renameMcpTrack, setMcpTrackFlag, setMcpTrackKind } from "./arrangement";
 import { situationsArgument, situationsByPart } from "./toolKit";
@@ -869,8 +869,60 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
     handler: (args) => {
       try {
         const notes = args.notes as readonly { pitch: number; startBeats: number; lengthBeats: number; velocity: number }[];
+        /**
+         * ⭐ **The track's range is read *before* the notes land.** Reading it afterwards would make `widenedTrackRange` always false: the
+         * new notes are already inside the range being compared with, so the question "did this call reach further" could never be answered
+         * yes. The criterion in `arrangementNoteAbilities.test.ts` is what caught that.
+         */
+        const before = (getMcpArrangement(String(args.arrangementId))?.notesByTrack ?? {})[String(args.trackId)] ?? [];
+        let priorLow = Number.POSITIVE_INFINITY;
+        let priorHigh = Number.NEGATIVE_INFINITY;
+        for (const note of before) {
+          if (note.pitch < priorLow) priorLow = note.pitch;
+          if (note.pitch > priorHigh) priorHigh = note.pitch;
+        }
         const result = addMcpTrackNotes(String(args.arrangementId), String(args.trackId), notes as never);
-        return { ...result, requested: notes.length };
+        /**
+         * ⭐ **The pitch range the call wrote, and the track's own range afterwards, reported together.**
+         *
+         * A wrong octave is the mistake this catches, and catching it here is what makes the reply useful: the whole part arrives at once, so
+         * the range is in hand at the moment it is written rather than at the next listen. It is a report and nothing else -- a range that
+         * widens the track is stated, never refused, because a part that reaches past its neighbours is a choice a composer may be making on
+         * purpose. Both bounds are found by looping: a spread over a few hundred thousand pitches overflows the stack, and that is exactly the
+         * kind of part this tool exists for.
+         */
+        let addedLow = notes[0]!.pitch;
+        let addedHigh = notes[0]!.pitch;
+        for (const note of notes) {
+          if (note.pitch < addedLow) addedLow = note.pitch;
+          if (note.pitch > addedHigh) addedHigh = note.pitch;
+        }
+        const arrangement = getMcpArrangement(String(args.arrangementId));
+        let lowest = addedLow;
+        let highest = addedHigh;
+        for (const note of arrangement?.notesByTrack?.[String(args.trackId)] ?? []) {
+          if (note.pitch < lowest) lowest = note.pitch;
+          if (note.pitch > highest) highest = note.pitch;
+        }
+        return {
+          ...result,
+          requested: notes.length,
+          addedPitchRange: {
+            lowest: addedLow,
+            highest: addedHigh,
+            lowestName: noteName(addedLow),
+            highestName: noteName(addedHigh),
+          },
+          trackPitchRange: {
+            lowest,
+            highest,
+            lowestName: noteName(lowest),
+            highestName: noteName(highest),
+          },
+          /** ⭐ True when this call is what made the track reach further, in either direction. An empty track cannot be widened. */
+          widenedTrackRange:
+            before.length > 0 && (addedLow < priorLow || addedHigh > priorHigh),
+        };
       } catch (error) {
         return failure((error as Error).message);
       }
