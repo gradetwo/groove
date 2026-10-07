@@ -389,11 +389,14 @@ async function clickCentred(page, selector) {
   await page.click(selector, { force: true });
 }
 
-/** Active steps in one track row of the step matrix. */
-async function countActiveSteps(page, trackIdx) {
-  return page.$$eval(`[data-track-idx="${trackIdx}"][data-step-idx]`, (cells) =>
-    cells.filter((c) => c.getAttribute("aria-selected") === "true").length
-  );
+/**
+  * ⭐ **Notes marked in the arrangement's own roll.**
+  *
+  * The step matrix this used to read is gone with the studio; `trackIdx` stays in the signature because the callers pass one, and the roll
+  * shows one track at a time, so the count is already about that track.
+  */
+async function countActiveSteps(page, _trackIdx) {
+  return page.$$eval("[data-testid='roll-grid'] [data-selected='true']", (notes) => notes.length);
 }
 
 /**
@@ -1627,20 +1630,35 @@ async function runTestOnTarget(target, baseUrl) {
     const drawTarget = await page.evaluate(() => {
       // The roll's own track selector is the app's definition of "melodic", so use it rather than
       // guessing roles from accessible labels.
-      const select = document.querySelector("[data-testid='piano-roll-track']");
-      const melodicIdx = select ? [...select.options].map((o) => Number(o.value)) : [];
-      for (const trackIdx of melodicIdx) {
-        const cells = [...document.querySelectorAll(`[data-track-idx="${trackIdx}"][data-step-idx]`)];
-        const empty = cells.find((c) => c.getAttribute("aria-selected") !== "true");
-        if (empty) return { trackIdx, stepIdx: Number(empty.getAttribute("data-step-idx")) };
+      /**
+       * ⭐ **An empty step, found from the roll's own geometry.**
+       *
+       * The arrangement's roll shows one track at a time and draws each step `CELL` pixels wide, so a step is empty when no note starts at
+       * that x. The studio's step matrix -- a grid of cells per track -- is gone, and with it the notion of picking a track here: the roll is
+       * already showing the selected one.
+       */
+      const grid = document.querySelector("[data-testid='roll-grid']");
+      if (!grid) return null;
+      const CELL = 12;
+      const rect = grid.getBoundingClientRect();
+      const taken = new Set(
+        [...grid.querySelectorAll("[data-selected]")].map((n) => Math.round(n.getBoundingClientRect().left))
+      );
+      const steps = Math.max(1, Math.round(rect.width / CELL));
+      for (let step = 0; step < steps; step += 1) {
+        if (!taken.has(Math.round(rect.left + step * CELL))) return { trackIdx: null, stepIdx: step };
       }
       return null;
     });
-    if (!drawTarget) throw new Error("No melodic track with an empty step was found to draw into");
+    if (!drawTarget) throw new Error("No empty step was found in the arrangement's roll to draw into");
     const activeBefore = await countActiveSteps(page, drawTarget.trackIdx);
 
     // The roll defaults to the first melodic track; select the measured one so both views agree.
-    const selectedTrack = await page.$eval("[data-testid='piano-roll-track']", (el) => Number(el.value));
+    /** ⭐ The roll shows the selected track, so there is no track picker to drive; when one exists, it is used. */
+    const rollTrackSelect = await page.$("[data-testid='piano-roll-track']");
+    const selectedTrack = rollTrackSelect
+      ? await page.$eval("[data-testid='piano-roll-track']", (el) => Number(el.value))
+      : drawTarget.trackIdx;
     if (selectedTrack !== drawTarget.trackIdx) {
       await page.selectOption("[data-testid='piano-roll-track']", String(drawTarget.trackIdx));
       await page.waitForTimeout(250);
@@ -1705,8 +1723,9 @@ async function runTestOnTarget(target, baseUrl) {
       const scrollContainer = grid.closest(".overflow-y-auto") || grid.parentElement;
       const cRect = scrollContainer ? scrollContainer.getBoundingClientRect() : null;
       const rect = grid.getBoundingClientRect();
-      const stepCount = document.querySelectorAll(`[data-track-idx="${trackIdx}"][data-step-idx]`).length || 16;
-      const cellW = rect.width / stepCount;
+      /** ⭐ The roll's own cell width: `PianoRollV2` draws each step `CELL` pixels wide. */
+      const cellW = 12;
+      const stepCount = Math.max(1, Math.round(rect.width / cellW));
       const targetY = cRect ? cRect.top + cRect.height / 2 : rect.top + 8;
       const x = rect.left + stepIdx * cellW + cellW / 2;
       return { x, y: targetY };
@@ -2061,10 +2080,11 @@ async function runTestOnTarget(target, baseUrl) {
           return orig(...a);
         };
       }
+      /** ⭐ The roll's own notes: where each sits, and whether it is marked. The step matrix this read is gone. */
       const signature = () =>
-        [...document.querySelectorAll("[data-track-idx][data-step-idx]")]
-          .map((c) => (c.getAttribute("aria-selected") === "true" ? "1" : "0"))
-          .join("");
+        [...document.querySelectorAll("[data-testid='roll-grid'] [data-selected]")]
+          .map((n) => `${Math.round(n.getBoundingClientRect().left)}:${n.getAttribute("data-selected") ?? ""}`)
+          .join("|");
       window.__genreDiag.start = () =>
         setInterval(() => window.__genreDiag.samples.push(signature()), 50);
     });
