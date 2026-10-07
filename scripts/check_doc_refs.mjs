@@ -101,6 +101,18 @@ const PROPOSED = new Map([
    * for the version they were written about, so they are declared rather than edited. Both scripts measured the studio's own controls.
    */
   [
+    "src/components/sequencer/Toolbar.tsx",
+    "Removed 2026-10-07 with the studio: it was the sequencer panel's toolbar, and OPEN_WORK.md's readings name it because they were taken with it.",
+  ],
+  [
+    "src/test/toolbarTiers.test.tsx",
+    "Removed with the tier table it guarded; the same OPEN_WORK.md section records what it checked.",
+  ],
+  [
+    "src/components/sequencer/toolbarTiers.ts",
+    "Removed 2026-10-07 with the studio toolbar it described: its tier table decided which toolbar controls were visible, and the arrangement surface has no such toolbar. OPEN_WORK.md records the readings taken with it.",
+  ],
+  [
     "scripts/measure_toolbar_density.mjs",
     "Removed 2026-10-07: it counted the studio toolbar's controls, which the arrangement surface does not have. The plan document names it.",
   ],
