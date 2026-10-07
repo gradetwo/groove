@@ -109,6 +109,12 @@ export async function renderPatternInSpans(
        * span 0 that renders different music is not a trade this project takes, so the first span keeps rendering the whole
        * pattern and the cost problem stays open (see the note in the caller and `docs/OPEN_WORK.md`).
        */
+      /**
+       * ⚠️ **`windowBars` is deliberately NOT passed here** (kept in the renderer, measured, unused). It would make the
+       * first span cost a span instead of the whole piece — the open cost problem — but the gate localises its difference
+       * to the **first quarter** (−1.4 dBFS, exact everywhere else), so a windowed bar-0 render is not the same music at
+       * the head. Until that is understood, the first span keeps rendering the whole pattern.
+       */
       options: { ...parentOptions, headless: true },
       catalogueRead,
       context,
