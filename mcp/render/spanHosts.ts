@@ -29,6 +29,11 @@ export const SPAN_PRE_ROLL_SEC = 2;
 
 export interface SpanRenderOutcome {
   buffer: AudioBuffer;
+  /** ⭐ The plan actually rendered: each span's window and the frames the renderer reported for it. */
+  spanPlan: Array<{ fromBar: number; toBar: number; atFrame: number; last: boolean; preRollFrames: number; chunkEndFrame: number }>;
+  /** ⭐ Where the span children wrote their raw PCM — kept when `GROOVE_KEEP_SPANS=1`, for exactly the comparison that
+   * tells a child-side bug from a merge-side one (the smoke test reads these). */
+  spanScratchDir: string;
   report: MergeReport;
   spanMs: number[];
   audioLanes: OfflineAudioLaneReport;
@@ -158,10 +163,30 @@ export async function renderPatternInSpans(
     outcomes.map((outcome) => outcome.result),
     { crossfadeFrames: Math.max(0, Math.round(0.05 * sampleRate)) }
   );
-  await fs.rm(scratch, { recursive: true, force: true });
+  /**
+   * ⭐ **A debugging seam, not a feature.** `GROOVE_KEEP_SPANS=1` leaves the span children's raw PCM and a `plan.json`
+   * on disk, which is the only way to tell "the child rendered different music" from "the merge put the right music in
+   * the wrong place" without threading debug fields through an interface that lives in the pinned `worker.ts`.
+   */
+  if (process.env.GROOVE_KEEP_SPANS) {
+    /**
+     * ⭐ **The path is recorded where a reader can find it.** The first version left only a randomly named directory in
+     * `/tmp`, and the probe picked the wrong one — a debugging seam that cannot be located is not a seam.
+     */
+    const marker = process.env.GROOVE_KEEP_SPANS === "1" ? path.join(os.tmpdir(), "groove-spans-latest") : process.env.GROOVE_KEEP_SPANS;
+    await fs.writeFile(marker, scratch);
+    await fs.writeFile(
+      path.join(scratch, "plan.json"),
+      JSON.stringify({ framesPerBar, preRollFrames, spans: spans.map((span, index) => ({ ...span, preRollFrames: outcomes[index]?.result.preRollFrames, chunkEndFrame: outcomes[index]?.result.chunkEndFrame })) }, null, 1)
+    );
+  } else {
+    await fs.rm(scratch, { recursive: true, force: true });
+  }
   return {
+    spanScratchDir: scratch,
     buffer: merged.buffer as unknown as AudioBuffer,
     report: merged.report,
+    spanPlan: spans.map((span, index) => ({ ...span, preRollFrames: outcomes[index]?.result.preRollFrames ?? 0, chunkEndFrame: outcomes[index]?.result.chunkEndFrame ?? 0 })),
     spanMs: outcomes.map((outcome) => outcome.ms),
     /**
      * ⭐ **One lane entry per track, events summed.** Each span covers a disjoint stretch of the timeline, so the events
