@@ -84,8 +84,13 @@ export function createServer(): McpServer {
                   message,
                 },
               })
-              .catch(() => {
-                // A disconnected client is not a failed render: the work still finishes and the result is still written.
+              .catch((error: unknown) => {
+                /**
+                 * A disconnected client is not a failed render: the work still finishes and the result is still written.
+                 * ⭐ But the error is *said* under `GROOVE_TRACE_PROGRESS`, because a swallowed send failure is exactly
+                 * how "the tool promises progress and no notification ever arrives" looks from the outside.
+                 */
+                if (process.env.GROOVE_TRACE_PROGRESS === "1") console.error("PROGRESS-SEND-FAILED", error);
               });
           });
           const context = { ...(progress ? { progress } : {}) };

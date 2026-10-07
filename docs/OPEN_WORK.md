@@ -18616,3 +18616,20 @@ describe("the grid's editing actions", () => {
   ⏳ 修法（下一轮 ✓）：在**注册表那条注册路**上同样调 `createRenderProgress(extra?._meta?.progressToken, …)` ✓
     并把结果放进 handler 的 `ctx` ✓；随后用同一个冒烟确认 `rendered 1 of N spans` 真的到达客户端 ✓，
     并补一条能红的判据 ✓（照 `budgetHonesty` 里那两例的形状 ✓）。
+
+### 七百三十一、✅ **更正 §730：不是产品缺陷，是我的探针把通知丢掉了**（2026-10-08 ✓）
+
+  ⭐ §730 的结论"注册表那条路根本没建 `ctx.progress`"**是错的** ✗，原因很朴素 ✓：**服务端的 stderr 被我的探针丢掉了** ✗
+    （`spawn(..., stdio: ["pipe","pipe","pipe"])` 但只读了 stdout ✓）⇒ trace 其实打印了 ✓，只是我看不见 ✓。
+    把 stderr 转发后一次就看清了 ✓：
+    · `PROGRESS-TRACE token=span-1` ✓ ⇒ **服务端确实收到了 token** ✓；
+    · `PROGRESS-SEND token=span-1 value=0 / 1600 / 8160 …` ✓ ⇒ **服务端确实在发** ✓；
+    · 客户端侧收到 ✓：`{"method":"notifications/progress","params":{"progressToken":"span-1","progress":13280,"total":132800,"message":"rendering 1 bar(s) of : 10% (13280 of 132800 frames rendered)"}}` ✓、
+      `"render finished; writing the file"` ✓。
+  ⭐ 我这边真正的 bug 是**探针的读取器**：它是在**单行**版本上做匹配的 ✗，而我早先那次"加通知分支"的补丁匹配的是**多行**版本 ✗
+    ⇒ 补丁静默没生效 ✗ ⇒ `progressNotes` 一直是空数组 ✓（这就是"一个通知都没收到"的全部原因 ✓）。
+  ⭐ 教训（本轮第三次同类 ✓）：**先确认量具读到了什么，再判断产品有没有做** ✓——
+    这次我差点把一个**正常工作的进度通道**写成缺陷 ✗。已在代码里保留 stderr 转发与两条 trace ✓。
+  ⚠️ 仍未单独取证的一点 ✓：**"rendered N of M spans"** 那条按段消息本身 ✓——
+    冒烟里能走到 span 的 fixture 与"便宜"两件事不容易同时满足 ✓（模板编曲被守卫回退、合成器小样本太快 ✓）；
+    但进度通道本身已被证明到达客户端 ✓，而 `onSpanDone → reportOf` 的接线在类型与代码上都在 ✓。
