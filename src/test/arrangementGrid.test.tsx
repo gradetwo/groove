@@ -438,4 +438,43 @@ describe("the phone layout does not shrink M/S/R", () => {
     expect(css).toMatch(/\.arr-head-msr\s*\{[^}]*min-height:\s*44px/);
     expect(css).toMatch(/\.arr-head-msr\s*\{[^}]*min-width:\s*44px/);
   });
+  it("⭐ labels the toolbar's clusters, and never leaves a label standing on its own", () => {
+    /**
+     * ⭐ **The owner's "the buttons above are incomprehensible", as structure.**
+     *
+     * Each control already said what it does; nothing said which family it belonged to, so five edit verbs, the form
+     * buttons, the transport, the grid, the effects and the file entries read as one flat row of 36 controls. Each
+     * cluster now opens with a labelled divider — and the divider is **inside** the cluster's own wrapper, which is
+     * the half of this that has a failure mode: a divider sitting beside its controls can wrap onto the row above
+     * them, which is exactly what happened on the first attempt (measured at 1820x918: the FILE label ended row 2
+     * while Export and Import began row 3). The assertion below is what makes that impossible to reintroduce.
+     */
+    renderView();
+    const toolbar = screen.getByTestId("arrangement-toolbar");
+    const dividers = [...toolbar.querySelectorAll("[data-toolbar-divider]")];
+    expect(dividers.map((divider) => divider.getAttribute("data-toolbar-divider"))).toEqual([
+      "Edit",
+      "Form",
+      "Pitch",
+      "Transport",
+      "Grid",
+      "FX",
+      "Zoom",
+      "File",
+    ]);
+    for (const divider of dividers) {
+      const cluster = divider.parentElement;
+      expect(cluster).not.toBeNull();
+      // ⭐ A label with no control beside it is the defect: the group is the divider *and* what it names.
+      expect(cluster!.querySelectorAll("button, input, select").length).toBeGreaterThan(0);
+      // ⭐ And the divider is the cluster's first child, so it cannot drift to the end of the previous row.
+      expect(cluster!.firstElementChild).toBe(divider);
+      expect(cluster!.parentElement).toBe(toolbar);
+    }
+    // The eight clusters carry the toolbar: five edit verbs, the form, the pitch tools, the transport, the grid, the
+    // effects, the zoom and the file entries. (The editor tabs are deliberately not in a cluster — they switch which
+    // editor is open rather than doing something to the music.)
+    const grouped = dividers.flatMap((divider) => [...divider.parentElement!.querySelectorAll("button, input, select, label")]);
+    expect(grouped.length).toBeGreaterThan(30);
+  });
 });

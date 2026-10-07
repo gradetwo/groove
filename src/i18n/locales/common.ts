@@ -160,10 +160,24 @@ export const commonMessages = {
   arrangement_hscroll: { en: "Scroll the arrangement sideways", zh: "横向滚动编排" },
   arrangement_tracks_label: { en: "Arrangement tracks", zh: "编排轨道" },
   /**
+   * ⭐ The toolbar's cluster labels. The controls say what they do; these say which family they are in, which is what
+   * "the buttons above are incomprehensible" was missing.
+   */
+  arrangement_group_edit: { en: "Edit", zh: "编辑" },
+  arrangement_group_form: { en: "Form", zh: "形态" },
+  arrangement_group_harmony: { en: "Pitch", zh: "音高" },
+  arrangement_group_transport: { en: "Transport", zh: "走带" },
+  arrangement_group_grid: { en: "Grid", zh: "网格" },
+  arrangement_group_fx: { en: "FX", zh: "效果" },
+  arrangement_group_zoom: { en: "Zoom", zh: "缩放" },
+  arrangement_group_file: { en: "File", zh: "文件" },
+  /**
    * The old row-based list's disclosure. The grid is the arrangement's editing surface; this list is the one place
    * the per-bar step strip and the pan control exist, so it stays reachable without being a second wall of tracks.
    */
   arrangement_track_list_summary: { en: "Track list — steps, level and pan ({count})", zh: "轨道列表 —— 步进、电平与声像（{count}）" },
+  /** ⭐ The detail dock's empty state — it was a hardcoded English sentence in a bilingual app. */
+  arrangement_detail_empty: { en: "Select a track to see its takes.", zh: "选一条轨道，这里就会显示它的段落与音符。" },
   /** ⭐ The landing panel's genre filter: 159 chips was a ten-row wall before it existed. */
   new_project_genre_filter: { en: "Filter genres", zh: "筛选流派" },
   new_project_genre_count: { en: "{shown} / {total}", zh: "{shown} / {total}" },

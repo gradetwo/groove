@@ -283,6 +283,24 @@ export interface ArrangementViewV2Props {
   seekTransport?: (step: number) => number | undefined;
 }
 
+/**
+ * ⭐ **A labelled divider between the toolbar's clusters.**
+ *
+ * The owner's report was that "the buttons above are incomprehensible": each control did say what it does
+ * ("Ramp velocity", "Quantise lengths"), but nothing said which family it belonged to, so five edit verbs, the
+ * form buttons, the transport and the click track read as one flat row of 36 controls. This is the smallest
+ * thing that answers it — a hairline and a 9 px word at each boundary — and it is `aria-hidden`, because the
+ * groups are a reading aid for the eye: the controls inside carry their own accessible names.
+ */
+function ToolbarDivider({ label }: { label: string }) {
+  return (
+    <span aria-hidden="true" data-toolbar-divider={label} className="mx-1 flex shrink-0 items-center gap-1.5 self-stretch">
+      <span className="h-6 w-px bg-[rgb(var(--d-line))]" />
+      <span className="text-[9px] uppercase tracking-widest text-text opacity-45">{label}</span>
+    </span>
+  );
+}
+
 export function ArrangementViewV2({ songId, capture, bar = 0, player, instruments, playheadBar, initialArrangement, onArrangementChange, onCreateProject, loadProblem, setTransportLoopRange, seekTransport, initialAutoPlay, onClearInitialAutoPlay, engineRef , onOpenHelp }: ArrangementViewV2Props) {
   const { t, isZh } = useLanguage();
 
@@ -1023,6 +1041,8 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           * the selected track, or on the first track that actually carries notes, so an arrangement with music in it is never
           * a dead end when nothing is selected.
           */}
+        <span className="flex items-center gap-1">
+        <ToolbarDivider label={t("arrangement_group_edit")} />
         <button
           type="button"
           data-testid="arrangement-ramp-velocity"
@@ -1180,6 +1200,9 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           * commits the same command the length field does — one command, one undo — and the notes are left exactly as they are,
           * which is what makes picking one form and picking another reversible.
           */}
+        </span>
+        <span className="flex items-center gap-1">
+        <ToolbarDivider label={t("arrangement_group_form")} />
         <button
           type="button"
           data-testid="arrangement-form-loop"
@@ -1221,6 +1244,9 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           * this layer: the marks give the span, the field gives the interval, and one command moves it — so one press is one
           * undo, and transposing by the negative interval brings the music back exactly.
           */}
+        </span>
+        <span className="flex items-center gap-1">
+        <ToolbarDivider label={t("arrangement_group_harmony")} />
         <label className="flex items-center gap-1 text-xs text-text opacity-90">
           ±
           <input
@@ -1285,6 +1311,9 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
          * in five of the six skins it *is* `--d-accent`, so an accent-ink word on an accent fill measures 1:1. A label
          * nobody can read is the opposite of the indication this change is about.
          */}
+        </span>
+        <span className="flex items-center gap-1">
+        <ToolbarDivider label={t("arrangement_group_transport")} />
         <button
           type="button"
           data-testid="arrangement-play"
@@ -1441,6 +1470,9 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           </button>
         </span>
 
+        </span>
+        <span className="flex items-center gap-1">
+        <ToolbarDivider label={t("arrangement_group_grid")} />
         {/* Tempo and bars: the arrangement's own declared length and speed, editable where the transport is. */}
         <label className="flex items-center gap-1 text-[10px] text-text opacity-80">
           {t("arrangement_tempo")}
@@ -1540,6 +1572,9 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
 
         <ArrangementClickTrackV2 engineRef={engineRef} />
 
+        </span>
+        <span className="flex items-center gap-1">
+        <ToolbarDivider label={t("arrangement_group_fx")} />
         {/* Master rack: the four blocks the engine builds, each with its own switch. Parameters come after. */}
         {(["filterEnabled", "saturationEnabled", "chorusEnabled", "bitcrusherEnabled"] as const).map((key) => {
           const on = (fxState ?? DEFAULT_FX_STATE)[key];
@@ -1649,6 +1684,9 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           />
         </span>
 
+        </span>
+        <span className="flex items-center gap-1">
+        <ToolbarDivider label={t("arrangement_group_zoom")} />
         {/* Zoom. The same control the ruler's own manual gestures answer to, and the reason the labels subdivide. */}
         <span className="flex shrink-0 items-center">
           <button
@@ -1674,6 +1712,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           <span data-testid="arrangement-zoom-value" className="w-8 text-right font-['JetBrains_Mono'] text-[10px] text-text opacity-70">
             {pixelsPerBar}
           </span>
+        </span>
         </span>
 
         {/**
@@ -1713,6 +1752,8 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
          * the one place on this route where a person looks for "get this out of here" or "bring that in". Same six
          * export words as the workbench toolbar, so the two surfaces do not teach two vocabularies.
          */}
+        <span className="flex items-center gap-1">
+        <ToolbarDivider label={t("arrangement_group_file")} />
         <ArrangementFileEntriesV2
           busy={files.busy}
           onExportMidi={files.exportMidi}
@@ -1725,6 +1766,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           {...(files.exportingKind === undefined ? {} : { exportingKind: files.exportingKind })}
           onCancelExport={files.cancelExport}
         />
+        </span>
       </div>
 
       {/**
@@ -1942,7 +1984,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
       <div data-testid="arrangement-detail" className="flex flex-col gap-2 rounded border border-[rgb(var(--d-line))] bg-[var(--d-surface,rgba(255,255,255,0.04))] p-3">
         {selected === undefined ? (
           // Said rather than left blank, so an empty panel reads as "nothing selected" instead of "something is broken".
-          <p>Select a track to see its takes.</p>
+          <p>{t("arrangement_detail_empty")}</p>
         ) : (
           <>
             <TakeSelectorV2 track={selected} bar={bar} onSelect={(takeId) => commit(selectTrackTakeCommand(selected.id, selected.selectedTakeId, takeId))} />
