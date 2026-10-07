@@ -61,8 +61,9 @@ export const FILE_TOOLS: ToolDefinition[] = [
   },
   {
     /**
-     * The other half of `export_groove`, and the answer to a composer's report that a song "lives only in the server's map, so a
-     * restart loses the whole arrangement": a package can be read back, validated, and put back into the server to continue.
+     * ⭐ **The other half of `export_groove`: a package comes back as the arrangement it was.** A composer reported that their work "lives
+     * only in the server's map, so a restart loses the whole arrangement"; a package can be read back, validated by the app's own validator,
+     * and put into the server again to continue. A package carrying the older shape is refused rather than guessed at.
      */
     name: "import_groove",
     title: "Load a .groove package as an arrangement",

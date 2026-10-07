@@ -856,3 +856,11 @@
 | ✅ **与 ③ 同一形状** | ⭐ 两处都用**循环**求音域 ✓（⭐ 防爆栈 ✓）、⭐ 都用 `noteName` 给音名 ✓、⭐ 都**只报告不拒绝** ✓ ⇒ ⭐ 术语与形状统一 ✓ | §903‑925 |
 | ⭐ **判据（能红 ✓）** | ⭐ `arrangementNoteAbilities.test.ts` 新增一例 ✓：⭐ 第 0 小节 48 音、第 2 小节 72 音 ⇒ ⭐ region(0,1) **只覆盖 48** ✓；⭐ region(20,21) **无音符** ⇒ `null` ✓；⭐ 清空 region ⇒ 恢复 48–72 ✓ | §925 |
 
+## 2026-10-07 09:09 回填（第 4 条规矩：改完实现回来改表）
+
+| 面 | 变化 | 依据 |
+|---|---|---|
+| ✅ **MCP 面：迁移 ② `registryFiles` 复核（3 个工具 ✓）** | ⭐ **实现早已是 v2** ✅：⭐ `export_groove` **接 `arrangementId`** ✓、⭐ 用 `buildArrangementPackage(arrangement)` ✓、⭐ 回包 **`version: 2`** ✓、⭐ 文件名按 id ✓（⭐ "an arrangement carries no name" ✓）｜⭐ `import_groove` **接 `.groove` 包 ⇒ 建 arrangement** ✓（⭐ `arrangementFromPackage` ＋ `putMcpArrangement` ✓），⭐ 旧形状**拒绝**而非猜测 ✓ | §931‑935 |
+| ⚠️ **只有文案是 v1 口径 ✗** | ⭐ `export_groove` 的 `title` 说"⭐ Export a **song**…"✗、⭐ `description` 说"⭐ Write a **song** created with **create_song**… carrying its **clips and sections**"✗ ⇒ ⭐ 与 v2 包形状（⭐ 存 `tracks`／`notes`／`takes`／`bars`／`tempoMap` ✓，⭐ **不存** clips／sections／slots ✗）**冲突** ✗｜⭐ 另有两处内部注释同病 ✗ | §933‑935 |
+| ✅ **改法：句子改说它所做的事** | ⭐ title ⇒ "⭐ Export an **arrangement**…"✓｜⭐ description ⇒ "⭐ Write an **arrangement**… carrying its **tracks, notes, takes, bars and tempo map**"✓｜⭐ 两处注释改以 arrangement 为主语 ✓（⭐ 作曲家原话的引用保留 ✓）｜⭐ `check:mcp` **0** ✓（⭐ 工具描述的门 ✓）｜⭐ 判据无牵挂 ✓（⭐ 无判据断言旧句子 ✓，⭐ 已核 ✓）| §933‑935 |
+
