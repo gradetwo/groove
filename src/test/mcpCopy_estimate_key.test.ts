@@ -17,7 +17,7 @@ const description = /\bdescription:\s*\n?\s*"((?:[^"\\]|\\.)*)"/s.exec(block)![1
 describe(TOOL + "'s description, after the split", () => {
   it("⭐ still says it reads the composition and why that beats an FFT", () => {
     for (const anchor of [
-      "Estimate the key of a pattern from **its",
+      "Estimate the key of an arrangement from",
       "The notes are what the composer chose, w",
       "Per-render loudness needs no tool: rende",
       "It reads the composition rather than the",

@@ -94,7 +94,7 @@ export const LIBRARY_TOOLS: ToolDefinition[] = [
     name: "get_custom_genre",
     title: "Get a custom genre",
     description:
-      "One custom genre in full: every recorded field and its eight-track pattern, exactly as save_custom_genre stored it. The pattern's genre_id is the genre's own id, so the pattern can be passed straight to get_pattern, apply_pattern_ops or render_audio.",
+      "One custom genre in full: every recorded field and its eight-track pattern, exactly as save_custom_genre stored it. The pattern's genre_id is the genre's own id. `create_arrangement` seeds from the shipped library, so a custom genre is read here and its material copied into an arrangement through the note tools.",
     readOnly: true,
     inputSchema: { id: z.string().describe("a custom genre id, as list_custom_genres returns") },
     handler: async (args) => {

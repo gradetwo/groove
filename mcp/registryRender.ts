@@ -4,17 +4,13 @@
  * ⚠️ Moved, not rewritten; helpers come from `./toolKit`.
  */
 import path from "node:path";
-import { patternFromGenre } from "../src/data/genreMix";
 import { legatoGapNote, legatoGapsFor } from "../src/data/legatoGaps";
-import { flattenSong } from "../src/data/songFlatten";
 import { chordChangeReattackNote, chordChangeReattacks } from "../src/data/stringTechniques";
-import { SequencerPattern } from "../src/types/genre";
 import { flattenMcpArrangement, getMcpArrangement, summariseArrangement } from "./arrangement";
-import { findGenre } from "./library";
 import { audioLaneReplyFields } from "./pattern";
 import { HEADLESS_POINTER_SENTENCE, headlessParameterDescription, renderBudgetSentence, renderCostSentence } from "./render/budget";
-import { auditionInstrumentNote, renderAudio, renderStems } from "./render/worker";
-import { ToolDefinition, failure, patternFromArgs, patternSchema, unknownGenre } from "./toolKit";
+import { auditionInstrumentNote, renderStems } from "./render/worker";
+import { ToolDefinition, failure } from "./toolKit";
 import { z } from "zod";
 
 export const RENDER_TOOLS: ToolDefinition[] = [

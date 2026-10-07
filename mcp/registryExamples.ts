@@ -5,9 +5,9 @@ import { examplesFor, listExamples } from "./examples";
 import { loudnessReport } from "./exporting";
 import { findGenre, getGenre, suggestProgression } from "./library";
 import { generateMelody } from "./melody";
-import { comparePatterns, patternStatistics, validatePattern } from "./pattern";
+import { comparePatterns } from "./pattern";
 import { validateProsody } from "./prosody";
-import { ToolDefinition, failure, patternFromArgs, patternSchema, unknownGenre } from "./toolKit";
+import { ToolDefinition, failure } from "./toolKit";
 import { z } from "zod";
 
 export const EXAMPLE_TOOLS: ToolDefinition[] = [
@@ -116,7 +116,7 @@ export const EXAMPLE_TOOLS: ToolDefinition[] = [
     name: "suggest_progression",
     title: "Suggest a chord progression in a key",
     description:
-      "Pick a progression from the committed library for an emotion or category and render it in the caller's key: returns the roman numerals, the concrete chords, and the songs that used it. Feed `chords` to apply_pattern_ops with set_chord_progression. It is a chooser plus a renderer rather than a generator, so every result traces to a committed entry.",
+      "Pick a progression from the committed library for an emotion or category and render it in the caller's key: returns the roman numerals, the concrete chords, and the songs that used it. Write the `chords` onto a track with add_arrangement_notes, holding each chord for as many beats as you want it. It is a chooser plus a renderer rather than a generator, so every result traces to a committed entry.",
     readOnly: true,
     inputSchema: {
       tonic: z.number().int().min(0).max(127).optional().describe("MIDI note of the key's tonic; default 60 (C)"),

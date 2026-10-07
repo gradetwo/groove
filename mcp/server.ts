@@ -26,14 +26,14 @@ export function createServer(): McpServer {
     { name: "groove-lab", version: VERSION },
     {
       instructions: [
-        "Groove Lab is a genre library and drum-machine studio: 159 genres with their real patterns, a sequencer,",
-        "exporters (WAV/MP3/MIDI/Ableton) and audio measurement.",
+        "Groove Lab is a genre library and an arrangement studio: 159 genres with their real material, a v2 arrangement",
+        "surface (tracks, notes, instruments, takes, mixing), exporters (WAV/MP3/MIDI/MusicXML/Ableton/Logic) and audio measurement.",
         "",
-        "Typical flow: search_genres or list_genres → get_genre (the recorded facts) → get_pattern (what it plays)",
-        "→ apply_pattern_ops (compose) → render_audio and/or share_url (hand it to a human).",
+        "Typical flow: search_genres or list_genres → get_genre (the recorded facts) → create_arrangement (seed from the genre)",
+        "→ add_arrangement_track / add_arrangement_notes (compose) → render_arrangement and export_* (hand it to a human).",
         "",
-        "Everything except render_audio runs without a browser. The library is read-only: apply_pattern_ops returns a",
-        "new pattern and never edits a genre.",
+        "Everything except the render tools runs without a browser. The library is read-only: create_arrangement makes a new",
+        "arrangement and never edits a genre.",
       ].join("\n"),
     }
   );

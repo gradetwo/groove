@@ -67,12 +67,12 @@ export function examplesFor(genreId: string): MCPExample[] {
       id: `${clean(genreId)}-as-arranged`,
       genreId: clean(genreId),
       title: { en: `${genre.name ?? genreId} — as the app arranges it`, zh: `${genreId} — 应用自身编排的样子` },
-      teaches: "the baseline: the pattern the app itself plays on entering this genre, with no edits",
-      recipe: ["get_pattern(genreId)"],
+      teaches: "the baseline: the material the app itself starts this genre from, with no edits",
+      recipe: ["create_arrangement({ genreId })", "get_arrangement({ arrangementId })"],
       pattern: base,
       notes: [
         "This is the material to imitate first; every other example is a change to it.",
-        "No tool call is needed to reproduce it beyond `get_pattern`.",
+        "`create_arrangement` seeds an arrangement from exactly this material; the `pattern` field is the v1 shape the renderer still plays underneath it.",
       ],
     },
     {
@@ -81,16 +81,18 @@ export function examplesFor(genreId: string): MCPExample[] {
       title: { en: `${genre.name ?? genreId} — a chosen progression and a written melody`, zh: `${genreId} — 选定进行 + 生成的旋律` },
       teaches: "composition: choose a progression for a feeling, place it, then write a melody over it",
       recipe: [
+        'create_arrangement({ genreId })',
         'suggest_progression({ emotion: "nostalgic", tonic: 60, mode: "minor" })',
-        "apply_pattern_ops({ op: \"set_chord_progression\", chords })",
-        "generate_melody({ tonic: 60, mode: \"minor\", bars: 4, form: \"AABA\", seed: 3 })",
-        "apply_pattern_ops({ op: \"clear_track\", track: \"lead\" }) then one set_step per note",
+        'add_arrangement_notes({ trackId: "chords", notes }) — one note per chord tone, held for the chord',
+        'generate_melody({ tonic: 60, mode: "minor", bars: 4, form: "AABA", seed: 3 })',
+        'add_arrangement_notes({ trackId: "lead", notes }) — the melody\'s steps, as beats',
       ],
       pattern: illustrated,
       notes: [
         chords.length ? `the progression is ${suggested.roman} → ${JSON.stringify(chords)}` : "no progression was available to place",
         `the melody is ${melody.statistics.notes} notes, ${melody.contour.join("")}, inside ${JSON.stringify(melody.range)}`,
         "the melody is placed on `lead` because that is the lane this genre reserves for a voice; nothing else in the pattern is touched",
+        "the `pattern` field is the v1 shape this example was built from; the recipe names the arrangement calls that write the same music today",
       ],
     },
   ];

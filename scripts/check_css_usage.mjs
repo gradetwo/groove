@@ -42,7 +42,7 @@ const SEARCH_DIRS = ["src", "index.html", "scripts"];
 const INTENTIONAL = new Map([
   [
     "animate-pulse-glow",
-    "Named in the reduced-motion guard's selector list beside \`.animate-pulse-play\` and \`.animate-pulse\`, which ARE used. The list is a safety net on purpose: a redundant arm costs nothing, whereas pruning it would change a reduced-motion guarantee for a class someone might apply later.",
+    "Named in the reduced-motion guard's selector list beside `.animate-pulse`, which IS used. The list is a safety net on purpose: a redundant arm costs nothing, whereas pruning it would change a reduced-motion guarantee for a class someone might apply later.",
   ],
   [
     "animate-orbit",

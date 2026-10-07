@@ -308,7 +308,7 @@ export function suggestProgression(args: {
     numerals,
     chords,
     ...(warnings.length ? { warnings } : {}),
-    why: `chosen for "${args.emotion ?? picked.category ?? "any"}" from ${POPULAR_PROGRESSIONS.length} committed progressions; feed \`chords\` to apply_pattern_ops with set_chord_progression`,
+    why: `chosen for "${args.emotion ?? picked.category ?? "any"}" from ${POPULAR_PROGRESSIONS.length} committed progressions; write the \`chords\` onto a track with add_arrangement_notes`,
   };
 }
 

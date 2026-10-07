@@ -957,7 +957,7 @@ try {
 
   const prompt = await client.request("prompts/get", { name: "compose_groove", arguments: { genre: "chicago-house" } });
   const promptText = prompt?.messages?.[0]?.content?.text ?? "";
-  check("prompts/get builds a usable brief", promptText.includes("chicago-house") && promptText.includes("apply_pattern_ops"), `${promptText.length} chars`);
+  check("prompts/get builds a usable brief", promptText.includes("chicago-house") && promptText.includes("add_arrangement_notes"), `${promptText.length} chars`);
 } catch (error) {
   failures.push(`❌ the client could not complete the session — ${error.message}`);
 } finally {

@@ -74,10 +74,6 @@
      * What survives is deliberate: `-x: none` still suppresses Chrome's two-finger horizontal
      * history-swipe (Back/Forward), which the step grid's own horizontal panning would otherwise
      * trigger constantly. Vertical belongs to the browser again, so the page scrolls.
-     *
-     * `.overscroll-x-contain` further down this file already used this exact split for the
-     * sequencer's own scroll pane; the root was simply the one place the lesson had not been
-     * applied.
      */
     overscroll-behavior-x: none;
     overscroll-behavior-y: auto;
@@ -203,21 +199,14 @@ input[type=range]::-moz-range-thumb {
   cursor: grab;
 }
 
-/* Keyframes */
-@keyframes pulse-play {
-  0% { box-shadow: 0 0 0 0 #f5b73d66; }
-  100% { box-shadow: 0 0 0 16px #f5b73d00; }
-}
-
 /*
  * The `.animate-spawn` rule and its `@keyframes spawn` lived here. Nothing referenced the class —
  * not a className, not a template literal, not a test — so it was one more rule that reads as intent
  * while having no effect. Found by `scripts/check_css_usage.mjs`, which now guards the rest.
+ *
+ * `.animate-pulse-play` and its `@keyframes pulse-play` went the same way with the v1 studio's
+ * transport, and its two arms in the reduced-motion guard went with them.
  */
-
-.animate-pulse-play {
-  animation: pulse-play 1.05s ease-out infinite;
-}
 
 
 /* Scrollbar */
@@ -237,24 +226,10 @@ input[type=range]::-moz-range-thumb {
 }
 
 /* Sequencer Matrix Horizontal Scrollbar */
-.custom-sequencer-scroll::-webkit-scrollbar {
-  height: 8px;
-}
-.custom-sequencer-scroll::-webkit-scrollbar-track {
-  background: #0a0b0e;
-  border-radius: 4px;
-  /* Shares `--trk-head-w` with the ruler label and the track headers instead of the
-     126 px it used to hardcode — a fourth disagreeing width for the same column. */
-  margin-left: var(--trk-head-w);
-}
-.custom-sequencer-scroll::-webkit-scrollbar-thumb {
-  background: #323642;
-  border-radius: 4px;
-  border: 2px solid #0a0b0e;
-}
-.custom-sequencer-scroll::-webkit-scrollbar-thumb:hover {
-  background: #f5b73d;
-}
+/*
+ * The `.custom-sequencer-scroll` scrollbar rules lived here. They were the v1 step matrix's own
+ * scrollbar, and the class went with the studio; `check_css_usage.mjs` found the four orphaned rules.
+ */
 
 /**
  * Makes the frozen track-header column solid: full row height, header width plus the gutter.
@@ -452,12 +427,10 @@ input[type=range]::-moz-range-thumb {
   }
 }
 
-.overscroll-x-contain {
-  overscroll-behavior-x: contain !important;
-  overscroll-behavior-y: auto !important;
-  -webkit-overflow-scrolling: touch;
-}
-
+/*
+ * The `.overscroll-x-contain` rule lived here. Its only consumer was the v1 sequencer's own scroll
+ * pane, so the class went with the studio and the rule followed it.
+ */
 /**
  * Desktop-only controls inside the frozen track header.
  *
@@ -501,8 +474,9 @@ input[type=range]::-moz-range-thumb {
   min-width: 44px;
 }
 
-/* iOS Safe Area insets (P2-22) */
-.safe-pb, .pb-safe {
+/* iOS Safe Area insets (P2-22). `.safe-pb` was the v1 spelling and lost its last call site with the
+   studio; `.pb-safe` is the one the arrangement shell applies. */
+.pb-safe {
   padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
 }
 /*
@@ -520,7 +494,6 @@ input[type=range]::-moz-range-thumb {
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
-  .animate-pulse-play,
   .animate-pulse,
   .animate-pulse-glow,
   .animate-orbit {
@@ -536,7 +509,6 @@ html.reduced-motion *::after {
   transition-duration: 0.001ms !important;
   scroll-behavior: auto !important;
 }
-html.reduced-motion .animate-pulse-play,
 html.reduced-motion .animate-pulse,
 html.reduced-motion .animate-pulse-glow,
 html.reduced-motion .animate-orbit {
@@ -567,9 +539,10 @@ html.reduced-motion .animate-orbit {
     padding-top: 0.25rem !important;
     padding-bottom: 0.25rem !important;
   }
-  .landscape-hide-sidebar {
-    display: none !important;
-  }
+  /*
+   * The `.landscape-hide-sidebar` rule lived here. It hid the v1 studio's dossier sidebar in
+   * landscape; the sidebar and the class went together, so `check_css_usage.mjs` found the orphan.
+   */
   /**
    * The desktop-only track-header controls, hidden here for the same reason the portrait block
    * hides them: at 16 px they are the opposite of a phone target, and everything they do lives in

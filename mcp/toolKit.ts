@@ -1,20 +1,11 @@
 
-import { audioLaneReplyFields } from "./pattern";
-import { legatoGapNote, legatoGapsFor } from "../src/data/legatoGaps";
 /**
  * ⭐ **The string situations, taken from the rule table rather than restated.**
  *
  * `list_arrangement_instruments` offers `situation` as an enum, and a hand-written enum beside a hand-written table
  * is two lists to keep in step — the failure this file's own header warns about. So the enum *is* the table's list.
  */
-import {
-  STRING_INSTRUMENT_IDS,
-  STRING_SITUATION_IDS,
-  chordChangeReattackNote,
-  chordChangeReattacks,
-  type StringInstrument,
-  type StringSituation,
-} from "../src/data/stringTechniques";
+import { STRING_INSTRUMENT_IDS, STRING_SITUATION_IDS, type StringInstrument, type StringSituation } from "../src/data/stringTechniques";
 /**
  * The MCP surface, declared once.
  *
@@ -24,9 +15,7 @@ import {
  * the picture.
  */
 import { z } from "zod";
-import { clonePattern, findGenre, getChordProgression, getGenre, getGenreRelations, suggestProgression, libraryIndex, listCategories, listChordProgressions, listGenres, listMasterclasses, searchGenres } from "./library";
-import { applyChordProgression } from "./progression";
-import { inspectSfzAt } from "./sfzInspectRemote";
+import { clonePattern, findGenre, listGenres } from "./library";
 
 /**
  * What to say when a `genreId` does not exist (fifth report, P1.2).
@@ -45,72 +34,12 @@ export function unknownGenre(wanted: string): string {
     (near.length ? `; closest: ${near.map((id) => `"${id}"`).join(", ")}` : "")
   );
 }
-import { applyPatternOps, comparePatterns, findTrack, patternStatistics, validatePattern, type PatternOp } from "./pattern";
-import { DEFAULT_NOTE_CONVENTION, collectTranspositions, describePitch, type NoteConvention } from "../src/data/pitchTruth";
-import { fromMidi } from "../src/data/midiToArrangement";
-import { changeUserLibraries } from "./sampleLibraries";
-import { resolveGs1Lane } from "../src/audio/gs1/gs1Tracks";
-import { decodeGs1PatchCode, type Gs1PatchRoute } from "../src/audio/gs1/gs1PatchCode";
-import {
-  gs1ParameterReadings,
-  gs1RouteOverrideReadings,
-  gs1RouteReadings,
-  mergeGs1Overrides,
-  type ResolvedGs1Overrides,
-} from "../src/audio/gs1/gs1ParamOverrides";
+import { type Gs1PatchRoute } from "../src/audio/gs1/gs1PatchCode";
+import { gs1ParameterReadings, gs1RouteOverrideReadings, gs1RouteReadings, mergeGs1Overrides, type ResolvedGs1Overrides } from "../src/audio/gs1/gs1ParamOverrides";
 import { DEFAULT_PARAMS, MAX_ROUTES } from "../vendor/gs1/src/audio/params";
-import { patternFromGenre } from "../src/data/genreMix";
-import { MAX_BARS } from "../src/data/arrangementEdits";
-import { generateMelody } from "./melody";
-import { examplesFor, listExamples } from "./examples";
-import { validateProsody } from "./prosody";
-import { flattenSong } from "../src/data/songFlatten";
-import { catalogueAssetById, listCatalogueInstruments, listSampleLibraries, nearestCatalogueAssetIds } from "./instruments";
-import {
-  addMcpNote,
-  addMcpTake,
-  exportMcpArrangementMidi,
-  exportMcpMusicXml,
-  importMcpMusicXml,
-  importMcpLogicProject,
-  exportMcpLogicProject,
-  importMcpMidi,
-  importMcpMusicXmlBytes,
-  addMcpTrack,
-  assignMcpTakeRange,
-  createMcpArrangement,
-  describeMcpArrangement,
-  flattenMcpArrangement,
-  moveMcpNote,
-  removeMcpNote,
-  removeMcpTrack,
-  renameMcpTrack,
-  selectMcpTake,
-  setMcpTrackCollapsed,
-  setMcpTrackFlag,
-  setMcpArrangementBars,
-  setMcpArrangementTempo,
-  setMcpArrangementTempoMap,
-  addMcpTrackNotes,
-  setMcpArrangementTimeSignature,
-  setMcpNoteLength,
-  setMcpTrackGain,
-  setMcpTrackAsset,
-  setMcpTrackKind,
-  setMcpTrackPan,
-  setMcpTrackParent,
-  setMcpTrackRegion,
-  setMcpTrackSteps,
-  summariseArrangement,
-  getMcpArrangement,
-} from "./arrangement";
-import { APP_VERSION } from "../src/version";
-import { exportProjectPackage, validateGroovePackage } from "../src/features/sequencer/projectDb";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { exportAbleton, exportMidi, loudnessReport, shareUrl, toBase64 } from "./exporting";
-import { analyseWavFile, auditionInstrumentNote, renderAudio, renderStems } from "./render/worker";
 /**
  * The render budget and the measured costs, from the one file that holds them (`mcp/render/budget.json`).
  *
@@ -118,19 +47,8 @@ import { analyseWavFile, auditionInstrumentNote, renderAudio, renderStems } from
  * the budget the worker enforces and the budget a caller reads are then one value, and `budgetHonesty.test.ts` asserts
  * the descriptions carry the derivation rather than a literal.
  */
-import {
-  renderBudgetSentence,
-  renderCostSentence,
-  renderOutputSentence,
-  HEADLESS_POINTER_SENTENCE,
-  headlessParameterDescription,
-} from "./render/budget";
 import type { ProgressReporter } from "./render/progress";
-import { getGenreLoudnessTrimDb } from "../src/data/genreMix";
-import { setVocalMelody } from "./vocal";
-import { deleteMcpCustomGenre, duplicateMcpCustomGenre, getMcpCustomGenre, listMcpCustomGenres, saveMcpCustomGenre } from "./customGenres";
 import type { SequencerPattern } from "../src/types/genre";
-import type { CustomGenre } from "../src/types/customGenre";
 
 /** MCP tool results are text for maximum client compatibility; JSON is the text. */
 export function json(value: unknown): { content: Array<{ type: "text"; text: string }> } {
@@ -459,7 +377,6 @@ export interface ToolContext {
   progress?: ProgressReporter;
 }
 
-import { ARRANGEMENT_TOOLS } from "./registryArrangement";
 
 export function estimateKey(pattern: { tracks?: Array<{ pitch?: Array<number | null>; pitches?: Array<number[] | null> }> }): Record<string, unknown> {
   const histogram = new Array(12).fill(0);

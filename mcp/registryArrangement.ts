@@ -37,30 +37,17 @@ import { instrumentsByPart } from "./toolKit";
 
 import { setMcpArrangementTempo, setMcpArrangementTimeSignature } from "./arrangement";
 
-import { addMcpTrackNotes, setMcpArrangementBars, setMcpArrangementTempoMap, setMcpTrackGain } from "./arrangement";
+import { setMcpArrangementBars, setMcpArrangementTempoMap, setMcpTrackGain } from "./arrangement";
 import { catalogueAssetById, listSampleLibraries, nearestCatalogueAssetIds } from "./instruments";
 import { inspectSfzAt } from "./sfzInspectRemote";
 
-import { addMcpNote, addMcpTake, moveMcpNote, removeMcpNote, setMcpNoteLength, setMcpTrackAsset, setMcpTrackPan, setMcpTrackParent, setMcpTrackRegion, setMcpTrackSteps } from "./arrangement";
+import { addMcpTake, setMcpTrackAsset, setMcpTrackPan, setMcpTrackParent, setMcpTrackRegion, setMcpTrackSteps } from "./arrangement";
 
-import { CustomGenre } from "../src/types/customGenre";
 import { assignMcpTakeRange, selectMcpTake, setMcpTrackCollapsed } from "./arrangement";
-import { deleteMcpCustomGenre, getMcpCustomGenre, listMcpCustomGenres, saveMcpCustomGenre } from "./customGenres";
-import { getGenre, getGenreRelations, listCategories, listGenres, searchGenres } from "./library";
-import { customGenreSchema } from "./toolKit";
 
-import { gs1ParameterReadings, gs1RouteOverrideReadings, gs1RouteReadings, mergeGs1Overrides } from "../src/audio/gs1/gs1ParamOverrides";
-import { decodeGs1PatchCode } from "../src/audio/gs1/gs1PatchCode";
-import { resolveGs1Lane } from "../src/audio/gs1/gs1Tracks";
-import { DEFAULT_NOTE_CONVENTION, NoteConvention, describePitch } from "../src/data/pitchTruth";
-import { DEFAULT_PARAMS, MAX_ROUTES } from "../vendor/gs1/src/audio/params";
 import { duplicateMcpCustomGenre } from "./customGenres";
-import { clonePattern, findGenre, getChordProgression, listChordProgressions, listMasterclasses } from "./library";
-import { PatternOp, applyPatternOps, findTrack, validatePattern } from "./pattern";
-import { applyChordProgression } from "./progression";
-import { auditionInstrumentNote } from "./render/worker";
+import { listMasterclasses } from "./library";
 import { changeUserLibraries } from "./sampleLibraries";
-import { describeGs1Sound, opSchema, patternFromArgs, patternSchema, unknownGenre } from "./toolKit";
 
 export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
   {

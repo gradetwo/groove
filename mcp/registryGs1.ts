@@ -11,7 +11,6 @@ import { DEFAULT_NOTE_CONVENTION, NoteConvention, describePitch } from "../src/d
 import { DEFAULT_PARAMS, MAX_ROUTES } from "../vendor/gs1/src/audio/params";
 import { getMcpArrangement, getMcpTrack, setMcpTrackGs1 } from "./arrangement";
 import { laneInstrumentForTrack, laneRoleForTrack } from "../src/data/arrangementCompile";
-import { headlessParameterDescription } from "./render/budget";
 import { auditionInstrumentNote } from "./render/worker";
 import { ToolDefinition, describeGs1Sound, failure } from "./toolKit";
 import { z } from "zod";

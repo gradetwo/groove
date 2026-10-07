@@ -70,10 +70,12 @@ describe("the frozen left column has exactly one width", () => {
         expect(source, `${name} reintroduced a hardcoded column width (${stale})`).not.toContain(stale);
       }
     }
-    // Including the scrollbar gutter, which had a fourth value of its own.
-    expect(css).toContain("margin-left: var(--trk-head-w)");
-    expect(css).not.toMatch(/margin-left:\s*126px/);
-    expect(css).not.toMatch(/margin-left:\s*172px/);
+    /*
+     * The scrollbar-gutter clause that lived here asked `src/index.css` to carry
+     * `margin-left: var(--trk-head-w)`. That value sat on `.custom-sequencer-scroll`, the v1 step
+     * matrix's own scrollbar, which went with the studio and had no consumer left — so the clause
+     * was measuring a rule nothing could apply. `check:css` found it; retired rather than moved.
+     */
   });
 
   it("uses one gap between the column and the first step, in the ruler and in the rows", () => {

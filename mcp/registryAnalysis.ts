@@ -3,14 +3,13 @@
  */
 import path from "node:path";
 import { getGenreLoudnessTrimDb } from "../src/data/genreMix";
-import { SequencerPattern } from "../src/types/genre";
-import { loudnessReport, shareUrl } from "./exporting";
+import { loudnessReport } from "./exporting";
 import { HEADLESS_POINTER_SENTENCE, headlessParameterDescription } from "./render/budget";
 import { analyseWavFile, renderAudio } from "./render/worker";
 import { flattenMcpArrangement, getMcpArrangement } from "./arrangement";
 import type { NoteEvent } from "../src/types/arrangementV2";
 import { runWithProgress } from "./render/progress";
-import { ToolDefinition, estimateKey, failure, patternFromArgs, patternSchema, unknownGenre } from "./toolKit";
+import { ToolDefinition, estimateKey, failure } from "./toolKit";
 import { z } from "zod";
 
 export const ANALYSIS_TOOLS: ToolDefinition[] = [
@@ -21,9 +20,9 @@ export const ANALYSIS_TOOLS: ToolDefinition[] = [
      * the two that were genuinely absent, and says in its description why the third is not here.
      */
     name: "estimate_key",
-    title: "Estimate a pattern's key",
+    title: "Estimate an arrangement's key",
     description:
-      "Estimate the key of a pattern from **its notes** — a pitch-class histogram fitted against major and minor profiles — and report the tonic, the mode and the fit. It reads the composition rather than the audio on purpose. The notes are what the composer chose, while an FFT estimate of a loop with a kick on every beat is mostly a statement about the kick. Per-render loudness needs no tool: render_audio and render_song already return gated loudness and true peak.",
+      "Estimate the key of an arrangement from **its notes** — a pitch-class histogram fitted against major and minor profiles — and report the tonic, the mode and the fit. It reads the composition rather than the audio on purpose. The notes are what the composer chose, while an FFT estimate of a loop with a kick on every beat is mostly a statement about the kick. Per-render loudness needs no tool: render_arrangement already returns gated loudness and true peak.",
     readOnly: true,
     inputSchema: {
       arrangementId: z.string().describe("the arrangement whose notes to read"),
@@ -56,7 +55,7 @@ export const ANALYSIS_TOOLS: ToolDefinition[] = [
     description:
       "Render an arrangement, measure it, compute the master trim that would reach a target integrated loudness, render again with it, and report both readings plus which bound decided the trim. The gain is capped by a true-peak ceiling, so the answer distinguishes reaching the target from reaching the ceiling. Returns the path of the normalized file. " +
       HEADLESS_POINTER_SENTENCE +
-      " **Every pass of the loop runs on the host you chose, and the reply's `engine` names it**: with `passes: 1` (the default) this is one render and the choice is the same one `render_song` offers; with more passes the loop is still the same host each time, so the trim is corrected against that host's own readings rather than mixing two engines. The measured host gap (1.03 dB band 3, 1.04 dB band 7, 1.612 LU) applies to the final file exactly as it does to a single render — what is *not* measured is a multi-pass loop whose rounds used different hosts, which this does not do.",
+      " **Every pass of the loop runs on the host you chose, and the reply's `engine` names it**: with `passes: 1` (the default) this is one render and the choice is the same one `render_arrangement` offers; with more passes the loop is still the same host each time, so the trim is corrected against that host's own readings rather than mixing two engines. The measured host gap (1.03 dB band 3, 1.04 dB band 7, 1.612 LU) applies to the final file exactly as it does to a single render — what is *not* measured is a multi-pass loop whose rounds used different hosts, which this does not do.",
     readOnly: false,
     inputSchema: {
       arrangementId: z.string().describe("the arrangement to normalize"),
