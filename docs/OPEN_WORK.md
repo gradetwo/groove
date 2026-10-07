@@ -17526,3 +17526,24 @@ describe("the grid's editing actions", () => {
   ⇒ ⭐ 顺序 ✓：⭐ **先清消费者 ✓，再删中枢 ✓**
 ```
 
+### 六百七十七、⭐ **GS-1 两个工具的迁移配方（2026-10-07 ✓ 量清后写死 ✓）**
+
+```
+**⭐ 为什么可以迁 ✓（v2 已具备全部输入 ✓）**：
+  ⭐ `resolveGs1Lane(role, instrument, genreId?, patchCode?, overrides?)` ✓（⭐ `gs1Tracks.ts:368` ✓）
+    ⇒ ⭐ 需要的五样 ⭐ 编曲上都有 ✓：⭐ `role` ⇒ `track.id` ✓｜⭐ `instrument` ⇒ `TrackV2.instrument?` ✓（⭐ `arrangementV2.ts:79` ✓）
+      ⭐ `genreId` ⇒ **可选** ✓（⭐ 传 `undefined` ✓）｜⭐ `patchCode` ⇒ `track.gs1Patch` ✓（⭐ 已加 ✓）｜⭐ `overrides` ⇒ `track.gs1PatchOverrides` ✓（⭐ 已加 ✓）
+  ⭐ 助手已就位 ✓：⭐ `getMcpTrack(arrangementId, trackId)` ✓ ＋ ⭐ `setMcpTrackGs1(arrangementId, trackId, patch, overrides?)` ✓（⭐ 都走 `edit` ⇒ **可撤销** ✓）
+**⭐ 配方（`get_gs1_patch` ✓）**：
+  ⭐ schema ✓：⭐ `patch?` ✓ ＋ ⭐ `arrangementId?` ✓ ＋ ⭐ `trackId?` ✓（⭐ 去掉 `genreId`／`pattern` ✗）
+  ⭐ handler ✓：⭐ `getMcpArrangement` ✓ ⇒ ⭐ `getMcpTrack` ✓ ⇒ ⭐ `resolveGs1Lane(track.id, track.instrument, undefined, track.gs1Patch, track.gs1PatchOverrides)` ✓
+  ⚠️ ⭐ **改名后必须 grep `args.track`** ✗：⭐ 我先改了 schema ✗ ⇒ ⭐ 但 `args.track` 还留着 ✗ ⇒ ⭐ `z.string().optional()` 下**编译期不报** ✗ ⇒ ⭐ 靠 `check:mcp` 才发现 ✓
+**⭐ 配方（`apply_gs1_patch` ✓，⭐ 结构性重写 ✓）**：
+  ⭐ 它现在直接改 `track` 对象 ✗（⭐ 因为拿到的是 `clonePattern` 的副本 ✓）⇒ ⭐ 迁到编曲后**不能这么改** ✗
+  ⭐ 顺序（⭐ **先算 ⇒ 先校验 ⇒ 后写** ✓）：⭐ ① 取 `arrangement` ＋ `track` ✓ ⇒ ⭐ ② 算 `nextCode`（⭐ `patch: null` ⇒ 清 ✓）与 `nextOverrides`（⭐ 合并 `parameters`／`routes` ✓）
+    ⇒ ⭐ ③ `resolveGs1Lane(...)` **先校验** ✓ ⇒ ⭐ ④ 通过后 ⭐ `setMcpTrackGs1(...)` **写回** ✓ ⇒ ⭐ ⑤ 回包 ⭐ 去掉 `pattern` ✗，改 `arrangementId` ＋ `trackId` ✓
+  ⚠️ ⭐ 为什么要"先校验后写" ✓：⭐ `setMcpTrackGs1` 走 `edit` ⇒ **记历史** ✓ ⇒ ⭐ 写了再失败会留一次**坏历史** ✗
+**⭐ `check_mcp` 的两处（⭐ `:500` ✓／`:515` ✓）**：⭐ 现在传 `genreId`／`pattern` ✗ ⇒ ⭐ 改成"⭐ 建编曲 ⇒ 建轨 ⇒ 传 `arrangementId` ＋ `trackId`" ✓（⭐ 照 `estimate_key` 的检查写法 ✓）
+**⭐ 状态 ✓**：⭐ 本轮我先迁了 `get_gs1_patch` 的读取路径 ✓ ⇒ ⭐ 门 **65／3** ✗ ⇒ ⭐ 为保持**可推送** ✓，⭐ 我把该文件**回退** ✓，⭐ 配方记此 ✓ ⇒ ⭐ 下一轮一次做完两个 ✓
+```
+
