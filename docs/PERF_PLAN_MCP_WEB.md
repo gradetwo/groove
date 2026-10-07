@@ -273,6 +273,12 @@ Against the measured baseline (5:03 of audio in **753 s**, 0.40× realtime, one 
 with the road:
 
 - **in-page contexts** (K=4, what the synthetic probe promised): dead — the real renderer serialises them (1.03–1.13×).
+⭐⭐ **A CHIEVED (2026-10-08): the five-minute piece renders in 297 s.** With the bar-0 pre-roll fix and eight spans,
+`render_arrangement` on the 126-bar / 2,016-note arrangement at 44.1 kHz stereo took **297 s** (K=4: 317 s) against the
+single-pass **753 s** — **2.5× faster**, same output size (53,449,248 bytes), and the span path stays **bit-exact**
+against a single pass (`scratch/node-span-equivalence.ts`, both fixtures, all quarters −inf). The rest of this section is
+the measurement trail that led there.
+
 - **The MCP road is a Node host, not a browser page** (`mcp/render/headless.ts`: `node-web-audio-api`, in-process). Its
   parallel unit is therefore a **child process**, and `renderPatternHeadless` (in the unpinned `headless.ts`) is the
   place to plan spans, fork K runners, merge and return — the pinned `worker.ts` only needs its existing call. K=4
