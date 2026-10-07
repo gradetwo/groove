@@ -265,7 +265,7 @@ GS-1 wasm host, and Chromium's audio-worklet thread appears to be one per render
 | K contexts in one page | **1.1×** (serialised) | nobody — dead |
 | K Web Workers | **no `OfflineAudioContext`** | nobody — dead |
 | K pages / tabs (Chromium) | **1.5×** overall at K=4 (the arm's wall is pinned by one page's **cold** first span, ≈4 s at 44.1 kHz, against ≈0.7 s warm); the **warm** pages overlap at ≈**3×** | ⚠️ **not** the MCP road — see below |
-| **K child processes** on the **Node Web Audio host** | not yet measured; the unit the MCP road can actually use | ⭐ the MCP renderer: `mcp/render/headless.ts` runs the app's own `renderPatternOffline` under `node-web-audio-api`, **in the server process** (`options.headless === true` → `renderPatternHeadless`), so its parallel unit is a process, not a page |
+| **K child processes** on the **Node Web Audio host** | **K=1 work/wall 0.98× · K=2 1.96× · K=4 3.90×** (16 bars each, 44.1 kHz stereo, one MCP server process per span: `scratch/node-host-scaling.mjs`) ⇒ 753 s of work projects to **≈193 s** at K=4 | ⭐ the MCP renderer: `mcp/render/headless.ts` runs the app's own `renderPatternOffline` under `node-web-audio-api`, **in the server process** (`options.headless === true` → `renderPatternHeadless`), so its parallel unit is a process, not a page |
 | K **warm** pages, sweep at 44.1 kHz stereo | K=2 1.17× · K=3 1.36× · K=4 1.58× · K=6 **2.34×** · K=8 **3.12×** — ⚠️ each level pays its own cold first span, so these are **upper bounds**; the clean reading is the 3 warmed pages completing inside one ≈0.8 s window | as above |
 | less work per render (draft rate, lighter reverb) | not yet measured | both roads |
 
@@ -276,9 +276,11 @@ with the road:
 - **The MCP road is a Node host, not a browser page** (`mcp/render/headless.ts`: `node-web-audio-api`, in-process). Its
   parallel unit is therefore a **child process**, and `renderPatternHeadless` (in the unpinned `headless.ts`) is the
   place to plan spans, fork K runners, merge and return — the pinned `worker.ts` only needs its existing call. K=4
-  processes with a near-linear audio-render scaling projects 753 s to **≈190 s**; even the Chromium road's measured
-  warm ratio (≈3×) lands at ≈250 s. ⏳ not yet measured for the Node host — that measurement is the first step of the
-  implementation, not an assumption.
+  processes with a near-linear audio-render scaling projects 753 s to **≈193 s** — and that is now **measured**, not
+  projected: four processes doing 4× the work took 3.9× the wall clock (16 bars each, 44.1 kHz stereo), while each
+  child's own render stretched from 28 s to 58 s under contention (so K=4 is where this machine's audio work saturates;
+  more processes would buy latency, not throughput). ⭐ **The objective's ≤300 s is therefore reachable on the MCP
+  road**, and the web export (which has no parallel lever) is the road that needs a different answer.
 - **web export**: no parallel lever at all (in-page serialised, no Web Audio in Workers, a page cannot open pages), so
   the only levers there are *less work per render* (a draft rate/lighter reverb) or rendering through the headless
   road.
