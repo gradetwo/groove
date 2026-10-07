@@ -17402,3 +17402,19 @@ describe("the grid's editing actions", () => {
   ⇒ ⭐ 正确做法 ✓：⭐ 用 `pgrep` 取 pid 再 `kill` ✓，⭐ 或给模式加字符类断开（⭐ 如 `"scripts/release[.]sh"` ✓）
 ```
 
+### 六百七十、⭐ **执行顺序 ⑤"同一 handler 两张脸"的结构级扫描（2026-10-07 ✓）**
+
+```
+**⭐ 方法 ✓**：⭐ 两个判据 —— ① ⭐ 同名工具跨文件 ✓ ② ⭐ 同一**实现函数**被多个工具引用 ✓（⭐ 先试命名 handler ✓ ⇒ 0 命中 ✗，
+  ⭐ 因为真正的形态是**内联箭头函数** ✓ ⇒ ⭐ 改为扫"⭐ handler 体内调用了谁**" ✓）
+**⭐ 命中 ✓**：⭐ `patternFromArgs`（⭐ `mcp/toolKit.ts:364` ✓）被 **9 个工具**用 ✓｜⭐ 其余 59 个命中是噪音 ✓（⭐ `String(`／`failure(`／`z.string(` 之类 ✓）
+**⭐ 该函数就是"两张脸" ✗**：⭐ `if (args.pattern) …`（⭐ v2 侧 ✓）⭐ 否则退回 `args.genreId` ⇒ ⭐ 建 **v1 的 `SequencerPattern`** ✗
+  ⇒ ⭐ 而返回类型 `SequencerPattern` 本身是 **v1 载体** ✗（⭐ v2 是 arrangement ✓）
+**⭐ 使用者清单 ✓**（⭐ 9 个 ✓）：⭐ `estimate_key` ✓ `share_url` ✓ `get_transposition_report` ✓（⭐ 已无 `genreId` ✓）
+  ✓ `validate_pattern` ✓ `pattern_statistics` ✓ `apply_gs1_patch` ✓ `get_gs1_patch` ✓ `apply_chord_progression` ✓ `apply_pattern_ops` ✓
+  ⇒ ⭐ **8 个仍带 `genreId`** ✗
+**⭐ 结论 ✓**：⭐ 处置**不是**删 `genreId` ✗（⭐ 即使删了，⭐ 它们的输入仍是 v1 pattern ✗）
+  ⇒ ⭐ 正解是**改收 arrangement** ✓ ⇒ ⭐ **与迁移 ⑤（⭐ `registrySong` ＋ `registryPattern` ✓）同批** ✓ ⇒ ⭐ 本轮**不动** ✓（⭐ 面涉 8 个工具的 schema ＋ 判据 ✗）
+**⭐ 因此 ✓**：⭐ ⑤ **扫描已完成** ✓，⭐ 命中点**归入迁移 ⑤** ✓，⭐ 不另开一批 ✓
+```
+
