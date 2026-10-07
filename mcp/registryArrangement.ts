@@ -988,12 +988,39 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
     },
     handler: (args) => {
       try {
-        return setMcpTrackRegion(
-          String(args.arrangementId),
-          String(args.trackId),
-          args.startBar === null ? null : Number(args.startBar),
-          args.endBar === null ? null : Number(args.endBar)
-        );
+        const startBar = args.startBar === null ? null : Number(args.startBar);
+        const endBar = args.endBar === null ? null : Number(args.endBar);
+        const result = setMcpTrackRegion(String(args.arrangementId), String(args.trackId), startBar, endBar);
+        /**
+         * ⭐ **What the region actually covers, in pitch — read, not asked for.**
+         *
+         * A region is a stretch of time, and the question a composer asks about it is what it holds: an octave that is wrong shows up as a
+         * range, and a region that covers no notes at all is worth knowing about before a render rather than after. Both bounds come from the
+         * notes themselves, and `null` says "there are no notes here" rather than inventing a range. A bar is four beats, which is the same
+         * rule `set_arrangement_bars` states.
+         */
+        const notes = (getMcpArrangement(String(args.arrangementId))?.notesByTrack ?? {})[String(args.trackId)] ?? [];
+        const covered =
+          startBar === null || endBar === null
+            ? notes
+            : notes.filter((note) => note.startBeats >= startBar * 4 && note.startBeats < endBar * 4);
+        const rangeOf = (list: typeof notes) => {
+          if (list.length === 0) return null;
+          let lowest = list[0]!.pitch;
+          let highest = list[0]!.pitch;
+          for (const note of list) {
+            if (note.pitch < lowest) lowest = note.pitch;
+            if (note.pitch > highest) highest = note.pitch;
+          }
+          return { lowest, highest, lowestName: noteName(lowest), highestName: noteName(highest) };
+        };
+        return {
+          ...result,
+          /** ⭐ The pitches inside the region's time window; `null` when it covers no notes. */
+          regionPitchRange: rangeOf(covered),
+          /** ⭐ And the whole track's range, so the two can be compared. */
+          trackPitchRange: rangeOf(notes),
+        };
       } catch (error) {
         return failure((error as Error).message);
       }

@@ -101,3 +101,30 @@ describe("the abilities the section tool carried, in arrangement terms", () => {
     expect(pitches).toContain(60);
   });
 
+  it("⭐ says what pitch range a region covers, and the track's own range beside it", async () => {
+    const { id, trackId } = await setup();
+    await call("add_arrangement_notes", {
+      arrangementId: id,
+      trackId,
+      notes: [
+        { pitch: 48, startBeats: 0, lengthBeats: 1, velocity: 100 },
+        { pitch: 72, startBeats: 8, lengthBeats: 1, velocity: 100 },
+      ],
+    });
+    // ⭐ Bar 0 is beats 0-3, so a region over it covers the low note only -- and the reply has to say so.
+    const first = await call("set_arrangement_region", { arrangementId: id, trackId, startBar: 0, endBar: 1 });
+    expect((first.regionPitchRange as { lowest: number }).lowest).toBe(48);
+    expect((first.regionPitchRange as { highest: number }).highest).toBe(48);
+    expect((first.trackPitchRange as { highest: number }).highest).toBe(72);
+
+    // ⭐ A region past the end covers nothing, and that reads as null rather than as an invented range.
+    const empty = await call("set_arrangement_region", { arrangementId: id, trackId, startBar: 20, endBar: 21 });
+    expect(empty.regionPitchRange).toBeNull();
+    expect((empty.trackPitchRange as { lowest: number }).lowest).toBe(48);
+
+    // ⭐ Clearing the region restores the whole-arrangement reading, so the two agree.
+    const cleared = await call("set_arrangement_region", { arrangementId: id, trackId, startBar: null, endBar: null });
+    expect((cleared.regionPitchRange as { lowest: number }).lowest).toBe(48);
+    expect((cleared.regionPitchRange as { highest: number }).highest).toBe(72);
+  });
+
