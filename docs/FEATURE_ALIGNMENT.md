@@ -873,3 +873,12 @@
 | ✅ **注释已改 v2** | ⭐ "⭐ `create_song` reaches here…**" ⇒ ⭐ "⭐ **A `genreId` that does not resolve** reaches here…**" ✓（⭐ 两处 ✓）| §937 |
 | ⭐ **归属 ✓** | ⭐ `estimate_key`／`share_url` **归入迁移 ⑤** ✓（⭐ `registrySong` ＋ `registryPattern` ✓）—— ⭐ 因为 `mcp/pattern.ts` 与 `mcp/exporting.ts` 都是 **v1 pattern 的家** ✗ ⇒ ⭐ 一起改才不留半截 ✓ | §937 |
 
+## 2026-10-07 10:05 回填（第 4 条规矩：改完实现回来改表）
+
+| 面 | 变化 | 依据 |
+|---|---|---|
+| ⚠️ **Web 面：主 FX 的 7 个参数**曾**无处可改** ✗ | ⭐ 编曲面的主机架只有 **4 个开关** ✓（滤波／饱和／合唱／位碎 ✓），⭐ 注释自己写着"⭐ **Parameters come after**"✗；⭐ v1 工具栏的 4 个滑块与滤波类型选择**随工具栏删除** ✗ ⇒ ⭐ `fxParamReachability` 立刻报"⭐ **7 个参数无写入点**"✗ | §1012‑1036 |
+| ✅ **补上 7 个控件（按第 ④ 条：移植，不删能力 ✓）** | ⭐ `ArrangementViewV2` 新增 **`patchEffectsRack`** ✓（⭐ 用判据认得的 setter 名 ✓）＋ **7 个控件** ✓：⭐ `arrangement-filter-cutoff` ✓／⭐ `-filter-q` ✓／⭐ `-filter-type` ✓（`select` ✓）／⭐ `-saturation-drive` ✓／⭐ `-chorus-mix` ✓／⭐ `-chorus-rate` ✓／⭐ `-bit-depth` ✓｜⭐ 范围取自 `EffectsRack.ts` 的注释（⭐ 20–20000 Hz ✓／0.5–15 ✓／1–6 ✓／0–1 ✓／0.2–5 ✓／4–16 ✓）｜⭐ 7 个 i18n 键（中英 ✓，`common.ts` ✓）| §1033 |
+| ⚠️ **为何一次推全部四块** | ⭐ 引擎的 setter 各吃**自己那一块**的值 ✓（`setMasterFilter(on, cutoff, q, type)` ✓）⇒ ⭐ 改一个参数要**回推四块** ✓ ⇒ ⭐ `patchEffectsRack` 就是这么写的 ✓（⭐ 与 `toggleFx` 同一契约 ✓） | §1031 |
+| ✅ **判据的 sanity 参照物更新** | ⭐ 它原来参照 v1 工具栏的 `filterEnabled` 开关 ✗ ⇒ ⭐ 改为参照 **`filterCutoff`**（⭐ 架子上第一个滑块的写入 ✓）⇒ ⭐ 4 项全绿 ✓ | §1036 |
+
