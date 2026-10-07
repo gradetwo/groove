@@ -55,7 +55,12 @@ export async function renderPatternInSpans(
   catalogueRead: AudioLaneCatalogueRead,
   context: HeadlessRenderContext
 ): Promise<SpanRenderOutcome> {
-  const bundle = process.argv[1];
+  /**
+   * ⭐ **The child entry is the bundle, and it can be named.** `process.argv[1]` is the bundle when the server runs
+   * normally, but under a probe runner (`vite-node`) it is the runner's own entry, and a child started with it answers
+   * "No files specified". `GROOVE_SPAN_BUNDLE` lets a probe point at `dist-mcp/groove-mcp.mjs` explicitly.
+   */
+  const bundle = process.env.GROOVE_SPAN_BUNDLE ?? process.argv[1];
   if (!bundle) throw new Error("the renderer cannot find its own bundle path, so it cannot start a span process");
   const sampleRate = options.sampleRate ?? 44100;
   const bpm = pattern.bpm ?? 120;

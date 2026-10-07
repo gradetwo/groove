@@ -18295,3 +18295,20 @@ describe("the grid's editing actions", () => {
     · **读 `compileArrangementToPattern` 的 lane 形状** ✓，把守卫改成按真实键判空 ✓（或更稳：直接按渲染器的音频轨报告判 ✓）；
     · **把 null 写成判据** ✓：同一 fixture 渲两次（1 段 vs 2 段 ✓），断言交叉淡化窗口外 ≤ −60 dBFS ✓、窗口内 ≤ −40 dBFS ✓——
       这条判据一旦存在 ✓，"某些 pattern 形状会差 −1.3 dB"就再也不会靠人记得 ✓。
+
+### 七百一十一、⭐ **null 判据落地了（`scratch/node-span-equivalence.ts`），本轮两个 fixture 都过——但第二个 fixture 还不是那条会红的形状**（2026-10-08 ✓）
+
+  ⭐ 写了目标点名的那件东西 ✓：**同一 fixture 渲两次**（整段 vs `renderPatternInSpans` K=2 的真实跨进程管道 ✓），
+    逐样本比对 ✓，阈值 **窗口外 ≤ −60 dBFS / 窗口内 ≤ −40 dBFS** ✓，不过就 `exit 1` ✓（可以当门禁 ✓）。
+  ⭐ 结果 ✓：
+    · `template`：`outsideDb −inf` ✓ `insideDb −inf` ✓ pass ✓；
+    · `blank-sampler`（我手写的字面量形状 ✓）：同样 **−inf** ✓ pass ✓。
+  ⚠️ 但要照实说 ✓：**第二个 fixture 没有复现那个缺陷** ✗——我手写的 arrangement 字面量经 `compileArrangementToPattern`
+    之后很可能**没带上 `assetId`** ✓，于是渲染器的"采样轨无音符播一次"规则根本没触发 ✓ ⇒ 它其实是一个**带音符的采样轨** ✓。
+    也就是说：**判据写好了 ✓，但它的第二个 fixture 还不是那条会红的形状** ✗（判据有没有用 ✓，取决于它能不能红 ✓）。
+  ⭐ 顺带修掉一个真问题 ✓：`spanHosts` 原来用 `process.argv[1]` 当子进程入口 ✓，在 `vite-node` 下那是**探针自己的入口** ✗
+    ⇒ 子进程报 "No files specified" ✓；现在可用 `GROOVE_SPAN_BUNDLE` 明确指向 `dist-mcp/groove-mcp.mjs` ✓
+    （这也让"探针里跑真实管道"成为可能 ✓）。
+  ⏳ 下一轮 ✓：把第二个 fixture 换成**冒烟里那条真会红的路径** ✓（`create_arrangement{blankKind:"sampler"}` →
+    `add_arrangement_notes` → `flattenMcpArrangement` ✓，即与工具完全同源 ✓），确认判据**会红** ✓；
+    然后修守卫/一次性触发 ✓ 直到它转绿 ✓，再把 `chunks` 放回工具面并设为默认 K=4 ✓。
