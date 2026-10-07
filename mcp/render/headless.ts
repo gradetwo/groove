@@ -323,7 +323,25 @@ export async function renderPatternHeadless(
   if (spanVerdict && !spanVerdict.ok && spanVerdict.reason) renderProblems.push(spanVerdict.reason);
   const spanOutcome =
     spanVerdict?.ok === true
-      ? await (await import("./spanHosts")).renderPatternInSpans(pattern, options, catalogueRead, context).then((outcome) => {
+      ? await (await import("./spanHosts"))
+          .renderPatternInSpans(
+            pattern,
+            /**
+             * ⭐ **A chunked render narrates itself per span.** The progress channel is the one thing a caller has while a
+             * long render runs — the page path's frame heartbeat exists for the same reason — and a span boundary is a
+             * real milestone rather than a guess: "rendered 2 of 4 spans" is true when it is said. The counter is
+             * monotonic, which is what `reportOf` requires.
+             */
+            {
+              ...options,
+              ...(progress
+                ? { onSpanDone: (done: number, total: number) => progress.reportOf(done, total, `rendered ${done} of ${total} spans`) }
+                : {}),
+            },
+            catalogueRead,
+            context
+          )
+          .then((outcome) => {
           audioLanes = outcome.audioLanes;
           limiterKind = outcome.limiterKind;
           gs1PatchProblems = outcome.gs1PatchProblems;

@@ -51,7 +51,12 @@ const barsOf = (pattern: SequencerPattern, options: RenderOptions): number => {
 
 export async function renderPatternInSpans(
   pattern: SequencerPattern,
-  options: RenderOptions & { chunks?: number; preRollSec?: number },
+  options: RenderOptions & {
+    chunks?: number;
+    preRollSec?: number;
+    /** ⭐ Called as each span lands — the narration a quarter-of-an-hour render has never had. */
+    onSpanDone?: (done: number, total: number) => void;
+  },
   catalogueRead: AudioLaneCatalogueRead,
   context: HeadlessRenderContext
 ): Promise<SpanRenderOutcome> {
