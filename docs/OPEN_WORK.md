@@ -18598,3 +18598,21 @@ describe("the grid's editing actions", () => {
   ⭐ 至此 **W5b 全链完成** ✓：数据（`setNoteVelocity` 钳制 1..127 ✓）→ 编排层（`setTrackNoteVelocity` ✓）
     → 命令（可撤销 ✓）→ **可见**（音符带 `data-velocity` ✓）→ **可改**（框选 + 工具条 ✓）→ 判据（3 个文件 ✓）。
     这正是六百九十四 里记下的创作者原话"**单个音符既看不到力度也改不了**"✓ —— 现在两件事都成立了 ✓。
+
+### 七百三十、⭐ **查清了"按段播报没有通知"的原因：**注册表那条路根本没建 `ctx.progress`****（2026-10-08 ✓）
+
+  ⭐ 观测链（都在一次运行里 ✓）：
+    ① 冒烟**确实**把 token 发出去了 ✓（`GROOVE_TRACE_REQUESTS=1` 打印 ✓：
+       `{... "chunks":2}, "_meta":{"progressToken":"span-2"}` ✓）；
+    ② 客户端**一个通知都没收到** ✓（记录所有 `method` ✓，不是只过滤 progress ✓）；
+    ③ 在 `mcp/server.ts` 那个建 `progress` 的处理函数里加 trace ✓（`GROOVE_TRACE_PROGRESS=1` ✓）后重跑 ✓：
+       **`PROGRESS-TRACE` 一次都没打印** ✗ ⇒ **那段代码没有被调用** ✗。
+  ⭐ 结论 ✓：**MCP 的工具有多条注册路** ✓——`server.ts` 里显式注册的那条会从 `extra._meta.progressToken` 建 `ctx.progress` ✓
+    （`budgetHonesty.test.ts` 与 `mcpProgressReporting.test.ts` 覆盖的正是它 ✓），而**渲染工具走的是注册表那条** ✗，
+    它没有建 `progress` ✓ ⇒ 工具描述里承诺的进度（以及本轮加的"按段播报" ✓）**在这条路上永远不会发生** ✗。
+    这是**真缺陷** ✓，不是我量具的问题 ✓（token 在请求里 ✓、客户端记录所有通知 ✓、服务端那段没跑 ✓）。
+  ⭐ 两条 env-gated 的 trace 留在代码里 ✓（`GROOVE_TRACE_PROGRESS` ✓、`GROOVE_TRACE_REQUESTS` ✓），
+    下一个人一次运行就能复现这个判断 ✓。
+  ⏳ 修法（下一轮 ✓）：在**注册表那条注册路**上同样调 `createRenderProgress(extra?._meta?.progressToken, …)` ✓
+    并把结果放进 handler 的 `ctx` ✓；随后用同一个冒烟确认 `rendered 1 of N spans` 真的到达客户端 ✓，
+    并补一条能红的判据 ✓（照 `budgetHonesty` 里那两例的形状 ✓）。

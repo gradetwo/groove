@@ -68,7 +68,12 @@ export function createServer(): McpServer {
            * (`resetTimeoutOnProgress`), which is the mechanism that lets a 445-511 s eight-bar render survive a
            * timeout the caller set for short calls.
            */
+          /** ⭐ A trace for the "no notifications arrived" question: did the server even see a token, and did it send? */
+          if (process.env.GROOVE_TRACE_PROGRESS === "1") {
+            console.error(`PROGRESS-TRACE token=${String(extra?._meta?.progressToken)} tool=${String((args as { __tool?: unknown }).__tool ?? "")}`);
+          }
           const progress = createRenderProgress(extra?._meta?.progressToken, (token, value, total, message) => {
+            if (process.env.GROOVE_TRACE_PROGRESS === "1") console.error(`PROGRESS-SEND token=${String(token)} value=${value} total=${String(total)}`);
             void extra
               .sendNotification({
                 method: "notifications/progress",
