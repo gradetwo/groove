@@ -230,7 +230,12 @@ export function loadHeadlessHost(publicRoot: string): unknown {
  */
 export async function renderPatternHeadless(
   pattern: SequencerPattern,
-  options: RenderOptions,
+  /**
+   * ⭐ `RenderOptions` plus the two span fields and the chunk count. Widened **here** rather than in the pinned
+   * `mcp/render/worker.ts` (1652/1653 lines, held by `fileSizeBudget`): a field added to that interface would spend
+   * the file's last line, and `renderAudio` already forwards its options object whole, so an extra field travels.
+   */
+  options: RenderOptions & { chunks?: number; fromBar?: number; preRollSec?: number },
   catalogueRead: AudioLaneCatalogueRead,
   context: HeadlessRenderContext
 ): Promise<RenderAudioPayload> {
@@ -296,8 +301,33 @@ export async function renderPatternHeadless(
     ((options.sampleRate ?? 44100) * bars * 4 * 60) / Math.max(20, Math.min(300, pattern.bpm ?? 120))
   );
 
-  const buffer = await wav.renderPatternOffline(pattern, {
+  /**
+   * ⭐ **K spans in K processes, when the caller asks for them.** The renderer is this process, so the parallel unit is
+   * a process (measured 3.90× at K=4 — `scratch/node-host-scaling.mjs`); `options.chunks > 1` is the whole switch, and
+   * an absent or 1 value leaves this function byte-for-byte the path it always was.
+   */
+  const spanOutcome =
+    (options.chunks ?? 1) > 1
+      ? await (await import("./spanHosts")).renderPatternInSpans(pattern, options, catalogueRead, context).then((outcome) => {
+          audioLanes = outcome.audioLanes;
+          limiterKind = outcome.limiterKind;
+          gs1PatchProblems = outcome.gs1PatchProblems;
+          renderProblems.push(...outcome.problems);
+          return outcome;
+        })
+      : null;
+  const buffer = spanOutcome
+    ? spanOutcome.buffer
+    : await wav.renderPatternOffline(pattern, {
     bars,
+    /**
+     * ⭐ **The span window, passed straight through.** `RenderWavOptions.fromBar`/`preRollSec` are the renderer's own
+     * chunking entry points ("the entry point chunking needs"), and this host is where the MCP road can use them: one
+     * child process per span, K of them at once, merged by `mcp/render/spanHosts.ts`. Absent means "the whole thing",
+     * which is every existing caller.
+     */
+    ...(options.fromBar === undefined ? {} : { fromBar: options.fromBar }),
+    ...(options.preRollSec === undefined ? {} : { preRollSec: options.preRollSec }),
     /**
      * ⭐ **The bytes come from the process's disk cache, and this render fetches every recording before it starts.**
      *

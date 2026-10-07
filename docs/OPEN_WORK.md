@@ -17984,3 +17984,18 @@ describe("the grid's editing actions", () => {
   ⭐ 因此实现方向确定 ✓（`headless.ts` 未钉死 ✓）：`chunks > 1` 时规划 span ✓ → fork K 个 span runner ✓
     （每个跑同一套 Node host，写 PCM）→ `mergeRenderedChunks` 合并 ✓ → 返回同一形状的回包 ✓；
     被钉死的 `worker.ts` 保持现有调用 ✓。落地后按 600九十 的 null 口径验等价 ✓，再打开默认 ✓。
+
+### 六百九十三、⭐ **MCP 分块并行的骨架已落地（默认不激活）**（2026-10-08 ✓）
+
+  ⭐ 按 六百九十二 的读数（K=4 吞吐 3.90× ⇒ 753 s 投影 ≈193 s ✓）实现：
+    ① `mcp/render/spanRunner.ts`（新 ✓）：**子进程侧**——读 job、用同一个 `renderPatternHeadless` 渲**一段**、
+       把回包里的 16-bit WAV 解成 float、写 `.f32` + sidecar（lane 报告/limiter/问题 ✓，让父进程的回包不比单次渲染更贫 ✓）；
+    ② `mcp/render/spanHosts.ts`（新 ✓）：**父进程侧**——`planRenderSpans` 切段 ✓、写 job、**K 个 bundle 子进程**并发 ✓、
+       读回 PCM、`mergeRenderedChunks` 合并 ✓、汇总 lane/limiter/问题 ✓；
+    ③ `mcp/server.ts`（179 行，未钉死 ✓）：`GROOVE_SPAN_JOB=<job.json>` 时进入**隐藏的 span 模式**（跑完即退 ✓，协议路径一行不变 ✓）；
+    ④ `mcp/render/headless.ts`（未钉死 ✓）：把 `fromBar`/`preRollSec` **透传**给渲染器 ✓（那正是它的分块入口 ✓），
+       并把 `options.chunks > 1` 作为唯一开关 ✓——`RenderOptions` 的接口**没动** ✓（被钉死的 `worker.ts` 仍是 1652/1653 行 ✓，
+       因为它本来就**整体转发** options ✓，多一个字段能搭车 ✓）。
+  ⭐ 现状：`chunks` **没有任何调用者传**（工具 schema 还没加这个参数 ✓）⇒ 行为与之前**完全一致** ✓，typecheck/lint/判据全绿 ✓。
+  ⏳ 剩两步：① 在 `render_arrangement` 的 schema/handler 里加 `chunks` 并透传 ✓；② 8 kHz 小样本先 smoke ✓，
+    再跑真实 5 分钟对 753 s 基线 ✓，并用 §6.3 的 null 口径验等价 ✓，达标后把默认设成 K=4 ✓。

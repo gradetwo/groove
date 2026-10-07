@@ -170,10 +170,29 @@ async function main(): Promise<void> {
   console.error(`groove-lab MCP server ready (${TOOLS.length} tools, ${RESOURCES.length} resources, ${PROMPTS.length} prompts)`);
 }
 
+/**
+ * ⭐ **The hidden span mode: one span, one process, no protocol.**
+ *
+ * `mcp/render/spanHosts.ts` starts these processes to render a long piece K spans at a time — measured at 3.90× the
+ * throughput of one (`scratch/node-host-scaling.mjs`). It is the same bundle rather than a second entry point because
+ * the bundle is what can import the app's own renderer outside the dev server. Nothing about the protocol path
+ * changes: this runs before `main()` and exits without touching stdin.
+ */
 const isEntryPoint = process.argv[1] && import.meta.url.endsWith(process.argv[1].split("/").pop() ?? "");
 if (isEntryPoint || process.env.GROOVE_MCP_FORCE_MAIN === "1") {
-  main().catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
+  const job = process.env.GROOVE_SPAN_JOB;
+  if (job) {
+    import("./render/spanRunner")
+      .then(({ runSpanJob }) => runSpanJob(job))
+      .then(() => process.exit(0))
+      .catch((error) => {
+        console.error(error);
+        process.exit(1);
+      });
+  } else {
+    main().catch((error) => {
+      console.error(error);
+      process.exit(1);
+    });
+  }
 }
