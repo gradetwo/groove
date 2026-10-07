@@ -18312,3 +18312,20 @@ describe("the grid's editing actions", () => {
   ⏳ 下一轮 ✓：把第二个 fixture 换成**冒烟里那条真会红的路径** ✓（`create_arrangement{blankKind:"sampler"}` →
     `add_arrangement_notes` → `flattenMcpArrangement` ✓，即与工具完全同源 ✓），确认判据**会红** ✓；
     然后修守卫/一次性触发 ✓ 直到它转绿 ✓，再把 `chunks` 放回工具面并设为默认 K=4 ✓。
+
+### 七百一十二、⭐⭐ **判据现在用的是工具同源的 fixture，而且它对两件都精确 ⇒ 缺陷只在 `headless.ts` 那一层**（2026-10-08 ✓）
+
+  ⭐ 第二个 fixture 改成**与工具完全同源** ✓：`createMcpArrangement({blankKind:"sampler"})` → `setMcpArrangementBars(4)` →
+    `setMcpArrangementTempo(100)` → `addMcpTrackNotes(28 个)` → **`flattenMcpArrangement(id).flattened.pattern`** ✓
+    （就是 `render_arrangement` 真正渲的那个 pattern ✓；跑出 **81,600 帧 = 10.2 s** ✓，与冒烟里的空白 fixture 一致 ✓）。
+  ⭐ 直接用 `renderPatternInSpans` 跑 null 判据 ✓：**两个 fixture 都是 −inf（精确零差）** ✓✓——
+    包括那个**经 MCP 工具路径会差 −1.3 dB** 的空白采样器形状 ✓。
+  ⭐ 于是结论收得很干净 ✓：
+    · `spanHosts.renderPatternInSpans` **本身是精确的** ✓（template ✓ 与工具同源的 blank-sampler ✓ 都 −inf ✓）；
+    · 而**经 `headless.ts` 的 span 分支**（工具那条路 ✓）同一个 pattern 会差 −1.3 dB ✗
+    ⇒ **缺陷在这两个调用点之间的那几行** ✓（`mcp/render/headless.ts` 的 `renderArgs`/`spanOutcome` ✓，未钉死 ✓）。
+  ⏳ 下一轮（很短 ✓）：在 `headless.ts` 的 span 分支旁边做**同进程对照** ✓——用同一份 pattern 分别调用
+    `renderPatternInSpans(pattern, options, …)` 与 `wav.renderPatternChunkOffline(pattern, renderArgs)` ✓，
+    逐帧比对 ✓：若前者 ≠ 后者 ✓，差就在 `renderArgs` 的字段（`bars` 的"重复几遍 vs 段长"两义 ✓、
+    `fromBar`/`preRollSec` 的传递 ✓）；若相等 ✓，差在 `spanOutcome` 的**使用方式**（哪一段被当成音乐区 ✓）。
+    修好后判据转绿 ✓ ⇒ 把 `chunks` 放回工具面 ✓、默认 K=4 ✓ ⇒ 再跑真实 5 分钟对 753 s 基线 ✓。
