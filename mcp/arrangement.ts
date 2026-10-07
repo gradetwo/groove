@@ -736,6 +736,40 @@ export function quantizeMcpNoteLengths(arrangementId: string, trackId: string, s
   );
 }
 
+/**
+ * ⭐ **A track's own GS-1 sound, read and written on the arrangement.**
+ *
+ * The v1 pattern's track carried `gs1Patch` and `gs1PatchOverrides`, and the GS-1 tools reached into a pattern to find them; the same two
+ * fields live on `TrackV2` now. Both paths go through `edit`, so a write is undoable exactly like every other arrangement change -- which a
+ * plain `putMcpArrangement` would not be.
+ */
+export function getMcpTrack(arrangementId: string, trackId: string): TrackV2 | undefined {
+  return getMcpArrangement(arrangementId)?.tracks.find((row) => row.id === trackId);
+}
+
+export function setMcpTrackGs1(
+  arrangementId: string,
+  trackId: string,
+  patch: string | null,
+  overrides?: Record<string, number>
+): ArrangementEditResult {
+  return edit(arrangementId, (arrangement) => {
+    const tracks = arrangement.tracks.map((row) => {
+      if (row.id !== trackId) return row;
+      const next: TrackV2 = { ...row };
+      if (patch === null) {
+        delete next.gs1Patch;
+        delete next.gs1PatchOverrides;
+      } else {
+        next.gs1Patch = patch;
+      }
+      if (overrides !== undefined) next.gs1PatchOverrides = overrides;
+      return next;
+    });
+    return { ...arrangement, tracks };
+  });
+}
+
 export function transposeMcpNotes(
   arrangementId: string,
   trackId: string,
