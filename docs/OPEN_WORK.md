@@ -18122,3 +18122,20 @@ describe("the grid's editing actions", () => {
     直接渲 `{fromBar:0,bars:4}` 与 `{fromBar:2,bars:2,preRollSec:2}` 并逐帧比对 ✓：
     · 若不同 ✓ ⇒ 定位于 **host 的窗口渲染** ✓，可选出路有两条：修 host 侧（shim/调度 ✓），或**让分块不走窗口** ✓——
       改为"把 pattern 先切成子 pattern，再整段渲染" ✓（这条正是 Chromium 已验证精确的那条路 ✓，代价是要在切片时保留跨边界音符 ✓）。
+
+### 七百零一、⭐ **找到了那个"同名两义"的坑：`bars` 在窗口里是"段长"、在别处是"重复几遍"**（2026-10-08 ✓）
+
+  ⭐ `computeRenderWindow({ fromBar, bars, ... })` ✓（`WavExporter.ts:1046` ✓）内部用
+    `spanSteps = stepsPerBar × max(1, bars)` ✓ ⇒ 在**窗口**这条路上 `bars` 被当作**段长** ✓；
+    而同一份文档（`docs/HEADLESS_CORE_PLAN.md:414` ✓）早就记着这个坑：
+    **"`bars` 是'整个 pattern 重复几遍'而不是'几小节' ✗✓，所以 `bars: 2` 会让一个 8 小节 pattern 渲染两遍 ✓"** ✓。
+    ⇒ 同一个参数名在两条路上两种含义 ✗——这正是项目自己记过的 "same parameter name, two meanings" ✓。
+  ⭐ 目前的证据与未闭合之处（照实写 ✓）：
+    · **Chromium**：窗口路径**逐样本精确** ✓（`scratch/window-ab.mjs` ✓，−inf dBFS ✓）；
+    · **Node host**：同形的窗口渲染与整曲同一段**不同** ✗（smoke ✓，且已排除合并/预热/平移/一次性触发/整小节错位 ✓）；
+    · ⇒ 二者必须用一个实验调和 ✓：**在 Node host 里重放同一个 A/B** ✓（`loadHeadlessHost` + `renderPatternChunkOffline` ✓，
+      渲 `{fromBar:0,bars:4}` vs `{fromBar:2,bars:2,preRollSec:2}` ✓ 逐帧比对 ✓）。
+  ⏳ 两条出路（都已想清 ✓，等实验定性后选 ✓）：
+    ① 若 Node host 的窗口渲染确实不同 ⇒ 给窗口**自己的名字**（如 `spanBars` ✓，不再复用 `bars` ✓）或修 host 侧 ✓；
+    ② 或让分块**不走窗口** ✓：把 pattern 先切成子 pattern 再整段渲染 ✓（Chromium 已验证精确的那条路 ✓，
+       代价是切片要保留跨边界音符 ✓，且 `bars` 的重复语义必须显式置 1 ✓）。
