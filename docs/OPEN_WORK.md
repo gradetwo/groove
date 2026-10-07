@@ -18177,3 +18177,23 @@ describe("the grid's editing actions", () => {
     `audioLaneCatalogue` ✓、回调 ✓）⇒ 下一轮就是**选项二分** ✓：
     把 `node-window-ab.ts` 逐步加上工具的那些选项 ✓（先加 `genreId: "custom"` ✓），哪一项一加就复现 ≠ −inf ✓，就是它 ✓。
   ⭐ 这条定位把范围从"渲染器/host/合并/预热/平移"缩到**一个选项集** ✓，下一轮应当能一枪打中 ✓。
+
+### 七百零四、⭐ **选项与 JSON 往返都排除：子进程的差异不在"它带了什么"，而在"它在哪个进程里"**（2026-10-08 ✓）
+
+  ⭐ 把工具那套选项逐项加到直接 A/B 上 ✓（`scratch/node-window-ab.ts --genre/--comp/--trim/--json` ✓）：
+
+| 选项 | 窗口 vs 整曲 bars 2–4 | 对照 |
+| --- | --- | --- |
+| 最小 | **−inf** ✓ | −1.4 dB |
+| `genreId: "custom"` | **−inf** ✓ | −1.4 dB |
+| ＋`masterBusCompEnabled` | **−inf** ✓ | −1.4 dB |
+| ＋`loudnessTrimDb: 0` | **−inf** ✓ | −1.4 dB |
+| ＋**JSON 往返**（`JSON.parse(JSON.stringify(pattern))` ✓，模拟 job 文件那条管道 ✓） | **−inf** ✓ | −1.4 dB |
+
+  ⭐ 结论 ✓：**不是选项、也不是模式经 JSON 落盘再读回** ✗（`undefined` 键/`NaN` 这些往返损耗都验过了 ✓）。
+    结合 七百零三（子进程自己的 PCM 就不同 ✓、合并没有放错 ✓）⇒ 差异来自**子进程的环境/入口** ✓，而不是它拿到的东西 ✓。
+  ⏳ 下一轮的一枪 ✓：**让子进程自己做 A/B** ✓——在 `runSpanJob` 里（或它的调试分支里 ✓）先渲一次
+    `{bars: 1}`（无窗口 ✓＝整段 ✓）再渲它自己的窗口 ✓，把两者的差写进 sidecar ✓：
+    · 若子进程内也 ≠ 0 ✓ ⇒ 差异由**该进程的环境**造成 ✓，随后二分环境 ✓（`headless: true` 的 host 安装 ✓、
+      `catalogueRead`/`context` ✓、那一组回调 ✓、以及"同一个进程里先渲整段再渲窗口"的顺序效应 ✓）；
+    · 若子进程内 = 0 ✓ ⇒ 差异在**父进程发出去的 job**与子进程读到的之间 ✓（路径/编码/时点 ✓）。
