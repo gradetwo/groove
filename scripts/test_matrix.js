@@ -1285,8 +1285,18 @@ async function runTestOnTarget(target, baseUrl) {
          * `arrangement-transport` inside the arrangement view, so those are what the same three assertions are measured against.
          */
         const header = document.querySelector("header");
+        /**
+         * ⭐ **The carrier is the toolbar, not the status span.**
+         *
+         * `arrangement-transport` is a status span — "audio engine not connected yet", "planned N lane events",
+         * "preparing" — and it is **empty** once the engine is connected and nothing is playing. An empty flex span has
+         * zero height, so its centre is exactly the header's bottom edge and the hit test landed on `header.sticky` on
+         * all three desktop browsers (measured 2026-10-07). The studio's carrier was its transport group, which held the
+         * play/stop cluster and could not be empty; the arrangement's equivalent is the toolbar that holds the same
+         * cluster, so that is what the claim is measured against.
+         */
         const group = document.querySelector(
-          "[data-testid='arrangement-transport'], [data-testid='toolbar-group-transport']"
+          "[data-testid='arrangement-toolbar'], [data-testid='toolbar-group-transport']"
         );
         const panel =
           document.querySelector("[data-testid='arrangement-view-v2']") ??
