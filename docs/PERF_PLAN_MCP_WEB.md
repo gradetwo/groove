@@ -219,3 +219,53 @@ until E1 makes parallelism explicit), `flattenCost.test.ts` (E4), `fileSizeBudge
 - **Replacing the v1 song model.** `flattenSong` is the renderer's input and its cost curve is in §1.1; the fix
   (E4, E7) does not require retiring the model.
 - **Reducing the 8 kHz preview's sample rate further.** It is not the cost; the cold start and the voice count are.
+
+---
+
+## 6. The parallel render: measured feasibility and the design (2026-10-07)
+
+### 6.1 What was measured before any code
+
+A synthetic `OfflineAudioContext` of the same shape as the arrangement's graph — 200 sawtooth voices through a
+1.7 s convolution reverb, 20 s of audio — rendered K times **at once**, in K separate pages and then K contexts
+inside **one** page (`scratch/parallel-render-probe.mjs`):
+
+| K | wall (K pages) | aggregate | wall (one page, K contexts) | aggregate |
+| --- | --- | --- | --- | --- |
+| 1 | 5.20 s | 3.8× realtime | 5.32 s | 3.8× realtime |
+| 2 | 5.90 s | 6.8× | 5.80 s | 6.9× |
+| 4 | 7.65 s | 10.5× | 7.72 s | 10.4× |
+| 8 | 12.93 s | 12.4× | — | — |
+
+**Two conclusions, and the second is the one that matters for the implementation:** the engine does parallelise
+(throughput 3.8× → 12.4× realtime from K=1 to K=8, i.e. ≈ **2.8× at K=4 and ≈ 3.3× at K=8**), and **one page with K
+contexts is as good as K pages** — so chunked rendering needs no multi-page or worker orchestration; it can live
+inside the render page both roads already use.
+
+Against the measured baseline (5:03 of audio in **753 s**, 0.40× realtime, one core of eight), K=4 projects to
+**≈ 270 s (4.5 min)** and K=8 to **≈ 230 s (3.8 min)**, before the pre-roll overhead below.
+
+### 6.2 The design
+
+1. **A span primitive.** `compileArrangementToPattern` gains an optional `range` (`startBar`/`endBar`) that filters
+   the notes to the span and shifts them so the span begins at zero — the rule the MCP preview already implements in
+   `flattenMcpArrangement(range)` ("a note that began before the span is clipped at its head; the compiled section is
+   `endBar - startBar` bars long"), moved to the one place both roads can call.
+2. **`renderPatternChunked(pattern, options, { chunks })`** (new, `src/audio/parallelRender.ts`): split the length
+   into K spans, render them **concurrently** as K `OfflineAudioContext`s in the existing page, then stitch.
+3. **Pre-roll, not guesswork.** Every chunk except the first is rendered from `preroll` **before** its start, where
+   `preroll = longest note in the piece + the reverb tail` (the piece's pads are 4.8 s and the tail is 1.7 s, so
+   ≈ 7 s). The pre-roll region is discarded, but the voices and the reverb are in the state the single pass would
+   have had. Overlapping crossfade regions (≈ 250 ms) absorb what the pre-roll cannot reconstruct exactly.
+4. **A fallback that is the old path.** `chunks: 1` is byte-for-byte the current renderer; it stays for exactness and
+   for the equivalence test's reference.
+5. **Wiring**: the web export (`wavFileFor`) and the MCP render worker both ask for `chunks = 4` (a setting, not a
+   constant), and the export's progress element gets its ticks from the chunk completions — which is also what W7
+   needs.
+
+### 6.3 The criterion that keeps the sound
+
+The guard is a **null test**, not a listening test: render a fixed fixture twice — `chunks: 1` and `chunks: 4` — and
+compare sample by sample. Target: outside the crossfade windows, peak difference **≤ −60 dBFS**; inside them,
+**≤ −40 dBFS**; and the two buffers must be the same length. The thresholds are to be set from the first real
+measurement and then frozen, the way `flattenCost`'s ceilings were.
