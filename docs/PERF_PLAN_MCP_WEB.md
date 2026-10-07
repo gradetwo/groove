@@ -49,10 +49,12 @@ an idle machine before anyone treats the last digits as a target. The render, CP
 | **open the instrument library** | **≥11.5 s (one run), >40 s (another)** | 315 programs; search *after* it opens is 97–199 ms |
 | choose an instrument | 781–3,037 ms | row click → chip name |
 | open the piano roll | 1,586 ms | track picker + Roll tab |
-| **draw one note in the roll** | **368–507 ms per landed note** | 4 of 8 targeted cells landed; the rest were scrolled out of the roll's viewport and the coordinate click missed |
+| **bulk entry — import a 5-minute MIDI (10 parts, 2,096 notes)** | **127 ms to the mapping dialog + 303 ms to place = ~0.6 s** | dialog names all **10 parts** with 49 instrument options; **Confirm is disabled until one part is mapped**, Skip places them all as synths |
+| **the arrangement's length after that import** | **stays 8 bars** while the file's music reaches **125** | the ruler, the regions and the transport all stay 8 bars; setting Bars to 125 by hand costs **394 ms** |
+| draw one note in the roll (the *editing* gesture, not the entry path) | 368–507 ms per landed note | later steps need a horizontal scroll: 4 of 8 targeted cells landed |
 | "Copy selection" (the only repeat gesture) | 7,206 ms | duplicates the marked span **once**; the copies are not re-selected, so pressing again does nothing new |
-| start playback with 10 parts | 3,232 ms | transport reachable, sounds |
-| page JS heap | **43 MB with 1 track → 391 MB with 10 tracks** (~35 MB per sampler track) | `performance.memory` |
+| start playback (11 imported parts) | **393 ms** to the first playhead movement | frames p50 16.7 ms, p95 21.6 ms, worst 45.8 ms, 1 frame >32 ms, 0 long tasks |
+| page JS heap | **15–16 MB with 11 imported (synth) lanes**; 43 MB with one *sampler* lane; **391 MB with ten sampler lanes and the instrument library open** | so the memory is in sampler state + the library, not in track count |
 | boot / first paint (from `perf:check`, idle machine) | desktop FCP 1,300 ms, LCP 2,424 ms, CLS 0.000; mobile 4G+4× FCP 3,568 ms, LCP 6,192 ms | initial route **226 KB gzip** |
 
 ---
@@ -101,9 +103,20 @@ an idle machine before anyone treats the last digits as a target. The render, CP
 13. **The roll's visible window fights the mouse.** The grid is 128 steps wide; cells outside the visible area do
     not receive a coordinate click. Drawing the ostinato means scroll-click-scroll, at ~0.45 s per note — **≈16
     minutes of clicking for 2,096 notes**, before any musical judgement.
-14. **No bulk entry or paste.** The generators (Inspire Me, Euclidean, Arpeggio, Chord) are the only bulk paths,
-    they need a selection, and they are electronic-music idioms: none of them writes a sustained orchestral swell
-    or an ostinato figure.
+14. **The bulk path is the file, and the file arrives with the wrong length.** MIDI import is fast and names the
+    parts (measured above), but it leaves the arrangement at **8 bars** while the music reaches 125: the ruler, the
+    regions and the transport all stop at 8 until someone types 125 by hand. A creator who imports a five-minute
+    cue and presses play hears sixteen seconds of it. ⭐ **This is the first thing to fix.**
+15. **The instrument mapping exists only at import time.** The dialog is good — one row per part, the file's own
+    names, 49 catalogue options, and the created track says which recording it ended on — but the decision cannot
+    be revisited afterwards: the report itself says "re-import the file and choose an instrument in this dialog".
+    `Confirm` is also **disabled until at least one part is mapped**, while `Skip` quietly makes every part a
+    synthesiser (the report does say so, which is the good half).
+16. **Nothing records what you play.** The arrangement *does* wire Web MIDI input
+    (`ArrangementViewV2` → `useMidiInput`, `isKeyboardMode: true`) and it renders a virtual keyboard
+    (`ArrangementKeyboardV2`) — but both only **audition** (`engineRef.triggerNote` / `player.audition`). There is
+    no path from "I played that" to a note in `notesByTrack`, so the two input methods a creator reaches for
+    first cannot put a note in. Drawing, generators and file import are the only ways in.
 15. **No way to see or set the piece's *length* in time.** Bars are bars; at 100 BPM 125 bars is 5:00, at 120 BPM
     it is 4:10. The creator thinks in minutes.
 
@@ -142,7 +155,9 @@ moved. Targets are for an **idle** 8-core machine unless stated.
 | --- | --- | --- | --- | --- |
 | W1 | **Incremental editing.** Adding a track, switching a kind or starting playback must not re-render the whole surface: memoise the lane list, keep the grid's scroll/selection, and commit through the same command path without a full pass. | 3.0 s / 3.0 s / 3.2 s | **≤ 300 ms** each | `probe:latency`-style interaction probe on the arrangement surface (it already measures click → DOM) |
 | W2 | **The instrument library must open in one frame.** The 315-row list is the cost: virtualise it, defer the per-row coverage probe until a row is hovered (the component already asks for coverage on hover/focus), and remember the last category. | ≥ 11.5 s / > 40 s | **≤ 800 ms** to first list | a browser criterion that clicks the chip and asserts the list within 800 ms |
-| W3 | **Bulk note entry and a real repeat.** Marquee multi-select, paste at a position, "repeat selection ×N", and drag-copy with a modifier; plus a step-strip that can be typed into. | ~0.45 s per note; one-shot copy | **≥ 20 notes/second** entered (paste/repeat), and a 2,096-note cue assembled in **≤ 3 minutes of interaction** | interaction probe: draw 4, marquee, repeat ×8, assert the note count and the elapsed interaction time |
+| W3 | ⭐ **An imported file sets the arrangement's length.** Extend `bars` to cover the imported notes (and the part that reaches furthest), the way the MCP import already does (`steps 2000` = 125 bars). | 125 bars of music arrive into an 8-bar arrangement | the piece plays end to end with **no manual step** | import criterion: import the 125-bar fixture, assert `bars >= 125` and that the last note is inside the ruler |
+| W3b | **Recording.** Route MIDI-in and the virtual keyboard into `notesByTrack` (quantise/velocity options, arm-per-track already exists as a flag): "press record, play, see the notes". | both only audition | a played phrase lands as notes and can be undone in one step | a browser probe with a fake MIDI device (`requestMIDIAccess` stub) writes 8 notes while the transport runs |
+| W3c | **The mapping stays revisitable.** The per-track instrument chip already exists; make it the place the import's decision can be changed later, instead of re-importing. | decide-at-import only | any imported part can be re-pointed from its own track | UI criterion: change an imported track's asset and the lanes show the new recording |
 | W4 | **Orchestral generators.** An "ostinato" generator (figure × bars × dynamic arc), a "swell" (velocity/length curve over a phrase) and a "score from chords" pass; the existing generators stay for electronic idioms. | none | one gesture writes an 8-bar orchestral ostinato | unit criteria on the generated note set + a UI test that the gesture lands it |
 | W5 | **Length in seconds, on the toolbar.** Show `125 bars ≈ 5:00 @ 100 BPM` and let a person type either. | bars only | a creator can ask for 5:00 and get the bars | unit + toolbar criterion |
 | W6 | **Memory per track.** 35 MB per sampler lane is mostly duplicated catalogue/coverage state; share it per instrument and drop it when the lane's instrument changes. | 391 MB at 10 tracks | **≤ 150 MB** at 10 tracks | a browser criterion reading `performance.memory` after building 10 tracks |
@@ -153,7 +168,9 @@ moved. Targets are for an **idle** 8-core machine unless stated.
 - **Hear the piece:** 5:00 stereo render **≤ 2 min** (today 8 m 38 s), preview of a phrase **≤ 2 s** warm.
 - **Discover an instrument:** MCP **≤ 3 s** first call, web **≤ 0.8 s**; repeat **≤ 50 ms**.
 - **Build a 10-part palette:** MCP **≤ 100 ms** total (today ~40 ms ✓), web **≤ 3 s** total (today ~28 s).
-- **Enter 2,000 notes:** web **≤ 3 min** of interaction (today ~16 min of clicking), MCP unchanged (13–64 ms per part).
+- **Enter 2,000 notes:** web **by file, ≤ 1 s** (today ~0.6 s ✓) and it must arrive at the music's own length
+  (today the arrangement stays at 8 bars); by hand, the editing gestures stay sub-second; by keyboard, **it must land
+  at all** (today it cannot). MCP unchanged (13–64 ms per part).
 - **Memory:** ≤ 150 MB at 10 tracks (today 391 MB web / 245 MB MCP).
 - **Never a silent wait:** every operation over 1 s reports progress and an estimate.
 

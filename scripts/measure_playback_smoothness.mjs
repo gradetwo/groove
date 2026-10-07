@@ -81,10 +81,42 @@ localStorage.setItem("groove_audio_started", "1");
   await page.setViewportSize({ width, height });
   await page.goto(`http://127.0.0.1:${port}/?tab=studio`, { waitUntil: "domcontentloaded" });
 
+  /**
+   * ⭐ **The landing surface is the chooser, not the studio** (v2.35.0): `?tab=studio` draws
+   * `new-project-panel-v2` and the arrangement mounts when a project is created. This probe waited for the v1
+   * `track-header-0`, which no surface renders any more, so it answered "studio did not render" for all three
+   * targets — the realtime axis had **no working instrument at all** (found 2026-10-07, while measuring the
+   * Zimmer study). The steps below are the ones `test_matrix.js`, `measure_interaction_latency.mjs` and
+   * `audit_screens.mjs` all take: gate, prompt, chooser, then the arrangement.
+   */
+  const FIRST_SCREEN =
+    "[data-testid='audio-start-gate'], [data-testid='first-run-prompt'], [data-testid='new-project-panel-v2'], [data-testid='arrangement-view-v2']";
+  await page.waitForSelector(FIRST_SCREEN, { state: "attached", timeout: 45000 }).catch(() => null);
+  if (await page.$("[data-testid='audio-start-gate']")) {
+    await page.click("[data-testid='audio-start-button']", { force: true }).catch(() => {});
+    await page.waitForSelector("[data-testid='audio-start-gate']", { state: "detached", timeout: 20000 }).catch(() => null);
+  }
+  if (await page.$("[data-testid='first-run-prompt']")) {
+    await page.click("[data-testid='first-run-prompt-dismiss']", { force: true }).catch(() => {});
+    await page.waitForSelector("[data-testid='first-run-prompt']", { state: "detached", timeout: 20000 }).catch(() => null);
+  }
+  await page
+    .waitForSelector("[data-testid='new-project-panel-v2'], [data-testid='arrangement-view-v2']", { state: "attached", timeout: 45000 })
+    .catch(() => null);
+  if (await page.$("[data-testid='new-project-panel-v2']")) {
+    // ⭐ A DOM click, and Create only once the card says it is chosen: coordinate clicks land on the modal, and
+    // both clicks in one tick create the previous render's template (both measured in `test_matrix.js`).
+    await page.evaluate(() => document.querySelector("[data-testid='template-drums-bass']")?.click());
+    await page
+      .waitForFunction(() => document.querySelector("[data-testid='template-drums-bass']")?.getAttribute("aria-pressed") === "true", { timeout: 5000 })
+      .catch(() => null);
+    await page.waitForTimeout(150);
+    await page.evaluate(() => document.querySelector("[data-testid='new-project-create']")?.click());
+  }
   try {
-    await page.waitForSelector("[data-testid='track-header-0']", { timeout: 30000 });
+    await page.waitForSelector("[data-testid='arrangement-view-v2']", { timeout: 30000 });
   } catch {
-    console.log(`\n### ${label}: studio did not render`);
+    console.log(`\n### ${label}: the arrangement did not render`);
     await context.close();
     continue;
   }
@@ -153,12 +185,21 @@ localStorage.setItem("groove_audio_started", "1");
       /* unsupported */
     }
 
-    // Watch the ruler's active step: this is the actual visual playhead the user sees.
+    /**
+     * ⭐ **The v2 playhead is a position, not a labelled cell.** It carries no `data-ruler-step-idx` (the v1
+     * studio's cell did, and this read returned null ever after), so the step is read from the playhead's own
+     * `left` against the zoom: `pixelsPerBar` is on screen beside the zoom buttons, and a bar is sixteen steps.
+     * That is precisely "where the picture is", which is what the drift question is about.
+     */
     const readStep = () => {
-      const cell = document.querySelector("[data-testid='arrangement-playhead']");
-      if (!cell) return null;
-      const attr = cell.getAttribute("data-ruler-step-idx");
-      return attr === null ? null : Number(attr);
+      const head = document.querySelector("[data-testid='arrangement-playhead']");
+      const zoom = document.querySelector("[data-testid='arrangement-zoom-value']");
+      if (!head || !zoom) return null;
+      const perBar = Number(zoom.textContent);
+      if (!Number.isFinite(perBar) || perBar <= 0) return null;
+      const px = Number.parseFloat(head.style.left || "0");
+      if (!Number.isFinite(px)) return null;
+      return Math.round((px / perBar) * 16);
     };
 
     const t0 = performance.now();
@@ -241,7 +282,14 @@ localStorage.setItem("groove_audio_started", "1");
 
   // The tempo the studio is running at, so the expected step rate can be computed.
   const bpm = await page.evaluate(() => {
-    const el = document.querySelector("[data-testid='tempo-readout'], [data-testid='tempo-value'], input[type='number']");
+    /**
+     * ⭐ **The tempo by name, not "the first number input".** A selector list is resolved in document order, and
+     * the v2 toolbar carries several number inputs before the tempo — the Euclidean pulse count among them — so
+     * this read "bpm=3" and then computed the expected rate from it, reporting DRIFT on a playhead that was in
+     * phase (7.83 steps/s against the 8 that 120 BPM implies).
+     */
+    const tempo = document.querySelector("[data-testid='arrangement-tempo']");
+    const el = tempo ?? document.querySelector("[data-testid='tempo-readout'], [data-testid='tempo-value']");
     const m = el ? (el.textContent || el.value || "").match(/\d+(\.\d+)?/) : null;
     return m ? Number(m[0]) : null;
   });
