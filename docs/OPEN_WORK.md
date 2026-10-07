@@ -17511,3 +17511,18 @@ describe("the grid's editing actions", () => {
 **⭐ 另一条已确认的事实 ✓**：⭐ 删 v1 工具要**同时**改 ⭐ **必需清单**（⭐ `check_mcp.mjs:128–146` ✓）＋ ⭐ **行为检查**（⭐ 8 处 ✓）＋ ⭐ 判据读源码的路径 ✓
 ```
 
+### 六百七十六、⭐ **迁移 ④ 的清单：三个"v2 名字吃 v1 数据"的工具（2026-10-07 ✓）**
+
+```
+**⭐ 现象 ✓**：⭐ `patternFromArgs`（⭐ `mcp/toolKit.ts:364` ✓）有 ⭐ **9 个使用者** ✗，其中 ⭐ **3 个仍是活的工具** ✓：
+  ⭐ ① ⭐ `estimate_key` ✓（⭐ `registryAnalysis.ts:22` ✓）⇒ ⭐ 入参 `genreId?`／`pattern?` ✗
+  ⭐ ② ⭐ `pattern_statistics` ✓（⭐ `registryExamples.ts:31` ✓）⇒ ⭐ 同上 ✗
+  ⭐ ③ ⭐ `share_url` ✓（⭐ `registryAnalysis.ts:206` ✓）⇒ ⭐ `pattern?` ✗ ⇒ ⭐ 把 v1 pattern **编码进 URL** ✗
+**⭐ 迁移方案（已量 ✓）**：
+  ⭐ ① ⭐ `estimate_key` ✓ ⇒ ⭐ 入参 `arrangementId` ＋ `trackId?` ✓ ⇒ ⭐ 从 `notesByTrack` 组 `{ tracks: [{ pitch: [...] }] }` ✓ ⇒ ⭐ `estimateKey` 的签名只读音符 ✓（⭐ `toolKit.ts:464` ✓）⇒ ⭐ **逻辑不变 ✓，只换来源 ✓**
+  ⭐ ② ⭐ `pattern_statistics` ✓ ⇒ ⭐ 同理 ✓（⭐ 密度／力度／音域 ✓ 在音符上都算得出 ✓）
+  ⭐ ③ ⭐ `share_url` ✓ ⇒ ⚠️ **判断**：⭐ 分享的是**作品** ✗，⭐ 而 v1 的编码器写的是 pattern ✗ ⇒ ⭐ 要么换成编曲的编码 ✓，⭐ 要么**退役** ✓
+**⭐ 为什么这是关键一步 ✓**：⭐ 这三个是 ⭐ `patternFromArgs` **最后的使用者** ✗ ⇒ ⭐ 迁完 ⇒ ⭐ 才能删 ⭐ `mcp/pattern.ts`（⭐ 821 行 ✓，⭐ 12 个导出 ✓，⭐ 被 ⭐ **8 个模块**引用 ✗）✓
+  ⇒ ⭐ 顺序 ✓：⭐ **先清消费者 ✓，再删中枢 ✓**
+```
+
