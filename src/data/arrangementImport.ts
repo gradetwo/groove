@@ -23,7 +23,7 @@ import type { ArrangementV2, NoteEvent, TrackKindV2 } from "../types/arrangement
 import type { GrooveProjectPackage } from "../types/project";
 import type { SequencerPattern, SequencerTrack } from "../types/genre";
 import type { ImportedPart } from "./musicxmlImport";
-import { addTrack } from "./arrangementEdits";
+import { addTrack, MAX_BARS } from "./arrangementEdits";
 import { sampledInstrumentFor } from "./sampledInstruments";
 import { placementForPart, type SituationPlacement, type StringSituationSpec } from "./stringSituation";
 import { projectSongToV2, v1KindForTrackId } from "./arrangementProjection";
@@ -114,6 +114,40 @@ export function importedPartVoice(instrument: string | undefined): { kind: Track
  * track it got before this option existed. A single-part file places straight away: one part is not a table. Naming
  * a **playing technique** still has no picker, so that half remains a programmatic caller's.
  */
+/**
+ * ⭐ **How long the arrangement becomes when these parts land in it.**
+ *
+ * A file states its music, not the host's grid. Importing a five-minute MIDI (125 bars) into an eight-bar
+ * arrangement left the ruler, the regions and the transport at **eight bars**, so the piece could not be heard past
+ * sixteen seconds without someone typing the length in by hand — measured on 2026-10-07 (the import reported "10
+ * track(s), 2096 note(s)" and the Bars field still read 8). The MCP import had the same gap: its reply said
+ * `steps: 2000` beside `bars: 8`.
+ *
+ * The rule is the furthest reach of what arrived; the arrangement's own length is a floor, so an import can never
+ * shorten a piece, and `MAX_BARS` caps what the import may *ask for* (a longer file keeps its notes; the length stops
+ * at the ceiling rather than pretending).
+ */
+export function barsCoveringNotes(
+  currentBars: number,
+  parts: readonly { notes: readonly NoteEvent[] }[],
+  beats: number
+): number {
+  const perBar = Math.max(1, beats);
+  let furthest = 0;
+  for (const part of parts) {
+    for (const note of part.notes) {
+      const end = note.startBeats + Math.max(0, note.lengthBeats);
+      if (end > furthest) furthest = end;
+    }
+  }
+  if (furthest <= 0) return currentBars;
+  const needed = Math.ceil(furthest / perBar);
+  // ⭐ The cap applies to what the **import asks for**, never to what the arrangement already is: an arrangement
+  // longer than the ceiling is left alone rather than shortened to it (the criterion caught exactly that).
+  if (needed <= currentBars) return currentBars;
+  return Math.min(MAX_BARS, needed);
+}
+
 export function arrangementWithImportedParts(
   arrangement: ArrangementV2,
   imported: { parts: readonly ImportedPart[]; problems?: readonly string[] },
@@ -203,6 +237,15 @@ export function arrangementWithImportedParts(
     trackIds.push(trackId);
     notes += part.notes.length;
   }
+
+  /**
+   * ⭐ **The arrangement is as long as the music it now holds.** Before this, an imported 125-bar file played for
+   * eight bars; the criterion in `arrangementImportLength.test.ts` is what keeps the two together.
+   */
+  next = {
+    ...next,
+    bars: barsCoveringNotes(next.bars ?? 8, withNotes.map(({ part }) => part), beatsPerBar(next.timeSignature)),
+  };
 
   return {
     arrangement: next,

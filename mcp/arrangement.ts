@@ -62,7 +62,7 @@ import { flattenArrangementV2, laneInstrumentForTrack, laneRoleForTrack } from "
 import { resolveInstrumentPresetKey } from "../src/audio/instrumentPresets";
 import { SAMPLED_INSTRUMENT_SYNTHS, sampledAssetForLane, sampledInstrumentFor, sampledInstrumentGapReason } from "../src/data/sampledInstruments";
 import { placementForPart, placementForTrack, type SituationPlacement, type StringSituationSpec } from "../src/data/stringSituation";
-import { importedPartVoice } from "../src/data/arrangementImport";
+import { barsCoveringNotes, importedPartVoice } from "../src/data/arrangementImport";
 import { DEFAULT_SYNTH_PRESETS } from "../src/audio/PolySynth";
 import { stepsFromNotes, STEPS_PER_BEAT } from "../src/data/noteEvents";
 import { beatsPerBar } from "../src/data/genreExpression";
@@ -1306,7 +1306,15 @@ function addImportedParts(
       // The notes arrive whole rather than one call each: an imported part is one decision, not two hundred edits.
       next = { ...withTrack, notesByTrack: { ...(withTrack.notesByTrack ?? {}), [trackId]: candidate.part.notes } };
     }
-    return next;
+    /**
+     * ⭐ **The arrangement is as long as the music it now holds** — the same rule the file picker's own import uses
+     * (`barsCoveringNotes`), so a 125-bar MIDI plays for 125 bars on both roads. Measured before this: the reply read
+     * `steps: 2000` beside `bars: 8`, so an agent importing a five-minute file got sixteen seconds of it.
+     */
+    return {
+      ...next,
+      bars: barsCoveringNotes(next.bars ?? 8, withNotes.map(({ part }) => part), beatsPerBar(next.timeSignature)),
+    };
   });
   // Guarded because `slice(-0)` is `slice(0)`, which is the whole list: an import that added no track would otherwise report every track it did not add.
   const trackIds = withNotes.length === 0 ? [] : result.summary.tracks.slice(-withNotes.length).map((track) => track.id);

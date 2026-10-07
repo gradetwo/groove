@@ -17,7 +17,8 @@
  * needs a file from anywhere.
  */
 import { describe, expect, it } from "vitest";
-import { arrangementWithImportedParts } from "../data/arrangementImport";
+import { arrangementWithImportedParts, barsCoveringNotes } from "../data/arrangementImport";
+import { MAX_BARS } from "../data/arrangementEdits";
 import { fromMidi } from "../data/midiToArrangement";
 import { sampledAssetForLane } from "../data/sampledInstruments";
 import { buildMidiFile } from "./fixtures/midi_file.mjs";
@@ -78,5 +79,43 @@ describe("the data layer's import creates the track the name asks for", () => {
     // The name is honoured as the built-in voice it means, and the track is not silently left an anonymous one.
     expect(result.problems.join(" | ")).toContain('part 1 "Piano" was named "warm_pad"');
     expect(result.problems.join(" | ")).toContain("keeps its built-in synthesizer");
+  });
+});
+
+/**
+ * ⭐ **An imported file makes the arrangement as long as its music.**
+ *
+ * Measured on 2026-10-07 with a five-minute MIDI (125 bars): the import reported "10 track(s), 2096 note(s)" and the
+ * arrangement's own length stayed **8 bars**, so the ruler, the regions and the transport all stopped at sixteen
+ * seconds and the rest was invisible until someone typed the number in. The MCP import had the same gap — its reply
+ * read `steps: 2000` beside `bars: 8` — and both roads now use `barsCoveringNotes`, which is why these cases call it
+ * directly as well as through the importer.
+ */
+describe("an import makes the arrangement as long as its music", () => {
+  it("⭐ extends the length to the furthest note the file carries", () => {
+    // Bar 100 in 4/4 at 480 ticks per beat = beat 396; the note is held for a bar, so the reach is bar 101.
+    const longFile = buildMidiFile({
+      tracks: [{ name: "Strings", notes: [{ note: 60, startTicks: 396 * 480, durationTicks: 4 * 480 }] }],
+    });
+    const result = arrangementWithImportedParts(blank(), fromMidi(longFile));
+    expect(result.arrangement.bars).toBeGreaterThanOrEqual(100);
+    // And the notes really are there, so the length is describing the file rather than being invented.
+    const trackId = result.arrangement.tracks[0]!.id;
+    expect(result.arrangement.notesByTrack?.[trackId]?.length).toBe(1);
+  });
+
+  it("never shortens an arrangement that is already longer than the file", () => {
+    const short = arrangementWithImportedParts(
+      { ...blank(), bars: 200 },
+      { parts: [{ name: "One bar", notes: [{ pitch: 60, startBeats: 0, lengthBeats: 1, velocity: 90 }] }] }
+    );
+    expect(short.arrangement.bars).toBe(200);
+  });
+
+  it("stops at the model's ceiling instead of pretending, and an empty import changes nothing", () => {
+    // 2,000 bars of reach against a 128-bar ceiling.
+    expect(barsCoveringNotes(8, [{ notes: [{ pitch: 60, startBeats: 0, lengthBeats: 2000 * 4, velocity: 90 }] }], 4)).toBe(MAX_BARS);
+    // No notes: the arrangement keeps the length it had, rather than collapsing to the floor.
+    expect(barsCoveringNotes(8, [{ notes: [] }], 4)).toBe(8);
   });
 });
