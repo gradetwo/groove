@@ -185,6 +185,11 @@ export const commonMessages = {
   lanes_label: { en: "Lanes", zh: "通道" },
   lanes_mute: { en: "Mute", zh: "静音" },
   arrangement_exporting: { en: "Exporting…", zh: "导出中…" },
+  /**
+   * ⭐ **How much longer, from the render's own fraction.** `{time}` is `m:ss`, so the copy stays a sentence in both
+   * languages and the number is the only thing that changes.
+   */
+  arrangement_export_eta: { en: "~{time} left", zh: "剩余约 {time}" },
   arrangement_export_cancel: { en: "Cancel", zh: "取消" },
   arrangement_preparing: { en: "Preparing…", zh: "准备中…" },
   arrangement_metronome: { en: "Metronome", zh: "节拍器" },

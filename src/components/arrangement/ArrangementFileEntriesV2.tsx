@@ -15,6 +15,14 @@ import { memo, useEffect, useRef, useState } from "react";
 import { ChevronDown, Download, FileAudio, FolderKanban, Layers, Loader2, Package, Upload } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
 
+/** ⭐ `m:ss` left, from the fraction and the elapsed seconds the renderer's own callback carries. */
+const remainingLabel = (progress: { fraction: number; elapsedSec: number }): string => {
+  const remaining = Math.max(1, Math.round((progress.elapsedSec * (1 - progress.fraction)) / Math.max(0.01, progress.fraction)));
+  const minutes = Math.floor(remaining / 60);
+  const seconds = remaining % 60;
+  return minutes > 0 ? `${minutes}:${String(seconds).padStart(2, "0")}` : `${seconds}s`;
+};
+
 export interface ArrangementFileEntriesV2Props {
   /** True while a render or a read is in flight, so the menu reports that it is working instead of looking idle. */
   busy?: boolean;
@@ -78,7 +86,7 @@ onImportFile,
         <span data-testid="arrangement-export-progress" className="font-mono text-[10px] uppercase tracking-widest text-text-sub">
           {t("arrangement_exporting")}
           {exportProgress !== undefined && exportProgress.fraction >= 0.03
-            ? ` ${Math.round(exportProgress.fraction * 100)}%`
+            ? ` ${Math.round(exportProgress.fraction * 100)}% · ${t("arrangement_export_eta", { time: remainingLabel(exportProgress) })}`
             : ""}
         </span>
       )}

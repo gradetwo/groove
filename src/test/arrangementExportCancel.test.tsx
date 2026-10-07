@@ -32,7 +32,13 @@ const entries = (extra: Record<string, unknown>) =>
 describe("the export's own state", () => {
   it("⭐ shows the renderer's own fraction, and shows nothing when there is no measurement", () => {
     const { rerender } = entries({ exportingKind: "export", exportProgress: { fraction: 0.42, elapsedSec: 90 } });
-    expect(screen.getByTestId("arrangement-export-progress").textContent).toContain("42%");
+    const label = screen.getByTestId("arrangement-export-progress").textContent ?? "";
+    expect(label).toContain("42%");
+    /**
+     * ⭐ The ETA is derived from the same two numbers, so it is checked here too: 90 s elapsed at 42% leaves about
+     * 124 s, which the label says as `2:04`. A missing helper or a swapped fraction turns this red.
+     */
+    expect(label).toMatch(/2:0\d|1:5\d|2:1\d/);
     rerender(
       <LanguageProvider>
         <ArrangementFileEntriesV2
