@@ -194,6 +194,26 @@ export function moveNote(
 }
 
 /** Change how long a note is held, with a floor of one step so a note cannot become invisible. */
+/**
+ * ⭐ **One note's velocity, which the roll could neither show nor change.**
+ *
+ * Measured while authoring: the note element carried `data-length` and no velocity, the only velocity controls were the
+ * *new-note* slider and a whole-track ramp — so "the strings are too loud on beat 3" had no answer. The clamp is 1..127
+ * because that is the MIDI range every consumer of these notes agrees on.
+ */
+export function setNoteVelocity(
+  notes: readonly NoteEvent[],
+  at: { pitch: number; startBeats: number },
+  velocity: number
+): NoteEvent[] {
+  const clamped = Math.max(1, Math.min(127, Math.round(velocity)));
+  return notes.map((note) =>
+    note.pitch === at.pitch && sameGridPosition(note, { pitch: at.pitch, startBeats: at.startBeats } as NoteEvent)
+      ? { ...note, velocity: clamped }
+      : note
+  );
+}
+
 export function setNoteLength(
   notes: readonly NoteEvent[],
   at: { pitch: number; startBeats: number },

@@ -54,6 +54,7 @@ import {
   setTrackFlag,
   setTrackGain,
   setTrackNoteLength,
+  setTrackNoteVelocity,
   setTrackPan,
   setTrackRegion,
   setTrackSample,
@@ -339,6 +340,23 @@ export function moveTrackNoteCommand(
     action: "move-note",
     redo: (arrangement) => moveTrackNote(arrangement, trackId, from, to),
     undo: (arrangement) => moveTrackNote(arrangement, trackId, to, from),
+  };
+}
+
+/**
+ * ⭐ **One note's velocity as an undoable command**, exactly the shape the length command has: the caller states what the
+ * value was before, so undo restores it rather than guessing.
+ */
+export function setTrackNoteVelocityCommand(
+  trackId: string,
+  at: { pitch: number; startBeats: number },
+  before: number | undefined,
+  after: number
+): ArrangementCommand {
+  return {
+    action: "note-velocity",
+    redo: (arrangement) => setTrackNoteVelocity(arrangement, trackId, at, after),
+    undo: (arrangement) => (before === undefined ? arrangement : setTrackNoteVelocity(arrangement, trackId, at, before)),
   };
 }
 

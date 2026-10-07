@@ -18557,3 +18557,18 @@ describe("the grid's editing actions", () => {
   ⏳ 只剩 **W5b（单音符力度）** ✓ —— 计划里的最后一项 ✓：卷帘目前只有"新音符滑杆"与"整轨 ramp" ✓，
     单个音符既看不到力度也改不了 ✓。下一轮从**数据层与提交路径**入手（先让音符带力度可改、可撤销 ✓，再接 UI ✓），
     并配一条能红的判据 ✓。
+
+### 七百二十七、🚧 **W5b 第一步：单个音符的力度终于可以改（数据层＋命令＋判据）**（2026-10-08 ✓）
+
+  ⭐ 现状（六百九十四 量的 ✓）：音符元素只有 `data-length` ✓，力度既看不到 ✗ 也改不了 ✗；
+    屏幕上只有"**新音符**用的滑杆"与"**整轨** ramp" ✓ ⇒ "第 3 拍的弦乐太响"没有答案 ✓。
+  ⭐ 本轮落地三样 ✓（照 `setTrackNoteLength` 的既有做法镜像 ✓，一条路不新增第二种写法 ✓）：
+    ① `setNoteVelocity(notes, at, velocity)` ✓（`src/data/noteEvents.ts` ✓）：**同时匹配音高与网格位置** ✓
+       （否则会改到邻居 ✓），并**钳制到 1..127** ✓（0 或 254 不该到达合成器 ✓）；
+    ② `setTrackNoteVelocity(arrangement, trackId, at, velocity)` ✓（`src/data/arrangementEdits.ts` ✓）；
+    ③ `setTrackNoteVelocityCommand(trackId, at, before, after)` ✓（`src/data/arrangementHistory.ts` ✓）——
+       撤销用**调用者给出的旧值** ✓，不靠猜 ✓；`before === undefined` 时是 no-op 而不是清零 ✓。
+  ⭐ 判据 ✓（`src/test/noteVelocity.test.ts` ✓ 2 例 ✓）：改且**只改**那一个音符 ✓（三个音符的力度断言 ✓）；
+    钳制 ✓（0→1、999→127 ✓）；撤销恢复旧值 ✓；`undefined` 旧值 ⇒ 原样返回 ✓。
+  ⏳ 还差 **UI** ✓（下一轮）：在卷帘里把这个编辑接上——按仓库既有惯例，作用对象是**框选**（`quantise lengths` 就是这么做的 ✓，
+    而"点音符＝删除"是设计 ✗，所以不走点击选中 ✓），并显示选中音符的力度 ✓。

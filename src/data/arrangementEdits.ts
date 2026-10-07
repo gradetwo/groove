@@ -11,7 +11,7 @@ import { normaliseTrackRegion, regionBars, sameTrackRegion } from "./arrangement
 import { stepCountFor, stepsPerBarFor } from "./noteEvents";
 import type { PlannedTake } from "./takePlanning";
 import { DEFAULT_SAMPLER_ASSET, defaultContentFor, type DefaultContent } from "./defaultContent";
-import { addNote, moveNote, notesFromSteps, removeNote, setNoteLength, stepsFromNotes, STEPS_PER_BEAT } from "./noteEvents";
+import { addNote, moveNote, notesFromSteps, removeNote, setNoteLength, setNoteVelocity, stepsFromNotes, STEPS_PER_BEAT } from "./noteEvents";
 import { chordVoicingForStep } from "../audio/chordVoicing";
 
 let nextId = 1;
@@ -573,6 +573,15 @@ export function moveTrackNote(
 ): ArrangementV2 {
   const notes = arrangement.notesByTrack?.[trackId] ?? [];
   return { ...arrangement, notesByTrack: { ...(arrangement.notesByTrack ?? {}), [trackId]: moveNote(notes, from, to) } };
+}
+
+/**
+ * ⭐ **Change one note's velocity** — the edit the roll had no gesture for. Clamped to 1..127 by `setNoteVelocity`, so a
+ * drag or a slider cannot write a value no synth will read.
+ */
+export function setTrackNoteVelocity(arrangement: ArrangementV2, trackId: string, at: { pitch: number; startBeats: number }, velocity: number): ArrangementV2 {
+  const notes = arrangement.notesByTrack?.[trackId] ?? [];
+  return { ...arrangement, notesByTrack: { ...(arrangement.notesByTrack ?? {}), [trackId]: setNoteVelocity(notes, at, velocity) } };
 }
 
 /** Change how long a note is held. A note shorter than a step is not visible in the grid, so one step is the floor. */
