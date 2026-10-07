@@ -325,39 +325,13 @@ export async function renderPatternHeadless(
    * **both** spans, including the one with no seam at all.
    */
   let spanTimeline: { preRollFrames: number; chunkEndFrame: number } | null = null;
-  const renderedSpan = async () => {
-    if ((options.chunks ?? 1) > 1) return null;
-    if (options.fromBar === undefined && options.preRollSec === undefined) return null;
-    return wav.renderPatternChunkOffline(pattern, {
-      bars,
-      ...(options.fromBar === undefined ? {} : { fromBar: options.fromBar }),
-      ...(options.preRollSec === undefined ? {} : { preRollSec: options.preRollSec }),
-      ...(options.sampleRate ? { sampleRate: options.sampleRate } : {}),
-      ...(options.channels ? { channels: options.channels } : {}),
-      ...(options.stemTrackIdx === undefined ? {} : { stemTrackIdx: options.stemTrackIdx }),
-      ...(Number.isFinite(options.loudnessTrimDb) ? { loudnessTrimDb: options.loudnessTrimDb } : {}),
-      audioLaneCatalogue: audioCatalogue,
-      onAudioLanes: (report: OfflineAudioLaneReport) => {
-        audioLanes = report;
-      },
-      onLimiterKind: (kind: string) => {
-        limiterKind = kind;
-      },
-      onGs1PatchProblems: (problems: readonly string[]) => {
-        gs1PatchProblems = [...problems];
-      },
-      onProblems: (problems: readonly string[]) => {
-        renderProblems.push(...problems);
-      },
-      ...(catalogueRead.problem ? { audioLaneCatalogueProblem: catalogueRead.problem } : {}),
-    });
-  };
-  const spanChunk = spanOutcome ? null : await renderedSpan();
-  const buffer = spanOutcome
-    ? spanOutcome.buffer
-    : spanChunk
-      ? spanChunk.buffer
-      : await wav.renderPatternOffline(pattern, {
+  /**
+   * ⭐ **One options object, three entry points.** A span render needs the renderer's chunk call (for the window it
+   * reports), an ordinary render the whole-pattern call, and both take the same options — building that literal twice
+   * is what the duplication budget caught on this change, and it was right: two copies of a fifteen-line option block
+   * are two places for a field to be forgotten.
+   */
+  const renderArgs: Parameters<typeof wav.renderPatternOffline>[1] = {
     bars,
     /**
      * ⭐ **The span window, passed straight through.** `RenderWavOptions.fromBar`/`preRollSec` are the renderer's own
@@ -435,9 +409,18 @@ export async function renderPatternHeadless(
     // Only the main render reports frames: the per-track solo renders below are separate renders, and their frame
     // counts would make the progress stream look like it restarted.
     ...(progress ? { onRenderProgress: reportRenderedFrames } : {}),
-  });
+  };
+  let buffer: AudioBuffer;
+  if (spanOutcome) {
+    buffer = spanOutcome.buffer;
+  } else if (options.fromBar === undefined && options.preRollSec === undefined) {
+    buffer = await wav.renderPatternOffline(pattern, renderArgs);
+  } else {
+    const chunk = await wav.renderPatternChunkOffline(pattern, renderArgs);
+    buffer = chunk.buffer;
+    spanTimeline = { preRollFrames: chunk.preRollFrames, chunkEndFrame: chunk.chunkEndFrame };
+  }
   progress?.reportOf(buffer.length, buffer.length, "render finished; writing the file");
-  if (spanChunk) spanTimeline = { preRollFrames: spanChunk.preRollFrames, chunkEndFrame: spanChunk.chunkEndFrame };
 
   const channels: Float32Array[] = [];
   for (let index = 0; index < buffer.numberOfChannels; index += 1) channels.push(buffer.getChannelData(index));

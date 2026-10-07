@@ -18056,3 +18056,14 @@ describe("the grid's editing actions", () => {
   ⏳ 下一轮的决定性探针 ✓：把**后一段的音乐区**与整曲同一段做**互相关** ✓，找出使差异最小的**滞后帧数 N** ✓——
     若存在这样的 N（差异降到 ≈ −90 dB ✓）⇒ 结论就是"span 起点错位 N 帧" ✓，修法是用渲染器报的时间线/绝对步对齐 ✓，
     而不是在父进程里按"fromBar × framesPerBar"推算 ✓。这条一改，null 就有望过 ✓，随后才谈 5 分钟基线 ✓ 与默认 K=4 ✓。
+
+### 六百九十七、✅ **CI 红了：重复代码预算抓住了"同一个选项块写两遍"**（2026-10-08 ✓）
+
+  ⚠️ `duplicationBudget` 判据在 CI 上红了 ✓：`sameFile 21 > 20` ✓。
+    根因是我在 `headless.ts` 为 span 路径**复制了主渲染那 15 行选项块** ✓（`onAudioLanes`/`onLimiterStatus`/… 一整套 ✓）。
+  ⭐ 修法（而不是调高上限 ✓）：把选项**只建一次**（`renderArgs` ✓，并标注
+    `Parameters<typeof renderPatternOffline>[1]` 以保留上下文类型 ✓），三个入口共用 ✓：
+    span 走 `renderPatternChunkOffline`（需要它报的窗口 ✓）、普通渲染走 `renderPatternOffline` ✓。
+    修完 **36/20/16** ✓（上限 37/20/17 ✓），判据转绿 ✓；smoke 数字不变 ✓（bar0/1 = −90.3 dB ✓、bar2/3 = −1.3 dB ✗ ✓）。
+  ⭐ 这条判据的价值和 null 判据一样 ✓：它拦住的不是"风格问题" ✓，而是**同一份东西两处维护** ✓——正是文档里反复说的
+    "two places, one thing" ✗。
