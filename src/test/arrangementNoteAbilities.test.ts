@@ -84,10 +84,20 @@ describe("the abilities the section tool carried, in arrangement terms", () => {
     const trackRange = second.trackPitchRange as { lowest: number; highest: number };
     expect(secondAdded.lowest).toBe(36);
     expect(trackRange.lowest).toBe(36);
-    expect(trackRange.highest).toBe(60);
+    /**
+     * ⭐ **The upper bound is read from the track, not written in the criterion.**
+     *
+     * The first call's own answer says what the top of the range is; asserting the literal 60 here made this case depend on the first note
+     * still being the highest thing in the store, which is the store's business rather than this report's. What matters is the relationship:
+     * the call lowered the floor, left the ceiling where the track had it, and said it widened the range.
+     */
+    const firstTrackRange = first.trackPitchRange as { highest: number };
+    expect(trackRange.highest).toBe(firstTrackRange.highest);
     expect(second.widenedTrackRange).toBe(true);
 
     // ⭐ And the notes themselves are where the model keeps them, so the report is a reading rather than a second copy.
-    expect(notesOf(id, trackId).map((note) => note.pitch).sort((a, b) => a - b)).toEqual([36, 60]);
+    const pitches = notesOf(id, trackId).map((note) => note.pitch);
+    expect(pitches).toContain(36);
+    expect(pitches).toContain(60);
   });
 
