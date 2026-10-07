@@ -17826,3 +17826,24 @@ describe("the grid's editing actions", () => {
     实测：导入后 **bpm 100 / bars 126 / steps 2016 / 11 轨** ✓（先前 bpm 是 120 ✓）。
   ⭐ 判据：`arrangementImportSamplerKind.test.ts` 新增"an import carries the file's tempo and meter" ✓
     （fixture 用 `microsecondsPerQuarter: 600_000` = 100 BPM ✓）。
+
+### 六百八十四、✅ **背靠背复测：把"两条路谁快"这件事量成可比的两个数**（2026-10-07 ✓）
+
+**⭐ 一、为什么要重测**
+  ⭐ 六百八十三 里 web 导出 726 s 与 MCP 517.6 s 是在**其它浏览器探针同时跑**时量的 ✗ ⇒ 40% 差异**不成立** ✓
+    ⇒ `scratch/mcp-vs-web-render.mjs` 在同一进程里**先 MCP 后 web**、空闲机上跑同一份 MIDI ✓（11 轨 / 2096 音符 / 126 小节 ✓）。
+
+**⭐ 二、空闲机上的 MCP 渲染**
+  ⭐ **753 s（12 分 33 秒）渲染 303 s 音频 ＝ 0.40× 实时** ✓（44.1 kHz 立体声 ✓，53.4 MB ✓）。
+  ⚠️ 与发布前那次 **517.6 s（0.58×）** 不一致 ✓，而**那次是在有负载时量的**（负载只会更慢 ✓）⇒
+    两次的差别**不是负载** ✓，而是**编排不同**：517.6 s 那次是 10 条**采样器**轨（本部署没有采样包 ✓，
+    `validate_arrangement` 明说 "no sample … no samples ship with the app yet" ✓，无法解析的轨会被记进 `skippedLanes` ✓），
+    753 s 这次是 10 条**合成器**轨 ✓ ⇒ **先前的"0.58×"很可能只渲染了一部分声部** ✗。
+  ⚠️ 这一条必须按口径写：**5 分钟音频在这台机器上要 9–13 分钟**（0.40–0.58× 实时 ✓），
+    要一个可比的绝对值，得用固定 fixture 的 `probe:render-wall`（计划 E1 的量具 ✓）。
+
+**⭐ 三、量具自身的一个错（第三次同型 ✓）**
+  ⚠️ 对比脚本用 `browser.process()` 取浏览器 pid ✗（Playwright 没有这个 API ✓）
+    ⇒ 前两次都在**渲染已经跑完之后**死在这一行 ✗（MCP 的数保住了 ✓、web 的没跑 ✓）。
+    ⇒ 改成采样**本脚本自己的 pid** ✓（浏览器是它的子进程 ✓，`sampleCpu` 的进程组兜底能抓到 Chromium ✓）。
+  ⭐ 教训与 六百八十三 的三次同型：**先证明量具能动，再相信它量出来的数** ✓。
