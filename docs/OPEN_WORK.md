@@ -17434,3 +17434,26 @@ describe("the grid's editing actions", () => {
   ⭐ ④ ⭐ 峰值余量 ✓｜⑤ ⭐ 两张脸扫描 ✓｜⑥ ⭐ 进度上报 ✓｜⑦ ⭐ 歌词 × 编曲 ✓）
 ```
 
+### 六百七十二、⭐ **v1 发布包袱清零：60 处 ⇒ 0（2026-10-07 ✓ 业主指令"甩掉 v1 历史包袱"✓）**
+
+```
+**⭐ 业主指令 ✓**："⭐ **可以考虑把 v1 的发布矩阵废弃，直接按照 v2 重写**"✓ ＋ "⭐ **v1 历史包袱要甩掉**"✓
+**⭐ 清零总账 ✓**：
+  ⭐ ① ⭐ **发布矩阵 `scripts/test_matrix.js`：47 处 ⇒ 0** ✓
+    ⭐ 入口链 ✓：⭐ `ensureArrangementMounted` 已是 v2 的四屏链（⭐ 音频门 ⇒ 首次提示 ⇒ 新建面板 ⇒ Create ⇒ 网格 ✓）
+    ⭐ 落地面 ✓：⭐ `arrangement-grid` ✓／⭐ `arrangement-play` ✓／⭐ `arrangement-playhead` ✓
+    ⭐ 导出 ✓：⭐ `arrangement-export-menu` ✓／⭐ `arrangement-export-mp3` ✓
+    ⭐ 音频设置 ✓：⭐ `header-settings-open` ✓（⭐ 面板 `initialTab = "audio"` ✓）
+    ⭐ 滚卷帘 ✓：⭐ `arrangement-editor-roll` ✓ ＋ ⭐ `roll-grid` ✓
+    ⭐ 删除 ✓：⭐ 手机外壳全部分支（⭐ `mobile-*` ✓ 24 处 ✓）／⭐ 三个 v1 助手（⭐ `openStudioMoreControls`／`openFloatedConsole`／旧 `openPianoRoll` ✓）
+    ⭐ 移植 ✓：⭐ v1 步进格（⭐ `data-track-idx`／`data-step-idx` ✓）⇒ ⭐ 卷帘的音符与几何（⭐ `CELL = 12` ✓）
+  ⭐ ② ⭐ **探针脚本 ×5：13 处 ⇒ 0** ✓（⭐ 改指 ⭐ `arrangement-view-v2`／`arrangement-play`／`roll-grid` ✓）
+  ⭐ ③ ⭐ **两个 v1 专用脚本退役** ✓：⭐ `measure_toolbar_density.mjs`（⭐ 数工作室工具栏控件 ✓）＋ ⭐ `probe_old_project_features.mjs`
+    （⭐ 走 v1 项目中心与抽屉 ✓）⇒ ⭐ 连 `package.json` 的 `probe:toolbar` 一起删 ✓ ＋ ⭐ 在 `check_doc_refs.mjs` **申报**（⭐ 文件路径 ＋ npm script ✓）
+**⭐ 分流依据（业主判例 ✓）**：⭐ **结构 ⇒ 退役** ✓（⭐ 对"已无双部分的布局"加约束 ＝ 对空无的主张 ✗）；⭐ **能力 ⇒ 重建** ✓（⭐ 载体换 v2 ✓，主张不动 ✓）
+**⭐ 发布次数 ✓**：⭐ 前二十次里 ⭐ **只有两次是真实产品缺陷** ✓（⭐ Create 无处理器 ✓；⭐ 设置面板引擎为 `null` ✓），
+  ⭐ 其余是"矩阵按 v1 写"（⭐ 十余处 ✓）与一次偶发联网 ✓ ⇒ ⭐ 教训 ✓：⭐ **退役 `StudioView` 时就该扫 `scripts/`** ✗
+**⚠️ ⭐ 本轮教训（第二次 ✓）**：⭐ `pgrep -f "scripts/release[.]sh"` **又杀掉自己的 shell** ✗（⭐ 因为我的命令行里也含 `scripts/release.sh` ✓）
+  ⇒ ⭐ 正确做法 ✓：⭐ 用 `ps -eo pid,args | grep` 看清后按 **pid** 杀 ✓，⭐ 或先 `exit` 再杀 ✓
+```
+
