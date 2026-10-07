@@ -58,7 +58,7 @@ export interface SpanSidecar {
   audioLanes: OfflineAudioLaneReport;
   problems: string[];
   /** ⭐ The child's own whole-vs-window comparison, present only under `GROOVE_SPAN_SELF_AB=1`. */
-  selfAB?: { frames: number; worstDb: string; wholeFrames: number; barFrames: number; offset: number };
+  selfAB?: { frames: number; worstDb: string; wholeFrames: number; barFrames: number; offset: number; hostInstalls: number };
 }
 
 /** A minimal 16-bit PCM WAV reader: find `fmt ` and `data` rather than assuming the 44-byte canonical header. */
@@ -133,7 +133,7 @@ export async function runSpanJob(jobPath: string): Promise<void> {
     const length = Math.min((timeline?.chunkEndFrame ?? decoded.frames) - from, wholeDecoded.frames - offset);
     let worst = 0;
     for (let i = 0; i < length; i += 1) worst = Math.max(worst, Math.abs(decoded.channels[0]![from + i]! - wholeDecoded.channels[0]![offset + i]!));
-    return { frames: length, worstDb: worst <= 1e-9 ? "-inf" : (20 * Math.log10(worst)).toFixed(1), wholeFrames: wholeDecoded.frames, barFrames, offset };
+    return { frames: length, worstDb: worst <= 1e-9 ? "-inf" : (20 * Math.log10(worst)).toFixed(1), wholeFrames: wholeDecoded.frames, barFrames, offset, hostInstalls: (globalThis as unknown as { __grooveHostInstalls?: number }).__grooveHostInstalls ?? 0 };
   })();
 
   const sidecar: SpanSidecar = {

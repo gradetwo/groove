@@ -178,6 +178,14 @@ export function loadHeadlessHost(publicRoot: string): unknown {
   }
   if (hostInstalled) return wa;
   hostInstalled = true;
+  /**
+   * ⭐ **How many times the host was really installed, on `globalThis` rather than in a module variable** — because the
+   * question is whether the *bundle* holds more than one copy of this module. Two installs wrap `OfflineAudioContext`
+   * twice, and a windowed render's time offset applied twice would move a span's music while leaving a whole render
+   * (offset 0) untouched, which is exactly the pattern the span tests measured.
+   */
+  (globalThis as unknown as { __grooveHostInstalls?: number }).__grooveHostInstalls =
+    ((globalThis as unknown as { __grooveHostInstalls?: number }).__grooveHostInstalls ?? 0) + 1;
 
   /**
    * The wrapper the probe established: **worklet modules are fetched by URL**, and the app asks for them at

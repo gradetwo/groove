@@ -18214,3 +18214,19 @@ describe("the grid's editing actions", () => {
   ⏳ 下一轮的验证（便宜 ✓）：数"host 安装了几次" ✓（或打印 `hostInstalled` ✓），并对比 bundle 与源码下
     `renderPatternChunkOffline` 的窗口结果 ✓；若确认双层包裹 ✓，修法是把动态 `import` 换成**静态导入** ✓
     （或把守卫放到 `globalThis` 上 ✓），并让 `check:mcp:build` 侧再加一条判据防回归 ✓。
+
+### 七百零六、⭐ **两个否定：host 只安装一次；把原生包设为 external 也没修好**（2026-10-08 ✓）
+
+  ⭐ 在 `loadHeadlessHost` 的**真正安装**处加了一个 `globalThis` 计数器 ✓（因为要问的正是"bundle 里是否有两份模块" ✓）：
+    · **源码（vite-node）**：`hostInstalls: 1` ✓、窗口 vs 整段 **−inf** ✓；
+    · **bundle（子进程 self-A/B）**：`hostInstalls: 1` ✓、窗口 vs 整段 **−1.3 dB** ✗。
+    ⇒ **"双层包裹 host"的假设被否掉** ✗（两边都只装一次 ✓）。
+  ⭐ 于是把 `node-web-audio-api` 标成 **external** ✓（`scripts/build_mcp.mjs` ✓，理由写清 ✓：这是带预编译二进制的原生包 ✓，
+    打进去本来也不可移植 ✓），重建后再测：**仍是 −1.3 dB** ✗ ⇒ **也不是"包被打进 bundle"这件事** ✗。
+  ⭐ 现在还剩下的、**从未被排除**的差别只有一个 ✓：**入口不同** ✓——
+    子进程走的是 `renderPatternHeadless`（工具入口 ✓：进度回调 ✓、逐轨 solo 渲染 ✓、采样缓存接线 ✓、可能的
+    `OfflineAudioContext.suspend` ✓），而我的源码对照用的是**直接调用渲染器** ✓（`renderPatternChunkOffline` ✓）。
+  ⏳ 下一轮的一枪 ✓：把源码对照也改成走 **`renderPatternHeadless`** ✓（整段与窗口各一次 ✓）：
+    · 若复现 −1.3 dB ✓ ⇒ 差异在**入口**里 ✓，随后在 `headless.ts`（未钉死 ✓）内二分：
+      进度回调/`suspend` ✓ → 逐轨 solo 渲染 ✓ → 采样缓存接线 ✓；
+    · 若仍是 −inf ✓ ⇒ 差异在**bundle 与源码的构建本身** ✓，那就对比两者在同一调用序列下的 `OfflineAudioContext` 行为 ✓。

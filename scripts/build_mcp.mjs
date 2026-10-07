@@ -34,7 +34,14 @@ const result = await build({
   legalComments: "none",
   define: { "process.env.GROOVE_MCP_VERSION": JSON.stringify(version) },
   // Playwright is ~300 MB and only needed by render_audio; it must stay a runtime import.
-  external: ["playwright", "playwright-core", "@cfworker/json-schema"],
+  /**
+   * ⭐ **`node-web-audio-api` is external for a measured reason, not for size.** Bundled, its JS glue is inlined and the
+   * Node host it installs renders a **windowed** render differently from the whole render of the same pattern (−1.3 dBFS
+   * in the child, against bit-exact in the same code run from source); with the package external, the same bundle and the
+   * same source agree. The host installs once either way, so this is the package's own module identity, not a double
+   * install. It is a native package with prebuilt binaries, so a bundled copy was never going to be portable anyway.
+   */
+  external: ["playwright", "playwright-core", "@cfworker/json-schema", "node-web-audio-api"],
   banner: {
     // No shebang here: `mcp/server.ts` has one and esbuild hoists it to line 1. A second copy in the banner
     // lands on line 2, where it is a syntax error rather than a comment.
