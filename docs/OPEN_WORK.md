@@ -18247,3 +18247,20 @@ describe("the grid's editing actions", () => {
     与源码逐项对齐 ✓ ⇒ 若 bundle 内直接调用也 ≠ 0 ✓，则差异在**构建产物对该原生包的绑定方式** ✓，
     下一步就去看 esbuild 对 `node-web-audio-api` 的输出（wasm/二进制加载路径 ✓、`require` 与 `import` 混用 ✓）；
     若 bundle 内直接调用 = 0 ✓，则差异在**子进程那条路径**（job/环境变量/stdout 协议 ✓）。
+
+### 七百零八、⭐⭐⭐ **bundle 内部直接跑同一序列 = −inf ⇒ 差别不在构建，而在"子进程那条路"，而它唯一多出来的变量是**那个 pattern****（2026-10-08 ✓）
+
+  ⭐ 给 bundle 加了隐藏的 self-AB 模式 ✓（`GROOVE_SELF_AB=1` ✓：在 bundle 内重放源码对照的同一序列 ✓）：
+    `{"mode":"bundle-self-ab","hostInstalls":1,"barFrames":16000,"framesCompared":32000,"worstDb":"-inf",...}` ✓✓
+    ⇒ **bundle 与源码一致地精确** ✓ ⇒ "构建差异"这条**否掉** ✗（七百零六/七百零七 的推断在此收正 ✓）。
+  ⭐ 于是把剩下的变量逐一对照 ✓（子进程 vs 这个 self-AB ✓）：
+    入口 ✓（两者都用 `renderPatternHeadless` ✓）、host ✓、选项集 ✓、JSON 往返 ✓、构建 ✓、包外置 ✓、安装次数 ✓、
+    进程内的先后顺序 ✓（self-AB 也是先整段后窗口 ✓）——**唯一还没被替换过的就是 pattern 本身** ✓✓：
+    self-AB 用的是**模板**编曲 ✓（`createArrangementFromTemplate("drums-bass-chords")` ✓），
+    而子进程渲的是**冒烟脚本经 MCP 工具建的那个编曲** ✓（`blankKind: "sampler"` ✓，且其采样资产在本机**无法解析** ✓）。
+  ⭐ 机制上最像的一条 ✓：文档写明"**A lane with a sample and no notes is played once at the arrangement's start**" ✓——
+    窗口渲染里那个**一次性触发**很可能落在**窗口开头**而不是编曲开头 ✗ ⇒ 内容不同 ✓，
+    且**无窗口**的整段渲染不受影响 ✓（span 0 永远精确 ✓）——与我观察到的全部现象一致 ✓。
+  ⏳ 下一轮一枪 ✓：把 self-AB 的 pattern 换成**冒烟用的那个**（或直接把冒烟 fixture 建进 self-AB ✓）：
+    · 复现 −1.3 dB ✓ ⇒ **pattern 是变量** ✓，随后二分 pattern（去掉采样轨 ✓／改用纯合成器编曲 ✓）；
+    · 仍是 −inf ✓ ⇒ 差异在**子进程的环境**（环境变量 ✓、stdout 协议 ✓、job 读取时点 ✓），再窄也窄不到哪里去了 ✓。

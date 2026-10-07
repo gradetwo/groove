@@ -181,7 +181,15 @@ async function main(): Promise<void> {
 const isEntryPoint = process.argv[1] && import.meta.url.endsWith(process.argv[1].split("/").pop() ?? "");
 if (isEntryPoint || process.env.GROOVE_MCP_FORCE_MAIN === "1") {
   const job = process.env.GROOVE_SPAN_JOB;
-  if (job) {
+  if (process.env.GROOVE_SELF_AB === "1") {
+    import("./render/spanRunner")
+      .then(({ runSelfAb }) => runSelfAb())
+      .then(() => process.exit(0))
+      .catch((error) => {
+        console.error(error);
+        process.exit(1);
+      });
+  } else if (job) {
     import("./render/spanRunner")
       .then(({ runSpanJob }) => runSpanJob(job))
       .then(() => process.exit(0))

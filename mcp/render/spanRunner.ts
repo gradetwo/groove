@@ -154,3 +154,42 @@ export async function runSpanJob(jobPath: string): Promise<void> {
   await fs.writeFile(`${job.outStem}.json`, JSON.stringify(sidecar));
   process.stdout.write(`${JSON.stringify({ ok: true, outStem: job.outStem, ...sidecar })}\n`);
 }
+
+/**
+ * ⭐ **The source-side A/B, replayed inside the bundle.**
+ *
+ * `scratch/node-entry-ab.ts` proved that the renderer, the entry point and the Node host are all bit-exact when the code
+ * runs **from source**; the same sequence inside the **bundle** is what differs (the child's self-A/B measures −1.3 dB).
+ * This runs it here, so the next comparison is bundle-internal-direct against bundle-child: if this is bit-exact, the
+ * difference is the job/child path; if it is not, the difference is how esbuild binds `node-web-audio-api`.
+ */
+export async function runSelfAb(): Promise<void> {
+  const { createArrangementFromTemplate } = await import("../../src/data/arrangementEdits");
+  const { compileArrangementToPattern } = await import("../../src/data/arrangementCompile");
+  const arrangement = createArrangementFromTemplate("drums-bass-chords", "bundle-self-ab");
+  const pattern = compileArrangementToPattern(arrangement, arrangement.notesByTrack ?? {});
+  const catalogueRead = { text: "" } as Parameters<typeof renderPatternHeadless>[2];
+  const context = { publicRoot: "public", sampleRoot: "public/samples" } as Parameters<typeof renderPatternHeadless>[3];
+  const base = { headless: true, sampleRate: 8000, channels: 1 } as unknown as Parameters<typeof renderPatternHeadless>[1];
+  const whole = await renderPatternHeadless(pattern, { ...base, bars: 1 }, catalogueRead, context);
+  const windowed = await renderPatternHeadless(pattern, { ...base, bars: 2, fromBar: 2, preRollSec: 2 }, catalogueRead, context);
+  const wholeDecoded = decodePcm16Wav(new Uint8Array(Buffer.from(whole.base64, "base64")));
+  const windowDecoded = decodePcm16Wav(new Uint8Array(Buffer.from(windowed.base64, "base64")));
+  const timeline = (windowed as unknown as { spanTimeline?: { preRollFrames: number; chunkEndFrame: number } }).spanTimeline;
+  const barFrames = Math.round((60 / (pattern.bpm ?? 120)) * 4 * 8000);
+  const from = timeline?.preRollFrames ?? 0;
+  const offset = 2 * barFrames;
+  const length = Math.min((timeline?.chunkEndFrame ?? windowDecoded.frames) - from, wholeDecoded.frames - offset);
+  let worst = 0;
+  for (let i = 0; i < length; i += 1) worst = Math.max(worst, Math.abs(windowDecoded.channels[0]![from + i]! - wholeDecoded.channels[0]![offset + i]!));
+  process.stdout.write(
+    `${JSON.stringify({
+      mode: "bundle-self-ab",
+      hostInstalls: (globalThis as unknown as { __grooveHostInstalls?: number }).__grooveHostInstalls ?? 0,
+      barFrames,
+      framesCompared: length,
+      worstDb: worst <= 1e-9 ? "-inf" : (20 * Math.log10(worst)).toFixed(1),
+      timeline: timeline ?? null,
+    })}\n`
+  );
+}
