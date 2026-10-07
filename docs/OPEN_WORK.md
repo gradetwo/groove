@@ -18018,3 +18018,20 @@ describe("the grid's editing actions", () => {
   ⏳ 待查（下一轮）：−1.3 dBFS 的**持续性**差异（不是接缝尖峰 ✓）指向"每块渲出的**内容**就不同" ✓——
     优先怀疑 ① 每块各自准备 lane ⇒ 采样轨在每个 span 开头**重复触发** ✓（文档就说"A lane with a sample and no notes is played
     once at the arrangement's start" ✓）；② `fromBar` 模式下 per-lane 预热/概率滚动的绝对步对齐 ✓；③ 8 kHz 下混响/限制器状态 ✓（这一条只解释接缝 ✓，解释不了 6.3 s ✓）。
+
+### 六百九十五、⭐ **把 −1.3 dBFS 缩小到"第二段的内容不对"**（2026-10-08 ✓）
+
+  ⭐ 本轮用"按段对比"把差异定位了 ✓（`scratch/mcp/span-smoke.mjs` 现在按 span 区域分别报最差差 ✓）：
+    · **第一段（fromBar 0）与单次渲染差 −90.3 dBFS** ✓✓（等于逐样本相同 ✓）
+      ⇒ 说明**合并、裁剪、以及渲染器的分块入口在"从第 0 小节开始"时完全正确** ✓。
+    · **第二段（fromBar 2）差 −1.3 dBFS** ✗，且：
+      · 把 preroll 从 2 s 加到 **6 s**（覆盖它前面全部音乐 ✓）——**毫无变化** ✗ ⇒ **不是预热/状态问题** ✓；
+      · 与整曲的**前两小节**对比也只有 −1.5 dBFS ✗ ⇒ **也不是简单的"取错区间"** ✓。
+    · ⇒ 结论收窄为：**渲染器在 `fromBar > 0` 时渲出的内容与整体渲染的同一段不同** ✗（不是合并的锅 ✓）。
+  ⭐ 本轮修掉的真缺陷（由这个定位暴露 ✓）：**父进程原来用"请求的 `preRollSec`"当作实际 preroll** ✗——
+    而从第 0 小节开始的 span **根本没有 preroll**（前面没有音乐可预热 ✓）⇒ 合并时白剪掉 2 s 音乐 ✓ ⇒ 第一段才会差 −1.3 dBFS ✓。
+    修法：`headless.ts` 的 span 路径改走 `renderPatternChunkOffline` ✓，把渲染器**自己报的** `preRollFrames`/`chunkEndFrame`
+    经 sidecar 交给父进程 ✓（"量出来的窗口"而不是"假设的窗口" ✓）。修完第一段即 −90.3 dBFS ✓。
+  ⏳ 下一轮的探针（渲染器侧，边界很窄 ✓）：对同一 fixture 分别渲染 `{fromBar: 2, bars: 1}` 与 `{fromBar: 2, bars: 2}` ✓，
+    与整曲的对应小节逐一比对 ✓，看**哪一小节**开始不对 ✓；同时读 `computeRenderWindow`/`stepOffset` 在 `fromBar` 下的取值 ✓
+    （lane 排程的绝对步与预热窗口都在那里 ✓）。`chunks` 仍**默认不传** ✓（判据没过就不许当默认 ✓）。

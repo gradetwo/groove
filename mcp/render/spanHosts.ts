@@ -124,8 +124,12 @@ export async function renderPatternInSpans(
           getChannelData: (c: number) => channels[c]!,
         },
         atFrame: span.fromBar * framesPerBar,
-        preRollFrames,
-        chunkEndFrame: Math.min(sidecar.frames, preRollFrames + (span.toBar - span.fromBar) * framesPerBar),
+        /**
+         * ⭐ The child's measured window, not this function's assumption: a span that starts at bar 0 gets **no**
+         * pre-roll, because there is nothing before bar 0 to warm the reverb with.
+         */
+        preRollFrames: sidecar.preRollFrames,
+        chunkEndFrame: sidecar.chunkEndFrame,
         /**
          * ⚠️ **The end of the piece keeps its tail.** Without this flag the merge cuts at `chunkEndFrame`, dropping the
          * reverb's decay — the first smoke test rendered 9.6 s of a 10.2 s piece, and the 0.6 s that went missing is

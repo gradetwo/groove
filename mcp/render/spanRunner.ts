@@ -43,6 +43,14 @@ export interface SpanSidecar {
   channels: number;
   sampleRate: number;
   frames: number;
+  /**
+   * ⭐ **The renderer's own answer about the window, not the parent's assumption.** The pre-roll a span actually got is
+   * not always the one requested — asking for bars before the first bar buys nothing — and assuming it cost a whole
+   * debugging round: the first merge trimmed 2 s of music off span 0 and the null test measured −1.3 dBFS across both
+   * spans.
+   */
+  preRollFrames: number;
+  chunkEndFrame: number;
   durationSec: number;
   limiterKind: string;
   gs1PatchProblems: string[];
@@ -105,10 +113,13 @@ export async function runSpanJob(jobPath: string): Promise<void> {
     job.context
   );
   const decoded = decodePcm16Wav(new Uint8Array(Buffer.from(rendered.base64, "base64")));
+  const timeline = (rendered as { spanTimeline?: { preRollFrames: number; chunkEndFrame: number } }).spanTimeline;
   const sidecar: SpanSidecar = {
     channels: decoded.channels.length,
     sampleRate: decoded.sampleRate,
     frames: decoded.frames,
+    preRollFrames: timeline?.preRollFrames ?? 0,
+    chunkEndFrame: timeline?.chunkEndFrame ?? decoded.frames,
     durationSec: rendered.durationSec,
     limiterKind: rendered.limiterKind,
     gs1PatchProblems: rendered.gs1PatchProblems ?? [],

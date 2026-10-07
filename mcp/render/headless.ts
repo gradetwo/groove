@@ -316,9 +316,48 @@ export async function renderPatternHeadless(
           return outcome;
         })
       : null;
+  /**
+   * ⭐ **A span render goes through the renderer's chunk entry point, and the timeline it hands back is used, not
+   * assumed.** `renderPatternChunkOffline` says where the music starts (`preRollFrames`) and where the span's own audio
+   * stops (`chunkEndFrame`) — and the pre-roll is **not** always the requested `preRollSec`: asking for bars *before the
+   * first bar* buys nothing, so the first span's pre-roll is zero. The first version of the parent assumed the requested
+   * value for every span, trimmed 2 s of music off the head of span 0, and the null test found it: −1.3 dBFS across
+   * **both** spans, including the one with no seam at all.
+   */
+  let spanTimeline: { preRollFrames: number; chunkEndFrame: number } | null = null;
+  const renderedSpan = async () => {
+    if ((options.chunks ?? 1) > 1) return null;
+    if (options.fromBar === undefined && options.preRollSec === undefined) return null;
+    return wav.renderPatternChunkOffline(pattern, {
+      bars,
+      ...(options.fromBar === undefined ? {} : { fromBar: options.fromBar }),
+      ...(options.preRollSec === undefined ? {} : { preRollSec: options.preRollSec }),
+      ...(options.sampleRate ? { sampleRate: options.sampleRate } : {}),
+      ...(options.channels ? { channels: options.channels } : {}),
+      ...(options.stemTrackIdx === undefined ? {} : { stemTrackIdx: options.stemTrackIdx }),
+      ...(Number.isFinite(options.loudnessTrimDb) ? { loudnessTrimDb: options.loudnessTrimDb } : {}),
+      audioLaneCatalogue: audioCatalogue,
+      onAudioLanes: (report: OfflineAudioLaneReport) => {
+        audioLanes = report;
+      },
+      onLimiterKind: (kind: string) => {
+        limiterKind = kind;
+      },
+      onGs1PatchProblems: (problems: readonly string[]) => {
+        gs1PatchProblems = [...problems];
+      },
+      onProblems: (problems: readonly string[]) => {
+        renderProblems.push(...problems);
+      },
+      ...(catalogueRead.problem ? { audioLaneCatalogueProblem: catalogueRead.problem } : {}),
+    });
+  };
+  const spanChunk = spanOutcome ? null : await renderedSpan();
   const buffer = spanOutcome
     ? spanOutcome.buffer
-    : await wav.renderPatternOffline(pattern, {
+    : spanChunk
+      ? spanChunk.buffer
+      : await wav.renderPatternOffline(pattern, {
     bars,
     /**
      * ⭐ **The span window, passed straight through.** `RenderWavOptions.fromBar`/`preRollSec` are the renderer's own
@@ -398,6 +437,7 @@ export async function renderPatternHeadless(
     ...(progress ? { onRenderProgress: reportRenderedFrames } : {}),
   });
   progress?.reportOf(buffer.length, buffer.length, "render finished; writing the file");
+  if (spanChunk) spanTimeline = { preRollFrames: spanChunk.preRollFrames, chunkEndFrame: spanChunk.chunkEndFrame };
 
   const channels: Float32Array[] = [];
   for (let index = 0; index < buffer.numberOfChannels; index += 1) channels.push(buffer.getChannelData(index));
@@ -449,6 +489,8 @@ export async function renderPatternHeadless(
   return {
     base64,
     durationSec: buffer.duration,
+    /** ⭐ Present for a span render: where the music starts and where the span's own audio stops (see above). */
+    ...(spanTimeline ? { spanTimeline } : {}),
     ...sampleCache.sampleCacheStats(),
     sampleRate: buffer.sampleRate,
     channels: buffer.numberOfChannels,
