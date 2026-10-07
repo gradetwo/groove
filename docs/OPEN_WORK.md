@@ -17457,3 +17457,20 @@ describe("the grid's editing actions", () => {
   ⇒ ⭐ 正确做法 ✓：⭐ 用 `ps -eo pid,args | grep` 看清后按 **pid** 杀 ✓，⭐ 或先 `exit` 再杀 ✓
 ```
 
+### 六百七十三、⭐ **删一个文件要扫四处（2026-10-07 ✓ 两次踩坑后总结 ✓）**
+
+```
+**⭐ 教训来源 ✓**：⭐ 本会话删 `SequencerPanel`／`Toolbar`／`InfoDossier`／`SoundBankManager`／`measure_toolbar_density` 时，
+  ⭐ 两次**漏扫**导致闸门红 ✗（⭐ 第二次是 `.github/workflows/ci.yml` ✓）
+**⭐ 必扫四处（＋ 一处申报 ✓）**：
+  ⭐ ① ⭐ **生产代码** ✓：⭐ `grep -rn "<名字>" src/ mcp/` ✓（⭐ 排除自身 ✓）
+  ⭐ ② ⭐ **判据** ✓：⭐ `src/test/` ✓ —— ⚠️ ⭐ 判据**既可能 import 它**（⭐ 编译期红 ✓）⭐ 也可能**读它的源码文本**（⭐ `readFileSync` ✓ ⇒ ⭐ **运行期才红** ✗）
+  ⭐ ③ ⭐ **CI 工作流** ✓：⭐ `.github/workflows/*.yml` ✓ —— ⚠️ ⭐ 且要**两处同步** ✓：⭐ 工作流里跑的 ✓ ＋ ⭐ 判据里的"⭐ 必需清单**"（⭐ `ciWorkflows.test.ts:145` ✓）
+  ⭐ ④ ⭐ **`package.json` 的 scripts** ✓（⭐ 删脚本要连 npm script 一起删 ✓）
+  ⭐ ⑤ ⭐ **文档申报** ✓：⭐ `scripts/check_doc_refs.mjs`（⭐ 文件路径 ✓ ＋ npm script 的 `SCRIPT_EXEMPT` ✓）
+**⭐ 另一条同型教训 ✓**：⭐ **拆分文件**（⭐ `registryArrangement` ⇒ `registryArrangementNotes` ✓）同样要扫四处 ✓
+  ⇒ ⭐ 本会话 `mcpNotesResolveHint.test.ts` 就因为**从旧路径读文本**而红 ✗
+**⭐ 判据设计的一条正面经验 ✓**：⭐ `ciWorkflows.test.ts` **双向**断言 —— ⭐ ① 工作流里的 `npm run X` 必须存在 ✓
+  ⭐ ② 必需的探针必须被跑 ✓ ⇒ ⭐ 删探针时两处一起红 ✓ ⇒ ⭐ 这是好的判据形状 ✓（⭐ 不会漏掉另一半 ✓）
+```
+
