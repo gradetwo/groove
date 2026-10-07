@@ -134,7 +134,7 @@ export async function renderPatternInSpans(
        * and "the renderer is exact" is *not* confirmed for the job's configuration. That discrepancy is the next thing
        * to chase, not a reason to ship the cheaper span.
        */
-      options: { ...parentOptions, headless: true },
+      options: { ...parentOptions, headless: true, windowBars: span.toBar - span.fromBar },
       catalogueRead,
       context,
       fromBar: span.fromBar,

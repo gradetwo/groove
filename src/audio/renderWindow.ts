@@ -82,7 +82,16 @@ export function computeRenderWindow(input: RenderWindowInput): ChunkRenderWindow
   const spanSteps = Math.round(input.stepsPerBar * (windowBars ?? Math.max(1, input.bars)));
   const barStartSeconds = input.timing ? input.timing.starts[startStep]! : barStartStep * input.stepDur;
   const preRollRequested = Number.isFinite(input.preRollSec) ? Math.max(0, input.preRollSec as number) : input.tailSec;
-  const preRollSec = Math.min(preRollRequested, RENDER_PREROLL_MAX_SEC);
+  /**
+   * ⭐ **A window that starts at bar 0 gets no pre-roll, because there is nothing before bar 0 to warm up.**
+   *
+   * Measured: the same bar-0 window with `preRollSec: 2` differs from the whole render's own first bars from frame 145
+   * (18 ms, RMS −14.4 dBFS — a genuinely different waveform, not a shift: no lag within ±400 frames improved it), while
+   * the same window with `preRollSec: 0` is **bit-exact** (−240 dBFS). Two seconds of silence in front does not warm a
+   * reverb or a limiter; it only moves the music two seconds into a longer context, and whatever the master chain does
+   * over that silence it does not do at the piece's start.
+   */
+  const preRollSec = fromBar > 0 ? Math.min(preRollRequested, RENDER_PREROLL_MAX_SEC) : 0;
   const contextSeconds = preRollSec + spanSteps * input.stepDur + input.tailSec;
   const preRollFrames = Math.ceil(preRollSec * input.sampleRate);
   return {
