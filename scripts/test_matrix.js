@@ -1293,9 +1293,7 @@ async function runTestOnTarget(target, baseUrl) {
      * header is a title bar there (see 2.3), and the sheet row is the identical entry point behind a
      * bigger target. Same panel, same assertions — only the way in differs.
      */
-    const settingsEntry = target.isMobile
-      ? "[data-testid='mobile-sheet-action-settings']"
-      : "[data-testid='header-settings-open']";
+    const settingsEntry = "[data-testid='header-settings-open']";
     if (target.isMobile) {
       /**
        * The header's own 44 px button, not the tab bar's sheet opener: measured in portrait, the
@@ -1351,26 +1349,6 @@ async function runTestOnTarget(target, baseUrl) {
      * criteria drive `audio-settings-gs1-toggle` and read the flag back. What is left below is the phone path, which reaches the same panel
      * through the studio sheet.
      */
-    if (await page.$("[data-testid='mobile-transport-more']")) {
-      // Phone: restore the default through the panel itself, which is the only surface that owns
-      // the flag there.
-      await page.click("[data-testid='mobile-transport-more']", { timeout: 10000 });
-      await page.waitForSelector("[data-testid='mobile-studio-sheet']", { timeout: 10000 });
-      await clickSheetRowAndVerify(
-        page,
-        "[data-testid='mobile-studio-action-audio-settings']",
-        "[data-testid='audio-settings-gs1-toggle']",
-        "audio settings (restore)"
-      );
-      await page.click("[data-testid='audio-settings-gs1-toggle']", { force: true });
-      await page.waitForTimeout(200);
-      const restored = await page.getAttribute("[data-testid='audio-settings-gs1-toggle']", "aria-pressed");
-      if (restored !== "true") {
-        throw new Error(`Could not restore the GS-1 default on a phone (aria-pressed=${restored})`);
-      }
-      await page.keyboard.press("Escape");
-      await page.waitForTimeout(250);
-    }
 
     // 5e. Track inspector placement + categorized timbre picker (item ②).
     //
@@ -1418,11 +1396,8 @@ async function runTestOnTarget(target, baseUrl) {
       const bottomChromeTop = await page.evaluate(() => {
         const vh = window.innerHeight;
         let top = vh;
-        for (const sel of [
-          "[data-testid='mobile-tab-bar']",
-          "[data-testid='mobile-transport-bar']",
-          "[data-testid='mobile-shared-bottom-row']",
-        ]) {
+        /** ⭐ Empty: the phone's bottom chrome is gone, so there is nothing anchored to the viewport bottom to measure. */
+        for (const sel of []) {
           for (const el of document.querySelectorAll(sel)) {
             const r = el.getBoundingClientRect();
             // Only elements actually anchored to the bottom of the viewport count.
@@ -1624,27 +1599,6 @@ async function runTestOnTarget(target, baseUrl) {
     // instead: an omitted feature must be visibly omitted, with a route to the alternative, not
     // simply absent.
     const rollShell = await openPianoRoll(page);
-    if (rollShell === null) {
-      /**
-       * ⭐ **Existence, not a 45-second timeout.** `openPianoRoll` returns `null` only on the phone
-       * shell, where it has already opened the explanation — so the notice is either there now or the
-       * shell lied. Waiting 45 s to find out would express "this does not exist" as a timeout, which
-       * is the one thing a criterion must not do: the phone targets are gone (2026-10-02), and this
-       * branch is dormant until they are a decision again.
-       */
-      if (!(await page.$("[data-testid='piano-roll-mobile-notice']"))) {
-        throw new Error("Phone shell hid the piano roll without explaining why");
-      }
-      if (!(await page.$("[data-testid='piano-roll-mobile-notice-chords']"))) {
-        throw new Error("Piano-roll notice offers no route to the Chords view");
-      }
-      console.log(`   · piano roll: not offered on a phone; notice + Chords route verified`);
-      await clickVerified(page, "[data-testid='piano-roll-mobile-notice-close']");
-      await page.waitForTimeout(250);
-      if (await page.$("[data-testid='piano-roll-mobile-notice']")) {
-        throw new Error("Piano-roll notice did not dismiss");
-      }
-    } else {
     try {
       await page.waitForSelector("[data-testid='piano-roll-grid']", { timeout: 45000 });
     } catch (rollErr) {
@@ -1654,11 +1608,8 @@ async function runTestOnTarget(target, baseUrl) {
         notMelodic: Boolean(document.querySelector("[data-testid='piano-roll-not-melodic']")),
         inspector: Boolean(document.querySelector("[data-testid='track-inspector']")),
         settings: Boolean(document.querySelector("[data-testid='settings-tab-audio']")),
-        stepGrid: document.querySelectorAll("[data-track-idx][data-step-idx]").length,
         toggleBox: (() => {
-          const el =
-            document.querySelector("[data-testid='toolbar-piano-roll-toggle']") ||
-            document.querySelector("[data-testid='mobile-studio-action-piano-roll']");
+          const el = document.querySelector("[data-testid='arrangement-editor-roll']");
           const r = el?.getBoundingClientRect();
           return r ? { x: r.x, y: r.y, w: r.width, h: r.height } : null;
         })(),
@@ -2084,7 +2035,7 @@ async function runTestOnTarget(target, baseUrl) {
      * arrow-key claims have nothing here to describe. The capability itself is covered where it now lives: `arrangementViewV2.test.tsx`
      * asserts the ramp command against the notes it changes.
      */
-    } // end desktop-only piano roll assertions
+     // end desktop-only piano roll assertions
 
     // 5g. Switching genre *while playing* (the case that shipped broken).
     //
