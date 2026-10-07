@@ -178,11 +178,17 @@ moved. Targets are for an **idle** 8-core machine unless stated.
 - **Hear the piece:** 5:00 stereo render **≤ 2 min** (today 8 m 38 s), preview of a phrase **≤ 2 s** warm.
 - **Discover an instrument:** MCP **≤ 3 s** first call, web **≤ 0.8 s**; repeat **≤ 50 ms**.
 - **Build a 10-part palette:** MCP **≤ 100 ms** total (today ~40 ms ✓), web **≤ 3 s** total (today ~28 s).
-- **Enter 2,000 notes:** web **by file, ≤ 1 s** (today ~0.6 s ✓) and it must arrive at the music's own length
-  (today the arrangement stays at 8 bars); by hand, the editing gestures stay sub-second; by keyboard, **it must land
-  at all** (today it cannot). MCP unchanged (13–64 ms per part).
-- **Memory:** ≤ 150 MB at 10 tracks (today 391 MB web / 245 MB MCP).
-- **Never a silent wait:** every operation over 1 s reports progress and an estimate.
+- **Enter 2,000 notes:** web **by file, ≤ 1 s** (today ~0.6 s ✓) **and it arrives at the music's own length**
+  (✅ done 2026-10-07: the 5:00 file lands at 126 bars on both roads); by hand, the editing gestures stay sub-second
+  (quantise measured 937 ms); by keyboard, **it must land at all** (today MIDI-in and the virtual keyboard only
+  audition). MCP unchanged (13–64 ms per part).
+- **Edit what you entered:** a note's velocity is settable (today there is **no** per-note velocity control), and a
+  selection that Copy/Legato/Transpose can act on is one gesture away (today the marquee needs an empty cell at both
+  ends; a release over a note selects nothing).
+- **Memory:** ≤ 150 MB for a ten-lane arrangement with the editor open (today: **125 MB** with the 126-bar roll open,
+  58 MB for the same grid empty, 10–18 MB without it; the MCP server's median during a render is 245 MB, peak 447 MB).
+- **Never a silent wait:** every operation over 1 s reports progress and an estimate — today a 5:00 export shows one
+  static word ("Exporting…") for **twelve minutes**, and an MCP render emits progress once.
 
 ---
 
