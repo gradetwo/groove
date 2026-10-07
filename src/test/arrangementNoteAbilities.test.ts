@@ -128,3 +128,25 @@ describe("the abilities the section tool carried, in arrangement terms", () => {
     expect((cleared.regionPitchRange as { highest: number }).highest).toBe(72);
   });
 
+/**
+ * ⭐ **Transposing a window, which is what the pattern tool's own transpose became.**
+ *
+ * `apply_pattern_ops` moved a pattern's steps by semitones; an arrangement's notes have a start in beats, so the window is a beat range. The
+ * criterion states both halves: notes inside the window move, and notes outside it do not -- the second is the half that a transpose applied to
+ * the whole track would fail, and it is why the window is an argument rather than a convenience.
+ */
+describe("transpose_arrangement_notes", () => {
+  it("moves the notes inside the window and leaves the rest alone", async () => {
+    const { id, trackId } = await setup();
+    await call("add_arrangement_note", { arrangementId: id, trackId, pitch: 60, startBeats: 0, lengthBeats: 1, velocity: 0.9 });
+    await call("add_arrangement_note", { arrangementId: id, trackId, pitch: 64, startBeats: 8, lengthBeats: 1, velocity: 0.9 });
+
+    await call("transpose_arrangement_notes", { arrangementId: id, trackId, fromBeats: 0, toBeats: 4, semitones: 12 });
+    expect(notesOf(id, trackId).map((n) => n.pitch).sort((a, b) => a - b)).toEqual([64, 72]);
+
+    // ⭐ The negative control: a window that holds no note changes nothing at all.
+    await call("transpose_arrangement_notes", { arrangementId: id, trackId, fromBeats: 100, toBeats: 104, semitones: -12 });
+    expect(notesOf(id, trackId).map((n) => n.pitch).sort((a, b) => a - b)).toEqual([64, 72]);
+  });
+});
+
