@@ -18443,3 +18443,20 @@ describe("the grid's editing actions", () => {
     而模板那次直接崩在探针的读文件路径上 ✗ ⇒ **"按段播报"这件事目前只有代码与类型检查，没有端到端证据** ✗（照实记下 ✓）。
   ⏳ 下一轮 ✓：先修探针（回包无 `path` 时打印回包本身 ✓，一次就能看出是工具拒绝还是调用参数问题 ✓），拿到
     "rendered 1 of 2 spans" 的真实通知 ✓；再回到 bar-0 窗口那 0.2 s 的逐帧对照 ✓。
+
+### 七百二十、⭐ **渲染器的 bar-0 窗口**逐样本精确**（两种选项形状都是）——残留差异在 `renderPatternInSpans` 里**（2026-10-08 ✓）
+
+  ⭐ 新探针 `scratch/window0-head.ts` ✓（渲染器层面，直出音频 ✓）：整段 vs `{bars:4, fromBar:0, preRollSec:2, windowBars:4}` ✓：
+
+| 选项形状 | 首个不同帧 | 前 0.2 s RMS |
+| --- | --- | --- |
+| 最小集 ✓ | **−1**（= 没有任何帧不同 ✓） | **−240.0 dB**（精确零 ✓） |
+| **工具那套**（`format`/`bitrateKbps`/`genreId:"custom"` ✓） | **−1** ✓ | **−240.0 dB** ✓ |
+
+  ⭐ ⇒ **"bar 0 开窗口"在渲染器层面是逐样本正确的** ✓✓（`preRollFrames: 0` ✓ 也对 ✓）。
+  ⭐ 而带 `windowBars` 跑**判据**时模板编曲第一刻差 **−1.4 dB** ✗ ⇒ **残留差异在 `renderPatternInSpans` 内部** ✗
+    （不是渲染器 ✓、不是选项 ✓、不是 host ✓）。
+  ⭐ 下一步（器具已经都在 ✓）：给 `GROOVE_KEEP_SPANS=1` 的那条路加一句"**把 span 0 的原始 PCM 与整曲前 4 小节对齐比对**" ✓
+    （`七百零三` 就是同一个三方对比 ✓）⇒ 一次就能分清"**子进程渲的那一段不对**"还是"**父进程放错/裁错**" ✓：
+    · 子进程那段不对 ⇒ 差在 job 的字段（`windowBars` 与 `preRollSec` 的组合 ✓、`bars` ✓）；
+    · 父进程放错 ⇒ 差在合并的 `atFrame`/`preRollFrames`/`chunkEndFrame` ✓（这三者都已由渲染器报出 ✓，用它们而不是推算 ✓）。
