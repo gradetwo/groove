@@ -103,7 +103,7 @@ function startServer() {
 const SKINS = ["default", "minimal", "comic", "soviet", "sovietYears", "pixel"];
 /** Desktop views render on every target; the phone views only exist on a phone-sized, touch target. */
 const DESKTOP_VIEWS = [
-  { name: "studio", url: "/?tab=studio", waitFor: "[data-toolbar-id='play'], [data-testid='mobile-transport-play']" },
+  { name: "studio", url: "/?tab=studio", waitFor: "[data-testid='arrangement-play']" },
   { name: "chords", url: "/?tab=chords", waitFor: "[data-testid^='chord-style-'], [data-testid='mobile-explore']" },
   { name: "challenge", url: "/?tab=challenge", waitFor: "[data-testid='challenge-view'], [data-testid='mobile-challenge']" },
   { name: "compare", url: "/?tab=compare", waitFor: "[data-testid='compare-view'], [data-testid='mobile-shell']" },

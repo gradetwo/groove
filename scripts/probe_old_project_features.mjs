@@ -125,7 +125,7 @@ const openHub = async () => {
    */
   const hubButton = page.locator('[data-toolbar-id="project-hub"]');
   if (!(await hubButton.first().isVisible().catch(() => false))) {
-    const advanced = page.locator('[data-testid="toolbar-advanced-toggle"]');
+    const advanced = page.locator('[data-testid="arrangement-view-v2"]');
     if (await advanced.count()) {
       await advanced.first().click().catch(() => undefined);
       await page.waitForTimeout(500);
@@ -146,7 +146,7 @@ const cardNames = async () => page.locator('[class*="rounded-2xl"] h4, [class*="
 try {
   /* ── New and Save As, through the Hub's own buttons ─────────────────────────────────────────────────────────── */
   await page.goto(`${base}/#/studio?genre=chicago-house`, { waitUntil: "domcontentloaded" });
-  await page.waitForSelector('[data-testid="toolbar-advanced-toggle"]', { timeout: 30000 });
+  await page.waitForSelector('[data-testid="arrangement-view-v2"]', { timeout: 30000 });
   await openHub();
   await page.locator('button[title="New Project"]').first().click();
   await page.waitForTimeout(900);
@@ -217,7 +217,7 @@ try {
   /* ── ⭐ ...all of it again after a reload ───────────────────────────────────────────────────────────────────── */
   await closeHub();
   await page.reload({ waitUntil: "domcontentloaded" });
-  await page.waitForSelector('[data-testid="toolbar-advanced-toggle"]', { timeout: 30000 });
+  await page.waitForSelector('[data-testid="arrangement-view-v2"]', { timeout: 30000 });
   await openHub();
   const cardsAfterReload = await cardNames();
   const names = cardsAfterReload.join(" | ");

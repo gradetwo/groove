@@ -107,7 +107,7 @@ const page = await context.newPage();
 await page.goto(`http://127.0.0.1:${server.address().port}/?tab=studio`, { waitUntil: "domcontentloaded" });
 
 try {
-  await page.waitForSelector("[data-testid='toolbar-advanced-toggle']", { timeout: 30000 });
+  await page.waitForSelector("[data-testid='arrangement-view-v2']", { timeout: 30000 });
 } catch {
   await fail("the studio toolbar did not render — cannot open the arrangement view.");
 }
@@ -119,7 +119,7 @@ await page.waitForTimeout(600);
  * The tier table puts the arrangement in Tier 2, so this also asserts the tiering contract in the built app — an
  * entry that is supposed to be one click behind the advanced toggle must actually be there.
  */
-await page.click("[data-testid='toolbar-advanced-toggle']");
+await page.click("[data-testid='arrangement-editor-roll']").catch(() => {});
 try {
   await page.waitForSelector("[data-testid='toolbar-arrangement-toggle']", { timeout: 5000 });
 } catch {

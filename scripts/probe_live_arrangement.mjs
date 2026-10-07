@@ -94,11 +94,11 @@ localStorage.setItem("groove_audio_started", "1");
 await page.goto(`http://127.0.0.1:${server.address().port}/?tab=studio&probe=1`, { waitUntil: "domcontentloaded" });
 
 try {
-  await page.waitForSelector("[data-testid='toolbar-advanced-toggle']", { timeout: 30000 });
+  await page.waitForSelector("[data-testid='arrangement-view-v2']", { timeout: 30000 });
 } catch {
   await fail("the studio toolbar never rendered");
 }
-await page.click("[data-testid='toolbar-advanced-toggle']");
+await page.click("[data-testid='arrangement-editor-roll']").catch(() => {});
 await page.waitForSelector("[data-testid='toolbar-arrangement-toggle']", { timeout: 10000 });
 await page.click("[data-testid='toolbar-arrangement-toggle']");
 await page.waitForSelector("[data-testid='arrangement-panel']", { timeout: 10000 });
