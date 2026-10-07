@@ -864,3 +864,12 @@
 | ⚠️ **只有文案是 v1 口径 ✗** | ⭐ `export_groove` 的 `title` 说"⭐ Export a **song**…"✗、⭐ `description` 说"⭐ Write a **song** created with **create_song**… carrying its **clips and sections**"✗ ⇒ ⭐ 与 v2 包形状（⭐ 存 `tracks`／`notes`／`takes`／`bars`／`tempoMap` ✓，⭐ **不存** clips／sections／slots ✗）**冲突** ✗｜⭐ 另有两处内部注释同病 ✗ | §933‑935 |
 | ✅ **改法：句子改说它所做的事** | ⭐ title ⇒ "⭐ Export an **arrangement**…"✓｜⭐ description ⇒ "⭐ Write an **arrangement**… carrying its **tracks, notes, takes, bars and tempo map**"✓｜⭐ 两处注释改以 arrangement 为主语 ✓（⭐ 作曲家原话的引用保留 ✓）｜⭐ `check:mcp` **0** ✓（⭐ 工具描述的门 ✓）｜⭐ 判据无牵挂 ✓（⭐ 无判据断言旧句子 ✓，⭐ 已核 ✓）| §933‑935 |
 
+## 2026-10-07 09:16 回填（第 4 条规矩：改完实现回来改表）
+
+| 面 | 变化 | 依据 |
+|---|---|---|
+| ✅ **MCP 面：迁移 ④ `registryAnalysis` 复核（6 个工具 ✓）** | ⭐ **`normalize_loudness` 早已是 v2** ✅（⭐ 输入 `arrangementId` ✓、⭐ 回包含 `peakHeadroom` ✓）｜⭐ `spectral_balance`／`get_loudness_report`／`analyze_audio` **吃文件路径** ✓ ⇒ ⭐ 与模型无关 ✓ ⇒ ⭐ 无需迁移 ✅ | §936‑937 |
+| ⚠️ **两处 v1 残留（真问题 ✗）** | ⭐ `estimate_key` 与 `share_url` **同一形状** ✗：⭐ `inputSchema: { genreId?, pattern? }` ✗ ⇒ ⭐ `patternFromArgs` 分流 ✗ ⇒ ⭐ 输入是 **v1 的 `SequencerPattern`** ✗（⭐ 与 ⑤ 的命中**同源** ✓）｜⭐ 另有 **两处注释**提 `create_song` ✗ | §936‑937 |
+| ✅ **注释已改 v2** | ⭐ "⭐ `create_song` reaches here…**" ⇒ ⭐ "⭐ **A `genreId` that does not resolve** reaches here…**" ✓（⭐ 两处 ✓）| §937 |
+| ⭐ **归属 ✓** | ⭐ `estimate_key`／`share_url` **归入迁移 ⑤** ✓（⭐ `registrySong` ＋ `registryPattern` ✓）—— ⭐ 因为 `mcp/pattern.ts` 与 `mcp/exporting.ts` 都是 **v1 pattern 的家** ✗ ⇒ ⭐ 一起改才不留半截 ✓ | §937 |
+

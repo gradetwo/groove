@@ -31,7 +31,7 @@ export const ANALYSIS_TOOLS: ToolDefinition[] = [
     handler: (args) => {
       const pattern = patternFromArgs(args as { genreId?: string; pattern?: unknown });
       if (!pattern) {
-        // `create_song` reaches here when a supplied genreId did not resolve, so this is the message most composers will actually see.
+        // ⭐ A `genreId` that does not resolve reaches here, so this is the message most composers will actually see.
         const wanted = (args as { genreId?: string }).genreId;
         return failure(wanted ? unknownGenre(wanted) : "provide either genreId or pattern");
       }
@@ -211,7 +211,7 @@ export const ANALYSIS_TOOLS: ToolDefinition[] = [
     handler: (args) => {
       const pattern = patternFromArgs(args as { genreId?: string; pattern?: unknown });
       if (!pattern) {
-        // `create_song` reaches here when a supplied genreId did not resolve, so this is the message most composers will actually see.
+        // ⭐ A `genreId` that does not resolve reaches here, so this is the message most composers will actually see.
         const wanted = (args as { genreId?: string }).genreId;
         return failure(wanted ? unknownGenre(wanted) : "provide either genreId or pattern");
       }
