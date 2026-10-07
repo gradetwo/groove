@@ -246,7 +246,7 @@ describe("MCP · the declared surface", () => {
      * The promise being checked is the client's: `readOnly` means calling the tool changes nothing. So the annotation has to agree with the verb in the name, and the two tools that use a writing verb while only returning bytes are named here rather
      * than hidden behind a prefix list that would misclassify them.
      */
-    const WRITING_VERBS = new Set(["add", "assign", "create", "delete", "duplicate", "export", "import", "make", "move", "normalize", "remove", "rename", "render", "save", "select", "set", "undo"]);
+    const WRITING_VERBS = new Set(["add", "apply", "assign", "create", "delete", "duplicate", "export", "import", "make", "move", "normalize", "quantize", "remove", "rename", "render", "save", "select", "set", "transpose", "undo", "vary"]);
     // `export_*` names a verb that sounds like writing and returns bytes while changing nothing: the promise `readOnly` makes is about the state, not about the word.
     const RETURNS_BYTES_DESPITE_THE_VERB = new Set(["export_arrangement_musicxml", "export_logic_project"]);
 

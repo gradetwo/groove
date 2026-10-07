@@ -46,4 +46,26 @@ describe("compiling a v2 arrangement into engine lanes", () => {
     expect(input.clips.A.tracks).toHaveLength(1);
     expect(input.clips.A.tracks[0]!.steps.every((step) => step === 0)).toBe(true);
   });
+
+  it("carries a track's own GS-1 sound onto its lane, so the renderer can read it", () => {
+    /**
+     * ⭐ **The field has to cross the compile or it is a value nothing hears.** The engine's readers
+     * (`WavExporter`, `AudioEngine`, the live `Gs1VoicePool`) read `gs1Patch`/`gs1PatchOverrides` off the **lane**, and
+     * the arrangement stores them on the **track**; the compile is the only bridge. A track with no patch must compile
+     * to exactly the lane it always did, so both halves are pinned here.
+     */
+    const overrides = { parameters: { FILTER_CUTOFF: 700 }, routes: [{ src: "velocity", dst: "cutoff", amount: 0.5 }] };
+    const lanes = compileArrangementToLanes(
+      arr(
+        { id: "chords", kind: "synth", name: "Chords", fromTrackId: "chords", instrument: "warm_pad", gs1Patch: "gs1.1.xyz", gs1PatchOverrides: overrides },
+        { id: "lead", kind: "synth", name: "Lead", fromTrackId: "lead", instrument: "warm_pad" }
+      )
+    );
+    const [chords, lead] = lanes.map((lane) => lane.track);
+    expect(chords!.gs1Patch).toBe("gs1.1.xyz");
+    expect(chords!.gs1PatchOverrides).toEqual(overrides);
+    // Absent fields stay absent: a track that states no patch does not gain an empty layer.
+    expect(lead!.gs1Patch).toBeUndefined();
+    expect(lead!.gs1PatchOverrides).toBeUndefined();
+  });
 });

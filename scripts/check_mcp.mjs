@@ -489,35 +489,47 @@ try {
    * first version of this check failed, loudly and immediately.
    */
   /**
-   * ⭐ **The per-parameter GS-1 surface, over the wire.** `apply_gs1_patch` used to take one opaque
-   * share code and nothing else — 0 of the engine's 224 parameters and 0 routes individually
-   * writable. This calls the write side, then the read side, and checks that what came back is the
-   * value that was written, in the engine's own unit, marked as an override. It is browser-free by
-   * nature: nothing here renders, which is why it belongs in this gate rather than in the render
-   * probe.
+   * ⭐ **The per-parameter GS-1 surface, over the wire, on the arrangement.** `apply_gs1_patch` writes one track's own
+   * sound — 224 parameters and 8 routes individually writable — and `get_gs1_patch` reads it back. The migration moved
+   * both from a v1 pattern to `arrangementId` + `trackId`, so this builds the arrangement it names and checks the
+   * reply points at that track. It is browser-free by nature: nothing here renders, which is why it belongs in this
+   * gate rather than in the render probe.
    */
+  const gs1Arrangement = payload(
+    await client.request("tools/call", { name: "create_arrangement", arguments: { genreId: "chicago-house" } })
+  );
+  const gs1ArrangementId = gs1Arrangement.arrangementId;
+  const gs1TrackId = "chords";
   const gs1Before = payload(
-    await client.request("tools/call", { name: "get_gs1_patch", arguments: { genreId: "chicago-house", track: "chords" } })
+    await client.request("tools/call", {
+      name: "get_gs1_patch",
+      arguments: { arrangementId: gs1ArrangementId, trackId: gs1TrackId },
+    })
   );
   const gs1Applied = payload(
     await client.request("tools/call", {
       name: "apply_gs1_patch",
       arguments: {
-        genreId: "chicago-house",
-        track: "chords",
+        arrangementId: gs1ArrangementId,
+        trackId: gs1TrackId,
         parameters: { FILTER_CUTOFF: 700, OSC2_PITCH: 31 },
         routes: [{ index: 0, src: "velocity", dst: "cutoff", amount: 0.5 }],
       },
     })
   );
-  const gs1Lane = (gs1Applied.pattern?.tracks ?? []).find((track) => track.track_id === "chords") ?? {};
   const gs1After = payload(
-    await client.request("tools/call", { name: "get_gs1_patch", arguments: { pattern: gs1Applied.pattern, track: "chords" } })
+    await client.request("tools/call", {
+      name: "get_gs1_patch",
+      arguments: { arrangementId: gs1ArrangementId, trackId: gs1TrackId },
+    })
   );
   const gs1Cutoff = (gs1After.parameters ?? []).find((row) => row.id === 14) ?? {};
+  const gs1Osc2 = (gs1After.parameters ?? []).find((row) => row.name === "OSC2_PITCH") ?? {};
   check(
-    "get_gs1_patch reads a lane's instrument-table patch in named parameters, not 224 numbers",
+    "get_gs1_patch reads a track's instrument-table patch in named parameters, not 224 numbers",
     gs1Before.voiced === true &&
+      gs1Before.arrangementId === gs1ArrangementId &&
+      gs1Before.trackId === gs1TrackId &&
       typeof gs1Before.patch?.tablePatch === "string" &&
       Array.isArray(gs1Before.parameters) &&
       gs1Before.parameters.length > 0 &&
@@ -526,11 +538,12 @@ try {
     JSON.stringify({ patch: gs1Before.patch?.tablePatch, rows: (gs1Before.parameters ?? []).length })
   );
   check(
-    "apply_gs1_patch writes { parameter, value } and a route onto the lane — 31, which PARAM_SPECS would reject",
-    gs1Lane.gs1PatchOverrides?.parameters?.FILTER_CUTOFF === 700 &&
-      gs1Lane.gs1PatchOverrides?.parameters?.OSC2_PITCH === 31 &&
-      gs1Lane.gs1PatchOverrides?.routes?.[0]?.src === "velocity",
-    JSON.stringify(gs1Lane.gs1PatchOverrides ?? {}).slice(0, 160)
+    "apply_gs1_patch writes { parameter, value } and a route onto the track — 31, which PARAM_SPECS would reject",
+    gs1Applied.arrangementId === gs1ArrangementId &&
+      gs1Applied.trackId === gs1TrackId &&
+      gs1Osc2.value === 31 &&
+      gs1Osc2.from === "override",
+    JSON.stringify({ track: gs1Applied.track, osc2: gs1Osc2 }).slice(0, 160)
   );
   check(
     "get_gs1_patch reads the override back in the engine's own unit, marked as an override",
@@ -555,10 +568,10 @@ try {
   );
   const gs1Refused = await client.request("tools/call", {
     name: "apply_gs1_patch",
-    arguments: { genreId: "chicago-house", track: "chords", parameters: { FILTER_CUTOF: 700 } },
+    arguments: { arrangementId: gs1ArrangementId, trackId: gs1TrackId, parameters: { FILTER_CUTOF: 700 } },
   });
   check(
-    "apply_gs1_patch refuses an unknown parameter and names the lane, rather than writing it",
+    "apply_gs1_patch refuses an unknown parameter and names the track, rather than writing it",
     gs1Refused?.isError === true && /FILTER_CUTOF/.test(JSON.stringify(gs1Refused)) && /chords/.test(JSON.stringify(gs1Refused)),
     JSON.stringify(gs1Refused).slice(0, 140)
   );

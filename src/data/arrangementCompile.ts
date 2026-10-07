@@ -193,6 +193,17 @@ export function compileArrangementToLanes(arrangement: ArrangementV2, notes: Not
           : {}),
         ...(track.fromLaneId ? { laneId: track.fromLaneId } : {}),
         /**
+         * ⭐ **The track's own GS-1 sound travels with the lane, or `apply_gs1_patch` writes a field nothing reads.**
+         *
+         * `TrackV2.gs1Patch` / `gs1PatchOverrides` hold one track's own sound, and the engine's readers
+         * (`WavExporter`, `AudioEngine`, the live `Gs1VoicePool`) read those two fields off the **lane**. The compile is
+         * the only bridge between the two models, so carrying them here is what makes a track's patch audible rather
+         * than a value stored in the arrangement and heard as the instrument table's answer. Spread conditionally, so a
+         * track with no patch compiles to exactly the lane it always did.
+         */
+        ...(track.gs1Patch ? { gs1Patch: track.gs1Patch } : {}),
+        ...(track.gs1PatchOverrides ? { gs1PatchOverrides: track.gs1PatchOverrides } : {}),
+        /**
          * ⭐ **The track's own level and position travel with the lane, or a render cannot honour them.**
          *
          * `gainDb` and `pan` are per-lane properties of the arrangement model, and the compile used to drop both: every consumer of the compiled pattern — the

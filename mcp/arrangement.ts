@@ -736,6 +736,46 @@ export function quantizeMcpNoteLengths(arrangementId: string, trackId: string, s
   );
 }
 
+/**
+ * ⭐ **A track's own GS-1 sound, read and written on the arrangement.**
+ *
+ * The v1 pattern's track carried `gs1Patch` and `gs1PatchOverrides`, and the GS-1 tools reached into a pattern to find them; the same two
+ * fields live on `TrackV2` now. Both paths go through `edit`, so a write is undoable exactly like every other arrangement change -- which a
+ * plain `putMcpArrangement` would not be.
+ */
+export function getMcpTrack(arrangementId: string, trackId: string): TrackV2 | undefined {
+  return getMcpArrangement(arrangementId)?.tracks.find((row) => row.id === trackId);
+}
+
+/**
+ * ⭐ **Three states per field, because "leave it alone" is not "clear it".** `undefined` writes nothing, `null` removes the field, and a value
+ * stores it. `apply_gs1_patch` needs all three: writing only `parameters` must not drop the share code, `parameters: {}` must clear the
+ * override half alone, and `patch: null` must clear both.
+ */
+export function setMcpTrackGs1(
+  arrangementId: string,
+  trackId: string,
+  patch: string | null | undefined,
+  overrides?: TrackV2["gs1PatchOverrides"] | null
+): ArrangementEditResult {
+  return edit(arrangementId, (arrangement) => {
+    const tracks = arrangement.tracks.map((row) => {
+      if (row.id !== trackId) return row;
+      const next: TrackV2 = { ...row };
+      if (patch !== undefined) {
+        if (patch === null) delete next.gs1Patch;
+        else next.gs1Patch = patch;
+      }
+      if (overrides !== undefined) {
+        if (overrides === null) delete next.gs1PatchOverrides;
+        else next.gs1PatchOverrides = overrides;
+      }
+      return next;
+    });
+    return { ...arrangement, tracks };
+  });
+}
+
 export function transposeMcpNotes(
   arrangementId: string,
   trackId: string,

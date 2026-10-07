@@ -10,6 +10,7 @@
  * carries — name, kind, colour, mute, solo, gain, pan, grouping — and the notes remain where every existing consumer already reads them.
  */
 import type { NoteConvention } from "../data/pitchTruth";
+import type { SequencerTrack } from "./genre";
 
 /**
  * The sounding kinds, plus `folder`, which groups without making a sound. A discriminated union rather than a pile of optional fields: "a track that is both a drum kit and a sampler" is a shape the fields would permit and the semantics do not have.
@@ -57,8 +58,15 @@ export interface TrackV2 {
    * what every track had before the v1 pattern carried the field -- the arrangement keeps the same idea on the track that makes the sound.
    */
   gs1Patch?: string;
-  /** ⭐ **Per-parameter overrides on top of {@link gs1Patch}**, so a lane can be tuned without touching the share code. */
-  gs1PatchOverrides?: Record<string, number>;
+  /**
+   * ⭐ **Per-parameter overrides on top of {@link gs1Patch}**, so a lane can be tuned without touching the share code.
+   *
+   * The shape is the engine's own (`SequencerTrack["gs1PatchOverrides"]`, `{ parameters?, routes? }`) rather than a flat
+   * name→number record: it is read by `resolveGs1Lane` and written by `apply_gs1_patch`, and two spellings of one
+   * stored field would be a second format the renderer never agreed to. Deriving it means a change to the engine's
+   * shape is a type error here instead of a patch that writes a field nothing reads.
+   */
+  gs1PatchOverrides?: NonNullable<SequencerTrack["gs1PatchOverrides"]>;
   /** The v1 role this track came from, kept so a projection can be verified against its source. */
   fromTrackId?: string;
   /** The v1 second name, for songs with two lanes of one kind. */

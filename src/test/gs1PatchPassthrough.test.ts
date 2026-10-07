@@ -103,6 +103,7 @@ import { DEFAULT_PARAMS } from "../../vendor/gs1/src/audio/params";
 import { fingerprintChannels, fingerprintDistance } from "./helpers/timbre";
 import { installFakeOfflineAudioContext } from "./helpers/fakeAudio";
 import { validatePattern } from "../../mcp/pattern";
+import { clearMcpArrangements, createMcpArrangement, getMcpTrack } from "../../mcp/arrangement";
 import { TOOLS } from "../../mcp/registry";
 import type { SequencerPattern } from "../types/genre";
 
@@ -443,34 +444,31 @@ describe("the resolver's overrides reach the host the exporter and the pool buil
 
 /**
  * The caller-facing write path: the MCP tool the owner's "can the synth's MCP be reused" question
- * ends at. It is a **pure transform** like `apply_pattern_ops` (a pattern in, a new pattern out),
- * which is why its name takes `apply_` and not a writing verb — the repository's own surface test
- * enforces that agreement between the name and the `readOnly` annotation.
+ * ends at. It **writes the arrangement** — a track id in, the track's stored sound changed — so the
+ * name takes `apply_` and the annotation says `readOnly: false`; the repository's own surface test
+ * enforces that agreement between the name and the annotation.
  */
-describe("the tool a caller uses to put a patch on a lane", () => {
+describe("the tool a caller uses to put a patch on a track", () => {
   const tool = TOOLS.find((candidate) => candidate.name === "apply_gs1_patch")!;
 
-  it("stores a valid code without mutating its input, and clears on null", async () => {
-    const base = makePattern();
-    const result = (await tool.handler({ pattern: base, track: "chords", patch: ACID_CODE })) as {
-      pattern: SequencerPattern;
+  it("stores a valid code on the track, and clears on null", async () => {
+    clearMcpArrangements();
+    const summary = createMcpArrangement({ genreId: "chicago-house" });
+    const arrangementId = summary.arrangementId;
+    const result = (await tool.handler({ arrangementId, trackId: "chords", patch: ACID_CODE })) as {
       patch: { parametersChanged: number };
-      validation: { ok: boolean };
     };
-    expect(result.pattern.tracks[0].gs1Patch).toBe(ACID_CODE);
-    // The caller's object is never touched (the library's contract for a pattern transform).
-    expect(base.tracks[0].gs1Patch).toBeUndefined();
+    expect(getMcpTrack(arrangementId, "chords")!.gs1Patch).toBe(ACID_CODE);
     expect(result.patch.parametersChanged).toBeGreaterThan(0);
-    expect(result.validation.ok).toBe(true);
 
-    const cleared = (await tool.handler({ pattern: result.pattern, track: "chords", patch: null })) as {
-      pattern: SequencerPattern;
-    };
-    expect(cleared.pattern.tracks[0].gs1Patch).toBeUndefined();
+    await tool.handler({ arrangementId, trackId: "chords", patch: null });
+    expect(getMcpTrack(arrangementId, "chords")!.gs1Patch).toBeUndefined();
   });
 
-  it("refuses a corrupt code with the lane named, rather than storing it", async () => {
-    const response = (await tool.handler({ pattern: makePattern(), track: "chords", patch: "gs1.1.!!!" })) as {
+  it("refuses a corrupt code with the track named, rather than storing it", async () => {
+    clearMcpArrangements();
+    const summary = createMcpArrangement({ genreId: "chicago-house" });
+    const response = (await tool.handler({ arrangementId: summary.arrangementId, trackId: "chords", patch: "gs1.1.!!!" })) as {
       isError?: boolean;
     };
     expect(response.isError).toBe(true);

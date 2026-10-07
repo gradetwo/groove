@@ -70,6 +70,8 @@ import {
 import { DEFAULT_PARAMS, PARAM_NAMES, PARAM_SPECS, Param, type ParamId } from "../../vendor/gs1/src/audio/params";
 import { fingerprintChannels, fingerprintDistance } from "./helpers/timbre";
 import { validatePattern } from "../../mcp/pattern";
+import { clearMcpArrangements, createMcpArrangement, getMcpArrangement, getMcpTrack } from "../../mcp/arrangement";
+import { compileArrangementToPattern } from "../data/arrangementCompile";
 import { TOOLS } from "../../mcp/registry";
 import type { SequencerPattern } from "../types/genre";
 
@@ -592,82 +594,93 @@ describe("apply_gs1_patch: the overrides are stored beside the code, and refused
   const apply = TOOLS.find((tool) => tool.name === "apply_gs1_patch")!;
   const read = TOOLS.find((tool) => tool.name === "get_gs1_patch")!;
 
-  it("stores parameters and routes without touching the caller's pattern", async () => {
-    const base = makePattern();
+  /**
+   * ⭐ **A genre-seeded arrangement, because that is where a GS-1 lane actually comes from.** Its `chords` track is
+   * projected from the genre's own v1 lane, so `fromTrackId` and `instrument` are the ones the GS-1 table is keyed by;
+   * a blank arrangement's `synth` track takes its kind's role and is not GS-1's unless a share code names it.
+   */
+  function seeded(): { arrangementId: string; trackId: string } {
+    const summary = createMcpArrangement({ genreId: "chicago-house" });
+    return { arrangementId: summary.arrangementId, trackId: "chords" };
+  }
+
+  beforeEach(() => {
+    clearMcpArrangements();
+  });
+
+  it("stores parameters and routes on the track the arrangement names", async () => {
+    const { arrangementId, trackId } = seeded();
     const result = (await apply.handler({
-      pattern: base,
-      track: "chords",
+      arrangementId,
+      trackId,
       patch: ACID_SHARE_CODE,
       parameters: { FILTER_CUTOFF: 700, osc2Pitch: 31 },
       routes: [{ index: 0, src: "aftertouch", dst: "res", amount: 0.25 }],
     })) as {
-      pattern: SequencerPattern;
+      arrangementId: string;
+      trackId: string;
       patch: { shareCode: string; parametersChanged: number; routes: number };
       overrides: { parameters: Array<{ name: string; value: number; display: string }> };
-      validation: { ok: boolean };
     };
 
-    expect(result.pattern.tracks[0].gs1Patch).toBe(ACID_SHARE_CODE);
-    expect(result.pattern.tracks[0].gs1PatchOverrides).toEqual({
+    const stored = getMcpTrack(arrangementId, trackId)!;
+    expect(stored.gs1Patch).toBe(ACID_SHARE_CODE);
+    expect(stored.gs1PatchOverrides).toEqual({
       parameters: { FILTER_CUTOFF: 700, osc2Pitch: 31 },
       routes: [{ index: 0, src: "aftertouch", dst: "res", amount: 0.25 }],
     });
-    // The library's contract for a pattern transform: the input object is never mutated.
-    expect(base.tracks[0].gs1PatchOverrides).toBeUndefined();
-    expect(base.tracks[0].gs1Patch).toBeUndefined();
+    // The reply names what it changed, so a caller can read the track back without guessing an id.
+    expect(result.arrangementId).toBe(arrangementId);
+    expect(result.trackId).toBe(trackId);
     // The reply shows the effective layer, in names, not just "ok".
     expect(result.overrides.parameters.map((row) => [row.name, row.value])).toEqual([
       ["OSC2_PITCH", 31],
       ["FILTER_CUTOFF", 700],
     ]);
     expect(result.overrides.parameters.find((row) => row.name === "FILTER_CUTOFF")?.display).toBe("700 Hz");
-    expect(result.validation.ok, JSON.stringify(result.validation)).toBe(true);
   });
 
-  it("refuses an unknown parameter, names the lane, and stores nothing", async () => {
+  it("refuses an unknown parameter, names the track, and stores nothing", async () => {
+    const { arrangementId, trackId } = seeded();
     const response = (await apply.handler({
-      pattern: makePattern(),
-      track: "chords",
+      arrangementId,
+      trackId,
       patch: ACID_SHARE_CODE,
       parameters: { FILTER_CUTOF: 700 },
     })) as { isError?: boolean };
     expect(response.isError).toBe(true);
-    expect(JSON.stringify(response)).toContain("chords");
+    expect(JSON.stringify(response)).toContain("(chords)");
     expect(JSON.stringify(response)).toMatch(/not a GS-1 parameter/);
     expect(JSON.stringify(response)).toMatch(/FILTER_CUTOFF/);
+    // Validation happens before the write, so a refused call leaves no undo step and no half-applied sound.
+    expect(getMcpTrack(arrangementId, trackId)!.gs1Patch).toBeUndefined();
+    expect(getMcpTrack(arrangementId, trackId)!.gs1PatchOverrides).toBeUndefined();
   });
 
   it("clears the code and the overrides together, and clears one half on request", async () => {
-    const stored = (await apply.handler({
-      pattern: makePattern(),
-      track: "chords",
+    const { arrangementId, trackId } = seeded();
+    await apply.handler({
+      arrangementId,
+      trackId,
       patch: ACID_SHARE_CODE,
       parameters: { FILTER_CUTOFF: 700 },
-    })) as { pattern: SequencerPattern };
-    expect(stored.pattern.tracks[0].gs1PatchOverrides).toBeDefined();
+    });
+    expect(getMcpTrack(arrangementId, trackId)!.gs1PatchOverrides).toBeDefined();
 
     // `parameters: {}` clears the parameter half only.
-    const halfCleared = (await apply.handler({
-      pattern: stored.pattern,
-      track: "chords",
-      parameters: {},
-    })) as { pattern: SequencerPattern };
-    expect(halfCleared.pattern.tracks[0].gs1Patch).toBe(ACID_SHARE_CODE);
-    expect(halfCleared.pattern.tracks[0].gs1PatchOverrides).toBeUndefined();
+    await apply.handler({ arrangementId, trackId, parameters: {} });
+    expect(getMcpTrack(arrangementId, trackId)!.gs1Patch).toBe(ACID_SHARE_CODE);
+    expect(getMcpTrack(arrangementId, trackId)!.gs1PatchOverrides).toBeUndefined();
 
-    // `patch: null` clears the lane's whole GS-1 sound.
-    const cleared = (await apply.handler({
-      pattern: stored.pattern,
-      track: "chords",
-      patch: null,
-    })) as { pattern: SequencerPattern };
-    expect(cleared.pattern.tracks[0].gs1Patch).toBeUndefined();
-    expect(cleared.pattern.tracks[0].gs1PatchOverrides).toBeUndefined();
+    // `patch: null` clears the track's whole GS-1 sound.
+    await apply.handler({ arrangementId, trackId, patch: null });
+    expect(getMcpTrack(arrangementId, trackId)!.gs1Patch).toBeUndefined();
+    expect(getMcpTrack(arrangementId, trackId)!.gs1PatchOverrides).toBeUndefined();
 
     // …and refuses to be combined with overrides, rather than picking one meaning.
     const contradictory = (await apply.handler({
-      pattern: stored.pattern,
-      track: "chords",
+      arrangementId,
+      trackId,
       patch: null,
       parameters: { FILTER_CUTOFF: 700 },
     })) as { isError?: boolean };
@@ -675,27 +688,30 @@ describe("apply_gs1_patch: the overrides are stored beside the code, and refused
   });
 
   it("overrides the instrument table's patch when there is no share code", async () => {
+    const { arrangementId, trackId } = seeded();
     const result = (await apply.handler({
-      pattern: makePattern(),
-      track: "chords",
+      arrangementId,
+      trackId,
       parameters: { FILTER_CUTOFF: 500 },
-    })) as { pattern: SequencerPattern; detail: string; patch: { shareCode: string | null } };
-    expect(result.pattern.tracks[0].gs1Patch).toBeUndefined();
-    expect(result.pattern.tracks[0].gs1PatchOverrides).toEqual({ parameters: { FILTER_CUTOFF: 500 } });
+    })) as { detail: string; patch: { shareCode: string | null } };
+    const stored = getMcpTrack(arrangementId, trackId)!;
+    expect(stored.gs1Patch).toBeUndefined();
+    expect(stored.gs1PatchOverrides).toEqual({ parameters: { FILTER_CUTOFF: 500 } });
     expect(result.patch.shareCode).toBeNull();
     expect(result.detail).toMatch(/instrument table/);
   });
 
-  it("get_gs1_patch says what the lane plays, in named parameters", async () => {
-    const stored = (await apply.handler({
-      pattern: makePattern(),
-      track: "chords",
+  it("get_gs1_patch says what the track plays, in named parameters", async () => {
+    const { arrangementId, trackId } = seeded();
+    await apply.handler({
+      arrangementId,
+      trackId,
       patch: ACID_SHARE_CODE,
       parameters: { FILTER_CUTOFF: 700 },
       routes: [{ src: "velocity", dst: "cutoff", amount: 0.5 }],
-    })) as { pattern: SequencerPattern };
+    });
 
-    const report = (await read.handler({ pattern: stored.pattern, track: "chords" })) as {
+    const report = (await read.handler({ arrangementId, trackId })) as {
       patch: { kind: string; shareCode: string | null; parametersChanged: number; parametersAtDefault: number };
       parameters: Array<{ id: number; name: string; label?: string; display: string; from: string; value: number }>;
       routes: Array<{ index: number; source: string; destination: string; amount: number }>;
@@ -723,7 +739,7 @@ describe("apply_gs1_patch: the overrides are stored beside the code, and refused
     });
   });
 
-  it("reads a share code the caller passes, and says plainly when a lane is not GS-1", async () => {
+  it("reads a share code the caller passes, and says plainly when a track is not GS-1", async () => {
     const direct = (await read.handler({ patch: ACID_SHARE_CODE })) as {
       patch: { kind: string; parametersChanged: number };
       routes: unknown[];
@@ -732,9 +748,12 @@ describe("apply_gs1_patch: the overrides are stored beside the code, and refused
     expect(direct.patch.parametersChanged).toBeGreaterThan(0);
     expect(direct.routes.length).toBe(4);
 
-    const native = makePattern();
-    native.tracks[0].instrument = "definitely-not-a-gs1-instrument";
-    const report = (await read.handler({ pattern: native, track: "chords" })) as {
+    /**
+     * ⭐ **A blank `synth` track is the honest "not GS-1" case now.** Its compiled role is `lead` and its instrument is
+     * `"synth"`, which the GS-1 table does not carry, so the answer says so rather than guessing a patch.
+     */
+    const blank = createMcpArrangement({ blankKind: "synth" });
+    const report = (await read.handler({ arrangementId: blank.arrangementId, trackId: blank.tracks[0]!.id })) as {
       voiced: boolean;
       detail: string;
     };
@@ -814,26 +833,38 @@ describe("the resolved voice carries the overrides, so no consumer can miss them
 describe("what the artifact states is what the render uses", () => {
   const apply = TOOLS.find((tool) => tool.name === "apply_gs1_patch")!;
 
-  it("carries the tool's own pattern field into a real core render", async () => {
+  it("carries a track's own patch through the compile into a real core render", async () => {
     /**
-     * The criterion a model change like this one has to pass, in the terms `pitches` learned the hard
-     * way: a value that lives where the renderer does not read it makes the artifact state one sound
-     * and the audio play another. So this goes the whole way — the **tool's returned pattern**, its
-     * `gs1PatchOverrides` field, `resolveGs1Lane`, `applyGs1Voice`, the real host's `AudioParam`s, and
-     * a render of the vendored core — and it is asked in both directions: the field present, and the
-     * same pattern with the field removed.
+     * The criterion a model change like this one has to pass, in the terms `pitches` learned the hard way: a value
+     * that lives where the renderer does not read it makes the artifact state one sound and the audio play another.
+     * So this goes the whole way — the **tool writes the arrangement**, `compileArrangementToPattern` carries the
+     * field onto the lane, then `resolveGs1Lane`, `applyGs1Voice`, the real host's `AudioParam`s, and a render of the
+     * vendored core — and it is asked in both directions: the field present, and the same lane with the field removed.
+     *
+     * ⭐ The compile step is what this migration added. Without it the tool would store a patch that no reader of the
+     * compiled pattern ever sees, which is exactly the failure this criterion exists to catch.
      */
-    const written = (await apply.handler({
-      pattern: makePattern(),
-      track: "chords",
+    clearMcpArrangements();
+    const summary = createMcpArrangement({ genreId: "chicago-house" });
+    const arrangementId = summary.arrangementId;
+    await apply.handler({
+      arrangementId,
+      trackId: "chords",
       patch: ACID_SHARE_CODE,
       parameters: { FILTER_TYPE: 1 },
-    })) as { pattern: SequencerPattern };
-    const track = written.pattern.tracks[0];
+    });
+    const track = getMcpTrack(arrangementId, "chords")!;
     expect(track.gs1PatchOverrides).toEqual({ parameters: { FILTER_TYPE: 1 } });
 
-    const stated = resolveGs1Lane(track.track_id, track.instrument, written.pattern.genre_id, track.gs1Patch, track.gs1PatchOverrides);
-    const plain = resolveGs1Lane(track.track_id, track.instrument, written.pattern.genre_id, track.gs1Patch, undefined);
+    const arrangement = getMcpArrangement(arrangementId)!;
+    const compiled = compileArrangementToPattern(arrangement, arrangement.notesByTrack);
+    const lane = compiled.tracks.find((row) => row.track_id === "chords")!;
+    // The compile is the bridge: a field the arrangement holds must be a field the renderer reads.
+    expect(lane.gs1Patch).toBe(ACID_SHARE_CODE);
+    expect(lane.gs1PatchOverrides).toEqual({ parameters: { FILTER_TYPE: 1 } });
+
+    const stated = resolveGs1Lane(lane.track_id, lane.instrument, compiled.genre_id, lane.gs1Patch, lane.gs1PatchOverrides);
+    const plain = resolveGs1Lane(lane.track_id, lane.instrument, compiled.genre_id, lane.gs1Patch, undefined);
     expect(stated.kind).toBe("voice");
     expect(plain.kind).toBe("voice");
     if (stated.kind !== "voice" || plain.kind !== "voice") return;
@@ -855,7 +886,7 @@ describe("what the artifact states is what the render uses", () => {
     const statedAudio = renderThroughCore(statedParams);
     const distance = fingerprintDistance(fingerprintChannels([unstatedAudio], SR), fingerprintChannels([statedAudio], SR));
     console.log(
-      `[gs1-param-writes] pattern field { FILTER_TYPE: 1 } -> AudioParam ${String(statedParams[Param.FILTER_TYPE])} -> ` +
+      `[gs1-param-writes] track field { FILTER_TYPE: 1 } -> compiled lane -> AudioParam ${String(statedParams[Param.FILTER_TYPE])} -> ` +
         `render centroid ${fingerprintChannels([unstatedAudio], SR).centroidHz.toFixed(0)} -> ` +
         `${fingerprintChannels([statedAudio], SR).centroidHz.toFixed(0)} Hz, fingerprint distance ${distance.toFixed(2)} dB`
     );
