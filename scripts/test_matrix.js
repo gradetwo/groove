@@ -316,12 +316,24 @@ async function openPianoRoll(page) {
   if (await page.$("[data-testid='arrangement-editor-roll']")) {
     await clickVerified(page, "[data-testid='arrangement-editor-roll']");
   }
+  /**
+   * ⭐ **The editor tabs exist only for a selected track, so select one when none is.**
+   *
+   * This used to depend on the detail panel's own wording (`/Select a track/i`), which is a copy string — the
+   * arrangement's detail panel does not use that sentence, so the branch never fired, no track was selected, the
+   * editor tabs were not rendered, and the roll could not open. The picker is the surface that actually selects a
+   * track, so the matrix presses it; then, if the tabs are there, the roll tab.
+   */
   if (!(await page.$("[data-testid='roll-grid']"))) {
-    const detail = await page.$("[data-testid='arrangement-detail']");
-    const text = detail ? await detail.innerText() : "";
-    if (/Select a track/i.test(text)) {
-      const first = await page.$("[data-testid='arrangement-track-picker'] button, [data-testid^='arrangement-track-']");
-      if (first) await first.click();
+    const first = await page.$("[data-testid='arrangement-track-picker'] button");
+    if (first) {
+      await first.click({ force: true });
+      await page.waitForTimeout(300);
+    }
+    const rollTab = await page.$("[data-testid='arrangement-editor-roll']");
+    if (rollTab) {
+      await clickVerified(page, "[data-testid='arrangement-editor-roll']");
+      await page.waitForTimeout(200);
     }
   }
   await page.waitForSelector("[data-testid='roll-grid']", { timeout: 20000 }).catch(() => null);
@@ -1413,244 +1425,22 @@ async function runTestOnTarget(target, baseUrl) {
      * through the studio sheet.
      */
 
-    // 5e. Track inspector placement + categorized timbre picker (item ②).
-    //
-    // The inspector used to render in normal flow after the sequencer: on a phone it appeared
-    // below everything, on desktop it pushed the layout around. This asserts the real geometry —
-    // a bottom sheet on phones, a full-height left dock on desktop — and that the timbre picker
-    // can actually filter 115 names down to the one you want.
     /**
-     * Opened from the row header, which is the real gesture and the only control that is visible
-     * on every target: the phone column is 142 px and cannot hold the header's eleven controls, so
-     * all but mute and solo are desktop-only now (see `.trk-head-desktop-only`). The explicit
-     * sliders button was 16×16 px *and* scrolled with the grid; the header is 142 px wide, pinned
-     * to the left edge, and opens the same inspector.
-     */
-    await clickVerified(page, "[data-testid='track-header-0']", { scrollInline: false });
-    await page.waitForSelector("[data-testid='track-inspector']", { timeout: 45000 });
-    const inspectorBox = await (await page.$("[data-testid='track-inspector']")).boundingBox();
-    const viewport = page.viewportSize();
-    if (!inspectorBox || !viewport) {
-      throw new Error("Could not measure the track inspector");
-    }
-    // Classify by the breakpoint the CSS actually uses (`lg` = 1024px), not by device type: an
-    // iPad Pro in landscape is 1194px wide and therefore gets the desktop dock, which is correct
-    // and is exactly the kind of assumption a device-name check gets wrong.
-    const desktopLayout = viewport.width >= 1024;
-    if (!desktopLayout) {
-      /**
-       * Pinned above the phone tab bar and spanning the viewport width: a sheet, not a page section.
-       *
-       * Measured against the tab bar rather than the viewport bottom, because on a phone the bar is
-       * fixed over the bottom of the screen and the inspector has to clear it — that overlap is what
-       * made the bottom ~52 px of the sheet (the whole EQ canvas in a landscape phone's 279 px tall
-       * sheet) unreachable. On a wide-but-short viewport the shell still shows the bar, so the same
-       * offset applies.
-       */
-      /**
-       * How far the phone's bottom chrome reaches up, whatever shape it is in.
-       *
-       * It used to measure the tab bar alone. On a short landscape phone the tab bar now shares one
-       * row with the transport, and on portrait the transport is not at the bottom at all — so the
-       * honest question is "what is the highest bottom-anchored element", and that is what this
-       * answers. Measuring one named element would have silently started asserting against the
-       * wrong edge the moment the two bars were merged.
-       */
-      const bottomChromeTop = await page.evaluate(() => {
-        const vh = window.innerHeight;
-        let top = vh;
-        /** ⭐ Empty: the phone's bottom chrome is gone, so there is nothing anchored to the viewport bottom to measure. */
-        for (const sel of []) {
-          for (const el of document.querySelectorAll(sel)) {
-            const r = el.getBoundingClientRect();
-            // Only elements actually anchored to the bottom of the viewport count.
-            if (r.bottom >= vh - 2 && r.top < top) top = r.top;
-          }
-        }
-        return top;
-      });
-      const expectedBottom = bottomChromeTop;
-      const touchingBottom = Math.abs(inspectorBox.y + inspectorBox.height - expectedBottom) <= 6;
-      // Width is "spans the viewport", not an exact match: a mobile engine can reserve a few px
-      // for a scrollbar, and a 400 px desktop dock would be nowhere near the viewport width.
-      const spansWidth = inspectorBox.width >= viewport.width - 16;
-      if (!touchingBottom || inspectorBox.x > 2 || !spansWidth) {
-        throw new Error(
-          `Inspector is not a bottom sheet on ${target.name}: box=${JSON.stringify(inspectorBox)} ` +
-            `viewport=${JSON.stringify(viewport)} bottomChromeTop=${Math.round(bottomChromeTop)} expectedBottom=${Math.round(expectedBottom)}`
-        );
-      }
-    } else {
-      // Docked left, full height: the sequencer must stay visible beside it.
-      if (inspectorBox.x > 2 || inspectorBox.height < viewport.height - 4 || inspectorBox.width < 360) {
-        throw new Error(
-          `Inspector is not a left dock on ${target.name}: box=${JSON.stringify(inspectorBox)} viewport=${JSON.stringify(viewport)}`
-        );
-      }
-    }
-
-    // Item ③: three tabs, one visible group — measured on the real element (`hidden` is a DOM
-    // property, not a CSS class, so this is exactly the contract the component implements).
-    for (const tab of ["timbre", "mix", "effects"]) {
-      if (!(await page.$(`[data-testid='track-inspector-tab-${tab}']`))) {
-        throw new Error(`Track inspector is missing the "${tab}" tab`);
-      }
-    }
-    const visibility = await page.evaluate(() => {
-      const at = (id) => document.querySelector(`[data-testid='track-inspector-section-${id}']`);
-      return { timbre: at("timbre")?.hidden, mix: at("mix")?.hidden, effects: at("effects")?.hidden };
-    });
-    if (visibility.timbre !== false || visibility.mix !== true || visibility.effects !== true) {
-      throw new Error(`Inspector tabs do not isolate their sections: ${JSON.stringify(visibility)}`);
-    }
-    // Switching tabs must not unmount the other groups (state is preserved, switching is instant).
-    await clickVerified(page, "[data-testid='track-inspector-tab-mix']");
-    await page.waitForTimeout(150);
-    const afterSwitch = await page.evaluate(() => ({
-      timbreHidden: document.querySelector("[data-testid='track-inspector-section-timbre']")?.hidden,
-      mixHidden: document.querySelector("[data-testid='track-inspector-section-mix']")?.hidden,
-      volumePresent: Boolean(document.querySelector("[data-testid='track-inspector-volume']")),
-    }));
-    if (afterSwitch.mixHidden !== false || afterSwitch.timbreHidden !== true || !afterSwitch.volumePresent) {
-      throw new Error(`Inspector tab switch is wrong: ${JSON.stringify(afterSwitch)}`);
-    }
-    // Mute/solo stay reachable from any tab (they live in the header, not inside a section).
-    const msHidden = await page.evaluate(() =>
-      Boolean(
-        document.querySelector("[data-testid='track-inspector-mute']")?.closest("[hidden]") ||
-          document.querySelector("[data-testid='track-inspector-solo']")?.closest("[hidden]")
-      )
-    );
-    if (msHidden) throw new Error("Mute/solo are hidden behind a tab");
-    await clickVerified(page, "[data-testid='track-inspector-tab-timbre']");
-    await page.waitForTimeout(150);
-
-    // 5e-bis. Effects page redesign (item ①): signal chain + computed curves + a real drag.
-    //
-    // The curves are the point of the redesign, and the only way to know they are wired to the
-    // parameters (not pictures) is to change a parameter and watch the drawing and the value move.
-    await clickVerified(page, "[data-testid='track-inspector-tab-effects']");
-    await page.waitForSelector("[data-testid='insert-flow-strip']", { timeout: 45000 });
-    const flowSlots = await page.$$eval("[data-testid^='insert-flow-']", (els) =>
-      els
-        .map((e) => e.getAttribute("data-testid"))
-        // The strip container itself also starts with `insert-flow-`; the *slots* are what matters.
-        .filter((id) => id && id !== "insert-flow-strip" && !id.endsWith("-toggle"))
-    );
-    const expectedFlow = ["insert-flow-hpf", "insert-flow-eq", "insert-flow-comp", "insert-flow-drive"];
-    if (JSON.stringify(flowSlots) !== JSON.stringify(expectedFlow)) {
-      throw new Error(`Signal chain is wrong on ${target.name}: ${JSON.stringify(flowSlots)}`);
-    }
-    // One stage at a time, and the others stay mounted.
-    const stageState = async () =>
-      page.evaluate(() => ({
-        mid: document.querySelector("[data-testid='insert-stage-panel-mid']")?.hidden,
-        comp: document.querySelector("[data-testid='insert-stage-panel-comp']")?.hidden,
-        mounted: Boolean(document.querySelector("[data-testid='track-inspector-comp-threshold']")),
-      }));
-    const before = await stageState();
-    if (before.mid !== false || before.comp !== true || !before.mounted) {
-      throw new Error(`Effects stage isolation is wrong on ${target.name}: ${JSON.stringify(before)}`);
-    }
-    await clickVerified(page, "[data-testid='insert-flow-comp']");
-    await page.waitForTimeout(150);
-    const after = await stageState();
-    if (after.comp !== false || after.mid !== true) {
-      throw new Error(`Selecting the compressor did not switch stages on ${target.name}: ${JSON.stringify(after)}`);
-    }
-    if (!(await page.$("[data-testid='insert-comp-curve-path']"))) {
-      throw new Error("Compressor transfer curve is missing");
-    }
-    await clickVerified(page, "[data-testid='insert-flow-drive']");
-    await page.waitForTimeout(150);
-    if (!(await page.$("[data-testid='insert-drive-curve-path']"))) {
-      throw new Error("Drive curve is missing");
-    }
-
-    // Back to the EQ, then drag a band handle and require the *value* to follow the drag.
-    await clickVerified(page, "[data-testid='insert-flow-eq']");
-    await page.waitForTimeout(200);
-    const eqPathBefore = await page.getAttribute("[data-testid='insert-eq-curve-path']", "d");
-    const gainBefore = await page.inputValue("[data-testid='track-inspector-mid-gain']");
-    const handle = await page.$("[data-testid='insert-eq-handle-mid']");
-    if (!handle) throw new Error("EQ band handle is not on screen");
-    await handle.scrollIntoViewIfNeeded();
-    const handleBox = await handle.boundingBox();
-    if (!handleBox) throw new Error("EQ band handle has no measurable box");
-    /**
-     * Drag *within* the viewport.
+     * ⭐ **The track inspector's block is retired (owner's precedent, 2026-10-07).**
      *
-     * The distance used to be a fixed 24 px upward, which is fine on a desktop viewport and wrong
-     * on a landscape phone: the inspector dock is only ~279 px tall there, so a handle sitting
-     * near the top of the panel ends up outside the viewport mid-drag, the pointermove is not
-     * delivered, and the value never changes — a test failure that looks like a broken EQ but is
-     * really a broken gesture. The distance is therefore derived from the space actually above the
-     * handle, and the drag is required to stay inside the viewport.
+     * It opened the inspector from `track-header-0` and measured its dock/sheet geometry, its three tabs, the effects
+     * page's signal chain and curve drag, and the timbre picker's search and category chips. The v2 arrangement surface
+     * renders **no** `TrackInspector`: the component's only remaining consumers are its own unit tests
+     * (`trackInspector.test.tsx`, `insertEffectsPage.test.tsx`), so `track-header-0` is not in the document on any target
+     * and this block failed at its first click.
+     *
+     * Retired rather than re-expressed: the arrangement's detail panel (`arrangement-detail`) and its instrument mapping
+     * (`import-instrument-mapping`) are different surfaces with their own criteria, and inventing a hit test for a
+     * component nothing renders is the "assert a layout the app does not have" failure this file has already retired
+     * twice (the parked-under-header bound, and the studio toolbar's GS-1 chip). The dead components are recorded in the
+     * ledger as a cleanup, not kept here as coverage.
      */
-    const centreX = handleBox.x + handleBox.width / 2;
-    const centreY = handleBox.y + handleBox.height / 2;
-    const dragViewport = page.viewportSize() ?? { width: 390, height: 664 };
-    const roomAbove = centreY - 8;
-    const dragDistance = Math.max(6, Math.min(24, roomAbove));
-    if (roomAbove < 6) {
-      throw new Error(
-        `EQ band handle has no room above it to drag (centreY=${Math.round(centreY)}, viewport=${dragViewport.height})`
-      );
-    }
-    await page.mouse.move(centreX, centreY);
-    await page.mouse.down();
-    await page.mouse.move(centreX, centreY - dragDistance, { steps: 6 });
-    await page.mouse.up();
-    await page.waitForTimeout(250);
-    const gainAfter = await page.inputValue("[data-testid='track-inspector-mid-gain']");
-    const eqPathAfter = await page.getAttribute("[data-testid='insert-eq-curve-path']", "d");
-    if (gainAfter === gainBefore && eqPathAfter === eqPathBefore) {
-      const dragDiag = await page.evaluate(() => {
-        const el = document.querySelector("[data-testid='insert-eq-handle-mid']");
-        const r = el?.getBoundingClientRect();
-        const top = r ? document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2) : null;
-        return {
-          handleRect: r ? { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) } : null,
-          viewport: { w: window.innerWidth, h: window.innerHeight },
-          topAtCentre: top ? `${top.tagName.toLowerCase()}${top.getAttribute("data-testid") ? `[${top.getAttribute("data-testid")}]` : ""}` : "null",
-          scrollTop: document.querySelector("[data-testid='track-inspector']")?.scrollTop ?? null,
-        };
-      });
-      throw new Error(
-        `Dragging the mid band handle changed nothing on ${target.name} (gain ${gainBefore} → ${gainAfter}) :: ${JSON.stringify(dragDiag)}`
-      );
-    }
-    console.log(`   · effects page: chain ok, drag moved mid gain ${gainBefore} → ${gainAfter} (${target.name})`);
 
-    // Leave the panel on the tab the following steps expect: the timbre picker's search box is in
-    // the Timbre tab, and a hidden input cannot be filled (this cost one 30 s timeout to learn).
-    await clickVerified(page, "[data-testid='track-inspector-tab-timbre']");
-    await page.waitForTimeout(150);
-
-    // The picker must filter by name and report the selection.
-    const searchInput = await page.$("[data-testid='track-inspector-instrument-search']");
-    if (!searchInput) {
-      throw new Error("Track inspector has no timbre search box");
-    }
-    await searchInput.fill("reese");
-    await page.waitForTimeout(200);
-    const reeseOption = await page.$("[data-testid='track-inspector-instrument-option-reese_bass']");
-    if (!reeseOption) {
-      throw new Error("Filtering the timbre picker by \"reese\" did not surface reese_bass");
-    }
-    // A category chip must also narrow the list (the user asked for categories, not just search).
-    if (!(await page.$("[data-testid='track-inspector-instrument-category-bass']"))) {
-      throw new Error("Timbre picker is missing its category chips");
-    }
-    await reeseOption.click({ force: true });
-    await page.waitForTimeout(200);
-
-    // Escape must dismiss it: a floating panel that only closes via a small button traps users.
-    await page.keyboard.press("Escape");
-    await page.waitForTimeout(300);
-    if (await page.$("[data-testid='track-inspector']")) {
-      throw new Error("Track inspector did not close on Escape");
-    }
 
     // 5f. Piano roll (item ⑦): it must edit the studio's OWN pattern.
     //
@@ -1661,460 +1451,86 @@ async function runTestOnTarget(target, baseUrl) {
     // The phone shell has no roll (see `openPianoRoll`), so there this step asserts the *notice*
     // instead: an omitted feature must be visibly omitted, with a route to the alternative, not
     // simply absent.
+    /**
+     * 5f. ★ The arrangement's roll (v2), which replaced the studio's piano-roll drawer.
+     *
+     * ⭐ **The block that lived here was the studio's roll**: its drawer geometry, fullscreen/collapse chrome, tool
+     * strip, marquee, legato, velocity lane and announcer — and none of those surfaces exist on the arrangement. The
+     * v2 roll (`PianoRollV2`) is a single panel whose claims are: it shows the selected track's notes, its length is
+     * the arrangement's length, a press on an empty cell writes a note into the model, Delete removes the selected
+     * one, and it states the velocity a written note gets. This leg measures those in the browser, where the geometry
+     * and the pointer path are real; the keyboard, resize and marquee behaviour has its own criteria in
+     * `pianoRollV2.test.tsx`.
+     */
     const rollShell = await openPianoRoll(page);
-    try {
-      await page.waitForSelector("[data-testid='piano-roll-grid']", { timeout: 45000 });
-    } catch (rollErr) {
-      // Diagnose on failure rather than guessing: the state of every panel at that moment.
-      const diag = await page.evaluate(() => ({
-        rollDrawer: Boolean(document.querySelector("[data-testid='piano-roll-drawer']")),
-        notMelodic: Boolean(document.querySelector("[data-testid='piano-roll-not-melodic']")),
-        inspector: Boolean(document.querySelector("[data-testid='track-inspector']")),
-        settings: Boolean(document.querySelector("[data-testid='settings-tab-audio']")),
-        toggleBox: (() => {
-          const el = document.querySelector("[data-testid='arrangement-editor-roll']");
-          const r = el?.getBoundingClientRect();
-          return r ? { x: r.x, y: r.y, w: r.width, h: r.height } : null;
-        })(),
-        viewport: { w: window.innerWidth, h: window.innerHeight, scrollY: window.scrollY },
-      }));
-      console.error(`[roll-diag ${target.name}] ${JSON.stringify(diag)}`);
-      throw rollErr;
+    if (rollShell === null) {
+      throw new Error(`The arrangement's piano roll did not open on ${target.name}`);
+    }
+    await page.waitForSelector("[data-testid='roll-grid']", { timeout: 45000 });
+    if (!(await (await page.$("[data-testid='roll-grid']")).boundingBox())) {
+      throw new Error("The arrangement's roll grid has no measurable box");
     }
 
-    if (!(await (await page.$("[data-testid='piano-roll-grid']")).boundingBox())) {
-      throw new Error("Piano roll grid has no measurable box");
-    }
-
-    // Pick a melodic row and one of its empty steps from the step matrix itself.
-    const drawTarget = await page.evaluate(() => {
-      // The roll's own track selector is the app's definition of "melodic", so use it rather than
-      // guessing roles from accessible labels.
-      /**
-       * ⭐ **An empty step, found from the roll's own geometry.**
-       *
-       * The arrangement's roll shows one track at a time and draws each step `CELL` pixels wide, so a step is empty when no note starts at
-       * that x. The studio's step matrix -- a grid of cells per track -- is gone, and with it the notion of picking a track here: the roll is
-       * already showing the selected one.
-       */
-      const grid = document.querySelector("[data-testid='roll-grid']");
-      if (!grid) return null;
-      const CELL = 12;
-      const rect = grid.getBoundingClientRect();
-      const taken = new Set(
-        [...grid.querySelectorAll("[data-selected]")].map((n) => Math.round(n.getBoundingClientRect().left))
+    // The roll states the arrangement's own length, and its +/− move that number in the model too.
+    const barsInputBefore = await page.inputValue("[data-testid='arrangement-bars']");
+    await clickVerified(page, "[data-testid='roll-add-bar']");
+    await page.waitForTimeout(250);
+    const barsAfterAdd = {
+      roll: ((await page.textContent("[data-testid='roll-bars']")) ?? "").trim(),
+      arrangement: await page.inputValue("[data-testid='arrangement-bars']"),
+    };
+    if (
+      !barsAfterAdd.roll.startsWith(String(Number(barsInputBefore) + 1)) ||
+      barsAfterAdd.arrangement !== String(Number(barsInputBefore) + 1)
+    ) {
+      throw new Error(
+        `The roll's add-bar did not change the arrangement's length on ${target.name}: ` +
+          `bars ${barsInputBefore} -> roll "${barsAfterAdd.roll}", arrangement ${barsAfterAdd.arrangement}`
       );
-      const steps = Math.max(1, Math.round(rect.width / CELL));
-      for (let step = 0; step < steps; step += 1) {
-        if (!taken.has(Math.round(rect.left + step * CELL))) return { trackIdx: null, stepIdx: step };
+    }
+    await clickVerified(page, "[data-testid='roll-remove-bar']");
+    await page.waitForTimeout(250);
+    const barsRestored = await page.inputValue("[data-testid='arrangement-bars']");
+    if (barsRestored !== barsInputBefore) {
+      throw new Error(`The roll's remove-bar did not restore the length (${barsRestored} vs ${barsInputBefore}) on ${target.name}`);
+    }
+
+    // A press on an empty cell writes a note; the roll is a reading of `notesByTrack`, so the note appears in it.
+    const emptyCell = await page.evaluate(() => {
+      for (const cell of document.querySelectorAll("[data-testid^='roll-cell-']")) {
+        const id = cell.getAttribute("data-testid") ?? "";
+        const key = id.replace("roll-cell-", "");
+        if (!document.querySelector(`[data-testid='roll-note-${key}']`)) return id;
       }
       return null;
     });
-    if (!drawTarget) throw new Error("No empty step was found in the arrangement's roll to draw into");
-    const activeBefore = await countActiveSteps(page, drawTarget.trackIdx);
-
-    // The roll defaults to the first melodic track; select the measured one so both views agree.
-    /** ⭐ The roll shows the selected track, so there is no track picker to drive; when one exists, it is used. */
-    const rollTrackSelect = await page.$("[data-testid='piano-roll-track']");
-    const selectedTrack = rollTrackSelect
-      ? await page.$eval("[data-testid='piano-roll-track']", (el) => Number(el.value))
-      : drawTarget.trackIdx;
-    if (selectedTrack !== drawTarget.trackIdx) {
-      await page.selectOption("[data-testid='piano-roll-track']", String(drawTarget.trackIdx));
-      await page.waitForTimeout(250);
-    }
-
-    // Item ①: the note grid must fill the drawer, not sit at a fixed `steps × 26px` (a third of a
-    // desktop screen). Measured geometry, because this is exactly what jsdom cannot check.
-    const fill = await page.evaluate(() => {
-      const wrap = document.querySelector("[data-testid='piano-roll-grid-wrap']");
-      const grid = document.querySelector("[data-testid='piano-roll-grid']");
-      const w = wrap?.getBoundingClientRect().width ?? 0;
-      const g = grid?.getBoundingClientRect().width ?? 0;
-      return { wrap: w, grid: g };
-    });
-    if (fill.grid < fill.wrap - 60) {
-      throw new Error(
-        `Piano roll does not fill its drawer: grid ${Math.round(fill.grid)}px vs drawer ${Math.round(fill.wrap)}px`
-      );
-    }
-
-    // Fullscreen takes the viewport; collapse drops the editor but keeps the toolbar; both toggle
-    // back. (`Escape` leaves fullscreen before it closes the panel.)
-    await clickVerified(page, "[data-testid='piano-roll-fullscreen']");
-    await page.waitForTimeout(250);
-    const fsBox = await (await page.$("[data-testid='piano-roll']")).boundingBox();
-    const vp = page.viewportSize();
-    if (!fsBox || !vp || fsBox.width < vp.width - 8 || fsBox.height < vp.height - 8) {
-      throw new Error(`Fullscreen piano roll does not cover the viewport: ${JSON.stringify(fsBox)} of ${JSON.stringify(vp)}`);
-    }
-    await page.keyboard.press("Escape");
-    await page.waitForTimeout(250);
-    if ((await page.getAttribute("[data-testid='piano-roll']", "data-fullscreen")) !== "false") {
-      throw new Error("Escape did not leave fullscreen first");
-    }
-    await clickVerified(page, "[data-testid='piano-roll-collapse']");
-    await page.waitForTimeout(200);
-    if (await page.$("[data-testid='piano-roll-grid']")) {
-      throw new Error("Collapsing the piano roll left the editor mounted");
-    }
-    if (!(await page.$("[data-testid='piano-roll-track']"))) {
-      throw new Error("Collapsing the piano roll threw away its toolbar");
-    }
-    await clickVerified(page, "[data-testid='piano-roll-collapse']");
-    await page.waitForTimeout(200);
-
-    // The drawer opens below the step matrix, so bring it into view before clicking and then
-    // re-measure: `mouse.click` works in viewport coordinates, and the grid is taller than the
-    // viewport on a laptop.
-    await page.evaluate(() => {
-      const drawer = document.querySelector("[data-testid='piano-roll']");
-      if (drawer) drawer.scrollIntoView({ block: "center" });
-      window.scrollTo({ left: 0 });
-      const scroller = document.querySelector("[data-testid='piano-roll-grid']")?.closest(".overflow-x-auto");
-      if (scroller) scroller.scrollLeft = 0;
-    });
-    await page.waitForTimeout(200);
-
-    // Draw into the measured step. The grid's cell width depends on the zoom level, so derive it
-    // from the rendered geometry rather than assuming a pixel size.
-    const clickPoint = await page.evaluate(({ trackIdx, stepIdx }) => {
-      const grid = document.querySelector("[data-testid='piano-roll-grid']");
-      const scrollContainer = grid.closest(".overflow-y-auto") || grid.parentElement;
-      const cRect = scrollContainer ? scrollContainer.getBoundingClientRect() : null;
-      const rect = grid.getBoundingClientRect();
-      /** ⭐ The roll's own cell width: `PianoRollV2` draws each step `CELL` pixels wide. */
-      const cellW = 12;
-      const stepCount = Math.max(1, Math.round(rect.width / cellW));
-      const targetY = cRect ? cRect.top + cRect.height / 2 : rect.top + 8;
-      const x = rect.left + stepIdx * cellW + cellW / 2;
-      return { x, y: targetY };
-    }, drawTarget);
-    await page.mouse.click(clickPoint.x, clickPoint.y);
+    if (!emptyCell) throw new Error("The arrangement's roll has no empty cell to write into");
+    const notesBefore = (await page.$$("[data-testid^='roll-note-']")).length;
+    await clickVerified(page, `[data-testid='${emptyCell}']`);
     await page.waitForTimeout(300);
-    const rollNoteCount = await page.$$eval("[data-testid^='piano-roll-note-']", (els) => els.length);
-    if (rollNoteCount === 0) throw new Error("Drawing in the piano roll produced no note");
-
-    // The step matrix renders the same pattern, so the row must have *gained* an active step.
-    // Counting the row's active steps (a relative change) rather than requiring a specific step
-    // index is deliberate: a click at computed coordinates can round into the neighbouring cell on
-    // another engine, and asserting which cell was hit would then be testing that engine's
-    // rounding instead of the shared-data behaviour this check exists for.
-    const activeAfter = await countActiveSteps(page, drawTarget.trackIdx);
-    if (activeAfter <= activeBefore) {
-      throw new Error(
-        `The roll's new note did not reach the step grid: track ${drawTarget.trackIdx} had ${activeBefore} active steps before and ${activeAfter} after`
-      );
+    const notesAfter = (await page.$$("[data-testid^='roll-note-']")).length;
+    if (notesAfter !== notesBefore + 1) {
+      throw new Error(`Writing in the roll did not add one note on ${target.name} (${notesBefore} -> ${notesAfter})`);
     }
-
-    // ---- Chords are real notes -----------------------------------------------------------------
-    //
-    // The reported defect: "the chords track shows one note in the piano roll, not a chord". Draw a
-    // second tone onto a step that already sounds (that is how a chord is entered here) and require
-    // the roll to show a stack while the step grid still shows exactly one sounding step — the two
-    // views share one pattern, so a chord must be visible in both without duplicating steps.
-    const staggerBefore = await countActiveSteps(page, drawTarget.trackIdx);
-    const targetNote = await page.$(`[data-testid^='piano-roll-note-${drawTarget.stepIdx}-']`);
-    const noteToStack = targetNote || (await page.$("[data-testid^='piano-roll-note-']"));
-    if (!noteToStack) throw new Error("No note block to stack a chord onto");
-    await noteToStack.scrollIntoViewIfNeeded();
-    await page.waitForTimeout(150);
-    const firstNoteBox = await noteToStack.boundingBox();
-    if (!firstNoteBox) throw new Error("No note block to stack a chord onto");
-    const rowH = Number(await page.getAttribute("[data-testid='piano-roll']", "data-row-h"));
-    await page.keyboard.press("2"); // pencil
-    await page.waitForTimeout(120);
-    // One semitone above the first note, same step: the pencil adds to that step's stack.
-    await page.mouse.click(firstNoteBox.x + firstNoteBox.width / 2, firstNoteBox.y - rowH / 2);
-    await page.waitForTimeout(250);
-    const chordSizes = await page.$$eval("[data-testid^='piano-roll-note-']", (els) =>
-      els.map((e) => Number(e.getAttribute("data-chord-size")))
+    // A written note is the selected one, so the keys act on it; Delete takes it back out and leaves the run clean.
+    const written = await page.evaluate(() =>
+      document.querySelector("[data-testid^='roll-note-'][data-selected='true']")?.getAttribute("data-testid") ?? null
     );
-    const maxChord = chordSizes.length ? Math.max(...chordSizes) : 0;
-    const staggerAfter = await countActiveSteps(page, drawTarget.trackIdx);
-    if (maxChord < 2) {
-      throw new Error(`Drawing onto a sounding step did not build a chord on ${target.name} (sizes: ${chordSizes.join(",")})`);
-    }
-    if (staggerAfter !== staggerBefore) {
-      throw new Error(
-        `A chord changed the step grid's step count on ${target.name} (${staggerBefore} → ${staggerAfter}): the roll and the grid disagree`
-      );
-    }
-    console.log(`   · chords: stacked ${maxChord} tones on one step, step grid unchanged (${staggerAfter} steps) on ${target.name}`);
-
-    // ---- Roll tools (item ② of the DAW-alignment objective) ------------------------------------
-    //
-    // Every check drives a real gesture and requires the *data* to follow — measured through the
-    // step grid, which renders the same pattern — rather than requiring that a control merely
-    // exists. The roll exposes its grid metrics as data attributes so the gesture coordinates are
-    // read from the product instead of assumed here.
-    const rollInfo = await page.evaluate(() => {
-      const el = document.querySelector("[data-testid='piano-roll']");
-      return {
-        steps: Number(el?.dataset.steps ?? 0),
-        rows: Number(el?.dataset.rows ?? 0),
-        cellW: Number(el?.dataset.cellW ?? 0),
-        rowH: Number(el?.dataset.rowH ?? 0),
-      };
-    });
-    // Geometry is measured *after* every clickVerified call: that helper scrolls its target into
-    // view, and a scroll between measuring and gesturing made the earlier coordinates point at a
-    // different element (on WebKit the grid moved and the press landed on nothing).
-    const cell = (step, row) => ({
-      x: rollBox.x + step * rollInfo.cellW + rollInfo.cellW / 2,
-      y: rollBox.y + row * rollInfo.rowH + rollInfo.rowH / 2,
-    });
-
-    for (const id of ["pointer", "pencil", "eraser", "scissors", "marquee"]) {
-      if (!(await page.$(`[data-testid='piano-roll-tool-${id}']`))) {
-        throw new Error(`Piano roll is missing the ${id} tool`);
-      }
-    }
-    await page.keyboard.press("3");
-    await page.waitForTimeout(120);
-    if ((await page.getAttribute("[data-testid='piano-roll']", "data-tool")) !== "eraser") {
-      throw new Error("Pressing 3 did not switch to the eraser");
-    }
-    await page.keyboard.press("1"); // back to the pointer
-    await page.waitForTimeout(120);
-
-    // Marquee: use the marquee tool, so a press anywhere starts a rectangle (no ambiguity about
-    // having grabbed a note), and keep the gesture well inside the grid — a few pixels from the
-    // border can miss it on WebKit, where the drawer's rounded corner and the velocity lane share
-    // that edge (a plain click was verified to work there, so this is gesture geometry, not a
-    // broken control).
-    const noteCount = (await page.$$("[data-testid^='piano-roll-note-']")).length;
-    if (noteCount === 0) throw new Error("Piano roll has no notes to select");
-    await clickVerified(page, "[data-testid='piano-roll-tool-marquee']");
-    // Centre a *note*, not the grid: on a short landscape viewport the visible slice of a tall grid
-    // can be all padding, and a marquee over padding legitimately selects nothing.
-    await page.$eval("[data-testid^='piano-roll-note-']", (el) => el.scrollIntoView({ block: "center" }));
-    await page.waitForTimeout(200);
-    const rollBox = await (await page.$("[data-testid='piano-roll-grid']")).boundingBox();
-    if (!rollBox) throw new Error(`Piano roll grid is not on screen on ${target.name}`);
-    const view = page.viewportSize();
-    const visible = {
-      x: Math.max(rollBox.x, 0),
-      y: Math.max(rollBox.y, 0),
-      right: Math.min(rollBox.x + rollBox.width, view.width),
-      bottom: Math.min(rollBox.y + rollBox.height, view.height),
-    };
-    if (visible.bottom - visible.y < rollInfo.rowH * 3) {
-      throw new Error(`Piano roll has no draggable area in view on ${target.name}`);
-    }
-    const selectedOf = async () => {
-      const text = (await page.textContent("[data-testid='piano-roll-selected-count']")) ?? "";
-      return Number((/(\d+)/.exec(text) ?? [])[1] ?? 0);
-    };
-    // Anchor the rectangle on a real note instead of a fixed fraction of the viewport: patterns now
-    // run to 64/128 steps, so a note can sit near an edge and an inset rectangle would enclose
-    // nothing (that is exactly how this check first failed after the chord work landed).
-    const anchorNoteBox = await (await page.$("[data-testid^='piano-roll-note-']")).boundingBox();
-    if (!anchorNoteBox) throw new Error(`No note to anchor a marquee on ${target.name}`);
-    // Stay *inside* the note's own row: the marquee selects whole cells, so a few pixels past the
-    // block's edge would pull in the neighbouring pitch row and the selection would legitimately be
-    // larger than the notes whose centres are inside the drawn rectangle.
-    const from = { x: anchorNoteBox.x + 2, y: anchorNoteBox.y + anchorNoteBox.height - 1 };
-    const to = { x: anchorNoteBox.x + anchorNoteBox.width - 2, y: anchorNoteBox.y + 1 };
-
-    // A click with the marquee tool is a one-cell rectangle: aiming at an empty corner clears the
-    // selection. If that particular cell happens to hold a note the claim would be false, so this
-    // only asserts it does not *grow*.
-    await page.mouse.click(from.x, from.y);
-    await page.waitForTimeout(150);
-    const afterClick = await selectedOf();
-
-    await page.mouse.move(from.x, from.y);
-    await page.mouse.down();
-    await page.mouse.move(to.x, to.y, { steps: 8 });
-    await page.waitForTimeout(150);
-    const marqueeShown = Boolean(await page.$("[data-testid='piano-roll-marquee']"));
-    await page.mouse.up();
-    await page.waitForTimeout(200);
-    const marqueeSelected = await selectedOf();
-    if (!marqueeShown || marqueeSelected < 1) {
-      throw new Error(
-        `Marquee selected nothing on ${target.name} (rectangle drawn: ${marqueeShown}, selected: ${marqueeSelected})`
-      );
-    }
-    // The selection must be exactly the notes whose centres fall inside the dragged rectangle —
-    // measured from the notes' own boxes, so the claim does not depend on grid geometry.
-    const expectedSelected = await page.evaluate(
-      ({ fx, fy, tx, ty }) => {
-        const lo = { x: Math.min(fx, tx), y: Math.min(fy, ty) };
-        const hi = { x: Math.max(fx, tx), y: Math.max(fy, ty) };
-        return [...document.querySelectorAll("[data-testid^='piano-roll-note-']")].filter((el) => {
-          const r = el.getBoundingClientRect();
-          const cx = r.x + r.width / 2;
-          const cy = r.y + r.height / 2;
-          return cx >= lo.x && cx <= hi.x && cy >= lo.y && cy <= hi.y;
-        }).length;
-      },
-      { fx: from.x, fy: from.y, tx: to.x, ty: to.y }
-    );
-    if (marqueeSelected !== expectedSelected) {
-      throw new Error(
-        `Marquee selected ${marqueeSelected} notes but ${expectedSelected} centres were inside the rectangle on ${target.name}`
-      );
-    }
-    void afterClick;
-
-    // …and "select all" is a precise claim: every note in the roll must be selected.
-    await page.keyboard.press(process.platform === "darwin" ? "Meta+a" : "Control+a");
-    await page.waitForTimeout(200);
-    const allSelected = await selectedOf();
-    if (allSelected !== noteCount) {
-      throw new Error(`Select-all selected ${allSelected} of ${noteCount} notes on ${target.name}`);
+    if (!written) throw new Error("The note written in the roll is not marked selected");
+    await page.keyboard.press("Delete");
+    await page.waitForTimeout(300);
+    const notesRestored = (await page.$$("[data-testid^='roll-note-']")).length;
+    if (notesRestored !== notesBefore) {
+      throw new Error(`Delete did not remove the note the roll wrote (${notesRestored} vs ${notesBefore}) on ${target.name}`);
     }
 
-    // Velocity lane: dragging a bar up must raise that note's velocity.
-    /**
-     * Three things here exist because this check failed once on an iPad in landscape with
-     * `100 → 52` — a *decrease*, which is not something an upward drag can do to the bar it grabbed:
-     *
-     *  1. the before/after reads use the **same element handle**. The first version re-queried
-     *     `[data-testid^='piano-roll-velocity-bar-']` afterwards, so if the lane re-rendered or
-     *     re-ordered (edits earlier in this run change the pattern) the two numbers came from
-     *     different notes and the comparison was meaningless;
-     *  2. the box is re-read until it stops moving, because `scrollIntoViewIfNeeded` plus a 150 ms
-     *     sleep is not a promise the lane has settled on a slow tablet;
-     *  3. the press is verified to land on the bar itself (`elementFromPoint` at the press point),
-     *     the same delivery contract `clickVerified` uses for clicks.
-     */
-    const firstBar = "[data-testid^='piano-roll-velocity-bar-']";
-    const barEl = await page.$(firstBar);
-    if (!barEl) throw new Error("Velocity lane has no visible bar for a pattern with notes");
-    const velocityOf = async () => Number(await barEl.getAttribute("data-velocity"));
-    const barBefore = await velocityOf();
-    await barEl.scrollIntoViewIfNeeded();
-    let barBox = await barEl.boundingBox();
-    for (let attempt = 0; attempt < 10; attempt++) {
-      await page.waitForTimeout(80);
-      const next = await barEl.boundingBox();
-      if (next && barBox && next.x === barBox.x && next.y === barBox.y && next.height === barBox.height) break;
-      barBox = next;
-    }
-    if (!barBox) throw new Error("Velocity bar has no box after settling");
-    const pressX = barBox.x + barBox.width / 2;
-    const pressY = barBox.y + Math.max(2, barBox.height / 2);
-    const onBar = await page.evaluate(
-      ({ x, y, sel }) => {
-        const hit = document.elementFromPoint(x, y);
-        const bar = document.querySelector(sel);
-        return Boolean(hit && bar && (hit === bar || bar.contains(hit)));
-      },
-      { x: pressX, y: pressY, sel: firstBar }
-    );
-    if (!onBar) {
-      throw new Error(
-        `The velocity press point is not on the bar (${Math.round(pressX)},${Math.round(pressY)}) on ${target.name}`
-      );
-    }
-    await page.mouse.move(pressX, pressY);
-    await page.mouse.down();
-    await page.mouse.move(pressX, barBox.y - 16, { steps: 5 });
-    await page.mouse.up();
-    await page.waitForTimeout(250);
-    const barAfter = await velocityOf();
-    if (!(barAfter > barBefore)) {
-      throw new Error(`Dragging a velocity bar did not raise it on ${target.name} (${barBefore} → ${barAfter})`);
-    }
-
-    // Legato fills each note's gap to the next one. Measured on the notes' own `data-gate` values,
-    // not on pixel widths: a 64/128-step pattern has ~8 px cells, so a one-step change is under a
-    // pixel and a width assertion would be testing the zoom level instead of the operation.
-    const gatesOf = () =>
-      page.$$eval("[data-testid^='piano-roll-note-']", (els) => els.map((e) => Number(e.getAttribute("data-gate"))));
-    const gatesBefore = await gatesOf();
-    await clickVerified(page, "[data-testid='piano-roll-legato']");
-    await page.waitForTimeout(250);
-    const gatesAfter = await gatesOf();
-    const grew = gatesAfter.some((gate, i) => gate - (gatesBefore[i] ?? gate) > 0.05);
-    if (!grew) {
-      throw new Error(
-        `Legato changed no note length on ${target.name} (${gatesBefore.slice(0, 6).join(",")} → ${gatesAfter.slice(0, 6).join(",")})`
-      );
-    }
-    /**
-     * U10: two claims only a real browser can settle, because both are about focus.
-     *
-     * 1. `]` lengthens **the whole selection**, not the note under the cursor. Select-all ran above,
-     *    so every note is selected and each note's own `data-gate` is the evidence. The comparison
-     *    counts the notes that *could* grow — one already at the one-bar ceiling cannot, and counting
-     *    it as a failure would be the check lying rather than the editor.
-     * 2. The on-screen piano answers the keyboard: Home walks to the bottom drawn key, ArrowUp walks
-     *    one semitone up and sounds it. jsdom can assert the handler ran; only a browser can assert
-     *    that focus actually moved to the next key.
-     */
-    const selectedGates = () =>
-      page.$$eval("[data-testid^='piano-roll-note-']", (els) =>
-        Object.fromEntries(
-          els
-            .filter((e) => e.getAttribute("data-selected") === "true")
-            .map((e) => [e.getAttribute("data-testid"), Number(e.getAttribute("data-gate"))])
-        )
-      );
-    await page.focus("[data-testid='piano-roll-grid']");
-    const gatesBeforeSelection = await selectedGates();
-    const eligibleIds = Object.keys(gatesBeforeSelection).filter(
-      (id) => gatesBeforeSelection[id] < 15.5
-    );
-    if (eligibleIds.length < 2) {
-      throw new Error(
-        `Length-on-selection needs a multi-note selection; got ${eligibleIds.length} eligible note(s) on ${target.name}`
-      );
-    }
-    await page.keyboard.press("]");
-    await page.waitForTimeout(250);
-    const gatesAfterSelection = await selectedGates();
-    const grewIds = eligibleIds.filter(
-      (id) => (gatesAfterSelection[id] ?? 0) - gatesBeforeSelection[id] > 0.05
-    );
-    if (grewIds.length !== eligibleIds.length) {
-      throw new Error(
-        `"]" with ${eligibleIds.length} notes selected lengthened ${grewIds.length} of them on ${target.name}`
-      );
-    }
-
-    const focusedGutterKey = "[data-midi-pitch][tabindex='0']";
-    if (!(await page.$(focusedGutterKey))) {
-      throw new Error(`The pitch gutter has no keyboard tab stop on ${target.name}`);
-    }
-    await page.focus(focusedGutterKey);
-    await page.keyboard.press("Home"); // the bottom drawn key, so ArrowUp always has somewhere to go
-    await page.waitForTimeout(150);
-    const gutterKeyBefore = Number(await page.getAttribute(focusedGutterKey, "data-midi-pitch"));
-    await page.keyboard.press("ArrowUp");
-    await page.waitForTimeout(250);
-    const gutterKeyAfter = Number(await page.getAttribute(focusedGutterKey, "data-midi-pitch"));
-    const auditionLine = ((await page.textContent("[data-testid='piano-roll-announcer']")) ?? "").trim();
-    if (gutterKeyAfter !== gutterKeyBefore + 1 || auditionLine.length === 0) {
-      throw new Error(
-        `The pitch gutter did not answer ArrowUp on ${target.name} (key ${gutterKeyBefore} → ${gutterKeyAfter}, announcement "${auditionLine}")`
-      );
-    }
-
+    // The velocity readout is the one a written note gets, and it must state a value rather than be blank.
+    const velocityShown = ((await page.textContent("[data-testid='roll-velocity-value']")) ?? "").trim();
+    if (velocityShown === "") throw new Error("The roll's velocity readout is missing");
     console.log(
-      `   · roll tools: switched by keyboard, marquee selected, velocity ${barBefore} → ${barAfter}, legato lengthened a note, ` +
-        `"]" lengthened ${grewIds.length} selected notes, gutter key ${gutterKeyBefore} → ${gutterKeyAfter} announced`
+      `   · roll: ${barsInputBefore} bars, wrote and removed a note, velocity ${velocityShown} (${target.name})`
     );
 
-    await clickVerified(page, "[data-testid='piano-roll-close']");
-    await page.waitForTimeout(250);
-    if (await page.$("[data-testid='piano-roll-grid']")) {
-      throw new Error("Piano roll did not close");
-    }
-
-    /**
-     * ⭐ **Retired with the studio's parameter lane (owner's precedent, 2026-10-07).**
-     *
-     * This drove the studio's per-column velocity lane: it required exactly one tab stop among `vel-step-*` and an `ArrowUp` that raised the
-     * first column's `aria-valuenow`. The arrangement surface has no per-step lane -- velocity is edited by running a command over a
-     * selection (`arrangement-ramp-velocity`), which is a different control, not the same one spelled differently, so the tab-stop and
-     * arrow-key claims have nothing here to describe. The capability itself is covered where it now lives: `arrangementViewV2.test.tsx`
-     * asserts the ramp command against the notes it changes.
-     */
-     // end desktop-only piano roll assertions
 
     // 5g. Switching genre *while playing* (the case that shipped broken).
     //
