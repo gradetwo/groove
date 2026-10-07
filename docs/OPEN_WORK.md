@@ -18197,3 +18197,20 @@ describe("the grid's editing actions", () => {
     · 若子进程内也 ≠ 0 ✓ ⇒ 差异由**该进程的环境**造成 ✓，随后二分环境 ✓（`headless: true` 的 host 安装 ✓、
       `catalogueRead`/`context` ✓、那一组回调 ✓、以及"同一个进程里先渲整段再渲窗口"的顺序效应 ✓）；
     · 若子进程内 = 0 ✓ ⇒ 差异在**父进程发出去的 job**与子进程读到的之间 ✓（路径/编码/时点 ✓）。
+
+### 七百零五、⭐⭐ **子进程自己做 A/B：−1.3 dB ⇒ 差异在"这个进程"里，而它跑的是 **bundle**、我的对照跑的是 **源码**（2026-10-08 ✓）
+
+  ⭐ 在 `runSpanJob` 里加 `GROOVE_SPAN_SELF_AB=1` ✓：**同一个子进程**内先渲整段（`{bars:1}`，无窗口 ✓）、再渲它自己的窗口 ✓，
+    把逐帧差写进 sidecar ✓。实测该子进程内 **−1.3 dB** ✗（`frames 38,400`、`offset 38,400`、`barFrames 19,200` ✓ 全部正确 ✓）。
+  ⭐ 与 `scratch/node-window-ab.ts`（`vite-node` 跑**源码** ✓）的 **−inf** ✓ 对照 ⇒ **同一段代码，两种构建** ✓
+    ⇒ 差异来自**构建（esbuild bundle）**，不是选项 ✓、不是 job 内容 ✓、不是 host ✓、不是合并 ✓。
+  ⭐ 一个能解释**全部**现象的具体机制（下一轮先验它 ✓）：
+    · `mcp/render/headless.ts` 的 host 安装用**模块级** `hostInstalled` 守卫 ✓；bundle 里若出现**两份模块实例** ✓
+      （源码走静态 `import` ✓，而 `renderPatternHeadless` 内部用的是 **动态 `import("../../src/audio/WavExporter")`** ✓），
+      守卫就会失效 ⇒ **`OfflineAudioContext` 被包两层** ✗；
+    · 包两层的后果正是"**时间偏移被应用两次**" ✓ ⇒ 窗口渲染的内容整体挪位 ✗；
+    · 而**无窗口**渲染（起点 0 ✓）的偏移是 **0** ✓ ⇒ 平移两次仍是 0 ✓ ⇒ **span 0 永远精确** ✓✓✓
+      ——这一条正好解释了那个一直解释不了的事实 ✓。
+  ⏳ 下一轮的验证（便宜 ✓）：数"host 安装了几次" ✓（或打印 `hostInstalled` ✓），并对比 bundle 与源码下
+    `renderPatternChunkOffline` 的窗口结果 ✓；若确认双层包裹 ✓，修法是把动态 `import` 换成**静态导入** ✓
+    （或把守卫放到 `globalThis` 上 ✓），并让 `check:mcp:build` 侧再加一条判据防回归 ✓。

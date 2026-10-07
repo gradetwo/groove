@@ -57,6 +57,8 @@ export interface SpanSidecar {
   /** The lane report this span filled, carried so the parent can union them rather than report nothing. */
   audioLanes: OfflineAudioLaneReport;
   problems: string[];
+  /** ⭐ The child's own whole-vs-window comparison, present only under `GROOVE_SPAN_SELF_AB=1`. */
+  selfAB?: { frames: number; worstDb: string; wholeFrames: number; barFrames: number; offset: number };
 }
 
 /** A minimal 16-bit PCM WAV reader: find `fmt ` and `data` rather than assuming the 44-byte canonical header. */
@@ -114,6 +116,26 @@ export async function runSpanJob(jobPath: string): Promise<void> {
   );
   const decoded = decodePcm16Wav(new Uint8Array(Buffer.from(rendered.base64, "base64")));
   const timeline = (rendered as { spanTimeline?: { preRollFrames: number; chunkEndFrame: number } }).spanTimeline;
+  /**
+   * ⭐ **The child's own A/B, inside the process whose render is in question.** Everything outside this process has been
+   * ruled out — the option set, the JSON round trip, the merge, both hosts' window arithmetic — so the question is now
+   * whether *this* process renders the window differently from the whole. `GROOVE_SPAN_SELF_AB=1` renders the whole
+   * pattern here too and reports the difference beside the span, which tells the two remaining causes apart: the
+   * process's environment, or the job it was handed.
+   */
+  const selfAB = await (async () => {
+    if (process.env.GROOVE_SPAN_SELF_AB !== "1") return null;
+    const whole = await renderPatternHeadless(job.pattern, { ...job.options, headless: true, bars: 1 }, job.catalogueRead, job.context);
+    const wholeDecoded = decodePcm16Wav(new Uint8Array(Buffer.from(whole.base64, "base64")));
+    const barFrames = Math.round((60 / (job.pattern.bpm ?? 120)) * 4 * decoded.sampleRate);
+    const offset = job.fromBar * barFrames;
+    const from = timeline?.preRollFrames ?? decoded.frames;
+    const length = Math.min((timeline?.chunkEndFrame ?? decoded.frames) - from, wholeDecoded.frames - offset);
+    let worst = 0;
+    for (let i = 0; i < length; i += 1) worst = Math.max(worst, Math.abs(decoded.channels[0]![from + i]! - wholeDecoded.channels[0]![offset + i]!));
+    return { frames: length, worstDb: worst <= 1e-9 ? "-inf" : (20 * Math.log10(worst)).toFixed(1), wholeFrames: wholeDecoded.frames, barFrames, offset };
+  })();
+
   const sidecar: SpanSidecar = {
     channels: decoded.channels.length,
     sampleRate: decoded.sampleRate,
@@ -125,6 +147,7 @@ export async function runSpanJob(jobPath: string): Promise<void> {
     gs1PatchProblems: rendered.gs1PatchProblems ?? [],
     audioLanes: rendered.audioLanes ?? { lanes: [], events: 0, problems: [] },
     problems: rendered.problems ?? [],
+    ...(selfAB ? { selfAB } : {}),
   };
   await fs.mkdir(path.dirname(job.outStem), { recursive: true });
   await fs.writeFile(`${job.outStem}.f32`, Buffer.concat(decoded.channels.map((channel) => Buffer.from(channel.buffer, channel.byteOffset, channel.byteLength))));
