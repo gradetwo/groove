@@ -17953,3 +17953,17 @@ describe("the grid's editing actions", () => {
     · **web 导出**：没有任何可用并发手段 ✓ ⇒ 只能"少做工作"（草稿采样率/轻混响 ✓）或改走 headless 渲染路 ✓。
   ⚠️ 一次量具错：探针的 `num()` 只认 `--flag value` ✗，而我传的是 `--flag=value` ✓ ⇒ 第一次 44.1 kHz 复测**实际仍在 8 kHz** ✗
     （`--spans/--bars` 恰好等于默认值才没露馅 ✓）⇒ 已改成两种写法都认 ✓。教训同 §六百八十三/六百八十五：**先证明参数生效，再相信数** ✓。
+
+### 六百九十一、⭐ **MCP 路的渲染其实跑在 Node 里（`node-web-audio-api`），并行单位是"进程"不是"页面"**（2026-10-08 ✓）
+
+  ⭐ 读代码纠正了一个我一直按"页面"推理的前提 ✓：`mcp/render/headless.ts` 的文件头写明
+    **"The Node Web Audio host ... running under `node-web-audio-api` instead of Vite + Chromium"** ✓；
+    `mcp/render/worker.ts` 在 `options.headless === true` 时调用 `renderPatternHeadless` ✓ ⇒
+    **MCP 的渲染在服务进程内**（这也解释了为什么早先 `ps` 采样看到的是**服务进程** 99.9% 单核 ✓）。
+  ⭐ 因此：
+    · 并行单位 = **子进程 / worker_thread** ✓，**不是浏览器页面** ✗（六百九十 的"K 页面"结论**不适用于 MCP 路** ✓，已改正 ✓）；
+    · 插入点很干净 ✓：`headless.ts`（**569 行，未钉死** ✓）里做"分 span → fork K 个 runner → 收集 PCM → `mergeRenderedChunks` → 返回" ✓，
+      而**被钉死的 `worker.ts`（1652/1653 行）只需保留现有那一处调用** ✓。
+    · 投影：K=4 进程若接近线性 ⇒ 753 s → **≈190 s** ✓；即便只有 Chromium 路量到的暖态 3× ⇒ ≈250 s ✓，
+      两条都在 **≤300 s** 之内 ✓ ⇒ **原目标在 MCP 路上仍然成立** ✓，而且实现位置不受 `fileSizeBudget` 阻塞 ✓。
+  ⏳ 未量：Node host 的 K 进程扩展性（这是实现的第一步，不是假设 ✓）。
