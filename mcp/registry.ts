@@ -92,6 +92,7 @@ import { deleteMcpCustomGenre, duplicateMcpCustomGenre, getMcpCustomGenre, listM
 import type { SequencerPattern } from "../src/types/genre";
 import type { CustomGenre } from "../src/types/customGenre";
 import { ARRANGEMENT_TOOLS } from "./registryArrangement";
+import { ARRANGEMENT_NOTE_TOOLS } from "./registryArrangementNotes";
 
 export * from "./toolKit";
 import { unknownGenre, failure, describeGs1Sound, patternSchema, customGenreSchema, opSchema, patternFromArgs, instrumentsByPart, situationsArgument, situationsByPart, ToolDefinition } from "./toolKit";
@@ -127,6 +128,7 @@ export const TOOLS: ToolDefinition[] = [
   ...LIBRARY_TOOLS,
   ...PROJECT_TOOLS,
   ...ARRANGEMENT_TOOLS,
+  ...ARRANGEMENT_NOTE_TOOLS,
   /**
    * The arrangement surface — the v2 model the interface has used since `/new`.
    *
