@@ -95,9 +95,20 @@ export function TrackHeaderV2({
       */
       role="toolbar"
       aria-label={t("track_header_label", { name: track.name })}
-      className="relative flex shrink-0 items-center gap-1 px-1"
+      /**
+       * ⭐ **Two rows, because one row does not fit and silently ate the track's name.**
+       *
+       * Measured at 1820×918 on the released build: the single row needed 262 px inside a 240 px column, so the
+       * remove button painted 19 px into the lane area and the name — the one control that says which track this
+       * is — was squeezed to **zero** width. The row is `--arr-track-h` tall (96 px, the lane row's own height), so
+       * it can hold two 44 px rows: identity (colour, kind, name, instrument) and mixing (level, arm, solo, mute,
+       * meter, remove). Headers still align with their lanes because the row height is unchanged.
+       */
+      className="relative flex shrink-0 flex-col justify-center gap-1 px-1"
       style={{ height: "var(--arr-track-h)", paddingLeft: `${4 + depth * 12}px` }}
     >
+      {/* Identity: what this track *is*, led by the name. */}
+      <div data-row="identity" className="flex min-w-0 items-center gap-1">
       {/* 1 — the colour strip. The brief's first item, and the only thing that identifies a track without reading. */}
       <span data-control="color" data-testid={`track-color-${track.id}`} aria-hidden="true" className="h-8 w-1 shrink-0 rounded" style={{ background: color }} />
 
@@ -139,10 +150,35 @@ export function TrackHeaderV2({
             {track.collapsed ? "▸" : "▾"}
           </button>
         )}
-        <span data-testid={`track-name-${track.id}`} className="min-w-0 truncate text-xs text-text" style={{ flex: "1 1 2rem" }} title={track.name}>
+        <span data-testid={`track-name-${track.id}`} className="min-w-[2.5rem] truncate text-xs text-text" style={{ flex: "1 1 2rem" }} title={track.name}>
           {track.name}
         </span>
       </span>
+
+      {/*
+        The instrument slot, in the identity row because it says **what this track is**, not how it is mixed.
+
+        It is a **flex item, not an overlay**: absolutely positioned in the bottom corner it landed on the level meter
+        and, at this column's width, on the volume slider as well — and a control that cannot be clicked is worse than
+        one that is absent. It sits beside the name, and the name gives up space to it through its own `min-w-0`.
+      */}
+      {canPlayInstrument && (
+        <span data-control="instrument" className="min-w-0 max-w-[7rem]">
+          <InstrumentBrowserV2
+            trackId={track.id}
+            trackName={track.name}
+            {...(track.sample?.assetId ? { assetId: track.sample.assetId } : {})}
+            instruments={instruments}
+            onChangeInstrument={onChangeInstrument!}
+            open={libraryOpen}
+            onOpenChange={(open) => onLibraryOpenChange?.(track.id, open)}
+          />
+        </span>
+      )}
+      </div>
+
+      {/* Mixing: level, arm, solo, mute, meter and remove — the controls a hand reaches for while the music plays. */}
+      <div data-row="mixing" className="flex items-center gap-1">
 
       {/* 4 — the volume, with its number beside it: a slider says "a bit quieter", the number says how much. */}
       <span data-control="volume" className="arr-head-desktop-only flex shrink-0 items-center gap-1">
@@ -280,28 +316,6 @@ export function TrackHeaderV2({
         <span className="block w-full" style={{ height: "70%", background: color }} />
       </span>
 
-      {/*
-        The instrument slot, after Bitwig's eight because it is ours rather than part of their documented set.
-
-        It is a **flex item, not an overlay**: absolutely positioned in the bottom corner it landed on the level meter
-        and, at this column's width, on the volume slider as well — and a control that cannot be clicked is worse than
-        one that is absent, because nothing says why. As a flex item it either fits or the name gives up space to it,
-        which is what the `min-w-0` on the name is for.
-      */}
-      {canPlayInstrument && (
-        <span data-control="instrument" className="min-w-0 max-w-[8rem]">
-          <InstrumentBrowserV2
-            trackId={track.id}
-            trackName={track.name}
-            {...(track.sample?.assetId ? { assetId: track.sample.assetId } : {})}
-            instruments={instruments}
-            onChangeInstrument={onChangeInstrument!}
-            open={libraryOpen}
-            onOpenChange={(open) => onLibraryOpenChange?.(track.id, open)}
-          />
-        </span>
-      )}
-
       {onRemoveTrack && (
         <button
           type="button"
@@ -314,6 +328,7 @@ export function TrackHeaderV2({
           ×
         </button>
       )}
+      </div>
     </div>
   );
 }

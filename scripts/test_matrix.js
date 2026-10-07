@@ -594,6 +594,68 @@ async function runTestOnTarget(target, baseUrl) {
       }
     }
 
+    /**
+     * ⭐ **The grid's two columns line up, row for row, and nothing overflows the header column.**
+     *
+     * Measured on the released v2.35.0 at 1820×918: the add-track block lived inside the header column but not the
+     * lane column, so every header sat 101 px above its own lane; each header row carried a 1 px bottom border the
+     * lane row did not, so the columns drifted another pixel per track; and the header's controls needed 262 px inside
+     * a 240 px column, so the track's name was squeezed to zero width and the remove button painted into the lane
+     * area. jsdom cannot see any of that — geometry is not in its model — which is why it is asserted here, on the one
+     * leg that has a real browser and a production build.
+     */
+    const gridGeometry = await page.evaluate(() => {
+      const column = document.querySelector("[data-testid='arrangement-header-column'] > div:first-child");
+      const lanes = document.querySelector("[data-testid='arrangement-lane']");
+      if (!column || !lanes) return { error: "no header column or lane column" };
+      const headerRows = [...column.querySelectorAll("[data-testid^='arrangement-header-row-']")];
+      const laneRows = [...lanes.children];
+      const box = (el) => el.getBoundingClientRect();
+      return {
+        headerTops: headerRows.map((row) => Math.round(box(row).top)),
+        headerHeights: headerRows.map((row) => Math.round(box(row).height)),
+        laneTops: laneRows.map((row) => Math.round(box(row).top)),
+        laneHeights: laneRows.map((row) => Math.round(box(row).height)),
+        overflow: headerRows.map((row) => {
+          const r = box(row);
+          const inner = row.firstElementChild;
+          const kids = inner ? [...inner.children].map((child) => box(child)) : [];
+          return kids.length ? Math.round(Math.max(...kids.map((kid) => kid.right)) - r.right) : 0;
+        }),
+        nameWidths: headerRows.map((row) => {
+          const id = (row.getAttribute("data-testid") ?? "").replace("arrangement-header-row-", "");
+          const name = document.querySelector(`[data-testid='track-name-${id}']`);
+          return name ? Math.round(box(name).width) : 0;
+        }),
+      };
+    });
+    if (gridGeometry.error) throw new Error(gridGeometry.error);
+    if (gridGeometry.headerTops.length !== gridGeometry.laneTops.length) {
+      throw new Error(
+        `the grid draws ${gridGeometry.headerTops.length} header row(s) but ${gridGeometry.laneTops.length} lane row(s) on ${target.name}`
+      );
+    }
+    gridGeometry.headerTops.forEach((top, index) => {
+      if (top !== gridGeometry.laneTops[index] || gridGeometry.headerHeights[index] !== gridGeometry.laneHeights[index]) {
+        throw new Error(
+          `header ${index} is at ${top}px/${gridGeometry.headerHeights[index]}px against its lane at ` +
+            `${gridGeometry.laneTops[index]}px/${gridGeometry.laneHeights[index]}px on ${target.name} — the two columns must share one row height`
+        );
+      }
+    });
+    const overflowingHeaders = gridGeometry.overflow.filter((px) => px > 0);
+    if (overflowingHeaders.length) {
+      throw new Error(`track header content overflows its column by ${overflowingHeaders.join(", ")} px on ${target.name}`);
+    }
+    const namelessHeaders = gridGeometry.nameWidths.filter((width) => width < 8);
+    if (namelessHeaders.length) {
+      throw new Error(`a track header draws no readable name on ${target.name} (widths ${gridGeometry.nameWidths.join(", ")})`);
+    }
+    console.log(
+      `   · grid: ${gridGeometry.headerTops.length} row(s), headers and lanes aligned, names ` +
+        `${Math.min(...gridGeometry.nameWidths)}-${Math.max(...gridGeometry.nameWidths)} px (${target.name})`
+    );
+
     // Play button interaction & Playhead beam alignment check
     /**
      * By test id, not by label.

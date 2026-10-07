@@ -61,14 +61,18 @@ beforeEach(() => {
 });
 
 describe("the track header's controls", () => {
-  it("draws Bitwig's documented minimum set in Bitwig's documented order", () => {
+  it("draws Bitwig's documented minimum set in an order the column can actually hold", () => {
     const { container } = renderHeader();
     /**
-     * The eight items of §2's table, in order. The instrument slot and the remove button are ours and trail the set,
-     * so the assertion names them rather than allowing anything to appear in between: a control inserted between
-     * mute and the meter is a change to the convention, and it should have to say so here.
+     * ⭐ **Bitwig's set, split into the two rows the 240 px column can hold.**
+     *
+     * The order changed on 2026-10-07 for a measured reason: as one row the header needed 262 px inside a 240 px
+     * column, so the remove button painted into the lane area and the **name** — the control that says which track
+     * this is — was squeezed to zero width. The identity item (the instrument slot) therefore moved up beside the
+     * name, and everything a hand reaches for while the music plays (volume, arm, solo, mute, meter, remove) follows.
+     * The set is unchanged; the assertion names the whole order so a control inserted in the middle has to say so.
      */
-    expect(controlOrder(container)).toEqual(["color", "kind", "name", "volume", "arm", "solo", "mute", "meter", "instrument", "remove"]);
+    expect(controlOrder(container)).toEqual(["color", "kind", "name", "instrument", "volume", "arm", "solo", "mute", "meter", "remove"]);
   });
 
   it("keeps the eight in that order for an instrument track with no instrument slot", () => {

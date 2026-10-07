@@ -159,6 +159,11 @@ export const commonMessages = {
   arrangement_musicxml_empty: { en: "This track holds no notes, so there is no score to write", zh: "这条轨道没有音符，写不出乐谱" },
   arrangement_hscroll: { en: "Scroll the arrangement sideways", zh: "横向滚动编排" },
   arrangement_tracks_label: { en: "Arrangement tracks", zh: "编排轨道" },
+  /**
+   * The old row-based list's disclosure. The grid is the arrangement's editing surface; this list is the one place
+   * the per-bar step strip and the pan control exist, so it stays reachable without being a second wall of tracks.
+   */
+  arrangement_track_list_summary: { en: "Track list — steps, level and pan ({count})", zh: "轨道列表 —— 步进、电平与声像（{count}）" },
   arrangement_lanes_label: { en: "Arrangement lanes", zh: "编排通道" },
   lanes_label: { en: "Lanes", zh: "通道" },
   lanes_mute: { en: "Mute", zh: "静音" },

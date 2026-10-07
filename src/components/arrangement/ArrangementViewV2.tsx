@@ -1806,25 +1806,40 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             </div>
           </div>
 
+          {/**
+           * ⭐ **The add-track row is its own row above the two columns, not the header column's first child.**
+           *
+           * Inside the header column it pushed every header 101 px below the lane column, so the first lane sat
+           * beside the add buttons and each header was a row out of step with its own region — the measured defect
+           * this row's position is the fix for. Above both columns they start at the same y by construction.
+           */}
+          <div data-testid="track-list-add" className="flex flex-wrap items-center gap-1 border-b border-[rgb(var(--d-line))] p-1">
+            {TRACK_KIND_ORDER.map((kind) => (
+              <button key={kind} type="button" data-testid={`track-add-${kind}`} className="min-h-[44px] rounded border border-[rgb(var(--d-line))] px-1 text-[10px] text-text" onClick={() => onAddTrack(kind, kind)}>
+                + {t(KIND_LABEL_KEY[kind])}
+              </button>
+            ))}
+          </div>
+
           {/* Track rows. One flex row per track: the header (sticky, so it stays while the lanes scroll sideways) and
               the lane. Headers and lanes are siblings inside one vertical scroller, so their heights cannot drift. */}
           <div data-testid="arrangement-header-column" aria-label={t("arrangement_tracks_label")} className="flex min-w-max">
             <div className="sticky left-0 z-10 shrink-0 border-r border-[rgb(var(--d-line))]" style={{ width: "var(--arr-head-w)" }}>
-              {/* Adding tracks sits at the top of the header column, which is where every DAW's "new track" is. */}
-              <div data-testid="track-list-add" className="flex flex-wrap items-center gap-1 border-b border-[rgb(var(--d-line))] p-1">
-                {TRACK_KIND_ORDER.map((kind) => (
-                  <button key={kind} type="button" data-testid={`track-add-${kind}`} className="min-h-[44px] rounded border border-[rgb(var(--d-line))] px-1 text-[10px] text-text" onClick={() => onAddTrack(kind, kind)}>
-                    + {t(KIND_LABEL_KEY[kind])}
-                  </button>
-                ))}
-              </div>
               {arrangement.tracks.map((track) => (
                 <div
                   key={track.id}
                   data-testid={`arrangement-header-row-${track.id}`}
                   onFocusCapture={() => setSelectedTrackId(track.id)}
                   onPointerDown={() => setSelectedTrackId(track.id)}
-                  className={`border-b border-[rgb(var(--d-line))] ${track.id === selectedTrackId ? "bg-[var(--d-surface,rgba(255,255,255,0.06))]" : ""}`}
+                  /**
+                   * ⭐ **The row is exactly `--arr-track-h`, and its separator is painted inside that box.**
+                   *
+                   * The lane row is `--arr-track-h` (96 px) and carries no border of its own; this wrapper used to add
+                   * a `border-b` around a 96 px child, so it measured 97 px against the lane's 96 and the two columns
+                   * drifted a pixel per track. An inset shadow draws the same line without taking a pixel of layout.
+                   */
+                  style={{ height: "var(--arr-track-h)", boxShadow: "inset 0 -1px 0 rgb(var(--d-line))" }}
+                  className={track.id === selectedTrackId ? "bg-[var(--d-surface,rgba(255,255,255,0.06))]" : ""}
                 >
                   <TrackHeaderV2
                     track={track}
@@ -2030,12 +2045,19 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
        * The old row-based list, kept as a report of the arrangement rather than as the editing surface.
        *
        * It is here because it still carries what the grid's header deliberately does not: **one bar of steps** per
-       * track, which is the pattern-at-a-glance view the owner asked for and which lives nowhere else on this route.
-       * Rendering it means the arrangement now has two readings of one model on screen at once, which is the risk the
-       * header rebuild was supposed to remove — so it is last, it is the only place the step strip appears, and it is
-       * the thing to delete once the step strip has a home in the new grid.
+       * track, plus the pan control, and both live nowhere else on this route.
+       *
+       * ⭐ **Behind a disclosure, because on the released build it read as a second arrangement.** Measured at
+       * 1820×918, the page showed the same eight tracks three times: the picker chips, the grid's headers, and this
+       * list — a wall of duplicate rows under the editor. The list is worth keeping until the step strip and pan have
+       * a home in the grid, but it does not need to be open to be reachable; the summary states what is inside and
+       * how many tracks it holds.
        */}
-      <TrackListV2
+      <details data-testid="arrangement-track-list" className="rounded border border-[rgb(var(--d-line))]">
+        <summary className="cursor-pointer list-none px-3 py-2 text-xs text-text opacity-80">
+          {t("arrangement_track_list_summary", { count: arrangement.tracks.length })}
+        </summary>
+        <TrackListV2
         arrangement={arrangement}
         onAddTrack={onAddTrack}
         onRemoveTrack={(trackId) => {
@@ -2054,7 +2076,8 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
         bar={stripBar}
         onChangeGain={(trackId, gainDb) => commit(setTrackGainCommand(trackId, trackFor(trackId)?.gainDb ?? 0, gainDb))}
         onChangePan={(trackId, pan) => commit(setTrackPanCommand(trackId, trackFor(trackId)?.pan ?? 0, pan))}
-      />
+        />
+      </details>
 
       {/**
        * ⭐ **The per-part instrument mapping, when a multi-part MIDI file was chosen.**
