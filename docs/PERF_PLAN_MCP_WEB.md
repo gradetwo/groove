@@ -263,6 +263,17 @@ Against the measured baseline (5:03 of audio in **753 s**, 0.40× realtime, one 
    constant), and the export's progress element gets its ticks from the chunk completions — which is also what W7
    needs.
 
+**Built so far (2026-10-08).** `src/audio/parallelRender.ts` holds the two halves of step 2 and 3 and nothing else:
+`mergeRenderedChunks` (drop each chunk's pre-roll, blend the head of every chunk after the first over a stated
+crossfade, keep the last chunk's tail, report the seams / a clipped or padded length) and
+`renderChunksConcurrently` (a bound on spans in flight — 4 by measurement — with a per-span progress callback). Its
+criterion (`src/test/parallelRender.test.ts`) states the claims exactly: outside the crossfade windows the merged audio
+is the reference **sample for sample**, and **with the pre-roll removed the same cut cannot be** — which is what makes
+the pre-roll a measured requirement rather than a belief. Out-of-order chunks are placed by `atFrame`, a stated total
+length is the caller's decision rather than a floor (a first version silently ignored a shorter one), and the
+concurrency bound is counted, not timed. ⏳ Still to do: the renderer's own `renderPatternChunkOffline` call per span,
+the wiring on both roads, and the real-quality null test against a single pass.
+
 ### 6.3 The criterion that keeps the sound
 
 The guard is a **null test**, not a listening test: render a fixed fixture twice — `chunks: 1` and `chunks: 4` — and

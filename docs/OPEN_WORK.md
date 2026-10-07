@@ -17866,3 +17866,21 @@ describe("the grid's editing actions", () => {
   ⚠️ 本轮只完成**可行性 + 设计** ✓；实现（分块渲染模块 + 接线 + null 判据）留给下一轮 ✓。
   ⚠️ 一次量具事故：`scratch/concurrency-probe.sh` 第一版用 `env time -f` ✓，本机没有 `time` ✗ ⇒ 两次渲染根本没启动 ✓
     （已改为 `date +%s%N` 计时 ✓；该对照后因"同页并发"这一更关键的实验而主动中止 ✓）。
+
+### 六百八十六、✅ **分块渲染的"缝合"与"并发编排"落地（2026-10-08 ✓）**
+
+  ⭐ 读完既有代码后的一个重要事实：**分块渲染的地基其实已经在了** ✓——
+    `RenderWavOptions.fromBar` + `preRollSec` ✓（注释就写着"the entry point chunking needs ✓"）、
+    `renderPatternChunkOffline` 返回 `RenderedChunk`（含 `preRollFrames`/`barStartFrame`/`chunkEndFrame`/`tailSec` ✓）、
+    `trimChunkFrames` ✓、`planRenderChunks`（45 行纯函数 ＋ 判据 ✓，但**生产里没人调用** ✗）。
+    ⇒ 缺的只是**缝合**与**并发执行**与**接线** ✓。
+  ⭐ 本轮落地 `src/audio/parallelRender.ts`（**纯函数，浏览器无关** ✓）：
+    ① `mergeRenderedChunks` ✓：丢掉每块的 preroll ✓、第 2 块起在**声明长度的交叉淡化窗口**内与已有音频混合 ✓、
+       保留最后一块的尾音 ✓、并报告**接缝位置 / 被截断 / 被补齐** ✓（长度由调用者说了算 ✓）。
+    ② `renderChunksConcurrently` ✓：**在飞上限**（实测 K=4 是曲线拐点 ✓）＋ 每块完成回调（这也是导出进度 W7 的接口 ✓）。
+  ⭐ 判据 `src/test/parallelRender.test.ts`（6 例 ✓）把话说死：
+    交叉淡化窗口外**与参考信号逐样本相等** ✓；**去掉 preroll 后同样的切法必然不等** ✓（⇒ preroll 是量出来的要求 ✓，不是信念 ✓）；
+    乱序块按 `atFrame` 落位 ✓；声明的总长是调用者的决定而非下限 ✓（第一版静默忽略了更短的总长 ✓，判据当场抓住 ✓）；
+    并发上限是**数出来的**而非计时 ✓。
+  ⏳ 未做：每块调用 `renderPatternChunkOffline` ✓、两条路的接线 ✓、以及**真实质量下的 null 测试**（对照单次渲染 ✓）。
+  ⚠️ 计划里点名的模块名就是 `src/audio/parallelRender.ts` ✓ ⇒ 文件落地后把 `check_doc_refs.mjs` 的 PROPOSED 申报删掉 ✓（否则门禁会把"已存在"当成过时申报 ✓）。

@@ -41,15 +41,6 @@ const REPORT_ONLY = process.argv.includes("--report");
  * intentionally documented before it is built and cannot be marked inline.
  */
 const PROPOSED = new Map([
-  /**
-   * ⭐ **The chunked renderer the plan designs but has not built yet.** `docs/PERF_PLAN_MCP_WEB.md` §6 names the module
-   * it will live in, so the document reads as a plan rather than as a description of something that exists. When the
-   * file lands, this entry goes with it.
-   */
-  [
-    "src/audio/parallelRender.ts",
-    "Planned in docs/PERF_PLAN_MCP_WEB.md §6 (the chunked parallel render); not written yet.",
-  ],
   [
     "src/test/phoneShellCut.test.ts",
     "Added by the mobile cut on the mobile-cut branch; not merged into dev yet. It asserts the phone shell is gone, and once that lands this entry should be removed because the file will exist.",
