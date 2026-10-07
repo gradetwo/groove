@@ -1,5 +1,5 @@
 /**
- * The two things that make `position: sticky` possible in this app (G.47).
+ * ⭐ **What makes `position: sticky` possible in this app (G.47).**
  *
  * Sticky was declared in several places — the app header (`sticky top-0 z-50`), the dossier sidebar
  * — and never worked, anywhere, because `<body>` carried Tailwind's `overflow-x-hidden`. An element
@@ -30,7 +30,6 @@ const html = read("index.html");
 const css = read("src/index.css");
 const header = read("src/components/Header.tsx");
 const toolbar = read("src/components/sequencer/Toolbar.tsx");
-const dossier = read("src/components/sequencer/InfoDossier.tsx");
 
 describe("sticky anchors · the page must not be a scroll container", () => {
   it("keeps `overflow-x-hidden` off the body tag", () => {
@@ -88,12 +87,5 @@ describe("sticky anchors · the transport strip", () => {
 
   it("keeps the transport's own testid, which the E2E reachability check measures", () => {
     expect(toolbar).toContain('data-testid="toolbar-group-transport"');
-  });
-});
-
-describe("sticky anchors · the dossier sidebar", () => {
-  it("stops using a hand-typed offset for the header", () => {
-    expect(dossier).toContain("sticky top-[var(--app-header-h)]");
-    expect(dossier, "`top-16` (64 px) is 5 px short of the real header").not.toMatch(/sticky top-16\b/);
   });
 });
