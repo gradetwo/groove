@@ -33,7 +33,6 @@ export interface MergeableChunk {
     length: number;
     sampleRate: number;
     getChannelData: (channel: number) => Float32Array;
-    copyToChannel?: (source: Float32Array, channel: number) => void;
   };
   /** The absolute frame where this chunk's **music** begins (its first requested bar). */
   atFrame: number;

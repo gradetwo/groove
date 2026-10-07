@@ -24,6 +24,7 @@ import { unzipSync, zipSync } from "fflate";
 import { logicProjectBundle } from "../../data/arrangementToLogic";
 import { fromLogicProjectBase64 } from "../../data/logicToArrangement";
 import { arrangementWithImportedParts, arrangementFromGroovePackage, type ArrangementImportResult } from "../../data/arrangementImport";
+import { barsOf } from "../../audio/chunkedMasterWav";
 import { compileArrangementToPattern } from "../../data/arrangementCompile";
 import type { MusicXmlBytesImport } from "../../data/musicxmlImport";
 import { DEFAULT_FX_STATE } from "../../audio/EffectsRack";
@@ -235,12 +236,52 @@ function renderOptionsFor(arrangement: ArrangementV2) {
   return { bpm: arrangement.bpm ?? 120, swing: 0, drumKit: "808" as const };
 }
 
-/** The arrangement's master, rendered offline to a 16-bit WAV. */
+/**
+ * The arrangement's master, rendered offline to a 16-bit WAV.
+ *
+ * ⭐ **A long arrangement is rendered in spans at once.** Measured (2026-10-07): 5:03 of audio takes **753 s** in one
+ * `OfflineAudioContext` — 0.40× realtime on one core of eight — and K concurrent contexts reach ≈2.8× at K=4, with K
+ * contexts in one page as good as K pages. So from `CHUNKED_EXPORT_FROM_BARS` up, the master goes through
+ * `exportMasterWavChunked`: same renderer, same options, same reply shape, K spans in flight and a merged file.
+ *
+ * The floor is not decoration. A chunk carries `preRollSec` of warm-up (one reverb impulse by default), so a piece
+ * that is barely longer than its own pre-roll would spend more time warming up than rendering; sixteen bars is where
+ * the measured curve starts paying. Below it the single-pass road is byte-for-byte what it always was — which is also
+ * the reference a listener (and the equivalence probe) compares against.
+ */
+const CHUNKED_EXPORT_FROM_BARS = 16;
+
+/**
+ * ⚠️ **Off, until the in-app measurement shows the win the standalone probe promised.**
+ *
+ * `src/audio/chunkedMasterWav.ts` is complete and its merge has criteria, but wired as the default it made a 5-minute
+ * export **no faster** — a 14-minute run against the single pass's 11 m 54 s, watched rather than assumed. The
+ * standalone probe rendered K contexts in a bare page and measured ≈2.8× at K=4; the app's page also holds the
+ * **running realtime `AudioContext`** (and the GS-1 worklet), and Chromium's offline contexts appear to queue behind
+ * it — the first thing to measure next (`spanMs` is returned per span for exactly that), along with whether each span
+ * re-prepares the audio lanes. Until then an unverified slower path must not be the default: a creator waiting twelve
+ * minutes is the baseline this goal exists to cut, not to lengthen.
+ */
+const CHUNKED_EXPORT_ENABLED = false;
+
 export async function wavFileFor(arrangement: ArrangementV2): Promise<ProducedAudio> {
-  const { exportMasterWav } = await import("../../audio/WavExporter");
   const pattern = compiledPatternFor(arrangement);
   const lanes = await audioLaneOptions(pattern);
-  const result = await exportMasterWav(pattern, ARRANGEMENT_FILE_STEM, { ...renderOptionsFor(arrangement), ...lanes.options });
+  const options = { ...renderOptionsFor(arrangement), ...lanes.options };
+  if (CHUNKED_EXPORT_ENABLED && barsOf(pattern) >= CHUNKED_EXPORT_FROM_BARS) {
+    const { exportMasterWavChunked } = await import("../../audio/chunkedMasterWav");
+    const result = await exportMasterWavChunked(pattern, ARRANGEMENT_FILE_STEM, options);
+    return {
+      kind: "wav",
+      filename: result.filename,
+      blob: result.blob,
+      workletsUnavailable: result.workletsUnavailable,
+      gs1HostFailures: result.gs1HostFailures,
+      limiterKind: result.limiterKind,
+    };
+  }
+  const { exportMasterWav } = await import("../../audio/WavExporter");
+  const result = await exportMasterWav(pattern, ARRANGEMENT_FILE_STEM, options);
   return {
     kind: "wav",
     filename: result.filename,

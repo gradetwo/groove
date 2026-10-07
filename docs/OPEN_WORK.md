@@ -17884,3 +17884,19 @@ describe("the grid's editing actions", () => {
     并发上限是**数出来的**而非计时 ✓。
   ⏳ 未做：每块调用 `renderPatternChunkOffline` ✓、两条路的接线 ✓、以及**真实质量下的 null 测试**（对照单次渲染 ✓）。
   ⚠️ 计划里点名的模块名就是 `src/audio/parallelRender.ts` ✓ ⇒ 文件落地后把 `check_doc_refs.mjs` 的 PROPOSED 申报删掉 ✓（否则门禁会把"已存在"当成过时申报 ✓）。
+
+### 六百八十七、⚠️ **分块导出接线后"没有变快"：先撤成默认关闭，再查为什么**（2026-10-08 ✓）
+
+  ⭐ 本轮把分块渲染接到导出路 ✓（新模块 `src/audio/chunkedMasterWav.ts` ✓：span 计划 → 每段 `renderPatternChunkOffline`
+    并发 → 合并 → 编码 ✓，16 小节起走分块 ✓），typecheck/lint 全绿 ✓。
+  ⚠️ **端到端实测没有变快** ✗：同一首 126 小节（5:03）的导出跑到 **14 分钟仍未完成** ✓，
+    而单次渲染的基线是 **11 分 54 秒（714 s）** ✓ ⇒ **接线即默认 = 把最慢的路径变成默认** ✗。
+  ⭐ 处置（宁可慢一步也不留未经验证的默认 ✓）：`CHUNKED_EXPORT_ENABLED = false` ✓ —— 模块与判据保留 ✓、
+    默认回单次渲染 ✓，并在代码里写清原因 ✓。**没有把"可能更慢"的路径交给创作者** ✓。
+  ⭐ 下一步要查的两件事（`spanMs` 已经按 span 返回 ✓，就是为了这个）：
+    ① **是否被实时 AudioContext 串行化** ✓——合成探针是在**空白页**里量的（≈2.8× @ K=4 ✓），
+       而应用页里同时跑着**实时 AudioContext（含 GS-1 worklet）** ✓ ⇒ Chromium 的离线 context 可能排在它后面 ✓；
+       测法：导出时暂停/挂起实时 context，或把分块渲染挪到 MCP 那种**独立渲染页**里 ✓。
+    ② **每段是否重复准备音频轨** ✓（各段各自 `prepare` 采样/目录 ✓ ⇒ K 倍准备开销 ✓）。
+  ⚠️ 一次操作事故：用 `pkill -f web-export-full` 停探针时，**模式匹配到了执行该命令的 shell 自己** ✗
+    ⇒ 命令被 SIGTERM 打断、编辑没落盘 ✓（改成按 pid 停 ✓，重做后才生效 ✓）。
