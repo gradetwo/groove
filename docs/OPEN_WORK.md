@@ -18230,3 +18230,20 @@ describe("the grid's editing actions", () => {
     · 若复现 −1.3 dB ✓ ⇒ 差异在**入口**里 ✓，随后在 `headless.ts`（未钉死 ✓）内二分：
       进度回调/`suspend` ✓ → 逐轨 solo 渲染 ✓ → 采样缓存接线 ✓；
     · 若仍是 −inf ✓ ⇒ 差异在**bundle 与源码的构建本身** ✓，那就对比两者在同一调用序列下的 `OfflineAudioContext` 行为 ✓。
+
+### 七百零七、⭐ **入口也排除：走 `renderPatternHeadless` 的源码对照仍然 −inf**（2026-10-08 ✓）
+
+  ⭐ `scratch/node-entry-ab.ts` ✓：**同一个入口**（`renderPatternHeadless` ✓，带进度/solo/缓存接线 ✓）渲整段与窗口 ✓：
+    · `windowVsWhole: −inf dB` ✓（`hostInstalls: 1` ✓、`timeline {preRollFrames 16000, chunkEndFrame 48000}` ✓、`barFrames 16000` ✓）；
+    · 对照（错区间）−1.4 dB ✗ ✓。
+    ⇒ **入口不是原因** ✗（进度回调 ✓、逐轨 solo ✓、缓存接线 ✓ 都排除 ✓）。
+  ⭐ 并且这一轮顺手发现一个**量具隐患** ✓（必须记下 ✓）：早期两个对照脚本把 `barFrames` **硬编码成 100 BPM**（19,200 帧 ✓），
+    而这个模板的 `pattern.bpm` 是 **120**（16,000 帧 ✓）✗ ⇒ 那两次"−inf"是在**错位对比**下得到的 ✗，
+    本轮的 `node-entry-ab.ts` 用**模式自己的 bpm** ✓ 复现了 −inf ✓ ⇒ 结论（源码侧精确 ✓）仍然成立 ✓，
+    但**"两个 host 都精确"那两条的偏移口径要按本轮的写法重验一次** ✓（列入下一步 ✓，避免把量具错当结论 ✓）。
+  ⭐ 现在剩下的差别只有一条 ✓：**同一段调用序列，bundle 与源码给出不同结果** ✓（子进程 self-A/B −1.3 dB ✗ vs
+    源码 `node-entry-ab` −inf ✓，两侧都 `hostInstalls: 1` ✓、都不是包外置的问题 ✓）。
+  ⏳ 下一轮：给 bundle 加一个**隐藏的 self-AB 模式** ✓（`GROOVE_SELF_AB=1` ✓：在 bundle 内直接重放 `node-entry-ab.ts` 的序列 ✓），
+    与源码逐项对齐 ✓ ⇒ 若 bundle 内直接调用也 ≠ 0 ✓，则差异在**构建产物对该原生包的绑定方式** ✓，
+    下一步就去看 esbuild 对 `node-web-audio-api` 的输出（wasm/二进制加载路径 ✓、`require` 与 `import` 混用 ✓）；
+    若 bundle 内直接调用 = 0 ✓，则差异在**子进程那条路径**（job/环境变量/stdout 协议 ✓）。
