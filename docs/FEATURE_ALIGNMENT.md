@@ -920,4 +920,5 @@
 |---|---|---|
 | ⭐ **编曲统计** | ⏳ **needs** | v1 的 `pattern_statistics` 报密度／离拍比／力度分布／音域 ✓。它吃 **v1 pattern** ✗，而 v2 面**没有**对应实现 ✗ ⇒ 工具退役 ✓，能力记此 ✓。做的时候从 `NoteEvent[]` 算 ✓（都在音符上可得 ✓）。 |
 | ⭐ **编曲分享链接** | ⏳ **needs** | v1 的 `share_url` 把 **pattern 的字段**编进 URL ✗（`genre_id`／`bpm`／`swing`／`steps` ✓）⇒ v2 面**没有**编曲的分享编码 ✗ ⇒ 工具退役 ✓，能力记此 ✓。 |
+| ⭐ **示例行的 v1 pattern 校验** | ⏳ **needs** | `check_mcp` 曾用 `validate_pattern` 验证 `get_example` 的每一行 ✗。该工具随 v1 pattern 退役 ⇒ 现在只校验**形状**（行数 ＋ 每行有 recipe ✓）⇒ 逐行的 pattern 校验记此 ✓。 |
 

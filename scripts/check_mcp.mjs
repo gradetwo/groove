@@ -131,7 +131,6 @@ try {
     "search_genres",
     "list_examples",
     // ⭐ `get_pattern` and `apply_pattern_ops` are gone with the v1 pattern they carried.
-    "validate_pattern",
     "apply_gs1_patch",
     "get_gs1_patch",
     "compare_genres",
@@ -566,17 +565,15 @@ try {
 
   const exampleRows = payload(await client.request("tools/call", { name: "get_example", arguments: { genreId: "chicago-house" } }));
   const rows = exampleRows.examples ?? [];
-  let validExamples = 0;
-  for (const row of rows) {
-    const validation = payload(
-      await client.request("tools/call", { name: "validate_pattern", arguments: { pattern: row.pattern } })
-    );
-    if (validation.ok === true) validExamples += 1;
-  }
+  /**
+   * ⭐ **The rows are still checked for shape; the pattern-level validation went with `validate_pattern`.** That tool reported a v1 pattern's
+   * step counts, velocity ranges and length mismatches, and `validate_arrangement` answers the same family of questions about an arrangement
+   * rather than about this record. Validating the v1 pattern each row carries is recorded as open in `docs/FEATURE_ALIGNMENT.md`.
+   */
   check(
-    "get_example returns examples whose patterns validate",
-    rows.length >= 2 && validExamples === rows.length && rows.every((row) => (row.recipe ?? []).length > 0),
-    `${rows.length} example(s), ${validExamples} valid`
+    "get_example returns examples with a recipe each",
+    rows.length >= 2 && rows.every((row) => (row.recipe ?? []).length > 0),
+    `${rows.length} example(s)`
   );
   const missingGenre = payload(await client.request("tools/call", { name: "get_example", arguments: { genreId: "no-such-genre" } }));
   check(
