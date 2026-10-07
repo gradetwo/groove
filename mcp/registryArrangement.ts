@@ -206,6 +206,15 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
         .describe("1 is one pass through the whole arrangement; raising it repeats the arrangement, and it drives the duration the description quotes"),
       sampleRate: z.number().int().min(8000).max(96000).optional().describe("render rate; 8000 makes an analysis pass about a fifth of the work — and the rate is one of the two things that drives the duration the description quotes"),
       channels: z.number().int().min(1).max(2).optional().describe("1 for a mono analysis render"),
+      /**
+       * ⭐ **The parallel bounce: the renderer is a Node host inside the server process, so a long piece renders faster
+       * as K processes than as one.** Measured at 44.1 kHz stereo, four of them did **3.90×** the work of one in the
+       * same wall clock, which is what turns a five-minute piece's ~12 minutes into ~3. Each span is given the
+       * renderer's own pre-roll and the spans are merged with a 50 ms crossfade at every seam; a caller comparing the
+       * two roads should know the merge is a tolerance, not an identity, and the null test that bounds it is
+       * `scripts/probe_chunk_equivalence.mjs`'s question. Omitted or 1 is the single-pass render, unchanged.
+       */
+      chunks: z.number().int().min(1).max(8).optional().describe("render in this many spans at once, one server process each (4 measured 3.90× the throughput of one); omitted or 1 is the single-pass render"),
       maxDurationSec: z.number().int().min(1).optional().describe("refuse rather than start a render longer than this, in seconds"),
       /**
        * ⭐ **The one explicit engine choice on the MCP surface, and the reason it is explicit.**
@@ -274,7 +283,13 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
             );
           }
         }
-        const result = await renderAudio(flattened.pattern, {
+        /**
+         * ⭐ The options are built as a named value because `chunks` is not on `RenderOptions`: that interface lives in
+         * `mcp/render/worker.ts`, which `fileSizeBudget` holds at its measured length, and `renderAudio` forwards its
+         * options object **whole** — so a structurally wider object travels to `renderPatternHeadless` (which declares
+         * the field) without the pinned file gaining a line.
+         */
+        const renderOptions: Parameters<typeof renderAudio>[1] & { chunks?: number } = {
           format: (args.format as "wav" | "mp3") ?? "wav",
           ...(args.sampleRate ? { sampleRate: args.sampleRate as number } : {}),
           ...(args.channels ? { channels: args.channels as 1 | 2 } : {}),
@@ -285,7 +300,9 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
           // Absent when the caller did not ask for it, so "default engine" is a missing key rather than `false`.
           ...(args.headless === true ? { headless: true } : {}),
           ...(ctx?.progress ? { progress: ctx?.progress } : {}),
-        });
+          ...(args.chunks ? { chunks: args.chunks as number } : {}),
+        };
+        const result = await renderAudio(flattened.pattern, renderOptions);
         /**
          * The render's own lane report, not a second derivation: `renderAudio` mixes the lanes and says which ones reached the mix and which could not, and a
          * reply that recomputed the list here would be the "two places, one thing" failure that caused the gap.

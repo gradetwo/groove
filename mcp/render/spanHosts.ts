@@ -63,11 +63,24 @@ export async function renderPatternInSpans(
   const spans = planRenderSpans({ totalBars, chunks: wanted, framesPerBar });
   const scratch = await fs.mkdtemp(path.join(os.tmpdir(), "groove-spans-"));
 
+  /**
+   * ⚠️ **The chunk count must be gone from what the child is told** — not merely undeclared. A spread would carry it,
+   * the child runs the same `renderPatternHeadless`, and the first smoke test was killed by resource exhaustion because
+   * every span process spawned its own spans. Destructured out here so it cannot travel by accident.
+   */
+  const { chunks: _parentChunks, ...parentOptions } = options;
+
   const run = async (index: number, span: { fromBar: number; toBar: number }): Promise<{ result: MergeableChunk; sidecar: SpanSidecar; ms: number }> => {
     const outStem = path.join(scratch, `span-${index}`);
     const job: SpanJob = {
       pattern,
-      options: { ...options, headless: true },
+      /**
+       * ⚠️ **`chunks` must not travel into the child.** The child runs the same `renderPatternHeadless`, which switches
+       * to this module when `options.chunks > 1` — so a forwarded `chunks` makes every child spawn its own children, and
+       * the first smoke test was killed by resource exhaustion instead of reporting a number. The child renders **one
+       * span**; that is exactly `chunks: 1`.
+       */
+      options: { ...parentOptions, headless: true },
       catalogueRead,
       context,
       fromBar: span.fromBar,
@@ -98,10 +111,27 @@ export async function renderPatternInSpans(
       ms,
       sidecar,
       result: {
-        buffer: { numberOfChannels: sidecar.channels, length: sidecar.frames, sampleRate: sidecar.sampleRate, getChannelData: (c: number) => channels[c]! },
+        /**
+         * ⭐ `duration` is stated because the single-pass renderer's `AudioBuffer` has it and the reply quotes it
+         * (`durationSec`): a plain channel-data object would silently drop the field from the chunked answer, which is
+         * how a caller tells a five-minute file from a four-minute one.
+         */
+        buffer: {
+          numberOfChannels: sidecar.channels,
+          length: sidecar.frames,
+          sampleRate: sidecar.sampleRate,
+          duration: sidecar.frames / sidecar.sampleRate,
+          getChannelData: (c: number) => channels[c]!,
+        },
         atFrame: span.fromBar * framesPerBar,
         preRollFrames,
         chunkEndFrame: Math.min(sidecar.frames, preRollFrames + (span.toBar - span.fromBar) * framesPerBar),
+        /**
+         * ⚠️ **The end of the piece keeps its tail.** Without this flag the merge cuts at `chunkEndFrame`, dropping the
+         * reverb's decay — the first smoke test rendered 9.6 s of a 10.2 s piece, and the 0.6 s that went missing is
+         * exactly the tail. A file must not stop while the reverb is still sounding.
+         */
+        ...(span.toBar === totalBars ? { last: true } : {}),
       },
     };
   };
@@ -129,10 +159,26 @@ export async function renderPatternInSpans(
     buffer: merged.buffer as unknown as AudioBuffer,
     report: merged.report,
     spanMs: outcomes.map((outcome) => outcome.ms),
+    /**
+     * ⭐ **One lane entry per track, events summed.** Each span covers a disjoint stretch of the timeline, so the events
+     * across spans add up to the render's own count; the *lane list* does not, because every span reports the tracks it
+     * saw — the first smoke test listed "Sampler" twice and counted 42 events for a 28-note render.
+     */
     audioLanes: {
-      lanes: outcomes.flatMap((outcome) => outcome.sidecar.audioLanes.lanes as never[]),
+      lanes: [
+        ...new Map(outcomes.flatMap((outcome) => outcome.sidecar.audioLanes.lanes).map((lane) => [(lane as { trackIndex?: number }).trackIndex, lane])).values(),
+      ] as OfflineAudioLaneReport["lanes"],
       events: outcomes.reduce((sum, outcome) => sum + outcome.sidecar.audioLanes.events, 0),
-      problems: [...new Set(outcomes.flatMap((outcome) => outcome.sidecar.audioLanes.problems))],
+      problems: [
+        ...new Map(
+          outcomes
+            .flatMap((outcome) => outcome.sidecar.audioLanes.problems)
+            .map((problem) => [
+              `${(problem as { trackIndex?: number }).trackIndex}:${(problem as { reason?: string }).reason ?? ""}`,
+              problem,
+            ])
+        ).values(),
+      ] as OfflineAudioLaneReport["problems"],
     },
     limiterKind: outcomes[0]?.sidecar.limiterKind ?? "fallback",
     gs1PatchProblems: [...new Set(outcomes.flatMap((outcome) => outcome.sidecar.gs1PatchProblems))],

@@ -17999,3 +17999,22 @@ describe("the grid's editing actions", () => {
   ⭐ 现状：`chunks` **没有任何调用者传**（工具 schema 还没加这个参数 ✓）⇒ 行为与之前**完全一致** ✓，typecheck/lint/判据全绿 ✓。
   ⏳ 剩两步：① 在 `render_arrangement` 的 schema/handler 里加 `chunks` 并透传 ✓；② 8 kHz 小样本先 smoke ✓，
     再跑真实 5 分钟对 753 s 基线 ✓，并用 §6.3 的 null 口径验等价 ✓，达标后把默认设成 K=4 ✓。
+
+### 六百九十四、⚠️ **分块渲染跑通了，但 null 判据当场判它不等价（−1.3 dBFS）**（2026-10-08 ✓）
+
+  ⭐ 本轮把 `chunks` 接到 `render_arrangement` 的 schema 与 handler ✓（schema 里写明"K 个进程、4 实测 3.90×、接缝 50 ms 交叉淡化、
+    这是容差不是恒等 ✓"；handler 用命名对象传参 ✓，**被钉死的 `RenderOptions` 一行未动** ✓）。
+  ⭐ smoke（4 小节 / 8 kHz 单声道 / 28 音符 ✓，chunks=1 vs 2 ✓）：
+    · 长度 **完全一致**（81,600 帧 = 10.2 s，`lengthDelta 0` ✓）；LUFS 只差 **0.1 dB** ✓；耗时 1.16 s → 2.26 s（小样本下开进程不划算 ✓，符合预期 ✓）。
+    · ⚠️ **null 判据不通过**：整体最差差 **−1.3 dBFS**（在 6.32 s ✓），接缝窗口内 **−1.8 dBFS** ✗ ⇒
+      **分块结果与单次渲染不是同一段音乐** ✗（目标里的判据是窗口外 ≤ −60 dBFS、窗口内 ≤ −40 dBFS ✓）。
+  ⭐ 判据的价值正在这里 ✓：它没让"看起来对了（长度一致、响度接近）"的东西混成默认 ✓ ⇒ **`chunks` 默认仍不传** ✓，行为不变 ✓。
+  ⭐ 三个已发现并修掉的真缺陷（都是这一步量出来的）：
+    ① **fork 炸弹** ✗：job 里带着 `chunks` ⇒ 子进程又去分块 ⇒ 每个 span 再生 span，第一次 smoke 被资源耗尽杀掉 ✓
+       ⇒ 现在从选项里**解构剔除** ✓（不是"类型上没写"就完事 ✓）。
+    ② **尾巴被切掉** ✗：最后一块没标 `last` ⇒ 合并按 `chunkEndFrame` 截断，10.2 s 的曲子渲出 9.6 s（正好差混响尾 ✓）⇒ 已修 ✓。
+    ③ **lane 重复计数** ✗：每块都报自己看到的轨 ⇒ "Sampler" 出现两次、28 音符报成 42 事件 ✓ ⇒ 改为按 `trackIndex` 去重 ✓、
+       事件数**求和**（各块覆盖互不重叠的时间段 ✓，求和才是总数 ✓）；同时给合并缓冲补上 `duration` ✓（否则回包缺 `durationSec` ✓）。
+  ⏳ 待查（下一轮）：−1.3 dBFS 的**持续性**差异（不是接缝尖峰 ✓）指向"每块渲出的**内容**就不同" ✓——
+    优先怀疑 ① 每块各自准备 lane ⇒ 采样轨在每个 span 开头**重复触发** ✓（文档就说"A lane with a sample and no notes is played
+    once at the arrangement's start" ✓）；② `fromBar` 模式下 per-lane 预热/概率滚动的绝对步对齐 ✓；③ 8 kHz 下混响/限制器状态 ✓（这一条只解释接缝 ✓，解释不了 6.3 s ✓）。

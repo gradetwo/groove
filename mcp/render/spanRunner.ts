@@ -27,6 +27,7 @@ import { renderPatternHeadless, type HeadlessRenderContext } from "./headless";
 /** What the parent writes for one span. */
 export interface SpanJob {
   pattern: SequencerPattern;
+  /** ⚠️ `chunks` is deliberately **not** carried: the child renders one span, and a forwarded count would recurse. */
   options: RenderOptions & { bars?: number; sampleRate?: number; channels?: 1 | 2 };
   catalogueRead: AudioLaneCatalogueRead;
   context: HeadlessRenderContext;

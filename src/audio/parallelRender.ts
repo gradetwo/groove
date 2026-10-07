@@ -32,6 +32,8 @@ export interface MergeableChunk {
     numberOfChannels: number;
     length: number;
     sampleRate: number;
+    /** Present on a real `AudioBuffer`; a merge-time object may state it so a reply can quote a duration. */
+    duration?: number;
     getChannelData: (channel: number) => Float32Array;
   };
   /** The absolute frame where this chunk's **music** begins (its first requested bar). */
