@@ -216,3 +216,32 @@ export async function renderChunksConcurrently(
   });
   return { ...merged, spanMs };
 }
+
+/**
+ * ⭐ **Cut a length into the spans the reactor renders, in absolute frames.**
+ *
+ * The bars are split evenly (`ceil(totalBars / chunks)` each) rather than at section boundaries: a section boundary is
+ * a preference for *music*, and the renderer's own boundary support is the pre-roll, which makes any bar line safe.
+ * `planRenderChunks` in `mcp/render/chunks.ts` remains the section-aware planner for the progress-shaped cuts on that
+ * road; this is the arithmetic the merge needs, and it is here so it can be checked without a browser.
+ *
+ * `framesPerBar` comes from the caller because a tempo map makes a bar a different number of frames in different
+ * places — this module will not guess a tempo.
+ */
+export function planRenderSpans(input: {
+  totalBars: number;
+  chunks: number;
+  framesPerBar: number;
+}): RenderSpan[] {
+  const totalBars = Math.max(0, Math.floor(input.totalBars));
+  const perBar = Math.max(1, Math.floor(input.framesPerBar));
+  if (totalBars === 0) return [];
+  const wanted = Math.max(1, Math.min(Math.floor(input.chunks), totalBars));
+  const size = Math.ceil(totalBars / wanted);
+  const spans: RenderSpan[] = [];
+  for (let from = 0; from < totalBars; from += size) {
+    const to = Math.min(totalBars, from + size);
+    spans.push({ fromBar: from, toBar: to, atFrame: from * perBar, last: to === totalBars });
+  }
+  return spans;
+}

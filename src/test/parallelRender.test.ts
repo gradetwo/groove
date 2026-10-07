@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ChunkMergeError, mergeRenderedChunks, renderChunksConcurrently, type MergeableChunk } from "../audio/parallelRender";
+import { ChunkMergeError, mergeRenderedChunks, planRenderSpans, renderChunksConcurrently, type MergeableChunk } from "../audio/parallelRender";
 
 /**
  * ⭐ **The merge is where a chunked render becomes the same music again.**
@@ -189,5 +189,31 @@ describe("rendering spans concurrently", () => {
 
   it("refuses an empty plan rather than returning silence", async () => {
     await expect(renderChunksConcurrently([], async () => ({ buffer: new FakeBuffer(2, 1, 48000), preRollFrames: 0, chunkEndFrame: 1 }))).rejects.toThrow(ChunkMergeError);
+  });
+});
+
+/**
+ * ⭐ **The span plan: every bar once, in order, and the music placed where the merge expects it.**
+ *
+ * A missing bar is silence and a repeated bar is a stutter, and neither is attributable by ear in a long render — so
+ * the plan is checked as arithmetic, the way `planRenderChunks`' own criterion does it on the other road.
+ */
+describe("planning render spans", () => {
+  it("⭐ covers every bar once, in order, with the last span carrying the end", () => {
+    for (const [totalBars, chunks] of [[126, 4], [126, 3], [8, 4], [5, 8], [1, 4]] as const) {
+      const spans = planRenderSpans({ totalBars, chunks, framesPerBar: 1000 });
+      expect(spans[0]!.fromBar).toBe(0);
+      expect(spans.at(-1)!.toBar).toBe(totalBars);
+      for (let i = 1; i < spans.length; i += 1) expect(spans[i]!.fromBar).toBe(spans[i - 1]!.toBar);
+      expect(spans.filter((s) => s.last)).toHaveLength(1);
+      expect(spans.at(-1)!.last).toBe(true);
+      // The absolute frame is the bar's own, so two spans can never claim the same music.
+      for (const span of spans) expect(span.atFrame).toBe(span.fromBar * 1000);
+    }
+    // 126 bars in four spans is 32/32/32/30 — the last one shorter, never a gap.
+    expect(planRenderSpans({ totalBars: 126, chunks: 4, framesPerBar: 1000 }).map((s) => s.toBar - s.fromBar)).toEqual([32, 32, 32, 30]);
+    // More chunks than bars is clamped: one bar each, and no empty span at the end.
+    expect(planRenderSpans({ totalBars: 5, chunks: 8, framesPerBar: 10 })).toHaveLength(5);
+    expect(planRenderSpans({ totalBars: 0, chunks: 4, framesPerBar: 10 })).toEqual([]);
   });
 });
