@@ -283,7 +283,13 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
               <div key={pitch} className="flex items-stretch">
                 <span
                   className={`w-12 shrink-0 pr-1 text-right font-['JetBrains_Mono'] text-[9px] leading-4 ${
-                    pitch % 12 === 0 ? "text-text" : "text-text opacity-50"
+                    /**
+                     * ⭐ **A dimmer ink token, not half-transparent ink.** The evaluation measured these 9px labels at
+                     * 2.35:1 on the paper skins: `opacity-50` over black ink becomes mid grey, and at 9px the
+                     * anti-aliased strokes wash out against the grid. `text-text-sub` is the role for "quieter than
+                     * body text" and each skin defines it against its own paper.
+                     */
+                    pitch % 12 === 0 ? "text-text" : "text-text-sub"
                   }`}
                   style={{ height: ROW_HEIGHT }}
                 >

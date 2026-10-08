@@ -339,7 +339,6 @@
 [class~="text-neutral-700"] { color: rgb(var(--d-ink-on-pale)); }
 [class~="text-neutral-900"] { color: rgb(var(--d-ink-on-pale)); }
 [class~="text-zinc-600"] { color: rgb(var(--d-ink-on-pale)); }
-[class~="text-zinc-700"] { color: rgb(var(--d-ink-on-pale)); }
 [class~="text-zinc-950"] { color: rgb(var(--d-ink-on-pale)); }
 [class~="text-slate-300"] { color: rgb(var(--d-ink)); }
 [class~="text-zinc-200"] { color: rgb(var(--d-ink)); }
@@ -640,7 +639,7 @@
 /*
  * The literal map: the desktop's hardcoded hexes, by role.
  *
- * 585 rules, generated from the literals the source actually uses. Because each rule names a
+ * 583 rules, generated from the literals the source actually uses. Because each rule names a
  * **token**, the same rules serve all six skins — the skin decides what the token resolves to. The few
  * near-duplicate grounds and inks in the default theme therefore converge onto one value each, which is
  * what "the same palette on both surfaces" means in practice.
@@ -699,7 +698,6 @@
 [class~="text-[#b9b7b0]"] { color: rgb(var(--d-ink-2)); }
 [class~="text-[#8e93a0]"] { color: rgb(var(--d-ink-3)); }
 [class~="bg-[#f3f1eb]"] { background-color: rgb(var(--d-surface-pale)); }
-[class~="bg-[#e2dfd5]"] { background-color: rgb(var(--d-surface-pale-2)); }
 [class~="to-[#e0e2e8]"] { --tw-gradient-to: rgb(var(--d-surface-pale-2)); }
 [class~="focus-visible:ring-[#f5b73d]/50"]:focus-visible { --tw-ring-color: rgb(var(--d-accent) / 0.50); }
 [class~="focus:border-[#f5b73d]"]:focus { border-color: rgb(var(--d-accent)); }
@@ -861,7 +859,6 @@
 [class~="bg-[#181a20]"] { background-color: rgb(var(--d-surface)); }
 [class~="hover:bg-[#2c303c]"]:hover { background-color: rgb(var(--d-surface)); }
 [class~="border-[#2c303c]"] { border-color: rgb(var(--d-surface)); }
-[class~="bg-[#252a36]"] { background-color: rgb(var(--d-surface)); }
 [class~="bg-[#111218]"] { background-color: rgb(var(--d-panel)); }
 [class~="bg-[#0f1116]"] { background-color: rgb(var(--d-panel)); }
 [class~="bg-[#22262e]"] { background-color: rgb(var(--d-surface)); }
@@ -1551,7 +1548,6 @@
 [class~="hover:bg-[#ff5566]"][class~="text-zinc-950"]:hover { color: rgb(var(--d-on-accent)); }
 [class~="hover:bg-[#ffc24b]"][class~="text-zinc-950"]:hover { color: rgb(var(--d-on-accent)); }
 [class~="hover:bg-[#ffc65c]"][class~="text-zinc-950"]:hover { color: rgb(var(--d-on-accent)); }
-[class~="hover:bg-[#ffffff]"][class~="text-zinc-950"]:hover { color: rgb(var(--d-on-accent)); }
 [class~="hover:bg-accent"][class~="text-zinc-950"]:hover { color: rgb(var(--d-on-accent)); }
 [class~="hover:bg-accent/90"][class~="text-zinc-950"]:hover { color: rgb(var(--d-on-accent)); }
 [class~="to-[#38bdf8]/20"][class~="text-zinc-950"] { color: rgb(var(--d-on-accent)); }

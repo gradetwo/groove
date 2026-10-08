@@ -724,9 +724,16 @@ html.reduced-motion .animate-orbit {
   cursor: pointer;
   padding: 12px 30px;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  background: linear-gradient(180deg, #ffd089, #e9a02c 62%, #d98c1c);
-  color: #231703;
+  /**
+   * ⭐ **The plate and the ink are the skin's own pair.** The independent evaluation measured this label at 1.15:1 on
+   * four skins: the gradient was hard-coded gold and the ink hard-coded `#231703`, so a skin that flattens or recolours
+   * the plate (the pixel sheet flattens gradients by design) left dark ink on a dark plate. `--d-accent`/`--d-on-accent`
+   * are exactly the "plate" and "readable on the plate" roles, and every skin already declares both — so the button
+   * keeps each skin's own look *and* stays readable.
+   */
+  border: 1px solid rgb(var(--d-line-strong, 255 255 255) / 0.35);
+  background: rgb(var(--d-accent));
+  color: rgb(var(--d-on-accent, 35 23 3));
   font-size: 14px;
   font-weight: 700;
   line-height: 1;
