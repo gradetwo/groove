@@ -1231,7 +1231,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             onChange={(e) => setEuclideanPulses(Math.max(1, Math.min(16, Number(e.target.value) || 1)))}
             data-testid="arrangement-euclidean-pulses"
             aria-label={t("arrangement_euclidean_pulses")}
-            className="w-10 rounded border border-white/10 bg-transparent px-1 py-0.5 text-text"
+            className="min-h-11 sm:min-h-0 w-10 rounded border border-white/10 bg-transparent px-1 py-0.5 text-text"
           />
           <button
             type="button"
@@ -1313,7 +1313,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             data-testid="arrangement-transpose-semitones"
             value={semitones}
             onChange={(event) => setSemitones(Number(event.target.value))}
-            className="h-6 w-12 rounded border border-[rgb(var(--d-line))] bg-transparent px-1 font-['JetBrains_Mono'] text-[10px]"
+            className="min-h-11 h-11 sm:h-6 w-12 rounded border border-[rgb(var(--d-line))] bg-transparent px-1 font-['JetBrains_Mono'] text-[10px]"
           />
         </label>
         <button
@@ -1555,7 +1555,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             data-testid="arrangement-tempo"
             value={arrangement.bpm ?? 120}
             onChange={(event) => commit(setArrangementTempoCommand(arrangement.bpm ?? 120, Number(event.target.value)))}
-            className="h-6 w-14 rounded border border-[rgb(var(--d-line))] bg-transparent px-1 font-['JetBrains_Mono'] text-xs text-text"
+            className="min-h-11 h-11 sm:h-6 w-14 rounded border border-[rgb(var(--d-line))] bg-transparent px-1 font-['JetBrains_Mono'] text-xs text-text"
           />
         </label>
         <label className="flex items-center gap-1 text-[10px] text-text opacity-80">
@@ -1568,7 +1568,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             data-testid="arrangement-bars"
             value={bars}
             onChange={(event) => commit(setArrangementBarsCommand(bars, Number(event.target.value)))}
-            className="h-6 w-12 rounded border border-[rgb(var(--d-line))] bg-transparent px-1 font-['JetBrains_Mono'] text-xs text-text"
+            className="min-h-11 h-11 sm:h-6 w-12 rounded border border-[rgb(var(--d-line))] bg-transparent px-1 font-['JetBrains_Mono'] text-xs text-text"
           />
         </label>
 

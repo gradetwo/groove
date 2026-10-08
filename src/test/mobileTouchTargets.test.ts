@@ -62,4 +62,19 @@ describe("mobile touch targets", () => {
     }
   });
 
+
+  it("⭐ the arrangement panel's number inputs are 44 px on a phone and their desktop height is restored", () => {
+    /**
+     * Measured: `arrangement-euclidean-pulses` 22 px, `arrangement-tempo` / `arrangement-bars` /
+     * `arrangement-transpose-semitones` 24 px. A number input on a phone is a thumb target as much as a button is, and
+     * these keep the exact desktop height from `sm:` — the fix is mobile-first, so nothing about the wide layout moves.
+     */
+    const view = source("components/arrangement/ArrangementViewV2.tsx");
+    for (const id of ["arrangement-euclidean-pulses", "arrangement-transpose-semitones", "arrangement-tempo", "arrangement-bars"]) {
+      const at = view.indexOf(`data-testid="${id}"`);
+      expect(at, `${id} is in the view`).toBeGreaterThan(-1);
+      expect(view.slice(at, at + 420), `${id} is phone-sized with a desktop escape`).toMatch(/min-h-11/);
+    }
+  });
+
 });

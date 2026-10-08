@@ -20062,3 +20062,18 @@ describe("the grid's editing actions", () => {
   ⏳ 剩余 ✓（`16px` 徽标 ✓、`22px arrangement-euclidean-pulses` ✓、24px 那批里的 `arrangement-tempo`/`arrangement-bars`/
     `arrangement-transpose-semitones` ✓、28/30px 那批 ✓）——下一轮继续按"主路径补、其余豁免并写明理由"的规矩清 ✓，
     并用**同一把尺子的读数**作为每一步的验收证据 ✓（51 → 36 → … ✓）。
+
+### 八百零三、✅ **F12 布局半（第四步）：面板的数字输入到 44px，桌面高度逐字保留**（2026-10-08 ✓）
+
+  ⭐ **依据** ✓：同一把尺子量到 `arrangement-euclidean-pulses` **22px** ✗、
+    `arrangement-transpose-semitones` / `arrangement-tempo` / `arrangement-bars` **24px** ✗
+    ——手机上一个数字输入框和按钮一样，都是**拇指目标** ✓。
+  ⭐ **改法（移动优先，桌面不动 ✓）** ✓：给这四个输入加 `min-h-11` ✓，
+    其中三个原本写死 `h-6` 的改为 **`h-11 sm:h-6`** ✓（默认 44px ✓、`sm:` 起逐字回到原来的 24px ✓——
+    **桌面布局一个像素都没动** ✓）。
+  ⭐ 判据 ✓（第 5 例 ✓）：这四个 testid 的块内**必须**出现 `min-h-11` ✓；
+    ＋ `arrangementViewV2` 既有 19 条一并复跑 ✓ ⇒ 共 **24 条全绿** ✓。
+  ⭐ 验收 ✓：`typecheck` ✓、`lint` ✓、`docs:check` ✓、`check:css` ✓。
+  ⏳ 剩余 ✓：`16px` 版本徽标 ✓（**是提示不是控件** ✓ ⇒ 归入豁免清单并写明理由 ✓）、
+    `22px arrangement-euclidean-pulses` 已在本轮处理 ✓、`28px×11` 与 `30px×10` 那批待下一轮点名 ✓
+    ——仍然按"**主路径补、其余豁免并写明理由**"的规矩，并用同一把尺子的读数验收 ✓（51 → 36 → …）。
