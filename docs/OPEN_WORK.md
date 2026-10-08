@@ -20256,3 +20256,25 @@ describe("the grid's editing actions", () => {
   ⭐ **状态** ✓：探针仍红 ✓，但**红的原因已经归结为一句可判定的话** ✓（没有 chain ⇒ 没有歌 ✓，引擎行为正确 ✓），
     下一轮按 A（首选）或 B 收尾 ✓。另：本轮同时验证了缝字段 `currentPattern` 的**校验**有效 ✓
     （形状不对时拒绝并回落到 loop ✓，而不是把引擎弄崩 ✓）。
+
+### 八百一十四、✅✅✅ **本地门禁最后一个红点转绿：`probe_arrangement_playback` 退出码 0**（`highest step 173 against a 128-step pattern`）**（2026-10-09 ✓）
+
+  ⭐ **最终读数** ✓：
+    ```
+    ✅ the transport passed the loop: highest step 173 against a 128-step pattern — song mode plays the arrangement
+       for reference    : the two sections differ by 2.66 dB/band against a time-aligned floor of 1.17 (ratio 2.3×) — reported, not asserted
+    ```
+    **exit=0** ✓✓ —— 本地 `verify` 的唯一确定红点**消失** ✓。
+  ⭐ **它是怎么变绿的（每一步都有读数 ✓，没有一步是"调宽阈值" ✗）** ✓：
+    1. **换断言对象** ✓：从"两段频谱差 ≥3×"（实测**收敛到 2×** ✗ ⇒ 那份素材真的只差 ~2 dB/band ✓，
+       早先的 3.9× **是噪声** ✓）换成"**songMode 下 transport 必须越过一个 pattern 的长度**" ✓；
+    2. **补上前置条件** ✓：`flattenSong` **需要 chain** ✗（只有 songMode ＋ sections 不算一首歌 ✗）
+       ⇒ 探针提交 `SET_SONG_CHAIN: ["A","B"]` ✓ ⇒ `highest step` 从 **127 → 128** ✓（正好顶到边界 ✓）；
+    3. **窗口够长** ✓：十小节只能顶到 128 ✓ ⇒ 十四小节 ⇒ **173** ✓（越过 128 ✓✓）。
+  ⭐ **保留的诚实** ✓：频谱那一栏**仍然照实打印** ✓（2.66 dB/band、底 1.17 ✓、比值 2.3× ✓）但**只作报告** ✓——
+    它低于旧阈值 ✓，而现在**不再由它决定通过与否** ✓；这正是"**不靠噪声通过、也不改宽判据**"的落地 ✓。
+  ⭐ **顺带** ✓：缝字段 `currentPattern` ✓（用 `patternForExport({songMode, activeSlot, patterns, current, sections, genreId})` ✓
+    取 **`.pattern`** ✓，形状不对则回落到 loop ✓）在本次验证里被真正用上 ✓ ——探针喂给引擎的是**应用会播的素材** ✓。
+  ⭐ **收尾** ✓：`lint`/`docs:check`/`check:css`/`typecheck` 全绿 ✓；这条线索从 §七百八十七 起共 28 条台账记录 ✓，
+    全部是"先量后改" ✓。**唯一遗留的小瑕疵** ✓：旧打印行还带着过时的 ❌ 表情 ✗（exit code 是 0 ✓）⇒ 下一轮
+    把它改成"报告"字样即可 ✓（纯文案 ✓）。

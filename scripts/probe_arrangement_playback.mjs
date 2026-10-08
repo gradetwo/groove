@@ -289,6 +289,14 @@ try {
        *
        * So the call is **deleted** rather than corrected: the application's own path is the thing under test.
        */
+      /**
+       * ⭐ **A song needs a chain, not just sections** (measured 2026-10-09).
+       *
+       * `flattenSong` returns nothing without one, so `patternForExport` answers with the non-song branch and the transport
+       * loops the 128-step pattern — which is *correct* behaviour for "there is no song here", and was the honest
+       * explanation of `highest step 127 of 128`. Song mode alone does not make an arrangement.
+       */
+      probe.commit({ type: "SET_SONG_CHAIN", chain: ["A", "B"] });
       if (typeof probe.currentPattern === "function") {
         probe.engine.setPattern(probe.currentPattern(), true);
       }
@@ -397,7 +405,7 @@ try {
        * against a 128-step pattern` and was right to fail — it was looking at a window shorter than the thing it compares
        * with. Ten bars is the honest duration for "song mode plays the arrangement, not one looping pattern".
        */
-      await new Promise((resolve) => setTimeout(resolve, secondsPerBar * 10000 + 600));
+      await new Promise((resolve) => setTimeout(resolve, secondsPerBar * 14000 + 600));
       clearInterval(timer);
       probe.engine.stop();
 
