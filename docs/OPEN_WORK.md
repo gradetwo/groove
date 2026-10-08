@@ -20633,3 +20633,30 @@ describe("the grid's editing actions", () => {
     ⇒ 下一步要你定：**A** 让编排路由也能读到歌（把 song 提到编排 store／或挂载/共享那个 store ✓），
       **B** 或让**有歌的那条路**（studio/console ✓）来导出带歌的包 ✓。两条都能立刻做，但方向不同 ✓。
   ⭐ 验收 ✓：`typecheck` ✓、`lint` ✓、`check:mcp`（68 项 ✓）、`docs:check` ✓、`check:css` ✓；新增与相关测试全绿 ✓。
+
+### 八百三十二、🚨 **线上事故修复并已发布：`/new` 点击"创建"没反应 —— 新手引导的遮罩盖住了整页**（2026-10-09 ✓）
+
+  ⭐ **复现（真浏览器打线上 ✓）** ✓：`https://groove.wangda.today/new`（v2.35.5 ✓）上，
+    Create 按钮位置用 `document.elementFromPoint` 取到的**不是按钮** ✗，而是
+    `div[fixed inset-0 z-50 … bg-black/75 backdrop-blur-md]` ✓ —— 即**新手引导 tour** ✓
+    （其内部 testid：`onboarding-skip-btn` / `onboarding-listen-btn` / `onboarding-next-btn` ✓，文案 "Groove Interactive Onboarding Tour 1/7…" ✓）。
+    ⇒ **按钮被 modal 盖住 ⇒ 点击没有效果** ✓✓，与用户描述完全一致 ✓。
+  ⭐ **定位到根因（源码 ✓）** ✓：`src/App.tsx` 的 effect 在**没有** `groove_onboarding_completed` 时，
+    **加载 700 ms 后自动打开 tour** ✓，且**不区分路由** ✗ ⇒ `/new` 也照开 ✓。
+    而 `/new` 是**只有一件事要做**的页面 ✓（创建工程 ✓），tour 的步骤讲的却是 studio ✓ ⇒ 它盖住了用户来做的事 ✓。
+  ⭐ **证伪两个错误假设 ✓**（都靠读数排除 ✓）：
+    · **不是**按钮坏了 ✗：点掉 tour 之后（`onboarding-skip-btn` ✓），
+      同一位置的 `elementFromPoint` 立刻变成 `button[new-project-create]` ✓；
+    · **不是** 2.35.5 这批引入的 ✗：`git log -- src/App.tsx` 显示该 effect 与 tour 组件**不在本批任何提交里** ✓
+      （本批只碰过 F12 触控、chooser、包 schema 等 ✓）⇒ 这是一个**一直存在的设计缺陷** ✓：
+      一个自动弹出的 modal 盖在了"只需要一次点击"的路由上 ✓。
+  ⭐ **修法（最小且不改引导本身 ✓）** ✓：把"何时可自动弹出"抽成一个**有名字、可测**的判断 ✓——
+    新增 `src/components/help/onboardingAutoLaunch.ts` 的 `shouldAutoLaunchTour({newProject, completed})` ✓：
+    **完成过 ⇒ 不弹** ✓、**`/new` ⇒ 不弹** ✓、其余照旧 ✓；`App.tsx` 的 effect 改为**问它** ✓（并把 `route.newProject` 纳入依赖 ✓）。
+    引导仍可从**帮助**里随时打开 ✓，其它路由行为**不变** ✓。
+  ⭐ **判据 ✓**（`src/test/onboardingAutoLaunch.test.ts` ✓ 4 例 ✓）：`/new` 上必须为 false ✓（今天之前为 true ⇒ 能红 ✓）、
+    其它路由首次访问为 true ✓、完成过一律 false ✓、以及**App 必须真的问这个函数**（防止规则与它守的 modal 脱钩 ✓）。
+  ⭐ **本地复验（真浏览器 ＋ 全新 profile ✓）** ✓：`tourUp: false` ✓、`on Create: button[new-project-create]` ✓、
+    点击后 `arrangement: true` ✓、**零 page error** ✓。
+  ⭐ **发布 ✓**：**v2.35.6** ✓（`full CI ok · deploy ok · tag ok · remote ok` ✓）；
+    线上复验 ✓：版本 `v2.35.6` ✓、`tourUp: false` ✓、Create 上就是按钮 ✓、**点击后 `hasArrangement: true`、`hasChooser: false`** ✓✓。
