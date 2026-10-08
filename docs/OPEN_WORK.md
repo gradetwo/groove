@@ -18814,3 +18814,24 @@ describe("the grid's editing actions", () => {
   ⭐ lint / check:css / docs / check:skin-roles 全绿 ✓，桌面皮肤与可读性相关 24 条判据全绿 ✓。
   ⏳ 第三批剩余 ✓：**S5**（分析仪频段色浅底不可读 ✓）、**S6**（Canvas 刻度黑底黑字 ✓）；
     另有 **D6 的计时那一半**待浏览器探针 ✓。
+
+### 七百四十二、✅ **第三批 S5：分析仪的频段标签跟着皮肤走；另：S6 在本仓库复现不出来**（2026-10-08 ✓）
+
+  ⭐ **S5（真缺陷，已修）** ✓：`FREQUENCY_BANDS`（`src/utils/audioAnalysis.ts` ✓）带的是**暗底专用**的 500 档荧光色 ✓
+    （`#ef4444` / `#f59e0b` / `#eab308` / `#10b981` / `#06b6d4` … ✓），而分析仪把它**当文字色**用 ✗
+    （`WaterfallSpectrogram.tsx` 的频段标签 `style={{ color: band.color }}` ✓）⇒ 在 `minimal`/`comic`/`sovietYears`
+    这类浅底上 ✓ 报告量到 **1.55:1–2.54:1** ✓（黄字压近白底 ✓，Low-Mids 基本看不见 ✓）。
+  ⭐ **修法** ✓（不新增一张调色板 ✓）：新模块 `src/utils/bandInk.ts` ✓ ——
+    `readableBandColor(hex, panelToken)` ✓：从**皮肤自己的 `--d-panel`** 读出面板亮度 ✓
+    （**不是皮肤名单** ✓——名单会漂 ✓），暗底 ⇒ 原色不动 ✓；浅底 ⇒ 同一色相逐步压暗 ✓，
+    直到对该面板达到**正文 4.5:1** ✓；读不到 token（测试环境 / 未声明的皮肤 ✓）⇒ 保持原色 ✓（即今天的行为 ✓）。
+  ⭐ 判据 ✓（`src/test/bandInk.test.ts` ✓ 2 例 ✓）：
+    · **七个频段全部**在浅底上 ≥ **4.5:1** ✓（只改黄色会让绿/青继续不达标 ✓），暗底上原色不变 ✓，token 读不到时不变 ✓；
+    · 源码扫描 ✓：标签**必须**用 `readableBandColor(band.color, panelToken)` ✓，
+      且**不得**出现 `style={{ color: band.color }}` ✓（把填充色当文字色用即红 ✓）。
+  ⚠️ **S6（报告说 Canvas 刻度用硬编码 `#444` 黑底黑字）在本仓库复现不出来** ✓：
+    全 `src/components/analyzer/` **没有任何** `#444/#333/#555/#666` ✓；瀑布图底色是固定的 `#08090e` ✓，
+    其刻度与轨迹用 `rgba(255,255,255,0.25–0.75)` ✓ ⇒ **深底浅字本来就是对的** ✓。
+    结论：S6 的引用（`WaterfallSpectrogram.tsx:340-375` 的 `ctx.fillStyle = "#444444"`）**在当前代码里不存在** ✗
+    ⇒ 按纪律：**没有复现就不改** ✓，并记下它可能是旧版本或另一处 ✓。
+  ⭐ lint / check:css / docs 门禁绿 ✓。**至此第三批只剩"没有复现项"** ✓。

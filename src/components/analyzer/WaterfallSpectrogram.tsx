@@ -6,6 +6,7 @@ import {
   getFrequencyBandInfo,
   FREQUENCY_BANDS,
 } from "../../utils/audioAnalysis";
+import { readableBandColor } from "../../utils/bandInk";
 
 export type SpectrogramTheme = "obsidian" | "cyberpunk" | "heat" | "phosphor";
 
@@ -118,6 +119,13 @@ export const WaterfallSpectrogram: React.FC<WaterfallSpectrogramProps> = ({
   className = "",
   isZh = true,
 }) => {
+  /**
+   * ⭐ **The skin's panel, read from the token rather than from a list of skin names** (finding S5). The analyzer's band
+   * labels were the authored dark-panel colours drawn as text, which measured 1.55:1–2.54:1 on the paper skins; an empty
+   * value (a test environment, or a skin that declares none) keeps the authored colour, which is today's behaviour.
+   */
+  const panelToken = typeof window === "undefined" ? undefined : getComputedStyle(document.documentElement).getPropertyValue("--d-panel");
+
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animFrameRef = useRef<number | null>(null);
@@ -543,7 +551,7 @@ export const WaterfallSpectrogram: React.FC<WaterfallSpectrogramProps> = ({
                 }`}
               >
                 <div className="flex items-center justify-between w-full px-1 text-[9px] font-['JetBrains_Mono'] text-text-sub">
-                  <span className="truncate" style={{ color: band.color }}>
+                  <span className="truncate" style={{ color: readableBandColor(band.color, panelToken) }}>
                     {band.nameEn}
                   </span>
                   <span className="text-[8px] text-text-dim">{energy}%</span>
