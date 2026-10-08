@@ -26,6 +26,7 @@ import {
   NewUserOnboardingModal,
   ONBOARDING_COMPLETED_KEY,
 } from "./components/help/NewUserOnboardingModal";
+import { shouldAutoLaunchTour } from "./components/help/onboardingAutoLaunch";
 import { InteractiveTutorialCoach } from "./components/help/InteractiveTutorialCoach";
 import { useAppShortcuts } from "./hooks/useAppShortcuts";
 import { ToastContainer, Skeleton, AriaLiveRegion, announcer } from "./ui";
@@ -140,11 +141,17 @@ const MainApp: React.FC = () => {
     stepIndex: number;
   } | null>(null);
 
-  // Auto-launch onboarding tour for first-time visitors
+  /**
+   * Auto-launch onboarding tour for first-time visitors.
+   *
+   * ⭐ **Except on `/new`** (production defect of 2026-10-09, measured on live): the tour's overlay covered that route, so
+   * the element under the Create button was the tour and pressing it did nothing. The decision lives in
+   * `shouldAutoLaunchTour`, which says why; this effect only asks it.
+   */
   useEffect(() => {
     try {
-      const hasCompleted = localStorage.getItem(ONBOARDING_COMPLETED_KEY);
-      if (!hasCompleted) {
+      const hasCompleted = localStorage.getItem(ONBOARDING_COMPLETED_KEY) !== null;
+      if (shouldAutoLaunchTour({ newProject: route.newProject === true, completed: hasCompleted })) {
         const timer = setTimeout(() => {
           setOnboardingOpen(true);
         }, 700);
@@ -153,7 +160,7 @@ const MainApp: React.FC = () => {
     } catch {
       // Ignore localStorage read errors
     }
-  }, []);
+  }, [route.newProject]);
 
   const [initialChords, setInitialChords] = useState<ChordDefinition[] | null>(null);
   const [initialArpeggio, setInitialArpeggio] = useState<{

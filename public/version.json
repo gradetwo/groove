@@ -1,29 +1,25 @@
 {
-  "version": "2.35.5",
+  "version": "2.35.6",
   "releaseDate": "2026-10-08",
   "changelogCount": 10,
   "latest": {
-    "version": "2.35.5",
+    "version": "2.35.6",
     "date": "2026-10-09",
     "category": "fix",
     "title": {
-      "zh": "小屏触控与音源面板可读性修复",
-      "en": "Touch targets on phones, and a readable instrument chooser"
+      "zh": "修复新建工程页点击无反应",
+      "en": "Fixes the new-project page whose Create button did nothing"
     },
     "highlights": [
       {
-        "zh": "手机上的静音、独奏、删除与加轨等控件改为 44px 命中区，且不改变轨道行高。",
-        "en": "Mute, solo, remove and add-track controls now offer a 44px hit area on phones without changing the track row height."
+        "zh": "新建工程页点击“创建”没有反应：新手引导的遮罩盖在页面上，把点击吃掉了。",
+        "en": "On the new-project page, pressing Create did nothing: the first-run tour's overlay covered the page and swallowed the click."
       },
       {
-        "zh": "换音源面板补上不透明表面，分类与乐器行不再压在编排画布的文字上。",
-        "en": "The instrument chooser declares its own surface, so its categories and rows no longer overlap the arrangement behind them."
-      },
-      {
-        "zh": "修复轨道行高取值缺失时的回退，避免个别浏览器下头列与数据列错位。",
-        "en": "A missing track-height variable now falls back to its design value, so the header and lane columns cannot drift apart."
+        "zh": "引导不再在新建工程页自动弹出，仍可从帮助里随时打开，其它页面行为不变。",
+        "en": "The tour no longer opens itself on the new-project route; it is still available from Help, and other routes behave as before."
       }
     ],
-    "truncated": true
+    "truncated": false
   }
 }
