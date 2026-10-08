@@ -73,6 +73,15 @@ export interface PianoRollV2Props {
   onToggleTransport?: () => void;
 }
 
+/**
+ * ⭐ **How many step columns are drawn when the container has not been measured** (and the margin kept around the
+ * viewport once it has). The evaluation measured this grid at **4,736 real buttons for eight bars and 74,592 for 126** —
+ * one per pitch row per step, for the whole arrangement. Only the visible window is drawn now, so the count is a
+ * function of the *viewport*, not of the piece.
+ */
+const DEFAULT_VISIBLE_STEPS = 64;
+const VISIBLE_MARGIN_STEPS = 4;
+
 /** Pixels per sixteenth step — the grid's unit, and the scale every position is computed in. */
 const CELL = 12;
 const ROW_HEIGHT = 16;
@@ -132,6 +141,13 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
   const pressed = useRef<{ pitch: number; step: number } | undefined>(undefined);
   /** The panel, so a press on a note can hand it the focus the keys arrive through. */
   const panel = useRef<HTMLDivElement | null>(null);
+  /**
+   * ⭐ **The scroll container, and the step window currently drawn.** `clientWidth` is 0 in a test environment, which is
+   * why the fallback window above is a constant rather than a measurement — a criterion can then count the cells it
+   * gets, and the browser gets the real thing.
+   */
+  const scroller = useRef<HTMLDivElement | null>(null);
+  const [visibleSteps, setVisibleSteps] = useState<{ from: number; to: number }>({ from: 0, to: DEFAULT_VISIBLE_STEPS });
 
   /**
    * ⭐ **A gesture that ends anywhere else is cleared, and the clear is unconditional on purpose.**
@@ -157,6 +173,28 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
 
   const steps = Math.round(beats * STEPS_PER_BEAT);
   const rows = useMemo(() => pitchRows(lowPitch, highPitch), [lowPitch, highPitch]);
+
+  /**
+   * ⭐ **Measure, and keep measuring while the person scrolls.** The window is recomputed from `scrollLeft` and
+   * `clientWidth` with a small margin on each side, so a drag that runs off the edge still finds cells where it lands.
+   */
+  useEffect(() => {
+    const element = scroller.current;
+    const measure = () => {
+      const width = element?.clientWidth ?? 0;
+      const scrollLeft = element?.scrollLeft ?? 0;
+      const from = Math.max(0, Math.floor(scrollLeft / CELL) - VISIBLE_MARGIN_STEPS);
+      const count = width > 0 ? Math.ceil(width / CELL) + VISIBLE_MARGIN_STEPS * 2 : DEFAULT_VISIBLE_STEPS;
+      setVisibleSteps({ from, to: Math.max(from, Math.min(steps, from + count)) });
+    };
+    measure();
+    element?.addEventListener("scroll", measure, { passive: true });
+    window.addEventListener("resize", measure);
+    return () => {
+      element?.removeEventListener("scroll", measure);
+      window.removeEventListener("resize", measure);
+    };
+  }, [steps]);
   /** Notes by the cell they start in: a note between steps is drawn where the playback path will place it, so the picture and the sound agree. */
   const byRow = useMemo(() => {
     const map = new Map<number, NoteEvent[]>();
@@ -311,7 +349,7 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
           </label>
         )}
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" ref={scroller}>
         <div className="flex flex-col" style={{ minWidth: steps * CELL + 48 }} data-testid="roll-grid">
           {rows.map((pitch) => {
             const rowNotes = byRow.get(pitch) ?? [];
@@ -333,8 +371,8 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
                 </span>
                 {/* One positioned layer per row: the cells are the click grid, and the notes sit above them without moving any of them. */}
                 <div className="relative" style={{ width: steps * CELL, height: ROW_HEIGHT }}>
-                  <div className="absolute inset-0 flex">
-                    {Array.from({ length: steps }, (_, step) => (
+                  <div className="absolute inset-0">
+                    {Array.from({ length: Math.max(0, visibleSteps.to - visibleSteps.from) }, (_, index) => visibleSteps.from + index).map((step) => (
                       <button
                         key={step}
                         type="button"
@@ -382,8 +420,13 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
                             );
                           }
                         }}
-                        style={{ width: CELL, height: ROW_HEIGHT }}
-                        className={`shrink-0 border-r border-b border-[rgb(var(--d-line))] ${
+                        /**
+                         * ⭐ **Absolutely positioned at its own step**, because a windowed subset in a flex row would
+                         * lay out contiguously and put step 40 where step 0 is. The row's own width still spans the whole
+                         * arrangement, so the scrollbar and every position stay what they were.
+                         */
+                        style={{ position: "absolute", left: step * CELL, width: CELL, height: ROW_HEIGHT }}
+                        className={`border-r border-b border-[rgb(var(--d-line))] ${
                           isBlackKey(pitch) ? "bg-[var(--d-panel2,rgba(255,255,255,0.06))]" : "bg-transparent"
                         } ${step % STEPS_PER_BEAT === 0 ? "border-l border-l-[rgb(var(--d-line))]" : ""}`}
                       />
