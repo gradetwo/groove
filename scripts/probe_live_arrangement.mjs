@@ -218,12 +218,17 @@ const measured = await page.evaluate(
 );
 
 /**
- * ⭐ **The loop's length, from the samples themselves**: the highest step seen before the first wrap. With no wrap in the
- * window there is no measured length, and the bar comparison below is skipped rather than invented.
+ * ⭐ **Bars come from the step grid, and the wrap is reported rather than required** (reworked measurement).
+ *
+ * The first version of this rework waited for a wrap to learn the arrangement's length — but on this route "a pass" is the
+ * **whole arrangement** (the club form is about 77 s at 124 BPM), so a 30 s window cannot contain one and the probe
+ * declared itself unmeasured while the audio was fine. A bar is 16 sixteenths, which the engine's step counter already
+ * speaks, so the per-bar comparison needs no wrap at all. The wraps that *are* seen are still reported: over a longer
+ * window they are how this probe shows the arrangement repeating.
  */
-const firstWrapAt = measured.samples.findIndex((sample, index) => index > 0 && sample.step < measured.samples[index - 1].step);
-const beforeWrap = firstWrapAt === -1 ? measured.samples : measured.samples.slice(0, firstWrapAt);
-const loopSteps = beforeWrap.length ? Math.max(...beforeWrap.map((sample) => sample.step)) + 1 : 0;
+const STEPS_PER_BAR = 16;
+const maxStepSeen = Math.max(0, ...measured.samples.map((sample) => sample.step));
+const barsSeen = Math.floor(maxStepSeen / STEPS_PER_BAR) + 1;
 
 /**
  * Per-**bar** levels, by median, with the dropouts counted separately.
@@ -244,7 +249,7 @@ const median = (values) => {
   const mid = Math.floor(sorted.length / 2);
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 };
-const barOf = (sample) => Math.floor(sample.step / Math.max(1, loopSteps));
+const barOf = (sample) => Math.floor(sample.step / STEPS_PER_BAR);
 const bars = new Map();
 for (const sample of measured.samples) {
   const key = barOf(sample);
@@ -270,13 +275,20 @@ const loudest = barLevels.reduce((best, entry) => (entry.level > best.level ? en
 const early = first ? first.level : 0;
 const late = loudest.level;
 const risePct = early > 0 ? ((late - early) / early) * 100 : 0;
-const unmeasured = dropoutPct > 20 || barLevels.length < 2;
+/**
+ * ⭐ **Unmeasured means "this run cannot say anything about the mix"**, not "the arrangement is quiet between notes": a
+ * dance arrangement has real gaps, so the dropouts are reported and the *audible* test is a peak one. Two bars is the
+ * minimum for the per-bar comparison to compare anything.
+ */
+const peakRms = measured.samples.reduce((best, sample) => Math.max(best, sample.rms), 0);
+const unmeasured = peakRms === 0 || barLevels.length < 2;
 
 const summary = {
   /** ⭐ The arrangement's length **measured from the transport**, not read from a store this route does not have. */
-  loopSteps,
-  maxStep: Math.max(...measured.samples.map((sample) => sample.step)),
+  barsSeen,
+  maxStep: maxStepSeen,
   wraps: measured.wraps,
+  peakRms: Number(peakRms.toExponential(3)),
   samples: measured.samples.length,
   earlyRms: Number(early.toExponential(3)),
   lateRms: Number(late.toExponential(3)),
@@ -297,10 +309,10 @@ if (!measured.playing) await fail("the transport never started — nothing was m
 if (measured.maxStep <= 0 && measured.wraps === 0) {
   await fail("the transport never advanced: the step stayed at 0 for the whole window, so nothing was played");
 }
-if (loopSteps === 0) {
+if (barLevels.length < 2) {
   await fail(
-    `unmeasured: the arrangement did not wrap inside the ${Math.round(SAMPLE_MS / 1000)}s window, so its length — and the ` +
-      `per-bar comparison that needs it — could not be measured`
+    `unmeasured: the window covered ${barLevels.length} bar(s) — the per-bar comparison needs at least two, and a short ` +
+      `window is a probe setting rather than a finding about the app`
   );
 }
 if (unmeasured) {
@@ -309,14 +321,16 @@ if (unmeasured) {
       `transport only reached ${barLevels.length} bar(s) — this says nothing about the mix`
   );
 }
-if (late <= 0) await fail("the master analyser was silent for the whole window, so the arrangement produced no audio");
+if (peakRms === 0) {
+  await fail("the master analyser was silent for the whole window, so the arrangement produced no audio at all");
+}
 
 if (asJson) {
   console.log(JSON.stringify(summary, null, 1));
 } else {
   console.log(
-    `✅ Live arrangement: step reached ${summary.maxStep} with ${summary.wraps} wrap(s) over a ` +
-      `${summary.loopSteps}-step arrangement, level ${summary.earlyRms} → ${summary.lateRms} (+${summary.risePct} %) over ` +
+    `✅ Live arrangement: step reached ${summary.maxStep} over ` +
+      `${summary.barsSeen} bar(s) seen (${summary.wraps} wrap(s)), level ${summary.earlyRms} → ${summary.lateRms} (+${summary.risePct} %) over ` +
       `${(SAMPLE_MS / 1000).toFixed(0)}s of playback`
   );
 }
