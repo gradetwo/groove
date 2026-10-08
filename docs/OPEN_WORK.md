@@ -20480,3 +20480,23 @@ describe("the grid's editing actions", () => {
   ⭐ **下一轮：一次量测即可定 A/B** ✓——打印 `arrangement-lane` 的
     `children` 各自 `{ tag, testid, height, childElementCount, computedHeight }` ✓
     以及各自后代里**带 `--arr-track-h` 的那一层**的高度 ✓ ⇒ A 与 B 一眼可分 ✓。
+
+### 八百二十五、📌 **用 e2e 自己的视口（1280×800）复现失败：**仍然是 96/96**⇒ 失败需要 e2e **自己的流程**，下一步是**在断言旁临时打印****（2026-10-09 ✓）
+
+  ⭐ **读数** ✓（我的探针，Chromium **与** WebKit，1280×800 ✓ = `test_matrix.js:200` 的 desktop 视口 ✓）：
+    ```
+    header arrangement-header-row-synth-2  h 96
+    lane   div                             h 96   carrier 84
+    ```
+    ⇒ **两列同高（96/96）** ✓，且 lane 的**直接子元素**正是带 `var(--arr-track-h)` 的那一层 ✓
+    ⇒ "取数层不一致"（§八百二十四 的假设 B ✓）**在新建工程的状态下不成立** ✗。
+  ⭐ **因此结论收窄到一句** ✓：e2e 报的 `119 / 22` 需要 **e2e 自己的流程**（它建工程的方式、添加轨道、或它保留的存储状态 ✗），
+    而不是"某个静态的层选错" ✗ —— 我的探针在**同视口 ＋ 新工程**下达不到它 ✓。
+  ⭐ **下一轮的确切做法（一次就能定案 ✓）** ✓：**在断言旁临时加打印** ✓——就在 `scripts/test_matrix.js` 的
+    `gridGeometry` 里 ✓，对失败的那一行同时输出
+    `headerRow.getAttribute("style")` ✓、`laneRow.getAttribute("style")` ✓、
+    两者 `childElementCount` ✓ 与各自**后代**里带 `--arr-track-h` 的那一层高度 ✓，
+    并在打印后照旧抛错 ✓（**不改契约、不降标准** ✓）。
+    ⇒ 有了这份"失败现场" ✓，119/22 是"头列被撑高"还是"lane 取错层" ✓ **一眼可判** ✓。
+  ⭐ **本轮净收获** ✓：排除了"层选错"这个假设 ✓（在新建工程状态下 ✓）＋ 把失败条件锁定为"**e2e 的流程/状态**" ✓，
+    并给出**在不改断言前提下的取证手段** ✓（打印而非放宽 ✓）。
