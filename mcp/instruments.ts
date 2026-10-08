@@ -241,6 +241,18 @@ export function listCatalogueInstruments({
               stringInstrument: technique.instrument,
               technique: technique.technique,
               /**
+               * ⭐ **The compass this program actually sounds** (finding D2).
+               *
+               * The independent evaluation reported that an agent could not tell a double bass from a piccolo before
+               * writing notes: the listing carried ids and names, so an out-of-range part was written and came back
+               * silent, and `get_pitch_report` had to be called pitch by pitch to find out. These two numbers come from
+               * the **measured** technique table (`src/data/stringTechniques.ts`), and they are stated only where that
+               * table states them — an asset with no measurement carries no range rather than a guessed 0–127, because
+               * a guessed range is exactly the silent failure this replaces.
+               */
+              lowestNote: technique.lowestNote,
+              highestNote: technique.highestNote,
+              /**
                * **The situations this exact program serves**, register included — so `plucked-walking` appears on the
                * contrabass pizzicato and not on the viola's, which is the difference between a rule and a synonym.
                */

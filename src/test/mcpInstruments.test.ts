@@ -169,4 +169,26 @@ describe("string techniques on the instrument list", () => {
     // The twenty-six playable rows are exactly the twenty-six assets the listing annotates.
     expect(strings().filter((instrument) => instrument.technique !== undefined)).toHaveLength(26);
   });
+
+  it("⭐ says the compass a measured program sounds, and says nothing where nothing is measured (finding D2)", () => {
+    /**
+     * The evaluation's complaint: an agent could not tell a double bass from a piccolo before writing, so an
+     * out-of-range part arrived silent and `get_pitch_report` had to be called pitch by pitch to find out. These two
+     * numbers come from the measured technique table; an asset with no measurement must carry **no** range, because a
+     * guessed 0–127 is the silent failure this replaces. Deleting the two fields turns this red.
+     */
+    const all = listCatalogueInstruments();
+    const measured = (all.instruments ?? []).find((row: { assetId: string }) => /ContrabassPizz/.test(row.assetId)) as
+      | { lowestNote?: number; highestNote?: number }
+      | undefined;
+    expect(measured?.lowestNote, "a measured contrabass pizzicato starts at MIDI 24").toBe(24);
+    expect(measured?.highestNote, "and stops at 60").toBe(60);
+
+    const unmeasured = (all.instruments ?? []).find((row: { assetId: string }) => row.assetId === "salamander-grand") as
+      | { lowestNote?: number }
+      | undefined;
+    expect(unmeasured, "the piano is in the catalogue").toBeTruthy();
+    expect(unmeasured?.lowestNote, "no measurement, no claim").toBeUndefined();
+  });
+
 });

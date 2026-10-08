@@ -18774,3 +18774,23 @@ describe("the grid's editing actions", () => {
     126 小节那条路就会把它顶红 ✓）。
   ⏳ 下一轮 ✓：给 D6 写一个**浏览器探针**（加轨时的帧耗时与掉帧数 ✓，复用仓库既有的 Playwright harness ✓），
     先量出真实数字 ✓，再决定是否需要 `React.memo`/状态边界隔离 ✓——**没有数字就不动结构** ✓。
+
+### 七百四十、✅ **第三批 D2：乐器列表现在说出"它实际能响多宽"——只在量过的地方说**（2026-10-08 ✓）
+
+  ⭐ **先取证** ✓（`scratch/repro-d2-range.mjs` ✓，直接问工具 ✓）：修前每一行的字段是
+    `assetId, name, seconds, library, category, [subcategory], program` ✓ ——**没有任何音域** ✗ ✓（与报告一致 ✓：
+    Agent 无法在写音符之前分辨低音提琴与短笛 ✓ ⇒ 写超域、渲染静音、再靠 `get_pitch_report` 一个音一个音试 ✓）。
+  ⭐ **修法** ✓（`mcp/instruments.ts` ✓）：从**已量测的**弦乐技法表（`src/data/stringTechniques.ts` ✓，
+    在 `mcp/instruments.ts` 里按 assetId 索引 ✓）把 `lowestNote` / `highestNote` 带出来 ✓——
+    **只在表里有量测的行上** ✓；没有量测的资源**不带音域** ✗ 而不是猜一个 `0–127` ✓
+    （猜出来的音域正好就是它要消灭的那种静音故障 ✓）。工具描述同步说明这对字段 ✓
+    （并写明缺失的含义是"未量测"而不是"任意音高" ✓）。
+  ⭐ **修后实测** ✓（同一探针 ✓）：
+    · `vsco2ce:ContrabassPizz` ⇒ `lowestNote: 24, highestNote: 60` ✓（报告举的例子"低音提琴写到 C6"现在**写之前就能看见** ✓）；
+    · `vsco2ce:ViolaEnsPizz` ⇒ `48 / 86` ✓（与"walking 只由低音提琴回答"的那条包含式规则一致 ✓）；
+    · `salamander-grand`、`karoryfer-…-cello:02-Bowed-mod-wheel`、木琴类 ⇒ **不带音域** ✓（未量测 ⇒ 不作声明 ✓）。
+  ⭐ 判据 ✓（`src/test/mcpInstruments.test.ts` ✓ 14 例 ✓）：量过的低音提琴拨奏**必须是 24–60** ✓；
+    钢琴**必须没有** `lowestNote` ✓ ⇒ 删掉这两个字段、或给未量测的乐器补一个猜的音域，都会红 ✓。
+  ⭐ lint / docs 门禁绿 ✓。**第三批的 D2 完成** ✓。
+  ⏳ 第三批剩余 ✓：**S4**（pixel 皮肤 2px 边框吃掉微格热区 ✓）、**S5**（分析仪频段色在浅底不可读 ✓）、
+    **S6**（Canvas 刻度黑底黑字 ✓）、**S7**（≤11px 像素字体碎裂 ✓）；另有 **D6 的计时那一半待浏览器探针** ✓。
