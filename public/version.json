@@ -1,27 +1,27 @@
 {
-  "version": "2.35.4",
+  "version": "2.35.5",
   "releaseDate": "2026-10-08",
   "changelogCount": 10,
   "latest": {
-    "version": "2.35.4",
-    "date": "2026-10-08",
+    "version": "2.35.5",
+    "date": "2026-10-09",
     "category": "fix",
     "title": {
-      "zh": "分析快 28 倍、MusicXML 多谱表、可用性修复",
-      "en": "Analysis 28× faster, multi-part MusicXML, and usability fixes"
+      "zh": "小屏触控与音源面板可读性修复",
+      "en": "Touch targets on phones, and a readable instrument chooser"
     },
     "highlights": [
       {
-        "zh": "五分钟音频首次分析从 287 秒降到 10.2 秒；新增\"只看响度与频谱\"的轻量模式。",
-        "en": "A first five-minute analysis went from 287s to 10.2s, and a loudness-and-spectrum-only mode was added."
+        "zh": "手机上的静音、独奏、删除与加轨等控件改为 44px 命中区，且不改变轨道行高。",
+        "en": "Mute, solo, remove and add-track controls now offer a 44px hit area on phones without changing the track row height."
       },
       {
-        "zh": "MusicXML 可每个声部一个谱表；工程名随包传递，导出默认以标题命名。",
-        "en": "MusicXML can export one part per lane; a project's name travels in its package and names the export."
+        "zh": "换音源面板补上不透明表面，分类与乐器行不再压在编排画布的文字上。",
+        "en": "The instrument chooser declares its own surface, so its categories and rows no longer overlap the arrangement behind them."
       },
       {
-        "zh": "空查询不再崩溃、未知轨道被拒绝、单边范围与时长预算如实报告、低音区音符在卷帘可见。",
-        "en": "An empty search no longer crashes, unknown tracks are refused, one-sided spans and the duration budget report what they did, and bass notes are visible in the roll."
+        "zh": "修复轨道行高取值缺失时的回退，避免个别浏览器下头列与数据列错位。",
+        "en": "A missing track-height variable now falls back to its design value, so the header and lane columns cannot drift apart."
       }
     ],
     "truncated": true
