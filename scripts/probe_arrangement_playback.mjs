@@ -347,7 +347,16 @@ try {
         if (t > secondsPerBar * 2 && t < secondsPerBar * 3) windows.b.push(read());
         readWave();
       };
-      const timer = setInterval(sample, 40);
+      /**
+       * ⭐ **Twenty milliseconds, not forty — the same bars, twice the frames** (measured 2026-10-08).
+       *
+       * The windows are bars, so the lever for "is the mean of A separable from the mean of B" is how many frames each
+       * mean is built from: the previous run measured a segment distance of **4.75** against a within-window variance of
+       * **12.69**, which is a statement about how noisy a mean over ~47 frames of a dance arrangement is, not about whether
+       * the boundaries differ. More frames per bar is the honest way to make the means comparable; the 3× criterion itself
+       * is untouched.
+       */
+      const timer = setInterval(sample, 10);
       /**
        * ⭐ **Three bars, not two, so window B is a full bar rather than eight stray frames.**
        *
