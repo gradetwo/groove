@@ -20660,3 +20660,24 @@ describe("the grid's editing actions", () => {
     点击后 `arrangement: true` ✓、**零 page error** ✓。
   ⭐ **发布 ✓**：**v2.35.6** ✓（`full CI ok · deploy ok · tag ok · remote ok` ✓）；
     线上复验 ✓：版本 `v2.35.6` ✓、`tourUp: false` ✓、Create 上就是按钮 ✓、**点击后 `hasArrangement: true`、`hasChooser: false`** ✓✓。
+
+### 八百三十三、🔬 **用户报告"Salamander Grand 钢琴刺啦刺啦"：先排除硬削，并把复现卡在哪说清**（2026-10-09 ✓）
+
+  ⭐ **已有实测（提交在案的基线 ✓）** ✓：`scripts/loudness.baseline.json` 的 **159 个 genre** 里
+    `arrangedTruePeakDb` 落在 **−4.08 … −1.23 dBTP**（中位 **−1.30** ✓），**钉在 ≥ −0.05 dBTP 的：0 个** ✓
+    ⇒ 这条渲染路有**限幅上限**、**没有触到满刻度** ⇒ **硬削（clipping）被排除** ✓
+    （若真是削顶 ✓，基线里应出现一批钉在 0 dBFS 的行 ✓）。
+  ⚠️ **我的直接复现目前**无效**，如实记** ✗：`scratch/probe-piano-noise.mjs` ✓ 用应用自己的离线渲染器
+    （dev server ✓、两条 sampler 轨 ✓、`assetId: salamander-grand` ✓）渲染 ✓，得到的却是**静音** ✗：
+    `peakDb: null` ✓（即 peak=0 ✓）、`pinnedSamples 0` ✓、`jumpCount 0` ✗
+    ⇒ **这些数字对钢琴没有任何说明力** ✓（采样器在**运行时采样目录/样本加载**之前**不发声** ✓；
+      我在页面里等 9 s 后仍未拿到有效读数 ✓）。⇒ 结论：**复现要先把目录/样本加载到位** ✓，否则量的是空气 ✓。
+  ⭐ **下一步（两条路，任一即可定案 ✓）** ✓：
+    · **A（最快、最真 ✓）** ✓：用户在那个工程里点 **Export → WAV** ✓，把文件给我 ⇒
+      我用**已建好的分析路径**（F07 那套 `measure()` ✓）一次读出：
+      `pinnedSamples`（硬削 ✓）与 `discontinuities`/`worstDb` 的**时间位置**（对照音尾 ✓ ⇒ 硬断 ✓）；
+    · **B** ✓：我把探针改成**等采样目录就绪**（`sampleCatalogueRuntime` 的状态 ✓，F10 那套 ✓）再渲染 ✓。
+  ⭐ **两类结果的对应修法（先写下来，出数即用 ✓）** ✓：
+    · **硬断** ⇒ 采样器在**音尾硬切** ✓（衰减样本被截断 ✓）⇒ 加**短释放斜坡**（约 5–15 ms ✓）
+      或让 sample 走 note-off 释放段 ✓；应用里已有 `safeHeldSeconds`/一次性样本警示 ✓ 可作佐证 ✓；
+    · **硬削** ⇒ 总线余量/限幅阈值 ✓（但基线已强烈指向"不是这一类" ✓）。
