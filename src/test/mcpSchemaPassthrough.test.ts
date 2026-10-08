@@ -55,7 +55,13 @@ describe("MCP · the tool boundary keeps what it is given", () => {
   it("an arrangement keeps the lyric it was given", async () => {
     await withMcp(async (call) => {
       const arrangement = await call("create_arrangement", { blankKind: "synth" });
-      const trackId = String((arrangement.trackIds ?? [])[0] ?? "track-1");
+      /**
+       * ⭐ **The real track id** (found by CI, not by this test): this read `arrangement.trackIds`, which the create reply
+       * does not carry, so it fell back to the literal `"track-1"` — a track that never existed. It passed anyway because
+       * nothing refused notes and lyrics written to an unknown track; the third evaluation's F04 is that silence, and
+       * once it was fixed this fixture became a failure. The reply carries `tracks`, so the id is read from there.
+       */
+      const trackId = String((arrangement.tracks ?? [])[0]?.id ?? "track-1");
       const sung = await call("set_arrangement_vocal_melody", {
         arrangementId: arrangement.arrangementId,
         trackId,
@@ -73,7 +79,13 @@ describe("MCP · the tool boundary keeps what it is given", () => {
   it("still rejects a genuinely wrong value rather than passing it through", async () => {
     await withMcp(async (call) => {
       const arrangement = await call("create_arrangement", { blankKind: "synth" });
-      const trackId = String((arrangement.trackIds ?? [])[0] ?? "track-1");
+      /**
+       * ⭐ **The real track id** (found by CI, not by this test): this read `arrangement.trackIds`, which the create reply
+       * does not carry, so it fell back to the literal `"track-1"` — a track that never existed. It passed anyway because
+       * nothing refused notes and lyrics written to an unknown track; the third evaluation's F04 is that silence, and
+       * once it was fixed this fixture became a failure. The reply carries `tracks`, so the id is read from there.
+       */
+      const trackId = String((arrangement.tracks ?? [])[0]?.id ?? "track-1");
       /**
        * A pan outside −1…1 is a request to refuse, not a field to pass through. The schema is the only
        * place that can say so: by the time the handler runs, the value has already been accepted.
