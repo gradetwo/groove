@@ -124,6 +124,11 @@ export function undoMcpArrangement(arrangementId: string, steps = 1): Arrangemen
 export interface ArrangementEditResult {
   summary: ArrangementSummary;
   problems: string[];
+  /**
+   * ⭐ **Notes whose pitch, start, length or velocity this call changed** (third evaluation, section 6). Present on every
+   * edit — `0` included, because "nothing moved" is exactly the answer a batch caller needs and cannot infer.
+   */
+  changedNotes?: number;
 }
 
 export interface ArrangementTrackSummary {
@@ -502,7 +507,42 @@ function edit(arrangementId: string, apply: (arrangement: ArrangementV2) => Arra
   const next = apply(arrangement);
   arrangements.set(arrangementId, next);
   const summary = summariseArrangement(arrangementId, next);
-  return { summary, problems: summary.problems };
+  /**
+   * ⭐ **How many notes this call actually changed** (third evaluation, section 6: "transactional batch edits, returning
+   * the number actually modified").
+   *
+   * The batch tools report what was **asked for** and what the track now holds, so a caller that wants the delta has to
+   * remember the before-count itself — and an edit that changed nothing at all looks exactly like one that changed
+   * everything. Counted here, in the one place every edit passes through, with a per-note comparison rather than a length
+   * comparison: quantise and transpose rewrite values without changing the count, and a length-only check would call all
+   * of those "no change".
+   */
+  const changedNotes = countChangedNotes(arrangement, next);
+  return { summary, problems: summary.problems, ...(changedNotes === 0 ? { changedNotes: 0 } : { changedNotes }) };
+}
+
+/**
+ * ⭐ **Notes whose pitch, start, length or velocity differ** between two states of one arrangement, summed over the tracks
+ * either state knows about. O(notes), and only ever called once per edit.
+ */
+function countChangedNotes(before: ArrangementV2, after: ArrangementV2): number {
+  const same = (a: NoteEvent, b: NoteEvent) =>
+    a.pitch === b.pitch && a.startBeats === b.startBeats && a.lengthBeats === b.lengthBeats && a.velocity === b.velocity;
+  const trackIds = new Set([...Object.keys(before.notesByTrack ?? {}), ...Object.keys(after.notesByTrack ?? {})]);
+  let changed = 0;
+  for (const trackId of trackIds) {
+    const was = before.notesByTrack?.[trackId] ?? [];
+    const now = after.notesByTrack?.[trackId] ?? [];
+    if (was.length !== now.length) {
+      // ⭐ Added or removed notes are changes too, and the difference is what the caller would otherwise infer wrongly.
+      changed += Math.abs(now.length - was.length);
+      const paired = Math.min(was.length, now.length);
+      for (let i = 0; i < paired; i += 1) if (!same(was[i]!, now[i]!)) changed += 1;
+      continue;
+    }
+    for (let i = 0; i < was.length; i += 1) if (!same(was[i]!, now[i]!)) changed += 1;
+  }
+  return changed;
 }
 
 /**

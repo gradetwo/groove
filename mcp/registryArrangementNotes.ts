@@ -35,6 +35,7 @@ function noteReply(result: unknown, verbose: boolean | undefined): unknown {
     addedPitchRange?: unknown;
     trackPitchRange?: unknown;
     widenedTrackRange?: unknown;
+    changedNotes?: unknown;
   };
   return {
     status: "ok",
@@ -52,6 +53,8 @@ function noteReply(result: unknown, verbose: boolean | undefined): unknown {
     ...(r?.addedPitchRange === undefined ? {} : { addedPitchRange: r.addedPitchRange }),
     ...(r?.trackPitchRange === undefined ? {} : { trackPitchRange: r.trackPitchRange }),
     ...(r?.widenedTrackRange === undefined ? {} : { widenedTrackRange: r.widenedTrackRange }),
+    /** ⭐ What the call actually changed, so a batch caller does not have to remember the before-count (section 6). */
+    ...(r?.changedNotes === undefined ? {} : { changedNotes: r.changedNotes }),
     note: "full note lists omitted; pass verbose: true for the previous reply",
   };
 }
