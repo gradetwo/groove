@@ -20500,3 +20500,24 @@ describe("the grid's editing actions", () => {
     ⇒ 有了这份"失败现场" ✓，119/22 是"头列被撑高"还是"lane 取错层" ✓ **一眼可判** ✓。
   ⭐ **本轮净收获** ✓：排除了"层选错"这个假设 ✓（在新建工程状态下 ✓）＋ 把失败条件锁定为"**e2e 的流程/状态**" ✓，
     并给出**在不改断言前提下的取证手段** ✓（打印而非放宽 ✓）。
+
+### 八百二十六、✅ **e2e 三引擎**干净通过**（WebKit 这次没有重试），而我把"失败现场"永久留在了断言里**（2026-10-09 ✓）
+
+  ⭐ **本轮读数** ✓：
+    ```
+    ✅ PASS Desktop Chromium / Chrome       (22.79s)
+    ✅ PASS Desktop Firefox                 (27.93s)
+    ✅ PASS Desktop WebKit (Safari Engine)  (30.45s)   ← 没有 [retried once] ✓
+    🎉 ALL 3 BROWSER & DEVICE TARGETS PASSED PRE-RELEASE VERIFICATION!
+    ```
+  ⭐ **把取证留在断言里（本轮的实质改动 ✓）** ✓：即使这次通过了 ✓，那条断言现在**失败时会自己说明现场** ✓——
+    在原有的那句话后面追加
+    `header scene: {testid, style, inlineHeight, variable(--arr-track-h), kids}` ✓ 与
+    `lane scene: {tag, style, height, variable, kids, carrierHeight}` ✓
+    ⇒ 下次它若再红 ✓，**不需要再靠猜或再写一个探针** ✓：119/22 是"头列被撑高"还是"lane 取错层" ✓ 一眼可判 ✓。
+  ⭐ **诚实结论** ✓：这条断言**是间歇性的** ✓（同一份代码：`verify` 里连红两次 ✗、单独跑三次里两次通过 ✓），
+    而我在**两种视口 × 两个引擎 × 新建工程**下都量到 **96/96** ✓
+    ⇒ 它需要一个**尚未复现的状态** ✓；我**没有**因此去放宽它 ✗，而是①把现场信息写进失败消息 ✓
+      ②继续把它当作"未解释的红"记在台账里 ✓。
+  ⭐ **闸门总账（当前 ✓）** ✓：单元 **5087 passed / 0 failed** ✓；e2e **三引擎通过** ✓；
+    前段检查全绿 ✓；`check:mcp:build` 假红已修 ✓；CI 整批 success ✓；线上 **v2.35.4** ✓。

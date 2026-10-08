@@ -629,6 +629,34 @@ async function runTestOnTarget(target, baseUrl) {
         headerHeights: headerRows.map((row) => Math.round(box(row).height)),
         laneTops: laneRows.map((row) => Math.round(box(row).top)),
         laneHeights: laneRows.map((row) => Math.round(box(row).height)),
+        /**
+         * ⭐ **The failure scene, kept in the message rather than guessed at** (measured 2026-10-09).
+         *
+         * Two reproductions outside this harness — 1440×900 and this matrix's own 1280×800, both engines, a freshly
+         * created project — measured header 96 px and lane 96 px with the lane's direct child carrying
+         * `height: var(--arr-track-h)`. So the 119/22 this assertion reports needs **this harness's own flow or state**,
+         * and the only honest way to find it is to print what the two rows actually are when it fails.
+         */
+        headerScene: headerRows.map((row) => ({
+          testid: row.getAttribute("data-testid"),
+          style: row.getAttribute("style"),
+          height: Math.round(box(row).height),
+          inlineHeight: getComputedStyle(row).height,
+          variable: getComputedStyle(row).getPropertyValue("--arr-track-h").trim(),
+          kids: row.childElementCount,
+        })),
+        laneScene: laneRows.map((row) => {
+          const carrying = [...row.querySelectorAll("*")].find((el) => (el.getAttribute("style") ?? "").includes("--arr-track-h"));
+          return {
+            tag: row.tagName.toLowerCase(),
+            style: row.getAttribute("style"),
+            height: Math.round(box(row).height),
+            inlineHeight: getComputedStyle(row).height,
+            variable: getComputedStyle(row).getPropertyValue("--arr-track-h").trim(),
+            kids: row.childElementCount,
+            carrierHeight: carrying ? Math.round(box(carrying).height) : null,
+          };
+        }),
         overflow: headerRows.map((row) => {
           const r = box(row);
           const inner = row.firstElementChild;
@@ -659,7 +687,9 @@ async function runTestOnTarget(target, baseUrl) {
       if (top !== gridGeometry.laneTops[index] || gridGeometry.headerHeights[index] !== gridGeometry.laneHeights[index]) {
         throw new Error(
           `header ${index} is at ${top}px/${gridGeometry.headerHeights[index]}px against its lane at ` +
-            `${gridGeometry.laneTops[index]}px/${gridGeometry.laneHeights[index]}px on ${target.name} — the two columns must share one row height`
+            `${gridGeometry.laneTops[index]}px/${gridGeometry.laneHeights[index]}px on ${target.name} — the two columns must share one row height\n` +
+            `  header scene: ${JSON.stringify(gridGeometry.headerScene[index] ?? null)}\n` +
+            `  lane scene  : ${JSON.stringify(gridGeometry.laneScene[index] ?? null)}`
         );
       }
     });
