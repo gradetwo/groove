@@ -52,6 +52,13 @@ describe("MCP · the library surface", () => {
     expect(result.matches[0].matchedOn.length).toBeGreaterThan(0);
     // A search for nothing useful returns nothing rather than everything.
     expect(searchGenres({ query: "zzzznotagenre" }).matches).toHaveLength(0);
+    /**
+     * ⭐ **A query that was not sent is a question, not a crash.** The independent evaluation found this call throwing
+     * `Cannot read properties of undefined (reading 'trim')`; the protocol is JSON, so "the field is missing" arrives at
+     * runtime however the type reads. Deleting the guard turns this red.
+     */
+    expect(searchGenres({ query: undefined } as unknown as { query: string }).matches).toHaveLength(0);
+    expect(searchGenres({ query: "   " }).matches).toHaveLength(0);
   });
 
   it("returns a genre document with its recorded facts, not generated prose", () => {

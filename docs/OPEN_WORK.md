@@ -18661,3 +18661,24 @@ describe("the grid's editing actions", () => {
     ⇒ 对**自动段数**那一跑的探针还没看清 ✓（是工具调用失败、还是探针没收到 ✓），所以这条**不能算证明** ✓。
   ⏳ 结论照实 ✓：A2 的代码与判据齐了 ✓、fork 炸弹修了 ✓；**D1 仍未取证** ✗；
     发版 2.35.2（C2，与 A 一起发 ✓）**我建议等 D1 有证据、且 `292863b`/本轮提交的 CI 转绿之后再走** ✓。
+
+### 七百三十四、⭐ **按 agy 两份独立评测报告开工（第一批）：D8 修复、D7 更正并改进**（2026-10-08 ✓）
+
+  ⭐ 背景 ✓：`/home/crow/work/agy` 的两份报告（全系统 626 行 ✓、皮肤视觉 496 行 ✓）跑的 checkout 是 **`e991987` = v2.35.2** ✓
+    ——与本仓库发布的同一个提交 ✓ ⇒ 它们描述的就是当前线上代码 ✓，不是旧版 ✓。
+  ⭐ **先复现再改** ✓（`scratch/repro-d7-d8.ts` ✓）：
+    · **D8** ✓：`searchGenres({ query: undefined })` ⇒ `THREW: Cannot read properties of undefined (reading 'trim')` ✓
+      ⇒ 修法一行 ✓：`(args?.query ?? "").trim()` ✓ ＋ 空查询**返回空结果而不是抛错** ✓
+      ⇒ 复现脚本现在打印 `{"query":"","matches":[]}` ✓；判据 ✓（`mcpTools.test.ts` ✓：未传与纯空格都返回 0 条 ✓）。
+    · **D7 —— 报告结论需要更正** ✓：它把"MCP 产物无法导入 Web DAW"归为断裂 ✓，复现方式是把这个项目**自己的导出器**写的
+      包（`format: "groove-arrangement"` ✓）交给 `validateGroovePackage` ✓——这一步确实抛错 ✓，**但**：
+      · 本仓库**编曲那条路**正是读这个格式 ✓（`arrangementFileKind` → `"groove"` → `validateArrangementPackage` ✓，
+        `arrangementEntries.test.ts` **11 条判据**全绿 ✓）⇒ **产物本来就能导入** ✓；
+      · `validateGroovePackage` 是 **v1 工程包的闸** ✓，在本仓库**没有生产调用者** ✗（只有测试 ✓）。
+      ⇒ 真正错的是**那句话**：标识符是对的 ✓，文件只是属于另一条路 ✗。修法 ✓：加一条分支 ✓，
+        当格式是 `groove-arrangement` 时抛出**指明去处**的信息 ✓（"open it with the arrangement view's Import…" ✓）；
+        判据 ✓（`projectDb.test.ts` ✓ 断言信息里出现 `arrangement view` ✓）。
+  ⭐ 两条判据都可红 ✓（删掉守卫 / 删掉分支即失败 ✓），本地 typecheck、lint、docs 门禁全绿 ✓。
+  ⏳ 第一批剩余 ✓：**S1**（`.gate-btn` 硬编码 `color:#231703` ✓ 复现位置已确认 ✓）、**S2**（`PianoRollV2.tsx:286` 的
+    `opacity-50` ✓）、**S8**（和弦琴键激活态字色 ✓，报告给的路径 `src/components/chords/…` **不存在** ✗，
+    真实路径是 `src/views/ChordProgressionsView.tsx` ✓，要按真实文件重验 ✓）、**D4 可发现性**（力度控件放进卷帘内部 ✓）。

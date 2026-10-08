@@ -156,6 +156,13 @@ describe("IndexedDB Multi-Project Hub Engine (P7-02)", () => {
 
     expect(() => validateGroovePackage(null)).toThrow();
     expect(() => validateGroovePackage({ format: "invalid" })).toThrow();
+    /**
+     * ⭐ **A v2 arrangement package is refused with a sentence that says where it *is* read.** The evaluation called
+     * this a broken interoperation; the arrangement route reads exactly this format (eleven entries tests), so what
+     * needed fixing was the message — "identifier missing or incorrect" named the wrong problem. Deleting the branch
+     * turns this red.
+     */
+    expect(() => validateGroovePackage({ format: "groove-arrangement" })).toThrow(/arrangement view/);
   });
 
   it("carries a section's B5 overrides through a .groove package, JSON and all", () => {

@@ -131,7 +131,14 @@ export function searchGenres(args: { query: string; limit?: number }): {
   query: string;
   matches: Array<GenreSummary & { score: number; matchedOn: string[] }>;
 } {
-  const query = args.query.trim().toLowerCase();
+  /**
+   * ⭐ **A missing query is a question, not a crash.** The independent evaluation found this line throwing
+   * `Cannot read properties of undefined (reading 'trim')` on `searchGenres({ query: undefined })` — reproduced before
+   * the fix, and the empty query now simply matches nothing rather than taking the process down. The type says
+   * `query: string`; the protocol is JSON, so "the field was not sent" is a state that arrives at runtime.
+   */
+  const query = (args?.query ?? "").trim().toLowerCase();
+  if (query.length === 0) return { query, matches: [] };
   const limit = Math.min(50, Math.max(1, args.limit ?? 10));
   if (!query) return { query: args.query, matches: [] };
   const terms = query.split(/\s+/).filter(Boolean);

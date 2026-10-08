@@ -671,6 +671,21 @@ export function validateGroovePackage(data: unknown): GrooveProjectPackage {
   }
 
   const pkg = data as Record<string, any>;
+  /**
+   * ⭐ **A v2 arrangement package is refused here, and the sentence says where it *is* read.**
+   *
+   * The independent evaluation reported this as "MCP 产物无法导入 Web DAW" and reproduced it by handing a package this
+   * project's own exporter writes (`format: "groove-arrangement"`) to this function. Checked in this tree before
+   * changing anything: the app's arrangement route reads exactly that package (`arrangementFileKind` → `"groove"` →
+   * `validateArrangementPackage`, with eleven passing entries tests), so the product **is** importable — this validator
+   * is the v1 *project* gate and has no production caller. What was genuinely wrong is the message: it said
+   * "identifier missing or incorrect" when the identifier was correct and the file simply belongs to the other route.
+   */
+  if (pkg.format === "groove-arrangement") {
+    throw new Error(
+      'this is an arrangement package (format "groove-arrangement"), not a project package — open it with the arrangement view\'s Import, which reads it through validateArrangementPackage'
+    );
+  }
   if (pkg.format !== "groove-project") {
     throw new Error("Invalid .groove package: format identifier missing or incorrect");
   }
