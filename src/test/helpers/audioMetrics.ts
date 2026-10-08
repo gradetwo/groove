@@ -204,6 +204,47 @@ export function decayShapeRatio(channels: Float32Array[], sampleRate: number): n
  * What remains is what a listener would call a click: a short cluster of samples standing far above the local
  * texture, happening at irregular times.
  */
+/**
+ * ⭐ **A small multiset kept in order, for the click detector's rolling window** (third evaluation, F07).
+ *
+ * Insertion and removal are binary search plus `splice`; the median is the middle element of the same multiset the original
+ * code sorted, so the number this returns is the number that code returned — the difference is that a step now costs one
+ * removal and one insertion instead of collecting and sorting ~55 values.
+ *
+ * `remove` deletes **one** copy, which is what a multiset needs: the window legitimately holds the same difference twice.
+ */
+class OrderedWindow {
+  private values: number[] = [];
+  /** ⭐ The first index whose value is >= `value`, so duplicates keep a stable place. */
+  private lowerBound(value: number): number {
+    let low = 0;
+    let high = this.values.length;
+    while (low < high) {
+      const mid = (low + high) >> 1;
+      if (this.values[mid]! < value) low = mid + 1;
+      else high = mid;
+    }
+    return low;
+  }
+  insert(value: number): void {
+    this.values.splice(this.lowerBound(value), 0, value);
+  }
+  remove(value: number): void {
+    const at = this.lowerBound(value);
+    if (at < this.values.length && this.values[at] === value) this.values.splice(at, 1);
+  }
+  reset(sorted: number[]): void {
+    this.values = sorted.slice();
+  }
+  /** The same `floor(n / 2)` the rebuild took: for an even count that is the upper of the two middles. */
+  median(): number {
+    return this.values[this.values.length >> 1]!;
+  }
+  get size(): number {
+    return this.values.length;
+  }
+}
+
 export function clickAnalysis(
   channels: Float32Array[],
   sampleRate: number,
@@ -228,34 +269,52 @@ export function clickAnalysis(
     const steps = new Float32Array(Math.max(0, channel.length - 1));
     for (let i = 1; i < channel.length; i += 1) steps[i - 1] = Math.abs(channel[i] - channel[i - 1]);
     /**
-     * ⭐ **The same median, computed without a comparator callback** (third evaluation, F07).
+     * ⭐ **The window is rolled, not rebuilt** (third evaluation, F07).
      *
-     * The evaluation measured a first five-minute analysis at 161 s and traced it to this loop: a window is rebuilt and
-     * **sorted per sample**, 13.2 million times. Reproduced here at 287 s, or ~470 ms of CPU per second of audio. The
-     * cheapest honest cut is the comparator: `Array.prototype.sort((a, b) => a - b)` calls a JavaScript function ~55·log₂55
-     * times per sample, while `Float64Array.prototype.sort()` sorts numerically in the engine. Same values, same order,
-     * same median — the reading cannot move — and the buffer is preallocated, so nothing is allocated per sample either.
+     * The evaluation measured a first five-minute analysis at 161 s and traced it here: for **every** sample the window of
+     * ~55 values was rebuilt and sorted — 13.2 million rebuilds, 287 s on this machine. Two exact cuts, one after the
+     * other: the sort lost its comparator (a `Float64Array` sorts numerically in the engine), and now the window itself is
+     * carried forward.
      *
-     * ⚠️ It is a first step, not the whole fix: the window still rebuilds its ~55 values per sample. A rolling window
-     * (one removal and one insertion per stride, per residue class — the same multiset, so the same median) is the next
-     * one, and the readings on the four fixture shapes in `scratch/f07-baseline.ts` are what any such change must match.
+     * **Why carrying it forward is exact.** The window's values are `steps[from], steps[from + stride], …`, and
+     * `from = max(0, i - halfWindow)` moves by one per sample — so consecutive samples sample a *different* residue class
+     * of the stride and share almost nothing. But the same residue class comes around every `stride` samples, and then
+     * `from` and `to` have both advanced by exactly `stride`: the class's multiset loses the values that left the range and
+     * gains the ones that entered, and nothing else. One `OrderedWindow` per class therefore holds the same **multiset**
+     * the rebuild would have produced, so `median()` returns the same number — and a value is inserted and removed once
+     * per class, so the whole pass costs O(samples) rather than O(samples × window).
+     *
+     * The readings on the four fixture shapes in `scratch/f07-baseline.ts` were pinned bit for bit before this change and
+     * matched after it: `count`, `worstDb` and `worstIndex` are what says the shortcut did not change what a click is.
      */
-    const scratch = new Float64Array(Math.max(1, 2 * halfWindow));
+    const windows = [new OrderedWindow(), new OrderedWindow(), new OrderedWindow(), new OrderedWindow()];
+    const windowRanges: Array<{ from: number; to: number } | undefined> = [undefined, undefined, undefined, undefined];
+    const strideClass = (index: number) => ((index % stride) + stride) % stride;
     for (let i = 1; i < channel.length - 1; i += 1) {
       const predicted = (channel[i - 1] + channel[i + 1]) / 2;
       const deviation = Math.abs(channel[i] - predicted);
       if (deviation === 0) continue;
-      let count = 0;
       const from = Math.max(0, i - halfWindow);
       const to = Math.min(steps.length, i + halfWindow);
-      for (let j = from; j < to; j += stride) {
-        if (count < scratch.length) scratch[count] = steps[j];
-        count += 1;
+      const cursor = strideClass(from);
+      const window = windows[cursor]!;
+      const previous = windowRanges[cursor];
+      if (previous === undefined || previous.from > from || previous.to > to) {
+        /** ⭐ First use of this class (or a range this window cannot roll to): build the multiset directly. */
+        const values: number[] = [];
+        for (let j = from; j < to; j += stride) values.push(steps[j]!);
+        if (!values.length) continue;
+        values.sort((a, b) => a - b);
+        window.reset(values);
+        windowRanges[cursor] = { from, to };
+      } else {
+        /** ⭐ Roll forward: what left the range goes, what entered it arrives. Both ends only move forward. */
+        for (let j = previous.from; j < from; j += stride) window.remove(steps[j]!);
+        for (let j = previous.to + strideClass(from - previous.to); j < to; j += stride) window.insert(steps[j]!);
+        windowRanges[cursor] = { from, to };
       }
-      if (count === 0) continue;
-      const window = scratch.subarray(0, Math.min(count, scratch.length));
-      window.sort();
-      const floor = window[Math.floor(window.length / 2)];
+      if (window.size === 0) continue;
+      const floor = window.median();
       const ratioDb = 20 * Math.log10(deviation / Math.max(floor, 1e-9));
       if (worstDb === null || ratioDb > worstDb) {
         worstDb = ratioDb;
