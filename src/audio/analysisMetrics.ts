@@ -1,4 +1,12 @@
 /**
+ * ⭐ **The audio analysis the product actually runs** — moved here from `src/test/helpers` (third evaluation, F07).
+ *
+ * The evaluation's F07 found the production click detector living in a test helper: the MCP analysis path imported it from
+ * `src/test/`, which is where a measurement nobody could optimise safely ends up (no layer rule looks at it, and a
+ * behaviour change there is easy to mistake for a test detail). The algorithm is unchanged by the move — the four fixture
+ * readings pinned in `scratch/f07-baseline.ts` and in `src/test/clickAnalysisBehaviour.test.ts` are the same before and
+ * after — and the whole file moves, because the metrics below are what the audit measures a render with, not fixtures.
+ *
  * Signal-level metrics for the export audit.
  *
  * `helpers/loudness.ts` already owns loudness and true peak, and `helpers/timbre.ts` owns the spectral shape

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clickAnalysis } from "./helpers/audioMetrics";
+import { clickAnalysis } from "../audio/analysisMetrics";
 
 /**
  * ⭐ **What the click detector must keep saying, while its cost is cut** (third evaluation, F07).

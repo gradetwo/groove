@@ -46,7 +46,7 @@ import {
   samplePeakDb,
   sideToMidDb,
   tailRmsDb,
-} from "../../src/test/helpers/audioMetrics";
+} from "../../src/audio/analysisMetrics";
 
 export interface RenderOptions {
   format: "wav" | "mp3";
@@ -805,7 +805,7 @@ function renderAudioInPage(
         import(/* @vite-ignore */ specifier("/src/audio/WavExporter.ts")),
         import(/* @vite-ignore */ specifier("/src/audio/Mp3Exporter.ts")),
         import(/* @vite-ignore */ specifier("/src/test/helpers/loudness.ts")),
-        import(/* @vite-ignore */ specifier("/src/test/helpers/audioMetrics.ts")),
+        import(/* @vite-ignore */ specifier("/src/audio/analysisMetrics.ts")),
         import(/* @vite-ignore */ specifier("/src/data/sampleCatalogue.ts")),
       ]);
       const audioCatalogue = manifest ? catalogue.catalogueFromManifestText(manifest, mirrorRoot).assets : [];

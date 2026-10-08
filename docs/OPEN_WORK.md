@@ -10533,7 +10533,7 @@ problems: **[]** ✓
 ```
 **起点 ✓**：真机 `analyze_audio` 的民谣回包（`§450` ✓）里 ⭐ `discontinuities: **1824**` ✓
    ＋ `worstDiscontinuityDb` **112.30** ✓ ⇒ ⚠️ 我**先不下结论** ✗
-**① 定性（先量后说 ✓）**：读 `src/test/helpers/audioMetrics.ts` ✓
+**① 定性（先量后说 ✓）**：读 `src/audio/analysisMetrics.ts` ✓
    · 第 44 行 ✓：*"How many sample-to-sample jumps exceed `factor` × **the median jump**."* ✓
      ⇒ ⭐ 它是**相对素材自身**的指标 ✓，不是绝对失真 ✗
    · 第 192 行 ✓：*"Click detector: an **isolated** discontinuity, **not a waveform's own edges**"* ✓
@@ -19039,7 +19039,7 @@ describe("the grid's editing actions", () => {
   ⭐ **报告的原话（HTML 的 F07 节摘录）** ✓：`analyze_audio` 分析 300.6 s / 44.1 kHz 立体声 WAV ⇒ 首次 **161.349 s** ✓，
     缓存后 `spectral_balance` 约 **0.005 s** ✓；其中 `clickAnalysis` 自身约 **126.6 s** ✓，另有一段**局部排序回调**约 **22.8 s** ✓；
     原因是"**逐采样点构造局部窗口并排序求中值**" ✓（同步占用事件循环 ✓），
-    代码指向 `src/test/helpers/audioMetrics.ts:207` ✓（**生产算法长在测试助手里** ✗）、`mcp/render/worker.ts:1112` ✓、`mcp/render/analysis.ts:27` ✓。
+    代码指向 `src/audio/analysisMetrics.ts:207` ✓（**生产算法长在测试助手里** ✗）、`mcp/render/worker.ts:1112` ✓、`mcp/render/analysis.ts:27` ✓。
   ⭐ **本地量（`scratch/probe-f07-analysis.ts` ✓，合成五分钟素材 ✓：安静底噪 ＋ 每 0.5 s 一次底鼓 ＋ 三处真爆音 ✓）**：
     **286,698 ms ≈ 287 s** ✓（**每音频秒 956 ms** ✓，比报告的 161 s 更慢 ✓——同数量级、同形状 ✓），
     检出 `count: 1230` ✓、`worstDb: 71.0` ✓ ⇒ **症状与规模都复现了** ✓。
@@ -19081,7 +19081,7 @@ describe("the grid's editing actions", () => {
 
 ### 七百五十六、✅ **F07 第一步（精确）：每步排序改用数值类型排序，五分钟 287 s → 70 s（4.1×），读数逐位不变**（2026-10-08 ✓）
 
-  ⭐ **改动** ✓（`src/test/helpers/audioMetrics.ts` ✓）：内层每采样点的那次排序原为
+  ⭐ **改动** ✓（`src/audio/analysisMetrics.ts` ✓）：内层每采样点的那次排序原为
     `scratch: number[]` ＋ `sort((a, b) => a - b)` ✗——**每个采样点要调用 ~55·log₂55 次 JS 比较函数** ✓。
     改为**预分配的 `Float64Array`** ＋ `subarray(0, n).sort()` ✓（引擎内**数值**排序 ✓，无回调 ✓，**每�sample 零分配** ✓）。
   ⭐ **等价证据（关键）** ✓：`scratch/f07-baseline.ts` 的**四类素材**（确定性噪声 ✓）改前改后**逐位相同** ✓：
@@ -19148,3 +19148,24 @@ describe("the grid's editing actions", () => {
   ⏳ **F07 仍未完全收尾** ✓（照实说 ✓）：报告要求的结构两半还没做 ✓——
     ①生产算法**从 `src/test/helpers` 移到音频分析模块** ✓；②分析**放进 worker thread ＋ 取消/阶段进度** ✓
     （按纪律先量后动结构 ✓，而"改前/改后等价"的证据现在已经齐了 ✓，动结构时正好用它兜底 ✓）。
+
+### 七百五十九、✅ **F07 结构那一半（第 1 步）：生产分析算法从 `src/test/helpers` 搬进 `src/audio/`**（2026-10-08 ✓）
+
+  ⭐ **报告的原话** ✓（F07 的修改建议）✓："生产算法从 test/helpers 移到音频分析模块" ✓ ——
+    `mcp/render/headless.ts` ✓ 与 `mcp/render/worker.ts` ✓ **在生产路径上**长期 `import` 一个 **`src/test/helpers/`** 里的模块 ✗：
+    没有分层规则会盯它 ✓，而"改它的行为"很容易被当成"改测试细节" ✓——这正是报告说它是结构问题的理由 ✓。
+  ⭐ **做法** ✓：`git mv src/test/helpers/audioMetrics.ts src/audio/analysisMetrics.ts` ✓（**移动**而不是复制 ✓，
+    避免重复预算 ✓），并更新**全部**引用 ✓：
+    · 生产 ✓：`mcp/render/headless.ts`（动态 import ✓）、`mcp/render/worker.ts`（静态 import ✓ ＋ **浏览器端按 URL 的动态 import** ✓
+      ——`specifier("/src/audio/analysisMetrics.ts")` ✓，这条如果漏了，浏览器宿主会**加载不到**而症状很隐蔽 ✓）；
+    · 测试 ✓ 三个文件 ✓；· **scripts 里的运行时 import** ✓ 两处 ✓；
+    · 文档引用 ✓：`docs/GROOVE_QUALITY_PLAN.md` ✓、`docs/OPEN_WORK.md` ✓（`check:docs:refs` 当场就报了这三处 ✓）。
+  ⭐ ⚠️ **一个值得记的教训** ✓：`check:docs:refs` 只保**文档**里的引用 ✓，**保不住** `scripts/*.mjs` 里的**运行时**路径 ✗
+    ⇒ 是我自己 `grep` 全仓才把 `scripts/analyze_export_audio.mjs`（1 处 ✓）与 `scripts/probe_arrangement_audio.mjs`（2 处 ✓）找出来 ✓。
+    **移动文件后要 grep 运行时字符串，不能只信门禁** ✓。
+  ⭐ **等价证据（移动不该改变任何读数 ✓）** ✓：`scratch/f07-baseline.ts` 在新路径下重跑，四类素材**逐位相同** ✓
+    （count/worstDb/worstIndex 一字不差 ✓），单例 **1,049 / 1,235 / 1,189 ms** ✓（与移动前 1,062 / 1,281 / 1,215 同量级 ✓）。
+  ⭐ 门禁 ✓：`lint` ✓、`check:layers` ✓、`docs:check` ✓、`check:docs:refs` ✓（修完引用后 ✓）、
+    三个相关测试文件 **15 条全绿** ✓。
+  ⏳ **F07 剩下的结构那半** ✓：分析**放进 worker thread ＋ 支持取消/阶段进度** ✓（报告同一条建议的后半句 ✓），
+    以及把"只算响度/频谱"的选项做出来 ✓（避免为了一个数字跑完整套 ✓）。

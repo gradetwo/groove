@@ -19,7 +19,7 @@
  * It renders through `renderPatternOffline` — the app's real offline path, the same one the WAV/MP3 export
  * uses — via the Vite **dev** server, so no test hook ships in the production bundle (the pattern
  * `measure_genre_loudness.mjs` established). The DSP comes from the repo's own tested helpers
- * (`helpers/loudness.ts` for LUFS/true peak, `helpers/timbre.ts` for the band shape, `helpers/audioMetrics.ts`
+ * (`helpers/loudness.ts` for LUFS/true peak, `helpers/timbre.ts` for the band shape, `src/audio/analysisMetrics.ts`
  * for clicks/clipping/space/tail) — never an inline copy.
  *
  * Usage
@@ -110,7 +110,7 @@ async function measureGenre(page, genreId, bars, soloTracks) {
         import("/src/data/genreMix.ts"),
         import("/src/test/helpers/loudness.ts"),
         import("/src/test/helpers/timbre.ts"),
-        import("/src/test/helpers/audioMetrics.ts"),
+        import("/src/audio/analysisMetrics.ts"),
         import("/src/utils/trackUtils.ts"),
         // The duck measurement reproduces the renderer's step grid, so it uses the *shared* probability
         // helper instead of a second copy of the decision.

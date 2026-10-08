@@ -42,7 +42,7 @@ import { browserSampleDecoder } from "../audio/browserSampleGraph";
 import { FakeAudioBuffer, FakeAudioParam, FakeGainNode, FakeOfflineAudioContext } from "./helpers/fakeAudio";
 import { fingerprintChannels } from "./helpers/timbre";
 import { resetGs1OfflineCapability, setGs1OfflineCapability } from "../audio/gs1/gs1OfflineCapability";
-import { samplePeakDb } from "./helpers/audioMetrics";
+import { samplePeakDb } from "../audio/analysisMetrics";
 import type { SampleAsset } from "../data/sampleCatalogue";
 import type { SequencerPattern, SequencerTrack } from "../types/genre";
 

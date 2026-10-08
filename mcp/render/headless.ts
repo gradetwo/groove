@@ -258,7 +258,7 @@ export async function renderPatternHeadless(
     import("../../src/audio/WavExporter"),
     import("../../src/audio/Mp3Exporter"),
     import("../../src/test/helpers/loudness"),
-    import("../../src/test/helpers/audioMetrics"),
+    import("../../src/audio/analysisMetrics"),
     import("../../src/data/sampleCatalogue"),
     /**
      * The bytes→buffer half of the app's own decoder, so the cache in front of it decodes through exactly the code the

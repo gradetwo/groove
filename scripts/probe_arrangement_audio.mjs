@@ -370,11 +370,11 @@ const memory = typeof performance !== "undefined" && !window.__probeNoHeap ? per
      * Stage 3's criterion, measured with the app's own counter: does a fade at the section boundaries move the discontinuity
      * count, and does it leave a song with no jumps alone?
      *
-     * `clickAnalysis` is the function `analyze_audio` counts discontinuities with (`src/test/helpers/audioMetrics.ts:207`,
+     * `clickAnalysis` is the function `analyze_audio` counts discontinuities with (`src/audio/analysisMetrics.ts:207`,
      * imported by `mcp/render/worker.ts`), so this is the same number the composers saw rather than a second implementation.
      * The two renders differ by exactly one option.
      */
-    const metrics = await import("/src/test/helpers/audioMetrics.ts");
+    const metrics = await import("/src/audio/analysisMetrics.ts");
     const discontinuities = (channels, rate) => metrics.clickAnalysis(channels, rate).count;
     /**
      * A **small** song for this pair, because the club form is minutes of audio per render and five of them outran the probe's

@@ -19,7 +19,7 @@ import {
   sideToMidDb,
   stepOutlierCount,
   tailRmsDb,
-} from "./helpers/audioMetrics";
+} from "../audio/analysisMetrics";
 
 const RATE = 48000;
 

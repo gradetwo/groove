@@ -180,7 +180,7 @@ re-record behind it.
 **And it is nearly free to take, because the probe already has both renders.** `probe_arrangement_audio.mjs` builds
 `withoutTextureLane(song)` and renders it beside the untouched song — that is how the top-end proxy A/B was measured — so the
 whole-mix comparison needs **no extra render**, which matters on a probe that has already been cut down once for exceeding its budget.
-What it needs is a measurement the in-page helper set does not carry: `src/test/helpers/audioMetrics.ts` exports peak, correlation,
+What it needs is a measurement the in-page helper set does not carry: `src/audio/analysisMetrics.ts` exports peak, correlation,
 click and decay statistics but **no gated loudness and no band fingerprint** (those live on the Node side, in `mcp/render/` and the
 app's audio modules).
 
