@@ -1,27 +1,27 @@
 {
-  "version": "2.35.3",
+  "version": "2.35.4",
   "releaseDate": "2026-10-08",
   "changelogCount": 10,
   "latest": {
-    "version": "2.35.3",
+    "version": "2.35.4",
     "date": "2026-10-08",
     "category": "fix",
     "title": {
-      "zh": "编辑更快更省：音符应答改增量、卷帘只画可见格、六处可读性修复",
-      "en": "Editing that is faster and lighter: delta note replies, a roll that draws only what is visible, and six readability fixes"
+      "zh": "分析快 28 倍、MusicXML 多谱表、可用性修复",
+      "en": "Analysis 28× faster, multi-part MusicXML, and usability fixes"
     },
     "highlights": [
       {
-        "zh": "改一个音符的回包不再带整首曲子：+4.9 KB/批 → +1 字节，`verbose: true` 可取回全量。",
-        "en": "A note edit no longer returns the whole arrangement: +4.9 KB per batch became +1 byte, and `verbose: true` restores the old reply."
+        "zh": "五分钟音频首次分析从 287 秒降到 10.2 秒；新增\"只看响度与频谱\"的轻量模式。",
+        "en": "A first five-minute analysis went from 287s to 10.2s, and a loudness-and-spectrum-only mode was added."
       },
       {
-        "zh": "卷帘 126 小节从 74,592 个格子降到 2,368，且不再随曲长增长。",
-        "en": "The roll's 126 bars went from 74,592 cells to 2,368, and the count no longer follows the length of the piece."
+        "zh": "MusicXML 可每个声部一个谱表；工程名随包传递，导出默认以标题命名。",
+        "en": "MusicXML can export one part per lane; a project's name travels in its package and names the export."
       },
       {
-        "zh": "六处对比度修复改用各皮肤自己的墨色；pixel 皮肤不再吃微格热区、不再要半像素字号。",
-        "en": "Six contrast fixes take each skin's own ink; the pixel skin no longer eats micro-cell hit areas or asks for half-pixel sizes."
+        "zh": "空查询不再崩溃、未知轨道被拒绝、单边范围与时长预算如实报告、低音区音符在卷帘可见。",
+        "en": "An empty search no longer crashes, unknown tracks are refused, one-sided spans and the duration budget report what they did, and bass notes are visible in the roll."
       }
     ],
     "truncated": true
