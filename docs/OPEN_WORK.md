@@ -20046,3 +20046,19 @@ describe("the grid's editing actions", () => {
   ⭐ 验收 ✓：`typecheck` ✓、`lint` ✓、`docs:check` ✓、`check:css` ✓；新判据与编排视图 19 条全绿 ✓。
   ⏳ 清单剩余 ✓：`first-run-prompt-dismiss`（22px ✓）、24px 那批里还没处理的 ✓、28/30/40px 的 ✓
     ——下一轮按"**只给主路径**、其余显式豁免并写明理由"的同一规矩继续 ✓。
+
+### 八百零二、✅ **F12 布局半（第三步）：新用户最先碰的两个控件到 44px；并把"故意小"的清单写死**（2026-10-08 ✓）
+
+  ⭐ **先复量（证据）** ✓：重建后重跑同一把尺子 ✓ ⇒ **`under44` 从 51 降到 36** ✓
+    （`byHeight` 里 **20px 那一组整组消失** ✓✓ ⇒ §八百/§八百零一 两批修复**确实生效** ✓）；
+    剩余分布 ✓：`16px×1 / 22px×2 / 24px×12 / 28px×11 / 30px×10` ✓。
+  ⭐ **本轮改的两个（都在"主路径"的定义之内 ✓）** ✓：`first-run-prompt-play`（24px ✗）与
+    `first-run-prompt-dismiss`（22px ✗）——**新用户被要求点的第一个东西** ✓ ⇒ 各加 `min-h-11` ✓
+    （关闭按钮同时 `min-w-11` ✓）＋ `sm:min-h-0`（/`sm:min-w-0`）✓ 保持桌面紧凑 ✓。
+  ⭐ **判据（3 例 → 4 例 ✓）** ✓：新例断言这两个 testid 的块内**必须**出现"44px ＋ `sm:` 还原" ✓；
+    并在注释里**把豁免清单写死** ✓：**步进格子**（`step N` ✓）、**小节标尺**（`ruler-bar-*` ✓）、**密集读数**
+    ——"它们是用来**读**的标尺，不是用来**点**的目标" ✓ ⇒ 这条判据点名控件 ✓，而不是"一切都得 44px" ✗。
+  ⭐ 验收 ✓：`typecheck` ✓、`lint` ✓、`docs:check` ✓、`check:css` ✓；新判据 ＋ FirstRunPrompt 既有测试 **14 条全绿** ✓。
+  ⏳ 剩余 ✓（`16px` 徽标 ✓、`22px arrangement-euclidean-pulses` ✓、24px 那批里的 `arrangement-tempo`/`arrangement-bars`/
+    `arrangement-transpose-semitones` ✓、28/30px 那批 ✓）——下一轮继续按"主路径补、其余豁免并写明理由"的规矩清 ✓，
+    并用**同一把尺子的读数**作为每一步的验收证据 ✓（51 → 36 → … ✓）。

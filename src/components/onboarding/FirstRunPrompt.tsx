@@ -45,7 +45,7 @@ export const FirstRunPrompt: React.FC<FirstRunPromptProps> = ({ visible, onPlay,
         type="button"
         onClick={onPlay}
         data-testid="first-run-prompt-play"
-        className="flex items-center gap-1 px-3 py-1 rounded-lg bg-accent text-black font-bold text-xs hover:bg-accent/90 transition-colors shrink-0"
+        className="flex min-h-11 sm:min-h-0 items-center gap-1 px-3 py-1 rounded-lg bg-accent text-black font-bold text-xs hover:bg-accent/90 transition-colors shrink-0"
       >
         <Play className="w-3 h-3" />
         <span>{t("first_run_prompt_play")}</span>
@@ -56,7 +56,7 @@ export const FirstRunPrompt: React.FC<FirstRunPromptProps> = ({ visible, onPlay,
         data-testid="first-run-prompt-dismiss"
         aria-label={t("first_run_prompt_dismiss")}
         title={t("first_run_prompt_dismiss")}
-        className="p-1 rounded-lg text-text-dim hover:text-text hover:bg-white/10 transition-colors shrink-0"
+        className="flex min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 items-center justify-center rounded-lg text-text-dim hover:text-text hover:bg-white/10 transition-colors shrink-0"
       >
         <X className="w-3.5 h-3.5" />
       </button>

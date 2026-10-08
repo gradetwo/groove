@@ -43,4 +43,23 @@ describe("mobile touch targets", () => {
     }
   });
 
+
+  it("⭐ the first-run prompt's two controls are phone-sized, because they are the first thing anyone touches", () => {
+    /**
+     * Measured at 390×844: `first-run-prompt-play` 24 px and `first-run-prompt-dismiss` 22 px. These are the very first
+     * controls a new person is asked to hit, so they are on the primary path by definition; `sm:` keeps the prompt the same
+     * compact strip on a desktop.
+     *
+     * ⚠️ **And the deliberate exemptions, stated so the list stops growing**: the step grid (`step N`), the bar **ruler**
+     * (`ruler-bar-*`) and dense readouts are small on purpose — they are scales to read, not targets to hit — which is why
+     * the probe excludes the grid and why this criterion names controls rather than "everything".
+     */
+    const prompt = source("components/onboarding/FirstRunPrompt.tsx");
+    for (const id of ["first-run-prompt-play", "first-run-prompt-dismiss"]) {
+      const at = prompt.indexOf(`data-testid="${id}"`);
+      expect(at, `${id} is in the prompt`).toBeGreaterThan(-1);
+      expect(prompt.slice(at, at + 320), `${id} has a phone-sized target with a desktop escape`).toMatch(/min-h-11[^"]*sm:min-h-0/);
+    }
+  });
+
 });
