@@ -9,7 +9,7 @@
 import { z } from "zod";
 import { failure } from "./toolKit";
 import type { ToolDefinition } from "./toolKit";
-import { addMcpNote, addMcpTrackNotes, moveMcpNote, quantizeMcpNoteLengths, removeMcpNote, setMcpNoteLength, transposeMcpNotes, varyMcpNotes } from "./arrangement";
+import { addMcpNote, addMcpTrackNotes, moveMcpNote, quantizeMcpNoteLengths, removeMcpNote, setMcpNoteLength, setMcpNoteVelocity, transposeMcpNotes, varyMcpNotes } from "./arrangement";
 import { getMcpArrangement } from "./arrangement";
 import { noteName } from "../src/data/pitchTruth";
 
@@ -174,6 +174,27 @@ export const ARRANGEMENT_NOTE_TOOLS: ToolDefinition[] = [
     },
   },
 
+  {
+    name: "set_arrangement_note_velocity",
+    title: "Change one note's velocity",
+    description:
+      "Set how hard one note is played, clamped to 1..127 -- the range every consumer of these notes agrees on. A note carries its own velocity, so this is the per-note answer where `vary_arrangement_notes` is the performance-wide one and a track ramp is the shape-wide one.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      trackId: z.string(),
+      pitch: z.number().int().min(0).max(127),
+      startBeats: z.number().min(0),
+      velocity: z.number().int().describe("1..127; the value is clamped rather than refused"),
+    },
+    handler: (args) => {
+      try {
+        return setMcpNoteVelocity(String(args.arrangementId), String(args.trackId), { pitch: Number(args.pitch), startBeats: Number(args.startBeats) }, Number(args.velocity));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
   {
     name: "set_arrangement_note_length",
     title: "Hold a note longer",

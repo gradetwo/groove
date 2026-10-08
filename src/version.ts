@@ -3,4 +3,4 @@
  * Source of truth: package.json#version
  */
 export const APP_VERSION = "2.35.2";
-export const BUILD_DATE = "2026-10-07";
+export const BUILD_DATE = "2026-10-08";

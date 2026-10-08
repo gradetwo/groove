@@ -47,6 +47,7 @@ import {
   setArrangementTimeSignature,
   setTrackGain,
   setTrackNoteLength,
+  setTrackNoteVelocity,
   setTrackPan,
   setTrackParent,
   setTrackRegion,
@@ -799,6 +800,18 @@ export function moveMcpNote(
   to: { pitch: number; startBeats: number }
 ): ArrangementEditResult {
   return edit(arrangementId, (arrangement) => refuseUnknownTrack(arrangement, trackId, () => moveTrackNote(arrangement, trackId, from, to)));
+}
+
+/**
+ * ⭐ **One note's velocity, the edit the roll gained and an agent should have too.**
+ *
+ * The coverage criterion is what asked for this: `setTrackNoteVelocity` changes the model, so it must either be reachable
+ * from a tool or be declared unreachable with a reason — and "the roll can do it" is not a reason on a surface whose
+ * whole point is that an agent can do what the app can. The clamp lives in `setNoteVelocity` (1..127), so this wrapper
+ * only refuses an unknown track, exactly as the length one does.
+ */
+export function setMcpNoteVelocity(arrangementId: string, trackId: string, at: { pitch: number; startBeats: number }, velocity: number): ArrangementEditResult {
+  return edit(arrangementId, (arrangement) => refuseUnknownTrack(arrangement, trackId, () => setTrackNoteVelocity(arrangement, trackId, at, velocity)));
 }
 
 export function setMcpNoteLength(arrangementId: string, trackId: string, at: { pitch: number; startBeats: number }, lengthBeats: number): ArrangementEditResult {
