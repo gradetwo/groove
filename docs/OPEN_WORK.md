@@ -19492,3 +19492,21 @@ describe("the grid's editing actions", () => {
   ⭐ 相关 4 个测试文件 **34 条全绿** ✓，lint / docs / refs 门禁绿 ✓。
   ⏳ 第 6 节剩余（仍开放 ✓）：render jobId ＋ 真正取消（L01 结构那半 ✓）、段落视图/片段重复 ✓、
     自动保存与修订恢复 ✓、Web/MCP 统一工程 schema 的其余字段（sections/author ✓，F09 已让 name 随包走 ✓）。
+
+### 七百七十三、🔧 **CI 又抓到两处"靠缺陷通过"的夹具：第二份 copy 测试与 MCP 门禁的歌词用例**（2026-10-08 ✓）
+
+  ⭐ **背景** ✓：前面连推了若干提交后，CI 报 `feat(mcp): the risky band…` 与 `feat(mcp): a note that outlasts…` 两次 **failure** ✗
+    ⇒ 逐个查日志 ✓，两处**都是旧夹具在量一个"从来不存在的东西"** ✓：
+    · **① `src/test/mcpAnalyzeAudioCopy.test.ts`** ✓：它**也**钉着 `analyze_audio` 的描述 ✓——
+      而我做 **L02** 时把那句 `get_song` 换掉了 ✓ ⇒ 这份测试的锚点失效 ✗。
+      ⚠️ **教训** ✓：同一条描述有**两份** copy 测试（`mcpCopy_analyze_audio` ＋ `mcpAnalyzeAudioCopy` ✓），
+      我上一轮只更新了其中一份 ✗ ⇒ 已同步 ✓，并在文件头写明"改这条描述要动**两处**" ✓。
+    · **② `scripts/check_mcp.mjs`** ✓（`check:mcp` 门禁 ✓）：它的歌词用例从 `lyricArrangement.trackIds` 取轨道 id ✗，
+      而 `create_arrangement` 的**回包没有这个字段** ✓ ⇒ 一直退回到 `"track-1"` ✓——**一条从来不存在的轨道** ✓。
+      它此前能过 ✓，正因为往未知轨道写歌词**没有任何东西会拒绝** ✗ ——那正是第三份报告的 **F04** ✓
+      ⇒ F04 一修，这条门禁就报 `undefined note(s), undefined warning(s)` ✗（**门禁一直在量空气** ✓）。
+      改为从回包真正携带的 `tracks[0].id` 取 ✓ 后在注释里记下来龙去脉 ✓。
+  ⭐ 复跑 ✓：`check:mcp` **68 checks passed, 0 failed** ✓（81 tools / 7 resources / 4 prompts 全可达 ✓）；
+    该项相关 8 个测试文件 **29 条全绿** ✓，lint / docs / refs 门禁绿 ✓。
+  ⭐ **这是同一模式的第三次** ✓（第一次是 `mcpSchemaPassthrough` ✓，第二次是这条门禁 ✓）：
+    **"静默接受非法输入"的缺陷一旦被修，所有靠它通过的夹具都会现形** ✓——它们不是回归 ✓，而是**迟到的证据** ✓。
