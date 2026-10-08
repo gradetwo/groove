@@ -278,7 +278,18 @@ try {
        * for it.
        */
       const sessionPattern = state.pattern;
-      if (sessionPattern) probe.engine.setPattern(sessionPattern, true);
+      /**
+       * ⭐ **The app hands the engine its own material, and the probe must not override it.**
+       *
+       * Measured 2026-10-08: with song mode on, the transport still wrapped at **127 of a 128-step pattern** — because this
+       * line pushed `readState().pattern`, the **raw loop**, straight into the engine, replacing the flattened arrangement
+       * `useAudioEngineLifecycle` had already set (its own comment: `patternForExport` gives "the flattened arrangement in
+       * song mode, the loop otherwise"). The engine was not at fault; the probe was feeding it the wrong music — which also
+       * explains why the spectral ratio never left the 1×–2.6× band: it was comparing two bars of the *same* loop.
+       *
+       * So the call is **deleted** rather than corrected: the application's own path is the thing under test.
+       */
+      void sessionPattern;
       const contextState = analyser.context?.state ?? "unknown";
       if (contextState !== "running") return { error: `the audio context is ${contextState}, not running` };
       const bins = new Float32Array(analyser.frequencyBinCount);
