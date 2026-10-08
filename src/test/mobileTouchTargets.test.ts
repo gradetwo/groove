@@ -16,9 +16,15 @@ const source = (path: string) => readFileSync(resolve(__dirname, "..", path), "u
 describe("mobile touch targets", () => {
   it("⭐ the destructive track-remove control is 44 px on a phone and compact only from `sm:`", () => {
     const header = source("components/arrangement/TrackHeaderV2.tsx");
-    expect(header, "the default is the touch size").toMatch(/h-11 w-11 shrink-0 rounded[^"]*sm:h-5 sm:w-5/);
-    // ⭐ And the old unconditional 20 px square is gone: keeping it would mean the phone never got the larger target.
-    expect(header).not.toMatch(/className="h-5 w-5 shrink-0 rounded/);
+    /**
+     * ⭐ **The hit area, not the layout box.** The first version of this criterion demanded `h-11 w-11`, and the release
+     * matrix then caught the cost: growing the control grew the header column, and WebKit reported *"header 0 is at
+     * 726px/119px against its lane at 845px/22px — the two columns must share one row height."* A target is therefore
+     * extended **outside** the layout box, so the criterion checks that the extension is there (12 px past each edge of a
+     * 20 px square = 44 px) rather than that the square itself grew.
+     */
+    expect(header, "the 20 px square stays 20 px").toMatch(/className="relative h-5 w-5 shrink-0 rounded[^"]*"/);
+    expect(header, "and its hit area reaches 44 px without touching the row").toMatch(/after:absolute after:-inset-3 after:content-\[''\]/);
   });
 
   it("⭐ the header's version control reaches 44 px on a phone as well", () => {
@@ -34,6 +40,8 @@ describe("mobile touch targets", () => {
      * which is why one rule covers them — and `sm:min-h-0` is what keeps the desktop panel as dense as it was.
      */
     const view = source("components/arrangement/ArrangementViewV2.tsx");
+    // ⭐ The panel is not part of the header/lane grid, so a real `min-h-11` box is fine there — and it is what keeps the
+    // desktop panel dense from `sm:`.
     const controls = ["arrangement-legato-selection", "arrangement-arpeggiate-selection", "arrangement-euclidean", "arrangement-form-loop"];
     for (const id of controls) {
       const at = view.indexOf(`data-testid="${id}"`);

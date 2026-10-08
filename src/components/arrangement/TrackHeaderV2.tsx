@@ -120,7 +120,7 @@ export function TrackHeaderV2({
           aria-label={`${track.name} kind`}
           value={track.kind}
           onChange={(event) => onChangeKind(track.id, event.target.value as TrackKindV2)}
-          className="min-h-11 h-11 sm:min-h-0 sm:h-7 w-8 shrink-0 rounded border border-[rgb(var(--d-line))] bg-transparent text-center text-xs text-text"
+          className="relative h-7 w-8 shrink-0 rounded border border-[rgb(var(--d-line))] bg-transparent text-center text-xs text-text after:absolute after:-inset-2 after:content-['']"
         >
           {TRACK_KIND_ORDER.map((kind) => (
             <option key={kind} value={kind} label={t(KIND_LABEL_KEY[kind])}>
@@ -324,13 +324,17 @@ export function TrackHeaderV2({
           data-testid={`track-remove-${track.id}`}
           onClick={() => onRemoveTrack(track.id)}
           /**
-           * ⭐ **A 44 px target on a phone, the compact 20 px square on a wider screen** (third evaluation, F12).
+           * ⭐ **A 44 px hit area that costs the layout nothing** (third evaluation F12, corrected by the e2e gate).
            *
-           * Measured at 390×844: this was one of 51 non-grid controls under 44 px, and it is the **destructive** one —
-           * "delete this track" is the last control that should need aiming. Mobile-first, so the default is the touch
-           * size and `sm:` restores the desktop density.
+           * This is the **destructive** control — "delete this track" — so it must be easy to hit on a phone. My first
+           * version made it `h-11 w-11` on mobile, and the release matrix caught what that broke: *"header 0 is at
+           * 726px/119px against its lane at 845px/22px on Desktop WebKit — the two columns must share one row height."*
+           * The header column and the lane column are one grid, so growing a control grows one column only.
+           *
+           * The target is therefore extended **outside the layout box** — a pseudo-element 12 px beyond each edge, which
+           * takes the 20 px square to 44 px of tappable space without moving a single pixel of the row.
            */
-          className="h-11 w-11 shrink-0 rounded text-base text-text opacity-70 sm:h-5 sm:w-5 sm:text-xs"
+          className="relative h-5 w-5 shrink-0 rounded text-xs text-text opacity-70 after:absolute after:-inset-3 after:content-['']"
         >
           ×
         </button>

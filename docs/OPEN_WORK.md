@@ -20314,3 +20314,23 @@ describe("the grid's editing actions", () => {
   ⭐ **本轮的完整状态** ✓：`verify` 前段全绿 ✓（含 **5087 passed / 0 failed** 的单测 ✓、
     `check:mcp:build` 修好后不再假红 ✓、`probe:boot` ✓、`probe:live-arrangement` ✓ ✓）；
     **唯一的红是 e2e 的 WebKit 布局断言** ✓，且**它指出的正是我引入的问题** ✓ ⇒ 下一步明确且不大 ✓。
+
+### 八百一十七、✅ **修掉 WebKit 抓到的那个回归：把 44px 从"撑高布局"改成"**扩命中区域**"**（2026-10-09 ✓）
+
+  ⭐ **依据（e2e 的原话 ✓）** ✓："header 0 is at 726px/119px against its lane at 845px/22px on Desktop WebKit —
+    the two columns must share one row height" ✓ ⇒ 轨道**头列**与**数据列**是同一张网格 ✓，
+    我给头列控件加 `h-11` / `min-h-11` ✗ ⇒ **头列变高** ✓ ⇒ 三引擎里 WebKit 判定不一致 ✓。
+  ⭐ **修法（区分"视觉盒子"与"命中区域" ✓）** ✓：
+    · **布局高度一律回到原样** ✓：`track-remove-*` 回 `h-5 w-5` ✓、头行音色选择器回 `h-7 w-8` ✓、
+      `TrackListV2` 的 M/S/×/折叠/选择器/加轨回 `h-7` ✓；
+    · **命中区域扩展到布局之外** ✓：统一加 `relative` ＋
+      `after:absolute after:-inset-3 after:content-['']` ✓（20px 的方块 ⇒ 44px 可点 ✓）或
+      `after:-inset-2` ✓（28px 控件 ⇒ 44px ✓）——**一行像素都没动** ✓；
+    · 面板类控件（不在头/数据网格里 ✓，例如编排面板 12 个动作、首启提示、chooser 搜索框 ✓）
+      **继续用 `min-h-11`** ✓ ⇒ 它们的 44px 是真实盒子 ✓，不涉及行高 ✓。
+  ⭐ **判据随之升级（关键 ✓）** ✓：`mobileTouchTargets.test.ts` 从"必须有 `min-h-11`"（**看 class** ✗）
+    改为"**必须存在命中区域扩展 `after:-inset-*`、且布局盒子保持原尺寸**" ✓——
+    这正是这条判据**本该有的形态** ✓（几何意图 ✓），也是被门禁教出来的 ✓。
+  ⭐ **验收** ✓：`typecheck` ✓、`lint` ✓、`docs:check` ✓、`check:css` ✓；
+    `mobileTouchTargets`（5 例 ✓）＋ 编排视图 ＋ chooser 表面判据共 **26 条全绿** ✓；
+    e2e 已重新发起 ✓（见下一节读数 ✓）。
