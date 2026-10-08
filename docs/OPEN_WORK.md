@@ -18977,3 +18977,23 @@ describe("the grid's editing actions", () => {
     干净的修法是给音频渲染/导出工具加一个 `filename` 参数 ✓（MIDI 与 ALS 两条导出路**已经有**这个参数 ✓，
     形状与上限都照抄 ✓ max 64 ✓），由调用者命名 ✓；同时把 F05 的两半合并成一条判据 ✓。
   ⏳ 下一步 ✓：**F06**（`.groove` 导入缺深层校验 ✓：非法音符与速度被接受 ✓，材料里 `{tracks:1, bars:129}` 那条 ✓）。
+
+### 七百五十一、✅ **F06：`.groove` 的门现在查"值"，不只查"形状"**（2026-10-08 ✓）
+
+  ⭐ **取证** ✓：材料 `assertions.json` 里 failed 的那条是 "Import must reject invalid notes and tempo" ✓，
+    `detail` 却是 `{tracks: 1, bars: 129}` ✗ ⇒ **非法音符与非法速度被接受了** ✓。
+  ⭐ **根因（读 `validateArrangementPackage` 即坐实）** ✓：这个门只查**形状** ✓——format ✓、appVersion ✓、arrangement ✓、
+    不得携带 v1 键 ✓、`tracks` 是数组 ✓——**一个值都不查** ✗：音高越界 ✓、力度 0 ✓、负起点 ✓、零长度 ✓、
+    `bars` 与 `bpm` 是否说得通 ✓（129.5 小节、负 BPM 都能进 ✓）。
+    ⇒ 这正是评测说的"**深层校验**缺失" ✓：文件**确实是** v2 包 ✓，它只是说了模型**装不下**的话 ✓。
+  ⭐ **修法** ✓（沿用同一扇门、同一种句式：**点名那个字段** ✓）：
+    `notesByTrack` 必须是"轨道 id → 音符数组" ✓，每个音符查
+    `pitch` 0–127 整数 ✓、`velocity` 1–127 ✓、`startBeats` ≥ 0 有限 ✓、`lengthBeats` > 0 有限 ✓；
+    `bars` 1–4096 整数 ✓、`bpm` 20–400 有限 ✓（越界一律拒绝并说明合法范围 ✓）。
+  ⭐ 判据 ✓（`src/test/arrangementPackageValues.test.ts` ✓ 2 例 ✓）：**音高 128 / 力度 0 / 起点 −1 / 长度 0 /
+    bars 129.5 / bpm −20** 六种都要在门口被拒 ✓，且信息里点出字段与那个值 ✓；**同时**断言一份合法编曲仍然通过 ✓
+    （防止"为了拒绝而拒绝" ✓）。删掉任一检查即红 ✓。
+  ⭐ 既有相关测试 ✓（`arrangementPackage` ✓、`arrangementEntries` ✓、`projectDb` ✓、`arrangementFiles*` ✓、
+    MCP 包与导入 / MIDI / MusicXML ✓）**共 65 条全绿** ✓，lint / docs 门禁绿 ✓。
+  ⏳ 下一步 ✓：回到 **F05 的轨道作用域那一半**（给音频渲染/导出工具加 `filename` ✓，照 MIDI/ALS 的形状 ✓），
+    然后 **F08**（低音轨音符在卷帘不可见不可编辑 ✓）。

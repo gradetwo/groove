@@ -53,6 +53,48 @@ export function validateArrangementPackage(data: unknown): ArrangementPackage {
   if (!Array.isArray(arrangement.tracks)) {
     throw new Error("Invalid arrangement package: arrangement is missing its tracks");
   }
+  /**
+   * ⭐ **The values, not only the shape** (third evaluation, F06).
+   *
+   * Everything above checks that the file *is* a v2 package; none of it checks that what the file says is playable. The
+   * evaluation imported a file carrying invalid notes and an invalid tempo and the app accepted it — one track, 129 bars
+   * — and the mistake only surfaced later, as silence or as a bar count nothing could explain. A note outside MIDI, a
+   * velocity of zero, a negative start or a length that is not positive are all statements the model cannot hold, so
+   * they are refused **at the door** with the field named, which is the same rule the shape half already follows.
+   */
+  const notes = arrangement.notesByTrack;
+  if (notes !== undefined) {
+    if (!notes || typeof notes !== "object" || Array.isArray(notes)) {
+      throw new Error("Invalid arrangement package: notesByTrack is not a map of track id to notes");
+    }
+    for (const [trackId, list] of Object.entries(notes as Record<string, unknown>)) {
+      if (!Array.isArray(list)) throw new Error(`Invalid arrangement package: the notes of "${trackId}" are not an array`);
+      for (const entry of list as Array<Record<string, unknown>>) {
+        if (!entry || typeof entry !== "object") throw new Error(`Invalid arrangement package: "${trackId}" carries a note that is not an object`);
+        const { pitch, velocity, startBeats, lengthBeats } = entry;
+        if (typeof pitch !== "number" || !Number.isInteger(pitch) || pitch < 0 || pitch > 127) {
+          throw new Error(`Invalid arrangement package: "${trackId}" has a note with pitch ${String(pitch)} — a MIDI pitch is a whole number from 0 to 127`);
+        }
+        if (typeof velocity !== "number" || !Number.isFinite(velocity) || velocity < 1 || velocity > 127) {
+          throw new Error(`Invalid arrangement package: "${trackId}" has a note with velocity ${String(velocity)} — a velocity is from 1 to 127`);
+        }
+        if (typeof startBeats !== "number" || !Number.isFinite(startBeats) || startBeats < 0) {
+          throw new Error(`Invalid arrangement package: "${trackId}" has a note starting at ${String(startBeats)} beats — a start is zero or later`);
+        }
+        if (typeof lengthBeats !== "number" || !Number.isFinite(lengthBeats) || lengthBeats <= 0) {
+          throw new Error(`Invalid arrangement package: "${trackId}" has a note ${String(lengthBeats)} beats long — a length is greater than zero`);
+        }
+      }
+    }
+  }
+  const bars = arrangement.bars;
+  if (bars !== undefined && (typeof bars !== "number" || !Number.isInteger(bars) || bars < 1 || bars > 4096)) {
+    throw new Error(`Invalid arrangement package: bars is ${String(bars)} — a whole number from 1 to 4096`);
+  }
+  const bpm = arrangement.bpm;
+  if (bpm !== undefined && (typeof bpm !== "number" || !Number.isFinite(bpm) || bpm < 20 || bpm > 400)) {
+    throw new Error(`Invalid arrangement package: bpm is ${String(bpm)} — a tempo from 20 to 400`);
+  }
   return pkg as unknown as ArrangementPackage;
 }
 
