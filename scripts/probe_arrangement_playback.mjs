@@ -206,6 +206,24 @@ try {
     async ({ genreId, sampleMs, controlLoop }) => {
       const probe = window.__grooveProbeSeen || window.__grooveProbe;
       if (!probe) return { error: "no probe surface" };
+      /**
+       * ⚠️ **This probe drives the studio store, and the arrangement route does not install one.**
+       *
+       * `readState()` here is the studio's sequencer state — the sections model, `songMode`, and the pattern the session
+       * holds. The route this probe now reaches (`?tab=studio` → `NewProjectView`) installs the **engine only**; its own
+       * comment says so ("There is no sequencer store on this route"). So the probe cannot run here, and it says that in one
+       * sentence instead of dying on `readState is not a function` with a stack trace: measuring this route's live playback
+       * needs the recipe the sibling probe now uses (gate → surface → **resume the context** → the arrangement's own play
+       * control) with the two windows taken from **bars**, which the engine's step counter already names. That rework is
+       * written down in `docs/OPEN_WORK.md` §779 rather than half-done here.
+       */
+      if (typeof probe.readState !== "function") {
+        return {
+          error:
+            "this probe drives the studio store (readState/sections/song mode), which the arrangement route does not install — " +
+            "it needs the same rework the live-arrangement probe had (docs/OPEN_WORK.md 779)",
+        };
+      }
       const state = probe.readState();
       const bpm = state.bpm || 120;
       const secondsPerBar = (60 / bpm) * 4;

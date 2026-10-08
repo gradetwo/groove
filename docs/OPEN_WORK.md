@@ -19637,3 +19637,28 @@ describe("the grid's editing actions", () => {
   ⭐ 另记 ✓：兄弟探针 `probe_arrangement_playback.mjs`（**不是本批改动** ✓）在本机**同样失败** ✓，
     且失败在它自己的 `readState()` 上 ✓ ⇒ **两条编排探针都指向一个这条路不再安装的接口** ✓；
     本轮的配方（gate ⇒ 面 ⇒ resume ⇒ 播放控制 ✓）对它同样适用 ✓，是它的独立重写的现成起点 ✓。
+
+### 七百七十九、📌 **兄弟探针（`probe_arrangement_playback`）现在**说清**它为什么跑不了**；完整重写留到下一轮（并把它的字段表读出来）（2026-10-08 ✓）
+
+  ⭐ **本轮做对的两件小事** ✓：
+    · **让它的失败可读** ✓：它原本死在 `probe.readState is not a function` 的**堆栈**上 ✗
+      （`scripts/probe_arrangement_playback.mjs:209` ✓ ⇒ 它在读 **studio store** ✓，
+      而这条路只装引擎 ✓——`NewProjectView` 自己的注释："There is no sequencer store on this route" ✓）
+      ⇒ 现在返回一句能读懂的话 ✓：
+      "this probe drives the studio store (readState/sections/song mode), which the arrangement route does not install —
+      it needs the same rework the live-arrangement probe had (docs/OPEN_WORK.md 779)" ✓，
+      并打印 `❌ the probe could not measure both sections` ✓（退出码仍为 1 ✓——见下 ✓）。
+    · ⚠️ **一个我自己的测量错误，当场纠正** ✓：前几轮我用 `… | tail -3; echo "exit=$?"` 读退出码 ✗——
+      那读到的是 **`tail` 的**退出码 ✗，不是探针的 ✗。正确读法 ✓（`node … > file 2>&1; echo exit=$?` ✓）复核：
+      **`probe_live_arrangement` 真实退出码 = 0** ✓（`✅ … step reached 322 over 21 bar(s) seen …` ✓）；
+      **`probe_arrangement_playback` 真实退出码 = 1** ✓（它**仍红** ✓，这是如实状态 ✓）。
+  ⭐ **下一轮的完整重写（已把设计定下来 ✓，不再靠猜 ✓）** ✓：这条探针的 claim 是
+    "**播放头跨过段落边界时，声音确实变了**" ✓（B7 的听感证据 ✓）⇒ 在编排路线上的**同义**测法是
+    "**早段与远段的声音不同**" ✓（不需要 sections ✗）：
+    · 用它已经验证过的统计 ✓（三个窗口 ✓：`a` 与 `a2` 是**同一段**的两小节 ⇒ 噪声底 ✓，
+      `b` 是**远处**的小节 ⇒ 信号 ✓；`spectrumDistance` ✓、`timeCourseDistance` ✓、比值断言 `ratio < 3` 失败 ✓）；
+    · **窗口按小节取** ✓（引擎的 `getCurrentStep()` ÷ 16 ✓，与我在 live 探针里改法一致 ✓）；
+    · **需要先读清的字段表** ✓（它 `return` 的形状 ✓）：`frames: {a, b}` ✓、`distanceAB` ✓、`alignedFloor` ✓、
+      `timeCourseAB` / `timeCourseFloor` ✓、`meanLevelA` / `meanLevelB` ✓（还有几个在 400 行以后被报告与比值使用 ✓）
+      ⇒ 下一轮先把 400–440 行的读取点列全 ✓，再动手 ✓（这正是本轮**没有**硬改的原因 ✓：
+      改错 `return` 形状会让"探针在量什么"变成猜 ✗）。
