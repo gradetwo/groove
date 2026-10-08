@@ -247,6 +247,18 @@ try {
        * the **same** music — which is why its ratio wandered through 3.9× / 1.0× / 0.4× / 1.5× across runs. A bounded poll
        * is what makes "the transport plays the arrangement" the thing actually being measured.
        */
+      /**
+       * ⭐ **And wait for the sections too** — the same async-commit lesson, one commit earlier.
+       *
+       * `SET_SECTIONS` is dispatched like everything else, so the state read on the next line is the state *before* it:
+       * measured here as `sectionsBefore: 2 / sectionsAfter: 2` while the probe believed it had just installed its own
+       * pair. The engine was therefore playing the **default** two sections, whose difference is smaller than the pair this
+       * probe means to compare — which is what pulled its ratio down to 1.5× with both windows full.
+       */
+      const sectionsDeadline = Date.now() + 5000;
+      while ((probe.readState().sections ?? []).length < 2 && Date.now() < sectionsDeadline) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
       const songModeDeadline = Date.now() + 5000;
       while (!probe.readState().songMode && Date.now() < songModeDeadline) {
         await new Promise((resolve) => setTimeout(resolve, 100));
