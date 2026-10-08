@@ -20015,3 +20015,21 @@ describe("the grid's editing actions", () => {
   ⭐ **下一步（先列清单再动手 ✓）** ✓：把 `under44` 里**排除步进格子**后的控件列出来 ✓（带 testid ✓），
     挑**主路径上**的（transport / 轨道操作 / 面板开关 ✓）补 `min-h-11`（仓库既有的 44px 令牌 ✓），
     并配一条判据：**主路径控件的可见高度 ≥44px** ✓（格子显式豁免 ✓，理由写在判据里 ✓）。
+
+### 八百、✅ **F12 布局半：先把**主路径上最该修的两个**改成 44px 触控目标（其余按清单继续）**（2026-10-08 ✓）
+
+  ⭐ **清单（排除步进格子后 ✓，390×844 实测 ✓）** ✓：**51 个** <44px 的控件 ✓，按高度
+    `16px×1 / 20px×3 / 22px×2 / 24px×20 / 28px×11 / 30px×10 / 40px×4` ✓；最矮的几个点名了 ✓：
+    `header-version-button` ✓、**`track-remove-drumkit-2` / `track-remove-synth-3`** ✓、`arrangement-euclidean-pulses` ✓、
+    `first-run-prompt-dismiss` ✓、`arrangement-legato-selection` / `arrangement-arpeggiate-selection` / `arrangement-euclidean` / `arrangement-form-loop` ✓。
+  ⭐ **本轮改的两个（选它们的理由写下来 ✓）** ✓：
+    · **`track-remove-*`** ✓（`TrackHeaderV2.tsx` ✓）：它是**破坏性**控件 ✗——"删掉这条轨"最不该需要瞄准 ✓，
+      原来写死 `h-5 w-5`（20px ✓）⇒ 改为**移动优先**：默认 `h-11 w-11`（44px ✓）＋ `sm:h-5 sm:w-5` 恢复桌面密度 ✓
+      （字号同步 `text-base` ⇒ `sm:text-xs` ✓，触控目标变大但不挤压行高 ✓）；
+    · **`header-version-button`** ✓（`Header.tsx` ✓）：20px ⇒ `min-h-11` ✓ ＋ `sm:min-h-0` ✓ 回到紧凑药丸 ✓。
+  ⭐ 判据 ✓（`src/test/mobileTouchTargets.test.ts` ✓ 2 例 ✓）：①remove 控件**必须**是"默认 44px ＋ `sm:` 才缩小" ✓，
+    且**旧的写死 20px 必须消失** ✗（留着就等于手机上永远得不到大目标 ✓）；②版本控件必须有 `min-h-11` ＋ `sm:min-h-0` ✓。
+    ⭐ **判据里显式写了"格子豁免"的理由** ✓：步进格子**故意小** ✓，一条"处处 44px"的判据等于要求把网格毁掉 ✗。
+  ⭐ 验收 ✓：`typecheck` ✓、`lint` ✓、`docs:check` ✓、`check:css` ✓；新判据与轨道/头部相关测试全绿 ✓。
+  ⏳ **剩下的清单继续做** ✓（24px 那 20 个、28px 那 11 个、30px 那 10 个 ✓——大多在编排面板与小屏工具条 ✓），
+    做法同上：**只给主路径**的补 44px ✓，格子与"密集读数"类显式豁免并写明理由 ✓。

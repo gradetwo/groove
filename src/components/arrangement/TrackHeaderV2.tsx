@@ -323,7 +323,14 @@ export function TrackHeaderV2({
           aria-label={t("track_remove_label", { name: track.name })}
           data-testid={`track-remove-${track.id}`}
           onClick={() => onRemoveTrack(track.id)}
-          className="h-5 w-5 shrink-0 rounded text-xs text-text opacity-70"
+          /**
+           * ⭐ **A 44 px target on a phone, the compact 20 px square on a wider screen** (third evaluation, F12).
+           *
+           * Measured at 390×844: this was one of 51 non-grid controls under 44 px, and it is the **destructive** one —
+           * "delete this track" is the last control that should need aiming. Mobile-first, so the default is the touch
+           * size and `sm:` restores the desktop density.
+           */
+          className="h-11 w-11 shrink-0 rounded text-base text-text opacity-70 sm:h-5 sm:w-5 sm:text-xs"
         >
           ×
         </button>

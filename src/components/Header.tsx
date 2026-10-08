@@ -589,7 +589,8 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={onOpenUpdates}
             data-testid="header-version-button"
-            className="flex items-center gap-1.5 text-xs font-mono font-medium text-text-sub hover:text-accent px-2 py-1.5 border border-line hover:border-accent/40 rounded-lg bg-panel2 transition-colors"
+            /** ⭐ A 44 px target on a phone (F12: measured 20 px at 390×844); the compact pill returns at `sm:`. */
+            className="flex min-h-11 items-center gap-1.5 text-xs font-mono font-medium text-text-sub hover:text-accent px-2 py-1.5 border border-line hover:border-accent/40 rounded-lg bg-panel2 transition-colors sm:min-h-0"
             title={t("header_check_updates_title")}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
