@@ -19532,3 +19532,28 @@ describe("the grid's editing actions", () => {
     若我起的名字不同 ✗，就会悄悄留下**第二套保存状态** ✓——那才是真正要避免的结果 ✓。
   ⏳ 第 6 节剩余（仍开放 ✓）：render jobId ＋ 真正取消（L01 结构那半 ✓）、段落视图/片段重复 ✓、工程修订恢复（"恢复"那半 ✓——
     自动保存**状态**已有 ✓，但"**回到上一版**"仍是未验证的能力 ✓）、统一工程 schema 的其余字段（`author`/`section` ✓——模型里没有数据源 ✓，不擅自发明 ✓）。
+
+### 七百七十五、🔎 **跑了一次完整 `npm run verify`：5102 条测试全过；失败在一条"期望本身已过期"的浏览器探针**（2026-10-08 ✓）
+
+  ⭐ **结果** ✓：`npm run verify` 的单元测试段 **`Test Files 654 passed | 4 skipped`** ✓、
+    **`Tests 5075 passed | 27 skipped (5102)`** ✓ ——**一条都没红** ✓；
+    但脚本 **`exit=1`** ✗，失败在**最后**那一阶段 ✓：`probe:live-arrangement` ✓ ⇒
+    `❌ the studio toolbar never rendered` ✓。
+  ⭐ **定位（读代码＋读探针历史）** ✓：
+    · 探针第 94–100 行**直接**等待 `[data-testid='arrangement-view-v2']` ✗；
+    · 而 `ArrangementViewV2.tsx:327` 写着 `const [choosing, setChoosing] = useState(initialArrangement === undefined);` ✓，
+      第 998 行 `if (choosing) return (… <NewProjectPanelV2/> …)` ✓ ⇒ **没有已存工程时，这个 testid 根本不存在** ✓
+      （Logic 的"Choose a Project" ✓，正是本仓库刻意的行为 ✓）；
+    · 探针在**全新浏览器**里跑 ✓（`localStorage.removeItem("groove_project_v1")` ✓）⇒ 那个等待**永远无法满足** ✗✓；
+    · `git log -1 -- scripts/probe_live_arrangement.mjs` ⇒ 这句期望来自 **`c309685`（2026-10-07）** ✓，
+      即**本批次之前**就在仓库里 ✓ ⇒ **不是我这批改动引入的回归** ✓（我此前看到的 CI 红都是单元测试段 ✓，
+      而 CI 并不跑这条探针 ✓ ⇒ 它一直红着，只是**本地 `verify`** 才会遇到 ✓）。
+  ⭐ **已做的一半修复** ✓：把"直接等视图"改为**先选模板再 Create** ✓
+    （`template-drums-bass` ＋ `new-project-create` ✓）——这正是**一个人打开这个页面会做的第一步** ✓，
+    也是让后面所有断言有意义的前提 ✓。修好后失败点**向里推进了一层** ✓：
+    现在停在 `toolbar-arrangement-toggle` ✗（`arrangement-editor-roll` 之后的下一步 ✓）⇒
+    **说明第一步的修复是对的** ✓，而**这条探针的整体流程仍是旧 UI 的写法** ✗（自 `c309685` 起 ✓）。
+  ⭐ **我不硬改剩下的部分** ✓：重写一条浏览器探针需要对**当前**编辑器/抽屉的真实交互做一次实测 ✓，
+    而不是照着失败的等待逐个替换 ✗（那会把"探针在量什么"变成猜 ✗）。已把**下一处需要重测的地方**写在上面 ✓。
+  ⭐ 本轮同时确认 ✓：`arrangement-store`/视图/皮肤的既有能力**没有**被我这批改动破坏 ✓（5102 条测试为证 ✓）；
+    也再次印证 七百七十四 的教训 ✓——**先查"是不是已经有了"** ✓（这次是"先查这是不是我的错" ✓，结论：不是 ✓）。

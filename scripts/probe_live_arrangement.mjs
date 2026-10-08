@@ -94,6 +94,16 @@ localStorage.setItem("groove_audio_started", "1");
 await page.goto(`http://127.0.0.1:${server.address().port}/?tab=studio&probe=1`, { waitUntil: "domcontentloaded" });
 
 try {
+  /**
+   * ⭐ **A project has to exist before the arrangement view does** — Logic's "Choose a Project": with nothing stored the
+   * studio route draws the chooser, and `arrangement-view-v2` is not in the document at all. This waited for the view
+   * directly and could therefore never pass on a fresh browser (the probe starts with empty storage by construction), so
+   * the wait named a state no run could reach. Choosing a template is what a person does first, and it is what makes the
+   * rest of this probe meaningful.
+   */
+  await page.waitForSelector("[data-testid='new-project-panel-v2']", { timeout: 30000 });
+  await page.click("[data-testid='template-drums-bass']").catch(() => {});
+  await page.click("[data-testid='new-project-create']");
   await page.waitForSelector("[data-testid='arrangement-view-v2']", { timeout: 30000 });
 } catch {
   await fail("the studio toolbar never rendered");
