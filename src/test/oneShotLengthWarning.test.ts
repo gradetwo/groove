@@ -36,4 +36,37 @@ describe("a one-shot's length limit", () => {
     const fine = addMcpTrackNotes(created.arrangementId, trackId, [{ pitch: 48, startBeats: 32, lengthBeats: 0.5, velocity: 100 }] as never);
     expect(fine.problems.some((problem) => problem.includes(pizzicato.assetId))).toBe(false);
   });
+
+  it("⭐ names the risky band between the shortest and the longest sample, and stays quiet below it", () => {
+    /**
+     * ⭐ **The band a caller cannot reason about.** Past `maxSampleSeconds` a note is definitely cut; between
+     * `safeSeconds` and `maxSampleSeconds` it is cut only if the sample for **its own pitch** is the short one. The
+     * evaluation's section 6 asks for these constraints to be machine-readable, and the table has carried this
+     * distinction since the string work — the instrument row now exposes `safeHeldSeconds` beside `maxHeldSeconds`, and a
+     * write inside the band is told so rather than left to be discovered by ear.
+     */
+    const created = createMcpArrangement({ blankKind: "sampler" });
+    const trackId = created.tracks![0]!.id;
+    setMcpArrangementBars(created.arrangementId, 16);
+    setMcpTrackAsset(created.arrangementId, trackId, pizzicato.assetId);
+
+    /**
+     * ⭐ At 120 bpm a beat is half a second, so **beats = 2 × seconds**: landing inside the band is
+     * `(safeSeconds + maxSampleSeconds)` beats, and landing below it is `safeSeconds` beats.
+     */
+    const risky = addMcpTrackNotes(created.arrangementId, trackId, [
+      { pitch: 48, startBeats: 0, lengthBeats: pizzicato.safeSeconds + pizzicato.maxSampleSeconds, velocity: 100 },
+    ] as never);
+    const sentence = risky.problems.find((problem) => problem.includes(pizzicato.assetId));
+    expect(sentence, `a note inside the band must be named: ${JSON.stringify(risky.problems)}`).toBeTruthy();
+    expect(sentence).toMatch(/depends on which pitch's sample answers it/);
+    expect(sentence, "and it must carry the safe number, which is the actionable one").toMatch(new RegExp(`${pizzicato.safeSeconds}s`));
+
+    // ⭐ Below the shortest sample nothing is said: this is a constraint, not a nag.
+    const short = addMcpTrackNotes(created.arrangementId, trackId, [
+      { pitch: 48, startBeats: 40, lengthBeats: pizzicato.safeSeconds, velocity: 100 },
+    ] as never);
+    expect(short.problems.some((problem) => problem.includes(pizzicato.assetId))).toBe(false);
+  });
+
 });

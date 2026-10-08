@@ -1463,6 +1463,21 @@ export function addMcpTrackNotes(arrangementId: string, trackId: string, notes: 
         ],
       };
     }
+    /**
+     * ⭐ **The band between the shortest and the longest sample is named too**, because it is the one a caller cannot
+     * reason about: past `maxSampleSeconds` a note is definitely cut, but between the two it is cut **only if the sample
+     * for its own pitch** is the short one. The import path has used this `risky`/`exceeds` distinction since the string
+     * work; the writing path knew only the ceiling.
+     */
+    if (longestSeconds > program.safeSeconds) {
+      return {
+        ...result,
+        problems: [
+          ...result.problems,
+          `the longest note is ${longestSeconds.toFixed(2)}s and ${program.assetId}'s shortest sample is ${program.safeSeconds}s (its longest is ${program.maxSampleSeconds}s), so whether it sounds whole depends on which pitch's sample answers it — keep it under ${program.safeSeconds}s to be sure`,
+        ],
+      };
+    }
   }
   return result;
 }

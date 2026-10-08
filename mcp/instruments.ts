@@ -263,6 +263,15 @@ export function listCatalogueInstruments({
                 )
               ),
               maxHeldSeconds: technique.maxSampleSeconds,
+              /**
+               * ⭐ **And the length at or below which every sample of the program suffices** (third evaluation, section 6:
+               * legato/articulation and longest duration as machine-readable constraints).
+               *
+               * `maxHeldSeconds` is the *longest* sample; between it and this number a note sounds whole only if the
+               * sample for **its** pitch happens to be long enough. The table has carried that distinction since the
+               * string work ("a risk worth naming rather than rounding away") and the listing exposed only the ceiling.
+               */
+              safeHeldSeconds: technique.safeSeconds,
               dynamicLayers: technique.velocityLayers.length,
             }
           : {}),

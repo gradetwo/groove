@@ -19407,3 +19407,31 @@ describe("the grid's editing actions", () => {
   ⭐ 相关 6 个测试文件 **20 条全绿** ✓，lint / docs / refs 门禁绿 ✓。
   ⏳ 第 6 节剩余（仍开放 ✓）：render jobId ＋ 真正取消（L01 的结构那半 ✓）、legato/articulation 的**逐音符**约束（本轮做的是"
     最长持续时间" ✓，legato 连接仍只有文字说明 ✓）、多谱表 MusicXML ✓、段落视图 ✓、自动保存与修订恢复 ✓。
+
+### 七百七十、✅ **第 6 节能力评估（第 5 件）：把"确定能奏满"与"可能被截断"之间那条带子变成机器可读**（2026-10-08 ✓）
+
+  ⭐ **来源** ✓：报告第 6 节 Agent 侧"音源可演奏音域、articulation、**legato** 及**最长持续时间**的机器可读约束" ✓
+    （上一轮做了"超过最长样本"那一半 ✓，本轮补的是**中间那条带子** ✓）。
+  ⭐ **复现（读代码即坐实）** ✓：`StringTechniqueProgram` **同时有** `maxSampleSeconds`（**最长**样本 ✓）
+    与 `safeSeconds`（**最短**样本 ✓，注释写着"在两者之间，音符能否完整只取决于**它自己那个音高**的样本够不够长，
+    这是个值得说出来而不是四舍五入掉的**风险**" ✓）；而**乐器列表只暴露了上限** ✗（`maxHeldSeconds` ✓），
+    写音符那条路也**只判上限** ✗ ⇒ 一句"这个长音能不能奏满"的答案，在真正有风险的那段区间里**是空白** ✗✓。
+  ⭐ **修法（两处，都用已有量测 ✓）** ✓：
+    ① `list_arrangement_instruments` 的弦乐行**新增 `safeHeldSeconds`** ✓（与 `maxHeldSeconds`、`lowestNote`/`highestNote` 并列 ✓
+      ⇒ 音域、技法、最长与**安全**时长现在都是字段 ✓，agent 不必靠散文 ✓）；
+    ② 写音符时**补上 `risky` 那条判词** ✓（沿用导入路径既有的 "risky / exceeds" 词汇 ✓）：
+      "the longest note is **2.26s** and **vsco2ce:ViolinEnsPizz**'s shortest sample is **1.51s** (its longest is **3.016s**),
+      so whether it sounds whole **depends on which pitch's sample answers it** — keep it under 1.51s to be sure" ✓
+      （**给出可执行的安全数字** ✓，而不是只说"有风险" ✓）。
+  ⭐ 判据 ✓（两条，都可红 ✓）：
+    · `oneShotLengthWarning.test.ts` ✓：落在带子里的音符 ⇒ **必须**出现 "...depends on which pitch's sample answers it" ✓
+      且**必须**带 `{safeSeconds}s` ✓；**低于安全值** ⇒ **不得**有任何提示 ✓（是约束，不是唠叨 ✓）；
+      ⚠️ 写这条判据时我把拍数换算错了 ✗（120 bpm 下 `秒 = 拍 / 2` ✓，我却乘了 120×4 ✗）⇒ 音符落到了上限之外 ✓、
+      断言自然读到了 "exceeds" ✗ ⇒ 现场修正为 `beats = safeSeconds + maxSampleSeconds` ✓（正是带子的中点 ✓）。
+    · `mcpInstruments.test.ts` ✓：**每一个**带 `maxHeldSeconds` 的行**都必须**有 `safeHeldSeconds` ✓，
+      且必须 **≤ `maxHeldSeconds`** ✓（最短样本不可能比最长样本还长 ✓——这条同时防"把两个字段接反" ✓）。
+  ⭐ 相关 6 个测试文件 **30 条全绿** ✓，lint / docs / refs 门禁绿 ✓。
+  ⏳ 第 6 节剩余（仍开放 ✓，照实记）：**legato** 本身仍未机器可读 ✗——引擎**不实现**那些 legato/CC 操作码 ✓，
+    连接完全来自**音符时值重叠** ✓ ⇒ 真正诚实的做法是给行加一个"**该程序不会连奏，连接要由时值决定**"的字段 ＋
+    在写连奏乐句时给建议 ✓；本轮先把"时长"这条约束补齐 ✓，legato 这条留到下一轮 ✓。
+    另有 render jobId ＋ 真正取消（L01 结构那半 ✓）、多谱表 MusicXML ✓、段落视图 ✓、自动保存与修订恢复 ✓。

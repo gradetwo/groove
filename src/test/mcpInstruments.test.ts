@@ -191,4 +191,21 @@ describe("string techniques on the instrument list", () => {
     expect(unmeasured?.lowestNote, "no measurement, no claim").toBeUndefined();
   });
 
+
+  it("⭐ exposes the shortest-sample limit beside the longest, so the risky band is machine-readable (section 6)", () => {
+    /**
+     * `maxHeldSeconds` says when a note is definitely cut; `safeHeldSeconds` says when it is *certainly* whole. Between
+     * them a note sounds whole only if the sample for its own pitch is long enough — the distinction the string table has
+     * carried since the string work and the listing did not expose.
+     */
+    const strings = (listCatalogueInstruments().instruments ?? []).filter(
+      (row: { maxHeldSeconds?: number }) => row.maxHeldSeconds !== undefined
+    ) as Array<{ assetId: string; maxHeldSeconds: number; safeHeldSeconds?: number }>;
+    expect(strings.length, "the string programs are in the listing").toBeGreaterThan(0);
+    for (const row of strings) {
+      expect(row.safeHeldSeconds, `${row.assetId} carries the safe number`).toBeDefined();
+      expect(row.safeHeldSeconds!, `${row.assetId}: the shortest sample cannot outlast the longest`).toBeLessThanOrEqual(row.maxHeldSeconds);
+    }
+  });
+
 });
