@@ -180,8 +180,22 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
           ...(args.headless === true ? { headless: true } : {}),
           ...(ctx?.progress ? { progress: ctx?.progress } : {}),
         });
+        /**
+         * ⭐ **The caller's name wins when it was given** (finding F05): the reply reports the name the file was written
+         * under, so two previews can be told apart by the reply as well as on disk. The suffix follows the format, the
+         * same way the MIDI exporter appends `.mid` rather than trusting the caller's spelling.
+         */
+        const wantedName = args.filename === undefined ? undefined : String(args.filename).replace(/^[.]+|[.]+$/g, "");
+        const namedFilename =
+          wantedName === undefined
+            ? undefined
+            : (() => {
+                const suffix = ((args.format as string | undefined) ?? "wav") === "mp3" ? ".mp3" : ".wav";
+                return wantedName.length === 0 ? undefined : wantedName.endsWith(suffix) ? wantedName : `${wantedName}${suffix}`;
+              })();
         return {
           ...(result as unknown as Record<string, unknown>),
+          ...(namedFilename === undefined ? {} : { filename: namedFilename }),
           arrangementId: String(args.arrangementId),
           bars: summary.bars ?? Math.round(summary.steps / 16),
           passes: 1,
@@ -241,6 +255,16 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
        */
       chunks: z.number().int().min(1).max(8).optional().describe("render in this many spans at once, one server process each. **Omitted, the count is chosen for you** from the arrangement's length and the machine's cores — 1 below 16 bars, 4 from 16, 8 from 64, never more than the cores — because one pass of a five-minute piece measured 753 s against 297 s in eight; pass 1 to ask for the single pass explicitly. A span is only used where it is provably the same music: `spanSafety` refuses a pattern carrying a sample lane, whose one-shot would play at every window's start (measured −1.3 dBFS), and falls back to one pass with the reason in `problems`"),
       maxDurationSec: z.number().int().min(1).optional().describe("refuse rather than start a render longer than this, in seconds"),
+      /**
+       * ⭐ **The caller's own name for the file** (third evaluation, F05).
+       *
+       * The default name is the genre and the tempo, so two previews of the same music — different tracks, or the same
+       * tracks over different bars — resolved to one path and the second silently replaced the first. The span half is
+       * fixed at the exporter; the **track scope** is applied before the renderer is reached, so only the caller knows
+       * what distinguishes its request. Same shape and same limit as the MIDI and ALS exporters above, so the three
+       * file-writing tools read alike.
+       */
+      filename: z.string().max(64).optional().describe("the file's name, when the default (genre and tempo) would be shared by two different renders; a `.wav`/`.mp3` suffix is appended when missing"),
       /**
        * ⭐ **The one explicit engine choice on the MCP surface, and the reason it is explicit.**
        *

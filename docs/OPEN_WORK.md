@@ -19015,3 +19015,21 @@ describe("the grid's editing actions", () => {
     现改为 `createArrangement(songId, blankKind)` ✓ 并重跑 ✓ 通过 ✓。
   ⏳ 下一步 ✓：**F05 的轨道作用域那一半**（给音频渲染/导出工具加 `filename` ✓，照 MIDI/ALS 的形状与上限 ✓）；
     然后 **F07**（五分钟音频首次分析 161 s ✓）、F09–F13、L01–L02 ✓。
+
+### 七百五十三、✅ **F05 的另一半：预览工具接受调用者自己的文件名（与 MIDI/ALS 同一形状）**（2026-10-08 ✓）
+
+  ⭐ **为什么必须在工具层修** ✓：**窗口**在导出器里看得见 ✓（七百五十已修 ✓），但**轨道作用域**是在**渲染器之前**
+    就应用到 flatten 上的 ✓——到了渲染器那里，pattern 里**只剩那几条轨** ✓，**没有任何东西**能分辨"这是哪一次请求" ✗
+    ⇒ 只有**调用者**知道自己要区分什么 ✓。
+  ⭐ **修法** ✓：给 `render_arrangement_preview` 加 `filename` ✓——
+    形状与上限**照抄**已有的两条文件写入工具 ✓（`z.string().max(64).optional()` ✓，MIDI 与 ALS 都在用 ✓），
+    描述里写明"默认名（genre ＋ bpm）会被两次不同渲染共用时，用它区分" ✓；处理函数把名字**规范化**
+    （去掉首尾点 ✓、按 `format` 补 `.wav`/`.mp3` ✓——与 MIDI 导出器"自己补 `.mid`，不信调用者的拼写"同一规矩 ✓），
+    并在**回包里报告实际使用的文件名** ✓（这样两次预览在**回包**上也能区分 ✓，不只在磁盘上 ✓）。
+  ⭐ 判据 ✓（`src/test/windowedExportName.test.ts` ✓ 2 例 ✓ 覆盖 F05 两半 ✓）：
+    窗口分支必须由 `windowBars !== undefined` 也触发 ✓（窗口半 ✓）；`filename` 必须以 `max(64)` 声明 ✓、
+    回包必须报告 `namedFilename` ✓、`.mp3` 请求必须补 `.mp3` ✓（轨道半 ✓）。
+  ⭐ MCP 表层门禁 ✓（`mcpCoverage` ✓、`mcpCopy_render_arrangement_preview` ✓、`mcpPreviewScopeDiagnostic` ✓、
+    `mcpDescriptionReadability` ✓、`featureAlignmentCoverage` ✓）**17 条全绿** ✓，lint / docs 绿 ✓。
+  ✅ **F05 至此两半都修完** ✓（窗口名 ＋ 调用者命名 ✓）。
+  ⏳ 下一步 ✓：**F07**（五分钟音频"首次分析 161 s" ✓ —— 先量出时间花在哪个阶段 ✓，再决定优化点 ✓）。

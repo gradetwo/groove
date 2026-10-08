@@ -24,3 +24,20 @@ describe("a windowed render's filename", () => {
 
   });
 });
+
+/**
+ * ⭐ **The track half of F05: the caller names its own file.**
+ *
+ * The span half is fixed at the exporter, where the window is known. The track scope is applied *before* the renderer is
+ * reached — the flattened pattern simply has fewer lanes — so nothing downstream can tell two previews apart. The tool
+ * therefore takes the caller's name, in the same shape and with the same limit as the MIDI and ALS exporters.
+ */
+const registry = readFileSync(resolve(__dirname, "../../mcp/registryArrangement.ts"), "utf8");
+
+describe("the preview tool's filename", () => {
+  it("⭐ is declared, bounded like the other file-writing tools, and reported in the reply", () => {
+    expect(registry, "the argument is on the surface").toMatch(/filename: z\.string\(\)\.max\(64\)\.optional\(\)/);
+    expect(registry, "the reply reports the name that was used, with the suffix the format implies").toContain("namedFilename");
+    expect(registry, "an `.mp3` request gets `.mp3`").toMatch(/"\.mp3" : "\.wav"/);
+  });
+});
