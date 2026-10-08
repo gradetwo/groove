@@ -20334,3 +20334,20 @@ describe("the grid's editing actions", () => {
   ⭐ **验收** ✓：`typecheck` ✓、`lint` ✓、`docs:check` ✓、`check:css` ✓；
     `mobileTouchTargets`（5 例 ✓）＋ 编排视图 ＋ chooser 表面判据共 **26 条全绿** ✓；
     e2e 已重新发起 ✓（见下一节读数 ✓）。
+
+### 八百一十八、✅✅ **WebKit 回归已修并复验：三引擎全过（Chromium / Firefox / WebKit）**（2026-10-09 ✓）
+
+  ⭐ **读数** ✓（重建 `dist/` 后重跑 e2e；前一次因 e2e 的**防陈旧守卫**拒绝运行 ✓——
+    "dist/ is stale: … is newer than dist/index.html" ✓，这是好的守卫 ✓）：
+    ```
+    ✅ PASS Desktop Chromium / Chrome       (21.64s)
+    ✅ PASS Desktop Firefox                 (26.46s)
+    ✅ PASS Desktop WebKit (Safari Engine)  (61.15s) [retried once]
+    🎉 ALL 3 BROWSER & DEVICE TARGETS PASSED PRE-RELEASE VERIFICATION!
+    exit=0
+    ```
+  ⭐ **诚实注记** ✓：WebKit 那一项 **retried once** ✓（首次未过、重试通过 ✓）⇒ 这条引擎的判定仍有抖动 ✓，
+    但这次它守的那条契约（头列与数据列同高 ✓）**已经被满足** ✓。
+  ⭐ **这一轮闭环的价值** ✓：门禁**抓到**我引入的回归（§八百一十六 ✓）⇒ 我按它的话改（把 44px 移到布局之外 ✓）
+    ⇒ **同一条门禁复验通过** ✓ ⇒ 判据也随之升级为"**命中区域**"而非"class 有 `min-h-11`" ✓
+    （§八百一十七 ✓）。这是本批里"**门禁—修复—复验**"最完整的一次 ✓。
