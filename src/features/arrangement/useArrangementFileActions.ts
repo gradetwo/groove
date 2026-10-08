@@ -47,6 +47,12 @@ export interface UseArrangementFileActionsOptions {
   scoreBars: number;
   /** The track name the score is titled with, which also names the file. */
   scoreTitle?: string;
+  /**
+   * ⭐ **The project's song, read when an export runs** (third evaluation F09/§6): the sections and the chain that orders
+   * them, so a `.groove` written here carries the structure the arrangement view is playing. Absent, or incomplete, means
+   * the file carries no `song` field at all.
+   */
+  currentSong?: () => { chain: string[]; sections: unknown[] } | undefined;
 }
 
 export interface UseArrangementFileActionsResult {
@@ -130,6 +136,7 @@ export function useArrangementFileActions({
   scoreNotes,
   scoreBars,
   scoreTitle,
+  currentSong,
 }: UseArrangementFileActionsOptions): UseArrangementFileActionsResult {
   const { t } = useLanguage();
   const [report, setReport] = useState<string | undefined>(undefined);
@@ -282,7 +289,11 @@ export function useArrangementFileActions({
 
   const exportGroove = useCallback(() => {
     void run("export", async () => {
-      const file = await grooveFileFor(arrangement);
+      /**
+       * ⭐ **Read at export time, not at mount**: whether there is a song — and which sections it has — is a fact about
+       * the project as it stands when the person clicks, so a getter is the honest shape for it.
+       */
+      const file = await grooveFileFor(arrangement, undefined, currentSong?.());
       return { file, report: t("export_groove_done", { name: file.name }) };
     });
   }, [arrangement, run, t]);

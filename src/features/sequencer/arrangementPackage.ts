@@ -1,14 +1,39 @@
 import { APP_VERSION } from "../../version";
 import type { ArrangementV2 } from "../../types/arrangementV2";
+import { CLIP_SLOTS, type ClipSlot, type SongSection } from "../../types/song";
 
 /**
  * ⭐ **The v2 package: an arrangement, and nothing of the older model.**
  *
- * The owner's decision is that the package carries tracks, notes, takes, bars and a tempo map, and carries no clips, slots
- * or sections. The validator below enforces exactly that, which is what makes this a v2 shape rather than the older one
- * with a new name: a package that carries the old keys is refused, not accepted, so the two cannot coexist.
+ * The owner's decision is that the package carries tracks, notes, takes, bars and a tempo map, and carries no clips or
+ * slots. The validator below enforces exactly that, which is what makes this a v2 shape rather than the older one with a
+ * new name: a package that carries the old keys is refused, not accepted, so the two cannot coexist.
+ *
+ * ⭐ **Revised on 2026-10-09, at the owner's instruction ("B")**: the package may also carry the project's **song
+ * structure** — its sections and the chain that orders them — under the key `song`. The third evaluation asked for exactly
+ * this (F09, "定义统一工程元数据 schema，导入/导出保持 name、作者、版本、section", and §6, "sections 和动态曲线的结构化规划"),
+ * and the previous "no sections at all" decision could not express a song that the arrangement view plays.
+ *
+ * Three properties keep that revision from becoming the old shape again:
+ *   · the key is **`song`**, never `sections` — the v1 keys below are still refused, so a file cannot claim to be v2 while
+ *     carrying the old `arrangement.sections`;
+ *   · it is **absent** unless the project actually has a song. A project with one loop writes a package byte-identical to
+ *     the one it wrote before this field existed, so nothing needs migrating;
+ *   · a song is written only when it is **complete** (a chain *and* sections). Sections without a chain are a list with no
+ *     song: measured 2026-10-09, the engine plays the loop in that case, so a package that claimed a song would be lying.
  */
 export const ARRANGEMENT_PACKAGE_FORMAT = "groove-arrangement";
+
+/**
+ * ⭐ **The song a project plays, when it has one**: the sections and the chain that orders them.
+ *
+ * Both halves are required together, because either alone is not a song. `sectionsToSongChain` derives the chain from the
+ * sections in the studio, but the chain is what flattening walks, so the file carries what the engine reads.
+ */
+export interface ArrangementSongStructure {
+  chain: ClipSlot[];
+  sections: SongSection[];
+}
 
 export interface ArrangementPackage {
   format: typeof ARRANGEMENT_PACKAGE_FORMAT;
@@ -16,17 +41,38 @@ export interface ArrangementPackage {
   /** ⭐ Who wrote it and when, so a file found later still explains itself. */
   writtenAt: string;
   arrangement: ArrangementV2;
+  /** ⭐ Absent when the project has one loop and no song — see the doc comment above. */
+  song?: ArrangementSongStructure;
 }
+
+/** ⭐ The clip slots a section or a chain entry may name, read from the model rather than restated. */
+const CLIP_SLOT_NAMES: readonly string[] = CLIP_SLOTS;
 
 /** ⭐ The v1 keys whose presence means the package is not a v2 one. */
 const OLD_SHAPE_KEYS = ["clips", "slots", "sections", "project"] as const;
 
+/** ⭐ A song is written only when both halves are there — see the doc comment on the shape. */
+function completeSong(song: ArrangementSongStructure | undefined): ArrangementSongStructure | undefined {
+  if (!song) return undefined;
+  if (!Array.isArray(song.chain) || song.chain.length === 0) return undefined;
+  if (!Array.isArray(song.sections) || song.sections.length === 0) return undefined;
+  return song;
+}
+
 export function buildArrangementPackage(
   arrangement: ArrangementV2,
   appVersion: string = APP_VERSION,
-  writtenAt: string = new Date().toISOString()
+  writtenAt: string = new Date().toISOString(),
+  song?: ArrangementSongStructure
 ): ArrangementPackage {
-  return { format: ARRANGEMENT_PACKAGE_FORMAT, appVersion, writtenAt, arrangement };
+  const carried = completeSong(song);
+  return {
+    format: ARRANGEMENT_PACKAGE_FORMAT,
+    appVersion,
+    writtenAt,
+    arrangement,
+    ...(carried === undefined ? {} : { song: carried }),
+  };
 }
 
 /**
@@ -52,6 +98,45 @@ export function validateArrangementPackage(data: unknown): ArrangementPackage {
   }
   if (!Array.isArray(arrangement.tracks)) {
     throw new Error("Invalid arrangement package: arrangement is missing its tracks");
+  }
+  /**
+   * ⭐ **The song, when the file claims one — values, not only shape** (the same rule F06 established for the notes).
+   *
+   * A section whose slot is not a clip slot, or whose length is zero, is not a section anything can play; accepting it
+   * would put a broken song into the engine through a door that is supposed to be the strict one.
+   */
+  if (pkg.song !== undefined) {
+    const song = pkg.song as { chain?: unknown; sections?: unknown };
+    if (!song || typeof song !== "object") throw new Error("Invalid arrangement package: song must be an object");
+    if (!Array.isArray(song.chain) || song.chain.length === 0) {
+      throw new Error("Invalid arrangement package: song is missing its chain (sections without a chain are not a song)");
+    }
+    song.chain.forEach((slot, index) => {
+      if (typeof slot !== "string" || !CLIP_SLOT_NAMES.includes(slot)) {
+        throw new Error(`Invalid arrangement package: song.chain[${index}] is ${JSON.stringify(slot)}, not one of ${CLIP_SLOT_NAMES.join("/")}`);
+      }
+    });
+    if (!Array.isArray(song.sections) || song.sections.length === 0) {
+      throw new Error("Invalid arrangement package: song is missing its sections");
+    }
+    song.sections.forEach((raw, index) => {
+      const section = raw as { id?: unknown; slot?: unknown; bars?: unknown; mute?: unknown };
+      if (!section || typeof section !== "object") {
+        throw new Error(`Invalid arrangement package: song.sections[${index}] is not an object`);
+      }
+      if (typeof section.id !== "string" || section.id.length === 0) {
+        throw new Error(`Invalid arrangement package: song.sections[${index}].id must be a non-empty string`);
+      }
+      if (typeof section.slot !== "string" || !CLIP_SLOT_NAMES.includes(section.slot)) {
+        throw new Error(`Invalid arrangement package: song.sections[${index}].slot is ${JSON.stringify(section.slot)}, not one of ${CLIP_SLOT_NAMES.join("/")}`);
+      }
+      if (typeof section.bars !== "number" || !Number.isFinite(section.bars) || section.bars < 1) {
+        throw new Error(`Invalid arrangement package: song.sections[${index}].bars must be a finite number of at least 1`);
+      }
+      if (section.mute !== undefined && (!Array.isArray(section.mute) || section.mute.some((id) => typeof id !== "string"))) {
+        throw new Error(`Invalid arrangement package: song.sections[${index}].mute must be a list of track ids`);
+      }
+    });
   }
   /**
    * ⭐ **The values, not only the shape** (third evaluation, F06).
@@ -106,4 +191,15 @@ export function validateArrangementPackage(data: unknown): ArrangementPackage {
  */
 export function arrangementFromPackage(data: unknown): ArrangementV2 {
   return validateArrangementPackage(data).arrangement;
+}
+
+/**
+ * ⭐ **The song half of the same door**: the sections and chain a package carries, or `null` when it carries none.
+ *
+ * `null` rather than an empty structure, because "this file has one loop" and "this file has a song with nothing in it" are
+ * different facts, and only the first is valid.
+ */
+export function songFromPackage(data: unknown): ArrangementSongStructure | null {
+  const song = validateArrangementPackage(data).song;
+  return song ?? null;
 }

@@ -253,6 +253,10 @@ export function NewProjectView({ capture, onProjectNameChange, arrangementId, in
           ))}
         </div>
       )}
+      {/**
+        * ⭐ **The song travels with the arrangement** (third evaluation F09/§6): the store this route already owns is where
+        * the sections and the chain live, so an export can carry the structure the person is working on.
+        */}
       <ArrangementViewV2
       songId="new"
       player={player}

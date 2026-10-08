@@ -20602,3 +20602,34 @@ describe("the grid's editing actions", () => {
     ＋ `bg-panel` ＋ 有界高度 ＋ 关闭按钮 ✓；**手机必须是 fixed + inset-x-2 + bottom-2，且 `sm:absolute` 恢复** ✓
     （任一条回退即红 ✓）；列表行必须 `min-h-11 sm:min-h-0` ✓。
   ⭐ 验收 ✓：相关 5 个测试文件 **43 条全绿** ✓；`lint`/`docs:check`/`check:css` ✓。
+
+### 八百三十一、✅ **方案 B 落地（第一部分）：`.groove` 包可以携带**歌曲结构**，MCP 可写可读；Web 只差"谁来供料"这半步**（2026-10-09 ✓）
+
+  ⭐ **你选的是 B** ✓（`author` 未表态 ⇒ 本轮**没有**动它 ✓）⇒ 我按 B 落地，并把"改的是哪条决定"写在代码里 ✓。
+  ⭐ **改了什么（`src/features/sequencer/arrangementPackage.ts` ✓）** ✓：
+    · 新增 `ArrangementSongStructure { chain: ClipSlot[]; sections: SongSection[] }` ✓，
+      作为包的**可选** `song` 字段 ✓；
+    · **键名是 `song`** ✓，**不是** `sections` ✗ —— 后者仍在 `OLD_SHAPE_KEYS` 里被**拒绝** ✓
+      ⇒ "文件不能一边自称 v2、一边带 v1 的 `arrangement.sections`"这条性质**保住了** ✓（有判据 ✓）；
+    · **没有歌就不写** ✓（`completeSong` 判定 ✓）⇒ 一个只有循环的工程写出的包与**这个字段存在之前逐字节相同** ✓
+      ⇒ **老文件零迁移** ✓；
+    · **只有一半就不写** ✓（有 chain 无 sections ✗／有 sections 无 chain ✗）——依据是我实测的"**无 chain 就没有歌**"
+      （引擎会继续播循环 ✓ §813–§814 ✓）⇒ 否则这个字段会**撒谎** ✓；
+    · **值校验（沿用 F06 的口径 ✓）** ✓：chain 必须非空且是合法 clip slot ✓；section 的 `id` 非空 ✓、
+      `slot` 合法 ✓、`bars` 有限且 ≥1 ✓、`mute` 是字符串数组 ✓ —— 违规时报出**字段路径** ✓；
+    · 读侧新增 `songFromPackage(data): ArrangementSongStructure | null` ✓（`null` 与"空结构"区分开 ✓）。
+  ⭐ **MCP（`mcp/registryFiles.ts` ✓）** ✓：`export_groove` 多了**可选 `song {chain, sections}`** ✓
+    （agent 因此能把结构写下来 ✓ ——正对报告 §6"AI Agent 优先：sections 的结构化规划" ✓），回包报 `sections` 数量 ✓；
+    `read_groove` 回包增加 `sections` 与 `chain` 数量 ✓ ⇒ 往返**可被 agent 验证** ✓。
+  ⭐ **判据（新增 6 条 ✓）** ✓：`arrangementPackageSong.test.ts` ✓（无歌不写字段且字符串里没有 `"song"` ✓／
+    sections＋chain 往返一致 ✓／半首歌不写 ✓／非法 slot・`bars:0`・空 chain・空 sections・缺 id 各自被拒且**点名** ✓／
+    **v1 形状仍被拒** ✓）；`arrangementFileSong.test.ts` ✓（Web 写手给了歌就写、没给就不写 ✓）。
+  ⚠️ **还差的半步（如实 ✓）** ✓：**编排路由没有任何"歌"可供** ✗ ——
+    `NewProjectView` 用的是**编排工程 store** ✓（只有 `project/loading/…` ✓），而 `sections`/`songChain` 在
+    **`useSequencerStore`** 里 ✓，全仓只有 **console 路由**（`HardwareConsoleView` ✓）挂载它 ✓。
+    我先把**接缝**留在写手与 hook 上 ✓（`grooveFileFor(arrangement, stem?, song?)` ✓、
+    `useArrangementFileActions({ currentSong })` ✓，导出时**即时读取** ✓），
+    但**没有**硬塞一个来源 ✗（我试过从 `NewProjectView` 传 ✗ ⇒ 类型检查当场指出那里没有 `state` ✗ ⇒ 已撤 ✓）。
+    ⇒ 下一步要你定：**A** 让编排路由也能读到歌（把 song 提到编排 store／或挂载/共享那个 store ✓），
+      **B** 或让**有歌的那条路**（studio/console ✓）来导出带歌的包 ✓。两条都能立刻做，但方向不同 ✓。
+  ⭐ 验收 ✓：`typecheck` ✓、`lint` ✓、`check:mcp`（68 项 ✓）、`docs:check` ✓、`check:css` ✓；新增与相关测试全绿 ✓。

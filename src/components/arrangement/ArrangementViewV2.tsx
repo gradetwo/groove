@@ -235,6 +235,12 @@ export interface ArrangementViewV2Props {
   initialAutoPlay?: boolean;
   onClearInitialAutoPlay?: () => void;
   /**
+   * ⭐ **The project's song, when the host holds one**: the sections and the chain, so a `.groove` exported from this route
+   * carries the structure the person is looking at (third evaluation F09/§6). A view that renders the arrangement without
+   * a song store simply does not pass it, and the file then carries no `song` field.
+   */
+  currentSong?: () => { chain: string[]; sections: unknown[] } | undefined;
+  /**
    * ⭐ **The engine's ref, when the host has one.** Optional for the reason `player` is: this view renders and is judged
    * without an engine, and the MIDI input needs the ref rather than the value — a device event arrives after the render that
    * subscribed, so reading `engineRef.current` at that moment is the difference between playing a note and playing a stale
@@ -302,7 +308,7 @@ function ToolbarDivider({ label }: { label: string }) {
   );
 }
 
-export function ArrangementViewV2({ songId, capture, bar = 0, player, instruments, playheadBar, initialArrangement, onArrangementChange, onCreateProject, loadProblem, setTransportLoopRange, seekTransport, initialAutoPlay, onClearInitialAutoPlay, engineRef , onOpenHelp }: ArrangementViewV2Props) {
+export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, player, instruments, playheadBar, initialArrangement, onArrangementChange, onCreateProject, loadProblem, setTransportLoopRange, seekTransport, initialAutoPlay, onClearInitialAutoPlay, engineRef , onOpenHelp }: ArrangementViewV2Props) {
   const { t, isZh } = useLanguage();
 
   /**
@@ -567,6 +573,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
     scoreNotes,
     scoreBars: bars,
     ...(selected ? { scoreTitle: selected.name } : {}),
+    ...(currentSong === undefined ? {} : { currentSong }),
   });
 
   /**
