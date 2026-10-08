@@ -62,6 +62,7 @@ import type { PlannedTake } from "../src/data/takePlanning";
 import { flattenArrangementV2, laneInstrumentForTrack, laneRoleForTrack } from "../src/data/arrangementCompile";
 import { resolveInstrumentPresetKey } from "../src/audio/instrumentPresets";
 import { SAMPLED_INSTRUMENT_SYNTHS, sampledAssetForLane, sampledInstrumentFor, sampledInstrumentGapReason } from "../src/data/sampledInstruments";
+import { playableTechniques, type StringTechniqueProgram } from "../src/data/stringTechniques";
 import { placementForPart, placementForTrack, type SituationPlacement, type StringSituationSpec } from "../src/data/stringSituation";
 import { barsCoveringNotes, importedPartVoice, importedTempoAndMeter } from "../src/data/arrangementImport";
 import { DEFAULT_SYNTH_PRESETS } from "../src/audio/PolySynth";
@@ -1429,7 +1430,41 @@ export function addMcpTrackNotes(arrangementId: string, trackId: string, notes: 
    * single-note writer already went through `refuseUnknownTrack`; the bulk writer — the one a part actually arrives
    * through, and the one whose silent failure costs the most — did not.
    */
-  return edit(arrangementId, (arrangement) => refuseUnknownTrack(arrangement, trackId, () => addTrackNotes(arrangement, trackId, notes)));
+  const result = edit(arrangementId, (arrangement) => refuseUnknownTrack(arrangement, trackId, () => addTrackNotes(arrangement, trackId, notes)));
+  /**
+   * ⭐ **A note longer than the recording is said out loud** (third evaluation, section 6: the machine-readable
+   * constraints — playable range, articulation, legato, longest duration).
+   *
+   * The knowledge already existed: `src/data/stringTechniques.ts` measures each program's longest sample, and the import
+   * path has warned about it since the string work. What was missing is the **moment of writing**: a caller can point a
+   * lane at a 3-second pizzicato and ask for a 40-second pad, and nothing in the reply says the recording stops before
+   * the note does. The lane's own asset decides, through the same resolver the renderer uses, so a note written to a lane
+   * that plays no recording gets no sentence.
+   */
+  const lane = getMcpArrangement(arrangementId)?.tracks.find((candidate) => candidate.id === trackId);
+  /**
+   * ⭐ **The lane's own `sample.assetId` first**: that field is what a sampler track states, and it is the same field the
+   * renderer reads. `sampledAssetForLane` is the broader resolver (a mapped instrument name, a role), and it is asked
+   * second because it keys on `track_id`/`instrument` rather than on the `kind` a `TrackV2` actually carries — asking it
+   * first returned `undefined` for a sampler that plainly names its recording, which is how this comment exists.
+   */
+  const assetId = lane?.sample?.assetId ?? sampledAssetForLane(lane as never);
+  const program = playableTechniques().find((candidate: StringTechniqueProgram) => candidate.assetId === assetId);
+  if (program) {
+    const bpm = getMcpArrangement(arrangementId)?.bpm ?? 120;
+    const longestBeats = notes.reduce((longest, note) => Math.max(longest, note.lengthBeats), 0);
+    const longestSeconds = (longestBeats * 60) / bpm;
+    if (longestSeconds > program.maxSampleSeconds) {
+      return {
+        ...result,
+        problems: [
+          ...result.problems,
+          `the longest note is ${longestSeconds.toFixed(2)}s and ${program.assetId} is a one-shot whose longest sample is ${program.maxSampleSeconds}s, so the recording stops before the note does — shorten it, or split it across repeated notes`,
+        ],
+      };
+    }
+  }
+  return result;
 }
 
 /**

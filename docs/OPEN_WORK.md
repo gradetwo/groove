@@ -19382,3 +19382,28 @@ describe("the grid's editing actions", () => {
     可演奏音域/articulation/legato 的机器可读约束 ✓（与 D2 同族 ✓，D2 已做音域那一半 ✓）、
     多谱表 MusicXML ✓、全音域卷帘与段落视图 ✓（F08 已做"存在的音高必可见"那半 ✓）、自动保存与修订恢复 ✓、
     Web/MCP 统一工程 schema ✓（F09 已让名字随包走 ✓）。
+
+### 七百六十九、✅ **第 6 节能力评估（第 4 件）：一次性录音的"最长持续时间"约束，在**写音符的那一刻**说出来**（2026-10-08 ✓）
+
+  ⭐ **来源** ✓：报告第 6 节 Agent 侧："音源**可演奏音域**、**articulation**、**legato** 及**最长持续时间**的机器可读约束" ✓
+    （音域那半已由 D2 完成 ✓：`lowestNote`/`highestNote` 只在**量测过**的地方给出 ✓）。
+  ⭐ **复现（读代码即坐实）** ✓：约束**早就存在**——`src/data/stringTechniques.ts` 为每个弦乐程序记录了
+    `maxSampleSeconds` ✓，导入路径（`placementForPart` ✓）也会给出"**录音会在音符结束前停下**"的判词 ✓；
+    但**写音符这条路**不查它 ✗ ⇒ 调用者可以把音轨指向一段 **3 秒**的拨奏 ✓ 却要求一个 **40 秒**的长音 ✓
+    ⇒ 回包里**一句提示都没有** ✗✓（Agent 听不到截断 ✓，正是报告说的"约束没有机器可读地到达" ✓）。
+  ⭐ **修法** ✓（`mcp/arrangement.ts` 的 `addMcpTrackNotes` ✓，全批次都能吃到 ✓）：
+    取该音轨**实际播放的资产** ✓ → 在已量测的技法表里找它的程序 ✓ → 把写进来的**最长音符换算成秒**
+    （`lengthBeats × 60 / bpm` ✓）与之比较 ✓ ⇒ 超过就**追加一条 problems** ✓：
+    "the longest note is **15.00s** and **vsco2ce:ViolinEnsPizz** is a one-shot whose longest sample is **3.016s**,
+    so the recording stops before the note does — shorten it, or split it across repeated notes" ✓
+    （**给出数字 ＋ 两条可执行的下一步** ✓，与本仓库其他判词一致 ✓）。
+    ⚠️ **踩到并修正了一个自己的错** ✓：一开始用 `sampledAssetForLane(lane)` 取资产 ✓，它对 `TrackV2` 返回 `undefined` ✗
+      （那个解析器按 `track_id`/`instrument` 取键 ✓，而 `TrackV2` 带的是 `kind` ✓）⇒ 改为**先读音轨自己的
+      `sample.assetId`** ✓（渲染器读的也是这个字段 ✓），解析器作为回退 ✓；探针当场把这个 `undefined` 打了出来 ✓。
+  ⭐ 判据 ✓（`src/test/oneShotLengthWarning.test.ts` ✓）：
+    · 在**真实量测**出来的拨奏程序上（`maxSampleSeconds < 6` 的那一个 ✓，不是自造夹具 ✓）写一个 **30 拍**音符 ⇒
+      回包**必须**点名该资产 ✓、必须说 "stops before the note does" ✓、必须带上 **`{maxSampleSeconds}s`** 这个数字 ✓；
+    · 再写一个**在限内**的短音符 ⇒ **不得**出现那条提示 ✓（对什么都报警的提示是噪音，不是约束 ✓）。
+  ⭐ 相关 6 个测试文件 **20 条全绿** ✓，lint / docs / refs 门禁绿 ✓。
+  ⏳ 第 6 节剩余（仍开放 ✓）：render jobId ＋ 真正取消（L01 的结构那半 ✓）、legato/articulation 的**逐音符**约束（本轮做的是"
+    最长持续时间" ✓，legato 连接仍只有文字说明 ✓）、多谱表 MusicXML ✓、段落视图 ✓、自动保存与修订恢复 ✓。
