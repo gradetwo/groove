@@ -45,8 +45,15 @@ describe("the arrangement's note-shaping tools", () => {
       arrangementId,
       trackId,
       snapBeats: 0.25,
-    })) as { summary?: unknown };
-    expect(result.summary).toBeTruthy();
+    })) as { status?: string; summary?: unknown; tracks?: Array<{ notes?: number }> };
+    /**
+     * ⭐ **The default reply is a delta now, not the arrangement** (finding D1). The edit's *effect* is still asserted
+     * from the model below, which is where it belongs; what this checks is that the reply says what changed and carries
+     * no full note dump — deleting the delta (or making it default to the old snapshot) turns it red.
+     */
+    expect(result.status).toBe("ok");
+    expect(result.summary).toBeUndefined();
+    expect(result.tracks?.[0]?.notes).toBe(4);
 
     const after = notesOf(arrangementId, trackId);
     // ⭐ Starts are what makes a phrase: the operation moves lengths only, so the rhythm survives.
@@ -59,15 +66,49 @@ describe("the arrangement's note-shaping tools", () => {
     const before = notesOf(arrangementId, trackId);
 
     const result = (await tool("vary_arrangement_notes").handler({ arrangementId, trackId })) as {
-      summary?: { trackCount?: number };
+      summary?: unknown;
+      tracks?: Array<{ notes?: number }>;
     };
-    // The reply is the arrangement's standard edit result; the advisory about a synth's built-in preset is
-    // expected here and is not a failure of the operation.
-    expect(result.summary?.trackCount).toBe(1);
+    /**
+     * ⭐ The delta reply: one entry per track with a **count**, and the advisory about a synth's built-in preset is
+     * expected here and is not a failure of the operation.
+     */
+    expect(result.summary).toBeUndefined();
+    expect(result.tracks?.length).toBe(1);
 
     const after = notesOf(arrangementId, trackId);
     // ⭐ The humanize rule the v1 op carried: the bass keeps its place, and the part stays the same size.
     expect(after.length).toBe(before.length);
     expect(Math.min(...after.map((note) => note.pitch))).toBe(36);
   });
+
+  it("⭐ keeps the full arrangement behind `verbose`, and bounds the delta (finding D1)", () => {
+    const { arrangementId, trackId } = seeded();
+    // The measured defect: 32-note batches on a growing arrangement returned 7.2 KB and climbed ~5 KB per batch, so a
+    // single edit on a 900-note piece cost ~182 KB (~45.5k tokens). The delta is a function of the *tracks*, not the notes.
+    const delta = tool("add_arrangement_note").handler({
+      arrangementId,
+      trackId,
+      pitch: 60,
+      startBeats: 8,
+      lengthBeats: 1,
+      velocity: 100,
+    }) as { status?: string; summary?: unknown; tracks?: Array<{ notes?: number }> };
+    expect(delta.status).toBe("ok");
+    expect(delta.summary, "the default reply carries no note arrays").toBeUndefined();
+    expect(JSON.stringify(delta).length).toBeLessThan(2_000);
+
+    // ⭐ And the old reply is one flag away, so nothing that needed it lost it.
+    const verbose = tool("add_arrangement_note").handler({
+      arrangementId,
+      trackId,
+      pitch: 62,
+      startBeats: 9,
+      lengthBeats: 1,
+      velocity: 100,
+      verbose: true,
+    }) as { summary?: { tracks?: Array<{ notes?: unknown[] }> } };
+    expect(verbose.summary?.tracks?.[0]?.notes?.length).toBeGreaterThan(0);
+  });
+
 });

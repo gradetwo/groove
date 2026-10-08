@@ -18724,3 +18724,21 @@ describe("the grid's editing actions", () => {
     本地 typecheck ✓、lint ✓、check:css ✓、docs 门禁 ✓、check:skin-roles ✓、两条预算判据 ✓ 全绿 ✓。
   ⏳ 下一批（目标第二批 ✓）：**D1**（MCP 音符应答全量快照 ✓ 实测单次 182 KB / 4.5 万 tokens ✓）、
     **D3**（卷帘 74,592 个 DOM 按钮 ✓）、**D6**（加轨全页重排 ✓）——同样先复现取证再改 ✓。
+
+### 七百三十七、✅ **第二批 D1：MCP 音符应答默认变成"增量"，实测每批增长从 ~4.9 KB 降到 ~0**（2026-10-08 ✓）
+
+  ⭐ **先复现** ✓（`scratch/repro-d1-token-growth.mjs` ✓）：每批 32 个音符 ✓、逐批打印**回包字节数** ✓：
+    修前 **7,200 → 12,152 → 17,112 → 22,073 → 27,033 → 31,993** ✓ ⇒ **每批 +~4,950 字节** ✓
+    （报告在 8 轨/900 音符上量到单次 **182,065 字节 ≈ 4.5 万 tokens** ✓，同一形状 ✓）。
+  ⭐ **根因** ✓：音符编辑类工具的应答里带着 `summary` ✓，而 `summary.tracks[].notes` 是**整首曲子的全部音符** ✗
+    ⇒ 改一个音符要付整首曲子的 token ✓。
+  ⭐ **修法** ✓（`mcp/registryArrangementNotes.ts` ✓）：新增 `noteReply(result, verbose)` ✓——
+    默认返回**增量** ✓：`{status, arrangementId, bars, bpm, tracks:[{id,name,kind,notes:<数量>}], requested?, problems?, addedPitchRange?, trackPitchRange?, widenedTrackRange?, note:"…pass verbose: true…"}` ✓
+    （**计数**而不是数组 ✓，且把调用者真正要行动的几个字段原样保留 ✓）；
+    `verbose: true` ⇒ **逐字节回到原来那份** ✓（需要全量的人一个开关就拿回来 ✓）。九个音符工具全部接上 ✓。
+  ⭐ **修后实测** ✓：**928 → 929 字节，六批只涨 1 字节** ✓✓（原来 +24,793 ✓）⇒ 与音轨数相关、**与音符数无关** ✓。
+  ⭐ 判据 ✓（`src/test/mcpArrangementNoteOps.test.ts` ✓）：默认 **没有** `summary` ✓、`tracks[0].notes` 是**计数** ✓、
+    序列化 < 2 KB ✓；同一文件里断言 `verbose: true` **仍然带回** 音符数组 ✓（逃生门可证 ✓）；
+    另两处原先断言 `result.summary` 的用例改成断言增量形状 ✓（**效果**本来就都从模型断言 ✓）。
+  ⭐ 受影响的 11 个测试文件 **85 条全绿** ✓，lint / docs 门禁绿 ✓。
+  ⏳ 第二批剩余 ✓：**D3**（卷帘 74,592 个 DOM 按钮 ✓）、**D6**（加轨全页重排 ✓）。

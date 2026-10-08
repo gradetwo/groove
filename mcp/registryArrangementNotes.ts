@@ -13,6 +13,50 @@ import { addMcpNote, addMcpTrackNotes, moveMcpNote, quantizeMcpNoteLengths, remo
 import { getMcpArrangement } from "./arrangement";
 import { noteName } from "../src/data/pitchTruth";
 
+/**
+ * ⭐ **The delta reply: what changed, not the arrangement.**
+ *
+ * The independent evaluation measured one `add_arrangement_notes` returning **182,065 bytes (~45,500 tokens)** on an
+ * eight-track, 900-note arrangement, growing linearly with the piece, because every note-edit reply carried the whole
+ * arrangement as `summary`. Reproduced here: 32-note batches climbed ~5 KB each. A caller that edits one note and pays
+ * for the entire arrangement is the shape this fixes.
+ *
+ * The default is the **delta** — the arrangement's identity, its length, and one entry per track with a **count** rather
+ * than an array — and `verbose: true` still returns exactly what it always did, so nothing that needed the full dump
+ * lost it. `requested`, `problems`, the pitch ranges and `widenedTrackRange` travel in both, because they are the
+ * fields a caller acts on ("the lane declined my notes", "this call reached past the range").
+ */
+function noteReply(result: unknown, verbose: boolean | undefined): unknown {
+  if (verbose === true) return result;
+  const r = result as {
+    summary?: { arrangementId?: string; bars?: number; bpm?: number; tracks?: Array<{ id?: string; name?: string; kind?: string; notes?: unknown[] }> };
+    problems?: unknown;
+    requested?: unknown;
+    addedPitchRange?: unknown;
+    trackPitchRange?: unknown;
+    widenedTrackRange?: unknown;
+  };
+  return {
+    status: "ok",
+    arrangementId: r?.summary?.arrangementId,
+    ...(r?.summary?.bars === undefined ? {} : { bars: r.summary.bars }),
+    ...(r?.summary?.bpm === undefined ? {} : { bpm: r.summary.bpm }),
+    tracks: (r?.summary?.tracks ?? []).map((track) => ({
+      id: track.id,
+      ...(track.name === undefined ? {} : { name: track.name }),
+      ...(track.kind === undefined ? {} : { kind: track.kind }),
+      notes: Array.isArray(track.notes) ? track.notes.length : undefined,
+    })),
+    ...(r?.requested === undefined ? {} : { requested: r.requested }),
+    ...(r?.problems === undefined ? {} : { problems: r.problems }),
+    ...(r?.addedPitchRange === undefined ? {} : { addedPitchRange: r.addedPitchRange }),
+    ...(r?.trackPitchRange === undefined ? {} : { trackPitchRange: r.trackPitchRange }),
+    ...(r?.widenedTrackRange === undefined ? {} : { widenedTrackRange: r.widenedTrackRange }),
+    note: "full note lists omitted; pass verbose: true for the previous reply",
+  };
+}
+
+
 export const ARRANGEMENT_NOTE_TOOLS: ToolDefinition[] = [
   {
     name: "add_arrangement_notes",
@@ -22,6 +66,7 @@ export const ARRANGEMENT_NOTE_TOOLS: ToolDefinition[] = [
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
+      verbose: z.boolean().optional().describe("return the arrangement's full note lists as before; omitted, the reply is a delta"),
       trackId: z.string().describe("the lane to add to; `fx` and `folder` lanes decline notes"),
       notes: z
         .array(
@@ -73,7 +118,7 @@ export const ARRANGEMENT_NOTE_TOOLS: ToolDefinition[] = [
           if (note.pitch < lowest) lowest = note.pitch;
           if (note.pitch > highest) highest = note.pitch;
         }
-        return {
+        return noteReply({
           ...result,
           requested: notes.length,
           addedPitchRange: {
@@ -91,7 +136,7 @@ export const ARRANGEMENT_NOTE_TOOLS: ToolDefinition[] = [
           /** ⭐ True when this call is what made the track reach further, in either direction. An empty track cannot be widened. */
           widenedTrackRange:
             before.length > 0 && (addedLow < priorLow || addedHigh > priorHigh),
-        };
+        }, args.verbose === true);
       } catch (error) {
         return failure((error as Error).message);
       }
@@ -106,6 +151,7 @@ export const ARRANGEMENT_NOTE_TOOLS: ToolDefinition[] = [
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
+      verbose: z.boolean().optional().describe("return the arrangement's full note lists as before; omitted, the reply is a delta"),
       trackId: z.string(),
       pitch: z.number().int().min(0).max(127).describe("MIDI note; a drum note is just a pitch, as in a DAW"),
       startBeats: z.number().min(0).describe("beats (quarter notes) from the arrangement's start; fractional is allowed"),
@@ -114,13 +160,13 @@ export const ARRANGEMENT_NOTE_TOOLS: ToolDefinition[] = [
     },
     handler: (args) => {
       try {
-        return addMcpNote(String(args.arrangementId), {
+        return noteReply(addMcpNote(String(args.arrangementId), {
           trackId: String(args.trackId),
           pitch: Number(args.pitch),
           startBeats: Number(args.startBeats),
           lengthBeats: args.lengthBeats as number | undefined,
           velocity: args.velocity as number | undefined,
-        });
+        }), args.verbose === true);
       } catch (error) {
         return failure((error as Error).message);
       }
@@ -134,13 +180,14 @@ export const ARRANGEMENT_NOTE_TOOLS: ToolDefinition[] = [
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
+      verbose: z.boolean().optional().describe("return the arrangement's full note lists as before; omitted, the reply is a delta"),
       trackId: z.string(),
       pitch: z.number().int().min(0).max(127),
       startBeats: z.number().min(0),
     },
     handler: (args) => {
       try {
-        return removeMcpNote(String(args.arrangementId), String(args.trackId), { pitch: Number(args.pitch), startBeats: Number(args.startBeats) });
+        return noteReply(removeMcpNote(String(args.arrangementId), String(args.trackId), { pitch: Number(args.pitch), startBeats: Number(args.startBeats) }), args.verbose === true);
       } catch (error) {
         return failure((error as Error).message);
       }
@@ -154,6 +201,7 @@ export const ARRANGEMENT_NOTE_TOOLS: ToolDefinition[] = [
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
+      verbose: z.boolean().optional().describe("return the arrangement's full note lists as before; omitted, the reply is a delta"),
       trackId: z.string(),
       pitch: z.number().int().min(0).max(127),
       startBeats: z.number().min(0),
@@ -162,12 +210,12 @@ export const ARRANGEMENT_NOTE_TOOLS: ToolDefinition[] = [
     },
     handler: (args) => {
       try {
-        return moveMcpNote(
+        return noteReply(moveMcpNote(
           String(args.arrangementId),
           String(args.trackId),
           { pitch: Number(args.pitch), startBeats: Number(args.startBeats) },
           { pitch: Number(args.toPitch), startBeats: Number(args.toStartBeats) }
-        );
+        ), args.verbose === true);
       } catch (error) {
         return failure((error as Error).message);
       }
@@ -182,6 +230,7 @@ export const ARRANGEMENT_NOTE_TOOLS: ToolDefinition[] = [
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
+      verbose: z.boolean().optional().describe("return the arrangement's full note lists as before; omitted, the reply is a delta"),
       trackId: z.string(),
       pitch: z.number().int().min(0).max(127),
       startBeats: z.number().min(0),
@@ -189,7 +238,7 @@ export const ARRANGEMENT_NOTE_TOOLS: ToolDefinition[] = [
     },
     handler: (args) => {
       try {
-        return setMcpNoteVelocity(String(args.arrangementId), String(args.trackId), { pitch: Number(args.pitch), startBeats: Number(args.startBeats) }, Number(args.velocity));
+        return noteReply(setMcpNoteVelocity(String(args.arrangementId), String(args.trackId), { pitch: Number(args.pitch), startBeats: Number(args.startBeats) }, Number(args.velocity)), args.verbose === true);
       } catch (error) {
         return failure((error as Error).message);
       }
@@ -202,6 +251,7 @@ export const ARRANGEMENT_NOTE_TOOLS: ToolDefinition[] = [
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
+      verbose: z.boolean().optional().describe("return the arrangement's full note lists as before; omitted, the reply is a delta"),
       trackId: z.string(),
       pitch: z.number().int().min(0).max(127),
       startBeats: z.number().min(0),
@@ -209,7 +259,7 @@ export const ARRANGEMENT_NOTE_TOOLS: ToolDefinition[] = [
     },
     handler: (args) => {
       try {
-        return setMcpNoteLength(String(args.arrangementId), String(args.trackId), { pitch: Number(args.pitch), startBeats: Number(args.startBeats) }, Number(args.lengthBeats));
+        return noteReply(setMcpNoteLength(String(args.arrangementId), String(args.trackId), { pitch: Number(args.pitch), startBeats: Number(args.startBeats) }, Number(args.lengthBeats)), args.verbose === true);
       } catch (error) {
         return failure((error as Error).message);
       }
@@ -223,11 +273,12 @@ export const ARRANGEMENT_NOTE_TOOLS: ToolDefinition[] = [
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
+      verbose: z.boolean().optional().describe("return the arrangement's full note lists as before; omitted, the reply is a delta"),
       trackId: z.string(),
       snapBeats: z.number().describe("the division to round to, in beats; 0.25 is a sixteenth"),
     },
     handler: (args) =>
-      quantizeMcpNoteLengths(String(args.arrangementId), String(args.trackId), Number(args.snapBeats)),
+      noteReply(quantizeMcpNoteLengths(String(args.arrangementId), String(args.trackId), Number(args.snapBeats)), args.verbose === true),
   },
   {
     name: "vary_arrangement_notes",
@@ -236,7 +287,7 @@ export const ARRANGEMENT_NOTE_TOOLS: ToolDefinition[] = [
       "Nudge one track's notes the way a performance differs from a grid: small timing, velocity and pitch changes, applied with the variation's own default strength. This is the studio's `humanize` operation on the data that replaced the pattern -- notes with a start, a length, a pitch and a velocity.",
     readOnly: false,
     inputSchema: { arrangementId: z.string(), trackId: z.string() },
-    handler: (args) => varyMcpNotes(String(args.arrangementId), String(args.trackId)),
+    handler: (args) => noteReply(varyMcpNotes(String(args.arrangementId), String(args.trackId)), args.verbose === true),
   },
   {
     name: "transpose_arrangement_notes",
@@ -246,18 +297,22 @@ export const ARRANGEMENT_NOTE_TOOLS: ToolDefinition[] = [
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
+      verbose: z.boolean().optional().describe("return the arrangement's full note lists as before; omitted, the reply is a delta"),
       trackId: z.string(),
       fromBeats: z.number().describe("window start, inclusive, in beats from the arrangement's beginning"),
       toBeats: z.number().describe("window end, exclusive"),
       semitones: z.number().int().describe("positive raises, negative lowers"),
     },
     handler: (args) =>
-      transposeMcpNotes(
-        String(args.arrangementId),
-        String(args.trackId),
-        Number(args.fromBeats),
-        Number(args.toBeats),
-        Number(args.semitones)
+      noteReply(
+        transposeMcpNotes(
+          String(args.arrangementId),
+          String(args.trackId),
+          Number(args.fromBeats),
+          Number(args.toBeats),
+          Number(args.semitones)
+        ),
+        args.verbose === true
       ),
   },
 ];
