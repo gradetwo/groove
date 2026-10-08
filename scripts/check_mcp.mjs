@@ -240,7 +240,13 @@ try {
    * nothing — so unlike the loudness and preview checks this one belongs here, where it runs in seconds.
    */
   const lyricArrangement = payload(await client.request("tools/call", { name: "create_arrangement", arguments: { blankKind: "synth" } }));
-  const lyricTrackId = String((lyricArrangement.trackIds ?? [])[0] ?? "track-1");
+  /**
+   * ⭐ **The arrangement's own track id** — this read `trackIds`, which `create_arrangement` does not return, so it fell
+   * back to the literal `"track-1"`: a track that never existed. It passed because lyrics written to an unknown track were
+   * silently accepted, which is the third evaluation's F04; once that was refused, this check failed with `undefined
+   * note(s)` — the refusal reaching a fixture that had been measuring nothing. The reply carries `tracks`.
+   */
+  const lyricTrackId = String(lyricArrangement.tracks?.[0]?.id ?? "track-1");
   const vocal = payload(
     await client.request("tools/call", {
       name: "set_arrangement_vocal_melody",
