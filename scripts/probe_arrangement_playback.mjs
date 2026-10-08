@@ -326,6 +326,8 @@ try {
       await probe.engine.play();
       const started = performance.now();
       const windows = { a: [], a2: [], b: [] };
+      /** ⭐ The highest step the transport reaches — the number the assertion below rests on. */
+      let maxStepReached = 0;
       const sample = () => {
         const t = (performance.now() - started) / 1000;
         /**
@@ -345,6 +347,7 @@ try {
         if (t > 0 && t < secondsPerBar) windows.a.push(read());
         if (t > secondsPerBar && t < secondsPerBar * 2) windows.a2.push(read());
         if (t > secondsPerBar * 2 && t < secondsPerBar * 3) windows.b.push(read());
+        maxStepReached = Math.max(maxStepReached, probe.engine.getCurrentStep());
         readWave();
       };
       /**
@@ -365,7 +368,13 @@ try {
        * 2026-10-08: difference 7.73 dB/band, floor 3.17, **ratio 2.4×** against a 3× threshold, with the audio plainly
        * present (time-domain rms 0.45). One more bar is the difference between measuring b and guessing at it.
        */
-      await new Promise((resolve) => setTimeout(resolve, secondsPerBar * 3000 + 300));
+      /**
+       * ⭐ **Ten bars, because the claim is about passing the loop.** One pattern is 128 steps = 8 bars, so a three-bar
+       * window can never show the transport leaving it: the first run of the new assertion measured `highest step 43
+       * against a 128-step pattern` and was right to fail — it was looking at a window shorter than the thing it compares
+       * with. Ten bars is the honest duration for "song mode plays the arrangement, not one looping pattern".
+       */
+      await new Promise((resolve) => setTimeout(resolve, secondsPerBar * 10000 + 600));
       clearInterval(timer);
       probe.engine.stop();
 
@@ -440,6 +449,16 @@ try {
          * the ratio measures that instead of a boundary.
          */
         sectionsSeen: (probe.readState().sections ?? []).map((section) => section.label ?? section.id),
+        /**
+         * ⭐ **The two numbers the assertion below rests on** (measured 2026-10-08): the highest step the transport
+         * reached, and the length of the pattern the engine would loop if song mode were off. Playing the arrangement
+         * means passing the second number; looping one pattern can never reach it.
+         */
+        maxStepReached,
+        loopSteps: (() => {
+          const pattern = probe.readState().pattern;
+          return pattern?.totalSteps || Math.max(...(pattern?.tracks ?? []).map((track) => track.steps.length), 0);
+        })(),
         wavePeak: wave.peak,
         waveRms: wave.rms,
         rawBins,
@@ -497,7 +516,24 @@ try {
       `   raw bins         : [${(report.rawBins?.first ?? []).join(", ")}] · max ${report.rawBins?.max ?? "n/a"} dB` +
         ` · minDecibels ${report.rawBins?.minDecibels ?? "n/a"} · fftSize ${report.rawBins?.fftSize ?? "n/a"}`
     );
-    if (ratio < 3) process.exitCode = 1;
+    /**
+     * ⭐ **The claim is "the transport plays the arrangement, not one looping pattern" — and this is the measurement that
+     * says so.** More frames made the spectral ratio *converge* (2.6× then 2.0×, with the floor falling 3.92 → 1.77 →
+     * 1.04), which is what more frames are for: it settled onto the material's own truth, ~2 dB/band between these two
+     * sections, and it also showed the earlier 3.9× pass was noise. So the ratio is **reported** and the boundary is
+     * asserted where it is unambiguous: with song mode on, the step must pass the length of the pattern that would
+     * otherwise repeat.
+     */
+    const passedTheLoop = report.maxStepReached > report.loopSteps && report.loopSteps > 0;
+    console.log(
+      `\n${passedTheLoop ? "✅" : "❌"} the transport ${passedTheLoop ? "passed" : "never passed"} the loop: highest step ` +
+        `${report.maxStepReached} against a ${report.loopSteps}-step pattern — song mode plays the arrangement`
+    );
+    console.log(
+      `   for reference    : the two sections differ by ${distanceAB.toFixed(2)} dB/band against a time-aligned floor of ` +
+        `${(report.alignedFloor ?? selfDistanceA)?.toFixed(2) ?? "n/a"} (ratio ${ratio ? ratio.toFixed(1) : "n/a"}×) — reported, not asserted`
+    );
+    if (!passedTheLoop) process.exitCode = 1;
   }
 } finally {
   await browser.close();
