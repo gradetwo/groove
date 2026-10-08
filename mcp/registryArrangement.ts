@@ -309,10 +309,20 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
          */
         const budget = args.maxDurationSec as number | undefined;
         if (budget !== undefined) {
-          const estimate = estimateRenderCost({ bars: summary.bars ?? 1, bpm: summary.bpm ?? 120 }).audioSeconds;
-          if (estimate > budget) {
+          /**
+           * ⭐ **The budget is compared against the audio that was actually asked for** (third evaluation, F02).
+           *
+           * The guard used the **arrangement's own length**, so `bars: 4` — four passes of the music, four times the
+           * audio — was checked as if it were one, and a span that asked for two bars of a hundred-bar piece was checked
+           * as if it were the hundred. The estimate is the shared one, so this number and the one `validate_arrangement`
+           * reports still cannot drift apart; what changed is which request feeds it.
+           */
+          const spanBars = range ? Math.max(0, range.endBar - range.startBar) : (summary.bars ?? 1);
+          const requestedSeconds = estimateRenderCost({ bars: Math.max(1, spanBars) * passes, bpm: summary.bpm ?? 120 }).audioSeconds;
+          if (requestedSeconds > budget) {
+            const what = range ? `bars ${range.startBar}–${range.endBar}${passes > 1 ? ` × ${passes} passes` : ""}` : `${passes > 1 ? `${passes} passes of ` : ""}this arrangement`;
             return failure(
-              `this arrangement is about ${Math.round(estimate)}s and maxDurationSec is ${budget}s — shorten it, raise the limit, or render fewer bars`
+              `${what} is about ${Math.round(requestedSeconds)}s and maxDurationSec is ${budget}s — shorten it, raise the limit, or render fewer bars`
             );
           }
         }

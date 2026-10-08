@@ -18926,3 +18926,17 @@ describe("the grid's editing actions", () => {
   ⭐ 判据 ✓（`mcpPreviewScopeDiagnostic.test.ts` ✓ 4 例 ✓）：**两个处理函数各必须有这句话** ✓（`sentences.length === 2` ✓）、
     必须作为 `halfSpan` 字段送出 ✓、必须进 `arrangementProblems` ✓ ⇒ 删掉任一处的任一半即红 ✓。
   ⏳ 下一步 ✓：**F02**（`estimateRenderCost` 的墙钟几乎不随重复次数/范围变 ✓ —— 与 F03 同族："数字说了不算" ✓）。
+
+### 七百四十八、✅ **第三份报告 F02：时长预算量的是"你要的音频"，不是"这首曲子本来就多长"**（2026-10-08 ✓）
+
+  ⭐ **复现（读那条守卫即坐实）** ✓：`maxDurationSec` 的守卫写的是
+    `estimateRenderCost({ bars: summary.bars ?? 1, … }).audioSeconds` ✗ —— 用的是**编曲自身的长度** ✓，而**不是**
+    调用者要的东西 ✓ ⇒ ①`bars: 4`（四遍音乐、四倍音频 ✓）被当成一遍来检查 ✓；②一百小节里只要两小节的 span 被当成一百小节 ✓。
+    按修前那行代码：1 小节的编曲 = **2 s** ✓，即使调用者要 4 遍（8 s ✓）也照样放行 ✓。
+  ⭐ **修法** ✓：先按 range 与 passes 算**真正请求的音频** ✓：
+    `spanBars = range ? endBar − startBar : summary.bars` ✓、`requestedSeconds = estimateRenderCost({bars: max(1, spanBars) × passes})` ✓
+    ——**估算仍是同一个共享函数** ✓（因此它与 `validate_arrangement` 报的数字依旧不可能漂 ✓），变的只是**喂给它的是哪个请求** ✓；
+    拒绝信息也改成说**请求**（`bars 4–8 × 4 passes` ✓ / `4 passes of this arrangement` ✓）。
+  ⭐ 判据 ✓（`arrangementRenderBudget.test.ts` ✓ 3 例 ✓）：1 小节的编曲 ＋ `bars: 4` ＋ `maxDurationSec: 5` ⇒
+    **必须拒绝** ✓，且信息里必须出现 **`4 passes`** 与 **`about 8s`** ✓（回退到"编曲自身长度"即红 ✓，因为那时它只会说 2 s 且根本不拒 ✓）。
+  ⏳ 下一步 ✓：**F01**（`validate_arrangement` 说"没准备好"、`render_arrangement` 实际成功 ✓ —— 两者必须用同一个"能不能播"的判据 ✓）。
