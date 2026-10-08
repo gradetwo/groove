@@ -19682,3 +19682,22 @@ describe("the grid's editing actions", () => {
   ⭐ **退出码如实** ✓：`probe_arrangement_playback` **= 1** ✗（本地 `verify` 仍会红在它身上 ✓），
     `probe_live_arrangement` **= 0** ✓；两者都用**正确读法**验证 ✓（`node … > file 2>&1; echo exit=$?` ✓——
     上一轮我发现用 `| tail` 读到的只是 `tail` 的退出码 ✗）。
+
+### 七百八十一、🔎 **兄弟探针的定论：**它的目标还活着，**过时的是它的入口**（`?tab=studio` 现在是编排路线）（2026-10-08 ✓）
+
+  ⭐ **本轮两个决定性事实（都是查出来的，不是猜的 ✓）** ✓：
+    1. **它的被测对象仍然存在** ✓：`SET_SECTIONS` 还在 `src/features/sequencer/useSequencerStore.ts` ✓，
+       `songMode` 也仍在 `projectDb` 的持久化形状里 ✓ ⇒ 报告所验证的那个能力（**sections ＋ song mode 的实时播放** ✓）没有消失 ✓；
+    2. **真正过时的是它的入口** ✓：`useSequencerStore` 的宿主是 `currentTab === "console"` → `HardwareConsoleView` ✓
+       （`src/App.tsx:421` ✓），而它一直走 `?tab=studio` ✓——那个入口**现在渲染编排路线** ✓
+       （`NewProjectView` 的注释原文："This route renders the arrangement **instead of** the studio" ✓），
+       那条路**只装引擎、不装 store** ✓ ⇒ `readState is not a function` ✓ 以及此后每一次失败 ✓。
+  ⭐ **因此我撤回了上一轮的方向** ✓：那轮我把它改成"只用引擎、按小节取样" ✗——那是**对一个还活着的功能做错的改动** ✗。
+    本轮把文件**恢复到原样** ✓（`git checkout` ✓），只改**入口** ✓（URL 指向 console 标签 ✓），
+    并把上面两条事实与"为什么"写进它的文件头 ✓——**这是路线修复，不是重写** ✓。
+  ⚠️ **现状（如实）** ✓：指向 console 后它报 **"the probe surface never appeared"** ✗（退出码 **1** ✓）——
+    还差**这条路线自己的 hash 与第一次手势** ✓（console 的 `?probe=1` 面由谁建起来 ✓、需要点哪一个控件 ✓）。
+    这两个都已写进文件头与 §781 作为**下一处要测的东西** ✓，而不是在这里瞎试 ✗。
+  ⭐ **教训（值得留给后人）** ✓：一条探针失败时，"**它的目标还在不在**"必须先问 ✗——我上一轮直接假设目标没了 ✗，
+    结果对着一个活着的功能改了两轮 ✓；正确顺序是：**先定位 store 的宿主路由（`grep useSequencerStore` ✓），
+    再动探针** ✓。

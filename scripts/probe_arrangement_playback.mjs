@@ -132,7 +132,21 @@ try {
    * The hash router supports `#/studio?genre=…` (`src/app/router.tsx`), which is the difference between a probe that
    * measures a playing genre and one that measures silence — the failure the first honest run reported at −80 dBFS.
    */
-  await page.goto(`http://127.0.0.1:${port}/?probe=1#/studio?genre=${encodeURIComponent(genre)}`, {
+  /**
+   * ⭐ **The two facts that settle this probe's rework** (measured this round, `docs/OPEN_WORK.md` §781).
+   *
+   * 1. Its **subject is alive**: `SET_SECTIONS`/`songMode` still exist in `src/features/sequencer/useSequencerStore.ts`,
+   *    and the route that mounts that store is `currentTab === "console"` → `HardwareConsoleView` (`src/App.tsx`).
+   * 2. Its **route is what went stale**: `?tab=studio` used to be a way in, and now renders the **arrangement** route
+   *    (`NewProjectView`: "This route renders the arrangement **instead of** the studio"), which installs the engine and no
+   *    store — hence `readState is not a function` and every failure since.
+   *
+   * So this is a **route repair**, not a rewrite: the probe's claim (B7 — the live transport plays the arrangement rather
+   * than one looping pattern) is unchanged. The URL below is the console tab. ⚠️ It still does not find the surface: the
+   * console's hash and its own first gesture are the next thing to measure, and they are named in §781 rather than guessed
+   * at here.
+   */
+  await page.goto(`http://127.0.0.1:${port}/?probe=1&tab=console`, {
     waitUntil: "domcontentloaded",
   });
   /**
@@ -206,24 +220,40 @@ try {
     async ({ genreId, sampleMs, controlLoop }) => {
       const probe = window.__grooveProbeSeen || window.__grooveProbe;
       if (!probe) return { error: "no probe surface" };
-      /**
-       * ⭐ **No sections and no song mode** (reworked 2026-10-08, `docs/OPEN_WORK.md` §779): this route installs the engine,
-       * not the studio store, so the two windows are taken from the **arrangement itself** — bars 0 and 2 as the floor, a
-       * bar around 8–10 as the signal. What the probe claims is unchanged in substance ("the live path plays the
-       * arrangement, not one looping bar"); only its vocabulary is this route's.
-       */
-      void controlLoop;
-      void genreId;
+      const state = probe.readState();
+      const bpm = state.bpm || 120;
+      const secondsPerBar = (60 / bpm) * 4;
+
+      // Two one-bar sections that are audibly different: the same clip, the second quieter with the lead muted.
+      if (!controlLoop) probe.commit({
+        type: "SET_SECTIONS",
+        sections: [
+          { id: "probe-a", slot: "A", bars: 2, label: "probe A" },
+          /**
+           * Structurally different, not merely quieter: the drums are muted, so the section's **spectral shape** changes rather
+           * than its level. The earlier pair (0.55 velocity, lead muted) was so close that a mean spectrum over a bar could not
+           * tell them apart — the geometry could not answer the question it was asked.
+           */
+          { id: "probe-b", slot: "A", bars: 2, velocityScale: 0.75, mute: ["kick", "snare", "hihat", "percussion"], label: "probe B" },
+        ],
+      });
+      // The store's song-mode action is a toggle, so set it by reading the live state rather than assuming.
+      if (!probe.readState().songMode) probe.commit({ type: "TOGGLE_SONG_MODE" });
 
       const analyser = probe.engine.getMasterAnalyser();
       if (!analyser) return { error: "the engine exposes no master analyser" };
       // A suspended context is silence, and silence is what the first honest run measured: resume it here, then insist.
       if (analyser.context?.state !== "running") await analyser.context?.resume?.();
       /**
-       * ⭐ **The arrangement's player hands the engine its material** — there is no `setPattern` call to make here, and the
-       * player is started below by the control a person would press. The context still has to be running: a suspended
-       * context is silence, which is what the first honest run of the sibling probe measured.
+       * Hand the engine the pattern the session is holding.
+       *
+       * The app does this from the console when it mounts; a probe that only calls `play()` runs an engine with nothing to
+       * play, which is why both windows measured about −85 dBFS even with the surface reached. `readState().pattern` is the
+       * same object the store renders (eight tracks, the genre's own bpm), and `setPattern` is the engine's own entry point
+       * for it.
        */
+      const sessionPattern = state.pattern;
+      if (sessionPattern) probe.engine.setPattern(sessionPattern, true);
       const contextState = analyser.context?.state ?? "unknown";
       if (contextState !== "running") return { error: `the audio context is ${contextState}, not running` };
       const bins = new Float32Array(analyser.frequencyBinCount);
@@ -268,42 +298,32 @@ try {
         wave.rms = Math.max(wave.rms, Math.sqrt(sum / time.length));
       };
 
-      /**
-       * ⭐ **The transport is started by the arrangement's own control, and the windows are taken by *bar*.**
-       *
-       * The route this probe reaches installs the engine only — there is no sequencer store to set sections on, and no
-       * `setPattern` call to make, because the arrangement's player is what hands the engine its material. What the claim
-       * becomes is the same claim in this route's vocabulary: "the sound changes when the playhead crosses a section
-       * boundary" is measured as "**an early bar and a far bar do not sound the same**", with two bars of the *same* region
-       * kept as the time-aligned noise floor. Bars come from the engine's own step counter, so nothing here needs a store.
-       */
-      const play = document.querySelector("[data-testid='arrangement-play']");
-      if (!play) return { error: "the arrangement has no play control on this route" };
-      play.click();
-      const waitStarted = Date.now();
-      let startStep = null;
-      while (Date.now() - waitStarted < 15000) {
-        if (probe.engine.getIsPlaying()) {
-          if (startStep === null) startStep = probe.engine.getCurrentStep();
-          else if (probe.engine.getCurrentStep() !== startStep) break;
-        }
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      }
-
-      const STEPS_PER_BAR = 16;
-      const windows = { a: [], a2: [], b: [] };
+      await probe.engine.play();
       const started = performance.now();
+      const windows = { a: [], a2: [], b: [] };
       const sample = () => {
-        const bar = Math.floor(probe.engine.getCurrentStep() / STEPS_PER_BAR);
-        // ⭐ `a` and `a2` are bars of the same region two apart — the floor is the music's own movement, time-aligned; `b`
-        // is a bar far enough away that the arrangement has moved on (the club form's build, on the default template).
-        if (bar === 0) windows.a.push(read());
-        if (bar === 2) windows.a2.push(read());
-        if (bar >= 8 && bar <= 10) windows.b.push(read());
+        const t = (performance.now() - started) / 1000;
+        /**
+         * Section A is bar 0 and section B is bar 1, and each window now spans its **whole** bar rather than its middle half.
+         *
+         * The first CI run reported a same-section "noise floor" of 9.94 dB/band against a 5.43 dB/band section difference
+         * (ratio 0.5×) — and a floor that large from comparing a section with itself is not a floor. With ~12 frames per
+         * window, halving them leaves ~6 frames of a bar whose content changes from beat to beat, so the "floor" was measuring
+         * the music's own variation rather than measurement noise. Doubling the window halves that variance again before the
+         * ratio is trusted; the levels are printed with it so silence and a real floor stay distinguishable.
+         */
+        /**
+         * Section A occupies bars 0–1 and section B bars 2–3, so the windows are **the same beats of different bars**: `a` and
+         * `a2` are two bars of the *same* section (the noise floor, time-aligned, so the music's own movement cancels) and `b` is
+         * the first bar of the other section (the signal).
+         */
+        if (t > 0 && t < secondsPerBar) windows.a.push(read());
+        if (t > secondsPerBar && t < secondsPerBar * 2) windows.a2.push(read());
+        if (t > secondsPerBar * 2 && t < secondsPerBar * 3) windows.b.push(read());
         readWave();
       };
       const timer = setInterval(sample, 40);
-      await new Promise((resolve) => setTimeout(resolve, 40000));
+      await new Promise((resolve) => setTimeout(resolve, secondsPerBar * 2000 + 300));
       clearInterval(timer);
       probe.engine.stop();
 
@@ -378,10 +398,9 @@ try {
         // Whatever the engine believes about itself: playing or not, and which material it holds.
         statePreview: (() => {
           try {
-            return `engine: playing ${probe.engine.getIsPlaying()}, step ${probe.engine.getCurrentStep()}, ` +
-              `context ${analyser.context?.state ?? "unknown"}`;
+            return JSON.stringify(probe.readState()).slice(0, 300);
           } catch (error) {
-            return `the engine threw: ${String(error)}`;
+            return `readState threw: ${String(error)}`;
           }
         })(),
       };
