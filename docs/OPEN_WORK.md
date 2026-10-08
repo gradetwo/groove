@@ -18940,3 +18940,21 @@ describe("the grid's editing actions", () => {
   ⭐ 判据 ✓（`arrangementRenderBudget.test.ts` ✓ 3 例 ✓）：1 小节的编曲 ＋ `bars: 4` ＋ `maxDurationSec: 5` ⇒
     **必须拒绝** ✓，且信息里必须出现 **`4 passes`** 与 **`about 8s`** ✓（回退到"编曲自身长度"即红 ✓，因为那时它只会说 2 s 且根本不拒 ✓）。
   ⏳ 下一步 ✓：**F01**（`validate_arrangement` 说"没准备好"、`render_arrangement` 实际成功 ✓ —— 两者必须用同一个"能不能播"的判据 ✓）。
+
+### 七百四十九、✅ **第三份报告 F01：验证与渲染终于用同一个"能不能播"的判据（采样器不再被误报为不可播放）**（2026-10-08 ✓）
+
+  ⭐ **报告的原话（我按 HTML 的 F01 节摘录）** ✓：六个有效 sampler 轨道 ＋ 1,624 音符 ⇒ `validate_arrangement` 报
+    `empty/ready=false, loaded=0` ✗ ⇒ **紧接着** `render_arrangement` **完整成功** ✓（`audioLanes.events=1624` ✓、无采样问题 ✓）。
+    报告给的原因：preflight 建好了 `catalogueWiring` ✓ 但 `preparePatternAudioLanes` 的 options **没传 `audioCatalogue`** ✗
+    ——**校验与真实渲染走了不同的依赖注入路径** ✓。
+  ⭐ **复现＋定位（我这边）** ✓：`scratch/repro-f-report3.ts` 里 `validate_arrangement` 读出
+    `ready:false` ＋ "virtuosity-drums-basic: no sample … no samples ship with the app yet" ✓；
+    读 `mcp/render/headless.ts` 确认 ✓——渲染路（513 行 ✓）传 `...(audioCatalogue.length ? { audioLaneCatalogue: audioCatalogue } : {})` ✓，
+    而预检路（`validateArrangementHeadless` ✓）只传 `bars`/`sampleDecoder`/`fetchSfzBytes`/采样率/声道 ✗ ⇒ **逐字对上报告的原因** ✓。
+  ⭐ **修法** ✓：预检路也传 `audioLaneCatalogue: audioCatalogue` ✓（与渲染路同一个字段名 ✓）。
+    **修后实测同一个探针** ✓：`validate_arrangement` ⇒ **`ready: true, problems: []`** ✓✓（修前 `ready:false, loaded:0` ✗）
+    ⇒ "能不能播"与"真的播了吗"对同一份文件给出同一个答案 ✓。
+  ⭐ 判据 ✓（`src/test/validateRenderAgreement.test.ts` ✓）：扫描 `headless.ts` ✓——
+    凡是准备 lane 的地方 **都必须带上 catalogue** ✓（`audioLaneCatalogue` 出现次数 ≥ 预检调用数 ＋ 1 ✓）
+    ⇒ 再出现"第二个建好却不传"的站点即红 ✓。
+  ⏳ 下一步 ✓：**F06**（`.groove` 导入缺深层校验 ✓：非法音符/速度被接受 ✓）与 **F05**（两个预览写同一路径覆盖 ✓）。

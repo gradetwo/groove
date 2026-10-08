@@ -610,8 +610,19 @@ export async function validateArrangementHeadless(
   ]);
   const { audioCatalogue, cacheWiring } = laneWiringFrom(context, catalogueRead, { catalogue });
   const bars = Math.max(1, Math.min(64, options.bars ?? 1));
+  /**
+   * ⭐ **The catalogue travels into the preflight, which is the whole of finding F01.**
+   *
+   * The render path passes `audioLaneCatalogue` (line 513 above) and this one did not: the preflight built the
+   * `audioCatalogue` and then asked `preparePatternAudioLanes` to resolve recordings **without** it, so every sampler lane
+   * resolved to nothing and a valid six-track project came back `empty/ready=false, loaded=0` — while the very next
+   * `render_arrangement` on the same project succeeded with all 1,624 events and no sample problems (the third
+   * evaluation's F01). The two paths now answer from the same wiring, so "is this playable" and "did it play" cannot
+   * disagree about the same file.
+   */
   return wav.preparePatternAudioLanes(pattern, {
     bars,
+    ...(audioCatalogue.length ? { audioLaneCatalogue: audioCatalogue } : {}),
     sampleDecoder: (ctx: BaseAudioContext) => cacheWiring.decoderFor(ctx, graph.browserBytesDecoder(ctx)),
     fetchSfzBytes: cacheWiring.fetchSfzBytes,
     ...(options.sampleRate === undefined ? {} : { sampleRate: options.sampleRate }),
