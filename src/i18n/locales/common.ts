@@ -252,6 +252,8 @@ export const commonMessages = {
   instrument_current: { en: "Instrument", zh: "乐器" },
   keyboard_hint: { en: "Play the selected track with your keyboard, or click the keys", zh: "用电脑键盘或直接点琴键，试听选中的轨道" },
   keyboard_velocity: { en: "Velocity", zh: "力度" },
+  /** ⭐ The velocity of the *selected* notes, shown inside the roll (finding D4). */
+  roll_selection_velocity: { en: "Selected", zh: "选中" },
   keyboard_needs_instrument: { en: "This sampler track needs an instrument before it can sound", zh: "这条采样器轨道还没有选乐器，试听不会有声音" },
   keyboard_needs_sampler: { en: "Select a sampler track to play it", zh: "选中一条采样器轨道才能试听" },
   template_blank_desc: { en: "Blank, with one track already typed the way you choose", zh: "空白，但已经有一条你选好类型的轨道" },

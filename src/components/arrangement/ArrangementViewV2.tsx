@@ -372,6 +372,20 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
    * ⭐ **Where the slider starts**: the velocity of the first note in the roll's selection (or the default the new-note
    * slider uses). Derived at render rather than stored, so the control cannot disagree with the music.
    */
+  /**
+   * ⭐ **One setter for both controls.** The panel's toolbar slider and the roll's own one call this, so a change is one
+   * command path (per note, each carrying that note's previous value) and the duplication budget has nothing to catch.
+   */
+  const setSelectionVelocity = (velocity: number) => {
+    if (editableTrackId === undefined || rollSelection.length === 0) return;
+    for (const mark of rollSelection) {
+      const before = (arrangement.notesByTrack?.[editableTrackId] ?? []).find(
+        (note) => note.pitch === mark.pitch && note.startBeats === mark.startBeats
+      )?.velocity;
+      commit(setTrackNoteVelocityCommand(editableTrackId, mark, before, velocity));
+    }
+  };
+
   const selectionVelocity = (() => {
     const first = rollSelection[0];
     if (editableTrackId === undefined || first === undefined) return 100;
@@ -1107,18 +1121,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             className="h-1 w-20 accent-accent"
             disabled={editableTrackId === undefined || rollSelection.length === 0}
             value={selectionVelocity}
-            onChange={(event) => {
-              if (editableTrackId === undefined || rollSelection.length === 0) return;
-              const velocity = Number(event.target.value);
-              // ⭐ One command per note, each carrying that note's own previous value, so undo restores the selection
-              // note by note instead of resetting every note to one number.
-              for (const mark of rollSelection) {
-                const before = (arrangement.notesByTrack?.[editableTrackId] ?? []).find(
-                  (note) => note.pitch === mark.pitch && note.startBeats === mark.startBeats
-                )?.velocity;
-                commit(setTrackNoteVelocityCommand(editableTrackId, mark, before, velocity));
-              }
-            }}
+            onChange={(event) => setSelectionVelocity(Number(event.target.value))}
           />
         </label>
         <button
@@ -2070,6 +2073,13 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
                  * `notesByTrack`, so a second copy of the note here would be the copy that goes stale.
                  */
                 onSelectionChange={setRollSelection}
+                /**
+                 * ⭐ **And the roll can re-voice what it has selected** (finding D4): the same derived value and the same
+                 * setter the panel's toolbar uses, so the two controls cannot disagree about either the reading or the
+                 * command path.
+                 */
+                selectionVelocity={selectionVelocity}
+                onSetSelectionVelocity={setSelectionVelocity}
                 onRemoveNote={(at) => commit(removeTrackNoteCommand(selected.id, at, noteFor(selected.id, at)))}
                 /**
                  * ⭐ **One press, one undo.** The roll reports the whole selection when it can, and this commits a single

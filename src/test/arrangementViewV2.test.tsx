@@ -259,6 +259,11 @@ describe("copying what the roll has marked", () => {
     fireEvent.click(within(screen.getByTestId("arrangement-track-picker")).getByText(track.name));
 
     const cell = (pitch: number, step: number) => screen.getByTestId(`roll-cell-${pitch}-${step}`);
+    /**
+     * ⭐ **Nothing selected, so the roll offers no velocity reading** — the finding D4 complaint was that this surface
+     * offered *only* the new-note slider, and a control that appears with nothing selected would be that slider again.
+     */
+    expect(screen.queryByTestId("roll-selection-velocity")).toBeNull();
     fireEvent.pointerDown(cell(first.pitch, stepOf(first.startBeats)));
     fireEvent.pointerEnter(cell(second.pitch, stepOf(second.startBeats)));
     fireEvent.pointerUp(cell(second.pitch, stepOf(second.startBeats)));
@@ -284,6 +289,20 @@ describe("copying what the roll has marked", () => {
       (note) => note.pitch === first.pitch && note.startBeats === first.startBeats
     );
     expect(markedNote?.velocity).toBe(42);
+    /**
+     * ⭐ **And the same control inside the roll** (finding D4): with something selected the roll shows the selection's
+     * velocity and can change it, through the same command path the toolbar uses. Deleting the roll's control, or
+     * giving it a setter that does not commit, turns this red.
+     */
+    const rollVelocity = screen.getByTestId("roll-selection-velocity") as HTMLInputElement;
+    expect(Number(rollVelocity.value)).toBe(42);
+    fireEvent.change(rollVelocity, { target: { value: "88" } });
+    const reVoicedAgain = onArrangementChange.mock.calls.at(-1)?.[0] as ArrangementV2;
+    expect(
+      (reVoicedAgain.notesByTrack?.[track.id] ?? []).find(
+        (note) => note.pitch === first.pitch && note.startBeats === first.startBeats
+      )?.velocity
+    ).toBe(88);
 
   });
 });

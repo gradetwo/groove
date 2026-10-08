@@ -36,6 +36,13 @@ export const PianoKeyboardVisualizer: React.FC<PianoKeyboardVisualizerProps> = (
 
   const whiteKeys = keys.filter(k => !k.isBlack);
 
+  /**
+   * ⭐ **The "readable on the accent" role, defined once for both key rows.** The white and black keyboards are separate
+   * maps, so a class defined inside one is invisible to the other — which is exactly how the first version of this fix
+   * failed typecheck on the black keys.
+   */
+  const onAccent = "text-[rgb(var(--d-on-accent))]";
+
   const handleKeyTap = (midi: number) => {
     triggerHaptic(HapticPatterns.tap);
     if (onKeyClick) {
@@ -86,7 +93,6 @@ export const PianoKeyboardVisualizer: React.FC<PianoKeyboardVisualizerProps> = (
              * stay physically white (that is what a keyboard looks like), so their ink stays a fixed dark — but raised
              * to `zinc-600`, which is ~5.9:1 on that plate rather than the 400 that read as a faded hint.
              */
-            const onAccent = "text-[rgb(var(--d-on-accent))]";
             let bgColor = "bg-[#f3f1eb] hover:bg-[#ffffff] text-zinc-600";
             if (isExactRoot) {
               bgColor = `bg-accent ${onAccent} font-bold shadow-[0_0_12px_rgba(245,183,61,0.8)] z-10`;

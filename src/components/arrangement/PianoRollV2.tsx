@@ -58,6 +58,16 @@ export interface PianoRollV2Props {
    */
   onRemoveSelection?: (at: readonly { pitch: number; startBeats: number }[]) => void;
   /**
+   * ⭐ **The velocity of what is selected, and how to change it — inside the roll.**
+   *
+   * The independent evaluation's finding D4 was "no per-note velocity input": the only velocity on this surface was the
+   * slider for notes **not yet written** (below) and the panel's whole-track ramp. The value and the setter are passed
+   * in rather than derived here, because the panel already derives "the selection's velocity" for its own toolbar
+   * control — one derivation, two places to use it, and no chance of the two readings disagreeing.
+   */
+  selectionVelocity?: number;
+  onSetSelectionVelocity?: (velocity: number) => void;
+  /**
    * ⭐ **What `Space` means while this editor has focus.** Optional like the rest: a host with no transport draws a roll whose Space does nothing rather than one that lies about playing.
    */
   onToggleTransport?: () => void;
@@ -100,7 +110,7 @@ export function noteName(pitch: number, convention: NoteConvention = DEFAULT_NOT
 
 const isBlackKey = (pitch: number) => [1, 3, 6, 8, 10].includes(pitch % 12);
 
-export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResizeNote, beats = 16, onSetBars, lowPitch = 48, highPitch = 84, onAudition, onSelectionChange, onRemoveSelection, onToggleTransport }: PianoRollV2Props) {
+export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResizeNote, beats = 16, onSetBars, lowPitch = 48, highPitch = 84, onAudition, onSelectionChange, onRemoveSelection, onToggleTransport, selectionVelocity, onSetSelectionVelocity }: PianoRollV2Props) {
   const { t } = useLanguage();
   const [lengthBeats, setLengthBeats] = useState(1);
   const [velocity, setVelocity] = useState(100);
@@ -274,6 +284,32 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
           />
           <span data-testid="roll-velocity-value" className="w-8 text-right font-['JetBrains_Mono']">{velocity}</span>
         </label>
+        {/**
+          * ⭐ **The selected notes' own velocity, here rather than only in the panel's toolbar.**
+          *
+          * Finding D4 from the independent evaluation: with a note selected there was no reading and no way to change
+          * it — the slider beside this one is for notes not yet written, which is why a probe (and a person) looking
+          * *inside the roll* found nothing. Shown only when something is selected, so it cannot be mistaken for the
+          * new-note control next to it.
+          */}
+        {selected.length > 0 && onSetSelectionVelocity !== undefined && (
+          <label className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-text-sub">
+            {t("roll_selection_velocity")}
+            <input
+              type="range"
+              min={1}
+              max={127}
+              value={selectionVelocity ?? velocity}
+              aria-label={t("roll_selection_velocity")}
+              data-testid="roll-selection-velocity"
+              onChange={(event) => onSetSelectionVelocity(Number(event.target.value))}
+              className="w-24"
+            />
+            <span data-testid="roll-selection-velocity-value" className="w-8 text-right font-['JetBrains_Mono']">
+              {selectionVelocity ?? velocity}
+            </span>
+          </label>
+        )}
       </div>
       <div className="overflow-x-auto">
         <div className="flex flex-col" style={{ minWidth: steps * CELL + 48 }} data-testid="roll-grid">
