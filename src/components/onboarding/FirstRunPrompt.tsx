@@ -38,9 +38,18 @@ export const FirstRunPrompt: React.FC<FirstRunPromptProps> = ({ visible, onPlay,
     <div
       data-testid="first-run-prompt"
       role="note"
-      className="flex items-center gap-2 mb-2 px-3 py-2 rounded-xl border border-accent/30 bg-accent/10 text-xs text-text"
+      /**
+   * ⭐ **It shrinks instead of pushing the toolbar apart** (reported: in a fresh profile — incognito — the Import/Export
+   * buttons dropped to their own line).
+   *
+   * The toolbar is one `flex flex-wrap` row of groups, and this banner sits inside the transport group while the file
+   * group follows it with `ml-auto`. Without `min-w-0 shrink` the banner refuses to give up any width, so the row wraps
+   * and the file group lands on a line of its own — and because the banner only exists until playback has happened, the
+   * effect shows up for a first-time profile and not for a returning one. The prompt is a hint: it may be truncated.
+   */
+  className="flex min-w-0 shrink items-center gap-2 mb-2 px-3 py-2 rounded-xl border border-accent/30 bg-accent/10 text-xs text-text"
     >
-      <span className="flex-1 min-w-0">{t("first_run_prompt_text")}</span>
+      <span className="flex-1 min-w-0 truncate">{t("first_run_prompt_text")}</span>
       <button
         type="button"
         onClick={onPlay}

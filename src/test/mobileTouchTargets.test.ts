@@ -85,4 +85,19 @@ describe("mobile touch targets", () => {
     }
   });
 
+
+  it("⭐ the first-run hint yields width instead of pushing Import/Export onto their own line", () => {
+    /**
+     * Reported from a fresh profile (incognito): with the hint visible, the file group wrapped to a line of its own. The
+     * hint lives in the transport group of a `flex flex-wrap` toolbar, so a hint that cannot shrink wraps the row; it is a
+     * hint, so truncating it is the honest trade.
+     */
+    const prompt = source("components/onboarding/FirstRunPrompt.tsx");
+    const at = prompt.indexOf('data-testid="first-run-prompt"');
+    expect(at, "the hint is in the file").toBeGreaterThan(-1);
+    const block = prompt.slice(at, at + 900);
+    expect(block, "it can shrink").toMatch(/min-w-0 shrink/);
+    expect(block, "and its text truncates rather than wrapping the row").toMatch(/flex-1 min-w-0 truncate/);
+  });
+
 });
