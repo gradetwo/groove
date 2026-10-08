@@ -19105,3 +19105,18 @@ describe("the grid's editing actions", () => {
       每条每次只**移出一个、移入一个** ✓ ⇒ 同一多重集 ⇒ 同一中位数 ✓，预期再把 70 s 压一档 ✓）；
     ②**结构层面** ✓：把生产算法从 `src/test/helpers` 移到音频分析模块 ✓，并把分析放进 worker thread ＋ 支持取消/阶段进度 ✓
       （这条按纪律**先量后动结构** ✓）。
+
+### 七百五十七、🔧 **CI 抓到 F04 的真实余波：一个测试一直在向"不存在的轨道"写歌词**（2026-10-08 ✓）
+
+  ⚠️ **CI 红在哪** ✓：`fix(mcp): the preview takes the caller's filename` 那次（`641 passed | 1 failed` ✓），
+    失败的是 `src/test/mcpSchemaPassthrough.test.ts > an arrangement keeps the lyric it was given` ✓，
+    报错 `set_arrangement_vocal_melody failed: no track "track-1" in this arrangement — its tracks are synth-1` ✓。
+  ⭐ **真因（值得记）** ✓：那个用例从 `arrangement.trackIds` 取轨道 id ✗，而 `create_arrangement` 的**回包根本没有这个字段** ✗
+    ⇒ 它一直退回到字面量 `"track-1"` ✓——**一条从来不存在的轨道** ✓。它以前能过 ✓,
+    **正是因为**当时往未知轨道写音符/歌词**没有任何东西会拒绝** ✗——那正是第三份报告的 **F04** ✓。
+    ⇒ F04 一修 ✓，这条"靠沉默通过"的用例立刻变成失败 ✓ ——**这是修对了的信号** ✓，不是回归 ✓。
+  ⭐ **修法** ✓：改成从回包真正携带的 `tracks[0].id` 取 ✓（并在注释里把这段来龙去脉写清楚 ✓，
+    因为"这条用例为什么以前是绿的"本身就是 F04 的证据 ✓）。
+  ⭐ 复跑 `mcpSchemaPassthrough.test.ts` **2 条绿** ✓。
+  ⚠️ 教训（第三次同型 ✓）：**本地绿 ≠ CI 绿** ✓——我这一轮连续推了 6 个提交都没看 CI ✗，
+    而唯一红的那条恰好暴露了 F04 的余波 ✓ ⇒ 后面每推一批就**先读 CI 自己的结论** ✓。
