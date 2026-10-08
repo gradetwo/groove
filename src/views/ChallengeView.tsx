@@ -138,6 +138,16 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
   const [selectedAnswerId, setSelectedAnswerId] = useState<string | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  /**
+   * ⭐ **Whether the round has actually been heard** (third evaluation, F11).
+   *
+   * The evaluation entered the listening challenge, chose an answer **before pressing play**, and the round was scored:
+   * Elo 1200 → 1191 and a wrong answer recorded, for a question nobody had heard. The guard was `isAnswered || !question`
+   * and the buttons were disabled on `isAnswered`, so "has this been listened to" was never part of the question. It is
+   * now: no answer is accepted until the transport has started for this question, and the panel says so rather than
+   * leaving a person to guess why the options do not respond.
+   */
+  const [hasPlayed, setHasPlayed] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [lastEloDelta, setLastEloDelta] = useState<{ delta: number; bonus: number } | null>(null);
   const [confusionNotification, setConfusionNotification] = useState<string | null>(null);
@@ -217,6 +227,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
     setQuestion(q);
     setSelectedAnswerId(null);
     setIsAnswered(false);
+    setHasPlayed(false);
     setLastEloDelta(null);
     setConfusionNotification(null);
 
@@ -238,6 +249,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
        */
       void startRecordedLanes(pattern);
       setIsPlaying(true);
+      setHasPlayed(true);
     } else {
       setIsPlaying(false);
     }
@@ -264,8 +276,11 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
       void engineRef.current.play();
       void startRecordedLanes(pattern);
       setIsPlaying(true);
+      setHasPlayed(true);
       return;
     }
+    // ⭐ Pressing play on an already-started round is hearing it again, which is also a play.
+    setHasPlayed(true);
     if (isPlaying) {
       engineRef.current.pause();
       // A pause stops the sampler half too: a recorded note is already on the audio clock and cannot be un-scheduled.
@@ -281,7 +296,12 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
   };
 
   const handleSelectOption = (genre: Genre) => {
-    if (isAnswered || !question) return;
+    /**
+     * ⭐ **An unheard round cannot be answered** (finding F11): scoring a guess at a question nobody has heard is not a
+     * listening challenge, and it silently moved the rating. The options are disabled for the same reason, so this guard
+     * and the button state are the same rule stated twice.
+     */
+    if (isAnswered || !question || !hasPlayed) return;
 
     setSelectedAnswerId(genre.id);
     setIsAnswered(true);
@@ -610,6 +630,16 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
         </div>
       </div>
 
+      {/**
+        * ⭐ **Why the options are quiet** (finding F11): the guard that refuses an unheard answer is only fair if the
+        * interface says so. It disappears the moment the round has been played.
+        */}
+      {!hasPlayed && !isAnswered && (
+        <p data-testid="challenge-listen-first" className="text-xs text-text-sub">
+          {t("challenge_listen_first")}
+        </p>
+      )}
+
       {/* 4 Multiple Choice Options */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {question.options.map((opt, idx) => {
@@ -633,7 +663,7 @@ export const ChallengeView: React.FC<ChallengeViewProps> = ({
             <button
               key={opt.id}
               data-testid="challenge-option"
-              disabled={isAnswered}
+              disabled={isAnswered || !hasPlayed}
               onClick={() => handleSelectOption(opt)}
               className={`p-5 rounded-2xl border text-left transition-all duration-200 flex items-center justify-between group ${cardStyle}`}
             >

@@ -264,6 +264,8 @@ export const commonMessages = {
   nav_console_desc: { en: "Mixer console", zh: "硬件调音台（大屏更好用）" },
   nav_compare_desc: { en: "A/B two genres", zh: "两个曲风 A/B 对比" },
   nav_challenge_desc: { en: "Guess the genre by ear", zh: "听辨曲风挑战" },
+  /** ⭐ Says why the options are not answering yet, instead of leaving them to be read as broken (finding F11). */
+  challenge_listen_first: { en: "Listen to the round first — the options open once it has played", zh: "请先试听这一题——播放后选项才能作答" },
   nav_chords: { en: "Chords", zh: "和弦走向" },
   nav_explore: { en: "Explore", zh: "探索" },
   nav_galaxy: { en: "Galaxy", zh: "律动星系" },

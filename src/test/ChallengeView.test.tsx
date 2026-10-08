@@ -85,6 +85,13 @@ describe("ChallengeView with Elo & SuperMemo-2 Spaced Repetition (P6-04)", () =>
     );
     expect(optionButtons.length).toBe(4);
 
+    /**
+     * ⭐ **Listening comes first** (finding F11). This test used to answer straight away and pass, because an unheard
+     * round was scored — the very behaviour the evaluation reported (Elo 1200 → 1191 for a question nobody heard). The
+     * scoring path it is about is unchanged; what changed is that it has to be reached by hearing the round.
+     */
+    fireEvent.click(screen.getByRole("button", { name: /Start Listening|Start|试听/i }));
+
     // Click first option
     fireEvent.click(optionButtons[0]);
 
@@ -112,4 +119,29 @@ describe("ChallengeView with Elo & SuperMemo-2 Spaced Repetition (P6-04)", () =>
     );
     expect(optionButtons.length).toBe(4);
   });
+
+  it("⭐ refuses an answer to a round nobody has heard, and opens once it has been played (finding F11)", () => {
+    /**
+     * The evaluation picked an answer **before pressing play** and the round was scored: Elo 1200 → 1191 and a wrong
+     * answer recorded for a question nobody had heard. The guard only asked "is it already answered", so the options
+     * answered for a round that had not started. Removing `hasPlayed` from either the handler or the button turns this
+     * red.
+     */
+    render(
+      <LanguageProvider>
+        <ChallengeView onSelectGenre={vi.fn()} onOpenStudio={vi.fn()} />
+      </LanguageProvider>
+    );
+
+    const options = () => screen.getAllByRole("button").filter((button) => button.className.includes("text-left"));
+    // ⭐ Before a play: every option is disabled, and the panel says why rather than leaving them to look broken.
+    expect(options().every((button) => (button as HTMLButtonElement).disabled)).toBe(true);
+    expect(screen.getByTestId("challenge-listen-first")).toBeTruthy();
+
+    // Pressing play is what opens them, and it is the same for a resume.
+    fireEvent.click(screen.getByRole("button", { name: /Start Listening|Start|试听/i }));
+    expect(options().some((button) => !(button as HTMLButtonElement).disabled), "an heard round can be answered").toBe(true);
+    expect(screen.queryByTestId("challenge-listen-first"), "the explanation is gone once it applies to nothing").toBeNull();
+  });
+
 });
