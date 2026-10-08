@@ -19890,3 +19890,28 @@ describe("the grid's editing actions", () => {
   ⭐ **下一步的做法（先说清再动）** ✓：算法已经在 `src/audio/analysisMetrics.ts` ✓（F07 第一半已迁出 `src/test` ✓），
     所以 worker 化是**加一层宿主**：worker 里 `import { measure }` ✓、主线程 `new Worker(...)` ＋ 请求/响应 ＋ `AbortSignal` 终止 ✓；
     判据将是**同一份输入、逐位相同的读数** ✓（沿用已钉死的四类素材 ✓）＋**事件循环不被饿死** ✓（同一条 timer 量法 ✓）。
+
+### 七百九十三、📋 **F07 worker 化：先写下可执行的实现方案（不半做）**（2026-10-08 ✓）
+
+  ⭐ **为什么先写方案而不是直接动手** ✓：这是**结构改动**（新增 worker 宿主 ＋ 新文件 ＋ 打包/解析路径 ✓），
+    而我这一轮的可用上下文已接近耗尽 ✓ ⇒ 半做会把"MCP 分析"这条**已经优化到 10.2 s 且读数逐位可验**的路径弄坏 ✗。
+    本仓库的规矩是"**先量后动结构**" ✓——量已经做完了（§792 ✓），所以下一步是**一次做完、一次验完** ✓。
+  ⭐ **已定的实现方案（可直接执行 ✓）** ✓：
+    1. **新文件** `mcp/render/analysisWorker.ts` ✓：worker 线程入口 ✓——
+       收到 `{ left: Float32Array, right?: Float32Array, sampleRate, only }` ✓ ⇒ 调用现成的
+       `src/audio/analysisMetrics.ts` 的 `measure(...)` ✓（F07 第一半已把算法迁到那里 ✓）⇒ `postMessage(result)` ✓；
+    2. **新文件** `mcp/render/analysisWorkerHost.ts` ✓：主线程宿主 ✓——
+       `analyseInWorker(channels, sampleRate, only)` ✓：`new Worker(new URL("./analysisWorker.ts", import.meta.url))` ✓
+       ＋ **transfer** 两个 `Float32Array` 的 `ArrayBuffer`（零拷贝 ✓，分析本来就只读 ✓）＋ 一个 `AbortSignal` ✓
+       （`signal.addEventListener("abort", () => worker.terminate())` ✓ ⇒ 顺手把 **L01/F07 要的"真正取消"** 也做了 ✓）；
+       **回退**：worker 不可用（打包路径解析失败等 ✓）时**同步跑一次** ✓ 并**在结果里说明**（`worker: "inline"` ✓）✓，
+       不允许静默退化成"看起来用了 worker" ✗。
+    3. **接线** ✓：`mcp/render/analysis.ts` 的 `analyseWavFile` 改为 async ✓（它已经是 async 调用点 ✓），
+       缓存键保持"文件 size:mtime ＋ 请求"不变 ✓（§777 ✓）。
+  ⭐ **判据（两条，都可红 ✓）** ✓：
+    · **读数逐位相同** ✓：`scratch/f07-baseline.ts` 四类素材 ＋ `src/test/lightAnalysisOption.test.ts` /
+      `analysisCacheStatus.test.ts` 的既有断言 ✓ 必须原样通过 ✓；
+    · **事件循环不再被独占** ✓：同一条量法（§792 的 20 ms timer ✓）在 worker 路径下必须看到
+      `actualTicks ≈ expectedTicks` ✓（对照：现在 `actualTicks = 0` ✗）✓。
+  ⭐ **风险与检查点** ✓：`mcp:build` 的打包是否包含新 worker 文件 ✓（`grep -n "worker" scripts/*mcp*` ✓ 先看构建脚本 ✓）；
+    若不包含 ✓，则用"宿主内联 worker 源码字符串"的写法 ✓（`new Worker(source, { eval: true })` ✓）并**写明为什么** ✓。
