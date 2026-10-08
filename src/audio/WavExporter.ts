@@ -2380,10 +2380,20 @@ export async function exportMasterWav(
   const blob = new Blob([wavArrayBuffer], { type: "audio/wav" });
   const bpm = options.bpm || pattern.bpm || 120;
   const sanitizedGenre = (genreId || "groove").replace(/[^a-z0-9_-]/gi, "_").toLowerCase();
-  const filename =
-    options.fromBar && options.fromBar > 0
-      ? `${sanitizedGenre}_master_${bpm}bpm_bars${chunk.fromBar}-${chunk.toBar}.wav`
-      : `${sanitizedGenre}_master_${bpm}bpm.wav`;
+  /**
+   * ⭐ **A window's name says which window it is** (third evaluation, F05).
+   *
+   * The name was the genre and the tempo, plus the span **only when the window started after bar 0** — so two different
+   * previews of the same music wrote the same file and the later one silently replaced the first (the evaluation's
+   * `collision-A`/`collision-B` put two different previews at one path). A render that covers a window — because it
+   * starts late **or** because it was asked for a window at all (`windowBars`) — now carries its bars in the name. What
+   * this cannot see is the *track scope*, which is applied before the renderer is reached; that half needs the caller's
+   * own name and is recorded in `docs/OPEN_WORK.md`.
+   */
+  const windowed = (options.fromBar !== undefined && options.fromBar > 0) || options.windowBars !== undefined;
+  const filename = windowed
+    ? `${sanitizedGenre}_master_${bpm}bpm_bars${chunk.fromBar}-${chunk.toBar}.wav`
+    : `${sanitizedGenre}_master_${bpm}bpm.wav`;
 
   return {
     blob,
