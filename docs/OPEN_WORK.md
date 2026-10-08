@@ -20278,3 +20278,19 @@ describe("the grid's editing actions", () => {
   ⭐ **收尾** ✓：`lint`/`docs:check`/`check:css`/`typecheck` 全绿 ✓；这条线索从 §七百八十七 起共 28 条台账记录 ✓，
     全部是"先量后改" ✓。**唯一遗留的小瑕疵** ✓：旧打印行还带着过时的 ❌ 表情 ✗（exit code 是 0 ✓）⇒ 下一轮
     把它改成"报告"字样即可 ✓（纯文案 ✓）。
+
+### 八百一十五、✅ **单元套件整批 0 失败；并修掉 `check:mcp:build` 里一处**写死版本号**的假红**（2026-10-09 ✓）
+
+  ⭐ **`npm run verify` 的单元段（实测 ✓）** ✓：**`Test Files 659 passed | 3 skipped (662)`** ✓、
+    **`Tests 5087 passed | 24 skipped (5111)`** ✓ ⇒ **0 失败** ✓✓（这一轮语料抖动没有出现 ✓）。
+  ⭐ **随后 `check:mcp:build` 报红** ✗：`dist-mcp/groove-mcp.mjs was built from another version (found none; source is 2.35.4)` ✓
+    ——即使我当场 `npm run mcp:build`（build=0 ✓）仍然红 ✓ ⇒ **不是构建问题** ✓。
+  ⭐ **根因（读脚本即见 ✓）** ✓：`scripts/check_mcp_build.mjs` 里写死
+    `.filter((v) => v.startsWith("2.34."))` ✗ ——那是**第五份报告时代的版本号** ✓；
+    从 **2.35.0** 起这个过滤必然**过滤掉一切** ✗ ⇒ `versions` 为空 ✓ ⇒ 对一份**刚构建好的**产物报"found none" ✓✓
+    ——典型的"**假红**" ✓（最容易把人训练成忽略门禁的那种红 ✗）。
+  ⭐ **修法（一行 ＋ 理由 ✓）** ✓：前缀改为**从 `package.json` 推导** ✓
+    （`${pkg.version.split(".").slice(0,2).join(".")}.` ✓），并把"为什么会这样、为什么这么修"写进脚本注释 ✓
+    ⇒ 立刻 `✅ the MCP artifact carries the source version (2.35.4).` ✓✓。
+  ⭐ **意义** ✓：这是本批第二次遇到"**门禁自己坏了**" ✓（第一次是语料测试在网络抖动下误报 ✓）——
+    两次都按同一规矩处理：**先证明不是本次改动 ✓，再修门禁本身 ✓，并把理由写在它旁边** ✓。

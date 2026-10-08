@@ -16,7 +16,16 @@ if (!existsSync(ARTIFACT)) {
   process.exit(1);
 }
 const text = readFileSync(ARTIFACT, "utf8");
-const versions = [...new Set(text.match(/\b\d+\.\d+\.\d+\b/g) ?? [])].filter((v) => v.startsWith("2.34."));
+/**
+ * ⭐ **The prefix comes from `package.json`, not from a version that was current when this was written** (found 2026-10-09).
+ *
+ * It used to filter on a hardcoded `2.34.` — correct for the fifth report's tree and a guaranteed false negative from
+ * `2.35.0` on: at 2.35.4 this check reported "found none" about an artifact that was in fact freshly built, which is exactly
+ * the kind of red that teaches people to ignore a gate. The artifact is expected to mention the version's own
+ * `major.minor`, whatever that currently is.
+ */
+const prefix = `${pkg.version.split(".").slice(0, 2).join(".")}.`;
+const versions = [...new Set(text.match(/\b\d+\.\d+\.\d+\b/g) ?? [])].filter((v) => v.startsWith(prefix));
 if (!versions.includes(pkg.version)) {
   console.error(`❌ ${ARTIFACT} was built from another version (found ${versions.join(", ") || "none"}; source is ${pkg.version}) — run \`npm run mcp:build\`.`);
   process.exit(1);
