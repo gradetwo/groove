@@ -334,7 +334,17 @@ try {
         wave.rms = Math.max(wave.rms, Math.sqrt(sum / time.length));
       };
 
-      await probe.engine.play();
+      /**
+       * ⭐ **The route's own transport control, not `engine.play()`.**
+       *
+       * Measured: with the override removed, `engine.play()` alone produced `highest step 0` and NaN spectra — the engine
+       * had no material, because the **app** hands it the flattened arrangement on its own play path
+       * (`useAudioEngineLifecycle`). Pressing the control a person presses is therefore the way to measure the app rather
+       * than the engine in isolation; `probe.engine.play()` was a second path that skipped the first.
+       */
+      const transport = document.querySelector("[data-testid='arrangement-play']");
+      if (transport) transport.click();
+      else await probe.engine.play();
       const started = performance.now();
       const windows = { a: [], a2: [], b: [] };
       /** ⭐ The highest step the transport reaches — the number the assertion below rests on. */

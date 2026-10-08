@@ -20201,3 +20201,20 @@ describe("the grid's editing actions", () => {
   ⭐ **状态** ✓：探针仍红 ✓，但它的每一步都已落在**可执行的具体动作**上 ✓，不再是猜测 ✓：
     入口 ✅、缝 ✅、songMode 与 sections 都生效 ✅、真音频（rms 0.45–0.48）✅、
     根因（喂错素材 ✅，已删）✅、剩"用真实控件启动播放"这一步 ✅。
+
+### 八百一十一、📌 **按"真实控件"播放这一步也试了：这条路由**没有可用的 transport 控件**（step 仍是 0）⇒ 结论收敛到"缝要暴露**该播的 pattern**"**（2026-10-09 ✓）
+
+  ⭐ **读数** ✓：把播放改按 `arrangement-play`（找不到则回退 `engine.play()` ✓）之后：
+    `highest step 0 / 128` ✗、窗口电平 `-Infinity` ✗ ⇒ **仍然没播** ✓。
+  ⭐ **与已知事实合并** ✓：console 路由的 testid 普查（§七百八十九 之前那次 ✓）里**没有** `arrangement-play` ✓
+    （那批是 `console-channel-*` / `console-fader-*` / `console-master*` ✓）⇒ 这条路上**没有暴露的 transport 控件** ✗
+    ⇒ 探针的"点真控件"在这条路上**不成立** ✓；而**单独** `engine.play()` 又没有素材 ✗（应用在自己的生命周期里设 ✓）。
+  ⭐ **因此结论是干净的** ✓：要让探针测到"应用真的在播编排" ✓，就需要缝上多一样东西 ——
+    **"当前该播的 pattern"** ✓（即 `patternForExport({ ...state, songMode: true })` 的产物 ✓，
+    与 `useAudioEngineLifecycle` 用的是**同一个函数** ✓）。这是一处**小应用改动** ✓：
+    `HardwareConsoleView` 的 `installProbeHooks({...})` 里加 `currentPattern: () => patternForExport(...)` ✓
+    ⇒ 探针 `setPattern(probe.currentPattern(), true)` ＋ `engine.play()` ✓ ⇒ 播的就是**应用会播的东西** ✓，
+    而**不是**探针自己拼的素材 ✓；`maxStep` 越过 128 才是这条 claim 的直接证据 ✓。
+  ⭐ **这一条线索的完整履历（每一环都有读数 ✓）** ✓：入口 ✅ → 缝 ✅（并修掉它读旧 state 的缺陷 ✓）→
+    songMode/sections 生效 ✅ → 真音频 rms 0.45–0.48 ✅ → 根因＝探针覆盖了应用的 flattened 编排 ✅（已删 ✓）→
+    真实控件这条路**不成立**（无该控件 ✓）→ 结论：**缝暴露 `currentPattern`** ✓（下一轮一处小改 ＋ 一次跑 ✓）。
