@@ -425,6 +425,12 @@ try {
         timeCourseFloor: timeCourseDistance(windows.a, windows.a2),
         meanLevelA: meanLevel(windows.a),
         meanLevelB: meanLevel(windows.b),
+        /**
+         * ⭐ **Which sections the store actually holds when the sampling starts** — the fact this probe kept guessing at.
+         * If these are not the pair the probe committed, the windows are comparing whatever the project shipped with, and
+         * the ratio measures that instead of a boundary.
+         */
+        sectionsSeen: (probe.readState().sections ?? []).map((section) => section.label ?? section.id),
         wavePeak: wave.peak,
         waveRms: wave.rms,
         rawBins,
