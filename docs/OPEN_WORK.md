@@ -19915,3 +19915,20 @@ describe("the grid's editing actions", () => {
       `actualTicks ≈ expectedTicks` ✓（对照：现在 `actualTicks = 0` ✗）✓。
   ⭐ **风险与检查点** ✓：`mcp:build` 的打包是否包含新 worker 文件 ✓（`grep -n "worker" scripts/*mcp*` ✓ 先看构建脚本 ✓）；
     若不包含 ✓，则用"宿主内联 worker 源码字符串"的写法 ✓（`new Worker(source, { eval: true })` ✓）并**写明为什么** ✓。
+
+### 七百九十四、🔧 **F07 worker 化：机制确认为**本仓库现成的"同 bundle 子进程"**；并量清改动面（本轮不半做）**（2026-10-08 ✓）
+
+  ⭐ **机制（读代码确认 ✓，是仓库已有做法 ✓）** ✓：`spanRunner`/`spanHosts` 就是这么做长任务的 ✓——
+    `mcp/server.ts` 在 `main()` **之前**检查 `GROOVE_SPAN_JOB` 环境变量 ✓ ⇒ 跑对应 job ⇒ `process.exit` ✓；
+    `spanHosts.ts` 用**同一个 bundle** 起子进程 ✓（注释写明理由："the bundle is what can import the app's own renderer
+    outside the dev server" ✓）。⇒ 分析 worker 应照抄这条 ✓（新 env `GROOVE_ANALYSIS_JOB=<job.json>` ✓），
+    而不是新造 worker_threads 路径 ✓——**同一 bundle 子进程还能被 `kill` ✓ ⇒ 顺带把 L01/F07 要的"真正取消"做掉 ✓**。
+  ⭐ **改动面（量清了 ✓）** ✓：
+    · 新增 `mcp/render/analysisJob.ts` ✓（读 job JSON ⇒ 跑 `analyseWavFile(path, only)` ⇒ stdout 输出 JSON ⇒ exit ✓）；
+    · `mcp/server.ts` 加一个分支 ✓（紧挨 span job ✓，约 4 行 ✓）；
+    · `mcp/render/analysis.ts` 的 `analyseWavFile` 变成 **async** ✗ ⇒ 连带改动：
+      `mcp/registryAnalysis.ts` 两处调用 ✓、`src/test/mcpAnalysisCache.test.ts` ✓、`src/test/analysisCacheStatus.test.ts` ✓、
+      `src/test/lightAnalysisOption.test.ts`（直接调 `measure` ✓ 不受影响 ✓）✓；
+    · `mcp:build` 后重跑两条判据 ✓（读数逐位相同 ＋ timer 不再被饿死 ✓）。
+  ⭐ **为什么本轮停在"方案 + 面"** ✓：这是**四五个文件的连带改动 ＋ 重新打包** ✓，而我这一轮可用上下文已到底 ✓；
+    半做会把**刚发布的**分析路径弄坏 ✗ ⇒ 按本仓库规矩：**没有余量就不动关键路径** ✓，把机制与改动面留成下一次可以一口气做完的清单 ✓。
