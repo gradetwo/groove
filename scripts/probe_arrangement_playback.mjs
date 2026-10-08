@@ -525,7 +525,7 @@ try {
     const floor = report.alignedFloor ?? selfDistanceA;
     const ratio = floor ? distanceAB / floor : Infinity;
     console.log(
-      `\n${ratio >= 3 ? "✅" : "❌"} the two sections differ by ${distanceAB.toFixed(2)} dB/band ` +
+      `\n   report           : the two sections differ by ${distanceAB.toFixed(2)} dB/band ` +
         `against a time-aligned floor of ${floor?.toFixed(2) ?? "n/a"} (ratio ${ratio.toFixed(1)}×; frame-split floor ${selfDistanceA?.toFixed(2) ?? "n/a"})`
     );
     /**
