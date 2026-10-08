@@ -1,27 +1,27 @@
 {
-  "version": "2.35.2",
+  "version": "2.35.3",
   "releaseDate": "2026-10-08",
   "changelogCount": 10,
   "latest": {
-    "version": "2.35.2",
+    "version": "2.35.3",
     "date": "2026-10-08",
-    "category": "feature",
+    "category": "fix",
     "title": {
-      "zh": "长曲子渲染默认分块（快 2.5 倍）、单音符力度可看可改、导出报进度与剩余时间",
-      "en": "Long renders 2.5× faster, a note's velocity you can see and change, and an export that says how much longer"
+      "zh": "编辑更快更省：音符应答改增量、卷帘只画可见格、六处可读性修复",
+      "en": "Editing that is faster and lighter: delta note replies, a roll that draws only what is visible, and six readability fixes"
     },
     "highlights": [
       {
-        "zh": "五分钟渲染 753 秒 → 297 秒：长曲子默认多段多进程；等价性由逐样本判据守住。`chunks: 1` 可关。",
-        "en": "A five-minute render went 753 s → 297 s: long pieces are chunked across processes by default, with sample-accurate equivalence held by a criterion; `chunks: 1` turns it off."
+        "zh": "改一个音符的回包不再带整首曲子：+4.9 KB/批 → +1 字节，`verbose: true` 可取回全量。",
+        "en": "A note edit no longer returns the whole arrangement: +4.9 KB per batch became +1 byte, and `verbose: true` restores the old reply."
       },
       {
-        "zh": "单个音符的力度现在看得到也改得了：音符带着力度，框选后用工具条调整，每音符一步撤销。",
-        "en": "A note's velocity is visible and editable: notes carry their own value, and a selection can be re-voiced from the toolbar, one undo step per note."
+        "zh": "卷帘 126 小节从 74,592 个格子降到 2,368，且不再随曲长增长。",
+        "en": "The roll's 126 bars went from 74,592 cells to 2,368, and the count no longer follows the length of the piece."
       },
       {
-        "zh": "导出的母带报进度与剩余时间，数字来自渲染器自己的每 10% 回调。",
-        "en": "A master export reports progress and time left, from the renderer's own ten-percent callbacks."
+        "zh": "六处对比度修复改用各皮肤自己的墨色；pixel 皮肤不再吃微格热区、不再要半像素字号。",
+        "en": "Six contrast fixes take each skin's own ink; the pixel skin no longer eats micro-cell hit areas or asks for half-pixel sizes."
       }
     ],
     "truncated": true
