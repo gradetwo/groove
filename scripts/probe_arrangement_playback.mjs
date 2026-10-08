@@ -239,6 +239,19 @@ try {
       });
       // The store's song-mode action is a toggle, so set it by reading the live state rather than assuming.
       if (!probe.readState().songMode) probe.commit({ type: "TOGGLE_SONG_MODE" });
+      /**
+       * ⭐ **Wait for the commit to land, or the engine is handed the loop instead of the song.**
+       *
+       * A dispatch is asynchronous in React: reading the state on the next line sees the value *before* the commit. This
+       * probe measured `songMode: false` for a one-line reducer, played the 128-step loop, and then compared two windows of
+       * the **same** music — which is why its ratio wandered through 3.9× / 1.0× / 0.4× / 1.5× across runs. A bounded poll
+       * is what makes "the transport plays the arrangement" the thing actually being measured.
+       */
+      const songModeDeadline = Date.now() + 5000;
+      while (!probe.readState().songMode && Date.now() < songModeDeadline) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      if (!probe.readState().songMode) return { error: "song mode did not switch on, so the engine would play the loop" };
 
       const analyser = probe.engine.getMasterAnalyser();
       if (!analyser) return { error: "the engine exposes no master analyser" };
@@ -323,7 +336,15 @@ try {
         readWave();
       };
       const timer = setInterval(sample, 40);
-      await new Promise((resolve) => setTimeout(resolve, secondsPerBar * 2000 + 300));
+      /**
+       * ⭐ **Three bars, not two, so window B is a full bar rather than eight stray frames.**
+       *
+       * The windows are bar 1 (a), bar 2 (a2, the floor) and bar 3 (b, the signal), and this wait used to be two bars: the
+       * sampling stopped as b was beginning. Its mean was then computed from ~8 frames against A's ~47 — measured
+       * 2026-10-08: difference 7.73 dB/band, floor 3.17, **ratio 2.4×** against a 3× threshold, with the audio plainly
+       * present (time-domain rms 0.45). One more bar is the difference between measuring b and guessing at it.
+       */
+      await new Promise((resolve) => setTimeout(resolve, secondsPerBar * 3000 + 300));
       clearInterval(timer);
       probe.engine.stop();
 
