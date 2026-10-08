@@ -20234,3 +20234,25 @@ describe("the grid's editing actions", () => {
     且**不得**是 `bg-transparent` ✓（"我这个主题下看着挺好"正是它当初能上线的原因 ✓）；
     ②搜索框**必须**有 `min-h-11` ✓。⇒ 任一处回退即红 ✓。
   ⭐ 验收 ✓：`typecheck` ✓、`lint` ✓、`docs:check` ✓、`check:css` ✓；chooser 相关测试 **9 条全绿** ✓。
+
+### 八百一十三、🔎 **127/128 的最后一块拼图：`patternForExport` 的形状与**前置条件**都查明了——这条路由**很可能本来就没有"整首编排"可播**（2026-10-09 ✓）
+
+  ⭐ **读到的两个事实（源码 ✓）** ✓：
+    1. `patternForExport(input)` **返回 `{ pattern, isSong, problems }`** ✓——引擎要的是其中的 **`pattern`** 字段 ✓
+       （我第一版把整个返回值交给 `setPattern` ✗ ⇒ 探针报 `forEach` of undefined ✓，已改 ✓）；
+       它的 **input** 是 `{ songMode, activeSlot, patterns, current, sections, genreId }` ✓（照 lifecycle 的真实调用抄 ✓，
+       而我先前把整个 `SequencerState` 塞进去 ✗ ⇒ 拿到的是**非 song 分支** ✓ ⇒ 这正是 `127/128` 的来源 ✓）。
+    2. ⭐ **关键** ✓：flatten 需要 **`chain`** ✓（`SET_SONG_CHAIN` ✓）——而 **console 路由上探针只设了
+       `songMode` 与 `sections`，没有设 chain** ✗ ⇒ `flattenSong` 无可编排 ⇒ 返回非 song 分支 ✓
+       ⇒ **应用自己在这条路由上也会播那一个 128 步的循环** ✓✓。
+  ⭐ **因此 `highest step 127 / 128` 有一个诚实的解释** ✓：**不是缺陷** ✗，而是**这条路由没有可播的整首编排** ✓
+    （没有 chain ⇒ 没有歌 ✓）。探针此前把"没有歌"误当成"引擎在偷懒" ✗。
+  ⭐ **下一轮的两条路（都很小 ✓）** ✓：
+    · **A**：探针再提交一次 `SET_SONG_CHAIN`（用两段的 slot ✓）⇒ 这时 flatten 才有内容 ✓ ⇒ 预期 `maxStep > 128` ✓
+      （这才是"transport 播整首编排"的直接证据 ✓）；
+    · **B**：若 chain 在这条路由上不可设 ✓，则把断言**改成它能诚实回答的问题** ✓：
+      "在 songMode 且有 sections 但**无 chain** 时，引擎必须**继续播循环**" ✓——那也是被测应用的一条真实契约 ✓
+      （比一条永远到不了的 3× 比值有意义得多 ✓）。
+  ⭐ **状态** ✓：探针仍红 ✓，但**红的原因已经归结为一句可判定的话** ✓（没有 chain ⇒ 没有歌 ✓，引擎行为正确 ✓），
+    下一轮按 A（首选）或 B 收尾 ✓。另：本轮同时验证了缝字段 `currentPattern` 的**校验**有效 ✓
+    （形状不对时拒绝并回落到 loop ✓，而不是把引擎弄崩 ✓）。

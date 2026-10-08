@@ -71,10 +71,26 @@ export const HardwareConsoleView: React.FC<HardwareConsoleViewProps> = ({
        * ⭐ **What the app would play**, through the same `patternForExport` the lifecycle uses. If it cannot answer for a
        * state that is still being assembled, the probe gets the raw loop and can tell the difference from `readState()`.
        */
+      /**
+       * ⭐ **What the app would play, through the same call the lifecycle makes** (measured 2026-10-09).
+       *
+       * `patternForExport` takes the pieces it needs and returns `{ pattern, isSong, problems }` — its **`pattern` field**
+       * is the engine's input, not the wrapper. Two earlier versions of this got it wrong in ways the probe then reported
+       * honestly: passing the whole `SequencerState` (the exporter answered with the non-song branch, so the transport kept
+       * looping 128 steps) and handing its return value to `setPattern` unchecked (`forEach` of undefined).
+       */
       currentPattern: () => {
         const state = latest.current.state;
         try {
-          return patternForExport(state as never) ?? state.pattern;
+          const exported = patternForExport({
+            songMode: true,
+            activeSlot: state.activeSlot,
+            patterns: state.patterns,
+            current: state.pattern,
+            sections: state.sections ?? [],
+            genreId: state.currentGenre?.id ?? "",
+          } as never);
+          return (exported as { pattern?: unknown } | undefined)?.pattern ?? state.pattern;
         } catch {
           return state.pattern;
         }
