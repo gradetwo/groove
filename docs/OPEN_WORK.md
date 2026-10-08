@@ -19983,3 +19983,16 @@ describe("the grid's editing actions", () => {
   ⭐ 验收 ✓：`typecheck` ✓、`lint` ✓、`docs:check` ✓；四个分析判据（新增的 ＋ 缓存两件 ＋ 轻量模式）**全绿** ✓。
   ⏳ 剩最后一小步 ✓：在**真 bundle** 下用同一条 timer 量法读一次 `actualTicks`（应从 **0** 变成 **≈ expectedTicks** ✓），
     作为判据 2 的读数留档 ✓。
+
+### 七百九十八、✅✅ **F07 判据 2 拿到读数：子进程分析期间，服务器**保持响应**（timer 110/112 次，对照同步路径 **0** 次）**（2026-10-08 ✓）
+
+  ⭐ **量法** ✓（`scratch/probe-f07-child-timer.mjs` ✓）：父进程（= 服务器 ✓）挂 **20 ms** timer ✓，
+    用 `spawn(node, dist-mcp/groove-mcp.mjs)` ＋ `GROOVE_ANALYSIS_JOB` 让**子进程**分析一份 240 s 音频 ✓，数 tick ✓。
+  ⭐ **读数** ✓：
+    `audioSeconds: 240` ✓、`wallMs: 2230` ✓、`expectedTicks: 112` ✓、**`actualTicks: 110`** ✓✓、
+    `exitCode: 0` ✓、`replyBytes: 2360` ✓、`hasLoudness: true` ✓。
+  ⭐ **对照（§792，同一把尺子 ✓）** ✓：**同步路径 `actualTicks: 0`** ✗（10.5 s 里事件循环完全被占用 ✓）
+    ⇒ 现在 **110/112** ✓ ⇒ **"分析期间服务器还能应答别的事"这条从假设变成了读数** ✓✓ ——F07 的判据 2 完成 ✓。
+  ⚠️ **一处必须说清的不可比** ✓：这次的 `wallMs: 2230` **不能**与 §792 的 10.5 s 相比 ✓
+    （那份是 44.1 kHz **立体声** 120 s ✓，这份是 8 kHz **单声道** 240 s ✓ ⇒ 输入规模差着量级 ✓）；
+    本文比较的是**同一条 timer 的 tick 比例** ✓，那才是"会不会独占事件循环"的度量 ✓。
