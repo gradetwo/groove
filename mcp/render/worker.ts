@@ -1109,16 +1109,16 @@ export function decodeWav(buffer: Buffer): { channels: Float32Array[]; sampleRat
 }
 
 /** The shared measurement set: the same helpers the export audit and the loudness gate use. */
-export function measure(channels: Float32Array[], sampleRate: number): Record<string, unknown> {
-  const clicks = clickAnalysis(channels, sampleRate);
+export function measure(channels: Float32Array[], sampleRate: number, only?: { discontinuities?: boolean }): Record<string, unknown> {
+  const clicks = only?.discontinuities === false ? null : clickAnalysis(channels, sampleRate);
   const fingerprint = fingerprintChannels(channels, sampleRate);
   return {
     truePeakDb: truePeakDbChannels(channels),
     samplePeakDb: samplePeakDb(channels),
     integratedLufs: measureLoudness(channels, sampleRate).integratedLufs,
     pinnedSamples: clippedSampleCount(channels),
-    discontinuities: clicks.count,
-    worstDiscontinuityDb: clicks.worstDb,
+    discontinuities: clicks === null ? undefined : clicks.count,
+    worstDiscontinuityDb: clicks === null ? undefined : clicks.worstDb,
     /**
      * Where the worst one is, in seconds — the position a count cannot give.
      *
@@ -1127,7 +1127,7 @@ export function measure(channels: Float32Array[], sampleRate: number): Record<st
      * has always computed the index (`worstIndex`); this is the same number expressed where the caller can look at it. Aggregating
      * by section boundary is the next step and needs the boundary list, which `flattenSong` already returns.
      */
-    worstDiscontinuitySec: clicks.worstIndex === null ? null : Number((clicks.worstIndex / sampleRate).toFixed(4)),
+    worstDiscontinuitySec: clicks === null || clicks.worstIndex === null ? undefined : Number((clicks.worstIndex / sampleRate).toFixed(4)),
     correlation: channels.length > 1 ? channelCorrelation(channels[0], channels[1]) : 1,
     sideToMidDb: sideToMidDb(channels),
     tailRmsDb: tailRmsDb(channels, sampleRate, 50),

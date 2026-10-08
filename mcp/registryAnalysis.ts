@@ -215,9 +215,19 @@ export const ANALYSIS_TOOLS: ToolDefinition[] = [
     name: "analyze_audio",
     title: "Analyse a rendered WAV",
     description:
-      "Dense material reports many discontinuities. The count is relative to the file's own median jump, so percussive and plucked mixes look busy without any click. Measure a WAV this server produced. Gated loudness, true peak, pinned samples, discontinuity count **and where the worst one is** (`worstDiscontinuitySec`), stereo correlation, tail level and the 13-band spectral shape. No browser needed. **The position is what makes the count useful**: a whole-file count is dominated by the music's own transients. To ask whether these are splice clicks at your section boundaries. Compare that position against the arrangement's own boundaries: `get_arrangement` reports its bars and its tempo, and v2 has no sections. This tool counts; the arrangement says where the joins are. **A render already returns its own gated loudness and true peak for either format** — reach for this only when the extra metrics are what you want, not to measure a file you just rendered.",
+      "Dense material reports many discontinuities. The count is relative to the file's own median jump, so percussive and plucked mixes look busy without any click. Pass `loudnessAndSpectrumOnly` to skip that scan when only levels and colour are wanted. Measure a WAV this server produced. Gated loudness, true peak, pinned samples, discontinuity count **and where the worst one is** (`worstDiscontinuitySec`), stereo correlation, tail level and the 13-band spectral shape. No browser needed. **The position is what makes the count useful**: a whole-file count is dominated by the music's own transients. To ask whether these are splice clicks at your section boundaries. Compare that position against the arrangement's own boundaries: `get_arrangement` reports its bars and its tempo, and v2 has no sections. This tool counts; the arrangement says where the joins are. **A render already returns its own gated loudness and true peak for either format** — reach for this only when the extra metrics are what you want, not to measure a file you just rendered.",
     readOnly: true,
-    inputSchema: { path: z.string().describe("a .wav path this server produced; the analyser decodes the app's own 16-bit PCM — there is no MP3 decoder here, because a render already reports its loudness and true peak") },
+    inputSchema: {
+      path: z.string().describe("a .wav path this server produced; the analyser decodes the app's own 16-bit PCM — there is no MP3 decoder here, because a render already reports its loudness and true peak"),
+      /**
+       * ⭐ **Ask for loudness and colour without the per-sample scan** (the evaluation's F07 recommendation, and its
+       * section 6 ask for a light analysis). The scan is the one expensive metric — 287 s on five minutes before it was
+       * rolled, 10 s after, against well under a second for loudness, peaks and the spectral balance — and a caller
+       * checking a mix level should not pay for it. The three discontinuity fields are then **absent**, not zero, so
+       * "not measured" cannot be read as "none found".
+       */
+      loudnessAndSpectrumOnly: z.boolean().optional().describe("skip the per-sample discontinuity scan: loudness, peaks, correlation and the 13-band shape only, with the three discontinuity fields absent rather than zero"),
+    },
     handler: async (args, ctx) => {
       try {
         /**
@@ -225,7 +235,9 @@ export const ANALYSIS_TOOLS: ToolDefinition[] = [
          * end — the event loop is inside it. The announcement is still worth making: a caller that asked to be told learns what
          * the tool is doing, and if the analyser ever becomes asynchronous the heartbeat arrives without a second change.
          */
-        return await runWithProgress(ctx?.progress, "analysing the rendered file", async () => analyseWavFile(String(args.path)));
+        return await runWithProgress(ctx?.progress, "analysing the rendered file", async () =>
+          analyseWavFile(String(args.path), { discontinuities: args.loudnessAndSpectrumOnly !== true })
+        );
       } catch (error) {
         return failure(`could not analyse "${String(args.path)}": ${(error as Error).message}`);
       }
