@@ -272,6 +272,18 @@ export function listCatalogueInstruments({
                * string work ("a risk worth naming rather than rounding away") and the listing exposed only the ceiling.
                */
               safeHeldSeconds: technique.safeSeconds,
+              /**
+               * ⭐ **Legato is not a flag this engine has** (third evaluation, section 6: legato as a machine-readable
+               * constraint).
+               *
+               * The fact is recorded in this repository twice over: the loader implements none of the legato opcodes
+               * (`trigger=legato`, `locc64`, the CC modulations a library like MTG's uses), and the samples do not loop.
+               * So a program cannot join two notes; a legato line is written by **overlapping note lengths**, and every
+               * note still re-attacks. Saying `false` here is more useful than silence, because it is the difference
+               * between "no tool call will give me this" and "I have not found the right one yet" — and a caller who
+               * needs a joined line is choosing between overlapping lengths and a synth voice.
+               */
+              legatoSupported: false,
               dynamicLayers: technique.velocityLayers.length,
             }
           : {}),

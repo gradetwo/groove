@@ -19435,3 +19435,27 @@ describe("the grid's editing actions", () => {
     连接完全来自**音符时值重叠** ✓ ⇒ 真正诚实的做法是给行加一个"**该程序不会连奏，连接要由时值决定**"的字段 ＋
     在写连奏乐句时给建议 ✓；本轮先把"时长"这条约束补齐 ✓，legato 这条留到下一轮 ✓。
     另有 render jobId ＋ 真正取消（L01 结构那半 ✓）、多谱表 MusicXML ✓、段落视图 ✓、自动保存与修订恢复 ✓。
+
+### 七百七十一、✅ **第 6 节能力评估（第 6 件）：legato 不再是"你自己猜"——把这条**否定事实**变成字段**（2026-10-08 ✓）
+
+  ⭐ **来源** ✓：报告第 6 节把 **legato** 与音域、articulation、最长持续时间并列，要求机器可读 ✓
+    （音域＝D2 ✓、时长＝七百六十九/七百七十 ✓、articulation＝`technique` ✓，**legato 是最后一块** ✓）。
+  ⭐ **复现（读代码即坐实）** ✓：这条事实在仓库里被**写了两遍** ✓——
+    ① 加载器**不实现**任何 legato 相关操作码 ✓（`trigger=legato`、`locc64`、以及 MTG 那类 CC 调制 ✓，
+       这句就写在 `sampledInstruments.ts` 里说明为什么替换掉 keyswitch 包装的那段 ✓）；
+    ② **样本不循环** ✓（`stringTechniques.ts` 的原话 ✓）⇒ 程序**无法把两个音连起来** ✓
+    ⇒ legato 乐句只能靠**时值重叠** ✓，而每个音仍会**重新起音** ✓。
+    ⚠️ 这两句都只存在于**散文**里 ✗（`add_arrangement_notes` 的描述 ✓、表里的注释 ✓）⇒
+    一个 agent 读到"要有 legato"之后，**会去找那个并不存在的开关** ✗✓。
+  ⭐ **修法** ✓（**否定事实也要说** ✓——"没有这个工具"与"我还没找到"是两种完全不同的处境 ✓）：
+    · 弦乐行新增 **`legatoSupported: false`** ✓（与 `lowestNote`/`highestNote`/`maxHeldSeconds`/`safeHeldSeconds`/`technique` 并列 ✓）；
+    · `add_arrangement_notes` 的描述里把那句话变成**可执行**的 ✓：
+      "**There is no legato flag to set.** `list_arrangement_instruments` reports `legatoSupported: false` on every
+      sampled program, so overlapping lengths are the whole of the technique." ✓（176 字符 ✓，在 ≤190 的棘轮内 ✓）。
+  ⭐ 判据 ✓（`mcpInstruments.test.ts` ✓ 16 例 ✓）：**每一个**弦乐行**都必须**带 `legatoSupported === false` ✓
+    （沉默不算数 ✓）；且描述里**必须**出现 "no legato flag to set" ✓ 与 `legatoSupported: false` ✓ ⇒ 删字段或删句子即红 ✓。
+  ⭐ 相关 6 个测试文件 **31 条全绿** ✓，lint / docs / refs 门禁绿 ✓。
+  ⭐ **一句诚实的边界** ✓：这条约束是**否定式**的 ✓——引擎里没有"能连奏"的程序可标 ✓，
+    所以本轮做的是"**把没有说清楚**" ✓，而不是"**让某个程序支持 legato**" ✓（后者是要动 DSP/加载器的事 ✓，不在本轮 ✓）。
+  ⏳ 第 6 节剩余（仍开放 ✓）：render jobId ＋ 真正取消（与 L01 结构那半同源 ✓）、多谱表 MusicXML ✓、
+    段落视图/片段重复 ✓、自动保存与修订恢复 ✓、Web/MCP 统一工程 schema（F09 已让名字随包走 ✓，尚缺 sections/author 等 ✓）。

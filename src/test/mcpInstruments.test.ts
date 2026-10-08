@@ -9,6 +9,7 @@ import { listCatalogueInstruments } from "../../mcp/instruments";
 import { addMcpTrack, clearMcpArrangements, createMcpArrangement, getMcpArrangement, setMcpTrackAsset, summariseArrangement } from "../../mcp/arrangement";
 import { resetTrackIdsForTests } from "../data/arrangementEdits";
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 const manifest = () => JSON.parse(readFileSync("public/samples/manifest.json", "utf8")) as { entries: { id: string; files: unknown[] }[] };
 
@@ -206,6 +207,28 @@ describe("string techniques on the instrument list", () => {
       expect(row.safeHeldSeconds, `${row.assetId} carries the safe number`).toBeDefined();
       expect(row.safeHeldSeconds!, `${row.assetId}: the shortest sample cannot outlast the longest`).toBeLessThanOrEqual(row.maxHeldSeconds);
     }
+  });
+
+
+  it("⭐ states that no sampled program joins notes, instead of leaving legato to be guessed (section 6)", () => {
+    /**
+     * The evaluation's section 6 asks for legato as a machine-readable constraint. The fact this repository can state is
+     * negative and worth stating: the loader implements none of the legato opcodes, the samples do not loop, so a program
+     * cannot join two notes — a legato line is overlapping lengths, and every note re-attacks. An agent that reads
+     * `legatoSupported: false` stops looking for the tool that would set it.
+     */
+    const strings = (listCatalogueInstruments().instruments ?? []).filter(
+      (row: { maxHeldSeconds?: number }) => row.maxHeldSeconds !== undefined
+    ) as Array<{ assetId: string; legatoSupported?: boolean }>;
+    expect(strings.length, "the string programs are in the listing").toBeGreaterThan(0);
+    for (const row of strings) {
+      expect(row.legatoSupported, `${row.assetId} carries the negative fact rather than silence`).toBe(false);
+    }
+
+    // ⭐ And the description an agent reads says what to do instead, which is the actionable half.
+    const notes = readFileSync(resolve(__dirname, "../../mcp/registryArrangementNotes.ts"), "utf8");
+    expect(notes, "no legato flag exists, and the description says so").toMatch(/no legato flag to set/);
+    expect(notes, "and names the field that carries the fact").toContain("legatoSupported: false");
   });
 
 });
