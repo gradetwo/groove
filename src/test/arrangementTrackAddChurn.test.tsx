@@ -78,7 +78,12 @@ describe("adding a track", () => {
     // which needs a browser to measure and is not claimed here.
     expect(first.added, `the first track add put ${first.added} nodes into the page`).toBeLessThan(3_000);
     expect(first.nodes, `${first.nodes} nodes on the page after one track`).toBeLessThan(12_000);
-  });
+    /**
+     * ⚠️ **The test's own timeout, because the assertion is not the slow part.** In CI this read "Test timed out in
+     * 5000ms" — vitest's default, not a `waitFor` — while the same criterion passes in a second on a laptop. A slow
+     * runner must not be able to report "the DOM was rebuilt"; the budgets above are what judge that.
+     */
+  }, 30_000);
 
   it("⭐ does not rebuild the DOM of the tracks already on screen", async () => {
     const { added, removed } = await churnOfOneTrackAdd();
@@ -86,5 +91,5 @@ describe("adding a track", () => {
     // lane is a few dozen nodes; the budget leaves room for a real row and fails on a page rebuild.
     expect(added, `adding one track added ${added} nodes`).toBeLessThan(600);
     expect(removed, `adding one track removed ${removed} nodes`).toBeLessThan(600);
-  });
+  }, 30_000);
 });
