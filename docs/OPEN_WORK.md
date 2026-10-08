@@ -20416,3 +20416,25 @@ describe("the grid's editing actions", () => {
     （`flex-nowrap` ✓、必要时 `min-w-0` ＋ `truncate` ✓ 处理长名字 ✓），
     并把命中区域（我的 `after:-inset-*` ✓）**继续留在布局之外** ✓ ⇒ 预期行高回到与数据列一致 ✓，
     e2e 那条断言随之稳定 ✓（那时它测的是**真契约**，而不是一个被掩盖的换行 ✓）。
+
+### 八百二十二、🛑 **更正我上一轮的读法：96px 是**设计值**（`--arr-track-h`），不是"子元素叠了两行"**（2026-10-09 ✓）
+
+  ⭐ **源码（`ArrangementViewV2.tsx:1959` 附近 ✓）** ✓：头列的每一行写的是
+    ```jsx
+    style={{ height: "var(--arr-track-h)", boxShadow: "inset 0 -1px 0 rgb(var(--d-line))" }}
+    ```
+    而它**自己的注释**就写着："The **lane row is `--arr-track-h` (96 px)** … this wrapper used to add a `border-b`
+    around a 96 px child, so it measured 97 px against the lane's 96 and the two columns drifted a pixel per track." ✓
+  ⭐ **因此更正** ✓：我上一轮把 96px 读成"两个子元素（32 ＋ 44）叠成了两行" ✗ **是错的** ✓——
+    96px 就是**桌面轨道行高的设计值** ✓，那两个子元素（32/44）**本来就在 96px 的行里** ✓。
+    （教训记下 ✓：我量了**头列行**的高 ✓，却把它与"e2e 报的 **lane** 22px"放在一起比较 ✗——
+    而我的脚本**根本没有量 lane** ✗✓。比较两个来自不同测量的数字，是这一轮的错误来源 ✓。）
+  ⭐ **于是真正的问题只剩一个（而且很具体 ✓）** ✓：e2e 说 **lane 是 22px** ✗——而按设计它也应当是 **96px** ✓
+    （注释原话 ✓）⇒ **lane 行在那一刻是塌的/没渲染** ✓（22px ≈ 一个空行/占位 ✓）
+    ⇒ 这才是 `header 119 vs lane 22` 的真实形状 ✓（不是头列太高 ✗，而是**数据列没铺开** ✓）。
+  ⭐ **下一轮的量测（把上一轮缺的那一半补上 ✓）** ✓：在同一个脚本里**同时**量
+    `arrangement-header-row-*` 与它的 **lane 对偶**（`arrangement-lane-*` 或 lane 容器 ✓）的
+    `height/top/childElementCount/computedHeight` ✓ ⇒ 一眼看出 lane 为何是 22px ✓
+    （是 CSS 变量没生效 ✓、还是 lane 列表为空 ✓、还是它被 `min-height` 压扁 ✓）。
+  ⭐ **状态** ✓：本轮的净收获是**排除**了一个错误方向 ✓（"头列换行"✗）并把问题**收敛到 lane 列** ✓——
+    这也是我在本批里第 N 次"先量后说"的价值 ✓：写得清楚，就能被下一轮的读数推翻并改正 ✓。
