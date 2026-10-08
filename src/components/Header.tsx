@@ -537,7 +537,7 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           type="button"
           onClick={handleRandom}
-          className="p-1.5 border border-dashed border-line hover:border-accent rounded-lg text-text-sub hover:text-accent bg-panel2 transition-colors"
+          className="min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 p-1.5 border border-dashed border-line hover:border-accent rounded-lg text-text-sub hover:text-accent bg-panel2 transition-colors"
           title={t("random_genre")}
           aria-label={t("random_genre")}
         >
@@ -556,14 +556,14 @@ export const Header: React.FC<HeaderProps> = ({
           aria-label={t("debug_bundle")}
           data-testid="header-debug-bundle"
         >
-          <Bug className="w-4 h-4" />
+          <Bug className="min-h-11 sm:min-h-0 w-4 h-4" />
         </button>
 
         {/* Language Switch */}
         <button
           onClick={toggleLanguage}
           data-testid="header-language-switch"
-          className="flex items-center gap-1 text-xs font-mono font-bold text-text-sub hover:text-text px-2 py-1.5 border border-line hover:border-line-strong rounded-lg bg-panel2 transition-colors"
+          className="flex min-h-11 sm:min-h-0 items-center gap-1 text-xs font-mono font-bold text-text-sub hover:text-text px-2 py-1.5 border border-line hover:border-line-strong rounded-lg bg-panel2 transition-colors"
           title={t("lang_switch_title")}
         >
           <span className="text-accent">{t("lang_switch_target")}</span>
@@ -576,7 +576,7 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             onClick={onOpenSettings}
             data-testid="header-settings-open"
-            className="flex items-center justify-center p-1.5 border border-line hover:border-accent rounded-lg text-text-sub hover:text-accent bg-panel2 transition-colors"
+            className="flex min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 items-center justify-center p-1.5 border border-line hover:border-accent rounded-lg text-text-sub hover:text-accent bg-panel2 transition-colors"
             title={t("settings_open")}
             aria-label={t("settings_open")}
           >
@@ -645,7 +645,7 @@ export const Header: React.FC<HeaderProps> = ({
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
           aria-expanded={mobileMenuOpen}
-          className="md:hidden p-1.5 border border-line rounded-lg text-text-sub hover:text-text bg-panel2"
+          className="min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 md:hidden p-1.5 border border-line rounded-lg text-text-sub hover:text-text bg-panel2"
         >
           {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
         </button>

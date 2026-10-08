@@ -120,7 +120,7 @@ export function TrackHeaderV2({
           aria-label={`${track.name} kind`}
           value={track.kind}
           onChange={(event) => onChangeKind(track.id, event.target.value as TrackKindV2)}
-          className="h-7 w-8 shrink-0 rounded border border-[rgb(var(--d-line))] bg-transparent text-center text-xs text-text"
+          className="min-h-11 h-11 sm:min-h-0 sm:h-7 w-8 shrink-0 rounded border border-[rgb(var(--d-line))] bg-transparent text-center text-xs text-text"
         >
           {TRACK_KIND_ORDER.map((kind) => (
             <option key={kind} value={kind} label={t(KIND_LABEL_KEY[kind])}>
