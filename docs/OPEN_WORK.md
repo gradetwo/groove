@@ -18897,3 +18897,18 @@ describe("the grid's editing actions", () => {
       "A/B previews should have unique output paths"（两个预览同一路径 ✓）与 "Import must reject invalid notes and tempo"（`{tracks:1, bars:129}` 竟被接受 ✓）。
   ⏳ 下一步（按性价比 ✓）：**F04**（拒绝未知轨道 ✓ 一行判据 ✓）→ **F03/F02**（参数与估算要一致 ✓）→ **F01**（validate 与 render 用同一个"能不能播"的判据 ✓）
     → **F06**（导入的深层校验 ✓ 音符/速度范围 ✓）→ **F05**（预览文件名含范围/轨道 ✓）→ **F08**（低音轨在卷帘可见 ✓）→ F07/F09–F13、L01–L02。
+
+### 七百四十六、✅ **第三份报告 F04：向不存在的轨道写音符不再"成功"**（2026-10-08 ✓）
+
+  ⭐ **复现（先量）** ✓：`addMcpTrackNotes(arrangementId, "no-such-track", notes)` 返回**成功** ✓，
+    而 `problems` 里讲的是**合成器预设** ✗、**一句都没提**那条轨道不存在 ✓ ⇒ 音符写到不存在的地方、调用者以为写成了 ✓。
+  ⭐ **根因** ✓（读代码）✓：单音符写入器**都**走 `refuseUnknownTrack` ✓，而**批量写入器**（`addMcpTrackNotes` ✓，
+    也就是"整个声部一次进来"的那条最常用的路 ✓）**没有** ✗；同族的**替换写入器** `setMcpTrackNotes` 更隐蔽 ✗——
+    它在找不到轨道时**原样返回** arrangement ✓（"替换成功、什么都没写" ✓）。
+  ⭐ **修法** ✓（沿用仓库既有守卫 ✓，不新增第二种说法 ✓）：两处都改成 `refuseUnknownTrack` 的语义 ✓；
+    `setMcpTrackNotes` 里 `fx`/`folder` 那一半**保持原样** ✓（它存在但不能放音符 ✓，与"不存在"是两件事 ✓，
+    且模型层在音符到达时已有自己的说法 ✓）——注释里写清这个区分 ✓。
+  ⭐ 判据 ✓（`mcpArrangementNoteOps.test.ts` ✓ 4 例 ✓）：**两条写入路都必须拒绝** `/no-such-track/` ✓
+    ⇒ 删掉任一守卫即红 ✓。相关既有 4 个测试文件全绿 ✓，lint / docs 门禁绿 ✓。
+  ⏳ 下一步 ✓：**F03**（单边范围参数被静默忽略 ✓）与 **F02**（`maxDurationSec` 忽略重复次数与范围 ✓）——
+    两者都是"参数说了不算"的同一族 ✓，先按工具层复现 ✓。

@@ -1381,7 +1381,15 @@ export function setMcpArrangementTempoMap(
  * caller comparing counts finds it.
  */
 export function addMcpTrackNotes(arrangementId: string, trackId: string, notes: readonly NoteEvent[]): ArrangementEditResult {
-  return edit(arrangementId, (arrangement) => addTrackNotes(arrangement, trackId, notes));
+  /**
+   * ⭐ **A track that does not exist is refused, not silently written past** (third evaluation, F04).
+   *
+   * The evaluation wrote notes to a track id that was not in the arrangement and got a **success** back: the reply's
+   * problems were about the synth's preset and said nothing about the missing track, and the notes went nowhere. Every
+   * single-note writer already went through `refuseUnknownTrack`; the bulk writer — the one a part actually arrives
+   * through, and the one whose silent failure costs the most — did not.
+   */
+  return edit(arrangementId, (arrangement) => refuseUnknownTrack(arrangement, trackId, () => addTrackNotes(arrangement, trackId, notes)));
 }
 
 /**
@@ -1398,7 +1406,14 @@ export function setMcpTrackNotes(
 ): ArrangementEditResult {
   return edit(arrangementId, (arrangement) => {
     const track = arrangement.tracks.find((candidate) => candidate.id === trackId);
-    if (!track || track.kind === "fx" || track.kind === "folder") return arrangement;
+    /**
+     * ⭐ **An unknown track is refused here too** (third evaluation, F04): this writer returned the arrangement
+     * unchanged, so "replace a track's notes" against a track that does not exist looked like a success with nothing
+     * written. An `fx` or `folder` track is a different answer — it exists and cannot hold notes, which the model layer
+     * already says when notes arrive — so that half stays as it was rather than becoming a second refusal.
+     */
+    if (!track) throw new Error(unknownTrack(arrangement, trackId));
+    if (track.kind === "fx" || track.kind === "folder") return arrangement;
     return {
       ...arrangement,
       notesByTrack: { ...(arrangement.notesByTrack ?? {}), [trackId]: [...notes] },

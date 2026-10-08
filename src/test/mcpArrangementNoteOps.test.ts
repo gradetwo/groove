@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { addMcpTrackNotes, clearMcpArrangements, createMcpArrangement, getMcpArrangement } from "../../mcp/arrangement";
+import { addMcpTrackNotes, clearMcpArrangements, createMcpArrangement, getMcpArrangement, setMcpTrackNotes } from "../../mcp/arrangement";
 import { TOOLS } from "../../mcp/registry";
 
 /**
@@ -109,6 +109,22 @@ describe("the arrangement's note-shaping tools", () => {
       verbose: true,
     }) as { summary?: { tracks?: Array<{ notes?: unknown[] }> } };
     expect(verbose.summary?.tracks?.[0]?.notes?.length).toBeGreaterThan(0);
+  });
+
+
+  it("⭐ refuses notes written to a track that does not exist (finding F04)", () => {
+    /**
+     * The evaluation wrote notes to an id that was not in the arrangement and got a **success** back whose problems were
+     * about the synth's preset — the notes went nowhere and the reply did not say so. Every single-note writer already
+     * refused an unknown track; the bulk writer, which is how a part actually arrives, did not. Removing the guard turns
+     * this red.
+     */
+    const { arrangementId } = seeded();
+    expect(() =>
+      addMcpTrackNotes(arrangementId, "no-such-track", [{ pitch: 60, startBeats: 0, lengthBeats: 1, velocity: 100 }] as never)
+    ).toThrow(/no-such-track/);
+    // ⭐ The replacement writer is the same road: it used to return the arrangement unchanged.
+    expect(() => setMcpTrackNotes(arrangementId, "no-such-track", [{ pitch: 60, startBeats: 0, lengthBeats: 1, velocity: 100 }] as never)).toThrow(/no-such-track/);
   });
 
 });
