@@ -178,7 +178,7 @@ export const ARRANGEMENT_NOTE_TOOLS: ToolDefinition[] = [
     name: "set_arrangement_note_velocity",
     title: "Change one note's velocity",
     description:
-      "Set how hard one note is played, clamped to 1..127 -- the range every consumer of these notes agrees on. A note carries its own velocity, so this is the per-note answer where `vary_arrangement_notes` is the performance-wide one and a track ramp is the shape-wide one.",
+      "Set how hard one note is played, clamped to the range 1 to 127 that every consumer of these notes agrees on. A note carries its own velocity, so this is the per-note answer where `vary_arrangement_notes` is the performance-wide one and a track ramp is the shape-wide one.",
     readOnly: false,
     inputSchema: {
       arrangementId: z.string(),
