@@ -521,6 +521,15 @@ export async function renderPatternHeadless(
     }
   }
 
+  /**
+   * ⭐ **The encode is a stage of its own, and it was the silent one** (third evaluation, section 6: "stage progress";
+   * F07 measured MP3 encoding at 480.5 ms per 5 s of audio — the slowest step in a render, and the one a caller could
+   * not see coming). Rendering reports frames, preparation reports recordings, and then "render finished; writing the
+   * file" was followed by an unbounded wait. The encode now says what it is doing and how much audio it is doing it to.
+   */
+  if (options.format === "mp3") {
+    progress?.reportOf(buffer.length, buffer.length, `encoding MP3 — ${Math.round(buffer.duration)}s of audio at ${options.bitrateKbps ?? 192} kbps`);
+  }
   const base64 =
     options.format === "mp3"
       ? Buffer.from(

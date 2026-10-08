@@ -53,6 +53,8 @@ export function createRenderProgress(token: string | number | undefined, notify:
   if (token === undefined) return undefined;
   let last = -1;
   let lastOwn = -1;
+  /** ⭐ The last message sent on this channel, so a new stage at the same progress is not mistaken for a repeat. */
+  let lastMessage: string | undefined;
   const send = (progress: number, total: number | undefined, message: string): void => {
     try {
       notify(token, progress, total, message);
@@ -69,11 +71,22 @@ export function createRenderProgress(token: string | number | undefined, notify:
       send(Math.round(progressMs), RENDER_BUDGET_MS, message);
     },
     reportOf(progress, total, message) {
-      if (!Number.isFinite(progress) || progress <= lastOwn) return;
+      if (!Number.isFinite(progress)) return;
       // A total below the progress already reported is a caller's arithmetic error, not a number to send; MCP requires
       // `total` to be an upper bound on `progress`.
       if (total !== undefined && (!Number.isFinite(total) || total < progress)) return;
+      /**
+       * ⭐ **A new stage at the same progress is news, not a repeat** (third evaluation, section 6: stage progress).
+       *
+       * The rule was "drop anything not strictly increasing", which is right for a counter and wrong for a stage: the MP3
+       * encode begins exactly where "render finished; writing the file" left off, so its announcement arrived at an equal
+       * progress and was silently swallowed — the one stage a caller most needs to see (F07 measured it at 480.5 ms per
+       * 5 s of audio) was the one stage nobody could hear. Progress still never decreases; an identical message at the
+       * same progress is still dropped.
+       */
+      if (progress < lastOwn || (progress === lastOwn && message === lastMessage)) return;
       lastOwn = progress;
+      lastMessage = message;
       send(progress, total, message);
     },
   };
