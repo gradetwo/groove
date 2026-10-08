@@ -19662,3 +19662,23 @@ describe("the grid's editing actions", () => {
       `timeCourseAB` / `timeCourseFloor` ✓、`meanLevelA` / `meanLevelB` ✓（还有几个在 400 行以后被报告与比值使用 ✓）
       ⇒ 下一轮先把 400–440 行的读取点列全 ✓，再动手 ✓（这正是本轮**没有**硬改的原因 ✓：
       改错 `return` 形状会让"探针在量什么"变成猜 ✗）。
+
+### 七百八十、🟡 **兄弟探针重写到"编排路线"这一步：sections/song-mode 已移除、按小节取样已就位；还差"它自己怎么走到编排路线"**（2026-10-08 ✓）
+
+  ⭐ **本轮改掉的** ✓（`scripts/probe_arrangement_playback.mjs` ✓）：
+    · **删掉 studio store 的全部用法** ✓：`SET_SECTIONS` ✓、`TOGGLE_SONG_MODE` ✓、`readState()` ✓、
+      `setPattern(state.pattern)` ✓、`statePreview` 里的 `readState` ✓ ⇒ 它现在**只用引擎** ✓；
+    · **窗口改为按小节取** ✓（`getCurrentStep() ÷ 16` ✓）：`a` = 第 0 小节 ✓、`a2` = 第 2 小节（**同一段的噪声底** ✓，时间对齐 ✓）、
+      `b` = 第 8–10 小节（**远处的信号** ✓）✓——claim 的**实质没变** ✓（"live 路径播的是**编排**，不是一个小节在循环" ✓），
+      换的是**这条路自己的词汇** ✓；
+    · 播放由**编排自己的播放控制**启动 ✓（先 `resume()` 上下文 ✓——"挂起的上下文就是沉默" ✓）；
+    · 保留它原有的统计与断言 ✓（`spectrumDistance` ✓、`timeCourseDistance` ✓、`alignedFloor` ✓、比值 `≥3` ✓）。
+  ⭐ **现在的失败是"真话"** ✓：`{ "error": "the arrangement has no play control on this route" }` ✓
+    ⇒ 原因很清楚 ✓：**这条探针自己的路线设置**是从 `#/studio?genre=…` 出发、点 Studio 标签 ✓（旧 studio 的入口 ✓），
+    它因此**没有走到编排路线** ✓（那条路上才有 `arrangement-play` ✓）。
+  ⭐ **还差的一步（已定位 ✓，下一轮做 ✓）** ✓：把它的**路线设置**换成与 live 探针相同的一步 ✓——
+    `?tab=studio` ⇒ 等 `new-project-panel-v2` ⇒ 选模板 ⇒ `new-project-create` ⇒ 等 `arrangement-view-v2` ✓
+    （那条路我已验证可行 ✓，配方与注释都写在我的探针里 ✓）。
+  ⭐ **退出码如实** ✓：`probe_arrangement_playback` **= 1** ✗（本地 `verify` 仍会红在它身上 ✓），
+    `probe_live_arrangement` **= 0** ✓；两者都用**正确读法**验证 ✓（`node … > file 2>&1; echo exit=$?` ✓——
+    上一轮我发现用 `| tail` 读到的只是 `tail` 的退出码 ✗）。
