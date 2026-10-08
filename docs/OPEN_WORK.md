@@ -19282,3 +19282,28 @@ describe("the grid's editing actions", () => {
     **可中断的 worker/job** ✓ ＋ **采样请求用 `AbortSignal`** ✓ ＋ 以**资源采样**确认回落后再导出不互相覆盖 ✓。
     浏览器这条路的 offline render **没有可分块的中断边界** ✗（`CHUNKED_EXPORT_ENABLED` 仍是 false ✗）⇒ 需要先做结构改造 ✓，
     并按纪律**用资源数字证明**收益 ✓（报告自己也没测到 ✓）。现在的状态是"**限制被如实呈现**" ✓，而不是"限制被消除" ✓。
+
+### 七百六十五、✅（i18n 那半）**F12：中文界面上的英文孤岛——编排工具条三个动词 ＋ 音源库面板**（2026-10-08 ✓）
+
+  ⭐ **报告的原话（HTML 的 F12 节摘录）** ✓：在 390×844 实测六轨/100 小节编排与音源库设置 ✓——
+    未发现整体横向溢出 ✓，但**工具栏约占 352px 高** ✓、**116 个按钮高度 < 24px** ✗；
+    并且 **"Ramp velocity / Quantise lengths / Copy selection" 与音源注册表仍是英文** ✗；
+    代码指向 `ArrangementViewV2.tsx:1085` ✓ 与 `SampleLibrariesPanel.tsx:138` ✓；
+    报告自己注明"此数是 DOM 几何测量，不等于 116 项独立缺陷" ✓。
+  ⭐ **本轮做的是 i18n 那半（可验证、可红 ✓），布局那半如实留档 ✓**：
+    · 工具条三个动词**原本是硬编码英文** ✓（`Ramp velocity` / `Quantise lengths` / `Copy selection` ✓）
+      ⇒ 全部改为字典键 ✓：`arrangement_ramp_velocity`（力度渐变 ✓）、`arrangement_quantise_lengths`（量化时值 ✓）、
+      `arrangement_copy_selection`（复制所选 ✓）；**命令 id 保持原样** ✓（它是撤销栈的内部标识、被测试引用 ✓，
+      改它会把"看不见的东西"换个名字 ✗，而不是修好看得见的东西 ✓）。
+    · `SampleLibrariesPanel` ✓ 的**标题、说明段、移除提示**三处英文 ⇒ 改为
+      `sample_libraries_title` / `sample_libraries_intro` / `sample_libraries_removed` ✓（并接上 `useLanguage` ✓，
+      该面板此前**根本没有翻译器** ✓）。
+  ⭐ 判据 ✓（`src/test/chineseInterfaceCoverage.test.ts` ✓ 2 例 ✓）：
+    ①三个动词**必须**由 `t("…")` 取 ✓ 且**不得**再出现 `>Ramp velocity<` 这类字面量 ✓；
+    ②面板三处**必须**走字典 ✓，且**每个键都必须真有中文** ✓——**且不得与英文相同** ✓、**必须是中文** ✓
+      （"留空就会回落到英文"是这类问题的成因 ✓，所以"有键"不算数、"有真中文"才算 ✓）。
+    ⚠️ 写这条判据时踩了两次自己的坑 ✓并当场修正 ✓：**按行**找键会把跨行的长句判成缺失 ✓（改为按**条目**切片 ✓，
+      边界用"下一个键名"而不是"下一个缩进" ✓）；**单引号**英文值被判成没有英文 ✓（引号放宽 ✓）；`no-regex-spaces` ✓（改 `{2}` ✓）。
+  ⏳ **F12 的布局那半仍开放（不当作已修）** ✓：报告要的是**移动端分层操作菜单** ✓、**可折叠 transport/effects** ✓、
+    **触控目标约 44px** ✓，并以 **200% 缩放 / 键盘焦点 / 屏幕阅读器 / 触控拖动** 验证 ✓。
+    这一半要先量（哪些控件在 390px 下 < 44px、哪些是真正的交互目标 ✓），再做结构改动 ✓——按纪律**先量后动结构** ✓。

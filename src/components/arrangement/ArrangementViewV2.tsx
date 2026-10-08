@@ -1091,7 +1091,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             commit(setterCommand("Ramp velocity", (_current, value) => value, arrangement, rampArrangementNoteVelocity(arrangement, editableTrackId)));
           }}
         >
-          Ramp velocity
+          {t("arrangement_ramp_velocity")}
         </button>
         <button
           type="button"
@@ -1105,7 +1105,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             commit(setterCommand("Quantise lengths", (_current, value) => value, arrangement, quantizeArrangementNoteLengths(arrangement, editableTrackId, 4 / divisor)));
           }}
         >
-          Quantise lengths
+          {t("arrangement_quantise_lengths")}
         </button>
         {/**
           * ⭐ **A copy placed by the selection's own length.** One command, so one undo, and the notes it lands on are the
@@ -1154,7 +1154,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
             commit(setterCommand("Copy selection", (_current, value) => value, arrangement, after));
           }}
         >
-          Copy selection
+          {t("arrangement_copy_selection")}
         </button>
         {/**
           * ⭐ **Legato: each marked note reaches the next one.** The model's own rule, committed as one command so one press is

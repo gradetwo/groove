@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLanguage } from "../../i18n/LanguageContext";
 import { parseManifest } from "../../data/sampleManifest";
 import {
   changeStoredUserLibraries,
@@ -52,6 +53,7 @@ export function SampleLibrariesPanel({ reservedIds = [], storage }: SampleLibrar
   const [libraries, setLibraries] = useState<UserSoundLibrary[]>([]);
   const [problems, setProblems] = useState<string[]>([]);
   const [form, setForm] = useState({ ...EMPTY_FORM });
+  const { t } = useLanguage();
   const [message, setMessage] = useState<string | undefined>(undefined);
   /**
    * ⭐ **The ids the project already ships, read from the manifest the app itself loads.**
@@ -129,20 +131,16 @@ export function SampleLibrariesPanel({ reservedIds = [], storage }: SampleLibrar
     const result = changeStoredUserLibraries({ remove: id, reservedIds: reserved }, storage);
     setLibraries(result.libraries);
     setProblems(result.problems);
-    setMessage(result.changed === "removed" ? `Removed "${id}".` : undefined);
+    setMessage(result.changed === "removed" ? t("sample_libraries_removed", { id }) : undefined);
   };
 
   return (
     <section data-testid="sample-libraries-panel" className="flex flex-col gap-4 text-text">
       <header className="flex flex-col gap-1">
-        <h3 className="text-sm font-semibold">Your sound libraries</h3>
+        <h3 className="text-sm font-semibold">{t("sample_libraries_title")}</h3>
         {/* ⭐ The sentence says what happens, not what the feature is called: this is where someone finds out
             that their own orchestral library can be played by the same engine as everything else. */}
-        <p className="text-xs opacity-80">
-          Point the app at an SFZ library you already have — a pinned repository, or a mirror you host — and its
-          instruments join the catalogue. It is validated by the same rules the MCP tool uses, and its licence is
-          recorded as you state it.
-        </p>
+        <p className="text-xs opacity-80">{t("sample_libraries_intro")}</p>
       </header>
 
       {problems.length > 0 && (

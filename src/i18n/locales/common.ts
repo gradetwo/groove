@@ -267,6 +267,20 @@ export const commonMessages = {
   /** ⭐ Says why the options are not answering yet, instead of leaving them to be read as broken (finding F11). */
   /** ⭐ The catalogue's retry, on the route that used to swallow its failures (finding F10). */
   /** ⭐ The cancel is honest about what it can and cannot stop (finding L01). */
+  /**
+   * ⭐ **The library panel, which was English-only on a Chinese interface** (finding F12). The report named this panel and
+   * three toolbar verbs as the islands desktop copy had left behind.
+   */
+  sample_libraries_title: { en: "Your sound libraries", zh: "你的音源库" },
+  sample_libraries_intro: {
+    en: "Point the app at an SFZ library you already have — a pinned repository, or a mirror you host — and its instruments join the catalogue. It is validated by the same rules the MCP tool uses, and its licence is recorded as you state it.",
+    zh: "把你已有的 SFZ 音源库指给应用——可以是固定版本的仓库，也可以是你自己托管的镜像——其中的乐器就会加入目录。它按与 MCP 工具相同的规则校验，许可证按你填写的内容记录。",
+  },
+  sample_libraries_removed: { en: 'Removed "{{id}}".', zh: "已移除「{{id}}」。" },
+  /** ⭐ The arrangement toolbar's own verbs, which were hard-coded English on a Chinese interface (finding F12). */
+  arrangement_ramp_velocity: { en: "Ramp velocity", zh: "力度渐变" },
+  arrangement_quantise_lengths: { en: "Quantise lengths", zh: "量化时值" },
+  arrangement_copy_selection: { en: "Copy selection", zh: "复制所选" },
   arrangement_export_stopping: { en: "Stopping…", zh: "正在停止…" },
   catalogue_retry: { en: "Retry", zh: "重试" },
   challenge_listen_first: { en: "Listen to the round first — the options open once it has played", zh: "请先试听这一题——播放后选项才能作答" },
