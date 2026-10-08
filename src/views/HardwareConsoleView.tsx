@@ -4,6 +4,7 @@ import { AudioEngine } from "../audio/AudioEngine";
 import { useSequencerStore } from "../features/sequencer/useSequencerStore";
 import { getDefaultDrumKitForGenre } from "../utils/trackUtils";
 import { ConsolePanel } from "../components/console/ConsolePanel";
+import { installProbeHooks, uninstallProbeHooks } from "../platform/probeHooks";
 
 interface HardwareConsoleViewProps {
   selectedGenre?: Genre;
@@ -37,6 +38,28 @@ export const HardwareConsoleView: React.FC<HardwareConsoleViewProps> = ({
       setEngine(null);
     };
   }, []);
+
+  /**
+   * ⭐ **The measurement seam on the console route, with the store this route actually owns.**
+   *
+   * `?probe=1` used to reach `readState`/`commit` only through the studio route; that route now renders the **arrangement**
+   * (`NewProjectView`: "This route renders the arrangement **instead of** the studio"), which installs the engine and no
+   * store — so `scripts/probe_arrangement_playback.mjs` lost its surface while the feature it verifies (sections and song
+   * mode) stayed alive **here**. This view is the one that owns both the engine and `useSequencerStore`, so this is where
+   * the seam belongs. `installProbeHooks` returns false unless the page was loaded with `?probe=1`, which is the property
+   * `src/test/probeHooks.test.ts` holds.
+   */
+  useEffect(() => {
+    if (!engine) return;
+    const installed = installProbeHooks({
+      engine,
+      readState: () => store.state,
+      commit: (action) => store.commit(action as never),
+    });
+    return () => {
+      if (installed) uninstallProbeHooks();
+    };
+  }, [engine, store]);
 
   // The engine only exists after the mount effect; render an inert shell for that
   // first frame instead of constructing a second engine to fill it.

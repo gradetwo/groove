@@ -19701,3 +19701,25 @@ describe("the grid's editing actions", () => {
   ⭐ **教训（值得留给后人）** ✓：一条探针失败时，"**它的目标还在不在**"必须先问 ✗——我上一轮直接假设目标没了 ✗，
     结果对着一个活着的功能改了两轮 ✓；正确顺序是：**先定位 store 的宿主路由（`grep useSequencerStore` ✓），
     再动探针** ✓。
+
+### 七百八十二、✅ **实测定位并修好：`?probe=1` 的缝在 console 路线上没人装——装上后兄弟探针**通过**（但证据偏弱，如实记）**（2026-10-08 ✓）
+
+  ⭐ **实测**（`scratch/probe-console-testids.mjs` ✓，与之前同一套 testid 普查 ✓）：`?tab=console` **会**渲染
+    **Hardware Console** ✓（`console-channel-0..7` ✓、`console-fader-*` ✓、`console-master*` ✓），
+    但 **`window.__grooveProbe` 为 false** ✗ ⇒ **这条路线没人调用 `installProbeHooks`** ✗✓
+    （`NewProjectView` 装 ✓、`StudioView` 装 ✓、`HardwareConsoleView` **没装** ✗）。
+  ⭐ **修法**（一处、且尊重既有门禁 ✓）：`HardwareConsoleView` 里装缝 ✓——
+    它**同时拥有引擎与 `useSequencerStore`** ✓，正是探针要的两件东西 ✓：
+    `installProbeHooks({ engine, readState: () => store.state, commit: (action) => store.commit(action as never) })` ✓；
+    `installProbeHooks` 在**没有 `?probe=1` 时返回 false** ✓（`src/test/probeHooks.test.ts` 保的就是这条 ✓）。
+    ⚠️ 注意 ✓：探针跑的是**构建产物 `dist/`** ✓ ⇒ 改完必须 `npm run build` ✓（我第一次忘了 ✓，于是 `surface: false` 依旧 ✓，
+    重建后 `surface: true` ✓）。
+  ⭐ **结果** ✓：兄弟探针 `probe_arrangement_playback` **退出码 0** ✓：
+    `✅ the two sections differ by 6.74 dB/band against a time-aligned floor of 1.72 (ratio 3.9×…)` ✓
+  ⚠️ **但这份证据偏弱，必须写下来** ✗：它自己打印的窗口电平是 **A −80.7 dB · B −75.9 dB** ✗——
+    那正是它文件头警告过的"**两边都接近 −80 dBFS 的沉默**" ✓；比值 3.9× 是在**近静音**上算出来的 ✓
+    ⇒ **通过 ≠ 已证明** ✓。对照：我那条 live 探针（编排路线 ✓）的窗口电平是 rms ≈ **0.35** ✓（有信号 ✓）
+    ⇒ 两条路线的"能不能出声"差别很大 ✓，这条（console ✓）的下一步是让它的 transport 真正跑起来 ✓
+    （它现在的入口手势仍是旧 studio 的写法 ✓）。
+  ⭐ **测试与门禁** ✓：`probeHooks.test.ts` ＋ `ConsolePanel.test.tsx` **13 条全绿** ✓（"没有 `?probe=1` 就没有缝" ✓ 仍成立 ✓）；
+    lint / docs / refs 绿 ✓。
