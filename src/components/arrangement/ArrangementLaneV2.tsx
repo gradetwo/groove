@@ -192,7 +192,7 @@ function Region({
      * carries mute (and, on a phone, the M/S/R disclosure), so the lane is the music again; the measurement that
      * caught it is in the ledger and the browser matrix now asserts the alignment.
      */
-    <div className="flex items-center" style={{ height: "var(--arr-track-h)" }}>
+    <div className="flex items-center" style={{ height: "var(--arr-track-h, 96px)" }}>
       <button
         type="button"
         data-testid={`arrangement-region-${region.trackId}`}
@@ -223,7 +223,7 @@ function Region({
           which is also the header's height — that equality is what keeps headers and lanes in step, and a literal
           here would break it the first time the row height changed.
         */
-        style={{ width: bars * pixelsPerBar, height: "calc(var(--arr-track-h) - 12px)" }}
+        style={{ width: bars * pixelsPerBar, height: "calc(var(--arr-track-h, 96px) - 12px)" }}
       >
         {/* Bar boundaries, so the region can be read against the ruler. One node per bar and no more: a gridline
             per sixteenth would be sixteen times the DOM for a line the zoom can already imply. */}

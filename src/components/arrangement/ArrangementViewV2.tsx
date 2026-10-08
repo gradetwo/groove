@@ -1966,7 +1966,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
                    * a `border-b` around a 96 px child, so it measured 97 px against the lane's 96 and the two columns
                    * drifted a pixel per track. An inset shadow draws the same line without taking a pixel of layout.
                    */
-                  style={{ height: "var(--arr-track-h)", boxShadow: "inset 0 -1px 0 rgb(var(--d-line))" }}
+                  style={{ height: "var(--arr-track-h, 96px)", boxShadow: "inset 0 -1px 0 rgb(var(--d-line))" }}
                   className={track.id === selectedTrackId ? "bg-[var(--d-surface,rgba(255,255,255,0.06))]" : ""}
                 >
                   <TrackHeaderV2

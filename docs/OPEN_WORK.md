@@ -20536,3 +20536,25 @@ describe("the grid's editing actions", () => {
   ⭐ **因此给用户的答案就是两句话** ✓：
     · `section` ✓：**可以加** ✓（用已有的 `sections` ✓），要不要加、加哪种形态 ⇒ **你定** ✓；
     · `author` ✓：**先不能加** ✗（没有源 ✓）；若你要 ✓，需要先有一个"作者名"的输入位置 ⇒ 那是一个**功能**而不是一个字段 ✓。
+
+### 八百二十八、✅✅✅ **间歇红点破案并修好：`--arr-track-h` 在失败那一刻**是空的**——两列各自退回内容高（119 / 22）**（2026-10-09 ✓）
+
+  ⭐ **破案方式** ✓：连跑 e2e 三次 ✓，第 1 次（重试后过 ✓）与第 3 次（失败 ✓）都打出了 §八百二十六 留下的**失败现场** ✓：
+    ```
+    header scene: {testid: arrangement-header-row-synth-2, style: "height: var(--arr-track-h); …",
+                   height: 119, inlineHeight: "119px", variable: "", kids: 1}
+    lane scene  : {tag: div, style: "height: var(--arr-track-h);",
+                   height: 22,  inlineHeight: "22px",  variable: "", kids: 1, carrierHeight: 9}
+    ```
+  ⭐⭐ **决定性的一格：两边的 `variable` 都是 `""`** ✓✓ ⇒ 那一刻 **`--arr-track-h` 没有定义** ✗
+    ⇒ `height: var(--arr-track-h)` 解析为空 ✓ ⇒ 两列**各自退回内容高** ✓
+    （头列内容 119px ✗、lane 内容 22px ✗）⇒ 断言报的那句话**完全对上** ✓✓。
+    变量的定义在 `src/index.css` ✓ ⇒ 这是**样式生效时序**的窗口 ✗（不是布局规则错 ✗）；
+    也解释了为什么"重试一次就过" ✓ 与"为什么两边的数字都不是 96" ✓。
+  ⭐ **修法（一处规则，不动断言、不放宽标准 ✓）** ✓：给**所有**用到它的地方加**回退值** ✓——
+    `var(--arr-track-h, 96px)` ✓（`ArrangementViewV2.tsx` 1 处 ✓、`ArrangementLaneV2.tsx` 2 处 ✓，含区域的 `calc(… - 12px)` ✓）
+    ⇒ **无论样式表是否及时生效 ✓，两列都是 96px** ✓ ——这才是行高契约真正需要的性质 ✓。
+  ⭐ 判据 ✓（`src/test/trackHeightFallback.test.ts` ✓）：这两个文件里**每一处** `var(--arr-track-h…)` **都必须带 `96px` 回退** ✓
+    ⇒ 将来谁去掉它就会红 ✓。
+  ⭐ **方法上的闭环** ✓：§八百二十六 把"现场"写进断言 ✗（当时并未复现 ✓）⇒ §八百二十八 靠它**一次就定位** ✓
+    ——这比再写三个探针都有效 ✓，也说明"**把证据留在失败处**"是对的 ✓。
