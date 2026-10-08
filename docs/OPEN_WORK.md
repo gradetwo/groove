@@ -20294,3 +20294,23 @@ describe("the grid's editing actions", () => {
     ⇒ 立刻 `✅ the MCP artifact carries the source version (2.35.4).` ✓✓。
   ⭐ **意义** ✓：这是本批第二次遇到"**门禁自己坏了**" ✓（第一次是语料测试在网络抖动下误报 ✓）——
     两次都按同一规矩处理：**先证明不是本次改动 ✓，再修门禁本身 ✓，并把理由写在它旁边** ✓。
+
+### 八百一十六、🎯 **完整 `verify` 跑到 e2e：**WebKit 抓到我 F12 那次改动的一个真回归**（Firefox 通过、Chromium 通过、Safari 引擎失败）**（2026-10-09 ✓）
+
+  ⭐ **失败的确切句子（e2e `summary.md` ✓）** ✓：
+    > Desktop WebKit (Safari Engine): **header 0 is at 726px/119px against its lane at 845px/22px** —
+    > **the two columns must share one row height**
+  ⭐ **读法** ✓：编排视图里"**轨道头列**"与"**轨道数据列**"必须**同一行高** ✓——而我 F12 给轨道头里的控件加了
+    `min-h-11` / `h-11 sm:h-5` ✓ 与头行音色选择器的 `h-11` ✓ ⇒ **头列被撑高了** ✗
+    ⇒ Chromium 与 Firefox 通过了 ✓、**WebKit 没通过** ✗（同一处布局在引擎间被判定不一致 ✓）。
+    ⇒ 这是**门禁抓到我自己的改动** ✓✓——正是它该做的事 ✓；我此前"触控变大但不挤压行高"的说法 ✗
+    在**头列与数据列对齐**这一条上**不成立** ✓，这里更正 ✓。
+  ⭐ **修法方向（下一轮 ✓，不改判据 ✗、不降标准 ✗）** ✓：把"**视觉盒子**"与"**命中区域**"分开 ✓——
+    控件的**布局高度回到原样** ✓（`h-5` / `h-7` ✓），**命中区域用不参与布局的扩展** ✓
+    （例如 `relative` ＋ `after:absolute after:-inset-3` ✓ 这类"伪元素撑大点击区"的写法 ✓）
+    ⇒ 手机上仍是 ≥44px 的触控目标 ✓（F12 的判据继续成立 ✓——但判据要从"必须有 `min-h-11`"改为
+      "**命中区域必须 ≥44px**" ✓，这需要把 `mobileTouchTargets` 的检查方式升级为**几何量测** ✓，
+      而不是只看 class ✗）。这正好是那条判据应当有的形态 ✓。
+  ⭐ **本轮的完整状态** ✓：`verify` 前段全绿 ✓（含 **5087 passed / 0 failed** 的单测 ✓、
+    `check:mcp:build` 修好后不再假红 ✓、`probe:boot` ✓、`probe:live-arrangement` ✓ ✓）；
+    **唯一的红是 e2e 的 WebKit 布局断言** ✓，且**它指出的正是我引入的问题** ✓ ⇒ 下一步明确且不大 ✓。
