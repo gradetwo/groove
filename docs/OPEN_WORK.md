@@ -19557,3 +19557,27 @@ describe("the grid's editing actions", () => {
     而不是照着失败的等待逐个替换 ✗（那会把"探针在量什么"变成猜 ✗）。已把**下一处需要重测的地方**写在上面 ✓。
   ⭐ 本轮同时确认 ✓：`arrangement-store`/视图/皮肤的既有能力**没有**被我这批改动破坏 ✓（5102 条测试为证 ✓）；
     也再次印证 七百七十四 的教训 ✓——**先查"是不是已经有了"** ✓（这次是"先查这是不是我的错" ✓，结论：不是 ✓）。
+
+### 七百七十六、🔎 **探针的第二处：它驱动的是"这条路已经不再安装"的接口**（2026-10-08 ✓；到此停止盲改 ✓）
+
+  ⭐ **进程** ✓（每一步都以"失败点向里推进"作为"这步改对了"的证据 ✓）：
+    · 起点 ✓：`❌ the studio toolbar never rendered`（等待一个**没有工程时不存在**的 testid ✓）；
+    · 第一步修复 ✓（先选模板再 Create ✓）⇒ 失败点推进到 `toolbar-arrangement-toggle` ✗；
+    · **实测当前界面** ✓（`scratch/probe-testids.mjs` ✓：建工程后把**所有** `data-testid` 列出来 ✓）⇒
+      `arrangement-editor-roll` / `toolbar-arrangement-toggle` / `arrangement-panel` **在文档里根本不存在** ✗，
+      而 `arrangement-form-club` / `arrangement-play` / `arrangement-export-menu` / `arrangement-lane` 等**都在** ✓
+      ⇒ 第二步修复 ✓（按**实测**而不是猜 ✓ 换成 `arrangement-form-club` ✓）⇒ 失败点再向里推进 ✗；
+    · **新失败点** ✓：`probe.readState()` ✗。
+  ⭐ **真正的原因（读代码）** ✓：`src/platform/probeHooks.ts:24` 里 `readState?: () => SequencerState` 是**可选**的 ✓，
+    而 `NewProjectView.tsx:82` 的注释写得很清楚 ✓：
+    "**There is no sequencer store on this route**, so `readState`/`commit`…" ✓——这条路**只安装引擎** ✓，
+    **不安装 sequencer store** ✓ ⇒ 这条探针驱动的是**旧 studio 路线**的接口 ✗，
+    它测的东西（`readState` → `state.pattern` → `commit({type:"TOGGLE_SONG_MODE"})` ✓）**在这一页不存在** ✓。
+  ⭐ **我到此停止盲改** ✓，并把**需要做的决定**写清楚 ✓——**不是"再换一个选择器"** ✗，而是：
+    **这条探针应当测什么？** ①把**编排路线自己的**播放/引擎路径测出来 ✓（引擎在这条路上**是**安装了的 ✓，
+      所以"能不能出声、循环几遍、响度是否一致"这些**仍然可测** ✓），还是 ②把它指回 **studio** 路线 ✓。
+    两者都要求先实测"人在这页上真正的操作路径" ✓（就像我这轮做的 testid 普查 ✓），
+    而不是把断言逐条替换成能过的写法 ✗——那会把"探针在量什么"变成猜 ✓。
+  ⭐ **影响面，照实说** ✓：这条探针**不在 CI 里** ✓（CI 的 `Unit Tests & Coverage` 段与我看到的所有红/绿都不含它 ✓）
+    ⇒ **"GitHub CI 全绿"不受它影响** ✓；但它**在本地 `npm run verify` 里** ✓，也就是**目前唯一还红着的那道本地门禁** ✓。
+    其余 ✓：`npm run verify` 的**单元测试段 5102 条全过** ✓（七百七十五 ✓），我这两步修复都保留 ✓（它们把失败点推进了，而不是掩盖 ✓）。

@@ -108,10 +108,15 @@ try {
 } catch {
   await fail("the studio toolbar never rendered");
 }
-await page.click("[data-testid='arrangement-editor-roll']").catch(() => {});
-await page.waitForSelector("[data-testid='toolbar-arrangement-toggle']", { timeout: 10000 });
-await page.click("[data-testid='toolbar-arrangement-toggle']");
-await page.waitForSelector("[data-testid='arrangement-panel']", { timeout: 10000 });
+/**
+ * ⭐ **Measured, not assumed.** The steps that used to stand here — the editor's roll tab, an advanced drawer's
+ * arrangement toggle, then an `arrangement-panel` — belong to an older studio: on the surface this probe now reaches,
+ * `arrangement-editor-roll`, `toolbar-arrangement-toggle` and `arrangement-panel` are **not in the document at all**, while
+ * the club pattern's own button (`arrangement-form-club`) is there as soon as the project exists. The probe was rewritten
+ * from a reading of the live DOM (every `data-testid` on the surface, listed and compared) rather than by replacing one
+ * failing wait with the next guess.
+ */
+await page.waitForSelector("[data-testid='arrangement-form-club']", { timeout: 10000 });
 await page.click("[data-testid='arrangement-form-club']");
 
 const hook = await page.evaluate(() => Boolean(window.__grooveProbe));
