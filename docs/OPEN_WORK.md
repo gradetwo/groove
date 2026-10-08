@@ -20456,3 +20456,27 @@ describe("the grid's editing actions", () => {
     · 两列各自的**计算后** `height` ✓ 与 `getComputedStyle(el).getPropertyValue("--arr-track-h")` ✓；
     · 哪一层定义了 `--arr-track-h` ✓（沿祖先链找 ✓）。
     ⇒ **变量值不同** ⇒ 断点问题 ✓；**变量为空** ⇒ 某分支没继承 ✓。两条都直接指向修法 ✓，且都不需要猜 ✓。
+
+### 八百二十四、🎯 **定位到断言的**取数口径**：它量的是 `arrangement-lane` 的**直接子元素**（`[...lanes.children]`），而那些可能只是**包裹层**而不是真正带行高的那一层**（2026-10-09 ✓）
+
+  ⭐ **断言原文（`scripts/test_matrix.js:609-612` ✓）** ✓：
+    ```js
+    const column = document.querySelector("[data-testid='arrangement-header-column'] > div:first-child");
+    const lanes  = document.querySelector("[data-testid='arrangement-lane']");
+    const headerRows = [...column.querySelectorAll("[data-testid^='arrangement-header-row-']")];  // 头列：按 testid ✓
+    const laneRows   = [...lanes.children];                                                        // 数据列：直接子元素 ✗
+    ```
+    ⇒ **两边取的不是同一层** ✓：头列取的是**带行高的行** ✓，数据列取的是**任意直接子元素** ✗。
+  ⭐ **读数（源码 ✓）** ✓：`ArrangementLaneV2.tsx:195` 那一层才是 `style={{ height: "var(--arr-track-h)" }}` ✓
+    ——它**未必**是 `arrangement-lane` 的直接子元素 ✓（301 行的容器是 `flex flex-col` ✓，
+    中间可能还有包裹层 ✓）⇒ 一旦是包裹层 ✓，`lanes.children` 量到的就是**内容高度** ✓（空时 ≈ **22px** ✓✓）
+    ⇒ 与 `119px` 的头列一比 ✓ 正是 e2e 报的那句话 ✓✓；而变量本身（96px ✓）在**两列里都生效** ✓。
+  ⭐ **两个可能的修法（都能一次验证 ✓，且都不改契约 ✓）** ✓：
+    · **A（若包裹层是应用侧的 ✓）** ✓：让包裹层**继承/带上**同样的行高 ✓（或把行高提到包裹层 ✓）
+      ⇒ `lanes.children` 与头列行**同层同高** ✓，断言自然成立 ✓；
+    · **B（若包裹层是刻意的 ✓）** ✓：把断言的取数与头列**对齐** ✓（用与头列相同的 testid 选择器 ✓，
+      或对数据列取"带 `--arr-track-h` 的那一层" ✓）⇒ 断言测的才是**真契约** ✓。
+    ⇒ 无论 A/B ✓，都**不动那条契约** ✓（头列与数据列必须同高 ✓），也**不降标准** ✓。
+  ⭐ **下一轮：一次量测即可定 A/B** ✓——打印 `arrangement-lane` 的
+    `children` 各自 `{ tag, testid, height, childElementCount, computedHeight }` ✓
+    以及各自后代里**带 `--arr-track-h` 的那一层**的高度 ✓ ⇒ A 与 B 一眼可分 ✓。
