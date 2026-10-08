@@ -19949,3 +19949,22 @@ describe("the grid's editing actions", () => {
     `AbortSignal` 触发时 **`child.kill()`** ✓（⇒ **L01 要的"真取消"随之成立** ✓）；
     然后 `mcp/registryAnalysis.ts` 改调宿主 ✓（`analyseWavFile` 仍是 async ✓），
     并对两条判据验收 ✓：**四类素材读数逐位相同** ✓ ＋ **timer 的 `actualTicks ≈ expectedTicks`** ✓（现在 `0` ✗）。
+
+### 七百九十六、✅ **F07 worker 化：宿主那一半也做完了（子进程 ＋ 回落 ＋ 回包说明走的是哪条路）**（2026-10-08 ✓）
+
+  ⭐ **宿主（`mcp/render/analysis.ts` 新增两处 ✓）** ✓：
+    · `analyseWavFileInChild(filePath, only)` ✓：**只在本进程的 `argv[1]` 是 bundle（`.mjs`）时**才起子进程 ✓
+      （⇒ 测试运行器 / dev server 下**不起** ✓，读数与之前**逐位相同** ✓）；
+      写 job 文件 ⇒ `spawn(process.execPath, [entry], { env: { …, GROOVE_ANALYSIS_JOB } })` ✓ ⇒ 读 stdout 的 JSON ✓；
+      子进程失败 ⇒ 返回 `undefined` ✓（**回落而不是失败** ✓）；
+    · `analyseWavFileIsolated(...)` ✓：有子进程用子进程 ✓、否则进程内分析 ✓，并在回包里写明
+      **`worker: "child" | "inline"`** ✓ ⇒ **不允许"看起来用了 worker"的静默退化** ✗（报告反复强调的那类失败 ✓）。
+    · `mcp/registryAnalysis.ts` 的两个入口改为调用它 ✓（`spectral_balance` 的处理函数同时改为 async ✓）。
+  ⭐ **验收（本轮做到的）** ✓：`typecheck` ✓、`lint` ✓、`docs:check` ✓；
+    三个分析判据全绿 ✓——`mcpAnalysisCache.test.ts` ✓、`analysisCacheStatus.test.ts` ✓、`lightAnalysisOption.test.ts` ✓
+    ⇒ **读数与缓存语义在"回落路径"上逐位不变** ✓（它们正是判据 1 ✓）。
+  ⏳ **判据 2（子进程路径下事件循环不被独占）** ✓：§795 已经证明**子进程本身能跑出完整 JSON** ✓；
+    还差一条"在真 bundle 里跑宿主并用同一条 timer 量法"的读数 ✓（`actualTicks` 应从 **0** ✗ 变成 **≈ expectedTicks** ✓）——
+    这条留到下一轮，用**同一份 `scratch/probe-f07-blocking.ts`** 改成经宿主调用即可 ✓。
+  ⭐ **L01 的"真取消"** ✓：现在只差把 `AbortSignal` 接到 `child.kill()` 上（宿主里加 4 行 ✓）＋ 给它配一条判据 ✓
+    （"abort 之后子进程真的消失" ✓）——这是下一轮与判据 2 一起做的一件小事 ✓。

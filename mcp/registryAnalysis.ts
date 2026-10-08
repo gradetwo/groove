@@ -4,6 +4,7 @@
 import path from "node:path";
 import { getGenreLoudnessTrimDb } from "../src/data/genreMix";
 import { loudnessReport } from "./exporting";
+import { analyseWavFileIsolated } from "./render/analysis";
 import { HEADLESS_POINTER_SENTENCE, headlessParameterDescription } from "./render/budget";
 import { analyseWavFile, renderAudio } from "./render/worker";
 import { flattenMcpArrangement, getMcpArrangement } from "./arrangement";
@@ -195,9 +196,9 @@ export const ANALYSIS_TOOLS: ToolDefinition[] = [
       "The 13-band spectral shape of a WAV this server produced, with the bands named (sub, low, low-mid, mid, high-mid, high) rather than left as indices, plus the spectral centroid. This is the same fingerprint the timbre baseline uses, so a reading here is comparable with it. No browser needed. **The same measurement as `analyze_audio`**: both call one analysis, so calling both repeats it and only costs time. Ask for one of them.",
     readOnly: true,
     inputSchema: { path: z.string().describe("a .wav path this server produced") },
-    handler: (args) => {
+    handler: async (args) => {
       try {
-        return analyseWavFile(args.path as string);
+        return await analyseWavFileIsolated(args.path as string);
       } catch (error) {
         return failure((error as Error).message);
       }
