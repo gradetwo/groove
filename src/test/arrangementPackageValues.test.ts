@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildArrangementPackage, validateArrangementPackage } from "../features/sequencer/arrangementPackage";
-import { createArrangementFromTemplate } from "../data/arrangementEdits";
+import { createArrangement } from "../data/arrangementEdits";
 
 /**
  * ⭐ **The door checks the values, not only the shape** (third evaluation, F06).
@@ -9,15 +9,15 @@ import { createArrangementFromTemplate } from "../data/arrangementEdits";
  * 129 bars — so the mistake surfaced later, as silence or as a bar count nothing could explain. Shape checks alone
  * cannot catch that: the file *is* a v2 package, it just says things the model cannot hold.
  */
-const withArrangement = (mutate: (arrangement: ReturnType<typeof createArrangementFromTemplate>) => void) => {
-  const arrangement = createArrangementFromTemplate({ name: "fixture", bpm: 120, bars: 4 });
+const withArrangement = (mutate: (arrangement: ReturnType<typeof createArrangement>) => void) => {
+  const arrangement = createArrangement("fixture", "synth");
   mutate(arrangement);
   return buildArrangementPackage(arrangement);
 };
 
 describe("an arrangement package's values", () => {
   it("⭐ refuses a note outside MIDI, a zero velocity, a bad start, a bad length, a bad bar count and a bad tempo", () => {
-    const trackId = createArrangementFromTemplate({ name: "ids", bpm: 120, bars: 4 }).tracks[0]!.id;
+    const trackId = createArrangement("ids", "synth").tracks[0]!.id;
     const note = { pitch: 60, startBeats: 0, lengthBeats: 1, velocity: 100 };
     const cases: Array<[string, RegExp]> = [
       ["pitch 128", /pitch 128/],
@@ -41,7 +41,9 @@ describe("an arrangement package's values", () => {
   });
 
   it("⭐ and still accepts what a valid arrangement produces", () => {
-    const arrangement = createArrangementFromTemplate({ name: "valid", bpm: 96, bars: 8 });
+    const arrangement = createArrangement("valid", "synth");
+    arrangement.bpm = 96;
+    arrangement.bars = 8;
     const trackId = arrangement.tracks[0]!.id;
     arrangement.notesByTrack = { [trackId]: [{ pitch: 60, startBeats: 0, lengthBeats: 1, velocity: 100 }] };
     expect(() => validateArrangementPackage(buildArrangementPackage(arrangement))).not.toThrow();

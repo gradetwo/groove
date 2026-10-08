@@ -172,7 +172,24 @@ export function PianoRollV2({ notes, onAddNote, onRemoveNote, onMoveNote, onResi
   }, []);
 
   const steps = Math.round(beats * STEPS_PER_BEAT);
-  const rows = useMemo(() => pitchRows(lowPitch, highPitch), [lowPitch, highPitch]);
+  /**
+   * ⭐ **A note that exists is always drawn** (third evaluation, F08).
+   *
+   * The window is `48–84` by default and was taken literally: a bass line written at MIDI 28–43 had notes in the
+   * arrangement, was audible, and was **invisible and uneditable** in this roll — the evaluation's F08, and the reason it
+   * was hard to believe at first is that nothing was wrong with the notes. The window is a *view* of the music, so it is
+   * widened to include every pitch the music actually uses; an empty roll still shows the plain window, so the compact
+   * default is kept where it helps.
+   */
+  const rows = useMemo(() => {
+    let lowest = lowPitch;
+    let highest = highPitch;
+    for (const note of notes) {
+      if (note.pitch < lowest) lowest = note.pitch;
+      if (note.pitch > highest) highest = note.pitch;
+    }
+    return pitchRows(lowest, highest);
+  }, [lowPitch, highPitch, notes]);
 
   /**
    * ⭐ **Measure, and keep measuring while the person scrolls.** The window is recomputed from `scrollLeft` and
