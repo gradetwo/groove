@@ -20092,3 +20092,16 @@ describe("the grid's editing actions", () => {
       `header-settings-open` / `header-language-switch` / `header-debug-bundle` / `Open menu`（**30px** ✓）、`Random`（**30px** ✓）。
   ⭐ **本轮验收** ✓：`typecheck`/`lint`/`docs:check`/`check:css` 全绿 ✓（本轮只改了探针的"打印全部 ✓"以便点名 ✓），
     并把上面这份**豁免清单与待改清单**写进台账 ✓——下一轮照单继续 ✓，不重新讨论"哪些算主路径" ✓。
+
+### 八百零五、✅ **F12 布局半（第五步）：轨道列表那一排（M/S/×、音色选择器、折叠、加轨）到 44px**（2026-10-08 ✓）
+
+  ⭐ **先解决"改哪儿"的问题（而不是照着名字猜 ✓）** ✓：给几何探针加上**父级链** ✓
+    （`ancestry: data-testid < …` ✓）⇒ 一眼看出点名的那批在哪 ✓：
+    · `M` / `S` / `×` / `Drums kind` / `Bass kind`（28px ✗）都在 **`track-list-v2 < arrangement-track-list`** ✓
+      ⇒ 真正要改的是 **`TrackListV2.tsx`** ✓（**不是**头部那个同名按钮 ✗——头部的加轨按钮本来就有 `min-h-[44px]` ✓）；
+    · `Random` / `header-*`（30px ✗）在 **`<header>`** ✓ ⇒ 下一轮改头部 ✓。
+  ⭐ **本轮改动（`TrackListV2.tsx`，6 处 ✓）** ✓：M / S / × / 折叠 / 音色选择器 / 加轨按钮
+    统一加 **`min-h-11 min-w-11 sm:min-h-0 sm:min-w-0`** ✓（移动优先 ⇒ 手机上 44px 触控 ✓，`sm:` 起逐字回到原来的 28px 密度 ✓）。
+  ⭐ 验收 ✓：`typecheck` ✓、`lint` ✓、`docs:check` ✓、`check:css` ✓；轨道列表与编排视图 **26 条全绿** ✓。
+  ⏳ 下一轮 ✓：头部那批（`Random` / `header-settings-open` / `header-language-switch` / `header-debug-bundle` / `Open menu` ✓ 30px ✓）
+    照同一规矩改 ✓；然后**复量一次**（预期 30 → ~12 ✓，剩下的即台账里写明理由的标尺/徽标/快捷键提示 ✓），F12 布局半即可收束 ✓。

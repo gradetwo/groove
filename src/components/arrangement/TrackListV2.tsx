@@ -112,7 +112,7 @@ export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, 
     <div data-testid="track-list-v2" className="flex flex-col gap-3 p-4">
       <div data-testid="track-list-add" className="flex flex-wrap gap-2">
         {ADDABLE.map((kind) => (
-          <button key={kind} type="button" className="px-3 py-1 rounded border border-[rgb(var(--d-line))] text-sm text-text" onClick={() => onAddTrack(kind, kind)}>
+          <button key={kind} type="button" className="min-h-11 sm:min-h-0 px-3 py-1 rounded border border-[rgb(var(--d-line))] text-sm text-text" onClick={() => onAddTrack(kind, kind)}>
             + {t(KIND_LABEL_KEY[kind])}
           </button>
         ))}
@@ -125,7 +125,7 @@ export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, 
               <span className="min-w-32 text-text">{track.kind === "folder" ? "▸ " : ""}{track.name}</span>
               {/* ⭐ The kind is changeable, which the owner asked for: a track's type is a decision, not an identity. The component only reports the choice — what happens to the fields the old kind owned is `changeTrackKind`'s business. */}
               <select
-                className="px-2 h-7 rounded text-xs bg-transparent border border-[rgb(var(--d-line))] text-text"
+                className="min-h-11 sm:min-h-0 px-2 h-7 rounded text-xs bg-transparent border border-[rgb(var(--d-line))] text-text"
                 aria-label={`${track.name} kind`}
                 value={track.kind}
                 onChange={(event) => onChangeKind(track.id, event.target.value as TrackKindV2)}
@@ -193,14 +193,14 @@ export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, 
                   className="w-16 accent-[rgb(var(--d-accent))]"
                 />
               )}
-              <button type="button" className={`w-7 h-7 rounded text-xs ${track.muted ? "bg-[rgb(var(--d-accent))] text-[rgb(var(--d-accent-ink))]" : "border border-[rgb(var(--d-line))] text-text"}`} aria-pressed={Boolean(track.muted)} onClick={() => onToggle(track.id, "muted", !track.muted)}>
+              <button type="button" className={`min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 w-7 h-7 rounded text-xs ${track.muted ? "bg-[rgb(var(--d-accent))] text-[rgb(var(--d-accent-ink))]" : "border border-[rgb(var(--d-line))] text-text"}`} aria-pressed={Boolean(track.muted)} onClick={() => onToggle(track.id, "muted", !track.muted)}>
                 M
               </button>
-              <button type="button" className={`w-7 h-7 rounded text-xs ${track.soloed ? "bg-[rgb(var(--d-accent))] text-[rgb(var(--d-accent-ink))]" : "border border-[rgb(var(--d-line))] text-text"}`} aria-pressed={Boolean(track.soloed)} onClick={() => onToggle(track.id, "soloed", !track.soloed)}>
+              <button type="button" className={`min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 w-7 h-7 rounded text-xs ${track.soloed ? "bg-[rgb(var(--d-accent))] text-[rgb(var(--d-accent-ink))]" : "border border-[rgb(var(--d-line))] text-text"}`} aria-pressed={Boolean(track.soloed)} onClick={() => onToggle(track.id, "soloed", !track.soloed)}>
                 S
               </button>
               {track.kind === "folder" && (
-                <button type="button" className="px-2 h-7 rounded text-xs border border-[rgb(var(--d-line))] text-text" aria-expanded={!track.collapsed} onClick={() => onToggleCollapse(track.id, !track.collapsed)}>
+                <button type="button" className="min-h-11 sm:min-h-0 px-2 h-7 rounded text-xs border border-[rgb(var(--d-line))] text-text" aria-expanded={!track.collapsed} onClick={() => onToggleCollapse(track.id, !track.collapsed)}>
                   fold
                 </button>
               )}
@@ -230,7 +230,7 @@ export function TrackListV2({ arrangement, onAddTrack, onRemoveTrack, onToggle, 
                   ))}
                 </div>
               )}
-              <button type="button" className="w-7 h-7 rounded text-xs text-text opacity-70" onClick={() => onRemoveTrack(track.id)}>
+              <button type="button" className="min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 w-7 h-7 rounded text-xs text-text opacity-70" onClick={() => onRemoveTrack(track.id)}>
                 ×
               </button>
             </li>
