@@ -19188,3 +19188,28 @@ describe("the grid's editing actions", () => {
     点播放后**至少一个可点** ✓ 且提示句消失 ✓ ⇒ 从处理器或按钮任一处拿掉 `hasPlayed` 即红 ✓。
   ⚠️ **又一条"靠缺陷通过"的旧用例** ✓：`handles answer selection, updates Elo rating…` ✓ 原来**直接点选项**就过 ✓
     （正是 F11 本身 ✓）⇒ 现改为**先播放再作答** ✓，并在注释里写清这段来龙去脉 ✓；挑战与 i18n 相关 4 个文件 **21 条全绿** ✓。
+
+### 七百六十一、✅ **F10：采样目录的状态在 `/new` 也说出来了（失败不再被吞成"什么都没有"）**（2026-10-08 ✓）
+
+  ⭐ **报告的原话（HTML 的 F10 节摘录）** ✓：不配置 `VITE_SAMPLE_ROOT` 启动 ⇒ **没有可选采样音源** ✓；
+    设好镜像再 build ⇒ 315 音源 / 32 库 ✓；而新建页的 catalogue 加载 **catch 返回 `undefined`** ✗ ⇒ **用户缺少失败解释** ✗；
+    代码指向 `src/data/sampleCatalogueRuntime.ts:124` ✓ 与 `src/views/NewProjectView.tsx:157` ✓。
+  ⭐ **复现（读代码即坐实，而且比报告更精确）** ✓：`appCatalogueRuntime.load()` **从不 reject** ✗——
+    它把失败写进 **`problems`** ✓（含地址 ✓，例如 `manifest: 404 from …` ✓）并带着能解析出来的资产返回 ✓
+    ⇒ 于是 `/new` 里那个 `.catch(() => undefined)` **根本跑不到** ✗，而 `load()` 的返回值里 **`problems` 被丢掉** ✗
+    ⇒ "**404 / 拿到 HTML / 解析出 0 条**" 与出厂状态"**根本没配镜像**"在界面上**长得一模一样** ✗✓（正是报告说的"容易混淆" ✓）。
+    而且本仓库**早就有** `src/data/sampleCatalogueStatus.ts` ✓（把 5 个阶段分成 `unconfigured/loading/failed/empty/ready` ✓，
+    并明确写了"`empty` 与 `failed` 必须分开" ✓）——**工作室那条路在用，`/new` 没用** ✗。
+  ⭐ **修法** ✓（一处决策、两处使用 ✓，不新增第二套说法 ✓）：
+    · `sampleCatalogueStatus.ts` 新增 `catalogueNoticeFor(status)` ✓：**`ready` 不需要句子、`loading` 是瞬态** ✓，
+      其余三种（含**出厂态 `unconfigured`** ✓——最容易被误当成故障的那一种 ✓）都给出一句 ＋ 明细 ✓；
+    · `/new` 改为 `catalogueNoticeFor(describeRuntimeStatus(appCatalogueRuntime))` ✓（用既有的 `describeRuntimeStatus` ✓，
+      不再自己拼字段 ✓）；
+    · 在编排视图**上方**渲染 `data-testid="catalogue-notice"` ✓：**一句摘要 ＋ `problems` 里的地址明细** ✓
+      ＋ **`catalogue-retry` 重试按钮** ✓（重试调**同一个** `load()` ✓——运行时**特意不缓存失败** ✓，正是为了这一步 ✓）；
+      新增双语键 `catalogue_retry` ✓。
+  ⭐ 判据 ✓（`src/test/catalogueNoticeWiring.test.ts` ✓ 2 例 ✓）：①**五个阶段**各有归属 ✓——
+    `ready`/`loading` 无句子 ✓、出厂态句子要提到 `mirror` ✓、失败态句子要说"加载不了/回来的是一张网页" ✓
+    且 `detail` 必须带上**地址**（`404 from` ✓，这条正是"可行动"的关键 ✓）；
+    ②**路由必须真的问** ✓：调用共享助手 ✓、渲染 notice ✓、有 retry ✓。删任一处即红 ✓。
+  ⭐ 相关 4 个测试文件 **14 条全绿** ✓，lint / docs / refs / css 门禁绿 ✓。

@@ -86,3 +86,16 @@ export function describeRuntimeStatus(runtime: {
     assetCount: runtime.assets.length,
   });
 }
+
+/**
+ * ⭐ **Which of those phases a route should put on screen** (third evaluation, F10).
+ *
+ * `ready` needs no sentence and `loading` is momentary; the other three are states a composer should be able to read —
+ * including `unconfigured`, which is the shipped state and therefore the one most likely to be mistaken for a fault
+ * ("where are the instruments?"). This lives here rather than in each view so the studio's chooser and the new-project
+ * route cannot drift into telling two different stories about the same catalogue.
+ */
+export function catalogueNoticeFor(status: CatalogueStatus): { summary: string; detail: string[] } | null {
+  if (status.phase === "ready" || status.phase === "loading") return null;
+  return { summary: status.summary, detail: status.detail };
+}

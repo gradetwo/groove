@@ -3,6 +3,8 @@ import { AudioEngine } from "../audio/AudioEngine";
 import { getActiveAudioEngine, setActiveAudioEngine } from "../audio/activeEngine";
 import { createArrangementPlayer } from "../audio/playerFromEngine";
 import { appCatalogueRuntime } from "../data/sampleCatalogueRuntime";
+import { useLanguage } from "../i18n/LanguageContext";
+import { catalogueNoticeFor, describeRuntimeStatus } from "../data/sampleCatalogueStatus";
 import { ArrangementViewV2 } from "../components/arrangement/ArrangementViewV2";
 import { instrumentChoicesFromAssets } from "../components/arrangement/CatalogueRecordingPicker";
 import type { InstrumentChoice } from "../components/arrangement/TrackListV2";
@@ -99,6 +101,7 @@ export function useNewProjectEngine(): { engine: AudioEngine | null; engineRef: 
 
 export function NewProjectView({ capture, onProjectNameChange, arrangementId, initialAutoPlay, onClearInitialAutoPlay , onOpenHelp}: NewProjectViewProps) {
   const { engine, engineRef } = useNewProjectEngine();
+  const { t } = useLanguage();
   const [instruments, setInstruments] = useState<InstrumentChoice[]>([]);
   /**
    * ⭐ **The stored project** — the whole persistence story for this route: it is read once, here, and every change the
@@ -146,19 +149,32 @@ export function NewProjectView({ capture, onProjectNameChange, arrangementId, in
    * route grew the same one and two copies of "what an instrument is" would be the "two places, one thing" failure
    * this codebase keeps removing. It is one function, called by both routes.
    */
+  /**
+   * ⭐ **The catalogue's state is said here too, not swallowed** (third evaluation, F10).
+   *
+   * This route read `{ assets }` and dropped everything else on the floor: `load()` never rejects — it records what went
+   * wrong in `problems` and answers with whatever it could resolve — so the `.catch` here could not run, and a manifest
+   * that 404'd, answered HTML instead of JSON, or yielded nothing resolvable looked exactly like the shipped
+   * "no mirror configured" state: an empty instrument list with no explanation. The evaluation's F10 is that silence,
+   * and `describeCatalogueStatus` already exists to break it into the five phases that send a composer to different
+   * actions — the studio's chooser uses it, this route did not.
+   */
+  const [catalogueNotice, setCatalogueNotice] = useState<{ summary: string; detail: string[] } | null>(null);
+  const loadCatalogue = useCallback(() => {
+    return appCatalogueRuntime.load().then(({ assets }) => {
+      setInstruments(instrumentChoicesFromAssets(assets));
+      // ⭐ Which phases deserve a sentence is one decision, in `sampleCatalogueStatus`, shared with the studio's chooser.
+      setCatalogueNotice(catalogueNoticeFor(describeRuntimeStatus(appCatalogueRuntime)));
+    });
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
-    void appCatalogueRuntime
-      .load()
-      .then(({ assets }) => {
-        if (cancelled) return;
-        setInstruments(instrumentChoicesFromAssets(assets));
-      })
-      .catch(() => undefined);
+    void loadCatalogue().catch(() => undefined);
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadCatalogue]);
 
   const player = useMemo(
     () => (engine ? createArrangementPlayer({ engine, loadCatalogue: () => appCatalogueRuntime.load() }) : undefined),
@@ -205,7 +221,39 @@ export function NewProjectView({ capture, onProjectNameChange, arrangementId, in
   if (store.loading) return null;
 
   return (
-    <ArrangementViewV2
+    <>
+      {/**
+        * ⭐ **The reason, where the instruments would be** (finding F10), with the failing address from `problems` and a
+        * retry that calls the same load — the runtime reports failures rather than caching them, precisely so a retry can
+        * work. It disappears as soon as the catalogue is readable.
+        */}
+      {catalogueNotice && (
+        <div
+          data-testid="catalogue-notice"
+          className="mx-3 mt-3 rounded-lg border border-line bg-panel2/60 px-3 py-2 text-xs text-text-sub"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <span>{catalogueNotice.summary}</span>
+            <button
+              type="button"
+              data-testid="catalogue-retry"
+              className="shrink-0 rounded border border-line px-2 py-1 text-[11px] text-text"
+              onClick={() => {
+                setCatalogueNotice(null);
+                void loadCatalogue().catch(() => undefined);
+              }}
+            >
+              {t("catalogue_retry")}
+            </button>
+          </div>
+          {catalogueNotice.detail.map((line) => (
+            <div key={line} className="mt-1 font-['JetBrains_Mono'] text-[10px] text-text-dim">
+              {line}
+            </div>
+          ))}
+        </div>
+      )}
+      <ArrangementViewV2
       songId="new"
       player={player}
       engineRef={engineRef}
@@ -228,6 +276,7 @@ export function NewProjectView({ capture, onProjectNameChange, arrangementId, in
         notifyName.current?.(name.trim() || undefined);
       }}
       onArrangementChange={store.report}
-    />
+      />
+    </>
   );
 }
