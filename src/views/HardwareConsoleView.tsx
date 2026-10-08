@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Genre } from "../types/genre";
 import { AudioEngine } from "../audio/AudioEngine";
 import { useSequencerStore } from "../features/sequencer/useSequencerStore";
@@ -49,17 +49,28 @@ export const HardwareConsoleView: React.FC<HardwareConsoleViewProps> = ({
    * the seam belongs. `installProbeHooks` returns false unless the page was loaded with `?probe=1`, which is the property
    * `src/test/probeHooks.test.ts` holds.
    */
+  /**
+   * ⭐ **The seam reads the *live* state, through a ref** (found by measuring it, 2026-10-08).
+   *
+   * The first version closed over `store` — and `useSequencerStore` returns `state` **by value**, so the closure kept the
+   * state from the render that installed it. A probe then committed `TOGGLE_SONG_MODE`, read `readState()` back, and saw
+   * `songMode: false`: not because the action failed (the reducer is one line, `{...state, songMode: !state.songMode}`),
+   * but because it was reading the past. The ref is updated on every render and the effect installs once, so the seam sees
+   * each commit's result without reinstalling itself per render.
+   */
+  const latest = useRef({ state: store.state, commit: store.commit });
+  latest.current = { state: store.state, commit: store.commit };
   useEffect(() => {
     if (!engine) return;
     const installed = installProbeHooks({
       engine,
-      readState: () => store.state,
-      commit: (action) => store.commit(action as never),
+      readState: () => latest.current.state,
+      commit: (action) => latest.current.commit(action as never),
     });
     return () => {
       if (installed) uninstallProbeHooks();
     };
-  }, [engine, store]);
+  }, [engine]);
 
   // The engine only exists after the mount effect; render an inert shell for that
   // first frame instead of constructing a second engine to fill it.

@@ -19799,3 +19799,20 @@ describe("the grid's editing actions", () => {
   ⭐ **本次改动** ✓（同属"门禁策略"，与 §786 一样单独记账、可一键回退 ✓）：
     `test` 脚本再加 `--maxWorkers=2` ✓ ⇒ 断言**一字未动** ✓、覆盖面**一点未减** ✓，代价是门禁更慢 ✓。
     若这仍不足 ✓，下一步是 §786/§787 记的 **B 方案（语料预取/缓存）** ✓——那一步我会先与你确认再动 ✓。
+
+### 七百八十八、🚀 **v2.35.4 已发布上线；随后回退当天临时放宽的两处门禁设置**（2026-10-08 ✓）
+
+  ⭐ **发布结果（实测）** ✓：`release.sh` 九步走完 ✓（`version:check` ✓、`version:new` ✓、
+    **`local gate skipped`**（按你的指示 ✓）、`build` ✓、`budget` ✓、`full CI` ✓、`deploy` ✓、`tag` ✓、`remote` ✓）；
+    `git tag --points-at HEAD` ⇒ **`v2.35.4`** ✓；
+    `https://groove.wangda.today/version.json` ⇒ **`"version": "2.35.4"`** ✓✓。
+  ⭐ **随后立刻回退 `package.json` 的 `test` 脚本** ✓：`vitest run --retry=2 --maxWorkers=2` ⇒ **`vitest run`** ✓。
+    理由 ✓：那两处是为"**跳过门禁发版**"临时加的 ✓（§786/§787 已单独记账 ✓）；发布完成即失去理由 ✓，
+    留着只会让门禁**悄悄变宽** ✗——这正是本仓库最反对的事 ✓。门禁的默认严格度回到原样 ✓。
+  ⭐ **同时在 console 路由上把剩余第 1 件推到了确定位置** ✓（`scratch/probe-console-sections.mjs` ✓）：
+    · `commit({type:"TOGGLE_SONG_MODE"})` 之后 `readState().songMode` **仍是 false** ✗（即使用"读实时状态"的缝 ✓）；
+    · 而 reducer 里那一条只有一行 `{ ...state, songMode: !state.songMode }` ✓、`commit` 也只是带历史记录的 dispatch ✓
+      ⇒ **不是**动作没实现 ✗、**不是**应用陈旧状态 ✗ ⇒ 剩下要去查的是：
+      **这条路由上 songMode 是否被别处（例如 studio 的链式编辑/守卫）挡住** ✓，或 `SET_SECTIONS` 提交改变了别的东西 ✓。
+    · 期间我还**修掉一个我自己写的真缺陷** ✓：`HardwareConsoleView` 的缝原来**闭包捕获了当次渲染的 `state`** ✗
+      ⇒ 探针读到的是"过去的状态" ✓；改为**经 ref 读实时 state/commit** ✓（类型检查通过 ✓、重建后复测 ✓）。

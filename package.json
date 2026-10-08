@@ -11,7 +11,7 @@
     "lint:data": "vitest run src/test/schema.test.ts src/test/schemaFields.test.ts src/test/genreContentAudit.test.ts src/test/genreHarmony.test.ts src/test/genreIndexDrift.test.ts src/test/genreIdReferences.test.ts src/test/genreLinks.test.ts",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "vitest run --retry=2 --maxWorkers=2",
+    "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "E2E_PROFILE=pc node scripts/test_matrix.js",
     "check:budget": "node scripts/check_budgets.js",
