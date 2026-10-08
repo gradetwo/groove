@@ -19968,3 +19968,18 @@ describe("the grid's editing actions", () => {
     这条留到下一轮，用**同一份 `scratch/probe-f07-blocking.ts`** 改成经宿主调用即可 ✓。
   ⭐ **L01 的"真取消"** ✓：现在只差把 `AbortSignal` 接到 `child.kill()` 上（宿主里加 4 行 ✓）＋ 给它配一条判据 ✓
     （"abort 之后子进程真的消失" ✓）——这是下一轮与判据 2 一起做的一件小事 ✓。
+
+### 七百九十七、✅ **L01：取消现在**真的能停**——分析宿主接上了 `AbortSignal ⇒ child.kill()`，并配了能红的判据**（2026-10-08 ✓）
+
+  ⭐ **接线（`mcp/render/analysis.ts` ✓）** ✓：`analyseWavFileInChild(path, only, signal)` ✓ 在 `spawn` 后挂
+    `signal.addEventListener("abort", () => child.kill("SIGTERM"), { once: true })` ✓，`close` 时摘掉监听 ✓；
+    `analyseWavFileIsolated(..., signal)` ✓ 在**开始前**已 abort 时**明确抛错** ✓（"the analysis was cancelled before it
+    started" ✓），中途 abort 亦然 ✓ ⇒ **绝不把取消后的结果当正常读数返回** ✗（这正是 L01 说的"只丢掉结果"的反面 ✓）。
+  ⭐ **为什么这条能成立** ✓：**同步调用没有可中断的边界** ✗（报告的原话 ✓），而**子进程有** ✓——
+    它就是 §792 量出来的那 10.5 s 事件循环占用所对应的、可以 `kill` 的实体 ✓。
+  ⭐ 判据 ✓（`src/test/analysisCancellation.test.ts` ✓）：①**已 abort 的 signal** ⇒ 必须 `rejects(/cancel/i)` ✓
+    （今天之前它会照常分析 ⇒ 红 ✓）；②普通路径仍必须给出读数 ✓ 并**在回包里说明走的是哪条路**
+    （`worker: "inline"` ✓，测试运行器下无 bundle ⇒ 回落 ✓，与 §796 的契约一致 ✓）。
+  ⭐ 验收 ✓：`typecheck` ✓、`lint` ✓、`docs:check` ✓；四个分析判据（新增的 ＋ 缓存两件 ＋ 轻量模式）**全绿** ✓。
+  ⏳ 剩最后一小步 ✓：在**真 bundle** 下用同一条 timer 量法读一次 `actualTicks`（应从 **0** 变成 **≈ expectedTicks** ✓），
+    作为判据 2 的读数留档 ✓。

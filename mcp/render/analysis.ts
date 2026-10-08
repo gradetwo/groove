@@ -86,10 +86,11 @@ function analysisChildEntry(): string | undefined {
 
 export async function analyseWavFileInChild(
   filePath: string,
-  only?: { discontinuities?: boolean }
+  only?: { discontinuities?: boolean },
+  signal?: AbortSignal
 ): Promise<Record<string, unknown> | undefined> {
   const entry = analysisChildEntry();
-  if (!entry) return undefined;
+  if (!entry || signal?.aborted) return undefined;
   const { spawn } = await import("node:child_process");
   const { mkdtempSync, writeFileSync } = await import("node:fs");
   const { tmpdir } = await import("node:os");
@@ -101,6 +102,13 @@ export async function analyseWavFileInChild(
       env: { ...process.env, GROOVE_ANALYSIS_JOB: jobPath },
       stdio: ["ignore", "pipe", "pipe"],
     });
+    /**
+     * ⭐ **A cancel is a kill, and that is the whole point of the child** (L01): the evaluation's finding was that
+     * cancelling an export only abandoned its *result* while the work carried on, because a synchronous call has no
+     * boundary to interrupt. A child process does.
+     */
+    const onAbort = () => child.kill("SIGTERM");
+    signal?.addEventListener("abort", onAbort, { once: true });
     let out = "";
     child.stdout.on("data", (chunk) => {
       out += String(chunk);
@@ -108,6 +116,7 @@ export async function analyseWavFileInChild(
     child.stderr.resume();
     child.on("error", () => resolve(undefined));
     child.on("close", (code) => {
+      signal?.removeEventListener("abort", onAbort);
       if (code !== 0) return resolve(undefined);
       try {
         resolve(JSON.parse(out) as Record<string, unknown>);
@@ -124,9 +133,16 @@ export async function analyseWavFileInChild(
  */
 export async function analyseWavFileIsolated(
   filePath: string,
-  only?: { discontinuities?: boolean }
+  only?: { discontinuities?: boolean },
+  signal?: AbortSignal
 ): Promise<Record<string, unknown>> {
-  const isolated = await analyseWavFileInChild(filePath, only);
+  /**
+   * ⭐ **An aborted read answers honestly** rather than analysing anyway: the caller asked to stop, and a reply that
+   * quietly cost ten seconds would be the opposite of a cancellation. The tool layer turns this into its own failure.
+   */
+  if (signal?.aborted) throw new Error("the analysis was cancelled before it started");
+  const isolated = await analyseWavFileInChild(filePath, only, signal);
+  if (signal?.aborted) throw new Error("the analysis was cancelled");
   if (isolated !== undefined) return { ...isolated, worker: "child" };
   return { ...analyseWavFile(filePath, only), worker: "inline" };
 }
