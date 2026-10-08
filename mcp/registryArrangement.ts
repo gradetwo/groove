@@ -139,6 +139,18 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
           args.startBar !== undefined && args.endBar !== undefined
             ? { startBar: args.startBar as number, endBar: args.endBar as number }
             : undefined;
+        /**
+         * ⭐ **One side of a span is named, not swallowed** (third evaluation, F03).
+         *
+         * `startBar` and `endBar` are a pair, and a caller that sends only one used to get a render of the **whole**
+         * arrangement with nothing said: the request read as satisfied, the render covered bars the caller did not ask
+         * for, and the cost estimate the caller was given was for the wrong span. The sentence names which side is
+         * missing and what actually happened, in the same voice as the unknown-lane advisory below.
+         */
+        const halfSpan =
+          (args.startBar === undefined) !== (args.endBar === undefined)
+            ? `only ${args.startBar === undefined ? "endBar" : "startBar"} was given: a span needs both, so this render covers the whole arrangement — pass both bars, or neither`
+            : undefined;
         const trackIds = (args.trackIds as string[] | undefined) ?? (args.trackId ? [String(args.trackId)] : undefined);
         /**
          * ⭐ **An id that matches no lane is named, not swallowed.** `flattenMcpArrangement` keeps only the lanes whose
@@ -151,9 +163,13 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
         const unknownTrackIds = trackIds ? trackIds.filter((id) => !knownTrackIds.has(id)) : [];
         const { flattened } = flattenMcpArrangement(String(args.arrangementId), range, trackIds);
         const summary = summariseArrangement(String(args.arrangementId), lanes);
-        const scopeProblems = unknownTrackIds.length
-          ? [...summary.problems, `no lane has the id ${unknownTrackIds.map((id) => `"${id}"`).join(", ")}: the render contains only the lanes that matched, so it can be silent`]
-          : summary.problems;
+        const scopeProblems = [
+          ...summary.problems,
+          ...(unknownTrackIds.length
+            ? [`no lane has the id ${unknownTrackIds.map((id) => `"${id}"`).join(", ")}: the render contains only the lanes that matched, so it can be silent`]
+            : []),
+          ...(halfSpan ? [halfSpan] : []),
+        ];
         const result = await renderAudio(flattened.pattern, {
           format: (args.format as "wav" | "mp3") ?? "wav",
           sampleRate: (args.sampleRate as number | undefined) ?? 8000,
@@ -170,6 +186,7 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
           bars: summary.bars ?? Math.round(summary.steps / 16),
           passes: 1,
           ...(range ? { span: range } : {}),
+          ...(halfSpan ? { halfSpan } : {}),
           ...(trackIds ? { tracks: trackIds } : {}),
           ...(unknownTrackIds.length ? { unknownTrackIds } : {}),
           totalSteps: flattened.pattern.totalSteps,
@@ -254,6 +271,14 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
     },
     handler: async (args, ctx) => {
       try {
+        /**
+         * ⭐ **One side of a span is named here too** (third evaluation, F03): the pair reads as "both or neither", and a
+         * caller that sent one side used to receive a render of the whole arrangement with nothing said about it.
+         */
+        const halfSpan =
+          (args.startBar === undefined) !== (args.endBar === undefined)
+            ? `only ${args.startBar === undefined ? "endBar" : "startBar"} was given: a span needs both, so this render covers the whole arrangement — pass both bars, or neither`
+            : undefined;
         const range =
           typeof args.startBar === "number" && typeof args.endBar === "number"
             ? { startBar: args.startBar, endBar: args.endBar }
@@ -323,7 +348,7 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
           /** How many times that whole arrangement was rendered, i.e. what `bars` asked for. */
           passes,
           totalSteps: flattened.pattern.totalSteps,
-          ...(summary.problems.length ? { arrangementProblems: summary.problems } : {}),
+          ...(summary.problems.length || halfSpan ? { arrangementProblems: [...summary.problems, ...(halfSpan ? [halfSpan] : [])] } : {}),
           ...audioLaneReplyFields(result.audioLanes),
         };
       } catch (error) {

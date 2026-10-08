@@ -18912,3 +18912,17 @@ describe("the grid's editing actions", () => {
     ⇒ 删掉任一守卫即红 ✓。相关既有 4 个测试文件全绿 ✓，lint / docs 门禁绿 ✓。
   ⏳ 下一步 ✓：**F03**（单边范围参数被静默忽略 ✓）与 **F02**（`maxDurationSec` 忽略重复次数与范围 ✓）——
     两者都是"参数说了不算"的同一族 ✓，先按工具层复现 ✓。
+
+### 七百四十七、✅ **第三份报告 F03：单边的范围参数不再被静默吞掉**（2026-10-08 ✓）
+
+  ⭐ **复现（读代码即坐实）** ✓：两个吃范围参数的处理函数都写成
+    `(args.startBar !== undefined && args.endBar !== undefined) ? {…} : undefined` ✓——**只给一侧**时整段范围被丢掉 ✗，
+    回包**一句不说** ✗ ⇒ 调用者以为"渲染了那一小段" ✓，实际拿到**整首** ✓，而且之前给它的**成本估算也是错的范围** ✓。
+  ⭐ **修法** ✓（沿用同文件既有的"命名而不是吞掉"风格 ✓——`unknownTrackIds` 那段就是先例 ✓）：
+    两个处理函数各算一句 `halfSpan` ✓：`only endBar was given: a span needs both, so this render covers the whole
+    arrangement — pass both bars, or neither` ✓（指出**缺的是哪一侧** ✓、以及**实际发生了什么** ✓），
+    并同时以**结构化字段** `halfSpan` ✓ 与 **`arrangementProblems` 里的一句** ✓ 两种形式送出 ✓
+    （读结构的与读散文的调用者都能发现 ✓）。
+  ⭐ 判据 ✓（`mcpPreviewScopeDiagnostic.test.ts` ✓ 4 例 ✓）：**两个处理函数各必须有这句话** ✓（`sentences.length === 2` ✓）、
+    必须作为 `halfSpan` 字段送出 ✓、必须进 `arrangementProblems` ✓ ⇒ 删掉任一处的任一半即红 ✓。
+  ⏳ 下一步 ✓：**F02**（`estimateRenderCost` 的墙钟几乎不随重复次数/范围变 ✓ —— 与 F03 同族："数字说了不算" ✓）。

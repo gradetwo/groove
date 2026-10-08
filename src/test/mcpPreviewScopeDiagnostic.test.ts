@@ -12,6 +12,7 @@
  * one that fails, so the criterion exists to keep the difference visible.
  */
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const SOURCE = "mcp/registryArrangement.ts";
@@ -44,4 +45,18 @@ describe("the preview reports track ids that matched nothing", () => {
     expect({ found: body.length > 1000, hasHandler: body.includes("handler: async") })
       .toEqual({ found: true, hasHandler: true });
   });
+
+  it("⭐ names a one-sided span instead of silently rendering the whole arrangement (finding F03)", () => {
+    /**
+     * The evaluation sent only one of `startBar`/`endBar` and received a render of the **whole** arrangement with
+     * nothing said — the cost estimate the caller was given was for the wrong span, and the request read as satisfied.
+     * Both range-taking handlers must compute the sentence and put it in the reply; deleting either turns this red.
+     */
+    const source = readFileSync(resolve(__dirname, "../../mcp/registryArrangement.ts"), "utf8");
+    const sentences = [...source.matchAll(/only \$\{args\.startBar === undefined \? "endBar" : "startBar"\} was given/g)];
+    expect(sentences.length, "one sentence per range-taking handler").toBe(2);
+    expect(source, "and it travels as a named field").toContain("...(halfSpan ? { halfSpan } : {})");
+    expect(source, "and in the arrangement's problems, where a caller reads diagnoses").toContain("...(halfSpan ? [halfSpan] : [])");
+  });
+
 });
