@@ -227,18 +227,35 @@ export function clickAnalysis(
     const indices: number[] = [];
     const steps = new Float32Array(Math.max(0, channel.length - 1));
     for (let i = 1; i < channel.length; i += 1) steps[i - 1] = Math.abs(channel[i] - channel[i - 1]);
-    const scratch: number[] = [];
+    /**
+     * ⭐ **The same median, computed without a comparator callback** (third evaluation, F07).
+     *
+     * The evaluation measured a first five-minute analysis at 161 s and traced it to this loop: a window is rebuilt and
+     * **sorted per sample**, 13.2 million times. Reproduced here at 287 s, or ~470 ms of CPU per second of audio. The
+     * cheapest honest cut is the comparator: `Array.prototype.sort((a, b) => a - b)` calls a JavaScript function ~55·log₂55
+     * times per sample, while `Float64Array.prototype.sort()` sorts numerically in the engine. Same values, same order,
+     * same median — the reading cannot move — and the buffer is preallocated, so nothing is allocated per sample either.
+     *
+     * ⚠️ It is a first step, not the whole fix: the window still rebuilds its ~55 values per sample. A rolling window
+     * (one removal and one insertion per stride, per residue class — the same multiset, so the same median) is the next
+     * one, and the readings on the four fixture shapes in `scratch/f07-baseline.ts` are what any such change must match.
+     */
+    const scratch = new Float64Array(Math.max(1, 2 * halfWindow));
     for (let i = 1; i < channel.length - 1; i += 1) {
       const predicted = (channel[i - 1] + channel[i + 1]) / 2;
       const deviation = Math.abs(channel[i] - predicted);
       if (deviation === 0) continue;
-      scratch.length = 0;
+      let count = 0;
       const from = Math.max(0, i - halfWindow);
       const to = Math.min(steps.length, i + halfWindow);
-      for (let j = from; j < to; j += stride) scratch.push(steps[j]);
-      if (!scratch.length) continue;
-      scratch.sort((a, b) => a - b);
-      const floor = scratch[Math.floor(scratch.length / 2)];
+      for (let j = from; j < to; j += stride) {
+        if (count < scratch.length) scratch[count] = steps[j];
+        count += 1;
+      }
+      if (count === 0) continue;
+      const window = scratch.subarray(0, Math.min(count, scratch.length));
+      window.sort();
+      const floor = window[Math.floor(window.length / 2)];
       const ratioDb = 20 * Math.log10(deviation / Math.max(floor, 1e-9));
       if (worstDb === null || ratioDb > worstDb) {
         worstDb = ratioDb;
