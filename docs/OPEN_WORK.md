@@ -19459,3 +19459,36 @@ describe("the grid's editing actions", () => {
     所以本轮做的是"**把没有说清楚**" ✓，而不是"**让某个程序支持 legato**" ✓（后者是要动 DSP/加载器的事 ✓，不在本轮 ✓）。
   ⏳ 第 6 节剩余（仍开放 ✓）：render jobId ＋ 真正取消（与 L01 结构那半同源 ✓）、多谱表 MusicXML ✓、
     段落视图/片段重复 ✓、自动保存与修订恢复 ✓、Web/MCP 统一工程 schema（F09 已让名字随包走 ✓，尚缺 sections/author 等 ✓）。
+
+### 七百七十二、✅ **第 6 节能力评估（第 7 件）：MusicXML 导出支持"每个声部一个谱表"；顺手抓到并修掉"非法 kind 崩在模型里"**（2026-10-08 ✓）
+
+  ⭐ **来源** ✓：报告第 6 节 Agent 侧"支持**导出所有声部的多谱表 MusicXML**" ✓；
+    其材料索引里也写着"MCP 的 musicxml **仅钢琴声部**" ✓。
+  ⭐ **复现（读代码即坐实）** ✓：`export_arrangement_musicxml` 的描述原文就是 "**One part, from one track**" ✓，
+    schema 只收**单个** `trackId` ✓ ⇒ 六轨作品只能交出一个声部给制谱软件 ✗✓。
+    而**导入**那一侧**早就**有 `partIndex: number | "all"` ✓（"Which part is a choice, and all of them is a choice" ✓）
+    ⇒ 这是一个**方向不对称** ✓：能把别人的分谱读进来，却交不出自己的 ✓。
+  ⭐ **修法** ✓（镜像导入侧的选择，两边读起来一样 ✓）：
+    · `src/data/musicxml.ts` 新增 `toMusicXmlScore(parts, bars, {title})` ✓：一个 `<score-part>` ＋ 一个
+      `<part id="Pn">` **每个声部一份** ✓；**单声部的 `toMusicXml` 直接由它实现** ✓（不复制正文 ✓，
+      所以两者不可能漂 ✓）；第一条 part 带 tempo/meter ✓（格式惯例 ✓），其余各自带自己需要的 attributes ✓；
+    · `exportMcpMusicXml(..., { trackId: "all" })` ✓：**每个非 folder 轨道一份分谱** ✓（folder 在 MusicXML 里没有对应物 ✓；
+      没有音符的轨**也写** ✓——"有名无音的谱表"与"这个声部不存在"是两件事 ✓），文件名用**工程名** ✓（F09 的成果 ✓），
+      回包新增 `parts: string[]` ✓；
+    · 工具 schema ✓：`trackId` 说明改为 'which track to write, or `"all"` for one part per lane' ✓，
+      描述里也写明这与导入的 `partIndex: "all"` 是**同一个选择的反方向** ✓。
+  ⭐ 判据 ✓（`src/test/musicxmlAllParts.test.ts` ✓）：
+    · `<score-part id=…>` 与 `<part id=…>` 的 **id 列表必须逐个相等且同序** ✓（"声明了一个谱表却没有正文"是丢声部的安静版本 ✓）；
+    · 每条分谱**必须**带**该轨自己的名字** ✓（含持有音符那条 ✓）；标题是**作品**的而不是某条轨的 ✓；
+    回包 `parts` **必须**等于轨道名列表 ✓；而**默认仍是单轨** ✓（是"一个选择"而不是"唯一行为" ✓）⇒ 删掉 `"all"` 分支即红 ✓。
+  ⭐ ⚠️ **顺手抓到的一个**新**缺陷（报告里没有 ✓，是我写判据时撞上的 ✓）**：
+    写判据时我用 `addMcpTrack(id, "bass", …)` ✓ 想造三条轨 ✓，结果抛
+    `Cannot read properties of undefined (reading 'sample')` ✗——因为 `TrackKindV2` 是
+    `drumkit | synth | sampler | fx | folder` ✓，而 `"bass"` 是 **drumkit 里的一个 role** ✓，不是 kind ✓；
+    工具 schema 收 `z.string()` ✓ ⇒ **agent 完全可能这么传** ✓，却得到一个**既不点参数也不点选项**的内部报错 ✗✓。
+    **修法** ✓：`addMcpTrack` 开头按 `TRACK_KINDS` 校验 ✓，报错**点名参数与合法选项** ✓：
+    `"bass" is not a track kind — the kinds are drumkit, synth, sampler, fx, folder (a drum role such as "bass" or "chord" is a lane inside a drumkit, not a kind)` ✓；
+    判据 ✓：必须匹配 `/not a track kind/` 与 `/drumkit, synth, sampler, fx, folder/` ✓（今天那条内部错误自然不匹配 ⇒ 红 ✓）。
+  ⭐ 相关 4 个测试文件 **34 条全绿** ✓，lint / docs / refs 门禁绿 ✓。
+  ⏳ 第 6 节剩余（仍开放 ✓）：render jobId ＋ 真正取消（L01 结构那半 ✓）、段落视图/片段重复 ✓、
+    自动保存与修订恢复 ✓、Web/MCP 统一工程 schema 的其余字段（sections/author ✓，F09 已让 name 随包走 ✓）。

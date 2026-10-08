@@ -371,20 +371,42 @@ function divisionsFor(notes: readonly NoteEvent[], cap = 960): number {
   return cap;
 }
 
-export function toMusicXml(notes: readonly NoteEvent[], bars: number, options: MusicXmlOptions = {}): string {
-  const measures = notesToMeasures(notes, bars, options);
-  const partName = escapeXml(options.partName ?? "Track");
+/**
+ * ⭐ **The whole arrangement as one score, one part per track** (third evaluation, section 6: "export all parts as a
+ * multi-staff MusicXML").
+ *
+ * The writer below has always been single-part — the tool's own description said "one part, from one track", and a
+ * composer working through MCP could only hand a notation program one lane of a six-lane piece. The import side already
+ * takes `partIndex: number | "all"`, so the two directions now read alike: one part, or every part.
+ *
+ * Each part keeps its own name and its own measures; the first part carries the tempo and the meter, as the format
+ * expects, and the rest repeat the attributes they need to stand alone. Nothing here decides **which** tracks those are —
+ * the caller picks them, because a folder or a silent lane is its business and not this function's.
+ */
+export function toMusicXmlScore(
+  parts: ReadonlyArray<{ notes: readonly NoteEvent[]; options?: MusicXmlOptions }>,
+  bars: number,
+  options: { title?: string } = {}
+): string {
+  const bodies = parts.map((part, index) => {
+    const partOptions = { ...options, ...(part.options ?? {}) };
+    const measures = notesToMeasures(part.notes, bars, partOptions);
+    return { id: `P${index + 1}`, name: escapeXml(part.options?.partName ?? `Part ${index + 1}`), measures };
+  });
   return (
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
     `<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">\n` +
     `<score-partwise version="4.0">\n` +
     `  <work><work-title>${escapeXml(options.title ?? "Untitled")}</work-title></work>\n` +
     `  <part-list>\n` +
-    `    <score-part id="P1"><part-name>${partName}</part-name></score-part>\n` +
-    `  </part-list>\n` +
-    `  <part id="P1">\n` +
-    measures.join("\n") +
-    `\n  </part>\n` +
-    `</score-partwise>\n`
+    bodies.map((body) => `    <score-part id="${body.id}"><part-name>${body.name}</part-name></score-part>`).join("\n") +
+    `\n  </part-list>\n` +
+    bodies.map((body) => `  <part id="${body.id}">\n${body.measures.join("\n")}\n  </part>`).join("\n") +
+    `\n</score-partwise>\n`
   );
+}
+
+/** ⭐ The single-part case **is** the score with one part, so the two cannot drift apart. */
+export function toMusicXml(notes: readonly NoteEvent[], bars: number, options: MusicXmlOptions = {}): string {
+  return toMusicXmlScore([{ notes, options }], bars, options);
 }

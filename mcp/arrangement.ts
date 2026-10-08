@@ -13,7 +13,7 @@ import { stepCountFor, stepsPerBarFor } from "../src/data/noteEvents";
 import { findGenre } from "./library";
 import { patternFromGenre } from "../src/data/genreMix";
 import { arrangementSeededFromGenre } from "../src/data/arrangementProjection";
-import { toMusicXml } from "../src/data/musicxml";
+import { toMusicXml, toMusicXmlScore } from "../src/data/musicxml";
 import { fromMusicXml, fromMusicXmlBytes } from "../src/data/musicxmlImport";
 import type { ImportedPart } from "../src/data/musicxmlImport";
 import { fromMidi } from "../src/data/midiToArrangement";
@@ -122,6 +122,9 @@ export function undoMcpArrangement(arrangementId: string, steps = 1): Arrangemen
 
 
 /** Every function that changes an arrangement reports the same way: a summary, plus anything wrong with the request. */
+/** ⭐ The kinds a track may be, in one place, so a refusal can name them (see `addMcpTrack`). */
+const TRACK_KINDS: readonly TrackKindV2[] = ["drumkit", "synth", "sampler", "fx", "folder"];
+
 export interface ArrangementEditResult {
   summary: ArrangementSummary;
   problems: string[];
@@ -581,6 +584,19 @@ export function addMcpTrack(
    */
   situation?: StringSituationSpec
 ): ArrangementEditResult & { situation?: SituationPlacement } {
+  /**
+   * ⭐ **A kind that is not a kind is refused by name** (found while building the every-part score criterion).
+   *
+   * `TrackKindV2` is `drumkit | synth | sampler | fx | folder` — a drum **role** like `"bass"` is not one of them, and the
+   * tool's schema accepts a string, so an agent can reasonably pass one. Doing so used to reach the model layer and die
+   * with `Cannot read properties of undefined (reading 'sample')`, which names neither the argument nor the choices. The
+   * valid kinds are now the sentence.
+   */
+  if (!TRACK_KINDS.includes(kind)) {
+    throw new Error(
+      `"${kind}" is not a track kind — the kinds are ${TRACK_KINDS.join(", ")} (a drum role such as "bass" or "chord" is a lane inside a drumkit, not a kind)`
+    );
+  }
   if (instrument !== undefined && kind !== "synth") {
     throw new Error(
       `instrument was given for a ${kind} track, and only a synth track declares one — a ${kind} track's sound is its own (a sampler names an assetId; a drum kit and an effect have no recorded instrument to declare)`
@@ -896,8 +912,45 @@ export function exportMcpMusicXml(arrangementId: string, options: { trackId?: st
   xml: string;
   track: string;
   bars: number;
+  /** ⭐ The lanes written, one per `<part>` — present in the every-part form (third evaluation, section 6). */
+  parts?: string[];
 } {
   const arrangement = requireArrangement(arrangementId);
+  /**
+   * ⭐ **Every track, one part each** (third evaluation, section 6: "export all parts as a multi-staff MusicXML").
+   *
+   * `"all"` mirrors the import's own `partIndex: number | "all"`, so the two directions of this format read alike. Folders
+   * are left out — MusicXML has no folder — and a lane with no notes is written anyway, because a named empty staff is
+   * how a reader sees that the part exists and is silent, which is different from it not being there.
+   */
+  if (options.trackId === "all") {
+    const tracks = arrangement.tracks.filter((candidate) => candidate.kind !== "folder");
+    if (tracks.length === 0) throw new Error("this arrangement has no tracks to write");
+    const parts = tracks.map((track) => ({
+      notes: arrangement.notesByTrack?.[track.id] ?? [],
+      options: {
+        title: options.title ?? "Groove arrangement",
+        partName: track.name,
+        ...(options.tempoBpm === undefined ? {} : { tempoBpm: options.tempoBpm }),
+      },
+    }));
+    const bars = Math.max(
+      1,
+      ...tracks.map((track) => Math.round(stepCountFor(arrangement.notesByTrack?.[track.id] ?? [], arrangement.bars) / STEPS_PER_BAR))
+    );
+    const xml = toMusicXmlScore(parts, bars, { title: options.title ?? "Groove arrangement" });
+    const name = arrangement.name?.trim() || "score";
+    const safe = name.replace(/[^\w.-]+/g, "-").replace(/^-|-$/g, "") || "score";
+    return {
+      filename: `${safe}.musicxml`,
+      mimeType: "application/vnd.recordare.musicxml+xml",
+      bytes: xml.length,
+      xml,
+      track: tracks.map((track) => track.name).join(", "),
+      bars,
+      parts: tracks.map((track) => track.name),
+    };
+  }
   const track = options.trackId ? arrangement.tracks.find((candidate) => candidate.id === options.trackId) : arrangement.tracks.find((candidate) => candidate.kind !== "folder");
   if (!track) throw new Error(`no track to write: ${options.trackId ? `"${options.trackId}" is not in this arrangement` : "the arrangement has no tracks"}`);
   const notes = arrangement.notesByTrack?.[track.id] ?? [];
