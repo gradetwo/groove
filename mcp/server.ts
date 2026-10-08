@@ -199,6 +199,15 @@ if (isEntryPoint || process.env.GROOVE_MCP_FORCE_MAIN === "1") {
         console.error(error);
         process.exit(1);
       });
+  } else if (process.env.GROOVE_ANALYSIS_JOB) {
+    /** ⭐ The analysis child: one file, one reply on stdout, then exit (F07's second half — see `render/analysisJob.ts`). */
+    import("./render/analysisJob")
+      .then(({ runAnalysisJob }) => runAnalysisJob())
+      .then(() => process.exit(0))
+      .catch((error) => {
+        console.error(error);
+        process.exit(1);
+      });
   } else if (job) {
     import("./render/spanRunner")
       .then(({ runSpanJob }) => runSpanJob(job))

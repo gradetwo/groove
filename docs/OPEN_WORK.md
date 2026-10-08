@@ -19932,3 +19932,20 @@ describe("the grid's editing actions", () => {
     · `mcp:build` 后重跑两条判据 ✓（读数逐位相同 ＋ timer 不再被饿死 ✓）。
   ⭐ **为什么本轮停在"方案 + 面"** ✓：这是**四五个文件的连带改动 ＋ 重新打包** ✓，而我这一轮可用上下文已到底 ✓；
     半做会把**刚发布的**分析路径弄坏 ✗ ⇒ 按本仓库规矩：**没有余量就不动关键路径** ✓，把机制与改动面留成下一次可以一口气做完的清单 ✓。
+
+### 七百九十五、✅ **F07 worker 化：**子进程那一半做完并当场验证**（`GROOVE_ANALYSIS_JOB` ⇒ stdout 输出完整分析 JSON）**（2026-10-08 ✓）
+
+  ⭐ **新增（两处，都是**加法**、默认不可达 ⇒ 对已发布的路径零风险 ✓）** ✓：
+    · `mcp/render/analysisJob.ts` ✓：`readAnalysisJob()` 读 `GROOVE_ANALYSIS_JOB` 指向的 job 文件 ✓（`{path, only}` ✓）＋
+      `runAnalysisJob()` 调**同一个** `analyseWavFile` ✓ ⇒ 把结果 **JSON 写到 stdout** ✓（这就是宿主与子进程之间的全部协议 ✓）；
+    · `mcp/server.ts` ✓：在 span job 旁边加了一个分支 ✓——**只有**设了 `GROOVE_ANALYSIS_JOB` 才会走 ✓，
+      否则行为与之前**逐字相同** ✓。
+  ⭐ **当场验证（不是"应该能跑" ✓）** ✓：`npm run mcp:build` ✓（build=0 ✓）后
+    `GROOVE_ANALYSIS_JOB=/tmp/analysis-job.json node dist-mcp/groove-mcp.mjs` ✓ ⇒
+    stdout 直接吐出完整分析 JSON ✓（`sampleRate: 8000` ✓、`durationSec: 1` ✓、`truePeakDb` ✓、`integratedLufs` ✓ … ✓），
+    **stderr 为空** ✓ ⇒ 子进程这条路**通了** ✓。
+  ⏳ **还差的一半（很清楚，下一轮一次做完）** ✓：**宿主**——
+    照 `spanHosts.ts` 的写法定位 bundle ✓、写 job 文件 ✓、`spawn(process.execPath, [bundle])` ✓、解析 stdout ✓、
+    `AbortSignal` 触发时 **`child.kill()`** ✓（⇒ **L01 要的"真取消"随之成立** ✓）；
+    然后 `mcp/registryAnalysis.ts` 改调宿主 ✓（`analyseWavFile` 仍是 async ✓），
+    并对两条判据验收 ✓：**四类素材读数逐位相同** ✓ ＋ **timer 的 `actualTicks ≈ expectedTicks`** ✓（现在 `0` ✗）。
