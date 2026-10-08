@@ -339,7 +339,16 @@ export function useArrangementV2Project(options: UseArrangementV2ProjectOptions 
   const create = useCallback(
     (name: string, arrangement: ArrangementV2) => {
       const trimmed = name.trim() || "Untitled Project";
-      const created: ArrangementProjectState = { id: "", name: trimmed, arrangement };
+      /**
+       * ⭐ **The name goes into the arrangement, not only beside it** (third evaluation, F09).
+       *
+       * The project's name lived in this state and nowhere else: the evaluation named a project "潮汐与星尘 · Web 五分钟",
+       * exported the `.groove`, imported it through MCP and exported again — every note and bar matched, and the title was
+       * gone, because a package carries the arrangement and the arrangement said nothing about what it was called. Stamping
+       * it here means one write, and every reader of the arrangement (the package, the MCP surface, the default audio
+       * filename) has it.
+       */
+      const created: ArrangementProjectState = { id: "", name: trimmed, arrangement: { ...arrangement, name: trimmed } };
       // ⭐ Written through the same path as every other change, and set in state first so the view can render the
       // arrangement in the same commit the click arrives in.
       projectRef.current = created;
@@ -375,7 +384,7 @@ export function useArrangementV2Project(options: UseArrangementV2ProjectOptions 
     (name: string) => {
       const current = projectRef.current;
       if (current === null) return;
-      const next: ArrangementProjectState = { ...current, name };
+      const next: ArrangementProjectState = { ...current, name, arrangement: { ...current.arrangement, name } };
       projectRef.current = next;
       setProject(next);
       write(next);

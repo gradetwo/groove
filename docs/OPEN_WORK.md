@@ -19237,3 +19237,28 @@ describe("the grid's editing actions", () => {
     · 判据 ✓（`arrangementViewV2.test.tsx` ✓ 19 例 ✓）：读数**必须**匹配 `/planned 0 active step/` ✓，
       且**必须**带 `note(s)` ✓ ⇒ 把任一词去掉即红 ✓（连"0 也要显示"的旧断言一并保留 ✓）。
   ⭐ 两条的门禁与相关测试全绿 ✓（lint / docs / refs ✓；MCP 描述类 4 个文件 11 条 ✓；编排视图 19 条 ✓）。
+
+### 七百六十三、✅ **F09：工程名随 `.groove` 包走，导出也以标题命名**（2026-10-08 ✓）
+
+  ⭐ **报告的原话（HTML 的 F09 节摘录）** ✓：把工程命名为"潮汐与星尘 · Web 五分钟" ✓、导出 `.groove` ✓、用 MCP 导入再导出 ✓
+    ⇒ **每个音符与小节都精确一致，标题仍然缺失** ✗；原因：**名称作为 `store.create` 的工程元数据保存，导出只包 arrangement** ✓；
+    连导出的音频也用了通用的 arrangement 文件名 ✓；代码指向 `NewProjectView.tsx:226` ✓ 与 `arrangementPackage.ts:24` ✓。
+  ⭐ **根因（读代码即坐实）** ✓：`ArrangementV2` **本来就有** `name?: string` ✓（注释还写着"v1 的 song 有、arrangement 没有" ✓），
+    但 `arrangementStore` 的 `create`/`rename` 只把名字放在**工程状态**里 ✓——`arrangement` 自己一无所知 ✗
+    ⇒ 包（只包 arrangement ✓）当然带不走它 ✗✓。
+  ⭐ **修法（一处写入、所有读者都拿得到 ✓，不新增第二份真相 ✗）** ✓：
+    · `create` ⇒ `arrangement: { ...arrangement, name: trimmed }` ✓；`rename` 同步 `arrangement.name` ✓
+      ⇒ **包 / MCP 回读 / 音频默认文件名**全都自动带上 ✓；
+    · `grooveFileFor(arrangement, stem?)` ✓：**未给 stem 时用工程名** ✓（报告："导出默认以标题命名" ✓）
+      ⇒ 不再出现两个工程都叫 `arrangement.groove` ✓（`safeFileStem` 本来就保留中文 ✓）。
+  ⭐ 判据 ✓（`src/test/arrangementEntries.test.ts` ✓ 13 例 ✓，两条新例都可红 ✓）：
+    · **往返**：带名字的编曲 ⇒ `filename` 必须含 **"潮汐与星尘"** ✓ 且不等于 `arrangement.groove` ✓；
+      包内 `arrangement.name` 必须**等于**那个名字 ✓；`validateArrangementPackage` 通过后
+      `arrangementFromPackage(...).name` **拿回同一个名字** ✓（跨"写—读"闸门的断言 ✓）；
+    · **真正常缺的那半**：store 的 `create` 必须把名字写进 arrangement ✓、`rename` 必须同步 ✓（源码判据 ✓，
+      防止两条路再次漂移 ✓）。
+  ⭐ 门禁与相关 4 个测试文件 **31 条全绿** ✓。
+  ⏳ **L01 仍开放** ✓（报告自己标注为**静态限制** ✓ "本轮未实测取消资源回收" ✓）：
+    取消目前**只禁止已完成的结果被应用** ✗，没有可中断的任务边界 ✗ ⇒ 按报告的做法需要 worker/job 可中断 ＋
+    `AbortSignal` ＋ 取消完成前保持"正在停止" ✓；我下一步先做**能立刻做对的那部分**：界面上的"正在停止"状态 ✓
+    （这是报告明确要求的一条 ✓，且不需要动渲染结构 ✓），结构性的 worker 化留到能量化收益时再做 ✓。

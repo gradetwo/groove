@@ -195,13 +195,19 @@ export function grooveProjectFor(arrangement: ArrangementV2): GrooveProject {
  * and an arrangement is exactly what this route has. So the file carries both halves: the v1 two-pattern project every
  * older reader understands, and the clips that make re-opening it faithful.
  */
-export async function grooveFileFor(arrangement: ArrangementV2, stem = "arrangement"): Promise<ProducedGroove> {
+export async function grooveFileFor(arrangement: ArrangementV2, stem?: string): Promise<ProducedGroove> {
+  /**
+   * ⭐ **A project's own name is the default filename** (finding F09): the evaluation's exported audio and package were
+   * both named after the model ("arrangement") rather than after the piece, which is how two projects end up as
+   * `arrangement.groove` and `arrangement (1).groove` in a downloads folder.
+   */
+  const wantedStem = stem ?? arrangement.name ?? "arrangement";
   const { buildArrangementPackage, validateArrangementPackage } = await import("../sequencer/arrangementPackage");
   // ⭐ The package carries the arrangement itself: no compiled pattern, no clips and no project half.
   const pkg = buildArrangementPackage(arrangement);
   // The app's own validator is the gate on the way out too: a package this refuses must never reach a person's disk.
   validateArrangementPackage(pkg);
-  const safeStem = safeFileStem(stem);
+  const safeStem = safeFileStem(wantedStem);
   return {
     kind: "groove",
     filename: `${safeStem}.groove`,

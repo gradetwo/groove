@@ -10,6 +10,8 @@
  * and reads the very bytes an entry would hand over. The one place that does touch the document (`downloadProducedFile`)
  * is checked by name, below.
  */
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ArrangementV2, NoteEvent } from "../types/arrangementV2";
 import { fromMidi } from "../data/midiToArrangement";
@@ -207,4 +209,40 @@ describe("the recognised extensions", () => {
     expect(arrangementFileKind("a.xml")).toBe("musicxml");
     expect(arrangementFileKind("a.wav")).toBe("unsupported");
   });
+
+/**
+ * ⭐ **The name survives the round trip** (third evaluation, F09).
+ *
+ * The evaluation named a project "潮汐与星尘 · Web 五分钟", exported the `.groove`, imported it through MCP and exported
+ * again: every note and bar matched and the **title was gone**, because a package carries the arrangement and the
+ * arrangement said nothing about what it was called. The name now goes into the arrangement when the project is created or
+ * renamed, so the package carries it without a second field to keep in step.
+ */
+describe("a project's name travels with its package", () => {
+  it("⭐ the package carries the arrangement's name, and the file is named after it", async () => {
+    const named = { ...arrangement(), name: "潮汐与星尘 · Web 五分钟" };
+    const file = await grooveFileFor(named);
+    // The stem is the title, not the model's word for it: two projects must not both download as `arrangement.groove`.
+    expect(file.filename).toContain("潮汐与星尘");
+    expect(file.filename).not.toBe("arrangement.groove");
+
+    const parsed = JSON.parse(await file.blob.text()) as { arrangement: { name?: string } };
+    expect(parsed.arrangement.name, "the name is inside the arrangement the package carries").toBe("潮汐与星尘 · Web 五分钟");
+
+    const { validateArrangementPackage, arrangementFromPackage } = await import("../features/sequencer/arrangementPackage");
+    validateArrangementPackage(parsed);
+    expect(arrangementFromPackage(parsed).name, "and it is what a reader gets back").toBe("潮汐与星尘 · Web 五分钟");
+  });
+
+  it("⭐ and a project created through the store stamps it onto the arrangement", async () => {
+    /**
+     * The half that was actually missing: the name lived in the store's state, beside an arrangement that did not carry
+     * it. A criterion on the store's own `create` is what keeps the two from drifting apart again.
+     */
+    const source = readFileSync(resolve(__dirname, "../features/arrangement/arrangementStore.ts"), "utf8");
+    expect(source, "create stamps the name").toMatch(/arrangement: \{ \.\.\.arrangement, name: trimmed \}/);
+    expect(source, "and rename keeps it in step").toMatch(/arrangement: \{ \.\.\.current\.arrangement, name \}/);
+  });
+});
+
 });
