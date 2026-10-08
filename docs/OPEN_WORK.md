@@ -19760,3 +19760,19 @@ describe("the grid's editing actions", () => {
     **撤回的重复实现** 1 处（自动保存状态本已存在 ✓）✓。
   ⭐ **留给下一轮/下一人的，是 5 件，已逐条具名** ✓（§783 末尾 ✓）：兄弟探针的 sections 断言（先测后定 ✓）、
     F07 的 worker 化 ✓、L01 的中断边界 ✓、F12 的移动端布局 ✓、统一 schema 的 `author`/`section`（缺数据源 ⇒ 产品决定 ✓）。
+
+### 七百八十五、📌 **2.35.4 的发布在"本地门禁"处停下：红的是**语料依赖**的测试，两次红的地方还不一样**（2026-10-08 ✓）
+
+  ⭐ **发布脚本的行为是对的** ✓：`release.sh` 在 local gate 失败时**什么都没发布** ✓
+    （"❌ the local gate failed — do not commit" ✓、"❌ stopping: nothing has been published as if this step succeeded" ✓）✓。
+  ⭐ **两次全量跑，红的地方不同** ✓（关键证据 ✓）：
+    · 第一次（发布脚本内）：`Test Files 1 failed | 655 passed` ✗、`Tests 2 failed | 5077 passed` ✗；
+    · 第二次（我自己重跑全量）：`Tests 1 failed | 5072 passed` ✗，红的是
+      `src/test/sfzTrigger.test.ts > the whole-corpus trigger census > … names the ones that are genuinely absent` ✗；
+    · 第三次（只跑那个文件）：红的是**另外三条** ✗ ——
+      `salamander-grand … note 60 found no region` ✓、`every region is gated or triggered away from note-on` ✓ 等。
+  ⭐ **结论（有据）** ✓：这些是**读样本语料**的测试 ✓（SFZ 解析 / 区域解析 / census ✓），
+    而本批次**没有碰**任何 SFZ 解析或语料代码 ✓ ⇒ 本例的失败是**环境/语料的运行间不稳定** ✓，
+    **不是这批改动引入的** ✓；也解释了为什么 CI 的绿红与它们无关 ✓（CI 环境里这些语料测试通常被跳过 ✓）。
+  ⭐ **因此的处理** ✓：把这条如实记下 ✓，然后**重跑一次发布** ✓——门禁是"当次必须全绿" ✓，
+    碰到这种与本次改动无关的语料抖动时，正确做法是**重跑并观察** ✓，而不是改测试或绕过门禁 ✓。
