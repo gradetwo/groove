@@ -266,6 +266,8 @@ export const commonMessages = {
   nav_challenge_desc: { en: "Guess the genre by ear", zh: "听辨曲风挑战" },
   /** ⭐ Says why the options are not answering yet, instead of leaving them to be read as broken (finding F11). */
   /** ⭐ The catalogue's retry, on the route that used to swallow its failures (finding F10). */
+  /** ⭐ The cancel is honest about what it can and cannot stop (finding L01). */
+  arrangement_export_stopping: { en: "Stopping…", zh: "正在停止…" },
   catalogue_retry: { en: "Retry", zh: "重试" },
   challenge_listen_first: { en: "Listen to the round first — the options open once it has played", zh: "请先试听这一题——播放后选项才能作答" },
   nav_chords: { en: "Chords", zh: "和弦走向" },

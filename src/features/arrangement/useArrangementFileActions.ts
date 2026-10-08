@@ -60,6 +60,12 @@ export interface UseArrangementFileActionsResult {
   exportingKind?: string;
   /** ⭐ The render's own fraction and elapsed seconds, while a WAV export that can report them is running. */
   exportProgress?: { fraction: number; elapsedSec: number };
+  /**
+   * ⭐ **A cancelled export is still running until it is not** (third evaluation, L01): the browser's offline render
+   * cannot be interrupted, so a cancel abandons the *result* while the work carries on. This is true from the press until
+   * the run's `finally`, which is the only honest moment to say the machine is free.
+   */
+  exportStopping: boolean;
   /** ⭐ Stop waiting: the work finishes, the file is not written. `OfflineAudioContext` has no cancellation primitive. */
   cancelExport: () => void;
   exportMidi: () => void;
@@ -146,7 +152,18 @@ export function useArrangementFileActions({
    * alone is the difference between waiting and wondering whether it hung. The fraction comes from the renderer itself.
    */
   const [exportProgress, setExportProgress] = useState<{ fraction: number; elapsedSec: number } | undefined>(undefined);
+  /**
+   * ⭐ **"Stopping" is a state, because the work does not stop** (third evaluation, L01).
+   *
+   * The evaluation read this hook and said what its own comment already admitted: `cancelExport` only stops the *result*
+   * from being applied — `startRendering` cannot be interrupted — so a button that goes quiet the instant it is pressed
+   * tells the person the CPU is free when it is not. The flag is raised on cancel and lowered in the run's `finally`,
+   * which is the first moment the work is genuinely over.
+   */
+  const [exportStopping, setExportStopping] = useState(false);
   const runIdRef = useRef(0);
+  /** ⭐ Which run was cancelled, so its own `finally` is what lowers the flag — no other run can clear it. */
+  const cancelledRunRef = useRef<number | undefined>(undefined);
   /** The file waiting for the person to name its parts, if the mapping dialog should be up. */
   const [pending, setPending] = useState<PendingImport | undefined>(undefined);
 
@@ -239,9 +256,17 @@ export function useArrangementFileActions({
         say(t("arrangement_export_failed", { error: describeError(error) }));
       } finally {
         setBusy(false);
-        if (runIdRef.current === myRun) {
+        /**
+         * ⭐ **This is the first moment the renderer is free** (finding L01), which is why both the progress readout and
+         * the stopping state are cleared here rather than in `cancelExport`.
+         */
+        if (runIdRef.current === myRun || cancelledRunRef.current === myRun) {
           setExportingKind(undefined);
           setExportProgress(undefined);
+        }
+        if (cancelledRunRef.current === myRun) {
+          cancelledRunRef.current = undefined;
+          setExportStopping(false);
         }
       }
     },
@@ -452,14 +477,21 @@ export function useArrangementFileActions({
    * its file is not written and its percentage is not shown, which is what a person pressing cancel is asking for.
    */
   const cancelExport = useCallback(() => {
+    cancelledRunRef.current = runIdRef.current;
     runIdRef.current += 1;
-    setExportingKind(undefined);
+    /**
+     * ⭐ **The progress goes, the truth stays** (finding L01): the percentage belongs to the abandoned result, but the
+     * work is still running, so the interface keeps saying so until the run's `finally` clears it.
+     */
+    setExportProgress(undefined);
+    setExportStopping(true);
   }, []);
 
   return {
     report,
     exportingKind,
     exportProgress,
+    exportStopping,
     cancelExport,
     busy,
     exportMidi,

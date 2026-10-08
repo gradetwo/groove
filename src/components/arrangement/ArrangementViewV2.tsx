@@ -1836,6 +1836,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           onImportFile={files.importFile}
           {...(files.exportingKind === undefined ? {} : { exportingKind: files.exportingKind })}
           {...(files.exportProgress === undefined ? {} : { exportProgress: files.exportProgress })}
+          {...(files.exportStopping ? { exportStopping: true } : {})}
           onCancelExport={files.cancelExport}
         />
         </span>

@@ -71,4 +71,22 @@ describe("the export's own state", () => {
     fireEvent.click(screen.getByTestId("arrangement-export-cancel"));
     expect(onCancelExport).toHaveBeenCalledTimes(1);
   });
+
+  it("⭐ keeps saying it is stopping, and takes the cancel away, until the renderer is actually free (finding L01)", () => {
+    /**
+     * The evaluation read this hook and named the difference the comment already admitted: cancel only abandons the
+     * **result** — `startRendering` cannot be interrupted — so an interface that goes quiet on the press tells a person
+     * the CPU is free when it is not. While `exportStopping` is true the readout says so, the percentage is gone (it
+     * belonged to the abandoned result), and the cancel button is no longer offered (there is nothing left to cancel).
+     */
+    entries({ exportingKind: "export", exportProgress: { fraction: 0.4, elapsedSec: 10 }, exportStopping: true });
+    const label = screen.getByTestId("arrangement-export-progress").textContent ?? "";
+    expect(label, "it says it is stopping").toMatch(/Stopping/i);
+    expect(label, "and the abandoned result's percentage is gone").not.toMatch(/%/);
+    expect(screen.queryByTestId("arrangement-export-cancel"), "there is nothing left to cancel").toBeNull();
+
+    // ⭐ The settling case — no exporting kind and no stopping flag — is the "says nothing while idle" case above, which
+    // renders into a fresh container. Asserting it here would query this container's earlier render instead of a new one.
+  });
+
 });
