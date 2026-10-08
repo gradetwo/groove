@@ -51,4 +51,30 @@ describe("the first batch of evaluation findings", () => {
     expect(keyboard, "the fixed grey that vanished into the highlight is gone").not.toContain('"bg-[#e2dfd5] text-zinc-600"');
     expect(keyboard, "the fixed teal plate is gone").not.toContain('"bg-[#4ad8c8]');
   });
+
+  it("⭐ S4 — the pixel skin's 2px hairlines spare the grid's own cells", () => {
+    /**
+     * The evaluation measured a 12×16 px cell losing 4 px of width to the skin's forced 2px borders — about 28 % of its
+     * hit area — so sixteen-step entry became aiming. The exclusion is keyed on `[data-note]`, which the roll's cells
+     * and notes already carry; deleting the `:not(...)` turns this red.
+     */
+    const sheet = source("styles/skin-pixel.css");
+    expect(sheet, "the bottom hairline spares the grid").toMatch(/\.border-b:not\(\[data-note\]\)/);
+    expect(sheet, "and so does the right one").toMatch(/\.border-r:not\(\[data-note\]\)/);
+  });
+
+
+  it("⭐ S7 — the pixel skin never asks a pixel face for a fractional or sub-8px size", () => {
+    /**
+     * The face is drawn on an 8px grid with smoothing off, so a fractional size splits a stroke across a sub-pixel —
+     * the broken letterforms the evaluation photographed in the small caps. The sheet had a 9.5px rule; this fails if
+     * one comes back, or if anything shrinks below the face's own size.
+     */
+    const sheet = source("styles/skin-pixel.css");
+    const sizes = [...sheet.matchAll(/font-size:\s*([0-9.]+)px/g)].map((match) => Number(match[1]));
+    expect(sizes.length).toBeGreaterThan(0);
+    expect(sizes.filter((size) => !Number.isInteger(size)), "no fractional pixel sizes").toEqual([]);
+    expect(sizes.filter((size) => size < 8), "nothing below the face's own 8px").toEqual([]);
+  });
+
 });

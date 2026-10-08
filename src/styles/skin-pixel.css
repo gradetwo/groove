@@ -137,9 +137,17 @@
   font-size: 8px;
   letter-spacing: 0.08em;
 }
+/**
+ * ⭐ **Integer sizes only, and never below the face's own 8px** (evaluation finding S7).
+ *
+ * `Press Start 2P` is a pixel face — this sheet turns smoothing off for exactly that reason — so a **fractional**
+ * size asks the rasteriser to split a stroke across a sub-pixel, which is what the evaluation photographed as broken
+ * letterforms in the small caps. 9.5px became 10px: still smaller than the step it replaces, and now on the grid the
+ * face is drawn on.
+ */
 :root[data-skin="pixel"] [data-surface="desktop"] .uppercase.text-\[11px\],
 :root[data-skin="pixel"] [data-surface="desktop"] .uppercase.text-sm {
-  font-size: 9.5px;
+  font-size: 10px;
   letter-spacing: 0.08em;
 }
 
@@ -237,8 +245,9 @@
 :root[data-skin="pixel"] [data-surface="desktop"] .text-\[9px\] {
   font-size: 10px;
 }
+/* ⭐ The same rule as the caps above: a pixel face is drawn on whole pixels, so a half-pixel size is a broken stroke. */
 :root[data-skin="pixel"] [data-surface="desktop"] .text-\[9\.5px\] {
-  font-size: 10.5px;
+  font-size: 10px;
 }
 :root[data-skin="pixel"] [data-surface="desktop"] .text-\[10px\] {
   font-size: 11px;
@@ -353,7 +362,16 @@
   border-top-width: 2px;
   border-top-style: solid;
 }
-:root[data-skin="pixel"] [data-surface="desktop"] .border-b {
+/**
+ * ⭐ **The roll's cells and notes keep their 1px hairlines** (evaluation finding S4).
+ *
+ * The bump above is the skin's look on panels and cards, and it was applied to **every** `border-r`/`border-b` in the
+ * desktop surface — including the sequencer's micro-cells, which are 12px wide and 16px tall: a 2px border on two sides
+ * of a `border-box` eats 4px of a 12px cell, and the evaluation measured the usable hit area down about 28 %, so
+ * sixteen-step entry became a game of aiming. `[data-note]` is the hook the grid already carries on both its cells and
+ * its notes, so the exclusion is stated in terms of the thing itself rather than of a class that happens to be nearby.
+ */
+:root[data-skin="pixel"] [data-surface="desktop"] .border-b:not([data-note]) {
   border-bottom-width: 2px;
   border-bottom-style: solid;
 }
@@ -361,7 +379,7 @@
   border-left-width: 2px;
   border-left-style: solid;
 }
-:root[data-skin="pixel"] [data-surface="desktop"] .border-r {
+:root[data-skin="pixel"] [data-surface="desktop"] .border-r:not([data-note]) {
   border-right-width: 2px;
   border-right-style: solid;
 }
