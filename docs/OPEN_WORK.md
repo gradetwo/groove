@@ -20577,3 +20577,28 @@ describe("the grid's editing actions", () => {
     ⇒ 属"**根因已修 + 可复验**" ✓，不再是"偶发、未解释" ✓。
   ⭐ **闸门总账（最终 ✓）** ✓：单元 **5087 passed / 0 failed** ✓；e2e **三引擎 × 三次全过** ✓；
     前段检查全绿 ✓；探针全绿 ✓；`check:mcp:build` 假红已修 ✓；CI 整批 success ✓；线上 **v2.35.4** ✓。
+
+### 八百三十、✅ **v2.35.5 已发布；音源 chooser 弹层化（手机底部抽屉／桌面锚定面板）并量过**（2026-10-09 ✓）
+
+  ⭐ **发布（实测 ✓）** ✓：`version:check ✓ version:new ✓ local gate skipped(按你的指示) ✓ build ✓ budget ✓
+    full CI ✓ deploy ✓ tag ✓ remote ✓`；`/version.json` ⇒ **2.35.5** ✓✓。
+  ⭐ **chooser 弹层化（用户截图第二条："操作很不方便" ✓）** ✓：
+    · **根因之一（量出来的 ✓）** ✓：原先是**行内**渲染 ✓，而所在列的height被钉在 `--arr-track-h`（96px ✓）
+      ⇒ 面板既**太窄**（三列挤在一起 ✓）又**压着编排** ✓；
+    · **修法** ✓：把它**移出文档流** ✓——手机默认 **底部抽屉** ✓
+      （`fixed inset-x-2 bottom-2 max-h-[70vh] z-50 overflow-y-auto bg-panel` ✓），
+      从 `sm:` 起恢复**锚定面板** ✓（`sm:absolute sm:left-0 sm:top-full sm:w-[22rem] sm:max-h-[60vh]` ✓）；
+      并加了**独立的关闭按钮** ✓（手机上面板可能盖住那个 chip ✓）；
+    · **列表行触控** ✓：`rowClass` 一处改动覆盖分类/子分类/乐器三列 ⇒ 手机 **44px** ✓、`sm:` 起回到 **24px** ✓。
+  ⭐ **量测（`scratch/probe-chooser-layer.mjs` ✓，真浏览器 ✓）** ✓：
+    | 视口 | 面板 | 是否在视口内 | 行高（开面板前后） | 行高 |
+    | --- | --- | --- | --- | --- |
+    | 390×844 | 374×333 @ y=503 | ✅ 是 | 96 → **96 不变** ✓ | 44px ✓ |
+    | 1440×900 | 352×287 @ (132,499) | ✅ 是 | 96 → **96 不变** ✓ | 24px ✓ |
+    两个视口的面板背景都是 `rgb(18,19,23)`（不透明 ✓）、`overflow-y: auto` ✓。
+    ⚠️ **修之前量到的真实缺陷** ✓：只加 `absolute` 时，手机上面板开在 **y=985** ✗（844 高的视口 ⇒ **在屏幕外** ✗）
+    ⇒ 这正是"操作很不方便"的量化形状 ✓，也是我改成底部抽屉的直接依据 ✓。
+  ⭐ 判据 ✓（`instrumentLibrarySurface` 增至 7 例 ✓）：面板必须 `relative` 锚点 ＋ `absolute`/`fixed` ＋ `z-*`
+    ＋ `bg-panel` ＋ 有界高度 ＋ 关闭按钮 ✓；**手机必须是 fixed + inset-x-2 + bottom-2，且 `sm:absolute` 恢复** ✓
+    （任一条回退即红 ✓）；列表行必须 `min-h-11 sm:min-h-0` ✓。
+  ⭐ 验收 ✓：相关 5 个测试文件 **43 条全绿** ✓；`lint`/`docs:check`/`check:css` ✓。

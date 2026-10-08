@@ -212,5 +212,10 @@ export function InstrumentLibraryV2({ instruments, currentAssetId, onChoose, cov
 }
 
 function rowClass(active: boolean): string {
-  return `w-full text-left px-2 py-1 rounded ${active ? "bg-[rgb(var(--d-accent))] text-black" : "hover:bg-[var(--d-panel2,rgba(255,255,255,0.06))] text-text"}`;
+  /**
+   * ⭐ **A row is a thumb target on a phone** (reported with a screenshot: choosing an instrument was "very inconvenient").
+   * The height is mobile-first so a finger can land on a row, and `sm:` returns the dense desktop list — the same rule the
+   * arrangement's own controls follow.
+   */
+  return `w-full min-h-11 sm:min-h-0 text-left px-2 py-1 rounded ${active ? "bg-[rgb(var(--d-accent))] text-black" : "hover:bg-[var(--d-panel2,rgba(255,255,255,0.06))] text-text"}`;
 }
