@@ -46,8 +46,14 @@ describe("analyseWavFile", () => {
 
     const first = analyseWavFile(file);
     const second = analyseWavFile(file);
-    expect({ reused: first === second }).toEqual({ reused: true });
-    expect(second).toEqual(first);
+    /**
+     * ⭐ **The signal is `cache`, not object identity** (third evaluation, section 6 added the field). This used to assert
+     * `first === second`, which was a proxy for "not re-analysed" — and a proxy that the new field replaces: the reply now
+     * says whether it was measured or remembered, which is the thing a caller acts on (161 s against 0.005 s), and it says
+     * it about a fresh object each time so no caller can mutate a cached reply by accident.
+     */
+    expect({ first: first.cache, second: second.cache }).toEqual({ first: "miss", second: "hit" });
+    expect(second).toEqual({ ...first, cache: "hit" });
 
     // A longer file with a newer mtime must not serve the curve computed for the shorter one.
     writeFileSync(file, wavBytes(3200));
@@ -55,6 +61,6 @@ describe("analyseWavFile", () => {
     utimesSync(file, later, later);
     const third = analyseWavFile(file);
     expect({ durationSec: third.durationSec }).toEqual({ durationSec: 3200 / 8000 });
-    expect({ changed: third !== first }).toEqual({ changed: true });
+    expect({ changed: third.cache }).toEqual({ changed: "miss" });
   });
 });

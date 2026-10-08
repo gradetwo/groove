@@ -121,6 +121,23 @@ await page.click("[data-testid='arrangement-form-club']");
 
 const hook = await page.evaluate(() => Boolean(window.__grooveProbe));
 if (!hook) await fail("?probe=1 did not install the probe surface — the engine is unreachable, so nothing can be heard");
+/**
+ * ⭐ **This probe drives the studio store, and this route does not install one.**
+ *
+ * It reads `readState()`/`sections` and commits `TOGGLE_SONG_MODE` — the studio's song mode, which the arrangement route
+ * does not have (`NewProjectView`'s own comment: "There is no sequencer store on this route"). The route installs the
+ * **engine** and nothing else, so this probe cannot run here, and its old failure message ("the studio toolbar never
+ * rendered") described the wrong thing: the toolbar does render — what is absent is the store. The check below makes the
+ * real state explicit instead of leaving a timeout to be misread, and the rework it needs is written down in
+ * `docs/OPEN_WORK.md` §776 rather than guessed at here.
+ */
+const hasStore = await page.evaluate(() => typeof window.__grooveProbe?.readState === "function");
+if (!hasStore) {
+  await fail(
+    "this probe drives the studio store (`readState`/`commit`/song mode), which the arrangement route does not install — " +
+      "it needs reworking to measure this route's engine and transport (docs/OPEN_WORK.md 776)"
+  );
+}
 
 /** One pass of the loop, read from the pattern the store holds, so the probe does not assume a length. */
 const loopSteps = await page.evaluate(() => {

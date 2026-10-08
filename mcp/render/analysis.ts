@@ -12,21 +12,38 @@ import { decodeWav, measure, energyCurveDb } from "./worker";
  * The key is the file's size and mtime, so an unchanged file hands back what it already has while a changed one is
  * analysed again; the path alone would have served a stale curve, which is the failure this key exists to prevent.
  */
+/**
+ * ⭐ **One entry per file *and per request*** (third evaluation, section 6: cache status).
+ *
+ * The map used to be keyed by the file alone, so a loudness-only read and a full read shared a slot and each evicted the
+ * other: alternating between them re-ran the full analysis — the 161 s measurement, every time — while both replies
+ * reported a plausible "miss". Two questions about one file are two answers; the key says so now, and only a changed file
+ * (size or mtime) invalidates either of them.
+ */
 const analysisCache = new Map<string, { key: string; value: Record<string, unknown> }>();
 
 export function analyseWavFile(filePath: string, only?: { discontinuities?: boolean }): Record<string, unknown> {
   const stat = statSync(filePath);
+  /**
+   * ⭐ **Whether this answer was measured now or remembered** (third evaluation, section 6: cache status).
+   *
+   * The cache is the difference between 161 s and 0.005 s on the same file — the evaluation's own F07 numbers — and the
+   * reply said nothing about which of the two a caller had just received. An agent budgeting its time (and its owner's
+   * patience) can act on that difference: a cached reading is free to re-ask, a fresh one cost minutes.
+   */
+  const served = (value: Record<string, unknown>, cached: boolean) => ({ ...value, cache: cached ? "hit" : "miss" });
   /**
    * ⭐ **The cache key carries the request** (finding F07 / section 6's light analysis): the same file analysed for
    * loudness only and analysed fully are two different answers, and a key that ignored `only` would hand one caller the
    * other's reply.
    */
   const key = `${stat.size}:${stat.mtimeMs}:${only?.discontinuities === false ? "light" : "full"}`;
-  const cached = analysisCache.get(filePath);
-  if (cached !== undefined && cached.key === key) return cached.value;
+  const slot = `${filePath}:${only?.discontinuities === false ? "light" : "full"}`;
+  const cached = analysisCache.get(slot);
+  if (cached !== undefined && cached.key === key) return served(cached.value, true);
   const value = buildAnalysis(filePath, only);
-  analysisCache.set(filePath, { key, value });
-  return value;
+  analysisCache.set(slot, { key, value });
+  return served(value, false);
 }
 
 function buildAnalysis(filePath: string, only?: { discontinuities?: boolean }): Record<string, unknown> {
