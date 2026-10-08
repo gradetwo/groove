@@ -1082,7 +1082,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
         <button
           type="button"
           data-testid="arrangement-ramp-velocity"
-          className="px-2 py-1 rounded text-xs text-text opacity-90"
+          className="px-2 py-1 rounded text-xs text-text opacity-90 min-h-11 sm:min-h-0"
           disabled={editableTrackId === undefined}
           onClick={() => {
             if (editableTrackId === undefined) return;
@@ -1096,7 +1096,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
         <button
           type="button"
           data-testid="arrangement-quantize-lengths"
-          className="px-2 py-1 rounded text-xs text-text opacity-90"
+          className="px-2 py-1 rounded text-xs text-text opacity-90 min-h-11 sm:min-h-0"
           disabled={editableTrackId === undefined}
           onClick={() => {
             if (editableTrackId === undefined) return;
@@ -1136,7 +1136,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
         <button
           type="button"
           data-testid="arrangement-copy-selection"
-          className="px-2 py-1 rounded text-xs text-text opacity-90"
+          className="px-2 py-1 rounded text-xs text-text opacity-90 min-h-11 sm:min-h-0"
           disabled={editableTrackId === undefined || rollSelection.length === 0}
           onClick={() => {
             if (editableTrackId === undefined || rollSelection.length === 0) return;
@@ -1163,7 +1163,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
         <button
           type="button"
           data-testid="arrangement-legato-selection"
-          className="px-2 py-1 rounded text-xs text-text opacity-90"
+          className="px-2 py-1 rounded text-xs text-text opacity-90 min-h-11 sm:min-h-0"
           disabled={editableTrackId === undefined || rollSelection.length === 0}
           onClick={() => {
             if (editableTrackId === undefined || rollSelection.length === 0) return;
@@ -1187,7 +1187,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
         <button
           type="button"
           data-testid="arrangement-arpeggiate-selection"
-          className="px-2 py-1 rounded text-xs text-text opacity-90"
+          className="px-2 py-1 rounded text-xs text-text opacity-90 min-h-11 sm:min-h-0"
           disabled={editableTrackId === undefined || rollSelection.length === 0}
           onClick={() => {
             if (editableTrackId === undefined || rollSelection.length === 0) return;
@@ -1209,7 +1209,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
         <button
           type="button"
           data-testid="arrangement-inspire-me"
-          className="px-2 py-1 rounded text-xs text-text opacity-90"
+          className="px-2 py-1 rounded text-xs text-text opacity-90 min-h-11 sm:min-h-0"
           disabled={selectedTrackId === undefined}
           onClick={() => {
             if (selectedTrackId === undefined) return;
@@ -1236,7 +1236,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
           <button
             type="button"
             data-testid="arrangement-euclidean"
-            className="px-2 py-1 rounded text-xs text-text opacity-90"
+            className="px-2 py-1 rounded text-xs text-text opacity-90 min-h-11 sm:min-h-0"
             disabled={selectedTrackId === undefined}
             onClick={() => {
               if (selectedTrackId === undefined) return;
@@ -1264,7 +1264,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
         <button
           type="button"
           data-testid="arrangement-form-loop"
-          className="px-2 py-1 rounded text-xs text-text opacity-90"
+          className="px-2 py-1 rounded text-xs text-text opacity-90 min-h-11 sm:min-h-0"
           onClick={() =>
             commit(
               setterCommand("Form: loop", (_current, value) => value, arrangement, applyForm(arrangement, "loop"))
@@ -1276,7 +1276,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
         <button
           type="button"
           data-testid="arrangement-form-club"
-          className="px-2 py-1 rounded text-xs text-text opacity-90"
+          className="px-2 py-1 rounded text-xs text-text opacity-90 min-h-11 sm:min-h-0"
           onClick={() =>
             commit(
               setterCommand("Form: club", (_current, value) => value, arrangement, applyForm(arrangement, "club"))
@@ -1288,7 +1288,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
         <button
           type="button"
           data-testid="arrangement-form-song"
-          className="px-2 py-1 rounded text-xs text-text opacity-90"
+          className="px-2 py-1 rounded text-xs text-text opacity-90 min-h-11 sm:min-h-0"
           onClick={() =>
             commit(
               setterCommand("Form: song", (_current, value) => value, arrangement, applyForm(arrangement, "song"))
@@ -1319,7 +1319,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
         <button
           type="button"
           data-testid="arrangement-transpose-apply"
-          className="px-2 py-1 rounded text-xs text-text opacity-90"
+          className="px-2 py-1 rounded text-xs text-text opacity-90 min-h-11 sm:min-h-0"
           disabled={editableTrackId === undefined || rollSelection.length === 0}
           onClick={() => {
             if (editableTrackId === undefined || rollSelection.length === 0) return;
@@ -1337,7 +1337,7 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
         <button
           type="button"
           data-testid="arrangement-stamp-chord"
-          className="px-2 py-1 rounded text-xs text-text opacity-90"
+          className="px-2 py-1 rounded text-xs text-text opacity-90 min-h-11 sm:min-h-0"
           disabled={editableTrackId === undefined || rollSelection.length === 0}
           onClick={() => {
             if (editableTrackId === undefined || rollSelection.length === 0) return;

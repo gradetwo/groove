@@ -26,4 +26,21 @@ describe("mobile touch targets", () => {
     expect(header).toContain("min-h-11");
     expect(header, "and returns to the compact pill only from `sm:`").toContain("sm:min-h-0");
   });
+
+  it("⭐ the arrangement panel's action controls reach 44 px on a phone too", () => {
+    /**
+     * The same list, one row further down: `arrangement-legato-selection`, `arrangement-arpeggiate-selection`,
+     * `arrangement-euclidean` and `arrangement-form-loop` all measured 22–24 px at 390×844. They share one class string,
+     * which is why one rule covers them — and `sm:min-h-0` is what keeps the desktop panel as dense as it was.
+     */
+    const view = source("components/arrangement/ArrangementViewV2.tsx");
+    const controls = ["arrangement-legato-selection", "arrangement-arpeggiate-selection", "arrangement-euclidean", "arrangement-form-loop"];
+    for (const id of controls) {
+      const at = view.indexOf(`data-testid="${id}"`);
+      expect(at, `${id} is in the view`).toBeGreaterThan(-1);
+      const block = view.slice(at, at + 400);
+      expect(block, `${id} has a phone-sized target with a desktop escape`).toMatch(/min-h-11[^"]*sm:min-h-0|sm:min-h-0[^"]*min-h-11/);
+    }
+  });
+
 });

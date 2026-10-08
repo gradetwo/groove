@@ -20033,3 +20033,16 @@ describe("the grid's editing actions", () => {
   ⭐ 验收 ✓：`typecheck` ✓、`lint` ✓、`docs:check` ✓、`check:css` ✓；新判据与轨道/头部相关测试全绿 ✓。
   ⏳ **剩下的清单继续做** ✓（24px 那 20 个、28px 那 11 个、30px 那 10 个 ✓——大多在编排面板与小屏工具条 ✓），
     做法同上：**只给主路径**的补 44px ✓，格子与"密集读数"类显式豁免并写明理由 ✓。
+
+### 八百零一、✅ **F12 布局半（第二步）：编排面板的 12 个动作控件在手机上到 44px，桌面密度不变**（2026-10-08 ✓）
+
+  ⭐ **依据** ✓：390×844 实测里，`arrangement-legato-selection` ✓、`arrangement-arpeggiate-selection` ✓、
+    `arrangement-euclidean` ✓、`arrangement-form-loop` ✓ 等都在 **22–24px** ✗（它们共用同一段 class ✓ ⇒ 一处规则覆盖 ✓）。
+  ⭐ **改法（与 §八百 同一套 ✓）** ✓：那段 class 后追加 **`min-h-11 sm:min-h-0`** ✓
+    （默认 44px 触控高度 ✓，`sm:` 起回到原来的紧凑面板 ✗不变 ✓），**共 12 处** ✓。
+  ⭐ 判据 ✓（`src/test/mobileTouchTargets.test.ts` ✓ 3 例 ✓）：除前两条外，新增"**这四个 testid 的块内必须同时出现
+    `min-h-11` 与 `sm:min-h-0`**" ✓ ⇒ 只加高度不还原桌面 ✗、或只还原不加高度 ✗ 都会红 ✓；
+    **格子豁免的理由仍写在判据注释里** ✓。
+  ⭐ 验收 ✓：`typecheck` ✓、`lint` ✓、`docs:check` ✓、`check:css` ✓；新判据与编排视图 19 条全绿 ✓。
+  ⏳ 清单剩余 ✓：`first-run-prompt-dismiss`（22px ✓）、24px 那批里还没处理的 ✓、28/30/40px 的 ✓
+    ——下一轮按"**只给主路径**、其余显式豁免并写明理由"的同一规矩继续 ✓。
