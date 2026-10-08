@@ -19510,3 +19510,25 @@ describe("the grid's editing actions", () => {
     该项相关 8 个测试文件 **29 条全绿** ✓，lint / docs / refs 门禁绿 ✓。
   ⭐ **这是同一模式的第三次** ✓（第一次是 `mcpSchemaPassthrough` ✓，第二次是这条门禁 ✓）：
     **"静默接受非法输入"的缺陷一旦被修，所有靠它通过的夹具都会现形** ✓——它们不是回归 ✓，而是**迟到的证据** ✓。
+
+### 七百七十四、➖ **第 6 节能力评估（第 8 件）："自动保存时间/状态"——**已经存在**，所以本轮不改**（2026-10-08 ✓）
+
+  ⭐ **报告的原话** ✓（第 6 节 Web 创作者侧）："**自动保存时间/状态**与工程修订恢复" ✓。
+  ⭐ **我先动手、然后**发现自己**在重复已有能力** ✓（这一轮的真正价值在这儿 ✓）：
+    我按报告的措辞给 `arrangementStore` 加了 `saveStatus` ＋ 在 `ArrangementViewV2` 里加了一行状态显示 ✗ ——
+    编译时立刻撞出 `Duplicate identifier 'saveStatus'` ✗ ⇒ 顺着读下去发现**仓库里早就有** ✓：
+    · `src/features/sequencer/projectDb.ts:1259/1283/1285` ✓ 在**开始写 / 写成功 / 写失败**三个时刻
+      `setArrangementSaveStatus({status, savedAt})` ✓；
+    · `ArrangementViewV2.tsx:525` ✓ 用 `useSyncExternalStore(subscribeArrangementSaveStatus, getArrangementSaveStatusSnapshot)`
+      **订阅**它 ✓，并在 `:1492` 渲染 **`<SaveIndicator visible status={saveStatus} />`** ✓；
+    · `src/components/sequencer/SaveIndicator.tsx` ✓ 有 **idle/saving/saved/failed** 四态 ✓、
+      `role="status"` ＋ `aria-live="polite"` ✓、失败态用告警图标 ✓、`title` 带**精确时间** ✓。
+    ⇒ 报告的这条诉求**已实现** ✓，而且是"**一个真相**"的实现 ✓（状态由存储层发出 ✓，不是视图各自记 ✓）。
+  ⭐ **我的处理** ✓：**把我加的那份全部撤回** ✓（存储层的状态、视图的 prop 与渲染、`NewProjectView` 的传递、三个 i18n 键 ✓），
+    工作区恢复到只剩**已提交**的内容 ✓（`git status` 干净 ✓），并**不留下第二份真相** ✓。
+    验证 ✓：`arrangementStore` 与 `arrangementViewV2` 等 **28 条判据全绿** ✓、`typecheck` 通过 ✓。
+  ⭐ **这一轮的教训（值得单列）** ✓：**动手前先找"是不是已经有了"** ✓——尤其是在一个已经把
+    "两处一个东西"当作主要失败模式的仓库里 ✓。我这次是靠**编译器**拦住的 ✓（重名 ✗）；
+    若我起的名字不同 ✗，就会悄悄留下**第二套保存状态** ✓——那才是真正要避免的结果 ✓。
+  ⏳ 第 6 节剩余（仍开放 ✓）：render jobId ＋ 真正取消（L01 结构那半 ✓）、段落视图/片段重复 ✓、工程修订恢复（"恢复"那半 ✓——
+    自动保存**状态**已有 ✓，但"**回到上一版**"仍是未验证的能力 ✓）、统一工程 schema 的其余字段（`author`/`section` ✓——模型里没有数据源 ✓，不擅自发明 ✓）。
