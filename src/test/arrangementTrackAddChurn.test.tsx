@@ -36,7 +36,7 @@ const churnOfFirstTrackAdd = async () => {
   const observer = new MutationObserver((records) => { for (const record of records) added += record.addedNodes.length; });
   observer.observe(document.body, { childList: true, subtree: true });
   fireEvent.click(screen.getAllByRole("button", { name: "+ Synth" })[0]!);
-  await waitFor(() => expect(screen.getAllByTestId(/arrangement-header-row-/).length).toBe(2));
+  await waitFor(() => expect(screen.getAllByTestId(/arrangement-header-row-/).length).toBe(2), { timeout: 20_000 });
   observer.disconnect();
   return { added, nodes: document.body.querySelectorAll("*").length };
 };
@@ -52,7 +52,7 @@ const churnOfOneTrackAdd = async () => {
   fireEvent.click(screen.getAllByRole("button", { name: "+ Synth" })[0]!);
   fireEvent.click(screen.getAllByRole("button", { name: "+ Synth" })[0]!);
   fireEvent.click(screen.getAllByRole("button", { name: "+ Synth" })[0]!);
-  await waitFor(() => expect(screen.getByTestId("arrangement-track-picker").textContent).toMatch(/synth/));
+  await waitFor(() => expect(screen.getByTestId("arrangement-track-picker").textContent).toMatch(/synth/), { timeout: 20_000 });
 
   let added = 0;
   let removed = 0;
@@ -64,7 +64,7 @@ const churnOfOneTrackAdd = async () => {
   });
   observer.observe(document.body, { childList: true, subtree: true });
   fireEvent.click(screen.getAllByRole("button", { name: "+ Synth" })[0]!);
-  await waitFor(() => expect(screen.getAllByTestId(/arrangement-header-row-/).length).toBe(5));
+  await waitFor(() => expect(screen.getAllByTestId(/arrangement-header-row-/).length).toBe(5), { timeout: 20_000 });
   observer.disconnect();
   return { added, removed };
 };

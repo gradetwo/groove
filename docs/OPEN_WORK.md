@@ -18859,3 +18859,16 @@ describe("the grid's editing actions", () => {
     ⇒ 探针必须先自行绕开（Escape ＋ 主按钮，最多三轮 ✓）才能量到任何东西 ✓ ——这与报告"交互摩擦 1"是同一件事 ✓。
   ⭐ 结论 ✓：**D6 的"整页重排"部分已经不再是问题** ✓（D3 之后 churn 与耗时都掉下来了 ✓）；
     **剩下的是"加轨那一帧 290 ms"** ✓，需要单独的一次优化与判据 ✓。
+
+### 七百四十四、🔧 **CI 红了三条：一个句子超长 + 一个测试在 CI 上超时（都已修）**（2026-10-08 ✓）
+
+  ⚠️ 三次 push（D2 ✓、S4/S7 ✓、S5 ✓）在 CI 上都是 **failure** ✗，而本地门禁是绿的 ✓ ⇒ 查 CI 日志得到两条真因 ✓：
+    · **句子超长** ✗：给 `list_arrangement_instruments` 描述补的那句话把整句撑到 **239 字符** ✓，
+      而仓库的棘轮规则是"**任何一句 ≤ 200 字符**"（`mcpCopy_list_arrangement_instruments.test.ts` 明确报
+      `{longest: 239, under: false}` ✓；`mcpDescriptionReadability.test.ts` 同时盯"不得比今天最长的一句更长" ✓）
+      ⇒ 改成**独立短句** ✓（"They also carry the compass they sound: `lowestNote`/`highestNote`, measured. Absent means
+      unmeasured." ✓）。
+    · **`arrangementTrackAddChurn` 在 CI 上 5 s 超时** ✗（本地过 ✓）⇒ 那是"等待稳定"的 `waitFor` 默认超时太短 ✗
+      ⇒ 三处 `waitFor` 全部显式给 **20 s** ✓（断言本身不变 ✓，只是不再把"机器慢"当成"churn 超标" ✗）。
+  ⭐ 两条都本地复跑通过 ✓（相关 7 条 ✓）。教训与前面同型 ✓：**本地绿 ≠ CI 绿**——棘轮类判据（句子长度、预算）
+    与超时类判据最容易在两边给出不同答案 ✓，所以"CI 全绿"必须**看 CI 自己说** ✓。
