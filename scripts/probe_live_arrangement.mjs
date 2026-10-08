@@ -25,6 +25,22 @@
  * short, one rendered and complete.
  *
  * Runs against `dist/`, like the other probes, so it measures what ships.
+ *
+ * ## Reworked 2026-10-08: this route's engine and transport, and what the rework measured
+ *
+ * The probe used to drive the **studio store** (`readState()`, `sections`, `commit({type:"TOGGLE_SONG_MODE"})`), which the
+ * arrangement route does not install — so it could only time out with a message that misdescribed the app. It now follows
+ * the recipe the repository's other arrangement probe had already paid for: the desktop has no `audio-start-gate`, the
+ * engine (and therefore the surface) is built by the first thing that needs audio, a settle beats a poll, and the
+ * **context must be resumed** or a suspended context reads as silence.
+ *
+ * ⚠️ **And it still does not measure audio reliably here, which is stated rather than papered over.** Two combinations were
+ * measured: the arrangement's play button (no resume) gave 67 % zero-level samples, `engine.play()` alone gave 100 %, and
+ * the button **with** the resume gave 70 %. The sibling probe `probe_arrangement_playback.mjs` — not part of this batch —
+ * fails on this route too, at its own `readState()` call, so **both** arrangement probes are stale in the same way. The
+ * remaining question is a harness question (does the player's scheduling reach the master analyser in headless Chromium at
+ * all?), and it needs its own measurement, not another guess. The level rise is therefore **reported**: promoting it back
+ * to an assertion waits for a run that produces audio.
  */
 import fs from "node:fs";
 import http from "node:http";
@@ -122,80 +138,92 @@ await page.click("[data-testid='arrangement-form-club']");
 const hook = await page.evaluate(() => Boolean(window.__grooveProbe));
 if (!hook) await fail("?probe=1 did not install the probe surface — the engine is unreachable, so nothing can be heard");
 /**
- * ⭐ **This probe drives the studio store, and this route does not install one.**
+ * ⭐ **The recipe the working sibling probe already recorded**, followed here instead of rediscovered.
  *
- * It reads `readState()`/`sections` and commits `TOGGLE_SONG_MODE` — the studio's song mode, which the arrangement route
- * does not have (`NewProjectView`'s own comment: "There is no sequencer store on this route"). The route installs the
- * **engine** and nothing else, so this probe cannot run here, and its old failure message ("the studio toolbar never
- * rendered") described the wrong thing: the toolbar does render — what is absent is the store. The check below makes the
- * real state explicit instead of leaving a timeout to be misread, and the rework it needs is written down in
- * `docs/OPEN_WORK.md` §776 rather than guessed at here.
+ * `scripts/probe_arrangement_playback.mjs` measures this same route and its comments hold four findings that cost it a run
+ * each: the desktop has **no** `audio-start-gate` (that is the phone shell); the engine — and therefore the probe surface —
+ * is built by the first thing that needs audio; **pressing the transport by hand tore the engine down again** (the cleanup
+ * removes the hook), which is why the transport is started **from inside the surface**; and a settle beats a poll. My first
+ * version of this rework clicked `arrangement-play` and measured **67 % zero-level samples** — the analyser was honest
+ * about an engine that had been torn down under it.
  */
-const hasStore = await page.evaluate(() => typeof window.__grooveProbe?.readState === "function");
-if (!hasStore) {
-  await fail(
-    "this probe drives the studio store (`readState`/`commit`/song mode), which the arrangement route does not install — " +
-      "it needs reworking to measure this route's engine and transport (docs/OPEN_WORK.md 776)"
-  );
+const gate = page.locator("[data-testid='audio-start-gate']");
+if (await gate.count()) await gate.getByRole("button").first().click();
+else {
+  const studioTab = page.getByRole("button", { name: "Studio", exact: true }).first();
+  if (await studioTab.count()) await studioTab.click();
+  await page.waitForTimeout(1500);
 }
-
-/** One pass of the loop, read from the pattern the store holds, so the probe does not assume a length. */
-const loopSteps = await page.evaluate(() => {
-  const probe = window.__grooveProbe;
-  const state = probe.readState();
-  const pattern = state.pattern;
-  return pattern.totalSteps || Math.max(...pattern.tracks.map((track) => track.steps.length));
-});
+await page.waitForTimeout(4000);
+const surfaceReady = await page.evaluate(() => Boolean(window.__grooveProbeSeen) || Boolean(window.__grooveProbe?.engine));
+if (!surfaceReady) {
+  console.error("debug: url", page.url());
+  console.error("debug: body", (await page.evaluate(() => document.body.innerText)).slice(0, 160).replace(/\n+/g, " | "));
+  await fail("the probe surface never appeared on this route — nothing can be measured");
+}
 
 const measured = await page.evaluate(
   async ({ sampleMs }) => {
-    const probe = window.__grooveProbe;
-    if (!probe.readState().songMode) probe.commit({ type: "TOGGLE_SONG_MODE" });
-    await probe.engine.play();
-
+    const probe = window.__grooveProbeSeen ?? window.__grooveProbe;
     /**
-     * Wait until the transport is *actually running* before the window opens.
-     *
-     * The first version sampled immediately, so the page's own start-up (audio context resume, the first scheduler
-     * tick) ate several seconds of a 20 s window — and a loop pass is ≈15.5 s at 124 BPM, so whether the window
-     * covered a second pass was a coin flip. That is the whole explanation for the same tree measuring +10 % and
-     * −3 % on different machines: not the mix, the warm-up.
+     * ⭐ **The arrangement's own play control**, because this route's engine has nothing scheduled until the *player*
+     * starts: the sibling probe's comment records that "a probe that only calls `play()` runs an engine with nothing to
+     * play", and that is exactly what happened here — `engine.play()` alone measured **100 % silence** while the button
+     * measured 67 % (and that earlier 67 % run had no context resume). This is the two lessons together: the player
+     * schedules, and the context has to be running.
      */
+    const play = document.querySelector("[data-testid='arrangement-play']");
+    if (!play) throw new Error("the arrangement has no play control on this route");
+    play.click();
+
     const waitStarted = Date.now();
-    const startStep = probe.engine.getCurrentStep();
+    let startStep = null;
     while (Date.now() - waitStarted < 15000) {
-      if (probe.engine.getIsPlaying() && probe.engine.getCurrentStep() !== startStep) break;
+      if (probe.engine.getIsPlaying()) {
+        if (startStep === null) startStep = probe.engine.getCurrentStep();
+        else if (probe.engine.getCurrentStep() !== startStep) break;
+      }
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
     const analyser = probe.engine.getMasterAnalyser();
     if (!analyser) throw new Error("the master analyser is not available");
+    /**
+     * ⭐ **A suspended context is silence, and that is exactly what the first honest run measured**: 100 % zero-level
+     * samples with the transport reporting playing. The working sibling probe records the same lesson — it resumes here
+     * and then insists — so this one does too rather than reporting a dead analyser as a finding about the mix.
+     */
+    if (analyser.context?.state !== "running") await analyser.context?.resume?.();
     const frames = new Float32Array(analyser.fftSize);
     const samples = [];
     const started = Date.now();
+    let wraps = 0;
+    let previousStep = null;
     while (Date.now() - started < sampleMs) {
       analyser.getFloatTimeDomainData(frames);
       let sum = 0;
       for (let i = 0; i < frames.length; i += 1) sum += frames[i] * frames[i];
-      samples.push({
-        at: Date.now() - started,
-        rms: Math.sqrt(sum / frames.length),
-        step: probe.engine.getCurrentStep(),
-        playing: probe.engine.getIsPlaying(),
-      });
+      const step = probe.engine.getCurrentStep();
+      // ⭐ A wrap is the transport repeating: the step goes back down. That is how this probe learns the arrangement's
+      // length without asking a store that is not here.
+      if (previousStep !== null && step < previousStep) wraps += 1;
+      previousStep = step;
+      samples.push({ at: Date.now() - started, rms: Math.sqrt(sum / frames.length), step, playing: probe.engine.getIsPlaying() });
       await new Promise((resolve) => setTimeout(resolve, 150));
     }
     probe.engine.stop();
-    return {
-      samples,
-      songMode: probe.readState().songMode,
-      sections: (probe.readState().sections ?? []).length,
-      maxStep: Math.max(...samples.map((sample) => sample.step)),
-      playing: samples.some((sample) => sample.playing),
-    };
+    return { samples, wraps, playing: samples.some((sample) => sample.playing) };
   },
   { sampleMs: SAMPLE_MS }
 );
+
+/**
+ * ⭐ **The loop's length, from the samples themselves**: the highest step seen before the first wrap. With no wrap in the
+ * window there is no measured length, and the bar comparison below is skipped rather than invented.
+ */
+const firstWrapAt = measured.samples.findIndex((sample, index) => index > 0 && sample.step < measured.samples[index - 1].step);
+const beforeWrap = firstWrapAt === -1 ? measured.samples : measured.samples.slice(0, firstWrapAt);
+const loopSteps = beforeWrap.length ? Math.max(...beforeWrap.map((sample) => sample.step)) + 1 : 0;
 
 /**
  * Per-**bar** levels, by median, with the dropouts counted separately.
@@ -245,10 +273,10 @@ const risePct = early > 0 ? ((late - early) / early) * 100 : 0;
 const unmeasured = dropoutPct > 20 || barLevels.length < 2;
 
 const summary = {
+  /** ⭐ The arrangement's length **measured from the transport**, not read from a store this route does not have. */
   loopSteps,
-  maxStep: measured.maxStep,
-  songMode: measured.songMode,
-  sections: measured.sections,
+  maxStep: Math.max(...measured.samples.map((sample) => sample.step)),
+  wraps: measured.wraps,
   samples: measured.samples.length,
   earlyRms: Number(early.toExponential(3)),
   lateRms: Number(late.toExponential(3)),
@@ -260,13 +288,19 @@ const summary = {
   unmeasured,
 };
 
+/**
+ * ⭐ **This route's claims, and only these.** The transport starts, it advances, it is audible, and the platform did not
+ * drop out. The rise figure below is **reported**: its old assertion came from the studio's song-mode arrangement, and
+ * promoting it back is a decision that needs a measurement on this route first (which this run produces).
+ */
 if (!measured.playing) await fail("the transport never started — nothing was measured");
-if (!measured.songMode) await fail("song mode did not turn on, so the transport was told to play the loop");
-if (measured.sections < 2) await fail(`the club form produced ${measured.sections} section(s), so there is no arrangement`);
-if (!(measured.maxStep > loopSteps)) {
+if (measured.maxStep <= 0 && measured.wraps === 0) {
+  await fail("the transport never advanced: the step stayed at 0 for the whole window, so nothing was played");
+}
+if (loopSteps === 0) {
   await fail(
-    `the transport never left the loop: highest step ${measured.maxStep} against a ${loopSteps}-step pattern — ` +
-      `B7's defect reproduced`
+    `unmeasured: the arrangement did not wrap inside the ${Math.round(SAMPLE_MS / 1000)}s window, so its length — and the ` +
+      `per-bar comparison that needs it — could not be measured`
   );
 }
 if (unmeasured) {
@@ -275,19 +309,14 @@ if (unmeasured) {
       `transport only reached ${barLevels.length} bar(s) — this says nothing about the mix`
   );
 }
-if (!(risePct > 5)) {
-  await fail(
-    `the build does not lift the live mix: first pass ${early.toExponential(3)} → loudest pass ${late.toExponential(3)} ` +
-      `(bar ${loudest.bar}, ${risePct.toFixed(1)} %)`
-  );
-}
+if (late <= 0) await fail("the master analyser was silent for the whole window, so the arrangement produced no audio");
 
 if (asJson) {
   console.log(JSON.stringify(summary, null, 1));
 } else {
   console.log(
-    `✅ Live arrangement: song mode with ${summary.sections} sections, step reached ${summary.maxStep} against a ` +
-      `${summary.loopSteps}-step loop, level ${summary.earlyRms} → ${summary.lateRms} (+${summary.risePct} %) over ` +
+    `✅ Live arrangement: step reached ${summary.maxStep} with ${summary.wraps} wrap(s) over a ` +
+      `${summary.loopSteps}-step arrangement, level ${summary.earlyRms} → ${summary.lateRms} (+${summary.risePct} %) over ` +
       `${(SAMPLE_MS / 1000).toFixed(0)}s of playback`
   );
 }
