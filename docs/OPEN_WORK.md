@@ -19213,3 +19213,27 @@ describe("the grid's editing actions", () => {
     且 `detail` 必须带上**地址**（`404 from` ✓，这条正是"可行动"的关键 ✓）；
     ②**路由必须真的问** ✓：调用共享助手 ✓、渲染 notice ✓、有 retry ✓。删任一处即红 ✓。
   ⭐ 相关 4 个测试文件 **14 条全绿** ✓，lint / docs / refs / css 门禁绿 ✓。
+
+### 七百六十二、✅ **L02 ＋ F13：描述里的退休工具名清掉，播放读数不再会被读成"漏音符"**（2026-10-08 ✓）
+
+  ⭐ **L02（报告：MCP 文档残留旧工具名）** ✓：
+    · **复现方式我做得比报告更硬** ✓：写了 `src/test/mcpToolNameReferences.test.ts` ✓——把**每个工具**的标题与描述里
+      **长得像工具名**的标识符（`get|list|add|set|render|export|analyze|validate|import|create|remove|move|quantize|vary|transpose|collect|search|read|write|delete|update` ＋ `_` ＋ 名词 ✓）全部抽出来 ✓，
+      逐个对照**实时 `TOOLS` 名单** ✓；不是工具的必须进 `ALLOWED` 并**写明理由** ✓（与仓库其他门禁同一风格 ✓）。
+    · **它当场报出恰好一个** ✓：`get_song (in analyze_audio)` ✓——与报告点名的 `mcp/registryAnalysis.ts:218` **完全一致** ✓。
+      原因也正如报告所说：**描述文本与实时 schema 之间没有任何一致性约束** ✓（`mcpCoverage` 只管"操作能落到工具上" ✓，
+      不管"散文提到的是不是工具" ✓）。
+    · **修法** ✓：那句话原为"…derive from **`get_song`'s sections**" ✗ ⇒ 改为
+      "…against the arrangement's own boundaries: **`get_arrangement`** reports its bars and its tempo, and v2 has no sections" ✓
+      （换成**在架的工具名** ✓，并顺手去掉 v2 里不存在的 sections 概念 ✓）。
+    · ⚠️ **两次都被门禁当场抓住 ✓**（这就是它们的价值 ✓）：句长棘轮（212 → 197 ✓，`≤190` 规则 ✓）✓；
+      以及 `mcpCopy_analyze_audio.test.ts` 里**钉住原句**的锚点 ✓（copy 测试就是"描述说了什么"的账本 ✓ ⇒ 同步更新并写明缘由 ✓）。
+  ⭐ **F13（报告：播放诊断计数易误解为漏音符）** ✓：
+    · **复现（读代码即坐实）** ✓：`playerFromEngine.ts:581` 的 `planned` 统计的是
+      **非零 step 数** ✗，而界面 `ArrangementViewV2.tsx:1441` 把它写成 **"planned N lane event(s)"** ✗
+      ⇒ 与离线 `audioLanes.events=1,620` 一比 ✓ 自然读成"少了 92 个音符" ✓——而真相是 **138 个弦乐音符落在 46 个和弦起点** ✓，一个都没漏 ✓。
+    · **修法** ✓：标签改成说出**它统计的是什么** ✓，并**把音符数并排显示** ✓：
+      `planned {N} active step(s) · {M} note(s)` ✓（报告的两条建议——"改为活跃步"与"同时显示 onset 与 note event"——**同时满足** ✓）。
+    · 判据 ✓（`arrangementViewV2.test.tsx` ✓ 19 例 ✓）：读数**必须**匹配 `/planned 0 active step/` ✓，
+      且**必须**带 `note(s)` ✓ ⇒ 把任一词去掉即红 ✓（连"0 也要显示"的旧断言一并保留 ✓）。
+  ⭐ 两条的门禁与相关测试全绿 ✓（lint / docs / refs ✓；MCP 描述类 4 个文件 11 条 ✓；编排视图 19 条 ✓）。

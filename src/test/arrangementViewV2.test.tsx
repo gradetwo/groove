@@ -91,9 +91,16 @@ describe("the play button and the engine seam", () => {
     renderView(<ArrangementViewV2 songId="s" capture={noCapture} player={{ play, pause: vi.fn(() => 0) }} />);
     fireEvent.click(screen.getByRole("button", { name: "Create" }));
     fireEvent.click(screen.getByRole("button", { name: /Play/ }));
-    // Zero is shown, not hidden: "nothing was planned" is a fact a user should see rather than a silent no-op.
+    /**
+     * ⭐ Zero is shown, not hidden: "nothing was planned" is a fact a user should see rather than a silent no-op. And what
+     * is shown says **steps**, beside the arrangement's **notes** — the evaluation read "1528 lane events" against 1,620
+     * offline events and concluded 92 notes were missing, when the difference was chord onsets (finding F13). Dropping
+     * either word turns this red.
+     */
     await screen.findByTestId("arrangement-played");
-    expect(screen.getByTestId("arrangement-played").textContent).toMatch(/planned 0/);
+    const label = screen.getByTestId("arrangement-played").textContent ?? "";
+    expect(label).toMatch(/planned 0 active step/);
+    expect(label, "the notes are shown beside the steps, so the two numbers cannot be confused").toMatch(/note\(s\)/);
   });
 });
 

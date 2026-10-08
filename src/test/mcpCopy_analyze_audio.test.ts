@@ -19,7 +19,14 @@ describe(TOOL + "'s description, after the split", () => {
     for (const anchor of [
       "**A render already returns its own gated",
       "Gated loudness, true peak, pinned sample",
-      "Compare that position against the bounda",
+      /**
+       * ⭐ **This anchor is the sentence that named a retired tool** (third evaluation, L02). It used to read
+       * "…derive from `get_song`'s sections", and `get_song` is not on the surface any more, so an agent following the
+       * description built a call that could not succeed. The copy test is the record of what the description says, so the
+       * fix lands here as well as in the registry — and `mcpToolNameReferences.test.ts` is the gate that would have
+       * caught it, by checking every tool-shaped name in every description against the live surface.
+       */
+      "Compare that position against the arrangement",
       "**The position is what makes the count u",
       "To ask whether these are splice clicks a",
     ])

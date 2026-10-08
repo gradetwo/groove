@@ -474,6 +474,15 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
   const [openLibraryFor, setOpenLibraryFor] = useState<string | undefined>(undefined);
   /** What the last play reported — **zero is shown, not hidden**: "nothing was planned" is a fact a user should see rather than a silent no-op. */
   const [played, setPlayed] = useState<number | undefined>(undefined);
+  /**
+   * ⭐ **The other half of the reading** (finding F13): how many notes the arrangement actually holds. The two numbers
+   * differ for a good reason — several notes can share one step — and showing both is what stops the difference from being
+   * read as notes that went missing.
+   */
+  const noteEventCount = useMemo(
+    () => Object.values(arrangement.notesByTrack ?? {}).reduce((total, notes) => total + notes.length, 0),
+    [arrangement.notesByTrack]
+  );
   /** Why nothing played, when nothing did — the engine can be unreachable or its instrument unresolvable, and both are answers rather than silence. */
   const [playProblem, setPlayProblem] = useState<string | undefined>(undefined);
   /**
@@ -1438,7 +1447,20 @@ export function ArrangementViewV2({ songId, capture, bar = 0, player, instrument
         <span data-testid="arrangement-transport" className="flex items-center gap-1">
           {/* ⭐ Said rather than clicked into nothing: without an engine the button is disabled and this explains why. */}
           {player === undefined && <span className="text-[10px] text-text opacity-70">(audio engine not connected yet)</span>}
-          {played !== undefined && <span data-testid="arrangement-played" className="text-[10px] text-text opacity-70">planned {played} lane event(s)</span>}
+          {/**
+            * ⭐ **"Steps", not "events"** (third evaluation, F13).
+            *
+            * This read "planned N lane event(s)", and the number is the count of **non-zero steps** — so on a piece where
+            * several notes share an onset it is legitimately smaller than the arrangement's note count. The evaluation
+            * compared 1,528 against 1,620 offline events and read the difference as 92 missing notes; it was 138 string
+            * notes spread over 46 chord onsets, all of them playing. An agent checking itself against this number would
+            * have concluded the same wrong thing, so the label names what is counted and the notes are shown beside it.
+            */}
+          {played !== undefined && (
+            <span data-testid="arrangement-played" className="text-[10px] text-text opacity-70">
+              planned {played} active step(s) · {noteEventCount} note(s)
+            </span>
+          )}
           {preparing && (
             <span data-testid="arrangement-preparing" className="font-mono text-[10px] uppercase tracking-widest text-text-sub">
               {t("arrangement_preparing")}
