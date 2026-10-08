@@ -93,14 +93,15 @@ export function InstrumentLibraryV2({ instruments, currentAssetId, onChoose, cov
     .filter((entry) => searching || subcategory === undefined || entry.subcategory === subcategory);
 
   return (
-    <div data-testid="instrument-library" className="flex flex-col gap-2 rounded border border-[rgb(var(--d-line))] p-2">
+    <div data-testid="instrument-library" className="flex flex-col gap-2 rounded border border-[rgb(var(--d-line))] bg-panel p-2 shadow-lg">
+      {/* ⭐ Opaque on purpose: the host's surface is translucent, and a list without a background drew its labels over the arrangement (reported with a screenshot). */}
       <input
         type="search"
         value={query}
         aria-label={t("instrument_search")}
         placeholder={t("instrument_search")}
         onChange={(event) => setQuery(event.target.value)}
-        className="w-full px-2 py-1 rounded text-xs bg-transparent border border-[rgb(var(--d-line))] text-text"
+        className="w-full min-h-11 sm:min-h-0 px-2 py-1 rounded text-xs bg-transparent border border-[rgb(var(--d-line))] text-text"
       />
       <div className="flex gap-2 min-h-32">
         {/* The category column. Hidden while searching, because a search ignores it and a column that does nothing is worse than none. */}

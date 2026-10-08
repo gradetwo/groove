@@ -22,6 +22,14 @@ export interface GrooveProbeSurface {
    * for the resource probes, which need the engine and nothing else. A probe that needs the state checks for these first.
    */
   readState?: () => SequencerState;
+  /**
+   * ⭐ **The pattern the app itself would hand the engine** (measured need, 2026-10-09).
+   *
+   * `useAudioEngineLifecycle` decides this with `patternForExport`: the flattened arrangement in song mode, the loop
+   * otherwise. A probe that builds its own material measures itself — the arrangement-playback probe did exactly that and
+   * could only ever see a 128-step loop wrap — so the seam exposes the decision instead of the ingredients.
+   */
+  currentPattern?: () => unknown;
   /** The store's own commit, so a probe can turn song mode on without clicking a button by its label. */
   commit?: (action: SequencerAction, recordHistory?: boolean) => void;
   /**

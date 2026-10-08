@@ -289,7 +289,9 @@ try {
        *
        * So the call is **deleted** rather than corrected: the application's own path is the thing under test.
        */
-      void sessionPattern;
+      if (typeof probe.currentPattern === "function") {
+        probe.engine.setPattern(probe.currentPattern(), true);
+      }
       const contextState = analyser.context?.state ?? "unknown";
       if (contextState !== "running") return { error: `the audio context is ${contextState}, not running` };
       const bins = new Float32Array(analyser.frequencyBinCount);

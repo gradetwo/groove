@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Genre } from "../types/genre";
 import { AudioEngine } from "../audio/AudioEngine";
 import { useSequencerStore } from "../features/sequencer/useSequencerStore";
+import { patternForExport } from "../data/songFlatten";
 import { getDefaultDrumKitForGenre } from "../utils/trackUtils";
 import { ConsolePanel } from "../components/console/ConsolePanel";
 import { installProbeHooks, uninstallProbeHooks } from "../platform/probeHooks";
@@ -66,6 +67,18 @@ export const HardwareConsoleView: React.FC<HardwareConsoleViewProps> = ({
       engine,
       readState: () => latest.current.state,
       commit: (action) => latest.current.commit(action as never),
+      /**
+       * ⭐ **What the app would play**, through the same `patternForExport` the lifecycle uses. If it cannot answer for a
+       * state that is still being assembled, the probe gets the raw loop and can tell the difference from `readState()`.
+       */
+      currentPattern: () => {
+        const state = latest.current.state;
+        try {
+          return patternForExport(state as never) ?? state.pattern;
+        } catch {
+          return state.pattern;
+        }
+      },
     });
     return () => {
       if (installed) uninstallProbeHooks();
