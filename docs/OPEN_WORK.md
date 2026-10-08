@@ -18872,3 +18872,28 @@ describe("the grid's editing actions", () => {
       ⇒ 三处 `waitFor` 全部显式给 **20 s** ✓（断言本身不变 ✓，只是不再把"机器慢"当成"churn 超标" ✗）。
   ⭐ 两条都本地复跑通过 ✓（相关 7 条 ✓）。教训与前面同型 ✓：**本地绿 ≠ CI 绿**——棘轮类判据（句子长度、预算）
     与超时类判据最容易在两边给出不同答案 ✓，所以"CI 全绿"必须**看 CI 自己说** ✓。
+
+### 七百四十五、📌 **第三份独立评测报告（针对 v2.35.3 / a71cebb）开工：先复现 F01/F02/F04**（2026-10-08 ✓）
+
+  ⭐ 材料 ✓：`/tmp/Groove_报告_作品_完整复现材料.zip`（474 MB ✓）——`outputs/README.txt` ✓ ＋ `outputs/Groove_完整测试报告.html` ✓
+    ＋ 证据（`assertions.json` ✓、CPU profile ✓、两首五分钟作品 ✓）。报告自述**针对 `a71cebb` = v2.35.3** ✓
+    ⇒ 讲的就是**刚发出去的那一版** ✓，不是旧树 ✓。
+  ⭐ 报告结论一览 ✓（**F01–F13 ＋ L01–L02** ✓）：
+    F01 P1 采样器验证误报"不可播放" ✓；F02 P1 `maxDurationSec` 忽略重复次数与范围 ✓；F03 P2 单边范围参数被静默忽略 ✓；
+    F04 P1 向不存在轨道写音符却返回成功 ✓；F05 P1 不同预览导出到同一路径覆盖旧产物 ✓；F06 P1 `.groove` 导入缺深层校验 ✓；
+    F07 P1 五分钟音频**首次分析 161 s** ✓；F08 P1 低音轨音符存在但卷帘**不可见不可编辑** ✓；F09 P2 工程名未随包传递 ✓；
+    F10 P2 默认配置隐藏采样器目录且吞掉加载错误 ✓；F11 P2 听辨挑战未播放即可答题并影响评分 ✓；F12 P3 中英混排/小屏过密 ✓；
+    F13 P3 播放诊断计数易误解 ✓；L01 P2 Web 取消导出不中止底层渲染 ✓；L02 P3 MCP 文档残留旧工具名 ✓。
+  ⭐ **本轮复现（`scratch/repro-f-report3.ts` ✓）**：
+    · **F04 确认** ✗：`addMcpTrackNotes(arrangementId, "no-such-track", notes)` 的 `problems` 讲的是**合成器预设** ✓，
+      **没有一句**说那条轨道不存在 ✗ ⇒ 音符写到不存在的轨道上"成功"了 ✓（正是报告说的 ✓）。
+    · **F01 确认** ✗：`validate_arrangement`（采样器编曲）返回 `ready: false` ✓，
+      理由 "virtuosity-drums-basic: no sample … no samples ship with the app yet" ✓——而同一份材料里**渲染是成功的** ✓
+      ⇒ **validate 与 render 互相矛盾** ✓（报告 F01 ✓）。
+    · **F02 确认（部分）** ✗：`estimateRenderCost({bars:1})` ⇒ 音频 2 s、墙钟 **424.8 s** ✓；`{bars:4}` ⇒ 音频 8 s、
+      墙钟 **429 s** ✗ —— 墙钟几乎不随重复次数变 ✓（`startSec: 423.4` 占绝对多数 ✓）⇒ 用它当 `maxDurationSec` 的判据会失真 ✓。
+    · **F03** ✓：`flattenMcpArrangement` 的**双边**范围是对的 ✓（8 小节 → 4 小节 ✓）⇒ 报告说的"**单边**参数被静默忽略"要按**工具层**再验一次 ✓。
+    · **F05 / F06** ✓：由材料自己的 `assertions.json` 坐实 ✓——两条 failed ✓：
+      "A/B previews should have unique output paths"（两个预览同一路径 ✓）与 "Import must reject invalid notes and tempo"（`{tracks:1, bars:129}` 竟被接受 ✓）。
+  ⏳ 下一步（按性价比 ✓）：**F04**（拒绝未知轨道 ✓ 一行判据 ✓）→ **F03/F02**（参数与估算要一致 ✓）→ **F01**（validate 与 render 用同一个"能不能播"的判据 ✓）
+    → **F06**（导入的深层校验 ✓ 音符/速度范围 ✓）→ **F05**（预览文件名含范围/轨道 ✓）→ **F08**（低音轨在卷帘可见 ✓）→ F07/F09–F13、L01–L02。
