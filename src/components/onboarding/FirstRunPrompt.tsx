@@ -39,13 +39,14 @@ export const FirstRunPrompt: React.FC<FirstRunPromptProps> = ({ visible, onPlay,
       data-testid="first-run-prompt"
       role="note"
       /**
-   * ⭐ **It shrinks instead of pushing the toolbar apart** (reported: in a fresh profile — incognito — the Import/Export
-   * buttons dropped to their own line).
+   * ⭐ **The hint yields width rather than forcing a row apart** (reported from a fresh profile: the Import/Export buttons
+   * dropped to a line of their own).
    *
-   * The toolbar is one `flex flex-wrap` row of groups, and this banner sits inside the transport group while the file
-   * group follows it with `ml-auto`. Without `min-w-0 shrink` the banner refuses to give up any width, so the row wraps
-   * and the file group lands on a line of its own — and because the banner only exists until playback has happened, the
-   * effect shows up for a first-time profile and not for a returning one. The prompt is a hint: it may be truncated.
+   * ⚠️ **This alone could not fix it, and the measurement is why**: the toolbar is `flex flex-wrap`, and a wrapping row
+   * wraps *before* it shrinks, so a shrinkable item inside the row never gets the chance to yield. The fix that worked was
+   * structural — the hint now renders as its own row above the toolbar (see `ArrangementViewV2`) — and it took the toolbar
+   * from five rows at 1469 CSS px back to four, with the file group beside FX and ZOOM again. This class stays because a
+   * hint that cannot be truncated is still the wrong shape for a toolbar; its criterion pins the property, not the fix.
    */
   className="flex min-w-0 shrink items-center gap-2 mb-2 px-3 py-2 rounded-xl border border-accent/30 bg-accent/10 text-xs text-text"
     >

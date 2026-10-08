@@ -95,9 +95,24 @@ describe("mobile touch targets", () => {
     const prompt = source("components/onboarding/FirstRunPrompt.tsx");
     const at = prompt.indexOf('data-testid="first-run-prompt"');
     expect(at, "the hint is in the file").toBeGreaterThan(-1);
-    const block = prompt.slice(at, at + 900);
+    const block = prompt.slice(at, at + 2600);
     expect(block, "it can shrink").toMatch(/min-w-0 shrink/);
     expect(block, "and its text truncates rather than wrapping the row").toMatch(/flex-1 min-w-0 truncate/);
+  });
+
+
+  it("⭐ the first-run hint renders outside the toolbar, so it cannot cost a toolbar row", () => {
+    /**
+     * The measured fix: inside the transport group the hint took ~506 px of a wrapping row and every group after it moved
+     * down one — reproduced at **1512 CSS px** (the reporter's own window), where Import/Export landed on a row alone. As a
+     * row of its own the toolbar went from five rows back to four, with the file group beside FX and ZOOM.
+     */
+    const view = source("components/arrangement/ArrangementViewV2.tsx");
+    const hint = view.indexOf("<FirstRunPrompt");
+    const toolbar = view.indexOf('data-testid="arrangement-toolbar"');
+    expect(hint, "the hint is rendered on this view").toBeGreaterThan(-1);
+    expect(toolbar, "the toolbar is rendered on this view").toBeGreaterThan(-1);
+    expect(hint, "the hint comes before the toolbar, not inside it").toBeLessThan(toolbar);
   });
 
 });

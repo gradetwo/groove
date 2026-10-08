@@ -1072,6 +1072,23 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
        * It is one row of controls at `--arr-toolbar-h` and may wrap on a narrow window; wrapping is the right failure
        * here, because the alternative is shrinking a target below the 44 px the surface is held to.
        */}
+      {/**
+        * ⭐ **The first-run hint gets its own row, above the toolbar** (reported: with it visible, Import/Export dropped to
+        * a line of its own — reproduced at 1469 CSS px, the width of the reporter's own screenshot).
+        *
+        * The toolbar's own note says wrapping is its right failure rather than shrinking a target below 44 px, and that
+        * stance is kept here: the newcomer yields, not the controls. Inside the transport group the hint took ~506 px of a
+        * wrapping row, so every group after it moved down one; as a row of its own it costs the toolbar nothing and still
+        * sits directly above Play, which is where it points.
+        */}
+      <FirstRunPrompt
+        visible={firstRunPrompt.visible}
+        onPlay={() => {
+          firstRunPrompt.started();
+          void togglePlay();
+        }}
+        onDismiss={firstRunPrompt.dismiss}
+      />
       <div
         data-testid="arrangement-toolbar"
         role="toolbar"
@@ -1392,15 +1409,6 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
           {playing ? t("arrangement_pause") : t("arrangement_play")}
         </button>
 
-        {/* ⭐ Unconditional, per the component's own note: `visible` decides, not a conditional sibling. */}
-        <FirstRunPrompt
-          visible={firstRunPrompt.visible}
-          onPlay={() => {
-            firstRunPrompt.started();
-            void togglePlay();
-          }}
-          onDismiss={firstRunPrompt.dismiss}
-        />
         {/**
          * **Stop, because the sampler's notes are started on the audio clock and the engine's transport cannot reach them.** Without it, pressing play on a piano arrangement and then wanting it to
          * stop left every scheduled note ringing — the arrangement player is the only object that holds those voices, so only this button can silence them.
