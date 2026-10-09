@@ -1,27 +1,27 @@
 {
-  "version": "2.35.7",
+  "version": "2.35.8",
   "releaseDate": "2026-10-09",
   "changelogCount": 10,
   "latest": {
-    "version": "2.35.7",
+    "version": "2.35.8",
     "date": "2026-10-09",
     "category": "fix",
     "title": {
-      "zh": "音源面板可点、chip 可读、门禁与文案修复",
-      "en": "A clickable instrument panel, a readable chip, and gate and copy fixes"
+      "zh": "标识唯一化、重复控件与皮肤统一",
+      "en": "Unique ids, a duplicate control removed, and one surface rule"
     },
     "highlights": [
       {
-        "zh": "音源选择面板改为浮动层并钳制进视口，选项不再被下方详情区盖住、可以点选。",
-        "en": "The instrument panel is a floating layer clamped into the viewport, so its options are no longer covered by the detail area below."
+        "zh": "轨道表头与列表不再共用同一批测试标识（一个标识对应一个元素），并删掉新手提示里与播放重复的按钮。",
+        "en": "The track header and the list no longer share test ids, one id now means one element, and the hint's duplicate play button is gone."
       },
       {
-        "zh": "音源 chip 桌面从 112×17 变为 152×28，手机从 10px 宽变为 104px，并可看到完整乐名。",
-        "en": "The instrument chip grew from 112×17 to 152×28 on desktop and from 10px wide to 104px on a phone, with the full name on hover."
+        "zh": "导出菜单改用皮肤表面色，不再写死深色；悬停底色改用可编译的类——之前那批悬停其实一直没有生效。",
+        "en": "The export menu uses the skin's surface instead of a hardcoded dark colour, and the hover tint uses a class Tailwind actually generates — the earlier hover never applied."
       },
       {
-        "zh": "工具栏按钮有了悬停反馈；轨道 chip 的测试标识不再重复；播放提示改用正确单复数。",
-        "en": "Toolbar buttons respond to hover, a track's chip no longer shares its test id with the header's copy, and the transport readout uses real plurals."
+        "zh": "折叠的轨道列表与空状态不再像两个标题；播放读数改用正确单复数。",
+        "en": "The collapsed track list reads as a control rather than a second heading, and the transport readout uses real plurals."
       }
     ],
     "truncated": true
