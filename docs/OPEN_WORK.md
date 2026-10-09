@@ -20829,3 +20829,24 @@ describe("the grid's editing actions", () => {
     同时 P1-1 的证明**保持成立** ✓（面板在视口内 ✓、`elementFromPoint` 仍是选项按钮 ✓）。
   ⭐ 判据 ✓（`mobileTouchTargets` 增至 8 例 ✓）：槽位必须带 `min-w-[6.5rem]` ＋ `sm:min-w-0` ✓（把 `min-w-0` 单独留着即红 ✓）。
   ⭐ **P1-2 至此两半都完成** ✓：桌面 chip **112×17 → 152×28** ✓、手机 **10×44 → 104×44** ✓、`title` 带完整乐器名 ✓。
+
+### 八百四十一、🧹 **P3 各条处置（能改的改、属设计取舍的写明理由）**（2026-10-09 ✓）
+
+  ⭐ **改了的两条** ✓：
+    · **P3-2 英式拼写** ✓：`arrangement_quantise_lengths` 的 en 由 "Quantise lengths" ⇒ **"Quantize lengths"** ✓
+      （界面其余处为美式 ✓，报告的意见成立 ✓；键名保留 `quantise` 以免破坏既有引用 ✓，理由写在键的注释里 ✓）；
+    · **P3-3 的 "64"** ✓：缩放数字**有了名字** ✓——`arrangement_zoom_value`（en `"{pixels} px per bar"` / zh `"每小节 {pixels} 像素"` ✓）
+      同时给 `title` 与 `aria-label` ✓（32px 的槽位不必为说明让出宽度 ✓）。
+  ⭐ **不改并写明理由的两条** ✓：
+    · **P3-3 的"橙色方块"** ✓：它就是 **Snap 开关** ✓，且**本来就有** `aria-label` ＋ `title` ✓
+      （`arrangement_snap_toggle` ✓，见 `ArrangementViewV2.tsx:1616` ✓）；报告看到的是**可见文字**的缺失（只有一个 `#` 字形 ✓）
+      ⇒ 这是**设计取舍** ✓（工具栏里用字形省宽度 ✓，提示与无障碍名都在 ✓）⇒ 我不擅自改视觉语言 ✓；
+    · **P3-3 的 "FILE" 冗余** ✓：它与 EDIT／TRANSPORT／GRID／FX **同一套分组标签** ✓ ⇒ 删掉它会**破坏一致性** ✓
+      ⇒ 保留并说明理由 ✓（报告自己也把 EDIT/TRANSPORT/FX/FILE 的顺序评为符合工作流 ✓）。
+  ⏳ **推迟并写明理由的两条** ✓：
+    · **P3-5 的 1512px 下方约 300px 空白** ✓：属**版面设计**（钢琴卷帘高度与窗口高度的关系 ✓）⇒ 需要先量"卷帘应有高度"
+      与"用户常用编排规模" ✓，不适合顺手改 ✓；
+    · **P3-6 乐器列表是开发者术语、无分组** ✓：报告查 `instrument-cat-*` 为空 ✗——本仓库的分类项 testid 其实是
+      **`instrument-category-*`** ✓（命名不同 ✓）⇒ 需要先复现"分组是否真的没显示" ✓；
+      而"`arco 3vel` 这类名字改成人类语言"要动**目录数据/命名策略** ✓ ⇒ 另开一件做 ✓。
+  ⭐ 验收 ✓：`typecheck` ✓、`lint` ✓、`docs:check` ✓；中文覆盖／触控／chooser 判据 **24 条全绿** ✓。

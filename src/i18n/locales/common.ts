@@ -291,7 +291,10 @@ export const commonMessages = {
   sample_libraries_removed: { en: 'Removed "{{id}}".', zh: "已移除「{{id}}」。" },
   /** ⭐ The arrangement toolbar's own verbs, which were hard-coded English on a Chinese interface (finding F12). */
   arrangement_ramp_velocity: { en: "Ramp velocity", zh: "力度渐变" },
-  arrangement_quantise_lengths: { en: "Quantise lengths", zh: "量化时值" },
+  /** ⭐ "Quantize", not "Quantise": the interface is US English everywhere else (fourth evaluation, P3-2). */
+  /** ⭐ "64" was a bare number beside ZOOM (fourth evaluation, P3-3): the label names the unit. */
+  arrangement_zoom_value: { en: "{pixels} px per bar", zh: "每小节 {pixels} 像素" },
+  arrangement_quantise_lengths: { en: "Quantize lengths", zh: "量化时值" },
   arrangement_copy_selection: { en: "Copy selection", zh: "复制所选" },
   arrangement_export_stopping: { en: "Stopping…", zh: "正在停止…" },
   catalogue_retry: { en: "Retry", zh: "重试" },

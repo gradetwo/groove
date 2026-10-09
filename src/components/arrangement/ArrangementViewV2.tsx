@@ -1802,7 +1802,16 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
           >
             +
           </button>
-          <span data-testid="arrangement-zoom-value" className="w-8 text-right font-['JetBrains_Mono'] text-[10px] text-text opacity-70">
+          <span
+            data-testid="arrangement-zoom-value"
+            /**
+             * ⭐ **The number is named** (fourth evaluation, P3-3: "ZOOM 旁的 64 無單位"): the value is pixels per bar, and
+             * a unit in the accessible name costs no width in a 32 px slot.
+             */
+            title={t("arrangement_zoom_value", { pixels: pixelsPerBar })}
+            aria-label={t("arrangement_zoom_value", { pixels: pixelsPerBar })}
+            className="w-8 text-right font-['JetBrains_Mono'] text-[10px] text-text opacity-70"
+          >
             {pixelsPerBar}
           </span>
         </span>
