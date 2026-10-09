@@ -41,7 +41,7 @@ import { setMcpArrangementBars, setMcpArrangementTempoMap, setMcpTrackGain } fro
 import { catalogueAssetById, listSampleLibraries, nearestCatalogueAssetIds } from "./instruments";
 import { inspectSfzAt } from "./sfzInspectRemote";
 
-import { addMcpTake, setMcpTrackAsset, setMcpTrackPan, setMcpTrackParent, setMcpTrackRegion, setMcpTrackSteps } from "./arrangement";
+import { addMcpTake, setMcpTrackAsset, setMcpTrackInstrument, setMcpTrackPan, setMcpTrackParent, setMcpTrackRegion, setMcpTrackSteps } from "./arrangement";
 
 import { assignMcpTakeRange, selectMcpTake, setMcpTrackCollapsed } from "./arrangement";
 
@@ -1060,6 +1060,29 @@ export const ARRANGEMENT_TOOLS: ToolDefinition[] = [
     handler: (args) => {
       try {
         return setMcpTrackAsset(String(args.arrangementId), String(args.trackId), String(args.assetId));
+      } catch (error) {
+        return failure((error as Error).message);
+      }
+    },
+  },
+  {
+    /**
+     * ⭐ **The preset half of "choose a synth's sound"** — the fifth Web evaluation found the interface gave a synth track no
+     * way to say what it sounds through, and this is the protocol's answer to the same gap.
+     */
+    name: "set_arrangement_track_instrument",
+    title: "Choose a synth track's preset",
+    description:
+      "Point a **synth** track at one of the built-in presets, by name (`warmPad`, `acidBass`, `analogLead` …). A synth track's sound is a preset, and it already names it in `instrument`, so this is the call that sets that name. Refused for any other kind of track: a **sampler** takes an `assetId` (`set_arrangement_track_asset`) and a **drum** track plays the built-in kit through its roles. The names are the keys of the preset table the engine uses, so a name this build does not have is refused rather than stored.",
+    readOnly: false,
+    inputSchema: {
+      arrangementId: z.string(),
+      trackId: z.string(),
+      instrument: z.string().describe("a built-in preset name, e.g. warmPad"),
+    },
+    handler: (args) => {
+      try {
+        return setMcpTrackInstrument(String(args.arrangementId), String(args.trackId), String(args.instrument));
       } catch (error) {
         return failure((error as Error).message);
       }

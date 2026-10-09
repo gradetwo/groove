@@ -56,6 +56,7 @@ import {
   quantizeArrangementNoteLengths,
   transposeNotesInRange,
   varyArrangementNotes,
+  setTrackInstrument,
 } from "../src/data/arrangementEdits";
 import type { ArrangementV2, NoteEvent, TrackKindV2, TrackV2 } from "../src/types/arrangementV2";
 import type { PlannedTake } from "../src/data/takePlanning";
@@ -698,6 +699,29 @@ export function setMcpTrackAsset(arrangementId: string, trackId: string, assetId
      */
     if (track.kind !== "sampler") throw new Error(`"${track.name}" is a ${track.kind} track, and only a sampler track plays a catalogue asset`);
     return setTrackSample(arrangement, trackId, assetId);
+  });
+}
+
+/**
+ * ⭐ **A synth track's preset, by name** (fifth Web evaluation of v2.35.9, P2: *"非 sampler 軌道沒有樂器切換入口"*).
+ *
+ * A synth track already sounds through a preset named in its `instrument` field — `resolveInstrumentPresetKey`'s first step
+ * is an exact match against the preset keys — so this is the tool that *writes* that field, and the reason it exists is the
+ * UI that will call it. Refused for any other kind: a drumtrack's sound is its role against one built-in kit, and a
+ * sampler's is its asset, so accepting the name there would report success for a change nobody can hear.
+ */
+export function setMcpTrackInstrument(arrangementId: string, trackId: string, instrument: string): ArrangementEditResult {
+  return edit(arrangementId, (arrangement) => {
+    const track = arrangement.tracks.find((candidate) => candidate.id === trackId);
+    if (!track) throw new Error(unknownTrack(arrangement, trackId));
+    if (track.kind !== "synth") {
+      throw new Error(
+        `"${track.name}" is a ${track.kind} track, and only a synth track sounds through a built-in preset; a sampler track takes an assetId (set_arrangement_track_asset) and a drum track plays the built-in kit`
+      );
+    }
+    const wanted = instrument.trim();
+    if (wanted === "") throw new Error("the preset name is empty; name one of the built-in presets, for example warmPad");
+    return setTrackInstrument(arrangement, trackId, wanted);
   });
 }
 
