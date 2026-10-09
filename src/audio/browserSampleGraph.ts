@@ -11,7 +11,7 @@
 import type { DecodedSample, SampleLoader } from "./sampleLoader";
 import { createSampleLoader } from "./sampleLoader";
 import type { SampleSink } from "./audioLaneScheduler";
-import { DEFAULT_SAMPLER_RELEASE_SECONDS, startSamplerNote } from "./samplerVoice";
+import { samplerReleaseSeconds, startSamplerNote } from "./samplerVoice";
 import { createLegatoVoiceLedger, type LegatoVoiceLedger } from "./legatoVoices";
 import type { SampleAsset } from "../data/sampleCatalogue";
 import { transportNote, type TransportProbe } from "./transportDiagnostic";
@@ -162,9 +162,10 @@ export function browserSampleSink(context: BaseAudioContext, destination: AudioN
             ratio,
             whenSeconds,
             ...(seconds === undefined ? {} : { seconds }),
-            ...(event.handedOn === true && seconds !== undefined && seconds < recordingSeconds
-              ? { releaseSeconds: DEFAULT_SAMPLER_RELEASE_SECONDS }
-              : {}),
+            /** ⭐ The same rule as the offline sink — the keyboard's notes were the ones being cut (see `samplerReleaseSeconds`). */
+            ...(samplerReleaseSeconds(seconds, recordingSeconds) === undefined
+              ? {}
+              : { releaseSeconds: samplerReleaseSeconds(seconds, recordingSeconds)! }),
             /**
              * ⭐ **The region's loop declaration crosses here too.** A buffer does not say whether the region that named it
              * wanted the recording to repeat, so a `loop_sustain` program (`karoryfer-meatbass` writes it) would be cut at

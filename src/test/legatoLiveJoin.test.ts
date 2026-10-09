@@ -285,23 +285,28 @@ describe("⭐ the audio-lane playback plan and the browser sink", () => {
   });
 
   /**
-   * ⭐ **The negative half of the release ramp, and the reason the live change is "only this branch".**
+   * ⭐ **A plain note is released too — the restriction to `handedOn` was the click.**
    *
-   * The offline sink gives every note whose written end arrives before its recording a release ramp
-   * (`5bb7c7b`'s owner decision). The live sinks give it to exactly the voices the rule names as `handedOn`, so a
-   * single note with nothing after it still ends with `start(when, 0, seconds)` — the length it had before any of this
-   * existed. That is what keeps `src/test/samplerSteps.test.ts`'s three criteria green unchanged.
+   * This case used to pin the opposite: the offline sink released a note whose written end arrived before its recording,
+   * while the live sinks did so **only** for voices the legato rule named as `handedOn`, so a note with nothing after it
+   * kept a scheduled stop. The owner reported what that sounds like (2026-10-09): *playing the virtual keyboard, every
+   * note clicked as the key came up* — the gate lands while the recording is still at full level, and stopping it there is
+   * a step to zero. `samplerReleaseSeconds` now answers for every path, so this note is released, and the keyboard stopped
+   * clicking while the export keeps sounding exactly as it did.
    */
-  it("gives a note nobody will be handed the scheduled end it always had, not a ramp", async () => {
+  it("⭐ releases a plain note whose gate ends before its recording, exactly as the offline sink does", async () => {
     const lane = laneOf([{ step: 0, pitch: 57, gate: 24 }]);
     const catalogue = [SUSTAIN_ASSET];
     const context = new FakeAudioContext();
     const report = await scheduleAudioLaneSamples(songOf(lane), vscoLoader(), browserSampleSink(context as never, context.createGain() as never), 0, catalogue);
     expect(report.problems).toEqual([]);
     expect(report.scheduled).toBe(1);
-    // One note, one recording, and its own three seconds written into the node rather than a release ramp.
+    // One note, one recording, and **no scheduled stop**: its end is reached through the release ramp, not a cut.
     expect(context.createdBufferSources).toHaveLength(1);
-    expect(context.createdBufferSources[0]!.started[0]!.duration).toBe(3);
+    expect(
+      context.createdBufferSources[0]!.started[0]!.duration,
+      "released rather than cut, because the recording outlasts the gate"
+    ).toBeUndefined();
   });
 
   it("leaves a repeated pitch and a lane with no recording alone, so the boundary cases do not move", () => {

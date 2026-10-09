@@ -22,7 +22,7 @@ import { stepDuration } from "../data/noteLayer";
 import { sampledAssetForLane } from "../data/sampledInstruments";
 import { programForIdentity } from "../data/stringTechniques";
 import type { StringTechnique } from "../data/stringTechniques";
-import { DEFAULT_SAMPLER_RELEASE_SECONDS, startSamplerNote, type SamplerVoice } from "./samplerVoice";
+import { samplerReleaseSeconds, startSamplerNote, type SamplerVoice } from "./samplerVoice";
 import { planLegatoJoins, type LegatoJoinCandidate, type LegatoJoinMark } from "./legatoJoin";
 import { createLegatoVoiceLedger, type LegatoVoiceReading } from "./legatoVoices";
 import type { SampleLoader } from "./sampleLoader";
@@ -307,7 +307,10 @@ export async function scheduleSamplerSteps(events: readonly SamplerStepEvent[], 
           ratio: note.ratio,
           whenSeconds,
           seconds,
-          ...(event.handedOn === true && seconds < recordingSeconds ? { releaseSeconds: DEFAULT_SAMPLER_RELEASE_SECONDS } : {}),
+          /** ⭐ The legato restriction was the bug: a plain note needs the release too (see `samplerReleaseSeconds`). */
+          ...(samplerReleaseSeconds(seconds, recordingSeconds) === undefined
+            ? {}
+            : { releaseSeconds: samplerReleaseSeconds(seconds, recordingSeconds)! }),
           /**
            * ⭐ **The region's loop declaration, which stopped at this line.** `startSamplerNote` has honoured `loop_mode`
            * since the sustaining-strings fix, and this scheduler never passed it — so a `loop_sustain` program

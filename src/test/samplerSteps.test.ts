@@ -83,7 +83,15 @@ describe("scheduling a sampler lane's steps in the browser", () => {
   it("ends each note at the lane's own gate, so a played note does not ring until the tab closes", async () => {
     // A note held for one beat: `gate` 4 steps at 120 bpm is 4 × (60 / 120 / 4) = 0.5 s.
     const { started } = await schedule(samplerLane([{ step: 0, pitch: 60, gate: 4 }]));
-    expect(started).toEqual([{ when: 0, offset: 0, duration: 0.5 }]);
+    /**
+     * ⭐ **No scheduled duration, because the note is released rather than cut** (2026-10-09, the owner's keyboard click).
+     *
+     * This used to pin `duration: 0.5` — a hard stop at the gate — and the live path only asked for a release when a
+     * legato join had handed the note on, so a plain gated note clicked at its end while the exported WAV was clean.
+     * `samplerReleaseSeconds` now answers for every path, and a voice with a release is started with **no scheduled
+     * length** and ramped down instead (see `SamplerVoice.start`, which documents exactly that).
+     */
+    expect(started).toEqual([{ when: 0, offset: 0 }]);
   });
 
   it("falls back to the engine's own 0.8-step length when the lane states no gate", async () => {
@@ -91,7 +99,9 @@ describe("scheduling a sampler lane's steps in the browser", () => {
     const events = planSamplerSteps([{ sourceTrackId: "t1", lane: samplerLane([{ step: 0, pitch: 60 }]) }]);
     expect(events[0]!.gateSteps).toBeCloseTo(0.8, 6);
     const { started } = await schedule(samplerLane([{ step: 0, pitch: 60 }]));
-    expect(started[0]!.duration).toBeCloseTo(0.1, 6);
+    /** ⭐ The default length still decides *when* the note ends; it is now reached through a release, not a stop. */
+    expect(started[0]!.when).toBeCloseTo(0, 6);
+    expect(started[0]!.duration, "released, so no scheduled stop").toBeUndefined();
   });
 
   it("keeps repeated notes on consecutive steps separate, because a step grid cannot tie a note", async () => {
@@ -111,6 +121,7 @@ describe("scheduling a sampler lane's steps in the browser", () => {
     const { context, started } = await schedule(lane);
     expect(context.createdBufferSources).toHaveLength(3);
     expect(started.map((entry) => entry.when)).toEqual([0, 0.125, 0.25]);
-    expect(started.map((entry) => entry.duration)).toEqual([0.125, 0.125, 0.125]);
+    /** ⭐ Each of the three is released at its own gate rather than cut (see the first case in this file). */
+    expect(started.map((entry) => entry.duration)).toEqual([undefined, undefined, undefined]);
   });
 });

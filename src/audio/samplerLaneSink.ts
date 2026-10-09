@@ -25,7 +25,7 @@
  *     (`src/audio/legatoVoices.ts`) carries the sounding voice when it can and refuses when it cannot — the one
  *     refusal needs the decoded recording's length, which only exists on this side of the seam.
  */
-import { DEFAULT_SAMPLER_RELEASE_SECONDS, startSamplerNote } from "./samplerVoice";
+import { samplerReleaseSeconds, startSamplerNote } from "./samplerVoice";
 import { createLegatoVoiceLedger, type LegatoVoiceLedger, type LegatoVoiceReading } from "./legatoVoices";
 import type { OfflineAudioLaneEvent, OfflineAudioLaneSink } from "./offlineAudioLanes";
 
@@ -57,7 +57,9 @@ export function createOfflineSamplerSink(input: OfflineSamplerSinkInput): Offlin
           ratio,
           whenSeconds: Math.max(0, event.atSeconds),
           seconds,
-          ...(seconds < recordingSeconds ? { releaseSeconds: DEFAULT_SAMPLER_RELEASE_SECONDS } : {}),
+          ...(samplerReleaseSeconds(seconds, recordingSeconds) === undefined
+            ? {}
+            : { releaseSeconds: samplerReleaseSeconds(seconds, recordingSeconds)! }),
           ...(note?.loopMode === undefined ? {} : { loopMode: note.loopMode }),
           ...(note?.loopStartFrames === undefined ? {} : { loopStartFrames: note.loopStartFrames }),
           ...(note?.loopEndFrames === undefined ? {} : { loopEndFrames: note.loopEndFrames }),

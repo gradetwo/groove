@@ -91,6 +91,25 @@ export interface SamplerVoiceInput {
   releaseSeconds?: number;
 }
 
+/**
+ * ⭐ **When a sampled note ends through a release rather than a cut** — one rule, shared by every path.
+ *
+ * Reported by the owner (2026-10-09): playing the virtual keyboard, **every note clicked** at the moment the key came up.
+ * The cause was a divergence, not a missing feature: the offline sink already released a note whose gate ended before its
+ * recording (`seconds < recordingSeconds`), while the two **live** paths asked for the same release **only when the note
+ * had been handed on by a legato join** — so a plain pressed-and-released note was cut at its gate on the live path and
+ * rendered cleanly offline. That is exactly why the exported WAV sounded fine while the keyboard clicked.
+ *
+ * A release is asked for when the written length ends the note **before the recording would have**: the tail is still at
+ * full level there, and stopping it is a step to zero — a click. When the recording has already fallen silent, the stop
+ * costs nothing and the sample's own ending is kept.
+ */
+export function samplerReleaseSeconds(seconds: number | undefined, recordingSeconds: number): number | undefined {
+  if (seconds === undefined) return undefined;
+  if (!(seconds < recordingSeconds)) return undefined;
+  return DEFAULT_SAMPLER_RELEASE_SECONDS;
+}
+
 /** The measured fade: about fifty milliseconds from full level to one percent. */
 const CHOKE_FADE_SECONDS = 0.05;
 /** A hair of extra time, so the scheduled stop lands after the ramp rather than through it. */
