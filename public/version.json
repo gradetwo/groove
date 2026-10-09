@@ -20,7 +20,7 @@
         "en": "melody_to_track writes a generated melody onto a track on the sixteenth grid, so nobody zips four arrays by hand."
       },
       {
-        "zh": "渲染冷启动先报一句进度；工具收到不认识的参数会点名；响度报告自称是已提交基线。",
+        "zh": "渲染冷启动先报进度；未知参数会被点名；响度报告自称是已提交基线。",
         "en": "A render announces its cold start, a tool names the arguments it never declared, and the loudness report says it is a committed baseline."
       }
     ],
