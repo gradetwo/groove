@@ -63,7 +63,9 @@ describe("mobile touch targets", () => {
      * the probe excludes the grid and why this criterion names controls rather than "everything".
      */
     const prompt = source("components/onboarding/FirstRunPrompt.tsx");
-    for (const id of ["first-run-prompt-play", "first-run-prompt-dismiss"]) {
+    expect(prompt, "and it offers no second play control").not.toContain("first-run-prompt-play");
+    /** ⭐ Only the dismiss remains: the hint's own play control was a duplicate of the transport's (fifth evaluation P3). */
+    for (const id of ["first-run-prompt-dismiss"]) {
       const at = prompt.indexOf(`data-testid="${id}"`);
       expect(at, `${id} is in the prompt`).toBeGreaterThan(-1);
       expect(prompt.slice(at, at + 320), `${id} has a phone-sized target with a desktop escape`).toMatch(/min-h-11[^"]*sm:min-h-0/);

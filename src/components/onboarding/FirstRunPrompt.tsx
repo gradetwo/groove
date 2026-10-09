@@ -15,7 +15,6 @@ export interface FirstRunPromptProps {
    */
   visible: boolean;
   /** Starts the transport — the one action this strip exists to point at. */
-  onPlay: () => void;
   /** The visitor does not want the hint. */
   onDismiss: () => void;
 }
@@ -28,7 +27,7 @@ export interface FirstRunPromptProps {
  * would repeat the mistake. `useFirstRunPrompt` decides whether it is shown at all, and retires it
  * for good once playback has happened once.
  */
-export const FirstRunPrompt: React.FC<FirstRunPromptProps> = ({ visible, onPlay, onDismiss }) => {
+export const FirstRunPrompt: React.FC<FirstRunPromptProps> = ({ visible, onDismiss }) => {
   const { t } = useLanguage();
 
   // See the `visible` prop's note: returning null here is what keeps the sibling below mounted.
@@ -50,16 +49,12 @@ export const FirstRunPrompt: React.FC<FirstRunPromptProps> = ({ visible, onPlay,
    */
   className="flex min-w-0 shrink items-center gap-2 mb-2 px-3 py-2 rounded-xl border border-accent/30 bg-accent/10 text-xs text-text"
     >
+      {/**
+        * ⭐ **One action, and it is the transport's** (fifth evaluation, P3: "Listen 與 Play 重複" — two controls doing the
+        * same thing an inch apart). The hint's sentence points at Play, Play is right below it, and the hook retires the
+        * hint the moment playback starts — so the duplicate button added nothing but a second way to be confused.
+        */}
       <span className="flex-1 min-w-0 truncate">{t("first_run_prompt_text")}</span>
-      <button
-        type="button"
-        onClick={onPlay}
-        data-testid="first-run-prompt-play"
-        className="flex min-h-11 sm:min-h-0 items-center gap-1 px-3 py-1 rounded-lg bg-accent text-black font-bold text-xs hover:bg-accent/90 transition-colors shrink-0"
-      >
-        <Play className="w-3 h-3" />
-        <span>{t("first_run_prompt_play")}</span>
-      </button>
       <button
         type="button"
         onClick={onDismiss}

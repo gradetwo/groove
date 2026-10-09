@@ -35,20 +35,22 @@ beforeEach(() => {
 });
 
 describe("first-run prompt · the strip itself", () => {
-  it("states the one action and offers exactly two controls", () => {
-    const onPlay = vi.fn();
+  it("⭐ states the one action and offers exactly one control — the transport already has the other", () => {
+    /**
+     * ⭐ **Fifth evaluation, P3**: the hint used to carry a "Listen" button a few pixels above the transport's own Play —
+     * two controls for one action. The sentence says *press play*; Play is right there; and `useFirstRunPrompt` retires the
+     * hint the moment playback starts, so nothing is lost by not repeating the button here.
+     */
     const onDismiss = vi.fn();
     render(
       <LanguageProvider>
-        <FirstRunPrompt visible onPlay={onPlay} onDismiss={onDismiss} />
+        <FirstRunPrompt visible onDismiss={onDismiss} />
       </LanguageProvider>
     );
 
     const prompt = screen.getByTestId("first-run-prompt");
     expect(prompt.textContent?.length).toBeGreaterThan(10);
-
-    fireEvent.click(screen.getByTestId("first-run-prompt-play"));
-    expect(onPlay).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId("first-run-prompt-play"), "no second play control").toBeNull();
 
     fireEvent.click(screen.getByTestId("first-run-prompt-dismiss"));
     expect(onDismiss).toHaveBeenCalledTimes(1);
@@ -69,7 +71,7 @@ describe("first-run prompt · the strip itself", () => {
     const Host: React.FC<{ visible: boolean }> = ({ visible }) => (
       <LanguageProvider>
         <div>
-          <FirstRunPrompt visible={visible} onPlay={() => {}} onDismiss={() => {}} />
+          <FirstRunPrompt visible={visible} onDismiss={() => {}} />
           <Below />
         </div>
       </LanguageProvider>
@@ -188,6 +190,12 @@ describe("first-run prompt · wiring", () => {
     // Rendered unconditionally with a `visible` prop — see the component's note on remounting.
     expect(view).toContain("visible={firstRunPrompt.visible}");
     expect(view).not.toMatch(/\{firstRunPrompt\.visible && \(/);
-    expect(view).toContain("void togglePlay()");
+    /**
+     * ⭐ **And it is not wired to a play control of its own** (fifth evaluation, P3): the hint used to call
+     * `firstRunPrompt.started()` and `togglePlay()`, which is what the transport's Play already does. The hint now takes
+     * `visible` and `onDismiss`, and the hook retires it when playback starts, so this assertion pins the absence.
+     */
+    expect(view, "no duplicate play wiring").not.toContain("void togglePlay()");
+    expect(view, "the hint is told when to show and how to dismiss").toMatch(/<FirstRunPrompt visible=\{firstRunPrompt\.visible\} onDismiss=\{firstRunPrompt\.dismiss\} \/>/);
   });
 });

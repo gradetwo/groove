@@ -1087,14 +1087,7 @@ export function ArrangementViewV2({ currentSong, songId, capture, bar = 0, playe
         * wrapping row, so every group after it moved down one; as a row of its own it costs the toolbar nothing and still
         * sits directly above Play, which is where it points.
         */}
-      <FirstRunPrompt
-        visible={firstRunPrompt.visible}
-        onPlay={() => {
-          firstRunPrompt.started();
-          void togglePlay();
-        }}
-        onDismiss={firstRunPrompt.dismiss}
-      />
+      <FirstRunPrompt visible={firstRunPrompt.visible} onDismiss={firstRunPrompt.dismiss} />
       <div
         data-testid="arrangement-toolbar"
         role="toolbar"

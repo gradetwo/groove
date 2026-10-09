@@ -20983,3 +20983,19 @@ describe("the grid's editing actions", () => {
     （前者动版面 ✓、后者是内容决策 ✓）⇒ 记为"**设计取舍 + 已提供完整名称**" ✓；
     若你要，两个可选方向我都能做：**A** 加宽表头列（`--arr-head-w` ✓），**B** 表头只显示乐器名去掉库前缀 ✓。
   ⭐ 判据 ✓：本项**不需要**新判据（未改行为 ✓）；但**口径**已写进本节 ✓，避免以后再拿两处的数字互相当证据 ✓。
+
+### 八百四十九、✅ **剩余项③："Listen" 与 Play 重复——删掉 hint 里那个按钮，并把"不得再有第二个播放控件"写成判据**（2026-10-09 ✓）
+
+  ⭐ **报告的依据** ✓（第五份 ✓）：hint 右侧的 **Listen** 与紧下方的 transport **Play** 是**同一个动作** ✓（"Listen 與 Play 重複" ✓）。
+  ⭐ **修法（保守且不丢功能 ✓）** ✓：删掉 `FirstRunPrompt` 的 `onPlay` 与那个按钮 ✓，
+    保留**句子**（"Press play to hear this groove…" ✓，它指着 Play ✓）与**关闭** ✓；
+    `ArrangementViewV2` 的传参简化为 `visible` ＋ `onDismiss` ✓。
+    **为什么不会把 hint 卡住** ✓：`useFirstRunPrompt` **监听 `isPlaying`** ✓（其注释："Playback started by another route:
+    the prompt has nothing left to say" ✓）⇒ 一旦播放就自动退休 ✓ ⇒ 删掉按钮**不损失任何路径** ✓。
+  ⭐ 判据 ✓：①`firstRunPrompt.test.tsx` 改为"**恰好一个控件**（关闭）" ✓ 并断言
+    `queryByTestId("first-run-prompt-play")` **为 null** ✓；②wiring 判据由 `toContain("void togglePlay()")`
+    反转为 **`not.toContain`** ✓ 并新增"传参恰为 `visible` ＋ `onDismiss`" ✓；③`mobileTouchTargets` 只再要求
+    `first-run-prompt-dismiss` 的 44px ✓ 并断言源码里**不再出现** `first-run-prompt-play` ✓。
+  ⭐ **验收** ✓：两个测试文件 **19 条全绿** ✓；`typecheck` ✓、`lint` ✓、`docs:check` ✓。
+  ⏳ **未做的** ✓：报告同时提的 **"FILE" 区段标签冗余** ✗ —— 我仍按"与 EDIT/TRANSPORT/GRID/FX 一致"**保留** ✓
+    （两份报告与我意见不同，理由已记账 ✓，不擅改设计语言 ✓）。
