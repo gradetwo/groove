@@ -21389,3 +21389,28 @@ describe("the grid's editing actions", () => {
       缺省时**沿用今天"按名字/角色推导"的行为** ✓ ⇒ 老工程零迁移成本 ✓。
   ⭐ **本轮仍然不改代码** ✓（把设计钉死、把唯一未知项标出来 ✓）；**下一件可执行的是那条播放路径测量** ✓，
     它一旦给出"路由只看 `sample` 是否存在" ✓，drumkit 那半就是"2 处模型 ＋ 3 处 UI ＋ 判据"的**可逆小改** ✓。
+
+### 八百七十、🔎 **剩余项⑧再进一步：鼓轨的 `sample` 是**播放层故意拒绝**的——鼓轨的音色来自"角色/乐器映射"，所以那不是模型缺口，是**UI 缺口**（或需要一个新的"套鼓"字段）**（2026-10-10 ✓）
+
+  ⭐ **决定性读数 ✓**（`src/data/sampledInstruments.ts:341` ✓ `sampledAssetForLane` ✓）**原文** ✓：
+    > "A lane that names a recording plays it — an `audio` lane … or a melodic lane … **A drum or effect lane that happens to
+    > carry a sample id is not honoured**: that is the case `sampleReferenceProblem` refuses out loud, and returning an asset
+    > here would silently turn **a kit lane into one note**."
+    ⇒ `return role === "audio" || SAMPLED_ROLES.includes(role) ? own : undefined;` ✓
+  ⭐ **含义（把上一轮的结论纠正过来 ✓）** ✓：
+    · 上一轮我以为"扩 `sample` 到 drumkit"就能让鼓轨换 kit ✗ ——**不行** ✓：播放层**有意**忽略鼓/效果轨上的 `sample` ✓，
+      因为**一个 kit 轨不是一个音** ✓（给它一个 assetId 会把它变成单音 ✗）。这条拒绝是**有理由的设计** ✓，不该绕过 ✓。
+    · 鼓轨的音色真正来自 **角色/乐器 → 套鼓声部** 的映射 ✓：`sampledDrumVoicingForLane(lane)` ✓
+      ＝ `drumVoicingForLane(lane)` ＋ **`DRUM_KIT_ASSET_ID`** ✓（`drumRoles.ts` ✓）。
+      ⇒ **结论：鼓轨缺的不是模型字段，而是"让你选套鼓/角色"的入口** ✓ —— 除非我们要支持**多套鼓**，
+      那才需要一个新的"套鼓"字段 ✓（今天只有**一套** `DRUM_KIT_ASSET_ID` ✓）。
+  ⭐ **修正后的设计（三档，按代价排序 ✓）** ✓：
+    · **⑧-a（最小 ✓、恐怕就是正解）** ✓：**今天只有一套鼓** ⇒ 鼓轨"换音色"的真实内容是**换角色**
+      （kick/snare/hat ✓）⇒ 这属于**鼓垫/步进 UI**（第⑨项 ✓），不是 chip ⇒ **⑧ 对鼓轨可以判定为"无需 chip"** ✓，
+      并在 UI 上**说清**"鼓轨用的是内置套鼓" ✓（诚实 ✓，而不是给一个空控件 ✗）。
+    · **⑧-b（中等 ✓）** ✓：**synth 轨**加 `track.synthPreset?: string` ✓（复用 `DEFAULT_SYNTH_PRESETS` ✓），
+      缺省沿用"按名字/角色推导" ✓ ⇒ 老工程零迁移 ✓；这是**⑧ 唯一真正可落地的"换音色"** ✓。
+    · **⑧-c（较大 ✓）** ✓：支持**多套鼓**（新增 `track.drumKitId?` ✓ ＋ 目录里多 kit ＋ `sampledDrumVoicingForLane` 按它选 ✓）
+      ⇒ 需要内容（采样库）配合 ✓。
+  ⭐ **本轮仍不改代码 ✓**（把"哪条路是真的"钉死 ✓）；**下一步**建议落 **⑧-b**（synth 预设选择器 ✓，可逆、零迁移 ✓），
+    并将 **⑧-a** 作为"鼓轨的现实结论"写进 UI 文案与台账 ✓。
