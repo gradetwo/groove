@@ -169,8 +169,23 @@ export function AudioStartGate({ children, onStart }: AudioStartGateProps) {
   return (
     <>
       {children}
-      <div data-testid="audio-start-gate" role="dialog" aria-modal="true" aria-label={t("audio_gate_label")} className="gate-overlay">
-        <div className="gate-card">
+      <div
+        data-testid="audio-start-gate"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("audio_gate_label")}
+        className="gate-overlay"
+        /**
+         * ⭐ **Clicking the backdrop dismisses, exactly as Escape does** (fourth evaluation, P2-3: the gate "should not
+         * block navigation or creating a project", and on `/new` it swallowed the Create click behind it).
+         *
+         * This is the same dismissal Escape already performs — it deliberately does **not** count as the start gesture, so
+         * nothing about the audio policy changes; what changes is that the gate stops being a wall between a person and the
+         * page. The card below stops propagation, so clicking inside it never dismisses.
+         */
+        onClick={() => setOpen(false)}
+      >
+        <div className="gate-card" onClick={(event) => event.stopPropagation()}>
           <div className="gate-brand">
             <svg className="gate-logo" width="46" height="46" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <circle cx="12" cy="12" r="10.5" stroke="currentColor" strokeOpacity="0.35" />

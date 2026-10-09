@@ -68,4 +68,36 @@ describe("the audio start gate", () => {
     fireEvent.click(screen.getByTestId("audio-start-retry"));
     await waitFor(() => expect(screen.queryByTestId("audio-start-gate")).toBeNull());
   });
+
+  it("⭐ lets the page through when its backdrop is clicked — the gate is not a wall", async () => {
+    /**
+     * ⭐ **Fourth evaluation, P2-3**: on `/new` the gate swallowed the Create click behind it, so a first-time visitor
+     * could not create a project without first finding the gate's own control. The backdrop now dismisses exactly as
+     * Escape does — the same dismissal, which deliberately does not count as the start gesture, so the audio policy is
+     * untouched and only the wall is gone.
+     */
+    const onStart = vi.fn().mockResolvedValue(undefined);
+    render(
+      <AudioStartGate onStart={onStart}>
+        <div data-testid="app">app</div>
+      </AudioStartGate>
+    );
+    fireEvent.click(screen.getByTestId("audio-start-gate"));
+    await waitFor(() => expect(screen.queryByTestId("audio-start-gate")).toBeNull());
+    // ⭐ A dismissal is not a start: the gate must not claim the gesture it did not receive.
+    expect(onStart).not.toHaveBeenCalled();
+  });
+
+  it("⭐ and clicking inside its card does not dismiss it", async () => {
+    const onStart = vi.fn().mockResolvedValue(undefined);
+    render(
+      <AudioStartGate onStart={onStart}>
+        <div data-testid="app">app</div>
+      </AudioStartGate>
+    );
+    fireEvent.click(screen.getByText("GROOVE", { exact: false }).closest(".gate-card")!);
+    // Still up: only the backdrop and the two explicit controls close it.
+    expect(screen.getByTestId("audio-start-gate")).toBeTruthy();
+  });
+
 });

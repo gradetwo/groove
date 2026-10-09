@@ -20803,3 +20803,18 @@ describe("the grid's editing actions", () => {
     高度必须**由 `top` 推出** ✓，且**旧形状 `innerHeight - wanted` 不得回来** ✓（回归即红 ✓）。
   ⭐ **用户指示"发版不要着急"** ✓ ⇒ 我把 P1-1 的证明落库 ✓，**继续**把 P1-2 剩下的一半（手机 chip 仅 10px 宽 ✓）
     与 P2-3（gate 挡 `/new`）做完再考虑发版 ✓。
+
+### 八百三十九、✅ **P2-3：audio gate 的背板现在可以点掉（"不是一堵墙"），并配两条能红的判据**（2026-10-09 ✓）
+
+  ⭐ **报告的实测** ✓：直接进 `/new` 时 `audio-start-gate` overlay **拦截所有 pointer event** ✓ ⇒ Create 点不了 ✓
+    （Playwright click 超时 30s ✓）；报告认为 gate 的本意是挡音频 ✓，**不该挡导航/新建** ✓。
+  ⭐ **我的处置（选最安全且真有效的一步 ✓）** ✓：**让背板（overlay 自身）点一下就 dismiss** ✓——
+    与既有 **Escape** 走**完全相同**的语义 ✓（组件文档已写明：dismissal **不算**启动手势 ✓、
+    不写 `AUDIO_STARTED_KEY` ✓ ⇒ **音频策略一点没变** ✓），卡内 `onClick` `stopPropagation` ✓ ⇒ 点卡内不会误关 ✓。
+    ⇒ gate 从"必须找到它自己的按钮"变成"**点一下就放行**" ✓，这正是"不该挡导航/新建"的最小实现 ✓。
+  ⭐ **我**没有**做**的那一步（写明理由 ✓）** ✗：让 `AudioStartGate` **按路由**根本不渲染 ✓（那才是报告字面上的建议 ✓）——
+    但它现在**包住整个 `RouterProvider`** ✓（在路由之外 ✓）⇒ 要按路由判断就得把 gate 挪进路由内部 ✓
+    （结构性改动 ✓）⇒ 我选择先做"点背板即放行"这一版 ✓，把结构调整留给下一轮**先量**（例如量 gate 覆盖时 `/new` 还有哪些控件真的不可点 ✓）。
+  ⭐ 判据 ✓（`audioStartGate.test.tsx` 3 → **5 例** ✓）：①点背板必须 dismiss ✓ **且不得调用 `onStart`** ✓
+    （"dismissal 不是手势" ✓——这条正好守住音频策略不被顺手改坏 ✓）；②点卡内**不得** dismiss ✓。
+  ⭐ 验收 ✓：`typecheck` ✓、`lint` ✓、`docs:check` ✓、`check:css` ✓；该测试文件 5 条全绿 ✓。
