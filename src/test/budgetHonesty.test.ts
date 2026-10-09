@@ -335,7 +335,12 @@ describe("the server turns a request's progressToken into notifications", () => 
         const notifications = received as Array<{ progressToken?: string | number; progress?: number; message?: string }>;
         expect(notifications.length, "a token-carrying render must not be silent").toBeGreaterThanOrEqual(1);
         expect(notifications[0]?.progressToken).toBe(4242);
-        expect(notifications[0]?.message).toContain("starting the renderer");
+        /**
+         * ⭐ The **real** cold-start sentence, not the stub's (2026-10-10): the render path now announces the engine before
+         * it waits, and this criterion is about the plumbing carrying that message, so it must accept the wording the
+         * server actually sends — `starting the render engine — a first render in this session also starts a browser`.
+         */
+        expect(notifications[0]?.message).toContain("starting the render");
       });
     } finally {
       renderStub.emit = undefined;
