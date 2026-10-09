@@ -1,29 +1,29 @@
 {
-  "version": "2.35.8",
+  "version": "2.35.9",
   "releaseDate": "2026-10-09",
   "changelogCount": 10,
   "latest": {
-    "version": "2.35.8",
+    "version": "2.35.9",
     "date": "2026-10-09",
-    "category": "fix",
+    "category": "feature",
     "title": {
-      "zh": "标识唯一化、重复控件与皮肤统一",
-      "en": "Unique ids, a duplicate control removed, and one surface rule"
+      "zh": "音源 chip 只显示乐器名，术语改成人话",
+      "en": "Instrument chips name the instrument, and its terms are readable"
     },
     "highlights": [
       {
-        "zh": "轨道表头与列表不再共用同一批测试标识（一个标识对应一个元素），并删掉新手提示里与播放重复的按钮。",
-        "en": "The track header and the list no longer share test ids, one id now means one element, and the hint's duplicate play button is gone."
+        "zh": "音源 chip 只显示乐器名（去掉库前缀），表头上被截断的那一截随之消失。",
+        "en": "An instrument chip now shows the instrument's own name rather than its library's, and the truncation the header suffered is gone."
       },
       {
-        "zh": "导出菜单改用皮肤表面色，不再写死深色；悬停底色改用可编译的类——之前那批悬停其实一直没有生效。",
-        "en": "The export menu uses the skin's surface instead of a hardcoded dark colour, and the hover tint uses a class Tailwind actually generates — the earlier hover never applied."
+        "zh": "把库自带的术语翻成人话：arco→Bowed、pizz→Plucked、3vel→3 layers，映射类程序标明是键位映射。",
+        "en": "The library's own terms are translated: arco becomes Bowed, pizz becomes Plucked, 3vel becomes 3 layers, and map programs are labelled as keyswitch maps."
       },
       {
-        "zh": "折叠的轨道列表与空状态不再像两个标题；播放读数改用正确单复数。",
-        "en": "The collapsed track list reads as a control rather than a second heading, and the transport readout uses real plurals."
+        "zh": "查不出含义的词（three、six、basic、looped）保持原样——名字不凭空发明意思。",
+        "en": "Words whose meaning the data does not show (three, six, basic, looped) are left exactly as the library writes them."
       }
     ],
-    "truncated": true
+    "truncated": false
   }
 }
