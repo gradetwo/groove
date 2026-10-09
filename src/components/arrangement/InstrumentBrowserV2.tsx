@@ -18,6 +18,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { InstrumentLibraryV2 } from "./InstrumentLibraryV2";
+import { instrumentDisplayName } from "./instrumentDisplayName";
 import type { InstrumentChoice } from "./TrackListV2";
 
 export interface InstrumentBrowserV2Props {
@@ -152,7 +153,7 @@ export function InstrumentBrowserV2({
           the panel behind the chip already says which library and category the instrument came from, so repeating it
           in a 10 px chip would cost the words that identify the instrument itself.
         */}
-        {current ? current.name : t("instrument_choose")}
+        {current ? instrumentDisplayName(current.name) : t("instrument_choose")}
       </button>
       {open &&
         anchor &&

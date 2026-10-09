@@ -21168,3 +21168,25 @@ describe("the grid's editing actions", () => {
     ③**在固定窄列里加最小宽度会挤掉轨名** ✓（表头/列表分开 ✓）④**e2e 矩阵脚本自己在查裸 id** ✓（本机三引擎复验 ✓）。
   ⭐ **写入台账的两条硬规矩** ✓：**改标识前 grep 全仓消费者（含 `scripts/`）** ✓；
     **发版前必须让远端矩阵绿** ✓（本机抽样不是权威 ✓）。
+
+### 八百五十九、✅ **按你的指示：chip **只显示乐器名**（去掉库前缀）——表头那 40px 截断随之消失**（2026-10-09 ✓）
+
+  ⭐ **你的决定** ✓：两个待选项里选了 **"只显示乐器名"** ✓（对应 ② 的 B ✓）。
+  ⭐ **实现前先读了代码，发现一件有意思的事** ✓：`InstrumentBrowserV2` 里 chip 的注释**早就写着**这一点 ✓——
+    "this is the name without the prefix: **the panel behind the chip already says which library and category the
+    instrument came from**, so repeating it in a 10 px chip would cost the words that identify the instrument itself" ✓
+    ——**而代码从来没做到** ✗（一直渲染 `current.name` 全名 ✓）⇒ 你这句话等于把注释里那条意图**真正落实** ✓。
+  ⭐ **规则（写在一个小模块里，可测 ✓）** ✓：`src/components/arrangement/instrumentDisplayName.ts` ✓——
+    只按**带空格的破折号 `" — "`** 切**第一处** ✓（目录正是用这个连接库名与程序名 ✓）；
+    **连字符不切** ✓（`Hi-Hat - Closed` 这种名字里连字符属于乐器名本身 ✓，切了就是**凭空发明一个库** ✗）；
+    切出来为空 ⇒ **保留原名** ✓。`title` **仍保留目录全名** ✓（悬停可看完整 ✓）。
+  ⭐ **实测（同一把尺子 ✓，`scratch/probe-chip-width.mjs` ✓）** ✓：
+
+| 副本 | 改前 | 改后 |
+| --- | --- | --- |
+| 表头（`…-header`） | 112×28，**隐藏 40px** ✗ | **54×28，隐藏 0** ✅ |
+| 列表 | 152×28，隐藏 0 ✅ | **54×28，隐藏 0** ✅ |
+
+    ⇒ **四处 chip 全部零截断** ✓（之前"表头 40px 被裁"的问题按你的方案消失 ✓）。
+  ⭐ 判据 ✓（`instrumentDisplayName.test.ts` 6 例 ✓）：去掉库前缀 ✓、无前缀的名字原样 ✓、只切第一处 ✓、
+    尾段为空则保留 ✓、**连字符不切** ✓、以及"**chip 必须用它、`title` 必须仍是全名**" ✓（回退即红 ✓）。
