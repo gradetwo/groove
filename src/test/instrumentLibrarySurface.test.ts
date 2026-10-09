@@ -37,25 +37,29 @@ describe("the instrument chooser's layer", () => {
    */
   const browser = readFileSync(resolve(__dirname, "../components/arrangement/InstrumentBrowserV2.tsx"), "utf8");
 
-  it("⭐ anchors the panel to its slot and takes it out of the row's flow", () => {
-    expect(browser, "the slot is the positioning context").toMatch(/instrument-slot-\$\{trackId\}`[^>]*className="relative/);
-    const at = browser.indexOf("instrument-panel-");
-    expect(at, "the panel exists").toBeGreaterThan(-1);
-    const block = browser.slice(at, at + 2200);
-    expect(block, "it floats above the grid").toMatch(/absolute/);
-    expect(block, "above the arrangement").toMatch(/z-[2-9]\d/);
-    expect(block, "on its own surface").toMatch(/bg-panel/);
-    expect(block, "with a bounded, scrollable height").toMatch(/max-h-\[[67]\dvh\]/);
-    expect(block, "and a way to close it that does not depend on the chip").toMatch(/instrument-panel-close-/);
+  it("⭐ renders the panel into the body, measured from the chip — the stacking context that hid it is escaped", () => {
     /**
-     * ⭐ **And it must be reachable on a phone** (measured: released as an anchored panel alone, it opened at y=985 in an
-     * 844 px viewport — below the fold, which is the "inconvenient to operate" the screenshot showed). The mobile-first
-     * default is therefore a bottom sheet pinned to the viewport, with the anchored panel restored from `sm:`.
+     * ⭐ **The fourth evaluation's P1-1, as a criterion.** The panel used to be `absolute` inside the slot, and the slot
+     * lives in a sticky `z-10` column: `z-50` therefore meant 50 *inside that context*, and a track near the bottom of the
+     * list opened a panel that `arrangement-detail` painted over — 315 options in the DOM, none of them clickable
+     * (`elementFromPoint` proved it; scripted `.click()` never asked what was on top).
+     *
+     * So the property to hold is not "it floats" but "**it is not a descendant of the column**": a portal into
+     * `document.body`, `fixed`, with coordinates measured from the chip and clamped to the viewport.
      */
-    expect(block, "a phone gets a sheet pinned to the viewport").toMatch(/fixed/);
-    expect(block, "spanning the width it has").toMatch(/inset-x-2/);
-    expect(block, "at the bottom edge").toMatch(/bottom-2/);
-    expect(block, "and a wide screen gets the anchored panel back").toMatch(/sm:absolute/);
+    // ⭐ Whole-file assertions: the properties are about how this component renders, and slicing around one testid made
+    // them depend on where a comment happens to end.
+    expect(browser, "it escapes every ancestor's stacking context").toMatch(/createPortal\(/);
+    expect(browser, "into the body").toMatch(/document\.body/);
+    expect(browser, "positioned by measurement, not by ancestors").toMatch(/getBoundingClientRect\(\)/);
+    expect(browser, "the slot is the measuring anchor").toMatch(/ref=\{slotRef\}/);
+    expect(browser, "above everything the surface draws").toMatch(/z-\[6\d\]/);
+    expect(browser, "on its own surface").toMatch(/bg-panel/);
+    expect(browser, "with a height bounded by what is left").toMatch(/maxHeight/);
+    expect(browser, "and a way to close it that does not depend on the chip").toMatch(/instrument-panel-close-/);
+    // ⭐ And the panel is not positioned as a descendant any more: no `absolute` in its own class string.
+    const panelClass = browser.slice(browser.indexOf("instrument-panel-"), browser.indexOf("instrument-panel-") + 900);
+    expect(panelClass, "the panel is fixed, not absolute inside the column").not.toMatch(/className="[^"]*absolute/);
   });
 
   it("⭐ makes every row of the library a thumb target on a phone", () => {
